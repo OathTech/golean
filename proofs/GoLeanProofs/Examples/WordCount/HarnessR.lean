@@ -78,6 +78,7 @@ namespace GoLean.Examples.WordCount
 open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.Surface
 open GoLean.SliceMem
 open GoLean.MapMem
+open GoLean.MapLoops
 
 set_option maxRecDepth 1000000
 set_option maxHeartbeats 2000000
@@ -1137,292 +1138,12 @@ theorem cp_loopR (σ : ExecState) (n seed : Nat) (hn : n < 2 ^ 63)
 r-placement (`S := σR σ L sv siv civ ws lp`, `bArr = 5`, `bMap = 16`,
 `base0 = 20`) -/
 
-theorem wcR_init1 (σ : ExecState) (L : Nat) (sv siv civ : Int)
-    (ws lp : List Int) :
-    ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (na : Nat)
-      (ch : Choices), 20 ≤ na → DeadFrom dead na →
-    stepFn (σR σ L sv siv civ ws lp kvs iv false dead na)
-        (.exec (.initialization { id := "$c1", typ := tMap }) env3R
-          (.seq [asgnC1, seqnC2, mapAsgnStmt] env3R postBodyKR)) ch
-      = .ok (.next (.seq [asgnC1, seqnC2, mapAsgnStmt] (u1EnvR na) postBodyKR),
-          σR σ L sv siv civ ws lp kvs iv false
-            (dead ++ [(.base ⟨na⟩, nilMapCell)]) (na + 1), ch) := by
-  intro kvs iv dead na ch hna hdead
-  have hmiss : Heap.lookup
-      (frontR L sv siv civ ws lp kvs iv false ++ dead) (.base ⟨na⟩) = none := by
-    rw [lookup_append_right
-      (lookup_frontR_none L sv siv civ ws lp kvs iv false hna)]
-    exact hdead na (Nat.le_refl na)
-  have h := stepFn_init_seq (σ := σR σ L sv siv civ ws lp kvs iv false dead na)
-    (p := { id := "$c1", typ := tMap })
-    (rest := [asgnC1, seqnC2, mapAsgnStmt]) (env := env3R) (k := postBodyKR)
-    (ch := ch) (v := .map ⟨none⟩)
-    (by simp [defaultValue, defaultValueFuel, typeResolutionFuel])
-  rw [show (σR σ L sv siv civ ws lp kvs iv false dead na).nextAddr = na from rfl,
-    show (σR σ L sv siv civ ws lp kvs iv false dead na).heap
-      = frontR L sv siv civ ws lp kvs iv false ++ dead from rfl,
-    set_fresh hmiss, List.append_assoc] at h
-  exact h
-
-theorem wcR_st1 (σ : ExecState) (L : Nat) (sv siv civ : Int)
-    (ws lp : List Int) :
-    ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (na₀ na : Nat)
-      (ch : Choices), 20 ≤ na₀ → DeadFrom dead na₀ →
-    stepFn (σR σ L sv siv civ ws lp kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, nilMapCell)]) na)
-        (.next (.storeK [.chain (.addr (.base ⟨na₀⟩)) [] []]
-          [.map ⟨some (.base ⟨16⟩)⟩] (.seqn #[]) (u1EnvR na₀)
-          (.seq [seqnC2, mapAsgnStmt] (u1EnvR na₀) postBodyKR))) ch
-      = .ok (.next (.storeK [] [] (.seqn #[]) (u1EnvR na₀)
-            (.seq [seqnC2, mapAsgnStmt] (u1EnvR na₀) postBodyKR)),
-          σR σ L sv siv civ ws lp kvs iv false
-            (dead ++ [(.base ⟨na₀⟩, mhCellR)]) na, ch) := by
-  intro kvs iv dead na₀ na ch hna hdead
-  have hlook : Heap.lookup
-      (σR σ L sv siv civ ws lp kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, nilMapCell)]) na).heap
-      (.base ⟨na₀⟩) = some ⟨some tMap, .map ⟨none⟩⟩ := by
-    show Heap.lookup
-      (frontR L sv siv civ ws lp kvs iv false
-        ++ (dead ++ [(.base ⟨na₀⟩, nilMapCell)]))
-      (.base ⟨na₀⟩) = some ⟨some tMap, .map ⟨none⟩⟩
-    rw [lookup_append_right
-        (lookup_frontR_none L sv siv civ ws lp kvs iv false hna),
-      lookup_append_right (hdead na₀ (Nat.le_refl na₀))]
-    exact lookup_singleton_self
-  have h := storeTarget_addr (v := .map ⟨some (.base ⟨16⟩)⟩)
-    (v' := .map ⟨some (.base ⟨16⟩)⟩) hlook
-    (by simp [normalizeValueForTy, normalizeValueForTyFuel,
-      typeResolutionFuel])
-  rw [show (σR σ L sv siv civ ws lp kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, nilMapCell)]) na).heap
-      = frontR L sv siv civ ws lp kvs iv false
-        ++ (dead ++ [(.base ⟨na₀⟩, nilMapCell)]) from rfl,
-    set_append_right (lookup_frontR_none L sv siv civ ws lp kvs iv false hna),
-    set_append_right (hdead na₀ (Nat.le_refl na₀)),
-    set_singleton_self] at h
-  exact stepFn_store_step h
-
-theorem wcR_init2 (σ : ExecState) (L : Nat) (sv siv civ : Int)
-    (ws lp : List Int) :
-    ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (na₀ : Nat)
-      (ch : Choices), 20 ≤ na₀ → DeadFrom dead na₀ →
-    stepFn (σR σ L sv siv civ ws lp kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, mhG 16)]) (na₀ + 1))
-        (.exec (.initialization { id := "$c2", typ := tU64 }) (u1EnvR na₀)
-          (.seq [.assign (.var "$c2")
-              (.indexGet (.var "words") (.var "i")), mapAsgnStmt]
-            (u1EnvR na₀) postBodyKR)) ch
-      = .ok (.next (.seq [.assign (.var "$c2")
-            (.indexGet (.var "words") (.var "i")), mapAsgnStmt]
-            (uEnvR na₀) postBodyKR),
-          σR σ L sv siv civ ws lp kvs iv false
-            (dead ++ [(.base ⟨na₀⟩, mhG 16), (.base ⟨na₀ + 1⟩, u64cell 0)])
-            (na₀ + 2), ch) := by
-  intro kvs iv dead na₀ ch hna hdead
-  have hmiss : Heap.lookup
-      (frontR L sv siv civ ws lp kvs iv false
-        ++ (dead ++ [(.base ⟨na₀⟩, mhG 16)]))
-      (.base ⟨na₀ + 1⟩) = none := by
-    rw [lookup_append_right
-        (lookup_frontR_none L sv siv civ ws lp kvs iv false (by omega)),
-      lookup_append_right (hdead (na₀ + 1) (by omega)),
-      lookup_cons_ne (base_beq_false (by omega : na₀ ≠ na₀ + 1))]
-    rfl
-  have h := stepFn_init_seq
-    (σ := σR σ L sv siv civ ws lp kvs iv false
-      (dead ++ [(.base ⟨na₀⟩, mhG 16)]) (na₀ + 1))
-    (p := { id := "$c2", typ := tU64 })
-    (rest := [.assign (.var "$c2")
-      (.indexGet (.var "words") (.var "i")), mapAsgnStmt])
-    (env := u1EnvR na₀) (k := postBodyKR) (ch := ch) (v := .int 0 .uint64)
-    (by simp [defaultValue, defaultValueFuel, typeResolutionFuel])
-  rw [show (σR σ L sv siv civ ws lp kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, mhG 16)]) (na₀ + 1)).nextAddr = na₀ + 1
-      from rfl,
-    show (σR σ L sv siv civ ws lp kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, mhG 16)]) (na₀ + 1)).heap
-      = frontR L sv siv civ ws lp kvs iv false
-        ++ (dead ++ [(.base ⟨na₀⟩, mhG 16)]) from rfl,
-    set_fresh hmiss, List.append_assoc, List.append_assoc] at h
-  exact h
-
-theorem wcR_st2 (σ : ExecState) (L : Nat) (sv siv civ : Int)
-    (ws lp : List Int) :
-    ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (na₀ na : Nat)
-      (w : Int) (ch : Choices), 0 ≤ w → w < 2 ^ 64 →
-      20 ≤ na₀ → DeadFrom dead na₀ →
-    stepFn (σR σ L sv siv civ ws lp kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, mhG 16), (.base ⟨na₀ + 1⟩, u64cell 0)]) na)
-        (.next (.storeK [.chain (.addr (.base ⟨na₀ + 1⟩)) [] []]
-          [.int w .uint64] (.seqn #[]) (uEnvR na₀)
-          (.seq [mapAsgnStmt] (uEnvR na₀) postBodyKR))) ch
-      = .ok (.next (.storeK [] [] (.seqn #[]) (uEnvR na₀)
-            (.seq [mapAsgnStmt] (uEnvR na₀) postBodyKR)),
-          σR σ L sv siv civ ws lp kvs iv false
-            (dead ++ [(.base ⟨na₀⟩, mhG 16), (.base ⟨na₀ + 1⟩, u64cell w)])
-            na, ch) := by
-  intro kvs iv dead na₀ na w ch hw0 hw64 hna hdead
-  have hwnorm : IntKind.normalize .uint64 w = w := unorm_of_range hw0 hw64
-  have hlook : Heap.lookup
-      (σR σ L sv siv civ ws lp kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, mhG 16), (.base ⟨na₀ + 1⟩, u64cell 0)])
-        na).heap
-      (.base ⟨na₀ + 1⟩) = some ⟨some tU64, .int 0 .uint64⟩ := by
-    show Heap.lookup
-      (frontR L sv siv civ ws lp kvs iv false
-        ++ (dead ++ ([(.base ⟨na₀⟩, mhG 16)]
-          ++ [(.base ⟨na₀ + 1⟩, u64cell 0)])))
-      (.base ⟨na₀ + 1⟩) = some ⟨some tU64, .int 0 .uint64⟩
-    rw [lookup_append_right
-        (lookup_frontR_none L sv siv civ ws lp kvs iv false (by omega)),
-      lookup_append_right (hdead (na₀ + 1) (by omega)),
-      lookup_append_right (show Heap.lookup [(.base ⟨na₀⟩, mhG 16)]
-          (.base ⟨na₀ + 1⟩) = none from by
-        rw [lookup_cons_ne (base_beq_false (by omega : na₀ ≠ na₀ + 1))]
-        rfl)]
-    exact lookup_singleton_self
-  have h := storeTarget_addr (v := .int w .uint64) (v' := .int w .uint64)
-    hlook
-    (by
-      simp only [normalizeValueForTy, normalizeValueForTyFuel,
-        typeResolutionFuel]
-      rw [hwnorm]
-      rfl)
-  rw [show (σR σ L sv siv civ ws lp kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, mhG 16), (.base ⟨na₀ + 1⟩, u64cell 0)])
-        na).heap
-      = frontR L sv siv civ ws lp kvs iv false
-        ++ (dead ++ ([(.base ⟨na₀⟩, mhG 16)]
-          ++ [(.base ⟨na₀ + 1⟩, u64cell 0)])) from rfl,
-    set_append_right
-      (lookup_frontR_none L sv siv civ ws lp kvs iv false (by omega)),
-    set_append_right (hdead (na₀ + 1) (by omega)),
-    set_append_right (show Heap.lookup [(.base ⟨na₀⟩, mhG 16)]
-        (.base ⟨na₀ + 1⟩) = none from by
-      rw [lookup_cons_ne (base_beq_false (by omega : na₀ ≠ na₀ + 1))]
-      rfl),
-    set_singleton_self] at h
-  exact stepFn_store_step h
-
-theorem wcR_lk1 (σ : ExecState) (L : Nat) (sv siv civ : Int)
-    (ws lp : List Int) (kvs : List (Int × Nat)) (iv w : Int)
-    (dead : Heap) (na₀ na : Nat) (hna : 20 ≤ na₀)
-    (hdead : DeadFrom dead na₀) :
-    Heap.lookup (σR σ L sv siv civ ws lp kvs iv false
-      (dead ++ [(.base ⟨na₀⟩, mhG 16), (.base ⟨na₀ + 1⟩, u64cell w)]) na).heap
-      (.base ⟨na₀⟩) = some mhCellR := by
-  show Heap.lookup
-    (frontR L sv siv civ ws lp kvs iv false
-      ++ (dead ++ ([(.base ⟨na₀⟩, mhCellR)]
-        ++ [(.base ⟨na₀ + 1⟩, u64cell w)])))
-    (.base ⟨na₀⟩) = some mhCellR
-  rw [lookup_append_right
-      (lookup_frontR_none L sv siv civ ws lp kvs iv false hna),
-    lookup_append_right (hdead na₀ (Nat.le_refl na₀))]
-  exact lookup_append_left lookup_singleton_self
-
-theorem wcR_lk2 (σ : ExecState) (L : Nat) (sv siv civ : Int)
-    (ws lp : List Int) (kvs : List (Int × Nat)) (iv w : Int)
-    (dead : Heap) (na₀ na : Nat) (hna : 20 ≤ na₀)
-    (hdead : DeadFrom dead na₀) :
-    Heap.lookup (σR σ L sv siv civ ws lp kvs iv false
-      (dead ++ [(.base ⟨na₀⟩, mhG 16), (.base ⟨na₀ + 1⟩, u64cell w)]) na).heap
-      (.base ⟨na₀ + 1⟩) = some (u64cell w) := by
-  show Heap.lookup
-    (frontR L sv siv civ ws lp kvs iv false
-      ++ (dead ++ ([(.base ⟨na₀⟩, mhCellR)]
-        ++ [(.base ⟨na₀ + 1⟩, u64cell w)])))
-    (.base ⟨na₀ + 1⟩) = some (u64cell w)
-  rw [lookup_append_right
-      (lookup_frontR_none L sv siv civ ws lp kvs iv false (by omega)),
-    lookup_append_right (hdead (na₀ + 1) (by omega)),
-    lookup_append_right (show Heap.lookup [(.base ⟨na₀⟩, mhCellR)]
-        (.base ⟨na₀ + 1⟩) = none from by
-      rw [lookup_cons_ne (base_beq_false (by omega : na₀ ≠ na₀ + 1))]
-      rfl)]
-  exact lookup_singleton_self
-
-theorem wcR_var1 (σ : ExecState) (L : Nat) (sv siv civ : Int)
-    (ws lp : List Int) :
-    ∀ (kvs : List (Int × Nat)) (iv w : Int) (dead : Heap) (na₀ na : Nat)
-      (k : Cont) (ch : Choices), 20 ≤ na₀ → DeadFrom dead na₀ →
-    stepFn (σR σ L sv siv civ ws lp kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, mhG 16), (.base ⟨na₀ + 1⟩, u64cell w)]) na)
-        (.evalE (.var "$c1") (uEnvR na₀) k) ch
-      = .ok (.retV (.map ⟨some (.base ⟨16⟩)⟩) k,
-          σR σ L sv siv civ ws lp kvs iv false
-            (dead ++ [(.base ⟨na₀⟩, mhG 16), (.base ⟨na₀ + 1⟩, u64cell w)])
-            na, ch) := by
-  intro kvs iv w dead na₀ na k ch hna hdead
-  exact stepFn_var rfl (wcR_lk1 σ L sv siv civ ws lp kvs iv w dead na₀ na hna
-    hdead)
-
-theorem wcR_var2 (σ : ExecState) (L : Nat) (sv siv civ : Int)
-    (ws lp : List Int) :
-    ∀ (kvs : List (Int × Nat)) (iv w : Int) (dead : Heap) (na₀ na : Nat)
-      (k : Cont) (ch : Choices), 20 ≤ na₀ → DeadFrom dead na₀ →
-    stepFn (σR σ L sv siv civ ws lp kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, mhG 16), (.base ⟨na₀ + 1⟩, u64cell w)]) na)
-        (.evalE (.var "$c2") (uEnvR na₀) k) ch
-      = .ok (.retV (.int w .uint64) k,
-          σR σ L sv siv civ ws lp kvs iv false
-            (dead ++ [(.base ⟨na₀⟩, mhG 16), (.base ⟨na₀ + 1⟩, u64cell w)])
-            na, ch) := by
-  intro kvs iv w dead na₀ na k ch hna hdead
-  exact stepFn_var rfl (wcR_lk2 σ L sv siv civ ws lp kvs iv w dead na₀ na hna
-    hdead)
-
-theorem wcR_read (σ : ExecState) (sv siv civ : Int) (ws lp : List Int) :
-    ∀ (kvs : List (Int × Nat)) (i : Nat) (dead : Heap) (na : Nat),
-      i < ws.length →
-    applyStrictOp (σR σ ws.length sv siv civ ws lp kvs ((i : Nat) : Int) false
-        dead na) .indexGet
-        [wsHG 5 ws.length, .int ((i : Nat) : Int) .int]
-      = .ok (.int (ws.getD i 0) .uint64,
-          σR σ ws.length sv siv civ ws lp kvs ((i : Nat) : Int) false dead
-            na) := by
-  intro kvs i dead na hi
-  have hget : (⟨ws.map (fun v => .int v .uint64)⟩ : Array GoValue)[0 + i]?
-      = some (.int (ws.getD i 0) .uint64) := by
-    rw [Nat.zero_add, getElem?_mapU ws i hi]
-  exact applyStrictOp_indexGet_slice (dty := some (.array ws.length tU64))
-    (off := 0) (len := ws.length) (cap := ws.length) (ik := .int) rfl
-    (Nat.le_refl ws.length) hi hget
-
-theorem wcR_mapGet (σ : ExecState) (L : Nat) (sv siv civ : Int)
-    (ws lp : List Int) :
-    ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (na : Nat)
-      (w : Int), 0 ≤ w → w < 2 ^ 64 →
-    applyStrictOp (σR σ L sv siv civ ws lp kvs iv false dead na)
-        (.mapGet tU64 tU64) [.map ⟨some (.base ⟨16⟩)⟩, .int w .uint64]
-      = .ok (.int (cnt kvs w : Int) .uint64,
-          σR σ L sv siv civ ws lp kvs iv false dead na) := by
-  intro kvs iv dead na w hw0 hw64
-  exact applyStrictOp_mapGet (a := ⟨16⟩) (dty := none) rfl
-    (unorm_of_range hw0 hw64)
-
-theorem wcR_mapAsgn (σ : ExecState) (L : Nat) (sv siv civ : Int)
-    (ws lp : List Int) :
-    ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (na₀ na : Nat)
-      (w : Int) (v : Nat) (ch : Choices), 0 ≤ w → w < 2 ^ 64 → v < 2 ^ 64 →
-    stepFn (σR σ L sv siv civ ws lp kvs iv false dead na)
-        (.retV (.int ((v : Nat) : Int) .uint64)
-          (.stmtOpK (.mapAssign tU64 tU64) 0
-            [.int w .uint64, .map ⟨some (.base ⟨16⟩)⟩] []
-            (uEnvR na₀) (.seq [] (uEnvR na₀) postBodyKR))) ch
-      = .ok (.next (.seq [] (uEnvR na₀) postBodyKR),
-          σR σ L sv siv civ ws lp (setk kvs w v) iv false dead na, ch) := by
-  intro kvs iv dead na₀ na w v ch hw0 hw64 hv
-  have hMA := mapAssignValue_toEntries (a := ⟨16⟩)
-    (σ := σR σ L sv siv civ ws lp kvs iv false dead na)
-    (v := v) rfl (unorm_of_range hw0 hw64)
-    (unorm_of_range (by omega) (by exact_mod_cast hv))
-  rw [show Heap.set (σR σ L sv siv civ ws lp kvs iv false dead na).heap
-      (.base ⟨16⟩) ⟨none, .mapData (toEntries (setk kvs w v))⟩
-      = frontR L sv siv civ ws lp (setk kvs w v) iv false ++ dead
-      from rfl] at hMA
-  exact stepFn_mapAssign_apply hMA
+/- GAP-C1 CLOSED (kit-gap closure, 2026-08-15): the r-placement's
+conditioned discharges (`wcR_init1`/`wcR_st1`/`wcR_init2`/`wcR_st2`/
+`wcR_lk1`/`wcR_lk2`/`wcR_var1`/`wcR_var2`/`wcR_read`/`wcR_mapGet`/
+`wcR_mapAsgn`, ~270 lines) are DELETED — the kit's
+`MapLoops.mapCountIter_at` constructs them from nine placement facts,
+every one a `rfl` here except `lookup_frontR_none`. -/
 
 /-- **One counting iteration** at the r-placement — INSTANTIATED from
 `wcIter_generic`. 53 steps. -/
@@ -1443,37 +1164,34 @@ theorem wcR_count_iter (σ : ExecState) (sv siv civ : Int)
   have hcnt : cnt (countsFold (ws.take i)) (ws.getD i 0) + 1 < 2 ^ 64 := by
     have := cnt_take_le (ws := ws) (i := i) (ws.getD i 0)
     omega
-  have h := wcIter_generic (σR σ ws.length sv siv civ ws lp) ws 5 16 20
+  have h := mapCountIter_at "words" (σR σ ws.length sv siv civ ws lp) σ
+    (fun kvs iv => frontR ws.length sv siv civ ws lp kvs iv false) ws 5 16 20
     headCR cmpContCR postBodyKR env3R u1EnvR uEnvR
+    (fun _ _ _ _ => rfl)
+    (fun kvs iv x hx =>
+      lookup_frontR_none ws.length sv siv civ ws lp kvs iv false hx)
+    (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ _ _ => rfl)
+    (fun _ => rfl) (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)
     (fun kvs iv dead na ch =>
       wcR_segC1_raw σ ws.length sv siv civ ws lp kvs iv dead na ch)
-    (wcR_init1 σ ws.length sv siv civ ws lp)
     (fun kvs iv dead na₀ na ch =>
       wcR_segC2_raw σ ws.length sv siv civ ws lp kvs iv dead na₀ na ch)
-    (wcR_st1 σ ws.length sv siv civ ws lp)
     (fun kvs iv dead na₀ na ch =>
       wcR_segC3_raw σ ws.length sv siv civ ws lp kvs iv dead na₀ na ch)
-    (wcR_init2 σ ws.length sv siv civ ws lp)
     (fun kvs iv dead na₀ na ch =>
       wcR_segC4_raw σ ws.length sv siv civ ws lp kvs iv dead na₀ na ch)
-    (wcR_read σ sv siv civ ws lp)
     (fun kvs iv dead na₀ na w ch =>
       wcR_segC5_raw σ ws.length sv siv civ ws lp kvs iv dead na₀ na w ch)
-    (wcR_st2 σ ws.length sv siv civ ws lp)
     (fun kvs iv dead na₀ na ch =>
       wcR_segC6_raw σ ws.length sv siv civ ws lp kvs iv dead na₀ na ch)
-    (wcR_var1 σ ws.length sv siv civ ws lp)
-    (wcR_var2 σ ws.length sv siv civ ws lp)
     (fun kvs iv dead na₀ na ch =>
       wcR_segC7_raw σ ws.length sv siv civ ws lp kvs iv dead na₀ na ch)
     (fun kvs iv dead na₀ na w ch =>
       wcR_segC8_raw σ ws.length sv siv civ ws lp kvs iv dead na₀ na w ch)
     (fun kvs iv dead na₀ na w ch =>
       wcR_segC9_raw σ ws.length sv siv civ ws lp kvs iv dead na₀ na w ch)
-    (wcR_mapGet σ ws.length sv siv civ ws lp)
     (fun kvs iv dead na₀ na w cv ch =>
       wcR_segC10_raw σ ws.length sv siv civ ws lp kvs iv dead na₀ na w cv ch)
-    (wcR_mapAsgn σ ws.length sv siv civ ws lp)
     (fun kvs iv dead na₀ na ch =>
       wcR_segC11_raw σ ws.length sv siv civ ws lp kvs iv dead na₀ na ch)
     (countsFold (ws.take i)) i dead na ch hi hw.1 hw.2 hcnt hna hdead
@@ -1593,23 +1311,43 @@ theorem wcR_count_loop (σ : ExecState) (sv siv civ : Int)
             σR σ ws.length sv siv civ ws lp (countsFold ws)
               ((ws.length : Nat) : Int) false tail (na + 2 * n + 1), ch) := by
   intro n i hn hi dead na hna hdead ch
-  exact wcLoop_generic (σR σ ws.length sv siv civ ws lp) ws 5 16 20
-    headCR cmpContCR frameKR env2R envR0R envRBR kRR hlen
-    (fun i dead na ch hi hna hdead =>
-      wcR_count_iter σ sv siv civ ws lp i dead na ch hws hlen hi hna hdead)
-    (fun kvs iv dead na ch =>
-      wcR_segA1_raw σ ws.length sv siv civ ws lp kvs iv dead na ch)
-    (fun kvs iv dead na ch =>
-      wcR_segX0_raw σ ws.length sv siv civ ws lp kvs iv dead na ch)
-    (wcR_initBest σ ws.length sv siv civ ws lp)
-    (fun kvs iv dead B na ch =>
-      wcR_segX0b_raw σ ws.length sv siv civ ws lp kvs iv dead B na ch)
-    (wcR_stBest σ ws.length sv siv civ ws lp)
-    (fun kvs iv dead B na ch =>
-      wcR_segX0c_raw σ ws.length sv siv civ ws lp kvs iv dead B na ch)
-    (wcR_snap σ ws.length sv siv civ ws lp)
-    (countsFold_norm ws hws hlen)
-    n i hn hi dead na hna hdead ch
+  obtain ⟨tail₀, htail₀, hrun₀⟩ :=
+    mapCountLoop_generic (σR σ ws.length sv siv civ ws lp) ws 5 16 20
+      headCR cmpContCR env2R hlen
+      (fun i dead na ch hi hna hdead =>
+        wcR_count_iter σ sv siv civ ws lp i dead na ch hws hlen hi hna hdead)
+      (fun kvs iv dead na ch =>
+        wcR_segA1_raw σ ws.length sv siv civ ws lp kvs iv dead na ch)
+      n i hn hi dead na hna hdead ch
+  -- the exit tower: 23 steps, `best` allocated at `na + 2·n`
+  have hX := wcR_segX0_raw σ ws.length sv siv civ ws lp (countsFold ws)
+    ((ws.length : Nat) : Int) tail₀ (na + 2 * n) ch
+  have hIB := wcR_initBest σ ws.length sv siv civ ws lp (countsFold ws)
+    ((ws.length : Nat) : Int) tail₀ (na + 2 * n) ch (by omega) htail₀
+  have h1 := stepFnIter_chain hX (stepFnIter_one hIB)
+  have hXb := wcR_segX0b_raw σ ws.length sv siv civ ws lp (countsFold ws)
+    ((ws.length : Nat) : Int) (tail₀ ++ [(.base ⟨na + 2 * n⟩, u64cell 0)])
+    (na + 2 * n) (na + 2 * n + 1) ch
+  have h2 := stepFnIter_chain h1 hXb
+  have hSB := wcR_stBest σ ws.length sv siv civ ws lp (countsFold ws)
+    ((ws.length : Nat) : Int) tail₀ (na + 2 * n) (na + 2 * n + 1) ch
+    (by omega) htail₀
+  have h3 := stepFnIter_chain h2 (stepFnIter_one hSB)
+  have hXc := wcR_segX0c_raw σ ws.length sv siv civ ws lp (countsFold ws)
+    ((ws.length : Nat) : Int) (tail₀ ++ [(.base ⟨na + 2 * n⟩, u64cell 0)])
+    (na + 2 * n) (na + 2 * n + 1) ch
+  have h4 := stepFnIter_chain h3 hXc
+  have hSn := wcR_snap σ ws.length sv siv civ ws lp (countsFold ws)
+    ((ws.length : Nat) : Int) (tail₀ ++ [(.base ⟨na + 2 * n⟩, u64cell 0)])
+    (na + 2 * n) (na + 2 * n + 1) ch (countsFold_norm ws hws hlen)
+  have h5 := stepFnIter_chain h4 (stepFnIter_one hSn)
+  refine ⟨84 * n + 23, tail₀ ++ [(.base ⟨na + 2 * n⟩, u64cell 0)],
+    Nat.le_refl _, ?_, ?_, ?_⟩
+  · intro x hx
+    exact DeadFrom.push (c := u64cell 0) htail₀ x (by omega)
+  · rw [lookup_append_right (htail₀ (na + 2 * n) (Nat.le_refl _))]
+    exact lookup_singleton_self
+  · exact stepFnIter_chain hrun₀ h5
 
 /-! ## The range phase: the generic layer's discharges at the
 r-placement -/

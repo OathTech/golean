@@ -5,6 +5,7 @@ import GoLeanProofs.StepKit
 import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Frame.RenameId
 import GoLeanProofs.Laws.StmtOps
+import GoLeanProofs.MapLoops
 import GoLeanProofs.Examples.WordCount.HarnessSubject
 
 /-!
@@ -24,6 +25,7 @@ namespace GoLean.Examples.WordCount
 open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.Surface
 open GoLean.SliceMem
 open GoLean.MapMem
+open GoLean.MapLoops
 
 set_option maxRecDepth 1000000
 set_option maxHeartbeats 2000000
@@ -37,279 +39,19 @@ set_option linter.unusedSimpArgs false
 hypotheses at `S := σH ws.length sv siv ws`; every statement pins the full
 transition — the E-form made structural) -/
 
-private theorem wcH_init1 (ws : List Int) (sv siv : Int) :
-    ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (na : Nat)
-      (ch : Choices), 16 ≤ na → DeadFrom dead na →
-    stepFn (σH ws.length sv siv ws kvs iv false dead na)
-        (.exec (.initialization { id := "$c1", typ := tMap }) env3H
-          (.seq [asgnC1, seqnC2, mapAsgnStmt] env3H postBodyKH)) ch
-      = .ok (.next (.seq [asgnC1, seqnC2, mapAsgnStmt] (u1EnvH na) postBodyKH),
-          σH ws.length sv siv ws kvs iv false (dead ++ [(.base ⟨na⟩, nilMapCell)])
-            (na + 1), ch) := by
-  intro kvs iv dead na ch hna hdead
-  have hmiss : Heap.lookup
-      (frontH ws.length sv siv ws kvs iv false ++ dead) (.base ⟨na⟩) = none := by
-    rw [lookup_append_right (lookup_frontH_none ws.length sv siv ws kvs iv false
-      hna)]
-    exact hdead na (Nat.le_refl na)
-  have h := stepFn_init_seq (σ := σH ws.length sv siv ws kvs iv false dead na)
-    (p := { id := "$c1", typ := tMap })
-    (rest := [asgnC1, seqnC2, mapAsgnStmt]) (env := env3H) (k := postBodyKH)
-    (ch := ch) (v := .map ⟨none⟩)
-    (by simp [defaultValue, defaultValueFuel, typeResolutionFuel])
-  rw [show (σH ws.length sv siv ws kvs iv false dead na).nextAddr = na from rfl,
-    show (σH ws.length sv siv ws kvs iv false dead na).heap
-      = frontH ws.length sv siv ws kvs iv false ++ dead from rfl,
-    set_fresh hmiss, List.append_assoc] at h
-  exact h
-
-private theorem wcH_st1 (ws : List Int) (sv siv : Int) :
-    ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (na₀ na : Nat)
-      (ch : Choices), 16 ≤ na₀ → DeadFrom dead na₀ →
-    stepFn (σH ws.length sv siv ws kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, nilMapCell)]) na)
-        (.next (.storeK [.chain (.addr (.base ⟨na₀⟩)) [] []]
-          [.map ⟨some (.base ⟨12⟩)⟩] (.seqn #[]) (u1EnvH na₀)
-          (.seq [seqnC2, mapAsgnStmt] (u1EnvH na₀) postBodyKH))) ch
-      = .ok (.next (.storeK [] [] (.seqn #[]) (u1EnvH na₀)
-            (.seq [seqnC2, mapAsgnStmt] (u1EnvH na₀) postBodyKH)),
-          σH ws.length sv siv ws kvs iv false (dead ++ [(.base ⟨na₀⟩, mhCellW)]) na,
-          ch) := by
-  intro kvs iv dead na₀ na ch hna hdead
-  have hlook : Heap.lookup
-      (σH ws.length sv siv ws kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, nilMapCell)]) na).heap
-      (.base ⟨na₀⟩) = some ⟨some tMap, .map ⟨none⟩⟩ := by
-    show Heap.lookup
-      (frontH ws.length sv siv ws kvs iv false
-        ++ (dead ++ [(.base ⟨na₀⟩, nilMapCell)]))
-      (.base ⟨na₀⟩) = some ⟨some tMap, .map ⟨none⟩⟩
-    rw [lookup_append_right (lookup_frontH_none ws.length sv siv ws kvs iv false
-        hna),
-      lookup_append_right (hdead na₀ (Nat.le_refl na₀))]
-    exact lookup_singleton_self
-  have h := storeTarget_addr (v := .map ⟨some (.base ⟨12⟩)⟩)
-    (v' := .map ⟨some (.base ⟨12⟩)⟩) hlook
-    (by simp [normalizeValueForTy, normalizeValueForTyFuel,
-      typeResolutionFuel])
-  rw [show (σH ws.length sv siv ws kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, nilMapCell)]) na).heap
-      = frontH ws.length sv siv ws kvs iv false
-        ++ (dead ++ [(.base ⟨na₀⟩, nilMapCell)]) from rfl,
-    set_append_right (lookup_frontH_none ws.length sv siv ws kvs iv false hna),
-    set_append_right (hdead na₀ (Nat.le_refl na₀)),
-    set_singleton_self] at h
-  exact stepFn_store_step h
-
-private theorem wcH_init2 (ws : List Int) (sv siv : Int) :
-    ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (na₀ : Nat)
-      (ch : Choices), 16 ≤ na₀ → DeadFrom dead na₀ →
-    stepFn (σH ws.length sv siv ws kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, mhG 12)]) (na₀ + 1))
-        (.exec (.initialization { id := "$c2", typ := tU64 }) (u1EnvH na₀)
-          (.seq [.assign (.var "$c2")
-              (.indexGet (.var "words") (.var "i")), mapAsgnStmt]
-            (u1EnvH na₀) postBodyKH)) ch
-      = .ok (.next (.seq [.assign (.var "$c2")
-            (.indexGet (.var "words") (.var "i")), mapAsgnStmt]
-            (uEnvH na₀) postBodyKH),
-          σH ws.length sv siv ws kvs iv false
-            (dead ++ [(.base ⟨na₀⟩, mhG 12), (.base ⟨na₀ + 1⟩, u64cell 0)])
-            (na₀ + 2), ch) := by
-  intro kvs iv dead na₀ ch hna hdead
-  have hmiss : Heap.lookup
-      (frontH ws.length sv siv ws kvs iv false ++ (dead ++ [(.base ⟨na₀⟩, mhG 12)]))
-      (.base ⟨na₀ + 1⟩) = none := by
-    rw [lookup_append_right
-        (lookup_frontH_none ws.length sv siv ws kvs iv false (by omega)),
-      lookup_append_right (hdead (na₀ + 1) (by omega)),
-      lookup_cons_ne (base_beq_false (by omega : na₀ ≠ na₀ + 1))]
-    rfl
-  have h := stepFn_init_seq
-    (σ := σH ws.length sv siv ws kvs iv false (dead ++ [(.base ⟨na₀⟩, mhG 12)])
-      (na₀ + 1))
-    (p := { id := "$c2", typ := tU64 })
-    (rest := [.assign (.var "$c2")
-      (.indexGet (.var "words") (.var "i")), mapAsgnStmt])
-    (env := u1EnvH na₀) (k := postBodyKH) (ch := ch)
-    (v := .int 0 .uint64)
-    (by simp [defaultValue, defaultValueFuel, typeResolutionFuel])
-  rw [show (σH ws.length sv siv ws kvs iv false (dead ++ [(.base ⟨na₀⟩, mhG 12)])
-        (na₀ + 1)).nextAddr = na₀ + 1 from rfl,
-    show (σH ws.length sv siv ws kvs iv false (dead ++ [(.base ⟨na₀⟩, mhG 12)])
-        (na₀ + 1)).heap
-      = frontH ws.length sv siv ws kvs iv false ++ (dead ++ [(.base ⟨na₀⟩, mhG 12)])
-      from rfl,
-    set_fresh hmiss, List.append_assoc, List.append_assoc] at h
-  exact h
-
-private theorem wcH_st2 (ws : List Int) (sv siv : Int) :
-    ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (na₀ na : Nat)
-      (w : Int) (ch : Choices), 0 ≤ w → w < 2 ^ 64 →
-      16 ≤ na₀ → DeadFrom dead na₀ →
-    stepFn (σH ws.length sv siv ws kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, mhG 12), (.base ⟨na₀ + 1⟩, u64cell 0)]) na)
-        (.next (.storeK [.chain (.addr (.base ⟨na₀ + 1⟩)) [] []]
-          [.int w .uint64] (.seqn #[]) (uEnvH na₀)
-          (.seq [mapAsgnStmt] (uEnvH na₀) postBodyKH))) ch
-      = .ok (.next (.storeK [] [] (.seqn #[]) (uEnvH na₀)
-            (.seq [mapAsgnStmt] (uEnvH na₀) postBodyKH)),
-          σH ws.length sv siv ws kvs iv false
-            (dead ++ [(.base ⟨na₀⟩, mhG 12), (.base ⟨na₀ + 1⟩, u64cell w)])
-            na, ch) := by
-  intro kvs iv dead na₀ na w ch hw0 hw64 hna hdead
-  have hwnorm : IntKind.normalize .uint64 w = w := unorm_of_range hw0 hw64
-  have hlook : Heap.lookup
-      (σH ws.length sv siv ws kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, mhG 12), (.base ⟨na₀ + 1⟩, u64cell 0)])
-        na).heap
-      (.base ⟨na₀ + 1⟩) = some ⟨some tU64, .int 0 .uint64⟩ := by
-    show Heap.lookup
-      (frontH ws.length sv siv ws kvs iv false
-        ++ (dead ++ ([(.base ⟨na₀⟩, mhG 12)]
-          ++ [(.base ⟨na₀ + 1⟩, u64cell 0)])))
-      (.base ⟨na₀ + 1⟩) = some ⟨some tU64, .int 0 .uint64⟩
-    rw [lookup_append_right
-        (lookup_frontH_none ws.length sv siv ws kvs iv false (by omega)),
-      lookup_append_right (hdead (na₀ + 1) (by omega)),
-      lookup_append_right (show Heap.lookup [(.base ⟨na₀⟩, mhG 12)]
-          (.base ⟨na₀ + 1⟩) = none from by
-        rw [lookup_cons_ne (base_beq_false (by omega : na₀ ≠ na₀ + 1))]
-        rfl)]
-    exact lookup_singleton_self
-  have h := storeTarget_addr (v := .int w .uint64) (v' := .int w .uint64)
-    hlook
-    (by
-      simp only [normalizeValueForTy, normalizeValueForTyFuel,
-        typeResolutionFuel]
-      rw [hwnorm]
-      rfl)
-  rw [show (σH ws.length sv siv ws kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, mhG 12), (.base ⟨na₀ + 1⟩, u64cell 0)])
-        na).heap
-      = frontH ws.length sv siv ws kvs iv false
-        ++ (dead ++ ([(.base ⟨na₀⟩, mhG 12)]
-          ++ [(.base ⟨na₀ + 1⟩, u64cell 0)])) from rfl,
-    set_append_right (lookup_frontH_none ws.length sv siv ws kvs iv false
-      (by omega)),
-    set_append_right (hdead (na₀ + 1) (by omega)),
-    set_append_right (show Heap.lookup [(.base ⟨na₀⟩, mhG 12)]
-        (.base ⟨na₀ + 1⟩) = none from by
-      rw [lookup_cons_ne (base_beq_false (by omega : na₀ ≠ na₀ + 1))]
-      rfl),
-    set_singleton_self] at h
-  exact stepFn_store_step h
-
-private theorem wcH_lk1 (ws : List Int) (sv siv : Int) (kvs : List (Int × Nat)) (iv w : Int)
-    (dead : Heap) (na₀ na : Nat) (hna : 16 ≤ na₀) (hdead : DeadFrom dead na₀) :
-    Heap.lookup (σH ws.length sv siv ws kvs iv false
-      (dead ++ [(.base ⟨na₀⟩, mhG 12), (.base ⟨na₀ + 1⟩, u64cell w)]) na).heap
-      (.base ⟨na₀⟩) = some mhCellW := by
-  show Heap.lookup
-    (frontH ws.length sv siv ws kvs iv false
-      ++ (dead ++ ([(.base ⟨na₀⟩, mhCellW)]
-        ++ [(.base ⟨na₀ + 1⟩, u64cell w)])))
-    (.base ⟨na₀⟩) = some mhCellW
-  rw [lookup_append_right (lookup_frontH_none ws.length sv siv ws kvs iv false hna),
-    lookup_append_right (hdead na₀ (Nat.le_refl na₀))]
-  exact lookup_append_left lookup_singleton_self
-
-private theorem wcH_lk2 (ws : List Int) (sv siv : Int) (kvs : List (Int × Nat)) (iv w : Int)
-    (dead : Heap) (na₀ na : Nat) (hna : 16 ≤ na₀) (hdead : DeadFrom dead na₀) :
-    Heap.lookup (σH ws.length sv siv ws kvs iv false
-      (dead ++ [(.base ⟨na₀⟩, mhG 12), (.base ⟨na₀ + 1⟩, u64cell w)]) na).heap
-      (.base ⟨na₀ + 1⟩) = some (u64cell w) := by
-  show Heap.lookup
-    (frontH ws.length sv siv ws kvs iv false
-      ++ (dead ++ ([(.base ⟨na₀⟩, mhCellW)]
-        ++ [(.base ⟨na₀ + 1⟩, u64cell w)])))
-    (.base ⟨na₀ + 1⟩) = some (u64cell w)
-  rw [lookup_append_right
-      (lookup_frontH_none ws.length sv siv ws kvs iv false (by omega)),
-    lookup_append_right (hdead (na₀ + 1) (by omega)),
-    lookup_append_right (show Heap.lookup [(.base ⟨na₀⟩, mhCellW)]
-        (.base ⟨na₀ + 1⟩) = none from by
-      rw [lookup_cons_ne (base_beq_false (by omega : na₀ ≠ na₀ + 1))]
-      rfl)]
-  exact lookup_singleton_self
-
-private theorem wcH_var1 (ws : List Int) (sv siv : Int) :
-    ∀ (kvs : List (Int × Nat)) (iv w : Int) (dead : Heap) (na₀ na : Nat)
-      (k : Cont) (ch : Choices), 16 ≤ na₀ → DeadFrom dead na₀ →
-    stepFn (σH ws.length sv siv ws kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, mhG 12), (.base ⟨na₀ + 1⟩, u64cell w)]) na)
-        (.evalE (.var "$c1") (uEnvH na₀) k) ch
-      = .ok (.retV (.map ⟨some (.base ⟨12⟩)⟩) k,
-          σH ws.length sv siv ws kvs iv false
-            (dead ++ [(.base ⟨na₀⟩, mhG 12), (.base ⟨na₀ + 1⟩, u64cell w)])
-            na, ch) := by
-  intro kvs iv w dead na₀ na k ch hna hdead
-  exact stepFn_var rfl (wcH_lk1 ws sv siv kvs iv w dead na₀ na hna hdead)
-
-private theorem wcH_var2 (ws : List Int) (sv siv : Int) :
-    ∀ (kvs : List (Int × Nat)) (iv w : Int) (dead : Heap) (na₀ na : Nat)
-      (k : Cont) (ch : Choices), 16 ≤ na₀ → DeadFrom dead na₀ →
-    stepFn (σH ws.length sv siv ws kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, mhG 12), (.base ⟨na₀ + 1⟩, u64cell w)]) na)
-        (.evalE (.var "$c2") (uEnvH na₀) k) ch
-      = .ok (.retV (.int w .uint64) k,
-          σH ws.length sv siv ws kvs iv false
-            (dead ++ [(.base ⟨na₀⟩, mhG 12), (.base ⟨na₀ + 1⟩, u64cell w)])
-            na, ch) := by
-  intro kvs iv w dead na₀ na k ch hna hdead
-  exact stepFn_var rfl (wcH_lk2 ws sv siv kvs iv w dead na₀ na hna hdead)
-
-private theorem wcH_read (ws : List Int) (sv siv : Int) :
-    ∀ (kvs : List (Int × Nat)) (i : Nat) (dead : Heap) (na : Nat),
-      i < ws.length →
-    applyStrictOp (σH ws.length sv siv ws kvs ((i : Nat) : Int) false dead na)
-        .indexGet [wsHG 4 ws.length, .int ((i : Nat) : Int) .int]
-      = .ok (.int (ws.getD i 0) .uint64,
-          σH ws.length sv siv ws kvs ((i : Nat) : Int) false dead na) := by
-  intro kvs i dead na hi
-  have hget : (⟨ws.map (fun v => .int v .uint64)⟩ : Array GoValue)[0 + i]?
-      = some (.int (ws.getD i 0) .uint64) := by
-    rw [Nat.zero_add, getElem?_mapU ws i hi]
-  exact applyStrictOp_indexGet_slice (dty := some (.array ws.length tU64))
-    (off := 0) (len := ws.length) (cap := ws.length) (ik := .int) rfl
-    (Nat.le_refl ws.length) hi hget
-
-private theorem wcH_mapGet (ws : List Int) (sv siv : Int) :
-    ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (na : Nat)
-      (w : Int), 0 ≤ w → w < 2 ^ 64 →
-    applyStrictOp (σH ws.length sv siv ws kvs iv false dead na) (.mapGet tU64 tU64)
-        [.map ⟨some (.base ⟨12⟩)⟩, .int w .uint64]
-      = .ok (.int (cnt kvs w : Int) .uint64,
-          σH ws.length sv siv ws kvs iv false dead na) := by
-  intro kvs iv dead na w hw0 hw64
-  exact applyStrictOp_mapGet (a := ⟨12⟩) (dty := none) rfl
-    (unorm_of_range hw0 hw64)
-
-private theorem wcH_mapAsgn (ws : List Int) (sv siv : Int) :
-    ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (na₀ na : Nat)
-      (w : Int) (v : Nat) (ch : Choices), 0 ≤ w → w < 2 ^ 64 → v < 2 ^ 64 →
-    stepFn (σH ws.length sv siv ws kvs iv false dead na)
-        (.retV (.int ((v : Nat) : Int) .uint64)
-          (.stmtOpK (.mapAssign tU64 tU64) 0
-            [.int w .uint64, .map ⟨some (.base ⟨12⟩)⟩] []
-            (uEnvH na₀) (.seq [] (uEnvH na₀) postBodyKH))) ch
-      = .ok (.next (.seq [] (uEnvH na₀) postBodyKH),
-          σH ws.length sv siv ws (setk kvs w v) iv false dead na, ch) := by
-  intro kvs iv dead na₀ na w v ch hw0 hw64 hv
-  have hMA := mapAssignValue_toEntries (a := ⟨12⟩)
-    (σ := σH ws.length sv siv ws kvs iv false dead na)
-    (v := v) rfl (unorm_of_range hw0 hw64)
-    (unorm_of_range (by omega) (by exact_mod_cast hv))
-  rw [show Heap.set (σH ws.length sv siv ws kvs iv false dead na).heap (.base ⟨12⟩)
-      ⟨none, .mapData (toEntries (setk kvs w v))⟩
-      = frontH ws.length sv siv ws (setk kvs w v) iv false ++ dead from rfl] at hMA
-  exact stepFn_mapAssign_apply hMA
+/- GAP-C1 CLOSED (kit-gap closure, 2026-08-15): the harness
+placement's conditioned discharges (`wcH_init1`/`wcH_st1`/`wcH_init2`/
+`wcH_st2`/`wcH_lk1`/`wcH_lk2`/`wcH_var1`/`wcH_var2`/`wcH_read`/
+`wcH_mapGet`/`wcH_mapAsgn`, ~270 lines) are DELETED — the kit's
+`MapLoops.mapCountIter_at` constructs them from nine placement facts,
+every one a `rfl` here except `lookup_frontH_none`
+(`HarnessSubject`). -/
 
 /-- **One counting iteration** (exit test true at word `i`): the map
 data cell advances from the counts of `ws.take i` to those of
 `ws.take (i+1)`; two fresh dead cells land at `na`, `na + 1`. 53
-steps — INSTANTIATED from the placement-generic `wcIter_generic`
-(consolidation slice 2026-08-13). -/
+steps — via the kit's bundled `MapLoops.mapCountIter_at` (GAP-C1
+closure, 2026-08-15). -/
 private theorem wcH_count_iter (ws : List Int) (sv siv : Int) (i : Nat)
     (dead : Heap)
     (na : Nat) (ch : Choices)
@@ -327,36 +69,34 @@ private theorem wcH_count_iter (ws : List Int) (sv siv : Int) (i : Nat)
   have hcnt : cnt (countsFold (ws.take i)) (ws.getD i 0) + 1 < 2 ^ 64 := by
     have := cnt_take_le (ws := ws) (i := i) (ws.getD i 0)
     omega
-  have h := wcIter_generic (σH ws.length sv siv ws) ws 4 12 16 headCH cmpContCH
-    postBodyKH env3H u1EnvH uEnvH
+  have h := mapCountIter_at "words" (σH ws.length sv siv ws)
+    (wcSeed ws 1 [] 2)
+    (fun kvs iv => frontH ws.length sv siv ws kvs iv false) ws 4 12 16
+    headCH cmpContCH postBodyKH env3H u1EnvH uEnvH
+    (fun _ _ _ _ => rfl)
+    (fun kvs iv x hx =>
+      lookup_frontH_none ws.length sv siv ws kvs iv false hx)
+    (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ _ _ => rfl)
+    (fun _ => rfl) (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)
     (fun kvs iv dead na ch => wcH_segC1_raw ws.length sv siv ws kvs iv dead na ch)
-    (wcH_init1 ws sv siv)
     (fun kvs iv dead na₀ na ch =>
       wcH_segC2_raw ws.length sv siv ws kvs iv dead na₀ na ch)
-    (wcH_st1 ws sv siv)
     (fun kvs iv dead na₀ na ch =>
       wcH_segC3_raw ws.length sv siv ws kvs iv dead na₀ na ch)
-    (wcH_init2 ws sv siv)
     (fun kvs iv dead na₀ na ch =>
       wcH_segC4_raw ws.length sv siv ws kvs iv dead na₀ na ch)
-    (wcH_read ws sv siv)
     (fun kvs iv dead na₀ na w ch =>
       wcH_segC5_raw ws.length sv siv ws kvs iv dead na₀ na w ch)
-    (wcH_st2 ws sv siv)
     (fun kvs iv dead na₀ na ch =>
       wcH_segC6_raw ws.length sv siv ws kvs iv dead na₀ na ch)
-    (wcH_var1 ws sv siv)
-    (wcH_var2 ws sv siv)
     (fun kvs iv dead na₀ na ch =>
       wcH_segC7_raw ws.length sv siv ws kvs iv dead na₀ na ch)
     (fun kvs iv dead na₀ na w ch =>
       wcH_segC8_raw ws.length sv siv ws kvs iv dead na₀ na w ch)
     (fun kvs iv dead na₀ na w ch =>
       wcH_segC9_raw ws.length sv siv ws kvs iv dead na₀ na w ch)
-    (wcH_mapGet ws sv siv)
     (fun kvs iv dead na₀ na w cv ch =>
       wcH_segC10_raw ws.length sv siv ws kvs iv dead na₀ na w cv ch)
-    (wcH_mapAsgn ws sv siv)
     (fun kvs iv dead na₀ na ch =>
       wcH_segC11_raw ws.length sv siv ws kvs iv dead na₀ na ch)
     (countsFold (ws.take i)) i dead na ch hi hw.1 hw.2 hcnt hna hdead
@@ -450,9 +190,9 @@ private theorem wcH_snap (ws : List Int) (sv siv : Int) :
 /-- **The counting loop**, by strong induction on the remaining word
 count: from the exit-test delivery at word `i`, the run reaches the
 RANGE HEAD over the snapshot of the full counts, with `best` zeroed at
-address `na + 2·(L - i)`, within `84·(L-i) + 23` steps — INSTANTIATED
-from the placement-generic `wcLoop_generic` (consolidation slice
-2026-08-13). -/
+address `na + 2·(L - i)`, within `84·(L-i) + 23` steps — the kit's
+`MapLoops.mapCountLoop_generic` plus this placement's own 23-step exit
+tower (GAP-C1 closure, 2026-08-15). -/
 private theorem wcH_count_loop (ws : List Int) (sv siv : Int)
     (hws : ∀ v ∈ ws, 0 ≤ v ∧ v < 2 ^ 64) (hlen : ws.length < 2 ^ 63) :
     ∀ (n i : Nat), n = ws.length - i → i ≤ ws.length →
@@ -472,25 +212,42 @@ private theorem wcH_count_loop (ws : List Int) (sv siv : Int)
             σH ws.length sv siv ws (countsFold ws) (ws.length : Int) false tail
               (na + 2 * n + 1), ch) := by
   intro n i hn hi dead na hna hdead ch
-  obtain ⟨k, tail, hk, htail, hbest, hrun⟩ :=
-    wcLoop_generic (σH ws.length sv siv ws) ws 4 12 16 headCH cmpContCH frameKH
-      env2H envR0H envRBH kRH hlen
+  obtain ⟨tail₀, htail₀, hrun₀⟩ :=
+    mapCountLoop_generic (σH ws.length sv siv ws) ws 4 12 16 headCH
+      cmpContCH env2H hlen
       (fun i dead na ch hi hna hdead =>
         wcH_count_iter ws sv siv i dead na ch hws hlen hi hna hdead)
       (fun kvs iv dead na ch =>
         wcH_segA1_raw ws.length sv siv ws kvs iv dead na ch)
-      (fun kvs iv dead na ch =>
-        wcH_segX0_raw ws.length sv siv ws kvs iv dead na ch)
-      (wcH_initBest ws sv siv)
-      (fun kvs iv dead B na ch =>
-        wcH_segX0b_raw ws.length sv siv ws kvs iv dead B na ch)
-      (wcH_stBest ws sv siv)
-      (fun kvs iv dead B na ch =>
-        wcH_segX0c_raw ws.length sv siv ws kvs iv dead B na ch)
-      (wcH_snap ws sv siv)
-      (countsFold_norm ws hws hlen)
       n i hn hi dead na hna hdead ch
-  exact ⟨k, tail, hk, htail, hbest, hrun⟩
+  -- the exit tower: 23 steps, `best` allocated at `na + 2·n`
+  have hX := wcH_segX0_raw ws.length sv siv ws (countsFold ws)
+    ((ws.length : Nat) : Int) tail₀ (na + 2 * n) ch
+  have hIB := wcH_initBest ws sv siv (countsFold ws)
+    ((ws.length : Nat) : Int) tail₀ (na + 2 * n) ch (by omega) htail₀
+  have h1 := stepFnIter_chain hX (stepFnIter_one hIB)
+  have hXb := wcH_segX0b_raw ws.length sv siv ws (countsFold ws)
+    ((ws.length : Nat) : Int) (tail₀ ++ [(.base ⟨na + 2 * n⟩, u64cell 0)])
+    (na + 2 * n) (na + 2 * n + 1) ch
+  have h2 := stepFnIter_chain h1 hXb
+  have hSB := wcH_stBest ws sv siv (countsFold ws) ((ws.length : Nat) : Int)
+    tail₀ (na + 2 * n) (na + 2 * n + 1) ch (by omega) htail₀
+  have h3 := stepFnIter_chain h2 (stepFnIter_one hSB)
+  have hXc := wcH_segX0c_raw ws.length sv siv ws (countsFold ws)
+    ((ws.length : Nat) : Int) (tail₀ ++ [(.base ⟨na + 2 * n⟩, u64cell 0)])
+    (na + 2 * n) (na + 2 * n + 1) ch
+  have h4 := stepFnIter_chain h3 hXc
+  have hSn := wcH_snap ws sv siv (countsFold ws) ((ws.length : Nat) : Int)
+    (tail₀ ++ [(.base ⟨na + 2 * n⟩, u64cell 0)]) (na + 2 * n)
+    (na + 2 * n + 1) ch (countsFold_norm ws hws hlen)
+  have h5 := stepFnIter_chain h4 (stepFnIter_one hSn)
+  refine ⟨84 * n + 23, tail₀ ++ [(.base ⟨na + 2 * n⟩, u64cell 0)],
+    Nat.le_refl _, ?_, ?_, ?_⟩
+  · intro x hx
+    exact DeadFrom.push (c := u64cell 0) htail₀ x (by omega)
+  · rw [lookup_append_right (htail₀ (na + 2 * n) (Nat.le_refl _))]
+    exact lookup_singleton_self
+  · exact stepFnIter_chain hrun₀ h5
 
 /-! ### The HARNESS placement's range-loop discharges + wrapper -/
 

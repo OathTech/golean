@@ -116,7 +116,8 @@ asserted: at the seal date every name has ≥3 external consumers
 `private`. The API groups, which consumers may depend on:
 
 * heap reasoning at a symbolic split (P11): `lookup_append_left`,
-  `lookup_append_right`, `set_append_right`, `set_fresh`,
+  `lookup_append_right`, `set_append_left`, `set_append_right`,
+  `set_fresh`,
   `base_beq_false`, `lookup_cons_ne`, `set_singleton_self`,
   `lookup_singleton_self`, and the dead-tail freshness predicate
   `DeadFrom` with `DeadFrom.push` / `DeadFrom.push2` (Gallery
@@ -197,6 +198,25 @@ theorem set_append_right {h₁ h₂ : Heap} {l : Loc} {c : HeapCell}
       simp only [Heap.lookup] at h
       cases hb : (k == l) with
       | true => simp [hb] at h
+      | false =>
+          rw [hb] at h
+          simp only [List.cons_append, Heap.set, hb, Bool.false_eq_true,
+            if_false]
+          exact congrArg _ (ih h)
+
+/-- Setting a location present in the left part stays in the left part
+(the mirror of `set_append_right`; GAP-C1/R1 lift, 2026-08-15 —
+formerly a private copy in wordcount's `RangeGeneric` shard). -/
+theorem set_append_left {h₁ h₂ : Heap} {l : Loc} {c₀ c : HeapCell}
+    (h : Heap.lookup h₁ l = some c₀) :
+    Heap.set (h₁ ++ h₂) l c = Heap.set h₁ l c ++ h₂ := by
+  induction h₁ with
+  | nil => cases h
+  | cons p rest ih =>
+      obtain ⟨k, c'⟩ := p
+      simp only [Heap.lookup] at h
+      cases hb : (k == l) with
+      | true => simp [Heap.set, hb]
       | false =>
           rw [hb] at h
           simp only [List.cons_append, Heap.set, hb, Bool.false_eq_true,

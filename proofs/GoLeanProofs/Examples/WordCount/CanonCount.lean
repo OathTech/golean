@@ -5,7 +5,8 @@ import GoLeanProofs.StepKit
 import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Frame.RenameId
 import GoLeanProofs.Laws.StmtOps
-import GoLeanProofs.Examples.WordCount.CountGeneric
+import GoLeanProofs.MapLoops
+import GoLeanProofs.Examples.WordCount.Machine
 
 /-!
 # WordCount — CanonCount
@@ -24,6 +25,7 @@ namespace GoLean.Examples.WordCount
 open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.Surface
 open GoLean.SliceMem
 open GoLean.MapMem
+open GoLean.MapLoops
 
 set_option maxRecDepth 1000000
 set_option maxHeartbeats 2000000
@@ -306,283 +308,21 @@ private theorem wc_segC11_raw (L : Nat) (ws : List Int)
 -- `open GoLean.MapMem` — the local copies were deleted in the GAP-P1
 -- closure.)
 
-/-! ## The canonical placement's discharge lemmas (the generic layer's
-hypotheses at `S := σC ws.length ws`; every statement pins the full
-transition — the E-form made structural) -/
+/-! ## The canonical placement, via the kit's bundled iteration
 
-private theorem wcC_init1 (ws : List Int) :
-    ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (na : Nat)
-      (ch : Choices), 9 ≤ na → DeadFrom dead na →
-    stepFn (σC ws.length ws kvs iv false dead na)
-        (.exec (.initialization { id := "$c1", typ := tMap }) env3
-          (.seq [asgnC1, seqnC2, mapAsgnStmt] env3 postBodyK)) ch
-      = .ok (.next (.seq [asgnC1, seqnC2, mapAsgnStmt] (u1Env na) postBodyK),
-          σC ws.length ws kvs iv false (dead ++ [(.base ⟨na⟩, nilMapCell)])
-            (na + 1), ch) := by
-  intro kvs iv dead na ch hna hdead
-  have hmiss : Heap.lookup
-      (frontC ws.length ws kvs iv false ++ dead) (.base ⟨na⟩) = none := by
-    rw [lookup_append_right (lookup_frontC_none ws.length ws kvs iv false
-      hna)]
-    exact hdead na (Nat.le_refl na)
-  have h := stepFn_init_seq (σ := σC ws.length ws kvs iv false dead na)
-    (p := { id := "$c1", typ := tMap })
-    (rest := [asgnC1, seqnC2, mapAsgnStmt]) (env := env3) (k := postBodyK)
-    (ch := ch) (v := .map ⟨none⟩)
-    (by simp [defaultValue, defaultValueFuel, typeResolutionFuel])
-  rw [show (σC ws.length ws kvs iv false dead na).nextAddr = na from rfl,
-    show (σC ws.length ws kvs iv false dead na).heap
-      = frontC ws.length ws kvs iv false ++ dead from rfl,
-    set_fresh hmiss, List.append_assoc] at h
-  exact h
-
-private theorem wcC_st1 (ws : List Int) :
-    ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (na₀ na : Nat)
-      (ch : Choices), 9 ≤ na₀ → DeadFrom dead na₀ →
-    stepFn (σC ws.length ws kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, nilMapCell)]) na)
-        (.next (.storeK [.chain (.addr (.base ⟨na₀⟩)) [] []]
-          [.map ⟨some (.base ⟨5⟩)⟩] (.seqn #[]) (u1Env na₀)
-          (.seq [seqnC2, mapAsgnStmt] (u1Env na₀) postBodyK))) ch
-      = .ok (.next (.storeK [] [] (.seqn #[]) (u1Env na₀)
-            (.seq [seqnC2, mapAsgnStmt] (u1Env na₀) postBodyK)),
-          σC ws.length ws kvs iv false (dead ++ [(.base ⟨na₀⟩, mhCell)]) na,
-          ch) := by
-  intro kvs iv dead na₀ na ch hna hdead
-  have hlook : Heap.lookup
-      (σC ws.length ws kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, nilMapCell)]) na).heap
-      (.base ⟨na₀⟩) = some ⟨some tMap, .map ⟨none⟩⟩ := by
-    show Heap.lookup
-      (frontC ws.length ws kvs iv false
-        ++ (dead ++ [(.base ⟨na₀⟩, nilMapCell)]))
-      (.base ⟨na₀⟩) = some ⟨some tMap, .map ⟨none⟩⟩
-    rw [lookup_append_right (lookup_frontC_none ws.length ws kvs iv false
-        hna),
-      lookup_append_right (hdead na₀ (Nat.le_refl na₀))]
-    exact lookup_singleton_self
-  have h := storeTarget_addr (v := .map ⟨some (.base ⟨5⟩)⟩)
-    (v' := .map ⟨some (.base ⟨5⟩)⟩) hlook
-    (by simp [normalizeValueForTy, normalizeValueForTyFuel,
-      typeResolutionFuel])
-  rw [show (σC ws.length ws kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, nilMapCell)]) na).heap
-      = frontC ws.length ws kvs iv false
-        ++ (dead ++ [(.base ⟨na₀⟩, nilMapCell)]) from rfl,
-    set_append_right (lookup_frontC_none ws.length ws kvs iv false hna),
-    set_append_right (hdead na₀ (Nat.le_refl na₀)),
-    set_singleton_self] at h
-  exact stepFn_store_step h
-
-private theorem wcC_init2 (ws : List Int) :
-    ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (na₀ : Nat)
-      (ch : Choices), 9 ≤ na₀ → DeadFrom dead na₀ →
-    stepFn (σC ws.length ws kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, mhG 5)]) (na₀ + 1))
-        (.exec (.initialization { id := "$c2", typ := tU64 }) (u1Env na₀)
-          (.seq [.assign (.var "$c2")
-              (.indexGet (.var "words") (.var "i")), mapAsgnStmt]
-            (u1Env na₀) postBodyK)) ch
-      = .ok (.next (.seq [.assign (.var "$c2")
-            (.indexGet (.var "words") (.var "i")), mapAsgnStmt]
-            (uEnv na₀) postBodyK),
-          σC ws.length ws kvs iv false
-            (dead ++ [(.base ⟨na₀⟩, mhG 5), (.base ⟨na₀ + 1⟩, u64cell 0)])
-            (na₀ + 2), ch) := by
-  intro kvs iv dead na₀ ch hna hdead
-  have hmiss : Heap.lookup
-      (frontC ws.length ws kvs iv false ++ (dead ++ [(.base ⟨na₀⟩, mhG 5)]))
-      (.base ⟨na₀ + 1⟩) = none := by
-    rw [lookup_append_right
-        (lookup_frontC_none ws.length ws kvs iv false (by omega)),
-      lookup_append_right (hdead (na₀ + 1) (by omega)),
-      lookup_cons_ne (base_beq_false (by omega : na₀ ≠ na₀ + 1))]
-    rfl
-  have h := stepFn_init_seq
-    (σ := σC ws.length ws kvs iv false (dead ++ [(.base ⟨na₀⟩, mhG 5)])
-      (na₀ + 1))
-    (p := { id := "$c2", typ := tU64 })
-    (rest := [.assign (.var "$c2")
-      (.indexGet (.var "words") (.var "i")), mapAsgnStmt])
-    (env := u1Env na₀) (k := postBodyK) (ch := ch)
-    (v := .int 0 .uint64)
-    (by simp [defaultValue, defaultValueFuel, typeResolutionFuel])
-  rw [show (σC ws.length ws kvs iv false (dead ++ [(.base ⟨na₀⟩, mhG 5)])
-        (na₀ + 1)).nextAddr = na₀ + 1 from rfl,
-    show (σC ws.length ws kvs iv false (dead ++ [(.base ⟨na₀⟩, mhG 5)])
-        (na₀ + 1)).heap
-      = frontC ws.length ws kvs iv false ++ (dead ++ [(.base ⟨na₀⟩, mhG 5)])
-      from rfl,
-    set_fresh hmiss, List.append_assoc, List.append_assoc] at h
-  exact h
-
-private theorem wcC_st2 (ws : List Int) :
-    ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (na₀ na : Nat)
-      (w : Int) (ch : Choices), 0 ≤ w → w < 2 ^ 64 →
-      9 ≤ na₀ → DeadFrom dead na₀ →
-    stepFn (σC ws.length ws kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, mhG 5), (.base ⟨na₀ + 1⟩, u64cell 0)]) na)
-        (.next (.storeK [.chain (.addr (.base ⟨na₀ + 1⟩)) [] []]
-          [.int w .uint64] (.seqn #[]) (uEnv na₀)
-          (.seq [mapAsgnStmt] (uEnv na₀) postBodyK))) ch
-      = .ok (.next (.storeK [] [] (.seqn #[]) (uEnv na₀)
-            (.seq [mapAsgnStmt] (uEnv na₀) postBodyK)),
-          σC ws.length ws kvs iv false
-            (dead ++ [(.base ⟨na₀⟩, mhG 5), (.base ⟨na₀ + 1⟩, u64cell w)])
-            na, ch) := by
-  intro kvs iv dead na₀ na w ch hw0 hw64 hna hdead
-  have hwnorm : IntKind.normalize .uint64 w = w := unorm_of_range hw0 hw64
-  have hlook : Heap.lookup
-      (σC ws.length ws kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, mhG 5), (.base ⟨na₀ + 1⟩, u64cell 0)])
-        na).heap
-      (.base ⟨na₀ + 1⟩) = some ⟨some tU64, .int 0 .uint64⟩ := by
-    show Heap.lookup
-      (frontC ws.length ws kvs iv false
-        ++ (dead ++ ([(.base ⟨na₀⟩, mhG 5)]
-          ++ [(.base ⟨na₀ + 1⟩, u64cell 0)])))
-      (.base ⟨na₀ + 1⟩) = some ⟨some tU64, .int 0 .uint64⟩
-    rw [lookup_append_right
-        (lookup_frontC_none ws.length ws kvs iv false (by omega)),
-      lookup_append_right (hdead (na₀ + 1) (by omega)),
-      lookup_append_right (show Heap.lookup [(.base ⟨na₀⟩, mhG 5)]
-          (.base ⟨na₀ + 1⟩) = none from by
-        rw [lookup_cons_ne (base_beq_false (by omega : na₀ ≠ na₀ + 1))]
-        rfl)]
-    exact lookup_singleton_self
-  have h := storeTarget_addr (v := .int w .uint64) (v' := .int w .uint64)
-    hlook
-    (by
-      simp only [normalizeValueForTy, normalizeValueForTyFuel,
-        typeResolutionFuel]
-      rw [hwnorm]
-      rfl)
-  rw [show (σC ws.length ws kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, mhG 5), (.base ⟨na₀ + 1⟩, u64cell 0)])
-        na).heap
-      = frontC ws.length ws kvs iv false
-        ++ (dead ++ ([(.base ⟨na₀⟩, mhG 5)]
-          ++ [(.base ⟨na₀ + 1⟩, u64cell 0)])) from rfl,
-    set_append_right (lookup_frontC_none ws.length ws kvs iv false
-      (by omega)),
-    set_append_right (hdead (na₀ + 1) (by omega)),
-    set_append_right (show Heap.lookup [(.base ⟨na₀⟩, mhG 5)]
-        (.base ⟨na₀ + 1⟩) = none from by
-      rw [lookup_cons_ne (base_beq_false (by omega : na₀ ≠ na₀ + 1))]
-      rfl),
-    set_singleton_self] at h
-  exact stepFn_store_step h
-
-private theorem wcC_lk1 (ws : List Int) (kvs : List (Int × Nat)) (iv w : Int)
-    (dead : Heap) (na₀ na : Nat) (hna : 9 ≤ na₀) (hdead : DeadFrom dead na₀) :
-    Heap.lookup (σC ws.length ws kvs iv false
-      (dead ++ [(.base ⟨na₀⟩, mhG 5), (.base ⟨na₀ + 1⟩, u64cell w)]) na).heap
-      (.base ⟨na₀⟩) = some mhCell := by
-  show Heap.lookup
-    (frontC ws.length ws kvs iv false
-      ++ (dead ++ ([(.base ⟨na₀⟩, mhCell)]
-        ++ [(.base ⟨na₀ + 1⟩, u64cell w)])))
-    (.base ⟨na₀⟩) = some mhCell
-  rw [lookup_append_right (lookup_frontC_none ws.length ws kvs iv false hna),
-    lookup_append_right (hdead na₀ (Nat.le_refl na₀))]
-  exact lookup_append_left lookup_singleton_self
-
-private theorem wcC_lk2 (ws : List Int) (kvs : List (Int × Nat)) (iv w : Int)
-    (dead : Heap) (na₀ na : Nat) (hna : 9 ≤ na₀) (hdead : DeadFrom dead na₀) :
-    Heap.lookup (σC ws.length ws kvs iv false
-      (dead ++ [(.base ⟨na₀⟩, mhG 5), (.base ⟨na₀ + 1⟩, u64cell w)]) na).heap
-      (.base ⟨na₀ + 1⟩) = some (u64cell w) := by
-  show Heap.lookup
-    (frontC ws.length ws kvs iv false
-      ++ (dead ++ ([(.base ⟨na₀⟩, mhCell)]
-        ++ [(.base ⟨na₀ + 1⟩, u64cell w)])))
-    (.base ⟨na₀ + 1⟩) = some (u64cell w)
-  rw [lookup_append_right
-      (lookup_frontC_none ws.length ws kvs iv false (by omega)),
-    lookup_append_right (hdead (na₀ + 1) (by omega)),
-    lookup_append_right (show Heap.lookup [(.base ⟨na₀⟩, mhCell)]
-        (.base ⟨na₀ + 1⟩) = none from by
-      rw [lookup_cons_ne (base_beq_false (by omega : na₀ ≠ na₀ + 1))]
-      rfl)]
-  exact lookup_singleton_self
-
-private theorem wcC_var1 (ws : List Int) :
-    ∀ (kvs : List (Int × Nat)) (iv w : Int) (dead : Heap) (na₀ na : Nat)
-      (k : Cont) (ch : Choices), 9 ≤ na₀ → DeadFrom dead na₀ →
-    stepFn (σC ws.length ws kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, mhG 5), (.base ⟨na₀ + 1⟩, u64cell w)]) na)
-        (.evalE (.var "$c1") (uEnv na₀) k) ch
-      = .ok (.retV (.map ⟨some (.base ⟨5⟩)⟩) k,
-          σC ws.length ws kvs iv false
-            (dead ++ [(.base ⟨na₀⟩, mhG 5), (.base ⟨na₀ + 1⟩, u64cell w)])
-            na, ch) := by
-  intro kvs iv w dead na₀ na k ch hna hdead
-  exact stepFn_var rfl (wcC_lk1 ws kvs iv w dead na₀ na hna hdead)
-
-private theorem wcC_var2 (ws : List Int) :
-    ∀ (kvs : List (Int × Nat)) (iv w : Int) (dead : Heap) (na₀ na : Nat)
-      (k : Cont) (ch : Choices), 9 ≤ na₀ → DeadFrom dead na₀ →
-    stepFn (σC ws.length ws kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, mhG 5), (.base ⟨na₀ + 1⟩, u64cell w)]) na)
-        (.evalE (.var "$c2") (uEnv na₀) k) ch
-      = .ok (.retV (.int w .uint64) k,
-          σC ws.length ws kvs iv false
-            (dead ++ [(.base ⟨na₀⟩, mhG 5), (.base ⟨na₀ + 1⟩, u64cell w)])
-            na, ch) := by
-  intro kvs iv w dead na₀ na k ch hna hdead
-  exact stepFn_var rfl (wcC_lk2 ws kvs iv w dead na₀ na hna hdead)
-
-private theorem wcC_read (ws : List Int) :
-    ∀ (kvs : List (Int × Nat)) (i : Nat) (dead : Heap) (na : Nat),
-      i < ws.length →
-    applyStrictOp (σC ws.length ws kvs ((i : Nat) : Int) false dead na)
-        .indexGet [wsHG 1 ws.length, .int ((i : Nat) : Int) .int]
-      = .ok (.int (ws.getD i 0) .uint64,
-          σC ws.length ws kvs ((i : Nat) : Int) false dead na) := by
-  intro kvs i dead na hi
-  have hget : (⟨ws.map (fun v => .int v .uint64)⟩ : Array GoValue)[0 + i]?
-      = some (.int (ws.getD i 0) .uint64) := by
-    rw [Nat.zero_add, getElem?_mapU ws i hi]
-  exact applyStrictOp_indexGet_slice (dty := some (.array ws.length tU64))
-    (off := 0) (len := ws.length) (cap := ws.length) (ik := .int) rfl
-    (Nat.le_refl ws.length) hi hget
-
-private theorem wcC_mapGet (ws : List Int) :
-    ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (na : Nat)
-      (w : Int), 0 ≤ w → w < 2 ^ 64 →
-    applyStrictOp (σC ws.length ws kvs iv false dead na) (.mapGet tU64 tU64)
-        [.map ⟨some (.base ⟨5⟩)⟩, .int w .uint64]
-      = .ok (.int (cnt kvs w : Int) .uint64,
-          σC ws.length ws kvs iv false dead na) := by
-  intro kvs iv dead na w hw0 hw64
-  exact applyStrictOp_mapGet (a := ⟨5⟩) (dty := none) rfl
-    (unorm_of_range hw0 hw64)
-
-private theorem wcC_mapAsgn (ws : List Int) :
-    ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (na₀ na : Nat)
-      (w : Int) (v : Nat) (ch : Choices), 0 ≤ w → w < 2 ^ 64 → v < 2 ^ 64 →
-    stepFn (σC ws.length ws kvs iv false dead na)
-        (.retV (.int ((v : Nat) : Int) .uint64)
-          (.stmtOpK (.mapAssign tU64 tU64) 0
-            [.int w .uint64, .map ⟨some (.base ⟨5⟩)⟩] []
-            (uEnv na₀) (.seq [] (uEnv na₀) postBodyK))) ch
-      = .ok (.next (.seq [] (uEnv na₀) postBodyK),
-          σC ws.length ws (setk kvs w v) iv false dead na, ch) := by
-  intro kvs iv dead na₀ na w v ch hw0 hw64 hv
-  have hMA := mapAssignValue_toEntries (a := ⟨5⟩)
-    (σ := σC ws.length ws kvs iv false dead na)
-    (v := v) rfl (unorm_of_range hw0 hw64)
-    (unorm_of_range (by omega) (by exact_mod_cast hv))
-  rw [show Heap.set (σC ws.length ws kvs iv false dead na).heap (.base ⟨5⟩)
-      ⟨none, .mapData (toEntries (setk kvs w v))⟩
-      = frontC ws.length ws (setk kvs w v) iv false ++ dead from rfl] at hMA
-  exact stepFn_mapAssign_apply hMA
+GAP-C1 CLOSED (kit-gap closure, 2026-08-15): the conditioned
+discharges this shard carried (`wcC_init1`/`wcC_st1`/`wcC_init2`/
+`wcC_st2`/`wcC_lk1`/`wcC_lk2`/`wcC_var1`/`wcC_var2`/`wcC_read`/
+`wcC_mapGet`/`wcC_mapAsgn`, ~270 lines) are DELETED — the kit's
+`MapLoops.mapCountIter_at` constructs them from nine placement facts,
+every one of which is a `rfl` here except the front-freshness lemma
+(`lookup_frontC_none`, kept above). -/
 
 /-- **One counting iteration** (exit test true at word `i`): the map
 data cell advances from the counts of `ws.take i` to those of
 `ws.take (i+1)`; two fresh dead cells land at `na`, `na + 1`. 53
-steps — INSTANTIATED from the placement-generic `wcIter_generic`
-(consolidation slice 2026-08-13). -/
+steps — via the kit's bundled `MapLoops.mapCountIter_at` (GAP-C1
+closure, 2026-08-15). -/
 private theorem wc_count_iter (ws : List Int) (i : Nat) (dead : Heap)
     (na : Nat) (ch : Choices)
     (hws : ∀ v ∈ ws, 0 ≤ v ∧ v < 2 ^ 64) (hlen : ws.length < 2 ^ 63)
@@ -599,36 +339,32 @@ private theorem wc_count_iter (ws : List Int) (i : Nat) (dead : Heap)
   have hcnt : cnt (countsFold (ws.take i)) (ws.getD i 0) + 1 < 2 ^ 64 := by
     have := cnt_take_le (ws := ws) (i := i) (ws.getD i 0)
     omega
-  have h := wcIter_generic (σC ws.length ws) ws 1 5 9 headC cmpContC
-    postBodyK env3 u1Env uEnv
+  have h := mapCountIter_at "words" (σC ws.length ws) (wcSeed ws 1 [] 2)
+    (fun kvs iv => frontC ws.length ws kvs iv false) ws 1 5 9
+    headC cmpContC postBodyK env3 u1Env uEnv
+    (fun _ _ _ _ => rfl)
+    (fun kvs iv x hx => lookup_frontC_none ws.length ws kvs iv false hx)
+    (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ _ _ => rfl)
+    (fun _ => rfl) (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)
     (fun kvs iv dead na ch => wc_segC1_raw ws.length ws kvs iv dead na ch)
-    (wcC_init1 ws)
     (fun kvs iv dead na₀ na ch =>
       wc_segC2_raw ws.length ws kvs iv dead na₀ na ch)
-    (wcC_st1 ws)
     (fun kvs iv dead na₀ na ch =>
       wc_segC3_raw ws.length ws kvs iv dead na₀ na ch)
-    (wcC_init2 ws)
     (fun kvs iv dead na₀ na ch =>
       wc_segC4_raw ws.length ws kvs iv dead na₀ na ch)
-    (wcC_read ws)
     (fun kvs iv dead na₀ na w ch =>
       wc_segC5_raw ws.length ws kvs iv dead na₀ na w ch)
-    (wcC_st2 ws)
     (fun kvs iv dead na₀ na ch =>
       wc_segC6_raw ws.length ws kvs iv dead na₀ na ch)
-    (wcC_var1 ws)
-    (wcC_var2 ws)
     (fun kvs iv dead na₀ na ch =>
       wc_segC7_raw ws.length ws kvs iv dead na₀ na ch)
     (fun kvs iv dead na₀ na w ch =>
       wc_segC8_raw ws.length ws kvs iv dead na₀ na w ch)
     (fun kvs iv dead na₀ na w ch =>
       wc_segC9_raw ws.length ws kvs iv dead na₀ na w ch)
-    (wcC_mapGet ws)
     (fun kvs iv dead na₀ na w cv ch =>
       wc_segC10_raw ws.length ws kvs iv dead na₀ na w cv ch)
-    (wcC_mapAsgn ws)
     (fun kvs iv dead na₀ na ch =>
       wc_segC11_raw ws.length ws kvs iv dead na₀ na ch)
     (countsFold (ws.take i)) i dead na ch hi hw.1 hw.2 hcnt hna hdead
@@ -800,9 +536,11 @@ private theorem wcC_snap (ws : List Int) :
 /-- **The counting loop**, by strong induction on the remaining word
 count: from the exit-test delivery at word `i`, the run reaches the
 RANGE HEAD over the snapshot of the full counts, with `best` zeroed at
-address `na + 2·(L - i)`, within `84·(L-i) + 23` steps — INSTANTIATED
-from the placement-generic `wcLoop_generic` (consolidation slice
-2026-08-13). -/
+address `na + 2·(L - i)`, within `84·(L-i) + 23` steps — the kit's
+`MapLoops.mapCountLoop_generic` (exactly `84·(L−i)` to the false test)
+plus this placement's own 23-step exit tower (GAP-C1 closure,
+2026-08-15: the exit is deliberately example-side — histogram's exit
+differs). -/
 theorem wc_count_loop (ws : List Int)
     (hws : ∀ v ∈ ws, 0 ≤ v ∧ v < 2 ^ 64) (hlen : ws.length < 2 ^ 63) :
     ∀ (n i : Nat), n = ws.length - i → i ≤ ws.length →
@@ -822,25 +560,41 @@ theorem wc_count_loop (ws : List Int)
             σC ws.length ws (countsFold ws) (ws.length : Int) false tail
               (na + 2 * n + 1), ch) := by
   intro n i hn hi dead na hna hdead ch
-  obtain ⟨k, tail, hk, htail, hbest, hrun⟩ :=
-    wcLoop_generic (σC ws.length ws) ws 1 5 9 headC cmpContC frameK
-      env2 envR0 envRB kR hlen
+  obtain ⟨tail₀, htail₀, hrun₀⟩ :=
+    mapCountLoop_generic (σC ws.length ws) ws 1 5 9 headC cmpContC env2 hlen
       (fun i dead na ch hi hna hdead =>
         wc_count_iter ws i dead na ch hws hlen hi hna hdead)
       (fun kvs iv dead na ch =>
         wc_segA1_raw ws.length ws kvs iv dead na ch)
-      (fun kvs iv dead na ch =>
-        wc_segX0_raw ws.length ws kvs iv dead na ch)
-      (wcC_initBest ws)
-      (fun kvs iv dead B na ch =>
-        wc_segX0b_raw ws.length ws kvs iv dead B na ch)
-      (wcC_stBest ws)
-      (fun kvs iv dead B na ch =>
-        wc_segX0c_raw ws.length ws kvs iv dead B na ch)
-      (wcC_snap ws)
-      (countsFold_norm ws hws hlen)
       n i hn hi dead na hna hdead ch
-  exact ⟨k, tail, hk, htail, hbest, hrun⟩
+  -- the exit tower: 23 steps, `best` allocated at `na + 2·n`
+  have hX := wc_segX0_raw ws.length ws (countsFold ws)
+    ((ws.length : Nat) : Int) tail₀ (na + 2 * n) ch
+  have hIB := wcC_initBest ws (countsFold ws) ((ws.length : Nat) : Int)
+    tail₀ (na + 2 * n) ch (by omega) htail₀
+  have h1 := stepFnIter_chain hX (stepFnIter_one hIB)
+  have hXb := wc_segX0b_raw ws.length ws (countsFold ws)
+    ((ws.length : Nat) : Int) (tail₀ ++ [(.base ⟨na + 2 * n⟩, u64cell 0)])
+    (na + 2 * n) (na + 2 * n + 1) ch
+  have h2 := stepFnIter_chain h1 hXb
+  have hSB := wcC_stBest ws (countsFold ws) ((ws.length : Nat) : Int)
+    tail₀ (na + 2 * n) (na + 2 * n + 1) ch (by omega) htail₀
+  have h3 := stepFnIter_chain h2 (stepFnIter_one hSB)
+  have hXc := wc_segX0c_raw ws.length ws (countsFold ws)
+    ((ws.length : Nat) : Int) (tail₀ ++ [(.base ⟨na + 2 * n⟩, u64cell 0)])
+    (na + 2 * n) (na + 2 * n + 1) ch
+  have h4 := stepFnIter_chain h3 hXc
+  have hSn := wcC_snap ws (countsFold ws) ((ws.length : Nat) : Int)
+    (tail₀ ++ [(.base ⟨na + 2 * n⟩, u64cell 0)]) (na + 2 * n)
+    (na + 2 * n + 1) ch (countsFold_norm ws hws hlen)
+  have h5 := stepFnIter_chain h4 (stepFnIter_one hSn)
+  refine ⟨84 * n + 23, tail₀ ++ [(.base ⟨na + 2 * n⟩, u64cell 0)],
+    Nat.le_refl _, ?_, ?_, ?_⟩
+  · intro x hx
+    exact DeadFrom.push (c := u64cell 0) htail₀ x (by omega)
+  · rw [lookup_append_right (htail₀ (na + 2 * n) (Nat.le_refl _))]
+    exact lookup_singleton_self
+  · exact stepFnIter_chain hrun₀ h5
 
 
 end GoLean.Examples.WordCount

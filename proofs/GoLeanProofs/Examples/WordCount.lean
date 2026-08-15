@@ -1,6 +1,5 @@
 import GoLeanProofs.Examples.WordCount.Pure
 import GoLeanProofs.Examples.WordCount.Machine
-import GoLeanProofs.Examples.WordCount.CountGeneric
 import GoLeanProofs.Examples.WordCount.CanonCount
 import GoLeanProofs.Examples.WordCount.RangeGeneric
 import GoLeanProofs.Examples.WordCount.CanonRange
@@ -72,8 +71,9 @@ Lean-side heap vocabulary. What THIS module ships against that form:
   `seed < 2^64` (the seed-wrap caveat stays refuted), returned value
   EXACTLY `(n+2)/3` via `wcFamily_maxMult`; `wordcount_readout_v1` is
   the derived D1 twin. Closed as the FIRST CONSUMER of the
-  placement-generic composition layer (`wcIter_generic`/
-  `wcLoop_generic`/`wcRange_generic` below): the compositions are
+  placement-generic composition layer (now the KIT's
+  `MapLoops.mapCountIter_at`/`mapCountLoop_generic` — GAP-C1 closure,
+  2026-08-15 — plus `wcRange_generic` below): the compositions are
   stated once over an abstract state family and instantiated at both
   the canonical and harness placements — the 2026-08-13 elaborator
   storm (diagnosed as exponential delta-fallback unification over
@@ -131,8 +131,7 @@ byte-identical to the pre-split module:
 |---|---|
 | `Pure` | the spec layer, the map-in-memory vocabulary, the counts algebra and the max fold |
 | `Machine` | canonical-placement machine configurations, `stepFn_pick`, `DeadFrom` |
-| `CountGeneric` | the placement-generic counting layer (`wcIter_generic`, `wcLoop_generic`) |
-| `CanonCount` | the canonical placement's counting segments and discharges |
+| `CanonCount` | the canonical placement's counting segments + the kit-instantiated loops (the generic layer moved to `GoLeanProofs/MapLoops.lean`, GAP-C1 closure 2026-08-15) |
 | `RangeGeneric` | the placement-generic range layer (`wcRange_generic`) |
 | `CanonRange` | the canonical placement's range discharges and `wc_range_loop` |
 | `Return` | the canonical return path (range exit → the driver terminal) |

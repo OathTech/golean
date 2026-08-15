@@ -2,6 +2,7 @@ import Lean
 import GoLeanProofs.StepKit
 import GoLeanProofs.SliceMem
 import GoLeanProofs.MapMem
+import GoLeanProofs.MapLoops
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.Examples.Fib
 import GoLeanProofs.Examples.Gcd
@@ -38,9 +39,10 @@ update the matching docstring in the same commit, with the reason.
 
 namespace GoLean.Iris.Audit
 
-/-! ## StepKit — the conditioned step-glue kit (25 public lemmas;
-+2 in the GAP-M2 lift, 2026-08-15: `DeadFrom.push`/`DeadFrom.push2` —
-`DeadFrom` itself is a def, unpinned like the other vocabulary defs) -/
+/-! ## StepKit — the conditioned step-glue kit (26 public lemmas;
++2 in the GAP-M2 lift and +1 (`set_append_left`) in the GAP-C1 lift,
+2026-08-15 — `DeadFrom` itself is a def, unpinned like the other
+vocabulary defs) -/
 
 /-- info: 'GoLean.Surface.lookup_append_left' depends on axioms: [propext] -/
 #guard_msgs in #print axioms GoLean.Surface.lookup_append_left
@@ -50,6 +52,8 @@ namespace GoLean.Iris.Audit
 #guard_msgs in #print axioms GoLean.Surface.set_append_right
 /-- info: 'GoLean.Surface.set_fresh' depends on axioms: [propext] -/
 #guard_msgs in #print axioms GoLean.Surface.set_fresh
+/-- info: 'GoLean.Surface.set_append_left' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Surface.set_append_left
 /-- info: 'GoLean.Surface.base_beq_false' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.base_beq_false
 /-- info: 'GoLean.Surface.lookup_cons_ne' depends on axioms: [propext] -/
@@ -183,6 +187,16 @@ vocabulary defs) -/
 #guard_msgs in #print axioms GoLean.MapMem.mapAssignValue_toEntries
 /-- info: 'GoLean.MapMem.snapshot_toEntries' depends on axioms: [propext] -/
 #guard_msgs in #print axioms GoLean.MapMem.snapshot_toEntries
+
+/-! ## MapLoops — the map-loop schemas (3 public lemmas; the GAP-C1
+lift, 2026-08-15) -/
+
+/-- info: 'GoLean.MapLoops.mapCountIter_generic' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.MapLoops.mapCountIter_generic
+/-- info: 'GoLean.MapLoops.mapCountIter_at' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.MapLoops.mapCountIter_at
+/-- info: 'GoLean.MapLoops.mapCountLoop_generic' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.MapLoops.mapCountLoop_generic
 
 /-! ## FuelMeasure — the termination/composition kit incl. the P5 iteration schema (18 public lemmas) -/
 
