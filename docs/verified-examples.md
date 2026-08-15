@@ -95,11 +95,14 @@ exhaustion.
   deletion test stopped being a thing we check by reading. Designation also
   puts them in front of the independent Comparator judge, which re-checks
   the proofs by kernel replay against these statements alone.
-  **The entries after the eighth — `histogram`, `powmod`, `dotprod`,
-  `kadane` and `dedup` — are NOT designated.** They were added by the gallery campaign (2026-08-15) and
-  designation is a separate, user-signed act at the end of that arc: both are
-  deliberately absent from `Examples/Targets.lean`, from `scripts/ci`'s
-  trusted-closure allowlist and from the Comparator judge's set. Their
+  **The five newest entries — `histogram`, `powmod`, `dotprod`,
+  `kadane` and `dedup` — are NOT designated.** (Those eight designated
+  headlines span seven example sections, because `fib` carries two of
+  them.) The five were added by the gallery campaign (2026-08-15), and
+  designation is a separate, user-signed act at the end of that arc: all
+  five are deliberately absent from `Examples/Targets.lean`, from
+  `scripts/ci`'s trusted-closure allowlist and from the Comparator
+  judge's set. Their
   deletion tests were therefore RUN by hand rather than by the gate —
   `lean_minimal_hypotheses` on `histogram_ok` (all four explicit binders
   load-bearing), on `powmod_ok` (all five), on `dotprod_ok` (all three),
