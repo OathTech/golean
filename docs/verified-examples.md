@@ -1,6 +1,6 @@
 # Verified examples — the gallery (2026-08-14)
 
-Eight Go programs, and for each one a GoLean theorem you can read.
+Nine Go programs, and for each one a GoLean theorem you can read.
 
 This file is the **object of agreement**: it exists so that a reader who is
 not a Lean expert can check, by eye, that the top-level statement really
@@ -124,7 +124,7 @@ exhaustion.
 
 `Choices` is the stream of nondeterministic decisions the machine consumes at
 points where Go does not promise an outcome. `∀ ch : Choices` says the claim
-holds at **every** such stream. For six of the eight examples this quantifier
+holds at **every** such stream. For seven of the nine examples this quantifier
 is cheap (their runs consume no choices). For word-count and histogram it
 does real work: `for … range` over a Go map consumes one choice per
 iteration, because Go deliberately does not fix map iteration order — so the
@@ -1290,6 +1290,198 @@ absent) and `harness-r-wrap` (`seed = q = 2^63 − 1`, the largest value the
 differential driver can pass — the `--arg` int64 ceiling is a *driver*
 limit, not a machine one, and it is why no row reaches the true uint64 wrap
 region).
+
+## palin — array palindrome check (two-index inward walk, early return)
+
+**The Go** (`Corpus/coverage/exec/examples/palin/main.go`):
+
+<!-- verbatim: Corpus/coverage/exec/examples/palin/main.go -->
+```go
+func isPalindrome(s []uint64) uint64 {
+	i := 0
+	j := len(s) - 1
+	for i < j {
+		if s[i] != s[j] {
+			return 0
+		}
+		i++
+		j--
+	}
+	return 1
+}
+```
+
+<!-- verbatim: Corpus/coverage/exec/examples/palin/main.go -->
+```go
+// palin_harness_r: the S3 RELATIONAL harness. Setup builds the
+// alternating family s[i] = seed + i%2 (go-run verified: verdict 1 for
+// n <= 1 and odd n, verdict 0 for even n >= 2); the copy loop lifts the
+// pre-state into a fixed-cap array and the subject's verdict rides
+// alongside. Real Go, ghost ladder rung 0.
+func palin_harness_r(n, seed uint64) ([palinCapN]uint64, uint64) {
+	s := make([]uint64, n)
+	for i := uint64(0); i < n; i++ {
+		s[i] = seed + i%2
+	}
+	var pre [palinCapN]uint64
+	for i := uint64(0); i < n; i++ {
+		pre[i] = s[i]
+	}
+	v := isPalindrome(s)
+	return pre, v
+}
+```
+
+**The claim.** For every `n ≤ 8` and every `seed < 2^64`,
+`palin_harness_r(n, seed)` finishes normally, at every nondeterminism
+choice, and returns two values: a list `pre` of length `n` (as the fixed-cap
+array the Go returns) and a verdict which is `1` exactly when *that very
+list* reads the same forwards and backwards. **The postcondition is a
+relation over the RETURNED data** — the setup family does not appear in it.
+
+**The whole mathematical content of the claim is one line.** The
+specification is `palinSpec xs = if xs.reverse = xs then 1 else 0`: list
+reversal, written the way a mathematician would write it. It contains no
+indices, no halves, no loop. The Go program does something quite different —
+it walks two indices inward and stops in the middle, inspecting only the
+pairs `(t, len−1−t)` for `t < len/2`. That the two agree is a *theorem*
+(`palin_iff_half`), not a definition, and it is where all the index
+arithmetic in this example lives. This is the separation the gallery is for:
+you read the claim without reading the algorithm.
+
+**The shape that is new here: an early return.** Every other subject in this
+gallery leaves its loop one way. `isPalindrome` leaves two ways that are not
+symmetric — the loop's exit test when the walk meets in the middle, and a
+`return 0` from *inside* the body at the first mismatched pair. So the
+machine-level loop lemma cannot stop at "the loop head after `μ`
+iterations"; it runs all the way to the driver terminal, and its content is
+that **both exits deliver the same observable**. The loop's own `i` and `j`
+are existentially quantified there, because the two exits stop at different
+indices and nothing the harness returns depends on which.
+
+Four honesty clauses, none of them small print:
+
+* **The cap `n ≤ 8` is a toy bound, and it is the price of this style.**
+  Go's pass-by-value fragment cannot return unbounded data, so the harness
+  returns `[palinCapN]uint64` with `palinCapN = 8` — visible in the Go — and
+  the copy loop and the zero padding exist *only* so the checked array can
+  cross the observation boundary. The theorem carries `n ≤ 8` as a
+  hypothesis rather than hiding it.
+* **`∃ pre` is still family-determined.** The witness the proof supplies is
+  `s[i] = (seed + i%2) mod 2^64`; the statement merely does not *say* so.
+  What the S3 form buys is on the postcondition side — the verdict is
+  asserted about observed output. Turning the input into genuine ∀-data
+  needs the ghost rung-1 annotation, which is designed and not built. The
+  family is not a degenerate choice: it produces **both** verdicts (`1` for
+  `n ≤ 1` and odd `n`, `0` for even `n ≥ 2`), so the corpus rows exercise
+  both branches of the subject against `go run`.
+* **`n = 0` is in the domain and is not a hole.** The Go sets `j = -1`, the
+  loop never runs, the verdict is `1`, and the empty list is indeed a
+  palindrome. The row `harness-r-empty` pins that against `go run`.
+* **Machine idealization**, as elsewhere: entry from an empty heap, an
+  unbounded heap, allocation always succeeds. The three arithmetic domains
+  are separated as usual: `n ≤ 8` is *the program's own* (the array cap),
+  `seed < 2^64` is *Go's* uint64 domain at the call boundary, and list
+  reversal is mathematics.
+
+**The specification function**
+(`proofs/GoLeanProofs/Examples/ArrayPalindrome/Pure.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/ArrayPalindrome/Pure.lean -->
+```lean
+def palinSpec (xs : List Int) : Int :=
+  if xs.reverse = xs then 1 else 0
+```
+
+**The returned-array adapter** — the rest of the statement vocabulary
+(`proofs/GoLeanProofs/Examples/ArrayPalindrome/Machine.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/ArrayPalindrome/Machine.lean -->
+```lean
+def palArr8 (xs : List Int) : GoValue :=
+  .array ⟨(xs ++ List.replicate (8 - xs.length) 0).map
+    (fun v => .int v .uint64)⟩
+```
+
+**The theorem** (`proofs/GoLeanProofs/Examples/ArrayPalindrome.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/ArrayPalindrome.lean -->
+```lean
+theorem palin_ok (n seed : Nat) (hcap : n ≤ 8) (hseed : seed < 2 ^ 64) :
+    ∃ pre : List Int, pre.length = n ∧
+      ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        runFunctionWithContextM fuel palinLowered.typeDefs.toList
+            palinLowered.funcs palinHarnessRFunc
+            #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+            palinLowered.methods ch
+          = .ok { values := #[palArr8 pre,
+                              .int (palinSpec pre) .uint64] } := by
+```
+
+**The first-order readout**, for a reader who would rather not unfold
+`palinSpec` at all (`proofs/GoLeanProofs/Examples/ArrayPalindrome.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/ArrayPalindrome.lean -->
+```lean
+theorem palin_verdict_iff (n seed : Nat) (hcap : n ≤ 8)
+    (hseed : seed < 2 ^ 64) :
+    ∃ pre : List Int, pre.length = n ∧
+      ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        ∃ v : Int,
+          runFunctionWithContextM fuel palinLowered.typeDefs.toList
+              palinLowered.funcs palinHarnessRFunc
+              #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+              palinLowered.methods ch
+            = .ok { values := #[palArr8 pre, .int v .uint64] }
+          ∧ (v = 1 ↔ pre.reverse = pre) := by
+```
+
+**Axioms** (pinned in `proofs/Audit/ArrayPalindrome.lean`):
+
+<!-- verbatim: proofs/Audit/ArrayPalindrome.lean -->
+```lean
+/-- info: 'GoLean.Examples.ArrayPalindrome.palin_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+<!-- verbatim: proofs/Audit/ArrayPalindrome.lean -->
+```lean
+/-- info: 'GoLean.Examples.ArrayPalindrome.palin_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+Lean's classical trio; no `sorry`, no native evaluation, no project axioms.
+
+**Fuel bound.** Explicit and affine: `N = 144·n + 298`. This is the
+branch-UNIFORM worst case — 57 steps per setup iteration, 53 per copy
+iteration, 68 per full subject iteration (of which there are at most `n/2`,
+charged here as `34·n`), plus the fixed `298` covering entry, the three loop
+exits, the one frame entry, the subject's prologue and the epilogue. **The
+measured step counts are different numbers, and the difference is worth
+stating plainly**: `277` at `n = 0`, `387` at `n = 1`, then `518`/`738`/`1178`
+at `n = 2`/`4`/`8` (the walk bails at the first pair) against `675`/`963` at
+`n = 3`/`5` (the walk completes). That measurement is **not affine in `n`**
+and could not be, because how far the walk gets depends on the data. The
+bound the theorem ships is `144·n + 298`; the measurements are the numbers
+above; neither is presented as the other.
+
+**Status.** NOT DESIGNATED — see the note in *How to read an entry*: this
+example post-dates the 2026-08-14 designation, and designation is arc-end
+work under user sign-off, so its statement is not walked by the mechanized
+statement-TCB gate and not replayed by the Comparator judge. What it does
+have, in-build: the `rfl` lowering pins (`palin_pin`,
+`palinHarnessRFunc_pin`), the golden-lowering guard on both links, and the
+axiom pins above. `palin_readout` is the run-conditioned twin, and
+`palin_verdict_iff` is the first-order readout quoted above. There is no
+∀-data companion claim here: the subject-level statement about arbitrary
+`[]uint64` inputs is not proved, and this entry does not imply it.
+
+**Ground.** Differentially green on 14 corpus rows: the four-element drivers
+(`four-palin`, `four-nonpalin`, `four-allsame`, `four-big`), the
+three-element pair (`three-palin`, `three-nonpalin`), the singleton (`one`)
+and the empty slice (`empty`), plus the relational harness at
+`harness-r-empty`, `harness-r-one`, `harness-r-four`, `harness-r-five`,
+`harness-r-eight` and `harness-r-big` (`seed = 2^63 − 1`, the largest value
+the differential driver can pass — the `--arg` int64 ceiling is a *driver*
+limit, not a machine one).
 
 ## The derived twins, and the one axiom line they share
 
