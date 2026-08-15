@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+rev-lit	revLit	-	ok	-	strings,loops,indexing,ints
+palin-lit	palinLit	-	ok	-	strings,loops,indexing,if,ints
+build-mid	buildStr	5,3	ok	-	strings,loops,ints
+rev-built	revBuilt	4,0	ok	-	strings,loops,indexing,ints
+palin-one	palinBuilt	1,7	ok	-	strings,loops,indexing,if,ints
+palin-no	palinBuilt	6,2	ok	-	strings,loops,indexing,if,ints
+palin-empty	palinBuilt	0,9223372036854775807	ok	-	strings,loops,indexing,if,ints
+harness-empty	strrev_harness_r	0,5	ok	-	strings,loops,indexing,if,ints
+harness-one	strrev_harness_r	1,25	ok	-	strings,loops,indexing,if,ints
+harness-mid	strrev_harness_r	5,7	ok	-	strings,loops,indexing,if,ints
+harness-cap	strrev_harness_r	8,19	ok	-	strings,loops,indexing,if,ints
+harness-extreme	strrev_harness_r	8,9223372036854775807	ok	-	strings,loops,indexing,if,ints

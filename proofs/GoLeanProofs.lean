@@ -147,6 +147,8 @@ import GoLeanProofs.Examples.SliceStackProgram
 import GoLeanProofs.Examples.SliceStack
 import GoLeanProofs.Examples.SliceQueueProgram
 import GoLeanProofs.Examples.SliceQueue
+import GoLeanProofs.Examples.StringReverseProgram
+import GoLeanProofs.Examples.StringReverse
 import GoLeanProofs.Examples.SelectionSortProgram
 import GoLeanProofs.Examples.SelectionSort
 
