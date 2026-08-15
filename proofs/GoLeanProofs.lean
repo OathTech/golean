@@ -127,6 +127,8 @@ import GoLeanProofs.Examples.BubbleSortProgram
 import GoLeanProofs.Examples.BubbleSort
 import GoLeanProofs.Examples.TwoSumProgram
 import GoLeanProofs.Examples.TwoSum
+import GoLeanProofs.Examples.RunLengthProgram
+import GoLeanProofs.Examples.RunLength
 import GoLeanProofs.Examples.SelectionSortProgram
 import GoLeanProofs.Examples.SelectionSort
 

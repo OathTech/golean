@@ -1,0 +1,15 @@
+# id	subject	args	expected_status	expected_reason	features
+four-mixed	rleFourCount	7,7,3,3	ok	-	slices,indexing,loops,if,bools
+four-distinct	rleFourCount	1,2,3,4	ok	-	slices,indexing,loops,if,bools
+four-same	rleFourCount	5,5,5,5	ok	-	slices,indexing,loops,if,bools
+four-alternating	rleFourCount	1,2,1,2	ok	-	slices,indexing,loops,if,bools
+four-extremes	rleFourCount	9223372036854775807,9223372036854775807,0,0	ok	-	slices,indexing,loops,if,bools
+four-first	rleFourFirst	7,7,3,3	ok	-	slices,indexing,loops,if,bools
+four-first-same	rleFourFirst	5,5,5,5	ok	-	slices,indexing,loops,if,bools
+one	rleOne	42	ok	-	slices,indexing,loops,if,bools
+empty	rleEmpty	-	ok	-	slices,indexing,loops,if,bools
+harness-r-empty	rle_harness_r	0,5	ok	-	slices,indexing,loops,if,bools,arrays
+harness-r-one	rle_harness_r	1,7	ok	-	slices,indexing,loops,if,bools,arrays
+harness-r-mid	rle_harness_r	5,40	ok	-	slices,indexing,loops,if,bools,arrays
+harness-r-cap	rle_harness_r	8,10	ok	-	slices,indexing,loops,if,bools,arrays
+harness-r-extreme	rle_harness_r	8,9223372036854775807	ok	-	slices,indexing,loops,if,bools,arrays
