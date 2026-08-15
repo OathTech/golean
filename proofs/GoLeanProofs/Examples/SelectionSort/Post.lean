@@ -25,7 +25,12 @@ set_option maxRecDepth 1000000
 set_option maxHeartbeats 4000000
 set_option linter.unusedSimpArgs false
 
-/-! ## The copy-prefix of the sorted backing -/
+/-! ## The copy-prefix of the sorted backing
+
+-- KIT-GAP WITNESS (see .tmp/kitgaps-selsort.md): the copy-OUT loop's
+prefix (`takePad`) has no kit form — `SliceMem.prefixPad`'s set lemma
+is `familyMod`-keyed, and this loop copies COMPUTED data. Consumers:
+selsort (here), bubble (chartered). -/
 
 /-- The `post` array after `m` copy steps. -/
 def selPost (lf : List Int) (m : Nat) : List Int :=

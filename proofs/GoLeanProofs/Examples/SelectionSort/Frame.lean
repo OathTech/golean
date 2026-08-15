@@ -29,7 +29,15 @@ set_option maxRecDepth 1000000
 set_option maxHeartbeats 4000000
 set_option linter.unusedSimpArgs false
 
-/-! ## The shift at threshold 16 -/
+/-! ## The shift at threshold 16
+
+-- KIT-GAP WITNESS (see .tmp/kitgaps-selsort.md): everything from here
+through `transfer_seg16` is the FOURTH landed copy of the
+shift/rebase/transfer layer (InsertionSort carries three, at
+thresholds 4/11/21); the threshold and the retired-cell count are the
+only parameters that vary. The shape wanted — `Frame.shiftAt` +
+`rebaseSimAt` + `transfer_segAt`, threshold- and retire-generic — is
+written out in the gap file. -/
 
 /-- The per-pass shift: identity on the fixed cells `0..15`, shift by
 `d` on the pass-local region. -/

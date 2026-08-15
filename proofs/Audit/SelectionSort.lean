@@ -59,10 +59,12 @@ Statement closure: interpreter/native-entry vocabulary
 `List.count` + `Nat`/`Int` arithmetic — no heap vocabulary, no Iris,
 no Frame names in any statement.
 Deletion test RUN (2026-08-15, by re-elaborating the headline with
-each binder removed): both explicit hypotheses are load-bearing —
-dropping `hcap` breaks the proof (the cap feeds every in-range `omega`
-and the fixed-cap padding), dropping `hseed` breaks the entry
-normalization rewrite. No decorative hypothesis.
+each binder removed, `.tmp/del_hcap.lean`/`.tmp/del_hseed.lean`): both
+explicit hypotheses are load-bearing — dropping `hcap` breaks TWO
+goals (the run theorem's cap discharge and the `n`-argument
+normalization rewrite), dropping `hseed` breaks TWO goals (the run
+theorem's seed discharge and the `seed`-argument normalization
+rewrite). No decorative hypothesis.
 
 NOT DESIGNATED: this example is deliberately absent from
 `Examples/Targets.lean`, from `scripts/ci`'s Targets allowlist, from

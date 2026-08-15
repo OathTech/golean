@@ -23,7 +23,13 @@ open GoLean GoLean.SliceMem
 set_option maxRecDepth 1000000
 set_option linter.unusedSimpArgs false
 
-/-! ## `getD`/`set` pointwise algebra (list surgery for the swap) -/
+/-! ## `getD`/`set` pointwise algebra (list surgery for the swap)
+
+-- KIT-GAP WITNESS (see .tmp/kitgaps-selsort.md): `getD_set_self`,
+`getD_set_ne`, `count_set_add`, `swapList` and its five facts are pure
+`List Int` algebra every swap-based subject re-derives; they belong in
+`SliceMem` beside `mem_set_of_mem`. Consumers: selsort (here), bubble
+(chartered), isort (its `bubbleState_swap` is the same surgery). -/
 
 theorem getD_set_self {l : List Int} {k : Nat} {w : Int}
     (hk : k < l.length) : (l.set k w).getD k 0 = w := by
