@@ -129,6 +129,8 @@ import GoLeanProofs.Examples.TwoSumProgram
 import GoLeanProofs.Examples.TwoSum
 import GoLeanProofs.Examples.RunLengthProgram
 import GoLeanProofs.Examples.RunLength
+import GoLeanProofs.Examples.PowModProgram
+import GoLeanProofs.Examples.PowMod
 import GoLeanProofs.Examples.SelectionSortProgram
 import GoLeanProofs.Examples.SelectionSort
 
