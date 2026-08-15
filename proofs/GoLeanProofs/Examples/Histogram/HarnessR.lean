@@ -1046,17 +1046,16 @@ theorem hg_range_loop (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
 /-! ## Normalization of the map's entries (the snapshot's side
 condition) -/
 
-theorem countsList_norm (ws : List Int) (hws : ∀ v ∈ ws, 0 ≤ v ∧ v < 2 ^ 64)
+theorem countsFold_norm (ws : List Int) (hws : ∀ v ∈ ws, 0 ≤ v ∧ v < 2 ^ 64)
     (hlen : ws.length < 2 ^ 64) :
-    ∀ p ∈ countsList ws, IntKind.normalize .uint64 p.1 = p.1
+    ∀ p ∈ countsFold ws, IntKind.normalize .uint64 p.1 = p.1
       ∧ IntKind.normalize .uint64 ((p.2 : Nat) : Int)
           = ((p.2 : Nat) : Int) := by
   intro p hp
   refine ⟨?_, ?_⟩
-  · rcases countsList_key_mem ws [] p hp with h | h
-    · exact unorm_of_range (hws p.1 h).1 (hws p.1 h).2
-    · cases h
-  · have := countsList_val_le ws hp
+  · have h := countsFold_key_mem hp
+    exact unorm_of_range (hws p.1 h).1 (hws p.1 h).2
+  · have := countsFold_val_le ws hp
     exact unorm_nat_of_lt (by omega)
 
 /-! ## The exit phase -/
@@ -1341,7 +1340,7 @@ theorem hg_runs_generic (σ : ExecState) (n seed q : Nat) (hcap : n ≤ 8)
         = .ok (.next .stop,
             σXH σ n ((seed : Nat) : Int) ((q : Nat) : Int) ((n : Nat) : Int)
               ((n : Nat) : Int) (histFamily n seed) (histPre n seed)
-              (histPre n seed) (countsList (histFamily n seed))
+              (histPre n seed) (countsFold (histFamily n seed))
               ((occurrences ((q : Nat) : Int) (histFamily n seed) : Nat) : Int)
               ((distinctCount (histFamily n seed) : Nat) : Int)
               ((occurrences ((q : Nat) : Int) (histFamily n seed) : Nat) : Int)
@@ -1364,10 +1363,10 @@ theorem hg_runs_generic (σ : ExecState) (n seed q : Nat) (hcap : n ≤ 8)
   have hDist : distinctCount (histFamily n seed) ≤ n := by
     have := distinctCount_le (histFamily n seed)
     omega
-  have hcntq : cnt (countsList (histFamily n seed)) ((q : Nat) : Int)
+  have hcntq : cnt (countsFold (histFamily n seed)) ((q : Nat) : Int)
       = occurrences ((q : Nat) : Int) (histFamily n seed) :=
     cnt_countsList' (histFamily n seed) ((q : Nat) : Int)
-  have hdlen : (countsList (histFamily n seed)).length
+  have hdlen : (countsFold (histFamily n seed)).length
       = distinctCount (histFamily n seed) :=
     countsList_length (histFamily n seed)
   have hHn : IntKind.normalize .uint64
@@ -1442,26 +1441,26 @@ theorem hg_runs_generic (σ : ExecState) (n seed q : Nat) (hcap : n ≤ 8)
   have hIH := stepFnIter_one
     (hg_initHits σ n ((seed : Nat) : Int) ((q : Nat) : Int) ((n : Nat) : Int)
       ((n : Nat) : Int) (histFamily n seed) (histPre n seed)
-      (countsList (histFamily n seed)) ((n : Nat) : Int) tail₁ (25 + 2 * n) ch
+      (countsFold (histFamily n seed)) ((n : Nat) : Int) tail₁ (25 + 2 * n) ch
       hB25 htail₁)
   have hS6 := stepFnIter_chain hS5 hIH
   have hqA := hg_qA_raw σ n ((seed : Nat) : Int) ((q : Nat) : Int)
     ((n : Nat) : Int) ((n : Nat) : Int) (histFamily n seed) (histPre n seed)
-    (countsList (histFamily n seed)) ((n : Nat) : Int)
+    (countsFold (histFamily n seed)) ((n : Nat) : Int)
     (tail₁ ++ [(.base ⟨25 + 2 * n⟩, u64cell 0)]) (25 + 2 * n)
     (25 + 2 * n + 1) ch
   have hS7 := stepFnIter_chain hS6 hqA
   have hget := stepFnIter_one
     (hg_queryGet σ n ((seed : Nat) : Int) ((q : Nat) : Int) ((n : Nat) : Int)
       ((n : Nat) : Int) (histFamily n seed) (histPre n seed)
-      (countsList (histFamily n seed)) ((n : Nat) : Int)
+      (countsFold (histFamily n seed)) ((n : Nat) : Int)
       (tail₁ ++ [(.base ⟨25 + 2 * n⟩, u64cell 0)]) (25 + 2 * n)
       (25 + 2 * n + 1) ch hqn)
   rw [hcntq] at hget
   have hS8 := stepFnIter_chain hS7 hget
   have hqB := hg_qB_raw σ n ((seed : Nat) : Int) ((q : Nat) : Int)
     ((n : Nat) : Int) ((n : Nat) : Int) (histFamily n seed) (histPre n seed)
-    (countsList (histFamily n seed)) ((n : Nat) : Int)
+    (countsFold (histFamily n seed)) ((n : Nat) : Int)
     (tail₁ ++ [(.base ⟨25 + 2 * n⟩, u64cell 0)]) (25 + 2 * n)
     (25 + 2 * n + 1)
     ((occurrences ((q : Nat) : Int) (histFamily n seed) : Nat) : Int) ch
@@ -1469,7 +1468,7 @@ theorem hg_runs_generic (σ : ExecState) (n seed q : Nat) (hcap : n ≤ 8)
   have hstH := stepFnIter_one
     (hg_stHits σ n ((seed : Nat) : Int) ((q : Nat) : Int) ((n : Nat) : Int)
       ((n : Nat) : Int) (histFamily n seed) (histPre n seed)
-      (countsList (histFamily n seed)) ((n : Nat) : Int)
+      (countsFold (histFamily n seed)) ((n : Nat) : Int)
       (tail₁ ++ [(.base ⟨25 + 2 * n⟩, u64cell 0)]) (25 + 2 * n)
       (25 + 2 * n + 1) 0
       ((occurrences ((q : Nat) : Int) (histFamily n seed) : Nat) : Int) ch
@@ -1479,7 +1478,7 @@ theorem hg_runs_generic (σ : ExecState) (n seed q : Nat) (hcap : n ≤ 8)
   have hS10 := stepFnIter_chain hS9 hstH
   have hqC := hg_qC_raw σ n ((seed : Nat) : Int) ((q : Nat) : Int)
     ((n : Nat) : Int) ((n : Nat) : Int) (histFamily n seed) (histPre n seed)
-    (countsList (histFamily n seed)) ((n : Nat) : Int)
+    (countsFold (histFamily n seed)) ((n : Nat) : Int)
     (tail₁ ++ [(.base ⟨25 + 2 * n⟩,
       ⟨some tU64,
         .int ((occurrences ((q : Nat) : Int) (histFamily n seed) : Nat) : Int)
@@ -1493,7 +1492,7 @@ theorem hg_runs_generic (σ : ExecState) (n seed q : Nat) (hcap : n ≤ 8)
   have hID := stepFnIter_one
     (hg_initDistinct σ n ((seed : Nat) : Int) ((q : Nat) : Int)
       ((n : Nat) : Int) ((n : Nat) : Int) (histFamily n seed)
-      (histPre n seed) (countsList (histFamily n seed)) ((n : Nat) : Int)
+      (histPre n seed) (countsFold (histFamily n seed)) ((n : Nat) : Int)
       (tail₁ ++ [(.base ⟨25 + 2 * n⟩,
         ⟨some tU64,
           .int ((occurrences ((q : Nat) : Int)
@@ -1502,7 +1501,7 @@ theorem hg_runs_generic (σ : ExecState) (n seed q : Nat) (hcap : n ≤ 8)
   have hS12 := stepFnIter_chain hS11 hID
   have hrA := hg_rA_raw σ n ((seed : Nat) : Int) ((q : Nat) : Int)
     ((n : Nat) : Int) ((n : Nat) : Int) (histFamily n seed) (histPre n seed)
-    (countsList (histFamily n seed)) ((n : Nat) : Int)
+    (countsFold (histFamily n seed)) ((n : Nat) : Int)
     (tail₁ ++ [(.base ⟨25 + 2 * n⟩,
       ⟨some tU64,
         .int ((occurrences ((q : Nat) : Int) (histFamily n seed) : Nat) : Int)
@@ -1519,7 +1518,7 @@ theorem hg_runs_generic (σ : ExecState) (n seed q : Nat) (hcap : n ≤ 8)
   have hstD := stepFnIter_one
     (hg_stDistinct σ n ((seed : Nat) : Int) ((q : Nat) : Int)
       ((n : Nat) : Int) ((n : Nat) : Int) (histFamily n seed)
-      (histPre n seed) (countsList (histFamily n seed)) ((n : Nat) : Int)
+      (histPre n seed) (countsFold (histFamily n seed)) ((n : Nat) : Int)
       (tail₁ ++ [(.base ⟨25 + 2 * n⟩,
         ⟨some tU64,
           .int ((occurrences ((q : Nat) : Int)
@@ -1534,7 +1533,7 @@ theorem hg_runs_generic (σ : ExecState) (n seed q : Nat) (hcap : n ≤ 8)
   -- the range head
   have hrB := hg_rB_raw σ n ((seed : Nat) : Int) ((q : Nat) : Int)
     ((n : Nat) : Int) ((n : Nat) : Int) (histFamily n seed) (histPre n seed)
-    (countsList (histFamily n seed)) ((n : Nat) : Int)
+    (countsFold (histFamily n seed)) ((n : Nat) : Int)
     (tail₁ ++ [(.base ⟨25 + 2 * n⟩,
       ⟨some tU64,
         .int ((occurrences ((q : Nat) : Int) (histFamily n seed) : Nat) : Int)
@@ -1544,14 +1543,14 @@ theorem hg_runs_generic (σ : ExecState) (n seed q : Nat) (hcap : n ≤ 8)
   have hsnap := stepFnIter_one
     (hg_snap σ n ((seed : Nat) : Int) ((q : Nat) : Int) ((n : Nat) : Int)
       ((n : Nat) : Int) (histFamily n seed) (histPre n seed)
-      (countsList (histFamily n seed)) ((n : Nat) : Int)
+      (countsFold (histFamily n seed)) ((n : Nat) : Int)
       (tail₁ ++ [(.base ⟨25 + 2 * n⟩,
         ⟨some tU64,
           .int ((occurrences ((q : Nat) : Int)
             (histFamily n seed) : Nat) : Int) .uint64⟩)]
         ++ [(.base ⟨25 + 2 * n + 1⟩, u64cell 0)])
       (25 + 2 * n) (25 + 2 * n + 2) ch
-      (countsList_norm (histFamily n seed) hws (by omega)))
+      (countsFold_norm (histFamily n seed) hws (by omega)))
   have hS16 := stepFnIter_chain hS15 hsnap
   -- THE RANGE LOOP, at every choice stream
   have hlkH3 : Heap.lookup (tail₁ ++ [(.base ⟨25 + 2 * n⟩,
@@ -1565,14 +1564,14 @@ theorem hg_runs_generic (σ : ExecState) (n seed q : Nat) (hcap : n ≤ 8)
       (by
         rw [lookup_append_right (htail₁ (25 + 2 * n) (Nat.le_refl _))]
         exact lookup_singleton_self)
-  have hmle : (countsList (histFamily n seed)).length ≤ n := by
+  have hmle : (countsFold (histFamily n seed)).length ≤ n := by
     have := countsList_length_le (histFamily n seed)
     omega
   obtain ⟨ch₅, tail₂, hd1, hd2, hd3, hrun₂⟩ :=
     hg_range_loop σ n ((seed : Nat) : Int) ((q : Nat) : Int) ((n : Nat) : Int)
       ((n : Nat) : Int) (histFamily n seed) (histPre n seed)
-      (countsList (histFamily n seed)) ((n : Nat) : Int)
-      (countsList (histFamily n seed)).length (countsList (histFamily n seed))
+      (countsFold (histFamily n seed)) ((n : Nat) : Int)
+      (countsFold (histFamily n seed)).length (countsFold (histFamily n seed))
       rfl 0
       (tail₁ ++ [(.base ⟨25 + 2 * n⟩,
         ⟨some tU64,
@@ -1587,22 +1586,22 @@ theorem hg_runs_generic (σ : ExecState) (n seed q : Nat) (hcap : n ≤ 8)
   -- THE EXIT PHASE (the state family shifts to `σXH`; the fronts agree)
   have hbridge : σH σ n ((seed : Nat) : Int) ((q : Nat) : Int)
       ((n : Nat) : Int) ((n : Nat) : Int) (histFamily n seed)
-      (histPre n seed) (countsList (histFamily n seed)) ((n : Nat) : Int)
+      (histPre n seed) (countsFold (histFamily n seed)) ((n : Nat) : Int)
       false tail₂ (25 + 2 * n + 2)
       = σXH σ n ((seed : Nat) : Int) ((q : Nat) : Int) ((n : Nat) : Int)
         ((n : Nat) : Int) (histFamily n seed) (histPre n seed) zeros8
-        (countsList (histFamily n seed)) 0 0 0 0 0 0 tail₂
+        (countsFold (histFamily n seed)) 0 0 0 0 0 0 tail₂
         (25 + 2 * n + 2) := rfl
   rw [hbridge] at hS17
   have hX1 := hg_X1_raw σ n ((seed : Nat) : Int) ((q : Nat) : Int)
     ((n : Nat) : Int) ((n : Nat) : Int) (histFamily n seed) (histPre n seed)
-    zeros8 (countsList (histFamily n seed)) 0 0 0 0 0 0 tail₂ (25 + 2 * n)
+    zeros8 (countsFold (histFamily n seed)) 0 0 0 0 0 0 tail₂ (25 + 2 * n)
     (25 + 2 * n + 2) ch₅
   have hS18 := stepFnIter_chain hS17 hX1
   have hvH := stepFnIter_one
     (hg_varHits σ n ((seed : Nat) : Int) ((q : Nat) : Int) ((n : Nat) : Int)
       ((n : Nat) : Int) (histFamily n seed) (histPre n seed) zeros8
-      (countsList (histFamily n seed)) 0 0 0 0 0 0 tail₂ (25 + 2 * n)
+      (countsFold (histFamily n seed)) 0 0 0 0 0 0 tail₂ (25 + 2 * n)
       (25 + 2 * n + 2)
       ((occurrences ((q : Nat) : Int) (histFamily n seed) : Nat) : Int)
       (envRBDH (25 + 2 * n))
@@ -1614,21 +1613,21 @@ theorem hg_runs_generic (σ : ExecState) (n seed q : Nat) (hcap : n ≤ 8)
   have hS19 := stepFnIter_chain hS18 hvH
   have hX2a := hg_X2a_raw σ n ((seed : Nat) : Int) ((q : Nat) : Int)
     ((n : Nat) : Int) ((n : Nat) : Int) (histFamily n seed) (histPre n seed)
-    zeros8 (countsList (histFamily n seed)) 0 0 0 0 0 0
+    zeros8 (countsFold (histFamily n seed)) 0 0 0 0 0 0
     ((occurrences ((q : Nat) : Int) (histFamily n seed) : Nat) : Int) tail₂
     (25 + 2 * n) (25 + 2 * n + 2) ch₅
   rw [hHn] at hX2a
   have hS20 := stepFnIter_chain hS19 hX2a
   have hX2b := hg_X2b_raw σ n ((seed : Nat) : Int) ((q : Nat) : Int)
     ((n : Nat) : Int) ((n : Nat) : Int) (histFamily n seed) (histPre n seed)
-    zeros8 (countsList (histFamily n seed)) 0 0 0 0
+    zeros8 (countsFold (histFamily n seed)) 0 0 0 0
     ((occurrences ((q : Nat) : Int) (histFamily n seed) : Nat) : Int) 0 tail₂
     (25 + 2 * n) (25 + 2 * n + 2) ch₅
   have hS21 := stepFnIter_chain hS20 hX2b
   have hvD := stepFnIter_one
     (hg_varDistinctX σ n ((seed : Nat) : Int) ((q : Nat) : Int)
       ((n : Nat) : Int) ((n : Nat) : Int) (histFamily n seed)
-      (histPre n seed) zeros8 (countsList (histFamily n seed)) 0 0 0 0
+      (histPre n seed) zeros8 (countsFold (histFamily n seed)) 0 0 0 0
       ((occurrences ((q : Nat) : Int) (histFamily n seed) : Nat) : Int) 0
       tail₂ (25 + 2 * n) (25 + 2 * n + 2)
       ((distinctCount (histFamily n seed) : Nat) : Int)
@@ -1640,7 +1639,7 @@ theorem hg_runs_generic (σ : ExecState) (n seed q : Nat) (hcap : n ≤ 8)
   have hS22 := stepFnIter_chain hS21 hvD
   have hX3a := hg_X3a_raw σ n ((seed : Nat) : Int) ((q : Nat) : Int)
     ((n : Nat) : Int) ((n : Nat) : Int) (histFamily n seed) (histPre n seed)
-    zeros8 (countsList (histFamily n seed)) 0 0 0 0
+    zeros8 (countsFold (histFamily n seed)) 0 0 0 0
     ((occurrences ((q : Nat) : Int) (histFamily n seed) : Nat) : Int) 0
     ((distinctCount (histFamily n seed) : Nat) : Int) tail₂ (25 + 2 * n)
     (25 + 2 * n + 2) ch₅
@@ -1648,7 +1647,7 @@ theorem hg_runs_generic (σ : ExecState) (n seed q : Nat) (hcap : n ≤ 8)
   have hS23 := stepFnIter_chain hS22 hX3a
   have hX3b := hg_X3b_raw σ n ((seed : Nat) : Int) ((q : Nat) : Int)
     ((n : Nat) : Int) ((n : Nat) : Int) (histFamily n seed) (histPre n seed)
-    zeros8 (countsList (histFamily n seed)) 0 0 0 0
+    zeros8 (countsFold (histFamily n seed)) 0 0 0 0
     ((occurrences ((q : Nat) : Int) (histFamily n seed) : Nat) : Int)
     ((distinctCount (histFamily n seed) : Nat) : Int) tail₂ (25 + 2 * n)
     (25 + 2 * n + 2) ch₅
@@ -1658,7 +1657,7 @@ theorem hg_runs_generic (σ : ExecState) (n seed q : Nat) (hcap : n ≤ 8)
   have hstore : storeTarget
       (σXH σ n ((seed : Nat) : Int) ((q : Nat) : Int) ((n : Nat) : Int)
         ((n : Nat) : Int) (histFamily n seed) (histPre n seed) zeros8
-        (countsList (histFamily n seed)) 0 0
+        (countsFold (histFamily n seed)) 0 0
         ((occurrences ((q : Nat) : Int) (histFamily n seed) : Nat) : Int)
         ((distinctCount (histFamily n seed) : Nat) : Int)
         ((occurrences ((q : Nat) : Int) (histFamily n seed) : Nat) : Int)
@@ -1667,7 +1666,7 @@ theorem hg_runs_generic (σ : ExecState) (n seed q : Nat) (hcap : n ≤ 8)
       hRes0Ref (.array ⟨(histPre n seed).map (fun v => .int v .uint64)⟩)
       = .ok (σXH σ n ((seed : Nat) : Int) ((q : Nat) : Int) ((n : Nat) : Int)
           ((n : Nat) : Int) (histFamily n seed) (histPre n seed)
-          (histPre n seed) (countsList (histFamily n seed)) 0 0
+          (histPre n seed) (countsFold (histFamily n seed)) 0 0
           ((occurrences ((q : Nat) : Int) (histFamily n seed) : Nat) : Int)
           ((distinctCount (histFamily n seed) : Nat) : Int)
           ((occurrences ((q : Nat) : Int) (histFamily n seed) : Nat) : Int)
@@ -1676,7 +1675,7 @@ theorem hg_runs_generic (σ : ExecState) (n seed q : Nat) (hcap : n ≤ 8)
     storeTarget_addr
       (lookup_res0_XH σ n ((seed : Nat) : Int) ((q : Nat) : Int)
         ((n : Nat) : Int) ((n : Nat) : Int) (histFamily n seed)
-        (histPre n seed) zeros8 (countsList (histFamily n seed)) 0 0
+        (histPre n seed) zeros8 (countsFold (histFamily n seed)) 0 0
         ((occurrences ((q : Nat) : Int) (histFamily n seed) : Nat) : Int)
         ((distinctCount (histFamily n seed) : Nat) : Int)
         ((occurrences ((q : Nat) : Int) (histFamily n seed) : Nat) : Int)
@@ -1687,7 +1686,7 @@ theorem hg_runs_generic (σ : ExecState) (n seed q : Nat) (hcap : n ≤ 8)
     (stepFn_store_step hstore))
   have hX4 := hg_X4_raw σ n ((seed : Nat) : Int) ((q : Nat) : Int)
     ((n : Nat) : Int) ((n : Nat) : Int) (histFamily n seed) (histPre n seed)
-    (histPre n seed) (countsList (histFamily n seed)) 0 0
+    (histPre n seed) (countsFold (histFamily n seed)) 0 0
     ((occurrences ((q : Nat) : Int) (histFamily n seed) : Nat) : Int)
     ((distinctCount (histFamily n seed) : Nat) : Int)
     ((occurrences ((q : Nat) : Int) (histFamily n seed) : Nat) : Int)

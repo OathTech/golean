@@ -33,7 +33,7 @@ pick per iteration, so the ∀ch quantifier is doing genuine work here
 order-independent BY NECESSITY; an order-dependent claim would be
 unprovable against the enveloped iteration) — with the max
 multiplicity in the result cell and the input backing unchanged.
-Proof: the §10 design executed — countsList assoc-invariant counting
+Proof: the §10 design executed — counting-fold assoc-invariant
 induction + the choice-pick strong induction (`Choices.consume`
 destructured, erase-and-max-fold invariant), both halves in the
 symbolic-address regime (finding 12). `wordcount_empty_ok` is the §11

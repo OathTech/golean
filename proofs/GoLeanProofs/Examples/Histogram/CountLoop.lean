@@ -34,11 +34,9 @@ the abstract state family `σH σ L sv qv siv civ ws lp kvs iv ff dead
 na`, and no concrete 25-cell front ever reaches the unifier inside a
 composition step.
 
-Two smaller re-derivations, same family as Pure's GAP-P1 (the
-`bump`/`countsList` fold layer): `take_succ_getD` and `cnt_take_le`
-below are verbatim `Examples/WordCount/CanonCount.lean` lemmas
-(wordcount-local, so not importable without pulling in wordcount's
-program). They belong with the `MapMem`-lifted fold vocabulary.
+(GAP-P1 CLOSED, kit-gap closure 2026-08-15: the `take_succ_getD` /
+`cnt_take_le` / `nilMapCell` re-derivations this module carried are
+deleted — the kit forms live in `GoLeanProofs/MapMem.lean`.)
 -/
 
 namespace GoLean.Examples.Histogram
@@ -51,30 +49,9 @@ set_option maxRecDepth 1000000
 set_option maxHeartbeats 2000000
 set_option linter.unusedSimpArgs false
 
-/-- The nil-map cell — `$c1`'s default value before the `counts`
-handle is copied over it (the wordcount `nilMapCell`, re-derived:
-GAP-C1's cell vocabulary). -/
-abbrev nilMapCellH : HeapCell := ⟨some tMap, .map ⟨none⟩⟩
-
-/-! ## The GAP-P1-family list lemmas (re-derived from
-`Examples/WordCount/CanonCount.lean`) -/
-
-private theorem take_succ_getD {ws : List Int} {i : Nat}
-    (hi : i < ws.length) :
-    ws.take (i + 1) = ws.take i ++ [ws.getD i 0] := by
-  rw [List.take_add_one, List.getElem?_eq_getElem hi]
-  simp [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hi]
-
-private theorem cnt_take_le {ws : List Int} {i : Nat} (w : Int) :
-    cnt (countsList (ws.take i)) w ≤ i := by
-  rw [cnt_countsList']
-  simp only [occurrences]
-  have h1 : ((ws.take i).filter (· = w)).length ≤ (ws.take i).length :=
-    List.length_filter_le _ _
-  have h2 : (ws.take i).length ≤ i := by
-    rw [List.length_take]
-    exact Nat.min_le_left _ _
-  omega
+-- (`nilMapCell`, `take_succ_getD`, `cnt_take_le` are the kit's, via
+-- `open GoLean.MapMem` — the local copies were deleted in the GAP-P1
+-- closure.)
 
 /-! ## The counting-loop raw segments (step counts identical to the
 wordcount tower — same statements up to the `"vals"` rename, new
@@ -300,7 +277,7 @@ theorem hg_init1 (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
       = .ok (.next (.seq [asgnC1H, seqnC2H, mapAsgnStmtH] (u1EnvH na)
             postBodyKH),
           σH σ L sv qv siv civ ws lp kvs iv false
-            (dead ++ [(.base ⟨na⟩, nilMapCellH)]) (na + 1), ch) := by
+            (dead ++ [(.base ⟨na⟩, nilMapCell)]) (na + 1), ch) := by
   intro kvs iv dead na ch hna hdead
   have hmiss : Heap.lookup
       (frontH L sv qv siv civ ws lp kvs iv false ++ dead) (.base ⟨na⟩)
@@ -326,7 +303,7 @@ theorem hg_st1 (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
     ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (na₀ na : Nat)
       (ch : Choices), 25 ≤ na₀ → DeadFrom dead na₀ →
     stepFn (σH σ L sv qv siv civ ws lp kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, nilMapCellH)]) na)
+        (dead ++ [(.base ⟨na₀⟩, nilMapCell)]) na)
         (.next (.storeK [.chain (.addr (.base ⟨na₀⟩)) [] []]
           [.map ⟨some (.base ⟨21⟩)⟩] (.seqn #[]) (u1EnvH na₀)
           (.seq [seqnC2H, mapAsgnStmtH] (u1EnvH na₀) postBodyKH))) ch
@@ -337,11 +314,11 @@ theorem hg_st1 (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
   intro kvs iv dead na₀ na ch hna hdead
   have hlook : Heap.lookup
       (σH σ L sv qv siv civ ws lp kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, nilMapCellH)]) na).heap
+        (dead ++ [(.base ⟨na₀⟩, nilMapCell)]) na).heap
       (.base ⟨na₀⟩) = some ⟨some tMap, .map ⟨none⟩⟩ := by
     show Heap.lookup
       (frontH L sv qv siv civ ws lp kvs iv false
-        ++ (dead ++ [(.base ⟨na₀⟩, nilMapCellH)]))
+        ++ (dead ++ [(.base ⟨na₀⟩, nilMapCell)]))
       (.base ⟨na₀⟩) = some ⟨some tMap, .map ⟨none⟩⟩
     rw [lookup_append_right
         (lookup_frontH_none L sv qv siv civ ws lp kvs iv false hna),
@@ -352,9 +329,9 @@ theorem hg_st1 (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
     (by simp [normalizeValueForTy, normalizeValueForTyFuel,
       typeResolutionFuel])
   rw [show (σH σ L sv qv siv civ ws lp kvs iv false
-        (dead ++ [(.base ⟨na₀⟩, nilMapCellH)]) na).heap
+        (dead ++ [(.base ⟨na₀⟩, nilMapCell)]) na).heap
       = frontH L sv qv siv civ ws lp kvs iv false
-        ++ (dead ++ [(.base ⟨na₀⟩, nilMapCellH)]) from rfl,
+        ++ (dead ++ [(.base ⟨na₀⟩, nilMapCell)]) from rfl,
     set_append_right
       (lookup_frontH_none L sv qv siv civ ws lp kvs iv false hna),
     set_append_right (hdead na₀ (Nat.le_refl na₀)),
@@ -593,135 +570,135 @@ theorem hg_count_iter (σ : ExecState) (sv qv siv civ : Int)
     (hws : ∀ v ∈ ws, 0 ≤ v ∧ v < 2 ^ 64) (hlen : ws.length < 2 ^ 63)
     (hi : i < ws.length) (hna : 25 ≤ na) (hdead : DeadFrom dead na) :
     stepFnIter 53
-      (σH σ ws.length sv qv siv civ ws lp (countsList (ws.take i)) (i : Int)
+      (σH σ ws.length sv qv siv civ ws lp (countsFold (ws.take i)) (i : Int)
         false dead na)
       (.retV (.bool true) cmpContCH) ch
       = .ok (headCH,
-          σH σ ws.length sv qv siv civ ws lp (countsList (ws.take (i + 1)))
+          σH σ ws.length sv qv siv civ ws lp (countsFold (ws.take (i + 1)))
             (i : Int) false
             (dead ++ [(.base ⟨na⟩, mhCellH),
               (.base ⟨na + 1⟩, u64cell (ws.getD i 0))]) (na + 2), ch) := by
   have hw := hws (ws.getD i 0) (getD_mem hi)
-  have hcnt : cnt (countsList (ws.take i)) (ws.getD i 0) + 1 < 2 ^ 64 := by
+  have hcnt : cnt (countsFold (ws.take i)) (ws.getD i 0) + 1 < 2 ^ 64 := by
     have := cnt_take_le (ws := ws) (i := i) (ws.getD i 0)
     omega
   have h1 := stepFnIter_chain
-    (hg_segC1_raw σ ws.length sv qv siv civ ws lp (countsList (ws.take i))
+    (hg_segC1_raw σ ws.length sv qv siv civ ws lp (countsFold (ws.take i))
       ((i : Nat) : Int) dead na ch)
     (stepFnIter_one (hg_init1 σ ws.length sv qv siv civ ws lp
-      (countsList (ws.take i)) ((i : Nat) : Int) dead na ch hna hdead))
+      (countsFold (ws.take i)) ((i : Nat) : Int) dead na ch hna hdead))
   have h2 := stepFnIter_chain h1
-    (hg_segC2_raw σ ws.length sv qv siv civ ws lp (countsList (ws.take i))
-      ((i : Nat) : Int) (dead ++ [(.base ⟨na⟩, nilMapCellH)]) na (na + 1) ch)
+    (hg_segC2_raw σ ws.length sv qv siv civ ws lp (countsFold (ws.take i))
+      ((i : Nat) : Int) (dead ++ [(.base ⟨na⟩, nilMapCell)]) na (na + 1) ch)
   have h3 := stepFnIter_chain h2
     (stepFnIter_one (hg_st1 σ ws.length sv qv siv civ ws lp
-      (countsList (ws.take i)) ((i : Nat) : Int) dead na (na + 1) ch hna
+      (countsFold (ws.take i)) ((i : Nat) : Int) dead na (na + 1) ch hna
       hdead))
   have h4 := stepFnIter_chain h3
-    (hg_segC3_raw σ ws.length sv qv siv civ ws lp (countsList (ws.take i))
+    (hg_segC3_raw σ ws.length sv qv siv civ ws lp (countsFold (ws.take i))
       ((i : Nat) : Int) (dead ++ [(.base ⟨na⟩, mhCellH)]) na (na + 1) ch)
   have h5 := stepFnIter_chain h4
     (stepFnIter_one (hg_init2 σ ws.length sv qv siv civ ws lp
-      (countsList (ws.take i)) ((i : Nat) : Int) dead na ch hna hdead))
+      (countsFold (ws.take i)) ((i : Nat) : Int) dead na ch hna hdead))
   have h6 := stepFnIter_chain h5
-    (hg_segC4_raw σ ws.length sv qv siv civ ws lp (countsList (ws.take i))
+    (hg_segC4_raw σ ws.length sv qv siv civ ws lp (countsFold (ws.take i))
       ((i : Nat) : Int)
       (dead ++ [(.base ⟨na⟩, mhCellH), (.base ⟨na + 1⟩, u64cell 0)]) na
       (na + 2) ch)
   have h7 := stepFnIter_chain h6
     (stepFnIter_one (stepFn_strict_apply (done := [hSliceV ws.length])
-      (hg_read σ sv qv siv civ ws lp (countsList (ws.take i)) i
+      (hg_read σ sv qv siv civ ws lp (countsFold (ws.take i)) i
         (dead ++ [(.base ⟨na⟩, mhCellH), (.base ⟨na + 1⟩, u64cell 0)])
         (na + 2) hi)))
   have h8 := stepFnIter_chain h7
-    (hg_segC5_raw σ ws.length sv qv siv civ ws lp (countsList (ws.take i))
+    (hg_segC5_raw σ ws.length sv qv siv civ ws lp (countsFold (ws.take i))
       ((i : Nat) : Int)
       (dead ++ [(.base ⟨na⟩, mhCellH), (.base ⟨na + 1⟩, u64cell 0)]) na
       (na + 2) (.int (ws.getD i 0) .uint64) ch)
   have h9 := stepFnIter_chain h8
     (stepFnIter_one (hg_st2 σ ws.length sv qv siv civ ws lp
-      (countsList (ws.take i)) ((i : Nat) : Int) dead na (na + 2)
+      (countsFold (ws.take i)) ((i : Nat) : Int) dead na (na + 2)
       (ws.getD i 0) ch hw.1 hw.2 hna hdead))
   have h10 := stepFnIter_chain h9
-    (hg_segC6_raw σ ws.length sv qv siv civ ws lp (countsList (ws.take i))
+    (hg_segC6_raw σ ws.length sv qv siv civ ws lp (countsFold (ws.take i))
       ((i : Nat) : Int)
       (dead ++ [(.base ⟨na⟩, mhCellH),
         (.base ⟨na + 1⟩, u64cell (ws.getD i 0))]) na (na + 2) ch)
   have h11 := stepFnIter_chain h10
     (stepFnIter_one (hg_var1 σ ws.length sv qv siv civ ws lp
-      (countsList (ws.take i)) ((i : Nat) : Int) (ws.getD i 0) dead na
+      (countsFold (ws.take i)) ((i : Nat) : Int) (ws.getD i 0) dead na
       (na + 2) _ ch hna hdead))
   have h12 := stepFnIter_chain h11
-    (hg_segC7_raw σ ws.length sv qv siv civ ws lp (countsList (ws.take i))
+    (hg_segC7_raw σ ws.length sv qv siv civ ws lp (countsFold (ws.take i))
       ((i : Nat) : Int)
       (dead ++ [(.base ⟨na⟩, mhCellH),
         (.base ⟨na + 1⟩, u64cell (ws.getD i 0))]) na (na + 2) ch)
   have h13 := stepFnIter_chain h12
     (stepFnIter_one (hg_var2 σ ws.length sv qv siv civ ws lp
-      (countsList (ws.take i)) ((i : Nat) : Int) (ws.getD i 0) dead na
+      (countsFold (ws.take i)) ((i : Nat) : Int) (ws.getD i 0) dead na
       (na + 2) _ ch hna hdead))
   have h14 := stepFnIter_chain h13
-    (hg_segC8_raw σ ws.length sv qv siv civ ws lp (countsList (ws.take i))
+    (hg_segC8_raw σ ws.length sv qv siv civ ws lp (countsFold (ws.take i))
       ((i : Nat) : Int)
       (dead ++ [(.base ⟨na⟩, mhCellH),
         (.base ⟨na + 1⟩, u64cell (ws.getD i 0))]) na (na + 2)
       (ws.getD i 0) ch)
   have h15 := stepFnIter_chain h14
     (stepFnIter_one (hg_var1 σ ws.length sv qv siv civ ws lp
-      (countsList (ws.take i)) ((i : Nat) : Int) (ws.getD i 0) dead na
+      (countsFold (ws.take i)) ((i : Nat) : Int) (ws.getD i 0) dead na
       (na + 2) _ ch hna hdead))
   have h16 := stepFnIter_chain h15
-    (hg_segC9_raw σ ws.length sv qv siv civ ws lp (countsList (ws.take i))
+    (hg_segC9_raw σ ws.length sv qv siv civ ws lp (countsFold (ws.take i))
       ((i : Nat) : Int)
       (dead ++ [(.base ⟨na⟩, mhCellH),
         (.base ⟨na + 1⟩, u64cell (ws.getD i 0))]) na (na + 2)
       (ws.getD i 0) ch)
   have h17 := stepFnIter_chain h16
     (stepFnIter_one (hg_var2 σ ws.length sv qv siv civ ws lp
-      (countsList (ws.take i)) ((i : Nat) : Int) (ws.getD i 0) dead na
+      (countsFold (ws.take i)) ((i : Nat) : Int) (ws.getD i 0) dead na
       (na + 2) _ ch hna hdead))
   have h18 := stepFnIter_chain h17
     (stepFnIter_one (stepFn_strict_apply
       (done := [.map ⟨some (.base ⟨21⟩)⟩])
-      (hg_mapGet σ ws.length sv qv siv civ ws lp (countsList (ws.take i))
+      (hg_mapGet σ ws.length sv qv siv civ ws lp (countsFold (ws.take i))
         ((i : Nat) : Int)
         (dead ++ [(.base ⟨na⟩, mhCellH),
           (.base ⟨na + 1⟩, u64cell (ws.getD i 0))])
         (na + 2) (ws.getD i 0) hw.1 hw.2)))
   have h19 := stepFnIter_chain h18
-    (hg_segC10_raw σ ws.length sv qv siv civ ws lp (countsList (ws.take i))
+    (hg_segC10_raw σ ws.length sv qv siv civ ws lp (countsFold (ws.take i))
       ((i : Nat) : Int)
       (dead ++ [(.base ⟨na⟩, mhCellH),
         (.base ⟨na + 1⟩, u64cell (ws.getD i 0))]) na (na + 2)
       (ws.getD i 0)
-      ((cnt (countsList (ws.take i)) (ws.getD i 0) : Nat) : Int) ch)
-  have hcast : ((cnt (countsList (ws.take i)) (ws.getD i 0) : Nat) : Int) + 1
-      = ((cnt (countsList (ws.take i)) (ws.getD i 0) + 1 : Nat) : Int) := by
+      ((cnt (countsFold (ws.take i)) (ws.getD i 0) : Nat) : Int) ch)
+  have hcast : ((cnt (countsFold (ws.take i)) (ws.getD i 0) : Nat) : Int) + 1
+      = ((cnt (countsFold (ws.take i)) (ws.getD i 0) + 1 : Nat) : Int) := by
     omega
   have hnorm1 : IntKind.normalize .uint64
-      ((cnt (countsList (ws.take i)) (ws.getD i 0) + 1 : Nat) : Int)
-      = ((cnt (countsList (ws.take i)) (ws.getD i 0) + 1 : Nat) : Int) := by
+      ((cnt (countsFold (ws.take i)) (ws.getD i 0) + 1 : Nat) : Int)
+      = ((cnt (countsFold (ws.take i)) (ws.getD i 0) + 1 : Nat) : Int) := by
     refine GoLean.SliceMem.unorm_of_range (by omega) ?_
     exact_mod_cast hcnt
   rw [hcast, hnorm1] at h19
   have h20 := stepFnIter_chain h19
     (stepFnIter_one (hg_mapAsgn σ ws.length sv qv siv civ ws lp
-      (countsList (ws.take i)) ((i : Nat) : Int)
+      (countsFold (ws.take i)) ((i : Nat) : Int)
       (dead ++ [(.base ⟨na⟩, mhCellH),
         (.base ⟨na + 1⟩, u64cell (ws.getD i 0))])
       na (na + 2) (ws.getD i 0)
-      (cnt (countsList (ws.take i)) (ws.getD i 0) + 1) ch hw.1 hw.2 hcnt))
+      (cnt (countsFold (ws.take i)) (ws.getD i 0) + 1) ch hw.1 hw.2 hcnt))
   have h21 := stepFnIter_chain h20
     (hg_segC11_raw σ ws.length sv qv siv civ ws lp
-      (setk (countsList (ws.take i)) (ws.getD i 0)
-        (cnt (countsList (ws.take i)) (ws.getD i 0) + 1))
+      (setk (countsFold (ws.take i)) (ws.getD i 0)
+        (cnt (countsFold (ws.take i)) (ws.getD i 0) + 1))
       ((i : Nat) : Int)
       (dead ++ [(.base ⟨na⟩, mhCellH),
         (.base ⟨na + 1⟩, u64cell (ws.getD i 0))]) na (na + 2) ch)
-  rw [show setk (countsList (ws.take i)) (ws.getD i 0)
-      (cnt (countsList (ws.take i)) (ws.getD i 0) + 1)
-      = countsList (ws.take (i + 1)) from by
-    rw [setk_cnt_succ, ← countsList_append_value,
+  rw [show setk (countsFold (ws.take i)) (ws.getD i 0)
+      (cnt (countsFold (ws.take i)) (ws.getD i 0) + 1)
+      = countsFold (ws.take (i + 1)) from by
+    rw [setk_cnt_succ, ← countsFold_append,
       ← take_succ_getD hi]] at h21
   exact h21
 
@@ -743,7 +720,7 @@ theorem hg_count_loop (σ : ExecState) (sv qv siv civ : Int)
       k ≤ 84 * m + 9
       ∧ DeadFrom tail (na + 2 * m)
       ∧ stepFnIter k
-          (σH σ ws.length sv qv siv civ ws lp (countsList (ws.take i))
+          (σH σ ws.length sv qv siv civ ws lp (countsFold (ws.take i))
             (i : Int) false dead na)
           (.retV (.bool (decide ((i : Int) < (ws.length : Int)))) cmpContCH)
           ch
@@ -751,7 +728,7 @@ theorem hg_count_loop (σ : ExecState) (sv qv siv civ : Int)
               (.seq [.assign (.var "hits")
                   (.mapGet (.var "counts") (.var "q") tU64 tU64),
                 distinctSeqn, hMapRangeStmt, hRetSeqn] envR0H frameKH),
-            σH σ ws.length sv qv siv civ ws lp (countsList ws)
+            σH σ ws.length sv qv siv civ ws lp (countsFold ws)
               ((ws.length : Nat) : Int) false tail (na + 2 * m), ch) := by
   intro m
   induction m using Nat.strongRecOn with
@@ -767,7 +744,7 @@ theorem hg_count_loop (σ : ExecState) (sv qv siv civ : Int)
           (.base ⟨na + 1⟩, u64cell (ws.getD i 0))]) (na + 2) :=
         DeadFrom.push2 hdead
       have hA1' := hg_segA1_raw σ ws.length sv qv siv civ ws lp
-        (countsList (ws.take (i + 1))) ((i : Nat) : Int)
+        (countsFold (ws.take (i + 1))) ((i : Nat) : Int)
         (dead ++ [(.base ⟨na⟩, mhCellH),
           (.base ⟨na + 1⟩, u64cell (ws.getD i 0))]) (na + 2) ch
       rw [show ((i : Nat) : Int) + 1 = ((i + 1 : Nat) : Int) from by omega,
@@ -780,7 +757,7 @@ theorem hg_count_loop (σ : ExecState) (sv qv siv civ : Int)
           (ch := ch)
           (GoLean.SliceMem.applyStrictOp_len_slice
             (σ := σH σ ws.length sv qv siv civ ws lp
-              (countsList (ws.take (i + 1))) ((i + 1 : Nat) : Int) false
+              (countsFold (ws.take (i + 1))) ((i + 1 : Nat) : Int) false
               (dead ++ [(.base ⟨na⟩, mhCellH),
                 (.base ⟨na + 1⟩, u64cell (ws.getD i 0))]) (na + 2))
             (b := .base ⟨7⟩) (off := 0) (len := ws.length)
@@ -791,7 +768,7 @@ theorem hg_count_loop (σ : ExecState) (sv qv siv civ : Int)
           (k := cmpContCH) (ch := ch)
           (GoLean.SliceMem.applyStrictOp_lessCmp_int
             (σ := σH σ ws.length sv qv siv civ ws lp
-              (countsList (ws.take (i + 1))) ((i + 1 : Nat) : Int) false
+              (countsFold (ws.take (i + 1))) ((i + 1 : Nat) : Int) false
               (dead ++ [(.base ⟨na⟩, mhCellH),
                 (.base ⟨na + 1⟩, u64cell (ws.getD i 0))]) (na + 2))
             (a := ((i + 1 : Nat) : Int)) (b := ((ws.length : Nat) : Int))
@@ -816,7 +793,7 @@ theorem hg_count_loop (σ : ExecState) (sv qv siv civ : Int)
       rw [show (decide (((ws.length : Nat) : Int) < ((ws.length : Nat) : Int)))
           = false from decide_eq_false (by omega)]
       have hX := hg_segX0_raw σ ws.length sv qv siv civ ws lp
-        (countsList (ws.take ws.length)) ((ws.length : Nat) : Int) dead na ch
+        (countsFold (ws.take ws.length)) ((ws.length : Nat) : Int) dead na ch
       refine ⟨9, dead, by omega, ?_, ?_⟩
       · intro x hx
         exact hdead x (by omega)

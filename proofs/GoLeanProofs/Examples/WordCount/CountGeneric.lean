@@ -35,8 +35,7 @@ open GoLean.Surface GoLean.SliceMem
 
 /-- The map-handle heap cell at data address `bMap`. -/
 abbrev mhG (bMap : Nat) : HeapCell := ⟨some tMap, .map ⟨some (.base ⟨bMap⟩)⟩⟩
-/-- The nil-map cell (`$c1`'s default). -/
-abbrev nilMapCell : HeapCell := ⟨some tMap, .map ⟨none⟩⟩
+-- (`nilMapCell` is the kit's, via `open GoLean.MapMem` — GAP-P1.)
 /-- The input-slice handle over backing address `bArr`. -/
 abbrev wsHG (bArr L : Nat) : GoValue :=
   .slice ⟨some (.base ⟨bArr⟩), 0, L, L⟩
@@ -354,10 +353,10 @@ theorem wcLoop_generic
     (hlen : ws.length < 2 ^ 63)
     (hIter : ∀ (i : Nat) (dead : Heap) (na : Nat) (ch : Choices),
       i < ws.length → base0 ≤ na → DeadFrom dead na →
-      stepFnIter 53 (S (countsList (ws.take i)) ((i : Nat) : Int) false dead
+      stepFnIter 53 (S (countsFold (ws.take i)) ((i : Nat) : Int) false dead
           na) (.retV (.bool true) cmp) ch
         = .ok (head,
-            S (countsList (ws.take (i + 1))) ((i : Nat) : Int) false
+            S (countsFold (ws.take (i + 1))) ((i : Nat) : Int) false
               (dead ++ [(.base ⟨na⟩, mhG bMap),
                 (.base ⟨na + 1⟩, u64cell (ws.getD i 0))]) (na + 2), ch))
     (hA1 : ∀ kvs iv dead na ch,
@@ -418,7 +417,7 @@ theorem wcLoop_generic
         = .ok (.next (.mapIterK none (some "c") tU64 tU64 wcRangeBody
               (toEntries kvs) (envRBg B) (kRg B)),
             S kvs iv false dead na, ch))
-    (hNormKvs : ∀ p ∈ countsList ws,
+    (hNormKvs : ∀ p ∈ countsFold ws,
       IntKind.normalize .uint64 p.1 = p.1
         ∧ IntKind.normalize .uint64 ((p.2 : Nat) : Int) = ((p.2 : Nat) : Int)) :
     ∀ (n i : Nat), n = ws.length - i → i ≤ ws.length →
@@ -429,13 +428,13 @@ theorem wcLoop_generic
       ∧ DeadFrom tail (na + 2 * n + 1)
       ∧ Heap.lookup tail (.base ⟨na + 2 * n⟩) = some (u64cell 0)
       ∧ stepFnIter k
-          (S (countsList (ws.take i)) ((i : Nat) : Int) false dead na)
+          (S (countsFold (ws.take i)) ((i : Nat) : Int) false dead na)
           (.retV (.bool (decide (((i : Nat) : Int) < (ws.length : Int)))) cmp)
           ch
         = .ok (.next (.mapIterK none (some "c") tU64 tU64 wcRangeBody
-              (toEntries (countsList ws)) (envRBg (na + 2 * n))
+              (toEntries (countsFold ws)) (envRBg (na + 2 * n))
               (kRg (na + 2 * n))),
-            S (countsList ws) ((ws.length : Nat) : Int) false tail
+            S (countsFold ws) ((ws.length : Nat) : Int) false tail
               (na + 2 * n + 1), ch) := by
   intro n
   induction n using Nat.strongRecOn with
@@ -449,7 +448,7 @@ theorem wcLoop_generic
       have hdead₂ : DeadFrom (dead ++ [(.base ⟨na⟩, mhG bMap),
           (.base ⟨na + 1⟩, u64cell (ws.getD i 0))]) (na + 2) :=
         DeadFrom.push2 hdead
-      have hA1' := hA1 (countsList (ws.take (i + 1))) ((i : Nat) : Int)
+      have hA1' := hA1 (countsFold (ws.take (i + 1))) ((i : Nat) : Int)
         (dead ++ [(.base ⟨na⟩, mhG bMap),
           (.base ⟨na + 1⟩, u64cell (ws.getD i 0))]) (na + 2) ch
       rw [show ((i : Nat) : Int) + 1 = ((i + 1 : Nat) : Int) from by omega,
@@ -461,7 +460,7 @@ theorem wcLoop_generic
             cmp)
           (ch := ch)
           (GoLean.SliceMem.applyStrictOp_len_slice
-            (σ := S (countsList (ws.take (i + 1))) ((i + 1 : Nat) : Int) false
+            (σ := S (countsFold (ws.take (i + 1))) ((i + 1 : Nat) : Int) false
               (dead ++ [(.base ⟨na⟩, mhG bMap),
                 (.base ⟨na + 1⟩, u64cell (ws.getD i 0))]) (na + 2))
             (b := .base ⟨bArr⟩) (off := 0) (len := ws.length)
@@ -471,7 +470,7 @@ theorem wcLoop_generic
           (done := [.int ((i + 1 : Nat) : Int) .int]) (env := env2g)
           (k := cmp) (ch := ch)
           (GoLean.SliceMem.applyStrictOp_lessCmp_int
-            (σ := S (countsList (ws.take (i + 1))) ((i + 1 : Nat) : Int) false
+            (σ := S (countsFold (ws.take (i + 1))) ((i + 1 : Nat) : Int) false
               (dead ++ [(.base ⟨na⟩, mhG bMap),
                 (.base ⟨na + 1⟩, u64cell (ws.getD i 0))]) (na + 2))
             (a := ((i + 1 : Nat) : Int)) (b := ((ws.length : Nat) : Int))
@@ -497,23 +496,23 @@ theorem wcLoop_generic
       subst hn0
       rw [show (decide (((ws.length : Nat) : Int) < ((ws.length : Nat) : Int)))
           = false from decide_eq_false (by omega)]
-      have hX := hX0 (countsList (ws.take ws.length)) ((ws.length : Nat) : Int)
+      have hX := hX0 (countsFold (ws.take ws.length)) ((ws.length : Nat) : Int)
         dead na ch
-      have hIB := hInitBest (countsList (ws.take ws.length))
+      have hIB := hInitBest (countsFold (ws.take ws.length))
         ((ws.length : Nat) : Int) dead na ch hna hdead
       have h1 := stepFnIter_chain hX (stepFnIter_one hIB)
-      have hXb := hX0b (countsList (ws.take ws.length))
+      have hXb := hX0b (countsFold (ws.take ws.length))
         ((ws.length : Nat) : Int) (dead ++ [(.base ⟨na⟩, u64cell 0)]) na
         (na + 1) ch
       have h2 := stepFnIter_chain h1 hXb
-      have hSB := hStBest (countsList (ws.take ws.length))
+      have hSB := hStBest (countsFold (ws.take ws.length))
         ((ws.length : Nat) : Int) dead na (na + 1) ch hna hdead
       have h3 := stepFnIter_chain h2 (stepFnIter_one hSB)
-      have hXc := hX0c (countsList (ws.take ws.length))
+      have hXc := hX0c (countsFold (ws.take ws.length))
         ((ws.length : Nat) : Int) (dead ++ [(.base ⟨na⟩, u64cell 0)]) na
         (na + 1) ch
       have h4 := stepFnIter_chain h3 hXc
-      have hSn := hSnap (countsList (ws.take ws.length))
+      have hSn := hSnap (countsFold (ws.take ws.length))
         ((ws.length : Nat) : Int) (dead ++ [(.base ⟨na⟩, u64cell 0)]) na
         (na + 1) ch
         (by rw [List.take_length]; exact hNormKvs)

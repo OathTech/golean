@@ -18,29 +18,26 @@ Two layers live here, and the split matters:
   functions a reader can check by eye, and both are ORDER-INVARIANT
   functions OF THE RETURNED DATA (the S3 relational style): they never
   mention the map, the machine, or the setup family.
-* **PROOF vocabulary** — `bump`/`countsList` (the abstract content of
+* **PROOF vocabulary** — `bump`/`countsFold` (the abstract content of
   the map data cell) and `histFamily` (the setup family), plus the
   bridges from those to the statement functions.
 
 ## Kit gaps witnessed here (campaign log `g1.md`, KIT-GAP list)
 
-* **GAP-P1 `bump`/`countsList`.** The counting-fold layer is a verbatim
-  re-derivation of `Examples/WordCount/Pure.lean`'s. G0 item 3b
-  deliberately left it in wordcount ("wordcount spec vocabulary, not map
-  machinery"); as the chartered consumer this example shows that call
-  was wrong — the fold, `setk_cnt_succ`, `countsList_append_word`,
-  `cnt_countsList'`, `countsList_val_le` and the nodup-keys chain are
-  map-histogram machinery, not wordcount's. Shape wanted: these lemmas
-  in `MapMem` over `bump`, leaving each example only its own statement
-  functions and their bridges.
+* **GAP-P1 — CLOSED** (kit-gap closure, 2026-08-15): the counting-fold
+  layer this module had re-derived verbatim from
+  `Examples/WordCount/Pure.lean` now lives in `GoLeanProofs/MapMem.lean`
+  (`bump`/`countsFold` + the lemma chain); only the `occurrences`
+  bridge stays here.
 * **GAP-P2 the setup family.** `histFamily` and its four facts are an
   address-free re-derivation of `wcFamily`. The P5 lift covered the
   setup INDUCTION but explicitly not the family (G0 log, unit 3a JC).
   Shape wanted: a `familyMod k` generic over the modulus with
   `length`/`range`/`set`/`getD` proven once.
 
-The `(countsList l).length = distinctCount l` bridge below is NOT a gap
-— it is this example's own spec content.
+The `(countsList l).length = distinctCount l` bridge below is NOT a
+gap — it is this example's own spec content (`countsList` is the
+pinned delegation name for the kit's `countsFold`).
 -/
 
 namespace GoLean.Examples.Histogram
@@ -67,200 +64,34 @@ def distinctCount : List Int → Nat
 
 /-! ## The proof vocabulary: the counting fold
 
-GAP-P1 (see the module docstring): re-derived from
-`Examples/WordCount/Pure.lean`. -/
+GAP-P1 CLOSED (kit-gap closure, 2026-08-15): `bump`/`countsFold` and
+the lemma chain this module had re-derived verbatim (`setk_cnt_succ`,
+`countsFold_append`, `cnt_countsFold`, the key-membership/nodup/`cnt`
+chain, `countsFold_val_le`) now live in `GoLeanProofs/MapMem.lean`
+(visible here via `open GoLean.MapMem`). What stays is histogram's own
+STATEMENT vocabulary: the bridge to `occurrences` and the cardinality
+bridge below. -/
 
-/-- One value lands in the counts list: increment the first occurrence
-of the key, or append `(v, 1)` — first-occurrence insertion order,
-matching the machine's `mapAssign`. -/
-def bump : List (Int × Nat) → Int → List (Int × Nat)
-  | [], v => [(v, 1)]
-  | (k, c) :: rest, v =>
-      if k = v then (k, c + 1) :: rest else (k, c) :: bump rest v
-
-/-- The counts list after processing `l`, in first-occurrence insertion
-order — the abstract content of the map data cell. -/
-def countsList (l : List Int) : List (Int × Nat) :=
-  l.foldl bump []
-
-/-- What the machine's write computes is `bump`: the value written is
-`counts[v] + 1` at the first occurrence (or `0 + 1` fresh). -/
-theorem setk_cnt_succ :
-    ∀ (kvs : List (Int × Nat)) (v : Int),
-    setk kvs v (cnt kvs v + 1) = bump kvs v := by
-  intro kvs
-  induction kvs with
-  | nil => intro v; rfl
-  | cons kv rest ih =>
-      intro v
-      obtain ⟨k, c⟩ := kv
-      by_cases hk : k = v
-      · simp [setk, cnt, bump, hk]
-      · simp [setk, cnt, bump, hk, ih v]
-
-theorem countsList_append_value (p : List Int) (v : Int) :
-    countsList (p ++ [v]) = bump (countsList p) v := by
-  simp [countsList, List.foldl_append]
-
-theorem countsList_nil : countsList [] = [] := rfl
-
-/-! ### `occurrences` against the fold -/
-
-private theorem occurrences_nil (v : Int) : occurrences v [] = 0 := rfl
-
-private theorem occurrences_cons (v w : Int) (l : List Int) :
-    occurrences v (w :: l)
-      = (if w = v then 1 else 0) + occurrences v l := by
-  simp only [occurrences, List.filter_cons]
-  by_cases h : w = v
-  · simp [h, Nat.add_comm]
-  · simp [h]
-
-private theorem cnt_bump (kvs : List (Int × Nat)) (w x : Int) :
-    cnt (bump kvs w) x
-      = if x = w then cnt kvs w + 1 else cnt kvs x := by
-  induction kvs with
-  | nil =>
-      by_cases hx : x = w
-      · simp [bump, cnt, hx]
-      · simp [bump, cnt, hx, Ne.symm hx]
-  | cons kv rest ih =>
-      obtain ⟨k, c⟩ := kv
-      by_cases hk : k = w
-      · subst hk
-        by_cases hx : x = k
-        · simp [bump, cnt, hx]
-        · simp [bump, cnt, Ne.symm hx, hx]
-      · by_cases hxk : k = x
-        · subst hxk
-          simp [bump, cnt, hk]
-        · simp [bump, cnt, hk, hxk, ih]
-
-private theorem cnt_countsList (l : List Int) :
-    ∀ (kvs : List (Int × Nat)) (x : Int),
-    cnt (List.foldl bump kvs l) x = cnt kvs x + occurrences x l := by
-  induction l with
-  | nil => intro kvs x; simp [occurrences_nil]
-  | cons w rest ih =>
-      intro kvs x
-      simp only [List.foldl_cons, ih, cnt_bump, occurrences_cons]
-      by_cases hx : x = w
-      · subst hx
-        have h1 : (if x = x then cnt kvs x + 1 else cnt kvs x)
-            = cnt kvs x + 1 := if_pos rfl
-        have h2 : (if x = x then 1 else 0) = 1 := if_pos rfl
-        omega
-      · have h1 : (if x = w then cnt kvs w + 1 else cnt kvs x)
-            = cnt kvs x := if_neg hx
-        have h2 : (if w = x then 1 else 0) = 0 := if_neg (Ne.symm hx)
-        omega
+/-- The pinned histogram name for the kit's counting fold (the
+audit-shard roll-call names it): a pure delegation — the re-derived
+definition this module carried is deleted. -/
+abbrev countsList : List Int → List (Int × Nat) := GoLean.MapMem.countsFold
 
 /-- **The queried-key bridge**: the map's count at any key is that
 key's number of occurrences (0 on both sides for an absent key — Go's
-zero-value read is exactly the `occurrences = 0` case). -/
+zero-value read is exactly the `occurrences = 0` case); histogram's
+statement function is definitionally the kit's filter-length. -/
 theorem cnt_countsList' (l : List Int) (x : Int) :
     cnt (countsList l) x = occurrences x l := by
-  simpa [countsList, cnt] using cnt_countsList l [] x
+  rw [cnt_countsFold]; rfl
 
-/-! ### The key column: membership, nodup, and the value bound -/
-
-private theorem mem_bump {kvs : List (Int × Nat)} {w : Int}
-    {p : Int × Nat} (h : p ∈ bump kvs w) :
-    p.1 = w ∨ p ∈ kvs := by
-  induction kvs with
-  | nil =>
-      simp only [bump, List.mem_singleton] at h
-      exact .inl (by rw [h])
-  | cons kv rest ih =>
-      obtain ⟨k, c⟩ := kv
-      by_cases hk : k = w
-      · simp only [bump, if_pos hk] at h
-        rcases List.mem_cons.mp h with h1 | h1
-        · exact .inl (by rw [h1]; exact hk)
-        · exact .inr (List.mem_cons.mpr (.inr h1))
-      · simp only [bump, if_neg hk] at h
-        rcases List.mem_cons.mp h with h1 | h1
-        · exact .inr (List.mem_cons.mpr (.inl h1))
-        · rcases ih h1 with h2 | h2
-          · exact .inl h2
-          · exact .inr (List.mem_cons.mpr (.inr h2))
-
-theorem countsList_key_mem (l : List Int) :
-    ∀ (kvs : List (Int × Nat)) (p : Int × Nat),
-    p ∈ List.foldl bump kvs l → p.1 ∈ l ∨ p ∈ kvs := by
-  induction l with
-  | nil => intro kvs p h; exact .inr h
-  | cons w rest ih =>
-      intro kvs p h
-      simp only [List.foldl_cons] at h
-      rcases ih (bump kvs w) p h with h | h
-      · exact .inl (by simp [h])
-      · rcases mem_bump h with h | h
-        · exact .inl (by simp [h])
-        · exact .inr h
-
-private theorem nodup_keys_bump {kvs : List (Int × Nat)} {w : Int}
-    (h : (kvs.map Prod.fst).Nodup) :
-    ((bump kvs w).map Prod.fst).Nodup := by
-  induction kvs with
-  | nil => simp [bump]
-  | cons kv rest ih =>
-      obtain ⟨k, c⟩ := kv
-      simp only [List.map_cons, List.nodup_cons] at h
-      by_cases hk : k = w
-      · simpa [bump, hk, List.nodup_cons] using h
-      · simp only [bump, if_neg hk, List.map_cons, List.nodup_cons]
-        refine ⟨?_, ih h.2⟩
-        intro hc
-        rcases List.mem_map.mp hc with ⟨p, hp, hpk⟩
-        rcases mem_bump hp with h1 | h1
-        · exact hk (hpk ▸ h1)
-        · exact h.1 (List.mem_map.mpr ⟨p, h1, hpk⟩)
-
-private theorem nodup_keys_countsList (l : List Int) :
-    ∀ kvs : List (Int × Nat), (kvs.map Prod.fst).Nodup →
-    ((List.foldl bump kvs l).map Prod.fst).Nodup := by
-  induction l with
-  | nil => intro kvs h; exact h
-  | cons w rest ih =>
-      intro kvs h
-      exact ih (bump kvs w) (nodup_keys_bump h)
-
-private theorem cnt_of_mem_nodup :
-    ∀ {kvs : List (Int × Nat)} {k : Int} {c : Nat},
-    (kvs.map Prod.fst).Nodup → (k, c) ∈ kvs → cnt kvs k = c := by
-  intro kvs
-  induction kvs with
-  | nil => intro k c _ h; cases h
-  | cons kv rest ih =>
-      intro k c hnd h
-      obtain ⟨k', c'⟩ := kv
-      simp only [List.map_cons, List.nodup_cons] at hnd
-      rcases List.mem_cons.mp h with h | h
-      · injection h with h1 h2
-        subst h1; subst h2
-        simp [cnt]
-      · have hk : k' ≠ k := by
-          intro hc
-          subst hc
-          exact hnd.1 (List.mem_map.mpr ⟨(k', c), h, rfl⟩)
-        simp only [cnt, if_neg hk]
-        exact ih hnd.2 h
-
-/-- Value bound: no count exceeds the number of values counted. -/
+/-- Value bound, at the pinned histogram name (delegation to the
+kit's `countsFold_val_le`). -/
 theorem countsList_val_le (l : List Int) {p : Int × Nat}
-    (hp : p ∈ countsList l) : p.2 ≤ l.length := by
-  obtain ⟨k, c⟩ := p
-  have hnd := nodup_keys_countsList l [] (by simp)
-  have hcnt : cnt (countsList l) k = c := cnt_of_mem_nodup hnd hp
-  have := cnt_countsList' l k
-  rw [hcnt] at this
-  simp only [occurrences] at this
-  have hle : (l.filter (· = k)).length ≤ l.length :=
-    List.length_filter_le _ _
-  omega
+    (hp : p ∈ countsList l) : p.2 ≤ l.length :=
+  GoLean.MapMem.countsFold_val_le l hp
 
-/-! ## The cardinality bridge: `(countsList l).length = distinctCount l`
+/-! ## The cardinality bridge: `(countsFold l).length = distinctCount l`
 
 This example's own spec content — the fact that makes the `for range`
 loop's answer readable. The auxiliary `newCount seen l` counts the
@@ -386,7 +217,8 @@ counts` answer readable — the loop runs once per entry at EVERY
 iteration order, and the entry count is a function of the data. -/
 theorem countsList_length (l : List Int) :
     (countsList l).length = distinctCount l := by
-  rw [countsList, foldl_bump_length l []]
+  rw [show countsList l = List.foldl bump [] l from rfl,
+    foldl_bump_length l []]
   simp [newCount_nil_seen]
 
 theorem distinctCount_le (l : List Int) : distinctCount l ≤ l.length := by

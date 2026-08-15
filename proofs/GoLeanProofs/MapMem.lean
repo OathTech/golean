@@ -21,9 +21,12 @@ fibonacci-memo, whose map phases state exactly these facts.
 
 Everything speaks the private counts encoding `List (Int × Nat)` —
 keys with `Nat` values (the machine stores values as wrapped uint64
-`Int`s; `toEntries` is the encoding). WordCount's PURE counting layer
-(`bump`/`countsList`/the max fold) is NOT here: it is wordcount's
-spec vocabulary, not map machinery.
+`Int`s; `toEntries` is the encoding). The counting fold
+(`bump`/`countsFold`) joined in the GAP-P1 lift (kit-gap closure,
+2026-08-15) once histogram — the chartered consumer — had re-derived
+it verbatim: the fold is map-counting machinery after all, and only
+each example's STATEMENT functions (the max fold, `distinctCount`)
+stay example-local.
 
 ## PUBLIC API — the sealed interface (the W6 convention, as in
 `SliceMem`)
@@ -41,10 +44,17 @@ spec vocabulary, not map machinery.
   snapshot), `mapEntryIndex?_toEntries` (the key scan), and the
   scan engine `scan_generic`;
 * the `toEntries` bridges: `toEntries_getElem?`, `toEntries_size`,
-  `toEntries_eraseIdx`, `map_eraseIdx`.
+  `toEntries_eraseIdx`, `map_eraseIdx`;
+* the counting fold (GAP-P1 lift, 2026-08-15): `bump`, `countsFold`,
+  `nilMapCell`, with `setk_cnt_succ`, `countsFold_nil`,
+  `countsFold_append`, `cnt_countsFold`, `countsFold_key_mem`,
+  `countsFold_nodup_keys`, `cnt_of_mem_nodup`, `cnt_pos_mem`,
+  `countsFold_val_le`, `take_succ_getD`, `cnt_take_le`.
 
 **Internal** (`private` — spelling may change without notice):
-`valueEq_u64`, `toEntries_setk`, `snapshot_norm`.
+`valueEq_u64`, `toEntries_setk`, `snapshot_norm`, `cnt_bump`,
+`cnt_countsFold_aux`, `mem_bump`, `countsFold_key_mem_aux`,
+`nodup_keys_bump`, `countsFold_nodup_keys_aux`.
 
 **The API discipline** (as `SliceMem`'s, verbatim in substance):
 everything here is UNTRUSTED METHOD except the vocabulary defs, and
@@ -268,6 +278,265 @@ theorem toEntries_eraseIdx (kvs : List (Int × Nat)) (i : Nat)
     (toEntries kvs).eraseIdx i h = toEntries (kvs.eraseIdx i) := by
   apply Array.toList_inj.mp
   simp [toEntries, map_eraseIdx]
+
+/-! ## The counting fold (Gallery Campaign kit-gap closure GAP-P1,
+2026-08-15)
+
+`bump`/`countsFold` — the abstract content of a counting map's data
+cell (`m[k]++` folded over a value list) and its lemma chain, lifted
+from the verbatim copies in `Examples/WordCount/Pure.lean` and
+`Examples/Histogram/Pure.lean`. G0 item 3b deliberately left the
+family in wordcount as "spec vocabulary, not map machinery"; the
+chartered consumer (histogram) then re-derived it wholesale, showing
+that boundary call wrong — corrected here, recorded in the campaign
+log. Each example keeps only its own STATEMENT functions
+(`multiplicity` / `occurrences`, `distinctCount`) and a one-line
+bridge to `cnt_countsFold`. The addendum members (`take_succ_getD`,
+`cnt_take_le`, `nilMapCell`) are the counting-loop plumbing the same
+gap record listed. -/
+
+/-- One value lands in the counts list: increment the first occurrence
+of the key, or append `(v, 1)` — first-occurrence insertion order,
+matching the machine's `mapAssign`. -/
+def bump : List (Int × Nat) → Int → List (Int × Nat)
+  | [], v => [(v, 1)]
+  | (k, c) :: rest, v =>
+      if k = v then (k, c + 1) :: rest else (k, c) :: bump rest v
+
+/-- The counts list after processing `l`, in first-occurrence
+insertion order — the abstract content of the map data cell. -/
+def countsFold (l : List Int) : List (Int × Nat) :=
+  l.foldl bump []
+
+/-- The nil-map cell — a `map[uint64]uint64` variable's default value
+before a handle is stored over it. -/
+abbrev nilMapCell : HeapCell :=
+  ⟨some (.map (.int .uint64) (.int .uint64)), .map ⟨none⟩⟩
+
+/-- What the machine's write computes is `bump`: the value written is
+`counts[v] + 1` at the first occurrence (or `0 + 1` fresh). -/
+theorem setk_cnt_succ :
+    ∀ (kvs : List (Int × Nat)) (v : Int),
+    setk kvs v (cnt kvs v + 1) = bump kvs v := by
+  intro kvs
+  induction kvs with
+  | nil => intro v; rfl
+  | cons kv rest ih =>
+      intro v
+      obtain ⟨k, c⟩ := kv
+      by_cases hk : k = v
+      · simp [setk, cnt, bump, hk]
+      · simp [setk, cnt, bump, hk, ih v]
+
+theorem countsFold_nil : countsFold [] = [] := rfl
+
+theorem countsFold_append (p : List Int) (v : Int) :
+    countsFold (p ++ [v]) = bump (countsFold p) v := by
+  simp [countsFold, List.foldl_append]
+
+/-- `cnt` after a `bump`. -/
+private theorem cnt_bump (kvs : List (Int × Nat)) (w x : Int) :
+    cnt (bump kvs w) x
+      = if x = w then cnt kvs w + 1 else cnt kvs x := by
+  induction kvs with
+  | nil =>
+      by_cases hx : x = w
+      · simp [bump, cnt, hx]
+      · simp [bump, cnt, hx, Ne.symm hx]
+  | cons kv rest ih =>
+      obtain ⟨k, c⟩ := kv
+      by_cases hk : k = w
+      · subst hk
+        by_cases hx : x = k
+        · simp [bump, cnt, hx]
+        · simp [bump, cnt, Ne.symm hx, hx]
+      · by_cases hxk : k = x
+        · subst hxk
+          simp [bump, cnt, hk]
+        · simp [bump, cnt, hk, hxk, ih]
+
+private theorem filter_len_cons (v w : Int) (l : List Int) :
+    ((w :: l).filter (· = v)).length
+      = (if w = v then 1 else 0) + (l.filter (· = v)).length := by
+  simp only [List.filter_cons]
+  by_cases h : w = v
+  · simp [h, Nat.add_comm]
+  · simp [h]
+
+private theorem cnt_countsFold_aux (l : List Int) :
+    ∀ (kvs : List (Int × Nat)) (x : Int),
+    cnt (List.foldl bump kvs l) x
+      = cnt kvs x + (l.filter (· = x)).length := by
+  induction l with
+  | nil => intro kvs x; simp
+  | cons w rest ih =>
+      intro kvs x
+      simp only [List.foldl_cons, ih, cnt_bump, filter_len_cons]
+      by_cases hx : x = w
+      · subst hx
+        have h1 : (if x = x then cnt kvs x + 1 else cnt kvs x)
+            = cnt kvs x + 1 := if_pos rfl
+        have h2 : (if x = x then 1 else 0) = 1 := if_pos rfl
+        omega
+      · have h1 : (if x = w then cnt kvs w + 1 else cnt kvs x)
+            = cnt kvs x := if_neg hx
+        have h2 : (if w = x then 1 else 0) = 0 := if_neg (Ne.symm hx)
+        omega
+
+/-- **The counting-fold invariant**: the fold's count at any key is
+that key's number of occurrences (0 on both sides for an absent key —
+Go's zero-value read is exactly the absent case). Each example bridges
+this to its own statement function (`multiplicity` / `occurrences`),
+both of which are definitionally this filter-length. -/
+theorem cnt_countsFold (l : List Int) (x : Int) :
+    cnt (countsFold l) x = (l.filter (· = x)).length := by
+  simpa [countsFold, cnt] using cnt_countsFold_aux l [] x
+
+/-- Every entry of a `bump` has its key at the bumped value or in the
+seed. -/
+private theorem mem_bump {kvs : List (Int × Nat)} {w : Int}
+    {p : Int × Nat} (h : p ∈ bump kvs w) :
+    p.1 = w ∨ p ∈ kvs := by
+  induction kvs with
+  | nil =>
+      simp only [bump, List.mem_singleton] at h
+      exact .inl (by rw [h])
+  | cons kv rest ih =>
+      obtain ⟨k, c⟩ := kv
+      by_cases hk : k = w
+      · simp only [bump, if_pos hk] at h
+        rcases List.mem_cons.mp h with h1 | h1
+        · exact .inl (by rw [h1]; exact hk)
+        · exact .inr (List.mem_cons.mpr (.inr h1))
+      · simp only [bump, if_neg hk] at h
+        rcases List.mem_cons.mp h with h1 | h1
+        · exact .inr (List.mem_cons.mpr (.inl h1))
+        · rcases ih h1 with h2 | h2
+          · exact .inl h2
+          · exact .inr (List.mem_cons.mpr (.inr h2))
+
+private theorem countsFold_key_mem_aux (l : List Int) :
+    ∀ (kvs : List (Int × Nat)) (p : Int × Nat),
+    p ∈ List.foldl bump kvs l → p.1 ∈ l ∨ p ∈ kvs := by
+  induction l with
+  | nil => intro kvs p h; exact .inr h
+  | cons w rest ih =>
+      intro kvs p h
+      simp only [List.foldl_cons] at h
+      rcases ih (bump kvs w) p h with h | h
+      · exact .inl (by simp [h])
+      · rcases mem_bump h with h | h
+        · exact .inl (by simp [h])
+        · exact .inr h
+
+/-- Every key of the fold occurs in the folded list. -/
+theorem countsFold_key_mem {l : List Int} {p : Int × Nat}
+    (hp : p ∈ countsFold l) : p.1 ∈ l := by
+  rcases countsFold_key_mem_aux l [] p hp with h | h
+  · exact h
+  · cases h
+
+/-- Distinct keys (`Nodup` on the key column) — `bump` preserves it. -/
+private theorem nodup_keys_bump {kvs : List (Int × Nat)} {w : Int}
+    (h : (kvs.map Prod.fst).Nodup) :
+    ((bump kvs w).map Prod.fst).Nodup := by
+  induction kvs with
+  | nil => simp [bump]
+  | cons kv rest ih =>
+      obtain ⟨k, c⟩ := kv
+      simp only [List.map_cons, List.nodup_cons] at h
+      by_cases hk : k = w
+      · simpa [bump, hk, List.nodup_cons] using h
+      · simp only [bump, if_neg hk, List.map_cons, List.nodup_cons]
+        refine ⟨?_, ih h.2⟩
+        intro hc
+        rcases List.mem_map.mp hc with ⟨p, hp, hpk⟩
+        rcases mem_bump hp with h1 | h1
+        · exact hk (hpk ▸ h1)
+        · exact h.1 (List.mem_map.mpr ⟨p, h1, hpk⟩)
+
+private theorem countsFold_nodup_keys_aux (l : List Int) :
+    ∀ kvs : List (Int × Nat), (kvs.map Prod.fst).Nodup →
+    ((List.foldl bump kvs l).map Prod.fst).Nodup := by
+  induction l with
+  | nil => intro kvs h; exact h
+  | cons w rest ih =>
+      intro kvs h
+      exact ih (bump kvs w) (nodup_keys_bump h)
+
+/-- The fold's key column is duplicate-free. -/
+theorem countsFold_nodup_keys (l : List Int) :
+    ((countsFold l).map Prod.fst).Nodup :=
+  countsFold_nodup_keys_aux l [] (by simp)
+
+/-- With distinct keys, membership pins the count: `(k, c) ∈ kvs →
+cnt kvs k = c`. -/
+theorem cnt_of_mem_nodup :
+    ∀ {kvs : List (Int × Nat)} {k : Int} {c : Nat},
+    (kvs.map Prod.fst).Nodup → (k, c) ∈ kvs → cnt kvs k = c := by
+  intro kvs
+  induction kvs with
+  | nil => intro k c _ h; cases h
+  | cons kv rest ih =>
+      intro k c hnd h
+      obtain ⟨k', c'⟩ := kv
+      simp only [List.map_cons, List.nodup_cons] at hnd
+      rcases List.mem_cons.mp h with h | h
+      · injection h with h1 h2
+        subst h1; subst h2
+        simp [cnt]
+      · have hk : k' ≠ k := by
+          intro hc
+          subst hc
+          exact hnd.1 (List.mem_map.mpr ⟨(k', c), h, rfl⟩)
+        simp only [cnt, if_neg hk]
+        exact ih hnd.2 h
+
+/-- Positive `cnt` means the key is present. -/
+theorem cnt_pos_mem {kvs : List (Int × Nat)} {x : Int}
+    (h : 0 < cnt kvs x) : (x, cnt kvs x) ∈ kvs := by
+  induction kvs with
+  | nil => simp [cnt] at h
+  | cons kv rest ih =>
+      obtain ⟨k, c⟩ := kv
+      by_cases hk : k = x
+      · subst hk
+        simp only [cnt, if_pos rfl] at h ⊢
+        exact List.mem_cons.mpr (.inl rfl)
+      · simp only [cnt, if_neg hk] at h ⊢
+        exact List.mem_cons.mpr (.inr (ih h))
+
+/-- Value bound: no count exceeds the number of values folded. -/
+theorem countsFold_val_le (l : List Int) {p : Int × Nat}
+    (hp : p ∈ countsFold l) : p.2 ≤ l.length := by
+  obtain ⟨k, c⟩ := p
+  have hnd := countsFold_nodup_keys l
+  have hcnt : cnt (countsFold l) k = c := cnt_of_mem_nodup hnd hp
+  have := cnt_countsFold l k
+  rw [hcnt] at this
+  have hle : (l.filter (· = k)).length ≤ l.length :=
+    List.length_filter_le _ _
+  omega
+
+/-- A take extended by one step is the take plus the element (the
+counting loop's per-iteration list identity). -/
+theorem take_succ_getD {α : Type} {l : List α} {i : Nat}
+    (hi : i < l.length) {d : α} :
+    l.take (i + 1) = l.take i ++ [l.getD i d] := by
+  rw [List.take_add_one, List.getElem?_eq_getElem hi]
+  simp [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hi]
+
+/-- The running count is bounded by the number of values folded so far
+(the counting loop's no-overflow bound). -/
+theorem cnt_take_le {ws : List Int} {i : Nat} (w : Int) :
+    cnt (countsFold (ws.take i)) w ≤ i := by
+  rw [cnt_countsFold]
+  have h1 : ((ws.take i).filter (· = w)).length ≤ (ws.take i).length :=
+    List.length_filter_le _ _
+  have h2 : (ws.take i).length ≤ i := by
+    rw [List.length_take]
+    exact Nat.min_le_left _ _
+  omega
 
 /-! ## The executable map-op facts -/
 

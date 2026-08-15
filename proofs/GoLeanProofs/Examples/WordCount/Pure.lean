@@ -161,7 +161,7 @@ flagged as a "SliceMem promotion candidate" and is now
 `GoLeanProofs/MapMem.lean` (Gallery Campaign G0 item 3b, 2026-08-15;
 landed consumer: this example, chartered: histogram + fibonacci-memo).
 Everything below consumes it via `open GoLean.MapMem`; only
-wordcount's own spec layer (`bump`/`countsList`/the max fold) stays. -/
+wordcount's own spec layer (`bump`/`countsFold`/the max fold) stays. -/
 
 /-! ## The heap-append kit (symbolic-address algebra, §10c)
 
@@ -169,197 +169,21 @@ The in-loop cells live at length-dependent addresses past the nine
 concrete front cells, so their reads/writes are discharged by this
 small append algebra instead of definitional reduction. -/
 
-/-! ## The pure counts layer: `bump`, `countsList`, and the max fold -/
+/-! ## The pure counts layer
 
-/-- One word lands in the counts list: increment the first occurrence
-of the key, or append `(v, 1)` — first-occurrence insertion order,
-matching the machine's `mapAssign`. -/
-def bump : List (Int × Nat) → Int → List (Int × Nat)
-  | [], v => [(v, 1)]
-  | (k, c) :: rest, v =>
-      if k = v then (k, c + 1) :: rest else (k, c) :: bump rest v
+GAP-P1 CLOSED (kit-gap closure, 2026-08-15): `bump`/`countsFold` and
+the whole lemma chain (`setk_cnt_succ`, `countsFold_append`,
+`cnt_countsFold`, the key-membership/nodup/`cnt` chain,
+`countsFold_val_le`) now live in `GoLeanProofs/MapMem.lean` (visible
+here via `open GoLean.MapMem`). What stays is wordcount's own
+STATEMENT vocabulary: the bridge to `multiplicity` and the max fold. -/
 
-/-- The counts list after processing `ws`, in first-occurrence
-insertion order — the abstract content of the map data cell. -/
-def countsList (ws : List Int) : List (Int × Nat) :=
-  ws.foldl bump []
-
-/-- What the machine's write computes is `bump`: the value written is
-`counts[w] + 1` at the first occurrence (or `0 + 1` fresh). -/
-theorem setk_cnt_succ :
-    ∀ (kvs : List (Int × Nat)) (w : Int),
-    setk kvs w (cnt kvs w + 1) = bump kvs w := by
-  intro kvs
-  induction kvs with
-  | nil => intro w; rfl
-  | cons kv rest ih =>
-      intro w
-      obtain ⟨k, c⟩ := kv
-      by_cases hk : k = w
-      · simp [setk, cnt, bump, hk]
-      · simp [setk, cnt, bump, hk, ih w]
-
-theorem countsList_append_word (p : List Int) (w : Int) :
-    countsList (p ++ [w]) = bump (countsList p) w := by
-  simp [countsList, List.foldl_append]
-
-private theorem multiplicity_nil (v : Int) : multiplicity v [] = 0 := rfl
-
-private theorem multiplicity_cons (v w : Int) (ws : List Int) :
-    multiplicity v (w :: ws)
-      = (if w = v then 1 else 0) + multiplicity v ws := by
-  simp only [multiplicity, List.filter_cons]
-  by_cases h : w = v
-  · simp [h, Nat.add_comm]
-  · simp [h]
-
-/-- `cnt` after a `bump`. -/
-private theorem cnt_bump (kvs : List (Int × Nat)) (w x : Int) :
-    cnt (bump kvs w) x
-      = if x = w then cnt kvs w + 1 else cnt kvs x := by
-  induction kvs with
-  | nil =>
-      by_cases hx : x = w
-      · simp [bump, cnt, hx]
-      · simp [bump, cnt, hx, Ne.symm hx]
-  | cons kv rest ih =>
-      obtain ⟨k, c⟩ := kv
-      by_cases hk : k = w
-      · subst hk
-        by_cases hx : x = k
-        · simp [bump, cnt, hx]
-        · simp [bump, cnt, Ne.symm hx, hx]
-      · by_cases hxk : k = x
-        · subst hxk
-          simp [bump, cnt, hk]
-        · simp [bump, cnt, hk, hxk, ih]
-
-/-- **The counts-list invariant**: after processing `ws`, `cnt` at any
-key is its multiplicity (0 included on both sides for absent keys). -/
-private theorem cnt_countsList (ws : List Int) :
-    ∀ (kvs : List (Int × Nat)) (x : Int),
-    cnt (List.foldl bump kvs ws) x = cnt kvs x + multiplicity x ws := by
-  induction ws with
-  | nil => intro kvs x; simp [multiplicity_nil]
-  | cons w rest ih =>
-      intro kvs x
-      simp only [List.foldl_cons, ih, cnt_bump, multiplicity_cons]
-      by_cases hx : x = w
-      · subst hx
-        have h1 : (if x = x then cnt kvs x + 1 else cnt kvs x)
-            = cnt kvs x + 1 := if_pos rfl
-        have h2 : (if x = x then 1 else 0) = 1 := if_pos rfl
-        omega
-      · have h1 : (if x = w then cnt kvs w + 1 else cnt kvs x)
-            = cnt kvs x := if_neg hx
-        have h2 : (if w = x then 1 else 0) = 0 := if_neg (Ne.symm hx)
-        omega
-
-theorem cnt_countsList' (ws : List Int) (x : Int) :
-    cnt (countsList ws) x = multiplicity x ws := by
-  simpa [countsList, cnt] using cnt_countsList ws [] x
-
-/-- Every entry of a `bump`-fold has its key in the processed words (or
-in the seed). -/
-private theorem mem_bump {kvs : List (Int × Nat)} {w : Int}
-    {p : Int × Nat} (h : p ∈ bump kvs w) :
-    p.1 = w ∨ p ∈ kvs := by
-  induction kvs with
-  | nil =>
-      simp only [bump, List.mem_singleton] at h
-      exact .inl (by rw [h])
-  | cons kv rest ih =>
-      obtain ⟨k, c⟩ := kv
-      by_cases hk : k = w
-      · simp only [bump, if_pos hk] at h
-        rcases List.mem_cons.mp h with h1 | h1
-        · exact .inl (by rw [h1]; exact hk)
-        · exact .inr (List.mem_cons.mpr (.inr h1))
-      · simp only [bump, if_neg hk] at h
-        rcases List.mem_cons.mp h with h1 | h1
-        · exact .inr (List.mem_cons.mpr (.inl h1))
-        · rcases ih h1 with h2 | h2
-          · exact .inl h2
-          · exact .inr (List.mem_cons.mpr (.inr h2))
-
-theorem countsList_key_mem (ws : List Int) :
-    ∀ (kvs : List (Int × Nat)) (p : Int × Nat),
-    p ∈ List.foldl bump kvs ws → p.1 ∈ ws ∨ p ∈ kvs := by
-  induction ws with
-  | nil => intro kvs p h; exact .inr h
-  | cons w rest ih =>
-      intro kvs p h
-      simp only [List.foldl_cons] at h
-      rcases ih (bump kvs w) p h with h | h
-      · exact .inl (by simp [h])
-      · rcases mem_bump h with h | h
-        · exact .inl (by simp [h])
-        · exact .inr h
-
-/-- Distinct keys (`Nodup` on the key column) — `bump` preserves it. -/
-private theorem nodup_keys_bump {kvs : List (Int × Nat)} {w : Int}
-    (h : (kvs.map Prod.fst).Nodup) :
-    ((bump kvs w).map Prod.fst).Nodup := by
-  induction kvs with
-  | nil => simp [bump]
-  | cons kv rest ih =>
-      obtain ⟨k, c⟩ := kv
-      simp only [List.map_cons, List.nodup_cons] at h
-      by_cases hk : k = w
-      · simpa [bump, hk, List.nodup_cons] using h
-      · simp only [bump, if_neg hk, List.map_cons, List.nodup_cons]
-        refine ⟨?_, ih h.2⟩
-        intro hc
-        rcases List.mem_map.mp hc with ⟨p, hp, hpk⟩
-        rcases mem_bump hp with h1 | h1
-        · exact hk (hpk ▸ h1)
-        · exact h.1 (List.mem_map.mpr ⟨p, h1, hpk⟩)
-
-private theorem nodup_keys_countsList (ws : List Int) :
-    ∀ kvs : List (Int × Nat), (kvs.map Prod.fst).Nodup →
-    ((List.foldl bump kvs ws).map Prod.fst).Nodup := by
-  induction ws with
-  | nil => intro kvs h; exact h
-  | cons w rest ih =>
-      intro kvs h
-      exact ih (bump kvs w) (nodup_keys_bump h)
-
-/-- With distinct keys, membership pins the count: `(k, c) ∈ kvs →
-cnt kvs k = c`. -/
-private theorem cnt_of_mem_nodup :
-    ∀ {kvs : List (Int × Nat)} {k : Int} {c : Nat},
-    (kvs.map Prod.fst).Nodup → (k, c) ∈ kvs → cnt kvs k = c := by
-  intro kvs
-  induction kvs with
-  | nil => intro k c _ h; cases h
-  | cons kv rest ih =>
-      intro k c hnd h
-      obtain ⟨k', c'⟩ := kv
-      simp only [List.map_cons, List.nodup_cons] at hnd
-      rcases List.mem_cons.mp h with h | h
-      · injection h with h1 h2
-        subst h1; subst h2
-        simp [cnt]
-      · have hk : k' ≠ k := by
-          intro hc
-          subst hc
-          exact hnd.1 (List.mem_map.mpr ⟨(k', c), h, rfl⟩)
-        simp only [cnt, if_neg hk]
-        exact ih hnd.2 h
-
-/-- Positive `cnt` means the key is present. -/
-private theorem cnt_pos_mem {kvs : List (Int × Nat)} {x : Int}
-    (h : 0 < cnt kvs x) : (x, cnt kvs x) ∈ kvs := by
-  induction kvs with
-  | nil => simp [cnt] at h
-  | cons kv rest ih =>
-      obtain ⟨k, c⟩ := kv
-      by_cases hk : k = x
-      · subst hk
-        simp only [cnt, if_pos rfl] at h ⊢
-        exact List.mem_cons.mpr (.inl rfl)
-      · simp only [cnt, if_neg hk] at h ⊢
-        exact List.mem_cons.mpr (.inr (ih h))
+/-- **The queried-count bridge**: the fold's count at any key is that
+key's `multiplicity` — wordcount's statement function is
+definitionally the kit's filter-length. -/
+theorem cnt_countsFold' (ws : List Int) (x : Int) :
+    cnt (countsFold ws) x = multiplicity x ws := by
+  rw [cnt_countsFold]; rfl
 
 /-! ### The max fold -/
 
@@ -461,6 +285,14 @@ theorem maxMult_le {ws : List Int} {B : Nat}
     (h : ∀ v ∈ ws, multiplicity v ws ≤ B) : maxMultiplicity ws ≤ B :=
   foldl_max_le (f := fun v => multiplicity v ws) ws 0 (Nat.zero_le _) h
 
+private theorem multiplicity_cons (v w : Int) (ws : List Int) :
+    multiplicity v (w :: ws)
+      = (if w = v then 1 else 0) + multiplicity v ws := by
+  simp only [multiplicity, List.filter_cons]
+  by_cases h : w = v
+  · simp [h, Nat.add_comm]
+  · simp [h]
+
 private theorem mem_mult_pos {ws : List Int} {v : Int} (h : v ∈ ws) :
     0 < multiplicity v ws := by
   induction ws with
@@ -477,22 +309,19 @@ private theorem mem_mult_pos {ws : List Int} {v : Int} (h : v ∈ ws) :
 
 /-- **The spec bridge**: the max over the counts-list value column IS
 `maxMultiplicity`. -/
-theorem maxOf_countsList (ws : List Int) :
-    maxOf ((countsList ws).map Prod.snd) = maxMultiplicity ws := by
-  have hnd : ((countsList ws).map Prod.fst).Nodup :=
-    nodup_keys_countsList ws [] (by simp)
+theorem maxOf_countsFold (ws : List Int) :
+    maxOf ((countsFold ws).map Prod.snd) = maxMultiplicity ws := by
+  have hnd : ((countsFold ws).map Prod.fst).Nodup :=
+    countsFold_nodup_keys ws
   apply Nat.le_antisymm
   · -- every count is some key's multiplicity, ≤ the max
     apply maxOf_le
     intro c hc
     rcases List.mem_map.mp hc with ⟨⟨k, c'⟩, hp, hsnd⟩
-    have hkey : k ∈ ws := by
-      rcases countsList_key_mem ws [] (k, c') hp with h | h
-      · exact h
-      · cases h
-    have hcnt : cnt (countsList ws) k = c' := cnt_of_mem_nodup hnd hp
+    have hkey : k ∈ ws := countsFold_key_mem hp
+    have hcnt : cnt (countsFold ws) k = c' := cnt_of_mem_nodup hnd hp
     have : c' = multiplicity k ws := by
-      rw [← hcnt, cnt_countsList' ws k]
+      rw [← hcnt, cnt_countsFold' ws k]
     subst hsnd
     show c' ≤ maxMultiplicity ws
     rw [this]
@@ -501,28 +330,18 @@ theorem maxOf_countsList (ws : List Int) :
     apply maxMult_le
     intro v hv
     have hpos : 0 < multiplicity v ws := mem_mult_pos hv
-    have hcnt : cnt (countsList ws) v = multiplicity v ws :=
-      cnt_countsList' ws v
-    have hmem : (v, cnt (countsList ws) v) ∈ countsList ws :=
+    have hcnt : cnt (countsFold ws) v = multiplicity v ws :=
+      cnt_countsFold' ws v
+    have hmem : (v, cnt (countsFold ws) v) ∈ countsFold ws :=
       cnt_pos_mem (by omega)
-    have : cnt (countsList ws) v
-        ∈ (countsList ws).map Prod.snd :=
-      List.mem_map.mpr ⟨(v, cnt (countsList ws) v), hmem, rfl⟩
+    have : cnt (countsFold ws) v
+        ∈ (countsFold ws).map Prod.snd :=
+      List.mem_map.mpr ⟨(v, cnt (countsFold ws) v), hmem, rfl⟩
     rw [← hcnt]
     exact mem_le_maxOf this
 
-/-- Value bound: counts never exceed the word count. -/
-theorem countsList_val_le (ws : List Int) {p : Int × Nat}
-    (hp : p ∈ countsList ws) : p.2 ≤ ws.length := by
-  obtain ⟨k, c⟩ := p
-  have hnd := nodup_keys_countsList ws [] (by simp)
-  have hcnt : cnt (countsList ws) k = c := cnt_of_mem_nodup hnd hp
-  have := cnt_countsList' ws k
-  rw [hcnt] at this
-  simp only [multiplicity] at this
-  have hle : (ws.filter (· = k)).length ≤ ws.length :=
-    List.length_filter_le _ _
-  omega
+-- (`countsFold_val_le` is the kit's, via `open GoLean.MapMem` —
+-- the local copy was deleted in the GAP-P1 closure.)
 
 
 end GoLean.Examples.WordCount

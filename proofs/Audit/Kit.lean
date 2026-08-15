@@ -130,7 +130,10 @@ namespace GoLean.Iris.Audit
 /-- info: 'GoLean.SliceMem.applyStrictOp_mod_u64' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.SliceMem.applyStrictOp_mod_u64
 
-/-! ## MapMem — map-in-memory vocabulary + executable op facts (13 public lemmas) -/
+/-! ## MapMem — map-in-memory vocabulary + executable op facts
+(24 public lemmas; +11 in the GAP-P1 counting-fold lift, 2026-08-15 —
+the `bump`/`countsFold`/`nilMapCell` defs are unpinned like the other
+vocabulary defs) -/
 
 /-- info: 'GoLean.MapMem.scan_generic' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.MapMem.scan_generic
@@ -152,6 +155,28 @@ namespace GoLean.Iris.Audit
 #guard_msgs in #print axioms GoLean.MapMem.map_eraseIdx
 /-- info: 'GoLean.MapMem.toEntries_eraseIdx' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.MapMem.toEntries_eraseIdx
+/-- info: 'GoLean.MapMem.setk_cnt_succ' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.MapMem.setk_cnt_succ
+/-- info: 'GoLean.MapMem.countsFold_nil' does not depend on any axioms -/
+#guard_msgs in #print axioms GoLean.MapMem.countsFold_nil
+/-- info: 'GoLean.MapMem.countsFold_append' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.MapMem.countsFold_append
+/-- info: 'GoLean.MapMem.cnt_countsFold' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.MapMem.cnt_countsFold
+/-- info: 'GoLean.MapMem.countsFold_key_mem' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.MapMem.countsFold_key_mem
+/-- info: 'GoLean.MapMem.countsFold_nodup_keys' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.MapMem.countsFold_nodup_keys
+/-- info: 'GoLean.MapMem.cnt_of_mem_nodup' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.MapMem.cnt_of_mem_nodup
+/-- info: 'GoLean.MapMem.cnt_pos_mem' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.MapMem.cnt_pos_mem
+/-- info: 'GoLean.MapMem.countsFold_val_le' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.MapMem.countsFold_val_le
+/-- info: 'GoLean.MapMem.take_succ_getD' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.MapMem.take_succ_getD
+/-- info: 'GoLean.MapMem.cnt_take_le' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.MapMem.cnt_take_le
 /-- info: 'GoLean.MapMem.applyStrictOp_mapGet' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.MapMem.applyStrictOp_mapGet
 /-- info: 'GoLean.MapMem.mapAssignValue_toEntries' depends on axioms: [propext, Classical.choice, Quot.sound] -/

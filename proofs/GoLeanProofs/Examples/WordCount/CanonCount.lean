@@ -302,22 +302,9 @@ private theorem wc_segC11_raw (L : Nat) (ws : List Int)
 
 /-! ## The composed counting iteration -/
 
-theorem take_succ_getD {ws : List Int} {i : Nat}
-    (hi : i < ws.length) :
-    ws.take (i + 1) = ws.take i ++ [ws.getD i 0] := by
-  rw [List.take_add_one, List.getElem?_eq_getElem hi]
-  simp [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hi]
-
-theorem cnt_take_le {ws : List Int} {i : Nat} (w : Int) :
-    cnt (countsList (ws.take i)) w ≤ i := by
-  rw [cnt_countsList']
-  simp only [multiplicity]
-  have h1 : ((ws.take i).filter (· = w)).length ≤ (ws.take i).length :=
-    List.length_filter_le _ _
-  have h2 : (ws.take i).length ≤ i := by
-    rw [List.length_take]
-    exact Nat.min_le_left _ _
-  omega
+-- (`take_succ_getD` and `cnt_take_le` are the kit's, via
+-- `open GoLean.MapMem` — the local copies were deleted in the GAP-P1
+-- closure.)
 
 /-! ## The canonical placement's discharge lemmas (the generic layer's
 hypotheses at `S := σC ws.length ws`; every statement pins the full
@@ -602,14 +589,14 @@ private theorem wc_count_iter (ws : List Int) (i : Nat) (dead : Heap)
     (hi : i < ws.length) (hna : 9 ≤ na)
     (hdead : ∀ x : Nat, na ≤ x → Heap.lookup dead (.base ⟨x⟩) = none) :
     stepFnIter 53
-      (σC ws.length ws (countsList (ws.take i)) (i : Int) false dead na)
+      (σC ws.length ws (countsFold (ws.take i)) (i : Int) false dead na)
       (.retV (.bool true) cmpContC) ch
       = .ok (headC,
-          σC ws.length ws (countsList (ws.take (i + 1))) (i : Int) false
+          σC ws.length ws (countsFold (ws.take (i + 1))) (i : Int) false
             (dead ++ [(.base ⟨na⟩, mhCell),
               (.base ⟨na + 1⟩, u64cell (ws.getD i 0))]) (na + 2), ch) := by
   have hw := hws (ws.getD i 0) (getD_mem hi)
-  have hcnt : cnt (countsList (ws.take i)) (ws.getD i 0) + 1 < 2 ^ 64 := by
+  have hcnt : cnt (countsFold (ws.take i)) (ws.getD i 0) + 1 < 2 ^ 64 := by
     have := cnt_take_le (ws := ws) (i := i) (ws.getD i 0)
     omega
   have h := wcIter_generic (σC ws.length ws) ws 1 5 9 headC cmpContC
@@ -644,11 +631,11 @@ private theorem wc_count_iter (ws : List Int) (i : Nat) (dead : Heap)
     (wcC_mapAsgn ws)
     (fun kvs iv dead na₀ na ch =>
       wc_segC11_raw ws.length ws kvs iv dead na₀ na ch)
-    (countsList (ws.take i)) i dead na ch hi hw.1 hw.2 hcnt hna hdead
-  rw [show setk (countsList (ws.take i)) (ws.getD i 0)
-      (cnt (countsList (ws.take i)) (ws.getD i 0) + 1)
-      = countsList (ws.take (i + 1)) from by
-    rw [setk_cnt_succ, ← countsList_append_word, ← take_succ_getD hi]] at h
+    (countsFold (ws.take i)) i dead na ch hi hw.1 hw.2 hcnt hna hdead
+  rw [show setk (countsFold (ws.take i)) (ws.getD i 0)
+      (cnt (countsFold (ws.take i)) (ws.getD i 0) + 1)
+      = countsFold (ws.take (i + 1)) from by
+    rw [setk_cnt_succ, ← countsFold_append, ← take_succ_getD hi]] at h
   exact h
 
 /-! ## Exit of the counting loop → the range head -/
@@ -716,17 +703,15 @@ private theorem wc_segX0c_raw (L : Nat) (ws : List Int)
   exact stepFnIter_chain (stepFnIter_chain h1 h2) h3
 
 /-- The counts-list range facts (keys are words; values are counts). -/
-theorem countsList_norm (ws : List Int)
+theorem countsFold_norm (ws : List Int)
     (hws : ∀ v ∈ ws, 0 ≤ v ∧ v < 2 ^ 64) (hlen : ws.length < 2 ^ 63) :
-    ∀ p ∈ countsList ws, IntKind.normalize .uint64 p.1 = p.1
+    ∀ p ∈ countsFold ws, IntKind.normalize .uint64 p.1 = p.1
       ∧ IntKind.normalize .uint64 (p.2 : Int) = (p.2 : Int) := by
   intro p hp
   have hkey : p.1 ∈ ws := by
-    rcases countsList_key_mem ws [] p hp with h | h
-    · exact h
-    · cases h
+    exact countsFold_key_mem hp
   have hkr := hws p.1 hkey
-  have hvle : p.2 ≤ ws.length := countsList_val_le ws hp
+  have hvle : p.2 ≤ ws.length := countsFold_val_le ws hp
   refine ⟨unorm_of_range hkr.1 hkr.2, unorm_of_range (by omega) ?_⟩
   have : p.2 < 2 ^ 64 := by omega
   exact_mod_cast this
@@ -830,11 +815,11 @@ theorem wc_count_loop (ws : List Int)
           Heap.lookup tail (.base ⟨x⟩) = none)
       ∧ Heap.lookup tail (.base ⟨na + 2 * n⟩) = some (u64cell 0)
       ∧ stepFnIter k
-          (σC ws.length ws (countsList (ws.take i)) (i : Int) false dead na)
+          (σC ws.length ws (countsFold (ws.take i)) (i : Int) false dead na)
           (.retV (.bool (decide ((i : Int) < (ws.length : Int)))) cmpContC)
           ch
-        = .ok (rangeHead (na + 2 * n) (countsList ws),
-            σC ws.length ws (countsList ws) (ws.length : Int) false tail
+        = .ok (rangeHead (na + 2 * n) (countsFold ws),
+            σC ws.length ws (countsFold ws) (ws.length : Int) false tail
               (na + 2 * n + 1), ch) := by
   intro n i hn hi dead na hna hdead ch
   obtain ⟨k, tail, hk, htail, hbest, hrun⟩ :=
@@ -853,7 +838,7 @@ theorem wc_count_loop (ws : List Int)
       (fun kvs iv dead B na ch =>
         wc_segX0c_raw ws.length ws kvs iv dead B na ch)
       (wcC_snap ws)
-      (countsList_norm ws hws hlen)
+      (countsFold_norm ws hws hlen)
       n i hn hi dead na hna hdead ch
   exact ⟨k, tail, hk, htail, hbest, hrun⟩
 

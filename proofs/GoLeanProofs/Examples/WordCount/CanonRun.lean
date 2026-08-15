@@ -23,6 +23,7 @@ namespace GoLean.Examples.WordCount
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.Surface
 open GoLean.SliceMem
+open GoLean.MapMem
 
 set_option maxRecDepth 1000000
 set_option maxHeartbeats 2000000
@@ -30,8 +31,8 @@ set_option linter.unusedSimpArgs false
 
 /-! ## The canonical run, end to end -/
 
-theorem countsList_length_le (ws : List Int) :
-    (countsList ws).length ≤ ws.length := by
+theorem countsFold_length_le (ws : List Int) :
+    (countsFold ws).length ≤ ws.length := by
   have hbump : ∀ (kvs : List (Int × Nat)) (w : Int),
       (bump kvs w).length ≤ kvs.length + 1 := by
     intro kvs w
@@ -54,7 +55,7 @@ theorem countsList_length_le (ws : List Int) :
         have h1 := ih (bump kvs w)
         have h2 := hbump kvs w
         omega
-  simpa [countsList] using hfold ws []
+  simpa [countsFold] using hfold ws []
 
 private theorem maxMult_le_len (ws : List Int) :
     maxMultiplicity ws ≤ ws.length := by
@@ -73,7 +74,7 @@ private theorem wc_runs (ws : List Int)
       k ≤ 132 + 108 * ws.length ∧
       stepFnIter k (wcSeed ws 1 [] 2) (.exec (wcCall ws 1) wcEnv .stop) ch
         = .ok (.next .stop,
-            σX ws.length ws (countsList ws)
+            σX ws.length ws (countsFold ws)
               ((maxMultiplicity ws : Nat) : Int)
               ((maxMultiplicity ws : Nat) : Int) tail na, ch') := by
   have hM : maxMultiplicity ws ≤ ws.length := maxMult_le_len ws
@@ -116,48 +117,48 @@ private theorem wc_runs (ws : List Int)
   have hC := stepFnIter_chain hD hrun₁
   -- the range loop
   obtain ⟨k₂, ch₂, tail₂, na₂, hk₂, hna₂, hbest₂, htail₂, hrun₂⟩ :=
-    wc_range_loop ws (countsList ws) (countsList ws).length (countsList ws)
+    wc_range_loop ws (countsFold ws) (countsFold ws).length (countsFold ws)
       rfl 0 (9 + 2 * (ws.length - 0)) (9 + 2 * (ws.length - 0) + 1) tail₁
-      ch (fun p hp => countsList_val_le ws hp) hlen (by omega) (by omega)
+      ch (fun p hp => countsFold_val_le ws hp) hlen (by omega) (by omega)
       (by omega) hbest₁ htail₁
   have hR := stepFnIter_chain hC hrun₂
-  rw [show max 0 (maxOf ((countsList ws).map Prod.snd))
+  rw [show max 0 (maxOf ((countsFold ws).map Prod.snd))
       = maxMultiplicity ws from by
     rw [Nat.zero_max]
-    exact maxOf_countsList ws] at hbest₂
+    exact maxOf_countsFold ws] at hbest₂
   -- the return path
-  have hX1 := wc_segX1_raw ws.length ws (countsList ws) 0 0 tail₂
+  have hX1 := wc_segX1_raw ws.length ws (countsFold ws) 0 0 tail₂
     (9 + 2 * (ws.length - 0)) na₂ ch₂
   have hX := stepFnIter_chain hR hX1
   have hlkB : Heap.lookup
-      (σX ws.length ws (countsList ws) 0 0 tail₂ na₂).heap
+      (σX ws.length ws (countsFold ws) 0 0 tail₂ na₂).heap
       (.base ⟨9 + 2 * (ws.length - 0)⟩)
       = some (u64cell ((maxMultiplicity ws : Nat) : Int)) := by
-    show Heap.lookup (frontX ws.length ws (countsList ws) 0 0 ++ tail₂)
+    show Heap.lookup (frontX ws.length ws (countsFold ws) 0 0 ++ tail₂)
       (.base ⟨9 + 2 * (ws.length - 0)⟩)
       = some (u64cell ((maxMultiplicity ws : Nat) : Int))
     rw [lookup_append_right
-      (lookup_frontX_none ws.length ws (countsList ws) 0 0 (by omega))]
+      (lookup_frontX_none ws.length ws (countsFold ws) 0 0 (by omega))]
     exact hbest₂
   have hX2 := stepFnIter_chain hX (stepFnIter_one
     (stepFn_var (x := "best") (env := envRB (9 + 2 * (ws.length - 0)))
       (a := ⟨9 + 2 * (ws.length - 0)⟩) (ch := ch₂) rfl hlkB))
-  have hX2a := wc_segX2a_raw ws.length ws (countsList ws) 0 0
+  have hX2a := wc_segX2a_raw ws.length ws (countsFold ws) 0 0
     ((maxMultiplicity ws : Nat) : Int) tail₂
     (9 + 2 * (ws.length - 0)) na₂ ch₂
   rw [hMnorm] at hX2a
   have hX3 := stepFnIter_chain hX2 hX2a
   have hX4 := stepFnIter_chain hX3
-    (wc_segX2b_raw ws.length ws (countsList ws) 0
+    (wc_segX2b_raw ws.length ws (countsFold ws) 0
       ((maxMultiplicity ws : Nat) : Int) tail₂
       (9 + 2 * (ws.length - 0)) na₂ ch₂)
-  have hX2c := wc_segX2c_raw ws.length ws (countsList ws) 0
+  have hX2c := wc_segX2c_raw ws.length ws (countsFold ws) 0
     ((maxMultiplicity ws : Nat) : Int) tail₂ na₂
     (9 + 2 * (ws.length - 0)) ch₂
   rw [hMnorm] at hX2c
   have hX5 := stepFnIter_chain hX4 hX2c
   refine ⟨_, ch₂, tail₂, na₂, ?_, hX5⟩
-  have hm := countsList_length_le ws
+  have hm := countsFold_length_le ws
   omega
 
 /-- **Total correctness of the `maxCount` run at the canonical
@@ -183,7 +184,7 @@ theorem maxCount_total_canonical (ws : List Int)
                 .array ⟨ws.map (fun v => .int v .uint64)⟩⟩ := by
   intro fuel hfuel ch
   obtain ⟨k, ch', tail, na, hk, hrun⟩ := wc_runs ws hws hlen ch
-  refine ⟨σX ws.length ws (countsList ws)
+  refine ⟨σX ws.length ws (countsFold ws)
     ((maxMultiplicity ws : Nat) : Int) ((maxMultiplicity ws : Nat) : Int)
     tail na, ch', ?_, rfl, rfl⟩
   show execStmtLoop fuel (wcSeed ws 1 [] 2)

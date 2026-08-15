@@ -317,14 +317,14 @@ private theorem wcH_count_iter (ws : List Int) (sv siv : Int) (i : Nat)
     (hi : i < ws.length) (hna : 16 ≤ na)
     (hdead : ∀ x : Nat, na ≤ x → Heap.lookup dead (.base ⟨x⟩) = none) :
     stepFnIter 53
-      (σH ws.length sv siv ws (countsList (ws.take i)) (i : Int) false dead na)
+      (σH ws.length sv siv ws (countsFold (ws.take i)) (i : Int) false dead na)
       (.retV (.bool true) cmpContCH) ch
       = .ok (headCH,
-          σH ws.length sv siv ws (countsList (ws.take (i + 1))) (i : Int) false
+          σH ws.length sv siv ws (countsFold (ws.take (i + 1))) (i : Int) false
             (dead ++ [(.base ⟨na⟩, mhCellW),
               (.base ⟨na + 1⟩, u64cell (ws.getD i 0))]) (na + 2), ch) := by
   have hw := hws (ws.getD i 0) (getD_mem hi)
-  have hcnt : cnt (countsList (ws.take i)) (ws.getD i 0) + 1 < 2 ^ 64 := by
+  have hcnt : cnt (countsFold (ws.take i)) (ws.getD i 0) + 1 < 2 ^ 64 := by
     have := cnt_take_le (ws := ws) (i := i) (ws.getD i 0)
     omega
   have h := wcIter_generic (σH ws.length sv siv ws) ws 4 12 16 headCH cmpContCH
@@ -359,11 +359,11 @@ private theorem wcH_count_iter (ws : List Int) (sv siv : Int) (i : Nat)
     (wcH_mapAsgn ws sv siv)
     (fun kvs iv dead na₀ na ch =>
       wcH_segC11_raw ws.length sv siv ws kvs iv dead na₀ na ch)
-    (countsList (ws.take i)) i dead na ch hi hw.1 hw.2 hcnt hna hdead
-  rw [show setk (countsList (ws.take i)) (ws.getD i 0)
-      (cnt (countsList (ws.take i)) (ws.getD i 0) + 1)
-      = countsList (ws.take (i + 1)) from by
-    rw [setk_cnt_succ, ← countsList_append_word, ← take_succ_getD hi]] at h
+    (countsFold (ws.take i)) i dead na ch hi hw.1 hw.2 hcnt hna hdead
+  rw [show setk (countsFold (ws.take i)) (ws.getD i 0)
+      (cnt (countsFold (ws.take i)) (ws.getD i 0) + 1)
+      = countsFold (ws.take (i + 1)) from by
+    rw [setk_cnt_succ, ← countsFold_append, ← take_succ_getD hi]] at h
   exact h
 
 private theorem wcH_initBest (ws : List Int) (sv siv : Int) :
@@ -465,11 +465,11 @@ private theorem wcH_count_loop (ws : List Int) (sv siv : Int)
           Heap.lookup tail (.base ⟨x⟩) = none)
       ∧ Heap.lookup tail (.base ⟨na + 2 * n⟩) = some (u64cell 0)
       ∧ stepFnIter k
-          (σH ws.length sv siv ws (countsList (ws.take i)) (i : Int) false dead na)
+          (σH ws.length sv siv ws (countsFold (ws.take i)) (i : Int) false dead na)
           (.retV (.bool (decide ((i : Int) < (ws.length : Int)))) cmpContCH)
           ch
-        = .ok (rangeHeadH (na + 2 * n) (countsList ws),
-            σH ws.length sv siv ws (countsList ws) (ws.length : Int) false tail
+        = .ok (rangeHeadH (na + 2 * n) (countsFold ws),
+            σH ws.length sv siv ws (countsFold ws) (ws.length : Int) false tail
               (na + 2 * n + 1), ch) := by
   intro n i hn hi dead na hna hdead ch
   obtain ⟨k, tail, hk, htail, hbest, hrun⟩ :=
@@ -488,7 +488,7 @@ private theorem wcH_count_loop (ws : List Int) (sv siv : Int)
       (fun kvs iv dead B na ch =>
         wcH_segX0c_raw ws.length sv siv ws kvs iv dead B na ch)
       (wcH_snap ws sv siv)
-      (countsList_norm ws hws hlen)
+      (countsFold_norm ws hws hlen)
       n i hn hi dead na hna hdead ch
   exact ⟨k, tail, hk, htail, hbest, hrun⟩
 
@@ -789,7 +789,7 @@ theorem wcH_runs (n seed : Nat) (hn : n < 2 ^ 63) (ch : Choices) :
           (.exec wordcountHarnessFunc.body [hWScope0] hWFrame0) ch
         = .ok (.next .stop,
             σXH n ((seed : Nat) : Int) ((n : Nat) : Int)
-              (wcFamily n seed) (countsList (wcFamily n seed))
+              (wcFamily n seed) (countsFold (wcFamily n seed))
               (((n + 2) / 3 : Nat) : Int) (((n + 2) / 3 : Nat) : Int)
               (((n + 2) / 3 : Nat) : Int) tail na, ch') := by
   have hws := wcFamily_range n seed
@@ -848,57 +848,57 @@ theorem wcH_runs (n seed : Nat) (hn : n < 2 ^ 63) (ch : Choices) :
   -- the range loop
   obtain ⟨k₂, ch₂, tail₂, na₂, hk₂, hna₂, hbest₂, htail₂, hrun₂⟩ :=
     wcH_range_loop (wcFamily n seed) ((seed : Nat) : Int) ((n : Nat) : Int)
-      (countsList (wcFamily n seed)) (countsList (wcFamily n seed)).length
-      (countsList (wcFamily n seed)) rfl 0 (16 + 2 * (n - 0))
+      (countsFold (wcFamily n seed)) (countsFold (wcFamily n seed)).length
+      (countsFold (wcFamily n seed)) rfl 0 (16 + 2 * (n - 0))
       (16 + 2 * (n - 0) + 1) tail₁ ch
       (fun p hp => by
-        have := countsList_val_le (wcFamily n seed) hp
+        have := countsFold_val_le (wcFamily n seed) hp
         omega)
       hlen (by omega) (by omega) (by omega) hbest₁ htail₁
   rw [hLen] at hrun₂
   have hS6 := stepFnIter_chain hS5 hrun₂
-  rw [show max 0 (maxOf ((countsList (wcFamily n seed)).map Prod.snd))
+  rw [show max 0 (maxOf ((countsFold (wcFamily n seed)).map Prod.snd))
       = (n + 2) / 3 from by
-    rw [Nat.zero_max, maxOf_countsList (wcFamily n seed), hM]] at hbest₂
+    rw [Nat.zero_max, maxOf_countsFold (wcFamily n seed), hM]] at hbest₂
   -- the return path
   have hX1 := wcH_segX1_raw n ((seed : Nat) : Int) ((n : Nat) : Int)
-    (wcFamily n seed) (countsList (wcFamily n seed)) 0 0 0 tail₂
+    (wcFamily n seed) (countsFold (wcFamily n seed)) 0 0 0 tail₂
     (16 + 2 * (n - 0)) na₂ ch₂
   have hS7 := stepFnIter_chain hS6 hX1
   have hlkB : Heap.lookup
       (σXH n ((seed : Nat) : Int) ((n : Nat) : Int) (wcFamily n seed)
-        (countsList (wcFamily n seed)) 0 0 0 tail₂ na₂).heap
+        (countsFold (wcFamily n seed)) 0 0 0 tail₂ na₂).heap
       (.base ⟨16 + 2 * (n - 0)⟩)
       = some (u64cell (((n + 2) / 3 : Nat) : Int)) := by
     show Heap.lookup
       (frontXH n ((seed : Nat) : Int) ((n : Nat) : Int) (wcFamily n seed)
-        (countsList (wcFamily n seed)) 0 0 0 ++ tail₂)
+        (countsFold (wcFamily n seed)) 0 0 0 ++ tail₂)
       (.base ⟨16 + 2 * (n - 0)⟩)
       = some (u64cell (((n + 2) / 3 : Nat) : Int))
     rw [lookup_append_right
       (lookup_frontXH_none n ((seed : Nat) : Int) ((n : Nat) : Int)
-        (wcFamily n seed) (countsList (wcFamily n seed)) 0 0 0 (by omega))]
+        (wcFamily n seed) (countsFold (wcFamily n seed)) 0 0 0 (by omega))]
     exact hbest₂
   have hS8 := stepFnIter_chain hS7 (stepFnIter_one
     (stepFn_var (x := "best") (env := envRBH (16 + 2 * (n - 0)))
       (a := ⟨16 + 2 * (n - 0)⟩) (ch := ch₂) rfl hlkB))
   have hX2a := wcH_segX2a_raw n ((seed : Nat) : Int) ((n : Nat) : Int)
-    (wcFamily n seed) (countsList (wcFamily n seed)) 0 0 0
+    (wcFamily n seed) (countsFold (wcFamily n seed)) 0 0 0
     (((n + 2) / 3 : Nat) : Int) tail₂ (16 + 2 * (n - 0)) na₂ ch₂
   rw [hMnorm] at hX2a
   have hS9 := stepFnIter_chain hS8 hX2a
   have hS10 := stepFnIter_chain hS9
     (wcH_segX2b_raw n ((seed : Nat) : Int) ((n : Nat) : Int)
-      (wcFamily n seed) (countsList (wcFamily n seed)) 0 0
+      (wcFamily n seed) (countsFold (wcFamily n seed)) 0 0
       (((n + 2) / 3 : Nat) : Int) tail₂ (16 + 2 * (n - 0)) na₂ ch₂)
   have hX2c := wcH_segX2c_raw n ((seed : Nat) : Int) ((n : Nat) : Int)
-    (wcFamily n seed) (countsList (wcFamily n seed)) 0 0
+    (wcFamily n seed) (countsFold (wcFamily n seed)) 0 0
     (((n + 2) / 3 : Nat) : Int) tail₂ na₂ (16 + 2 * (n - 0)) ch₂
   rw [hMnorm, hMnorm] at hX2c
   have hS11 := stepFnIter_chain hS10 hX2c
   refine ⟨_, ch₂, tail₂, na₂, ?_, hS11⟩
-  have hm : (countsList (wcFamily n seed)).length ≤ n := by
-    have := countsList_length_le (wcFamily n seed)
+  have hm : (countsFold (wcFamily n seed)).length ≤ n := by
+    have := countsFold_length_le (wcFamily n seed)
     omega
   omega
 

@@ -164,6 +164,7 @@ namespace GoLean.Examples.WordCount
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.Surface
 open GoLean.SliceMem
+open GoLean.MapMem
 
 set_option maxRecDepth 1000000
 set_option maxHeartbeats 2000000
@@ -206,7 +207,7 @@ theorem wordcount_ok_v1 (n seed : Nat) (hn : n < 2 ^ 63)
       (σWH0 ((n : Nat) : Int) ((seed : Nat) : Int))
       wcHC₀ ch
       = .ok (σXH n ((seed : Nat) : Int) ((n : Nat) : Int)
-          (wcFamily n seed) (countsList (wcFamily n seed))
+          (wcFamily n seed) (countsFold (wcFamily n seed))
           (((n + 2) / 3 : Nat) : Int) (((n + 2) / 3 : Nat) : Int)
           (((n + 2) / 3 : Nat) : Int) tail na, ch') := by
     -- the recorded show-bridge: the macro-emitted wcHC₀ is the old

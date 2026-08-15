@@ -1431,16 +1431,16 @@ theorem wcR_count_iter (σ : ExecState) (sv siv civ : Int)
     (hws : ∀ v ∈ ws, 0 ≤ v ∧ v < 2 ^ 64) (hlen : ws.length < 2 ^ 63)
     (hi : i < ws.length) (hna : 20 ≤ na) (hdead : DeadFrom dead na) :
     stepFnIter 53
-      (σR σ ws.length sv siv civ ws lp (countsList (ws.take i)) (i : Int)
+      (σR σ ws.length sv siv civ ws lp (countsFold (ws.take i)) (i : Int)
         false dead na)
       (.retV (.bool true) cmpContCR) ch
       = .ok (headCR,
-          σR σ ws.length sv siv civ ws lp (countsList (ws.take (i + 1)))
+          σR σ ws.length sv siv civ ws lp (countsFold (ws.take (i + 1)))
             (i : Int) false
             (dead ++ [(.base ⟨na⟩, mhCellR),
               (.base ⟨na + 1⟩, u64cell (ws.getD i 0))]) (na + 2), ch) := by
   have hw := hws (ws.getD i 0) (getD_mem hi)
-  have hcnt : cnt (countsList (ws.take i)) (ws.getD i 0) + 1 < 2 ^ 64 := by
+  have hcnt : cnt (countsFold (ws.take i)) (ws.getD i 0) + 1 < 2 ^ 64 := by
     have := cnt_take_le (ws := ws) (i := i) (ws.getD i 0)
     omega
   have h := wcIter_generic (σR σ ws.length sv siv civ ws lp) ws 5 16 20
@@ -1476,11 +1476,11 @@ theorem wcR_count_iter (σ : ExecState) (sv siv civ : Int)
     (wcR_mapAsgn σ ws.length sv siv civ ws lp)
     (fun kvs iv dead na₀ na ch =>
       wcR_segC11_raw σ ws.length sv siv civ ws lp kvs iv dead na₀ na ch)
-    (countsList (ws.take i)) i dead na ch hi hw.1 hw.2 hcnt hna hdead
-  rw [show setk (countsList (ws.take i)) (ws.getD i 0)
-      (cnt (countsList (ws.take i)) (ws.getD i 0) + 1)
-      = countsList (ws.take (i + 1)) from by
-    rw [setk_cnt_succ, ← countsList_append_word, ← take_succ_getD hi]] at h
+    (countsFold (ws.take i)) i dead na ch hi hw.1 hw.2 hcnt hna hdead
+  rw [show setk (countsFold (ws.take i)) (ws.getD i 0)
+      (cnt (countsFold (ws.take i)) (ws.getD i 0) + 1)
+      = countsFold (ws.take (i + 1)) from by
+    rw [setk_cnt_succ, ← countsFold_append, ← take_succ_getD hi]] at h
   exact h
 
 theorem wcR_initBest (σ : ExecState) (L : Nat) (sv siv civ : Int)
@@ -1583,14 +1583,14 @@ theorem wcR_count_loop (σ : ExecState) (sv siv civ : Int)
       ∧ DeadFrom tail (na + 2 * n + 1)
       ∧ Heap.lookup tail (.base ⟨na + 2 * n⟩) = some (u64cell 0)
       ∧ stepFnIter k
-          (σR σ ws.length sv siv civ ws lp (countsList (ws.take i)) (i : Int)
+          (σR σ ws.length sv siv civ ws lp (countsFold (ws.take i)) (i : Int)
             false dead na)
           (.retV (.bool (decide ((i : Int) < (ws.length : Int)))) cmpContCR)
           ch
         = .ok (.next (.mapIterK none (some "c") tU64 tU64 wcRangeBody
-              (toEntries (countsList ws)) (envRBR (na + 2 * n))
+              (toEntries (countsFold ws)) (envRBR (na + 2 * n))
               (kRR (na + 2 * n))),
-            σR σ ws.length sv siv civ ws lp (countsList ws)
+            σR σ ws.length sv siv civ ws lp (countsFold ws)
               ((ws.length : Nat) : Int) false tail (na + 2 * n + 1), ch) := by
   intro n i hn hi dead na hna hdead ch
   exact wcLoop_generic (σR σ ws.length sv siv civ ws lp) ws 5 16 20
@@ -1608,7 +1608,7 @@ theorem wcR_count_loop (σ : ExecState) (sv siv civ : Int)
     (fun kvs iv dead B na ch =>
       wcR_segX0c_raw σ ws.length sv siv civ ws lp kvs iv dead B na ch)
     (wcR_snap σ ws.length sv siv civ ws lp)
-    (countsList_norm ws hws hlen)
+    (countsFold_norm ws hws hlen)
     n i hn hi dead na hna hdead ch
 
 /-! ## The range phase: the generic layer's discharges at the
@@ -1926,7 +1926,7 @@ theorem r_runs_generic (σ : ExecState) (n seed : Nat) (hcap : n ≤ 8)
         = .ok (.next .stop,
             σXR σ n ((seed : Nat) : Int) ((n : Nat) : Int) ((n : Nat) : Int)
               (wcFamily n seed) (wcPre n seed) (wcPre n seed)
-              (countsList (wcFamily n seed))
+              (countsFold (wcFamily n seed))
               ((maxMultiplicity (wcFamily n seed) : Nat) : Int)
               ((maxMultiplicity (wcFamily n seed) : Nat) : Int)
               ((maxMultiplicity (wcFamily n seed) : Nat) : Int)
@@ -1996,59 +1996,59 @@ theorem r_runs_generic (σ : ExecState) (n seed : Nat) (hcap : n ≤ 8)
   -- the range loop
   obtain ⟨k₄, ch₄, tail₂, na₂, hk₄, hna₂, hbest₂, htail₂, hrun₂⟩ :=
     wcR_range_loop σ ((seed : Nat) : Int) ((n : Nat) : Int) ((n : Nat) : Int)
-      (wcFamily n seed) (wcPre n seed) (countsList (wcFamily n seed))
-      (countsList (wcFamily n seed)).length (countsList (wcFamily n seed))
+      (wcFamily n seed) (wcPre n seed) (countsFold (wcFamily n seed))
+      (countsFold (wcFamily n seed)).length (countsFold (wcFamily n seed))
       rfl 0 (20 + 2 * (n - 0)) (20 + 2 * (n - 0) + 1) tail₁ ch
       (fun p hp => by
-        have := countsList_val_le (wcFamily n seed) hp
+        have := countsFold_val_le (wcFamily n seed) hp
         omega)
       hlen (by omega) (by omega) (by omega) hbest₁ htail₁
   rw [hLen] at hrun₂
   have hS6 := stepFnIter_chain hS5 hrun₂
-  rw [show max 0 (maxOf ((countsList (wcFamily n seed)).map Prod.snd))
+  rw [show max 0 (maxOf ((countsFold (wcFamily n seed)).map Prod.snd))
       = maxMultiplicity (wcFamily n seed) from by
-    rw [Nat.zero_max, maxOf_countsList (wcFamily n seed)]] at hbest₂
+    rw [Nat.zero_max, maxOf_countsFold (wcFamily n seed)]] at hbest₂
   -- the exit phase
   have hX1 := wcR_segX1_raw σ n ((seed : Nat) : Int) ((n : Nat) : Int)
     ((n : Nat) : Int) (wcFamily n seed) (wcPre n seed) zeros8
-    (countsList (wcFamily n seed)) 0 0 0 tail₂ (20 + 2 * (n - 0)) na₂ ch₄
+    (countsFold (wcFamily n seed)) 0 0 0 tail₂ (20 + 2 * (n - 0)) na₂ ch₄
   have hS7 := stepFnIter_chain hS6 hX1
   have hlkB : Heap.lookup
       (σXR σ n ((seed : Nat) : Int) ((n : Nat) : Int) ((n : Nat) : Int)
         (wcFamily n seed) (wcPre n seed) zeros8
-        (countsList (wcFamily n seed)) 0 0 0 tail₂ na₂).heap
+        (countsFold (wcFamily n seed)) 0 0 0 tail₂ na₂).heap
       (.base ⟨20 + 2 * (n - 0)⟩)
       = some (u64cell ((maxMultiplicity (wcFamily n seed) : Nat) : Int)) := by
     show Heap.lookup
       (frontXR n ((seed : Nat) : Int) ((n : Nat) : Int) ((n : Nat) : Int)
         (wcFamily n seed) (wcPre n seed) zeros8
-        (countsList (wcFamily n seed)) 0 0 0 ++ tail₂)
+        (countsFold (wcFamily n seed)) 0 0 0 ++ tail₂)
       (.base ⟨20 + 2 * (n - 0)⟩)
       = some (u64cell ((maxMultiplicity (wcFamily n seed) : Nat) : Int))
     rw [lookup_append_right
       (lookup_frontXR_none n ((seed : Nat) : Int) ((n : Nat) : Int)
         ((n : Nat) : Int) (wcFamily n seed) (wcPre n seed) zeros8
-        (countsList (wcFamily n seed)) 0 0 0 (by omega))]
+        (countsFold (wcFamily n seed)) 0 0 0 (by omega))]
     exact hbest₂
   have hS8 := stepFnIter_chain hS7 (stepFnIter_one
     (stepFn_var (x := "best") (env := envRBR (20 + 2 * (n - 0)))
       (a := ⟨20 + 2 * (n - 0)⟩) (ch := ch₄) rfl hlkB))
   have hX2a := wcR_segX2a_raw σ n ((seed : Nat) : Int) ((n : Nat) : Int)
     ((n : Nat) : Int) (wcFamily n seed) (wcPre n seed) zeros8
-    (countsList (wcFamily n seed)) 0 0 0
+    (countsFold (wcFamily n seed)) 0 0 0
     ((maxMultiplicity (wcFamily n seed) : Nat) : Int) tail₂
     (20 + 2 * (n - 0)) na₂ ch₄
   rw [hMnorm] at hX2a
   have hS9 := stepFnIter_chain hS8 hX2a
   have hX2b := wcR_segX2b_raw σ n ((seed : Nat) : Int) ((n : Nat) : Int)
     ((n : Nat) : Int) (wcFamily n seed) (wcPre n seed) zeros8
-    (countsList (wcFamily n seed)) 0 0
+    (countsFold (wcFamily n seed)) 0 0
     ((maxMultiplicity (wcFamily n seed) : Nat) : Int) tail₂
     (20 + 2 * (n - 0)) na₂ ch₄
   have hS10 := stepFnIter_chain hS9 hX2b
   have hXA := wcR_exitA_raw σ n ((seed : Nat) : Int) ((n : Nat) : Int)
     ((n : Nat) : Int) (wcFamily n seed) (wcPre n seed) zeros8
-    (countsList (wcFamily n seed)) 0 0
+    (countsFold (wcFamily n seed)) 0 0
     ((maxMultiplicity (wcFamily n seed) : Nat) : Int) tail₂
     (20 + 2 * (n - 0)) na₂ ch₄
   rw [hMnorm] at hXA
@@ -2057,19 +2057,19 @@ theorem r_runs_generic (σ : ExecState) (n seed : Nat) (hcap : n ≤ 8)
   have hstore : storeTarget
       (σXR σ n ((seed : Nat) : Int) ((n : Nat) : Int) ((n : Nat) : Int)
         (wcFamily n seed) (wcPre n seed) zeros8
-        (countsList (wcFamily n seed)) 0
+        (countsFold (wcFamily n seed)) 0
         ((maxMultiplicity (wcFamily n seed) : Nat) : Int)
         ((maxMultiplicity (wcFamily n seed) : Nat) : Int) tail₂ na₂)
       rRes0Ref (.array ⟨(wcPre n seed).map (fun v => .int v .uint64)⟩)
       = .ok (σXR σ n ((seed : Nat) : Int) ((n : Nat) : Int) ((n : Nat) : Int)
           (wcFamily n seed) (wcPre n seed) (wcPre n seed)
-          (countsList (wcFamily n seed)) 0
+          (countsFold (wcFamily n seed)) 0
           ((maxMultiplicity (wcFamily n seed) : Nat) : Int)
           ((maxMultiplicity (wcFamily n seed) : Nat) : Int) tail₂ na₂) :=
     storeTarget_addr
       (lookup_res0_X σ n ((seed : Nat) : Int) ((n : Nat) : Int)
         ((n : Nat) : Int) (wcFamily n seed) (wcPre n seed) zeros8
-        (countsList (wcFamily n seed)) 0
+        (countsFold (wcFamily n seed)) 0
         ((maxMultiplicity (wcFamily n seed) : Nat) : Int)
         ((maxMultiplicity (wcFamily n seed) : Nat) : Int) tail₂ na₂)
       (normalizeValueForTy_arr_u64 (wcPre_length hcap) wcPre_range)
@@ -2077,14 +2077,14 @@ theorem r_runs_generic (σ : ExecState) (n seed : Nat) (hcap : n ≤ 8)
     (stepFn_store_step hstore))
   have hXB := wcR_exitB_raw σ n ((seed : Nat) : Int) ((n : Nat) : Int)
     ((n : Nat) : Int) (wcFamily n seed) (wcPre n seed) (wcPre n seed)
-    (countsList (wcFamily n seed)) 0
+    (countsFold (wcFamily n seed)) 0
     ((maxMultiplicity (wcFamily n seed) : Nat) : Int)
     ((maxMultiplicity (wcFamily n seed) : Nat) : Int) tail₂ na₂ ch₄
   rw [hMnorm] at hXB
   have hS13 := stepFnIter_chain hS12 hXB
   refine ⟨_, ch₄, tail₂, na₂, ?_, hS13⟩
-  have hm : (countsList (wcFamily n seed)).length ≤ n := by
-    have := countsList_length_le (wcFamily n seed)
+  have hm : (countsFold (wcFamily n seed)).length ≤ n := by
+    have := countsFold_length_le (wcFamily n seed)
     omega
   omega
 
