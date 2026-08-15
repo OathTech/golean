@@ -188,8 +188,8 @@ vocabulary defs) -/
 /-- info: 'GoLean.MapMem.snapshot_toEntries' depends on axioms: [propext] -/
 #guard_msgs in #print axioms GoLean.MapMem.snapshot_toEntries
 
-/-! ## MapLoops — the map-loop schemas (3 public lemmas; the GAP-C1
-lift, 2026-08-15) -/
+/-! ## MapLoops — the map-loop schemas (7 public lemmas; the GAP-C1
+counting-loop lift + the GAP-R1 pick-loop lift, 2026-08-15) -/
 
 /-- info: 'GoLean.MapLoops.mapCountIter_generic' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.MapLoops.mapCountIter_generic
@@ -197,6 +197,14 @@ lift, 2026-08-15) -/
 #guard_msgs in #print axioms GoLean.MapLoops.mapCountIter_at
 /-- info: 'GoLean.MapLoops.mapCountLoop_generic' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.MapLoops.mapCountLoop_generic
+/-- info: 'GoLean.MapLoops.consume_lt' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.MapLoops.consume_lt
+/-- info: 'GoLean.MapLoops.eraseIdx_length_of_lt' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.MapLoops.eraseIdx_length_of_lt
+/-- info: 'GoLean.MapLoops.mem_of_mem_eraseIdx' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.MapLoops.mem_of_mem_eraseIdx
+/-- info: 'GoLean.MapLoops.mapPickLoop_generic' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.MapLoops.mapPickLoop_generic
 
 /-! ## FuelMeasure — the termination/composition kit incl. the P5 iteration schema (18 public lemmas) -/
 

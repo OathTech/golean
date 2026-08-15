@@ -21,15 +21,13 @@ everything else, and the end-to-end run, is here.
   `SliceMem.prefixPad (fam : Nat → Nat → List Int) (cap m seed : Nat)`
   with `zero`/`length`/`range`/`set`/`full` proven once. Three landed
   consumers (minmax, wordcount, histogram).
-* **GAP-R1 — the range-loop induction.** `Examples/WordCount/RangeGeneric.lean`
-  states the §10b choice-pick induction once, but over `wcRangeBody`
-  and the `some "c"` binder, so it does not apply to a variable-free
-  range. `hg_range_loop` below re-derives it. Shape wanted: the
-  induction over an ABSTRACT body with the per-iteration effect given
-  as a hypothesis (`∀ rem d, one iteration takes the state at `d` to
-  the state at `f d` in `c` steps`), which is what both consumers
-  actually need; the body/binder shape then never appears in the
-  schema. Two landed consumers.
+* **GAP-R1 — CLOSED** (kit-gap closure, 2026-08-15): the §10b
+  choice-pick induction now lives in the kit as
+  `MapLoops.mapPickLoop_generic`, over an abstract state descriptor
+  with the whole per-iteration effect as ONE hypothesis — no body, no
+  binder shape. `hg_range_loop` below instantiates it with the
+  conservation invariant "`distinct` + remaining entries = constant";
+  `hg_range_iter` supplies the 16-step iteration, given the pick.
 -/
 
 namespace GoLean.Examples.Histogram
@@ -37,6 +35,7 @@ namespace GoLean.Examples.Histogram
 open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.Surface
 open GoLean.SliceMem
 open GoLean.MapMem
+open GoLean.MapLoops
 
 set_option maxRecDepth 1000000
 set_option maxHeartbeats 2000000
@@ -931,30 +930,25 @@ theorem hg_pick (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
   exact stepFn_pick_novars (body := hRangeBody) (env := envRBDH B)
     (k := kRH B) hcons hidx
 
-/-- **One range iteration**: 16 steps, one choice, one entry gone,
-`distinct` up by one — and the state is otherwise IDENTICAL. -/
+/-- **One range iteration, GIVEN the pick**: 16 steps, one entry gone,
+`distinct` up by one — and the state is otherwise IDENTICAL (GAP-R1
+closure, 2026-08-15: the pick destructuring and the induction moved to
+the kit's `mapPickLoop_generic`; this placement supplies only the
+iteration). -/
 theorem hg_range_iter (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
     (ws lp : List Int) :
-    ∀ (kvs rem : List (Int × Nat)) (iv : Int) (dead : Heap) (B na : Nat)
-      (dv : Nat) (ch : Choices),
-      0 < rem.length → 25 ≤ B + 1 → dv + 1 < 2 ^ 64 →
+    ∀ (kvs rem : List (Int × Nat)) (idx : Nat) (ch ch₂ : Choices)
+      (iv : Int) (dead : Heap) (B na : Nat) (dv : Nat),
+      Choices.consume ch rem.length = (idx, ch₂) → idx < rem.length →
+      25 ≤ B + 1 → dv + 1 < 2 ^ 64 →
       Heap.lookup dead (.base ⟨B + 1⟩) = some (u64cell ((dv : Nat) : Int)) →
-    ∃ (ch' : Choices) (rem' : List (Int × Nat)),
-      rem'.length = rem.length - 1 ∧
       stepFnIter 16 (σH σ L sv qv siv civ ws lp kvs iv false dead na)
           (.next (iterKH B rem)) ch
-        = .ok (.next (iterKH B rem'),
+        = .ok (.next (iterKH B (rem.eraseIdx idx)),
             σH σ L sv qv siv civ ws lp kvs iv false
               (Heap.set dead (.base ⟨B + 1⟩)
-                (u64cell ((dv + 1 : Nat) : Int))) na, ch') := by
-  intro kvs rem iv dead B na dv ch hrem hB hdv hlk
-  cases hcons : Choices.consume ch rem.length with
-  | mk idx ch₂ =>
-  have hidx : idx < rem.length := by
-    have := consume_lt ch hrem
-    rw [hcons] at this
-    exact this
-  refine ⟨ch₂, rem.eraseIdx idx, eraseIdx_length_of_lt hidx, ?_⟩
+                (u64cell ((dv + 1 : Nat) : Int))) na, ch₂) := by
+  intro kvs rem idx ch ch₂ iv dead B na dv hcons hidx hB hdv hlk
   have hp := stepFnIter_one
     (hg_pick σ L sv qv siv civ ws lp kvs rem idx ch ch₂ iv dead B na hcons
       hidx)
@@ -980,9 +974,14 @@ theorem hg_range_iter (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
   exact stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
     (stepFnIter_chain (stepFnIter_chain hp hR1) hvar) hR2) hst) hR3
 
-/-- **The range loop, at EVERY choice stream**: exactly `16·m + 1`
-steps and `distinct` ends at `dv + m`, where `m` is the number of map
-entries — the pick never enters the answer. -/
+/-- **The range loop, at EVERY choice stream**: within `16·m + 1`
+steps `distinct` ends at `dv + m`, where `m` is the number of map
+entries — the pick never enters the answer. The kit's
+`mapPickLoop_generic` at this placement's iteration, with the
+conservation invariant "`distinct` + remaining entries = `dv + m`"
+(GAP-R1 closure, 2026-08-15; the step count became the schema's
+`∃ k ≤ 16·m + 1` — the run assembly's fuel arithmetic carries the
+bound). -/
 theorem hg_range_loop (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
     (ws lp : List Int) (kvs : List (Int × Nat)) (iv : Int) :
     ∀ (m : Nat) (rem : List (Int × Nat)), rem.length = m →
@@ -990,58 +989,70 @@ theorem hg_range_loop (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
       25 ≤ B + 1 → B + 1 < na → dv + m < 2 ^ 64 →
       Heap.lookup dead (.base ⟨B + 1⟩) = some (u64cell ((dv : Nat) : Int)) →
       DeadFrom dead na →
-    ∃ (ch' : Choices) (tail : Heap),
-      Heap.lookup tail (.base ⟨B + 1⟩)
+    ∃ (k : Nat) (ch' : Choices) (tail : Heap),
+      k ≤ 16 * m + 1
+      ∧ Heap.lookup tail (.base ⟨B + 1⟩)
           = some (u64cell ((dv + m : Nat) : Int))
       ∧ Heap.lookup tail (.base ⟨B⟩) = Heap.lookup dead (.base ⟨B⟩)
       ∧ DeadFrom tail na
-      ∧ stepFnIter (16 * m + 1)
+      ∧ stepFnIter k
           (σH σ L sv qv siv civ ws lp kvs iv false dead na)
-          (.next (iterKH B rem)) ch
+          (.next (iterKH B rem))
+          ch
         = .ok (.next (kRH B),
             σH σ L sv qv siv civ ws lp kvs iv false tail na, ch') := by
-  intro m
-  induction m with
-  | zero =>
-      intro rem hrem dv dead B na ch hB hBna hdv hlk hdead
-      have hnil : rem = [] := List.eq_nil_of_length_eq_zero hrem
-      subst hnil
-      refine ⟨ch, dead, by simpa using hlk, rfl, hdead, ?_⟩
-      show stepFnIter 1 _ _ _ = _
-      with_unfolding_all rfl
-  | succ m ih =>
-      intro rem hrem dv dead B na ch hB hBna hdv hlk hdead
-      obtain ⟨ch₂, rem', hrem', hiter⟩ :=
-        hg_range_iter σ L sv qv siv civ ws lp kvs rem iv dead B na dv ch
-          (by omega) hB (by omega) hlk
-      have hlk' : Heap.lookup (Heap.set dead (.base ⟨B + 1⟩)
-            (u64cell ((dv + 1 : Nat) : Int))) (.base ⟨B + 1⟩)
-          = some (u64cell ((dv + 1 : Nat) : Int)) := lookup_set_self
-      have hne : ∀ x : Nat, x ≠ B + 1 →
-          Heap.lookup (Heap.set dead (.base ⟨B + 1⟩)
-              (u64cell ((dv + 1 : Nat) : Int))) (.base ⟨x⟩)
-            = Heap.lookup dead (.base ⟨x⟩) := by
-        intro x hx
-        refine Machine.Heap.lookup_set_ne ?_
-        intro hc
-        exact hx (by
-          have h := congrArg Loc.rootBase hc
-          simp only [Loc.rootBase] at h
-          omega)
-      have hdeadF : DeadFrom (Heap.set dead (.base ⟨B + 1⟩)
-          (u64cell ((dv + 1 : Nat) : Int))) na := by
-        intro x hx
-        rw [hne x (by omega)]
-        exact hdead x hx
-      obtain ⟨ch', tail, ht1, ht2, ht3, hrun⟩ :=
-        ih rem' (by omega) (dv + 1)
-          (Heap.set dead (.base ⟨B + 1⟩) (u64cell ((dv + 1 : Nat) : Int)))
-          B na ch₂ hB hBna (by omega) hlk' hdeadF
-      refine ⟨ch', tail, by rw [ht1]; congr 2; omega,
-        by rw [ht2, hne B (by omega)], ht3, ?_⟩
-      have := stepFnIter_chain hiter hrun
-      rw [show 16 + (16 * m + 1) = 16 * (m + 1) + 1 from by omega] at this
-      exact this
+  intro m rem hm dv dead B na ch hB hBna hdv hlk hdead
+  subst hm
+  obtain ⟨k, tail, ch', hk, hP, hrun⟩ :=
+    mapPickLoop_generic
+      (T := fun tl : Heap => σH σ L sv qv siv civ ws lp kvs iv false tl na)
+      (cfg := fun r => .next (iterKH B r))
+      (exitCfg := .next (kRH B))
+      (P := fun tl r =>
+        r.length ≤ rem.length
+        ∧ Heap.lookup tl (.base ⟨B + 1⟩)
+            = some (u64cell ((dv + (rem.length - r.length) : Nat) : Int))
+        ∧ Heap.lookup tl (.base ⟨B⟩) = Heap.lookup dead (.base ⟨B⟩)
+        ∧ DeadFrom tl na)
+      (c := 16) (e := 1)
+      (fun tl r idx p ch₀ ch₂ hcons hidx hp hP => by
+        obtain ⟨hlen, hlk', hlkB, hdead'⟩ := hP
+        have hlpos : 0 < r.length := by omega
+        have hiter := hg_range_iter σ L sv qv siv civ ws lp kvs r idx ch₀
+          ch₂ iv tl B na (dv + (rem.length - r.length)) hcons hidx hB (by omega) hlk'
+        have hne : ∀ x : Nat, x ≠ B + 1 →
+            Heap.lookup (Heap.set tl (.base ⟨B + 1⟩)
+                (u64cell ((dv + (rem.length - r.length) + 1 : Nat) : Int)))
+              (.base ⟨x⟩)
+              = Heap.lookup tl (.base ⟨x⟩) := by
+          intro x hx
+          refine Machine.Heap.lookup_set_ne ?_
+          intro hc
+          exact hx (by
+            have h := congrArg Loc.rootBase hc
+            simp only [Loc.rootBase] at h
+            omega)
+        refine ⟨16, Heap.set tl (.base ⟨B + 1⟩)
+            (u64cell ((dv + (rem.length - r.length) + 1 : Nat) : Int)),
+          Nat.le_refl _,
+          ⟨by rw [eraseIdx_length_of_lt hidx]; omega, ?_, ?_, ?_⟩, hiter⟩
+        · rw [lookup_set_self]
+          congr 3
+          rw [eraseIdx_length_of_lt hidx]
+          omega
+        · rw [hne B (by omega)]
+          exact hlkB
+        · intro x hx
+          rw [hne x (by omega)]
+          exact hdead' x hx)
+      (fun tl ch₀ _ => by
+        show stepFnIter 1 _ _ _ = _
+        with_unfolding_all rfl)
+      rem.length rem rfl dead ch
+      ⟨Nat.le_refl _, by simpa using hlk, rfl, hdead⟩
+  obtain ⟨-, hlk', hlkB, hdead'⟩ := hP
+  refine ⟨k, ch', tail, hk, ?_, hlkB, hdead', hrun⟩
+  simpa using hlk'
 
 /-! ## Normalization of the map's entries (the snapshot's side
 condition) -/
@@ -1567,7 +1578,7 @@ theorem hg_runs_generic (σ : ExecState) (n seed q : Nat) (hcap : n ≤ 8)
   have hmle : (countsFold (histFamily n seed)).length ≤ n := by
     have := countsList_length_le (histFamily n seed)
     omega
-  obtain ⟨ch₅, tail₂, hd1, hd2, hd3, hrun₂⟩ :=
+  obtain ⟨k₅, ch₅, tail₂, hk₅, hd1, hd2, hd3, hrun₂⟩ :=
     hg_range_loop σ n ((seed : Nat) : Int) ((q : Nat) : Int) ((n : Nat) : Int)
       ((n : Nat) : Int) (histFamily n seed) (histPre n seed)
       (countsFold (histFamily n seed)) ((n : Nat) : Int)

@@ -337,24 +337,9 @@ theorem stepFn_pick_novars {σ : ExecState} {rem : List (Int × Nat)}
     simp only [bindIterVars, Bind.bind, Except.bind, pure, Except.pure, hsz,
       hconsume, toEntries_eraseIdx rem idx hidx']
 
-/-- Erasing the picked entry shortens the snapshot by exactly one — the
-whole per-iteration content of the range loop, and the reason
-`distinct` counts entries at every choice stream. -/
-theorem eraseIdx_length_of_lt {kvs : List (Int × Nat)} {idx : Nat}
-    (h : idx < kvs.length) : (kvs.eraseIdx idx).length = kvs.length - 1 := by
-  rw [List.length_eraseIdx]
-  simp [h]
-
-/-- `Choices.consume`'s `% bound` contract: the pick is in range. -/
-theorem consume_lt (ch : Choices) {n : Nat} (hn : 0 < n) :
-    (Choices.consume ch n).1 < n := by
-  cases ch with
-  | nil => simpa [Choices.consume] using hn
-  | cons c rest =>
-      simp only [Choices.consume]
-      have : max 1 n = n := by omega
-      rw [this]
-      exact Nat.mod_lt _ hn
+-- (`eraseIdx_length_of_lt` and `consume_lt` are the kit's, via
+-- `open GoLean.MapLoops` at the use sites — the re-derived copies were
+-- deleted in the GAP-R1 closure.)
 
 /-! ## The placement: environments, continuations, heap fronts
 

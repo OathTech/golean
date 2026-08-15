@@ -46,7 +46,9 @@ result type on the `have` (the E-form).
 (`mhG`, `wsHG`, `asgnC1G`, `asgnReadG`, `seqnC2G`, `mapAsgnG`) and
 the schema statements `mapCountIter_generic`, `mapCountIter_at` (the
 bundled form — placement facts + raw segments, conditioned discharges
-constructed inside) and `mapCountLoop_generic`. Everything here is
+constructed inside), `mapCountLoop_generic`, and the GAP-R1 pick-loop
+family `mapPickLoop_generic` + `consume_lt` /
+`eraseIdx_length_of_lt` / `mem_of_mem_eraseIdx`. Everything here is
 UNTRUSTED METHOD (proof-side): no name from this module may appear in
 a headline statement closure. Additions follow the §12
 active-abstraction loop.
@@ -974,5 +976,107 @@ theorem mapCountIter_at (slVar : String)
     env3g u1Envg uEnvg hC1 hInit1 hC2 hSt1 hC3 hInit2 hC4 hRead hC5 hSt2
     hC6 hVar1 hVar2 hC7 hC8 hC9 hMapGet hC10 hMapAsgn hC11
     kvs i dead na ch hi hw0 hw64 hcnt hna hdead
+
+/-! ## The map-range pick loop (GAP-R1)
+
+The §10b choice-pick induction, stated ONCE over an abstract state
+descriptor: the whole per-iteration content — body, binders,
+allocation, accumulator effect — enters through the single `hIter`
+hypothesis ("given the pick, one iteration takes the state at `d` to
+the state at some `d'` preserving the invariant, within `c` steps"),
+so neither the body nor the binder shape appears in the schema. The
+consumer encodes its accumulator law as a CONSERVATION invariant `P`
+(wordcount: the max-fold of `best` and the remaining values is
+constant; histogram: `distinct` plus the remaining count is constant),
+which is exactly how order-invariance under every pick becomes a
+provable loop fact. -/
+
+/-- `Choices.consume`'s `% bound` contract: the pick is in range
+(promoted from the two per-example copies — GAP-R1). -/
+theorem consume_lt (ch : Choices) {n : Nat} (hn : 0 < n) :
+    (Choices.consume ch n).1 < n := by
+  cases ch with
+  | nil => simpa [Choices.consume] using hn
+  | cons c rest =>
+      simp only [Choices.consume]
+      have : max 1 n = n := by omega
+      rw [this]
+      exact Nat.mod_lt _ hn
+
+/-- Erasing the picked entry shortens the snapshot by exactly one
+(promoted — GAP-R1). -/
+theorem eraseIdx_length_of_lt {α : Type} {l : List α} {idx : Nat}
+    (h : idx < l.length) : (l.eraseIdx idx).length = l.length - 1 := by
+  rw [List.length_eraseIdx]
+  simp [h]
+
+/-- Membership survives an erase (promoted — GAP-R1). -/
+theorem mem_of_mem_eraseIdx {α : Type} :
+    ∀ {l : List α} {i : Nat} {a : α}, a ∈ l.eraseIdx i → a ∈ l := by
+  intro l
+  induction l with
+  | nil => intro i a h; cases h
+  | cons x rest ih =>
+      intro i a h
+      cases i with
+      | zero =>
+          rw [List.eraseIdx_cons_zero] at h
+          exact List.mem_cons.mpr (.inr h)
+      | succ n =>
+          rw [List.eraseIdx_cons_succ] at h
+          rcases List.mem_cons.mp h with h | h
+          · exact List.mem_cons.mpr (.inl h)
+          · exact List.mem_cons.mpr (.inr (ih h))
+
+/-- **The choice-pick loop, at every choice stream** (GAP-R1): from a
+snapshot `rem` with the invariant `P d rem`, the loop drains the
+snapshot — one consumed choice and one erased entry per iteration
+(`hIter`), `e` steps to exit at the empty snapshot (`hExit`) — within
+`c·|rem| + e` steps, ending at `exitCfg` in a state satisfying
+`P d' []`. -/
+theorem mapPickLoop_generic {δ : Type}
+    (T : δ → ExecState) (cfg : List (Int × Nat) → Config)
+    (exitCfg : Config) (P : δ → List (Int × Nat) → Prop)
+    (c e : Nat)
+    (hIter : ∀ (d : δ) (rem : List (Int × Nat)) (idx : Nat)
+      (p : Int × Nat) (ch ch₂ : Choices),
+      Choices.consume ch rem.length = (idx, ch₂) → idx < rem.length →
+      rem[idx]? = some p → P d rem →
+      ∃ (k : Nat) (d' : δ), k ≤ c ∧ P d' (rem.eraseIdx idx) ∧
+        stepFnIter k (T d) (cfg rem) ch
+          = .ok (cfg (rem.eraseIdx idx), T d', ch₂))
+    (hExit : ∀ (d : δ) (ch : Choices), P d [] →
+      stepFnIter e (T d) (cfg []) ch = .ok (exitCfg, T d, ch)) :
+    ∀ (m : Nat) (rem : List (Int × Nat)), rem.length = m →
+    ∀ (d : δ) (ch : Choices), P d rem →
+    ∃ (k : Nat) (d' : δ) (ch' : Choices),
+      k ≤ c * m + e ∧ P d' [] ∧
+      stepFnIter k (T d) (cfg rem) ch = .ok (exitCfg, T d', ch') := by
+  intro m
+  induction m with
+  | zero =>
+      intro rem hm d ch hP
+      have hnil : rem = [] := List.eq_nil_of_length_eq_zero hm
+      subst hnil
+      exact ⟨e, d, ch, by omega, hP, hExit d ch hP⟩
+  | succ m ih =>
+      intro rem hm d ch hP
+      rcases hcons : Choices.consume ch rem.length with ⟨idx, ch₂⟩
+      have hidx : idx < rem.length := by
+        have := consume_lt ch (show 0 < rem.length by omega)
+        rw [hcons] at this
+        exact this
+      obtain ⟨p, hp⟩ : ∃ p, rem[idx]? = some p :=
+        ⟨_, List.getElem?_eq_getElem hidx⟩
+      obtain ⟨k₁, d₁, hk₁, hP₁, hrun₁⟩ :=
+        hIter d rem idx p ch ch₂ hcons hidx hp hP
+      obtain ⟨k₂, d₂, ch', hk₂, hP₂, hrun₂⟩ :=
+        ih (rem.eraseIdx idx)
+          (by rw [eraseIdx_length_of_lt hidx]; omega) d₁ ch₂ hP₁
+      refine ⟨k₁ + k₂, d₂, ch', ?_, hP₂,
+        stepFnIter_chain hrun₁ hrun₂⟩
+      have hms : c * (m + 1) = c * m + c := by
+        rw [Nat.mul_add, Nat.mul_one]
+      omega
 
 end GoLean.MapLoops
