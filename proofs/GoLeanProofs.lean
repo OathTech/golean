@@ -125,6 +125,8 @@ import GoLeanProofs.Examples.HistogramProgram
 import GoLeanProofs.Examples.Histogram
 import GoLeanProofs.Examples.BubbleSortProgram
 import GoLeanProofs.Examples.BubbleSort
+import GoLeanProofs.Examples.TwoSumProgram
+import GoLeanProofs.Examples.TwoSum
 import GoLeanProofs.Examples.SelectionSortProgram
 import GoLeanProofs.Examples.SelectionSort
 

@@ -1,0 +1,15 @@
+# id	subject	args	expected_status	expected_reason	features
+four-mid	twoSumFour	5,2,9,4,11	ok	-	slices,indexing,loops,if
+four-first	twoSumFour	4,6,1,2,10	ok	-	slices,indexing,loops,if
+four-last	twoSumFour	8,1,2,5,7	ok	-	slices,indexing,loops,if
+four-notfound	twoSumFour	1,2,3,4,100	ok	-	slices,indexing,loops,if
+four-same	twoSumFour	5,5,5,5,10	ok	-	slices,indexing,loops,if
+four-dups	twoSumFour	3,3,1,3,4	ok	-	slices,indexing,loops,if
+four-extremes	twoSumFour	9223372036854775807,0,3,9223372036854775804,9223372036854775807	ok	-	slices,indexing,loops,if
+one-notfound	twoSumOne	42,84	ok	-	slices,indexing,loops,if
+empty	twoSumEmpty	5	ok	-	slices,indexing,loops,if
+harness-r-empty	twosum_harness_r	0,7,10	ok	-	slices,indexing,loops,if,arrays
+harness-r-one	twosum_harness_r	1,5,10	ok	-	slices,indexing,loops,if,arrays
+harness-r-five	twosum_harness_r	5,10,27	ok	-	slices,indexing,loops,if,arrays
+harness-r-eight	twosum_harness_r	8,1,9	ok	-	slices,indexing,loops,if,arrays
+harness-r-wrap	twosum_harness_r	8,9223372036854775807,0	ok	-	slices,indexing,loops,if,arrays

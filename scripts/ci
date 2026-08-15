@@ -426,6 +426,8 @@ check_surface_imports proofs/GoLeanProofs/Examples/HistogramProgram.lean \
 # unreviewed.
 check_surface_imports proofs/GoLeanProofs/Examples/BubbleSortProgram.lean \
   '^import GoLean\.'
+check_surface_imports proofs/GoLeanProofs/Examples/TwoSumProgram.lean \
+  '^import GoLean\.'
 check_surface_imports proofs/GoLeanProofs/Examples/SelectionSortProgram.lean \
   '^import GoLean\.'
 # The fork/join pool witnesses (channels arc slice 2): statement-bearing,
