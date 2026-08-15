@@ -1,6 +1,6 @@
 # Verified examples — the gallery (2026-08-14)
 
-Nine Go programs, and for each one a GoLean theorem you can read.
+Ten Go programs, and for each one a GoLean theorem you can read.
 
 This file is the **object of agreement**: it exists so that a reader who is
 not a Lean expert can check, by eye, that the top-level statement really
@@ -124,7 +124,7 @@ exhaustion.
 
 `Choices` is the stream of nondeterministic decisions the machine consumes at
 points where Go does not promise an outcome. `∀ ch : Choices` says the claim
-holds at **every** such stream. For seven of the nine examples this quantifier
+holds at **every** such stream. For eight of the ten examples this quantifier
 is cheap (their runs consume no choices). For word-count and histogram it
 does real work: `for … range` over a Go map consumes one choice per
 iteration, because Go deliberately does not fix map iteration order — so the
@@ -1482,6 +1482,224 @@ and the empty slice (`empty`), plus the relational harness at
 `harness-r-eight` and `harness-r-big` (`seed = 2^63 − 1`, the largest value
 the differential driver can pass — the `--arg` int64 ceiling is a *driver*
 limit, not a machine one).
+
+## strrev — string reversal by byte concatenation, with a palindrome verdict
+
+**The Go** (`Corpus/coverage/exec/examples/strrev/main.go`):
+
+<!-- verbatim: Corpus/coverage/exec/examples/strrev/main.go -->
+```go
+// reverseString: the subject — walk the bytes from the end and build
+// the reversal by concatenation.
+func reverseString(s string) string {
+	out := ""
+	for i := len(s) - 1; i >= 0; i-- {
+		out += string(rune(s[i]))
+	}
+	return out
+}
+```
+
+<!-- verbatim: Corpus/coverage/exec/examples/strrev/main.go -->
+```go
+// isStringPalindrome: companion subject — two-index byte walk; returns
+// 1 if s reads the same forwards and backwards, else 0.
+func isStringPalindrome(s string) uint64 {
+	i := 0
+	j := len(s) - 1
+	for i < j {
+		if s[i] != s[j] {
+			return 0
+		}
+		i++
+		j--
+	}
+	return 1
+}
+```
+
+<!-- verbatim: Corpus/coverage/exec/examples/strrev/main.go -->
+```go
+// buildStr: the differential driver passes only integer arguments, so
+// every corpus subject builds its string internally from (n, seed).
+func buildStr(n, seed uint64) string {
+	out := ""
+	for i := uint64(0); i < n; i++ {
+		out += string(rune(97 + (seed+i)%26))
+	}
+	return out
+}
+```
+
+<!-- verbatim: Corpus/coverage/exec/examples/strrev/main.go -->
+```go
+// strrev_harness_r: the S3 RELATIONAL harness — setup builds the
+// string from (n, seed), the subject reverses it, and the verdict
+// reports whether the ORIGINAL is a palindrome. The returned
+// (pre, post, isPalin) triple is the observable; strings cross the
+// observation boundary by contents (tag "string"), so both pre and
+// post are genuinely observed.
+func strrev_harness_r(n, seed uint64) (string, string, uint64) {
+	pre := buildStr(n, seed)
+	post := reverseString(pre)
+	isPalin := isStringPalindrome(pre)
+	return pre, post, isPalin
+}
+```
+
+**The claim.** For every `n < 2^63` and every `seed < 2^64`,
+`strrev_harness_r(n, seed)` finishes normally, at every nondeterminism
+choice, and returns three values: a byte string `pre` of length `n`, the
+string holding exactly `pre`'s bytes in reverse order, and a verdict that
+is `1` exactly when `pre` reads the same both ways. **The postcondition is
+a relation over the RETURNED data** — `post` is `pre.reverse` and the
+verdict is `palinSpec pre`; neither the setup family nor any index
+arithmetic appears in it.
+
+**This is the gallery's first entry with NO fixed-cap toy bound on the
+returned data.** Every previous relational entry returns its data through
+a fixed-size array (`[8]uint64` and the copy-loop-plus-zero-padding
+workaround), because Go's pass-by-value fragment cannot return unbounded
+aggregates. Strings can: they cross the observation boundary by CONTENTS
+(`{"tag":"string","bytes":[...]}`), so all three returned values are
+genuinely observed at every length and there is no `n ≤ 8` anywhere in
+the statement. The bounds that DO appear are attributed below — both are
+Go's own domains, not caps of ours.
+
+Honesty clauses, none of them small print:
+
+* **The reversal claim is byte-level, and the ASCII invariant is what
+  makes it the Go's.** `reverseString` rebuilds through
+  `string(rune(s[i]))`, and the machine models that round-trip
+  FAITHFULLY: it is the full UTF-8 encoder, so a byte `≥ 128` would come
+  back as a two-byte encoding and the Go would NOT compute the byte
+  reversal of such a string. The theorem is about the harness, whose
+  built strings are all-ASCII (`a`–`z`), and the proof carries
+  `∀ b ∈ pre, b.toNat < 128` (`strFamily_ascii`) through the reverse
+  loop explicitly. No claim is made about `reverseString` on non-ASCII
+  strings — and that restraint is the machine being right about Go, not
+  a proof shortcut.
+* **`∃ pre` is still family-determined.** The witness is
+  `strFamily n seed` — byte `i` is `97 + ((seed+i) mod 2^64) mod 26`,
+  which is the program's OWN uint64 arithmetic including the wrap (for
+  `seed + i ≥ 2^64` the inner wrap changes the letter, and the family
+  says so rather than pretending `%` distributes). The statement merely
+  avoids SAYING so; genuine ∀-input data needs the ghost rung-1
+  annotation, which is designed and not built.
+* **Domain bounds, attributed.** `seed < 2^64` is Go's uint64 domain at
+  the call boundary. `n < 2^63` is Go's `int` domain: both subjects run
+  `int` loop indices over the string (`i := len(s) - 1`, `j := len(s) -
+  1`), so a length past `2^63 − 1` could not even be indexed — the bound
+  is the language's, not the mathematics'. There is no bound from the
+  proof method itself.
+* **`n = 0` is included**: `reverseString` sets `i = -1` and
+  `isStringPalindrome` sets `j = -1`, no loop body runs, and the empty
+  string is its own reversal and a palindrome. The corpus rows
+  `harness-empty`/`palin-empty` pin that against `go run`.
+* **Machine idealization**, as elsewhere: entry from an empty heap, an
+  unbounded heap, allocation always succeeds — and string VALUES of
+  unbounded length, which is exactly Go-the-language (the spec caps
+  `int` indexing, not string size; a real machine would exhaust memory
+  first). The theorem's domain is the model's, not the practical one.
+
+**The specification vocabulary**
+(`proofs/GoLeanProofs/Examples/StringReverse/Pure.lean` and
+`.../Machine.lean`). The whole mathematical content is `List.reverse`
+plus:
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/StringReverse/Pure.lean -->
+```lean
+def palinSpec (xs : List UInt8) : Int :=
+  if xs.reverse = xs then 1 else 0
+```
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/StringReverse/Machine.lean -->
+```lean
+def gs (l : List UInt8) : GoString := ⟨⟨l⟩⟩
+```
+
+(`gs` is the two-constructor bridge from a byte list to the machine's
+string value — the returned strings are `.string (gs pre)` etc.; a Go
+string in the machine IS its byte array. The Go decides the verdict by
+a half scan with an early return; `palin_iff_half` — the ArrayPalindrome
+bridge re-derived one type over — is proof method, not statement.)
+
+**The theorem** (`proofs/GoLeanProofs/Examples/StringReverse.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/StringReverse.lean -->
+```lean
+theorem strrev_ok (n seed : Nat) (hn : n < 2 ^ 63)
+    (hseed : seed < 2 ^ 64) :
+    ∃ pre : List UInt8, pre.length = n ∧
+      ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        runFunctionWithContextM fuel strrevLowered.typeDefs.toList
+            strrevLowered.funcs strrevHarnessRFunc
+            #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+            strrevLowered.methods ch
+          = .ok { values := #[.string (gs pre),
+                              .string (gs pre.reverse),
+                              .int (palinSpec pre) .uint64] } := by
+```
+
+The first-order readout corollary (statement-TCB doctrine) is
+`strrev_verdict_iff`: over the returned byte lists, `v = 1 ↔ post =
+pre` — the verdict is `1` exactly when the returned reversal equals the
+returned original, with no `palinSpec` in sight. (Its `∃ post` is
+family-determined the same way `∃ pre` is; the headline pins
+`post = pre.reverse`.)
+
+**Axioms** (pinned in `proofs/Audit/StringReverse.lean`):
+
+<!-- verbatim: proofs/Audit/StringReverse.lean -->
+```lean
+/-- info: 'GoLean.Examples.StringReverse.strrev_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+<!-- verbatim: proofs/Audit/StringReverse.lean -->
+```lean
+/-- info: 'GoLean.Examples.StringReverse.strrev_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+Lean's classical trio; no `sorry`, no native evaluation, no project
+axioms.
+
+**Fuel bound.** Explicit and affine: `N = 156·n + 372`. This is the
+branch-UNIFORM worst case — 65 steps per build iteration, 57 per
+reverse iteration, 68 per full palindrome iteration with the palindrome
+loop charged its `n/2` maximum (as `34·n`), plus the fixed `372` of
+entry, three frame entries, three prologues, three first dispatches,
+two inter-frame exits and the worst palindrome tail. **The measured
+step counts are different numbers, recorded separately and not
+presented as the bound**: `351` at `n = 0`, `473` at `n = 1`, and
+`122·n + 372` for the measured `n = 2/3/4/8` (`616/738/860/1348`) —
+the alternating-letter family mismatches at its first pair, so the
+palindrome loop's `68·(n/2)` worst case is never exercised past one
+partial iteration by this family, and the measurement is
+family-dependent where the bound is not.
+
+**Status.** NOT DESIGNATED — this example post-dates the 2026-08-14
+designation set; designation is arc-end work under user sign-off, so
+its statement is not walked by the mechanized statement-TCB gate and
+not replayed by the Comparator judge. What it does have, in-build: FOUR
+`rfl` lowering pins (`buildStr_pin`, `reverseString_pin`,
+`isStringPalindrome_pin`, `strrevHarnessRFunc_pin` — every function the
+run steps through), the golden-lowering guard on both links, the axiom
+pins above, and a hand-run deletion test (both hypotheses load-bearing:
+dropping `hn` breaks three normalization goals, dropping `hseed` two).
+`strrev_readout` is the run-conditioned twin. One toolchain finding is
+recorded in the module: `derive_entry_eq` fails closed on string result
+defaults, so this example's entry equation is hand-written in exactly
+the macro's emitted shape.
+
+**Ground.** Differentially green on 12 corpus rows: the literal drivers
+(`rev-lit`, `palin-lit` — the positive multi-character palindrome runs
+over a literal, because the build family's adjacent letters always
+differ), the subject drivers (`build-mid`, `rev-built`, `palin-one`,
+`palin-no`, `palin-empty` with an extreme seed), and the relational
+harness at `harness-empty`, `harness-one`, `harness-mid`,
+`harness-cap`, `harness-extreme` (`seed = 2^63 − 1`, the largest value
+the differential driver can pass — the `--arg` int64 ceiling is a
+driver limit, not a machine one).
 
 ## The derived twins, and the one axiom line they share
 
