@@ -1,0 +1,17 @@
+# id	subject	args	expected_status	expected_reason	features
+count-both	scCount	1,2	ok	-	bools,calls,evaluation_order
+count-left-false	scCount	0,0	ok	-	bools,calls,evaluation_order
+count-right-false	scCount	1,0	ok	-	bools,calls,evaluation_order
+count-left-decides	scCount	0,5	ok	-	bools,calls,evaluation_order
+order-left-true	scOrder	1,0	ok	-	bools,calls,evaluation_order
+order-right-true	scOrder	0,1	ok	-	bools,calls,evaluation_order
+order-both-false	scOrder	0,0	ok	-	bools,calls,evaluation_order
+nested-outer-false	scNested	0,1,1	ok	-	bools,calls,evaluation_order
+nested-inner-left	scNested	1,1,0	ok	-	bools,calls,evaluation_order
+nested-inner-right	scNested	1,0,1	ok	-	bools,calls,evaluation_order
+nested-all-false	scNested	1,0,0	ok	-	bools,calls,evaluation_order
+loop-three	scLoop	3,6	ok	-	bools,calls,evaluation_order,loops
+loop-left-zero	scLoop	0,9	ok	-	bools,calls,evaluation_order,loops
+loop-right-zero	scLoop	4,0	ok	-	bools,calls,evaluation_order,loops
+assign-both	scAssign	1,2	ok	-	bools,calls,evaluation_order
+assign-left-false	scAssign	0,7	ok	-	bools,calls,evaluation_order

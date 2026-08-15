@@ -1562,9 +1562,12 @@ func (e *emitter) emitStmtList(list []ast.Stmt) ([]any, error) {
 }
 
 // hoist binds an effectful node (call/alloc) to a fresh temp before the current
-// statement and returns a reference to that temp.
+// statement and returns a reference to that temp. In a short-circuit RHS
+// (hoistForbidden set WITH scHoistOK) the temp binding is admitted: it lands in
+// emitBinary's RHS accumulator and is wrapped in the conditional that realizes
+// the spec's conditional evaluation of the right operand (E3).
 func (e *emitter) hoist(node any, resultType types.Type) (any, error) {
-	if e.hoistForbidden != "" {
+	if e.hoistForbidden != "" && !e.scHoistOK {
 		return nil, unsup("call/allocation in %s (would change evaluation order)", e.hoistForbidden)
 	}
 	ty, err := e.emitType(resultType)
@@ -5521,11 +5524,81 @@ func (e *emitter) emitBinary(b *ast.BinaryExpr) (any, error) {
 	// by the ONE-mechanism len/cap hoist under the function-scoped
 	// `fnHasRecv` flag — BUG-023/BUG-026: every operand AND
 	// statement-emission position, not just binary operands.)
-	// The RHS of a short-circuit operator is only conditionally evaluated, so a
-	// call there cannot be hoisted ahead of the operator.
-	y, err := e.emitGuarded(op == "&&" || op == "||", "short-circuit operand", b.Y)
-	if err != nil {
-		return nil, err
+	// The RHS of a short-circuit operator is evaluated CONDITIONALLY (spec,
+	// "Logical operators": p && q is "if p then q else false"; p || q is
+	// "if p then true else q"), so a call there cannot be hoisted ahead of
+	// the operator. E3 (gallery campaign G2, 2026-08-15): the RHS is
+	// emitted ONCE into its own accumulator with the quarantine still set —
+	// every non-call effect site keeps its standing refusal — but with the
+	// single hoist() temp-binding path admitted (scHoistOK). An empty
+	// accumulator (pure RHS) keeps the inline lowering below byte-identical
+	// to the pre-E3 emission; otherwise the operation NORMALIZES to the
+	// spec's own rewrite as statements:
+	//	$cN := <x>                        -- the LHS value binds once, in order
+	//	if $cN  { <y hoists>; $cN = <y> } -- (&&)
+	//	if !$cN { <y hoists>; $cN = <y> } -- (||)
+	// and the expression lowers to the temp read $cN. Nested short-circuits
+	// normalize into the enclosing RHS accumulator, so their machinery sits
+	// inside the outer conditional body. Fidelity argument + the risk-pinning
+	// corpus rows (bools/short-circuit-effects/*, committed red first):
+	// docs/gallery-campaign-log/g2.md, "E3 — THE FIDELITY ARGUMENT".
+	var y any
+	if op == "&&" || op == "||" {
+		savedHoisted := e.hoisted
+		savedForbidden := e.hoistForbidden
+		savedOK := e.scHoistOK
+		e.hoisted = nil
+		e.hoistForbidden = "short-circuit operand"
+		e.scHoistOK = true
+		y, err = e.emitExpr(b.Y)
+		rhsHoists := e.hoisted
+		e.hoisted = savedHoisted
+		e.hoistForbidden = savedForbidden
+		e.scHoistOK = savedOK
+		if err != nil {
+			return nil, err
+		}
+		if len(rhsHoists) > 0 {
+			// An effectful RHS while a position that itself forbids hoisting
+			// is active refuses unless that position is a short-circuit RHS
+			// (which admits via scHoistOK — the nested case). Today only the
+			// short-circuit RHS sets hoistForbidden, so this keeps any FUTURE
+			// forbidden position fail-closed rather than silently normalized.
+			if e.hoistForbidden != "" && !e.scHoistOK {
+				return nil, unsup("call/allocation in %s (would change evaluation order)", e.hoistForbidden)
+			}
+			ty, err := e.typeOf(b)
+			if err != nil {
+				return nil, err
+			}
+			name := "$c" + itoa(e.tmpSeq)
+			e.tmpSeq++
+			e.hoisted = append(e.hoisted, map[string]any{
+				"stmt": "assign", "define": true,
+				"lhs":  []any{map[string]any{"target": "declare", "id": name, "type": ty}},
+				"rhs":  []any{x},
+			})
+			ref := map[string]any{"expr": "ident", "name": name, "type": ty}
+			cond := any(ref)
+			if op == "||" {
+				cond = map[string]any{"expr": "unary", "op": "!", "x": ref}
+			}
+			body := append(append([]any{}, rhsHoists...), map[string]any{
+				"stmt": "assign", "define": false,
+				"lhs":  []any{map[string]any{"target": "var", "id": name}},
+				"rhs":  []any{y},
+			})
+			e.hoisted = append(e.hoisted, map[string]any{
+				"stmt": "if", "cond": cond,
+				"then": map[string]any{"stmt": "block", "body": body},
+			})
+			return ref, nil
+		}
+	} else {
+		y, err = e.emitExpr(b.Y)
+		if err != nil {
+			return nil, err
+		}
 	}
 	// Mixed interface/non-interface comparison (spec §Comparison
 	// operators: "A value x of non-interface type X and a value t of
@@ -6161,19 +6234,6 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 		return nil, false, err
 	}
 	return map[string]any{"expr": "call", "func": name + "." + sel.Sel.Name, "args": all, "resultTypes": resultTypes}, true, nil
-}
-
-// emitGuarded emits x, forbidding hoists while `guard` holds (restoring any
-// prior guard afterward).
-func (e *emitter) emitGuarded(guard bool, reason string, x ast.Expr) (any, error) {
-	if !guard {
-		return e.emitExpr(x)
-	}
-	saved := e.hoistForbidden
-	e.hoistForbidden = reason
-	w, err := e.emitExpr(x)
-	e.hoistForbidden = saved
-	return w, err
 }
 
 // emitBuiltin handles Go builtin calls. len/cap are pure expressions; the

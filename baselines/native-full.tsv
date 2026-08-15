@@ -1,5 +1,42 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-15  commit: gallery campaign G2 extension E1 (differential
+# recorded: 2026-08-15  commit: gallery campaign G2 extension E3 GUARDRAILS
+#   (calls in short-circuit operands) — fidelity argument + risk-pinning
+#   rows, committed BEFORE the implementation
+#   re-pin reason: 16 NEW rows, all deliberate expected FAILs, no other
+#   change. bools/short-circuit-effects/* pins the E3 risk classes named
+#   in the fidelity argument (docs/gallery-campaign-log/g2.md, "E3 — THE
+#   FIDELITY ARGUMENT"): double evaluation and eager right-operand
+#   evaluation (scCount: result*100+evals over a package-level counter),
+#   left-to-right + exactly-when-needed order (scOrder: || digit trace),
+#   nested `f(a) && (g(b) || h(c))` (scNested), per-iteration
+#   re-evaluation of a short-circuit loop guard — the stein shape
+#   isolated (scLoop), and expression-position consumption (scAssign).
+#   Expected values hand-computed from the spec rewrite and verified
+#   against `go run` before landing (probe transcript in the unit
+#   record). All 16 classify verbatim
+#     stage=frontend-export
+#     "status":"unsupported"
+#     "normalizing frontend-quarantined: call/allocation in short-circuit
+#      operand (would change evaluation order)"
+#   — the SAME standing quarantine the 9 stein rows and the 3 older
+#   bools/short-circuit-* rows pin. Expected_status stays ok because
+#   that is the Go-side truth; nothing was hoisted to make them pass.
+#   Acceptance for the E3 build: these 16 + stein's 9 + the 3 older
+#   short-circuit rows flip to PASS with zero drift elsewhere (the 8
+#   comparisons/short-circuit/* panic-timing pins, all PASS, must NOT
+#   move — they pin the pure-RHS inline lowering the normalization
+#   leaves byte-identical).
+#   Drift check on this run: EXACTLY the 16 new ids, every one
+#   "NEW id" -> FAIL/frontend-export. No pre-existing id changed result
+#   or stage — the 1791 previously recorded cases are byte-identical in
+#   both columns.
+#   frontend: native  oracle: go run (strict lane) / go-run membership in the
+#   machine-enumerated observation set, sampled plain AND under -race
+#   (membership lane; go1.26.5) / schedule-tree singleton certification +
+#   strict go-run equality (confluent lane) / every-enumerated-path-refuses
+#   + go run -race red (racy lane; never combined with deadlock)
+# manifest_cases: 1807  pass: 1663  fail: 144
+# previous record: 2026-08-15  commit: gallery campaign G2 extension E1 (differential
 #   driver --arg past int64) — corpus + driver, one commit
 #   re-pin reason: 15 NEW rows and ONE PAIR OF RENAMES, no other change.
 #   E1 removed the ONE-SIDED limit that kept the differential's argument
@@ -177,6 +214,22 @@ FAIL	bools/left-to-right	frontend-export
 PASS	bools/logical-ops	-
 FAIL	bools/short-circuit-and	frontend-export
 FAIL	bools/short-circuit-call-operand	frontend-export
+FAIL	bools/short-circuit-effects/assign-both	frontend-export
+FAIL	bools/short-circuit-effects/assign-left-false	frontend-export
+FAIL	bools/short-circuit-effects/count-both	frontend-export
+FAIL	bools/short-circuit-effects/count-left-decides	frontend-export
+FAIL	bools/short-circuit-effects/count-left-false	frontend-export
+FAIL	bools/short-circuit-effects/count-right-false	frontend-export
+FAIL	bools/short-circuit-effects/loop-left-zero	frontend-export
+FAIL	bools/short-circuit-effects/loop-right-zero	frontend-export
+FAIL	bools/short-circuit-effects/loop-three	frontend-export
+FAIL	bools/short-circuit-effects/nested-all-false	frontend-export
+FAIL	bools/short-circuit-effects/nested-inner-left	frontend-export
+FAIL	bools/short-circuit-effects/nested-inner-right	frontend-export
+FAIL	bools/short-circuit-effects/nested-outer-false	frontend-export
+FAIL	bools/short-circuit-effects/order-both-false	frontend-export
+FAIL	bools/short-circuit-effects/order-left-true	frontend-export
+FAIL	bools/short-circuit-effects/order-right-true	frontend-export
 FAIL	bools/short-circuit-or	frontend-export
 PASS	bools/zero-value	-
 PASS	builtins/append-defined-byte-slice-string	-
