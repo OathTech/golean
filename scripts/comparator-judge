@@ -150,7 +150,7 @@ n_theorems=$(echo "$config_names" | wc -l)
 # retired fail-open '^import ' anchor); unknown module roots FAIL, never
 # skip.
 closure_walk() {
-  local queue=("$@") m f
+  local queue=("$@") m f rel
   declare -A seen
   while ((${#queue[@]})); do
     m="${queue[0]}"; queue=("${queue[@]:1}")
@@ -159,11 +159,15 @@ closure_walk() {
     case "$m" in
       Iris*) echo "IRIS:$m"; return 0 ;;
       Std|Std.*|Init|Init.*|Lean|Lean.*|Batteries|Batteries.*|Qq|Qq.*) continue ;;
-      GoLean.*) f="$CHECK_ROOT/GoLean/${m#GoLean.}" ;;
-      GoLeanProofs|GoLeanProofs.*) f="$CHECK_ROOT/proofs/GoLeanProofs/${m#GoLeanProofs.}"; [ "$m" = GoLeanProofs ] && f="$CHECK_ROOT/proofs/GoLeanProofs" ;;
+      GoLean.*) rel="GoLean/${m#GoLean.}" ;;
+      GoLeanProofs|GoLeanProofs.*) rel="proofs/GoLeanProofs/${m#GoLeanProofs.}"; [ "$m" = GoLeanProofs ] && rel="proofs/GoLeanProofs" ;;
       *) echo "UNKNOWN:$m"; return 0 ;;
     esac
-    f="${f//.//}.lean"
+    # Dots -> slashes on the MODULE-DERIVED part ONLY (scripts/ci's walk is the
+    # model). The old form substituted over the whole path, so any CHECK_ROOT
+    # containing a dot — every .claude/worktrees/<lane> — turned into a fake
+    # "missing module" fail-closed abort (recorded 2026-08-02, fixed 2026-08-15).
+    f="$CHECK_ROOT/${rel//.//}.lean"
     [ -f "$f" ] || { echo "MISSING:$m"; return 0; }
     while read -r imp; do [ -n "$imp" ] && queue+=("$imp"); done < <(lean_imports "$f")
   done
