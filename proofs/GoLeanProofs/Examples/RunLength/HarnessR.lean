@@ -1604,4 +1604,1050 @@ theorem ep_z_raw0 (σ : ExecState) (nv sv : Int) (n : Nat)
         qSt σ (qHeapEnd0 nv sv n l lp siv civ 0) 31, ch) := by
   with_unfolding_all rfl
 
+/-! ## The composed iterations -/
+
+/-- The wrapped seed — the single run's VALUE (`s[i] = seed + i/3` is
+constant on `i < 3`). -/
+def wSeed (seed : Nat) : Int := ((seed % 2 ^ 64 : Nat) : Int)
+
+theorem wSeed_range (seed : Nat) : 0 ≤ wSeed seed ∧ wSeed seed < 2 ^ 64 := by
+  have := Nat.mod_lt seed (y := 2 ^ 64) (by omega)
+  unfold wSeed
+  omega
+
+/-- The family's element at any `m < n ≤ 3` IS the wrapped seed. -/
+theorem rleFamily_getD_const {n seed m : Nat} (hm : m < n) (hn : n ≤ 3) :
+    (rleFamily n seed).getD m 0 = wSeed seed := by
+  rw [rleFamily_getD hm, wSeed]
+  congr 1
+  have : m / 3 = 0 := Nat.div_eq_of_lt (by omega)
+  rw [this, Nat.add_zero]
+
+/-- **Iteration `i = 0`, composed — THE NEW-RUN EVENT.** From the
+test-true delivery, through both SPILLING `append`s, back to the loop
+head: the output slices now hold the one-run state `([w], [1])` over
+fresh backings with CHOICE-DEPENDENT capacities in `[1, 32]`, and the
+stream has advanced past the two consumed choices. 148 steps. -/
+theorem r_iter0C (σ : ExecState) (n seed : Nat) (hn1 : 1 ≤ n)
+    (hn : n ≤ 3) (ch : Choices) :
+    ∃ (capV capC : Nat) (ch' : Choices),
+      1 ≤ capV ∧ capV ≤ 32 ∧ 1 ≤ capC ∧ capC ≤ 32 ∧
+      stepFnIter 148
+        (qSt σ (qHeapRle0 ((n : Nat) : Int) ((seed : Nat) : Int) n
+          (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+          ((n : Nat) : Int) 0 false) 27)
+        (.retV (.bool true) rCmpKQ) ch
+        = .ok (rHeadCfgQ,
+            qSt σ (qHeapRun ((n : Nat) : Int) ((seed : Nat) : Int) n
+              (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+              ((n : Nat) : Int) capV capC (wSeed seed) 1 0 false []) 37,
+            ch') := by
+  have hwr := wSeed_range seed
+  have ha := r_i0_a_rawQ σ ((n : Nat) : Int) ((seed : Nat) : Int) n
+    (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+    ((n : Nat) : Int) ch
+  -- the k length (runVals is the empty slice)
+  have hlen := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := []) (env := rKEnv 27)
+    (k := .rhsK .vals [.chain (.addr (.base ⟨27⟩)) [] []] [] [] (.seqn #[])
+      (rKEnv 27) (rKTailK 27))
+    (applyStrictOp_len_slice (σ := qSt σ (qHeapRle0 ((n : Nat) : Int)
+        ((seed : Nat) : Int) n (rleFamily n seed) (rlePre n seed)
+        ((n : Nat) : Int) ((n : Nat) : Int) 0 false
+        ++ [(.base ⟨27⟩, qint 0)]) 28)
+      (b := .base ⟨20⟩) (off := 0) (len := 0) (cap := 0) (elem := tU64)
+      (Nat.le_refl 0)))
+  have h1 := stepFnIter_chain ha hlen
+  have hb := r_i0_b_rawQ σ ((n : Nat) : Int) ((seed : Nat) : Int) n
+    (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+    ((n : Nat) : Int) ch
+  have h2 := stepFnIter_chain h1 hb
+  -- the s[0] read: the family's head is the wrapped seed
+  have hgetS : (⟨(rleFamily n seed).map (fun v => .int v .uint64)⟩ :
+      Array GoValue)[0 + 0]? = some (.int (wSeed seed) .uint64) := by
+    rw [Nat.zero_add, getElem?_mapU _ _ (by rw [rleFamily_length]; omega),
+      rleFamily_getD_const (by omega) hn]
+  have hlookS : Heap.lookup (qSt σ (qHeapRle0 ((n : Nat) : Int)
+      ((seed : Nat) : Int) n (rleFamily n seed) (rlePre n seed)
+      ((n : Nat) : Int) ((n : Nat) : Int) 0 false
+      ++ [(.base ⟨27⟩, qint 0), (.base ⟨28⟩, qbool false),
+          (.base ⟨29⟩, qC1Slice 30), (.base ⟨30⟩, qBack1 0)]) 31).heap
+      (.base ⟨7⟩)
+      = some ⟨some (.array n tU64),
+          .array ⟨(rleFamily n seed).map (fun v => .int v .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hreadS := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := [qSliceS n]) (env := rNREnv1)
+    (k := .rhsK .vals [rC2Ref] [] [] (.seqn #[]) rNREnv1 rNRTail1)
+    (applyStrictOp_indexGet_slice (ik := .int) (i := 0) hlookS
+      (Nat.le_refl n) (by omega) hgetS))
+  have h3 := stepFnIter_chain h2 hreadS
+  have hc := r_i0_c_rawQ σ ((n : Nat) : Int) ((seed : Nat) : Int) n
+    (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+    ((n : Nat) : Int) (.int (wSeed seed) .uint64) ch
+  have h4 := stepFnIter_chain h3 hc
+  -- the $c2[0] store
+  have hlookC2 : Heap.lookup (qSt σ (qHeapRle0 ((n : Nat) : Int)
+      ((seed : Nat) : Int) n (rleFamily n seed) (rlePre n seed)
+      ((n : Nat) : Int) ((n : Nat) : Int) 0 false
+      ++ [(.base ⟨27⟩, qint 0), (.base ⟨28⟩, qbool false),
+          (.base ⟨29⟩, qC1Slice 30), (.base ⟨30⟩, qBack1 0)]) 31).heap
+      (.base ⟨30⟩)
+      = some ⟨some (.array 1 tU64),
+          .array ⟨([0] : List Int).map (fun v => .int v .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hstC2 := storeTarget_slice_u64
+    (σ := qSt σ (qHeapRle0 ((n : Nat) : Int) ((seed : Nat) : Int) n
+      (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+      ((n : Nat) : Int) 0 false
+      ++ [(.base ⟨27⟩, qint 0), (.base ⟨28⟩, qbool false),
+          (.base ⟨29⟩, qC1Slice 30), (.base ⟨30⟩, qBack1 0)]) 31)
+    (a := ⟨30⟩) (off := 0) (len := 1) (cap := 1) (i := 0) (n := 1)
+    (ik := .int) (l := [0]) (w := wSeed seed)
+    hlookC2 (Nat.le_refl 1) (by omega) (by simp) (by simp)
+    (by intro x hx; simp at hx; omega) hwr
+  have h5 := stepFnIter_chain h4
+    (stepFnIter_one (stepFn_store_step hstC2))
+  have hd := r_i0_d_rawQ σ ((n : Nat) : Int) ((seed : Nat) : Int) n
+    (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+    ((n : Nat) : Int) (wSeed seed) ch
+  have h6 := stepFnIter_chain h5 hd
+  -- the FIRST append: runVals spills
+  obtain ⟨capV, ch1, hcV1, hcV2, happ1⟩ :=
+    applyStmtOp_append_spill1
+      (σ := qSt σ (qHeapRle0 ((n : Nat) : Int) ((seed : Nat) : Int) n
+        (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+        ((n : Nat) : Int) 0 false
+        ++ [(.base ⟨27⟩, qint 0), (.base ⟨28⟩, qbool false),
+            (.base ⟨29⟩, qC1Slice 30), (.base ⟨30⟩, qBack1 (wSeed seed)),
+            (.base ⟨31⟩, qNilSlice)]) 32)
+      (ta := ⟨31⟩) (sb := ⟨20⟩) (eb := ⟨30⟩) (v := wSeed seed)
+      (oldv := .slice ⟨none, 0, 0, 0⟩)
+      (by with_unfolding_all rfl) (by with_unfolding_all rfl) hwr
+      (by with_unfolding_all rfl) ch
+  have h7 := stepFnIter_chain h6
+    (stepFnIter_one (stepFn_stmtOp_apply happ1))
+  have he := r_i0_e_rawQ σ ((n : Nat) : Int) ((seed : Nat) : Int) n
+    (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+    ((n : Nat) : Int) (wSeed seed) capV ch1
+  have h8 := stepFnIter_chain h7 he
+  -- the SECOND append: runCounts spills
+  obtain ⟨capC, ch2, hcC1, hcC2, happ2⟩ :=
+    applyStmtOp_append_spill1
+      (σ := qSt σ (qHeapRle0' ((n : Nat) : Int) ((seed : Nat) : Int) n
+        (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+        ((n : Nat) : Int) capV
+        ++ [(.base ⟨27⟩, qint 0), (.base ⟨28⟩, qbool false),
+            (.base ⟨29⟩, qC1Slice 30), (.base ⟨30⟩, qBack1 (wSeed seed)),
+            (.base ⟨31⟩, qRunSlice 32 capV),
+            (.base ⟨32⟩, qBackPad capV (wSeed seed)),
+            (.base ⟨33⟩, qC1Slice 34), (.base ⟨34⟩, qBack1 1),
+            (.base ⟨35⟩, qNilSlice)]) 36)
+      (ta := ⟨35⟩) (sb := ⟨23⟩) (eb := ⟨34⟩) (v := 1)
+      (oldv := .slice ⟨none, 0, 0, 0⟩)
+      (by with_unfolding_all rfl) (by with_unfolding_all rfl)
+      (by omega) (by with_unfolding_all rfl) ch1
+  have h9 := stepFnIter_chain h8
+    (stepFnIter_one (stepFn_stmtOp_apply happ2))
+  have hf := r_i0_f_rawQ σ ((n : Nat) : Int) ((seed : Nat) : Int) n
+    (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+    ((n : Nat) : Int) (wSeed seed) capV capC ch2
+  have h10 := stepFnIter_chain h9 hf
+  exact ⟨capV, capC, ch2, hcV1, hcV2, hcC1, hcC2, h10⟩
+
+/-- **Extend iteration `i = 1`, composed** (from the loop head through
+the dispatch, the extend test — the pair matches, the family is
+constant — and `runCounts[0]++`, back to the head). 143 steps; the
+choice stream is untouched (no allocation spills). -/
+theorem r_extC37 (σ : ExecState) (n seed : Nat) (capV capC : Nat)
+    (hcV : 1 ≤ capV) (hcC : 1 ≤ capC) (h1n : 1 < n) (hn : n ≤ 3)
+    (ch : Choices) :
+    stepFnIter 143
+      (qSt σ (qHeapRun ((n : Nat) : Int) ((seed : Nat) : Int) n
+        (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+        ((n : Nat) : Int) capV capC (wSeed seed) 1 0 false []) 37)
+      rHeadCfgQ ch
+      = .ok (rHeadCfgQ,
+          qSt σ (qHeapRun ((n : Nat) : Int) ((seed : Nat) : Int) n
+            (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+            ((n : Nat) : Int) capV capC (wSeed seed) 2 1 false ke1) 39,
+          ch) := by
+  have hwr := wSeed_range seed
+  have hA1 := r_A1_raw37 σ ((n : Nat) : Int) ((seed : Nat) : Int) n
+    (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+    ((n : Nat) : Int) capV capC (wSeed seed) 1 0 ch
+  rw [show IntKind.normalize .int (IntKind.normalize .int ((0 : Int) + 1))
+      = (1 : Int) from rfl] at hA1
+  -- len(s), then the exit test (true: 1 < n)
+  have hlenS := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := []) (env := rBodyEnv)
+    (k := .strictK .lessCmp [.int 1 .int] [] rBodyEnv rCmpKQ)
+    (applyStrictOp_len_slice (σ := qSt σ (qHeapRun ((n : Nat) : Int)
+        ((seed : Nat) : Int) n (rleFamily n seed) (rlePre n seed)
+        ((n : Nat) : Int) ((n : Nat) : Int) capV capC (wSeed seed) 1 1
+        false []) 37)
+      (b := .base ⟨7⟩) (off := 0) (len := n) (cap := n) (elem := tU64)
+      (Nat.le_refl n)))
+  have hlt := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := [.int 1 .int]) (env := rBodyEnv) (k := rCmpKQ)
+    (applyStrictOp_lessCmp_int (σ := qSt σ (qHeapRun ((n : Nat) : Int)
+        ((seed : Nat) : Int) n (rleFamily n seed) (rlePre n seed)
+        ((n : Nat) : Int) ((n : Nat) : Int) capV capC (wSeed seed) 1 1
+        false []) 37)
+      (a := 1) (b := ((n : Nat) : Int)) (k := .int) (k' := .int)))
+  rw [show decide ((1 : Int) < ((n : Nat) : Int)) = true from
+    decide_eq_true (by exact_mod_cast h1n)] at hlt
+  have h1 := stepFnIter_chain (stepFnIter_chain hA1 hlenS) hlt
+  have ha := r_ext_a37 σ ((n : Nat) : Int) ((seed : Nat) : Int) n
+    (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+    ((n : Nat) : Int) capV capC (wSeed seed) 1 1 ch
+  have h2 := stepFnIter_chain h1 ha
+  -- k := len(runVals) = 1
+  have hlenV := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := []) (env := rKEnv 37)
+    (k := .rhsK .vals [.chain (.addr (.base ⟨37⟩)) [] []] [] [] (.seqn #[])
+      (rKEnv 37) (rKTailK 37))
+    (applyStrictOp_len_slice (σ := qSt σ (qHeapRun ((n : Nat) : Int)
+        ((seed : Nat) : Int) n (rleFamily n seed) (rlePre n seed)
+        ((n : Nat) : Int) ((n : Nat) : Int) capV capC (wSeed seed) 1 1
+        false [(.base ⟨37⟩, qint 0)]) 38)
+      (b := .base ⟨32⟩) (off := 0) (len := 1) (cap := capV) (elem := tU64)
+      hcV))
+  have h3 := stepFnIter_chain h2 hlenV
+  have hb := r_ext_b37 σ ((n : Nat) : Int) ((seed : Nat) : Int) n
+    (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+    ((n : Nat) : Int) capV capC (wSeed seed) 1 1 ch
+  have h4 := stepFnIter_chain h3 hb
+  -- runVals[0] (the banked run value)
+  have hlookV : Heap.lookup (qSt σ (qHeapRun ((n : Nat) : Int)
+      ((seed : Nat) : Int) n (rleFamily n seed) (rlePre n seed)
+      ((n : Nat) : Int) ((n : Nat) : Int) capV capC (wSeed seed) 1 1 false
+      [(.base ⟨37⟩, qint 1), (.base ⟨38⟩, qbool false)]) 39).heap
+      (.base ⟨32⟩)
+      = some ⟨some (.array capV tU64),
+          .array ⟨(qPadL capV (wSeed seed)).map
+            (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hreadV := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := [qRunSliceV 32 capV]) (env := rExtGuardEnv 37)
+    (k := .strictK (.eqCmp tU64) [] [.indexGet (.var "s") (.var "i")]
+      (rExtGuardEnv 37) (rExtIfK 37))
+    (applyStrictOp_indexGet_slice (ik := .int) (i := 0) hlookV hcV
+      (by omega) (by rfl)))
+  have h5 := stepFnIter_chain h4 hreadV
+  have hc := r_ext_c37 σ ((n : Nat) : Int) ((seed : Nat) : Int) n
+    (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+    ((n : Nat) : Int) capV capC (wSeed seed) 1 1 (wSeed seed) ch
+  have h6 := stepFnIter_chain h5 hc
+  -- s[1] (the family is constant, so it MATCHES)
+  have hgetS : (⟨(rleFamily n seed).map (fun v => .int v .uint64)⟩ :
+      Array GoValue)[0 + 1]? = some (.int (wSeed seed) .uint64) := by
+    rw [Nat.zero_add, getElem?_mapU _ _ (by rw [rleFamily_length]; omega),
+      rleFamily_getD_const (by omega) hn]
+  have hlookS : Heap.lookup (qSt σ (qHeapRun ((n : Nat) : Int)
+      ((seed : Nat) : Int) n (rleFamily n seed) (rlePre n seed)
+      ((n : Nat) : Int) ((n : Nat) : Int) capV capC (wSeed seed) 1 1 false
+      [(.base ⟨37⟩, qint 1), (.base ⟨38⟩, qbool false)]) 39).heap
+      (.base ⟨7⟩)
+      = some ⟨some (.array n tU64),
+          .array ⟨(rleFamily n seed).map (fun v => .int v .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hreadS := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := [qSliceS n]) (env := rExtGuardEnv 37)
+    (k := .strictK (.eqCmp tU64) [.int (wSeed seed) .uint64] []
+      (rExtGuardEnv 37) (rExtIfK 37))
+    (applyStrictOp_indexGet_slice (ik := .int) (i := 1) hlookS
+      (Nat.le_refl n) (by omega) hgetS))
+  have h7 := stepFnIter_chain h6 hreadS
+  have heq := r_eq_apply (qSt σ (qHeapRun ((n : Nat) : Int)
+      ((seed : Nat) : Int) n (rleFamily n seed) (rlePre n seed)
+      ((n : Nat) : Int) ((n : Nat) : Int) capV capC (wSeed seed) 1 1 false
+      [(.base ⟨37⟩, qint 1), (.base ⟨38⟩, qbool false)]) 39)
+    (wSeed seed) (wSeed seed) (rExtGuardEnv 37) (rExtIfK 37) ch
+  rw [show ((wSeed seed) == (wSeed seed)) = true from beq_self_eq_true _]
+    at heq
+  have h8 := stepFnIter_chain h7 heq
+  have hd := r_ext_d37 σ ((n : Nat) : Int) ((seed : Nat) : Int) n
+    (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+    ((n : Nat) : Int) capV capC (wSeed seed) 1 1 ch
+  have h9 := stepFnIter_chain h8 hd
+  -- runCounts[0] = 1
+  have hlookC : Heap.lookup (qSt σ (qHeapRun ((n : Nat) : Int)
+      ((seed : Nat) : Int) n (rleFamily n seed) (rlePre n seed)
+      ((n : Nat) : Int) ((n : Nat) : Int) capV capC (wSeed seed) 1 1 false
+      [(.base ⟨37⟩, qint 1), (.base ⟨38⟩, qbool false)]) 39).heap
+      (.base ⟨36⟩)
+      = some ⟨some (.array capC tU64),
+          .array ⟨(qPadL capC 1).map (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hreadC := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := [qRunSliceV 36 capC]) (env := rExtBEnv 37)
+    (k := .strictK .add [] [.intLit 1 .uint64] (rExtBEnv 37)
+      (rExtRhsK 37 capC))
+    (applyStrictOp_indexGet_slice (ik := .int) (i := 0) hlookC hcC
+      (by omega) (by rfl)))
+  have h10 := stepFnIter_chain h9 hreadC
+  have he := r_ext_e37 σ ((n : Nat) : Int) ((seed : Nat) : Int) n
+    (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+    ((n : Nat) : Int) capV capC (wSeed seed) 1 1 1 ch
+  rw [show IntKind.normalize .uint64 ((1 : Int) + 1) = (2 : Int) from rfl]
+    at he
+  have h11 := stepFnIter_chain h10 he
+  -- the runCounts[0] := 2 store
+  have hstC := storeTarget_slice_u64
+    (σ := qSt σ (qHeapRun ((n : Nat) : Int) ((seed : Nat) : Int) n
+      (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+      ((n : Nat) : Int) capV capC (wSeed seed) 1 1 false
+      [(.base ⟨37⟩, qint 1), (.base ⟨38⟩, qbool false)]) 39)
+    (a := ⟨36⟩) (off := 0) (len := 1) (cap := capC) (i := 0) (n := capC)
+    (ik := .int) (l := qPadL capC 1) (w := 2)
+    hlookC hcC (by omega)
+    (by simp only [qPadL, List.length_cons, List.length_replicate]; omega)
+    (by simp only [qPadL, List.length_cons, List.length_replicate]; omega)
+    (by
+      intro x hx
+      rcases List.mem_cons.mp hx with rfl | hx
+      · omega
+      · rcases List.mem_replicate.mp hx with ⟨-, rfl⟩; omega)
+    (by omega)
+  have h12 := stepFnIter_chain h11
+    (stepFnIter_one (stepFn_store_step hstC))
+  have hf := r_ext_f37 σ ((n : Nat) : Int) ((seed : Nat) : Int) n
+    (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+    ((n : Nat) : Int) capV capC (wSeed seed) 2 1 ch
+  exact stepFnIter_chain h12 hf
+
+/-- **Extend iteration `i = 2`, composed** (from the loop head through
+the dispatch, the extend test — the pair matches, the family is
+constant — and `runCounts[0]++`, back to the head). 143 steps; the
+choice stream is untouched (no allocation spills). -/
+theorem r_extC39 (σ : ExecState) (n seed : Nat) (capV capC : Nat)
+    (hcV : 1 ≤ capV) (hcC : 1 ≤ capC) (h1n : 2 < n) (hn : n ≤ 3)
+    (ch : Choices) :
+    stepFnIter 143
+      (qSt σ (qHeapRun ((n : Nat) : Int) ((seed : Nat) : Int) n
+        (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+        ((n : Nat) : Int) capV capC (wSeed seed) 2 1 false ke1) 39)
+      rHeadCfgQ ch
+      = .ok (rHeadCfgQ,
+          qSt σ (qHeapRun ((n : Nat) : Int) ((seed : Nat) : Int) n
+            (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+            ((n : Nat) : Int) capV capC (wSeed seed) 3 2 false ke2) 41,
+          ch) := by
+  have hwr := wSeed_range seed
+  have hA1 := r_A1_raw39 σ ((n : Nat) : Int) ((seed : Nat) : Int) n
+    (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+    ((n : Nat) : Int) capV capC (wSeed seed) 2 1 ch
+  rw [show IntKind.normalize .int (IntKind.normalize .int ((1 : Int) + 1))
+      = (2 : Int) from rfl] at hA1
+  -- len(s), then the exit test (true: 1 < n)
+  have hlenS := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := []) (env := rBodyEnv)
+    (k := .strictK .lessCmp [.int 2 .int] [] rBodyEnv rCmpKQ)
+    (applyStrictOp_len_slice (σ := qSt σ (qHeapRun ((n : Nat) : Int)
+        ((seed : Nat) : Int) n (rleFamily n seed) (rlePre n seed)
+        ((n : Nat) : Int) ((n : Nat) : Int) capV capC (wSeed seed) 2 2
+        false ke1) 39)
+      (b := .base ⟨7⟩) (off := 0) (len := n) (cap := n) (elem := tU64)
+      (Nat.le_refl n)))
+  have hlt := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := [.int 2 .int]) (env := rBodyEnv) (k := rCmpKQ)
+    (applyStrictOp_lessCmp_int (σ := qSt σ (qHeapRun ((n : Nat) : Int)
+        ((seed : Nat) : Int) n (rleFamily n seed) (rlePre n seed)
+        ((n : Nat) : Int) ((n : Nat) : Int) capV capC (wSeed seed) 2 2
+        false ke1) 39)
+      (a := 2) (b := ((n : Nat) : Int)) (k := .int) (k' := .int)))
+  rw [show decide ((2 : Int) < ((n : Nat) : Int)) = true from
+    decide_eq_true (by exact_mod_cast h1n)] at hlt
+  have h1 := stepFnIter_chain (stepFnIter_chain hA1 hlenS) hlt
+  have ha := r_ext_a39 σ ((n : Nat) : Int) ((seed : Nat) : Int) n
+    (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+    ((n : Nat) : Int) capV capC (wSeed seed) 2 2 ch
+  have h2 := stepFnIter_chain h1 ha
+  -- k := len(runVals) = 1
+  have hlenV := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := []) (env := rKEnv 39)
+    (k := .rhsK .vals [.chain (.addr (.base ⟨39⟩)) [] []] [] [] (.seqn #[])
+      (rKEnv 39) (rKTailK 39))
+    (applyStrictOp_len_slice (σ := qSt σ (qHeapRun ((n : Nat) : Int)
+        ((seed : Nat) : Int) n (rleFamily n seed) (rlePre n seed)
+        ((n : Nat) : Int) ((n : Nat) : Int) capV capC (wSeed seed) 2 2
+        false (ke1 ++ [(.base ⟨39⟩, qint 0)])) 40)
+      (b := .base ⟨32⟩) (off := 0) (len := 1) (cap := capV) (elem := tU64)
+      hcV))
+  have h3 := stepFnIter_chain h2 hlenV
+  have hb := r_ext_b39 σ ((n : Nat) : Int) ((seed : Nat) : Int) n
+    (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+    ((n : Nat) : Int) capV capC (wSeed seed) 2 2 ch
+  have h4 := stepFnIter_chain h3 hb
+  -- runVals[0] (the banked run value)
+  have hlookV : Heap.lookup (qSt σ (qHeapRun ((n : Nat) : Int)
+      ((seed : Nat) : Int) n (rleFamily n seed) (rlePre n seed)
+      ((n : Nat) : Int) ((n : Nat) : Int) capV capC (wSeed seed) 2 2 false
+      (ke1 ++ [(.base ⟨39⟩, qint 1), (.base ⟨40⟩, qbool false)])) 41).heap
+      (.base ⟨32⟩)
+      = some ⟨some (.array capV tU64),
+          .array ⟨(qPadL capV (wSeed seed)).map
+            (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hreadV := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := [qRunSliceV 32 capV]) (env := rExtGuardEnv 39)
+    (k := .strictK (.eqCmp tU64) [] [.indexGet (.var "s") (.var "i")]
+      (rExtGuardEnv 39) (rExtIfK 39))
+    (applyStrictOp_indexGet_slice (ik := .int) (i := 0) hlookV hcV
+      (by omega) (by rfl)))
+  have h5 := stepFnIter_chain h4 hreadV
+  have hc := r_ext_c39 σ ((n : Nat) : Int) ((seed : Nat) : Int) n
+    (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+    ((n : Nat) : Int) capV capC (wSeed seed) 2 2 (wSeed seed) ch
+  have h6 := stepFnIter_chain h5 hc
+  -- s[1] (the family is constant, so it MATCHES)
+  have hgetS : (⟨(rleFamily n seed).map (fun v => .int v .uint64)⟩ :
+      Array GoValue)[0 + 2]? = some (.int (wSeed seed) .uint64) := by
+    rw [Nat.zero_add, getElem?_mapU _ _ (by rw [rleFamily_length]; omega),
+      rleFamily_getD_const (by omega) hn]
+  have hlookS : Heap.lookup (qSt σ (qHeapRun ((n : Nat) : Int)
+      ((seed : Nat) : Int) n (rleFamily n seed) (rlePre n seed)
+      ((n : Nat) : Int) ((n : Nat) : Int) capV capC (wSeed seed) 2 2 false
+      (ke1 ++ [(.base ⟨39⟩, qint 1), (.base ⟨40⟩, qbool false)])) 41).heap
+      (.base ⟨7⟩)
+      = some ⟨some (.array n tU64),
+          .array ⟨(rleFamily n seed).map (fun v => .int v .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hreadS := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := [qSliceS n]) (env := rExtGuardEnv 39)
+    (k := .strictK (.eqCmp tU64) [.int (wSeed seed) .uint64] []
+      (rExtGuardEnv 39) (rExtIfK 39))
+    (applyStrictOp_indexGet_slice (ik := .int) (i := 2) hlookS
+      (Nat.le_refl n) (by omega) hgetS))
+  have h7 := stepFnIter_chain h6 hreadS
+  have heq := r_eq_apply (qSt σ (qHeapRun ((n : Nat) : Int)
+      ((seed : Nat) : Int) n (rleFamily n seed) (rlePre n seed)
+      ((n : Nat) : Int) ((n : Nat) : Int) capV capC (wSeed seed) 2 2 false
+      (ke1 ++ [(.base ⟨39⟩, qint 1), (.base ⟨40⟩, qbool false)])) 41)
+    (wSeed seed) (wSeed seed) (rExtGuardEnv 39) (rExtIfK 39) ch
+  rw [show ((wSeed seed) == (wSeed seed)) = true from beq_self_eq_true _]
+    at heq
+  have h8 := stepFnIter_chain h7 heq
+  have hd := r_ext_d39 σ ((n : Nat) : Int) ((seed : Nat) : Int) n
+    (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+    ((n : Nat) : Int) capV capC (wSeed seed) 2 2 ch
+  have h9 := stepFnIter_chain h8 hd
+  -- runCounts[0] = 1
+  have hlookC : Heap.lookup (qSt σ (qHeapRun ((n : Nat) : Int)
+      ((seed : Nat) : Int) n (rleFamily n seed) (rlePre n seed)
+      ((n : Nat) : Int) ((n : Nat) : Int) capV capC (wSeed seed) 2 2 false
+      (ke1 ++ [(.base ⟨39⟩, qint 1), (.base ⟨40⟩, qbool false)])) 41).heap
+      (.base ⟨36⟩)
+      = some ⟨some (.array capC tU64),
+          .array ⟨(qPadL capC 2).map (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hreadC := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := [qRunSliceV 36 capC]) (env := rExtBEnv 39)
+    (k := .strictK .add [] [.intLit 1 .uint64] (rExtBEnv 39)
+      (rExtRhsK 39 capC))
+    (applyStrictOp_indexGet_slice (ik := .int) (i := 0) hlookC hcC
+      (by omega) (by rfl)))
+  have h10 := stepFnIter_chain h9 hreadC
+  have he := r_ext_e39 σ ((n : Nat) : Int) ((seed : Nat) : Int) n
+    (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+    ((n : Nat) : Int) capV capC (wSeed seed) 2 2 2 ch
+  rw [show IntKind.normalize .uint64 ((2 : Int) + 1) = (3 : Int) from rfl]
+    at he
+  have h11 := stepFnIter_chain h10 he
+  -- the runCounts[0] := 2 store
+  have hstC := storeTarget_slice_u64
+    (σ := qSt σ (qHeapRun ((n : Nat) : Int) ((seed : Nat) : Int) n
+      (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+      ((n : Nat) : Int) capV capC (wSeed seed) 2 2 false
+      (ke1 ++ [(.base ⟨39⟩, qint 1), (.base ⟨40⟩, qbool false)])) 41)
+    (a := ⟨36⟩) (off := 0) (len := 1) (cap := capC) (i := 0) (n := capC)
+    (ik := .int) (l := qPadL capC 2) (w := 3)
+    hlookC hcC (by omega)
+    (by simp only [qPadL, List.length_cons, List.length_replicate]; omega)
+    (by simp only [qPadL, List.length_cons, List.length_replicate]; omega)
+    (by
+      intro x hx
+      rcases List.mem_cons.mp hx with rfl | hx
+      · omega
+      · rcases List.mem_replicate.mp hx with ⟨-, rfl⟩; omega)
+    (by omega)
+  have h12 := stepFnIter_chain h11
+    (stepFnIter_one (stepFn_store_step hstC))
+  have hf := r_ext_f39 σ ((n : Nat) : Int) ((seed : Nat) : Int) n
+    (rleFamily n seed) (rlePre n seed) ((n : Nat) : Int)
+    ((n : Nat) : Int) capV capC (wSeed seed) 3 2 ch
+  exact stepFnIter_chain h12 hf
+
+/-! ## The composed final copy + epilogue (one instance per exit
+layout) -/
+
+/-- The `[8]uint64` array holding one live element. -/
+def qPad8 (x : Int) : List Int := x :: List.replicate 7 0
+
+theorem qPad8_length (x : Int) : (qPad8 x).length = 8 := by
+  simp [qPad8]
+
+theorem qPad8_range {x : Int} (hx : 0 ≤ x ∧ x < 2 ^ 64) :
+    ∀ v ∈ qPad8 x, 0 ≤ v ∧ v < 2 ^ 64 := by
+  intro v hv
+  rcases List.mem_cons.mp hv with rfl | hv
+  · exact hx
+  · rcases List.mem_replicate.mp hv with ⟨-, rfl⟩; omega
+
+/-- **The final copy loop + the epilogue, composed** (`A = 41`
+layout): one iteration lifts `(w, cnt)` into the arrays, the loop
+exits at `i = 1 = len(vals)`, and the four results are delivered.
+151 steps. -/
+theorem fcC41 (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (capV capC : Nat) (w cnt : Int)
+    (hcV : 1 ≤ capV) (hcC : 1 ≤ capC)
+    (hw : 0 ≤ w ∧ w < 2 ^ 64) (hcnt : 0 ≤ cnt ∧ cnt < 2 ^ 64)
+    (hlp : lp.length = 8) (hlpr : ∀ v ∈ lp, 0 ≤ v ∧ v < 2 ^ 64)
+    (iv : Int) (ch : Choices) :
+    stepFnIter 151
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC w cnt iv ke2
+        zeros8 zeros8 0 true 41) 45) (fcHeadCfg 41) ch
+      = .ok (.next .stop,
+          qSt σ (qHeapEnd1 nv sv n l lp siv civ capV capC w cnt 1 iv ke2
+            (qPad8 w) (qPad8 cnt) 1 41) 45, ch) := by
+  have hA0 := fc_A0_raw41 σ nv sv n l lp siv civ capV capC w cnt iv
+    zeros8 zeros8 ch
+  -- len(vals) = 1, then 0 < 1
+  have hlen1 := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := []) (env := fcEnvB 41)
+    (k := .strictK .lessCmp [.int 0 .int] [] (fcEnvB 41) (fcCmpK 41))
+    (applyStrictOp_len_slice (σ := qSt σ (qHeapFC nv sv n l lp siv civ
+        capV capC w cnt iv ke2 zeros8 zeros8 0 false 41) 45)
+      (b := .base ⟨32⟩) (off := 0) (len := 1) (cap := capV)
+      (elem := tU64) hcV))
+  have hlt1 := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := [.int 0 .int]) (env := fcEnvB 41) (k := fcCmpK 41)
+    (applyStrictOp_lessCmp_int (σ := qSt σ (qHeapFC nv sv n l lp siv civ
+        capV capC w cnt iv ke2 zeros8 zeros8 0 false 41) 45)
+      (a := 0) (b := ((1 : Nat) : Int)) (k := .int) (k' := .int)))
+  rw [show decide ((0 : Int) < ((1 : Nat) : Int)) = true from
+    decide_eq_true (by omega)] at hlt1
+  have h1 := stepFnIter_chain (stepFnIter_chain hA0 hlen1) hlt1
+  have hb := fc_b_raw41 σ nv sv n l lp siv civ capV capC w cnt iv
+    zeros8 zeros8 0 ch
+  have h2 := stepFnIter_chain h1 hb
+  -- vals[0] = w
+  have hlookV : Heap.lookup (qSt σ (qHeapFC nv sv n l lp siv civ
+      capV capC w cnt iv ke2 zeros8 zeros8 0 false 41) 45).heap
+      (.base ⟨32⟩)
+      = some ⟨some (.array capV tU64),
+          .array ⟨(qPadL capV w).map (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hreadV := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := [qRunSliceV 32 capV]) (env := fcEnvB2 41)
+    (k := fcVRhsK 41 0)
+    (applyStrictOp_indexGet_slice (ik := .int) (i := 0) hlookV hcV
+      (by omega) (by rfl)))
+  have h3 := stepFnIter_chain h2 hreadV
+  have hc := fc_c_raw41 σ nv sv n l lp siv civ capV capC w cnt iv
+    zeros8 zeros8 0 (.int w .uint64) ch
+  have h4 := stepFnIter_chain h3 hc
+  -- runVals[0] := w
+  have hlookA : Heap.lookup (qSt σ (qHeapFC nv sv n l lp siv civ
+      capV capC w cnt iv ke2 zeros8 zeros8 0 false 41) 45).heap
+      (.base ⟨41⟩)
+      = some ⟨some (.array 8 tU64),
+          .array ⟨zeros8.map (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hstV := storeTarget_arrayLocal_u64 (a := ⟨41⟩) (N := 8) (i := 0)
+    (ik := .int) (l := zeros8) (w := w) hlookA
+    (by simp [zeros8]) (by simp [zeros8])
+    (by intro x hx; rcases List.mem_replicate.mp hx with ⟨-, rfl⟩; omega)
+    hw
+  have h5 := stepFnIter_chain h4
+    (stepFnIter_one (stepFn_store_step hstV))
+  have hd := fc_d_raw41 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) zeros8 0 ch
+  have h6 := stepFnIter_chain h5 hd
+  -- counts[0] = cnt
+  have hlookC : Heap.lookup (qSt σ (qHeapFC nv sv n l lp siv civ
+      capV capC w cnt iv ke2 (qPad8 w) zeros8 0 false 41) 45).heap
+      (.base ⟨36⟩)
+      = some ⟨some (.array capC tU64),
+          .array ⟨(qPadL capC cnt).map (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hreadC := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := [qRunSliceV 36 capC]) (env := fcEnvB2 41)
+    (k := fcCRhsK 41 0)
+    (applyStrictOp_indexGet_slice (ik := .int) (i := 0) hlookC hcC
+      (by omega) (by rfl)))
+  have h7 := stepFnIter_chain h6 hreadC
+  have he := fc_e_raw41 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) zeros8 0 (.int cnt .uint64) ch
+  have h8 := stepFnIter_chain h7 he
+  -- runCounts[0] := cnt
+  have hlookB : Heap.lookup (qSt σ (qHeapFC nv sv n l lp siv civ
+      capV capC w cnt iv ke2 (qPad8 w) zeros8 0 false 41) 45).heap
+      (.base ⟨42⟩)
+      = some ⟨some (.array 8 tU64),
+          .array ⟨zeros8.map (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hstC := storeTarget_arrayLocal_u64 (a := ⟨42⟩) (N := 8) (i := 0)
+    (ik := .int) (l := zeros8) (w := cnt) hlookB
+    (by simp [zeros8]) (by simp [zeros8])
+    (by intro x hx; rcases List.mem_replicate.mp hx with ⟨-, rfl⟩; omega)
+    hcnt
+  have h9 := stepFnIter_chain h8
+    (stepFnIter_one (stepFn_store_step hstC))
+  have hf := fc_f_raw41 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) (qPad8 cnt) 0 ch
+  have h10 := stepFnIter_chain h9 hf
+  -- the second dispatch: i = 1, the test fails
+  have hA1 := fc_A1_raw41 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) (qPad8 cnt) 0 ch
+  rw [show IntKind.normalize .int (IntKind.normalize .int ((0 : Int) + 1))
+      = (1 : Int) from rfl] at hA1
+  have hlen2 := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := []) (env := fcEnvB 41)
+    (k := .strictK .lessCmp [.int 1 .int] [] (fcEnvB 41) (fcCmpK 41))
+    (applyStrictOp_len_slice (σ := qSt σ (qHeapFC nv sv n l lp siv civ
+        capV capC w cnt iv ke2 (qPad8 w) (qPad8 cnt) 1 false 41) 45)
+      (b := .base ⟨32⟩) (off := 0) (len := 1) (cap := capV)
+      (elem := tU64) hcV))
+  have hlt2 := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := [.int 1 .int]) (env := fcEnvB 41) (k := fcCmpK 41)
+    (applyStrictOp_lessCmp_int (σ := qSt σ (qHeapFC nv sv n l lp siv civ
+        capV capC w cnt iv ke2 (qPad8 w) (qPad8 cnt) 1 false 41) 45)
+      (a := 1) (b := ((1 : Nat) : Int)) (k := .int) (k' := .int)))
+  rw [show decide ((1 : Int) < ((1 : Nat) : Int)) = false from
+    decide_eq_false (by omega)] at hlt2
+  have h11 := stepFnIter_chain (stepFnIter_chain
+    (stepFnIter_chain h10 hA1) hlen2) hlt2
+  have hepa := ep_a_raw41 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) (qPad8 cnt) 1 ch
+  have h12 := stepFnIter_chain h11 hepa
+  -- $res0 := pre
+  have hlook2 : Heap.lookup (qSt σ (qHeapFC nv sv n l lp siv civ
+      capV capC w cnt iv ke2 (qPad8 w) (qPad8 cnt) 1 false 41) 45).heap
+      (.base ⟨2⟩)
+      = some ⟨some (.array 8 tU64),
+          .array ⟨zeros8.map (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hst0 := storeTarget_addr (ty := .array 8 tU64) hlook2
+    (normalizeValueForTy_arr_u64 hlp hlpr)
+  have h13 := stepFnIter_chain h12
+    (stepFnIter_one (stepFn_store_step hst0))
+  have hepb := ep_b_raw41 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) (qPad8 cnt) 1 ch
+  have h14 := stepFnIter_chain h13 hepb
+  -- $res1 := runVals
+  have hlook3 : Heap.lookup (qSt σ (qHeapEp nv sv n l lp siv civ
+      capV capC w cnt 0 iv ke2 (qPad8 w) (qPad8 cnt) 1 41
+      lp zeros8 zeros8) 45).heap (.base ⟨3⟩)
+      = some ⟨some (.array 8 tU64),
+          .array ⟨zeros8.map (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hst1 := storeTarget_addr (ty := .array 8 tU64) hlook3
+    (normalizeValueForTy_arr_u64 (qPad8_length w) (qPad8_range hw))
+  have h15 := stepFnIter_chain h14
+    (stepFnIter_one (stepFn_store_step hst1))
+  have hepc := ep_c_raw41 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) (qPad8 cnt) 1 ch
+  have h16 := stepFnIter_chain h15 hepc
+  -- $res2 := runCounts
+  have hlook4 : Heap.lookup (qSt σ (qHeapEp nv sv n l lp siv civ
+      capV capC w cnt 0 iv ke2 (qPad8 w) (qPad8 cnt) 1 41
+      lp (qPad8 w) zeros8) 45).heap (.base ⟨4⟩)
+      = some ⟨some (.array 8 tU64),
+          .array ⟨zeros8.map (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hst2 := storeTarget_addr (ty := .array 8 tU64) hlook4
+    (normalizeValueForTy_arr_u64 (qPad8_length cnt) (qPad8_range hcnt))
+  have h17 := stepFnIter_chain h16
+    (stepFnIter_one (stepFn_store_step hst2))
+  have hepd := ep_d_raw41 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) (qPad8 cnt) 1 ch
+  have h18 := stepFnIter_chain h17 hepd
+  -- len(vals) once more, then convert + the $res3 store + return
+  have hlen3 := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := []) (env := fcTopEnv 41)
+    (k := .strictK (.convert tU64) [] [] (fcTopEnv 41)
+      (.rhsK .vals [.chain (.addr (.base ⟨5⟩)) [] []] [] []
+        (.seqn #[]) (fcTopEnv 41) (epK 41 [.returnStmt])))
+    (applyStrictOp_len_slice (σ := qSt σ (qHeapEp nv sv n l lp siv civ
+        capV capC w cnt 0 iv ke2 (qPad8 w) (qPad8 cnt) 1 41
+        lp (qPad8 w) (qPad8 cnt)) 45)
+      (b := .base ⟨32⟩) (off := 0) (len := 1) (cap := capV)
+      (elem := tU64) hcV))
+  have h19 := stepFnIter_chain h18 hlen3
+  have hepe := ep_e_raw41 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) (qPad8 cnt) 1 ch
+  exact stepFnIter_chain h19 hepe
+
+/-- **The final copy loop + the epilogue, composed** (`A = 39`
+layout): one iteration lifts `(w, cnt)` into the arrays, the loop
+exits at `i = 1 = len(vals)`, and the four results are delivered.
+151 steps. -/
+theorem fcC39 (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (capV capC : Nat) (w cnt : Int)
+    (hcV : 1 ≤ capV) (hcC : 1 ≤ capC)
+    (hw : 0 ≤ w ∧ w < 2 ^ 64) (hcnt : 0 ≤ cnt ∧ cnt < 2 ^ 64)
+    (hlp : lp.length = 8) (hlpr : ∀ v ∈ lp, 0 ≤ v ∧ v < 2 ^ 64)
+    (iv : Int) (ch : Choices) :
+    stepFnIter 151
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC w cnt iv ke1
+        zeros8 zeros8 0 true 39) 43) (fcHeadCfg 39) ch
+      = .ok (.next .stop,
+          qSt σ (qHeapEnd1 nv sv n l lp siv civ capV capC w cnt 1 iv ke1
+            (qPad8 w) (qPad8 cnt) 1 39) 43, ch) := by
+  have hA0 := fc_A0_raw39 σ nv sv n l lp siv civ capV capC w cnt iv
+    zeros8 zeros8 ch
+  -- len(vals) = 1, then 0 < 1
+  have hlen1 := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := []) (env := fcEnvB 39)
+    (k := .strictK .lessCmp [.int 0 .int] [] (fcEnvB 39) (fcCmpK 39))
+    (applyStrictOp_len_slice (σ := qSt σ (qHeapFC nv sv n l lp siv civ
+        capV capC w cnt iv ke1 zeros8 zeros8 0 false 39) 43)
+      (b := .base ⟨32⟩) (off := 0) (len := 1) (cap := capV)
+      (elem := tU64) hcV))
+  have hlt1 := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := [.int 0 .int]) (env := fcEnvB 39) (k := fcCmpK 39)
+    (applyStrictOp_lessCmp_int (σ := qSt σ (qHeapFC nv sv n l lp siv civ
+        capV capC w cnt iv ke1 zeros8 zeros8 0 false 39) 43)
+      (a := 0) (b := ((1 : Nat) : Int)) (k := .int) (k' := .int)))
+  rw [show decide ((0 : Int) < ((1 : Nat) : Int)) = true from
+    decide_eq_true (by omega)] at hlt1
+  have h1 := stepFnIter_chain (stepFnIter_chain hA0 hlen1) hlt1
+  have hb := fc_b_raw39 σ nv sv n l lp siv civ capV capC w cnt iv
+    zeros8 zeros8 0 ch
+  have h2 := stepFnIter_chain h1 hb
+  -- vals[0] = w
+  have hlookV : Heap.lookup (qSt σ (qHeapFC nv sv n l lp siv civ
+      capV capC w cnt iv ke1 zeros8 zeros8 0 false 39) 43).heap
+      (.base ⟨32⟩)
+      = some ⟨some (.array capV tU64),
+          .array ⟨(qPadL capV w).map (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hreadV := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := [qRunSliceV 32 capV]) (env := fcEnvB2 39)
+    (k := fcVRhsK 39 0)
+    (applyStrictOp_indexGet_slice (ik := .int) (i := 0) hlookV hcV
+      (by omega) (by rfl)))
+  have h3 := stepFnIter_chain h2 hreadV
+  have hc := fc_c_raw39 σ nv sv n l lp siv civ capV capC w cnt iv
+    zeros8 zeros8 0 (.int w .uint64) ch
+  have h4 := stepFnIter_chain h3 hc
+  -- runVals[0] := w
+  have hlookA : Heap.lookup (qSt σ (qHeapFC nv sv n l lp siv civ
+      capV capC w cnt iv ke1 zeros8 zeros8 0 false 39) 43).heap
+      (.base ⟨39⟩)
+      = some ⟨some (.array 8 tU64),
+          .array ⟨zeros8.map (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hstV := storeTarget_arrayLocal_u64 (a := ⟨39⟩) (N := 8) (i := 0)
+    (ik := .int) (l := zeros8) (w := w) hlookA
+    (by simp [zeros8]) (by simp [zeros8])
+    (by intro x hx; rcases List.mem_replicate.mp hx with ⟨-, rfl⟩; omega)
+    hw
+  have h5 := stepFnIter_chain h4
+    (stepFnIter_one (stepFn_store_step hstV))
+  have hd := fc_d_raw39 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) zeros8 0 ch
+  have h6 := stepFnIter_chain h5 hd
+  -- counts[0] = cnt
+  have hlookC : Heap.lookup (qSt σ (qHeapFC nv sv n l lp siv civ
+      capV capC w cnt iv ke1 (qPad8 w) zeros8 0 false 39) 43).heap
+      (.base ⟨36⟩)
+      = some ⟨some (.array capC tU64),
+          .array ⟨(qPadL capC cnt).map (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hreadC := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := [qRunSliceV 36 capC]) (env := fcEnvB2 39)
+    (k := fcCRhsK 39 0)
+    (applyStrictOp_indexGet_slice (ik := .int) (i := 0) hlookC hcC
+      (by omega) (by rfl)))
+  have h7 := stepFnIter_chain h6 hreadC
+  have he := fc_e_raw39 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) zeros8 0 (.int cnt .uint64) ch
+  have h8 := stepFnIter_chain h7 he
+  -- runCounts[0] := cnt
+  have hlookB : Heap.lookup (qSt σ (qHeapFC nv sv n l lp siv civ
+      capV capC w cnt iv ke1 (qPad8 w) zeros8 0 false 39) 43).heap
+      (.base ⟨40⟩)
+      = some ⟨some (.array 8 tU64),
+          .array ⟨zeros8.map (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hstC := storeTarget_arrayLocal_u64 (a := ⟨40⟩) (N := 8) (i := 0)
+    (ik := .int) (l := zeros8) (w := cnt) hlookB
+    (by simp [zeros8]) (by simp [zeros8])
+    (by intro x hx; rcases List.mem_replicate.mp hx with ⟨-, rfl⟩; omega)
+    hcnt
+  have h9 := stepFnIter_chain h8
+    (stepFnIter_one (stepFn_store_step hstC))
+  have hf := fc_f_raw39 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) (qPad8 cnt) 0 ch
+  have h10 := stepFnIter_chain h9 hf
+  -- the second dispatch: i = 1, the test fails
+  have hA1 := fc_A1_raw39 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) (qPad8 cnt) 0 ch
+  rw [show IntKind.normalize .int (IntKind.normalize .int ((0 : Int) + 1))
+      = (1 : Int) from rfl] at hA1
+  have hlen2 := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := []) (env := fcEnvB 39)
+    (k := .strictK .lessCmp [.int 1 .int] [] (fcEnvB 39) (fcCmpK 39))
+    (applyStrictOp_len_slice (σ := qSt σ (qHeapFC nv sv n l lp siv civ
+        capV capC w cnt iv ke1 (qPad8 w) (qPad8 cnt) 1 false 39) 43)
+      (b := .base ⟨32⟩) (off := 0) (len := 1) (cap := capV)
+      (elem := tU64) hcV))
+  have hlt2 := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := [.int 1 .int]) (env := fcEnvB 39) (k := fcCmpK 39)
+    (applyStrictOp_lessCmp_int (σ := qSt σ (qHeapFC nv sv n l lp siv civ
+        capV capC w cnt iv ke1 (qPad8 w) (qPad8 cnt) 1 false 39) 43)
+      (a := 1) (b := ((1 : Nat) : Int)) (k := .int) (k' := .int)))
+  rw [show decide ((1 : Int) < ((1 : Nat) : Int)) = false from
+    decide_eq_false (by omega)] at hlt2
+  have h11 := stepFnIter_chain (stepFnIter_chain
+    (stepFnIter_chain h10 hA1) hlen2) hlt2
+  have hepa := ep_a_raw39 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) (qPad8 cnt) 1 ch
+  have h12 := stepFnIter_chain h11 hepa
+  -- $res0 := pre
+  have hlook2 : Heap.lookup (qSt σ (qHeapFC nv sv n l lp siv civ
+      capV capC w cnt iv ke1 (qPad8 w) (qPad8 cnt) 1 false 39) 43).heap
+      (.base ⟨2⟩)
+      = some ⟨some (.array 8 tU64),
+          .array ⟨zeros8.map (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hst0 := storeTarget_addr (ty := .array 8 tU64) hlook2
+    (normalizeValueForTy_arr_u64 hlp hlpr)
+  have h13 := stepFnIter_chain h12
+    (stepFnIter_one (stepFn_store_step hst0))
+  have hepb := ep_b_raw39 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) (qPad8 cnt) 1 ch
+  have h14 := stepFnIter_chain h13 hepb
+  -- $res1 := runVals
+  have hlook3 : Heap.lookup (qSt σ (qHeapEp nv sv n l lp siv civ
+      capV capC w cnt 0 iv ke1 (qPad8 w) (qPad8 cnt) 1 39
+      lp zeros8 zeros8) 43).heap (.base ⟨3⟩)
+      = some ⟨some (.array 8 tU64),
+          .array ⟨zeros8.map (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hst1 := storeTarget_addr (ty := .array 8 tU64) hlook3
+    (normalizeValueForTy_arr_u64 (qPad8_length w) (qPad8_range hw))
+  have h15 := stepFnIter_chain h14
+    (stepFnIter_one (stepFn_store_step hst1))
+  have hepc := ep_c_raw39 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) (qPad8 cnt) 1 ch
+  have h16 := stepFnIter_chain h15 hepc
+  -- $res2 := runCounts
+  have hlook4 : Heap.lookup (qSt σ (qHeapEp nv sv n l lp siv civ
+      capV capC w cnt 0 iv ke1 (qPad8 w) (qPad8 cnt) 1 39
+      lp (qPad8 w) zeros8) 43).heap (.base ⟨4⟩)
+      = some ⟨some (.array 8 tU64),
+          .array ⟨zeros8.map (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hst2 := storeTarget_addr (ty := .array 8 tU64) hlook4
+    (normalizeValueForTy_arr_u64 (qPad8_length cnt) (qPad8_range hcnt))
+  have h17 := stepFnIter_chain h16
+    (stepFnIter_one (stepFn_store_step hst2))
+  have hepd := ep_d_raw39 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) (qPad8 cnt) 1 ch
+  have h18 := stepFnIter_chain h17 hepd
+  -- len(vals) once more, then convert + the $res3 store + return
+  have hlen3 := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := []) (env := fcTopEnv 39)
+    (k := .strictK (.convert tU64) [] [] (fcTopEnv 39)
+      (.rhsK .vals [.chain (.addr (.base ⟨5⟩)) [] []] [] []
+        (.seqn #[]) (fcTopEnv 39) (epK 39 [.returnStmt])))
+    (applyStrictOp_len_slice (σ := qSt σ (qHeapEp nv sv n l lp siv civ
+        capV capC w cnt 0 iv ke1 (qPad8 w) (qPad8 cnt) 1 39
+        lp (qPad8 w) (qPad8 cnt)) 43)
+      (b := .base ⟨32⟩) (off := 0) (len := 1) (cap := capV)
+      (elem := tU64) hcV))
+  have h19 := stepFnIter_chain h18 hlen3
+  have hepe := ep_e_raw39 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) (qPad8 cnt) 1 ch
+  exact stepFnIter_chain h19 hepe
+
+/-- **The final copy loop + the epilogue, composed** (`A = 37`
+layout): one iteration lifts `(w, cnt)` into the arrays, the loop
+exits at `i = 1 = len(vals)`, and the four results are delivered.
+151 steps. -/
+theorem fcC37 (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (capV capC : Nat) (w cnt : Int)
+    (hcV : 1 ≤ capV) (hcC : 1 ≤ capC)
+    (hw : 0 ≤ w ∧ w < 2 ^ 64) (hcnt : 0 ≤ cnt ∧ cnt < 2 ^ 64)
+    (hlp : lp.length = 8) (hlpr : ∀ v ∈ lp, 0 ≤ v ∧ v < 2 ^ 64)
+    (iv : Int) (ch : Choices) :
+    stepFnIter 151
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC w cnt iv ([] : Heap)
+        zeros8 zeros8 0 true 37) 41) (fcHeadCfg 37) ch
+      = .ok (.next .stop,
+          qSt σ (qHeapEnd1 nv sv n l lp siv civ capV capC w cnt 1 iv ([] : Heap)
+            (qPad8 w) (qPad8 cnt) 1 37) 41, ch) := by
+  have hA0 := fc_A0_raw37 σ nv sv n l lp siv civ capV capC w cnt iv
+    zeros8 zeros8 ch
+  -- len(vals) = 1, then 0 < 1
+  have hlen1 := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := []) (env := fcEnvB 37)
+    (k := .strictK .lessCmp [.int 0 .int] [] (fcEnvB 37) (fcCmpK 37))
+    (applyStrictOp_len_slice (σ := qSt σ (qHeapFC nv sv n l lp siv civ
+        capV capC w cnt iv ([] : Heap) zeros8 zeros8 0 false 37) 41)
+      (b := .base ⟨32⟩) (off := 0) (len := 1) (cap := capV)
+      (elem := tU64) hcV))
+  have hlt1 := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := [.int 0 .int]) (env := fcEnvB 37) (k := fcCmpK 37)
+    (applyStrictOp_lessCmp_int (σ := qSt σ (qHeapFC nv sv n l lp siv civ
+        capV capC w cnt iv ([] : Heap) zeros8 zeros8 0 false 37) 41)
+      (a := 0) (b := ((1 : Nat) : Int)) (k := .int) (k' := .int)))
+  rw [show decide ((0 : Int) < ((1 : Nat) : Int)) = true from
+    decide_eq_true (by omega)] at hlt1
+  have h1 := stepFnIter_chain (stepFnIter_chain hA0 hlen1) hlt1
+  have hb := fc_b_raw37 σ nv sv n l lp siv civ capV capC w cnt iv
+    zeros8 zeros8 0 ch
+  have h2 := stepFnIter_chain h1 hb
+  -- vals[0] = w
+  have hlookV : Heap.lookup (qSt σ (qHeapFC nv sv n l lp siv civ
+      capV capC w cnt iv ([] : Heap) zeros8 zeros8 0 false 37) 41).heap
+      (.base ⟨32⟩)
+      = some ⟨some (.array capV tU64),
+          .array ⟨(qPadL capV w).map (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hreadV := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := [qRunSliceV 32 capV]) (env := fcEnvB2 37)
+    (k := fcVRhsK 37 0)
+    (applyStrictOp_indexGet_slice (ik := .int) (i := 0) hlookV hcV
+      (by omega) (by rfl)))
+  have h3 := stepFnIter_chain h2 hreadV
+  have hc := fc_c_raw37 σ nv sv n l lp siv civ capV capC w cnt iv
+    zeros8 zeros8 0 (.int w .uint64) ch
+  have h4 := stepFnIter_chain h3 hc
+  -- runVals[0] := w
+  have hlookA : Heap.lookup (qSt σ (qHeapFC nv sv n l lp siv civ
+      capV capC w cnt iv ([] : Heap) zeros8 zeros8 0 false 37) 41).heap
+      (.base ⟨37⟩)
+      = some ⟨some (.array 8 tU64),
+          .array ⟨zeros8.map (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hstV := storeTarget_arrayLocal_u64 (a := ⟨37⟩) (N := 8) (i := 0)
+    (ik := .int) (l := zeros8) (w := w) hlookA
+    (by simp [zeros8]) (by simp [zeros8])
+    (by intro x hx; rcases List.mem_replicate.mp hx with ⟨-, rfl⟩; omega)
+    hw
+  have h5 := stepFnIter_chain h4
+    (stepFnIter_one (stepFn_store_step hstV))
+  have hd := fc_d_raw37 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) zeros8 0 ch
+  have h6 := stepFnIter_chain h5 hd
+  -- counts[0] = cnt
+  have hlookC : Heap.lookup (qSt σ (qHeapFC nv sv n l lp siv civ
+      capV capC w cnt iv ([] : Heap) (qPad8 w) zeros8 0 false 37) 41).heap
+      (.base ⟨36⟩)
+      = some ⟨some (.array capC tU64),
+          .array ⟨(qPadL capC cnt).map (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hreadC := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := [qRunSliceV 36 capC]) (env := fcEnvB2 37)
+    (k := fcCRhsK 37 0)
+    (applyStrictOp_indexGet_slice (ik := .int) (i := 0) hlookC hcC
+      (by omega) (by rfl)))
+  have h7 := stepFnIter_chain h6 hreadC
+  have he := fc_e_raw37 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) zeros8 0 (.int cnt .uint64) ch
+  have h8 := stepFnIter_chain h7 he
+  -- runCounts[0] := cnt
+  have hlookB : Heap.lookup (qSt σ (qHeapFC nv sv n l lp siv civ
+      capV capC w cnt iv ([] : Heap) (qPad8 w) zeros8 0 false 37) 41).heap
+      (.base ⟨38⟩)
+      = some ⟨some (.array 8 tU64),
+          .array ⟨zeros8.map (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hstC := storeTarget_arrayLocal_u64 (a := ⟨38⟩) (N := 8) (i := 0)
+    (ik := .int) (l := zeros8) (w := cnt) hlookB
+    (by simp [zeros8]) (by simp [zeros8])
+    (by intro x hx; rcases List.mem_replicate.mp hx with ⟨-, rfl⟩; omega)
+    hcnt
+  have h9 := stepFnIter_chain h8
+    (stepFnIter_one (stepFn_store_step hstC))
+  have hf := fc_f_raw37 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) (qPad8 cnt) 0 ch
+  have h10 := stepFnIter_chain h9 hf
+  -- the second dispatch: i = 1, the test fails
+  have hA1 := fc_A1_raw37 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) (qPad8 cnt) 0 ch
+  rw [show IntKind.normalize .int (IntKind.normalize .int ((0 : Int) + 1))
+      = (1 : Int) from rfl] at hA1
+  have hlen2 := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := []) (env := fcEnvB 37)
+    (k := .strictK .lessCmp [.int 1 .int] [] (fcEnvB 37) (fcCmpK 37))
+    (applyStrictOp_len_slice (σ := qSt σ (qHeapFC nv sv n l lp siv civ
+        capV capC w cnt iv ([] : Heap) (qPad8 w) (qPad8 cnt) 1 false 37) 41)
+      (b := .base ⟨32⟩) (off := 0) (len := 1) (cap := capV)
+      (elem := tU64) hcV))
+  have hlt2 := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := [.int 1 .int]) (env := fcEnvB 37) (k := fcCmpK 37)
+    (applyStrictOp_lessCmp_int (σ := qSt σ (qHeapFC nv sv n l lp siv civ
+        capV capC w cnt iv ([] : Heap) (qPad8 w) (qPad8 cnt) 1 false 37) 41)
+      (a := 1) (b := ((1 : Nat) : Int)) (k := .int) (k' := .int)))
+  rw [show decide ((1 : Int) < ((1 : Nat) : Int)) = false from
+    decide_eq_false (by omega)] at hlt2
+  have h11 := stepFnIter_chain (stepFnIter_chain
+    (stepFnIter_chain h10 hA1) hlen2) hlt2
+  have hepa := ep_a_raw37 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) (qPad8 cnt) 1 ch
+  have h12 := stepFnIter_chain h11 hepa
+  -- $res0 := pre
+  have hlook2 : Heap.lookup (qSt σ (qHeapFC nv sv n l lp siv civ
+      capV capC w cnt iv ([] : Heap) (qPad8 w) (qPad8 cnt) 1 false 37) 41).heap
+      (.base ⟨2⟩)
+      = some ⟨some (.array 8 tU64),
+          .array ⟨zeros8.map (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hst0 := storeTarget_addr (ty := .array 8 tU64) hlook2
+    (normalizeValueForTy_arr_u64 hlp hlpr)
+  have h13 := stepFnIter_chain h12
+    (stepFnIter_one (stepFn_store_step hst0))
+  have hepb := ep_b_raw37 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) (qPad8 cnt) 1 ch
+  have h14 := stepFnIter_chain h13 hepb
+  -- $res1 := runVals
+  have hlook3 : Heap.lookup (qSt σ (qHeapEp nv sv n l lp siv civ
+      capV capC w cnt 0 iv ([] : Heap) (qPad8 w) (qPad8 cnt) 1 37
+      lp zeros8 zeros8) 41).heap (.base ⟨3⟩)
+      = some ⟨some (.array 8 tU64),
+          .array ⟨zeros8.map (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hst1 := storeTarget_addr (ty := .array 8 tU64) hlook3
+    (normalizeValueForTy_arr_u64 (qPad8_length w) (qPad8_range hw))
+  have h15 := stepFnIter_chain h14
+    (stepFnIter_one (stepFn_store_step hst1))
+  have hepc := ep_c_raw37 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) (qPad8 cnt) 1 ch
+  have h16 := stepFnIter_chain h15 hepc
+  -- $res2 := runCounts
+  have hlook4 : Heap.lookup (qSt σ (qHeapEp nv sv n l lp siv civ
+      capV capC w cnt 0 iv ([] : Heap) (qPad8 w) (qPad8 cnt) 1 37
+      lp (qPad8 w) zeros8) 41).heap (.base ⟨4⟩)
+      = some ⟨some (.array 8 tU64),
+          .array ⟨zeros8.map (fun x => .int x .uint64)⟩⟩ := by
+    with_unfolding_all rfl
+  have hst2 := storeTarget_addr (ty := .array 8 tU64) hlook4
+    (normalizeValueForTy_arr_u64 (qPad8_length cnt) (qPad8_range hcnt))
+  have h17 := stepFnIter_chain h16
+    (stepFnIter_one (stepFn_store_step hst2))
+  have hepd := ep_d_raw37 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) (qPad8 cnt) 1 ch
+  have h18 := stepFnIter_chain h17 hepd
+  -- len(vals) once more, then convert + the $res3 store + return
+  have hlen3 := stepFnIter_one (ch := ch) (stepFn_strict_apply
+    (done := []) (env := fcTopEnv 37)
+    (k := .strictK (.convert tU64) [] [] (fcTopEnv 37)
+      (.rhsK .vals [.chain (.addr (.base ⟨5⟩)) [] []] [] []
+        (.seqn #[]) (fcTopEnv 37) (epK 37 [.returnStmt])))
+    (applyStrictOp_len_slice (σ := qSt σ (qHeapEp nv sv n l lp siv civ
+        capV capC w cnt 0 iv ([] : Heap) (qPad8 w) (qPad8 cnt) 1 37
+        lp (qPad8 w) (qPad8 cnt)) 41)
+      (b := .base ⟨32⟩) (off := 0) (len := 1) (cap := capV)
+      (elem := tU64) hcV))
+  have h19 := stepFnIter_chain h18 hlen3
+  have hepe := ep_e_raw37 σ nv sv n l lp siv civ capV capC w cnt iv
+    (qPad8 w) (qPad8 cnt) 1 ch
+  exact stepFnIter_chain h19 hepe
+
 end GoLean.Examples.RunLength
