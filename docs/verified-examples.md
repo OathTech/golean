@@ -1,6 +1,6 @@
 # Verified examples — the gallery (2026-08-14)
 
-Thirteen Go programs, and for each one a GoLean theorem you can read.
+Fourteen Go programs, and for each one a GoLean theorem you can read.
 
 This file is the **object of agreement**: it exists so that a reader who is
 not a Lean expert can check, by eye, that the top-level statement really
@@ -95,19 +95,19 @@ exhaustion.
   deletion test stopped being a thing we check by reading. Designation also
   puts them in front of the independent Comparator judge, which re-checks
   the proofs by kernel replay against these statements alone.
-  **The six newest entries — `histogram`, `powmod`, `dotprod`,
-  `kadane`, `dedup` and `fibmemo` — are NOT designated.** (Those eight
-  designated headlines span seven example sections, because `fib` carries
-  two of them.) The six were added by the gallery campaign (2026-08-15),
-  and designation is a separate, user-signed act at the end of that arc:
-  all six are deliberately absent from `Examples/Targets.lean`, from
-  `scripts/ci`'s trusted-closure allowlist and from the Comparator
-  judge's set. Their
+  **The seven newest entries — `histogram`, `powmod`, `dotprod`,
+  `kadane`, `dedup`, `fibmemo` and `sieve` — are NOT designated.**
+  (Those eight designated headlines span seven example sections, because
+  `fib` carries two of them.) The seven were added by the gallery
+  campaign (2026-08-15), and designation is a separate, user-signed act
+  at the end of that arc: all seven are deliberately absent from
+  `Examples/Targets.lean`, from `scripts/ci`'s trusted-closure allowlist
+  and from the Comparator judge's set. Their
   deletion tests were therefore RUN by hand rather than by the gate —
   `lean_minimal_hypotheses` on `histogram_ok` (all four explicit binders
   load-bearing), on `powmod_ok` (all five), on `dotprod_ok` (all three),
-  on `kadane_ok` (all five), on `dedup_ok` (all three) and on
-  `fibmemo_ok` (both) — and that is
+  on `kadane_ok` (all five), on `dedup_ok` (all three), on `fibmemo_ok`
+  (both) and on `sieve_ok` (both) — and that is
   exactly the weaker standing that undesignated means. Their axioms are
   pinned in-build like everyone else's (`proofs/Audit/Histogram.lean`,
   `proofs/Audit/PowMod.lean`, `proofs/Audit/DotProduct.lean`,
@@ -132,7 +132,7 @@ exhaustion.
 
 `Choices` is the stream of nondeterministic decisions the machine consumes at
 points where Go does not promise an outcome. `∀ ch : Choices` says the claim
-holds at **every** such stream. For eleven of the thirteen examples this
+holds at **every** such stream. For twelve of the fourteen examples this
 quantifier is cheap (their runs consume no choices). For word-count and histogram it
 does real work: `for … range` over a Go map consumes one choice per
 iteration, because Go deliberately does not fix map iteration order — so the
@@ -2045,6 +2045,144 @@ the run-conditioned twin.
 `ten`, `thirty` (the `fib` wrapper), `memosize-zero`, `memosize-one`,
 `memosize-ten` (the map-ranging sibling subject), and the harness rows
 `harness-one` and `harness-thirty`. All ten are inside the theorem's domain.
+
+## sieve — the sieve of Eratosthenes, bounded
+
+**The Go** (`Corpus/coverage/exec/examples/sieve/main.go`):
+
+<!-- verbatim: Corpus/coverage/exec/examples/sieve/main.go -->
+```go
+func countPrimes(n uint64) uint64 {
+	if n < 2 {
+		return 0
+	}
+	composite := make([]bool, n+1)
+	for i := uint64(2); i*i <= n; i++ {
+		if !composite[i] {
+			for j := i * i; j <= n; j += i {
+				composite[j] = true
+			}
+		}
+	}
+	count := uint64(0)
+	for i := uint64(2); i <= n; i++ {
+		if !composite[i] {
+			count++
+		}
+	}
+	return count
+}
+```
+
+<!-- verbatim: Corpus/coverage/exec/examples/sieve/main.go -->
+```go
+// sieve_harness: S2 scalar three-phase shape; setup and test are
+// identities (argument-input subject, returned scalar is the
+// observable).
+func sieve_harness(n uint64) uint64 {
+	return countPrimes(n)
+}
+```
+
+**The specification** (`proofs/GoLeanProofs/Examples/Sieve/Pure.lean`) is
+trial-division primality — the obvious definition a reader checks by eye,
+not a restatement of the sieve:
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/Sieve/Pure.lean -->
+```lean
+/-- Trial-division primality: `2 ≤ k` and no divisor `d` with `2 ≤ d < k`. -/
+def isPrime (k : Nat) : Bool :=
+  decide (2 ≤ k) && (List.range k).all (fun d => decide (d < 2) || decide (k % d ≠ 0))
+```
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/Sieve/Pure.lean -->
+```lean
+/-- The number of primes ≤ `n` — the obvious spec the headline states. -/
+def primeCount (n : Nat) : Nat := ((List.range (n + 1)).filter isPrime).length
+```
+
+**The theorem** (`proofs/GoLeanProofs/Examples/Sieve.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/Sieve.lean -->
+```lean
+theorem sieve_ok (n : Nat) (hn : n < 2 ^ 62) :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      runFunctionWithContextM fuel sieveLowered.typeDefs.toList
+          sieveLowered.funcs sieveHarnessFunc
+          #[.int (n : Int) .uint64] sieveLowered.methods ch
+        = .ok { values := #[.int ((primeCount n : Nat) : Int) .uint64] } := by
+```
+
+**Axioms** (pinned in `proofs/Audit/Sieve.lean`):
+
+<!-- verbatim: proofs/Audit/Sieve.lean -->
+```lean
+/-- info: 'GoLean.Examples.Sieve.sieve_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+<!-- verbatim: proofs/Audit/Sieve.lean -->
+```lean
+/-- info: 'GoLean.Examples.Sieve.sieve_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+Lean's classical trio; no `sorry`, no native evaluation, no project axioms.
+
+**The theorem says the sieve computes THE PRIMES.** The specification never
+mentions marking, multiples, or loops — it enumerates divisors. So the
+theorem carries the sieve's own number theory: that marking the multiples
+`i·i, i·i+i, …` of each still-unmarked `i` with `i·i ≤ n` marks *exactly*
+the composites `≤ n`. The two directions are genuinely different facts: a
+marked cell is a multiple `j ≥ i·i` of some `i ≥ 2`, hence composite; and a
+composite `k ≤ n` has a least prime factor `p` with `p·p ≤ k` — so the
+outer loop reaches `p` (its guard `p·p ≤ n` holds), finds it unmarked
+(its own factors are smaller than `p`, and `p` is prime), and marks `k`.
+That least-prime-factor argument is `sieveTable_spec`'s core, proved from
+scratch (this project carries no Mathlib).
+
+**Why this entry was hard, mechanically.** `make([]bool, n+1)` allocates a
+backing array of SYMBOLIC length — no fixed cap, unlike every array entry
+before it — and each marking pass allocates fresh loop-scratch cells, so
+the heap's shape depends on the run's own data (which `i` were prime). The
+machine half rides the footprint style the `fibmemo` unit introduced: a
+concrete 10-cell front, an abstract dead region with a freshness invariant,
+and per-pass live cells at symbolic addresses.
+
+**Domain bounds, attributed.** `n < 2^62` is **the program's own
+arithmetic**: the outer guard computes `i*i`, and although `i` stays small
+(`i ≤ √n + 1`), for `n` near `2^64` that multiply can WRAP and the guard —
+and with it the program — computes something else. Below `2^62` every
+machine integer in the run is comfortably under the threshold, and the
+theorem deliberately claims nothing outside it. The primality itself is
+**mathematics**. Machine idealization as elsewhere — the `n+1`-cell table
+lives in one backing cell of an unbounded heap.
+
+**Fuel bound.** `N = (n+1)·(49·(n+1) + 261) + 300` — a deliberately
+generous QUADRATIC over-charge (every potential pass is billed a full
+inner sweep; the true cost is the sieve's `n·(Σ 1/p)`-ish sum). **The
+measurement is a much smaller number**: 55 / 279 / 340 / 1174 / 3296 at
+`n = 0, 2, 3, 10, 30`, against bound values 610 / 1524 / 2128 / 9100 /
+55480. A valid bound was preferred to a delicate one; neither is presented
+as the other.
+
+**∀ choices is vacuous here, and stated anyway.**
+
+**Status.** NOT DESIGNATED — see the note in *How to read an entry*. Added
+by the gallery campaign's hard lane (2026-08-15); the machine half was
+proved by a delegated worker against a fixed statement and re-verified by
+the lane owner (fresh axiom probes, deletion test re-run). In-build: the
+`rfl` lowering pins (`countPrimes_pin` on the subject,
+`sieveHarnessFunc_pin` on the harness), the golden-lowering guard on both
+links, and the axiom pins above. Its deletion test was RUN —
+`lean_minimal_hypotheses` on `sieve_ok`, **both explicit binders
+load-bearing**. `sieve_readout` is the run-conditioned twin.
+
+**Ground.** Differentially green on 11 corpus rows: `n0`, `n1`, `n2`,
+`n10`, `n30`, `n60` (the subject), `prime`, `composite`, `beyond` (the
+`isPrimeSieved` sibling subject), and the harness rows `harness-mid` and
+`harness-zero`. All eleven are inside the theorem's domain — the corpus
+deliberately has no extreme-`n` row, because `n` is an ALLOCATION size and
+the boundedness rule outranks the generic edge-case rule (the wave's
+recorded call).
 
 ## The derived twins, and the one axiom line they share
 
