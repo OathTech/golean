@@ -135,6 +135,8 @@ import GoLeanProofs.Examples.ArrayPalindromeProgram
 import GoLeanProofs.Examples.ArrayPalindrome
 import GoLeanProofs.Examples.DedupAdjacentProgram
 import GoLeanProofs.Examples.DedupAdjacent
+import GoLeanProofs.Examples.KadaneProgram
+import GoLeanProofs.Examples.Kadane
 import GoLeanProofs.Examples.SelectionSortProgram
 import GoLeanProofs.Examples.SelectionSort
 

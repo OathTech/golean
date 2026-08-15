@@ -1,0 +1,15 @@
+# id	subject	args	expected_status	expected_reason	features
+four-mixed	kadaneFour	4,-1,2,-7	ok	-	slices,indexing,loops,if,ints
+four-positive	kadaneFour	1,2,3,4	ok	-	slices,indexing,loops,if,ints
+four-negative	kadaneFour	-5,-1,-3,-2	ok	-	slices,indexing,loops,if,ints
+four-same	kadaneFour	3,3,3,3	ok	-	slices,indexing,loops,if,ints
+four-extremes	kadaneFour	9223372036854775807,0,9223372036854775807,-1	ok	-	slices,indexing,loops,if,ints
+three	kadaneThree	-1,5,-1	ok	-	slices,indexing,loops,if,ints
+one	kadaneOne	-7	ok	-	slices,indexing,loops,if,ints
+empty	kadaneEmpty	-	ok	-	slices,if,ints
+harness-r-empty	kadane_harness_r	0,5	ok	-	slices,if,ints,arrays
+harness-r-one	kadane_harness_r	1,7	ok	-	slices,indexing,loops,if,ints,arrays
+harness-r-mid	kadane_harness_r	5,-3	ok	-	slices,indexing,loops,if,ints,arrays
+harness-r-eight	kadane_harness_r	8,-3	ok	-	slices,indexing,loops,if,ints,arrays
+harness-r-maxseed	kadane_harness_r	8,9223372036854775807	ok	-	slices,indexing,loops,if,ints,arrays
+harness-r-minseed	kadane_harness_r	8,-9223372036854775808	ok	-	slices,indexing,loops,if,ints,arrays
