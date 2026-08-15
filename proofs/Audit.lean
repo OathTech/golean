@@ -9,6 +9,7 @@ import Audit.InsertionSort
 import Audit.BinSearch
 import Audit.WordCount
 import Audit.Histogram
+import Audit.PowMod
 
 /-!
 # In-build epistemic gate for the Iris proof layer
@@ -1832,7 +1833,7 @@ is unaffected: it walks the whole environment of the audited build, and
 the shards are in it by import. `scripts/ci`'s proofs-file
 audit-coverage step fails closed if a shard ever falls out of the
 closure. Shards: Reverse, Gcd, MinMax, InsertionSort, BinSearch,
-WordCount, Histogram. Fib's references stay in the exemplar section
+WordCount, Histogram, PowMod. Fib's references stay in the exemplar section
 above — that section pins the WP-law kit, not the example.
 -/
 /-! ## The harness-entry glue (form note §11; FuelMeasure)

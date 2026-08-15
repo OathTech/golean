@@ -1,6 +1,6 @@
 # Verified examples — the gallery (2026-08-14)
 
-Eight Go programs, and for each one a GoLean theorem you can read.
+Nine Go programs, and for each one a GoLean theorem you can read.
 
 This file is the **object of agreement**: it exists so that a reader who is
 not a Lean expert can check, by eye, that the top-level statement really
@@ -95,15 +95,17 @@ exhaustion.
   deletion test stopped being a thing we check by reading. Designation also
   puts them in front of the independent Comparator judge, which re-checks
   the proofs by kernel replay against these statements alone.
-  **The ninth entry, `histogram`, is NOT designated.** It was added by the
-  gallery campaign (2026-08-15) and designation is a separate, user-signed
-  act at the end of that arc: it is deliberately absent from
-  `Examples/Targets.lean`, from `scripts/ci`'s trusted-closure allowlist and
-  from the Comparator judge's set. Its deletion test was therefore RUN by
-  hand rather than by the gate — `lean_minimal_hypotheses` on
-  `histogram_ok`, all four explicit binders load-bearing — and that is
-  exactly the weaker standing that undesignated means. Its axioms are pinned
-  in-build like everyone else's (`proofs/Audit/Histogram.lean`).
+  **The entries after the eighth — `histogram` and `powmod` — are NOT
+  designated.** They were added by the gallery campaign (2026-08-15) and
+  designation is a separate, user-signed act at the end of that arc: both are
+  deliberately absent from `Examples/Targets.lean`, from `scripts/ci`'s
+  trusted-closure allowlist and from the Comparator judge's set. Their
+  deletion tests were therefore RUN by hand rather than by the gate —
+  `lean_minimal_hypotheses` on `histogram_ok` (all four explicit binders
+  load-bearing) and on `powmod_ok` (all five load-bearing) — and that is
+  exactly the weaker standing that undesignated means. Their axioms are
+  pinned in-build like everyone else's (`proofs/Audit/Histogram.lean`,
+  `proofs/Audit/PowMod.lean`).
 - **Where the audits are.** Two adversarial pre-merge audits stand behind
   this file, and entries below cite both by date. The **2026-08-15** one —
   the phase-2 arc's, which swapped three headlines and designated all eight
@@ -124,7 +126,7 @@ exhaustion.
 
 `Choices` is the stream of nondeterministic decisions the machine consumes at
 points where Go does not promise an outcome. `∀ ch : Choices` says the claim
-holds at **every** such stream. For six of the eight examples this quantifier
+holds at **every** such stream. For seven of the nine examples this quantifier
 is cheap (their runs consume no choices). For word-count and histogram it
 does real work: `for … range` over a Go map consumes one choice per
 iteration, because Go deliberately does not fix map iteration order — so the
@@ -1314,6 +1316,148 @@ absent) and `harness-r-wrap` (`seed = q = 2^63 − 1`, the largest value the
 differential driver can pass — the `--arg` int64 ceiling is a *driver*
 limit, not a machine one, and it is why no row reaches the true uint64 wrap
 region).
+
+## powmod — exponentiation by squaring, modulo `m`
+
+**The Go** (`Corpus/coverage/exec/examples/powmod/main.go`):
+
+<!-- verbatim: Corpus/coverage/exec/examples/powmod/main.go -->
+```go
+func powMod(base, exp, mod uint64) uint64 {
+	if mod == 0 {
+		return 0
+	}
+	if mod == 1 {
+		return 0
+	}
+	result := uint64(1)
+	base = base % mod
+	for exp > 0 {
+		if exp%2 == 1 {
+			result = result * base % mod
+		}
+		base = base * base % mod
+		exp = exp / 2
+	}
+	return result
+}
+```
+
+<!-- verbatim: Corpus/coverage/exec/examples/powmod/main.go -->
+```go
+// powmod_harness: three-phase shape; setup and test are identities
+// (argument-input subject, returned scalar is the observable).
+func powmod_harness(base, exp, mod uint64) uint64 {
+	r := powMod(base, exp, mod)
+	return r
+}
+```
+
+The harness is the S2 SCALAR shape — the same one `gcd` uses, and for the
+same reason: with a scalar in and a scalar out an S3 relational harness
+would degenerate, because the pre-state *is* the argument list.
+
+**The specification** (`proofs/GoLeanProofs/Examples/PowMod.lean`) — the
+whole postcondition, and it is mathematics rather than a restatement of the
+loop:
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/PowMod.lean -->
+```lean
+def powModAnswer (base exp mod : Nat) : Nat :=
+  if mod = 0 then 0 else base ^ exp % mod
+```
+
+`base ^ exp` is natural-number exponentiation — unbounded, no modulus, no
+squaring — so the theorem below is the *correctness of exponentiation by
+squaring*, not "the program computes what the program computes". The
+loop-shaped function the proof actually inducts over (`powLoop`) is
+proof-side only; it is bridged to this specification by `powLoop_eq` and it
+does not appear in the statement.
+
+Two cases are worth reading carefully. `mod = 1` gets **no case of its
+own**: Go's second guard returns `0`, and `base ^ exp % 1 = 0`, so the
+guard and the mathematics agree and the general branch covers it. `mod = 0`
+*is* a case, and it is the program's own documented definition rather than a
+mathematical fact — Go's `% 0` panics, and this program chose to return `0`
+instead. `powModAnswer` says exactly that, in the open.
+
+**The theorem** (`proofs/GoLeanProofs/Examples/PowMod.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/PowMod.lean -->
+```lean
+theorem powmod_ok (base exp mod : Nat) (hb : base < 2 ^ 64) (he : exp < 2 ^ 64)
+    (hm : mod < 2 ^ 64) (hnw : (mod - 1) * (mod - 1) < 2 ^ 64) :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      runFunctionWithContextM fuel powmodLowered.typeDefs.toList
+          powmodLowered.funcs powmodHarnessFunc
+          #[.int (base : Int) .uint64, .int (exp : Int) .uint64,
+            .int (mod : Int) .uint64]
+          powmodLowered.methods ch
+        = .ok { values := #[.int ((powModAnswer base exp mod : Nat) : Int) .uint64] } := by
+```
+
+**Axioms** (pinned in `proofs/Audit/PowMod.lean`):
+
+<!-- verbatim: proofs/Audit/PowMod.lean -->
+```lean
+/-- info: 'GoLean.Examples.PowMod.powmod_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+<!-- verbatim: proofs/Audit/PowMod.lean -->
+```lean
+/-- info: 'GoLean.Examples.PowMod.powmod_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+Lean's classical trio; no `sorry`, no native evaluation, no project axioms.
+
+**Domain bounds, attributed.** `base < 2^64` and `exp < 2^64` are **Go's
+domain** — the uint64 arguments, nothing more. `(mod − 1)² < 2^64` is **the
+program's own arithmetic**: it is the no-wrap condition quoted from the Go
+source's own comment, and it is exactly the region in which the uint64
+multiplies `result * base` and `base * base` do not wrap. Outside it the
+program still runs and still returns something — the corpus rows `wrap` and
+`harness-extreme` pin what — but that something is not `base ^ exp mod m`,
+and **this theorem deliberately does not claim it**. `mod < 2^64` is Go's
+domain again; it is *logically implied* by the no-wrap condition (below the
+threshold `mod` cannot exceed `2^32 + 1`), and it is kept as an explicit
+binder so the statement reads uniformly — all three arguments in the uint64
+domain, plus the no-wrap condition. The deletion test below confirms the
+proof does consume it.
+
+**Fuel bound.** `N = 6027` — a **constant over the whole domain**, which is
+the interesting part. The exponent halves every pass, so `exp < 2^64` needs
+at most 64 iterations no matter how large it is; the induction is on the
+exponent's *bit budget*, not on the exponent, and the bound comes out as
+`139 + 92·64`. It is a BOUND, and the measurement is a different number:
+the measured step count is exactly `139 + 72·bits(exp) + 20·popcount(exp)`
+(probe-verified against the machine — 139 at `exp = 0`, 231 at `exp = 1`,
+487 at `exp = 13`), because an odd pass costs 92 steps and an even pass 72.
+The two coincide only at `exp = 2^64 − 1`, where every pass is odd. The
+guard paths measure 59 (`mod = 0`) and 68 (`mod = 1`). Neither number is
+presented as the other.
+
+**∀ choices is vacuous here, and stated anyway.** The subject consumes no
+nondeterminism choice; the quantifier records that fact rather than hiding a
+`Choices` argument.
+
+**Status.** NOT DESIGNATED — see the note in *How to read an entry*. Added
+by the gallery campaign (2026-08-15); designation is arc-end work under user
+sign-off, so this statement is not walked by the mechanized statement-TCB
+gate and not replayed by the Comparator judge. What it does have, in-build:
+the `rfl` lowering pins (`powMod_pin` on the subject, `powmodHarnessFunc_pin`
+on the harness), the golden-lowering guard on both links, and the axiom pins
+above. Its deletion test was RUN by hand rather than by the gate —
+`lean_minimal_hypotheses` on `powmod_ok`, **all five explicit binders
+load-bearing**. `powmod_readout` is the run-conditioned twin. There is no
+subject-level claim about `powMod` itself apart from the harness run, and
+this entry does not imply one.
+
+**Ground.** Differentially green on 13 corpus rows: `exp-zero`, `exp-one`,
+`small`, `base-reduce`, `zero-zero`, `large-exp` (`exp = 2^63 − 1`, the
+largest the differential driver can pass), `mod-one`, `mod-zero`, `wrap`
+(inside the wrap region the theorem excludes), the fixed driver `two-ten`
+and `two-large`, and the harness at `harness-typical` and
+`harness-extreme`.
 
 ## The derived twins, and the one axiom line they share
 
