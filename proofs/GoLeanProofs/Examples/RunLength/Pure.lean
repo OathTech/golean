@@ -202,3 +202,4 @@ theorem rleSpec_const_form {n seed : Nat} (hn : n ≤ 3) :
   rw [rleFamily_const hn, rleSpec_replicate]
 
 end GoLean.Examples.RunLength
+
