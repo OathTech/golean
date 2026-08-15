@@ -457,12 +457,14 @@ def bPreTailK : Cont :=
             .assign (.var "$forFirst") (.boolLit true),
             .while (.boolLit true) bOuterBody]] bEnvEnd
     (.seq [] ([] :: bFrameEnv) bFrameK)
+/-- The `end := len(s)` store's rhs continuation. -/
+def bEndRhsK : Cont :=
+  .rhsK .vals [.chain (.addr (.base ⟨14⟩)) [] []] [] [] (.seqn #[])
+    bEnvEnd bPreTailK
 /-- The `len(s)` apply point inside the subject's prologue: the length
 op feeds the `end` store's rhs. -/
 def bLenKB : Cont :=
-  .strictK (.lengthOf (some (.slice tU64))) [] [] bEnvEnd
-    (.rhsK .vals [.chain (.addr (.base ⟨14⟩)) [] []] [] [] (.seqn #[])
-      bEnvEnd bPreTailK)
+  .strictK (.lengthOf (some (.slice tU64))) [] [] bEnvEnd bEndRhsK
 
 def bHeadTailO : Cont :=
   .seq [] bEnvO
@@ -499,7 +501,7 @@ def bEnvC : LocalEnv := [] :: [] :: bEnvI
 /-- The comparison-and-swap `if`'s delivery continuation. -/
 def bSwIfK : Cont :=
   .ifK bSwapBlock (.seqn #[]) bEnvC
-    (.seq [] ([] :: bEnvI) bLoopKI)
+    (.seq [] bEnvC (.seq [] ([] :: bEnvI) bLoopKI))
 /-- The FIRST condition read's apply point (`s[i-1]`), with the second
 operand still pending. -/
 def bGtK1 (n : Nat) : Cont :=
@@ -515,14 +517,14 @@ def bGtK2 (n : Nat) (a : Int) : Cont :=
 /-- The `!swapped` delivery continuation (the pass's third statement). -/
 def bNotIfK : Cont :=
   .ifK (.block #[] #[.returnStmt]) (.seqn #[]) bEnvSw
-    (.seq [] ([] :: bEnvO) bLoopKO)
+    (.seq [] bEnvSw (.seq [] ([] :: bEnvO) bLoopKO))
 
 /-! ### The swap's `assignMany` spine -/
 
-def bEnvSw2 : LocalEnv := [] :: [] :: bEnvI
+def bEnvSw2 : LocalEnv := [] :: bEnvC
 def bSwTail : Cont :=
   .seq [.seqn #[.assign (.var "swapped") (.boolLit true)]] bEnvSw2
-    (.seq [] ([] :: bEnvI) bLoopKI)
+    (.seq [] bEnvC (.seq [] ([] :: bEnvI) bLoopKI))
 def bRefj (n : Nat) (idx : Int) : TargetRef :=
   .chain (bSliceS n) [.int idx .int] [.index]
 /-- The first rhs read's (`s[i]`) apply point: both target refs
