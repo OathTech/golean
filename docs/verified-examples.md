@@ -1,7 +1,6 @@
-# Verified examples — the gallery (2026-08-14)
+# Verified examples — the gallery (2026-08-15)
 
-Twenty Go programs, and for each one a GoLean theorem you can read.
-Fourteen Go programs, and for each one a GoLean theorem you can read.
+Twenty-one Go programs, and for each one a GoLean theorem you can read.
 
 This file is the **object of agreement**: it exists so that a reader who is
 not a Lean expert can check, by eye, that the top-level statement really
@@ -133,7 +132,7 @@ exhaustion.
 
 `Choices` is the stream of nondeterministic decisions the machine consumes at
 points where Go does not promise an outcome. `∀ ch : Choices` says the claim
-holds at **every** such stream. For seventeen of the twenty examples this
+holds at **every** such stream. For eighteen of the twenty-one examples this
 quantifier is cheap (their runs consume no choices). For word-count, histogram
 (map iteration order) and run-length encoding (append's spill capacity) it
 does real work: `for … range` over a Go map consumes one choice per
@@ -3384,6 +3383,141 @@ load-bearing**. `sieve_readout` is the run-conditioned twin.
 deliberately has no extreme-`n` row, because `n` is an ALLOCATION size and
 the boundedness rule outranks the generic edge-case rule (the wave's
 recorded call).
+
+## stein — binary GCD (Stein's algorithm), the extension-E3 consumer
+
+**The Go** (`Corpus/coverage/exec/examples/stein/main.go`):
+
+<!-- verbatim: Corpus/coverage/exec/examples/stein/main.go -->
+```go
+func isEven(x uint64) bool {
+	return x%2 == 0
+}
+```
+
+<!-- verbatim: Corpus/coverage/exec/examples/stein/main.go -->
+```go
+func steinGCD(a, b uint64) uint64 {
+	if a == 0 {
+		return b
+	}
+	if b == 0 {
+		return a
+	}
+	shift := uint64(0)
+	for isEven(a) && isEven(b) {
+		a /= 2
+		b /= 2
+		shift++
+	}
+	for isEven(a) {
+		a /= 2
+	}
+	for {
+		for isEven(b) {
+			b /= 2
+		}
+		if a > b {
+			a, b = b, a
+		}
+		b = b - a
+		if b == 0 {
+			break
+		}
+	}
+	return a << shift
+}
+```
+
+<!-- verbatim: Corpus/coverage/exec/examples/stein/main.go -->
+```go
+// stein_harness: three-phase shape; setup and test are identities
+// (argument-input subject, returned data is the observable).
+func stein_harness(a, b uint64) uint64 {
+	r := steinGCD(a, b)
+	return r
+}
+```
+
+**Why this example exists.** Idiomatic Go writes `isEven(a) && isEven(b)` —
+a CALL in a short-circuit operand — and the frontend quarantined exactly
+that, fail-closed, so this example was landed BLOCKED (nine red rows, the
+recorded guardrail) and then PULLED extension E3: the frontend's
+normalization of effectful short-circuit operands to the spec's own
+conditional rewrite, its evaluation-order fidelity argued against the spec
+text and pinned by corpus rows before the implementation landed
+(`docs/gallery-campaign-log/g2.md`, "E3 — THE FIDELITY ARGUMENT"). The
+subject was NOT rewritten to dodge the gap; the gap was closed under
+guardrails, and this entry is E3's COMPLETE consumer.
+
+**The claim.** For every `a` and `b` in the full `uint64 × uint64` domain —
+no bound and no wrapping clause, because a gcd never exceeds its arguments,
+the subtract loop runs only after the ordering swap, and the final
+`a << shift` reassembles exactly the factors the first loop took apart —
+`stein_harness(a, b)` finishes normally, at every nondeterminism choice,
+and returns exactly `Nat.gcd a b`: Lean's textbook gcd, including
+`gcd(0, 0) = 0`.
+
+**The mathematics.** The three loop phases are mirrored by pure functions
+(`commonTwos`, `stripTwos`, `steinSub` in
+`proofs/GoLeanProofs/Examples/Stein/Pure.lean`) whose composition
+`steinSpec` is proven equal to `Nat.gcd` from core Lean, no Mathlib — the
+binary-GCD identities `gcd(2a,2b) = 2·gcd(a,b)`, `gcd(a,2b) = gcd(a,b)`
+for odd `a`, and `gcd(a,b−a) = gcd(a,b)` for `a ≤ b`, each by
+divisibility antisymmetry:
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/Stein/Pure.lean -->
+```lean
+theorem steinSpec_eq_gcd (a b : Nat) : steinSpec a b = Nat.gcd a b := by
+```
+
+The machine walk (`Examples/Stein/Run.lean`) is math-free: its phase
+inductions run one-to-one against those functions' branch equations, and
+the two halves meet in exactly that theorem.
+
+**The theorem** (`proofs/GoLeanProofs/Examples/Stein.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/Stein.lean -->
+```lean
+theorem stein_ok (a b : Nat) (ha : a < 2 ^ 64) (hb : b < 2 ^ 64) :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      runFunctionWithContextM fuel steinLowered.typeDefs.toList
+          steinLowered.funcs steinHarnessFunc
+          #[.int (a : Int) .uint64, .int (b : Int) .uint64]
+          steinLowered.methods ch
+        = .ok { values := #[.int ((Nat.gcd a b : Nat) : Int) .uint64] } := by
+```
+
+**Axioms** (pinned in `proofs/Audit/Stein.lean`, the example's shard of
+`proofs/Audit.lean`):
+
+<!-- verbatim: proofs/Audit/Stein.lean -->
+```lean
+/-- info: 'GoLean.Examples.Stein.stein_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+Lean's classical trio; no `sorry`, no native evaluation, no project axioms
+(`steinSpec_eq_gcd` itself uses only `[propext, Quot.sound]`).
+
+**Fuel bound.** Explicit and affine in the loops' shared
+strictly-decreasing measure: `N = 600 + 480·(a + b)` — a BOUND, not a
+measurement (recorded so in the module; the measured `(12, 18)` run takes
+896 steps against a bound of 15,000, and the early exits measure 57 and
+66).
+
+**Status.** `stein_readout` is the run-conditioned twin, derived through
+the shared bridge.
+
+**Ground.** Differentially green on 9 corpus rows: `zero-zero`, `a-zero`,
+`zero-b`, `coprime`, `common`, `pow2` (a pure power-of-two pair), `big`
+(`(2^63−1, 3074457345618258602)`), and the harness rows `harness-common`
+and `harness-big` — all nine RED at `frontend-export` until E3 landed,
+which was the point. The evaluation-order behaviour of the normalization
+this lowering rides on is separately pinned by the 16-row
+`bools/short-circuit-effects/*` guardrail family (counter, order-witness,
+nested, loop-guard, and expression-position shapes).
+
+---
 
 ## The derived twins, and the one axiom line they share
 

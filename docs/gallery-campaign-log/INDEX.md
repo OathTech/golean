@@ -26,8 +26,8 @@ overstates.
 | goal | done | remaining | notes |
 |---|---|---|---|
 | G0 (opening kit phase) | 5 of 5 mandatory units; (d) assessed → deferred to its pulling G1 example; **item 4 (flagship rule) DISCHARGED** by G1.1 | 0 — G0 CLOSED | see `g0.md`; the flagship's kit-gap report is in `g1.md` |
-| G1 (gallery to twenty) | **1 of ≥13** new COMPLETE entries (`histogram`, the flagship); **+ the KIT-GAP CLOSURE unit (G1.1-KG): all six gaps CLOSED**; **+ the GUARDRAILS WAVE (G1.2): the CORPUS HALF of 15 further examples landed** — corpus rows, golden pins, `*Program` modules and stub proof roots, one commit each | ≥12 COMPLETE (the 15 wave entries are landed GUARDRAILS, NOT COMPLETE entries — each needs its headline) | see `g1.md`; the wave table is there, the extension pull-list in `g2.md` |
-| G2 (extensions) | **1 BUILT (E1, 2026-08-15)**; the PULL-LIST is established and probe-grounded (`g2.md`) | E3 to build (consumer `stein` landed, 9 rows red); a THIRD pulled extension must be found | **HONEST FINDING: the G1 set pulls TWO of the four, not three.** E4 is a NON-PULL — `strrev` landed E4-independent, 12 rows PASS; E2 is a reasoned NON-PULL (observation is by return, not printing). Operator call recorded in `g2.md` |
+| G1 (gallery to twenty) | **14 of ≥13** new COMPLETE entries — the gallery stands at **TWENTY-ONE** (`histogram` the flagship, the G1.4–6 delegation wave, the hard lane `fibmemo`+`sieve` at `e8fcad31`, and `stein` — the E3 consumer, 2026-08-15); + the KIT-GAP CLOSURE unit (G1.1-KG); + the GUARDRAILS WAVE (G1.2) | **G1 MET at ≥20**; `stein` lands one PAST the bar as E3's consumer | see `g1.md`; the wave table is there, the extension pull-list in `g2.md` |
+| G2 (extensions) | **2 of ≥3 BUILT** — E1 (2026-08-15) and **E3 (2026-08-15: fidelity argument + guardrails RED first, the normalization, 46 quarantined rows flipped incl. 18 blast-radius rows the full run surfaced, fail-closed remainder probe-verified, and `stein` as its COMPLETE consumer)**; the PULL-LIST is established and probe-grounded (`g2.md`) | a THIRD pulled extension must be found (or the "≥3" amended at the level it was set — operator call, recorded in `g2.md`) | **HONEST FINDING stands: the G1 set pulls TWO of the four named extensions.** E4 is a NON-PULL — `strrev` landed E4-independent; E2 is a reasoned NON-PULL (observation is by return, not printing). The probe-surfaced candidate is stdlib selector calls (subsumes E2+E4's real boundary) |
 | G3 (evidence dossiers) | 0 | register = denominator, fixed at dossier-lane start | register lives in `g3.md`, **enumerated by the dossier lane's first commit** (process amendment `ea7c689a`: the register is that lane's deliverable, not G0's) |
 | G4 (infrastructure debt) | 0 of 4 | 4 | |
 
@@ -35,6 +35,35 @@ overstates.
 
 (at least every 5 units; newest first)
 
+- 2026-08-15, checkpoint 6 (units G2.E3 + G1.stein, 3 commits): **THE
+  SECOND EXTENSION IS BUILT, WITH ITS COMPLETE CONSUMER — G2 stands at
+  2 of ≥3, the gallery at TWENTY-ONE.** E3 (calls in short-circuit
+  operands) went in the chartered order: the FIDELITY ARGUMENT first
+  (the spec's own "if p then q else false" rewrite emitted as
+  statements; risk classes — double evaluation, eager RHS, order swap,
+  loop re-evaluation, nesting — each excluded by construction; the
+  panic-timing altitude stated), then 16 risk-pinning
+  `bools/short-circuit-effects/*` rows committed RED with their own
+  full-gate re-pin, then the frontend normalization (emitBinary +
+  hoist + one wire.go field; NO GoCore change, NO decoder change,
+  fail-closed remainder probe-verified: receives and make in an sc-RHS
+  still refuse verbatim). The full differential — the oracle for any
+  frontend change — flipped **46** rows FAIL/frontend-export → PASS,
+  not the enumerated 28: goose's imported corpus writes
+  `ok = ok && testFn(...)` everywhere, so E3 un-blocked a third-party
+  corpus slice nobody listed (the blast-radius FINDING, recorded in
+  `g2.md`; re-pin 1807 cases / 1709 PASS / 98 FAIL from the run).
+  `stein`'s golden repr drifted deliberately in the same commit. The
+  proof half then made stein the COMPLETE consumer (all eight
+  checklist items; unit entry in `g1.md`): `stein_ok` — full
+  `uint64 × uint64`, EXACT `Nat.gcd a b`, bound `600 + 480·(a+b)`,
+  classical-trio axioms, deletion test run — over a 4,581-line
+  footprint-style machine walk whose phase inductions consume the pure
+  module's branch equations one-to-one, with the mathematics
+  (`steinSpec_eq_gcd`, core Lean, no Mathlib) crossing at exactly one
+  theorem. Consolidation signal recorded: the footprint vocabulary now
+  has two program-local copies (fibmemo, stein) — the StepKit lift is
+  DUE at a consolidation slice.
 - 2026-08-15, checkpoint 5 (unit G2.E1, 1 commit): **THE FIRST EXTENSION
   IS BUILT.** E1 — the differential driver's argument domain past
   `int64` — landed as 15 guardrail rows + a 3-line semantic change in
