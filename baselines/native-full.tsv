@@ -1,5 +1,47 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-15  commit: gallery campaign G1 unit 1 (histogram, the flagship example)
+# recorded: 2026-08-15  commit: gallery campaign G1 unit G1.2 (THE GUARDRAILS WAVE)
+#   re-pin reason: 203 NEW explained rows in ONE dated event — the
+#   corpus half of every remaining G1 gallery example, landed BEFORE any
+#   of their proofs exist (guardrails-first) so the proof units can then
+#   run as parallel lanes without contending on this file. Sixteen new
+#   directories under Corpus/coverage/exec/examples, one commit each:
+#     bubble 14  selsort 14  twosum 14  rle 14  powmod 13  palin 14
+#     dedup 13   kadane 14   dotprod 14  sieve 11  matmul 11  stack 13
+#     queue 13   strrev 12   fibmemo 10  ... all PASS (194 rows), and
+#     stein 9 ... all FAIL at stage frontend-export (see below).
+#   NO NEW FRONTEND CAPABILITY is claimed. Every construct these rows
+#   use was PROBED through the real pipeline before the examples were
+#   written (append, slice truncation/re-slicing, 2-D fixed arrays,
+#   []bool, signed int64 with negative args, the string constructs, map
+#   string keys, comma-ok map reads); what is new is the COMBINATION
+#   inside examples whose harnesses the Lean headlines will run.
+#   THE NINE FAILING ROWS ARE DELIBERATE AND EXPECTED, not a
+#   regression and not laundered: examples/stein/* is binary GCD in its
+#   NATURAL Go form, whose `for isEven(a) && isEven(b)` puts a call in a
+#   short-circuit operand. The frontend quarantines that, fail-closed
+#   and per-declaration, so all nine rows classify
+#     stage=frontend-export
+#     "status":"unsupported"
+#     "normalizing frontend-quarantined: call/allocation in short-circuit
+#      operand (would change evaluation order)"
+#   The rows keep expected_status = ok because that is the GO-side truth
+#   (steinGCD agrees with the gcd example's Euclid on a 100,000-pair
+#   sweep, zero mismatches); the calls were NOT hoisted to make them
+#   pass. They are the guardrail for extension E3, pinned before the
+#   extension is built — docs/gallery-campaign-log/g2.md records stein
+#   as E3's consumer-to-be, and when E3 lands these nine flipping to
+#   PASS is its acceptance test.
+#   Drift check on this run: EXACTLY the 203 new ids, every one reported
+#   as "NEW id (not in baseline)". No pre-existing id changed result or
+#   stage — the 1573 previously recorded cases are byte-identical in
+#   both columns.
+#   frontend: native  oracle: go run (strict lane) / go-run membership in the
+#   machine-enumerated observation set, sampled plain AND under -race
+#   (membership lane; go1.26.5) / schedule-tree singleton certification +
+#   strict go-run equality (confluent lane) / every-enumerated-path-refuses
+#   + go run -race red (racy lane; never combined with deadlock)
+# manifest_cases: 1776  pass: 1648  fail: 128
+# previous record: 2026-08-15  commit: gallery campaign G1 unit 1 (histogram, the flagship example)
 #   re-pin reason: 13 NEW explained rows — the campaign's first corpus
 #   touch adds the `histogram` map example
 #   (Corpus/coverage/exec/examples/histogram): the `histogram` subject
@@ -407,6 +449,47 @@ PASS	examples/binsearch/harness-found	-
 PASS	examples/binsearch/harness-gap	-
 PASS	examples/binsearch/one-absent	-
 PASS	examples/binsearch/one-found	-
+PASS	examples/bubble/empty	-
+PASS	examples/bubble/four-duplicates	-
+PASS	examples/bubble/four-extremes	-
+PASS	examples/bubble/four-reversed	-
+PASS	examples/bubble/four-same	-
+PASS	examples/bubble/four-shuffled	-
+PASS	examples/bubble/four-sorted	-
+PASS	examples/bubble/harness-r-big-seed	-
+PASS	examples/bubble/harness-r-cap	-
+PASS	examples/bubble/harness-r-empty	-
+PASS	examples/bubble/harness-r-five	-
+PASS	examples/bubble/harness-r-one	-
+PASS	examples/bubble/one	-
+PASS	examples/bubble/three	-
+PASS	examples/dedup/empty	-
+PASS	examples/dedup/four-all-same	-
+PASS	examples/dedup/four-alternating	-
+PASS	examples/dedup/four-distinct	-
+PASS	examples/dedup/four-extremes	-
+PASS	examples/dedup/four-first	-
+PASS	examples/dedup/four-pairs	-
+PASS	examples/dedup/harness-r-big	-
+PASS	examples/dedup/harness-r-cap	-
+PASS	examples/dedup/harness-r-empty	-
+PASS	examples/dedup/harness-r-mid	-
+PASS	examples/dedup/harness-r-one	-
+PASS	examples/dedup/one	-
+PASS	examples/dotprod/empty	-
+PASS	examples/dotprod/four-same	-
+PASS	examples/dotprod/four-typical	-
+PASS	examples/dotprod/four-wrap	-
+PASS	examples/dotprod/four-zero-vec	-
+PASS	examples/dotprod/harness-r-cap	-
+PASS	examples/dotprod/harness-r-empty	-
+PASS	examples/dotprod/harness-r-mid	-
+PASS	examples/dotprod/harness-r-one	-
+PASS	examples/dotprod/harness-r-wrap-62	-
+PASS	examples/dotprod/harness-r-wrap-max	-
+PASS	examples/dotprod/one	-
+PASS	examples/dotprod/one-wrap	-
+PASS	examples/dotprod/uneven	-
 PASS	examples/fib/harness-ten	-
 PASS	examples/fib/harness-wrap	-
 PASS	examples/fib/ninety-four-wrap	-
@@ -415,6 +498,16 @@ PASS	examples/fib/one	-
 PASS	examples/fib/ten	-
 PASS	examples/fib/two	-
 PASS	examples/fib/zero	-
+PASS	examples/fibmemo/harness-one	-
+PASS	examples/fibmemo/harness-thirty	-
+PASS	examples/fibmemo/memosize-one	-
+PASS	examples/fibmemo/memosize-ten	-
+PASS	examples/fibmemo/memosize-zero	-
+PASS	examples/fibmemo/one	-
+PASS	examples/fibmemo/ten	-
+PASS	examples/fibmemo/thirty	-
+PASS	examples/fibmemo/two	-
+PASS	examples/fibmemo/zero	-
 PASS	examples/gcd/a-zero	-
 PASS	examples/gcd/big	-
 PASS	examples/gcd/chain	-
@@ -448,6 +541,31 @@ PASS	examples/isort/harness-empty	-
 PASS	examples/isort/harness-five	-
 PASS	examples/isort/one	-
 PASS	examples/isort/three	-
+PASS	examples/kadane/empty	-
+PASS	examples/kadane/four-extremes	-
+PASS	examples/kadane/four-mixed	-
+PASS	examples/kadane/four-negative	-
+PASS	examples/kadane/four-positive	-
+PASS	examples/kadane/four-same	-
+PASS	examples/kadane/harness-r-eight	-
+PASS	examples/kadane/harness-r-empty	-
+PASS	examples/kadane/harness-r-maxseed	-
+PASS	examples/kadane/harness-r-mid	-
+PASS	examples/kadane/harness-r-minseed	-
+PASS	examples/kadane/harness-r-one	-
+PASS	examples/kadane/one	-
+PASS	examples/kadane/three	-
+PASS	examples/matmul/harness-basic	-
+PASS	examples/matmul/harness-wrap	-
+PASS	examples/matmul/identity-times-seed	-
+PASS	examples/matmul/scalar-diag-basic	-
+PASS	examples/matmul/scalar-diag-identity	-
+PASS	examples/matmul/scalar-diag-wrap	-
+PASS	examples/matmul/scalar-diag-zero	-
+PASS	examples/matmul/seed-trace-basic	-
+PASS	examples/matmul/seed-trace-wrap	-
+PASS	examples/matmul/seed-trace-zero	-
+PASS	examples/matmul/zero-times-seed	-
 PASS	examples/minmax/empty-panics	-
 PASS	examples/minmax/four	-
 PASS	examples/minmax/four-big	-
@@ -461,6 +579,46 @@ PASS	examples/minmax/harness-r-five	-
 PASS	examples/minmax/harness-r-one	-
 PASS	examples/minmax/one	-
 PASS	examples/minmax/three-same	-
+PASS	examples/palin/empty	-
+PASS	examples/palin/four-allsame	-
+PASS	examples/palin/four-big	-
+PASS	examples/palin/four-nonpalin	-
+PASS	examples/palin/four-palin	-
+PASS	examples/palin/harness-r-big	-
+PASS	examples/palin/harness-r-eight	-
+PASS	examples/palin/harness-r-empty	-
+PASS	examples/palin/harness-r-five	-
+PASS	examples/palin/harness-r-four	-
+PASS	examples/palin/harness-r-one	-
+PASS	examples/palin/one	-
+PASS	examples/palin/three-nonpalin	-
+PASS	examples/palin/three-palin	-
+PASS	examples/powmod/base-reduce	-
+PASS	examples/powmod/exp-one	-
+PASS	examples/powmod/exp-zero	-
+PASS	examples/powmod/harness-extreme	-
+PASS	examples/powmod/harness-typical	-
+PASS	examples/powmod/large-exp	-
+PASS	examples/powmod/mod-one	-
+PASS	examples/powmod/mod-zero	-
+PASS	examples/powmod/small	-
+PASS	examples/powmod/two-large	-
+PASS	examples/powmod/two-ten	-
+PASS	examples/powmod/wrap	-
+PASS	examples/powmod/zero-zero	-
+PASS	examples/queue/empty-size	-
+PASS	examples/queue/enq-front	-
+PASS	examples/queue/fifo-three	-
+PASS	examples/queue/fifo-three-desc	-
+PASS	examples/queue/fifo-three-extremes	-
+PASS	examples/queue/fifo-three-same	-
+PASS	examples/queue/harness-bigseed	-
+PASS	examples/queue/harness-cap-drain	-
+PASS	examples/queue/harness-empty	-
+PASS	examples/queue/harness-k-over	-
+PASS	examples/queue/harness-k-zero	-
+PASS	examples/queue/harness-mid	-
+PASS	examples/queue/harness-one-drain	-
 PASS	examples/reverse/empty	-
 PASS	examples/reverse/four	-
 PASS	examples/reverse/four-big	-
@@ -472,6 +630,93 @@ PASS	examples/reverse/harness-v-wrapping	-
 PASS	examples/reverse/harness-wrapping	-
 PASS	examples/reverse/one	-
 PASS	examples/reverse/three	-
+PASS	examples/rle/empty	-
+PASS	examples/rle/four-alternating	-
+PASS	examples/rle/four-distinct	-
+PASS	examples/rle/four-extremes	-
+PASS	examples/rle/four-first	-
+PASS	examples/rle/four-first-same	-
+PASS	examples/rle/four-mixed	-
+PASS	examples/rle/four-same	-
+PASS	examples/rle/harness-r-cap	-
+PASS	examples/rle/harness-r-empty	-
+PASS	examples/rle/harness-r-extreme	-
+PASS	examples/rle/harness-r-mid	-
+PASS	examples/rle/harness-r-one	-
+PASS	examples/rle/one	-
+PASS	examples/selsort/empty	-
+PASS	examples/selsort/four-duplicates	-
+PASS	examples/selsort/four-extremes	-
+PASS	examples/selsort/four-reversed	-
+PASS	examples/selsort/four-same	-
+PASS	examples/selsort/four-shuffled	-
+PASS	examples/selsort/four-sorted	-
+PASS	examples/selsort/harness-r-cap	-
+PASS	examples/selsort/harness-r-empty	-
+PASS	examples/selsort/harness-r-extreme	-
+PASS	examples/selsort/harness-r-mid	-
+PASS	examples/selsort/harness-r-one	-
+PASS	examples/selsort/one	-
+PASS	examples/selsort/three	-
+PASS	examples/sieve/beyond	-
+PASS	examples/sieve/composite	-
+PASS	examples/sieve/harness-mid	-
+PASS	examples/sieve/harness-zero	-
+PASS	examples/sieve/n0	-
+PASS	examples/sieve/n1	-
+PASS	examples/sieve/n10	-
+PASS	examples/sieve/n2	-
+PASS	examples/sieve/n30	-
+PASS	examples/sieve/n60	-
+PASS	examples/sieve/prime	-
+PASS	examples/stack/empty-size	-
+PASS	examples/stack/harness-cap-drain	-
+PASS	examples/stack/harness-empty	-
+PASS	examples/stack/harness-k0	-
+PASS	examples/stack/harness-kn	-
+PASS	examples/stack/harness-kover	-
+PASS	examples/stack/harness-maxseed	-
+PASS	examples/stack/harness-mid	-
+PASS	examples/stack/harness-one	-
+PASS	examples/stack/lifo-dup	-
+PASS	examples/stack/lifo-extremes	-
+PASS	examples/stack/lifo-three	-
+PASS	examples/stack/peek-two	-
+FAIL	examples/stein/a-zero	frontend-export
+FAIL	examples/stein/big	frontend-export
+FAIL	examples/stein/common	frontend-export
+FAIL	examples/stein/coprime	frontend-export
+FAIL	examples/stein/harness-big	frontend-export
+FAIL	examples/stein/harness-common	frontend-export
+FAIL	examples/stein/pow2	frontend-export
+FAIL	examples/stein/zero-b	frontend-export
+FAIL	examples/stein/zero-zero	frontend-export
+PASS	examples/strrev/build-mid	-
+PASS	examples/strrev/harness-cap	-
+PASS	examples/strrev/harness-empty	-
+PASS	examples/strrev/harness-extreme	-
+PASS	examples/strrev/harness-mid	-
+PASS	examples/strrev/harness-one	-
+PASS	examples/strrev/palin-empty	-
+PASS	examples/strrev/palin-lit	-
+PASS	examples/strrev/palin-no	-
+PASS	examples/strrev/palin-one	-
+PASS	examples/strrev/rev-built	-
+PASS	examples/strrev/rev-lit	-
+PASS	examples/twosum/empty	-
+PASS	examples/twosum/four-dups	-
+PASS	examples/twosum/four-extremes	-
+PASS	examples/twosum/four-first	-
+PASS	examples/twosum/four-last	-
+PASS	examples/twosum/four-mid	-
+PASS	examples/twosum/four-notfound	-
+PASS	examples/twosum/four-same	-
+PASS	examples/twosum/harness-r-eight	-
+PASS	examples/twosum/harness-r-empty	-
+PASS	examples/twosum/harness-r-five	-
+PASS	examples/twosum/harness-r-one	-
+PASS	examples/twosum/harness-r-wrap	-
+PASS	examples/twosum/one-notfound	-
 PASS	examples/wordcount/all-same	-
 PASS	examples/wordcount/distinct	-
 PASS	examples/wordcount/empty	-

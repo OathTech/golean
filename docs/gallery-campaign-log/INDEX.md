@@ -35,6 +35,37 @@ overstates.
 
 (at least every 5 units; newest first)
 
+- 2026-08-15, checkpoint 4 (unit G1.2, 18 commits): THE GUARDRAILS WAVE
+  COMPLETE. The corpus half of **16 examples** landed in one pass —
+  bubble, selsort, twosum, rle, stein, powmod, palin, dedup, kadane,
+  dotprod, sieve, matmul, stack, queue, strrev, fibmemo — each with
+  `main.go` + `cases.tsv`, a golden pin (repr baseline + `*Program`
+  module, both `check-golden` links green), a STUB proof root carrying
+  the named harness `rfl` pin and NOTHING else (verified: 1 def + 1
+  theorem + 0 `sorry` per stub), and its two aggregator imports so the
+  module is in the audited closure from birth. `scripts/ci` PASS at
+  every one of the 16 commits.
+  **203 new corpus rows: 194 PASS, 9 FAIL** — the nine being `stein`'s
+  DELIBERATE quarantine (binary GCD in its natural Go form puts a call
+  in a `&&` operand; fail-closed at stage `frontend-export`, verbatim
+  message pinned, calls NOT hoisted to make it pass). Baseline re-pinned
+  ONCE, dated, from a full `scripts/ci --diff` (3m43s, 1776 cases);
+  drift was EXACTLY the 203 new ids with no pre-existing id moving, and
+  the untriaged fidelity backlog is unchanged at 16 — `frontend-export`
+  is a coverage gap, not a fidelity failure.
+  **G2's pull-list established by PROBE, not by list** (`g2.md`): E1 and
+  E3 are genuinely PULLED with landed consumers (`dotprod`, `stein`);
+  E4 is a NON-PULL demonstrated by landing `strrev` without it, 12 rows
+  PASS; E2 is a reasoned NON-PULL. Honest status: the G1 set pulls TWO
+  of four, not three — surfaced for an operator ruling rather than
+  re-scoped to keep the count.
+  Style triad choices: 12 S3-relational, 4 S2-scalar, 0 S1-verdict —
+  the S1 verdict style was not forced anywhere, because returning the
+  data always said more than returning a 1. Divergence guard never
+  triggered; no example dropped or substituted.
+  Totals: G0 5/5; G1 **1 COMPLETE** + 16 guardrail suites landed; G2
+  pull-list established, 0 built; G3 22/22 dossiers; G4 0/4.
+
 - 2026-08-15, checkpoint 3 (unit G1.1-KG, 6 commits): KIT-GAP CLOSURE
   COMPLETE — all six flagship gaps closed, each as lift + BOTH landed
   consumers retrofitted + P6 rollback in the same commit, `scripts/ci`
