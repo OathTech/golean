@@ -139,6 +139,8 @@ import GoLeanProofs.Examples.KadaneProgram
 import GoLeanProofs.Examples.Kadane
 import GoLeanProofs.Examples.DotProductProgram
 import GoLeanProofs.Examples.DotProduct
+import GoLeanProofs.Examples.SieveProgram
+import GoLeanProofs.Examples.Sieve
 import GoLeanProofs.Examples.SelectionSortProgram
 import GoLeanProofs.Examples.SelectionSort
 
