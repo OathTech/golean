@@ -395,20 +395,27 @@ def tOutCmpK : Cont :=
   .ifK (.seqn #[]) .breakStmt outEnvCT
     (.seq [twoSumFunc.innerWrap] outEnvCT tOutLoopK)
 
+/-- The subject's outer-loop statement (its body's second element). -/
+def tSOuter : Stmt :=
+  .block #[]
+    #[.seqn #[.initialization { id := "i", typ := tU64 },
+              .assign (.var "i") (.intLit 0 .uint64)],
+      .block #[]
+        #[.initialization { id := "$forFirst", typ := .bool },
+          .assign (.var "$forFirst") (.boolLit true),
+          .while (.boolLit true) twoSumFunc.outerBody]]
+/-- The prologue's continuation below the `n :=` store. -/
+def tProTail : Cont :=
+  .seq [tSOuter, twoSumFunc.tsTailSeqn] envNT tFrameK
+/-- The `uint64(…)` conversion's apply point over the `n :=` store. -/
+def tConvK : Cont :=
+  .strictK (.convert tU64) [] [] envNT
+    (.rhsK .vals [.chain (.addr (.base ⟨20⟩)) [] []] [] [] (.seqn #[])
+      envNT tProTail)
 /-- The `n := uint64(len(s))` apply point: the length op under the
 conversion's strict frame, under the store into cell 20. -/
 def tLenKP : Cont :=
-  .strictK (.lengthOf (some (.slice tU64))) [] [] envNT
-    (.strictK (.convert tU64) [] [] envNT
-      (.rhsK .vals [.chain (.addr (.base ⟨20⟩)) [] []] [] [] (.seqn #[])
-        envNT (.seq [] envNT (.seq [.block #[]
-          #[.seqn #[.initialization { id := "i", typ := tU64 },
-                    .assign (.var "i") (.intLit 0 .uint64)],
-            .block #[]
-              #[.initialization { id := "$forFirst", typ := .bool },
-                .assign (.var "$forFirst") (.boolLit true),
-                .while (.boolLit true) twoSumFunc.outerBody]],
-          twoSumFunc.tsTailSeqn] envNT tFrameK))))
+  .strictK (.lengthOf (some (.slice tU64))) [] [] envNT tConvK
 
 /-- The tail below the inner-wrap blocks (fixed across iterations). -/
 def tJSeqTail : Cont :=
@@ -437,6 +444,37 @@ def tInCmpK (ja : Nat) : Cont :=
 def tInIfK (ja : Nat) : Cont :=
   .ifK twoSumFunc.foundBlock (.seqn #[]) (inEnvB2T ja)
     (.seq [] (inEnvB2T ja) (.seq [] (inEnvCT ja) (tInLoopK ja)))
+
+/-! ### The inner dispatch's conditioned points (probe-measured at
+steps 540/546/551/559 of the `(2, 5, 9)` trace) -/
+
+/-- The inner exit test statement. -/
+def tIfJN : Stmt :=
+  .ifThenElse (.lessCmp (.var "j") (.var "n")) (.seqn #[]) .breakStmt
+/-- The loop body's remaining statements after the first-pass `if`. -/
+def tInBodyTail (ja : Nat) : Cont :=
+  .seq [.seqn #[], tIfJN, twoSumFunc.matchBlock] (inEnvCT ja)
+    (tInLoopK ja)
+/-- The first-pass dispatch `if` inside the inner loop. -/
+def tFFIfK (ja : Nat) : Cont :=
+  .ifK (.assign (.var "$forFirst") (.boolLit false))
+    (.assign (.var "j") (.add (.var "j") (.intLit 1 .uint64)))
+    (inEnvCT ja) (tInBodyTail ja)
+def tJRef (ja : Nat) : TargetRef := .chain (.addr (.base ⟨ja⟩)) [] []
+def tFFRef (ja : Nat) : TargetRef :=
+  .chain (.addr (.base ⟨ja + 1⟩)) [] []
+/-- The `j++` add's apply chain over the store into the live `j`. -/
+def tJIncrK (ja : Nat) : Cont :=
+  .strictK .add [] [.intLit 1 .uint64] (inEnvCT ja)
+    (.rhsK .vals [tJRef ja] [] [] (.seqn #[]) (inEnvCT ja)
+      (tInBodyTail ja))
+/-- The `$forFirst := false` store's continuation (first pass). -/
+def tFFStoreTail (ja : Nat) : Cont :=
+  .rhsK .vals [tFFRef ja] [] [] (.seqn #[]) (inEnvCT ja)
+    (tInBodyTail ja)
+/-- The inner exit test's `<` frame. -/
+def tJTestK (ja : Nat) : Cont :=
+  .strictK .lessCmp [] [.var "n"] (inEnvCT ja) (tInCmpK ja)
 
 /-- The FIRST index read's apply point (`s[i]`), the add and the
 comparison pending. -/
