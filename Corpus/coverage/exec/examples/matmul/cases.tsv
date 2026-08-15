@@ -1,0 +1,12 @@
+# id	subject	args	expected_status	expected_reason	features
+identity-times-seed	mulIdentitySeed	7	ok	-	arrays,indexing,loops,ints
+zero-times-seed	mulZeroSeed	7	ok	-	arrays,indexing,loops,ints
+scalar-diag-basic	mulScalarDiag	6,7	ok	-	arrays,indexing,loops,ints
+scalar-diag-identity	mulScalarDiag	1,123456789	ok	-	arrays,indexing,loops,ints
+scalar-diag-zero	mulScalarDiag	0,9999	ok	-	arrays,indexing,loops,ints
+scalar-diag-wrap	mulScalarDiag	9223372036854775807,2	ok	-	arrays,indexing,loops,ints,widths
+seed-trace-zero	mulSeedTrace	0	ok	-	arrays,indexing,loops,ints
+seed-trace-basic	mulSeedTrace	1	ok	-	arrays,indexing,loops,ints
+seed-trace-wrap	mulSeedTrace	9223372036854775807	ok	-	arrays,indexing,loops,ints,widths
+harness-basic	matmul_harness_r	5	ok	-	arrays,indexing,loops,ints
+harness-wrap	matmul_harness_r	9223372036854775807	ok	-	arrays,indexing,loops,ints,widths

@@ -141,6 +141,8 @@ import GoLeanProofs.Examples.DotProductProgram
 import GoLeanProofs.Examples.DotProduct
 import GoLeanProofs.Examples.SieveProgram
 import GoLeanProofs.Examples.Sieve
+import GoLeanProofs.Examples.MatMulProgram
+import GoLeanProofs.Examples.MatMul
 import GoLeanProofs.Examples.SelectionSortProgram
 import GoLeanProofs.Examples.SelectionSort
 
