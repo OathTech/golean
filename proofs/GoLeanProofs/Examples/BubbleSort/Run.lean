@@ -27,7 +27,10 @@ set_option linter.unusedSimpArgs false
 /-! ## The `post` array's pure form -/
 
 /-- The `post` array after `m` copy steps: the copied prefix,
-zero-padded to the cap. -/
+zero-padded to the cap.
+-- KIT-GAP WITNESS (see .tmp/kitgaps-bubble.md): the third and fourth
+fixed-cap copy-loop instantiations in the gallery; `prefixPad`
+generalized off `familyMod` would delete this block. -/
 def bPost (l : List Int) (m : Nat) : List Int :=
   l.take m ++ List.replicate (8 - m) 0
 
