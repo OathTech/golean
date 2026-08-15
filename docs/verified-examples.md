@@ -1,6 +1,6 @@
 # Verified examples — the gallery (2026-08-14)
 
-Twelve Go programs, and for each one a GoLean theorem you can read.
+Thirteen Go programs, and for each one a GoLean theorem you can read.
 
 This file is the **object of agreement**: it exists so that a reader who is
 not a Lean expert can check, by eye, that the top-level statement really
@@ -95,22 +95,24 @@ exhaustion.
   deletion test stopped being a thing we check by reading. Designation also
   puts them in front of the independent Comparator judge, which re-checks
   the proofs by kernel replay against these statements alone.
-  **The five newest entries — `histogram`, `powmod`, `dotprod`,
-  `kadane` and `dedup` — are NOT designated.** (Those eight designated
-  headlines span seven example sections, because `fib` carries two of
-  them.) The five were added by the gallery campaign (2026-08-15), and
-  designation is a separate, user-signed act at the end of that arc: all
-  five are deliberately absent from `Examples/Targets.lean`, from
+  **The six newest entries — `histogram`, `powmod`, `dotprod`,
+  `kadane`, `dedup` and `stack` — are NOT designated.** (Those eight
+  designated headlines span seven example sections, because `fib` carries
+  two of them.) The six were added by the gallery campaign (2026-08-15),
+  and designation is a separate, user-signed act at the end of that arc:
+  all six are deliberately absent from `Examples/Targets.lean`, from
   `scripts/ci`'s trusted-closure allowlist and from the Comparator
   judge's set. Their
   deletion tests were therefore RUN by hand rather than by the gate —
   `lean_minimal_hypotheses` on `histogram_ok` (all four explicit binders
   load-bearing), on `powmod_ok` (all five), on `dotprod_ok` (all three),
-  on `kadane_ok` (all five) and on `dedup_ok` (all three) — and that is
+  on `kadane_ok` (all five), on `dedup_ok` (all three) and on `stack_ok`
+  (all four explicit binder groups) — and that is
   exactly the weaker standing that undesignated means. Their axioms are
   pinned in-build like everyone else's (`proofs/Audit/Histogram.lean`,
   `proofs/Audit/PowMod.lean`, `proofs/Audit/DotProduct.lean`,
-  `proofs/Audit/Kadane.lean`, `proofs/Audit/DedupAdjacent.lean`).
+  `proofs/Audit/Kadane.lean`, `proofs/Audit/DedupAdjacent.lean`,
+  `proofs/Audit/SliceStack.lean`).
 - **Where the audits are.** Two adversarial pre-merge audits stand behind
   this file, and entries below cite both by date. The **2026-08-15** one —
   the phase-2 arc's, which swapped three headlines and designated all eight
@@ -131,13 +133,27 @@ exhaustion.
 
 `Choices` is the stream of nondeterministic decisions the machine consumes at
 points where Go does not promise an outcome. `∀ ch : Choices` says the claim
-holds at **every** such stream. For ten of the twelve examples this quantifier
-is cheap (their runs consume no choices). For word-count and histogram it
-does real work: `for … range` over a Go map consumes one choice per
-iteration, because Go deliberately does not fix map iteration order — so the
-theorem covers every order, and the specification is *forced* to be
-order-independent. A spec saying "the count of the first key" would be
-unprovable there. That unprovability is the model working.
+holds at **every** such stream. For ten of the thirteen examples this
+quantifier is cheap (their runs consume no choices). For the other three it
+does real work, in two different ways.
+
+**Map iteration order** (word-count, histogram): `for … range` over a Go map
+consumes one choice per iteration, because Go deliberately does not fix map
+iteration order — so the theorem covers every order, and the specification is
+*forced* to be order-independent. A spec saying "the count of the first key"
+would be unprovable there. That unprovability is the model working.
+
+**`append` capacity** (stack): a spilling `append` consumes one choice,
+because Go promises only "a new, sufficiently large underlying array" and real
+`gc` picks the size by an amortized growth rule *and* by
+element-size-dependent size-class rounding — so the machine admits an envelope
+of capacities rather than pinning one. The theorem holds at every member.
+Here the *specification* is not forced to change (capacity is not observable
+through the harness), but the *proof* is: it has to carry the backing array's
+address and capacity as existentials, because a proof pinned to one stream's
+layout would be a false claim about `∀ ch`. Worth noticing when reading that
+entry: the returned values and the step count are choice-invariant, while the
+heap layout — and even how many choices the run consumes — are not.
 
 ## What fuel is, and what the bound is
 
@@ -1913,6 +1929,319 @@ run-conditioned twin.
 relational harness at `harness-r-empty`, `harness-r-one`, `harness-r-mid`,
 `harness-r-cap` and `harness-r-big`. All five harness rows are inside the
 theorem's domain.
+
+## stack — LIFO through a growing slice, and the first non-map `∀ choices`
+
+**The Go** (`Corpus/coverage/exec/examples/stack/main.go`):
+
+<!-- verbatim: Corpus/coverage/exec/examples/stack/main.go -->
+```go
+func push(s []uint64, v uint64) []uint64 {
+	return append(s, v)
+}
+
+func pop(s []uint64) ([]uint64, uint64) {
+	v := s[len(s)-1]
+	return s[:len(s)-1], v
+}
+
+func peek(s []uint64) uint64 {
+	return s[len(s)-1]
+}
+
+func size(s []uint64) uint64 {
+	return uint64(len(s))
+}
+```
+
+<!-- verbatim: Corpus/coverage/exec/examples/stack/main.go -->
+```go
+const stackCapN = 8
+
+// stack_harness_r: the S3 RELATIONAL harness. Setup pushes the family
+// seed + i (wrapping) for i < n, recording each pushed value; the test
+// pops min(k, n) values, recording them in pop order; the observable is
+// (pushed, popped, remaining size). The Lean postcondition relates the
+// returned data directly: popped is the suffix of pushed, reversed —
+// popped[j] = pushed[n-1-j] for j < min(k, n) — and remaining =
+// n - min(k, n). Real Go, ghost ladder rung 0.
+func stack_harness_r(n, seed, k uint64) ([stackCapN]uint64, [stackCapN]uint64, uint64) {
+	s := []uint64{}
+	var pushed [stackCapN]uint64
+	for i := uint64(0); i < n; i++ {
+		v := seed + i
+		s = push(s, v)
+		pushed[i] = v
+	}
+	m := k
+	if n < m {
+		m = n
+	}
+	var popped [stackCapN]uint64
+	for j := uint64(0); j < m; j++ {
+		var v uint64
+		s, v = pop(s)
+		popped[j] = v
+	}
+	return pushed, popped, size(s)
+}
+```
+
+**The specification** (`proofs/GoLeanProofs/Examples/SliceStack.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/SliceStack.lean -->
+```lean
+/-- The returned fixed-cap array: the observed value list, zero-padded to
+the harness's `stackCapN = 8` slots. Deliberately NOT shared with the
+identically shaped arrays of other examples (the §11 closure rule). -/
+def stArr8 (xs : List Int) : GoValue :=
+  .array ⟨(xs ++ List.replicate (8 - xs.length) 0).map (fun v => .int v .uint64)⟩
+```
+
+**The specification is two list operations, and that is the whole point.**
+LIFO is `pushed.reverse.take k` — pop order is push order reversed, truncated
+at what the stack actually holds. The remaining size is `n - k` in **Nat**
+subtraction, which truncates at zero, so an over-large `k` simply drains the
+stack. No `min` appears anywhere in the statement: `List.take` already does
+it. Read the sibling `queue` entry beside this one — its specification is the
+same sentence with `.reverse` deleted, and that single word is the difference
+between a stack and a queue.
+
+**The theorem** (`proofs/GoLeanProofs/Examples/SliceStack.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/SliceStack.lean -->
+```lean
+theorem stack_ok (n seed k : Nat) (hcap : n ≤ 8) (hseed : seed < 2 ^ 64)
+    (hk : k < 2 ^ 64) :
+    ∃ pushed : List Int, pushed.length = n ∧
+      ∃ N : Nat, ∀ fuel ≥ N, ∀ ch : Choices,
+        runFunctionWithContextM fuel stackLowered.typeDefs.toList
+            stackLowered.funcs stackHarnessRFunc
+            #[.int (n : Int) .uint64, .int (seed : Int) .uint64,
+              .int (k : Int) .uint64]
+            stackLowered.methods ch
+          = .ok { values := #[stArr8 pushed,
+                              stArr8 (pushed.reverse.take k),
+                              .int ((n - k : Nat) : Int) .uint64] } := by
+```
+
+**Axioms** (pinned in `proofs/Audit/SliceStack.lean`):
+
+<!-- verbatim: proofs/Audit/SliceStack.lean -->
+```lean
+/-- info: 'GoLean.Examples.SliceStack.stack_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+<!-- verbatim: proofs/Audit/SliceStack.lean -->
+```lean
+/-- info: 'GoLean.Examples.SliceStack.stack_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+Lean's classical trio; no `sorry`, no native evaluation, no project axioms.
+
+**`∀ choices` does real work here — and this is the first example in the
+gallery where it does so without a map.** `push` is Go's `append`, and the Go
+specification does not fix the capacity a spilling `append` allocates: it
+promises only "a new, sufficiently large underlying array". Real `gc` picks a
+capacity by an amortized growth rule *and* by element-size-dependent
+size-class rounding and stack buffering. The machine therefore does not pin
+one number — it admits an **envelope** of capacities and consumes one
+nondeterministic choice at each spilling append to select from it. So the
+harness's own run is genuinely nondeterministic in its memory layout, and
+`∀ ch` quantifies over that.
+
+What the proof had to be, as a result: **capacity- and address-generic**. The
+push-loop invariant carries the backing array's address and capacity as
+*existentials* and never names them, so the theorem holds at every member of
+the envelope. Three things are worth stating plainly about that:
+
+- **The returned values do not depend on the choice** — capacity is not
+  observable through this harness — which is why the postcondition mentions
+  no capacity at all.
+- **The step count does not depend on the choice either** (probe-checked at
+  several streams): an `append` is one machine step whether it spills or not.
+  That is what lets a single fuel bound cover every stream.
+- **The heap layout does depend on it**, and so does *how many choices the run
+  consumes*: a stream granting a large first capacity suppresses a later
+  spill. A proof that had unrolled the loop to the concrete capacities of one
+  stream would have been a true statement about that stream and a false one
+  about `∀ ch`.
+
+**Domain bounds, attributed.** `n ≤ 8` is **the program's own arithmetic**
+(`stackCapN = 8`, visible in the corpus Go — Go's pass-by-value fragment
+cannot return unbounded data). `seed < 2^64` and `k < 2^64` are **Go's
+domain**, all of it; no hypothesis excludes the wrap region. The LIFO
+relation itself is **mathematics**. Machine idealization as elsewhere.
+
+**`∃ pushed` is family-determined.** The witness is the setup family
+`seed + i` reduced mod 2^64; the statement merely avoids naming it. Genuine
+∀-data needs the ghost rung-1 annotation, which is designed and not built.
+
+**Fuel bound.** `N = 257·n + 254` — a branch-uniform **bound** that charges
+every element the widest path (`min(k,n) = n`, plus the taken `n < k`
+branch). **The measurement is a different number**: the exact count is
+`242 + 130·n + 127·min(k,n) + 12·[n < k]`, probe-verified at `n = 0…8` with
+`k` under, at and over `n`, and proved as an equality inside the module. The
+two coincide exactly when `k > n` — the drain-everything rows — and the bound
+is loose by `127·(n − k) + 12` when `k ≤ n`. Neither is presented as the
+other.
+
+**Status.** NOT DESIGNATED — see the note in *How to read an entry*. Added by
+the gallery campaign (2026-08-15). In-build: the `rfl` lowering pins
+(`push_pin`, `pop_pin`, `size_pin` on the subject, `stackHarnessRFunc_pin` on
+the harness), the golden-lowering guard on both links, and the axiom pins
+above. Its deletion test was RUN by the lane owner —
+`lean_minimal_hypotheses` on `stack_ok`, **all four explicit binder groups
+load-bearing** (`(n seed k)`, `hcap`, `hseed`, `hk`) — and then sharpened by a
+machine probe, because "the proof needs it" and "the claim fails without it"
+are different statements. `hcap` is a **totality** bound (at `n = 9` the
+subject panics, `index out of range [8] with length 8`); `hk` is a **truth**
+bound (at `k = 2^64` the machine pops nothing and returns size `3`, against a
+postcondition that reads `k` as the Nat `2^64`); `hseed` is a
+**proof-structure** bound only (at `seed = 2^64` machine and statement still
+agree — both reduce mod 2^64). `stack_readout` is the run-conditioned twin.
+
+**Ground.** Differentially green on 13 corpus rows: `lifo-three`, `lifo-dup`,
+`lifo-extremes`, `peek-two`, `empty-size`, and the relational harness at
+`harness-empty`, `harness-one`, `harness-mid`, `harness-cap-drain`,
+`harness-k0`, `harness-kn`, `harness-kover` and `harness-maxseed`. All eight
+harness rows are inside the theorem's domain. **One honest gap between oracle
+and theorem:** the largest seed any row pins is `2^63 − 1`
+(`harness-maxseed`), because the differential driver's arguments are
+int64-limited, so the region `[2^63, 2^64)` is claimed by the theorem and not
+pinned by `go run`. It was probe-matched against the machine at
+`seed = 2^64 − 1` and `2^64 − 2`; that is a weaker check and is labelled as
+one.
+
+## matmul — the textbook triple loop, and the gallery's first 2-D example
+
+The subject is matrix multiply over `[3][3]uint64`, wrapping. Go arrays are
+**values** — copied on call and on return — so a 2-D result crosses the
+call/return boundary by copy, and this example needs no fixed-cap workaround
+at all: the observable *is* three matrices.
+
+**The subject** (`Corpus/coverage/exec/examples/matmul/main.go`):
+
+<!-- verbatim: Corpus/coverage/exec/examples/matmul/main.go -->
+```go
+func matMul(a, b [matN][matN]uint64) [matN][matN]uint64 {
+	var c [matN][matN]uint64
+	for i := 0; i < matN; i++ {
+		for j := 0; j < matN; j++ {
+			var sum uint64
+			for k := 0; k < matN; k++ {
+				sum += a[i][k] * b[k][j]
+			}
+			c[i][j] = sum
+		}
+	}
+	return c
+}
+```
+
+**The harness** (same file):
+
+<!-- verbatim: Corpus/coverage/exec/examples/matmul/main.go -->
+```go
+func matmul_harness_r(seed uint64) ([matN][matN]uint64, [matN][matN]uint64, [matN][matN]uint64) {
+	a := seedMat(seed)
+	b := seedMat(1)
+	return a, b, matMul(a, b)
+}
+```
+
+**The specification** (`proofs/GoLeanProofs/Examples/MatMul.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/MatMul.lean -->
+```lean
+def matSpec (a b : List (List Int)) : List (List Int) :=
+  (List.range 3).map (fun i =>
+    (List.range 3).map (fun j =>
+      ((List.range 3).map (fun l => mmGet a i l * mmGet b l j)).sum
+        % (2 ^ 64 : Int)))
+```
+
+**Read the two side by side.** The Go accumulates into `sum` and wraps at
+*every* `+=`; the specification takes the mathematical sum `Σₖ aᵢₖ·bₖⱼ` over
+the integers and reduces **once**. Those agree because uint64 normalization
+is idempotent and `%` distributes over sum and product — and that agreement
+is *proved* (`mm_c_final`), not assumed. This is `dotprod`'s stance, not
+`powmod`'s: the claim is stated in wrapped arithmetic and the wrap is the
+point, rather than being excluded by a no-overflow hypothesis.
+
+**The theorem** (`proofs/GoLeanProofs/Examples/MatMul.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/MatMul.lean -->
+```lean
+theorem matmul_ok (seed : Nat) (hseed : seed < 2 ^ 64) :
+    ∃ a b : List (List Int),
+      a.length = 3 ∧ b.length = 3 ∧
+      (∀ r ∈ a, r.length = 3) ∧ (∀ r ∈ b, r.length = 3) ∧
+      ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        runFunctionWithContextM fuel matmulLowered.typeDefs.toList
+            matmulLowered.funcs matmulHarnessRFunc
+            #[.int (seed : Int) .uint64]
+            matmulLowered.methods ch
+          = .ok { values := #[mmArr3 a, mmArr3 b, mmArr3 (matSpec a b)] } := by
+```
+
+**Axioms** (pinned in `proofs/Audit/MatMul.lean`):
+
+<!-- verbatim: proofs/Audit/MatMul.lean -->
+```lean
+/-- info: 'GoLean.Examples.MatMul.matmul_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+<!-- verbatim: proofs/Audit/MatMul.lean -->
+```lean
+/-- info: 'GoLean.Examples.MatMul.matmul_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+Lean's classical trio; no `sorry`, no native evaluation, no project axioms.
+
+**`∃ a b` is family-determined, and one of the two is a constant.** The
+witnesses are `a[i][j] = seed + (3i+j)` wrapped, and `b = seedMat(1)`, which
+is the fixed matrix `[[1,2,3],[4,5,6],[7,8,9]]`. The statement does not say
+so — it quantifies over the returned matrices and relates the third to the
+first two — but a reader should know that the input side is determined by
+the harness rather than universally quantified. Genuine ∀-data needs the
+ghost rung-1 annotation, which is designed and not built. What the
+quantifier *does* buy is real: the theorem's postcondition is
+`matSpec a b`, so the product is related to whatever `a` and `b` the run
+actually returns.
+
+**Domain bounds, attributed.** `seed < 2^64` is **Go's domain**, all of it —
+no hypothesis excludes the wrap region. The dimension `3` is **the program's
+own arithmetic** (`const matN = 3`, visible in the corpus Go). The matrix
+product itself is **mathematics**. Machine idealization as elsewhere.
+
+**Fuel bound.** `N = 5247`, and here bound and measurement **coincide**:
+every loop bound is the compile-time constant `matN = 3`, so the control
+flow is fully concrete and the run is a straight line of exactly 5247 steps
+at every seed. Probe-measured at `seed = 0`, `5` and `2^63 − 1` — the
+minimum fuel at which the run succeeds is 5247 in each case — and the
+proof's 82 chained segment counts sum to the same number. It is a *number*
+rather than a formula only because the dimension is fixed; the count is
+cubic in that dimension.
+
+**`∀ choices` is vacuous here, and is stated anyway.** The run consumes no
+nondeterminism choice — there is no `append`, no map range. The quantifier
+records that fact instead of hiding a `Choices` argument, which is what
+makes the contrast with the `stack` and `queue` entries above legible.
+
+**Status.** NOT DESIGNATED — see the note in *How to read an entry*. Added by
+the gallery campaign (2026-08-15). In-build: the three `rfl` lowering pins
+(`seedMat_pin` and `matMul_pin` on the subjects, `matmulHarnessRFunc_pin` on
+the harness), the golden-lowering guard on all three links, and the axiom
+pins above. `matmul_readout` is the run-conditioned twin.
+
+**Ground.** Differentially green on 11 corpus rows, including the wrap rows
+`scalar-diag-wrap`, `seed-trace-wrap` and `harness-wrap`. **The same honest
+gap as the other seeded entries:** the differential driver's arguments are
+int64-limited, so the largest seed any row pins is `2^63 − 1`, and the region
+`[2^63, 2^64)` is claimed by the theorem but not pinned by `go run`. It was
+probe-matched against the machine at `seed = 2^64 − 1`, `2^64 − 2` and
+`2^64 − 6`; that is a weaker check and is labelled as one.
 
 ## The derived twins, and the one axiom line they share
 
