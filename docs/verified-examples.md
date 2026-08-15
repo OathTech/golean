@@ -1413,11 +1413,15 @@ Lean's classical trio; no `sorry`, no native evaluation, no project axioms.
 **Domain bounds, attributed.** `base < 2^64` and `exp < 2^64` are **Go's
 domain** — the uint64 arguments, nothing more. `(mod − 1)² < 2^64` is **the
 program's own arithmetic**: it is the no-wrap condition quoted from the Go
-source's own comment, and it is exactly the region in which the uint64
-multiplies `result * base` and `base * base` do not wrap. Outside it the
-program still runs and still returns something — the corpus rows `wrap` and
-`harness-extreme` pin what — but that something is not `base ^ exp mod m`,
-and **this theorem deliberately does not claim it**. `mod < 2^64` is Go's
+source's own comment (equivalently `mod ≤ 2^32`), and it is exactly the
+region in which the uint64 multiplies `result * base` and `base * base` do
+not wrap. Outside it the program still runs and still returns something —
+the corpus row `wrap` pins what — but that something is not
+`base ^ exp mod m`, and **this theorem deliberately does not claim it**.
+Of the 13 corpus rows exactly **one**, `wrap` (`mod = 2^63 − 1`), lies
+outside the theorem's domain; the other twelve are inside it, including
+`harness-extreme`, whose `base = 2^63 − 1` and `exp = 2^63 − 2` are
+extreme but whose `mod = 999999937` is comfortably below the threshold. `mod < 2^64` is Go's
 domain again; it is *logically implied* by the no-wrap condition (below the
 threshold `mod` cannot exceed `2^32 + 1`), and it is kept as an explicit
 binder so the statement reads uniformly — all three arguments in the uint64
@@ -1454,10 +1458,12 @@ this entry does not imply one.
 
 **Ground.** Differentially green on 13 corpus rows: `exp-zero`, `exp-one`,
 `small`, `base-reduce`, `zero-zero`, `large-exp` (`exp = 2^63 − 1`, the
-largest the differential driver can pass), `mod-one`, `mod-zero`, `wrap`
-(inside the wrap region the theorem excludes), the fixed driver `two-ten`
-and `two-large`, and the harness at `harness-typical` and
-`harness-extreme`.
+largest the differential driver can pass — the `--arg` int64 ceiling is a
+*driver* limit, not a machine one), `mod-one`, `mod-zero`, `wrap` (the one
+row inside the wrap region the theorem excludes), the fixed driver
+`two-ten` and `two-large`, and the harness at `harness-typical` and
+`harness-extreme`. Twelve of the thirteen are inside the theorem's
+domain — the differential and the proof overlap on all but `wrap`.
 
 ## The derived twins, and the one axiom line they share
 

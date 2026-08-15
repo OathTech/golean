@@ -795,11 +795,14 @@ Honesty clauses, recorded rather than hidden:
   `powModAnswer` says exactly that. Attribution: the program's own
   arithmetic.
 * **The domain bound `(mod−1)² < 2⁶⁴` is the wrap threshold**, quoted
-  from the Go source comment. Outside it the uint64 multiplies wrap and
-  the answer is NOT `base ^ exp mod m`; the corpus rows `wrap` and
-  `harness-extreme` pin that region differentially, and this theorem
-  deliberately does not claim it. Attribution: the program's own
-  arithmetic (machine-integer honesty, FD-E3).
+  from the Go source comment; equivalently `mod ≤ 2³²`. Outside it the
+  uint64 multiplies wrap and the answer is NOT `base ^ exp mod m`, and
+  this theorem deliberately does not claim it. Of the 13 corpus rows
+  exactly ONE — `wrap` (`mod = 2⁶³ − 1`) — lies outside; the other 12,
+  `harness-extreme` (`base = 2⁶³ − 1`, `exp = 2⁶³ − 2`,
+  `mod = 999999937`) included, are inside the theorem's domain.
+  Attribution: the program's own arithmetic (machine-integer honesty,
+  FD-E3).
 * **The fuel bound is a CONSTANT, 6027, over the whole domain** — the
   exponent halves, so 64 iterations bound every `exp < 2⁶⁴`. It is a
   BOUND, not a measurement: the measured step count is
