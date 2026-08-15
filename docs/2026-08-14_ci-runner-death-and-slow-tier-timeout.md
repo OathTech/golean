@@ -207,6 +207,47 @@ system manager honors `MemoryMax` on transient scopes (the readback now
 refuses if not), and `actions/cache/save` warning-vs-failure semantics.
 The first post-merge push is the live validation for all four.
 
+## Outcome (2026-08-15, post-merge): streak broken; verdict revised toward memory pressure
+
+Two more data points landed after the audit round, and they reshape the
+Failure-1 verdict:
+
+1. **The 08-15 nightly (old workflow, `4f29a44f`) died the same way** —
+   "runner has received a shutdown signal", exit 143, northcentralus,
+   ~10 min into the proofs build. That made THREE shutdown deaths in
+   three different Azure regions, **3-for-3 in the proofs-build phase**
+   — no longer plausible as random capacity reclaim. Revised leading
+   hypothesis (user-concurred): **memory pressure masquerading as a
+   platform shutdown.** Ubuntu 24.04 runners ship `systemd-oomd`, which
+   under sustained pressure kills whole service units — including the
+   runner service itself, which presents exactly as a graceful
+   "shutdown signal", not a kernel OOM kill of `lean`. The
+   frozen-cache-forced cold rebuild at 2-wide parallelism on a small VM
+   fits; the earlier resource refutation measured the wrong regime (the
+   batch alone, 32-wide, warm — audit F1's exact caveat).
+2. **The first run under the hardened workflow went GREEN**
+   (run 31883263298, `b078ef73`, centralus — a region that had killed
+   us the day before). Everything worked on first contact: machine
+   shape finally measured (**2 cores, 7.8 GiB RAM, 3.0 GiB swap** — the
+   swap the uncapped runs could thrash into), cap derived as 6737 MiB,
+   the `GOLEAN_CAPPED=1` readback passed and the gate printed
+   `cap 6737M -> LEAN_NUM_THREADS=2`, the in-scope probe showed
+   go1.26.5 + the pinned toolchain, the fast gate PASSED in ~19.5 min,
+   no OOM events, and the save step banked the first source-hashed
+   cache entry (`...-r31883263298.1`) — the 2026-07-21 frozen-cache era
+   is over. One run cannot prove causality, but the correlation now
+   runs the right way: uncapped runs died 3/3 in the proofs build;
+   the capped run survived the same phase on the same VM shape.
+
+**Runner provisioning decision (user, 2026-08-15):** staged. The cap +
+seeded cache likely keep standard 2-core/7.8 GiB runners viable for
+incremental pushes; the day the proof corpus outgrows them, CI now says
+so legibly (red at the cgroup + OOM discriminator) instead of flaking.
+When that happens, the low-friction path is GitHub larger hosted
+runners (org setting + a `runs-on` label, ~2× per-minute cost);
+self-hosted runners carry an isolation/maintenance posture we take only
+if the paid tiers do not fit.
+
 ## Follow-ups / open items
 
 - **The lever-5 cache is still unseeded** (both attempts died before any

@@ -218,9 +218,12 @@ jobs:
       # F1b/F7): the kernel ring buffer is the cheap discriminator.
       - name: OOM discriminator (forensics)
         if: always()
+        # The || belongs on a CAPTURED result, not the pipeline: tail
+        # exits 0 on empty input, so the fallback line never fired on the
+        # first live run (2026-08-15) even though there were no events.
         run: |
-          sudo -n dmesg 2>/dev/null | grep -iE "out of memory|oom-kill|killed process" | tail -20 \
-            || echo "dmesg: no OOM events"
+          oom="$(sudo -n dmesg 2>/dev/null | grep -iE "out of memory|oom-kill|killed process" | tail -20)"
+          if [ -n "$oom" ]; then printf '%s\n' "$oom"; else echo "dmesg: no OOM events"; fi
 
       # The save half of the split cache — see the restore step's comment.
       # `always()` is the point: a red gate still saves, so each retry
