@@ -27,13 +27,50 @@ overstates.
 |---|---|---|---|
 | G0 (opening kit phase) | 5 of 5 mandatory units; (d) assessed → deferred to its pulling G1 example; **item 4 (flagship rule) DISCHARGED** by G1.1 | 0 — G0 CLOSED | see `g0.md`; the flagship's kit-gap report is in `g1.md` |
 | G1 (gallery to twenty) | **1 of ≥13** new COMPLETE entries (`histogram`, the flagship); **+ the KIT-GAP CLOSURE unit (G1.1-KG): all six gaps CLOSED**; **+ the GUARDRAILS WAVE (G1.2): the CORPUS HALF of 15 further examples landed** — corpus rows, golden pins, `*Program` modules and stub proof roots, one commit each | ≥12 COMPLETE (the 15 wave entries are landed GUARDRAILS, NOT COMPLETE entries — each needs its headline) | see `g1.md`; the wave table is there, the extension pull-list in `g2.md` |
-| G2 (extensions) | 0 BUILT; **the PULL-LIST is established and probe-grounded** (`g2.md`) | E1 + E3 to build (both have landed consumers); a THIRD pulled extension must be found | **HONEST FINDING: the G1 set pulls TWO of the four, not three.** E4 is a NON-PULL — `strrev` landed E4-independent, 12 rows PASS; E2 is a reasoned NON-PULL (observation is by return, not printing). Operator call recorded in `g2.md` |
+| G2 (extensions) | **1 BUILT (E1, 2026-08-15)**; the PULL-LIST is established and probe-grounded (`g2.md`) | E3 to build (consumer `stein` landed, 9 rows red); a THIRD pulled extension must be found | **HONEST FINDING: the G1 set pulls TWO of the four, not three.** E4 is a NON-PULL — `strrev` landed E4-independent, 12 rows PASS; E2 is a reasoned NON-PULL (observation is by return, not printing). Operator call recorded in `g2.md` |
 | G3 (evidence dossiers) | 0 | register = denominator, fixed at dossier-lane start | register lives in `g3.md`, **enumerated by the dossier lane's first commit** (process amendment `ea7c689a`: the register is that lane's deliverable, not G0's) |
 | G4 (infrastructure debt) | 0 of 4 | 4 | |
 
 ## Checkpoint summaries
 
 (at least every 5 units; newest first)
+
+- 2026-08-15, checkpoint 5 (unit G2.E1, 1 commit): **THE FIRST EXTENSION
+  IS BUILT.** E1 — the differential driver's argument domain past
+  `int64` — landed as 15 guardrail rows + a 3-line semantic change in
+  `tools/coverageharness` + two id renames + the re-pin, one commit, no
+  Lean source touched. Guardrails-first was MEASURED, not asserted: the
+  15 rows were committed and run BEFORE the driver change and all 15
+  failed at `stage=go-harness` with the recorded `strconv.ParseInt …
+  value out of range`; after the change all 15 PASS. **No fidelity
+  finding** — real `go run` and the machine agree everywhere in the
+  `[2^63, 2^64)` wrap region the machine had always claimed, which is
+  the point of the extension and the interesting negative result.
+  Consumers: `dotprod` (its four probe-verified wrap shapes lifted into
+  the true wrap region) plus `reverse`/`minmax`/`isort`/`wordcount`,
+  whose `2^64-1` HAND PROBES from the 2026-08-14/15 audits are now
+  permanent oracle rows. Baseline re-pinned from a full `scripts/ci
+  --diff`: **1791 cases, 1663 PASS, 128 FAIL** (was 1776/1648/128), drift
+  EXACTLY the 15 new ids, FAIL count unchanged, nothing MISSING.
+  Gallery corrected in the same commit: `reverse`'s and `minmax`'s
+  driver-limitation sentences (the "no oracle row reaches that region" /
+  "machine only, no `go run` in the loop" admissions) are now stale and
+  say so; row counts 11→14 (reverse), 13→16 (minmax), 11→13 (isort),
+  11→14 (wordcount); `scripts/render-gallery` green, 52 blocks.
+  **ONE CHARTERED SUB-ITEM DID NOT LAND, and needs an operator ruling:**
+  the `examples/reverse/harness-wrapping` → `harness-near-max` rename
+  (the seed does not wrap; the id names a behaviour it never exercised).
+  It was made and ran green, then `scripts/ci`'s baseline re-pin guard
+  refused it — the guard's model is PASS-id set inclusion, so a RENAMED
+  id is indistinguishable from a REGRESSED one, and its only discharge is
+  a `docs/BUGS.md` `- Cases:` line, i.e. calling a rename a fidelity bug.
+  Backed out rather than launder the gate or ship it red; no corpus id
+  has ever been renamed or retired before, so the guard has simply never
+  met this event. The minimal, strictly-MORE-precise amendment is drafted
+  in `g2.md` for a change that owns `scripts/ci`.
+  Totals: G0 5/5; G1 **1 COMPLETE** + 16 guardrail suites landed; G2
+  **1 of ≥3 BUILT** (E3 remains, third must be found); G3 22/22
+  dossiers; G4 0/4.
 
 - 2026-08-15, checkpoint 4 (unit G1.2, 18 commits): THE GUARDRAILS WAVE
   COMPLETE. The corpus half of **16 examples** landed in one pass —

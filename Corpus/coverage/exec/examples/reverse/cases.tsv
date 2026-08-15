@@ -1,12 +1,15 @@
 # id	subject	args	expected_status	expected_reason	features
 four	reverseFour	1,2,3,4	ok	-	slices,indexing,loops,multi_assign
 four-big	reverseFour	9223372036854775807,7,0,9	ok	-	slices,indexing,loops,multi_assign
+four-u64max	reverseFour	18446744073709551615,7,0,9	ok	-	slices,indexing,loops,multi_assign,widths
 three	reverseThree	10,20,30	ok	-	slices,indexing,loops,multi_assign
 one	reverseOne	42	ok	-	slices,indexing,loops,multi_assign
 empty	reverseEmpty	-	ok	-	slices,indexing,loops,multi_assign
 harness-five	reverse_harness	5,100	ok	-	slices,indexing,loops,multi_assign
 harness-empty	reverse_harness	0,7	ok	-	slices,indexing,loops,multi_assign
 harness-wrapping	reverse_harness	4,9223372036854775805	ok	-	slices,indexing,loops,multi_assign
+harness-wrap-max	reverse_harness	4,18446744073709551615	ok	-	slices,indexing,loops,multi_assign,widths
 harness-v-five	reverse_harness_v	5,100	ok	-	slices,indexing,loops,multi_assign
 harness-v-empty	reverse_harness_v	0,7	ok	-	slices,indexing,loops,multi_assign
 harness-v-wrapping	reverse_harness_v	4,9223372036854775805	ok	-	slices,indexing,loops,multi_assign
+harness-v-wrap-max	reverse_harness_v	4,18446744073709551615	ok	-	slices,indexing,loops,multi_assign,widths

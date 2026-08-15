@@ -2,13 +2,16 @@
 four	minMaxFour	3,1,4,1	ok	-	slices,indexing,loops,if
 four-desc	minMaxFour	9,7,5,3	ok	-	slices,indexing,loops,if
 four-big	minMaxFour	9223372036854775807,0,7,9223372036854775807	ok	-	slices,indexing,loops,if
+four-u64max	minMaxFour	18446744073709551615,0,7,9223372036854775807	ok	-	slices,indexing,loops,if,widths
 three-same	minMaxThree	5,5,5	ok	-	slices,indexing,loops,if
 one	minMaxOne	42	ok	-	slices,indexing,loops,if
 empty-panics	minMaxEmpty	-	panic	index out of range	slices,indexing,panic
 harness-five	minmax_harness	5,40	ok	-	slices,indexing,loops,if
 harness-one	minmax_harness	1,7	ok	-	slices,indexing,loops,if
+harness-wrap-max	minmax_harness	5,18446744073709551615	ok	-	slices,indexing,loops,if,widths
 harness-empty-panics	minmax_harness	0,3	panic	index out of range	slices,indexing,panic
 harness-r-five	minmax_harness_r	5,40	ok	-	slices,indexing,loops,if,arrays
 harness-r-one	minmax_harness_r	1,7	ok	-	slices,indexing,loops,if,arrays
 harness-r-eight	minmax_harness_r	8,9223372036854775805	ok	-	slices,indexing,loops,if,arrays
+harness-r-wrap-max	minmax_harness_r	8,18446744073709551615	ok	-	slices,indexing,loops,if,arrays,widths
 harness-r-empty-panics	minmax_harness_r	0,3	panic	index out of range	slices,indexing,panic,arrays

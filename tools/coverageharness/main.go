@@ -156,8 +156,28 @@ func parseArgs(raw string) ([]string, error) {
 		if part == "" {
 			return nil, fmt.Errorf("empty integer argument in %q", raw)
 		}
-		if _, err := strconv.ParseInt(part, 10, 64); err != nil {
-			return nil, fmt.Errorf("invalid integer argument %q: %w", part, err)
+		// Arguments are VALIDATED here and pasted verbatim into the
+		// generated harness as `T(value)` conversions, so the only
+		// question this function answers is whether the literal denotes a
+		// value some 64-bit Go integer type can hold. The corpus uses BOTH
+		// domains: signed rows reach -9223372036854775808
+		// (examples/kadane/harness-r-minseed), and — since gallery-campaign
+		// extension E1 (docs/gallery-campaign-log/g2.md) — unsigned rows
+		// reach 18446744073709551615 (examples/dotprod/harness-r-wrap-u64max),
+		// the uint64 wrap region the MACHINE side has always accepted
+		// (`--arg-int` parses arbitrary-precision Int in GoLean/CLI.lean).
+		// int64 is tried FIRST so every pre-E1 row, negatives included,
+		// keeps byte-identical behaviour; uint64 is the fallback that opens
+		// only the [2^63, 2^64) half. Anything outside both fails closed
+		// here. Note this is deliberately NOT a per-parameter type check:
+		// a uint64-only literal handed to an int64 parameter is a Go
+		// constant-overflow COMPILE error in the generated harness, caught
+		// loudly at the go-run stage by the authority on the question.
+		_, errInt := strconv.ParseInt(part, 10, 64)
+		if errInt != nil {
+			if _, errUint := strconv.ParseUint(part, 10, 64); errUint != nil {
+				return nil, fmt.Errorf("invalid integer argument %q: not an int64 (%v) and not a uint64: %w", part, errInt, errUint)
+			}
 		}
 	}
 	return parts, nil

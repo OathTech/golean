@@ -405,7 +405,8 @@ annotating the one setup assignment would make the input ∀-data with the same
 test phase, which the verdict harness below (`reverse_ok_v1`, whose check
 re-derives `seed+(n-1-i)`) could never do. The wrapping is deliberate and the
 theorem covers every seed below `2^64`, including the ones where `seed + i`
-wraps; the differential rows below do not reach that region (see **Ground**).
+wraps; since extension E1 the differential rows DO reach that region
+(see **Ground**).
 
 **The family** (`proofs/GoLeanProofs/Examples/Reverse.lean`):
 
@@ -461,15 +462,25 @@ theorems sit beneath, both kept and both still proved:
   supporting material because the user-facing form observes only returned
   values.
 
-**Ground.** Differentially green on 11 corpus rows: four/three/one/empty
-element drivers and an `int64`-boundary value; the verdict harness at
-`(5,100)`, `(0,7)` and a near-`2^63` seed; and the copy-relational harness at
-`harness-v-five`, `harness-v-empty` and `harness-v-wrapping`. A near-`2^63`
-seed is the largest a corpus row can express, since the differential driver
-parses `int64` arguments, so no oracle row reaches the `uint64` wrap region.
-The wrap region was checked by direct `go run` probes in the 2026-08-14 audit
-and agrees with the machine; extending the driver is recorded as an input for
-the successor arc.
+**Ground.** Differentially green on 14 corpus rows: four/three/one/empty
+element drivers, an `int64`-boundary value and a `2^64-1` driver value
+(`four-u64max`); the verdict harness at `(5,100)`, `(0,7)`, a near-`2^63`
+seed (`harness-wrapping`) and seed `2^64-1` (`harness-wrap-max`); and the
+copy-relational harness at `harness-v-five`, `harness-v-empty`,
+`harness-v-wrapping` and `harness-v-wrap-max`. **The `uint64` wrap region is
+now oracle-witnessed**: at seed `2^64-1` the family `s[i] = seed + i` is
+`[2^64-1, 0, 1, 2]`, and the two `*-wrap-max` rows compare real `go run`
+against the machine there, like every other row. Before extension E1
+(2026-08-15, `docs/gallery-campaign-log/g2.md`) the differential driver
+parsed its arguments as signed `int64`, so a near-`2^63` seed was the largest
+a row could express and the wrap region rested on hand `go run` probes from
+the 2026-08-14 audit; the driver now parses the full 64-bit domain and those
+probes are permanent rows. Note the two `*-wrapping` ids are MISNAMED and
+known to be: at seed `9223372036854775805` with `n = 4` the family tops out
+at exactly `2^63`, so nothing wraps. Renaming them to `*-near-max` is
+chartered under E1 and is currently BLOCKED by the baseline re-pin guard,
+which cannot tell a renamed id from a regressed one (`g2.md`, E1's build
+record).
 
 ---
 
@@ -625,21 +636,25 @@ additional claim that the input slice comes back unchanged (the program is
 read-only on its input) and every frame cell is preserved. Supporting
 material.
 
-**Ground.** Differentially green on 13 corpus rows: the four/three/one/empty
-drivers and an `int64`-boundary value, the empty-slice panic through both the
-driver and the harness, the pair harness at `(5,40)` and `(1,7)`, and the
-relational harness at `harness-r-five`, `harness-r-one`, `harness-r-eight`
+**Ground.** Differentially green on 16 corpus rows: the four/three/one/empty
+drivers, an `int64`-boundary value and a `2^64-1` driver value
+(`four-u64max`), the empty-slice panic through both the driver and the
+harness, the pair harness at `(5,40)`, `(1,7)` and seed `2^64-1`
+(`harness-wrap-max`), and the relational harness at `harness-r-five`,
+`harness-r-one`, `harness-r-eight`, `harness-r-wrap-max` (seed `2^64-1`)
 and `harness-r-empty-panics`.
 
-What no row reaches, said as plainly as in reverse's entry: the theorem
-covers every `seed < 2^64`, including the seeds where `seed + i` wraps and
-the answer stops being "the first and last element" — but **no corpus row
-reaches that wrap region**, because the differential driver parses `int64`
-arguments, so the largest seed a row can express is near `2^63`. The wrap
-behaviour here was checked in the 2026-08-15 audit **on the machine only,
-with no `go run` oracle in the loop** — weaker evidence than reverse's
-entry, where the same region was probed against real Go. Extending the
-driver past `int64` is recorded as an input for the successor arc (E1).
+What the rows reach, corrected: the theorem covers every `seed < 2^64`,
+including the seeds where `seed + i` wraps and the answer stops being "the
+first and last element" — and **since extension E1 (2026-08-15,
+`docs/gallery-campaign-log/g2.md`) corpus rows reach that region**. At seed
+`2^64-1` with `n = 5` the family is `[2^64-1, 0, 1, 2, 3]`, so `lo = 0` and
+`hi = 2^64-1`: the wrap is what makes the answer, and `harness-wrap-max` /
+`harness-r-wrap-max` check it against real `go run`. Until E1 the
+differential driver parsed `int64` arguments, the largest expressible seed
+was near `2^63`, and this entry's wrap behaviour rested on a 2026-08-15
+audit check **on the machine only, with no `go run` oracle in the loop** —
+that gap is closed, and the oracle agrees.
 
 ---
 
@@ -895,9 +910,14 @@ is load-bearing here, and that is shown by the proof's step-walk (the segment
 completes without a panic, and the machine panics on out-of-range reads); the
 carrier lemmas are proof-internal.
 
-**Ground.** Differentially green on 11 corpus rows
-(shuffled/sorted/reversed/duplicates/`int64`-boundary/three/one/empty) plus
-the harness at `(5,37)`, `(6,0)` (all-equal family) and `(0,5)`.
+**Ground.** Differentially green on 13 corpus rows
+(shuffled/sorted/reversed/duplicates/`int64`-boundary/`2^64-1`
+(`four-u64max`)/three/one/empty) plus the harness at `(5,37)`, `(6,0)`
+(all-equal family), `(0,5)` and seed `2^64-1` (`harness-wrap-max`, extension
+E1). At that seed the multiplicative family `s[i] = seed * (i+1)` wraps at
+every index — it is `[2^64-1, 2^64-2, …, 2^64-5]`, i.e. descending — so the
+row exercises the sort's worst case and the wrapping setup arithmetic
+against real `go run`.
 
 ---
 
@@ -1084,13 +1104,17 @@ multiplicity — the ∀-data claim no scalar-parameterized harness subsumes.
 `wordcount_empty_ok` covers the zero-argument degenerate harness. Supporting
 material.
 
-**Ground.** Differentially green on 11 corpus rows: the distinct /
-all-same / mode-of-three / two-pairs / one / empty drivers, the scalar
-harness at `(7,50)` and `(0,9)`, and the relational harness at
-`harness-r-seven`, `harness-r-eight` and `harness-r-empty`. The `(n+2)/3`
-closed form behind `wordcount_ok_v1` was additionally cross-checked against
-`go run` at seeds `0`, `50`, `2^63−1`, `2^64−3`, `2^64−2`, `2^64−1` before
-any of it was written in Lean.
+**Ground.** Differentially green on 14 corpus rows: the distinct /
+all-same / mode-of-three / two-pairs / one / empty drivers plus a
+`2^64-1`-keyed driver (`four-u64max`), the scalar harness at `(7,50)`,
+`(0,9)` and seed `2^64-1` (`harness-wrap-max`), and the relational harness
+at `harness-r-seven`, `harness-r-eight`, `harness-r-empty` and seed `2^64-1`
+(`harness-r-wrap-max`). The `(n+2)/3` closed form behind `wordcount_ok_v1`
+was additionally cross-checked against `go run` at seeds `0`, `50`, `2^63−1`,
+`2^64−3`, `2^64−2`, `2^64−1` before any of it was written in Lean; since
+extension E1 (2026-08-15) the `2^64−1` end of that sweep is a permanent
+oracle row rather than a hand probe — the family `seed + i%3` is
+`[2^64-1, 0, 1, …]` there, so the wrap decides the map keys themselves.
 
 ---
 
