@@ -1,4 +1,4 @@
-import GoLeanProofs.Examples.BubbleSort.Harness
+import GoLeanProofs.Examples.BubbleSort.Copy
 
 /-!
 # BubbleSort — Subject (the nested loops, at the tight placement)
