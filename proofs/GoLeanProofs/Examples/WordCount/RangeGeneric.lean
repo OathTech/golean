@@ -1,10 +1,8 @@
-import GoLeanProofs.Examples.WordCountProgram
+import GoLeanProofs.MapMem
 import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.StepKit
-import GoLeanProofs.Frame.Transfer
-import GoLeanProofs.Frame.RenameId
-import GoLeanProofs.Laws.StmtOps
+import GoLeanProofs.Frame.Sim
 import GoLeanProofs.MapLoops
 import GoLeanProofs.Examples.WordCount.CanonCount
 

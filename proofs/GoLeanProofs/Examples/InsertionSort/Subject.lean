@@ -2,9 +2,9 @@ import GoLeanProofs.Examples.InsertionSortProgram
 import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.StepKit
+import GoLeanProofs.Frame.Rename
+import GoLeanProofs.Frame.Sim
 import GoLeanProofs.Frame.Transfer
-import GoLeanProofs.Frame.RenameId
-import GoLeanProofs.Laws.StmtOps
 import GoLeanProofs.Examples.InsertionSort.Setup
 
 /-!
