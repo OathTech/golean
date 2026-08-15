@@ -513,6 +513,192 @@ def rCmpKQ : Cont :=
             rleFunc.rlNewRunBlock (.seqn #[])]]
       ([] :: rEnvIn) rLoopKQ)
 
+/-! ## Continuations — inside the subject loop
+
+The loop-body block pushes a scope, the `k`/`extended` block another;
+`k`'s cell address advances by 2 per iteration, so the pieces are
+parameterized by `ka` (this iteration's `k`-cell address). -/
+
+def rBodyEnv : LocalEnv := [] :: rEnvIn
+def rKEnv (ka : Nat) : LocalEnv := [("k", .base ⟨ka⟩)] :: rBodyEnv
+def rKEEnv (ka : Nat) : LocalEnv :=
+  [("extended", .base ⟨ka + 1⟩), ("k", .base ⟨ka⟩)] :: rBodyEnv
+def rSeqExtInit : Stmt :=
+  .seqn #[.initialization { id := "extended", typ := .bool },
+          .assign (.var "extended") (.boolLit false)]
+def rIfGuard : Stmt :=
+  .ifThenElse (.greaterCmp (.var "k") (.intLit 0 .int))
+    (.block #[]
+      #[.ifThenElse (.eqCmp tU64
+            (.indexGet (.var "runVals")
+              (.sub (.var "k") (.intLit 1 .int)))
+            (.indexGet (.var "s") (.var "i")))
+          rleFunc.rlExtendBlock (.seqn #[])])
+    (.seqn #[])
+def rIfNew : Stmt :=
+  .ifThenElse (.not (.var "extended")) rleFunc.rlNewRunBlock (.seqn #[])
+def rBlockTail : Cont := .seq [] rBodyEnv rLoopKQ
+def rKTailK (ka : Nat) : Cont :=
+  .seq [rSeqExtInit, rIfGuard, rIfNew] (rKEnv ka) rBlockTail
+/-- The `len(runVals)` apply point (the `k :=` assignment). -/
+def rKLenK (ka : Nat) : Cont :=
+  .strictK (.lengthOf (some (.slice tU64))) [] [] (rKEnv ka)
+    (.rhsK .vals [.chain (.addr (.base ⟨ka⟩)) [] []] [] [] (.seqn #[])
+      (rKEnv ka) (rKTailK ka))
+/-- The head-test `len(s)` apply point (`i < len(s)`). -/
+def rLenSK (iv : Int) : Cont :=
+  .strictK (.lengthOf (some (.slice tU64))) [] [] rBodyEnv
+    (.strictK .lessCmp [.int iv .int] [] rBodyEnv rCmpKQ)
+
+/-! ### The new-run event's pieces (iteration `i = 0`; every address
+literal — the event always runs at `k` cell 27) -/
+
+def rNRs3 : Stmt :=
+  .seqn #[.initialization { id := "$c3", typ := .slice tU64 },
+          .appendSlice (.var "$c3") tU64 (.var "runVals") (.var "$c2")]
+def rNRs4 : Stmt := .seqn #[.assign (.var "runVals") (.var "$c3")]
+def rNRs5 : Stmt :=
+  .seqn #[.initialization { id := "$c4", typ := .slice tU64 },
+          .makeSlice (.var "$c4") tU64 (.intLit 1 .int)
+            (some (.intLit 1 .int)),
+          .assign (.addr (.indexAddr (.var "$c4") (.intLit 0 .int)))
+            (.intLit 1 .uint64)]
+def rNRs6 : Stmt :=
+  .seqn #[.initialization { id := "$c5", typ := .slice tU64 },
+          .appendSlice (.var "$c5") tU64 (.var "runCounts") (.var "$c4")]
+def rNRs7 : Stmt := .seqn #[.assign (.var "runCounts") (.var "$c5")]
+
+def rNREnv1 : LocalEnv := [("$c2", .base ⟨29⟩)] :: rKEEnv 27
+def rNREnv2 : LocalEnv :=
+  [("$c3", .base ⟨31⟩), ("$c2", .base ⟨29⟩)] :: rKEEnv 27
+def rNREnv3 : LocalEnv :=
+  [("$c4", .base ⟨33⟩), ("$c3", .base ⟨31⟩), ("$c2", .base ⟨29⟩)]
+    :: rKEEnv 27
+def rNREnv4 : LocalEnv :=
+  [("$c5", .base ⟨35⟩), ("$c4", .base ⟨33⟩), ("$c3", .base ⟨31⟩),
+   ("$c2", .base ⟨29⟩)] :: rKEEnv 27
+
+/-- After the new-run block: pop it, pop the `k` block, back to the
+loop. -/
+def rNRAfter : Cont := .seq [] (rKEEnv 27) rBlockTail
+def rNRTail1 : Cont :=
+  .seq [rNRs3, rNRs4, rNRs5, rNRs6, rNRs7] rNREnv1 rNRAfter
+def rNRTail2 : Cont := .seq [rNRs4, rNRs5, rNRs6, rNRs7] rNREnv2 rNRAfter
+def rNRTail4 : Cont := .seq [rNRs7] rNREnv4 rNRAfter
+/-- The `$c2[0] = s[i]` store target. -/
+def rC2Ref : TargetRef := .chain (qC1SliceV 30) [.int 0 .int] [.index]
+/-- The extend arm's `runCounts[k-1]` store target. -/
+def rCntRef (capC : Nat) : TargetRef :=
+  .chain (qRunSliceV 36 capC) [.int 0 .int] [.index]
+
+/-! ### The extend iteration's pieces (parameterized by `ka` and the
+symbolic caps) -/
+
+def rExtGuardEnv (ka : Nat) : LocalEnv := [] :: rKEEnv ka
+/-- The extend test's `ifK`, with what follows it. -/
+def rExtIfK (ka : Nat) : Cont :=
+  .ifK rleFunc.rlExtendBlock (.seqn #[]) (rExtGuardEnv ka)
+    (.seq [] (rExtGuardEnv ka)
+      (.seq [rIfNew] (rKEEnv ka) rBlockTail))
+/-- The `runVals[k-1]` read point inside the extend test. -/
+def rExtEqK (ka : Nat) (capV : Nat) : Cont :=
+  .strictK .indexGet [qRunSliceV 32 capV] [] (rExtGuardEnv ka)
+    (.strictK (.eqCmp tU64) [] [.indexGet (.var "s") (.var "i")]
+      (rExtGuardEnv ka) (rExtIfK ka))
+/-- The second operand's (`s[i]`) read point. -/
+def rExtEq2K (n ka : Nat) (a : Int) : Cont :=
+  .strictK .indexGet [qSliceS n] [] (rExtGuardEnv ka)
+    (.strictK (.eqCmp tU64) [.int a .uint64] [] (rExtGuardEnv ka)
+      (rExtIfK ka))
+
+/-! ### The extend arm's store pieces -/
+
+def rExtBEnv (ka : Nat) : LocalEnv := [] :: rExtGuardEnv ka
+def rExtStTail (ka : Nat) : Cont :=
+  .seq [.seqn #[.assign (.var "extended") (.boolLit true)]] (rExtBEnv ka)
+    (.seq [] (rExtGuardEnv ka) (.seq [rIfNew] (rKEEnv ka) rBlockTail))
+def rExtRhsK (ka capC : Nat) : Cont :=
+  .rhsK .vals [rCntRef capC] [] [] (.seqn #[]) (rExtBEnv ka)
+    (rExtStTail ka)
+/-- The `runCounts[k-1]` READ point (the `++`'s left operand). -/
+def rExtCntReadK (ka capC : Nat) : Cont :=
+  .strictK .indexGet [qRunSliceV 36 capC] [] (rExtBEnv ka)
+    (.strictK .add [] [.intLit 1 .uint64] (rExtBEnv ka)
+      (rExtRhsK ka capC))
+
+/-! ## Continuations — the final copy loop and the epilogue
+(parameterized by `A`, the per-`n` address of the `runVals` array;
+raw segments instantiate `A` at a literal) -/
+
+def fcTopScope (A : Nat) : Scope :=
+  [("runCounts", .base ⟨A + 1⟩), ("runVals", .base ⟨A⟩),
+   ("counts", .base ⟨15⟩), ("vals", .base ⟨14⟩), ("pre", .base ⟨11⟩),
+   ("s", .base ⟨8⟩), ("$c10", .base ⟨6⟩)]
+def fcTopEnv (A : Nat) : LocalEnv := [fcTopScope A, baseEnvQ]
+def fcEnv (A : Nat) : LocalEnv :=
+  [("$forFirst", .base ⟨A + 3⟩)] :: [("i", .base ⟨A + 2⟩)] :: fcTopEnv A
+def fcEnvB (A : Nat) : LocalEnv := [] :: fcEnv A
+def fcEnvB2 (A : Nat) : LocalEnv := [] :: fcEnvB A
+def fcTailQ (A : Nat) : Cont :=
+  .seq [] (fcEnv A)
+    (.seq [] ([("i", .base ⟨A + 2⟩)] :: fcTopEnv A)
+      (.seq [qS10] (fcTopEnv A) (.frame [] [] [] [] .stop)))
+def fcHeadCfg (A : Nat) : Config :=
+  .exec (.while (.boolLit true) rleHarnessRFunc.fcBody) (fcEnv A)
+    (fcTailQ A)
+def fcLoopK (A : Nat) : Cont :=
+  .loop (.boolLit true) rleHarnessRFunc.fcBody (fcEnv A) (fcTailQ A)
+def fcStoreBlock : Stmt :=
+  .block #[]
+    #[.seqn #[.assign (.addr (.indexAddr (.ref "runVals") (.var "i")))
+        (.indexGet (.var "vals") (.var "i"))],
+      .seqn #[.assign (.addr (.indexAddr (.ref "runCounts") (.var "i")))
+        (.indexGet (.var "counts") (.var "i"))]]
+def fcCmpK (A : Nat) : Cont :=
+  .ifK (.seqn #[]) .breakStmt (fcEnvB A)
+    (.seq [fcStoreBlock] (fcEnvB A) (fcLoopK A))
+/-- The `len(vals)` apply point in the final copy loop's test. -/
+def fcLenSK (A : Nat) (iv : Int) : Cont :=
+  .strictK (.lengthOf (some (.slice tU64))) [] [] (fcEnvB A)
+    (.strictK .lessCmp [.int iv .int] [] (fcEnvB A) (fcCmpK A))
+def fcVRef (A : Nat) (iv : Int) : TargetRef :=
+  .chain (.addr (.base ⟨A⟩)) [.int iv .int] [.index]
+def fcCRef (A : Nat) (iv : Int) : TargetRef :=
+  .chain (.addr (.base ⟨A + 1⟩)) [.int iv .int] [.index]
+/-- After the FIRST fc store: the second store's seqn, then out. -/
+def fcStTail1 (A : Nat) : Cont :=
+  .seq [.seqn #[.assign (.addr (.indexAddr (.ref "runCounts") (.var "i")))
+        (.indexGet (.var "counts") (.var "i"))]] (fcEnvB2 A)
+    (.seq [] (fcEnvB A) (fcLoopK A))
+/-- After the SECOND fc store: out to the loop head. -/
+def fcStTail2 (A : Nat) : Cont :=
+  .seq [] (fcEnvB2 A) (.seq [] (fcEnvB A) (fcLoopK A))
+def fcVRhsK (A : Nat) (iv : Int) : Cont :=
+  .rhsK .vals [fcVRef A iv] [] [] (.seqn #[]) (fcEnvB2 A) (fcStTail1 A)
+def fcCRhsK (A : Nat) (iv : Int) : Cont :=
+  .rhsK .vals [fcCRef A iv] [] [] (.seqn #[]) (fcEnvB2 A) (fcStTail2 A)
+/-- The `vals[i]` read point (first fc store's RHS). -/
+def fcVReadK (A capV : Nat) (iv : Int) : Cont :=
+  .strictK .indexGet [qRunSliceV 32 capV] [] (fcEnvB2 A) (fcVRhsK A iv)
+/-- The `counts[i]` read point (second fc store's RHS). -/
+def fcCReadK (A capC : Nat) (iv : Int) : Cont :=
+  .strictK .indexGet [qRunSliceV 36 capC] [] (fcEnvB2 A) (fcCRhsK A iv)
+def qRes0Ref : TargetRef := .chain (.addr (.base ⟨2⟩)) [] []
+def qRes1Ref : TargetRef := .chain (.addr (.base ⟨3⟩)) [] []
+def qRes2Ref : TargetRef := .chain (.addr (.base ⟨4⟩)) [] []
+/-- The epilogue's remaining-statement continuation (the spliced
+`seqn[5]`'s tail; stores pop back into it). -/
+def epK (A : Nat) (ss : List Stmt) : Cont :=
+  .seq ss (fcTopEnv A) (.frame [] [] [] [] .stop)
+def epA1 : Stmt := .assign (.var "$res1") (.var "runVals")
+def epA2 : Stmt := .assign (.var "$res2") (.var "runCounts")
+def epA3 : Stmt :=
+  .assign (.var "$res3")
+    (.convert tU64 (.length (.var "vals") (some (.slice tU64))))
+/-- The `k`/`extended` garbage cells the extend iterations leave. -/
+def ke1 : Heap := [(.base ⟨37⟩, qint 1), (.base ⟨38⟩, qbool true)]
+def ke2 : Heap := ke1 ++ [(.base ⟨39⟩, qint 1), (.base ⟨40⟩, qbool true)]
+
 /-! ## Heap fronts — the harness half (program-generic) -/
 
 def qHeap0 (nv sv : Int) : Heap :=
@@ -570,6 +756,16 @@ def qHeapRle0 (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int)
      (.base ⟨23⟩, qEmptyBack), (.base ⟨24⟩, qESlice 23),
      (.base ⟨25⟩, qint iv), (.base ⟨26⟩, qbool ffv)]
 
+/-- Mid-event: `runVals` (21) already redirected to its spilled
+backing, `runCounts` (24) still empty; `i = 0`, flag consumed. -/
+def qHeapRle0' (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int)
+    (capV : Nat) : Heap :=
+  qHeapFrame nv sv n l lp siv civ ++
+    [(.base ⟨19⟩, qESlice 20), (.base ⟨20⟩, qEmptyBack),
+     (.base ⟨21⟩, qRunSlice 32 capV), (.base ⟨22⟩, qESlice 23),
+     (.base ⟨23⟩, qEmptyBack), (.base ⟨24⟩, qESlice 23),
+     (.base ⟨25⟩, qint 0), (.base ⟨26⟩, qbool false)]
+
 /-- The subject's loop-head state AFTER the `i = 0` new-run event:
 both output slices length 1 over their SPILLED backings (symbolic caps
 `capV`/`capC`), the run count so far in `cnt`, plus the `ke` suffix of
@@ -588,6 +784,106 @@ def qHeapRun (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int)
      (.base ⟨31⟩, qRunSlice 32 capV), (.base ⟨32⟩, qBackPad capV v),
      (.base ⟨33⟩, qC1Slice 34), (.base ⟨34⟩, qBack1 1),
      (.base ⟨35⟩, qRunSlice 36 capC), (.base ⟨36⟩, qBackPad capC cnt)] ++ ke
+
+/-- The post-`rle`-return front: `vals`/`counts` (14/15) hold the run
+slices, the frame cells 16–18 remain, the run cells 19–36 as the
+new-run event left them (`cnt` = the final count), plus the `ke`
+suffix of extend-iteration `k`/`extended` cells. -/
+def qHeapPost (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int)
+    (capV capC : Nat) (v cnt : Int) (iv : Int) (ke : Heap) : Heap :=
+  qHeapCp nv sv n l lp siv civ false ++
+    [(.base ⟨14⟩, qRunSlice 32 capV), (.base ⟨15⟩, qRunSlice 36 capC),
+     (.base ⟨16⟩, qHandle n), (.base ⟨17⟩, qRunSlice 32 capV),
+     (.base ⟨18⟩, qRunSlice 36 capC),
+     (.base ⟨19⟩, qESlice 20), (.base ⟨20⟩, qEmptyBack),
+     (.base ⟨21⟩, qRunSlice 32 capV), (.base ⟨22⟩, qESlice 23),
+     (.base ⟨23⟩, qEmptyBack), (.base ⟨24⟩, qRunSlice 36 capC),
+     (.base ⟨25⟩, qint iv), (.base ⟨26⟩, qbool false),
+     (.base ⟨27⟩, qint 0), (.base ⟨28⟩, qbool false),
+     (.base ⟨29⟩, qC1Slice 30), (.base ⟨30⟩, qBack1 v),
+     (.base ⟨31⟩, qRunSlice 32 capV), (.base ⟨32⟩, qBackPad capV v),
+     (.base ⟨33⟩, qC1Slice 34), (.base ⟨34⟩, qBack1 1),
+     (.base ⟨35⟩, qRunSlice 36 capC), (.base ⟨36⟩, qBackPad capC cnt)]
+    ++ ke
+
+/-- The final-copy front: `qHeapPost` plus the two `[8]uint64` arrays
+and the loop's counter/flag at the per-`n` base address `A`. -/
+def qHeapFC (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int)
+    (capV capC : Nat) (v cnt : Int) (iv : Int) (ke : Heap)
+    (rv rc : List Int) (fiv : Int) (fb : Bool) (A : Nat) : Heap :=
+  qHeapPost nv sv n l lp siv civ capV capC v cnt iv ke ++
+    [(.base ⟨A⟩, qArr8C rv), (.base ⟨A + 1⟩, qArr8C rc),
+     (.base ⟨A + 2⟩, qint fiv), (.base ⟨A + 3⟩, qbool fb)]
+
+/-- The epilogue-phase heap for `n ≥ 1`: like `qHeapFC` but with the
+four result cells' contents explicit (`a2`/`a3`/`a4`/`kres`) — the
+epilogue's four stores walk them in. -/
+def qHeapEp (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int)
+    (capV capC : Nat) (v cnt kres : Int) (iv : Int) (ke : Heap)
+    (rv rc : List Int) (fiv : Int) (A : Nat)
+    (a2 a3 a4 : List Int) : Heap :=
+  [(.base ⟨0⟩, qu64 nv), (.base ⟨1⟩, qu64 sv), (.base ⟨2⟩, qArr8C a2),
+   (.base ⟨3⟩, qArr8C a3), (.base ⟨4⟩, qArr8C a4),
+   (.base ⟨5⟩, qu64 kres),
+   (.base ⟨6⟩, qHandle n), (.base ⟨7⟩, qBack n l), (.base ⟨8⟩, qHandle n),
+   (.base ⟨9⟩, qu64 siv), (.base ⟨10⟩, qbool false),
+   (.base ⟨11⟩, qArr8C lp), (.base ⟨12⟩, qu64 civ), (.base ⟨13⟩, qbool false),
+   (.base ⟨14⟩, qRunSlice 32 capV), (.base ⟨15⟩, qRunSlice 36 capC),
+   (.base ⟨16⟩, qHandle n), (.base ⟨17⟩, qRunSlice 32 capV),
+   (.base ⟨18⟩, qRunSlice 36 capC),
+   (.base ⟨19⟩, qESlice 20), (.base ⟨20⟩, qEmptyBack),
+   (.base ⟨21⟩, qRunSlice 32 capV), (.base ⟨22⟩, qESlice 23),
+   (.base ⟨23⟩, qEmptyBack), (.base ⟨24⟩, qRunSlice 36 capC),
+   (.base ⟨25⟩, qint iv), (.base ⟨26⟩, qbool false),
+   (.base ⟨27⟩, qint 0), (.base ⟨28⟩, qbool false),
+   (.base ⟨29⟩, qC1Slice 30), (.base ⟨30⟩, qBack1 v),
+   (.base ⟨31⟩, qRunSlice 32 capV), (.base ⟨32⟩, qBackPad capV v),
+   (.base ⟨33⟩, qC1Slice 34), (.base ⟨34⟩, qBack1 1),
+   (.base ⟨35⟩, qRunSlice 36 capC), (.base ⟨36⟩, qBackPad capC cnt)]
+  ++ ke ++
+    [(.base ⟨A⟩, qArr8C rv), (.base ⟨A + 1⟩, qArr8C rc),
+     (.base ⟨A + 2⟩, qint fiv), (.base ⟨A + 3⟩, qbool false)]
+
+/-- The terminal heap for `n ≥ 1`. -/
+def qHeapEnd1 (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int)
+    (capV capC : Nat) (v cnt kres : Int) (iv : Int) (ke : Heap)
+    (rv rc : List Int) (fiv : Int) (A : Nat) : Heap :=
+  qHeapEp nv sv n l lp siv civ capV capC v cnt kres iv ke rv rc fiv A
+    lp rv rc
+
+/-- The `n = 0` post-return front: no run event ever fired — both
+returned slices are the empty `make`s. -/
+def qHeapPost0 (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int)
+    (fiv : Int) (fb : Bool) : Heap :=
+  qHeapCp nv sv n l lp siv civ false ++
+    [(.base ⟨14⟩, qESlice 20), (.base ⟨15⟩, qESlice 23),
+     (.base ⟨16⟩, qHandle n), (.base ⟨17⟩, qESlice 20),
+     (.base ⟨18⟩, qESlice 23),
+     (.base ⟨19⟩, qESlice 20), (.base ⟨20⟩, qEmptyBack),
+     (.base ⟨21⟩, qESlice 20), (.base ⟨22⟩, qESlice 23),
+     (.base ⟨23⟩, qEmptyBack), (.base ⟨24⟩, qESlice 23),
+     (.base ⟨25⟩, qint 0), (.base ⟨26⟩, qbool false),
+     (.base ⟨27⟩, qArr8C zeros8), (.base ⟨28⟩, qArr8C zeros8),
+     (.base ⟨29⟩, qint fiv), (.base ⟨30⟩, qbool fb)]
+
+/-- The `n = 0` terminal heap. -/
+def qHeapEnd0 (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int)
+    (kres : Int) : Heap :=
+  [(.base ⟨0⟩, qu64 nv), (.base ⟨1⟩, qu64 sv), (.base ⟨2⟩, qArr8C lp),
+   (.base ⟨3⟩, qArr8C zeros8), (.base ⟨4⟩, qArr8C zeros8),
+   (.base ⟨5⟩, qu64 kres),
+   (.base ⟨6⟩, qHandle n), (.base ⟨7⟩, qBack n l), (.base ⟨8⟩, qHandle n),
+   (.base ⟨9⟩, qu64 siv), (.base ⟨10⟩, qbool false),
+   (.base ⟨11⟩, qArr8C lp), (.base ⟨12⟩, qu64 civ), (.base ⟨13⟩, qbool false),
+   (.base ⟨14⟩, qESlice 20), (.base ⟨15⟩, qESlice 23),
+   (.base ⟨16⟩, qHandle n), (.base ⟨17⟩, qESlice 20),
+   (.base ⟨18⟩, qESlice 23),
+   (.base ⟨19⟩, qESlice 20), (.base ⟨20⟩, qEmptyBack),
+   (.base ⟨21⟩, qESlice 20), (.base ⟨22⟩, qESlice 23),
+   (.base ⟨23⟩, qEmptyBack), (.base ⟨24⟩, qESlice 23),
+   (.base ⟨25⟩, qint 0), (.base ⟨26⟩, qbool false),
+   (.base ⟨27⟩, qArr8C zeros8), (.base ⟨28⟩, qArr8C zeros8),
+   (.base ⟨29⟩, qint 0), (.base ⟨30⟩, qbool false)]
 
 /-! ## The entry equation -/
 

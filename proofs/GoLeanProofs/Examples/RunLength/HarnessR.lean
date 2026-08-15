@@ -627,4 +627,981 @@ theorem applyStmtOp_append_spill1 {σ : ExecState} {ta sb eb : Addr}
       by have := Nat.mod_lt (3 + c % 32) (y := 32) (by omega); omega,
       hmain (c % 32) rest rfl (Nat.mod_lt _ (by omega))⟩
 
+/-! ## The subject loop — raw segments
+
+Iteration `i = 0` is THE NEW-RUN EVENT (both `append`s spill —
+`runVals`/`runCounts` have cap 0); iterations `i = 1, 2` extend. The
+`k`/`extended` cells are allocated afresh EVERY iteration, so extend
+segments are stated at their literal addresses. -/
+
+/-- Subject head, first dispatch: flag → `i` read → the `len(s)` apply
+point. 25 steps. -/
+theorem r_A0_rawQ (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (ch : Choices) :
+    stepFnIter 25 (qSt σ (qHeapRle0 nv sv n l lp siv civ 0 true) 27)
+      rHeadCfgQ ch
+      = .ok (.retV (qSliceS n) (rLenSK 0),
+          qSt σ (qHeapRle0 nv sv n l lp siv civ 0 false) 27, ch) := by
+  with_unfolding_all rfl
+
+/-- Test true at `i = 0` → the `k := len(runVals)` apply point
+(`k`'s cell allocated). 14 steps. -/
+theorem r_i0_a_rawQ (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (ch : Choices) :
+    stepFnIter 14 (qSt σ (qHeapRle0 nv sv n l lp siv civ 0 false) 27)
+      (.retV (.bool true) rCmpKQ) ch
+      = .ok (.retV (qESliceV 20) (rKLenK 27),
+          qSt σ (qHeapRle0 nv sv n l lp siv civ 0 false
+            ++ [(.base ⟨27⟩, qint 0)]) 28, ch) := by
+  with_unfolding_all rfl
+
+/-- `k = 0` delivered → through `extended := false`, the `k > 0` guard
+(false), `!extended` (true), the `$c2` make and its store target → the
+`s[i]` read point. 55 steps. -/
+theorem r_i0_b_rawQ (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (ch : Choices) :
+    stepFnIter 55 (qSt σ (qHeapRle0 nv sv n l lp siv civ 0 false
+        ++ [(.base ⟨27⟩, qint 0)]) 28)
+      (.retV (.int 0 .int)
+        (.rhsK .vals [.chain (.addr (.base ⟨27⟩)) [] []] [] [] (.seqn #[])
+          (rKEnv 27) (rKTailK 27))) ch
+      = .ok (.retV (.int 0 .int)
+          (.strictK .indexGet [qSliceS n] [] rNREnv1
+            (.rhsK .vals [rC2Ref] [] [] (.seqn #[]) rNREnv1 rNRTail1)),
+        qSt σ (qHeapRle0 nv sv n l lp siv civ 0 false
+          ++ [(.base ⟨27⟩, qint 0), (.base ⟨28⟩, qbool false),
+              (.base ⟨29⟩, qC1Slice 30), (.base ⟨30⟩, qBack1 0)]) 31,
+        ch) := by
+  with_unfolding_all rfl
+
+/-- `s[0]` delivered → the pending `$c2[0]` store. 1 step. -/
+theorem r_i0_c_rawQ (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (w : GoValue) (ch : Choices) :
+    stepFnIter 1 (qSt σ (qHeapRle0 nv sv n l lp siv civ 0 false
+        ++ [(.base ⟨27⟩, qint 0), (.base ⟨28⟩, qbool false),
+            (.base ⟨29⟩, qC1Slice 30), (.base ⟨30⟩, qBack1 0)]) 31)
+      (.retV w (.rhsK .vals [rC2Ref] [] [] (.seqn #[]) rNREnv1 rNRTail1))
+      ch
+      = .ok (.next (.storeK [rC2Ref] [w] (.seqn #[]) rNREnv1 rNRTail1),
+          qSt σ (qHeapRle0 nv sv n l lp siv civ 0 false
+            ++ [(.base ⟨27⟩, qint 0), (.base ⟨28⟩, qbool false),
+                (.base ⟨29⟩, qC1Slice 30), (.base ⟨30⟩, qBack1 0)]) 31,
+          ch) := by
+  with_unfolding_all rfl
+
+/-- The `$c2[0]` store done → `$c3` declared → the FIRST `appendSlice`
+apply point. 13 steps. -/
+theorem r_i0_d_rawQ (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (v : Int) (ch : Choices) :
+    stepFnIter 13 (qSt σ (qHeapRle0 nv sv n l lp siv civ 0 false
+        ++ [(.base ⟨27⟩, qint 0), (.base ⟨28⟩, qbool false),
+            (.base ⟨29⟩, qC1Slice 30), (.base ⟨30⟩, qBack1 v)]) 31)
+      (.next (.storeK [] [] (.seqn #[]) rNREnv1 rNRTail1)) ch
+      = .ok (.retV (qC1SliceV 30)
+          (.stmtOpK (.appendSlice tU64) 1
+            [qESliceV 20, .addr (.base ⟨31⟩)] [] rNREnv2 rNRTail2),
+        qSt σ (qHeapRle0 nv sv n l lp siv civ 0 false
+          ++ [(.base ⟨27⟩, qint 0), (.base ⟨28⟩, qbool false),
+              (.base ⟨29⟩, qC1Slice 30), (.base ⟨30⟩, qBack1 v),
+              (.base ⟨31⟩, qNilSlice)]) 32, ch) := by
+  with_unfolding_all rfl
+
+/-- After the first append: `runVals := $c3`, the `$c4` make and its
+literal store, `$c5` declared → the SECOND `appendSlice` apply point.
+45 steps. -/
+theorem r_i0_e_rawQ (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (v : Int) (capV : Nat) (ch : Choices) :
+    stepFnIter 45 (qSt σ (qHeapRle0 nv sv n l lp siv civ 0 false
+        ++ [(.base ⟨27⟩, qint 0), (.base ⟨28⟩, qbool false),
+            (.base ⟨29⟩, qC1Slice 30), (.base ⟨30⟩, qBack1 v),
+            (.base ⟨31⟩, qRunSlice 32 capV), (.base ⟨32⟩, qBackPad capV v)])
+        33)
+      (.next rNRTail2) ch
+      = .ok (.retV (qC1SliceV 34)
+          (.stmtOpK (.appendSlice tU64) 1
+            [qESliceV 23, .addr (.base ⟨35⟩)] [] rNREnv4 rNRTail4),
+        qSt σ (qHeapRle0' nv sv n l lp siv civ capV
+          ++ [(.base ⟨27⟩, qint 0), (.base ⟨28⟩, qbool false),
+              (.base ⟨29⟩, qC1Slice 30), (.base ⟨30⟩, qBack1 v),
+              (.base ⟨31⟩, qRunSlice 32 capV), (.base ⟨32⟩, qBackPad capV v),
+              (.base ⟨33⟩, qC1Slice 34), (.base ⟨34⟩, qBack1 1),
+              (.base ⟨35⟩, qNilSlice)]) 36, ch) := by
+  with_unfolding_all rfl
+
+/-- After the second append: `runCounts := $c5`, pops → the loop head.
+15 steps. -/
+theorem r_i0_f_rawQ (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (v : Int) (capV capC : Nat) (ch : Choices) :
+    stepFnIter 15 (qSt σ (qHeapRle0' nv sv n l lp siv civ capV
+        ++ [(.base ⟨27⟩, qint 0), (.base ⟨28⟩, qbool false),
+            (.base ⟨29⟩, qC1Slice 30), (.base ⟨30⟩, qBack1 v),
+            (.base ⟨31⟩, qRunSlice 32 capV), (.base ⟨32⟩, qBackPad capV v),
+            (.base ⟨33⟩, qC1Slice 34), (.base ⟨34⟩, qBack1 1),
+            (.base ⟨35⟩, qRunSlice 36 capC), (.base ⟨36⟩, qBackPad capC 1)])
+        37)
+      (.next rNRTail4) ch
+      = .ok (rHeadCfgQ,
+          qSt σ (qHeapRun nv sv n l lp siv civ capV capC v 1 0 false []) 37,
+          ch) := by
+  with_unfolding_all rfl
+
+/-! ## The extend iterations — raw segments
+
+Two literal instances (`k` at 37 for `i = 1`, at 39 for `i = 2`): raw
+segments need literal addresses, and each iteration allocates its own
+`k`/`extended` pair. -/
+
+/-- The integer `==` apply step, PROGRAM- and STATE-generic (the
+result is the symbolic `Bool` the machine computes; the composition
+rewrites it). -/
+theorem r_eq_apply (σ : ExecState) (a b : Int) (env : LocalEnv) (k : Cont)
+    (ch : Choices) :
+    stepFnIter 1 σ
+      (.retV (.int b .uint64)
+        (.strictK (.eqCmp tU64) [.int a .uint64] [] env k)) ch
+      = .ok (.retV (.bool (a == b)) k, σ, ch) := by
+  with_unfolding_all rfl
+
+/-- Later-dispatch at the subject head (`$forFirst` false): `i++` →
+the `len(s)` apply point. 29 steps. Instance: after iteration 0. -/
+theorem r_A1_raw37 (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (capV capC : Nat) (v cnt iv : Int) (ch : Choices) :
+    stepFnIter 29
+      (qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false []) 37)
+      rHeadCfgQ ch
+      = .ok (.retV (qSliceS n)
+          (rLenSK (IntKind.normalize .int (IntKind.normalize .int (iv + 1)))),
+        qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt
+          (IntKind.normalize .int (IntKind.normalize .int (iv + 1)))
+          false []) 37, ch) := by
+  with_unfolding_all rfl
+
+/-- Same, after iteration 1 (`ke1` garbage, `nextAddr` 39). -/
+theorem r_A1_raw39 (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (capV capC : Nat) (v cnt iv : Int) (ch : Choices) :
+    stepFnIter 29
+      (qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false ke1) 39)
+      rHeadCfgQ ch
+      = .ok (.retV (qSliceS n)
+          (rLenSK (IntKind.normalize .int (IntKind.normalize .int (iv + 1)))),
+        qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt
+          (IntKind.normalize .int (IntKind.normalize .int (iv + 1)))
+          false ke1) 39, ch) := by
+  with_unfolding_all rfl
+
+/-- Same, after iteration 2 (`ke2`, `nextAddr` 41 — the `n = 3` exit
+dispatch). -/
+theorem r_A1_raw41 (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (capV capC : Nat) (v cnt iv : Int) (ch : Choices) :
+    stepFnIter 29
+      (qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false ke2) 41)
+      rHeadCfgQ ch
+      = .ok (.retV (qSliceS n)
+          (rLenSK (IntKind.normalize .int (IntKind.normalize .int (iv + 1)))),
+        qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt
+          (IntKind.normalize .int (IntKind.normalize .int (iv + 1)))
+          false ke2) 41, ch) := by
+  with_unfolding_all rfl
+
+/-- Extend, phase a: test true → the `k := len(runVals)` apply point.
+14 steps. -/
+theorem r_ext_a37 (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (capV capC : Nat) (v cnt iv : Int) (ch : Choices) :
+    stepFnIter 14
+      (qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false []) 37)
+      (.retV (.bool true) rCmpKQ) ch
+      = .ok (.retV (qRunSliceV 32 capV) (rKLenK 37),
+        qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false
+          [(.base ⟨37⟩, qint 0)]) 38, ch) := by
+  with_unfolding_all rfl
+
+theorem r_ext_a39 (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (capV capC : Nat) (v cnt iv : Int) (ch : Choices) :
+    stepFnIter 14
+      (qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false ke1) 39)
+      (.retV (.bool true) rCmpKQ) ch
+      = .ok (.retV (qRunSliceV 32 capV) (rKLenK 39),
+        qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false
+          (ke1 ++ [(.base ⟨39⟩, qint 0)])) 40, ch) := by
+  with_unfolding_all rfl
+
+/-- Extend, phase b: `k = 1` delivered → `extended := false`, the
+`k > 0` guard (true) → the `runVals[k-1]` read point. 37 steps. -/
+theorem r_ext_b37 (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (capV capC : Nat) (v cnt iv : Int) (ch : Choices) :
+    stepFnIter 37
+      (qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false
+        [(.base ⟨37⟩, qint 0)]) 38)
+      (.retV (.int 1 .int)
+        (.rhsK .vals [.chain (.addr (.base ⟨37⟩)) [] []] [] [] (.seqn #[])
+          (rKEnv 37) (rKTailK 37))) ch
+      = .ok (.retV (.int 0 .int) (rExtEqK 37 capV),
+        qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false
+          [(.base ⟨37⟩, qint 1), (.base ⟨38⟩, qbool false)]) 39, ch) := by
+  with_unfolding_all rfl
+
+theorem r_ext_b39 (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (capV capC : Nat) (v cnt iv : Int) (ch : Choices) :
+    stepFnIter 37
+      (qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false
+        (ke1 ++ [(.base ⟨39⟩, qint 0)])) 40)
+      (.retV (.int 1 .int)
+        (.rhsK .vals [.chain (.addr (.base ⟨39⟩)) [] []] [] [] (.seqn #[])
+          (rKEnv 39) (rKTailK 39))) ch
+      = .ok (.retV (.int 0 .int) (rExtEqK 39 capV),
+        qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false
+          (ke1 ++ [(.base ⟨39⟩, qint 1), (.base ⟨40⟩, qbool false)])) 41,
+        ch) := by
+  with_unfolding_all rfl
+
+/-- Extend, phase c: `runVals[0]` banked → the `s[i]` read point.
+5 steps. -/
+theorem r_ext_c37 (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (capV capC : Nat) (v cnt iv a : Int) (ch : Choices) :
+    stepFnIter 5
+      (qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false
+        [(.base ⟨37⟩, qint 1), (.base ⟨38⟩, qbool false)]) 39)
+      (.retV (.int a .uint64)
+        (.strictK (.eqCmp tU64) [] [.indexGet (.var "s") (.var "i")]
+          (rExtGuardEnv 37) (rExtIfK 37))) ch
+      = .ok (.retV (.int iv .int) (rExtEq2K n 37 a),
+        qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false
+          [(.base ⟨37⟩, qint 1), (.base ⟨38⟩, qbool false)]) 39, ch) := by
+  with_unfolding_all rfl
+
+theorem r_ext_c39 (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (capV capC : Nat) (v cnt iv a : Int) (ch : Choices) :
+    stepFnIter 5
+      (qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false
+        (ke1 ++ [(.base ⟨39⟩, qint 1), (.base ⟨40⟩, qbool false)])) 41)
+      (.retV (.int a .uint64)
+        (.strictK (.eqCmp tU64) [] [.indexGet (.var "s") (.var "i")]
+          (rExtGuardEnv 39) (rExtIfK 39))) ch
+      = .ok (.retV (.int iv .int) (rExtEq2K n 39 a),
+        qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false
+          (ke1 ++ [(.base ⟨39⟩, qint 1), (.base ⟨40⟩, qbool false)])) 41,
+        ch) := by
+  with_unfolding_all rfl
+
+/-- Extend, phase d: the pair matched → into the extend arm, to the
+`runCounts[k-1]` read point. 21 steps. -/
+theorem r_ext_d37 (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (capV capC : Nat) (v cnt iv : Int) (ch : Choices) :
+    stepFnIter 21
+      (qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false
+        [(.base ⟨37⟩, qint 1), (.base ⟨38⟩, qbool false)]) 39)
+      (.retV (.bool true) (rExtIfK 37)) ch
+      = .ok (.retV (.int 0 .int) (rExtCntReadK 37 capC),
+        qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false
+          [(.base ⟨37⟩, qint 1), (.base ⟨38⟩, qbool false)]) 39, ch) := by
+  with_unfolding_all rfl
+
+theorem r_ext_d39 (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (capV capC : Nat) (v cnt iv : Int) (ch : Choices) :
+    stepFnIter 21
+      (qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false
+        (ke1 ++ [(.base ⟨39⟩, qint 1), (.base ⟨40⟩, qbool false)])) 41)
+      (.retV (.bool true) (rExtIfK 39)) ch
+      = .ok (.retV (.int 0 .int) (rExtCntReadK 39 capC),
+        qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false
+          (ke1 ++ [(.base ⟨39⟩, qint 1), (.base ⟨40⟩, qbool false)])) 41,
+        ch) := by
+  with_unfolding_all rfl
+
+/-- Extend, phase e: `runCounts[0]` banked → `+ 1` → the pending
+element store. 4 steps. -/
+theorem r_ext_e37 (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (capV capC : Nat) (v cnt iv cv : Int) (ch : Choices) :
+    stepFnIter 4
+      (qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false
+        [(.base ⟨37⟩, qint 1), (.base ⟨38⟩, qbool false)]) 39)
+      (.retV (.int cv .uint64)
+        (.strictK .add [] [.intLit 1 .uint64] (rExtBEnv 37)
+          (rExtRhsK 37 capC))) ch
+      = .ok (.next (.storeK [rCntRef capC]
+            [.int (IntKind.normalize .uint64 (cv + 1)) .uint64]
+            (.seqn #[]) (rExtBEnv 37) (rExtStTail 37)),
+        qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false
+          [(.base ⟨37⟩, qint 1), (.base ⟨38⟩, qbool false)]) 39, ch) := by
+  with_unfolding_all rfl
+
+theorem r_ext_e39 (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (capV capC : Nat) (v cnt iv cv : Int) (ch : Choices) :
+    stepFnIter 4
+      (qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false
+        (ke1 ++ [(.base ⟨39⟩, qint 1), (.base ⟨40⟩, qbool false)])) 41)
+      (.retV (.int cv .uint64)
+        (.strictK .add [] [.intLit 1 .uint64] (rExtBEnv 39)
+          (rExtRhsK 39 capC))) ch
+      = .ok (.next (.storeK [rCntRef capC]
+            [.int (IntKind.normalize .uint64 (cv + 1)) .uint64]
+            (.seqn #[]) (rExtBEnv 39) (rExtStTail 39)),
+        qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false
+          (ke1 ++ [(.base ⟨39⟩, qint 1), (.base ⟨40⟩, qbool false)])) 41,
+        ch) := by
+  with_unfolding_all rfl
+
+/-- Extend, phase f: the store done → `extended := true`, `!extended`
+skips the new-run arm, pops → the loop head. 25 steps. -/
+theorem r_ext_f37 (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (capV capC : Nat) (v cnt iv : Int) (ch : Choices) :
+    stepFnIter 25
+      (qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false
+        [(.base ⟨37⟩, qint 1), (.base ⟨38⟩, qbool false)]) 39)
+      (.next (.storeK [] [] (.seqn #[]) (rExtBEnv 37) (rExtStTail 37))) ch
+      = .ok (rHeadCfgQ,
+        qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false
+          ke1) 39, ch) := by
+  with_unfolding_all rfl
+
+theorem r_ext_f39 (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+    (siv civ : Int) (capV capC : Nat) (v cnt iv : Int) (ch : Choices) :
+    stepFnIter 25
+      (qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false
+        (ke1 ++ [(.base ⟨39⟩, qint 1), (.base ⟨40⟩, qbool false)])) 41)
+      (.next (.storeK [] [] (.seqn #[]) (rExtBEnv 39) (rExtStTail 39))) ch
+      = .ok (rHeadCfgQ,
+        qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false
+          ke2) 41, ch) := by
+  with_unfolding_all rfl
+
+/-! ## The subject exit, the final copy loop and the epilogue
+
+Per-`n` literal instances: the four post-return cells live at
+`A = 37/39/41` for `n = 1/2/3` (and 27 for `n = 0`), because each
+extend iteration left two garbage cells behind. -/
+
+/-- Subject exit (`n = 3` layout): test false → break → the subject's
+epilogue (`$res0/$res1 :=` the run slices) → the frame return delivers
+them into `vals`/`counts` → `runVals`/`runCounts` arrays and the final
+copy counter/flag declared → the final-copy head. 75 steps. -/
+theorem r_exit_raw41 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (ch : Choices) :
+    stepFnIter 75
+      (qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false ke2) 41)
+      (.retV (.bool false) rCmpKQ) ch
+      = .ok (fcHeadCfg 41,
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke2
+          zeros8 zeros8 0 true 41) 45, ch) := by
+  with_unfolding_all rfl
+
+/-- Final-copy head, first dispatch → the `len(vals)` apply point.
+25 steps. -/
+theorem fc_A0_raw41 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (ch : Choices) :
+    stepFnIter 25
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke2
+        rv rc 0 true 41) 45) (fcHeadCfg 41) ch
+      = .ok (.retV (qRunSliceV 32 capV) (fcLenSK 41 0),
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke2
+          rv rc 0 false 41) 45, ch) := by
+  with_unfolding_all rfl
+
+/-- Final-copy head, later dispatch (`i++`) → the `len(vals)` apply
+point. 29 steps. -/
+theorem fc_A1_raw41 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 29
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke2
+        rv rc fiv false 41) 45) (fcHeadCfg 41) ch
+      = .ok (.retV (qRunSliceV 32 capV)
+          (fcLenSK 41
+            (IntKind.normalize .int (IntKind.normalize .int (fiv + 1)))),
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke2
+          rv rc (IntKind.normalize .int (IntKind.normalize .int (fiv + 1)))
+          false 41) 45, ch) := by
+  with_unfolding_all rfl
+
+/-- Final-copy body: test true → the `vals[i]` read point. 16 steps. -/
+theorem fc_b_raw41 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 16
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke2
+        rv rc fiv false 41) 45)
+      (.retV (.bool true) (fcCmpK 41)) ch
+      = .ok (.retV (.int fiv .int) (fcVReadK 41 capV fiv),
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke2
+          rv rc fiv false 41) 45, ch) := by
+  with_unfolding_all rfl
+
+/-- `vals[i]` delivered → the pending `runVals[i]` store. 1 step. -/
+theorem fc_c_raw41 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (w : GoValue) (ch : Choices) :
+    stepFnIter 1
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke2
+        rv rc fiv false 41) 45)
+      (.retV w (fcVRhsK 41 fiv)) ch
+      = .ok (.next (.storeK [fcVRef 41 fiv] [w] (.seqn #[]) (fcEnvB2 41)
+            (fcStTail1 41)),
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke2
+          rv rc fiv false 41) 45, ch) := by
+  with_unfolding_all rfl
+
+/-- The first store done → the `counts[i]` read point. 14 steps. -/
+theorem fc_d_raw41 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 14
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke2
+        rv rc fiv false 41) 45)
+      (.next (.storeK [] [] (.seqn #[]) (fcEnvB2 41) (fcStTail1 41))) ch
+      = .ok (.retV (.int fiv .int) (fcCReadK 41 capC fiv),
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke2
+          rv rc fiv false 41) 45, ch) := by
+  with_unfolding_all rfl
+
+/-- `counts[i]` delivered → the pending `runCounts[i]` store. 1 step. -/
+theorem fc_e_raw41 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (w : GoValue) (ch : Choices) :
+    stepFnIter 1
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke2
+        rv rc fiv false 41) 45)
+      (.retV w (fcCRhsK 41 fiv)) ch
+      = .ok (.next (.storeK [fcCRef 41 fiv] [w] (.seqn #[]) (fcEnvB2 41)
+            (fcStTail2 41)),
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke2
+          rv rc fiv false 41) 45, ch) := by
+  with_unfolding_all rfl
+
+/-- The second store done → the loop head. 5 steps. -/
+theorem fc_f_raw41 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 5
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke2
+        rv rc fiv false 41) 45)
+      (.next (.storeK [] [] (.seqn #[]) (fcEnvB2 41) (fcStTail2 41))) ch
+      = .ok (fcHeadCfg 41,
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke2
+          rv rc fiv false 41) 45, ch) := by
+  with_unfolding_all rfl
+
+/-- Final-copy exit: test false → break → the harness epilogue up to
+the pending `$res0 = pre` store. 14 steps. -/
+theorem ep_a_raw41 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 14
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke2
+        rv rc fiv false 41) 45)
+      (.retV (.bool false) (fcCmpK 41)) ch
+      = .ok (.next (.storeK [qRes0Ref]
+            [.array ⟨lp.map (fun x => .int x .uint64)⟩] (.seqn #[])
+            (fcTopEnv 41) (epK 41 [epA1, epA2, epA3, .returnStmt])),
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke2
+          rv rc fiv false 41) 45, ch) := by
+  with_unfolding_all rfl
+
+/-- `$res0` stored → the pending `$res1 = runVals` store. 8 steps. -/
+theorem ep_b_raw41 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 8
+      (qSt σ (qHeapEp nv sv n l lp siv civ capV capC v cnt 0 iv ke2
+        rv rc fiv 41 lp zeros8 zeros8) 45)
+      (.next (.storeK [] [] (.seqn #[]) (fcTopEnv 41)
+        (epK 41 [epA1, epA2, epA3, .returnStmt]))) ch
+      = .ok (.next (.storeK [qRes1Ref]
+            [.array ⟨rv.map (fun x => .int x .uint64)⟩] (.seqn #[])
+            (fcTopEnv 41) (epK 41 [epA2, epA3, .returnStmt])),
+        qSt σ (qHeapEp nv sv n l lp siv civ capV capC v cnt 0 iv ke2
+          rv rc fiv 41 lp zeros8 zeros8) 45, ch) := by
+  with_unfolding_all rfl
+
+/-- `$res1` stored → the pending `$res2 = runCounts` store. 8 steps. -/
+theorem ep_c_raw41 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 8
+      (qSt σ (qHeapEp nv sv n l lp siv civ capV capC v cnt 0 iv ke2
+        rv rc fiv 41 lp rv zeros8) 45)
+      (.next (.storeK [] [] (.seqn #[]) (fcTopEnv 41)
+        (epK 41 [epA2, epA3, .returnStmt]))) ch
+      = .ok (.next (.storeK [qRes2Ref]
+            [.array ⟨rc.map (fun x => .int x .uint64)⟩] (.seqn #[])
+            (fcTopEnv 41) (epK 41 [epA3, .returnStmt])),
+        qSt σ (qHeapEp nv sv n l lp siv civ capV capC v cnt 0 iv ke2
+          rv rc fiv 41 lp rv zeros8) 45, ch) := by
+  with_unfolding_all rfl
+
+/-- `$res2` stored → the `len(vals)` apply point inside
+`$res3 = uint64(len(vals))`. 9 steps. -/
+theorem ep_d_raw41 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 9
+      (qSt σ (qHeapEp nv sv n l lp siv civ capV capC v cnt 0 iv ke2
+        rv rc fiv 41 lp rv rc) 45)
+      (.next (.storeK [] [] (.seqn #[]) (fcTopEnv 41)
+        (epK 41 [epA3, .returnStmt]))) ch
+      = .ok (.retV (qRunSliceV 32 capV)
+          (.strictK (.lengthOf (some (.slice tU64))) [] [] (fcTopEnv 41)
+            (.strictK (.convert tU64) [] [] (fcTopEnv 41)
+              (.rhsK .vals [.chain (.addr (.base ⟨5⟩)) [] []] [] []
+                (.seqn #[]) (fcTopEnv 41) (epK 41 [.returnStmt])))),
+        qSt σ (qHeapEp nv sv n l lp siv civ capV capC v cnt 0 iv ke2
+          rv rc fiv 41 lp rv rc) 45, ch) := by
+  with_unfolding_all rfl
+
+/-- The length delivered → convert, the `$res3` store (a concrete
+scalar — raw), return, the frame pops → the DRIVER TERMINAL. 9 steps. -/
+theorem ep_e_raw41 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 9
+      (qSt σ (qHeapEp nv sv n l lp siv civ capV capC v cnt 0 iv ke2
+        rv rc fiv 41 lp rv rc) 45)
+      (.retV (.int 1 .int)
+        (.strictK (.convert tU64) [] [] (fcTopEnv 41)
+          (.rhsK .vals [.chain (.addr (.base ⟨5⟩)) [] []] [] []
+            (.seqn #[]) (fcTopEnv 41) (epK 41 [.returnStmt])))) ch
+      = .ok (.next .stop,
+        qSt σ (qHeapEnd1 nv sv n l lp siv civ capV capC v cnt 1 iv ke2
+          rv rc fiv 41) 45, ch) := by
+  with_unfolding_all rfl
+
+/-- Subject exit (layout for A = 39): test false → break → the subject's
+epilogue (`$res0/$res1 :=` the run slices) → the frame return delivers
+them into `vals`/`counts` → `runVals`/`runCounts` arrays and the final
+copy counter/flag declared → the final-copy head. 75 steps. -/
+theorem r_exit_raw39 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (ch : Choices) :
+    stepFnIter 75
+      (qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false ke2) 39)
+      (.retV (.bool false) rCmpKQ) ch
+      = .ok (fcHeadCfg 39,
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke1
+          zeros8 zeros8 0 true 39) 43, ch) := by
+  with_unfolding_all rfl
+
+/-- Final-copy head, first dispatch → the `len(vals)` apply point.
+25 steps. -/
+theorem fc_A0_raw39 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (ch : Choices) :
+    stepFnIter 25
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke1
+        rv rc 0 true 39) 43) (fcHeadCfg 39) ch
+      = .ok (.retV (qRunSliceV 32 capV) (fcLenSK 39 0),
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke1
+          rv rc 0 false 39) 43, ch) := by
+  with_unfolding_all rfl
+
+/-- Final-copy head, later dispatch (`i++`) → the `len(vals)` apply
+point. 29 steps. -/
+theorem fc_A1_raw39 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 29
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke1
+        rv rc fiv false 39) 43) (fcHeadCfg 39) ch
+      = .ok (.retV (qRunSliceV 32 capV)
+          (fcLenSK 39
+            (IntKind.normalize .int (IntKind.normalize .int (fiv + 1)))),
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke1
+          rv rc (IntKind.normalize .int (IntKind.normalize .int (fiv + 1)))
+          false 39) 43, ch) := by
+  with_unfolding_all rfl
+
+/-- Final-copy body: test true → the `vals[i]` read point. 16 steps. -/
+theorem fc_b_raw39 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 16
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke1
+        rv rc fiv false 39) 43)
+      (.retV (.bool true) (fcCmpK 39)) ch
+      = .ok (.retV (.int fiv .int) (fcVReadK 39 capV fiv),
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke1
+          rv rc fiv false 39) 43, ch) := by
+  with_unfolding_all rfl
+
+/-- `vals[i]` delivered → the pending `runVals[i]` store. 1 step. -/
+theorem fc_c_raw39 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (w : GoValue) (ch : Choices) :
+    stepFnIter 1
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke1
+        rv rc fiv false 39) 43)
+      (.retV w (fcVRhsK 39 fiv)) ch
+      = .ok (.next (.storeK [fcVRef 39 fiv] [w] (.seqn #[]) (fcEnvB2 39)
+            (fcStTail1 39)),
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke1
+          rv rc fiv false 39) 43, ch) := by
+  with_unfolding_all rfl
+
+/-- The first store done → the `counts[i]` read point. 14 steps. -/
+theorem fc_d_raw39 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 14
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke1
+        rv rc fiv false 39) 43)
+      (.next (.storeK [] [] (.seqn #[]) (fcEnvB2 39) (fcStTail1 39))) ch
+      = .ok (.retV (.int fiv .int) (fcCReadK 39 capC fiv),
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke1
+          rv rc fiv false 39) 43, ch) := by
+  with_unfolding_all rfl
+
+/-- `counts[i]` delivered → the pending `runCounts[i]` store. 1 step. -/
+theorem fc_e_raw39 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (w : GoValue) (ch : Choices) :
+    stepFnIter 1
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke1
+        rv rc fiv false 39) 43)
+      (.retV w (fcCRhsK 39 fiv)) ch
+      = .ok (.next (.storeK [fcCRef 39 fiv] [w] (.seqn #[]) (fcEnvB2 39)
+            (fcStTail2 39)),
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke1
+          rv rc fiv false 39) 43, ch) := by
+  with_unfolding_all rfl
+
+/-- The second store done → the loop head. 5 steps. -/
+theorem fc_f_raw39 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 5
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke1
+        rv rc fiv false 39) 43)
+      (.next (.storeK [] [] (.seqn #[]) (fcEnvB2 39) (fcStTail2 39))) ch
+      = .ok (fcHeadCfg 39,
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke1
+          rv rc fiv false 39) 43, ch) := by
+  with_unfolding_all rfl
+
+/-- Final-copy exit: test false → break → the harness epilogue up to
+the pending `$res0 = pre` store. 14 steps. -/
+theorem ep_a_raw39 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 14
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke1
+        rv rc fiv false 39) 43)
+      (.retV (.bool false) (fcCmpK 39)) ch
+      = .ok (.next (.storeK [qRes0Ref]
+            [.array ⟨lp.map (fun x => .int x .uint64)⟩] (.seqn #[])
+            (fcTopEnv 39) (epK 39 [epA1, epA2, epA3, .returnStmt])),
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ke1
+          rv rc fiv false 39) 43, ch) := by
+  with_unfolding_all rfl
+
+/-- `$res0` stored → the pending `$res1 = runVals` store. 8 steps. -/
+theorem ep_b_raw39 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 8
+      (qSt σ (qHeapEp nv sv n l lp siv civ capV capC v cnt 0 iv ke1
+        rv rc fiv 39 lp zeros8 zeros8) 43)
+      (.next (.storeK [] [] (.seqn #[]) (fcTopEnv 39)
+        (epK 39 [epA1, epA2, epA3, .returnStmt]))) ch
+      = .ok (.next (.storeK [qRes1Ref]
+            [.array ⟨rv.map (fun x => .int x .uint64)⟩] (.seqn #[])
+            (fcTopEnv 39) (epK 39 [epA2, epA3, .returnStmt])),
+        qSt σ (qHeapEp nv sv n l lp siv civ capV capC v cnt 0 iv ke1
+          rv rc fiv 39 lp zeros8 zeros8) 43, ch) := by
+  with_unfolding_all rfl
+
+/-- `$res1` stored → the pending `$res2 = runCounts` store. 8 steps. -/
+theorem ep_c_raw39 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 8
+      (qSt σ (qHeapEp nv sv n l lp siv civ capV capC v cnt 0 iv ke1
+        rv rc fiv 39 lp rv zeros8) 43)
+      (.next (.storeK [] [] (.seqn #[]) (fcTopEnv 39)
+        (epK 39 [epA2, epA3, .returnStmt]))) ch
+      = .ok (.next (.storeK [qRes2Ref]
+            [.array ⟨rc.map (fun x => .int x .uint64)⟩] (.seqn #[])
+            (fcTopEnv 39) (epK 39 [epA3, .returnStmt])),
+        qSt σ (qHeapEp nv sv n l lp siv civ capV capC v cnt 0 iv ke1
+          rv rc fiv 39 lp rv zeros8) 43, ch) := by
+  with_unfolding_all rfl
+
+/-- `$res2` stored → the `len(vals)` apply point inside
+`$res3 = uint64(len(vals))`. 9 steps. -/
+theorem ep_d_raw39 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 9
+      (qSt σ (qHeapEp nv sv n l lp siv civ capV capC v cnt 0 iv ke1
+        rv rc fiv 39 lp rv rc) 43)
+      (.next (.storeK [] [] (.seqn #[]) (fcTopEnv 39)
+        (epK 39 [epA3, .returnStmt]))) ch
+      = .ok (.retV (qRunSliceV 32 capV)
+          (.strictK (.lengthOf (some (.slice tU64))) [] [] (fcTopEnv 39)
+            (.strictK (.convert tU64) [] [] (fcTopEnv 39)
+              (.rhsK .vals [.chain (.addr (.base ⟨5⟩)) [] []] [] []
+                (.seqn #[]) (fcTopEnv 39) (epK 39 [.returnStmt])))),
+        qSt σ (qHeapEp nv sv n l lp siv civ capV capC v cnt 0 iv ke1
+          rv rc fiv 39 lp rv rc) 43, ch) := by
+  with_unfolding_all rfl
+
+/-- The length delivered → convert, the `$res3` store (a concrete
+scalar — raw), return, the frame pops → the DRIVER TERMINAL. 9 steps. -/
+theorem ep_e_raw39 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 9
+      (qSt σ (qHeapEp nv sv n l lp siv civ capV capC v cnt 0 iv ke1
+        rv rc fiv 39 lp rv rc) 43)
+      (.retV (.int 1 .int)
+        (.strictK (.convert tU64) [] [] (fcTopEnv 39)
+          (.rhsK .vals [.chain (.addr (.base ⟨5⟩)) [] []] [] []
+            (.seqn #[]) (fcTopEnv 39) (epK 39 [.returnStmt])))) ch
+      = .ok (.next .stop,
+        qSt σ (qHeapEnd1 nv sv n l lp siv civ capV capC v cnt 1 iv ke1
+          rv rc fiv 39) 43, ch) := by
+  with_unfolding_all rfl
+
+/-- Subject exit (layout for A = 37): test false → break → the subject's
+epilogue (`$res0/$res1 :=` the run slices) → the frame return delivers
+them into `vals`/`counts` → `runVals`/`runCounts` arrays and the final
+copy counter/flag declared → the final-copy head. 75 steps. -/
+theorem r_exit_raw37 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (ch : Choices) :
+    stepFnIter 75
+      (qSt σ (qHeapRun nv sv n l lp siv civ capV capC v cnt iv false ke2) 37)
+      (.retV (.bool false) rCmpKQ) ch
+      = .ok (fcHeadCfg 37,
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ([] : Heap)
+          zeros8 zeros8 0 true 37) 41, ch) := by
+  with_unfolding_all rfl
+
+/-- Final-copy head, first dispatch → the `len(vals)` apply point.
+25 steps. -/
+theorem fc_A0_raw37 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (ch : Choices) :
+    stepFnIter 25
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ([] : Heap)
+        rv rc 0 true 37) 41) (fcHeadCfg 37) ch
+      = .ok (.retV (qRunSliceV 32 capV) (fcLenSK 37 0),
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ([] : Heap)
+          rv rc 0 false 37) 41, ch) := by
+  with_unfolding_all rfl
+
+/-- Final-copy head, later dispatch (`i++`) → the `len(vals)` apply
+point. 29 steps. -/
+theorem fc_A1_raw37 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 29
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ([] : Heap)
+        rv rc fiv false 37) 41) (fcHeadCfg 37) ch
+      = .ok (.retV (qRunSliceV 32 capV)
+          (fcLenSK 37
+            (IntKind.normalize .int (IntKind.normalize .int (fiv + 1)))),
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ([] : Heap)
+          rv rc (IntKind.normalize .int (IntKind.normalize .int (fiv + 1)))
+          false 37) 41, ch) := by
+  with_unfolding_all rfl
+
+/-- Final-copy body: test true → the `vals[i]` read point. 16 steps. -/
+theorem fc_b_raw37 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 16
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ([] : Heap)
+        rv rc fiv false 37) 41)
+      (.retV (.bool true) (fcCmpK 37)) ch
+      = .ok (.retV (.int fiv .int) (fcVReadK 37 capV fiv),
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ([] : Heap)
+          rv rc fiv false 37) 41, ch) := by
+  with_unfolding_all rfl
+
+/-- `vals[i]` delivered → the pending `runVals[i]` store. 1 step. -/
+theorem fc_c_raw37 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (w : GoValue) (ch : Choices) :
+    stepFnIter 1
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ([] : Heap)
+        rv rc fiv false 37) 41)
+      (.retV w (fcVRhsK 37 fiv)) ch
+      = .ok (.next (.storeK [fcVRef 37 fiv] [w] (.seqn #[]) (fcEnvB2 37)
+            (fcStTail1 37)),
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ([] : Heap)
+          rv rc fiv false 37) 41, ch) := by
+  with_unfolding_all rfl
+
+/-- The first store done → the `counts[i]` read point. 14 steps. -/
+theorem fc_d_raw37 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 14
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ([] : Heap)
+        rv rc fiv false 37) 41)
+      (.next (.storeK [] [] (.seqn #[]) (fcEnvB2 37) (fcStTail1 37))) ch
+      = .ok (.retV (.int fiv .int) (fcCReadK 37 capC fiv),
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ([] : Heap)
+          rv rc fiv false 37) 41, ch) := by
+  with_unfolding_all rfl
+
+/-- `counts[i]` delivered → the pending `runCounts[i]` store. 1 step. -/
+theorem fc_e_raw37 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (w : GoValue) (ch : Choices) :
+    stepFnIter 1
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ([] : Heap)
+        rv rc fiv false 37) 41)
+      (.retV w (fcCRhsK 37 fiv)) ch
+      = .ok (.next (.storeK [fcCRef 37 fiv] [w] (.seqn #[]) (fcEnvB2 37)
+            (fcStTail2 37)),
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ([] : Heap)
+          rv rc fiv false 37) 41, ch) := by
+  with_unfolding_all rfl
+
+/-- The second store done → the loop head. 5 steps. -/
+theorem fc_f_raw37 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 5
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ([] : Heap)
+        rv rc fiv false 37) 41)
+      (.next (.storeK [] [] (.seqn #[]) (fcEnvB2 37) (fcStTail2 37))) ch
+      = .ok (fcHeadCfg 37,
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ([] : Heap)
+          rv rc fiv false 37) 41, ch) := by
+  with_unfolding_all rfl
+
+/-- Final-copy exit: test false → break → the harness epilogue up to
+the pending `$res0 = pre` store. 14 steps. -/
+theorem ep_a_raw37 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 14
+      (qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ([] : Heap)
+        rv rc fiv false 37) 41)
+      (.retV (.bool false) (fcCmpK 37)) ch
+      = .ok (.next (.storeK [qRes0Ref]
+            [.array ⟨lp.map (fun x => .int x .uint64)⟩] (.seqn #[])
+            (fcTopEnv 37) (epK 37 [epA1, epA2, epA3, .returnStmt])),
+        qSt σ (qHeapFC nv sv n l lp siv civ capV capC v cnt iv ([] : Heap)
+          rv rc fiv false 37) 41, ch) := by
+  with_unfolding_all rfl
+
+/-- `$res0` stored → the pending `$res1 = runVals` store. 8 steps. -/
+theorem ep_b_raw37 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 8
+      (qSt σ (qHeapEp nv sv n l lp siv civ capV capC v cnt 0 iv ([] : Heap)
+        rv rc fiv 37 lp zeros8 zeros8) 41)
+      (.next (.storeK [] [] (.seqn #[]) (fcTopEnv 37)
+        (epK 37 [epA1, epA2, epA3, .returnStmt]))) ch
+      = .ok (.next (.storeK [qRes1Ref]
+            [.array ⟨rv.map (fun x => .int x .uint64)⟩] (.seqn #[])
+            (fcTopEnv 37) (epK 37 [epA2, epA3, .returnStmt])),
+        qSt σ (qHeapEp nv sv n l lp siv civ capV capC v cnt 0 iv ([] : Heap)
+          rv rc fiv 37 lp zeros8 zeros8) 41, ch) := by
+  with_unfolding_all rfl
+
+/-- `$res1` stored → the pending `$res2 = runCounts` store. 8 steps. -/
+theorem ep_c_raw37 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 8
+      (qSt σ (qHeapEp nv sv n l lp siv civ capV capC v cnt 0 iv ([] : Heap)
+        rv rc fiv 37 lp rv zeros8) 41)
+      (.next (.storeK [] [] (.seqn #[]) (fcTopEnv 37)
+        (epK 37 [epA2, epA3, .returnStmt]))) ch
+      = .ok (.next (.storeK [qRes2Ref]
+            [.array ⟨rc.map (fun x => .int x .uint64)⟩] (.seqn #[])
+            (fcTopEnv 37) (epK 37 [epA3, .returnStmt])),
+        qSt σ (qHeapEp nv sv n l lp siv civ capV capC v cnt 0 iv ([] : Heap)
+          rv rc fiv 37 lp rv zeros8) 41, ch) := by
+  with_unfolding_all rfl
+
+/-- `$res2` stored → the `len(vals)` apply point inside
+`$res3 = uint64(len(vals))`. 9 steps. -/
+theorem ep_d_raw37 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 9
+      (qSt σ (qHeapEp nv sv n l lp siv civ capV capC v cnt 0 iv ([] : Heap)
+        rv rc fiv 37 lp rv rc) 41)
+      (.next (.storeK [] [] (.seqn #[]) (fcTopEnv 37)
+        (epK 37 [epA3, .returnStmt]))) ch
+      = .ok (.retV (qRunSliceV 32 capV)
+          (.strictK (.lengthOf (some (.slice tU64))) [] [] (fcTopEnv 37)
+            (.strictK (.convert tU64) [] [] (fcTopEnv 37)
+              (.rhsK .vals [.chain (.addr (.base ⟨5⟩)) [] []] [] []
+                (.seqn #[]) (fcTopEnv 37) (epK 37 [.returnStmt])))),
+        qSt σ (qHeapEp nv sv n l lp siv civ capV capC v cnt 0 iv ([] : Heap)
+          rv rc fiv 37 lp rv rc) 41, ch) := by
+  with_unfolding_all rfl
+
+/-- The length delivered → convert, the `$res3` store (a concrete
+scalar — raw), return, the frame pops → the DRIVER TERMINAL. 9 steps. -/
+theorem ep_e_raw37 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (capV capC : Nat) (v cnt iv : Int)
+    (rv rc : List Int) (fiv : Int) (ch : Choices) :
+    stepFnIter 9
+      (qSt σ (qHeapEp nv sv n l lp siv civ capV capC v cnt 0 iv ([] : Heap)
+        rv rc fiv 37 lp rv rc) 41)
+      (.retV (.int 1 .int)
+        (.strictK (.convert tU64) [] [] (fcTopEnv 37)
+          (.rhsK .vals [.chain (.addr (.base ⟨5⟩)) [] []] [] []
+            (.seqn #[]) (fcTopEnv 37) (epK 37 [.returnStmt])))) ch
+      = .ok (.next .stop,
+        qSt σ (qHeapEnd1 nv sv n l lp siv civ capV capC v cnt 1 iv ([] : Heap)
+          rv rc fiv 37) 41, ch) := by
+  with_unfolding_all rfl
+
+/-! ## The `n = 0` path: no run event ever fires -/
+
+/-- `n = 0` subject exit: test false at the FIRST dispatch → the
+subject epilogue delivers the two EMPTY slices → the final-copy head.
+75 steps. -/
+theorem r_exit_raw0 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (ch : Choices) :
+    stepFnIter 75 (qSt σ (qHeapRle0 nv sv n l lp siv civ 0 false) 27)
+      (.retV (.bool false) rCmpKQ) ch
+      = .ok (fcHeadCfg 27,
+        qSt σ (qHeapPost0 nv sv n l lp siv civ 0 true) 31, ch) := by
+  with_unfolding_all rfl
+
+/-- `n = 0` final-copy head: first dispatch, `len(vals) = 0` (a
+CONCRETE empty slice — the length reduces definitionally), test false.
+27 steps. -/
+theorem fc_A0_raw0 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (ch : Choices) :
+    stepFnIter 27 (qSt σ (qHeapPost0 nv sv n l lp siv civ 0 true) 31)
+      (fcHeadCfg 27) ch
+      = .ok (.retV (.bool false) (fcCmpK 27),
+        qSt σ (qHeapPost0 nv sv n l lp siv civ 0 false) 31, ch) := by
+  with_unfolding_all rfl
+
+/-- `n = 0` final-copy exit → the pending `$res0 = pre` store.
+14 steps. -/
+theorem ep_a_raw0 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (ch : Choices) :
+    stepFnIter 14 (qSt σ (qHeapPost0 nv sv n l lp siv civ 0 false) 31)
+      (.retV (.bool false) (fcCmpK 27)) ch
+      = .ok (.next (.storeK [qRes0Ref]
+            [.array ⟨lp.map (fun x => .int x .uint64)⟩] (.seqn #[])
+            (fcTopEnv 27) (epK 27 [epA1, epA2, epA3, .returnStmt])),
+        qSt σ (qHeapPost0 nv sv n l lp siv civ 0 false) 31, ch) := by
+  with_unfolding_all rfl
+
+/-- `n = 0` epilogue tail: `$res1`/`$res2` (both the CONCRETE zero
+array), `$res3 = 0`, return → the DRIVER TERMINAL. 37 steps. -/
+theorem ep_z_raw0 (σ : ExecState) (nv sv : Int) (n : Nat)
+    (l lp : List Int) (siv civ : Int) (ch : Choices) :
+    stepFnIter 37
+      (qSt σ (qHeapEnd0 nv sv n l lp siv civ 0) 31)
+      (.next (.storeK [] [] (.seqn #[]) (fcTopEnv 27)
+        (epK 27 [epA1, epA2, epA3, .returnStmt]))) ch
+      = .ok (.next .stop,
+        qSt σ (qHeapEnd0 nv sv n l lp siv civ 0) 31, ch) := by
+  with_unfolding_all rfl
+
 end GoLean.Examples.RunLength
