@@ -1,0 +1,242 @@
+// Stdlib selector-call shims — extension E5 (gallery campaign G2,
+// 2026-08-15; fidelity argument: docs/gallery-campaign-log/g2.md,
+// "E5 — THE FIDELITY ARGUMENT").
+//
+// The machine has no standard library and must not grow one: a stdlib
+// function modeled as a GoCore node would put LIBRARY behaviour inside
+// the semantic core, where only Go LANGUAGE semantics belongs. An E5
+// shim is frontend-maintained lowering code in the quarantine zone: a
+// Go-SOURCE function, written in the already-modeled subset, injected
+// into the user's package as a synthetic file before type-check
+// whenever an allowlisted call shape (`strings.Fields(x)`) occurs;
+// exactly those call sites are then emitted as ordinary static calls
+// to the injected function (emit.go, emitStdlibShimCall). The shim
+// lowers through the SAME pipeline as user code, so a consumer's
+// golden pin records its lowered body verbatim.
+//
+// THE VALIDATION STORY: `go run` executes the REAL stdlib; the machine
+// executes the shim. Every differential corpus row whose control flow
+// crosses a shimmed call is therefore a direct oracle test of shim
+// fidelity — the corpus is the shim's conformance suite
+// (`strings/fields-conformance/*` is the dedicated slice, tag
+// `stdlib`).
+//
+// FAIL-CLOSED RULES:
+//   - The allowlist below is the whole scope. Every other selector
+//     call keeps the standing per-declaration quarantine verbatim
+//     ("selector call <Fn> is not a method value"). Widening the list
+//     owes new guardrail corpus rows and a fidelity argument FIRST.
+//   - Only the direct CALL shape `pkg.Fn(args)` is admitted. The
+//     function VALUE (`f := strings.Fields`), dot imports, and every
+//     other reference shape keep their existing refusals.
+//   - Shim declaration names are reserved: a user package-level
+//     declaration of the same name refuses the export loudly at
+//     injection (never a silent merge or override).
+package main
+
+import (
+	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"sort"
+)
+
+// stringsFieldsShimName is the reserved declaration name of the
+// strings.Fields shim ($-mangling is not available here: the injected
+// file must parse as Go source, so the name is spellable and therefore
+// collision-checked at injection instead).
+const stringsFieldsShimName = "goleanShimStringsFields"
+
+// stdlibShimAllowlist: package import path -> selector name -> shim
+// declaration name. ONE entry (E5's whole scope).
+var stdlibShimAllowlist = map[string]map[string]string{
+	"strings": {"Fields": stringsFieldsShimName},
+}
+
+// stdlibShimSources: shim declaration name -> Go source of the
+// injected declaration. Each shim body must stay inside the modeled
+// subset (it lowers through the ordinary pipeline) and must be
+// semantically equal to the stdlib function it stands for — the
+// fidelity argument for THIS body, including the 600k-trial
+// shim-vs-stdlib fuzz and the byte-scan-equals-rune-scan argument, is
+// the g2.md E5 section; the conformance rows pin it differentially
+// forever after.
+var stdlibShimSources = map[string]string{
+	// strings.Fields: "splits the string s around each instance of one
+	// or more consecutive white space characters, as defined by
+	// unicode.IsSpace, returning a slice of the substrings of s or an
+	// empty slice if s contains only white space."
+	//
+	// The body is a BYTE scan over the FULL White_Space class —
+	// unicode.IsSpace is a small closed set whose UTF-8 encodings are
+	// finitely enumerable, so no rune decoding is needed:
+	//   1 byte : 09 0A 0B 0C 0D 20
+	//   2 bytes: C2 85 (U+0085 NEL), C2 A0 (U+00A0 NBSP)
+	//   3 bytes: E1 9A 80 (U+1680); E2 80 80..8A (U+2000-200A);
+	//            E2 80 A8, E2 80 A9 (U+2028/2029); E2 80 AF (U+202F);
+	//            E2 81 9F (U+205F); E3 80 80 (U+3000)
+	// No pattern starts with a UTF-8 continuation byte, so a pattern
+	// can never fire from inside a preceding valid rune; on invalid
+	// UTF-8 both sides treat undecodable bytes as field content
+	// (RuneError is not white space). The separator-width computation
+	// is INLINED (no helper function) so consumers' machine runs carry
+	// no extra call frames.
+	stringsFieldsShimName: `
+// goleanShimStringsFields is the native frontend's strings.Fields shim
+// (extension E5). Injected declaration — not user code. See
+// tools/nativefrontend/stdlibshim.go for the contract and
+// docs/gallery-campaign-log/g2.md for the fidelity argument.
+func goleanShimStringsFields(s string) []string {
+	out := []string{}
+	i := 0
+	start := 0
+	inField := false
+	for i < len(s) {
+		w := 0
+		c := s[i]
+		if c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r' {
+			w = 1
+		} else if c == 0xC2 && i+1 < len(s) && (s[i+1] == 0x85 || s[i+1] == 0xA0) {
+			w = 2
+		} else if i+2 < len(s) {
+			c1 := s[i+1]
+			c2 := s[i+2]
+			if (c == 0xE1 && c1 == 0x9A && c2 == 0x80) ||
+				(c == 0xE2 && c1 == 0x80 && ((c2 >= 0x80 && c2 <= 0x8A) || c2 == 0xA8 || c2 == 0xA9 || c2 == 0xAF)) ||
+				(c == 0xE2 && c1 == 0x81 && c2 == 0x9F) ||
+				(c == 0xE3 && c1 == 0x80 && c2 == 0x80) {
+				w = 3
+			}
+		}
+		if w > 0 {
+			if inField {
+				out = append(out, s[start:i])
+				inField = false
+			}
+			i += w
+		} else {
+			if !inField {
+				start = i
+				inField = true
+			}
+			i++
+		}
+	}
+	if inField {
+		out = append(out, s[start:])
+	}
+	return out
+}
+`,
+}
+
+// injectStdlibShims scans the parsed (pre-type-check) files for
+// allowlisted stdlib selector calls and, when any is present, returns
+// a synthetic file declaring the needed shims. The scan is SYNTACTIC
+// (per-file import local names, then `local.Fn(...)` call shapes): a
+// false positive merely injects a function the emitter never targets
+// (dead on the wire, harmless); a false negative is impossible for the
+// admitted shape because a qualified selector call must spell the
+// import's local name in the same file — and the emitter's type-based
+// hook fails closed if the shim it needs is ever absent.
+func injectStdlibShims(fset *token.FileSet, files []*ast.File) (*ast.File, error) {
+	needed := map[string]bool{}
+	for _, f := range files {
+		local := map[string]map[string]string{}
+		for _, imp := range f.Imports {
+			path := importPathOf(imp)
+			fns, ok := stdlibShimAllowlist[path]
+			if !ok {
+				continue
+			}
+			name := path
+			if imp.Name != nil {
+				name = imp.Name.Name
+			}
+			// Dot and blank imports never produce the qualified
+			// selector shape; they keep their existing behavior.
+			if name == "." || name == "_" {
+				continue
+			}
+			local[name] = fns
+		}
+		if len(local) == 0 {
+			continue
+		}
+		ast.Inspect(f, func(n ast.Node) bool {
+			call, ok := n.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+			sel, ok := call.Fun.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
+			x, ok := sel.X.(*ast.Ident)
+			if !ok {
+				return true
+			}
+			fns, ok := local[x.Name]
+			if !ok {
+				return true
+			}
+			if shim, ok := fns[sel.Sel.Name]; ok {
+				needed[shim] = true
+			}
+			return true
+		})
+	}
+	if len(needed) == 0 {
+		return nil, nil
+	}
+	// Reserved-name collision check: fail closed, loudly, BEFORE the
+	// type-checker reports a bare redeclaration.
+	for _, f := range files {
+		for _, decl := range f.Decls {
+			switch d := decl.(type) {
+			case *ast.FuncDecl:
+				if d.Recv == nil && needed[d.Name.Name] {
+					return nil, fmt.Errorf("package declares %s, which is a reserved stdlib-shim name (E5); rename the declaration", d.Name.Name)
+				}
+			case *ast.GenDecl:
+				for _, spec := range d.Specs {
+					switch s := spec.(type) {
+					case *ast.TypeSpec:
+						if needed[s.Name.Name] {
+							return nil, fmt.Errorf("package declares %s, which is a reserved stdlib-shim name (E5); rename the declaration", s.Name.Name)
+						}
+					case *ast.ValueSpec:
+						for _, id := range s.Names {
+							if needed[id.Name] {
+								return nil, fmt.Errorf("package declares %s, which is a reserved stdlib-shim name (E5); rename the declaration", id.Name)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	names := make([]string, 0, len(needed))
+	for name := range needed {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	src := "package " + files[0].Name.Name + "\n"
+	for _, name := range names {
+		src += stdlibShimSources[name]
+	}
+	shimFile, err := parser.ParseFile(fset, "golean-stdlib-shims.go", src, parser.ParseComments)
+	if err != nil {
+		return nil, fmt.Errorf("internal: stdlib shim source failed to parse: %w", err)
+	}
+	return shimFile, nil
+}
+
+func importPathOf(imp *ast.ImportSpec) string {
+	p := imp.Path.Value
+	if len(p) >= 2 && p[0] == '"' && p[len(p)-1] == '"' {
+		return p[1 : len(p)-1]
+	}
+	return p
+}

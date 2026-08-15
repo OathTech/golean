@@ -77,6 +77,19 @@ func run() error {
 		}
 	}
 
+	// E5 stdlib shims (stdlibshim.go): when an allowlisted stdlib
+	// selector call is present, inject the shim declarations as a
+	// synthetic file BEFORE type-check, so the shim type-checks and
+	// emits through the ordinary pipeline. Reserved-name collisions
+	// refuse the export here, loudly.
+	shimFile, err := injectStdlibShims(fset, files)
+	if err != nil {
+		return err
+	}
+	if shimFile != nil {
+		files = append(files, shimFile)
+	}
+
 	info := &types.Info{
 		Types:      map[ast.Expr]types.TypeAndValue{},
 		Defs:       map[*ast.Ident]types.Object{},

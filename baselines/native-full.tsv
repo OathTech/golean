@@ -1,23 +1,30 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-15  commit: gallery campaign G2 extension E5 guardrails
-#   (stdlib selector-call shims, scoped to strings.Fields) — the fidelity
-#   argument + 23 guardrail rows, RED FIRST, before any frontend change
-#   re-pin reason: EXACTLY 23 NEW ids, no existing id changed result or
-#   stage; regenerated from this commit's full run. 22 of the new rows
-#   land FAIL/frontend-export at the standing quarantine verbatim
-#   ("selector call Fields is not a method value") — the E5 guardrails:
-#   examples/wordfreq/* (14 of 15: the consumer, word frequency over a
-#   string via strings.Fields + map[string]uint64) and
-#   strings/fields-conformance/* (8: the shim's dedicated conformance
-#   suite — empty/all-space/single/lead-trail/consec-mixed edges, the
-#   non-ASCII White_Space members, the White_Space=No negative pin, and
-#   invalid UTF-8; expected splits go-run-confirmed, recorded in that
-#   cases.tsv). The 23rd row (examples/wordfreq/build-text) exercises
-#   only the harness's setup builder and PASSES — the control.
-#   Fidelity argument, risk classes, scope boundary:
-#   docs/gallery-campaign-log/g2.md "E5 — THE FIDELITY ARGUMENT".
-#   NO frontend change, NO GoCore change, NO Lean change in this commit;
-#   the flip of the 22 red rows is E5's acceptance test when it builds.
+# recorded: 2026-08-15  commit: gallery campaign G2 extension E5 BUILT
+#   (stdlib selector-call shims, scoped to strings.Fields) — the frontend
+#   shim mechanism + the 22-row flip, one commit
+#   re-pin reason: EXACTLY 22 flips FAIL/frontend-export -> PASS/-, no
+#   other change; regenerated from this commit's full run (1830 cases,
+#   1732 PASS, 98 FAIL — the FAIL set returns to its pre-E5 state).
+#   The mechanism (tools/nativefrontend: stdlibshim.go NEW, emit.go
+#   emitStdlibShimCall + hook, main.go injection call): an allowlisted
+#   stdlib selector call (`strings.Fields(x)` — the allowlist's ONE
+#   entry) injects a Go-source shim as a synthetic file before
+#   type-check and emits the call as an ordinary static call to it; the
+#   shim is a byte-level scan over the FULL Unicode White_Space class,
+#   lowered through the ordinary pipeline. Every other selector call
+#   keeps the standing per-declaration quarantine byte-identical
+#   (probe-verified: strings.Repeat, fmt.Sprint, value position, dot
+#   import, reserved-name collision). go run executes the REAL stdlib,
+#   so each flipped row is a direct oracle test of shim fidelity —
+#   incl. the non-ASCII White_Space rows and invalid UTF-8.
+#   Fidelity argument + BUILT record:
+#   docs/gallery-campaign-log/g2.md "E5". NO GoCore change, NO decoder
+#   change, NO wire-schema change.
+#   The 22 flipped ids = the whole E5 acceptance set, nothing else:
+#     examples/wordfreq/* (14 — the consumer's quarantined rows) and
+#     strings/fields-conformance/* (8 — the shim conformance suite).
+#   Unlike E3 there is NO blast radius beyond the acceptance set (no
+#   other corpus row calls strings.Fields; verified by this full run).
 # columns: result, id, stage (features/detail omitted on purpose)
 # frontend: native (tools/nativefrontend + GoLean/NativeToIR.lean)
 PASS	arrays/array-bounds	-
@@ -692,20 +699,20 @@ PASS	examples/wordcount/mode-three	-
 PASS	examples/wordcount/one	-
 PASS	examples/wordcount/two-pairs	-
 PASS	examples/wordfreq/build-text	-
-FAIL	examples/wordfreq/harness-eight	frontend-export
-FAIL	examples/wordfreq/harness-empty	frontend-export
-FAIL	examples/wordfreq/harness-mid	frontend-export
-FAIL	examples/wordfreq/harness-one	frontend-export
-FAIL	examples/wordfreq/harness-one-miss	frontend-export
-FAIL	examples/wordfreq/harness-qwrap	frontend-export
-FAIL	examples/wordfreq/harness-twelve	frontend-export
-FAIL	examples/wordfreq/harness-wrap	frontend-export
-FAIL	examples/wordfreq/lit-all-same	frontend-export
-FAIL	examples/wordfreq/lit-basic	frontend-export
-FAIL	examples/wordfreq/lit-empty	frontend-export
-FAIL	examples/wordfreq/lit-miss	frontend-export
-FAIL	examples/wordfreq/lit-space-only	frontend-export
-FAIL	examples/wordfreq/lit-tabs-newlines	frontend-export
+PASS	examples/wordfreq/harness-eight	-
+PASS	examples/wordfreq/harness-empty	-
+PASS	examples/wordfreq/harness-mid	-
+PASS	examples/wordfreq/harness-one	-
+PASS	examples/wordfreq/harness-one-miss	-
+PASS	examples/wordfreq/harness-qwrap	-
+PASS	examples/wordfreq/harness-twelve	-
+PASS	examples/wordfreq/harness-wrap	-
+PASS	examples/wordfreq/lit-all-same	-
+PASS	examples/wordfreq/lit-basic	-
+PASS	examples/wordfreq/lit-empty	-
+PASS	examples/wordfreq/lit-miss	-
+PASS	examples/wordfreq/lit-space-only	-
+PASS	examples/wordfreq/lit-tabs-newlines	-
 PASS	floats/compound-assign	-
 PASS	floats/defined-incdec	-
 PASS	floats/defined-type-ops	-
@@ -1674,14 +1681,14 @@ PASS	strings/byte-slice-to-string-copy	-
 PASS	strings/concat-eval-order	-
 PASS	strings/defined-copy-invalid-utf8	-
 FAIL	strings/defined-slice-string-conversion	lean-observation
-FAIL	strings/fields-conformance/all-space	frontend-export
-FAIL	strings/fields-conformance/consec-mixed	frontend-export
-FAIL	strings/fields-conformance/empty	frontend-export
-FAIL	strings/fields-conformance/invalid-utf8	frontend-export
-FAIL	strings/fields-conformance/lead-trail	frontend-export
-FAIL	strings/fields-conformance/single	frontend-export
-FAIL	strings/fields-conformance/unicode-non-space	frontend-export
-FAIL	strings/fields-conformance/unicode-space	frontend-export
+PASS	strings/fields-conformance/all-space	-
+PASS	strings/fields-conformance/consec-mixed	-
+PASS	strings/fields-conformance/empty	-
+PASS	strings/fields-conformance/invalid-utf8	-
+PASS	strings/fields-conformance/lead-trail	-
+PASS	strings/fields-conformance/single	-
+PASS	strings/fields-conformance/unicode-non-space	-
+PASS	strings/fields-conformance/unicode-space	-
 PASS	strings/index-eval-order	-
 PASS	strings/literal-edge/interpreted-nul-byte	-
 PASS	strings/literal-edge/interpreted-octal-hex-escapes	-

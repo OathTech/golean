@@ -5741,7 +5741,14 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 
 	// Method call x.M(args): a call to the receiver-scoped FuncId
 	// "DefiningType.M" with the receiver prepended as the first argument.
+	// FIRST, though: the E5 stdlib-shim hook (stdlibshim.go) — an
+	// allowlisted `pkg.Fn(args)` call emits as an ordinary static call
+	// to the injected shim; every other selector call falls through to
+	// the method machinery and its standing refusals, byte-identical.
 	if sel, ok := c.Fun.(*ast.SelectorExpr); ok {
+		if node, handled, err := e.emitStdlibShimCall(c, sel); handled || err != nil {
+			return node, handled, err
+		}
 		return e.emitMethodCall(c, sel)
 	}
 
@@ -6068,6 +6075,59 @@ func (e *emitter) emitCallArgs(sig *types.Signature, c *ast.CallExpr) ([]any, er
 		return nil, err
 	}
 	return append(args, sliceRef), nil
+}
+
+// emitStdlibShimCall is the E5 allowlist hook (stdlibshim.go): a call
+// whose callee is a qualified selector `pkg.Fn` with `pkg` an imported
+// package on the stdlib-shim allowlist and `Fn` an allowlisted
+// function emits as an ordinary static call to the injected shim
+// declaration. handled=false (nil error) for every other selector
+// call — the caller keeps its standing method machinery and refusals
+// byte-identical. Failure modes fail CLOSED: the injection scan
+// (syntactic) is a superset of this hook's admitted shape for
+// qualified selectors, but if the shim declaration is ever absent the
+// call refuses per-declaration rather than emitting a dangling name.
+func (e *emitter) emitStdlibShimCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool, error) {
+	x, ok := sel.X.(*ast.Ident)
+	if !ok {
+		return nil, false, nil
+	}
+	pkgName, ok := e.info.Uses[x].(*types.PkgName)
+	if !ok {
+		return nil, false, nil
+	}
+	fns, ok := stdlibShimAllowlist[pkgName.Imported().Path()]
+	if !ok {
+		return nil, false, nil
+	}
+	shimName, ok := fns[sel.Sel.Name]
+	if !ok {
+		return nil, false, nil
+	}
+	fn, ok := e.info.Uses[sel.Sel].(*types.Func)
+	if !ok {
+		return nil, false, unsup("stdlib call %s.%s did not resolve to a function",
+			pkgName.Imported().Path(), sel.Sel.Name)
+	}
+	if e.pkg.Scope().Lookup(shimName) == nil {
+		return nil, false, unsup("stdlib shim %s not injected for %s.%s",
+			shimName, pkgName.Imported().Path(), sel.Sel.Name)
+	}
+	sig, ok := fn.Type().(*types.Signature)
+	if !ok {
+		return nil, false, unsup("stdlib call %s.%s has no signature",
+			pkgName.Imported().Path(), sel.Sel.Name)
+	}
+	args, err := e.emitCallArgs(sig, c)
+	if err != nil {
+		return nil, false, err
+	}
+	resultTypes, err := e.emitResultTypes(sig)
+	if err != nil {
+		return nil, false, err
+	}
+	return map[string]any{"expr": "call", "func": shimName, "args": args,
+		"resultTypes": resultTypes}, true, nil
 }
 
 func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool, error) {
