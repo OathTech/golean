@@ -19,6 +19,8 @@ import Audit.TwoSum
 import Audit.SelectionSort
 import Audit.BubbleSort
 import Audit.RunLength
+import Audit.FibMemo
+import Audit.Sieve
 
 /-!
 # In-build epistemic gate for the Iris proof layer
@@ -1844,7 +1846,7 @@ audit-coverage step fails closed if a shard ever falls out of the
 closure. Shards: Reverse, Gcd, MinMax, InsertionSort, BinSearch,
 WordCount, Histogram, PowMod, DotProduct, Kadane, DedupAdjacent,
 ArrayPalindrome, StringReverse, TwoSum, SelectionSort, BubbleSort,
-RunLength. Fib's references stay in the exemplar section
+RunLength, FibMemo, Sieve. Fib's references stay in the exemplar section
 above — that section pins the WP-law kit, not the example.
 -/
 /-! ## The harness-entry glue (form note §11; FuelMeasure)
