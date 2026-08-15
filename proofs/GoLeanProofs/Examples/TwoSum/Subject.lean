@@ -1084,4 +1084,458 @@ theorem ts_inIter (σ : ExecState) (nv sv tv : Int) (n : Nat)
   exact stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
     (stepFnIter_chain h1 h2) h3) h4) h5
 
+/-- **The HIT: one pair test that lands, then the early return all the
+way to the DRIVER TERMINAL.** 101 steps from the exit-test TRUE
+delivery at `(t, u)`. -/
+theorem ts_inHit (σ : ExecState) (nv sv tv : Int) (n : Nat)
+    (l lp : List Int) (siv civ tvp : Int) (t u : Nat) (D : Heap)
+    (ja : Nat) (na : Nat) (hja : 23 ≤ ja) (hD : DeadFrom D ja)
+    (hlen : l.length = n) (hrange : ∀ v ∈ l, 0 ≤ v ∧ v < 2 ^ 64)
+    (hlp : lp.length = 8) (hlpr : ∀ v ∈ lp, 0 ≤ v ∧ v < 2 ^ 64)
+    (hn : n ≤ 8) (ht : t < n) (hu : u < n)
+    (hhit : (l.getD t 0 + l.getD u 0) % 2 ^ 64 = tvp) (ch : Choices) :
+    stepFnIter 101
+      (tSt σ (tsHeapIn nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+        ((t : Nat) : Int) D ja ((u : Nat) : Int) false) na)
+      (.retV (.bool true) (tInCmpK ja)) ch
+      = .ok (.next .stop,
+          tSt σ (tsHeapEnd nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+            ((t : Nat) : Int) ((t : Nat) : Int) ((u : Nat) : Int)
+            ((t : Nat) : Int) ((u : Nat) : Int) ((t : Nat) : Int)
+            ((u : Nat) : Int) ++ (D ++ tsLive ja ((u : Nat) : Int) false))
+            na, ch) := by
+  have htr : (0 : Int) ≤ ((t : Nat) : Int) ∧ ((t : Nat) : Int) < 2 ^ 64 :=
+    ⟨by omega, by omega⟩
+  have hur : (0 : Int) ≤ ((u : Nat) : Int) ∧ ((u : Nat) : Int) < 2 ^ 64 :=
+    ⟨by omega, by omega⟩
+  have h1 := ts_inBody σ nv sv tv n l lp siv civ tvp t u D ja na hja hD
+    hlen hrange ht hu ch
+  rw [show ((l.getD t 0 + l.getD u 0) % 2 ^ 64 == tvp) = true from
+    beq_iff_eq.mpr hhit] at h1
+  have h2 := t_fA_raw
+    (tSt σ (tsHeapIn nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+      ((t : Nat) : Int) D ja ((u : Nat) : Int) false) na) ja ch
+  have h3 := stepFnIter_one
+    (σ := tSt σ (tsHeapIn nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+      ((t : Nat) : Int) D ja ((u : Nat) : Int) false) na) (ch := ch)
+    (stepFn_seqn_splice
+      (ss := #[.assign (.var "$res0") (.var "i"),
+               .assign (.var "$res1") (.var "j"), .returnStmt])
+      (env := fEnvT ja) (rest := []) (k := tFoundK ja))
+  have h4 : stepFnIter 8
+      (tSt σ (tsHeapIn nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+        ((t : Nat) : Int) D ja ((u : Nat) : Int) false) na)
+      (.next (.seq ([.assign (.var "$res0") (.var "i"),
+          .assign (.var "$res1") (.var "j"), .returnStmt] ++ [])
+        (fEnvT ja) (tFoundK ja))) ch
+      = .ok (.exec (.seqn #[]) (fEnvT ja)
+            (.seq [.assign (.var "$res1") (.var "j"), .returnStmt]
+              (fEnvT ja) (tFoundK ja)),
+          tSt σ (tsHeapRet nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+            ((t : Nat) : Int) (IntKind.normalize .uint64 ((t : Nat) : Int))
+            0 ++ (D ++ tsLive ja ((u : Nat) : Int) false)) na, ch) :=
+    t_fB_raw σ nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+      ((t : Nat) : Int) (D ++ tsLive ja ((u : Nat) : Int) false) ja na ch
+  rw [unorm_of_range htr.1 htr.2] at h4
+  have h5 := stepFnIter_one
+    (σ := tSt σ (tsHeapRet nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+      ((t : Nat) : Int) ((t : Nat) : Int) 0
+      ++ (D ++ tsLive ja ((u : Nat) : Int) false)) na) (ch := ch)
+    (stepFn_seqn_splice (ss := #[]) (env := fEnvT ja)
+      (rest := [.assign (.var "$res1") (.var "j"), .returnStmt])
+      (k := tFoundK ja))
+  have h6 := t_fC_raw
+    (tSt σ (tsHeapRet nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+      ((t : Nat) : Int) ((t : Nat) : Int) 0
+      ++ (D ++ tsLive ja ((u : Nat) : Int) false)) na) ja ch
+  have h7 := stepFnIter_one (ch := ch)
+    (stepFn_var (σ := tSt σ (tsHeapRet nv sv tv n l lp siv civ tvp
+        ((n : Nat) : Int) ((t : Nat) : Int) ((t : Nat) : Int) 0
+        ++ (D ++ tsLive ja ((u : Nat) : Int) false)) na)
+      (env_f_j ja)
+      (show Heap.lookup (tSt σ (tsHeapRet nv sv tv n l lp siv civ tvp
+          ((n : Nat) : Int) ((t : Nat) : Int) ((t : Nat) : Int) 0
+          ++ (D ++ tsLive ja ((u : Nat) : Int) false)) na).heap
+          (.base ⟨ja⟩) = some (tsu64 ((u : Nat) : Int)) from
+        lookup_retD_j nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+          ((t : Nat) : Int) ((t : Nat) : Int) 0 D ja ((u : Nat) : Int)
+          false hja hD)
+      (k := .rhsK .vals [.chain (.addr (.base ⟨19⟩)) [] []] [] []
+        (.seqn #[]) (fEnvT ja)
+        (.seq [.returnStmt] (fEnvT ja) (tFoundK ja))))
+  have h8 := t_fD1_raw σ nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+    ((t : Nat) : Int) ((t : Nat) : Int)
+    (D ++ tsLive ja ((u : Nat) : Int) false) ja ((u : Nat) : Int) na ch
+  rw [unorm_of_range hur.1 hur.2] at h8
+  have h9 := stepFnIter_one
+    (σ := tSt σ (tsHeapRet nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+      ((t : Nat) : Int) ((t : Nat) : Int) ((u : Nat) : Int)
+      ++ (D ++ tsLive ja ((u : Nat) : Int) false)) na) (ch := ch)
+    (stepFn_seqn_splice (ss := #[]) (env := fEnvT ja)
+      (rest := [.returnStmt]) (k := tFoundK ja))
+  have h10 := t_fE_raw σ nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+    ((t : Nat) : Int) ((t : Nat) : Int) ((u : Nat) : Int)
+    (D ++ tsLive ja ((u : Nat) : Int) false) ja na ch
+  have h11 := t_fF_raw σ nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+    ((t : Nat) : Int) ((t : Nat) : Int) ((u : Nat) : Int)
+    (D ++ tsLive ja ((u : Nat) : Int) false) na ch
+  rw [unorm_of_range htr.1 htr.2, unorm_of_range hur.1 hur.2] at h11
+  have h12 := stepFnIter_one (stepFn_store_step (ch := ch) (rs := [])
+    (vs := []) (body := .seqn #[]) (env := callEnvT) (k := tEpiTail)
+    (t_epiStore σ nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+      ((t : Nat) : Int) ((t : Nat) : Int) ((u : Nat) : Int)
+      ((t : Nat) : Int) ((u : Nat) : Int)
+      (D ++ tsLive ja ((u : Nat) : Int) false) na hlp hlpr))
+  have h13 := t_epi_raw σ nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+    ((t : Nat) : Int) ((t : Nat) : Int) ((u : Nat) : Int)
+    ((t : Nat) : Int) ((u : Nat) : Int)
+    (D ++ tsLive ja ((u : Nat) : Int) false) na ch
+  rw [unorm_of_range htr.1 htr.2, unorm_of_range hur.1 hur.2] at h13
+  exact stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+    (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+      (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+        (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+          h1 h2) h3) h4) h5) h6) h7) h8) h9) h10) h11) h12) h13
+
+/-- **One whole outer row that MISSES**: outer TRUE delivery at `t`,
+no hit in row `t`, next outer delivery at `t + 1`. Exactly
+`100 + 57·(n − t − 1)` steps; grows the dead region by the retired
+live pair. -/
+theorem ts_rowMiss (σ : ExecState) (nv sv tv : Int) (n : Nat)
+    (l lp : List Int) (siv civ tvp : Int) (t : Nat) (D : Heap) (na : Nat)
+    (hna : 23 ≤ na) (hD : DeadFrom D na)
+    (hlen : l.length = n) (hrange : ∀ v ∈ l, 0 ≤ v ∧ v < 2 ^ 64)
+    (hn : n ≤ 8) (ht : t < n)
+    (hnone : findFrom l tvp t (t + 1) = none) (ch : Choices) :
+    stepFnIter (100 + 57 * (n - (t + 1)))
+      (tSt σ (tsHeapOut nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+        ((t : Nat) : Int) false ++ D) na)
+      (.retV (.bool true) tOutCmpK) ch
+      = .ok (.retV (.bool (decide
+            (((t + 1 : Nat) : Int) < ((n : Nat) : Int)))) tOutCmpK,
+          tSt σ (tsHeapOut nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+            ((t + 1 : Nat) : Int) false
+            ++ (D ++ tsLive na ((n : Nat) : Int) false)) (na + 2),
+          ch) := by
+  have h1 := ts_alloc σ nv sv tv n l lp siv civ tvp t D na hna hD
+    (by omega) ch
+  have h2 := ts_inDispatch σ nv sv tv n l lp siv civ tvp
+    ((n : Nat) : Int) ((t : Nat) : Int) D na ((t + 1 : Nat) : Int)
+    (na + 2) hna hD ch
+  -- the miss iterations, shifted to the row's start
+  have hmiss : ∀ v, t + 1 ≤ v → v < n →
+      ¬ (l.getD t 0 + l.getD v 0) % 2 ^ 64 = tvp := by
+    intro v h1' h2'
+    exact findFrom_none hnone v h1' (by omega)
+  have hiter := stepFnIter_iterate (c := 57) (n := n - (t + 1))
+    (T := fun d => tSt σ (tsHeapIn nv sv tv n l lp siv civ tvp
+      ((n : Nat) : Int) ((t : Nat) : Int) D na
+      ((t + 1 + d : Nat) : Int) false) (na + 2))
+    (C := fun d => .retV (.bool (decide
+      (((t + 1 + d : Nat) : Int) < ((n : Nat) : Int)))) (tInCmpK na))
+    (fun d hd ch' => by
+      rw [show (decide (((t + 1 + d : Nat) : Int) < ((n : Nat) : Int)))
+          = true from decide_eq_true (by exact_mod_cast (by omega :
+            t + 1 + d < n))]
+      have := ts_inIter σ nv sv tv n l lp siv civ tvp t (t + 1 + d) D na
+        (na + 2) hna hD hlen hrange (by omega) ht (by omega)
+        (hmiss (t + 1 + d) (by omega) (by omega)) ch'
+      rw [show t + 1 + d + 1 = t + 1 + (d + 1) from by omega] at this
+      exact this)
+    0 (by omega) ch
+  rw [Nat.sub_zero, Nat.add_zero,
+    show t + 1 + (n - (t + 1)) = n from by omega] at hiter
+  rw [show (decide (((n : Nat) : Int) < ((n : Nat) : Int))) = false from
+    decide_eq_false (by omega)] at hiter
+  have h4 : stepFnIter 38
+      (tSt σ (tsHeapIn nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+        ((t : Nat) : Int) D na ((n : Nat) : Int) false) (na + 2))
+      (.retV (.bool false) (tInCmpK na)) ch
+      = .ok (.retV (.bool (decide
+            (IntKind.normalize .uint64
+              (IntKind.normalize .uint64 (((t : Nat) : Int) + 1))
+              < ((n : Nat) : Int)))) tOutCmpK,
+          tSt σ (tsHeapOut nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+            (IntKind.normalize .uint64
+              (IntKind.normalize .uint64 (((t : Nat) : Int) + 1))) false
+            ++ (D ++ tsLive na ((n : Nat) : Int) false)) (na + 2), ch) :=
+    t_oX_raw σ nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+      ((t : Nat) : Int) (D ++ tsLive na ((n : Nat) : Int) false) na
+      (na + 2) ch
+  rw [show ((t : Nat) : Int) + 1 = ((t + 1 : Nat) : Int) from by omega,
+    unorm_of_range (v := ((t + 1 : Nat) : Int)) (by omega) (by omega),
+    unorm_of_range (v := ((t + 1 : Nat) : Int)) (by omega) (by omega)]
+    at h4
+  have hchain := stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+    h1 h2) hiter) h4
+  rw [show 37 + 25 + 57 * (n - (t + 1)) + 38
+      = 100 + 57 * (n - (t + 1)) from by omega] at hchain
+  exact hchain
+
+/-- **One whole outer row that HITS at `u`**: outer TRUE delivery at
+`t`, first hit of row `t` at column `u`, the driver terminal. Exactly
+`163 + 57·(u − t − 1)` steps. -/
+theorem ts_rowHit (σ : ExecState) (nv sv tv : Int) (n : Nat)
+    (l lp : List Int) (siv civ tvp : Int) (t u : Nat) (D : Heap)
+    (na : Nat) (hna : 23 ≤ na) (hD : DeadFrom D na)
+    (hlen : l.length = n) (hrange : ∀ v ∈ l, 0 ≤ v ∧ v < 2 ^ 64)
+    (hlp : lp.length = 8) (hlpr : ∀ v ∈ lp, 0 ≤ v ∧ v < 2 ^ 64)
+    (hn : n ≤ 8) (ht : t < n)
+    (hsome : findFrom l tvp t (t + 1) = some u) (ch : Choices) :
+    stepFnIter (163 + 57 * (u - (t + 1)))
+      (tSt σ (tsHeapOut nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+        ((t : Nat) : Int) false ++ D) na)
+      (.retV (.bool true) tOutCmpK) ch
+      = .ok (.next .stop,
+          tSt σ (tsHeapEnd nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+            ((t : Nat) : Int) ((t : Nat) : Int) ((u : Nat) : Int)
+            ((t : Nat) : Int) ((u : Nat) : Int) ((t : Nat) : Int)
+            ((u : Nat) : Int)
+            ++ (D ++ tsLive na ((u : Nat) : Int) false)) (na + 2),
+          ch) := by
+  obtain ⟨hu1, hu2, hhit, hminim⟩ := findFrom_some hsome
+  have hun : u < n := by omega
+  have h1 := ts_alloc σ nv sv tv n l lp siv civ tvp t D na hna hD
+    (by omega) ch
+  have h2 := ts_inDispatch σ nv sv tv n l lp siv civ tvp
+    ((n : Nat) : Int) ((t : Nat) : Int) D na ((t + 1 : Nat) : Int)
+    (na + 2) hna hD ch
+  have hiter := stepFnIter_iterate (c := 57) (n := u - (t + 1))
+    (T := fun d => tSt σ (tsHeapIn nv sv tv n l lp siv civ tvp
+      ((n : Nat) : Int) ((t : Nat) : Int) D na
+      ((t + 1 + d : Nat) : Int) false) (na + 2))
+    (C := fun d => .retV (.bool (decide
+      (((t + 1 + d : Nat) : Int) < ((n : Nat) : Int)))) (tInCmpK na))
+    (fun d hd ch' => by
+      rw [show (decide (((t + 1 + d : Nat) : Int) < ((n : Nat) : Int)))
+          = true from decide_eq_true (by exact_mod_cast (by omega :
+            t + 1 + d < n))]
+      have := ts_inIter σ nv sv tv n l lp siv civ tvp t (t + 1 + d) D na
+        (na + 2) hna hD hlen hrange (by omega) ht (by omega)
+        (hminim (t + 1 + d) (by omega) (by omega)) ch'
+      rw [show t + 1 + d + 1 = t + 1 + (d + 1) from by omega] at this
+      exact this)
+    0 (by omega) ch
+  rw [Nat.sub_zero, Nat.add_zero,
+    show t + 1 + (u - (t + 1)) = u from by omega] at hiter
+  rw [show (decide (((u : Nat) : Int) < ((n : Nat) : Int))) = true from
+    decide_eq_true (by exact_mod_cast hun)] at hiter
+  have h4 := ts_inHit σ nv sv tv n l lp siv civ tvp t u D na (na + 2)
+    hna hD hlen hrange hlp hlpr hn ht hun hhit ch
+  have hchain := stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+    h1 h2) hiter) h4
+  rw [show 37 + 25 + 57 * (u - (t + 1)) + 101
+      = 163 + 57 * (u - (t + 1)) from by omega] at hchain
+  exact hchain
+
+/-- **THE OUTER INDUCTION**: from the outer exit-test delivery at row
+`t` — with the machine's carried answer `tsAnsF l tvp t` — the run
+reaches the DRIVER TERMINAL within `(57·n + 106)·μ + 71` steps, the
+returned index pair being exactly that answer. The dead region, the
+final `nextAddr` and the outer counter's final cell are existentially
+forgotten (nothing returned depends on them — the palindrome
+exemplar's `ph_loopP` shape, one level up). -/
+theorem ts_outerP (σ : ExecState) (nv sv tv : Int) (n : Nat)
+    (l lp : List Int) (siv civ tvp : Int)
+    (hlen : l.length = n) (hrange : ∀ v ∈ l, 0 ≤ v ∧ v < 2 ^ 64)
+    (hlp : lp.length = 8) (hlpr : ∀ v ∈ lp, 0 ≤ v ∧ v < 2 ^ 64)
+    (hn : n ≤ 8) :
+    ∀ μ t : Nat, t + μ = n → ∀ (D : Heap) (na : Nat), 23 ≤ na →
+      DeadFrom D na → ∀ ch : Choices,
+    ∃ k : Nat, k ≤ (57 * n + 106) * μ + 71 ∧
+    ∃ (Dr : Heap) (nar : Nat) (oiv : Int),
+      stepFnIter k
+        (tSt σ (tsHeapOut nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+          ((t : Nat) : Int) false ++ D) na)
+        (.retV (.bool (decide (((t : Nat) : Int) < ((n : Nat) : Int))))
+          tOutCmpK) ch
+        = .ok (.next .stop,
+            tSt σ (tsHeapEnd nv sv tv n l lp siv civ tvp
+              ((n : Nat) : Int) oiv
+              (((tsAnsF l tvp t).1 : Nat) : Int)
+              (((tsAnsF l tvp t).2 : Nat) : Int)
+              (((tsAnsF l tvp t).1 : Nat) : Int)
+              (((tsAnsF l tvp t).2 : Nat) : Int)
+              (((tsAnsF l tvp t).1 : Nat) : Int)
+              (((tsAnsF l tvp t).2 : Nat) : Int) ++ Dr) nar, ch) := by
+  intro μ
+  induction μ using Nat.strongRecOn with
+  | _ μ ih =>
+    intro t hμ D na hna hD ch
+    rcases Nat.lt_or_ge t n with hlt | hge
+    · -- a live row
+      obtain ⟨μ', rfl⟩ : ∃ μ', μ = μ' + 1 := ⟨μ - 1, by omega⟩
+      rw [show (decide (((t : Nat) : Int) < ((n : Nat) : Int))) = true
+        from decide_eq_true (by exact_mod_cast hlt)]
+      cases hf : findFrom l tvp t (t + 1) with
+      | some u =>
+          obtain ⟨hu1, hu2, -, -⟩ := findFrom_some hf
+          have hrun := ts_rowHit σ nv sv tv n l lp siv civ tvp t u D na
+            hna hD hlen hrange hlp hlpr hn hlt hf ch
+          refine ⟨163 + 57 * (u - (t + 1)), ?_, D ++ tsLive na
+            ((u : Nat) : Int) false, na + 2, ((t : Nat) : Int), ?_⟩
+          · have hB : (57 * n + 106) * (μ' + 1)
+                = (57 * n + 106) * μ' + (57 * n + 106) :=
+              Nat.mul_succ _ _
+            omega
+          · rw [tsAnsF_hit (by omega) hf]
+            exact hrun
+      | none =>
+          have hrow := ts_rowMiss σ nv sv tv n l lp siv civ tvp t D na
+            hna hD hlen hrange hn hlt hf ch
+          obtain ⟨k, hk, Dr, nar, oiv, hrec⟩ := ih μ' (by omega)
+            (t + 1) (by omega) (D ++ tsLive na ((n : Nat) : Int) false)
+            (na + 2) (by omega) (DeadFrom.push2 hD) ch
+          refine ⟨100 + 57 * (n - (t + 1)) + k, ?_, Dr, nar, oiv, ?_⟩
+          · have hB : (57 * n + 106) * (μ' + 1)
+                = (57 * n + 106) * μ' + (57 * n + 106) :=
+              Nat.mul_succ _ _
+            omega
+          · rw [tsAnsF_miss (by omega) hf]
+            exact stepFnIter_chain hrow hrec
+    · -- the sentinel exit
+      have ht : t = n := by omega
+      subst ht
+      rw [show (decide (((t : Nat) : Int) < ((t : Nat) : Int))) = false
+        from decide_eq_false (by omega)]
+      have hmr : (0 : Int) ≤ ((t : Nat) : Int)
+          ∧ ((t : Nat) : Int) < 2 ^ 64 := ⟨by omega, by omega⟩
+      have h1 := t_mX1_raw σ nv sv tv t l lp siv civ tvp
+        ((t : Nat) : Int) ((t : Nat) : Int) D na ch
+      rw [unorm_of_range hmr.1 hmr.2, unorm_of_range hmr.1 hmr.2] at h1
+      have h2 := stepFnIter_one (stepFn_store_step (ch := ch) (rs := [])
+        (vs := []) (body := .seqn #[]) (env := callEnvT) (k := tEpiTail)
+        (t_epiStore σ nv sv tv t l lp siv civ tvp ((t : Nat) : Int)
+          ((t : Nat) : Int) ((t : Nat) : Int) ((t : Nat) : Int)
+          ((t : Nat) : Int) ((t : Nat) : Int) D na hlp hlpr))
+      have h3 := t_epi_raw σ nv sv tv t l lp siv civ tvp
+        ((t : Nat) : Int) ((t : Nat) : Int) ((t : Nat) : Int)
+        ((t : Nat) : Int) ((t : Nat) : Int) ((t : Nat) : Int) D na ch
+      rw [unorm_of_range hmr.1 hmr.2] at h3
+      refine ⟨71, by omega, D, na, ((t : Nat) : Int), ?_⟩
+      rw [tsAnsF_exit (by omega), hlen]
+      exact stepFnIter_chain (stepFnIter_chain h1 h2) h3
+
+/-! ## The run, end to end -/
+
+/-- The `enterFrame` discharge at the pinned program: the second and
+last unfolding of `twosumLowered` in this example. -/
+theorem t_enterFrame_fact (n seed target : Nat) (l lp : List Int)
+    (siv civ : Int) :
+    enterFrame
+        (tSt tProg (tsHeapCall ((n : Nat) : Int) ((seed : Nat) : Int)
+          ((target : Nat) : Int) n l lp siv civ) 16) ⟨"twoSum"⟩
+        [tsSliceS n, .int ((target : Nat) : Int) .uint64]
+      = .ok (twoSumFunc, tFrameEnv, [.base ⟨18⟩, .base ⟨19⟩],
+          tSt tProg (tsHeapFrame ((n : Nat) : Int) ((seed : Nat) : Int)
+            ((target : Nat) : Int) n l lp siv civ
+            (IntKind.normalize .uint64 ((target : Nat) : Int))) 20) := by
+  with_unfolding_all rfl
+
+/-- **The harness run, PROGRAM-generic**: within `57·n² + 212·n + 303`
+steps the harness reaches the driver terminal with the `vals` copy in
+`$res0` and the machine's answer pair — `tsAnsF` of the family at row
+0 — in `$res1`/`$res2`. -/
+theorem ts_runT (σ : ExecState) (n seed target : Nat) (hcap : n ≤ 8)
+    (hseed : seed < 2 ^ 64) (htgt : target < 2 ^ 64)
+    (henter : ∀ (l lp : List Int) (siv civ : Int),
+      enterFrame (tSt σ (tsHeapCall ((n : Nat) : Int) ((seed : Nat) : Int)
+          ((target : Nat) : Int) n l lp siv civ) 16) ⟨"twoSum"⟩
+          [tsSliceS n, .int ((target : Nat) : Int) .uint64]
+        = .ok (twoSumFunc, tFrameEnv, [.base ⟨18⟩, .base ⟨19⟩],
+            tSt σ (tsHeapFrame ((n : Nat) : Int) ((seed : Nat) : Int)
+              ((target : Nat) : Int) n l lp siv civ
+              (IntKind.normalize .uint64 ((target : Nat) : Int))) 20))
+    (ch : Choices) :
+    ∃ k : Nat, k ≤ 57 * n ^ 2 + 212 * n + 303 ∧
+    ∃ (Dr : Heap) (nar : Nat) (oiv : Int),
+      stepFnIter k
+        (tSt σ (tsHeap0 ((n : Nat) : Int) ((seed : Nat) : Int)
+          ((target : Nat) : Int)) 6) tHC0 ch
+        = .ok (.next .stop,
+            tSt σ (tsHeapEnd ((n : Nat) : Int) ((seed : Nat) : Int)
+              ((target : Nat) : Int) n (tsFamily n seed) (tsPre n seed)
+              ((n : Nat) : Int) ((n : Nat) : Int) ((target : Nat) : Int)
+              ((n : Nat) : Int) oiv
+              (((tsAnsF (tsFamily n seed) ((target : Nat) : Int) 0).1
+                : Nat) : Int)
+              (((tsAnsF (tsFamily n seed) ((target : Nat) : Int) 0).2
+                : Nat) : Int)
+              (((tsAnsF (tsFamily n seed) ((target : Nat) : Int) 0).1
+                : Nat) : Int)
+              (((tsAnsF (tsFamily n seed) ((target : Nat) : Int) 0).2
+                : Nat) : Int)
+              (((tsAnsF (tsFamily n seed) ((target : Nat) : Int) 0).1
+                : Nat) : Int)
+              (((tsAnsF (tsFamily n seed) ((target : Nat) : Int) 0).2
+                : Nat) : Int) ++ Dr) nar, ch) := by
+  have hn : n < 2 ^ 63 := by omega
+  have hlen : (tsFamily n seed).length = n := tsFamily_length n seed
+  -- entry
+  have hE1 := t_E1_raw σ ((n : Nat) : Int) ((seed : Nat) : Int)
+    ((target : Nat) : Int) ch
+  have hmk := stepFnIter_one
+    (stepFn_makeSlice_u64_step (env := envC9T)
+      (k := .seq [tS2, tS3, tS4, tS5, tS6, tS7] envC9T
+        (.frame [] [] [] [] .stop))
+      (t_make_apply σ ((n : Nat) : Int) ((seed : Nat) : Int)
+        ((target : Nat) : Int) n ch))
+  have hE2 := t_E2_raw σ ((n : Nat) : Int) ((seed : Nat) : Int)
+    ((target : Nat) : Int) n ch
+  have hA0 := su_A0_rawT σ ((n : Nat) : Int) ((seed : Nat) : Int)
+    ((target : Nat) : Int) n (List.replicate n 0) 0 ch
+  have hsu := su_loopT σ n seed target hn 0 (by omega) ch
+  rw [show tsFamily 0 seed ++ List.replicate (n - 0) 0
+      = List.replicate n 0 from by simp [tsFamily],
+    show (((0 : Nat) : Int)) = (0 : Int) from rfl] at hsu
+  have hentry := stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+    (stepFnIter_chain hE1 hmk) hE2) hA0) hsu
+  -- the setup exit
+  have hX := su_X_rawT σ ((n : Nat) : Int) ((seed : Nat) : Int)
+    ((target : Nat) : Int) n (tsFamily n seed) ((n : Nat) : Int) ch
+  rw [show (decide (((n : Nat) : Int) < ((n : Nat) : Int))) = false from
+    decide_eq_false (by omega)] at hentry
+  have hthru := stepFnIter_chain hentry hX
+  -- the copy loop, the call, the prologue
+  have hcA0 := cp_A0_rawT σ ((n : Nat) : Int) ((seed : Nat) : Int)
+    ((target : Nat) : Int) n (tsFamily n seed) zeros8 ((n : Nat) : Int)
+    0 ch
+  obtain ⟨k2, hk2, hcp⟩ := cp_loopT σ n seed target hn hcap htgt henter
+    n 0 (by omega) ch
+  rw [show tsPre 0 seed = zeros8 from tsPre_zero seed,
+    show (((0 : Nat) : Int)) = (0 : Int) from rfl] at hcp
+  have hthru2 := stepFnIter_chain (stepFnIter_chain hthru hcA0) hcp
+  -- the outer loop's first dispatch
+  have hoD : stepFnIter 25
+      (tSt σ (tsHeapOut ((n : Nat) : Int) ((seed : Nat) : Int)
+        ((target : Nat) : Int) n (tsFamily n seed) (tsPre n seed)
+        ((n : Nat) : Int) ((n : Nat) : Int) ((target : Nat) : Int)
+        ((n : Nat) : Int) 0 true ++ ([] : Heap)) 23) tOutHeadCfg ch
+      = .ok (.retV (.bool (decide ((0 : Int) < ((n : Nat) : Int))))
+            tOutCmpK,
+          tSt σ (tsHeapOut ((n : Nat) : Int) ((seed : Nat) : Int)
+            ((target : Nat) : Int) n (tsFamily n seed) (tsPre n seed)
+            ((n : Nat) : Int) ((n : Nat) : Int) ((target : Nat) : Int)
+            ((n : Nat) : Int) 0 false ++ ([] : Heap)) 23, ch) :=
+    t_oDisp_raw σ ((n : Nat) : Int) ((seed : Nat) : Int)
+      ((target : Nat) : Int) n (tsFamily n seed) (tsPre n seed)
+      ((n : Nat) : Int) ((n : Nat) : Int) ((target : Nat) : Int)
+      ((n : Nat) : Int) 0 ([] : Heap) 23 ch
+  -- the outer loop, to the terminal
+  obtain ⟨k3, hk3, Dr, nar, oiv, houter⟩ := ts_outerP σ
+    ((n : Nat) : Int) ((seed : Nat) : Int) ((target : Nat) : Int) n
+    (tsFamily n seed) (tsPre n seed) ((n : Nat) : Int)
+    ((n : Nat) : Int) ((target : Nat) : Int) hlen
+    (tsFamily_range n seed) (tsPre_length hcap) tsPre_range hcap n 0
+    (by omega) ([] : Heap) 23 (by omega) (fun x hx => rfl) ch
+  rw [show (((0 : Nat) : Int)) = (0 : Int) from rfl] at houter
+  refine ⟨10 + 1 + 42 + 25 + 53 * (n - 0) + 39 + 25 + k2 + (25 + k3),
+    ?_, Dr, nar, oiv, ?_⟩
+  · have hsq : n ^ 2 = n * n := by rw [Nat.pow_succ, Nat.pow_one]
+    have hexp : (57 * n + 106) * n = 57 * (n * n) + 106 * n := by
+      rw [Nat.add_mul, Nat.mul_assoc]
+    omega
+  · have hfin := stepFnIter_chain hthru2 (stepFnIter_chain hoD houter)
+    exact hfin
+
 end GoLean.Examples.TwoSum
