@@ -53,9 +53,13 @@ on success, so "Post Cache" was skipped and the failed run banked
 nothing. That is why retries never converge on a failing state. Fixed in
 this lane: the cache is split into `actions/cache/restore@v4` + an
 explicit `actions/cache/save@v4` at the end of the job with
-`if: always()`, so a red-but-alive gate still saves its build progress
-and the retry resumes from it. (A runner that dies outright still saves
-nothing — no step outlives the VM.)
+`if: always()`, AND saved keys carry a per-attempt suffix
+(`-r<run_id>.<attempt>`, audit F3: with a plain source-hash key a retry
+exact-hits the failed attempt's entry and convergence stops after one
+generation), guarded so a run whose gate never started does not bank a
+thin entry (audit F4). A red-but-alive gate now saves its build progress
+and each retry resumes from the previous attempt's. (A runner that dies
+outright still saves nothing — no step outlives the VM.)
 
 **Aggravating factors, both real, both addressed:**
 
@@ -69,18 +73,33 @@ nothing — no step outlives the VM.)
    COMPLETED run seeds the first entry — and runner death skips the save,
    so retries stayed cold. The re-run doubles as the seeding run.
 2. **Runner death was undiagnosable and unmitigated.** Fixes in this lane:
-   a diagnostics step (`nproc; free -h; df -h /; swapon --show`) so future
-   post-mortems have a floor, and each gate step now runs inside a SYSTEM
-   cgroup scope (`sudo systemd-run --scope`, `MemoryMax` = VM RAM − 1.2 G,
-   `MemorySwapMax=0`). Hosted runners have no systemd *user* bus (why
-   `scripts/capped` is opted out with `GOLEAN_MEM_MAX=none`, unchanged)
-   but they do have passwordless sudo and a system manager. The old
+   a diagnostics step (`nproc; free -h; df -h /; swapon --show`, placed
+   before the cache restore) so surviving runs record the machine shape,
+   and each gate step now runs inside a SYSTEM cgroup scope
+   (`sudo systemd-run --scope`, `MemoryMax` = VM RAM − 1.2 G,
+   `MemorySwapMax=0`). Hosted runners have no systemd *user* bus for
+   `scripts/capped` itself, but they do have passwordless sudo and a
+   system manager — and the cap is PROVEN, not asserted (audit F2): the
+   workflow passes `GOLEAN_CAPPED=1` + the real size, routing `scripts/ci`
+   through `capped`'s untrusted-token readback, which refuses (exit 3) if
+   systemd accepted-and-ignored the property. Passing the real size also
+   feeds ci's cap-scaled `LEAN_NUM_THREADS` heuristic (audit F6). The old
    workflow comment's claim — "if a build eats the runner the job just
    fails, which is the outcome we wanted anyway" — is disproved: the job
    does NOT fail; the VM dies with zero logs and no cache save. Under the
-   cap, a future memory blowout kills the build instead: red job, logs
-   uploaded, partial `.lake` saved by the cache post-step (so retries make
-   progress).
+   cap, a future memory blowout of OURS kills the build instead: red job,
+   logs uploaded, progress banked by the `always()` save step. To be
+   explicit about scope (audit F5): the cap does NOT prevent the
+   platform-side shutdowns actually observed — nothing in a workflow
+   does; it removes the one death mode we could cause ourselves and makes
+   every surviving failure legible. An `always()` dmesg step
+   discriminates a cgroup OOM kill from a semantic failure (audit
+   F1b/F7). Recorded cost (audit F1): `MemorySwapMax=0` forbids the ~4 GB
+   of swap the old uncapped runs could thrash into, and the cold 2-thread
+   runner peak is unmeasured — if a legitimate gate peak exceeds
+   RAM − 1.2 G, the first post-merge run goes red at the cgroup; the
+   remedy is revisiting the constant with the diagnostics numbers, never
+   deleting the readback.
 
 ## Failure 2: nightly 31669436263 (2026-08-13) — google-search membership flake
 
@@ -140,6 +159,53 @@ Nothing semantic moved; the certified set is intact.
   multiply past core count, a hung enumeration could push the nightly
   into the job timeout, which kills the step with nothing published —
   re-check this arithmetic when adding slow rows.
+
+## Pre-merge audit record (2026-08-15: two Opus reviewers, findings verified then fixed)
+
+**Reviewer A (gate half, scripts/diff-coverage + corpus row).** F1
+(confirmed by probe): timeout knobs were silently disableable — perl
+`alarm` numifies `20m`/`none` to 0, which CANCELS the guard; fixed with
+startup validation of all five knobs, exit 2 loud, after the
+gate-integrity `rm`. F4: timeout naming extended to the confluent and
+racy lanes (the nit was originally recorded against confluent). F2/F5:
+flake diagnosis restated as best-explanation with its evidence basis;
+~300 s runner figure marked estimated; composition caveat recorded. F3
+(partially refuted on verification): the parked goose-parity rows are
+confluent-lane, their 300 s bound untouched — clarifying addendum +
+stale-figure corrections added to the parked note. Cleared explicitly:
+slow-budget scoping is exactly tier=slow re-certification; no
+non-timeout failure can become a pass; the comment block is safe for
+every cases.tsv consumer; the certified record is untouched.
+
+**Reviewer B (workflow half).** F2: the cap was asserted without a
+readback — the exact fail-open `scripts/capped` was written against;
+fixed by passing `GOLEAN_CAPPED=1` + the real size so ci re-execs
+through capped's readback inside the scope. F6: `GOLEAN_MEM_MAX=none`
+fed the cap-scaled parallelism heuristic a lie; fixed by the same
+change. F3: cache convergence stopped after one generation (retry
+exact-hits the failed attempt's entry, save skipped); fixed with
+per-attempt key suffixes. F4: an early setup failure could bank a thin
+poisoning entry; fixed with the skipped-gate save guard. F5/F7: comment
+overclaims (cap framed as fixing the observed platform-side deaths;
+diagnostics "before anything heavy" while sitting after the restore)
+fixed; diagnostics moved pre-restore; `always()` dmesg OOM-discriminator
+step added (also answers F1b: a cgroup kill in the differential would
+otherwise read as baseline drift). F8: env-allowlist drops were
+invisible; an in-scope probe line (user/pwd/go/lake versions) now prints
+from inside the wrapper. F1 (accepted, not fully closeable offline): the
+cap value is a hard ceiling derived from an unmeasured cold-runner peak
+and removes the swap old runs could thrash into — mitigated with a
+`free -m` sanity guard, the recorded remedy path, and the diagnostics
+numbers to re-derive the constant from real runs. Cleared explicitly: no
+greenwash path through the wrapper; no dropped env var changes today's
+gate behavior; cache paths/keys in lockstep; sudo/runuser/PAM mechanics
+probed on a same-family Ubuntu 24.04 box.
+
+**Residual, observable only on a real runner:** the VM's actual
+`free`/swap numbers, the cold 2-thread gate peak, whether the image's
+system manager honors `MemoryMax` on transient scopes (the readback now
+refuses if not), and `actions/cache/save` warning-vs-failure semantics.
+The first post-merge push is the live validation for all four.
 
 ## Follow-ups / open items
 
