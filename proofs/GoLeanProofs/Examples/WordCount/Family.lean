@@ -82,49 +82,35 @@ subject's `words` parameter, 10 = the subject's `$res0`, 11 = `$c0`,
 range iteration). Fuel bound: `229 + 165·n` (probe: the whole
 `(4, 7)` run is 841 steps; the bound gives 889). -/
 
-/-- **The input family**: the slice contents the setup phase builds from
-`(n, seed)` — `w[i] = seed + i%3`, wrapped at `2^64` (Go's uint64
-addition; the wrap is part of the family by design, so the family
-covers wrap-boundary seeds). -/
-def wcFamily (n seed : Nat) : List Int :=
-  (List.range n).map (fun i => (((seed + i % 3) % 2 ^ 64 : Nat) : Int))
+/-- **The input family**: the slice contents the setup phase builds
+from `(n, seed)` — `w[i] = seed + i%3`, wrapped at `2^64`. GAP-P2
+CLOSED (kit-gap closure, 2026-08-15): the pinned name is a delegation
+to the kit's `SliceMem.familyMod 3`; the re-derived facts below are
+one-line delegations. -/
+abbrev wcFamily (n seed : Nat) : List Int :=
+  GoLean.SliceMem.familyMod 3 n seed
 
 theorem wcFamily_length (n seed : Nat) :
-    (wcFamily n seed).length = n := by
-  simp [wcFamily]
+    (wcFamily n seed).length = n := familyMod_length 3 n seed
 
 theorem wcFamily_range (n seed : Nat) :
-    ∀ v ∈ wcFamily n seed, 0 ≤ v ∧ v < 2 ^ 64 := by
-  intro v hv
-  simp only [wcFamily, List.mem_map, List.mem_range] at hv
-  obtain ⟨i, -, rfl⟩ := hv
-  have : (seed + i % 3) % 2 ^ 64 < 2 ^ 64 := Nat.mod_lt _ (by omega)
-  omega
+    ∀ v ∈ wcFamily n seed, 0 ≤ v ∧ v < 2 ^ 64 := familyMod_range 3 n seed
 
 theorem wcFamilyZ_range {n seed i : Nat} :
     ∀ v ∈ wcFamily i seed ++ List.replicate (n - i) (0 : Int),
-      0 ≤ v ∧ v < 2 ^ 64 := by
-  intro v hv
-  rcases List.mem_append.mp hv with hv | hv
-  · exact wcFamily_range i seed v hv
-  · rcases List.mem_replicate.mp hv with ⟨-, rfl⟩
-    omega
+      0 ≤ v ∧ v < 2 ^ 64 := familyModZ_range
 
 private theorem wcFamily_succ (i seed : Nat) :
     wcFamily (i + 1) seed
-      = wcFamily i seed ++ [(((seed + i % 3) % 2 ^ 64 : Nat) : Int)] := by
-  simp [wcFamily, List.range_succ]
+      = wcFamily i seed ++ [(((seed + i % 3) % 2 ^ 64 : Nat) : Int)] :=
+  familyMod_succ 3 i seed
 
 /-- One setup store advances the family prefix. -/
 theorem wcFamily_set {n seed i : Nat} (hi : i < n) :
     (wcFamily i seed ++ List.replicate (n - i) 0).set i
         (((seed + i % 3) % 2 ^ 64 : Nat) : Int)
-      = wcFamily (i + 1) seed ++ List.replicate (n - (i + 1)) 0 := by
-  have hlen : (wcFamily i seed).length = i := wcFamily_length i seed
-  have hnm : n - i = (n - (i + 1)) + 1 := by omega
-  rw [List.set_append_right _ _ (by omega), hlen, Nat.sub_self, hnm,
-    List.replicate_succ, List.set_cons_zero, wcFamily_succ]
-  simp
+      = wcFamily (i + 1) seed ++ List.replicate (n - (i + 1)) 0 :=
+  familyMod_set hi
 
 /-! ### The closed-form value: `maxMultiplicity (wcFamily n seed)
 = ⌈n/3⌉`, at EVERY seed — the no-collision analysis, consumed -/
@@ -176,13 +162,13 @@ private theorem multiplicity_wcVal (seed r : Nat) (hr : r < 3) :
 
 private theorem mem_wcFamily_eq {n seed : Nat} {v : Int}
     (hv : v ∈ wcFamily n seed) : ∃ i, i < n ∧ v = wcVal seed (i % 3) := by
-  simp only [wcFamily, List.mem_map, List.mem_range] at hv
+  simp only [wcFamily, familyMod, List.mem_map, List.mem_range] at hv
   obtain ⟨i, hi, rfl⟩ := hv
   exact ⟨i, hi, rfl⟩
 
 private theorem wcVal_mem {n seed i : Nat} (hi : i < n) :
     wcVal seed (i % 3) ∈ wcFamily n seed := by
-  simp only [wcFamily, List.mem_map, List.mem_range]
+  simp only [wcFamily, familyMod, List.mem_map, List.mem_range]
   exact ⟨i, hi, rfl⟩
 
 /-- **The headline's returned value in closed arithmetic form**: the

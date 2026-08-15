@@ -40,7 +40,11 @@ the brick-wp W6 convention adapted to Lean 4)
   `storeTarget_slice_u64`, `storeTarget_arrayLocal_u64`,
   `normalizeValueForTy_arr_u64`;
 * slice-value plumbing: `getElem?_mapU`, `getD_mem`,
-  `mem_set_of_mem`, `locSup_mapU`.
+  `mem_set_of_mem`, `locSup_mapU`;
+* the setup family + copy prefix (GAP-P2 lift, 2026-08-15):
+  `familyMod`, `prefixPad`, with `familyMod_length`/`_range`/
+  `familyModZ_range`/`_succ`/`_set`/`_getD` and `prefixPad_zero`/
+  `_length`/`_range`/`prefixPad_familyMod_set`/`prefixPad_full`.
 
 **Internal** (`private` — spelling may change without notice):
 `validateSlice_ok`, `sliceIndexLoc_ok`, `normalizeListWith_u64` — the
@@ -422,5 +426,108 @@ theorem applyStrictOp_mod_u64 {σ : ExecState} {a b : Nat}
     Bool.false_eq_true, if_false, Bind.bind, Except.bind, pure, Except.pure]
   simp only [show (IntKind.uint64 == IntKind.uint64) = true from rfl,
     if_true, hnorm]
+
+/-! ## The modular setup family + the zero-padded prefix (Gallery
+Campaign kit-gap closure GAP-P2, 2026-08-15)
+
+`familyMod k n seed` — the harness setup family `v[i] = seed + i % k`,
+wrapped at uint64 — and `prefixPad`, the copy loop's "family prefix,
+zero tail" invariant list, lifted from the verbatim per-example copies
+(`wcFamily`/`wcPre`, `histFamily`/`histPre`; both landed consumers
+keep their pinned names as one-line delegations). The wrap is part of
+the family BY DESIGN, so the family covers wrap-boundary seeds.
+(MinMax's `mmFamily` is a DIFFERENT formula (`seed + i`, no modulus)
+and designated statement vocabulary — deliberately not touched.) -/
+
+/-- The modular setup family: `fam[i] = (seed + i % k) % 2^64`. -/
+def familyMod (k n seed : Nat) : List Int :=
+  (List.range n).map (fun i => (((seed + i % k) % 2 ^ 64 : Nat) : Int))
+
+theorem familyMod_length (k n seed : Nat) :
+    (familyMod k n seed).length = n := by
+  simp [familyMod]
+
+theorem familyMod_range (k n seed : Nat) :
+    ∀ v ∈ familyMod k n seed, 0 ≤ v ∧ v < 2 ^ 64 := by
+  intro v hv
+  simp only [familyMod, List.mem_map, List.mem_range] at hv
+  obtain ⟨i, -, rfl⟩ := hv
+  have : (seed + i % k) % 2 ^ 64 < 2 ^ 64 := Nat.mod_lt _ (by omega)
+  omega
+
+/-- The family prefix with a zero tail stays in uint64 range. -/
+theorem familyModZ_range {k n seed i : Nat} :
+    ∀ v ∈ familyMod k i seed ++ List.replicate (n - i) (0 : Int),
+      0 ≤ v ∧ v < 2 ^ 64 := by
+  intro v hv
+  rcases List.mem_append.mp hv with hv | hv
+  · exact familyMod_range k i seed v hv
+  · rcases List.mem_replicate.mp hv with ⟨-, rfl⟩
+    omega
+
+theorem familyMod_succ (k i seed : Nat) :
+    familyMod k (i + 1) seed
+      = familyMod k i seed ++ [(((seed + i % k) % 2 ^ 64 : Nat) : Int)] := by
+  simp [familyMod, List.range_succ]
+
+/-- One setup store advances the family prefix. -/
+theorem familyMod_set {k n seed i : Nat} (hi : i < n) :
+    (familyMod k i seed ++ List.replicate (n - i) 0).set i
+        (((seed + i % k) % 2 ^ 64 : Nat) : Int)
+      = familyMod k (i + 1) seed ++ List.replicate (n - (i + 1)) 0 := by
+  have hlen : (familyMod k i seed).length = i := familyMod_length k i seed
+  have hnm : n - i = (n - (i + 1)) + 1 := by omega
+  rw [List.set_append_right _ _ (by omega), hlen, Nat.sub_self, hnm,
+    List.replicate_succ, List.set_cons_zero, familyMod_succ]
+  simp
+
+/-- The family's element at an in-range index. -/
+theorem familyMod_getD {k n seed m : Nat} (hm : m < n) :
+    (familyMod k n seed).getD m 0
+      = (((seed + m % k) % 2 ^ 64 : Nat) : Int) := by
+  rw [familyMod, List.getD_eq_getElem?_getD, List.getElem?_map,
+    List.getElem?_eq_getElem (by simpa using hm)]
+  simp
+
+/-- The copy loop's array invariant: the family prefix after `m`
+steps, the rest still the array's zero default (cap `cap`). -/
+def prefixPad (fam : Nat → Nat → List Int) (cap m seed : Nat) :
+    List Int :=
+  fam m seed ++ List.replicate (cap - m) 0
+
+theorem prefixPad_zero {fam : Nat → Nat → List Int} {cap seed : Nat}
+    (h0 : fam 0 seed = []) :
+    prefixPad fam cap 0 seed = List.replicate cap 0 := by
+  simp [prefixPad, h0]
+
+theorem prefixPad_length {fam : Nat → Nat → List Int}
+    {cap m seed : Nat} (hlen : (fam m seed).length = m) (hm : m ≤ cap) :
+    (prefixPad fam cap m seed).length = cap := by
+  rw [prefixPad, List.length_append, hlen, List.length_replicate]
+  omega
+
+theorem prefixPad_range {fam : Nat → Nat → List Int}
+    {cap m seed : Nat} (hr : ∀ v ∈ fam m seed, 0 ≤ v ∧ v < 2 ^ 64) :
+    ∀ v ∈ prefixPad fam cap m seed, 0 ≤ v ∧ v < 2 ^ 64 := by
+  intro v hv
+  rcases List.mem_append.mp hv with hv | hv
+  · exact hr v hv
+  · rcases List.mem_replicate.mp hv with ⟨-, rfl⟩
+    omega
+
+/-- One copy store advances the prefix (the `familyMod` instance). -/
+theorem prefixPad_familyMod_set {k cap seed m : Nat} (hm : m < cap) :
+    (prefixPad (familyMod k) cap m seed).set m
+        (((seed + m % k) % 2 ^ 64 : Nat) : Int)
+      = prefixPad (familyMod k) cap (m + 1) seed :=
+  familyMod_set hm
+
+/-- The copy loop's terminal list IS the family zero-padded to the
+cap. -/
+theorem prefixPad_full {fam : Nat → Nat → List Int}
+    {cap n seed : Nat} (hlen : (fam n seed).length = n) :
+    prefixPad fam cap n seed
+      = fam n seed ++ List.replicate (cap - (fam n seed).length) 0 := by
+  rw [prefixPad, hlen]
 
 end GoLean.SliceMem

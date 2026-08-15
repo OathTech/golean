@@ -29,11 +29,10 @@ Two layers live here, and the split matters:
   `Examples/WordCount/Pure.lean` now lives in `GoLeanProofs/MapMem.lean`
   (`bump`/`countsFold` + the lemma chain); only the `occurrences`
   bridge stays here.
-* **GAP-P2 the setup family.** `histFamily` and its four facts are an
-  address-free re-derivation of `wcFamily`. The P5 lift covered the
-  setup INDUCTION but explicitly not the family (G0 log, unit 3a JC).
-  Shape wanted: a `familyMod k` generic over the modulus with
-  `length`/`range`/`set`/`getD` proven once.
+* **GAP-P2 — CLOSED** (kit-gap closure, 2026-08-15): `histFamily` is
+  now a one-line delegation to `SliceMem.familyMod 3`, its facts
+  one-line delegations to the kit's — the re-derived proofs are
+  deleted.
 
 The `(countsList l).length = distinctCount l` bridge below is NOT a
 gap — it is this example's own spec content (`countsList` is the
@@ -43,6 +42,7 @@ pinned delegation name for the kit's `countsFold`).
 namespace GoLean.Examples.Histogram
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.Surface
+open GoLean.SliceMem
 open GoLean.MapMem
 
 set_option maxRecDepth 1000000
@@ -234,54 +234,36 @@ theorem countsList_length_le (l : List Int) :
 
 /-! ## The setup family
 
-GAP-P2 (see the module docstring): an address-free re-derivation of
-`Examples/WordCount/Family.lean`'s `wcFamily`. -/
+GAP-P2 CLOSED (kit-gap closure, 2026-08-15): the address-free
+re-derivation of the family this module carried is deleted — the kit
+form is `SliceMem.familyMod 3`; the pinned names below are one-line
+delegations. -/
 
 /-- The setup loop's family: `v[i] = seed + i%3`, wrapped at uint64 —
-three distinct values once `n ≥ 3`, with controllable multiplicities. -/
-def histFamily (n seed : Nat) : List Int :=
-  (List.range n).map (fun i => (((seed + i % 3) % 2 ^ 64 : Nat) : Int))
+three distinct values once `n ≥ 3`, with controllable multiplicities
+(delegation to the kit's `familyMod 3`). -/
+abbrev histFamily (n seed : Nat) : List Int :=
+  GoLean.SliceMem.familyMod 3 n seed
 
 theorem histFamily_length (n seed : Nat) :
-    (histFamily n seed).length = n := by
-  simp [histFamily]
+    (histFamily n seed).length = n := familyMod_length 3 n seed
 
 theorem histFamily_range (n seed : Nat) :
-    ∀ v ∈ histFamily n seed, 0 ≤ v ∧ v < 2 ^ 64 := by
-  intro v hv
-  simp only [histFamily, List.mem_map, List.mem_range] at hv
-  obtain ⟨i, -, rfl⟩ := hv
-  have : (seed + i % 3) % 2 ^ 64 < 2 ^ 64 := Nat.mod_lt _ (by omega)
-  omega
+    ∀ v ∈ histFamily n seed, 0 ≤ v ∧ v < 2 ^ 64 :=
+  familyMod_range 3 n seed
 
 theorem histFamilyZ_range {n seed i : Nat} :
     ∀ v ∈ histFamily i seed ++ List.replicate (n - i) (0 : Int),
-      0 ≤ v ∧ v < 2 ^ 64 := by
-  intro v hv
-  rcases List.mem_append.mp hv with hv | hv
-  · exact histFamily_range i seed v hv
-  · rcases List.mem_replicate.mp hv with ⟨-, rfl⟩
-    omega
-
-private theorem histFamily_succ (i seed : Nat) :
-    histFamily (i + 1) seed
-      = histFamily i seed ++ [(((seed + i % 3) % 2 ^ 64 : Nat) : Int)] := by
-  simp [histFamily, List.range_succ]
+      0 ≤ v ∧ v < 2 ^ 64 := familyModZ_range
 
 theorem histFamily_set {n seed i : Nat} (hi : i < n) :
     (histFamily i seed ++ List.replicate (n - i) 0).set i
         (((seed + i % 3) % 2 ^ 64 : Nat) : Int)
-      = histFamily (i + 1) seed ++ List.replicate (n - (i + 1)) 0 := by
-  have hlen : (histFamily i seed).length = i := histFamily_length i seed
-  have hnm : n - i = (n - (i + 1)) + 1 := by omega
-  rw [List.set_append_right _ _ (by omega), hlen, Nat.sub_self, hnm,
-    List.replicate_succ, List.set_cons_zero, histFamily_succ]
-  simp
+      = histFamily (i + 1) seed ++ List.replicate (n - (i + 1)) 0 :=
+  familyMod_set hi
 
 theorem histFamily_getD {n seed m : Nat} (hm : m < n) :
-    (histFamily n seed).getD m 0 = (((seed + m % 3) % 2 ^ 64 : Nat) : Int) := by
-  rw [histFamily, List.getD_eq_getElem?_getD, List.getElem?_map,
-    List.getElem?_eq_getElem (by simpa using hm)]
-  simp
+    (histFamily n seed).getD m 0
+      = (((seed + m % 3) % 2 ^ 64 : Nat) : Int) := familyMod_getD hm
 
 end GoLean.Examples.Histogram

@@ -112,40 +112,40 @@ Comparator Challenge's trusted closure imports. -/
 -- induction carries `wcPre` instead — and an unused lemma in a proof
 -- module is a maintenance surface, not a fact anyone reads.)
 
-/-- The family's element at an in-range index. -/
+/-- The family's element at an in-range index (GAP-P2: delegation). -/
 theorem wcFamily_getD {n seed m : Nat} (hm : m < n) :
-    (wcFamily n seed).getD m 0 = (((seed + m % 3) % 2 ^ 64 : Nat) : Int) := by
-  rw [wcFamily, List.getD_eq_getElem?_getD, List.getElem?_map,
-    List.getElem?_eq_getElem (by simpa using hm)]
-  simp
+    (wcFamily n seed).getD m 0 = (((seed + m % 3) % 2 ^ 64 : Nat) : Int) :=
+  familyMod_getD hm
 
-/-- The `words` array after `m` copy steps: the family prefix, the rest
-still the array's zero default. -/
+/-- The `words` array after `m` copy steps: the family prefix, the
+rest still the array's zero default (GAP-P2 CLOSED: the kit's
+`prefixPad`; the facts are delegations). -/
 def wcPre (m seed : Nat) : List Int :=
-  wcFamily m seed ++ List.replicate (8 - m) 0
+  prefixPad (GoLean.SliceMem.familyMod 3) 8 m seed
 
-theorem wcPre_zero (seed : Nat) : wcPre 0 seed = List.replicate 8 0 := by
-  simp [wcPre, wcFamily]
+theorem wcPre_zero (seed : Nat) : wcPre 0 seed = List.replicate 8 0 :=
+  prefixPad_zero rfl
 
 theorem wcPre_length {m seed : Nat} (h : m ≤ 8) :
-    (wcPre m seed).length = 8 := by
-  rw [wcPre, List.length_append, wcFamily_length, List.length_replicate]
-  omega
+    (wcPre m seed).length = 8 :=
+  prefixPad_length (familyMod_length 3 m seed) h
 
 theorem wcPre_range {m seed : Nat} :
-    ∀ v ∈ wcPre m seed, 0 ≤ v ∧ v < 2 ^ 64 := wcFamilyZ_range
+    ∀ v ∈ wcPre m seed, 0 ≤ v ∧ v < 2 ^ 64 :=
+  prefixPad_range (familyMod_range 3 m seed)
 
 theorem wcPre_set {seed m : Nat} (hm : m < 8) :
     (wcPre m seed).set m (((seed + m % 3) % 2 ^ 64 : Nat) : Int)
-      = wcPre (m + 1) seed := wcFamily_set hm
+      = wcPre (m + 1) seed :=
+  prefixPad_familyMod_set hm
 
 /-- The copy loop's terminal list IS `goArr8`'s content at the family:
 `wcFamily_length` is what makes `8 - (wcFamily n seed).length` reduce
 to `8 - n`. -/
 theorem wcPre_full {n seed : Nat} :
     wcPre n seed
-      = wcFamily n seed ++ List.replicate (8 - (wcFamily n seed).length) 0 := by
-  rw [wcPre, wcFamily_length]
+      = wcFamily n seed ++ List.replicate (8 - (wcFamily n seed).length) 0 :=
+  prefixPad_full (familyMod_length 3 n seed)
 
 /-! ## Cells and handles at the r-layout -/
 

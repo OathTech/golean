@@ -97,7 +97,10 @@ vocabulary defs) -/
 /-- info: 'GoLean.Surface.natFromNonneg_cast' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.natFromNonneg_cast
 
-/-! ## SliceMem — slice-in-memory vocabulary + executable op facts (17 public lemmas) -/
+/-! ## SliceMem — slice-in-memory vocabulary + executable op facts
+(28 public lemmas; +11 in the GAP-P2 family/prefix lift, 2026-08-15 —
+the `familyMod`/`prefixPad` defs are unpinned like the other
+vocabulary defs) -/
 
 /-- info: 'GoLean.SliceMem.unorm_of_range' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.SliceMem.unorm_of_range
@@ -133,6 +136,29 @@ vocabulary defs) -/
 #guard_msgs in #print axioms GoLean.SliceMem.applyStrictOp_lessCmp_int
 /-- info: 'GoLean.SliceMem.applyStrictOp_mod_u64' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.SliceMem.applyStrictOp_mod_u64
+
+/-- info: 'GoLean.SliceMem.familyMod_length' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.familyMod_length
+/-- info: 'GoLean.SliceMem.familyMod_range' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.familyMod_range
+/-- info: 'GoLean.SliceMem.familyModZ_range' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.familyModZ_range
+/-- info: 'GoLean.SliceMem.familyMod_succ' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.familyMod_succ
+/-- info: 'GoLean.SliceMem.familyMod_set' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.familyMod_set
+/-- info: 'GoLean.SliceMem.familyMod_getD' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.familyMod_getD
+/-- info: 'GoLean.SliceMem.prefixPad_zero' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.prefixPad_zero
+/-- info: 'GoLean.SliceMem.prefixPad_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.prefixPad_length
+/-- info: 'GoLean.SliceMem.prefixPad_range' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.prefixPad_range
+/-- info: 'GoLean.SliceMem.prefixPad_familyMod_set' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.prefixPad_familyMod_set
+/-- info: 'GoLean.SliceMem.prefixPad_full' does not depend on any axioms -/
+#guard_msgs in #print axioms GoLean.SliceMem.prefixPad_full
 
 /-! ## MapMem — map-in-memory vocabulary + executable op facts
 (24 public lemmas; +11 in the GAP-P1 counting-fold lift, 2026-08-15 —

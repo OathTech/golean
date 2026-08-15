@@ -41,35 +41,39 @@ set_option maxRecDepth 1000000
 set_option maxHeartbeats 2000000
 set_option linter.unusedSimpArgs false
 
-/-! ## The copy loop's array invariant (GAP-P2) -/
+/-! ## The copy loop's array invariant
+
+GAP-P2 CLOSED (kit-gap closure, 2026-08-15): `histPre` is the kit's
+`prefixPad` at cap 8; the facts are one-line delegations. -/
 
 /-- The `vals` array after `m` copy steps: the family prefix, the rest
 still the array's zero default. -/
 def histPre (m seed : Nat) : List Int :=
-  histFamily m seed ++ List.replicate (8 - m) 0
+  prefixPad (GoLean.SliceMem.familyMod 3) 8 m seed
 
-theorem histPre_zero (seed : Nat) : histPre 0 seed = List.replicate 8 0 := by
-  simp [histPre, histFamily]
+theorem histPre_zero (seed : Nat) : histPre 0 seed = List.replicate 8 0 :=
+  prefixPad_zero rfl
 
 theorem histPre_length {m seed : Nat} (h : m ≤ 8) :
-    (histPre m seed).length = 8 := by
-  rw [histPre, List.length_append, histFamily_length, List.length_replicate]
-  omega
+    (histPre m seed).length = 8 :=
+  prefixPad_length (familyMod_length 3 m seed) h
 
 theorem histPre_range {m seed : Nat} :
-    ∀ v ∈ histPre m seed, 0 ≤ v ∧ v < 2 ^ 64 := histFamilyZ_range
+    ∀ v ∈ histPre m seed, 0 ≤ v ∧ v < 2 ^ 64 :=
+  prefixPad_range (familyMod_range 3 m seed)
 
 theorem histPre_set {seed m : Nat} (hm : m < 8) :
     (histPre m seed).set m (((seed + m % 3) % 2 ^ 64 : Nat) : Int)
-      = histPre (m + 1) seed := histFamily_set hm
+      = histPre (m + 1) seed :=
+  prefixPad_familyMod_set hm
 
 /-- The copy loop's terminal list IS `histArr8`'s content at the
 family. -/
 theorem histPre_full {n seed : Nat} :
     histPre n seed
       = histFamily n seed
-          ++ List.replicate (8 - (histFamily n seed).length) 0 := by
-  rw [histPre, histFamily_length]
+          ++ List.replicate (8 - (histFamily n seed).length) 0 :=
+  prefixPad_full (familyMod_length 3 n seed)
 
 /-! ## Heap-lookup facts -/
 
