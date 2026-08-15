@@ -1,0 +1,15 @@
+# id	subject	args	expected_status	expected_reason	features
+four-palin	palinFour	1,2,2,1	ok	-	slices,indexing,loops,if
+four-nonpalin	palinFour	1,2,3,4	ok	-	slices,indexing,loops,if
+four-allsame	palinFour	7,7,7,7	ok	-	slices,indexing,loops,if
+four-big	palinFour	9223372036854775807,0,0,9223372036854775807	ok	-	slices,indexing,loops,if
+three-palin	palinThree	5,9,5	ok	-	slices,indexing,loops,if
+three-nonpalin	palinThree	5,9,6	ok	-	slices,indexing,loops,if
+one	palinOne	42	ok	-	slices,indexing,loops,if
+empty	palinEmpty	-	ok	-	slices,indexing,loops,if
+harness-r-empty	palin_harness_r	0,5	ok	-	slices,indexing,loops,if,arrays
+harness-r-one	palin_harness_r	1,37	ok	-	slices,indexing,loops,if,arrays
+harness-r-five	palin_harness_r	5,10	ok	-	slices,indexing,loops,if,arrays
+harness-r-four	palin_harness_r	4,10	ok	-	slices,indexing,loops,if,arrays
+harness-r-eight	palin_harness_r	8,3	ok	-	slices,indexing,loops,if,arrays
+harness-r-big	palin_harness_r	7,9223372036854775807	ok	-	slices,indexing,loops,if,arrays

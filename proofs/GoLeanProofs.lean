@@ -131,6 +131,8 @@ import GoLeanProofs.Examples.RunLengthProgram
 import GoLeanProofs.Examples.RunLength
 import GoLeanProofs.Examples.PowModProgram
 import GoLeanProofs.Examples.PowMod
+import GoLeanProofs.Examples.ArrayPalindromeProgram
+import GoLeanProofs.Examples.ArrayPalindrome
 import GoLeanProofs.Examples.SelectionSortProgram
 import GoLeanProofs.Examples.SelectionSort
 
