@@ -6,7 +6,12 @@ import GoLeanProofs.FuelMeasure
 import GoLeanProofs.StepKit
 import GoLeanProofs.Laws.StmtOps
 import GoLeanProofs.MapLoops
-import GoLeanProofs.Examples.WordCount
+import GoLeanProofs.Examples.WordCount.CanonCount
+import GoLeanProofs.Examples.WordCount.CanonRun
+import GoLeanProofs.Examples.WordCount.Family
+import GoLeanProofs.Examples.WordCount.Machine
+import GoLeanProofs.Examples.WordCount.Pure
+import GoLeanProofs.Examples.WordCount.RangeGeneric
 import GoLeanProofs.Examples.Targets
 
 /-!

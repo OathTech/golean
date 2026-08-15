@@ -11,6 +11,7 @@ import GoLeanProofs.Examples.WordCount.Family
 import GoLeanProofs.Examples.WordCount.HarnessSetup
 import GoLeanProofs.Examples.WordCount.HarnessSubject
 import GoLeanProofs.Examples.WordCount.HarnessRun
+import GoLeanProofs.Examples.WordCount.HarnessR
 
 
 /-!

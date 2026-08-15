@@ -1,6 +1,8 @@
 import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.StepKit
+import GoLeanProofs.Examples.InsertionSort.Canon
+import GoLeanProofs.Examples.InsertionSort.Setup
 import GoLeanProofs.Examples.InsertionSort.Subject
 
 /-!

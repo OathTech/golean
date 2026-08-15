@@ -3,6 +3,7 @@ import GoLeanProofs.MapMem
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.StepKit
 import GoLeanProofs.Examples.WordCount.HarnessSetup
+import GoLeanProofs.Examples.WordCount.Machine
 
 /-!
 # WordCount — HarnessSubject

@@ -5,6 +5,7 @@ import GoLeanProofs.FuelMeasure
 import GoLeanProofs.StepKit
 import GoLeanProofs.Laws.StmtOps
 import GoLeanProofs.Examples.WordCount.Family
+import GoLeanProofs.Examples.WordCount.Machine
 import GoLeanProofs.Examples.Targets
 
 /-!

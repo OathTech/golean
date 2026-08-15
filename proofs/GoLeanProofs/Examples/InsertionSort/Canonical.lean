@@ -6,7 +6,9 @@ import GoLeanProofs.Frame.Rename
 import GoLeanProofs.Frame.Sim
 import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Frame.RenameId
+import GoLeanProofs.Examples.InsertionSort.Canon
 import GoLeanProofs.Examples.InsertionSort.PassFrame
+import GoLeanProofs.Examples.InsertionSort.Pure
 
 /-!
 # InsertionSort — Canonical

@@ -1,5 +1,5 @@
 import GoLeanProofs.SliceMem
-import GoLeanProofs.Examples.WordCount.Empty
+import GoLeanProofs.Examples.WordCount.Pure
 import GoLeanProofs.Examples.Targets
 
 /-!
