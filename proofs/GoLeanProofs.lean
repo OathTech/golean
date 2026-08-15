@@ -133,6 +133,8 @@ import GoLeanProofs.Examples.PowModProgram
 import GoLeanProofs.Examples.PowMod
 import GoLeanProofs.Examples.ArrayPalindromeProgram
 import GoLeanProofs.Examples.ArrayPalindrome
+import GoLeanProofs.Examples.DedupAdjacentProgram
+import GoLeanProofs.Examples.DedupAdjacent
 import GoLeanProofs.Examples.SelectionSortProgram
 import GoLeanProofs.Examples.SelectionSort
 

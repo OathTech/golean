@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+four-all-same	dedupFourLen	7,7,7,7	ok	-	slices,indexing,loops,bools,if
+four-distinct	dedupFourLen	1,2,3,4	ok	-	slices,indexing,loops,bools,if
+four-alternating	dedupFourLen	1,2,1,2	ok	-	slices,indexing,loops,bools,if
+four-pairs	dedupFourLen	5,5,9,9	ok	-	slices,indexing,loops,bools,if
+four-extremes	dedupFourLen	9223372036854775807,9223372036854775807,0,0	ok	-	slices,indexing,loops,bools,if
+four-first	dedupFourFirst	6,6,2,2	ok	-	slices,indexing,loops,bools,if
+one	dedupOne	42	ok	-	slices,indexing,loops,bools,if
+empty	dedupEmpty	-	ok	-	slices,indexing,loops,bools,if
+harness-r-empty	dedup_harness_r	0,5	ok	-	slices,indexing,loops,bools,if,arrays
+harness-r-one	dedup_harness_r	1,9	ok	-	slices,indexing,loops,bools,if,arrays
+harness-r-mid	dedup_harness_r	5,3	ok	-	slices,indexing,loops,bools,if,arrays
+harness-r-cap	dedup_harness_r	8,100	ok	-	slices,indexing,loops,bools,if,arrays
+harness-r-big	dedup_harness_r	6,9223372036854775807	ok	-	slices,indexing,loops,bools,if,arrays

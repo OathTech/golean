@@ -434,6 +434,8 @@ check_surface_imports proofs/GoLeanProofs/Examples/PowModProgram.lean \
   '^import GoLean\.'
 check_surface_imports proofs/GoLeanProofs/Examples/ArrayPalindromeProgram.lean \
   '^import GoLean\.'
+check_surface_imports proofs/GoLeanProofs/Examples/DedupAdjacentProgram.lean \
+  '^import GoLean\.'
 check_surface_imports proofs/GoLeanProofs/Examples/SelectionSortProgram.lean \
   '^import GoLean\.'
 # The fork/join pool witnesses (channels arc slice 2): statement-bearing,
