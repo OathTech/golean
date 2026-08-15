@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+fifo-three	enqDeqThree	10,20,30	ok	-	slices,indexing,multi_assign
+fifo-three-desc	enqDeqThree	30,20,10	ok	-	slices,indexing,multi_assign
+fifo-three-same	enqDeqThree	7,7,7	ok	-	slices,indexing,multi_assign
+fifo-three-extremes	enqDeqThree	9223372036854775807,0,9223372036854775807	ok	-	slices,indexing,multi_assign
+enq-front	enqFront	5,9	ok	-	slices,indexing
+empty-size	emptyQSize	-	ok	-	slices
+harness-empty	queue_harness_r	0,5,0	ok	-	slices,indexing,loops,if,arrays,multi_assign
+harness-one-drain	queue_harness_r	1,42,1	ok	-	slices,indexing,loops,if,arrays,multi_assign
+harness-mid	queue_harness_r	5,100,3	ok	-	slices,indexing,loops,if,arrays,multi_assign
+harness-cap-drain	queue_harness_r	8,3,8	ok	-	slices,indexing,loops,if,arrays,multi_assign
+harness-k-zero	queue_harness_r	4,50,0	ok	-	slices,indexing,loops,if,arrays,multi_assign
+harness-k-over	queue_harness_r	3,7,9	ok	-	slices,indexing,loops,if,arrays,multi_assign
+harness-bigseed	queue_harness_r	8,9223372036854775807,4	ok	-	slices,indexing,loops,if,arrays,multi_assign
