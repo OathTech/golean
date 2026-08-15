@@ -1,6 +1,6 @@
 # Verified examples — the gallery (2026-08-14)
 
-Ten Go programs, and for each one a GoLean theorem you can read.
+Thirteen Go programs, and for each one a GoLean theorem you can read.
 
 This file is the **object of agreement**: it exists so that a reader who is
 not a Lean expert can check, by eye, that the top-level statement really
@@ -124,7 +124,7 @@ exhaustion.
 
 `Choices` is the stream of nondeterministic decisions the machine consumes at
 points where Go does not promise an outcome. `∀ ch : Choices` says the claim
-holds at **every** such stream. For eight of the ten examples this quantifier
+holds at **every** such stream. For eleven of the thirteen examples this quantifier
 is cheap (their runs consume no choices). For word-count and histogram it
 does real work: `for … range` over a Go map consumes one choice per
 iteration, because Go deliberately does not fix map iteration order — so the
@@ -1700,6 +1700,587 @@ harness at `harness-empty`, `harness-one`, `harness-mid`,
 `harness-cap`, `harness-extreme` (`seed = 2^63 − 1`, the largest value
 the differential driver can pass — the `--arg` int64 ceiling is a
 driver limit, not a machine one).
+
+## twosum — first pair summing to a target (nested loops, early return)
+
+**The Go** (`Corpus/coverage/exec/examples/twosum/main.go`):
+
+<!-- verbatim: Corpus/coverage/exec/examples/twosum/main.go -->
+```go
+// twoSum: the O(n^2) double loop. Returns the FIRST index pair (i, j)
+// in scan order with i < j and s[i]+s[j] == target (wrapping uint64
+// addition). When no pair exists it returns
+// (uint64(len(s)), uint64(len(s))) — an out-of-range sentinel.
+func twoSum(s []uint64, target uint64) (uint64, uint64) {
+	n := uint64(len(s))
+	for i := uint64(0); i < n; i++ {
+		for j := i + 1; j < n; j++ {
+			if s[i]+s[j] == target {
+				return i, j
+			}
+		}
+	}
+	return n, n
+}
+```
+
+<!-- verbatim: Corpus/coverage/exec/examples/twosum/main.go -->
+```go
+// twosum_harness_r: the S3 RELATIONAL harness. Setup builds the family
+// s[i] = seed + i (wrapping uint64 addition); a copy loop lifts the
+// pre-state into a fixed-cap array (the pass-by-value fragment's
+// unbounded-data workaround); then the subject runs. Returning
+// (vals, i, j) lets the postcondition relate the returned data
+// directly: either i < j < n with vals[i]+vals[j] = target and (i, j)
+// first in scan order, or i = j = n (the not-found sentinel).
+// Real Go, ghost ladder rung 0.
+func twosum_harness_r(n, seed, target uint64) ([twosumCapN]uint64, uint64, uint64) {
+	s := make([]uint64, n)
+	for i := uint64(0); i < n; i++ {
+		s[i] = seed + i
+	}
+	var vals [twosumCapN]uint64
+	for i := uint64(0); i < n; i++ {
+		vals[i] = s[i]
+	}
+	i, j := twoSum(s, target)
+	return vals, i, j
+}
+```
+
+**The claim.** For every `n ≤ 8`, every `seed < 2^64` and every
+`target < 2^64`, `twosum_harness_r(n, seed, target)` finishes normally, at
+every nondeterminism choice, and returns three values: a list `vals` of
+length `n` (as the fixed-cap array the Go returns) together with the index
+pair `twoSumSpec vals target` — the FIRST pair `(i, j)` in scan order
+(outer index ascending, inner ascending, always `i < j`) whose wrapping
+sum `(vals[i] + vals[j]) % 2^64` equals the target, or the sentinel
+`(n, n)` when no pair does. **The postcondition is a relation over the
+RETURNED data** — the pair is a function of the very array the program
+handed back. No family function appears in the claim.
+
+The honesty clauses, none of them small print:
+
+* **`twoSumSpec` is a first-search recursion**, shaped like the scan it
+  specifies — by itself it would be a program-shaped spec. The genuinely
+  first-order content is shipped alongside: `twosum_first_pair` restates
+  the theorem as the explicit disjunction — *either* `i < j < n`, the
+  wrapped sum hits, and no scan-earlier pair hits; *or* `i = j = n` and no
+  pair hits at all — with no reference to `twoSumSpec`, using only
+  `List.getD`, `%` and `<`.
+* **The wrapped sum is the program's own arithmetic.** The `% 2^64` in the
+  claim is Go's uint64 addition on this fragment (spelled with `Int.emod`),
+  not a proof convenience; the domain bounds `seed, target < 2^64` are Go's
+  uint64 domain; `n ≤ 8` is the program's own array cap (below); the
+  first-pair ordering content is mathematics.
+* **The cap `n ≤ 8` is a toy bound, and it is the price of this style.**
+  Go's pass-by-value fragment cannot return unbounded data, so the harness
+  returns `[twosumCapN]uint64` with `twosumCapN = 8` — visible in the Go —
+  and the copy loop and the zero padding exist *only* so the searched array
+  can cross the observation boundary. The theorem carries `n ≤ 8` as a
+  hypothesis rather than hiding it.
+* **`∃ vals` is still family-determined.** The witness the proof supplies
+  is `s[i] = (seed + i) mod 2^64`; the statement merely does not *say* so.
+  Turning the input into genuine ∀-data needs the ghost rung-1 annotation,
+  which is designed and not built.
+* **`n = 0` and `n = 1` are included** and are not degenerate holes: no
+  pair exists, both loops fall through, and the sentinel comes back —
+  pinned against `go run` by the `harness-r-empty` / `harness-r-one` rows.
+
+As elsewhere, the machine idealizes allocation (entry from an empty heap,
+an unbounded heap, allocation always succeeds) — and this example leans on
+that idealization harder than its siblings: each outer iteration of
+`twoSum` declares a fresh inner `j` and loop flag, so the machine allocates
+two new cells per outer round, all of which succeed by fiat.
+
+**The specification function** (`proofs/GoLeanProofs/Examples/TwoSum/Pure.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/TwoSum/Pure.lean -->
+```lean
+def findFrom (xs : List Int) (tgt : Int) (i j : Nat) : Option Nat :=
+  if _h : j < xs.length then
+    if (xs.getD i 0 + xs.getD j 0) % 2 ^ 64 = tgt then some j
+    else findFrom xs tgt i (j + 1)
+  else none
+termination_by xs.length - j
+```
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/TwoSum/Pure.lean -->
+```lean
+def findPair (xs : List Int) (tgt : Int) (i : Nat) : Option (Nat × Nat) :=
+  if _h : i < xs.length then
+    match findFrom xs tgt i (i + 1) with
+    | some j => some (i, j)
+    | none => findPair xs tgt (i + 1)
+  else none
+termination_by xs.length - i
+```
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/TwoSum/Pure.lean -->
+```lean
+def twoSumSpec (xs : List Int) (tgt : Int) : Int × Int :=
+  match findPair xs tgt 0 with
+  | some (i, j) => ((i : Int), (j : Int))
+  | none => ((xs.length : Int), (xs.length : Int))
+```
+
+**The returned-array adapter** — the S3 statement vocabulary
+(`proofs/GoLeanProofs/Examples/TwoSum/Machine.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/TwoSum/Machine.lean -->
+```lean
+def tsArr8 (xs : List Int) : GoValue :=
+  .array ⟨(xs ++ List.replicate (8 - xs.length) 0).map
+    (fun v => .int v .uint64)⟩
+```
+
+**The theorem** (`proofs/GoLeanProofs/Examples/TwoSum.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/TwoSum.lean -->
+```lean
+theorem twosum_ok (n seed target : Nat) (hcap : n ≤ 8)
+    (hseed : seed < 2 ^ 64) (htgt : target < 2 ^ 64) :
+    ∃ vals : List Int, vals.length = n ∧
+      ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        runFunctionWithContextM fuel twosumLowered.typeDefs.toList
+            twosumLowered.funcs twosumHarnessRFunc
+            #[.int (n : Int) .uint64, .int (seed : Int) .uint64,
+              .int (target : Int) .uint64]
+            twosumLowered.methods ch
+          = .ok { values := #[tsArr8 vals,
+              .int (twoSumSpec vals (target : Int)).1 .uint64,
+              .int (twoSumSpec vals (target : Int)).2 .uint64] } := by
+```
+
+**The first-order corollary** (same file; the statement-TCB readout —
+what the pair MEANS, with `twoSumSpec` never mentioned):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/TwoSum.lean -->
+```lean
+theorem twosum_first_pair (n seed target : Nat) (hcap : n ≤ 8)
+    (hseed : seed < 2 ^ 64) (htgt : target < 2 ^ 64) :
+    ∃ vals : List Int, vals.length = n ∧
+      ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        ∃ i j : Int,
+          runFunctionWithContextM fuel twosumLowered.typeDefs.toList
+              twosumLowered.funcs twosumHarnessRFunc
+              #[.int (n : Int) .uint64, .int (seed : Int) .uint64,
+                .int (target : Int) .uint64]
+              twosumLowered.methods ch
+            = .ok { values := #[tsArr8 vals, .int i .uint64,
+                .int j .uint64] }
+          ∧ ((∃ a b : Nat, i = (a : Int) ∧ j = (b : Int)
+                ∧ a < b ∧ b < n
+                ∧ (vals.getD a 0 + vals.getD b 0) % 2 ^ 64
+                    = (target : Int)
+                ∧ ∀ a' b' : Nat, a' < b' → b' < n →
+                    (a' < a ∨ (a' = a ∧ b' < b)) →
+                    ¬ (vals.getD a' 0 + vals.getD b' 0) % 2 ^ 64
+                        = (target : Int))
+            ∨ (i = (n : Int) ∧ j = (n : Int)
+                ∧ ∀ a b : Nat, a < b → b < n →
+                    ¬ (vals.getD a 0 + vals.getD b 0) % 2 ^ 64
+                        = (target : Int))) := by
+```
+
+**Axioms** (pinned in `proofs/Audit/TwoSum.lean`):
+
+<!-- verbatim: proofs/Audit/TwoSum.lean -->
+```lean
+/-- info: 'GoLean.Examples.TwoSum.twosum_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+Lean's classical trio; no `sorry`, no native evaluation, no project axioms.
+
+**Fuel bound.** Explicit and QUADRATIC — the honest shape of a nested
+loop: `N = 57·n² + 212·n + 303`. It is branch-uniform: each of the at most
+`n` outer rows is charged its worst case (`57·n + 106`, covering the fresh
+inner-counter allocation, up to `n−1` inner iterations at 57 steps each,
+and either exit), on top of the setup/copy loops at 53 steps per iteration
+and the fixed entry/call/epilogue overheads. The *measured* counts are
+smaller and data-dependent, because the early return skips everything
+after the first hit — the exact no-pair law is
+`303 + 206·n + 57·n·(n−1)/2` (measured: 303/509/772/1469/3547 at
+`n = 0/1/2/4/8`), while a hit at `(0,1)` costs 607 at `n = 2` and 1243 at
+`n = 8`. The bound quoted here is the one the theorem actually ships;
+the measurements are recorded, not shipped.
+
+**Status.** `twosum_readout` is the run-conditioned twin;
+`twosum_first_pair` is the first-order corollary quoted above. This entry
+is NOT designated: it is absent from `Examples/Targets.lean`, the
+`scripts/ci` Targets allowlist, `Audit.lean`'s designated-name list and
+the Comparator Challenge's trusted closure — designation is arc-end work
+under user sign-off. Deletion test run 2026-08-15 by re-elaborating the
+headline with each explicit binder removed: `hcap`, `hseed` and `htgt`
+each break the proof (two sites each). No decorative hypothesis.
+
+**Ground.** Differentially green on 14 corpus rows: the four-element
+driver at a middle/first/last/absent/duplicate/degenerate-duplicate hit,
+an `int64`-boundary extreme, the one-element and empty drivers, and the
+relational harness at `n = 0`, `n = 1`, `n = 5` (interior hit), `n = 8`
+(adjacent hit at the head) and the wrap-region seed
+`9223372036854775807` with target `0`.
+
+What no row reaches, said plainly: the theorem covers every
+`seed, target < 2^64`, including the region where `seed + i` and the pair
+sums wrap past `2^64` — but the differential driver parses `int64`
+arguments, so no corpus row exercises a seed or target above `2^63 − 1`
+(the `harness-r-wrap` row sits exactly at that boundary, where the pair
+sums `≈ 2^64` DO wrap and the no-pair sentinel is what real Go returns).
+The full uint64 wrap region was checked on the machine only, with no
+`go run` oracle in the loop — extending the driver past `int64` is the
+recorded E1 extension (dotprod is its designated consumer).
+
+## selsort — selection sort, the sorted output returned and related to the input
+
+**The Go** (`Corpus/coverage/exec/examples/selsort/main.go`):
+
+<!-- verbatim: Corpus/coverage/exec/examples/selsort/main.go -->
+```go
+func selectionSort(s []uint64) {
+	for i := 0; i < len(s); i++ {
+		m := i
+		for j := i + 1; j < len(s); j++ {
+			if s[j] < s[m] {
+				m = j
+			}
+		}
+		s[i], s[m] = s[m], s[i]
+	}
+}
+```
+
+<!-- verbatim: Corpus/coverage/exec/examples/selsort/main.go -->
+```go
+// selsortCapN: the fixed observation cap of the S3 relational harness.
+// Both returned arrays are `[selsortCapN]uint64`, so the harness's own
+// bound is `n <= 8` — plainly visible in the source.
+const selsortCapN = 8
+```
+
+<!-- verbatim: Corpus/coverage/exec/examples/selsort/main.go -->
+```go
+// selsort_harness_r: the S3 RELATIONAL harness. Setup builds a
+// genuinely-unsorted family by iterating a wrapping LCG from `seed`;
+// a copy loop lifts it into `pre` (the fixed-cap array is the
+// pass-by-value fragment's unbounded-data workaround), the subject
+// sorts in place, and a second copy loop lifts the result into
+// `post`, so a postcondition can relate the returned data directly.
+// Real Go, ghost ladder rung 0.
+func selsort_harness_r(n, seed uint64) ([selsortCapN]uint64, [selsortCapN]uint64) {
+	s := make([]uint64, n)
+	x := seed
+	for i := uint64(0); i < n; i++ {
+		x = x*6364136223846793005 + 1442695040888963407
+		s[i] = x
+	}
+	var pre [selsortCapN]uint64
+	for i := uint64(0); i < n; i++ {
+		pre[i] = s[i]
+	}
+	selectionSort(s)
+	var post [selsortCapN]uint64
+	for i := uint64(0); i < n; i++ {
+		post[i] = s[i]
+	}
+	return pre, post
+}
+```
+
+**The claim.** For every `n ≤ 8` and every `seed < 2^64`,
+`selsort_harness_r(n, seed)` finishes normally, at every nondeterminism
+choice, and returns two values: a list `pre` of length `n` and the list
+`post = sortSpec pre` — THE sorted permutation of `pre` — both as the
+fixed-cap `[8]uint64` arrays the Go returns. **The postcondition is a
+relation between the two RETURNED arrays**: the sorted output is itself
+observed and equated to the mathematical sort of the observed input. This is
+the strongest honest form this harness style has achieved for a sort — the
+gallery's other sort, `isort`, checks sortedness and the permutation
+property IN GO and returns the verdict `1`; here the data itself crosses the
+boundary and the theorem relates it. The first-order companion
+`selsort_sorted_count` states the same claim with no `sortSpec` at all:
+the second array is `Sorted` and every value occurs in it exactly as often
+as in the first (`SortShared.sorted_perm_unique` makes the two forms
+interderivable — a sorted list is determined by its counts).
+
+Four honesty clauses, none of them small print:
+
+* **`sortSpec` is one shared definition.** It is the insertion fold from
+  the isort entry (`Examples.InsertionSort.Pure`), imported deliberately via
+  `SortShared` so that "the sorted permutation" means ONE thing across the
+  gallery; `sortSpec_sorted`/`sortSpec_count` are its defining theorems, and
+  the first-order corollary avoids the name entirely.
+* **The cap `n ≤ 8` is a toy bound, and it is the price of this style.**
+  Go's pass-by-value fragment cannot return unbounded data, so the harness
+  returns `[selsortCapN]uint64` with `selsortCapN = 8` — visible in the
+  Go — and the copy loops and the zero padding exist *only* so the data can
+  cross the observation boundary. The theorem carries `n ≤ 8` as a
+  hypothesis rather than hiding it.
+* **`∃ pre` is still family-determined.** The witness the proof supplies is
+  the wrapping LCG `x = x·6364136223846793005 + 1442695040888963407
+  (mod 2^64)` iterated from `seed` — genuinely unsorted inputs,
+  probe-verified in the guardrails wave — and the statement merely does not
+  *say* so. What the S3 form buys is on the postcondition side: the
+  sorted-permutation relation is asserted about observed output against
+  observed input. Turning the input into genuine ∀-data needs the ghost
+  rung-1 annotation, which is designed and not built.
+* **Machine idealization**, as elsewhere: entry from an empty heap, an
+  unbounded heap, allocation always succeeds. The arithmetic domains are
+  separated as usual: `n ≤ 8` is *the program's own* (the array cap,
+  declared in its source), `seed < 2^64` is *Go's* uint64 domain at the
+  call boundary, the LCG wrap-around is *the program's own arithmetic*
+  (uint64 multiply-add, wrapping by Go's rules), and sortedness/counting
+  are mathematics.
+
+**The theorem** (`proofs/GoLeanProofs/Examples/SelectionSort.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/SelectionSort.lean -->
+```lean
+theorem selsort_ok (n seed : Nat) (hcap : n ≤ 8) (hseed : seed < 2 ^ 64) :
+    ∃ pre post : List Int, pre.length = n ∧ post = sortSpec pre ∧
+      ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        runFunctionWithContextM fuel selsortLowered.typeDefs.toList
+            selsortLowered.funcs selsortHarnessRFunc
+            #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+            selsortLowered.methods ch
+          = .ok { values := #[selArr8 pre, selArr8 post] } := by
+```
+
+**The first-order readout** (same file; the statement-TCB corollary — no
+`sortSpec`, nothing to unfold):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/SelectionSort.lean -->
+```lean
+theorem selsort_sorted_count (n seed : Nat) (hcap : n ≤ 8)
+    (hseed : seed < 2 ^ 64) :
+    ∃ pre post : List Int, pre.length = n ∧
+      Sorted post ∧ (∀ v : Int, post.count v = pre.count v) ∧
+      ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        runFunctionWithContextM fuel selsortLowered.typeDefs.toList
+            selsortLowered.funcs selsortHarnessRFunc
+            #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+            selsortLowered.methods ch
+          = .ok { values := #[selArr8 pre, selArr8 post] } := by
+```
+
+**The returned-array adapter** — the rest of the statement vocabulary
+(`proofs/GoLeanProofs/Examples/SelectionSort/Machine.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/SelectionSort/Machine.lean -->
+```lean
+def selArr8 (xs : List Int) : GoValue :=
+  .array ⟨(selPad8 xs).map (fun v => .int v .uint64)⟩
+```
+
+**Axioms** (pinned in `proofs/Audit/SelectionSort.lean`):
+
+<!-- verbatim: proofs/Audit/SelectionSort.lean -->
+```lean
+/-- info: 'GoLean.Examples.SelectionSort.selsort_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+<!-- verbatim: proofs/Audit/SelectionSort.lean -->
+```lean
+/-- info: 'GoLean.Examples.SelectionSort.selsort_sorted_count' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+Lean's classical trio; no `sorry`, no native evaluation, no project axioms.
+
+**Fuel bound.** Explicit and QUADRATIC, as selection sort is:
+`N = (67·n + 145)·n + 174·n + 318`. This is the branch-UNIFORM worst case:
+every inner iteration is charged at its `m`-update ceiling (67 steps) and
+every pass at a full-suffix scan. **The measured step counts are different
+numbers, and the difference is worth stating plainly.** At seed 7 the
+machine takes `318` steps at `n = 0` (exactly the bound's constant term),
+then `637 / 1011 / 1452 / 1960 / 2535 / 3165 / 3838 / 4566` at `n = 1…8`;
+at `n = 8` across seeds `0 / 1 / 123456789 / 2^64−1` it takes
+`4506 / 4530 / 4554 / 4542` against the bound's `7158`. The measurement
+depends on the data — how often the running minimum updates — and the bound
+does not; neither is presented as the other.
+
+**A machine shape worth noticing** (it is what this proof pays for that the
+gallery's other sort already paid at a shallower prefix): the subject
+allocates a FRESH `m`/`j`/`$forFirst` cell triple on every outer pass — the
+pass-local declarations re-enter their blocks, `nextAddr` grows by 3 per
+pass, and the dead cells stay in the heap. The proof runs each pass once at
+a tight canonical placement and moves it to the true garbage-laden placement
+with the executable frame theorem, retiring the triple into the frame
+between passes. The garbage is semantically inert; the frame theorem is
+precisely the tool that says so.
+
+**Status.** NOT DESIGNATED — see the note in *How to read an entry*: this
+example post-dates the 2026-08-14 designation, and designation is arc-end
+work under user sign-off, so its statement is not walked by the mechanized
+statement-TCB gate and not replayed by the Comparator judge. What it does
+have, in-build: the `rfl` lowering pins (`selectionSort_pin`,
+`selsortHarnessRFunc_pin`), the golden-lowering guard on both links, and the
+axiom pins above. `selsort_readout` is the run-conditioned twin. The
+deletion test was run by hand (both binders load-bearing; two broken goals
+each). There is no ∀-data companion claim — the subject-level claim over
+arbitrary slice contents is not proved, and this entry does not imply it.
+
+**Ground.** Differentially green on 14 corpus rows: the fixed-size drivers
+`four-shuffled` / `four-sorted` / `four-same` / `four-reversed` /
+`four-duplicates` / `four-extremes` (values at the int64 driver maximum),
+`three`, `one`, `empty`, and the relational harness at `harness-r-empty`
+(`n = 0`), `harness-r-one`, `harness-r-mid` (`n = 5`), `harness-r-cap`
+(`n = 8`) and `harness-r-extreme` (`n = 8`, `seed = 2^63 − 1` — the largest
+seed the differential driver can pass; the `--arg` int64 ceiling is a
+*driver* limit, not a machine one).
+
+## bubble — early-exit bubble sort, sorted-permutation over returned data
+
+**The Go** (`Corpus/coverage/exec/examples/bubble/main.go`):
+
+<!-- verbatim: Corpus/coverage/exec/examples/bubble/main.go -->
+```go
+func bubbleSort(s []uint64) {
+	for end := len(s); end > 1; end-- {
+		swapped := false
+		for i := 1; i < end; i++ {
+			if s[i-1] > s[i] {
+				s[i-1], s[i] = s[i], s[i-1]
+				swapped = true
+			}
+		}
+		if !swapped {
+			return
+		}
+	}
+}
+```
+
+<!-- verbatim: Corpus/coverage/exec/examples/bubble/main.go -->
+```go
+// bubble_harness_r: the S3 RELATIONAL harness. Setup builds a
+// genuinely-unsorted family by iterating a wrapping LCG from `seed`;
+// a copy loop lifts it into `pre` (the fixed-cap array is the
+// pass-by-value fragment's unbounded-data workaround), the subject
+// sorts in place, and a second copy loop lifts the result into
+// `post`, so a postcondition can relate the returned data directly.
+// Real Go, ghost ladder rung 0.
+func bubble_harness_r(n, seed uint64) ([bubbleCapN]uint64, [bubbleCapN]uint64) {
+	s := make([]uint64, n)
+	x := seed
+	for i := uint64(0); i < n; i++ {
+		x = x*2862933555777941757 + 3037000493
+		s[i] = x
+	}
+	var pre [bubbleCapN]uint64
+	for i := uint64(0); i < n; i++ {
+		pre[i] = s[i]
+	}
+	bubbleSort(s)
+	var post [bubbleCapN]uint64
+	for i := uint64(0); i < n; i++ {
+		post[i] = s[i]
+	}
+	return pre, post
+}
+```
+
+**The claim.** For every `n ≤ 8` and every `seed` in the full uint64 domain,
+`bubble_harness_r(n, seed)` finishes normally, at every nondeterminism
+choice, and returns TWO `[8]uint64` arrays: a length-`n` list `pre` (the
+input, zero-padded to the cap), and **`sortSpec pre` — THE sorted
+permutation of `pre`** — as the second. The postcondition is stated over
+the RETURNED data only. `sortSpec` is the gallery's one definition of "the
+sorted permutation" (an insertion fold, shared with the `isort` entry), and
+the first-order corollary `bubble_sorted_perm` restates the same claim
+without it: the second array is **sorted** (`GoLean.SliceMem.Sorted`) and
+has **exactly the first array's element counts** (`List.count`, every
+`v : Int`). This is the strongest honest form the S3 harness style has
+achieved in the gallery: the other sort entry (`isort`) returns a
+Go-computed verdict `1`, while `bubble` returns the data itself and the
+theorem relates the two arrays.
+
+**The theorem** (`proofs/GoLeanProofs/Examples/BubbleSort.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/BubbleSort.lean -->
+```lean
+theorem bubble_ok (n seed : Nat) (hcap : n ≤ 8) (hseed : seed < 2 ^ 64) :
+    ∃ pre : List Int, pre.length = n ∧
+      ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        runFunctionWithContextM fuel bubbleLowered.typeDefs.toList
+            bubbleLowered.funcs bubbleHarnessRFunc
+            #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+            bubbleLowered.methods ch
+          = .ok { values := #[bArr8V pre, bArr8V (sortSpec pre)] } := by
+```
+
+with the first-order readout corollary, same file:
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/BubbleSort.lean -->
+```lean
+theorem bubble_sorted_perm (n seed : Nat) (hcap : n ≤ 8)
+    (hseed : seed < 2 ^ 64) :
+    ∃ pre : List Int, pre.length = n ∧
+      ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        ∃ post : List Int,
+          runFunctionWithContextM fuel bubbleLowered.typeDefs.toList
+              bubbleLowered.funcs bubbleHarnessRFunc
+              #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+              bubbleLowered.methods ch
+            = .ok { values := #[bArr8V pre, bArr8V post] }
+          ∧ Sorted post ∧ (∀ v : Int, post.count v = pre.count v) := by
+```
+
+**Axioms** (pinned in `proofs/Audit/BubbleSort.lean`, the example's shard
+of `proofs/Audit.lean`):
+
+<!-- verbatim: proofs/Audit/BubbleSort.lean -->
+```lean
+/-- info: 'GoLean.Examples.BubbleSort.bubble_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+Lean's classical trio; no `sorry`, no native evaluation, no project axioms.
+
+**Honesty clauses.**
+
+* **`∃ pre` is family-determined.** The witness is the wrapping LCG family
+  `x ← x·2862933555777941757 + 3037000493 (mod 2^64)` seeded at `seed` —
+  the statement merely avoids saying so. The corpus rows exercise passes
+  with swaps, the swap-free early exit, and the counter exit, so both ways
+  out of the subject are on the proven path AND the differential path.
+  Making the input genuine ∀-data needs the ghost rung-1 annotation
+  (designed, not built).
+* **The cap `n ≤ 8` is a TOY bound.** It exists only so the data can cross
+  Go's pass-by-value observation boundary as `[bubbleCapN]uint64`
+  (`bubbleCapN = 8`, visible in the source); it is not a property of
+  bubble sort.
+* **Domain bounds attributed**: `seed < 2^64` is Go's own uint64 argument
+  domain; the elements' bounds are the program's own arithmetic (LCG
+  iterates mod `2^64`); `n ≤ 8` is the harness cap; sortedness and
+  count-preservation are mathematics over `List Int`. Machine
+  idealization as in every entry: empty-heap entry, unbounded heap,
+  allocation always succeeds.
+* **`n = 0` and `n = 1` are included** — `end ≤ 1` fails the outer test at
+  once and the empty/singleton array is sorted; corpus rows pin both.
+
+**Fuel bound.** Explicit and QUADRATIC (this is bubble sort):
+`N = (105·n + 116)·n + 174·n + 318` — a branch-uniform worst case: `105`
+per inner comparison charged at the swap arm, at most `n−1` passes, `68`
+per setup iteration, `53` per copy iteration (twice), plus fixed
+entry/prologue/epilogue segments. Measured runs (seed 7), recorded
+separately and NOT the bound: `318` at `n = 0`, `492` at `n = 1`,
+`809/1040/1549` at `n = 2/3/4`, `4443` at `n = 8` — data-dependent (how
+many swaps fire, where the early exit lands), which is why only the bound
+is a law.
+
+**Status.** `bubble_readout` is the run-conditioned twin. The early return
+(`if !swapped { return }`, the corpus's unary-`!` probe) means the subject
+leaves from two places; the proof runs both exits to the same terminal —
+the swap-free exit is discharged by "a swap-free pass certifies a sorted
+prefix", the counter exit by the pass invariant alone. The per-pass
+re-allocation of `swapped`/`i`/`$forFirst` is carried by the executable
+frame theorem (each pass proven once at a tight placement, retired cells
+rebased into the frame), the isort precedent at threshold 16.
+
+**Ground.** Differentially green on 14 corpus rows: subject rows through
+`sortFour`/`sortThree`/`sortOne`/`sortEmpty` covering shuffled,
+already-sorted (early exit on the first pass), all-equal, reverse-sorted
+(full pass count), duplicate, and near-`2^63` inputs, plus the harness at
+`n = 0/1/5/8` and a near-`2^63` seed.
 
 ## The derived twins, and the one axiom line they share
 
