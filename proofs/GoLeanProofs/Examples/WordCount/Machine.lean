@@ -167,58 +167,11 @@ def σC (L : Nat) (ws : List Int) (kvs : List (Int × Nat))
     methods := wordCountLowered.methods,
     heap := frontC L ws kvs iv ff ++ dead, nextAddr := na }
 
-/-- **The choice-pick step** (§10b): at a nonempty snapshot, ONE choice
-is consumed (`idx < size` from `Choices.consume`'s `% bound` contract),
-the picked entry's VALUE cell is freshly allocated at the current
-`nextAddr`, and the entry is erased. -/
-theorem stepFn_pick {σ : ExecState} {rem : List (Int × Nat)}
-    {idx : Nat} {ch ch' : Choices} {body : Stmt} {env : LocalEnv} {k : Cont}
-    (hconsume : Choices.consume ch rem.length = (idx, ch'))
-    (hidx : idx < rem.length)
-    {p : Int × Nat} (hp : rem[idx]? = some p)
-    (hv : IntKind.normalize .uint64 (p.2 : Int) = (p.2 : Int)) :
-    stepFn σ
-      (.next (.mapIterK none (some "c") tU64 tU64 body (toEntries rem) env k))
-      ch
-      = .ok (.exec body (env.pushScope.declare "c" (.base ⟨σ.nextAddr⟩))
-          (.mapIterK none (some "c") tU64 tU64 body
-            (toEntries (rem.eraseIdx idx)) env k),
-        { σ with
-            heap := Heap.set σ.heap (.base ⟨σ.nextAddr⟩)
-              ⟨some tU64, .int (p.2 : Int) .uint64⟩,
-            nextAddr := σ.nextAddr + 1 },
-        ch') := by
-  have hne : (toEntries rem).isEmpty = false := by
-    cases rem with
-    | nil => cases hidx
-    | cons q rest => rfl
-  have hsz : (toEntries rem).size = rem.length := toEntries_size rem
-  have hget : (toEntries rem)[idx]?
-      = some (.int p.1 .uint64, .int (p.2 : Int) .uint64) :=
-    toEntries_getElem? rem idx hp
-  have hidx' : idx < (toEntries rem).size := by rw [hsz]; exact hidx
-  simp only [stepFn, hne, Bool.false_eq_true, if_false]
-  split
-  · rename_i hnone
-    rw [hsz, hconsume] at hnone
-    simp only at hnone
-    rw [hget] at hnone
-    cases hnone
-  · rename_i key value hsome
-    rw [hsz, hconsume] at hsome
-    simp only at hsome
-    rw [hget] at hsome
-    injection hsome with h1
-    injection h1 with hk hv2
-    subst hk
-    subst hv2
-    simp only [bindIterVars, Bind.bind, Except.bind, pure, Except.pure]
-    rw [show normalizeValueForTy σ tU64 (.int (p.2 : Int) .uint64)
-        = .ok (.int (p.2 : Int) .uint64) from by
-      simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel,
-        hv]]
-    simp only [Bind.bind, Except.bind, pure, Except.pure, ExecState.alloc,
-      ExecState.freshLoc, hsz, hconsume, toEntries_eraseIdx rem idx hidx']
+-- GAP-M1 CLOSED (kit-gap closure, 2026-08-15): the binder-specialized
+-- `stepFn_pick` this module carried is DELETED — the kit forms are
+-- `MapMem.stepFn_pick_bind` (parameterized over both binder options,
+-- allocation via `bindIterVars`) and its two corollaries
+-- `stepFn_pick_value` / `stepFn_pick_novars`.
 
 /-! ## The placement-generic counting-loop composition (consolidation
 slice 2026-08-13, worklist item 1)

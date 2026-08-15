@@ -32,16 +32,12 @@ downstream re-checks the transcription by `rfl`):
 
 ## Kit gap witnessed here (campaign log `g1.md`)
 
-**GAP-M1 the choice-pick step.** `stepFn_pick` — the `mapIterK` pick —
-lives in `Examples/WordCount/Machine.lean`, not in the kit, and is
-specialized to the `none`/`some "c"` binder shape. This example needs
-the `none`/`none` shape (`for range m {}`), so it re-derives the step
-as `stepFn_pick_novars` below. Nothing in either proof is
-example-specific: both are statements about `mapIterK`, `Choices`, and
-`MapMem.toEntries`. Shape wanted: ONE kit lemma in `MapMem` (or a
-`MapIter` sibling) parameterized over the two binder options, with the
-per-binder allocation described by `bindIterVars`. Two consumers exist
-today (wordcount, histogram) and fibonacci-memo is chartered.
+**GAP-M1 — CLOSED** (kit-gap closure, 2026-08-15): the `mapIterK`
+pick now lives in `MapMem` as `stepFn_pick_bind`, parameterized over
+`(keyVar valVar : Option String)` with the allocation described by
+`bindIterVars`, plus the two binder-shape corollaries
+(`stepFn_pick_value`, `stepFn_pick_novars`). The pinned histogram name
+below is a one-line delegation; the re-derived proof is deleted.
 -/
 
 namespace GoLean.Examples.Histogram
@@ -286,17 +282,15 @@ abbrev hSt (σ : ExecState) (H : Heap) (na : Nat) : ExecState :=
 
 /-! ## The variable-free choice-pick step (GAP-M1) -/
 
-/-- **The choice-pick step at a variable-free `for range m`** (§10b):
-at a nonempty snapshot ONE choice is consumed (`idx < size` from
-`Choices.consume`'s `% bound` contract) and the picked entry is erased
-— and, because neither a key nor a value binder is present,
-`bindIterVars` allocates NOTHING: the state is unchanged and only the
-scope is pushed.
-
-That is the whole reason this example's range loop is cheap, and it is
-also why order-invariance is so visible here: the machine's only
-per-iteration effect is "one fewer entry", so a claim about the number
-of iterations cannot depend on the pick. -/
+/-- **The choice-pick step at a variable-free `for range m`** (§10b),
+at the PINNED histogram name: a delegation to the kit's
+`MapMem.stepFn_pick_novars` (GAP-M1 closure, 2026-08-15 — the
+re-derived proof is deleted). `bindIterVars` with neither binder
+allocates NOTHING: the state is unchanged and only the scope is
+pushed. That is the whole reason this example's range loop is cheap,
+and it is also why order-invariance is so visible here: the machine's
+only per-iteration effect is "one fewer entry", so a claim about the
+number of iterations cannot depend on the pick. -/
 theorem stepFn_pick_novars {σ : ExecState} {rem : List (Int × Nat)}
     {idx : Nat} {ch ch' : Choices} {body : Stmt} {env : LocalEnv} {k : Cont}
     (hconsume : Choices.consume ch rem.length = (idx, ch'))
@@ -307,35 +301,8 @@ theorem stepFn_pick_novars {σ : ExecState} {rem : List (Int × Nat)}
       = .ok (.exec body env.pushScope
           (.mapIterK none none tU64 tU64 body
             (toEntries (rem.eraseIdx idx)) env k),
-        σ, ch') := by
-  have hne : (toEntries rem).isEmpty = false := by
-    cases rem with
-    | nil => cases hidx
-    | cons q rest => rfl
-  have hsz : (toEntries rem).size = rem.length := toEntries_size rem
-  have hidx' : idx < (toEntries rem).size := by rw [hsz]; exact hidx
-  obtain ⟨p, hp⟩ : ∃ p, rem[idx]? = some p :=
-    ⟨rem[idx]'hidx, List.getElem?_eq_getElem hidx⟩
-  have hget : (toEntries rem)[idx]?
-      = some (.int p.1 .uint64, .int (p.2 : Int) .uint64) :=
-    toEntries_getElem? rem idx hp
-  simp only [stepFn, hne, Bool.false_eq_true, if_false]
-  split
-  · rename_i hnone
-    rw [hsz, hconsume] at hnone
-    simp only at hnone
-    rw [hget] at hnone
-    cases hnone
-  · rename_i key value hsome
-    rw [hsz, hconsume] at hsome
-    simp only at hsome
-    rw [hget] at hsome
-    injection hsome with h1
-    injection h1 with hk hv2
-    subst hk
-    subst hv2
-    simp only [bindIterVars, Bind.bind, Except.bind, pure, Except.pure, hsz,
-      hconsume, toEntries_eraseIdx rem idx hidx']
+        σ, ch') :=
+  GoLean.MapMem.stepFn_pick_novars hconsume hidx
 
 -- (`eraseIdx_length_of_lt` and `consume_lt` are the kit's, via
 -- `open GoLean.MapLoops` at the use sites — the re-derived copies were

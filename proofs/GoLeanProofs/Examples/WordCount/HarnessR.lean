@@ -1373,7 +1373,7 @@ theorem wcR_pick (σ : ExecState) (sv siv civ : Int) (ws lp : List Int) :
     rw [lookup_append_right (lookup_frontR_none ws.length sv siv civ ws lp kvs
       (ws.length : Int) false hna)]
     exact htail na (Nat.le_refl na)
-  have hPick := stepFn_pick
+  have hPick := GoLean.MapMem.stepFn_pick_value (v := "c")
     (σ := σR σ ws.length sv siv civ ws lp kvs (ws.length : Int) false tail na)
     (body := wcRangeBody) (env := envRBR B) (k := kRR B)
     hcons hidx hp hvnorm

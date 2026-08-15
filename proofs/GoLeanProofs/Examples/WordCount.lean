@@ -130,7 +130,7 @@ byte-identical to the pre-split module:
 | shard | phase |
 |---|---|
 | `Pure` | the spec layer, the map-in-memory vocabulary, the counts algebra and the max fold |
-| `Machine` | canonical-placement machine configurations, `stepFn_pick`, `DeadFrom` |
+| `Machine` | canonical-placement machine configurations (the pick step and `DeadFrom` moved to the kit — GAP-M1/M2 closures, 2026-08-15) |
 | `CanonCount` | the canonical placement's counting segments + the kit-instantiated loops (the generic layer moved to `GoLeanProofs/MapLoops.lean`, GAP-C1 closure 2026-08-15) |
 | `RangeGeneric` | the placement-generic range layer (`wcRange_generic`) |
 | `CanonRange` | the canonical placement's range discharges and `wc_range_loop` |

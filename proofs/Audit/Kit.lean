@@ -161,9 +161,9 @@ vocabulary defs) -/
 #guard_msgs in #print axioms GoLean.SliceMem.prefixPad_full
 
 /-! ## MapMem — map-in-memory vocabulary + executable op facts
-(24 public lemmas; +11 in the GAP-P1 counting-fold lift, 2026-08-15 —
-the `bump`/`countsFold`/`nilMapCell` defs are unpinned like the other
-vocabulary defs) -/
+(27 public lemmas; +11 in the GAP-P1 counting-fold lift and +3 in the
+GAP-M1 choice-pick lift, 2026-08-15 — the `bump`/`countsFold`/
+`nilMapCell` defs are unpinned like the other vocabulary defs) -/
 
 /-- info: 'GoLean.MapMem.scan_generic' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.MapMem.scan_generic
@@ -207,6 +207,12 @@ vocabulary defs) -/
 #guard_msgs in #print axioms GoLean.MapMem.take_succ_getD
 /-- info: 'GoLean.MapMem.cnt_take_le' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.MapMem.cnt_take_le
+/-- info: 'GoLean.MapMem.stepFn_pick_bind' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.MapMem.stepFn_pick_bind
+/-- info: 'GoLean.MapMem.stepFn_pick_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.MapMem.stepFn_pick_value
+/-- info: 'GoLean.MapMem.stepFn_pick_novars' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.MapMem.stepFn_pick_novars
 /-- info: 'GoLean.MapMem.applyStrictOp_mapGet' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.MapMem.applyStrictOp_mapGet
 /-- info: 'GoLean.MapMem.mapAssignValue_toEntries' depends on axioms: [propext, Classical.choice, Quot.sound] -/

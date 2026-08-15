@@ -53,7 +53,7 @@ private theorem wcC_pick (ws : List Int) :
     rw [lookup_append_right (lookup_frontC_none ws.length ws kvs
       (ws.length : Int) false hna)]
     exact htail na (Nat.le_refl na)
-  have hPick := stepFn_pick
+  have hPick := GoLean.MapMem.stepFn_pick_value (v := "c")
     (σ := σC ws.length ws kvs (ws.length : Int) false tail na)
     (body := wcRangeBody) (env := envRB B) (k := kR B)
     hcons hidx hp hvnorm

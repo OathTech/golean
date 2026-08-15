@@ -49,7 +49,10 @@ stay example-local.
   `nilMapCell`, with `setk_cnt_succ`, `countsFold_nil`,
   `countsFold_append`, `cnt_countsFold`, `countsFold_key_mem`,
   `countsFold_nodup_keys`, `cnt_of_mem_nodup`, `cnt_pos_mem`,
-  `countsFold_val_le`, `take_succ_getD`, `cnt_take_le`.
+  `countsFold_val_le`, `take_succ_getD`, `cnt_take_le`;
+* the `mapIterK` choice-pick step (GAP-M1 lift, 2026-08-15):
+  `stepFn_pick_bind` (binder-generic, allocation via `bindIterVars`)
+  and its corollaries `stepFn_pick_value`, `stepFn_pick_novars`.
 
 **Internal** (`private` — spelling may change without notice):
 `valueEq_u64`, `toEntries_setk`, `snapshot_norm`, `cnt_bump`,
@@ -653,6 +656,113 @@ private theorem snapshot_norm (types : TypeEnv) :
       simp only [List.map_cons, snapshotEntriesSelfNormalizedList]
       rw [hrest]
       simp [isNormalForTy, isNormalForTyFuel, typeResolutionFuel, hp.1, hp.2]
+
+/-! ## The `mapIterK` choice-pick step (Gallery Campaign kit-gap
+closure GAP-M1, 2026-08-15)
+
+The §10b pick, lifted from the two binder-specialized per-example
+copies (wordcount's `none`/`some "c"`, histogram's `none`/`none`): ONE
+lemma parameterized over `(keyVar valVar : Option String)` with the
+allocation described by `bindIterVars` (`stepFn_pick_bind`), plus the
+two corollaries at the binder shapes that actually occur. -/
+
+/-- **The choice-pick step, at any binder shape** (§10b): at a
+nonempty snapshot ONE choice is consumed (`idx < size` from
+`Choices.consume`'s `% bound` contract), the picked entry is erased,
+and the iteration's bindings/allocation are whatever `bindIterVars`
+says — supplied as the `hbind` fact. -/
+theorem stepFn_pick_bind {σ σ' : ExecState} {rem : List (Int × Nat)}
+    {idx : Nat} {ch ch' : Choices} {ko vo : Option String} {body : Stmt}
+    {env env' : LocalEnv} {k : Cont} {p : Int × Nat}
+    (hconsume : Choices.consume ch rem.length = (idx, ch'))
+    (hidx : idx < rem.length)
+    (hp : rem[idx]? = some p)
+    (hbind : bindIterVars env.pushScope σ ko vo (.int .uint64) (.int .uint64)
+      (.int p.1 .uint64) (.int (p.2 : Int) .uint64) = .ok (env', σ')) :
+    stepFn σ
+      (.next (.mapIterK ko vo (.int .uint64) (.int .uint64) body
+        (toEntries rem) env k)) ch
+      = .ok (.exec body env'
+          (.mapIterK ko vo (.int .uint64) (.int .uint64) body
+            (toEntries (rem.eraseIdx idx)) env k),
+        σ', ch') := by
+  have hne : (toEntries rem).isEmpty = false := by
+    cases rem with
+    | nil => cases hidx
+    | cons q rest => rfl
+  have hsz : (toEntries rem).size = rem.length := toEntries_size rem
+  have hget : (toEntries rem)[idx]?
+      = some (.int p.1 .uint64, .int (p.2 : Int) .uint64) :=
+    toEntries_getElem? rem idx hp
+  have hidx' : idx < (toEntries rem).size := by rw [hsz]; exact hidx
+  simp only [stepFn, hne, Bool.false_eq_true, if_false]
+  split
+  · rename_i hnone
+    rw [hsz, hconsume] at hnone
+    simp only at hnone
+    rw [hget] at hnone
+    cases hnone
+  · rename_i key value hsome
+    rw [hsz, hconsume] at hsome
+    simp only at hsome
+    rw [hget] at hsome
+    injection hsome with h1
+    injection h1 with hk hv2
+    subst hk
+    subst hv2
+    simp only [Bind.bind, Except.bind, hbind, pure, Except.pure, hsz,
+      hconsume, toEntries_eraseIdx rem idx hidx']
+
+/-- The pick at a VALUE-ONLY binder (`for _, v := range m`): the
+picked entry's value cell is freshly allocated at the current
+`nextAddr` and the binder declared over a pushed scope. -/
+theorem stepFn_pick_value {σ : ExecState} {rem : List (Int × Nat)}
+    {idx : Nat} {ch ch' : Choices} {v : String} {body : Stmt}
+    {env : LocalEnv} {k : Cont} {p : Int × Nat}
+    (hconsume : Choices.consume ch rem.length = (idx, ch'))
+    (hidx : idx < rem.length)
+    (hp : rem[idx]? = some p)
+    (hv : IntKind.normalize .uint64 (p.2 : Int) = (p.2 : Int)) :
+    stepFn σ
+      (.next (.mapIterK none (some v) (.int .uint64) (.int .uint64) body
+        (toEntries rem) env k)) ch
+      = .ok (.exec body (env.pushScope.declare v (.base ⟨σ.nextAddr⟩))
+          (.mapIterK none (some v) (.int .uint64) (.int .uint64) body
+            (toEntries (rem.eraseIdx idx)) env k),
+        { σ with
+            heap := Heap.set σ.heap (.base ⟨σ.nextAddr⟩)
+              ⟨some (.int .uint64), .int (p.2 : Int) .uint64⟩,
+            nextAddr := σ.nextAddr + 1 },
+        ch') := by
+  refine stepFn_pick_bind hconsume hidx hp ?_
+  simp only [bindIterVars, Bind.bind, Except.bind, pure, Except.pure]
+  rw [show normalizeValueForTy σ (.int .uint64) (.int (p.2 : Int) .uint64)
+      = .ok (.int (p.2 : Int) .uint64) from by
+    simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel,
+      hv]]
+  simp only [Bind.bind, Except.bind, pure, Except.pure, ExecState.alloc,
+    ExecState.freshLoc]
+
+/-- The pick at a VARIABLE-FREE range (`for range m {}`):
+`bindIterVars` with neither binder allocates NOTHING — the state is
+unchanged and only the scope is pushed. This is why a variable-free
+range loop is state-stable, and why order-invariance is so visible
+there: the machine's only per-iteration effect is "one fewer
+entry". -/
+theorem stepFn_pick_novars {σ : ExecState} {rem : List (Int × Nat)}
+    {idx : Nat} {ch ch' : Choices} {body : Stmt} {env : LocalEnv} {k : Cont}
+    (hconsume : Choices.consume ch rem.length = (idx, ch'))
+    (hidx : idx < rem.length) :
+    stepFn σ
+      (.next (.mapIterK none none (.int .uint64) (.int .uint64) body
+        (toEntries rem) env k)) ch
+      = .ok (.exec body env.pushScope
+          (.mapIterK none none (.int .uint64) (.int .uint64) body
+            (toEntries (rem.eraseIdx idx)) env k),
+        σ, ch') := by
+  obtain ⟨p, hp⟩ : ∃ p, rem[idx]? = some p :=
+    ⟨rem[idx]'hidx, List.getElem?_eq_getElem hidx⟩
+  exact stepFn_pick_bind hconsume hidx hp rfl
 
 /-- **The range snapshot** (`mapRangeK`): reads the data cell and
 validates every entry self-normalized — on the in-range fragment, the

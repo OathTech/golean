@@ -26,7 +26,7 @@ overstates.
 | goal | done | remaining | notes |
 |---|---|---|---|
 | G0 (opening kit phase) | 5 of 5 mandatory units; (d) assessed → deferred to its pulling G1 example; **item 4 (flagship rule) DISCHARGED** by G1.1 | 0 — G0 CLOSED | see `g0.md`; the flagship's kit-gap report is in `g1.md` |
-| G1 (gallery to twenty) | **1 of ≥13** new COMPLETE entries (`histogram`, the flagship — all 8 checklist items met; also discharges G0 item 4) | ≥12 | see `g1.md`; the KIT-GAP list there is the flagship's acceptance report |
+| G1 (gallery to twenty) | **1 of ≥13** new COMPLETE entries (`histogram`, the flagship — all 8 checklist items met; also discharges G0 item 4); **+ the KIT-GAP CLOSURE unit (G1.1-KG): all six recorded gaps CLOSED**, 6 commits, ~900–950 of the ~1,050 per-successor gap-witness lines eliminated | ≥12 | see `g1.md`; the KIT-GAP list there is the flagship's acceptance report, closed in full by G1.1-KG |
 | G2 (extensions) | 0 of ≥3 | ≥3 of E1–E4 | |
 | G3 (evidence dossiers) | 0 | register = denominator, fixed at dossier-lane start | register lives in `g3.md`, **enumerated by the dossier lane's first commit** (process amendment `ea7c689a`: the register is that lane's deliverable, not G0's) |
 | G4 (infrastructure debt) | 0 of 4 | 4 | |
@@ -34,6 +34,29 @@ overstates.
 ## Checkpoint summaries
 
 (at least every 5 units; newest first)
+
+- 2026-08-15, checkpoint 3 (unit G1.1-KG, 6 commits): KIT-GAP CLOSURE
+  COMPLETE — all six flagship gaps closed, each as lift + BOTH landed
+  consumers retrofitted + P6 rollback in the same commit, `scripts/ci`
+  PASS per commit. Order was dependency-driven (M2, P1 first — they
+  are C1's statement vocabulary — then C1, R1, P2, M1; JC logged).
+  The headline deliveries: `GoLeanProofs/MapLoops.lean` (new kit
+  module, ~1,100 lines) carrying the name-parameterized counting
+  iteration/loop, the per-placement discharge pack
+  (`mapCountIter_at` — nine conditioned discharges proven once over
+  base state + live front + nine mostly-`rfl` placement facts), and
+  the abstract choice-pick loop (`mapPickLoop_generic`, accumulator
+  laws as conservation invariants); MapMem gains the counting fold +
+  the binder-generic pick step; SliceMem gains `familyMod`/`prefixPad`;
+  StepKit gains `DeadFrom` + `set_append_left`. P6 scale: GAP-C1 alone
+  deleted 1,948 consumer lines across FOUR landed placements
+  (CountGeneric.lean deleted outright; Histogram/CountLoop 825 → 376
+  lines, 71 s → 1.2 s). Every headline statement untouched; every
+  existing `#guard_msgs` pin byte-identical (pinned proof-layer names
+  survive as one-line delegations); kit pins 81 → 116, all transcribed
+  from fresh probes. Projected histogram-class successor: ~2,900–3,000
+  lines / ~2.5–3 h (was 3,890 / 3.5 h). Totals: G0 5/5; G1 1 of ≥13 +
+  kit-gaps closed; G2 0; G3 22/22 dossiers; G4 0/4.
 
 - 2026-08-15, checkpoint 2 (unit G1.1, 2 commits): THE FLAGSHIP
   LANDED. `histogram` — a `map[uint64]uint64` count map, a queried-key
