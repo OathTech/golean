@@ -111,7 +111,13 @@ def tFoundK (ja : Nat) : Cont :=
 theorem env_f_j (ja : Nat) :
     LocalEnv.lookup (fEnvT ja) "j" = some (.base ⟨ja⟩) := rfl
 
-/-! ## Freshness / live-cell plumbing over the abstract dead region -/
+/-! ## Freshness / live-cell plumbing over the abstract dead region
+
+-- KIT-GAP WITNESS (see .tmp/kitgaps-twosum.md, [lane B] KIT GAP —
+-- growing-heap loop support): `lookup_ret_none`, the solo-cell
+-- lookup/set pair and the state-level store discharges further down
+-- (`storeJ_liveT`/`storeFF_liveT`/`storeJ_soloT`) are re-derivable
+-- boilerplate a kit `storeTarget_live` would delete. -/
 
 /-- The outer front plus the dead region misses the fresh address. -/
 theorem lookup_outD_none (nv sv tv : Int) (n : Nat) (l lp : List Int)
