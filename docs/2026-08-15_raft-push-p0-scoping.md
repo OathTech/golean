@@ -278,7 +278,106 @@ Both are recorded in the README as design inputs for the P2 machine
 twin — an in-machine harness will face the same ownership and
 loop-decoupling questions.
 
-## §7 Open decisions (for user ruling, not urgent)
+## §7 Gap analysis: running the harness family on the machine (2026-08-15)
+
+Surveyed against the pipeline's current support (evidence:
+`tools/nativefrontend/main.go:64` single-package limit;
+`docs/2026-07-30_quorum-extern-policy.md`; the method-set/embedding/
+generics/defer-panic corpus suites; `docs/coverage-ledger.md`;
+`docs/BUGS.md`) and against the raft core's measured import surface
+(`go list` over `.`, `quorum`, `tracker`, `confchange`, `raftpb`).
+
+**Layer A — the harness shell (`raftharness/*.go`): a planned rewrite,
+not a port.** The shell leans on wall-clock time (`time.Ticker`/
+`Sleep`/`After`), `context` budgets, seeded `math/rand/v2` chaos, and
+`fmt`/`flag`/`os` reporting — none interpretable, none meant to be.
+The P2 twin replaces each with machine-native structure: logical tick
+driving; fuel in place of deadlines; **the choice stream in place of
+the chaos RNG** — drops/dups/delays/partition schedules become
+∀ch-quantified envelope nondeterminism, so each go-run seed witnesses
+one envelope member (the two-bounds coherence, exactly). Goroutines,
+channels, select, mutex/WaitGroup are already supported; the shell
+deliberately uses no atomics (out of scope by design) — keep it that
+way.
+
+**Layer B — the raft core (raft.go + quorum + tracker + confchange +
+log/storage, ≈8–10k lines): mostly language-feasible today; the
+blockers are structural, not semantic.**
+- Supported already: interfaces + real method-set records (`Storage`,
+  `Logger`, `AckedIndexer`), value/pointer receiver asymmetry,
+  embedding (gc-style promotion wrappers), closures, defer,
+  panic/recover, generics by monomorphization, maps with struct keys,
+  pointers into structs. The measured stdlib surface is small: 8×
+  `slices.Sort` (integer elements — the one existing extern), 2×
+  `slices.SortFunc` (gap: extend the extern or vendor as source —
+  pure generic Go, monomorphizable), 3 non-logger `fmt.Sprintf` in
+  raft.go, `strconv`/`strings` only in rendering paths, no `goto`.
+- **Blocker 1 — single-package lowering** (`main.go:64`). The raft
+  core spans 5 packages. Either true multi-package lowering (deferred
+  from the quorum pilot, requires the BUG-010 package-name TypeId fix;
+  the ledger already anticipates it) or a mega-vendor at ~30× the
+  pilot's 168 lines. Recommendation: multi-package lowering is the
+  honest arc — a whole-library vendor accumulates deltas that erode
+  the "real etcd-io/raft" claim the pilot's verbatim discipline
+  established.
+- **Blocker 2 — the election-jitter seam.** `raft.go` draws its
+  randomized election timeout from `crypto/rand` + `math/big` — a
+  nondeterminism source *inside the subject*. Doctrinally this is a
+  latitude point: model it as a new choice-consumption site
+  (∀-quantified, like L1) rather than injecting a pinned rand.
+  Needs its own envelope argument in the latitude inventory.
+- Logging: `Logger` is an interface — inject a no-op implementation
+  (empty bodies, no fmt); rendering/`String()` paths ride the standing
+  per-decl quarantine, fail-closed if ever called (the extern-policy
+  pattern, unchanged).
+- Concurrency-relevant open bugs to clear before the concurrent twin:
+  BUG-002 (expression-step atomicity), BUG-045/046/047 (channel shadow
+  locations); BUG-009/BUG-010 before multi-package identity.
+- P1's discovery instrument is unchanged: stage 4's differential
+  against etcd's own datadriven traces will surface whatever raft.go
+  hits that the corpus never exercised.
+
+**Layer C — raftpb/protobuf: never interpret it; engineer it out.**
+At the current floating rev, `raftpb` drags in `reflect`, `unsafe`,
+`sync`, and the protobuf runtime — permanently `deferred-unsafe`
+class. Ranked strategy (compose 1 or 2 WITH 3):
+1. **Pin `deps/raft` to the last gogo-protobuf rev** (pre-migration):
+   raftpb becomes plain reflection-free structs with generated plain-Go
+   Marshal/Unmarshal. Rev pin is a user ruling (the pins table records
+   raft as deliberately floating; the go-run family would need its
+   getter calls reverted to field access).
+2. **Or a hand-written `plainpb` shim**: same API surface, plain
+   structs. raftpb is generated code, so "same .proto, different
+   generator" is a defensible verbatim-ness argument — but it is a
+   documented delta either way.
+3. **Avoid runtime marshaling entirely** (works under 1 or 2): the
+   in-memory network passes structs (no wire encode); MemoryStorage
+   stores structs (no persistence encode); the one hot-path
+   `proto.Unmarshal` (ConfChange apply at bootstrap) disappears if
+   membership is seeded via a pre-populated snapshot/ConfState instead
+   of `StartNode`'s conf-change entries. Marshal/Unmarshal then sit
+   quarantined-if-called, never called.
+4. Modeling protobuf encode/decode as extern intrinsics is the worst
+   option — encoding semantics enter the TCB for no benefit given 3.
+
+**General library policy (the standing one, extended, for the record):**
+pure-Go libraries (slices, cmp, sort, errors) vendor as source and
+lower like any Go — "no stdlib" is really "no cross-package" until
+Blocker 1 falls; impure/runtime-touching packages (reflect, unsafe,
+time, crypto, os) are never interpreted — quarantine-unless-called,
+replace behind a harness-owned seam, or (only when semantically
+necessary) model as a ledgered extern with a differential obligation,
+the `slices.Sort` pattern. Time and randomness specifically become
+choice sites, not models — they are nondeterminism, and the envelope
+is where nondeterminism lives here.
+
+**Net:** the P1 work list, ordered — multi-package lowering (+BUG-010),
+`slices.SortFunc`, the raftpb strategy ruling (§8.6), the
+election-jitter choice site, no-op logger + quarantine sweep, then
+stage-2–4 lowering driven by the datadriven-trace differential. Layer
+A costs nothing until P2 and is a redesign, not a gap.
+
+## §8 Open decisions (for user ruling, not urgent)
 
 1. Charter predicate: agreement as end state, KV-linearizability as
    stretch tier (§3.2) — confirm.
@@ -290,3 +389,6 @@ loop-decoupling questions.
    `Corpus/` + `baselines/` — serialize or seam.
 5. Whether P1 (stages 2–4) runs supervised (recommended here) or gets
    folded into the autonomous push.
+6. raftpb strategy: gogo-rev pin vs `plainpb` shim (both with
+   marshal-avoidance, §7 layer C) — user ruling needed (it moves a
+   deps pin / touches verbatim-ness).
