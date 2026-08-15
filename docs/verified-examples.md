@@ -1,6 +1,6 @@
 # Verified examples — the gallery (2026-08-14)
 
-Ten Go programs, and for each one a GoLean theorem you can read.
+Twelve Go programs, and for each one a GoLean theorem you can read.
 
 This file is the **object of agreement**: it exists so that a reader who is
 not a Lean expert can check, by eye, that the top-level statement really
@@ -95,18 +95,19 @@ exhaustion.
   deletion test stopped being a thing we check by reading. Designation also
   puts them in front of the independent Comparator judge, which re-checks
   the proofs by kernel replay against these statements alone.
-  **The entries after the eighth — `histogram`, `powmod` and `dotprod` —
-  are NOT designated.** They were added by the gallery campaign (2026-08-15) and
+  **The entries after the eighth — `histogram`, `powmod`, `dotprod`,
+  `kadane` and `dedup` — are NOT designated.** They were added by the gallery campaign (2026-08-15) and
   designation is a separate, user-signed act at the end of that arc: both are
   deliberately absent from `Examples/Targets.lean`, from `scripts/ci`'s
   trusted-closure allowlist and from the Comparator judge's set. Their
   deletion tests were therefore RUN by hand rather than by the gate —
   `lean_minimal_hypotheses` on `histogram_ok` (all four explicit binders
-  load-bearing), on `powmod_ok` (all five) and on `dotprod_ok` (all
-  three) — and that is exactly the weaker standing that undesignated
-  means. Their axioms are pinned in-build like everyone else's
-  (`proofs/Audit/Histogram.lean`, `proofs/Audit/PowMod.lean`,
-  `proofs/Audit/DotProduct.lean`).
+  load-bearing), on `powmod_ok` (all five), on `dotprod_ok` (all three),
+  on `kadane_ok` (all five) and on `dedup_ok` (all three) — and that is
+  exactly the weaker standing that undesignated means. Their axioms are
+  pinned in-build like everyone else's (`proofs/Audit/Histogram.lean`,
+  `proofs/Audit/PowMod.lean`, `proofs/Audit/DotProduct.lean`,
+  `proofs/Audit/Kadane.lean`, `proofs/Audit/DedupAdjacent.lean`).
 - **Where the audits are.** Two adversarial pre-merge audits stand behind
   this file, and entries below cite both by date. The **2026-08-15** one —
   the phase-2 arc's, which swapped three headlines and designated all eight
@@ -127,7 +128,7 @@ exhaustion.
 
 `Choices` is the stream of nondeterministic decisions the machine consumes at
 points where Go does not promise an outcome. `∀ ch : Choices` says the claim
-holds at **every** such stream. For eight of the ten examples this quantifier
+holds at **every** such stream. For ten of the twelve examples this quantifier
 is cheap (their runs consume no choices). For word-count and histogram it
 does real work: `for … range` over a Go map consumes one choice per
 iteration, because Go deliberately does not fix map iteration order — so the
@@ -1603,6 +1604,312 @@ run-conditioned twin.
 `harness-r-empty`, `harness-r-one`, `harness-r-mid`, `harness-r-cap`,
 `harness-r-wrap-max` and `harness-r-wrap-62`. The last four are the wrap
 region — inside the theorem's domain, not excluded from it.
+
+## kadane — maximum subarray sum, the gallery's first signed example
+
+**The Go** (`Corpus/coverage/exec/examples/kadane/main.go`):
+
+<!-- verbatim: Corpus/coverage/exec/examples/kadane/main.go -->
+```go
+func kadane(s []int64) int64 {
+	if len(s) == 0 {
+		return 0
+	}
+	best := s[0]
+	cur := s[0]
+	for i := 1; i < len(s); i++ {
+		if cur < 0 {
+			cur = s[i]
+		} else {
+			cur = cur + s[i]
+		}
+		if cur > best {
+			best = cur
+		}
+	}
+	return best
+}
+```
+
+<!-- verbatim: Corpus/coverage/exec/examples/kadane/main.go -->
+```go
+// kadane_harness_r: S3 RELATIONAL harness. Setup builds the
+// alternating-sign family s[i] = seed + i with every odd index
+// negated, copies it into the fixed-cap pre-state array, runs the
+// subject, and returns (pre, best) so a postcondition can relate the
+// returned data directly. Real Go, ghost ladder rung 0; bound n <= 8.
+func kadane_harness_r(n, seed int64) ([kadaneCapN]int64, int64) {
+	s := make([]int64, n)
+	for i := int64(0); i < n; i++ {
+		s[i] = seed + i
+		if i%2 == 1 {
+			s[i] = -s[i]
+		}
+	}
+	var pre [kadaneCapN]int64
+	for i := int64(0); i < n; i++ {
+		pre[i] = s[i]
+	}
+	best := kadane(s)
+	return pre, best
+}
+```
+
+**The specification** (`proofs/GoLeanProofs/Examples/Kadane.lean`) — an
+explicit enumeration of every non-empty contiguous segment, and the greatest
+of their sums:
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/Kadane.lean -->
+```lean
+def nePrefixes : List Int → List (List Int)
+  | [] => []
+  | x :: t => [x] :: (nePrefixes t).map (x :: ·)
+
+/-- All non-empty contiguous segments of `xs`: the non-empty prefixes
+starting at position 0, then the segments of the tail. -/
+def segments : List Int → List (List Int)
+  | [] => []
+  | x :: t => nePrefixes (x :: t) ++ segments t
+
+/-- **The maximum subarray sum**: the greatest sum over all non-empty
+contiguous segments, `0` for the empty list. -/
+def maxSubarraySum (xs : List Int) : Int :=
+  (((segments xs).map List.sum).max?).getD 0
+```
+
+This is the point of the entry. Kadane's algorithm is a *clever* linear
+scan; the specification above is the *obvious* quadratic definition —
+enumerate the segments, sum each, take the max. They are not the same
+program, and the theorem is that the clever one computes the obvious one's
+answer. The scan-shaped functions the induction actually carries
+(`kadCur`, `kadBest`) are proof-side and are bridged to `maxSubarraySum`;
+they do not appear in the statement. The all-negative case is the classic
+trap — the answer is the largest single element, never `0` — and it falls
+out of the definition rather than needing a clause, because `segments` are
+non-empty by construction; the corpus row `four-negative` pins it on the
+oracle side.
+
+**The theorem** (`proofs/GoLeanProofs/Examples/Kadane.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/Kadane.lean -->
+```lean
+theorem kadane_ok (n : Nat) (seed : Int) (hcap : n ≤ 8)
+    (hs1 : -(2 ^ 59) ≤ seed) (hs2 : seed ≤ 2 ^ 59) :
+    ∃ vals : List Int, vals.length = n ∧
+      ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        runFunctionWithContextM fuel kadaneLowered.typeDefs.toList
+            kadaneLowered.funcs kadaneHarnessRFunc
+            #[.int (n : Int) .int64, .int seed .int64]
+            kadaneLowered.methods ch
+          = .ok { values := #[kadArr8 vals,
+                              .int (maxSubarraySum vals) .int64] } := by
+```
+
+**Axioms** (pinned in `proofs/Audit/Kadane.lean`):
+
+<!-- verbatim: proofs/Audit/Kadane.lean -->
+```lean
+/-- info: 'GoLean.Examples.Kadane.kadane_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+<!-- verbatim: proofs/Audit/Kadane.lean -->
+```lean
+/-- info: 'GoLean.Examples.Kadane.kadane_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+Lean's classical trio; no `sorry`, no native evaluation, no project axioms.
+
+**Domain bounds, attributed — and this entry's bound is the narrowest in the
+gallery, so read it carefully.** `n ≤ 8` is **the program's own arithmetic**
+(`kadaneCapN = 8`, visible in the corpus Go). The segment enumeration and the
+maximum are **mathematics**. But `−2^59 ≤ seed ≤ 2^59` is **not Go's int64
+domain** — it is a no-wrap window, and it is narrower than the corpus. The
+family values are `±(seed+i)` and the running sums can reach a small multiple
+of `|seed|`, so the window is exactly what keeps every int64 `normalize` an
+identity. **Of the six relational-harness corpus rows, four are inside the
+theorem's domain and two are outside it**: `harness-r-maxseed`
+(`seed = 2^63 − 1`) and `harness-r-minseed` (`seed = −2^63`) are pinned
+differentially and are *not* claimed here. That is a real gap between what
+the oracle checks and what the theorem says, and it is stated rather than
+elided.
+
+**Fuel bound.** `N = 227·n + 220`, a branch-UNIFORM worst case: 86 steps per
+setup iteration on the negated (odd) index and 66 on the even one, 53 per
+copy iteration, at most 88 per scan iteration, and the exits. **The measured
+step count is a different number and is not affine**, because the setup and
+scan branches depend on the data: measured at seed 5 for `n = 0…8` it is
+213, 427, 642, 845, 1060, 1263, 1478, 1681, 1896 (cross-checked at seeds −7
+and −100). The bound the theorem ships is `227·n + 220`; the measurements are
+those numbers; neither is presented as the other.
+
+**∀ choices is vacuous here, and stated anyway.** The subject consumes no
+nondeterminism choice.
+
+**Status.** NOT DESIGNATED — see the note in *How to read an entry*. Added by
+the gallery campaign (2026-08-15). In-build: the `rfl` lowering pins
+(`kadane_pin` on the subject, `kadaneHarnessRFunc_pin` on the harness), the
+golden-lowering guard on both links, and the axiom pins above. Its deletion
+test was RUN by hand — `lean_minimal_hypotheses` on `kadane_ok`, **all five
+explicit binders load-bearing**. `kadane_readout` is the run-conditioned
+twin. The theorem covers the harness's runs only, including the `n = 0` path
+through the Go's empty-slice guard; the standalone drivers (`kadaneFour`,
+`kadaneThree`, `kadaneOne`, `kadaneEmpty`) are pinned differentially and are
+not claimed.
+
+**Ground.** Differentially green on 14 corpus rows: `four-mixed`,
+`four-positive`, `four-negative` (the all-negative trap), `four-same`,
+`four-extremes`, `three`, `one`, `empty`, and the relational harness at
+`harness-r-empty`, `harness-r-one`, `harness-r-mid`, `harness-r-eight`,
+`harness-r-maxseed` and `harness-r-minseed` — the last two outside the
+theorem's seed window, as above.
+
+## dedup — adjacent-only compaction, in place
+
+**The Go** (`Corpus/coverage/exec/examples/dedup/main.go`):
+
+<!-- verbatim: Corpus/coverage/exec/examples/dedup/main.go -->
+```go
+func dedupAdjacent(s []uint64) []uint64 {
+	k := 0
+	for i := 0; i < len(s); i++ {
+		if k == 0 || s[i] != s[k-1] {
+			s[k] = s[i]
+			k++
+		}
+	}
+	return s[:k]
+}
+```
+
+<!-- verbatim: Corpus/coverage/exec/examples/dedup/main.go -->
+```go
+// dedup_harness_r: the S3 RELATIONAL harness. Setup builds the family
+// s[i] = seed + i/2 (integer division, so adjacent pairs repeat), the
+// pre array snapshots it, the subject compacts in place, the post
+// array holds the surviving prefix zero-padded, and k is its length.
+func dedup_harness_r(n, seed uint64) ([dedupCapN]uint64, [dedupCapN]uint64, uint64) {
+	s := make([]uint64, n)
+	for i := uint64(0); i < n; i++ {
+		s[i] = seed + i/2
+	}
+	var pre [dedupCapN]uint64
+	for i := uint64(0); i < n; i++ {
+		pre[i] = s[i]
+	}
+	r := dedupAdjacent(s)
+	var post [dedupCapN]uint64
+	for i := 0; i < len(r); i++ {
+		post[i] = r[i]
+	}
+	return pre, post, uint64(len(r))
+}
+```
+
+**The specification** (`proofs/GoLeanProofs/Examples/DedupAdjacent.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/DedupAdjacent.lean -->
+```lean
+def dedupAdjTail (prev : Int) : List Int → List Int
+  | [] => []
+  | x :: xs => if x = prev then dedupAdjTail x xs
+               else x :: dedupAdjTail x xs
+
+/-- **The specification**: adjacent-only deduplication. The first
+element is always kept; every later element is kept iff it differs
+from the last kept one. -/
+def dedupAdj : List Int → List Int
+  | [] => []
+  | x :: xs => x :: dedupAdjTail x xs
+```
+
+**"Adjacent" is the whole content of this entry, and it is the thing readers
+get wrong.** `dedupAdjacent` is not "remove duplicates" — it collapses only
+*runs* of equal neighbours. The input `1, 2, 1, 2` survives entirely
+intact: no element equals its predecessor, so nothing is dropped, even
+though only two distinct values appear. The specification above says exactly
+that ("kept iff first, or differs from the last KEPT one") and the corpus row
+`four-alternating` pins it against the real Go. A specification that said
+"the distinct values" would be a different, false claim.
+
+**The theorem** (`proofs/GoLeanProofs/Examples/DedupAdjacent.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/DedupAdjacent.lean -->
+```lean
+theorem dedup_ok (n seed : Nat) (hcap : n ≤ 8) (hseed : seed < 2 ^ 64) :
+    ∃ vals : List Int, vals.length = n ∧
+      ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        runFunctionWithContextM fuel dedupLowered.typeDefs.toList
+            dedupLowered.funcs dedupHarnessRFunc
+            #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+            dedupLowered.methods ch
+          = .ok { values := #[ddArr8 vals, ddArr8 (dedupAdj vals),
+              .int ((dedupAdj vals).length : Nat) .uint64] } := by
+```
+
+**Axioms** (pinned in `proofs/Audit/DedupAdjacent.lean`):
+
+<!-- verbatim: proofs/Audit/DedupAdjacent.lean -->
+```lean
+/-- info: 'GoLean.Examples.DedupAdjacent.dedup_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+<!-- verbatim: proofs/Audit/DedupAdjacent.lean -->
+```lean
+/-- info: 'GoLean.Examples.DedupAdjacent.dedup_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+Lean's classical trio; no `sorry`, no native evaluation, no project axioms.
+
+**What the machine had to be shown, and why it is interesting.** The
+compaction is *in place*: it writes `s[k]` while reading `s[i]` and `s[k-1]`,
+with `k ≤ i` throughout, so the slice is simultaneously the input being read
+and the output being built. The invariant that carries it is that after
+processing the first `i` elements with `k` kept, the slice is
+`dedupAdj (first i elements)` followed by the still-untouched original tail —
+the stale region between `k` and `i` is never read again, because the guard
+reads only `s[k-1]`. A second machine fact fell out of the proof and is worth
+recording: the guard `k == 0 || s[i] != s[k-1]` is genuinely **lazy** in the
+machine — on the `k == 0` branch the `s[k-1]` read never happens, so the
+out-of-range index the reader worries about is never evaluated. The raw
+segments show that directly.
+
+**Domain bounds, attributed.** `n ≤ 8` is **the program's own arithmetic**
+(`dedupCapN = 8`, visible in the corpus Go). `seed < 2^64` is **Go's
+domain**, all of it — the setup family is `seed + i/2` and wraps freely; no
+hypothesis excludes it. The deduplication itself is **mathematics**. Machine
+idealization as elsewhere.
+
+**`∃ vals` is family-determined.** The witness is the setup family
+`seed + i/2` (integer division, so adjacent pairs repeat and the example has
+something to collapse); the statement merely avoids naming it. Genuine
+∀-data needs the ghost rung-1 annotation, which is designed and not built.
+
+**Fuel bound.** `N = 263·n + 361` — a branch-UNIFORM bound that charges every
+element the widest branch (the 98-step "keep, with `k ≠ 0`" path) plus a
+55-step post-copy slot. **The measurement is a different, input-dependent
+number**: `361` at `n = 0`, and `177·n + 86·K + 343` for `n ≥ 1`, where `K`
+is the number of survivors (the family gives `K = ⌈n/2⌉`). Probe-verified at
+`n = 0, 1, 2, 3, 5, 8`: 361, 606, 783, 1046, 1486, 2103 — and 2103 again at
+the wrap-boundary seed `2^64 − 2`. The bound the theorem ships is
+`263·n + 361`; the measurement is the formula above; neither is presented as
+the other.
+
+**∀ choices is vacuous here, and stated anyway.**
+
+**Status.** NOT DESIGNATED — see the note in *How to read an entry*. Added by
+the gallery campaign (2026-08-15). In-build: the `rfl` lowering pins
+(`dedupAdjacent_pin` on the subject, `dedupHarnessRFunc_pin` on the harness),
+the golden-lowering guard on both links, and the axiom pins above. Its
+deletion test was RUN by hand — `lean_minimal_hypotheses` on `dedup_ok`,
+**all three explicit binders load-bearing**. `dedup_readout` is the
+run-conditioned twin.
+
+**Ground.** Differentially green on 13 corpus rows: `four-all-same`,
+`four-distinct`, `four-alternating` (the adjacent-only guard),
+`four-pairs`, `four-extremes`, `four-first`, `one`, `empty`, and the
+relational harness at `harness-r-empty`, `harness-r-one`, `harness-r-mid`,
+`harness-r-cap` and `harness-r-big`. All five harness rows are inside the
+theorem's domain.
 
 ## The derived twins, and the one axiom line they share
 
