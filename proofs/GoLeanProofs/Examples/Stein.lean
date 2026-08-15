@@ -1,55 +1,34 @@
 import GoLeanProofs.Examples.SteinProgram
 
 /-!
-# Stein — the `stein` example (Gallery Campaign G1, guardrails wave)
+# Stein — the `stein` example (Gallery Campaign G1 + G2 extension E3)
 
-**STATUS: GUARDRAILS ONLY — no headline theorem yet.** This root carries
-exactly the corpus half of the G1 checklist: the pinned lowering (via
-`SteinProgram`, itself pinned by `scripts/check-golden` against
-`baselines/golden/stein-lowered.repr`) and the named harness
-transcription below, tied to that lowering by `rfl`. The proof lane that
-adopts this example states its headline HERE, in this root, so the
-aggregator's `import GoLeanProofs.Examples.Stein` reaches it by name
-(the C-H4/C-H5 shape, adopted from birth).
+This root carries the pinned lowering (via `SteinProgram`, itself pinned
+by `scripts/check-golden` against `baselines/golden/stein-lowered.repr`)
+and the named harness transcription below, tied to that lowering by
+`rfl`. The headline is stated HERE, in this root, so the aggregator's
+`import GoLeanProofs.Examples.Stein` reaches it by name (the C-H4/C-H5
+shape, adopted from birth).
 
 Go source: `Corpus/coverage/exec/examples/stein/main.go`.
 
-**THIS EXAMPLE IS BLOCKED, AND THE BLOCK IS THE POINT.** All nine of its
-corpus rows are RED at stage `frontend-export`, every one with the same
-verbatim classification:
-
-```
-"status":"unsupported"
-"normalizing frontend-quarantined: call/allocation in short-circuit
- operand (would change evaluation order)"
-```
-
-Stein's algorithm written in its NATURAL Go form guards the shared-factor
-loop with `for isEven(a) && isEven(b)`, and a CALL inside a short-circuit
-operand is exactly what the frontend quarantines. The Go oracle computes
-the right answer on every row (cross-checked against the `gcd` example's
-Euclid on all seven argument pairs plus a 100,000-pair sweep, zero
-mismatches); the machine refuses, visibly.
-
-The refusal is fail-closed, per-declaration, and legible in the pinned
-lowering itself: `steinGCD` lowers to `Stmt.unsupported` with the reason
-carried verbatim, and its parameters to `Ty.unsupported`. The harness
-below is fully lowered and calls into that stub — which is why the rows
-are red rather than quietly wrong.
-
-**No headline is provable here until extension E3 lands** (calls in
-short-circuit operands; see `docs/gallery-campaign-log/g2.md`, where this
-example is E3's recorded consumer-to-be). The rows were landed anyway,
-BEFORE the extension, because that is what guardrails-first means: E3's
-target behaviour is now pinned by cases that fail for a stated reason, so
-the extension cannot land and silently change what Stein computes. When it
-lands, `baselines/golden/stein-lowered.repr` DRIFTS — deliberately, with
-its reason, in the same commit.
+**HISTORY — this example existed BLOCKED, and the block was the point**
+(guardrails wave, 2026-08-15): binary GCD in its natural Go form guards
+the shared-factor loop with `for isEven(a) && isEven(b)`, a call in a
+short-circuit operand, which the frontend quarantined fail-closed
+(`steinGCD` lowered to `Stmt.unsupported` carrying the reason verbatim);
+all nine corpus rows were RED at stage `frontend-export` as the pinned
+guardrail for extension E3. **E3 is now BUILT** (same date; the fidelity
+argument and the build record are in `docs/gallery-campaign-log/g2.md`):
+the frontend normalizes an effectful short-circuit RHS to the spec's own
+conditional rewrite, `steinGCD` lowers fully (see `SteinProgram`, whose
+per-iteration `$c` machinery in each loop's condPre IS that
+normalization), and all nine rows plus the 19 short-circuit guardrail
+rows are differentially green against `go run`.
 
 The harness `Func` below is EXTRACTED from the pinned repr rather than
 hand-written, so `steinHarnessFunc_pin` checks a transcription that is
-byte-derived from the lowering. A proof lane may restate it in the
-readable dot-notation form; the pin must keep holding by `rfl`.
+byte-derived from the lowering.
 -/
 
 namespace GoLean.Examples.Stein

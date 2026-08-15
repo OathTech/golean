@@ -1,5 +1,55 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-15  commit: gallery campaign G2 extension E3 GUARDRAILS
+# recorded: 2026-08-15  commit: gallery campaign G2 extension E3 BUILT
+#   (calls in short-circuit operands) — the frontend normalization + the
+#   46-row flip + the deliberate stein golden drift, one commit
+#   re-pin reason: EXACTLY 46 flips FAIL/frontend-export -> PASS/-, no
+#   other change; regenerated from this commit's full run. The
+#   normalization (tools/nativefrontend emitBinary + hoist + one wire.go
+#   field): the RHS of &&/|| is emitted once into its own accumulator
+#   with the quarantine still set and only the single hoist()
+#   temp-binding path admitted; an empty accumulator keeps the pre-E3
+#   inline lowering byte-identical; otherwise the operation normalizes
+#   to the spec's own rewrite as statements
+#     $cN := <x>; if $cN { <y hoists>; $cN = <y> }    (&&; || with !$cN)
+#   — fidelity argument, risk classes, boundary:
+#   docs/gallery-campaign-log/g2.md "E3 — THE FIDELITY ARGUMENT" and the
+#   BUILT record. NO GoCore change, NO decoder change.
+#   The 46 flipped ids, all the SAME standing quarantine lifted:
+#     the 28-row acceptance set — bools/short-circuit-effects/* (16, the
+#     E3 guardrails committed RED one commit earlier),
+#     bools/short-circuit-{and,or,call-operand} (3), examples/stein/*
+#     (9, E3's pulled consumer);
+#   PLUS 18 rows the acceptance set had not enumerated, surfaced by the
+#   full run (the quarantine's true blast radius — a FINDING, recorded
+#   in the BUILT record, not an anomaly): bools/left-to-right
+#   (mark(true,1) && mark(true,2)), interfaces/error-idioms/
+#   extra-interface-assertion (ok && x.Temporary(), an interface METHOD
+#   call in the RHS), and 16 imported-goose/* rows whose test idiom is
+#   literally `ok = ok && testFn(...)` (shortcircuiting/{and,or}-{f-t,t-f},
+#   operations/{add64,sub64,reverse-assign-ops64,failing-reverse-assign-
+#   ops32}-equals-family, closures/closure-basic, maps/iterate-map,
+#   structs/struct-updates, type-equality/{primitive,list,defined-str}-
+#   types-equal, generics/generic-conversion, interfaces/binary-expr-
+#   interface). Every one is a genuine differential PASS against go run.
+#   Fail-closed remainder probe-verified after the build: a channel
+#   receive and a make in a short-circuit RHS still refuse
+#   per-declaration with their standing reasons.
+#   The 8 comparisons/short-circuit/* panic-timing pins and the 2
+#   channels/recv-order BUG-032 fail-closed rows are byte-identical in
+#   this run — the pure-RHS inline lowering did not move.
+#   Golden drift, deliberate, same commit: baselines/golden/
+#   stein-lowered.repr (the steinGCD quarantine stub becomes the real
+#   lowering; SteinProgram.lean regenerated from the fresh repr;
+#   check-golden green on both links).
+#   Drift check on this run: EXACTLY the 46 flips above; nothing NEW,
+#   nothing MISSING, no other id changed result or stage.
+#   frontend: native  oracle: go run (strict lane) / go-run membership in the
+#   machine-enumerated observation set, sampled plain AND under -race
+#   (membership lane; go1.26.5) / schedule-tree singleton certification +
+#   strict go-run equality (confluent lane) / every-enumerated-path-refuses
+#   + go run -race red (racy lane; never combined with deadlock)
+# manifest_cases: 1807  pass: 1709  fail: 98
+# previous record: 2026-08-15  commit: gallery campaign G2 extension E3 GUARDRAILS
 #   (calls in short-circuit operands) — fidelity argument + risk-pinning
 #   rows, committed BEFORE the implementation
 #   re-pin reason: 16 NEW rows, all deliberate expected FAILs, no other
@@ -210,27 +260,27 @@ PASS	bools/generic-type-set/equality	-
 PASS	bools/generic-type-set/inference	-
 PASS	bools/generic-type-set/not-defined	-
 PASS	bools/generic-type-set/zero-value	-
-FAIL	bools/left-to-right	frontend-export
+PASS	bools/left-to-right	-
 PASS	bools/logical-ops	-
-FAIL	bools/short-circuit-and	frontend-export
-FAIL	bools/short-circuit-call-operand	frontend-export
-FAIL	bools/short-circuit-effects/assign-both	frontend-export
-FAIL	bools/short-circuit-effects/assign-left-false	frontend-export
-FAIL	bools/short-circuit-effects/count-both	frontend-export
-FAIL	bools/short-circuit-effects/count-left-decides	frontend-export
-FAIL	bools/short-circuit-effects/count-left-false	frontend-export
-FAIL	bools/short-circuit-effects/count-right-false	frontend-export
-FAIL	bools/short-circuit-effects/loop-left-zero	frontend-export
-FAIL	bools/short-circuit-effects/loop-right-zero	frontend-export
-FAIL	bools/short-circuit-effects/loop-three	frontend-export
-FAIL	bools/short-circuit-effects/nested-all-false	frontend-export
-FAIL	bools/short-circuit-effects/nested-inner-left	frontend-export
-FAIL	bools/short-circuit-effects/nested-inner-right	frontend-export
-FAIL	bools/short-circuit-effects/nested-outer-false	frontend-export
-FAIL	bools/short-circuit-effects/order-both-false	frontend-export
-FAIL	bools/short-circuit-effects/order-left-true	frontend-export
-FAIL	bools/short-circuit-effects/order-right-true	frontend-export
-FAIL	bools/short-circuit-or	frontend-export
+PASS	bools/short-circuit-and	-
+PASS	bools/short-circuit-call-operand	-
+PASS	bools/short-circuit-effects/assign-both	-
+PASS	bools/short-circuit-effects/assign-left-false	-
+PASS	bools/short-circuit-effects/count-both	-
+PASS	bools/short-circuit-effects/count-left-decides	-
+PASS	bools/short-circuit-effects/count-left-false	-
+PASS	bools/short-circuit-effects/count-right-false	-
+PASS	bools/short-circuit-effects/loop-left-zero	-
+PASS	bools/short-circuit-effects/loop-right-zero	-
+PASS	bools/short-circuit-effects/loop-three	-
+PASS	bools/short-circuit-effects/nested-all-false	-
+PASS	bools/short-circuit-effects/nested-inner-left	-
+PASS	bools/short-circuit-effects/nested-inner-right	-
+PASS	bools/short-circuit-effects/nested-outer-false	-
+PASS	bools/short-circuit-effects/order-both-false	-
+PASS	bools/short-circuit-effects/order-left-true	-
+PASS	bools/short-circuit-effects/order-right-true	-
+PASS	bools/short-circuit-or	-
 PASS	bools/zero-value	-
 PASS	builtins/append-defined-byte-slice-string	-
 PASS	builtins/append-string-to-bytes	-
@@ -803,15 +853,15 @@ PASS	examples/stack/lifo-dup	-
 PASS	examples/stack/lifo-extremes	-
 PASS	examples/stack/lifo-three	-
 PASS	examples/stack/peek-two	-
-FAIL	examples/stein/a-zero	frontend-export
-FAIL	examples/stein/big	frontend-export
-FAIL	examples/stein/common	frontend-export
-FAIL	examples/stein/coprime	frontend-export
-FAIL	examples/stein/harness-big	frontend-export
-FAIL	examples/stein/harness-common	frontend-export
-FAIL	examples/stein/pow2	frontend-export
-FAIL	examples/stein/zero-b	frontend-export
-FAIL	examples/stein/zero-zero	frontend-export
+PASS	examples/stein/a-zero	-
+PASS	examples/stein/big	-
+PASS	examples/stein/common	-
+PASS	examples/stein/coprime	-
+PASS	examples/stein/harness-big	-
+PASS	examples/stein/harness-common	-
+PASS	examples/stein/pow2	-
+PASS	examples/stein/zero-b	-
+PASS	examples/stein/zero-zero	-
 PASS	examples/strrev/build-mid	-
 PASS	examples/strrev/harness-cap	-
 PASS	examples/strrev/harness-empty	-
@@ -1063,14 +1113,14 @@ PASS	imported-goose/channel/select-tricky-examples/nb-full-buffer-not-ready	-
 PASS	imported-goose/channel/select-tricky-examples/nb-guaranteed-ready	-
 PASS	imported-goose/channel/select-tricky-examples/nb-not-ready	confluent
 PASS	imported-goose/generics/constraints	-
-FAIL	imported-goose/generics/generic-conversion	frontend-export
+PASS	imported-goose/generics/generic-conversion	-
 PASS	imported-goose/generics/helpers	-
 PASS	imported-goose/semantics/allocator/allocate-distinct	-
 PASS	imported-goose/semantics/allocator/allocate-full	-
 PASS	imported-goose/semantics/block/explicit-block-stmt	-
 PASS	imported-goose/semantics/builtin/max-uint64	-
 PASS	imported-goose/semantics/builtin/min-uint64	-
-FAIL	imported-goose/semantics/closures/closure-basic	frontend-export
+PASS	imported-goose/semantics/closures/closure-basic	-
 PASS	imported-goose/semantics/comparisons/compare-all	-
 PASS	imported-goose/semantics/comparisons/compare-g-e	-
 PASS	imported-goose/semantics/comparisons/compare-g-t	-
@@ -1103,7 +1153,7 @@ PASS	imported-goose/semantics/interfaces-complex/string-interface	-
 PASS	imported-goose/semantics/interfaces-complex/type-assertion-interface	-
 PASS	imported-goose/semantics/interfaces/assign-interface	-
 PASS	imported-goose/semantics/interfaces/basic-interface	-
-FAIL	imported-goose/semantics/interfaces/binary-expr-interface	frontend-export
+PASS	imported-goose/semantics/interfaces/binary-expr-interface	-
 PASS	imported-goose/semantics/interfaces/if-stmt-interface	-
 PASS	imported-goose/semantics/interfaces/multiple-interface	-
 PASS	imported-goose/semantics/lock/s-use-locks	-
@@ -1117,7 +1167,7 @@ PASS	imported-goose/semantics/loops/nested-go-style-loops	-
 PASS	imported-goose/semantics/loops/nested-go-style-loops-no-comparison	-
 PASS	imported-goose/semantics/loops/nested-loops	-
 PASS	imported-goose/semantics/loops/standard-for-loop	-
-FAIL	imported-goose/semantics/maps/iterate-map	frontend-export
+PASS	imported-goose/semantics/maps/iterate-map	-
 PASS	imported-goose/semantics/maps/map-size	-
 PASS	imported-goose/semantics/multiple-assign/assign-three	-
 PASS	imported-goose/semantics/multiple-assign/assign-two	-
@@ -1134,26 +1184,26 @@ PASS	imported-goose/semantics/nil/compare-pointer-wrapped-default-to-nil	-
 PASS	imported-goose/semantics/nil/compare-pointer-wrapped-to-nil	-
 PASS	imported-goose/semantics/nil/compare-slice-to-nil	-
 PASS	imported-goose/semantics/nil/interface-nil-with-type	-
-FAIL	imported-goose/semantics/operations/add64-equals	frontend-export
+PASS	imported-goose/semantics/operations/add64-equals	-
 PASS	imported-goose/semantics/operations/arithmetic-shifts	-
 PASS	imported-goose/semantics/operations/bit-add-and	-
 PASS	imported-goose/semantics/operations/bitwise-ops-precedence	-
 PASS	imported-goose/semantics/operations/division-precedence	-
-FAIL	imported-goose/semantics/operations/failing-reverse-assign-ops32	frontend-export
+PASS	imported-goose/semantics/operations/failing-reverse-assign-ops32	-
 PASS	imported-goose/semantics/operations/many-parentheses	-
 PASS	imported-goose/semantics/operations/mod-precedence	-
 PASS	imported-goose/semantics/operations/plus-times	-
-FAIL	imported-goose/semantics/operations/reverse-assign-ops64	frontend-export
-FAIL	imported-goose/semantics/operations/sub64-equals	frontend-export
+PASS	imported-goose/semantics/operations/reverse-assign-ops64	-
+PASS	imported-goose/semantics/operations/sub64-equals	-
 PASS	imported-goose/semantics/panic	-
 PASS	imported-goose/semantics/precedence/and-compare	-
 PASS	imported-goose/semantics/precedence/or-compare	-
 PASS	imported-goose/semantics/precedence/or-compare-simple	-
 PASS	imported-goose/semantics/precedence/shift-mod	-
-FAIL	imported-goose/semantics/shortcircuiting/shortcircuit-and-f-t	frontend-export
-FAIL	imported-goose/semantics/shortcircuiting/shortcircuit-and-t-f	frontend-export
-FAIL	imported-goose/semantics/shortcircuiting/shortcircuit-or-f-t	frontend-export
-FAIL	imported-goose/semantics/shortcircuiting/shortcircuit-or-t-f	frontend-export
+PASS	imported-goose/semantics/shortcircuiting/shortcircuit-and-f-t	-
+PASS	imported-goose/semantics/shortcircuiting/shortcircuit-and-t-f	-
+PASS	imported-goose/semantics/shortcircuiting/shortcircuit-or-f-t	-
+PASS	imported-goose/semantics/shortcircuiting/shortcircuit-or-t-f	-
 PASS	imported-goose/semantics/slices/overwrite-array	-
 PASS	imported-goose/semantics/slices/slice-append	-
 PASS	imported-goose/semantics/slices/slice-capacity-ops	-
@@ -1169,14 +1219,14 @@ PASS	imported-goose/semantics/structs/store-in-struct-var	-
 PASS	imported-goose/semantics/structs/store-slice	-
 PASS	imported-goose/semantics/structs/struct-constructions	-
 PASS	imported-goose/semantics/structs/struct-field-func	-
-FAIL	imported-goose/semantics/structs/struct-updates	frontend-export
+PASS	imported-goose/semantics/structs/struct-updates	-
 PASS	imported-goose/semantics/switch/switch-conversion	-
 PASS	imported-goose/semantics/switch/switch-default-true	-
 PASS	imported-goose/semantics/switch/switch-multiple	-
 PASS	imported-goose/semantics/switch/switch-val	-
-FAIL	imported-goose/semantics/type-equality/defined-str-types-equal	frontend-export
-FAIL	imported-goose/semantics/type-equality/list-types-equal	frontend-export
-FAIL	imported-goose/semantics/type-equality/primitive-types-equal	frontend-export
+PASS	imported-goose/semantics/type-equality/defined-str-types-equal	-
+PASS	imported-goose/semantics/type-equality/list-types-equal	-
+PASS	imported-goose/semantics/type-equality/primitive-types-equal	-
 PASS	imported-goose/semantics/vars/address-of-local	-
 PASS	imported-goose/semantics/vars/anonymous-assign	-
 PASS	imported-goose/semantics/vars/pointer-assignment	-
@@ -1275,7 +1325,7 @@ PASS	interfaces/embedded-interface-shadowing/interface-field-shadowed	-
 PASS	interfaces/embedded-interface-shadowing/nil-pointer-method-promoted	-
 PASS	interfaces/embedded-interface-shadowing/pointer-method-promoted	-
 PASS	interfaces/error-idioms/any-round-trip	-
-FAIL	interfaces/error-idioms/extra-interface-assertion	frontend-export
+PASS	interfaces/error-idioms/extra-interface-assertion	-
 PASS	interfaces/error-idioms/nil-error	-
 PASS	interfaces/error-idioms/nil-pointer-method	-
 PASS	interfaces/error-idioms/pointer-identity	-

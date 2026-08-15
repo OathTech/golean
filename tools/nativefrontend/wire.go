@@ -28,6 +28,16 @@ type emitter struct {
 	hoisted        []any
 	tmpSeq         int
 	hoistForbidden string // non-empty where hoisting is unsafe (short-circuit RHS, loop cond)
+	// scHoistOK admits the single hoist() temp-binding path (plain call
+	// temps and kin) while hoistForbidden is set for a SHORT-CIRCUIT RHS:
+	// emitBinary captures those hoists into its own accumulator and wraps
+	// them in the conditional that realizes the spec's "the right operand
+	// is evaluated conditionally" (E3, docs/gallery-campaign-log/g2.md,
+	// "E3 — THE FIDELITY ARGUMENT"). Every OTHER quarantined effect site
+	// (channel receives, make/new/append/copy, slice/map literals,
+	// &composite, interface method values, multi-value splats) checks
+	// hoistForbidden directly and keeps its standing fail-closed refusal.
+	scHoistOK bool
 
 	// Lambda lifting (W5, docs/2026-07-24_sequential-coverage-scoping.md §8):
 	// func literals are hoisted to synthetic top-level functions taking their
