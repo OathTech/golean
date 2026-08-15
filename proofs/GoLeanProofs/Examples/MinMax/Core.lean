@@ -175,16 +175,16 @@ example : findFunctionIn? minMaxLowered.funcs ⟨"minMax"⟩ = some minMaxFunc :
   rfl
 
 /-- The driver environment: the two harness result cells. -/
-def minMaxEnv : LocalEnv := [[("$mn", .base ⟨0⟩), ("$mx", .base ⟨1⟩)]]
+private def minMaxEnv : LocalEnv := [[("$mn", .base ⟨0⟩), ("$mx", .base ⟨1⟩)]]
 
 /-- The harness result cells (addresses 0 and 1, zeroed uint64). -/
-def resCells : Heap :=
+private def resCells : Heap :=
   [(.base ⟨0⟩, ⟨some (.int .uint64), .int 0 .uint64⟩),
    (.base ⟨1⟩, ⟨some (.int .uint64), .int 0 .uint64⟩)]
 
 /-- The driver: `$mn, $mx = minMax(s)` with the slice handle over the
 backing array at `base` as the literal argument. -/
-def minMaxCall (xs : List Int) (base : Nat) : Stmt :=
+private def minMaxCall (xs : List Int) (base : Nat) : Stmt :=
   .call #[.var "$mn", .var "$mx"] ⟨"minMax"⟩
     #[.slice (.locLit (.base ⟨base⟩)) (.intLit 0 .int)
         (.intLit xs.length .int) none]
@@ -193,7 +193,7 @@ def minMaxCall (xs : List Int) (base : Nat) : Stmt :=
 `base`, an arbitrary frame `fr`, allocator at `na`. The canonical
 placement is `minMaxSeed xs 2 [] 3` — TIGHT (dom = {0, 1, 2}, na₀ = 3),
 as the frame theorem's seed discharge requires. -/
-def minMaxSeed (xs : List Int) (base : Nat) (fr : Heap) (na : Nat) :
+private def minMaxSeed (xs : List Int) (base : Nat) (fr : Heap) (na : Nat) :
     ExecState :=
   { types := minMaxLowered.typeDefs.toList, functions := minMaxLowered.funcs,
     methods := minMaxLowered.methods,
@@ -201,7 +201,7 @@ def minMaxSeed (xs : List Int) (base : Nat) (fr : Heap) (na : Nat) :
 
 /-! ## The pure layer: prefix min/max surgery -/
 
-theorem take_ne_nil {xs : List Int} {m : Nat} (hm1 : 1 ≤ m)
+private theorem take_ne_nil {xs : List Int} {m : Nat} (hm1 : 1 ≤ m)
     (hne : xs ≠ []) : xs.take m ≠ [] := by
   cases xs with
   | nil => exact absurd rfl hne
@@ -211,7 +211,7 @@ theorem take_ne_nil {xs : List Int} {m : Nat} (hm1 : 1 ≤ m)
       simp only [List.length_take, List.length_cons, List.length_nil] at hlen
       omega
 
-theorem take_succ_snoc {xs : List Int} {m : Nat}
+private theorem take_succ_snoc {xs : List Int} {m : Nat}
     (hm : m < xs.length) :
     xs.take (m + 1) = xs.take m ++ [xs.getD m 0] := by
   have hx : xs[m]? = some (xs.getD m 0) := by
@@ -220,7 +220,7 @@ theorem take_succ_snoc {xs : List Int} {m : Nat}
   rfl
 
 /-- Appending one element to a nonempty list steps `minSpec` by `min`. -/
-theorem minSpec_snoc (w : Int) (t : List Int) (v : Int) :
+private theorem minSpec_snoc (w : Int) (t : List Int) (v : Int) :
     minSpec ((w :: t) ++ [v]) = min (minSpec (w :: t)) v := by
   induction t generalizing w with
   | nil => simp [minSpec]
@@ -232,7 +232,7 @@ theorem minSpec_snoc (w : Int) (t : List Int) (v : Int) :
         = min (min w (minSpec (x :: rest))) v
       omega
 
-theorem maxSpec_snoc (w : Int) (t : List Int) (v : Int) :
+private theorem maxSpec_snoc (w : Int) (t : List Int) (v : Int) :
     maxSpec ((w :: t) ++ [v]) = max (maxSpec (w :: t)) v := by
   induction t generalizing w with
   | nil => simp [maxSpec]
@@ -308,12 +308,12 @@ theorem maxSpec_mem : ∀ {l : List Int}, l ≠ [] → maxSpec l ∈ l := by
           · rw [h]
             exact List.mem_cons_of_mem _ (ih (by simp))
 
-theorem minTake_range {xs : List Int} {m : Nat}
+private theorem minTake_range {xs : List Int} {m : Nat}
     (hxs : ∀ v ∈ xs, 0 ≤ v ∧ v < 2 ^ 64) (hm1 : 1 ≤ m) (hne : xs ≠ []) :
     0 ≤ minSpec (xs.take m) ∧ minSpec (xs.take m) < 2 ^ 64 :=
   hxs _ (List.mem_of_mem_take (minSpec_mem (take_ne_nil hm1 hne)))
 
-theorem maxTake_range {xs : List Int} {m : Nat}
+private theorem maxTake_range {xs : List Int} {m : Nat}
     (hxs : ∀ v ∈ xs, 0 ≤ v ∧ v < 2 ^ 64) (hm1 : 1 ≤ m) (hne : xs ≠ []) :
     0 ≤ maxSpec (xs.take m) ∧ maxSpec (xs.take m) < 2 ^ 64 :=
   hxs _ (List.mem_of_mem_take (maxSpec_mem (take_ne_nil hm1 hne)))
@@ -1423,7 +1423,7 @@ theorem setupList_range (n seed i : Nat) :
   · rw [List.eq_of_mem_replicate h]
     omega
 
-theorem set_append_first {xs ys : List Int} {w : Int} :
+private theorem set_append_first {xs ys : List Int} {w : Int} :
     (xs ++ ys).set xs.length w = xs ++ ys.set 0 w := by
   induction xs with
   | nil => simp

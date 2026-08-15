@@ -35,7 +35,7 @@ set_option linter.unusedSimpArgs false
 
 The committed pass/frame-rebase machinery re-derived under the harness
 continuation (Reverse's route (b): concrete re-derivation — the frame
-theorem maps ADDRESSES, not continuations, so the canonical subject
+private theorem maps ADDRESSES, not continuations, so the canonical subject
 run cannot be transferred here). Harness subject cells: 8 = the `s`
 parameter, 9 = the subject `i`, 10 = the outer `$forFirst`; the
 per-pass `j`/`$forFirst` pair sits TIGHT at 11/12 and is rebased into
@@ -48,20 +48,20 @@ tail continuation differ); each is re-checked by `rfl` here. -/
 def hAfterCallK : Cont := .seq (hIBodyList.drop 4) envIH2 hIFrame0
 
 /-- The subject call's frame continuation (caller env saved). -/
-def hSubjFrameK : Cont := .frame [] envIH2 [] [] hAfterCallK false
+private def hSubjFrameK : Cont := .frame [] envIH2 [] [] hAfterCallK false
 
 def envHO : LocalEnv :=
   [[("$forFirst", .base ⟨10⟩)], [("i", .base ⟨9⟩)], [], [("s", .base ⟨8⟩)]]
-def envHOMid : LocalEnv :=
+private def envHOMid : LocalEnv :=
   [[("i", .base ⟨9⟩)], [], [("s", .base ⟨8⟩)]]
-def envHOOut : LocalEnv := [[], [("s", .base ⟨8⟩)]]
+private def envHOOut : LocalEnv := [[], [("s", .base ⟨8⟩)]]
 
-def hHeadTailO : Cont :=
+private def hHeadTailO : Cont :=
   .seq [] envHO (.seq [] envHOMid (.seq [] envHOOut hSubjFrameK))
 /-- The subject OUTER loop-head configuration (harness placement). -/
-def hOuterHeadCfg : Config :=
+private def hOuterHeadCfg : Config :=
   .exec (.while (.boolLit true) outerWhileBody) envHO hHeadTailO
-def hLoopKO : Cont :=
+private def hLoopKO : Cont :=
   .loop (.boolLit true) outerWhileBody envHO hHeadTailO
 def hOuterCmpCont : Cont :=
   .ifK (.seqn #[]) .breakStmt ([] :: envHO)
@@ -70,36 +70,36 @@ def hLenTestK (iv : Int) : Cont :=
   .strictK (.lengthOf (some (.slice (.int .uint64)))) [] [] ([] :: envHO)
     (.strictK .lessCmp [.int iv .int] [] ([] :: envHO) hOuterCmpCont)
 
-def envHI : LocalEnv :=
+private def envHI : LocalEnv :=
   [("$forFirst", .base ⟨12⟩)] :: [("j", .base ⟨11⟩)] :: [] :: [] :: envHO
-def hInnerTail : Cont :=
+private def hInnerTail : Cont :=
   .seq [] envHI
     (.seq [] ([("j", .base ⟨11⟩)] :: [] :: [] :: envHO)
       (.seq [] ([] :: [] :: envHO)
         (.seq [] ([] :: envHO) hLoopKO)))
 /-- The subject INNER loop-head configuration (tight placement). -/
-def hInnerHeadCfg : Config :=
+private def hInnerHeadCfg : Config :=
   .exec (.while (.boolLit true) innerWhileBody) envHI hInnerTail
-def hLoopKI : Cont :=
+private def hLoopKI : Cont :=
   .loop (.boolLit true) innerWhileBody envHI hInnerTail
 def hInnerIfK : Cont :=
   .ifK (.seqn #[]) .breakStmt ([] :: envHI)
     (.seq [isortSwapBlock] ([] :: envHI) hLoopKI)
-def hAndKCont : Cont :=
+private def hAndKCont : Cont :=
   .andK (.greaterCmp
       (.indexGet (.var "s") (.sub (.var "j") (.intLit 1 .int)))
       (.indexGet (.var "s") (.var "j")))
     ([] :: envHI) hInnerIfK
-def hGcK1 : Cont :=
+private def hGcK1 : Cont :=
   .strictK .greaterCmp [] [.indexGet (.var "s") (.var "j")] ([] :: envHI)
     (.boolK hInnerIfK)
-def hGcK2 (w1 : GoValue) : Cont :=
+private def hGcK2 (w1 : GoValue) : Cont :=
   .strictK .greaterCmp [w1] [] ([] :: envHI) (.boolK hInnerIfK)
 
-def envHSw : LocalEnv := [] :: [] :: envHI
-def hSwTail : Cont :=
+private def envHSw : LocalEnv := [] :: [] :: envHI
+private def hSwTail : Cont :=
   .seq [] envHSw (.seq [] ([] :: envHI) hLoopKI)
-def hrefj (n : Nat) (idx : Int) : TargetRef :=
+private def hrefj (n : Nat) (idx : Int) : TargetRef :=
   .chain (hISliceH n) [.int idx .int] [.index]
 def hRhsK1 (n : Nat) (idx1 jv : Int) : Cont :=
   .rhsK .vals [hrefj n idx1, hrefj n jv] []
@@ -654,7 +654,7 @@ private theorem lookup_σHIn_index (n seed : Nat) (l : List Int) (iv jv : Int)
     Heap.lookup (σHIn n seed l iv jv ffIv).heap (.index b i) = none := rfl
 
 /-- Root bump by 2 above the fixed cells (threshold 11). -/
-def bump2H : Loc → Loc
+private def bump2H : Loc → Loc
   | .base a => .base ⟨if a.id < 11 then a.id else a.id + 2⟩
   | .field b tid f => .field (bump2H b) tid f
   | .index b i => .index (bump2H b) i

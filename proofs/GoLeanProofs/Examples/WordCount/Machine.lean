@@ -101,7 +101,7 @@ def sc1 : Scope := [("counts", .base ⟨6⟩), ("$c0", .base ⟨4⟩)]
 def envR0 : LocalEnv := [sc1, sc0]
 def envB : LocalEnv :=
   [[("$forFirst", .base ⟨8⟩)], [("i", .base ⟨7⟩)], sc1, sc0]
-def envB1 : LocalEnv := [[("i", .base ⟨7⟩)], sc1, sc0]
+private def envB1 : LocalEnv := [[("i", .base ⟨7⟩)], sc1, sc0]
 def env2 : LocalEnv := [] :: envB
 def env3 : LocalEnv := [] :: env2
 def u1Env (na : Nat) : LocalEnv := [("$c1", .base ⟨na⟩)] :: env2
@@ -111,14 +111,14 @@ def uEnv (na : Nat) : LocalEnv :=
 def frameK : Cont :=
   .frame [(.chain [], [.ref "$callres"])] [[("$callres", .base ⟨0⟩)]]
     [.base ⟨3⟩] [] .stop false
-def tailB : Cont :=
+private def tailB : Cont :=
   .seq [] envB (.seq [] envB1
     (.seq [bestSeqn, wcMapRangeStmt, retSeqn] envR0 frameK))
 /-- The counting-loop head configuration. -/
 def headC : Config :=
   .exec (.while (.boolLit true) wcWhileBody) envB tailB
-def loopKC : Cont := .loop (.boolLit true) wcWhileBody envB tailB
-def bodyTail : Cont := .seq [wcCountBody] env2 loopKC
+private def loopKC : Cont := .loop (.boolLit true) wcWhileBody envB tailB
+private def bodyTail : Cont := .seq [wcCountBody] env2 loopKC
 /-- The exit test's delivery continuation (segment split point). -/
 def cmpContC : Cont := .ifK (.seqn #[]) .breakStmt env2 bodyTail
 /-- The `len(words)` apply point inside the exit test. -/

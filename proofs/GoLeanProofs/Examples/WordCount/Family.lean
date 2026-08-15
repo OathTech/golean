@@ -111,7 +111,7 @@ theorem wcFamily_set {n seed i : Nat} (hi : i < n) :
 = ⌈n/3⌉`, at EVERY seed — the no-collision analysis, consumed -/
 
 /-- The family's value at residue `r`. -/
-def wcVal (seed r : Nat) : Int := (((seed + r) % 2 ^ 64 : Nat) : Int)
+private def wcVal (seed r : Nat) : Int := (((seed + r) % 2 ^ 64 : Nat) : Int)
 
 /-- **No collision at any seed**: two residue values are equal only at
 equal residues — `(seed + a) ≡ (seed + b) (mod 2^64)` forces `a = b`

@@ -32,10 +32,10 @@ statements, same step counts, new concrete addresses, and the subject
 frame sitting on the harness's after-call continuation instead of the
 driver's `frameK` -/
 
-def envWCall : LocalEnv :=
+private def envWCall : LocalEnv :=
   [[("$c10", .base ⟨8⟩), ("w", .base ⟨5⟩), ("$c9", .base ⟨3⟩)], hWScope0]
-def afterCallKW : Cont := .seq (hWBodyList.drop 4) envWCall hWFrame0
-def callKW : Cont :=
+private def afterCallKW : Cont := .seq (hWBodyList.drop 4) envWCall hWFrame0
+private def callKW : Cont :=
   .callArgsK ⟨"maxCount"⟩ [(.chain [], [.ref "$c10"])] [] [] envWCall
     afterCallKW
 /-- The subject's call frame: result loc 10, write-back target `$c10`,

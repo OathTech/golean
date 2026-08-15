@@ -126,7 +126,7 @@ example : findFunctionIn? wordCountLowered.funcs ⟨"maxCount"⟩
 def wcEnv : LocalEnv := [[("$callres", Loc.base ⟨0⟩)]]
 
 /-- The zeroed uint64 result cell at address `0`. -/
-def wcResCell : Heap := [(.base ⟨0⟩, ⟨some (.int .uint64), .int 0 .uint64⟩)]
+private def wcResCell : Heap := [(.base ⟨0⟩, ⟨some (.int .uint64), .int 0 .uint64⟩)]
 
 /-- The driver: `$callres = maxCount(words)` — the words slice enters
 as a slice expression over the backing array at `base` (the §9a
@@ -176,7 +176,7 @@ STATEMENT vocabulary: the bridge to `multiplicity` and the max fold. -/
 /-- **The queried-count bridge**: the fold's count at any key is that
 key's `multiplicity` — wordcount's statement function is
 definitionally the kit's filter-length. -/
-theorem cnt_countsFold' (ws : List Int) (x : Int) :
+private theorem cnt_countsFold' (ws : List Int) (x : Int) :
     cnt (countsFold ws) x = multiplicity x ws := by
   rw [cnt_countsFold]; rfl
 

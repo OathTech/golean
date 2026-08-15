@@ -31,14 +31,14 @@ allocates per iteration, so its segments are address-concrete; the
 whole remainder run is transferred to the true placement in ONE
 `transfer_seg11` application at the end) -/
 
-def okScopeI : Scope :=
+private def okScopeI : Scope :=
   [("ok", .base ⟨11⟩), ("s", .base ⟨5⟩), ("$c4", .base ⟨3⟩)]
-def envIH2ok : LocalEnv := [okScopeI, hIScope0]
-def envSC : LocalEnv :=
+private def envIH2ok : LocalEnv := [okScopeI, hIScope0]
+private def envSC : LocalEnv :=
   [[("$forFirst", .base ⟨13⟩)], [("i", .base ⟨12⟩)], okScopeI, hIScope0]
 
 /-- The scan loop's desugared while body (from the pinned record). -/
-abbrev isortScanBody : Stmt :=
+private abbrev isortScanBody : Stmt :=
   .block #[]
     #[.ifThenElse (.var "$forFirst")
         (.assign (.var "$forFirst") (.boolLit false))
@@ -58,15 +58,15 @@ abbrev isortScanBody : Stmt :=
               #[.seqn #[.assign (.var "ok") (.intLit 0 .uint64)]])
             (.seqn #[])]]
 
-def scTail : Cont :=
+private def scTail : Cont :=
   .seq [] envSC
     (.seq [] [[("i", .base ⟨12⟩)], okScopeI, hIScope0]
       (.seq (hIBodyList.drop 6) envIH2ok hIFrame0))
-def scHeadCfg : Config :=
+private def scHeadCfg : Config :=
   .exec (.while (.boolLit true) isortScanBody) envSC scTail
-def scLoopK : Cont :=
+private def scLoopK : Cont :=
   .loop (.boolLit true) isortScanBody envSC scTail
-def scChkBlk : Stmt :=
+private def scChkBlk : Stmt :=
   .block #[]
     #[.ifThenElse
         (.greaterCmp
@@ -77,13 +77,13 @@ def scChkBlk : Stmt :=
 def scCmpK : Cont :=
   .ifK (.seqn #[]) .breakStmt ([] :: envSC)
     (.seq [scChkBlk] ([] :: envSC) scLoopK)
-def scEnv2 : LocalEnv := [] :: [] :: envSC
-def scIfK : Cont :=
+private def scEnv2 : LocalEnv := [] :: [] :: envSC
+private def scIfK : Cont :=
   .ifK (.block #[] #[.seqn #[.assign (.var "ok") (.intLit 0 .uint64)]])
     (.seqn #[]) scEnv2 (.seq [] scEnv2 (.seq [] ([] :: envSC) scLoopK))
-def scGcK1 : Cont :=
+private def scGcK1 : Cont :=
   .strictK .greaterCmp [] [.indexGet (.var "s") (.var "i")] scEnv2 scIfK
-def scGcK2 (w1 : GoValue) : Cont :=
+private def scGcK2 (w1 : GoValue) : Cont :=
   .strictK .greaterCmp [w1] [] scEnv2 scIfK
 
 /-- The scan-phase state: `ok` pinned 1, scan counter `iv`, flag. -/

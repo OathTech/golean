@@ -31,12 +31,12 @@ set_option linter.unusedSimpArgs false
 — the setup machinery re-instantiated at the `t` placement, cells
 14–18, backing at 15) -/
 
-def c5Scope : Scope :=
+private def c5Scope : Scope :=
   [("$c5", .base ⟨14⟩), ("ok", .base ⟨11⟩), ("s", .base ⟨5⟩),
    ("$c4", .base ⟨3⟩)]
-def envC5 : LocalEnv := [c5Scope, hIScope0]
-def hIAfterMs2K : Cont := .seq (hIBodyList.drop 7) envC5 hIFrame0
-def hIMs2K : Cont :=
+private def envC5 : LocalEnv := [c5Scope, hIScope0]
+private def hIAfterMs2K : Cont := .seq (hIBodyList.drop 7) envC5 hIFrame0
+private def hIMs2K : Cont :=
   .stmtOpK (.makeSlice (.int .uint64) false) 1 [.addr (.base ⟨14⟩)] []
     envC5 hIAfterMs2K
 
@@ -111,7 +111,7 @@ def envRB : LocalEnv :=
   [[("$forFirst", .base ⟨18⟩)], [("i", .base ⟨17⟩)], tScope, hIScope0]
 
 /-- The rebuild loop's desugared body (the multiplicative store to `t`). -/
-abbrev isortRebuildBody : Stmt :=
+private abbrev isortRebuildBody : Stmt :=
   .block #[]
     #[.ifThenElse (.var "$forFirst")
         (.assign (.var "$forFirst") (.boolLit false))
@@ -128,15 +128,15 @@ abbrev isortRebuildBody : Stmt :=
                 (.mul (.var "seed")
                   (.add (.var "i") (.intLit 1 .uint64)))]]]
 
-def rbTail : Cont :=
+private def rbTail : Cont :=
   .seq [] envRB
     (.seq [] [[("i", .base ⟨17⟩)], tScope, hIScope0]
       (.seq (hIBodyList.drop 9) envT hIFrame0))
-def rbHeadCfg : Config :=
+private def rbHeadCfg : Config :=
   .exec (.while (.boolLit true) isortRebuildBody) envRB rbTail
-def rbLoopK : Cont :=
+private def rbLoopK : Cont :=
   .loop (.boolLit true) isortRebuildBody envRB rbTail
-def rbStoreBlk : Stmt :=
+private def rbStoreBlk : Stmt :=
   .block #[]
     #[.seqn
         #[.assign
@@ -146,7 +146,7 @@ def rbStoreBlk : Stmt :=
 def rbCmpK : Cont :=
   .ifK (.seqn #[]) .breakStmt ([] :: envRB)
     (.seq [rbStoreBlk] ([] :: envRB) rbLoopK)
-def rbStoreTail : Cont :=
+private def rbStoreTail : Cont :=
   .seq [] ([] :: [] :: envRB) (.seq [] ([] :: envRB) rbLoopK)
 
 /-- The rebuild-loop state family (fixed cells 0–18). -/

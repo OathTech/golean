@@ -31,7 +31,7 @@ set_option linter.unusedSimpArgs false
 /-! ## The entry equation (§11 glue) -/
 
 /-- The entry frame environment (probe-pinned). -/
-def hIEnv0 : LocalEnv :=
+private def hIEnv0 : LocalEnv :=
   [[("$res0", .base ⟨2⟩), ("seed", .base ⟨1⟩), ("n", .base ⟨0⟩)]]
 
 abbrev ucell (v : Int) : HeapCell :=
@@ -89,7 +89,7 @@ def σIMkS (n seed : Nat) : ExecState :=
              (.base ⟨4⟩, arrCell n (List.replicate n 0))],
     nextAddr := 5 }
 
-def envC4 : LocalEnv := [[("$c4", .base ⟨3⟩)], hIScope0]
+private def envC4 : LocalEnv := [[("$c4", .base ⟨3⟩)], hIScope0]
 
 /-- The harness body's top statement list (projection of the pinned
 record — reducible data, so the `rfl` segments see through it). -/
@@ -101,10 +101,10 @@ def hIBodyList : List Stmt :=
 def hIFrame0 : Cont := .frame [] [] [] [] .stop false
 
 /-- The continuation below the makeSlice apply. -/
-def hIAfterMsK : Cont :=
+private def hIAfterMsK : Cont :=
   .seq (hIBodyList.drop 1) envC4 hIFrame0
 
-def hIMsK : Cont :=
+private def hIMsK : Cont :=
   .stmtOpK (.makeSlice (.int .uint64) false) 1 [.addr (.base ⟨3⟩)] []
     envC4 hIAfterMsK
 
@@ -159,7 +159,7 @@ def sISU (n : Nat) (sv : Int) (l : List Int) (iv : Int)
     nextAddr := 8 }
 
 /-- The setup loop's `for`-desugar body (the multiplicative store). -/
-abbrev isortSetupBody : Stmt :=
+private abbrev isortSetupBody : Stmt :=
   .block #[]
     #[.ifThenElse (.var "$forFirst")
         (.assign (.var "$forFirst") (.boolLit false))
@@ -176,24 +176,24 @@ abbrev isortSetupBody : Stmt :=
                 (.mul (.var "seed")
                   (.add (.var "i") (.intLit 1 .uint64)))]]]
 
-def envISU : LocalEnv :=
+private def envISU : LocalEnv :=
   [[("$forFirst", .base ⟨7⟩)], [("i", .base ⟨6⟩)],
    [("s", .base ⟨5⟩), ("$c4", .base ⟨3⟩)], hIScope0]
-def envISU2 : LocalEnv :=
+private def envISU2 : LocalEnv :=
   [[("i", .base ⟨6⟩)], [("s", .base ⟨5⟩), ("$c4", .base ⟨3⟩)], hIScope0]
 def envIH2 : LocalEnv :=
   [[("s", .base ⟨5⟩), ("$c4", .base ⟨3⟩)], hIScope0]
 
-def suITail : Cont :=
+private def suITail : Cont :=
   .seq [] envISU (.seq [] envISU2
     (.seq (hIBodyList.drop 3) envIH2 hIFrame0))
 /-- The setup loop-head configuration. -/
-def suIHeadCfg : Config :=
+private def suIHeadCfg : Config :=
   .exec (.while (.boolLit true) isortSetupBody) envISU suITail
-def suILoopK : Cont :=
+private def suILoopK : Cont :=
   .loop (.boolLit true) isortSetupBody envISU suITail
 
-def suIStoreBlk : Stmt :=
+private def suIStoreBlk : Stmt :=
   .block #[]
     #[.seqn
         #[.assign
@@ -206,7 +206,7 @@ def suICmpK : Cont :=
   .ifK (.seqn #[]) .breakStmt ([] :: envISU)
     (.seq [suIStoreBlk] ([] :: envISU) suILoopK)
 
-def suIStoreTail : Cont :=
+private def suIStoreTail : Cont :=
   .seq [] ([] :: [] :: envISU) (.seq [] ([] :: envISU) suILoopK)
 
 /-- Entry A2: makeSlice done → `s := $c4`, `i := 0`, the `$forFirst`

@@ -45,16 +45,16 @@ abbrev sliceH (n : Nat) : GoValue :=
 
 def envO : LocalEnv :=
   [[("$forFirst", .base ⟨3⟩)], [("i", .base ⟨2⟩)], [], [("s", .base ⟨1⟩)]]
-def envOMid : LocalEnv := [[("i", .base ⟨2⟩)], [], [("s", .base ⟨1⟩)]]
-def envOOut : LocalEnv := [[], [("s", .base ⟨1⟩)]]
+private def envOMid : LocalEnv := [[("i", .base ⟨2⟩)], [], [("s", .base ⟨1⟩)]]
+private def envOOut : LocalEnv := [[], [("s", .base ⟨1⟩)]]
 
-def headTailO : Cont :=
+private def headTailO : Cont :=
   .seq [] envO (.seq [] envOMid (.seq [] envOOut
     (.frame [] [] [] [] .stop false)))
 /-- The OUTER loop-head configuration. -/
-def outerHeadCfg : Config :=
+private def outerHeadCfg : Config :=
   .exec (.while (.boolLit true) outerWhileBody) envO headTailO
-def loopKO : Cont := .loop (.boolLit true) outerWhileBody envO headTailO
+private def loopKO : Cont := .loop (.boolLit true) outerWhileBody envO headTailO
 /-- The outer exit test's delivery continuation. -/
 def outerCmpCont : Cont :=
   .ifK (.seqn #[]) .breakStmt ([] :: envO)
@@ -67,15 +67,15 @@ def lenTestK (iv : Int) : Cont :=
 
 def envI : LocalEnv :=
   [("$forFirst", .base ⟨5⟩)] :: [("j", .base ⟨4⟩)] :: [] :: [] :: envO
-def innerTail : Cont :=
+private def innerTail : Cont :=
   .seq [] envI
     (.seq [] ([("j", .base ⟨4⟩)] :: [] :: [] :: envO)
       (.seq [] ([] :: [] :: envO)
         (.seq [] ([] :: envO) loopKO)))
 /-- The INNER loop-head configuration (tight placement). -/
-def innerHeadCfg : Config :=
+private def innerHeadCfg : Config :=
   .exec (.while (.boolLit true) innerWhileBody) envI innerTail
-def loopKI : Cont := .loop (.boolLit true) innerWhileBody envI innerTail
+private def loopKI : Cont := .loop (.boolLit true) innerWhileBody envI innerTail
 /-- The inner test's `if` delivery continuation. -/
 def innerIfK : Cont :=
   .ifK (.seqn #[]) .breakStmt ([] :: envI)
@@ -83,22 +83,22 @@ def innerIfK : Cont :=
 /-- The short-circuit `&&` continuation: first conjunct delivers HERE;
 `false` skips the index reads entirely (Go's laziness — load-bearing at
 `j = 0`). -/
-def andKCont : Cont :=
+private def andKCont : Cont :=
   .andK (.greaterCmp
       (.indexGet (.var "s") (.sub (.var "j") (.intLit 1 .int)))
       (.indexGet (.var "s") (.var "j")))
     ([] :: envI) innerIfK
 /-- The second conjunct's spine: first index read pending the second. -/
-def gcK1 : Cont :=
+private def gcK1 : Cont :=
   .strictK .greaterCmp [] [.indexGet (.var "s") (.var "j")] ([] :: envI)
     (.boolK innerIfK)
-def gcK2 (w1 : GoValue) : Cont :=
+private def gcK2 (w1 : GoValue) : Cont :=
   .strictK .greaterCmp [w1] [] ([] :: envI) (.boolK innerIfK)
 
-def envSw : LocalEnv := [] :: [] :: envI
+private def envSw : LocalEnv := [] :: [] :: envI
 def swTail : Cont :=
   .seq [] envSw (.seq [] ([] :: envI) loopKI)
-def refj (n : Nat) (idx : Int) : TargetRef :=
+private def refj (n : Nat) (idx : Int) : TargetRef :=
   .chain (sliceH n) [.int idx .int] [.index]
 def rhsK1 (n : Nat) (idx1 jv : Int) : Cont :=
   .rhsK .vals [refj n idx1, refj n jv] []
@@ -359,7 +359,7 @@ first-conjunct delivery point of the short-circuit `&&`) -/
 the sorted prefix `p` — the run returns to the OUTER loop head with the
 insertion complete, within `92·jv + 10` steps. `jex` is the final
 (retired) counter value. -/
-theorem inner_loop (n : Nat) (ivv : Int) (p suffix : List Int)
+private theorem inner_loop (n : Nat) (ivv : Int) (p suffix : List Int)
     (v : Int) (hn : n < 2 ^ 63)
     (hlen : p.length + 1 + suffix.length = n)
     (hsort : Sorted p)

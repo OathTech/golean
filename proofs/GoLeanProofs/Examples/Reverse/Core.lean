@@ -168,7 +168,7 @@ array at `base` as the literal argument — the §9e
 argument-as-quantifier convention lifted to a memory-backed value: a
 slice expression over a `locLit` pointer-to-array base yields the
 handle via `sliceFromArray`. -/
-def reverseCall (xs : List Int) (base : Nat) : Stmt :=
+private def reverseCall (xs : List Int) (base : Nat) : Stmt :=
   .call #[] ⟨"reverse"⟩
     #[.slice (.locLit (.base ⟨base⟩)) (.intLit 0 .int)
         (.intLit xs.length .int) none]
@@ -177,7 +177,7 @@ def reverseCall (xs : List Int) (base : Nat) : Stmt :=
 an arbitrary frame `fr`, allocator at `na`. The canonical placement is
 `reverseSeed xs 0 [] 1` — TIGHT (dom = {0}, na₀ = 1), as the frame
 theorem's seed discharge requires. -/
-def reverseSeed (xs : List Int) (base : Nat) (fr : Heap) (na : Nat) :
+private def reverseSeed (xs : List Int) (base : Nat) (fr : Heap) (na : Nat) :
     ExecState :=
   { types := reverseLowered.typeDefs.toList,
     functions := reverseLowered.funcs,
@@ -198,14 +198,14 @@ theorem length_revSwap (xs : List Int) (m : Nat) :
     (revSwap xs m).length = xs.length := by
   simp [revSwap]
 
-theorem getElem?_revSwap (xs : List Int) (m k : Nat)
+private theorem getElem?_revSwap (xs : List Int) (m k : Nat)
     (hk : k < xs.length) :
     (revSwap xs m)[k]? =
       some (if k < m ∨ xs.length - m ≤ k then xs.getD (xs.length - 1 - k) 0
         else xs.getD k 0) := by
   simp [revSwap, List.getElem?_map, List.getElem?_range, hk]
 
-theorem getD_revSwap (xs : List Int) (m k : Nat)
+private theorem getD_revSwap (xs : List Int) (m k : Nat)
     (hk : k < xs.length) :
     (revSwap xs m).getD k 0 =
       if k < m ∨ xs.length - m ≤ k then xs.getD (xs.length - 1 - k) 0
@@ -1109,7 +1109,7 @@ theorem mem_suList {n seed m : Nat} {v : Int}
   · exact mem_revFamily h
   · omega
 
-theorem revFamily_succ (m seed : Nat) :
+private theorem revFamily_succ (m seed : Nat) :
     revFamily (m + 1) seed
       = revFamily m seed ++ [(((seed + m) % 2 ^ 64 : Nat) : Int)] := by
   simp [revFamily, List.range_succ]

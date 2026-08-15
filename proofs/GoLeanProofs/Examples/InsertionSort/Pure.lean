@@ -37,7 +37,7 @@ abbrev isortSwapBlock : Stmt :=
 
 /-- The inner `for`'s condition: Go's SHORT-CIRCUIT
 `j > 0 && s[j-1] > s[j]`. -/
-abbrev innerCond : Expr :=
+private abbrev innerCond : Expr :=
   .and (.greaterCmp (.var "j") (.intLit 0 .int))
     (.greaterCmp
       (.indexGet (.var "s") (.sub (.var "j") (.intLit 1 .int)))
@@ -83,7 +83,7 @@ abbrev outerWhileBody : Stmt :=
 
 /-- The subject's `Func` record, verbatim from the pinned lowering (the
 `example` pin below ties it by `rfl`). -/
-def isortFunc : Func :=
+private def isortFunc : Func :=
   { id := { key := "insertionSort" },
     args := #[{ id := "s", typ := .slice (.int .uint64) }],
     results := #[],

@@ -34,7 +34,7 @@ set_option linter.unusedSimpArgs false
 step is address-concrete; conditioned glue at the data-dependent
 points) -/
 
-def callK : Cont :=
+private def callK : Cont :=
   .callArgsK ⟨"maxCount"⟩ [(.chain [], [.ref "$callres"])] [] [] wcEnv .stop
 
 /-- Entry A: driver start → the slice-expression apply point. 7 steps. -/
@@ -105,18 +105,18 @@ theorem lookup_frontC_none (L : Nat) (ws : List Int)
     base_beq_false (by omega : (8 : Nat) ≠ x),
     Bool.false_eq_true, if_false]
 
-def stK0 (na : Nat) : Cont :=
+private def stK0 (na : Nat) : Cont :=
   .stmtOpK (.mapAssign tU64 tU64) 0 []
     [.var "$c2",
      .add (.mapGet (.var "$c1") (.var "$c2") tU64 tU64) (.intLit 1 .uint64)]
     (uEnv na) (.seq [] (uEnv na) postBodyK)
-def stK2 (na : Nat) (w : Int) : Cont :=
+private def stK2 (na : Nat) (w : Int) : Cont :=
   .stmtOpK (.mapAssign tU64 tU64) 0
     [.int w .uint64, .map ⟨some (.base ⟨5⟩)⟩] []
     (uEnv na) (.seq [] (uEnv na) postBodyK)
-def addK (na : Nat) (w : Int) : Cont :=
+private def addK (na : Nat) (w : Int) : Cont :=
   .strictK .add [] [.intLit 1 .uint64] (uEnv na) (stK2 na w)
-def mapGetK (na : Nat) (w : Int) : Cont :=
+private def mapGetK (na : Nat) (w : Int) : Cont :=
   .strictK (.mapGet tU64 tU64) [.map ⟨some (.base ⟨5⟩)⟩] [] (uEnv na)
     (addK na w)
 

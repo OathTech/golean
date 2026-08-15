@@ -73,7 +73,7 @@ set_option linter.unusedSimpArgs false
 /-- The PROGRAM-generic state form: an abstract `σ` with only the heap
 front and the allocator pinned. Reducible, so `with_unfolding_all rfl`
 sees straight through it. -/
-abbrev vSt (σ : ExecState) (H : Heap) (na : Nat) : ExecState :=
+private abbrev vSt (σ : ExecState) (H : Heap) (na : Nat) : ExecState :=
   { σ with heap := H, nextAddr := na }
 
 /-! ## The harness `Func`, verbatim from the pinned lowering -/
@@ -92,7 +92,7 @@ theorem reverseHarnessV_pin :
 
 /-- The family's own element at an in-range index (the copy loop reads
 `s[i]`, which is exactly this). -/
-theorem getD_revFamily {n seed m : Nat} (hm : m < n) :
+private theorem getD_revFamily {n seed m : Nat} (hm : m < n) :
     (revFamily n seed).getD m 0 = (((seed + m) % 2 ^ 64 : Nat) : Int) := by
   rw [List.getD]
   simp only [revFamily, List.getElem?_map, List.getElem?_range hm]
@@ -100,28 +100,28 @@ theorem getD_revFamily {n seed m : Nat} (hm : m < n) :
 
 /-! ## Cells and slice handles at the v-layout -/
 
-abbrev vu64 (v : Int) : HeapCell := ⟨some (.int .uint64), .int v .uint64⟩
-abbrev vbool (b : Bool) : HeapCell := ⟨some .bool, .bool b⟩
-abbrev vint (v : Int) : HeapCell := ⟨some (.int .int), .int v .int⟩
+private abbrev vu64 (v : Int) : HeapCell := ⟨some (.int .uint64), .int v .uint64⟩
+private abbrev vbool (b : Bool) : HeapCell := ⟨some .bool, .bool b⟩
+private abbrev vint (v : Int) : HeapCell := ⟨some (.int .int), .int v .int⟩
 /-- `s`'s handle: backing at 4, offset 0, len = cap = `n`. -/
-abbrev vSliceS (n : Nat) : GoValue := .slice ⟨some (.base ⟨4⟩), 0, n, n⟩
+private abbrev vSliceS (n : Nat) : GoValue := .slice ⟨some (.base ⟨4⟩), 0, n, n⟩
 /-- `t`'s handle: backing at 9. -/
-abbrev vSliceT (n : Nat) : GoValue := .slice ⟨some (.base ⟨9⟩), 0, n, n⟩
-abbrev vHandleS (n : Nat) : HeapCell :=
+private abbrev vSliceT (n : Nat) : GoValue := .slice ⟨some (.base ⟨9⟩), 0, n, n⟩
+private abbrev vHandleS (n : Nat) : HeapCell :=
   ⟨some (.slice (.int .uint64)), vSliceS n⟩
-abbrev vHandleT (n : Nat) : HeapCell :=
+private abbrev vHandleT (n : Nat) : HeapCell :=
   ⟨some (.slice (.int .uint64)), vSliceT n⟩
-abbrev vArr (n : Nat) (l : List Int) : HeapCell :=
+private abbrev vArr (n : Nat) (l : List Int) : HeapCell :=
   ⟨some (.array n (.int .uint64)), .array ⟨l.map (fun v => .int v .uint64)⟩⟩
-abbrev vNilSlice : HeapCell :=
+private abbrev vNilSlice : HeapCell :=
   ⟨some (.slice (.int .uint64)), .slice ⟨none, 0, 0, 0⟩⟩
 
 /-! ## Statement pieces (suffixes of the harness body) -/
 
-def vS2 : Stmt :=
+private def vS2 : Stmt :=
   .seqn #[.initialization { id := "s", typ := .slice (.int .uint64) },
           .assign (.var "s") (.var "$c5")]
-def vS3 : Stmt :=
+private def vS3 : Stmt :=
   .block #[]
     #[.seqn #[.initialization { id := "i", typ := .int .uint64 },
               .assign (.var "i") (.intLit 0 .uint64)],
@@ -129,13 +129,13 @@ def vS3 : Stmt :=
         #[.initialization { id := "$forFirst", typ := .bool },
           .assign (.var "$forFirst") (.boolLit true),
           .while (.boolLit true) reverseHarnessFunc.suBody]]
-def vS4 : Stmt :=
+private def vS4 : Stmt :=
   .seqn #[.initialization { id := "$c6", typ := .slice (.int .uint64) },
           .makeSlice (.var "$c6") (.int .uint64) (.var "n") none]
-def vS5 : Stmt :=
+private def vS5 : Stmt :=
   .seqn #[.initialization { id := "t", typ := .slice (.int .uint64) },
           .assign (.var "t") (.var "$c6")]
-def vS6 : Stmt :=
+private def vS6 : Stmt :=
   .block #[]
     #[.seqn #[.initialization { id := "i", typ := .int .uint64 },
               .assign (.var "i") (.intLit 0 .uint64)],
@@ -143,11 +143,11 @@ def vS6 : Stmt :=
         #[.initialization { id := "$forFirst", typ := .bool },
           .assign (.var "$forFirst") (.boolLit true),
           .while (.boolLit true) reverseHarnessVFunc.cpBody]]
-def vS7 : Stmt := .call #[] ⟨"reverse"⟩ #[.var "s"]
-def vS8 : Stmt :=
+private def vS7 : Stmt := .call #[] ⟨"reverse"⟩ #[.var "s"]
+private def vS8 : Stmt :=
   .seqn #[.initialization { id := "ok", typ := .int .uint64 },
           .assign (.var "ok") (.intLit 1 .uint64)]
-def vS9 : Stmt :=
+private def vS9 : Stmt :=
   .block #[]
     #[.seqn #[.initialization { id := "i", typ := .int .uint64 },
               .assign (.var "i") (.intLit 0 .uint64)],
@@ -155,184 +155,184 @@ def vS9 : Stmt :=
         #[.initialization { id := "$forFirst", typ := .bool },
           .assign (.var "$forFirst") (.boolLit true),
           .while (.boolLit true) reverseHarnessVFunc.tvBody]]
-def vS10 : Stmt :=
+private def vS10 : Stmt :=
   .seqn #[.assign (.var "$res0") (.var "ok"), .returnStmt]
 
 /-! ## Environments -/
 
-def baseEnvV : Scope :=
+private def baseEnvV : Scope :=
   [("$res0", .base ⟨2⟩), ("seed", .base ⟨1⟩), ("n", .base ⟨0⟩)]
-def envC5V : LocalEnv := [[("$c5", .base ⟨3⟩)], baseEnvV]
-def sScopeV : Scope := [("s", .base ⟨5⟩), ("$c5", .base ⟨3⟩)]
-def c6ScopeV : Scope :=
+private def envC5V : LocalEnv := [[("$c5", .base ⟨3⟩)], baseEnvV]
+private def sScopeV : Scope := [("s", .base ⟨5⟩), ("$c5", .base ⟨3⟩)]
+private def c6ScopeV : Scope :=
   [("$c6", .base ⟨8⟩), ("s", .base ⟨5⟩), ("$c5", .base ⟨3⟩)]
-def tScopeV : Scope :=
+private def tScopeV : Scope :=
   [("t", .base ⟨10⟩), ("$c6", .base ⟨8⟩), ("s", .base ⟨5⟩),
    ("$c5", .base ⟨3⟩)]
-def okScopeV : Scope :=
+private def okScopeV : Scope :=
   [("ok", .base ⟨17⟩), ("t", .base ⟨10⟩), ("$c6", .base ⟨8⟩),
    ("s", .base ⟨5⟩), ("$c5", .base ⟨3⟩)]
 
-def suEnvV : LocalEnv :=
+private def suEnvV : LocalEnv :=
   [[("$forFirst", .base ⟨7⟩)], [("i", .base ⟨6⟩)], sScopeV, baseEnvV]
-def suEnvV2 : LocalEnv := [] :: [] :: suEnvV
-def cpEnvV : LocalEnv :=
+private def suEnvV2 : LocalEnv := [] :: [] :: suEnvV
+private def cpEnvV : LocalEnv :=
   [[("$forFirst", .base ⟨12⟩)], [("i", .base ⟨11⟩)], tScopeV, baseEnvV]
-def cpEnvV2 : LocalEnv := [] :: [] :: cpEnvV
-def tvEnvV : LocalEnv :=
+private def cpEnvV2 : LocalEnv := [] :: [] :: cpEnvV
+private def tvEnvV : LocalEnv :=
   [[("$forFirst", .base ⟨19⟩)], [("i", .base ⟨18⟩)], okScopeV, baseEnvV]
-def tvEnvV2 : LocalEnv := [] :: [] :: tvEnvV
+private def tvEnvV2 : LocalEnv := [] :: [] :: tvEnvV
 
 /-! ## Continuations -/
 
-def vTailAfterSetup : Cont :=
+private def vTailAfterSetup : Cont :=
   .seq [vS4, vS5, vS6, vS7, vS8, vS9, vS10] [sScopeV, baseEnvV]
     (.frame [] [] [] [] .stop)
-def suHeadTailV : Cont :=
+private def suHeadTailV : Cont :=
   .seq [] suEnvV
     (.seq [] [[("i", .base ⟨6⟩)], sScopeV, baseEnvV] vTailAfterSetup)
-def suHeadCfgV : Config :=
+private def suHeadCfgV : Config :=
   .exec (.while (.boolLit true) reverseHarnessFunc.suBody) suEnvV suHeadTailV
-def suLoopKV : Cont :=
+private def suLoopKV : Cont :=
   .loop (.boolLit true) reverseHarnessFunc.suBody suEnvV suHeadTailV
-def suStoreBlockV : Stmt :=
+private def suStoreBlockV : Stmt :=
   .block #[]
     #[.seqn #[.assign (.addr (.indexAddr (.var "s") (.var "i")))
         (.add (.var "seed") (.var "i"))]]
-def suCmpContV : Cont :=
+private def suCmpContV : Cont :=
   .ifK (.seqn #[]) .breakStmt ([] :: suEnvV)
     (.seq [suStoreBlockV] ([] :: suEnvV) suLoopKV)
-def suRefV (n : Nat) (iv : Int) : TargetRef :=
+private def suRefV (n : Nat) (iv : Int) : TargetRef :=
   .chain (vSliceS n) [.int iv .uint64] [.index]
-def suSwTailV : Cont :=
+private def suSwTailV : Cont :=
   .seq [] suEnvV2 (.seq [] ([] :: suEnvV) suLoopKV)
 
-def vTailAfterCopy : Cont :=
+private def vTailAfterCopy : Cont :=
   .seq [vS7, vS8, vS9, vS10] [tScopeV, baseEnvV] (.frame [] [] [] [] .stop)
-def cpHeadTailV : Cont :=
+private def cpHeadTailV : Cont :=
   .seq [] cpEnvV
     (.seq [] [[("i", .base ⟨11⟩)], tScopeV, baseEnvV] vTailAfterCopy)
-def cpHeadCfgV : Config :=
+private def cpHeadCfgV : Config :=
   .exec (.while (.boolLit true) reverseHarnessVFunc.cpBody) cpEnvV cpHeadTailV
-def cpLoopKV : Cont :=
+private def cpLoopKV : Cont :=
   .loop (.boolLit true) reverseHarnessVFunc.cpBody cpEnvV cpHeadTailV
-def cpStoreBlockV : Stmt :=
+private def cpStoreBlockV : Stmt :=
   .block #[]
     #[.seqn #[.assign (.addr (.indexAddr (.var "t") (.var "i")))
         (.indexGet (.var "s") (.var "i"))]]
-def cpCmpContV : Cont :=
+private def cpCmpContV : Cont :=
   .ifK (.seqn #[]) .breakStmt ([] :: cpEnvV)
     (.seq [cpStoreBlockV] ([] :: cpEnvV) cpLoopKV)
-def cpRefV (n : Nat) (iv : Int) : TargetRef :=
+private def cpRefV (n : Nat) (iv : Int) : TargetRef :=
   .chain (vSliceT n) [.int iv .uint64] [.index]
-def cpSwTailV : Cont :=
+private def cpSwTailV : Cont :=
   .seq [] cpEnvV2 (.seq [] ([] :: cpEnvV) cpLoopKV)
-def cpRhsKV (n : Nat) (iv : Int) : Cont :=
+private def cpRhsKV (n : Nat) (iv : Int) : Cont :=
   .rhsK .vals [cpRefV n iv] [] [] (.seqn #[]) cpEnvV2 cpSwTailV
 
 /-! ### Reverse-phase continuations at the v-layout (the subject's own
 tower sitting on the after-call continuation) -/
 
-def rvEnvInV : LocalEnv :=
+private def rvEnvInV : LocalEnv :=
   [[("$forFirst", .base ⟨16⟩)], [("j", .base ⟨15⟩), ("i", .base ⟨14⟩)],
    [], [("s", .base ⟨13⟩)]]
-def rvEnvMidV : LocalEnv :=
+private def rvEnvMidV : LocalEnv :=
   [[("j", .base ⟨15⟩), ("i", .base ⟨14⟩)], [], [("s", .base ⟨13⟩)]]
-def rvEnvOutV : LocalEnv := [[], [("s", .base ⟨13⟩)]]
-def rvAfterCallV : Cont :=
+private def rvEnvOutV : LocalEnv := [[], [("s", .base ⟨13⟩)]]
+private def rvAfterCallV : Cont :=
   .seq [vS8, vS9, vS10] [tScopeV, baseEnvV] (.frame [] [] [] [] .stop)
-def rvFrameV : Cont :=
+private def rvFrameV : Cont :=
   .frame [] [tScopeV, baseEnvV] [] [] rvAfterCallV false
-def rvHeadTailV : Cont :=
+private def rvHeadTailV : Cont :=
   .seq [] rvEnvInV (.seq [] rvEnvMidV (.seq [] rvEnvOutV rvFrameV))
-def rvHeadCfgV : Config :=
+private def rvHeadCfgV : Config :=
   .exec (.while (.boolLit true) revWhileBody) rvEnvInV rvHeadTailV
-def rvLoopKV : Cont :=
+private def rvLoopKV : Cont :=
   .loop (.boolLit true) revWhileBody rvEnvInV rvHeadTailV
-def rvCmpContV : Cont :=
+private def rvCmpContV : Cont :=
   .ifK (.seqn #[]) .breakStmt ([] :: rvEnvInV)
     (.seq [revSwapBlock] ([] :: rvEnvInV) rvLoopKV)
-def rvEnvIn2V : LocalEnv := [] :: [] :: rvEnvInV
-def rvSwTailV : Cont :=
+private def rvEnvIn2V : LocalEnv := [] :: [] :: rvEnvInV
+private def rvSwTailV : Cont :=
   .seq [] rvEnvIn2V (.seq [] ([] :: rvEnvInV) rvLoopKV)
-def rvRefV (n : Nat) (v : Int) : TargetRef :=
+private def rvRefV (n : Nat) (v : Int) : TargetRef :=
   .chain (vSliceS n) [.int v .int] [.index]
-def rvRhsK1V (n : Nat) (iv jv : Int) : Cont :=
+private def rvRhsK1V (n : Nat) (iv jv : Int) : Cont :=
   .rhsK .vals [rvRefV n iv, rvRefV n jv] [] [.indexGet (.var "s") (.var "i")]
     (.seqn #[]) rvEnvIn2V rvSwTailV
-def rvRhsK2V (n : Nat) (iv jv : Int) (wj : GoValue) : Cont :=
+private def rvRhsK2V (n : Nat) (iv jv : Int) (wj : GoValue) : Cont :=
   .rhsK .vals [rvRefV n iv, rvRefV n jv] [wj] [] (.seqn #[]) rvEnvIn2V
     rvSwTailV
-def rvEntryRhsKV : Cont :=
+private def rvEntryRhsKV : Cont :=
   .rhsK .vals
     [.chain (.addr (.base ⟨14⟩)) [] [], .chain (.addr (.base ⟨15⟩)) [] []]
     [.int 0 .int] [] (.seqn #[]) rvEnvMidV
     (.seq [ffBlock] rvEnvMidV (.seq [] rvEnvOutV rvFrameV))
 /-- The drained call-argument continuation at the `reverse(s)` call —
 the one point the machine consults the pinned program. -/
-def rvCallArgsKV : Cont :=
+private def rvCallArgsKV : Cont :=
   .callArgsK ⟨"reverse"⟩ [] [] [] [tScopeV, baseEnvV] rvAfterCallV
 
 /-! ### Test-phase continuations -/
 
-def tvIdxExpr : Expr :=
+private def tvIdxExpr : Expr :=
   .sub (.sub (.var "n") (.intLit 1 .uint64)) (.var "i")
-def tvHeadTailV : Cont :=
+private def tvHeadTailV : Cont :=
   .seq [] tvEnvV
     (.seq [] [[("i", .base ⟨18⟩)], okScopeV, baseEnvV]
       (.seq [vS10] [okScopeV, baseEnvV] (.frame [] [] [] [] .stop)))
-def tvHeadCfgV : Config :=
+private def tvHeadCfgV : Config :=
   .exec (.while (.boolLit true) reverseHarnessVFunc.tvBody) tvEnvV tvHeadTailV
-def tvLoopKV : Cont :=
+private def tvLoopKV : Cont :=
   .loop (.boolLit true) reverseHarnessVFunc.tvBody tvEnvV tvHeadTailV
-def tvCheckBlockV : Stmt :=
+private def tvCheckBlockV : Stmt :=
   .block #[]
     #[.ifThenElse
         (.neqCmp (.int .uint64) (.indexGet (.var "s") (.var "i"))
           (.indexGet (.var "t") tvIdxExpr))
         (.block #[] #[.seqn #[.assign (.var "ok") (.intLit 0 .uint64)]])
         (.seqn #[])]
-def tvCmpContV : Cont :=
+private def tvCmpContV : Cont :=
   .ifK (.seqn #[]) .breakStmt ([] :: tvEnvV)
     (.seq [tvCheckBlockV] ([] :: tvEnvV) tvLoopKV)
-def tvIfKV : Cont :=
+private def tvIfKV : Cont :=
   .ifK (.block #[] #[.seqn #[.assign (.var "ok") (.intLit 0 .uint64)]])
     (.seqn #[]) tvEnvV2 (.seq [] tvEnvV2 (.seq [] ([] :: tvEnvV) tvLoopKV))
-def tvNeqK1V : Cont :=
+private def tvNeqK1V : Cont :=
   .strictK (.neqCmp (.int .uint64)) [] [.indexGet (.var "t") tvIdxExpr]
     tvEnvV2 tvIfKV
-def tvNeqK2V (w : GoValue) : Cont :=
+private def tvNeqK2V (w : GoValue) : Cont :=
   .strictK (.neqCmp (.int .uint64)) [w] [] tvEnvV2 tvIfKV
 
 /-! ## Heap fronts (program-generic: only these are ever pinned) -/
 
-def vHeap0 (nv sv : Int) : Heap :=
+private def vHeap0 (nv sv : Int) : Heap :=
   [(.base ⟨0⟩, vu64 nv), (.base ⟨1⟩, vu64 sv), (.base ⟨2⟩, vu64 0)]
 
-def vHeapC5 (n seed : Nat) : Heap :=
+private def vHeapC5 (n seed : Nat) : Heap :=
   [(.base ⟨0⟩, vu64 (n : Int)), (.base ⟨1⟩, vu64 (seed : Int)),
    (.base ⟨2⟩, vu64 0), (.base ⟨3⟩, vNilSlice)]
 
-def vHeapMakeS (n seed : Nat) : Heap :=
+private def vHeapMakeS (n seed : Nat) : Heap :=
   [(.base ⟨0⟩, vu64 (n : Int)), (.base ⟨1⟩, vu64 (seed : Int)),
    (.base ⟨2⟩, vu64 0), (.base ⟨3⟩, vHandleS n),
    (.base ⟨4⟩, vArr n (List.replicate n 0))]
 
-def vHeapSu (n seed : Nat) (l : List Int) (iv : Int) (ffv : Bool) : Heap :=
+private def vHeapSu (n seed : Nat) (l : List Int) (iv : Int) (ffv : Bool) : Heap :=
   [(.base ⟨0⟩, vu64 (n : Int)), (.base ⟨1⟩, vu64 (seed : Int)),
    (.base ⟨2⟩, vu64 0), (.base ⟨3⟩, vHandleS n),
    (.base ⟨4⟩, vArr n l), (.base ⟨5⟩, vHandleS n),
    (.base ⟨6⟩, vu64 iv), (.base ⟨7⟩, vbool ffv)]
 
-def vHeapC6 (n seed : Nat) (l : List Int) (iv : Int) : Heap :=
+private def vHeapC6 (n seed : Nat) (l : List Int) (iv : Int) : Heap :=
   vHeapSu n seed l iv false ++ [(.base ⟨8⟩, vNilSlice)]
 
-def vHeapMakeT (n seed : Nat) (l : List Int) (iv : Int) : Heap :=
+private def vHeapMakeT (n seed : Nat) (l : List Int) (iv : Int) : Heap :=
   vHeapSu n seed l iv false ++
     [(.base ⟨8⟩, vHandleT n),
      (.base ⟨9⟩, vArr n (List.replicate n 0))]
 
-def vHeapCp (n seed : Nat) (siv : Int) (ls lt : List Int) (iv : Int)
+private def vHeapCp (n seed : Nat) (siv : Int) (ls lt : List Int) (iv : Int)
     (ffv : Bool) : Heap :=
   [(.base ⟨0⟩, vu64 (n : Int)), (.base ⟨1⟩, vu64 (seed : Int)),
    (.base ⟨2⟩, vu64 0), (.base ⟨3⟩, vHandleS n),
@@ -342,23 +342,23 @@ def vHeapCp (n seed : Nat) (siv : Int) (ls lt : List Int) (iv : Int)
    (.base ⟨10⟩, vHandleT n), (.base ⟨11⟩, vu64 iv),
    (.base ⟨12⟩, vbool ffv)]
 
-def vHeapRvEntry (n seed : Nat) (siv civ : Int) (ls lt : List Int) : Heap :=
+private def vHeapRvEntry (n seed : Nat) (siv civ : Int) (ls lt : List Int) : Heap :=
   vHeapCp n seed siv ls lt civ false ++
     [(.base ⟨13⟩, vHandleS n), (.base ⟨14⟩, vint 0), (.base ⟨15⟩, vint 0)]
 
-def vHeapRv (n seed : Nat) (siv civ : Int) (ls lt : List Int)
+private def vHeapRv (n seed : Nat) (siv civ : Int) (ls lt : List Int)
     (iv jv : Int) (ffv : Bool) : Heap :=
   vHeapCp n seed siv ls lt civ false ++
     [(.base ⟨13⟩, vHandleS n), (.base ⟨14⟩, vint iv),
      (.base ⟨15⟩, vint jv), (.base ⟨16⟩, vbool ffv)]
 
-def vHeapTv (n seed : Nat) (siv civ rif rjf : Int) (ls lt : List Int)
+private def vHeapTv (n seed : Nat) (siv civ rif rjf : Int) (ls lt : List Int)
     (iv : Int) (ffv : Bool) : Heap :=
   vHeapRv n seed siv civ ls lt rif rjf false ++
     [(.base ⟨17⟩, vu64 1), (.base ⟨18⟩, vu64 iv), (.base ⟨19⟩, vbool ffv)]
 
 /-- The terminal heap: the verdict 1 delivered to `$res0`. -/
-def vHeapEnd (n seed : Nat) (siv civ rif rjf : Int) (ls lt : List Int)
+private def vHeapEnd (n seed : Nat) (siv civ rif rjf : Int) (ls lt : List Int)
     (iv : Int) : Heap :=
   [(.base ⟨0⟩, vu64 (n : Int)), (.base ⟨1⟩, vu64 (seed : Int)),
    (.base ⟨2⟩, vu64 1), (.base ⟨3⟩, vHandleS n),
@@ -375,7 +375,7 @@ def vHeapEnd (n seed : Nat) (siv civ rif rjf : Int) (ls lt : List Int)
 `derive_entry_eq` invocation below, the one place this module carries
 `reverseLowered` (moved up from the run section for the macro's sake,
 G0 item 3c). -/
-def vProg : ExecState :=
+private def vProg : ExecState :=
   { types := reverseLowered.typeDefs.toList,
     functions := reverseLowered.funcs,
     methods := reverseLowered.methods,
@@ -391,28 +391,28 @@ derive_entry_eq revHV_entry_eq reverseLowered reverseHarnessVFunc vHSeed vHC₀ 
 
 /-! ## The backing-cell lookups (the conditioned steps' premises) -/
 
-theorem lookup_suV (σ : ExecState) (n seed : Nat) (l : List Int) (iv : Int)
+private theorem lookup_suV (σ : ExecState) (n seed : Nat) (l : List Int) (iv : Int)
     (ffv : Bool) (na : Nat) :
     Heap.lookup (vSt σ (vHeapSu n seed l iv ffv) na).heap (.base ⟨4⟩)
       = some ⟨some (.array n (.int .uint64)),
           .array ⟨l.map (fun v => .int v .uint64)⟩⟩ := by
   simp [vHeapSu, Heap.lookup, vArr]
 
-theorem lookup_cpS (σ : ExecState) (n seed : Nat) (siv : Int)
+private theorem lookup_cpS (σ : ExecState) (n seed : Nat) (siv : Int)
     (ls lt : List Int) (iv : Int) (ffv : Bool) (na : Nat) :
     Heap.lookup (vSt σ (vHeapCp n seed siv ls lt iv ffv) na).heap (.base ⟨4⟩)
       = some ⟨some (.array n (.int .uint64)),
           .array ⟨ls.map (fun v => .int v .uint64)⟩⟩ := by
   simp [vHeapCp, Heap.lookup, vArr]
 
-theorem lookup_cpT (σ : ExecState) (n seed : Nat) (siv : Int)
+private theorem lookup_cpT (σ : ExecState) (n seed : Nat) (siv : Int)
     (ls lt : List Int) (iv : Int) (ffv : Bool) (na : Nat) :
     Heap.lookup (vSt σ (vHeapCp n seed siv ls lt iv ffv) na).heap (.base ⟨9⟩)
       = some ⟨some (.array n (.int .uint64)),
           .array ⟨lt.map (fun v => .int v .uint64)⟩⟩ := by
   simp [vHeapCp, Heap.lookup, vArr]
 
-theorem lookup_rvS (σ : ExecState) (n seed : Nat) (siv civ : Int)
+private theorem lookup_rvS (σ : ExecState) (n seed : Nat) (siv civ : Int)
     (ls lt : List Int) (iv jv : Int) (ffv : Bool) (na : Nat) :
     Heap.lookup (vSt σ (vHeapRv n seed siv civ ls lt iv jv ffv) na).heap
         (.base ⟨4⟩)
@@ -420,7 +420,7 @@ theorem lookup_rvS (σ : ExecState) (n seed : Nat) (siv civ : Int)
           .array ⟨ls.map (fun v => .int v .uint64)⟩⟩ := by
   simp [vHeapRv, vHeapCp, Heap.lookup, vArr]
 
-theorem lookup_tvS (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
+private theorem lookup_tvS (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
     (ls lt : List Int) (iv : Int) (ffv : Bool) (na : Nat) :
     Heap.lookup
         (vSt σ (vHeapTv n seed siv civ rif rjf ls lt iv ffv) na).heap
@@ -429,7 +429,7 @@ theorem lookup_tvS (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
           .array ⟨ls.map (fun v => .int v .uint64)⟩⟩ := by
   simp [vHeapTv, vHeapRv, vHeapCp, Heap.lookup, vArr]
 
-theorem lookup_tvT (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
+private theorem lookup_tvT (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
     (ls lt : List Int) (iv : Int) (ffv : Bool) (na : Nat) :
     Heap.lookup
         (vSt σ (vHeapTv n seed siv civ rif rjf ls lt iv ffv) na).heap
@@ -445,7 +445,7 @@ reads and stores, the two test reads. -/
 
 /-- Entry A: the post-prelude configuration → the `$c5` makeSlice
 apply point. 10 steps. -/
-theorem vH_E1_raw (σ : ExecState) (n seed : Nat) (ch : Choices) :
+private theorem vH_E1_raw (σ : ExecState) (n seed : Nat) (ch : Choices) :
     stepFnIter 10 (vSt σ (vHeap0 (n : Int) (seed : Int)) 3) vHC₀ ch
       = .ok (.retV (.int (n : Int) .uint64)
           (.stmtOpK (.makeSlice (.int .uint64) false) 1
@@ -459,7 +459,7 @@ theorem vH_E1_raw (σ : ExecState) (n seed : Nat) (ch : Choices) :
 PROMOTED to `StepKit.stepFn_makeSlice_u64_step` (phase-2 slice 1, second
 consumer: the minmax S3 layer); this module is one of the promotion's
 two fixture witnesses. -/
-theorem stepFn_makeSliceV {σ σ' : ExecState} {n : Nat}
+private theorem stepFn_makeSliceV {σ σ' : ExecState} {n : Nat}
     {tv : GoValue} {env : LocalEnv} {k : Cont} {ch : Choices}
     (happly : applyStmtOp σ ch (.makeSlice (.int .uint64) false) 1
       [tv, .int (n : Nat) .uint64] = .ok (σ', ch)) :
@@ -471,7 +471,7 @@ theorem stepFn_makeSliceV {σ σ' : ExecState} {n : Nat}
 /-- **`make([]uint64, n)` at SYMBOLIC `n`, for `s`** — the entry
 phase's one branch point (the machine's non-negativity check on the
 length). The backing is `n` zeros. -/
-theorem vH_makeS_apply (σ : ExecState) (n seed : Nat) (ch : Choices) :
+private theorem vH_makeS_apply (σ : ExecState) (n seed : Nat) (ch : Choices) :
     applyStmtOp (vSt σ (vHeapC5 n seed) 4) ch
       (.makeSlice (.int .uint64) false) 1
       [.addr (.base ⟨3⟩), .int (n : Nat) .uint64]
@@ -495,7 +495,7 @@ theorem vH_makeS_apply (σ : ExecState) (n seed : Nat) (ch : Choices) :
 
 /-- Entry B: the `s := $c5` binding, the setup counter and flag → the
 setup loop head. 42 steps. -/
-theorem vH_E2_raw (σ : ExecState) (n seed : Nat) (ch : Choices) :
+private theorem vH_E2_raw (σ : ExecState) (n seed : Nat) (ch : Choices) :
     stepFnIter 42 (vSt σ (vHeapMakeS n seed) 5)
       (.next (.seq [vS2, vS3, vS4, vS5, vS6, vS7, vS8, vS9, vS10] envC5V
         (.frame [] [] [] [] .stop))) ch
@@ -506,7 +506,7 @@ theorem vH_E2_raw (σ : ExecState) (n seed : Nat) (ch : Choices) :
 /-! ### The setup loop -/
 
 /-- Setup first-pass dispatch: head with the flag up → the exit test. -/
-theorem su_A0_rawV (σ : ExecState) (n seed : Nat) (l : List Int) (iv : Int)
+private theorem su_A0_rawV (σ : ExecState) (n seed : Nat) (l : List Int) (iv : Int)
     (ch : Choices) :
     stepFnIter 25 (vSt σ (vHeapSu n seed l iv true) 8) suHeadCfgV ch
       = .ok (.retV (.bool (decide (iv < (n : Int)))) suCmpContV,
@@ -514,7 +514,7 @@ theorem su_A0_rawV (σ : ExecState) (n seed : Nat) (l : List Int) (iv : Int)
   with_unfolding_all rfl
 
 /-- Setup later-pass dispatch: `i++`, then the exit test. -/
-theorem su_A1_rawV (σ : ExecState) (n seed : Nat) (l : List Int) (iv : Int)
+private theorem su_A1_rawV (σ : ExecState) (n seed : Nat) (l : List Int) (iv : Int)
     (ch : Choices) :
     stepFnIter 29 (vSt σ (vHeapSu n seed l iv false) 8) suHeadCfgV ch
       = .ok (.retV (.bool (decide
@@ -527,7 +527,7 @@ theorem su_A1_rawV (σ : ExecState) (n seed : Nat) (l : List Int) (iv : Int)
 
 /-- Setup fill phase: test true → target + RHS evaluated, the store
 pending (`seed + i`, wrapped once by the add). 18 steps. -/
-theorem su_B1_rawV (σ : ExecState) (n seed : Nat) (l : List Int) (iv : Int)
+private theorem su_B1_rawV (σ : ExecState) (n seed : Nat) (l : List Int) (iv : Int)
     (ch : Choices) :
     stepFnIter 18 (vSt σ (vHeapSu n seed l iv false) 8)
       (.retV (.bool true) suCmpContV) ch
@@ -538,7 +538,7 @@ theorem su_B1_rawV (σ : ExecState) (n seed : Nat) (l : List Int) (iv : Int)
   with_unfolding_all rfl
 
 /-- Setup fill tail: store done → back to the loop head. 5 steps. -/
-theorem su_D_rawV (σ : ExecState) (n seed : Nat) (l : List Int) (iv : Int)
+private theorem su_D_rawV (σ : ExecState) (n seed : Nat) (l : List Int) (iv : Int)
     (ch : Choices) :
     stepFnIter 5 (vSt σ (vHeapSu n seed l iv false) 8)
       (.next (.storeK [] [] (.seqn #[]) suEnvV2 suSwTailV)) ch
@@ -546,7 +546,7 @@ theorem su_D_rawV (σ : ExecState) (n seed : Nat) (l : List Int) (iv : Int)
   with_unfolding_all rfl
 
 /-- Setup exit: test false → the `$c6` makeSlice apply point. 15 steps. -/
-theorem su_X_rawV (σ : ExecState) (n seed : Nat) (l : List Int) (iv : Int)
+private theorem su_X_rawV (σ : ExecState) (n seed : Nat) (l : List Int) (iv : Int)
     (ch : Choices) :
     stepFnIter 15 (vSt σ (vHeapSu n seed l iv false) 8)
       (.retV (.bool false) suCmpContV) ch
@@ -560,7 +560,7 @@ theorem su_X_rawV (σ : ExecState) (n seed : Nat) (l : List Int) (iv : Int)
 
 /-- **`make([]uint64, n)` at SYMBOLIC `n`, for `t`** — the copy
 phase's allocation, at the second placement. -/
-theorem vH_makeT_apply (σ : ExecState) (n seed : Nat) (l : List Int)
+private theorem vH_makeT_apply (σ : ExecState) (n seed : Nat) (l : List Int)
     (iv : Int) (ch : Choices) :
     applyStmtOp (vSt σ (vHeapC6 n seed l iv) 9) ch
       (.makeSlice (.int .uint64) false) 1
@@ -586,7 +586,7 @@ theorem vH_makeT_apply (σ : ExecState) (n seed : Nat) (l : List Int)
 
 /-- Copy entry: the `t := $c6` binding, the copy counter and flag →
 the copy loop head. 42 steps. -/
-theorem cp_E_rawV (σ : ExecState) (n seed : Nat) (l : List Int) (iv : Int)
+private theorem cp_E_rawV (σ : ExecState) (n seed : Nat) (l : List Int) (iv : Int)
     (ch : Choices) :
     stepFnIter 42 (vSt σ (vHeapMakeT n seed l iv) 10)
       (.next (.seq [vS5, vS6, vS7, vS8, vS9, vS10] [c6ScopeV, baseEnvV]
@@ -598,7 +598,7 @@ theorem cp_E_rawV (σ : ExecState) (n seed : Nat) (l : List Int) (iv : Int)
 /-! ### The copy loop — the history ghost being materialized -/
 
 /-- Copy first-pass dispatch: head with the flag up → the exit test. -/
-theorem cp_A0_rawV (σ : ExecState) (n seed : Nat) (siv : Int)
+private theorem cp_A0_rawV (σ : ExecState) (n seed : Nat) (siv : Int)
     (ls lt : List Int) (iv : Int) (ch : Choices) :
     stepFnIter 25 (vSt σ (vHeapCp n seed siv ls lt iv true) 13) cpHeadCfgV ch
       = .ok (.retV (.bool (decide (iv < (n : Int)))) cpCmpContV,
@@ -606,7 +606,7 @@ theorem cp_A0_rawV (σ : ExecState) (n seed : Nat) (siv : Int)
   with_unfolding_all rfl
 
 /-- Copy later-pass dispatch: `i++`, then the exit test. -/
-theorem cp_A1_rawV (σ : ExecState) (n seed : Nat) (siv : Int)
+private theorem cp_A1_rawV (σ : ExecState) (n seed : Nat) (siv : Int)
     (ls lt : List Int) (iv : Int) (ch : Choices) :
     stepFnIter 29 (vSt σ (vHeapCp n seed siv ls lt iv false) 13) cpHeadCfgV ch
       = .ok (.retV (.bool (decide
@@ -619,7 +619,7 @@ theorem cp_A1_rawV (σ : ExecState) (n seed : Nat) (siv : Int)
 
 /-- Copy phase 1: test true → the store target banked, the `s[i]` read
 at its apply point. 16 steps. -/
-theorem cp_B1_rawV (σ : ExecState) (n seed : Nat) (siv : Int)
+private theorem cp_B1_rawV (σ : ExecState) (n seed : Nat) (siv : Int)
     (ls lt : List Int) (iv : Int) (ch : Choices) :
     stepFnIter 16 (vSt σ (vHeapCp n seed siv ls lt iv false) 13)
       (.retV (.bool true) cpCmpContV) ch
@@ -629,7 +629,7 @@ theorem cp_B1_rawV (σ : ExecState) (n seed : Nat) (siv : Int)
   with_unfolding_all rfl
 
 /-- Copy phase 2: the read value delivered → the store pending. -/
-theorem cp_B2_rawV (σ : ExecState) (n seed : Nat) (siv : Int)
+private theorem cp_B2_rawV (σ : ExecState) (n seed : Nat) (siv : Int)
     (ls lt : List Int) (iv : Int) (w : GoValue) (ch : Choices) :
     stepFnIter 1 (vSt σ (vHeapCp n seed siv ls lt iv false) 13)
       (.retV w (cpRhsKV n iv)) ch
@@ -638,7 +638,7 @@ theorem cp_B2_rawV (σ : ExecState) (n seed : Nat) (siv : Int)
   with_unfolding_all rfl
 
 /-- Copy tail: store done → back to the loop head. 5 steps. -/
-theorem cp_D_rawV (σ : ExecState) (n seed : Nat) (siv : Int)
+private theorem cp_D_rawV (σ : ExecState) (n seed : Nat) (siv : Int)
     (ls lt : List Int) (iv : Int) (ch : Choices) :
     stepFnIter 5 (vSt σ (vHeapCp n seed siv ls lt iv false) 13)
       (.next (.storeK [] [] (.seqn #[]) cpEnvV2 cpSwTailV)) ch
@@ -649,7 +649,7 @@ theorem cp_D_rawV (σ : ExecState) (n seed : Nat) (siv : Int)
 /-- Copy exit: test false → the `reverse(s)` call's argument delivered
 at the drained `callArgsK` — the machine's ONE program-consulting
 point. 9 steps. -/
-theorem cp_X_rawV (σ : ExecState) (n seed : Nat) (siv : Int)
+private theorem cp_X_rawV (σ : ExecState) (n seed : Nat) (siv : Int)
     (ls lt : List Int) (iv : Int) (ch : Choices) :
     stepFnIter 9 (vSt σ (vHeapCp n seed siv ls lt iv false) 13)
       (.retV (.bool false) cpCmpContV) ch
@@ -659,12 +659,12 @@ theorem cp_X_rawV (σ : ExecState) (n seed : Nat) (siv : Int)
 
 /-- The frame heap right after `reverse`'s entry: the parameter `s`
 bound at 13. -/
-def vHeapRvFrame (n seed : Nat) (siv civ : Int) (ls lt : List Int) : Heap :=
+private def vHeapRvFrame (n seed : Nat) (siv civ : Int) (ls lt : List Int) : Heap :=
   vHeapCp n seed siv ls lt civ false ++ [(.base ⟨13⟩, vHandleS n)]
 
 /-- Reverse prologue: `i`/`j` declared, `len(s)` walked to its apply
 point. 20 steps. -/
-theorem rv_pre_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
+private theorem rv_pre_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
     (ls lt : List Int) (ch : Choices) :
     stepFnIter 20 (vSt σ (vHeapRvFrame n seed siv civ ls lt) 14)
       (.exec reverseFunc.body [[("s", .base ⟨13⟩)]] rvFrameV) ch
@@ -677,7 +677,7 @@ theorem rv_pre_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
 
 /-- Reverse entry tail: `len - 1` delivered → `i, j` stored, the flag
 block run, the reverse loop head. 22 steps. -/
-theorem rv_entry_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
+private theorem rv_entry_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
     (ls lt : List Int) (ch : Choices) :
     stepFnIter 22 (vSt σ (vHeapRvEntry n seed siv civ ls lt) 16)
       (.retV (.int (n : Nat) .int)
@@ -692,7 +692,7 @@ theorem rv_entry_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
 v-layout) -/
 
 /-- Reverse first-pass dispatch. -/
-theorem rv_A0_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
+private theorem rv_A0_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
     (ls lt : List Int) (iv jv : Int) (ch : Choices) :
     stepFnIter 25 (vSt σ (vHeapRv n seed siv civ ls lt iv jv true) 17)
       rvHeadCfgV ch
@@ -701,7 +701,7 @@ theorem rv_A0_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
   with_unfolding_all rfl
 
 /-- Reverse later-pass dispatch: `i, j = i+1, j-1`, then the test. -/
-theorem rv_A1_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
+private theorem rv_A1_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
     (ls lt : List Int) (iv jv : Int) (ch : Choices) :
     stepFnIter 40 (vSt σ (vHeapRv n seed siv civ ls lt iv jv false) 17)
       rvHeadCfgV ch
@@ -716,7 +716,7 @@ theorem rv_A1_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
   with_unfolding_all rfl
 
 /-- Swap phase 1a: test true → the first index-read apply (`s[j]`). -/
-theorem rv_swapA_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
+private theorem rv_swapA_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
     (ls lt : List Int) (iv jv : Int) (ch : Choices) :
     stepFnIter 20 (vSt σ (vHeapRv n seed siv civ ls lt iv jv false) 17)
       (.retV (.bool true) rvCmpContV) ch
@@ -726,7 +726,7 @@ theorem rv_swapA_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
   with_unfolding_all rfl
 
 /-- Swap phase 1b: first read delivered → the second read apply. -/
-theorem rv_swapB_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
+private theorem rv_swapB_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
     (ls lt : List Int) (iv jv : Int) (wj : GoValue) (ch : Choices) :
     stepFnIter 5 (vSt σ (vHeapRv n seed siv civ ls lt iv jv false) 17)
       (.retV wj (rvRhsK1V n iv jv)) ch
@@ -737,7 +737,7 @@ theorem rv_swapB_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
   with_unfolding_all rfl
 
 /-- Swap phase 1 → 2: both reads banked, the stores begin. -/
-theorem rv_swapC_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
+private theorem rv_swapC_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
     (ls lt : List Int) (iv jv : Int) (wj wi : GoValue) (ch : Choices) :
     stepFnIter 1 (vSt σ (vHeapRv n seed siv civ ls lt iv jv false) 17)
       (.retV wi (rvRhsK2V n iv jv wj)) ch
@@ -747,7 +747,7 @@ theorem rv_swapC_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
   with_unfolding_all rfl
 
 /-- Swap tail: stores done → back to the loop head. -/
-theorem rv_swapD_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
+private theorem rv_swapD_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
     (ls lt : List Int) (iv jv : Int) (ch : Choices) :
     stepFnIter 5 (vSt σ (vHeapRv n seed siv civ ls lt iv jv false) 17)
       (.next (.storeK [] [] (.seqn #[]) rvEnvIn2V rvSwTailV)) ch
@@ -757,7 +757,7 @@ theorem rv_swapD_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
 
 /-- Reverse exit → frame exit, `ok := 1`, the test loop's counter and
 flag declared, the test loop head. 50 steps. -/
-theorem rv_X_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
+private theorem rv_X_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
     (ls lt : List Int) (iv jv : Int) (ch : Choices) :
     stepFnIter 50 (vSt σ (vHeapRv n seed siv civ ls lt iv jv false) 17)
       (.retV (.bool false) rvCmpContV) ch
@@ -768,7 +768,7 @@ theorem rv_X_rawV (σ : ExecState) (n seed : Nat) (siv civ : Int)
 /-! ### The test loop — the RELATIONAL check, two index reads -/
 
 /-- Test first-pass dispatch. -/
-theorem tv_A0_rawV (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
+private theorem tv_A0_rawV (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
     (ls lt : List Int) (iv : Int) (ch : Choices) :
     stepFnIter 25 (vSt σ (vHeapTv n seed siv civ rif rjf ls lt iv true) 20)
       tvHeadCfgV ch
@@ -777,7 +777,7 @@ theorem tv_A0_rawV (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
   with_unfolding_all rfl
 
 /-- Test later-pass dispatch: `i++`, then the exit test. -/
-theorem tv_A1_rawV (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
+private theorem tv_A1_rawV (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
     (ls lt : List Int) (iv : Int) (ch : Choices) :
     stepFnIter 29 (vSt σ (vHeapTv n seed siv civ rif rjf ls lt iv false) 20)
       tvHeadCfgV ch
@@ -790,7 +790,7 @@ theorem tv_A1_rawV (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
   with_unfolding_all rfl
 
 /-- Test check phase 1: test true → the `s[i]` read apply. 11 steps. -/
-theorem tv_B1_rawV (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
+private theorem tv_B1_rawV (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
     (ls lt : List Int) (iv : Int) (ch : Choices) :
     stepFnIter 11 (vSt σ (vHeapTv n seed siv civ rif rjf ls lt iv false) 20)
       (.retV (.bool true) tvCmpContV) ch
@@ -802,7 +802,7 @@ theorem tv_B1_rawV (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
 /-- Test check phase 2: `s[i]` banked → the ghost index `(n-1) - i`
 computed in Go's wrapping uint64 arithmetic and the `t[...]` read at
 its apply point. 13 steps. -/
-theorem tv_B2_rawV (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
+private theorem tv_B2_rawV (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
     (ls lt : List Int) (iv wv : Int) (ch : Choices) :
     stepFnIter 13 (vSt σ (vHeapTv n seed siv civ rif rjf ls lt iv false) 20)
       (.retV (.int wv .uint64) tvNeqK1V) ch
@@ -814,7 +814,7 @@ theorem tv_B2_rawV (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
   with_unfolding_all rfl
 
 /-- Test check phase 3: both elements banked → the `!=` delivered. -/
-theorem tv_B3_rawV (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
+private theorem tv_B3_rawV (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
     (ls lt : List Int) (iv wv uv : Int) (ch : Choices) :
     stepFnIter 1 (vSt σ (vHeapTv n seed siv civ rif rjf ls lt iv false) 20)
       (.retV (.int uv .uint64) (tvNeqK2V (.int wv .uint64))) ch
@@ -824,7 +824,7 @@ theorem tv_B3_rawV (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
 
 /-- Test check phase 4 (the EQUAL case): the else branch drains back to
 the loop head, the verdict untouched. 5 steps. -/
-theorem tv_B4_rawV (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
+private theorem tv_B4_rawV (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
     (ls lt : List Int) (iv : Int) (ch : Choices) :
     stepFnIter 5 (vSt σ (vHeapTv n seed siv civ rif rjf ls lt iv false) 20)
       (.retV (.bool false) tvIfKV) ch
@@ -834,7 +834,7 @@ theorem tv_B4_rawV (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
 
 /-- Test exit: verdict 1 to the result cell, return, barrier exit —
 the driver terminal, terminal state pinned. 21 steps. -/
-theorem tv_X_rawV (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
+private theorem tv_X_rawV (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
     (ls lt : List Int) (iv : Int) (ch : Choices) :
     stepFnIter 21 (vSt σ (vHeapTv n seed siv civ rif rjf ls lt iv false) 20)
       (.retV (.bool false) tvCmpContV) ch
@@ -847,7 +847,7 @@ theorem tv_X_rawV (σ : ExecState) (n seed : Nat) (siv civ rif rjf : Int)
 /-- One setup iteration from the exit test's true delivery at `m`:
 fill `s[m] = seed + m` (wrapped), return to the head, dispatch, deliver
 the next test — the family prefix advanced. 53 steps. -/
-theorem su_iterV (σ : ExecState) (n seed : Nat) (m : Nat) (hn64 : n < 2 ^ 64)
+private theorem su_iterV (σ : ExecState) (n seed : Nat) (m : Nat) (hn64 : n < 2 ^ 64)
     (hm : m < n) (ch : Choices) :
     stepFnIter 53
       (vSt σ (vHeapSu n seed (suList n seed m) ((m : Nat) : Int) false) 8)
@@ -886,7 +886,7 @@ theorem su_iterV (σ : ExecState) (n seed : Nat) (m : Nat) (hn64 : n < 2 ^ 64)
 /-- **The setup loop**: from the exit-test delivery at `m` the run
 reaches the COPY LOOP HEAD with the full family in `s`'s backing and a
 freshly zeroed `t`, within `53·μ + 58` steps. -/
-theorem su_loopV (σ : ExecState) (n seed : Nat) (hn : n < 2 ^ 63) :
+private theorem su_loopV (σ : ExecState) (n seed : Nat) (hn : n < 2 ^ 63) :
     ∀ μ m : Nat, m + μ = n → ∀ ch : Choices,
     ∃ k : Nat, k ≤ 53 * μ + 58 ∧
       stepFnIter k
@@ -940,7 +940,7 @@ needed on the pure side. -/
 /-- One copy iteration from the exit test's true delivery at `m`:
 read `s[m]`, store it into `t[m]`, return to the head, dispatch,
 deliver the next test. 53 steps. -/
-theorem cp_iterV (σ : ExecState) (n seed : Nat) (siv : Int) (m : Nat)
+private theorem cp_iterV (σ : ExecState) (n seed : Nat) (siv : Int) (m : Nat)
     (hn : n < 2 ^ 63) (hm : m < n) (ch : Choices) :
     stepFnIter 53
       (vSt σ (vHeapCp n seed siv (revFamily n seed) (suList n seed m)
@@ -1003,7 +1003,7 @@ theorem cp_iterV (σ : ExecState) (n seed : Nat) (siv : Int) (m : Nat)
 reaches the REVERSE LOOP HEAD with the pre-copy complete in `t`, within
 `53·μ + 53` steps. The base case crosses the one program-consulting
 step, so it carries the `enterFrame` fact as a hypothesis. -/
-theorem cp_loopV (σ : ExecState) (n seed : Nat) (hn : n < 2 ^ 63)
+private theorem cp_loopV (σ : ExecState) (n seed : Nat) (hn : n < 2 ^ 63)
     (henter : ∀ (siv civ : Int) (ls lt : List Int),
       enterFrame (vSt σ (vHeapCp n seed siv ls lt civ false) 13)
           ⟨"reverse"⟩ [vSliceS n]
@@ -1068,13 +1068,13 @@ theorem cp_loopV (σ : ExecState) (n seed : Nat) (hn : n < 2 ^ 63)
 machinery of `Examples/Reverse.lean`, re-consumed at the v-layout) -/
 
 /-- The reverse-phase exit-test delivery heap at iteration `m`. -/
-abbrev vHeapRvCmp (n seed : Nat) (siv civ : Int) (m : Nat) : Heap :=
+private abbrev vHeapRvCmp (n seed : Nat) (siv civ : Int) (m : Nat) : Heap :=
   vHeapRv n seed siv civ (revSwap (revFamily n seed) m) (revFamily n seed)
     ((m : Nat) : Int) ((n - 1 - m : Nat) : Int) false
 
 /-- One swap at the v-layout: 35 steps from the true test back to the
 head, the partial reversal advanced. -/
-theorem rv_swap_segV (σ : ExecState) (n seed : Nat) (siv civ : Int)
+private theorem rv_swap_segV (σ : ExecState) (n seed : Nat) (siv civ : Int)
     (m : Nat) (hm : 2 * m + 1 < n) (ch : Choices) :
     stepFnIter 35 (vSt σ (vHeapRvCmp n seed siv civ m) 17)
       (.retV (.bool true) rvCmpContV) ch
@@ -1204,7 +1204,7 @@ theorem rv_swap_segV (σ : ExecState) (n seed : Nat) (siv civ : Int)
 
 /-- The later-pass dispatch, cleaned: counters advance to
 `(m+1, n-1-(m+1))` and the next test delivers. 40 steps. -/
-theorem rv_dispatchV (σ : ExecState) (n seed : Nat) (siv civ : Int)
+private theorem rv_dispatchV (σ : ExecState) (n seed : Nat) (siv civ : Int)
     (m : Nat) (hn : n < 2 ^ 63) (hm : 2 * m + 1 < n) (ch : Choices) :
     stepFnIter 40
       (vSt σ (vHeapRv n seed siv civ (revSwap (revFamily n seed) (m + 1))
@@ -1231,7 +1231,7 @@ drops by 2 per iteration, so the bound counts SWAPS, not units of the
 measure): from the exit-test delivery at `m` the run reaches the TEST
 LOOP HEAD — reversal complete in `s`, pre-copy intact in `t`, verdict
 cell initialized to 1 — within `75·⌊(μ+1)/2⌋ + 50` steps. -/
-theorem rv_loopV (σ : ExecState) (n seed : Nat) (hn : n < 2 ^ 63)
+private theorem rv_loopV (σ : ExecState) (n seed : Nat) (hn : n < 2 ^ 63)
     (siv civ : Int) :
     ∀ μ m : Nat, μ = (n - 1) - 2 * m → ∀ ch : Choices,
     ∃ (k m' : Nat), k ≤ 75 * ((μ + 1) / 2) + 50 ∧ n ≤ 2 * m' + 1 ∧
@@ -1275,7 +1275,7 @@ the next test. 61 steps. This is the whole payoff of the copy-relational
 style: the machine compares two reads, and the proof's obligation is
 that the reversal relation holds between them, not that the check's
 arithmetic re-derives the setup formula. -/
-theorem tv_iterV (σ : ExecState) (n seed : Nat) (hn : n < 2 ^ 63)
+private theorem tv_iterV (σ : ExecState) (n seed : Nat) (hn : n < 2 ^ 63)
     (siv civ rif rjf : Int) (m : Nat) (hm : m < n) (ch : Choices) :
     stepFnIter 61
       (vSt σ (vHeapTv n seed siv civ rif rjf ((revFamily n seed).reverse)
@@ -1354,7 +1354,7 @@ theorem tv_iterV (σ : ExecState) (n seed : Nat) (hn : n < 2 ^ 63)
 /-- **The test loop**: from the exit-test delivery at `m` the run
 reaches the driver terminal with the verdict 1 delivered, within
 `61·μ + 21` steps. -/
-theorem tv_loopV (σ : ExecState) (n seed : Nat) (hn : n < 2 ^ 63)
+private theorem tv_loopV (σ : ExecState) (n seed : Nat) (hn : n < 2 ^ 63)
     (siv civ rif rjf : Int) :
     ∀ μ m : Nat, m + μ = n → ∀ ch : Choices,
     ∃ k : Nat, k ≤ 61 * μ + 21 ∧
@@ -1391,7 +1391,7 @@ pinned program is the `enterFrame` hypothesis. Within `205·n + 335`
 steps the harness reaches the driver terminal with the verdict 1 in the
 result cell (the terminal state is pinned up to `reverse`'s parked
 final counters). -/
-theorem vH_runs_generic (σ : ExecState) (n seed : Nat) (hn : n < 2 ^ 63)
+private theorem vH_runs_generic (σ : ExecState) (n seed : Nat) (hn : n < 2 ^ 63)
     (henter : ∀ (siv civ : Int) (ls lt : List Int),
       enterFrame (vSt σ (vHeapCp n seed siv ls lt civ false) 13)
           ⟨"reverse"⟩ [vSliceS n]
@@ -1474,7 +1474,7 @@ theorem vH_runs_generic (σ : ExecState) (n seed : Nat) (hn : n < 2 ^ 63)
 /-- The `enterFrame` discharge at the pinned program: the SECOND and
 last unfolding of `reverseLowered` in this module (`reverse` is the
 funcs array's head, so the scan stops immediately). -/
-theorem vH_enterFrame_fact (n seed : Nat) (siv civ : Int)
+private theorem vH_enterFrame_fact (n seed : Nat) (siv civ : Int)
     (ls lt : List Int) :
     enterFrame (vSt vProg (vHeapCp n seed siv ls lt civ false) 13)
         ⟨"reverse"⟩ [vSliceS n]

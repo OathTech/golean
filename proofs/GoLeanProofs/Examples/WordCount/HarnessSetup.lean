@@ -73,9 +73,9 @@ def hWBodyList : List Stmt :=
   | .block _ ss => ss.toList
   | _ => []
 
-def envWC9 : LocalEnv := [[("$c9", .base ⟨3⟩)], hWScope0]
-def hWAfterMsK : Cont := .seq (hWBodyList.drop 1) envWC9 hWFrame0
-def hWMsK : Cont :=
+private def envWC9 : LocalEnv := [[("$c9", .base ⟨3⟩)], hWScope0]
+private def hWAfterMsK : Cont := .seq (hWBodyList.drop 1) envWC9 hWFrame0
+private def hWMsK : Cont :=
   .stmtOpK (.makeSlice tU64 false) 1 [.addr (.base ⟨3⟩)] [] envWC9
     hWAfterMsK
 
@@ -138,8 +138,8 @@ theorem wcH_makeSlice (n seed : Nat) (ch : Choices) :
 
 /-! ### The setup loop (fixed cells 0–7; the loop never allocates) -/
 
-def wScopeH : Scope := [("w", .base ⟨5⟩), ("$c9", .base ⟨3⟩)]
-def suWEnv : LocalEnv :=
+private def wScopeH : Scope := [("w", .base ⟨5⟩), ("$c9", .base ⟨3⟩)]
+private def suWEnv : LocalEnv :=
   [[("$forFirst", .base ⟨7⟩)], [("i", .base ⟨6⟩)], wScopeH, hWScope0]
 
 /-- The setup-loop state family: backing list `l`, counter `iv`,
@@ -155,15 +155,15 @@ def sWSU (n : Nat) (sv : Int) (l : List Int) (iv : Int)
              (.base ⟨6⟩, u64cell iv), (.base ⟨7⟩, bcell ff)],
     nextAddr := 8 }
 
-def suWTail : Cont :=
+private def suWTail : Cont :=
   .seq [] suWEnv
     (.seq [] [[("i", .base ⟨6⟩)], wScopeH, hWScope0]
       (.seq (hWBodyList.drop 3) [wScopeH, hWScope0] hWFrame0))
-def suWHeadCfg : Config :=
+private def suWHeadCfg : Config :=
   .exec (.while (.boolLit true) wordcountHarnessFunc.suBody) suWEnv suWTail
-def suWLoopK : Cont :=
+private def suWLoopK : Cont :=
   .loop (.boolLit true) wordcountHarnessFunc.suBody suWEnv suWTail
-def suWStoreBlk : Stmt :=
+private def suWStoreBlk : Stmt :=
   .block #[]
     #[.seqn
         #[.assign (.addr (.indexAddr (.var "w") (.var "i")))
@@ -171,16 +171,16 @@ def suWStoreBlk : Stmt :=
 def suWCmpK : Cont :=
   .ifK (.seqn #[]) .breakStmt ([] :: suWEnv)
     (.seq [suWStoreBlk] ([] :: suWEnv) suWLoopK)
-def envW6 : LocalEnv := [] :: [] :: suWEnv
-def suWRef (n : Nat) (iv : Int) : TargetRef :=
+private def envW6 : LocalEnv := [] :: [] :: suWEnv
+private def suWRef (n : Nat) (iv : Int) : TargetRef :=
   .chain (wSliceH n) [.int iv .uint64] [.index]
-def suWStoreTail : Cont :=
+private def suWStoreTail : Cont :=
   .seq [] envW6 (.seq [] ([] :: suWEnv) suWLoopK)
-def suWRhsK (n : Nat) (iv : Int) : Cont :=
+private def suWRhsK (n : Nat) (iv : Int) : Cont :=
   .rhsK .vals [suWRef n iv] [] [] (.seqn #[]) envW6 suWStoreTail
-def suWAddK (n : Nat) (sv iv : Int) : Cont :=
+private def suWAddK (n : Nat) (sv iv : Int) : Cont :=
   .strictK .add [.int sv .uint64] [] envW6 (suWRhsK n iv)
-def suWModK (n : Nat) (sv iv : Int) : Cont :=
+private def suWModK (n : Nat) (sv iv : Int) : Cont :=
   .strictK .mod [.int iv .uint64] [] envW6 (suWAddK n sv iv)
 
 /-- Entry B: makeSlice done → `w := $c9`, `i := 0`, the flag block →

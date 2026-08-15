@@ -129,7 +129,7 @@ theorem bodies_ρsh (ρ : Nat → Nat) :
 
 /-- Root bump by 2 above the active cells: the transport between
 consecutive shifts (`ρsh (d+2) l = ρsh d (bump2 l)` on locations). -/
-def bump2 : Loc → Loc
+private def bump2 : Loc → Loc
   | .base a => .base ⟨if a.id < 4 then a.id else a.id + 2⟩
   | .field b tid f => .field (bump2 b) tid f
   | .index b i => .index (bump2 b) i

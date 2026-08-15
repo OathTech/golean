@@ -59,7 +59,7 @@ set_option maxRecDepth 1000000
 set_option linter.unusedSimpArgs false
 
 /-- The PROGRAM-generic state form (the reverse module's `vSt`). -/
-abbrev rSt (σ : ExecState) (H : Heap) (na : Nat) : ExecState :=
+private abbrev rSt (σ : ExecState) (H : Heap) (na : Nat) : ExecState :=
   { σ with heap := H, nextAddr := na }
 
 /-! ## The S3 statement adapter
@@ -81,28 +81,28 @@ the same one, now enforced by a gate instead of by convention. -/
 
 /-- The family is prefix-closed: taking `m` of the length-`N` family is
 the length-`m` family. -/
-theorem mmFamily_take {N seed m : Nat} (h : m ≤ N) :
+private theorem mmFamily_take {N seed m : Nat} (h : m ≤ N) :
     (mmFamily N seed).take m = mmFamily m seed := by
   simp only [mmFamily, ← List.map_take, List.take_range,
     Nat.min_eq_left h]
 
 /-- The pre-copy's invariant list IS the setup loop's, at cap 8. -/
-theorem preList_full {n seed : Nat} (h : n ≤ 8) :
+private theorem preList_full {n seed : Nat} (h : n ≤ 8) :
     setupList 8 seed n
       = (mmFamily n seed) ++ List.replicate (8 - (mmFamily n seed).length) 0 := by
   rw [setupList, mmFamily_take h, mmFamily_length]
 
 /-! ## Cells and handles at the r-layout -/
 
-abbrev ru64 (v : Int) : HeapCell := ⟨some (.int .uint64), .int v .uint64⟩
-abbrev rint (v : Int) : HeapCell := ⟨some (.int .int), .int v .int⟩
-abbrev rbool (b : Bool) : HeapCell := ⟨some .bool, .bool b⟩
-abbrev rSliceS (n : Nat) : GoValue := .slice ⟨some (.base ⟨6⟩), 0, n, n⟩
-abbrev rHandle (n : Nat) : HeapCell :=
+private abbrev ru64 (v : Int) : HeapCell := ⟨some (.int .uint64), .int v .uint64⟩
+private abbrev rint (v : Int) : HeapCell := ⟨some (.int .int), .int v .int⟩
+private abbrev rbool (b : Bool) : HeapCell := ⟨some .bool, .bool b⟩
+private abbrev rSliceS (n : Nat) : GoValue := .slice ⟨some (.base ⟨6⟩), 0, n, n⟩
+private abbrev rHandle (n : Nat) : HeapCell :=
   ⟨some (.slice (.int .uint64)), rSliceS n⟩
-abbrev rBack (n : Nat) (l : List Int) : HeapCell :=
+private abbrev rBack (n : Nat) (l : List Int) : HeapCell :=
   ⟨some (.array n (.int .uint64)), .array ⟨l.map (fun v => .int v .uint64)⟩⟩
-abbrev rArr8 (l : List Int) : HeapCell :=
+private abbrev rArr8 (l : List Int) : HeapCell :=
   ⟨some (.array 8 (.int .uint64)), .array ⟨l.map (fun v => .int v .uint64)⟩⟩
 abbrev rNilSlice : HeapCell :=
   ⟨some (.slice (.int .uint64)), .slice ⟨none, 0, 0, 0⟩⟩
@@ -184,9 +184,9 @@ def rS7 : Stmt :=
 def baseEnvR : Scope :=
   [("$res2", .base ⟨4⟩), ("$res1", .base ⟨3⟩), ("$res0", .base ⟨2⟩),
    ("seed", .base ⟨1⟩), ("n", .base ⟨0⟩)]
-def envC15R : LocalEnv := [[("$c15", .base ⟨5⟩)], baseEnvR]
-def sScopeR : Scope := [("s", .base ⟨7⟩), ("$c15", .base ⟨5⟩)]
-def preScopeR : Scope :=
+private def envC15R : LocalEnv := [[("$c15", .base ⟨5⟩)], baseEnvR]
+private def sScopeR : Scope := [("s", .base ⟨7⟩), ("$c15", .base ⟨5⟩)]
+private def preScopeR : Scope :=
   [("pre", .base ⟨10⟩), ("s", .base ⟨7⟩), ("$c15", .base ⟨5⟩)]
 def callScopeR : Scope :=
   [("hi", .base ⟨14⟩), ("lo", .base ⟨13⟩), ("pre", .base ⟨10⟩),
@@ -246,57 +246,57 @@ def cpRhsKR (iv : Int) : Cont :=
 
 /-! ### The minMax frame at the r-layout -/
 
-def mEnvBR : LocalEnv :=
+private def mEnvBR : LocalEnv :=
   [[("hi", .base ⟨19⟩), ("lo", .base ⟨18⟩)],
    [("$res1", .base ⟨17⟩), ("$res0", .base ⟨16⟩), ("s", .base ⟨15⟩)]]
-def mEnvIR : LocalEnv := [("i", .base ⟨20⟩)] :: mEnvBR
-def mEnvInR : LocalEnv := [("$forFirst", .base ⟨21⟩)] :: mEnvIR
-def mEnvCR : LocalEnv := [] :: mEnvInR
-def mEnvB2R : LocalEnv := [] :: mEnvCR
-def mEnvB3R : LocalEnv := [] :: mEnvB2R
+private def mEnvIR : LocalEnv := [("i", .base ⟨20⟩)] :: mEnvBR
+private def mEnvInR : LocalEnv := [("$forFirst", .base ⟨21⟩)] :: mEnvIR
+private def mEnvCR : LocalEnv := [] :: mEnvInR
+private def mEnvB2R : LocalEnv := [] :: mEnvCR
+private def mEnvB3R : LocalEnv := [] :: mEnvB2R
 
-def mShapesR : List (TargetShape × List Expr) :=
+private def mShapesR : List (TargetShape × List Expr) :=
   [(.chain [], [.ref "lo"]), (.chain [], [.ref "hi"])]
 def rAfterCall : Cont :=
   .seq [rS7] callEnvR (.frame [] [] [] [] .stop)
-def mFrameKR : Cont :=
+private def mFrameKR : Cont :=
   .frame mShapesR callEnvR [.base ⟨16⟩, .base ⟨17⟩] [] rAfterCall false
 def rCallArgsKR : Cont :=
   .callArgsK ⟨"minMax"⟩ mShapesR [] [] callEnvR rAfterCall
-def mEntryTailR : Cont := .seq [mmIffBlock, mmTailSeqn] mEnvBR mFrameKR
-def mtref18 : TargetRef := .chain (.addr (.base ⟨18⟩)) [] []
-def mtref19 : TargetRef := .chain (.addr (.base ⟨19⟩)) [] []
-def mRhs1KR : Cont :=
+private def mEntryTailR : Cont := .seq [mmIffBlock, mmTailSeqn] mEnvBR mFrameKR
+private def mtref18 : TargetRef := .chain (.addr (.base ⟨18⟩)) [] []
+private def mtref19 : TargetRef := .chain (.addr (.base ⟨19⟩)) [] []
+private def mRhs1KR : Cont :=
   .rhsK .vals [mtref18, mtref19] []
     [.indexGet (.var "s") (.intLit 0 .int)] (.seqn #[]) mEnvBR mEntryTailR
-def mRhs2KR (w : Int) : Cont :=
+private def mRhs2KR (w : Int) : Cont :=
   .rhsK .vals [mtref18, mtref19] [.int w .uint64] [] (.seqn #[]) mEnvBR
     mEntryTailR
-def mHeadTailR : Cont :=
+private def mHeadTailR : Cont :=
   .seq [] mEnvInR (.seq [] mEnvIR (.seq [mmTailSeqn] mEnvBR mFrameKR))
-def mHeadCfgR : Config :=
+private def mHeadCfgR : Config :=
   .exec (.while (.boolLit true) mmWhileBody) mEnvInR mHeadTailR
-def mLoopKR : Cont := .loop (.boolLit true) mmWhileBody mEnvInR mHeadTailR
-def mCmpIfKR : Cont :=
+private def mLoopKR : Cont := .loop (.boolLit true) mmWhileBody mEnvInR mHeadTailR
+private def mCmpIfKR : Cont :=
   .ifK (.seqn #[]) .breakStmt mEnvCR
     (.seq [.block #[] #[mmLoIf, mmHiIf]] mEnvCR mLoopKR)
-def mLenApplyKR (iv : Int) : Cont :=
+private def mLenApplyKR (iv : Int) : Cont :=
   .strictK (.lengthOf (some (.slice (.int .uint64)))) [] [] mEnvCR
     (.strictK .lessCmp [.int iv .int] [] mEnvCR mCmpIfKR)
-def mLoIfKR : Cont :=
+private def mLoIfKR : Cont :=
   .ifK (.block #[]
       #[.seqn #[.assign (.var "lo") (.indexGet (.var "s") (.var "i"))]])
     (.seqn #[]) mEnvB2R (.seq [mmHiIf] mEnvB2R (.seq [] mEnvCR mLoopKR))
-def mLoCmpKR : Cont := .strictK .lessCmp [] [.var "lo"] mEnvB2R mLoIfKR
-def mLoStoreKR : Cont :=
+private def mLoCmpKR : Cont := .strictK .lessCmp [] [.var "lo"] mEnvB2R mLoIfKR
+private def mLoStoreKR : Cont :=
   .rhsK .vals [mtref18] [] [] (.seqn #[]) mEnvB3R
     (.seq [] mEnvB3R (.seq [mmHiIf] mEnvB2R (.seq [] mEnvCR mLoopKR)))
-def mHiIfKR : Cont :=
+private def mHiIfKR : Cont :=
   .ifK (.block #[]
       #[.seqn #[.assign (.var "hi") (.indexGet (.var "s") (.var "i"))]])
     (.seqn #[]) mEnvB2R (.seq [] mEnvB2R (.seq [] mEnvCR mLoopKR))
-def mHiCmpKR : Cont := .strictK .greaterCmp [] [.var "hi"] mEnvB2R mHiIfKR
-def mHiStoreKR : Cont :=
+private def mHiCmpKR : Cont := .strictK .greaterCmp [] [.var "hi"] mEnvB2R mHiIfKR
+private def mHiStoreKR : Cont :=
   .rhsK .vals [mtref19] [] [] (.seqn #[]) mEnvB3R
     (.seq [] mEnvB3R (.seq [] mEnvB2R (.seq [] mEnvCR mLoopKR)))
 
@@ -308,7 +308,7 @@ def rHeap0 (nv sv : Int) : Heap :=
   [(.base ⟨0⟩, ru64 nv), (.base ⟨1⟩, ru64 sv), (.base ⟨2⟩, rArr8 zeros8),
    (.base ⟨3⟩, ru64 0), (.base ⟨4⟩, ru64 0)]
 
-def rHeapC15 (nv sv : Int) : Heap :=
+private def rHeapC15 (nv sv : Int) : Heap :=
   rHeap0 nv sv ++ [(.base ⟨5⟩, rNilSlice)]
 
 def rHeapMake (nv sv : Int) (n : Nat) : Heap :=
@@ -336,12 +336,12 @@ def rHeapMFrame (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int) :
   rHeapCall nv sv n l lp siv civ ++
     [(.base ⟨15⟩, rHandle n), (.base ⟨16⟩, ru64 0), (.base ⟨17⟩, ru64 0)]
 
-def rHeapM1 (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int) :
+private def rHeapM1 (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int) :
     Heap :=
   rHeapMFrame nv sv n l lp siv civ ++
     [(.base ⟨18⟩, ru64 0), (.base ⟨19⟩, ru64 0)]
 
-def rHeapM (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int)
+private def rHeapM (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int)
     (lov hiv iv : Int) (ffv : Bool) : Heap :=
   rHeapMFrame nv sv n l lp siv civ ++
     [(.base ⟨18⟩, ru64 lov), (.base ⟨19⟩, ru64 hiv),
@@ -349,7 +349,7 @@ def rHeapM (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int)
 
 /-- The state just before the `$res0 = pre` store (the one epilogue step
 that cannot reduce definitionally at a symbolic array). -/
-def rHeapPreStore (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int)
+private def rHeapPreStore (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int)
     (lov hiv iv : Int) : Heap :=
   rHeapSu nv sv n l siv false ++
     [(.base ⟨10⟩, rArr8 lp), (.base ⟨11⟩, ru64 civ), (.base ⟨12⟩, rbool false),
@@ -364,7 +364,7 @@ def rHeapPreStore (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int)
      (.base ⟨20⟩, rint iv), (.base ⟨21⟩, rbool false)]
 
 /-- Same, with `pre` delivered into `$res0`. -/
-def rHeapStored (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int)
+private def rHeapStored (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int)
     (lov hiv iv : Int) : Heap :=
   [(.base ⟨0⟩, ru64 nv), (.base ⟨1⟩, ru64 sv), (.base ⟨2⟩, rArr8 lp),
    (.base ⟨3⟩, ru64 0), (.base ⟨4⟩, ru64 0),
@@ -382,7 +382,7 @@ def rHeapStored (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int)
    (.base ⟨20⟩, rint iv), (.base ⟨21⟩, rbool false)]
 
 /-- The terminal heap. -/
-def rHeapEnd (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int)
+private def rHeapEnd (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int)
     (lov hiv iv : Int) : Heap :=
   [(.base ⟨0⟩, ru64 nv), (.base ⟨1⟩, ru64 sv), (.base ⟨2⟩, rArr8 lp),
    (.base ⟨3⟩, ru64 (IntKind.normalize .uint64 (IntKind.normalize .uint64
@@ -429,7 +429,7 @@ theorem lookup_suR (σ : ExecState) (nv sv : Int) (n : Nat) (l : List Int)
           .array ⟨l.map (fun v => .int v .uint64)⟩⟩ := by
   simp [rHeapSu, rHeap0, Heap.lookup, rBack]
 
-theorem lookup_cpS_R (σ : ExecState) (nv sv : Int) (n : Nat)
+private theorem lookup_cpS_R (σ : ExecState) (nv sv : Int) (n : Nat)
     (l lp : List Int) (siv civ : Int) (ffv : Bool) (na : Nat) :
     Heap.lookup (rSt σ (rHeapCp nv sv n l lp siv civ ffv) na).heap
         (.base ⟨6⟩)
@@ -437,7 +437,7 @@ theorem lookup_cpS_R (σ : ExecState) (nv sv : Int) (n : Nat)
           .array ⟨l.map (fun v => .int v .uint64)⟩⟩ := by
   simp [rHeapCp, rHeapSu, rHeap0, Heap.lookup, rBack]
 
-theorem lookup_cpPre_R (σ : ExecState) (nv sv : Int) (n : Nat)
+private theorem lookup_cpPre_R (σ : ExecState) (nv sv : Int) (n : Nat)
     (l lp : List Int) (siv civ : Int) (ffv : Bool) (na : Nat) :
     Heap.lookup (rSt σ (rHeapCp nv sv n l lp siv civ ffv) na).heap
         (.base ⟨10⟩)
@@ -445,7 +445,7 @@ theorem lookup_cpPre_R (σ : ExecState) (nv sv : Int) (n : Nat)
           .array ⟨lp.map (fun v => .int v .uint64)⟩⟩ := by
   simp [rHeapCp, rHeapSu, rHeap0, Heap.lookup, rArr8]
 
-theorem lookup_m1R (σ : ExecState) (nv sv : Int) (n : Nat)
+private theorem lookup_m1R (σ : ExecState) (nv sv : Int) (n : Nat)
     (l lp : List Int) (siv civ : Int) (na : Nat) :
     Heap.lookup (rSt σ (rHeapM1 nv sv n l lp siv civ) na).heap (.base ⟨6⟩)
       = some ⟨some (.array n (.int .uint64)),
@@ -453,7 +453,7 @@ theorem lookup_m1R (σ : ExecState) (nv sv : Int) (n : Nat)
   simp [rHeapM1, rHeapMFrame, rHeapCall, rHeapCp, rHeapSu, rHeap0,
     Heap.lookup, rBack]
 
-theorem lookup_mR (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+private theorem lookup_mR (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
     (siv civ lov hiv iv : Int) (ffv : Bool) (na : Nat) :
     Heap.lookup (rSt σ (rHeapM nv sv n l lp siv civ lov hiv iv ffv) na).heap
         (.base ⟨6⟩)
@@ -462,7 +462,7 @@ theorem lookup_mR (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
   simp [rHeapM, rHeapMFrame, rHeapCall, rHeapCp, rHeapSu, rHeap0,
     Heap.lookup, rBack]
 
-theorem lookup_preStore (σ : ExecState) (nv sv : Int) (n : Nat)
+private theorem lookup_preStore (σ : ExecState) (nv sv : Int) (n : Nat)
     (l lp : List Int) (siv civ lov hiv iv : Int) (na : Nat) :
     Heap.lookup
         (rSt σ (rHeapPreStore nv sv n l lp siv civ lov hiv iv) na).heap
@@ -475,7 +475,7 @@ theorem lookup_preStore (σ : ExecState) (nv sv : Int) (n : Nat)
 identity (the `$res0 = pre` store's side condition). The thin cap-8
 alias of `SliceMem.normalizeValueForTy_arr_u64`, lifted with the store
 lemma above in phase-2 slice 1. -/
-theorem normalizeValueForTy_arr8_u64 {σ : ExecState} {lp : List Int}
+private theorem normalizeValueForTy_arr8_u64 {σ : ExecState} {lp : List Int}
     (hlen : lp.length = 8) (hl : ∀ v ∈ lp, 0 ≤ v ∧ v < 2 ^ 64) :
     normalizeValueForTy σ (.array 8 (.int .uint64))
         (.array ⟨lp.map (fun v => .int v .uint64)⟩)
@@ -555,7 +555,7 @@ theorem su_A1_rawR (σ : ExecState) (nv sv : Int) (n : Nat) (l : List Int)
             false) 10, ch) := by
   with_unfolding_all rfl
 
-theorem su_B1_rawR (σ : ExecState) (nv sv : Int) (n : Nat) (l : List Int)
+private theorem su_B1_rawR (σ : ExecState) (nv sv : Int) (n : Nat) (l : List Int)
     (iv : Int) (ch : Choices) :
     stepFnIter 18 (rSt σ (rHeapSu nv sv n l iv false) 10)
       (.retV (.bool true) suCmpKR) ch
@@ -644,7 +644,7 @@ theorem cp_X_rawR (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
 
 /-- minMax prologue: `lo`/`hi` declared, the first `s[0]` operand walk →
 the first index-read apply point. 17 steps. -/
-theorem m_pre_rawR (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+private theorem m_pre_rawR (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
     (siv civ : Int) (ch : Choices) :
     stepFnIter 17 (rSt σ (rHeapMFrame nv sv n l lp siv civ) 18)
       (.exec minMaxFunc.body
@@ -655,7 +655,7 @@ theorem m_pre_rawR (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
           rSt σ (rHeapM1 nv sv n l lp siv civ) 20, ch) := by
   with_unfolding_all rfl
 
-theorem m_entryC_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
+private theorem m_entryC_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
     (l lp : List Int) (siv civ : Int) (w : Int) (ch : Choices) :
     stepFnIter 5 (rSt σ (rHeapM1 nv sv n l lp siv civ) 20)
       (.retV (.int w .uint64) mRhs1KR) ch
@@ -664,7 +664,7 @@ theorem m_entryC_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
           rSt σ (rHeapM1 nv sv n l lp siv civ) 20, ch) := by
   with_unfolding_all rfl
 
-theorem m_entryD_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
+private theorem m_entryD_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
     (l lp : List Int) (siv civ : Int) (w1 w2 : Int) (ch : Choices) :
     stepFnIter 34 (rSt σ (rHeapM1 nv sv n l lp siv civ) 20)
       (.retV (.int w2 .uint64) (mRhs2KR w1)) ch
@@ -673,7 +673,7 @@ theorem m_entryD_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
             (IntKind.normalize .uint64 w2) 1 true) 22, ch) := by
   with_unfolding_all rfl
 
-theorem mh_dispA_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
+private theorem mh_dispA_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
     (l lp : List Int) (siv civ lov hiv iv : Int) (ch : Choices) :
     stepFnIter 25 (rSt σ (rHeapM nv sv n l lp siv civ lov hiv iv true) 22)
       mHeadCfgR ch
@@ -681,7 +681,7 @@ theorem mh_dispA_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
           rSt σ (rHeapM nv sv n l lp siv civ lov hiv iv false) 22, ch) := by
   with_unfolding_all rfl
 
-theorem mh_dispB_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
+private theorem mh_dispB_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
     (l lp : List Int) (siv civ lov hiv iv : Int) (ch : Choices) :
     stepFnIter 29 (rSt σ (rHeapM nv sv n l lp siv civ lov hiv iv false) 22)
       mHeadCfgR ch
@@ -693,7 +693,7 @@ theorem mh_dispB_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
             false) 22, ch) := by
   with_unfolding_all rfl
 
-theorem mh_bodyA_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
+private theorem mh_bodyA_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
     (l lp : List Int) (siv civ lov hiv iv : Int) (ch : Choices) :
     stepFnIter 11 (rSt σ (rHeapM nv sv n l lp siv civ lov hiv iv false) 22)
       (.retV (.bool true) mCmpIfKR) ch
@@ -702,7 +702,7 @@ theorem mh_bodyA_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
           rSt σ (rHeapM nv sv n l lp siv civ lov hiv iv false) 22, ch) := by
   with_unfolding_all rfl
 
-theorem mh_bodyB_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
+private theorem mh_bodyB_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
     (l lp : List Int) (siv civ lov hiv iv w : Int) (ch : Choices) :
     stepFnIter 3 (rSt σ (rHeapM nv sv n l lp siv civ lov hiv iv false) 22)
       (.retV (.int w .uint64) mLoCmpKR) ch
@@ -710,7 +710,7 @@ theorem mh_bodyB_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
           rSt σ (rHeapM nv sv n l lp siv civ lov hiv iv false) 22, ch) := by
   with_unfolding_all rfl
 
-theorem mh_loT_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
+private theorem mh_loT_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
     (l lp : List Int) (siv civ lov hiv iv : Int) (ch : Choices) :
     stepFnIter 12 (rSt σ (rHeapM nv sv n l lp siv civ lov hiv iv false) 22)
       (.retV (.bool true) mLoIfKR) ch
@@ -719,7 +719,7 @@ theorem mh_loT_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
           rSt σ (rHeapM nv sv n l lp siv civ lov hiv iv false) 22, ch) := by
   with_unfolding_all rfl
 
-theorem mh_loT2_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
+private theorem mh_loT2_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
     (l lp : List Int) (siv civ lov hiv iv w : Int) (ch : Choices) :
     stepFnIter 12 (rSt σ (rHeapM nv sv n l lp siv civ lov hiv iv false) 22)
       (.retV (.int w .uint64) mLoStoreKR) ch
@@ -729,7 +729,7 @@ theorem mh_loT2_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
             hiv iv false) 22, ch) := by
   with_unfolding_all rfl
 
-theorem mh_loF_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
+private theorem mh_loF_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
     (l lp : List Int) (siv civ lov hiv iv : Int) (ch : Choices) :
     stepFnIter 9 (rSt σ (rHeapM nv sv n l lp siv civ lov hiv iv false) 22)
       (.retV (.bool false) mLoIfKR) ch
@@ -738,7 +738,7 @@ theorem mh_loF_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
           rSt σ (rHeapM nv sv n l lp siv civ lov hiv iv false) 22, ch) := by
   with_unfolding_all rfl
 
-theorem mh_hiB_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
+private theorem mh_hiB_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
     (l lp : List Int) (siv civ lov hiv iv w : Int) (ch : Choices) :
     stepFnIter 3 (rSt σ (rHeapM nv sv n l lp siv civ lov hiv iv false) 22)
       (.retV (.int w .uint64) mHiCmpKR) ch
@@ -746,7 +746,7 @@ theorem mh_hiB_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
           rSt σ (rHeapM nv sv n l lp siv civ lov hiv iv false) 22, ch) := by
   with_unfolding_all rfl
 
-theorem mh_hiT_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
+private theorem mh_hiT_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
     (l lp : List Int) (siv civ lov hiv iv : Int) (ch : Choices) :
     stepFnIter 12 (rSt σ (rHeapM nv sv n l lp siv civ lov hiv iv false) 22)
       (.retV (.bool true) mHiIfKR) ch
@@ -755,7 +755,7 @@ theorem mh_hiT_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
           rSt σ (rHeapM nv sv n l lp siv civ lov hiv iv false) 22, ch) := by
   with_unfolding_all rfl
 
-theorem mh_hiT2_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
+private theorem mh_hiT2_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
     (l lp : List Int) (siv civ lov hiv iv w : Int) (ch : Choices) :
     stepFnIter 8 (rSt σ (rHeapM nv sv n l lp siv civ lov hiv iv false) 22)
       (.retV (.int w .uint64) mHiStoreKR) ch
@@ -764,7 +764,7 @@ theorem mh_hiT2_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
             (IntKind.normalize .uint64 w) iv false) 22, ch) := by
   with_unfolding_all rfl
 
-theorem mh_hiF_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
+private theorem mh_hiF_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
     (l lp : List Int) (siv civ lov hiv iv : Int) (ch : Choices) :
     stepFnIter 5 (rSt σ (rHeapM nv sv n l lp siv civ lov hiv iv false) 22)
       (.retV (.bool false) mHiIfKR) ch
@@ -776,7 +776,7 @@ theorem mh_hiF_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
 harness's `lo`/`hi`, and the `$res0 = pre` store PENDING. 46 steps; the
 store itself cannot reduce definitionally (the array's contents are
 symbolic), which is exactly why it is split out. -/
-theorem mh_exitA_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
+private theorem mh_exitA_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
     (l lp : List Int) (siv civ lov hiv iv : Int) (ch : Choices) :
     stepFnIter 46 (rSt σ (rHeapM nv sv n l lp siv civ lov hiv iv false) 22)
       (.retV (.bool false) mCmpIfKR) ch
@@ -788,7 +788,7 @@ theorem mh_exitA_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
 
 /-- minMax exit B: `$res1`/`$res2` delivered, return, barrier exit —
 the driver terminal. 24 steps. -/
-theorem mh_exitB_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
+private theorem mh_exitB_rawR (σ : ExecState) (nv sv : Int) (n : Nat)
     (l lp : List Int) (siv civ lov hiv iv : Int) (ch : Choices) :
     stepFnIter 24 (rSt σ (rHeapStored nv sv n l lp siv civ lov hiv iv) 22)
       (.next (.storeK [] [] (.seqn #[]) callEnvR rEpiTail)) ch
@@ -1026,12 +1026,12 @@ theorem cp_loopR (σ : ExecState) (n seed : Nat) (hn : n < 2 ^ 63)
 `mh_iter`/`mh_loop`, ported to the r-layout) -/
 
 /-- The exit-test heap after the dispatch of iteration `m`. -/
-abbrev rCmpHeap (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int)
+private abbrev rCmpHeap (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int)
     (m : Nat) : Heap :=
   rHeapM nv sv n l lp siv civ (minSpec (l.take m)) (maxSpec (l.take m))
     ((m : Nat) : Int) false
 
-theorem mh_iterR (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+private theorem mh_iterR (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
     (m : Nat) (hln : l.length = n) (hxs : ∀ v ∈ l, 0 ≤ v ∧ v < 2 ^ 64)
     (hn : n < 2 ^ 63) (siv civ : Int) (hm1 : 1 ≤ m) (hm : m < n)
     (ch : Choices) :
@@ -1170,7 +1170,7 @@ theorem mh_iterR (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
 the run reaches the ENTRY TERMINAL within `96·μ + 71` steps. The
 epilogue's `$res0 = pre` store is the one conditioned step (its value is
 a symbolic array, so it cannot reduce definitionally). -/
-theorem mh_loopR (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
+private theorem mh_loopR (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
     (hln : l.length = n) (hxs : ∀ v ∈ l, 0 ≤ v ∧ v < 2 ^ 64)
     (hlp : lp.length = 8) (hlpr : ∀ v ∈ lp, 0 ≤ v ∧ v < 2 ^ 64)
     (hn : n < 2 ^ 63) (siv civ : Int) :

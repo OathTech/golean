@@ -99,7 +99,7 @@ set_option linter.unusedSimpArgs false
 
 /-- The PROGRAM-generic state form (the reverse/minmax modules' `vSt`
 / `rSt`). -/
-abbrev wSt (σ : ExecState) (H : Heap) (na : Nat) : ExecState :=
+private abbrev wSt (σ : ExecState) (H : Heap) (na : Nat) : ExecState :=
   { σ with heap := H, nextAddr := na }
 
 /-! ## The S3 statement adapter
@@ -126,28 +126,28 @@ Comparator Challenge's trusted closure imports. -/
 -- module is a maintenance surface, not a fact anyone reads.)
 
 /-- The family's element at an in-range index (GAP-P2: delegation). -/
-theorem wcFamily_getD {n seed m : Nat} (hm : m < n) :
+private theorem wcFamily_getD {n seed m : Nat} (hm : m < n) :
     (wcFamily n seed).getD m 0 = (((seed + m % 3) % 2 ^ 64 : Nat) : Int) :=
   familyMod_getD hm
 
 /-- The `words` array after `m` copy steps: the family prefix, the
 rest still the array's zero default (GAP-P2 CLOSED: the kit's
 `prefixPad`; the facts are delegations). -/
-def wcPre (m seed : Nat) : List Int :=
+private def wcPre (m seed : Nat) : List Int :=
   prefixPad (GoLean.SliceMem.familyMod 3) 8 m seed
 
-theorem wcPre_zero (seed : Nat) : wcPre 0 seed = List.replicate 8 0 :=
+private theorem wcPre_zero (seed : Nat) : wcPre 0 seed = List.replicate 8 0 :=
   prefixPad_zero rfl
 
-theorem wcPre_length {m seed : Nat} (h : m ≤ 8) :
+private theorem wcPre_length {m seed : Nat} (h : m ≤ 8) :
     (wcPre m seed).length = 8 :=
   prefixPad_length (familyMod_length 3 m seed) h
 
-theorem wcPre_range {m seed : Nat} :
+private theorem wcPre_range {m seed : Nat} :
     ∀ v ∈ wcPre m seed, 0 ≤ v ∧ v < 2 ^ 64 :=
   prefixPad_range (familyMod_range 3 m seed)
 
-theorem wcPre_set {seed m : Nat} (hm : m < 8) :
+private theorem wcPre_set {seed m : Nat} (hm : m < 8) :
     (wcPre m seed).set m (((seed + m % 3) % 2 ^ 64 : Nat) : Int)
       = wcPre (m + 1) seed :=
   prefixPad_familyMod_set hm
@@ -155,18 +155,18 @@ theorem wcPre_set {seed m : Nat} (hm : m < 8) :
 /-- The copy loop's terminal list IS `goArr8`'s content at the family:
 `wcFamily_length` is what makes `8 - (wcFamily n seed).length` reduce
 to `8 - n`. -/
-theorem wcPre_full {n seed : Nat} :
+private theorem wcPre_full {n seed : Nat} :
     wcPre n seed
       = wcFamily n seed ++ List.replicate (8 - (wcFamily n seed).length) 0 :=
   prefixPad_full (familyMod_length 3 n seed)
 
 /-! ## Cells and handles at the r-layout -/
 
-abbrev rSliceW (n : Nat) : GoValue := .slice ⟨some (.base ⟨5⟩), 0, n, n⟩
-abbrev rHandleW (n : Nat) : HeapCell := ⟨some (.slice tU64), rSliceW n⟩
+private abbrev rSliceW (n : Nat) : GoValue := .slice ⟨some (.base ⟨5⟩), 0, n, n⟩
+private abbrev rHandleW (n : Nat) : HeapCell := ⟨some (.slice tU64), rSliceW n⟩
 abbrev rNilSlice : HeapCell :=
   ⟨some (.slice tU64), .slice ⟨none, 0, 0, 0⟩⟩
-abbrev mhCellR : HeapCell := ⟨some tMap, .map ⟨some (.base ⟨16⟩)⟩⟩
+private abbrev mhCellR : HeapCell := ⟨some tMap, .map ⟨some (.base ⟨16⟩)⟩⟩
 abbrev zeros8 : List Int := List.replicate 8 0
 
 /-! ## The harness `Func`, verbatim from the pinned lowering -/
@@ -215,9 +215,9 @@ def rS7 : Stmt :=
 def baseEnvR : Scope :=
   [("$res1", .base ⟨3⟩), ("$res0", .base ⟨2⟩),
    ("seed", .base ⟨1⟩), ("n", .base ⟨0⟩)]
-def envC11R : LocalEnv := [[("$c11", .base ⟨4⟩)], baseEnvR]
-def wScopeR : Scope := [("w", .base ⟨6⟩), ("$c11", .base ⟨4⟩)]
-def wordsScopeR : Scope :=
+private def envC11R : LocalEnv := [[("$c11", .base ⟨4⟩)], baseEnvR]
+private def wScopeR : Scope := [("w", .base ⟨6⟩), ("$c11", .base ⟨4⟩)]
+private def wordsScopeR : Scope :=
   [("words", .base ⟨9⟩), ("w", .base ⟨6⟩), ("$c11", .base ⟨4⟩)]
 def callScopeR : Scope :=
   [("best", .base ⟨12⟩), ("words", .base ⟨9⟩), ("w", .base ⟨6⟩),
@@ -251,11 +251,11 @@ def suRefR (n : Nat) (iv : Int) : TargetRef :=
   .chain (rSliceW n) [.int iv .uint64] [.index]
 def suStTailR : Cont :=
   .seq [] suEnvR2 (.seq [] ([] :: suEnvR) suLoopKR)
-def suRhsKR (n : Nat) (iv : Int) : Cont :=
+private def suRhsKR (n : Nat) (iv : Int) : Cont :=
   .rhsK .vals [suRefR n iv] [] [] (.seqn #[]) suEnvR2 suStTailR
-def suAddKR (n : Nat) (sv iv : Int) : Cont :=
+private def suAddKR (n : Nat) (sv iv : Int) : Cont :=
   .strictK .add [.int sv .uint64] [] suEnvR2 (suRhsKR n iv)
-def suModKR (n : Nat) (sv iv : Int) : Cont :=
+private def suModKR (n : Nat) (sv iv : Int) : Cont :=
   .strictK .mod [.int iv .uint64] [] suEnvR2 (suAddKR n sv iv)
 
 def rTailAfterCopy : Cont :=
@@ -291,54 +291,54 @@ def rCallArgsKR : Cont :=
     rAfterCall
 /-- The subject's call frame: result loc 14, write-back target `best`,
 returning into the harness's epilogue. -/
-def frameKR : Cont :=
+private def frameKR : Cont :=
   .frame [(.chain [], [.ref "best"])] callEnvR [.base ⟨14⟩] [] rAfterCall
-def rFrameEnv : LocalEnv :=
+private def rFrameEnv : LocalEnv :=
   [[("$res0", .base ⟨14⟩), ("words", .base ⟨13⟩)]]
 
-def sc0R : Scope := [("$res0", .base ⟨14⟩), ("words", .base ⟨13⟩)]
-def sc1R : Scope := [("counts", .base ⟨17⟩), ("$c0", .base ⟨15⟩)]
-def envR0R : LocalEnv := [sc1R, sc0R]
-def envBR : LocalEnv :=
+private def sc0R : Scope := [("$res0", .base ⟨14⟩), ("words", .base ⟨13⟩)]
+private def sc1R : Scope := [("counts", .base ⟨17⟩), ("$c0", .base ⟨15⟩)]
+private def envR0R : LocalEnv := [sc1R, sc0R]
+private def envBR : LocalEnv :=
   [[("$forFirst", .base ⟨19⟩)], [("i", .base ⟨18⟩)], sc1R, sc0R]
-def envB1R : LocalEnv := [[("i", .base ⟨18⟩)], sc1R, sc0R]
-def env2R : LocalEnv := [] :: envBR
-def env3R : LocalEnv := [] :: env2R
-def u1EnvR (na : Nat) : LocalEnv := [("$c1", .base ⟨na⟩)] :: env2R
-def uEnvR (na : Nat) : LocalEnv :=
+private def envB1R : LocalEnv := [[("i", .base ⟨18⟩)], sc1R, sc0R]
+private def env2R : LocalEnv := [] :: envBR
+private def env3R : LocalEnv := [] :: env2R
+private def u1EnvR (na : Nat) : LocalEnv := [("$c1", .base ⟨na⟩)] :: env2R
+private def uEnvR (na : Nat) : LocalEnv :=
   [("$c2", .base ⟨na + 1⟩), ("$c1", .base ⟨na⟩)] :: env2R
 
-def tailBR : Cont :=
+private def tailBR : Cont :=
   .seq [] envBR (.seq [] envB1R
     (.seq [bestSeqn, wcMapRangeStmt, retSeqn] envR0R frameKR))
 /-- The counting-loop head configuration (r-harness placement). -/
-def headCR : Config :=
+private def headCR : Config :=
   .exec (.while (.boolLit true) wcWhileBody) envBR tailBR
-def loopKCR : Cont := .loop (.boolLit true) wcWhileBody envBR tailBR
-def bodyTailR : Cont := .seq [wcCountBody] env2R loopKCR
-def cmpContCR : Cont := .ifK (.seqn #[]) .breakStmt env2R bodyTailR
-def lenKR (iv : Int) : Cont :=
+private def loopKCR : Cont := .loop (.boolLit true) wcWhileBody envBR tailBR
+private def bodyTailR : Cont := .seq [wcCountBody] env2R loopKCR
+private def cmpContCR : Cont := .ifK (.seqn #[]) .breakStmt env2R bodyTailR
+private def lenKR (iv : Int) : Cont :=
   .strictK (.lengthOf (some (.slice tU64))) [] [] env2R
     (.strictK .lessCmp [.int iv .int] [] env2R cmpContCR)
-def postBodyKR : Cont := .seq [] env2R loopKCR
+private def postBodyKR : Cont := .seq [] env2R loopKCR
 
-def stK0R (na : Nat) : Cont :=
+private def stK0R (na : Nat) : Cont :=
   .stmtOpK (.mapAssign tU64 tU64) 0 []
     [.var "$c2",
      .add (.mapGet (.var "$c1") (.var "$c2") tU64 tU64) (.intLit 1 .uint64)]
     (uEnvR na) (.seq [] (uEnvR na) postBodyKR)
-def stK2R (na : Nat) (w : Int) : Cont :=
+private def stK2R (na : Nat) (w : Int) : Cont :=
   .stmtOpK (.mapAssign tU64 tU64) 0
     [.int w .uint64, .map ⟨some (.base ⟨16⟩)⟩] []
     (uEnvR na) (.seq [] (uEnvR na) postBodyKR)
-def addKR (na : Nat) (w : Int) : Cont :=
+private def addKR (na : Nat) (w : Int) : Cont :=
   .strictK .add [] [.intLit 1 .uint64] (uEnvR na) (stK2R na w)
-def mapGetKR (na : Nat) (w : Int) : Cont :=
+private def mapGetKR (na : Nat) (w : Int) : Cont :=
   .strictK (.mapGet tU64 tU64) [.map ⟨some (.base ⟨16⟩)⟩] [] (uEnvR na)
     (addKR na w)
 
-def envRBR (B : Nat) : LocalEnv := (("best", .base ⟨B⟩) :: sc1R) :: [sc0R]
-def kRR (B : Nat) : Cont := .seq [retSeqn] (envRBR B) frameKR
+private def envRBR (B : Nat) : LocalEnv := (("best", .base ⟨B⟩) :: sc1R) :: [sc0R]
+private def kRR (B : Nat) : Cont := .seq [retSeqn] (envRBR B) frameKR
 
 /-! ## Heap fronts (program-generic) -/
 
@@ -346,7 +346,7 @@ def rHeap0 (nv sv : Int) : Heap :=
   [(.base ⟨0⟩, u64cell nv), (.base ⟨1⟩, u64cell sv),
    (.base ⟨2⟩, arrCell 8 zeros8), (.base ⟨3⟩, u64cell 0)]
 
-def rHeapC11 (nv sv : Int) : Heap :=
+private def rHeapC11 (nv sv : Int) : Heap :=
   rHeap0 nv sv ++ [(.base ⟨4⟩, rNilSlice)]
 
 def rHeapMake (nv sv : Int) (n : Nat) : Heap :=
@@ -377,7 +377,7 @@ def rHeapMFrame (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int) :
 /-- The twenty concrete front cells during the subject's counting and
 range phases (`sv`/`siv`/`civ` = the parked seed and the two parked
 loop counters). -/
-def frontR (L : Nat) (sv siv civ : Int) (ws lp : List Int)
+private def frontR (L : Nat) (sv siv civ : Int) (ws lp : List Int)
     (kvs : List (Int × Nat)) (iv : Int) (ff : Bool) : Heap :=
   [(.base ⟨0⟩, u64cell (L : Int)), (.base ⟨1⟩, u64cell sv),
    (.base ⟨2⟩, arrCell 8 zeros8), (.base ⟨3⟩, u64cell 0),
@@ -398,7 +398,7 @@ def σR (σ : ExecState) (L : Nat) (sv siv civ : Int) (ws lp : List Int)
     (na : Nat) : ExecState :=
   wSt σ (frontR L sv siv civ ws lp kvs iv ff ++ dead) na
 
-theorem lookup_frontR_none (L : Nat) (sv siv civ : Int) (ws lp : List Int)
+private theorem lookup_frontR_none (L : Nat) (sv siv civ : Int) (ws lp : List Int)
     (kvs : List (Int × Nat)) (iv : Int) (ff : Bool) {x : Nat} (hx : 20 ≤ x) :
     Heap.lookup (frontR L sv siv civ ws lp kvs iv ff) (.base ⟨x⟩) = none := by
   simp only [frontR, Heap.lookup,
@@ -427,7 +427,7 @@ theorem lookup_frontR_none (L : Nat) (sv siv civ : Int) (ws lp : List Int)
 /-- The exit-phase front: `$res0` (2), `$res1` (3), `best` (12) and the
 subject's `$res0` (14) generalized; the counting counter parked at
 `L`. -/
-def frontXR (L : Nat) (sv siv civ : Int) (ws lp r2 : List Int)
+private def frontXR (L : Nat) (sv siv civ : Int) (ws lp r2 : List Int)
     (kvs : List (Int × Nat)) (r3 r12 r14 : Int) : Heap :=
   [(.base ⟨0⟩, u64cell (L : Int)), (.base ⟨1⟩, u64cell sv),
    (.base ⟨2⟩, arrCell 8 r2), (.base ⟨3⟩, u64cell r3),
@@ -445,7 +445,7 @@ def σXR (σ : ExecState) (L : Nat) (sv siv civ : Int) (ws lp r2 : List Int)
     ExecState :=
   wSt σ (frontXR L sv siv civ ws lp r2 kvs r3 r12 r14 ++ tail) na
 
-theorem lookup_frontXR_none (L : Nat) (sv siv civ : Int)
+private theorem lookup_frontXR_none (L : Nat) (sv siv civ : Int)
     (ws lp r2 : List Int) (kvs : List (Int × Nat)) (r3 r12 r14 : Int)
     {x : Nat} (hx : 20 ≤ x) :
     Heap.lookup (frontXR L sv siv civ ws lp r2 kvs r3 r12 r14) (.base ⟨x⟩)
@@ -500,14 +500,14 @@ theorem lookup_suR (σ : ExecState) (nv sv : Int) (n : Nat) (l : List Int)
           .array ⟨l.map (fun v => .int v .uint64)⟩⟩ := by
   simp [rHeapSu, rHeap0, Heap.lookup]
 
-theorem lookup_cpW_R (σ : ExecState) (nv sv : Int) (n : Nat)
+private theorem lookup_cpW_R (σ : ExecState) (nv sv : Int) (n : Nat)
     (l lp : List Int) (siv civ : Int) (ff : Bool) (na : Nat) :
     Heap.lookup (wSt σ (rHeapCp nv sv n l lp siv civ ff) na).heap (.base ⟨5⟩)
       = some ⟨some (.array n tU64),
           .array ⟨l.map (fun v => .int v .uint64)⟩⟩ := by
   simp [rHeapCp, rHeapSu, rHeap0, Heap.lookup]
 
-theorem lookup_cpWords_R (σ : ExecState) (nv sv : Int) (n : Nat)
+private theorem lookup_cpWords_R (σ : ExecState) (nv sv : Int) (n : Nat)
     (l lp : List Int) (siv civ : Int) (ff : Bool) (na : Nat) :
     Heap.lookup (wSt σ (rHeapCp nv sv n l lp siv civ ff) na).heap (.base ⟨9⟩)
       = some ⟨some (.array 8 tU64),
@@ -579,7 +579,7 @@ theorem su_A1_rawR (σ : ExecState) (nv sv : Int) (n : Nat) (l : List Int)
   with_unfolding_all rfl
 
 /-- Setup fill phase A: test true → the `%` apply point. 19 steps. -/
-theorem su_B1a_rawR (σ : ExecState) (nv sv : Int) (n : Nat) (l : List Int)
+private theorem su_B1a_rawR (σ : ExecState) (nv sv : Int) (n : Nat) (l : List Int)
     (iv : Int) (ch : Choices) :
     stepFnIter 19 (wSt σ (rHeapSu nv sv n l iv false) 9)
       (.retV (.bool true) suCmpKR) ch
@@ -589,7 +589,7 @@ theorem su_B1a_rawR (σ : ExecState) (nv sv : Int) (n : Nat) (l : List Int)
 
 /-- Setup fill phase B: the `%` result → the add → the element-store
 point. 2 steps. -/
-theorem su_B1b_rawR (σ : ExecState) (nv sv : Int) (n : Nat) (l : List Int)
+private theorem su_B1b_rawR (σ : ExecState) (nv sv : Int) (n : Nat) (l : List Int)
     (iv rv : Int) (ch : Choices) :
     stepFnIter 2 (wSt σ (rHeapSu nv sv n l iv false) 9)
       (.retV (.int rv .uint64) (suAddKR n sv iv)) ch
@@ -677,7 +677,7 @@ theorem cp_X_rawR (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
 /-- The `maxCount` prologue: `$c0`/makeMap/`counts`/`i`/`$forFirst` →
 the counting-loop head at `nextAddr = 20`. 51 steps, program-free given
 the frame entry. -/
-theorem r_prologue_rawR (σ : ExecState) (sv : Int) (n : Nat)
+private theorem r_prologue_rawR (σ : ExecState) (sv : Int) (n : Nat)
     (l lp : List Int) (siv civ : Int) (ch : Choices) :
     stepFnIter 51 (wSt σ (rHeapMFrame ((n : Nat) : Int) sv n l lp siv civ) 15)
       (.exec maxCountFunc.body rFrameEnv frameKR) ch
@@ -688,7 +688,7 @@ theorem r_prologue_rawR (σ : ExecState) (sv : Int) (n : Nat)
 identical to the `wordcount_harness` tower — same statements, new
 addresses, and the subject frame sitting on the r-harness's epilogue) -/
 
-theorem wcR_segA0_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_segA0_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp : List Int) (kvs : List (Int × Nat)) (iv : Int) (dead : Heap)
     (na : Nat) (ch : Choices) :
     stepFnIter 25 (σR σ L sv siv civ ws lp kvs iv true dead na) headCR ch
@@ -696,7 +696,7 @@ theorem wcR_segA0_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
           σR σ L sv siv civ ws lp kvs iv false dead na, ch) := by
   with_unfolding_all rfl
 
-theorem wcR_segA1_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_segA1_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp : List Int) (kvs : List (Int × Nat)) (iv : Int) (dead : Heap)
     (na : Nat) (ch : Choices) :
     stepFnIter 29 (σR σ L sv siv civ ws lp kvs iv false dead na) headCR ch
@@ -707,7 +707,7 @@ theorem wcR_segA1_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
             false dead na, ch) := by
   with_unfolding_all rfl
 
-theorem wcR_cmp_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_cmp_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp : List Int) (kvs : List (Int × Nat)) (iv jv : Int) (dead : Heap)
     (na : Nat) (ch : Choices) :
     stepFnIter 1 (σR σ L sv siv civ ws lp kvs iv false dead na)
@@ -717,7 +717,7 @@ theorem wcR_cmp_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
           σR σ L sv siv civ ws lp kvs iv false dead na, ch) := by
   with_unfolding_all rfl
 
-theorem wcR_segC1_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_segC1_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp : List Int) (kvs : List (Int × Nat)) (iv : Int) (tail : Heap)
     (na : Nat) (ch : Choices) :
     stepFnIter 7 (σR σ L sv siv civ ws lp kvs iv false tail na)
@@ -727,7 +727,7 @@ theorem wcR_segC1_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
           σR σ L sv siv civ ws lp kvs iv false tail na, ch) := by
   with_unfolding_all rfl
 
-theorem wcR_segC2_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_segC2_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp : List Int) (kvs : List (Int × Nat)) (iv : Int) (tail : Heap)
     (na₀ na : Nat) (ch : Choices) :
     stepFnIter 6 (σR σ L sv siv civ ws lp kvs iv false tail na)
@@ -738,7 +738,7 @@ theorem wcR_segC2_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
           σR σ L sv siv civ ws lp kvs iv false tail na, ch) := by
   with_unfolding_all rfl
 
-theorem wcR_segC3_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_segC3_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp : List Int) (kvs : List (Int × Nat)) (iv : Int) (tail : Heap)
     (na₀ na : Nat) (ch : Choices) :
     stepFnIter 5 (σR σ L sv siv civ ws lp kvs iv false tail na)
@@ -774,7 +774,7 @@ theorem wcR_segC3_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
   exact stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
     (stepFnIter_chain h1 h2) h3) h4) h5
 
-theorem wcR_segC4_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_segC4_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp : List Int) (kvs : List (Int × Nat)) (iv : Int) (tail : Heap)
     (na₀ na : Nat) (ch : Choices) :
     stepFnIter 8 (σR σ L sv siv civ ws lp kvs iv false tail na)
@@ -789,7 +789,7 @@ theorem wcR_segC4_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
           σR σ L sv siv civ ws lp kvs iv false tail na, ch) := by
   with_unfolding_all rfl
 
-theorem wcR_segC5_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_segC5_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp : List Int) (kvs : List (Int × Nat)) (iv : Int) (tail : Heap)
     (na₀ na : Nat) (w : GoValue) (ch : Choices) :
     stepFnIter 1 (σR σ L sv siv civ ws lp kvs iv false tail na)
@@ -803,7 +803,7 @@ theorem wcR_segC5_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
           σR σ L sv siv civ ws lp kvs iv false tail na, ch) := by
   with_unfolding_all rfl
 
-theorem wcR_segC6_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_segC6_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp : List Int) (kvs : List (Int × Nat)) (iv : Int) (tail : Heap)
     (na₀ na : Nat) (ch : Choices) :
     stepFnIter 4 (σR σ L sv siv civ ws lp kvs iv false tail na)
@@ -826,7 +826,7 @@ theorem wcR_segC6_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
     with_unfolding_all rfl
   exact stepFnIter_chain (stepFnIter_chain h1 h2) h3
 
-theorem wcR_segC7_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_segC7_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp : List Int) (kvs : List (Int × Nat)) (iv : Int) (tail : Heap)
     (na₀ na : Nat) (ch : Choices) :
     stepFnIter 1 (σR σ L sv siv civ ws lp kvs iv false tail na)
@@ -839,7 +839,7 @@ theorem wcR_segC7_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
           σR σ L sv siv civ ws lp kvs iv false tail na, ch) := by
   with_unfolding_all rfl
 
-theorem wcR_segC8_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_segC8_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp : List Int) (kvs : List (Int × Nat)) (iv : Int) (tail : Heap)
     (na₀ na : Nat) (w : Int) (ch : Choices) :
     stepFnIter 3 (σR σ L sv siv civ ws lp kvs iv false tail na)
@@ -854,7 +854,7 @@ theorem wcR_segC8_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
           σR σ L sv siv civ ws lp kvs iv false tail na, ch) := by
   with_unfolding_all rfl
 
-theorem wcR_segC9_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_segC9_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp : List Int) (kvs : List (Int × Nat)) (iv : Int) (tail : Heap)
     (na₀ na : Nat) (w : Int) (ch : Choices) :
     stepFnIter 1 (σR σ L sv siv civ ws lp kvs iv false tail na)
@@ -865,7 +865,7 @@ theorem wcR_segC9_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
           σR σ L sv siv civ ws lp kvs iv false tail na, ch) := by
   with_unfolding_all rfl
 
-theorem wcR_segC10_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_segC10_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp : List Int) (kvs : List (Int × Nat)) (iv : Int) (tail : Heap)
     (na₀ na : Nat) (w cv : Int) (ch : Choices) :
     stepFnIter 3 (σR σ L sv siv civ ws lp kvs iv false tail na)
@@ -875,7 +875,7 @@ theorem wcR_segC10_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
           σR σ L sv siv civ ws lp kvs iv false tail na, ch) := by
   with_unfolding_all rfl
 
-theorem wcR_segC11_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_segC11_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp : List Int) (kvs : List (Int × Nat)) (iv : Int) (tail : Heap)
     (na₀ na : Nat) (ch : Choices) :
     stepFnIter 3 (σR σ L sv siv civ ws lp kvs iv false tail na)
@@ -885,7 +885,7 @@ theorem wcR_segC11_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
 
 /-! ### Counting-loop exit → the range head -/
 
-theorem wcR_segX0_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_segX0_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp : List Int) (kvs : List (Int × Nat)) (iv : Int) (tail : Heap)
     (na : Nat) (ch : Choices) :
     stepFnIter 9 (σR σ L sv siv civ ws lp kvs iv false tail na)
@@ -896,7 +896,7 @@ theorem wcR_segX0_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
           σR σ L sv siv civ ws lp kvs iv false tail na, ch) := by
   with_unfolding_all rfl
 
-theorem wcR_segX0b_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_segX0b_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp : List Int) (kvs : List (Int × Nat)) (iv : Int) (tail : Heap)
     (B na : Nat) (ch : Choices) :
     stepFnIter 6 (σR σ L sv siv civ ws lp kvs iv false tail na)
@@ -908,7 +908,7 @@ theorem wcR_segX0b_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
           σR σ L sv siv civ ws lp kvs iv false tail na, ch) := by
   with_unfolding_all rfl
 
-theorem wcR_segX0c_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_segX0c_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp : List Int) (kvs : List (Int × Nat)) (iv : Int) (tail : Heap)
     (B na : Nat) (ch : Choices) :
     stepFnIter 5 (σR σ L sv siv civ ws lp kvs iv false tail na)
@@ -1160,7 +1160,7 @@ every one a `rfl` here except `lookup_frontR_none`. -/
 
 /-- **One counting iteration** at the r-placement — INSTANTIATED from
 `wcIter_generic`. 53 steps. -/
-theorem wcR_count_iter (σ : ExecState) (sv siv civ : Int)
+private theorem wcR_count_iter (σ : ExecState) (sv siv civ : Int)
     (ws lp : List Int) (i : Nat) (dead : Heap) (na : Nat) (ch : Choices)
     (hws : ∀ v ∈ ws, 0 ≤ v ∧ v < 2 ^ 64) (hlen : ws.length < 2 ^ 63)
     (hi : i < ws.length) (hna : 20 ≤ na) (hdead : DeadFrom dead na) :
@@ -1214,7 +1214,7 @@ theorem wcR_count_iter (σ : ExecState) (sv siv civ : Int)
     rw [setk_cnt_succ, ← countsFold_append, ← take_succ_getD hi]] at h
   exact h
 
-theorem wcR_initBest (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_initBest (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp : List Int) :
     ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (na : Nat)
       (ch : Choices), 20 ≤ na → DeadFrom dead na →
@@ -1245,7 +1245,7 @@ theorem wcR_initBest (σ : ExecState) (L : Nat) (sv siv civ : Int)
     set_fresh hmiss, List.append_assoc] at h
   exact h
 
-theorem wcR_stBest (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_stBest (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp : List Int) :
     ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (B na : Nat)
       (ch : Choices), 20 ≤ B → DeadFrom dead B →
@@ -1284,7 +1284,7 @@ theorem wcR_stBest (σ : ExecState) (L : Nat) (sv siv civ : Int)
     set_singleton_self] at h
   exact stepFn_store_step h
 
-theorem wcR_snap (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_snap (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp : List Int) :
     ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (B na : Nat)
       (ch : Choices),
@@ -1303,7 +1303,7 @@ theorem wcR_snap (σ : ExecState) (L : Nat) (sv siv civ : Int)
 
 /-- **The counting loop** at the r-placement — INSTANTIATED from
 `wcLoop_generic`. -/
-theorem wcR_count_loop (σ : ExecState) (sv siv civ : Int)
+private theorem wcR_count_loop (σ : ExecState) (sv siv civ : Int)
     (ws lp : List Int)
     (hws : ∀ v ∈ ws, 0 ≤ v ∧ v < 2 ^ 64) (hlen : ws.length < 2 ^ 63) :
     ∀ (n i : Nat), n = ws.length - i → i ≤ ws.length →
@@ -1365,7 +1365,7 @@ theorem wcR_count_loop (σ : ExecState) (sv siv civ : Int)
 /-! ## The range phase: the generic layer's discharges at the
 r-placement -/
 
-theorem wcR_pick (σ : ExecState) (sv siv civ : Int) (ws lp : List Int) :
+private theorem wcR_pick (σ : ExecState) (sv siv civ : Int) (ws lp : List Int) :
     ∀ (kvs rem : List (Int × Nat)) (idx : Nat) (ch ch₂ : Choices)
       (p : Int × Nat) (tail : Heap) (B na : Nat),
       Choices.consume ch rem.length = (idx, ch₂) → idx < rem.length →
@@ -1399,7 +1399,7 @@ theorem wcR_pick (σ : ExecState) (sv siv civ : Int) (ws lp : List Int) :
     set_fresh hmiss, List.append_assoc] at hPick
   exact hPick
 
-theorem wcR_R4b (σ : ExecState) (sv siv civ : Int) (ws lp : List Int) :
+private theorem wcR_R4b (σ : ExecState) (sv siv civ : Int) (ws lp : List Int) :
     ∀ (kvs rem : List (Int × Nat)) (tail : Heap) (B na₀ na : Nat)
       (ch : Choices),
       stepFnIter 4 (σR σ ws.length sv siv civ ws lp kvs (ws.length : Int)
@@ -1416,7 +1416,7 @@ theorem wcR_R4b (σ : ExecState) (sv siv civ : Int) (ws lp : List Int) :
   intro kvs rem tail B na₀ na ch
   with_unfolding_all rfl
 
-theorem wcR_varC (σ : ExecState) (sv siv civ : Int) (ws lp : List Int) :
+private theorem wcR_varC (σ : ExecState) (sv siv civ : Int) (ws lp : List Int) :
     ∀ (kvs : List (Int × Nat)) (tail : Heap) (na₀ na : Nat)
       (v : Int) (env : LocalEnv) (k : Cont) (ch : Choices),
       LocalEnv.lookup env "c" = some (.base ⟨na₀⟩) →
@@ -1439,7 +1439,7 @@ theorem wcR_varC (σ : ExecState) (sv siv civ : Int) (ws lp : List Int) :
     lookup_append_right (hdead na₀ (Nat.le_refl na₀))]
   exact lookup_singleton_self
 
-theorem wcR_varBest (σ : ExecState) (sv siv civ : Int) (ws lp : List Int) :
+private theorem wcR_varBest (σ : ExecState) (sv siv civ : Int) (ws lp : List Int) :
     ∀ (kvs : List (Int × Nat)) (tail : Heap) (B na : Nat)
       (bv : Int) (env : LocalEnv) (k : Cont) (ch : Choices),
       LocalEnv.lookup env "best" = some (.base ⟨B⟩) → 20 ≤ B →
@@ -1458,7 +1458,7 @@ theorem wcR_varBest (σ : ExecState) (sv siv civ : Int) (ws lp : List Int) :
       (ws.length : Int) false hB)]
   exact hlkB
 
-theorem wcR_stB (σ : ExecState) (sv siv civ : Int) (ws lp : List Int) :
+private theorem wcR_stB (σ : ExecState) (sv siv civ : Int) (ws lp : List Int) :
     ∀ (kvs rem : List (Int × Nat)) (tail : Heap) (B na₀ na : Nat)
       (bv v : Int) (ch : Choices),
       20 ≤ B → Heap.lookup tail (.base ⟨B⟩) = some (u64cell bv) →
@@ -1500,7 +1500,7 @@ theorem wcR_stB (σ : ExecState) (sv siv civ : Int) (ws lp : List Int) :
 
 /-- **The range loop, at every choice stream** — INSTANTIATED from
 `wcRange_generic` (§10b). -/
-theorem wcR_range_loop (σ : ExecState) (sv siv civ : Int)
+private theorem wcR_range_loop (σ : ExecState) (sv siv civ : Int)
     (ws lp : List Int) (kvs : List (Int × Nat)) :
     ∀ (m : Nat) (rem : List (Int × Nat)), rem.length = m →
     ∀ (bv : Nat) (B na : Nat) (tail : Heap) (ch : Choices),
@@ -1542,7 +1542,7 @@ def rEpiTail : Cont :=
 def rRes0Ref : TargetRef := .chain (.addr (.base ⟨2⟩)) [] []
 
 /-- X1: range-loop exit → the `best` read of `$res0 := best`. 6 steps. -/
-theorem wcR_segX1_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_segX1_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp r2 : List Int) (kvs : List (Int × Nat)) (r3 r12 r14 : Int)
     (tail : Heap) (B na : Nat) (ch : Choices) :
     stepFnIter 6 (σXR σ L sv siv civ ws lp r2 kvs r3 r12 r14 tail na)
@@ -1576,7 +1576,7 @@ theorem wcR_segX1_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
 
 /-- X2a: the `best` value delivered → stored into the subject's `$res0`
 (cell 14). 2 steps. -/
-theorem wcR_segX2a_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_segX2a_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp r2 : List Int) (kvs : List (Int × Nat)) (r3 r12 r14 bvv : Int)
     (tail : Heap) (B na : Nat) (ch : Choices) :
     stepFnIter 2 (σXR σ L sv siv civ ws lp r2 kvs r3 r12 r14 tail na)
@@ -1590,7 +1590,7 @@ theorem wcR_segX2a_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
   with_unfolding_all rfl
 
 /-- X2b: → the `returnStmt` dispatch point. 2 steps. -/
-theorem wcR_segX2b_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_segX2b_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp r2 : List Int) (kvs : List (Int × Nat)) (r3 r12 r14 : Int)
     (tail : Heap) (B na : Nat) (ch : Choices) :
     stepFnIter 2 (σXR σ L sv siv civ ws lp r2 kvs r3 r12 r14 tail na)
@@ -1613,7 +1613,7 @@ theorem wcR_segX2b_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
 write-back, then the harness epilogue up to the `$res0 = words` store
 POINT. 17 steps; the store itself cannot reduce definitionally (the
 array's contents are symbolic), which is why it is split out. -/
-theorem wcR_exitA_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_exitA_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp r2 : List Int) (kvs : List (Int × Nat)) (r3 r12 r14 : Int)
     (tail : Heap) (B na : Nat) (ch : Choices) :
     stepFnIter 17 (σXR σ L sv siv civ ws lp r2 kvs r3 r12 r14 tail na)
@@ -1628,7 +1628,7 @@ theorem wcR_exitA_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
 
 /-- Exit B: `$res1 := best`, return, the harness frame exit — the
 driver terminal. 15 steps. -/
-theorem wcR_exitB_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem wcR_exitB_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp r2 : List Int) (kvs : List (Int × Nat)) (r3 r12 r14 : Int)
     (tail : Heap) (na : Nat) (ch : Choices) :
     stepFnIter 15 (σXR σ L sv siv civ ws lp r2 kvs r3 r12 r14 tail na)
@@ -1638,7 +1638,7 @@ theorem wcR_exitB_raw (σ : ExecState) (L : Nat) (sv siv civ : Int)
             (IntKind.normalize .uint64 r12) r12 r14 tail na, ch) := by
   with_unfolding_all rfl
 
-theorem lookup_res0_X (σ : ExecState) (L : Nat) (sv siv civ : Int)
+private theorem lookup_res0_X (σ : ExecState) (L : Nat) (sv siv civ : Int)
     (ws lp r2 : List Int) (kvs : List (Int × Nat)) (r3 r12 r14 : Int)
     (tail : Heap) (na : Nat) :
     Heap.lookup (σXR σ L sv siv civ ws lp r2 kvs r3 r12 r14 tail na).heap

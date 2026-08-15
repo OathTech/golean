@@ -38,11 +38,11 @@ every pass — the SECOND frame-rebase layer (threshold 21, retire FOUR
 cells per pass). Count cells: 19 = the count `i`, 20 = its flag;
 tight pass placement 21 = `cs`, 22 = `ct`, 23 = `j`, 24 = its flag. -/
 
-def envCNT : LocalEnv :=
+private def envCNT : LocalEnv :=
   [[("$forFirst", .base ⟨20⟩)], [("i", .base ⟨19⟩)], tScope, hIScope0]
 
 /-- The count inner loop's desugared body (from the pinned record). -/
-abbrev isortCountInnerBody : Stmt :=
+private abbrev isortCountInnerBody : Stmt :=
   .block #[]
     #[.ifThenElse (.var "$forFirst")
         (.assign (.var "$forFirst") (.boolLit false))
@@ -72,7 +72,7 @@ abbrev isortCountInnerBody : Stmt :=
 
 /-- The count pass block (`cs`/`ct` declarations, the `j` loop, the
 `cs != ct` verdict fold). -/
-abbrev isortCountPassBlk : Stmt :=
+private abbrev isortCountPassBlk : Stmt :=
   .block #[]
     #[.seqn
         #[.initialization { id := "cs", typ := .int .uint64 },
@@ -94,7 +94,7 @@ abbrev isortCountPassBlk : Stmt :=
         (.seqn #[])]
 
 /-- The count OUTER loop's desugared body. -/
-abbrev isortCountOuterBody : Stmt :=
+private abbrev isortCountOuterBody : Stmt :=
   .block #[]
     #[.ifThenElse (.var "$forFirst")
         (.assign (.var "$forFirst") (.boolLit false))
@@ -106,35 +106,35 @@ abbrev isortCountOuterBody : Stmt :=
         .breakStmt,
       isortCountPassBlk]
 
-def cntTail : Cont :=
+private def cntTail : Cont :=
   .seq [] envCNT
     (.seq [] [[("i", .base ⟨19⟩)], tScope, hIScope0]
       (.seq (hIBodyList.drop 10) envT hIFrame0))
-def cntHeadCfg : Config :=
+private def cntHeadCfg : Config :=
   .exec (.while (.boolLit true) isortCountOuterBody) envCNT cntTail
-def cntLoopK : Cont :=
+private def cntLoopK : Cont :=
   .loop (.boolLit true) isortCountOuterBody envCNT cntTail
-def cntCmpK : Cont :=
+private def cntCmpK : Cont :=
   .ifK (.seqn #[]) .breakStmt ([] :: envCNT)
     (.seq [isortCountPassBlk] ([] :: envCNT) cntLoopK)
 
-def envP : LocalEnv :=
+private def envP : LocalEnv :=
   [("ct", .base ⟨22⟩), ("cs", .base ⟨21⟩)] :: [] :: envCNT
-def envCJ : LocalEnv :=
+private def envCJ : LocalEnv :=
   [("$forFirst", .base ⟨24⟩)] :: [("j", .base ⟨23⟩)] :: envP
-def cntNeqIf : Stmt :=
+private def cntNeqIf : Stmt :=
   .ifThenElse (.neqCmp (.int .uint64) (.var "cs") (.var "ct"))
     (.block #[] #[.seqn #[.assign (.var "ok") (.intLit 0 .uint64)]])
     (.seqn #[])
-def cntInTail : Cont :=
+private def cntInTail : Cont :=
   .seq [] envCJ
     (.seq [] ([("j", .base ⟨23⟩)] :: envP)
       (.seq [cntNeqIf] envP (.seq [] ([] :: envCNT) cntLoopK)))
-def cntInHeadCfg : Config :=
+private def cntInHeadCfg : Config :=
   .exec (.while (.boolLit true) isortCountInnerBody) envCJ cntInTail
-def cntInLoopK : Cont :=
+private def cntInLoopK : Cont :=
   .loop (.boolLit true) isortCountInnerBody envCJ cntInTail
-def cntChkBlk : Stmt :=
+private def cntChkBlk : Stmt :=
   .block #[]
     #[.ifThenElse
         (.eqCmp (.int .uint64)
@@ -150,11 +150,11 @@ def cntChkBlk : Stmt :=
         (.block #[]
           #[.assign (.var "ct") (.add (.var "ct") (.intLit 1 .uint64))])
         (.seqn #[])]
-def cntInCmpK : Cont :=
+private def cntInCmpK : Cont :=
   .ifK (.seqn #[]) .breakStmt ([] :: envCJ)
     (.seq [cntChkBlk] ([] :: envCJ) cntInLoopK)
-def env2C : LocalEnv := [] :: [] :: envCJ
-def cntIf2Stmt : Stmt :=
+private def env2C : LocalEnv := [] :: [] :: envCJ
+private def cntIf2Stmt : Stmt :=
   .ifThenElse
     (.eqCmp (.int .uint64)
       (.indexGet (.var "t") (.var "j"))
@@ -162,27 +162,27 @@ def cntIf2Stmt : Stmt :=
     (.block #[]
       #[.assign (.var "ct") (.add (.var "ct") (.intLit 1 .uint64))])
     (.seqn #[])
-def cntIf1K : Cont :=
+private def cntIf1K : Cont :=
   .ifK (.block #[]
       #[.assign (.var "cs") (.add (.var "cs") (.intLit 1 .uint64))])
     (.seqn #[]) env2C
     (.seq [cntIf2Stmt] env2C (.seq [] ([] :: envCJ) cntInLoopK))
-def cntIf2K : Cont :=
+private def cntIf2K : Cont :=
   .ifK (.block #[]
       #[.assign (.var "ct") (.add (.var "ct") (.intLit 1 .uint64))])
     (.seqn #[]) env2C
     (.seq [] env2C (.seq [] ([] :: envCJ) cntInLoopK))
-def cntEq1K1 : Cont :=
+private def cntEq1K1 : Cont :=
   .strictK (.eqCmp (.int .uint64)) []
     [.indexGet (.var "t") (.var "i")] env2C cntIf1K
-def cntEq1K2 (w : GoValue) : Cont :=
+private def cntEq1K2 (w : GoValue) : Cont :=
   .strictK (.eqCmp (.int .uint64)) [w] [] env2C cntIf1K
-def cntEq2K1 : Cont :=
+private def cntEq2K1 : Cont :=
   .strictK (.eqCmp (.int .uint64)) []
     [.indexGet (.var "t") (.var "i")] env2C cntIf2K
-def cntEq2K2 (w : GoValue) : Cont :=
+private def cntEq2K2 (w : GoValue) : Cont :=
   .strictK (.eqCmp (.int .uint64)) [w] [] env2C cntIf2K
-def cntNeqIfK : Cont :=
+private def cntNeqIfK : Cont :=
   .ifK (.block #[] #[.seqn #[.assign (.var "ok") (.intLit 0 .uint64)]])
     (.seqn #[]) envP (.seq [] envP (.seq [] ([] :: envCNT) cntLoopK))
 
@@ -865,7 +865,7 @@ private theorem lookup_σCntIn_index (n seed : Nat) (ivF sciv : Int)
       (.index b i) = none := rfl
 
 /-- Root bump by 4 above the fixed count cells (threshold 21). -/
-def bump4C : Loc → Loc
+private def bump4C : Loc → Loc
   | .base a => .base ⟨if a.id < 21 then a.id else a.id + 4⟩
   | .field b tid f => .field (bump4C b) tid f
   | .index b i => .index (bump4C b) i

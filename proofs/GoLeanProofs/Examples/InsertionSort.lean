@@ -122,11 +122,25 @@ evidence only — never machine-hardening evidence.
 ## Module layout (per-phase split, examples phase-2 slice 0 lever 2,
 2026-08-14)
 
-This file is the THIN HEADLINE module: it holds the user-facing §11
-harness statements and nothing else. The proof phases live in
-`GoLeanProofs.Examples.InsertionSort.*`, imported above in dependency
-order, and were moved VERBATIM — every statement and proof is
-byte-identical to the pre-split module:
+This file holds the user-facing §11 harness statements — `isort_ok` and
+`isort_readout`, the designated headlines, are declared HERE, so
+`import GoLeanProofs.Examples.InsertionSort` reaches them directly —
+and aggregates every phase shard. The proof phases live in
+`GoLeanProofs.Examples.InsertionSort.*`, imported above at their
+MEASURED dependencies (G4.2 replaced the authoring-order chain; max
+depth 11 → 8).
+
+**On the split's "moved VERBATIM" claim** (C-M5, mechanized 2026-08-15
+rather than left an assertion). The claim was made by `6256228d` and
+**it was TRUE when made**: a comparison of every declaration BLOCK
+(statement PLUS proof) in the pre-split module (`6256228d^`) against
+the shards at `6256228d` finds **318 of 318 byte-identical, 0
+differing, 0 absent**
+(`artifacts/g4/verbatim-check.py`, re-runnable). It is **no longer true
+of the CURRENT tree**: measured against today, 311 of those 318 are
+still byte-identical, 5 differ and 2 are absent (`isortHarnessFunc` and
+`iharness_entry_eq` moved to `Examples/Targets.lean` in the designation
+hoist). All of it is later, intended work — not drift from the split.
 
 | shard | phase |
 |---|---|

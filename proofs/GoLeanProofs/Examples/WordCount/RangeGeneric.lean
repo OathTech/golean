@@ -55,12 +55,12 @@ range env. -/
 def envIterR (B na : Nat) : LocalEnv :=
   [("c", .base ⟨na⟩)] :: envRBg B
 def envIfR (B na : Nat) : LocalEnv := [] :: envIterR envRBg B na
-def thenBlkR : Stmt :=
+private def thenBlkR : Stmt :=
   .block #[] #[.seqn #[.assign (.var "best") (.var "c")]]
 def iterKR (B : Nat) (rem : List (Int × Nat)) : Cont :=
   .mapIterK none (some "c") tU64 tU64 wcRangeBody (toEntries rem)
     (envRBg B) (kRg B)
-def ifKRR (B na : Nat) (rem : List (Int × Nat)) : Cont :=
+private def ifKRR (B na : Nat) (rem : List (Int × Nat)) : Cont :=
   .ifK thenBlkR (.seqn #[]) (envIfR envRBg B na)
     (.seq [] (envIfR envRBg B na) (iterKR envRBg kRg B rem))
 def env4R (B na : Nat) : LocalEnv := [] :: envIfR envRBg B na
@@ -191,7 +191,7 @@ body): within 24 steps the state advances to the erased snapshot with
 iteration effect the kit's `mapPickLoop_generic` consumes as its
 `hIter` (GAP-R1 closure, 2026-08-15: the induction itself now lives in
 the kit; this placement supplies only the iteration). -/
-theorem wcRangeIter_generic
+private theorem wcRangeIter_generic
     (S : List (Int × Nat) → Int → Bool → Heap → Nat → ExecState)
     (ivP : Int) (base0 : Nat)
     (hEnvBest : ∀ B na₀ : Nat,
