@@ -123,6 +123,8 @@ import GoLeanProofs.Examples.WordCount.HarnessR
 -- BOUNDARIES — designation is arc-end work under user sign-off).
 import GoLeanProofs.Examples.HistogramProgram
 import GoLeanProofs.Examples.Histogram
+import GoLeanProofs.Examples.SelectionSortProgram
+import GoLeanProofs.Examples.SelectionSort
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)

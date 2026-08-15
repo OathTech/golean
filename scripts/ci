@@ -419,6 +419,13 @@ check_surface_imports proofs/GoLeanProofs/Examples/WordCountProgram.lean \
 # nothing and keeps the module core-only from birth.
 check_surface_imports proofs/GoLeanProofs/Examples/HistogramProgram.lean \
   '^import GoLean\.'
+# The gallery-campaign G1 GUARDRAILS WAVE lowerings (2026-08-15). Same
+# story as the eighth: none is in `Examples/Targets.lean`'s allowlist or
+# in Challenge's trusted closure (all are undesignated by charter), but
+# each is pinned core-only from birth so a proof lane cannot widen it
+# unreviewed.
+check_surface_imports proofs/GoLeanProofs/Examples/SelectionSortProgram.lean \
+  '^import GoLean\.'
 # The fork/join pool witnesses (channels arc slice 2): statement-bearing,
 # Iris-free by chain — GoLean core + the surface + its own def-only
 # targets module (audit F4 split). NOT importable from Challenge (it
