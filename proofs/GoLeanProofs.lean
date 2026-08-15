@@ -123,6 +123,7 @@ import GoLeanProofs.Examples.WordCount.HarnessR
 -- BOUNDARIES — designation is arc-end work under user sign-off).
 import GoLeanProofs.Examples.HistogramProgram
 import GoLeanProofs.Examples.Histogram
+import GoLeanProofs.Examples.SortShared
 import GoLeanProofs.Examples.BubbleSortProgram
 import GoLeanProofs.Examples.BubbleSort
 import GoLeanProofs.Examples.TwoSumProgram
