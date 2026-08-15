@@ -143,6 +143,8 @@ import GoLeanProofs.Examples.SieveProgram
 import GoLeanProofs.Examples.Sieve
 import GoLeanProofs.Examples.MatMulProgram
 import GoLeanProofs.Examples.MatMul
+import GoLeanProofs.Examples.SliceStackProgram
+import GoLeanProofs.Examples.SliceStack
 import GoLeanProofs.Examples.SelectionSortProgram
 import GoLeanProofs.Examples.SelectionSort
 

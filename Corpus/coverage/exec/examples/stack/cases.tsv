@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+lifo-three	pushPopThree	10,20,30	ok	-	slices,indexing,multi_assign
+lifo-dup	pushPopThree	7,7,9	ok	-	slices,indexing,multi_assign
+lifo-extremes	pushPopThree	9223372036854775807,0,1	ok	-	slices,indexing,multi_assign
+peek-two	pushPeek	5,6	ok	-	slices,indexing
+empty-size	emptySize	-	ok	-	slices
+harness-empty	stack_harness_r	0,5,3	ok	-	slices,indexing,loops,if,arrays,multi_assign
+harness-one	stack_harness_r	1,42,1	ok	-	slices,indexing,loops,if,arrays,multi_assign
+harness-mid	stack_harness_r	6,50,3	ok	-	slices,indexing,loops,if,arrays,multi_assign
+harness-cap-drain	stack_harness_r	8,3,8	ok	-	slices,indexing,loops,if,arrays,multi_assign
+harness-k0	stack_harness_r	5,10,0	ok	-	slices,indexing,loops,if,arrays,multi_assign
+harness-kn	stack_harness_r	4,100,4	ok	-	slices,indexing,loops,if,arrays,multi_assign
+harness-kover	stack_harness_r	5,7,9	ok	-	slices,indexing,loops,if,arrays,multi_assign
+harness-maxseed	stack_harness_r	8,9223372036854775807,4	ok	-	slices,indexing,loops,if,arrays,multi_assign
