@@ -238,29 +238,10 @@ to instantiations) and the harness placement (`wcH_count_iter`/
 `rfl` segments are cheap and were never the storm's site; the
 composition + the conditioned state-massage discharges were. -/
 
-/-- Freshness of a heap tail from an address up. -/
-def DeadFrom (dead : Heap) (na : Nat) : Prop :=
-  ∀ x : Nat, na ≤ x → Heap.lookup dead (.base ⟨x⟩) = none
-
-theorem DeadFrom.push {dead : Heap} {na : Nat} {c : HeapCell}
-    (h : DeadFrom dead na) :
-    DeadFrom (dead ++ [(.base ⟨na⟩, c)]) (na + 1) := by
-  intro x hx
-  rw [GoLean.Surface.lookup_append_right (h x (by omega)),
-    GoLean.Surface.lookup_cons_ne
-      (GoLean.Surface.base_beq_false (by omega : na ≠ x))]
-  rfl
-
-theorem DeadFrom.push2 {dead : Heap} {na : Nat} {c c' : HeapCell}
-    (h : DeadFrom dead na) :
-    DeadFrom (dead ++ [(.base ⟨na⟩, c), (.base ⟨na + 1⟩, c')]) (na + 2) := by
-  intro x hx
-  rw [GoLean.Surface.lookup_append_right (h x (by omega)),
-    GoLean.Surface.lookup_cons_ne
-      (GoLean.Surface.base_beq_false (by omega : na ≠ x)),
-    GoLean.Surface.lookup_cons_ne
-      (GoLean.Surface.base_beq_false (by omega : na + 1 ≠ x))]
-  rfl
+-- PROMOTED to `GoLeanProofs/StepKit.lean` (Gallery Campaign kit-gap
+-- closure GAP-M2, 2026-08-15): `DeadFrom` and its two `push` lemmas
+-- are pure heap algebra and now live beside the P11 append/set kit;
+-- visible here via `open GoLean.Surface`.
 
 
 end GoLean.Examples.WordCount

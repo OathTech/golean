@@ -118,7 +118,12 @@ asserted: at the seal date every name has ≥3 external consumers
 * heap reasoning at a symbolic split (P11): `lookup_append_left`,
   `lookup_append_right`, `set_append_right`, `set_fresh`,
   `base_beq_false`, `lookup_cons_ne`, `set_singleton_self`,
-  `lookup_singleton_self`;
+  `lookup_singleton_self`, and the dead-tail freshness predicate
+  `DeadFrom` with `DeadFrom.push` / `DeadFrom.push2` (Gallery
+  Campaign GAP-M2, 2026-08-15 — lifted from the two per-example
+  copies in `Examples/WordCount/Machine.lean` and
+  `Examples/Histogram/Machine.lean`, both retrofitted in the lifting
+  commit);
 * the conditioned one-step glue (P1): `stepFnIter_one`,
   `stepFn_call_enter`, `stepFn_makeSlice_u64_step`,
   `stepFn_strict_apply`, `stepFn_store_step`, `stepFn_stmtOp_apply`,
@@ -231,6 +236,34 @@ theorem set_singleton_self {l : Loc} {c₀ c : HeapCell} :
 theorem lookup_singleton_self {l : Loc} {c : HeapCell} :
     Heap.lookup [(l, c)] l = some c := by
   simp [Heap.lookup]
+
+/-- Freshness of a heap tail from an address up: the symbolic dead-cell
+region past a placement's concrete front (GAP-M2 lift, 2026-08-15 —
+formerly a per-example copy in the wordcount and histogram machine
+shards). -/
+def DeadFrom (dead : Heap) (na : Nat) : Prop :=
+  ∀ x : Nat, na ≤ x → Heap.lookup dead (.base ⟨x⟩) = none
+
+/-- Appending one fresh cell at the boundary address preserves
+freshness one address up. -/
+theorem DeadFrom.push {dead : Heap} {na : Nat} {c : HeapCell}
+    (h : DeadFrom dead na) :
+    DeadFrom (dead ++ [(.base ⟨na⟩, c)]) (na + 1) := by
+  intro x hx
+  rw [lookup_append_right (h x (by omega)),
+    lookup_cons_ne (base_beq_false (by omega : na ≠ x))]
+  rfl
+
+/-- Appending two fresh cells at the boundary preserves freshness two
+addresses up (the per-iteration `$c1`/`$c2` shape). -/
+theorem DeadFrom.push2 {dead : Heap} {na : Nat} {c c' : HeapCell}
+    (h : DeadFrom dead na) :
+    DeadFrom (dead ++ [(.base ⟨na⟩, c), (.base ⟨na + 1⟩, c')]) (na + 2) := by
+  intro x hx
+  rw [lookup_append_right (h x (by omega)),
+    lookup_cons_ne (base_beq_false (by omega : na ≠ x)),
+    lookup_cons_ne (base_beq_false (by omega : na + 1 ≠ x))]
+  rfl
 
 /-! ## P1: the conditioned one-step glue -/
 

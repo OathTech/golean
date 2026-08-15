@@ -715,31 +715,10 @@ theorem lookup_frontXH_none (L : Nat) (sv qv siv civ : Int)
     base_beq_false (by omega : (24 : Nat) ≠ x),
     Bool.false_eq_true, if_false]
 
-/-- Freshness of a heap tail from an address up (the wordcount
-`DeadFrom`, re-derived — GAP-M2: this and its two `push` lemmas are
-kit-shaped and live in `Examples/WordCount/Machine.lean`). -/
-def DeadFrom (dead : Heap) (na : Nat) : Prop :=
-  ∀ x : Nat, na ≤ x → Heap.lookup dead (.base ⟨x⟩) = none
-
-theorem DeadFrom.push {dead : Heap} {na : Nat} {c : HeapCell}
-    (h : DeadFrom dead na) :
-    DeadFrom (dead ++ [(.base ⟨na⟩, c)]) (na + 1) := by
-  intro x hx
-  rw [GoLean.Surface.lookup_append_right (h x (by omega)),
-    GoLean.Surface.lookup_cons_ne
-      (GoLean.Surface.base_beq_false (by omega : na ≠ x))]
-  rfl
-
-theorem DeadFrom.push2 {dead : Heap} {na : Nat} {c c' : HeapCell}
-    (h : DeadFrom dead na) :
-    DeadFrom (dead ++ [(.base ⟨na⟩, c), (.base ⟨na + 1⟩, c')]) (na + 2) := by
-  intro x hx
-  rw [GoLean.Surface.lookup_append_right (h x (by omega)),
-    GoLean.Surface.lookup_cons_ne
-      (GoLean.Surface.base_beq_false (by omega : na ≠ x)),
-    GoLean.Surface.lookup_cons_ne
-      (GoLean.Surface.base_beq_false (by omega : na + 1 ≠ x))]
-  rfl
+-- GAP-M2 CLOSED (kit-gap closure, 2026-08-15): the re-derived
+-- `DeadFrom` + `push`/`push2` copies this module carried as
+-- gap-witness code are DELETED; the kit forms live in
+-- `GoLeanProofs/StepKit.lean` (visible via `open GoLean.Surface`).
 
 /-! ## The pinned program and the entry equation -/
 

@@ -38,7 +38,9 @@ update the matching docstring in the same commit, with the reason.
 
 namespace GoLean.Iris.Audit
 
-/-! ## StepKit — the conditioned step-glue kit (23 public lemmas) -/
+/-! ## StepKit — the conditioned step-glue kit (25 public lemmas;
++2 in the GAP-M2 lift, 2026-08-15: `DeadFrom.push`/`DeadFrom.push2` —
+`DeadFrom` itself is a def, unpinned like the other vocabulary defs) -/
 
 /-- info: 'GoLean.Surface.lookup_append_left' depends on axioms: [propext] -/
 #guard_msgs in #print axioms GoLean.Surface.lookup_append_left
@@ -56,6 +58,10 @@ namespace GoLean.Iris.Audit
 #guard_msgs in #print axioms GoLean.Surface.set_singleton_self
 /-- info: 'GoLean.Surface.lookup_singleton_self' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.lookup_singleton_self
+/-- info: 'GoLean.Surface.DeadFrom.push' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.DeadFrom.push
+/-- info: 'GoLean.Surface.DeadFrom.push2' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.DeadFrom.push2
 /-- info: 'GoLean.Surface.stepFnIter_one' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.stepFnIter_one
 /-- info: 'GoLean.Surface.stepFn_call_enter' depends on axioms: [propext, Quot.sound] -/
