@@ -151,6 +151,8 @@ import GoLeanProofs.Examples.StringReverseProgram
 import GoLeanProofs.Examples.StringReverse
 import GoLeanProofs.Examples.SteinProgram
 import GoLeanProofs.Examples.Stein
+import GoLeanProofs.Examples.FibMemoProgram
+import GoLeanProofs.Examples.FibMemo
 import GoLeanProofs.Examples.SelectionSortProgram
 import GoLeanProofs.Examples.SelectionSort
 

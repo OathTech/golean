@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+zero	fib	0	ok	-	maps,if,ints
+one	fib	1	ok	-	maps,if,ints
+two	fib	2	ok	-	maps,if,ints
+ten	fib	10	ok	-	maps,if,ints
+thirty	fib	30	ok	-	maps,if,ints
+memosize-zero	fibMemoSize	0	ok	-	maps,if,ints,range,loops
+memosize-one	fibMemoSize	1	ok	-	maps,if,ints,range,loops
+memosize-ten	fibMemoSize	10	ok	-	maps,if,ints,range,loops
+harness-one	fibmemo_harness	1	ok	-	maps,if,ints
+harness-thirty	fibmemo_harness	30	ok	-	maps,if,ints

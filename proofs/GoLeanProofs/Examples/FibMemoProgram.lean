@@ -1,0 +1,231 @@
+import GoLean.GoCore.Syntax
+
+/-!
+# The `fibmemo` example — the frontend's lowering, pinned
+(gallery campaign G1, guardrails wave, 2026-08-15)
+
+`fibmemoLowered` is the native frontend's ACTUAL lowering of the
+canonical corpus source (`Corpus/coverage/exec/examples/fibmemo/main.go`,
+differentially green against `go run`), pinned by `scripts/check-golden`
+against `baselines/golden/fibmemo-lowered.repr`. THIS DEF IS GENERATED from
+that repr (the literal below IS the repr text, byte-identical under
+`repr` — the same both-links story as the other golden pins);
+regenerate rather than hand-edit.
+
+Pure syntax module: no Iris import, safe for statement-side use.
+-/
+
+namespace GoLean.Examples.FibMemo
+
+open GoLean GoLean.GoCore
+
+/-- The frontend's lowering of the `fibmemo` subject, verbatim
+(`scripts/check-golden` pins it). -/
+def fibmemoLowered : Program :=
+  { typeDefs := #[({ key := "struct{}" }, GoLean.GoCore.TypeDef.struct #[])],
+    funcs := #[{ id := { key := "fibMemo" },
+                 args := #[{ id := "n", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                           { id := "memo",
+                             typ := GoLean.GoCore.Ty.map
+                                      (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                      (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) }],
+                 results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
+                 body := GoLean.GoCore.Stmt.block
+                           #[]
+                           #[GoLean.GoCore.Stmt.ifThenElse
+                               (GoLean.GoCore.Expr.lessCmp
+                                 (GoLean.GoCore.Expr.var "n")
+                                 (GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.uint64)))
+                               (GoLean.GoCore.Stmt.block
+                                 #[]
+                                 #[GoLean.GoCore.Stmt.seqn
+                                     #[GoLean.GoCore.Stmt.assign
+                                         (GoLean.GoCore.Assignee.var "$res0")
+                                         (GoLean.GoCore.Expr.var "n"),
+                                       GoLean.GoCore.Stmt.returnStmt]])
+                               (GoLean.GoCore.Stmt.seqn #[]),
+                             GoLean.GoCore.Stmt.block
+                               #[]
+                               #[GoLean.GoCore.Stmt.seqn
+                                   #[GoLean.GoCore.Stmt.initialization
+                                       { id := "v", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                     GoLean.GoCore.Stmt.initialization { id := "ok", typ := GoLean.GoCore.Ty.bool },
+                                     GoLean.GoCore.Stmt.mapLookup
+                                       (GoLean.GoCore.Assignee.var "v")
+                                       (GoLean.GoCore.Assignee.var "ok")
+                                       (GoLean.GoCore.Expr.var "memo")
+                                       (GoLean.GoCore.Expr.var "n")
+                                       (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                       (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))],
+                                 GoLean.GoCore.Stmt.ifThenElse
+                                   (GoLean.GoCore.Expr.var "ok")
+                                   (GoLean.GoCore.Stmt.block
+                                     #[]
+                                     #[GoLean.GoCore.Stmt.seqn
+                                         #[GoLean.GoCore.Stmt.assign
+                                             (GoLean.GoCore.Assignee.var "$res0")
+                                             (GoLean.GoCore.Expr.var "v"),
+                                           GoLean.GoCore.Stmt.returnStmt]])
+                                   (GoLean.GoCore.Stmt.seqn #[])],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$c0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                 GoLean.GoCore.Stmt.call
+                                   #[GoLean.GoCore.Assignee.var "$c0"]
+                                   { key := "fibMemo" }
+                                   #[GoLean.GoCore.Expr.sub
+                                       (GoLean.GoCore.Expr.var "n")
+                                       (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.uint64)),
+                                     GoLean.GoCore.Expr.var "memo"]],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$c1", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                 GoLean.GoCore.Stmt.call
+                                   #[GoLean.GoCore.Assignee.var "$c1"]
+                                   { key := "fibMemo" }
+                                   #[GoLean.GoCore.Expr.sub
+                                       (GoLean.GoCore.Expr.var "n")
+                                       (GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.uint64)),
+                                     GoLean.GoCore.Expr.var "memo"]],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "r", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                 GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.var "r")
+                                   (GoLean.GoCore.Expr.add
+                                     (GoLean.GoCore.Expr.var "$c0")
+                                     (GoLean.GoCore.Expr.var "$c1"))],
+                             GoLean.GoCore.Stmt.mapAssign
+                               (GoLean.GoCore.Expr.var "memo")
+                               (GoLean.GoCore.Expr.var "n")
+                               (GoLean.GoCore.Expr.var "r")
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)),
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.var "$res0")
+                                   (GoLean.GoCore.Expr.var "r"),
+                                 GoLean.GoCore.Stmt.returnStmt]],
+                 variadic := false,
+                 wrapper := false },
+               { id := { key := "fib" },
+                 args := #[{ id := "n", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
+                 results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
+                 body := GoLean.GoCore.Stmt.block
+                           #[]
+                           #[GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$c2",
+                                     typ := GoLean.GoCore.Ty.map
+                                              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) },
+                                 GoLean.GoCore.Stmt.makeMap
+                                   (GoLean.GoCore.Assignee.var "$c2")
+                                   (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                   (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                   none],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "memo",
+                                     typ := GoLean.GoCore.Ty.map
+                                              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) },
+                                 GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.var "memo")
+                                   (GoLean.GoCore.Expr.var "$c2")],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$c3", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                 GoLean.GoCore.Stmt.call
+                                   #[GoLean.GoCore.Assignee.var "$c3"]
+                                   { key := "fibMemo" }
+                                   #[GoLean.GoCore.Expr.var "n", GoLean.GoCore.Expr.var "memo"]],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.var "$res0")
+                                   (GoLean.GoCore.Expr.var "$c3"),
+                                 GoLean.GoCore.Stmt.returnStmt]],
+                 variadic := false,
+                 wrapper := false },
+               { id := { key := "fibMemoSize" },
+                 args := #[{ id := "n", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
+                 results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
+                 body := GoLean.GoCore.Stmt.block
+                           #[]
+                           #[GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$c4",
+                                     typ := GoLean.GoCore.Ty.map
+                                              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) },
+                                 GoLean.GoCore.Stmt.makeMap
+                                   (GoLean.GoCore.Assignee.var "$c4")
+                                   (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                   (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                   none],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "memo",
+                                     typ := GoLean.GoCore.Ty.map
+                                              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) },
+                                 GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.var "memo")
+                                   (GoLean.GoCore.Expr.var "$c4")],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$cr0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                 GoLean.GoCore.Stmt.call
+                                   #[GoLean.GoCore.Assignee.var "$cr0"]
+                                   { key := "fibMemo" }
+                                   #[GoLean.GoCore.Expr.var "n", GoLean.GoCore.Expr.var "memo"]],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "size", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                 GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.var "size")
+                                   (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64))],
+                             GoLean.GoCore.Stmt.mapRange
+                               none
+                               none
+                               (GoLean.GoCore.Expr.var "memo")
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Stmt.block
+                                 #[]
+                                 #[GoLean.GoCore.Stmt.assign
+                                     (GoLean.GoCore.Assignee.var "size")
+                                     (GoLean.GoCore.Expr.add
+                                       (GoLean.GoCore.Expr.var "size")
+                                       (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.uint64)))]),
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.var "$res0")
+                                   (GoLean.GoCore.Expr.var "size"),
+                                 GoLean.GoCore.Stmt.returnStmt]],
+                 variadic := false,
+                 wrapper := false },
+               { id := { key := "fibmemo_harness" },
+                 args := #[{ id := "n", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
+                 results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
+                 body := GoLean.GoCore.Stmt.block
+                           #[]
+                           #[GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$c5", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                 GoLean.GoCore.Stmt.call
+                                   #[GoLean.GoCore.Assignee.var "$c5"]
+                                   { key := "fib" }
+                                   #[GoLean.GoCore.Expr.var "n"]],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.var "$res0")
+                                   (GoLean.GoCore.Expr.var "$c5"),
+                                 GoLean.GoCore.Stmt.returnStmt]],
+                 variadic := false,
+                 wrapper := false }],
+    methods := #[],
+    globals := #[],
+    methodSets := #[{ key := "struct{}", coverage := GoLean.GoCore.MethodSetCoverage.full }] }
+
+end GoLean.Examples.FibMemo
