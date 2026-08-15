@@ -26,8 +26,8 @@ overstates.
 | goal | done | remaining | notes |
 |---|---|---|---|
 | G0 (opening kit phase) | 5 of 5 mandatory units; (d) assessed → deferred to its pulling G1 example; **item 4 (flagship rule) DISCHARGED** by G1.1 | 0 — G0 CLOSED | see `g0.md`; the flagship's kit-gap report is in `g1.md` |
-| G1 (gallery to twenty) | **1 of ≥13** new COMPLETE entries (`histogram`, the flagship — all 8 checklist items met; also discharges G0 item 4); **+ the KIT-GAP CLOSURE unit (G1.1-KG): all six recorded gaps CLOSED**, 6 commits, ~900–950 of the ~1,050 per-successor gap-witness lines eliminated | ≥12 | see `g1.md`; the KIT-GAP list there is the flagship's acceptance report, closed in full by G1.1-KG |
-| G2 (extensions) | 0 of ≥3 | ≥3 of E1–E4 | |
+| G1 (gallery to twenty) | **1 of ≥13** new COMPLETE entries (`histogram`, the flagship); **+ the KIT-GAP CLOSURE unit (G1.1-KG): all six gaps CLOSED**; **+ the GUARDRAILS WAVE (G1.2): the CORPUS HALF of 15 further examples landed** — corpus rows, golden pins, `*Program` modules and stub proof roots, one commit each | ≥12 COMPLETE (the 15 wave entries are landed GUARDRAILS, NOT COMPLETE entries — each needs its headline) | see `g1.md`; the wave table is there, the extension pull-list in `g2.md` |
+| G2 (extensions) | 0 BUILT; **the PULL-LIST is established and probe-grounded** (`g2.md`) | E1 + E3 to build (both have landed consumers); a THIRD pulled extension must be found | **HONEST FINDING: the G1 set pulls TWO of the four, not three.** E4 is a NON-PULL — `strrev` landed E4-independent, 12 rows PASS; E2 is a reasoned NON-PULL (observation is by return, not printing). Operator call recorded in `g2.md` |
 | G3 (evidence dossiers) | 0 | register = denominator, fixed at dossier-lane start | register lives in `g3.md`, **enumerated by the dossier lane's first commit** (process amendment `ea7c689a`: the register is that lane's deliverable, not G0's) |
 | G4 (infrastructure debt) | 0 of 4 | 4 | |
 
