@@ -3,8 +3,6 @@ import GoLeanProofs.EntryEq
 import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.StepKit
-import GoLeanProofs.Frame.Transfer
-import GoLeanProofs.Frame.RenameId
 import GoLeanProofs.Laws.StmtOps
 import GoLeanProofs.Examples.WordCount.Family
 import GoLeanProofs.Examples.Targets

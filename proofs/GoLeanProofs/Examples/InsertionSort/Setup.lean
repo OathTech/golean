@@ -3,10 +3,9 @@ import GoLeanProofs.EntryEq
 import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.StepKit
-import GoLeanProofs.Frame.Transfer
-import GoLeanProofs.Frame.RenameId
 import GoLeanProofs.Laws.StmtOps
 import GoLeanProofs.Examples.InsertionSort.Family
+import GoLeanProofs.Examples.Targets
 
 /-!
 # InsertionSort — Setup
@@ -24,7 +23,6 @@ namespace GoLean.Examples.InsertionSort
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.Surface
 open GoLean.SliceMem
-open GoLean.Frame
 
 set_option maxRecDepth 1000000
 set_option linter.unusedSimpArgs false

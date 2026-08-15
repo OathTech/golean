@@ -1,11 +1,6 @@
-import GoLeanProofs.Examples.WordCountProgram
 import GoLeanProofs.SliceMem
-import GoLeanProofs.FuelMeasure
-import GoLeanProofs.StepKit
-import GoLeanProofs.Frame.Transfer
-import GoLeanProofs.Frame.RenameId
-import GoLeanProofs.Laws.StmtOps
 import GoLeanProofs.Examples.WordCount.Empty
+import GoLeanProofs.Examples.Targets
 
 /-!
 # WordCount — Family
@@ -21,7 +16,7 @@ the example's design.
 
 namespace GoLean.Examples.WordCount
 
-open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.Surface
+open GoLean GoLean.GoCore GoLean.GoCore.Machine
 open GoLean.SliceMem
 
 set_option maxRecDepth 1000000
