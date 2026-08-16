@@ -51,14 +51,23 @@ func cmdBatch(seed uint64, tag string, n int) []string {
 func finish(ctx context.Context, c *Cluster, cmds []string, minClaims int) error {
 	waitErr := c.waitAllApplied(ctx, cmds)
 	c.stopAll()
-	if v := c.checkSafety(cmds, minClaims); len(v) > 0 {
+	if v := c.checkSafety(cmds); len(v) > 0 {
 		msg := fmt.Sprintf("SAFETY VIOLATIONS:\n  %s", strings.Join(v, "\n  "))
 		if waitErr != nil {
 			msg += fmt.Sprintf("\n  (and completion wait failed: %v)", waitErr)
 		}
 		return fmt.Errorf("%s", msg)
 	}
-	return waitErr
+	if waitErr != nil {
+		return waitErr
+	}
+	// The exercise floor is a COVERAGE assertion about the scenario —
+	// reported distinctly from safety, never under its banner
+	// (delta-review finding: a floor shortfall is not a raft violation).
+	if n := c.claimCount(); n < minClaims {
+		return fmt.Errorf("EXERCISE FLOOR SHORTFALL: %d leader claim(s) observed, scenario requires >= %d (raft violated nothing; the scenario under-exercised S1)", n, minClaims)
+	}
+	return nil
 }
 
 // basic: 3 nodes, no injected chaos (delivery order is still arbitrary —
@@ -103,6 +112,11 @@ func runChaos(ctx context.Context, seed uint64) error {
 						rest = append(rest, id)
 					}
 				}
+				// CALIBRATION COUPLING (delta-review): the floor of 2
+				// depends on the isolated majority electing within this
+				// window under the scenario's drop rate; measured runs
+				// consume up to 4 campaign rounds of the ~150ms. Raising
+				// DropProb or trimming the window can flake the floor.
 				c.setPartition([][]uint64{{st.Lead}, rest})
 				time.Sleep(150 * time.Millisecond)
 				c.setPartition(nil)
@@ -137,14 +151,17 @@ func driveConcurrent(ctx context.Context, c *Cluster, seed uint64, perNode int, 
 	}
 	wg.Wait()
 	close(errs)
+	// Join the barrier before ANY exit, including the error path — the
+	// chaos pulse must not outlive the run (delta-review finding: the
+	// early return leaked it for up to ~2s).
+	if barrier != nil {
+		<-barrier
+	}
 	for err := range errs {
 		if err != nil {
 			c.stopAll()
 			return err
 		}
-	}
-	if barrier != nil {
-		<-barrier
 	}
 	c.setNet(healNet)
 	return finish(ctx, c, all, minClaims)
@@ -284,6 +301,16 @@ func runCrashRestart(ctx context.Context, seed uint64) error {
 		}
 		st := c.node(victim).rn.Status()
 		if st.RaftState == raft.StateLeader {
+			// Delta-review strengthening: leading proves quorum under
+			// the RESTORED config; also assert the config is the full
+			// cluster (a quorum-containing subset would still win).
+			voters := st.Config.Voters[0]
+			for _, id := range c.ids() {
+				if _, ok := voters[id]; !ok {
+					c.stopAll()
+					return fmt.Errorf("restarted node %d leads with wrong config: voters %v missing node %d", victim, voters, id)
+				}
+			}
 			break
 		}
 		if st.Lead != 0 && st.Lead != victim {

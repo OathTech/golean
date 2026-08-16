@@ -63,10 +63,10 @@ type Cluster struct {
 }
 
 type Node struct {
-	id      uint64
-	c       *Cluster
-	rn      raft.Node
-	storage *raft.MemoryStorage
+	id       uint64
+	c        *Cluster
+	rn       raft.Node
+	storage  *raft.MemoryStorage
 	inbox    chan *raftpb.Message
 	stopCh   chan struct{}
 	doneCh   chan struct{}
@@ -184,6 +184,12 @@ func (c *Cluster) recordClaim(id, term uint64) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.claims = append(c.claims, LeaderClaim{NodeID: id, Term: term})
+}
+
+func (c *Cluster) claimCount() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return len(c.claims)
 }
 
 func (c *Cluster) send(msgs []*raftpb.Message) {
@@ -381,10 +387,19 @@ func (c *Cluster) restartNode(id uint64) {
 	old.mu.Unlock()
 
 	if confState == nil {
+		// Loud by design: a victim crashed before applying the bootstrap
+		// conf changes has no membership to restore; no current scenario
+		// can produce this (proposals only start after a leader commits).
 		panic(fmt.Sprintf("node %d: restart with no recorded ConfState (bootstrap conf changes not applied?)", id))
 	}
 	if _, err := old.storage.CreateSnapshot(appliedIndex, confState, nil); err != nil {
-		panic(fmt.Sprintf("node %d: persisting ConfState at index %d: %v", id, appliedIndex, err))
+		if err == raft.ErrSnapOutOfDate {
+			// A prior restart already persisted a snapshot at this
+			// applied index (same node restarted with no progress in
+			// between) — the ConfState is already durable; proceed.
+		} else {
+			panic(fmt.Sprintf("node %d: persisting ConfState at index %d: %v", id, appliedIndex, err))
+		}
 	}
 
 	nd := c.newNode(id)
@@ -417,11 +432,11 @@ func (c *Cluster) stopAll() {
 
 // checkSafety returns a list of violation descriptions (empty = pass).
 //
-//	S1 Election Safety   — at most one leader per term; plus an
-//	                       EXERCISE FLOOR: at least minClaims leader
-//	                       claims must have been observed, so a scenario
-//	                       that never exercises elections fails loudly
-//	                       instead of passing vacuously.
+//	S1 Election Safety   — at most one leader per term. (The
+//	                       per-scenario exercise floor lives in finish,
+//	                       not here: it is a coverage assertion about
+//	                       the scenario, not a safety property of raft,
+//	                       and must not be reported as one.)
 //	S2 Log/Apply Agreement — no two nodes apply different (term, data)
 //	                       at the same raft index (State Machine Safety,
 //	                       observed at the apply boundary).
@@ -433,7 +448,7 @@ func (c *Cluster) stopAll() {
 //	S4 Completion        — every node applied every driven command.
 //	                       Run even when the completion wait timed out,
 //	                       so a timeout cannot mask a safety violation.
-func (c *Cluster) checkSafety(allCmds []string, minClaims int) []string {
+func (c *Cluster) checkSafety(allCmds []string) []string {
 	var violations []string
 
 	// S1: at most one leader per term.
@@ -447,10 +462,6 @@ func (c *Cluster) checkSafety(allCmds []string, minClaims int) []string {
 				fmt.Sprintf("S1 election safety: term %d claimed by both node %d and node %d", cl.Term, prev, cl.NodeID))
 		}
 		leaderOf[cl.Term] = cl.NodeID
-	}
-	if len(claims) < minClaims {
-		violations = append(violations,
-			fmt.Sprintf("S1 exercise floor: only %d leader claim(s) observed, scenario requires >= %d", len(claims), minClaims))
 	}
 
 	// S3 anomaly channel (recorded at apply time).

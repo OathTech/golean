@@ -29,10 +29,12 @@ is NOT reproduced — that residual nondeterminism is the point).
 ## The executable specification (`checkSafety`)
 
 - **S1 Election Safety** — at most one leader per term (from the stream
-  of "node N observed itself leader at term T" claims), PLUS a
-  per-scenario **exercise floor**: at least `minClaims` claims must
-  have been observed, so a scenario that never exercises elections
-  fails loudly instead of passing vacuously (audit-added). Known
+  of "node N observed itself leader at term T" claims). Each scenario
+  additionally carries an **exercise floor** (at least `minClaims`
+  claims observed), reported as a distinct `EXERCISE FLOOR SHORTFALL`
+  — it is a coverage assertion about the scenario, not a safety
+  property of raft, and is never banner'd as a safety violation
+  (audit-added; banner split per delta-review). Known
   masking-direction limitation: claims exist only for Readys the app
   loop consumed before `stopAll`, so a leadership acquired in the
   final window can go unrecorded — this can only hide a violation,
@@ -105,5 +107,12 @@ stream.)
    voters, is silently unpromotable, and can never campaign; the
    harness persists it via `CreateSnapshot(appliedIndex, confState,
    nil)` before restart, and `crash-restart` now asserts the recovered
-   node can regain leadership and commit. The machine twin's storage
-   model owes the same invariant.
+   node regains leadership WITH the full voter set and commits. The
+   machine twin's storage model owes the same invariant.
+
+Known coverage gap (delta-review observation, future family member):
+the crash-restart victim is stopped at a quiescent point, so
+`applied == commit` at restart and `Config.Applied` has nothing to
+re-slice — the committed-but-unapplied crash state its anomaly guard
+polices is never produced. A "crash mid-drive" scenario would make
+that guard live.
