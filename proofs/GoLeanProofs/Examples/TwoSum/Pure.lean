@@ -44,49 +44,40 @@ set_option maxRecDepth 1000000
 def tsFamily (n seed : Nat) : List Int :=
   (List.range n).map (fun i => (((seed + i) % 2 ^ 64 : Nat) : Int))
 
-theorem tsFamily_length (n seed : Nat) : (tsFamily n seed).length = n := by
-  simp [tsFamily]
+-- GAP-P2b CLOSED (WP arc s1 lift 2): `tsFamily` IS `SliceMem.familyF
+-- id` (definitionally), so the six re-derived facts below are
+-- one-line delegations to the kit family; the ~40 lines of local
+-- proofs are deleted.
+
+theorem tsFamily_length (n seed : Nat) : (tsFamily n seed).length = n :=
+  familyF_length id n seed
 
 theorem tsFamily_range (n seed : Nat) :
-    ∀ v ∈ tsFamily n seed, 0 ≤ v ∧ v < 2 ^ 64 := by
-  intro v hv
-  simp only [tsFamily, List.mem_map, List.mem_range] at hv
-  obtain ⟨i, -, rfl⟩ := hv
-  have : (seed + i) % 2 ^ 64 < 2 ^ 64 := Nat.mod_lt _ (by omega)
-  omega
+    ∀ v ∈ tsFamily n seed, 0 ≤ v ∧ v < 2 ^ 64 :=
+  familyF_range id n seed
 
 /-- The family prefix with a zero tail stays in uint64 range. -/
 theorem tsFamilyZ_range {seed i m : Nat} :
     ∀ v ∈ tsFamily i seed ++ List.replicate (m - i) (0 : Int),
-      0 ≤ v ∧ v < 2 ^ 64 := by
-  intro v hv
-  rcases List.mem_append.mp hv with hv | hv
-  · exact tsFamily_range i seed v hv
-  · rcases List.mem_replicate.mp hv with ⟨-, rfl⟩
-    omega
+      0 ≤ v ∧ v < 2 ^ 64 :=
+  familyFZ_range (f := id)
 
 theorem tsFamily_succ (i seed : Nat) :
     tsFamily (i + 1) seed
-      = tsFamily i seed ++ [(((seed + i) % 2 ^ 64 : Nat) : Int)] := by
-  simp [tsFamily, List.range_succ]
+      = tsFamily i seed ++ [(((seed + i) % 2 ^ 64 : Nat) : Int)] :=
+  familyF_succ id i seed
 
 /-- One setup store advances the family prefix. -/
 theorem tsFamily_set {n seed i : Nat} (hi : i < n) :
     (tsFamily i seed ++ List.replicate (n - i) 0).set i
         (((seed + i) % 2 ^ 64 : Nat) : Int)
-      = tsFamily (i + 1) seed ++ List.replicate (n - (i + 1)) 0 := by
-  have hlen : (tsFamily i seed).length = i := tsFamily_length i seed
-  have hnm : n - i = (n - (i + 1)) + 1 := by omega
-  rw [List.set_append_right _ _ (by omega), hlen, Nat.sub_self, hnm,
-    List.replicate_succ, List.set_cons_zero, tsFamily_succ]
-  simp
+      = tsFamily (i + 1) seed ++ List.replicate (n - (i + 1)) 0 :=
+  familyF_set (f := id) hi
 
 /-- The family's element at an in-range index. -/
 theorem tsFamily_getD {n seed m : Nat} (hm : m < n) :
-    (tsFamily n seed).getD m 0 = (((seed + m) % 2 ^ 64 : Nat) : Int) := by
-  rw [tsFamily, List.getD_eq_getElem?_getD, List.getElem?_map,
-    List.getElem?_eq_getElem (by simpa using hm)]
-  simp
+    (tsFamily n seed).getD m 0 = (((seed + m) % 2 ^ 64 : Nat) : Int) :=
+  familyF_getD (f := id) hm
 
 /-! ## The copy-loop invariant (the kit's `prefixPad` at `tsFamily`) -/
 

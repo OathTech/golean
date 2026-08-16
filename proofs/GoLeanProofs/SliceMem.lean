@@ -711,4 +711,282 @@ theorem prefixPad_full {fam : Nat → Nat → List Int}
       = fam n seed ++ List.replicate (cap - (fam n seed).length) 0 := by
   rw [prefixPad, hlen]
 
+/-! ## The generic setup families (WP arc s1 lift 2, 2026-08-16)
+
+Three layers, each pre-drafted in the campaign ledger (g1.md, the
+lane-B kit-gap lists + GAP-P2b/c/d):
+
+* `familyZ (g : Nat → Int) (n)` — the fully generic map-over-range
+  family, `g` the per-index element. The SIGNED carrier (kadane's
+  `kadFamVal` family, dotprod's unwrapped `dpFamB`) and the base the
+  other two layers' facts delegate to. `padZ` is its zero-padded
+  prefix (an `Int`-elementwise `prefixPad`), with the two-store
+  mid-list helper (`padZ_set_any`) GAP-P2c asked for.
+* `familyF (f : Nat → Nat) (n seed)` — the drafted uint64 shape
+  `v[i] = (seed + f i) % 2^64`: `familyMod k = familyF (· % k)`,
+  twosum/dotprod-A/reverse/minmax/stack/queue = `familyF id` (the
+  six-affine-copy family, GAP-P2b), rle = `familyF (· / 3)`, dedup =
+  `familyF (· / 2)` (GAP-P2d).
+* `familyOf (step : Nat → Nat) (n seed)` — the iterated-step family
+  (`iterStep`); the sorts' LCG becomes an instance. -/
+
+/-- The fully generic setup family: `fam[i] = g i`. -/
+def familyZ (g : Nat → Int) (n : Nat) : List Int :=
+  (List.range n).map g
+
+theorem familyZ_length (g : Nat → Int) (n : Nat) :
+    (familyZ g n).length = n := by
+  simp [familyZ]
+
+/-- Membership characterization — the generic scaffold every
+family-specific range fact discharges through. -/
+theorem familyZ_mem {g : Nat → Int} {n : Nat} {v : Int}
+    (hv : v ∈ familyZ g n) : ∃ i, i < n ∧ v = g i := by
+  simp only [familyZ, List.mem_map, List.mem_range] at hv
+  obtain ⟨i, hi, rfl⟩ := hv
+  exact ⟨i, hi, rfl⟩
+
+theorem familyZ_succ (g : Nat → Int) (i : Nat) :
+    familyZ g (i + 1) = familyZ g i ++ [g i] := by
+  simp [familyZ, List.range_succ]
+
+/-- One setup store advances the family prefix. -/
+theorem familyZ_set {g : Nat → Int} {n i : Nat} (hi : i < n) :
+    (familyZ g i ++ List.replicate (n - i) 0).set i (g i)
+      = familyZ g (i + 1) ++ List.replicate (n - (i + 1)) 0 := by
+  have hlen : (familyZ g i).length = i := familyZ_length g i
+  have hnm : n - i = (n - (i + 1)) + 1 := by omega
+  rw [List.set_append_right _ _ (by omega), hlen, Nat.sub_self, hnm,
+    List.replicate_succ, List.set_cons_zero, familyZ_succ]
+  simp
+
+/-- The family's element at an in-range index. -/
+theorem familyZ_getD {g : Nat → Int} {n m : Nat} (hm : m < n) :
+    (familyZ g n).getD m 0 = g m := by
+  rw [familyZ, List.getD_eq_getElem?_getD, List.getElem?_map,
+    List.getElem?_eq_getElem (by simpa using hm)]
+  simp
+
+/-- The zero-padded prefix of a generic family (the `Int`-elementwise
+`prefixPad`). -/
+def padZ (g : Nat → Int) (cap m : Nat) : List Int :=
+  familyZ g m ++ List.replicate (cap - m) 0
+
+theorem padZ_zero (g : Nat → Int) (cap : Nat) :
+    padZ g cap 0 = List.replicate cap 0 := by
+  simp [padZ, familyZ]
+
+theorem padZ_length {g : Nat → Int} {cap m : Nat} (hm : m ≤ cap) :
+    (padZ g cap m).length = cap := by
+  rw [padZ, List.length_append, familyZ_length, List.length_replicate]
+  omega
+
+/-- One padded-prefix store advances the prefix. -/
+theorem padZ_set {g : Nat → Int} {cap m : Nat} (hm : m < cap) :
+    (padZ g cap m).set m (g m) = padZ g cap (m + 1) := by
+  exact familyZ_set hm
+
+/-- Storing an ARBITRARY value at the prefix boundary — the two-store
+mid-list helper (GAP-P2c): the first store of an odd-index pair lands
+`w`, the second rewrites it to `g m` (`padZ_set` from the mid list
+via `List.set_set`, or directly by this at `w := g m`). -/
+theorem padZ_set_any {g : Nat → Int} {cap m : Nat} (w : Int)
+    (hm : m < cap) :
+    (padZ g cap m).set m w
+      = familyZ g m ++ (w :: List.replicate (cap - (m + 1)) 0) := by
+  have hlen : (familyZ g m).length = m := familyZ_length g m
+  have hnm : cap - m = (cap - (m + 1)) + 1 := by omega
+  rw [padZ, List.set_append_right _ _ (by omega), hlen, Nat.sub_self, hnm,
+    List.replicate_succ, List.set_cons_zero]
+
+/-- Every member is in range when every element is (the generic range
+transport for `padZ` — zero must satisfy the bound, as it does for
+every landed window). -/
+theorem padZ_range {g : Nat → Int} {cap m : Nat} {lo hi : Int}
+    (hg : ∀ i, i < m → lo ≤ g i ∧ g i ≤ hi)
+    (h0 : lo ≤ 0 ∧ (0 : Int) ≤ hi) :
+    ∀ v ∈ padZ g cap m, lo ≤ v ∧ v ≤ hi := by
+  intro v hv
+  rcases List.mem_append.mp hv with hv | hv
+  · obtain ⟨i, hi', rfl⟩ := familyZ_mem hv
+    exact hg i hi'
+  · rcases List.mem_replicate.mp hv with ⟨-, rfl⟩
+    exact h0
+
+/-! ### `familyF` — the index-function uint64 family (the exact
+drafted shape, g1.md §THE KIT-GAP LIST (twosum)/(rle)) -/
+
+/-- The index-function setup family: `fam[i] = (seed + f i) % 2^64`. -/
+def familyF (f : Nat → Nat) (n seed : Nat) : List Int :=
+  (List.range n).map (fun i => (((seed + f i) % 2 ^ 64 : Nat) : Int))
+
+/-- `familyMod` IS the `· % k` instance (definitional). -/
+theorem familyMod_eq_familyF (k : Nat) : familyMod k = familyF (· % k) :=
+  rfl
+
+theorem familyF_length (f : Nat → Nat) (n seed : Nat) :
+    (familyF f n seed).length = n := by
+  simp [familyF]
+
+theorem familyF_range (f : Nat → Nat) (n seed : Nat) :
+    ∀ v ∈ familyF f n seed, 0 ≤ v ∧ v < 2 ^ 64 := by
+  intro v hv
+  obtain ⟨i, -, rfl⟩ := familyZ_mem (g := fun i =>
+    (((seed + f i) % 2 ^ 64 : Nat) : Int)) hv
+  have : (seed + f i) % 2 ^ 64 < 2 ^ 64 := Nat.mod_lt _ (by omega)
+  omega
+
+/-- The family prefix with a zero tail stays in uint64 range. -/
+theorem familyFZ_range {f : Nat → Nat} {n seed i : Nat} :
+    ∀ v ∈ familyF f i seed ++ List.replicate (n - i) (0 : Int),
+      0 ≤ v ∧ v < 2 ^ 64 := by
+  intro v hv
+  rcases List.mem_append.mp hv with hv | hv
+  · exact familyF_range f i seed v hv
+  · rcases List.mem_replicate.mp hv with ⟨-, rfl⟩
+    omega
+
+theorem familyF_succ (f : Nat → Nat) (i seed : Nat) :
+    familyF f (i + 1) seed
+      = familyF f i seed ++ [(((seed + f i) % 2 ^ 64 : Nat) : Int)] :=
+  familyZ_succ _ i
+
+/-- One setup store advances the family prefix. -/
+theorem familyF_set {f : Nat → Nat} {n seed i : Nat} (hi : i < n) :
+    (familyF f i seed ++ List.replicate (n - i) 0).set i
+        (((seed + f i) % 2 ^ 64 : Nat) : Int)
+      = familyF f (i + 1) seed ++ List.replicate (n - (i + 1)) 0 :=
+  familyZ_set hi
+
+/-- The family's element at an in-range index. -/
+theorem familyF_getD {f : Nat → Nat} {n seed m : Nat} (hm : m < n) :
+    (familyF f n seed).getD m 0
+      = (((seed + f m) % 2 ^ 64 : Nat) : Int) :=
+  familyZ_getD hm
+
+/-- One copy store advances the prefix (the `familyF` instance of
+`prefixPad_familyMod_set`). -/
+theorem prefixPad_familyF_set {f : Nat → Nat} {cap seed m : Nat}
+    (hm : m < cap) :
+    (prefixPad (familyF f) cap m seed).set m
+        (((seed + f m) % 2 ^ 64 : Nat) : Int)
+      = prefixPad (familyF f) cap (m + 1) seed :=
+  familyF_set hm
+
+/-! ### `familyOf` — the iterated-step family (the LCG shape) -/
+
+/-- Iterate a step function `k` times from `x` (structurally the
+sorts' `lcgStep`, step-function generic). -/
+def iterStep (step : Nat → Nat) : Nat → Nat → Nat
+  | 0, x => x
+  | k + 1, x => step (iterStep step k x)
+
+/-- Every positive iterate of a range-preserving step is in range. -/
+theorem iterStep_lt {step : Nat → Nat} {k x : Nat}
+    (hs : ∀ y, step y < 2 ^ 64) (hk : 0 < k) :
+    iterStep step k x < 2 ^ 64 := by
+  cases k with
+  | zero => omega
+  | succ k => exact hs _
+
+/-- The iterated-step setup family: `fam[i]` is the `(i+1)`-th
+iterate of `step` from `seed`. -/
+def familyOf (step : Nat → Nat) (n seed : Nat) : List Int :=
+  (List.range n).map (fun i => ((iterStep step (i + 1) seed : Nat) : Int))
+
+theorem familyOf_length (step : Nat → Nat) (n seed : Nat) :
+    (familyOf step n seed).length = n := by
+  simp [familyOf]
+
+theorem familyOf_range {step : Nat → Nat} (hs : ∀ y, step y < 2 ^ 64)
+    (n seed : Nat) :
+    ∀ v ∈ familyOf step n seed, 0 ≤ v ∧ v < 2 ^ 64 := by
+  intro v hv
+  obtain ⟨i, -, rfl⟩ := familyZ_mem (g := fun i =>
+    ((iterStep step (i + 1) seed : Nat) : Int)) hv
+  have := iterStep_lt (k := i + 1) (x := seed) hs (by omega)
+  omega
+
+/-- The family prefix with a zero tail stays in uint64 range. -/
+theorem familyOfZ_range {step : Nat → Nat} (hs : ∀ y, step y < 2 ^ 64)
+    {n seed i : Nat} :
+    ∀ v ∈ familyOf step i seed ++ List.replicate (n - i) (0 : Int),
+      0 ≤ v ∧ v < 2 ^ 64 := by
+  intro v hv
+  rcases List.mem_append.mp hv with hv | hv
+  · exact familyOf_range hs i seed v hv
+  · rcases List.mem_replicate.mp hv with ⟨-, rfl⟩
+    omega
+
+theorem familyOf_succ (step : Nat → Nat) (i seed : Nat) :
+    familyOf step (i + 1) seed
+      = familyOf step i seed
+          ++ [((iterStep step (i + 1) seed : Nat) : Int)] :=
+  familyZ_succ _ i
+
+/-- One setup store advances the family prefix. -/
+theorem familyOf_set {step : Nat → Nat} {n seed i : Nat} (hi : i < n) :
+    (familyOf step i seed ++ List.replicate (n - i) 0).set i
+        ((iterStep step (i + 1) seed : Nat) : Int)
+      = familyOf step (i + 1) seed ++ List.replicate (n - (i + 1)) 0 :=
+  familyZ_set hi
+
+/-- The family's element at an in-range index. -/
+theorem familyOf_getD {step : Nat → Nat} {n seed m : Nat} (hm : m < n) :
+    (familyOf step n seed).getD m 0
+      = ((iterStep step (m + 1) seed : Nat) : Int) :=
+  familyZ_getD hm
+
+/-! ### `takePad` — the copy-OUT prefix over COMPUTED data (the exact
+drafted shape, g1.md §THE KIT-GAP LIST (selsort); the bubble list's
+`prefixPadL` is this same shape) -/
+
+/-- The copy-out loop's invariant list: the first `m` elements of the
+(computed, symbolic) source `l`, zero-padded to `cap`. -/
+def takePad (l : List Int) (cap m : Nat) : List Int :=
+  l.take m ++ List.replicate (cap - m) 0
+
+theorem takePad_zero (l : List Int) (cap : Nat) :
+    takePad l cap 0 = List.replicate cap 0 := by
+  simp [takePad]
+
+theorem takePad_length {l : List Int} {cap m : Nat}
+    (hm : m ≤ cap) (hl : m ≤ l.length) :
+    (takePad l cap m).length = cap := by
+  rw [takePad, List.length_append, List.length_take, List.length_replicate]
+  omega
+
+theorem takePad_range {l : List Int} {cap m : Nat}
+    (hl : ∀ v ∈ l, 0 ≤ v ∧ v < 2 ^ 64) :
+    ∀ v ∈ takePad l cap m, 0 ≤ v ∧ v < 2 ^ 64 := by
+  intro v hv
+  rcases List.mem_append.mp hv with hv | hv
+  · exact hl v (List.mem_of_mem_take hv)
+  · rcases List.mem_replicate.mp hv with ⟨-, rfl⟩
+    omega
+
+/-- One copy-out store advances the prefix. (Stated at the weakest
+hypotheses the two landed consumers need — `m` in the source and in
+the cap; the ledger's drafted `m < n → l.length = n → n ≤ cap` form
+follows by `omega`.) -/
+theorem takePad_set {l : List Int} {cap m : Nat}
+    (hml : m < l.length) (hcap : m < cap) :
+    (takePad l cap m).set m (l.getD m 0) = takePad l cap (m + 1) := by
+  have hltake : (l.take m).length = m := by
+    rw [List.length_take]; omega
+  have hnm : cap - m = (cap - (m + 1)) + 1 := by omega
+  have htake : l.take (m + 1) = l.take m ++ [l.getD m 0] := by
+    rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hml]
+    simp [List.take_add_one (l := l) (i := m)]
+  rw [takePad, List.set_append_right _ _ (by omega), hltake,
+    Nat.sub_self, hnm, List.replicate_succ, List.set_cons_zero,
+    takePad, htake]
+  simp
+
+/-- The copy-out loop's terminal list IS the source zero-padded to
+the cap. -/
+theorem takePad_full {l : List Int} {cap n : Nat} (hlen : l.length = n) :
+    takePad l cap n = l ++ List.replicate (cap - n) 0 := by
+  rw [takePad, List.take_of_length_le (by omega)]
+
 end GoLean.SliceMem

@@ -27,29 +27,22 @@ set_option linter.unusedSimpArgs false
 
 /-! ## The copy-prefix of the sorted backing
 
--- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST (selsort)): the copy-OUT loop's
-prefix (`takePad`) has no kit form — `SliceMem.prefixPad`'s set lemma
-is `familyMod`-keyed, and this loop copies COMPUTED data. Consumers:
-selsort (here), bubble (chartered). -/
+GAP CLOSED (WP arc s1 lift 2): `selPost` IS the kit's
+`SliceMem.takePad` at cap 8 (definitionally); the facts below are
+one-line delegations. -/
 
 /-- The `post` array after `m` copy steps. -/
 def selPost (lf : List Int) (m : Nat) : List Int :=
   lf.take m ++ List.replicate (8 - m) 0
 
 theorem selPost_length {lf : List Int} {n m : Nat} (hlen : lf.length = n)
-    (hm : m ≤ n) (hcap : n ≤ 8) : (selPost lf m).length = 8 := by
-  rw [selPost, List.length_append, List.length_take,
-    List.length_replicate]
-  omega
+    (hm : m ≤ n) (hcap : n ≤ 8) : (selPost lf m).length = 8 :=
+  takePad_length (by omega) (by omega)
 
 theorem selPost_range {lf : List Int} {m : Nat}
     (hr : ∀ x ∈ lf, 0 ≤ x ∧ x < 2 ^ 64) :
-    ∀ v ∈ selPost lf m, 0 ≤ v ∧ v < 2 ^ 64 := by
-  intro v hv
-  rcases List.mem_append.mp hv with hv | hv
-  · exact hr v (List.mem_of_mem_take hv)
-  · rcases List.mem_replicate.mp hv with ⟨-, rfl⟩
-    omega
+    ∀ v ∈ selPost lf m, 0 ≤ v ∧ v < 2 ^ 64 :=
+  takePad_range hr
 
 theorem selPost_full {lf : List Int} {n : Nat} (hlen : lf.length = n) :
     selPost lf n = selPad8 lf := by
@@ -58,23 +51,8 @@ theorem selPost_full {lf : List Int} {n : Nat} (hlen : lf.length = n) :
 /-- One copy store advances the prefix. -/
 theorem selPost_set {lf : List Int} {n m : Nat} (hlen : lf.length = n)
     (hm : m < n) (hcap : n ≤ 8) :
-    (selPost lf m).set m (lf.getD m 0) = selPost lf (m + 1) := by
-  have hlt : (lf.take m).length = m := by
-    rw [List.length_take]
-    omega
-  have hnm : 8 - m = (8 - (m + 1)) + 1 := by omega
-  have hget : lf.getD m 0 = lf[m]'(by omega) := by
-    rw [List.getD_eq_getElem?_getD,
-      List.getElem?_eq_getElem (by omega : m < lf.length)]
-    rfl
-  have htake : lf.take (m + 1) = lf.take m ++ [lf[m]'(by omega)] := by
-    rw [List.take_add_one,
-      List.getElem?_eq_getElem (by omega : m < lf.length)]
-    rfl
-  rw [selPost, selPost, htake, List.set_append_right _ _ (by omega), hlt,
-    Nat.sub_self, hnm, List.replicate_succ, List.set_cons_zero, hget,
-    List.append_assoc]
-  rfl
+    (selPost lf m).set m (lf.getD m 0) = selPost lf (m + 1) :=
+  takePad_set (by omega) (by omega)
 
 /-! ## Raw segments -/
 

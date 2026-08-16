@@ -267,38 +267,28 @@ zero-padded prefix DOES reuse the kit's `prefixPad` generically. -/
 def stFam (n seed : Nat) : List Int :=
   (List.range n).map (fun i => (((seed + i) % 2 ^ 64 : Nat) : Int))
 
-theorem stFam_length (n seed : Nat) : (stFam n seed).length = n := by
-  simp [stFam]
+theorem stFam_length (n seed : Nat) : (stFam n seed).length = n :=
+  familyF_length id n seed
 
 theorem stFam_range (n seed : Nat) :
-    ∀ v ∈ stFam n seed, 0 ≤ v ∧ v < 2 ^ 64 := by
-  intro v hv
-  simp only [stFam, List.mem_map, List.mem_range] at hv
-  obtain ⟨i, -, rfl⟩ := hv
-  have : (seed + i) % 2 ^ 64 < 2 ^ 64 := Nat.mod_lt _ (by omega)
-  omega
+    ∀ v ∈ stFam n seed, 0 ≤ v ∧ v < 2 ^ 64 :=
+  familyF_range id n seed
 
 theorem stFam_succ (i seed : Nat) :
     stFam (i + 1) seed
-      = stFam i seed ++ [(((seed + i) % 2 ^ 64 : Nat) : Int)] := by
-  simp [stFam, List.range_succ]
+      = stFam i seed ++ [(((seed + i) % 2 ^ 64 : Nat) : Int)] :=
+  familyF_succ id i seed
 
 theorem stFam_getD {n seed m : Nat} (hm : m < n) :
-    (stFam n seed).getD m 0 = (((seed + m) % 2 ^ 64 : Nat) : Int) := by
-  rw [stFam, List.getD_eq_getElem?_getD, List.getElem?_map,
-    List.getElem?_eq_getElem (by simpa using hm)]
-  simp
+    (stFam n seed).getD m 0 = (((seed + m) % 2 ^ 64 : Nat) : Int) :=
+  familyF_getD (f := id) hm
 
 /-- The family prefix with a zero tail (to an arbitrary capacity `c`)
 stays in uint64 range. -/
 theorem stFamZ_range {c seed i : Nat} :
     ∀ v ∈ stFam i seed ++ List.replicate (c - i) (0 : Int),
-      0 ≤ v ∧ v < 2 ^ 64 := by
-  intro v hv
-  rcases List.mem_append.mp hv with hv | hv
-  · exact stFam_range i seed v hv
-  · rcases List.mem_replicate.mp hv with ⟨-, rfl⟩
-    omega
+      0 ≤ v ∧ v < 2 ^ 64 :=
+  familyFZ_range (f := id)
 
 /-- One in-place append advances the family prefix inside a fixed-cap
 backing: setting slot `i` of `fam i ++ zeros (c-i)` yields
@@ -306,12 +296,8 @@ backing: setting slot `i` of `fam i ++ zeros (c-i)` yields
 theorem stFam_set {c seed i : Nat} (hi : i < c) :
     (stFam i seed ++ List.replicate (c - i) 0).set i
         (((seed + i) % 2 ^ 64 : Nat) : Int)
-      = stFam (i + 1) seed ++ List.replicate (c - (i + 1)) 0 := by
-  have hlen : (stFam i seed).length = i := stFam_length i seed
-  have hnm : c - i = (c - (i + 1)) + 1 := by omega
-  rw [List.set_append_right _ _ (by omega), hlen, Nat.sub_self, hnm,
-    List.replicate_succ, List.set_cons_zero, stFam_succ]
-  simp
+      = stFam (i + 1) seed ++ List.replicate (c - (i + 1)) 0 :=
+  familyF_set (f := id) hi
 
 /-- The `pushed` array after `m` recorded pushes (the kit's
 `prefixPad`, cap 8). -/

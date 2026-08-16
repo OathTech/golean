@@ -28,39 +28,27 @@ set_option linter.unusedSimpArgs false
 
 /-- The `post` array after `m` copy steps: the copied prefix,
 zero-padded to the cap.
--- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST (bubble)): the third and fourth
-fixed-cap copy-loop instantiations in the gallery; `prefixPad`
-generalized off `familyMod` would delete this block. -/
+GAP CLOSED (WP arc s1 lift 2): `bPost` IS the kit's
+`SliceMem.takePad` at cap 8 (definitionally); the facts below are
+one-line delegations. -/
 def bPost (l : List Int) (m : Nat) : List Int :=
   l.take m ++ List.replicate (8 - m) 0
 
 theorem bPost_length {l : List Int} {m : Nat} (hm : m ≤ 8)
     (hml : m ≤ l.length) :
-    (bPost l m).length = 8 := by
-  rw [bPost, List.length_append, List.length_take, List.length_replicate]
-  omega
+    (bPost l m).length = 8 :=
+  takePad_length hm hml
 
 theorem bPost_range {l : List Int} {m : Nat}
     (hr : ∀ x ∈ l, 0 ≤ x ∧ x < 2 ^ 64) :
-    ∀ v ∈ bPost l m, 0 ≤ v ∧ v < 2 ^ 64 := by
-  intro v hv
-  rcases List.mem_append.mp hv with hv | hv
-  · exact hr v (List.mem_of_mem_take hv)
-  · rcases List.mem_replicate.mp hv with ⟨-, rfl⟩
-    omega
+    ∀ v ∈ bPost l m, 0 ≤ v ∧ v < 2 ^ 64 :=
+  takePad_range hr
 
 /-- One copy store advances the `post` prefix. -/
 theorem bPost_set {l : List Int} {m : Nat} (hm : m < l.length)
     (hm8 : m < 8) :
-    (bPost l m).set m (l.getD m 0) = bPost l (m + 1) := by
-  have hlen : (l.take m).length = m := by
-    rw [List.length_take]; omega
-  have hnm : 8 - m = (8 - (m + 1)) + 1 := by omega
-  rw [bPost, List.set_append_right _ _ (by omega : (l.take m).length ≤ m),
-    hlen, Nat.sub_self, hnm, List.replicate_succ, List.set_cons_zero]
-  rw [bPost, List.take_succ, List.getElem?_eq_getElem hm]
-  rw [← getD_of_lt hm]
-  simp
+    (bPost l m).set m (l.getD m 0) = bPost l (m + 1) :=
+  takePad_set hm hm8
 
 /-! ## The epilogue heap fronts -/
 

@@ -1078,15 +1078,12 @@ theorem reverseHarness_pin :
 /-! ### The pure layer: the family, the setup prefix, the test reads -/
 
 theorem length_revFamily (n seed : Nat) :
-    (revFamily n seed).length = n := by
-  simp [revFamily]
+    (revFamily n seed).length = n :=
+  GoLean.SliceMem.familyF_length id n seed
 
 theorem mem_revFamily {n seed : Nat} {v : Int}
-    (h : v ∈ revFamily n seed) : 0 ≤ v ∧ v < 2 ^ 64 := by
-  simp only [revFamily, List.mem_map, List.mem_range] at h
-  obtain ⟨i, -, rfl⟩ := h
-  have : (seed + i) % 2 ^ 64 < 2 ^ 64 := Nat.mod_lt _ (by omega)
-  omega
+    (h : v ∈ revFamily n seed) : 0 ≤ v ∧ v < 2 ^ 64 :=
+  GoLean.SliceMem.familyF_range id n seed v h
 
 /-- The setup loop's backing after `m` fill iterations: the family
 prefix, then still-zero slots. -/
@@ -1111,18 +1108,14 @@ theorem mem_suList {n seed m : Nat} {v : Int}
 
 private theorem revFamily_succ (m seed : Nat) :
     revFamily (m + 1) seed
-      = revFamily m seed ++ [(((seed + m) % 2 ^ 64 : Nat) : Int)] := by
-  simp [revFamily, List.range_succ]
+      = revFamily m seed ++ [(((seed + m) % 2 ^ 64 : Nat) : Int)] :=
+  GoLean.SliceMem.familyF_succ id m seed
 
 /-- One fill store advances the prefix. -/
 theorem suList_set {n seed m : Nat} (hm : m < n) :
     (suList n seed m).set m (((seed + m) % 2 ^ 64 : Nat) : Int)
-      = suList n seed (m + 1) := by
-  have hlen : (revFamily m seed).length = m := length_revFamily m seed
-  have hnm : n - m = (n - (m + 1)) + 1 := by omega
-  rw [suList, List.set_append_right _ _ (by omega), hlen, Nat.sub_self,
-    hnm, List.replicate_succ, List.set_cons_zero, suList, revFamily_succ]
-  simp
+      = suList n seed (m + 1) :=
+  GoLean.SliceMem.familyF_set (f := id) hm
 
 theorem suList_full (n seed : Nat) :
     suList n seed n = revFamily n seed := by

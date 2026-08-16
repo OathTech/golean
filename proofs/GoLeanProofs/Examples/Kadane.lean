@@ -577,27 +577,25 @@ def kadFamily (n : Nat) (seed : Int) : List Int :=
   (List.range n).map (kadFamVal seed)
 
 theorem kadFamily_length (n : Nat) (seed : Int) :
-    (kadFamily n seed).length = n := by simp [kadFamily]
+    (kadFamily n seed).length = n :=
+  familyZ_length (kadFamVal seed) n
 
 theorem kadFamily_range {n : Nat} {seed : Int} (hn : n ≤ 8)
     (hs1 : -(2 ^ 59) ≤ seed) (hs2 : seed ≤ 2 ^ 59) :
     ∀ v ∈ kadFamily n seed, -(2 ^ 59 + 8) ≤ v ∧ v ≤ 2 ^ 59 + 8 := by
   intro v hv
-  simp only [kadFamily, List.mem_map, List.mem_range] at hv
-  obtain ⟨i, hi, rfl⟩ := hv
+  obtain ⟨i, hi, rfl⟩ := familyZ_mem (g := kadFamVal seed) hv
   have : (i : Int) ≤ 8 := by omega
   rw [kadFamVal]
   split <;> omega
 
 theorem kadFamily_getD {n m : Nat} {seed : Int} (hm : m < n) :
-    (kadFamily n seed).getD m 0 = kadFamVal seed m := by
-  rw [kadFamily, List.getD_eq_getElem?_getD, List.getElem?_map,
-    List.getElem?_eq_getElem (by simpa using hm)]
-  simp
+    (kadFamily n seed).getD m 0 = kadFamVal seed m :=
+  familyZ_getD hm
 
 theorem kadFamily_succ (m : Nat) (seed : Int) :
-    kadFamily (m + 1) seed = kadFamily m seed ++ [kadFamVal seed m] := by
-  simp [kadFamily, List.range_succ]
+    kadFamily (m + 1) seed = kadFamily m seed ++ [kadFamVal seed m] :=
+  familyZ_succ (kadFamVal seed) m
 
 /-- The setup/copy invariant list: the family prefix, zero-padded to
 `cap`. -/
@@ -605,32 +603,28 @@ def kadPad (cap m : Nat) (seed : Int) : List Int :=
   kadFamily m seed ++ List.replicate (cap - m) 0
 
 theorem kadPad_zero (cap : Nat) (seed : Int) :
-    kadPad cap 0 seed = List.replicate cap 0 := by
-  simp [kadPad, kadFamily]
+    kadPad cap 0 seed = List.replicate cap 0 :=
+  padZ_zero (kadFamVal seed) cap
 
 theorem kadPad_length {cap m : Nat} {seed : Int} (hm : m ≤ cap) :
-    (kadPad cap m seed).length = cap := by
-  rw [kadPad, List.length_append, kadFamily_length, List.length_replicate]
-  omega
+    (kadPad cap m seed).length = cap :=
+  padZ_length hm
 
 theorem kadPad_range {cap m : Nat} {seed : Int} (_hm : m ≤ cap)
     (hcap : m ≤ 8) (hs1 : -(2 ^ 59) ≤ seed) (hs2 : seed ≤ 2 ^ 59) :
-    ∀ v ∈ kadPad cap m seed, -(2 ^ 59 + 8) ≤ v ∧ v ≤ 2 ^ 59 + 8 := by
-  intro v hv
-  rcases List.mem_append.mp hv with hv | hv
-  · exact kadFamily_range hcap hs1 hs2 v hv
-  · rcases List.mem_replicate.mp hv with ⟨-, rfl⟩
-    omega
+    ∀ v ∈ kadPad cap m seed, -(2 ^ 59 + 8) ≤ v ∧ v ≤ 2 ^ 59 + 8 :=
+  padZ_range
+    (fun i hi => by
+      have : (i : Int) ≤ 8 := by omega
+      rw [kadFamVal]
+      split <;> omega)
+    ⟨by omega, by omega⟩
 
 /-- One padded-prefix store advances the prefix. -/
 theorem kadPad_set {cap m : Nat} {seed : Int} (hm : m < cap) :
     (kadPad cap m seed).set m (kadFamVal seed m)
-      = kadPad cap (m + 1) seed := by
-  have hlen : (kadFamily m seed).length = m := kadFamily_length m seed
-  have hnm : cap - m = (cap - (m + 1)) + 1 := by omega
-  rw [kadPad, List.set_append_right _ _ (by omega), hlen, Nat.sub_self, hnm,
-    List.replicate_succ, List.set_cons_zero, kadPad, kadFamily_succ]
-  simp
+      = kadPad cap (m + 1) seed :=
+  padZ_set hm
 
 /-- The EVEN-index setup store lands the family value directly. -/
 theorem kadPad_set_even {cap m : Nat} {seed : Int} (hm : m < cap)
@@ -647,11 +641,8 @@ def kadMid (cap m : Nat) (seed : Int) : List Int :=
   kadFamily m seed ++ ((seed + m) :: List.replicate (cap - (m + 1)) 0)
 
 theorem kadMid_of_set {cap m : Nat} {seed : Int} (hm : m < cap) :
-    (kadPad cap m seed).set m (seed + m) = kadMid cap m seed := by
-  have hlen : (kadFamily m seed).length = m := kadFamily_length m seed
-  have hnm : cap - m = (cap - (m + 1)) + 1 := by omega
-  rw [kadPad, List.set_append_right _ _ (by omega), hlen, Nat.sub_self, hnm,
-    List.replicate_succ, List.set_cons_zero, kadMid]
+    (kadPad cap m seed).set m (seed + m) = kadMid cap m seed :=
+  padZ_set_any (seed + (m : Int)) hm
 
 theorem kadMid_length {cap m : Nat} {seed : Int} (_hm : m < cap) :
     (kadMid cap m seed).length = cap := by
