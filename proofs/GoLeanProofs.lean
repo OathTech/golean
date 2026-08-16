@@ -156,6 +156,8 @@ import GoLeanProofs.Examples.FibMemoProgram
 import GoLeanProofs.Examples.FibMemo
 import GoLeanProofs.Examples.SelectionSortProgram
 import GoLeanProofs.Examples.SelectionSort
+import GoLeanProofs.Examples.WordFreqProgram
+import GoLeanProofs.Examples.WordFreq
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)

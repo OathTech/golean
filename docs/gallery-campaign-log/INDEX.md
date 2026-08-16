@@ -26,14 +26,52 @@ overstates.
 | goal | done | remaining | notes |
 |---|---|---|---|
 | G0 (opening kit phase) | 5 of 5 mandatory units; (d) assessed → deferred to its pulling G1 example; **item 4 (flagship rule) DISCHARGED** by G1.1 | 0 — G0 CLOSED | see `g0.md`; the flagship's kit-gap report is in `g1.md` |
-| G1 (gallery to twenty) | **14 of ≥13** new COMPLETE entries — the gallery stands at **TWENTY-ONE** (`histogram` the flagship, the G1.4–6 delegation wave, the hard lane `fibmemo`+`sieve` at `e8fcad31`, and `stein` — the E3 consumer, 2026-08-15); + the KIT-GAP CLOSURE unit (G1.1-KG); + the GUARDRAILS WAVE (G1.2) | **G1 MET at ≥20**; `stein` lands one PAST the bar as E3's consumer | see `g1.md`; the wave table is there, the extension pull-list in `g2.md` |
-| G2 (extensions) | **2 of ≥3 BUILT** — E1 (2026-08-15) and **E3 (2026-08-15: fidelity argument + guardrails RED first, the normalization, 46 quarantined rows flipped incl. 18 blast-radius rows the full run surfaced, fail-closed remainder probe-verified, and `stein` as its COMPLETE consumer)**; the PULL-LIST is established and probe-grounded (`g2.md`) | a THIRD pulled extension must be found (or the "≥3" amended at the level it was set — operator call, recorded in `g2.md`) | **HONEST FINDING stands: the G1 set pulls TWO of the four named extensions.** E4 is a NON-PULL — `strrev` landed E4-independent; E2 is a reasoned NON-PULL (observation is by return, not printing). The probe-surfaced candidate is stdlib selector calls (subsumes E2+E4's real boundary) |
+| G1 (gallery to twenty) | **15 of ≥13** new COMPLETE entries — the gallery stands at **TWENTY-TWO** (`wordfreq`, the E5 consumer, 2026-08-16; previously: `histogram` the flagship, the G1.4–6 delegation wave, the hard lane `fibmemo`+`sieve` at `e8fcad31`, and `stein` — the E3 consumer, 2026-08-15); + the KIT-GAP CLOSURE unit (G1.1-KG); + the GUARDRAILS WAVE (G1.2) | **G1 MET at ≥20**; `stein` and `wordfreq` land past the bar as the E3/E5 consumers | see `g1.md`; the wave table is there, the extension pull-list in `g2.md` |
+| G2 (extensions) | **3 of ≥3 BUILT — THE GOAL THRESHOLD IS MET** (2026-08-16): E5 (stdlib selector-call shims scoped to `strings.Fields`, the probe-found merged E2+E4 boundary, with `wordfreq` its COMPLETE consumer) joins  E1 (2026-08-15) and **E3 (2026-08-15: fidelity argument + guardrails RED first, the normalization, 46 quarantined rows flipped incl. 18 blast-radius rows the full run surfaced, fail-closed remainder probe-verified, and `stein` as its COMPLETE consumer)**; the PULL-LIST is established and probe-grounded (`g2.md`) | 0 — G2 MET (the third extension was FOUND per the recorded consequence-2 path, never pushed) | **HONEST FINDING stands: the G1 set pulls TWO of the four named extensions.** E4 is a NON-PULL — `strrev` landed E4-independent; E2 is a reasoned NON-PULL (observation is by return, not printing). The probe-surfaced candidate — stdlib selector calls, subsuming E2+E4's real boundary — became **E5**, pulled by `wordfreq` from the reserve list |
 | G3 (evidence dossiers) | 0 | register = denominator, fixed at dossier-lane start | register lives in `g3.md`, **enumerated by the dossier lane's first commit** (process amendment `ea7c689a`: the register is that lane's deliverable, not G0's) |
 | G4 (infrastructure debt) | 0 of 4 | 4 | |
 
 ## Checkpoint summaries
 
 (at least every 5 units; newest first)
+
+- 2026-08-16, checkpoint 7 (unit G2.E5 + G1.wordfreq, 3 commits): **THE
+  THIRD EXTENSION IS BUILT, WITH ITS COMPLETE CONSUMER — G2 MEETS ITS
+  GOAL THRESHOLD AT 3 of ≥3, the gallery at TWENTY-TWO.** E5 (stdlib
+  selector-call shims, the probe-found merged E2+E4 boundary, allowlist
+  = `strings.Fields` alone) went in the chartered order: the FIDELITY
+  ARGUMENT first (the machine has no stdlib and must not grow one — a
+  Go-SOURCE shim injected by the frontend and lowered through the
+  ordinary pipeline; THE VALIDATION INSIGHT made explicit: go run
+  executes the REAL stdlib, the machine executes the shim, so every
+  differential row through a shimmed call is a direct oracle test of
+  shim fidelity — the corpus IS the shim's conformance suite; the full
+  White_Space class as byte patterns with the
+  byte-scan-equals-rune-scan argument; a 600,000-trial shim-vs-stdlib
+  fuzz, 0 mismatches), then 23 guardrail rows committed RED with their
+  own full-gate re-pin (14 wordfreq + 8 fields-conformance incl.
+  NBSP/NEL/EM/IDEOGRAPHIC splits, the U+200B negative pin, invalid
+  UTF-8 — all go-run-confirmed), then the mechanism (stdlibshim.go +
+  one emit hook + the injection call; NO GoCore change, NO decoder
+  change, NO wire change; reserved-name collisions refuse loudly;
+  Repeat/Sprint/value-position/dot-import refusals byte-identical,
+  probe-verified). Full differential: EXACTLY the 22 flips, zero blast
+  radius (1830/1732/98). The proof half then made wordfreq the
+  COMPLETE consumer (all eight items; g1.md): `wordfreq_ok` over the
+  returned `(pre, q, hits, best)` with `wordsOf` — the byte-level
+  Fields spec, `#guard`-pinned to the same go-run-confirmed splits —
+  as statement vocabulary, `∀ ch` covering BOTH consumed choice kinds
+  (append spill, map order), bound `811·n + 582`, classical trio,
+  deletion test run, 11,673 lines over nine shards whose scan phase
+  walks the injected shim's lowered body. Five sequential Fable
+  workers; two honest mid-arc parks, each at a green boundary with a
+  continuation plan that the successor executed; zero divergence-guard
+  events. Elaboration-storm root causes found and recorded (D-relative
+  signatures; qualify `Loc.base` in big-state positional arguments) —
+  promotion-ledger rows. A pre-existing dot-import stuck-not-refused
+  boundary defect recorded as an input. Totals: G0 5/5; G1 **15
+  COMPLETE** (gallery TWENTY-TWO); G2 **3 of ≥3 — MET**; G3 22/22
+  dossiers; G4 0/4.
 
 - 2026-08-15, checkpoint 6 (units G2.E3 + G1.stein, 3 commits): **THE
   SECOND EXTENSION IS BUILT, WITH ITS COMPLETE CONSUMER — G2 stands at

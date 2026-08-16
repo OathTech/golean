@@ -1,6 +1,6 @@
 # Verified examples — the gallery (2026-08-15)
 
-Twenty-one Go programs, and for each one a GoLean theorem you can read.
+Twenty-two Go programs, and for each one a GoLean theorem you can read.
 
 This file is the **object of agreement**: it exists so that a reader who is
 not a Lean expert can check, by eye, that the top-level statement really
@@ -132,10 +132,11 @@ exhaustion.
 
 `Choices` is the stream of nondeterministic decisions the machine consumes at
 points where Go does not promise an outcome. `∀ ch : Choices` says the claim
-holds at **every** such stream. For eighteen of the twenty-one examples this
+holds at **every** such stream. For eighteen of the twenty-two examples this
 quantifier is cheap (their runs consume no choices). For word-count, histogram
-(map iteration order) and run-length encoding (append's spill capacity) it
-does real work: `for … range` over a Go map consumes one choice per
+(map iteration order), run-length encoding (append's spill capacity) and
+wordfreq (BOTH — its fields slice grows by `append` and its max loop ranges
+over a map) it does real work: `for … range` over a Go map consumes one choice per
 iteration, because Go deliberately does not fix map iteration order — so the
 theorem covers every order, and the specification is *forced* to be
 order-independent. A spec saying "the count of the first key" would be
@@ -3516,6 +3517,194 @@ which was the point. The evaluation-order behaviour of the normalization
 this lowering rides on is separately pinned by the 16-row
 `bools/short-circuit-effects/*` guardrail family (counter, order-witness,
 nested, loop-guard, and expression-position shapes).
+
+---
+
+## wordfreq — word frequency over a string via `strings.Fields`, the extension-E5 consumer
+
+**The Go** (`Corpus/coverage/exec/examples/wordfreq/main.go`):
+
+<!-- verbatim: Corpus/coverage/exec/examples/wordfreq/main.go -->
+```go
+// wordFreq: the subject — split the text into words with
+// strings.Fields (the idiomatic Go spelling this example exists to
+// exercise: extension E5, the stdlib-shim boundary), count each word
+// in a map, and report the queried word's count plus the maximum
+// count over all words. The max loop RANGES over the map, so its
+// iteration order is nondeterministic; the summary is order-invariant
+// by construction. `counts[query]` on an absent key is Go's
+// zero-value read.
+func wordFreq(text string, query string) (uint64, uint64) {
+	words := strings.Fields(text)
+	counts := make(map[string]uint64)
+	for i := 0; i < len(words); i++ {
+		counts[words[i]]++
+	}
+	best := uint64(0)
+	for _, c := range counts {
+		if c > best {
+			best = c
+		}
+	}
+	return counts[query], best
+}
+```
+
+<!-- verbatim: Corpus/coverage/exec/examples/wordfreq/main.go -->
+```go
+// buildText: the differential driver passes only integer arguments,
+// so the harness builds its text from (n, seed): n single-letter
+// words from the family {"a","b","c"} (word i = 'a' + (seed+i)%3,
+// Go's own uint64 wrap in seed+i kept honestly), with the separator
+// VARIED by position — one space, two spaces, or a tab — and a
+// leading space, so Fields' leading/trailing/consecutive/mixed
+// whitespace classes are exercised on every built input.
+func buildText(n, seed uint64) string {
+	out := " "
+	for i := uint64(0); i < n; i++ {
+		out += string(rune(97 + (seed+i)%3))
+		if i%3 == 0 {
+			out += " "
+		} else if i%3 == 1 {
+			out += "  "
+		} else {
+			out += "\t"
+		}
+	}
+	return out
+}
+```
+
+<!-- verbatim: Corpus/coverage/exec/examples/wordfreq/main.go -->
+```go
+// wordfreq_harness_r: the S3 RELATIONAL harness — setup builds the
+// text and the queried word from (n, seed, qsel); the returned
+// quadruple (pre, q, hits, best) is the observable, all pure values
+// (strings cross the observation boundary by contents). The
+// postcondition relates the RETURNED data: hits = the multiplicity
+// of q among pre's words, best = the maximum multiplicity.
+func wordfreq_harness_r(n, seed, qsel uint64) (string, string, uint64, uint64) {
+	pre := buildText(n, seed)
+	q := string(rune(97 + qsel%3))
+	hits, best := wordFreq(pre, q)
+	return pre, q, hits, best
+}
+```
+
+**Why this example exists.** Idiomatic Go writes
+`words := strings.Fields(text)` — a STANDARD-LIBRARY call — and the
+machine has no standard library: the frontend quarantined exactly that
+call, fail-closed, so this example landed BLOCKED (14 red rows, the
+recorded guardrail) and PULLED extension E5: frontend-level shims for
+an allowlisted set of pure stdlib functions
+(`docs/gallery-campaign-log/g2.md`, "E5 — THE FIDELITY ARGUMENT"). The
+subject was NOT rewritten around the gap (a hand-rolled splitter would
+be a green example of a program nobody writes); the gap was closed
+under guardrails, and this entry is E5's COMPLETE consumer.
+
+**What the machine actually runs — and why that is the claim's
+honesty clause, not a footnote.** `go run` executes the REAL
+`strings.Fields`; the machine executes the frontend's SHIM — a
+byte-level scan over the full Unicode White_Space class, injected into
+the program and lowered through the ordinary pipeline (its lowered
+body is part of this example's golden pin). The theorem below is a
+theorem about the SHIM's semantics. Three things tie the shim to the
+stdlib: (1) every differential row through the call is a direct oracle
+test of shim fidelity — including the dedicated
+`strings/fields-conformance/*` suite with the non-ASCII White_Space
+members, a White_Space=No negative pin, and invalid UTF-8, all green;
+(2) a 600,000-trial randomized shim-vs-stdlib equivalence fuzz (0
+mismatches), run under the real Go runtime; (3) the Lean spec
+`wordsOf` is `#guard`-pinned inside the proof against the same
+go-run-confirmed splits the corpus pins. What is NOT claimed: a proof
+that shim = stdlib for all inputs — that correspondence is
+differentially validated evidence, exactly like the machine's own
+semantics.
+
+**The claim.** For every `n < 2^60`, `seed < 2^64`, `qsel < 2^64`,
+running `wordfreq_harness_r(n, seed, qsel)` completes normally past
+one fuel bound, at every nondeterminism-choice stream, and returns
+FOUR values: the built text `pre` (with exactly `n` words), the
+queried word `q`, the multiplicity of `q` among `pre`'s words, and the
+maximum multiplicity over `pre`'s words — where "words" means
+`wordsOf pre`, the byte-level Fields spec, stated over the RETURNED
+data.
+
+**The theorem** (`proofs/GoLeanProofs/Examples/WordFreq.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/WordFreq.lean -->
+```lean
+theorem wordfreq_ok (n seed qsel : Nat) (hn : n < 2 ^ 60)
+    (hseed : seed < 2 ^ 64) (hqsel : qsel < 2 ^ 64) :
+    ∃ pre q : List UInt8, (wordsOf pre).length = n ∧
+      ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        runFunctionWithContextM fuel wordfreqLowered.typeDefs.toList
+            wordfreqLowered.funcs wordfreqHarnessRFunc
+            #[.int (n : Int) .uint64, .int (seed : Int) .uint64,
+              .int (qsel : Int) .uint64]
+            wordfreqLowered.methods ch
+          = .ok { values := #[.string (gs pre), .string (gs q),
+                              .int (multiplicity q (wordsOf pre) : Nat) .uint64,
+                              .int (maxMultiplicity (wordsOf pre) : Nat) .uint64] } := by
+```
+
+**Axioms** (pinned in `proofs/Audit/WordFreq.lean`):
+
+<!-- verbatim: proofs/Audit/WordFreq.lean -->
+```lean
+/-- info: 'GoLean.Examples.WordFreq.wordfreq_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+Lean's classical trio; no `sorry`, no native evaluation, no project
+axioms (`wordsOf_textFamily` — the family bridge — uses only
+`[propext, Quot.sound]`).
+
+**Honesty clauses.**
+
+* **`∀ ch` is load-bearing**: the `for range counts` max loop consumes
+  one choice per iteration, so the claim holds at EVERY map-iteration
+  order — provable precisely because `maxMultiplicity` is a function
+  of the returned data and cannot see the order.
+* **The queried count is the map read, zero value included** —
+  `counts[query]` on an absent word yields `0`, `multiplicity` is `0`
+  in exactly that case; rows `lit-miss` and `harness-one-miss` pin it
+  on the oracle.
+* **No fixed-cap toy bound**: strings cross the observation boundary
+  by contents; the returned text is unbounded. The bounds that DO
+  appear are attributed: `seed, qsel < 2^64` are Go's `uint64`
+  argument domain; `n < 2^60` keeps the built text (at most `3n+1`
+  bytes) inside Go's `int` domain for the subjects' `int` loop
+  indices — mathematics needs none of them.
+* **`∃ pre, q` is still family-determined**: the witnesses are
+  `textFamily n seed` and `qWord qsel` — the program's own
+  arithmetic, uint64 wrap included. The statement merely avoids
+  SAYING so; the first-order corollary below says it exactly.
+* **Machine idealization** as everywhere: empty-heap entry, unbounded
+  heap and strings, allocation always succeeds.
+
+**Fuel bound.** Explicit and affine: `N = wfFuel n = 811·n + 582` — a BOUND, not a
+measurement, composed from the four phases' branch-uniform worst cases
+(build→scan `703·n + 402`, count `84·n + 85`, range head `16`, the
+pick loop charged `n` iterations though the family yields at most
+`min n 3` distinct words, exit `78`). The MEASURED minimal fuels,
+recorded separately: `582/1145/2007/2575/3206/4056/4612/5243/6093/8686`
+at `n = 0…8, 12` (seed/qsel-independent at fixed `n`; the bound is
+exact at `n = 0`).
+
+**Status.** `wordfreq_readout` is the run-conditioned twin;
+`wordfreq_hits_eq` is the first-order readout corollary (the hits
+value as pure residue arithmetic over `(n, seed, qsel)`).
+
+**Ground.** Differentially green on 15 corpus rows (six literal-input
+rows incl. empty text, all-space text, tabs/newlines and a missing
+query; eight family-harness rows incl. `n = 0`, `n = 12`, a wrapping
+seed and a wrapping `qsel`; plus the setup control) — 14 of them RED
+at `frontend-export` until E5 landed, which was the point. The shim
+itself is additionally pinned by the 8-row
+`strings/fields-conformance/*` suite (leading/trailing/consecutive
+mixed whitespace, NBSP/NEL/EM-SPACE/IDEOGRAPHIC-SPACE splitting, the
+U+200B non-split, invalid UTF-8), each split observed byte-exactly
+via a `'|'` join against the real stdlib.
 
 ---
 

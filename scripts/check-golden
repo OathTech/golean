@@ -47,6 +47,10 @@ PINS=(
   "Corpus/coverage/exec/examples/stein|baselines/golden/stein-lowered.repr|GoLean.Examples.Stein.steinLowered"
   "Corpus/coverage/exec/examples/fibmemo|baselines/golden/fibmemo-lowered.repr|GoLean.Examples.FibMemo.fibmemoLowered"
   "Corpus/coverage/exec/examples/selsort|baselines/golden/selsort-lowered.repr|GoLean.Examples.SelectionSort.selsortLowered"
+  # G2 extension E5's consumer (2026-08-15): the pin INCLUDES the injected
+  # strings.Fields shim's lowered body, so frontend shim drift is golden
+  # drift here.
+  "Corpus/coverage/exec/examples/wordfreq|baselines/golden/wordfreq-lowered.repr|GoLean.Examples.WordFreq.wordfreqLowered"
 )
 
 WORK="${TMPDIR:-/tmp}/golden-check.$$"
@@ -64,7 +68,7 @@ export GOCACHE="${GOCACHE:-$ROOT/artifacts/go-build-cache}"
 # means not relying on the next run's self-heal, on either link.)
 lake build GoLean.NativeToIR > /dev/null \
   || { echo "check-golden: FAIL — NativeToIR (decoder) build failed (fail closed)" >&2; exit 1; }
-(cd proofs && lake build GoLeanProofs.Specs.GoldenProgram GoLeanProofs.Specs.GoldenQuorum GoLeanProofs.Examples.FibProgram GoLeanProofs.Examples.ReverseProgram GoLeanProofs.Examples.GcdProgram GoLeanProofs.Examples.MinMaxProgram GoLeanProofs.Examples.BinSearchProgram GoLeanProofs.Examples.InsertionSortProgram GoLeanProofs.Examples.WordCountProgram GoLeanProofs.Examples.HistogramProgram GoLeanProofs.Examples.BubbleSortProgram GoLeanProofs.Examples.TwoSumProgram GoLeanProofs.Examples.RunLengthProgram GoLeanProofs.Examples.PowModProgram GoLeanProofs.Examples.ArrayPalindromeProgram GoLeanProofs.Examples.DedupAdjacentProgram GoLeanProofs.Examples.KadaneProgram GoLeanProofs.Examples.DotProductProgram GoLeanProofs.Examples.SieveProgram GoLeanProofs.Examples.MatMulProgram GoLeanProofs.Examples.SliceStackProgram GoLeanProofs.Examples.SliceQueueProgram GoLeanProofs.Examples.StringReverseProgram GoLeanProofs.Examples.SteinProgram GoLeanProofs.Examples.FibMemoProgram GoLeanProofs.Examples.SelectionSortProgram > /dev/null) \
+(cd proofs && lake build GoLeanProofs.Specs.GoldenProgram GoLeanProofs.Specs.GoldenQuorum GoLeanProofs.Examples.FibProgram GoLeanProofs.Examples.ReverseProgram GoLeanProofs.Examples.GcdProgram GoLeanProofs.Examples.MinMaxProgram GoLeanProofs.Examples.BinSearchProgram GoLeanProofs.Examples.InsertionSortProgram GoLeanProofs.Examples.WordCountProgram GoLeanProofs.Examples.HistogramProgram GoLeanProofs.Examples.BubbleSortProgram GoLeanProofs.Examples.TwoSumProgram GoLeanProofs.Examples.RunLengthProgram GoLeanProofs.Examples.PowModProgram GoLeanProofs.Examples.ArrayPalindromeProgram GoLeanProofs.Examples.DedupAdjacentProgram GoLeanProofs.Examples.KadaneProgram GoLeanProofs.Examples.DotProductProgram GoLeanProofs.Examples.SieveProgram GoLeanProofs.Examples.MatMulProgram GoLeanProofs.Examples.SliceStackProgram GoLeanProofs.Examples.SliceQueueProgram GoLeanProofs.Examples.StringReverseProgram GoLeanProofs.Examples.SteinProgram GoLeanProofs.Examples.FibMemoProgram GoLeanProofs.Examples.SelectionSortProgram GoLeanProofs.Examples.WordFreqProgram > /dev/null) \
   || { echo "check-golden: FAIL — pin module build failed (fail closed)" >&2; exit 1; }
 
 for pin in "${PINS[@]}"; do
@@ -124,6 +128,7 @@ import GoLeanProofs.Examples.StringReverseProgram
 import GoLeanProofs.Examples.SteinProgram
 import GoLeanProofs.Examples.FibMemoProgram
 import GoLeanProofs.Examples.SelectionSortProgram
+import GoLeanProofs.Examples.WordFreqProgram
 def main : IO Unit :=
   IO.println (repr $TERM)
 LEAN
