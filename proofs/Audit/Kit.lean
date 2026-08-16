@@ -98,11 +98,12 @@ vocabulary defs) -/
 #guard_msgs in #print axioms GoLean.Surface.natFromNonneg_cast
 
 /-! ## SliceMem — slice-in-memory vocabulary + executable op facts
-(72 public lemmas; +11 in the GAP-P2 family/prefix lift, 2026-08-15;
+(81 public lemmas; +11 in the GAP-P2 family/prefix lift, 2026-08-15;
 +14 in the WP arc s1 lift 1 — the normal-form/op-fact family
 completion + the C4 `intKind_normalize_idem` lift-out-of-HeapBridge;
 +30 in the WP arc s1 lift 2 — the generic family layer
-`familyZ`/`padZ`/`familyF`/`familyOf`/`takePad` — the
+`familyZ`/`padZ`/`familyF`/`familyOf`/`takePad`; +9 in the WP arc s1
+lift 3 — the swap surgery + count algebra — the
 `familyMod`/`prefixPad`/family/`iterStep` defs are unpinned like the
 other vocabulary defs) -/
 
@@ -237,6 +238,28 @@ other vocabulary defs) -/
 #guard_msgs in #print axioms GoLean.SliceMem.takePad_set
 /-- info: 'GoLean.SliceMem.takePad_full' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.SliceMem.takePad_full
+
+-- WP arc s1 lift 3 (2026-08-16): the swap surgery + count algebra.
+-- Transcribed verbatim from a fresh probe (`.tmp/pinprobe3.lean`
+-- at the lift commit).
+/-- info: 'GoLean.SliceMem.getD_set_self' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.getD_set_self
+/-- info: 'GoLean.SliceMem.getD_set_ne' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.getD_set_ne
+/-- info: 'GoLean.SliceMem.count_set_add' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.count_set_add
+/-- info: 'GoLean.SliceMem.swapList_length' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.swapList_length
+/-- info: 'GoLean.SliceMem.getD_swapList_fst' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.getD_swapList_fst
+/-- info: 'GoLean.SliceMem.getD_swapList_snd' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.getD_swapList_snd
+/-- info: 'GoLean.SliceMem.getD_swapList_other' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.getD_swapList_other
+/-- info: 'GoLean.SliceMem.count_swapList' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.count_swapList
+/-- info: 'GoLean.SliceMem.range_swapList' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.range_swapList
 
 /-- info: 'GoLean.SliceMem.familyMod_length' depends on axioms: [propext] -/
 #guard_msgs in #print axioms GoLean.SliceMem.familyMod_length
