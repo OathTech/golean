@@ -1374,16 +1374,28 @@ and import `HeapBridge`) was NOT taken: it would have put the Iris
 layer into a closure that does not otherwise contain it, to save four
 lines.
 
-**NB — corrected 2026-08-16, fix round #3.** This paragraph used to
-argue from "no module under `Examples/` imports Iris". **That was
-false.** Measured over the tree: **63 of the 132 modules under
-`Examples/` DO transitively import Iris**, the gateway in every case
-being `GoLeanProofs.Laws.StmtOps`, whose first line is
-`import Iris.ProgramLogic.WeakestPre` (20 example modules import
-`Laws.StmtOps` directly; the other 43 reach it through a sibling).
+**NB — corrected 2026-08-16, fix round #3; the ATTRIBUTION corrected
+again in fix round #4.** This paragraph used to argue from "no module
+under `Examples/` imports Iris". **That was false.** Measured over the
+tree: **63 of the 132 modules under `Examples/` DO transitively import
+Iris** — that number is right and stands. What round #3 got wrong is
+WHERE the dependency enters: it named `GoLeanProofs.Laws.StmtOps` "the
+gateway in every case". Re-measured in round #4, **there is no unique
+gateway.** `Laws.StmtOps` is in **62** of the 63 closures, not all 63
+(`GoLeanProofs.Examples.Fib` is the exception — it reaches Iris via
+`Laws.Assign/Call/Control/Init/Loop`, `SurfaceExit` and `Adequacy`),
+and its split is **20 modules importing it directly, 42 reaching it
+through a sibling, and 1 not reaching it at all** — not the 20/43 round
+#3 recorded. Meanwhile **six** modules that import `Iris.*` directly —
+`Lifting`, `Lang`, `HeapBridge`, `Tactics.GoWalk`, `Laws.Eval`,
+`Ghost` — appear in **all 63** closures, so no single module is the
+place the Iris layer gets in.
 The ruling is unchanged, but it stands on the DIRECT, module-local
 basis stated above — this closure is Iris-free and is worth keeping
 that way — and never on a tree-wide property the tree does not have.
+(Errata: `b5f0893c`'s commit message carries round #3's wrong
+attribution verbatim; a landed message cannot be edited, so this
+paragraph is its correction of record.)
 
 The real item, recorded in `docs/gallery-campaign-log/g1.md` (fibmemo
 unit, promotion ledger): lift `intKind_normalize_idem` OUT of

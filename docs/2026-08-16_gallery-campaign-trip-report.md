@@ -264,7 +264,8 @@ exactly what the baseline said. **One gate WAS failing open, and the
 audit did not find it** — the E6 receive-bearing-`len` guard, silently
 disabled inside a short-circuit RHS by the same C1 defect described
 below. It surfaced only in fix round #2's register walk (`b4179573`;
-`g2.md:1160-1173`), after this sentence had already been written.
+`g2.md` §"THE E6 REGISTER WALK"), after this sentence had already been
+written.
 [Corrected 2026-08-16, fix round #3: this read "no gate was found
 failing open", which was true of the audit's own findings and false as
 a statement about the tree — precisely the reading a trip report
@@ -301,7 +302,8 @@ at all**, and nesting a function literal in a short-circuit RHS was a
 way to walk around a fail-closed guard and take the inline lowering E6
 exists to refuse. Same missing save/restore, opposite direction. Found
 in fix round #2's register walk (`b4179573`), probe-verified against a
-reconstructed pre-C1 emitter, and recorded at `g2.md:1160-1173`. The
+reconstructed pre-C1 emitter, and recorded at `g2.md` §"THE E6 REGISTER
+WALK". The
 lesson is in the log there and is worth repeating here: **when a fix
 restores a saved flag, the walk owed is every READER of that flag, in
 both directions** — not only the readers whose symptom was reported.
@@ -334,7 +336,9 @@ Three of the OPERATOR's:
    command nobody re-read is the same defect class this addendum is
    about, one level down.
 2. **"One mid-fence split repaired."** There were **THREE** splices, not
-   one, one per repair round: (1) the gallery's dedup/palin split, where
+   one — two of them repaired in the SAME round (buckets A and B of the
+   2026-08-16 audit-fix round), the third a round later: (1) the
+   gallery's dedup/palin split, where
    dedup's honesty half rendered inside `## palin`
    (`verified-examples.md`, repaired by `798a24af` A1); (2) `g1.md`'s
    palin/dotprod swap — palin's unit carrying DotProduct's cost table and
@@ -348,7 +352,10 @@ Three of the OPERATOR's:
    [Corrected 2026-08-16, fix round #3: this list previously named the
    third splice's two halves as items 2 and 3 and dropped the
    palin/dotprod splice entirely — three events, but not the three that
-   happened.]
+   happened. Corrected again in fix round #4: round #3's replacement
+   glossed the list as "one per repair round", which the SHAs it had
+   just written refute — `798a24af` and `0ab348ce` are buckets A and B
+   of one round, and only `a816aa65` is a later one.]
    **The third was found by records-pass-2, in the campaign LOG rather
    than in the gallery — after two rounds of repair had already gone
    looking for exactly this class.** That is the honest reading: the
@@ -366,10 +373,16 @@ Three of the OPERATOR's:
 Two of the WORKERS':
 
 4. **"366 kit invocations, zero hand-rolled `stepFn` unfoldings"**
-   (flagship unit). The second half holds; the count is not
-   reproducible from the tree by any method the audit could reconstruct,
-   and it has been carried forward in summaries ever since as if it
-   were measured.
+   (flagship unit). The second half did NOT hold when it was written:
+   at the flagship's landing commit `a82a04ba`,
+   `Histogram/Machine.lean:322` carried `simp only [stepFn, hne,
+   Bool.false_eq_true, if_false]` — one hand-rolled unfolding, the only
+   one in the file — and it was removed later, by `a202b402`
+   (GAP-M1 kit-gap closure), so the claim became true only after the
+   fact. The count is not reproducible from the tree by any method the
+   audit could reconstruct, and it has been carried forward in summaries
+   ever since as if it were measured. [Second half qualified 2026-08-16,
+   fix round #4; before that this read "The second half holds".]
 5. **"Zero hand dances survive"** (a kit-closure claim). Stale by the
    end of the campaign: later units re-derived exactly the kind of
    step-level scaffolding the claim said had been eliminated — the

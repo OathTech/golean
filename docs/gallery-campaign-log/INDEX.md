@@ -29,6 +29,14 @@ overstates.
 **Judgment-call format** (one line each, in the owning goal file):
 `JC: <the call> — <the principle applied>.`
 
+**Cite convention** (adopted 2026-08-16, fix round #4, after four rounds
+of line-cites going stale inside the round that wrote them): a line-cite
+into a MUTABLE campaign doc is either UNIT/SECTION-ANCHORED
+(`g1.md §Unit G1.7b`, `g2.md §"THE E6 REGISTER WALK"`) or
+COMMIT-QUALIFIED (`g2.md:868 @ 53a44689`). Bare tip-relative line numbers
+are retired for cross-doc references; in-file cites to stable code lines
+in COMMITTED Lean sources remain fine.
+
 ## Per-goal totals
 
 (Totals corrected 2026-08-16 by the post-autonomy audit: the G1, G3 and

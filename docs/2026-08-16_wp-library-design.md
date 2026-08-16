@@ -6,10 +6,13 @@ OPERATOR CROSS-CORRECTION NOTE at the end — every correction lives
 there, R5's body is untouched.
 
 LINE-CITES ARE HISTORICAL: the report's `g1.md:NNNN` references were
-taken at `3aac907e`, and bucket B's edits shifted `g1.md`'s numbering
-(+213 lines). The cites no longer resolve; THE CONTENT IS INTACT AT THE
-NAMED UNITS — navigate by unit name. Details, and the two `proofs/`
-cites that are also off, in the note at the end.
+taken at `3aac907e`, and later edits shifted `g1.md`'s numbering
+(+213 lines as of `53a44689`, where that offset was measured; it keeps
+growing with each fix round, which is the point — the cites are
+historical addresses, not a fixed offset away). The cites no longer
+resolve; THE CONTENT IS INTACT AT THE NAMED UNITS — navigate by unit
+name. Details, and the two `proofs/` cites that are also off, in the
+note at the end.
 
 STATUS: DESIGN INPUT for the next arc. No decision is taken here and
 nothing in it is chartered. Every proposal it makes lives in the
@@ -225,7 +228,7 @@ report's cites into `proofs/` are mostly still good; two are not (see (c)).
 The superseded note said: *"R2B also found unorm_idem already exists
 kind-generically (HeapBridge.intKind_normalize_idem) — item 9's `unorm_idem`
 line becomes an import fix, not a lift."* **The import route was REFUSED.**
-The ruling is at `proofs/GoLeanProofs/Examples/FibMemo/Rec.lean:1359-1392`,
+The ruling is at `proofs/GoLeanProofs/Examples/FibMemo/Rec.lean:1359-1404`,
 the docstring of `theorem unorm_idem`:
 
 > GAP-WITNESS, and a CORRECTED one (post-autonomy audit, 2026-08-16).
@@ -244,16 +247,28 @@ the docstring of `theorem unorm_idem`:
 > layer into a closure that does not otherwise contain it, to save four
 > lines.
 >
-> **NB — corrected 2026-08-16, fix round #3.** This paragraph used to
-> argue from "no module under `Examples/` imports Iris". **That was
-> false.** Measured over the tree: **63 of the 132 modules under
-> `Examples/` DO transitively import Iris**, the gateway in every case
-> being `GoLeanProofs.Laws.StmtOps`, whose first line is
-> `import Iris.ProgramLogic.WeakestPre` (20 example modules import
-> `Laws.StmtOps` directly; the other 43 reach it through a sibling).
+> **NB — corrected 2026-08-16, fix round #3; the ATTRIBUTION corrected
+> again in fix round #4.** This paragraph used to argue from "no module
+> under `Examples/` imports Iris". **That was false.** Measured over the
+> tree: **63 of the 132 modules under `Examples/` DO transitively import
+> Iris** — that number is right and stands. What round #3 got wrong is
+> WHERE the dependency enters: it named `GoLeanProofs.Laws.StmtOps` "the
+> gateway in every case". Re-measured in round #4, **there is no unique
+> gateway.** `Laws.StmtOps` is in **62** of the 63 closures, not all 63
+> (`GoLeanProofs.Examples.Fib` is the exception — it reaches Iris via
+> `Laws.Assign/Call/Control/Init/Loop`, `SurfaceExit` and `Adequacy`),
+> and its split is **20 modules importing it directly, 42 reaching it
+> through a sibling, and 1 not reaching it at all** — not the 20/43 round
+> #3 recorded. Meanwhile **six** modules that import `Iris.*` directly —
+> `Lifting`, `Lang`, `HeapBridge`, `Tactics.GoWalk`, `Laws.Eval`,
+> `Ghost` — appear in **all 63** closures, so no single module is the
+> place the Iris layer gets in.
 > The ruling is unchanged, but it stands on the DIRECT, module-local
 > basis stated above — this closure is Iris-free and is worth keeping
 > that way — and never on a tree-wide property the tree does not have.
+> (Errata: `b5f0893c`'s commit message carries round #3's wrong
+> attribution verbatim; a landed message cannot be edited, so this
+> paragraph is its correction of record.)
 >
 > The real item, recorded in `docs/gallery-campaign-log/g1.md` (fibmemo
 > unit, promotion ledger): lift `intKind_normalize_idem` OUT of
@@ -267,10 +282,14 @@ old note also got wrong: the namespace is `GoLean.Iris`, not
 at `:277`). The wrong qualifier hid exactly the layering fact that decides
 the ruling.
 
-**Designation-relevant input (recorded 2026-08-16, fix round #3).** That
-63/132 measurement is not just a corrected footnote: it says the example
-tree is *already* half Iris-dependent through `Laws.StmtOps`, so "keep Iris
-out of `Examples/`" is not an available policy and cannot be an argument for
+**Designation-relevant input (recorded 2026-08-16, fix round #3;
+attribution corrected in fix round #4).** That 63/132 measurement is not
+just a corrected footnote: it says the example tree is *already* half
+Iris-dependent — through `Laws.StmtOps` in 62 of the 63 closures, and
+through six always-present direct `Iris.*` importers (`Lifting`, `Lang`,
+`HeapBridge`, `Tactics.GoWalk`, `Laws.Eval`, `Ghost`) in all 63 — so "keep
+Iris out of `Examples/`" is not an available policy and cannot be an
+argument for
 or against any promotion in this note. What IS available, and is what the
 `unorm_idem` ruling actually exercises, is keeping *individual* closures
 Iris-free where a layer's independence is worth something — which makes the
