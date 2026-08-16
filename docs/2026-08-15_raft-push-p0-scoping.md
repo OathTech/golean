@@ -98,7 +98,7 @@ etcd-io/raft scaffolding / specification."*
 
 - **Concurrency semantics: substantially built.** `goStmt`, channel
   send/recv, `selectStmt` in the stepper; the thread-pool layer
-  (`GoLean/GoCore/Multi.lean`, ~1560 lines: `stepMulti`, park/wake,
+  (`GoLean/GoCore/Multi.lean`, ~1.6k lines: `stepMulti`, park/wake,
   rendezvous pairing, deadlock detection); stateful sync primitives
   incl. gc's misuse fatals (`Value.lean`); a happens-before race
   detector (`Race.lean`) and an NPDRF/mover development (`NPDRF.lean`).
@@ -110,7 +110,13 @@ etcd-io/raft scaffolding / specification."*
   `Multi.lean`); the `Choices` stream is the executable witness
   mechanism; the deterministic default is a default, not the model.
   What IS pinned is **granularity** — preemption only at registry
-  boundaries (C2/C3; open obligation U-2, the NPDRF arc's charge).
+  boundaries (the C2/C3 pins; the registry-path-vs-full-interleaving
+  question is NPDRF register #5, with unknowns U-1/U-5 — id corrected
+  by audit: U-2 is the L4⊆L1-reachability question, a different
+  obligation). Sharper still: the essence-doctrine register #1 records
+  an ORACLE-VISIBLE definitional bug in the granularity pin today (the
+  send-then-spin wedge — gc exits 0, the machine fuel-outs on every
+  stream; observed ∉ modeled), first in the re-envelope queue.
 - **Raft path (roadmap 6-stage ladder):** stage 1 (`quorum`) done as a
   kernel-checked pilot (`GoldenQuorum*.lean` over the frontend's
   verbatim lowering of real etcd quorum source). Stages 2–5 (tracker,
@@ -128,7 +134,9 @@ etcd-io/raft scaffolding / specification."*
   (`run = .ok r → Agreement r`); fairness/liveness deferred with a
   recorded non-preclusion requirement on any `Choices` reshape (picks
   must stay identifiable, schedulable-set recoverable); lean fixed-3/5
-  clusters before quantified `num_parties`.
+  clusters before quantified `num_parties` (audit note: fixed-3/5 is
+  the study's recorded LEAN, not part of the user ruling — confirm at
+  §8.2).
 
 ## §3 Critique of the proposed end state
 
@@ -166,9 +174,12 @@ etcd-io/raft scaffolding / specification."*
      weaker theorem than raft's design point (no drops/partitions);
      say so where the statement lives.
    - **granularity** — a theorem over registry-boundary interleavings
-     is narrower than "all Go behaviors" until U-2/NPDRF closes;
-     the statement docstring scopes it honestly or the push includes
-     the mover theorem.
+     is narrower than "all Go behaviors" until the NPDRF register #5
+     question closes; the statement docstring scopes it honestly or
+     the push includes the mover theorem. The register #1 send-then-
+     spin wedge is NOT scopable — a conforming behavior the machine
+     cannot produce is a definitional bug and must be fixed (it heads
+     the re-envelope queue).
 
 ## §4 Critique of the draft prompt
 
@@ -272,11 +283,19 @@ family itself caught:
 2. an app-loop wedge: `Node.Step` on a forwarded `MsgProp` blocks
    inside raft while leaderless, freezing ticks → elections → the
    cluster, and deadlocking shutdown. Fixed by stepping proposals off
-   the loop under a per-node stop-canceled context.
+   the loop under a per-node stop-canceled context;
+3. (audit-found, 2026-08-16) restart requires persisting the
+   ConfState, not just log entries — `RestartNode` restores membership
+   from the snapshot metadata, and a config-less restart is silently
+   unpromotable. The harness now persists it and `crash-restart`
+   asserts the recovered node regains leadership. The same audit
+   hardened the checker itself: S3 re-deliveries surface as recorded
+   anomalies, S4 runs even on completion timeout, and per-scenario
+   exercise floors make an unexercised S1 fail loudly.
 
-Both are recorded in the README as design inputs for the P2 machine
-twin — an in-machine harness will face the same ownership and
-loop-decoupling questions.
+All are recorded in the README as design inputs for the P2 machine
+twin — an in-machine harness will face the same ownership,
+loop-decoupling, and storage-invariant questions.
 
 ## §7 Gap analysis: running the harness family on the machine (2026-08-15)
 
@@ -301,8 +320,10 @@ deliberately uses no atomics (out of scope by design) — keep it that
 way.
 
 **Layer B — the raft core (raft.go + quorum + tracker + confchange +
-log/storage, ≈8–10k lines): mostly language-feasible today; the
-blockers are structural, not semantic.**
+log/storage, ~5.0k lines measured; raft.go itself is 2,162, the whole
+module ~7.9k non-test excluding raftpb/rafttest — sizes corrected by
+audit): mostly language-feasible today; the blockers are structural,
+not semantic.**
 - Supported already: interfaces + real method-set records (`Storage`,
   `Logger`, `AckedIndexer`), value/pointer receiver asymmetry,
   embedding (gc-style promotion wrappers), closures, defer,
@@ -331,9 +352,14 @@ blockers are structural, not semantic.**
   (empty bodies, no fmt); rendering/`String()` paths ride the standing
   per-decl quarantine, fail-closed if ever called (the extern-policy
   pattern, unchanged).
-- Concurrency-relevant open bugs to clear before the concurrent twin:
-  BUG-002 (expression-step atomicity), BUG-045/046/047 (channel shadow
-  locations); BUG-009/BUG-010 before multi-package identity.
+- Concurrency-relevant defect state (corrected by pre-merge audit,
+  2026-08-16 — the original text called all six "open"): BUG-002
+  (expression-step atomicity) and BUG-010 (package-name TypeId) are
+  the OPEN ones — BUG-002 needs a disposition before the concurrent
+  twin, BUG-010 before multi-package identity. BUG-045/046 (channel
+  shadow locations) and BUG-047 (double call emission on
+  conversion-of-call) were fixed 2026-08-08; BUG-009 (imported
+  method sets) was fixed 2026-08-05.
 - P1's discovery instrument is unchanged: stage 4's differential
   against etcd's own datadriven traces will surface whatever raft.go
   hits that the corpus never exercised.
@@ -353,11 +379,20 @@ class. Ranked strategy (compose 1 or 2 WITH 3):
    documented delta either way.
 3. **Avoid runtime marshaling entirely** (works under 1 or 2): the
    in-memory network passes structs (no wire encode); MemoryStorage
-   stores structs (no persistence encode); the one hot-path
-   `proto.Unmarshal` (ConfChange apply at bootstrap) disappears if
-   membership is seeded via a pre-populated snapshot/ConfState instead
-   of `StartNode`'s conf-change entries. Marshal/Unmarshal then sit
-   quarantined-if-called, never called.
+   stores structs (no persistence encode); the application-side
+   `proto.Unmarshal` (ConfChange apply) disappears if membership is
+   seeded via a pre-populated snapshot/ConfState instead of
+   `StartNode`'s conf-change entries. Marshal/Unmarshal then sit
+   quarantined-if-called, never called. **Audit-found residue that
+   marshal-avoidance does NOT remove** (all inside Layer B): raft's
+   flow control computes protobuf wire sizes on the normal path
+   (`entsSize`/`limitSize` → `proto.Size`, callers in storage/log/
+   raft/rawnode); `proto.Clone` deep-copies on append/snapshot paths;
+   and `stepLeader` has two more `proto.Unmarshal` sites on its
+   MsgProp path. Under the gogo pin these are all generated plain Go;
+   under `plainpb` a wire-accurate `Size` (or a size-seam with a
+   recorded fidelity argument) is an explicit extra obligation — this
+   is a real, previously unnamed cost of option 2.
 4. Modeling protobuf encode/decode as extern intrinsics is the worst
    option — encoding semantics enter the TCB for no benefit given 3.
 

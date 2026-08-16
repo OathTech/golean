@@ -46,18 +46,31 @@ this checklist, each item with a named artifact:
 - **C-B Envelope upper bound.** Every choice site the statement's ∀ch
   quantifies has a latitude-inventory entry argued against spec text —
   including the NEW sites this plan creates: election-timeout jitter
-  (W3.1), network chaos draws (W5.2). Artifact: latitude entries,
-  reviewed at the standing dossier bar (the G3 dossier campaign is
-  closing exactly this census; new sites file into its ruling table).
-- **C-C Granularity honesty.** The U-2 obligation (registry-boundary
-  preemption vs full interleaving) either closes via the NPDRF/mover
-  theorem or the statement's docstring scopes the claim to
-  registry-granularity interleavings explicitly. Either is honest;
-  silence is not. Artifact: the U-2 ruling (W3.3).
+  (W3.1), network chaos draws (W5.2). Artifact: latitude-inventory
+  entries at the standing dossier bar. (Audit correction: the G3
+  dossier campaign is SEQUENTIAL-only with a fixed 22-item
+  denominator — C-series concurrency sites are explicitly out of its
+  scope, so new sites reuse its process pattern and bar, not its
+  table.)
+- **C-C Granularity honesty.** Two obligations, corrected by audit
+  (the original text cited "U-2", which is the L4⊆L1-reachability
+  question — a different item). (i) The register #1 send-then-spin
+  wedge is an ORACLE-VISIBLE definitional bug in the granularity pin
+  (gc exits 0; the machine fuel-outs on every stream) — under the
+  two-bounds charter it is NOT scopable and must be FIXED, at the
+  head of W3.2's re-envelope queue. (ii) The residual
+  registry-path-vs-full-interleaving question (NPDRF register #5;
+  unknowns U-1/U-5) then either closes via the mover theorem or the
+  statement's docstring scopes the claim explicitly — either is
+  honest; silence is not. Artifact: the wedge fix + the register #5
+  ruling (W3.3).
 - **C-D Concurrency defect clearance.** BUG-002 (expression-step
-  atomicity), BUG-045/046/047 (channel shadow locations) resolved or
-  argued non-bearing on the harness's operation set. Artifact:
-  BUGS.md dispositions cited in the statement's docstring.
+  atomicity) — the one OPEN concurrency-bearing defect — resolved or
+  argued non-bearing on the harness's operation set. (Audit
+  correction: BUG-045/046, the channel shadow locations, and BUG-047
+  were fixed 2026-08-08; the original text called them open.)
+  Artifact: the BUG-002 disposition cited in the statement's
+  docstring.
 - **C-E Fail-closed subject coverage.** Nothing the subject exercises
   is silently approximated: every stdlib shim carries the G2.E5-style
   fidelity argument + oracle rows (go run executes the REAL function,
@@ -85,8 +98,13 @@ From the P0 survey and a read-only look at the concurrent lanes:
   `stdlibshim.go`): allowlisted pure stdlib functions injected as
   synthetic source pre-typecheck, fail-closed, differentially
   fidelity-tested. This is the library strategy's tool — raft's
-  `slices.SortFunc`, `errors.New`, and any surviving `fmt` needs ride
-  it rather than new mechanisms.
+  `slices.SortFunc` and `errors.New` ride it rather than new
+  mechanisms. (Audit caveat: the allowlist is currently ONE entry
+  with a direct-call-shape restriction, and shim bodies must stay
+  inside the modeled subset — `fmt.Sprintf`'s variadic `any` +
+  format verbs may exceed it; the fallback for surviving `fmt` needs
+  is recorded-delta trims or hand-rolled formatting, per the
+  quorum-pilot pattern.)
 - **The latitude census is being closed** (gc-dossiers: 22/22 dossiers,
   ruling table) — new choice sites have a ready process and bar.
 - **The re-envelope ruling stands** (channel-logic lane, parked
@@ -96,18 +114,19 @@ From the P0 survey and a read-only look at the concurrent lanes:
   tier, a compositional fork/channel flagship) — a running start for
   P3, and a re-proof constituency the re-envelope arc must not break.
 - `raftharness/` (this lane): the executable spec family, green.
-- The examples campaign currently owns `Corpus/`, `baselines/`, and
-  gate scripts (observed: guardrails-wave re-pin, `scripts/ci` edits
-  on the gallery lane) — sequencing constraint, §5.
+- The examples campaign owned `Corpus/`, `baselines/`, and gate
+  scripts while this plan was drafted — **landed on `main` 2026-08-16;
+  the constraint is lifted** (see the §5 addendum).
 
 ## §3 Workstreams
 
 **W1 — Frontend capability.**
 1. Multi-package lowering: import resolution + qualified identity
-   across packages. Prerequisite fixes: BUG-010 (TypeId keyed by
-   package name → import path), BUG-009 (imported named types'
-   method sets on the wire). This is the deferred-from-quorum-pilot
-   arc, and the largest single frontend item.
+   across packages. Prerequisite fix: BUG-010 (TypeId keyed by
+   package name → import path). (Audit correction: BUG-009, imported
+   method sets, was fixed 2026-08-05 — not a prerequisite.) This is
+   the deferred-from-quorum-pilot arc, and the largest single
+   frontend item.
 2. `slices.SortFunc` (shim or extern extension — decide by fidelity
    argument; shim preferred, it needs no GoCore change).
 3. Sweep raft.go stage-by-stage for lowering refusals (W4 drives
@@ -145,8 +164,10 @@ From the P0 survey and a read-only look at the concurrent lanes:
    arc unblocks BOTH the raft push and the parked channel-logic lane;
    it carries a re-proof wave (gallery + channel-logic machinery) and
    the strictest audit bar in this plan.
-3. The U-2 granularity ruling (close via mover/NPDRF or scope the
-   statement); BUG-002/045/046/047 dispositions.
+3. The granularity work per C-C: the register #1 wedge fix (heads the
+   re-envelope queue), then the register #5 ruling (close via
+   mover/NPDRF or scope the statement); the BUG-002 disposition
+   (045/046/047 already fixed).
 
 **W4 — Sequential subject validation (roadmap stages 2–4).**
 Tracker → log_unstable/MemoryStorage → the raft.go step function,
@@ -169,9 +190,10 @@ where the subject's unexercised-path risk is burned down.
    stream completes (the future completion witness's executable twin).
 
 **W6 — Statement & pinning.**
-1. User rulings folded in: Agreement as the base predicate
-   (linearizability = stretch tier), tier ladder, network-envelope
-   scope statement.
+1. User rulings OBTAINED and folded in (audit correction: these are
+   the scoping doc's §8 open decisions — recommended, not yet ruled):
+   Agreement as the base predicate (linearizability = stretch tier),
+   tier ladder, network-envelope scope statement, raftpb strategy.
 2. Elaborate the statement against machine vocabulary (the
    `capstone_safety_shape` scratch form is the seed); write the
    Agreement predicate at statement-TCB level; draft the completion
@@ -230,7 +252,8 @@ these are supervised arcs under the standing merge/audit protocol
 
 ## §7 Risks, pre-registered
 
-1. **raft.go scale surprises** (≈11k lines of stage-4 subject) —
+1. **raft.go scale surprises** (measured: raft.go is 2,162 lines, the
+   full lowering target set ~5.0k — audit-corrected from "≈11k") —
    mitigated by stage-wise lowering with the trace differential as
    the discovery instrument and quarantine keeping gaps visible.
 2. **Re-envelope breakage** of existing proof estates — mitigated by
@@ -242,9 +265,10 @@ these are supervised arcs under the standing merge/audit protocol
    acceptable M4 exit; the mover theorem upgrades it later.
 4. **Protobuf strategy churn** — mitigated by marshal-avoidance
    making both options small and reversible.
-5. **Two-lane contention** — mitigated by §5's explicit queue; the
-   cost of serializing is weeks, the cost of a Corpus/baseline merge
-   conflict with laundered re-pins is trust.
+5. **Two-lane contention** — RETIRED for the examples campaign (landed
+   2026-08-16, §5 addendum); the principle stands for any future
+   concurrent core-owning lane: serialize — the cost is weeks, a
+   Corpus/baseline merge conflict with laundered re-pins costs trust.
 6. **Statement drift during the long middle** — mitigated by drafting
    the statement EARLY (W6.2 can elaborate against today's vocabulary
    with `sorry` proofs, as the scoping study did) and re-elaborating
