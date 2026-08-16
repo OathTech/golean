@@ -1,40 +1,45 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-15  commit: gallery campaign G2 extension E5 BUILT
-#   (stdlib selector-call shims, scoped to strings.Fields) — the frontend
-#   shim mechanism + the 22-row flip, one commit
-#   re-pin reason: EXACTLY 22 flips FAIL/frontend-export -> PASS/-, no
-#   other change; regenerated from this commit's full run (1830 cases,
-#   1732 PASS, 98 FAIL — the FAIL set returns to its pre-E5 state).
-#   The mechanism (tools/nativefrontend: stdlibshim.go NEW, emit.go
-#   emitStdlibShimCall + hook, main.go injection call): an allowlisted
-#   stdlib selector call (`strings.Fields(x)` — the allowlist's ONE
-#   entry) injects a Go-source shim as a synthetic file before
-#   type-check and emits the call as an ordinary static call to it; the
-#   shim is a byte-level scan over the FULL Unicode White_Space class,
-#   lowered through the ordinary pipeline. Every other selector call
-#   keeps its pre-E5 boundary behaviour byte-identical (probe-verified:
-#   strings.Repeat, fmt.Sprint, value position, reserved-name collision
-#   — those four refuse verbatim at the per-declaration quarantine; the
-#   DOT-IMPORT case is NOT a refusal and never was: it emits a dangling
-#   call and the machine answers `stuck`, a pre-existing fail-closed
-#   defect recorded in g2.md, which E5 neither widened nor narrowed).
-#   [Sentence corrected 2026-08-16 by the post-autonomy audit; the
-#   header had listed dot import among the byte-identical REFUSALS.]
-#   go run executes the REAL stdlib,
-#   so each flipped row is a direct oracle test of shim fidelity —
-#   incl. the non-ASCII White_Space rows and invalid UTF-8.
-#   Fidelity argument + BUILT record:
+# recorded: 2026-08-16  commit: post-autonomy audit fix C1, guardrails half
+#   (bools/short-circuit-funclit — the CLOSURE QUARANTINE LEAK's rows,
+#   committed RED before the fix, per guardrails-first)
+#   re-pin reason: 11 NEW ids, no pre-existing id moved (drift check:
+#   exactly the 11; PASS/FAIL sets and stages otherwise unchanged from
+#   the 2026-08-15 E5 record). 1841 cases, 1736 PASS, 105 FAIL.
+#   The 7 RED rows are the leak witness: a func LITERAL containing
+#   make/append, called inside a short-circuit RHS, emits its own body
+#   under hoistForbidden="short-circuit operand" because
+#   tools/nativefrontend/emit.go's emitFuncLit does not save/restore
+#   the hoistForbidden / scHoistOK pair. They fail at stage
+#   frontend-export with the verbatim quarantine reason
+#   `make in short-circuit operand`. That is an OVER-refusal — the
+#   literal's body is its own lifted function, so nothing hoists out of
+#   the conditional and no evaluation order changes — and the fix
+#   commit flips exactly these 7.
+#   The 4 PASS rows are the CONTROLS: the identical literal body
+#   outside any short-circuit (outside-four, outside-zero) and a
+#   short-circuit with no literal in it (outside-then-sc*). They pass
+#   today and must keep passing after the fix; a flip there would mean
+#   the fix widened something it should not have.
+#   Finding: post-autonomy audit R2A-F2, 2026-08-16.
+# previous record: 2026-08-15  commit: gallery campaign G2 extension E5
+#   BUILT (stdlib selector-call shims, scoped to strings.Fields) —
+#   1830 cases, 1732 PASS, 98 FAIL; re-pin reason: EXACTLY 22 flips
+#   FAIL/frontend-export -> PASS/-, no other change. The mechanism
+#   (tools/nativefrontend: stdlibshim.go NEW, emit.go
+#   emitStdlibShimCall + hook, main.go injection call) injects an
+#   allowlisted stdlib selector call's Go-SOURCE shim as a synthetic
+#   file before type-check and emits the call as an ordinary static
+#   call to it. Every other selector call keeps its pre-E5 boundary
+#   behaviour byte-identical (probe-verified: strings.Repeat,
+#   fmt.Sprint, value position, reserved-name collision — those four
+#   refuse verbatim; the DOT-IMPORT case is NOT a refusal and never
+#   was: it emits a dangling call and the machine answers `stuck`, a
+#   pre-existing fail-closed defect recorded in g2.md, which E5
+#   neither widened nor narrowed. Sentence corrected 2026-08-16 by the
+#   post-autonomy audit). Fidelity argument + BUILT record:
 #   docs/gallery-campaign-log/g2.md "E5". NO GoCore change, NO decoder
 #   change, NO wire-schema change.
-#   The 22 flipped ids = the whole E5 acceptance set, nothing else:
-#     examples/wordfreq/* (14 — the consumer's quarantined rows) and
-#     strings/fields-conformance/* (8 — the shim conformance suite).
-#   Unlike E3 there is NO blast radius beyond the acceptance set (no
-#   other corpus row calls strings.Fields; verified by this full run).
-# manifest_cases: 1830  pass: 1732  fail: 98
-#   (machine-readable counts line, restored 2026-08-16 by the
-#   post-autonomy audit — it had been dropped from the header at an
-#   earlier re-pin; every future re-pin carries it forward)
+# manifest_cases: 1841  pass: 1736  fail: 105
 # columns: result, id, stage (features/detail omitted on purpose)
 # frontend: native (tools/nativefrontend + GoLean/NativeToIR.lean)
 PASS	arrays/array-bounds	-
@@ -86,6 +91,17 @@ PASS	bools/short-circuit-effects/nested-outer-false	-
 PASS	bools/short-circuit-effects/order-both-false	-
 PASS	bools/short-circuit-effects/order-left-true	-
 PASS	bools/short-circuit-effects/order-right-true	-
+FAIL	bools/short-circuit-funclit/and-short	frontend-export
+FAIL	bools/short-circuit-funclit/and-taken	frontend-export
+FAIL	bools/short-circuit-funclit/and-zero-len	frontend-export
+FAIL	bools/short-circuit-funclit/capture-short	frontend-export
+FAIL	bools/short-circuit-funclit/capture-three	frontend-export
+FAIL	bools/short-circuit-funclit/or-short	frontend-export
+FAIL	bools/short-circuit-funclit/or-taken	frontend-export
+PASS	bools/short-circuit-funclit/outside-four	-
+PASS	bools/short-circuit-funclit/outside-then-sc	-
+PASS	bools/short-circuit-funclit/outside-then-sc-short	-
+PASS	bools/short-circuit-funclit/outside-zero	-
 PASS	bools/short-circuit-or	-
 PASS	bools/zero-value	-
 PASS	builtins/append-defined-byte-slice-string	-
