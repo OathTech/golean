@@ -173,3 +173,25 @@ addendum.)
 - **Fix landed (user check-in ruling, 2026-08-08):** BUG-048 fixed on
   the branch (frontend-side receiver deref); all three pins flipped
   PASS; entry Status: fixed.
+
+## Addendum (2026-08-15, ci-gate-hardening lane): timeout-budget split — parking terms undisturbed
+
+The 300 s `LEAN_ENUM_TIMEOUT_SECONDS` budget named in the parked
+question above now denotes the quick/confluent/racy budget
+SPECIFICALLY: `tier=slow` MEMBERSHIP re-certification got its own
+`LEAN_ENUM_SLOW_TIMEOUT_SECONDS` (default 1200 s) after the 2026-08-13
+nightly flake (`docs/2026-08-14_ci-runner-death-and-slow-tier-timeout.md`).
+The parked rows are confluent-lane candidates, so THEIR bound is
+unchanged at 300 s — the ruling's "no cap raises" term is not disturbed,
+and any revisit of the parked units remains a user decision. Two
+housekeeping corrections that ride along:
+
+- The google-search "contrast" figures above are superseded: the row was
+  later re-pinned to `work=60000000`, and the 2026-08-14 measurement is
+  39,976,295 steps / 94 s single-core on the dev box (the ~2-4 min
+  figure was measured at the older params/machine mix).
+- The muxer/make-greeting observability nit recorded above ("runner
+  shows an empty detail when the enumerator is timeout-killed") is now
+  FIXED for all three enumerating lanes — timeouts are named in the FAIL
+  detail ("enumerator TIMED OUT after Ns"), other enumerator failures
+  carry their exit code.
