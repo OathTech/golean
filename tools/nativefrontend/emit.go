@@ -5320,16 +5320,33 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 	}
 
 	// Emit the body with the capture map in force and a fresh hoist context.
+	//
+	// "Fresh hoist context" includes the HOIST RESTRICTION itself
+	// (hoistForbidden / scHoistOK), and until 2026-08-16 it did not —
+	// post-autonomy audit finding R2A-F2, guardrails in
+	// Corpus/coverage/exec/bools/short-circuit-funclit. The restriction
+	// says "you may not hoist a call/allocation OUT of this expression,
+	// because that would move it across a short-circuit". A function
+	// literal's body is emitted into its OWN lifted function: its
+	// statements never enter the enclosing statement stream, so there is
+	// nothing to hoist out and no evaluation order to change. Carrying
+	// the flag inward refused `make`/`append`/composites inside the
+	// literal — an over-refusal, invisible to every gate because a
+	// wrongly-`unsupported` case just looks like an expected coverage gap.
+	// The restriction is restored on the way out, so the ENCLOSING
+	// expression keeps its refusal exactly as before.
 	savedCapture, savedHoisted, savedName := e.captureParam, e.hoisted, e.curFuncName
 	savedFnRecv := e.fnHasRecv
 	e.fnHasRecv = containsRecv(lit.Body)
 	savedResults := e.curResults
 	savedBranch, savedGoto := e.branchLabels, e.gotoLabels
 	savedSeg, savedPC, savedLoop := e.gotoSeg, e.gotoPC, e.gotoLoop
+	savedForbidden, savedSCHoistOK := e.hoistForbidden, e.scHoistOK
 	e.captureParam, e.hoisted = newCapture, nil
 	e.curResults = sig.Results()
 	e.branchLabels, e.gotoLabels = scanLabelUses(lit.Body)
 	e.gotoSeg, e.gotoPC, e.gotoLoop = nil, "", ""
+	e.hoistForbidden, e.scHoistOK = "", false
 	var body any
 	var berr error
 	if len(e.gotoLabels) > 0 {
@@ -5342,6 +5359,7 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 	e.curResults = savedResults
 	e.branchLabels, e.gotoLabels = savedBranch, savedGoto
 	e.gotoSeg, e.gotoPC, e.gotoLoop = savedSeg, savedPC, savedLoop
+	e.hoistForbidden, e.scHoistOK = savedForbidden, savedSCHoistOK
 	if berr != nil {
 		return nil, berr
 	}

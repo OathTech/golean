@@ -1,45 +1,49 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-16  commit: post-autonomy audit fix C1, guardrails half
-#   (bools/short-circuit-funclit — the CLOSURE QUARANTINE LEAK's rows,
-#   committed RED before the fix, per guardrails-first)
-#   re-pin reason: 11 NEW ids, no pre-existing id moved (drift check:
-#   exactly the 11; PASS/FAIL sets and stages otherwise unchanged from
-#   the 2026-08-15 E5 record). 1841 cases, 1736 PASS, 105 FAIL.
-#   The 7 RED rows are the leak witness: a func LITERAL containing
-#   make/append, called inside a short-circuit RHS, emits its own body
-#   under hoistForbidden="short-circuit operand" because
-#   tools/nativefrontend/emit.go's emitFuncLit does not save/restore
-#   the hoistForbidden / scHoistOK pair. They fail at stage
-#   frontend-export with the verbatim quarantine reason
-#   `make in short-circuit operand`. That is an OVER-refusal — the
-#   literal's body is its own lifted function, so nothing hoists out of
-#   the conditional and no evaluation order changes — and the fix
-#   commit flips exactly these 7.
-#   The 4 PASS rows are the CONTROLS: the identical literal body
-#   outside any short-circuit (outside-four, outside-zero) and a
-#   short-circuit with no literal in it (outside-then-sc*). They pass
-#   today and must keep passing after the fix; a flip there would mean
-#   the fix widened something it should not have.
+# recorded: 2026-08-16  commit: post-autonomy audit fix C1, fix half
+#   (emitFuncLit saves/restores hoistForbidden + scHoistOK — the
+#   CLOSURE QUARANTINE LEAK closed)
+#   re-pin reason: EXACTLY 7 flips FAIL/frontend-export -> PASS/-, no
+#   other change; regenerated from this commit's full run (1841 cases,
+#   1743 PASS, 98 FAIL — the FAIL set returns to its standing
+#   fail-closed size, the same 98 as the 2026-08-15 E5 record).
+#   The 7 flipped ids are exactly the guardrail rows landed RED one
+#   commit earlier: bools/short-circuit-funclit/{and-taken,and-short,
+#   and-zero-len,or-taken,or-short,capture-three,capture-short}. The
+#   four CONTROL rows in the same family (outside-four, outside-zero,
+#   outside-then-sc, outside-then-sc-short) were PASS before and are
+#   PASS after — the fix did not widen them.
+#   The change: emitFuncLit already saved and restored nine pieces of
+#   emitter state around a function literal's body; hoistForbidden and
+#   scHoistOK were not among them, so a literal inside a short-circuit
+#   RHS emitted its OWN statements under "short-circuit operand" and
+#   any make/append/composite inside it was refused. The literal's body
+#   is its own lifted function — nothing hoists out of the conditional
+#   there and no evaluation order changes — so that was an OVER-refusal.
+#   Both flags are cleared for the body and restored on the way out, so
+#   the ENCLOSING expression keeps its refusal unchanged.
+#   FAIL-CLOSED REMAINDER, probe-verified before and after and
+#   BYTE-IDENTICAL (9 shapes, each directly in a short-circuit RHS):
+#   channel receive, make, new, append, copy, slice literal, map
+#   literal, &composite, interface method value. NO GoCore change, NO
+#   decoder change, NO wire-schema change; the only diff is the two
+#   flags in tools/nativefrontend/emit.go's emitFuncLit.
 #   Finding: post-autonomy audit R2A-F2, 2026-08-16.
-# previous record: 2026-08-15  commit: gallery campaign G2 extension E5
+# previous record: 2026-08-16  commit: post-autonomy audit fix C1,
+#   guardrails half — 1841 cases, 1736 PASS, 105 FAIL; 11 NEW ids
+#   (7 RED leak witnesses + 4 PASS controls), no pre-existing id moved.
+# earlier record: 2026-08-15  commit: gallery campaign G2 extension E5
 #   BUILT (stdlib selector-call shims, scoped to strings.Fields) —
-#   1830 cases, 1732 PASS, 98 FAIL; re-pin reason: EXACTLY 22 flips
-#   FAIL/frontend-export -> PASS/-, no other change. The mechanism
-#   (tools/nativefrontend: stdlibshim.go NEW, emit.go
-#   emitStdlibShimCall + hook, main.go injection call) injects an
-#   allowlisted stdlib selector call's Go-SOURCE shim as a synthetic
-#   file before type-check and emits the call as an ordinary static
-#   call to it. Every other selector call keeps its pre-E5 boundary
-#   behaviour byte-identical (probe-verified: strings.Repeat,
-#   fmt.Sprint, value position, reserved-name collision — those four
-#   refuse verbatim; the DOT-IMPORT case is NOT a refusal and never
-#   was: it emits a dangling call and the machine answers `stuck`, a
-#   pre-existing fail-closed defect recorded in g2.md, which E5
-#   neither widened nor narrowed. Sentence corrected 2026-08-16 by the
-#   post-autonomy audit). Fidelity argument + BUILT record:
-#   docs/gallery-campaign-log/g2.md "E5". NO GoCore change, NO decoder
-#   change, NO wire-schema change.
-# manifest_cases: 1841  pass: 1736  fail: 105
+#   1830 cases, 1732 PASS, 98 FAIL; EXACTLY 22 flips
+#   FAIL/frontend-export -> PASS/-. Every other selector call keeps its
+#   pre-E5 boundary behaviour byte-identical (probe-verified:
+#   strings.Repeat, fmt.Sprint, value position, reserved-name collision
+#   — those four refuse verbatim; the DOT-IMPORT case is NOT a refusal
+#   and never was: it emits a dangling call and the machine answers
+#   `stuck`, a pre-existing fail-closed defect recorded in g2.md, which
+#   E5 neither widened nor narrowed. Sentence corrected 2026-08-16 by
+#   the post-autonomy audit). Fidelity argument + BUILT record:
+#   docs/gallery-campaign-log/g2.md "E5".
+# manifest_cases: 1841  pass: 1743  fail: 98
 # columns: result, id, stage (features/detail omitted on purpose)
 # frontend: native (tools/nativefrontend + GoLean/NativeToIR.lean)
 PASS	arrays/array-bounds	-
@@ -91,13 +95,13 @@ PASS	bools/short-circuit-effects/nested-outer-false	-
 PASS	bools/short-circuit-effects/order-both-false	-
 PASS	bools/short-circuit-effects/order-left-true	-
 PASS	bools/short-circuit-effects/order-right-true	-
-FAIL	bools/short-circuit-funclit/and-short	frontend-export
-FAIL	bools/short-circuit-funclit/and-taken	frontend-export
-FAIL	bools/short-circuit-funclit/and-zero-len	frontend-export
-FAIL	bools/short-circuit-funclit/capture-short	frontend-export
-FAIL	bools/short-circuit-funclit/capture-three	frontend-export
-FAIL	bools/short-circuit-funclit/or-short	frontend-export
-FAIL	bools/short-circuit-funclit/or-taken	frontend-export
+PASS	bools/short-circuit-funclit/and-short	-
+PASS	bools/short-circuit-funclit/and-taken	-
+PASS	bools/short-circuit-funclit/and-zero-len	-
+PASS	bools/short-circuit-funclit/capture-short	-
+PASS	bools/short-circuit-funclit/capture-three	-
+PASS	bools/short-circuit-funclit/or-short	-
+PASS	bools/short-circuit-funclit/or-taken	-
 PASS	bools/short-circuit-funclit/outside-four	-
 PASS	bools/short-circuit-funclit/outside-then-sc	-
 PASS	bools/short-circuit-funclit/outside-then-sc-short	-
