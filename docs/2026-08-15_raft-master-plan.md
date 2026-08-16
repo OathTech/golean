@@ -200,6 +200,12 @@ lanes-permitting since it touches the semantic core, not the frontend
 
 ## §5 Sequencing & lane ownership
 
+**ADDENDUM 2026-08-16: the examples campaign LANDED on `main`** — the
+serialization constraint below is lifted by events. Corpus, baselines,
+and semantic-core ownership are open; the re-envelope arc (W3.2) can
+be scheduled as the next core-owning lane. Original text kept for the
+record:
+
 - **Now, without core ownership:** W2 (subject engineering — this
   lane), W6.1–.2 drafting, the raftpb ruling.
 - **Semantic-core / Corpus / baselines serialization:** the examples

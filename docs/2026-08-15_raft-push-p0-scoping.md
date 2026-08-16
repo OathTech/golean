@@ -281,7 +281,7 @@ loop-decoupling questions.
 ## §7 Gap analysis: running the harness family on the machine (2026-08-15)
 
 Surveyed against the pipeline's current support (evidence:
-`tools/nativefrontend/main.go:64` single-package limit;
+the single-package refusal in `tools/nativefrontend/main.go`;
 `docs/2026-07-30_quorum-extern-policy.md`; the method-set/embedding/
 generics/defer-panic corpus suites; `docs/coverage-ledger.md`;
 `docs/BUGS.md`) and against the raft core's measured import surface
@@ -312,7 +312,8 @@ blockers are structural, not semantic.**
   `slices.SortFunc` (gap: extend the extern or vendor as source —
   pure generic Go, monomorphizable), 3 non-logger `fmt.Sprintf` in
   raft.go, `strconv`/`strings` only in rendering paths, no `goto`.
-- **Blocker 1 — single-package lowering** (`main.go:64`). The raft
+- **Blocker 1 — single-package lowering** (the `parser.ParseDir`
+  one-package refusal in `tools/nativefrontend/main.go`). The raft
   core spans 5 packages. Either true multi-package lowering (deferred
   from the quorum pilot, requires the BUG-010 package-name TypeId fix;
   the ledger already anticipates it) or a mega-vendor at ~30× the
@@ -386,7 +387,9 @@ A costs nothing until P2 and is a redesign, not a gap.
 3. Network envelope for the pinned statement: reliable-first with the
    scope stated, chaos envelope as a later tier (§3.5) — confirm.
 4. Sequencing vs the examples lane: P1 touches semantic core +
-   `Corpus/` + `baselines/` — serialize or seam.
+   `Corpus/` + `baselines/` — serialize or seam. **RESOLVED BY EVENTS
+   2026-08-16: the examples campaign landed on `main`; ownership is
+   open.**
 5. Whether P1 (stages 2–4) runs supervised (recommended here) or gets
    folded into the autonomous push.
 6. raftpb strategy: gogo-rev pin vs `plainpb` shim (both with
