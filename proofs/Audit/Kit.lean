@@ -4,6 +4,7 @@ import GoLeanProofs.SliceMem
 import GoLeanProofs.MapMem
 import GoLeanProofs.MapLoops
 import GoLeanProofs.FuelMeasure
+import GoLeanProofs.Frame.Threshold
 import GoLeanProofs.Examples.Fib
 import GoLeanProofs.Examples.Gcd
 import GoLeanProofs.Examples.MinMax
@@ -283,6 +284,48 @@ other vocabulary defs) -/
 #guard_msgs in #print axioms GoLean.SliceMem.prefixPad_familyMod_set
 /-- info: 'GoLean.SliceMem.prefixPad_full' does not depend on any axioms -/
 #guard_msgs in #print axioms GoLean.SliceMem.prefixPad_full
+
+/-! ## Frame/Threshold — the threshold shift/rebase layer (WP arc s1
+lift 4, 2026-08-16: 17 public lemmas + the StepKit `lookup_append`
+match form; `ρT`/`bumpAt`/`retiredFrame`/`CellFixed` are vocabulary
+defs, unpinned). Transcribed verbatim from a fresh probe
+(`.tmp/pinprobe4.lean` at the lift commit). -/
+/-- info: 'GoLean.Surface.lookup_append' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Surface.lookup_append
+/-- info: 'GoLean.Frame.ρT_lt' does not depend on any axioms -/
+#guard_msgs in #print axioms GoLean.Frame.ρT_lt
+/-- info: 'GoLean.Frame.ρT_ge' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Frame.ρT_ge
+/-- info: 'GoLean.Frame.shiftSpec_ρT' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Frame.shiftSpec_ρT
+/-- info: 'GoLean.Frame.ρT_zero_app' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Frame.ρT_zero_app
+/-- info: 'GoLean.Frame.base_ne_of_ne' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Frame.base_ne_of_ne
+/-- info: 'GoLean.Frame.renameLoc_ρT_zero' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Frame.renameLoc_ρT_zero
+/-- info: 'GoLean.Frame.renameValue_id' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Frame.renameValue_id
+/-- info: 'GoLean.Frame.renameCell_ρT_zero' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Frame.renameCell_ρT_zero
+/-- info: 'GoLean.Frame.CellFixed.of_locFree' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Frame.CellFixed.of_locFree
+/-- info: 'GoLean.Frame.renameLoc_ρT_bump' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Frame.renameLoc_ρT_bump
+/-- info: 'GoLean.Frame.retiredFrame_lookup_base_none' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Frame.retiredFrame_lookup_base_none
+/-- info: 'GoLean.Frame.retiredFrame_lookup_field' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Frame.retiredFrame_lookup_field
+/-- info: 'GoLean.Frame.retiredFrame_lookup_index' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Frame.retiredFrame_lookup_index
+/-- info: 'GoLean.Frame.retiredFrame_lookup_some_inv' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Frame.retiredFrame_lookup_some_inv
+/-- info: 'GoLean.Frame.frameSim_seed' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Frame.frameSim_seed
+/-- info: 'GoLean.Frame.rebaseSimT' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Frame.rebaseSimT
+/-- info: 'GoLean.Frame.transfer_segT' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Frame.transfer_segT
 
 /-! ## MapMem — map-in-memory vocabulary + executable op facts
 (27 public lemmas; +11 in the GAP-P1 counting-fold lift and +3 in the

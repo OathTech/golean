@@ -164,7 +164,7 @@ theorem isortH_runs (n seed : Nat) (hn : n < 2 ^ 63)
     (renCfg_hanchor d) (renCfg_stop11 d)
   have hread := hFSf.lookup_some (l := .base ⟨2⟩) (c := ucell 1) hreadR
   have hren : renameLoc (ρ11 d) (.base ⟨2⟩) = .base ⟨2⟩ := by
-    simp [renameLoc, ρ11]
+    simp [renameLoc, ρ11, ρT]
   rw [hren] at hread
   -- the chain
   have h1 := stepFnIter_chain hA1 (stepFnIter_one hmk)

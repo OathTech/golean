@@ -188,6 +188,21 @@ theorem lookup_append_right {h₁ h₂ : Heap} {l : Loc}
           rw [hb] at h
           simpa [hb] using ih h
 
+/-- The MATCH form of lookup-over-append — the spelling the rebase
+proofs consume (WP arc s1 lift 4: lifted from the isort/selsort
+per-example copies, exactly as the selsort GAP-WITNESS note asked). -/
+theorem lookup_append (h₁ h₂ : Heap) (l : Loc) :
+    Heap.lookup (h₁ ++ h₂) l
+      = match Heap.lookup h₁ l with
+        | some c => some c
+        | none => Heap.lookup h₂ l := by
+  induction h₁ with
+  | nil => simp [Heap.lookup]
+  | cons p rest ih =>
+      obtain ⟨k, c⟩ := p
+      simp only [List.cons_append, Heap.lookup]
+      split <;> simp [ih]
+
 theorem set_append_right {h₁ h₂ : Heap} {l : Loc} {c : HeapCell}
     (h : Heap.lookup h₁ l = none) :
     Heap.set (h₁ ++ h₂) l c = h₁ ++ Heap.set h₂ l c := by

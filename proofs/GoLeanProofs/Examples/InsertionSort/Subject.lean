@@ -583,25 +583,13 @@ fixed cells 0–10, the pass-local region from 11) -/
 
 /-- The per-pass shift: identity on the fixed cells `0..10`, shift by
 `d` on the pass-local region. -/
-def ρ11 (d : Nat) : Nat → Nat := fun x => if x < 11 then x else x + d
-
-private theorem ρ11_lt {d a : Nat} (h : a < 11) : ρ11 d a = a := if_pos h
-private theorem ρ11_ge {d a : Nat} (h : 11 ≤ a) : ρ11 d a = a + d :=
-  if_neg (by omega)
-
-private theorem shiftSpec_ρ11 (d : Nat) : ShiftSpec (ρ11 d) 11 (11 + d) := by
-  refine ⟨?_, ?_⟩
-  · intro x y hxy
-    simp only [ρ11] at hxy
-    split at hxy <;> split at hxy <;> omega
-  · intro k
-    simp only [ρ11]
-    rw [if_neg (by omega)]
-    omega
+def ρ11 (d : Nat) : Nat → Nat := ρT 11 d
+-- (WP arc s1 lift 4: the kit's `ρT` at threshold 11; the wrapper
+-- keeps every downstream statement unchanged.)
 
 private theorem renCell_handleH (d n : Nat) :
     renameCell (ρ11 d) (hIHandleCell n) = hIHandleCell n := by
-  simp [renameCell, renameValue, renameLoc, ρ11]
+  simp [renameCell, renameValue, renameLoc, ρ11, ρT]
 
 private theorem lookup_σHOut_ge {n seed : Nat} {l : List Int} {iv : Int}
     {ffv : Bool} {a : Nat} (ha : 11 ≤ a) :
@@ -653,75 +641,13 @@ private theorem lookup_σHIn_index (n seed : Nat) (l : List Int) (iv jv : Int)
     (ffIv : Bool) (b : Loc) (i : Int) :
     Heap.lookup (σHIn n seed l iv jv ffIv).heap (.index b i) = none := rfl
 
-/-- Root bump by 2 above the fixed cells (threshold 11). -/
-private def bump2H : Loc → Loc
-  | .base a => .base ⟨if a.id < 11 then a.id else a.id + 2⟩
-  | .field b tid f => .field (bump2H b) tid f
-  | .index b i => .index (bump2H b) i
-
-private theorem renameLoc_bump2H (d : Nat) (l : Loc) :
-    renameLoc (ρ11 (d + 2)) l = renameLoc (ρ11 d) (bump2H l) := by
-  induction l with
-  | base a =>
-      have h : ρ11 (d + 2) a.id
-          = ρ11 d (if a.id < 11 then a.id else a.id + 2) := by
-        by_cases ha : a.id < 11
-        · rw [if_pos ha, ρ11_lt ha, ρ11_lt ha]
-        · rw [if_neg ha, ρ11_ge (d := d + 2) (a := a.id) (by omega),
-            ρ11_ge (d := d) (a := a.id + 2) (by omega)]
-          omega
-      simp only [renameLoc, bump2H, h]
-  | field b tid f ih => simp only [renameLoc, bump2H, ih]
-  | index b i ih => simp only [renameLoc, bump2H, ih]
-
-/-- The trivial-frame simulation at the subject-loop entry. -/
+/-- The trivial-frame simulation at the subject-loop entry (kit
+`frameSim_seed`). -/
 theorem frameSim_zero11 (n seed : Nat) (l : List Int) (iv : Int)
     (ffv : Bool) :
     FrameSim (ρ11 0) 11 11 [] (σHOut n seed l iv ffv)
-      (σHOut n seed l iv ffv) := by
-  refine ⟨shiftSpec_ρ11 0, rfl, rfl, rfl, rfl, rfl, Nat.le_refl 11,
-    ?_, ?_, fun a => rfl, bodies_ρsh (ρ11 0)⟩
-  · intro loc
-    match loc with
-    | .base ⟨a⟩ =>
-        match a with
-        | 0 => rfl
-        | 1 => rfl
-        | 2 => rfl
-        | 3 =>
-            show Heap.lookup (σHOut n seed l iv ffv).heap (.base ⟨ρ11 0 3⟩)
-              = some (renameCell (ρ11 0) (hIHandleCell n))
-            rw [renCell_handleH 0 n]
-            rfl
-        | 4 =>
-            show Heap.lookup (σHOut n seed l iv ffv).heap (.base ⟨ρ11 0 4⟩)
-              = some (renameCell (ρ11 0) (arrCell n l))
-            rw [renCell_arr]
-            rfl
-        | 5 =>
-            show Heap.lookup (σHOut n seed l iv ffv).heap (.base ⟨ρ11 0 5⟩)
-              = some (renameCell (ρ11 0) (hIHandleCell n))
-            rw [renCell_handleH 0 n]
-            rfl
-        | 6 => rfl
-        | 7 => rfl
-        | 8 =>
-            show Heap.lookup (σHOut n seed l iv ffv).heap (.base ⟨ρ11 0 8⟩)
-              = some (renameCell (ρ11 0) (hIHandleCell n))
-            rw [renCell_handleH 0 n]
-            rfl
-        | 9 => rfl
-        | 10 => rfl
-        | (a + 11) =>
-            show Heap.lookup (σHOut n seed l iv ffv).heap
-              (.base ⟨ρ11 0 (a + 11)⟩) = _
-            rw [ρ11_ge (d := 0) (a := a + 11) (by omega)]
-            rw [lookup_σHOut_ge (a := a + 11 + 0) (by omega)]
-            rfl
-    | .field b tid f => rfl
-    | .index b i => rfl
-  · intro loc c hc
-    simp [Heap.lookup] at hc
+      (σHOut n seed l iv ffv) :=
+  frameSim_seed rfl (bodies_ρsh (ρT 11 0))
 
 theorem fs_lookup_none11 {ρ : Nat → Nat} {na₀ na : Nat} {fr : Heap}
     {σ σF : ExecState} (h : FrameSim ρ na₀ na fr σ σF) {l : Loc}
@@ -733,144 +659,46 @@ theorem fs_lookup_none11 {ρ : Nat → Nat} {na₀ na : Nat} {fr : Heap}
 
 /-- **The frame rebase at threshold 11**: the pass's retired
 `j`/`$forFirst` cells (canonical 11/12) move INTO the frame at their
-true addresses `11+d`/`12+d`. -/
+true addresses (kit `rebaseSimT` + this example's fixed-cell
+enumeration — WP arc s1 lift 4). -/
 private theorem rebaseSim11 {d : Nat} {fr : Heap} {n seed : Nat}
     {l : List Int} {iv jv : Int} {σA : ExecState}
     (h : FrameSim (ρ11 d) 11 (11 + d) fr (σHIn n seed l iv jv false) σA) :
     FrameSim (ρ11 (d + 2)) 11 (11 + (d + 2))
-      (fr ++ [(.base ⟨11 + d⟩, intcell jv), (.base ⟨12 + d⟩, bcell false)])
+      (fr ++ retiredFrame (11 + d) [intcell jv, bcell false])
       (σHOut n seed l iv false) σA := by
-  refine ⟨shiftSpec_ρ11 (d + 2), h.types_eq, h.funcs_eq, h.methods_eq,
-    h.methodSets_eq, ?_, Nat.le_refl 11, ?_, ?_, ?_, bodies_ρsh _⟩
-  · have hne := h.next_eq
-    rw [show (σHIn n seed l iv jv false).nextAddr = 13 from rfl,
-      ρ11_ge (d := d) (a := 13) (by omega)] at hne
-    show σA.nextAddr = ρ11 (d + 2) 11
-    rw [ρ11_ge (d := d + 2) (a := 11) (by omega)]
-    omega
-  · intro loc
-    match loc with
-    | .base ⟨a⟩ =>
-        by_cases ha : a < 11
-        · rcases (by omega : a = 0 ∨ a = 1 ∨ a = 2 ∨ a = 3 ∨ a = 4 ∨ a = 5
-              ∨ a = 6 ∨ a = 7 ∨ a = 8 ∨ a = 9 ∨ a = 10)
-            with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-          · exact h.lookup_some (l := .base ⟨0⟩) (c := ucell (n : Int)) rfl
-          · exact h.lookup_some (l := .base ⟨1⟩) (c := ucell (seed : Int)) rfl
-          · exact h.lookup_some (l := .base ⟨2⟩) (c := ucell 0) rfl
-          · exact h.lookup_some (l := .base ⟨3⟩) (c := hIHandleCell n) rfl
-          · have himg := h.lookup_some (l := .base ⟨4⟩) (c := arrCell n l) rfl
-            rw [renCell_arr] at himg
-            show Heap.lookup σA.heap (.base ⟨ρ11 (d + 2) 4⟩)
-              = some (renameCell (ρ11 (d + 2)) (arrCell n l))
-            rw [renCell_arr]
-            exact himg
-          · exact h.lookup_some (l := .base ⟨5⟩) (c := hIHandleCell n) rfl
-          · exact h.lookup_some (l := .base ⟨6⟩)
-              (c := ucell ((n : Nat) : Int)) rfl
-          · exact h.lookup_some (l := .base ⟨7⟩) (c := bcell false) rfl
-          · exact h.lookup_some (l := .base ⟨8⟩) (c := hIHandleCell n) rfl
-          · exact h.lookup_some (l := .base ⟨9⟩) (c := intcell iv) rfl
-          · exact h.lookup_some (l := .base ⟨10⟩) (c := bcell false) rfl
-        · have himg := fs_lookup_none11 h (l := .base ⟨a + 2⟩)
-            (lookup_σHIn_ge (by omega))
-          have hren1 : renameLoc (ρ11 d) (.base ⟨a + 2⟩)
-              = .base ⟨a + 2 + d⟩ := by
-            simp [renameLoc, ρ11_ge (d := d) (a := a + 2) (by omega)]
-          rw [hren1] at himg
-          have hren2 : renameLoc (ρ11 (d + 2)) (.base ⟨a⟩)
-              = .base ⟨a + (d + 2)⟩ := by
-            simp [renameLoc, ρ11_ge (d := d + 2) (a := a) (by omega)]
-          rw [hren2, lookup_σHOut_ge (by omega)]
-          show Heap.lookup σA.heap (.base ⟨a + (d + 2)⟩)
-            = Heap.lookup (fr ++ [(.base ⟨11 + d⟩, intcell jv),
-                (.base ⟨12 + d⟩, bcell false)]) (.base ⟨a + (d + 2)⟩)
-          rw [show a + (d + 2) = a + 2 + d from by omega, himg,
-            lookup_append]
-          cases hfr : Heap.lookup fr (.base ⟨a + 2 + d⟩) with
-          | some c => rfl
-          | none =>
-              show (none : Option HeapCell)
-                = Heap.lookup [(.base ⟨11 + d⟩, intcell jv),
-                    (.base ⟨12 + d⟩, bcell false)] (.base ⟨a + 2 + d⟩)
-              simp [Heap.lookup,
-                beq_false_of_ne (base_ne (show 11 + d ≠ a + 2 + d by omega)),
-                beq_false_of_ne (base_ne (show 12 + d ≠ a + 2 + d by omega))]
-    | .field b tid f =>
-        have himg := fs_lookup_none11 h (l := bump2H (.field b tid f))
-          (lookup_σHIn_field n seed l iv jv false (bump2H b) tid f)
-        rw [← renameLoc_bump2H] at himg
-        show Heap.lookup σA.heap (renameLoc (ρ11 (d + 2)) (.field b tid f))
-          = Heap.lookup (fr ++ [(.base ⟨11 + d⟩, intcell jv),
-              (.base ⟨12 + d⟩, bcell false)])
-            (renameLoc (ρ11 (d + 2)) (.field b tid f))
-        rw [himg, lookup_append]
-        cases hfr : Heap.lookup fr
-            (renameLoc (ρ11 (d + 2)) (.field b tid f)) with
-        | some c => rfl
-        | none => rfl
-    | .index b i =>
-        have himg := fs_lookup_none11 h (l := bump2H (.index b i))
-          (lookup_σHIn_index n seed l iv jv false (bump2H b) i)
-        rw [← renameLoc_bump2H] at himg
-        show Heap.lookup σA.heap (renameLoc (ρ11 (d + 2)) (.index b i))
-          = Heap.lookup (fr ++ [(.base ⟨11 + d⟩, intcell jv),
-              (.base ⟨12 + d⟩, bcell false)])
-            (renameLoc (ρ11 (d + 2)) (.index b i))
-        rw [himg, lookup_append]
-        cases hfr : Heap.lookup fr
-            (renameLoc (ρ11 (d + 2)) (.index b i)) with
-        | some c => rfl
-        | none => rfl
-  · intro loc c hc
-    rw [lookup_append] at hc
-    cases hfr : Heap.lookup fr loc with
-    | some c0 =>
-        rw [hfr] at hc
-        have hc' : some c0 = some c := hc
-        injection hc' with hcc
-        exact hcc ▸ h.frame_pres loc c0 hfr
-    | none =>
-        rw [hfr] at hc
-        have hc' : Heap.lookup [(.base ⟨11 + d⟩, intcell jv),
-            (.base ⟨12 + d⟩, bcell false)] loc = some c := hc
-        by_cases h4 : (.base ⟨11 + d⟩ : Loc) = loc
-        · subst h4
-          have hcell : c = intcell jv := by
-            simp [Heap.lookup] at hc'
-            exact hc'.symm
-          subst hcell
-          exact h.lookup_some (l := .base ⟨11⟩) (c := intcell jv) rfl
-        · by_cases h5 : (.base ⟨12 + d⟩ : Loc) = loc
-          · subst h5
-            have hcell : c = bcell false := by
-              simp [Heap.lookup, beq_false_of_ne h4] at hc'
-              exact hc'.symm
-            subst hcell
-            exact h.lookup_some (l := .base ⟨12⟩) (c := bcell false) rfl
-          · exfalso
-            simp [Heap.lookup, beq_false_of_ne h4, beq_false_of_ne h5] at hc'
-  · intro a
-    rw [lookup_append]
-    by_cases ha : a < 11
-    · rw [ρ11_lt ha]
-      have h2 := h.fr_avoid a
-      rw [ρ11_lt ha] at h2
-      rw [h2]
-      show Heap.lookup [(.base ⟨11 + d⟩, intcell jv),
-          (.base ⟨12 + d⟩, bcell false)] (.base ⟨a⟩) = none
-      simp [Heap.lookup,
-        beq_false_of_ne (base_ne (show 11 + d ≠ a by omega)),
-        beq_false_of_ne (base_ne (show 12 + d ≠ a by omega))]
-    · rw [ρ11_ge (d := d + 2) (a := a) (by omega)]
-      have h2 := h.fr_avoid (a + 2)
-      rw [ρ11_ge (d := d) (a := a + 2) (by omega)] at h2
-      rw [show a + (d + 2) = a + 2 + d from by omega, h2]
-      show Heap.lookup [(.base ⟨11 + d⟩, intcell jv),
-          (.base ⟨12 + d⟩, bcell false)] (.base ⟨a + 2 + d⟩) = none
-      simp [Heap.lookup,
-        beq_false_of_ne (base_ne (show 11 + d ≠ a + 2 + d by omega)),
-        beq_false_of_ne (base_ne (show 12 + d ≠ a + 2 + d by omega))]
+  refine rebaseSimT (retired := [intcell jv, bcell false]) h
+    rfl rfl rfl rfl rfl rfl ?_ ?_
+    (fun a ha => lookup_σHIn_ge (by simpa using ha))
+    (fun a ha => lookup_σHOut_ge ha)
+    ⟨fun b tid f => lookup_σHIn_field n seed l iv jv false b tid f,
+     fun b i => lookup_σHIn_index n seed l iv jv false b i⟩
+    ⟨fun b tid f => lookup_σHOut_field n seed l iv false b tid f,
+     fun b i => lookup_σHOut_index n seed l iv false b i⟩
+    (bodies_ρsh _)
+  · intro a ha
+    rcases (by omega : a = 0 ∨ a = 1 ∨ a = 2 ∨ a = 3 ∨ a = 4 ∨ a = 5
+        ∨ a = 6 ∨ a = 7 ∨ a = 8 ∨ a = 9 ∨ a = 10)
+      with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+    · exact ⟨rfl, fun c hc => by cases hc; exact fun d' => rfl⟩
+    · exact ⟨rfl, fun c hc => by cases hc; exact fun d' => rfl⟩
+    · exact ⟨rfl, fun c hc => by cases hc; exact fun d' => rfl⟩
+    · exact ⟨rfl, fun c hc => by
+        cases hc; exact fun d' => renCell_handleH d' n⟩
+    · exact ⟨rfl, fun c hc => by
+        cases hc; exact fun d' => renCell_arr _ n l⟩
+    · exact ⟨rfl, fun c hc => by
+        cases hc; exact fun d' => renCell_handleH d' n⟩
+    · exact ⟨rfl, fun c hc => by cases hc; exact fun d' => rfl⟩
+    · exact ⟨rfl, fun c hc => by cases hc; exact fun d' => rfl⟩
+    · exact ⟨rfl, fun c hc => by
+        cases hc; exact fun d' => renCell_handleH d' n⟩
+    · exact ⟨rfl, fun c hc => by cases hc; exact fun d' => rfl⟩
+    · exact ⟨rfl, fun c hc => by cases hc; exact fun d' => rfl⟩
+  · intro j hj
+    match j, hj with
+    | 0, _ => exact ⟨rfl, fun d' => rfl⟩
+    | 1, _ => exact ⟨rfl, fun d' => rfl⟩
 
 private theorem renCfg_hcmp (d : Nat) (b : Bool) :
     renameConfig (ρ11 d) (.retV (.bool b) hOuterCmpCont)
@@ -889,16 +717,8 @@ theorem transfer_seg11 {d : Nat} {fr : Heap} {σC σC' σA : ExecState}
     (hrun : stepFnIter k σC c ch = .ok (c', σC', ch))
     (hc : renameConfig (ρ11 d) c = c) (hc' : renameConfig (ρ11 d) c' = c') :
     ∃ σA', stepFnIter k σA c ch = .ok (c', σA', ch)
-      ∧ FrameSim (ρ11 d) 11 (11 + d) fr σC' σA' := by
-  have hsim := stepFnIter_sim k hFS c ch
-  rw [hc] at hsim
-  obtain ⟨rF, hrunF, htrip⟩ := hsim.ok_inv hrun
-  obtain ⟨cF, σF, chF⟩ := rF
-  obtain ⟨h1, h2, h3⟩ := htrip
-  dsimp only at h1 h2 h3
-  rw [h1, hc'] at hrunF
-  rw [h3] at hrunF
-  exact ⟨σF, hrunF, h2⟩
+      ∧ FrameSim (ρ11 d) 11 (11 + d) fr σC' σA' :=
+  transfer_segT hFS hrun hc hc'
 
 /-! ### The subject outer induction (harness placement): each pass
 transferred from the tight placement, rebased, ending at the harness
@@ -955,8 +775,8 @@ theorem hs_outer_loop (xs : List Int) (n seed : Nat)
       have hFS2 := rebaseSim11 hFS'
       obtain ⟨k, σA'', d, fr', ivF, hk, hrun, hFSf⟩ := ih (n - (m + 2))
         (by omega) (m + 1) σA'
-        (fr ++ [(.base ⟨11 + 2 * m⟩, intcell ((jex : Nat) : Int)),
-          (.base ⟨12 + 2 * m⟩, bcell false)]) rfl
+        (fr ++ retiredFrame (11 + 2 * m)
+          [intcell ((jex : Nat) : Int), bcell false]) rfl
         (by
           have : 2 * m + 2 = 2 * (m + 1) := by omega
           rw [← this]

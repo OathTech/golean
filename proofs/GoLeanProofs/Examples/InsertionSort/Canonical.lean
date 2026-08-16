@@ -83,8 +83,8 @@ private theorem isort_loop (xs : List Int) (n : Nat) (hn : n = xs.length)
         (renCfg_cmp (2 * m) true) (renCfg_cmp (2 * m) _)
       have hFS2 := rebaseSim hFS'
       obtain ⟨k, σf, hk, hrun, hread⟩ := ih (n - (m + 2)) (by omega) (m + 1)
-        σA' (fr ++ [(.base ⟨4 + 2 * m⟩, intcell ((jex : Nat) : Int)),
-          (.base ⟨5 + 2 * m⟩, bcell false)]) rfl hFS2 ch
+        σA' (fr ++ retiredFrame (4 + 2 * m)
+          [intcell ((jex : Nat) : Int), bcell false]) rfl hFS2 ch
       refine ⟨K + k, σf, ?_, stepFnIter_chain hrunA hrun, hread⟩
       have hmul : (92 * n + 160) * (n - (m + 2)) + (92 * n + 160)
           = (92 * n + 160) * (n - (m + 1)) := by

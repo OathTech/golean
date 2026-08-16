@@ -66,9 +66,9 @@ theorem selsortH_runs (n seed : Nat) (hcap : n ≤ 8)
   have h3 := stepFnIter_chain h2 hrunT
   -- the result-cell lookups through the final frame simulation
   have hren2 : renameLoc (ρ16 d) (.base ⟨2⟩) = .base ⟨2⟩ := by
-    simp [renameLoc, ρ16]
+    simp [renameLoc, ρ16, ρT]
   have hren3 : renameLoc (ρ16 d) (.base ⟨3⟩) = .base ⟨3⟩ := by
-    simp [renameLoc, ρ16]
+    simp [renameLoc, ρ16, ρT]
   have hlook2 := hFSend.lookup_some (l := .base ⟨2⟩)
     (c := sArr8 (selPad8 (selFam n seed))) rfl
   rw [hren2, renCell_arr16] at hlook2
