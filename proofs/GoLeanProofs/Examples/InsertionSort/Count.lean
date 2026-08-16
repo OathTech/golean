@@ -767,29 +767,17 @@ private theorem hcnt_pass_seg (n seed : Nat) (hn : n < 2 ^ 63)
 
 /-! ### The count frame layer at threshold 21 (retire FOUR cells) -/
 
-def ρ21 (d : Nat) : Nat → Nat := fun x => if x < 21 then x else x + d
-
-private theorem ρ21_lt {d a : Nat} (h : a < 21) : ρ21 d a = a := if_pos h
-private theorem ρ21_ge {d a : Nat} (h : 21 ≤ a) : ρ21 d a = a + d :=
-  if_neg (by omega)
-
-private theorem shiftSpec_ρ21 (d : Nat) : ShiftSpec (ρ21 d) 21 (21 + d) := by
-  refine ⟨?_, ?_⟩
-  · intro x y hxy
-    simp only [ρ21] at hxy
-    split at hxy <;> split at hxy <;> omega
-  · intro k
-    simp only [ρ21]
-    rw [if_neg (by omega)]
-    omega
+def ρ21 (d : Nat) : Nat → Nat := ρT 21 d
+-- (WP arc s1 lift 4: the kit's `ρT` at threshold 21; the wrapper
+-- keeps every downstream statement unchanged.)
 
 private theorem renCell_handleH21 (d n : Nat) :
     renameCell (ρ21 d) (hIHandleCell n) = hIHandleCell n := by
-  simp [renameCell, renameValue, renameLoc, ρ21]
+  simp [renameCell, renameValue, renameLoc, ρ21, ρT]
 
 private theorem renCell_handleT21 (d n : Nat) :
     renameCell (ρ21 d) (hTHandleCell n) = hTHandleCell n := by
-  simp [renameCell, renameValue, renameLoc, ρ21]
+  simp [renameCell, renameValue, renameLoc, ρ21, ρT]
 
 private theorem lookup_σCntOut_ge {n seed : Nat} {ivF sciv : Int}
     {l tl : List Int} {civ : Int} {ffv : Bool} {a : Nat} (ha : 21 ≤ a) :
@@ -864,295 +852,94 @@ private theorem lookup_σCntIn_index (n seed : Nat) (ivF sciv : Int)
     Heap.lookup (σCntIn n seed ivF sciv l tl civ csv ctv jv jffv).heap
       (.index b i) = none := rfl
 
-/-- Root bump by 4 above the fixed count cells (threshold 21). -/
-private def bump4C : Loc → Loc
-  | .base a => .base ⟨if a.id < 21 then a.id else a.id + 4⟩
-  | .field b tid f => .field (bump4C b) tid f
-  | .index b i => .index (bump4C b) i
+private theorem lookup_σCntOut_field (n seed : Nat) (ivF sciv : Int)
+    (l tl : List Int) (civ : Int) (ffv : Bool) (b : Loc) (tid : TypeId)
+    (f : String) :
+    Heap.lookup (σCntOut n seed ivF sciv l tl civ ffv).heap
+      (.field b tid f) = none := rfl
 
-private theorem renameLoc_bump4C (d : Nat) (l : Loc) :
-    renameLoc (ρ21 (d + 4)) l = renameLoc (ρ21 d) (bump4C l) := by
-  induction l with
-  | base a =>
-      have h : ρ21 (d + 4) a.id
-          = ρ21 d (if a.id < 21 then a.id else a.id + 4) := by
-        by_cases ha : a.id < 21
-        · rw [if_pos ha, ρ21_lt ha, ρ21_lt ha]
-        · rw [if_neg ha, ρ21_ge (d := d + 4) (a := a.id) (by omega),
-            ρ21_ge (d := d) (a := a.id + 4) (by omega)]
-          omega
-      simp only [renameLoc, bump4C, h]
-  | field b tid f ih => simp only [renameLoc, bump4C, ih]
-  | index b i ih => simp only [renameLoc, bump4C, ih]
+private theorem lookup_σCntOut_index (n seed : Nat) (ivF sciv : Int)
+    (l tl : List Int) (civ : Int) (ffv : Bool) (b : Loc) (i : Int) :
+    Heap.lookup (σCntOut n seed ivF sciv l tl civ ffv).heap
+      (.index b i) = none := rfl
 
-/-- The trivial-frame simulation at the count-loop entry. -/
+/-- The trivial-frame simulation at the count-loop entry (kit
+`frameSim_seed`). -/
 theorem frameSim_zero21 (n seed : Nat) (ivF sciv : Int)
     (l tl : List Int) (civ : Int) (ffv : Bool) :
     FrameSim (ρ21 0) 21 21 [] (σCntOut n seed ivF sciv l tl civ ffv)
-      (σCntOut n seed ivF sciv l tl civ ffv) := by
-  refine ⟨shiftSpec_ρ21 0, rfl, rfl, rfl, rfl, rfl, Nat.le_refl 21,
-    ?_, ?_, fun a => rfl, bodies_ρsh (ρ21 0)⟩
-  · intro loc
-    match loc with
-    | .base ⟨a⟩ =>
-        match a with
-        | 0 => rfl
-        | 1 => rfl
-        | 2 => rfl
-        | 3 =>
-            show Heap.lookup (σCntOut n seed ivF sciv l tl civ ffv).heap
-              (.base ⟨ρ21 0 3⟩) = some (renameCell (ρ21 0) (hIHandleCell n))
-            rw [renCell_handleH21 0 n]
-            rfl
-        | 4 =>
-            show Heap.lookup (σCntOut n seed ivF sciv l tl civ ffv).heap
-              (.base ⟨ρ21 0 4⟩) = some (renameCell (ρ21 0) (arrCell n l))
-            rw [renCell_arr]
-            rfl
-        | 5 =>
-            show Heap.lookup (σCntOut n seed ivF sciv l tl civ ffv).heap
-              (.base ⟨ρ21 0 5⟩) = some (renameCell (ρ21 0) (hIHandleCell n))
-            rw [renCell_handleH21 0 n]
-            rfl
-        | 6 => rfl
-        | 7 => rfl
-        | 8 =>
-            show Heap.lookup (σCntOut n seed ivF sciv l tl civ ffv).heap
-              (.base ⟨ρ21 0 8⟩) = some (renameCell (ρ21 0) (hIHandleCell n))
-            rw [renCell_handleH21 0 n]
-            rfl
-        | 9 => rfl
-        | 10 => rfl
-        | 11 => rfl
-        | 12 => rfl
-        | 13 => rfl
-        | 14 =>
-            show Heap.lookup (σCntOut n seed ivF sciv l tl civ ffv).heap
-              (.base ⟨ρ21 0 14⟩) = some (renameCell (ρ21 0) (hTHandleCell n))
-            rw [renCell_handleT21 0 n]
-            rfl
-        | 15 =>
-            show Heap.lookup (σCntOut n seed ivF sciv l tl civ ffv).heap
-              (.base ⟨ρ21 0 15⟩) = some (renameCell (ρ21 0) (arrCell n tl))
-            rw [renCell_arr]
-            rfl
-        | 16 =>
-            show Heap.lookup (σCntOut n seed ivF sciv l tl civ ffv).heap
-              (.base ⟨ρ21 0 16⟩) = some (renameCell (ρ21 0) (hTHandleCell n))
-            rw [renCell_handleT21 0 n]
-            rfl
-        | 17 => rfl
-        | 18 => rfl
-        | 19 => rfl
-        | 20 => rfl
-        | (a + 21) =>
-            show Heap.lookup (σCntOut n seed ivF sciv l tl civ ffv).heap
-              (.base ⟨ρ21 0 (a + 21)⟩) = _
-            rw [ρ21_ge (d := 0) (a := a + 21) (by omega)]
-            rw [lookup_σCntOut_ge (a := a + 21 + 0) (by omega)]
-            rfl
-    | .field b tid f => rfl
-    | .index b i => rfl
-  · intro loc c hc
-    simp [Heap.lookup] at hc
+      (σCntOut n seed ivF sciv l tl civ ffv) :=
+  frameSim_seed rfl (bodies_ρsh (ρT 21 0))
 
 /-- **The frame rebase at threshold 21**: the pass's retired
 `cs`/`ct`/`j`/flag cells (canonical 21–24) move INTO the frame at
-their true addresses `21+d`–`24+d`. -/
+their true addresses (kit `rebaseSimT` + this example's fixed-cell
+enumeration — WP arc s1 lift 4). -/
 private theorem rebaseSim21 {d : Nat} {fr : Heap} {n seed : Nat}
     {ivF sciv : Int} {l tl : List Int} {civ csv ctv jv : Int}
     {σA : ExecState}
     (h : FrameSim (ρ21 d) 21 (21 + d) fr
       (σCntIn n seed ivF sciv l tl civ csv ctv jv false) σA) :
     FrameSim (ρ21 (d + 4)) 21 (21 + (d + 4))
-      (fr ++ [(.base ⟨21 + d⟩, ucell csv), (.base ⟨22 + d⟩, ucell ctv),
-              (.base ⟨23 + d⟩, ucell jv), (.base ⟨24 + d⟩, bcell false)])
+      (fr ++ retiredFrame (21 + d)
+        [ucell csv, ucell ctv, ucell jv, bcell false])
       (σCntOut n seed ivF sciv l tl civ false) σA := by
-  refine ⟨shiftSpec_ρ21 (d + 4), h.types_eq, h.funcs_eq, h.methods_eq,
-    h.methodSets_eq, ?_, Nat.le_refl 21, ?_, ?_, ?_, bodies_ρsh _⟩
-  · have hne := h.next_eq
-    rw [show (σCntIn n seed ivF sciv l tl civ csv ctv jv false).nextAddr = 25
-        from rfl,
-      ρ21_ge (d := d) (a := 25) (by omega)] at hne
-    show σA.nextAddr = ρ21 (d + 4) 21
-    rw [ρ21_ge (d := d + 4) (a := 21) (by omega)]
-    omega
-  · intro loc
-    match loc with
-    | .base ⟨a⟩ =>
-        by_cases ha : a < 21
-        · rcases (by omega : a = 0 ∨ a = 1 ∨ a = 2 ∨ a = 3 ∨ a = 4 ∨ a = 5
-              ∨ a = 6 ∨ a = 7 ∨ a = 8 ∨ a = 9 ∨ a = 10 ∨ a = 11 ∨ a = 12
-              ∨ a = 13 ∨ a = 14 ∨ a = 15 ∨ a = 16 ∨ a = 17 ∨ a = 18
-              ∨ a = 19 ∨ a = 20)
-            with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-              | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-              | rfl
-          · exact h.lookup_some (l := .base ⟨0⟩) (c := ucell (n : Int)) rfl
-          · exact h.lookup_some (l := .base ⟨1⟩) (c := ucell (seed : Int)) rfl
-          · exact h.lookup_some (l := .base ⟨2⟩) (c := ucell 0) rfl
-          · exact h.lookup_some (l := .base ⟨3⟩) (c := hIHandleCell n) rfl
-          · have himg := h.lookup_some (l := .base ⟨4⟩) (c := arrCell n l) rfl
-            rw [renCell_arr] at himg
-            show Heap.lookup σA.heap (.base ⟨ρ21 (d + 4) 4⟩)
-              = some (renameCell (ρ21 (d + 4)) (arrCell n l))
-            rw [renCell_arr]
-            exact himg
-          · exact h.lookup_some (l := .base ⟨5⟩) (c := hIHandleCell n) rfl
-          · exact h.lookup_some (l := .base ⟨6⟩)
-              (c := ucell ((n : Nat) : Int)) rfl
-          · exact h.lookup_some (l := .base ⟨7⟩) (c := bcell false) rfl
-          · exact h.lookup_some (l := .base ⟨8⟩) (c := hIHandleCell n) rfl
-          · exact h.lookup_some (l := .base ⟨9⟩) (c := intcell ivF) rfl
-          · exact h.lookup_some (l := .base ⟨10⟩) (c := bcell false) rfl
-          · exact h.lookup_some (l := .base ⟨11⟩) (c := ucell 1) rfl
-          · exact h.lookup_some (l := .base ⟨12⟩) (c := ucell sciv) rfl
-          · exact h.lookup_some (l := .base ⟨13⟩) (c := bcell false) rfl
-          · exact h.lookup_some (l := .base ⟨14⟩) (c := hTHandleCell n) rfl
-          · have himg := h.lookup_some (l := .base ⟨15⟩)
-              (c := arrCell n tl) rfl
-            rw [renCell_arr] at himg
-            show Heap.lookup σA.heap (.base ⟨ρ21 (d + 4) 15⟩)
-              = some (renameCell (ρ21 (d + 4)) (arrCell n tl))
-            rw [renCell_arr]
-            exact himg
-          · exact h.lookup_some (l := .base ⟨16⟩) (c := hTHandleCell n) rfl
-          · exact h.lookup_some (l := .base ⟨17⟩)
-              (c := ucell ((n : Nat) : Int)) rfl
-          · exact h.lookup_some (l := .base ⟨18⟩) (c := bcell false) rfl
-          · exact h.lookup_some (l := .base ⟨19⟩) (c := ucell civ) rfl
-          · exact h.lookup_some (l := .base ⟨20⟩) (c := bcell false) rfl
-        · have himg := fs_lookup_none11 h (l := .base ⟨a + 4⟩)
-            (lookup_σCntIn_ge (by omega))
-          have hren1 : renameLoc (ρ21 d) (.base ⟨a + 4⟩)
-              = .base ⟨a + 4 + d⟩ := by
-            simp [renameLoc, ρ21_ge (d := d) (a := a + 4) (by omega)]
-          rw [hren1] at himg
-          have hren2 : renameLoc (ρ21 (d + 4)) (.base ⟨a⟩)
-              = .base ⟨a + (d + 4)⟩ := by
-            simp [renameLoc, ρ21_ge (d := d + 4) (a := a) (by omega)]
-          rw [hren2, lookup_σCntOut_ge (by omega)]
-          show Heap.lookup σA.heap (.base ⟨a + (d + 4)⟩)
-            = Heap.lookup (fr ++ [(.base ⟨21 + d⟩, ucell csv),
-                (.base ⟨22 + d⟩, ucell ctv), (.base ⟨23 + d⟩, ucell jv),
-                (.base ⟨24 + d⟩, bcell false)]) (.base ⟨a + (d + 4)⟩)
-          rw [show a + (d + 4) = a + 4 + d from by omega, himg,
-            lookup_append]
-          cases hfr : Heap.lookup fr (.base ⟨a + 4 + d⟩) with
-          | some c => rfl
-          | none =>
-              show (none : Option HeapCell)
-                = Heap.lookup [(.base ⟨21 + d⟩, ucell csv),
-                    (.base ⟨22 + d⟩, ucell ctv), (.base ⟨23 + d⟩, ucell jv),
-                    (.base ⟨24 + d⟩, bcell false)] (.base ⟨a + 4 + d⟩)
-              simp [Heap.lookup,
-                beq_false_of_ne (base_ne (show 21 + d ≠ a + 4 + d by omega)),
-                beq_false_of_ne (base_ne (show 22 + d ≠ a + 4 + d by omega)),
-                beq_false_of_ne (base_ne (show 23 + d ≠ a + 4 + d by omega)),
-                beq_false_of_ne (base_ne (show 24 + d ≠ a + 4 + d by omega))]
-    | .field b tid f =>
-        have himg := fs_lookup_none11 h (l := bump4C (.field b tid f))
-          (lookup_σCntIn_field n seed ivF sciv l tl civ csv ctv jv false
-            (bump4C b) tid f)
-        rw [← renameLoc_bump4C] at himg
-        show Heap.lookup σA.heap (renameLoc (ρ21 (d + 4)) (.field b tid f))
-          = Heap.lookup (fr ++ [(.base ⟨21 + d⟩, ucell csv),
-              (.base ⟨22 + d⟩, ucell ctv), (.base ⟨23 + d⟩, ucell jv),
-              (.base ⟨24 + d⟩, bcell false)])
-            (renameLoc (ρ21 (d + 4)) (.field b tid f))
-        rw [himg, lookup_append]
-        cases hfr : Heap.lookup fr
-            (renameLoc (ρ21 (d + 4)) (.field b tid f)) with
-        | some c => rfl
-        | none => rfl
-    | .index b i =>
-        have himg := fs_lookup_none11 h (l := bump4C (.index b i))
-          (lookup_σCntIn_index n seed ivF sciv l tl civ csv ctv jv false
-            (bump4C b) i)
-        rw [← renameLoc_bump4C] at himg
-        show Heap.lookup σA.heap (renameLoc (ρ21 (d + 4)) (.index b i))
-          = Heap.lookup (fr ++ [(.base ⟨21 + d⟩, ucell csv),
-              (.base ⟨22 + d⟩, ucell ctv), (.base ⟨23 + d⟩, ucell jv),
-              (.base ⟨24 + d⟩, bcell false)])
-            (renameLoc (ρ21 (d + 4)) (.index b i))
-        rw [himg, lookup_append]
-        cases hfr : Heap.lookup fr
-            (renameLoc (ρ21 (d + 4)) (.index b i)) with
-        | some c => rfl
-        | none => rfl
-  · intro loc c hc
-    rw [lookup_append] at hc
-    cases hfr : Heap.lookup fr loc with
-    | some c0 =>
-        rw [hfr] at hc
-        have hc' : some c0 = some c := hc
-        injection hc' with hcc
-        exact hcc ▸ h.frame_pres loc c0 hfr
-    | none =>
-        rw [hfr] at hc
-        have hc' : Heap.lookup [(.base ⟨21 + d⟩, ucell csv),
-            (.base ⟨22 + d⟩, ucell ctv), (.base ⟨23 + d⟩, ucell jv),
-            (.base ⟨24 + d⟩, bcell false)] loc = some c := hc
-        by_cases h1 : (.base ⟨21 + d⟩ : Loc) = loc
-        · subst h1
-          have hcell : c = ucell csv := by
-            simp [Heap.lookup] at hc'
-            exact hc'.symm
-          subst hcell
-          exact h.lookup_some (l := .base ⟨21⟩) (c := ucell csv) rfl
-        · by_cases h2 : (.base ⟨22 + d⟩ : Loc) = loc
-          · subst h2
-            have hcell : c = ucell ctv := by
-              simp [Heap.lookup, beq_false_of_ne h1] at hc'
-              exact hc'.symm
-            subst hcell
-            exact h.lookup_some (l := .base ⟨22⟩) (c := ucell ctv) rfl
-          · by_cases h3 : (.base ⟨23 + d⟩ : Loc) = loc
-            · subst h3
-              have hcell : c = ucell jv := by
-                simp [Heap.lookup, beq_false_of_ne h1,
-                  beq_false_of_ne h2] at hc'
-                exact hc'.symm
-              subst hcell
-              exact h.lookup_some (l := .base ⟨23⟩) (c := ucell jv) rfl
-            · by_cases h4 : (.base ⟨24 + d⟩ : Loc) = loc
-              · subst h4
-                have hcell : c = bcell false := by
-                  simp [Heap.lookup, beq_false_of_ne h1, beq_false_of_ne h2,
-                    beq_false_of_ne h3] at hc'
-                  exact hc'.symm
-                subst hcell
-                exact h.lookup_some (l := .base ⟨24⟩) (c := bcell false) rfl
-              · exfalso
-                simp [Heap.lookup, beq_false_of_ne h1, beq_false_of_ne h2,
-                  beq_false_of_ne h3, beq_false_of_ne h4] at hc'
-  · intro a
-    rw [lookup_append]
-    by_cases ha : a < 21
-    · rw [ρ21_lt ha]
-      have h2 := h.fr_avoid a
-      rw [ρ21_lt ha] at h2
-      rw [h2]
-      show Heap.lookup [(.base ⟨21 + d⟩, ucell csv),
-          (.base ⟨22 + d⟩, ucell ctv), (.base ⟨23 + d⟩, ucell jv),
-          (.base ⟨24 + d⟩, bcell false)] (.base ⟨a⟩) = none
-      simp [Heap.lookup,
-        beq_false_of_ne (base_ne (show 21 + d ≠ a by omega)),
-        beq_false_of_ne (base_ne (show 22 + d ≠ a by omega)),
-        beq_false_of_ne (base_ne (show 23 + d ≠ a by omega)),
-        beq_false_of_ne (base_ne (show 24 + d ≠ a by omega))]
-    · rw [ρ21_ge (d := d + 4) (a := a) (by omega)]
-      have h2 := h.fr_avoid (a + 4)
-      rw [ρ21_ge (d := d) (a := a + 4) (by omega)] at h2
-      rw [show a + (d + 4) = a + 4 + d from by omega, h2]
-      show Heap.lookup [(.base ⟨21 + d⟩, ucell csv),
-          (.base ⟨22 + d⟩, ucell ctv), (.base ⟨23 + d⟩, ucell jv),
-          (.base ⟨24 + d⟩, bcell false)] (.base ⟨a + 4 + d⟩) = none
-      simp [Heap.lookup,
-        beq_false_of_ne (base_ne (show 21 + d ≠ a + 4 + d by omega)),
-        beq_false_of_ne (base_ne (show 22 + d ≠ a + 4 + d by omega)),
-        beq_false_of_ne (base_ne (show 23 + d ≠ a + 4 + d by omega)),
-        beq_false_of_ne (base_ne (show 24 + d ≠ a + 4 + d by omega))]
+  refine rebaseSimT
+    (retired := [ucell csv, ucell ctv, ucell jv, bcell false]) h
+    rfl rfl rfl rfl rfl rfl ?_ ?_
+    (fun a ha => lookup_σCntIn_ge (by simpa using ha))
+    (fun a ha => lookup_σCntOut_ge ha)
+    ⟨fun b tid f =>
+      lookup_σCntIn_field n seed ivF sciv l tl civ csv ctv jv false
+        b tid f,
+     fun b i =>
+      lookup_σCntIn_index n seed ivF sciv l tl civ csv ctv jv false b i⟩
+    ⟨fun b tid f =>
+      lookup_σCntOut_field n seed ivF sciv l tl civ false b tid f,
+     fun b i => lookup_σCntOut_index n seed ivF sciv l tl civ false b i⟩
+    (bodies_ρsh _)
+  · intro a ha
+    rcases (by omega : a = 0 ∨ a = 1 ∨ a = 2 ∨ a = 3 ∨ a = 4 ∨ a = 5
+        ∨ a = 6 ∨ a = 7 ∨ a = 8 ∨ a = 9 ∨ a = 10 ∨ a = 11 ∨ a = 12
+        ∨ a = 13 ∨ a = 14 ∨ a = 15 ∨ a = 16 ∨ a = 17 ∨ a = 18
+        ∨ a = 19 ∨ a = 20)
+      with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+        | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+        | rfl
+    · exact ⟨rfl, fun c hc => by cases hc; exact fun d' => rfl⟩
+    · exact ⟨rfl, fun c hc => by cases hc; exact fun d' => rfl⟩
+    · exact ⟨rfl, fun c hc => by cases hc; exact fun d' => rfl⟩
+    · exact ⟨rfl, fun c hc => by
+        cases hc; exact fun d' => renCell_handleH21 d' n⟩
+    · exact ⟨rfl, fun c hc => by
+        cases hc; exact fun d' => renCell_arr _ n l⟩
+    · exact ⟨rfl, fun c hc => by
+        cases hc; exact fun d' => renCell_handleH21 d' n⟩
+    · exact ⟨rfl, fun c hc => by cases hc; exact fun d' => rfl⟩
+    · exact ⟨rfl, fun c hc => by cases hc; exact fun d' => rfl⟩
+    · exact ⟨rfl, fun c hc => by
+        cases hc; exact fun d' => renCell_handleH21 d' n⟩
+    · exact ⟨rfl, fun c hc => by cases hc; exact fun d' => rfl⟩
+    · exact ⟨rfl, fun c hc => by cases hc; exact fun d' => rfl⟩
+    · exact ⟨rfl, fun c hc => by cases hc; exact fun d' => rfl⟩
+    · exact ⟨rfl, fun c hc => by cases hc; exact fun d' => rfl⟩
+    · exact ⟨rfl, fun c hc => by cases hc; exact fun d' => rfl⟩
+    · exact ⟨rfl, fun c hc => by
+        cases hc; exact fun d' => renCell_handleT21 d' n⟩
+    · exact ⟨rfl, fun c hc => by
+        cases hc; exact fun d' => renCell_arr _ n tl⟩
+    · exact ⟨rfl, fun c hc => by
+        cases hc; exact fun d' => renCell_handleT21 d' n⟩
+    · exact ⟨rfl, fun c hc => by cases hc; exact fun d' => rfl⟩
+    · exact ⟨rfl, fun c hc => by cases hc; exact fun d' => rfl⟩
+    · exact ⟨rfl, fun c hc => by cases hc; exact fun d' => rfl⟩
+    · exact ⟨rfl, fun c hc => by cases hc; exact fun d' => rfl⟩
+  · intro j hj
+    match j, hj with
+    | 0, _ => exact ⟨rfl, fun d' => rfl⟩
+    | 1, _ => exact ⟨rfl, fun d' => rfl⟩
+    | 2, _ => exact ⟨rfl, fun d' => rfl⟩
+    | 3, _ => exact ⟨rfl, fun d' => rfl⟩
 
 private theorem renCfg_cntcmp (d : Nat) (b : Bool) :
     renameConfig (ρ21 d) (.retV (.bool b) cntCmpK)
@@ -1168,16 +955,8 @@ private theorem transfer_seg21 {d : Nat} {fr : Heap} {σC σC' σA : ExecState}
     (hrun : stepFnIter k σC c ch = .ok (c', σC', ch))
     (hc : renameConfig (ρ21 d) c = c) (hc' : renameConfig (ρ21 d) c' = c') :
     ∃ σA', stepFnIter k σA c ch = .ok (c', σA', ch)
-      ∧ FrameSim (ρ21 d) 21 (21 + d) fr σC' σA' := by
-  have hsim := stepFnIter_sim k hFS c ch
-  rw [hc] at hsim
-  obtain ⟨rF, hrunF, htrip⟩ := hsim.ok_inv hrun
-  obtain ⟨cF, σF, chF⟩ := rF
-  obtain ⟨h1, h2, h3⟩ := htrip
-  dsimp only at h1 h2 h3
-  rw [h1, hc'] at hrunF
-  rw [h3] at hrunF
-  exact ⟨σF, hrunF, h2⟩
+      ∧ FrameSim (ρ21 d) 21 (21 + d) fr σC' σA' :=
+  transfer_segT hFS hrun hc hc'
 
 /-- **The count outer loop over the (count-)garbage-laden run**: from
 the outer test delivery after `p` passes, the run reaches the DRIVER
@@ -1211,12 +990,10 @@ theorem hcnt_outer_loop (n seed : Nat) (h63 : n < 2 ^ 63)
       have hFS2 := rebaseSim21 hFS'
       obtain ⟨k, σf, hk, hrun, hread⟩ := ih (n - (p + 1)) (by omega) (p + 1)
         σA'
-        (fr ++ [(.base ⟨21 + 4 * p⟩,
-            ucell ((cntSpec (tl.getD p 0) l : Nat) : Int)),
-          (.base ⟨22 + 4 * p⟩,
-            ucell ((cntSpec (tl.getD p 0) tl : Nat) : Int)),
-          (.base ⟨23 + 4 * p⟩, ucell ((n : Nat) : Int)),
-          (.base ⟨24 + 4 * p⟩, bcell false)]) rfl (by omega)
+        (fr ++ retiredFrame (21 + 4 * p)
+          [ucell ((cntSpec (tl.getD p 0) l : Nat) : Int),
+           ucell ((cntSpec (tl.getD p 0) tl : Nat) : Int),
+           ucell ((n : Nat) : Int), bcell false]) rfl (by omega)
         (by
           have : 4 * p + 4 = 4 * (p + 1) := by omega
           rw [← this]
@@ -1238,7 +1015,7 @@ theorem hcnt_outer_loop (n seed : Nat) (h63 : n < 2 ^ 63)
       refine ⟨21, σf, by omega, hrunA, ?_⟩
       have hread := hFS'.lookup_some (l := .base ⟨2⟩) (c := ucell 1) rfl
       have hren : renameLoc (ρ21 (4 * p)) (.base ⟨2⟩) = .base ⟨2⟩ := by
-        simp [renameLoc, ρ21]
+        simp [renameLoc, ρ21, ρT]
       rw [hren] at hread
       exact hread
 

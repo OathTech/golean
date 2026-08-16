@@ -431,9 +431,9 @@ theorem bH_runs (n seed : Nat) (hcap : n ≤ 8) (hseed : seed < 2 ^ 64)
     (c := bArr8 (bPost (bubSorted n seed) n))
     (by simp [bHeapEnd, Heap.lookup])
   have hren2 : renameLoc (ρ16 d') (.base ⟨2⟩) = .base ⟨2⟩ := by
-    simp [renameLoc, ρ16]
+    simp [renameLoc, ρ16, ρT]
   have hren3 : renameLoc (ρ16 d') (.base ⟨3⟩) = .base ⟨3⟩ := by
-    simp [renameLoc, ρ16]
+    simp [renameLoc, ρ16, ρT]
   rw [hren2, renCell_arr8B] at hread2
   rw [hren3, renCell_arr8B] at hread3
   -- the chain
