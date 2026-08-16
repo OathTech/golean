@@ -58,16 +58,27 @@ reusable idea.
 
 **6. Honesty conventions scaled with autonomy.** The highest-value
 recorded rules: bounds shipped AS bounds with measured forms recorded
-separately (three separate over-claim incidents caught against it);
-deletion tests RUN not asserted, upgraded mid-campaign to the
-three-way split (totality / truth / proof-structure, each
+separately; deletion tests RUN not asserted, upgraded mid-campaign to
+the three-way split (totality / truth / proof-structure, each
 machine-probed); verbatim-quote disciplines for axioms and evidence.
 Autonomy removes the user's casual glance, so the flattering-drift
-failure mode ("measured law", "tight at even n", one fabricated
-explanatory mechanism, one phantom cost breach) WILL appear — the
-conventions caught every instance, usually by a later worker
-re-verifying an earlier claim first-hand. Cross-verification between
-worker generations is cheap and should stay briefed-in.
+failure mode WILL appear — and it did, twice: the `emptyPops`
+fabrication (a worker explained a step count by a Go counter that does
+not exist; grep settled it) and the phantom cost breach. Both were
+caught by the conventions, in both cases by a later worker re-verifying
+an earlier claim first-hand. Cross-verification between worker
+generations is cheap and should stay briefed-in.
+
+**CORRECTION (2026-08-16, post-autonomy audit — an error in this
+report's own narrative, left visible on purpose).** The paragraph above
+originally claimed "three separate over-claim incidents" and named
+"measured law" and "tight at even `n`" among the campaign's. Those two
+are NOT campaign incidents: they are findings B-F1 and B-F2 of the
+PRIOR arc's pre-merge audit (`docs/2026-08-15_phase2-premerge-audit.md`,
+the reverse fuel bound), fixed before this campaign started. Attributing
+them here inflated both the campaign's exposure and its conventions'
+catch rate — a summary-layer error of exactly the class this round's
+lesson 15 is about, and one that flattered the thing it was praising.
 
 **7. Hard boundaries held, and the two stops were the right stops.**
 The only places autonomy halted were genuine user decisions (a gate
@@ -207,8 +218,11 @@ after the charter was committed.**
 **08:16–12:27 — extensions and the A2 lane.** E3: fidelity argument +
 16 red rows at 08:16, the normalization + 46 flips at 08:27, stein
 COMPLETE at 10:24. E5: 23 red rows at 10:47, the shim + 22 flips at
-10:55. Lane A2 in parallel: stack (11:27, the first non-map ∀ch
-entry), matmul honestly withdrawn (12:01), queue (12:01), the
+10:55. Lane A2 in parallel: stack (11:27, the first
+LIFO/stack-shaped ∀ch entry — the FIRST non-map ∀ch entry is `rle` at
+04:48, whose append-capacity envelope stack and queue then reused;
+attribution corrected 2026-08-16 by the post-autonomy audit, in the
+gallery too), matmul honestly withdrawn (12:01), queue (12:01), the
 cost-claim correction (12:27).
 
 **Aug 15 afternoon → Aug 16 07:16 — the long tail.** wordfreq's proof
@@ -224,3 +238,112 @@ shape worth noticing: >60% of all value landed in the first 8 hours
 (kit, dossiers, wave, ten proofs); the last 40% of wall clock went to
 the three hardest units (sieve/fibmemo, stein, wordfreq) — long-cycle
 budgets should expect exactly this fat tail.
+
+## Post-autonomy audit addendum (2026-08-16, user-supervised)
+
+Written AFTER the autonomous phase closed, under user supervision, and
+kept in the same file as the report it corrects — a retrospective that
+edits itself silently is worth less than one that shows the edit.
+
+**How the audit ran.** Five decorrelated reviewers against tip
+`3aac907e`, one per dimension, each pointed at primary sources rather
+than at this report's conclusions: **R1** statement TCB / claim strength
+(Fable), **R2A** gates and trust surface (Opus), **R2B** duplication and
+promotion ledger (Opus), **R2C** records and summary layers (Opus),
+**R5** WP-library design as a separate forward-looking deliverable
+(Fable). Findings were then verified independently, defaulting to
+refute; what survived was fixed in seven buckets (A–G), one commit each,
+`scripts/ci` green per commit.
+
+**The verdict, stated the way that is useful.** Proofs and gates PASSED
+everywhere the reviewers could re-derive evidence: no headline statement
+was wrong, no axiom pin moved, no gate was found failing open, and the
+differential's failing set was exactly what the baseline said. **The
+findings concentrated at integration seams and summary layers** — the
+places where two lanes' text met, and the places where numbers were
+restated rather than recomputed. Two examples of the class, both real:
+a whole honesty half of the `dedup` gallery entry was rendering inside
+the `palin` section (so `dedup` was truncated and `palin` carried two of
+everything), and the same integration produced a cost table under the
+wrong unit in `g1.md`. Neither is a proof defect; both are exactly the
+kind of thing a reader of the object-of-agreement would trip over.
+
+**One genuine code defect**, and it is the interesting one because no
+gate could see it: the CLOSURE QUARANTINE LEAK (R2A-F2). `emitFuncLit`
+carried `hoistForbidden` / `scHoistOK` into a function literal's body,
+so a literal inside a short-circuit RHS had its own `make`/`append`
+refused. A wrongly-`unsupported` case is indistinguishable from an
+expected coverage gap in every gate we own — the fail-closed
+classification class the audit doctrine names. Fixed guardrails-first
+(11 rows red, then the two-flag fix, then exactly 7 flips with the
+9-shape refusal boundary probe-verified byte-identical).
+
+### Claims this report and the campaign made that were FALSE — by name
+
+Three of the OPERATOR's:
+
+1. **"`scripts/ci` untouched."** It was not, and the diff is one
+   command: `git diff a82a04ba~1 3aac907e -- scripts/ci` shows the
+   campaign adding nineteen `check_surface_imports` pin lines (the
+   guardrails wave's lowering modules, then Stein's, then WordFreq's)
+   plus the matching `scripts/check-golden` PIN entries. Every one of
+   those edits was correct and in-pattern — that is not the point. The
+   claim was made as a TRUST-SURFACE reassurance ("we did not touch the
+   gate"), which is exactly the kind of claim that has to be checked
+   against the diff rather than remembered.
+2. **"One mid-fence split repaired."** There were TWO splices, not one —
+   the gallery's dedup/palin split and `g1.md`'s cost-table swap. The
+   second was never found during the campaign; the audit found it.
+3. **DONE clause 6 ("log complete") certified as met.** The per-unit
+   logs were complete, so the clause was read as satisfied; the INDEX's
+   own cadence rule ("checkpoints at least every 5 units") was violated
+   at the time of certification, with twelve G1 units between
+   checkpoints 5 and 6. The certification stands on the unit-level
+   reading and is now accompanied by a dated correction in `INDEX.md`;
+   what does not stand is having certified it without checking half of
+   what the clause means.
+
+Two of the WORKERS':
+
+4. **"366 kit invocations, zero hand-rolled `stepFn` unfoldings"**
+   (flagship unit). The second half holds; the count is not
+   reproducible from the tree by any method the audit could reconstruct,
+   and it has been carried forward in summaries ever since as if it
+   were measured.
+5. **"Zero hand dances survive"** (a kit-closure claim). Stale by the
+   end of the campaign: later units re-derived exactly the kind of
+   step-level scaffolding the claim said had been eliminated — the
+   promotion-ledger corrections in bucket B enumerate five frame-layer
+   copies, six affine-family copies and five `lookup_set_self` copies.
+
+### The revised experiment readout
+
+The original readout — "the conventions caught every instance" — was
+right about the layer it measured and silent about the layer it did not.
+**Worker-level honesty conventions HELD.** Bounds shipped as bounds,
+deletion tests were run rather than asserted, axiom pins were
+transcribed from fresh probes, and where a worker over-claimed, a later
+worker caught it. Every finding above at the worker layer was a stale
+claim, not a false proof.
+
+**The drift lived one level up**: in integration (text merged from two
+lanes, never re-read as a whole) and in summary (numbers restated from
+memory of an earlier state — totals tables, consumer counts, "first X"
+attributions, commit SHAs orphaned by a rebase). Those layers had no
+convention at all. They were written by the operator, at the end of long
+sessions, about work the operator had not personally re-derived — which
+is the honest explanation and also the whole lesson.
+
+**15. Summary layers need the same anchoring rules as worker claims.**
+Every number in an index, checkpoint, totals table or retrospective is a
+claim, and it needs the same discipline the campaign already demanded of
+a fuel bound: **a build, a probe, or a SHA behind it, or it does not go
+in.** Concretely, for the next long-cycle run: totals tables recomputed
+by script at checkpoint time rather than edited; every "first / only /
+Nth" superlative checked against the artifact that would falsify it;
+commit SHAs in records written only after the rebase that lands them;
+and one pass whose entire job is to re-read merged text as a whole
+document rather than as a diff. The campaign's own rule — "a count in
+the object of agreement is a claim" — was already written down by a lane
+owner mid-campaign (`g1.md`, lane-A self-review). It simply was never
+applied above the unit level.
