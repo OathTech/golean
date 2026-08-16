@@ -1,49 +1,43 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-16  commit: post-autonomy audit fix C1, fix half
-#   (emitFuncLit saves/restores hoistForbidden + scHoistOK — the
-#   CLOSURE QUARANTINE LEAK closed)
-#   re-pin reason: EXACTLY 7 flips FAIL/frontend-export -> PASS/-, no
-#   other change; regenerated from this commit's full run (1841 cases,
-#   1743 PASS, 98 FAIL — the FAIL set returns to its standing
-#   fail-closed size, the same 98 as the 2026-08-15 E5 record).
-#   The 7 flipped ids are exactly the guardrail rows landed RED one
-#   commit earlier: bools/short-circuit-funclit/{and-taken,and-short,
-#   and-zero-len,or-taken,or-short,capture-three,capture-short}. The
-#   four CONTROL rows in the same family (outside-four, outside-zero,
-#   outside-then-sc, outside-then-sc-short) were PASS before and are
-#   PASS after — the fix did not widen them.
-#   The change: emitFuncLit already saved and restored nine pieces of
-#   emitter state around a function literal's body; hoistForbidden and
-#   scHoistOK were not among them, so a literal inside a short-circuit
-#   RHS emitted its OWN statements under "short-circuit operand" and
-#   any make/append/composite inside it was refused. The literal's body
-#   is its own lifted function — nothing hoists out of the conditional
-#   there and no evaluation order changes — so that was an OVER-refusal.
-#   Both flags are cleared for the body and restored on the way out, so
-#   the ENCLOSING expression keeps its refusal unchanged.
-#   FAIL-CLOSED REMAINDER, probe-verified before and after and
-#   BYTE-IDENTICAL (9 shapes, each directly in a short-circuit RHS):
-#   channel receive, make, new, append, copy, slice literal, map
-#   literal, &composite, interface method value. NO GoCore change, NO
-#   decoder change, NO wire-schema change; the only diff is the two
-#   flags in tools/nativefrontend/emit.go's emitFuncLit.
-#   Finding: post-autonomy audit R2A-F2, 2026-08-16.
-# previous record: 2026-08-16  commit: post-autonomy audit fix C1,
-#   guardrails half — 1841 cases, 1736 PASS, 105 FAIL; 11 NEW ids
-#   (7 RED leak witnesses + 4 PASS controls), no pre-existing id moved.
-# earlier record: 2026-08-15  commit: gallery campaign G2 extension E5
-#   BUILT (stdlib selector-call shims, scoped to strings.Fields) —
-#   1830 cases, 1732 PASS, 98 FAIL; EXACTLY 22 flips
-#   FAIL/frontend-export -> PASS/-. Every other selector call keeps its
-#   pre-E5 boundary behaviour byte-identical (probe-verified:
-#   strings.Repeat, fmt.Sprint, value position, reserved-name collision
-#   — those four refuse verbatim; the DOT-IMPORT case is NOT a refusal
-#   and never was: it emits a dangling call and the machine answers
-#   `stuck`, a pre-existing fail-closed defect recorded in g2.md, which
-#   E5 neither widened nor narrowed. Sentence corrected 2026-08-16 by
-#   the post-autonomy audit). Fidelity argument + BUILT record:
-#   docs/gallery-campaign-log/g2.md "E5".
-# manifest_cases: 1841  pass: 1743  fail: 98
+# recorded: 2026-08-16  commit: fix round #2, item 6 — the E6 register
+#   walk, and 12 guardrail rows for the literal-in-short-circuit boundary
+#   re-pin reason: TWELVE NEW IDS, no other change. Drift against the
+#   previous baseline is exactly these twelve; every pre-existing id
+#   keeps its result and its stage. No frontend, GoCore or decoder code
+#   is touched by this commit — the rows are corpus-only, pinning
+#   behaviour the C1 fix (89a02d47) already shipped but never pinned.
+#
+#   The 10 PASS ids are shapes the C1 fix newly ADMITTED inside a
+#   function literal in a short-circuit RHS, each expected value
+#   hand-computed from the Go spec first and then confirmed by go run:
+#     admit-new{,-short}           new                  11 / 0
+#     admit-copy{,-short}          copy                 102 / 100
+#     admit-maplit{,-short}        map literal          1007 / 7
+#     admit-splat-in-lit{,-short}  multi-value splat    10005 / 0
+#     admit-elided-in-lit{,-short} elided &composite    10005 / 0
+#   The last two cover the two hoistForbidden readers C1's nine-shape
+#   remainder probe missed (splatMultiCall emit.go:1595, the elided
+#   &composite arm emit.go:4921).
+#
+#   The 2 FAIL ids are a deliberate PAIR at stage frontend-export, and
+#   they are the point of this re-pin:
+#     e6-recv-len-in-sc    receive-bearing literal with a panicking len
+#                          operand, inside &&'s RHS
+#     e6-recv-len-outside  the byte-identical body, outside any
+#                          short-circuit
+#   Both refuse, with the SAME verbatim reason ("len of a
+#   potentially-panicking operand in a receive-bearing function
+#   (hoisting would reorder its panic — BUG-032)"). go run panics on
+#   both ("interface conversion"). This is the E6 register's recorded
+#   PERMANENT refusal (docs/2026-08-11_latitude-inventory.md:450), so
+#   the two new FAILs are expected fail-closed rows, not coverage loss.
+#   Before the C1 fix only the OUTSIDE row refused: hoistForbidden was
+#   non-empty inside the literal, so the E6 gate's second conjunct
+#   (emit.go:6355) was false and the guard could not fire — nesting a
+#   literal in a short-circuit RHS walked around a fail-closed check.
+#   Probed on both emitters and recorded verbatim in
+#   docs/gallery-campaign-log/g2.md, "THE E6 REGISTER WALK".
+# manifest_cases: 1853  pass: 1753  fail: 100
 # columns: result, id, stage (features/detail omitted on purpose)
 # frontend: native (tools/nativefrontend + GoLean/NativeToIR.lean)
 PASS	arrays/array-bounds	-
@@ -95,11 +89,23 @@ PASS	bools/short-circuit-effects/nested-outer-false	-
 PASS	bools/short-circuit-effects/order-both-false	-
 PASS	bools/short-circuit-effects/order-left-true	-
 PASS	bools/short-circuit-effects/order-right-true	-
+PASS	bools/short-circuit-funclit/admit-copy	-
+PASS	bools/short-circuit-funclit/admit-copy-short	-
+PASS	bools/short-circuit-funclit/admit-elided-in-lit	-
+PASS	bools/short-circuit-funclit/admit-elided-in-lit-short	-
+PASS	bools/short-circuit-funclit/admit-maplit	-
+PASS	bools/short-circuit-funclit/admit-maplit-short	-
+PASS	bools/short-circuit-funclit/admit-new	-
+PASS	bools/short-circuit-funclit/admit-new-short	-
+PASS	bools/short-circuit-funclit/admit-splat-in-lit	-
+PASS	bools/short-circuit-funclit/admit-splat-in-lit-short	-
 PASS	bools/short-circuit-funclit/and-short	-
 PASS	bools/short-circuit-funclit/and-taken	-
 PASS	bools/short-circuit-funclit/and-zero-len	-
 PASS	bools/short-circuit-funclit/capture-short	-
 PASS	bools/short-circuit-funclit/capture-three	-
+FAIL	bools/short-circuit-funclit/e6-recv-len-in-sc	frontend-export
+FAIL	bools/short-circuit-funclit/e6-recv-len-outside	frontend-export
 PASS	bools/short-circuit-funclit/or-short	-
 PASS	bools/short-circuit-funclit/or-taken	-
 PASS	bools/short-circuit-funclit/outside-four	-
