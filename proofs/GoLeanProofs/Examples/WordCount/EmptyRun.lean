@@ -18,7 +18,9 @@ docstring there records the example's design.
 **CHECKED, not asserted** (C-M5, 2026-08-15): every line from `theorem
 wc_empty_run (ch : Choices) :` through `= .ok (.next .stop, σEmptyFin,
 ch)` matches `6256228d^` exactly. Only the proof differs, and only past
-the `:=` — which is why `artifacts/g4/verbatim-check.py`, comparing
+the `:=` — which is why the g4 verbatim check (a scratch script under
+`artifacts/`, now gone; method in `docs/gallery-campaign-log/g4.md`
+§ C-M5), comparing
 whole declaration BLOCKS (statement plus proof), lists this name as
 differing: the old block ended `:= by`, this one delegates to
 `wc_empty_run_generic`. The proof was restated after the slice-1

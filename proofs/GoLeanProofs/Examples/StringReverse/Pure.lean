@@ -21,7 +21,7 @@ of the reverse loop (`revPre`), and the half-scan characterisation
 `palin_iff_half` — the same theorem `ArrayPalindrome.palin_iff_half`
 proves one type over (`List Int`), re-derived here at `List UInt8`
 because examples do not import each other.
--- KIT-GAP WITNESS (see .tmp/kitgaps-strrev.md): the half-scan bridge
+-- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST (strrev)): the half-scan bridge
 -- is type-generic and belongs in a kit module at `List α`.
 -/
 
@@ -211,7 +211,7 @@ theorem palinSpec_of_mismatch {xs : List UInt8} {m : Nat}
 
 /-- `getD` of an in-range index is a member — `SliceMem.getD_mem` one
 type over (that kit lemma is fixed at `List Int`).
--- KIT-GAP WITNESS (see .tmp/kitgaps-strrev.md) -/
+-- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST (strrev)) -/
 theorem getD_mem_u8 {xs : List UInt8} {k : Nat} (hk : k < xs.length) :
     xs.getD k 0 ∈ xs := by
   rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hk]

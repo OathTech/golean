@@ -26,7 +26,7 @@ set_option maxRecDepth 1000000
 
 /-! ## The setup family `s[i] = seed + i` (wrapping)
 
--- KIT-GAP WITNESS (see .tmp/kitgaps-twosum.md, [lane B] KIT GAP —
+-- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST (twosum), [lane B] KIT GAP —
 -- familyF): `SliceMem.familyMod k` is the family `seed + i % k`; this
 -- example's setup is `seed + i` (the identity index function), which
 -- `familyMod` cannot express at any `k`. The shape wanted is a family

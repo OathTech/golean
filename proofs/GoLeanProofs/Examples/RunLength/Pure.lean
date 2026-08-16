@@ -14,7 +14,7 @@ family the harness builds (`s[i] = seed + i/3`).
 nothing else in this module reaches the statement layer. The family is
 proof method.
 
-## Kit-gap witnesses here (`.tmp/kitgaps-rle.md`)
+## Kit-gap witnesses here (`docs/gallery-campaign-log/g1.md § KIT-GAP LIST (rle)`)
 
 * the setup family `seed + i/3` is NOT expressible with
   `SliceMem.familyMod` (which is `seed + i%k`); `rleFamily` below is
@@ -95,7 +95,7 @@ theorem rleSpec_replicate_length (n : Nat) (v : Int) :
 
 /-! ## The setup family — `s[i] = seed + i/3`, wrapped at uint64
 
--- KIT-GAP WITNESS (see .tmp/kitgaps-rle.md): `SliceMem.familyMod` is
+-- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST (rle)): `SliceMem.familyMod` is
 -- `seed + i%k`; this harness's family divides instead. The lemma set
 -- below mirrors `familyMod`'s exactly (`length`/`range`/`Z_range`/
 -- `succ`/`set`/`getD`), which is the shape a kit-level

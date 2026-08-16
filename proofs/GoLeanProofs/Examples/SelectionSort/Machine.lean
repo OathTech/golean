@@ -80,7 +80,7 @@ def selArr8 (xs : List Int) : GoValue :=
 /-- `unorm` on a `Nat` cast is the wrap (re-derived from
 `InsertionSort/Family.lean` — importing another example's shard for a
 4-line lemma is worse than the duplication).
--- KIT-GAP WITNESS (see .tmp/kitgaps-selsort.md): belongs in
+-- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST (selsort)): belongs in
 `SliceMem` beside `unorm_add_nat`. -/
 theorem unorm_nat_mod (m : Nat) :
     IntKind.normalize .uint64 ((m : Nat) : Int)

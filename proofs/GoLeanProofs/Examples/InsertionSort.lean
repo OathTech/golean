@@ -136,7 +136,7 @@ rather than left an assertion). The claim was made by `6256228d` and
 (statement PLUS proof) in the pre-split module (`6256228d^`) against
 the shards at `6256228d` finds **318 of 318 byte-identical, 0
 differing, 0 absent**
-(`artifacts/g4/verbatim-check.py`, re-runnable). It is **no longer true
+(measured by the g4 verbatim-check script (a scratch artifact under `artifacts/`, gitignored and now gone; its method — compare every declaration BLOCK, statement plus proof, modifiers normalised, by name between two revisions — is described in `docs/gallery-campaign-log/g4.md` § C-M5 and is re-implementable from that description)). It is **no longer true
 of the CURRENT tree**: measured against today, 311 of those 318 are
 still byte-identical, 5 differ and 2 are absent (`isortHarnessFunc` and
 `iharness_entry_eq` moved to `Examples/Targets.lean` in the designation

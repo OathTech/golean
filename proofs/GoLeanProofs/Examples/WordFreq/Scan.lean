@@ -18,7 +18,7 @@ CHOICE-dependent (`append`'s spill path consumes a capacity choice),
 so the loop state carries the backing through the `ScanBack` invariant
 and the iteration/loop lemmas quantify `∃ k, b, cap, D, na, ch'`.
 
--- KIT-GAP WITNESS: `[]string` slice vocabulary (make / append /
+-- GAP-WITNESS: `[]string` slice vocabulary (make / append /
 -- element store / visible-values at STRING elements) — `SliceMem` is
 -- `[]uint64`-only; the conditioned facts below are what a
 -- string-slice kit module would open with (2nd element family after

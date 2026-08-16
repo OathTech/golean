@@ -10,7 +10,7 @@ The `map[string]uint64` executable facts, derived locally at
 (GoString equality = byte equality), then the count-phase machine
 segments.
 
--- KIT-GAP WITNESS: key-generic MapMem (string keys; promotion
+-- GAP-WITNESS: key-generic MapMem (string keys; promotion
 -- candidate) — every theorem in the `MapMemW` section below is
 -- `GoLeanProofs.MapMem`'s uint64-key fact re-derived at
 -- `(.string, .int .uint64)` key/value types over the Pure layer's

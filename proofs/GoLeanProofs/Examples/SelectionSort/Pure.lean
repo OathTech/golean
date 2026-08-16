@@ -25,7 +25,7 @@ set_option linter.unusedSimpArgs false
 
 /-! ## `getD`/`set` pointwise algebra (list surgery for the swap)
 
--- KIT-GAP WITNESS (see .tmp/kitgaps-selsort.md): `getD_set_self`,
+-- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST (selsort)): `getD_set_self`,
 `getD_set_ne`, `count_set_add`, `swapList` and its five facts are pure
 `List Int` algebra every swap-based subject re-derives; they belong in
 `SliceMem` beside `mem_set_of_mem`. Consumers: selsort (here), bubble

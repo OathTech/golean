@@ -27,14 +27,14 @@ set (3 layouts at the second event, 5 at the third, multiplied across
 both output slices), OR kit machinery that does not exist yet — an
 address-shift frame lemma, or a conditioned micro-step library that
 can walk allocation at a symbolic `nextAddr`. Both are recorded as kit
-gaps in the campaign log (`.tmp/kitgaps-rle.md`, lane B). Nothing here
+gaps in the campaign log (`docs/gallery-campaign-log/g1.md § KIT-GAP LIST (rle)`, lane B). Nothing here
 weakens fail-closed behavior: the theorem simply does not claim
 `n > 3`.
 
 ## Kit gaps witnessed in this module
 
 * `applyStrictOp_div_u64` — the kit has the `%` executable fact only;
-  `/` is re-derived locally below (KIT-GAP WITNESS).
+  `/` is re-derived locally below (GAP-WITNESS).
 * `applyStmtOp` has NO appendSlice vocabulary — the spill-step
   executable fact (`append_spill1` below, with its `buildAppendBackingValue`
   closed form) is this example's main kit-gap witness.
@@ -51,7 +51,7 @@ set_option linter.unusedSimpArgs false
 
 /-! ## The `/` executable fact
 
--- KIT-GAP WITNESS (see .tmp/kitgaps-rle.md): mirror of
+-- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST (rle)): mirror of
 -- `SliceMem.applyStrictOp_mod_u64`, which the kit has; `/` it does
 -- not. -/
 
@@ -463,7 +463,7 @@ theorem r_R1b_rawQ (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
 
 /-! ## The appendSlice SPILL step
 
--- KIT-GAP WITNESS (see .tmp/kitgaps-rle.md): `SliceMem` has no
+-- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST (rle)): `SliceMem` has no
 -- append/slice-growth vocabulary at all. The two lemmas below are the
 -- executable facts this example needs: the backing-builder closed form
 -- at one appended element, and the spill arm of `applyStmtOp` with its

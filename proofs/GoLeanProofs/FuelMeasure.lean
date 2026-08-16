@@ -370,7 +370,9 @@ Every shipped array example proves the same strong induction for its
 setup loop (and isort a second time for its rebuild loop): a loop
 whose every iteration runs the SAME number of interpreter steps from
 the `i`-indexed configuration/state to the `i+1`-indexed one, iterated
-to `n`. The 8 shipped instances each carried the identical
+to `n`. The 9 shipped instances (count corrected 2026-08-16 by the
+post-autonomy audit; g0.md records all nine retrofitted) each carried
+the identical
 `Nat.strongRecOn` + chain + `c + c·(n−(i+1)) = c·(n−i)` + exit-case
 boilerplate; this is that induction stated ONCE. The per-iteration
 composite stays example-local (it chains that example's raw segments)

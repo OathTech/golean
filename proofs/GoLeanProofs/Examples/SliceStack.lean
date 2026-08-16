@@ -1026,7 +1026,7 @@ theorem st_sliceExpr_slice (σ : ExecState) (bl : Loc)
     pure, Except.pure]
   simp
 
-/-- The conditioned frame-exit step (KIT GAP, reported): a `.returning`
+/-- The conditioned frame-exit step (GAP-WITNESS, kit gap reported): a `.returning`
 at a target-bearing frame reads the pinned result cells and enters the
 caller-side target/store spine. `stepFn_call_enter`'s exit-side
 mirror. -/

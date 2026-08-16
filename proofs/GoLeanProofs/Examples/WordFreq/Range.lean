@@ -8,7 +8,7 @@ snapshot, the §10b choice-pick loop with the max-fold carried as the
 CONSERVATION invariant (`max best (maxOf remaining) = const`), ending
 at the result-store seam `.next (rKRes a nb)`.
 
--- KIT-GAP WITNESS: key-generic MapMem (string keys; promotion
+-- GAP-WITNESS: key-generic MapMem (string keys; promotion
 -- candidate) — the pick step is `stepFn_pickW_value` (Count.lean's
 -- string-key re-derivation of `MapMem.stepFn_pick_value`), and the
 -- loop induction is `mapPickLoopW` (the kit's `mapPickLoop_generic`

@@ -39,7 +39,7 @@ set_option linter.unusedSimpArgs false
 
 /-- A `Nat`-cast value normalizes to its wrap (the general form of
 `unorm_add_nat`'s conclusion).
--- KIT-GAP WITNESS (see .tmp/kitgaps-bubble.md): SliceMem has
+-- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST (bubble)): SliceMem has
 `unorm_add_nat` but no bare-cast or multiplicative form; both sorts
 need them for the LCG setup. -/
 theorem unorm_nat (Y : Nat) :
@@ -49,7 +49,7 @@ theorem unorm_nat (Y : Nat) :
 
 /-- The machine's three-normalize spelling of one LCG step collapses
 to the `Nat` wrap `(X*A + B) % 2^64`.
--- KIT-GAP WITNESS (see .tmp/kitgaps-bubble.md). -/
+-- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST (bubble)). -/
 theorem bubX_step_norm (X : Nat) :
     IntKind.normalize .uint64 (IntKind.normalize .uint64
         (IntKind.normalize .uint64 ((X : Int) * 2862933555777941757)

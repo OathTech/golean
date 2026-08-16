@@ -36,7 +36,7 @@ campaign charter forbids this lane from editing the kit (gaps are
 RECORDED, never fixed in-lane), so both live here, marked, with their
 shapes written down for the operator.
 
-`-- KIT-GAP WITNESS` markers below flag the code a kit lift would
+`-- GAP-WITNESS` markers below flag the code a kit lift would
 delete.
 -/
 
@@ -48,7 +48,7 @@ set_option maxRecDepth 1000000
 
 /-! ## The wrapping LCG setup family
 
--- KIT-GAP WITNESS (see the lane's kit-gap list): the kit's
+-- GAP-WITNESS (see the lane's kit-gap list): the kit's
 `SliceMem.familyMod k n seed` is hard-wired to `seed + i % k`. Neither
 sort's family is additive at all, so all six facts are re-derived here.
 Shape wanted: `SliceMem.familyOf (step : Nat → Nat) (n seed : Nat)`,
@@ -119,7 +119,7 @@ theorem lcgFamily_getD {a b n seed m : Nat} (hm : m < n) :
 
 /-! ## The sorted-permutation bridge
 
--- KIT-GAP WITNESS: `sorted_perm_unique` is a fact about
+-- GAP-WITNESS: `sorted_perm_unique` is a fact about
 `SliceMem.Sorted` and `List.count` with no example in it; it belongs
 beside `Sorted` in the kit. Consumers: bubble, selsort (both landed
 here), and any future sort. -/

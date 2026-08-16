@@ -27,7 +27,7 @@ set_option linter.unusedSimpArgs false
 
 /-! ## The copy-prefix of the sorted backing
 
--- KIT-GAP WITNESS (see .tmp/kitgaps-selsort.md): the copy-OUT loop's
+-- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST (selsort)): the copy-OUT loop's
 prefix (`takePad`) has no kit form — `SliceMem.prefixPad`'s set lemma
 is `familyMod`-keyed, and this loop copies COMPUTED data. Consumers:
 selsort (here), bubble (chartered). -/

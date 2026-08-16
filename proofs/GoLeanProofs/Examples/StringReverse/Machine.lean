@@ -20,7 +20,7 @@ scalar/array/nil-slice/nil-map defaults only, so
 theorem below is exactly the shape the macro's program-generic form
 emits, transcribed by hand, and closes by the same
 `with_unfolding_all rfl`.
--- KIT-GAP WITNESS (see .tmp/kitgaps-strrev.md): `derive_entry_eq`
+-- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST (strrev)): `derive_entry_eq`
 -- string-default quoting.
 
 **What is DIFFERENT about strings, machine-side** (probe-established,
@@ -265,7 +265,7 @@ theorem gs_append (a b : List UInt8) :
 
 /-! ## The string strict-op conditioned facts
 
--- KIT-GAP WITNESS (see .tmp/kitgaps-strrev.md): there is no string
+-- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST (strrev)): there is no string
 -- vocabulary in `SliceMem`/`StepKit`; these four facts are what a
 -- `StringMem` kit module would open with. -/
 

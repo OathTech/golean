@@ -28,7 +28,7 @@ set_option linter.unusedSimpArgs false
 
 /-- The `post` array after `m` copy steps: the copied prefix,
 zero-padded to the cap.
--- KIT-GAP WITNESS (see .tmp/kitgaps-bubble.md): the third and fourth
+-- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST (bubble)): the third and fourth
 fixed-cap copy-loop instantiations in the gallery; `prefixPad`
 generalized off `familyMod` would delete this block. -/
 def bPost (l : List Int) (m : Nat) : List Int :=

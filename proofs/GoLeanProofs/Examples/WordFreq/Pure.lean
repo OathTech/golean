@@ -306,7 +306,7 @@ theorem wordsOf_textFamily (n seed : Nat) :
 
 `WordCount`'s statement functions, one key type over: words are
 `List UInt8`, not `Int`.
--- KIT-GAP WITNESS: key-generic MapMem/count-layer (3rd key type:
+-- GAP-WITNESS: key-generic MapMem/count-layer (3rd key type:
 -- Int, and now List UInt8); promotion candidate, ≥2 consumers. -/
 
 /-- Occurrences of the word `w` in `ws`. -/
@@ -324,7 +324,7 @@ def maxMultiplicity (ws : List (List UInt8)) : Nat :=
 `GoLeanProofs.MapMem`'s `idxOf?`/`cnt`/`setk` association-list model
 mirrored one key type over — the abstract content of the
 `map[string]uint64` data cell.
--- KIT-GAP WITNESS: key-generic MapMem/count-layer (3rd key type:
+-- GAP-WITNESS: key-generic MapMem/count-layer (3rd key type:
 -- Int, and now List UInt8); promotion candidate, ≥2 consumers. -/
 
 /-- First index of key `w` (the machine's entry-scan order). -/
@@ -421,7 +421,7 @@ theorem idxOfW?_some_setk {kvs : List (List UInt8 × Nat)} {w : List UInt8}
 `GoLeanProofs.MapMem`'s `bump`/`countsFold` chain mirrored one key
 type over — the abstract content of the counting map (`m[w]++` folded
 over the word list).
--- KIT-GAP WITNESS: key-generic MapMem/count-layer (3rd key type:
+-- GAP-WITNESS: key-generic MapMem/count-layer (3rd key type:
 -- Int, and now List UInt8); promotion candidate, ≥2 consumers. -/
 
 /-- One word lands in the counts list: increment the first occurrence
@@ -663,7 +663,7 @@ theorem cntW_take_le {ws : List (List UInt8)} {i : Nat} (w : List UInt8) :
 
 `WordCount`'s max layer, mirrored (`maxOf` itself is key-type
 independent; the bridges below are one key type over).
--- KIT-GAP WITNESS: key-generic MapMem/count-layer (3rd key type:
+-- GAP-WITNESS: key-generic MapMem/count-layer (3rd key type:
 -- Int, and now List UInt8); promotion candidate, ≥2 consumers. -/
 
 /-- Max over a `Nat` list (base 0) — the value-column aggregate. -/
@@ -717,7 +717,7 @@ theorem maxOf_eraseIdx :
 
 /-! ### The spec bridge: `maxOf` of the counts equals
 `maxMultiplicity`
--- KIT-GAP WITNESS: key-generic MapMem/count-layer (3rd key type:
+-- GAP-WITNESS: key-generic MapMem/count-layer (3rd key type:
 -- Int, and now List UInt8); promotion candidate, ≥2 consumers. -/
 
 private theorem foldl_max_le {f : List UInt8 → Nat} {B : Nat} :

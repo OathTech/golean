@@ -11,10 +11,13 @@ a single placement. This is InsertionSort's `ρ11`/`rebaseSim11` layer
 prefix: SIXTEEN fixed cells (0–15), pass-local region from 16, THREE
 retired cells per pass.
 
--- KIT-GAP WITNESS (see .tmp/kitgaps-bubble.md): this is the third
-hand-instantiation of the identical shift/rebase construction
-(canonical ρsh @ 4/2, isort harness ρ11 @ 11/2, bubble ρ16 @ 16/3);
-the kit wants it once, parameterized by threshold and retire list.
+-- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST
+-- (bubble)): this is the FIFTH hand-instantiation of the identical
+-- shift/rebase construction (canonical ρsh @ 4/2, isort harness
+-- ρ11 @ 11/2, isort count layer ρ21 @ 21, selsort ρ16 @ 16/3, bubble
+-- ρ16 @ 16/3); the kit wants it once, parameterized by threshold and
+-- retire list. [Site count corrected 2026-08-16 by the post-autonomy
+-- audit: this said "third", counting only isort's first two copies.]
 -/
 
 namespace GoLean.Examples.BubbleSort

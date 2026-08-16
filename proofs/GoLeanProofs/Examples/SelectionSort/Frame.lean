@@ -31,13 +31,15 @@ set_option linter.unusedSimpArgs false
 
 /-! ## The shift at threshold 16
 
--- KIT-GAP WITNESS (see .tmp/kitgaps-selsort.md): everything from here
-through `transfer_seg16` is the FOURTH landed copy of the
+-- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST
+-- (selsort)): everything from here
+through `transfer_seg16` is the FOURTH landed copy — of FIVE — of the
 shift/rebase/transfer layer (InsertionSort carries three, at
-thresholds 4/11/21); the threshold and the retired-cell count are the
+thresholds 4/11/21; bubble's `ρ16` is the fifth); the threshold and
+the retired-cell count are the
 only parameters that vary. The shape wanted — `Frame.shiftAt` +
 `rebaseSimAt` + `transfer_segAt`, threshold- and retire-generic — is
-written out in the gap file. -/
+written out in the ledger entry. -/
 
 /-- The per-pass shift: identity on the fixed cells `0..15`, shift by
 `d` on the pass-local region. -/
@@ -65,7 +67,7 @@ theorem base_ne16 {x y : Nat} (h : x ≠ y) :
 
 /-- Lookup distributes over heap append (local copy of the
 InsertionSort helper — another example's shard is read-only).
--- KIT-GAP WITNESS (see .tmp/kitgaps-selsort.md): `lookup_append`
+-- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST (selsort)): `lookup_append`
 belongs in StepKit beside `lookup_append_left/right`. -/
 theorem lookup_append16 (h1 h2 : Heap) (l : Loc) :
     Heap.lookup (h1 ++ h2) l

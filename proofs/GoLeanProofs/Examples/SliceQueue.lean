@@ -1583,7 +1583,11 @@ theorem applyStrictOp_convert_u64 {σ : ExecState} {v : Int} {k : IntKind} :
 
 /-- The frame-return step, conditioned on the result loads: `.returning`
 at a target-bearing frame loads the pinned results and starts the
-post-call target walk. -/
+post-call target walk.
+
+GAP-WITNESS (GAP-FRAME, see docs/gallery-campaign-log/g1.md
+§ KIT GAPS (unit G1.8b)): stack re-derives the same fact; the kit has
+no frame-exit step lemma. -/
 theorem stepFn_return_frame {σ : ExecState} {sh : TargetShape} {e : Expr}
     {ops : List Expr} {rest : List (TargetShape × List Expr)}
     {tenv : LocalEnv} {results : List Loc} {k' : Cont} {w : Bool}
@@ -5233,13 +5237,6 @@ theorem qd_callee (σ : ExecState) (H : Heap) (D na : Nat)
   rw [show (4 : Nat) + 1 + 5 + 1 + 2 + 1 + 1 + 1 + 3 + 2 + 4 + 1 + 4 + 1
       + 1 + 1 + 1 + 1 + 6 + 1 + 1 + 1 + 5 = 49 from by omega] at hall
   exact hall
-
-/- WIP (stashed to `.tmp/qd_iter_wip.lean` at the session boundary):
-`qd_iter` — one dequeue iteration, EXACTLY 117 steps, choice-free,
-statement final, proof complete through the `v` allocation; every
-conditioned fact it needs (`qd_callee`, `qdeq_enterFrame`,
-`applyStrictOp_sliceExpr_slice`, the `qdCells` lookup/set lemmas) is
-landed above. -/
 
 /-- **The enqueue loop**: exactly `130·(n−j)` steps at EVERY choice
 stream, existentially packaging the (choice-dependent) backing address,

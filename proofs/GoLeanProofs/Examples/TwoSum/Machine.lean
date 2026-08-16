@@ -676,7 +676,7 @@ Every inner-loop access to `j`/`$forFirst` resolves through these:
 the concrete front (cells 0…22) misses, the dead region misses by
 `DeadFrom`, the live pair answers.
 
--- KIT-GAP WITNESS (see .tmp/kitgaps-twosum.md, [lane B] KIT GAP —
+-- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST (twosum), [lane B] KIT GAP —
 -- growing-heap loop support): the front-none rewrite chain and the
 -- live-cell lookup/set family below are the per-example price of a
 -- loop body that declares variables; the shape wanted is a kit-level

@@ -1061,7 +1061,7 @@ missing from it), and `StepKit.stepFn_makeSlice_u64_step` at three
 | `stepFn_makeSlice_u64_step` | 3 | **LIFTED** to `StepKit` (swap 2) |
 | `storeTarget_arrayLocal_u64` | 2 | **LIFTED** to `SliceMem` (swap 3) — already `N`-generic where it stood |
 | `normalizeValueForTy_arr_u64` | 2 | **LIFTED** to `SliceMem` (swap 3), genuinely generalized (`arr8` → `arr`, cap 8 → `N`) |
-| `goArr8` | 2 | **NOT lifted — deliberately, and permanently** |
+| `goArr8` | 12 (count corrected 2026-08-16) | **NOT lifted — deliberately, and permanently** |
 | the copy-into-observation loop schema | 3 instances | **NOT lifted — nothing shareable left** |
 
 The two non-lifts are decisions, not deferrals, and both are recorded
@@ -1072,7 +1072,19 @@ because a later session will otherwise re-propose them:
   example's own module over base definitions. Hoisting a 3-line adapter
   into a kit module to save six lines would make both headlines read
   through a shared import — defeating the exact rule the definition
-  exists to obey. Two identical copies is the correct cost.
+  exists to obey. Identical copies are the correct cost.
+  **Count corrected 2026-08-16 (post-autonomy audit): the row said TWO
+  consumers, which was true of the name `goArr8` at the time this
+  ledger was written and is not true of the FAMILY today.** The
+  fixed-cap array adapter now stands in TWELVE copies under
+  `proofs/GoLeanProofs/Examples/`: `goArr8` twice in `Targets.lean`
+  (:381 MinMax, :954 WordCount) plus `palArr8`, `ddArr8`, `dpArr8`,
+  `histArr8`, `kadArr8`, `rleArr8`, `selArr8`, `qArr8`, `stArr8`,
+  `tsArr8` — one per example, each three lines. **The keep-decision is
+  UNCHANGED** (the §11 closure rule is exactly why they are separate
+  definitions and the reason gets stronger, not weaker, as the number
+  grows); what changes is the stated cost: it is 12 × 3 lines, not
+  6.
   **SUPERSEDED IN PART by the arc-end designation (`e4202039`), noted
   here in the audit response (2026-08-15) so the ledger is not read as
   current:** both copies of `goArr8` now live in

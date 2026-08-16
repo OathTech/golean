@@ -113,7 +113,7 @@ theorem env_f_j (ja : Nat) :
 
 /-! ## Freshness / live-cell plumbing over the abstract dead region
 
--- KIT-GAP WITNESS (see .tmp/kitgaps-twosum.md, [lane B] KIT GAP —
+-- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST (twosum), [lane B] KIT GAP —
 -- growing-heap loop support): `lookup_ret_none`, the solo-cell
 -- lookup/set pair and the state-level store discharges further down
 -- (`storeJ_liveT`/`storeFF_liveT`/`storeJ_soloT`) are re-derivable

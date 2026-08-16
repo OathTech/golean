@@ -387,7 +387,10 @@ theorem fm_seg2a (h : Heap) (na f : Nat) (kv : Int) (old0 : Int)
       (stepFnIter_chain (stepFnIter_chain hA1 hA2) hA3) hv) hB) hC)
       hD1) hD2) hD3
 
-/-- The `.ref` evaluation step (env-only; the mirror of `stepFn_var`). -/
+/-- The `.ref` evaluation step (env-only; the mirror of `stepFn_var`).
+
+GAP-WITNESS (see docs/gallery-campaign-log/g1.md § unit G1.7 fibmemo,
+promotion ledger): the kit has `stepFn_var` but no `.ref` mirror. -/
 theorem fm_ref_step {σ : ExecState} {x : String} {env : LocalEnv}
     {l : Loc} {k : Cont} {ch : Choices}
     (henv : LocalEnv.lookup env x = some l) :
@@ -734,7 +737,11 @@ theorem fm_lookup_drain_miss {σ : ExecState} {f bM : Nat} {kv : Int}
   simp only [hmiss]
   with_unfolding_all rfl
 
-/-- The comma-ok drain, HIT at entry `i` holding wrapped value `w`. -/
+/-- The comma-ok drain, HIT at entry `i` holding wrapped value `w`.
+
+GAP-WITNESS (see docs/gallery-campaign-log/g1.md § unit G1.7 fibmemo,
+promotion ledger): `MapMem` carries `applyStrictOp_mapGet` for the
+EXPRESSION form only — the comma-ok drain has no kit form. -/
 theorem fm_lookup_drain_hit {σ : ExecState} {f bM : Nat} {kv : Int}
     {M : List (Int × Nat)} {i w : Nat} {KT : Cont} {ch : Choices}
     (hmap : Heap.lookup σ.heap (.base ⟨bM⟩) = some (mapDc M))

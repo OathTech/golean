@@ -427,7 +427,7 @@ theorem gs_append (a b : List UInt8) :
 
 /-! ## The string strict-op conditioned facts
 
--- KIT-GAP WITNESS: no string vocabulary in `SliceMem`/`StepKit`; these
+-- GAP-WITNESS: no string vocabulary in `SliceMem`/`StepKit`; these
 -- are the `StringMem` facts `StringReverse.Machine` first recorded,
 -- re-derived at this example (2nd consumer — promotion candidate),
 -- plus the SUBSTRING fact (`s[lo:hi]`), new here. -/

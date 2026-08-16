@@ -12,9 +12,15 @@
 #   type-check and emits the call as an ordinary static call to it; the
 #   shim is a byte-level scan over the FULL Unicode White_Space class,
 #   lowered through the ordinary pipeline. Every other selector call
-#   keeps the standing per-declaration quarantine byte-identical
-#   (probe-verified: strings.Repeat, fmt.Sprint, value position, dot
-#   import, reserved-name collision). go run executes the REAL stdlib,
+#   keeps its pre-E5 boundary behaviour byte-identical (probe-verified:
+#   strings.Repeat, fmt.Sprint, value position, reserved-name collision
+#   — those four refuse verbatim at the per-declaration quarantine; the
+#   DOT-IMPORT case is NOT a refusal and never was: it emits a dangling
+#   call and the machine answers `stuck`, a pre-existing fail-closed
+#   defect recorded in g2.md, which E5 neither widened nor narrowed).
+#   [Sentence corrected 2026-08-16 by the post-autonomy audit; the
+#   header had listed dot import among the byte-identical REFUSALS.]
+#   go run executes the REAL stdlib,
 #   so each flipped row is a direct oracle test of shim fidelity —
 #   incl. the non-ASCII White_Space rows and invalid UTF-8.
 #   Fidelity argument + BUILT record:
@@ -25,6 +31,10 @@
 #     strings/fields-conformance/* (8 — the shim conformance suite).
 #   Unlike E3 there is NO blast radius beyond the acceptance set (no
 #   other corpus row calls strings.Fields; verified by this full run).
+# manifest_cases: 1830  pass: 1732  fail: 98
+#   (machine-readable counts line, restored 2026-08-16 by the
+#   post-autonomy audit — it had been dropped from the header at an
+#   earlier re-pin; every future re-pin carries it forward)
 # columns: result, id, stage (features/detail omitted on purpose)
 # frontend: native (tools/nativefrontend + GoLean/NativeToIR.lean)
 PASS	arrays/array-bounds	-
