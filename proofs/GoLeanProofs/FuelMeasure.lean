@@ -416,6 +416,63 @@ theorem stepFnIter_iterate {c n : Nat} {T : Nat → ExecState}
       rw [harith] at hc
       exact hc
 
+/-- **The TWO-EXIT loop schema** (WP arc s1 lift 5 — the exact shape
+drafted at g1.md §Unit G1.3 "THE FINDING THIS UNIT CONTRIBUTES" and
+§THE KIT-GAP LIST): the loop either ITERATES (`c` steps, index `+1`,
+invariant `I` preserved), BAILS from inside the body to a terminal
+satisfying `Q` (`≤ b` steps, available at any index where the
+iteration does not fire), or EXITS at the test into a `Q`-terminal
+(`≤ e` steps). Per the R1-closure lesson, the whole per-iteration
+content enters through the ONE `hstep` hypothesis (a disjunction), the
+invariant `I` threads the data the exit needs (palin's `PalinUpTo`),
+and the terminal is a PREDICATE `Q` so the two exits may stop at
+different (existentially quantified) states. Bound:
+`c·(n−i) + max b e` — both landed shapes' `+70`-style constants are
+exactly `max b e`. Replaces the surviving per-example `strongRecOn`
+scaffolds. -/
+theorem stepFnIter_iterate_bail {c e b n : Nat} {T : Nat → ExecState}
+    {C : Nat → Config} {I : Nat → Prop}
+    (Q : Config → ExecState → Prop)
+    (hstep : ∀ i, i < n → I i →
+      (∀ ch : Choices, ∃ (cf : Config) (Tf : ExecState), Q cf Tf ∧
+        ∃ k ≤ b, stepFnIter k (T i) (C i) ch = .ok (cf, Tf, ch))
+      ∨ (I (i + 1) ∧ ∀ ch : Choices,
+        stepFnIter c (T i) (C i) ch = .ok (C (i + 1), T (i + 1), ch)))
+    (hexit : I n → ∀ ch : Choices,
+      ∃ (cf : Config) (Tf : ExecState), Q cf Tf ∧
+        ∃ k ≤ e, stepFnIter k (T n) (C n) ch = .ok (cf, Tf, ch)) :
+    ∀ i, i ≤ n → I i → ∀ ch : Choices,
+      ∃ (cf : Config) (Tf : ExecState), Q cf Tf ∧
+        ∃ k ≤ c * (n - i) + max b e,
+          stepFnIter k (T i) (C i) ch = .ok (cf, Tf, ch) := by
+  suffices key : ∀ μ i, μ = n - i → i ≤ n → I i → ∀ ch : Choices,
+      ∃ (cf : Config) (Tf : ExecState), Q cf Tf ∧
+        ∃ k ≤ c * (n - i) + max b e,
+          stepFnIter k (T i) (C i) ch = .ok (cf, Tf, ch) by
+    intro i hin hI ch
+    exact key (n - i) i rfl hin hI ch
+  intro μ
+  induction μ with
+  | zero =>
+      intro i hμ hin hI ch
+      have heq : i = n := by omega
+      subst heq
+      obtain ⟨cf, Tf, hQ, k, hk, hrun⟩ := hexit hI ch
+      exact ⟨cf, Tf, hQ, k, by omega, hrun⟩
+  | succ μ' ih =>
+      intro i hμ hin hI ch
+      have hlt : i < n := by omega
+      rcases hstep i hlt hI with hbail | ⟨hI', hiter⟩
+      · obtain ⟨cf, Tf, hQ, k, hk, hrun⟩ := hbail ch
+        exact ⟨cf, Tf, hQ, k, by omega, hrun⟩
+      · obtain ⟨cf, Tf, hQ, k, hk, hrun⟩ := ih (i + 1) (by omega)
+          (by omega) hI' ch
+        refine ⟨cf, Tf, hQ, c + k, ?_, stepFnIter_chain (hiter ch) hrun⟩
+        have : c * (n - i) = c + c * (n - (i + 1)) := by
+          rw [show n - i = (n - (i + 1)) + 1 from by omega, Nat.mul_succ]
+          omega
+        omega
+
 /-- The iterate-then-exit composition: the schema above plus an exit
 segment from `(T n, C n)` — the shape of the `∃k`-style setup loops
 that absorb their exit into the loop lemma. -/

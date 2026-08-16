@@ -808,39 +808,62 @@ theorem ph_loopP (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
         = .ok (.next .stop,
             pSt σ (pHeapEnd nv sv n l lp siv civ iv jv (palinSpec l)) 18,
             ch) := by
-  intro μ
-  induction μ using Nat.strongRecOn with
-  | _ μ ih =>
-    intro m hmc hμ hup ch
-    rcases Nat.lt_or_ge m (n / 2) with hlt | hge
-    · rw [show (decide (((m : Nat) : Int)
-          < ((n : Nat) : Int) - 1 - ((m : Nat) : Int))) = true from
-        decide_eq_true (by omega)]
-      by_cases heq : l.getD m 0 = l.getD (n - 1 - m) 0
-      · -- the pair matches: one full iteration, then recurse
-        obtain ⟨k, iv, jv, hk, hrun⟩ := ih (μ - 1) (by omega) (m + 1)
-          (by omega) (by omega) (palinUpTo_succ hup (by rw [hln]; exact heq)) ch
-        refine ⟨68 + k, iv, jv, by omega, ?_⟩
-        exact stepFnIter_chain
-          (ph_iterP σ nv sv n l lp siv civ m hln hn hlt heq ch) hrun
-      · -- the pair disagrees: the early return, verdict 0
-        refine ⟨70, ((m : Nat) : Int),
-          (((n : Nat) : Int) - 1 - ((m : Nat) : Int)), by omega, ?_⟩
-        rw [show palinSpec l = 0 from
-          palinSpec_of_mismatch (by omega : m < l.length)
-            (by rw [hln]; exact heq)]
-        exact ph_bailP σ nv sv n l lp siv civ m hln hlp hlpr hlt heq ch
-    · -- the walk met in the middle: verdict 1
-      have hmn : m = n / 2 := by omega
-      subst hmn
+  -- WP arc s1 lift 5: the per-example `strongRecOn` scaffold replaced
+  -- by ONE `FuelMeasure.stepFnIter_iterate_bail` instantiation.
+  have key := stepFnIter_iterate_bail (c := 68) (e := 49) (b := 70)
+    (n := n / 2)
+    (T := fun m => pSt σ (pHeapP nv sv n l lp siv civ ((m : Nat) : Int)
+      (((n : Nat) : Int) - 1 - ((m : Nat) : Int)) false) 18)
+    (C := fun m => .retV (.bool (decide (((m : Nat) : Int)
+      < ((n : Nat) : Int) - 1 - ((m : Nat) : Int)))) pCmpIfKP)
+    (I := fun m => m ≤ n / 2 ∧ PalinUpTo l m)
+    (Q := fun cf Tf => ∃ iv jv : Int, cf = .next .stop ∧
+      Tf = pSt σ (pHeapEnd nv sv n l lp siv civ iv jv (palinSpec l)) 18)
+    (hstep := fun i hi hI => by
+      obtain ⟨-, hup⟩ := hI
+      by_cases heq : l.getD i 0 = l.getD (n - 1 - i) 0
+      · right
+        refine ⟨⟨by omega, palinUpTo_succ hup (by rw [hln]; exact heq)⟩,
+          fun ch => ?_⟩
+        rw [show (decide (((i : Nat) : Int)
+            < ((n : Nat) : Int) - 1 - ((i : Nat) : Int))) = true from
+          decide_eq_true (by omega)]
+        exact ph_iterP σ nv sv n l lp siv civ i hln hn hi heq ch
+      · left
+        intro ch
+        refine ⟨.next .stop, pSt σ (pHeapEnd nv sv n l lp siv civ
+            ((i : Nat) : Int)
+            (((n : Nat) : Int) - 1 - ((i : Nat) : Int)) (palinSpec l)) 18,
+          ⟨((i : Nat) : Int),
+            (((n : Nat) : Int) - 1 - ((i : Nat) : Int)), rfl, rfl⟩,
+          70, Nat.le_refl 70, ?_⟩
+        rw [show (decide (((i : Nat) : Int)
+            < ((n : Nat) : Int) - 1 - ((i : Nat) : Int))) = true from
+          decide_eq_true (by omega),
+          show palinSpec l = 0 from
+            palinSpec_of_mismatch (by omega : i < l.length)
+              (by rw [hln]; exact heq)]
+        exact ph_bailP σ nv sv n l lp siv civ i hln hlp hlpr hi heq ch)
+    (hexit := fun hI ch => by
+      obtain ⟨-, hup⟩ := hI
+      refine ⟨.next .stop, pSt σ (pHeapEnd nv sv n l lp siv civ
+          ((n / 2 : Nat) : Int)
+          (((n : Nat) : Int) - 1 - ((n / 2 : Nat) : Int))
+          (palinSpec l)) 18,
+        ⟨((n / 2 : Nat) : Int),
+          (((n : Nat) : Int) - 1 - ((n / 2 : Nat) : Int)), rfl, rfl⟩,
+        49, Nat.le_refl 49, ?_⟩
       rw [show (decide (((n / 2 : Nat) : Int)
           < ((n : Nat) : Int) - 1 - ((n / 2 : Nat) : Int))) = false from
-        decide_eq_false (by omega)]
-      refine ⟨49, ((n / 2 : Nat) : Int),
-        (((n : Nat) : Int) - 1 - ((n / 2 : Nat) : Int)), by omega, ?_⟩
-      rw [show palinSpec l = 1 from
-        palinSpec_of_full (by rw [hln]; exact hup)]
-      exact ph_outP σ nv sv n l lp siv civ _ _ hlp hlpr ch
+        decide_eq_false (by omega),
+        show palinSpec l = 1 from
+          palinSpec_of_full (by rw [hln]; exact hup)]
+      exact ph_outP σ nv sv n l lp siv civ _ _ hlp hlpr ch)
+  intro μ m hmc hμ hup ch
+  obtain ⟨cf, Tf, ⟨iv, jv, rfl, rfl⟩, k, hk, hrun⟩ :=
+    key m hmc ⟨hmc, hup⟩ ch
+  have hmax : max 70 49 = 70 := rfl
+  exact ⟨k, iv, jv, by omega, hrun⟩
 
 /-! ## The run, end to end -/
 
