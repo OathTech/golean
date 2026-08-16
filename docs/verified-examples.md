@@ -2937,7 +2937,17 @@ separately and NOT the bound: `318` at `n = 0`, `492` at `n = 1`,
 many swaps fire, where the early exit lands), which is why only the bound
 is a law.
 
-**Status.** `bubble_readout` is the run-conditioned twin. The early return
+**Status.** NOT DESIGNATED — see the note in *How to read an entry*: this
+example post-dates the 2026-08-14 designation, and designation is arc-end
+work under user sign-off, so its statement is not walked by the mechanized
+statement-TCB gate and not replayed by the Comparator judge. What it does
+have, in-build: the `rfl` lowering pins (`bubble_pin`,
+`bubbleHarnessRFunc_pin`, both axiom-pinned in `proofs/Audit/BubbleSort.lean`),
+the golden-lowering guard (`scripts/check-golden` against
+`baselines/golden/bubble-lowered.repr`), and the axiom pins above. The
+deletion test was RUN by hand — both explicit hypotheses load-bearing
+(`hcap` breaks the run lemma's cap-dependent goals, `hseed` the entry
+normalization). `bubble_readout` is the run-conditioned twin. The early return
 (`if !swapped { return }`, the corpus's unary-`!` probe) means the subject
 leaves from two places; the proof runs both exits to the same terminal —
 the swap-free exit is discharged by "a swap-free pass certifies a sorted
@@ -3776,7 +3786,20 @@ recorded separately: `582/1145/2007/2575/3206/4056/4612/5243/6093/8686`
 at `n = 0…8, 12` (seed/qsel-independent at fixed `n`; the bound is
 exact at `n = 0`).
 
-**Status.** `wordfreq_readout` is the run-conditioned twin;
+**Status.** NOT DESIGNATED — see the note in *How to read an entry*: this
+example post-dates the 2026-08-14 designation, and designation is arc-end
+work under user sign-off, so its statement is not walked by the mechanized
+statement-TCB gate and not replayed by the Comparator judge. What it does
+have, in-build: four `rfl` lowering pins (`buildText_pin`, `wordFreq_pin`,
+`wordfreqHarnessRFunc_pin` and — the one this entry turns on —
+`goleanShimStringsFields_pin` on the INJECTED shim's own lowered body, all
+in `Examples/WordFreq/Machine.lean`), the golden-lowering guard
+(`scripts/check-golden` against `baselines/golden/wordfreq-lowered.repr`,
+which includes that shim body, so shim drift is golden drift), and the
+axiom pins above (`proofs/Audit/WordFreq.lean`). The deletion test was RUN
+— `lean_minimal_hypotheses` on `wordfreq_ok`, **all four explicit binders
+load-bearing** (`n seed qsel`, `hn`, `hseed`, `hqsel`).
+`wordfreq_readout` is the run-conditioned twin;
 `wordfreq_hits_eq` is the first-order readout corollary (the hits
 value as pure residue arithmetic over `(n, seed, qsel)`).
 
