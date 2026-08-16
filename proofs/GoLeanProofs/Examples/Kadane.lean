@@ -230,9 +230,6 @@ def kadArr8 (xs : List Int) : GoValue :=
 /-- `max?.getD 0`, the working spelling of the spec's maximum. -/
 private def mx (l : List Int) : Int := l.max?.getD 0
 
-private theorem mx_cons (x : Int) (l : List Int) :
-    mx (x :: l) = l.foldl max x := rfl
-
 private theorem foldl_max_pull (l : List Int) :
     ∀ a b : Int, l.foldl max (max a b) = max a (l.foldl max b) := by
   induction l with
@@ -360,8 +357,6 @@ private theorem segments_ne_nil {xs : List Int} (h : xs ≠ []) :
     segments xs ≠ [] := by
   obtain ⟨x, t, rfl⟩ := List.exists_cons_of_ne_nil h
   simp [segments, nePrefixes]
-
-theorem maxSub_nil : maxSubarraySum [] = 0 := rfl
 
 theorem maxSub_single (x : Int) : maxSubarraySum [x] = x := by
   simp [maxSubarraySum, segments, nePrefixes, List.max?]
@@ -696,11 +691,6 @@ theorem kadMid_set_odd {cap m : Nat} {seed : Int} (_hm : m < cap)
   rw [this]
   simp
 
-/-- The family is prefix-closed. -/
-theorem kadFamily_take {n m : Nat} {seed : Int} (h : m ≤ n) :
-    (kadFamily n seed).take m = kadFamily m seed := by
-  simp only [kadFamily, ← List.map_take, List.take_range, Nat.min_eq_left h]
-
 /-- The copy loop's terminal list at cap 8 IS the family, zero-padded —
 what `kadArr8` states over the witness. -/
 theorem kadPad_full {n : Nat} {seed : Int} (_h : n ≤ 8) :
@@ -730,10 +720,6 @@ theorem inorm64_of_range {v : Int} (h0 : -(2 ^ 63) ≤ v) (h1 : v < 2 ^ 63) :
 theorem inorm64_nat_of_lt {x : Nat} (h : x < 2 ^ 63) :
     IntKind.normalize .int64 (x : Int) = (x : Int) :=
   inorm64_of_range (by omega) (by exact_mod_cast h)
-
-/-- `tmod` at `Nat` casts is `Nat` mod (the parity computation). -/
-private theorem tmod_cast (m k : Nat) :
-    Int.tmod ((m : Nat) : Int) ((k : Nat) : Int) = ((m % k : Nat) : Int) := rfl
 
 /-- GAP-WITNESS (kit gap i64-ops): the int64 mirror of `getElem?_mapU`. -/
 private theorem getElem?_mapI (l : List Int) (k : Nat) (hk : k < l.length) :
@@ -1640,7 +1626,6 @@ theorem kd_X2_raw (σ : ExecState) (nv sv : Int) (n : Nat)
           kSt σ (kHeapEnd nv sv n l lp siv civ bv cv iv) 19, ch) := by
   with_unfolding_all rfl
 
-
 /-! ## The setup loop, cleaned + its induction -/
 
 /-- One setup iteration: both parities, branch-uniform bound 86 (the
@@ -2164,7 +2149,6 @@ theorem kd_loop (σ : ExecState) (n : Nat) (sv : Int) (l lp : List Int)
         stepFnIter_chain (stepFnIter_chain hX1
           (stepFnIter_one (stepFn_store_step hstore))) hX2⟩
 
-
 /-! ## The run, end to end -/
 
 /-- **The harness run, PROGRAM-generic**: within `227·n + 220` steps
@@ -2492,6 +2476,5 @@ theorem kadane_readout (n : Nat) (seed : Int) (hcap : n ≤ 8)
                           .int (maxSubarraySum vals) .int64] } := by
   obtain ⟨vals, hlen, htot⟩ := kadane_ok n seed hcap hs1 hs2
   exact ⟨vals, hlen, harness_readout_of_total htot⟩
-
 
 end GoLean.Examples.Kadane

@@ -468,10 +468,6 @@ def tJIncrK (ja : Nat) : Cont :=
   .strictK .add [] [.intLit 1 .uint64] (inEnvCT ja)
     (.rhsK .vals [tJRef ja] [] [] (.seqn #[]) (inEnvCT ja)
       (tInBodyTail ja))
-/-- The `$forFirst := false` store's continuation (first pass). -/
-def tFFStoreTail (ja : Nat) : Cont :=
-  .rhsK .vals [tFFRef ja] [] [] (.seqn #[]) (inEnvCT ja)
-    (tInBodyTail ja)
 /-- The inner exit test's `<` frame. -/
 def tJTestK (ja : Nat) : Cont :=
   .strictK .lessCmp [] [.var "n"] (inEnvCT ja) (tInCmpK ja)
@@ -659,16 +655,6 @@ theorem lookup_inS_T (σ : ExecState) (nv sv tv : Int) (n : Nat)
           .array ⟨l.map (fun v => .int v .uint64)⟩⟩ := by
   simp [tsHeapIn, tsHeapOut, tsHeapFrame, tsHeapCall, tsHeapCp, tsHeapSu,
     tsHeap0, Heap.lookup]
-
-theorem lookup_epiVals_T (σ : ExecState) (nv sv tv : Int) (n : Nat)
-    (l lp : List Int) (siv civ tvp mv iv riv rjv hiv hjv : Int)
-    (na : Nat) :
-    Heap.lookup
-        (tSt σ (tsHeapEpi nv sv tv n l lp siv civ tvp mv iv riv rjv
-          hiv hjv) na).heap (.base ⟨3⟩)
-      = some ⟨some (.array 8 tU64),
-          .array ⟨zeros8.map (fun v => .int v .uint64)⟩⟩ := by
-  simp [tsHeapEpi, tsHeapCp, tsHeapSu, tsHeap0, Heap.lookup]
 
 /-! ### The live-cell facts through the abstract dead region
 

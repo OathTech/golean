@@ -36,8 +36,6 @@ selsort (here), bubble (chartered). -/
 def selPost (lf : List Int) (m : Nat) : List Int :=
   lf.take m ++ List.replicate (8 - m) 0
 
-theorem selPost_zero (lf : List Int) : selPost lf 0 = zeros8 := rfl
-
 theorem selPost_length {lf : List Int} {n m : Nat} (hlen : lf.length = n)
     (hm : m ≤ n) (hcap : n ≤ 8) : (selPost lf m).length = 8 := by
   rw [selPost, List.length_append, List.length_take,

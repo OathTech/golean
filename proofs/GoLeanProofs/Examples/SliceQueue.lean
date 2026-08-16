@@ -461,14 +461,6 @@ theorem qBack_range {C i seed : Nat} :
   · rcases List.mem_replicate.mp hv with ⟨-, rfl⟩
     omega
 
-/-- The visible prefix of the backing IS the family prefix. -/
-theorem qBack_take {C i seed : Nat} (_h : i ≤ C) :
-    (qBack C i seed).take i = qFam i seed := by
-  rw [qBack,
-    List.take_append_of_le_length (by rw [qFam_length]; exact Nat.le_refl _),
-    List.take_of_length_le (by rw [qFam_length]; exact Nat.le_refl _)]
-
-
 /-- Reading the backing at an in-family index. -/
 theorem qBack_getD {C i seed j : Nat} (hj : j < i) :
     (qBack C i seed).getD j 0 = (((seed + j) % 2 ^ 64 : Nat) : Int) := by
@@ -736,16 +728,6 @@ plain `rfl` arms of `stepFn`; none consults the environment's
 theorem stepFn_seq_nil {σ : ExecState} {env : LocalEnv} {k : Cont}
     {ch : Choices} :
     stepFn σ (.next (.seq [] env k)) ch = .ok (.next k, σ, ch) := rfl
-
-theorem stepFn_loop_step {σ : ExecState} {c : Expr} {b : Stmt}
-    {env : LocalEnv} {k : Cont} {ch : Choices} :
-    stepFn σ (.next (.loop c b env k)) ch
-      = .ok (.exec (.while c b) env k, σ, ch) := rfl
-
-theorem stepFn_returning_seq {σ : ExecState} {ss : List Stmt}
-    {env : LocalEnv} {k : Cont} {ch : Choices} :
-    stepFn σ (.returning (.seq ss env k)) ch
-      = .ok (.returning k, σ, ch) := rfl
 
 /-! ## The entry segment and the loop-head segments -/
 
@@ -5302,7 +5284,6 @@ theorem qe_loop (σ : ExecState) (n seed k : Nat)
         omega] at hchain
       exact ⟨B', C', tail', na', ch', hchain, by omega, hinv'⟩
 
-
 /-! ## The dequeue write-back and store-block continuations -/
 
 /-- The write-back spine after the `dequeue` frame return, at the
@@ -5546,7 +5527,6 @@ theorem qd_t7_raw (σ : ExecState) (D : Nat) (iv dv : Int) (ch : Choices) :
       (.strictK .lessCmp [.int iv .uint64] [] (qdEnv1 D) (qdCmpK D))) ch
       = .ok (.retV (.bool (decide (iv < dv))) (qdCmpK D), σ, ch) := by
   with_unfolding_all rfl
-
 
 /-- One dequeue iteration: EXACTLY 117 steps — the `q[0]` read off the
 untouched backing at the moving offset, the `q[1:]` re-slice, the two
@@ -6983,7 +6963,6 @@ theorem qd_loop (σ : ExecState) (n seed k' m : Nat) (B C : Nat)
         omega] at hchain
       exact ⟨rest', na', hchain, by omega, by omega, hdead'⟩
 
-
 /-! ## The exit-epilogue continuations and helpers -/
 
 /-- The epilogue env after `$c8` is declared at `a`. -/
@@ -8234,7 +8213,6 @@ theorem q_exit (σ : ExecState) (n seed k' m : Nat) (B C : Nat)
       + 5 + 1 + 2 + 1 + 5 + 3 + 1 + 1 + 1 + 6 + 1 + 1 + 1 + 6 + 1 + 1
       + 1 + 6 = 72 from by omega] at hall
   exact hall
-
 
 /-! ## The pinned program, the entry equation, and the run -/
 

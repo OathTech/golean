@@ -34,8 +34,6 @@ generalized off `familyMod` would delete this block. -/
 def bPost (l : List Int) (m : Nat) : List Int :=
   l.take m ++ List.replicate (8 - m) 0
 
-theorem bPost_zero (l : List Int) : bPost l 0 = zeros8 := rfl
-
 theorem bPost_length {l : List Int} {m : Nat} (hm : m ≤ 8)
     (hml : m ≤ l.length) :
     (bPost l m).length = 8 := by

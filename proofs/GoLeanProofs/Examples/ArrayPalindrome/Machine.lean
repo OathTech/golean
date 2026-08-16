@@ -280,9 +280,6 @@ def suRefP (n : Nat) (iv : Int) : TargetRef :=
   .chain (pSliceS n) [.int iv .uint64] [.index]
 def suStTailP : Cont :=
   .seq [] suEnvP2 (.seq [] ([] :: suEnvP) suLoopKP)
-/-- The `%` apply point inside the setup body (`seed + i%2`). -/
-def suRhsKP : Cont :=
-  .rhsK .vals [suRefP 0 0] [] [] (.seqn #[]) suEnvP2 suStTailP
 def suAddKP (n : Nat) (sv iv : Int) : Cont :=
   .strictK .add [.int sv .uint64] [] suEnvP2
     (.rhsK .vals [suRefP n iv] [] [] (.seqn #[]) suEnvP2 suStTailP)

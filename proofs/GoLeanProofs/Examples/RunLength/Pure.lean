@@ -88,11 +88,6 @@ theorem rleSpec_replicate (n : Nat) (v : Int) :
     | zero => simp
     | succ m' => simp
 
-theorem rleSpec_replicate_length (n : Nat) (v : Int) :
-    (rleSpec (List.replicate n v)).length = if n = 0 then 0 else 1 := by
-  rw [rleSpec_replicate]
-  split <;> simp
-
 /-! ## The setup family — `s[i] = seed + i/3`, wrapped at uint64
 
 -- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST (rle)): `SliceMem.familyMod` is

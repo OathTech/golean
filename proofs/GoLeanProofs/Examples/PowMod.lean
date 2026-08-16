@@ -79,8 +79,6 @@ panic `% 0` would raise. -/
 def powModAnswer (base exp mod : Nat) : Nat :=
   if mod = 0 then 0 else base ^ exp % mod
 
-
-
 abbrev pmZeroBlock : Stmt :=
   .block #[] #[.seqn #[.assign (.var "$res0") (.intLit 0 .uint64), .returnStmt]]
 abbrev pmGuard (c : Int) : Stmt :=
@@ -420,7 +418,6 @@ theorem applyStrictOp_div_u64 {σ : ExecState} {a b : Nat}
     Bool.false_eq_true, if_false, Bind.bind, Except.bind, pure, Except.pure]
   simp only [show (IntKind.uint64 == IntKind.uint64) = true from rfl, if_true, hnorm]
 
-
 /-- The Go loop's own recursion. -/
 def powLoop (m r b e : Nat) : Nat :=
   if h : e = 0 then r
@@ -474,7 +471,6 @@ theorem powLoop_eq (m : Nat) (hm : 0 < m) :
         rw [← hbe, Nat.mul_assoc, Nat.mul_comm b (b ^ (2 * (e / 2)))]
       · have he2 : 2 * (e / 2) = e := by omega
         rw [if_neg hodd, hstep, he2]
-
 
 /-! ## The loop induction
 
@@ -672,16 +668,6 @@ private theorem pm_loop (b₀ e₀ m₀ : Int) (m : Nat) (hm : 0 < m) (hm64 : m 
           hrun
 
 /-! ## The end-to-end run and the headline -/
-
-/-- The guard terminal (both `mod = 0` and `mod = 1` reach it): the
-harness result cell holds `0`. -/
-private def pmGuardEnd (b₀ e₀ m₀ bv ev mv : Int) : ExecState :=
-  { types := powmodLowered.typeDefs.toList, functions := powmodLowered.funcs,
-    methods := powmodLowered.methods,
-    heap := [(.base ⟨0⟩, u64cell b₀), (.base ⟨1⟩, u64cell e₀), (.base ⟨2⟩, u64cell m₀),
-             (.base ⟨3⟩, u64cell 0), (.base ⟨4⟩, u64cell 0), (.base ⟨5⟩, u64cell bv),
-             (.base ⟨6⟩, u64cell ev), (.base ⟨7⟩, u64cell mv), (.base ⟨8⟩, u64cell 0)],
-    nextAddr := 9 }
 
 /-- **The run, end to end**: from the machine entry's post-prelude seed
 the harness reaches the entry terminal within `6027` steps — a CONSTANT

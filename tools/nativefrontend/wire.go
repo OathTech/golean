@@ -27,7 +27,19 @@ type emitter struct {
 	// emitted, so GoCore expressions stay pure (calls are statements).
 	hoisted        []any
 	tmpSeq         int
-	hoistForbidden string // non-empty where hoisting is unsafe (short-circuit RHS, loop cond)
+	// hoistForbidden is non-empty exactly where hoisting a call or an
+	// allocation OUT of the expression would change evaluation order.
+	// TODAY THE ONLY SETTER IS THE SHORT-CIRCUIT RHS (emitBinary; the
+	// same statement of fact is at that site) — the old "short-circuit
+	// RHS, loop cond" here named a loop-condition setter that does not
+	// exist, corrected 2026-08-16 by the post-autonomy audit. The
+	// checks that read it are written to keep any FUTURE
+	// hoist-forbidden position fail-closed rather than silently
+	// normalized. It is a property of the enclosing STATEMENT CONTEXT
+	// and does not cross into a lifted function body: emitFuncLit
+	// clears and restores it (audit R2A-F2, guardrails in
+	// Corpus/coverage/exec/bools/short-circuit-funclit).
+	hoistForbidden string
 	// scHoistOK admits the single hoist() temp-binding path (plain call
 	// temps and kin) while hoistForbidden is set for a SHORT-CIRCUIT RHS:
 	// emitBinary captures those hoists into its own accumulator and wraps

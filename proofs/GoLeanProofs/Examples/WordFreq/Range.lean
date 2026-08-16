@@ -107,18 +107,6 @@ theorem rg_R4a :
           σR, ch) := by
   with_unfolding_all rfl
 
-/-- R4b: the spliced store to the `c` read. 4 steps (post-splice). -/
-theorem rg_R4b :
-    stepFnIter 4 σR
-      (.next (.seq [.assign (.var "best") (.var "c")] (rEnv4 a nb nc)
-        (.seq [] (rEnvIf a nb nc) (rIterK a nb rem)))) ch
-      = .ok (.evalE (.var "c") (rEnv4 a nb nc)
-            (.rhsK .vals [.chain (.addr (.base ⟨nb⟩)) [] []] [] []
-              (.seqn #[]) (rEnv4 a nb nc)
-              (rStoreBestK a nb nc rem)),
-          σR, ch) := by
-  with_unfolding_all rfl
-
 /-- R4c: the store value banks. 1 step. -/
 theorem rg_R4c (cv : GoValue) :
     stepFnIter 1 σR

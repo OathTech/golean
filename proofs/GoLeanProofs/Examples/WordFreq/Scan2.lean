@@ -180,11 +180,6 @@ theorem textFamily_slice_word (seed : Nat) {n j : Nat} (hj : j < n) :
 /-! ## Heap-split helpers, second batch (suffix shapes the append
 block reaches) -/
 
-theorem lookup_c1of2' {D : Heap} {na : Nat} (hD : DeadFrom D na)
-    {c0 c1 : HeapCell} :
-    Heap.lookup (D ++ [(.base ⟨na⟩, c0), (.base ⟨na + 1⟩, c1)])
-      (.base ⟨na⟩) = some c0 := lookup_c1of2 hD
-
 /-- Setting the FIRST cell of a 2-cell suffix. -/
 theorem set_c1of2 {D : Heap} {na : Nat} (hD : DeadFrom D na)
     {c0 c1 c0' : HeapCell} :
@@ -673,22 +668,10 @@ theorem ck_ifKF (σ : ExecState) (t e : Stmt) (env : LocalEnv) (k : Cont)
       = .ok (.exec e env k, σ, ch) := by
   with_unfolding_all rfl
 
-theorem ck_orDesc (σ : ExecState) (a b : Expr) (env : LocalEnv)
-    (k : Cont) (ch : Choices) :
-    stepFnIter 1 σ (.evalE (.or a b) env k) ch
-      = .ok (.evalE a env (.orK b env k), σ, ch) := by
-  with_unfolding_all rfl
-
 theorem ck_andDesc (σ : ExecState) (a b : Expr) (env : LocalEnv)
     (k : Cont) (ch : Choices) :
     stepFnIter 1 σ (.evalE (.and a b) env k) ch
       = .ok (.evalE a env (.andK b env k), σ, ch) := by
-  with_unfolding_all rfl
-
-theorem ck_orT (σ : ExecState) (r : Expr) (env : LocalEnv) (k : Cont)
-    (ch : Choices) :
-    stepFnIter 1 σ (.retV (.bool true) (.orK r env k)) ch
-      = .ok (.retV (.bool true) k, σ, ch) := by
   with_unfolding_all rfl
 
 theorem ck_orF (σ : ExecState) (r : Expr) (env : LocalEnv) (k : Cont)

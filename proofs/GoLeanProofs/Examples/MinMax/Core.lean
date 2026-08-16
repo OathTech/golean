@@ -1460,9 +1460,6 @@ theorem unorm_nat_wrap (x : Nat) :
 
 /-! ### Harness-layout environments, continuations, and states -/
 
-private def hEnvA : LocalEnv :=
-  [[("$res1", .base ⟨3⟩), ("$res0", .base ⟨2⟩),
-    ("seed", .base ⟨1⟩), ("n", .base ⟨0⟩)]]
 private def hEnvMS : LocalEnv :=
   [[("$c12", .base ⟨4⟩)],
    [("$res1", .base ⟨3⟩), ("$res0", .base ⟨2⟩),

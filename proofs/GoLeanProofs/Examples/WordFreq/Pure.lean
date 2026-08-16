@@ -69,8 +69,6 @@ def sepWidth : List UInt8 → Nat
           ∨ (c.toNat = 0xE3 ∧ c1.toNat = 0x80 ∧ c2.toNat = 0x80) then 3
       else 0
 
-theorem sepWidth_nil : sepWidth [] = 0 := rfl
-
 /-- A 1-byte white-space head is a width-1 separator REGARDLESS of
 what follows (the first pattern wins) — this is why a two-space
 separator is two 1-byte steps. -/
@@ -135,13 +133,6 @@ these — byte granularity, one per byte class × carry state) -/
 /-- Exhausted input, no open field: no more words. -/
 theorem wordsOfCarry_nil_nil : wordsOfCarry [] [] = [] := by
   simp [wordsOfCarry]
-
-/-- Exhausted input closes the open field (the shim's trailing
-`if inField` append). -/
-theorem wordsOfCarry_nil_ne {carry : List UInt8} (hc : carry ≠ []) :
-    wordsOfCarry [] carry = [carry] := by
-  simp only [wordsOfCarry]
-  rw [if_neg hc]
 
 /-- The letter step: a non-separator byte joins the open field. -/
 theorem wordsOfCarry_letter {c : UInt8} {rest carry : List UInt8}
@@ -230,8 +221,6 @@ theorem letterByte_le (seed i : Nat) : (letterByte seed i).toNat ≤ 99 := by
 theorem letterWords_length (n seed : Nat) :
     (letterWords n seed).length = n := by
   simp [letterWords]
-
-theorem letterWords_zero (seed : Nat) : letterWords 0 seed = [] := rfl
 
 /-- The prefix step the build loop's invariant consumes (words side). -/
 theorem letterWords_succ (n seed : Nat) :
@@ -451,8 +440,6 @@ theorem setkW_cnt_succ :
       by_cases hk : k = w
       · simp [setkW, cntW, bumpW, hk]
       · simp [setkW, cntW, bumpW, hk, ih w]
-
-theorem countsFoldW_nil : countsFoldW [] = [] := rfl
 
 /-- The one-word step of the counting loop's invariant. -/
 theorem countsFoldW_append (p : List (List UInt8)) (w : List UInt8) :

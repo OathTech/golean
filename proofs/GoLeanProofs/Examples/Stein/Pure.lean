@@ -105,10 +105,6 @@ theorem commonTwos_stop (a b : Nat)
     (h : ¬(a ≠ 0 ∧ a % 2 = 0 ∧ b % 2 = 0)) : commonTwos a b = 0 := by
   rw [commonTwos.eq_def, if_neg h]
 
-/-- `commonTwos`, stop branch: first argument zero. -/
-theorem commonTwos_zero_left (b : Nat) : commonTwos 0 b = 0 :=
-  commonTwos_stop 0 b (by simp)
-
 /-- `commonTwos`, stop branch: first argument odd. -/
 theorem commonTwos_odd_left (a b : Nat) (h : a % 2 = 1) :
     commonTwos a b = 0 :=
@@ -214,11 +210,6 @@ theorem gcd_odd_halve (a b : Nat) (ha : a % 2 = 1) (hb : b % 2 = 0) :
     have h2 : 2 * (b / 2) = b := by omega
     rw [h2]
     exact Nat.gcd_dvd_right a b
-
-/-- Mirror of `gcd_odd_halve` for the first argument. -/
-theorem gcd_odd_halve_left (a b : Nat) (ha : a % 2 = 0) (hb : b % 2 = 1) :
-    Nat.gcd (a / 2) b = Nat.gcd a b := by
-  rw [Nat.gcd_comm (a / 2) b, gcd_odd_halve b a hb ha, Nat.gcd_comm b a]
 
 /-- The subtract step preserves the gcd. -/
 theorem gcd_sub (a b : Nat) (h : a ≤ b) :

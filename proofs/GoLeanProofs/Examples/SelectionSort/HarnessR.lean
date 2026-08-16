@@ -44,8 +44,6 @@ set_option linter.unusedSimpArgs false
 def selPre (m seed : Nat) : List Int :=
   lcgFamily lcgA lcgB m seed ++ List.replicate (8 - m) 0
 
-theorem selPre_zero (seed : Nat) : selPre 0 seed = zeros8 := rfl
-
 theorem selPre_length {m seed : Nat} (h : m ≤ 8) :
     (selPre m seed).length = 8 := by
   rw [selPre, List.length_append, lcgFamily_length, List.length_replicate]

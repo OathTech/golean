@@ -404,7 +404,6 @@ private def loopK2 (f : Nat) : Cont := loopKg body2 (envLp f) K2after
 private def l2Head (f : Nat) : Config := lpHeadg body2 (envLp f) K2after
 private def l2Post (f : Nat) : Config :=
   lpPostg body2 (envLp f) condSeqn2 exitIf2 iter2Blk K2after
-private def l2Exit (f : Nat) : Config := .next (.seq [] (envLp f) K2after)
 
 private abbrev ifTrueStmt : Stmt :=
   .ifThenElse (.boolLit true) (.seqn #[]) .breakStmt
@@ -412,14 +411,9 @@ private def loopK3 (f : Nat) : Cont := loopKg body3 (envLp f) K3after
 private def l3Head (f : Nat) : Config := lpHeadg body3 (envLp f) K3after
 private def l3Post (f : Nat) : Config :=
   lpPostg body3 (envLp f) (.seqn #[]) ifTrueStmt body3Blk K3after
-private def l3Exit (f : Nat) : Config := .next (.seq [] (envLp f) K3after)
 
 /-! ## Machine-integer / executable op facts (private; the mod/div
 facts keep the LITERAL divisor spelling the lowering produces) -/
-
-private theorem unorm_cast (n : Nat) (hn : n < 2 ^ 64) :
-    IntKind.normalize .uint64 ((n : Nat) : Int) = ((n : Nat) : Int) :=
-  unorm_nat_of_lt hn
 
 /-- `n % 2` at the literal divisor. -/
 private theorem applyStrictOp_mod2 {σ : ExecState} {n : Nat} :
@@ -2251,7 +2245,6 @@ private theorem l1_iter_even (h : Heap) (na av bv sv : Nat) (ch : Choices)
       lookup_set_other (by omega : 4 ≠ x)]
     exact lookup_append_left (lookup_append_left (lookup_append_left hc))
   · exact ((hfr3.set (by omega)).set (by omega)).set (by omega)
-
 
 /-- **Loop-1 exit, short-circuit** (`a` odd — `isEven(b)` never runs):
 post-dispatch point → the after-loop point. 64 steps, four cells

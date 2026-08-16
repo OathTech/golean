@@ -150,11 +150,6 @@ decreasing_by
   simp only [Nat.mul_one] at hii
   omega
 
-/-- The sieve table has `n + 1` entries. -/
-theorem sieveTable_length (n : Nat) : (sieveTable n).length = n + 1 := by
-  rw [sieveTable, sieveOuter_length]
-  simp
-
 /-! ## Bounds -/
 
 /-- The count over `[i..n]` is at most the window size. -/
@@ -171,18 +166,6 @@ decreasing_by omega
 private theorem isPrime_zero : isPrime 0 = false := rfl
 
 private theorem isPrime_one : isPrime 1 = false := rfl
-
-/-- At most `n` primes are ≤ `n` (`0` is never prime). -/
-theorem primeCount_le (n : Nat) : primeCount n ≤ n := by
-  cases n with
-  | zero => decide
-  | succ m =>
-    unfold primeCount
-    rw [List.range_eq_range', List.range'_succ, List.filter_cons, isPrime_zero]
-    simp only [Bool.false_eq_true, if_false]
-    calc (List.filter isPrime (List.range' 1 (m + 1))).length
-        ≤ (List.range' 1 (m + 1)).length := List.length_filter_le _ _
-      _ = m + 1 := by simp
 
 /-! ## Primality facts, from scratch (no Mathlib in this build) -/
 

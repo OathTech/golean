@@ -535,12 +535,6 @@ def stPoFrEnv (na : Nat) : LocalEnv :=
   [[("$res1", .base ⟨na + 3⟩), ("$res0", .base ⟨na + 2⟩),
     ("s", .base ⟨na + 1⟩)]]
 def stPoFrEnv2 (na : Nat) : LocalEnv := [] :: stPoFrEnv na
-def stPoFrEnvV (na : Nat) : LocalEnv :=
-  [("v", .base ⟨na + 4⟩)] :: stPoFrEnv na
-
-/-- The size callee's frame env (cells `na … na+1`). -/
-def stSzFrEnv (na : Nat) : LocalEnv :=
-  [[("$res0", .base ⟨na + 1⟩), ("s", .base ⟨na⟩)]]
 
 /-! ### Continuations -/
 
@@ -585,16 +579,11 @@ def stPoCmpK (q : Nat) : Cont :=
     (.seq [stPFillBlock] (stPoEnv1 q) (stPoLoopK q))
 
 def stPoK0 (q : Nat) : Cont := .seq [] (stPoEnv1 q) (stPoLoopK q)
-def stPoKF23 (q na : Nat) : Cont :=
-  .seq [stPFill2, stPFill3] (stPoEnvV q na) (stPoK0 q)
 def stPoKCall (q na : Nat) : Cont :=
   .seq [stPFill3] (stPoEnvV q na) (stPoK0 q)
 /-- The pop call's target plans (`s, v = pop(s)`). -/
 def stPoPlans : List (TargetShape × List Expr) :=
   [(.chain [], [.ref "s"]), (.chain [], [.ref "v"])]
-def stPoFrameK (q na : Nat) : Cont :=
-  .frame stPoPlans (stPoEnvV q na) [.base ⟨na + 2⟩, .base ⟨na + 3⟩] []
-    (stPoKCall q na) false
 
 /-! ## Heap facts at the symbolic split
 
@@ -1077,9 +1066,6 @@ def stAssignC00 : Stmt :=
 /-- The makeSlice-in-push governing sequence. -/
 def stPuKMS (na : Nat) : Cont :=
   .seq [stAssignC00, pushB2, pushB3] (stPuFrEnvC0 na) (stPuFrameK na)
-/-- After `$c1` is declared: the appendSlice governing sequence. -/
-def stPuKAp (na : Nat) : Cont :=
-  .seq [pushB3] (stPuFrEnvC1 na) (stPuFrameK na)
 
 /-- R1: checkpoint (test true) → the `v` declaration. 7 steps, heap
 untouched, envs concrete — fully state-generic. -/
@@ -5821,7 +5807,6 @@ theorem po_iter (σ : ExecState) (n seed k m j b c q na' : Nat)
         1 + 1 + 1 from rfl]
   exact hall
 
-
 /-- **The pop loop**: exactly `127·(m−j)` steps, existentially
 packaging the growing dead workspace. -/
 theorem po_loop (σ : ExecState) (n seed k m b c q : Nat) (T : Heap)
@@ -6631,8 +6616,6 @@ theorem st_exit (σ : ExecState) (n seed k m b c q na'' : Nat)
         + 1 + 2 + 1 + 1 + 1 + 1 + 1 + 6 + 1 + 2 + 4 + 1 + 1 + 1 + 2
         + 4 + 1 + 1 + 1 + 6 from rfl]
   exact hall
-
-
 
 /-! ## The run, end to end -/
 

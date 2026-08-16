@@ -44,8 +44,6 @@ def btEnv : LocalEnv :=
 def btEnvC : LocalEnv := [] :: btEnv
 /-- The store block's scope. -/
 def btEnv2 : LocalEnv := [] :: btEnvC
-/-- A separator arm block's scope. -/
-def btEnv3 : LocalEnv := [] :: btEnv2
 
 def btTailSeqn : Stmt :=
   .seqn #[.assign (.var "$res0") (.var "out"), .returnStmt]

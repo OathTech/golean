@@ -1356,7 +1356,26 @@ theorem fm_seg7 (h : Heap) (na f bM a0 : Nat) (kv : Int)
     (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
       (stepFnIter_chain h1 h2) h3) h4) h5) h6) h7) h8
 
-/-- Idempotence of the uint64 normal form (Int.emod stability). -/
+/-- Idempotence of the uint64 normal form (Int.emod stability).
+
+GAP-WITNESS, and a CORRECTED one (post-autonomy audit, 2026-08-16).
+The ledger recorded this as a missing kit lemma; it is not. The
+kind-generic statement exists as
+`GoLean.Iris.intKind_normalize_idem` (`GoLeanProofs/HeapBridge.lean`).
+What it does NOT have is a home an example module can import:
+`HeapBridge` pulls in `Iris.ProgramLogic.*`, `Iris.ProofMode` and
+`Iris.BI.Lib.GenHeap`, and no module under `Examples/` imports Iris —
+Iris is a proof device, not an example-layer dependency (the
+statement-TCB/layering doctrine, `docs/2026-08-01_*`). So the audit's
+literal instruction (delete this and import HeapBridge) was NOT taken:
+it would have made this the first example module in the tree to import
+the Iris layer, to save four lines.
+
+The real item, recorded in `docs/gallery-campaign-log/g1.md` (fibmemo
+unit, promotion ledger): lift `intKind_normalize_idem` OUT of
+`HeapBridge` into a core/kit module (`SliceMem` or `StepKit`), then
+both this site and `HeapBridge` consume it. Consolidation-slice work,
+not audit-round work. -/
 theorem unorm_idem (v : Int) :
     IntKind.normalize .uint64 (IntKind.normalize .uint64 v)
       = IntKind.normalize .uint64 v := by

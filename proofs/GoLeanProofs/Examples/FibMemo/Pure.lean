@@ -42,10 +42,6 @@ def fibW (m : Nat) : Nat := fibSpec m % 2 ^ 64
 theorem fibW_lt (m : Nat) : fibW m < 2 ^ 64 :=
   Nat.mod_lt _ (by decide)
 
-theorem fibW_zero : fibW 0 = 0 := rfl
-
-theorem fibW_one : fibW 1 = 1 := rfl
-
 /-- `fibW`'s base cases in the machine's shape: below the `n < 2`
 guard the returned value IS the argument. -/
 theorem fibW_small {m : Nat} (h : m ≤ 1) : fibW m = m := by

@@ -62,10 +62,6 @@ theorem palinUpTo_succ {xs : List Int} {m : Nat} (h : PalinUpTo xs m)
   · have : t = m := by omega
     subst this; exact hm
 
-theorem palinUpTo_le {xs : List Int} {m k : Nat} (h : PalinUpTo xs m)
-    (hk : k ≤ m) : PalinUpTo xs k := by
-  intro t ht; exact h t (by omega)
-
 /-- The verdict is a machine integer. -/
 theorem palinSpec_range (xs : List Int) :
     0 ≤ palinSpec xs ∧ palinSpec xs < 2 ^ 64 := by

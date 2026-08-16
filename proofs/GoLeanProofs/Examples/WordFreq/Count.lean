@@ -402,10 +402,6 @@ abbrev mdW (kvs : List (List UInt8 × Nat)) : HeapCell :=
 /-- A `map[string]uint64` variable's default cell. -/
 abbrev nilMapW : HeapCell := ⟨some tMapSU, .map ⟨none⟩⟩
 
-/-- Statement s1 of the post-shim tail: `$c0 := make(map[string]uint64)`. -/
-abbrev wfS1 : Stmt :=
-  .seqn #[.initialization { id := "$c0", typ := tMapSU },
-          .makeMap (.var "$c0") tStr tU64 none]
 /-- s2: `counts := $c0`. -/
 abbrev wfS2 : Stmt :=
   .seqn #[.initialization { id := "counts", typ := tMapSU },
@@ -546,32 +542,6 @@ theorem lookup_wHeapCount_none (nv sv qv bnv bsv : Int)
     base_beq_false (by omega : (29 : Nat) ≠ x),
     base_beq_false (by omega : (30 : Nat) ≠ x),
     Bool.false_eq_true, if_false]
-
-/-- Full-heap lookup through the concrete count front into the debris
-region. -/
-theorem lookup_countD (nv sv qv bnv bsv : Int) (l q : List UInt8)
-    (biv : Int) (b k cap : Nat) (iv sv2 : Int) {D : Heap}
-    {x : Nat} (hx : 31 ≤ x) {c : HeapCell}
-    (h : Heap.lookup D (.base ⟨x⟩) = some c) :
-    Heap.lookup
-        (wHeapCount nv sv qv bnv bsv l q biv b k cap iv sv2 ++ D)
-        (.base ⟨x⟩) = some c := by
-  rw [lookup_append_right
-    (lookup_wHeapCount_none nv sv qv bnv bsv l q biv b k cap iv sv2 hx)]
-  exact h
-
-/-- Full-heap set through the concrete count front into the debris
-region. -/
-theorem set_countD (nv sv qv bnv bsv : Int) (l q : List UInt8)
-    (biv : Int) (b k cap : Nat) (iv sv2 : Int) (D : Heap)
-    {x : Nat} (hx : 31 ≤ x) (c : HeapCell) :
-    Heap.set
-        (wHeapCount nv sv qv bnv bsv l q biv b k cap iv sv2 ++ D)
-        (.base ⟨x⟩) c
-      = wHeapCount nv sv qv bnv bsv l q biv b k cap iv sv2
-          ++ Heap.set D (.base ⟨x⟩) c :=
-  set_append_right
-    (lookup_wHeapCount_none nv sv qv bnv bsv l q biv b k cap iv sv2 hx)
 
 /-- Lookup within the five-cell prologue suffix (position `j < 5`),
 with an arbitrary further suffix `tail`. -/

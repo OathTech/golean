@@ -631,9 +631,6 @@ def stTail (a : Nat) : Cont :=
 def mstTgtK (a : Nat) (m : Nat) : Cont :=
   .tgtOpK (.chain [.index]) [svHandle m] [] [] [] .vals [.boolLit true] []
     (.seqn #[]) (stEnv a) (stTail a)
-def mstRhsK (a : Nat) (m : Nat) (jv : Int) : Cont :=
-  .rhsK .vals [.chain (svHandle m) [.int jv .uint64] [.index]] [] []
-    (.seqn #[]) (stEnv a) (stTail a)
 def jIncRhsK (a : Nat) : Cont :=
   .rhsK .vals [.chain (.addr (.base ⟨a⟩)) [] []] [] [] (.seqn #[])
     (inEnvB1 a) (inFlagTail a)

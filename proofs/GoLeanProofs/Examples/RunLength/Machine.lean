@@ -571,9 +571,6 @@ def rNRs7 : Stmt := .seqn #[.assign (.var "runCounts") (.var "$c5")]
 def rNREnv1 : LocalEnv := [("$c2", .base ⟨29⟩)] :: rKEEnv 27
 def rNREnv2 : LocalEnv :=
   [("$c3", .base ⟨31⟩), ("$c2", .base ⟨29⟩)] :: rKEEnv 27
-def rNREnv3 : LocalEnv :=
-  [("$c4", .base ⟨33⟩), ("$c3", .base ⟨31⟩), ("$c2", .base ⟨29⟩)]
-    :: rKEEnv 27
 def rNREnv4 : LocalEnv :=
   [("$c5", .base ⟨35⟩), ("$c4", .base ⟨33⟩), ("$c3", .base ⟨31⟩),
    ("$c2", .base ⟨29⟩)] :: rKEEnv 27

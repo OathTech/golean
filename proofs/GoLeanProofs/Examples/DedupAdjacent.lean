@@ -468,10 +468,6 @@ theorem dedupAdj_ne_nil {xs : List Int} (h : xs ≠ []) :
   | nil => exact absurd rfl h
   | cons x xs => simp [dedupAdj]
 
-theorem dedupAdj_length_pos {xs : List Int} (h : xs ≠ []) :
-    0 < (dedupAdj xs).length :=
-  List.length_pos_iff.mpr (dedupAdj_ne_nil h)
-
 theorem dedupAdjTail_mem {xs : List Int} :
     ∀ {prev v : Int}, v ∈ dedupAdjTail prev xs → v ∈ xs := by
   induction xs with
@@ -569,9 +565,6 @@ theorem ddFamily_getD {n seed m : Nat} (hm : m < n) :
 def ddPre (m seed : Nat) : List Int :=
   prefixPad ddFamily 8 m seed
 
-theorem ddPre_zero (seed : Nat) : ddPre 0 seed = List.replicate 8 0 :=
-  prefixPad_zero rfl
-
 theorem ddPre_length {m seed : Nat} (h : m ≤ 8) :
     (ddPre m seed).length = 8 :=
   prefixPad_length (ddFamily_length m seed) h
@@ -595,10 +588,6 @@ theorem ddPre_full {n seed : Nat} :
 answer, zero tail. -/
 def ddPost (vals : List Int) (m : Nat) : List Int :=
   (dedupAdj vals).take m ++ List.replicate (8 - m) 0
-
-theorem ddPost_zero (vals : List Int) :
-    ddPost vals 0 = List.replicate 8 0 := by
-  simp [ddPost]
 
 theorem ddPost_length {vals : List Int} {m : Nat}
     (hm : m ≤ (dedupAdj vals).length) (hcap : m ≤ 8) :
@@ -1031,12 +1020,6 @@ def epiRest1 : List Stmt :=
    .assign (.var "$res2") dConvExpr, .returnStmt]
 def epiRest2 : List Stmt :=
   [.assign (.var "$res2") dConvExpr, .returnStmt]
-def epiRhsK0 : Cont :=
-  .rhsK .vals [.chain (.addr (.base ⟨2⟩)) [] []] [] [] (.seqn #[]) epiEnv
-    (.seq epiRest1 epiEnv dBarrier)
-def epiRhsK1 : Cont :=
-  .rhsK .vals [.chain (.addr (.base ⟨3⟩)) [] []] [] [] (.seqn #[]) epiEnv
-    (.seq epiRest2 epiEnv dBarrier)
 def epiRhsK2 : Cont :=
   .rhsK .vals [.chain (.addr (.base ⟨4⟩)) [] []] [] [] (.seqn #[]) epiEnv
     (.seq [.returnStmt] epiEnv dBarrier)
