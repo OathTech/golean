@@ -23,9 +23,16 @@
 #
 #   scripts/render-gallery [doc]     default doc: docs/verified-examples.md
 #
+# Plus ONE counting check, added 2026-08-16 (post-autonomy audit A1): each
+# example section carries exactly one Fuel bound, one Status and one
+# Ground. It exists because a merge spliced one entry's honesty half into
+# its neighbour and every verbatim block still matched. See the comment at
+# the check itself, including the instruction NOT to grow it.
+#
 # Exit codes: 0 = every block matches; 1 = DRIFT (each stale block printed
-# with a diff); 2 = structural problem (missing doc/source, marker with no
-# block, unterminated fence, or zero blocks found — fail closed, because a
+# with a diff) or a section-structure violation (the section named); 2 =
+# structural problem (missing doc/source, marker with no block,
+# unterminated fence, or zero blocks found — fail closed, because a
 # check that silently verifies nothing is worse than no check).
 set -uo pipefail
 
@@ -132,6 +139,27 @@ fi
 if [ "$blocks" -eq 0 ]; then
   echo "render-gallery: FAIL — no '<!-- verbatim: ... -->' blocks in $DOC (markers lost? this check would verify nothing)" >&2
   structural=1
+fi
+
+# SECTION STRUCTURE, the cheapest possible form (post-autonomy audit A1,
+# 2026-08-16): an integration merge spliced dedup's honesty half into the
+# palin section — dedup lost its Fuel/Status/Ground, palin carried two of
+# each — and nothing noticed, because every verbatim block still matched.
+# So: an example section — one that quotes a Corpus/ file or carries any
+# of the three — must have exactly one of each, and at most one
+# Domain-bounds. Both halves of a splice fire: the section that LOST its
+# half reads 0/0/0 and the one that gained it reads 2/2/2.
+# DO NOT HARDEN: no ordering rule, no content rule, no per-example
+# knowledge, no cross-section reasoning. If this ever wants to know what a
+# section MEANS, delete it instead.
+if ! awk 'function chk(){if(n>0&&(f!=1||s!=1||g!=1||d>1)){
+      printf "render-gallery: SECTION STRUCTURE — %s (Fuel=%d Status=%d Ground=%d Domain=%d, want 1/1/1 and <=1)\n",h,f,s,g,d>"/dev/stderr";bad=1}}
+  /^## /{chk();h=substr($0,4);f=s=g=d=n=0;next}
+  /^<!-- verbatim: Corpus\//{n++}
+  /^\*\*Fuel bound/{f++;n++} /^\*\*Status/{s++;n++} /^\*\*Ground/{g++;n++} /^\*\*Domain bounds/{d++}
+  END{chk();exit bad}' "$DOC"; then
+  echo "render-gallery: FAIL — section structure (see above); an entry lost or doubled its Fuel/Status/Ground" >&2
+  exit 1
 fi
 
 if [ "$structural" -ne 0 ]; then
