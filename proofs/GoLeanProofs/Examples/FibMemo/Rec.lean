@@ -1362,14 +1362,28 @@ GAP-WITNESS, and a CORRECTED one (post-autonomy audit, 2026-08-16).
 The ledger recorded this as a missing kit lemma; it is not. The
 kind-generic statement exists as
 `GoLean.Iris.intKind_normalize_idem` (`GoLeanProofs/HeapBridge.lean`).
-What it does NOT have is a home an example module can import:
-`HeapBridge` pulls in `Iris.ProgramLogic.*`, `Iris.ProofMode` and
-`Iris.BI.Lib.GenHeap`, and no module under `Examples/` imports Iris —
-Iris is a proof device, not an example-layer dependency (the
-statement-TCB/layering doctrine, `docs/2026-08-01_*`). So the audit's
-literal instruction (delete this and import HeapBridge) was NOT taken:
-it would have made this the first example module in the tree to import
-the Iris layer, to save four lines.
+What it does NOT have is a home THIS module can import: `HeapBridge`
+pulls in `Iris.ProgramLogic.*`, `Iris.ProofMode` and
+`Iris.BI.Lib.GenHeap`, while **this file and its whole transitive
+import closure are Iris-free** (29 modules, zero under `Iris.`), and
+keeping them so preserves the FOOTPRINT layer's independence from the
+proof-device layer — Iris is a proof device, not a dependency the
+footprint style needs (the statement-TCB/layering doctrine,
+`docs/2026-08-01_*`). So the audit's literal instruction (delete this
+and import `HeapBridge`) was NOT taken: it would have put the Iris
+layer into a closure that does not otherwise contain it, to save four
+lines.
+
+**NB — corrected 2026-08-16, fix round #3.** This paragraph used to
+argue from "no module under `Examples/` imports Iris". **That was
+false.** Measured over the tree: **63 of the 132 modules under
+`Examples/` DO transitively import Iris**, the gateway in every case
+being `GoLeanProofs.Laws.StmtOps`, whose first line is
+`import Iris.ProgramLogic.WeakestPre` (20 example modules import
+`Laws.StmtOps` directly; the other 43 reach it through a sibling).
+The ruling is unchanged, but it stands on the DIRECT, module-local
+basis stated above — this closure is Iris-free and is worth keeping
+that way — and never on a tree-wide property the tree does not have.
 
 The real item, recorded in `docs/gallery-campaign-log/g1.md` (fibmemo
 unit, promotion ledger): lift `intKind_normalize_idem` OUT of

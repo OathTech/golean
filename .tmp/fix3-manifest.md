@@ -400,3 +400,116 @@ anything near here is off it is `:2144`, "the third-and-fourth landed
 copies" — under the same site enumeration the copies selsort and bubble add
 are the fourth and fifth. That line was not on the enumerated list, so it is
 left untouched and reported instead.
+
+---
+
+## F6 — the FibMemo `unorm_idem` ruling comment, restated on its true basis
+
+**R2 proof that the current text is WRONG.** The comment argued: *"and no
+module under `Examples/` imports Iris"*. Measured over the tree by building
+the transitive import closure of every module under `proofs/GoLeanProofs/Examples/`
+(script: `.tmp/irisdep.py`, `.tmp/irispath.py` — module `A.B` resolved to
+`./A/B.lean` or `proofs/A/B.lean`, imports read from the file's `import` lines):
+
+```
+Examples modules: 132
+transitively import Iris: 63
+Iris-free: 69
+
+gateway (module in closure that DIRECTLY imports Iris):
+  GoLeanProofs.Ghost                             62
+  GoLeanProofs.Adequacy                          1
+
+shortest path, sample:
+  GLP.Examples.ArrayPalindrome.Machine -> GLP.Laws.StmtOps -> Iris.ProgramLogic.WeakestPre
+
+second hop histogram (the example's own direct import that leads to Iris):
+  GoLeanProofs.Laws.StmtOps                  20      (+43 reaching it via a sibling)
+```
+
+corroborated at the gateway itself:
+
+```
+$ grep -n '^import' proofs/GoLeanProofs/Laws/StmtOps.lean | head -5
+1:import Iris.ProgramLogic.WeakestPre
+2:import Iris.ProgramLogic.Lifting
+3:import Iris.ProgramLogic.Adequacy
+4:import Iris.ProofMode
+5:import Iris.BI.Lib.GenHeap
+```
+
+**63 of 132 — the claim was false.** The TRUE fact, which is what the ruling
+actually rests on, verified separately:
+
+```
+FibMemo.Rec transitively imports Iris? False
+FibMemo.Rec closure size: 29
+Iris modules in closure: []
+```
+
+VERDICT: the ruling STANDS, its stated basis does not. Restate on the
+direct/module-local basis.
+
+| field | value |
+|---|---|
+| file | `proofs/GoLeanProofs/Examples/FibMemo/Rec.lean` |
+| lines | 1365-1372 (docstring of `theorem unorm_idem`) |
+| old text | `What it does NOT have is a home an example module can import: … and no module under `Examples/` imports Iris — Iris is a proof device, not an example-layer dependency … it would have made this the first example module in the tree to import the Iris layer, to save four lines.` |
+| new text | basis restated to "a home THIS module can import": **this file and its whole transitive closure are Iris-free (29 modules, zero under `Iris.`)**, keeping them so preserves the FOOTPRINT layer's independence; consequence reworded to "would have put the Iris layer into a closure that does not otherwise contain it". Plus an **NB** paragraph recording that the old tree-wide claim was FALSE, with the 63/132 measurement, the `Laws.StmtOps` gateway and the 20-direct/43-transitive split, and the explicit statement that the ruling now stands on the module-local basis and never on a tree-wide property |
+| derivation | `.tmp/irisdep.py`, `.tmp/irispath.py`, `grep -n '^import' proofs/GoLeanProofs/Laws/StmtOps.lean` |
+| output | as shown above |
+
+| field | value |
+|---|---|
+| file | `docs/2026-08-16_wp-library-design.md` |
+| lines | 228-254 (§(a), the blockquote of that ruling) |
+| old text | cite `Rec.lean:1359-1378` + the blockquote carrying the old "no module under `Examples/` imports Iris" wording |
+| new text | cite updated to `Rec.lean:1359-1392` (docstring grew: `grep -n` → opens 1359, closes 1392); blockquote re-synced to the new docstring including the NB paragraph; **plus one added paragraph** "Designation-relevant input (recorded 2026-08-16, fix round #3)" flagging the 63/132 measurement as an input to designation — "keep Iris out of `Examples/`" is not an available policy, so Iris-freedom is a per-module property to state and check, not to assume from a directory |
+| derivation | `grep -n 'Idempotence of the uint64\|not audit-round work. -/' proofs/GoLeanProofs/Examples/FibMemo/Rec.lean` |
+| output | `1359:` … `1392:` |
+
+---
+
+## NIT — the wp-note's seven self-cites, +6 offset
+
+**R2 proof.** The whole file IS reviewer 5's report (title at `:30`) with an
+operator cross-correction note appended at `:196`. Seven cites point into its
+own body and were written against R5's STANDALONE report, never rebased on
+landing. Each verified by CONTENT (not by applying an offset), old and new:
+
+| cite | old line resolves to | correct line | why |
+|---|---|---|---|
+| `:45` | P-A's Coverage line (`derive_entry_eq`) | **`:51`** | the P-B line that lists kadane in the `seed+i` affine bucket AND under "signed/Int-seeded" |
+| `:148` | *(blank line)* | **`:154`** | item 4, `familyF/…/affine`, whose consumer list repeats kadane |
+| `:55` (×2) | P-C prose, "The loop leaves either at its test…" | **`:62`** | the P-D Instances line — the ONLY line that both says "5 full hand instantiations" and carries `SelectionSort/Frame.lean:44,274,499` + `BubbleSort/Frame.lean:30,262,486`, the two cites the grading paragraph is about |
+| `:145` | `---` (a rule) | **`:151`** | priority item 1, "— 5 (isort ×3, selsort, bubble…)" |
+| `:26` | "addendum records this audit)…" | **`:32`** | the Basis line: "`FreshFrom` has **5** program-local copies" |
+| `:62` | P-D Instances (a different claim) | **`:68`** | P-E Instances: "5 program-local copies — fibmemo…" |
+| `:147` | `## 3. PARALLEL CONSTRUCTIONS…` (a heading) | **`:153`** | item 3, "The footprint pack … — 5 copies (fibmemo, stein, sieve…" |
+
+Six are +6; `:55` is **+7** — so the offset was NOT applied blindly, each was
+resolved against what the sentence claims the line says.
+
+**NOT changed:** `:25` and `:36` in §(e) are not self-cites — they point into
+`proofs/Audit/Kit.lean`. Verified: `sed -n '25p;36p' proofs/Audit/Kit.lean`
+returns two English prose lines, and the three counts the paragraph turns on
+re-derive exactly (`grep -c '^#guard_msgs in #print axioms '` → 116,
+`grep -c '#print axioms'` → 118, `grep -c '#guard_msgs'` → 117).
+
+| field | value |
+|---|---|
+| file | `docs/2026-08-16_wp-library-design.md` |
+| lines | 282, 283, 314, 321, 342 |
+| old text | `(`:45`)` / `` `:148` `` / `(`:55`, `:145`)` / `(`:55` cites` / `(`:26`, `:62`, `:147`)` |
+| new text | `(`:51`)` / `` `:154` `` / `(`:62`, `:151`)` / `(`:62` cites` / `(`:32`, `:68`, `:153`)` |
+| derivation | `sed -n '<N>p' docs/2026-08-16_wp-library-design.md` for each old and new line |
+| output | the table above |
+
+| field | value |
+|---|---|
+| file | `docs/2026-08-16_wp-library-design.md` |
+| line | after 324 (new bracketed note) |
+| old text | *(none — added)* |
+| new text | bracketed note recording all seven re-pointings, that they were derived by content rather than by offset, the six-at-+6/one-at-+7 split, and that `:25`/`:36` are Kit.lean cites deliberately left alone |
+| derivation | as above |
+| output | as above |

@@ -225,21 +225,35 @@ report's cites into `proofs/` are mostly still good; two are not (see (c)).
 The superseded note said: *"R2B also found unorm_idem already exists
 kind-generically (HeapBridge.intKind_normalize_idem) — item 9's `unorm_idem`
 line becomes an import fix, not a lift."* **The import route was REFUSED.**
-The ruling is at `proofs/GoLeanProofs/Examples/FibMemo/Rec.lean:1359-1378`,
+The ruling is at `proofs/GoLeanProofs/Examples/FibMemo/Rec.lean:1359-1392`,
 the docstring of `theorem unorm_idem`:
 
 > GAP-WITNESS, and a CORRECTED one (post-autonomy audit, 2026-08-16).
 > The ledger recorded this as a missing kit lemma; it is not. The
 > kind-generic statement exists as
 > `GoLean.Iris.intKind_normalize_idem` (`GoLeanProofs/HeapBridge.lean`).
-> What it does NOT have is a home an example module can import:
-> `HeapBridge` pulls in `Iris.ProgramLogic.*`, `Iris.ProofMode` and
-> `Iris.BI.Lib.GenHeap`, and no module under `Examples/` imports Iris —
-> Iris is a proof device, not an example-layer dependency (the
-> statement-TCB/layering doctrine, `docs/2026-08-01_*`). So the audit's
-> literal instruction (delete this and import HeapBridge) was NOT taken:
-> it would have made this the first example module in the tree to import
-> the Iris layer, to save four lines.
+> What it does NOT have is a home THIS module can import: `HeapBridge`
+> pulls in `Iris.ProgramLogic.*`, `Iris.ProofMode` and
+> `Iris.BI.Lib.GenHeap`, while **this file and its whole transitive
+> import closure are Iris-free** (29 modules, zero under `Iris.`), and
+> keeping them so preserves the FOOTPRINT layer's independence from the
+> proof-device layer — Iris is a proof device, not a dependency the
+> footprint style needs (the statement-TCB/layering doctrine,
+> `docs/2026-08-01_*`). So the audit's literal instruction (delete this
+> and import `HeapBridge`) was NOT taken: it would have put the Iris
+> layer into a closure that does not otherwise contain it, to save four
+> lines.
+>
+> **NB — corrected 2026-08-16, fix round #3.** This paragraph used to
+> argue from "no module under `Examples/` imports Iris". **That was
+> false.** Measured over the tree: **63 of the 132 modules under
+> `Examples/` DO transitively import Iris**, the gateway in every case
+> being `GoLeanProofs.Laws.StmtOps`, whose first line is
+> `import Iris.ProgramLogic.WeakestPre` (20 example modules import
+> `Laws.StmtOps` directly; the other 43 reach it through a sibling).
+> The ruling is unchanged, but it stands on the DIRECT, module-local
+> basis stated above — this closure is Iris-free and is worth keeping
+> that way — and never on a tree-wide property the tree does not have.
 >
 > The real item, recorded in `docs/gallery-campaign-log/g1.md` (fibmemo
 > unit, promotion ledger): lift `intKind_normalize_idem` OUT of
@@ -253,10 +267,20 @@ old note also got wrong: the namespace is `GoLean.Iris`, not
 at `:277`). The wrong qualifier hid exactly the layering fact that decides
 the ruling.
 
+**Designation-relevant input (recorded 2026-08-16, fix round #3).** That
+63/132 measurement is not just a corrected footnote: it says the example
+tree is *already* half Iris-dependent through `Laws.StmtOps`, so "keep Iris
+out of `Examples/`" is not an available policy and cannot be an argument for
+or against any promotion in this note. What IS available, and is what the
+`unorm_idem` ruling actually exercises, is keeping *individual* closures
+Iris-free where a layer's independence is worth something — which makes the
+Iris-freedom of a proposed kit module's closure a property to state and
+check per module, not to assume from its directory.
+
 ### (b) GAP-P2b — kadane is **GAP-P2c**, and §1 P-B's list is stale on it
 
-§1 P-B (`:45`) lists kadane twice: once in the `seed+i` affine bucket and
-once, correctly, under "signed/Int-seeded". `:148` repeats it in the affine
+§1 P-B (`:51`) lists kadane twice: once in the `seed+i` affine bucket and
+once, correctly, under "signed/Int-seeded". `:154` repeats it in the affine
 bucket. **The affine listing is wrong.** kadane's `kadFamVal` is the SIGNED
 variant — `docs/gallery-campaign-log/g1.md` records it as **GAP-P2c**
 (*"`familyMod`/`prefixPad` do not fit a SIGNED, Int-seeded family"*, kadane
@@ -287,21 +311,35 @@ grep -rn 'def ρ' proofs/GoLeanProofs/Examples/
   BubbleSort/Frame.lean:33         ρ16  (T=16)
 ```
 
-R5's body said five all along (`:55`, `:145`). The LEDGER said four at
+R5's body said five all along (`:62`, `:151`). The LEDGER said four at
 `3aac907e` and now says five — bucket B corrected it *(`g1.md`, lane-B
 six-example summary, promotion ledger item 1: "this line said FOUR while
 enumerating five sites")*. So the discrepancy the old note describes is
 resolved in the ledger's favour-of-R5 and no longer exists; attribute the
 five to R5, and the correction to bucket B.
 
-Two of R5's `file:line` cites for these are off by 2–3 lines (`:55` cites
+Two of R5's `file:line` cites for these are off by 2–3 lines (`:62` cites
 `SelectionSort/Frame.lean:44,274,499` — actual `46,276,501`; and
 `BubbleSort/Frame.lean:30,262,486` — actual `33,265,489`). The three isort
 triples are exact.
 
+[Self-cite offsets corrected 2026-08-16, fix round #3. This note's seven
+cites into its own body (`:45`, `:148`, `:55`×2, `:145`, `:26`, `:62`,
+`:147`) were all written against R5's standalone report and never rebased
+when it was landed into this file, so every one of them resolved to the
+wrong line — six by +6, `:55` by +7. Each was re-derived by CONTENT, not by
+applying an offset: `:45`→`:51` (the P-B line that lists kadane twice),
+`:148`→`:154` (the affine-bucket item that repeats it), `:55`→`:62` (the
+P-D Instances line — the one that both says "5 full hand instantiations"
+and carries the two `SelectionSort`/`BubbleSort` cites this paragraph
+grades), `:145`→`:151`, `:26`→`:32` (the Basis line's "**5**
+program-local copies"), `:62`→`:68`, `:147`→`:153`. The `:25`/`:36` cites
+in §(e) are NOT self-cites — they point into `proofs/Audit/Kit.lean`, both
+verified English prose lines — and were left alone.]
+
 ### (d) `FreshFrom` — "5 copies" and "2 definitions" are both TRUE, of different things
 
-The report's "5 program-local copies" (`:26`, `:62`, `:147`) is not a count
+The report's "5 program-local copies" (`:32`, `:68`, `:153`) is not a count
 of definitions. **`FreshFrom` is DEFINED twice** and has been throughout:
 
 ```
