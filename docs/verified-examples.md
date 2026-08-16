@@ -1,4 +1,4 @@
-# Verified examples — the gallery (2026-08-15)
+# Verified examples — the gallery (2026-08-15/16)
 
 Twenty-four Go programs, and for each one a GoLean theorem you can read.
 
@@ -10,11 +10,14 @@ from a proof: every Go snippet, every theorem, and every axiom line below is
 quoted **verbatim** from the file it comes from, and `scripts/render-gallery`
 re-checks those quotes byte-for-byte (see *Staleness*, at the end).
 
-Arc record: `docs/2026-08-14_examples-phase2-arc-charter.md` — the phase-2
-arc, which swapped three of the headlines and designated all eight; the
-founding arc is `docs/2026-08-12_verified-examples-arc-charter.md`. The
-statement form and the rulings behind it:
-`docs/2026-08-12_example-spec-form.md` §11.
+Arc record: `docs/2026-08-15_gallery-campaign.md` — the campaign charter the
+seventeen newest entries were built under (its per-unit log is
+`docs/gallery-campaign-log/`, its retrospective
+`docs/2026-08-16_gallery-campaign-trip-report.md`);
+`docs/2026-08-14_examples-phase2-arc-charter.md` — the phase-2 arc, which
+swapped three of the headlines and designated all eight; the founding arc is
+`docs/2026-08-12_verified-examples-arc-charter.md`. The statement form and
+the rulings behind it: `docs/2026-08-12_example-spec-form.md` §11.
 
 ## How to read an entry
 
@@ -105,22 +108,33 @@ exhaustion.
   at the end of that arc: all seventeen are deliberately absent from
   `Examples/Targets.lean`, from `scripts/ci`'s trusted-closure allowlist
   and from the Comparator judge's set. Their
-  deletion tests were therefore RUN by hand rather than by the gate —
-  `lean_minimal_hypotheses` on `histogram_ok` (all four explicit binders
+  deletion tests were therefore RUN by hand rather than by the gate, all
+  seventeen of them, recorded per unit in `docs/gallery-campaign-log/g1.md`
+  — `lean_minimal_hypotheses` on `histogram_ok` (all four explicit binders
   load-bearing), on `powmod_ok` (all five), on `dotprod_ok` (all three),
   on `kadane_ok` (all five), on `dedup_ok` (all three), on `fibmemo_ok`
-  (both), on `sieve_ok` (both) and on `stack_ok`
-  (all four explicit binder groups), and for `queue_ok` a **machine
-  probe** instead: each named hypothesis dropped in turn and the
+  (both), on `sieve_ok` (both), on `stein_ok` (all three), on
+  `wordfreq_ok` (all four) and on `stack_ok`
+  (all four explicit binder groups); scratch re-elaboration per binder on
+  lane B's six — `palin_ok`, `strrev_ok`, `twosum_ok`, `selsort_ok`,
+  `bubble_ok`, `rle_ok` — each binder breaking at least one goal when
+  dropped, no decorative hypothesis anywhere; and for `queue_ok` a
+  **machine probe** instead: each named hypothesis dropped in turn and the
   postcondition re-evaluated against the real run (`n = 9` panics,
   `k = 2^64` produces a witnessed counterexample, `seed = 2^64` still
   matches — so two of the three are frontiers of the claim and the third
   is a frontier of the proof only). That is exactly the weaker standing
   that undesignated means. Their axioms are
-  pinned in-build like everyone else's (`proofs/Audit/Histogram.lean`,
-  `proofs/Audit/PowMod.lean`, `proofs/Audit/DotProduct.lean`,
-  `proofs/Audit/Kadane.lean`, `proofs/Audit/DedupAdjacent.lean`,
-  `proofs/Audit/SliceStack.lean`, `proofs/Audit/SliceQueue.lean`).
+  pinned in-build like everyone else's, one shard each
+  (`proofs/Audit/Histogram.lean`, `proofs/Audit/PowMod.lean`,
+  `proofs/Audit/DotProduct.lean`, `proofs/Audit/Kadane.lean`,
+  `proofs/Audit/DedupAdjacent.lean`, `proofs/Audit/ArrayPalindrome.lean`,
+  `proofs/Audit/StringReverse.lean`, `proofs/Audit/TwoSum.lean`,
+  `proofs/Audit/SelectionSort.lean`, `proofs/Audit/BubbleSort.lean`,
+  `proofs/Audit/RunLength.lean`, `proofs/Audit/FibMemo.lean`,
+  `proofs/Audit/Sieve.lean`, `proofs/Audit/Stein.lean`,
+  `proofs/Audit/WordFreq.lean`, `proofs/Audit/SliceStack.lean`,
+  `proofs/Audit/SliceQueue.lean`).
 - **Where the audits are.** Two adversarial pre-merge audits stand behind
   this file, and entries below cite both by date. The **2026-08-15** one —
   the phase-2 arc's, which swapped three headlines and designated all eight
@@ -1555,7 +1569,7 @@ def dotSpec (a b : List Int) : Int :=
 
 **This is the entry where the arithmetic wraps, and the claim says so.**
 `a[i] * b[i]` and the running accumulator are `uint64`; at large seeds they
-genuinely reduce mod 2⁶⁴, and four corpus rows exercise that deliberately.
+genuinely reduce mod 2⁶⁴, and eight corpus rows exercise that deliberately.
 The theorem does **not** add a hypothesis excluding the wrap region — that
 would throw away exactly the interesting rows. Instead the specification is
 the wrapped one: `(Σ aᵢ·bᵢ) mod 2⁶⁴`, **one** modular reduction of the true
@@ -1629,12 +1643,17 @@ deletion test was RUN by hand — `lean_minimal_hypotheses` on `dotprod_ok`,
 **all three explicit binders load-bearing**. `dotprod_readout` is the
 run-conditioned twin.
 
-**Ground.** Differentially green on 14 corpus rows: `four-typical`,
-`four-zero-vec`, `four-same`, `four-wrap`, `one`, `one-wrap`, `empty`,
-`uneven` (the min-length guard), and the relational harness at
-`harness-r-empty`, `harness-r-one`, `harness-r-mid`, `harness-r-cap`,
-`harness-r-wrap-max` and `harness-r-wrap-62`. The last four are the wrap
-region — inside the theorem's domain, not excluded from it.
+**Ground.** Differentially green on 18 corpus rows: `four-typical`,
+`four-zero-vec`, `four-same`, `four-wrap`, `four-wrap-u64max`, `one`,
+`one-wrap`, `one-wrap-u64max`, `empty`, `uneven` (the min-length guard), and
+the relational harness at `harness-r-empty`, `harness-r-one`,
+`harness-r-mid`, `harness-r-cap`, `harness-r-wrap-max`, `harness-r-wrap-62`,
+`harness-r-wrap-u64max` and `harness-r-wrap-63`. The eight wrap rows are the
+wrap region — inside the theorem's domain, not excluded from it. Four of them
+(`four-wrap-u64max`, `one-wrap-u64max`, `harness-r-wrap-u64max`,
+`harness-r-wrap-63`) arrived with extension E1, which lifted the differential
+driver's argument domain past the int64 ceiling and so let the corpus reach
+the top half of `uint64` directly.
 
 ## kadane — maximum subarray sum, the gallery's first signed example
 
@@ -1889,6 +1908,59 @@ theorem dedup_ok (n seed : Nat) (hcap : n ≤ 8) (hseed : seed < 2 ^ 64) :
 /-- info: 'GoLean.Examples.DedupAdjacent.dedup_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 ```
 
+Lean's classical trio; no `sorry`, no native evaluation, no project axioms.
+
+**What the machine had to be shown, and why it is interesting.** The
+compaction is *in place*: it writes `s[k]` while reading `s[i]` and `s[k-1]`,
+with `k ≤ i` throughout, so the slice is simultaneously the input being read
+and the output being built. The invariant that carries it is that after
+processing the first `i` elements with `k` kept, the slice is
+`dedupAdj (first i elements)` followed by the still-untouched original tail —
+the stale region between `k` and `i` is never read again, because the guard
+reads only `s[k-1]`. A second machine fact fell out of the proof and is worth
+recording: the guard `k == 0 || s[i] != s[k-1]` is genuinely **lazy** in the
+machine — on the `k == 0` branch the `s[k-1]` read never happens, so the
+out-of-range index the reader worries about is never evaluated. The raw
+segments show that directly.
+
+**Domain bounds, attributed.** `n ≤ 8` is **the program's own arithmetic**
+(`dedupCapN = 8`, visible in the corpus Go). `seed < 2^64` is **Go's
+domain**, all of it — the setup family is `seed + i/2` and wraps freely; no
+hypothesis excludes it. The deduplication itself is **mathematics**. Machine
+idealization as elsewhere.
+
+**`∃ vals` is family-determined.** The witness is the setup family
+`seed + i/2` (integer division, so adjacent pairs repeat and the example has
+something to collapse); the statement merely avoids naming it. Genuine
+∀-data needs the ghost rung-1 annotation, which is designed and not built.
+
+**Fuel bound.** `N = 263·n + 361` — a branch-UNIFORM bound that charges every
+element the widest branch (the 98-step "keep, with `k ≠ 0`" path) plus a
+55-step post-copy slot. **The measurement is a different, input-dependent
+number**: `361` at `n = 0`, and `177·n + 86·K + 343` for `n ≥ 1`, where `K`
+is the number of survivors (the family gives `K = ⌈n/2⌉`). Probe-verified at
+`n = 0, 1, 2, 3, 5, 8`: 361, 606, 783, 1046, 1486, 2103 — and 2103 again at
+the wrap-boundary seed `2^64 − 2`. The bound the theorem ships is
+`263·n + 361`; the measurement is the formula above; neither is presented as
+the other.
+
+**∀ choices is vacuous here, and stated anyway.**
+
+**Status.** NOT DESIGNATED — see the note in *How to read an entry*. Added by
+the gallery campaign (2026-08-15). In-build: the `rfl` lowering pins
+(`dedupAdjacent_pin` on the subject, `dedupHarnessRFunc_pin` on the harness),
+the golden-lowering guard on both links, and the axiom pins above. Its
+deletion test was RUN by hand — `lean_minimal_hypotheses` on `dedup_ok`,
+**all three explicit binders load-bearing**. `dedup_readout` is the
+run-conditioned twin.
+
+**Ground.** Differentially green on 13 corpus rows: `four-all-same`,
+`four-distinct`, `four-alternating` (the adjacent-only guard),
+`four-pairs`, `four-extremes`, `four-first`, `one`, `empty`, and the
+relational harness at `harness-r-empty`, `harness-r-one`, `harness-r-mid`,
+`harness-r-cap` and `harness-r-big`. All five harness rows are inside the
+theorem's domain.
+
 ## palin — array palindrome check (two-index inward walk, early return)
 
 **The Go** (`Corpus/coverage/exec/examples/palin/main.go`):
@@ -2048,56 +2120,6 @@ theorem palin_verdict_iff (n seed : Nat) (hcap : n ≤ 8)
 
 Lean's classical trio; no `sorry`, no native evaluation, no project axioms.
 
-**What the machine had to be shown, and why it is interesting.** The
-compaction is *in place*: it writes `s[k]` while reading `s[i]` and `s[k-1]`,
-with `k ≤ i` throughout, so the slice is simultaneously the input being read
-and the output being built. The invariant that carries it is that after
-processing the first `i` elements with `k` kept, the slice is
-`dedupAdj (first i elements)` followed by the still-untouched original tail —
-the stale region between `k` and `i` is never read again, because the guard
-reads only `s[k-1]`. A second machine fact fell out of the proof and is worth
-recording: the guard `k == 0 || s[i] != s[k-1]` is genuinely **lazy** in the
-machine — on the `k == 0` branch the `s[k-1]` read never happens, so the
-out-of-range index the reader worries about is never evaluated. The raw
-segments show that directly.
-
-**Domain bounds, attributed.** `n ≤ 8` is **the program's own arithmetic**
-(`dedupCapN = 8`, visible in the corpus Go). `seed < 2^64` is **Go's
-domain**, all of it — the setup family is `seed + i/2` and wraps freely; no
-hypothesis excludes it. The deduplication itself is **mathematics**. Machine
-idealization as elsewhere.
-
-**`∃ vals` is family-determined.** The witness is the setup family
-`seed + i/2` (integer division, so adjacent pairs repeat and the example has
-something to collapse); the statement merely avoids naming it. Genuine
-∀-data needs the ghost rung-1 annotation, which is designed and not built.
-
-**Fuel bound.** `N = 263·n + 361` — a branch-UNIFORM bound that charges every
-element the widest branch (the 98-step "keep, with `k ≠ 0`" path) plus a
-55-step post-copy slot. **The measurement is a different, input-dependent
-number**: `361` at `n = 0`, and `177·n + 86·K + 343` for `n ≥ 1`, where `K`
-is the number of survivors (the family gives `K = ⌈n/2⌉`). Probe-verified at
-`n = 0, 1, 2, 3, 5, 8`: 361, 606, 783, 1046, 1486, 2103 — and 2103 again at
-the wrap-boundary seed `2^64 − 2`. The bound the theorem ships is
-`263·n + 361`; the measurement is the formula above; neither is presented as
-the other.
-
-**∀ choices is vacuous here, and stated anyway.**
-
-**Status.** NOT DESIGNATED — see the note in *How to read an entry*. Added by
-the gallery campaign (2026-08-15). In-build: the `rfl` lowering pins
-(`dedupAdjacent_pin` on the subject, `dedupHarnessRFunc_pin` on the harness),
-the golden-lowering guard on both links, and the axiom pins above. Its
-deletion test was RUN by hand — `lean_minimal_hypotheses` on `dedup_ok`,
-**all three explicit binders load-bearing**. `dedup_readout` is the
-run-conditioned twin.
-
-**Ground.** Differentially green on 13 corpus rows: `four-all-same`,
-`four-distinct`, `four-alternating` (the adjacent-only guard),
-`four-pairs`, `four-extremes`, `four-first`, `one`, `empty`, and the
-relational harness at `harness-r-empty`, `harness-r-one`, `harness-r-mid`,
-`harness-r-cap` and `harness-r-big`. All five harness rows are inside the
-theorem's domain.
 **Fuel bound.** Explicit and affine: `N = 144·n + 298`. This is the
 branch-UNIFORM worst case — 57 steps per setup iteration, 53 per copy
 iteration, 68 per full subject iteration (of which there are at most `n/2`,
@@ -3525,13 +3547,31 @@ theorem stein_ok (a b : Nat) (ha : a < 2 ^ 64) (hb : b < 2 ^ 64) :
 Lean's classical trio; no `sorry`, no native evaluation, no project axioms
 (`steinSpec_eq_gcd` itself uses only `[propext, Quot.sound]`).
 
+**Domain bounds, attributed — and this entry has none to exclude.** The
+theorem's `a < 2^64` and `b < 2^64` are *Go's own* `uint64` argument domain
+at the call boundary and nothing else: there is no toy cap (the harness
+returns a single `uint64`, so no fixed-cap array has to cross the observation
+boundary) and no wrap-region exclusion (a gcd never exceeds its arguments).
+The gcd itself — `Nat.gcd` and the binary-GCD identities — is
+**mathematics**. Machine idealization as elsewhere: entry from an empty heap,
+an unbounded heap, allocation always succeeds.
+
 **Fuel bound.** Explicit and affine in the loops' shared
 strictly-decreasing measure: `N = 600 + 480·(a + b)` — a BOUND, not a
 measurement (recorded so in the module; the measured `(12, 18)` run takes
 896 steps against a bound of 15,000, and the early exits measure 57 and
 66).
 
-**Status.** `stein_readout` is the run-conditioned twin, derived through
+**Status.** NOT DESIGNATED — see the note in *How to read an entry*: this
+example post-dates the 2026-08-14 designation, so its statement is not walked
+by the mechanized statement-TCB gate and not replayed by the Comparator
+judge. What it does have, in-build: the `rfl` lowering pins (`isEvenFunc_pin`
+and `steinGCDFunc_pin` on the subject, `steinHarnessFunc_pin` and
+`steinHarnessFuncRun_pin` on the harness), the golden-lowering guard
+(`scripts/check-golden` against `baselines/golden/stein-lowered.repr`), and
+the axiom pins above. Its deletion test was RUN by hand —
+`lean_minimal_hypotheses` on `stein_ok`, **all three explicit binders
+load-bearing**. `stein_readout` is the run-conditioned twin, derived through
 the shared bridge.
 
 **Ground.** Differentially green on 9 corpus rows: `zero-zero`, `a-zero`,
@@ -3686,10 +3726,30 @@ axioms (`wordsOf_textFamily` — the family bridge — uses only
 
 **Honesty clauses.**
 
-* **`∀ ch` is load-bearing**: the `for range counts` max loop consumes
-  one choice per iteration, so the claim holds at EVERY map-iteration
-  order — provable precisely because `maxMultiplicity` is a function
-  of the returned data and cannot see the order.
+* **`∀ ch` is load-bearing, and in BOTH of the gallery's two ways** —
+  this is the only entry where that happens. *Map-iteration order*: the
+  `for range counts` max loop consumes one choice per iteration, so the
+  claim holds at EVERY order — provable precisely because
+  `maxMultiplicity` is a function of the returned data and cannot see
+  the order. *`append` capacity*: the injected `strings.Fields` shim
+  builds its result with `out = append(out, …)`, so every spilling
+  append of the fields slice draws a capacity from the choice stream
+  (the same envelope `stack`, `queue` and `rle` quantify over below),
+  and the claim holds at every draw — nothing the harness returns
+  depends on which capacity the allocator picked.
+* **`wordsOf` is a scan-shaped specification** — it walks the bytes
+  left to right consuming separator widths, much as the split itself
+  does, so by itself it would be a program-shaped spec (`twosum`'s
+  clause above makes the same admission about `twoSumSpec`). Two
+  things carry it: its separator class is written out independently as
+  the full Unicode White_Space set in UTF-8 byte patterns (`sepWidth`,
+  `Examples/WordFreq/Pure.lean`) rather than as "whatever the shim
+  does", and the `#guard`s at the bottom of that module pin it
+  byte-exactly against the go-run-confirmed splits of all 8
+  `strings/fields-conformance` rows. The first-order readout
+  `wordfreq_hits_eq` then states the queried count with no `wordsOf`
+  in the statement at all — plain residue arithmetic over
+  `(n, seed, qsel)`.
 * **The queried count is the map read, zero value included** —
   `counts[query]` on an absent word yields `0`, `multiplicity` is `0`
   in exactly that case; rows `lit-miss` and `harness-one-miss` pin it
@@ -3733,7 +3793,7 @@ via a `'|'` join against the real stdlib.
 
 ---
 
-## stack — LIFO through a growing slice, and the first non-map `∀ choices`
+## stack — LIFO through a growing slice, and a non-map `∀ choices`
 
 **The Go** (`Corpus/coverage/exec/examples/stack/main.go`):
 
@@ -3842,8 +3902,10 @@ theorem stack_ok (n seed k : Nat) (hcap : n ≤ 8) (hseed : seed < 2 ^ 64)
 
 Lean's classical trio; no `sorry`, no native evaluation, no project axioms.
 
-**`∀ choices` does real work here — and this is the first example in the
-gallery where it does so without a map.** `push` is Go's `append`, and the Go
+**`∀ choices` does real work here, and it does so without a map** — this is
+the first LIFO/stack-shaped entry of that kind; `rle` above is the gallery's
+first non-map `∀ choices` entry, on the same `append`-capacity envelope.
+`push` is Go's `append`, and the Go
 specification does not fix the capacity a spilling `append` allocates: it
 promises only "a new, sufficiently large underlying array". Real `gc` picks a
 capacity by an amortized growth rule *and* by element-size-dependent
@@ -3899,8 +3961,9 @@ load-bearing** (`(n seed k)`, `hcap`, `hseed`, `hk`) — and then sharpened by a
 machine probe, because "the proof needs it" and "the claim fails without it"
 are different statements. `hcap` is a **totality** bound (at `n = 9` the
 subject panics, `index out of range [8] with length 8`); `hk` is a **truth**
-bound (at `k = 2^64` the machine pops nothing and returns size `3`, against a
-postcondition that reads `k` as the Nat `2^64`); `hseed` is a
+bound (the probe ran `n = 3, seed = 5, k = 2^64`: the machine normalizes `k`
+to `0`, pops nothing and returns size `3`, against a postcondition that reads
+`k` as the Nat `2^64`); `hseed` is a
 **proof-structure** bound only (at `seed = 2^64` machine and statement still
 agree — both reduce mod 2^64). `stack_readout` is the run-conditioned twin.
 
