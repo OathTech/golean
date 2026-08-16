@@ -357,6 +357,41 @@ compat note: two full gates beside mainline, zero interference;
   Crash rule per lane: snapshot dirty worktrees to `refs/snapshots/`
   before any checkout/rebase touches them. Prune retired worktrees.
 
+## Long-cycle autonomous arcs (2026-08-16, user-endorsed)
+
+An arc MAY run as a long-cycle autonomous goal — validated by the
+gallery campaign (34 h, ~25 worker sessions, 4 parallel lanes; lessons:
+`docs/2026-08-16_gallery-campaign-trip-report.md`, read before running
+one). Requirements, all charter-level:
+
+- **A self-contained DONE**: one counted, machine-checkable conjunction
+  in ONE file; the goal prompt points at that file's DONE section and
+  nothing more. Everything mandatory — no optional annexes. Honest gaps
+  are legitimate outcomes of an attempt but never count toward totals.
+- **Judgment delegated inside written hard boundaries**: no gate
+  weakening, no GoCore/trust-surface change, no re-pin laundering, no
+  merge/push/designation — the arc ends at branch-complete with the
+  audit ask POSED; merge and audit sign-off are the user's, always.
+  Named user checkpoints (design gates) stop the run. An EMERGENCY
+  EXIT is always permitted; park record + report on use.
+- **Artifact-mediated continuity**: module status blocks, stashes with
+  completion notes, snapshot refs before risky git ops, ONE WRITER PER
+  WORKTREE (hard rule), per-goal log files with one-line judgment-call
+  entries and checkpoints every ≤5 units.
+- **The serialization resource identified up front** (usually
+  `Corpus/` + `baselines/`): batch its writers into waves; parallelize
+  only file-AND-interface-disjoint units; interface changes (privacy,
+  imports, renames) land at wave boundaries, never beside consumers.
+- **Honesty conventions briefed into every worker**: bounds shipped AS
+  bounds with measured forms separate; deletion tests RUN, not
+  asserted; every summary number derivation-anchored (summary layers
+  obey the same rule as worker claims — that is where drift lives);
+  successors re-verify predecessors' top claims; cross-doc cites
+  unit-anchored or commit-qualified, never bare tip-relative lines.
+- **Tier by proof-shape novelty, not task prestige**: replication and
+  verification may be Opus; new proof shapes and fidelity arguments
+  are Fable.
+
 ## Reference checkouts (`deps/`, in-repo and gitignored)
 
 Checkouts available for reading — consult them instead of guessing or
