@@ -456,6 +456,12 @@ check_surface_imports proofs/GoLeanProofs/Examples/FibMemoProgram.lean \
   '^import GoLean\.'
 check_surface_imports proofs/GoLeanProofs/Examples/SelectionSortProgram.lean \
   '^import GoLean\.'
+# The E5 consumer's lowering (gallery campaign G2, wordfreq). Same story
+# as the wave block: undesignated by charter, pinned core-only from
+# birth; NOTE this pin also covers the injected strings.Fields shim's
+# lowered body, which is part of the Program term.
+check_surface_imports proofs/GoLeanProofs/Examples/WordFreqProgram.lean \
+  '^import GoLean\.'
 # The fork/join pool witnesses (channels arc slice 2): statement-bearing,
 # Iris-free by chain — GoLean core + the surface + its own def-only
 # targets module (audit F4 split). NOT importable from Challenge (it
