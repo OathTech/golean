@@ -1,4 +1,4 @@
-# The Gallery Campaign log — INDEX (2026-08-15)
+# The Gallery Campaign log — INDEX (2026-08-15 … 2026-08-16)
 
 Charter: `docs/2026-08-15_gallery-campaign.md`. This directory is the
 campaign's running record: ONE FILE PER GOAL (`g0.md` … `g4.md`) plus
@@ -80,7 +80,19 @@ FINAL CHECKPOINT below, which was right.)
   promotion-ledger rows. A pre-existing dot-import stuck-not-refused
   boundary defect recorded as an input. Totals: G0 5/5; G1 **15
   COMPLETE** (gallery TWENTY-TWO); G2 **3 of ≥3 — MET**; G3 22/22
-  dossiers; G4 0/4.
+  dossiers; G4 **4/4 — CLOSED**.
+  [G4 figure corrected 2026-08-16, fix round #2: this checkpoint said
+  `G4 0/4`, which was stale, not merely imprecise — all four G4 debt
+  commits are ANCESTORS of this checkpoint's own tip. Derivation:
+  `for s in 34f45448 51e1003b feda430e 5275c914; do git merge-base
+  --is-ancestor $s 46c04c0c; done` → all four exit 0; each is dated
+  2026-08-15, this checkpoint 2026-08-16. The earlier checkpoints' `G4
+  0/4` lines are CORRECT and stay: the four commits sit immediately
+  after checkpoint 5's tip `8b20dd37` in the linear history
+  (`git merge-base --is-ancestor` → non-zero at `8b20dd37`,
+  `5897c02b`, `b022de4e`, `300e3aa7`, `a82a04ba`), and checkpoint 6
+  carries no totals line at all. So exactly one checkpoint was wrong,
+  and the per-goal totals table above already read 4 of 4.]
 
 - 2026-08-15, checkpoint 6 (units G2.E3 + G1.stein, 3 commits): **THE
   SECOND EXTENSION IS BUILT, WITH ITS COMPLETE CONSUMER — G2 stands at
@@ -265,7 +277,7 @@ for the branch tip.
 | 2 | G2 ≥ 3 pulled extensions **of the named E1–E4** (charter §G2) | **3 BUILT, one of them a SUBSTITUTION** — E1/driver-uint64 (consumer dotprod) and E3/short-circuit calls (stein) are two of the four named; E2 and E4 are reasoned NON-PULLS (`g2.md`), so only TWO of E1–E4 were pulled. The third, E5/stdlib selector-call shims (consumer wordfreq), is the merged E2+E4 boundary the probes surfaced — chartered as a substitute under the logged JC (`g2.md`, "consequence 2 happened"), not one of the four named. Every one guardrails-red-first, fidelity-argued, oracle-flipped. [Qualifier and substitution restored 2026-08-16 by the post-autonomy audit: this row read as if three of the four named extensions had been pulled.] |
 | 3 | G3 all dossiers | 22/22, ruling table staged (g3.md) |
 | 4 | G4 four debt items | 4/4 incl. the constrained comparator-judge fix |
-| 5 | full gate + FULL diff record at tip | `scripts/ci --diff` PASS at `8cc7b39c` — baseline diff clean: **1830 cases, 0 drift (1732 PASS / 98 expected-FAIL)**; negative corpus 311/311. [Restated 2026-08-16: the old "1830/1830" read as 1830 passing, which the corpus has never been. The 98 are the standing fail-closed set — frontend-coverage gaps that are expected red — and "0 drift against the tracked baseline" is the actual claim.] |
+| 5 | full gate + FULL diff record at tip | `scripts/ci --diff` PASS at `8cc7b39c` — baseline diff clean: **1830 cases, 0 drift (1732 PASS / 98 expected-FAIL)**; negative corpus 311/311; **`scripts/render-gallery` exit 0, 159/159 verbatim blocks** (recorded in `8cc7b39c`'s own message — the gallery is a docs artifact and `scripts/ci` has no hook for it, so the standalone gate is a separate conjunct of "full gate", not a restatement of the first one). [Restated 2026-08-16: the old "1830/1830" read as 1830 passing, which the corpus has never been. The 98 are the standing fail-closed set — frontend-coverage gaps that are expected red — and "0 drift against the tracked baseline" is the actual claim. Render-gallery conjunct added 2026-08-16 in fix round #2: the clause said "full gate" while omitting the one gate that guards the object of agreement itself. At the branch tip it is 159/159 **plus** the per-section counting check that bucket F (`fa240552`) added — that check did not exist at `8cc7b39c`, so the checkpoint's 159/159 is the block check only.] |
 | 6 | log complete | per-goal files current; this checkpoint |
 | 7 | arc-end asks prepared and POSED | the operator's package accompanies this checkpoint — audit ask, designation candidates (17 headlines + readouts), merge request DRAFTED (merge + audit sign-off are the user's) |
 

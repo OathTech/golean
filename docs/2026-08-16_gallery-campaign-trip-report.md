@@ -252,8 +252,10 @@ than at this report's conclusions: **R1** statement TCB / claim strength
 promotion ledger (Opus), **R2C** records and summary layers (Opus),
 **R5** WP-library design as a separate forward-looking deliverable
 (Fable). Findings were then verified independently, defaulting to
-refute; what survived was fixed in seven buckets (A–G), one commit each,
-`scripts/ci` green per commit.
+refute; what survived was fixed in seven buckets (A–G) across **nine
+commits** — bucket C took three (guardrails RED, the fix, then the rest),
+the other six buckets one each — `scripts/ci` green per commit.
+(`git log --oneline 3aac907e..9d131a4f | wc -l` → 9.)
 
 **The verdict, stated the way that is useful.** Proofs and gates PASSED
 everywhere the reviewers could re-derive evidence: no headline statement
@@ -264,8 +266,8 @@ places where two lanes' text met, and the places where numbers were
 restated rather than recomputed. Two examples of the class, both real:
 a whole honesty half of the `dedup` gallery entry was rendering inside
 the `palin` section (so `dedup` was truncated and `palin` carried two of
-everything), and the same integration produced a cost table under the
-wrong unit in `g1.md`. Neither is a proof defect; both are exactly the
+everything), and the same integration produced cost tables under the
+wrong units in `g1.md`. Neither is a proof defect; both are exactly the
 kind of thing a reader of the object-of-agreement would trip over.
 
 **One genuine code defect**, and it is the interesting one because no
@@ -274,9 +276,12 @@ carried `hoistForbidden` / `scHoistOK` into a function literal's body,
 so a literal inside a short-circuit RHS had its own `make`/`append`
 refused. A wrongly-`unsupported` case is indistinguishable from an
 expected coverage gap in every gate we own — the fail-closed
-classification class the audit doctrine names. Fixed guardrails-first
-(11 rows red, then the two-flag fix, then exactly 7 flips with the
-9-shape refusal boundary probe-verified byte-identical).
+classification class the audit doctrine names. Fixed guardrails-first:
+**11 new corpus ids — 7 RED witnesses plus 4 PASSING controls** (the
+controls are the same literal body outside a short-circuit, and a
+short-circuit with no literal; they pass before the fix and must keep
+passing after it), then the two-flag fix, then exactly 7 flips with the
+9-shape refusal boundary probe-verified byte-identical.
 
 ### Claims this report and the campaign made that were FALSE — by name
 
@@ -284,16 +289,35 @@ Three of the OPERATOR's:
 
 1. **"`scripts/ci` untouched."** It was not, and the diff is one
    command: `git diff a82a04ba~1 3aac907e -- scripts/ci` shows the
-   campaign adding nineteen `check_surface_imports` pin lines (the
-   guardrails wave's lowering modules, then Stein's, then WordFreq's)
-   plus the matching `scripts/check-golden` PIN entries. Every one of
+   campaign adding **17** `check_surface_imports` pins (the guardrails
+   wave's lowering modules, then Stein's, then WordFreq's) plus the
+   matching `scripts/check-golden` PIN entries. Every one of
    those edits was correct and in-pattern — that is not the point. The
    claim was made as a TRUST-SURFACE reassurance ("we did not touch the
    gate"), which is exactly the kind of claim that has to be checked
    against the diff rather than remembered.
-2. **"One mid-fence split repaired."** There were TWO splices, not one —
-   the gallery's dedup/palin split and `g1.md`'s cost-table swap. The
-   second was never found during the campaign; the audit found it.
+   *Recount, fix round #2:* this bullet first said "nineteen pin lines",
+   which was wrong twice over — wrong count, and "pin lines" conflated
+   two different things. The derivation, using this bullet's own command:
+   `git diff a82a04ba~1 3aac907e -- scripts/ci | grep '^+' | grep -v
+   '^+++' | grep -c check_surface_imports` → **17** pins; `git diff
+   --numstat a82a04ba~1 3aac907e -- scripts/ci` → **43 added lines, 0
+   deleted** (17 pins × 2 lines each — the call plus its
+   `'^import GoLean\.'` continuation — plus 9 comment lines). Note the
+   trap the first recount fell into: `grep -c '^+'` alone answers 44,
+   because it counts the `+++ b/scripts/ci` header. An off-by-one from a
+   command nobody re-read is the same defect class this addendum is
+   about, one level down.
+2. **"One mid-fence split repaired."** There were **THREE** splices, not
+   one — the gallery's dedup/palin split, `g1.md`'s sieve/stack
+   cost-table swap, and a third: stack's own Costs table (with its
+   2540 MiB correction) left dangling, headingless, off the end of the
+   `wordfreq` unit, while the `sieve` unit sat with zero table rows.
+   **The third was found by records-pass-2, in the campaign LOG rather
+   than in the gallery — after two rounds of repair had already gone
+   looking for exactly this class.** That is the honest reading: the
+   class outlived its own fix twice, because each pass searched the
+   artifact the last finding was in. Repaired in fix round #2, item 1.
 3. **DONE clause 6 ("log complete") certified as met.** The per-unit
    logs were complete, so the clause was read as satisfied; the INDEX's
    own cadence rule ("checkpoints at least every 5 units") was violated
