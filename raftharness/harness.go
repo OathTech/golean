@@ -67,17 +67,20 @@ type Node struct {
 	c       *Cluster
 	rn      raft.Node
 	storage *raft.MemoryStorage
-	inbox   chan *raftpb.Message
-	stopCh  chan struct{}
-	doneCh  chan struct{}
-	ctx     context.Context // canceled on stop; bounds every rn.Step
-	cancel  context.CancelFunc
+	inbox    chan *raftpb.Message
+	stopCh   chan struct{}
+	doneCh   chan struct{}
+	stopOnce sync.Once
+	ctx      context.Context // canceled on stop; bounds every rn.Step
+	cancel   context.CancelFunc
 
 	mu           sync.Mutex
 	term         uint64 // last HardState term observed
 	appliedIndex uint64 // last applied raft index (all entry types)
 	applied      []AppliedEntry
 	appliedSet   map[string]bool
+	confState    *raftpb.ConfState // latest ApplyConfChange result; persisted on restart
+	anomalies    []string          // fail-closed channel: impossible-path observations
 }
 
 func newCluster(n int, net NetConfig, seed uint64) *Cluster {
@@ -91,10 +94,15 @@ func newCluster(n int, net NetConfig, seed uint64) *Cluster {
 	for id := uint64(1); id <= uint64(n); id++ {
 		peers = append(peers, raft.Peer{ID: id})
 	}
+	// Two-phase start: the nodes map must be complete before any app
+	// loop runs, since loops read it without holding c.mu open-endedly
+	// (audit find: a map write racing a live reader is a runtime throw).
 	for id := uint64(1); id <= uint64(n); id++ {
 		nd := c.newNode(id)
 		nd.rn = raft.StartNode(c.config(id, nd.storage, 0), peers)
 		c.nodes[id] = nd
+	}
+	for _, nd := range c.nodes {
 		go nd.run()
 	}
 	return c
@@ -257,9 +265,10 @@ func (n *Node) run() {
 				panic(err)
 			}
 			if !raft.IsEmptySnap(rd.Snapshot) {
-				if err := n.storage.ApplySnapshot(rd.Snapshot); err != nil {
-					panic(err)
-				}
+				// Fail closed: the harness never compacts, so no leader
+				// can legitimately need to send a snapshot; silently
+				// applying one would desync the recorded state machine.
+				panic(fmt.Sprintf("node %d: unexpected snapshot (harness never compacts)", n.id))
 			}
 			if rd.SoftState != nil && rd.SoftState.RaftState == raft.StateLeader {
 				n.mu.Lock()
@@ -293,6 +302,12 @@ func (n *Node) apply(e *raftpb.Entry) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	if e.GetIndex() <= n.appliedIndex {
+		// With Config.Applied set correctly on restart, a re-delivered
+		// index is a raft or harness bug — record it loudly instead of
+		// silently discarding the evidence (audit find: the silent
+		// guard made S3-index unfalsifiable).
+		n.anomalies = append(n.anomalies,
+			fmt.Sprintf("node %d: re-delivered index %d (applied index already %d)", n.id, e.GetIndex(), n.appliedIndex))
 		return
 	}
 	n.appliedIndex = e.GetIndex()
@@ -302,12 +317,22 @@ func (n *Node) apply(e *raftpb.Entry) {
 		if err := proto.Unmarshal(e.GetData(), cc); err != nil {
 			panic(err)
 		}
-		n.rn.ApplyConfChange(cc)
+		n.confState = n.rn.ApplyConfChange(cc)
+	case raftpb.EntryType_EntryConfChangeV2:
+		cc := &raftpb.ConfChangeV2{}
+		if err := proto.Unmarshal(e.GetData(), cc); err != nil {
+			panic(err)
+		}
+		n.confState = n.rn.ApplyConfChange(cc)
 	case raftpb.EntryType_EntryNormal:
 		if len(e.GetData()) > 0 {
 			n.applied = append(n.applied, AppliedEntry{Index: e.GetIndex(), Term: e.GetTerm(), Data: string(e.GetData())})
 			n.appliedSet[string(e.GetData())] = true
 		}
+	default:
+		// Fail closed on entry types this harness does not model.
+		n.anomalies = append(n.anomalies,
+			fmt.Sprintf("node %d: unmodeled entry type %v at index %d", n.id, e.GetType(), e.GetIndex()))
 	}
 }
 
@@ -323,16 +348,27 @@ func (n *Node) snapshotApplied() []AppliedEntry {
 	return append([]AppliedEntry(nil), n.applied...)
 }
 
-// stop halts the node's app loop and underlying raft node.
+// stop halts the node's app loop and underlying raft node. Idempotent:
+// failure paths may stop a victim node and then stopAll (audit find:
+// the double close panicked the process on the budget-exhausted path).
 func (n *Node) stop() {
-	n.cancel()
-	close(n.stopCh)
+	n.stopOnce.Do(func() {
+		n.cancel()
+		close(n.stopCh)
+	})
 	<-n.doneCh
 }
 
 // restartNode crash-restarts a node: the app loop is assumed stopped;
 // raft state survives in its MemoryStorage (modeling durable storage),
 // and the applied state machine survives (modeling a persistent SM).
+//
+// The membership ConfState MUST be persisted into the storage before
+// RestartNode: RestartNode restores configuration from
+// Storage.InitialState() = the snapshot metadata, and a node restarted
+// with an empty ConfState has no voters, is never promotable, and can
+// never campaign again (audit find #1 — the restarted node was
+// silently config-less, so recovered-node-leads was never tested).
 func (c *Cluster) restartNode(id uint64) {
 	old := c.node(id)
 	old.mu.Lock()
@@ -340,13 +376,24 @@ func (c *Cluster) restartNode(id uint64) {
 	applied := old.applied
 	appliedSet := old.appliedSet
 	term := old.term
+	confState := old.confState
+	anomalies := old.anomalies
 	old.mu.Unlock()
+
+	if confState == nil {
+		panic(fmt.Sprintf("node %d: restart with no recorded ConfState (bootstrap conf changes not applied?)", id))
+	}
+	if _, err := old.storage.CreateSnapshot(appliedIndex, confState, nil); err != nil {
+		panic(fmt.Sprintf("node %d: persisting ConfState at index %d: %v", id, appliedIndex, err))
+	}
 
 	nd := c.newNode(id)
 	nd.appliedIndex = appliedIndex
 	nd.applied = applied
 	nd.appliedSet = appliedSet
 	nd.term = term
+	nd.confState = confState
+	nd.anomalies = anomalies
 	nd.storage = old.storage
 	nd.rn = raft.RestartNode(c.config(id, nd.storage, appliedIndex))
 
@@ -370,16 +417,23 @@ func (c *Cluster) stopAll() {
 
 // checkSafety returns a list of violation descriptions (empty = pass).
 //
-//	S1 Election Safety   — at most one leader per term.
+//	S1 Election Safety   — at most one leader per term; plus an
+//	                       EXERCISE FLOOR: at least minClaims leader
+//	                       claims must have been observed, so a scenario
+//	                       that never exercises elections fails loudly
+//	                       instead of passing vacuously.
 //	S2 Log/Apply Agreement — no two nodes apply different (term, data)
 //	                       at the same raft index (State Machine Safety,
 //	                       observed at the apply boundary).
 //	S3 Apply Monotonicity — per node, applied indexes strictly increase
-//	                       and terms never decrease.
-//	S4 Completion        — every node applied every driven command
-//	                       (the liveness witness; scenarios only call
-//	                       this after the network is healed).
-func (c *Cluster) checkSafety(allCmds []string) []string {
+//	                       and terms never decrease; re-delivered or
+//	                       unmodeled entries are surfaced via the
+//	                       per-node anomaly channel (recorded at apply
+//	                       time, where the evidence exists).
+//	S4 Completion        — every node applied every driven command.
+//	                       Run even when the completion wait timed out,
+//	                       so a timeout cannot mask a safety violation.
+func (c *Cluster) checkSafety(allCmds []string, minClaims int) []string {
 	var violations []string
 
 	// S1: at most one leader per term.
@@ -393,6 +447,21 @@ func (c *Cluster) checkSafety(allCmds []string) []string {
 				fmt.Sprintf("S1 election safety: term %d claimed by both node %d and node %d", cl.Term, prev, cl.NodeID))
 		}
 		leaderOf[cl.Term] = cl.NodeID
+	}
+	if len(claims) < minClaims {
+		violations = append(violations,
+			fmt.Sprintf("S1 exercise floor: only %d leader claim(s) observed, scenario requires >= %d", len(claims), minClaims))
+	}
+
+	// S3 anomaly channel (recorded at apply time).
+	for _, id := range c.ids() {
+		nd := c.node(id)
+		nd.mu.Lock()
+		anomalies := append([]string(nil), nd.anomalies...)
+		nd.mu.Unlock()
+		for _, a := range anomalies {
+			violations = append(violations, "S3 anomaly: "+a)
+		}
 	}
 
 	// S2 + S3 across all nodes.

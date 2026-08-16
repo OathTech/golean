@@ -29,21 +29,36 @@ is NOT reproduced — that residual nondeterminism is the point).
 ## The executable specification (`checkSafety`)
 
 - **S1 Election Safety** — at most one leader per term (from the stream
-  of "node N observed itself leader at term T" claims).
+  of "node N observed itself leader at term T" claims), PLUS a
+  per-scenario **exercise floor**: at least `minClaims` claims must
+  have been observed, so a scenario that never exercises elections
+  fails loudly instead of passing vacuously (audit-added). Known
+  masking-direction limitation: claims exist only for Readys the app
+  loop consumed before `stopAll`, so a leadership acquired in the
+  final window can go unrecorded — this can only hide a violation,
+  never invent one.
 - **S2 Log/Apply Agreement** — no two nodes apply different
   `(term, data)` at the same raft index (State Machine Safety observed
-  at the apply boundary).
+  at the apply boundary). This is also the double-commit detector:
+  conflicting data at one index.
 - **S3 Apply Monotonicity** — per node, applied indexes strictly
-  increase and terms never decrease.
+  increase and terms never decrease; additionally, re-delivered
+  indexes and unmodeled entry types are recorded as **anomalies at
+  apply time** and surfaced as violations (audit-added: the silent
+  re-delivery guard previously made the index clause unfalsifiable).
 - **S4 Completion** — every node applies every driven command; demanded
   only after the network heals (the conditioned-liveness shape: raft
   cannot promise progress under adversarial networks, only after them).
+  Enforced primarily by the completion wait; the checker re-asserts it
+  and — audit-added — **runs even when the wait times out**, so a
+  liveness failure cannot mask a safety violation.
 
 Client contract: proposals are retried until applied — at-least-once,
 so duplicates are legitimate log entries that all nodes must still agree
-on. S1–S3 are pure safety and hold at every instant; S4 is the
-completion witness that keeps the family non-vacuous (a cluster that
-never commits anything cannot pass).
+on (S2 is what makes a true double-commit — same index, different
+data — visible). S1–S3 are pure safety and hold at every instant; S4
+is the completion witness that keeps the family non-vacuous (a cluster
+that never commits anything cannot pass).
 
 ## Network model
 
@@ -56,14 +71,20 @@ group partitions. Messages to a crashed node are dropped.
 
 ## The family
 
-| Scenario | Cluster | Chaos | What it exercises |
-|---|---|---|---|
-| `basic` | 3 | none (still reorders) | replication happy path |
-| `reorder-dup` | 3 | 10% dup, ≤3ms delay | dedup/ordering, concurrent proposers |
-| `chaos` | 5 | 15% drop, 5% dup, ≤3ms delay | retry/catch-up machinery, heal-then-complete |
-| `partition` | 5 | 2\|3 partition mid-run | majority progress, minority proposals surviving heal; S1's main workout |
-| `leader-churn` | 3 | forced transfer every 100ms | election safety under churn, proposal forwarding |
-| `crash-restart` | 3 | leader or follower crash+restart | durability: nothing committed is lost across a crash |
+| Scenario | Cluster | Chaos | What it exercises | Floor |
+|---|---|---|---|---|
+| `basic` | 3 | none (still reorders) | replication happy path | 1 |
+| `reorder-dup` | 3 | 10% dup, ≤3ms delay | dedup/ordering, concurrent proposers | 1 |
+| `chaos` | 5 | 15% drop, 5% dup, ≤3ms delay + a leader-isolation pulse | retry/catch-up machinery, forced re-election, heal-then-complete | 2 |
+| `partition` | 5 | current leader partitioned into a 2-node minority | majority election + progress, deposed-leader proposals surviving heal; S1's main workout | 2 |
+| `leader-churn` | 3 | forced transfer every 25ms, 40 cmds | election safety under churn, proposal forwarding | 2 |
+| `crash-restart` | 3 | leader (odd seeds) or follower crash+restart | durability: nothing committed lost, and the RECOVERED node must win an election and commit | 2 |
+
+(The chaos pulse and the leader-aware partition grouping are
+audit-added: message-level chaos alone never times out a 2ms-heartbeat
+leader, and a static partition only forces an election when the leader
+happens to land in the minority — both left S1 checking a one-claim
+stream.)
 
 ## Harness-construction findings (recorded for the machine twin)
 
@@ -76,3 +97,13 @@ group partitions. Messages to a crashed node are dropped.
    proposals off-loop, bounded by a per-node context canceled at stop.
    Any future in-machine harness needs the same decoupling or a
    drop-and-retry client instead of forwarding.
+3. **Restart requires persisting the ConfState, not just entries**
+   (audit find): `RestartNode` restores membership from
+   `Storage.InitialState()` — the snapshot metadata — and with
+   `Config.Applied` set, the bootstrap conf-change entries are never
+   re-delivered. A node restarted without a persisted ConfState has no
+   voters, is silently unpromotable, and can never campaign; the
+   harness persists it via `CreateSnapshot(appliedIndex, confState,
+   nil)` before restart, and `crash-restart` now asserts the recovered
+   node can regain leadership and commit. The machine twin's storage
+   model owes the same invariant.
