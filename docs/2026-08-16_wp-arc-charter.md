@@ -53,29 +53,14 @@ heap half) → growing-heap front support → the `derive_entry_eq` string
 arm → GAP-C1b (parameterize `MapLoops` over the remaining three
 statement constants). Same DONE per lift as slice 1.
 
-## Slice 3 — DISCOVERABILITY (the user's second aim; its own slice)
+## Slice 3 — library REGULARITY (early; the Guide comes LAST)
 
-The library is only leverage if the agent on proof N+1 FINDS it.
-Deliverables:
-1. **The Kit Guide** (`docs/kit-guide.md`): situation-indexed, not
-   module-indexed — "you are at X → use Y → fixture Z" for every proof
-   situation the 24 examples exhibit (entry; counted loop; two-exit
-   loop; loop-local allocation → threshold frame; map count; map
-   range; append/growth; recursion/call span; footprint; composition;
-   readout; bounds). Each row: the kit form, its hypotheses' shape,
-   the named fixture to copy from, the storm rules that apply. The
-   campaign ledger (g1.md) is the source; the guide is the
-   distillation — one page an agent reads FIRST.
-2. **Naming + module regularity**: conventions normalized across
-   StepKit/SliceMem/MapMem/MapLoops/FuelMeasure/StringMem/Frame;
-   sealed-API sections consistent; every kit module's docstring points
-   at its guide section and vice versa.
-3. **The discoverability acceptance test**: a fresh agent, given ONLY
-   the Kit Guide + a new example's corpus half, produces a proof plan
-   naming the right kit forms without reading any example module.
-   Run it as a real dry-run brief; the gaps it reveals are guide bugs
-   to fix. (The next real example built after this arc is the field
-   measurement.)
+Naming + module conventions normalized across StepKit/SliceMem/MapMem/
+MapLoops/FuelMeasure/StringMem/Frame; sealed-API sections consistent;
+docstring cross-pointers in place. (AMENDED 2026-08-16, operator review
+finding 1: the Kit Guide and its acceptance test move to the CLOSING
+slice — a guide written before the evaluator and sugar land describes
+a library that no longer exists by arc-end, and gets written twice.)
 
 ## Slice 4 — the mirror symbolic evaluator (Route B; the centerpiece)
 
@@ -92,9 +77,14 @@ quit-condition catalog.
 Then: `stepFn'`, the mirrored parametric step (proof-land, GoCore
 untouched — Route B by user ruling: *"it'd be nice to do this without
 touching the trust surface"*); the concrete-instance equivalence
-`stepFn' @ GoValue = stepFn` (arm-by-arm, rfl-shaped, the drift alarm);
+`stepFn' @ GoValue = stepFn` (arm-by-arm, rfl-shaped) — LANDED IN A
+DEFAULT BUILD TARGET so mirror drift FAILS THE BUILD, not a review
+(operator review finding 4);
 the symbolic instance = the evaluator; per-operation commutation
-lemmas; and THE REFINEMENT THEOREM:
+lemmas; and THE REFINEMENT THEOREM (which ships, per the standing
+non-vacuity gate, IN THE SAME COMMIT as its discharge witness — a real
+window from a shipped example, evaluated by `symEvalWindow` and
+transported to a `stepFnIter` fact; no witness ⇒ scaffold, marked so):
 
     symEvalWindow S = some S'  →  ∀ ρ, stepFnIter n (γ_ρ S) = γ_ρ S'
 
@@ -107,11 +97,15 @@ asserted**: no `Sym*` constant in any headline statement closure (the
 existing walker), and the deletion test extended — removing the whole
 symbolic layer leaves every statement elaborating.
 
-**Acceptance: matmul.** `matmul_ok` landed COMPLETE from its snapshot
-(`refs/snapshots/gc-proofs-a/matmul-machine-layer`) with its segment
-layer produced via the evaluator (emitted or evaluator-transported),
-gated, pinned — the GAP-RFL-COST class closed on the artifact that
-discovered it. Fallback if the evaluator runs long: probe-driven
+**Acceptance: matmul, measured in two stages** (operator review
+finding 5 — the snapshot predates the gap closure, G4 and the fix
+rounds): (a) restore from `refs/snapshots/gc-proofs-a/
+matmul-machine-layer` and RETROFIT to the current kit first, recording
+that cost/shrinkage as the baseline; (b) THEN produce the segment
+layer via the evaluator and land `matmul_ok` COMPLETE, gated, pinned —
+so the evaluator's contribution is measured separately from retrofit
+value. The GAP-RFL-COST class closes on the artifact that discovered
+it. Fallback if the evaluator runs long: probe-driven
 emission (`derive_seg` mode (a)) is the recorded interim, but the
 evaluator is the arc's deliverable.
 
@@ -125,23 +119,73 @@ lint (syntax-level, speedbump standard). Scope trimmed to what slices
 ## The raft cross-read checkpoint
 
 When the user's raft plan merges: STOP after the current slice,
-cross-read, and re-cut slice 4+/5 priorities against what raft pulls
-(expected: call-span/compositional spec-overrides, key-generic
-MapMem, struct coverage, possibly the address-shift simulation).
+cross-read, and re-cut slice 4+/5/6 priorities against what raft pulls.
+**PARKED PENDING THIS CHECKPOINT (explicitly, so nothing is silently
+lost — operator review finding 2):** key-generic `MapMem`/`MapLoops`
+(the wordfreq `*W` mirror is the landed second instantiation; raft's
+node-id-keyed maps are the expected puller), element-kind-generic
+`SliceMem` (the i64/bool mirror families), the address-shift
+simulation (rle's `n ∈ [4,8]` domain gap; any data-dependent
+allocation), struct-coverage examples. Each enters the arc ONLY by
+this checkpoint's re-cut or a recorded user pull.
 Recorded as a decision point, not a drift opportunity.
+
+## Slice 6 — DISCOVERABILITY close-out (LAST, covering the final
+library)
+
+1. **The Kit Guide** (`docs/kit-guide.md`): situation-indexed, not
+   module-indexed — "you are at X → use Y → fixture Z" for every proof
+   situation the 24 examples exhibit (entry; counted loop; two-exit
+   loop; loop-local allocation → threshold frame; map count; map
+   range; append/growth; recursion/call span; footprint; composition;
+   readout; bounds) PLUS the evaluator and sugar the arc added. Each
+   row: the kit form, its hypotheses' shape, the named fixture, the
+   storm rules that apply. The campaign ledger is the source; the
+   guide is the distillation — one page an agent reads FIRST.
+2. **The discoverability acceptance test**: a fresh agent, given ONLY
+   the Kit Guide + a new example's corpus half, produces a proof plan
+   naming the right kit forms without reading any example module. Run
+   as a real dry-run brief; gaps found are guide bugs, fixed before
+   DONE. (The next real example built after this arc is the field
+   measurement.)
+
+## Long-cycle apparatus (the arc MAY run as a long-cycle autonomous
+goal, per the CLAUDE.md practice; user decision at kickoff)
+
+- **Judgment calls delegated** inside the boundaries below; material
+  calls one-line-logged. Resolve by the recorded principles;
+  honesty beats velocity beats elegance.
+- **HARD BOUNDARIES**: the NON-GOALS above, plus no gate weakening, no
+  re-pin laundering, no merge/push/designation — the arc ends at
+  branch-complete with the audit ask POSED. The design-note gate
+  (slice 4) is a USER checkpoint: the evaluator's commutation proofs
+  do not start until the user has reviewed the domain design note.
+- **EMERGENCY EXIT**: always permitted; park record + report on use.
+- **Log**: docs/wp-arc-log/ (per-slice files + INDEX, campaign
+  conventions: derivation-anchored numbers, unit-anchored cites,
+  checkpoints every ≤5 units, SHAs on unit entries).
+- **Lanes**: one writer per worktree (HARD); kit-file edits serialize
+  (slices 1–2 are single-lane); slice 4's new modules may run beside
+  slice 3's regularity pass (disjoint files); Audit/Kit.lean is
+  append-only across lanes.
 
 ## DONE (the conjunction)
 
 1. Slices 1–2: every listed family lifted, zero surviving copies,
    deltas measured, pins landed.
-2. Slice 3: the Kit Guide exists; the dry-run acceptance ran and its
-   findings are fixed.
-3. Slice 4: the refinement theorem proven; outside-the-TCB verified by
-   walker + deletion test; **matmul COMPLETE and gated**.
+2. Slice 3: regularity landed (conventions + sealed APIs + pointers).
+3. Slice 4: the design note user-reviewed BEFORE commutation proofs;
+   the refinement theorem proven WITH its discharge witness;
+   outside-the-TCB verified by walker + deletion test; the
+   equivalence/drift theorem in a default build target;
+   **matmul COMPLETE and gated, two-stage measured**.
 4. Slice 5: shipped or explicitly trimmed with reasons.
-5. Gates green at tip (fast ci per commit; no corpus changes = the
-   standing full record carries; axiom pins byte-identical to
-   04fec3c1 throughout, matmul's new pins excepted).
-6. Arc log current (docs/wp-arc-log.md, campaign conventions); the
-   arc-end audit ask POSED (sized to: kit correctness = the
-   refinement theorem's review, discoverability, records).
+5. Slice 6: the Kit Guide exists; the dry-run acceptance ran and its
+   findings are fixed.
+6. Gates green at tip (fast ci per commit; no corpus changes = the
+   standing full record carries; EXISTING axiom pins byte-identical to
+   04fec3c1 throughout; additions — slice-1/2 Kit pins, matmul's —
+   per the Kit-pin convention).
+7. Arc log current (docs/wp-arc-log/, conventions above); the
+   arc-end audit ask POSED (sized to: kit correctness = the refinement
+   theorem's statement/witness review, discoverability, records).
