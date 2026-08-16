@@ -231,3 +231,23 @@ overstates.
   commit; full `scripts/ci` PASS at the G0.2 tip and at this tip —
   fast gate + `GOLEAN_ALLOW_NO_DIFF=1`, proofs-only lane, cached
   full differential record at the merge-base stands).
+
+
+## FINAL CHECKPOINT — the DONE conjunction, verified at tip 8cc7b39c (2026-08-16)
+
+| clause | requirement | state |
+|---|---|---|
+| 0 | G0 kit phase | DONE (mapping + 3 lifts + rollbacks + kit pins; g0.md) |
+| 1 | G1 ≥ 20 COMPLETE | **24 COMPLETE** (7 legacy + 17 campaign; matmul = the one honest gap, withdrawn with pickup plan) |
+| 2 | G2 ≥ 3 pulled extensions | **3 BUILT** — E1/driver-uint64 (consumer dotprod), E3/short-circuit calls (stein), E5/stdlib shims (wordfreq); every one guardrails-red-first, fidelity-argued, oracle-flipped |
+| 3 | G3 all dossiers | 22/22, ruling table staged (g3.md) |
+| 4 | G4 four debt items | 4/4 incl. the constrained comparator-judge fix |
+| 5 | full gate + FULL diff record at tip | scripts/ci --diff PASS at 8cc7b39c: 1830/1830, negative 311/311 |
+| 6 | log complete | per-goal files current; this checkpoint |
+| 7 | arc-end asks prepared and POSED | the operator's package accompanies this checkpoint — audit ask, designation candidates (17 headlines + readouts), merge request DRAFTED (merge + audit sign-off are the user's) |
+
+Chartered deviations, recorded: the reverse row-RENAME (E1 sub-item)
+remains blocked on the re-pin-guard amendment ruling (drafted in g2.md);
+matmul is the recorded honest gap (GAP-RFL-COST is its blocker and the
+verified-reflection direction's strongest evidence). Judgment-call log:
+every material call carries a one-line entry in its goal file.
