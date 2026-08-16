@@ -443,6 +443,10 @@ counting-loop lift + the GAP-R1 pick-loop lift, 2026-08-15) -/
 #guard_msgs in #print axioms GoLean.Surface.stepFnIter_iterate
 /-- info: 'GoLean.Surface.stepFnIter_iterate_exit' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.stepFnIter_iterate_exit
+-- WP arc s1 lift 5 (2026-08-16): the two-exit loop schema.
+-- Transcribed verbatim from a fresh probe (`.tmp/pinprobe5.lean`).
+/-- info: 'GoLean.Surface.stepFnIter_iterate_bail' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.stepFnIter_iterate_bail
 
 /-! ## The derive_entry_eq emitted-theorem fixtures (all 10 landed entry equations) -/
 
