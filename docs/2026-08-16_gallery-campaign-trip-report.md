@@ -309,10 +309,21 @@ Three of the OPERATOR's:
    command nobody re-read is the same defect class this addendum is
    about, one level down.
 2. **"One mid-fence split repaired."** There were **THREE** splices, not
-   one — the gallery's dedup/palin split, `g1.md`'s sieve/stack
-   cost-table swap, and a third: stack's own Costs table (with its
-   2540 MiB correction) left dangling, headingless, off the end of the
-   `wordfreq` unit, while the `sieve` unit sat with zero table rows.
+   one, one per repair round: (1) the gallery's dedup/palin split, where
+   dedup's honesty half rendered inside `## palin`
+   (`verified-examples.md`, repaired by `798a24af` A1); (2) `g1.md`'s
+   palin/dotprod swap — palin's unit carrying DotProduct's cost table and
+   dotprod's worker narrative, while palin's own table and its two JC
+   bullets sat orphaned in the lane-A process-finding section (repaired
+   by `0ab348ce` B4a, which named itself THE SECOND SPLICE); and (3)
+   `g1.md`'s sieve/stack cost-table swap, with stack's own Costs table
+   (and its 2540 MiB correction) left dangling, headingless, off the end
+   of the `wordfreq` unit while the `sieve` unit sat with zero table rows
+   (repaired by `a816aa65`, fix round #2 item 1).
+   [Corrected 2026-08-16, fix round #3: this list previously named the
+   third splice's two halves as items 2 and 3 and dropped the
+   palin/dotprod splice entirely — three events, but not the three that
+   happened.]
    **The third was found by records-pass-2, in the campaign LOG rather
    than in the gallery — after two rounds of repair had already gone
    looking for exactly this class.** That is the honest reading: the
