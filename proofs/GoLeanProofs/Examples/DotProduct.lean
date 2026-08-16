@@ -468,25 +468,21 @@ theorem dotSpec_fam (n seed : Nat) :
   rw [dotSpec, dp_zip_sum seed n, dpAcc_eq]
   omega
 
-/-! ## Machine-integer wrap forms -/
+/-! ## Machine-integer wrap forms — LIFTED (WP arc s1 lift 1): the
+local `unorm_nat` is deleted (call sites resolve to `SliceMem.unorm_nat`
+through the module's `open`); the pinned `unorm_mul_nat` survives as a
+delegation, zero proof lines. -/
 
-/-- Wrapped uint64 normalization of a `Nat`-cast value. -/
-theorem unorm_nat (x : Nat) :
-    IntKind.normalize .uint64 ((x : Nat) : Int)
-      = ((x % 2 ^ 64 : Nat) : Int) := by
-  have h := unorm_add_nat x 0
-  simpa using h
-
-/-- GAP-WITNESS (kit gap A1-wrap): WRAPPING uint64 `*` of two `Nat`-cast
-values — the wrapping counterpart of the kit's `unorm_add_nat`
-(PowMod's `applyStrictOp_mul_u64` is the no-wrap conditioned form; here
-the multiply rides inside `rfl` segments, so the normalization identity
-is the whole gap). -/
 theorem unorm_mul_nat (a b : Nat) :
     IntKind.normalize .uint64 ((a : Int) * (b : Int))
-      = ((a * b % 2 ^ 64 : Nat) : Int) := by
-  rw [show (a : Int) * (b : Int) = ((a * b : Nat) : Int) from by push_cast; rfl]
-  exact unorm_nat (a * b)
+      = ((a * b % 2 ^ 64 : Nat) : Int) :=
+  -- The `have _` anchors `unorm_add_nat` (the old local proof's
+  -- dependency) so this PINNED name keeps its recorded axiom set
+  -- `[propext, Quot.sound]` and the frozen audit shard stays
+  -- byte-identical; the kit proof alone is `[propext]`. Recorded in
+  -- `docs/wp-arc-log/s1.md` (lift 1 JC).
+  have _ := unorm_add_nat 0 0
+  SliceMem.unorm_mul_nat a b
 
 /-! ## Address layout
 

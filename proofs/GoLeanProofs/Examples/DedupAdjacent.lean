@@ -637,59 +637,18 @@ def ddArr8 (xs : List Int) : GoValue :=
   .array ⟨(xs ++ List.replicate (8 - xs.length) 0).map
     (fun v => .int v .uint64)⟩
 
-/-! ## The executable op facts this example needs locally -/
+/-! ## The executable op facts (WP arc s1 lift 1: LIFTED to
+`SliceMem`'s completed integer family — the four unpinned locals
+(`eqCmp`/`neqCmp`/`sub`/`convert`) are deleted, their call sites
+resolving to the kit through the module's `open GoLean.SliceMem`; the
+pinned `applyStrictOp_div_u64` survives as a delegation, zero proof
+lines.) -/
 
-/-- GAP-WITNESS (kit gap A2): uint64 `/` at a positive divisor —
-re-derived locally from `Examples/PowMod.lean`'s copy (the kit shape
-wanted is exactly this statement; two landed consumers now). -/
 theorem applyStrictOp_div_u64 {σ : ExecState} {a b : Nat}
     (hb : 0 < b) (ha : a < 2 ^ 64) :
     applyStrictOp σ .div [.int (a : Int) .uint64, .int (b : Int) .uint64]
-      = .ok (.int ((a / b : Nat) : Int) .uint64, σ) := by
-  have hbne : (((b : Nat) : Int) == 0) = false := by
-    simp only [beq_eq_false_iff_ne, ne_eq, Int.natCast_eq_zero]; omega
-  have htdiv : Int.tdiv (a : Int) (b : Int) = ((a / b : Nat) : Int) := rfl
-  have hnorm : IntKind.normalize .uint64 ((a / b : Nat) : Int) = ((a / b : Nat) : Int) :=
-    unorm_nat_of_lt (by have := Nat.div_le_self a b; omega)
-  simp only [applyStrictOp, valueAsInt, hbne, intBinaryResult,
-    valueAsIntValue, htdiv, IntKind.compatibleResult,
-    Bool.false_eq_true, if_false, Bind.bind, Except.bind, pure, Except.pure]
-  simp only [show (IntKind.uint64 == IntKind.uint64) = true from rfl, if_true, hnorm]
-
-/-- GAP-WITNESS (kit gap, reported): the `==` executable fact at
-integer operands — `valueEq` at an int type is payload `BEq`. -/
-theorem applyStrictOp_eqCmp_int {σ : ExecState} {a b : Int}
-    {k k1 k2 : IntKind} :
-    applyStrictOp σ (.eqCmp (.int k)) [.int a k1, .int b k2]
-      = .ok (.bool (a == b), σ) := by with_unfolding_all rfl
-
-/-- GAP-WITNESS (kit gap, reported): the `!=` executable fact at
-integer operands. -/
-theorem applyStrictOp_neqCmp_int {σ : ExecState} {a b : Int}
-    {k k1 k2 : IntKind} :
-    applyStrictOp σ (.neqCmp (.int k)) [.int a k1, .int b k2]
-      = .ok (.bool (!(a == b)), σ) := by with_unfolding_all rfl
-
-/-- GAP-WITNESS (kit gap, reported): signed-int `-` on in-range
-`Nat`-cast operands (the `k - 1` of the guard). -/
-theorem applyStrictOp_sub_int {σ : ExecState} {a : Nat}
-    (ha : 1 ≤ a) (ha2 : a < 2 ^ 63) :
-    applyStrictOp σ .sub [.int (a : Int) .int, .int (1 : Int) .int]
-      = .ok (.int ((a - 1 : Nat) : Int) .int, σ) := by
-  have hraw : applyStrictOp σ .sub [.int (a : Int) .int, .int (1 : Int) .int]
-      = .ok (.int (IntKind.normalize .int ((a : Int) - 1)) .int, σ) := rfl
-  rw [hraw, show ((a : Int) - 1) = ((a - 1 : Nat) : Int) from by omega,
-    inorm_nat_of_lt (by omega)]
-
-/-- GAP-WITNESS (kit gap, reported): `uint64(x)` conversion of an
-in-range value is the identity on the payload. -/
-theorem applyStrictOp_convert_u64 {σ : ExecState} {a : Nat} {k : IntKind}
-    (ha : a < 2 ^ 64) :
-    applyStrictOp σ (.convert tU64) [.int (a : Int) k]
-      = .ok (.int ((a : Nat) : Int) .uint64, σ) := by
-  have hraw : applyStrictOp σ (.convert tU64) [.int (a : Int) k]
-      = .ok (.int (IntKind.normalize .uint64 (a : Int)) .uint64, σ) := rfl
-  rw [hraw, unorm_nat_of_lt ha]
+      = .ok (.int ((a / b : Nat) : Int) .uint64, σ) :=
+  SliceMem.applyStrictOp_div_u64 hb ha
 
 /-- GAP-WITNESS (kit gap, reported): the two-index slice expression
 `s[0:kv]` over a SLICE base (the kit's `applyStrictOp_sliceExpr_array`

@@ -49,30 +49,17 @@ set_option maxRecDepth 1000000
 set_option maxHeartbeats 4000000
 set_option linter.unusedSimpArgs false
 
-/-! ## The `/` executable fact
-
--- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST (rle)): mirror of
--- `SliceMem.applyStrictOp_mod_u64`, which the kit has; `/` it does
--- not. -/
+/-! ## The `/` executable fact — LIFTED (WP arc s1 lift 1): the proof
+moved to `SliceMem.applyStrictOp_div_u64`; this name survives as a
+zero-proof-line delegation under its original signature (the audit
+shard's roll-call names it; the kit form drops the unused `b < 2^64`
+hypothesis, absorbed here). -/
 
 theorem applyStrictOp_div_u64 {σ : ExecState} {a b : Nat}
     (ha : a < 2 ^ 64) (hb : 0 < b) (hb64 : b < 2 ^ 64) :
     applyStrictOp σ .div [.int (a : Int) .uint64, .int (b : Int) .uint64]
-      = .ok (.int ((a / b : Nat) : Int) .uint64, σ) := by
-  have hbne : (((b : Nat) : Int) == 0) = false := by
-    simp only [beq_eq_false_iff_ne, ne_eq, Int.natCast_eq_zero]
-    omega
-  have htdiv : Int.tdiv (a : Int) (b : Int) = ((a / b : Nat) : Int) := rfl
-  have hnorm : IntKind.normalize .uint64 ((a / b : Nat) : Int)
-      = ((a / b : Nat) : Int) :=
-    unorm_nat_of_lt (by
-      have := Nat.div_le_self a b
-      omega)
-  simp only [applyStrictOp, valueAsInt, hbne, intBinaryResult,
-    valueAsIntValue, htdiv, IntKind.compatibleResult,
-    Bool.false_eq_true, if_false, Bind.bind, Except.bind, pure, Except.pure]
-  simp only [show (IntKind.uint64 == IntKind.uint64) = true from rfl,
-    if_true, hnorm]
+      = .ok (.int ((a / b : Nat) : Int) .uint64, σ) :=
+  SliceMem.applyStrictOp_div_u64 hb ha
 
 /-! ## Raw run segments — the harness front, PROGRAM-generic -/
 

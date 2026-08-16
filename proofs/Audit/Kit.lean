@@ -98,7 +98,9 @@ vocabulary defs) -/
 #guard_msgs in #print axioms GoLean.Surface.natFromNonneg_cast
 
 /-! ## SliceMem — slice-in-memory vocabulary + executable op facts
-(28 public lemmas; +11 in the GAP-P2 family/prefix lift, 2026-08-15 —
+(42 public lemmas; +11 in the GAP-P2 family/prefix lift, 2026-08-15;
++14 in the WP arc s1 lift 1 — the normal-form/op-fact family
+completion + the C4 `intKind_normalize_idem` lift-out-of-HeapBridge —
 the `familyMod`/`prefixPad` defs are unpinned like the other
 vocabulary defs) -/
 
@@ -136,6 +138,39 @@ vocabulary defs) -/
 #guard_msgs in #print axioms GoLean.SliceMem.applyStrictOp_lessCmp_int
 /-- info: 'GoLean.SliceMem.applyStrictOp_mod_u64' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.SliceMem.applyStrictOp_mod_u64
+
+-- WP arc s1 lift 1 (2026-08-16): the normal-form family + the
+-- completed integer executable-op family + the C4 lift. Transcribed
+-- verbatim from a fresh probe (`.tmp/pinprobe1.lean` at the lift
+-- commit).
+/-- info: 'GoLean.SliceMem.unorm_nat' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.unorm_nat
+/-- info: 'GoLean.SliceMem.unorm_mul_nat' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.unorm_mul_nat
+/-- info: 'GoLean.SliceMem.intKind_normalize_idem' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.intKind_normalize_idem
+/-- info: 'GoLean.SliceMem.normalize_of_range_unsigned' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.normalize_of_range_unsigned
+/-- info: 'GoLean.SliceMem.normalize_of_range_signed' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.normalize_of_range_signed
+/-- info: 'GoLean.SliceMem.applyStrictOp_mul_u64' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.applyStrictOp_mul_u64
+/-- info: 'GoLean.SliceMem.applyStrictOp_div_u64' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.applyStrictOp_div_u64
+/-- info: 'GoLean.SliceMem.applyStrictOp_add_u64' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.applyStrictOp_add_u64
+/-- info: 'GoLean.SliceMem.applyStrictOp_sub_int' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.applyStrictOp_sub_int
+/-- info: 'GoLean.SliceMem.applyStrictOp_eqCmp_int' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.applyStrictOp_eqCmp_int
+/-- info: 'GoLean.SliceMem.applyStrictOp_neqCmp_int' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.applyStrictOp_neqCmp_int
+/-- info: 'GoLean.SliceMem.applyStrictOp_atMostCmp' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.applyStrictOp_atMostCmp
+/-- info: 'GoLean.SliceMem.applyStrictOp_not' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.applyStrictOp_not
+/-- info: 'GoLean.SliceMem.applyStrictOp_convert_u64' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.applyStrictOp_convert_u64
 
 /-- info: 'GoLean.SliceMem.familyMod_length' depends on axioms: [propext] -/
 #guard_msgs in #print axioms GoLean.SliceMem.familyMod_length

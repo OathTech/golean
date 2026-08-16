@@ -246,7 +246,7 @@ private theorem hrb_iter (n seed : Nat) (ivF sciv : Int) (l : List Int)
     show ((seed : Nat) : Int) * ((i + 1 : Nat) : Int)
       = ((seed * (i + 1) : Nat) : Int) from
       (Int.natCast_mul seed (i + 1)).symm,
-    unorm_nat_mod (seed * (i + 1))] at h1
+    unorm_nat (seed * (i + 1))] at h1
   have h2 := hstep_rbstore n seed ivF sciv l
     (isFamily i seed ++ List.replicate (n - i) 0) i
     (((seed * (i + 1)) % 2 ^ 64 : Nat) : Int) hi

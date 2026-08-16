@@ -301,11 +301,8 @@ theorem applyStrictOp_indexGet_string {σ : ExecState} {l : List UInt8}
 /-- `int32` normalization is the identity on `0 ≤ v < 2^31` — the
 `rune(...)` conversions this example performs (byte values). -/
 theorem i32norm_of_range {v : Int} (h0 : 0 ≤ v) (h1 : v < 2 ^ 31) :
-    IntKind.normalize .int32 v = v := by
-  simp only [IntKind.normalize, IntKind.bits?, IntKind.signed]
-  have h2 : v % 2 ^ 32 = v := Int.emod_eq_of_lt h0 (by omega)
-  simp only [h2]
-  omega
+    IntKind.normalize .int32 v = v :=
+  SliceMem.normalize_of_range_signed (bits := 31) rfl rfl (by omega) h1
 
 /-- The `Nat`-cast corner of `i32norm_of_range`. -/
 theorem i32norm_nat_of_lt {x : Nat} (h : x < 2 ^ 31) :

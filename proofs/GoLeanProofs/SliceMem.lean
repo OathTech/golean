@@ -32,11 +32,19 @@ the brick-wp W6 convention adapted to Lean 4)
 
 * statement-adjacent vocabulary: `sliceCells`, `sliceVal`, `Sorted`;
 * machine-integer normal forms: `unorm_of_range`, `inorm_of_range`,
-  `inorm_nat_of_lt`, `unorm_nat_of_lt`, `unorm_add_nat`;
+  `inorm_nat_of_lt`, `unorm_nat_of_lt`, `unorm_add_nat`, and (WP arc
+  s1 lift 1, 2026-08-16) `unorm_nat`, `unorm_mul_nat`,
+  `intKind_normalize_idem`, plus the kind-generic pair
+  `normalize_of_range_unsigned`/`normalize_of_range_signed`;
 * the executable op facts, each conditioned on exactly its
   bounds/range hypotheses: `applyStrictOp_indexGet_slice`,
   `applyStrictOp_len_slice`, `applyStrictOp_sliceExpr_array`,
-  `applyStrictOp_lessCmp_int`, `applyStrictOp_mod_u64`,
+  `applyStrictOp_lessCmp_int`, `applyStrictOp_mod_u64`, and (WP arc
+  s1 lift 1) the completed integer family `applyStrictOp_mul_u64`,
+  `applyStrictOp_div_u64`, `applyStrictOp_add_u64`,
+  `applyStrictOp_sub_int`, `applyStrictOp_eqCmp_int`,
+  `applyStrictOp_neqCmp_int`, `applyStrictOp_atMostCmp`,
+  `applyStrictOp_not`, `applyStrictOp_convert_u64`;
   `storeTarget_slice_u64`, `storeTarget_arrayLocal_u64`,
   `normalizeValueForTy_arr_u64`;
 * slice-value plumbing: `getElem?_mapU`, `getD_mem`,
@@ -129,6 +137,82 @@ theorem unorm_add_nat (a b : Nat) :
       = (((a + b) % 2 ^ 64 : Nat) : Int) := by
   rw [show ((a : Int) + (b : Int)) = ((a + b : Nat) : Int) from by omega]
   simp [IntKind.normalize, IntKind.bits?, IntKind.signed]
+
+/-- Wrapped uint64 normalization of a bare `Nat` cast — the setup/LCG
+families' own wrap, no range hypothesis. (WP arc s1 lift 1: lifted
+from SIX per-example copies — dotprod `unorm_nat`, bubble `unorm_nat`,
+fib's private `unorm_nat`, minmax `unorm_nat_wrap`, isort + selsort
+`unorm_nat_mod` — all byte-identical statements.) -/
+theorem unorm_nat (x : Nat) :
+    IntKind.normalize .uint64 ((x : Nat) : Int)
+      = ((x % 2 ^ 64 : Nat) : Int) := by
+  simp [IntKind.normalize, IntKind.bits?, IntKind.signed]
+
+/-- Wrapped uint64 multiplication of two `Nat`-cast values — the
+WRAPPING counterpart of `unorm_add_nat` (`applyStrictOp_mul_u64` below
+is the no-wrap conditioned form; when `*`/`+` ride inside
+`with_unfolding_all rfl` segments only this normalization identity is
+consumed — the dotprod negative finding, g1.md §GAP-A1-wrap). -/
+theorem unorm_mul_nat (a b : Nat) :
+    IntKind.normalize .uint64 ((a : Int) * (b : Int))
+      = ((a * b % 2 ^ 64 : Nat) : Int) := by
+  rw [show (a : Int) * (b : Int) = ((a * b : Nat) : Int) from by
+    push_cast; rfl]
+  exact unorm_nat (a * b)
+
+/-- `IntKind.normalize` is idempotent — the fact behind discharging
+store re-normalizations to zero hypotheses. (WP arc s1 lift 1, the C4
+resolution: lifted OUT of `HeapBridge` — whose closure pulls the whole
+Iris layer — into this Iris-free module, so footprint-style example
+closures can consume it without importing a proof-device layer;
+`HeapBridge.intKind_normalize_idem` now delegates here, and fibmemo's
+local uint64 copy (`unorm_idem`) is deleted.) -/
+theorem intKind_normalize_idem (kind : IntKind) (v : Int) :
+    kind.normalize (kind.normalize v) = kind.normalize v := by
+  cases kind <;> simp [IntKind.normalize, IntKind.bits?, IntKind.signed] <;>
+    (repeat' split) <;> omega
+
+/-! ### Kind-generic normal forms (WP arc s1 lift 1)
+
+One lemma per signedness covers every `uint*`/`int*` in-range identity
+at once — the class strrev/wordfreq re-derived at `.int32`
+(`i32norm_of_range`) and kadane at `.int64` (`inorm64_of_range`).
+`bits?`/`signed` are forced by the kind: instantiate with `rfl`, e.g.
+`normalize_of_range_signed (bits := 63) rfl rfl h0 h1` at `.int64`.
+The signed form's width is spelled `bits + 1` so the half-range
+hypotheses are `-(2^bits) ≤ v < 2^bits` with no degenerate-width
+side condition. -/
+
+/-- A value of an UNSIGNED kind inside `[0, 2^bits)` is its own
+normal form. -/
+theorem normalize_of_range_unsigned {k : IntKind} {bits : Nat} {v : Int}
+    (hb : k.bits? = some bits) (hs : k.signed = false)
+    (h0 : 0 ≤ v) (h1 : v < 2 ^ bits) :
+    IntKind.normalize k v = v := by
+  simp only [IntKind.normalize, hb, hs, Bool.false_eq_true, if_false]
+  exact Int.emod_eq_of_lt h0 h1
+
+/-- A value of a SIGNED kind of width `bits + 1` inside
+`[-(2^bits), 2^bits)` is its own normal form. -/
+theorem normalize_of_range_signed {k : IntKind} {bits : Nat} {v : Int}
+    (hb : k.bits? = some (bits + 1)) (hs : k.signed = true)
+    (h0 : -(2 ^ bits) ≤ v) (h1 : v < 2 ^ bits) :
+    IntKind.normalize k v = v := by
+  have hpos : (0 : Int) < 2 ^ bits := by
+    have := Nat.two_pow_pos bits
+    exact_mod_cast this
+  have hps : (2 : Int) ^ (bits + 1) = 2 ^ bits * 2 := Int.pow_succ 2 bits
+  simp only [IntKind.normalize, hb, hs, if_true, Nat.add_sub_cancel]
+  by_cases hv : 0 ≤ v
+  · have hmod : v % 2 ^ (bits + 1) = v := Int.emod_eq_of_lt hv (by omega)
+    rw [hmod, if_neg (by omega)]
+  · have hmod : v % 2 ^ (bits + 1) = v + 2 ^ (bits + 1) := by
+      have h' := Int.add_mul_emod_self_left v (2 ^ (bits + 1)) 1
+      rw [Int.mul_one] at h'
+      rw [← h']
+      exact Int.emod_eq_of_lt (by omega) (by omega)
+    rw [hmod, if_pos (by omega)]
+    omega
 
 /-! ## The executable slice-op facts -/
 
@@ -426,6 +510,103 @@ theorem applyStrictOp_mod_u64 {σ : ExecState} {a b : Nat}
     Bool.false_eq_true, if_false, Bind.bind, Except.bind, pure, Except.pure]
   simp only [show (IntKind.uint64 == IntKind.uint64) = true from rfl,
     if_true, hnorm]
+
+/-! ## The integer executable-op family, completed (WP arc s1 lift 1,
+2026-08-16)
+
+The A1/A2 consolidation note (g1.md §Unit G1.3b): the integer
+executable-op facts land as ONE family rather than singly, so the
+fixture cost is paid once. Lifted from the landed per-example copies —
+powmod (`mul`, `div`), dedup (`div`, `eqCmp`, `neqCmp`, `sub`,
+`convert`), sieve (`mul`, `add`, `atMostCmp`, `not`), rle (`div`),
+dotprod's docstring cite of `mul` — each statement byte-identical to
+its copies (rle's `div` had an extra unused `b < 2^64` hypothesis;
+the kit form is the two-hypothesis powmod/dedup shape). -/
+
+/-- uint64 `*` below the wrap threshold (wrapping form: the
+`unorm_mul_nat` normalization identity above). -/
+theorem applyStrictOp_mul_u64 {σ : ExecState} {a b : Nat}
+    (h : a * b < 2 ^ 64) :
+    applyStrictOp σ .mul [.int (a : Int) .uint64, .int (b : Int) .uint64]
+      = .ok (.int ((a * b : Nat) : Int) .uint64, σ) := by
+  have hraw : applyStrictOp σ .mul [.int (a : Int) .uint64, .int (b : Int) .uint64]
+      = .ok (.int (IntKind.normalize .uint64 ((a : Int) * (b : Int))) .uint64, σ) := rfl
+  have hc : ((a * b : Nat) : Int) = (a : Int) * (b : Int) := by push_cast; rfl
+  rw [hraw, ← hc, unorm_nat_of_lt h]
+
+/-- uint64 `/` at a positive divisor (`a / b ≤ a` is the range
+argument, where `%` got its range from `< b`). -/
+theorem applyStrictOp_div_u64 {σ : ExecState} {a b : Nat}
+    (hb : 0 < b) (ha : a < 2 ^ 64) :
+    applyStrictOp σ .div [.int (a : Int) .uint64, .int (b : Int) .uint64]
+      = .ok (.int ((a / b : Nat) : Int) .uint64, σ) := by
+  have hbne : (((b : Nat) : Int) == 0) = false := by
+    simp only [beq_eq_false_iff_ne, ne_eq, Int.natCast_eq_zero]; omega
+  have htdiv : Int.tdiv (a : Int) (b : Int) = ((a / b : Nat) : Int) := rfl
+  have hnorm : IntKind.normalize .uint64 ((a / b : Nat) : Int) = ((a / b : Nat) : Int) :=
+    unorm_nat_of_lt (by have := Nat.div_le_self a b; omega)
+  simp only [applyStrictOp, valueAsInt, hbne, intBinaryResult,
+    valueAsIntValue, htdiv, IntKind.compatibleResult,
+    Bool.false_eq_true, if_false, Bind.bind, Except.bind, pure, Except.pure]
+  simp only [show (IntKind.uint64 == IntKind.uint64) = true from rfl, if_true, hnorm]
+
+/-- uint64 `+` below the wrap threshold (wrapping form:
+`unorm_add_nat`). -/
+theorem applyStrictOp_add_u64 {σ : ExecState} {a b : Nat}
+    (h : a + b < 2 ^ 64) :
+    applyStrictOp σ .add [.int (a : Int) .uint64, .int (b : Int) .uint64]
+      = .ok (.int ((a + b : Nat) : Int) .uint64, σ) := by
+  have hraw : applyStrictOp σ .add [.int (a : Int) .uint64, .int (b : Int) .uint64]
+      = .ok (.int (IntKind.normalize .uint64 ((a : Int) + (b : Int))) .uint64, σ) := rfl
+  have hc : ((a + b : Nat) : Int) = (a : Int) + (b : Int) := by push_cast; rfl
+  rw [hraw, ← hc, unorm_nat_of_lt h]
+
+/-- Signed-int `-` on in-range `Nat`-cast operands (the `k - 1` of a
+guard; parameterized by what the landed witnesses vary — dedup's is
+the only shape, `a - 1`). -/
+theorem applyStrictOp_sub_int {σ : ExecState} {a : Nat}
+    (ha : 1 ≤ a) (ha2 : a < 2 ^ 63) :
+    applyStrictOp σ .sub [.int (a : Int) .int, .int (1 : Int) .int]
+      = .ok (.int ((a - 1 : Nat) : Int) .int, σ) := by
+  have hraw : applyStrictOp σ .sub [.int (a : Int) .int, .int (1 : Int) .int]
+      = .ok (.int (IntKind.normalize .int ((a : Int) - 1)) .int, σ) := rfl
+  rw [hraw, show ((a : Int) - 1) = ((a - 1 : Nat) : Int) from by omega,
+    inorm_nat_of_lt (by omega)]
+
+/-- The `==` executable fact at integer operands — `valueEq` at an int
+type is payload `BEq` (note `with_unfolding_all`: plain `rfl` does not
+close `valueEq`, the dedup finding). -/
+theorem applyStrictOp_eqCmp_int {σ : ExecState} {a b : Int}
+    {k k1 k2 : IntKind} :
+    applyStrictOp σ (.eqCmp (.int k)) [.int a k1, .int b k2]
+      = .ok (.bool (a == b), σ) := by with_unfolding_all rfl
+
+/-- The `!=` executable fact at integer operands. -/
+theorem applyStrictOp_neqCmp_int {σ : ExecState} {a b : Int}
+    {k k1 k2 : IntKind} :
+    applyStrictOp σ (.neqCmp (.int k)) [.int a k1, .int b k2]
+      = .ok (.bool (!(a == b)), σ) := by with_unfolding_all rfl
+
+/-- `<=` on ints compares the payloads, state-free (mirror of
+`applyStrictOp_lessCmp_int`). -/
+theorem applyStrictOp_atMostCmp {σ : ExecState} {a b : Int}
+    {k k' : IntKind} :
+    applyStrictOp σ .atMostCmp [.int a k, .int b k']
+      = .ok (.bool (decide (a ≤ b)), σ) := rfl
+
+/-- `!` on a delivered bool, state-free. -/
+theorem applyStrictOp_not {σ : ExecState} {b : Bool} :
+    applyStrictOp σ .not [.bool b] = .ok (.bool (!b), σ) := rfl
+
+/-- `uint64(x)` conversion of an in-range value is the identity on the
+payload. -/
+theorem applyStrictOp_convert_u64 {σ : ExecState} {a : Nat} {k : IntKind}
+    (ha : a < 2 ^ 64) :
+    applyStrictOp σ (.convert (.int .uint64)) [.int (a : Int) k]
+      = .ok (.int ((a : Nat) : Int) .uint64, σ) := by
+  have hraw : applyStrictOp σ (.convert (.int .uint64)) [.int (a : Int) k]
+      = .ok (.int (IntKind.normalize .uint64 (a : Int)) .uint64, σ) := rfl
+  rw [hraw, unorm_nat_of_lt ha]
 
 /-! ## The modular setup family + the zero-padded prefix (Gallery
 Campaign kit-gap closure GAP-P2, 2026-08-15)

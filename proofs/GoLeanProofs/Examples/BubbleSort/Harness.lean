@@ -37,15 +37,9 @@ set_option linter.unusedSimpArgs false
 
 /-! ## The wrap-arithmetic normal forms -/
 
-/-- A `Nat`-cast value normalizes to its wrap (the general form of
-`unorm_add_nat`'s conclusion).
--- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST (bubble)): SliceMem has
-`unorm_add_nat` but no bare-cast or multiplicative form; both sorts
-need them for the LCG setup. -/
-theorem unorm_nat (Y : Nat) :
-    IntKind.normalize .uint64 ((Y : Nat) : Int)
-      = ((Y % 2 ^ 64 : Nat) : Int) := by
-  simp [IntKind.normalize, IntKind.bits?, IntKind.signed]
+-- The bare-cast wrap form `unorm_nat` — LIFTED (WP arc s1 lift 1):
+-- the local GAP-WITNESS copy is deleted; call sites resolve to
+-- `SliceMem.unorm_nat` through the module's `open GoLean.SliceMem`.
 
 /-- The machine's three-normalize spelling of one LCG step collapses
 to the `Nat` wrap `(X*A + B) % 2^64`.

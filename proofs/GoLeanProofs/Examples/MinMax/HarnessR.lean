@@ -814,7 +814,7 @@ theorem su_iterR (σ : ExecState) (n seed : Nat) (m : Nat) (hn : n < 2 ^ 63)
       = (((seed + m) % 2 ^ 64 : Nat) : Int) from by
     rw [show ((seed : Int) + ((m : Nat) : Int))
         = (((seed + m : Nat)) : Int) from by omega]
-    exact unorm_nat_wrap _] at hB
+    exact unorm_nat _] at hB
   have hw : (0 : Int) ≤ (((seed + m) % 2 ^ 64 : Nat) : Int)
       ∧ (((seed + m) % 2 ^ 64 : Nat) : Int) < 2 ^ 64 := by
     constructor
