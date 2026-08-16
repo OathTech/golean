@@ -1,9 +1,15 @@
 <!-- PROVENANCE: this document is the VERBATIM report of reviewer 5 of the
 post-autonomy adversarial audit of the gallery campaign (2026-08-16,
 user-supervised phase), written on Fable against worktree tip
-`3aac907e`. It is landed unedited except for this header and one
-operator-appended cross-correction note at the end (R2B's count
-corrections, marked as such in the text).
+`3aac907e`. It is landed unedited except for this header and the
+OPERATOR CROSS-CORRECTION NOTE at the end — every correction lives
+there, R5's body is untouched.
+
+LINE-CITES ARE HISTORICAL: the report's `g1.md:NNNN` references were
+taken at `3aac907e`, and bucket B's edits shifted `g1.md`'s numbering
+(+213 lines). The cites no longer resolve; THE CONTENT IS INTACT AT THE
+NAMED UNITS — navigate by unit name. Details, and the two `proofs/`
+cites that are also off, in the note at the end.
 
 STATUS: DESIGN INPUT for the next arc. No decision is taken here and
 nothing in it is chartered. Every proposal it makes lives in the
@@ -185,4 +191,164 @@ The through-line: the campaign proved the kit carries examples at the *step* lev
 
 Report ends. Key sources: `docs/gallery-campaign-log/g1.md` (all gap drafts and measurements), `proofs/GoLeanProofs/{StepKit,SliceMem,MapMem,MapLoops,FuelMeasure,EntryEq}.lean`, `proofs/GoLeanProofs/Frame/{Sim,Transfer}.lean`, the five frame instantiations and five footprint copies at the file:line references in §1, `docs/2026-08-14_phase2-slice2-proof-library.md`, `docs/2026-08-15_brick-wp-promotion-wave-mapping.md`, `docs/2026-08-12_example-spec-form.md` §5b/§12, `docs/2026-08-16_gallery-campaign-trip-report.md`.
 
-NOTE (R2B cross-correction, operator-appended): R2B's audit corrected two of this report's input counts after it was written — the frame layer has FIVE hand sites (not four; the ledger understated it), and the glue combinators have ONE landed + one latent consumer (not two landed). Neither changes a priority: the frame layer's case strengthens, and the combinators remain at-bar via stack's latent consumer. R2B also found unorm_idem already exists kind-generically (HeapBridge.intKind_normalize_idem) — item 9's `unorm_idem` line becomes an import fix, not a lift.
+---
+
+## OPERATOR CROSS-CORRECTION NOTE (rewritten 2026-08-16, fix round #2)
+
+**Everything above this line is R5's report, verbatim and unedited.** Every
+correction lives here. This note replaces a shorter operator-appended note
+that was itself wrong on two points — recorded below rather than removed,
+since a correction note that needed correcting is the most useful thing in
+it.
+
+**LINE-CITES ARE HISTORICAL.** R5 wrote against worktree tip `3aac907e`
+(provenance header, and §Basis at :26). Bucket B's edits and fix round #2
+inserted lines throughout `g1.md` — it went from 3,862 lines at `3aac907e`
+to 4,075 at the time of writing (`git show
+3aac907e:docs/gallery-campaign-log/g1.md | wc -l` → 3862; `wc -l` here →
+4075) — so **the report's 21 distinct `g1.md` line-cites no longer resolve;
+they are historical addresses.** (Count:
+`grep -o 'g1\.md:[0-9][0-9]*\(-[0-9][0-9]*\)\?' docs/2026-08-16_wp-library-design.md | sort -u | wc -l`
+→ 21. Note the anchor: `[0-9][0-9]*` and not `[0-9]*`, or the pattern also
+matches the bare `g1.md:` in this note's own prose and answers 22 — the
+same off-by-one-from-a-loose-pattern trap as (e) below, met twice in one
+document.) Three
+were spot-checked and all three now land on unrelated content (`:2649-2654`
+→ was the frame-layer ledger item, now an `rle` cost row; `:3302-3308` → was
+stein's consolidation signals, now the `SliceStack` cost table; `:1320-1327`
+→ was the sealed-API sub-finding, now unrelated prose). **The CONTENT is
+intact at the named units** — find it by unit name, not by line. The
+report's cites into `proofs/` are mostly still good; two are not (see (c)).
+
+### (a) `unorm_idem` — the C4 ruling, verbatim. The old note had this BACKWARDS.
+
+The superseded note said: *"R2B also found unorm_idem already exists
+kind-generically (HeapBridge.intKind_normalize_idem) — item 9's `unorm_idem`
+line becomes an import fix, not a lift."* **The import route was REFUSED.**
+The ruling is at `proofs/GoLeanProofs/Examples/FibMemo/Rec.lean:1359-1378`,
+the docstring of `theorem unorm_idem`:
+
+> GAP-WITNESS, and a CORRECTED one (post-autonomy audit, 2026-08-16).
+> The ledger recorded this as a missing kit lemma; it is not. The
+> kind-generic statement exists as
+> `GoLean.Iris.intKind_normalize_idem` (`GoLeanProofs/HeapBridge.lean`).
+> What it does NOT have is a home an example module can import:
+> `HeapBridge` pulls in `Iris.ProgramLogic.*`, `Iris.ProofMode` and
+> `Iris.BI.Lib.GenHeap`, and no module under `Examples/` imports Iris —
+> Iris is a proof device, not an example-layer dependency (the
+> statement-TCB/layering doctrine, `docs/2026-08-01_*`). So the audit's
+> literal instruction (delete this and import HeapBridge) was NOT taken:
+> it would have made this the first example module in the tree to import
+> the Iris layer, to save four lines.
+>
+> The real item, recorded in `docs/gallery-campaign-log/g1.md` (fibmemo
+> unit, promotion ledger): lift `intKind_normalize_idem` OUT of
+> `HeapBridge` into a core/kit module (`SliceMem` or `StepKit`), then
+> both this site and `HeapBridge` consume it. Consolidation-slice work,
+> not audit-round work.
+
+So the item stays **a LIFT, not an import fix** — and note the qualifier the
+old note also got wrong: the namespace is `GoLean.Iris`, not
+`GoLean.HeapBridge` (`HeapBridge.lean:22` `namespace GoLean.Iris`, theorem
+at `:277`). The wrong qualifier hid exactly the layering fact that decides
+the ruling.
+
+### (b) GAP-P2b — kadane is **GAP-P2c**, and §1 P-B's list is stale on it
+
+§1 P-B (`:45`) lists kadane twice: once in the `seed+i` affine bucket and
+once, correctly, under "signed/Int-seeded". `:148` repeats it in the affine
+bucket. **The affine listing is wrong.** kadane's `kadFamVal` is the SIGNED
+variant — `docs/gallery-campaign-log/g1.md` records it as **GAP-P2c**
+(*"`familyMod`/`prefixPad` do not fit a SIGNED, Int-seeded family"*, kadane
+unit), and the GAP-P2b consumer list carries an explicit de-listing:
+*"kadane was listed in error (its `kadFamVal` is the SIGNED variant, i.e.
+GAP-P2c), and three landed consumers were missing"*.
+
+**R5 is not at fault here.** At `3aac907e` the ledger's own P2b list DID
+name kadane (`git show 3aac907e:.../g1.md` → *"kadane (in flight, same
+`seed + i` shape)"*). The report copied a correct-at-the-time ledger; the
+ledger was corrected in bucket B and the report was not. The corrected P2b
+consumer set is **six byte-identical copies**: minmax, dotprod, reverse,
+twosum, stack, queue. Priority unchanged — still over the §12 bar, by more
+than the report thought.
+
+### (c) Frame-layer attribution — R5 was RIGHT; the "ledger understated it" clause is now stale
+
+The superseded note read *"the frame layer has FIVE hand sites (not four;
+the ledger understated it)"*. The first half is right and the second half
+has expired. **The tree has five**, confirmed directly:
+
+```
+grep -rn 'def ρ' proofs/GoLeanProofs/Examples/
+  InsertionSort/PassFrame.lean:43  ρsh  (T=4)
+  InsertionSort/Subject.lean:586   ρ11  (T=11)
+  InsertionSort/Count.lean:770     ρ21  (T=21)
+  SelectionSort/Frame.lean:46      ρ16  (T=16)
+  BubbleSort/Frame.lean:33         ρ16  (T=16)
+```
+
+R5's body said five all along (`:55`, `:145`). The LEDGER said four at
+`3aac907e` and now says five — bucket B corrected it *(`g1.md`, lane-B
+six-example summary, promotion ledger item 1: "this line said FOUR while
+enumerating five sites")*. So the discrepancy the old note describes is
+resolved in the ledger's favour-of-R5 and no longer exists; attribute the
+five to R5, and the correction to bucket B.
+
+Two of R5's `file:line` cites for these are off by 2–3 lines (`:55` cites
+`SelectionSort/Frame.lean:44,274,499` — actual `46,276,501`; and
+`BubbleSort/Frame.lean:30,262,486` — actual `33,265,489`). The three isort
+triples are exact.
+
+### (d) `FreshFrom` — "5 copies" and "2 definitions" are both TRUE, of different things
+
+The report's "5 program-local copies" (`:26`, `:62`, `:147`) is not a count
+of definitions. **`FreshFrom` is DEFINED twice** and has been throughout:
+
+```
+grep -rn 'def FreshFrom' proofs/GoLeanProofs/
+  Examples/FibMemo/Rec.lean:86   def FreshFrom
+  Examples/Stein/Run.lean:96     private def FreshFrom
+```
+
+The five is the ledger's own breakdown — *"two FULL packs, one
+`FreshFrom`-style pack without the def, and two partial cell-algebra
+copies"* — i.e. the duplicated dead-region ALGEBRA, which is what a lift
+would actually delete. Both figures stand; state which one you mean.
+
+**One framing correction to the fix-round instruction itself:** this is NOT
+a post-C3 drift. `git grep -n 'def FreshFrom' 3aac907e` returns the same two
+hits at the same two line numbers, and `git grep -l FreshFrom 3aac907e`
+returns the same five files. **Nothing about `FreshFrom` changed between
+`3aac907e` and the tip** — the "2 definitions" figure was equally true when
+the report was written. It is a definition/breakdown mismatch, not drift.
+
+### (e) Kit pins are **116**, not 118 — the fix round was told to make this WORSE
+
+The instruction for this note said to change 116 → 118. **Checked, and
+refused: 116 is correct.** The pins are verbatim `#guard_msgs in #print
+axioms <name>` lines in `proofs/Audit/Kit.lean` (no script, no list file).
+The artifact-free command, and the only one of the three that is:
+
+```
+grep -c '^#guard_msgs in #print axioms ' proofs/Audit/Kit.lean      -> 116
+```
+
+The other two spellings both over-count on prose in the module docstring:
+`grep -c '#print axioms'` → **118** (`:25` and `:36` are English), and
+`grep -c '#guard_msgs'` → **117** (`:25` again). 118 is the unanchored
+grep's answer, not the tree's. Unchanged since `3aac907e` (same command,
+same 116; the file's last touch was `a202b402`, before the audit), so
+`INDEX.md`'s "kit pins 81 → 116" is exactly right and stays.
+
+Recorded at length because of the direction: a records pass was one paste
+away from writing a wrong number into a doc, in the name of correcting it,
+with a command that looked like a derivation. **The anchor is the
+derivation.** A count is only as good as the pattern that produced it, and
+"I ran a grep" is not a derivation until the grep is shown.
+
+### The glue combinators — unchanged, and the one clause of the old note that stands
+
+*"the glue combinators have ONE landed + one latent consumer (not two
+landed)"* — correct, and the ledger now grades `GAP-CONVERT` the same way
+(two copies, one used, one latent). Priority unchanged: at-bar via stack's
+latent consumer, recorded not lifted.
