@@ -56,48 +56,11 @@ theorem getD_of_lt {l : List Int} {k : Nat} (h : k < l.length) :
   rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem h]
   rfl
 
-theorem getD_set_self {l : List Int} {i : Nat} {v : Int}
-    (h : i < l.length) : (l.set i v).getD i 0 = v := by
-  rw [List.getD_eq_getElem?_getD, List.getElem?_set_self h]
-  rfl
-
-theorem getD_set_ne {l : List Int} {i k : Nat} {v : Int} (h : i ≠ k) :
-    (l.set i v).getD k 0 = l.getD k 0 := by
-  rw [List.getD_eq_getElem?_getD, List.getD_eq_getElem?_getD,
-    List.getElem?_set_ne h]
-
-/-! ## The adjacent-swap surgery and its count preservation -/
-
-/-- A list splits at an adjacent pair. -/
-theorem adj_decomp {l : List Int} {i : Nat} (h1 : 1 ≤ i)
-    (h2 : i < l.length) :
-    l = l.take (i - 1)
-        ++ l.getD (i - 1) 0 :: l.getD i 0 :: l.drop (i + 1) := by
-  have e1 : i - 1 + 1 = i := by omega
-  have h := (List.take_append_drop (i - 1) l).symm
-  rw [List.drop_eq_getElem_cons (show i - 1 < l.length by omega), e1,
-    List.drop_eq_getElem_cons h2, ← getD_of_lt (show i - 1 < l.length by omega),
-    ← getD_of_lt h2] at h
-  exact h
-
-/-- The machine's two stores ARE the adjacent swap. -/
-theorem adj_swap_decomp {l : List Int} {i : Nat} (h1 : 1 ≤ i)
-    (h2 : i < l.length) :
-    (l.set (i - 1) (l.getD i 0)).set i (l.getD (i - 1) 0)
-      = l.take (i - 1)
-          ++ l.getD i 0 :: l.getD (i - 1) 0 :: l.drop (i + 1) := by
-  have e1 : i - 1 + 1 = i := by omega
-  have hlt1 : i - 1 < l.length := by omega
-  rw [show l.set (i - 1) (l.getD i 0)
-        = List.take (i - 1) l ++ l.getD i 0 :: List.drop i l from by
-      rw [List.set_eq_take_append_cons_drop, if_pos hlt1, e1]]
-  have hlen : (l.take (i - 1)).length = i - 1 := by
-    rw [List.length_take]; omega
-  rw [List.set_append_right _ _ (by rw [List.length_take]; omega)]
-  rw [hlen]
-  have e2 : i - (i - 1) = 1 := by omega
-  rw [e2, List.set_cons_succ,
-    List.drop_eq_getElem_cons h2, List.set_cons_zero]
+-- `getD_set_self`/`getD_set_ne` — LIFTED (WP arc s1 lift 3): the
+-- local copies are deleted; uses resolve to `SliceMem`'s. The
+-- adjacent-pair decomposition lemmas (`adj_decomp`/`adj_swap_decomp`)
+-- are deleted with them: `bstepL`'s swap arm IS
+-- `SliceMem.swapList l (i-1) i`, so the count fact is one delegation.
 
 /-- One step preserves every element count. -/
 theorem bstepL_count {l : List Int} {i : Nat} (h2 : i < l.length)
@@ -108,15 +71,7 @@ theorem bstepL_count {l : List Int} {i : Nat} (h2 : i < l.length)
     rcases Nat.eq_zero_or_pos i with rfl | h1
     · rw [show (0 : Nat) - 1 = 0 from rfl] at hlt
       exact absurd hlt (Int.lt_irrefl _)
-    · rw [adj_swap_decomp h1 h2]
-      have hR : l.count v
-          = (l.take (i - 1)
-              ++ l.getD (i - 1) 0 :: l.getD i 0 :: l.drop (i + 1)).count
-            v := by
-        rw [← adj_decomp h1 h2]
-      rw [hR]
-      simp only [List.count_append, List.count_cons]
-      omega
+    · exact count_swapList v (by omega) h2
   · rfl
 
 /-- One step preserves length. -/

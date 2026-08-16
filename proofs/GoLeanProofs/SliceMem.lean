@@ -711,6 +711,107 @@ theorem prefixPad_full {fam : Nat → Nat → List Int}
       = fam n seed ++ List.replicate (cap - (fam n seed).length) 0 := by
   rw [prefixPad, hlen]
 
+/-! ## The swap surgery + count algebra (WP arc s1 lift 3, 2026-08-16)
+
+Pure `List Int` algebra every swap-based subject re-derives, lifted
+verbatim from `Examples/SelectionSort/Pure.lean`'s GAP-WITNESS block
+(consumers: selsort, bubble — whose `bstepL` swap arm IS
+`swapList l (i-1) i`; isort's `bubbleState_swap` is the same surgery
+in `bubbleState`-structural clothing and stays local, recorded). -/
+
+theorem getD_set_self {l : List Int} {k : Nat} {w : Int}
+    (hk : k < l.length) : (l.set k w).getD k 0 = w := by
+  rw [List.getD_eq_getElem?_getD, List.getElem?_set, if_pos rfl,
+    if_pos hk]
+  rfl
+
+theorem getD_set_ne {l : List Int} {k j : Nat} {w : Int}
+    (h : k ≠ j) : (l.set k w).getD j 0 = l.getD j 0 := by
+  rw [List.getD_eq_getElem?_getD, List.getElem?_set, if_neg h,
+    List.getD_eq_getElem?_getD]
+
+/-- The additive counting law of one `set` (no `Nat` subtraction). -/
+theorem count_set_add (v w : Int) :
+    ∀ (l : List Int) (k : Nat), k < l.length →
+    (l.set k w).count v + (if l.getD k 0 = v then 1 else 0)
+      = l.count v + (if w = v then 1 else 0) := by
+  intro l
+  induction l with
+  | nil => intro k hk; simp at hk
+  | cons x rest ih =>
+      intro k hk
+      cases k with
+      | zero =>
+          simp only [List.set_cons_zero, List.count_cons, List.getD_cons_zero,
+            beq_iff_eq]
+          omega
+      | succ kk =>
+          have hkk : kk < rest.length := by simpa using hk
+          have ih' := ih kk hkk
+          simp only [List.set_cons_succ, List.count_cons,
+            List.getD_cons_succ, beq_iff_eq]
+          omega
+
+/-- The machine's two stores, in the machine's order: `s[i] := old
+s[m]`, then `s[m] := old s[i]` (both right-hand sides were read before
+either store). At `m = i` this is a no-op on the list. -/
+def swapList (l : List Int) (i m : Nat) : List Int :=
+  (l.set i (l.getD m 0)).set m (l.getD i 0)
+
+theorem swapList_length (l : List Int) (i m : Nat) :
+    (swapList l i m).length = l.length := by
+  simp [swapList]
+
+theorem getD_swapList_fst {l : List Int} {i m : Nat}
+    (hi : i < l.length) (hm : m < l.length) :
+    (swapList l i m).getD i 0 = l.getD m 0 := by
+  by_cases him : m = i
+  · subst him
+    rw [swapList, getD_set_self (by simpa using hi)]
+  · rw [swapList, getD_set_ne him, getD_set_self hi]
+
+theorem getD_swapList_snd {l : List Int} {i m : Nat}
+    (hm : m < l.length) :
+    (swapList l i m).getD m 0 = l.getD i 0 :=
+  getD_set_self (by simpa using hm)
+
+theorem getD_swapList_other {l : List Int} {i m k : Nat}
+    (hki : k ≠ i) (hkm : k ≠ m) :
+    (swapList l i m).getD k 0 = l.getD k 0 := by
+  rw [swapList, getD_set_ne (fun h => hkm h.symm),
+    getD_set_ne (fun h => hki h.symm)]
+
+/-- **Swapping preserves every count** — the permutation half of any
+sort invariant, first-order. -/
+theorem count_swapList (v : Int) {l : List Int} {i m : Nat}
+    (hi : i < l.length) (hm : m < l.length) :
+    (swapList l i m).count v = l.count v := by
+  have h1 := count_set_add v (l.getD i 0) (l.set i (l.getD m 0)) m
+    (by simpa using hm)
+  have h2 := count_set_add v (l.getD m 0) l i hi
+  have hgm : (l.set i (l.getD m 0)).getD m 0 = l.getD m 0 := by
+    by_cases him : i = m
+    · subst him; exact getD_set_self hi
+    · exact getD_set_ne him
+  rw [hgm] at h1
+  rw [show ((l.set i (l.getD m 0)).set m (l.getD i 0)) = swapList l i m
+    from rfl] at h1
+  by_cases ha : l.getD m 0 = v <;> by_cases hb : l.getD i 0 = v <;>
+    simp [ha, hb] at h1 h2 ⊢ <;> omega
+
+/-- The range invariant survives a swap (values only move). -/
+theorem range_swapList {l : List Int} {i m : Nat}
+    (hi : i < l.length) (hm : m < l.length)
+    (hr : ∀ x ∈ l, 0 ≤ x ∧ x < 2 ^ 64) :
+    ∀ x ∈ swapList l i m, 0 ≤ x ∧ x < 2 ^ 64 := by
+  intro x hx
+  rw [swapList] at hx
+  rcases mem_set_of_mem hx with rfl | hx
+  · exact hr _ (getD_mem hi)
+  · rcases mem_set_of_mem hx with rfl | hx
+    · exact hr _ (getD_mem hm)
+    · exact hr x hx
+
 /-! ## The generic setup families (WP arc s1 lift 2, 2026-08-16)
 
 Three layers, each pre-drafted in the campaign ledger (g1.md, the
