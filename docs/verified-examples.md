@@ -2575,28 +2575,45 @@ after the first hit — the exact no-pair law is
 `n = 8`. The bound quoted here is the one the theorem actually ships;
 the measurements are recorded, not shipped.
 
-**Status.** `twosum_readout` is the run-conditioned twin;
-`twosum_first_pair` is the first-order corollary quoted above. This entry
-is NOT designated: it is absent from `Examples/Targets.lean`, the
-`scripts/ci` Targets allowlist, `Audit.lean`'s designated-name list and
-the Comparator Challenge's trusted closure — designation is arc-end work
-under user sign-off. Deletion test run 2026-08-15 by re-elaborating the
+**Status.** NOT DESIGNATED — see the note in *How to read an entry*: this
+example post-dates the 2026-08-14 designation, and designation is arc-end
+work under user sign-off, so its statement is not walked by the mechanized
+statement-TCB gate and not replayed by the Comparator judge. It is absent
+from `Examples/Targets.lean`, the `scripts/ci` Targets allowlist,
+`Audit.lean`'s designated-name list and the Comparator Challenge's
+trusted closure. `twosum_readout` is the run-conditioned twin;
+`twosum_first_pair` is the first-order corollary quoted above.
+Deletion test run 2026-08-15 by re-elaborating the
 headline with each explicit binder removed: `hcap`, `hseed` and `htgt`
 each break the proof (two sites each). No decorative hypothesis.
 
 **Ground.** Differentially green on 14 corpus rows: the four-element
 driver at a middle/first/last/absent/duplicate/degenerate-duplicate hit,
 an `int64`-boundary extreme, the one-element and empty drivers, and the
-relational harness at `n = 0`, `n = 1`, `n = 5` (interior hit), `n = 8`
-(adjacent hit at the head) and the wrap-region seed
-`9223372036854775807` with target `0`.
+relational harness at `n = 0` and `n = 1` (both below the two-element
+minimum, so both return the sentinel), `n = 5` — seed 10, target 27,
+which hits at `(3, 4)`, the FINAL adjacent pair, `13 + 14` — `n = 8` —
+seed 1, target 9, which hits at `(0, 7)`, the WIDEST pair, `1 + 8` — and
+the wrap-region seed `9223372036854775807` with target `0`, which hits
+at `(0, 2)`: `s[0] + s[2] = (2^63 − 1) + (2^63 + 1) = 2^64 ≡ 0`.
+[All three descriptors corrected 2026-08-16, fix round #3, each
+recomputed from the row's own `cases.tsv` args through the Go oracle.
+They read "`n = 5` (interior hit)" — it is the last two of five;
+"`n = 8` (adjacent hit at the head)" — it is the first and last of
+eight, the least adjacent pair there is; and the wrap row was described
+as returning the no-pair sentinel, which is the opposite of what it
+does.]
 
 What no row reaches, said plainly: the theorem covers every
 `seed, target < 2^64`, including the region where `seed + i` and the pair
 sums wrap past `2^64` — but the differential driver parses `int64`
 arguments, so no corpus row exercises a seed or target above `2^63 − 1`
 (the `harness-r-wrap` row sits exactly at that boundary, where the pair
-sums `≈ 2^64` DO wrap and the no-pair sentinel is what real Go returns).
+sums `≈ 2^64` DO wrap — and wrapping is not merely tolerated there but
+load-bearing: that row's hit at `(0, 2)` exists ONLY because
+`(2^63 − 1) + (2^63 + 1)` wraps to `0`, so the row is a positive test of
+the wrapped-addition semantics rather than a boundary that degrades to
+the sentinel).
 The full uint64 wrap region was checked on the machine only, with no
 `go run` oracle in the loop — extending the driver past `int64` is the
 recorded E1 extension (dotprod is its designated consumer).
@@ -3157,11 +3174,16 @@ cost the same steps): `419` at `n = 0`, `780` at `n = 1`, `1033` at
 (`n = 0`); the true counts are affine on `n ∈ [1, 3]` (`253·n + 527`
 exactly) with `n = 0` below the line.
 
-**Status.** `rle_readout` is the run-conditioned twin; `rle_decode` the
-first-order corollary. The deletion test was RUN (both hypotheses
+**Status.** NOT DESIGNATED — see the note in *How to read an entry*: this
+example post-dates the 2026-08-14 designation, and designation is arc-end
+work under user sign-off, so its statement is not walked by the mechanized
+statement-TCB gate and not replayed by the Comparator judge. It is absent
+from `Examples/Targets.lean`, the `scripts/ci` Targets allowlist,
+`Audit.lean`'s designated-name list and the Comparator Challenge's
+trusted closure. `rle_readout` is the run-conditioned twin; `rle_decode`
+the first-order corollary. The deletion test was RUN (both hypotheses
 load-bearing: dropping `hcap` breaks the case split, dropping `hseed`
-the entry normalization). Not designated; absent from `Targets.lean`
-and the Comparator trusted closure.
+the entry normalization).
 
 **Ground.** Differentially green on 14 corpus rows: five four-element
 `rleFourCount` drivers (mixed, distinct, all-same, alternating, and an

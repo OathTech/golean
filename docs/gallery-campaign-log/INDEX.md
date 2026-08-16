@@ -1,10 +1,18 @@
-# The Gallery Campaign log — INDEX (2026-08-15 … 2026-08-16)
+# The Gallery Campaign log — INDEX (2026-08-14 … 2026-08-16)
 
 Charter: `docs/2026-08-15_gallery-campaign.md`. This directory is the
 campaign's running record: ONE FILE PER GOAL (`g0.md` … `g4.md`) plus
 this index (per-goal totals + checkpoint summaries), so parallel
 sub-lanes never write the same file (process amendment `ea7c689a`,
-user-authorized 2026-08-15).
+user-authorized 2026-08-14).
+
+[Four date labels corrected 2026-08-16, fix round #3 — the title range,
+this line, and checkpoints 1 and 2 all read 2026-08-15. The campaign was
+chartered `eda81a05`, **2026-08-14 21:16**; `ea7c689a` is 2026-08-14
+21:52; checkpoint 1 landed with `aa455e07`, 2026-08-14 22:40; checkpoint 2
+with `a82a04ba`, 2026-08-14 23:49. The charter FILE keeps its
+`2026-08-15_` name — that is a filename, not a date claim, and renaming it
+would break every cite.]
 
 ## What the log is
 
@@ -52,10 +60,18 @@ FINAL CHECKPOINT below, which was right.)
   shim fidelity — the corpus IS the shim's conformance suite; the full
   White_Space class as byte patterns with the
   byte-scan-equals-rune-scan argument; a 600,000-trial shim-vs-stdlib
-  fuzz, 0 mismatches), then 23 guardrail rows committed RED with their
-  own full-gate re-pin (14 wordfreq + 8 fields-conformance incl.
+  fuzz, 0 mismatches), then **22 guardrail rows committed RED plus 1
+  PASSING control — 23 new ids** — with their
+  own full-gate re-pin (14 wordfreq RED + 8 fields-conformance RED incl.
   NBSP/NEL/EM/IDEOGRAPHIC splits, the U+200B negative pin, invalid
-  UTF-8 — all go-run-confirmed), then the mechanism (stdlibshim.go +
+  UTF-8 — all go-run-confirmed; the 23rd is wordfreq's `build-text`
+  setup-only row, which PASSES before the mechanism and must keep
+  passing after it) [corrected 2026-08-16, fix round #3: this said "23
+  guardrail rows committed RED", which double-counts the control as a
+  RED witness — `191e7147` records "15 rows; 14 RED at frontend-export
+  …, build-text (setup only) PASSES as the control" plus 8
+  conformance rows, and the flip count downstream is 22, not 23],
+  then the mechanism (stdlibshim.go +
   one emit hook + the injection call; NO GoCore change, NO decoder
   change, NO wire change; reserved-name collisions refuse loudly;
   Repeat/Sprint/value-position refusals byte-identical,
@@ -89,10 +105,20 @@ FINAL CHECKPOINT below, which was right.)
   2026-08-15, this checkpoint 2026-08-16. The earlier checkpoints' `G4
   0/4` lines are CORRECT and stay: the four commits sit immediately
   after checkpoint 5's tip `8b20dd37` in the linear history
-  (`git merge-base --is-ancestor` → non-zero at `8b20dd37`,
-  `5897c02b`, `b022de4e`, `300e3aa7`, `a82a04ba`), and checkpoint 6
+  (`git merge-base --is-ancestor` → non-zero at every earlier
+  checkpoint tip: `8b20dd37` cp5, `5897c02b` cp4, `a202b402` cp3,
+  `a82a04ba` cp2, `aa455e07` cp1), and checkpoint 6
   carries no totals line at all. So exactly one checkpoint was wrong,
-  and the per-goal totals table above already read 4 of 4.]
+  and the per-goal totals table above already read 4 of 4.
+  [SHA list corrected 2026-08-16, fix round #3: it read `8b20dd37`,
+  `5897c02b`, `b022de4e`, `300e3aa7`, `a82a04ba` — `b022de4e` is the
+  guardrails wave's last row commit and `300e3aa7` a kit-gap-closure
+  commit; neither is a checkpoint tip, and the tips of checkpoints 3
+  and 1 (`a202b402`, `aa455e07`) were missing. Each tip re-derived by
+  `git log -S"checkpoint <n> (unit" -- INDEX.md | tail -1`. The
+  ancestry result is unchanged — all four G4 commits are non-ancestors
+  of all five corrected tips, and ancestors of checkpoint 7's
+  `46c04c0c` — so only the citation was wrong, not the finding.]
 
 - 2026-08-15, checkpoint 6 (units G2.E3 + G1.stein, 3 commits): **THE
   SECOND EXTENSION IS BUILT, WITH ITS COMPLETE CONSUMER — G2 stands at
@@ -128,8 +154,14 @@ FINAL CHECKPOINT below, which was right.)
 - 2026-08-15, checkpoint 5 (unit G2.E1, 1 commit): **THE FIRST EXTENSION
   IS BUILT.** E1 — the differential driver's argument domain past
   `int64` — landed as 15 guardrail rows + a 3-line semantic change in
-  `tools/coverageharness` + two id renames + the re-pin, one commit, no
-  Lean source touched. Guardrails-first was MEASURED, not asserted: the
+  `tools/coverageharness` + the re-pin, one commit, no
+  Lean source touched. [Corrected 2026-08-16, fix round #3: this read
+  "+ two id renames +". **No rename landed**, and there was ONE chartered,
+  not two. `8b20dd37`'s own message heads that paragraph "THE CHARTERED
+  RENAME DID NOT LAND" and closes it "the rename was BACKED OUT"; its
+  re-pin line reads "Drift is EXACTLY the 15 new ids", which leaves no
+  room for a renamed id. The back-out is already recorded twelve lines
+  below, so this checkpoint contradicted itself.] Guardrails-first was MEASURED, not asserted: the
   15 rows were committed and run BEFORE the driver change and all 15
   failed at `stage=go-harness` with the recorded `strconv.ParseInt …
   value out of range`; after the change all 15 PASS. **No fidelity
@@ -216,7 +248,7 @@ FINAL CHECKPOINT below, which was right.)
   lines / ~2.5–3 h (was 3,890 / 3.5 h). Totals: G0 5/5; G1 1 of ≥13 +
   kit-gaps closed; G2 0; G3 22/22 dossiers; G4 0/4.
 
-- 2026-08-15, checkpoint 2 (unit G1.1, 2 commits): THE FLAGSHIP
+- 2026-08-14, checkpoint 2 (unit G1.1, 2 commits): THE FLAGSHIP
   LANDED. `histogram` — a `map[uint64]uint64` count map, a queried-key
   read and a VARIABLE-FREE `for range` — is COMPLETE on all eight
   checklist items: 13 differentially green corpus rows (campaign's
@@ -234,19 +266,31 @@ FINAL CHECKPOINT below, which was right.)
   body/binder specialization ~130, GAP-P1 the counting fold ~150,
   GAP-P2 the setup family ~83, GAP-M1 the pick step ~45, GAP-M2
   `DeadFrom` ~30) — all ABSTRACTION gaps, none capability gaps; the kit
-  carried every machine step (366 invocations, zero hand-rolled `stepFn`
+  carried every machine step (366 invocations — **UNREPRODUCIBLE: see the
+  trip report's addendum**; the figure has never been re-derived from the
+  tree under any counting rule tried, at this tip or at the flagship's own
+  landing commit `a82a04ba`, and it should not be repeated as measured
+  [qualified 2026-08-16, fix round #3] — with zero hand-rolled `stepFn`
   unfoldings). Honest verdict: the kit carried the example at the STEP
   level, not the STRUCTURE level; ~27% of the example's Lean is
   gap-witness code that closing GAP-C1/R1 would delete. Totals: G0 5/5
   + item 4 discharged; G1 1 of ≥13; G2 0; G3 22/22 dossiers; G4 0/4.
 
-- 2026-08-15, checkpoint 1 (units G0.1–G0.4 + (d), 7 commits): G0
+- 2026-08-14, checkpoint 1 (units G0.1–G0.4 + (d), 7 commits): G0
   CLOSED. Log init; brick-wp mapping note; P5 setup-iteration schema
   (kit +2 lemmas, ALL 9 shipped setup inductions retrofitted, zero
   `strongRecOn` setup copies survive); MapMem promotion (wordcount
   retrofitted −346/+17 in Pure, chartered histogram + fib-memo);
   entry-equation completion (all 10 entry eqs derived, macro gains
-  the program-generic form, example modules net −131); Audit/Kit.lean
+  the program-generic form, **example modules net −111**) [corrected
+  2026-08-16, fix round #3: this read "net −131", which matches no
+  scope of `065da117`. Re-derived with `git show --numstat --format=''
+  065da117`: the twelve modules under `Examples/` are +129/−240 =
+  **net −111**; widening to all of `proofs/` (adding `EntryEq.lean`'s
+  +55/−14, the macro's own growth) gives +184/−254 = **net −70**;
+  counting every file touched, including the `g0.md` log entry, gives
+  **net −31**. "Example modules" is the scope this line states, so
+  −111 is the figure it wanted]; Audit/Kit.lean
   (81 verbatim kit-surface axiom pins). (d): bounded-iteration
   variant assessed and deferred to its pulling G1 example. Totals:
   G0 5/5; G1–G4 untouched. Headline statements byte-unchanged
@@ -260,15 +304,39 @@ FINAL CHECKPOINT below, which was right.)
 
 **What this checkpoint covers.** Every clause below was verified at
 `8cc7b39c`, the lane-A2 integration tip — NOT at the branch tip. The
-commits after it are: `b070c10b` (this checkpoint), `3aac907e` (the
-campaign trip report) — both doc-only — and then the **post-autonomy
-audit fix round** of 2026-08-16 (buckets A–G, added under user
-supervision after the autonomous phase closed). One of those fix
-commits touches runtime code (the closure-quarantine leak in
-`tools/nativefrontend/emit.go`) and carries its own full
-`scripts/ci --diff` and baseline re-pin; clause 5's record below is the
-checkpoint's, at `8cc7b39c`, and that commit's own record supersedes it
-for the branch tip.
+commits after it, in order, are:
+
+1. `b070c10b` (this checkpoint) and `3aac907e` (the campaign trip
+   report) — both doc-only.
+2. The **post-autonomy audit fix round** of 2026-08-16, buckets A–G
+   (`798a24af`, `0ab348ce`, `9ee5f1f3`, `89a02d47`, `007b6a97`,
+   `f2c6f756`, `d813f676`, `fa240552`, `9d131a4f`), added under user
+   supervision after the autonomous phase closed. Two touch more than
+   docs: `9ee5f1f3` adds the 11 closure-quarantine corpus ids RED
+   first, and `89a02d47` is the runtime fix itself
+   (`tools/nativefrontend/emit.go`, `emitFuncLit` saving and restoring
+   the hoist flags), carrying its own full `scripts/ci --diff` and
+   re-pin. `fa240552` adds render-gallery's per-section counting check.
+3. **Fix round #2**, 2026-08-16 (`a816aa65`, `69c3b399`, `72757752`,
+   `b4179573`, `dae9055c`, `53a44689`) — records and claims, with one
+   exception: **`b4179573`** ("THE E6 REGISTER WALK — and C1 also
+   closed a fail-open hole") adds twelve
+   `bools/short-circuit-funclit` corpus rows and re-pins the baseline.
+   It touches NO frontend, GoCore or decoder code (`git show --stat`:
+   `cases.tsv`, `main.go`, `baselines/native-full.tsv`, `g2.md`).
+4. **Fix round #3**, 2026-08-16 — records and claims only, no runtime
+   code, this enumeration among them.
+
+**The superseding record for clause 5 at the branch tip is
+`b4179573`'s: 1853 cases, 1753 PASS, 100 FAIL** (`1841 → 1853` cases,
+`1743 → 1753` PASS, `98 → 100` FAIL; drift EXACTLY the twelve new ids,
+every pre-existing id keeping result and stage), which is also the
+baseline `scripts/ci` diffs against today. Clause 5's own record below
+is the checkpoint's, at `8cc7b39c`, and is left as recorded.
+[Enumeration extended through fix rounds #2 and #3 on 2026-08-16, fix
+round #3: it stopped at "the post-autonomy audit fix round" and named
+one runtime-touching commit, which was true when written and had since
+been overtaken by a second corpus re-pin.]
 
 | clause | requirement | state |
 |---|---|---|

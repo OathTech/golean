@@ -259,8 +259,16 @@ the other six buckets one each — `scripts/ci` green per commit.
 
 **The verdict, stated the way that is useful.** Proofs and gates PASSED
 everywhere the reviewers could re-derive evidence: no headline statement
-was wrong, no axiom pin moved, no gate was found failing open, and the
-differential's failing set was exactly what the baseline said. **The
+was wrong, no axiom pin moved, and the differential's failing set was
+exactly what the baseline said. **One gate WAS failing open, and the
+audit did not find it** — the E6 receive-bearing-`len` guard, silently
+disabled inside a short-circuit RHS by the same C1 defect described
+below. It surfaced only in fix round #2's register walk (`b4179573`;
+`g2.md:1160-1173`), after this sentence had already been written.
+[Corrected 2026-08-16, fix round #3: this read "no gate was found
+failing open", which was true of the audit's own findings and false as
+a statement about the tree — precisely the reading a trip report
+invites.] **The
 findings concentrated at integration seams and summary layers** — the
 places where two lanes' text met, and the places where numbers were
 restated rather than recomputed. Two examples of the class, both real:
@@ -282,6 +290,23 @@ controls are the same literal body outside a short-circuit, and a
 short-circuit with no literal; they pass before the fix and must keep
 passing after it), then the two-flag fix, then exactly 7 flips with the
 9-shape refusal boundary probe-verified byte-identical.
+
+**And it ran BOTH ways — which the audit, the fix, and the first draft
+of this report all missed.** The `make`/`append` direction over-refused:
+programs rejected that should have been accepted, fail-CLOSED, and that
+is how C1 was recorded. But `hoistForbidden` is also read as a conjunct
+by the **E6** receive-bearing-`len` guard, and inside a literal in a
+short-circuit RHS that conjunct was false — so the gate **could not fire
+at all**, and nesting a function literal in a short-circuit RHS was a
+way to walk around a fail-closed guard and take the inline lowering E6
+exists to refuse. Same missing save/restore, opposite direction. Found
+in fix round #2's register walk (`b4179573`), probe-verified against a
+reconstructed pre-C1 emitter, and recorded at `g2.md:1160-1173`. The
+lesson is in the log there and is worth repeating here: **when a fix
+restores a saved flag, the walk owed is every READER of that flag, in
+both directions** — not only the readers whose symptom was reported.
+[Added 2026-08-16, fix round #3: the report described C1 as an
+over-refusal only.]
 
 ### Claims this report and the campaign made that were FALSE — by name
 
