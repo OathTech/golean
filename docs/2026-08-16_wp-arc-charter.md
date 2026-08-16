@@ -130,6 +130,32 @@ allocation), struct-coverage examples. Each enters the arc ONLY by
 this checkpoint's re-cut or a recorded user pull.
 Recorded as a decision point, not a drift opportunity.
 
+**CHECKPOINT DISCHARGED AT KICKOFF (2026-08-16)** — the raft master
+plan (`docs/2026-08-15_raft-master-plan.md`) landed on `main` before
+this arc started; the cross-read verdict: **no re-cut**. Findings of
+record:
+1. **Raft's pre-push phase pulls no WP items.** The plan's W1–W6 are
+   frontend/subject/differential/statement work — essentially no Lean
+   proving before P3 (the push), which is exactly what this arc
+   enables. The parked list stays parked. One prediction revised:
+   raft's state maps are uint64-keyed (`map[uint64]*Progress`), so
+   key-generic MapMem may matter LESS than expected at P3, while a
+   VALUE-side/struct-cell generalization may matter more — reassess
+   when P3 is chartered, not now.
+2. **The shim-registry retirement trigger will fire in raft W1.2**
+   (`slices.SortFunc` = the second shim instance; the overrides note's
+   wart-retirement rule). That refactor belongs to the raft frontend
+   arc, NOT this arc — recorded so neither lane grabs it by accident.
+3. **Sequencing constraints, both directions:** (a) this arc is
+   ownership-disjoint from raft's W1/W2/W4 lanes (proofs-only vs
+   frontend/corpus) — they may run in parallel; (b) slices 1–2's
+   retrofits touch gallery proof files, so they must COMPLETE before
+   the re-envelope arc's re-proof wave (W3.2) starts — same files;
+   (c) the evaluator's quit-at-choice design insulates it from
+   W3.2's `Choices` reshape except through the mirror itself, where
+   the default-build drift theorem makes the exposure visible and
+   the mirror update is a known, budgeted cost of that wave.
+
 ## Slice 6 — DISCOVERABILITY close-out (LAST, covering the final
 library)
 
