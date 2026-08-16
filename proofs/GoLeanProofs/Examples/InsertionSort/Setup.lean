@@ -296,7 +296,7 @@ private theorem hIsu_iter (n seed i : Nat) (hn : n < 2 ^ 63) (hi : i < n)
     show ((seed : Nat) : Int) * ((i + 1 : Nat) : Int)
       = ((seed * (i + 1) : Nat) : Int) from
       (Int.natCast_mul seed (i + 1)).symm,
-    unorm_nat_mod (seed * (i + 1))] at h1
+    unorm_nat (seed * (i + 1))] at h1
   have h2 := hstep_Istore_setup n (seed : Int)
     (isFamily i seed ++ List.replicate (n - i) 0) i
     (((seed * (i + 1)) % 2 ^ 64 : Nat) : Int) hi

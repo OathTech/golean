@@ -77,15 +77,10 @@ abbrev selPad8 (xs : List Int) : List Int :=
 def selArr8 (xs : List Int) : GoValue :=
   .array ⟨(selPad8 xs).map (fun v => .int v .uint64)⟩
 
-/-- `unorm` on a `Nat` cast is the wrap (re-derived from
-`InsertionSort/Family.lean` — importing another example's shard for a
-4-line lemma is worse than the duplication).
--- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST (selsort)): belongs in
-`SliceMem` beside `unorm_add_nat`. -/
-theorem unorm_nat_mod (m : Nat) :
-    IntKind.normalize .uint64 ((m : Nat) : Int)
-      = (((m % 2 ^ 64 : Nat)) : Int) := by
-  simp [IntKind.normalize, IntKind.bits?, IntKind.signed]
+-- `unorm` on a `Nat` cast (`unorm_nat_mod`) — LIFTED (WP arc s1
+-- lift 1), exactly as the GAP-WITNESS note asked: it now lives in
+-- `SliceMem` as `unorm_nat`; the local copy is deleted and HarnessR's
+-- call sites consume the kit form.
 
 /-! ## The subject `Func`, in the readable spelling -/
 

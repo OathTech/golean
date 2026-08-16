@@ -118,9 +118,9 @@ private theorem fibSpec_lt_of_le_93 {n : Nat} (h : n ≤ 93) :
 wrapped at the 64-bit boundary, as Go's arithmetic wraps it. -/
 private def fibv (m : Nat) : Int := (fibSpec m % 2 ^ 64 : Nat)
 
-private theorem unorm_nat (x : Nat) :
-    IntKind.normalize .uint64 (x : Int) = ((x % 2 ^ 64 : Nat) : Int) := by
-  simp [IntKind.normalize, IntKind.bits?, IntKind.signed]
+-- (The private `unorm_nat` copy was deleted in WP arc s1 lift 1; the
+-- uses below resolve to `SliceMem.unorm_nat` through the module's
+-- `open GoLean.SliceMem`.)
 
 private theorem unorm_fibv (m : Nat) :
     IntKind.normalize .uint64 (fibv m) = fibv m := by

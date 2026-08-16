@@ -173,9 +173,9 @@ theorem lcg_norm_chain (j seed : Nat) :
       = ((lcgStep lcgA lcgB j seed * lcgA : Nat) : Int) := by
     rw [Int.natCast_mul]
     rfl
-  rw [hc, unorm_nat_mod,
+  rw [hc, unorm_nat,
     show (1442695040888963407 : Int) = ((lcgB : Nat) : Int) from rfl,
-    unorm_add_nat, unorm_nat_mod]
+    unorm_add_nat, unorm_nat]
   have hnat : ((lcgStep lcgA lcgB j seed * lcgA % 2 ^ 64 + lcgB) % 2 ^ 64)
       % 2 ^ 64 = lcgStep lcgA lcgB (j + 1) seed := by
     show _ = (lcgStep lcgA lcgB j seed * lcgA + lcgB) % 2 ^ 64

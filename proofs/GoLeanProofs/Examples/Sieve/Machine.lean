@@ -415,41 +415,10 @@ private theorem front_lookup_none {n₀ nv : Int} {m : Nat} {bs : List Bool}
     lookup_cons_ne (base_beq_false (by omega : 9 ≠ x))]
   rfl
 
-/-! ## Executable op facts (GAP-WITNESS lemmas) -/
-
-/-- GAP-WITNESS (kit gap; duplicates powmod's recorded GAP-A1
-`applyStrictOp_mul_u64` — example-local copy, the lane owner
-consolidates): uint64 `*` below the wrap threshold. -/
-theorem applyStrictOp_mul_u64 {σ : ExecState} {a b : Nat}
-    (h : a * b < 2 ^ 64) :
-    applyStrictOp σ .mul [.int (a : Int) .uint64, .int (b : Int) .uint64]
-      = .ok (.int ((a * b : Nat) : Int) .uint64, σ) := by
-  have hraw : applyStrictOp σ .mul [.int (a : Int) .uint64, .int (b : Int) .uint64]
-      = .ok (.int (IntKind.normalize .uint64 ((a : Int) * (b : Int))) .uint64, σ) := rfl
-  have hc : ((a * b : Nat) : Int) = (a : Int) * (b : Int) := by push_cast; rfl
-  rw [hraw, ← hc, unorm_nat_of_lt h]
-
-/-- GAP-WITNESS (kit gap, mirrors GAP-A1's shape at `+`): uint64 `+`
-below the wrap threshold. -/
-theorem applyStrictOp_add_u64 {σ : ExecState} {a b : Nat}
-    (h : a + b < 2 ^ 64) :
-    applyStrictOp σ .add [.int (a : Int) .uint64, .int (b : Int) .uint64]
-      = .ok (.int ((a + b : Nat) : Int) .uint64, σ) := by
-  have hraw : applyStrictOp σ .add [.int (a : Int) .uint64, .int (b : Int) .uint64]
-      = .ok (.int (IntKind.normalize .uint64 ((a : Int) + (b : Int))) .uint64, σ) := rfl
-  have hc : ((a + b : Nat) : Int) = (a : Int) + (b : Int) := by push_cast; rfl
-  rw [hraw, ← hc, unorm_nat_of_lt h]
-
-/-- GAP-WITNESS (kit gap, mirrors `applyStrictOp_lessCmp_int`): `<=`
-on ints compares the payloads, state-free. -/
-theorem applyStrictOp_atMostCmp {σ : ExecState} {a b : Int}
-    {k k' : IntKind} :
-    applyStrictOp σ .atMostCmp [.int a k, .int b k']
-      = .ok (.bool (decide (a ≤ b)), σ) := rfl
-
-/-- GAP-WITNESS (kit gap): `!` on a delivered bool, state-free. -/
-theorem applyStrictOp_not {σ : ExecState} {b : Bool} :
-    applyStrictOp σ .not [.bool b] = .ok (.bool (!b), σ) := rfl
+/-! ## Executable op facts — LIFTED (WP arc s1 lift 1): the four
+GAP-WITNESS locals (`mul_u64`/`add_u64`/`atMostCmp`/`not`) are deleted;
+call sites resolve to `SliceMem`'s completed integer family through
+the module's `open GoLean.SliceMem`. -/
 
 /-- Reading the mapped-to-`GoValue` BOOL backing at an in-range index
 (GAP-WITNESS: mirrors `SliceMem.getElem?_mapU` at `Bool`). -/

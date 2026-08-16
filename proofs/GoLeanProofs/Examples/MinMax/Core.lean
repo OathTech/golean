@@ -1449,14 +1449,9 @@ theorem setupList_set {n seed i : Nat} (hi : i < n) :
 
 /-! ### Machine-integer facts for the setup arithmetic -/
 
-/-- The wrapping normal form of a `Nat`-cast sum — the machine's uint64
-`+` IS the family's `% 2^64`. -/
-theorem unorm_nat_wrap (x : Nat) :
-    IntKind.normalize .uint64 ((x : Nat) : Int)
-      = ((x % 2 ^ 64 : Nat) : Int) := by
-  simp only [IntKind.normalize, IntKind.bits?, IntKind.signed]
-  simp only [Bool.false_eq_true, if_false]
-  omega
+-- The wrapping normal form of a `Nat` cast (`unorm_nat_wrap`) —
+-- LIFTED (WP arc s1 lift 1): the local copy is deleted; the two call
+-- sites consume `SliceMem.unorm_nat`.
 
 /-! ### Harness-layout environments, continuations, and states -/
 
@@ -1999,7 +1994,7 @@ private theorem sh_iter (n seed i : Nat) (hn : n < 2 ^ 63) (hi : i < n)
       = (((seed + i) % 2 ^ 64 : Nat) : Int) from by
     rw [show ((seed : Int) + ((i : Nat) : Int))
         = (((seed + i : Nat)) : Int) from by omega]
-    exact unorm_nat_wrap _] at hB
+    exact unorm_nat _] at hB
   -- the element store
   have hw : (0 : Int) ≤ (((seed + i) % 2 ^ 64 : Nat) : Int)
       ∧ (((seed + i) % 2 ^ 64 : Nat) : Int) < 2 ^ 64 := by

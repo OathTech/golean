@@ -1356,58 +1356,15 @@ theorem fm_seg7 (h : Heap) (na f bM a0 : Nat) (kv : Int)
     (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
       (stepFnIter_chain h1 h2) h3) h4) h5) h6) h7) h8
 
-/-- Idempotence of the uint64 normal form (Int.emod stability).
-
-GAP-WITNESS, and a CORRECTED one (post-autonomy audit, 2026-08-16).
-The ledger recorded this as a missing kit lemma; it is not. The
-kind-generic statement exists as
-`GoLean.Iris.intKind_normalize_idem` (`GoLeanProofs/HeapBridge.lean`).
-What it does NOT have is a home THIS module can import: `HeapBridge`
-pulls in `Iris.ProgramLogic.*`, `Iris.ProofMode` and
-`Iris.BI.Lib.GenHeap`, while **this file and its whole transitive
-import closure are Iris-free** (29 modules, zero under `Iris.`), and
-keeping them so preserves the FOOTPRINT layer's independence from the
-proof-device layer — Iris is a proof device, not a dependency the
-footprint style needs (the statement-TCB/layering doctrine,
-`docs/2026-08-01_*`). So the audit's literal instruction (delete this
-and import `HeapBridge`) was NOT taken: it would have put the Iris
-layer into a closure that does not otherwise contain it, to save four
-lines.
-
-**NB — corrected 2026-08-16, fix round #3; the ATTRIBUTION corrected
-again in fix round #4.** This paragraph used to argue from "no module
-under `Examples/` imports Iris". **That was false.** Measured over the
-tree: **63 of the 132 modules under `Examples/` DO transitively import
-Iris** — that number is right and stands. What round #3 got wrong is
-WHERE the dependency enters: it named `GoLeanProofs.Laws.StmtOps` "the
-gateway in every case". Re-measured in round #4, **there is no unique
-gateway.** `Laws.StmtOps` is in **62** of the 63 closures, not all 63
-(`GoLeanProofs.Examples.Fib` is the exception — it reaches Iris via
-`Laws.Assign/Call/Control/Init/Loop`, `SurfaceExit` and `Adequacy`),
-and its split is **20 modules importing it directly, 42 reaching it
-through a sibling, and 1 not reaching it at all** — not the 20/43 round
-#3 recorded. Meanwhile **six** modules that import `Iris.*` directly —
-`Lifting`, `Lang`, `HeapBridge`, `Tactics.GoWalk`, `Laws.Eval`,
-`Ghost` — appear in **all 63** closures, so no single module is the
-place the Iris layer gets in.
-The ruling is unchanged, but it stands on the DIRECT, module-local
-basis stated above — this closure is Iris-free and is worth keeping
-that way — and never on a tree-wide property the tree does not have.
-(Errata: `b5f0893c`'s commit message carries round #3's wrong
-attribution verbatim; a landed message cannot be edited, so this
-paragraph is its correction of record.)
-
-The real item, recorded in `docs/gallery-campaign-log/g1.md` (fibmemo
-unit, promotion ledger): lift `intKind_normalize_idem` OUT of
-`HeapBridge` into a core/kit module (`SliceMem` or `StepKit`), then
-both this site and `HeapBridge` consume it. Consolidation-slice work,
-not audit-round work. -/
-theorem unorm_idem (v : Int) :
-    IntKind.normalize .uint64 (IntKind.normalize .uint64 v)
-      = IntKind.normalize .uint64 v := by
-  simp only [IntKind.normalize, IntKind.bits?, IntKind.signed,
-    Bool.false_eq_true, if_false]
-  omega
+-- `unorm_idem` (uint64 normalize idempotence) — DELETED (WP arc s1
+-- lift 1, discharging the C4 resolution recorded in the long docstring
+-- that lived here): `intKind_normalize_idem` was lifted OUT of
+-- `HeapBridge` into the Iris-free `GoLean.SliceMem`, exactly as this
+-- site's promotion-ledger item asked, so this closure consumes the
+-- kind-generic kit form directly and stays Iris-free. The full C4
+-- ruling text (with its round-3/round-4 corrections) remains on record
+-- in `docs/2026-08-16_wp-library-design.md` §OPERATOR CROSS-CORRECTION
+-- NOTE (a) and `docs/gallery-campaign-log/g1.md` §Unit G1.7.
 
 /-- S8 — `r := $c0 + $c1`: allocate `r` at `na`, read both results,
 apply the wrapped addition, store. 17 steps. -/
@@ -1551,7 +1508,7 @@ theorem fm_seg8 (h : Heap) (na f a0 a1 : Nat) (c0v c1v : Int)
       show normalizeValueForTy _ tU
         (.int (IntKind.normalize .uint64 (c0v + c1v)) .uint64) = _
       simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel,
-        unorm_idem])
+        intKind_normalize_idem])
   have h11 := stepFnIter_one (stepFn_store_step
     (σ := fmSt (h ++ [(Loc.base ⟨na⟩, u64c 0)]) (na + 1))
     (σ' := { fmSt (h ++ [(Loc.base ⟨na⟩, u64c 0)]) (na + 1) with

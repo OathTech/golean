@@ -78,12 +78,9 @@ theorem isFamily_set {n seed i : Nat} (hi : i < n) :
   rw [List.set_append_right _ _ (by omega), hlen, Nat.sub_self]
   rfl
 
-/-- The uint64 normalization of a `Nat` cast IS the mod-2^64 wrap (the
-family's own wrap — no range hypothesis). -/
-theorem unorm_nat_mod (m : Nat) :
-    IntKind.normalize .uint64 ((m : Nat) : Int)
-      = (((m % 2 ^ 64 : Nat)) : Int) := by
-  simp [IntKind.normalize, IntKind.bits?, IntKind.signed]
+-- The uint64 `Nat`-cast wrap (`unorm_nat_mod`) — LIFTED (WP arc s1
+-- lift 1): the local copy is deleted; call sites (Rebuild, Setup)
+-- consume `SliceMem.unorm_nat`.
 
 -- HOISTED to `GoLeanProofs/Examples/Targets.lean` (designation, 2026-08-14):
 -- `isortHarnessFunc` is statement vocabulary of a DESIGNATED gallery headline, so it must

@@ -1557,11 +1557,10 @@ theorem applyStrictOp_sliceExpr_slice {σ : ExecState} {b : Loc}
   simp only [applyStrictOp, valueAsInt, applySlice, sliceFromSlice, hval,
     hbounds, Bind.bind, Except.bind, pure, Except.pure]
 
-/-- `uint64(·)` conversion of an integer value: one normalization. -/
-theorem applyStrictOp_convert_u64 {σ : ExecState} {v : Int} {k : IntKind} :
-    applyStrictOp σ (.convert tU64) [.int v k]
-      = .ok (.int (IntKind.normalize .uint64 v) .uint64, σ) := by
-  with_unfolding_all rfl
+-- The latent `applyStrictOp_convert_u64` copy that sat here (declared,
+-- never called — the GAP-CONVERT grading, g1.md §Unit G1.8b) was
+-- DELETED in WP arc s1 lift 1; the kit form is
+-- `SliceMem.applyStrictOp_convert_u64`.
 
 /-- The frame-return step, conditioned on the result loads: `.returning`
 at a target-bearing frame loads the pinned results and starts the

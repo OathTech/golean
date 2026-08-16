@@ -394,29 +394,21 @@ private theorem pm_iterG (b₀ e₀ m₀ mv rv bv ev nv : Int) (ch : Choices) :
           pmStateP b₀ e₀ m₀ mv rv bv (IntKind.normalize .uint64 nv) false, ch) := by
   with_unfolding_all rfl
 
-/-- GAP-WITNESS (kit gap A1): uint64 `*` below the wrap threshold. -/
+/-- uint64 `*` below the wrap threshold. (Was GAP-WITNESS A1; lifted
+to `SliceMem.applyStrictOp_mul_u64`, WP arc s1 lift 1 — the pinned
+name survives as a delegation, zero proof lines.) -/
 theorem applyStrictOp_mul_u64 {σ : ExecState} {a b : Nat} (h : a * b < 2 ^ 64) :
     applyStrictOp σ .mul [.int (a : Int) .uint64, .int (b : Int) .uint64]
-      = .ok (.int ((a * b : Nat) : Int) .uint64, σ) := by
-  have hraw : applyStrictOp σ .mul [.int (a : Int) .uint64, .int (b : Int) .uint64]
-      = .ok (.int (IntKind.normalize .uint64 ((a : Int) * (b : Int))) .uint64, σ) := rfl
-  have hc : ((a * b : Nat) : Int) = (a : Int) * (b : Int) := by push_cast; rfl
-  rw [hraw, ← hc, unorm_nat_of_lt h]
+      = .ok (.int ((a * b : Nat) : Int) .uint64, σ) :=
+  SliceMem.applyStrictOp_mul_u64 h
 
-/-- GAP-WITNESS (kit gap A2): uint64 `/` at a positive divisor. -/
+/-- uint64 `/` at a positive divisor. (Was GAP-WITNESS A2; lifted to
+`SliceMem.applyStrictOp_div_u64` — delegation, zero proof lines.) -/
 theorem applyStrictOp_div_u64 {σ : ExecState} {a b : Nat}
     (hb : 0 < b) (ha : a < 2 ^ 64) :
     applyStrictOp σ .div [.int (a : Int) .uint64, .int (b : Int) .uint64]
-      = .ok (.int ((a / b : Nat) : Int) .uint64, σ) := by
-  have hbne : (((b : Nat) : Int) == 0) = false := by
-    simp only [beq_eq_false_iff_ne, ne_eq, Int.natCast_eq_zero]; omega
-  have htdiv : Int.tdiv (a : Int) (b : Int) = ((a / b : Nat) : Int) := rfl
-  have hnorm : IntKind.normalize .uint64 ((a / b : Nat) : Int) = ((a / b : Nat) : Int) :=
-    unorm_nat_of_lt (by have := Nat.div_le_self a b; omega)
-  simp only [applyStrictOp, valueAsInt, hbne, intBinaryResult,
-    valueAsIntValue, htdiv, IntKind.compatibleResult,
-    Bool.false_eq_true, if_false, Bind.bind, Except.bind, pure, Except.pure]
-  simp only [show (IntKind.uint64 == IntKind.uint64) = true from rfl, if_true, hnorm]
+      = .ok (.int ((a / b : Nat) : Int) .uint64, σ) :=
+  SliceMem.applyStrictOp_div_u64 hb ha
 
 /-- The Go loop's own recursion. -/
 def powLoop (m r b e : Nat) : Nat :=

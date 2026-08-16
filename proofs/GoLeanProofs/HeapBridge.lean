@@ -9,6 +9,7 @@ import Iris.Std.FromMathlib
 import Iris.Std.GenSetsInstances
 import GoLean.GoCore.MachineSound
 import GoLeanProofs.Lang
+import GoLeanProofs.SliceMem
 
 /-!
 # The heap model bridge
@@ -273,11 +274,16 @@ theorem execState_pin_eq {σ : ExecState} {T : TypeEnv} {F : Array Func}
 
 /-- `IntKind.normalize` is idempotent. The fact behind discharging the store
 witnesses' `hstore` to zero hypotheses: a store of an already-normalized int at
-a `.int kind`-typed cell re-normalizes to the same value. -/
+a `.int kind`-typed cell re-normalizes to the same value.
+
+(WP arc s1 lift 1, the C4 resolution: the proof now lives in the
+Iris-free `GoLean.SliceMem` — this module's closure pulls the whole
+Iris layer, which the footprint-style example closures must not
+inherit for a four-line arithmetic fact. This name DELEGATES so no
+`HeapBridge` consumer moves.) -/
 theorem intKind_normalize_idem (kind : IntKind) (v : Int) :
-    kind.normalize (kind.normalize v) = kind.normalize v := by
-  cases kind <;> simp [IntKind.normalize, IntKind.bits?, IntKind.signed] <;>
-    (repeat' split) <;> omega
+    kind.normalize (kind.normalize v) = kind.normalize v :=
+  GoLean.SliceMem.intKind_normalize_idem kind v
 
 /-- Pure interpreter fact closing the witnesses' `hstore` premise: storing a
 normalized int into an int-typed cell succeeds and yields exactly the updated

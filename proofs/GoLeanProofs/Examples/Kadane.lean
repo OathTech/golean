@@ -709,12 +709,13 @@ uint64 kind; kadane is the wave's only SIGNED example, so their int64
 mirrors live here as local copies until a second signed consumer
 promotes them into `SliceMem`/`StepKit`. -/
 
-/-- GAP-WITNESS (kit gap i64-ops): an int64 value in Go range is its
-own normal form. -/
+/-- An int64 value in Go range is its own normal form. (Was
+GAP-WITNESS i64-ops; WP arc s1 lift 1: the pinned name survives as a
+delegation to the kind-generic `SliceMem.normalize_of_range_signed`,
+zero proof lines.) -/
 theorem inorm64_of_range {v : Int} (h0 : -(2 ^ 63) ≤ v) (h1 : v < 2 ^ 63) :
-    IntKind.normalize .int64 v = v := by
-  simp only [IntKind.normalize, IntKind.bits?, IntKind.signed, if_true]
-  split <;> omega
+    IntKind.normalize .int64 v = v :=
+  SliceMem.normalize_of_range_signed (bits := 63) rfl rfl h0 h1
 
 /-- The `Nat`-cast corner (loop counters). -/
 theorem inorm64_nat_of_lt {x : Nat} (h : x < 2 ^ 63) :
