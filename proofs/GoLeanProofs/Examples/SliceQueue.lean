@@ -386,27 +386,21 @@ prefix reuses the kit's `prefixPad` generically (GAP-P2 lift). -/
 def qFam (n seed : Nat) : List Int :=
   (List.range n).map (fun i => (((seed + i) % 2 ^ 64 : Nat) : Int))
 
-theorem qFam_length (n seed : Nat) : (qFam n seed).length = n := by
-  simp [qFam]
+theorem qFam_length (n seed : Nat) : (qFam n seed).length = n :=
+  familyF_length id n seed
 
 theorem qFam_range (n seed : Nat) :
-    ∀ v ∈ qFam n seed, 0 ≤ v ∧ v < 2 ^ 64 := by
-  intro v hv
-  simp only [qFam, List.mem_map, List.mem_range] at hv
-  obtain ⟨i, -, rfl⟩ := hv
-  have : (seed + i) % 2 ^ 64 < 2 ^ 64 := Nat.mod_lt _ (by omega)
-  omega
+    ∀ v ∈ qFam n seed, 0 ≤ v ∧ v < 2 ^ 64 :=
+  familyF_range id n seed
 
 theorem qFam_succ (i seed : Nat) :
     qFam (i + 1) seed
-      = qFam i seed ++ [(((seed + i) % 2 ^ 64 : Nat) : Int)] := by
-  simp [qFam, List.range_succ]
+      = qFam i seed ++ [(((seed + i) % 2 ^ 64 : Nat) : Int)] :=
+  familyF_succ id i seed
 
 theorem qFam_getD {n seed m : Nat} (hm : m < n) :
-    (qFam n seed).getD m 0 = (((seed + m) % 2 ^ 64 : Nat) : Int) := by
-  rw [qFam, List.getD_eq_getElem?_getD, List.getElem?_map,
-    List.getElem?_eq_getElem (by simpa using hm)]
-  simp
+    (qFam n seed).getD m 0 = (((seed + m) % 2 ^ 64 : Nat) : Int) :=
+  familyF_getD (f := id) hm
 
 /-- FIFO's list form: the first `k` enqueued values are the family's
 `min k n`-prefix. -/
@@ -430,13 +424,8 @@ theorem qPre_range {m seed : Nat} :
 
 theorem qPre_set {seed m : Nat} (hm : m < 8) :
     (qPre m seed).set m (((seed + m) % 2 ^ 64 : Nat) : Int)
-      = qPre (m + 1) seed := by
-  have hlen : (qFam m seed).length = m := qFam_length m seed
-  have hnm : 8 - m = (8 - (m + 1)) + 1 := by omega
-  rw [qPre, prefixPad, List.set_append_right _ _ (by omega), hlen,
-    Nat.sub_self, hnm, List.replicate_succ, List.set_cons_zero]
-  rw [qPre, prefixPad, qFam_succ]
-  simp
+      = qPre (m + 1) seed :=
+  prefixPad_familyF_set (f := id) hm
 
 theorem qPre_full {n seed : Nat} :
     qPre n seed

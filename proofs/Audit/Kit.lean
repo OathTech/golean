@@ -98,11 +98,13 @@ vocabulary defs) -/
 #guard_msgs in #print axioms GoLean.Surface.natFromNonneg_cast
 
 /-! ## SliceMem — slice-in-memory vocabulary + executable op facts
-(42 public lemmas; +11 in the GAP-P2 family/prefix lift, 2026-08-15;
+(72 public lemmas; +11 in the GAP-P2 family/prefix lift, 2026-08-15;
 +14 in the WP arc s1 lift 1 — the normal-form/op-fact family
-completion + the C4 `intKind_normalize_idem` lift-out-of-HeapBridge —
-the `familyMod`/`prefixPad` defs are unpinned like the other
-vocabulary defs) -/
+completion + the C4 `intKind_normalize_idem` lift-out-of-HeapBridge;
++30 in the WP arc s1 lift 2 — the generic family layer
+`familyZ`/`padZ`/`familyF`/`familyOf`/`takePad` — the
+`familyMod`/`prefixPad`/family/`iterStep` defs are unpinned like the
+other vocabulary defs) -/
 
 /-- info: 'GoLean.SliceMem.unorm_of_range' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.SliceMem.unorm_of_range
@@ -171,6 +173,70 @@ vocabulary defs) -/
 #guard_msgs in #print axioms GoLean.SliceMem.applyStrictOp_not
 /-- info: 'GoLean.SliceMem.applyStrictOp_convert_u64' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.SliceMem.applyStrictOp_convert_u64
+
+-- WP arc s1 lift 2 (2026-08-16): the generic family layer.
+-- Transcribed verbatim from a fresh probe (`.tmp/pinprobe2.lean`
+-- at the lift commit).
+/-- info: 'GoLean.SliceMem.familyZ_length' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.familyZ_length
+/-- info: 'GoLean.SliceMem.familyZ_mem' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.familyZ_mem
+/-- info: 'GoLean.SliceMem.familyZ_succ' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.familyZ_succ
+/-- info: 'GoLean.SliceMem.familyZ_set' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.familyZ_set
+/-- info: 'GoLean.SliceMem.familyZ_getD' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.familyZ_getD
+/-- info: 'GoLean.SliceMem.padZ_zero' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.padZ_zero
+/-- info: 'GoLean.SliceMem.padZ_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.padZ_length
+/-- info: 'GoLean.SliceMem.padZ_set' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.padZ_set
+/-- info: 'GoLean.SliceMem.padZ_set_any' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.padZ_set_any
+/-- info: 'GoLean.SliceMem.padZ_range' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.padZ_range
+/-- info: 'GoLean.SliceMem.familyMod_eq_familyF' does not depend on any axioms -/
+#guard_msgs in #print axioms GoLean.SliceMem.familyMod_eq_familyF
+/-- info: 'GoLean.SliceMem.familyF_length' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.familyF_length
+/-- info: 'GoLean.SliceMem.familyF_range' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.familyF_range
+/-- info: 'GoLean.SliceMem.familyFZ_range' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.familyFZ_range
+/-- info: 'GoLean.SliceMem.familyF_succ' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.familyF_succ
+/-- info: 'GoLean.SliceMem.familyF_set' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.familyF_set
+/-- info: 'GoLean.SliceMem.familyF_getD' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.familyF_getD
+/-- info: 'GoLean.SliceMem.prefixPad_familyF_set' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.prefixPad_familyF_set
+/-- info: 'GoLean.SliceMem.iterStep_lt' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.iterStep_lt
+/-- info: 'GoLean.SliceMem.familyOf_length' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.familyOf_length
+/-- info: 'GoLean.SliceMem.familyOf_range' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.familyOf_range
+/-- info: 'GoLean.SliceMem.familyOfZ_range' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.familyOfZ_range
+/-- info: 'GoLean.SliceMem.familyOf_succ' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.familyOf_succ
+/-- info: 'GoLean.SliceMem.familyOf_set' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.familyOf_set
+/-- info: 'GoLean.SliceMem.familyOf_getD' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.familyOf_getD
+/-- info: 'GoLean.SliceMem.takePad_zero' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.SliceMem.takePad_zero
+/-- info: 'GoLean.SliceMem.takePad_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.takePad_length
+/-- info: 'GoLean.SliceMem.takePad_range' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.takePad_range
+/-- info: 'GoLean.SliceMem.takePad_set' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.takePad_set
+/-- info: 'GoLean.SliceMem.takePad_full' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.takePad_full
 
 /-- info: 'GoLean.SliceMem.familyMod_length' depends on axioms: [propext] -/
 #guard_msgs in #print axioms GoLean.SliceMem.familyMod_length

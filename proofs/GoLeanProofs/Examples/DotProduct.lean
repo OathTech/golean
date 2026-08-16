@@ -271,19 +271,15 @@ def dpFamA (n seed : Nat) : List Int :=
 def dpFamB (n : Nat) : List Int :=
   (List.range n).map (fun i => ((i + 1 : Nat) : Int))
 
-theorem dpFamA_length (n seed : Nat) : (dpFamA n seed).length = n := by
-  simp [dpFamA]
+theorem dpFamA_length (n seed : Nat) : (dpFamA n seed).length = n :=
+  familyF_length id n seed
 
 theorem dpFamB_length (n : Nat) : (dpFamB n).length = n := by
   simp [dpFamB]
 
 theorem dpFamA_range (n seed : Nat) :
-    ∀ v ∈ dpFamA n seed, 0 ≤ v ∧ v < 2 ^ 64 := by
-  intro v hv
-  simp only [dpFamA, List.mem_map, List.mem_range] at hv
-  obtain ⟨i, -, rfl⟩ := hv
-  have : (seed + i) % 2 ^ 64 < 2 ^ 64 := Nat.mod_lt _ (by omega)
-  omega
+    ∀ v ∈ dpFamA n seed, 0 ≤ v ∧ v < 2 ^ 64 :=
+  familyF_range id n seed
 
 theorem dpFamB_range {n : Nat} (hn : n < 2 ^ 64) :
     ∀ v ∈ dpFamB n, 0 ≤ v ∧ v < 2 ^ 64 := by
@@ -294,12 +290,8 @@ theorem dpFamB_range {n : Nat} (hn : n < 2 ^ 64) :
 
 theorem dpFamAZ_range {n seed i : Nat} :
     ∀ v ∈ dpFamA i seed ++ List.replicate (n - i) (0 : Int),
-      0 ≤ v ∧ v < 2 ^ 64 := by
-  intro v hv
-  rcases List.mem_append.mp hv with hv | hv
-  · exact dpFamA_range i seed v hv
-  · rcases List.mem_replicate.mp hv with ⟨-, rfl⟩
-    omega
+      0 ≤ v ∧ v < 2 ^ 64 :=
+  familyFZ_range (f := id)
 
 theorem dpFamBZ_range {n i : Nat} (hi : i < 2 ^ 64) :
     ∀ v ∈ dpFamB i ++ List.replicate (n - i) (0 : Int),
@@ -312,8 +304,8 @@ theorem dpFamBZ_range {n i : Nat} (hi : i < 2 ^ 64) :
 
 theorem dpFamA_succ (i seed : Nat) :
     dpFamA (i + 1) seed
-      = dpFamA i seed ++ [(((seed + i) % 2 ^ 64 : Nat) : Int)] := by
-  simp [dpFamA, List.range_succ]
+      = dpFamA i seed ++ [(((seed + i) % 2 ^ 64 : Nat) : Int)] :=
+  familyF_succ id i seed
 
 theorem dpFamB_succ (i : Nat) :
     dpFamB (i + 1) = dpFamB i ++ [((i + 1 : Nat) : Int)] := by
@@ -323,12 +315,8 @@ theorem dpFamB_succ (i : Nat) :
 theorem dpFamA_set {n seed i : Nat} (hi : i < n) :
     (dpFamA i seed ++ List.replicate (n - i) 0).set i
         (((seed + i) % 2 ^ 64 : Nat) : Int)
-      = dpFamA (i + 1) seed ++ List.replicate (n - (i + 1)) 0 := by
-  have hlen : (dpFamA i seed).length = i := dpFamA_length i seed
-  have hnm : n - i = (n - (i + 1)) + 1 := by omega
-  rw [List.set_append_right _ _ (by omega), hlen, Nat.sub_self, hnm,
-    List.replicate_succ, List.set_cons_zero, dpFamA_succ]
-  simp
+      = dpFamA (i + 1) seed ++ List.replicate (n - (i + 1)) 0 :=
+  familyF_set (f := id) hi
 
 /-- One setup store advances the B-family prefix. -/
 theorem dpFamB_set {n i : Nat} (hi : i < n) :
@@ -341,10 +329,8 @@ theorem dpFamB_set {n i : Nat} (hi : i < n) :
   simp
 
 theorem dpFamA_getD {n seed m : Nat} (hm : m < n) :
-    (dpFamA n seed).getD m 0 = (((seed + m) % 2 ^ 64 : Nat) : Int) := by
-  rw [dpFamA, List.getD_eq_getElem?_getD, List.getElem?_map,
-    List.getElem?_eq_getElem (by simpa using hm)]
-  simp
+    (dpFamA n seed).getD m 0 = (((seed + m) % 2 ^ 64 : Nat) : Int) :=
+  familyF_getD (f := id) hm
 
 theorem dpFamB_getD {n m : Nat} (hm : m < n) :
     (dpFamB n).getD m 0 = ((m + 1 : Nat) : Int) := by

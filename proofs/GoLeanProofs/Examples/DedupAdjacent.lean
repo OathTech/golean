@@ -516,49 +516,35 @@ integer division, so ADJACENT PAIRS REPEAT. -/
 def ddFamily (n seed : Nat) : List Int :=
   (List.range n).map (fun i => (((seed + i / 2) % 2 ^ 64 : Nat) : Int))
 
-theorem ddFamily_length (n seed : Nat) : (ddFamily n seed).length = n := by
-  simp [ddFamily]
+theorem ddFamily_length (n seed : Nat) : (ddFamily n seed).length = n :=
+  familyF_length (· / 2) n seed
 
 theorem ddFamily_range (n seed : Nat) :
-    ∀ v ∈ ddFamily n seed, 0 ≤ v ∧ v < 2 ^ 64 := by
-  intro v hv
-  simp only [ddFamily, List.mem_map, List.mem_range] at hv
-  obtain ⟨i, -, rfl⟩ := hv
-  have : (seed + i / 2) % 2 ^ 64 < 2 ^ 64 := Nat.mod_lt _ (by omega)
-  omega
+    ∀ v ∈ ddFamily n seed, 0 ≤ v ∧ v < 2 ^ 64 :=
+  familyF_range (· / 2) n seed
 
 theorem ddFamilyZ_range {n seed i : Nat} :
     ∀ v ∈ ddFamily i seed ++ List.replicate (n - i) (0 : Int),
-      0 ≤ v ∧ v < 2 ^ 64 := by
-  intro v hv
-  rcases List.mem_append.mp hv with hv | hv
-  · exact ddFamily_range i seed v hv
-  · rcases List.mem_replicate.mp hv with ⟨-, rfl⟩
-    omega
+      0 ≤ v ∧ v < 2 ^ 64 :=
+  familyFZ_range (f := (· / 2))
 
 theorem ddFamily_succ (i seed : Nat) :
     ddFamily (i + 1) seed
-      = ddFamily i seed ++ [(((seed + i / 2) % 2 ^ 64 : Nat) : Int)] := by
-  simp [ddFamily, List.range_succ]
+      = ddFamily i seed ++ [(((seed + i / 2) % 2 ^ 64 : Nat) : Int)] :=
+  familyF_succ (· / 2) i seed
 
 /-- One setup store advances the family prefix. -/
 theorem ddFamily_set {n seed i : Nat} (hi : i < n) :
     (ddFamily i seed ++ List.replicate (n - i) 0).set i
         (((seed + i / 2) % 2 ^ 64 : Nat) : Int)
-      = ddFamily (i + 1) seed ++ List.replicate (n - (i + 1)) 0 := by
-  have hlen : (ddFamily i seed).length = i := ddFamily_length i seed
-  have hnm : n - i = (n - (i + 1)) + 1 := by omega
-  rw [List.set_append_right _ _ (by omega), hlen, Nat.sub_self, hnm,
-    List.replicate_succ, List.set_cons_zero, ddFamily_succ]
-  simp
+      = ddFamily (i + 1) seed ++ List.replicate (n - (i + 1)) 0 :=
+  familyF_set (f := (· / 2)) hi
 
 /-- The family's element at an in-range index. -/
 theorem ddFamily_getD {n seed m : Nat} (hm : m < n) :
     (ddFamily n seed).getD m 0
-      = (((seed + m / 2) % 2 ^ 64 : Nat) : Int) := by
-  rw [ddFamily, List.getD_eq_getElem?_getD, List.getElem?_map,
-    List.getElem?_eq_getElem (by simpa using hm)]
-  simp
+      = (((seed + m / 2) % 2 ^ 64 : Nat) : Int) :=
+  familyF_getD (f := (· / 2)) hm
 
 /-- The `pre` copy-loop invariant list: the family prefix, zero tail
 (the kit's `prefixPad` at the local family). -/

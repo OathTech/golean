@@ -103,50 +103,36 @@ def rleFamily (n seed : Nat) : List Int :=
   (List.range n).map (fun i => (((seed + i / 3) % 2 ^ 64 : Nat) : Int))
 
 theorem rleFamily_length (n seed : Nat) :
-    (rleFamily n seed).length = n := by
-  simp [rleFamily]
+    (rleFamily n seed).length = n :=
+  familyF_length (· / 3) n seed
 
 theorem rleFamily_range (n seed : Nat) :
-    ∀ v ∈ rleFamily n seed, 0 ≤ v ∧ v < 2 ^ 64 := by
-  intro v hv
-  simp only [rleFamily, List.mem_map, List.mem_range] at hv
-  obtain ⟨i, -, rfl⟩ := hv
-  have : (seed + i / 3) % 2 ^ 64 < 2 ^ 64 := Nat.mod_lt _ (by omega)
-  omega
+    ∀ v ∈ rleFamily n seed, 0 ≤ v ∧ v < 2 ^ 64 :=
+  familyF_range (· / 3) n seed
 
 /-- The family prefix with a zero tail stays in uint64 range. -/
 theorem rleFamilyZ_range {n seed i : Nat} :
     ∀ v ∈ rleFamily i seed ++ List.replicate (n - i) (0 : Int),
-      0 ≤ v ∧ v < 2 ^ 64 := by
-  intro v hv
-  rcases List.mem_append.mp hv with hv | hv
-  · exact rleFamily_range i seed v hv
-  · rcases List.mem_replicate.mp hv with ⟨-, rfl⟩
-    omega
+      0 ≤ v ∧ v < 2 ^ 64 :=
+  familyFZ_range (f := (· / 3))
 
 theorem rleFamily_succ (i seed : Nat) :
     rleFamily (i + 1) seed
-      = rleFamily i seed ++ [(((seed + i / 3) % 2 ^ 64 : Nat) : Int)] := by
-  simp [rleFamily, List.range_succ]
+      = rleFamily i seed ++ [(((seed + i / 3) % 2 ^ 64 : Nat) : Int)] :=
+  familyF_succ (· / 3) i seed
 
 /-- One setup store advances the family prefix. -/
 theorem rleFamily_set {n seed i : Nat} (hi : i < n) :
     (rleFamily i seed ++ List.replicate (n - i) 0).set i
         (((seed + i / 3) % 2 ^ 64 : Nat) : Int)
-      = rleFamily (i + 1) seed ++ List.replicate (n - (i + 1)) 0 := by
-  have hlen : (rleFamily i seed).length = i := rleFamily_length i seed
-  have hnm : n - i = (n - (i + 1)) + 1 := by omega
-  rw [List.set_append_right _ _ (by omega), hlen, Nat.sub_self, hnm,
-    List.replicate_succ, List.set_cons_zero, rleFamily_succ]
-  simp
+      = rleFamily (i + 1) seed ++ List.replicate (n - (i + 1)) 0 :=
+  familyF_set (f := (· / 3)) hi
 
 /-- The family's element at an in-range index. -/
 theorem rleFamily_getD {n seed m : Nat} (hm : m < n) :
     (rleFamily n seed).getD m 0
-      = (((seed + m / 3) % 2 ^ 64 : Nat) : Int) := by
-  rw [rleFamily, List.getD_eq_getElem?_getD, List.getElem?_map,
-    List.getElem?_eq_getElem (by simpa using hm)]
-  simp
+      = (((seed + m / 3) % 2 ^ 64 : Nat) : Int) :=
+  familyF_getD (f := (· / 3)) hm
 
 /-- On `n ≤ 3` the family is CONSTANT (`i/3 = 0`): one run. This is
 what confines the shipped machine run to the single-run regime — the

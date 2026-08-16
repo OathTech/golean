@@ -1371,8 +1371,8 @@ theorem minmaxHarness_pin :
 /-! ### The pure layer: the family and the setup-prefix surgery -/
 
 theorem mmFamily_length (n seed : Nat) :
-    (mmFamily n seed).length = n := by
-  simp [mmFamily]
+    (mmFamily n seed).length = n :=
+  familyF_length id n seed
 
 theorem mmFamily_ne_nil {n seed : Nat} (h1 : 1 ≤ n) :
     mmFamily n seed ≠ [] := by
@@ -1382,18 +1382,12 @@ theorem mmFamily_ne_nil {n seed : Nat} (h1 : 1 ≤ n) :
   omega
 
 theorem mmFamily_getD {n seed i : Nat} (hi : i < n) :
-    (mmFamily n seed).getD i 0 = (((seed + i) % 2 ^ 64 : Nat) : Int) := by
-  simp [mmFamily, List.getD_eq_getElem?_getD, List.getElem?_map,
-    List.getElem?_range hi]
+    (mmFamily n seed).getD i 0 = (((seed + i) % 2 ^ 64 : Nat) : Int) :=
+  familyF_getD (f := id) hi
 
 theorem mmFamily_range (n seed : Nat) :
-    ∀ v ∈ mmFamily n seed, 0 ≤ v ∧ v < 2 ^ 64 := by
-  intro v hv
-  simp only [mmFamily, List.mem_map] at hv
-  obtain ⟨i, -, rfl⟩ := hv
-  constructor
-  · omega
-  · exact_mod_cast Nat.mod_lt _ (by omega)
+    ∀ v ∈ mmFamily n seed, 0 ≤ v ∧ v < 2 ^ 64 :=
+  familyF_range id n seed
 
 /-- The setup-loop invariant list: the built family prefix, then the
 `make`'s zeros. -/
@@ -1401,51 +1395,36 @@ def setupList (n seed i : Nat) : List Int :=
   (mmFamily n seed).take i ++ List.replicate (n - i) 0
 
 theorem setupList_zero (n seed : Nat) :
-    setupList n seed 0 = List.replicate n 0 := by
-  simp [setupList]
+    setupList n seed 0 = List.replicate n 0 :=
+  takePad_zero (mmFamily n seed) n
 
 theorem setupList_full (n seed : Nat) :
     setupList n seed n = mmFamily n seed := by
-  rw [setupList, Nat.sub_self, List.replicate_zero, List.append_nil,
-    List.take_of_length_le (Nat.le_of_eq (mmFamily_length n seed))]
+  rw [show setupList n seed n = takePad (mmFamily n seed) n n from rfl,
+    takePad_full (mmFamily_length n seed)]
+  simp
 
 theorem setupList_length {n seed i : Nat} (hi : i ≤ n) :
     (setupList n seed i).length = n := by
-  simp only [setupList, List.length_append, List.length_take,
-    List.length_replicate, mmFamily_length]
-  omega
+  cases Nat.lt_or_ge i n with
+  | inl h =>
+      exact takePad_length hi (by rw [mmFamily_length]; omega)
+  | inr h =>
+      have : i = n := by omega
+      subst this
+      rw [setupList_full, mmFamily_length]
 
 theorem setupList_range (n seed i : Nat) :
-    ∀ v ∈ setupList n seed i, 0 ≤ v ∧ v < 2 ^ 64 := by
-  intro v hv
-  rcases List.mem_append.mp hv with h | h
-  · exact mmFamily_range n seed v (List.mem_of_mem_take h)
-  · rw [List.eq_of_mem_replicate h]
-    omega
-
-private theorem set_append_first {xs ys : List Int} {w : Int} :
-    (xs ++ ys).set xs.length w = xs ++ ys.set 0 w := by
-  induction xs with
-  | nil => simp
-  | cons x t ih => simp only [List.cons_append, List.length_cons, List.set, ih]
+    ∀ v ∈ setupList n seed i, 0 ≤ v ∧ v < 2 ^ 64 :=
+  takePad_range (mmFamily_range n seed)
 
 /-- **One setup store advances the prefix**: writing the family value
 at position `i` turns invariant list `i` into invariant list `i + 1`. -/
 theorem setupList_set {n seed i : Nat} (hi : i < n) :
     (setupList n seed i).set i (((seed + i) % 2 ^ 64 : Nat) : Int)
       = setupList n seed (i + 1) := by
-  have hlen : ((mmFamily n seed).take i).length = i := by
-    simp only [List.length_take, mmFamily_length]
-    omega
-  have hset := set_append_first (xs := (mmFamily n seed).take i)
-    (ys := List.replicate (n - i) 0)
-    (w := (((seed + i) % 2 ^ 64 : Nat) : Int))
-  rw [hlen] at hset
-  rw [setupList, hset, show n - i = (n - i - 1) + 1 from by omega,
-    List.replicate_succ, List.set_cons_zero, setupList,
-    take_succ_snoc (by rw [mmFamily_length]; exact hi), mmFamily_getD hi,
-    show n - (i + 1) = n - i - 1 from by omega]
-  simp [List.append_assoc]
+  rw [← mmFamily_getD hi]
+  exact takePad_set (by rw [mmFamily_length]; omega) hi
 
 /-! ### Machine-integer facts for the setup arithmetic -/
 

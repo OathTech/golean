@@ -62,24 +62,40 @@ def lcgStep (a b : Nat) : Nat → Nat → Nat
   | 0, x => x
   | k + 1, x => (lcgStep a b k x * a + b) % 2 ^ 64
 
+/-- GAP CLOSED (WP arc s1 lift 2): `lcgStep` IS the kit's `iterStep`
+at the wrapping LCG step function — the bridge that makes `lcgFamily`
+a `SliceMem.familyOf` instance. -/
+theorem lcgStep_eq_iterStep (a b k x : Nat) :
+    lcgStep a b k x = iterStep (fun y => (y * a + b) % 2 ^ 64) k x := by
+  induction k with
+  | zero => rfl
+  | succ k ih => simp [lcgStep, iterStep, ih]
+
 theorem lcgStep_lt {a b k x : Nat} (hk : 0 < k) : lcgStep a b k x < 2 ^ 64 := by
-  cases k with
-  | zero => omega
-  | succ k => exact Nat.mod_lt _ (by omega)
+  rw [lcgStep_eq_iterStep]
+  exact iterStep_lt (fun y => Nat.mod_lt _ (by omega)) hk
 
 /-- The setup family: `s[i]` is the LCG's `(i+1)`-th iterate. -/
 def lcgFamily (a b n seed : Nat) : List Int :=
   (List.range n).map (fun i => ((lcgStep a b (i + 1) seed : Nat) : Int))
 
+/-- The `familyOf` connection (definitional through
+`lcgStep_eq_iterStep`); the six facts below delegate to the kit's
+generic `familyZ` layer. -/
+theorem lcgFamily_eq_familyOf (a b : Nat) :
+    lcgFamily a b = familyOf (fun y => (y * a + b) % 2 ^ 64) := by
+  funext n seed
+  simp [lcgFamily, familyOf, lcgStep_eq_iterStep]
+
 theorem lcgFamily_length (a b n seed : Nat) :
-    (lcgFamily a b n seed).length = n := by
-  simp [lcgFamily]
+    (lcgFamily a b n seed).length = n :=
+  familyZ_length _ n
 
 theorem lcgFamily_range (a b n seed : Nat) :
     ∀ v ∈ lcgFamily a b n seed, 0 ≤ v ∧ v < 2 ^ 64 := by
   intro v hv
-  simp only [lcgFamily, List.mem_map, List.mem_range] at hv
-  obtain ⟨i, -, rfl⟩ := hv
+  obtain ⟨i, -, rfl⟩ := familyZ_mem (g := fun i =>
+    ((lcgStep a b (i + 1) seed : Nat) : Int)) hv
   have : lcgStep a b (i + 1) seed < 2 ^ 64 := lcgStep_lt (by omega)
   omega
 
@@ -95,27 +111,21 @@ theorem lcgFamilyZ_range {a b n seed i : Nat} :
 
 theorem lcgFamily_succ (a b i seed : Nat) :
     lcgFamily a b (i + 1) seed
-      = lcgFamily a b i seed ++ [((lcgStep a b (i + 1) seed : Nat) : Int)] := by
-  simp [lcgFamily, List.range_succ]
+      = lcgFamily a b i seed ++ [((lcgStep a b (i + 1) seed : Nat) : Int)] :=
+  familyZ_succ _ i
 
 /-- One setup store advances the family prefix. -/
 theorem lcgFamily_set {a b n seed i : Nat} (hi : i < n) :
     (lcgFamily a b i seed ++ List.replicate (n - i) 0).set i
         ((lcgStep a b (i + 1) seed : Nat) : Int)
-      = lcgFamily a b (i + 1) seed ++ List.replicate (n - (i + 1)) 0 := by
-  have hlen : (lcgFamily a b i seed).length = i := lcgFamily_length a b i seed
-  have hnm : n - i = (n - (i + 1)) + 1 := by omega
-  rw [List.set_append_right _ _ (by omega), hlen, Nat.sub_self, hnm,
-    List.replicate_succ, List.set_cons_zero, lcgFamily_succ]
-  simp
+      = lcgFamily a b (i + 1) seed ++ List.replicate (n - (i + 1)) 0 :=
+  familyZ_set hi
 
 /-- The family's element at an in-range index. -/
 theorem lcgFamily_getD {a b n seed m : Nat} (hm : m < n) :
     (lcgFamily a b n seed).getD m 0
-      = ((lcgStep a b (m + 1) seed : Nat) : Int) := by
-  rw [lcgFamily, List.getD_eq_getElem?_getD, List.getElem?_map,
-    List.getElem?_eq_getElem (by simpa using hm)]
-  simp
+      = ((lcgStep a b (m + 1) seed : Nat) : Int) :=
+  familyZ_getD hm
 
 /-! ## The sorted-permutation bridge
 
