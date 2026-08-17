@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+left-first	binopLeftIndexFirst	-	panic	index out of range [8]	indexing,division,panic,evaluation_order
+call-before-left	binopCallBeforeLeftIndex	-	ok	-	indexing,calls,closures,evaluation_order
+call-before-left-div	binopCallBeforeLeftDiv	-	ok	-	indexing,calls,closures,division,evaluation_order

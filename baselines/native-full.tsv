@@ -1,45 +1,18 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-16  commit: fix round #2, item 6 — the E6 register
-#   walk, and 12 guardrail rows for the literal-in-short-circuit boundary
-#   re-pin reason: TWELVE NEW IDS, no other change. Drift against the
-#   previous baseline is exactly these twelve; every pre-existing id
-#   keeps its result and its stage. No frontend, GoCore or decoder code
-#   is touched by this commit — the rows are corpus-only, pinning
-#   behaviour the C1 fix (89a02d47) already shipped but never pinned.
+# recorded: 2026-08-17  commit: 9b6931af+ (spec-truth P2 slice 2 — E12
+#   guardrails: binop-order/operand-panic-vs-call/{left-first,
+#   call-before-left,call-before-left-div})
+#   re-pin reason: THREE NEW IDS, no other change. Drift against the
+#   previous baseline is exactly these three; every pre-existing id
+#   keeps its result and its stage. The rows pin gc's observed
+#   binary-operand order (calls before non-call operand events, left
+#   before right among non-calls — latitude entry E12, closing
+#   prior-art finding F1): all three PASS, i.e. the machine's
+#   frontend-ANF realization already matches gc's. Corpus-only
+#   commit; no frontend, GoCore, or decoder code touched.
+#   Full run: 1856 cases (1756 PASS / 100 FAIL), native frontend.
 #
-#   The 10 PASS ids are shapes the C1 fix newly ADMITTED inside a
-#   function literal in a short-circuit RHS, each expected value
-#   hand-computed from the Go spec first and then confirmed by go run:
-#     admit-new{,-short}           new                  11 / 0
-#     admit-copy{,-short}          copy                 102 / 100
-#     admit-maplit{,-short}        map literal          1007 / 7
-#     admit-splat-in-lit{,-short}  multi-value splat    10005 / 0
-#     admit-elided-in-lit{,-short} elided &composite    10005 / 0
-#   The last two cover the two hoistForbidden readers C1's nine-shape
-#   remainder probe missed (splatMultiCall emit.go:1595, the elided
-#   &composite arm emit.go:4921).
-#
-#   The 2 FAIL ids are a deliberate PAIR at stage frontend-export, and
-#   they are the point of this re-pin:
-#     e6-recv-len-in-sc    receive-bearing literal with a panicking len
-#                          operand, inside &&'s RHS
-#     e6-recv-len-outside  the byte-identical body, outside any
-#                          short-circuit
-#   Both refuse, with the SAME verbatim reason ("len of a
-#   potentially-panicking operand in a receive-bearing function
-#   (hoisting would reorder its panic — BUG-032)"). go run panics on
-#   both ("interface conversion"). This is the E6 register's recorded
-#   PERMANENT refusal (docs/2026-08-11_latitude-inventory.md:450), so
-#   the two new FAILs are expected fail-closed rows, not coverage loss.
-#   Before the C1 fix only the OUTSIDE row refused: hoistForbidden was
-#   non-empty inside the literal, so the E6 gate's second conjunct
-#   (emit.go:6355) was false and the guard could not fire — nesting a
-#   literal in a short-circuit RHS walked around a fail-closed check.
-#   Probed on both emitters and recorded verbatim in
-#   docs/gallery-campaign-log/g2.md, "THE E6 REGISTER WALK".
-# manifest_cases: 1853  pass: 1753  fail: 100
-# columns: result, id, stage (features/detail omitted on purpose)
-# frontend: native (tools/nativefrontend + GoLean/NativeToIR.lean)
+result	id	stage
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -64,6 +37,9 @@ PASS	assign-order/conversion-call-eval-once/define	-
 PASS	assign-order/target-check-vs-rhs/index-target	-
 PASS	assign-order/target-check-vs-rhs/nil-deref-target	-
 PASS	assign-order/target-check-vs-rhs/nil-field-target	-
+PASS	binop-order/operand-panic-vs-call/call-before-left	-
+PASS	binop-order/operand-panic-vs-call/call-before-left-div	-
+PASS	binop-order/operand-panic-vs-call/left-first	-
 PASS	bools/generic-type-set/and-or	-
 PASS	bools/generic-type-set/equality	-
 PASS	bools/generic-type-set/inference	-

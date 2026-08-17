@@ -29,6 +29,19 @@ Classes (per the inventory charter):
 - **(c) FORCED** — the spec mandates the behavior; no latitude.
 - **(d) UNKNOWN** — latitude suspected, not yet analyzed; the open
   question is stated instead of guessed at.
+Citation norms (P2 retrofit, 2026-08-17): spec#/mem# anchor tokens
+resolve against the PINNED documents and are lint-checked
+(`scripts/check-spec-anchors`, fail closed). The JSCert-derived norm:
+every latitude RULE-SITE carries the governing clause text verbatim
+plus its anchor (E2's block at Machine.lean:2587–2626 is the model) —
+maintained while writing, not retrofitted. Anchor existence is NOT a
+content-drift signal (`977e23a707` added normative mem#restrictions
+text with no anchor/version-line change); content hashing at re-pin
+is. And the CH2O contrast, recorded so nobody imports the wrong valve:
+C formalizations can launder ambiguity and combinatorial pain into
+undefined behavior — Go has no sequential UB, so our analog is the
+REFUSED class, a tool-level visible red, never a semantic verdict.
+
 - **(q) ENVELOPE-BY-QUOTIENT** (added 2026-08-13) — the machine keeps
   ONE deterministic realization as a canonical representative, and a
   THEOREM proves every conforming alternative observationally equal
@@ -75,7 +88,11 @@ The race detector replays consumption without consuming
 
 - WHERE: spec — NONE. The spec has zero scheduling text (ground-truth
   note §1.2: pure omission latitude, bounded only by blocking rules and
-  the memory model). Machine: `runnableIdxs` Multi.lean:206–219 (the
+  the memory model). Anchors (P2 retrofit): mem#model — the HB
+  Requirements 1–3 constrain read VISIBILITY only; nothing in them
+  picks which runnable proceeds. The blocking rules that bound the
+  envelope are the sync-edge catalogue (mem#chan, mem#locks,
+  mem#once). Machine: `runnableIdxs` Multi.lean:206–219 (the
   envelope statement in situ), consumed in `stepMulti` Multi.lean:926.
 - ENVELOPE: any runnable goroutine may run next, at every registry
   boundary; width = |runnable|. Believed MAXIMAL **at registry
@@ -124,7 +141,11 @@ The race detector replays consumption without consuming
   default stream; its extra never-yielding streams are the too-wide,
   transfer-safe direction, and ∀-stream termination on that shape is
   the fairness quantifier's territory, not this re-envelope's. The
-  probe record carries both shapes.)
+  probe record carries both shapes. Anchor for the transfer-safe half,
+  P2 retrofit: mem#badsync states the registry-free spinner's
+  conformity in normative-adjacent text — "The loop in main is not
+  guaranteed to finish"; the WEDGE's bug status itself rests on the
+  sync edges existing at all, mem#chan.)
 - RE-ENVELOPE OBLIGATION + COST: add preemption points inside segments
   (loop back-edges are the registry-granularity-style candidate) —
   boundary-set change ⇒ every pinned stream shifts (BUG-040 precedent:
@@ -138,9 +159,15 @@ The race detector replays consumption without consuming
 
 ### C3. Scheduling between an op's effect and its continuation — (b) PINNED, structural: the fused effect boundary
 
-- WHERE: spec — §Program execution and the MM give no ordering between
-  one goroutine's post-synchronization progress and a woken partner's;
-  any finite interleaving is conforming. Machine: `Config.atBoundary`
+- WHERE: spec — spec#Program_execution and the MM give no ordering
+  between one goroutine's post-synchronization progress and a woken
+  partner's; any finite interleaving is conforming.
+  Anchors-from-absence (P2 retrofit): the load-bearing SILENCE is
+  mem#chan + mem#model — and note mem#chan rule (1)'s direction: a
+  send is synchronized before the COMPLETION OF THE RECEIVE, not
+  before anything in the sender's continuation, so the fused
+  boundary's excluded members are scheduling-latitude observables,
+  never HB violations. Machine: `Config.atBoundary`
   marks PRE-op apply positions only; the ONLY post-op boundary is the
   spawn-completion marker `.spawned` (Multi.lean:232–239, BUG-040's
   fix). Every other registry op's effect and the issuer's subsequent
@@ -177,10 +204,13 @@ The race detector replays consumption without consuming
 
 ### C4. How long after main's terminal other goroutines may run (L5) — (a) ENVELOPED
 
-- WHERE: spec — §Program execution: "It does not wait for other
+- WHERE: spec — spec#Program_execution: "It does not wait for other
   (non-main) goroutines to complete" — no ordering between main's
   return and others' progress; any finite continuation before teardown
-  is conforming. Machine: `execProgLoop` Multi.lean:1383–1430 (envelope
+  is conforming. Anchor addendum (P2 retrofit): mem#goexit — the
+  explicit NON-edge at goroutine exit is why the others' post-main
+  progress is unobservable unless separately synchronized, which
+  bounds what the L5 envelope can ever expose. Machine: `execProgLoop` Multi.lean:1383–1430 (envelope
   statement in situ; consume-2 at :1422, re-offered at every subsequent
   loop entry until exit picked or nothing runnable).
 - ENVELOPE: {exit now, one more pool step}* — i.e. every finite prefix
@@ -195,7 +225,9 @@ The race detector replays consumption without consuming
 ### C5. Which matching parked waiter pairs with an arriving op (L4) — (a) ENVELOPED
 
 - WHERE: spec — NONE on waiter order ("any matching waiter"; gc's FIFO
-  wakeup is one legal point). Machine: `chanArrivalPlan` docstring
+  wakeup is one legal point). mem — NONE either (P2 retrofit): mem#chan
+  matches a send to "the corresponding receive" with zero text on WHICH
+  waiter corresponds; the absence is the anchor. Machine: `chanArrivalPlan` docstring
   Multi.lean:487–537 (envelope statement), candidate enumeration in
   goroutine order / clause order within a select (Multi.lean:424–456),
   pick consumed in `stepThread` Multi.lean:879–889 only at width > 1.
@@ -212,9 +244,12 @@ The race detector replays consumption without consuming
 
 ### C6. Which ready select clause commits at entry (L2, entry + arrival paths) — (a) ENVELOPED (possibilistic weakening)
 
-- WHERE: spec — §Select statements step 3: "If one or more of the
+- WHERE: spec — spec#Select_statements step 3: "If one or more of the
   communications can proceed, a single one that can proceed is chosen
-  via a uniform pseudo-random selection." Machine: the L2 envelope
+  via a uniform pseudo-random selection." Recorded absence (P2
+  retrofit): the memory model contains NO select text — auditors of
+  C6/C7 should not hunt for a mem# cite; spec#Select_statements is the
+  entire normative basis. Machine: the L2 envelope
   statement at Machine.lean:2279–2314; entry consumption
   Machine.lean:2374; arrival-path consumption Multi.lean:700–715.
 - ENVELOPE: ANY entry-ready clause (readiness waiter-extended on the
@@ -255,7 +290,15 @@ The race detector replays consumption without consuming
 
 - WHERE: spec/DOCS — nothing on acquisition order among contenders (no
   fairness, no FIFO; gc realizes semaphore-FIFO handoff WITH barging —
-  one legal point). Machine: `applySyncOp` envelope statement
+  one legal point). Anchors (P2 retrofit): mem#locks — the n<m
+  Unlock/Lock rule orders VISIBILITY across the acquisition sequence
+  and says nothing about which contender acquires (the absence half);
+  its TryLock sentence ("may be considered to be able to return false
+  even when the mutex l is unlocked") is an explicit spec-granted
+  spurious-failure envelope member to model if TryLock ever lands.
+  mem#once carries the once.Do edge quoted at the arm; the DOCS
+  citations at the arms rest on mem#more's delegation ("document their
+  own guarantees"). Machine: `applySyncOp` envelope statement
   Machine.lean:2015–2043 (consumes nothing, ever); wake-readiness is
   cell-based (`wakeReady` Multi.lean:181–199); which ready contender
   proceeds is the existing L1 pick (sync design §6).
@@ -300,7 +343,16 @@ The race detector replays consumption without consuming
 - WHERE: MM — racy programs get essentially undefined behavior
   ("implementations may always react to a data race by reporting the
   race and terminating the program" — go_mem's escape hatch is
-  exactly a refusal license). Machine: `RaceState`/`raceUpdate`
+  exactly a refusal license). Anchors (P2 retrofit): mem#overview and
+  mem#restrictions both carry the escape hatch; mem#restrictions
+  additionally grounds (a) the limited-outcomes stance the refusal
+  deliberately declines to model, and (b) the per-sub-value any-order
+  license for array/struct/complex accesses — the normative text
+  behind O1's whole-cell over-approximation and U5's granularity
+  discussion. NOTE the anchor-stability lesson attached to exactly
+  this section: `977e23a707` (2023) ADDED the per-sub-value paragraph
+  with no anchor or version-line change — content hashing, not anchor
+  existence, is the drift signal here. Machine: `RaceState`/`raceUpdate`
   (Race.lean + Multi.lean:1117–1263), terminal `raceDetected`.
 - CLASSIFICATION: not an envelope — a doctrine-decided boundary
   (register #4): SC interleaving is claimed only inside DRF; outside,
@@ -353,7 +405,7 @@ The race detector replays consumption without consuming
   covers the modeled observable fragment only — modeling `%p` output,
   pointer ordering, `unsafe` int↔ptr, or any address-exposing channel
   re-opens this entry.
-- Goroutine EXIT has no HB edge (Race.lean:752–762, go_mem quoted:
+- Goroutine EXIT has no HB edge (Race.lean:752–762; mem#goexit quoted:
   exit "is not guaranteed to happen before any event in the program")
   — forced by the memory model.
 
@@ -363,22 +415,28 @@ The race detector replays consumption without consuming
 
 ### E1. The spec-ordered core — (c) FORCED (machine follows; history recorded)
 
-Spec §Order of evaluation orders function calls, method calls, receive
-operations, and binary logical operations left-to-right; §Assignments
-mandates the two-phase discipline and phase-2 left-to-right stores with
-the earlier-store-observable example; select operands evaluate exactly
-once in source order (§Select step 1); channel buffers are FIFO
+Spec (spec#Order_of_evaluation) orders function calls, method calls,
+receive operations, and binary logical operations left-to-right;
+§Assignments (spec#Assignment_statements) mandates the two-phase
+discipline and phase-2 left-to-right stores with the
+earlier-store-observable example; select operands evaluate exactly
+once in source order (spec#Select_statements step 1); channel buffers are FIFO
 ("Channels act as first-in-first-out queues", Value.lean:614–621);
 defers run LIFO. The machine realizes all of these deterministically
 (storeK one-store-per-step Machine.lean:1621–1626, StepFn.lean:610–622;
 select entry Syntax.lean:338–344; send channel-then-value
 Machine.lean:1105–1111). The BUG-022/025/029/030/033/034/035/036/037
 family was the machine being WRONG against these forced points — fixed
-or tracked in BUGS.md, not latitude.
+or tracked in BUGS.md, not latitude. Cross-link (P2 retrofit):
+mem#model Requirement 1 DELEGATES sequenced-before to exactly this
+section — the spec's forced core is also the memory model's
+per-goroutine order, so E2–E5's residual latitude propagates verbatim
+into sequenced-before (matters the day an E-series envelope meets a
+concurrent observer).
 
 ### E2. Call vs. assignment-target operands — (b) PINNED to gc (call-first)
 
-- WHERE: spec §Order of evaluation: "the order of those events compared
+- WHERE: spec#Order_of_evaluation: "the order of those events compared
   to the evaluation and indexing of x and the evaluation of y ... is
   not specified." Machine: the PINNED LATITUDE rule-site block
   Machine.lean:2587–2626 (spec text verbatim, gc realization probed
@@ -387,7 +445,13 @@ or tracked in BUGS.md, not latitude.
 - PIN: the call evaluates first (args, frame); target operands evaluate
   at frame exit; then stores. gc's realized point. Plausible envelope:
   both orders (and in principle interleavings of the operand
-  evaluations with the call's effects).
+  evaluations with the call's effects). F2 reading (P2 retrofit,
+  Cerberus vocabulary — prior-art note §3): claimed as UNSEQ,
+  interleaving admitted, not merely either-order — a compound target
+  operand (`aa[i][j]`) has multiple observable sub-events that could
+  in principle interleave with the call's effects; the spec's silence
+  licenses the wider reading, and too-narrow is the membership lane's
+  risk to police.
 - EVIDENCE: GC — the S1-audit probe matrix, five oracle-backed corpus
   pins + `.callValue` discriminators (verified RED at the pre-fix
   machine). XIMPL/ARCH would bear on whether any implementation
@@ -402,7 +466,7 @@ or tracked in BUGS.md, not latitude.
 
 ### E3. Inter-target phase-1 operand order — (b) PINNED to OUR point, **known ≠ gc** (open envelope)
 
-- WHERE: spec §Order of evaluation (only calls/receives/binary-logical
+- WHERE: spec#Order_of_evaluation (only calls/receives/binary-logical
   are ordered — target-vs-target operand order is open). Machine:
   left-to-right inter-target walk (the tgtOpK spine; the rule-site
   SCOPE clause Machine.lean:2620–2626 records this axis as OPEN and
@@ -418,6 +482,11 @@ or tracked in BUGS.md, not latitude.
   of target operands — probed).
 - PLAUSIBLE ENVELOPE: any order of the targets' operand evaluations —
   observable ONLY as which panic wins (panic-identity membership).
+  F2 reading (P2 retrofit): the honest claim is UNSEQ across targets
+  (compound operands have multiple sub-events), not merely
+  either-order per pair; at today's panic-identity observable the two
+  readings coincide (which panic wins), recorded so the equivalence
+  gets re-checked if a richer observable ever lands.
 - RE-ENVELOPE OBLIGATION + COST: either full-statement linearization
   with an order choice (deliberately not built — BUG-032 records why)
   or a panic-identity membership envelope (admit any of the candidate
@@ -433,14 +502,19 @@ or tracked in BUGS.md, not latitude.
   StepFn.lean:459–500).
 - Same plausible envelope, obligation, and cost as E3 (one mechanism
   fixes both axes); recorded as OPEN envelope per BUG-032's precedent.
+  F2 reading: as E3 — the shared mechanism inherits the unseq claim.
 
 ### E5. Early store across the phase boundary — (b) PINNED to the spec-literal point; gc elsewhere
 
 - WHERE: BUG-032 final-check amendment: `x, a[i].f = 1, 7/z` (z = 0,
   recovered) — gc lands the x = 1 store BEFORE the phase-1 division
   panic; we follow the spec's literal two-phase order (x stays 0). Both
-  spec-legal (§Order of evaluation orders only calls/receives/
-  binary-logical). Distinct mechanism from E3/E4 — a fix holds the
+  spec-legal (spec#Order_of_evaluation orders only calls/receives/
+  binary-logical). F2 reading (P2 retrofit): a straight two-point
+  choice (store-early vs store-held-back — no interleaving content);
+  the re-envelope design is Cerberus's Q2 mold (add a nondeterministic
+  choice covering gc's observed exotic point; prior-art note §3), per
+  §7 item 5's updated record. Distinct mechanism from E3/E4 — a fix holds the
   store back rather than linearizing panics; natural home the BUG-025
   retirement slice; a future pin must use the membership treatment.
 - Note the asymmetry: here the machine's point is the SPEC-shaped one
@@ -460,7 +534,7 @@ or tracked in BUGS.md, not latitude.
 
 ### E7. Hidden-dependency initialization order — (b) PINNED to go/types' conforming order, **known ≠ gc**
 
-- WHERE: spec §Package initialization: "If other, hidden, data
+- WHERE: spec#Package_initialization: "If other, hidden, data
   dependencies exist between variables, the initialization order
   between those variables is unspecified." Machine/frontend: go/types
   `InitOrder` drives `$pkginit` synthesis (init design §1; the
@@ -502,7 +576,7 @@ or tracked in BUGS.md, not latitude.
 
 ### E9. Map iteration order — (a) ENVELOPED (all permutations of the snapshot) — scoped, with one FORCED-point violation
 
-- WHERE: spec §For statements: "The iteration order over maps is not
+- WHERE: spec#For_statements: "The iteration order over maps is not
   specified and is not guaranteed to be the same from one iteration to
   the next." Machine: snapshot at range entry
   (`mapRangeSnapshotEntries` Machine.lean:873–921), pick-any-remaining
@@ -565,6 +639,52 @@ or tracked in BUGS.md, not latitude.
   buys nothing).
 
 ---
+
+### E12. Binary-operator operand order: calls vs non-call operand events — (b) PINNED to gc (call-first; left-to-right among non-calls)
+
+Added 2026-08-17 at spec-truth P2, closing prior-art finding F1
+(`docs/2026-08-17_prior-art-ch2o-cerberus.md` §3: the census hole at
+the center of CH2O's redex-selection latitude; E11-adjacent — E11 is
+check order *within* one operation, this is order *across* the operand
+subexpressions of one binary operator).
+
+- WHERE: spec#Order_of_evaluation — calls/receives/binary-logical are
+  ordered lexically left-to-right, but "the order of those events
+  compared to the evaluation and indexing of x and the evaluation of
+  y" is explicitly not specified: the non-call operand events of a
+  binary expression carry latitude relative to the calls and to each
+  other. Machine realization point: the frontend's A-normal-form pass
+  (tools/nativefrontend/wire.go:25 — calls and allocations in
+  expression position hoist to temps ahead of the expression), after
+  which GoCore evaluates the residual call-free operands
+  left-to-right. So call-first is a FRONTEND normalization, not a
+  GoCore choice site.
+- PIN: calls evaluate before the non-call operand events of the same
+  binary expression even when the non-call operand is lexically LEFT
+  (gc probe: `a[i] + f()` with `f` mutating `i` returns a VALUE — the
+  call ran before the left operand's index read — where the
+  spec-literal left-to-right reading panics `[8]`); among non-call
+  operand events, left before right (both-out-of-range probe panics on
+  the LEFT index). Probed at the go1.26.5 pin, identical under
+  `-gcflags=all='-N -l'`. Plausible envelope: any relative order of
+  the non-call operand events and the calls' effects — and whether
+  that is an either-order or an interleaving claim is exactly the F2
+  order-vs-interleaving sentence owed to E2–E5 and this entry at the
+  P2 retrofit.
+- EVIDENCE: GC — corpus guardrails
+  `binop-order/operand-panic-vs-call/{left-first,call-before-left,call-before-left-div}`
+  (pure observables: the call mutates the state the left operand
+  reads, so call-first yields a defined value and operand-first
+  panics; no printing needed). All three PASS: the machine's
+  realization matches gc's. XIMPL/ARCH would bear on whether any
+  implementation realizes operand-first (none known; same open
+  question as E2).
+- RE-ENVELOPE OBLIGATION + COST: rides E2's re-envelope (same
+  call-first family; the membership/panic-identity treatment that §7
+  item 5 lists — with F3's cost note arguing for it — covers this
+  entry's observables too). Until E2 opens, no new machine arms;
+  widening then requires either frontend order-variants or a GoCore
+  operand-order choice site. MODERATE, sequential-only observable.
 
 ## 3. Representation, runtime, and library realization
 
@@ -822,8 +942,11 @@ achievement.
   them is still owed (BUG-002's R4 residue). Sub-registry granularity
   generally is C2/C3 + NPDRF territory, but these named arms are the
   known coarse spots INSIDE segments.
-- **U-6 Future atomics**: go_mem pins sync/atomic to SC ("behave as
-  the sequentially consistent atomics of C++") — forced when modeled;
+- **U-6 Future atomics**: mem#atomic pins sync/atomic to SC ("behave as
+  the sequentially consistent atomics of C++" — a considered design
+  commitment with recorded rationale, gomm: a conforming
+  implementation may NOT weaken these to acquire/release) — forced
+  when modeled;
   the latitude to analyze at that arc is the surrounding-plain-access
   envelope, not the atomics themselves.
 - **U-7 gc version drift as an evidence problem**: every pinned

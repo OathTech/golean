@@ -8,7 +8,9 @@ SCOPE CORRECTION (pre-landing audit, 2026-08-17): this note compares
 E1–E6 only; the inventory's §2 actually runs E1–E11 (E7 init order,
 E8 multi-file order, E9 map iteration, E10 map-key retention, E11
 runtime-check order). E7–E11 were trimmed without declaring it — now
-declared; E11 matters for finding F1, see §3. Primary sources read: `deps/papers/ch2o-krebbers-thesis.pdf`
+declared; E11 matters for finding F1, see §3. (F1 was closed at P2:
+inventory entry E12, probed and guardrailed — the machine matches
+gc's call-first realization.) Primary sources read: `deps/papers/ch2o-krebbers-thesis.pdf`
 (Krebbers, *The C standard formalized in Coq*, Radboud 2015 — Chapters 1,
 2, the §6.4 evaluation-order machinery, Chapters 10–11) and
 `deps/papers/cerberus-pldi16.pdf` (Memarian, Matthiesen, Lingard,

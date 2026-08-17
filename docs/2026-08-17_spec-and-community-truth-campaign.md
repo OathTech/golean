@@ -8,8 +8,18 @@ the CIPs in `docs/covmap-cips/`, held for handover sign-off).
 **P1 DONE** — four reading notes with verdicts:
 `docs/2026-08-17_prior-art-{spectec,esmeta-jest,ch2o-cerberus,fg-and-memory-model}.md`;
 their §3 corrections are applied inline below, marked "per the P1
-note". Next: first `main` landing (merge protocol), then P2 forks
-fresh. Lane: `spec-truth`.
+note". First landing MERGED to main
+(39973d23, 2026-08-17; gate PASS ×3, three-Opus audit + delta-review).
+**P2 EXECUTING** on lane `spec-p2`: anchor lint
+(`scripts/check-spec-anchors`, wired into the gate, falsifiability
+verified) — the bare-lint half of 4.1; the covmap content-hash layer
+stays validated-but-unwired until CIP-1 (status exit codes) lands
+upstream or we decide to wrap its output (decision deferred to the P2
+landing checkpoint). F1 probed and closed as inventory entry E12 with
+three corpus guardrails (machine matches gc's call-first realization).
+The spec#/mem# retrofit of the latitude inventory executed per the
+fg-and-memory-model note §2.2 worklist + F2 vocabulary + §0 citation
+norms. P4 (archaeology) next, parallel lane.
 Companion doctrine: `docs/2026-08-11_essence-of-go-doctrine.md` (the two
 bounds), `docs/2026-08-11_latitude-inventory.md` (the per-point census).
 

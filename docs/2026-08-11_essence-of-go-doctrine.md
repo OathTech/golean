@@ -112,9 +112,12 @@ costs. We do not BS ourselves about the distance to the goal.
 3. **One-implementation evidence base**: the differential oracle is gc
    at a pinned version; no cross-implementation lane exists yet.
 4. **SC-only interleaving within DRF**: correct per the memory model's
-   DRF-SC promise for the programs we accept (racy programs refused
-   fail-closed — racy semantics is undefined by Go and unmodelable as a
-   testable artifact today).
+   DRF-SC promise for the programs we accept (mem#model states it
+   formally with the Boehm–Adve proof pointer; mem#overview
+   informally — anchors added at the P2 retrofit; racy programs
+   refused fail-closed — racy semantics is undefined by Go and
+   unmodelable as a testable artifact today, a position the plmm
+   record shows is state-of-the-art-aligned, not a shortcut).
 5. **Registry-granularity scheduling points**: sound only where
    scheduling is unobservable between them for race-free programs; the
    fused-boundary discovery shows the current point set is incomplete
