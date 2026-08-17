@@ -30,6 +30,7 @@ language version is semantics, not packaging.
 | `spectec` | `acc6e834ff403c82554d081237f327346190ad96` | Wasm SpecTec reading copy (P1). Shallow. |
 | `esmeta` | `7d237fd1680f473e674320cc97932702d950fa98` | ESMeta/JISET-line reading copy (P1). Shallow. |
 | `gofrontend`, `tinygo` | floating (`-`) | Cross-implementation lane, only if P5 green-lights it (§4.5); pin at first real use. |
+| `proposal` | `0be13090fdb0cbae0d71641bb676d924bc1c94de` | golang/proposal — design docs behind language changes; committee-intent reconstruction for P4's archaeology (pinned 2026-08-18 when the first landing's P0 gap was closed). |
 
 Replicate: `scripts/setup-deps --only go,covmap,go101,spectec,esmeta`
 (covmap needs `--from <checkout-with-deps/covmap>`). NOTE the shallow

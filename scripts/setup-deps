@@ -79,6 +79,7 @@ spectec          acc6e834ff403c82554d081237f327346190ad96  https://github.com/Wa
 esmeta           7d237fd1680f473e674320cc97932702d950fa98  https://github.com/es-meta/esmeta.git        named
 gofrontend       -                                         https://github.com/golang/gofrontend.git     named
 tinygo           -                                         https://github.com/tinygo-org/tinygo.git     named
+proposal         0be13090fdb0cbae0d71641bb676d924bc1c94de  https://github.com/golang/proposal.git       named
 TABLE
 )
 
