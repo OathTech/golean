@@ -296,10 +296,10 @@ independent of each other.
    standing constraints (e.g. never file from this identity)?
 4. Scale check on P1: six reading notes ≈ six worker-agent lanes
    (Fable per the worker-model rule) — or trim the list?
-5. covmap (§8): green-light the P0 pilot? The §8.3 gaps are now
-   code-confirmed, so the CIP drafts for items 1–3 could be written
-   before the pilot rather than after — preference? (Handover of any
-   draft to the covmap repo remains a separately signed-off action.)
+5. covmap (§8): ~~CIP timing~~ DECIDED (Mike, 2026-08-17): CIP drafts
+   are written AFTER the pilot — the pilot may surprise us in ways
+   that change the requests. (Handover of any draft to the covmap
+   repo remains a separately signed-off action.)
 
 ## 8. Addendum (2026-08-17): covmap assessment
 
