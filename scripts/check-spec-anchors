@@ -14,9 +14,14 @@
 # Citation syntax (tracked convention, JSCert-style):
 #   spec#Anchor_name  ->  deps/go/doc/go_spec.html  id="Anchor_name"
 #   mem#anchor_name   ->  deps/go/doc/go_mem.html   id="anchor_name"
-# Prose placeholders use angle brackets (spec#<Anchor>), which the
-# scanner does not match. A citation token is #-then-word-chars; word
-# chars are [A-Za-z0-9_].
+# Scanned surface: tracked .md, .lean, and .go files (audit F1.3 — the
+# corpus's Go sources carry citations too). Prose placeholders use
+# angle brackets (spec#<Anchor>), which the scanner does not match. A
+# citation token is #-then-word-chars; word chars are [A-Za-z0-9_].
+# SCOPE, stated honestly: this lint checks RESOLUTION only — it cannot
+# see a resolving anchor attached to a misquoted or stale clause text
+# (that class is the covmap content-hash layer's job, and the audit
+# that found five such quotes proves the class is real).
 #
 # Fail closed:
 #   - no deps/go checkout             -> FAIL (scripts/setup-deps --only go)
@@ -44,37 +49,49 @@ if [[ -z "$pin" || "$have" != "$pin"* ]]; then
   exit 1
 fi
 
+# The pin check verifies the REVISION; also refuse a locally modified
+# spec/mem file (audit F1.4 — a dirty doc at the right SHA must not
+# validate citations).
+if ! git -C deps/go diff --quiet -- doc/go_spec.html doc/go_mem.html 2>/dev/null; then
+  echo "check-spec-anchors: FAIL — deps/go doc files locally modified at the pin (fail closed)" >&2
+  exit 1
+fi
+
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 grep -o 'id="[^"]*"' "$SPEC" | sed 's/^id="//;s/"$//' | sort -u > "$tmp/spec-ids"
 grep -o 'id="[^"]*"' "$MEM"  | sed 's/^id="//;s/"$//' | sort -u > "$tmp/mem-ids"
 
-# Every citation occurrence as "file<TAB>line<TAB>prefix<TAB>anchor".
-# grep -o emits the (possibly) leading non-word guard char; strip it in awk.
-git ls-files -z '*.md' '*.lean' \
-  | xargs -0 grep -nHoE '(^|[^A-Za-z0-9_])(spec|mem)#[A-Za-z0-9_]+' -- 2>/dev/null \
-  | awk -F: '{
-      tok = $3; for (i = 4; i <= NF; i++) tok = tok ":" $i;
-      sub(/^[^A-Za-z0-9_]*/, "", tok);
-      split(tok, a, "#");
-      printf "%s\t%s\t%s\t%s\n", $1, $2, a[1], a[2];
-    }' > "$tmp/citations" || true
+# Spool the file list FIRST so a git failure is a hard stop (audit F1.1:
+# a trailing `|| true` on the whole pipeline swallowed `git ls-files`
+# dying and reported ok with 0 citations). grep gets `|| true` only for
+# its legitimate no-match exit; --null makes the filename separator
+# unambiguous so paths containing ':' cannot shift the parse (F1.2).
+git ls-files -z '*.md' '*.lean' '*.go' > "$tmp/files"
+xargs -0 grep --null -nHoE '(^|[^A-Za-z0-9_])(spec|mem)#[A-Za-z0-9_]+' -- < "$tmp/files" > "$tmp/hits" || true
 
 fail=0
 n_spec=0; n_mem=0
-while IFS=$'\t' read -r f ln prefix anchor; do
+while IFS= read -r -d '' f && IFS= read -r rest; do
+  ln="${rest%%:*}"; tok="${rest#*:}"
+  tok="$(printf '%s' "$tok" | sed 's/^[^A-Za-z0-9_]*//')"
+  prefix="${tok%%#*}"; anchor="${tok#*#}"
   case "$prefix" in
     spec) ids="$tmp/spec-ids"; name="go_spec.html"; n_spec=$((n_spec+1)) ;;
     mem)  ids="$tmp/mem-ids";  name="go_mem.html";  n_mem=$((n_mem+1)) ;;
-    *)    continue ;;
+    *)    echo "  UNPARSED ${f}: '${rest}' (fail closed on grammar misses — audit F1.2)"; fail=1; continue ;;
   esac
   if ! grep -qxF "$anchor" "$ids"; then
     echo "  UNRESOLVED ${f}:${ln}: ${prefix}#${anchor} — no id=\"${anchor}\" in the pinned ${name}"
     fail=1
   fi
-done < "$tmp/citations"
+done < "$tmp/hits"
 
 if [[ "$fail" -ne 0 ]]; then
   echo "check-spec-anchors: FAIL — unresolved citations above (pin ${pin:0:9})" >&2
+  exit 1
+fi
+if [[ $((n_spec + n_mem)) -eq 0 ]]; then
+  echo "check-spec-anchors: FAIL — zero citations found; the scan is degenerate (a repo with the retrofit landed always has citations — if that ever legitimately changes, update this guard with the reason)" >&2
   exit 1
 fi
 echo "check-spec-anchors: ok — ${n_spec} spec# + ${n_mem} mem# citations all resolve at pin ${pin:0:9}"

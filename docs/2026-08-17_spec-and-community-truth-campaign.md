@@ -17,9 +17,14 @@ stays validated-but-unwired until CIP-1 (status exit codes) lands
 upstream or we decide to wrap its output (decision deferred to the P2
 landing checkpoint). F1 probed and closed as inventory entry E12 with
 three corpus guardrails (machine matches gc's call-first realization).
-The spec#/mem# retrofit of the latitude inventory executed per the
-fg-and-memory-model note §2.2 worklist + F2 vocabulary + §0 citation
-norms. P4 (archaeology) next, parallel lane.
+The spec#/mem# retrofit of the latitude inventory executed for the
+C- and E-series + register #4 + U-6 per the fg-and-memory-model note
+§2.2 worklist, + F2 vocabulary + §0 citation norms (the R-series
+still carries prose §-cites — queued for its next touch; scope
+precision per the P2 audit, which also caught five misquotes the
+resolution-only lint structurally cannot see — fixed, and the lesson
+recorded in the lint's header: quote fidelity is the covmap layer's
+case). P4 (archaeology) next, parallel lane.
 Companion doctrine: `docs/2026-08-11_essence-of-go-doctrine.md` (the two
 bounds), `docs/2026-08-11_latitude-inventory.md` (the per-point census).
 

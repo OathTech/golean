@@ -143,6 +143,7 @@ jobs:
       # constant with the diagnostics numbers, never deleting the
       # readback. Investigation record:
       # docs/2026-08-14_ci-runner-death-and-slow-tier-timeout.md.
+
       # check-spec-anchors (spec-truth P2) verifies spec#/mem# citations
       # against the PINNED golang/go checkout and fails CLOSED if absent
       # or off-pin. Shallow single-branch clone at the tag = the pinned
