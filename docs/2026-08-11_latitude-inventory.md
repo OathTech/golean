@@ -354,7 +354,7 @@ The race detector replays consumption without consuming
   race and terminating the program" — mem#overview verbatim, corrected
   at the P2 audit; mem#restrictions phrases the same license as "Any
   implementation can, upon detecting a data race, report the race and
-  halt execution" — go_mem's escape hatch is exactly a refusal
+  halt execution ..." (elision marked per the delta-review) — go_mem's escape hatch is exactly a refusal
   license). Anchors (P2 retrofit): mem#overview and
   mem#restrictions both carry the escape hatch; mem#restrictions
   additionally grounds (a) the limited-outcomes stance the refusal
@@ -976,8 +976,8 @@ achievement.
   generally is C2/C3 + NPDRF territory, but these named arms are the
   known coarse spots INSIDE segments.
 - **U-6 Future atomics**: mem#atomic pins sync/atomic to SC — verbatim:
-  "The preceding definition has the same semantics as C++'s
-  sequentially consistent atomics and Java's volatile variables"
+  "The preceding definition has the same semantics as C++’s
+  sequentially consistent atomics and Java’s volatile variables"
   (quote corrected at the P2 audit) — a considered design commitment
   with recorded rationale (gomm: a conforming implementation may NOT
   weaken these to acquire/release) — forced when modeled;

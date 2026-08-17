@@ -268,8 +268,11 @@ directions are asymmetric:
      rules and the memory model).
    - **Memory model (MM):** same duty, quoting go_mem; owns every
      happens-before/DRF-SC argument and the racy-refusal license (the
-     "implementations may always react to a data race by reporting the
-     race and terminating" escape hatch).
+     "An implementation may always react to a data race by reporting
+     the race and terminating the program" escape hatch — mem#overview
+     verbatim; quote corrected at the spec-p2 delta-review, which
+     caught the pre-fix wording surviving here after the inventory's
+     copy was fixed).
    - **Runtime/library docs (DOCS):** the doc sentence quoted at the
      arm (the sync arms' existing practice — `pendingW` reader
      exclusion, Wait-at-zero). Where docs underdetermine behavior, say

@@ -52,7 +52,7 @@ fi
 # The pin check verifies the REVISION; also refuse a locally modified
 # spec/mem file (audit F1.4 — a dirty doc at the right SHA must not
 # validate citations).
-if ! git -C deps/go diff --quiet -- doc/go_spec.html doc/go_mem.html 2>/dev/null; then
+if ! git -C deps/go diff --quiet HEAD -- doc/go_spec.html doc/go_mem.html 2>/dev/null; then
   echo "check-spec-anchors: FAIL — deps/go doc files locally modified at the pin (fail closed)" >&2
   exit 1
 fi
@@ -67,7 +67,19 @@ grep -o 'id="[^"]*"' "$MEM"  | sed 's/^id="//;s/"$//' | sort -u > "$tmp/mem-ids"
 # its legitimate no-match exit; --null makes the filename separator
 # unambiguous so paths containing ':' cannot shift the parse (F1.2).
 git ls-files -z '*.md' '*.lean' '*.go' > "$tmp/files"
-xargs -0 grep --null -nHoE '(^|[^A-Za-z0-9_])(spec|mem)#[A-Za-z0-9_]+' -- < "$tmp/files" > "$tmp/hits" || true
+# Gate the grep pipeline on exit 0/1 only (delta-review N4: a bare
+# `|| true` also swallowed grep exit 2 / xargs 123 — unreadable files
+# would silently vanish from the scan). Known residual gap, recorded:
+# a tracked file containing NUL bytes is treated as binary by grep and
+# its citations are skipped with only an stderr note (N6).
+set +e
+xargs -0 grep --null -nHoE '(^|[^A-Za-z0-9_])(spec|mem)#[A-Za-z0-9_]+' -- < "$tmp/files" > "$tmp/hits"
+rc=$?
+set -e
+if [[ "$rc" -gt 1 ]]; then
+  echo "check-spec-anchors: FAIL — citation scan died (grep/xargs exit $rc; fail closed)" >&2
+  exit 1
+fi
 
 fail=0
 n_spec=0; n_mem=0
