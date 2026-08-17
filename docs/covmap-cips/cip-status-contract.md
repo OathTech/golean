@@ -18,8 +18,11 @@ until healed." Today that is impossible to script honestly:
 - `cmd_status` returns `Ok(0)` unconditionally (`src/cli.rs`, tail of
   `cmd_status`) — observed in the pilot printing `drift: 1 file(s)
   edited` and exiting 0, and re-verified during the pre-landing audit.
-  (Error paths are fine — they propagate `io::Error` and exit
-  non-zero; the fail-open is `status`'s success path specifically.)
+  (TOP-LEVEL errors are fine — they propagate `io::Error` through
+  `main.rs` and exit non-zero; the fail-open surface is `status`'s
+  unconditional 0 plus the per-item paths below. Note remap's exit is
+  `Ok(if unresolved_count > 0 {1} else {0})`, `src/cli.rs:1679` — a
+  skipped file alone still yields 0.)
 - Output is human prose; a gate script must regex fragile text.
 
 covmap already has the right precedent in-tree: `iter next` exits

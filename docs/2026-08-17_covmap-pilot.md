@@ -21,8 +21,11 @@ Operator_precedence, Type_definitions, Type_parameter_declarations).
   the pre-anchor preamble — the two counts are distinct; audit nit
   2026-08-17) and named after their anchors in 0.4 s / 317 covmap
   calls (`artifacts/covmap-pilot/covlib.py`
-  — ~30 lines of hash-re-resolution gymnastics; the speed is fine, the
-  gymnastics is the CIP-3 evidence). Latitude side: 48 segments,
+  — ~30 lines of hash-re-resolution gymnastics; the speed is fine).
+  Delta-review addendum (2026-08-17): `split` also accepts positional
+  `file:line` addresses, so the hash-re-resolution loop was
+  avoidable — CIP-3 re-scoped accordingly (naming + idempotence
+  remain its case). Latitude side: 48 segments,
   `@C1…@C11`, `@E1…` etc.
 - **@name link endpoints work as advertised**: 8 links (C1→
   @Go_statements, C4→@Program_execution, C5→@Channel_types,
@@ -61,11 +64,11 @@ Operator_precedence, Type_definitions, Type_parameter_declarations).
   suffix-mapped sections resolve) — pure fingerprint grind, ending in
   127 proposals + 1 "no candidate ≥ 0.40". The proposals *classify*
   perfectly — the 117 scored at 100 % are exactly the unchanged
-  segments, the 11 sub-100 (spanning **69–99 %**; @Close 92 % is
-  exactly the close-builtin change) are exactly the changed ones — but
-  one genuinely changed section (@Allocation) got **no candidate at
-  all** (fingerprint false negative at the 0.40 default), and all the
-  signal is then discarded: remap is propose-only. (An earlier draft
+  segments; the 11 changed ones are exactly the rest, 10 of them
+  scored sub-100 (spanning **69–99 %**; @Close 92 % is exactly the
+  close-builtin change) and one (@Allocation) with **no candidate at
+  all** (fingerprint false negative at the 0.40 default) — and all
+  the signal is then discarded: remap is propose-only. (An earlier draft
   of this note reported the changed-section range as "92–98 %" from a
   truncated output tail and "146 exact matches" from arithmetic —
   both corrected here from full measured output, audit 2026-08-17.)
@@ -79,8 +82,11 @@ Operator_precedence, Type_definitions, Type_parameter_declarations).
   misparses and exits 0 — false; it exits 1 (the observed 0 was the
   background-shell wrapper's exit, not covmap's — the exact
   async-stdout misfire CLAUDE.md's housekeeping section warns about).
-  Error paths propagate `io::Error` and exit non-zero; the fail-open
-  is `status` specifically.
+  TOP-LEVEL errors exit non-zero via `main.rs`; per-item error paths
+  (unreadable covering in `status`, remap's "skipped" files) print to
+  stderr and continue without affecting the exit code — those, plus
+  `status`'s unconditional 0, are the fail-open surface (delta-review
+  precision, 2026-08-17).
 - **`@name`s are unique per covering, across files** — the spec's
   `preamble` collided with latitude's; cross-file coverings need a
   prefix convention (we used `lat-*`) or per-file namespacing.
@@ -104,8 +110,9 @@ connections (blocks multi-worktree use; self-connection suffices for
 one-lane P2), CIP-3 structural segmentation (our script covers it
 meanwhile). Fallback (bare anchor lint) not needed.
 
-## Control experiment: the small-edit case (diagnosis CORRECTED by the
-pre-landing audit, 2026-08-17)
+## Control experiment: the small-edit case (diagnosis corrected)
+
+(Diagnosis corrected by the pre-landing audit, 2026-08-17.)
 
 To separate "remap's diff degenerates on this document" from "remap is
 broken generally", a one-line in-place edit to `latitude.md` (line

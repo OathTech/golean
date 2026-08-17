@@ -267,7 +267,7 @@ corpus-touching slices: `--diff` and deliberate, explained re-pins).
   spec-anchor stability across two adjacent Go releases while at it
   (informs 4.1's lint strictness).
 - **P1 — prior-art reading notes (M, parallelizable).** Executed as
-  FOUR lanes, not §3's six clusters (trim proposed and accepted with
+  FOUR lanes, not §3's seven bullets (trim proposed and accepted with
   the execution go-ahead, 2026-08-17; recorded here per the audit):
   SpecTec / ESMeta-line / CH2O+Cerberus with JSCert folded in / FG +
   memory model with Fava at abstract level. Sail got a paragraph in
@@ -432,7 +432,9 @@ originally-hypothesized gaps dissolved on reading the code (see the
    with loud mismatch failure.
 3. **Structural segmentation.** `split` takes exactly one cut:
    `split <covering>:<hash> <line> [<label_top>] [<label_bot>]`
-   (`src/cli.rs:1397-1402`), addressed by segment hash — so scripted
+   (`src/cli.rs:1397-1402`), addressed by hash, `@name`, or — as the
+   delta-review later established, re-scoping CIP-3 — positional
+   `file:line` — so scripted
    bulk cutting must re-resolve addresses after every call (each
    split re-hashes the halves). No regex anywhere in `src/`
    (consistent with the sha2-only dependency policy). Cutting ~100+
@@ -465,9 +467,10 @@ coverings serialize position-ordered with `BTreeSet` headers, and
 connections write links in insertion order (`Connection::write`,
 `src/connection.rs:36-50`), so a tracked `.covmap/` is deterministic
 and git-diffable. The original text claimed "sorted text" citing
-`connection.rs:110` / `covering.rs:435,854` — those are directory
--listing sorts, and connection links are NOT sorted (empirically
-confirmed); deterministic-and-diffable survives, "sorted" does not.
+`connection.rs:110` / `covering.rs:435` — directory-listing
+sorts — and `covering.rs:854`, remap's internal position sort;
+connection links are NOT sorted (empirically confirmed);
+deterministic-and-diffable survives, "sorted" does not.
 Single-lane ownership covers the merge story. Whitespace/markup normalization was considered
 and dropped: cosmetic churn only bites at re-pins, which are rare and
 deserve review anyway.

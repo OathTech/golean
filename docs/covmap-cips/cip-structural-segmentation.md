@@ -15,19 +15,24 @@ splits" into one declarative call.
 
 Documents with intrinsic structure (HTML headings, markdown headings,
 function definitions) are the common case for spec-to-code coverings,
-and their boundaries are mechanical. Today `split` takes exactly one
-cut, addressed by segment hash or `@name` (the usage string says
-`<h>`, `src/cli.rs:1397-1402`, but `@name` resolves too — moot for
-bulk cutting since freshly split halves are unnamed), and each split
-re-hashes the halves — so bulk cutting means re-resolving the target
-segment's hash after every call. The pilot scripted this (python,
-~30 lines): 158 sections of the Go language spec, 317 covmap
-invocations (158 splits + 159 namings, counting the pre-anchor
-preamble segment), 0.4 s. Runtime is a non-issue;
-the issues are (a) every user re-derives the same fragile
-resolve-split-resolve loop, and (b) the loop is easy to get subtly
-wrong (our first attempt double-ran and corrupted its own address
-book; a second bug named segments off by one column).
+and their boundaries are mechanical. RE-SCOPED after delta-review
+(2026-08-17): `split` addresses accept segment hash, `@name`, AND
+positional `file:line` (`covering::resolve_segment` →
+`resolve_position`; verified end-to-end) — so a bulk-cut script can
+address every cut positionally and never touch a hash. Our pilot
+script (python, ~30 lines; 158 sections, 317 invocations, 0.4 s) did
+it the hard way, and an earlier draft of this CIP presented that
+hash-re-resolution loop as forced. It is not; the honest residual
+case for a built-in is smaller:
+(a) **naming**: positional cutting still needs a second per-segment
+pass to attach `@name`s, and deriving names from the boundary line's
+capture group is the part no shell loop does cleanly;
+(b) **idempotence** across re-runs (cut-at-existing-boundary as a
+no-op) is easy to get subtly wrong in ad hoc scripts (our first
+attempt double-ran and corrupted its own address book; a second bug
+named segments off by one column);
+(c) one declarative call is documentation of the covering's
+derivation rule — reproducible by anyone, including CI.
 
 Two adjacent findings from the same exercise:
 

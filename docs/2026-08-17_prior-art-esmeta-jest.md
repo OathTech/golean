@@ -204,10 +204,11 @@ patches (§1) — the cost model alone kills a Go version.
 
 But "there is nothing to extract" is false, checked against the pinned
 spec: `deps/go/doc/go_spec.html` at `go1.26.5` contains **62
-`<pre class="ebnf">` blocks** — the formal grammar productions (the
-notation-defining meta-grammar and token lists live in 28 further
-`class="grammar"` blocks; precision added by audit) — and **236 plain
-`<pre>` blocks**,
+`<pre class="ebnf">` blocks** — the formal grammar productions (28
+further `class="grammar"` blocks hold the notation-defining
+meta-grammar, token lists, operator-precedence and numeric-type
+tables, and builtin signatures; precision added by audit +
+delta-review) — and **236 plain `<pre>` blocks**,
 mostly author-written examples. Two extractable objects exist:
 
 - the **examples** — which is exactly mechanism 4.2, and note the
