@@ -165,6 +165,12 @@ they support the claim. Claim-support stays with the audit dimension
 TEXT"), which the anchors make executable-adjacent: an auditor can now
 jump from claim to pinned text in one step.
 
+**Candidate implementation: covmap (see §8).** OathTech's covmap is a
+strictly stronger mechanism than the bare anchor lint — content-hashed
+segments detect when the *cited text itself* changed at a re-pin, not
+merely whether the anchor still exists. §8 records the assessment and
+the feature gaps; the P0 pilot decides which implements 4.1.
+
 ### 4.2 Spec-example corpus extraction
 
 `doc/go_spec.html` contains hundreds of `<pre>` example blocks written
@@ -290,3 +296,107 @@ independent of each other.
    standing constraints (e.g. never file from this identity)?
 4. Scale check on P1: six reading notes ≈ six worker-agent lanes
    (Fable per the worker-model rule) — or trim the list?
+5. covmap (§8): green-light the P0 pilot? And should the feature
+   requests in §8.3 be filed as OathTech/covmap issues now, or held
+   until the pilot confirms them against reality?
+
+## 8. Addendum (2026-08-17): covmap assessment
+
+github.com/OathTech/covmap (Rust, v0.3 experimental, Apache-2.0) — a
+CLI that partitions text files into content-addressed **segments**
+(`(file, range, label)`, identity = first 64 bits of sha256(content),
+labels/names outside the hash), records **connections** (many-to-many
+links between two coverings, cross-repo), and reports **drift** when
+either side's bytes change — repairable via `recut`/`recut --remap`
+(boundaries carried through unchanged regions, `@name`s survive),
+terminal `broken` state healed only by explicit relink or drop.
+`iter` freezes a covering into a resumable per-segment worklist.
+Assessed from README, SKILL.md, GLOSSARY.md (not yet run — see pilot).
+
+### 8.1 Verdict: strong fit — candidate backbone for 4.1/4.2/4.3
+
+The design decisions are the ones we would have asked for: content-only
+hashes (relabeling never causes drift), broken-as-terminal (fail
+closed, heals only explicitly), plumbing-first CLI, agent-oriented
+workflow doc. Where it slots in:
+
+- **4.1, upgraded.** Covering A = pinned `doc/go_spec.html` cut at
+  section boundaries, `@name`s = spec anchors; covering B = latitude
+  inventory + assumptions register (+ interpreter regions later);
+  connection = "this envelope argument rests on this clause text". At
+  a spec re-pin: `recut --remap` on side A, and the drift/broken
+  report **is** the re-review worklist — which the bare anchor lint
+  cannot produce (an anchor can survive a re-pin while the text under
+  it changes meaning; content hashes catch exactly that).
+- **P2 retrofit.** `iter` over the latitude-inventory covering is the
+  natural worklist for the envelope-argument re-read, resumable across
+  agent lanes.
+- **4.2/4.3 coverage accounting.** Corpus cases and ledger entries
+  link to their clause segments; "which spec sections have zero
+  witnesses" is an unlinked-segment query — the SpecTec-style
+  coverage number, for free.
+- **Beyond this campaign** (noted, not scoped): paper-to-proof
+  alignment is a listed covmap use case — `compat/verdi` ↔
+  `deps/verdi` theories, raftharness ↔ `deps/raft` are the same shape.
+
+Doctrine fit: covmap is bookkeeping/speedbump class, not trust
+surface — a broken link is a review prompt, never a correctness claim.
+And it is OathTech's own tool, so the trust-tools never-modify rule
+does not apply; feature work on it is in-family.
+
+### 8.2 The workflow it enables (target state)
+
+spec re-pin (deliberate, §4.4) → `recut --remap` on the spec covering
+→ `status` lists changed clause segments + every connected envelope
+argument / corpus case / ledger entry → `iter` worklist for the
+re-review → all links healed = re-pin complete. Drift events are rare
+and meaningful because the spec side only changes at re-pins.
+
+### 8.3 Feature gaps (ordered; 1–3 are adoption blockers)
+
+1. **Exit codes + machine-readable `status`** (JSON or TSV). Output
+   is human text with no documented exit-code contract — not wirable
+   into `scripts/ci` preflight as a fail-closed gate. This is the
+   difference between a tool we run by hand and a gate.
+2. **Worktree-safe, rev-aware cross-repo references.** Connections
+   reference the target repo "by absolute path" — hostile to the
+   worktree-per-lane discipline (every lane resolves a different
+   absolute path) and unpinned (status compares against whatever is
+   on disk at that path). Wanted: repo aliases resolved via config
+   (git-remote-style) + an optional recorded rev per covering, with
+   loud failure on rev mismatch.
+3. **Structural segmentation.** Hand-splitting ~100+ spec sections
+   via `split <C>:<hash> <line>`, per spec version, is toil. A
+   generic plumbing form suffices and stays format-agnostic:
+   split-at-regex with `@name` from a capture group (for
+   `go_spec.html`: cut at `<h[23] id="(...)">`, name from the id —
+   which also makes 4.1's anchor names fall out automatically).
+4. **Typed links.** Links carry only free-text notes; we need kinds
+   (`cites` / `witnesses` / `disputes` / `implements`) filterable in
+   status and coverage queries. Note-conventions work as a stopgap;
+   first-class link labels make the coverage claims queryable.
+5. **Coverage summary.** A `status`-level rollup per connection:
+   linked/unlinked segment counts (and %) of covering A, grouped by
+   link type — the headline number 4.2 wants to report.
+6. **Bulk link plumbing.** Hundreds of corpus-case→clause links want
+   `link --batch` from stdin TSV with all-or-nothing validation (a
+   shell loop works meanwhile).
+7. **Reviewable store.** Confirm `.covmap/` serialization is
+   deterministic and diff-friendly so mapping changes are reviewable
+   in commits; single-lane ownership (the worktree rule) covers the
+   merge story.
+
+Whitespace/markup normalization was considered and dropped: cosmetic
+churn only bites at re-pins, which are rare and deserve review anyway.
+
+### 8.4 P0 pilot (small, decides 4.1's implementation)
+
+Add covmap to the P0 acquisition set (setup-deps row or cargo
+install — pin a rev either way; record in `docs/spec-sources.md`).
+Pilot: segment the channel/select clauses of the pinned spec, connect
+them to latitude entries C1–C11, simulate a re-pin by advancing the
+spec one Go release, and see whether the drift report matches the
+hand-derived list of affected envelope arguments. Exit criteria:
+gaps 1–3 confirmed-or-refuted against reality; a go/no-go on covmap
+as 4.1's implementation (fallback: the bare anchor lint, which
+remains sufficient for citation-resolution alone).
