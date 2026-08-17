@@ -296,9 +296,10 @@ independent of each other.
    standing constraints (e.g. never file from this identity)?
 4. Scale check on P1: six reading notes ≈ six worker-agent lanes
    (Fable per the worker-model rule) — or trim the list?
-5. covmap (§8): green-light the P0 pilot? And should the feature
-   requests in §8.3 be filed as OathTech/covmap issues now, or held
-   until the pilot confirms them against reality?
+5. covmap (§8): green-light the P0 pilot? The §8.3 gaps are now
+   code-confirmed, so the CIP drafts for items 1–3 could be written
+   before the pilot rather than after — preference? (Handover of any
+   draft to the covmap repo remains a separately signed-off action.)
 
 ## 8. Addendum (2026-08-17): covmap assessment
 
@@ -311,7 +312,11 @@ either side's bytes change — repairable via `recut`/`recut --remap`
 (boundaries carried through unchanged regions, `@name`s survive),
 terminal `broken` state healed only by explicit relink or drop.
 `iter` freezes a covering into a resumable per-segment worklist.
-Assessed from README, SKILL.md, GLOSSARY.md (not yet run — see pilot).
+Assessed from README, SKILL.md, GLOSSARY.md, and — since 2026-08-17 —
+the live checkout at `deps/covmap` (rev `2978393` at assessment time;
+internal repo, so its setup-deps row gets a `-` URL, `--from`
+required). §8.3's gaps are grounded to `file:line` in that rev. Not
+yet *run* — that is the pilot.
 
 ### 8.1 Verdict: strong fit — candidate backbone for 4.1/4.2/4.3
 
@@ -352,51 +357,93 @@ argument / corpus case / ledger entry → `iter` worklist for the
 re-review → all links healed = re-pin complete. Drift events are rare
 and meaningful because the spec side only changes at re-pins.
 
-### 8.3 Feature gaps (ordered; 1–3 are adoption blockers)
+### 8.3 Feature gaps — GROUNDED in `deps/covmap` @ `2978393`
+(ordered; 1–3 are adoption blockers)
 
-1. **Exit codes + machine-readable `status`** (JSON or TSV). Output
-   is human text with no documented exit-code contract — not wirable
-   into `scripts/ci` preflight as a fail-closed gate. This is the
-   difference between a tool we run by hand and a gate.
-2. **Worktree-safe, rev-aware cross-repo references.** Connections
-   reference the target repo "by absolute path" — hostile to the
-   worktree-per-lane discipline (every lane resolves a different
-   absolute path) and unpinned (status compares against whatever is
-   on disk at that path). Wanted: repo aliases resolved via config
-   (git-remote-style) + an optional recorded rev per covering, with
-   loud failure on rev mismatch.
-3. **Structural segmentation.** Hand-splitting ~100+ spec sections
-   via `split <C>:<hash> <line>`, per spec version, is toil. A
-   generic plumbing form suffices and stays format-agnostic:
-   split-at-regex with `@name` from a capture group (for
-   `go_spec.html`: cut at `<h[23] id="(...)">`, name from the id —
-   which also makes 4.1's anchor names fall out automatically).
-4. **Typed links.** Links carry only free-text notes; we need kinds
-   (`cites` / `witnesses` / `disputes` / `implements`) filterable in
-   status and coverage queries. Note-conventions work as a stopgap;
-   first-class link labels make the coverage claims queryable.
-5. **Coverage summary.** A `status`-level rollup per connection:
-   linked/unlinked segment counts (and %) of covering A, grouped by
-   link type — the headline number 4.2 wants to report.
-6. **Bulk link plumbing.** Hundreds of corpus-case→clause links want
-   `link --batch` from stdin TSV with all-or-nothing validation (a
-   shell loop works meanwhile).
-7. **Reviewable store.** Confirm `.covmap/` serialization is
-   deterministic and diff-friendly so mapping changes are reviewable
-   in commits; single-lane ownership (the worktree rule) covers the
-   merge story.
+Code-verified 2026-08-17; each cite is to that rev. Two of the seven
+originally-hypothesized gaps dissolved on reading the code (see the
+"already right" list below) — the survivors:
 
-Whitespace/markup normalization was considered and dropped: cosmetic
-churn only bites at re-pins, which are rare and deserve review anyway.
+1. **`status` exit code + machine-readable output.** `cmd_status`
+   returns `Ok(0)` unconditionally (`src/cli.rs:357` ff., the final
+   `Ok(0)` after the connections loop) — drift and broken-link counts
+   are printed but never reflected in the exit status, and there is no
+   JSON/TSV mode anywhere in `src/`. Not wirable into `scripts/ci`
+   preflight as a fail-closed gate; this is the difference between a
+   tool we run by hand and a gate. (Precedent in-tree: `iter next`
+   already exits non-zero on exhaustion "so a shell loop stops",
+   `src/cli.rs:2207` — the same contract on `status` is the ask.)
+2. **Worktree-safe, rev-aware cross-repo references.** The connection
+   file format stores `# target_repo=<abs/path>` (`src/connection.rs:4-8`,
+   `:40`), and `cmd_status` builds the target `Repo` straight from
+   that string. Hostile to the worktree-per-lane discipline (every
+   lane resolves a different absolute path — a connection created in
+   one lane is broken in all others and in every fresh clone) and
+   unpinned (status compares against whatever bytes are on disk; no
+   rev is recorded anywhere). Wanted: git-remote-style repo aliases
+   resolved via per-checkout config, plus an optional recorded rev
+   with loud mismatch failure.
+3. **Structural segmentation.** `split` takes exactly one cut:
+   `split <covering>:<hash> <line> [<label_top>] [<label_bot>]`
+   (`src/cli.rs:1397-1402`), addressed by segment hash — so scripted
+   bulk cutting must re-resolve addresses after every call (each
+   split re-hashes the halves). No regex anywhere in `src/`
+   (consistent with the sha2-only dependency policy). Cutting ~100+
+   spec sections per spec version this way is toil. A format-agnostic
+   plumbing form suffices: split-at-regex with `@name` from a capture
+   group (for `go_spec.html`: cut at `<h[234] id="(...)">`, name from
+   the id — which also makes 4.1's anchor names fall out
+   automatically), or a batch form taking a precomputed cut-list file.
+4. **Typed links.** `Link { a, b, note }` — free-text note only
+   (`src/connection.rs:20-24`). We want kinds (`cites` / `witnesses` /
+   `disputes` / `implements`) filterable in status/coverage queries.
+   Note-conventions are a workable stopgap; first-class link labels
+   make the coverage claims queryable.
+5. **Coverage breakdown + emission.** Downgraded from the original
+   hypothesis: per-connection coverage *already exists* — `status`
+   prints distinct-resolving-endpoints over covering size, source and
+   target ("the theory-defined source/target coverage",
+   `src/cli.rs:~430-452`), and `ls --linked|--unlinked [--label]`
+   lists the unmapped remainder (`src/cli.rs:1033-1052`). Remaining
+   ask folds into 1 and 4: machine-readable emission, and breakdown
+   by link type once types exist.
+6. **Bulk link plumbing.** `link` is one pair per call
+   (`src/cli.rs:1730`); hundreds of corpus-case→clause links want a
+   stdin-TSV batch with all-or-nothing validation. A shell loop works
+   meanwhile — lowest priority.
 
-### 8.4 P0 pilot (small, decides 4.1's implementation)
+Resolved positively by the code (no request needed): **store
+reviewability** — coverings and connections serialize as sorted text
+(`src/connection.rs:110`, `src/covering.rs:435,854`), so a tracked
+`.covmap/` is deterministic and git-diffable; single-lane ownership
+covers the merge story. Whitespace/markup normalization was considered
+and dropped: cosmetic churn only bites at re-pins, which are rare and
+deserve review anyway.
 
-Add covmap to the P0 acquisition set (setup-deps row or cargo
-install — pin a rev either way; record in `docs/spec-sources.md`).
-Pilot: segment the channel/select clauses of the pinned spec, connect
-them to latitude entries C1–C11, simulate a re-pin by advancing the
-spec one Go release, and see whether the drift report matches the
-hand-derived list of affected envelope arguments. Exit criteria:
-gaps 1–3 confirmed-or-refuted against reality; a go/no-go on covmap
-as 4.1's implementation (fallback: the bare anchor lint, which
-remains sufficient for citation-resolution alone).
+### 8.4 Deliverable: CIP drafts (the grounded request set)
+
+covmap has an in-repo proposal process (`cips/0001-iterators.md` …
+`0004-content-only-hash.md`) — requests to its developers are
+delivered in that format, not as an issue list. **A campaign outcome
+is a set of CIP drafts** covering §8.3 items 1–4 (6 as a paragraph in
+one of them), each grounded in: the `file:line` evidence above, the
+pilot's concrete transcript (the exact command sequence our workflow
+needs and where it breaks today), and the workflow story of §8.2.
+Drafts live at `docs/covmap-cips/` in this repo until handed over;
+handing them over is an outward-facing action with its own sign-off.
+Items 1–3 can be drafted immediately after the pilot; 4–6 should cite
+pilot experience to earn their priority claims.
+
+### 8.5 P0 pilot (small, decides 4.1's implementation)
+
+setup-deps row for covmap (`-` URL, internal; pin the assessed rev)
++ `cargo build`; record in `docs/spec-sources.md`. Pilot: segment the
+channel/select clauses of the pinned spec, connect them to latitude
+entries C1–C11 (working around gap 2 by running both coverings inside
+one repo checkout if needed — itself evidence for the CIP), simulate
+a re-pin by advancing the spec one Go release, and check the drift
+report against the hand-derived list of affected envelope arguments.
+Exit criteria: the §8.2 workflow demonstrated or refuted end-to-end;
+CIP drafts (§8.4) written from the transcript; go/no-go on covmap as
+4.1's implementation (fallback: the bare anchor lint, which remains
+sufficient for citation-resolution alone).
