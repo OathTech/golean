@@ -269,6 +269,20 @@ P0+P1 first and cheap; P2 before P3/P4 so the ledger and corpus slices
 are born citing anchors rather than retrofitted. P3 and P4 are
 independent of each other.
 
+**Branch topology (Mike, 2026-08-17): `spec-truth` is the campaign's
+integration branch.** Sub-lanes (P1 reading notes, etc.) fork as
+sub-worktrees off the `spec-truth` tip — not off `main` — so they see
+the plan without a `main` landing; they own disjoint files, rebase
+onto `spec-truth`, and land into it ff-only (the main-merge
+discipline, applied one level down; snapshot rule per sub-worktree;
+`deps/` via `setup-deps --from` the spec-truth worktree). `main`
+landings happen at milestones via the unchanged merge protocol —
+first one proposed after P0 + pilot + P1, so the audit surface stays
+reasonable. P3/P4 fork from `main` after that landing, not from the
+aged campaign branch: baseline re-pins and `Corpus/` ownership want a
+fresh base, and drift in `scripts/setup-deps` is the known conflict
+file with other arcs.
+
 ## 6. Risks and refusals
 
 - **Authority inversion.** The spec is upper-bound evidence, not the
