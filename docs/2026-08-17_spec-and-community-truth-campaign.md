@@ -168,7 +168,7 @@ and lands via the normal merge protocol.
 
 ### 4.1 Clause anchors + lint (the citation spine)
 
-A spec citation becomes a machine-checkable object: `spec#Anchor`
+A spec citation becomes a machine-checkable object: `spec#<Anchor>`
 (e.g. `spec#Order_of_evaluation`, `spec#Select_statements`) resolving
 into the pinned `doc/go_spec.html`, plus `mem#...` for the memory
 model. Then:

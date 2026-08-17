@@ -143,6 +143,14 @@ jobs:
       # constant with the diagnostics numbers, never deleting the
       # readback. Investigation record:
       # docs/2026-08-14_ci-runner-death-and-slow-tier-timeout.md.
+      # check-spec-anchors (spec-truth P2) verifies spec#/mem# citations
+      # against the PINNED golang/go checkout and fails CLOSED if absent
+      # or off-pin. Shallow single-branch clone at the tag = the pinned
+      # commit (scripts/setup-deps 'go' row; docs/spec-sources.md).
+      - name: Reference checkout deps/go at the pinned tag
+        run: |
+          git clone --quiet --depth 1 --branch go1.26.5 https://github.com/golang/go deps/go
+
       - name: Set up Go (pinned to the oracle family)
         uses: actions/setup-go@v5
         with:

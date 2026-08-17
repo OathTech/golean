@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# check-spec-anchors — every spec#/mem# citation in tracked files must
+# resolve to a real anchor in the PINNED Go spec / memory model.
+#
+# Mechanism 4.1 of the spec-truth campaign
+# (docs/2026-08-17_spec-and-community-truth-campaign.md §4.1): a spec
+# citation is a machine-checkable object. This lint checks RESOLUTION
+# (the cited anchor exists at the pin), deliberately not claim-support
+# — that stays with the audit dimension. Content-level drift detection
+# (did the cited TEXT change) is the covmap layer's job, not this
+# lint's; see the campaign doc §8 and the go_mem `977e23a707` lesson
+# (anchors and version lines can survive normative changes).
+#
+# Citation syntax (tracked convention, JSCert-style):
+#   spec#Anchor_name  ->  deps/go/doc/go_spec.html  id="Anchor_name"
+#   mem#anchor_name   ->  deps/go/doc/go_mem.html   id="anchor_name"
+# Prose placeholders use angle brackets (spec#<Anchor>), which the
+# scanner does not match. A citation token is #-then-word-chars; word
+# chars are [A-Za-z0-9_].
+#
+# Fail closed:
+#   - no deps/go checkout             -> FAIL (scripts/setup-deps --only go)
+#   - deps/go not at the recorded pin -> FAIL (trust-tools rule: resolve
+#     rev drift by hand, never silently)
+#   - any unresolved citation         -> FAIL, listing file:line:token
+set -euo pipefail
+cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+
+SPEC=deps/go/doc/go_spec.html
+MEM=deps/go/doc/go_mem.html
+if [[ ! -f "$SPEC" || ! -f "$MEM" ]]; then
+  echo "check-spec-anchors: FAIL — pinned spec checkout missing ($SPEC)." >&2
+  echo "  run: scripts/setup-deps --only go   (fail closed by design)" >&2
+  exit 1
+fi
+
+# The pin's authoritative home is the setup-deps table (itself derived
+# from docs/spec-sources.md). Verify the checkout matches it, so this
+# lint never validates citations against the wrong revision.
+pin="$(sed -n '/^PINS=/,/^TABLE$/p' scripts/setup-deps | awk '$1 == "go" { print $2 }')"
+have="$(git -C deps/go rev-parse HEAD)"
+if [[ -z "$pin" || "$have" != "$pin"* ]]; then
+  echo "check-spec-anchors: FAIL — deps/go at ${have:0:9}, pin is ${pin:0:9} (rev drift; fail closed)" >&2
+  exit 1
+fi
+
+tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
+grep -o 'id="[^"]*"' "$SPEC" | sed 's/^id="//;s/"$//' | sort -u > "$tmp/spec-ids"
+grep -o 'id="[^"]*"' "$MEM"  | sed 's/^id="//;s/"$//' | sort -u > "$tmp/mem-ids"
+
+# Every citation occurrence as "file<TAB>line<TAB>prefix<TAB>anchor".
+# grep -o emits the (possibly) leading non-word guard char; strip it in awk.
+git ls-files -z '*.md' '*.lean' \
+  | xargs -0 grep -nHoE '(^|[^A-Za-z0-9_])(spec|mem)#[A-Za-z0-9_]+' -- 2>/dev/null \
+  | awk -F: '{
+      tok = $3; for (i = 4; i <= NF; i++) tok = tok ":" $i;
+      sub(/^[^A-Za-z0-9_]*/, "", tok);
+      split(tok, a, "#");
+      printf "%s\t%s\t%s\t%s\n", $1, $2, a[1], a[2];
+    }' > "$tmp/citations" || true
+
+fail=0
+n_spec=0; n_mem=0
+while IFS=$'\t' read -r f ln prefix anchor; do
+  case "$prefix" in
+    spec) ids="$tmp/spec-ids"; name="go_spec.html"; n_spec=$((n_spec+1)) ;;
+    mem)  ids="$tmp/mem-ids";  name="go_mem.html";  n_mem=$((n_mem+1)) ;;
+    *)    continue ;;
+  esac
+  if ! grep -qxF "$anchor" "$ids"; then
+    echo "  UNRESOLVED ${f}:${ln}: ${prefix}#${anchor} — no id=\"${anchor}\" in the pinned ${name}"
+    fail=1
+  fi
+done < "$tmp/citations"
+
+if [[ "$fail" -ne 0 ]]; then
+  echo "check-spec-anchors: FAIL — unresolved citations above (pin ${pin:0:9})" >&2
+  exit 1
+fi
+echo "check-spec-anchors: ok — ${n_spec} spec# + ${n_mem} mem# citations all resolve at pin ${pin:0:9}"

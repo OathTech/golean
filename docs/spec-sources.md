@@ -28,7 +28,7 @@ corpus one; until then the check is spec-pin ⟷ oracle only.)
 
 | name | rev | role |
 |---|---|---|
-| `go` | `c19862e5f8415b4f24b189d065ed739517c548ba` (= `go1.26.5`) | THE upper-bound text: `doc/go_spec.html`, `doc/go_mem.html`, `test/` (issue-tagged semantic tests), `src/go/types/testdata`, `src/internal/types/testdata`; release notes in git HISTORY only (23 `doc/go1.*.html` files, all removed from `doc/` before the pin — delta-review nit). Full clone on purpose — P4 mines `git log --follow doc/go_spec.html` and `git log --all` for the release notes. |
+| `go` | `c19862e5f8415b4f24b189d065ed739517c548ba` (= `go1.26.5`) | THE upper-bound text: `doc/go_spec.html`, `doc/go_mem.html`, `test/` (issue-tagged semantic tests), `src/go/types/testdata`, `src/internal/types/testdata`; release notes in git HISTORY only (23 `doc/go1.*.html` files, all removed from `doc/` before the pin — delta-review nit). Full clone on purpose — P4 mines `git log --follow doc/go_spec.html` and `git log --all` for the release notes. PROMOTED to setup-deps' default tier when `scripts/check-spec-anchors` landed (P2): gate dependencies bootstrap by default, per the goose/verbatim-gate precedent; use `--from` to keep worktree bootstraps local. |
 | `covmap` | `2978393a4aed26b9562f5cd040e74507b2a53812` | Candidate 4.1 mechanism (campaign doc §8). Internal repo, no public URL — `--from` only. |
 | `go101` | `c13b00435002a00f574430b61eb65ec5a268acfe` | Community corner-case catalog; divergence-ledger *seed only*, every claim independently verified. Shallow reading copy (depth 50). |
 | `spectec` | `acc6e834ff403c82554d081237f327346190ad96` | Wasm SpecTec reading copy (P1). Shallow. |

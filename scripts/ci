@@ -274,6 +274,15 @@ if bugout="$(./scripts/check-bugs.sh 2>&1)"; then echo "$bugout" | sed 's/^/  /'
 step "feature-coverage cross-check (scripts/check-coverage)"
 if covout="$(./scripts/check-coverage 2>&1)"; then echo "$covout" | tail -2 | sed 's/^/  /'; ok "feature-coverage (no dead tags)"; else echo "$covout"; bad "feature-coverage (dead tag — see above)"; fi
 
+# 1c2b. Spec-anchor citations resolve against the PINNED Go spec/memory
+#     model (spec-truth campaign mechanism 4.1, landed at P2). Checks
+#     resolution only (anchor exists at the pin); content-level drift is
+#     the covmap layer's job. Fails closed without deps/go or on rev
+#     drift — deps/go is default-tier in scripts/setup-deps, and the CI
+#     workflow clones it pinned (like deps/goose for the verbatim gate).
+step "spec-anchor citations (scripts/check-spec-anchors)"
+if anchout="$(./scripts/check-spec-anchors 2>&1)"; then echo "$anchout" | sed 's/^/  /'; ok "spec-anchor citations resolve at the pin"; else echo "$anchout" | sed 's/^/  /'; bad "spec-anchor citations (see above)"; fi
+
 # 1c2. Membership-lane gate self-test (delta-review T2, 2026-08-05): the
 # lane's shell gates (manifest lane validation incl. the explicit-width
 # requirement) exercised against the recorded bad-shape fixtures, PLUS —

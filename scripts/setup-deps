@@ -72,7 +72,7 @@ grossmith        -                                         -                    
 gobra            -                                         -                                            named
 aeneas           -                                         -                                            named
 strata           -                                         -                                            named
-go               c19862e5f8415b4f24b189d065ed739517c548ba  https://github.com/golang/go.git             named
+go               c19862e5f8415b4f24b189d065ed739517c548ba  https://github.com/golang/go.git             default
 covmap           2978393a4aed26b9562f5cd040e74507b2a53812  -                                            named
 go101            c13b00435002a00f574430b61eb65ec5a268acfe  https://github.com/go101/go101.git           named
 spectec          acc6e834ff403c82554d081237f327346190ad96  https://github.com/Wasm-DSL/spectec.git      named
