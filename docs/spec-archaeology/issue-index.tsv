@@ -1,6 +1,9 @@
-# golang/go issue metadata for the archaeology census's 372 resolvable refs
+# golang/go issue metadata for the archaeology census's 370 resolvable refs
 # joined from the gh snapshot (deps/issue-snapshots/, gitignored); census pin c19862e5f841
-# unresolvable refs: 2 (47141,56010) — some census '#N' tokens are CL numbers or typos, recorded, not dropped silently
+# unresolvable via the ISSUES api: 2 (47141,56010) — NOT necessarily junk:
+# check the Discussions api before dismissing (audit F-5: 47141 and 56010 are the
+# memory-model-rewrite and loopvar-semantics DISCUSSIONS — top-value census objects)
+# snapshot rows not in the current census (retired refs): 2
 number	state	closed	labels	title
 113	closed	2014-12-08	FrozenDueToAge	Missing sentence from documentation and language definition
 164	closed	2014-12-08	LanguageChange,FrozenDueToAge	Cannot use fields of anonymous field in struct literal
@@ -18,10 +21,8 @@ number	state	closed	labels	title
 697	closed	2014-12-08	FrozenDueToAge	Spec elides ';' illegally after simple statement when switch expression elided
 743	closed	2014-12-08	FrozenDueToAge	an issue in GO programming language spec
 770	closed	2014-12-08	FrozenDueToAge	reflect method information seems wrong
-801	closed	2014-12-08	FrozenDueToAge	./all.bash fails at container/vector test
 803	closed	2014-12-08	FrozenDueToAge	PointerType missing from Conversion production
 891	closed	2014-12-08	FrozenDueToAge	Specification does not document behavior of len() and cap() on nil slice, map, or channel
-900	closed	2014-12-08	FrozenDueToAge	http.Server redirects to / on a URL with two (but not three or four) leading slashes, such as GET //myfile HTTP/1.1
 1118	closed	2014-12-08	FrozenDueToAge	The Go Memory Model article: Obsolete section
 1285	closed	2014-12-08	FrozenDueToAge	Spec references nonexistant unsafe.Maxalign
 1349	closed	2014-12-08	FrozenDueToAge	cannot catch "too many operations on a closed channel" panic

@@ -62,8 +62,10 @@ Discipline notes, recorded up front:
   restriction gc doesn't.
 - Bound affected: upper (a machine enforcing the old text would
   refuse programs conforming-by-amendment). Status: closed upstream;
-  our pin (go1.26.5) predates the fix commit? — NO: the fix is in the
-  1.26 line (2025-12-02 < the pin). No action owed.
+  the fix IS an ancestor of the go1.26.5 pin (`git merge-base
+  --is-ancestor 1a64db3a4b3f <pin>` — established by ancestry, not
+  date comparison; argument corrected at the P4 audit). No action
+  owed.
 
 ### L-002 — FG dispatch vs gc dispatch — `prior-art`
 
@@ -94,8 +96,10 @@ Discipline notes, recorded up front:
 - How found: spec-re-read (FG/memory-model note §2.1/§4.1).
 - Sources: mem#model Requirement 1 (links spec#Order_of_evaluation).
 - Content: the memory model's per-goroutine order is a PARTIAL order
-  exactly where the spec's evaluation order is open — E2–E5/E12's
-  latitude is memory-model latitude too, under concurrency.
+  exactly where the spec's evaluation order is open — E2–E5's latitude
+  (and E12's, the entry added on the spec-p2 lane landing alongside;
+  dangling-id caught at the P4 audit) is memory-model latitude too,
+  under concurrency.
 - Stance: recorded at E1's cross-link (P2 retrofit); matters the day
   an E-series envelope meets a concurrent observer.
 
@@ -110,18 +114,28 @@ Discipline notes, recorded up front:
 
 - How found: audit of the P1 notes (R2's F-1), verified twice.
 - Sources: `deps/go` commit `977e23a707` (2023-07-31), mem#restrictions.
-- Content: 13 lines of normative per-sub-value any-order text added
-  while the "Version of June 6, 2022" line and the full anchor set
-  stayed byte-identical.
+- Content: 13 insertions / 2 deletions — ~9 lines of new normative
+  per-sub-value any-order text plus rewordings (precision per the P4
+  audit) — while the "Version of June 6, 2022" line and the full
+  anchor set stayed byte-identical.
 - Stance: neither anchor existence nor the version line is a
   content-drift tripwire; content hashing (the covmap layer) is the
-  only sufficient signal. Encoded in the inventory §0 norms and
-  `scripts/check-spec-anchors`' header.
+  only sufficient signal. Encoded on the spec-p2 LANE (inventory §0
+  citation norms + `scripts/check-spec-anchors`' header) — landing
+  alongside this ledger, not present on this branch's own tree
+  (cross-branch scope corrected at the P4 audit).
 
 ## Feed status (honest accounting)
 
-Census at the go1.26.5 pin: **926 spec commits, 39 mem commits, 374
-distinct issue refs, 203 anchors with rulings** — the uncurated feed.
+Census at the go1.26.5 pin (post-audit regeneration): **926 spec
+commits, 39 mem commits, 372 distinct issue refs** (two code-browser
+URL fragments retired by the audit-tightened regex; ~20 of the refs
+are PR numbers from Gerrit trailers, counted as refs, disclosed),
+**214 anchors with rulings** — of which the rollup's `live_at_pin`
+column marks the sections REMOVED before the pin (historic keys, not
+covmap segment names) and 148+1 pre-2009 rows carry the explicit
+`(pre-anchor-era)` marker (the pre-HTML file had no anchors) — the
+uncurated feed.
 Curated above: 6. Issue-metadata enrichment DONE (2026-08-17,
 sandbox opened by operator): 372 of 374 refs resolved into the
 tracked `docs/spec-archaeology/issue-index.tsv` (30 carry
@@ -129,10 +143,24 @@ tracked `docs/spec-archaeology/issue-index.tsv` (30 carry
 `gh api repos/golang/go/issues/N` into the gitignored
 `deps/issue-snapshots/golang-go-issues.jsonl`, joined by
 `scripts/mine-spec-archaeology --enrich` (fail closed without the
-snapshot). Refresh loop, for the record:
-`while read n; do gh api repos/golang/go/issues/$n --jq '{number,title,state,closed_at,labels:[.labels[].name]}'; done < deps/issue-snapshots/issue-numbers.txt`. Next curation passes,
-in census-yield order: the `Implementation_differences` +
-`Package_unsafe` anchor clusters (32/31 commits — likely dense in
-rulings), Go 101 claims (seed #3, each independently verified),
-release-notes language-change deltas (in-history mining per the
-corrected §2 row).
+snapshot). Refresh loop, for the record (the else-branch writes the
+FAILED sentinel `--enrich`'s unresolvable accounting depends on —
+loop corrected at the P4 audit, whose first version could not
+reproduce the snapshot it documented):
+`while read n; do gh api repos/golang/go/issues/$n --jq '{number,title,state,closed_at,labels:[.labels[].name]}' || echo "{\"number\":$n,\"fetch\":\"FAILED\"}"; done < deps/issue-snapshots/issue-numbers.txt`.
+
+**Named high-value objects surfaced by the audit** (the two
+"unresolvable" refs are golang/go DISCUSSIONS, not junk — top
+curation targets): discussion **#47141** "Updating the Go memory
+model" (the 2022 rewrite's public record — committee intent for every
+mem# anchor we cite) and discussion **#56010** "redefining for loop
+variable semantics" (the 1.22 loopvar change — the language-version
+pin's own case study).
+
+Next curation passes: `Package_unsafe` (31 commits, LIVE at the pin);
+the two discussions above; Go 101 claims (seed #3, each independently
+verified); release-notes language-change deltas (in-history mining
+per the corrected §2 row). NOT `Implementation_differences` as a
+mapping target — its 32 commits are archaeology of a section removed
+in 2012 (`live_at_pin=no`; the audit caught the first version of this
+list nominating a dead section as the top cluster).

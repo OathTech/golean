@@ -2,207 +2,220 @@
 # deps/go @ c19862e5f841; commits touching the section / issue refs in them
 # NOTE: '(preamble)' is pre-first-anchor content — every release's subtitle/date bump
 # lands there, so its count is dominated by version-line churn, not rulings
-doc	anchor	commits	issue_refs
-spec	(preamble)	479	274
-spec	Composite_literals	54	30
-spec	Conversions	50	17
-spec	Constant_expressions	35	12
-spec	For_statements	33	12
-spec	Implementation_differences	32	7
-spec	Method_declarations	31	13
-spec	Operators	31	19
-spec	Package_unsafe	31	19
-spec	Selectors	31	19
-mem	(preamble)	30	15
-spec	Calls	26	6
-spec	Struct_types	26	15
-spec	Arithmetic_operators	25	3
-spec	Assignments	25	6
-spec	Constants	25	17
-spec	Making_slices_maps_and_channels	25	8
-spec	Type_switches	25	8
-spec	Comparison_operators	24	8
-spec	Index_expressions	24	15
-spec	Map_types	24	8
-spec	Variable_declarations	24	12
-spec	Channel_types	23	7
-spec	Interface_types	23	9
-spec	Type_declarations	23	9
-spec	Types	23	8
-spec	Appending_and_copying_slices	22	11
-spec	For_range	22	19
-spec	Return_statements	22	7
-spec	Predeclared_identifiers	21	4
-spec	Type_identity	21	12
-spec	Length_and_capacity	20	6
-spec	Type_assertions	20	8
-spec	Function_types	19	4
-spec	Operands	19	7
-spec	Select_statements	19	3
-spec	Short_variable_declarations	19	17
-spec	Import_declarations	18	4
-spec	Slices	18	7
-spec	Declarations_and_scope	17	7
-spec	Program_execution	17	10
-spec	Receive_operator	17	8
-spec	String_literals	17	6
-spec	Assignability	16	6
-spec	Numeric_types	16	2
-spec	Slice_types	16	6
-spec	Array_types	15	8
-spec	Defer_statements	15	5
-spec	Function_declarations	15	7
-spec	Handling_panics	15	5
-spec	Method_expressions	15	4
-spec	Primary_expressions	15	5
-spec	Address_operators	14	5
-spec	Order_of_evaluation	14	4
-spec	Passing_arguments_to_..._parameters	14	3
-spec	Expression_switches	13	8
-spec	Indexes	13	3
-spec	Instantiations	13	6
-spec	Introduction	13	5
-spec	Method_sets	13	7
-spec	Qualified_identifiers	13	5
-spec	Size_and_alignment_guarantees	13	6
-spec	Iota	12	3
-spec	Slice_expressions	12	7
-spec	Characters	11	2
-spec	Complex_numbers	11	9
-spec	Conversions_to_and_from_a_string_type	11	6
-spec	Goto_statements	11	3
-spec	Notation	11	5
-spec	Operator_precedence	11	6
-spec	Type_constraints	11	8
-spec	Assignment_compatibility	10	0
-spec	Communication_operators	10	0
-spec	Source_code_representation	10	1
-spec	Constant_declarations	9	6
-spec	Expression_statements	9	2
-spec	General_interfaces	9	3
-spec	Integer_overflow	9	3
-spec	The_zero_value	9	2
-spec	Type_definitions	9	4
-spec	Type_inference	9	0
-spec	Allocation	8	3
-spec	Built-in_functions	8	3
-spec	Continue_statements	8	3
-spec	Core_types	8	2
-spec	Deletion_of_map_elements	8	1
-spec	Pointer_types	8	2
-spec	Rune_literals	8	9
-spec	Semicolons	8	3
-spec	Send_statements	8	5
-spec	An_example_package	7	1
-spec	Bootstrapping	7	2
-spec	Break_statements	7	2
-spec	Close	7	4
-spec	Comparison_compatibility	7	0
-spec	Exported_identifiers	7	2
-spec	Function_literals	7	2
-spec	Package_initialization	7	6
-spec	Representability	7	1
-spec	Statements	7	0
-spec	String_types	7	3
-spec	Blocks	6	0
-spec	Close_and_closed	6	2
-spec	Conversions_from_slice_to_array_pointer	6	7
-spec	Copying_slices	6	0
-spec	Floating-point_literals	6	5
-spec	Foo	6	0
-spec	Integer_literals	6	6
-spec	Integer_operators	6	4
-spec	Tokens	6	2
-spec	Type_parameter_declarations	6	4
-spec	Type_unification	6	1
-spec	Underlying_types	6	3
-mem	model	5	3
-spec	Alias_declarations	5	6
-spec	Blank_identifier	5	3
-spec	Character_literals	5	0
-spec	Comments	5	1
-spec	Constraint_type_inference	5	0
-spec	Floating_point_operators	5	2
-spec	For_clause	5	4
-spec	Function_argument_type_inference	5	0
-spec	Go_statements	5	3
-spec	If_statements	5	1
-spec	IncDec_statements	5	1
-spec	Letters_and_digits	5	6
-spec	Method_values	5	4
-spec	Operators_and_Delimiters	5	2
-spec	Operators_and_punctuation	5	3
-spec	Structure_of_interfaces	5	0
-spec	Terminating_statements	5	4
-spec	Type_compatibility	5	1
-spec	Variables	5	6
-spec	Assignment_statements	4	2
-spec	Clear	4	3
-spec	Identifiers	4	0
-spec	Imaginary_literals	4	6
-spec	Label_scopes	4	0
-spec	Logical_operators	4	0
-spec	Min_and_max	4	4
-spec	Satisfying_a_type_constraint	4	4
-spec	Type_unification_rules	4	2
-mem	restrictions	3	2
-spec	Basic_interfaces	3	1
-spec	Boolean_types	3	1
-spec	Const_declarations	3	0
-spec	Empty_statements	3	0
-spec	Fallthrough_statements	3	2
-spec	Labeled_statements	3	0
-spec	Package_clause	3	0
-spec	Packages	3	0
-spec	Properties_of_types_and_values	3	0
-spec	Run_time_panics	3	0
-spec	Source_file_organization	3	0
-spec	Switch_statements	3	3
-spec	Type_parameter_lists	3	1
-mem	Foo	2	0
-mem	chan	2	3
-spec	Conversions_from_slice_to_array_or_array_pointer	2	2
-spec	Embedded_interfaces	2	1
-spec	Expressions	2	0
-spec	Go_1.22	2	2
-spec	Go_1.23	2	2
-spec	Ideal_numbers	2	0
-spec	Implementing_an_interface	2	0
-spec	Language_versions	2	2
-spec	Specific_types	2	0
-spec	String_concatenation	2	0
-spec	Strings	2	0
-spec	Type_parameters	2	0
-spec	Uniqueness_of_identifiers	2	1
-mem	advice	1	2
-mem	atomic	1	2
-mem	badsync	1	2
-mem	conclusion	1	2
-mem	go	1	2
-mem	goexit	1	2
-mem	init	1	2
-mem	introduction	1	2
-mem	locks	1	2
-mem	once	1	2
-mem	overview	1	2
-mem	synchronization	1	2
-spec	Basic_types	1	0
-spec	Boolean_literals	1	0
-spec	Booleans	1	0
-spec	Declarations_and_Scope	1	0
-spec	Errors	1	0
-spec	For_condition	1	1
-spec	General_properties_of_types_and_values	1	0
-spec	Generenal_interfaces	1	0
-spec	Go_1.24	1	1
-spec	Keywords	1	0
-spec	Lexical_elements	1	0
-spec	Multiple-file_packages	1	0
-spec	Predeclared_functions	1	0
-spec	Program_initialization	1	1
-spec	Program_initialization_and_execution	1	0
-spec	Representation_of_values	1	1
-spec	Run_time_errors	1	0
-spec	Structural_interfaces	1	0
-spec	System_considerations	1	0
-spec	Type_identity_and_compatibility	1	0
+# live_at_pin=no marks sections REMOVED before the pin: historic key,
+# not a covmap segment name; curate as archaeology, not as mapping targets
+doc	anchor	commits	issue_refs	live_at_pin
+spec	(preamble)	484	274	n/a
+spec	(pre-anchor-era)	148	0	n/a
+spec	Composite_literals	54	30	yes
+spec	Conversions	50	17	yes
+spec	Constant_expressions	35	12	yes
+spec	For_statements	33	12	yes
+spec	Implementation_differences	32	7	no
+mem	(preamble)	31	15	n/a
+spec	Method_declarations	31	13	yes
+spec	Operators	31	19	yes
+spec	Package_unsafe	31	19	yes
+spec	Selectors	31	19	yes
+spec	Calls	26	6	yes
+spec	Struct_types	26	15	yes
+spec	Arithmetic_operators	25	3	yes
+spec	Assignments	25	6	no
+spec	Constants	25	17	yes
+spec	Making_slices_maps_and_channels	25	8	yes
+spec	Type_switches	25	6	yes
+spec	Comparison_operators	24	8	yes
+spec	Index_expressions	24	15	yes
+spec	Map_types	24	8	yes
+spec	Variable_declarations	24	12	yes
+spec	Channel_types	23	7	yes
+spec	Interface_types	23	9	yes
+spec	Type_declarations	23	9	yes
+spec	Types	23	8	yes
+spec	Appending_and_copying_slices	22	11	yes
+spec	For_range	22	19	yes
+spec	Return_statements	22	7	yes
+spec	Predeclared_identifiers	21	4	yes
+spec	Type_identity	21	12	yes
+spec	Length_and_capacity	20	6	yes
+spec	Type_assertions	20	8	yes
+spec	Function_types	19	4	yes
+spec	Operands	19	7	yes
+spec	Select_statements	19	3	yes
+spec	Short_variable_declarations	19	17	yes
+spec	Import_declarations	18	4	yes
+spec	Slices	18	7	no
+spec	Declarations_and_scope	17	7	yes
+spec	Program_execution	17	10	yes
+spec	Receive_operator	17	8	yes
+spec	String_literals	17	6	yes
+spec	Assignability	16	6	yes
+spec	Numeric_types	16	2	yes
+spec	Slice_types	16	6	yes
+spec	Array_types	15	8	yes
+spec	Defer_statements	15	5	yes
+spec	Function_declarations	15	7	yes
+spec	Handling_panics	15	5	yes
+spec	Method_expressions	15	4	yes
+spec	Primary_expressions	15	5	yes
+spec	Address_operators	14	5	yes
+spec	Order_of_evaluation	14	4	yes
+spec	Passing_arguments_to_..._parameters	14	3	yes
+spec	Expression_switches	13	8	yes
+spec	Indexes	13	3	no
+spec	Instantiations	13	6	yes
+spec	Introduction	13	5	yes
+spec	Method_sets	13	7	yes
+spec	Qualified_identifiers	13	5	yes
+spec	Size_and_alignment_guarantees	13	6	yes
+spec	Complex_numbers	12	9	yes
+spec	Iota	12	3	yes
+spec	Slice_expressions	12	7	yes
+spec	Characters	11	2	yes
+spec	Conversions_to_and_from_a_string_type	11	6	yes
+spec	Goto_statements	11	3	yes
+spec	Notation	11	5	yes
+spec	Operator_precedence	11	6	yes
+spec	Type_constraints	11	8	yes
+spec	Assignment_compatibility	10	0	no
+spec	Communication_operators	10	0	no
+spec	Source_code_representation	10	1	yes
+spec	Constant_declarations	9	6	yes
+spec	Core_types	9	2	no
+spec	Expression_statements	9	2	yes
+spec	General_interfaces	9	3	yes
+spec	Integer_overflow	9	3	yes
+spec	The_zero_value	9	2	yes
+spec	Type_definitions	9	4	yes
+spec	Type_inference	9	0	yes
+spec	Allocation	8	3	yes
+spec	Built-in_functions	8	3	yes
+spec	Continue_statements	8	3	yes
+spec	Deletion_of_map_elements	8	1	yes
+spec	Pointer_types	8	2	yes
+spec	Rune_literals	8	9	yes
+spec	Semicolons	8	3	yes
+spec	Send_statements	8	5	yes
+spec	An_example_package	7	1	yes
+spec	Bootstrapping	7	2	yes
+spec	Break_statements	7	2	yes
+spec	Close	7	4	yes
+spec	Comparison_compatibility	7	0	no
+spec	Exported_identifiers	7	2	yes
+spec	Function_literals	7	2	yes
+spec	Package_initialization	7	6	yes
+spec	Representability	7	1	yes
+spec	Statements	7	0	yes
+spec	String_types	7	3	yes
+spec	Type_unification	7	1	yes
+spec	Blocks	6	0	yes
+spec	Close_and_closed	6	2	no
+spec	Conversions_from_slice_to_array_pointer	6	7	no
+spec	Copying_slices	6	0	no
+spec	Floating-point_literals	6	5	yes
+spec	Function_argument_type_inference	6	0	no
+spec	Integer_literals	6	6	yes
+spec	Integer_operators	6	4	yes
+spec	Tokens	6	2	yes
+spec	Type_parameter_declarations	6	4	yes
+spec	Underlying_types	6	3	yes
+mem	model	5	3	yes
+spec	Alias_declarations	5	6	yes
+spec	Blank_identifier	5	3	yes
+spec	Character_literals	5	0	no
+spec	Comments	5	1	yes
+spec	Constraint_type_inference	5	0	no
+spec	Floating_point_operators	5	2	yes
+spec	For_clause	5	4	yes
+spec	Go_statements	5	3	yes
+spec	If_statements	5	1	yes
+spec	IncDec_statements	5	1	yes
+spec	Letters_and_digits	5	6	yes
+spec	Method_values	5	4	yes
+spec	Operators_and_Delimiters	5	2	no
+spec	Operators_and_punctuation	5	3	yes
+spec	Structure_of_interfaces	5	0	no
+spec	Terminating_statements	5	4	yes
+spec	Type_compatibility	5	1	no
+spec	Variables	5	6	yes
+spec	Assignment_statements	4	2	yes
+spec	Clear	4	3	yes
+spec	Identifiers	4	0	yes
+spec	Imaginary_literals	4	6	yes
+spec	Label_scopes	4	0	yes
+spec	Logical_operators	4	0	yes
+spec	Min_and_max	4	4	yes
+spec	Satisfying_a_type_constraint	4	4	yes
+spec	Type_parameter_lists	4	1	no
+spec	Type_unification_rules	4	2	yes
+mem	restrictions	3	2	yes
+spec	Basic_interfaces	3	1	yes
+spec	Boolean_types	3	1	yes
+spec	Const_declarations	3	0	no
+spec	Empty_statements	3	0	yes
+spec	Fallthrough_statements	3	2	yes
+spec	Labeled_statements	3	0	yes
+spec	Package_clause	3	0	yes
+spec	Packages	3	0	yes
+spec	Properties_of_types_and_values	3	0	yes
+spec	Run_time_panics	3	0	yes
+spec	Source_file_organization	3	0	yes
+spec	Switch_statements	3	3	yes
+mem	chan	2	3	yes
+spec	Conversions_from_slice_to_array_or_array_pointer	2	2	yes
+spec	Embedded_interfaces	2	1	yes
+spec	Expressions	2	0	yes
+spec	Go_1.22	2	2	yes
+spec	Go_1.23	2	2	yes
+spec	Ideal_numbers	2	0	no
+spec	Implementing_an_interface	2	0	yes
+spec	Language_versions	2	2	yes
+spec	Specific_types	2	0	no
+spec	String_concatenation	2	0	yes
+spec	Strings	2	0	no
+spec	Type_parameters	2	0	no
+spec	Uniqueness_of_identifiers	2	1	yes
+mem	(pre-anchor-era)	1	0	n/a
+mem	advice	1	2	yes
+mem	atomic	1	2	yes
+mem	badcompiler	1	2	yes
+mem	badsync	1	2	yes
+mem	conclusion	1	2	yes
+mem	finalizer	1	2	yes
+mem	go	1	2	yes
+mem	goexit	1	2	yes
+mem	init	1	2	yes
+mem	introduction	1	2	yes
+mem	locks	1	2	yes
+mem	more	1	2	yes
+mem	once	1	2	yes
+mem	overview	1	2	yes
+mem	synchronization	1	2	yes
+spec	Appendix	1	0	yes
+spec	Basic_types	1	0	no
+spec	Boolean_literals	1	0	no
+spec	Booleans	1	0	no
+spec	Declarations_and_Scope	1	0	no
+spec	Errors	1	0	yes
+spec	For_condition	1	1	yes
+spec	General_properties_of_types_and_values	1	0	no
+spec	Generenal_interfaces	1	0	no
+spec	Go_1.13	1	1	yes
+spec	Go_1.14	1	1	yes
+spec	Go_1.17	1	1	yes
+spec	Go_1.18	1	1	yes
+spec	Go_1.20	1	1	yes
+spec	Go_1.21	1	1	yes
+spec	Go_1.24	1	1	yes
+spec	Go_1.9	1	1	yes
+spec	Keywords	1	0	yes
+spec	Lexical_elements	1	0	yes
+spec	Multiple-file_packages	1	0	no
+spec	Predeclared_functions	1	0	no
+spec	Program_initialization	1	1	yes
+spec	Program_initialization_and_execution	1	0	yes
+spec	Representation_of_values	1	1	yes
+spec	Run_time_errors	1	0	no
+spec	Structural_interfaces	1	0	no
+spec	System_considerations	1	0	yes
+spec	Type_identity_and_compatibility	1	0	no

@@ -3,154 +3,154 @@
 # rows: 926 commits (full --follow history at the pin)
 # anchors are mapped against EACH COMMIT'S OWN file version
 date	sha	issues	anchors	subject
-2008-03-04	73823d236a06	-	-	- added new, revised spec - updated todo
-2008-03-05	28590a0abb2b	-	-	- updated docs
-2008-03-06	194ed070de81	-	-	fix a few nits in the typography so HTML is right
-2008-03-06	1cf631b4c75e	-	-	- added missing ''''s
-2008-03-06	250767174b35	-	-	add HTML formatting; use 	/home/sanjay/bin/makehtml --mode=document go_lang.txt to generate the html output.
-2008-03-06	5009237adbac	-	-	- fixed a couple of grammar errors
-2008-03-06	b1d991d6fd15	-	-	- more grammar fixes
-2008-03-06	bbced0249065	-	-	- updated docs
-2008-03-06	e6626dafa8de	-	-	- get rid of Designator terminology
-2008-03-06	f27e5df49c0f	-	-	- fixed double-definition of StructType
-2008-03-07	2aae3fcbafb3	-	-	fix grammar for struct and interface types to make final semicolon optional
-2008-03-10	8b212f67ffd6	-	-	- attemp to correct statement syntax - introduced FieldDeclList and MethodDeclList   in consistency with other lists - made labels declarations
-2008-03-11	0d1e90be1723	-	-	- added 'nil' keyword to lang doc   (did not add 'true' and 'false' because I think these don't need to be   keywords, they can be recreated from whole cloth) - added 'new' syntax to expressions   (this is needed because of the type as 1st argument - the expression   list is probably not yet implemented, but I think we may want it   eventually) - removed optional ';'s in sieve example - make it more concise - fixed several bugs in go.atg, no parses sieve - added sieve as test case
-2008-03-11	213702a3e63c	-	-	- removed CompoundStat in favor of Block
-2008-03-11	78e4320fdc3e	-	-	- changed if/switch initial stat syntax to match go compiler and make   it consistent - changed declaration syntax to match go compiler
-2008-03-11	7acb294d5801	-	-	- replaced 's in productions everywhere with "s (we were inconsistent in   some places) - removed extra []'s around switch decl/tag expression - not needed
-2008-03-11	8152cb8a712a	-	-	examples contradicted text: '\octal' and '\hex' are fixed size
-2008-03-12	e31ee76dcb5a	-	-	- fixed typo in go_lang.txt - changed go.atg to make optional semicolons work for statements - expanded a test case
-2008-03-16	65348a89b806	-	-	SVN=112717
-2008-03-17	e4ca60eca70e	-	-	change Main, Init to lower case. make new() take an optional expression, not expression list. add an example for new().
-2008-03-19	6caad961fe65	-	-	- added extra escaped chars
-2008-03-25	67aafa6f5718	-	-	update document.  todo still: array and map literals; syntax for basic literals.
-2008-03-27	4c483aa159ce	-	-	Explain goto constraints. Add description of 'any'. Simplify and complete syntax for literals.
-2008-03-27	8c1408dd8e22	-	-	Add select statement
-2008-03-27	e118551c29bb	-	-	Fix date stamp
-2008-03-27	e311457488b7	-	-	add script to generate .html from .txt
-2008-04-17	75bbce9e845c	-	-	- added language to document .() notation - propose change to char/string productions: I find this easier to read
-2008-04-17	a0d5d8089a95	-	-	Added discussion of new, nil, and initialization.
-2008-04-18	1265a0c22d7b	-	-	- essentially reverted my change of yesterday with respect to char/string syntax - fixed indentation in many places - fixed a couple of typos
-2008-04-27	f53db3eaa9d5	-	-	Add description of type conversions.
-2008-04-28	c1aba4119469	-	-	fix description of iota to reflect reality.
-2008-04-29	50cea7038bef	-	-	- Added section on type equivalence - Changed signature syntax: parameter names are always mandatory - Minor white-space cosmetic changes
-2008-05-01	1975ff8b4410	-	-	- completed syntax for import declarations - fixed a typo
-2008-05-01	38c083c1ca66	-	-	Require names for return values for functions with complex return types.
-2008-05-01	5e391cff2cec	-	-	talk about short, int, long etc.
-2008-05-01	d4d19fad2fa1	-	-	Fixed a typo (changed ' -> ") and shortened a production name slightly to match the naming convention elsewhere.
-2008-05-01	f5c076343222	-	-	Explain about pointer types for mutually recursive structures.
-2008-05-06	d222c65477e0	-	-	Introduced forward declaration of types per discussion with ken. A forward-declared (or not yet fully defined) type must be used to construct (mutually) recursive type declarations. This simplifies the compiler and resolves the issue at which scope the forward- declared type is to be declared.
-2008-05-08	aa533738c156	-	-	- changed compound type -> composite type - eliminated 'structured type' terminology
-2008-05-08	b6b8da823dac	-	-	fix up the 'basic types' section. strings were missing
-2008-05-08	f4f588372d7d	-	-	Clarify conversions, include making them constructors for arrays etc.
-2008-05-15	9119f55e6dac	-	-	add a couple of TODOs fixed grammar for "Program"
-2008-05-15	d4aa5c0b4560	-	-	add disclaimer, authors. preparation for linking to p page
-2008-05-27	896c8f4ecca9	-	-	- fixed a typo
-2008-06-06	e92b7538102e	-	-	- fixed a few tests and added 3 incorrectly succeeding tests - updated go_lang.txt to be more uniform and match the implementation - made makehtml work on Mac - fixed a couple of bugs in go.atg
-2008-06-09	4ff63a479404	-	-	- updated spec w/ respect to variable types and shift operators
-2008-06-12	a40a79829ff1	-	-	- fixed minor issues in spec - fixed a couple of bugs in the spec (pointed out by iant)
-2008-06-16	daebf91d2c0e	-	-	fix up grammar for optional elements in if and switch conditions
-2008-07-01	8af8dff65b0c	-	-	- updated doc
-2008-07-01	bc8ef4d52693	-	-	- minor update
-2008-07-01	ceb01373bc14	-	-	- more minor fixes
-2008-07-03	de5442893ddb	-	-	A small but powerful change in constant declarations. Proposal by ken after some discussion about enums. Implementation should be trivial. Wording in the doc should be improved, probably.
-2008-07-07	835cd4694168	-	-	- first cut a Go parser in Go
-2008-07-08	6def94ad83bb	-	-	- added missing keyword 'iota'
-2008-07-08	c685e1b70dfd	-	-	add a disclaimer
-2008-07-15	1401c110083a	-	-	improve the examples in the section on iota
-2008-07-17	7eb7ff2b369f	-	-	new channel syntax select cleans up too
-2008-07-21	777ee7163bba	-	-	map delete
-2008-07-21	c1f5eda7a246	-	-	change date
-2008-07-22	220edc48da35	-	-	Expand section on compound literals.
-2008-07-22	f4dcf518463e	-	-	document initialization
-2008-07-22	febbf82e8dbf	-	-	fix some bad spaces
-2008-07-23	84c8d85fe6b5	-	-	slices and string/array concatenation
-2008-08-04	2f4352a26d27	-	-	- switched most of existing Go code to new export syntax - adjusted lang doc
-2008-08-07	e3fc124640d0	-	-	revert specification of pointer types to current implementation (do not allow explicit type forward declarations) and more clearly specify resolution
-2008-08-11	fe582137f4e9	-	-	- removed fall-through for case: case: in switch statements - added ()'s to all print calls in examples - augmented rule about use of identifiers
-2008-08-12	68fb2d04d0ad	-	-	use tabs for indentation consistently
-2008-08-12	9b1e6fddba4c	-	-	fix one syntax error in declaration. reformat the bullet list about strings
-2008-08-12	f97832e4c285	-	-	New words regarding constants
-2008-08-20	bb0594263886	-	-	updated section on reserved words
-2008-08-21	2d697d67dc22	-	-	clarify pointer forward decls per ian's suggestion
-2008-08-21	2dabb6525a5b	-	-	- explained function and method pointers - removed need for method types and literals (gri & r)
-2008-08-21	c2c49bec7745	-	-	added scope rules, removed TODO
-2008-08-28	df49fb3dc33c	-	-	- Preliminary draft of what might become a real spec - All text taken from go_lang.txt (which is unchanged), but added a contents section, and sorted the contents section in a hopefully sensible manner to give it more structure - Reordered text to match order of contents section, did not adjust the language (needs to be done), but removed sections that were dulicates or invalid
-2008-08-29	354be785c6b9	-	-	- removed 'iota' from the keyword list - added missing operators
-2008-09-03	0976e34d654a	-	-	Composite literal syntax.
-2008-09-03	7a4ed4f8c4f4	-	-	- minor corrections to go_spec.txt - verified that all text from go_lang.txt is either present in its   old form, or that we have corresponding updated sections for it - delete go_lang.txt
-2008-09-03	ce04d0197a59	-	-	- fixed typo
-2008-09-03	f5cb258195f1	-	-	- clarification of type of array literals (always fixed array) - clarification of const decl syntax
-2008-09-04	41d65ac4a5c3	-	-	- added missing language to operator section in spec
-2008-09-04	cae034223073	-	-	- \' not allowed in string literals - \" not allowed in char literals - replaces uses of printf with print
-2008-09-08	7231ceb714aa	-	-	Proposal for new function type syntax as suggested by ken: - removed "func" from function type - make it work by changing composite literal syntax to use {} instead of ()
-2008-09-09	0416f994b76c	-	-	- added convenience wrappers for sort   (work now with Ken's latest compiler fix) - exoanded test cases accordingly - fixed a type in the spec (thx r)
-2008-09-09	4dc2528afa1c	-	-	- added missing language to almost all types - fixed several examples to use new function type syntax - added list of open spec issues to todo.txt
-2008-09-09	c59d2f13aa73	-	-	- moved spec todo's into spec (as html comment) - cleaned up todo.txt a bit
-2008-09-10	203b55e31920	-	-	Eliminate duplication of MethodDecl nonterminal by renaming the one associated with interface types.
-2008-09-10	667ef6c163a0	-	-	- incorporated bug fixes, todo's as suggested by rsc
-2008-09-11	ad71110669d2	-	-	- rewrote section on numeric literals (grammar easier to read, separate between ints and floats, added language regarding the type of numeric literals) - added language with respect to the scope of labels - introduced ideal types for the purpose of the spec - added language to expressions, operands - added some more formal language about ideal type conversion   (probably not 100% correct yet)
-2008-09-11	e28ccebd3ab4	-	-	- simplified the ideal number terminology for better readability
-2008-09-12	c8e18767e88e	-	-	- hopefully improved language on label scopes
-2008-09-17	2902a82ca4ec	-	-	adjusted doc to incorporate new channel notation (still a couple of TODO's with respect to the new notation).
-2008-09-18	6a0fb608665e	-	-	- added item to TODO list in go_spec - filed a bug
-2008-09-19	b90b213e6155	-	-	Updated spec: - clarified constants and constant expressions - clarified type of array composite literals (fixed vs open arrays) - clarified type of map composite literals (need to use '&' to get   a map pointer) - added proposal for "if-else" (TBD) - added TODO w/ respect to "x, ok = <-ch" (and for arrays)
-2008-09-26	133c68e9ac91	-	-	Simplification of Conversions section: - leave only basic type conversions in that section - we have a section of composite literals which covers those - we have a section prepared (but not written) on type guards - the built-in function "convert" doesn't need to be exposed   as it is redundant
-2008-09-26	566e3b20432e	-	-	- added language with respect to init() restrictions
-2008-09-26	ac05579345f9	-	-	1) Fixed spec w/ respect to result types. 2) Added proposal for making "if" statements consistent with the    other control structures.
-2008-09-26	b9f8b9c43a1b	-	-	- fixed Go statement syntax (only notational change) - simplified Assignment syntax (only notational change) - added TODOs - made old text invisible by moving it into HTML comment
-2008-09-27	75a03a5b00cd	-	-	- added TODO - changed FieldDecl production in preparation for inlined types
-2008-09-29	1f3e842c73e2	-	-	Some initial language towards embedded types and methods for all types. More to come.
-2008-09-29	a1065faf7c4a	-	-	- corrections and more on interface types
-2008-09-29	cd49927ca75d	-	-	- added language about string literal concatenation - added "..." to list of delimiters (slightly re-arranged that table) - rename of 2 productions for more consistent naming
-2008-09-30	52a548034e76	-	-	- exceptional conditions during expression evaluation are undefined - "nil" for interfaces, comparison against "nil"
-2008-09-30	c59b2a3db18a	-	-	- type of array literals is always fixed array - changed terminology from "embedded type" to "anonymous field"
-2008-10-01	5e92fb20b8eb	-	-	Clarifications re: anonymous fields in structs: - typename cannot refer to interface types - clarified syntax - added TODO re: type name issue with qualified identifiers
-2008-10-02	cd368a259e77	-	-	add a little text clarifying the behavior of 'select'
-2008-10-03	347cf67a8534	-	-	- precise scope rules - clarified naming of invisible fields - fixed syntax of expression statements
-2008-10-03	569a107e0dd5	-	-	Revised wording about sends. Evaluation is done before communication starts.
-2008-10-07	7abfcd981f0e	-	-	- precise scope rules - forward decls for interface and struct types - complete & incomplete types - optional semicolons
-2008-10-08	aed247fdb972	-	-	- make optional semicolons explicit in grammar in all places except in statement list, where it is expressed in words - allow for empty import, const, type, and var decl lists inside ()'s - fixed grammar for inc/dec statements - added empty statement as it appears to be accepted by 6g
-2008-10-09	7271e048fc91	-	-	- added missing case for opt. semicolons (labels) - more precise wording by having an explicit list of cases - simplified statement list
-2008-10-09	bbfe31238b41	-	-	More spec progress: - language for selectors and array/map indices - formal description of syntax notation used - factor out common productions to better show   symmetries in grammar
-2008-10-10	57b34617e0f5	-	-	- Fixed bug in spec: PrimaryExpr is too restrictive in most places (for instance *p was not allowed on the left side of "="). Changed to Expression everywhere (this is too liberal, UnaryExpr is probably good enough, but it seems funny, and we need to check semantically anyway). This matches 6g yacc. - Write expression syntac recursively to express evaluation order and precedence syntactically. - Organized open issues list, folded in stuff from todo.txt which is now obsolete.
-2008-10-10	b5e0cc7ef5f6	-	-	- added language re: interface compparison using ==, != (seems not controversial)
-2008-10-16	71696ac048a6	-	-	clarification of conversion rules for ideal numbers
-2008-10-20	a6b546fe3116	-	-	- be even more explicit about ideal number conversion in expressions - added a note with respect the difference of semantics of *p++ in Go vs C
-2008-10-23	071c91bf4820	-	-	First cut at incorporating anonymous fields of pointer types into the spec.
-2008-10-23	4712165b17d9	-	-	- clarified that composites are values created every time they are evaluated, removed corresponding TODO.
-2008-10-24	2bfa95741f32	-	-	Preparation for varargs: Proposal for syntax.
-2008-10-30	2e90e5424ee2	-	-	- language for struct field tags
-2008-10-30	ebf14c625dcd	-	-	- clarified section on numeric types: platform-dependent types   are different from platform-independent types (not just aliases),   except for byte, uint8 - added missing documentation of new(a, len, cap) - updated todo/issues lists
-2008-11-03	f618f8940d78	-	-	- keeping track of to-do items
-2008-11-04	69e26bf28d98	-	-	- added (incomplete) section on parameter passing - decribe passing of "..." parameters for a start
-2008-11-07	434c6052d801	-	-	- language to define type equality rigorously - language for type guards - fixed language for break statements
-2008-11-17	337af317813d	-	-	- allow for multiple method names per function type in an interface decl. - added some initial language with respect to exports
-2008-11-17	a1c85ed83ef0	-	-	Package-export proposal: - syntax change - missing: corresponding language
-2008-12-04	7354b864b52f	-	-	Revised proposal for const/var cleanup, with Ken's suggestion for the "iota" extension to tuples.
-2008-12-12	9dfb2ea7af3b	-	-	closing a TODO: - define integer overflow as wrap-around - be more specific about machine representation
-2008-12-16	30a1a8c92251	-	-	language for range clause (I have deliberately left away the forms w/ := or = and the forms with :)
-2008-12-16	671535865225	-	-	- Add introduction section (1 page), essentially a condensed form of an earlier intro. - Updated contents section. - Removed left-over text from earlier documents.
-2008-12-16	ef77c226264f	-	-	- fixed minor bug in example (found by ken)
-2008-12-17	4d2303085939	-	-	- ripped out excessively fancy way of describing grammar   in favor of explicit constructs - simpler, clearer, and shorter overall - no spec changes
-2008-12-18	6ccca61510ac	-	-	- receiver ident may be optional
-2009-01-05	a329471ced90	-	-	A first attempt to capture the type changes.
-2009-01-06	633957bcce85	-	-	- documenting old "new()" - adding "init()" - fixing some bugs with slice documentation
-2009-01-07	91bbd6484b9d	-	-	Adjusted language for literals: - now have struct, array, slice, and map literals
-2009-01-16	1593ab6bb4d5	-	-	- cleanup todo list - fixed language for arrays slightly
-2009-01-16	83c17606d76f	-	-	- language for export via capitalized identifiers - removed explicit "export" declarations and keyword - fixed a few glitches and adjusted examples
-2009-01-16	9f4a27cbe6cc	-	-	- added TODO
-2009-01-22	ae299f0d6997	-	-	cosmetic change only: - slightly simplified a couple of productions (CommClause, SwitchClause)   by reordering
-2009-01-26	18b05c1a8d9f	-	-	- clarified slice index bounds rules - clarified comparisons of interfaces, slices, maps, channels - removed respective TODO's
-2009-01-27	4a903e0b32be	-	-	 defer statement
-2009-01-27	7471eab96f3a	-	-	- added missing sections on comparisons for some types - clarified legal map key types (must support comparison) - updated open issues/todo list
-2009-01-30	2b9fe0ea24a3	-	-	Test balloon: Changed the spec to see the implications of changing the syntax of function types and making them "reference types" like slice, map, and chan. First step in Russ' proposal.
-2009-02-05	77ccfb090cfa	-	-	making go-spec conform with 6g: - equality of struct types requires equality of field names
-2009-02-06	d8a764cc7eb4	-	-	- removed todo and restriction from spec (closures) - fixed typos, added a reminder for a todo
-2009-02-11	38c232fe37bb	-	-	- language for embedded interfaces (as discussed this morning) - fixed a syntax error
-2009-02-11	52c02c2d5d8f	-	-	Added section on package unsafe: - contains a (proposed) constant Maxalign - contains some text re" alignment guarantees
-2009-02-11	6f8df7aa3e8c	-	-	- syntax for composite literals use () instead of {} - do not permit + for array concatenation anymore   (not implemented and not a good idea) - document that unsafe function results are compile time constants - fixed minor typos
+2008-03-04	73823d236a06	-	(pre-anchor-era)	- added new, revised spec - updated todo
+2008-03-05	28590a0abb2b	-	(pre-anchor-era)	- updated docs
+2008-03-06	194ed070de81	-	(pre-anchor-era)	fix a few nits in the typography so HTML is right
+2008-03-06	1cf631b4c75e	-	(pre-anchor-era)	- added missing ''''s
+2008-03-06	250767174b35	-	(pre-anchor-era)	add HTML formatting; use 	/home/sanjay/bin/makehtml --mode=document go_lang.txt to generate the html output.
+2008-03-06	5009237adbac	-	(pre-anchor-era)	- fixed a couple of grammar errors
+2008-03-06	b1d991d6fd15	-	(pre-anchor-era)	- more grammar fixes
+2008-03-06	bbced0249065	-	(pre-anchor-era)	- updated docs
+2008-03-06	e6626dafa8de	-	(pre-anchor-era)	- get rid of Designator terminology
+2008-03-06	f27e5df49c0f	-	(pre-anchor-era)	- fixed double-definition of StructType
+2008-03-07	2aae3fcbafb3	-	(pre-anchor-era)	fix grammar for struct and interface types to make final semicolon optional
+2008-03-10	8b212f67ffd6	-	(pre-anchor-era)	- attemp to correct statement syntax - introduced FieldDeclList and MethodDeclList   in consistency with other lists - made labels declarations
+2008-03-11	0d1e90be1723	-	(pre-anchor-era)	- added 'nil' keyword to lang doc   (did not add 'true' and 'false' because I think these don't need to be   keywords, they can be recreated from whole cloth) - added 'new' syntax to expressions   (this is needed because of the type as 1st argument - the expression   list is probably not yet implemented, but I think we may want it   eventually) - removed optional ';'s in sieve example - make it more concise - fixed several bugs in go.atg, no parses sieve - added sieve as test case
+2008-03-11	213702a3e63c	-	(pre-anchor-era)	- removed CompoundStat in favor of Block
+2008-03-11	78e4320fdc3e	-	(pre-anchor-era)	- changed if/switch initial stat syntax to match go compiler and make   it consistent - changed declaration syntax to match go compiler
+2008-03-11	7acb294d5801	-	(pre-anchor-era)	- replaced 's in productions everywhere with "s (we were inconsistent in   some places) - removed extra []'s around switch decl/tag expression - not needed
+2008-03-11	8152cb8a712a	-	(pre-anchor-era)	examples contradicted text: '\octal' and '\hex' are fixed size
+2008-03-12	e31ee76dcb5a	-	(pre-anchor-era)	- fixed typo in go_lang.txt - changed go.atg to make optional semicolons work for statements - expanded a test case
+2008-03-16	65348a89b806	-	(pre-anchor-era)	SVN=112717
+2008-03-17	e4ca60eca70e	-	(pre-anchor-era)	change Main, Init to lower case. make new() take an optional expression, not expression list. add an example for new().
+2008-03-19	6caad961fe65	-	(pre-anchor-era)	- added extra escaped chars
+2008-03-25	67aafa6f5718	-	(pre-anchor-era)	update document.  todo still: array and map literals; syntax for basic literals.
+2008-03-27	4c483aa159ce	-	(pre-anchor-era)	Explain goto constraints. Add description of 'any'. Simplify and complete syntax for literals.
+2008-03-27	8c1408dd8e22	-	(pre-anchor-era)	Add select statement
+2008-03-27	e118551c29bb	-	(pre-anchor-era)	Fix date stamp
+2008-03-27	e311457488b7	-	(pre-anchor-era)	add script to generate .html from .txt
+2008-04-17	75bbce9e845c	-	(pre-anchor-era)	- added language to document .() notation - propose change to char/string productions: I find this easier to read
+2008-04-17	a0d5d8089a95	-	(pre-anchor-era)	Added discussion of new, nil, and initialization.
+2008-04-18	1265a0c22d7b	-	(pre-anchor-era)	- essentially reverted my change of yesterday with respect to char/string syntax - fixed indentation in many places - fixed a couple of typos
+2008-04-27	f53db3eaa9d5	-	(pre-anchor-era)	Add description of type conversions.
+2008-04-28	c1aba4119469	-	(pre-anchor-era)	fix description of iota to reflect reality.
+2008-04-29	50cea7038bef	-	(pre-anchor-era)	- Added section on type equivalence - Changed signature syntax: parameter names are always mandatory - Minor white-space cosmetic changes
+2008-05-01	1975ff8b4410	-	(pre-anchor-era)	- completed syntax for import declarations - fixed a typo
+2008-05-01	38c083c1ca66	-	(pre-anchor-era)	Require names for return values for functions with complex return types.
+2008-05-01	5e391cff2cec	-	(pre-anchor-era)	talk about short, int, long etc.
+2008-05-01	d4d19fad2fa1	-	(pre-anchor-era)	Fixed a typo (changed ' -> ") and shortened a production name slightly to match the naming convention elsewhere.
+2008-05-01	f5c076343222	-	(pre-anchor-era)	Explain about pointer types for mutually recursive structures.
+2008-05-06	d222c65477e0	-	(pre-anchor-era)	Introduced forward declaration of types per discussion with ken. A forward-declared (or not yet fully defined) type must be used to construct (mutually) recursive type declarations. This simplifies the compiler and resolves the issue at which scope the forward- declared type is to be declared.
+2008-05-08	aa533738c156	-	(pre-anchor-era)	- changed compound type -> composite type - eliminated 'structured type' terminology
+2008-05-08	b6b8da823dac	-	(pre-anchor-era)	fix up the 'basic types' section. strings were missing
+2008-05-08	f4f588372d7d	-	(pre-anchor-era)	Clarify conversions, include making them constructors for arrays etc.
+2008-05-15	9119f55e6dac	-	(pre-anchor-era)	add a couple of TODOs fixed grammar for "Program"
+2008-05-15	d4aa5c0b4560	-	(pre-anchor-era)	add disclaimer, authors. preparation for linking to p page
+2008-05-27	896c8f4ecca9	-	(pre-anchor-era)	- fixed a typo
+2008-06-06	e92b7538102e	-	(pre-anchor-era)	- fixed a few tests and added 3 incorrectly succeeding tests - updated go_lang.txt to be more uniform and match the implementation - made makehtml work on Mac - fixed a couple of bugs in go.atg
+2008-06-09	4ff63a479404	-	(pre-anchor-era)	- updated spec w/ respect to variable types and shift operators
+2008-06-12	a40a79829ff1	-	(pre-anchor-era)	- fixed minor issues in spec - fixed a couple of bugs in the spec (pointed out by iant)
+2008-06-16	daebf91d2c0e	-	(pre-anchor-era)	fix up grammar for optional elements in if and switch conditions
+2008-07-01	8af8dff65b0c	-	(pre-anchor-era)	- updated doc
+2008-07-01	bc8ef4d52693	-	(pre-anchor-era)	- minor update
+2008-07-01	ceb01373bc14	-	(pre-anchor-era)	- more minor fixes
+2008-07-03	de5442893ddb	-	(pre-anchor-era)	A small but powerful change in constant declarations. Proposal by ken after some discussion about enums. Implementation should be trivial. Wording in the doc should be improved, probably.
+2008-07-07	835cd4694168	-	(pre-anchor-era)	- first cut a Go parser in Go
+2008-07-08	6def94ad83bb	-	(pre-anchor-era)	- added missing keyword 'iota'
+2008-07-08	c685e1b70dfd	-	(pre-anchor-era)	add a disclaimer
+2008-07-15	1401c110083a	-	(pre-anchor-era)	improve the examples in the section on iota
+2008-07-17	7eb7ff2b369f	-	(pre-anchor-era)	new channel syntax select cleans up too
+2008-07-21	777ee7163bba	-	(pre-anchor-era)	map delete
+2008-07-21	c1f5eda7a246	-	(pre-anchor-era)	change date
+2008-07-22	220edc48da35	-	(pre-anchor-era)	Expand section on compound literals.
+2008-07-22	f4dcf518463e	-	(pre-anchor-era)	document initialization
+2008-07-22	febbf82e8dbf	-	(pre-anchor-era)	fix some bad spaces
+2008-07-23	84c8d85fe6b5	-	(pre-anchor-era)	slices and string/array concatenation
+2008-08-04	2f4352a26d27	-	(pre-anchor-era)	- switched most of existing Go code to new export syntax - adjusted lang doc
+2008-08-07	e3fc124640d0	-	(pre-anchor-era)	revert specification of pointer types to current implementation (do not allow explicit type forward declarations) and more clearly specify resolution
+2008-08-11	fe582137f4e9	-	(pre-anchor-era)	- removed fall-through for case: case: in switch statements - added ()'s to all print calls in examples - augmented rule about use of identifiers
+2008-08-12	68fb2d04d0ad	-	(pre-anchor-era)	use tabs for indentation consistently
+2008-08-12	9b1e6fddba4c	-	(pre-anchor-era)	fix one syntax error in declaration. reformat the bullet list about strings
+2008-08-12	f97832e4c285	-	(pre-anchor-era)	New words regarding constants
+2008-08-20	bb0594263886	-	(pre-anchor-era)	updated section on reserved words
+2008-08-21	2d697d67dc22	-	(pre-anchor-era)	clarify pointer forward decls per ian's suggestion
+2008-08-21	2dabb6525a5b	-	(pre-anchor-era)	- explained function and method pointers - removed need for method types and literals (gri & r)
+2008-08-21	c2c49bec7745	-	(pre-anchor-era)	added scope rules, removed TODO
+2008-08-28	df49fb3dc33c	-	(pre-anchor-era)	- Preliminary draft of what might become a real spec - All text taken from go_lang.txt (which is unchanged), but added a contents section, and sorted the contents section in a hopefully sensible manner to give it more structure - Reordered text to match order of contents section, did not adjust the language (needs to be done), but removed sections that were dulicates or invalid
+2008-08-29	354be785c6b9	-	(pre-anchor-era)	- removed 'iota' from the keyword list - added missing operators
+2008-09-03	0976e34d654a	-	(pre-anchor-era)	Composite literal syntax.
+2008-09-03	7a4ed4f8c4f4	-	(pre-anchor-era)	- minor corrections to go_spec.txt - verified that all text from go_lang.txt is either present in its   old form, or that we have corresponding updated sections for it - delete go_lang.txt
+2008-09-03	ce04d0197a59	-	(pre-anchor-era)	- fixed typo
+2008-09-03	f5cb258195f1	-	(pre-anchor-era)	- clarification of type of array literals (always fixed array) - clarification of const decl syntax
+2008-09-04	41d65ac4a5c3	-	(pre-anchor-era)	- added missing language to operator section in spec
+2008-09-04	cae034223073	-	(pre-anchor-era)	- \' not allowed in string literals - \" not allowed in char literals - replaces uses of printf with print
+2008-09-08	7231ceb714aa	-	(pre-anchor-era)	Proposal for new function type syntax as suggested by ken: - removed "func" from function type - make it work by changing composite literal syntax to use {} instead of ()
+2008-09-09	0416f994b76c	-	(pre-anchor-era)	- added convenience wrappers for sort   (work now with Ken's latest compiler fix) - exoanded test cases accordingly - fixed a type in the spec (thx r)
+2008-09-09	4dc2528afa1c	-	(pre-anchor-era)	- added missing language to almost all types - fixed several examples to use new function type syntax - added list of open spec issues to todo.txt
+2008-09-09	c59d2f13aa73	-	(pre-anchor-era)	- moved spec todo's into spec (as html comment) - cleaned up todo.txt a bit
+2008-09-10	203b55e31920	-	(pre-anchor-era)	Eliminate duplication of MethodDecl nonterminal by renaming the one associated with interface types.
+2008-09-10	667ef6c163a0	-	(pre-anchor-era)	- incorporated bug fixes, todo's as suggested by rsc
+2008-09-11	ad71110669d2	-	(pre-anchor-era)	- rewrote section on numeric literals (grammar easier to read, separate between ints and floats, added language regarding the type of numeric literals) - added language with respect to the scope of labels - introduced ideal types for the purpose of the spec - added language to expressions, operands - added some more formal language about ideal type conversion   (probably not 100% correct yet)
+2008-09-11	e28ccebd3ab4	-	(pre-anchor-era)	- simplified the ideal number terminology for better readability
+2008-09-12	c8e18767e88e	-	(pre-anchor-era)	- hopefully improved language on label scopes
+2008-09-17	2902a82ca4ec	-	(pre-anchor-era)	adjusted doc to incorporate new channel notation (still a couple of TODO's with respect to the new notation).
+2008-09-18	6a0fb608665e	-	(pre-anchor-era)	- added item to TODO list in go_spec - filed a bug
+2008-09-19	b90b213e6155	-	(pre-anchor-era)	Updated spec: - clarified constants and constant expressions - clarified type of array composite literals (fixed vs open arrays) - clarified type of map composite literals (need to use '&' to get   a map pointer) - added proposal for "if-else" (TBD) - added TODO w/ respect to "x, ok = <-ch" (and for arrays)
+2008-09-26	133c68e9ac91	-	(pre-anchor-era)	Simplification of Conversions section: - leave only basic type conversions in that section - we have a section of composite literals which covers those - we have a section prepared (but not written) on type guards - the built-in function "convert" doesn't need to be exposed   as it is redundant
+2008-09-26	566e3b20432e	-	(pre-anchor-era)	- added language with respect to init() restrictions
+2008-09-26	ac05579345f9	-	(pre-anchor-era)	1) Fixed spec w/ respect to result types. 2) Added proposal for making "if" statements consistent with the    other control structures.
+2008-09-26	b9f8b9c43a1b	-	(pre-anchor-era)	- fixed Go statement syntax (only notational change) - simplified Assignment syntax (only notational change) - added TODOs - made old text invisible by moving it into HTML comment
+2008-09-27	75a03a5b00cd	-	(pre-anchor-era)	- added TODO - changed FieldDecl production in preparation for inlined types
+2008-09-29	1f3e842c73e2	-	(pre-anchor-era)	Some initial language towards embedded types and methods for all types. More to come.
+2008-09-29	a1065faf7c4a	-	(pre-anchor-era)	- corrections and more on interface types
+2008-09-29	cd49927ca75d	-	(pre-anchor-era)	- added language about string literal concatenation - added "..." to list of delimiters (slightly re-arranged that table) - rename of 2 productions for more consistent naming
+2008-09-30	52a548034e76	-	(pre-anchor-era)	- exceptional conditions during expression evaluation are undefined - "nil" for interfaces, comparison against "nil"
+2008-09-30	c59b2a3db18a	-	(pre-anchor-era)	- type of array literals is always fixed array - changed terminology from "embedded type" to "anonymous field"
+2008-10-01	5e92fb20b8eb	-	(pre-anchor-era)	Clarifications re: anonymous fields in structs: - typename cannot refer to interface types - clarified syntax - added TODO re: type name issue with qualified identifiers
+2008-10-02	cd368a259e77	-	(pre-anchor-era)	add a little text clarifying the behavior of 'select'
+2008-10-03	347cf67a8534	-	(pre-anchor-era)	- precise scope rules - clarified naming of invisible fields - fixed syntax of expression statements
+2008-10-03	569a107e0dd5	-	(pre-anchor-era)	Revised wording about sends. Evaluation is done before communication starts.
+2008-10-07	7abfcd981f0e	-	(pre-anchor-era)	- precise scope rules - forward decls for interface and struct types - complete & incomplete types - optional semicolons
+2008-10-08	aed247fdb972	-	(pre-anchor-era)	- make optional semicolons explicit in grammar in all places except in statement list, where it is expressed in words - allow for empty import, const, type, and var decl lists inside ()'s - fixed grammar for inc/dec statements - added empty statement as it appears to be accepted by 6g
+2008-10-09	7271e048fc91	-	(pre-anchor-era)	- added missing case for opt. semicolons (labels) - more precise wording by having an explicit list of cases - simplified statement list
+2008-10-09	bbfe31238b41	-	(pre-anchor-era)	More spec progress: - language for selectors and array/map indices - formal description of syntax notation used - factor out common productions to better show   symmetries in grammar
+2008-10-10	57b34617e0f5	-	(pre-anchor-era)	- Fixed bug in spec: PrimaryExpr is too restrictive in most places (for instance *p was not allowed on the left side of "="). Changed to Expression everywhere (this is too liberal, UnaryExpr is probably good enough, but it seems funny, and we need to check semantically anyway). This matches 6g yacc. - Write expression syntac recursively to express evaluation order and precedence syntactically. - Organized open issues list, folded in stuff from todo.txt which is now obsolete.
+2008-10-10	b5e0cc7ef5f6	-	(pre-anchor-era)	- added language re: interface compparison using ==, != (seems not controversial)
+2008-10-16	71696ac048a6	-	(pre-anchor-era)	clarification of conversion rules for ideal numbers
+2008-10-20	a6b546fe3116	-	(pre-anchor-era)	- be even more explicit about ideal number conversion in expressions - added a note with respect the difference of semantics of *p++ in Go vs C
+2008-10-23	071c91bf4820	-	(pre-anchor-era)	First cut at incorporating anonymous fields of pointer types into the spec.
+2008-10-23	4712165b17d9	-	(pre-anchor-era)	- clarified that composites are values created every time they are evaluated, removed corresponding TODO.
+2008-10-24	2bfa95741f32	-	(pre-anchor-era)	Preparation for varargs: Proposal for syntax.
+2008-10-30	2e90e5424ee2	-	(pre-anchor-era)	- language for struct field tags
+2008-10-30	ebf14c625dcd	-	(pre-anchor-era)	- clarified section on numeric types: platform-dependent types   are different from platform-independent types (not just aliases),   except for byte, uint8 - added missing documentation of new(a, len, cap) - updated todo/issues lists
+2008-11-03	f618f8940d78	-	(pre-anchor-era)	- keeping track of to-do items
+2008-11-04	69e26bf28d98	-	(pre-anchor-era)	- added (incomplete) section on parameter passing - decribe passing of "..." parameters for a start
+2008-11-07	434c6052d801	-	(pre-anchor-era)	- language to define type equality rigorously - language for type guards - fixed language for break statements
+2008-11-17	337af317813d	-	(pre-anchor-era)	- allow for multiple method names per function type in an interface decl. - added some initial language with respect to exports
+2008-11-17	a1c85ed83ef0	-	(pre-anchor-era)	Package-export proposal: - syntax change - missing: corresponding language
+2008-12-04	7354b864b52f	-	(pre-anchor-era)	Revised proposal for const/var cleanup, with Ken's suggestion for the "iota" extension to tuples.
+2008-12-12	9dfb2ea7af3b	-	(pre-anchor-era)	closing a TODO: - define integer overflow as wrap-around - be more specific about machine representation
+2008-12-16	30a1a8c92251	-	(pre-anchor-era)	language for range clause (I have deliberately left away the forms w/ := or = and the forms with :)
+2008-12-16	671535865225	-	(pre-anchor-era)	- Add introduction section (1 page), essentially a condensed form of an earlier intro. - Updated contents section. - Removed left-over text from earlier documents.
+2008-12-16	ef77c226264f	-	(pre-anchor-era)	- fixed minor bug in example (found by ken)
+2008-12-17	4d2303085939	-	(pre-anchor-era)	- ripped out excessively fancy way of describing grammar   in favor of explicit constructs - simpler, clearer, and shorter overall - no spec changes
+2008-12-18	6ccca61510ac	-	(pre-anchor-era)	- receiver ident may be optional
+2009-01-05	a329471ced90	-	(pre-anchor-era)	A first attempt to capture the type changes.
+2009-01-06	633957bcce85	-	(pre-anchor-era)	- documenting old "new()" - adding "init()" - fixing some bugs with slice documentation
+2009-01-07	91bbd6484b9d	-	(pre-anchor-era)	Adjusted language for literals: - now have struct, array, slice, and map literals
+2009-01-16	1593ab6bb4d5	-	(pre-anchor-era)	- cleanup todo list - fixed language for arrays slightly
+2009-01-16	83c17606d76f	-	(pre-anchor-era)	- language for export via capitalized identifiers - removed explicit "export" declarations and keyword - fixed a few glitches and adjusted examples
+2009-01-16	9f4a27cbe6cc	-	(pre-anchor-era)	- added TODO
+2009-01-22	ae299f0d6997	-	(pre-anchor-era)	cosmetic change only: - slightly simplified a couple of productions (CommClause, SwitchClause)   by reordering
+2009-01-26	18b05c1a8d9f	-	(pre-anchor-era)	- clarified slice index bounds rules - clarified comparisons of interfaces, slices, maps, channels - removed respective TODO's
+2009-01-27	4a903e0b32be	-	(pre-anchor-era)	 defer statement
+2009-01-27	7471eab96f3a	-	(pre-anchor-era)	- added missing sections on comparisons for some types - clarified legal map key types (must support comparison) - updated open issues/todo list
+2009-01-30	2b9fe0ea24a3	-	(pre-anchor-era)	Test balloon: Changed the spec to see the implications of changing the syntax of function types and making them "reference types" like slice, map, and chan. First step in Russ' proposal.
+2009-02-05	77ccfb090cfa	-	(pre-anchor-era)	making go-spec conform with 6g: - equality of struct types requires equality of field names
+2009-02-06	d8a764cc7eb4	-	(pre-anchor-era)	- removed todo and restriction from spec (closures) - fixed typos, added a reminder for a todo
+2009-02-11	38c232fe37bb	-	(pre-anchor-era)	- language for embedded interfaces (as discussed this morning) - fixed a syntax error
+2009-02-11	52c02c2d5d8f	-	(pre-anchor-era)	Added section on package unsafe: - contains a (proposed) constant Maxalign - contains some text re" alignment guarantees
+2009-02-11	6f8df7aa3e8c	-	(pre-anchor-era)	- syntax for composite literals use () instead of {} - do not permit + for array concatenation anymore   (not implemented and not a good idea) - document that unsafe function results are compile time constants - fixed minor typos
 2009-02-19	4501d348e89b	-	(preamble)	Fix most HTML errors. Cut introduction. Start rewrite.
 2009-02-19	c2d5586c761b	-	(preamble)	go_spec.txt formatted in html. No textual changes except for html formatting. Seems like a fine intermediate step.
 2009-02-19	fd1f3830c141	-	(preamble)	autogenerate the table of contents
@@ -260,19 +260,19 @@ date	sha	issues	anchors	subject
 2009-09-15	8cb9184d7ff8	-	Passing_arguments_to_..._parameters,Program_execution,Struct_types	an attempt to define initialization order within a package.
 2009-09-16	5eb36240b7bc	-	Composite_literals,Conversions,Making_slices_maps_and_channels,Primary_expressions	- added syntax for conversions (was missing) - added TODO for syntax for built-ins (require type as first argument) - removed duplicate definition of Index
 2009-09-16	9d7538b42b60	-	Implementation_differences,Select_statements	slight refinement of select: evaluation is top to bottom, as in switches.
-2009-09-17	698c6c00a0bd	-	(preamble),An_example_package,Comparison_compatibility,Defer_statements,Foo,Implementation_differences,Introduction,Letters_and_digits,Making_slices_maps_and_channels,Notation,Order_of_evaluation,Program_execution,Size_and_alignment_guarantees,String_literals	A step towards "externalizing" some Go docs. + style sheet: like code.google.com but less feature-ful + JS with table-of-contents generation + tweaked go_spec.html and go_mem.html to use new style+JS + static-HTML-ified a few other Go docs:   + static HTML versions of some wiki pages (which I'll turn     into links to these pages).
+2009-09-17	698c6c00a0bd	-	(preamble),An_example_package,Comparison_compatibility,Defer_statements,Implementation_differences,Introduction,Letters_and_digits,Making_slices_maps_and_channels,Notation,Order_of_evaluation,Program_execution,Size_and_alignment_guarantees,String_literals	A step towards "externalizing" some Go docs. + style sheet: like code.google.com but less feature-ful + JS with table-of-contents generation + tweaked go_spec.html and go_mem.html to use new style+JS + static-HTML-ified a few other Go docs:   + static HTML versions of some wiki pages (which I'll turn     into links to these pages).
 2009-09-17	da961881b4f5	-	Method_declarations,Method_expressions	- silence ebnflint: mark syntax section as "ebnf" instead of "grammar" - re-use MethodName production
 2009-09-18	d36d191e2505	-	Characters,Floating-point_literals,Identifiers,Integer_literals,Method_expressions,Operator_precedence,Operators_and_Delimiters	- added heading to operator precedence section so it's easy to find - fixed broken link to function literals section - minor adjustments
 2009-09-19	084577b81a9b	-	Conversions	hakuho
-2009-09-24	19b1d35d4c50	-	Arithmetic_operators,Assignment_compatibility,Assignments,Boolean_types,Character_literals,Comparison_operators,Constant_declarations,Constant_expressions,Constants,Conversions,Expressions,Floating-point_literals,Foo,For_statements,IncDec_statements,Indexes,Integer_literals,Interface_types,Introduction,Iota,Logical_operators,Map_types,Numeric_types,Operands,Operators,Predeclared_identifiers,Properties_of_types_and_values,Slices,String_literals,String_types,The_zero_value,Types,Variable_declarations	rewording around ideal and basic types
+2009-09-24	19b1d35d4c50	-	(preamble),Arithmetic_operators,Assignment_compatibility,Assignments,Boolean_types,Character_literals,Comparison_operators,Constant_declarations,Constant_expressions,Constants,Conversions,Expressions,Floating-point_literals,For_statements,IncDec_statements,Indexes,Integer_literals,Interface_types,Introduction,Iota,Logical_operators,Map_types,Numeric_types,Operands,Operators,Predeclared_identifiers,Properties_of_types_and_values,Slices,String_literals,String_types,The_zero_value,Types,Variable_declarations	rewording around ideal and basic types
 2009-09-25	3aec2e46debc	-	Import_declarations	rewrite the section about imports
 2009-09-25	997851e68166	-	Assignment_compatibility,Constant_expressions,Declarations_and_scope,Import_declarations,Operands,Short_variable_declarations,Size_and_alignment_guarantees	- reworked section on import declarations - added missing <p> tags in various places
 2009-09-25	e1e7619f019c	-	An_example_package,Assignments,Channel_types,Communication_operators,Expression_statements,Go_statements,Order_of_evaluation,String_literals	- fixed sieve.go example (channel directions were wrong) - cosmetic adjustments
-2009-09-28	13dac655cbbc	-	Foo,Interface_types,Package_unsafe	disallow interface {x, y()}
+2009-09-28	13dac655cbbc	-	(preamble),Interface_types,Package_unsafe	disallow interface {x, y()}
 2009-09-28	326ef13976ab	-	Assignment_compatibility,Calls,Composite_literals,For_statements,Import_declarations,Packages,Return_statements	- assignments to structs are only legal if all struct fields are visible - removed section on Multiple-file packages as this seems now now covered   sufficiently elsewhere
-2009-09-28	fc61b77754f3	-	Foo,Method_declarations,Properties_of_types_and_values,String_types,Type_declarations,Types	- clarify type declaration (specifying status quo)
-2009-09-29	69d13b2332d6	-	Foo	make the sidebars consistent add Effective Go to the set of links
-2009-09-30	164a7bceeb67	-	Bootstrapping,Built-in_functions,Channel_types,Close_and_closed,Composite_literals,Conversions,Foo,Length_and_capacity,Making_slices_maps_and_channels,Primary_expressions	- completed section on built-in functions - moved Conversions section out of built-in functions and into expressions - fixed syntax of conversions (parens are not mandatory if the type is not a TypeName)   (this is the only change to the Conversions section; the rest of the text is just moved;   old line: 4043, new line: 3078) - fixed syntax of composite literals (parens are allowed around LiteralType)
+2009-09-28	fc61b77754f3	-	(preamble),Method_declarations,Properties_of_types_and_values,String_types,Type_declarations,Types	- clarify type declaration (specifying status quo)
+2009-09-29	69d13b2332d6	-	(preamble)	make the sidebars consistent add Effective Go to the set of links
+2009-09-30	164a7bceeb67	-	(preamble),Bootstrapping,Built-in_functions,Channel_types,Close_and_closed,Composite_literals,Conversions,Length_and_capacity,Making_slices_maps_and_channels,Primary_expressions	- completed section on built-in functions - moved Conversions section out of built-in functions and into expressions - fixed syntax of conversions (parens are not mandatory if the type is not a TypeName)   (this is the only change to the Conversions section; the rest of the text is just moved;   old line: 4043, new line: 3078) - fixed syntax of composite literals (parens are allowed around LiteralType)
 2009-10-01	53440da83578	-	(preamble),Implementation_differences	Factored out boilerplate from all html docs in doc directory: - the first HTML comment in those files is extracted as page   title when serving them - lib/godoc.html is top-level template for all pages served - experimented a bit with package documentation layout   (feedback welcome) - various related cleanups
 2009-10-19	d4d4ff0d836f	-	Bootstrapping,Conversions,Interface_types,Method_declarations,Order_of_evaluation,String_literals,Types	- method names in method sets/interfaces must be all different - specify evaluation order of floating-point expressions as   discussed - specify floating point conversion rounding as discussed - slightly reformatted section on conversions to make it   more readable (hopefully) - fixed production for interpreted_string_lit - components   were not properly tagged before because of """ instead of `"`
 2009-10-20	60ff8cc86ffd	-	(preamble)	address bug193 and add note to spec about it.
@@ -295,7 +295,7 @@ date	sha	issues	anchors	subject
 2009-12-02	ccd026486abd	-	Predeclared_identifiers	Add copy to the list of predeclared functions.
 2009-12-04	2a5f0c67ca4d	-	Built-in_functions	spec: document that built-ins cannot be used as func values
 2009-12-10	130ac74010af	-	An_example_package,Arithmetic_operators,Blocks,Break_statements,Calls,Comments,Communication_operators,Composite_literals,Constant_declarations,Constant_expressions,Continue_statements,Copying_slices,Defer_statements,Empty_statements,Expression_switches,For_statements,Function_declarations,Function_types,Goto_statements,Identifiers,If_statements,Import_declarations,Interface_types,Iota,Making_slices_maps_and_channels,Method_declarations,Method_expressions,Operands,Operators,Passing_arguments_to_..._parameters,Primary_expressions,Return_statements,Select_statements,Selectors,Semicolons,Short_variable_declarations,Slices,Source_file_organization,Statements,String_literals,Struct_types,The_zero_value,Tokens,Type_compatibility,Type_declarations,Type_switches,Variable_declarations	Spec modified to reflect new semicolon rules.
-2009-12-23	c1045db1d891	801,900	Type_switches	go_spec: use PrimaryExpr as type switch expression
+2009-12-23	c1045db1d891	-	Type_switches	go_spec: use PrimaryExpr as type switch expression
 2009-12-28	eb109a765d1a	457	Tokens	Clarify section on tokens. Fixes #457.
 2010-01-04	30e5ed249d2e	-	Semicolons	remove reference to "basic literal" since it's never defined
 2010-01-09	7ec0856f0112	-	Slice_types	fix typo
@@ -781,7 +781,7 @@ date	sha	issues	anchors	subject
 2021-11-18	24898d6948e1	-	(preamble),Interface_types,Method_sets	spec: various clarifications/fixes for method sets and interfaces
 2021-11-18	f6647f2e3bc0	-	(preamble),Interface_types,Method_sets,Operators_and_punctuation,Predeclared_identifiers	spec: generalize method sets and interface types to type sets
 2021-11-22	0244343088e0	-	(preamble),Method_declarations	spec: fix Swap example (correctly swap type arguments and parameters)
-2021-11-22	0c3b4a358ad6	-	(preamble),Function_declarations,Function_literals,Method_declarations,Method_sets,Type_constraints,Type_definitions	spec: add type parameter lists
+2021-11-22	0c3b4a358ad6	-	(preamble),Function_declarations,Function_literals,Method_declarations,Method_sets,Type_constraints,Type_definitions,Type_parameter_lists	spec: add type parameter lists
 2021-11-22	a287c4aa38c9	-	Declarations_and_scope,Type_parameters,Type_switches,Types,Underlying_types	spec: add type parameter types
 2021-11-22	e30ebaab0bd5	-	Channel_types,Function_types,Structural_interfaces,Type_identity	spec: add section on the structure of interfaces
 2021-11-24	003e7faf53a3	-	Representability	spec: adjust representability rules for type parameters
@@ -804,14 +804,14 @@ date	sha	issues	anchors	subject
 2022-01-21	b7fa0f941f05	-	(preamble),Arithmetic_operators,Close,For_range,Instantiations,Integer_overflow,Length_and_capacity,Map_types,Operands,Predeclared_identifiers	spec: minor formatting and link cleanups
 2022-01-26	719e9894f9a4	50791	Underlying_types	spec: document the underlying type of comparable
 2022-01-26	db48840cfc5e	50791	Underlying_types	Revert "spec: document the underlying type of comparable"
-2022-01-28	654d5f4b5dfc	-	(preamble),Constraint_type_inference,Instantiations,Type_inference	spec: add section on type inference
+2022-01-28	654d5f4b5dfc	-	(preamble),Constraint_type_inference,Function_argument_type_inference,Instantiations,Type_inference,Type_unification	spec: add section on type inference
 2022-02-01	9152e211328f	50646,50791	(preamble),Type_constraints	spec: add section on comparable constraint
 2022-02-08	3e514a0103a7	-	(preamble),Arithmetic_operators,Complex_numbers,Composite_literals,Conversions,Floating_point_operators,Index_expressions,Making_slices_maps_and_channels,Numeric_types,Operators,Package_unsafe,Representability	spec: explicitly define integer, floating-point, and complex types
 2022-02-09	20c300bc70e1	50202	(preamble),Constant_declarations,Constants,Conversions	spec: the type of a constant cannot be a type parameter
 2022-02-09	5d3476c3dbc5	-	Constraint_type_inference,Conversions,Structure_of_interfaces	spec: use "core type" rather than "structural type"
 2022-02-09	9867262dfd9b	51110	Type_switches	spec: document behavior of generic type switch cases
 2022-02-10	3b8c716e0fb8	-	(preamble),Arithmetic_operators,Conversions,Integer_overflow,String_concatenation	spec: document numeric operations behavior for generic types
-2022-02-10	99b61be9f573	-	Arithmetic_operators,Assignability,Constraint_type_inference,Conversions,Index_expressions,Length_and_capacity,Method_sets,Representability,Specific_types,Types,Underlying_types	spec: move all sections describing type properties into one place
+2022-02-10	99b61be9f573	-	Arithmetic_operators,Assignability,Constraint_type_inference,Conversions,Core_types,Index_expressions,Length_and_capacity,Method_sets,Representability,Specific_types,Types,Underlying_types	spec: move all sections describing type properties into one place
 2022-02-11	11788aa6e061	-	Appending_and_copying_slices,Calls,Close,Complex_numbers,Composite_literals,Core_types,Deletion_of_map_elements,For_range,Index_expressions,Making_slices_maps_and_channels,Operands,Receive_operator,Selectors,Send_statements,Slice_expressions	spec: adjust rules to use core or specific types as necessary
 2022-02-11	18e1a5a0859a	-	(preamble),Arithmetic_operators,Channel_types,Conversions,Core_types,Deletion_of_map_elements,Index_expressions,Length_and_capacity,Representability,Type_assertions,Type_parameter_lists,Type_switches	spec: combine section on type parameters and type parameter lists
 2022-02-11	30501bbef9fc	-	Basic_interfaces,Core_types,Embedded_interfaces,Generenal_interfaces,Type_constraints	spec: introduce notion of basic interface, misc. fine-tuning
@@ -869,7 +869,7 @@ date	sha	issues	anchors	subject
 2023-04-11	6e8eec7328d8	23442,59528	Constants	doc: add missing oxford comma in Constants
 2023-04-11	df6d442c3890	59506	Core_types	doc: fix "are" to "or" in core types
 2023-04-13	e7b04a3e166b	59626	Type_parameter_declarations	doc: correct spelling on placeholder
-2023-05-24	15a4e0d97030	-	(preamble),Allocation,Appending_and_copying_slices,Bootstrapping,Built-in_functions,Clear,Close,Deletion_of_map_elements,Length_and_capacity,Making_slices_maps_and_channels	spec: re-order built-ins sections alphabetically (more or less)
+2023-05-24	15a4e0d97030	-	(preamble),Allocation,Appending_and_copying_slices,Bootstrapping,Built-in_functions,Clear,Close,Complex_numbers,Deletion_of_map_elements,Length_and_capacity,Making_slices_maps_and_channels	spec: re-order built-ins sections alphabetically (more or less)
 2023-05-25	f9d114d0e85e	59488	(preamble),Constants,Min_and_max,Predeclared_identifiers	spec: document min and max built-ins
 2023-06-06	1aaf1b219a44	60570	(preamble),Min_and_max	spec: clarify min/max rules for numeric arguments (exclude NaNs)
 2023-06-07	72b08dbaf316	-	(preamble),Type_inference	spec: add temporary note to type inference section
@@ -880,7 +880,7 @@ date	sha	issues	anchors	subject
 2023-07-20	a04a665a9271	-	(preamble),Conversions,Instantiations,Package_unsafe,Type_definitions,Type_inference,Type_unification	spec: update section on type inference for Go 1.21
 2023-07-21	3bb51a680505	-	Type_inference	spec: fix a couple of minor mistakes in type inference section
 2023-07-26	7fed33815cf5	-	(preamble),Type_inference,Type_unification	spec: update section on type unification for Go 1.21
-2023-07-31	03bec7dc6ff6	-	(preamble),Size_and_alignment_guarantees,Type_unification,Type_unification_rules	spec: add Appendix with detailed type unification rules
+2023-07-31	03bec7dc6ff6	-	(preamble),Appendix,Size_and_alignment_guarantees,Type_unification,Type_unification_rules	spec: add Appendix with detailed type unification rules
 2023-08-03	3c25d832afe5	-	Index_expressions,Numeric_types,Operator_precedence,Type_unification	doc: fix html tags
 2023-08-03	976a84b1ff14	-	(preamble),Type_unification_rules	spec: remove unnecessary sentence
 2023-08-17	ab3332eea9cf	61879	(preamble),Type_unification_rules	spec: fix unification rule for inexact interface unification
@@ -891,7 +891,7 @@ date	sha	issues	anchors	subject
 2023-11-02	e5ef4846911d	61405	(preamble),For_range	spec: document range over integer expression
 2023-12-05	5686b650cc6e	64513	Introduction	doc/go_spec.html: rename golang.org to go.dev
 2023-12-20	a2a2c5b94726	64452	(preamble),Package_unsafe	doc: update unsafe.Pointer rule in spec
-2023-12-27	1dddd83c4948	63857	(preamble),Alias_declarations,Basic_interfaces,Clear,Conversions,Embedded_interfaces,Floating-point_literals,For_range,General_interfaces,Go_1.22,Imaginary_literals,Instantiations,Integer_literals,Language_versions,Min_and_max,Notation,Operators,Operators_and_punctuation,Package_unsafe,Predeclared_identifiers,Satisfying_a_type_constraint,Type_constraints,Type_parameter_declarations	doc: document version at which new language features were introduced in spec
+2023-12-27	1dddd83c4948	63857	(preamble),Alias_declarations,Basic_interfaces,Clear,Conversions,Embedded_interfaces,Floating-point_literals,For_range,General_interfaces,Go_1.13,Go_1.14,Go_1.17,Go_1.18,Go_1.20,Go_1.21,Go_1.22,Go_1.9,Imaginary_literals,Instantiations,Integer_literals,Language_versions,Min_and_max,Notation,Operators,Operators_and_punctuation,Package_unsafe,Predeclared_identifiers,Satisfying_a_type_constraint,Type_constraints,Type_parameter_declarations	doc: document version at which new language features were introduced in spec
 2023-12-27	26ba75fe5927	56010	For_clause,For_range,Go_1.22	doc: document new iteration variable semantics in spec
 2023-12-27	988b718f4130	56010	(preamble),For_clause	doc: fix typo in example in spec
 2024-01-05	1ae729e6d340	64969	Language_versions	doc: s/adjustements/adjustments

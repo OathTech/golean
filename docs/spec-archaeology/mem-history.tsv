@@ -3,10 +3,10 @@
 # rows: 39 commits (full --follow history at the pin)
 # anchors are mapped against EACH COMMIT'S OWN file version
 date	sha	issues	anchors	subject
-2009-02-20	82c38cf8dd62	-	-	draft of memory model.
+2009-02-20	82c38cf8dd62	-	(pre-anchor-era)	draft of memory model.
 2009-03-22	482cbb1f3358	-	(preamble)	change file name so it can be copied without name change to a more public place.
-2009-09-17	698c6c00a0bd	-	(preamble),Foo	A step towards "externalizing" some Go docs. + style sheet: like code.google.com but less feature-ful + JS with table-of-contents generation + tweaked go_spec.html and go_mem.html to use new style+JS + static-HTML-ified a few other Go docs:   + static HTML versions of some wiki pages (which I'll turn     into links to these pages).
-2009-09-29	69d13b2332d6	-	Foo	make the sidebars consistent add Effective Go to the set of links
+2009-09-17	698c6c00a0bd	-	(preamble)	A step towards "externalizing" some Go docs. + style sheet: like code.google.com but less feature-ful + JS with table-of-contents generation + tweaked go_spec.html and go_mem.html to use new style+JS + static-HTML-ified a few other Go docs:   + static HTML versions of some wiki pages (which I'll turn     into links to these pages).
+2009-09-29	69d13b2332d6	-	(preamble)	make the sidebars consistent add Effective Go to the set of links
 2009-10-01	53440da83578	-	(preamble)	Factored out boilerplate from all html docs in doc directory: - the first HTML comment in those files is extracted as page   title when serving them - lib/godoc.html is top-level template for all pages served - experimented a bit with package documentation layout   (feedback welcome) - various related cleanups
 2009-11-01	4e5296d4ba82	-	(preamble)	fixups for memory model document
 2009-11-08	830813f01969	-	(preamble)	assorted cleanup
@@ -33,7 +33,7 @@ date	sha	issues	anchors	subject
 2015-03-16	10a98dd6d912	9235	(preamble)	doc/go_mem.html: correct the channel example
 2018-12-21	e7c20b791798	27808	(preamble)	doc: go_mem: clarify Once docs
 2020-03-03	34830beffa63	-	(preamble)	doc/mem: remove unnecessary pre tags within same snippet
-2022-06-04	865911424d50	47141,50859	(preamble),advice,atomic,badsync,chan,conclusion,go,goexit,init,introduction,locks,model,once,overview,restrictions,synchronization	doc: update Go memory model
+2022-06-04	865911424d50	47141,50859	(preamble),advice,atomic,badcompiler,badsync,chan,conclusion,finalizer,go,goexit,init,introduction,locks,model,more,once,overview,restrictions,synchronization	doc: update Go memory model
 2022-06-06	4c08260c51c6	50859	(preamble)	doc/go_mem: update revision date
 2022-06-10	ff3db8d12d8e	-	model	doc: fix typos in Go memory model
 2023-07-31	977e23a70766	-	restrictions	doc/go_mem: explain arrays, structs, and complex numbers
