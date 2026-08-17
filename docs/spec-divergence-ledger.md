@@ -131,15 +131,19 @@ Census at the go1.26.5 pin (post-audit regeneration): **926 spec
 commits, 39 mem commits, 372 distinct issue refs** (two code-browser
 URL fragments retired by the audit-tightened regex; ~20 of the refs
 are PR numbers from Gerrit trailers, counted as refs, disclosed),
-**214 anchors with rulings** — of which the rollup's `live_at_pin`
-column marks the sections REMOVED before the pin (historic keys, not
-covmap segment names) and 148+1 pre-2009 rows carry the explicit
-`(pre-anchor-era)` marker (the pre-HTML file had no anchors) — the
+**214 rollup rows — 212 real anchors + 2 pseudo-keys
+(`(preamble)`, `(pre-anchor-era)`, marked `n/a`; delta-review N7)** —
+of which the `live_at_pin` column marks the 34 sections REMOVED
+before the pin (historic keys, not covmap segment names) and 148+1 pre-anchor-era rows (2008-03 through 2009-02 — 17 of them
+are 2009; delta-review N3) carry the explicit `(pre-anchor-era)`
+marker (the pre-HTML file had no anchors) — the
 uncurated feed.
 Curated above: 6. Issue-metadata enrichment DONE (2026-08-17,
-sandbox opened by operator): 372 of 374 refs resolved into the
-tracked `docs/spec-archaeology/issue-index.tsv` (30 carry
-`LanguageChange`; 2 unresolvable refs recorded in its header) via
+sandbox opened by operator; counts updated after the census
+regeneration retired two false-positive refs): 370 of 372 refs
+resolved into the tracked `docs/spec-archaeology/issue-index.tsv`
+(30 carry `LanguageChange`; 2 unresolvable refs recorded in its
+header) via
 `gh api repos/golang/go/issues/N` into the gitignored
 `deps/issue-snapshots/golang-go-issues.jsonl`, joined by
 `scripts/mine-spec-archaeology --enrich` (fail closed without the
@@ -147,7 +151,11 @@ snapshot). Refresh loop, for the record (the else-branch writes the
 FAILED sentinel `--enrich`'s unresolvable accounting depends on —
 loop corrected at the P4 audit, whose first version could not
 reproduce the snapshot it documented):
-`while read n; do gh api repos/golang/go/issues/$n --jq '{number,title,state,closed_at,labels:[.labels[].name]}' || echo "{\"number\":$n,\"fetch\":\"FAILED\"}"; done < deps/issue-snapshots/issue-numbers.txt`.
+`while read n; do out=$(gh api repos/golang/go/issues/$n --jq '{number,title,state,closed_at,labels:[.labels[].name]}' 2>/dev/null) && echo "$out" || echo "{\"number\":$n,\"fetch\":\"FAILED\"}"; done < deps/issue-snapshots/issue-numbers.txt`
+(delta-review S1: `gh api` writes the 404 BODY to stdout with no
+trailing newline, so a bare `|| echo` concatenates the sentinel onto
+it and `--enrich`'s json.loads dies — the capture-then-echo form is
+the one that reproduces the snapshot).
 
 **Named high-value objects surfaced by the audit** (the two
 "unresolvable" refs are golang/go DISCUSSIONS, not junk — top

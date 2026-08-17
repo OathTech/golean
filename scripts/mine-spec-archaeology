@@ -182,8 +182,9 @@ for rows, tag in ((spec_rows,'spec'), (mem_rows,'mem')):
             if issues != '-':
                 issue_roll[(tag, a)] += len(issues.split(','))
 # live_at_pin: the anchor key space is HISTORIC — sections get removed
-# (audit F-2: 35 of 185 spec anchors are dead at the pin, e.g.
-# Implementation_differences removed 2012, Core_types removed 2025).
+# (e.g. Implementation_differences removed 2012, Core_types removed
+# 2025; the current census has 34 dead spec anchors — count the 'no'
+# rows rather than trusting comments, delta-review S3).
 # Only live anchors are covmap segment names; dead ones are archaeology.
 live = {}
 for path, tag in (('doc/go_spec.html','spec'), ('doc/go_mem.html','mem')):
