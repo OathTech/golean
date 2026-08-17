@@ -53,6 +53,16 @@ them). All of these lanes eventually feed the model. Simplifying
 assumptions are permitted — recorded in the register below, never
 silently.
 
+## The language-version pin (2026-08-17, spec-truth campaign)
+
+"Go" is versioned semantics: the go.mod `go` directive selects language
+behavior (the 1.22 loop-variable change is the canonical example).
+**GoCore models the Go 1.26 language.** The concrete pins — spec text at
+`go1.26.5`, oracle toolchain, and their agreement rule — live in
+`docs/spec-sources.md`; re-pins are deliberate, both sides together,
+with the reason recorded. Upper-bound arguments cite the pinned spec,
+never the live web page.
+
 ## Pins are scaffolding
 
 Deterministic pins of spec latitude (matching gc's realization where the
