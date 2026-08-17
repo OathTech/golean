@@ -1,6 +1,15 @@
 # Spec-and-community truth campaign — plan (2026-08-17)
 
-Status: PLAN (no execution yet). Lane: `spec-truth` (docs-only until P2).
+Status: EXECUTING (updated 2026-08-17). **P0 DONE** (pins in
+`docs/spec-sources.md`; language-version pin Go 1.26 recorded in the
+doctrine doc; anchor-stability probe: zero churn 1.25→1.26).
+**Pilot DONE** (`docs/2026-08-17_covmap-pilot.md`: GO conditioned on
+the CIPs in `docs/covmap-cips/`, held for handover sign-off).
+**P1 DONE** — four reading notes with verdicts:
+`docs/2026-08-17_prior-art-{spectec,esmeta-jest,ch2o-cerberus,fg-and-memory-model}.md`;
+their §3 corrections are applied inline below, marked "per the P1
+note". Next: first `main` landing (merge protocol), then P2 forks
+fresh. Lane: `spec-truth`.
 Companion doctrine: `docs/2026-08-11_essence-of-go-doctrine.md` (the two
 bounds), `docs/2026-08-11_latitude-inventory.md` (the per-point census).
 
@@ -87,9 +96,11 @@ mechanisms in §4. Parallelizable across reading lanes. The hypotheses
 to test, per effort:
 
 - **SpecTec (Wasm)** — single DSL source generating typeset prose,
-  formal rules, and a meta-interpreter that passes 100% of the official
-  test suite; found errors in shipped spec text and in five in-flight
-  proposals. *Expected verdict:* reject the spec-generation frame (we
+  formal rules, and a meta-interpreter that passes 100% of the
+  applicable official test suite; showed 13 historical shipped-spec
+  errors would have been prevented (retrospective injection study, not
+  discovery — corrected per the P1 note) and found 10 new errors in
+  five in-flight proposals, confirmed upstream. *Expected verdict:* reject the spec-generation frame (we
   don't own Go's spec); adopt the **coverage discipline** — their
   "interpreter ⟷ official test suite" loop is our differential gate,
   and their "formalization finds proposal bugs" is our divergence
@@ -98,7 +109,8 @@ to test, per effort:
   mechanized spec *extracted* from ECMA-262's algorithmic prose, then:
   JEST does N+1 differential testing where a divergence is classified
   as *engine bug or spec bug* (found both); JSTAR type-checks the spec
-  itself (92 type bugs across 864 spec versions); plus PLDI 2023
+  itself (93 true type bugs of 157 reported — 59.2% precision — across
+  864 spec versions; corrected per the P1 note); plus PLDI 2023
   feature-sensitive coverage for conformance-test synthesis.
   *Expected verdict:* extraction doesn't transfer (Go's spec is prose,
   not pseudocode — there is nothing to extract an interpreter from);
@@ -119,10 +131,18 @@ to test, per effort:
   standard that deliberately underspecifies". CH2O treats unspecified
   evaluation order as genuine nondeterminism (= our envelopes) and fed
   defect reports back to WG14 (= our upstream loop precedent).
-  Cerberus's de-facto-vs-ISO distinction *is* our two-bounds doctrine
-  independently reinvented — including surveys of practitioners as a
-  rigorous community-evidence method. *Expected verdict:* adopt the
-  defect-report workflow and the de-facto/ISO vocabulary alignment;
+  Cerberus's de-facto-vs-ISO program is the cautionary tale of what
+  the two-bounds frame degenerates into when a language lets the
+  bounds cross (27 of 85 questions with de-facto/ISO CONFLICT —
+  deployed code relying on what the text forbids; Go's compatibility
+  promise keeps observed ⊆ permitted, so no third candidate-de-facto
+  artifact exists for us, and the ledger's job includes keeping it
+  that way — amended per the P1 note, which also recalibrates
+  upstream expectations: filings buy standing and answers, normative
+  text moves on decade scales even for C's best cases).
+  *Expected verdict:* adopt the
+  defect-report workflow and the question-formulation discipline
+  (mining over polling);
   read their evaluation-order treatment against our E1–E6 latitude
   entries specifically.
 - **Sail / RISC-V** — a formal model that the standards body adopted
