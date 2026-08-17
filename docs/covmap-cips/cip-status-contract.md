@@ -17,10 +17,9 @@ until healed." Today that is impossible to script honestly:
 
 - `cmd_status` returns `Ok(0)` unconditionally (`src/cli.rs`, tail of
   `cmd_status`) — observed in the pilot printing `drift: 1 file(s)
-  edited` and exiting 0.
-- Some error paths also exit 0: `recut --remap main` prints
-  `covmap: no segment matches 'main' in covering 'main'` and exits 0
-  (misparsed argument reported as a per-item message, not a failure).
+  edited` and exiting 0, and re-verified during the pre-landing audit.
+  (Error paths are fine — they propagate `io::Error` and exit
+  non-zero; the fail-open is `status`'s success path specifically.)
 - Output is human prose; a gate script must regex fragile text.
 
 covmap already has the right precedent in-tree: `iter next` exits
@@ -38,7 +37,14 @@ main reporting command.
   (`covering<TAB>segments<TAB>drifted_files<TAB>missing_files`) and
   per connection (`connection<TAB>links<TAB>broken<TAB>src_cov<TAB>
   tgt_cov`). TSV over JSON keeps the sha2-only dependency policy.
-- Any command that prints a `covmap:`-prefixed error exits non-zero.
+- Per-item failures must surface in the exit code. (Top-level
+  `covmap:`-prefixed errors already exit non-zero via `main.rs` — no
+  ask there; a draft of this CIP claimed otherwise and was corrected
+  by audit.) The genuine fail-open holes are the *per-item* paths that
+  print to stderr and continue: `cmd_status` on an unreadable covering
+  (`eprintln!` then `continue`, function still returns `Ok(0)`,
+  `src/cli.rs:369-374`), and `cmd_recut_remap`'s "cannot read as
+  UTF-8 — skipped" / "object store incomplete — skipped" paths.
 - `status -v` (or the tsv rows) should enumerate *which segments*
   drifted, not just per-file counts: the pilot's heal path (`recut
   <C>:<seg>` for an in-place edit) requires knowing the segment, and

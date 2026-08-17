@@ -18,7 +18,11 @@ oracle toolchain, and the corpus must agree on this (campaign doc §4.4):
 
 Re-pin both together, deliberately, with the reason — never one side
 alone. The Go 1.22 loop-variable change is the standing reminder that
-language version is semantics, not packaging.
+language version is semantics, not packaging. (Third leg, recorded as
+NOT YET EXISTING per the pre-landing audit: the corpus has no
+`go.mod`, so "the corpus's `go` directive must agree" has no object
+today — the agreement preflight gains that leg when P3/P4 give the
+corpus one; until then the check is spec-pin ⟷ oracle only.)
 
 ## Repo pins (rows in `scripts/setup-deps`, tier `named`)
 
@@ -30,9 +34,9 @@ language version is semantics, not packaging.
 | `spectec` | `acc6e834ff403c82554d081237f327346190ad96` | Wasm SpecTec reading copy (P1). Shallow. |
 | `esmeta` | `7d237fd1680f473e674320cc97932702d950fa98` | ESMeta/JISET-line reading copy (P1). Shallow. |
 | `gofrontend`, `tinygo` | floating (`-`) | Cross-implementation lane, only if P5 green-lights it (§4.5); pin at first real use. |
-| `proposal` | `0be13090fdb0cbae0d71641bb676d924bc1c94de` | golang/proposal — design docs behind language changes; committee-intent reconstruction for P4's archaeology (pinned 2026-08-18 when the first landing's P0 gap was closed). |
+| `proposal` | `0be13090fdb0cbae0d71641bb676d924bc1c94de` | golang/proposal — design docs behind language changes; committee-intent reconstruction for P4's archaeology (pinned 2026-08-17, closing a P0 gap before the first landing). |
 
-Replicate: `scripts/setup-deps --only go,covmap,go101,spectec,esmeta`
+Replicate: `scripts/setup-deps --only go,covmap,go101,spectec,esmeta,proposal`
 (covmap needs `--from <checkout-with-deps/covmap>`). NOTE the shallow
 caveat: go101/spectec/esmeta here are depth-50 clones; setup-deps
 `--from` a shallow copy fails closed (by design) — reclone from the

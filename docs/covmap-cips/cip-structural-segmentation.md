@@ -16,11 +16,14 @@ splits" into one declarative call.
 Documents with intrinsic structure (HTML headings, markdown headings,
 function definitions) are the common case for spec-to-code coverings,
 and their boundaries are mechanical. Today `split` takes exactly one
-cut, addressed by segment hash (`split <C>:<h> <line>`,
-`src/cli.rs:1397-1402`), and each split re-hashes the halves — so bulk
-cutting means re-resolving the target segment's hash after every call.
-The pilot scripted this (python, ~30 lines): 158 sections of the Go
-language spec, 317 covmap invocations, 0.4 s. Runtime is a non-issue;
+cut, addressed by segment hash or `@name` (the usage string says
+`<h>`, `src/cli.rs:1397-1402`, but `@name` resolves too — moot for
+bulk cutting since freshly split halves are unnamed), and each split
+re-hashes the halves — so bulk cutting means re-resolving the target
+segment's hash after every call. The pilot scripted this (python,
+~30 lines): 158 sections of the Go language spec, 317 covmap
+invocations (158 splits + 159 namings, counting the pre-anchor
+preamble segment), 0.4 s. Runtime is a non-issue;
 the issues are (a) every user re-derives the same fragile
 resolve-split-resolve loop, and (b) the loop is easy to get subtly
 wrong (our first attempt double-ran and corrupted its own address

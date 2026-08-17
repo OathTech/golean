@@ -55,7 +55,7 @@ done
 # reference-checkout list; iris-lean = the Lake manifest's pinned rev
 # (reading copy); raft = north-star target (rev floats deliberately —
 # recorded as "-" pin meaning any rev accepted); go/covmap/go101/
-# spectec/esmeta/gofrontend/tinygo = docs/spec-sources.md (the
+# spectec/esmeta/gofrontend/tinygo/proposal = docs/spec-sources.md (the
 # spec-and-community truth campaign's pin index — go's SHA is tag
 # go1.26.5, the language-version pin; covmap is internal, --from only).
 PINS=$(cat <<'TABLE'

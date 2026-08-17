@@ -8,7 +8,8 @@ under `artifacts/` — the sandbox denies `~/.cargo`, same pattern as
 `latitude.md` = the latitude inventory. The simulated re-pin event:
 overwrite with the go1.26.5 spec — our REAL pin, so the drift is the
 real 92/78-line release delta. Ground truth (difflib, hunks mapped to
-nearest enclosing anchor): **12 changed sections** (preamble,
+nearest enclosing anchor): **12 changed sections** — 11 anchored
+sections plus the pre-anchor preamble segment — (preamble,
 Alias_declarations, Allocation, Appending_and_copying_slices, Close,
 Composite_literals, For_clause, For_range, Min_and_max,
 Operator_precedence, Type_definitions, Type_parameter_declarations).
@@ -16,8 +17,10 @@ Operator_precedence, Type_definitions, Type_parameter_declarations).
 ## What worked
 
 - **Structural segmentation is scriptable and fast**: all 158 spec
-  sections cut at `<h[234] id=…>` boundaries and named after their
-  anchors in 0.4 s / 317 covmap calls (`artifacts/covmap-pilot/covlib.py`
+  sections cut at `<h[234] id=…>` boundaries (159 segments counting
+  the pre-anchor preamble — the two counts are distinct; audit nit
+  2026-08-17) and named after their anchors in 0.4 s / 317 covmap
+  calls (`artifacts/covmap-pilot/covlib.py`
   — ~30 lines of hash-re-resolution gymnastics; the speed is fine, the
   gymnastics is the CIP-3 evidence). Latitude side: 48 segments,
   `@C1…@C11`, `@E1…` etc.
@@ -32,7 +35,11 @@ Operator_precedence, Type_definitions, Type_parameter_declarations).
 - **The workaround re-pin flow reproduces ground truth EXACTLY**:
   re-segment the new spec into a fresh covering (same 0.4 s script) →
   compare hashes of same-named segments across coverings → the 12
-  changed sections, no more, no less, zero false positives. Then:
+  changed sections, no more, no less, zero false positives.
+  Precondition, stated honestly: the anchor set must be stable across
+  the pair (true here; under anchor renames the named diff degrades
+  to drop/add pairs — the anchor-stability probe in
+  `docs/spec-sources.md` is what makes this workaround trustworthy). Then:
   changed ∩ link-targets = ∅ → "no envelope arguments need re-reading
   this cycle" — the campaign's §8.2 answer, mechanized.
 - **`iter` is the re-review queue**: label the changed segments
@@ -44,21 +51,36 @@ Operator_precedence, Type_definitions, Type_parameter_declarations).
 
 - **`recut --remap` degenerates on version-headered documents — i.e.
   on every real spec re-pin.** The spec's subtitle ("Language version
-  go1.25 (Aug 12, 2025)", line 3) defeats the common-prefix trim;
-  suffix trim leaves a 7834×7848 middle = 61.5 M DP cells, 15× over
-  `diff.rs`'s 4 M `DP_CELL_CAP`, so the LCS bails and treats ~everything
-  below line 3 as changed. Result, measured: **4 m 06 s CPU, 0 files
-  healed, 0 segments refreshed, 128 unresolved** — pure fingerprint
-  grind. The bitter part: the fingerprint *scores are excellent*
-  (unchanged sections proposed at 100 %, the genuinely-changed ones at
-  92–98 % — @Close 92 % is exactly the close-builtin change), but
-  remap is propose-only and tells you to relocate 128 segments by hand.
+  go1.25 (Aug 12, 2025)", line 3) defeats the common-prefix trim; the
+  suffix trim still maps the last 1,078 lines, but the residual middle
+  is 7834×7848 = 61.5 M DP cells, 15× over `diff.rs`'s 4 M
+  `DP_CELL_CAP`, so the LCS bails and everything between line 3 and
+  the common suffix is treated as changed. Result, measured (audit
+  re-runs agreed): **~4 min CPU, 0 files healed, 0 segments refreshed,
+  128 of 159 spec segments unresolved** (the first segment + 30
+  suffix-mapped sections resolve) — pure fingerprint grind, ending in
+  127 proposals + 1 "no candidate ≥ 0.40". The proposals *classify*
+  perfectly — the 117 scored at 100 % are exactly the unchanged
+  segments, the 11 sub-100 (spanning **69–99 %**; @Close 92 % is
+  exactly the close-builtin change) are exactly the changed ones — but
+  one genuinely changed section (@Allocation) got **no candidate at
+  all** (fingerprint false negative at the 0.40 default), and all the
+  signal is then discarded: remap is propose-only. (An earlier draft
+  of this note reported the changed-section range as "92–98 %" from a
+  truncated output tail and "146 exact matches" from arithmetic —
+  both corrected here from full measured output, audit 2026-08-17.)
   → CIP: unique-line/patience-style anchoring in `line_map` + an
-  `--apply --threshold` mode. (Positive note: this failure exits 1.)
-- **Exit codes fail open elsewhere** (confirming the code reading):
-  `status` exits 0 with drift and broken links present; misparsed
-  arguments can print an error and still exit 0 (`recut --remap main`
-  → "no segment matches 'main'", rc 0). No machine-readable output.
+  `--apply --threshold` mode with the partition invariant answered.
+  (Positive note: this failure exits 1.)
+- **`status` fails open on exit code** (confirming the code reading):
+  it exits 0 with drift present (re-verified rc 0 with `drift: 1
+  file(s) edited`). No machine-readable output. CORRECTION (audit
+  2026-08-17): this note originally also claimed `recut --remap main`
+  misparses and exits 0 — false; it exits 1 (the observed 0 was the
+  background-shell wrapper's exit, not covmap's — the exact
+  async-stdout misfire CLAUDE.md's housekeeping section warns about).
+  Error paths propagate `io::Error` and exit non-zero; the fail-open
+  is `status` specifically.
 - **`@name`s are unique per covering, across files** — the spec's
   `preamble` collided with latitude's; cross-file coverings need a
   prefix convention (we used `lat-*`) or per-file namespacing.
@@ -82,21 +104,29 @@ connections (blocks multi-worktree use; self-connection suffices for
 one-lane P2), CIP-3 structural segmentation (our script covers it
 meanwhile). Fallback (bare anchor lint) not needed.
 
-## Control experiment: the small-edit case (run after first drafting)
+## Control experiment: the small-edit case (diagnosis CORRECTED by the
+pre-landing audit, 2026-08-17)
 
 To separate "remap's diff degenerates on this document" from "remap is
-broken generally", a one-line in-place edit to `latitude.md` (line 213,
-same line count): bare `recut --remap` — 4 m again (it re-grinds the
-still-drifted spec every run) and **did not heal the one-line edit
-either** ("0 refreshed, 129 unresolved"): in-place content change is
-"segment drift", which remap's boundary-carry pass does not refresh.
-The documented segment-drift path, plain `recut main:@C6`, healed it
-instantly with the name preserved — but only because we knew which
-segment we had edited: **`status` reports drift at file granularity
-only**; there is no "which segments drifted" query, so the heal path
-requires out-of-band knowledge. Folded into the CIPs: status should
-enumerate drifted segments (CIP-1), and remap should refresh
-carried-boundary segments whose content changed in place (CIP-4).
+broken generally", a one-line in-place edit to `latitude.md` (line
+213, same line count): bare `recut --remap` — 4 m again (it re-grinds
+the still-drifted spec every run) and did not heal the one-line edit
+("0 refreshed, 129 unresolved"). **This note originally misdiagnosed
+that as "remap does not refresh in-place segment drift" — false.**
+The refresh path exists and works (`covering.rs:920-936`; audit probe:
+an *interior*-line edit heals cleanly, "1 refreshed, 0 unresolved").
+The real cause: line 213 is @C6's **first line**, and `remap_file`
+resolves a segment by mapping its start line only
+(`covering.rs:885-898`) — a changed start line ⇒ unresolved ⇒ the
+per-file all-or-nothing bail. Since structural coverings cut at
+heading lines, heading edits hit this constantly; the corrected
+upstream ask (CIP-4) is start-line-resilient resolution + per-segment
+degradation, not a refresh feature that already ships. What survives
+of the original observation: plain `recut main:@C6` healed instantly
+with the name preserved, but required knowing which segment to aim
+at — **`status` reports drift at file granularity only** (remap's
+proposals do name segments, but only after the 4-minute grind), so
+CIP-1 keeps the ask that status enumerate drifted segments.
 
 Not exercised, honestly: multi-repo connections (worked around by
 design), `html` rendering, `fsck`, format migration, remap on a

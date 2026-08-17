@@ -63,7 +63,7 @@ P0 execution; the table below records the source and why.
 | The Go Language Specification | `golang/go` → `doc/go_spec.html` (rendered: go.dev/ref/spec) | THE upper-bound text. Pin the whole `golang/go` repo at a release tag → one pin covers spec + memory model + test suite + go/types. The file's **git history is itself a source**: every clarification commit marks a spot the text was once ambiguous, usually with an issue link. |
 | The Go Memory Model | same repo, `doc/go_mem.html` (go.dev/ref/mem; 2022 revision) | Governs the concurrency envelope. Rationale: Russ Cox's memory-model series (research.swtch.com/gomm). |
 | gc's semantic test suite | same repo, `test/` (thousands of small programs, many named `issueNNNNN.go`) + `src/go/types/testdata` + `src/internal/types/testdata` | A curated historical map of gc semantic bugs — each issue-tagged test is a spec-vs-gc divergence that actually happened. Corpus-seed goldmine. |
-| Release notes, language-change sections | same repo, `doc/go1.*.html` / go.dev/doc/go1.x | The delta record between spec versions; the versioning stance (§5.4) is decided against this. |
+| Release notes, language-change sections | same repo, **in git history only** — `doc/go1.*.html` files (23 of them) were removed from `doc/` before the pin; mine via `git log --all -- 'doc/go1.*.html'` (audit correction 2026-08-17) plus go.dev/doc/go1.x for recent releases | The delta record between spec versions; the versioning stance (§5.4) is decided against this. |
 | Proposal + issue archaeology | github.com/golang/proposal (git); golang/go issues labeled `Proposal`, `LanguageChange`, `Documentation` (mined via `gh`, snapshots into `deps/` as JSONL) | Committee-intent reconstruction — the doctrine doc already names this lane "Cerberus-style". |
 
 ### Community / de-facto sources (lower authority, explicitly so)
@@ -98,9 +98,10 @@ to test, per effort:
 - **SpecTec (Wasm)** — single DSL source generating typeset prose,
   formal rules, and a meta-interpreter that passes 100% of the
   applicable official test suite; showed 13 historical shipped-spec
-  errors would have been prevented (retrospective injection study, not
-  discovery — corrected per the P1 note) and found 10 new errors in
-  five in-flight proposals, confirmed upstream. *Expected verdict:* reject the spec-generation frame (we
+  errors would have been prevented (retrospective prevention study —
+  6 of 13 re-injected, the 7 prose errors argued by construction; not
+  discovery — corrected per the P1 note + audit) and found 10 new
+  errors in five in-flight proposals, confirmed upstream. *Expected verdict:* reject the spec-generation frame (we
   don't own Go's spec); adopt the **coverage discipline** — their
   "interpreter ⟷ official test suite" loop is our differential gate,
   and their "formalization finds proposal bugs" is our divergence
@@ -133,7 +134,8 @@ to test, per effort:
   defect reports back to WG14 (= our upstream loop precedent).
   Cerberus's de-facto-vs-ISO program is the cautionary tale of what
   the two-bounds frame degenerates into when a language lets the
-  bounds cross (27 of 85 questions with de-facto/ISO CONFLICT —
+  bounds cross (27 of 85 questions with "significant differences
+  between the ISO and the de facto standards" — Q25 the archetype of
   deployed code relying on what the text forbids; Go's compatibility
   promise keeps observed ⊆ permitted, so no third candidate-de-facto
   artifact exists for us, and the ledger's job includes keeping it
@@ -264,9 +266,14 @@ corpus-touching slices: `--diff` and deliberate, explained re-pins).
   `deps/papers/` manifest, `docs/spec-sources.md` pointer doc. Verify
   spec-anchor stability across two adjacent Go releases while at it
   (informs 4.1's lint strictness).
-- **P1 — prior-art reading notes (M, parallelizable).** Six dated
-  notes per §3, each with adopt/adapt/reject verdicts. Reading lanes
-  are docs-only and disjoint — safe to parallelize per the worktree
+- **P1 — prior-art reading notes (M, parallelizable).** Executed as
+  FOUR lanes, not §3's six clusters (trim proposed and accepted with
+  the execution go-ahead, 2026-08-17; recorded here per the audit):
+  SpecTec / ESMeta-line / CH2O+Cerberus with JSCert folded in / FG +
+  memory model with Fava at abstract level. Sail got a paragraph in
+  §3, not a note — its content is an endgame framing, not machinery.
+  Each note carries adopt/adapt/reject verdicts. Reading lanes are
+  docs-only and disjoint — safe to parallelize per the worktree
   discipline.
 - **P2 — anchors + lint (M).** Mechanism 4.1; retrofit the latitude
   inventory and assumptions register with anchors (that retrofit is
@@ -323,13 +330,19 @@ file with other arcs.
 
 ## 7. Open questions for Mike (pre-P0)
 
-1. Language-version pin: latest stable Go at pin time — agreed?
-2. Issue-tracker snapshots via `gh` into gitignored JSONL: fine, or
-   pointer-only (URLs in the ledger, no mirror)?
+1. ~~Language-version pin~~ DECIDED (default accepted with the
+   execution go-ahead, 2026-08-17) and EXECUTED at P0, with one
+   refinement: the pin is the **oracle toolchain's** version
+   (go1.26.5), not "latest stable" (go1.26.6 existed) — §4.4's
+   agreement rule dominates. Recorded in `docs/spec-sources.md`.
+2. ~~Issue-tracker snapshots~~ DECIDED (same go-ahead): gitignored
+   JSONL via `gh`, tracked pointer manifest only. Execution deferred
+   to P4 (not part of the first landing).
 3. P5's upstream-filing policy: per-filing sign-off is assumed; any
-   standing constraints (e.g. never file from this identity)?
-4. Scale check on P1: six reading notes ≈ six worker-agent lanes
-   (Fable per the worker-model rule) — or trim the list?
+   standing constraints (e.g. never file from this identity)? — STILL
+   OPEN, needed by P5, not before.
+4. ~~Scale check on P1~~ DECIDED (same go-ahead): four lanes, per the
+   clustering now recorded in §5's P1 entry.
 5. covmap (§8): ~~CIP timing~~ DECIDED (Mike, 2026-08-17): CIP drafts
    are written AFTER the pilot — the pilot may surprise us in ways
    that change the requests. (Handover of any draft to the covmap
@@ -446,11 +459,16 @@ originally-hypothesized gaps dissolved on reading the code (see the
    stdin-TSV batch with all-or-nothing validation. A shell loop works
    meanwhile — lowest priority.
 
-Resolved positively by the code (no request needed): **store
-reviewability** — coverings and connections serialize as sorted text
-(`src/connection.rs:110`, `src/covering.rs:435,854`), so a tracked
-`.covmap/` is deterministic and git-diffable; single-lane ownership
-covers the merge story. Whitespace/markup normalization was considered
+Resolved positively by the code, with one correction from the
+pre-landing audit (2026-08-17): **store reviewability** holds —
+coverings serialize position-ordered with `BTreeSet` headers, and
+connections write links in insertion order (`Connection::write`,
+`src/connection.rs:36-50`), so a tracked `.covmap/` is deterministic
+and git-diffable. The original text claimed "sorted text" citing
+`connection.rs:110` / `covering.rs:435,854` — those are directory
+-listing sorts, and connection links are NOT sorted (empirically
+confirmed); deterministic-and-diffable survives, "sorted" does not.
+Single-lane ownership covers the merge story. Whitespace/markup normalization was considered
 and dropped: cosmetic churn only bites at re-pins, which are rare and
 deserve review anyway.
 

@@ -91,9 +91,11 @@ of the spec's latitude, which their `EitherI` pins anyway.
 **Errors in shipped spec text (paper §4.2) — read the claim precisely.** RQ2 is a *retrospective
 injection study*, not a discovery record: they mined two years of fix commits on the Wasm spec's main
 branch, classified the normative ones — 3 type errors, 7 prose errors, 3 semantics errors, plus
-"numerous" editorial issues — re-injected them into the SpecTec source, and confirmed each *would have
-been* caught (type errors by the frontend, prose errors by generation, semantics errors by the test
-suite through the meta-interpreter). The abstract's own wording is "detecting historical errors in the
+"numerous" editorial issues — re-injected the 6 machine-checkable ones (the type and semantics errors;
+precision added by audit — an earlier draft said all 13 were injected) and confirmed each *would have
+been* caught (type errors by the frontend, semantics errors by the test suite through the
+meta-interpreter); the 7 prose errors are argued by construction — generated prose cannot contain
+them, and the paper confirms the corresponding semantics were correctly specified. The abstract's own wording is "detecting historical errors in the
 specification that have been corrected". The campaign plan's phrasing ("found errors in shipped spec
 text and in five in-flight proposals", §3) is half right: the shipped-text half is
 would-have-prevented, not newly-found. This matters for us because the *method* of RQ2 — mine the

@@ -14,8 +14,8 @@ expected git rev — instead of a baked-in absolute path.
 
 A connection stores `# target_repo=<abs/path>` (`src/connection.rs:4-8`,
 `:40`) and `status` builds the target `Repo` straight from that string.
-Two failure modes for any team that tracks `.covmap/` in git (which the
-sorted-text store deliberately makes attractive):
+Two failure modes for any team that tracks `.covmap/` in git (which
+the plain-text, deterministic store deliberately makes attractive):
 
 1. **Worktrees and clones break every connection.** golean runs a
    worktree-per-lane discipline — ~20 checkouts of the same repo at

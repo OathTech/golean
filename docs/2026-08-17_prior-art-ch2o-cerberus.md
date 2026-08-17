@@ -3,8 +3,12 @@
 Status: P1 reading note for the spec-and-community truth campaign
 (`docs/2026-08-17_spec-and-community-truth-campaign.md` §3, CH2O+Cerberus
 cluster). Companion doctrine: `docs/2026-08-11_essence-of-go-doctrine.md`;
-the comparison target is `docs/2026-08-11_latitude-inventory.md` §2
-(E1–E6). Primary sources read: `deps/papers/ch2o-krebbers-thesis.pdf`
+the comparison target is `docs/2026-08-11_latitude-inventory.md` §2.
+SCOPE CORRECTION (pre-landing audit, 2026-08-17): this note compares
+E1–E6 only; the inventory's §2 actually runs E1–E11 (E7 init order,
+E8 multi-file order, E9 map iteration, E10 map-key retention, E11
+runtime-check order). E7–E11 were trimmed without declaring it — now
+declared; E11 matters for finding F1, see §3. Primary sources read: `deps/papers/ch2o-krebbers-thesis.pdf`
 (Krebbers, *The C standard formalized in Coq*, Radboud 2015 — Chapters 1,
 2, the §6.4 evaluation-order machinery, Chapters 10–11) and
 `deps/papers/cerberus-pldi16.pdf` (Memarian, Matthiesen, Lingard,
@@ -180,6 +184,7 @@ behaviors ⊆ Cerberus behaviors — the membership lane again, mechanized
 per-program.
 
 ## 3. The E1–E6 comparison: their machinery against our census
+(E7–E11 not compared — see the scope correction in the header)
 
 The structural headline first: **Go's forced core covers C's worst
 axis.** C's expression nondeterminism is dominated by unsequenced side
@@ -199,7 +204,7 @@ Per entry:
 |---|---|---|---|---|
 | **E1** spec-ordered core | (c) FORCED | deterministic reduction rules; sequence points at the ordered constructs (§6.4/§6.5) | `let strong` / `let atomic` (§5.6) | No. Agreement all around; Go simply forces far more than C11 does. |
 | **E2** call vs assignment-target operands | (b) PINNED to gc (call-first) | genuine nondeterminism via redex selection (§2.2, §6.4); a fixed order is what *CompCert* does, and §2.3 names that a compiler semantics, not a standard one | `unseq` of the operand evaluations (§5.6); the full order-set enumerated by the exhaustive driver | Yes, in name only: both would label the pin an implementation choice — which is precisely the doctrine's own "scaffolding with re-envelope obligation". No new information, but independent confirmation the classification is right. |
-| **E3** inter-target phase-1 operand order (known ≠ gc) | (b) PINNED to OURS | same: enumerate orders; if two *writes* collided it would be UB — inapplicable to Go phase-1 operand evaluation (calls hoisted, per BUG-032's probe) | same; observable outcome-set computed by exhaustive mode | Their executable-set output (`exec` returning P(state), §1.4; exhaustive mode, §5.1) is the panic-identity **membership envelope** the inventory already prefers (§7 item 5) — restricted to the observable that matters. Supports the inventory's cheaper option over full linearization. |
+| **E3** inter-target phase-1 operand order (known ≠ gc) | (b) PINNED to OURS | same: enumerate orders; if two *writes* collided it would be UB — inapplicable to Go phase-1 operand evaluation (calls hoisted, per BUG-032's probe) | same; observable outcome-set computed by exhaustive mode | Their executable-set output (`exec` returning P(state), §1.4; exhaustive mode, §5.1) is the panic-identity **membership envelope** — one of the two options inventory §7 item 5 lists (it states no preference; audit correction) — restricted to the observable that matters. F3 is an argument FOR preferring it over full linearization. |
 | **E4** targets-vs-RHS panic order | (b) PINNED to OURS | as E3 | as E3 | As E3. |
 | **E5** early store across the phase boundary (gc exotic, ours spec-literal) | (b) PINNED to the spec-literal point | CH2O's pattern for observed-exotic compiler behavior is *more UB* (§2.6) — unavailable to Go | **Q2's pattern (§2.1): add a nondeterministic choice covering the observed point, even when distasteful** | Yes — Cerberus supplies the right mold and CH2O the wrong one. E5's future envelope should be a two-point (store-held-back / store-early) choice or a membership row, per Q2's precedent; never a UB-style exclusion, which Go cannot express. |
 | **E6** len/cap hoist shapes | REFUSED | UB-as-valve: ambiguity and combinatorial blowup both "subsumed" into undef (§2.6) | out-of-scope features listed explicitly (§1); candidate-model failures reported as failures (§6) | Clarifying, not reclassifying: CH2O's valve is *semantic*, ours is tool-level classification. Cerberus's honest "intended behavior on only 9" is the closer kin to our visible-red refusals. Keep the distinction explicit in the inventory preamble. |
@@ -223,7 +228,13 @@ carry (the task's "that is a finding" clause):**
   join the E3/E4/E5 membership-envelope treatment; if some frontend
   normalization forces it, record that instead. Either way the census
   currently has a hole exactly where CH2O's mechanism has its center of
-  mass.
+  mass. AUDIT REFINEMENT (2026-08-17): F1's nearest neighbour is
+  **E11** (runtime-check order *inside one operation* — same
+  observable, same (b)-PINNED class), which this note's original
+  E1–E6 scope missed; F1 remains genuinely uncovered — it is order
+  across two operand *subexpressions*, not within one op — so the
+  correct framing for the P2 worklist is "E11-adjacent, not
+  E11-covered".
 - **F2 (vocabulary gap): order vs interleaving.** Cerberus
   distinguishes `unseq` (actions *interleave*) from indeterminate
   sequencing (atomic units, either order); CH2O's §10.1 shows a real
@@ -244,9 +255,10 @@ carry (the task's "that is a finding" clause):**
   non-determinism" (§1.4), together say: enumerating evaluation orders
   in the *proof layer* is the expensive road, and C only survived it
   because UB makes legal programs near-confluent. This independently
-  supports the inventory's stated preference (§7 item 5) for the
-  panic-identity membership envelope over full-statement linearization
-  for E3/E4/E5.
+  argues for choosing the panic-identity membership envelope over
+  full-statement linearization for E3/E4/E5 (inventory §7 item 5
+  lists both options without a preference — audit correction; this
+  note's F3 is the argument for picking membership).
 
 ## 4. The upstream record — what actually happened, and the Go analog
 
@@ -392,8 +404,10 @@ one phrasing and needs calibration in another.
   sentence "Cerberus's de-facto-vs-ISO distinction *is* our two-bounds
   doctrine independently reinvented" is imprecise and should be
   amended when next touched: Cerberus documents 27 of 85 questions
-  where de facto and ISO **conflict** — deployed code relying on what
-  the text forbids (Q25, Q9) — a third-artifact situation (the
+  with "significant differences between the ISO and the de facto
+  standards" (the paper's wording; Q25 is the archetype of the
+  deployed-code-relies-on-what-ISO-forbids direction, but the paper
+  does not claim all 27 point that way — gloss tightened by audit) — a third-artifact situation (the
   candidate de-facto model) that our two bounds deliberately do not
   have, because in Go `observed ⊆ permitted` actually holds, enforced
   by the compatibility promise. The correct statement: Cerberus is the

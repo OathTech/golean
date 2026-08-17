@@ -204,8 +204,10 @@ patches (§1) — the cost model alone kills a Go version.
 
 But "there is nothing to extract" is false, checked against the pinned
 spec: `deps/go/doc/go_spec.html` at `go1.26.5` contains **62
-`<pre class="ebnf">` blocks** — the complete formal grammar, in a
-notation the spec itself defines — and **236 plain `<pre>` blocks**,
+`<pre class="ebnf">` blocks** — the formal grammar productions (the
+notation-defining meta-grammar and token lists live in 28 further
+`class="grammar"` blocks; precision added by audit) — and **236 plain
+`<pre>` blocks**,
 mostly author-written examples. Two extractable objects exist:
 
 - the **examples** — which is exactly mechanism 4.2, and note the
@@ -349,8 +351,11 @@ already parks — park it alongside, with this precedent attached.
 - Carry §2.1's vote-separation table (avg 1.14 vs 3.63 failing
   engines) into the P5 decision memo as the quantitative case for
   mechanism 4.5.
-- P3 extractor: inventory all 236 `<pre>` blocks (62 are `ebnf` —
-  classify, don't run), and wrap runnable examples with the strongest
+- P3 extractor: inventory all 326 `<pre>` blocks — 236 bare + 62
+  `class="ebnf"` + 28 `class="grammar"` (the grammar blocks were
+  dropped from this bullet's original phrasing; audit correction
+  2026-08-17) — classify, don't run the ebnf/grammar ones; wrap
+  runnable examples with the strongest
   available observation per JEST's assertion-yield data (§2.2);
   expected outcomes stay out-of-band.
 - P5: scope an interpreter fired-branch trace as the machine-side
