@@ -122,10 +122,15 @@ Discipline notes, recorded up front:
 
 Census at the go1.26.5 pin: **926 spec commits, 39 mem commits, 374
 distinct issue refs, 203 anchors with rulings** — the uncurated feed.
-Curated above: 6. The issue-metadata enrichment (title/state/labels
-per referenced issue, into gitignored `deps/issue-snapshots/` JSONL +
-a tracked index) is BLOCKED on sandbox access to `gh`'s config —
-pending operator action, recorded 2026-08-17. Next curation passes,
+Curated above: 6. Issue-metadata enrichment DONE (2026-08-17,
+sandbox opened by operator): 372 of 374 refs resolved into the
+tracked `docs/spec-archaeology/issue-index.tsv` (30 carry
+`LanguageChange`; 2 unresolvable refs recorded in its header) via
+`gh api repos/golang/go/issues/N` into the gitignored
+`deps/issue-snapshots/golang-go-issues.jsonl`, joined by
+`scripts/mine-spec-archaeology --enrich` (fail closed without the
+snapshot). Refresh loop, for the record:
+`while read n; do gh api repos/golang/go/issues/$n --jq '{number,title,state,closed_at,labels:[.labels[].name]}'; done < deps/issue-snapshots/issue-numbers.txt`. Next curation passes,
 in census-yield order: the `Implementation_differences` +
 `Package_unsafe` anchor clusters (32/31 commits — likely dense in
 rulings), Go 101 claims (seed #3, each independently verified),

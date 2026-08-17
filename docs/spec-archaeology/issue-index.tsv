@@ -1,0 +1,376 @@
+# golang/go issue metadata for the archaeology census's 372 resolvable refs
+# joined from the gh snapshot (deps/issue-snapshots/, gitignored); census pin c19862e5f841
+# unresolvable refs: 2 (47141,56010) — some census '#N' tokens are CL numbers or typos, recorded, not dropped silently
+number	state	closed	labels	title
+113	closed	2014-12-08	FrozenDueToAge	Missing sentence from documentation and language definition
+164	closed	2014-12-08	LanguageChange,FrozenDueToAge	Cannot use fields of anonymous field in struct literal
+173	closed	2014-12-08	FrozenDueToAge	Spec typo of map type
+186	closed	2014-12-08	LanguageChange,FrozenDueToAge	"cannot take address out of parameter" when using named return values and anonymous functions
+189	closed	2014-12-08	FrozenDueToAge	typo in go_spec ('#' comment syntax)
+357	closed	2014-12-08	LanguageChange,FrozenDueToAge	map[interface{}] issue
+395	closed	2021-04-21	LanguageChange,Proposal-Accepted,NeedsFix,FrozenDueToAge	spec: use (*[4]int)(x) to convert slice x into array pointer
+438	closed	2014-12-08	Documentation,FrozenDueToAge	IEEE 754 Special Values
+451	closed	2014-12-08	FrozenDueToAge	reflect: method lookup using anonymous field succeeds, but Call crashes
+457	closed	2014-12-08	FrozenDueToAge	Language Specification error
+528	closed	2014-12-08	LanguageChange,FrozenDueToAge	drop requirement for parenthesization of func return type
+583	closed	2014-12-08	LanguageChange,FrozenDueToAge	allow new goroutines to run during init
+658	closed	2014-12-08	FrozenDueToAge	spec: context type is unspecified for shifted constants in comparison expressions
+697	closed	2014-12-08	FrozenDueToAge	Spec elides ';' illegally after simple statement when switch expression elided
+743	closed	2014-12-08	FrozenDueToAge	an issue in GO programming language spec
+770	closed	2014-12-08	FrozenDueToAge	reflect method information seems wrong
+801	closed	2014-12-08	FrozenDueToAge	./all.bash fails at container/vector test
+803	closed	2014-12-08	FrozenDueToAge	PointerType missing from Conversion production
+891	closed	2014-12-08	FrozenDueToAge	Specification does not document behavior of len() and cap() on nil slice, map, or channel
+900	closed	2014-12-08	FrozenDueToAge	http.Server redirects to / on a URL with two (but not three or four) leading slashes, such as GET //myfile HTTP/1.1
+1118	closed	2014-12-08	FrozenDueToAge	The Go Memory Model article: Obsolete section
+1285	closed	2014-12-08	FrozenDueToAge	Spec references nonexistant unsafe.Maxalign
+1349	closed	2014-12-08	FrozenDueToAge	cannot catch "too many operations on a closed channel" panic
+1370	closed	2014-12-08	FrozenDueToAge	Effective Go panic example changes error value
+1419	closed	2014-12-08	FrozenDueToAge	Sending on a closed channel should fail after 0 or ∞ times, not a finite N > 0.
+1421	closed	2014-12-08	FrozenDueToAge	spec: constant specification is invalid
+1445	closed	2014-12-08	Documentation,FrozenDueToAge	spec doesn't define behavior of address of local
+1535	closed	2014-12-08	FrozenDueToAge	spec change: require if condition?
+1543	closed	2014-12-08	FrozenDueToAge	go_spec: ref to #Package_clauses instead of #Package_clause
+1551	closed	2014-12-08	FrozenDueToAge	spec: clarify meaning of embedded unexported fields/methods
+1612	closed	2014-12-08	Documentation,FrozenDueToAge	spec: require local variables to be used
+1665	closed	2014-12-08	FrozenDueToAge	go_spec: missing parentheses in "Handling panics" example
+1707	closed	2014-12-08	FrozenDueToAge	should named []byte type be convertible directly to string?
+1708	closed	2014-12-08	FrozenDueToAge	const ui uint = 5; var a int = 2.0 << ui;
+1713	closed	2014-12-08	Documentation,FrozenDueToAge	spec: clarify range over nil values
+1717	closed	2014-12-08	FrozenDueToAge	spec: clarify type signature of append
+1764	closed	2014-12-08	FrozenDueToAge	spec: specify behavior of x := int8(-128); x /= -1
+1776	closed	2014-12-08	FrozenDueToAge	net connections cannot be used inside init() functions
+1786	closed	2014-12-08	FrozenDueToAge	doc: missing closing tag in go_spec.html
+1793	closed	2014-12-08	FrozenDueToAge	Conversion from unsafe.Pointer to types other than uintptr
+1797	closed	2014-12-08	FrozenDueToAge	spec: link to Calls from method set discussion
+1814	closed	2014-12-08	Documentation,FrozenDueToAge	spec: disallow recursive embedded interfaces
+1821	closed	2014-12-08	FrozenDueToAge	Go spec notation, Production doesn't permit empty body
+1865	closed	2014-12-08	FrozenDueToAge	spec should define behavior of dereferencing nil
+1867	closed	2014-12-08	FrozenDueToAge	Specification problem with the symbol "..."
+1936	closed	2014-12-08	Documentation,FrozenDueToAge	go spec: language for append() built-in is contradictory
+1940	closed	2014-12-08	FrozenDueToAge	go spec: scope for short variable declarations is undefined
+1941	closed	2014-12-08	FrozenDueToAge	Confusing sentence in doc/go_mem.html
+1943	closed	2014-12-08	Documentation,FrozenDueToAge	go spec: unsafe.Sizeof (Alignof) should return uintptr
+2001	closed	2014-12-08	FrozenDueToAge	cgo: GOMAXPROCS deadlock
+2112	closed	2014-12-08	FrozenDueToAge	garbage collector doesn't run during init
+2246	closed	2014-12-08	LanguageChange,FrozenDueToAge	language spec: close() should be disallowed on receive-only channels
+2252	closed	2014-12-08	FrozenDueToAge	spec unclear on defer semantics
+2274	closed	2014-12-08	LanguageChange,FrozenDueToAge	append([]byte, string)
+2277	closed	2014-12-08	FrozenDueToAge	memory model bug
+2280	closed	2014-12-08	LanguageChange,FrozenDueToAge	spec: receiver-curried method expressions
+2353	closed	2014-12-08	FrozenDueToAge	spec should define behavior of close on a nil channel
+2377	closed	2014-12-08	FrozenDueToAge	Specs: "Variable declarations" don't mention complex constants type.
+2547	closed	2014-12-08	Documentation,FrozenDueToAge	website: update notable articles to Go 1 and move content to golang.org
+2561	closed	2014-12-08	LanguageChange,FrozenDueToAge	spec: determine when bool is ideal bool
+2568	closed	2014-12-08	FrozenDueToAge	spec: conversions inconsistent about trailing comma
+2620	closed	2014-12-08	FrozenDueToAge	Spec does not explain comparing pointers to zero-sized objects
+2789	closed	2014-12-08	FrozenDueToAge	cmd/gc: inaccurate ideal float comparison
+2803	closed	2014-12-08	FrozenDueToAge	spec: fix map key description
+2825	closed	2014-12-08	FrozenDueToAge	spec: clarify blocking / racing behavior of close on a channel
+2870	closed	2014-12-08	FrozenDueToAge	doc: list of primes contains a non-prime
+2916	closed	2014-12-08	FrozenDueToAge	spec: disallow field and method with same name
+3031	closed	2014-12-08	FrozenDueToAge	spec: define comparison of struct with _ fields
+3338	closed	2014-12-08	FrozenDueToAge	Old documentation for unsafe in the specification
+3635	closed	2014-12-08	FrozenDueToAge	spec: revise embedded field description
+3763	closed	2014-12-08	FrozenDueToAge	spec: inconsistent description in "Qualified identifiers" section
+3779	closed	2014-12-08	FrozenDueToAge	spec: x.f for nil x causes runtime panic, is not illegal
+3814	closed	2014-12-08	FrozenDueToAge	spec: error in http://golang.org/ref/spec#Constant_expressions section
+3852	closed	2014-12-08	Documentation,FrozenDueToAge	spec: evaluation order in assignments return statements
+4018	closed	2014-12-08	Documentation,FrozenDueToAge	spec: "[]byte is like string" is apparently too precise
+4039	closed	2014-12-08	FrozenDueToAge	doc: ref/mem example explanation shouldn't imply atomic string assignment
+4109	closed	2014-12-08	LanguageChange,Documentation,FrozenDueToAge	spec: spec is incorrect about the requirement for parentheses around the type in a conversion
+4123	closed	2014-12-08	FrozenDueToAge	spec: inconsistent about allowed string conversions
+4142	closed	2014-12-08	FrozenDueToAge	spec: does append use memmove like copy?
+4231	closed	2014-12-08	LanguageChange,FrozenDueToAge	spec: spec demands runtime error for index range errors
+4253	closed	2014-12-08	FrozenDueToAge	spec: wording about nil maps is confusing
+4324	closed	2014-12-08	FrozenDueToAge	Minor wording issue in the spec
+4398	closed	2014-12-08	FrozenDueToAge	spec: typed floating point constant does not match compiler behaviour
+4400	closed	2014-12-08	FrozenDueToAge	spec does not match compiler output on constant evaluation
+4441	closed	2014-12-08	FrozenDueToAge	spec: selector example incorrectly states automatic dereference
+4450	closed	2014-12-08	FrozenDueToAge	spec: when must parameter names be identical?
+4456	closed	2014-12-08	FrozenDueToAge	incorrect link in "The Go Specification"
+4457	closed	2014-12-08	FrozenDueToAge	spec: should (T).foo be a valid method expression?
+4462	closed	2014-12-08	FrozenDueToAge	spec: go/defer of builtin functions unspecified
+4472	closed	2014-12-08	FrozenDueToAge	spec: spec does not exclude impossible type switches and type assertions.
+4479	closed	2014-12-08	FrozenDueToAge	spec: BuiltinCall section contradicts itself
+4482	closed	2014-12-08	FrozenDueToAge	spec: Paragraph about type{} composite literals in if/switch/for conditions could be clearer (current description doesn't match gc's behavior)
+4486	closed	2016-11-18	FrozenDueToAge	spec: various cleanups
+4496	closed	2014-12-08	FrozenDueToAge	spec: permit parenthesized types for receiver types
+4524	closed	2015-07-30	Documentation,FrozenDueToAge	spec: multiple equal integer constant switch case values should be illegal
+4573	closed	2014-12-08	FrozenDueToAge	spec: define f(g()) not allowed when g() returns nothing
+4586	closed	2014-12-08	LanguageChange,FrozenDueToAge	spec: spec does not disallow const, type, or var named init
+4602	closed	2014-12-08	FrozenDueToAge	spec: s/char_lit/rune_lit/ ?
+4605	closed	2014-12-08	FrozenDueToAge	spec: note func conversion 'restriction' closer to definition
+4612	closed	2014-12-08	FrozenDueToAge	spec: disallow a, a := 1, 2
+4644	closed	2014-12-08	FrozenDueToAge	spec: (non?)evaluation of operand is unclear when ranging over pointer-to-array type
+4648	closed	2014-12-08	FrozenDueToAge	spec: order of initialization needs more detail
+4653	closed	2014-12-08	FrozenDueToAge	spec: Spec doesn't say that CommCases don't allow expressions in front of :=
+4679	closed	2014-12-08	FrozenDueToAge	spec: allow P(x) with type P unsafe.Pointer
+4682	closed	2014-12-08	FrozenDueToAge	spec: cap cannot be applied to nil map
+4774	closed	2014-12-08	FrozenDueToAge	spec: panic description is not quite right
+4793	closed	2014-12-08	Documentation,FrozenDueToAge	spec: result of comparison should always be untyped bool
+4880	closed	2014-12-08	FrozenDueToAge	cmd/gc: wrong error message for shift expression
+4881	closed	2014-12-08	FrozenDueToAge	gccgo: incorrect error message for shift expression
+4883	closed	2014-12-08	Documentation,FrozenDueToAge	spec: partially contradictory rule regarding shift typing
+4905	closed	2014-12-08	Documentation,FrozenDueToAge	spec: unsafe.Offsetof underspecified
+4913	closed	2014-12-08	Documentation,FrozenDueToAge	spec: type of "foo"[i:j] is unclear
+4923	closed	2014-12-08	FrozenDueToAge	spec: fallthrough not allowed in final case
+4976	closed	2014-12-08	FrozenDueToAge	spec: define that circular imports are illegal
+5069	closed	2022-12-14	Documentation,FrozenDueToAge	spec: Document rules for recursive type and other self-referential decls
+5083	closed	2024-12-30	Documentation,NeedsFix,FrozenDueToAge,FixPending	spec: reference-like properties of channels, slices, and maps not well specified
+5180	closed	2014-12-08	FrozenDueToAge	spec: clarify that append will only replace the slice if  the capacity is not large enough
+5425	closed	2014-12-08	FrozenDueToAge	spec: a "bare" return is an error if it appears within a hole in the scope of the named return parameters
+5430	closed	2014-12-08	FrozenDueToAge	spec: error in Constant expressions
+5434	closed	2014-12-08	FrozenDueToAge	Spec is inconsistent when using "up to"
+5456	closed	2014-12-08	FrozenDueToAge	spec: Method value commentary typo
+5561	closed	2014-12-08	Documentation,FrozenDueToAge	website: Advertise sub-repo packages
+5604	closed	2014-12-08	FrozenDueToAge	spec: Receive operator: slightly confusing wording about receive from closed channel
+5682	closed	2014-12-08	FrozenDueToAge	Spec clarification on named vs. unnamed types
+5704	closed	2014-12-08	FrozenDueToAge	cmd/gc: disagrees with spec in result of []byte("")
+5725	closed	2014-12-08	Documentation,FrozenDueToAge	doc: mention labelled break/continue statements in Effective Go
+5769	closed	2014-12-08	Documentation,FrozenDueToAge	spec: method selectors do not auto-dereference
+5818	closed	2014-12-08	Documentation,FrozenDueToAge	spec: be clear that 'make' creates an underlying array
+5862	closed	2014-12-08	Documentation,FrozenDueToAge	If the "m" definition should be move to the next example place? It confuses me currently.-------...
+5911	closed	2014-12-08	FrozenDueToAge	spec: say that chan is safe for concurrent access
+5951	closed	2014-12-08	FrozenDueToAge	spec: Slicing a nil slice from 0:0 should not panic
+5952	closed	2014-12-08	FrozenDueToAge	spec: tweak wording in Constants section
+6006	closed	2014-12-08	Documentation,FrozenDueToAge	spec: conflicting/unclear rules about assignments to _
+6102	closed	2014-12-08	LanguageChange,FrozenDueToAge	spec: range should not require a variable.
+6227	closed	2014-12-08	FrozenDueToAge	document mistake
+6242	closed	2014-12-08	FrozenDueToAge	spec: clarify the guarantees for HB behaviour of buffered chans
+6321	closed	2014-12-08	Documentation,FrozenDueToAge	doc: web site needs re-organization, should mention more external resources
+6358	closed	2014-12-08	Documentation,FrozenDueToAge	spec: be clear about unsafe.Pointer being a pointer
+6398	closed	2015-07-30	Documentation,FrozenDueToAge	spec: switch with no value uses bool rather than untyped bool
+6604	closed	2014-12-08	Documentation,FrozenDueToAge	spec: be clear about the meaning of _ methods in interfaces
+6703	closed	2014-12-08	Documentation,FrozenDueToAge	spec: section on variable initialization is unclear
+6858	closed	2016-10-04	LanguageChange,FrozenDueToAge	spec: field tags have to be identical when casting
+6977	closed	2019-11-13	LanguageChange,v2,Proposal,Proposal-Accepted,NeedsDecision,FrozenDueToAge	spec: allow embedding overlapping interfaces
+7003	closed	2014-12-08	FrozenDueToAge	spec: broken link to type identity
+7011	closed	2014-12-08	FrozenDueToAge	spec: wrong complex value (typo) in example
+7073	closed	2014-12-08	Documentation,FrozenDueToAge	spec: clarify what gets passed to a variadic function when the call has no arguments
+7137	closed	2014-12-08	Documentation,FrozenDueToAge	spec: evaluation order and initialization order specs are in contradiction
+7192	closed	2014-12-08	Documentation,FrozenDueToAge	spec: write rules for safe use of unsafe.Pointer and uintptr
+7386	closed	2014-12-08	FrozenDueToAge	gccgo: implementation of len(x) does not follow spec
+7387	closed	2014-12-08	Documentation,FrozenDueToAge	spec: clarify spec about what is considered a "function call" with respect to the rules for len/cap
+7404	closed	2014-12-08	Documentation,FrozenDueToAge	spec: clarify switch stements w/o switch expression
+7444	closed	2014-12-08	Documentation,FrozenDueToAge	spec: Minor inconsistency regarding the term "predeclared type"
+7551	closed	2014-12-08	FrozenDueToAge	spec: is not explicit that operators apply to named types.
+7669	closed	2014-12-08	Documentation,FrozenDueToAge	spec: nits in description of select statement
+7785	closed	2014-12-08	FrozenDueToAge	spec: closed channel behaviour clarifications
+7834	closed	2014-12-08	Documentation,FrozenDueToAge	spec: scope and re-use of loop variables is not fully specified
+7886	closed	2014-12-08	FrozenDueToAge	spec: Interface Types defines embedding as method enumeration, but private methods are treated differently
+8007	closed	2014-12-08	FrozenDueToAge	Raw string literals contain carriage returns
+8023	closed	2014-12-08	Documentation,FrozenDueToAge	spec: program does not necessary exit when main function returns
+8040	closed	2014-12-08	Documentation,FrozenDueToAge	spec: "innermost" for/switch must be limited to current function
+8088	closed	2014-12-08	Documentation,FrozenDueToAge	spec: oversight: §Variable declarations points to §Assignments but the relevant text does not match
+8107	closed	2014-12-08	Documentation,FrozenDueToAge	spec: clarify defer semantics
+8189	closed	2014-12-08	LanguageChange,FrozenDueToAge	spec: comma-ok expressions should return an untyped bool rather than a bool
+8485	closed	2014-12-08	FrozenDueToAge	spec: variable initialization order still unclear
+8496	closed	2014-12-08	FrozenDueToAge	spec: term "variable" used inconsistently
+8589	closed	2015-03-20	LanguageChange,FrozenDueToAge	spec: allow elision of explicit type for key in map literal
+8606	closed	2022-11-14	LanguageChange,Proposal,Proposal-Accepted,FrozenDueToAge	spec: define that structs are compared field-by-field as listed in source code
+8989	closed	2014-12-08	FrozenDueToAge	go/types: automatic deref ok for embedded fields in method lookup
+9001	closed	2014-12-08	Documentation,FrozenDueToAge	gc, go/types: parens are permitted around builtins, contra spec
+9060	closed	2017-10-25	Documentation,FrozenDueToAge	spec: remove unnecessary syntax restrictions for method expressions to match compiler
+9226	closed	2014-12-09	FrozenDueToAge	http://golang.org/ref/spec Type Identity example needs review
+9235	closed	2015-03-16	FrozenDueToAge	doc: The Go Memory Model : a channel example has a bug
+9418	closed	2014-12-22	FrozenDueToAge	spec: Variable Declarations, incorrect variable type
+9445	closed	2014-12-26	FrozenDueToAge	spec: Length and Capacity (mistyped expression)
+9837	closed	2015-08-05	FrozenDueToAge	spec: clarify redeclaration of result variables
+10151	closed	2015-05-13	FrozenDueToAge	spec: bad grammar for binary expressions
+10248	closed	2015-07-23	FrozenDueToAge	spec: clarify that """ is an invalid token
+10341	closed	2015-08-05	Documentation,FrozenDueToAge	spec: bounded type selectors
+10514	closed	2015-08-05	FrozenDueToAge	spec: odd sentence about non-constant shift expressions
+10893	closed	2015-05-18	Documentation,FrozenDueToAge	spec: "TO" != "T0" in spec
+11161	closed	2015-06-11	FrozenDueToAge	cmd/gc: x op= y is not always equivalent to x = x op y.
+11350	closed	2015-06-23	FrozenDueToAge	spec: non-integral constant can be converted to int
+11540	closed	2015-12-05	FrozenDueToAge	cmd/compile: interface conversion panic
+11668	closed	2015-07-30	FrozenDueToAge	cmd/compile: use of untyped nil in switch
+11669	closed	2015-08-21	FrozenDueToAge	go/types: complex(0, 0i) should be permitted
+11945	closed	2017-06-08	NeedsFix,FrozenDueToAge	cmd/compile: real and imag don't produce untyped results for untyped constant arguments
+11946	closed	2019-10-02	FrozenDueToAge	cmd/compile: real and imag don't accept untyped non-complex constants as arguments
+11947	closed	2015-08-26	FrozenDueToAge	go/types: real and imag don't accept untyped non-complex constants as arguments
+11964	closed	2015-07-31	Documentation,FrozenDueToAge	spec: minor changes to examples
+12576	closed	2015-10-20	Documentation,FrozenDueToAge	spec: Do exact floating-point constants differentiate between -0.0 and 0.0?
+12578	closed	2015-09-12	FrozenDueToAge	spec: Clarify composite literal type elision rules for map values
+12711	closed	2019-05-07	v2,Proposal,Proposal-Accepted,NeedsDecision,FrozenDueToAge	proposal: different octal base literal representation
+12717	closed	2015-09-23	FrozenDueToAge	spec: Make Composite Literals description more precise
+13371	closed	2015-11-26	Documentation,FrozenDueToAge	spec: docs for iota could give an example of incrementing over non-iota definitions
+13414	closed	2016-01-05	Documentation,FrozenDueToAge	spec: links to charts/lists of supported unicode character categories
+13420	closed	2015-11-30	FrozenDueToAge	spec: example in specification for struct tags not valid tags or not representative of tag usage
+13572	closed	2016-10-18	LanguageChange,Proposal,Proposal-Accepted,FrozenDueToAge	spec: allow implementations to restrict constants to 16-bit binary exponents
+13595	closed	2015-12-15	FrozenDueToAge	spec: Variadic receiver types
+13780	closed	2016-01-01	FrozenDueToAge	Typo in the language specification: “in a expression”
+14422	closed	2016-04-19	FrozenDueToAge	spec: terminating statements and trailing empty statements
+14477	closed	2016-02-23	FrozenDueToAge	Slice syntax in documentation wrong
+14785	closed	2016-04-21	Documentation,FrozenDueToAge	spec: operators/shift misleading comment
+14822	closed	2017-06-08	Documentation,FrozenDueToAge	spec: clarify restrictions on RHS of non-constant shifts
+14844	closed	2017-09-01	NeedsDecision,FrozenDueToAge	spec: gotype accepts a[1.0<<s] though the compilers do not - which is correct?
+15389	closed	2017-08-25	Documentation,FrozenDueToAge	spec: "representability" is not well defined in the spec
+15412	closed	2016-04-25	FrozenDueToAge	spec: empty vs absent struct field tag
+15550	closed	2017-10-19	NeedsFix,FrozenDueToAge	spec: definition for iota doesn't make sense for nested ConstDecls
+15686	closed	2016-08-18	FrozenDueToAge	go/types: incorrect scope positioning for variables defined by RangeStmt
+15782	closed	2016-08-24	FrozenDueToAge	spec: "special form" description of comma-ok assignments is incomplete
+15896	closed	2016-05-31	FrozenDueToAge	spec: clarify allowed implementation restrictions for switch statements
+16085	closed	2016-10-04	Proposal,Proposal-Accepted,FrozenDueToAge	Proposal: Ignore tags in struct type conversions
+16339	closed	2016-11-04	Proposal	Proposal: Alias declarations for Go
+16679	closed	2016-10-06	FrozenDueToAge	spec: clarify acceptable indices in array/slice composite literals
+16794	closed	2016-09-01	Documentation,FrozenDueToAge	spec: implementation and spec differ w/ respect to scope of implicit type switch vars
+16874	closed	2016-08-25	Documentation,FrozenDueToAge	spec: clarify init must be functions
+17398	closed	2016-10-14	NeedsFix,FrozenDueToAge	spec: description of complex numbers says valid code is illegal
+17428	closed	2016-10-13	FrozenDueToAge	spec: Type assertions
+17746	closed	2016-11-04	-	spec: embedding a type alias is confusing
+17784	closed	2016-11-04	-	spec: clarify meaning of alias decls in sequence of "enum" const declaration
+17895	closed	2017-06-20	LanguageChange,Proposal,Proposal-Accepted,FrozenDueToAge	spec: allow the use of fused multiply-add floating point instructions
+17954	closed	2016-11-18	NeedsFix,FrozenDueToAge	spec: clarify type elision rules for composite literals
+17975	closed	2016-11-18	FrozenDueToAge	go/doc: remove alias => operator from spec
+18130	closed	2017-05-03	Proposal,Proposal-Accepted,FrozenDueToAge	all: support gradual code repair while moving a type between packages
+18950	closed	2017-02-07	FrozenDueToAge	spec: improvement for wording
+19113	closed	2019-05-07	LanguageChange,v2,Proposal,Proposal-Accepted,NeedsDecision,FrozenDueToAge	proposal: spec: allow signed shift counts
+19220	closed	2017-08-30	FrozenDueToAge	spec: clarify whether str[low : high] shares the underlying memory with str
+19306	closed	2017-05-09	FrozenDueToAge	spec: clarify if a type with underlying unsafe.Pointer type can be used for unsafe conversions
+19308	closed	2019-05-07	LanguageChange,v2,Proposal,Proposal-Accepted,NeedsDecision,FrozenDueToAge	proposal: spec: binary integer literals
+19367	closed	2021-04-29	Proposal,Proposal-Accepted,FrozenDueToAge	unsafe: add Slice(ptr *T, len anyIntegerType) []T
+19450	closed	2017-03-13	NeedsDecision,FrozenDueToAge	spec: `operators, delimiters, and special tokens` not used consistently
+19689	closed	2017-03-24	Documentation,FrozenDueToAge	spec: does not cover the case where a map composite literal contains multiple copies of the same key at runtime
+19885	closed	2017-04-28	FrozenDueToAge	spec: admissible argument types for print/println
+19903	closed	2017-07-06	Documentation,Proposal,Proposal-Accepted,FrozenDueToAge	spec: document the hint for make(map) better
+20830	closed	2017-06-28	Documentation,FrozenDueToAge	spec: grammar mistake
+20900	closed	2017-08-14	FrozenDueToAge	spec: some "base type" (of pointer types) occurrences are not used consistently
+21579	closed	2017-08-25	FrozenDueToAge	spec: clarify zero value for complex types
+21580	closed	2017-08-25	FrozenDueToAge	spec: clarify that nil in a type switch is not a type
+21693	closed	2017-12-01	NeedsFix,FrozenDueToAge	cmd/compile: a[1.0 << s] should be accepted
+21785	closed	2017-09-19	FrozenDueToAge	spec: unclear whether int, bool, string are considered defined types
+22202	closed	2017-10-10	FrozenDueToAge	spec: type identity section not fully updated for 1.9
+22258	closed	2017-10-19	FrozenDueToAge	spec: unnecessary phrase in range loop description
+22282	closed	2017-10-23	Documentation,Proposal,Proposal-Accepted,FrozenDueToAge	doc: delete mention of compiled binaries from spec
+22308	closed	2017-10-18	Documentation,NeedsFix,FrozenDueToAge	spec: document package unsafe's path is "unsafe"
+22326	closed	2019-05-29	NeedsFix,FrozenDueToAge,early-in-cycle,release-blocker	cmd/compile: incorrect package initialization order for spec example
+22495	closed	2017-10-30	Documentation,FrozenDueToAge	spec: typo in the Go Spec
+23096	closed	2017-12-12	FrozenDueToAge	spec: Issue with an example of Type Identities in the language spec
+23215	closed	2017-12-22	FrozenDueToAge	spec: informally explain what a terminating statement is
+23254	closed	2018-01-04	FrozenDueToAge	spec: there are 4 "value type" of map type uses in spec
+23389	closed	2018-01-09	Documentation,FrozenDueToAge	spec: the double quotes enclosing "wrap around" are not symmetrical
+23409	closed	2018-01-11	Documentation,FrozenDueToAge	spec: Typing error in Go spec documentation
+23442	closed	2018-01-14	FrozenDueToAge	Edited ReadMe
+23443	closed	2018-01-17	Documentation,FrozenDueToAge	proposal: spec: the integer division exception rule should be moved to the integer overflow section
+23474	closed	2018-01-23	Documentation,FrozenDueToAge	spec: clarify "named" vs. "defined" types
+23814	closed	2022-06-14	Documentation,FrozenDueToAge	spec: review/clarify uses of "slice of bytes"
+23895	closed	2018-02-18	FrozenDueToAge	spec: confusing example in map index expressions section
+24163	closed	2024-12-30	Documentation,NeedsFix,FrozenDueToAge,FixPending	spec: clarify that conversions to slices don't guarantee slice capacity?
+24451	closed	2018-03-19	NeedsFix,FrozenDueToAge	doc: 9 is listed as a prime in example code within spec
+25448	closed	2023-01-19	LanguageChange,v2,Proposal,Proposal-Accepted,NeedsFix,FrozenDueToAge	spec: guarantee non-nil return value from recover
+26313	closed	2018-10-08	Documentation,FrozenDueToAge	spec: possibly inaccurate description of untyped case expressions
+27384	closed	2018-08-31	Documentation,FrozenDueToAge	doc: fix os.Pipe usage in short variable declarations example
+27802	closed	2018-09-24	NeedsDecision,FrozenDueToAge	spec: defer statement specification is easily misread
+27808	closed	2018-12-21	Documentation,NeedsFix,FrozenDueToAge	ref/mem: misleading sentence in sync.Once example
+27995	closed	2018-10-17	NeedsInvestigation,FrozenDueToAge,release-blocker	spec: should accept method recv base type that is alias to a pointer type
+28341	closed	2018-10-23	Documentation,NeedsFix,FrozenDueToAge	spec: don't use "exception" instead of "panic"
+28493	closed	2019-05-07	LanguageChange,v2,Proposal,Proposal-Accepted,NeedsDecision,FrozenDueToAge	proposal: permit blank (_) separator in integer number literals
+28736	closed	2018-11-13	Documentation,NeedsInvestigation,FrozenDueToAge	spec: documentation of len() in string type unclear
+29008	closed	2019-05-07	LanguageChange,v2,Proposal,Proposal-Accepted,NeedsDecision,FrozenDueToAge	proposal: Go 2: hexadecimal floats
+29425	closed	2019-05-13	Documentation,FrozenDueToAge	doc: new(T) and &T{} result into different things: clarification needed
+30769	closed	2019-03-14	Documentation,WaitingForInfo,NeedsFix,FrozenDueToAge	spec: apparent contradiction for passing of slice argument to variadic parameter
+31292	closed	2019-05-13	Documentation,FrozenDueToAge	spec: clarify section on initialization order
+31689	closed	2019-05-14	Documentation,NeedsFix,FrozenDueToAge	spec: clarify whether the spec guarantees that slicing an array reuses that array in the slice
+34056	closed	2019-09-04	NeedsFix,FrozenDueToAge	spec: minor bug relating to changes made for shifts
+36037	closed	2019-12-13	Documentation,NeedsDecision,FrozenDueToAge	doc: go spec says grammar is "regular", but it is not regular in grammar sense
+36520	closed	2020-01-15	Documentation,NeedsFix,FrozenDueToAge	doc: go-spec.html missing space before . on line 2416, OperandName = identifier | QualifiedIdent.
+36526	closed	2020-01-13	Documentation,NeedsFix,FrozenDueToAge	doc/go_spec.html: typo with an empty interface declaration
+36559	closed	2020-01-15	cla: yes	spec: add missing space in EBNF
+40481	closed	2021-04-29	Proposal,Proposal-Accepted,FrozenDueToAge	unsafe: add Add function
+40882	closed	2022-12-14	Documentation,FrozenDueToAge	spec: document that recursive type declarations through type parameters are not permitted
+41612	closed	2020-09-24	Documentation,NeedsFix,FrozenDueToAge	spec: a small imperfection in spec
+41687	closed	2022-05-12	NeedsInvestigation,FrozenDueToAge	spec: Embedded fields don't need to be defined types
+41835	closed	2020-10-30	NeedsInvestigation,FrozenDueToAge	spec: one imperfection
+43200	closed	2021-04-28	NeedsDecision,FrozenDueToAge	spec: unclear whether error should be reported for non-comparable switch expression in empty switch
+44040	closed	2021-02-02	cla: yes	spec: improve the example in Type assertions section
+44318	closed	2021-02-20	Documentation,NeedsFix,FrozenDueToAge	spec: Every type should have a method set which may be empty
+44664	closed	2021-03-16	cla: yes	spec: clarify that signed integers>=0 are permitted as shift counts
+44715	closed	2022-05-12	Documentation,NeedsInvestigation,FrozenDueToAge	spec: refers to Unicode 'class' when it should be 'category'
+45114	closed	2022-01-19	Documentation,FrozenDueToAge	spec: shift string(1 << s) should be invalid
+45624	closed	2025-10-27	LanguageChange,Proposal,Proposal-Accepted,release-blocker	spec: expression to create pointer to simple types
+45652	closed	2022-05-12	FrozenDueToAge	spec: clarify that short variable redeclaration cannot redeclare the same variable multiple times
+45771	closed	2021-04-27	cla: yes	doc: change <a/> to </a> in spec
+46477	closed	2024-11-27	Proposal,Proposal-Accepted,FrozenDueToAge,early-in-cycle,release-blocker,generics	spec: generics: permit type parameters on aliases
+46505	closed	2022-12-16	LanguageChange,Proposal,Proposal-Accepted,FrozenDueToAge,early-in-cycle,Proposal-FinalCommentPeriod	spec: allow conversion from slice to array
+46742	closed	2021-07-21	Proposal,Proposal-Accepted,FrozenDueToAge,release-blocker,Proposal-FinalCommentPeriod	unsafe: double-check specified semantics for Slice((*T)(nil), 0) for Go 1.17
+47280	closed	2021-07-19	Documentation,NeedsFix,FrozenDueToAge	spec: Conversions_from_slice_to_array_pointer: second len(s) comment should be len(t) ?
+47282	closed	2021-07-19	cla: yes	spec: correct example comment in Conversions from slice to array
+47368	closed	2021-07-25	Documentation,NeedsFix,FrozenDueToAge	spec: typographical inconsistency in character literals
+47599	closed	2021-08-08	Documentation,NeedsFix,FrozenDueToAge	spec: Conversions_from_slice_to_array_pointer: clarify behavior for subslices
+47732	closed	2021-09-01	cla: yes	spec: adjust example for consistency
+47863	closed	2021-08-23	NeedsFix,FrozenDueToAge	spec: add example for method value in case of embedded method
+48323	closed	2021-09-13	Thinking,NeedsFix,FrozenDueToAge	spec: contradiction in the definition of terminating statements
+48422	closed	2021-09-16	NeedsFix,FrozenDueToAge	spec: incorrect annotation to code example
+48864	closed	2022-05-12	Documentation,NeedsInvestigation,FrozenDueToAge	spec:  description of continue statements is not accurate
+49003	closed	2021-10-15	NeedsInvestigation,FrozenDueToAge,release-blocker	cmd/compile: function compiles OK with no return statement
+49482	closed	2022-05-03	NeedsFix,FrozenDueToAge	syntax: parser doesn't recognize valid type parameter list
+49602	closed	2021-12-17	NeedsFix,FrozenDueToAge	go/types, types2: confusing error message when using comparable in a union
+49816	closed	2021-11-27	cla: yes	spec: fix link for instantiations
+50074	closed	2022-05-12	Documentation,FrozenDueToAge	spec: the word terms not used properly in EBNF description
+50202	closed	2022-02-09	Documentation,FrozenDueToAge	spec: document that type parameters are not permitted as constant declaration types
+50420	closed	2022-03-31	NeedsDecision,FrozenDueToAge	cmd/compile: misleading error message when using type parameter in typeset
+50646	closed	2022-02-01	Documentation,FrozenDueToAge	spec: document/explain which interfaces implement `comparable`
+50791	closed	2022-02-01	Documentation,FrozenDueToAge	spec: document definition of `comparable`
+50859	closed	2022-06-04	Documentation,Proposal,Proposal-Accepted,FrozenDueToAge,release-blocker,Proposal-FinalCommentPeriod	doc: update Go memory model
+51110	closed	2022-02-09	Documentation,FrozenDueToAge	spec: document behavior of type switches containing type parameter cases
+51182	closed	2022-03-11	Documentation,NeedsFix,FrozenDueToAge	spec: do shifts really require core types?
+51503	closed	2024-07-26	NeedsFix,FrozenDueToAge	types2, go/types: the scope of a type parameter identifier in a method of a generic type is too large
+51576	closed	2022-03-09	NeedsFix,FrozenDueToAge,release-blocker	go/types, types2: disable field accesses through type parameters for now
+52038	closed	2022-05-12	Proposal,Proposal-Accepted,Proposal-FinalCommentPeriod	spec: adjust scope of type parameters declared by method receivers
+52111	closed	2022-04-02	-	doc: add illegal octal over 255 example
+52143	closed	2022-04-04	-	doc/go_spec.html: update type identity example
+52255	closed	2022-05-24	NeedsInvestigation,FrozenDueToAge,website	x/website: inconsistent tabs in code snippets
+52628	closed	2022-05-12	Documentation,NeedsFix,FrozenDueToAge,generics	spec: assignment rules need clarification when type parameters are involved
+52859	closed	2022-06-21	Documentation,NeedsFix,FrozenDueToAge	spec: several sections require core types and don't mention  `[]byte | string`
+53003	closed	2022-11-15	Proposal,Proposal-Accepted,FrozenDueToAge,Proposal-FinalCommentPeriod	unsafe: add StringData, String, SliceData
+53217	closed	2022-06-16	NeedsInvestigation,FrozenDueToAge	spec: clarify rune literal escape sequences
+53219	closed	2022-06-13	Documentation,FrozenDueToAge	spec: clarify that `make` does not panic for negative capacity hint
+53240	closed	2022-06-13	Documentation,NeedsFix,FrozenDueToAge	spec: EBNF for struct types does not permit embedding instantiated types
+54973	closed	2022-09-20	NeedsInvestigation,FrozenDueToAge	spec: typo in a type parameter example
+55007	closed	2022-11-23	Documentation,NeedsFix,FrozenDueToAge	spec: document that `x[i,]` (trailing comma) is permitted
+55021	closed	2022-09-20	-	spec: fix typo in a type parameter example
+56351	closed	2023-07-19	Proposal,Proposal-Accepted,FrozenDueToAge,Proposal-FinalCommentPeriod	spec: add clear(x) builtin, to clear map, zero content of slice
+56548	closed	2022-12-14	Proposal,Proposal-Accepted,FrozenDueToAge,Proposal-FinalCommentPeriod,generics	spec: allow basic interface types to instantiate comparable type parameters
+56684	closed	2022-11-23	Documentation,FrozenDueToAge	spec: `append` doesn't specify zero values when growing underlying array
+56986	closed	2023-03-31	Proposal,Proposal-Accepted,FrozenDueToAge	extended backwards compatibility for Go
+57012	closed	2022-12-14	Documentation,FrozenDueToAge	spec: document new behavior for `comparable`
+57082	closed	2022-12-08	-	doc: fix typo
+57323	closed	2022-12-15	NeedsFix,FrozenDueToAge	spec: typo in invalid examples of a recursive arrays
+57411	closed	2023-04-14	Proposal,Proposal-Accepted,FrozenDueToAge	spec: define initialization order more precisely
+58353	closed	2023-02-07	-	doc: fix spec typo
+59488	closed	2023-05-25	Proposal,Proposal-Accepted,FrozenDueToAge	cmp: new package with Ordered, Compare, Less; min, max as builtins
+59506	closed	2023-04-11	Documentation,NeedsFix,FrozenDueToAge	spec: typo "are" -> "or" in Core types
+59528	closed	2023-04-11	-	doc: add missing oxford comma in Constants
+59626	closed	2023-04-13	-	doc: correct spelling on placeholder
+60570	closed	2023-06-06	Documentation,NeedsInvestigation,FrozenDueToAge	spec: imprecise language around min and max when considering NaN
+60731	closed	2023-06-13	NeedsFix,FrozenDueToAge	spec: conversion with myString is a poor example
+61405	closed	2024-01-23	Proposal,Proposal-Accepted,FrozenDueToAge	spec: add range over int, range over func
+61879	closed	2023-08-15	NeedsFix,FrozenDueToAge,release-blocker,gopls,Tools	go/types, types2: panic: infinite recursion in unification with go1.21.0
+63525	closed	2023-10-17	Documentation,NeedsInvestigation,FrozenDueToAge	spec: confusing final code block in operator section
+63857	closed	2023-12-27	Documentation,NeedsFix,FrozenDueToAge	spec: document at which version new features were introduced
+64452	closed	2023-12-20	Documentation,FrozenDueToAge	spec: document unsafe.Slice/SliceOf when used with type parameter values
+64513	closed	2023-12-05	Suggested,Documentation,NeedsFix,FrozenDueToAge,website	doc: update golang.org url to go.dev in spec
+64969	closed	2024-01-05	-	doc: s/adjustements/adjustments
+65137	closed	2024-01-30	Documentation,FrozenDueToAge	spec: range over integer expressions underspecified
+65236	closed	2024-07-29	Proposal,Proposal-Accepted,FrozenDueToAge,compiler/runtime	spec: allow range-over-func to omit iteration variables
+65237	closed	2024-06-04	Documentation,NeedsFix,FrozenDueToAge,release-blocker,compiler/runtime	spec: document range-over-func
+66540	closed	2024-08-12	Documentation,Proposal-Accepted,NeedsFix,FrozenDueToAge	spec: document promotion of methods from embedded aliases of unnamed types
+66967	closed	2024-04-26	Documentation,NeedsFix,FrozenDueToAge	spec: a valid range uint(maxUint) is not accepted
+67977	closed	2024-06-13	Documentation,FrozenDueToAge	spec: the introduction to 'For statements with range clause' fails to mention range-over-func
+69472	closed	2024-10-02	Documentation,FrozenDueToAge,compiler/runtime	cmd/compile: clarify prose/examples regarding struct identity when embedded types match equally named non-embedded fields
+70128	closed	2025-03-03	Proposal,Proposal-Accepted,FrozenDueToAge	spec: remove notion of core types
+70295	closed	2024-11-12	-	doc/go_mem: fix broken paper link in go_mem.html
+70417	closed	2024-11-20	NeedsFix,FrozenDueToAge,release-blocker,compiler/runtime	cmd/compile: panic when declaring method on generic alias
+71083	closed	2025-01-03	-	spec: fix a dead link
+72891	closed	2025-03-16	-	doc/go_mem: fix grammar issue
+73526	closed	2025-05-06	NeedsFix,compiler/runtime,BugReport	runtime: incorrect terminology 'reraised' in panic message
+74034	closed	2025-12-02	Documentation	spec: fix spec and allow passing type parameterized channels of different element types to "close".
+75760	closed	2025-10-06	-	spec: close tag
+75883	closed	2025-11-26	LanguageChange,Proposal,Proposal-Accepted,LanguageChangeReview	spec: remove cycle restriction for type parameters
+75884	closed	2025-11-20	compiler/runtime,BugReport	go/types, types2: type checker accepts invalid program
+75885	closed	2025-11-20	LanguageChange,Documentation,Proposal,Proposal-Accepted,LanguageProposal	spec: allow type parameter as the RHS in an alias type declaration
+76122	closed	2025-12-02	Documentation	spec: new(expr) should allow "untyped bool values" too
+76226	closed	2025-11-10	Documentation	spec: the prose for the special case for append could be clearer
+76299	closed	2025-11-19	-	spec: escape double-ampersands

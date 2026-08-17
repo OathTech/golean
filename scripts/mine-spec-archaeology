@@ -30,6 +30,39 @@ if [[ -z "$have" || "$have" != "$pin"* ]]; then
 fi
 
 mkdir -p docs/spec-archaeology
+
+# --enrich: join the gh-fetched issue snapshot (gitignored JSONL,
+# refreshed by the loop documented in docs/spec-divergence-ledger.md)
+# into the tracked index docs/spec-archaeology/issue-index.tsv.
+# Fail closed if the snapshot is missing — the index is only ever
+# written from a real fetch, never guessed.
+if [[ "${1:-}" == "--enrich" ]]; then
+  snap=deps/issue-snapshots/golang-go-issues.jsonl
+  [[ -s "$snap" ]] || { echo "mine-spec-archaeology: FAIL — $snap missing/empty; run the gh fetch first (fail closed)" >&2; exit 1; }
+  python3 - "$pin" <<'ENRICHEOF'
+import json, sys
+PIN = sys.argv[1]
+rows, failed = [], []
+for line in open('deps/issue-snapshots/golang-go-issues.jsonl'):
+    d = json.loads(line)
+    if d.get('fetch') == 'FAILED':
+        failed.append(d['number']); continue
+    rows.append((d['number'], d['state'], (d.get('closed_at') or '-')[:10],
+                 ','.join(d.get('labels') or []) or '-',
+                 (d.get('title') or '').replace('\t',' ').strip()))
+rows.sort()
+with open('docs/spec-archaeology/issue-index.tsv','w') as f:
+    f.write(f"# golang/go issue metadata for the archaeology census's {len(rows)} resolvable refs\n"
+            f"# joined from the gh snapshot (deps/issue-snapshots/, gitignored); census pin {PIN[:12]}\n"
+            f"# unresolvable refs: {len(failed)} ({','.join(map(str,failed)) if failed else 'none'}) — some census '#N' tokens are CL numbers or typos, recorded, not dropped silently\n"
+            f"number\tstate\tclosed\tlabels\ttitle\n")
+    for r in rows:
+        f.write('\t'.join(map(str,r)) + '\n')
+print(f"issue-index: {len(rows)} rows, {len(failed)} unresolvable")
+ENRICHEOF
+  exit 0
+fi
+
 exec python3 - "$pin" <<'PYEOF'
 import re, subprocess, sys, collections
 
@@ -115,6 +148,8 @@ for rows, tag in ((spec_rows,'spec'), (mem_rows,'mem')):
 with open('docs/spec-archaeology/anchor-rollup.tsv', 'w') as f:
     f.write(f"# judgements-per-anchor rollup (spec+mem), from the same census run\n"
             f"# deps/go @ {PIN[:12]}; commits touching the section / issue refs in them\n"
+            f"# NOTE: '(preamble)' is pre-first-anchor content — every release's subtitle/date bump\n"
+            f"# lands there, so its count is dominated by version-line churn, not rulings\n"
             f"doc\tanchor\tcommits\tissue_refs\n")
     for (tag, a), n in sorted(roll.items(), key=lambda kv: (-kv[1], kv[0])):
         f.write(f"{tag}\t{a}\t{n}\t{issue_roll.get((tag,a),0)}\n")
