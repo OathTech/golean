@@ -1139,21 +1139,10 @@ none of the facts below have kit forms. Shapes wanted, with `stack` as
 the co-consumer for the append family and any future `q[a:b]`-using
 example for the re-slice fact. -/
 
-/-- Value-exact push-loop evaluation (the value-exact strengthening of
-`forIn_yield_push_size`, which only reports the size). -/
-private theorem forIn_yield_push_eq {α : Type}
-    {body : α → Array GoValue → Except GoError (ForInStep (Array GoValue))}
-    {g : α → GoValue} :
-    ∀ (l : List α), (∀ x ∈ l, ∀ r, body x r = .ok (.yield (r.push (g x)))) →
-    ∀ (acc : Array GoValue),
-      forIn l acc body = .ok (acc ++ (l.map g).toArray)
-  | [], _, acc => by simp [List.forIn_nil, pure, Except.pure]
-  | x :: xs, hshape, acc => by
-      rw [List.forIn_cons, hshape x (by simp) acc]
-      simp only [Bind.bind, Except.bind]
-      rw [forIn_yield_push_eq xs
-        (fun y hy r => hshape y (by simp [hy]) r) (acc.push (g x))]
-      simp
+-- (`forIn_yield_push_eq` — value-exact push-loop evaluation —
+-- formerly here, fed only the builder below —
+-- deleted with its forIn fight in WP arc s2 item 3; the kit's generic
+-- builder carries the walk.)
 
 /-- The visible elements of an offset-0 `[]uint64` slice over a mapped
 backing: the length-prefix of the backing list. -/
@@ -1223,58 +1212,33 @@ private theorem buildAppendBacking_u64 {σ : ExecState} {l₁ l₂ : List Int}
       = .ok (.array ⟨(l₁ ++ l₂
           ++ List.replicate (newCap - (l₁.length + l₂.length)) 0).map
             (fun v => .int v .uint64)⟩) := by
-  unfold buildAppendBackingValue
-  have happ : (⟨l₁.map (fun v => .int v .uint64)⟩ : Array GoValue)
-      ++ (⟨l₂.map (fun v => .int v .uint64)⟩ : Array GoValue)
-      = ⟨(l₁ ++ l₂).map (fun v => .int v .uint64)⟩ := by
-    apply Array.ext'
-    simp
   have h₁₂ : ∀ v ∈ l₁ ++ l₂, 0 ≤ v ∧ v < 2 ^ 64 := by
     intro v hv
     rcases List.mem_append.mp hv with hv | hv
     · exact h₁ v hv
     · exact h₂ v hv
-  simp only [Bind.bind, Except.bind, happ, ← Array.forIn_toList]
-  rw [forIn_yield_push_eq (g := fun v : GoValue => v)
-    ((l₁ ++ l₂).map (fun v => GoValue.int v IntKind.uint64)) ?hsh1 #[]]
-  case hsh1 =>
-    intro x hx r
-    obtain ⟨v, hv, rfl⟩ := List.mem_map.mp hx
-    have := h₁₂ v hv
-    simp only [normVal_u64 σ this.1 this.2, pure, Except.pure]
-  simp only [List.map_id']
-  have hsz : ((#[] : Array GoValue)
-      ++ ((l₁ ++ l₂).map (fun v => GoValue.int v IntKind.uint64)).toArray).size
-      = l₁.length + l₂.length := by simp
-  rw [if_neg (by rw [hsz]; omega)]
-  simp only [Std.Legacy.Range.forIn_eq_forIn_range']
-  rw [show ([:newCap - ((#[] : Array GoValue)
-      ++ ((l₁ ++ l₂).map (fun v => GoValue.int v IntKind.uint64)).toArray).size] :
-      Std.Legacy.Range).size
-    = newCap - (l₁.length + l₂.length) from by
-      simp [Std.Legacy.Range.size]]
-  rw [forIn_yield_push_eq
-    (g := fun _ : Nat => (GoValue.int 0 IntKind.uint64 : GoValue))
-    (List.range' 0 (newCap - (l₁.length + l₂.length)) 1) ?hsh2
-    ((#[] : Array GoValue)
-      ++ ((l₁ ++ l₂).map (fun v => GoValue.int v IntKind.uint64)).toArray)]
-  case hsh2 =>
-    intro x _ r
-    rw [show defaultValue σ tU64 = .ok (.int 0 .uint64) from by
-      with_unfolding_all rfl]
-    rfl
-  have hmapz : (List.range' 0 (newCap - (l₁.length + l₂.length)) 1).map
-        (fun _ => (.int 0 .uint64 : GoValue))
-      = (List.replicate (newCap - (l₁.length + l₂.length)) (0 : Int)).map
-          (fun v => .int v .uint64) := by
-    apply List.ext_getElem
-    · simp
-    · intro j hj hj2
-      simp
-  rw [hmapz]
-  simp only [pure, Except.pure, Except.ok.injEq, GoValue.array.injEq]
-  apply Array.ext'
-  simp
+  -- WP arc s2 item 3: the forIn fight replaced by the kit's generic
+  -- builder closed form.
+  have hn : ∀ x ∈ l₁.map (fun v => GoValue.int v .uint64)
+      ++ l₂.map (fun v => GoValue.int v .uint64),
+      normalizeValueForTy σ tU64 x = .ok x := by
+    intro x hx
+    rcases List.mem_append.mp hx with hx | hx
+    · obtain ⟨v, hv, rfl⟩ := List.mem_map.mp hx
+      have := h₁ v hv
+      exact normVal_u64 σ this.1 this.2
+    · obtain ⟨v, hv, rfl⟩ := List.mem_map.mp hx
+      have := h₂ v hv
+      exact normVal_u64 σ this.1 this.2
+  have h := SliceMem.buildAppendBackingValue_of_norm (σ := σ)
+    (l₁ := l₁.map (fun v => GoValue.int v .uint64))
+    (l₂ := l₂.map (fun v => GoValue.int v .uint64)) (newCap := newCap)
+    (d := .int 0 .uint64) hn
+    (by simp [defaultValue, defaultValueFuel, typeResolutionFuel])
+    (by simp; omega)
+  rw [h]
+  congr 2
+  simp [List.map_append, List.map_replicate]
 
 /-- `arraySet` on a mapped `[]uint64` backing at an in-range index. -/
 private theorem qArraySet_u64 {l : List Int} {i : Nat} {w : Int}
@@ -1331,13 +1295,8 @@ theorem qappend_inplace {σ : ExecState} {H : Heap} {na : Nat}
              .array ⟨(lq.set i w).map (fun v => .int v .uint64)⟩⟩)
             (.base ⟨tc⟩) ⟨some sliceU, qslV B 0 (i + 1) C⟩)
           na, ch) := by
-  have hvalq : validateSlice
-      (⟨some (.base ⟨B⟩), 0, i, C⟩ : SliceValue) = .ok () := by
-    simp [validateSlice, Nat.not_lt.mpr (by omega : i ≤ C), Bind.bind,
-      Except.bind]
-  have hvalc : validateSlice
-      (⟨some (.base ⟨bc⟩), 0, 1, 1⟩ : SliceValue) = .ok () := by
-    simp [validateSlice, Bind.bind, Except.bind]
+  -- WP arc s2 item 3: the applyStmtOp unfolding replaced by the kit's
+  -- `SliceMem.applyStmtOp_append1_inplace`.
   have hvis : sliceVisibleValues (qSt σ H na) ⟨some (.base ⟨bc⟩), 0, 1, 1⟩
       = .ok ⟨[GoValue.int w IntKind.uint64]⟩ := by
     have hbc' : Heap.lookup (qSt σ H na).heap (.base ⟨bc⟩)
@@ -1386,17 +1345,8 @@ theorem qappend_inplace {σ : ExecState} {H : Heap} {na : Nat}
       exact htc
     simp only [storeLoc, hlk, normVal_slice, Bind.bind, Except.bind, pure,
       Except.pure]
-  simp only [applyStmtOp, valueAsSlice, valueAsLoc, Bind.bind, Except.bind,
-    pure, Except.pure, hvalq, hvalc, hvis]
-  rw [show (⟨[GoValue.int w IntKind.uint64]⟩ : Array GoValue).size = 1
-    from rfl]
-  rw [if_pos (by omega : i + 1 ≤ C)]
-  rw [← Array.forIn_toList]
-  simp only [show (⟨[GoValue.int w IntKind.uint64]⟩ :
-      Array GoValue).toList = [GoValue.int w IntKind.uint64] from rfl]
-  simp only [List.forIn_cons, List.forIn_nil, Bind.bind, Except.bind,
-    hstore1, pure, Except.pure]
-  simp only [hstore2, pure, Except.pure]
+  exact SliceMem.applyStmtOp_append1_inplace (elem := tU64)
+    (by omega) (Nat.le_refl 1) hvis hstore1 hstore2
 
 /-- The realized SPILL capacity at choice head `e`. -/
 def qSpillCap (C e : Nat) : Nat :=
@@ -1459,70 +1409,82 @@ theorem qappend_spill {σ : ExecState} {H : Heap} {na : Nat}
     have := sliceVisibleValues_u64 hB' (len := C) (cap := C) (l := lq)
       (by omega) (by omega)
     rwa [List.take_of_length_le (by omega)] at this
-  have hbuild := buildAppendBacking_u64 (σ := qSt σ H na) (l₁ := lq) (l₂ := [w])
-    (newCap := qSpillCap C (ch.consume (appendSpillWidth C (C + 1))).1)
-    hrq (by intro v hv; simp at hv; omega)
-    (by have := qSpillCap_ge C (ch.consume (appendSpillWidth C (C + 1))).1
-        simp [hlen]; omega)
-  have hstore : storeLoc
-      (qSt σ (H ++ [(.base ⟨na⟩,
-          ⟨some (.array (qSpillCap C
-              (ch.consume (appendSpillWidth C (C + 1))).1) tU64),
-           .array ⟨(lq ++ [w] ++ List.replicate
-               (qSpillCap C (ch.consume (appendSpillWidth C (C + 1))).1
-                 - (C + 1)) 0).map (fun v => .int v .uint64)⟩⟩)])
-        (na + 1))
-      (.base ⟨tc⟩)
-      (.slice ⟨some (.base ⟨na⟩), 0, C + 1,
-        qSpillCap C (ch.consume (appendSpillWidth C (C + 1))).1⟩)
+  -- WP arc s2 item 3: the applyStmtOp unfolding replaced by the kit's
+  -- deterministic `SliceMem.applyStmtOp_append1_spill` (this frozen
+  -- statement NAMES the realized capacity `qSpillCap C extra`, which
+  -- is definitionally the kit's `appendRealizedCap C (C + 1) extra`).
+  have hbuild' : ∀ nc, C + 1 ≤ nc →
+      buildAppendBackingValue (qSt σ H na) tU64
+        ⟨lq.map (fun v => .int v .uint64)⟩
+        #[GoValue.int w IntKind.uint64] nc
+      = .ok (.array ⟨(lq ++ [w] ++ List.replicate (nc - (C + 1)) 0).map
+          (fun v => .int v .uint64)⟩) := by
+    intro nc hnc
+    have h := buildAppendBacking_u64 (σ := qSt σ H na) (l₁ := lq)
+      (l₂ := [w]) (newCap := nc) hrq
+      (by intro v hv; simp at hv; omega) (by simp [hlen]; omega)
+    simp only [List.map_cons, List.map_nil, List.length_cons,
+      List.length_nil, hlen] at h
+    rw [show C + (0 + 1) = C + 1 from by omega] at h
+    exact h
+  have hstore' : ∀ nc, C + 1 ≤ nc →
+      storeLoc
+        { qSt σ H na with
+          heap := Heap.set (qSt σ H na).heap
+            (.base ⟨(qSt σ H na).nextAddr⟩)
+            ⟨some (.array nc tU64),
+             .array ⟨(lq ++ [w] ++ List.replicate (nc - (C + 1)) 0).map
+               (fun v => .int v .uint64)⟩⟩,
+          nextAddr := (qSt σ H na).nextAddr + 1 }
+        (.base ⟨tc⟩)
+        (.slice ⟨some (.base ⟨(qSt σ H na).nextAddr⟩), 0, C + 1, nc⟩)
       = .ok (qSt σ
           (Heap.set H (.base ⟨tc⟩)
-            ⟨some sliceU,
-             qslV na 0 (C + 1)
-               (qSpillCap C (ch.consume (appendSpillWidth C (C + 1))).1)⟩
+            ⟨some sliceU, qslV na 0 (C + 1) nc⟩
           ++ [(.base ⟨na⟩,
-               ⟨some (.array (qSpillCap C
-                   (ch.consume (appendSpillWidth C (C + 1))).1) tU64),
-                .array ⟨(lq ++ [w] ++ List.replicate
-                    (qSpillCap C (ch.consume (appendSpillWidth C (C + 1))).1
-                      - (C + 1)) 0).map (fun v => .int v .uint64)⟩⟩)])
+               ⟨some (.array nc tU64),
+                .array ⟨(lq ++ [w] ++ List.replicate (nc - (C + 1)) 0).map
+                  (fun v => .int v .uint64)⟩⟩)])
           (na + 1)) := by
+    intro nc hnc
+    have hfresh : Heap.set H (.base ⟨na⟩)
+        (⟨some (.array nc tU64),
+          .array ⟨(lq ++ [w] ++ List.replicate (nc - (C + 1)) 0).map
+            (fun v => .int v .uint64)⟩⟩ : HeapCell)
+        = H ++ [(.base ⟨na⟩,
+            ⟨some (.array nc tU64),
+             .array ⟨(lq ++ [w] ++ List.replicate (nc - (C + 1)) 0).map
+               (fun v => .int v .uint64)⟩⟩)] :=
+      set_fresh (hdead na (Nat.le_refl na))
     have hlk : Heap.lookup (H ++ [(.base ⟨na⟩,
-        (⟨some (.array (qSpillCap C
-            (ch.consume (appendSpillWidth C (C + 1))).1) tU64),
-         .array ⟨(lq ++ [w] ++ List.replicate
-             (qSpillCap C (ch.consume (appendSpillWidth C (C + 1))).1
-               - (C + 1)) 0).map (fun v => .int v .uint64)⟩⟩ : HeapCell))])
+        (⟨some (.array nc tU64),
+         .array ⟨(lq ++ [w] ++ List.replicate (nc - (C + 1)) 0).map
+           (fun v => .int v .uint64)⟩⟩ : HeapCell))])
         (.base ⟨tc⟩) = some ⟨some sliceU, old⟩ :=
       lookup_append_left htc
     have hset := set_append_left (h₂ := [(.base ⟨na⟩,
-        (⟨some (.array (qSpillCap C
-            (ch.consume (appendSpillWidth C (C + 1))).1) tU64),
-         .array ⟨(lq ++ [w] ++ List.replicate
-             (qSpillCap C (ch.consume (appendSpillWidth C (C + 1))).1
-               - (C + 1)) 0).map (fun v => .int v .uint64)⟩⟩ : HeapCell))])
-      (c := (⟨some sliceU,
-        qslV na 0 (C + 1)
-          (qSpillCap C (ch.consume (appendSpillWidth C (C + 1))).1)⟩ :
-          HeapCell)) htc
-    simp only [storeLoc, hlk, normVal_slice, Bind.bind, Except.bind, pure,
-      Except.pure, hset]
-  simp only [applyStmtOp, valueAsSlice, valueAsLoc, Bind.bind, Except.bind,
-    pure, Except.pure, hvalq, hvalc, hvis, hvisq]
-  rw [show (⟨[GoValue.int w IntKind.uint64]⟩ : Array GoValue).size = 1
-    from rfl]
-  rw [if_neg (by omega : ¬ (C + 1 ≤ C))]
-  rw [show C + 1 + (appendGrowthCap C (C + 1) - (C + 1)
-        + (ch.consume (appendSpillWidth C (C + 1))).fst)
-        % appendSpillWidth C (C + 1)
-      = qSpillCap C (ch.consume (appendSpillWidth C (C + 1))).1 from rfl]
-  simp only [List.map_cons, List.map_nil, List.length_cons, List.length_nil,
-    hlen] at hbuild
-  rw [show C + (0 + 1) = C + 1 from by omega] at hbuild
-  simp only [hbuild]
-  simp only [ExecState.alloc, ExecState.freshLoc]
-  rw [set_fresh (hdead _ (Nat.le_refl _))]
-  simp only [hstore, Bind.bind, Except.bind, pure, Except.pure]
+        (⟨some (.array nc tU64),
+         .array ⟨(lq ++ [w] ++ List.replicate (nc - (C + 1)) 0).map
+           (fun v => .int v .uint64)⟩⟩ : HeapCell))])
+      (c := (⟨some sliceU, qslV na 0 (C + 1) nc⟩ : HeapCell)) htc
+    simp only [qSt, hfresh, storeLoc, hlk, normVal_slice, Bind.bind,
+      Except.bind, pure, Except.pure, hset]
+  exact SliceMem.applyStmtOp_append1_spill (elem := tU64)
+    (bk := fun nc => .array
+      ⟨(lq ++ [w] ++ List.replicate (nc - (C + 1)) 0).map
+        (fun v => .int v .uint64)⟩)
+    (σT := fun nc => qSt σ
+        (Heap.set H (.base ⟨tc⟩)
+          ⟨some sliceU, qslV na 0 (C + 1) nc⟩
+        ++ [(.base ⟨na⟩,
+             ⟨some (.array nc tU64),
+              .array ⟨(lq ++ [w] ++ List.replicate (nc - (C + 1)) 0).map
+                (fun v => .int v .uint64)⟩⟩)])
+        (na + 1))
+    (extra := (ch.consume (appendSpillWidth C (C + 1))).1)
+    (ch' := (ch.consume (appendSpillWidth C (C + 1))).2)
+    (by omega) (Nat.le_refl C) (Nat.le_refl 1) hvis hvisq rfl
+    hbuild' hstore'
 
 /-- **The re-slice fact** `q[1:len(q)]` at a slice base (GAP-WITNESS,
 closed in WP arc s1 lift 6: the MOVING-OFFSET instance `lo = 1`,

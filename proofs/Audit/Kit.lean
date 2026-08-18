@@ -189,6 +189,21 @@ other vocabulary defs) -/
 -- s[lo:hi]-at-slice-base form. Fresh probe: `.tmp/pinprobe7.lean`.
 /-- info: 'GoLean.SliceMem.applyStrictOp_sliceExpr_slice' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.SliceMem.applyStrictOp_sliceExpr_slice
+-- WP arc s2 item 3 (2026-08-18): GAP-APPEND — the one-element
+-- growing-slice append family, element-type-generic via conditioned
+-- hypotheses. Fresh probe: `.tmp/pinprobe10.lean`.
+/-- info: 'GoLean.SliceMem.buildAppendBackingValue_of_norm' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.buildAppendBackingValue_of_norm
+/-- info: 'GoLean.SliceMem.applyStmtOp_append1_inplace' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.applyStmtOp_append1_inplace
+/-- info: 'GoLean.SliceMem.appendRealizedCap_lower' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.appendRealizedCap_lower
+/-- info: 'GoLean.SliceMem.appendRealizedCap_upper' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.appendRealizedCap_upper
+/-- info: 'GoLean.SliceMem.applyStmtOp_append1_spill' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.applyStmtOp_append1_spill
+/-- info: 'GoLean.SliceMem.applyStmtOp_append1_spill_ex' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.applyStmtOp_append1_spill_ex
 /-- info: 'GoLean.SliceMem.mem_set_of_mem' depends on axioms: [propext] -/
 #guard_msgs in #print axioms GoLean.SliceMem.mem_set_of_mem
 /-- info: 'GoLean.SliceMem.storeTarget_slice_u64' depends on axioms: [propext, Quot.sound] -/

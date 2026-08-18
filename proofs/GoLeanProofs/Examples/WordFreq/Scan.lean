@@ -359,14 +359,8 @@ theorem applyStmtOp_append_str_inplace {σ : ExecState} {t b e : Nat}
     have := sliceVisibleValues_str (σ := σ) (b := e) (fs := [f]) (cap := 1)
       (by simpa [strArrCell, strArr] using he) (by simp)
     simpa using this
-  simp only [applyStmtOp, Bind.bind, Except.bind, pure, Except.pure,
-    valueAsSlice, validateSlice,
-    if_neg (show ¬ fs.length > cap from by omega),
-    if_neg (show ¬ (1 : Nat) > 1 from by omega), hvis]
-  simp only [valueAsLoc, Bind.bind, Except.bind, pure, Except.pure,
-    List.size_toArray, List.length_cons, List.length_nil]
-  rw [if_pos (show fs.length + 1 ≤ cap from by omega)]
-  -- the singleton element loop: one in-place store into the backing
+  -- WP arc s2 item 3: the applyStmtOp unfolding replaced by the kit's
+  -- `SliceMem.applyStmtOp_append1_inplace` (applied at the end).
   have hstore : storeLoc σ ((Loc.base ⟨b⟩).index
         (Int.ofNat (0 + fs.length + 0))) (GoValue.string (gs f))
       = .ok (wSt σ
@@ -451,42 +445,24 @@ theorem applyStmtOp_append_str_inplace {σ : ExecState} {t b e : Nat}
             (GoValue.string GoString.empty)⟩ : Array GoValue)
         = strArr (fs ++ [f]) cap from rfl]
     rw [normalize_strArr σ (fs ++ [f]) cap (by simp; omega)]
-  rw [← Array.forIn_toList]
-  simp only [List.toList_toArray, List.forIn_cons, List.forIn_nil,
-    Bind.bind, Except.bind, pure, Except.pure, hstore]
-  simp only [storeLoc]
-  rw [show Heap.lookup (wSt σ
-      (Heap.set σ.heap (.base ⟨b⟩) (strArrCell (fs ++ [f]) cap))
-      σ.nextAddr).heap (.base ⟨t⟩) = some slsNil from ht]
-  simp only [Bind.bind, Except.bind, pure, Except.pure]
-  rw [show normalizeValueForTy (wSt σ
-      (Heap.set σ.heap (.base ⟨b⟩) (strArrCell (fs ++ [f]) cap))
-      σ.nextAddr) tSlS (slsVal b 0 (fs.length + 1) cap)
-      = .ok (slsVal b 0 (fs.length + 1) cap) from by
-    simp [normalizeValueForTy, normalizeValueForTyFuel,
-      typeResolutionFuel]]
+  exact SliceMem.applyStmtOp_append1_inplace (elem := tStr)
+    (by omega) (Nat.le_refl 1) hvis hstore
+    (by
+      simp only [storeLoc]
+      rw [show Heap.lookup (wSt σ
+          (Heap.set σ.heap (.base ⟨b⟩) (strArrCell (fs ++ [f]) cap))
+          σ.nextAddr).heap (.base ⟨t⟩) = some slsNil from ht]
+      simp only [Bind.bind, Except.bind, pure, Except.pure]
+      rw [show normalizeValueForTy (wSt σ
+          (Heap.set σ.heap (.base ⟨b⟩) (strArrCell (fs ++ [f]) cap))
+          σ.nextAddr) tSlS (slsVal b 0 (fs.length + 1) cap)
+          = .ok (slsVal b 0 (fs.length + 1) cap) from by
+        simp [normalizeValueForTy, normalizeValueForTyFuel,
+          typeResolutionFuel]])
 
 
-/-- A `forIn` whose body pushes each value (abstract body pinned by
-`hf` — the higher-order unification trick that makes the `rw`
-robust). -/
-theorem forIn_push_generic
-    {f : GoValue → Array GoValue → Except GoError (ForInStep (Array GoValue))}
-    (hf : ∀ (v : GoValue) (acc : Array GoValue),
-      f v acc = .ok (.yield (acc.push v))) :
-    ∀ (l : List GoValue) (acc : Array GoValue),
-    forIn (m := Except GoError) l acc f = .ok (acc ++ l.toArray) := by
-  intro l
-  induction l with
-  | nil => intro acc; simp [List.forIn_nil]
-  | cons v rest ih =>
-      intro acc
-      rw [List.forIn_cons, hf]
-      simp only [Bind.bind, Except.bind]
-      rw [ih (acc.push v)]
-      apply congrArg
-      apply Array.toList_inj.mp
-      simp
+-- (`forIn_push_generic`, formerly here, fed only the builder below —
+-- deleted with its forIn fight in WP arc s2 item 3.)
 
 /-- The spill path's fresh backing: old values, the new element, and
 empty-string padding to the chosen capacity. -/
@@ -497,62 +473,28 @@ theorem buildAppendBackingValue_str (σ : ExecState)
       (fs.map (fun x => GoValue.string (gs x))).toArray
       #[.string (gs f)] newCap
       = .ok (strArr (fs ++ [f]) newCap) := by
-  simp only [buildAppendBackingValue, Bind.bind, Except.bind, pure,
-    Except.pure]
-  rw [← Array.forIn_toList]
-  rw [show ((fs.map (fun x => GoValue.string (gs x))).toArray
-      ++ #[GoValue.string (gs f)]).toList
-      = fs.map (fun x => GoValue.string (gs x)) ++ [.string (gs f)] from by
-    simp]
-  rw [forIn_push_generic (fun v acc => by with_unfolding_all rfl)]
-  simp only [Bind.bind, Except.bind, pure, Except.pure]
-  rw [show ((#[] : Array GoValue)
-      ++ (fs.map (fun x => GoValue.string (gs x))
-          ++ [GoValue.string (gs f)]).toArray).size
-      = fs.length + 1 from by simp]
-  rw [if_neg (show ¬ (fs.length + 1 > newCap) from by omega)]
-  simp only [Std.Legacy.Range.forIn_eq_forIn_range']
-  rw [show ([:newCap - (fs.length + 1)] : Std.Legacy.Range).size
-      = newCap - (fs.length + 1) from by simp [Std.Legacy.Range.size]]
-  rw [GoLean.Iris.forIn_range'_inv (N := newCap - (fs.length + 1))
-    (n := newCap - (fs.length + 1)) (j := 0)
-    (b := (#[] : Array GoValue)
-      ++ (fs.map (fun x => GoValue.string (gs x))
-          ++ [GoValue.string (gs f)]).toArray)
-    (Q := fun i acc => acc.toList
-      = fs.map (fun x => GoValue.string (gs x)) ++ [GoValue.string (gs f)]
-        ++ List.replicate i (GoValue.string GoString.empty))
-    (out := fun _ acc => acc.push (.string GoString.empty))
-    (res := (⟨fs.map (fun x => GoValue.string (gs x))
-      ++ [GoValue.string (gs f)]
-      ++ List.replicate (newCap - (fs.length + 1))
-        (GoValue.string GoString.empty)⟩ : Array GoValue))
-    ?hfill (by omega) (by simp) ?hdet]
-  case hfill =>
-    intro i acc hi hacc
-    refine ⟨by
-      simp [defaultValue, defaultValueFuel, typeResolutionFuel], ?_⟩
-    simp only [Array.toList_push, hacc, List.replicate_succ']
-    simp [List.append_assoc]
-  case hdet =>
-    intro b' hb'
-    rw [Nat.zero_add] at hb'
-    apply Array.toList_inj.mp
-    simpa using hb'
-  show Except.ok (GoValue.array
-      (⟨List.map (fun x => GoValue.string (gs x)) fs
-        ++ [GoValue.string (gs f)]
-        ++ List.replicate (newCap - (fs.length + 1))
-          (GoValue.string GoString.empty)⟩ : Array GoValue))
-    = Except.ok (strArr (fs ++ [f]) newCap)
-  apply congrArg
-  simp only [strArr]
-  apply congrArg
-  apply Array.toList_inj.mp
-  simp [List.append_assoc]
+  -- WP arc s2 item 3: the forIn fight replaced by the kit's generic
+  -- builder closed form (string values self-normalize).
+  have h := SliceMem.buildAppendBackingValue_of_norm (σ := σ)
+    (elem := tStr)
+    (l₁ := fs.map (fun x => GoValue.string (gs x)))
+    (l₂ := [GoValue.string (gs f)]) (newCap := newCap)
+    (d := .string GoString.empty)
+    (fun x _ => by with_unfolding_all rfl)
+    (by with_unfolding_all rfl)
+    (by simpa using h)
+  rw [show buildAppendBackingValue σ tStr
+      (fs.map (fun x => GoValue.string (gs x))).toArray
+      #[.string (gs f)] newCap
+    = buildAppendBackingValue σ tStr
+      ⟨fs.map (fun x => GoValue.string (gs x))⟩
+      ⟨[GoValue.string (gs f)]⟩ newCap from rfl]
+  rw [h]
+  congr 2
+  simp [strArr, List.map_append, List.map_replicate]
 
-/-- **The `append(out, $c16...)` SPILL fact** (`len = cap`): ONE
-capacity choice is consumed, a fresh backing materializes at the
+/-- **The `append(out, $c16...)` SPILL fact** (`len = cap`): one choice
+consumed, a fresh backing is allocated at the current
 allocator with the appended values and empty-string padding to the
 chosen capacity, and the handle stored over the target points at it.
 The capacity is Skolemized: `∃ newCap ∈ [len+1, …]` — its exact value
@@ -584,55 +526,45 @@ theorem applyStmtOp_append_str_spill {σ : ExecState} {t b e : Nat}
       ⟨some (.base ⟨b⟩), 0, fs.length, cap⟩
       = .ok (fs.map (fun x => GoValue.string (gs x))).toArray :=
     sliceVisibleValues_str hb (by omega)
-  refine ⟨fs.length + 1
-    + (appendGrowthCap cap (fs.length + 1) - (fs.length + 1)
-      + (ch.consume (appendSpillWidth cap (fs.length + 1))).fst)
-      % appendSpillWidth cap (fs.length + 1),
-    (ch.consume (appendSpillWidth cap (fs.length + 1))).snd,
-    by omega, ?_⟩
-  have hlook2 : Heap.lookup
-      (Heap.set σ.heap (.base ⟨σ.nextAddr⟩)
-        (strArrCell (fs ++ [f])
-          (fs.length + 1
-            + (appendGrowthCap cap (fs.length + 1) - (fs.length + 1)
-              + (ch.consume (appendSpillWidth cap (fs.length + 1))).fst)
-              % appendSpillWidth cap (fs.length + 1))))
-      (.base ⟨t⟩) = some slsNil := by
-    rw [Machine.Heap.lookup_set_ne
-      (by simp only [ne_eq, Loc.base.injEq, Addr.mk.injEq]; omega
-        : (Loc.base ⟨σ.nextAddr⟩ : Loc) ≠ .base ⟨t⟩)]
-    exact ht
-  simp only [applyStmtOp, Bind.bind, Except.bind, pure, Except.pure,
-    valueAsSlice, validateSlice,
-    if_neg (show ¬ fs.length > cap from by omega),
-    if_neg (show ¬ (1 : Nat) > 1 from by omega), hvis, valueAsLoc,
-    List.size_toArray, List.length_cons, List.length_nil]
-  rw [if_neg (show ¬ (fs.length + 1 ≤ cap) from by omega)]
-  simp only [hvisOld, Bind.bind, Except.bind, pure, Except.pure]
-  rw [buildAppendBackingValue_str σ fs f _ (by omega)]
-  simp only [Bind.bind, Except.bind, pure, Except.pure, ExecState.alloc,
-    ExecState.freshLoc]
-  simp only [storeLoc, hlook2, Bind.bind, Except.bind, pure, Except.pure]
-  rw [show normalizeValueForTy (wSt σ
-      (Heap.set σ.heap (.base ⟨σ.nextAddr⟩)
-        (strArrCell (fs ++ [f])
-          (fs.length + 1
-            + (appendGrowthCap cap (fs.length + 1) - (fs.length + 1)
-              + (ch.consume (appendSpillWidth cap (fs.length + 1))).fst)
-              % appendSpillWidth cap (fs.length + 1))))
-      (σ.nextAddr + 1)) tSlS
-      (slsVal σ.nextAddr 0 (fs.length + 1)
-        (fs.length + 1
-          + (appendGrowthCap cap (fs.length + 1) - (fs.length + 1)
-            + (ch.consume (appendSpillWidth cap (fs.length + 1))).fst)
-            % appendSpillWidth cap (fs.length + 1)))
-      = .ok (slsVal σ.nextAddr 0 (fs.length + 1)
-        (fs.length + 1
-          + (appendGrowthCap cap (fs.length + 1) - (fs.length + 1)
-            + (ch.consume (appendSpillWidth cap (fs.length + 1))).fst)
-            % appendSpillWidth cap (fs.length + 1))) from by
-    simp [normalizeValueForTy, normalizeValueForTyFuel,
-      typeResolutionFuel]]
+  -- WP arc s2 item 3: the applyStmtOp unfolding and the realized
+  -- capacity replaced by the kit's envelope existential
+  -- `SliceMem.applyStmtOp_append1_spill_ex`.
+  obtain ⟨newCap, ch', h1, -, happly⟩ :=
+    SliceMem.applyStmtOp_append1_spill_ex (σ := σ) (elem := tStr)
+      (tloc := .base ⟨t⟩) (bb := .base ⟨b⟩) (off := 0)
+      (len := fs.length) (cap := cap)
+      (eb := .base ⟨e⟩) (eoff := 0) (elen := 1) (ecap := 1)
+      (w := .string (gs f))
+      (old := (fs.map (fun x => GoValue.string (gs x))).toArray)
+      (bk := fun nc => strArr (fs ++ [f]) nc)
+      (σT := fun nc => wSt σ
+          (Heap.set
+            (Heap.set σ.heap (.base ⟨σ.nextAddr⟩)
+              (strArrCell (fs ++ [f]) nc))
+            (.base ⟨t⟩)
+            ⟨some tSlS, slsVal σ.nextAddr 0 (fs.length + 1) nc⟩)
+          (σ.nextAddr + 1))
+      (ch := ch)
+      (by omega) (by omega) (Nat.le_refl 1) hvis hvisOld
+      (fun nc hnc => buildAppendBackingValue_str σ fs f nc hnc)
+      (fun nc hnc => by
+        have hlook2 : Heap.lookup
+            (Heap.set σ.heap (.base ⟨σ.nextAddr⟩)
+              (strArrCell (fs ++ [f]) nc)) (.base ⟨t⟩)
+            = some slsNil := by
+          rw [Machine.Heap.lookup_set_ne
+            (by simp only [ne_eq, Loc.base.injEq, Addr.mk.injEq]; omega
+              : (Loc.base ⟨σ.nextAddr⟩ : Loc) ≠ .base ⟨t⟩)]
+          exact ht
+        simp only [storeLoc, hlook2, Bind.bind, Except.bind, pure,
+          Except.pure]
+        rw [show ∀ σ' : ExecState, normalizeValueForTy σ' tSlS
+            (slsVal σ.nextAddr 0 (fs.length + 1) nc)
+            = .ok (slsVal σ.nextAddr 0 (fs.length + 1) nc) from
+          fun σ' => by
+            simp [normalizeValueForTy, normalizeValueForTyFuel,
+              typeResolutionFuel]])
+  exact ⟨newCap, ch', h1, happly⟩
 
 /-! ## The scan loop's environments and continuations -/
 

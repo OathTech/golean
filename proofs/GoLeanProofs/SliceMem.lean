@@ -309,6 +309,209 @@ theorem applyStrictOp_sliceExpr_slice {σ : ExecState} {b : Loc}
   simp only [applyStrictOp, valueAsInt, applySlice, sliceFromSlice, hval,
     hbounds, Bind.bind, Except.bind, pure, Except.pure]
 
+/-! ### GAP-APPEND: the growing-slice append family (WP arc s2 item 3)
+
+ONE-element `append` — the shape all four landed witnesses use (stack,
+queue, rle, wordfreq's `[]string`) — generic in the ELEMENT TYPE via
+conditioned hypotheses: the two `sliceVisibleValues` facts, the
+element store (in-place arm) and the handle store enter as hypotheses
+the consumer discharges with its per-type executable facts. The spill
+arm's realized capacity is `appendRealizedCap`; the `_ex` wrapper
+surfaces it as the ENVELOPE EXISTENTIAL
+`[newLen, appendSpillUpper]` so a consumer never names it. -/
+
+private theorem forIn_yield_push_eq {α : Type}
+    {body : α → Array GoValue → Except GoError (ForInStep (Array GoValue))}
+    {g : α → GoValue} :
+    ∀ (l : List α), (∀ x ∈ l, ∀ r, body x r = .ok (.yield (r.push (g x)))) →
+    ∀ (acc : Array GoValue),
+      forIn l acc body = .ok (acc ++ (l.map g).toArray)
+  | [], _, acc => by simp [List.forIn_nil, pure, Except.pure]
+  | x :: xs, hshape, acc => by
+      rw [List.forIn_cons, hshape x (by simp) acc]
+      simp only [Bind.bind, Except.bind]
+      rw [forIn_yield_push_eq xs
+        (fun y hy r => hshape y (by simp [hy]) r) (acc.push (g x))]
+      simp
+
+/-- The generic backing-builder closed form: SELF-NORMALIZED elements
+(the per-type normalization facts discharge the hypothesis), the
+default-value pad. -/
+theorem buildAppendBackingValue_of_norm {σ : ExecState} {elem : Ty}
+    {l₁ l₂ : List GoValue} {newCap : Nat} {d : GoValue}
+    (hn : ∀ v ∈ l₁ ++ l₂, normalizeValueForTy σ elem v = .ok v)
+    (hd : defaultValue σ elem = .ok d)
+    (hcap : l₁.length + l₂.length ≤ newCap) :
+    buildAppendBackingValue σ elem ⟨l₁⟩ ⟨l₂⟩ newCap
+      = .ok (.array ⟨l₁ ++ l₂
+          ++ List.replicate (newCap - (l₁.length + l₂.length)) d⟩) := by
+  unfold buildAppendBackingValue
+  have happ : (⟨l₁⟩ : Array GoValue) ++ (⟨l₂⟩ : Array GoValue)
+      = ⟨l₁ ++ l₂⟩ := by
+    apply Array.ext'
+    simp
+  simp only [Bind.bind, Except.bind, happ, ← Array.forIn_toList]
+  rw [forIn_yield_push_eq (g := fun v : GoValue => v) (l₁ ++ l₂) ?hsh1 #[]]
+  case hsh1 =>
+    intro x hx r
+    simp only [hn x hx, pure, Except.pure]
+  simp only [List.map_id']
+  have hsz : ((#[] : Array GoValue) ++ (l₁ ++ l₂).toArray).size
+      = l₁.length + l₂.length := by simp
+  rw [if_neg (by rw [hsz]; omega)]
+  simp only [Std.Legacy.Range.forIn_eq_forIn_range']
+  rw [show ([:newCap - ((#[] : Array GoValue)
+      ++ (l₁ ++ l₂).toArray).size] : Std.Legacy.Range).size
+    = newCap - (l₁.length + l₂.length) from by
+      simp [Std.Legacy.Range.size]]
+  rw [forIn_yield_push_eq (g := fun _ : Nat => d)
+    (List.range' 0 (newCap - (l₁.length + l₂.length)) 1) ?hsh2
+    ((#[] : Array GoValue) ++ (l₁ ++ l₂).toArray)]
+  case hsh2 =>
+    intro x _ r
+    rw [hd]
+    rfl
+  have hmapd : (List.range' 0 (newCap - (l₁.length + l₂.length)) 1).map
+        (fun _ => d)
+      = List.replicate (newCap - (l₁.length + l₂.length)) d := by
+    apply List.ext_getElem
+    · simp
+    · intro j hj hj2
+      simp
+  rw [hmapd]
+  simp only [pure, Except.pure, Except.ok.injEq, GoValue.array.injEq]
+  apply Array.ext'
+  simp
+
+/-- **`append` of one element WITHOUT spill** (`len + 1 ≤ cap`): the
+element store and the handle store enter as hypotheses; no choice is
+consumed. -/
+theorem applyStmtOp_append1_inplace {σ σ₂ σ₃ : ExecState} {elem : Ty}
+    {tloc bb : Loc} {off len cap : Nat}
+    {eb : Loc} {eoff elen ecap : Nat} {w : GoValue} {ch : Choices}
+    (hfit : len + 1 ≤ cap) (hec : elen ≤ ecap)
+    (hvisE : sliceVisibleValues σ ⟨some eb, eoff, elen, ecap⟩ = .ok #[w])
+    (hstore : storeLoc σ (.index bb (Int.ofNat (off + len + 0))) w
+      = .ok σ₂)
+    (htgt : storeLoc σ₂ tloc (.slice ⟨some bb, off, len + 1, cap⟩)
+      = .ok σ₃) :
+    applyStmtOp σ ch (.appendSlice elem) 1
+      [.addr tloc, .slice ⟨some bb, off, len, cap⟩,
+       .slice ⟨some eb, eoff, elen, ecap⟩]
+      = .ok (σ₃, ch) := by
+  simp only [applyStmtOp, valueAsSlice, valueAsLoc, Bind.bind,
+    Except.bind, pure, Except.pure, validateSlice_ok (by omega : len ≤ cap),
+    validateSlice_ok hec, hvisE]
+  rw [if_pos (by simp; omega)]
+  rw [← Array.forIn_toList]
+  simp only [List.toList_toArray, List.forIn_cons, List.forIn_nil,
+    hstore, Bind.bind, Except.bind, pure, Except.pure]
+  rw [show (#[w] : Array GoValue).size = 1 from rfl, htgt]
+
+/-- The realized spill capacity: the growth-formula point offset by the
+consumed choice, wrapped into the envelope. -/
+def appendRealizedCap (oldCap newLen extra : Nat) : Nat :=
+  newLen + ((appendGrowthCap oldCap newLen - newLen + extra)
+    % appendSpillWidth oldCap newLen)
+
+theorem appendRealizedCap_lower (oldCap newLen extra : Nat) :
+    newLen ≤ appendRealizedCap oldCap newLen extra :=
+  Nat.le_add_right _ _
+
+theorem appendRealizedCap_upper {oldCap newLen : Nat}
+    (h : oldCap < newLen) (extra : Nat) :
+    appendRealizedCap oldCap newLen extra
+      ≤ appendSpillUpper oldCap newLen := by
+  have hge := appendGrowthCap_ge h
+  have h2 : 2 * appendGrowthCap oldCap newLen
+      ≤ appendSpillUpper oldCap newLen := by
+    unfold appendSpillUpper
+    exact Nat.le_max_right _ _
+  have hmod : (appendGrowthCap oldCap newLen - newLen + extra)
+        % appendSpillWidth oldCap newLen
+      < appendSpillWidth oldCap newLen :=
+    Nat.mod_lt _ (by unfold appendSpillWidth; omega)
+  unfold appendRealizedCap appendSpillWidth at *
+  omega
+
+/-- **`append` of one element WITH spill** (`cap < len + 1`), the
+DETERMINISTIC core: one choice consumed, the fresh backing at
+`σ.nextAddr` built by the (hypothesis) builder fact at every
+sufficient capacity, the handle store likewise capacity-generic. The
+realized capacity is `appendRealizedCap cap (len+1) extra`. Prefer
+`applyStmtOp_append1_spill_ex` below unless the statement being
+retrofitted names the capacity. -/
+theorem applyStmtOp_append1_spill {σ : ExecState} {elem : Ty}
+    {tloc bb : Loc} {off len cap : Nat}
+    {eb : Loc} {eoff elen ecap : Nat} {w : GoValue}
+    {old : Array GoValue} {bk : Nat → GoValue} {σT : Nat → ExecState}
+    {ch ch' : Choices} {extra : Nat}
+    (hfull : cap < len + 1) (hlc : len ≤ cap) (hec : elen ≤ ecap)
+    (hvisE : sliceVisibleValues σ ⟨some eb, eoff, elen, ecap⟩ = .ok #[w])
+    (hvisO : sliceVisibleValues σ ⟨some bb, off, len, cap⟩ = .ok old)
+    (hcons : ch.consume (appendSpillWidth cap (len + 1)) = (extra, ch'))
+    (hbuild : ∀ nc, len + 1 ≤ nc →
+      buildAppendBackingValue σ elem old #[w] nc = .ok (bk nc))
+    (htgt : ∀ nc, len + 1 ≤ nc →
+      storeLoc { σ with
+          heap := Heap.set σ.heap (.base ⟨σ.nextAddr⟩)
+            ⟨some (.array nc elem), bk nc⟩,
+          nextAddr := σ.nextAddr + 1 } tloc
+        (.slice ⟨some (.base ⟨σ.nextAddr⟩), 0, len + 1, nc⟩)
+      = .ok (σT nc)) :
+    applyStmtOp σ ch (.appendSlice elem) 1
+      [.addr tloc, .slice ⟨some bb, off, len, cap⟩,
+       .slice ⟨some eb, eoff, elen, ecap⟩]
+      = .ok (σT (appendRealizedCap cap (len + 1) extra), ch') := by
+  have hreal : len + 1 ≤ appendRealizedCap cap (len + 1) extra :=
+    appendRealizedCap_lower _ _ _
+  simp only [applyStmtOp, valueAsSlice, valueAsLoc, Bind.bind,
+    Except.bind, pure, Except.pure, validateSlice_ok hlc,
+    validateSlice_ok hec, hvisE]
+  rw [if_neg (by simp; omega)]
+  simp only [hvisO, Bind.bind, Except.bind, pure, Except.pure]
+  simp only [show (#[w] : Array GoValue).size = 1 from rfl, hcons]
+  rw [show len + 1 + ((appendGrowthCap cap (len + 1) - (len + 1)
+        + extra) % appendSpillWidth cap (len + 1))
+      = appendRealizedCap cap (len + 1) extra from rfl]
+  rw [hbuild _ hreal]
+  simp only [ExecState.alloc, ExecState.freshLoc, Bind.bind,
+    Except.bind, pure, Except.pure]
+  rw [htgt _ hreal]
+
+/-- The spill arm with the capacity as the ENVELOPE EXISTENTIAL
+`[newLen, appendSpillUpper]` — the consumer never names the realized
+capacity or the consumed stream. -/
+theorem applyStmtOp_append1_spill_ex {σ : ExecState} {elem : Ty}
+    {tloc bb : Loc} {off len cap : Nat}
+    {eb : Loc} {eoff elen ecap : Nat} {w : GoValue}
+    {old : Array GoValue} {bk : Nat → GoValue} {σT : Nat → ExecState}
+    {ch : Choices}
+    (hfull : cap < len + 1) (hlc : len ≤ cap) (hec : elen ≤ ecap)
+    (hvisE : sliceVisibleValues σ ⟨some eb, eoff, elen, ecap⟩ = .ok #[w])
+    (hvisO : sliceVisibleValues σ ⟨some bb, off, len, cap⟩ = .ok old)
+    (hbuild : ∀ nc, len + 1 ≤ nc →
+      buildAppendBackingValue σ elem old #[w] nc = .ok (bk nc))
+    (htgt : ∀ nc, len + 1 ≤ nc →
+      storeLoc { σ with
+          heap := Heap.set σ.heap (.base ⟨σ.nextAddr⟩)
+            ⟨some (.array nc elem), bk nc⟩,
+          nextAddr := σ.nextAddr + 1 } tloc
+        (.slice ⟨some (.base ⟨σ.nextAddr⟩), 0, len + 1, nc⟩)
+      = .ok (σT nc)) :
+    ∃ (newCap : Nat) (ch' : Choices), len + 1 ≤ newCap
+      ∧ newCap ≤ appendSpillUpper cap (len + 1)
+      ∧ applyStmtOp σ ch (.appendSlice elem) 1
+          [.addr tloc, .slice ⟨some bb, off, len, cap⟩,
+           .slice ⟨some eb, eoff, elen, ecap⟩]
+        = .ok (σT newCap, ch') := by
+  refine ⟨appendRealizedCap cap (len + 1)
+      (ch.consume (appendSpillWidth cap (len + 1))).1,
+    (ch.consume (appendSpillWidth cap (len + 1))).2,
+    appendRealizedCap_lower _ _ _,
+    appendRealizedCap_upper (by omega) _,
+    applyStmtOp_append1_spill hfull hlc hec hvisE hvisO rfl hbuild htgt⟩
+
 /-! ### The uint64 element-store fact
 
 The store side normalizes the whole backing array against the cell's

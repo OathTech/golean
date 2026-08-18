@@ -462,39 +462,25 @@ theorem buildAppendBackingValue_one (σ : ExecState) {v : Int}
     (hv : 0 ≤ v ∧ v < 2 ^ 64) {c : Nat} (hc : 1 ≤ c) :
     buildAppendBackingValue σ tU64 #[] #[.int v .uint64] c
       = .ok (.array ⟨(qPadL c v).map (fun x => .int x .uint64)⟩) := by
-  have hnorm : normalizeValueForTy σ tU64 (.int v .uint64)
-      = .ok (.int v .uint64) := by
+  -- WP arc s2 item 3: the forIn fight replaced by the kit's generic
+  -- builder closed form.
+  have hnorm : ∀ x ∈ ([] : List GoValue) ++ [GoValue.int v .uint64],
+      normalizeValueForTy σ tU64 x = .ok x := by
+    intro x hx
+    simp only [List.nil_append, List.mem_singleton] at hx
+    subst hx
     simp only [normalizeValueForTy]
     rw [show typeResolutionFuel = 1023 + 1 from rfl]
     simp only [normalizeValueForTyFuel, unorm_of_range hv.1 hv.2]
     rfl
-  simp only [buildAppendBackingValue, Std.Legacy.Range.forIn_eq_forIn_range',
-    Bind.bind, Except.bind, pure, Except.pure]
-  simp only [show ((#[] : Array GoValue) ++ #[GoValue.int v .uint64])
-      = #[GoValue.int v .uint64] from rfl]
-  simp only [← Array.forIn_toList, List.toList_toArray, List.forIn_cons,
-    List.forIn_nil, hnorm, Bind.bind, Except.bind, pure, Except.pure]
-  simp only [show ((#[] : Array GoValue).push (GoValue.int v .uint64))
-      = #[GoValue.int v .uint64] from rfl,
-    show ((#[GoValue.int v .uint64] : Array GoValue).size) = 1 from rfl]
-  rw [if_neg (by omega : ¬ (1 > c))]
-  rw [show ([:c - 1] : Std.Legacy.Range).size = c - 1 from by
-    simp [Std.Legacy.Range.size]]
-  rw [GoLean.Iris.forIn_range'_inv (N := c - 1) (n := c - 1) (j := 0)
-    (b := #[GoValue.int v .uint64])
-    (Q := fun i acc => acc
-      = #[GoValue.int v .uint64] ++ (List.replicate i (GoValue.int 0 .uint64)).toArray)
-    (out := fun _ acc => acc.push (.int 0 .uint64))
-    (res := #[GoValue.int v .uint64]
-      ++ (List.replicate (c - 1) (GoValue.int 0 .uint64)).toArray)
-    ?hfill (by omega) (by simp) (by intro b' h; rw [h, Nat.zero_add])]
-  · congr 1
-    simp [qPadL, List.map_replicate]
-  · case hfill =>
-      intro i acc hi hacc
-      refine ⟨by simp [defaultValue, defaultValueFuel, typeResolutionFuel], ?_⟩
-      rw [hacc, List.replicate_succ']
-      simp [← List.toArray_replicate]
+  have h := SliceMem.buildAppendBackingValue_of_norm (σ := σ)
+    (l₁ := []) (l₂ := [.int v .uint64]) (newCap := c)
+    (d := .int 0 .uint64) hnorm
+    (by simp [defaultValue, defaultValueFuel, typeResolutionFuel])
+    (by simpa using hc)
+  rw [h]
+  congr 2
+  simp [qPadL, List.map_replicate]
 
 /-- Setting one key leaves every OTHER key's lookup unchanged (the
 beq-hypothesis view of the core's `Heap.lookup_set_ne`; a zero-proof
@@ -533,11 +519,11 @@ theorem applyStmtOp_append_spill1 {σ : ExecState} {ta sb eb : Addr}
               ⟨some (.slice tU64),
                .slice ⟨some (.base ⟨σ.nextAddr⟩), 0, 1, cap⟩⟩,
             nextAddr := σ.nextAddr + 1 }, ch') := by
-  -- the elems slice's visible values: the one element at `eb[0]`
-  have hload : loadLoc σ (Loc.index (.base eb) (Int.ofNat (0 + 0)))
-      = .ok (.int v .uint64) := by
-    simp only [loadLoc, hlookE]
-    rfl
+  -- WP arc s2 item 3: the applyStmtOp unfolding and the choice-stream
+  -- case split replaced by the kit's envelope existential
+  -- `SliceMem.applyStmtOp_append1_spill_ex`; the per-type facts
+  -- (visible values, the builder, the handle store) discharge its
+  -- hypotheses.
   have hvis : sliceVisibleValues σ ⟨some (.base eb), 0, 1, 1⟩
       = .ok #[.int v .uint64] := by
     simp only [sliceVisibleValues, validateSlice,
@@ -557,53 +543,37 @@ theorem applyStmtOp_append_spill1 {σ : ExecState} {ta sb eb : Addr}
     rw [show ([:(0 : Nat)] : Std.Legacy.Range).size = 0 from by
       simp [Std.Legacy.Range.size]]
     simp [forIn, List.forIn', List.forIn'.loop]
-  have hmain : ∀ (extra : Nat) (rest' : Choices),
-      Choices.consume ch 32 = (extra, rest') → extra < 32 →
-      applyStmtOp σ ch (.appendSlice tU64) 1
-        [.addr (.base ta), .slice ⟨some (.base sb), 0, 0, 0⟩,
-         .slice ⟨some (.base eb), 0, 1, 1⟩]
-        = .ok ({ σ with
-            heap := Heap.set
-              (Heap.set σ.heap (.base ⟨σ.nextAddr⟩)
-                ⟨some (.array (1 + ((3 + extra) % 32)) tU64),
-                 .array ⟨(qPadL (1 + ((3 + extra) % 32)) v).map
-                   (fun x => .int x .uint64)⟩⟩)
-              (.base ta)
-              ⟨some (.slice tU64),
-               .slice ⟨some (.base ⟨σ.nextAddr⟩), 0, 1,
-                 1 + ((3 + extra) % 32)⟩⟩,
-            nextAddr := σ.nextAddr + 1 }, rest') := by
-    intro extra rest' hcons hlt
-    have hbuild := buildAppendBackingValue_one σ hv
-      (c := 1 + ((3 + extra) % 32)) (by omega)
-    have hval0 : validateSlice ⟨some (.base sb), 0, 0, 0⟩ = .ok () := rfl
-    have hval1 : validateSlice ⟨some (.base eb), 0, 1, 1⟩ = .ok () := rfl
-    have hnorms : ∀ (σ' : ExecState) (sv : SliceValue),
-        normalizeValueForTy σ' (.slice tU64) (.slice sv)
-          = .ok (.slice sv) := by
-      intro σ' sv
-      simp only [normalizeValueForTy]
-      rw [show typeResolutionFuel = 1023 + 1 from rfl]
-      rfl
-    simp only [applyStmtOp, valueAsSlice, hval0, hval1, valueAsLoc,
-      hvis, hvis0, Bind.bind, Except.bind, pure, Except.pure]
-    simp only [List.size_toArray, List.length_cons, List.length_nil,
-      Nat.zero_add]
-    rw [if_neg (by omega : ¬ (0 + 1 ≤ 0))]
-    simp only [show appendSpillWidth 0 (0 + 1) = 32 from rfl,
-      show appendGrowthCap 0 (0 + 1) = 4 from rfl, hcons]
-    rw [show 0 + 1 + (4 - (0 + 1) + extra) % 32 = 1 + ((3 + extra) % 32)
-      from by omega]
-    rw [hbuild]
-    simp only [ExecState.alloc, ExecState.freshLoc, storeLoc,
-      lookup_set_ne_local hta, hlookT, hnorms, Bind.bind, Except.bind,
-      pure, Except.pure]
-  rcases ch with _ | ⟨c, rest⟩
-  · exact ⟨1 + ((3 + 0) % 32), [], by omega, by omega,
-      hmain 0 [] rfl (by omega)⟩
-  · exact ⟨1 + ((3 + c % 32) % 32), rest, by omega,
-      by have := Nat.mod_lt (3 + c % 32) (y := 32) (by omega); omega,
-      hmain (c % 32) rest rfl (Nat.mod_lt _ (by omega))⟩
+  have hnorms : ∀ (σ' : ExecState) (sv : SliceValue),
+      normalizeValueForTy σ' (.slice tU64) (.slice sv)
+        = .ok (.slice sv) := by
+    intro σ' sv
+    simp only [normalizeValueForTy]
+    rw [show typeResolutionFuel = 1023 + 1 from rfl]
+    rfl
+  obtain ⟨newCap, ch', h1, h2, happly⟩ :=
+    SliceMem.applyStmtOp_append1_spill_ex (σ := σ) (elem := tU64)
+      (tloc := .base ta) (bb := .base sb) (off := 0) (len := 0)
+      (cap := 0) (eb := .base eb) (eoff := 0) (elen := 1) (ecap := 1)
+      (w := .int v .uint64) (old := #[])
+      (bk := fun nc => .array ⟨(qPadL nc v).map (fun x => .int x .uint64)⟩)
+      (σT := fun nc => { σ with
+          heap := Heap.set
+            (Heap.set σ.heap (.base ⟨σ.nextAddr⟩)
+              ⟨some (.array nc tU64),
+               .array ⟨(qPadL nc v).map (fun x => .int x .uint64)⟩⟩)
+            (.base ta)
+            ⟨some (.slice tU64),
+             .slice ⟨some (.base ⟨σ.nextAddr⟩), 0, 1, nc⟩⟩,
+          nextAddr := σ.nextAddr + 1 })
+      (ch := ch)
+      (by omega) (by omega) (by omega) hvis hvis0
+      (fun nc hnc => buildAppendBackingValue_one σ hv hnc)
+      (fun nc hnc => by
+        simp only [storeLoc, lookup_set_ne_local hta, hlookT, hnorms,
+          Bind.bind, Except.bind, pure, Except.pure])
+  refine ⟨newCap, ch', by omega, ?_, happly⟩
+  have hup : appendSpillUpper 0 (0 + 1) = 32 := rfl
+  omega
 
 /-! ## The subject loop — raw segments
 
