@@ -480,3 +480,50 @@ the import graph alone" is likewise false and is corrected.
 
 **Drift:** exactly four rows across 2089 cases — the three slice-1 reds
 go PASS, the new residual lands RED.
+
+## 2026-08-18 — delta-review fix round, slice 3: the husk gate's raw-string residual
+
+GATE-INFRA DIFF — flagged for the record.
+
+The F2 fix scoped `scripts/check-coverage`'s multi-package exemption
+scan to IMPORT DECLARATIONS, closing the "any quoted string exempts a
+sibling dir" hole. But it stripped comments with plain regexes over the
+whole file text, so it still had no idea where the string literals
+were. The delta review flagged the residual; here is the reproduction.
+
+Fail-OPEN direction (the dangerous one) — a RAW string that quotes an
+import block, which is an ordinary thing for a doc example, a codegen
+template or a test fixture to contain:
+
+```go
+import "helper"
+
+var tmpl = `
+import (
+	"forgotten"
+)
+`
+```
+
+Old scanner: `['forgotten', 'helper']` — `forgotten/` silently exempt,
+husk gate quiet on exactly the omission it exists to catch. New
+scanner: `['helper']` — `forgotten/` husks.
+
+Fail-closed direction (noisy, not dangerous): a raw string containing
+`/*` swallowed the rest of the file up to the next `*/`, eating real
+import declarations and dropping live exemptions.
+
+**Fix:** `_mask_literals` does ONE lexical pass in Go's own token
+order. Comments become whitespace with their newlines preserved (so
+the `^`/`$` anchors do not drift); every string and rune literal
+becomes an opaque `"@i@"` token with its content kept in a side table.
+Nothing inside a literal can then be read as code, and nothing outside
+one can be swallowed by a literal's delimiters. Two incidental
+improvements fall out: a RAW-string import path (`` import `p` `` —
+legal Go, since ImportPath is a string_lit) is now recognized, and
+the `/*`-in-a-raw-string case stops eating declarations.
+
+**Regression evidence:** the exempt-directory set computed by the old
+and new scanners over the whole corpus is IDENTICAL — 38 dirs, no
+additions, no removals — so the hole closed with zero collateral.
+`scripts/check-coverage` stays green.

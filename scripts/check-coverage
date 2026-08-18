@@ -104,30 +104,106 @@ for cf in glob.glob("Corpus/coverage/negative/**/case.tsv", recursive=True):
 # ANY string literal that happened to spell a sibling directory's name
 # — `var label = "forgotten"` — silently exempted that directory and
 # the husk gate went quiet on exactly the omission it exists to catch.
-# Reproduced, then re-checked after the fix: the forgotten dir husks,
-# every live exemption survives.
+#
+# The SECOND version scoped the scan to import declarations but did its
+# comment stripping with plain regexes over the whole text, so it had
+# no idea where the string literals were (delta-review F2 residual).
+# Both directions of that were reachable, and the dangerous one is
+# fail-OPEN: a RAW string that quotes an import block — a doc example,
+# a codegen template, a test fixture —
+#
+#     var tmpl = `
+#     import (
+#     	"forgotten"
+#     )
+#     `
+#
+# forged an exemption for `forgotten`, silencing the husk gate again.
+# (The other direction: a raw string containing `/*` ate a real import
+# block and dropped a live exemption — noisy but fail-closed.)
+#
+# So the masking is now LEXICAL, one pass, in Go's own token order:
+# comments become whitespace, and every string / rune literal becomes an
+# opaque token, so nothing inside a literal can be read as code and
+# nothing outside one can be swallowed by a literal's delimiters.
+# Reproduced before and re-checked after, both times: the forgotten dir
+# husks, every live exemption survives.
 import re
-_BLOCK_COMMENT = re.compile(r'/\*.*?\*/', re.S)
-_LINE_COMMENT  = re.compile(r'//[^\n]*')
+
+def _mask_literals(text):
+    """Mask a Go source file's comments and literals, lexically.
+
+    Returns (masked, literals): `masked` has every comment replaced by
+    whitespace (newlines preserved, so line anchors still mean what
+    they say) and every string / rune literal replaced by the opaque
+    token `"@i@"`; `literals[i]` is the i-th string literal's content.
+    Raw (backquoted) strings are masked too and can still be read as
+    import paths, which Go permits — ImportPath is a string_lit, and a
+    raw one is a string_lit.
+    """
+    out, lits = [], []
+    i, n = 0, len(text)
+    while i < n:
+        c = text[i]
+        nxt = text[i + 1] if i + 1 < n else ""
+        if c == "/" and nxt == "/":
+            j = text.find("\n", i)
+            i = n if j < 0 else j          # keep the newline itself
+        elif c == "/" and nxt == "*":
+            j = text.find("*/", i + 2)
+            j = n if j < 0 else j + 2
+            # A block comment separates tokens; keep its newlines so
+            # the `^`/`$` anchors below do not drift.
+            out.append(" " + "\n" * text.count("\n", i, j))
+            i = j
+        elif c == "`":
+            j = text.find("`", i + 1)
+            j = n if j < 0 else j
+            lits.append(text[i + 1:j])
+            out.append('"@%d@"' % (len(lits) - 1))
+            i = j + 1
+        elif c == '"':
+            j, buf = i + 1, []
+            while j < n and text[j] != '"' and text[j] != "\n":
+                if text[j] == "\\" and j + 1 < n:
+                    buf.append(text[j:j + 2])
+                    j += 2
+                    continue
+                buf.append(text[j])
+                j += 1
+            lits.append("".join(buf))
+            out.append('"@%d@"' % (len(lits) - 1))
+            i = j + 1 if j < n and text[j] == '"' else j
+        elif c == "'":
+            j = i + 1
+            while j < n and text[j] != "'" and text[j] != "\n":
+                j += 2 if text[j] == "\\" else 1
+            out.append("'@'")
+            i = j + 1 if j < n and text[j] == "'" else j
+        else:
+            out.append(c)
+            i += 1
+    return "".join(out), lits
+
 _IMPORT_BLOCK  = re.compile(r'^import\s*\(\s*$(.*?)^\s*\)\s*$', re.M | re.S)
-_IMPORT_SINGLE = re.compile(r'^import\s+(?:[A-Za-z_.][A-Za-z0-9_]*\s+)?"([^"\n]*)"\s*$', re.M)
-_IMPORT_SPEC   = re.compile(r'^\s*(?:[A-Za-z_.][A-Za-z0-9_]*\s+)?"([^"\n]*)"\s*$', re.M)
+_IMPORT_SINGLE = re.compile(r'^import\s+(?:[A-Za-z_.][A-Za-z0-9_]*\s+)?"@(\d+)@"\s*$', re.M)
+_IMPORT_SPEC   = re.compile(r'^\s*(?:[A-Za-z_.][A-Za-z0-9_]*\s+)?"@(\d+)@"\s*$', re.M)
 
 def _import_paths(text):
     """Import paths DECLARED by a Go source file (both decl forms).
 
     Deliberately a parser for import declarations only, not a string
-    scanner: a quoted path counts iff it appears as an import spec in
-    an `import ( ... )` block or an `import "p"` line. Comments are
-    stripped first (an import block's specs are often commented). The
-    optional leading identifier covers named, blank (`_`) and dot
+    scanner: a path counts iff it appears as an import spec in an
+    `import ( ... )` block or an `import "p"` line, in code position.
+    The optional leading identifier covers named, blank (`_`) and dot
     imports — all of which are real imports of the package.
     """
-    text = _LINE_COMMENT.sub("", _BLOCK_COMMENT.sub("", text))
-    out = []
-    for body in _IMPORT_BLOCK.findall(text):
-        out += _IMPORT_SPEC.findall(body)
-    return out + _IMPORT_SINGLE.findall(text)
+    masked, lits = _mask_literals(text)
+    idx = []
+    for body in _IMPORT_BLOCK.findall(masked):
+        idx += _IMPORT_SPEC.findall(body)
+    idx += _IMPORT_SINGLE.findall(masked)
+    return [lits[int(i)] for i in idx]
 
 def _go_files(d):
     try:
