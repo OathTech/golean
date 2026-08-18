@@ -649,14 +649,6 @@ theorem frameSim_zero11 (n seed : Nat) (l : List Int) (iv : Int)
       (σHOut n seed l iv ffv) :=
   frameSim_seed rfl (bodies_ρsh (ρT 11 0))
 
-theorem fs_lookup_none11 {ρ : Nat → Nat} {na₀ na : Nat} {fr : Heap}
-    {σ σF : ExecState} (h : FrameSim ρ na₀ na fr σ σF) {l : Loc}
-    (hl : Heap.lookup σ.heap l = none) :
-    Heap.lookup σF.heap (renameLoc ρ l) = Heap.lookup fr (renameLoc ρ l) := by
-  have h2 := h.lookup_img l
-  rw [hl] at h2
-  exact h2
-
 /-- **The frame rebase at threshold 11**: the pass's retired
 `j`/`$forFirst` cells (canonical 11/12) move INTO the frame at their
 true addresses (kit `rebaseSimT` + this example's fixed-cell

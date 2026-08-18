@@ -1680,16 +1680,6 @@ theorem qsize_enterFrame {σ : ExecState} {H : Heap} {na : Nat}
   rw [show na + 1 + 1 = na + 2 from rfl]
   simp [List.append_assoc]
 
-/-- Setting a live low cell preserves deadness above. -/
-theorem DeadFrom.set_low {dead : Heap} {na B : Nat} {c : HeapCell}
-    (h : DeadFrom dead na) (hB : B < na) :
-    DeadFrom (Heap.set dead (.base ⟨B⟩) c) na := by
-  intro x hx
-  rw [Machine.Heap.lookup_set_ne (by
-    simp only [ne_eq, Loc.base.injEq, Addr.mk.injEq]
-    omega)]
-  exact h x hx
-
 /-! ## The enqueue iteration (capacity- and address-generic)
 
 The lane-owner's corrected charter: the machine's `append` spill
