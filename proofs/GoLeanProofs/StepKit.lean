@@ -240,9 +240,7 @@ open GoLean GoLean.GoCore GoLean.GoCore.Machine
 
 namespace GoLean.Surface
 
-/-! ## Heap at a symbolic split (the P11 family)
-
-API group 1 of the module docstring. -/
+/-! ## API group 1 — the heap at a symbolic split (the P11 family) -/
 
 theorem lookup_append_left {h₁ h₂ : Heap} {l : Loc} {c : HeapCell}
     (h : Heap.lookup h₁ l = some c) :
@@ -356,9 +354,8 @@ theorem lookup_singleton_self {l : Loc} {c : HeapCell} :
     Heap.lookup [(l, c)] l = some c := by
   simp [Heap.lookup]
 
-/-! ## One cell under `Heap.set` — the lookup/set battery
-
-API group 2. (WP arc s2 item 1,
+/-! ## API group 2 — one cell under `Heap.set`: the lookup/set
+battery (WP arc s2 item 1,
 2026-08-18 — promoted from the five program-local copies: FibMemo/Rec,
 Stein/Run, Sieve/Machine, the WordFreq route, SliceStack; the two
 signature disciplines that go with it are rules 4/5 of the module
@@ -485,9 +482,8 @@ theorem DeadFrom.push2 {dead : Heap} {na : Nat} {c c' : HeapCell}
     lookup_cons_ne (base_beq_false (by omega : na + 1 ≠ x))]
   rfl
 
-/-! ## Footprint — the freshness algebra (`DeadFrom` / `FreshFrom`)
-
-API group 3. (WP arc s2 item 1.)
+/-! ## API group 3 — footprint: the freshness algebra
+(`DeadFrom` / `FreshFrom`; WP arc s2 item 1).
 
 `DeadFrom` and the footprint style's `FreshFrom` are ONE formula read
 two ways: a dead TAIL past a concrete front, or the WHOLE heap of a
@@ -562,9 +558,8 @@ theorem FreshFrom.lt_of_lookup {h : Heap} {na a : Nat}
     (hl : Heap.lookup h (.base ⟨a⟩) = some c) : a < na :=
   DeadFrom.lt_of_lookup hf hl
 
-/-! ## One machine step, conditioned (the P1/P9 family)
-
-API group 4 of the module docstring. -/
+/-! ## API group 4 — one machine step, conditioned (the P1/P9
+family) -/
 
 /-- A single successful `stepFn` step is a 1-step `stepFnIter`. -/
 theorem stepFnIter_one {σ : ExecState} {c : Config} {ch : Choices}
@@ -755,9 +750,8 @@ theorem storeTarget_addr {σ : ExecState} {a : Addr} {ty : Ty}
   simp only [storeTarget, resolveChain, valueAsLoc, Bind.bind, Except.bind,
     pure, Except.pure, storeLoc, hlook, hnorm]
 
-/-! ## Growing heap front — the executable front bound
-
-API group 5. (WP arc s2 item 5 — promoted from
+/-! ## API group 5 — the growing heap front: an executable front
+bound (WP arc s2 item 5 — promoted from
 the twosum/sieve front-miss chains; rle is the recorded chartered
 consumer with no landed copy). The per-example price of a loop body
 that DECLARES variables: a concrete front must be shown to miss every
@@ -869,9 +863,7 @@ theorem stepFn_snapshot {σ : ExecState} {v : GoValue} {kt vt : Ty}
           σ, ch) := by
   simp only [stepFn, h, Bind.bind, Except.bind, pure, Except.pure]
 
-/-! ## Shared op plumbing (P6-adjacent)
-
-API group 6. -/
+/-! ## API group 6 — shared op plumbing (P6-adjacent) -/
 
 /-- A `Nat`-cast argument survives `natFromNonnegativeInt` (makeSlice's
 length/cap checks at a symbolic `n`). -/

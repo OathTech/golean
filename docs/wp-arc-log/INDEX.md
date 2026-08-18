@@ -21,7 +21,7 @@ toward totals.
 |---|---|---|---|---|---|
 | s1 | lift wave 1 (pure lifts) | **COMPLETE** — all 6 lift families landed (lift-5 stragglers resolved in S1.5b) | 8 / 8 | 2,483 (consumers; net −1,551 with +932 delegation/instantiation lines) | +79 (116 → 195) |
 | s2 | lift wave 2 (new shapes) | **COMPLETE** — all 7 chartered items landed | 7 / 7 | 1,103 (consumers; net −633 with +470 delegation/instantiation lines) | +38 (195 → 233) |
-| s3 | library regularity | not started | — | — | — |
+| s3 | library regularity | **COMPLETE** — 8 kit modules regularized (the charter's 7 + `EntryEq`) | 5 / 5 | 0 (docstring-only slice; +851/−145 in `/-!` blocks) | +0 (233 → 233; no name moved) |
 | s4 | mirror symbolic evaluator | not started (USER design-note gate) | — | — | — |
 | s5 | emission + instantiation sugar | not started | — | — | — |
 | s6 | discoverability close-out | not started | — | — | — |
@@ -60,3 +60,24 @@ hand-written entry dances survive, claim sites updated), GAP-C1b
 (`MapLoops` name parameterization). Totals above; close-out entry:
 `s2.md` §SLICE 2 CLOSE-OUT. Next per the charter: slice 3 (library
 regularity).
+
+**Checkpoint 4 — S3 COMPLETE (2026-08-18, tip = the S3.5 commit;
+≤5-unit cadence met at units S3.1–S3.4 + this close).** Five units,
+one commit each, `scripts/ci` PASS at every commit: StepKit (the
+standard shape + THE FIVE RULES anchored as the kit's single copy of
+the storm discipline), SliceMem + StringMem, MapMem + MapLoops,
+FuelMeasure + Frame/Threshold + EntryEq, then the convention note.
+A DOCSTRING-ONLY slice by construction: 0 aliases, 0 renames, 0 names
+added or removed, `proofs/Audit/Kit.lean` untouched throughout
+(`git diff --name-only a9c15dcd -- proofs/Audit/` → empty), so the
+existing axiom pins are byte-identical and the pin count is unchanged
+at 233. Measured outcome: **142 public declarations that were named
+NOWHERE in their module docstring at the s2 tip are now in a named
+API group; the seven lemma modules' 263 public declarations partition
+first-group-wins across their groups with ZERO ungrouped, and
+`EntryEq`'s further 15 are all named in its two groups** (parsed at
+the S3.4 tip; the per-module sums are in `s3.md`). Close-out entry + the naming convention, the (empty)
+alias list, the five recorded near-misses and THE API-GROUP INVENTORY
+— slice 6's Kit Guide skeleton, with its twenty guide-section names
+fixed: `s3.md`. Next per the charter: slice 5 (slice 4 is in flight on
+the `wp-eval` lane).
