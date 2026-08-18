@@ -159,6 +159,29 @@ import GoLeanProofs.Examples.SelectionSortProgram
 import GoLeanProofs.Examples.SelectionSort
 import GoLeanProofs.Examples.WordFreqProgram
 import GoLeanProofs.Examples.WordFreq
+-- The mirror symbolic evaluator (WP arc slice 4, Route B; design
+-- docs/2026-08-16_symbolic-domain-design.md, gate discharged
+-- 2026-08-18). Proof AUTOMATION infrastructure, outside the statement
+-- TCB: listed here so the default build elaborates it and the Audit
+-- walker's third refusal class (no `GoLean.Sym` constant in any
+-- designated statement closure) sees its environment — NO example or
+-- headline module imports it (walker + grep-verified; the deletion
+-- test extends to it at arc end).
+import GoLeanProofs.Sym.Domain
+import GoLeanProofs.Sym.Mirror
+import GoLeanProofs.Sym.Conc
+import GoLeanProofs.Sym.Drift
+import GoLeanProofs.Sym.DriftOps
+import GoLeanProofs.Sym.DriftApply
+-- THE MASTER WALK: the drift theorem (`stepFn'_concrete_agrees`) and
+-- the symbolic per-step soundness live here — in the DEFAULT build,
+-- per the charter's drift-gate clause: an edit to ANY stepFn/stepFn'
+-- arm that breaks their agreement breaks this import.
+import GoLeanProofs.Sym.Walk
+-- THE REFINEMENT THEOREM (`symEvalWindow_refines`): the window
+-- driver's induction over the walk at the symbolic interpretation.
+import GoLeanProofs.Sym.Refine
+import GoLeanProofs.Sym.SpikeKadane
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)

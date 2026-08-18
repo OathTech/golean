@@ -360,7 +360,12 @@ been overtaken by a second corpus re-pin.]
 Chartered deviations, recorded: the reverse row-RENAME (E1 sub-item)
 remains blocked on the re-pin-guard amendment ruling (drafted in g2.md);
 matmul is the recorded honest gap (GAP-RFL-COST is its blocker and the
-verified-reflection direction's strongest evidence). Judgment-call log:
+verified-reflection direction's strongest evidence). [CLOSED
+2026-08-18 by WP arc slice 4 phase 3: matmul landed COMPLETE — the
+gallery's 25th entry; the blocker's root cause was a MetaM
+smart-unfolding pathology, with the evaluator transport landed on the
+three measured blocker segments; g1.md unit G1.9's CLOSED banner +
+docs/wp-arc-log/s4.md unit S4.11.] Judgment-call log:
 every material call carries a one-line entry in its goal file.
 
 **Two further deviations, added 2026-08-16 by the post-autonomy audit

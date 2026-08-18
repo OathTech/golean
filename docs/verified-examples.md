@@ -1,6 +1,6 @@
-# Verified examples — the gallery (2026-08-15/16)
+# Verified examples — the gallery (2026-08-15/16; +matmul 2026-08-18)
 
-Twenty-four Go programs, and for each one a GoLean theorem you can read.
+Twenty-five Go programs, and for each one a GoLean theorem you can read.
 
 This file is the **object of agreement**: it exists so that a reader who is
 not a Lean expert can check, by eye, that the top-level statement really
@@ -10,10 +10,13 @@ from a proof: every Go snippet, every theorem, and every axiom line below is
 quoted **verbatim** from the file it comes from, and `scripts/render-gallery`
 re-checks those quotes byte-for-byte (see *Staleness*, at the end).
 
-Arc record: `docs/2026-08-15_gallery-campaign.md` — the campaign charter the
-seventeen newest entries were built under (its per-unit log is
-`docs/gallery-campaign-log/`, its retrospective
-`docs/2026-08-16_gallery-campaign-trip-report.md`);
+Arc record: `docs/2026-08-15_gallery-campaign.md` — the campaign charter
+seventeen of the eighteen newest entries were built under (its per-unit log
+is `docs/gallery-campaign-log/`, its retrospective
+`docs/2026-08-16_gallery-campaign-trip-report.md`; the eighteenth,
+`matmul`, is the campaign's honest gap landed by the WP arc —
+`docs/2026-08-16_wp-arc-charter.md` §Slice 4, its record
+`docs/wp-arc-log/s4.md` unit S4.11);
 `docs/2026-08-14_examples-phase2-arc-charter.md` — the phase-2 arc, which
 swapped three of the headlines and designated all eight; the founding arc is
 `docs/2026-08-12_verified-examples-arc-charter.md`. The statement form and
@@ -98,18 +101,22 @@ exhaustion.
   deletion test stopped being a thing we check by reading. Designation also
   puts them in front of the independent Comparator judge, which re-checks
   the proofs by kernel replay against these statements alone.
-  **The seventeen newest entries — `histogram`, `powmod`, `dotprod`,
+  **The eighteen newest entries — `histogram`, `powmod`, `dotprod`,
   `kadane`, `dedup`, `palin`, `strrev`, `twosum`, `selsort`, `bubble`,
-  `rle`, `fibmemo`, `sieve`, `stein`, `wordfreq`, `stack` and `queue` —
+  `rle`, `fibmemo`, `sieve`, `stein`, `wordfreq`, `stack`, `queue` and
+  `matmul` —
   are NOT designated.**
   (The eight designated headlines span seven example sections, because
-  `fib` carries two of them.) The seventeen were added by the gallery
-  campaign (2026-08-15/16), and designation is a separate, user-signed act
-  at the end of that arc: all seventeen are deliberately absent from
+  `fib` carries two of them.) Seventeen were added by the gallery
+  campaign (2026-08-15/16); `matmul` — the campaign's one honest gap —
+  was landed by the WP arc (2026-08-18) as slice 4's chartered
+  acceptance. Designation is a separate, user-signed act:
+  all eighteen are deliberately absent from
   `Examples/Targets.lean`, from `scripts/ci`'s trusted-closure allowlist
   and from the Comparator judge's set. Their
   deletion tests were therefore RUN by hand rather than by the gate, all
-  seventeen of them, recorded per unit in `docs/gallery-campaign-log/g1.md`
+  eighteen of them, recorded per unit in `docs/gallery-campaign-log/g1.md`
+  (and, for `matmul`, in `docs/wp-arc-log/s4.md` unit S4.11)
   — `lean_minimal_hypotheses` on `histogram_ok` (all four explicit binders
   load-bearing), on `powmod_ok` (all five), on `dotprod_ok` (all three),
   on `kadane_ok` (all five), on `dedup_ok` (all three), on `fibmemo_ok`
@@ -118,13 +125,16 @@ exhaustion.
   (all four explicit binder groups); scratch re-elaboration per binder on
   lane B's six — `palin_ok`, `strrev_ok`, `twosum_ok`, `selsort_ok`,
   `bubble_ok`, `rle_ok` — each binder breaking at least one goal when
-  dropped, no decorative hypothesis anywhere; and for `queue_ok` a
+  dropped, no decorative hypothesis anywhere; for `queue_ok` a
   **machine probe** instead: each named hypothesis dropped in turn and the
   postcondition re-evaluated against the real run (`n = 9` panics,
   `k = 2^64` produces a witnessed counterexample, `seed = 2^64` still
   matches — so two of the three are frontiers of the claim and the third
-  is a frontier of the proof only). That is exactly the weaker standing
-  that undesignated means. Their axioms are
+  is a frontier of the proof only); and for `matmul_ok` the same
+  machine-probe pattern (its one hypothesis `hseed` comes back a
+  frontier of the proof only: at `seed = 2^64`, `2^64 + 5` and
+  `2^65 + 7` the machine still matches the wrapped family). That is
+  exactly the weaker standing that undesignated means. Their axioms are
   pinned in-build like everyone else's, one shard each
   (`proofs/Audit/Histogram.lean`, `proofs/Audit/PowMod.lean`,
   `proofs/Audit/DotProduct.lean`, `proofs/Audit/Kadane.lean`,
@@ -134,7 +144,7 @@ exhaustion.
   `proofs/Audit/RunLength.lean`, `proofs/Audit/FibMemo.lean`,
   `proofs/Audit/Sieve.lean`, `proofs/Audit/Stein.lean`,
   `proofs/Audit/WordFreq.lean`, `proofs/Audit/SliceStack.lean`,
-  `proofs/Audit/SliceQueue.lean`).
+  `proofs/Audit/SliceQueue.lean`, `proofs/Audit/MatMul.lean`).
 - **Where the audits are.** Two adversarial pre-merge audits stand behind
   this file, and entries below cite both by date. The **2026-08-15** one —
   the phase-2 arc's, which swapped three headlines and designated all eight
@@ -155,7 +165,7 @@ exhaustion.
 
 `Choices` is the stream of nondeterministic decisions the machine consumes at
 points where Go does not promise an outcome. `∀ ch : Choices` says the claim
-holds at **every** such stream. For eighteen of the twenty-four examples this
+holds at **every** such stream. For nineteen of the twenty-five examples this
 quantifier is cheap (their runs consume no choices). For the other six it
 does real work, in two different ways — and `wordfreq` in both at once.
 
@@ -4171,6 +4181,214 @@ row pins a seed above `2^63 − 1`, and the region `[2^63, 2^64)` is claimed by
 the theorem and not pinned by `go run`. It was probe-matched against the
 machine at `seed = 2^64 − 1` and `2^64 − 2`, across four choice streams; that
 is a weaker check and is labelled as one.
+
+## matmul — 3×3 matrix multiply, the first 2-D example and the GAP-RFL-COST closure
+
+The gallery's twenty-fifth entry has a history the others don't: it is
+the example that DISCOVERED the campaign's one recorded cost-class
+blocker (GAP-RFL-COST, `docs/gallery-campaign-log/g1.md` unit G1.9), was
+withdrawn rather than shipped unverified, and lands now as the measured
+acceptance test of the WP arc's mirror symbolic evaluator — the same
+statements, a different discharge for exactly the segments that blocked.
+The two-stage numbers are at the end of this entry.
+
+**The subject** (`Corpus/coverage/exec/examples/matmul/main.go`):
+
+<!-- verbatim: Corpus/coverage/exec/examples/matmul/main.go -->
+```go
+func matMul(a, b [matN][matN]uint64) [matN][matN]uint64 {
+	var c [matN][matN]uint64
+	for i := 0; i < matN; i++ {
+		for j := 0; j < matN; j++ {
+			var sum uint64
+			for k := 0; k < matN; k++ {
+				sum += a[i][k] * b[k][j]
+			}
+			c[i][j] = sum
+		}
+	}
+	return c
+}
+```
+
+with `const matN = 3` and the seeded input family (same file):
+
+<!-- verbatim: Corpus/coverage/exec/examples/matmul/main.go -->
+```go
+func seedMat(seed uint64) [matN][matN]uint64 {
+	var m [matN][matN]uint64
+	for i := 0; i < matN; i++ {
+		for j := 0; j < matN; j++ {
+			m[i][j] = seed + uint64(i*matN+j)
+		}
+	}
+	return m
+}
+```
+
+**The harness** (same file):
+
+<!-- verbatim: Corpus/coverage/exec/examples/matmul/main.go -->
+```go
+func matmul_harness_r(seed uint64) ([matN][matN]uint64, [matN][matN]uint64, [matN][matN]uint64) {
+	a := seedMat(seed)
+	b := seedMat(1)
+	return a, b, matMul(a, b)
+}
+```
+
+Go arrays are VALUES: `[3][3]uint64` arguments and results cross the
+call and return boundaries by copy, which is why a genuinely 2-D
+example fits the pass-by-value fragment with no fixed-cap workaround —
+the harness returns all three matrices whole and the postcondition is
+an S3 RELATION over the returned data.
+
+**The specification** (`proofs/GoLeanProofs/Examples/MatMul.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/MatMul.lean -->
+```lean
+def matSpec (a b : List (List Int)) : List (List Int) :=
+  (List.range 3).map (fun i =>
+    (List.range 3).map (fun j =>
+      ((List.range 3).map (fun l => mmGet a i l * mmGet b l j)).sum
+        % (2 ^ 64 : Int)))
+```
+
+with `mmGet m i j = (m.getD i []).getD j 0` — the obvious mathematical
+matrix product, each entry the true integer sum `Σₖ aᵢₖ·bₖⱼ` reduced
+ONCE mod 2^64. A reader can check it against the Go triple loop by eye.
+
+**The theorem** (`proofs/GoLeanProofs/Examples/MatMul.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/MatMul.lean -->
+```lean
+theorem matmul_ok (seed : Nat) (hseed : seed < 2 ^ 64) :
+    ∃ a b : List (List Int),
+      a.length = 3 ∧ b.length = 3 ∧
+      (∀ r ∈ a, r.length = 3) ∧ (∀ r ∈ b, r.length = 3) ∧
+      ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        runFunctionWithContextM fuel matmulLowered.typeDefs.toList
+            matmulLowered.funcs matmulHarnessRFunc
+            #[.int (seed : Int) .uint64]
+            matmulLowered.methods ch
+          = .ok { values := #[mmArr3 a, mmArr3 b, mmArr3 (matSpec a b)] } := by
+```
+
+**Axioms** (pinned in `proofs/Audit/MatMul.lean`):
+
+<!-- verbatim: proofs/Audit/MatMul.lean -->
+```lean
+/-- info: 'GoLean.Examples.MatMul.matmul_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+<!-- verbatim: proofs/Audit/MatMul.lean -->
+```lean
+/-- info: 'GoLean.Examples.MatMul.matmul_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+Lean's classical trio; no `sorry`, no native evaluation, no project
+axioms — including through the transported segments (the refinement
+theorem they ride is itself classical-trio, and it is a PROOF DEVICE:
+no `GoLean.Sym` constant appears in the statement's closure).
+
+**THE ARITHMETIC WRAPS, AND THE CLAIM SAYS SO.** Every multiply and
+every accumulation in `matMul` is uint64 and genuinely reduces mod
+2^64; `matSpec` is the true integer sum with ONE final reduction, and
+the theorem covers the FULL `seed < 2^64` domain — no hypothesis
+excludes the wrap region. The per-step wrapping equals the single
+reduction because normalization is idempotent and mod distributes over
+sum and product (`mm_c_final` — proved by `omega`, not assumed; linear
+because `b`'s entries are the literals `1…9`).
+
+**`∃ a b` is family-determined.** The witnesses are `aClean seed`
+(`a[i][j] = seed + (3i+j)`, wrapped) and the CONSTANT
+`b = [[1,2,3],[4,5,6],[7,8,9]]` — `b` IS `seedMat 1`, a constant
+matrix, and a reader should not have to discover that; the statement
+merely avoids saying so. Genuinely ∀-quantified input matrices need the
+ghost rung-1 annotation, which is designed and not built.
+
+**Domain bounds, attributed.** The `3×3` shape is the PROGRAM's own
+`matN` constant; `seed < 2^64` is Go's uint64 domain, wrap region
+included; the matrix product is mathematics. Machine idealization as in
+every other entry.
+
+**Fuel bound.** `N = 5247`, EXACT and constant — `matN = 3` is a
+compile-time constant, so the control flow is fully concrete and every
+run takes exactly 5247 steps; the triple loop contributes `matN³ = 27`
+inner iterations, so the constant is cubic in the (fixed) dimension.
+Bound and probe measurement COINCIDE (both 5247, re-probed at THIS
+tree at `seed = 0`, `5`, `2^63−1`: 5247 succeeds, 5246 fails), and the
+proof's 82 chained segment counts sum to it. Neither is presented as
+the other. **`∀ ch` is vacuous and stated anyway** — the run consumes
+no choice (no map ranges, no `append`).
+
+**Deletion test** — RUN as a machine probe, the `queue` pattern.
+`hseed` comes back PROOF-STRUCTURE load-bearing only: at
+`seed = 2^64`, `2^64 + 5`, and `2^65 + 7` — all outside the theorem's
+domain — the machine's returned triple still matches the wrapped
+family postcondition (entry normalization and `aClean` reduce mod 2^64
+together), so `hseed` is a frontier of the proof (it feeds the entry
+equation's normal form and every `omega` bridge), not of the truth.
+`seed` itself is the argument and trivially load-bearing.
+
+**The proof, and the GAP-RFL-COST closure — the two-stage record.**
+This module's proof is a straight-line chain of 75 per-window segment
+lemmas (no loop induction: all control flow is concrete), assembled
+over exactly 5247 steps. It is the artifact that DISCOVERED the
+campaign's one cost-class blocker, and landing it produced TWO
+closures, measured in two stages at the landing tree (full record:
+`docs/wp-arc-log/s4.md` unit S4.11):
+
+- *Stage (a), restore + retrofit alone (the baseline):* the withdrawn
+  2,375-line layer, retrofitted to the current kit (−14 lines: two
+  local arithmetic lemmas subsumed by the s1-lift op-facts), still
+  does NOT elaborate under default options — a bounded single-segment
+  probe re-measured one 291-step `seedMat` store window at **61.4 s**
+  of `rfl` tactic time (the campaign's recorded 61–326 s class), and
+  the whole-file elaboration was cut INCOMPLETE at **117 min** with
+  the three worst segments already excluded (the campaign's three
+  cuts: 57–114 min, with them included).
+- *Stage (b), the landing:* the three measured blocker segments (the
+  291-step `seedMat(seed)` outer iterations) are discharged through
+  the WP arc's mirror symbolic evaluator — `symEvalWindow_refines'`:
+  a compiled `#guard` of the window's step count, one kernel `rfl` on
+  the count projection, the refinement theorem, and a defeq `exact`
+  landing on the statement's own spelling — at **~1.3 s each**
+  (47–250× the raw class), statements BYTE-IDENTICAL to the withdrawn,
+  probe-confirmed forms. **And the root cause fell out of the
+  landing:** the class is a MetaM smart-unfolding pathology,
+  elaboration-side only — the kernel re-checked the same proofs in
+  milliseconds throughout, and under `set_option smartUnfolding
+  false` the worst raw segment takes **1.09 s**. The other 72 windows
+  stay raw `rfl` under that option. Whole module: **109 s wall /
+  2.30 GiB peak** bare elaboration; `scripts/proof-costs` records
+  **167.00 s / 2450 MiB** for the in-lake build (under the campaign's
+  ~2560 MiB bar; `Audit.MatMul` 0.66 s / 1664 MiB). The all-raw
+  variant with the option alone measures 107 s — the entry credits
+  the option, not the evaluator, with that part of the win.
+
+The evaluator is OUTSIDE the statement: `GoLean.Sym` is proof
+automation (WP arc slice 4), mechanically refused from designated
+statement closures by the statement-TCB walker, and this statement's
+own closure is interpreter vocabulary + `matSpec`/`mmArr3` + the
+pinned harness only.
+
+**Status.** NOT DESIGNATED — see the note in *How to read an entry*.
+Corpus half added by the gallery campaign's guardrails wave; headline
+landed by the WP arc (2026-08-18) as slice 4's chartered acceptance.
+In-build: the `rfl` lowering pins (`seedMat_pin`, `matMul_pin` on the
+subjects, `matmulHarnessRFunc_pin` on the harness), the golden-lowering
+guard on both links (`scripts/check-golden` ok), and the axiom pins
+above. `matmul_readout` is the run-conditioned twin.
+
+**Ground.** Differentially green on 11 corpus rows (products against
+identity, zero, scalar-diagonal matrices; seed traces; the harness
+itself at basic and wrap seeds). **The same honest gap as `stack` and
+`queue`:** the differential driver's arguments are int64-limited, so no
+row pins a seed above `2^63 − 1`; the region `[2^63, 2^64)` is claimed
+by the theorem and was probe-matched against the machine (an
+independently re-implemented spec, seeds `2^64−1`, `2^64−2`, `2^64−6`,
+re-run at the landing tree) — a weaker check, labelled as one.
 
 ## The derived twins, and the one axiom line they share
 

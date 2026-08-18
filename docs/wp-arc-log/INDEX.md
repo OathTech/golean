@@ -22,7 +22,7 @@ toward totals.
 | s1 | lift wave 1 (pure lifts) | **COMPLETE** — all 6 lift families landed (lift-5 stragglers resolved in S1.5b) | 8 / 8 | 2,483 (consumers; net −1,551 with +932 delegation/instantiation lines) | +79 (116 → 195) |
 | s2 | lift wave 2 (new shapes) | **COMPLETE** — all 7 chartered items landed | 7 / 7 | 1,103 (consumers; net −633 with +470 delegation/instantiation lines) | +38 (195 → 233) |
 | s3 | library regularity | **COMPLETE** — 8 kit modules regularized (the charter's 7 + `EntryEq`) | 5 / 5 | 0 (docstring-only slice; +851/−145 in `/-!` blocks) | +0 (233 → 233; no name moved) |
-| s4 | mirror symbolic evaluator | not started (USER design-note gate) | — | — | — |
+| s4 | mirror symbolic evaluator | **phases 1–3 DONE** (design gate discharged 2026-08-18; drift + refinement theorems in the default build; matmul acceptance LANDED — gallery entry 25) | 12 (S4.0–S4.11) | — (additive layer; matmul: the withdrawn 2,375-line snapshot lands as 2,486 incl. the mirror fixtures) | Sym surface +6 pins over the lane's fork base (post-merge total recounted at the s5 boundary) |
 | s5 | emission + instantiation sugar | not started | — | — | — |
 | s6 | discoverability close-out | not started | — | — | — |
 
@@ -81,3 +81,21 @@ alias list, the five recorded near-misses and THE API-GROUP INVENTORY
 — slice 6's Kit Guide skeleton, with its twenty guide-section names
 fixed: `s3.md`. Next per the charter: slice 5 (slice 4 is in flight on
 the `wp-eval` lane).
+**Checkpoint 2 — S4 phases 1–3 (2026-08-18; tip = the matmul-landing
+commit).** Phase 1 (`085862bd`…`f37b2feb`): Sym/Domain + Mirror + the
+kernel-cost spike (gate PASS, S4.3) + commutation leaves. Phase 2
+(`f1542dad`, `563b7f41`): the complete helper stratum, THE MASTER WALK,
+THE DRIFT THEOREM, THE REFINEMENT THEOREM, the Kadane witness through
+it; spike apparatus retired; TCB checks re-run (S4.9). Phase 3 (this
+commit): the matmul acceptance in two measured stages — the trio of
+measured blocker segments transported through `symEvalWindow_refines'`
+(~1.3 s vs 61.4 s raw each), and the GAP-RFL-COST ROOT CAUSE found: a
+MetaM smart-unfolding pathology (`set_option smartUnfolding false`
+takes the raw 291-step segment from 61.4 s to 1.09 s; whole module
+109 s / 2.30 GiB); `matmul_ok`+`matmul_readout` landed, gated, pinned
+(gallery 25, all 8 checklist items; `scripts/ci` PASS with the
+recorded no-diff hatch note — GoCore and `Corpus/` untouched all
+slice). Full records: `s4.md` units S4.0–S4.11. Slice-4 remaining at
+phase-3 end: the charter-phrasing integration TODO (OQ3 amendment at
+the next arc boundary) and the S4.3-scale smart-unfolding re-probe
+(flagged in S4.11).

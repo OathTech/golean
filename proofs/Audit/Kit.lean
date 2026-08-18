@@ -16,6 +16,7 @@ import GoLeanProofs.Examples.InsertionSort
 import GoLeanProofs.Examples.WordCount
 import GoLeanProofs.Examples.WordCount.HarnessR
 import GoLeanProofs.Examples.BinSearch
+import GoLeanProofs.Sym.SpikeKadane
 
 /-!
 # In-build axiom gate — the KIT SURFACE
@@ -584,5 +585,33 @@ counting-loop lift + the GAP-R1 pick-loop lift, 2026-08-15) -/
 #guard_msgs in #print axioms GoLean.Examples.Reverse.revHV_entry_eq
 /-- info: 'GoLean.Examples.WordCount.rH_entry_eq' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.WordCount.rH_entry_eq
+
+/-! ### WP arc slice 4 (mirror symbolic evaluator, phase 2): the
+public Sym surface, per the design §8 Kit-pin convention — THE MASTER
+WALK (`stepFn'_conc`), its two gated instances (**THE DRIFT THEOREM**
+`stepFn'_concrete_agrees`, charter :80-83 in the ruled OQ3 spelling;
+the symbolic per-step `stepFnS_sound`), **THE REFINEMENT THEOREM**
+(`symEvalWindow_refines`, charter :89), and the Kadane non-vacuity
+witness (`kd_su_A0_via_sym`, ruled OQ4 — statement byte-identical to
+the shipped `kd_su_A0_raw`, now discharged through the refinement
+theorem; phase 1's bespoke spike route is retired, log unit S4.8).
+Phase 3 adds the PROJECTION corollary `symEvalWindow_refines'` (the
+emission-seam spelling: the transported RHS is the run's own output,
+so a window discharge writes only the INPUT fixture; first consumers =
+the matmul blocked-segment transports, `Examples/MatMul.lean`, log
+unit S4.11). -/
+
+/-- info: 'GoLean.Sym.stepFn'_conc' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.stepFn'_conc
+/-- info: 'GoLean.Sym.stepFn'_concrete_agrees' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.stepFn'_concrete_agrees
+/-- info: 'GoLean.Sym.stepFnS_sound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.stepFnS_sound
+/-- info: 'GoLean.Sym.symEvalWindow_refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.symEvalWindow_refines
+/-- info: 'GoLean.Sym.symEvalWindow_refines'' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.symEvalWindow_refines' 
+/-- info: 'GoLean.Sym.Spike.kd_su_A0_via_sym' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.Spike.kd_su_A0_via_sym
 
 end GoLean.Iris.Audit
