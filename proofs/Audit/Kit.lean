@@ -15,6 +15,7 @@ import GoLeanProofs.Examples.InsertionSort
 import GoLeanProofs.Examples.WordCount
 import GoLeanProofs.Examples.WordCount.HarnessR
 import GoLeanProofs.Examples.BinSearch
+import GoLeanProofs.Sym.SpikeKadane
 
 /-!
 # In-build axiom gate — the KIT SURFACE
@@ -470,5 +471,18 @@ counting-loop lift + the GAP-R1 pick-loop lift, 2026-08-15) -/
 #guard_msgs in #print axioms GoLean.Examples.Reverse.revHV_entry_eq
 /-- info: 'GoLean.Examples.WordCount.rH_entry_eq' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.WordCount.rH_entry_eq
+
+/-! ### WP arc slice 4 (mirror symbolic evaluator, phase 1): the spike
+transport surface. `kd_su_A0_via_sym` is the SPIKE's transported
+window (byte-identical statement to `kd_su_A0_raw`, discharged through
+the evaluator); the full refinement theorem's pin joins here when it
+lands (phase 2), per the design §8 Kit-pin convention. -/
+
+/-- info: 'GoLean.Sym.Spike.spikeStep_sound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.Spike.spikeStep_sound
+/-- info: 'GoLean.Sym.Spike.spikeWindow_sound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.Spike.spikeWindow_sound
+/-- info: 'GoLean.Sym.Spike.kd_su_A0_via_sym' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.Spike.kd_su_A0_via_sym
 
 end GoLean.Iris.Audit

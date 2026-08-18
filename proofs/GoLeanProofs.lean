@@ -169,6 +169,8 @@ import GoLeanProofs.Examples.WordFreq
 import GoLeanProofs.Sym.Domain
 import GoLeanProofs.Sym.Mirror
 import GoLeanProofs.Sym.Conc
+import GoLeanProofs.Sym.Drift
+import GoLeanProofs.Sym.SpikeKadane
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)
