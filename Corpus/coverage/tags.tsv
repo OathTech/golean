@@ -127,3 +127,4 @@ mutex
 rwmutex
 waitgroup
 once
+multipackage

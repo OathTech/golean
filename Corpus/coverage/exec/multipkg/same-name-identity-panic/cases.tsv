@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	sameNameIdentityPanic	-	panic	types from different packages	multipackage,imports,identity,type_assertions,panic,structs
