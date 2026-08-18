@@ -185,3 +185,21 @@ slice): `Examples/DedupAdjacent.lean` is an un-retrofitted
 candidates. Slice record with both plans and both evaluations
 verbatim: `s6.md`. **This closes the arc's chartered slices; next per
 the charter is the arc-end gate + the audit ask.**
+
+## FINAL CHECKPOINT — the DONE conjunction at tip 69ef4bda + the boundary commit (2026-08-18)
+
+| clause | requirement | state |
+|---|---|---|
+| 1 | s1-s2 families lifted, zero survivors, deltas, pins | DONE (s1: 6/6 families, −2,483; s2: 7/7, −1,103; pin trail in the per-slice close-outs) |
+| 2 | s3 regularity | DONE (8 modules, 0 renames, 0 pin churn) |
+| 3 | s4: gate user-reviewed BEFORE proofs; refinement+witness; outside-TCB walker+deletion; drift in default build; matmul two-stage | DONE (gate discharged 2026-08-18 pre-build; symEvalWindow_refines + Kadane witness same-commit; Sym-deletion full-lib build exit 0; stepFn'_concrete_agrees in default build; matmul = gallery 25 with both stages measured; the S4.12 cost-story reconciliation supersedes S4.3's headline honestly) |
+| 4 | s5 shipped or trimmed with reasons | DONE (probe run; lint landed note-only; 4 tactics trimmed with measured reasons, 1 idiom lemma shipped) |
+| 5 | s6 guide + dry-run + findings fixed | DONE (two rounds, tool_uses=0 both, 5 guide bugs fixed + verified) |
+| 6 | gates green; frozen pins byte-identical; standing record carries (no corpus change on this branch) | DONE (ci PASS at tip; in-build Audit green every commit; corpus untouched — matmul's gallery entry is the chartered acceptance exception) |
+| 7 | log current; audit ask POSED | This checkpoint + the operator's ask accompanying it |
+
+Charter integration TODO (OQ3 wording) discharged in this commit.
+Open items recorded for the audit/next arc: DedupAdjacent's two
+promotion-ledger candidates (s6); the measure-driven-loop guide section
+unexercised by any dry-run (s6); the L5 lint's 81 notes as future
+option/transport migration candidates (s5).

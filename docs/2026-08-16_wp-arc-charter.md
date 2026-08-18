@@ -76,9 +76,11 @@ quit-condition catalog.
 
 Then: `stepFn'`, the mirrored parametric step (proof-land, GoCore
 untouched — Route B by user ruling: *"it'd be nice to do this without
-touching the trust surface"*); the concrete-instance equivalence
-`stepFn' @ GoValue = stepFn` (arm-by-arm, rfl-shaped) — LANDED IN A
-DEFAULT BUILD TARGET so mirror drift FAILS THE BUILD, not a review
+touching the trust surface"*); the concrete-instance equivalence — stated as the EMBEDDING-MEDIATED
+arm-by-arm equation (`stepFn'_concrete_agrees`; the literal
+`stepFn' @ GoValue = stepFn` is untypeable under Route B — wording
+amended per the discharged gate ruling's OQ3, 2026-08-18) — LANDED IN
+A DEFAULT BUILD TARGET so mirror drift FAILS THE BUILD, not a review
 (operator review finding 4);
 the symbolic instance = the evaluator; per-operation commutation
 lemmas; and THE REFINEMENT THEOREM (which ships, per the standing
