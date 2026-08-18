@@ -1,28 +1,44 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-18 (raft-w1 audit-fix F1b — the initialization list
-#   is built over ALL packages of the complete program)
-#   commit: this commit (on 205cdf40); prior re-pin same-day F1a
-#   re-pin reason: BUG-060 CLOSED. spec#Program_initialization orders
-#   "the list of all packages" of the complete program, and
-#   spec#Program_execution makes that main plus everything it imports
-#   transitively — stdlib included. tools/nativefrontend/load.go's new
-#   `specInitOrder` builds the node set as the source units plus the
-#   transitive closure of their non-source imports (edges from the
-#   import DECLARATIONS, read with go/build), runs the spec's
-#   lexicographic-first-ready walk over the whole set, and drops the
-#   non-source nodes only after they have taken their positions: they
-#   emit no initializer, only their ORDERING EFFECT lands. Type-check
-#   order stays local-only (a separate, weaker requirement).
-#   Deltas — exactly the two rows this fix targets:
-#     ~ multipkg/init-order-stdlib/seq   FAIL/differential -> PASS
-#       (machine 12 -> 21, matching go run);
-#     ~ multipkg/init-order-stdlib/marks FAIL/differential -> PASS
-#       (machine 102 -> 201).
-#   ZERO drift beyond those two: no single-package case moves (they
-#   short-circuit on one source unit), and the whole rest of the
-#   multipkg family is unchanged, incl. multipkg/init-order (still
-#   PASS) and multipkg/same-name-identity-panic (still BUG-059's red).
-#   Full run: 2084 cases (1949 PASS / 135 FAIL), native frontend.
+# recorded: 2026-08-18 (raft-w1 delta-review fix round, slice 1 —
+#   the pruned-schedule guardrails, PINNED RED before the fix)
+#   commit: this commit (on caab8c53)
+#   re-pin reason: GUARDRAILS FIRST. Three new multipkg cases pin what
+#   gc's package-initialization schedule actually does, and the
+#   frontend does not do it yet, so they land RED and this re-pin
+#   records the red honestly rather than waiting for the fix.
+#
+#   The rule they pin (deps/go/src, verified by hand + `go run`):
+#   cmd/compile emits a `..inittask` record for a package only if it
+#   has residual init work (a non-empty init func, or a var
+#   initializer staticinit could not fold) or an inittask-bearing
+#   import, and cmd/link orders exactly those records, popping the
+#   lexicographically first READY one BY SYMBOL NAME
+#   (objabi.PathToPrefix(path) + "..inittask"). So the schedule runs
+#   over a PRUNED node set, and its tie-break is not import-path
+#   order.
+#
+#   Deltas — exactly the four new ids, nothing else moves:
+#     + multipkg/init-order-pruned/static        NEW -> FAIL/differential
+#       (machine 21, go run 12: `zst`'s `var X = 5` is folded into the
+#       data section, so zst is not a node and its importer `sm` is
+#       ready at step one — the frontend still schedules zst);
+#     + multipkg/init-order-pruned/dynamic       NEW -> PASS
+#       (the CONTROL: `zdy` does run-time work, IS a node, and gates
+#       its importer — the frontend gets this one right already, which
+#       is what makes the pair decisive rather than the pass alone);
+#     + multipkg/init-order-pruned-stdlib/seq    NEW -> FAIL/differential
+#       (machine 21, go run 12: `sync/atomic` and `unicode/utf8` have
+#       no init work at all, so the blank imports of them gate nothing;
+#       minimal shape found by the 120-seed randomized differential
+#       harness, seed 46);
+#     + multipkg/init-order-tiebreak/seq         NEW -> FAIL/differential
+#       (machine 12, go run 21: "x-y..inittask" < "x..inittask"
+#       because '-' < '.', inverting the import-path order of x, x-y).
+#   ZERO drift beyond the four: every pre-existing multipkg row holds,
+#   including multipkg/init-order-stdlib/{seq,marks} (still PASS — the
+#   `sync` there IS a node, so its ordering effect is real) and
+#   multipkg/same-name-identity-panic (still BUG-059's red).
+#   Full run: 2088 cases (1950 PASS / 138 FAIL), native frontend.
 #
 result	id	stage
 PASS	arrays/array-bounds	-
@@ -1454,8 +1470,12 @@ PASS	multipkg/cross-type-method	-
 PASS	multipkg/cross-var	-
 PASS	multipkg/diamond-import	-
 PASS	multipkg/init-order	-
+FAIL	multipkg/init-order-pruned-stdlib/seq	differential
+PASS	multipkg/init-order-pruned/dynamic	-
+FAIL	multipkg/init-order-pruned/static	differential
 PASS	multipkg/init-order-stdlib/marks	-
 PASS	multipkg/init-order-stdlib/seq	-
+FAIL	multipkg/init-order-tiebreak/seq	differential
 FAIL	multipkg/same-name-identity-panic	differential
 PASS	multipkg/same-name-identity/func-identity	-
 PASS	multipkg/same-name-identity/type-identity	-

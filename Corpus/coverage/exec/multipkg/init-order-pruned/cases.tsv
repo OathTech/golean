@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+static	prunedStaticSeq	-	ok	-	multipackage,imports,init,globals,evaluation_order
+dynamic	prunedDynamicSeq	-	ok	-	multipackage,imports,init,globals,evaluation_order

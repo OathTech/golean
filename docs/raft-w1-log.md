@@ -349,3 +349,61 @@ record rather than in a transcript:
    skips `p[0] != "result"`, and `check-bugs.sh` matches on `$2 == id`
    so the row can never be an id. Restored anyway in the F1b re-pin,
    for format parity with `main`.
+
+## 2026-08-18 — delta-review fix round, slice 1: the pruned-schedule guardrails (RED)
+
+The delta review found that the F1b fix — build the initialization list
+over ALL packages of the complete program — is still not gc's schedule.
+Guardrails first: three cases pin what gc actually does, hand-verified
+with `go run`, landed RED, baseline re-pinned in the same commit.
+
+**The ground truth** (read in `deps/go/src`, Go 1.26.5, and confirmed by
+`go run` on each probe):
+
+- `cmd/compile/internal/pkginit/init.go`, `MakeTask`: a package emits a
+  `..inittask` record only if it has residual initialization WORK or an
+  inittask-bearing import —
+  `if len(deps) == 0 && len(fns) == 0 && path != "main" && path != "runtime" { return }`.
+  `fns` is what survives `cmd/compile/internal/staticinit`: a variable
+  initializer folded into the data section leaves nothing to run, and an
+  `init` function with an empty body is dropped. `deps` is the imports
+  that themselves bear inittasks.
+- `cmd/link/internal/ld/inittask.go`, `inittaskSym`: the linker walks
+  exactly those records, popping the lexicographically first READY one
+  BY SYMBOL NAME (`lexHeap` compares `ldr.SymName`; the record for
+  package p is `objabi.PathToPrefix(p) + "..inittask"`).
+
+So the schedule is a lexicographic-first-ready walk over a **pruned**
+node set, ordered by a **mangled** key — two divergences from the
+spec's literal "list of all packages, sorted by import path", both
+observable from Go source.
+
+**The cases** (`Corpus/coverage/exec/multipkg/`):
+
+- `init-order-pruned` — the decisive STATIC-vs-DYNAMIC pair, two
+  subjects over the same shape. `sm` imports `zst` (`var X = 5`,
+  statically folded, NOT a node) and is ready at step one: `rec.S == 12`.
+  `dm` imports `zdy` (`func init() { Y = 5 }`, a real node) and must
+  wait: `rec.D == 21`. The dynamic subject is the CONTROL — the
+  unpruned model gets it right by accident, which is exactly why the
+  static one alone would not have been decisive. Machine: 21 / 21.
+  Go: 12 / 21. `static` RED, `dynamic` PASS.
+- `init-order-pruned-stdlib` — pruning applies to the stdlib too. The
+  minimal divergence found by the 120-seed randomized differential
+  harness (`artifacts/delta-review-probe/gen2.py`, seed 46): two
+  packages whose only imports are the recorder and one blank stdlib
+  import each — `sync/atomic` and `unicode/utf8`, both of which have no
+  init work at all and therefore gate nothing. Machine 21, Go 12. RED.
+  Complement of `init-order-stdlib`, where `sync` DOES have work and
+  its ordering effect is real; the pair says it is not "importing a
+  stdlib package" that delays you, it is importing one gc schedules.
+- `init-order-tiebreak` — the sort key is the symbol name.
+  `"x" < "x-y"` as import paths, but `"x-y..inittask" < "x..inittask"`
+  as symbols ('-' = 0x2d < '.' = 0x2e), so gc initializes `x-y` first.
+  Both packages are ready at step one, so the tie-break is the only
+  thing deciding the order and the observation IS the tie-break.
+  Machine 12, Go 21. RED.
+
+**Drift:** exactly the four new ids, nothing else. Every pre-existing
+multipkg row holds, `init-order-stdlib/{seq,marks}` included. Full run
+2088 cases, 1950 PASS / 138 FAIL.
