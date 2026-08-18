@@ -3,6 +3,7 @@ import GoLeanProofs.Examples.WordFreqProgram
 import GoLeanProofs.StepKit
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.StringMem
+import GoLeanProofs.EntryEq
 import GoLeanProofs.SliceMem
 
 /-!
@@ -11,16 +12,15 @@ import GoLeanProofs.SliceMem
 The machine-facing layer shared by every run shard: the four `Func`
 records transcribed from the pinned lowering (each tied to it by an
 `rfl` pin), the string strict-op facts, the state formers and cell
-vocabulary, the whole-heap freshness predicate, the hand-written entry
+vocabulary, the whole-heap freshness predicate, the entry
 equation, and the three `enterFrame` discharges.
 
-**Why the entry equation is hand-written**: as in
-`StringReverse.Machine`, `derive_entry_eq` fails closed on this harness
-— two of its result defaults are STRINGS, and the macro's
-`quoteScalarVal` quotes scalar/array/nil-slice/nil-map defaults only.
-The theorem below is exactly the shape the macro's program-generic form
-emits, transcribed by hand, and closes by the same
-`with_unfolding_all rfl`.
+**The entry equation was hand-written at landing**: as in
+`StringReverse.Machine`, `derive_entry_eq` failed closed on this
+harness — two of its result defaults are STRINGS, outside
+`quoteScalarVal`'s fragment. CLOSED in WP arc s2 item 6: the string
+result-default arm was added to the quoter and the equation below is
+MACRO-DERIVED (same statement, same closure).
 
 **Address layout** (probe-measured at `(n, seed, qsel) = (2, 1, 0)`,
 tracer `.tmp/e5-drafts/trace-2-1-0.txt`; every raw segment downstream
@@ -715,8 +715,9 @@ def wfAfterShim : Cont :=
 /-- The shim frame continuation. -/
 def shimFrameK : Cont := .frame shimShapes wfEnvW [.base ⟨23⟩] [] wfAfterShim
 
-/-! ## The entry equation (hand-written; the macro fails closed on
-string result defaults, as in `StringReverse.Machine`) -/
+/-! ## The entry equation (macro-derived since WP arc s2 item 6 — the
+string result-default arm closed the gap that made this module
+hand-write it) -/
 
 /-- The pinned program as an empty-heap state. -/
 def sProg : ExecState :=
@@ -725,33 +726,7 @@ def sProg : ExecState :=
     methods := wordfreqLowered.methods,
     heap := [], nextAddr := 0 }
 
-/-- The machine entry's post-prelude state (program-generic form):
-argument cells at `0`–`2` — this def receives the ALREADY-normalized
-parameter values — and result cells at their defaults after them. -/
-def sHSeed (n seed qsel : Int) : ExecState :=
-  { sProg with heap := wHeap0 n seed qsel, nextAddr := 7 }
-
-/-- The post-prelude start configuration. -/
-def sHC0 : Config :=
-  .exec wordfreqHarnessRFunc.body [baseScopeW] frameStop
-
-/-- **The entry equation** (§11 glue): the machine entry IS its
-post-prelude `runConfig` form, at fully symbolic arguments, fuel and
-choice stream. -/
-theorem w_entry_eq (n seed qsel : Int) (fuel : Nat) (ch : Choices) :
-    runFunctionWithContextM fuel wordfreqLowered.typeDefs.toList
-        wordfreqLowered.funcs wordfreqHarnessRFunc
-        #[.int n .uint64, .int seed .uint64, .int qsel .uint64]
-        wordfreqLowered.methods ch
-      = (do
-          let r ← runConfig fuel
-            (sHSeed (IntKind.normalize .uint64 n)
-              (IntKind.normalize .uint64 seed)
-              (IntKind.normalize .uint64 qsel)) sHC0 ch
-          return { values :=
-            (← loadMany r.1
-              [.base ⟨3⟩, .base ⟨4⟩, .base ⟨5⟩, .base ⟨6⟩]).toArray }) := by
-  with_unfolding_all rfl
+derive_entry_eq w_entry_eq wordfreqLowered wordfreqHarnessRFunc sHSeed sHC0 sProg
 
 /-! ## The three `enterFrame` discharges (the only program-consulting
 steps outside the entry) -/

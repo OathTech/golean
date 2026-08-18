@@ -189,6 +189,11 @@ def quoteScalarVal : GoValue → CommandElabM Term
           quoted fragment (fail closed)"
       `(GoValue.int $(quote v.toNat) $(← quoteIntKind k))
   | .nil => `(GoValue.nil)
+  -- WP arc s2 item 6: the STRING result-default arm — the only string
+  -- default `defaultValue` can produce is the empty string, so the
+  -- quoter covers exactly that point and stays fail-closed one value
+  -- wider (closes the strrev/wordfreq hand-written entry dances).
+  | .string ⟨#[]⟩ => `(GoValue.string GoString.empty)
   | v => throwError
       "derive_entry_eq: default value {reprStr v} is outside the \
        quoted fragment — widen the quoter deliberately (fail closed)"

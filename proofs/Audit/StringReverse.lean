@@ -57,10 +57,13 @@ DRIVER TERMINAL (through the frame pop AND the harness epilogue), and
 the final `i`/`j` are existentially quantified — they differ between
 the exits and nothing returned depends on them.
 
-**One macro finding, recorded.** `derive_entry_eq` FAILS CLOSED on
-this harness — its result defaults are strings, outside the macro's
-quoted fragment — so `sH_entry_eq` is hand-written in exactly the
-emitted shape and closes by the same `with_unfolding_all rfl`.
+**One macro finding, recorded — and CLOSED (WP arc s2 item 6,
+2026-08-18).** At landing, `derive_entry_eq` FAILED CLOSED on this
+harness — its result defaults are strings, outside the macro's quoted
+fragment — so `sH_entry_eq` was hand-written in exactly the emitted
+shape. The string result-default arm has since been added to the
+quoter, and `sH_entry_eq` is now MACRO-DERIVED (same statement, same
+`with_unfolding_all rfl` closure; the pin below is unchanged).
 
 Statement closure: interpreter/native-entry vocabulary
 (`runFunctionWithContextM`, `Choices`, `Result`) + the pinned

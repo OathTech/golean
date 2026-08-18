@@ -3,6 +3,7 @@ import GoLeanProofs.Examples.StringReverseProgram
 import GoLeanProofs.StepKit
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.StringMem
+import GoLeanProofs.EntryEq
 
 /-!
 # StringReverse — Machine
@@ -11,18 +12,14 @@ The machine-facing layer: the four `Func` records transcribed from the
 pinned lowering (each tied to it by an `rfl` pin), the string-op
 conditioned facts, the address layout, the environments and
 continuations of the three call frames, the heap fronts, and the
-hand-written entry equation.
+entry equation.
 
-**Why the entry equation is hand-written** (a real finding, reported to
-the lane): `derive_entry_eq` fails closed on this harness — its result
-defaults are STRINGS, and the macro's `quoteScalarVal` quotes
-scalar/array/nil-slice/nil-map defaults only, so
-`.string GoString.empty` is outside the quoted fragment by design. The
-theorem below is exactly the shape the macro's program-generic form
-emits, transcribed by hand, and closes by the same
-`with_unfolding_all rfl`.
--- GAP-WITNESS (see docs/gallery-campaign-log/g1.md § KIT-GAP LIST (strrev)): `derive_entry_eq`
--- string-default quoting.
+**The entry equation was hand-written at landing** (a real finding,
+reported to the lane): `derive_entry_eq` failed closed on this
+harness — its result defaults are STRINGS, outside `quoteScalarVal`'s
+fragment. CLOSED in WP arc s2 item 6: the string result-default arm
+was added to the quoter and the equation below is MACRO-DERIVED (same
+statement, same `with_unfolding_all rfl` closure).
 
 **What is DIFFERENT about strings, machine-side** (probe-established,
 2026-08-15, `.tmp/Probe.lean`): a Go string is a pure VALUE
@@ -555,12 +552,9 @@ def sHeapEnd (nv sv bnv bsv : Int) (l : List UInt8) (biv : Int)
    (.base ⟨21⟩, sint piv), (.base ⟨22⟩, sint pjv),
    (.base ⟨23⟩, sbool false)]
 
-/-! ## The entry equation (hand-written; the macro fails closed here)
-
-The pinned program as an empty-heap state, then EXACTLY the shape
-`derive_entry_eq`'s program-generic form emits — transcribed by hand
-because the harness's result defaults are strings, which the macro's
-value quoter deliberately does not cover. -/
+/-! ## The entry equation (macro-derived since WP arc s2 item 6 — the
+string result-default arm closed the gap that made this module
+hand-write it) -/
 
 def sProg : ExecState :=
   { types := strrevLowered.typeDefs.toList,
@@ -568,38 +562,7 @@ def sProg : ExecState :=
     methods := strrevLowered.methods,
     heap := [], nextAddr := 0 }
 
-/-- The machine entry's post-prelude state (hand-derived, program-
-generic form): argument cells at `0`/`1` — this def receives the
-ALREADY-normalized parameter values — and result cells at their
-defaults after them. -/
-def sHSeed (n seed : Int) : ExecState :=
-  { sProg with
-    heap := [(.base ⟨0⟩, ⟨some (Ty.int .uint64), .int n .uint64⟩),
-             (.base ⟨1⟩, ⟨some (Ty.int .uint64), .int seed .uint64⟩),
-             (.base ⟨2⟩, ⟨some Ty.string, .string GoString.empty⟩),
-             (.base ⟨3⟩, ⟨some Ty.string, .string GoString.empty⟩),
-             (.base ⟨4⟩, ⟨some (Ty.int .uint64), .int 0 .uint64⟩)],
-    nextAddr := 5 }
-
-/-- The post-prelude start configuration. -/
-def sHC0 : Config :=
-  .exec strrevHarnessRFunc.body [baseScopeS] (.frame [] [] [] [] .stop)
-
-/-- **The entry equation** (§11 glue): the machine entry IS its
-post-prelude `runConfig` form, at fully symbolic arguments, fuel and
-choice stream. -/
-theorem sH_entry_eq (n seed : Int) (fuel : Nat) (ch : Choices) :
-    runFunctionWithContextM fuel strrevLowered.typeDefs.toList
-        strrevLowered.funcs strrevHarnessRFunc
-        #[.int n .uint64, .int seed .uint64]
-        strrevLowered.methods ch
-      = (do
-          let r ← runConfig fuel
-            (sHSeed (IntKind.normalize .uint64 n)
-              (IntKind.normalize .uint64 seed)) sHC0 ch
-          return { values :=
-            (← loadMany r.1 [.base ⟨2⟩, .base ⟨3⟩, .base ⟨4⟩]).toArray }) := by
-  with_unfolding_all rfl
+derive_entry_eq sH_entry_eq strrevLowered strrevHarnessRFunc sHSeed sHC0 sProg
 
 /-! ## The three `enterFrame` discharges (the only program-consulting
 steps outside the entry) -/
