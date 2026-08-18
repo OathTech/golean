@@ -29,7 +29,16 @@ bind raft-lane work but reorder nothing:
    tracking (a note for W2, not this lane's scope; §4 of the identity
    design note cites it for the vendoring-delta ledger).
 
-## 2026-08-18 — slice 1: guardrails (committed RED)
+## Numbering (corrected 2026-08-18, audit finding F4)
+
+Slice numbers in this log are the COMMIT slices, and each heading
+names its commit. The original entries had drifted: the identity
+design note was written up as "slice 2" though it landed inside the
+guardrails commit, which pushed the implementation and probe entries
+to 3 and 4 against commit messages that said 2 and 3. Entries are in
+commit order below; the audit-fix round follows them.
+
+## 2026-08-18 — slice 1 (`e3c353e1`): guardrails RED + the identity design note
 
 - Derivation: master plan §W1.1 + guardrails-first contract. Family
   `Corpus/coverage/exec/multipkg/*`: cross-package function call,
@@ -56,54 +65,25 @@ bind raft-lane work but reorder nothing:
   the identity note §6/§7.
 - JC: panic-form witness included KNOWINGLY as a will-stay-red pin of
   the rendering residue (identity note §3.3).
+- The design note landed in this SAME commit (it is the
+  guardrails' derivation, written before implementation):
+  - `docs/2026-08-18_multipackage-identity.md` (design of record):
+    path-keyed TypeId/FuncId grammar + injectivity argument; BUG-010
+    fix = qualifier `pkg.Path()` at the one boundary constructor;
+    `checkPackageNameCollisions` retires in favor of the dotted-path
+    grammar guard; rendering residue argued honestly (display-vs-
+    identity separation is a GoCore change, out of scope, filed as
+    BUG-059 with the pinned witness); raft vendors at SHORT dot-free
+    paths (path == name ⇒ exact rendering, oracle-shared tree);
+    cross-package init = the spec-pinned Go 1.21+ schedule, one
+    concatenated `$pkginit` (that schedule was then IMPLEMENTED over
+    the local packages only — audit F1 / BUG-060; §5 of the note and
+    the loader are corrected in the audit-fix round below);
+    fail-closed register (dot imports of
+    source packages refuse at the loader; the stdlib dot-import defect
+    stays recorded and untouched; shims stay main-package-only).
 
-## 2026-08-18 — slice 4: the tracker smoke probe (W1.3 discovery instrument)
-
-Measurement, NOT a milestone claim (arc brief step 5). Two probe tiers
-under `artifacts/probe-tracker-{verbatim,shimpb}/` (gitignored probe
-artifacts; every deviation from upstream is `[probe delta: ...]`-marked
-in the copies). Base: `deps/raft` @ 56e3200, packages tracker + quorum
-(+ raftpb), imports rewritten `go.etcd.io/raft/v3/X` → `X` (the §4
-canonical short-path form).
-
-**Tier 1 — verbatim vendor.** Refuses at raftpb's protobuf runtime,
-verbatim: `type-check: .../raftpb/confchange.go:22:2: could not import
-google.golang.org/protobuf/proto (can't find import: ...)`. NOTE FOR
-THE §8.6 RULING: at the pinned rev the runtime is
-google.golang.org/protobuf (raft has already migrated off gogo) — the
-scoping doc's "gogo-rev pin" option means pinning BACKWARD.
-
-**Tier 2 — struct-only raftpb stand-in** (ConfState only — the sole
-raftpb type tracker's non-test code touches; labeled probe artifact,
-NOT a plainpb proposal). Refusal inventory, in discovery order, each a
-W1.3 sweep item (cross-ref column per the §CROSS-READ item 3 against
-`docs/spec-archaeology/spec-examples-dispositions.tsv`):
-
-| # | Refusal (verbatim)                                    | Site                                   | Class | Cross-ref |
-|---|-------------------------------------------------------|----------------------------------------|-------|-----------|
-| 1 | `selector call Fprintf is not a method value`         | quorum majority.go String/Describe, tracker Config.String, Progress(.Map).String | rendering (quorum-pilot omission precedent; no-op-Logger/quarantine lane) | timezone-stringer row: fmt blocks are recorded honest-red class |
-| 2 | `c[0].String undefined` after omission                | quorum joint.go JointConfig.String/Describe | cascade of 1 | — |
-| 3 | `selector call FormatUint is not a method value`      | quorum quorum.go Index.String          | rendering | — |
-| 4 | `selector call FormatInt is not a method value`       | quorum voteresult_string.go (generated stringer) | rendering | — |
-| 5 | `builtin copy in statement position`                  | tracker inflights.go:93 `copy(newBuffer, in.buffer)` (Inflights.grow) | LANGUAGE GAP: copy's result may be discarded; frontend admits only expression position | spec-examples-decl/copy-forms covers the expression form language-wide — this is the statement-position residue |
-| 6 | `selector call Sprintf is not a method value`         | tracker progress.go:181 `panic(fmt.Sprintf(...))` (SentEntries) | SEMANTIC-PATH fmt: one of the scoping doc's measured non-logger Sprintf sites; needs the W1.2+ fmt story (shim / hand-rolled), not quarantine | timezone-stringer row (same class) |
-
-Post-inventory state: the FULL tracker+quorum tree (6 funcs, 39
-methods, 15 TypeDefs) exports clean, and the machine RUNS it:
-`probeTracker` (Progress literal + fields) → 7; `probeCommitted` —
-the REAL `quorum.MajorityConfig.CommittedIndex` over a main-package
-`AckedIndexer` implementation (cross-package interface satisfaction +
-the slices.Sort extern) → 5 on {8,5,3}, correct median. Also
-observed en passant: `new(p.AutoLeave)` (Go 1.26 new-with-value, in
-ConfState()) EMITS cleanly — language-wide corpus coverage exists
-(bools/short-circuit-funclit/admit-new*), but the tracker path is
-unexercised until W4 promotes cases.
-
-JC: probe iteration stopped at export-clean + two run probes — deeper
-exercise (ProgressTracker maps, Visit's sortkeys) is W4 stage-2's job
-with real differential cases, not a probe's.
-
-## 2026-08-18 — slice 3: the implementation lands (guardrails FLIP)
+## 2026-08-18 — slice 2 (`19ae5439`): the implementation lands (guardrails FLIP)
 
 - Derivation: identity note §1/§5–§7, implemented exactly.
   - Frontend loader (`tools/nativefrontend/load.go`): import-driven
@@ -145,20 +125,76 @@ with real differential cases, not a probe's.
   an unsequenced read is spec latitude, not a strict-lane target) —
   reads sequenced explicitly.
 
-## 2026-08-18 — slice 2: the identity design note
+## 2026-08-18 — slice 3 (`e5f44abd`): the tracker smoke probe (W1.3 discovery instrument)
 
-- `docs/2026-08-18_multipackage-identity.md` (design of record):
-  path-keyed TypeId/FuncId grammar + injectivity argument; BUG-010
-  fix = qualifier `pkg.Path()` at the one boundary constructor;
-  `checkPackageNameCollisions` retires in favor of the dotted-path
-  grammar guard; rendering residue argued honestly (display-vs-
-  identity separation is a GoCore change, out of scope, filed as
-  BUG-059 with the pinned witness); raft vendors at SHORT dot-free
-  paths (path == name ⇒ exact rendering, oracle-shared tree);
-  cross-package init = the spec-pinned Go 1.21+ schedule, one
-  concatenated `$pkginit`; fail-closed register (dot imports of
-  source packages refuse at the loader; the stdlib dot-import defect
-  stays recorded and untouched; shims stay main-package-only).
+Measurement, NOT a milestone claim (arc brief step 5). Two probe tiers
+under `artifacts/probe-tracker-{verbatim,shimpb}/` (gitignored probe
+artifacts; every deviation from upstream is `[probe delta: ...]`-marked
+in the copies). Base: `deps/raft` @ 56e3200, packages tracker + quorum
+(+ raftpb), imports rewritten `go.etcd.io/raft/v3/X` → `X` (the §4
+canonical short-path form).
+
+**Tier 1 — verbatim vendor.** Refuses at raftpb's protobuf runtime,
+verbatim: `type-check: .../raftpb/confchange.go:22:2: could not import
+google.golang.org/protobuf/proto (can't find import: ...)`. NOTE FOR
+THE §8.6 RULING: at the pinned rev the runtime is
+google.golang.org/protobuf (raft has already migrated off gogo) — the
+scoping doc's "gogo-rev pin" option means pinning BACKWARD.
+
+**Tier 2 — struct-only raftpb stand-in** (ConfState only — the sole
+raftpb type tracker's non-test code touches; labeled probe artifact,
+NOT a plainpb proposal). Refusal inventory, in discovery order, each a
+W1.3 sweep item (cross-ref column per the §CROSS-READ item 3 against
+`docs/spec-archaeology/spec-examples-dispositions.tsv`):
+
+| # | Refusal (verbatim)                                    | Site                                   | Class | Cross-ref |
+|---|-------------------------------------------------------|----------------------------------------|-------|-----------|
+| 1 | `selector call Fprintf is not a method value`         | quorum majority.go String/Describe, tracker Config.String, Progress(.Map).String | rendering (quorum-pilot omission precedent; no-op-Logger/quarantine lane) | timezone-stringer row: fmt blocks are recorded honest-red class |
+| 2 | `c[0].String undefined` after omission                | quorum joint.go JointConfig.String/Describe | cascade of 1 | — |
+| 3 | `selector call FormatUint is not a method value`      | quorum quorum.go Index.String          | rendering | — |
+| 4 | `selector call FormatInt is not a method value`       | quorum voteresult_string.go (generated stringer) | rendering | — |
+| 5 | `builtin copy in statement position`                  | tracker inflights.go:93 `copy(newBuffer, in.buffer)` (Inflights.grow) | LANGUAGE GAP: copy's result may be discarded; frontend admits only expression position | spec-examples-decl/copy-forms covers the expression form language-wide — this is the statement-position residue |
+| 6 | `selector call Sprintf is not a method value`         | tracker progress.go:181 `panic(fmt.Sprintf(...))` (SentEntries) | SEMANTIC-PATH fmt: one of the scoping doc's measured non-logger Sprintf sites; needs the W1.2+ fmt story (shim / hand-rolled), not quarantine | timezone-stringer row (same class) |
+
+Post-inventory state: the whole probe program (7 funcs, 40 methods,
+16 TypeDefs — counts CORRECTED in the audit-fix round, derivation
+below) exports clean, and the machine RUNS it:
+`probeTracker` (Progress literal + fields) → 7; `probeCommitted` —
+the REAL `quorum.MajorityConfig.CommittedIndex` over a main-package
+`AckedIndexer` implementation (cross-package interface satisfaction +
+the slices.Sort extern) → 5 on {8,5,3}, correct median. Also
+observed en passant: `new(p.AutoLeave)` (Go 1.26 new-with-value, in
+ConfState()) EMITS cleanly — language-wide corpus coverage exists
+(bools/short-circuit-funclit/admit-new*), but the tracker path is
+unexercised until W4 promotes cases.
+
+JC: probe iteration stopped at export-clean + two run probes — deeper
+exercise (ProgressTracker maps, Visit's sortkeys) is W4 stage-2's job
+with real differential cases, not a probe's.
+
+**Wire counts, reproduced** (audit finding F3; re-exported
+`artifacts/probe-tracker-shimpb` and counted the wire's top-level
+arrays):
+
+- `funcs` = **7**: tracker 4 (`NewInflights`, `MakeProgressTracker`,
+  and the two lifted func literals `Config.Clone$lit0` /
+  `ProgressTracker.QuorumActive$lit0`) + main 2 (`probeTracker`,
+  `probeCommitted`) + the synthesized `$pkginit`.
+- `methods` = **40**: quorum 8 (JointConfig 3, MajorityConfig 3,
+  AckedIndexer 1, mapAckIndexer 1) + tracker 31 (Inflights 7,
+  Progress 10, ProgressTracker 11, StateType 1, Config 1,
+  matchAckIndexer 1) + main 1 (`mapAckIndexer.AckedIndex`, the probe's
+  own AckedIndexer implementation).
+- `types` = **16**: raftpb 1 (ConfState) + quorum 6 + tracker 8 +
+  main 1.
+
+The originally recorded 6 / 39 / 15 each dropped exactly one item —
+`$pkginit`, main's one method and main's one type — i.e. they counted
+the imported tree and the two probe entry points but not the
+synthesized initializer or the main-package helper. The claim the
+sentence makes ("exports clean") is unaffected; the numbers are now
+the whole exported program's, and reproducible by counting those
+three arrays.
 
 ## 2026-08-18 — audit fix round, F1a: the init-order stdlib omission, RED first
 
@@ -275,3 +311,41 @@ get their own delta-review attention).
 - The scan bias is fail-CLOSED by construction: a shape the parser does
   not recognize drops an exemption and husks loudly (a visible red),
   never the reverse.
+
+## 2026-08-18 — audit fix round, F3/F4 + the recorded non-findings
+
+- F3: the tracker probe's wire counts corrected to the reproduced
+  7 funcs / 40 methods / 16 TypeDefs, with the by-unit derivation
+  shown in the slice-3 entry (the originally recorded 6 / 39 / 15 each
+  dropped one item — `$pkginit`, main's one method, main's one type).
+- F4: slice numbering realigned to the commits (see the Numbering
+  section), and the identity note's §8 blast-radius prediction
+  corrected from 8 rows to 9, with the note that `multipkg/cross-var`
+  joined DURING the implementation slice rather than being predicted.
+
+Two auditor observations recorded as NON-FINDINGS, so they are on the
+record rather than in a transcript:
+
+1. **Build-constraint asymmetry (pre-existing, unchanged by this
+   arc).** Both pipeline legs select corpus files by the same rule —
+   "`.go` and not `_test.go`" (`nonTestGoFile` in the frontend,
+   the same suffix test in `tools/coverageharness`) — and NEITHER
+   applies Go's build constraints, while the oracle's `go run` does.
+   A corpus file carrying a `//go:build` line or a `_GOOS.go` name
+   would therefore be lowered by the frontend and skipped by Go. No
+   corpus file has one today (checked: zero `//go:build` / `// +build`
+   lines under `Corpus/`), and the asymmetry predates the
+   multi-package work — the single-package frontend had the same rule.
+   Recorded, not fixed, and worth noting alongside its opposite: the
+   F1b initialization list DOES honor build constraints for stdlib
+   packages, because `go/build` applies them, which is what keeps the
+   list in agreement with the oracle on this host.
+2. **The dropped baseline column-header line (harmless by code).**
+   The slice-2 re-pin dropped `result<TAB>id<TAB>stage` from
+   `baselines/native-full.tsv`; the file at `main` has it. Harmless
+   because every reader skips it explicitly:
+   `scripts/coverage-baseline-diff` has `$1 == "result" { next }` on
+   both the baseline and the results pass, `scripts/check-coverage`
+   skips `p[0] != "result"`, and `check-bugs.sh` matches on `$2 == id`
+   so the row can never be an id. Restored anyway in the F1b re-pin,
+   for format parity with `main`.
