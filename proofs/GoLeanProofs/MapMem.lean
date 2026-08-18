@@ -129,9 +129,10 @@ Siblings, and the boundary with each:
   (`DeadFrom`/`FreshFrom`) is what a map-range loop's per-iteration
   allocation is argued with.
 
-Future `docs/kit-guide.md` (slice 6) sections fed by this module:
-**Values in memory: maps**, **Map counting** (the model/fold half of
-**Map count loop**), **Map range** (the pick step).
+`docs/kit-guide.md` — THE SITUATION INDEX; read it before writing a
+new proof. Sections fed by this module: **Values in memory: maps**,
+**Map count loop** (its model/fold half — group 4), **Map range loop**
+(the pick step — group 6).
 -/
 
 namespace GoLean.MapMem

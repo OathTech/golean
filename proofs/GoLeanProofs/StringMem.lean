@@ -99,8 +99,8 @@ Siblings, and the boundary with each:
 * `EntryEq` — its string arm (WP arc s2 item 6) emits entry
   equations whose string cells are `gs`-spelled.
 
-Future `docs/kit-guide.md` (slice 6) section fed by this module:
-**Values: strings**.
+`docs/kit-guide.md` — THE SITUATION INDEX; read it before writing a
+new proof. Section fed by this module: **Values: strings**.
 -/
 
 namespace GoLean.StringMem

@@ -155,8 +155,9 @@ Siblings, and the boundary with each:
   those modules' `sliceVal`/`mapVal` (which name a BACKED handle);
   the vocabulary enters later, when the harness allocates.
 
-Future `docs/kit-guide.md` (slice 6) section fed by this module:
-**Entry**.
+`docs/kit-guide.md` — THE SITUATION INDEX; read it before writing a
+new proof. Section fed by this module: **Entry** (both invocation
+forms, the string arm, and the fail-closed refusals).
 -/
 
 open Lean Elab Command Term Meta

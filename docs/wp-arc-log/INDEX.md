@@ -24,7 +24,7 @@ toward totals.
 | s3 | library regularity | **COMPLETE** — 8 kit modules regularized (the charter's 7 + `EntryEq`) | 5 / 5 | 0 (docstring-only slice; +851/−145 in `/-!` blocks) | +0 (233 → 233; no name moved) |
 | s4 | mirror symbolic evaluator | **phases 1–3 DONE** (design gate discharged 2026-08-18; drift + refinement theorems in the default build; matmul acceptance LANDED — gallery entry 25) | 13 (S4.0–S4.12; S4.12 = the cost-story reconciliation, run at the s5 boundary) | — (additive layer; matmul: the withdrawn 2,375-line snapshot lands as 2,486 incl. the mirror fixtures) | Sym surface +6 pins over the lane's fork base (post-merge total recounted at the s5 boundary) |
 | s5 | emission + instantiation sugar | **COMPLETE** — 3 units: the option probe (S4.11's flag closed), the storm lint, the sugar assessment (4 tactics trimmed with reasons, 1 lemma shipped) | 3 / 3 | 7 (the guard-bridge retrofit; ~50 more sites available, not swept) | +1 (`decide_natCast_lt_true`, `[propext]`) |
-| s6 | discoverability close-out | not started | — | — | — |
+| s6 | discoverability close-out | **COMPLETE** — the Kit Guide (`docs/kit-guide.md`, 819 lines, 23 sections) + 9 module cross-pointers + the dry-run acceptance RUN TWICE (5 guide bugs found, 5 fixed) | 3 / 3 | 0 (docs + docstring-only slice) | +0 (233 → 233; `Audit/Kit.lean` untouched) |
 
 Derivations for the s1 row: per-unit `git diff --numstat` figures in
 `s1.md` units S1.1–S1.6 (deleted 256+315+151+1481+63+104+113 = 2,483;
@@ -130,3 +130,58 @@ S4.11 discovery rescoped:
 Slice records: `s5.md` (+ `s4.md` §S4.12). Next per the charter:
 slice 6, the discoverability close-out (the Kit Guide + its dry-run
 acceptance).
+
+**Checkpoint 6 — S6 COMPLETE (2026-08-18, tip = the S6 commit; 3 units
+in one commit, `scripts/ci` PASS).** The arc's last slice, docs-only by
+construction (the whole code diff is `/-!` docstring blocks; no
+statement, no proof, no pin, no `Audit/Kit.lean` edit, no
+`Corpus/`/`baselines/` touch):
+
+1. **`docs/kit-guide.md`** — the situation index, 819 lines, 23 `##`
+   sections. All TWENTY section names fixed in `s3.md`'s API-group
+   inventory are present verbatim, so every module pointer resolves;
+   three sections beyond them, each with a reason (§5 Segments, which
+   carries S4.12's per-window guidance table — slice 4 ran on the
+   parallel lane and had no inventory row; §22 The disciplines; §23
+   Honest limits). All twelve of the charter's named situations
+   covered. Every row: kit form · hypothesis shape · the named fixture
+   FILE (never a line — the cite-drift rule) · the lint rules that bite.
+   Fixture cites re-derived by grep at this tip.
+2. **Cross-pointers filled** in 9 modules (the 8 `Future`-marked s3
+   slots + a new one in `Sym/Refine.lean`); `grep -rn kit-guide proofs/`
+   → 9 hits, 0 `Future`. One factual correction: MapMem's slot named
+   two sections ("Map counting", "Map range") that are not among the
+   twenty; both now name real sections.
+3. **THE DRY-RUN ACCEPTANCE, run TWICE.** Two fresh general-purpose
+   agents, no arc context, given only the guide + one example's corpus
+   half (`main.go` + `cases.tsv`) and told to plan, not prove, and to
+   read nothing. **`tool_uses = 0` in both transcripts** — no example
+   module was read, so the measurement is clean. Round 1 (dedup →
+   `Examples/DedupAdjacent.lean`): **10 of 13 phases routed correctly**
+   — exact on the entry form AND its computed layout, the
+   `familyF`-delegation pattern, the array-local store pair, the three
+   loop instantiations, the readout twin and its branch reason — with
+   **3 guide bugs**, all one defect class: *a section that lists forms
+   without saying when the section does not apply* (§18 sent every call
+   to the call span; §19 listed `SliceQueue`-only glue and the
+   `CompletesIn` algebra flat beside `stepFnIter_chain`; §3 had NO
+   applicability test, so a run whose every address is a constant still
+   pulled seven heap-algebra forms). Fixed with PRECONDITIONS + a
+   negative fixture, not new forms. Round 2 (stein →
+   `Examples/Stein/Run.lean`, chosen to exercise every fixed route in
+   the OPPOSITE direction): **all four fixes verified** — the footprint
+   precondition correctly failed, §18 correctly SPLIT the two calls,
+   §19's two tests correctly excluded both — plus **2 new bugs of the
+   same class** (§1 stated the program-generic form as a preference
+   rather than a condition on the segment spelling; no row existed for
+   the MEASURE-driven loop class, which is all four of stein's loops
+   and dedup's subject loop). Both fixed; flagged as the one part of
+   the guide no dry-run has exercised.
+
+Two tree findings recorded, deliberately NOT acted on (docs-only
+slice): `Examples/DedupAdjacent.lean` is an un-retrofitted
+`stepFnIter_iterate_bail_rel` consumer (its `sj_loopD` hand-induces
+`∃ k ≤ 98·μ`) and re-spells `takePad` locally — both promotion-ledger
+candidates. Slice record with both plans and both evaluations
+verbatim: `s6.md`. **This closes the arc's chartered slices; next per
+the charter is the arc-end gate + the audit ask.**

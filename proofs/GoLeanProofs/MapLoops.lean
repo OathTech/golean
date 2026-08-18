@@ -116,8 +116,10 @@ Siblings, and the boundary with each:
   wordcount's exit allocates and snapshots, histogram's does not, so
   each consumer chains its own.
 
-Future `docs/kit-guide.md` (slice 6) sections fed by this module:
-**Map count loop**, **Map range loop**.
+`docs/kit-guide.md` — THE SITUATION INDEX; read it before writing a
+new proof. Sections fed by this module: **Map count loop** (incl. the
+five identifier parameters `slVar`/`mapVar`/`c1`/`c2`/`iVar` a
+consumer must supply), **Map range loop**.
 -/
 
 namespace GoLean.MapLoops

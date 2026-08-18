@@ -231,9 +231,11 @@ Siblings, and the boundary with each:
 * `EntryEq` — the program-entry equation macro; its emitted theorems
   are what our `stepFn_call_enter` chains onto.
 
-Future `docs/kit-guide.md` (slice 6) sections fed by this module:
-**One step at a time**, **Heap at a symbolic split**, **Footprint**,
-**Append / growth** (the growing-front half).
+`docs/kit-guide.md` — THE SITUATION INDEX; read it before writing a
+new proof. Sections fed by this module: **One step at a time**,
+**Heap at a symbolic split**, **Footprint**, **Append / growth** (the
+growing-front half), and §22 **The disciplines**, which is THE FIVE
+RULES above restated at the guide's altitude.
 -/
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine

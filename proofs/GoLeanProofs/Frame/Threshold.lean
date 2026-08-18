@@ -128,7 +128,8 @@ Siblings, and the boundary with each:
 * `SliceMem` / `MapMem` — values. Untouched by renaming, which is
   precisely why the two halves compose.
 
-Future `docs/kit-guide.md` (slice 6) section fed by this module:
+`docs/kit-guide.md` — THE SITUATION INDEX; read it before writing a
+new proof. Section fed by this module:
 **Loop-local allocation → threshold frame**.
 -/
 

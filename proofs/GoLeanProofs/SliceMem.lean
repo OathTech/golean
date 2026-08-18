@@ -170,10 +170,10 @@ Siblings, and the boundary with each:
   `Examples/*` (layering doctrine 2026-08-01) — that is why the
   vocabulary lives here and not in an example module.
 
-Future `docs/kit-guide.md` (slice 6) sections fed by this module:
-**Values in memory: slices**, **Integer normal forms + bounds**,
-**Setup families (∀-input data)**, **Append / growth**,
-**Swap / count surgery**.
+`docs/kit-guide.md` — THE SITUATION INDEX; read it before writing a
+new proof. Sections fed by this module: **Values in memory: slices**,
+**Integer normal forms + bounds**, **Setup families (∀-input data)**,
+**Append / growth**, **Swap / count surgery**.
 -/
 
 namespace GoLean.SliceMem

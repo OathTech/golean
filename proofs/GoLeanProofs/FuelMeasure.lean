@@ -158,10 +158,14 @@ Siblings, and the boundary with each:
 * `Surface` — the statement-layer `Terminates`/`execStmt` vocabulary
   group 1 and group 3 bridge to. That layer is above us and frozen.
 
-Future `docs/kit-guide.md` (slice 6) sections fed by this module:
-**Composition**, **Counted loop**, **Two-exit loop**,
-**Recursion / call span**, **Termination**, **Readout**,
-**Entry** (the `runConfig` half).
+`docs/kit-guide.md` — THE SITUATION INDEX; read it before writing a
+new proof. Sections fed by this module: **Composition**,
+**Counted loop**, **Two-exit loop**, **Recursion / call span**,
+**Termination**, **Readout**, **Entry** (the `runConfig` half). The
+guide's §14 states the routing rule between group 6's three schemas:
+`stepFnIter_iterate` only when every iteration costs EXACTLY `c`
+steps; `_bail_rel` as soon as the cost varies or the successor state
+is existential.
 -/
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine

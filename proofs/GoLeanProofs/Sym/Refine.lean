@@ -16,6 +16,16 @@ Quit = shorter window (ruled OQ2): the driver has no error channel and
 the theorem no side conditions — a quit at step `n+1` simply yields the
 `n`-step fact. Nothing here claims quit-minimality (design §6.4: an
 over-eager quit costs automation, never soundness).
+
+`docs/kit-guide.md` — THE SITUATION INDEX; read it before writing a
+new proof. Section fed by this module: **§5 Segments — raw `rfl`, the
+option, or the evaluator**, which carries the MEASURED per-window
+routing rule (WP arc `docs/wp-arc-log/s4.md` §S4.12). The short
+version: reach for `symEvalWindow_refines'` when the window's OUTPUT
+is something you would otherwise have to transcribe by hand — not
+merely because the window is long, where
+`set_option smartUnfolding false` + raw `rfl` is cheaper and the
+option can INVERT this route.
 -/
 
 namespace GoLean.Sym
