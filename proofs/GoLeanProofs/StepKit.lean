@@ -649,6 +649,23 @@ theorem stepFn_return_frame {σ : ExecState} {sh : TargetShape} {e : Expr}
         σ, ch) := by
   simp only [stepFn, h, Bind.bind, Except.bind, pure, Except.pure]
 
+/-- One-cell `loadMany` (feeds `stepFn_return_frame` at single-result
+frames; WP arc s2 item 2, promoted from the SliceQueue/SliceStack
+copies). -/
+theorem loadMany_one {σ : ExecState} {a : Addr} {c : HeapCell}
+    (h : Heap.lookup σ.heap (.base a) = some c) :
+    loadMany σ [.base a] = .ok [c.value] := by
+  simp only [loadMany, loadLoc, h, Bind.bind, Except.bind, pure,
+    Except.pure]
+
+/-- Two-cell `loadMany` (the two-result frame exits). -/
+theorem loadMany_two {σ : ExecState} {a b : Addr} {c d : HeapCell}
+    (ha : Heap.lookup σ.heap (.base a) = some c)
+    (hb : Heap.lookup σ.heap (.base b) = some d) :
+    loadMany σ [.base a, .base b] = .ok [c.value, d.value] := by
+  simp only [loadMany, loadLoc, ha, hb, Bind.bind, Except.bind, pure,
+    Except.pure]
+
 /-- A declaration-free block pushes a fresh scope in one step (no env
 `DecidableEq` on this arm, so it holds at symbolic addresses). WP arc
 s1 lift 6, promoted from `SliceQueue` (stack's exit analysis is the

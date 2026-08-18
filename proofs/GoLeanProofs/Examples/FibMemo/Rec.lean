@@ -358,17 +358,9 @@ theorem fm_ref_step {σ : ExecState} {x : String} {env : LocalEnv}
     stepFn σ (.evalE (.ref x) env k) ch = .ok (.retV (.addr l) k, σ, ch) := by
   simp only [stepFn, henv, pure, Except.pure]
 
-/-- The frame-exit head step: `.returning` at the frame reads the
-pinned result and opens the caller-target spine. -/
-theorem fm_frame_exit_step {σ : ExecState} {tv : String} {envC : LocalEnv}
-    {f : Nat} {rest : List Stmt} {K₀ : Cont} {rv : Int} {ch : Choices}
-    (hres : Heap.lookup σ.heap (.base ⟨f + 2⟩) = some (u64c rv)) :
-    stepFn σ (.returning (frameK tv envC f rest K₀)) ch
-      = .ok (.evalE (.ref tv) envC
-          (.tgtOpK (.chain []) [] [] [] [] .vals [] [.int rv .uint64]
-            (.seqn #[]) envC (.seq rest envC K₀)), σ, ch) := by
-  simp only [stepFn, frameK, loadMany, loadLoc, hres, Bind.bind,
-    Except.bind, pure, Except.pure]
+-- (The frame-exit head step `fm_frame_exit_step` that sat here is
+-- the kit's `stepFn_return_frame` + `loadMany_one` since WP arc s2
+-- item 2.)
 
 /-- S2b — the frame exit: read the result, store it into the caller's
 target cell, resume the caller. 6 steps. -/
@@ -383,9 +375,10 @@ theorem fm_seg2b (h : Heap) (na f aT : Nat) (rv oldT : Int)
       = .ok (.next (.seq rest envC K₀),
           fmSt (h.set (.base ⟨aT⟩) (u64c rv)) na, ch) := by
   show stepFnIter (1 + 1 + 1 + 1 + 1 + 1) _ _ _ = _
-  have h1 := stepFnIter_one (fm_frame_exit_step (σ := fmSt h na)
-    (tv := tv) (envC := envC) (f := f) (rest := rest) (K₀ := K₀)
-    (rv := rv) (ch := ch) hres)
+  have h1 := stepFnIter_one (stepFn_return_frame (σ := fmSt h na)
+    (sh := .chain []) (e := .ref tv) (ops := []) (rest := [])
+    (tenv := envC) (k := .seq rest envC K₀) (w := false) (ch := ch)
+    (loadMany_one (c := u64c rv) hres))
   have h2 := stepFnIter_one (fm_ref_step (σ := fmSt h na) (x := tv)
     (env := envC) (l := .base ⟨aT⟩)
     (k := .tgtOpK (.chain []) [] [] [] [] .vals [] [.int rv .uint64]
@@ -443,14 +436,9 @@ theorem fmCall_base (h : Heap) (na bM aT : Nat) (k : Nat) (oldT : Int)
           fmSt ((h.set (.base ⟨aT⟩) (u64c ((fibW k : Nat) : Int)))
               ++ frameCells na bM (k : Int) (k : Int)) (na + 3), ch) := by
   have hk64 : k < 2 ^ 64 := by omega
-  show stepFnIter (1 + 8 + 17 + 6) _ _ _ = _
-  -- 1: the frame entry
-  have hEnter := stepFnIter_one (stepFn_call_enter
-    (σ := fmSt h na) (fid := ⟨"fibMemo"⟩) (v := mapHv bM)
-    (vals := [.int (k : Int) .uint64])
-    (plans := [(.chain [], [.ref tv])]) (env := envC)
-    (k := .seq rest envC K₀) (ch := ch)
-    (fm_enterFrame h na k bM hk64 hfr))
+  -- WP arc s2 item 2: assembled through the kit's
+  -- `stepFnIter_call_span` (entry/body/exit as the three hypotheses).
+  show stepFnIter (1 + (8 + 17) + 6) _ _ _ = _
   -- the heap with the three entry cells appended
   have hlk_n : Heap.lookup (h ++ frameCells na bM (k : Int) 0) (.base ⟨na⟩)
       = some (u64c (k : Int)) := by
@@ -500,7 +488,8 @@ theorem fmCall_base (h : Heap) (na bM aT : Nat) (k : Nat) (oldT : Int)
   have hfw : ((fibW k : Nat) : Int) = (k : Int) := by
     rw [fibW_small hk1]
   rw [hfw]
-  exact stepFnIter_chain (stepFnIter_chain (stepFnIter_chain hEnter hS1) hS2a) hS2b
+  exact stepFnIter_call_span (fm_enterFrame h na k bM hk64 hfr)
+    (stepFnIter_chain hS1 hS2a) hS2b
 
 /-! ## The lookup block -/
 

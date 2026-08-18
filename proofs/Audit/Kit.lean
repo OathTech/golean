@@ -141,6 +141,15 @@ vocabulary defs) -/
 #guard_msgs in #print axioms GoLean.Surface.stepFnIter_drain3
 /-- info: 'GoLean.Surface.stepFnIter_block_pop' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.stepFnIter_block_pop
+-- WP arc s2 item 2 (2026-08-18): the call-span combinator + the
+-- loadMany pair that feeds stepFn_return_frame. Fresh probe:
+-- `.tmp/pinprobe9.lean`.
+/-- info: 'GoLean.Surface.loadMany_one' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Surface.loadMany_one
+/-- info: 'GoLean.Surface.loadMany_two' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Surface.loadMany_two
+/-- info: 'GoLean.Surface.stepFnIter_call_span' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.stepFnIter_call_span
 /-- info: 'GoLean.Surface.storeTarget_addr' depends on axioms: [propext] -/
 #guard_msgs in #print axioms GoLean.Surface.storeTarget_addr
 /-- info: 'GoLean.Surface.stepFn_mapAssign_apply' depends on axioms: [propext, Quot.sound] -/

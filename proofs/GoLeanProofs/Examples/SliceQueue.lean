@@ -1547,19 +1547,8 @@ theorem applyStrictOp_sliceExpr_slice {σ : ExecState} {b : Loc}
 -- The local copy is deleted; call sites resolve through
 -- `open GoLean.Surface`.
 
-/-- One-cell `loadMany`. -/
-theorem loadMany_one {σ : ExecState} {a : Addr} {c : HeapCell}
-    (h : Heap.lookup σ.heap (.base a) = some c) :
-    loadMany σ [.base a] = .ok [c.value] := by
-  simp only [loadMany, loadLoc, h, Bind.bind, Except.bind, pure, Except.pure]
-
-/-- Two-cell `loadMany`. -/
-theorem loadMany_two {σ : ExecState} {a b : Addr} {c d : HeapCell}
-    (ha : Heap.lookup σ.heap (.base a) = some c)
-    (hb : Heap.lookup σ.heap (.base b) = some d) :
-    loadMany σ [.base a, .base b] = .ok [c.value, d.value] := by
-  simp only [loadMany, loadLoc, ha, hb, Bind.bind, Except.bind, pure,
-    Except.pure]
+-- (`loadMany_one`/`loadMany_two`, formerly here, are StepKit's since
+-- WP arc s2 item 2.)
 
 /-- `defaultValue` at the two scalar shapes the callees declare
 (state-generic: the fuel constant is concrete and the types consult

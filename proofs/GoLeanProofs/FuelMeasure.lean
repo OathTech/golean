@@ -370,6 +370,33 @@ single-step members live in `StepKit`, these compose them with
 `stepFnIter_chain`. Stack's exit analysis is the recorded latent
 second consumer, per the ledger's grading.) -/
 
+/-- **The CALL-SPAN combinator** (WP arc s2 item 2 — the P-H schema):
+a whole call is `enterFrame` (one conditioned step) → the callee BODY
+(one hypothesis, running from the entered body config to the frame's
+`.returning`) → the EXIT segment (one hypothesis, from that same
+`.returning` — typically opened by `stepFn_return_frame` and closing
+with the caller-side target/store walk). The three callee facts enter
+as hypotheses; the fibmemo and stein spans differ ONLY in them. -/
+theorem stepFnIter_call_span {σ σ₁ σ₂ σ₃ : ExecState} {fid : FuncId}
+    {v : GoValue} {vals : List GoValue}
+    {plans : List (TargetShape × List Expr)} {env : LocalEnv} {k : Cont}
+    {func : Func} {frameEnv : LocalEnv} {locs : List Loc}
+    {b e : Nat} {cf : Config} {ch : Choices}
+    (henter : enterFrame σ fid (vals ++ [v])
+      = .ok (func, frameEnv, locs, σ₁))
+    (hbody : stepFnIter b σ₁ (.exec func.body frameEnv
+        (.frame plans env locs [] k func.wrapper)) ch
+      = .ok (.returning (.frame plans env locs [] k func.wrapper),
+          σ₂, ch))
+    (hexit : stepFnIter e σ₂
+        (.returning (.frame plans env locs [] k func.wrapper)) ch
+      = .ok (cf, σ₃, ch)) :
+    stepFnIter (1 + b + e) σ
+        (.retV v (.callArgsK fid plans vals [] env k)) ch
+      = .ok (cf, σ₃, ch) :=
+  stepFnIter_chain (stepFnIter_chain
+    (stepFnIter_one (stepFn_call_enter henter)) hbody) hexit
+
 /-- Splice + pop in one: an `Expr`-free `seqn` under a same-env
 sequence, landing on the first statement of the concatenation. -/
 theorem stepFnIter_splice_pop {σ : ExecState} {ss : Array Stmt} {t : Stmt}

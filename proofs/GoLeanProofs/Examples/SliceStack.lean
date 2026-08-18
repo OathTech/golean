@@ -1010,19 +1010,9 @@ theorem stepFn_return_frame {σ : ExecState} {sh : TargetShape} {e : Expr}
         σ, ch) :=
   Surface.stepFn_return_frame h
 
-/-- One-cell `loadMany` (the push/size frame exits). -/
-theorem st_loadMany1 {σ : ExecState} {a : Nat} {c : HeapCell}
-    (h : Heap.lookup σ.heap (.base ⟨a⟩) = some c) :
-    loadMany σ [.base ⟨a⟩] = .ok [c.value] := by
-  simp [loadMany, loadLoc, h, Bind.bind, Except.bind, pure, Except.pure]
-
-/-- Two-cell `loadMany` (the pop frame exit). -/
-theorem st_loadMany2 {σ : ExecState} {a b : Nat} {c d : HeapCell}
-    (ha : Heap.lookup σ.heap (.base ⟨a⟩) = some c)
-    (hb : Heap.lookup σ.heap (.base ⟨b⟩) = some d) :
-    loadMany σ [.base ⟨a⟩, .base ⟨b⟩] = .ok [c.value, d.value] := by
-  simp [loadMany, loadLoc, ha, hb, Bind.bind, Except.bind, pure,
-    Except.pure]
+-- (The local `st_loadMany1`/`st_loadMany2` that sat here are
+-- StepKit's `loadMany_one`/`loadMany_two` since WP arc s2 item 2;
+-- call sites re-pointed.)
 
 /-! ## The push phase
 
@@ -1523,7 +1513,7 @@ theorem pu_post (σ : ExecState) (n seed k i b c b' c' na na' : Nat)
               (stPuKCall na)),
           stStx σ (stHp (n : Int) (seed : Int) (k : Int) (sHv b i c)
             (stPre i seed) (i : Int) Tp') na', ch) :=
-    stepFnIter_one (stepFn_return_frame (st_loadMany1 hres0'))
+    stepFnIter_one (stepFn_return_frame (loadMany_one hres0'))
   have g11 := pu_E4 (stStx σ (stHp (n : Int) (seed : Int) (k : Int)
     (sHv b i c) (stPre i seed) (i : Int) Tp') na') na
     (sHv b' (i + 1) c') ch
@@ -5389,7 +5379,7 @@ theorem po_iter (σ : ExecState) (n seed k m j b c q na' : Nat)
               (stPoEnvV q na') (stPoKCall2 q na')),
           (stStx σ (stHp (n : Int) (seed : Int) (k : Int) (sHv b (n - j) c)
       (stPre n seed) ((n : Nat) : Int) (T ++ ([(Loc.base ⟨q⟩, u64c ((m : Nat) : Int)), (Loc.base ⟨q + 1⟩, arrC 8 (stPopPre n seed j)), (Loc.base ⟨q + 2⟩, u64c ((j : Nat) : Int)), (Loc.base ⟨q + 3⟩, bcell false)] ++ (P ++ [(Loc.base ⟨na'⟩, u64c 0), (Loc.base ⟨na' + 1⟩, slC (sHv b (n - j) c)), (Loc.base ⟨na' + 2⟩, slC (sHv b (n - j - 1) c)), (Loc.base ⟨na' + 3⟩, u64c ((stFam n seed).getD (n - 1 - j) 0)), (Loc.base ⟨na' + 4⟩, u64c ((stFam n seed).getD (n - 1 - j) 0))])))) (na' + 5)), ch) :=
-    stepFnIter_one (stepFn_return_frame (st_loadMany2 hlkR0' hlkR1'))
+    stepFnIter_one (stepFn_return_frame (loadMany_two hlkR0' hlkR1'))
   have d24 := po_O (stStx σ (stHp (n : Int) (seed : Int) (k : Int) (sHv b (n - j) c)
       (stPre n seed) ((n : Nat) : Int) (T ++ ([(Loc.base ⟨q⟩, u64c ((m : Nat) : Int)), (Loc.base ⟨q + 1⟩, arrC 8 (stPopPre n seed j)), (Loc.base ⟨q + 2⟩, u64c ((j : Nat) : Int)), (Loc.base ⟨q + 3⟩, bcell false)] ++ (P ++ [(Loc.base ⟨na'⟩, u64c 0), (Loc.base ⟨na' + 1⟩, slC (sHv b (n - j) c)), (Loc.base ⟨na' + 2⟩, slC (sHv b (n - j - 1) c)), (Loc.base ⟨na' + 3⟩, u64c ((stFam n seed).getD (n - 1 - j) 0)), (Loc.base ⟨na' + 4⟩, u64c ((stFam n seed).getD (n - 1 - j) 0))])))) (na' + 5)) q na' (sHv b (n - j - 1) c)
     (.int ((stFam n seed).getD (n - 1 - j) 0) .uint64) ch
@@ -6221,7 +6211,7 @@ theorem st_exit (σ : ExecState) (n seed k m b c q na'' : Nat)
               (.seq [stS10] ([("$c8", Loc.base ⟨na''⟩) :: stTopP q, stBase]) stStop)),
           (stStx σ (stF (n : Int) (seed : Int) (k : Int) zeros8 zeros8 0 (sHv b (n - m) c)
       (stPre n seed) ((n : Nat) : Int) false ++ (T ++ ([(Loc.base ⟨q⟩, u64c ((m : Nat) : Int)), (Loc.base ⟨q + 1⟩, arrC 8 (stPopPre n seed m)), (Loc.base ⟨q + 2⟩, u64c ((m : Nat) : Int)), (Loc.base ⟨q + 3⟩, bcell false)] ++ (P ++ [(Loc.base ⟨na''⟩, u64c 0), (Loc.base ⟨na'' + 1⟩, slC (sHv b (n - m) c)), (Loc.base ⟨na'' + 2⟩, u64c ((n - m : Nat) : Int))])))) (na'' + 3)), ch) :=
-    stepFnIter_one (stepFn_return_frame (st_loadMany1 hlkRv))
+    stepFnIter_one (stepFn_return_frame (loadMany_one hlkRv))
   have x18 : stepFnIter 2 (stStx σ (stF (n : Int) (seed : Int) (k : Int) zeros8 zeros8 0 (sHv b (n - m) c)
       (stPre n seed) ((n : Nat) : Int) false ++ (T ++ ([(Loc.base ⟨q⟩, u64c ((m : Nat) : Int)), (Loc.base ⟨q + 1⟩, arrC 8 (stPopPre n seed m)), (Loc.base ⟨q + 2⟩, u64c ((m : Nat) : Int)), (Loc.base ⟨q + 3⟩, bcell false)] ++ (P ++ [(Loc.base ⟨na''⟩, u64c 0), (Loc.base ⟨na'' + 1⟩, slC (sHv b (n - m) c)), (Loc.base ⟨na'' + 2⟩, u64c ((n - m : Nat) : Int))])))) (na'' + 3))
       (.evalE (.ref "$c8") ([("$c8", Loc.base ⟨na''⟩) :: stTopP q, stBase])

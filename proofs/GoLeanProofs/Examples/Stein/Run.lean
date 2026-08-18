@@ -47,15 +47,11 @@ form in `a + b` (docstring at the def).
 
 ## Kit notes (recorded, not worked around silently)
 
-* The `fmSt`/`FreshFrom`/`lookup_set_*` footprint vocabulary is
-  re-declared privately here (fourth consumer counting FibMemo's and
-  the wordcount/histogram shards) — the "recursive-call frame
-  induction" pack in `Examples/FibMemo/Rec.lean`'s kit-candidate note
-  now has a second full consumer and is ripe for a `StepKit` lift.
-* `st_frame_exit_step` is a private variant of FibMemo's
-  `fm_frame_exit_step`: the kit has no frame-exit step, and the lemma
-  must take a CONCRETE `.base` result address (`loadLoc` is stuck at a
-  generic `Loc`).
+* The footprint vocabulary (`FreshFrom`/`lookup_set_*`) and the
+  frame-exit step are the KIT's since WP arc s2 (items 1 and 2): the
+  private re-declarations this header used to describe were the second
+  full consumer that justified the StepKit lift, and are deleted —
+  `open GoLean.Surface` supplies the same names.
 * Pitfall (cost a debugging round): `Heap` is an `abbrev` for
   `List (Loc × HeapCell)`, so dot-notation `.set` on an APPEND
   (`(h ++ l).set …`) resolves to `List.set`, not `Heap.set` — spell
@@ -506,18 +502,9 @@ private def frameK1 (tv : String) (envC : LocalEnv) (rl : Loc)
     (rest : List Stmt) (K : Cont) : Cont :=
   .frame [(.chain [], [.ref tv])] envC [rl] [] (.seq rest envC K) false
 
-/-- The frame-exit head step: read the pinned result cell, open the
-caller-target spine. -/
-private theorem st_frame_exit_step {σ : ExecState} {tv : String}
-    {envC : LocalEnv} {rA : Nat} {rest : List Stmt} {K : Cont}
-    {c : HeapCell} {ch : Choices}
-    (hres : Heap.lookup σ.heap (.base ⟨rA⟩) = some c) :
-    stepFn σ (.returning (frameK1 tv envC (.base ⟨rA⟩) rest K)) ch
-      = .ok (.evalE (.ref tv) envC
-          (.tgtOpK (.chain []) [] [] [] [] .vals [] [c.value]
-            (.seqn #[]) envC (.seq rest envC K)), σ, ch) := by
-  simp only [stepFn, frameK1, loadMany, loadLoc, hres, Bind.bind,
-    Except.bind, pure, Except.pure]
+-- (The frame-exit head step `st_frame_exit_step` that sat here is
+-- the kit's `stepFn_return_frame` + `loadMany_one` since WP arc s2
+-- item 2.)
 
 /-! ## Entry and the early-return guards (concrete heap; raw
 `with_unfolding_all rfl` segments split at the two guard deliveries) -/
@@ -715,8 +702,8 @@ private theorem st_ieCall (h : Heap) (na : Nat) (n sA tA : Nat)
               ++ [(.base ⟨na⟩, u64c (n : Int)),
                   (.base ⟨na + 1⟩, bcc (decide (n % 2 = 0)))]) (na + 2),
           ch) := by
-  show stepFnIter (1 + 1 + 1 + 2 + 1 + 4 + 2 + 1 + 2 + 1 + 4 + 1 + 1 + 1
-    + 3 + 1 + 1 + 1 + 1 + 1 + 1) _ _ _ = _
+  -- WP arc s2 item 2: assembled through the kit's
+  -- `stepFnIter_call_span` (entry/body/exit as the three hypotheses).
   -- 1: call planning
   have hP : stepFnIter 1 (stSt h na)
       (.exec (.call #[.var tv] ⟨"isEven"⟩ #[.var xv]) envC
@@ -740,19 +727,7 @@ private theorem st_ieCall (h : Heap) (na : Nat) (n sA tA : Nat)
       (k := .callArgsK ⟨"isEven"⟩ [(.chain [], [.ref tv])] [] [] envC
         (.seq rest envC K))
       (ch := ch) (c := u64c (n : Int)) henvX hsrc)
-  -- 3: frame entry
-  have hEnter : stepFnIter 1 (stSt h na)
-      (.retV (.int (n : Int) .uint64)
-        (.callArgsK ⟨"isEven"⟩ [(.chain [], [.ref tv])] [] [] envC
-          (.seq rest envC K))) ch
-      = .ok (.exec isEvenFunc.body (ieEnv na)
-          (frameK1 tv envC (.base ⟨na + 1⟩) rest K),
-        stSt (ieH1 h na (n : Int)) (na + 2), ch) :=
-    stepFnIter_one (stepFn_call_enter
-      (σ := stSt h na) (fid := ⟨"isEven"⟩) (v := .int (n : Int) .uint64)
-      (vals := []) (plans := [(.chain [], [.ref tv])]) (env := envC)
-      (k := .seq rest envC K) (ch := ch)
-      (ie_enterFrame h na n hn hfr))
+  -- 3: frame entry — consumed by `stepFnIter_call_span` below
   -- 4: body block entry + seq pop (2 steps, env-structural)
   have hB1 : stepFnIter 2 (stSt (ieH1 h na (n : Int)) (na + 2))
       (.exec isEvenFunc.body (ieEnv na)
@@ -978,11 +953,12 @@ private theorem st_ieCall (h : Heap) (na : Nat) (n sA tA : Nat)
               (.seq rest envC K)),
           stSt (ieH2 h na (n : Int) (((n % 2 : Nat) : Int) == 0)) (na + 2),
           ch) :=
-    stepFnIter_one (st_frame_exit_step
+    stepFnIter_one (stepFn_return_frame
       (σ := stSt (ieH2 h na (n : Int) (((n % 2 : Nat) : Int) == 0)) (na + 2))
-      (tv := tv) (envC := envC) (rA := na + 1) (rest := rest)
-      (K := K) (c := bcc (((n % 2 : Nat) : Int) == 0)) (ch := ch)
-      lookup_set_self)
+      (sh := .chain []) (e := .ref tv) (ops := []) (rest := [])
+      (tenv := envC) (k := .seq rest envC K) (w := false) (ch := ch)
+      (loadMany_one (c := bcc (((n % 2 : Nat) : Int) == 0))
+        lookup_set_self))
   -- 17: the caller-target ref
   have hB14 : stepFnIter 1
       (stSt (ieH2 h na (n : Int) (((n % 2 : Nat) : Int) == 0)) (na + 2))
@@ -1072,7 +1048,16 @@ private theorem st_ieCall (h : Heap) (na : Nat) (n sA tA : Nat)
       set_cons_ne (base_beq_false (by omega : na ≠ na + 1)),
       set_singleton_self,
       set_append_left htgt]
-  have hres := (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain hP hArg) hEnter) hB1) hB2) hB3) hB4) hB5) hB6) hB7) hB8) hB9) hB10) hB11) hB12) hB13) hB14) hB15) hB16) hB17) hB18)
+  have hbody := stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+    (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+      (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+        (stepFnIter_chain (stepFnIter_chain hB1 hB2) hB3) hB4) hB5)
+          hB6) hB7) hB8) hB9) hB10) hB11) hB12
+  have hexit := stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+    (stepFnIter_chain (stepFnIter_chain hB13 hB14) hB15) hB16) hB17)
+    hB18
+  have hres := stepFnIter_chain (stepFnIter_chain hP hArg)
+    (stepFnIter_call_span (ie_enterFrame h na n hn hfr) hbody hexit)
   rw [hheap] at hres
   rw [beq_mod2_zero] at hres
   exact hres
@@ -4176,13 +4161,15 @@ private theorem st_epilogue (h : Heap) (na : Nat) (a' sv : Nat)
               (.seq [harnessEpi] envH (.frame [] [] [] [] .stop false))),
           stSt (h.set (.base ⟨6⟩) (u64c ((a' * 2 ^ sv : Nat) : Int))) na,
           ch) :=
-    stepFnIter_one (st_frame_exit_step
+    stepFnIter_one (stepFn_return_frame
       (σ := stSt (h.set (.base ⟨6⟩)
         (u64c ((a' * 2 ^ sv : Nat) : Int))) na)
-      (tv := "r") (envC := envH) (rA := 6) (rest := [harnessEpi])
-      (K := .frame [] [] [] [] .stop false)
-      (c := u64c ((a' * 2 ^ sv : Nat) : Int)) (ch := ch)
-      lookup_set_self)
+      (sh := .chain []) (e := .ref "r") (ops := []) (rest := [])
+      (tenv := envH)
+      (k := .seq [harnessEpi] envH (.frame [] [] [] [] .stop false))
+      (w := false) (ch := ch)
+      (loadMany_one (c := u64c ((a' * 2 ^ sv : Nat) : Int))
+        lookup_set_self))
   have e12 : stepFnIter 2
       (stSt (h.set (.base ⟨6⟩) (u64c ((a' * 2 ^ sv : Nat) : Int))) na)
       (.evalE (.ref "r") envH
