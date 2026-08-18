@@ -81,6 +81,12 @@ structure Valuation where
   ints : Nat → Int
   bools : Nat → Bool
   vals : Nat → GoValue
+  /-- Whole-CELL atoms (JC-6, a recorded design delta): `kBack n l`'s
+  DECLARED TYPE (`.array n …`) carries the symbolic length, so the
+  §5.2 opaque-cell mechanism must valuate whole heap cells, not just
+  values — `HeapCell.atom i ↦ cells i`. Value-level atoms remain for
+  opaque values in carried lists. -/
+  cells : Nat → GoCore.HeapCell
 
 /-- Concretize a symbolic integer at a valuation. Structural; the
 `@[simp]` display equations below are the simp-normal form emitted

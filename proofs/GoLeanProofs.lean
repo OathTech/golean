@@ -167,6 +167,8 @@ import GoLeanProofs.Examples.WordFreq
 -- headline module imports it (walker + grep-verified; the deletion
 -- test extends to it at arc end).
 import GoLeanProofs.Sym.Domain
+import GoLeanProofs.Sym.Mirror
+import GoLeanProofs.Sym.Conc
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)
