@@ -19,17 +19,22 @@ toward totals.
 
 | slice | scope (charter §) | status | units done | landed lines deleted | kit pins added |
 |---|---|---|---|---|---|
-| s1 | lift wave 1 (pure lifts) | **COMPLETE** — all 6 lift families landed (lift-5 stragglers resolved in S1.5b) | 8 / 8 | 2,483 (consumers; net −1,551 with +932 delegation/instantiation lines) | +79 (116 → 195) |
+| s1 | lift wave 1 (pure lifts) | **COMPLETE** — all 6 lift families landed (lift-5 stragglers resolved in S1.5b) | 8 / 8 | 2,479 (consumers; net −1,547 with +932 delegation/instantiation lines) — corrected 2026-08-18, see §Audit corrections | +79 (116 → 195) |
 | s2 | lift wave 2 (new shapes) | **COMPLETE** — all 7 chartered items landed | 7 / 7 | 1,103 (consumers; net −633 with +470 delegation/instantiation lines) | +38 (195 → 233) |
-| s3 | library regularity | **COMPLETE** — 8 kit modules regularized (the charter's 7 + `EntryEq`) | 5 / 5 | 0 (docstring-only slice; +851/−145 in `/-!` blocks) | +0 (233 → 233; no name moved) |
+| s3 | library regularity | **COMPLETE** — 8 kit modules regularized (the charter's 7 + `EntryEq`) | 5 / 5 | 0 (docstring-only slice; +843/−145 in `/-!` blocks) — corrected 2026-08-18, see §Audit corrections | +0 (233 → 233; no name moved) |
 | s4 | mirror symbolic evaluator | **phases 1–3 DONE** (design gate discharged 2026-08-18; drift + refinement theorems in the default build; matmul acceptance LANDED — gallery entry 25) | 13 (S4.0–S4.12; S4.12 = the cost-story reconciliation, run at the s5 boundary) | — (additive layer; matmul: the withdrawn 2,375-line snapshot lands as 2,486 incl. the mirror fixtures) | Sym surface +6 pins over the lane's fork base (post-merge total recounted at the s5 boundary) |
 | s5 | emission + instantiation sugar | **COMPLETE** — 3 units: the option probe (S4.11's flag closed), the storm lint, the sugar assessment (4 tactics trimmed with reasons, 1 lemma shipped) | 3 / 3 | 7 (the guard-bridge retrofit; ~50 more sites available, not swept) | +1 (`decide_natCast_lt_true`, `[propext]`) |
-| s6 | discoverability close-out | **COMPLETE** — the Kit Guide (`docs/kit-guide.md`, 819 lines, 23 sections) + 9 module cross-pointers + the dry-run acceptance RUN TWICE (5 guide bugs found, 5 fixed) | 3 / 3 | 0 (docs + docstring-only slice) | +0 (233 → 233; `Audit/Kit.lean` untouched) |
+| s6 | discoverability close-out | **COMPLETE** — the Kit Guide (`docs/kit-guide.md`, 819 lines, 25 `##` sections = §0–§23 + the prologue) + 9 module cross-pointers + the dry-run acceptance RUN TWICE (5 guide bugs found, 5 fixed) | 3 / 3 | 0 (docs + docstring-only slice) | +0 (**240 → 240**; `Audit/Kit.lean` untouched — 233 was the s3-tip value, corrected 2026-08-18, see §Audit corrections) |
 
 Derivations for the s1 row: per-unit `git diff --numstat` figures in
-`s1.md` units S1.1–S1.6 (deleted 256+315+151+1481+63+104+113 = 2,483;
-inserted 97+174+20+317+110+172+42 = 932); pin count
+`s1.md` units S1.1–S1.6 (deleted 256+**311**+151+1481+63+104+113 =
+**2,479**; inserted 97+174+20+317+110+172+42 = 932); pin count
 `grep -c '^#guard_msgs in #print axioms ' proofs/Audit/Kit.lean` → 195.
+The S1.2 term is 311, not 315: the four extra deleted lines were
+`proofs/Audit/Kit.lean`'s, already counted in that unit's "pins +70/−4"
+and not a consumer line (`git diff --numstat 49f4a835^ 49f4a835 --
+proofs/GoLeanProofs/Examples/` → 12 files, +174/−311). Corrected
+2026-08-18; see §Audit corrections.
 
 ## Checkpoints
 
@@ -137,8 +142,11 @@ construction (the whole code diff is `/-!` docstring blocks; no
 statement, no proof, no pin, no `Audit/Kit.lean` edit, no
 `Corpus/`/`baselines/` touch):
 
-1. **`docs/kit-guide.md`** — the situation index, 819 lines, 23 `##`
-   sections. All TWENTY section names fixed in `s3.md`'s API-group
+1. **`docs/kit-guide.md`** — the situation index, 819 lines, 25 `##`
+   sections (§0–§23 + the unnumbered prologue "The shape of every
+   gallery proof"; `grep -c '^## ' docs/kit-guide.md` → 25 — the
+   published "23" counted the numbered sections only and miscounted
+   those too, corrected 2026-08-18). All TWENTY section names fixed in `s3.md`'s API-group
    inventory are present verbatim, so every module pointer resolves;
    three sections beyond them, each with a reason (§5 Segments, which
    carries S4.12's per-window guidance table — slice 4 ran on the
@@ -153,7 +161,13 @@ statement, no proof, no pin, no `Audit/Kit.lean` edit, no
    two sections ("Map counting", "Map range") that are not among the
    twenty; both now name real sections.
 3. **THE DRY-RUN ACCEPTANCE, run TWICE.** Two fresh general-purpose
-   agents, no arc context, given only the guide + one example's corpus
+   agents, no arc context, given only an inline ABRIDGEMENT of the
+   guide — NOT the file (pasted verbatim for every routing row,
+   precondition, form name, fixture path, measured number, §5's table
+   and §22's rules; some section tables flattened to prose; no form
+   name or routing rule dropped — the limit is stated at `s6.md`
+   JC-S6-4, and inline paste was chosen precisely to make file leakage
+   impossible) — plus one example's corpus
    half (`main.go` + `cases.tsv`) and told to plan, not prove, and to
    read nothing. **`tool_uses = 0` in both transcripts** — no example
    module was read, so the measurement is clean. Round 1 (dedup →
@@ -190,7 +204,7 @@ the charter is the arc-end gate + the audit ask.**
 
 | clause | requirement | state |
 |---|---|---|
-| 1 | s1-s2 families lifted, zero survivors, deltas, pins | DONE (s1: 6/6 families, −2,483; s2: 7/7, −1,103; pin trail in the per-slice close-outs) |
+| 1 | s1-s2 families lifted, zero survivors, deltas, pins | DONE (s1: 6/6 families, −2,479 as corrected; s2: 7/7, −1,103; pin trail in the per-slice close-outs). **Qualified 2026-08-18:** "zero survivors" was false as published in S1.4 and S2.1 — one stranded copy each, both now deleted; see §Audit corrections |
 | 2 | s3 regularity | DONE (8 modules, 0 renames, 0 pin churn) |
 | 3 | s4: gate user-reviewed BEFORE proofs; refinement+witness; outside-TCB walker+deletion; drift in default build; matmul two-stage | DONE (gate discharged 2026-08-18 pre-build; symEvalWindow_refines + Kadane witness same-commit; Sym-deletion full-lib build exit 0; stepFn'_concrete_agrees in default build; matmul = gallery 25 with both stages measured; the S4.12 cost-story reconciliation supersedes S4.3's headline honestly) |
 | 4 | s5 shipped or trimmed with reasons | DONE (probe run; lint landed note-only; 4 tactics trimmed with measured reasons, 1 idiom lemma shipped) |
@@ -203,3 +217,30 @@ Open items recorded for the audit/next arc: DedupAdjacent's two
 promotion-ledger candidates (s6); the measure-driven-loop guide section
 unexercised by any dry-run (s6); the L5 lint's 81 notes as future
 option/transport migration candidates (s5).
+
+## Audit corrections (2026-08-18, pre-merge adversarial review)
+
+Every number below was a PUBLISHED claim of this index; each is
+corrected in place above AND recorded here with its old value, so the
+correction is legible rather than laundered. Each carries the
+derivation that settles it. The reviewers' finding ids are kept.
+
+| id | where | published | corrected | derivation |
+|---|---|---|---|---|
+| B-1 | s1 row / clause 1 "zero survivors" | zero surviving copies at S1.4 | one stranded copy survived (`fs_lookup_none11`), deleted in the audit-fix commit | `grep -rn fs_lookup_none11` → 1 hit (the decl); note at `s1.md` §S1.4 |
+| B-2 | clause 1 "zero survivors" | zero surviving copies at S2.1 | one stranded copy survived (`DeadFrom.set_low`), deleted in the audit-fix commit | the unit's P6 grep has no `theorem DeadFrom\.` clause; note at `s2.md` §S2.1 |
+| B-4 | s1 row + its derivation line | 2,483 deleted, net −1,551 | **2,479 deleted, net −1,547** | S1.2's term is 311, not 315 — the 4 extra lines are `Audit/Kit.lean`'s, already counted as "pins −4" (`git diff --numstat 49f4a835^ 49f4a835 -- proofs/GoLeanProofs/Examples/` → 12 files, +174/−311). `s1.md` §S1.2 corrected to −311/+174 (net −137) across **12** example files, not 13 |
+| B-5 | s3 row + `s3.md` slice totals | +851/−145 | **+843/−145** | 851 was the range `a9c15dcd 5cd08332`, which stops one commit short of the slice; the slice's cumulative figure is `git diff --shortstat a9c15dcd 28b85959 -- proofs/` → 8 files, 843 insertions, 145 deletions (the close-out commit rewrote 18 of StepKit's own newly-added lines into 10) |
+| B-6 | s6 row pin absolutes | 233 → 233 | **240 → 240 (+0)** | 233 was the s3-TIP value; s4 (+6 Sym) and s5 (+1) moved it before s6 began. `grep -c '^#guard_msgs in #print axioms ' proofs/Audit/Kit.lean` → 240 at 8b36bf15, at 69ef4bda and at HEAD. The "+0 / `Audit/Kit.lean` untouched" claim itself is unaffected and stands |
+| B-7 | s6 unit 1 | 23 `##` sections | **25 `##` sections (§0–§23 + prologue)** | `grep -c '^## ' docs/kit-guide.md` → 25 |
+| B-8 | s6 unit 3 | agents "given only the guide" | given an inline ABRIDGEMENT of the guide, not the file | `s6.md` JC-S6-4 states the limit; the index dropped the qualifier. `tool_uses = 0` is unaffected — it is what makes the abridgement the whole input |
+
+Not a number, recorded here for the same reason: the S4.3 cost ratio
+was already superseded by S4.12 in `s4.md`, and that unit block now
+carries a SUPERSEDED banner plus its own internal-consistency
+corrections (finding B-3); the charter's slice-4 wording for
+`stepFn'_concrete_agrees` was tightened from "equivalence / arm-by-arm
+equation" to the success-only implication it actually is (finding
+A-F1), and `proofs/GoLeanProofs.lean`'s Sym import comment was
+corrected — MatMul imports `Sym.Refine` proof-side since S4.11, while
+the STATEMENT closures remain Sym-free (finding A-F2).
