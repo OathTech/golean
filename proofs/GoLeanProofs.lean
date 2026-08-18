@@ -170,6 +170,8 @@ import GoLeanProofs.Sym.Domain
 import GoLeanProofs.Sym.Mirror
 import GoLeanProofs.Sym.Conc
 import GoLeanProofs.Sym.Drift
+import GoLeanProofs.Sym.DriftOps
+import GoLeanProofs.Sym.DriftApply
 import GoLeanProofs.Sym.SpikeKadane
 
 /-!

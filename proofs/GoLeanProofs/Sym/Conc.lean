@@ -152,8 +152,10 @@ def concK (I : Interp D) : Cont D → Machine.Cont
   | .mapRangeK kv vv kt vt body env k =>
       .mapRangeK kv vv kt vt body env (concK I k)
   | .mapIterK kv vv kt vt body remaining env k =>
+      -- projection-lambda spelling on purpose: defeq-aligned with
+      -- `concEntries` so the walk's mapRange arm closes by `rfl`
       .mapIterK kv vv kt vt body
-        (remaining.map (fun (a, b) => (concV I a, concV I b))) env (concK I k)
+        (remaining.map (fun p => (concV I p.1, concV I p.2))) env (concK I k)
   | .panicArgK k => .panicArgK (concK I k)
   | .panicResumeK chain k =>
       .panicResumeK (chain.map (concEntry I)) (concK I k)

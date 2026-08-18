@@ -1004,27 +1004,38 @@ def sliceVisibleValues' (s : State D) (slice : SliceValue) :
     values := values.push (← loadLoc' s loc)
   return values
 
-/-- Mirror of `valueHashability` (VALUE-directed walk): interfaces need
-the type environment (Q4); atoms cannot answer (Q10); scalar and
-reference shapes are hashable. -/
-def valueHashability' : Value D → M Bool
-  | .interface _ _ => quit .q4Program
-  | .struct _ fields =>
-      let rec goFields : List (String × Value D) → M Bool
-        | [] => .ok true
-        | (_, v) :: rest => do
-            let b ← valueHashability' v
-            if b then goFields rest else .ok false
-      goFields fields.toList
-  | .array values =>
-      let rec goList : List (Value D) → M Bool
-        | [] => .ok true
-        | v :: rest => do
-            let b ← valueHashability' v
-            if b then goList rest else .ok false
-      goList values.toList
-  | .atom _ => quit .q10Atom
-  | _ => .ok true
+/-- Element-wise hashability at the (already fuel-decremented) checker —
+the de-WF recipe's list shape (`isNormalListWith'`'s twin). -/
+def hashabilityListWith' (f : Value D → M Bool) : List (Value D) → M Bool
+  | [] => .ok true
+  | v :: rest => do
+      let b ← f v
+      if b then hashabilityListWith' f rest else .ok false
+
+/-- Mirror of `valueHashability` (VALUE-directed walk), on the FUEL
+recipe (phase-2 delta, log JC-8: GoCore's mutual walk recurses through
+`fields.toList` — WF-compiled, kernel-irreducible — so the mirror
+trades that shape for fuel exactly as `coerceStoredValueFuel'` does;
+fuel bounds nesting DEPTH, exhaustion quits Q11, a conservative quit no
+real key reaches at `typeResolutionFuel`). Interfaces need the type
+environment (Q4); atoms cannot answer (Q10); scalar and reference
+shapes are hashable. GoCore answers `.hashable` exactly where this
+answers `.ok true`; `.ok false` is unreachable from the leaves (kept
+for the list helper's shape parity). -/
+def valueHashabilityFuel' : Nat → Value D → M Bool
+  | 0, _ => quit .q11Internal
+  | _ + 1, .interface _ _ => quit .q4Program
+  | fuel + 1, .struct _ fields =>
+      hashabilityListWith' (valueHashabilityFuel' fuel)
+        (fields.toList.map Prod.snd)
+  | fuel + 1, .array values =>
+      hashabilityListWith' (valueHashabilityFuel' fuel) values.toList
+  | _ + 1, .atom _ => quit .q10Atom
+  | _ + 1, _ => .ok true
+
+@[inherit_doc valueHashabilityFuel']
+def valueHashability' (v : Value D) : M Bool :=
+  valueHashabilityFuel' typeResolutionFuel v
 
 /-- Mirror of `checkKeyHashable`: an unhashable key is a PANIC (Q6). -/
 def checkKeyHashable' (key : Value D) : M Unit := do
@@ -1271,6 +1282,16 @@ def buildDefaultArrayValue' (length : Nat) (elem : Ty) : M (Value D) :=
 
 def anyFloatOperand' (vs : List (Value D)) : Bool :=
   vs.any fun v => match v with | .float _ _ => true | _ => false
+
+/-- Atom guard for the `min`/`max` arms (phase-2 fidelity fix, log
+JC-9): an ATOM operand's concretization can be a float, so the
+machine's float-head discrimination is undecidable at the mirror —
+the arms must quit Q10 before the float guard, not ride an atom
+through the fold's blind spots (the single-operand `min(x)` shape
+never compares `x`). Found BY the drift walk — the commutation lemma
+is false without it. -/
+def anyAtomOperand' (vs : List (Value D)) : Bool :=
+  vs.any fun v => match v with | .atom _ => true | _ => false
 
 /-- Mirror of `applyStrictOp`, arm-for-arm in the same order. Quit
 classes per the §1.4 table: comparisons/arith at ints are FORMERS;
@@ -1568,7 +1589,8 @@ def applyStrictOp' (s : State D) : StrictOp → List (Value D) →
           | _ => quit .q11Internal
   | .funcValOf fid, vs => .ok (.funcVal fid vs, s)
   | .minOf, v :: vs =>
-      if anyFloatOperand' (v :: vs) then quit .q11Internal
+      if anyAtomOperand' (v :: vs) then quit .q10Atom
+      else if anyFloatOperand' (v :: vs) then quit .q11Internal
       else do
         let mut best := v
         for w in vs do
@@ -1577,7 +1599,8 @@ def applyStrictOp' (s : State D) : StrictOp → List (Value D) →
             best := w
         return (best, s)
   | .maxOf, v :: vs =>
-      if anyFloatOperand' (v :: vs) then quit .q11Internal
+      if anyAtomOperand' (v :: vs) then quit .q10Atom
+      else if anyFloatOperand' (v :: vs) then quit .q11Internal
       else do
         let mut best := v
         for w in vs do
