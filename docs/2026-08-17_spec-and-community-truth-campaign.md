@@ -30,9 +30,21 @@ fixed; notable catches: five retrofit misquotes, census honesty
 labels, the discussions #47141/#56010 identification). **P3
 EXECUTING** on lane `spec-p3`: slice 1 = the 326-block inventory
 (scripts/extract-spec-examples); slice 2 = four-worker curation
-fan-out (negative lane from the 35 contains-illegal blocks, exec
-cases from stmt/expr + token + decl fragments), integration +
-full-run baseline re-pin to follow.
+fan-out + integration, LANDED with full-run re-pins of both
+baselines (f8ffcec8 + the audit-response); three machine bugs found
+(BUG-056/057/058, diagnoses corrected at the P3 audit — 058's real
+shape is an if-init/short-circuit hoist-scope frontend defect with
+silent wrong-answer modes, now guardrailed red). Recorded
+limitation (audit S3): constant-heavy greens attest go/types'
+folding, not GoCore arithmetic — the frontend folds constants with
+the same go/constant engine gc uses, so those PASSes are
+spec-derivation checks, not interpreter evidence (dispositions
+header carries the list). Follow-ons queued: legal-line value
+pinning for the literal grids; block-id lint (audit N5); and a
+gate-tool observation from the audit-response re-pin — a baseline id
+absent from a full run was NOT reported as dropped by
+coverage-baseline-diff (caught by arithmetic; a dropped id silently
+unpinning its record is a fail-open worth closing).
 Companion doctrine: `docs/2026-08-11_essence-of-go-doctrine.md` (the two
 bounds), `docs/2026-08-11_latitude-inventory.md` (the per-point census).
 

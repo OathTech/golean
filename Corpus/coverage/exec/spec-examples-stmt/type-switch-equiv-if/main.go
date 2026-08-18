@@ -2,8 +2,8 @@ package main
 
 // spec#Type_switches block Type_switches-4-595985f9: the spec's
 // hand-translation of its type switch into an if/type-assertion
-// chain — "the type switch of the previous example could be rewritten
-// as". Pins the stated equivalence: v := x evaluates x exactly once;
+// chain — introduced by the spec's literal "could be rewritten:" (quote
+// trimmed to verbatim at the P3 audit). Pins the stated equivalence: v := x evaluates x exactly once;
 // nil is tested with v == nil; each single-type case becomes
 // i, isT := v.(T); the (bool, string) list and default become
 // assertion-ok fan-outs where i := v keeps x's interface type.

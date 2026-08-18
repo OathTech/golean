@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+cond-call-after-init	condCallAfterInit	-	ok	-	control_flow,closures,evaluation_order
+init-panic-first	initPanicFirst	-	ok	-	control_flow,closures,panic,evaluation_order,slices

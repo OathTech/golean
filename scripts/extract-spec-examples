@@ -101,8 +101,15 @@ with open('docs/spec-archaeology/spec-examples-inventory.tsv', 'w') as f:
             f"{', '.join(f'{k}={v}' for k, v in sorted(counts.items()))}\n"
             f"# classes ebnf/grammar/non-code are excluded from the runnable\n"
             f"# denominator BY CLASS with the reason in the script header —\n"
-            f"# never silently (SpecTec pass=0,0 pattern); curation status\n"
-            f"# lives in the corpus, keyed by block_id\n"
+            f"# never silently (SpecTec pass=0,0 pattern). CURATION STATUS\n"
+            f"# lives in docs/spec-archaeology/spec-examples-dispositions.tsv\n"
+            f"# (SKIPs and handovers exist ONLY there) plus the corpus itself,\n"
+            f"# keyed by block_id. KNOWN AUTO-CLASS MISFILES (P3 audit F5),\n"
+            f"# corrected in the dispositions, not here (this file is\n"
+            f"# regenerated): Goto_statements-3/-4 are negative material\n"
+            f"# classed stmt-expr-fragment; Selectors-4 is negative material\n"
+            f"# classed token-examples; For_clause-5 is an output exhibit\n"
+            f"# classed token-examples.\n"
             f"block_id\tanchor\tclass\tlines\tcurated\tnote\n")
     for bid, anchor, kind, nlines in rows:
         f.write(f"{bid}\t{anchor}\t{kind}\t{nlines}\t-\t-\n")

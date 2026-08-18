@@ -42,3 +42,12 @@ func addrDerefNil() int {
 	_ = p
 	return 0
 }
+
+// addrDerefNilParen: the parenthesized composition &(*p) — identical
+// defect boundary per the P3 audit (BUG-056 N2): must panic exactly as
+// &*p does.
+func addrDerefNilParen() int {
+	var p *Point
+	q := &(*p)
+	return q.x
+}

@@ -2390,38 +2390,71 @@ FIRST per the standing rule.
   machinery exists; the address-of-indirection path skips it.
 - Class: unexercised path (the audit doctrine's first structural
   class); nothing in the pre-P3 corpus exercised `&*` on nil.
+  BOUNDARY (P3 audit N2, then CORRECTED by the integrator's own
+  differential run — the audit claimed `&(*p)` shares the defect;
+  measured: it does NOT): `&(*p)` panics correctly in the machine
+  (case addr-deref-nil-paren, GREEN, pins the boundary witness), as
+  do `&p.f` and `&p[i]` on nil pointers. The defect is exactly the
+  direct unparenthesized `&*p` composition — narrower than either
+  diagnosis, and AST-shape-sensitive, which points at the frontend's
+  handling of the immediate unary-&-of-unary-* node.
 
-## BUG-057 — typed two-variable receive declaration drops the received value
+## BUG-057 — two-variable comma-ok VAR DECLARATIONS drop the ok flag
 
-- Status: open (discovered 2026-08-18, spec-truth P3, same provenance
-  as BUG-056).
+- Status: open (discovered 2026-08-18, spec-truth P3; DIAGNOSIS
+  CORRECTED at the P3 pre-merge audit — the original entry titled
+  this "typed receive declaration drops the received value" and both
+  halves were wrong).
 - Pinned-by: differential
-- Cases: spec-examples-decl/receive-comma-ok/typed-form
-- Discovered: spec#Receive_operator lists four equivalent comma-ok
-  forms; the TYPED declaration form `var x, ok bool = <-ch` (chan
-  bool holding true) must yield x=true, ok=true (gc: 1). The machine
-  returns 0 — the typed two-var receive declaration mis-lowers (the
-  untyped `var x, ok = <-ch` and assignment forms in the sibling
-  subject PASS, isolating the defect to the typed-declaration path).
-- Class: unexercised path; the comma-ok coverage predating P3 never
-  used the typed var-declaration form.
+- Cases: spec-examples-decl/receive-comma-ok/typed-form, spec-examples-decl/receive-comma-ok/untyped-form-live, spec-examples-decl/index-comma-ok/var-form-present, spec-examples-decl/var-decl-forms/found-present
+- Discovered: spec#Receive_operator's four comma-ok forms. Audit
+  probe matrix (machine vs go, value/ok per form): assignment and
+  short-decl forms are CORRECT; `var x, ok = <-ch` (untyped) and
+  `var x, ok bool = <-ch` (typed) deliver the VALUE but drop `ok`
+  (false where gc says true); `var v, ok = m[k]` (map index) drops
+  `ok` identically. So: the defect is the two-variable comma-ok VAR
+  DECLARATION lowering — not typed-specific, not receive-specific;
+  the value arrives, the boolean is lost.
+- MASKING record: the original "untyped form PASSes" evidence used a
+  closed-drained channel / absent map key, where ok=false is the
+  RIGHT answer — the bug's output coincided with correctness. Three
+  tranche cases carried that masked green; each gained an unmasking
+  row (live channel / present key) in the audit-response commit, red
+  and pinned here.
+- Class: unexercised path (no pre-P3 case used a two-var comma-ok
+  var declaration with a TRUE ok on the line that matters).
 
-## BUG-058 — comma-ok type assertion in a recover handler exports, then dies unbound
+## BUG-058 — if-statement init scope: short-circuit hoist block emitted OUTSIDE the init
 
-- Status: open (discovered 2026-08-18, spec-truth P3; classification
-  defect in the fail-closed chain).
+- Status: open (discovered 2026-08-18, spec-truth P3; DIAGNOSIS
+  REWRITTEN at the P3 pre-merge audit — the original entry blamed
+  comma-ok assertion in a recover handler and prescribed a frontend
+  quarantine; every axis of that was wrong, and the quarantine would
+  have permanently darkened `if v, ok := m[k]; ok && f(v)` — one of
+  the most common shapes in real Go, including deps/raft).
 - Pinned-by: differential
-- Cases: spec-examples-lexical/panic-values/panic-error
-- Discovered: `if e, ok := x.(error); ok && ...` inside a
-  recover-handler closure passes frontend export but the emitted
-  GoCore dies with "unbound GoCore variable address: ok" — an
-  internal error at run time where the sibling comma-ok-assert shape
-  (spec-examples-decl/assert-comma-ok) is refused AT EXPORT. The
-  unsupported shape leaks past the frontend boundary and surfaces as
-  a machine internal error instead of a frontend-export refusal —
-  the fail-closed-classification audit class, caught red either way
-  but at the wrong stage.
-- Class: fail-closed classification (the boundary should refuse what
-  the machine cannot bind); the fix is a frontend guard or the
-  comma-ok lowering, a semantic-core/frontend arc.
+- Cases: spec-examples-lexical/panic-values/panic-error, spec-examples-stmt/if-init-hoist-order/cond-call-after-init, spec-examples-stmt/if-init-hoist-order/init-panic-first
+- Discovered: `emitIf` (tools/nativefrontend/emit.go:2426) emits
+  `st.Init` INSIDE the if node, but the condition is emitted with the
+  enclosing hoist accumulator in force, so `emitStmtList` places the
+  short-circuit desugar block BEFORE the if — outside the init's
+  scope. Trigger (audit probe matrix, wire-verified): an `if` (or
+  `else if`, incl. inside function literals) with an init statement
+  whose condition is a short-circuit (`&&`/`||`) with a call in the
+  RIGHT operand. Comma-ok, type assertions, recover, closures — all
+  incidental. Three observable modes:
+  (1) STUCK "unbound GoCore variable address: <init var>" when the
+      hoisted prefix reads the init-declared variable (the original
+      case's symptom);
+  (2) SILENT WRONG ANSWER — `if x := a(); b() == x`: go runs a then
+      b ("ab"); the machine runs the hoisted b first ("ba");
+  (3) SILENT WRONG ANSWER — `if x := s[0]; b() == x` with s nil: go
+      panics in the init before b runs; the machine runs b first.
+  Modes 2-3 are pinned red by the new if-init-hoist-order cases.
+- Class: frontend lowering (evaluation-order fidelity), NOT
+  fail-closed classification. Fix direction: scope the condition's
+  hoist accumulator inside the emitted if (est. small, emitIf-local);
+  a frontend arc, out of this corpus lane's scope.
+- For-init and switch-init are NOT affected (probed clean); the
+  receive-hoist family (BUG-023/026) is a different position set.
 

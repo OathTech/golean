@@ -1,2 +1,0 @@
-# id	subject	args	expected_status	expected_reason	features
--	loopvarPerIteration	-	ok	-	loops,closures,scoping,append,slices

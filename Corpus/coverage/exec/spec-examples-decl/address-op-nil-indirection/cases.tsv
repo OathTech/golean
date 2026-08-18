@@ -2,3 +2,4 @@
 forms	addressForms	-	ok	-	pointers,addressability,arrays,indexing,structs,literals,calls
 deref-nil	derefNil	-	panic	nil pointer dereference	pointers,nil,panic
 addr-deref-nil	addrDerefNil	-	panic	nil pointer dereference	pointers,nil,panic,addressability
+addr-deref-nil-paren	addrDerefNilParen	-	panic	nil pointer dereference	pointers,nil,panic,addressability

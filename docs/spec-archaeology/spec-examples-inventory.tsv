@@ -3,8 +3,15 @@
 # blocks: 326 total; by AUTO class: contains-illegal=35, decl-fragment=95, ebnf=62, grammar=28, non-code=42, program=1, stmt-expr-fragment=37, token-examples=26
 # classes ebnf/grammar/non-code are excluded from the runnable
 # denominator BY CLASS with the reason in the script header —
-# never silently (SpecTec pass=0,0 pattern); curation status
-# lives in the corpus, keyed by block_id
+# never silently (SpecTec pass=0,0 pattern). CURATION STATUS
+# lives in docs/spec-archaeology/spec-examples-dispositions.tsv
+# (SKIPs and handovers exist ONLY there) plus the corpus itself,
+# keyed by block_id. KNOWN AUTO-CLASS MISFILES (P3 audit F5),
+# corrected in the dispositions, not here (this file is
+# regenerated): Goto_statements-3/-4 are negative material
+# classed stmt-expr-fragment; Selectors-4 is negative material
+# classed token-examples; For_clause-5 is an output exhibit
+# classed token-examples.
 block_id	anchor	class	lines	curated	note
 Notation-1-674a3f23	Notation	grammar	8	-	-
 Notation-2-21e06162	Notation	grammar	4	-	-

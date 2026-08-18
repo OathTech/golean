@@ -1,6 +1,7 @@
-// spec#Goto_statements block Goto_statements-4-42aaa746: "The goto
-// statement outside a block cannot jump to a label inside that block" —
-// the spec's own erroneous example.
+// spec#Goto_statements block Goto_statements-4-42aaa746: 'A "goto"
+// statement outside a block cannot jump to a label inside that block.'
+// (spec verbatim, quote corrected at the P3 audit) — the spec's own
+// erroneous example.
 package main
 
 func g(xs []int) {

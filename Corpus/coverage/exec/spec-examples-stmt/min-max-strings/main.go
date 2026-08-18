@@ -37,6 +37,9 @@ func minMaxStringsPair() (string, string, bool, bool, bool) {
 		min("a", "ab") == "a", min("ab", "b") == "ab"
 }
 
+// N3 note: the spec states the associativity identity for min, "for
+// numeric arguments"; for string max it is a mathematical consequence of
+// the total order plus gc-verified behavior, not a quoted spec clause.
 func minMaxStringsAssoc() (string, bool, string, bool) {
 	x, y, z := "foo", "bar", "baz"
 	m3 := min(x, y, z)

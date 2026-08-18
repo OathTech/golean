@@ -1,29 +1,48 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2 — the
-#   spec-examples tranche: 211 NEW ids across spec-examples-stmt/,
-#   spec-examples-lexical/, spec-examples-decl/)
-#   re-pin reason: 211 new ids, no other change — every pre-existing id
-#   keeps its result and stage. The new ids: 181 PASS + 30 FAIL, every
-#   FAIL investigated and classified:
-#     - 18 frontend-export: deliberate guardrail cases the native
-#       frontend cannot yet export (stdlib imports beyond the corpus
-#       set; method expressions; struct-tag conversions; imaginary
-#       literals; several comma-ok/range-assign forms) — the expected
-#       coverage-gap class, written guardrails-first so the gaps are
-#       visible, never false passes.
-#     - 11 lean-observation: 9 fail-closed interpreter coverage gaps
-#       (slice-to-array conversions x4, string<->rune conversions x2,
-#       float min/max x3 — status=unsupported; entered in
-#       baselines/untriaged-ids, count 16->25 in the same commit), 1 =
-#       BUG-056 (&*nil collapses instead of panicking), 1 = BUG-058
-#       (comma-ok assert in a recover handler leaks past export and
-#       dies unbound — fail-closed-classification defect).
-#     - 1 differential: BUG-057 (typed two-variable receive
-#       declaration drops the value).
-#   The three BUGs are OPEN, pinned by these cases per the check-bugs
-#   discipline (docs/BUGS.md); fixes are semantic-core/frontend arcs,
-#   out of this corpus lane's scope.
-#   Full run: 2067 cases (1937 PASS / 130 FAIL), native frontend.
+# recorded: 2026-08-18  commit: ab317283+ (spec-truth P3 audit-response
+#   re-pin; supersedes the slice-2 re-pin)
+#   re-pin reason: SIX new ids, ONE removed, ONE flip — all
+#   audit-driven, no other change:
+#     + 5 RED bug pins: the BUG-057 unmasking rows
+#       (receive-comma-ok/untyped-form-live, index-comma-ok/
+#       var-form-present, var-decl-forms/found-present — the audit
+#       showed the ok-flag drop hits ALL two-var comma-ok var
+#       declarations; the prior greens read closed/absent lookups
+#       where ok=false was coincidentally right) and the BUG-058
+#       wrong-answer guardrails (if-init-hoist-order/* — the real
+#       defect is if-init + short-circuit hoist scoping, with silent
+#       wrong-answer modes the original stuck-only diagnosis missed).
+#     + 1 GREEN boundary witness: address-op-nil-indirection/
+#       addr-deref-nil-paren — the audit claimed &(*p) shares
+#       BUG-056; measured: it panics correctly; the case pins the
+#       narrower boundary.
+#     - spec-examples-lexical/for-clause-loopvar removed (audit S6:
+#       an output-exhibit block double-credited; its program is
+#       loopvar-per-iteration).
+#     ~ append-forms/ints frontend-export -> PASS: the slices import
+#       (its only blocker) replaced by hand-rolled equality, and the
+#       audit-triggered nondet trip fixed by checking each slice
+#       BEFORE the overlapping append (the post-hoc check observed
+#       append-capacity latitude).
+#   Corrected classification of the tranche's frontend-export reds
+#   (audit S4 — the earlier header's cause list was wrong): the
+#   largest class is ANONYMOUS NON-EMPTY STRUCT TYPES (4 cases);
+#   also complex128, channel-receive-in-short-circuit-operand,
+#   method expressions, struct-tag conversions, imaginary literals,
+#   stdlib imports (fmt/math/time). All verified fail-closed
+#   frontend-quarantined refusals.
+#   Attestation (audit F3): latest.meta.tsv may record full_run
+#   unknown when the run is driven through the gate; fullness is
+#   established by manifest_sha256 equality with the regenerated
+#   manifest, which is what scripts/ci checks. RECORD CORRECTION:
+#   slice-2 commit f8ffcec8's message claimed 'check-spec-anchors
+#   34+73' — that gate was RED at that commit (10 truncated-anchor
+#   UNRESOLVEDs; the count matches no commit); fixed by the grammar
+#   commit and disclosed here per audit F1.
+#   Open-bug reds pinned by docs/BUGS.md: BUG-056 (1), BUG-057 (4),
+#   BUG-058 (3, incl. panic-values/panic-error). Untriaged coverage
+#   gaps unchanged at 25.
+#   Full run: 2072 cases (1938 PASS / 134 FAIL), native frontend.
 #
 result	id	stage
 PASS	arrays/array-bounds	-
@@ -1702,12 +1721,13 @@ PASS	slices/slices-sort/ints	-
 PASS	slices/slices-sort/uint64	-
 PASS	slices/three-index-slice	-
 FAIL	spec-examples-decl/address-op-nil-indirection/addr-deref-nil	lean-observation
+PASS	spec-examples-decl/address-op-nil-indirection/addr-deref-nil-paren	-
 PASS	spec-examples-decl/address-op-nil-indirection/deref-nil	-
 PASS	spec-examples-decl/address-op-nil-indirection/forms	-
 PASS	spec-examples-decl/alias-identity	-
 PASS	spec-examples-decl/allocation-new	-
 PASS	spec-examples-decl/append-forms/interface	-
-FAIL	spec-examples-decl/append-forms/ints	frontend-export
+PASS	spec-examples-decl/append-forms/ints	-
 PASS	spec-examples-decl/append-forms/string	-
 FAIL	spec-examples-decl/assert-comma-ok	frontend-export
 PASS	spec-examples-decl/assign-tuple-order/exchange	-
@@ -1740,6 +1760,7 @@ PASS	spec-examples-decl/generic-min	-
 PASS	spec-examples-decl/generic-pair-swap	-
 PASS	spec-examples-decl/generic-type-switch	-
 PASS	spec-examples-decl/index-comma-ok	-
+FAIL	spec-examples-decl/index-comma-ok/var-form-present	differential
 PASS	spec-examples-decl/init-call-order/order	-
 PASS	spec-examples-decl/init-call-order/values	-
 PASS	spec-examples-decl/iota-multi-pair	-
@@ -1759,6 +1780,7 @@ PASS	spec-examples-decl/point-methods/length	-
 PASS	spec-examples-decl/point-methods/scale	-
 PASS	spec-examples-decl/receive-comma-ok/forms	-
 FAIL	spec-examples-decl/receive-comma-ok/typed-form	differential
+FAIL	spec-examples-decl/receive-comma-ok/untyped-form-live	differential
 PASS	spec-examples-decl/recover-protect/clean	-
 PASS	spec-examples-decl/recover-protect/panics	-
 PASS	spec-examples-decl/return-forms	-
@@ -1788,12 +1810,12 @@ PASS	spec-examples-decl/typeparam-parse-ambiguity/forced-generic	-
 PASS	spec-examples-decl/underlying-conversions	-
 PASS	spec-examples-decl/untyped-bool-comparison	-
 PASS	spec-examples-decl/var-decl-forms	-
+FAIL	spec-examples-decl/var-decl-forms/found-present	differential
 PASS	spec-examples-decl/variadic-greeting-nil/nil	-
 PASS	spec-examples-decl/variadic-greeting-nil/three	-
 PASS	spec-examples-decl/weekday-iota	-
 PASS	spec-examples-decl/zero-value	-
 PASS	spec-examples-lexical/channel-direction-forms	-
-PASS	spec-examples-lexical/for-clause-loopvar	-
 PASS	spec-examples-lexical/goto-label/goto-not-taken	-
 PASS	spec-examples-lexical/goto-label/goto-taken	-
 PASS	spec-examples-lexical/identifiers	-
@@ -1859,6 +1881,8 @@ PASS	spec-examples-stmt/if-init-else-chain/boundary-z	-
 PASS	spec-examples-stmt/if-init-else-chain/else-branch	-
 PASS	spec-examples-stmt/if-init-else-chain/first-branch	-
 PASS	spec-examples-stmt/if-init-else-chain/second-branch	-
+FAIL	spec-examples-stmt/if-init-hoist-order/cond-call-after-init	differential
+FAIL	spec-examples-stmt/if-init-hoist-order/init-panic-first	differential
 PASS	spec-examples-stmt/if-simple/above	-
 PASS	spec-examples-stmt/if-simple/at	-
 PASS	spec-examples-stmt/if-simple/below	-

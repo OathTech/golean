@@ -59,3 +59,15 @@ func varDeclForms() int {
 	}
 	return n // 7
 }
+
+// varDeclFoundPresent: package-level `var _, found = entries[name]` uses an
+// ABSENT key (found=false is right even under BUG-057); this unmasking row
+// (P3 audit) does the same var-declaration lookup on a present key. Expected 1.
+func varDeclFoundPresent() int {
+	m := map[string]int{"k": 3}
+	var _, present = m["k"]
+	if present {
+		return 1
+	}
+	return 0
+}

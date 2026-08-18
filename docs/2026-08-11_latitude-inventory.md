@@ -826,7 +826,10 @@ subexpressions of one binary operator).
 - FloatBits.lean:68–72. Go the language cannot observe NaN payloads
   (math.Float64bits is out of scope); becomes latitude-relevant only if
   math lands. Also: float min/max builtins REFUSED (Ops.lean:85–90 —
-  spec-pinned semantics, zero coverage, refusal over unvalidated pin).
+  spec-pinned semantics, refusal over unvalidated pin; "zero coverage"
+  retired at P3: spec-examples-stmt/min-max-float-specials pins the
+  spec's signed-zero/Inf/NaN table as three fail-closed reds in
+  baselines/untriaged-ids, flipping PASS when the builtins land).
 
 ### R8. WaitGroup counter representation — (b) PINNED to gc's bit layout
 

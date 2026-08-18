@@ -1,7 +1,9 @@
 // spec#Selectors block Selectors-3-361b7011 (also exercises the x.f
 // form of block Selectors-1-4580a32c)
 // The spec's T0/T1/T2 embedding example, declarations verbatim modulo
-// method bodies (the spec declares M0/M1/M2 without bodies; here each
+// method bodies, the added trace variable, and package-level t/p made
+// locals (scaffolding disclosed per the P3 audit N3; the spec declares
+// M0/M1/M2 without bodies; here each
 // appends a distinct digit to a trace so the resolved RECEIVER PATH of
 // every call in the spec's list is observable). Pins each selector's
 // documented resolution: t.z, t.y == t.T1.y, t.x == (*t.T0).x, the

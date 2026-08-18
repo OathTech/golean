@@ -1,2 +1,3 @@
 # id	subject	args	expected_status	expected_reason	features
 -	varDeclForms	-	ok	-	globals,zero_values,floats,maps,comma_ok,multi_result,untyped,shadowing
+found-present	varDeclFoundPresent	-	ok	-	maps,comma_ok,zero_values

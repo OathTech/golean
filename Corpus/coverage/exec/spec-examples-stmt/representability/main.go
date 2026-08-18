@@ -30,6 +30,11 @@ func reprFloatRounding() float32 {
 // -1e-1000 rounds to IEEE -0.0, then is simplified to unsigned 0.0:
 // the stored value must compare equal to zero AND carry a CLEAR sign
 // bit, observed as 1/f == +Inf (a -0.0 would give -Inf).
+// Latitude note (P3 audit S7): float division by zero is "not specified
+// beyond the IEEE 754 standard; whether a run-time panic occurs is
+// implementation-specific" (spec#Floating_point_operators) — this probe
+// relies on the registered R5 narrowing (latitude inventory §3), the
+// same convention min-max-float-specials cites.
 func reprNegTinyIsUnsignedZero() (bool, bool) {
 	var f float64 = -1e-1000
 	return f == 0, 1/f > 0

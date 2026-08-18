@@ -38,3 +38,19 @@ func receiveCommaOkTyped() int {
 	}
 	return 0
 }
+
+// receiveCommaOkUntypedLive: the UNTYPED var-declaration comma-ok form on a
+// LIVE channel — the unmasking row from the P3 audit (BUG-057): the sibling
+// subject's `var x3, ok3 = <-ch` reads a closed-drained channel, where
+// ok=false is the right answer, so the ok-flag drop was invisible there.
+// Here ok must be true: expected 71 (7*10 + 1).
+func receiveCommaOkUntypedLive() int {
+	ch := make(chan int, 1)
+	ch <- 7
+	var x, ok = <-ch
+	n := 0
+	if ok {
+		n = 1
+	}
+	return x*10 + n
+}

@@ -156,9 +156,10 @@ Discipline notes, recorded up front:
 
 - How found: P3 curation (worker 3's SKIP of the For_clause "6 6 6"
   exhibit), verified against the pinned text.
-- Sources: spec#For_clause — "[Prior to Go 1.22], iterations share
-  one set of variables" with the old-semantics output exhibit kept
-  as a deliberate historical note.
+- Sources: spec#For_clause — "Prior to [Go 1.22], iterations share
+  one set of variables" (bracket placement corrected at the P3 audit
+  F2: the brackets mark the version link, not the phrase) with the
+  old-semantics output exhibit kept as a deliberate historical note.
 - Stance: the spec text itself is version-CONDITIONAL, not merely
   versioned: a single pinned document describes two language
   behaviors gated on the go.mod directive. Mechanism 4.4's agreement
@@ -168,6 +169,29 @@ Discipline notes, recorded up front:
   Bound: upper (the pre-1.22 behavior is still conforming FOR
   MODULES DECLARING go < 1.22 — out of our declared Go 1.26 scope,
   recorded here so the scope boundary is explicit).
+
+### L-010 — a *may* implementation restriction exhibited as flatly "invalid" — `spec-ambiguity` (erratum-family)
+
+- How found: spec-re-read (P3 audit S2 — the only one of the spec's
+  11 "Implementation restriction" paragraphs the negative tranche
+  touches).
+- Sources: spec#Return_statements — prose: "Implementation
+  restriction: A compiler MAY disallow an empty expression list in a
+  'return' statement if a different entity ... with the same name as
+  a result parameter is in scope at the place of the return"; the
+  same section's example block labels the line flatly "// invalid
+  return statement: err is shadowed".
+- Sharp question: is a conforming implementation REQUIRED to reject
+  the shadowed bare return, or merely permitted to?
+- Data: the prose grants latitude; the exhibit asserts rejection; gc
+  rejects. Corpus case
+  negative/compile/spec-examples/bare-return-shadowed-result pins
+  gc's realization WITH the may-note in its header (audit-added): a
+  conforming implementation could accept this program, so the
+  rejection pin is a gc-realization record, not a spec-forced one.
+- Stance: erratum-family tension inside the spec (prose vs exhibit),
+  L-007/L-008's travel companion for any upstream report. Bound:
+  upper (an accepting implementation is conforming by the prose).
 
 ## Feed status (honest accounting)
 
