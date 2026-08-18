@@ -688,6 +688,94 @@ theorem storeTarget_addr {σ : ExecState} {a : Addr} {ty : Ty}
   simp only [storeTarget, resolveChain, valueAsLoc, Bind.bind, Except.bind,
     pure, Except.pure, storeLoc, hlook, hnorm]
 
+/-! ### Growing-heap front support (WP arc s2 item 5 — promoted from
+the twosum/sieve front-miss chains; rle is the recorded chartered
+consumer with no landed copy). The per-example price of a loop body
+that DECLARES variables: a concrete front must be shown to miss every
+high address (twosum paid a 23-link `lookup_cons_ne` chain, twice;
+sieve a 10-link one), and stores into the live cells past `front ++ D`
+re-derive the same projection dance. `keysBelow` makes the front bound
+an EXECUTABLE check — `rfl` on a concrete front — and
+`lookup_of_keysBelow`/`lookup_live`/`set_live`/`storeTarget_live`
+carry the rest. -/
+
+/-- Executable key bound: every cell key of `h` is a base address
+`< k`. On a CONCRETE front this evaluates — the whole 23-link chain
+becomes `(by rfl)`. -/
+def keysBelow (h : Heap) (k : Nat) : Bool :=
+  h.all fun p =>
+    match p.1 with
+    | .base a => decide (a.id < k)
+    | _ => false
+
+/-- A heap whose keys are below `k` misses every address `≥ k`. -/
+theorem lookup_of_keysBelow {h : Heap} {k x : Nat}
+    (hb : keysBelow h k = true) (hx : k ≤ x) :
+    Heap.lookup h (.base ⟨x⟩) = none := by
+  induction h with
+  | nil => rfl
+  | cons p rest ih =>
+      obtain ⟨l, c⟩ := p
+      simp only [keysBelow, List.all_cons, Bool.and_eq_true] at hb
+      obtain ⟨h1, h2⟩ := hb
+      cases l with
+      | base a =>
+          have ha : a.id < k := of_decide_eq_true h1
+          rw [lookup_cons_ne (show (Loc.base a == .base ⟨x⟩) = false from
+            base_beq_false (a := a.id) (by omega))]
+          exact ih h2
+      | index b i => cases h1
+      | field b tid f => cases h1
+
+/-- `front ++ D` misses a high address: the front by its key bound,
+the dead region by freshness. -/
+theorem lookup_frontD_none {front D : Heap} {k a x : Nat}
+    (hf : keysBelow front k = true) (hD : DeadFrom D a)
+    (hkx : k ≤ x) (hax : a ≤ x) :
+    Heap.lookup (front ++ D) (.base ⟨x⟩) = none := by
+  rw [lookup_append_right (lookup_of_keysBelow hf hkx)]
+  exact hD x hax
+
+/-- Reading a live cell through the front and the dead region. -/
+theorem lookup_live {front D live : Heap} {k a b : Nat} {c : HeapCell}
+    (hf : keysBelow front k = true) (hkb : k ≤ b)
+    (hD : DeadFrom D a) (hab : a ≤ b)
+    (hlive : Heap.lookup live (.base ⟨b⟩) = some c) :
+    Heap.lookup (front ++ (D ++ live)) (.base ⟨b⟩) = some c := by
+  rw [lookup_append_right (lookup_of_keysBelow hf hkb),
+    lookup_append_right (hD b hab)]
+  exact hlive
+
+/-- Writing a live cell through the front and the dead region. -/
+theorem set_live {front D live : Heap} {k a b : Nat} {c : HeapCell}
+    (hf : keysBelow front k = true) (hkb : k ≤ b)
+    (hD : DeadFrom D a) (hab : a ≤ b) :
+    Heap.set (front ++ (D ++ live)) (.base ⟨b⟩) c
+      = front ++ (D ++ Heap.set live (.base ⟨b⟩) c) := by
+  rw [set_append_right (lookup_of_keysBelow hf hkb),
+    set_append_right (hD b hab)]
+
+/-- `storeTarget` into a live cell, at the STATE level: the front-key
+bound, the dead region and the normalize fact enter as hypotheses, the
+result heap is the same `front ++ (D ++ …)` split with only the live
+part rewritten — consumers stop re-deriving the projection/coercion
+dance around `storeTarget_addr`'s `σ.heap` spelling. -/
+theorem storeTarget_live {σ : ExecState} {front D live : Heap}
+    {k a b : Nat} {ty : Ty} {old v v' : GoValue}
+    (hheap : σ.heap = front ++ (D ++ live))
+    (hf : keysBelow front k = true) (hkb : k ≤ b)
+    (hD : DeadFrom D a) (hab : a ≤ b)
+    (hlive : Heap.lookup live (.base ⟨b⟩) = some ⟨some ty, old⟩)
+    (hnorm : normalizeValueForTy σ ty v = .ok v') :
+    storeTarget σ (.chain (.addr (.base ⟨b⟩)) [] []) v
+      = .ok { σ with
+          heap := front
+            ++ (D ++ Heap.set live (.base ⟨b⟩) ⟨some ty, v'⟩) } := by
+  have hlk : Heap.lookup σ.heap (.base ⟨b⟩) = some ⟨some ty, old⟩ := by
+    rw [hheap]
+    exact lookup_live hf hkb hD hab hlive
+  rw [storeTarget_addr hlk hnorm, hheap, set_live hf hkb hD hab]
+
 /-- The `mapAssign` wide-op apply step, conditioned on the
 `mapAssignValue` fact (generic in the key/value types). -/
 theorem stepFn_mapAssign_apply {σ σ' : ExecState} {kt vt : Ty}

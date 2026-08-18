@@ -105,6 +105,19 @@ vocabulary defs) -/
 #guard_msgs in #print axioms GoLean.Surface.FreshFrom.set
 /-- info: 'GoLean.Surface.FreshFrom.lt_of_lookup' depends on axioms: [propext] -/
 #guard_msgs in #print axioms GoLean.Surface.FreshFrom.lt_of_lookup
+-- WP arc s2 item 5 (2026-08-18): growing-heap front support — the
+-- executable front bound + live-cell lookup/set + the state-level
+-- store. Fresh probe: `.tmp/pinprobe12.lean`.
+/-- info: 'GoLean.Surface.lookup_of_keysBelow' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.lookup_of_keysBelow
+/-- info: 'GoLean.Surface.lookup_frontD_none' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.lookup_frontD_none
+/-- info: 'GoLean.Surface.lookup_live' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.lookup_live
+/-- info: 'GoLean.Surface.set_live' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.set_live
+/-- info: 'GoLean.Surface.storeTarget_live' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.storeTarget_live
 /-- info: 'GoLean.Surface.DeadFrom.push2' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.DeadFrom.push2
 /-- info: 'GoLean.Surface.stepFnIter_one' depends on axioms: [propext, Quot.sound] -/

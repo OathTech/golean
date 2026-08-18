@@ -672,33 +672,10 @@ the concrete front (cells 0…22) misses, the dead region misses by
 theorem lookup_out_none (nv sv tv : Int) (n : Nat) (l lp : List Int)
     (siv civ tvp mv iv : Int) (ffv : Bool) {x : Nat} (hx : 23 ≤ x) :
     Heap.lookup (tsHeapOut nv sv tv n l lp siv civ tvp mv iv ffv)
-      (.base ⟨x⟩) = none := by
-  simp only [tsHeapOut, tsHeapFrame, tsHeapCall, tsHeapCp, tsHeapSu,
-    tsHeap0, List.append_assoc, List.cons_append, List.nil_append]
-  rw [lookup_cons_ne (base_beq_false (show 0 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 1 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 2 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 3 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 4 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 5 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 6 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 7 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 8 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 9 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 10 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 11 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 12 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 13 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 14 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 15 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 16 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 17 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 18 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 19 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 20 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 21 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 22 ≠ x by omega))]
-  rfl
+      (.base ⟨x⟩) = none :=
+  -- WP arc s2 item 5: the 23-link `lookup_cons_ne` chain replaced by
+  -- the kit's executable front bound.
+  lookup_of_keysBelow (k := 23) (by rfl) hx
 
 /-- Reading the live `j` cell through the dead region. -/
 theorem lookup_liveJ (nv sv tv : Int) (n : Nat) (l lp : List Int)
@@ -706,11 +683,9 @@ theorem lookup_liveJ (nv sv tv : Int) (n : Nat) (l lp : List Int)
     (ffv : Bool) (hja : 23 ≤ ja) (hD : DeadFrom D ja) :
     Heap.lookup (tsHeapIn nv sv tv n l lp siv civ tvp mv iv D ja jv ffv)
       (.base ⟨ja⟩) = some (tsu64 jv) := by
-  rw [tsHeapIn,
-    lookup_append_right (lookup_out_none nv sv tv n l lp siv civ tvp mv
-      iv false hja),
-    lookup_append_right (hD ja (Nat.le_refl _))]
-  simp [tsLive, Heap.lookup]
+  rw [tsHeapIn]
+  exact lookup_live (k := 23) (by rfl) hja hD (Nat.le_refl _)
+    (by simp [tsLive, Heap.lookup])
 
 /-- Reading the live `$forFirst` cell through the dead region. -/
 theorem lookup_liveFF (nv sv tv : Int) (n : Nat) (l lp : List Int)
@@ -718,12 +693,10 @@ theorem lookup_liveFF (nv sv tv : Int) (n : Nat) (l lp : List Int)
     (ffv : Bool) (hja : 23 ≤ ja) (hD : DeadFrom D ja) :
     Heap.lookup (tsHeapIn nv sv tv n l lp siv civ tvp mv iv D ja jv ffv)
       (.base ⟨ja + 1⟩) = some (tsbool ffv) := by
-  rw [tsHeapIn,
-    lookup_append_right (lookup_out_none nv sv tv n l lp siv civ tvp mv
-      iv false (by omega)),
-    lookup_append_right (hD (ja + 1) (by omega))]
-  simp [tsLive, Heap.lookup, lookup_cons_ne (base_beq_false
-    (show ja ≠ ja + 1 by omega))]
+  rw [tsHeapIn]
+  exact lookup_live (k := 23) (by rfl) (by omega) hD (by omega)
+    (by simp [tsLive, Heap.lookup, lookup_cons_ne (base_beq_false
+      (show ja ≠ ja + 1 by omega))])
 
 /-- Writing the live `j` cell through the dead region. -/
 theorem set_liveJ (nv sv tv : Int) (n : Nat) (l lp : List Int)
@@ -732,10 +705,7 @@ theorem set_liveJ (nv sv tv : Int) (n : Nat) (l lp : List Int)
     Heap.set (tsHeapIn nv sv tv n l lp siv civ tvp mv iv D ja jv ffv)
       (.base ⟨ja⟩) (tsu64 jv')
       = tsHeapIn nv sv tv n l lp siv civ tvp mv iv D ja jv' ffv := by
-  rw [tsHeapIn, tsHeapIn,
-    set_append_right (lookup_out_none nv sv tv n l lp siv civ tvp mv iv
-      false hja),
-    set_append_right (hD ja (Nat.le_refl _))]
+  rw [tsHeapIn, tsHeapIn, set_live (k := 23) (by rfl) hja hD (Nat.le_refl _)]
   simp [tsLive, Heap.set]
 
 /-- Writing the live `$forFirst` cell through the dead region. -/
@@ -745,10 +715,7 @@ theorem set_liveFF (nv sv tv : Int) (n : Nat) (l lp : List Int)
     Heap.set (tsHeapIn nv sv tv n l lp siv civ tvp mv iv D ja jv ffv)
       (.base ⟨ja + 1⟩) (tsbool ffv')
       = tsHeapIn nv sv tv n l lp siv civ tvp mv iv D ja jv ffv' := by
-  rw [tsHeapIn, tsHeapIn,
-    set_append_right (lookup_out_none nv sv tv n l lp siv civ tvp mv iv
-      false (by omega)),
-    set_append_right (hD (ja + 1) (by omega))]
+  rw [tsHeapIn, tsHeapIn, set_live (k := 23) (by rfl) (by omega) hD (by omega)]
   simp [tsLive, Heap.set, base_beq_false (show ja ≠ ja + 1 by omega)]
 
 end GoLean.Examples.TwoSum

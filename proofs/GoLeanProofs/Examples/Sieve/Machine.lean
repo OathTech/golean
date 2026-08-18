@@ -366,24 +366,10 @@ footprint battery now; call sites resolve through
 /-- The 10-cell front is fresh at and above address 10. -/
 private theorem front_lookup_none {n₀ nv : Int} {m : Nat} {bs : List Bool}
     {iv : Int} {ff : Bool} {x : Nat} (hx : 10 ≤ x) :
-    Heap.lookup (svFront n₀ nv m bs iv ff) (.base ⟨x⟩) = none := by
-  simp only [svFront]
-  rw [lookup_cons_ne (base_beq_false (by omega : 0 ≠ x)),
-    lookup_cons_ne (base_beq_false (by omega : 1 ≠ x)),
-    lookup_cons_ne (base_beq_false (by omega : 2 ≠ x)),
-    lookup_cons_ne (base_beq_false (by omega : 3 ≠ x)),
-    lookup_cons_ne (base_beq_false (by omega : 4 ≠ x)),
-    lookup_cons_ne (base_beq_false (by omega : 5 ≠ x)),
-    lookup_cons_ne (base_beq_false (by omega : 6 ≠ x)),
-    lookup_cons_ne (base_beq_false (by omega : 7 ≠ x)),
-    lookup_cons_ne (base_beq_false (by omega : 8 ≠ x)),
-    lookup_cons_ne (base_beq_false (by omega : 9 ≠ x))]
-  rfl
-
-/-! ## Executable op facts — LIFTED (WP arc s1 lift 1): the four
-GAP-WITNESS locals (`mul_u64`/`add_u64`/`atMostCmp`/`not`) are deleted;
-call sites resolve to `SliceMem`'s completed integer family through
-the module's `open GoLean.SliceMem`. -/
+    Heap.lookup (svFront n₀ nv m bs iv ff) (.base ⟨x⟩) = none :=
+  -- WP arc s2 item 5: the 10-link chain replaced by the kit's
+  -- executable front bound.
+  lookup_of_keysBelow (k := 10) (by rfl) hx
 
 /-- Reading the mapped-to-`GoValue` BOOL backing at an in-range index
 (GAP-WITNESS: mirrors `SliceMem.getElem?_mapU` at `Bool`). -/

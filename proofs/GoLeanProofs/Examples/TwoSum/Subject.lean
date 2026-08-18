@@ -155,33 +155,10 @@ theorem set_soloJ (nv sv tv : Int) (n : Nat) (l lp : List Int)
 theorem lookup_ret_none (nv sv tv : Int) (n : Nat) (l lp : List Int)
     (siv civ tvp mv iv riv rjv : Int) {x : Nat} (hx : 23 ≤ x) :
     Heap.lookup (tsHeapRet nv sv tv n l lp siv civ tvp mv iv riv rjv)
-      (.base ⟨x⟩) = none := by
-  simp only [tsHeapRet, tsHeapCall, tsHeapCp, tsHeapSu,
-    tsHeap0, List.append_assoc, List.cons_append, List.nil_append]
-  rw [lookup_cons_ne (base_beq_false (show 0 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 1 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 2 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 3 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 4 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 5 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 6 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 7 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 8 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 9 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 10 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 11 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 12 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 13 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 14 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 15 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 16 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 17 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 18 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 19 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 20 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 21 ≠ x by omega)),
-    lookup_cons_ne (base_beq_false (show 22 ≠ x by omega))]
-  rfl
+      (.base ⟨x⟩) = none :=
+  -- WP arc s2 item 5: the 23-link chain replaced by the kit's
+  -- executable front bound.
+  lookup_of_keysBelow (k := 23) (by rfl) hx
 
 /-- Reading the live `j` through the dead region, post-return front. -/
 theorem lookup_retD_j (nv sv tv : Int) (n : Nat) (l lp : List Int)
@@ -581,20 +558,23 @@ theorem storeJ_liveT (σ : ExecState) (nv sv tv : Int) (n : Nat)
           na') (tJRef ja) (.int w .uint64)
       = .ok (tSt σ (tsHeapIn nv sv tv n l lp siv civ tvp mv iv D ja w ffv)
           na') := by
+  -- WP arc s2 item 5: the projection/coercion dance replaced by the
+  -- kit's state-level `storeTarget_live`.
   have hn := norm_u64_scalar
     (tSt σ (tsHeapIn nv sv tv n l lp siv civ tvp mv iv D ja jv ffv) na') w
   rw [unorm_of_range hw1 hw2] at hn
   rw [show tJRef ja = .chain (.addr (.base ⟨ja⟩)) [] [] from rfl,
-    storeTarget_addr
-      (show Heap.lookup (tSt σ (tsHeapIn nv sv tv n l lp siv civ tvp mv iv
-          D ja jv ffv) na').heap (.base ⟨ja⟩)
-          = some ⟨some tU64, .int jv .uint64⟩ from
-        lookup_liveJ nv sv tv n l lp siv civ tvp mv iv D ja jv ffv hja hD)
-      hn,
-    show (tSt σ (tsHeapIn nv sv tv n l lp siv civ tvp mv iv D ja jv ffv)
-      na').heap = tsHeapIn nv sv tv n l lp siv civ tvp mv iv D ja jv ffv
-      from rfl,
-    set_liveJ nv sv tv n l lp siv civ tvp mv iv D ja jv w ffv hja hD]
+    storeTarget_live (k := 23)
+      (front := tsHeapOut nv sv tv n l lp siv civ tvp mv iv false)
+      (live := tsLive ja jv ffv)
+      (ty := tU64) (old := GoValue.int jv IntKind.uint64)
+      rfl (by rfl) hja hD (Nat.le_refl _)
+      (by simp [tsLive, Heap.lookup]) hn]
+  have hset : Heap.set (tsLive ja jv ffv) (Loc.base ⟨ja⟩)
+      ⟨some tU64, GoValue.int w IntKind.uint64⟩ = tsLive ja w ffv := by
+    simp [tsLive, Heap.set]
+  simp only [hset]
+  rfl
 
 /-- Store into the live flag cell, at the state level. -/
 theorem storeFF_liveT (σ : ExecState) (nv sv tv : Int) (n : Nat)
@@ -607,16 +587,19 @@ theorem storeFF_liveT (σ : ExecState) (nv sv tv : Int) (n : Nat)
       = .ok (tSt σ (tsHeapIn nv sv tv n l lp siv civ tvp mv iv D ja jv
           ffv') na') := by
   rw [show tFFRef ja = .chain (.addr (.base ⟨ja + 1⟩)) [] [] from rfl,
-    storeTarget_addr
-      (show Heap.lookup (tSt σ (tsHeapIn nv sv tv n l lp siv civ tvp mv iv
-          D ja jv ffv) na').heap (.base ⟨ja + 1⟩)
-          = some ⟨some .bool, .bool ffv⟩ from
-        lookup_liveFF nv sv tv n l lp siv civ tvp mv iv D ja jv ffv hja hD)
-      (norm_bool_val _ ffv'),
-    show (tSt σ (tsHeapIn nv sv tv n l lp siv civ tvp mv iv D ja jv ffv)
-      na').heap = tsHeapIn nv sv tv n l lp siv civ tvp mv iv D ja jv ffv
-      from rfl,
-    set_liveFF nv sv tv n l lp siv civ tvp mv iv D ja jv ffv ffv' hja hD]
+    storeTarget_live (k := 23)
+      (front := tsHeapOut nv sv tv n l lp siv civ tvp mv iv false)
+      (live := tsLive ja jv ffv)
+      (ty := Ty.bool) (old := GoValue.bool ffv)
+      rfl (by rfl) (by omega) hD (by omega)
+      (by simp [tsLive, Heap.lookup, lookup_cons_ne (base_beq_false
+        (show ja ≠ ja + 1 by omega))])
+      (norm_bool_val _ ffv')]
+  have hset : Heap.set (tsLive ja jv ffv) (Loc.base ⟨ja + 1⟩)
+      ⟨some Ty.bool, GoValue.bool ffv'⟩ = tsLive ja jv ffv' := by
+    simp [tsLive, Heap.set, base_beq_false (show ja ≠ ja + 1 by omega)]
+  simp only [hset]
+  rfl
 
 /-- Store into the solo `j` cell (the window before the flag exists). -/
 theorem storeJ_soloT (σ : ExecState) (nv sv tv : Int) (n : Nat)
@@ -634,17 +617,17 @@ theorem storeJ_soloT (σ : ExecState) (nv sv tv : Int) (n : Nat)
       ++ (D ++ [(.base ⟨ja⟩, tsu64 jv)])) na') w
   rw [unorm_of_range hw1 hw2] at hn
   rw [show tJRef ja = .chain (.addr (.base ⟨ja⟩)) [] [] from rfl,
-    storeTarget_addr
-      (show Heap.lookup (tSt σ (tsHeapOut nv sv tv n l lp siv civ tvp mv
-          iv false ++ (D ++ [(.base ⟨ja⟩, tsu64 jv)])) na').heap
-          (.base ⟨ja⟩) = some ⟨some tU64, .int jv .uint64⟩ from
-        lookup_soloJ nv sv tv n l lp siv civ tvp mv iv D ja jv hja hD)
-      hn,
-    show (tSt σ (tsHeapOut nv sv tv n l lp siv civ tvp mv iv false
-      ++ (D ++ [(.base ⟨ja⟩, tsu64 jv)])) na').heap
-      = tsHeapOut nv sv tv n l lp siv civ tvp mv iv false
-        ++ (D ++ [(.base ⟨ja⟩, tsu64 jv)]) from rfl,
-    set_soloJ nv sv tv n l lp siv civ tvp mv iv D ja jv w hja hD]
+    storeTarget_live (k := 23)
+      (front := tsHeapOut nv sv tv n l lp siv civ tvp mv iv false)
+      (live := [(.base ⟨ja⟩, tsu64 jv)])
+      (ty := tU64) (old := GoValue.int jv IntKind.uint64)
+      rfl (by rfl) hja hD (Nat.le_refl _)
+      (by simp [Heap.lookup]) hn]
+  have hset : Heap.set [(Loc.base ⟨ja⟩, tsu64 jv)] (Loc.base ⟨ja⟩)
+      ⟨some tU64, GoValue.int w IntKind.uint64⟩
+      = [(Loc.base ⟨ja⟩, tsu64 w)] := by
+    simp [Heap.set]
+  simp only [hset]
 
 /-- The pair test's TRUE arm entry (the `ifK` dispatch). 1 step. -/
 theorem t_inTrue_raw (σ : ExecState) (ja : Nat) (ch : Choices) :
