@@ -447,6 +447,11 @@ counting-loop lift + the GAP-R1 pick-loop lift, 2026-08-15) -/
 -- Transcribed verbatim from a fresh probe (`.tmp/pinprobe5.lean`).
 /-- info: 'GoLean.Surface.stepFnIter_iterate_bail' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.stepFnIter_iterate_bail
+-- WP arc s1.5b (2026-08-18): the relational/measure-indexed two-exit
+-- schema (twosum's variable row costs, bubble's frame-interleaved
+-- existential states). Fresh probe: `.tmp/pinprobe6.lean`.
+/-- info: 'GoLean.Surface.stepFnIter_iterate_bail_rel' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.stepFnIter_iterate_bail_rel
 
 /-! ## The derive_entry_eq emitted-theorem fixtures (all 10 landed entry equations) -/
 

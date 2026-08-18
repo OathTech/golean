@@ -416,6 +416,60 @@ theorem stepFnIter_iterate {c n : Nat} {T : Nat → ExecState}
       rw [harith] at hc
       exact hc
 
+/-- **The two-exit loop schema, RELATIONAL + MEASURE-INDEXED** (WP arc
+s1.5b — the δ-descriptor variant the s1 park record sketched for the
+frame-interleaved case). Two generalizations over
+`stepFnIter_iterate_bail` below, each forced by a landed consumer:
+(1) states are a per-index PREDICATE `S i σ` instead of a function
+`T i` — bubble's outer loop only knows its state through an
+EXISTENTIAL frame simulation (`FrameSim (ρ16 d)` at existential
+`d`/`fr`), and twosum's growing dead region (`D ++ tsLive …`, `na+2`
+per row) enters as descriptor existentials instead of a recursive heap
+family; (2) the fuel account is ONE measure `B : Nat → Nat` instead of
+a constant per-iteration cost — twosum's miss rows cost
+`100 + 57·(n−t−1)` each (VARIABLE per row), and bubble's pass cost is
+itself existentially bounded. The iterate branch supplies its cost `c`
+with the descent obligation `c + B (i+1) ≤ B i`; both exits fit under
+`B` at their own index; the conclusion's fuel is `≤ B i`. The
+constant-cost schema below is the special case
+`S i σ := σ = T i ∧ I i`, `B i := c·(n−i) + max b e`, and is proved
+from this one — the kit carries the induction exactly once. -/
+theorem stepFnIter_iterate_bail_rel {n : Nat} {S : Nat → ExecState → Prop}
+    {C : Nat → Config} (B : Nat → Nat)
+    (Q : Config → ExecState → Prop)
+    (hstep : ∀ i, i < n → ∀ σ, S i σ → ∀ ch : Choices,
+      (∃ (cf : Config) (Tf : ExecState), Q cf Tf ∧
+        ∃ k ≤ B i, stepFnIter k σ (C i) ch = .ok (cf, Tf, ch))
+      ∨ (∃ (σ' : ExecState) (c : Nat), S (i + 1) σ' ∧
+          c + B (i + 1) ≤ B i ∧
+          stepFnIter c σ (C i) ch = .ok (C (i + 1), σ', ch)))
+    (hexit : ∀ σ, S n σ → ∀ ch : Choices,
+      ∃ (cf : Config) (Tf : ExecState), Q cf Tf ∧
+        ∃ k ≤ B n, stepFnIter k σ (C n) ch = .ok (cf, Tf, ch)) :
+    ∀ i, i ≤ n → ∀ σ, S i σ → ∀ ch : Choices,
+      ∃ (cf : Config) (Tf : ExecState), Q cf Tf ∧
+        ∃ k ≤ B i, stepFnIter k σ (C i) ch = .ok (cf, Tf, ch) := by
+  suffices key : ∀ μ i, μ = n - i → i ≤ n → ∀ σ, S i σ → ∀ ch : Choices,
+      ∃ (cf : Config) (Tf : ExecState), Q cf Tf ∧
+        ∃ k ≤ B i, stepFnIter k σ (C i) ch = .ok (cf, Tf, ch) by
+    intro i hin σ hS ch
+    exact key (n - i) i rfl hin σ hS ch
+  intro μ
+  induction μ with
+  | zero =>
+      intro i hμ hin σ hS ch
+      have heq : i = n := by omega
+      subst heq
+      exact hexit σ hS ch
+  | succ μ' ih =>
+      intro i hμ hin σ hS ch
+      have hlt : i < n := by omega
+      rcases hstep i hlt σ hS ch with hbail | ⟨σ', c, hS', hc, hrun⟩
+      · exact hbail
+      · obtain ⟨cf, Tf, hQ, k, hk, hrun'⟩ :=
+          ih (i + 1) (by omega) (by omega) σ' hS' ch
+        exact ⟨cf, Tf, hQ, c + k, by omega, stepFnIter_chain hrun hrun'⟩
+
 /-- **The TWO-EXIT loop schema** (WP arc s1 lift 5 — the exact shape
 drafted at g1.md §Unit G1.3 "THE FINDING THIS UNIT CONTRIBUTES" and
 §THE KIT-GAP LIST): the loop either ITERATES (`c` steps, index `+1`,
@@ -429,7 +483,9 @@ and the terminal is a PREDICATE `Q` so the two exits may stop at
 different (existentially quantified) states. Bound:
 `c·(n−i) + max b e` — both landed shapes' `+70`-style constants are
 exactly `max b e`. Replaces the surviving per-example `strongRecOn`
-scaffolds. -/
+scaffolds. Since s1.5b this is the deterministic special case of
+`stepFnIter_iterate_bail_rel` above (proof internals only; the
+statement is unchanged). -/
 theorem stepFnIter_iterate_bail {c e b n : Nat} {T : Nat → ExecState}
     {C : Nat → Config} {I : Nat → Prop}
     (Q : Config → ExecState → Prop)
@@ -445,33 +501,29 @@ theorem stepFnIter_iterate_bail {c e b n : Nat} {T : Nat → ExecState}
       ∃ (cf : Config) (Tf : ExecState), Q cf Tf ∧
         ∃ k ≤ c * (n - i) + max b e,
           stepFnIter k (T i) (C i) ch = .ok (cf, Tf, ch) := by
-  suffices key : ∀ μ i, μ = n - i → i ≤ n → I i → ∀ ch : Choices,
-      ∃ (cf : Config) (Tf : ExecState), Q cf Tf ∧
-        ∃ k ≤ c * (n - i) + max b e,
-          stepFnIter k (T i) (C i) ch = .ok (cf, Tf, ch) by
-    intro i hin hI ch
-    exact key (n - i) i rfl hin hI ch
-  intro μ
-  induction μ with
-  | zero =>
-      intro i hμ hin hI ch
-      have heq : i = n := by omega
-      subst heq
-      obtain ⟨cf, Tf, hQ, k, hk, hrun⟩ := hexit hI ch
-      exact ⟨cf, Tf, hQ, k, by omega, hrun⟩
-  | succ μ' ih =>
-      intro i hμ hin hI ch
-      have hlt : i < n := by omega
-      rcases hstep i hlt hI with hbail | ⟨hI', hiter⟩
-      · obtain ⟨cf, Tf, hQ, k, hk, hrun⟩ := hbail ch
+  intro i hin hI ch
+  have key := stepFnIter_iterate_bail_rel (n := n)
+    (S := fun j σ => σ = T j ∧ I j) (C := C)
+    (B := fun j => c * (n - j) + max b e) Q
+    (hstep := fun j hj σ hS ch' => by
+      obtain ⟨rfl, hIj⟩ := hS
+      rcases hstep j hj hIj with hbail | ⟨hI', hiter⟩
+      · left
+        obtain ⟨cf, Tf, hQ, k, hk, hrun⟩ := hbail ch'
+        have hbm : b ≤ max b e := Nat.le_max_left b e
         exact ⟨cf, Tf, hQ, k, by omega, hrun⟩
-      · obtain ⟨cf, Tf, hQ, k, hk, hrun⟩ := ih (i + 1) (by omega)
-          (by omega) hI' ch
-        refine ⟨cf, Tf, hQ, c + k, ?_, stepFnIter_chain (hiter ch) hrun⟩
-        have : c * (n - i) = c + c * (n - (i + 1)) := by
-          rw [show n - i = (n - (i + 1)) + 1 from by omega, Nat.mul_succ]
+      · right
+        refine ⟨T (j + 1), c, ⟨rfl, hI'⟩, ?_, hiter ch'⟩
+        have harith : c * (n - j) = c + c * (n - (j + 1)) := by
+          rw [show n - j = (n - (j + 1)) + 1 from by omega, Nat.mul_succ]
           omega
-        omega
+        omega)
+    (hexit := fun σ hS ch' => by
+      obtain ⟨rfl, hIn⟩ := hS
+      obtain ⟨cf, Tf, hQ, k, hk, hrun⟩ := hexit hIn ch'
+      have hem : e ≤ max b e := Nat.le_max_right b e
+      exact ⟨cf, Tf, hQ, k, by omega, hrun⟩)
+  exact key i hin (T i) ⟨rfl, hI⟩ ch
 
 /-- The iterate-then-exit composition: the schema above plus an exit
 segment from `(T n, C n)` — the shape of the `∃k`-style setup loops

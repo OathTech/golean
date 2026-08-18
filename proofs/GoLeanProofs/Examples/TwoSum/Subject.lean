@@ -1364,63 +1364,99 @@ theorem ts_outerP (σ : ExecState) (nv sv tv : Int) (n : Nat)
               (((tsAnsF l tvp t).2 : Nat) : Int)
               (((tsAnsF l tvp t).1 : Nat) : Int)
               (((tsAnsF l tvp t).2 : Nat) : Int) ++ Dr) nar, ch) := by
-  intro μ
-  induction μ using Nat.strongRecOn with
-  | _ μ ih =>
-    intro t hμ D na hna hD ch
-    rcases Nat.lt_or_ge t n with hlt | hge
-    · -- a live row
-      obtain ⟨μ', rfl⟩ : ∃ μ', μ = μ' + 1 := ⟨μ - 1, by omega⟩
-      rw [show (decide (((t : Nat) : Int) < ((n : Nat) : Int))) = true
-        from decide_eq_true (by exact_mod_cast hlt)]
-      cases hf : findFrom l tvp t (t + 1) with
+  -- WP arc s1.5b: the per-example `strongRecOn` scaffold replaced by
+  -- ONE `FuelMeasure.stepFnIter_iterate_bail_rel` instantiation — the
+  -- relational/measure-indexed schema: the growing dead region
+  -- (`D ++ tsLive …`, `na + 2` per row) and the carried answer
+  -- (`tsAnsF` stability) enter through the descriptor `S`; the
+  -- VARIABLE per-row miss cost (`100 + 57·(n−t−1)`) through the
+  -- measure `B`. Statement unchanged.
+  intro μ t hμ D na hna hD ch
+  have key := stepFnIter_iterate_bail_rel (n := n)
+    (S := fun j σj => ∃ (D' : Heap) (na' : Nat), 23 ≤ na'
+      ∧ DeadFrom D' na' ∧ tsAnsF l tvp j = tsAnsF l tvp t
+      ∧ σj = tSt σ (tsHeapOut nv sv tv n l lp siv civ tvp
+          ((n : Nat) : Int) ((j : Nat) : Int) false ++ D') na')
+    (C := fun j => .retV (.bool (decide (((j : Nat) : Int)
+      < ((n : Nat) : Int)))) tOutCmpK)
+    (B := fun j => (57 * n + 106) * (n - j) + 71)
+    (Q := fun cf Tf => ∃ (Dr : Heap) (nar : Nat) (oiv : Int),
+      cf = .next .stop
+      ∧ Tf = tSt σ (tsHeapEnd nv sv tv n l lp siv civ tvp
+          ((n : Nat) : Int) oiv
+          (((tsAnsF l tvp t).1 : Nat) : Int)
+          (((tsAnsF l tvp t).2 : Nat) : Int)
+          (((tsAnsF l tvp t).1 : Nat) : Int)
+          (((tsAnsF l tvp t).2 : Nat) : Int)
+          (((tsAnsF l tvp t).1 : Nat) : Int)
+          (((tsAnsF l tvp t).2 : Nat) : Int) ++ Dr) nar)
+    (hstep := fun i hi σi hS ch' => by
+      obtain ⟨D', na', hna', hD', hAns, rfl⟩ := hS
+      cases hf : findFrom l tvp i (i + 1) with
       | some u =>
+          left
           obtain ⟨hu1, hu2, -, -⟩ := findFrom_some hf
-          have hrun := ts_rowHit σ nv sv tv n l lp siv civ tvp t u D na
-            hna hD hlen hrange hlp hlpr hn hlt hf ch
-          refine ⟨163 + 57 * (u - (t + 1)), ?_, D ++ tsLive na
-            ((u : Nat) : Int) false, na + 2, ((t : Nat) : Int), ?_⟩
-          · have hB : (57 * n + 106) * (μ' + 1)
-                = (57 * n + 106) * μ' + (57 * n + 106) :=
-              Nat.mul_succ _ _
-            omega
-          · rw [tsAnsF_hit (by omega) hf]
-            exact hrun
+          have hA : tsAnsF l tvp t = (i, u) := by
+            rw [← hAns]
+            exact tsAnsF_hit (by omega) hf
+          rw [show (decide (((i : Nat) : Int) < ((n : Nat) : Int)))
+              = true from decide_eq_true (by exact_mod_cast hi), hA]
+          refine ⟨.next .stop, _,
+            ⟨D' ++ tsLive na' ((u : Nat) : Int) false, na' + 2,
+              ((i : Nat) : Int), rfl, rfl⟩,
+            163 + 57 * (u - (i + 1)), ?_,
+            ts_rowHit σ nv sv tv n l lp siv civ tvp i u D' na'
+              hna' hD' hlen hrange hlp hlpr hn hi hf ch'⟩
+          have hge : 57 * n + 106 ≤ (57 * n + 106) * (n - i) :=
+            Nat.le_mul_of_pos_right _ (by omega)
+          omega
       | none =>
-          have hrow := ts_rowMiss σ nv sv tv n l lp siv civ tvp t D na
-            hna hD hlen hrange hn hlt hf ch
-          obtain ⟨k, hk, Dr, nar, oiv, hrec⟩ := ih μ' (by omega)
-            (t + 1) (by omega) (D ++ tsLive na ((n : Nat) : Int) false)
-            (na + 2) (by omega) (DeadFrom.push2 hD) ch
-          refine ⟨100 + 57 * (n - (t + 1)) + k, ?_, Dr, nar, oiv, ?_⟩
-          · have hB : (57 * n + 106) * (μ' + 1)
-                = (57 * n + 106) * μ' + (57 * n + 106) :=
+          right
+          refine ⟨tSt σ (tsHeapOut nv sv tv n l lp siv civ tvp
+              ((n : Nat) : Int) ((i + 1 : Nat) : Int) false
+              ++ (D' ++ tsLive na' ((n : Nat) : Int) false)) (na' + 2),
+            100 + 57 * (n - (i + 1)),
+            ⟨D' ++ tsLive na' ((n : Nat) : Int) false, na' + 2,
+              by omega, DeadFrom.push2 hD',
+              (tsAnsF_miss (by omega) hf).symm.trans hAns, rfl⟩, ?_, ?_⟩
+          · have hni : n - i = (n - (i + 1)) + 1 := by omega
+            have hB : (57 * n + 106) * ((n - (i + 1)) + 1)
+                = (57 * n + 106) * (n - (i + 1)) + (57 * n + 106) :=
               Nat.mul_succ _ _
+            rw [hni]
             omega
-          · rw [tsAnsF_miss (by omega) hf]
-            exact stepFnIter_chain hrow hrec
-    · -- the sentinel exit
-      have ht : t = n := by omega
-      subst ht
-      rw [show (decide (((t : Nat) : Int) < ((t : Nat) : Int))) = false
+          · rw [show (decide (((i : Nat) : Int) < ((n : Nat) : Int)))
+                = true from decide_eq_true (by exact_mod_cast hi)]
+            exact ts_rowMiss σ nv sv tv n l lp siv civ tvp i D' na'
+              hna' hD' hlen hrange hn hi hf ch')
+    (hexit := fun σi hS ch' => by
+      obtain ⟨D', na', hna', hD', hAns, rfl⟩ := hS
+      rw [show (decide (((n : Nat) : Int) < ((n : Nat) : Int))) = false
         from decide_eq_false (by omega)]
-      have hmr : (0 : Int) ≤ ((t : Nat) : Int)
-          ∧ ((t : Nat) : Int) < 2 ^ 64 := ⟨by omega, by omega⟩
-      have h1 := t_mX1_raw σ nv sv tv t l lp siv civ tvp
-        ((t : Nat) : Int) ((t : Nat) : Int) D na ch
+      have hmr : (0 : Int) ≤ ((n : Nat) : Int)
+          ∧ ((n : Nat) : Int) < 2 ^ 64 := ⟨by omega, by omega⟩
+      have h1 := t_mX1_raw σ nv sv tv n l lp siv civ tvp
+        ((n : Nat) : Int) ((n : Nat) : Int) D' na' ch'
       rw [unorm_of_range hmr.1 hmr.2, unorm_of_range hmr.1 hmr.2] at h1
-      have h2 := stepFnIter_one (stepFn_store_step (ch := ch) (rs := [])
+      have h2 := stepFnIter_one (stepFn_store_step (ch := ch') (rs := [])
         (vs := []) (body := .seqn #[]) (env := callEnvT) (k := tEpiTail)
-        (t_epiStore σ nv sv tv t l lp siv civ tvp ((t : Nat) : Int)
-          ((t : Nat) : Int) ((t : Nat) : Int) ((t : Nat) : Int)
-          ((t : Nat) : Int) ((t : Nat) : Int) D na hlp hlpr))
-      have h3 := t_epi_raw σ nv sv tv t l lp siv civ tvp
-        ((t : Nat) : Int) ((t : Nat) : Int) ((t : Nat) : Int)
-        ((t : Nat) : Int) ((t : Nat) : Int) ((t : Nat) : Int) D na ch
+        (t_epiStore σ nv sv tv n l lp siv civ tvp ((n : Nat) : Int)
+          ((n : Nat) : Int) ((n : Nat) : Int) ((n : Nat) : Int)
+          ((n : Nat) : Int) ((n : Nat) : Int) D' na' hlp hlpr))
+      have h3 := t_epi_raw σ nv sv tv n l lp siv civ tvp
+        ((n : Nat) : Int) ((n : Nat) : Int) ((n : Nat) : Int)
+        ((n : Nat) : Int) ((n : Nat) : Int) ((n : Nat) : Int) D' na' ch'
       rw [unorm_of_range hmr.1 hmr.2] at h3
-      refine ⟨71, by omega, D, na, ((t : Nat) : Int), ?_⟩
-      rw [tsAnsF_exit (by omega), hlen]
-      exact stepFnIter_chain (stepFnIter_chain h1 h2) h3
+      have hA : tsAnsF l tvp t = (n, n) := by
+        rw [← hAns, tsAnsF_exit (by omega), hlen]
+      rw [hA]
+      exact ⟨.next .stop, _, ⟨D', na', ((n : Nat) : Int), rfl, rfl⟩,
+        71, by omega, stepFnIter_chain (stepFnIter_chain h1 h2) h3⟩)
+  obtain ⟨cf, Tf, ⟨Dr, nar, oiv, rfl, rfl⟩, k, hk, hrun⟩ :=
+    key t (by omega) _ ⟨D, na, hna, hD, rfl, rfl⟩ ch
+  have hk' : k ≤ (57 * n + 106) * (n - t) + 71 := hk
+  rw [show n - t = μ from by omega] at hk'
+  exact ⟨k, hk', Dr, nar, oiv, hrun⟩
 
 /-! ## The run, end to end -/
 

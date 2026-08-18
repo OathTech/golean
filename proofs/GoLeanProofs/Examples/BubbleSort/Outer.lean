@@ -42,65 +42,97 @@ theorem bOuter_loop (n seed : Nat) (l0 : List Int)
         ∧ FrameSim (ρ16 d') 16 (16 + d') fr'
             (σBOut n seed (GoLean.Examples.InsertionSort.sortSpec l0)
               endF false) σA' := by
-  intro μ
-  induction μ using Nat.strongRecOn with
-  | _ μ ih =>
-    intro e l σA d fr hμ he hln hI hrl hFS ch
-    subst hμ
-    rcases Nat.lt_or_ge e 2 with h1 | h2
-    · -- the counter exit: end ≤ 1, the whole list is already sorted
-      rw [show (decide ((1 : Int) < ((e : Nat) : Int))) = false from
-        decide_eq_false (by exact_mod_cast (by omega : ¬ (1 < e)))]
-      have hX := bO_exit_raw n seed l ((e : Nat) : Int) [] 16 ch
-      obtain ⟨σA', hrunA, hFS'⟩ := transfer_seg16 hFS hX
-        (renCfg_bcmp d false) (renCfg_banchor d)
-      have hsorted : l = GoLean.Examples.InsertionSort.sortSpec l0 :=
-        bubbleInv_conclude hI (bubbleInv_finalExit hI (by omega))
-      rw [hsorted] at hFS'
-      exact ⟨8, σA', d, fr, ((e : Nat) : Int), by omega, hrunA, hFS'⟩
-    · -- one pass
-      rw [show (decide ((1 : Int) < ((e : Nat) : Int))) = true from
-        decide_eq_true (by exact_mod_cast (by omega : 1 < e))]
-      by_cases hsw : passB l (e - 1) = true
-      · -- the pass swapped: rebase and recurse at end = e - 1
-        obtain ⟨kp, hkp, hpass⟩ := bPass_swapped n seed l e hn hln h2
-          (by omega) hrl hsw ch
-        obtain ⟨σA', hrunA, hFS'⟩ := transfer_seg16 hFS hpass
-          (renCfg_bcmp d true) (renCfg_bcmp d _)
+  -- WP arc s1.5b: the per-example `strongRecOn` scaffold replaced by
+  -- ONE `FuelMeasure.stepFnIter_iterate_bail_rel` instantiation. This
+  -- is the FRAME-INTERLEAVED case the s1 park record graded as not
+  -- fitting the deterministic schema: the successor state is
+  -- existential through `transfer_seg16`/`rebaseSim16`, so the whole
+  -- loop state (current list, shift `d`, frame `fr`, the FrameSim
+  -- itself) enters as the relational descriptor `S`; the pass cost is
+  -- existentially bounded and enters through the measure `B`.
+  -- Statement unchanged.
+  intro μ e l σA d fr hμ he hln hI hrl hFS ch
+  have key := stepFnIter_iterate_bail_rel (n := μ)
+    (S := fun j σj => ∃ (lj : List Int) (dj : Nat) (frj : Heap),
+      lj.length = n ∧ BubbleInv l0 lj (e - j)
+      ∧ (∀ x ∈ lj, 0 ≤ x ∧ x < 2 ^ 64)
+      ∧ FrameSim (ρ16 dj) 16 (16 + dj) frj
+          (σBOut n seed lj ((e - j : Nat) : Int) false) σj)
+    (C := fun j => .retV (.bool (decide (1 < ((e - j : Nat) : Int))))
+      bOuterCmpK)
+    (B := fun j => (105 * n + 116) * (μ - j) + 8)
+    (Q := fun cf Tf => cf = .next bAfterCallK
+      ∧ ∃ (d' : Nat) (fr' : Heap) (endF : Int),
+        FrameSim (ρ16 d') 16 (16 + d') fr'
+          (σBOut n seed (GoLean.Examples.InsertionSort.sortSpec l0)
+            endF false) Tf)
+    (hstep := fun j hj σj hS ch' => by
+      obtain ⟨lj, dj, frj, hlnj, hIj, hrlj, hFSj⟩ := hS
+      have h2 : 2 ≤ e - j := by omega
+      rw [show (decide ((1 : Int) < ((e - j : Nat) : Int))) = true from
+        decide_eq_true (by exact_mod_cast (by omega : 1 < e - j))]
+      by_cases hsw : passB lj (e - j - 1) = true
+      · -- the pass swapped: rebase, one iterate at end = e - j - 1
+        right
+        obtain ⟨kp, hkp, hpass⟩ := bPass_swapped n seed lj (e - j) hn
+          hlnj h2 (by omega) hrlj hsw ch'
+        obtain ⟨σA', hrunA, hFS'⟩ := transfer_seg16 hFSj hpass
+          (renCfg_bcmp dj true) (renCfg_bcmp dj _)
         have hFS2 := rebaseSim16 hFS'
-        have hI' : BubbleInv l0 (passL l (e - 1)) (e - 1) :=
-          bubbleInv_pass hI h2 (by omega)
-        have hrl' : ∀ x ∈ passL l (e - 1), 0 ≤ x ∧ x < 2 ^ 64 :=
-          fun x hx => hrl x (passL_mem (by omega) hx)
-        obtain ⟨k, σA'', d', fr', endF, hk, hrun, hFSf⟩ := ih (e - 2)
-          (by omega) (e - 1) (passL l (e - 1)) σA' (d + 3) _ (by omega)
-          (by omega) (by rw [passL_length]; exact hln) hI' hrl' hFS2 ch
-        refine ⟨kp + k, σA'', d', fr', endF, ?_,
-          stepFnIter_chain hrunA hrun, hFSf⟩
-        have hkpn : kp ≤ 105 * n + 116 := by
-          have : 105 * e ≤ 105 * n := Nat.mul_le_mul_left _ he
+        have hI' : BubbleInv l0 (passL lj (e - j - 1)) (e - j - 1) :=
+          bubbleInv_pass hIj h2 (by omega)
+        have hrl' : ∀ x ∈ passL lj (e - j - 1), 0 ≤ x ∧ x < 2 ^ 64 :=
+          fun x hx => hrlj x (passL_mem (by omega) hx)
+        refine ⟨σA', kp,
+          ⟨passL lj (e - j - 1), dj + 3, _,
+            (by rw [passL_length]; exact hlnj), hI', hrl', hFS2⟩,
+          ?_, ?_⟩
+        · have hkpn : kp ≤ 105 * n + 116 := by
+            have : 105 * (e - j) ≤ 105 * n := Nat.mul_le_mul_left _
+              (by omega)
+            omega
+          have hni : μ - j = (μ - (j + 1)) + 1 := by omega
+          have hB : (105 * n + 116) * ((μ - (j + 1)) + 1)
+              = (105 * n + 116) * (μ - (j + 1)) + (105 * n + 116) :=
+            Nat.mul_succ _ _
+          rw [hni]
           omega
-        have hmul : (105 * n + 116) * (e - 2) + (105 * n + 116)
-            = (105 * n + 116) * (e - 1) := by
-          rw [← Nat.mul_succ]
-          congr 1
-          omega
-        omega
-      · -- the swap-free pass: the EARLY RETURN, the list is sorted
-        have hsw' : passB l (e - 1) = false := Bool.eq_false_iff.mpr hsw
-        obtain ⟨kp, hkp, hpass⟩ := bPass_early n seed l e hn hln h2
-          (by omega) hrl hsw' ch
-        obtain ⟨σA', hrunA, hFS'⟩ := transfer_seg16 hFS hpass
-          (renCfg_bcmp d true) (renCfg_banchor d)
+        · exact hrunA
+      · -- the swap-free pass: the EARLY RETURN — the bail exit
+        left
+        have hsw' : passB lj (e - j - 1) = false :=
+          Bool.eq_false_iff.mpr hsw
+        obtain ⟨kp, hkp, hpass⟩ := bPass_early n seed lj (e - j) hn
+          hlnj h2 (by omega) hrlj hsw' ch'
+        obtain ⟨σA', hrunA, hFS'⟩ := transfer_seg16 hFSj hpass
+          (renCfg_bcmp dj true) (renCfg_banchor dj)
         have hFS2 := rebaseSim16 hFS'
-        have hsorted : l = GoLean.Examples.InsertionSort.sortSpec l0 :=
-          bubbleInv_conclude hI (bubbleInv_earlyExit hI h2 (by omega) hsw')
+        have hsorted : lj = GoLean.Examples.InsertionSort.sortSpec l0 :=
+          bubbleInv_conclude hIj
+            (bubbleInv_earlyExit hIj h2 (by omega) hsw')
         rw [hsorted] at hFS2
-        refine ⟨kp, σA', d + 3, _, ((e : Nat) : Int), ?_, hrunA, hFS2⟩
-        have : 105 * e ≤ 105 * n := Nat.mul_le_mul_left _ he
-        have hμ1 : 1 ≤ e - 1 := by omega
-        have : (105 * n + 116) * 1 ≤ (105 * n + 116) * (e - 1) :=
-          Nat.mul_le_mul_left _ hμ1
-        omega
+        refine ⟨.next bAfterCallK, σA',
+          ⟨rfl, dj + 3, _, ((e - j : Nat) : Int), hFS2⟩, kp, ?_, hrunA⟩
+        have : 105 * (e - j) ≤ 105 * n := Nat.mul_le_mul_left _
+          (by omega)
+        have hge : 105 * n + 116 ≤ (105 * n + 116) * (μ - j) :=
+          Nat.le_mul_of_pos_right _ (by omega)
+        omega)
+    (hexit := fun σj hS ch' => by
+      obtain ⟨lj, dj, frj, hlnj, hIj, hrlj, hFSj⟩ := hS
+      rw [show (decide ((1 : Int) < ((e - μ : Nat) : Int))) = false from
+        decide_eq_false (by exact_mod_cast (by omega : ¬ (1 < e - μ)))]
+      have hX := bO_exit_raw n seed lj ((e - μ : Nat) : Int) [] 16 ch'
+      obtain ⟨σA', hrunA, hFS'⟩ := transfer_seg16 hFSj hX
+        (renCfg_bcmp dj false) (renCfg_banchor dj)
+      have hsorted : lj = GoLean.Examples.InsertionSort.sortSpec l0 :=
+        bubbleInv_conclude hIj (bubbleInv_finalExit hIj (by omega))
+      rw [hsorted] at hFS'
+      exact ⟨.next bAfterCallK, σA',
+        ⟨rfl, dj, frj, ((e - μ : Nat) : Int), hFS'⟩, 8, by omega,
+        hrunA⟩)
+  obtain ⟨cf, Tf, ⟨rfl, d', fr', endF, hFSf⟩, k, hk, hrun⟩ :=
+    key 0 (by omega) σA ⟨l, d, fr, hln, hI, hrl, hFS⟩ ch
+  exact ⟨k, Tf, d', fr', endF, hk, hrun, hFSf⟩
 
 end GoLean.Examples.BubbleSort
