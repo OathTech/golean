@@ -11,10 +11,28 @@ package main
 // dotted local paths, `main` as a local path, dot imports of local
 // packages, stdlib-shadowing local dirs, and import cycles all refuse
 // the export loudly.
+//
+// PROGRAM INITIALIZATION ORDER (design note §5; audit F1). The schedule
+// is spec#Program_initialization: "Given the list of all packages,
+// sorted by import path, in each step the first uninitialized package
+// in the list for which all imported packages (if any) are already
+// initialized is initialized." The list is the COMPLETE PROGRAM's —
+// spec#Program_execution: main "with all the packages it imports,
+// transitively" — so the imported stdlib packages are nodes in it,
+// whether or not we model them. specInitOrder therefore builds the
+// list over ALL packages: the source units plus the transitive closure
+// of every non-source import. Stdlib packages OCCUPY POSITIONS in the
+// schedule and contribute NO emitted initializer (their bodies are not
+// modeled); only their ORDERING EFFECT lands, and that is computable
+// from the import graph alone. Dropping them is NOT conservative: a
+// source package gated by a stdlib import becomes ready too early and
+// can be scheduled ahead of a lexicographically later package that is
+// genuinely ready (BUG-060, pinned by multipkg/init-order-stdlib).
 
 import (
 	"fmt"
 	"go/ast"
+	"go/build"
 	"go/importer"
 	"go/parser"
 	"go/token"
@@ -68,6 +86,9 @@ type loader struct {
 	// stdlib importer + probe cache (nil entry = not importable).
 	stdlib      types.Importer
 	stdlibProbe map[string]bool
+	// Import declarations of the NON-source packages reached while
+	// building the initialization list, by import path (see nonSrcDeps).
+	nonSrcCache map[string][]string
 }
 
 func newLoader(fset *token.FileSet, rootDir string) *loader {
@@ -77,6 +98,7 @@ func newLoader(fset *token.FileSet, rootDir string) *loader {
 		locals:      map[string]*sourcePkg{},
 		stdlib:      importer.Default(),
 		stdlibProbe: map[string]bool{},
+		nonSrcCache: map[string][]string{},
 	}
 }
 
@@ -189,9 +211,12 @@ func (l *loader) parseLocal(path, dir string) (*sourcePkg, error) {
 	return unit, nil
 }
 
-// localImportsOf lists the LOCAL import paths of a parsed unit (its
-// initialization-order edges), sorted and deduplicated.
-func (l *loader) localImportsOf(files []*ast.File) []string {
+// importPathsOf lists EVERY import path declared by a parsed unit —
+// local and non-local, named, blank and dot alike — sorted and
+// deduplicated. Every one of them is a node of the program's
+// initialization list (a blank import's whole purpose is its position
+// in that list), so no import form is filtered out here.
+func importPathsOf(files []*ast.File) []string {
 	seen := map[string]bool{}
 	for _, f := range files {
 		for _, spec := range f.Imports {
@@ -199,9 +224,7 @@ func (l *loader) localImportsOf(files []*ast.File) []string {
 			if err != nil {
 				continue // already refused by discover
 			}
-			if _, isLocal := l.locals[p]; isLocal {
-				seen[p] = true
-			}
+			seen[p] = true
 		}
 	}
 	out := make([]string, 0, len(seen))
@@ -210,6 +233,134 @@ func (l *loader) localImportsOf(files []*ast.File) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// localImportsOf lists the LOCAL import paths of a parsed unit (the
+// subset of its imports that is type-checked from source), sorted and
+// deduplicated. This is the TYPE-CHECK dependency order, not the
+// initialization order — see specInitOrder for the latter.
+func (l *loader) localImportsOf(files []*ast.File) []string {
+	out := []string{}
+	for _, p := range importPathsOf(files) {
+		if _, isLocal := l.locals[p]; isLocal {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// nonSrcDeps returns the import declarations of a package we do NOT
+// have source for — i.e. a stdlib package pulled into the program's
+// initialization list by some source package's import.
+//
+// It reads them with go/build, which reports the package's actual
+// import CLAUSES (build-constraint-filtered for the host toolchain,
+// exactly as the oracle's `go run` resolves them on the same host).
+// Deliberately NOT types.Package.Imports(): export data records the
+// packages whose objects the compiler referenced, which is neither a
+// subset nor a superset of the import declarations the spec's ordering
+// ranges over — measured at Go 1.26, `sync`'s export data lists
+// internal/abi (which sync does not import) and omits runtime (which
+// it does). Fail closed: a path go/build cannot resolve refuses the
+// export rather than being treated as a leaf, since a missing edge
+// silently perturbs the schedule.
+func (l *loader) nonSrcDeps(path string) ([]string, error) {
+	if ds, ok := l.nonSrcCache[path]; ok {
+		return ds, nil
+	}
+	bp, err := build.Default.Import(path, "", 0)
+	if err != nil {
+		return nil, unsup("cannot resolve imported package %q while building the program initialization list (spec#Program_initialization ranges over ALL packages of the complete program): %v", path, err)
+	}
+	ds := append([]string(nil), bp.Imports...)
+	sort.Strings(ds)
+	l.nonSrcCache[path] = ds
+	return ds, nil
+}
+
+// specInitOrder returns the SOURCE units in the program initialization
+// order of spec#Program_initialization, computed over the complete
+// program's package list: the source units plus the transitive closure
+// of their non-source (stdlib) imports. The non-source packages take
+// their positions in the schedule and are then dropped from the result
+// — they contribute no emitted initializer, only the ordering effect
+// of standing between a source package and its readiness.
+//
+// A single source unit is returned unchanged without touching the
+// import graph: with one package there is exactly one position to
+// occupy, so the schedule is fixed whatever the rest of the list looks
+// like. That keeps every single-package case (the overwhelming
+// majority of the corpus) on exactly the old code path and cost.
+func (l *loader) specInitOrder(units []*sourcePkg) ([]*sourcePkg, error) {
+	if len(units) < 2 {
+		return units, nil
+	}
+	src := map[string]*sourcePkg{}
+	deps := map[string][]string{}
+	pending := []string{}
+	for _, u := range units {
+		src[u.path] = u
+		ds := importPathsOf(u.files)
+		deps[u.path] = ds
+		pending = append(pending, ds...)
+	}
+	// Close over the non-source packages the source units reach.
+	for len(pending) > 0 {
+		p := pending[0]
+		pending = pending[1:]
+		if _, seen := deps[p]; seen {
+			continue
+		}
+		ds, err := l.nonSrcDeps(p)
+		if err != nil {
+			return nil, err
+		}
+		deps[p] = ds
+		pending = append(pending, ds...)
+	}
+
+	names := make([]string, 0, len(deps))
+	for p := range deps {
+		names = append(names, p)
+	}
+	sort.Strings(names)
+
+	out := make([]*sourcePkg, 0, len(units))
+	done := map[string]bool{}
+	for len(done) < len(names) {
+		progressed := false
+		for _, p := range names {
+			if done[p] {
+				continue
+			}
+			ready := true
+			for _, dep := range deps[p] {
+				if !done[dep] {
+					ready = false
+					break
+				}
+			}
+			if !ready {
+				continue
+			}
+			done[p] = true
+			progressed = true
+			if u, isSrc := src[p]; isSrc {
+				out = append(out, u)
+			}
+			break // restart from the lexicographic front
+		}
+		if !progressed {
+			blocked := []string{}
+			for _, p := range names {
+				if !done[p] {
+					blocked = append(blocked, p)
+				}
+			}
+			return nil, unsup("import cycle in the program initialization list: %v", blocked)
+		}
+	}
+	return out, nil
 }
 
 // chainedImporter resolves local packages from the loader's checked
@@ -262,8 +413,12 @@ func loadProgram(fset *token.FileSet, rootDir string, mainFiles []*ast.File) ([]
 	}
 	delete(l.locals, mainName)
 
-	// Initialization order over the local units + main (stdlib
-	// initialization is not modeled — status quo). Cycles refuse.
+	// TYPE-CHECK order over the local units + main: any dependency
+	// order will do (go/types needs each unit's imports checked before
+	// it), and the lexicographic-first-ready walk is one. This is NOT
+	// the initialization order — specInitOrder below computes that over
+	// the complete program's package list, once type-checking has
+	// resolved every import. Cycles refuse here first.
 	order := []*sourcePkg{}
 	done := map[string]bool{}
 	units := map[string]*sourcePkg{mainName: mainUnit}
@@ -318,5 +473,21 @@ func loadProgram(fset *token.FileSet, rootDir string, mainFiles []*ast.File) ([]
 		}
 		unit.pkg = pkg
 	}
-	return order, nil
+
+	// The spec's schedule, over ALL packages of the complete program.
+	initOrder, err := l.specInitOrder(order)
+	if err != nil {
+		return nil, err
+	}
+	if len(initOrder) != len(order) {
+		return nil, unsup("initialization list dropped %d source package(s)", len(order)-len(initOrder))
+	}
+	// main imports every other source package transitively (they are
+	// discovered from its imports), so it can only be initialized last.
+	// The emitter relies on that (main.go takes units[len-1] as the main
+	// unit), so check it rather than assume it.
+	if last := initOrder[len(initOrder)-1]; last != mainUnit {
+		return nil, unsup("initialization list ends at %q, not the main package %q", last.path, mainName)
+	}
+	return initOrder, nil
 }

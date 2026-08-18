@@ -1,27 +1,30 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-18 (raft-w1 audit-fix F1a — the init-order stdlib
-#   omission, landed RED per the guardrails-first contract)
-#   commit: this commit (on e5f44abd); prior re-pin same-day slice 2
-#   re-pin reason: TWO NEW ROWS, both honest FAILs — the pre-merge
-#   audit's F1 reproduction as a corpus case
-#   (Corpus/coverage/exec/multipkg/init-order-stdlib). The spec's
-#   initialization list ranges over ALL packages of the complete
-#   program (spec#Program_initialization, spec#Program_execution),
-#   stdlib included; the loader builds it over LOCAL packages only, so
-#   a local package whose readiness is gated by a stdlib import is
-#   scheduled too early. Reproduction, oracle-confirmed by go run:
-#     + multipkg/init-order-stdlib/seq   NEW FAIL/differential
-#       (machine 12, Go 21 — aaa scheduled before bbb because the
-#       list omits `sync`, which gates aaa);
-#     + multipkg/init-order-stdlib/marks NEW FAIL/differential
-#       (machine 102, Go 201 — the same fact via the push counts).
-#   The fix flips both green in the NEXT commit; this row exists so
-#   the defect is pinned by a red case before the code moves.
-#   Zero drift beyond these two rows (the control case
-#   multipkg/init-order still PASSes — its local-only expectation was
-#   correct as written: it imports no stdlib package).
-#   Full run: 2084 cases (1947 PASS / 137 FAIL), native frontend.
+# recorded: 2026-08-18 (raft-w1 audit-fix F1b — the initialization list
+#   is built over ALL packages of the complete program)
+#   commit: this commit (on 205cdf40); prior re-pin same-day F1a
+#   re-pin reason: BUG-060 CLOSED. spec#Program_initialization orders
+#   "the list of all packages" of the complete program, and
+#   spec#Program_execution makes that main plus everything it imports
+#   transitively — stdlib included. tools/nativefrontend/load.go's new
+#   `specInitOrder` builds the node set as the source units plus the
+#   transitive closure of their non-source imports (edges from the
+#   import DECLARATIONS, read with go/build), runs the spec's
+#   lexicographic-first-ready walk over the whole set, and drops the
+#   non-source nodes only after they have taken their positions: they
+#   emit no initializer, only their ORDERING EFFECT lands. Type-check
+#   order stays local-only (a separate, weaker requirement).
+#   Deltas — exactly the two rows this fix targets:
+#     ~ multipkg/init-order-stdlib/seq   FAIL/differential -> PASS
+#       (machine 12 -> 21, matching go run);
+#     ~ multipkg/init-order-stdlib/marks FAIL/differential -> PASS
+#       (machine 102 -> 201).
+#   ZERO drift beyond those two: no single-package case moves (they
+#   short-circuit on one source unit), and the whole rest of the
+#   multipkg family is unchanged, incl. multipkg/init-order (still
+#   PASS) and multipkg/same-name-identity-panic (still BUG-059's red).
+#   Full run: 2084 cases (1949 PASS / 135 FAIL), native frontend.
 #
+result	id	stage
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -1451,8 +1454,8 @@ PASS	multipkg/cross-type-method	-
 PASS	multipkg/cross-var	-
 PASS	multipkg/diamond-import	-
 PASS	multipkg/init-order	-
-FAIL	multipkg/init-order-stdlib/marks	differential
-FAIL	multipkg/init-order-stdlib/seq	differential
+PASS	multipkg/init-order-stdlib/marks	-
+PASS	multipkg/init-order-stdlib/seq	-
 FAIL	multipkg/same-name-identity-panic	differential
 PASS	multipkg/same-name-identity/func-identity	-
 PASS	multipkg/same-name-identity/type-identity	-

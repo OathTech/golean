@@ -187,3 +187,57 @@ with real differential cases, not a probe's.
   kept exactly as-is.
 - Full `scripts/ci --diff` + same-commit re-pin: 2084 cases, 1947 PASS
   / 137 FAIL, drift = exactly the two new ids, nothing else.
+
+## 2026-08-18 — audit fix round, F1b/c/d: the list is built over ALL packages
+
+- Derivation: `spec#Program_initialization` orders "the list of all
+  packages" of the COMPLETE program; `spec#Program_execution` defines
+  that as main "with all the packages it imports, transitively". The
+  stdlib packages are nodes in that list whether or not we model them.
+- `tools/nativefrontend/load.go`: new `specInitOrder` builds the node
+  set as the source units PLUS the transitive closure of their
+  non-source imports, takes each node's edges from its import
+  DECLARATIONS, runs the spec's lexicographic-first-ready walk over the
+  whole set, and drops the non-source nodes only after they have taken
+  their positions. They emit NO initializer — their bodies are not
+  modeled — and only the ORDERING EFFECT lands, which is computable
+  from the import graph alone. Type-check order (a separate, weaker
+  requirement — any dependency order works) stays local-only;
+  conflating the two was the defect.
+- JC: non-source edges come from `go/build`, NOT
+  `types.Package.Imports()` (the auditor's suggested route). Measured
+  at Go 1.26: export data is neither a subset nor a superset of the
+  import clauses — `sync`'s lists `internal/abi`, which sync does not
+  import, and omits `runtime`, which it does. go/build reports the
+  actual clauses, is 20x cheaper (25 ms vs 465 ms for fmt's closure),
+  and needs no force-load walk (export-data stubs come back with an
+  EMPTY `Imports()` until separately imported — probed before relying
+  on either).
+- Fail-closed: an import path go/build cannot resolve REFUSES the
+  export (a missing edge silently perturbs the schedule, which is the
+  whole class of this bug); a cycle in the full list refuses; and the
+  loader now CHECKS rather than assumes that the list ends at main
+  (main.go reads `units[len-1]` as the main unit).
+- Cost: a single source unit short-circuits before touching the import
+  graph (one package, one position), so every single-package case —
+  the overwhelming majority of the corpus — keeps exactly the old path
+  and cost. Only multi-package cases pay the closure walk.
+- Flip: both `multipkg/init-order-stdlib` rows go GREEN (12 -> 21,
+  102 -> 201, matching `go run`). Control `multipkg/init-order` PASSES
+  throughout, unchanged. BUG-060 closed.
+- Full `scripts/ci --diff` + re-pin: 2084 cases, 1949 PASS / 135 FAIL.
+  Drift = exactly those two flips; ZERO blast radius, nothing else
+  moved (no single-package case, no other multipkg row).
+- F1d, the raft shape: re-ran the tier-2 tracker probe
+  (`artifacts/probe-tracker-shimpb`) through the frontend. The emitted
+  unit order CHANGED, and to the spec's answer:
+    - before: `quorum, raftpb, tracker, main`
+    - after:  `raftpb, quorum, tracker, main`
+  Derivation: `quorum` imports `math` + `slices`; the raftpb stand-in
+  imports nothing; `tracker` imports raftpb + quorum + slices. raftpb
+  is ready from step one, `quorum` is not ready until `slices` has
+  run, and "raftpb" < "slices" — so raftpb takes its position first,
+  even though "quorum" < "raftpb" lexicographically. The old
+  local-only list saw both as ready at step one and took the
+  lexicographic order, giving quorum first. Wire counts are unchanged
+  by the fix (7 funcs / 40 methods / 16 types before and after).

@@ -4,8 +4,10 @@ Status: DESIGN OF RECORD for the multi-package lowering arc (master
 plan `docs/2026-08-15_raft-master-plan.md` §W1.1 — the critical path's
 head; scoping `docs/2026-08-15_raft-push-p0-scoping.md` §7 Blocker 1).
 Written BEFORE implementation, per the guardrails-first contract; the
-guardrail family is `Corpus/coverage/exec/multipkg/*` (8 rows, landed
-red). The prerequisite defect is BUG-010 (`docs/BUGS.md`): TypeId keys
+guardrail family is `Corpus/coverage/exec/multipkg/*` (8 rows landed
+red in the guardrails slice; 9 after `cross-var` joined in the
+implementation slice, 11 case ids after the audit-fix round's
+`init-order-stdlib` — §8). The prerequisite defect is BUG-010 (`docs/BUGS.md`): TypeId keys
 qualified by package NAME where Go keys identity on the import PATH.
 
 ## §1 The identity rule
@@ -157,19 +159,65 @@ is vendored into the corpus tree. Rationale:
 
 ## §5 Cross-package initialization (the E7 semantics)
 
-Forced point, no latitude entry: since Go 1.21 the spec pins the
-whole schedule (spec §Package initialization): sort all packages by
-import path; repeatedly initialize the first uninitialized package
-all of whose imports are initialized; within a package, variable
+Forced point, no latitude entry: since Go 1.21 the spec pins the whole
+schedule. Two clauses, and the arc's first implementation conflated
+them (audit F1 / BUG-060) — so state them separately.
+
+**Between packages** (`spec#Program_initialization`): "Given the list
+of all packages, sorted by import path, in each step the first
+uninitialized package in the list for which all imported packages (if
+any) are already initialized is initialized." The list is the COMPLETE
+PROGRAM's: `spec#Program_execution` defines that as the main package
+"with all the packages it imports, transitively". **The imported
+stdlib packages are in that list**, and their presence is observable
+even though nothing about their bodies is — they stand between a
+source package and its readiness, so a source package that imports one
+cannot be scheduled until it has run.
+
+**Within a package** (`spec#Package_initialization`): variable
 initializers in dependency/declaration order (go/types' `InitOrder`),
-then `init()` functions in file/source order. The frontend synthesizes
-ONE `$pkginit` whose body is the concatenation of per-package
-segments in exactly that package order (each segment: the package's
-`InitOrder` assignments, then its `$initN` calls). gids are assigned
-in the same order, so driver seeding is unchanged. Guardrails:
-`multipkg/init-order` (path-sorted order beats import-declaration
-order; var-before-init within a package), `multipkg/diamond-import`
-(exactly-once initialization, dependencies first).
+then `init()` functions in file/source order.
+
+**The real construction** (`tools/nativefrontend/load.go`,
+`specInitOrder`): build the node set as the source units plus the
+transitive closure of every non-source import, take each node's
+dependency edges from its import DECLARATIONS (source units from the
+AST; non-source packages from `go/build`, which reports the actual
+import clauses build-constraint-filtered for the host — deliberately
+not `types.Package.Imports()`, whose export-data list is neither a
+subset nor a superset of the import clauses: at Go 1.26 `sync`'s lists
+`internal/abi`, which it does not import, and omits `runtime`, which
+it does), then run the spec's lexicographic-first-ready walk over the
+whole set. Non-source packages occupy their positions and are then
+dropped from the result: they contribute NO emitted initializer —
+their bodies are not modeled — and only their ORDERING EFFECT lands,
+which is computable from the import graph alone without modeling
+anything. Fail closed: an import path `go/build` cannot resolve refuses
+the export rather than being treated as a leaf, because a missing edge
+silently perturbs the schedule. A single source unit short-circuits
+(one package, one position), so single-package cases keep exactly the
+old path and cost.
+
+Type-check order is a SEPARATE, weaker requirement (any dependency
+order will do) and is computed over the local units only; conflating
+the two is what produced BUG-060.
+
+The frontend then synthesizes ONE `$pkginit` whose body is the
+concatenation of per-package segments in that package order (each
+segment: the package's `InitOrder` assignments, then its `$initN`
+calls). gids are assigned in the same order, so driver seeding is
+unchanged. Guardrails: `multipkg/init-order` (path-sorted order beats
+import-declaration order; var-before-init within a package),
+`multipkg/init-order-stdlib` (the stdlib nodes' ordering effect —
+BUG-060's pin), `multipkg/diamond-import` (exactly-once
+initialization, dependencies first).
+
+Recorded honestly: which packages are in the list is
+BUILD-CONDITIONED, because build constraints decide which imports a
+stdlib package declares on a given GOOS/GOARCH. That is a property of
+Go, not a modeling choice, and the frontend reads the same host
+configuration the `go run` oracle uses, so the two legs agree by
+construction. A port to another platform re-derives the list.
 
 ## §6 Fail-closed register (what refuses, what is unchanged)
 
@@ -232,8 +280,21 @@ case-relative subdir paths (`import "mathutil"`, `import
   - `interfaces/imported-package-name-collision`: frontend-export →
     PASS (the BUG-010 closure flip; the case's doc comment updates
     with it);
-  - the 8 new `multipkg/*` rows: 7 → PASS;
+  - the 9 new `multipkg/*` rows: 8 → PASS;
     `multipkg/same-name-identity-panic` stays FAIL (observation
     stage, the §3.3 residue, BUG-059's pin).
+    (Written as 8 rows before implementation; corrected to 9 after the
+    fact — `multipkg/cross-var` was added DURING the implementation
+    slice, as a same-slice guardrail for the qualified
+    store/compound-assign/&-alias paths that the slice's fail-closed
+    junk message exposed. The prediction's shape held; the count did
+    not, because the guardrail set legitimately grew.)
 - Any OTHER drift at the full-run re-pin is a finding to investigate,
   not to launder (CLAUDE.md baseline rules).
+- Recorded after the pre-merge audit: the prediction above is a
+  prediction about DRIFT, and it held — but a green re-pin says
+  nothing about behavior no case exercises. Audit finding F1 (BUG-060)
+  was exactly that: the initialization list omitted the stdlib nodes,
+  and no corpus case had a local package gated by a stdlib import, so
+  every gate stayed green. `multipkg/init-order-stdlib` closes that
+  hole (2 rows, red-then-green across the audit-fix round).

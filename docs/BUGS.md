@@ -32,7 +32,14 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ## BUG-060 — the program initialization list omits the imported STDLIB packages, so a local package gated by a stdlib import is scheduled too early
 
-- Status: open
+- Status: fixed (2026-08-18, audit-fix round F1b: `specInitOrder` in
+  `tools/nativefrontend/load.go` builds the list over the source units
+  PLUS the transitive closure of their non-source imports, edges read
+  from the import declarations via `go/build`, and drops the non-source
+  nodes only after they have taken their positions. Type-check order —
+  a separate, weaker requirement — stays local-only; conflating the two
+  was the defect. Both cases PASS; `multipkg/init-order` PASSes
+  throughout.)
 - Pinned-by: differential
 - Cases: multipkg/init-order-stdlib/seq, multipkg/init-order-stdlib/marks
 
