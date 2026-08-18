@@ -527,3 +527,37 @@ the `/*`-in-a-raw-string case stops eating declarations.
 and new scanners over the whole corpus is IDENTICAL — 38 dirs, no
 additions, no removals — so the hole closed with zero collateral.
 `scripts/check-coverage` stays green.
+
+## 2026-08-18 — delta-review fix round: the tracker probe under the pruned schedule
+
+Re-ran the tier-2 tracker probe (`artifacts/probe-tracker-shimpb`,
+`deps/raft` @ 56e3200, tracker + quorum + the raftpb ConfState
+stand-in) through the fixed frontend.
+
+**Emitted unit order: `raftpb, quorum, tracker, main` — UNCHANGED**
+from the F1b state, and the wire counts are unchanged too (7 funcs /
+40 methods / 16 types). The ANSWER is stable; the DERIVATION is not,
+and the difference is worth recording because the old one is no longer
+true:
+
+- F1b's story: raftpb is ready at step one, `quorum` is not ready until
+  `slices` has run, and `"raftpb" < "slices"` — so raftpb takes its
+  position first despite `"quorum" < "raftpb"`.
+- What actually happens: `raftpb` (the stand-in) has no package-scope
+  variable initializers and no `init`, so gc emits no record for it —
+  it is **not in the schedule at all** and is emitted in the pruned
+  pass. `quorum` likewise has no work of its own but imports `slices`,
+  which IS a node, so `quorum` is a node by inheritance and waits for
+  the `slices`/`iter` chain. `tracker` has real work
+  (`var _ quorum.AckedIndexer = matchAckIndexer(nil)`) and waits for
+  `quorum`. `main` is last.
+
+Two things the probe says about the residual (BUG-061). First, it does
+NOT bite here: `tracker`'s `var prstmap = [...]string{...}` is exactly
+the under-pruned flavor — an array literal gc folds into the data
+section — but `tracker` is a node anyway through its second variable,
+so the misclassification of that one initializer changes nothing.
+Second, that is luck, not structure: a package whose ONLY initializer
+is a table literal (a common shape in real Go, `prstmap` included) is
+precisely the case where the frontend keeps a node gc deleted, and it
+took a hand-built case to see it.
