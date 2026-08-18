@@ -17,7 +17,13 @@
 # Scanned surface: tracked .md, .lean, and .go files (audit F1.3 — the
 # corpus's Go sources carry citations too). Prose placeholders use
 # angle brackets (spec#<Anchor>), which the scanner does not match. A
-# citation token is #-then-word-chars; word chars are [A-Za-z0-9_].
+# citation token is #-then-anchor-chars; anchor chars are
+# [A-Za-z0-9_.-] (the pinned namespace includes dots and hyphens —
+# Floating-point_literals, Passing_arguments_to_..._parameters, Go_1.9
+# — verified: zero pinned ids outside this set; grammar widened at P3
+# when the first dotted-anchor citations arrived). Trailing dots and
+# hyphens are stripped as prose punctuation, so "see spec#Close."
+# cites Close; an interior hyphen or dot is part of the anchor.
 # SCOPE, stated honestly: this lint checks RESOLUTION only — it cannot
 # see a resolving anchor attached to a misquoted or stale clause text
 # (that class is the covmap content-hash layer's job, and the audit
@@ -73,7 +79,7 @@ git ls-files -z '*.md' '*.lean' '*.go' > "$tmp/files"
 # a tracked file containing NUL bytes is treated as binary by grep and
 # its citations are skipped with only an stderr note (N6).
 set +e
-xargs -0 grep --null -nHoE '(^|[^A-Za-z0-9_])(spec|mem)#[A-Za-z0-9_]+' -- < "$tmp/files" > "$tmp/hits"
+xargs -0 grep --null -nHoE '(^|[^A-Za-z0-9_])(spec|mem)#[A-Za-z0-9_][A-Za-z0-9_.-]*' -- < "$tmp/files" > "$tmp/hits"
 rc=$?
 set -e
 if [[ "$rc" -gt 1 ]]; then
@@ -87,6 +93,7 @@ while IFS= read -r -d '' f && IFS= read -r rest; do
   ln="${rest%%:*}"; tok="${rest#*:}"
   tok="$(printf '%s' "$tok" | sed 's/^[^A-Za-z0-9_]*//')"
   prefix="${tok%%#*}"; anchor="${tok#*#}"
+  anchor="$(printf '%s' "$anchor" | sed 's/[.-]*$//')"  # trailing prose punctuation
   case "$prefix" in
     spec) ids="$tmp/spec-ids"; name="go_spec.html"; n_spec=$((n_spec+1)) ;;
     mem)  ids="$tmp/mem-ids";  name="go_mem.html";  n_mem=$((n_mem+1)) ;;
