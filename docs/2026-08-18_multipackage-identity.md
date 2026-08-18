@@ -159,44 +159,123 @@ is vendored into the corpus tree. Rationale:
 
 ## §5 Cross-package initialization (the E7 semantics)
 
-Forced point, no latitude entry: since Go 1.21 the spec pins the whole
-schedule. Two clauses, and the arc's first implementation conflated
-them (audit F1 / BUG-060) — so state them separately.
+**REWRITTEN 2026-08-18 (delta-review fix round).** The previous text
+called this a forced point with no latitude entry, and described the
+construction as the spec's algorithm over the complete program's
+package list. Both claims were wrong, and the ways they were wrong are
+observable from Go source. What follows is the measured rule.
 
-**Between packages** (`spec#Program_initialization`): "Given the list
-of all packages, sorted by import path, in each step the first
+**Within a package** (`spec#Package_initialization`) — unchanged and
+genuinely forced: variable initializers in dependency/declaration
+order (go/types' `InitOrder`), then `init()` functions in file/source
+order.
+
+**Between packages.** `spec#Program_initialization` says: "Given the
+list of all packages, sorted by import path, in each step the first
 uninitialized package in the list for which all imported packages (if
-any) are already initialized is initialized." The list is the COMPLETE
-PROGRAM's: `spec#Program_execution` defines that as the main package
-"with all the packages it imports, transitively". **The imported
-stdlib packages are in that list**, and their presence is observable
-even though nothing about their bodies is — they stand between a
-source package and its readiness, so a source package that imports one
-cannot be scheduled until it has run.
+any) are already initialized is initialized", and
+`spec#Program_execution` defines the complete program as main "with
+all the packages it imports, transitively". gc's schedule departs from
+that text in two ways.
 
-**Within a package** (`spec#Package_initialization`): variable
-initializers in dependency/declaration order (go/types' `InitOrder`),
-then `init()` functions in file/source order.
+*(1) The node set is PRUNED.*
+`cmd/compile/internal/pkginit/init.go`, `MakeTask`, emits a
+`..inittask` record for a package only if it has residual
+initialization work or an inittask-bearing import:
 
-**The real construction** (`tools/nativefrontend/load.go`,
-`specInitOrder`): build the node set as the source units plus the
-transitive closure of every non-source import, take each node's
-dependency edges from its import DECLARATIONS (source units from the
-AST; non-source packages from `go/build`, which reports the actual
-import clauses build-constraint-filtered for the host — deliberately
-not `types.Package.Imports()`, whose export-data list is neither a
-subset nor a superset of the import clauses: at Go 1.26 `sync`'s lists
-`internal/abi`, which it does not import, and omits `runtime`, which
-it does), then run the spec's lexicographic-first-ready walk over the
-whole set. Non-source packages occupy their positions and are then
-dropped from the result: they contribute NO emitted initializer —
-their bodies are not modeled — and only their ORDERING EFFECT lands,
-which is computable from the import graph alone without modeling
-anything. Fail closed: an import path `go/build` cannot resolve refuses
-the export rather than being treated as a leaf, because a missing edge
-silently perturbs the schedule. A single source unit short-circuits
-(one package, one position), so single-package cases keep exactly the
-old path and cost.
+```go
+if len(deps) == 0 && len(fns) == 0 &&
+   path != "main" && path != "runtime" { return }
+```
+
+`fns` is what survives `cmd/compile/internal/staticinit` (a variable
+initializer folded into the data section leaves nothing to run; an
+`init` function with an empty body is dropped) and `deps` is the
+imports that themselves bear records.
+`cmd/link/internal/ld/inittask.go`, `inittaskSym`, then walks exactly
+those records. A package with no record is NOT IN THE SCHEDULE: it
+gates nothing, and its importers are ready one step earlier than the
+spec's text predicts. Pinned by `multipkg/init-order-pruned` (the
+static/dynamic pair, with the dynamic subject as the control) and
+`multipkg/init-order-pruned-stdlib`.
+
+*(2) The tie-break is by LINKER SYMBOL NAME, not import path.* The
+linker pops the lexicographically first ready record by
+`ldr.SymName` — `objabi.PathToPrefix(path) + "..inittask"`. Appending
+the suffix is not order-preserving: `"x" < "x-y"` as paths, but
+`"x-y..inittask" < "x..inittask"` as symbols, because `'-'` (0x2d) <
+`'.'` (0x2e). `PathToPrefix` additionally percent-escapes
+symbol-hostile bytes and any `'.'` after the last `'/'`, which is live
+in the standard library today (Go 1.26 ships
+`crypto/internal/entropy/v1.0.0`). Pinned by
+`multipkg/init-order-tiebreak`.
+
+**The real construction** (`tools/nativefrontend/inittask.go` for the
+rule and its evidence, `load.go`'s `specInitOrder` for the walk):
+
+1. Build the graph over the source units plus the transitive closure
+   of their non-source imports, keyed by `PathToPrefix` of the import
+   path — the namespace gc's edges and sort key live in. Source edges
+   come from the import DECLARATIONS, which is what the compiler's
+   `Target.Imports` is.
+2. Compute the node set to fixpoint: a package is a node iff it has
+   residual work of its own or imports a node.
+3. Walk the nodes, taking the lexicographically first READY one by
+   `prefix + "..inittask"` at each step.
+4. Emit the PRUNED source units first, then the scheduled ones in walk
+   order. This is the faithful placement, not a fallback: a pruned
+   package's initializers are exactly the ones gc folded into the DATA
+   SECTION, so their values are in place before any init code runs
+   anywhere, and a pruned package can hold nothing but constants, so
+   nothing it assigns can depend on another package's run-time value.
+
+`main` is always a node (gc emits its record unconditionally) and is
+always last: every source unit is reachable from `main` by imports,
+and a chain ending at a node is all nodes, so no source node can be
+scheduled after it.
+
+**Where the node facts come from.** For SOURCE packages, syntactically:
+a `func init()` with a non-empty body is work, and a package-scope
+variable initializer is work unless go/types folded it to a constant.
+For STDLIB packages, nothing the frontend can see decides it — whether
+`sync/atomic` has residual init work is a fact about compiled objects —
+so the answer is taken FROM THE COMPILER. `scripts/gen-inittask-table`
+runs `go list -export` over `std` and reads each archive with
+`go tool nm`: a defined `p..inittask` means p is a node, and the
+undefined `q..inittask` references ARE p's edges. The result is the
+tracked, dated `tools/nativefrontend/inittask-std.tsv` (362 rows at
+go1.26.5, 293 of them nodes), embedded into the frontend and
+regenerated when the Go pin moves.
+
+That table also RETIRES the old `go/build` reading of stdlib imports
+and the caveat that went with it — gc's own `deps` list is now read
+directly, so the question of whether export data lists imports the
+package does not declare no longer arises.
+
+**The approximation's direction, honestly.** `staticinit` folds
+strictly more than "go/types says constant": composite literals of
+static elements, copies from other statically initialized globals,
+addresses of globals, conversions of constants, and — with the inliner
+on — whole function calls. So the syntactic rule UNDER-PRUNES: it can
+call a package a node that gc pruned, never the reverse. Over-pruning
+would be the unsafe direction (it deletes a real edge); under-pruning
+keeps a spurious one, which can delay an importer past a package it
+should have beaten. That is a real divergence, and it is MEASURED, not
+assumed: a 26-flavor probe puts it at 11 of 26, all one-directional,
+recorded in the divergence ledger and pinned by
+`multipkg/init-order-staticinit` (BUG-061).
+
+**And this is a LATITUDE point, not a forced one.** One residual
+flavor settles it: for `var X = f()` with `f` foldable, `go run`
+reports one order and `go run -gcflags=all='-N -l'` reports the other,
+for the same source under the same compiler. Package initialization
+order is therefore not determined by the spec plus the program at the
+pruning boundary — it depends on the optimizer. The corpus cases pin
+gc-at-default-flags, which per the doctrine is a deterministic gc-pin
+of latitude carrying a re-envelope obligation, not a fidelity
+achievement. All five landed init-order cases were checked under
+`-gcflags=all='-N -l'` and are stable there; only the call-folding
+flavor moves. Ledger entry L-011.
 
 Type-check order is a SEPARATE, weaker requirement (any dependency
 order will do) and is computed over the local units only; conflating
@@ -206,18 +285,24 @@ The frontend then synthesizes ONE `$pkginit` whose body is the
 concatenation of per-package segments in that package order (each
 segment: the package's `InitOrder` assignments, then its `$initN`
 calls). gids are assigned in the same order, so driver seeding is
-unchanged. Guardrails: `multipkg/init-order` (path-sorted order beats
+unchanged. Guardrails: `multipkg/init-order` (schedule order beats
 import-declaration order; var-before-init within a package),
-`multipkg/init-order-stdlib` (the stdlib nodes' ordering effect —
-BUG-060's pin), `multipkg/diamond-import` (exactly-once
-initialization, dependencies first).
+`multipkg/init-order-stdlib` (the ordering effect of a stdlib package
+that IS a node — BUG-060's pin), `multipkg/init-order-pruned{,-stdlib}`
+(pruning, with a control), `multipkg/init-order-tiebreak` (the symbol
+sort key), `multipkg/init-order-staticinit` (the residual, RED),
+`multipkg/diamond-import` (exactly-once initialization, dependencies
+first).
 
-Recorded honestly: which packages are in the list is
+Recorded honestly: which packages are in the schedule is
 BUILD-CONDITIONED, because build constraints decide which imports a
-stdlib package declares on a given GOOS/GOARCH. That is a property of
-Go, not a modeling choice, and the frontend reads the same host
-configuration the `go run` oracle uses, so the two legs agree by
-construction. A port to another platform re-derives the list.
+stdlib package declares on a given GOOS/GOARCH — and now also
+TOOLCHAIN-conditioned, because the table is read from one toolchain's
+compiled archives. Both are properties of Go rather than modeling
+choices, and the frontend reads the same host configuration the
+`go run` oracle uses, so the two legs agree by construction. A port to
+another platform or a move of the Go pin re-derives the table;
+`scripts/gen-inittask-table` is the one command that does it.
 
 ## §6 Fail-closed register (what refuses, what is unchanged)
 
@@ -233,6 +318,24 @@ construction. A port to another platform re-derives the list.
 - **Dotted import paths**: refusal (§3.2).
 - **Import cycles**: refusal (go/types cannot admit them; the loader
   refuses with the cycle named rather than recursing forever).
+- **A non-source import the inittask table does not cover**: refusal
+  (`stdInitLookup`, `tools/nativefrontend/inittask.go`). This is the
+  audit-F1-D class, restated for the table route and NOT narrowed by
+  it. Whether a package is a node of the initialization schedule is a
+  fact about compiled objects; if the frontend cannot read that fact
+  it cannot place the package, and treating it as a leaf silently
+  perturbs the order of every package around it. So the export
+  refuses. **The honest loss:** an import that go/types CAN resolve but
+  the table cannot name is now unlowerable — a vendored dependency, a
+  GOPATH package outside `std`, a std package added after the table was
+  generated, and the six `std` directories with no buildable non-test
+  Go files (recorded in the table as `?`, refused explicitly rather
+  than defaulted). Before the table this class refused too, via
+  `go/build` failing to resolve the path; the boundary moved, the
+  fail-closed posture did not. Regenerating the table
+  (`scripts/gen-inittask-table`) is the fix when the cause is a moved
+  Go pin; a genuinely non-std dependency is outside what the frontend
+  models and belongs in §4's normalization discussion, not here.
 - **Dot imports (`import . "p"`)**: a dot import of a SOURCE package
   refuses at the loader — new capability, closed by default. The
   recorded pre-existing stdlib dot-import defect (stdlibshim.go

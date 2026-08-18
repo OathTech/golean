@@ -12,27 +12,25 @@ package main
 // packages, stdlib-shadowing local dirs, and import cycles all refuse
 // the export loudly.
 //
-// PROGRAM INITIALIZATION ORDER (design note §5; audit F1). The schedule
-// is spec#Program_initialization: "Given the list of all packages,
-// sorted by import path, in each step the first uninitialized package
-// in the list for which all imported packages (if any) are already
-// initialized is initialized." The list is the COMPLETE PROGRAM's —
-// spec#Program_execution: main "with all the packages it imports,
-// transitively" — so the imported stdlib packages are nodes in it,
-// whether or not we model them. specInitOrder therefore builds the
-// list over ALL packages: the source units plus the transitive closure
-// of every non-source import. Stdlib packages OCCUPY POSITIONS in the
-// schedule and contribute NO emitted initializer (their bodies are not
-// modeled); only their ORDERING EFFECT lands, and that is computable
-// from the import graph alone. Dropping them is NOT conservative: a
-// source package gated by a stdlib import becomes ready too early and
-// can be scheduled ahead of a lexicographically later package that is
-// genuinely ready (BUG-060, pinned by multipkg/init-order-stdlib).
+// PROGRAM INITIALIZATION ORDER (design note §5; audit F1, delta-review
+// F1). The schedule is gc's, not the spec's literal reading, and the
+// rule plus its evidence live in inittask.go — read that first.
+// specInitOrder below is the walk: build the graph over the source
+// units plus the transitive closure of their non-source imports,
+// compute gc's PRUNED node set (a package is a node iff it has
+// residual init work or an inittask-bearing import), and take the
+// lexicographically first READY node at each step BY LINKER SYMBOL
+// NAME. Non-source nodes occupy their positions and are dropped from
+// the result: their bodies are not modeled, only their ORDERING
+// EFFECT lands. Both departures from the spec's text are pinned:
+// multipkg/init-order-pruned{,-stdlib} for the pruning,
+// multipkg/init-order-tiebreak for the symbol-name sort, and
+// multipkg/init-order-stdlib for the ordering effect that survives
+// pruning (BUG-060).
 
 import (
 	"fmt"
 	"go/ast"
-	"go/build"
 	"go/importer"
 	"go/parser"
 	"go/token"
@@ -87,9 +85,6 @@ type loader struct {
 	// stdlib importer + probe cache (nil entry = not importable).
 	stdlib      types.Importer
 	stdlibProbe map[string]bool
-	// Import declarations of the NON-source packages reached while
-	// building the initialization list, by import path (see nonSrcDeps).
-	nonSrcCache map[string][]string
 }
 
 func newLoader(fset *token.FileSet, rootDir string) *loader {
@@ -99,7 +94,6 @@ func newLoader(fset *token.FileSet, rootDir string) *loader {
 		locals:      map[string]*sourcePkg{},
 		stdlib:      importer.Default(),
 		stdlibProbe: map[string]bool{},
-		nonSrcCache: map[string][]string{},
 	}
 }
 
@@ -250,118 +244,265 @@ func (l *loader) localImportsOf(files []*ast.File) []string {
 	return out
 }
 
-// nonSrcDeps returns the import declarations of a package we do NOT
-// have source for — i.e. a stdlib package pulled into the program's
-// initialization list by some source package's import.
+// sourceHasInitWork approximates cmd/compile's decision about whether
+// a SOURCE package has residual initialization work — the `len(fns)`
+// half of MakeTask's pruning test (inittask.go).
 //
-// It reads them with go/build, which reports the package's actual
-// import CLAUSES (build-constraint-filtered for the host toolchain,
-// exactly as the oracle's `go run` resolves them on the same host).
-// Deliberately NOT types.Package.Imports(): export data records the
-// packages whose objects the compiler referenced, which is neither a
-// subset nor a superset of the import declarations the spec's ordering
-// ranges over — measured at Go 1.26, `sync`'s export data lists
-// internal/abi (which sync does not import) and omits runtime (which
-// it does). Fail closed: a path go/build cannot resolve refuses the
-// export rather than being treated as a leaf, since a missing edge
-// silently perturbs the schedule.
-func (l *loader) nonSrcDeps(path string) ([]string, error) {
-	if ds, ok := l.nonSrcCache[path]; ok {
-		return ds, nil
+// gc's answer is "what survives cmd/compile/internal/staticinit". The
+// frontend's answer is syntactic, over the AST plus go/types' constant
+// folding:
+//
+//   - a `func init()` with a non-empty body is work (gc drops an
+//     init function whose body is empty, so `func init() {}` is not);
+//   - a package-scope variable initializer is work UNLESS go/types
+//     assigned the expression a CONSTANT value.
+//
+// THE DIRECTION OF THE APPROXIMATION, honestly. staticinit folds
+// strictly MORE than "is a constant": it also statically initializes
+// composite literals of static elements, copies from other statically
+// initialized globals, and addresses of globals. So the syntactic rule
+// UNDER-PRUNES — it can call a package a node that gc pruned, never
+// the reverse. Under-pruning is the direction that keeps a spurious
+// EDGE, which can delay an importer past a package it should have
+// beaten; it is a real divergence, not a safe one, and it is measured
+// rather than assumed: the 120-seed randomized differential harness
+// (artifacts/delta-review-probe/gen2.py) and the residual entry in
+// docs/spec-divergence-ledger.md carry the count. It is chosen over a
+// deeper staticinit port because the rule is legible and its failure
+// mode is a wrong ORDER we can measure, whereas a half-ported
+// staticinit's failure mode is a wrong order we would believe.
+//
+// Over-pruning — calling a package pruned that gc schedules — is what
+// would be unsafe (it deletes a real edge), and the rule cannot do it
+// through the `fns` half: a constant initializer generates no code and
+// an empty init body is dropped by gc too.
+func sourceHasInitWork(u *sourcePkg) bool {
+	for _, f := range u.files {
+		for _, decl := range f.Decls {
+			switch d := decl.(type) {
+			case *ast.FuncDecl:
+				if d.Recv == nil && d.Name.Name == "init" && d.Body != nil && len(d.Body.List) > 0 {
+					return true
+				}
+			case *ast.GenDecl:
+				if d.Tok != token.VAR {
+					continue
+				}
+				for _, spec := range d.Specs {
+					vs, ok := spec.(*ast.ValueSpec)
+					if !ok {
+						continue
+					}
+					for _, value := range vs.Values {
+						// No recorded constant value => the
+						// initializer runs at initialization time.
+						// An expression go/types never typed (it
+						// should not exist after a clean Check) is
+						// treated as work: fail towards a node.
+						if tv, typed := u.info.Types[value]; !typed || tv.Value == nil {
+							return true
+						}
+					}
+				}
+			}
+		}
 	}
-	bp, err := build.Default.Import(path, "", 0)
-	if err != nil {
-		return nil, unsup("cannot resolve imported package %q while building the program initialization list (spec#Program_initialization ranges over ALL packages of the complete program): %v", path, err)
-	}
-	ds := append([]string(nil), bp.Imports...)
-	sort.Strings(ds)
-	l.nonSrcCache[path] = ds
-	return ds, nil
+	return false
 }
 
-// specInitOrder returns the SOURCE units in the program initialization
-// order of spec#Program_initialization, computed over the complete
-// program's package list: the source units plus the transitive closure
-// of their non-source (stdlib) imports. The non-source packages take
-// their positions in the schedule and are then dropped from the result
-// — they contribute no emitted initializer, only the ordering effect
-// of standing between a source package and its readiness.
+// initGraph is the program's initialization graph, in the LINKER
+// SYMBOL PREFIX namespace (inittask.go): keys are
+// objabi.PathToPrefix(importPath), which is what gc's edges name and
+// what its tie-break sorts by.
+type initGraph struct {
+	deps map[string][]string   // prefix -> the prefixes it imports
+	src  map[string]*sourcePkg // prefix -> source unit, for source packages
+	node map[string]bool       // prefix -> is a node of gc's schedule
+	work map[string]bool       // prefix -> has residual init work of its own
+}
+
+// specInitOrder returns ALL the source units in the order the program
+// initializes them, computed as gc's schedule rather than the spec's
+// literal reading (inittask.go documents the two divergences and why
+// they are observable):
+//
+//  1. build the graph over the source units plus the transitive
+//     closure of their non-source imports, edges from the import
+//     DECLARATIONS (which is what cmd/compile's Target.Imports is);
+//  2. compute the NODE set — a package is a node iff it has residual
+//     init work of its own or an inittask-bearing import, to fixpoint;
+//     stdlib node facts come from the generated table, source ones
+//     from sourceHasInitWork;
+//  3. walk the nodes: repeatedly take the lexicographically first
+//     READY node BY SORT KEY (prefix + "..inittask");
+//  4. emit the PRUNED source units first, then the scheduled ones in
+//     walk order.
+//
+// Step 4 is not a fallback, it is the faithful placement. A pruned
+// package's variable initializers are exactly the ones gc folded into
+// the DATA SECTION: their values are in place before any init code
+// runs anywhere in the program. And a pruned package can only hold
+// constants, so nothing it assigns can depend on another package's
+// run-time value — emitting the whole pruned set up front, in
+// dependency order among themselves, reproduces "already initialized"
+// without inventing a position in a schedule the package is not in.
+//
+// main is always a node (gc emits its record unconditionally) and is
+// always last: every source unit is reachable from main by imports,
+// and a chain ending at a node is all nodes, so no source node can be
+// scheduled after main.
 //
 // A single source unit is returned unchanged without touching the
 // import graph: with one package there is exactly one position to
-// occupy, so the schedule is fixed whatever the rest of the list looks
-// like. That keeps every single-package case (the overwhelming
+// occupy. That keeps every single-package case (the overwhelming
 // majority of the corpus) on exactly the old code path and cost.
-func (l *loader) specInitOrder(units []*sourcePkg) ([]*sourcePkg, error) {
+func (l *loader) specInitOrder(units []*sourcePkg, mainUnit *sourcePkg) ([]*sourcePkg, error) {
 	if len(units) < 2 {
 		return units, nil
 	}
-	src := map[string]*sourcePkg{}
-	deps := map[string][]string{}
-	pending := []string{}
-	for _, u := range units {
-		src[u.path] = u
-		ds := importPathsOf(u.files)
-		deps[u.path] = ds
-		pending = append(pending, ds...)
-	}
-	// Close over the non-source packages the source units reach.
-	for len(pending) > 0 {
-		p := pending[0]
-		pending = pending[1:]
-		if _, seen := deps[p]; seen {
-			continue
-		}
-		ds, err := l.nonSrcDeps(p)
-		if err != nil {
-			return nil, err
-		}
-		deps[p] = ds
-		pending = append(pending, ds...)
+	g, err := l.buildInitGraph(units, mainUnit)
+	if err != nil {
+		return nil, err
 	}
 
-	names := make([]string, 0, len(deps))
-	for p := range deps {
-		names = append(names, p)
+	keys := make([]string, 0, len(g.deps))
+	for p := range g.deps {
+		keys = append(keys, p)
 	}
-	sort.Strings(names)
+	// The schedule's own key: the inittask SYMBOL name, not the path.
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i]+initTaskSuffix < keys[j]+initTaskSuffix
+	})
 
 	out := make([]*sourcePkg, 0, len(units))
 	done := map[string]bool{}
-	for len(done) < len(names) {
-		progressed := false
-		for _, p := range names {
-			if done[p] {
-				continue
+	// Pass 1 drains the PRUNED packages, pass 2 runs gc's schedule
+	// over the nodes. Pass 1 is closed under its own dependencies — a
+	// pruned package has no inittask-bearing import, so everything it
+	// imports is pruned too — which is also why the readiness test can
+	// stay "every import done" in both passes: by the time pass 2
+	// starts, every pruned package is already done, so the only
+	// undone imports it can see are the node edges gc actually walks.
+	for _, nodePass := range []bool{false, true} {
+		remaining := 0
+		for _, p := range keys {
+			if g.node[p] == nodePass {
+				remaining++
 			}
-			ready := true
-			for _, dep := range deps[p] {
-				if !done[dep] {
-					ready = false
-					break
-				}
-			}
-			if !ready {
-				continue
-			}
-			done[p] = true
-			progressed = true
-			if u, isSrc := src[p]; isSrc {
-				out = append(out, u)
-			}
-			break // restart from the lexicographic front
 		}
-		if !progressed {
-			blocked := []string{}
-			for _, p := range names {
-				if !done[p] {
-					blocked = append(blocked, p)
+		for remaining > 0 {
+			progressed := false
+			for _, p := range keys {
+				if done[p] || g.node[p] != nodePass {
+					continue
 				}
+				ready := true
+				for _, dep := range g.deps[p] {
+					if !done[dep] {
+						ready = false
+						break
+					}
+				}
+				if !ready {
+					continue
+				}
+				done[p] = true
+				remaining--
+				progressed = true
+				if u, isSrc := g.src[p]; isSrc {
+					out = append(out, u)
+				}
+				break // restart from the lexicographic front
 			}
-			return nil, unsup("import cycle in the program initialization list: %v", blocked)
+			if !progressed {
+				blocked := []string{}
+				for _, p := range keys {
+					if !done[p] && g.node[p] == nodePass {
+						blocked = append(blocked, p)
+					}
+				}
+				return nil, unsup("import cycle in the program initialization schedule: %v", blocked)
+			}
 		}
 	}
 	return out, nil
+}
+
+// buildInitGraph closes over the program's imports and decides, for
+// every package reached, whether gc schedules it.
+func (l *loader) buildInitGraph(units []*sourcePkg, mainUnit *sourcePkg) (*initGraph, error) {
+	g := &initGraph{
+		deps: map[string][]string{},
+		src:  map[string]*sourcePkg{},
+		node: map[string]bool{},
+		work: map[string]bool{},
+	}
+	pending := []string{}
+	for _, u := range units {
+		prefix := pathToPrefix(u.path)
+		if other, dup := g.src[prefix]; dup {
+			return nil, unsup("source packages %q and %q share the linker symbol prefix %q, so the initialization schedule cannot tell them apart", other.path, u.path, prefix)
+		}
+		g.src[prefix] = u
+		ds := []string{}
+		for _, p := range importPathsOf(u.files) {
+			ds = append(ds, pathToPrefix(p))
+		}
+		g.deps[prefix] = ds
+		// cmd/compile emits main's record unconditionally, whether or
+		// not it has any work of its own (MakeTask's pruning test
+		// exempts `main` and `runtime` by name).
+		g.work[prefix] = u == mainUnit || sourceHasInitWork(u)
+		pending = append(pending, importPathsOf(u.files)...)
+	}
+	// Close over the non-source packages, taking their node facts and
+	// their edges from the generated table — gc's own answers, read
+	// out of the compiled archives (inittask.go).
+	for len(pending) > 0 {
+		path := pending[0]
+		pending = pending[1:]
+		prefix := pathToPrefix(path)
+		if _, seen := g.deps[prefix]; seen {
+			continue
+		}
+		if _, isSrc := g.src[prefix]; isSrc {
+			continue
+		}
+		entry, err := stdInitLookup(prefix, path)
+		if err != nil {
+			return nil, err
+		}
+		g.deps[prefix] = entry.deps
+		g.node[prefix] = entry.node
+		g.work[prefix] = entry.node
+		pending = append(pending, entry.deps...)
+	}
+	// Node set to fixpoint: a package is a node iff it has work of its
+	// own or imports a node. Only the SOURCE packages need solving —
+	// the table already gives the closed answer for the rest, and a
+	// stdlib package can never import a source one.
+	for changed := true; changed; {
+		changed = false
+		for prefix := range g.src {
+			if g.node[prefix] {
+				continue
+			}
+			isNode := g.work[prefix]
+			if !isNode {
+				for _, dep := range g.deps[prefix] {
+					if g.node[dep] {
+						isNode = true
+						break
+					}
+				}
+			}
+			if isNode {
+				g.node[prefix] = true
+				changed = true
+			}
+		}
+	}
+	return g, nil
 }
 
 // chainedImporter resolves local packages from the loader's checked
@@ -475,8 +616,8 @@ func loadProgram(fset *token.FileSet, rootDir string, mainFiles []*ast.File) ([]
 		unit.pkg = pkg
 	}
 
-	// The spec's schedule, over ALL packages of the complete program.
-	initOrder, err := l.specInitOrder(order)
+	// gc's schedule, over the PRUNED node set (inittask.go).
+	initOrder, err := l.specInitOrder(order, mainUnit)
 	if err != nil {
 		return nil, err
 	}

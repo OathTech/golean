@@ -1,44 +1,43 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-18 (raft-w1 delta-review fix round, slice 1 —
-#   the pruned-schedule guardrails, PINNED RED before the fix)
-#   commit: this commit (on caab8c53)
-#   re-pin reason: GUARDRAILS FIRST. Three new multipkg cases pin what
-#   gc's package-initialization schedule actually does, and the
-#   frontend does not do it yet, so they land RED and this re-pin
-#   records the red honestly rather than waiting for the fix.
-#
-#   The rule they pin (deps/go/src, verified by hand + `go run`):
-#   cmd/compile emits a `..inittask` record for a package only if it
-#   has residual init work (a non-empty init func, or a var
-#   initializer staticinit could not fold) or an inittask-bearing
-#   import, and cmd/link orders exactly those records, popping the
-#   lexicographically first READY one BY SYMBOL NAME
-#   (objabi.PathToPrefix(path) + "..inittask"). So the schedule runs
-#   over a PRUNED node set, and its tie-break is not import-path
-#   order.
-#
-#   Deltas — exactly the four new ids, nothing else moves:
-#     + multipkg/init-order-pruned/static        NEW -> FAIL/differential
-#       (machine 21, go run 12: `zst`'s `var X = 5` is folded into the
-#       data section, so zst is not a node and its importer `sm` is
-#       ready at step one — the frontend still schedules zst);
-#     + multipkg/init-order-pruned/dynamic       NEW -> PASS
-#       (the CONTROL: `zdy` does run-time work, IS a node, and gates
-#       its importer — the frontend gets this one right already, which
-#       is what makes the pair decisive rather than the pass alone);
-#     + multipkg/init-order-pruned-stdlib/seq    NEW -> FAIL/differential
-#       (machine 21, go run 12: `sync/atomic` and `unicode/utf8` have
-#       no init work at all, so the blank imports of them gate nothing;
-#       minimal shape found by the 120-seed randomized differential
-#       harness, seed 46);
-#     + multipkg/init-order-tiebreak/seq         NEW -> FAIL/differential
-#       (machine 12, go run 21: "x-y..inittask" < "x..inittask"
-#       because '-' < '.', inverting the import-path order of x, x-y).
-#   ZERO drift beyond the four: every pre-existing multipkg row holds,
-#   including multipkg/init-order-stdlib/{seq,marks} (still PASS — the
-#   `sync` there IS a node, so its ordering effect is real) and
-#   multipkg/same-name-identity-panic (still BUG-059's red).
-#   Full run: 2088 cases (1950 PASS / 138 FAIL), native frontend.
+# recorded: 2026-08-18 (raft-w1 delta-review fix round, slice 2 —
+#   gc's PRUNED initialization schedule, with the residual pinned RED)
+#   commit: this commit (on 156539fc); prior re-pin same-day slice 1
+#   re-pin reason: the frontend now computes gc's schedule instead of
+#   the spec's literal reading. Two departures, both observable:
+#   (1) PRUNING — cmd/compile emits a `..inittask` record only for a
+#   package with residual init work (what survives staticinit) or an
+#   inittask-bearing import, and cmd/link orders exactly those
+#   records, so a package with no record gates nothing; (2) the
+#   TIE-BREAK is by linker symbol name, PathToPrefix(path) +
+#   "..inittask", not by import path. Source node facts are
+#   approximated syntactically (a non-empty init body, or a var
+#   initializer go/types did not fold to a constant); STDLIB node
+#   facts and edges are read from the compiled archives into the
+#   tracked, embedded tools/nativefrontend/inittask-std.tsv
+#   (scripts/gen-inittask-table), and any std import absent from it
+#   REFUSES. That table also retires the old go/build reading of
+#   stdlib imports.
+#   Deltas — exactly the four rows this fix targets:
+#     ~ multipkg/init-order-pruned/static       FAIL/differential -> PASS
+#       (machine 21 -> 12, matching go run);
+#     ~ multipkg/init-order-pruned-stdlib/seq   FAIL/differential -> PASS
+#       (machine 21 -> 12);
+#     ~ multipkg/init-order-tiebreak/seq        FAIL/differential -> PASS
+#       (machine 12 -> 21);
+#     + multipkg/init-order-staticinit/seq      NEW -> FAIL/differential
+#       (the KNOWN residual, pinned RED on purpose: the syntactic rule
+#       under-approximates staticinit, so a statically-initialized
+#       package is still scheduled. BUG-061; measured at 11 of 26
+#       initializer flavors, all one-directional; ledger L-011 records
+#       that one of the eleven is optimizer-dependent within gc itself
+#       — `go run` and `go run -gcflags=all='-N -l'` disagree — which
+#       is why this is latitude rather than a forced point).
+#   ZERO drift beyond the four across 2089 cases: no single-package
+#   case moves (they short-circuit on one source unit), and every
+#   pre-existing multipkg row holds, incl. init-order,
+#   init-order-stdlib/{seq,marks}, diamond-import, and
+#   same-name-identity-panic (still BUG-059's red).
+#   Full run: 2089 cases (1953 PASS / 136 FAIL), native frontend.
 #
 result	id	stage
 PASS	arrays/array-bounds	-
@@ -1470,12 +1469,13 @@ PASS	multipkg/cross-type-method	-
 PASS	multipkg/cross-var	-
 PASS	multipkg/diamond-import	-
 PASS	multipkg/init-order	-
-FAIL	multipkg/init-order-pruned-stdlib/seq	differential
+PASS	multipkg/init-order-pruned-stdlib/seq	-
 PASS	multipkg/init-order-pruned/dynamic	-
-FAIL	multipkg/init-order-pruned/static	differential
+PASS	multipkg/init-order-pruned/static	-
+FAIL	multipkg/init-order-staticinit/seq	differential
 PASS	multipkg/init-order-stdlib/marks	-
 PASS	multipkg/init-order-stdlib/seq	-
-FAIL	multipkg/init-order-tiebreak/seq	differential
+PASS	multipkg/init-order-tiebreak/seq	-
 FAIL	multipkg/same-name-identity-panic	differential
 PASS	multipkg/same-name-identity/func-identity	-
 PASS	multipkg/same-name-identity/type-identity	-

@@ -407,3 +407,76 @@ observable from Go source.
 **Drift:** exactly the four new ids, nothing else. Every pre-existing
 multipkg row holds, `init-order-stdlib/{seq,marks}` included. Full run
 2088 cases, 1950 PASS / 138 FAIL.
+
+## 2026-08-18 — delta-review fix round, slice 2: gc's pruned schedule
+
+The fix for slice 1's three reds, plus the honest residual.
+
+**What `specInitOrder` now computes** (`tools/nativefrontend/load.go`;
+the rule and its evidence live in the new `inittask.go`):
+
+1. graph over the source units plus the transitive closure of their
+   non-source imports, keyed by `PathToPrefix` of the import path;
+2. node set to fixpoint — a package is a node iff it has residual init
+   work or imports a node;
+3. lexicographic-first-ready walk over the nodes, keyed by
+   `prefix + "..inittask"`;
+4. emission = the PRUNED source units first (dependency order among
+   themselves), then the scheduled ones in walk order.
+
+Step 4 is the faithful placement, not a fallback: a pruned package's
+initializers are the ones gc folded into the DATA SECTION, so their
+values are in place before any init code runs, and a pruned package
+can hold nothing but constants, so nothing it assigns can depend on a
+run-time value. Pruning is safe as a node DELETION because a pruned
+package has no inittask-bearing import, so everything behind it is
+pruned too — a deleted node can never hide a live edge. The generator
+checks that invariant on every row rather than assuming it.
+
+**The stdlib table** (`scripts/gen-inittask-table` ->
+`tools/nativefrontend/inittask-std.tsv`, embedded). Whether
+`sync/atomic` has residual init work is a fact about compiled objects,
+so it is taken FROM THE COMPILER: `go list -export` over `std`, then
+`go tool nm` on each archive — a defined `p..inittask` means p is a
+node, and the undefined `q..inittask` references ARE p's edges. 362
+rows at go1.26.5, 293 nodes, 6 unknown (test-only dirs, refused), 1
+percent-escaped (`crypto/internal/entropy/v1.0.0` — the escaping is
+live, not hypothetical). Regenerates in ~2.5s.
+
+This RETIRES `nonSrcDeps` and the `go/build` reading of stdlib
+imports, and with it the caveat about export data listing imports the
+package does not declare: gc's own `deps` list is read directly now.
+The refusal class is unchanged in posture and restated in design note
+§6 (audit F1-D): a non-source import the table cannot name refuses the
+export rather than being treated as a leaf.
+
+**The residual, measured.** A 26-flavor probe
+(`artifacts/delta-review-probe/gen3.py`) over the ways a package can be
+initialized: 15 flavors agree, 11 disagree, ALL in the under-prune
+direction (the frontend keeps a node gc deleted). Pinned RED as
+`multipkg/init-order-staticinit` / BUG-061. The 120-seed randomized
+harness went 26 mismatches -> **0**, and is structurally blind to this
+residual — every package it generates has a call-valued initializer,
+so it is a node under both rules.
+
+**The finding that reframes §5.** For `var X = f()` with `f` foldable,
+`go run` and `go run -gcflags=all='-N -l'` produce DIFFERENT observable
+initialization orders from the same source. Package initialization
+order is therefore not determined by the spec plus the program at the
+pruning boundary — it is an optimizer artifact. §5's "forced point, no
+latitude entry" is withdrawn; ledger entry L-011 books the
+re-envelope obligation. All five landed init-order cases were
+re-checked under `-N -l` and are stable there, so the pins are of
+optimizer-independent facts.
+
+**Records corrected.** BUG-060's mechanism narrative (audit F1-E) said
+"real Go initializes `rec` before `sync`". It does not: `rec` has no
+init work, so it is not in the schedule at all. The real mechanism is
+that `bbb`'s only import is the pruned `rec`, so `bbb` is ready at step
+one while `aaa` waits for `sync`. Same observation, same fix direction,
+wrong story — and the wrong story implied exactly the belief this round
+refuted. Its closing claim that the ordering effect "is computable from
+the import graph alone" is likewise false and is corrected.
+
+**Drift:** exactly four rows across 2089 cases — the three slice-1 reds
+go PASS, the new residual lands RED.
