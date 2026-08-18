@@ -93,7 +93,8 @@ facts as hypotheses), and the queue glue composites
 step count, uniform in `i`), `stepFnIter_iterate_bail` (the TWO-EXIT
 loop — the loop may leave early) with its measure-indexed relational
 schema `stepFnIter_iterate_bail_rel`, and `stepFnIter_iterate_exit`
-(the exit leg).
+(the exit leg), with the guard bridge `decide_natCast_lt_true` every
+instantiation needs.
 
 **Internal**: none — this module has no `private` declarations.
 
@@ -739,5 +740,30 @@ theorem stepFnIter_iterate_exit {c e n : Nat} {T : Nat → ExecState}
       stepFnIter (c * (n - i) + e) (T i) (C i) ch = .ok (cf, Tf, ch) :=
   fun i hin ch =>
     stepFnIter_chain (stepFnIter_iterate hstep i hin ch) (hexit ch)
+
+/-- The LOOP-GUARD BRIDGE for the schemas above (WP arc s5, item 3).
+
+Every counted-loop instantiation has to turn the descriptor's guard
+value `decide ((i : Int) < (n : Int))` — the machine's own reading of
+`i < n` at `Nat`-cast operands — into `true` before the per-iteration
+segment lemma applies. Written by hand that is three lines
+(`rw [show (decide (((i : Nat) : Int) < ((n : Nat) : Int))) = true from
+decide_eq_true (by exact_mod_cast hj)]`); with this lemma it is
+`rw [decide_natCast_lt_true hj]`.
+
+Consumer census at the lift (2026-08-18, `grep -rn "decide_eq_true (by
+exact_mod_cast" Examples/`): 79 occurrences of the idiom, ~50 of them
+in exactly this `Nat`→`Int` cast-on-both-sides shape; the rest either
+compare a `Nat` cast against an `Int` binder or need `omega` on Int
+arithmetic, where `decide_eq_true h` already applies directly and no
+lemma is missing. Retrofits landed in the same commit: `DotProduct`
+(3 sites), `Kadane` (2). This is the residue the s5 assessment found
+where a `go_iterate` TACTIC was proposed: the descriptors (`T`/`C`/
+`I`/`Q`/`hstep`) are per-example content only a probe-driven emitter
+could write, so the tactic was trimmed and its one uniform line lifted
+as a lemma instead (`docs/wp-arc-log/s5.md` §S5.3). -/
+theorem decide_natCast_lt_true {j n : Nat} (h : j < n) :
+    decide (((j : Nat) : Int) < ((n : Nat) : Int)) = true :=
+  decide_eq_true (by exact_mod_cast h)
 
 end GoLean.Surface

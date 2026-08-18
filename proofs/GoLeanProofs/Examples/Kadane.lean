@@ -1784,8 +1784,7 @@ theorem kd_su_loop (σ : ExecState) (n : Nat) (seed : Int)
   | _ μ ih =>
     intro m hm ch
     rcases Nat.lt_or_ge m n with hlt | hge
-    · rw [show (decide (((m : Nat) : Int) < ((n : Nat) : Int))) = true from
-        decide_eq_true (by exact_mod_cast hlt)]
+    · rw [decide_natCast_lt_true hlt]
       obtain ⟨k₀, hk₀, hstep⟩ := kd_su_iter σ n seed m hcap hs1 hs2 hlt ch
       obtain ⟨k, hk, hrun⟩ := ih (μ - 1) (by omega) (m + 1) (by omega) ch
       exact ⟨k₀ + k, by omega, stepFnIter_chain hstep hrun⟩
@@ -1915,8 +1914,7 @@ theorem kd_cp_loop (σ : ExecState) (n : Nat) (seed : Int)
     (C := fun j => .retV (.bool (decide
       (((j : Nat) : Int) < ((n : Nat) : Int)))) kdCpCmpK)
     (fun j hj ch'' => by
-      rw [show (decide (((j : Nat) : Int) < ((n : Nat) : Int))) = true from
-        decide_eq_true (by exact_mod_cast hj)]
+      rw [decide_natCast_lt_true hj]
       exact kd_cp_iter σ n seed j hcap hs1 hs2 hj ch'')
     hexit m (by omega) ch
 
@@ -2109,8 +2107,7 @@ theorem kd_loop (σ : ExecState) (n : Nat) (sv : Int) (l lp : List Int)
   | _ μ ih =>
     intro m hm1 hmn hμ ch
     rcases Nat.lt_or_ge m n with hlt | hge
-    · rw [show (decide (((m : Nat) : Int) < ((n : Nat) : Int))) = true from
-        decide_eq_true (by exact_mod_cast hlt)]
+    · rw [decide_natCast_lt_true hlt]
       obtain ⟨k₀, hk₀, hstep⟩ :=
         kd_iter σ n sv l lp m hln hlr hcap hm1 hlt ch
       obtain ⟨k, hk, hrun⟩ := ih (n - (m + 1)) (by omega) (m + 1)

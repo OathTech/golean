@@ -22,8 +22,8 @@ toward totals.
 | s1 | lift wave 1 (pure lifts) | **COMPLETE** — all 6 lift families landed (lift-5 stragglers resolved in S1.5b) | 8 / 8 | 2,483 (consumers; net −1,551 with +932 delegation/instantiation lines) | +79 (116 → 195) |
 | s2 | lift wave 2 (new shapes) | **COMPLETE** — all 7 chartered items landed | 7 / 7 | 1,103 (consumers; net −633 with +470 delegation/instantiation lines) | +38 (195 → 233) |
 | s3 | library regularity | **COMPLETE** — 8 kit modules regularized (the charter's 7 + `EntryEq`) | 5 / 5 | 0 (docstring-only slice; +851/−145 in `/-!` blocks) | +0 (233 → 233; no name moved) |
-| s4 | mirror symbolic evaluator | **phases 1–3 DONE** (design gate discharged 2026-08-18; drift + refinement theorems in the default build; matmul acceptance LANDED — gallery entry 25) | 12 (S4.0–S4.11) | — (additive layer; matmul: the withdrawn 2,375-line snapshot lands as 2,486 incl. the mirror fixtures) | Sym surface +6 pins over the lane's fork base (post-merge total recounted at the s5 boundary) |
-| s5 | emission + instantiation sugar | not started | — | — | — |
+| s4 | mirror symbolic evaluator | **phases 1–3 DONE** (design gate discharged 2026-08-18; drift + refinement theorems in the default build; matmul acceptance LANDED — gallery entry 25) | 13 (S4.0–S4.12; S4.12 = the cost-story reconciliation, run at the s5 boundary) | — (additive layer; matmul: the withdrawn 2,375-line snapshot lands as 2,486 incl. the mirror fixtures) | Sym surface +6 pins over the lane's fork base (post-merge total recounted at the s5 boundary) |
+| s5 | emission + instantiation sugar | **COMPLETE** — 3 units: the option probe (S4.11's flag closed), the storm lint, the sugar assessment (4 tactics trimmed with reasons, 1 lemma shipped) | 3 / 3 | 7 (the guard-bridge retrofit; ~50 more sites available, not swept) | +1 (`decide_natCast_lt_true`, `[propext]`) |
 | s6 | discoverability close-out | not started | — | — | — |
 
 Derivations for the s1 row: per-unit `git diff --numstat` figures in
@@ -99,3 +99,34 @@ slice). Full records: `s4.md` units S4.0–S4.11. Slice-4 remaining at
 phase-3 end: the charter-phrasing integration TODO (OQ3 amendment at
 the next arc boundary) and the S4.3-scale smart-unfolding re-probe
 (flagged in S4.11).
+
+**Checkpoint 5 — S5 COMPLETE (2026-08-18, tip = the S5.3 commit;
+3 units, two commits, `scripts/ci` PASS at each).** The slice the
+S4.11 discovery rescoped:
+1. **The option probe** (`8cd1f3d1`) — S4.11's flagged open question
+   answered at this tree and written up as `s4.md` §S4.12: the
+   reconstructed 752-step accumulation baseline is **DNF in 620 s at
+   default vs 0.94 s under `set_option smartUnfolding false`**, while
+   the evaluator's own `rfl` is 1.03 s / 1.01 s (option-insensitive)
+   and the transported route is 2.6 s at default but **DNF in 420 s
+   under the option** — the measured REVERSAL. Verdict recorded
+   plainly: the option, not the evaluator, buys the raw-window
+   collapse on today's corpus; the refinement theorem's value is
+   structural + the class the option breaks. S4.3's ratio superseded
+   in its own log.
+2. **The storm lint** (`8cd1f3d1`) — `scripts/proof-lint`, five rules
+   over measured pathologies (L5 is the probe's), report-only,
+   DO-NOT-HARDEN, wired into `scripts/ci` as a note-only step. 181
+   notes + a 552 L3 census at the tip; nothing changed to satisfy it.
+3. **The sugar assessment** (the S5.3 commit) — all four chartered
+   tactics (`go_iterate`/`go_bail`/`go_rebase`/`go_run`) TRIMMED with
+   one measured reason each (the descriptors are per-example content;
+   `Frame/Threshold` and `harness_readout_of_total` already ate the
+   rebase/readout work), `derive_seg` mode (a) out of scope and now
+   unmotivated. What shipped instead: the one verbatim-repeated idiom
+   the assessment found — the loop-guard bridge `decide_natCast_lt_true`
+   (79-site census; 7 sites retrofitted, −7 lines, pin `[propext]`).
+
+Slice records: `s5.md` (+ `s4.md` §S4.12). Next per the charter:
+slice 6, the discoverability close-out (the Kit Guide + its dry-run
+acceptance).

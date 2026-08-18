@@ -1388,8 +1388,7 @@ theorem su_loop (σ : ExecState) (n seed : Nat) (hn : n < 2 ^ 63) :
     (C := fun j => .retV (.bool (decide
       (((j : Nat) : Int) < ((n : Nat) : Int)))) suCmpK)
     (fun j hj ch' => by
-      rw [show (decide (((j : Nat) : Int) < ((n : Nat) : Int))) = true from
-        decide_eq_true (by exact_mod_cast hj)]
+      rw [decide_natCast_lt_true hj]
       exact su_iter σ n seed hn j hj ch')
     i hin ch
   simpa using hgen
@@ -1471,8 +1470,7 @@ theorem cp1_loop (σ : ExecState) (n seed : Nat) (siv : Int)
     (C := fun j => .retV (.bool (decide
       (((j : Nat) : Int) < ((n : Nat) : Int)))) cp1CmpK)
     (fun j hj ch' => by
-      rw [show (decide (((j : Nat) : Int) < ((n : Nat) : Int))) = true from
-        decide_eq_true (by exact_mod_cast hj)]
+      rw [decide_natCast_lt_true hj]
       exact cp1_iter σ n seed siv j hn hcap hj ch')
     m hmn ch
   simpa using hgen
@@ -1552,8 +1550,7 @@ theorem cp2_loop (σ : ExecState) (n seed : Nat) (siv c1v : Int)
     (C := fun j => .retV (.bool (decide
       (((j : Nat) : Int) < ((n : Nat) : Int)))) cp2CmpK)
     (fun j hj ch' => by
-      rw [show (decide (((j : Nat) : Int) < ((n : Nat) : Int))) = true from
-        decide_eq_true (by exact_mod_cast hj)]
+      rw [decide_natCast_lt_true hj]
       exact cp2_iter σ n seed siv c1v j hn hcap hj ch')
     m hmn ch
   simpa using hgen
@@ -1653,8 +1650,7 @@ theorem sj_loop (σ : ExecState) (n seed : Nat) (siv c1v c2v : Int)
     (C := fun j => .retV (.bool (decide
       (((j : Nat) : Int) < ((n : Nat) : Int)))) sjCmpK)
     (fun j hj ch' => by
-      rw [show (decide (((j : Nat) : Int) < ((n : Nat) : Int))) = true from
-        decide_eq_true (by exact_mod_cast hj)]
+      rw [decide_natCast_lt_true hj]
       exact sj_iter σ n seed siv c1v c2v j hn hcap hj ch')
     j hjn ch
   simpa using hgen

@@ -553,6 +553,14 @@ counting-loop lift + the GAP-R1 pick-loop lift, 2026-08-15) -/
 #guard_msgs in #print axioms GoLean.Surface.stepFnIter_iterate
 /-- info: 'GoLean.Surface.stepFnIter_iterate_exit' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.stepFnIter_iterate_exit
+-- WP arc s5 item 3 (2026-08-18): the loop-guard bridge every counted-loop
+-- instantiation needs (the 79-site `decide_eq_true (by exact_mod_cast …)`
+-- idiom, lifted after the go_iterate TACTIC was trimmed). Transcribed
+-- verbatim from a fresh probe (`.tmp/pinprobe13.lean`) — the set is
+-- [propext] ALONE, smaller than its neighbours here; do not copy a
+-- neighbour's trio (the S4.11 stale-pin lesson).
+/-- info: 'GoLean.Surface.decide_natCast_lt_true' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Surface.decide_natCast_lt_true
 -- WP arc s1 lift 5 (2026-08-16): the two-exit loop schema.
 -- Transcribed verbatim from a fresh probe (`.tmp/pinprobe5.lean`).
 /-- info: 'GoLean.Surface.stepFnIter_iterate_bail' depends on axioms: [propext, Quot.sound] -/
