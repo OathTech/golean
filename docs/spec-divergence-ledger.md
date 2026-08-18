@@ -97,8 +97,9 @@ Discipline notes, recorded up front:
 - Sources: mem#model Requirement 1 (links spec#Order_of_evaluation).
 - Content: the memory model's per-goroutine order is a PARTIAL order
   exactly where the spec's evaluation order is open — E2–E5's latitude
-  (and E12's, the entry added on the spec-p2 lane landing alongside;
-  dangling-id caught at the P4 audit) is memory-model latitude too,
+  (and E12's, now in the inventory on this tree — the dangling id was
+  caught at the P4 audit, resolved by the post-P2 rebase) is
+  memory-model latitude too,
   under concurrency.
 - Stance: recorded at E1's cross-link (P2 retrofit); matters the day
   an E-series envelope meets a concurrent observer.
@@ -120,10 +121,10 @@ Discipline notes, recorded up front:
   anchor set stayed byte-identical.
 - Stance: neither anchor existence nor the version line is a
   content-drift tripwire; content hashing (the covmap layer) is the
-  only sufficient signal. Encoded on the spec-p2 LANE (inventory §0
-  citation norms + `scripts/check-spec-anchors`' header) — landing
-  alongside this ledger, not present on this branch's own tree
-  (cross-branch scope corrected at the P4 audit).
+  only sufficient signal. Encoded in the inventory §0 citation norms
+  and `scripts/check-spec-anchors`' header (both now on this tree —
+  the P4 audit caught this line claiming them before the P2 landing;
+  updated at the post-P2 rebase, 2026-08-18).
 
 ## Feed status (honest accounting)
 
