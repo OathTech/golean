@@ -1,6 +1,7 @@
 import Lean
 import GoLeanProofs.StepKit
 import GoLeanProofs.SliceMem
+import GoLeanProofs.StringMem
 import GoLeanProofs.MapMem
 import GoLeanProofs.MapLoops
 import GoLeanProofs.FuelMeasure
@@ -204,6 +205,21 @@ other vocabulary defs) -/
 #guard_msgs in #print axioms GoLean.SliceMem.applyStmtOp_append1_spill
 /-- info: 'GoLean.SliceMem.applyStmtOp_append1_spill_ex' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.SliceMem.applyStmtOp_append1_spill_ex
+-- WP arc s2 item 4 (2026-08-18): StringMem — the string VALUE
+-- vocabulary (no heap half, by the recorded negative finding). Fresh
+-- probe: `.tmp/pinprobe11.lean`.
+/-- info: 'GoLean.StringMem.gs_nil' does not depend on any axioms -/
+#guard_msgs in #print axioms GoLean.StringMem.gs_nil
+/-- info: 'GoLean.StringMem.gs_append' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.StringMem.gs_append
+/-- info: 'GoLean.StringMem.applyStrictOp_stringFromRune_ascii' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.StringMem.applyStrictOp_stringFromRune_ascii
+/-- info: 'GoLean.StringMem.applyStrictOp_indexGet_string' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.StringMem.applyStrictOp_indexGet_string
+/-- info: 'GoLean.StringMem.applyStrictOp_len_string' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.StringMem.applyStrictOp_len_string
+/-- info: 'GoLean.StringMem.applyStrictOp_slice_string' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.StringMem.applyStrictOp_slice_string
 /-- info: 'GoLean.SliceMem.mem_set_of_mem' depends on axioms: [propext] -/
 #guard_msgs in #print axioms GoLean.SliceMem.mem_set_of_mem
 /-- info: 'GoLean.SliceMem.storeTarget_slice_u64' depends on axioms: [propext, Quot.sound] -/

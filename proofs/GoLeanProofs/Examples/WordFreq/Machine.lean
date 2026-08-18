@@ -2,6 +2,7 @@ import GoLeanProofs.Examples.WordFreq.Pure
 import GoLeanProofs.Examples.WordFreqProgram
 import GoLeanProofs.StepKit
 import GoLeanProofs.FuelMeasure
+import GoLeanProofs.StringMem
 import GoLeanProofs.SliceMem
 
 /-!
@@ -422,8 +423,10 @@ theorem gs_nil : gs [] = GoString.empty := rfl
 
 /-- String `+` at the list spelling. -/
 theorem gs_append (a b : List UInt8) :
-    GoString.append (gs a) (gs b) = gs (a ++ b) := by
-  simp [GoString.append, gs]
+    GoString.append (gs a) (gs b) = gs (a ++ b) :=
+  -- zero-proof delegation since WP arc s2 item 4 (`StringMem`); the
+  -- local `gs` stays — headline vocabulary, definitionally the kit's
+  StringMem.gs_append a b
 
 /-! ## The string strict-op conditioned facts
 
@@ -436,35 +439,22 @@ theorem gs_append (a b : List UInt8) :
 theorem applyStrictOp_stringFromRune_ascii {σ : ExecState} {c : Nat}
     {ik : IntKind} (h : c < 128) :
     applyStrictOp σ .stringFromRune [.int (c : Nat) ik]
-      = .ok (.string (gs [UInt8.ofNat c]), σ) := by
-  simp only [applyStrictOp, valueAsInt, bind, Except.bind, pure, Except.pure,
-    GoString.fromCodePoint, GoString.fromCodePointNat, GoString.utf8Byte,
-    Int.toNat_natCast]
-  rw [if_neg (by omega : ¬ ((c : Int) < 0)), if_pos (by omega : c ≤ 0x7f)]
-  rfl
+      = .ok (.string (gs [UInt8.ofNat c]), σ) :=
+  StringMem.applyStrictOp_stringFromRune_ascii h
 
 /-- `s[i]` on a string VALUE: the in-range byte read, at the `getD`
 spelling. Pure — the string is an operand, not a heap cell. -/
 theorem applyStrictOp_indexGet_string {σ : ExecState} {l : List UInt8}
     {i : Nat} {ik : IntKind} (hi : i < l.length) :
     applyStrictOp σ .indexGet [.string (gs l), .int (i : Nat) ik]
-      = .ok (.int ((l.getD i 0).toNat : Nat) .uint8, σ) := by
-  have hneg : ¬ ((i : Int) < 0) := by omega
-  have hbyte : (gs l).byte? (i : Int).toNat = some (l.getD i 0) := by
-    simp only [GoString.byte?, gs, Int.toNat_natCast]
-    rw [List.getElem?_toArray, List.getElem?_eq_getElem hi,
-      List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hi]
-    rfl
-  simp only [applyStrictOp, valueAsInt, stringByteGet, hneg, if_false,
-    hbyte, pure, Except.pure, bind, Except.bind]
-  rfl
+      = .ok (.int ((l.getD i 0).toNat : Nat) .uint8, σ) :=
+  StringMem.applyStrictOp_indexGet_string hi
 
 /-- `len(s)` on a string VALUE. -/
 theorem applyStrictOp_len_string {σ : ExecState} {l : List UInt8} :
     applyStrictOp σ (.lengthOf (some tStr)) [.string (gs l)]
-      = .ok (.int (l.length : Nat) .int, σ) := by
-  simp only [applyStrictOp, pure, Except.pure, bind, Except.bind]
-  rfl
+      = .ok (.int (l.length : Nat) .int, σ) :=
+  StringMem.applyStrictOp_len_string
 
 /-- The SUBSTRING fact: `s[lo:hi]` on a string value, in bounds, is the
 byte sublist `(l.drop lo).take (hi - lo)` — pure, no allocation (a Go
@@ -474,23 +464,8 @@ theorem applyStrictOp_slice_string {σ : ExecState} {l : List UInt8}
     (h1 : lo ≤ hi) (h2 : hi ≤ l.length) :
     applyStrictOp σ (.sliceExpr false)
       [.string (gs l), .int (lo : Nat) ik, .int (hi : Nat) ik']
-      = .ok (.string (gs ((l.drop lo).take (hi - lo))), σ) := by
-  simp only [applyStrictOp, valueAsInt, bind, Except.bind, pure, Except.pure,
-    applySlice, stringSlice, Option.isSome]
-  rw [show checkSliceBounds "length" (gs l).length ((lo : Nat) : Int)
-        ((hi : Nat) : Int) = .ok (lo, hi) from by
-    simp only [checkSliceBounds, gs, GoString.length, List.size_toArray]
-    rw [if_neg (by omega : ¬ (((hi : Nat) : Int) < 0)),
-      if_neg (by push_cast; omega : ¬ (((hi : Nat) : Int) > (l.length : Int))),
-      if_neg (by omega : ¬ (((lo : Nat) : Int) < 0)),
-      if_neg (by push_cast; omega : ¬ (((lo : Nat) : Int) > ((hi : Nat) : Int)))]
-    rfl]
-  simp only [pure, Except.pure, bind, Except.bind, GoString.slice, gs]
-  rw [show (⟨l⟩ : Array UInt8).extract lo hi
-      = ⟨(l.drop lo).take (hi - lo)⟩ from by
-    apply Array.toList_inj.mp
-    simp [List.extract_eq_take_drop]]
-  rfl
+      = .ok (.string (gs ((l.drop lo).take (hi - lo))), σ) :=
+  StringMem.applyStrictOp_slice_string h1 h2
 
 /-- `int32` normalization is the identity on `0 ≤ v < 2^31`. -/
 theorem i32norm_of_range {v : Int} (h0 : 0 ≤ v) (h1 : v < 2 ^ 31) :

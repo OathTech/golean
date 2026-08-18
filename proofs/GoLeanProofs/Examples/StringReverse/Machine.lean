@@ -2,6 +2,7 @@ import GoLeanProofs.Examples.StringReverse.Pure
 import GoLeanProofs.Examples.StringReverseProgram
 import GoLeanProofs.StepKit
 import GoLeanProofs.FuelMeasure
+import GoLeanProofs.StringMem
 
 /-!
 # StringReverse — Machine
@@ -258,10 +259,13 @@ def gs (l : List UInt8) : GoString := ⟨⟨l⟩⟩
 theorem gs_nil : gs [] = GoString.empty := rfl
 
 /-- String `+` at the list spelling — what turns the append the
-machine performs into the pure prefix invariant. -/
+machine performs into the pure prefix invariant. (Zero-proof
+delegation since WP arc s2 item 4 — `StringMem`; the local `gs` def
+stays: it is headline vocabulary, and it is definitionally the
+kit's.) -/
 theorem gs_append (a b : List UInt8) :
-    GoString.append (gs a) (gs b) = gs (a ++ b) := by
-  simp [GoString.append, gs]
+    GoString.append (gs a) (gs b) = gs (a ++ b) :=
+  StringMem.gs_append a b
 
 /-! ## The string strict-op conditioned facts
 
@@ -275,28 +279,16 @@ arm, and it is all this example's data ever exercises.) -/
 theorem applyStrictOp_stringFromRune_ascii {σ : ExecState} {c : Nat}
     {ik : IntKind} (h : c < 128) :
     applyStrictOp σ .stringFromRune [.int (c : Nat) ik]
-      = .ok (.string (gs [UInt8.ofNat c]), σ) := by
-  simp only [applyStrictOp, valueAsInt, bind, Except.bind, pure, Except.pure,
-    GoString.fromCodePoint, GoString.fromCodePointNat, GoString.utf8Byte,
-    Int.toNat_natCast]
-  rw [if_neg (by omega : ¬ ((c : Int) < 0)), if_pos (by omega : c ≤ 0x7f)]
-  rfl
+      = .ok (.string (gs [UInt8.ofNat c]), σ) :=
+  StringMem.applyStrictOp_stringFromRune_ascii h
 
 /-- `s[i]` on a string VALUE: the in-range byte read, at the `getD`
 spelling. Pure — the string is an operand, not a heap cell. -/
 theorem applyStrictOp_indexGet_string {σ : ExecState} {l : List UInt8}
     {i : Nat} {ik : IntKind} (hi : i < l.length) :
     applyStrictOp σ .indexGet [.string (gs l), .int (i : Nat) ik]
-      = .ok (.int ((l.getD i 0).toNat : Nat) .uint8, σ) := by
-  have hneg : ¬ ((i : Int) < 0) := by omega
-  have hbyte : (gs l).byte? (i : Int).toNat = some (l.getD i 0) := by
-    simp only [GoString.byte?, gs, Int.toNat_natCast]
-    rw [List.getElem?_toArray, List.getElem?_eq_getElem hi,
-      List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hi]
-    rfl
-  simp only [applyStrictOp, valueAsInt, stringByteGet, hneg, if_false,
-    hbyte, pure, Except.pure, bind, Except.bind]
-  rfl
+      = .ok (.int ((l.getD i 0).toNat : Nat) .uint8, σ) :=
+  StringMem.applyStrictOp_indexGet_string hi
 
 /-- `int32` normalization is the identity on `0 ≤ v < 2^31` — the
 `rune(...)` conversions this example performs (byte values). -/
