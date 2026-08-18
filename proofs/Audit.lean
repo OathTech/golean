@@ -25,6 +25,7 @@ import Audit.Stein
 import Audit.WordFreq
 import Audit.SliceStack
 import Audit.SliceQueue
+import Audit.MatMul
 
 /-!
 # In-build epistemic gate for the Iris proof layer
@@ -1887,7 +1888,9 @@ audit-coverage step fails closed if a shard ever falls out of the
 closure. Shards: Reverse, Gcd, MinMax, InsertionSort, BinSearch,
 WordCount, Histogram, PowMod, DotProduct, Kadane, DedupAdjacent,
 ArrayPalindrome, StringReverse, TwoSum, SelectionSort, BubbleSort,
-RunLength, FibMemo, Sieve, Stein, WordFreq, SliceStack, SliceQueue.
+RunLength, FibMemo, Sieve, Stein, WordFreq, SliceStack, SliceQueue,
+MatMul (landed by WP arc slice 4 phase 3 — the campaign's G1.9
+honest gap, closed).
 Fib's references stay in the exemplar section
 above — that section pins the WP-law kit, not the example.
 -/

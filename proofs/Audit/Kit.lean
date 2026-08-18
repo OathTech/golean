@@ -480,7 +480,12 @@ the symbolic per-step `stepFnS_sound`), **THE REFINEMENT THEOREM**
 (`symEvalWindow_refines`, charter :89), and the Kadane non-vacuity
 witness (`kd_su_A0_via_sym`, ruled OQ4 — statement byte-identical to
 the shipped `kd_su_A0_raw`, now discharged through the refinement
-theorem; phase 1's bespoke spike route is retired, log unit S4.8). -/
+theorem; phase 1's bespoke spike route is retired, log unit S4.8).
+Phase 3 adds the PROJECTION corollary `symEvalWindow_refines'` (the
+emission-seam spelling: the transported RHS is the run's own output,
+so a window discharge writes only the INPUT fixture; first consumers =
+the matmul blocked-segment transports, `Examples/MatMul.lean`, log
+unit S4.11). -/
 
 /-- info: 'GoLean.Sym.stepFn'_conc' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Sym.stepFn'_conc
@@ -490,6 +495,8 @@ theorem; phase 1's bespoke spike route is retired, log unit S4.8). -/
 #guard_msgs in #print axioms GoLean.Sym.stepFnS_sound
 /-- info: 'GoLean.Sym.symEvalWindow_refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Sym.symEvalWindow_refines
+/-- info: 'GoLean.Sym.symEvalWindow_refines'' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.symEvalWindow_refines' 
 /-- info: 'GoLean.Sym.Spike.kd_su_A0_via_sym' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Sym.Spike.kd_su_A0_via_sym
 

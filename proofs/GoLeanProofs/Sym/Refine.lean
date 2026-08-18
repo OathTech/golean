@@ -56,4 +56,21 @@ theorem symEvalWindow_refines :
         simp only [stepFnIter, h1, Bind.bind, Except.bind]
         exact ih hrec ρ σ ch
 
+/-- The PROJECTION-form corollary of the refinement theorem — the
+emission-seam spelling (WP arc slice 4, phase 3: the matmul transported
+segments are its first consumers, `Examples/MatMul.lean`). A window
+discharge writes only the INPUT fixture: the transported RHS is the
+run's own output (`(symEvalWindow …).2.1/2.2`), so no hand-transcribed
+output fixture exists to get wrong — the campaign's near-miss class.
+The one obligation is the step-count projection (`hn`), a closed
+evaluator run; the caller lands on the statement's own spelling by a
+defeq `exact`. Zero new content: `Prod` eta + `symEvalWindow_refines`. -/
+theorem symEvalWindow_refines' {budget n : Nat} {S : SymState} {C : SymConfig}
+    (hn : (symEvalWindow budget S C).1 = n)
+    (ρ : Valuation) (σ : ExecState) (ch : Choices) :
+    stepFnIter n (γS ρ σ S) (γC ρ C) ch
+      = .ok (γC ρ (symEvalWindow budget S C).2.2,
+          γS ρ σ (symEvalWindow budget S C).2.1, ch) :=
+  symEvalWindow_refines (by rw [← hn]) ρ σ ch
+
 end GoLean.Sym
