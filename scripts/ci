@@ -712,6 +712,22 @@ printf '%s\n' "$costout"
 ngrow="$(printf '%s\n' "$costout" | grep -c '^  note ' || true)"
 RESULTS+=("  note proof-cost trend: $ngrow module(s) over +25% vs their previous recording (report-only)")
 
+# 3d. STORM LINT — REPORT-ONLY SPEEDBUMP (WP arc slice 5, 2026-08-18; the
+#     design note's T5). Syntax-level heuristics for the five measured
+#     proof-cost shapes (StepKit rules 3/4/5, the program-embedding long run,
+#     and the new smart-unfolding rule from the s5 option probe). Prints the
+#     summary line only; `scripts/proof-lint` lists every note and
+#     `--rule Lx` narrows to one.
+#     DO NOT HARDEN — identical policy to the proof-cost step above: never
+#     bad(), never fail, never a threshold that blocks a landing. Every rule
+#     is a regex heuristic with a documented false-positive class (the L3
+#     census is 552 hits on a green tree), so a blocking version would be
+#     wrong before it was useful.
+step "storm lint (report-only speedbump — never blocks; scripts/proof-lint for the notes)"
+lintout="$(./scripts/proof-lint --summary 2>&1)"
+printf '%s\n' "$lintout"
+RESULTS+=("  note storm lint: $(printf '%s\n' "$lintout" | sed 's/^proof-lint: //')")
+
 # 3v. Verdi compat gate (merge window 2026-08-10, verdi-p1 lane queue
 # item 1): the standalone compat/verdi package — the Verdi Raft spec
 # port + the differential harness's LEAN leg only. The Rocq extraction
