@@ -208,6 +208,25 @@ open Lean in
      `GoLean.Iris.StepEC, `GoLean.Iris.GoPrimStepC]
   let isRelation : Name → Bool := fun n =>
     forbiddenRoots.any (fun r => r == n || r.isPrefixOf n)
+  -- THE THIRD REFUSAL CLASS (WP arc slice 4, 2026-08-18; design
+  -- §8 of docs/2026-08-16_symbolic-domain-design.md): the symbolic
+  -- mirror layer. Everything under the `GoLean.Sym` namespace —
+  -- the scalar domain, the mirror step function, the evaluator, and
+  -- (as they land) the drift/refinement theorems — is proof
+  -- AUTOMATION infrastructure, outside the statement TCB by
+  -- construction: no headline statement may reach it. One namespace,
+  -- so the check is a prefix test (`isPrefixOf` matches whole
+  -- components: `GoLean.Sym` does not match `GoLean.Symbols`).
+  let symRoot : Name := `GoLean.Sym
+  let isSymLayer : Name → Bool := fun n => symRoot.isPrefixOf n
+  -- Fail-closed existence anchor (the forbidden-roots rename-hole
+  -- guard, mirrored): if the layer's namespace ever moves without
+  -- re-pointing this gate, the build fails HERE rather than the
+  -- check silently checking nothing.
+  let some _ := env.find? `GoLean.Sym.SymInt
+    | throwError "statement-TCB gate: symbolic-layer anchor \
+        GoLean.Sym.SymInt is MISSING (namespace moved without \
+        re-pointing the gate?)"
   -- FAIL-CLOSED existence check on the forbidden set itself (S5 audit
   -- response): the roots are raw name literals — a rename would
   -- silently drop a relation from the check (the 2026-07-23
@@ -417,6 +436,24 @@ open Lean in
           s!"  {t}: statement closure reaches RELATION constant {c} \
             (Step/Steps are proof infrastructure — sem-adequacy slice 4)\
             \n    chain: {chain}"
+        continue
+      if isSymLayer c then
+        -- Symbolic-layer constant reached: report with the dependency
+        -- chain and stop at the boundary (one constant is the proof of
+        -- the violation — WP arc slice 4's outside-the-TCB gate).
+        let mut chain := s!"{c}"
+        let mut cur := c
+        for _ in [0:100000] do
+          match parent.get? cur with
+          | some p =>
+            chain := s!"{p} → " ++ chain
+            cur := p
+            if p == t then break
+          | none => break
+        violations := violations.push
+          s!"  {t}: statement closure reaches SYMBOLIC-LAYER constant {c} \
+            (GoLean.Sym is proof automation — WP arc slice 4, \
+            outside-the-TCB by construction)\n    chain: {chain}"
         continue
       match env.getModuleIdxFor? c with
       | some idx =>
