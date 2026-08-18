@@ -57,6 +57,52 @@ bind raft-lane work but reorder nothing:
 - JC: panic-form witness included KNOWINGLY as a will-stay-red pin of
   the rendering residue (identity note §3.3).
 
+## 2026-08-18 — slice 4: the tracker smoke probe (W1.3 discovery instrument)
+
+Measurement, NOT a milestone claim (arc brief step 5). Two probe tiers
+under `artifacts/probe-tracker-{verbatim,shimpb}/` (gitignored probe
+artifacts; every deviation from upstream is `[probe delta: ...]`-marked
+in the copies). Base: `deps/raft` @ 56e3200, packages tracker + quorum
+(+ raftpb), imports rewritten `go.etcd.io/raft/v3/X` → `X` (the §4
+canonical short-path form).
+
+**Tier 1 — verbatim vendor.** Refuses at raftpb's protobuf runtime,
+verbatim: `type-check: .../raftpb/confchange.go:22:2: could not import
+google.golang.org/protobuf/proto (can't find import: ...)`. NOTE FOR
+THE §8.6 RULING: at the pinned rev the runtime is
+google.golang.org/protobuf (raft has already migrated off gogo) — the
+scoping doc's "gogo-rev pin" option means pinning BACKWARD.
+
+**Tier 2 — struct-only raftpb stand-in** (ConfState only — the sole
+raftpb type tracker's non-test code touches; labeled probe artifact,
+NOT a plainpb proposal). Refusal inventory, in discovery order, each a
+W1.3 sweep item (cross-ref column per the §CROSS-READ item 3 against
+`docs/spec-archaeology/spec-examples-dispositions.tsv`):
+
+| # | Refusal (verbatim)                                    | Site                                   | Class | Cross-ref |
+|---|-------------------------------------------------------|----------------------------------------|-------|-----------|
+| 1 | `selector call Fprintf is not a method value`         | quorum majority.go String/Describe, tracker Config.String, Progress(.Map).String | rendering (quorum-pilot omission precedent; no-op-Logger/quarantine lane) | timezone-stringer row: fmt blocks are recorded honest-red class |
+| 2 | `c[0].String undefined` after omission                | quorum joint.go JointConfig.String/Describe | cascade of 1 | — |
+| 3 | `selector call FormatUint is not a method value`      | quorum quorum.go Index.String          | rendering | — |
+| 4 | `selector call FormatInt is not a method value`       | quorum voteresult_string.go (generated stringer) | rendering | — |
+| 5 | `builtin copy in statement position`                  | tracker inflights.go:93 `copy(newBuffer, in.buffer)` (Inflights.grow) | LANGUAGE GAP: copy's result may be discarded; frontend admits only expression position | spec-examples-decl/copy-forms covers the expression form language-wide — this is the statement-position residue |
+| 6 | `selector call Sprintf is not a method value`         | tracker progress.go:181 `panic(fmt.Sprintf(...))` (SentEntries) | SEMANTIC-PATH fmt: one of the scoping doc's measured non-logger Sprintf sites; needs the W1.2+ fmt story (shim / hand-rolled), not quarantine | timezone-stringer row (same class) |
+
+Post-inventory state: the FULL tracker+quorum tree (6 funcs, 39
+methods, 15 TypeDefs) exports clean, and the machine RUNS it:
+`probeTracker` (Progress literal + fields) → 7; `probeCommitted` —
+the REAL `quorum.MajorityConfig.CommittedIndex` over a main-package
+`AckedIndexer` implementation (cross-package interface satisfaction +
+the slices.Sort extern) → 5 on {8,5,3}, correct median. Also
+observed en passant: `new(p.AutoLeave)` (Go 1.26 new-with-value, in
+ConfState()) EMITS cleanly — language-wide corpus coverage exists
+(bools/short-circuit-funclit/admit-new*), but the tracker path is
+unexercised until W4 promotes cases.
+
+JC: probe iteration stopped at export-clean + two run probes — deeper
+exercise (ProgressTracker maps, Visit's sortkeys) is W4 stage-2's job
+with real differential cases, not a probe's.
+
 ## 2026-08-18 — slice 3: the implementation lands (guardrails FLIP)
 
 - Derivation: identity note §1/§5–§7, implemented exactly.
