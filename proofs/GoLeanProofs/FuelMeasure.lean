@@ -757,7 +757,8 @@ in exactly this `Nat`→`Int` cast-on-both-sides shape; the rest either
 compare a `Nat` cast against an `Int` binder or need `omega` on Int
 arithmetic, where `decide_eq_true h` already applies directly and no
 lemma is missing. Retrofits landed in the same commit: `DotProduct`
-(3 sites), `Kadane` (2). This is the residue the s5 assessment found
+(4 sites), `Kadane` (3) — counted from the applying commit's diff, not
+from the draft's estimate. This is the residue the s5 assessment found
 where a `go_iterate` TACTIC was proposed: the descriptors (`T`/`C`/
 `I`/`Q`/`hstep`) are per-example content only a probe-driven emitter
 could write, so the tactic was trimmed and its one uniform line lifted
