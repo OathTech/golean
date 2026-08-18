@@ -76,10 +76,18 @@ quit-condition catalog.
 
 Then: `stepFn'`, the mirrored parametric step (proof-land, GoCore
 untouched — Route B by user ruling: *"it'd be nice to do this without
-touching the trust surface"*); the concrete-instance equivalence — stated as the EMBEDDING-MEDIATED
-arm-by-arm equation (`stepFn'_concrete_agrees`; the literal
-`stepFn' @ GoValue = stepFn` is untypeable under Route B — wording
-amended per the discharged gate ruling's OQ3, 2026-08-18) — LANDED IN
+touching the trust surface"*); **the concrete-instance AGREEMENT**
+(`stepFn'_concrete_agrees`): the EMBEDDING-MEDIATED, SUCCESS-ONLY
+arm-by-arm implication — where a computing mirror arm returns `.ok`,
+its result IS the machine's under concretization; arms that QUIT are
+outside its scope, and the `#guard`ed step counts are what pin those
+windows. (Neither an equivalence nor an equation: it has no
+quit-direction content, so it cannot be read as "the mirror is the
+machine" — the literal `stepFn' @ GoValue = stepFn` is in any case
+untypeable under Route B. Wording amended per the discharged gate
+ruling's OQ3, 2026-08-18; TIGHTENED 2026-08-18 per pre-merge review
+finding A-F1, which caught "equivalence"/"arm-by-arm equation"
+claiming more than the shipped theorem states.) LANDED IN
 A DEFAULT BUILD TARGET so mirror drift FAILS THE BUILD, not a review
 (operator review finding 4);
 the symbolic instance = the evaluator; per-operation commutation

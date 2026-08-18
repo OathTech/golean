@@ -164,9 +164,16 @@ import GoLeanProofs.Examples.WordFreq
 -- 2026-08-18). Proof AUTOMATION infrastructure, outside the statement
 -- TCB: listed here so the default build elaborates it and the Audit
 -- walker's third refusal class (no `GoLean.Sym` constant in any
--- designated statement closure) sees its environment — NO example or
--- headline module imports it (walker + grep-verified; the deletion
--- test extends to it at arc end).
+-- designated statement closure) sees its environment.
+-- SCOPE, corrected 2026-08-18 (pre-merge review finding A-F2 — the
+-- old text said "NO example or headline module imports it", which
+-- stopped being true at S4.11): `Examples/MatMul.lean` imports
+-- `GoLeanProofs.Sym.Refine` PROOF-SIDE, to transport its measured
+-- blocker segments. What holds is the property the refusal class
+-- actually checks — every designated STATEMENT closure stays
+-- Sym-free (walker-verified, plus the audit's by-hand matmul closure)
+-- — so an import is not a statement dependency. The deletion test
+-- extends to Sym at arc end.
 import GoLeanProofs.Sym.Domain
 import GoLeanProofs.Sym.Mirror
 import GoLeanProofs.Sym.Conc
