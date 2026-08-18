@@ -159,3 +159,31 @@ with real differential cases, not a probe's.
   concatenated `$pkginit`; fail-closed register (dot imports of
   source packages refuse at the loader; the stdlib dot-import defect
   stays recorded and untouched; shims stay main-package-only).
+
+## 2026-08-18 — audit fix round, F1a: the init-order stdlib omission, RED first
+
+- Derivation: pre-merge audit finding F1 (HIGH), guardrails-first
+  contract — the reproduction lands as a corpus case BEFORE the code
+  moves, so the defect is pinned by a red rather than by prose.
+- New case `Corpus/coverage/exec/multipkg/init-order-stdlib` (two
+  subjects): `rec` (recorder), `bbb` imports rec and pushes 2, `aaa`
+  imports rec AND `sync` (blank import — ordering effect only, no
+  sync semantics required) and pushes 1, main imports all three.
+- Hand-derivation: `rec` is ready from step one and "rec" < "sync", so
+  the lex-first-ready rule initializes rec BEFORE sync; at the step
+  after rec, `aaa` is still blocked on sync while `bbb` is ready, and
+  no ready package sorts before "bbb" — so bbb goes first. Observed
+  schedule 21, push counts A=2/B=1 (marks 201). Oracle-confirmed by
+  `go run` under a GOPATH assembly: `seq= 21 marks= 201`.
+- The machine answers 12 / 102 — the loader's initialization list
+  ranges over LOCAL packages only, so `sync` is not in it and `aaa`
+  looks ready. Landed as 2 honest FAILs at stage `differential`
+  (a WRONG ANSWER, not a coverage gap).
+- Filed BUG-060 with both ids, so the reds are explained rather than
+  raising the untriaged ceiling (still 25/25).
+- Control: `multipkg/init-order` still PASSES — its local-only
+  expectation was correct AS WRITTEN, because that case imports no
+  stdlib package. The two cases are complements, and the old one is
+  kept exactly as-is.
+- Full `scripts/ci --diff` + same-commit re-pin: 2084 cases, 1947 PASS
+  / 137 FAIL, drift = exactly the two new ids, nothing else.

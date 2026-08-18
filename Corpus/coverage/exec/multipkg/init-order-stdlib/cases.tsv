@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+seq	initStdlibSeq	-	ok	-	multipackage,imports,init,globals,evaluation_order
+marks	initStdlibMarks	-	ok	-	multipackage,imports,init,globals

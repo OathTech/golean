@@ -30,6 +30,38 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
 
+## BUG-060 — the program initialization list omits the imported STDLIB packages, so a local package gated by a stdlib import is scheduled too early
+
+- Status: open
+- Pinned-by: differential
+- Cases: multipkg/init-order-stdlib/seq, multipkg/init-order-stdlib/marks
+
+`spec#Program_initialization` orders the packages of a *complete
+program*: "Given the list of all packages, sorted by import path, in
+each step the first uninitialized package in the list for which all
+imported packages (if any) are already initialized is initialized" —
+and `spec#Program_execution` defines the complete program as main
+"with all the packages it imports, transitively". The stdlib packages
+are IN that list. The W1.1 loader
+(`tools/nativefrontend/load.go`, `loadProgram`) builds the list over
+the case-local source packages only, dropping every stdlib node, so a
+local package whose readiness is gated by a stdlib import looks ready
+too early and can be scheduled ahead of a lexicographically later
+package that is genuinely ready.
+
+The pinned witness: `aaa` (imports `rec` and `sync`) sorts before
+`bbb` (imports `rec` only). Real Go initializes `rec` before `sync`
+("rec" is ready from step one and sorts first), so at the step after
+`rec` only `bbb` is ready — observed schedule 21. With `sync` absent
+from the list, `aaa` looks ready and goes first — machine 12. Found by
+the W1.1 pre-merge audit (finding F1), not by any green gate: the
+lower bound cannot see an omission that no corpus case exercises,
+which is why the reproduction lands as a case before the fix.
+
+Note that stdlib *initializers* are not modeled and are not the issue:
+only the ORDERING effect of those packages is observable here, and it
+is computable from the import graph alone.
+
 ## BUG-059 — panic messages render multi-segment TypeId qualifiers as the import PATH where gc renders the package NAME
 
 - Status: open
