@@ -22,8 +22,14 @@ isDefEq problem through these lemmas. At application sites that DO
 mention big concrete states, pin the full result type on the `have`
 (the E-form) — never leave a re-spelled state for the unifier.
 
-## The DEFAULT SHAPE FOR NEW SEGMENT PROOFS (phase-2 slice 0 lever 4,
-2026-08-14 — recorded convention, no retrofit of what already ships)
+## THE FIVE RULES — the default shape for new segment proofs
+(phase-2 slice 0 lever 4, 2026-08-14 + the WP arc s2 footprint pack,
+2026-08-18 — recorded convention, no retrofit of what already ships)
+
+**This section is the kit's single copy of the storm/signature
+discipline.** Sibling kit modules cite it as *"StepKit rules 1–5"* and
+never restate it (WP arc s3 regularity convention); the numbering
+below is therefore stable and is what those citations resolve to.
 
 A new example's segment layer starts placement-generic and
 type-ascribed. Concretely, prefer
@@ -133,28 +139,51 @@ the brick-wp W6 convention adapted to Lean 4)
 **Every theorem in this module is public API** — measured, not
 asserted: at the seal date every name has ≥3 external consumers
 (`stepFnIter_one` alone has ~200 use sites), so nothing here can be
-`private`. The API groups, which consumers may depend on:
+`private`. The API groups below are indexed by PROOF SITUATION (the
+WP arc s3 convention: a group is "what you are trying to do", not
+"which lift landed it"), and the in-file `/-! ## … -/` section headers
+carry the same names in the same order.
 
-* heap reasoning at a symbolic split (P11): `lookup_append_left`,
-  `lookup_append_right`, `set_append_left`, `set_append_right`,
-  `set_fresh`,
-  `base_beq_false`, `lookup_cons_ne`, `set_singleton_self`,
-  `lookup_singleton_self`, and the dead-tail freshness predicate
-  `DeadFrom` with `DeadFrom.push` / `DeadFrom.push2` (Gallery
-  Campaign GAP-M2, 2026-08-15 — lifted from the two per-example
-  copies in `Examples/WordCount/Machine.lean` and
-  `Examples/Histogram/Machine.lean`, both retrofitted in the lifting
-  commit);
-* the conditioned one-step glue (P1): `stepFnIter_one`,
-  `stepFn_call_enter`, `stepFn_makeSlice_u64_step`,
-  `stepFn_strict_apply`, `stepFn_store_step`, `stepFn_stmtOp_apply`,
-  `stepFn_var`, `stepFn_init_seq`, `stepFn_seqn_splice` (P9),
-  `stepFn_seq_pop`, `stepFn_storeK_nil`, `stepFn_return_frame`,
-  `stepFn_block`, `storeTarget_addr`,
-  `stepFn_mapAssign_apply`, `stepFn_snapshot` (the multi-step
-  splice/drain/block glue over these lives in `FuelMeasure`, beside
-  `stepFnIter_chain`);
-* shared op plumbing: `natFromNonneg_cast`.
+**Group 1** — *you are reasoning about the heap at a SYMBOLIC SPLIT* (a concrete
+front `++` an abstract dead tail `D`) — the P11 family:
+`lookup_append_left`, `lookup_append_right`, `lookup_append`,
+`set_append_left`, `set_append_right`, `set_fresh`,
+`base_beq_false`, `lookup_cons_ne`, `lookup_cons_self`,
+`set_cons_ne`, `set_cons_self`,
+`set_singleton_self`, `lookup_singleton_self`.
+
+**Group 2** — *you are reasoning about one heap CELL under `Heap.set`* — the
+lookup/set battery (WP arc s2 item 1): `lookup_set_self`,
+`lookup_set_other`, `set_set`, `set_comm` (the presence-conditioned
+commutation), `set_self_of_lookup`.
+
+**Group 3** — *you are carrying a FOOTPRINT ("everything at or above
+`na` is absent")* — the freshness algebra (Gallery Campaign GAP-M2 +
+WP arc s2 item 1). ONE predicate under two names: `DeadFrom`
+(a dead TAIL past a concrete front) and its `abbrev` view
+`FreshFrom` (the WHOLE heap of a footprint-style state), with
+`DeadFrom.mono`, `.push`, `.push2`, `.push3`, `.set`,
+`.lt_of_lookup` and the delegating `FreshFrom.mono`, `.push`,
+`.push2`, `.push3`, `.set`, `.lt_of_lookup`.
+
+**Group 4** — *you are taking ONE machine step, conditioned on an
+executable fact* — the one-step glue (P1/P9):
+`stepFnIter_one`, `stepFn_call_enter`, `stepFn_makeSlice_u64_step`,
+`stepFn_strict_apply`, `stepFn_store_step`, `stepFn_stmtOp_apply`,
+`stepFn_var`, `stepFn_init_seq`, `stepFn_seqn_splice` (P9),
+`stepFn_seq_pop`, `stepFn_storeK_nil`, `stepFn_return_frame`,
+`stepFn_block`, `stepFn_mapAssign_apply`, `stepFn_snapshot`,
+with the operand helpers `storeTarget_addr`, `loadMany_one`,
+`loadMany_two`. (Multi-step composition of these — chaining, call
+spans, splice/drain/block — lives in `FuelMeasure`, beside
+`stepFnIter_chain`; nothing here iterates.)
+
+**Group 5** — *your heap FRONT GROWS as the loop runs* (no fixed
+concrete front to split at) — the executable front bound (WP arc s2 item 5):
+`keysBelow` with `lookup_of_keysBelow`, `lookup_frontD_none`,
+`lookup_live`, `set_live`, `storeTarget_live`.
+
+**Group 6** — *shared op plumbing*: `natFromNonneg_cast`.
 
 **The API discipline** (C2 decoupling rule, harness-style scoping
 note: spec-style adapters are thin layers over a style-neutral core —
@@ -175,13 +204,45 @@ they depend on APIs, not internals):
 4. Lean has no Rocq-style opaque `Module Type` ascription: the seal is
    name-level + this contract (`private` where reference counts allow
    — here they do not), enforced at review, not by the kernel.
+5. Every public name above carries an exact `#print axioms` pin in
+   `Audit/Kit.lean` § StepKit, in this section's order. A new public
+   lemma lands with its pin in the same commit.
+
+## WHAT LIVES WHERE (the kit map — WP arc s3, 2026-08-18)
+
+THIS module: the machine's ONE STEP, and the heap algebra a step
+argument needs. Nothing here iterates, nothing here knows a Go type.
+
+Siblings, and the boundary with each:
+
+* `FuelMeasure` — everything MULTI-step: `stepFnIter_chain`, the
+  call span, the splice/drain/block composites, the counted-loop and
+  two-exit-loop schemas, `CompletesIn`/termination, the readouts.
+  Rule of thumb: if the statement mentions a step COUNT it is
+  `FuelMeasure`'s, if it mentions `stepFn` once it is ours.
+* `SliceMem` / `MapMem` / `StringMem` — the TYPE-specific operand
+  facts (`applyStrictOp`/`storeTarget`/`applyStmtOp` at a slice, a
+  map, a string) that discharge OUR conditioned hypotheses. We state
+  `h : applyStrictOp σ op args = .ok (out, σ')`; they prove it.
+* `MapLoops` — whole map-loop schemas composed from our steps.
+* `Frame/Threshold` — the per-pass rename/rebase layer for
+  loop-LOCAL allocation; it consumes our heap algebra and adds the
+  address-shift half we deliberately do not model.
+* `EntryEq` — the program-entry equation macro; its emitted theorems
+  are what our `stepFn_call_enter` chains onto.
+
+Future `docs/kit-guide.md` (slice 6) sections fed by this module:
+**One step at a time**, **Heap at a symbolic split**, **Footprint**,
+**Append / growth** (the growing-front half).
 -/
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine
 
 namespace GoLean.Surface
 
-/-! ## P11: heap append/set reasoning at a symbolic split -/
+/-! ## Heap at a symbolic split (the P11 family)
+
+API group 1 of the module docstring. -/
 
 theorem lookup_append_left {h₁ h₂ : Heap} {l : Loc} {c : HeapCell}
     (h : Heap.lookup h₁ l = some c) :
@@ -295,7 +356,9 @@ theorem lookup_singleton_self {l : Loc} {c : HeapCell} :
     Heap.lookup [(l, c)] l = some c := by
   simp [Heap.lookup]
 
-/-! ### The footprint pack's lookup/set battery (WP arc s2 item 1,
+/-! ## One cell under `Heap.set` — the lookup/set battery
+
+API group 2. (WP arc s2 item 1,
 2026-08-18 — promoted from the five program-local copies: FibMemo/Rec,
 Stein/Run, Sieve/Machine, the WordFreq route, SliceStack; the two
 signature disciplines that go with it are rules 4/5 of the module
@@ -422,7 +485,9 @@ theorem DeadFrom.push2 {dead : Heap} {na : Nat} {c c' : HeapCell}
     lookup_cons_ne (base_beq_false (by omega : na + 1 ≠ x))]
   rfl
 
-/-! ### The footprint pack's freshness algebra (WP arc s2 item 1).
+/-! ## Footprint — the freshness algebra (`DeadFrom` / `FreshFrom`)
+
+API group 3. (WP arc s2 item 1.)
 
 `DeadFrom` and the footprint style's `FreshFrom` are ONE formula read
 two ways: a dead TAIL past a concrete front, or the WHOLE heap of a
@@ -497,7 +562,9 @@ theorem FreshFrom.lt_of_lookup {h : Heap} {na a : Nat}
     (hl : Heap.lookup h (.base ⟨a⟩) = some c) : a < na :=
   DeadFrom.lt_of_lookup hf hl
 
-/-! ## P1: the conditioned one-step glue -/
+/-! ## One machine step, conditioned (the P1/P9 family)
+
+API group 4 of the module docstring. -/
 
 /-- A single successful `stepFn` step is a 1-step `stepFnIter`. -/
 theorem stepFnIter_one {σ : ExecState} {c : Config} {ch : Choices}
@@ -688,7 +755,9 @@ theorem storeTarget_addr {σ : ExecState} {a : Addr} {ty : Ty}
   simp only [storeTarget, resolveChain, valueAsLoc, Bind.bind, Except.bind,
     pure, Except.pure, storeLoc, hlook, hnorm]
 
-/-! ### Growing-heap front support (WP arc s2 item 5 — promoted from
+/-! ## Growing heap front — the executable front bound
+
+API group 5. (WP arc s2 item 5 — promoted from
 the twosum/sieve front-miss chains; rle is the recorded chartered
 consumer with no landed copy). The per-example price of a loop body
 that DECLARES variables: a concrete front must be shown to miss every
@@ -800,7 +869,9 @@ theorem stepFn_snapshot {σ : ExecState} {v : GoValue} {kt vt : Ty}
           σ, ch) := by
   simp only [stepFn, h, Bind.bind, Except.bind, pure, Except.pure]
 
-/-! ## Shared op plumbing (P6-adjacent) -/
+/-! ## Shared op plumbing (P6-adjacent)
+
+API group 6. -/
 
 /-- A `Nat`-cast argument survives `natFromNonnegativeInt` (makeSlice's
 length/cap checks at a symbolic `n`). -/
