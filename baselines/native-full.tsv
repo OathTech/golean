@@ -1,20 +1,25 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-18 (raft-w1 slice 1 — multipkg guardrails)
-#   commit: this commit (on 760e8b77); prior re-pin 69d9a0dc
-#   re-pin reason: EIGHT new ids, zero other drift — the W1.1
-#   multi-package guardrail family landed deliberately RED
-#   (guardrails-first): Corpus/coverage/exec/multipkg/* pins
-#   cross-package calls/types/consts, the BUG-010 same-name identity
-#   witnesses (type/func/panic forms), diamond exactly-once init, and
-#   the spec's path-sorted cross-package init order. All 8 fail today
-#   at stage go-run — the oracle leg's single-package assembly cannot
-#   resolve case-local subpackages ("cannot find package") — which is
-#   the pipeline's honest current refusal; the frontend's own
-#   single-package refusal sits behind it. Expected to flip when
-#   multi-package lowering lands (design:
-#   docs/2026-08-18_multipackage-identity.md; the panic form stays
-#   red per its §3.3 rendering residue).
-#   Full run: 2081 cases (1938 PASS / 143 FAIL), native frontend.
+# recorded: 2026-08-18 (raft-w1 slice 2 — multi-package lowering lands)
+#   commit: this commit (on e3c353e1); prior re-pin same-day slice 1
+#   re-pin reason: the W1.1 flip — multi-package lowering + the
+#   BUG-010 import-path TypeId/FuncId fix
+#   (docs/2026-08-18_multipackage-identity.md; frontend loader
+#   tools/nativefrontend/load.go + identity.go, oracle-side GOPATH
+#   assembly in tools/coverageharness + diff-coverage). Deltas, all
+#   intended and predicted in the design note §8:
+#     ~ 7 multipkg guardrails FAIL/go-run -> PASS (the feature);
+#     + multipkg/cross-var NEW PASS (same-slice guardrail for the
+#       qualified store/&-alias paths);
+#     ~ multipkg/same-name-identity-panic FAIL/go-run ->
+#       FAIL/differential — the §3.3 rendering residue, now visible at
+#       its true stage (identity verdict RIGHT, message qualifier is
+#       the path where gc prints the package name): BUG-059's pin;
+#     ~ interfaces/imported-package-name-collision
+#       FAIL/frontend-export -> PASS: BUG-010 CLOSED (the v1
+#       name-collision refusal retired; path keys answer Go's false).
+#   Zero drift beyond these ten rows. Single-package wires
+#   byte-identical (golden pins green).
+#   Full run: 2082 cases (1947 PASS / 135 FAIL), native frontend.
 #
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
@@ -1159,7 +1164,7 @@ PASS	interfaces/error-idioms/promoted-method	-
 PASS	interfaces/error-idioms/uncomparable-panic	-
 PASS	interfaces/error-idioms/value-equality	-
 PASS	interfaces/error-interface	-
-FAIL	interfaces/imported-package-name-collision	frontend-export
+PASS	interfaces/imported-package-name-collision	-
 PASS	interfaces/interface-array-compare-panic	-
 PASS	interfaces/interface-compare	-
 PASS	interfaces/interface-compare-panic	-
@@ -1439,14 +1444,15 @@ PASS	multi-assign/selector-target-before-rhs	-
 PASS	multi-assign/store-order-plain	-
 PASS	multi-assign/target-eval-before-call	-
 PASS	multi-assign/tuple-assign-order	-
-FAIL	multipkg/cross-const	go-run
-FAIL	multipkg/cross-func-call	go-run
-FAIL	multipkg/cross-type-method	go-run
-FAIL	multipkg/diamond-import	go-run
-FAIL	multipkg/init-order	go-run
-FAIL	multipkg/same-name-identity-panic	go-run
-FAIL	multipkg/same-name-identity/func-identity	go-run
-FAIL	multipkg/same-name-identity/type-identity	go-run
+PASS	multipkg/cross-const	-
+PASS	multipkg/cross-func-call	-
+PASS	multipkg/cross-type-method	-
+PASS	multipkg/cross-var	-
+PASS	multipkg/diamond-import	-
+PASS	multipkg/init-order	-
+FAIL	multipkg/same-name-identity-panic	differential
+PASS	multipkg/same-name-identity/func-identity	-
+PASS	multipkg/same-name-identity/type-identity	-
 PASS	native-smoke/arith	-
 PASS	native-smoke/maprange	-
 PASS	native-smoke/method	-

@@ -121,7 +121,75 @@ func run(cfg config) error {
 			return err
 		}
 	}
+	// Multi-package cases (raft W1.1, identity note §7): copy every
+	// case-local package the main package transitively imports into
+	// <out>/gopath/src/<import path>, verbatim. The runner sets
+	// GOPATH=<out>/gopath so `go run .` — Go's own resolution, the
+	// oracle-side authority — resolves them; the harness invents no
+	// resolution of its own (an unresolvable import stays a loud go-run
+	// compile error).
+	if err := copyLocalPackages(fset, inputDir, cfg.out); err != nil {
+		return err
+	}
 	return os.WriteFile(filepath.Join(cfg.out, "zz_golean_harness.go"), harness, 0o644)
+}
+
+// copyLocalPackages walks the main package's imports transitively: an
+// import path P is case-local exactly when <inputDir>/P holds non-test
+// .go files (import-DRIVEN — unimported subdirs, e.g. nested corpus
+// cases, stay inert). Each local package's non-test files copy
+// verbatim into <out>/gopath/src/P.
+func copyLocalPackages(fset *token.FileSet, inputDir, out string) error {
+	visited := map[string]bool{}
+	var walk func(files []string) error
+	walk = func(files []string) error {
+		for _, f := range files {
+			parsedIm, err := parser.ParseFile(fset, f, nil, parser.ImportsOnly)
+			if err != nil {
+				return err
+			}
+			for _, spec := range parsedIm.Imports {
+				p, err := strconv.Unquote(spec.Path.Value)
+				if err != nil || p == "" || visited[p] {
+					continue
+				}
+				// Never step outside the case dir: only clean,
+				// relative, non-escaping paths are local candidates.
+				if strings.HasPrefix(p, "/") || strings.Contains(p, "..") ||
+					filepath.ToSlash(filepath.Clean(filepath.FromSlash(p))) != p {
+					continue
+				}
+				dir := filepath.Join(inputDir, filepath.FromSlash(p))
+				pkgFiles, err := packageFiles(dir)
+				if err != nil {
+					continue // not a local package: stdlib or a go-run error
+				}
+				visited[p] = true
+				dst := filepath.Join(out, "gopath", "src", filepath.FromSlash(p))
+				if err := os.MkdirAll(dst, 0o755); err != nil {
+					return err
+				}
+				for _, src := range pkgFiles {
+					data, err := os.ReadFile(src)
+					if err != nil {
+						return err
+					}
+					if err := os.WriteFile(filepath.Join(dst, filepath.Base(src)), data, 0o644); err != nil {
+						return err
+					}
+				}
+				if err := walk(pkgFiles); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+	mainFiles, err := packageFiles(inputDir)
+	if err != nil {
+		return err
+	}
+	return walk(mainFiles)
 }
 
 type parsedFile struct {

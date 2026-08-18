@@ -10,10 +10,8 @@ import (
 	"flag"
 	"fmt"
 	"go/ast"
-	"go/importer"
 	"go/parser"
 	"go/token"
-	"go/types"
 	"os"
 	"path/filepath"
 	"sort"
@@ -90,30 +88,21 @@ func run() error {
 		files = append(files, shimFile)
 	}
 
-	info := &types.Info{
-		Types:      map[ast.Expr]types.TypeAndValue{},
-		Defs:       map[*ast.Ident]types.Object{},
-		Uses:       map[*ast.Ident]types.Object{},
-		Selections: map[*ast.SelectorExpr]*types.Selection{},
-		// Implicits carries the per-clause type-switch variable
-		// (`switch v := x.(type)`) — each CaseClause maps to its own
-		// implicitly declared *types.Var (design note 2026-08-05 D3).
-		Implicits: map[ast.Node]types.Object{},
-		// Instances maps each identifier denoting a generic function/type
-		// at a USE site to its (fully inferred) type arguments and
-		// instantiated type — the input to frontend monomorphization
-		// (generics design note 2026-08-05 §2a). Inside generic bodies the
-		// recorded arguments still mention the ENCLOSING type parameters;
-		// the substitution closure resolves those per stencil (mono.go).
-		Instances: map[*ast.Ident]types.Instance{},
-	}
-	conf := types.Config{Importer: importer.Default()}
-	tpkg, err := conf.Check(files[0].Name.Name, fset, files, info)
+	// Multi-package loading (raft W1.1, load.go): parse + type-check
+	// every case-local package the main package transitively imports,
+	// then the main package itself, in program initialization order.
+	// The per-package types.Info shape (incl. Implicits for type-switch
+	// clause variables — design note 2026-08-05 D3 — and Instances for
+	// monomorphization — generics design note 2026-08-05 §2a) lives in
+	// newTypesInfo.
+	units, err := loadProgram(fset, *dir, files)
 	if err != nil {
-		return fmt.Errorf("type-check: %w", err)
+		return err
 	}
+	mainUnit := units[len(units)-1]
 
-	em := &emitter{fset: fset, info: info, pkg: tpkg}
+	em := &emitter{fset: fset, info: mainUnit.info, pkg: mainUnit.pkg}
+	em.setUnits(units)
 	program, err := em.emitProgram(files)
 	if err != nil {
 		return err

@@ -195,13 +195,25 @@ type emitter struct {
 	// rollback (audit response m5; see rollbackMono).
 	monoLog []monoLogEntry
 
-	// Every package NAME that qualified a wire TypeId, mapped to the
-	// distinct import PATHs that used it. Go keys type identity on the
-	// path, the wire key on the name, so a name reached by two paths means
-	// two distinct Go types share one TypeId — `checkPackageNameCollisions`
-	// fails the export closed on that (pre-merge audit 2026-07-31,
-	// findings 4/7).
-	qualPkgPaths map[string][]string
+	// Multi-package lowering (raft W1.1,
+	// docs/2026-08-18_multipackage-identity.md): the source units in
+	// PROGRAM INITIALIZATION ORDER (main last), and the set/main views
+	// the qualification rules key on. Nil units = a directly
+	// constructed single-package emitter (unit tests): every helper
+	// falls back to the historic e.pkg-only semantics.
+	units     []*sourcePkg
+	mainPkg   *types.Package
+	srcPkgSet map[*types.Package]*sourcePkg
+
+	// Dotted import paths that reached a TypeId/FuncId qualifier: the
+	// key GRAMMAR reserves '.' for the qualifier/name separator
+	// (identity note §1/§3 — `TypeId.unqualified` and the injectivity
+	// argument both depend on dot-free qualifiers), so
+	// `checkKeyPathGrammar` fails the export closed when any is
+	// recorded. Successor of the retired package-NAME collision check
+	// (BUG-010: keys are path-qualified now, so distinct packages
+	// cannot collide by construction).
+	badKeyPaths map[string]bool
 
 	// Package-level variables (init slice, docs/2026-08-05_init-design.md):
 	// `collectGlobals` is the SINGLE place gids come from — a dense index
@@ -212,12 +224,11 @@ type emitter struct {
 	// each initializer's RHS expression to a fabricated assignment whose
 	// Lhs are the ORIGINAL declaring idents, so `$pkginit` synthesis
 	// reuses the ordinary emitAssign machinery (hoists, interface boxing,
-	// multi-value calls, blank targets). `initFuncNames` are the mangled
-	// `$initN` ids of the package's init() functions, source order.
+	// multi-value calls, blank targets). Init-function ids live
+	// per-unit (`sourcePkg.initNames` — multi-package, W1.1).
 	globalVars     map[*types.Var]int
 	globalDefs     []any
 	globalInitStmt map[ast.Expr]*ast.AssignStmt
-	initFuncNames  []string
 }
 
 // noteInterface records an interface type for the `interface` TypeDef pass.
@@ -384,9 +395,11 @@ func (e *emitter) emitType(t types.Type) (any, error) {
 			return map[string]any{"kind": "interface", "name": name}, nil
 		}
 		qname := e.qualifiedTypeName(obj)
-		if obj.Pkg() != nil && obj.Pkg() != e.pkg {
-			// An imported concrete named type: record it for the
-			// method-set stub pass (D5).
+		if obj.Pkg() != nil && !e.isSourcePackage(obj.Pkg()) {
+			// An imported concrete named type OUTSIDE the source
+			// program (stdlib): record it for the method-set stub pass
+			// (D5). Source-package types get REAL TypeDefs from their
+			// own unit's declaration pass (multi-package, W1.1).
 			if e.importedNamed == nil {
 				e.importedNamed = map[string]*types.Named{}
 			}

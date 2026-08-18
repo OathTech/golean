@@ -57,6 +57,48 @@ bind raft-lane work but reorder nothing:
 - JC: panic-form witness included KNOWINGLY as a will-stay-red pin of
   the rendering residue (identity note §3.3).
 
+## 2026-08-18 — slice 3: the implementation lands (guardrails FLIP)
+
+- Derivation: identity note §1/§5–§7, implemented exactly.
+  - Frontend loader (`tools/nativefrontend/load.go`): import-driven
+    local-package discovery, chained importer (locals then stdlib),
+    per-package `types.Info`, spec-order unit list (path-sorted
+    ready-first; main last). Fail-closed: dot imports of source
+    packages, dotted local paths, stdlib shadowing, `main` qualifier
+    collision, cycles.
+  - Identity boundary (`tools/nativefrontend/identity.go`):
+    `pkgQualifier` = import path; `funcWireName` / `globalWireName` /
+    `initFuncWireName`; `checkKeyPathGrammar` (dotted-path refusal)
+    replaces `checkPackageNameCollisions` — BUG-010 CLOSED.
+  - Emitter: per-unit decl/global emission in init order; one
+    concatenated `$pkginit`; qualified call/selector/store/&-alias
+    arms (`emitQualifiedCall`/`emitQualifiedSelector` + lvalue +
+    addressOf); mono stencils carry their declaring unit; D5 markers
+    now stdlib-only.
+  - Oracle leg: `coverageharness` copies imported local packages to
+    `<out>/gopath/src/<path>`; `diff-coverage` hands the tree to Go's
+    own resolution (`GOPATH=`, absolute).
+  - `check-coverage` husk gate: imported-package subdirs exempt by the
+    pipeline's own discovery rule (unimported go-file dirs still husk).
+- Flip: 7 guardrails + `interfaces/imported-package-name-collision`
+  (BUG-010's pin) go GREEN; new same-slice guardrail
+  `multipkg/cross-var` (qualified store/compound/&-alias, sequenced
+  reads) green; `multipkg/same-name-identity-panic` moves to its TRUE
+  stage (FAIL/differential — identity verdict right, message qualifier
+  path-vs-name), filed as BUG-059. Golden pins byte-identical
+  (`check-golden` green) — the feared BUG-010 re-key wave did not
+  materialize (main + single-segment stdlib have path == name).
+- Full `scripts/ci --diff` + re-pin: 2082 cases, 1947 PASS / 135
+  FAIL, zero drift beyond the ten predicted rows. Fast gate PASS end
+  to end after re-pin.
+- JC: cross-package var STORE initially fail-closed with a junk
+  message ("field address on anonymous struct type") — upgraded to a
+  real qualified-lvalue arm + the cross-var guardrail rather than a
+  cosmetic refusal.
+- JC: evaluation-order trap avoided in cross-var (mutating call beside
+  an unsequenced read is spec latitude, not a strict-lane target) —
+  reads sequenced explicitly.
+
 ## 2026-08-18 — slice 2: the identity design note
 
 - `docs/2026-08-18_multipackage-identity.md` (design of record):

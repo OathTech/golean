@@ -89,10 +89,62 @@ for cf in glob.glob("Corpus/coverage/negative/**/case.tsv", recursive=True):
 # roots with no metadata file anywhere beneath it is INVISIBLE to case
 # discovery — silently skipped, contra fail-closed. Hard-fail on any
 # (dot-directories excluded: tool droppings, not case dirs).
+# EXEMPTION (multi-package cases, raft W1.1, identity note §7): a case
+# directory's IMPORTED source-package subdirs carry .go files and no
+# metadata BY DESIGN (import path = case-relative subdir path; import-
+# driven discovery on both pipeline legs). A dir is exempt iff it lies
+# on the path to a subdir that (a) holds non-test .go files and (b) is
+# named verbatim as a quoted import path by a .go file in the case's
+# package tree — mirroring the pipeline's own discovery rule, so a
+# FORGOTTEN nested case (go files, no metadata, never imported) still
+# husks loudly.
+import re
+def _go_files(d):
+    try:
+        return [os.path.join(d, f) for f in os.listdir(d)
+                if f.endswith(".go") and not f.endswith("_test.go")
+                and os.path.isfile(os.path.join(d, f))]
+    except OSError:
+        return []
+def _imported_pkg_dirs(case_dir):
+    """Transitively imported local package dirs of a case dir."""
+    exempt, pending = set(), [case_dir]
+    while pending:
+        d = pending.pop()
+        for gf in _go_files(d):
+            try:
+                with open(gf, encoding="utf-8", errors="replace") as f:
+                    text = f.read()
+            except OSError:
+                continue
+            for m in re.finditer(r'"([a-z0-9_\-/]+)"', text):
+                p = os.path.normpath(os.path.join(case_dir, m.group(1)))
+                if p.startswith(case_dir + os.sep) and os.path.isdir(p) \
+                        and _go_files(p) and p not in exempt:
+                    exempt.add(p)
+                    pending.append(p)
+    return exempt
+
+case_dirs = set()
+for root in ("Corpus/coverage/exec", "Corpus/coverage/negative"):
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if not d.startswith(".")]
+        if any(f in ("cases.tsv", "case.tsv") for f in filenames):
+            case_dirs.add(dirpath)
+pkg_exempt = set()
+for cd in case_dirs:
+    for p in _imported_pkg_dirs(cd):
+        # The package dir and every intermediate dir down to it.
+        while p != cd:
+            pkg_exempt.add(p)
+            p = os.path.dirname(p)
+
 husks = []
 for root in ("Corpus/coverage/exec", "Corpus/coverage/negative"):
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if not d.startswith(".")]
+        if dirpath in pkg_exempt:
+            continue
         has_meta = any(
             f in ("cases.tsv", "case.tsv")
             for _, _, fs in os.walk(dirpath) for f in fs

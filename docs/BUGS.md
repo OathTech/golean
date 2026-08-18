@@ -30,6 +30,32 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
 
+## BUG-059 — panic messages render multi-segment TypeId qualifiers as the import PATH where gc renders the package NAME
+
+- Status: open
+- Pinned-by: differential
+- Cases: multipkg/same-name-identity-panic
+
+Path-keyed TypeIds (the BUG-010 fix, multi-package arc W1.1,
+`docs/2026-08-18_multipackage-identity.md` §3) made identity DECISIONS
+correct, but GoCore's message renderers print `TypeId.key` VERBATIM
+(`goTypeNameForMessage` / `dynamicTypeName?`, `GoLean/GoCore/Ops.lean`),
+while gc qualifies panic-message type names by the package NAME: for
+the pinned witness the machine says `interface conversion: interface {}
+is red/inner.T, not blue/inner.T` where gc says `... is inner.T, not
+inner.T (types from different packages)`. The divergence exists only
+for types from packages whose import path ≠ package name (multi-segment
+paths); for the whole vendored-raft scope (short paths, path == name,
+identity note §4) rendering is exact. Not fixable frontend-side: no one
+key string is both path-injective and byte-equal to gc's deliberately
+ambiguous name-qualified message. The structural fix is separating
+DISPLAY from IDENTITY in GoCore (a display-name table or TypeId field)
+— a semantic-core change deliberately out of the W1.1 arc's scope;
+dotted paths (which would additionally break `TypeId.unqualified`'s
+reflect-Name strip) are refused at the frontend boundary
+(`checkKeyPathGrammar`), so only the message-string channel diverges,
+and only differentially-visibly.
+
 ## BUG-053 — interface satisfaction on bare sync primitives answered a false "no" (wrong comma-ok bool, wrong type-switch branch, fabricated missing-method panic)
 
 - Status: fixed (2026-08-10, spec-parity arc-end fix round: the
@@ -1863,7 +1889,19 @@ correct it when the lowering is fixed. Tracked in `TODO.md` (F1).
 
 ## BUG-010 — TypeId keys are qualified by package NAME, not import PATH
 
-- Status: open
+- Status: fixed (2026-08-18, multi-package arc W1.1 — the REAL fix this
+  entry always named: `qualifiedTypeName`/`funcWireName` qualify by
+  `pkg.Path()` at the identity boundary
+  (`tools/nativefrontend/identity.go`;
+  `docs/2026-08-18_multipackage-identity.md` §1). Single-package keys
+  are byte-identical (the main package's path IS its name — golden
+  pins verified by `scripts/check-golden`), so no re-key wave
+  materialized; the v1 name-collision refusal
+  (`checkPackageNameCollisions`) retired in favor of the dotted-path
+  key-grammar guard (`checkKeyPathGrammar`), and the pinned case now
+  PASSES with Go's `false`. Residue split out honestly: the
+  panic-message RENDERING of multi-segment qualifiers is BUG-059,
+  pinned by multipkg/same-name-identity-panic.)
 - Pinned-by: differential
 - Cases: interfaces/imported-package-name-collision
 - Discovered: 2026-07-31 (final pre-merge adversarial audit of
@@ -1895,12 +1933,13 @@ mangling strip happens at exactly one boundary constructor and
 collision-checks", which `TypeId` (unlike `FuncId`) did not honour. The
 pinned case is now an honest `frontend-export` refusal naming both paths.
 
-The REAL fix is widening the key to `obj.Pkg().Path()`. It is deferred,
-not forgotten: it re-keys every `TypeId` — every pinned lowering, every
-`main.T(v)` panic rendering, every `TypeId.unqualified` observation — so
-it belongs with the multi-package slice, scoped in
-`docs/2026-07-30_quorum-extern-policy.md`. Escalate the moment
-multi-package lowering is claimed.
+The REAL fix — widening the key to `obj.Pkg().Path()` — landed with the
+multi-package slice (2026-08-18), as this entry's escalation clause
+demanded. The feared re-key wave did not materialize: `main`-package and
+single-segment stdlib qualifiers are path == name, so every pinned
+lowering, `main.T(v)` panic rendering, and `TypeId.unqualified`
+observation is byte-identical; the one genuinely divergent channel
+(multi-segment-path qualifiers in panic MESSAGES) is BUG-059.
 
 ## BUG-009 — an imported named type's METHOD SET is not on the wire, so interface satisfaction is UNKNOWN
 
