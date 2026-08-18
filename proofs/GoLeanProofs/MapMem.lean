@@ -31,42 +31,107 @@ stay example-local.
 ## PUBLIC API — the sealed interface (the W6 convention, as in
 `SliceMem`)
 
-**What consumers may depend on** (and nothing else):
+**What consumers may depend on** (and nothing else). The groups are
+indexed by PROOF SITUATION (the WP arc s3 convention: a group is
+"what you are trying to do", not "which lift landed it"); the in-file
+`/-! ## … -/` section headers carry the group number, and one group
+may span more than one section.
 
-* statement-adjacent vocabulary: `mapCells`, `mapVal`;
-* the abstract model: `idxOf?`, `cnt`, `setk`, `toEntries`, and the
-  model lemmas `idxOf?_none_cnt`, `idxOf?_none_setk`,
-  `idxOf?_some_snd`, `idxOf?_some_setk`;
-* the executable op facts, each conditioned on exactly its
-  lookup/normal-form hypotheses: `applyStrictOp_mapGet` (read, with
-  Go's zero-value-on-absent), `mapAssignValue_toEntries` (write,
-  update-or-append = `setk`), `snapshot_toEntries` (the `mapRangeK`
-  snapshot), `mapEntryIndex?_toEntries` (the key scan), and the
-  scan engine `scan_generic`;
-* the `toEntries` bridges: `toEntries_getElem?`, `toEntries_size`,
-  `toEntries_eraseIdx`, `map_eraseIdx`;
-* the counting fold (GAP-P1 lift, 2026-08-15): `bump`, `countsFold`,
-  `nilMapCell`, with `setk_cnt_succ`, `countsFold_nil`,
-  `countsFold_append`, `cnt_countsFold`, `countsFold_key_mem`,
-  `countsFold_nodup_keys`, `cnt_of_mem_nodup`, `cnt_pos_mem`,
-  `countsFold_val_le`, `take_succ_getD`, `cnt_take_le`;
-* the `mapIterK` choice-pick step (GAP-M1 lift, 2026-08-15):
-  `stepFn_pick_bind` (binder-generic, allocation via `bindIterVars`)
-  and its corollaries `stepFn_pick_value`, `stepFn_pick_novars`.
+**Group 1** — *you are naming a Go `map[uint64]uint64` that lives in
+memory*: `mapCells` (the data cell), `mapVal` (the handle the program
+carries).
+
+**Group 2** — *you are reasoning about the map ABSTRACTLY* (the
+association-list model that plays the role `List Int` plays for
+slices): `idxOf?` (key position), `cnt` (multiplicity), `setk`
+(update-or-append), `toEntries` (the machine encoding), with the
+model lemmas `idxOf?_none_cnt`, `idxOf?_none_setk`,
+`idxOf?_some_snd`, `idxOf?_some_setk`.
+
+**Group 3** — *you must move between the model and the machine's
+`Array` of entries* — the `toEntries` bridges: `toEntries_getElem?`,
+`toEntries_size`, `toEntries_eraseIdx`, `map_eraseIdx`.
+
+**Group 4** — *you are COUNTING with a map* (`m[k]++` folded over a
+slice; GAP-P1 lift, 2026-08-15): `bump`, `countsFold`, `nilMapCell`,
+with `setk_cnt_succ`, `countsFold_nil`, `countsFold_append`,
+`cnt_countsFold`, `countsFold_key_mem`, `countsFold_nodup_keys`,
+`cnt_of_mem_nodup`, `cnt_pos_mem`, `countsFold_val_le`,
+`take_succ_getD`, `cnt_take_le`.
+
+**Group 5** — *you need what a map OPERATION computes*, each fact
+conditioned on exactly its lookup/normal-form hypotheses:
+`applyStrictOp_mapGet` (read, with Go's zero-value-on-absent),
+`mapAssignValue_toEntries` (write, update-or-append = `setk`),
+`snapshot_toEntries` (the `mapRangeK` snapshot),
+`mapEntryIndex?_toEntries` (the key scan) and its engine
+`scan_generic` (body-abstract, so `rw` unifies it with the
+do-elaborated lambda).
+
+**Group 6** — *the range loop PICKS the next entry* (the `mapIterK`
+choice-consumption step; GAP-M1 lift, 2026-08-15): `stepFn_pick_bind`
+(binder-generic, allocation via `bindIterVars`) with its corollaries
+`stepFn_pick_value`, `stepFn_pick_novars`.
 
 **Internal** (`private` — spelling may change without notice):
-`valueEq_u64`, `toEntries_setk`, `snapshot_norm`, `cnt_bump`,
-`cnt_countsFold_aux`, `mem_bump`, `countsFold_key_mem_aux`,
-`nodup_keys_bump`, `countsFold_nodup_keys_aux`.
+`valueEq_u64`, `filter_len_cons`, `toEntries_setk`, `snapshot_norm`,
+`cnt_bump`, `cnt_countsFold_aux`, `mem_bump`,
+`countsFold_key_mem_aux`, `nodup_keys_bump`,
+`countsFold_nodup_keys_aux`.
+
+**Naming note** (WP arc s3): executable-fact lemmas are named
+`<executable function>_<operand or result shape>` at the function's
+shortest UNAMBIGUOUS spelling — `snapshot_toEntries` is
+`mapRangeSnapshotEntries` at that spelling, and `scan_generic` is the
+`mapEntryIndex?` scan; both are unambiguous inside this namespace.
+No alias added (`docs/wp-arc-log/s3.md` § Near-misses).
 
 **The API discipline** (as `SliceMem`'s, verbatim in substance):
-everything here is UNTRUSTED METHOD except the vocabulary defs, and
-even those enter a headline only under the §11 statement closure
-rules — a kit lemma NAME never appears in a headline statement (form
-note §12b). Additions follow the §12 loop (≥2 consumers retrofitted
-in the lifting commit, measured deltas). Lean's `private` hides names
-without sealing definitional transparency; the seal is name-level +
-this contract, and the statement layer has its own gate.
+
+1. Everything here is UNTRUSTED METHOD except the vocabulary defs,
+   and even those enter a headline only under the §11 statement
+   closure rules — a kit lemma NAME never appears in a headline
+   statement (form note §12b).
+2. Additions follow the §12 active-abstraction loop (≥2 consumers
+   retrofitted in the lifting commit, measured deltas).
+3. Lean's `private` hides names without sealing definitional
+   transparency; the seal is name-level + this contract, and the
+   statement layer has its own gate.
+4. Every public THEOREM above carries an exact `#print axioms` pin in
+   `Audit/Kit.lean` § MapMem; the nine vocabulary/model/fold defs
+   (`mapCells`, `mapVal`, `idxOf?`, `cnt`, `setk`, `toEntries`,
+   `bump`, `countsFold`, `nilMapCell`) are unpinned by the standing
+   convention. A new public lemma lands with its pin in the same
+   commit.
+5. **Storm/signature discipline: StepKit rules 1–5** (that module's
+   `## THE FIVE RULES` section is the kit's single copy — cite, never
+   restate). Group 5/6 members take the cell fact as a D-relative
+   hypothesis (rule 4) over an abstract `σ` (rule 1), which is why
+   they instantiate at any placement.
+
+## WHAT LIVES WHERE (the kit map — WP arc s3, 2026-08-18)
+
+THIS module: what the machine computes when the OPERAND is a map,
+plus the abstract model those facts are stated against. One step at
+most (group 6); no loops, no fuel.
+
+Siblings, and the boundary with each:
+
+* `MapLoops` — the whole map-LOOP schemas (counting loop, range pick
+  loop) built by composing our group 5/6 facts with `StepKit`'s
+  steps and `FuelMeasure`'s chaining. If it iterates, it is there.
+* `SliceMem` — the identical shape for `[]uint64`; the model half
+  there is plain `List Int`, which is why this module carries an
+  explicit `idxOf?`/`cnt`/`setk` layer and that one does not.
+* `StringMem` — the same shape for string values (no heap half).
+* `StepKit` — the machine step consuming our facts as its
+  `applyStrictOp`/`applyStmtOp` hypothesis; its footprint algebra
+  (`DeadFrom`/`FreshFrom`) is what a map-range loop's per-iteration
+  allocation is argued with.
+
+Future `docs/kit-guide.md` (slice 6) sections fed by this module:
+**Values in memory: maps**, **Map counting** (the model/fold half of
+**Map count loop**), **Map range** (the pick step).
 -/
 
 namespace GoLean.MapMem
@@ -78,7 +143,7 @@ open GoLean GoLean.GoCore GoLean.GoCore.Machine
 -- 2026-08-15); same suppression the example modules carry.
 set_option linter.unusedSimpArgs false
 
-/-! ## The §10a map-in-memory vocabulary -/
+/-! ## API group 1 — the map-in-memory vocabulary (§10a) -/
 
 /-- The heap representation of a `map[uint64]uint64` holding the
 association list `kvs` (insertion order = list order): one data cell at
@@ -89,7 +154,7 @@ def mapCells (kvs : List (Int × Int)) (base : Nat) : Heap :=
 
 def mapVal (base : Nat) : GoValue := .map ⟨some (.base ⟨base⟩)⟩
 
-/-! ## The abstract association-list model -/
+/-! ## API group 2 — the abstract association-list model -/
 
 /-- First index of key `w` (the machine's `mapEntryIndex?` order). -/
 def idxOf? : List (Int × Nat) → Int → Option Nat
@@ -124,6 +189,11 @@ private theorem valueEq_u64 (σ : ExecState) (l r : Int) :
     valueEq σ (.int .uint64) (.int l .uint64) (.int r .uint64)
       = .ok (l == r) := by
   simp [valueEq, valueEqFuel, typeResolutionFuel]
+
+/-! ### API group 5, stated early — the key scan and its engine.
+(They live here, beside the model, because both are stated over
+`toEntries`; the rest of group 5 is the `## API group 5, continued`
+section below.) -/
 
 /-- The key-scan loop of `mapEntryIndex?` over an abstract body `f`
 (pinned only by its action on wrapped-integer entry pairs — the
@@ -182,7 +252,8 @@ theorem mapEntryIndex?_toEntries (σ : ExecState)
       simp [hkb, hk]
   cases h : idxOf? kvs w <;> simp [Bind.bind, Except.bind, pure, Except.pure]
 
-/-! ### The model lemmas: `idxOf?` against `cnt` and `setk` -/
+/-! ### API group 2, continued — the model lemmas: `idxOf?` against
+`cnt` and `setk` -/
 
 theorem idxOf?_none_cnt {kvs : List (Int × Nat)} {w : Int}
     (h : idxOf? kvs w = none) : cnt kvs w = 0 := by
@@ -253,7 +324,7 @@ theorem idxOf?_some_setk {kvs : List (Int × Nat)} {w : Int} {j : Nat}
             simp only [List.set, setk, if_neg hk]
             exact congrArg _ (ih hidx)
 
-/-! ### The `toEntries` bridges -/
+/-! ## API group 3 — the `toEntries` bridges -/
 
 theorem toEntries_getElem? (kvs : List (Int × Nat)) (j : Nat)
     {p : Int × Nat} (h : kvs[j]? = some p) :
@@ -282,7 +353,8 @@ theorem toEntries_eraseIdx (kvs : List (Int × Nat)) (i : Nat)
   apply Array.toList_inj.mp
   simp [toEntries, map_eraseIdx]
 
-/-! ## The counting fold (Gallery Campaign kit-gap closure GAP-P1,
+/-! ## API group 4 — counting with a map: the counting fold
+(Gallery Campaign kit-gap closure GAP-P1,
 2026-08-15)
 
 `bump`/`countsFold` — the abstract content of a counting map's data
@@ -541,7 +613,7 @@ theorem cnt_take_le {ws : List Int} {i : Nat} (w : Int) :
     exact Nat.min_le_left _ _
   omega
 
-/-! ## The executable map-op facts -/
+/-! ## API group 5, continued — the executable map-op facts -/
 
 /-- **The map-elem read** (`counts[w]`, expression position): a present
 key answers its count, an absent key the ZERO VALUE — which is exactly
@@ -657,7 +729,8 @@ private theorem snapshot_norm (types : TypeEnv) :
       rw [hrest]
       simp [isNormalForTy, isNormalForTyFuel, typeResolutionFuel, hp.1, hp.2]
 
-/-! ## The `mapIterK` choice-pick step (Gallery Campaign kit-gap
+/-! ## API group 6 — the range loop PICKS: the `mapIterK`
+choice-pick step (Gallery Campaign kit-gap
 closure GAP-M1, 2026-08-15)
 
 The §10b pick, lifted from the two binder-specialized per-example

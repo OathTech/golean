@@ -31,27 +31,93 @@ in the second section — the choice-pick loop induction of
   `.retV (.bool false) cmp`, and each consumer chains its own exit
   (the same boundary call the P5 setup-loop schema made).
 
-## The storm discipline (unchanged from the source layer)
+## The storm discipline
 
-Every hypothesis type pins all intermediate states and configurations,
-so no instantiation can send the unifier into a concrete heap front
-(the 2026-08-13 storm diagnosis, `StepKit` module docstring). At
+**StepKit rules 1–5** (that module's `## THE FIVE RULES` section is
+the kit's single copy — cite, never restate). Concretely, as they
+land here: every hypothesis type pins all intermediate states and
+configurations, so no instantiation can send the unifier into a
+concrete heap front (rules 1–2, the 2026-08-13 storm diagnosis); at
 instantiation sites that mention big concrete states, pin the full
-result type on the `have` (the E-form).
+result type on the `have` (rule 3, the E-form).
 
 ## PUBLIC API — the sealed interface (the W6 convention, as in
 `StepKit`/`MapMem`)
 
-**What consumers may depend on**: the statement vocabulary
-(`mhG`, `wsHG`, `asgnC1G`, `asgnReadG`, `seqnC2G`, `mapAsgnG`) and
-the schema statements `mapCountIter_generic`, `mapCountIter_at` (the
-bundled form — placement facts + raw segments, conditioned discharges
-constructed inside), `mapCountLoop_generic`, and the GAP-R1 pick-loop
-family `mapPickLoop_generic` + `consume_lt` /
-`eraseIdx_length_of_lt` / `mem_of_mem_eraseIdx`. Everything here is
-UNTRUSTED METHOD (proof-side): no name from this module may appear in
-a headline statement closure. Additions follow the §12
-active-abstraction loop.
+**What consumers may depend on** (and nothing else). The groups are
+indexed by PROOF SITUATION (the WP arc s3 convention); the in-file
+`/-! ## … -/` section headers carry the group number.
+
+**Group 1** — *you are naming the desugared `m[k]++` loop body*: the
+statement vocabulary `mhG`, `wsHG`, `asgnC1G`, `asgnReadG`,
+`seqnC2G`, `mapAsgnG`, each parameterized over the identifier strings
+the frontend embeds (`slVar`/`mapVar`/`c1`/`c2`/`iVar` — GAP-C1b, WP
+arc s2 item 7), with the spelling helpers `tU64`, `tMap`, `u64cell`.
+
+**Group 2** — *your program counts into a map over a slice, and you
+need the LOOP* (GAP-C1): `mapCountIter_generic` (one iteration, 53
+steps, placement-generic) and `mapCountLoop_generic` (the strong
+induction over the remaining count, back-edge included, ending at the
+exit test's `false` delivery).
+
+**Group 3** — *you are placing that loop in a CONCRETE example*:
+`mapCountIter_at`, the bundled per-placement form — placement facts +
+raw segments in, conditioned discharges constructed inside.
+
+**Group 4** — *your program RANGES over a map and you need the pick
+loop* (GAP-R1): `mapPickLoop_generic`, with the list-consumption
+helpers it is stated against — `consume_lt`, `eraseIdx_length_of_lt`,
+`mem_of_mem_eraseIdx`.
+
+**Internal** (`private` — spelling may change without notice):
+`defaultValue_tMap`, `defaultValue_tU64`, `normMapHandle`, `normU64`
+— the per-placement discharge steps of `mapCountIter_at`.
+
+**The API discipline**:
+
+1. Everything here is UNTRUSTED METHOD (proof-side): no name from
+   this module may appear in a headline statement closure (§12b).
+2. Additions follow the §12 active-abstraction loop (≥2 consumers
+   retrofitted in the lifting commit, measured deltas).
+3. The seal is name-level + this contract; `private` hides names
+   without sealing definitional transparency.
+4. Every public THEOREM above carries an exact `#print axioms` pin in
+   `Audit/Kit.lean` § MapLoops; the statement-vocabulary `abbrev`s
+   are unpinned by the standing convention.
+5. **Storm/signature discipline: StepKit rules 1–5** — see the
+   section above for how they land in these schemas.
+
+**Naming note** (WP arc s3): `_generic` marks the placement- and
+name-generic SCHEMA; `_at` marks the bundled at-a-placement form
+built from it. That pair is the kit's convention for any future loop
+schema, and a `G` suffix marks a statement-vocabulary `abbrev`
+(`mhG`, `asgnC1G`, …) as generic in its embedded names.
+
+## WHAT LIVES WHERE (the kit map — WP arc s3, 2026-08-18)
+
+THIS module: whole map-LOOP schemas — the counting loop and the range
+pick loop, with their statement vocabulary. It is the composition
+layer; it proves no new fact about a map or a step.
+
+Siblings, and the boundary with each:
+
+* `MapMem` — the map facts these schemas consume (`applyStrictOp_
+  mapGet`, `mapAssignValue_toEntries`, `stepFn_pick_bind`, the
+  `cnt`/`setk` model the invariants are stated in). Anything true of
+  a map independent of a loop belongs there.
+* `StepKit` — the individual conditioned steps the segments are
+  built from.
+* `FuelMeasure` — the GENERAL loop schemas (`stepFnIter_iterate`,
+  `stepFnIter_iterate_bail`) and the chaining. These map schemas are
+  map-SPECIFIC and could not be stated there; a loop shape with no
+  map in it belongs there, not here.
+* `SliceMem` — the slice side of the counting loop's input.
+* The **counting-loop EXIT is deliberately in neither** (see above):
+  wordcount's exit allocates and snapshots, histogram's does not, so
+  each consumer chains its own.
+
+Future `docs/kit-guide.md` (slice 6) sections fed by this module:
+**Map count loop**, **Map range loop**.
 -/
 
 namespace GoLean.MapLoops
@@ -63,7 +129,7 @@ open GoLean.MapMem
 set_option maxRecDepth 1000000
 set_option maxHeartbeats 2000000
 
-/-! ## The counting-loop statement vocabulary
+/-! ## API group 1 — the counting-loop statement vocabulary
 
 The frontend's desugaring of `m[k]++` over `slVar[i]` — fixed shape,
 one embedded name. -/
@@ -94,6 +160,8 @@ abbrev mapAsgnG (c1 c2 : String) : Stmt :=
   .mapAssign (.var c1) (.var c2)
     (.add (.mapGet (.var c1) (.var c2) tU64 tU64) (.intLit 1 .uint64))
     tU64 tU64
+
+/-! ## API group 2 — the map-counting LOOP (GAP-C1) -/
 
 /-- **The placement- and name-generic counting ITERATION** (53 steps):
 stated over an abstract state family `S`, abstract placement
@@ -503,7 +571,8 @@ theorem mapCountLoop_generic
       · rw [List.take_length]
         rfl
 
-/-! ## The per-placement discharge pack (GAP-C1, second half)
+/-! ## API group 3 — placing the loop: the per-placement discharge
+pack (GAP-C1, second half)
 
 The nine CONDITIONED discharges every counting-loop placement had to
 re-derive (`init1`/`st1`/`init2`/`st2`/`var1`/`var2`/`read`/`mapGet`/
@@ -978,7 +1047,7 @@ theorem mapCountIter_at (slVar mapVar c1 c2 iVar : String)
     hC6 hVar1 hVar2 hC7 hC8 hC9 hMapGet hC10 hMapAsgn hC11
     kvs i dead na ch hi hw0 hw64 hcnt hna hdead
 
-/-! ## The map-range pick loop (GAP-R1)
+/-! ## API group 4 — ranging over a map: the pick loop (GAP-R1)
 
 The §10b choice-pick induction, stated ONCE over an abstract state
 descriptor: the whole per-iteration content — body, binders,
