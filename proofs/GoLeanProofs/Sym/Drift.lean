@@ -977,4 +977,289 @@ theorem pushDefer_conc (cv : Value D) (args : List (Value D)) :
        simp_all [Option.map])
   all_goals simp [concK]
 
+/-! ## Commutation leaves: the slice/bounds/index family (loop-free
+layer-2 helpers; WP arc s4 deliverable 5, first tranche) -/
+
+theorem checkSliceBounds_conc {limit : Nat} {low high : Int}
+    {p : Nat × Nat} (name : String)
+    (h : checkSliceBounds' limit low high = .ok p) :
+    checkSliceBounds name limit low high = .ok p := by
+  simp only [checkSliceBounds', quit] at h
+  by_cases h1 : high < 0
+  · rw [if_pos h1] at h; cases h
+  · rw [if_neg h1] at h
+    by_cases h2 : high > limit
+    · rw [if_pos h2] at h; cases h
+    · rw [if_neg h2] at h
+      by_cases h3 : low < 0
+      · rw [if_pos h3] at h; cases h
+      · rw [if_neg h3] at h
+        by_cases h4 : low > high
+        · rw [if_pos h4] at h; cases h
+        · rw [if_neg h4] at h
+          cases h
+          simp only [checkSliceBounds]
+          rw [if_neg h1, if_neg h2, if_neg h3, if_neg h4]
+          rfl
+
+theorem checkSliceBounds3_conc {max : Nat} {low high : Int}
+    {p : Nat × Nat} (h : checkSliceBounds3' max low high = .ok p) :
+    checkSliceBounds3 max low high = .ok p := by
+  simp only [checkSliceBounds3', quit] at h
+  by_cases h1 : high < 0
+  · rw [if_pos h1] at h; cases h
+  · rw [if_neg h1] at h
+    by_cases h2 : high > max
+    · rw [if_pos h2] at h; cases h
+    · rw [if_neg h2] at h
+      by_cases h3 : low < 0
+      · rw [if_pos h3] at h; cases h
+      · rw [if_neg h3] at h
+        by_cases h4 : low > high
+        · rw [if_pos h4] at h; cases h
+        · rw [if_neg h4] at h
+          cases h
+          simp only [checkSliceBounds3]
+          rw [if_neg h1, if_neg h2, if_neg h3, if_neg h4]
+          rfl
+
+theorem checkSliceMax_conc {limit : Nat} {max : Int} {m : Nat}
+    (name : String) (h : checkSliceMax' limit max = .ok m) :
+    checkSliceMax name limit max = .ok m := by
+  simp only [checkSliceMax', quit] at h
+  by_cases h1 : max < 0
+  · rw [if_pos h1] at h; cases h
+  · rw [if_neg h1] at h
+    by_cases h2 : max > limit
+    · rw [if_pos h2] at h; cases h
+    · rw [if_neg h2] at h
+      cases h
+      simp only [checkSliceMax]
+      rw [if_neg h1, if_neg h2]
+      rfl
+
+theorem validateSlice_conc {sl : SliceValue}
+    (h : validateSlice' sl = .ok ()) :
+    validateSlice sl = .ok () := by
+  simp only [validateSlice', quit] at h
+  by_cases h1 : sl.len > sl.cap
+  · rw [if_pos h1] at h; cases h
+  · rw [if_neg h1] at h
+    simp only [validateSlice]
+    rw [if_neg h1]
+    rcases hb : sl.base with _ | b
+    · rw [hb] at h
+      by_cases h2 : (sl.offset == 0 && sl.len == 0 && sl.cap == 0) = true
+      · rw [if_pos h2] at h
+        rw [if_pos h2]
+        rfl
+      · rw [if_neg h2] at h
+        cases h
+    · rw [hb] at h
+      rfl
+
+theorem sliceIndexLoc_conc {sl : SliceValue} {i : Int} {loc : Loc}
+    (h : sliceIndexLoc' sl i = .ok loc) :
+    sliceIndexLoc sl i = .ok loc := by
+  simp only [sliceIndexLoc', quit] at h
+  rcases hval : validateSlice' sl with e | u
+  · rw [hval] at h
+    cases h
+  · rw [hval] at h
+    obtain ⟨⟩ := u
+    simp only [Bind.bind, Except.bind, pure, Except.pure] at h
+    by_cases hneg : i < 0
+    · rw [if_pos hneg] at h
+      cases h
+    · rw [if_neg hneg] at h
+      by_cases hlt : i.toNat < sl.len
+      · rw [if_pos hlt] at h
+        rcases hb : sl.base with _ | b
+        · rw [hb] at h
+          cases h
+        · rw [hb] at h
+          cases h
+          simp only [sliceIndexLoc, Bind.bind, Except.bind]
+          rw [validateSlice_conc hval]
+          dsimp only
+          rw [if_neg hneg]
+          simp only [pure, Except.pure]
+          rw [if_pos hlt, hb]
+      · rw [if_neg hlt] at h
+        cases h
+
+theorem sliceFromSlice_conc {sl : SliceValue} {low high : Int}
+    {max : Option Int} {v : Value D}
+    (h : sliceFromSlice' sl low high max = .ok v) :
+    sliceFromSlice sl low high max = .ok (concV I v) := by
+  simp only [sliceFromSlice'] at h
+  rcases hval : validateSlice' sl with e | u
+  · rw [hval] at h
+    cases h
+  · rw [hval] at h
+    obtain ⟨⟩ := u
+    simp only [Bind.bind, Except.bind] at h
+    cases max with
+    | none =>
+        dsimp only at h
+        rcases hp : checkSliceBounds' sl.cap low high with e | ⟨lo, hi⟩
+        · rw [hp] at h
+          cases h
+        · rw [hp] at h
+          cases h
+          simp only [sliceFromSlice, Bind.bind, Except.bind]
+          rw [validateSlice_conc hval]
+          dsimp only
+          rw [checkSliceBounds_conc "capacity" hp]
+          simp
+    | some m =>
+        dsimp only at h
+        rcases hm : checkSliceMax' sl.cap m with e | mm
+        · rw [hm] at h
+          cases h
+        · rw [hm] at h
+          dsimp only at h
+          rcases hp : checkSliceBounds3' mm low high with e | ⟨lo, hi⟩
+          · rw [hp] at h
+            cases h
+          · rw [hp] at h
+            cases h
+            simp only [sliceFromSlice, Bind.bind, Except.bind]
+            rw [validateSlice_conc hval]
+            dsimp only
+            rw [checkSliceMax_conc "capacity" hm]
+            dsimp only
+            rw [checkSliceBounds3_conc hp]
+            simp
+
+theorem sliceFromArray_conc {base : Loc} {length : Nat} {low high : Int}
+    {max : Option Int} {v : Value D}
+    (h : sliceFromArray' base length low high max = .ok v) :
+    sliceFromArray base length low high max = .ok (concV I v) := by
+  simp only [sliceFromArray'] at h
+  cases max with
+  | none =>
+      dsimp only at h
+      rcases hp : checkSliceBounds' length low high with e | ⟨lo, hi⟩
+      · rw [hp] at h
+        cases h
+      · rw [hp] at h
+        cases h
+        simp only [sliceFromArray, Bind.bind, Except.bind]
+        rw [checkSliceBounds_conc "length" hp]
+        simp
+  | some m =>
+      dsimp only at h
+      rcases hm : checkSliceMax' length m with e | mm
+      · rw [hm] at h
+        cases h
+      · simp only [hm, Bind.bind, Except.bind] at h
+        rcases hp : checkSliceBounds3' mm low high with e | ⟨lo, hi⟩
+        · simp only [hp] at h
+          cases h
+        · simp only [hp] at h
+          cases h
+          simp only [sliceFromArray, Bind.bind, Except.bind]
+          rw [checkSliceMax_conc "length" hm]
+          dsimp only
+          rw [checkSliceBounds3_conc hp]
+          simp
+
+theorem stringSlice_conc {str : GoString} {low high : Int}
+    {max : Option Int} {v : Value D}
+    (h : stringSlice' str low high max = .ok v) :
+    stringSlice str low high max = .ok (concV I v) := by
+  simp only [stringSlice', quit] at h
+  by_cases hm : max.isSome
+  · rw [if_pos hm] at h
+    exact absurd h (by simp [Bind.bind, Except.bind])
+  · rw [if_neg hm] at h
+    simp only [Bind.bind, Except.bind, pure, Except.pure] at h
+    rcases hp : checkSliceBounds' str.length low high with e | ⟨lo, hi⟩
+    · rw [hp] at h
+      cases h
+    · rw [hp] at h
+      cases h
+      simp only [stringSlice, Bind.bind, Except.bind]
+      rw [if_neg hm]
+      simp only [pure, Except.pure]
+      rw [checkSliceBounds_conc "length" hp]
+      dsimp only
+      simp
+
+theorem stringByteGet_conc (hI : I.Sound) {str : GoString} {i : Int}
+    {v : Value D} (h : stringByteGet' str i = .ok v) :
+    stringByteGet str i = .ok (concV I v) := by
+  simp only [stringByteGet', quit, Bind.bind, Except.bind, pure,
+    Except.pure] at h
+  by_cases hneg : i < 0
+  · rw [if_pos hneg] at h
+    cases h
+  · rw [if_neg hneg] at h
+    rcases hb : str.byte? i.toNat with _ | byte
+    · rw [hb] at h
+      cases h
+    · rw [hb] at h
+      cases h
+      simp only [stringByteGet, Bind.bind, Except.bind, pure, Except.pure]
+      rw [if_neg hneg]
+      try dsimp only
+      rw [hb]
+      simp [hI.litI]
+
+theorem applySlice_conc (σ : ExecState) {s : State D}
+    {b : Value D} {low high : Int} {max : Option Int} {v : Value D}
+    (h : applySlice' s b low high max = .ok v) :
+    applySlice (concS I σ s) (concV I b) low high max
+      = .ok (concV I v, concS I σ s) := by
+  cases b <;> simp only [applySlice'] at h <;> try (cases h; done)
+  case string str =>
+    simp only [concV_string, applySlice, bind_eq_ok]
+    exact ⟨_, stringSlice_conc h, rfl⟩
+  case slice sl =>
+    simp only [concV_slice, applySlice, bind_eq_ok]
+    exact ⟨_, sliceFromSlice_conc h, rfl⟩
+  case addr baseLoc =>
+    simp only [bind_eq_ok] at h
+    obtain ⟨bv, hbv, h2⟩ := h
+    simp only [concV_addr, applySlice, bind_eq_ok]
+    refine ⟨concV I bv, loadLoc_conc σ hbv, ?_⟩
+    cases bv <;> try (cases h2; done)
+    · next values =>
+        simp only [concV_array, bind_eq_ok]
+        rw [show (values.map (concV I)).size = values.size by simp]
+        exact ⟨_, sliceFromArray_conc h2, rfl⟩
+    · next sl =>
+        simp only [concV_slice, bind_eq_ok]
+        exact ⟨_, sliceFromSlice_conc h2, rfl⟩
+
+theorem indexTargetLoc_conc (hI : I.Sound) (σ : ExecState) {s : State D}
+    {b i : Value D} {loc : Loc}
+    (h : indexTargetLoc' s b i = .ok loc) :
+    indexTargetLoc (concS I σ s) (concV I b) (concV I i) = .ok loc := by
+  simp only [indexTargetLoc', bind_eq_ok, quit] at h
+  obtain ⟨iv, hiv, h2⟩ := h
+  simp only [indexTargetLoc, bind_eq_ok]
+  refine ⟨iv, asIntAt_conc hI hiv, ?_⟩
+  cases b <;> try (cases h2; done)
+  case slice sl =>
+    simp only [concV_slice]
+    exact sliceIndexLoc_conc h2
+  case addr baseLoc =>
+    simp only [bind_eq_ok] at h2
+    obtain ⟨bv, hbv, h3⟩ := h2
+    simp only [concV_addr, bind_eq_ok]
+    refine ⟨concV I bv, loadLoc_conc σ hbv, ?_⟩
+    cases bv <;> try (cases h3; done)
+    · next values =>
+        simp only [concV_array]
+        simp only [bind_eq_ok] at h3
+        obtain ⟨j, hj, h4⟩ := h3
+        cases h4
+        simp only [bind_eq_ok]
+        exact ⟨j, arrayIndexNat'_conc hj _ (by simp), rfl⟩
+    · next sl =>
+        simp only [concV_slice]
+        exact sliceIndexLoc_conc h3
+
 end GoLean.Sym
