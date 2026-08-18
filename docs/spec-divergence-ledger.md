@@ -176,9 +176,12 @@ Discipline notes, recorded up front:
   11 "Implementation restriction" paragraphs the negative tranche
   touches).
 - Sources: spec#Return_statements — prose: "Implementation
-  restriction: A compiler MAY disallow an empty expression list in a
-  'return' statement if a different entity ... with the same name as
-  a result parameter is in scope at the place of the return"; the
+  restriction: A compiler may disallow an empty expression list in a
+  'return' statement if a different entity (constant, type, or
+  variable) with the same name as a result parameter is in scope at
+  the place of the return" (case restored to the pin's lowercase
+  "may" and elision filled at the delta-review F-7; emphasis is
+  ours in the discussion, never inside quotes); the
   same section's example block labels the line flatly "// invalid
   return statement: err is shadowed".
 - Sharp question: is a conforming implementation REQUIRED to reject

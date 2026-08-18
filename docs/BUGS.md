@@ -2380,7 +2380,7 @@ FIRST per the standing rule.
   guardrail case found the unexercised path; interpreter fix is a
   semantic-core arc, out of P3's corpus-lane scope).
 - Pinned-by: differential
-- Cases: spec-examples-decl/address-op-nil-indirection/addr-deref-nil
+- Cases: spec-examples-decl/address-op-nil-indirection/addr-deref-nil, spec-examples-decl/address-op-nil-indirection/addr-deref-nil-paren
 - Discovered: spec#Address_operators' own exhibit — "if the evaluation
   of x would cause a run-time panic, then the evaluation of &x does
   too" — so `&*p` with `p == nil` must panic (gc go1.26.5: panics;
@@ -2390,14 +2390,17 @@ FIRST per the standing rule.
   machinery exists; the address-of-indirection path skips it.
 - Class: unexercised path (the audit doctrine's first structural
   class); nothing in the pre-P3 corpus exercised `&*` on nil.
-  BOUNDARY (P3 audit N2, then CORRECTED by the integrator's own
-  differential run — the audit claimed `&(*p)` shares the defect;
-  measured: it does NOT): `&(*p)` panics correctly in the machine
-  (case addr-deref-nil-paren, GREEN, pins the boundary witness), as
-  do `&p.f` and `&p[i]` on nil pointers. The defect is exactly the
-  direct unparenthesized `&*p` composition — narrower than either
-  diagnosis, and AST-shape-sensitive, which points at the frontend's
-  handling of the immediate unary-&-of-unary-* node.
+  BOUNDARY (P3 audit N2 → integrator "refutation" → refutation
+  itself REFUTED at the delta-review F-1; the reversal recorded
+  deliberately): the frontend wire for `&*p` and `&(*p)` is
+  BYTE-IDENTICAL — both collapse to `q := p`. The short-lived green
+  "witness" ended `return q.x`, whose trailing deref panicked
+  regardless: a masked green, the same pattern BUG-057's rows fix.
+  The discriminating paren case (addr-deref-nil-paren, `_ = q`) is
+  RED and pinned above. `&p.f` and `&p[i]` on nil pointers panic
+  correctly (wire emits real field-addr/index-addr nodes —
+  record-only, no corpus witness). The defect: the `&`-of-`*`
+  composition, parenthesized or not.
 
 ## BUG-057 — two-variable comma-ok VAR DECLARATIONS drop the ok flag
 
@@ -2412,19 +2415,31 @@ FIRST per the standing rule.
   short-decl forms are CORRECT; `var x, ok = <-ch` (untyped) and
   `var x, ok bool = <-ch` (typed) deliver the VALUE but drop `ok`
   (false where gc says true); `var v, ok = m[k]` (map index) drops
-  `ok` identically. So: the defect is the two-variable comma-ok VAR
-  DECLARATION lowering — not typed-specific, not receive-specific;
-  the value arrives, the boolean is lost.
-- MASKING record: the original "untyped form PASSes" evidence used a
-  closed-drained channel / absent map key, where ok=false is the
-  RIGHT answer — the bug's output coincided with correctness. Three
-  tranche cases carried that masked green; each gained an unmasking
-  row (live channel / present key) in the audit-response commit, red
-  and pinned here.
+  `ok` identically. Scope tightened at the delta-review F-2: the
+  defect is the FUNCTION-LOCAL two-variable comma-ok
+  var-declaration lowering (emit.go:2383-2392 pairs names to values
+  with no arity check, so the second name gets no init —
+  wire-verified); package-level `var v, ok = m[k]` lowers correctly
+  via $pkginit. Not typed-specific, not receive-specific; the value
+  arrives, the boolean is lost. Adjacent honesty notes: the
+  analogous `var a, b = two()` tuple case FAILS CLOSED (the
+  silent-mis-lower arity hole is comma-ok-specific), and
+  typed-form's value-delivery half is wire-verified rather than
+  case-pinned — its subject returns x&&ok, which cannot distinguish
+  the two drops (F-10).
+- MASKING record (corrected at the delta-review F-2): the original
+  "untyped form PASSes" evidence used a closed-drained channel /
+  absent map key, where ok=false is the RIGHT answer — the bug's
+  output coincided with correctness. TWO tranche cases carried that
+  masked green (receive-comma-ok/forms and index-comma-ok, both
+  function-local); var-decl-forms' package-level `var _, found`,
+  originally listed as a third, was never masked (package-level is
+  correct-by-construction) — its new row found-present pins the
+  LOCAL form instead. All three unmasking rows red and pinned here.
 - Class: unexercised path (no pre-P3 case used a two-var comma-ok
   var declaration with a TRUE ok on the line that matters).
 
-## BUG-058 — if-statement init scope: short-circuit hoist block emitted OUTSIDE the init
+## BUG-058 — if-statement init scope: condition hoist block emitted OUTSIDE the init
 
 - Status: open (discovered 2026-08-18, spec-truth P3; DIAGNOSIS
   REWRITTEN at the P3 pre-merge audit — the original entry blamed
@@ -2438,11 +2453,13 @@ FIRST per the standing rule.
   `st.Init` INSIDE the if node, but the condition is emitted with the
   enclosing hoist accumulator in force, so `emitStmtList` places the
   short-circuit desugar block BEFORE the if — outside the init's
-  scope. Trigger (audit probe matrix, wire-verified): an `if` (or
-  `else if`, incl. inside function literals) with an init statement
-  whose condition is a short-circuit (`&&`/`||`) with a call in the
-  RIGHT operand. Comma-ok, type assertions, recover, closures — all
-  incidental. Three observable modes:
+  scope. Trigger widened at the delta-review F-3: any `if` (or
+  `else if`, incl. in function literals) with an init statement plus
+  ANY hoisting call/alloc anywhere in the condition — no
+  short-circuit operator required (modes 2-3 below have none;
+  `emitter.hoist` is generic, and `emitIf` scopes the else
+  accumulator but not the condition's). Comma-ok, type assertions,
+  recover, closures — all incidental. Observable modes:
   (1) STUCK "unbound GoCore variable address: <init var>" when the
       hoisted prefix reads the init-declared variable (the original
       case's symptom);
@@ -2455,6 +2472,9 @@ FIRST per the standing rule.
   fail-closed classification. Fix direction: scope the condition's
   hoist accumulator inside the emitted if (est. small, emitIf-local);
   a frontend arc, out of this corpus lane's scope.
-- For-init and switch-init are NOT affected (probed clean); the
-  receive-hoist family (BUG-023/026) is a different position set.
+- For-init and switch-init are NOT affected — probed clean AND
+  corroborated structurally at the delta-review (emitFor routes cond
+  hoists into condPre inside the loop node; emitSwitch/emitTypeSwitch
+  append tag hoists after the init); the receive-hoist family
+  (BUG-023/026) is a different position set.
 

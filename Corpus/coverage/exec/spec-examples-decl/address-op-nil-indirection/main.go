@@ -43,11 +43,15 @@ func addrDerefNil() int {
 	return 0
 }
 
-// addrDerefNilParen: the parenthesized composition &(*p) — identical
-// defect boundary per the P3 audit (BUG-056 N2): must panic exactly as
-// &*p does.
+// addrDerefNilParen: the parenthesized composition &(*p) shares BUG-056
+// exactly (delta-review F-1: the frontend wire for &*p and &(*p) is
+// byte-identical — both collapse to q := p; an earlier draft of this
+// subject ended `return q.x`, whose trailing deref panicked regardless,
+// masking the collapse — the same masked-green pattern BUG-057's rows
+// fix). Discriminating shape: the & expression itself must panic.
 func addrDerefNilParen() int {
 	var p *Point
 	q := &(*p)
-	return q.x
+	_ = q
+	return 0
 }

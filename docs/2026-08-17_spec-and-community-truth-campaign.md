@@ -41,10 +41,16 @@ the same go/constant engine gc uses, so those PASSes are
 spec-derivation checks, not interpreter evidence (dispositions
 header carries the list). Follow-ons queued: legal-line value
 pinning for the literal grids; block-id lint (audit N5); and a
-gate-tool observation from the audit-response re-pin — a baseline id
-absent from a full run was NOT reported as dropped by
-coverage-baseline-diff (caught by arithmetic; a dropped id silently
-unpinning its record is a fail-open worth closing).
+gate-tool observation from the audit-response re-pin — bare
+coverage-baseline-diff does not report dropped ids (--full does, and
+scripts/ci passes --full on full runs, so the GATE catches it: an
+ergonomics gap in manual use, not a gate fail-open — reworded at the
+delta-review F-6), and its
+complement: the re-pin GUARD flags any removed PASS id with no
+channel for deliberate curation removals, so the S6 duplicate case
+is retained-with-a-note instead of removed — the two gaps want one
+fix (an explicit removals ledger the diff reports against and the
+guard reads).
 Companion doctrine: `docs/2026-08-11_essence-of-go-doctrine.md` (the two
 bounds), `docs/2026-08-11_latitude-inventory.md` (the per-point census).
 
