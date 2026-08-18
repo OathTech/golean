@@ -94,11 +94,41 @@ for cf in glob.glob("Corpus/coverage/negative/**/case.tsv", recursive=True):
 # metadata BY DESIGN (import path = case-relative subdir path; import-
 # driven discovery on both pipeline legs). A dir is exempt iff it lies
 # on the path to a subdir that (a) holds non-test .go files and (b) is
-# named verbatim as a quoted import path by a .go file in the case's
-# package tree — mirroring the pipeline's own discovery rule, so a
-# FORGOTTEN nested case (go files, no metadata, never imported) still
-# husks loudly.
+# named by an IMPORT DECLARATION in a .go file in the case's package
+# tree — mirroring the pipeline's own discovery rule, so a FORGOTTEN
+# nested case (go files, no metadata, never imported) still husks
+# loudly.
+#
+# The import-declaration scope is load-bearing (pre-merge audit F2).
+# The first version scanned the WHOLE file text for quoted strings, so
+# ANY string literal that happened to spell a sibling directory's name
+# — `var label = "forgotten"` — silently exempted that directory and
+# the husk gate went quiet on exactly the omission it exists to catch.
+# Reproduced, then re-checked after the fix: the forgotten dir husks,
+# every live exemption survives.
 import re
+_BLOCK_COMMENT = re.compile(r'/\*.*?\*/', re.S)
+_LINE_COMMENT  = re.compile(r'//[^\n]*')
+_IMPORT_BLOCK  = re.compile(r'^import\s*\(\s*$(.*?)^\s*\)\s*$', re.M | re.S)
+_IMPORT_SINGLE = re.compile(r'^import\s+(?:[A-Za-z_.][A-Za-z0-9_]*\s+)?"([^"\n]*)"\s*$', re.M)
+_IMPORT_SPEC   = re.compile(r'^\s*(?:[A-Za-z_.][A-Za-z0-9_]*\s+)?"([^"\n]*)"\s*$', re.M)
+
+def _import_paths(text):
+    """Import paths DECLARED by a Go source file (both decl forms).
+
+    Deliberately a parser for import declarations only, not a string
+    scanner: a quoted path counts iff it appears as an import spec in
+    an `import ( ... )` block or an `import "p"` line. Comments are
+    stripped first (an import block's specs are often commented). The
+    optional leading identifier covers named, blank (`_`) and dot
+    imports — all of which are real imports of the package.
+    """
+    text = _LINE_COMMENT.sub("", _BLOCK_COMMENT.sub("", text))
+    out = []
+    for body in _IMPORT_BLOCK.findall(text):
+        out += _IMPORT_SPEC.findall(body)
+    return out + _IMPORT_SINGLE.findall(text)
+
 def _go_files(d):
     try:
         return [os.path.join(d, f) for f in os.listdir(d)
@@ -117,8 +147,12 @@ def _imported_pkg_dirs(case_dir):
                     text = f.read()
             except OSError:
                 continue
-            for m in re.finditer(r'"([a-z0-9_\-/]+)"', text):
-                p = os.path.normpath(os.path.join(case_dir, m.group(1)))
+            for ip in _import_paths(text):
+                # Same shape guard as the frontend loader's localDirFor:
+                # nothing that could escape the case dir is ever local.
+                if not ip or ip.startswith("/") or ".." in ip:
+                    continue
+                p = os.path.normpath(os.path.join(case_dir, ip))
                 if p.startswith(case_dir + os.sep) and os.path.isdir(p) \
                         and _go_files(p) and p not in exempt:
                     exempt.add(p)

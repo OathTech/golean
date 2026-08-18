@@ -241,3 +241,37 @@ with real differential cases, not a probe's.
   local-only list saw both as ready at step one and took the
   lexicographic order, giving quorum first. Wire counts are unchanged
   by the fix (7 funcs / 40 methods / 16 types before and after).
+
+## 2026-08-18 — audit fix round, F2: the husk-gate exemption scan is scoped to imports
+
+GATE-INFRA DIFF — flagged for the record (CLAUDE.md: gate/lint changes
+get their own delta-review attention).
+
+- Defect: `scripts/check-coverage`'s multi-package exemption scanned
+  the WHOLE file text for quoted strings, so any string literal that
+  spelled a sibling directory's name exempted that directory. The husk
+  gate exists to catch a nested case dir with .go files and no
+  metadata — invisible to case discovery — and this made it go quiet
+  on exactly that.
+- Fix: `_import_paths` parses IMPORT DECLARATIONS only (both forms;
+  comments stripped first; the optional leading identifier covers
+  named, blank and dot imports — all real imports). Paths that could
+  escape the case dir are dropped with the same shape guard the
+  frontend loader's `localDirFor` uses.
+- Reproduction, before and after, against the SHIPPED code (fixture
+  `artifacts/probe-huskgate`: main.go imports `helper`, carries the
+  literal `"forgotten"`, and `forgotten/` has .go files, no metadata,
+  no importer):
+    - old: exempt {forgotten, helper}, husks {} — silent;
+    - new: exempt {helper}, husks {forgotten} — loud.
+- All 14 pre-existing live exemptions still hold (plus the 3 dirs this
+  round's `init-order-stdlib` adds, and 4 intermediate dirs on the way
+  to `blue/inner` and `red/inner`, for 21 exempt dirs total):
+  cross-const/limits, cross-func-call/mathutil,
+  cross-type-method/counter, cross-var/store, diamond-import/{base,
+  left,right}, init-order/{alpha,beta,reclog},
+  same-name-identity/{blue,red}/inner,
+  same-name-identity-panic/{blue,red}/inner.
+- The scan bias is fail-CLOSED by construction: a shape the parser does
+  not recognize drops an exemption and husks loudly (a visible red),
+  never the reverse.
