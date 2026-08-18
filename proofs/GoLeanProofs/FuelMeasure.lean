@@ -1,5 +1,6 @@
 import GoLean.GoCore.MachineSound
 import GoLeanProofs.Surface
+import GoLeanProofs.StepKit
 
 /-!
 # The fuel-measure termination kit (verified-examples slice 1.5, 2026-08-12)
@@ -362,6 +363,46 @@ theorem stepFnIter_chain :
     rw [this]
     simp only [stepFnIter, bind_eq_ok]
     exact ⟨(cm, σm, chm), hstep, ih hrest h₂⟩
+
+/-! ### Multi-step control glue (WP arc s1 lift 6 — promoted from
+`SliceQueue`'s four dequeue glue combinators; `stepFn_block` and the
+single-step members live in `StepKit`, these compose them with
+`stepFnIter_chain`. Stack's exit analysis is the recorded latent
+second consumer, per the ledger's grading.) -/
+
+/-- Splice + pop in one: an `Expr`-free `seqn` under a same-env
+sequence, landing on the first statement of the concatenation. -/
+theorem stepFnIter_splice_pop {σ : ExecState} {ss : Array Stmt} {t : Stmt}
+    {ts rest : List Stmt} {env : LocalEnv} {k : Cont} {ch : Choices}
+    (hs : ss.toList ++ rest = t :: ts) :
+    stepFnIter 2 σ (.exec (.seqn ss) env (.seq rest env k)) ch
+      = .ok (.exec t env (.seq ts env k), σ, ch) := by
+  have h1 := stepFnIter_one (stepFn_seqn_splice (σ := σ) (ss := ss)
+    (env := env) (rest := rest) (k := k) (ch := ch))
+  rw [hs] at h1
+  exact stepFnIter_chain h1 (stepFnIter_one stepFn_seq_pop)
+
+/-- Store-drain glue: a drained store whose body is the empty `seqn`
+under a same-env sequence — three steps to the next statement. -/
+theorem stepFnIter_drain3 {σ : ExecState} {t : Stmt} {ts : List Stmt}
+    {env : LocalEnv} {k : Cont} {ch : Choices} :
+    stepFnIter 3 σ
+      (.next (.storeK [] [] (.seqn #[]) env (.seq (t :: ts) env k))) ch
+      = .ok (.exec t env (.seq ts env k), σ, ch) :=
+  stepFnIter_chain (stepFnIter_one stepFn_storeK_nil)
+    (stepFnIter_splice_pop (ss := #[]) rfl)
+
+/-- Block push + pop in one: a declaration-free block with a nonempty
+statement list. -/
+theorem stepFnIter_block_pop {σ : ExecState} {ss : Array Stmt} {t : Stmt}
+    {ts : List Stmt} {env : LocalEnv} {k : Cont} {ch : Choices}
+    (hs : ss.toList = t :: ts) :
+    stepFnIter 2 σ (.exec (.block #[] ss) env k) ch
+      = .ok (.exec t ([] :: env) (.seq ts ([] :: env) k), σ, ch) := by
+  have h1 := stepFnIter_one (stepFn_block (σ := σ) (ss := ss) (env := env)
+    (k := k) (ch := ch))
+  rw [hs] at h1
+  exact stepFnIter_chain h1 (stepFnIter_one stepFn_seq_pop)
 
 /-! ### The setup-loop iteration schema (Gallery Campaign G0 item 3a,
 2026-08-15 — the P5 promotion, reopened from the scale-out ledger)

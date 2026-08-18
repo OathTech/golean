@@ -636,23 +636,18 @@ theorem applyStrictOp_div_u64 {σ : ExecState} {a b : Nat}
       = .ok (.int ((a / b : Nat) : Int) .uint64, σ) :=
   SliceMem.applyStrictOp_div_u64 hb ha
 
-/-- GAP-WITNESS (kit gap, reported): the two-index slice expression
-`s[0:kv]` over a SLICE base (the kit's `applyStrictOp_sliceExpr_array`
-covers only the pointer-to-array base): length becomes `kv`, the
-capacity stays. -/
+/-- GAP-WITNESS, closed (WP arc s1 lift 6): the two-index slice
+expression `s[0:kv]` over a SLICE base — now the `lo = 0`,
+`len = cap = n` instance of the kit's general
+`SliceMem.applyStrictOp_sliceExpr_slice`; this pinned name survives as
+a zero-proof delegation. -/
 theorem applyStrictOp_sliceExpr_slice {σ : ExecState} {b : Loc}
     {n kv : Nat} {k1 k2 : IntKind} (hk : kv ≤ n) :
     applyStrictOp σ (.sliceExpr false)
       [.slice ⟨some b, 0, n, n⟩, .int 0 k1, .int (kv : Nat) k2]
-      = .ok (.slice ⟨some b, 0, kv, n⟩, σ) := by
-  simp only [applyStrictOp, valueAsInt, applySlice, sliceFromSlice,
-    validateSlice, checkSliceBounds, Bind.bind, Except.bind, pure,
-    Except.pure]
-  rw [if_neg (by omega)]
-  simp only [Bind.bind, Except.bind, pure, Except.pure]
-  rw [if_neg (by omega), if_neg (by exact_mod_cast Nat.not_lt.mpr hk),
-    if_neg (by omega), if_neg (by omega)]
-  simp
+      = .ok (.slice ⟨some b, 0, kv, n⟩, σ) :=
+  SliceMem.applyStrictOp_sliceExpr_slice (lo := 0)
+    (Nat.zero_le kv) hk (Nat.le_refl n)
 
 /-! ## Machine layer: heap cells, statement pieces, environments,
 continuations, heap fronts

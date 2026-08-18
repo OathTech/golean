@@ -19,7 +19,7 @@ toward totals.
 
 | slice | scope (charter §) | status | units done | landed lines deleted | kit pins added |
 |---|---|---|---|---|---|
-| s1 | lift wave 1 (pure lifts) | **PARKED (orderly pause)** — 5 of 6 lift families landed | 5 / 6 | 2,266 (consumers; net −1,548 with +718 delegation/instantiation lines) | +72 (116 → 188) |
+| s1 | lift wave 1 (pure lifts) | **COMPLETE** — all 6 lift families landed (lift-5 stragglers resolved in S1.5b) | 8 / 8 | 2,483 (consumers; net −1,551 with +932 delegation/instantiation lines) | +79 (116 → 195) |
 | s2 | lift wave 2 (new shapes) | not started | — | — | — |
 | s3 | library regularity | not started | — | — | — |
 | s4 | mirror symbolic evaluator | not started (USER design-note gate) | — | — | — |
@@ -27,9 +27,9 @@ toward totals.
 | s6 | discoverability close-out | not started | — | — | — |
 
 Derivations for the s1 row: per-unit `git diff --numstat` figures in
-`s1.md` units S1.1–S1.5 (deleted 256+315+151+1481+63 = 2,266; inserted
-97+174+20+317+110 = 718); pin count
-`grep -c '^#guard_msgs in #print axioms ' proofs/Audit/Kit.lean` → 188.
+`s1.md` units S1.1–S1.6 (deleted 256+315+151+1481+63+104+113 = 2,483;
+inserted 97+174+20+317+110+172+42 = 932); pin count
+`grep -c '^#guard_msgs in #print axioms ' proofs/Audit/Kit.lean` → 195.
 
 ## Checkpoints
 
@@ -37,3 +37,11 @@ Derivations for the s1 row: per-unit `git diff --numstat` figures in
 tip = the park commit).** Units S1.0–S1.5 landed, one commit each,
 `scripts/ci` PASS at every commit. Lift 6 not started. Full park
 record: `s1.md` §PARK RECORD.
+
+**Checkpoint 2 — S1 COMPLETE (2026-08-18, tip = the S1.6 commit).**
+Resume from the park record: S1.5b (bail stragglers — the
+relational/measure-indexed schema `stepFnIter_iterate_bail_rel`;
+twosum + bubble retrofitted, rle verified NO-OP) and S1.6 (GAP-RESLICE
++ `stepFn_return_frame`/`stepFn_block` + the queue glue composites),
+one commit each, `scripts/ci` PASS at each. P6 sweeps re-verified at
+the tip; totals above. Close-out entry: `s1.md` §SLICE 1 CLOSE-OUT.

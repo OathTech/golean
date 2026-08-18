@@ -282,6 +282,33 @@ theorem applyStrictOp_sliceExpr_array {σ : ExecState} {a : Addr}
     if_neg (by omega)]
   simp
 
+/-- The two-index slice expression `s[lo:hi]` over a SLICE base (WP
+arc s1 lift 6, GAP-RESLICE — the general form unifying the three
+landed copies: dedup's `s[0:kv]` at base offset 0, stack's `s[0:d]`,
+queue's MOVING-OFFSET `q[1:len]`): the SAME backing, offset advanced
+by `lo`, length `hi − lo`, capacity `cap − lo`. Bounds per the Go
+spec's slice-expression rule (`lo ≤ hi ≤ cap`); the input handle
+validates at `len ≤ cap`. No heap access, no allocation, no
+choice. -/
+theorem applyStrictOp_sliceExpr_slice {σ : ExecState} {b : Loc}
+    {off len cap lo hi : Nat} {k1 k2 : IntKind}
+    (hlo : lo ≤ hi) (hhi : hi ≤ cap) (hlen : len ≤ cap) :
+    applyStrictOp σ (.sliceExpr false)
+      [.slice ⟨some b, off, len, cap⟩, .int (lo : Nat) k1,
+       .int (hi : Nat) k2]
+      = .ok (.slice ⟨some b, off + lo, hi - lo, cap - lo⟩, σ) := by
+  have hval : validateSlice (⟨some b, off, len, cap⟩ : SliceValue)
+      = .ok () := validateSlice_ok hlen
+  have hbounds : checkSliceBounds "capacity" cap ((lo : Nat) : Int)
+      ((hi : Nat) : Int) = .ok (lo, hi) := by
+    simp only [checkSliceBounds, Bind.bind, Except.bind, pure,
+      Except.pure]
+    rw [if_neg (by omega), if_neg (by omega), if_neg (by omega),
+      if_neg (by omega)]
+    simp
+  simp only [applyStrictOp, valueAsInt, applySlice, sliceFromSlice, hval,
+    hbounds, Bind.bind, Except.bind, pure, Except.pure]
+
 /-! ### The uint64 element-store fact
 
 The store side normalizes the whole backing array against the cell's

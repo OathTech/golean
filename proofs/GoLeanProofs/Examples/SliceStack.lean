@@ -977,34 +977,27 @@ theorem st_append_spill (σ : ExecState) (b tc nb i : Nat)
 
 /-! ## The `pop`-body op facts -/
 
-private theorem st_checkSliceBounds {limit n : Nat} (h : n ≤ limit) :
-    checkSliceBounds "capacity" limit 0 (n : Int) = .ok (0, n) := by
-  simp only [checkSliceBounds, Bind.bind, Except.bind, pure, Except.pure]
-  rw [if_neg (by omega : ¬ ((n : Int) < 0)),
-    if_neg (by omega : ¬ ((n : Int) > (limit : Int))),
-    if_neg (by omega : ¬ ((0 : Int) < 0)),
-    if_neg (by omega : ¬ ((0 : Int) > (n : Int)))]
-  simp
+-- (The private `st_checkSliceBounds` helper that sat here fed only the
+-- reslice fact below and was deleted with its proof in WP arc s1
+-- lift 6.)
 
 /-- **The reslice `s[0:d]` on a SLICE base** (`pop`'s `s[:len(s)-1]`):
-same backing array, same offset, length `d`, capacity KEPT — no heap
-access, no allocation, no choice. GAP-WITNESS (kit gap,
-slice-expression-on-a-slice-base): the kit's `sliceExpr` fact covers
-only pointer-to-array bases. -/
+same backing array, same offset, length `d`, capacity KEPT.
+GAP-WITNESS, closed (WP arc s1 lift 6): the `lo = 0` instance of the
+kit's general `SliceMem.applyStrictOp_sliceExpr_slice`; this pinned
+name survives as a zero-proof delegation. -/
 theorem st_sliceExpr_slice (σ : ExecState) (bl : Loc)
     (len d c : Nat) (ik ik' : IntKind) (hd : d ≤ c) (hlen : len ≤ c) :
     applyStrictOp σ (.sliceExpr false)
       [.slice ⟨some bl, 0, len, c⟩, .int 0 ik, .int (d : Int) ik']
-      = .ok (.slice ⟨some bl, 0, d, c⟩, σ) := by
-  simp only [applyStrictOp, valueAsInt, applySlice, sliceFromSlice,
-    st_validateSlice hlen, st_checkSliceBounds hd, Bind.bind, Except.bind,
-    pure, Except.pure]
-  simp
+      = .ok (.slice ⟨some bl, 0, d, c⟩, σ) :=
+  SliceMem.applyStrictOp_sliceExpr_slice (lo := 0)
+    (Nat.zero_le d) hd hlen
 
-/-- The conditioned frame-exit step (GAP-WITNESS, kit gap reported): a `.returning`
-at a target-bearing frame reads the pinned result cells and enters the
-caller-side target/store spine. `stepFn_call_enter`'s exit-side
-mirror. -/
+/-- The conditioned frame-exit step (GAP-WITNESS, closed in WP arc s1
+lift 6: promoted to StepKit's P1 family as
+`Surface.stepFn_return_frame`; this pinned name survives as a
+zero-proof delegation). `stepFn_call_enter`'s exit-side mirror. -/
 theorem stepFn_return_frame {σ : ExecState} {sh : TargetShape} {e : Expr}
     {ops : List Expr} {rest : List (TargetShape × List Expr)}
     {tenv : LocalEnv} {results : List Loc} {k : Cont} {w : Bool}
@@ -1014,8 +1007,8 @@ theorem stepFn_return_frame {σ : ExecState} {sh : TargetShape} {e : Expr}
         k w)) ch
       = .ok (.evalE e tenv
           (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k),
-        σ, ch) := by
-  simp only [stepFn, h, Bind.bind, Except.bind, pure, Except.pure]
+        σ, ch) :=
+  Surface.stepFn_return_frame h
 
 /-- One-cell `loadMany` (the push/size frame exits). -/
 theorem st_loadMany1 {σ : ExecState} {a : Nat} {c : HeapCell}

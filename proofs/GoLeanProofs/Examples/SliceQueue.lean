@@ -1524,51 +1524,28 @@ theorem qappend_spill {σ : ExecState} {H : Heap} {na : Nat}
   rw [set_fresh (hdead _ (Nat.le_refl _))]
   simp only [hstore, Bind.bind, Except.bind, pure, Except.pure]
 
-/-- **The re-slice fact** `q[1:len(q)]` at a slice base (GAP-WITNESS:
-the kit's `applyStrictOp_sliceExpr_array` covers only pointer-to-array
-bases; the MOVING-OFFSET slice-base form is new with this example): the
-SAME backing, offset advanced, length and capacity down one. -/
+/-- **The re-slice fact** `q[1:len(q)]` at a slice base (GAP-WITNESS,
+closed in WP arc s1 lift 6: the MOVING-OFFSET instance `lo = 1`,
+`hi = len` of the kit's general `SliceMem.applyStrictOp_sliceExpr_slice`;
+this pinned name survives as a zero-proof delegation): the SAME
+backing, offset advanced, length and capacity down one. -/
 theorem applyStrictOp_sliceExpr_slice {σ : ExecState} {b : Loc}
     {off len cap : Nat} {ik ik' : IntKind}
     (h1 : 1 ≤ len) (hcap : len ≤ cap) :
     applyStrictOp σ (.sliceExpr false)
       [.slice ⟨some b, off, len, cap⟩, .int 1 ik, .int (len : Nat) ik']
-      = .ok (.slice ⟨some b, off + 1, len - 1, cap - 1⟩, σ) := by
-  have hval : validateSlice (⟨some b, off, len, cap⟩ : SliceValue)
-      = .ok () := by
-    simp [validateSlice, Nat.not_lt.mpr hcap, Bind.bind, Except.bind]
-  have hbounds : checkSliceBounds "capacity" cap 1 (len : Int)
-      = .ok (1, len) := by
-    simp only [checkSliceBounds, Bind.bind, Except.bind, pure, Except.pure]
-    rw [if_neg (by omega), if_neg (by omega), if_neg (by omega),
-      if_neg (by omega)]
-    simp
-  simp only [applyStrictOp, valueAsInt, applySlice, sliceFromSlice, hval,
-    hbounds, Bind.bind, Except.bind, pure, Except.pure]
+      = .ok (.slice ⟨some b, off + 1, len - 1, cap - 1⟩, σ) :=
+  SliceMem.applyStrictOp_sliceExpr_slice (lo := 1) h1 hcap hcap
 
 -- The latent `applyStrictOp_convert_u64` copy that sat here (declared,
 -- never called — the GAP-CONVERT grading, g1.md §Unit G1.8b) was
 -- DELETED in WP arc s1 lift 1; the kit form is
 -- `SliceMem.applyStrictOp_convert_u64`.
 
-/-- The frame-return step, conditioned on the result loads: `.returning`
-at a target-bearing frame loads the pinned results and starts the
-post-call target walk.
-
-GAP-WITNESS (GAP-FRAME, see docs/gallery-campaign-log/g1.md
-§ KIT GAPS (unit G1.8b)): stack re-derives the same fact; the kit has
-no frame-exit step lemma. -/
-theorem stepFn_return_frame {σ : ExecState} {sh : TargetShape} {e : Expr}
-    {ops : List Expr} {rest : List (TargetShape × List Expr)}
-    {tenv : LocalEnv} {results : List Loc} {k' : Cont} {w : Bool}
-    {vs : List GoValue} {ch : Choices}
-    (h : loadMany σ results = .ok vs) :
-    stepFn σ (.returning (.frame ((sh, e :: ops) :: rest) tenv results []
-      k' w)) ch
-      = .ok (.evalE e tenv
-          (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k'),
-        σ, ch) := by
-  simp only [stepFn, h, Bind.bind, Except.bind, pure, Except.pure]
+-- The frame-return step (GAP-FRAME) that sat here was PROMOTED to the
+-- kit in WP arc s1 lift 6: `Surface.stepFn_return_frame` (StepKit).
+-- The local copy is deleted; call sites resolve through
+-- `open GoLean.Surface`.
 
 /-- One-cell `loadMany`. -/
 theorem loadMany_one {σ : ExecState} {a : Addr} {c : HeapCell}
@@ -3441,48 +3418,12 @@ def qdFrameK (D a : Nat) : Cont :=
   .frame qdPlans (qdEnvV D a) [.base ⟨a + 2⟩, .base ⟨a + 3⟩] []
     (qdAfterCallK D a) false
 
-/-- A declaration-free block pushes a fresh scope (no env `DecidableEq`
-on this arm, so it holds at symbolic addresses). -/
-theorem stepFn_block {σ : ExecState} {ss : Array Stmt} {env : LocalEnv}
-    {k : Cont} {ch : Choices} :
-    stepFn σ (.exec (.block #[] ss) env k) ch
-      = .ok (.next (.seq ss.toList ([] :: env) k), σ, ch) := by
-  simp only [stepFn]
-  rfl
-
-/-- Splice + pop in one: an `Expr`-free `seqn` under a same-env
-sequence, landing on the first statement of the concatenation. -/
-theorem stepFnIter_splice_pop {σ : ExecState} {ss : Array Stmt} {t : Stmt}
-    {ts rest : List Stmt} {env : LocalEnv} {k : Cont} {ch : Choices}
-    (hs : ss.toList ++ rest = t :: ts) :
-    stepFnIter 2 σ (.exec (.seqn ss) env (.seq rest env k)) ch
-      = .ok (.exec t env (.seq ts env k), σ, ch) := by
-  have h1 := stepFnIter_one (stepFn_seqn_splice (σ := σ) (ss := ss)
-    (env := env) (rest := rest) (k := k) (ch := ch))
-  rw [hs] at h1
-  exact stepFnIter_chain h1 (stepFnIter_one stepFn_seq_pop)
-
-/-- Store-drain glue: a drained store whose body is the empty `seqn`
-under a same-env sequence — three steps to the next statement. -/
-theorem stepFnIter_drain3 {σ : ExecState} {t : Stmt} {ts : List Stmt}
-    {env : LocalEnv} {k : Cont} {ch : Choices} :
-    stepFnIter 3 σ
-      (.next (.storeK [] [] (.seqn #[]) env (.seq (t :: ts) env k))) ch
-      = .ok (.exec t env (.seq ts env k), σ, ch) :=
-  stepFnIter_chain (stepFnIter_one stepFn_storeK_nil)
-    (stepFnIter_splice_pop (ss := #[]) rfl)
-
-/-- Block push + pop in one: a declaration-free block with a nonempty
-statement list. -/
-theorem stepFnIter_block_pop {σ : ExecState} {ss : Array Stmt} {t : Stmt}
-    {ts : List Stmt} {env : LocalEnv} {k : Cont} {ch : Choices}
-    (hs : ss.toList = t :: ts) :
-    stepFnIter 2 σ (.exec (.block #[] ss) env k) ch
-      = .ok (.exec t ([] :: env) (.seq ts ([] :: env) k), σ, ch) := by
-  have h1 := stepFnIter_one (stepFn_block (σ := σ) (ss := ss) (env := env)
-    (k := k) (ch := ch))
-  rw [hs] at h1
-  exact stepFnIter_chain h1 (stepFnIter_one stepFn_seq_pop)
+-- The four dequeue glue combinators that sat here (`stepFn_block`,
+-- `stepFnIter_splice_pop`, `stepFnIter_drain3`, `stepFnIter_block_pop`)
+-- were PROMOTED to the kit in WP arc s1 lift 6: `stepFn_block` to
+-- StepKit's P1 family, the three `stepFnIter_*` composites to
+-- FuelMeasure beside `stepFnIter_chain`. The local copies are deleted;
+-- call sites resolve through `open GoLean.Surface`.
 
 /-- Bool cells never renormalize (the normalizer's catch-all arm). -/
 theorem normVal_bool (σ : ExecState) (b : Bool) :

@@ -129,8 +129,11 @@ asserted: at the seal date every name has ≥3 external consumers
   `stepFn_call_enter`, `stepFn_makeSlice_u64_step`,
   `stepFn_strict_apply`, `stepFn_store_step`, `stepFn_stmtOp_apply`,
   `stepFn_var`, `stepFn_init_seq`, `stepFn_seqn_splice` (P9),
-  `stepFn_seq_pop`, `stepFn_storeK_nil`, `storeTarget_addr`,
-  `stepFn_mapAssign_apply`, `stepFn_snapshot`;
+  `stepFn_seq_pop`, `stepFn_storeK_nil`, `stepFn_return_frame`,
+  `stepFn_block`, `storeTarget_addr`,
+  `stepFn_mapAssign_apply`, `stepFn_snapshot` (the multi-step
+  splice/drain/block glue over these lives in `FuelMeasure`, beside
+  `stepFnIter_chain`);
 * shared op plumbing: `natFromNonneg_cast`.
 
 **The API discipline** (C2 decoupling rule, harness-style scoping
@@ -432,6 +435,36 @@ theorem stepFn_storeK_nil {σ : ExecState} {body : Stmt}
     {env : LocalEnv} {k : Cont} {ch : Choices} :
     stepFn σ (.next (.storeK [] [] body env k)) ch
       = .ok (.exec body env k, σ, ch) := rfl
+
+/-- The FRAME-EXIT machine step, conditioned on the result loads
+(WP arc s1 lift 6, GAP-FRAME closed): a `.returning` at a
+target-bearing frame loads the pinned result cells and starts the
+post-call target walk — `stepFn_call_enter`'s exit-side mirror.
+Promoted from the two verbatim copies in `SliceQueue`/`SliceStack`
+(fibmemo and stein's spans consume the same shape through their
+call-span composites). -/
+theorem stepFn_return_frame {σ : ExecState} {sh : TargetShape} {e : Expr}
+    {ops : List Expr} {rest : List (TargetShape × List Expr)}
+    {tenv : LocalEnv} {results : List Loc} {k : Cont} {w : Bool}
+    {vs : List GoValue} {ch : Choices}
+    (h : loadMany σ results = .ok vs) :
+    stepFn σ (.returning (.frame ((sh, e :: ops) :: rest) tenv results []
+        k w)) ch
+      = .ok (.evalE e tenv
+          (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k),
+        σ, ch) := by
+  simp only [stepFn, h, Bind.bind, Except.bind, pure, Except.pure]
+
+/-- A declaration-free block pushes a fresh scope in one step (no env
+`DecidableEq` on this arm, so it holds at symbolic addresses). WP arc
+s1 lift 6, promoted from `SliceQueue` (stack's exit analysis is the
+recorded latent consumer). -/
+theorem stepFn_block {σ : ExecState} {ss : Array Stmt} {env : LocalEnv}
+    {k : Cont} {ch : Choices} :
+    stepFn σ (.exec (.block #[] ss) env k) ch
+      = .ok (.next (.seq ss.toList ([] :: env) k), σ, ch) := by
+  simp only [stepFn]
+  rfl
 
 /-- A plain-address store target is a `storeLoc` at its cell,
 conditioned on the cell's presence and the value's normal form. -/

@@ -89,6 +89,19 @@ vocabulary defs) -/
 #guard_msgs in #print axioms GoLean.Surface.stepFn_seq_pop
 /-- info: 'GoLean.Surface.stepFn_storeK_nil' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.stepFn_storeK_nil
+-- WP arc s1 lift 6 (2026-08-18): the frame-exit step + the promoted
+-- queue glue (stepFn_block in StepKit; the stepFnIter_* composites in
+-- FuelMeasure). Fresh probe: `.tmp/pinprobe7.lean`.
+/-- info: 'GoLean.Surface.stepFn_return_frame' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.stepFn_return_frame
+/-- info: 'GoLean.Surface.stepFn_block' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.stepFn_block
+/-- info: 'GoLean.Surface.stepFnIter_splice_pop' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.stepFnIter_splice_pop
+/-- info: 'GoLean.Surface.stepFnIter_drain3' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.stepFnIter_drain3
+/-- info: 'GoLean.Surface.stepFnIter_block_pop' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.stepFnIter_block_pop
 /-- info: 'GoLean.Surface.storeTarget_addr' depends on axioms: [propext] -/
 #guard_msgs in #print axioms GoLean.Surface.storeTarget_addr
 /-- info: 'GoLean.Surface.stepFn_mapAssign_apply' depends on axioms: [propext, Quot.sound] -/
@@ -124,6 +137,10 @@ other vocabulary defs) -/
 #guard_msgs in #print axioms GoLean.SliceMem.applyStrictOp_len_slice
 /-- info: 'GoLean.SliceMem.applyStrictOp_sliceExpr_array' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.SliceMem.applyStrictOp_sliceExpr_array
+-- WP arc s1 lift 6 (2026-08-18): GAP-RESLICE, the general
+-- s[lo:hi]-at-slice-base form. Fresh probe: `.tmp/pinprobe7.lean`.
+/-- info: 'GoLean.SliceMem.applyStrictOp_sliceExpr_slice' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.SliceMem.applyStrictOp_sliceExpr_slice
 /-- info: 'GoLean.SliceMem.mem_set_of_mem' depends on axioms: [propext] -/
 #guard_msgs in #print axioms GoLean.SliceMem.mem_set_of_mem
 /-- info: 'GoLean.SliceMem.storeTarget_slice_u64' depends on axioms: [propext, Quot.sound] -/
