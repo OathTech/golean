@@ -172,6 +172,14 @@ import GoLeanProofs.Sym.Conc
 import GoLeanProofs.Sym.Drift
 import GoLeanProofs.Sym.DriftOps
 import GoLeanProofs.Sym.DriftApply
+-- THE MASTER WALK: the drift theorem (`stepFn'_concrete_agrees`) and
+-- the symbolic per-step soundness live here — in the DEFAULT build,
+-- per the charter's drift-gate clause: an edit to ANY stepFn/stepFn'
+-- arm that breaks their agreement breaks this import.
+import GoLeanProofs.Sym.Walk
+-- THE REFINEMENT THEOREM (`symEvalWindow_refines`): the window
+-- driver's induction over the walk at the symbolic interpretation.
+import GoLeanProofs.Sym.Refine
 import GoLeanProofs.Sym.SpikeKadane
 
 /-!

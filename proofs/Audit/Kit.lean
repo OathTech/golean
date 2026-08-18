@@ -472,16 +472,24 @@ counting-loop lift + the GAP-R1 pick-loop lift, 2026-08-15) -/
 /-- info: 'GoLean.Examples.WordCount.rH_entry_eq' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.WordCount.rH_entry_eq
 
-/-! ### WP arc slice 4 (mirror symbolic evaluator, phase 1): the spike
-transport surface. `kd_su_A0_via_sym` is the SPIKE's transported
-window (byte-identical statement to `kd_su_A0_raw`, discharged through
-the evaluator); the full refinement theorem's pin joins here when it
-lands (phase 2), per the design §8 Kit-pin convention. -/
+/-! ### WP arc slice 4 (mirror symbolic evaluator, phase 2): the
+public Sym surface, per the design §8 Kit-pin convention — THE MASTER
+WALK (`stepFn'_conc`), its two gated instances (**THE DRIFT THEOREM**
+`stepFn'_concrete_agrees`, charter :80-83 in the ruled OQ3 spelling;
+the symbolic per-step `stepFnS_sound`), **THE REFINEMENT THEOREM**
+(`symEvalWindow_refines`, charter :89), and the Kadane non-vacuity
+witness (`kd_su_A0_via_sym`, ruled OQ4 — statement byte-identical to
+the shipped `kd_su_A0_raw`, now discharged through the refinement
+theorem; phase 1's bespoke spike route is retired, log unit S4.8). -/
 
-/-- info: 'GoLean.Sym.Spike.spikeStep_sound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Sym.Spike.spikeStep_sound
-/-- info: 'GoLean.Sym.Spike.spikeWindow_sound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Sym.Spike.spikeWindow_sound
+/-- info: 'GoLean.Sym.stepFn'_conc' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.stepFn'_conc
+/-- info: 'GoLean.Sym.stepFn'_concrete_agrees' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.stepFn'_concrete_agrees
+/-- info: 'GoLean.Sym.stepFnS_sound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.stepFnS_sound
+/-- info: 'GoLean.Sym.symEvalWindow_refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.symEvalWindow_refines
 /-- info: 'GoLean.Sym.Spike.kd_su_A0_via_sym' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Sym.Spike.kd_su_A0_via_sym
 
