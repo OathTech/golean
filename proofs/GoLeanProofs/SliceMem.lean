@@ -28,37 +28,89 @@ module is statement-side-safe.
 ## PUBLIC API — the sealed interface (phase-2 slice 2, 2026-08-14;
 the brick-wp W6 convention adapted to Lean 4)
 
-**What consumers may depend on** (and nothing else):
+**What consumers may depend on** (and nothing else). The groups are
+indexed by PROOF SITUATION (the WP arc s3 convention: a group is
+"what you are trying to do", not "which lift landed it"); the in-file
+`/-! ## … -/` section headers carry the group number, and one group
+may span more than one section.
 
-* statement-adjacent vocabulary: `sliceCells`, `sliceVal`, `Sorted`;
-* machine-integer normal forms: `unorm_of_range`, `inorm_of_range`,
-  `inorm_nat_of_lt`, `unorm_nat_of_lt`, `unorm_add_nat`, and (WP arc
-  s1 lift 1, 2026-08-16) `unorm_nat`, `unorm_mul_nat`,
-  `intKind_normalize_idem`, plus the kind-generic pair
-  `normalize_of_range_unsigned`/`normalize_of_range_signed`;
-* the executable op facts, each conditioned on exactly its
-  bounds/range hypotheses: `applyStrictOp_indexGet_slice`,
-  `applyStrictOp_len_slice`, `applyStrictOp_sliceExpr_array`,
-  `applyStrictOp_lessCmp_int`, `applyStrictOp_mod_u64`, and (WP arc
-  s1 lift 1) the completed integer family `applyStrictOp_mul_u64`,
-  `applyStrictOp_div_u64`, `applyStrictOp_add_u64`,
-  `applyStrictOp_sub_int`, `applyStrictOp_eqCmp_int`,
-  `applyStrictOp_neqCmp_int`, `applyStrictOp_atMostCmp`,
-  `applyStrictOp_not`, `applyStrictOp_convert_u64`;
-  `storeTarget_slice_u64`, `storeTarget_arrayLocal_u64`,
-  `normalizeValueForTy_arr_u64`;
-* slice-value plumbing: `getElem?_mapU`, `getD_mem`,
-  `mem_set_of_mem`, `locSup_mapU`;
-* the setup family + copy prefix (GAP-P2 lift, 2026-08-15):
-  `familyMod`, `prefixPad`, with `familyMod_length`/`_range`/
-  `familyModZ_range`/`_succ`/`_set`/`_getD` and `prefixPad_zero`/
-  `_length`/`_range`/`prefixPad_familyMod_set`/`prefixPad_full`.
+**Group 1** — *you are naming a Go `[]uint64` that lives in memory*:
+`sliceCells` (the backing cell), `sliceVal` (the handle the program
+receives), `Sorted` (the shared spec predicate).
+
+**Group 2** — *you must show a machine integer is its own normal
+form* (the bounds situation): `unorm_of_range`, `inorm_of_range`,
+`inorm_nat_of_lt`, `unorm_nat_of_lt`, `unorm_add_nat`, `unorm_nat`,
+`unorm_mul_nat`, `intKind_normalize_idem`, and the kind-generic pair
+`normalize_of_range_unsigned` / `normalize_of_range_signed`.
+
+**Group 3** — *you are READING, MEASURING or RE-SLICING a slice*:
+`applyStrictOp_indexGet_slice`, `applyStrictOp_len_slice`,
+`applyStrictOp_sliceExpr_array`, `applyStrictOp_sliceExpr_slice`
+(the general `s[lo:hi]`-at-a-slice-base form, WP arc s1 lift 6).
+
+**Group 4** — *the slice GROWS under `append`* (GAP-APPEND, WP arc
+s2 item 3): `applyStmtOp_append1_inplace` (spare capacity),
+`applyStmtOp_append1_spill` and `applyStmtOp_append1_spill_ex` (the
+reallocating arm, the `_ex` form hiding the realized capacity in an
+existential), with `buildAppendBackingValue_of_norm` and the capacity
+envelope `appendRealizedCap` / `appendRealizedCap_lower` /
+`appendRealizedCap_upper`.
+
+**Group 5** — *you are STORING one element*: `storeTarget_slice_u64`,
+`storeTarget_arrayLocal_u64` (the array-local target),
+`normalizeValueForTy_arr_u64`, `mem_set_of_mem`.
+
+**Group 6** — *slice-value plumbing* (the `List Int` ↔ `GoValue`
+side): `getElem?_mapU`, `getD_mem`, `locSup_mapU`.
+
+**Group 7** — *the operand is an INTEGER and you need what the op
+computes*: `applyStrictOp_lessCmp_int`, `applyStrictOp_mod_u64`,
+`applyStrictOp_mul_u64`, `applyStrictOp_div_u64`,
+`applyStrictOp_add_u64`, `applyStrictOp_sub_int`,
+`applyStrictOp_eqCmp_int`, `applyStrictOp_neqCmp_int`,
+`applyStrictOp_atMostCmp`, `applyStrictOp_not`,
+`applyStrictOp_convert_u64`.
+
+**Group 8** — *you need ∀-INPUT SETUP DATA (a symbolic family) and
+its algebra*. Six families, one shape each — a `def`, then
+`_length`/`_range`/`_succ`/`_set`/`_getD` (and a `Z`-suffixed
+`Int`-valued range variant where the consumer needs it):
+
+* `familyMod` (`i % m`) with `familyMod_length`, `familyMod_range`,
+  `familyModZ_range`, `familyMod_succ`, `familyMod_set`,
+  `familyMod_getD`;
+* `prefixPad` (copy-OUT prefix over `familyMod`) with
+  `prefixPad_zero`, `prefixPad_length`, `prefixPad_range`,
+  `prefixPad_familyMod_set`, `prefixPad_full`;
+* `familyZ` (the `Int`-valued family) with `familyZ_length`,
+  `familyZ_mem`, `familyZ_succ`, `familyZ_set`, `familyZ_getD`, and
+  its pad `padZ` with `padZ_zero`, `padZ_length`, `padZ_set`,
+  `padZ_set_any`, `padZ_range`;
+* `familyF` (an arbitrary index FUNCTION) with `familyF_length`,
+  `familyF_range`, `familyFZ_range`, `familyF_succ`, `familyF_set`,
+  `familyF_getD`, `prefixPad_familyF_set`, and the bridge
+  `familyMod_eq_familyF`;
+* `familyOf` (the ITERATED-step/LCG shape) built on `iterStep` with
+  `iterStep_lt`, `familyOf_length`, `familyOf_range`,
+  `familyOfZ_range`, `familyOf_succ`, `familyOf_set`,
+  `familyOf_getD`;
+* `takePad` (the copy-OUT prefix over COMPUTED data) with
+  `takePad_zero`, `takePad_length`, `takePad_range`, `takePad_set`,
+  `takePad_full`.
+
+**Group 9** — *the loop SWAPS or COUNTS elements* (WP arc s1 lift 3):
+`swapList` with `swapList_length`, `getD_swapList_fst`,
+`getD_swapList_snd`, `getD_swapList_other`, `count_swapList`,
+`range_swapList`, plus the point-update algebra `getD_set_self`,
+`getD_set_ne`, `count_set_add`.
 
 **Internal** (`private` — spelling may change without notice):
-`validateSlice_ok`, `sliceIndexLoc_ok`, `normalizeListWith_u64` — the
-decomposition steps of the public store/index facts. Consumers state
-their needs against the PUBLIC facts' hypothesis shapes, never against
-how a fact is discharged internally.
+`validateSlice_ok`, `sliceIndexLoc_ok`, `forIn_yield_push_eq`,
+`normalizeListWith_u64` — the decomposition steps of the public
+store/index/append facts. Consumers state their needs against the
+PUBLIC facts' hypothesis shapes, never against how a fact is
+discharged internally.
 
 **The API discipline** (C2 decoupling rule, harness-style scoping
 note: spec-style adapters are thin layers over a style-neutral core —
@@ -75,13 +127,60 @@ they depend on APIs, not internals):
    hides names but does not seal definitional transparency. The seal
    is therefore name-level + this contract; the statement layer has
    its own frozen closure and gate (statement-TCB).
+4. Every public THEOREM above carries an exact `#print axioms` pin in
+   `Audit/Kit.lean` § SliceMem; the vocabulary/family `def`s
+   (`sliceCells`, `sliceVal`, `Sorted`, `familyMod`, `prefixPad`,
+   `familyZ`, `padZ`, `familyF`, `iterStep`, `familyOf`, `takePad`,
+   `swapList`, `appendRealizedCap`) are unpinned by the standing
+   convention. A new public lemma lands with its pin in the same
+   commit.
+5. **Storm/signature discipline: StepKit rules 1–5** (that module's
+   `## THE FIVE RULES` section is the kit's single copy — cite, never
+   restate). The facts here are the conditioned HYPOTHESES those
+   rules tell you to take: rule 2's "take the lookup/store fact as a
+   hypothesis" is discharged by group 3/5 members, and rule 4's
+   D-relative signature is why every fact here states the operand,
+   never the whole heap.
+
+## WHAT LIVES WHERE (the kit map — WP arc s3, 2026-08-18)
+
+THIS module: everything the machine computes when the OPERAND is a
+`[]uint64` or an integer, plus the ∀-input data families the setup
+loops build. No stepping, no fuel, no loop induction.
+
+Siblings, and the boundary with each:
+
+* `StepKit` — the machine STEP that consumes our facts. It states
+  `h : applyStrictOp σ op args = .ok (out, σ')` as a hypothesis; we
+  prove that equation. Its heap algebra (`DeadFrom`/`FreshFrom`, the
+  symbolic split, the growing front) is the other half of an
+  append/store argument: we say what the cell BECOMES, StepKit says
+  where it sits.
+* `StringMem` — the exact same shape for string VALUES (and the
+  reason it has no heap half: a Go string is unbacked).
+* `MapMem` — the same shape for `map[uint64]uint64`, including the
+  abstract model (`idxOf?`/`cnt`/`setk`) our `List Int` plays for
+  slices.
+* `FuelMeasure` — the loop schemas that ITERATE over our families
+  (`stepFnIter_iterate` consumes a per-iteration composite stated in
+  terms of group 8's `_succ`/`_set` lemmas).
+* `Frame/Threshold` — address renaming; it never touches values.
+* `Laws/Slice.lean` — the WP-law layer whose premises discharge
+  through group 3/5. This module is BENEATH it and must not import
+  `Examples/*` (layering doctrine 2026-08-01) — that is why the
+  vocabulary lives here and not in an example module.
+
+Future `docs/kit-guide.md` (slice 6) sections fed by this module:
+**Values in memory: slices**, **Integer normal forms + bounds**,
+**Setup families (∀-input data)**, **Append / growth**,
+**Swap / count surgery**.
 -/
 
 namespace GoLean.SliceMem
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine
 
-/-! ## §9a: the input-in-memory vocabulary -/
+/-! ## API group 1 — the slice-in-memory vocabulary (§9a) -/
 
 /-- The heap representation of a Go `[]uint64` holding `xs`: one
 backing cell at `base` with the array of wrapped values. The slice
@@ -105,7 +204,7 @@ domain condition `j < xs.length` makes the default irrelevant). -/
 def Sorted (xs : List Int) : Prop :=
   ∀ i j : Nat, i < j → j < xs.length → xs.getD i 0 ≤ xs.getD j 0
 
-/-! ## Machine-integer normal forms -/
+/-! ## API group 2 — machine-integer normal forms -/
 
 /-- A `uint64` value in Go range is its own normal form. -/
 theorem unorm_of_range {v : Int} (h0 : 0 ≤ v) (h1 : v < 2 ^ 64) :
@@ -172,7 +271,7 @@ theorem intKind_normalize_idem (kind : IntKind) (v : Int) :
   cases kind <;> simp [IntKind.normalize, IntKind.bits?, IntKind.signed] <;>
     (repeat' split) <;> omega
 
-/-! ### Kind-generic normal forms (WP arc s1 lift 1)
+/-! ### API group 2, continued — kind-generic normal forms (WP arc s1 lift 1)
 
 One lemma per signedness covers every `uint*`/`int*` in-range identity
 at once — the class strrev/wordfreq re-derived at `.int32`
@@ -214,7 +313,8 @@ theorem normalize_of_range_signed {k : IntKind} {bits : Nat} {v : Int}
     rw [hmod, if_pos (by omega)]
     omega
 
-/-! ## The executable slice-op facts -/
+/-! ## API group 3 — read / measure / re-slice: the executable
+slice-op facts -/
 
 private theorem validateSlice_ok {b : Loc} {off len cap : Nat} (hcap : len ≤ cap) :
     validateSlice ⟨some b, off, len, cap⟩ = .ok () := by
@@ -309,7 +409,8 @@ theorem applyStrictOp_sliceExpr_slice {σ : ExecState} {b : Loc}
   simp only [applyStrictOp, valueAsInt, applySlice, sliceFromSlice, hval,
     hbounds, Bind.bind, Except.bind, pure, Except.pure]
 
-/-! ### GAP-APPEND: the growing-slice append family (WP arc s2 item 3)
+/-! ## API group 4 — the slice GROWS: the append family
+(GAP-APPEND, WP arc s2 item 3)
 
 ONE-element `append` — the shape all four landed witnesses use (stack,
 queue, rle, wordfreq's `[]string`) — generic in the ELEMENT TYPE via
@@ -512,7 +613,7 @@ theorem applyStmtOp_append1_spill_ex {σ : ExecState} {elem : Ty}
     appendRealizedCap_upper (by omega) _,
     applyStmtOp_append1_spill hfull hlc hec hvisE hvisO rfl hbuild htgt⟩
 
-/-! ### The uint64 element-store fact
+/-! ## API group 5 — storing one element: the uint64 element-store fact
 
 The store side normalizes the whole backing array against the cell's
 declared type, so the fact is stated at the `[]uint64` fragment: a
@@ -611,7 +712,8 @@ theorem storeTarget_slice_u64 {σ : ExecState} {a : Addr}
     valueAsLoc, sliceIndexLoc_ok hcap hi, Bind.bind, Except.bind, storeLoc,
     loadLoc, hlook, harrset, hnorm, pure, Except.pure]
 
-/-! ### The ARRAY-local element store (phase-2 slice 1, 2026-08-14)
+/-! ### API group 5, continued — the ARRAY-local element store
+(phase-2 slice 1, 2026-08-14)
 
 The S3 relational harness style returns its observed data as a
 fixed-cap Go ARRAY, so it needs the array-typed-local analogue of
@@ -687,7 +789,8 @@ theorem storeTarget_arrayLocal_u64 {σ : ExecState} {a : Addr} {N i : Nat}
     valueAsLoc, Bind.bind, Except.bind, storeLoc, loadLoc, hlook, hidxn,
     harrset, hnorm, pure, Except.pure]
 
-/-! ## Slice-value plumbing (consolidation slice 2026-08-13: promoted
+/-! ## API group 6 — slice-value plumbing (consolidation slice
+2026-08-13: promoted
 from 4–5 per-example private copies, ledger row P2) -/
 
 /-- Reading the mapped-to-`GoValue` backing at an in-range index. -/
@@ -741,7 +844,8 @@ theorem applyStrictOp_mod_u64 {σ : ExecState} {a b : Nat}
   simp only [show (IntKind.uint64 == IntKind.uint64) = true from rfl,
     if_true, hnorm]
 
-/-! ## The integer executable-op family, completed (WP arc s1 lift 1,
+/-! ## API group 7 — the integer executable-op family, completed
+(WP arc s1 lift 1,
 2026-08-16)
 
 The A1/A2 consolidation note (g1.md §Unit G1.3b): the integer
@@ -838,7 +942,8 @@ theorem applyStrictOp_convert_u64 {σ : ExecState} {a : Nat} {k : IntKind}
       = .ok (.int (IntKind.normalize .uint64 (a : Int)) .uint64, σ) := rfl
   rw [hraw, unorm_nat_of_lt ha]
 
-/-! ## The modular setup family + the zero-padded prefix (Gallery
+/-! ## API group 8 — ∀-input setup families: `familyMod` + the
+zero-padded prefix (Gallery
 Campaign kit-gap closure GAP-P2, 2026-08-15)
 
 `familyMod k n seed` — the harness setup family `v[i] = seed + i % k`,
@@ -941,7 +1046,7 @@ theorem prefixPad_full {fam : Nat → Nat → List Int}
       = fam n seed ++ List.replicate (cap - (fam n seed).length) 0 := by
   rw [prefixPad, hlen]
 
-/-! ## The swap surgery + count algebra (WP arc s1 lift 3, 2026-08-16)
+/-! ## API group 9 — swap / count surgery (WP arc s1 lift 3, 2026-08-16)
 
 Pure `List Int` algebra every swap-based subject re-derives, lifted
 verbatim from `Examples/SelectionSort/Pure.lean`'s GAP-WITNESS block
@@ -1042,7 +1147,8 @@ theorem range_swapList {l : List Int} {i m : Nat}
     · exact hr _ (getD_mem hm)
     · exact hr x hx
 
-/-! ## The generic setup families (WP arc s1 lift 2, 2026-08-16)
+/-! ## API group 8, continued — the generic setup families
+(WP arc s1 lift 2, 2026-08-16)
 
 Three layers, each pre-drafted in the campaign ledger (g1.md, the
 lane-B kit-gap lists + GAP-P2b/c/d):
@@ -1144,7 +1250,7 @@ theorem padZ_range {g : Nat → Int} {cap m : Nat} {lo hi : Int}
   · rcases List.mem_replicate.mp hv with ⟨-, rfl⟩
     exact h0
 
-/-! ### `familyF` — the index-function uint64 family (the exact
+/-! ### API group 8 — `familyF`, the index-function uint64 family (the exact
 drafted shape, g1.md §THE KIT-GAP LIST (twosum)/(rle)) -/
 
 /-- The index-function setup family: `fam[i] = (seed + f i) % 2^64`. -/
@@ -1204,7 +1310,7 @@ theorem prefixPad_familyF_set {f : Nat → Nat} {cap seed m : Nat}
       = prefixPad (familyF f) cap (m + 1) seed :=
   familyF_set hm
 
-/-! ### `familyOf` — the iterated-step family (the LCG shape) -/
+/-! ### API group 8 — `familyOf`, the iterated-step family (the LCG shape) -/
 
 /-- Iterate a step function `k` times from `x` (structurally the
 sorts' `lcgStep`, step-function generic). -/
@@ -1268,7 +1374,7 @@ theorem familyOf_getD {step : Nat → Nat} {n seed m : Nat} (hm : m < n) :
       = ((iterStep step (m + 1) seed : Nat) : Int) :=
   familyZ_getD hm
 
-/-! ### `takePad` — the copy-OUT prefix over COMPUTED data (the exact
+/-! ### API group 8 — `takePad`, the copy-OUT prefix over COMPUTED data (the exact
 drafted shape, g1.md §THE KIT-GAP LIST (selsort); the bubble list's
 `prefixPadL` is this same shape) -/
 
