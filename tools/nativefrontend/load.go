@@ -57,8 +57,9 @@ type sourcePkg struct {
 	// $init function wire names of THIS package, source order —
 	// consumed by the program-wide $pkginit synthesis.
 	initNames []string
-	// Import paths of the LOCAL packages this package imports
-	// (initialization-order edges).
+	// Import paths of the LOCAL packages this package imports — the
+	// TYPE-CHECK dependency edges. NOT the initialization-order edges:
+	// those range over the whole program (specInitOrder).
 	localImports []string
 }
 
