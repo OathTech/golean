@@ -1,0 +1,2 @@
+# expected_substring	features
+invalid recursive type T3	arrays,structs,compile_error

@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	stringToBytes	-	ok	-	strings,bytes,conversions,slices,defined_type,unicode,literals,nil

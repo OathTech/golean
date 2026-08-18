@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+loop-order	deferLoopOrder	-	ok	-	defer,loops,evaluation_order,calls
+named-result	deferNamedResult	-	ok	-	defer,named-results,closures,returns

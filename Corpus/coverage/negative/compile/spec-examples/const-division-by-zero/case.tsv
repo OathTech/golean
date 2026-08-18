@@ -1,0 +1,2 @@
+# expected_substring	features
+division by zero	constants,division,compile_error

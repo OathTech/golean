@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+nil-case	typeSwitchSpec	0	ok	-	type_switch,interfaces,nil,strings
+int-case	typeSwitchSpec	1	ok	-	type_switch,interfaces,ints,strings
+float64-case	typeSwitchSpec	2	ok	-	type_switch,interfaces,floats,strings
+func-case	typeSwitchSpec	3	ok	-	type_switch,interfaces,higher_order,strings
+bool-in-list	typeSwitchSpec	4	ok	-	type_switch,interfaces,bools,strings
+string-in-list	typeSwitchSpec	5	ok	-	type_switch,interfaces,strings
+default-case	typeSwitchSpec	6	ok	-	type_switch,interfaces,default,strings

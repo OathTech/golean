@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot use type parameter declared in alias declaration as RHS	aliases,generics,compile_error

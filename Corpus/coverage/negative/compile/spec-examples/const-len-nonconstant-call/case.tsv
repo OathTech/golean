@@ -1,0 +1,2 @@
+# expected_substring	features
+(value of type int) is not constant	constants,len,complex,compile_error

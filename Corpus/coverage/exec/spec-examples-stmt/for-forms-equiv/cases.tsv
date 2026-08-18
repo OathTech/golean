@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+cond-pair	forFormsCondPair	-	ok	-	loops,closures,control_flow
+infinite-pair	forFormsInfinitePair	-	ok	-	loops,break,control_flow

@@ -1,0 +1,2 @@
+# expected_substring	features
+duplicate method String	interfaces,methods,compile_error

@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+ready	selectReady	-	ok	-	select,channels,evaluation_order,nil
+default	selectDefault	-	ok	-	select,channels,default,nil
+block-forever	selectBlockForever	-	deadlock	-	select,deadlock

@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+ints	appendInts	-	ok	-	slices,append,overlap,variadic
+interface	appendInterface	-	ok	-	slices,append,interfaces,type_assertions
+string	appendString	-	ok	-	slices,append,strings,bytes

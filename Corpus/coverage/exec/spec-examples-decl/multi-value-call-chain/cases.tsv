@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	multiValueCallChain	-	ok	-	calls,multi_result,strings,functions,slicing

@@ -1,16 +1,29 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-17  commit: 9b6931af+ (spec-truth P2 slice 2 — E12
-#   guardrails: binop-order/operand-panic-vs-call/{left-first,
-#   call-before-left,call-before-left-div})
-#   re-pin reason: THREE NEW IDS, no other change. Drift against the
-#   previous baseline is exactly these three; every pre-existing id
-#   keeps its result and its stage. The rows pin gc's observed
-#   binary-operand order (calls before non-call operand events, left
-#   before right among non-calls — latitude entry E12, closing
-#   prior-art finding F1): all three PASS, i.e. the machine's
-#   frontend-ANF realization already matches gc's. Corpus-only
-#   commit; no frontend, GoCore, or decoder code touched.
-#   Full run: 1856 cases (1756 PASS / 100 FAIL), native frontend.
+# recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2 — the
+#   spec-examples tranche: 211 NEW ids across spec-examples-stmt/,
+#   spec-examples-lexical/, spec-examples-decl/)
+#   re-pin reason: 211 new ids, no other change — every pre-existing id
+#   keeps its result and stage. The new ids: 181 PASS + 30 FAIL, every
+#   FAIL investigated and classified:
+#     - 18 frontend-export: deliberate guardrail cases the native
+#       frontend cannot yet export (stdlib imports beyond the corpus
+#       set; method expressions; struct-tag conversions; imaginary
+#       literals; several comma-ok/range-assign forms) — the expected
+#       coverage-gap class, written guardrails-first so the gaps are
+#       visible, never false passes.
+#     - 11 lean-observation: 9 fail-closed interpreter coverage gaps
+#       (slice-to-array conversions x4, string<->rune conversions x2,
+#       float min/max x3 — status=unsupported; entered in
+#       baselines/untriaged-ids, count 16->25 in the same commit), 1 =
+#       BUG-056 (&*nil collapses instead of panicking), 1 = BUG-058
+#       (comma-ok assert in a recover handler leaks past export and
+#       dies unbound — fail-closed-classification defect).
+#     - 1 differential: BUG-057 (typed two-variable receive
+#       declaration drops the value).
+#   The three BUGs are OPEN, pinned by these cases per the check-bugs
+#   discipline (docs/BUGS.md); fixes are semantic-core/frontend arcs,
+#   out of this corpus lane's scope.
+#   Full run: 2067 cases (1937 PASS / 130 FAIL), native frontend.
 #
 result	id	stage
 PASS	arrays/array-bounds	-
@@ -1688,6 +1701,217 @@ FAIL	slices/slices-sort-non-integer-refusal	frontend-export
 PASS	slices/slices-sort/ints	-
 PASS	slices/slices-sort/uint64	-
 PASS	slices/three-index-slice	-
+FAIL	spec-examples-decl/address-op-nil-indirection/addr-deref-nil	lean-observation
+PASS	spec-examples-decl/address-op-nil-indirection/deref-nil	-
+PASS	spec-examples-decl/address-op-nil-indirection/forms	-
+PASS	spec-examples-decl/alias-identity	-
+PASS	spec-examples-decl/allocation-new	-
+PASS	spec-examples-decl/append-forms/interface	-
+FAIL	spec-examples-decl/append-forms/ints	frontend-export
+PASS	spec-examples-decl/append-forms/string	-
+FAIL	spec-examples-decl/assert-comma-ok	frontend-export
+PASS	spec-examples-decl/assign-tuple-order/exchange	-
+PASS	spec-examples-decl/assign-tuple-order/index-then-var	-
+PASS	spec-examples-decl/assign-tuple-order/panic-nil-field	-
+PASS	spec-examples-decl/assign-tuple-order/panic-second-target	-
+FAIL	spec-examples-decl/assign-tuple-order/range-assign	frontend-export
+FAIL	spec-examples-decl/compile-only-forms	frontend-export
+PASS	spec-examples-decl/composite-literal-elision	-
+PASS	spec-examples-decl/composite-literal-pointer	-
+PASS	spec-examples-decl/const-complex/typed	-
+FAIL	spec-examples-decl/const-complex/untyped	frontend-export
+PASS	spec-examples-decl/const-decl-forms	-
+PASS	spec-examples-decl/const-huge-shift	-
+PASS	spec-examples-decl/conversion-parse-forms	-
+PASS	spec-examples-decl/copy-forms	-
+PASS	spec-examples-decl/dedup-inference	-
+PASS	spec-examples-decl/defer-order-named-result/loop-order	-
+PASS	spec-examples-decl/defer-order-named-result/named-result	-
+PASS	spec-examples-decl/embedded-readwriter	-
+PASS	spec-examples-decl/function-literals	-
+PASS	spec-examples-decl/general-interface-float	-
+PASS	spec-examples-decl/generic-alias-set	-
+PASS	spec-examples-decl/generic-conversion/f32	-
+PASS	spec-examples-decl/generic-conversion/f64	-
+PASS	spec-examples-decl/generic-dot-product/float64	-
+PASS	spec-examples-decl/generic-dot-product/named	-
+PASS	spec-examples-decl/generic-list	-
+PASS	spec-examples-decl/generic-min	-
+PASS	spec-examples-decl/generic-pair-swap	-
+PASS	spec-examples-decl/generic-type-switch	-
+PASS	spec-examples-decl/index-comma-ok	-
+PASS	spec-examples-decl/init-call-order/order	-
+PASS	spec-examples-decl/init-call-order/values	-
+PASS	spec-examples-decl/iota-multi-pair	-
+PASS	spec-examples-decl/iota-per-constdecl	-
+PASS	spec-examples-decl/locker-satisfaction	-
+PASS	spec-examples-decl/loopvar-per-iteration	-
+FAIL	spec-examples-decl/method-expressions	frontend-export
+PASS	spec-examples-decl/method-sets-defined-types/interface-method-set	-
+PASS	spec-examples-decl/method-sets-defined-types/promotion	-
+PASS	spec-examples-decl/method-values-binding/binding	-
+PASS	spec-examples-decl/method-values-binding/interface	-
+PASS	spec-examples-decl/method-values-receiver-copy	-
+PASS	spec-examples-decl/multi-value-call-chain	-
+PASS	spec-examples-decl/pkg-init-deps	-
+PASS	spec-examples-decl/pkg-init-together	-
+PASS	spec-examples-decl/point-methods/length	-
+PASS	spec-examples-decl/point-methods/scale	-
+PASS	spec-examples-decl/receive-comma-ok/forms	-
+FAIL	spec-examples-decl/receive-comma-ok/typed-form	differential
+PASS	spec-examples-decl/recover-protect/clean	-
+PASS	spec-examples-decl/recover-protect/panics	-
+PASS	spec-examples-decl/return-forms	-
+PASS	spec-examples-decl/select-forms/block-forever	-
+PASS	spec-examples-decl/select-forms/default	-
+PASS	spec-examples-decl/select-forms/ready	-
+PASS	spec-examples-decl/selectors-embedding-depth/fields	-
+PASS	spec-examples-decl/selectors-embedding-depth/methods	-
+PASS	spec-examples-decl/slice-aliasing	-
+PASS	spec-examples-decl/slice-map-sharing/map	-
+PASS	spec-examples-decl/slice-map-sharing/slice	-
+FAIL	spec-examples-decl/slice-to-array/nil-to-longer-ptr	lean-observation
+FAIL	spec-examples-decl/slice-to-array/ok-forms	lean-observation
+FAIL	spec-examples-decl/slice-to-array/short-array	lean-observation
+FAIL	spec-examples-decl/slice-to-array/short-array-ptr	lean-observation
+PASS	spec-examples-decl/string-from-bytes	-
+PASS	spec-examples-decl/string-from-int	-
+FAIL	spec-examples-decl/string-from-runes	lean-observation
+FAIL	spec-examples-decl/struct-tag-conversion	frontend-export
+FAIL	spec-examples-decl/timezone-stringer	frontend-export
+FAIL	spec-examples-decl/type-definitions-distinct	frontend-export
+PASS	spec-examples-decl/type-identity	-
+PASS	spec-examples-decl/typed-nil-interface	-
+PASS	spec-examples-decl/typeparam-parse-ambiguity/arrays	-
+PASS	spec-examples-decl/typeparam-parse-ambiguity/conversion-form	-
+PASS	spec-examples-decl/typeparam-parse-ambiguity/forced-generic	-
+PASS	spec-examples-decl/underlying-conversions	-
+PASS	spec-examples-decl/untyped-bool-comparison	-
+PASS	spec-examples-decl/var-decl-forms	-
+PASS	spec-examples-decl/variadic-greeting-nil/nil	-
+PASS	spec-examples-decl/variadic-greeting-nil/three	-
+PASS	spec-examples-decl/weekday-iota	-
+PASS	spec-examples-decl/zero-value	-
+PASS	spec-examples-lexical/channel-direction-forms	-
+PASS	spec-examples-lexical/for-clause-loopvar	-
+PASS	spec-examples-lexical/goto-label/goto-not-taken	-
+PASS	spec-examples-lexical/goto-label/goto-taken	-
+PASS	spec-examples-lexical/identifiers	-
+FAIL	spec-examples-lexical/imaginary-literals	frontend-export
+PASS	spec-examples-lexical/index-expression-form	-
+PASS	spec-examples-lexical/integer-division-overflow	-
+PASS	spec-examples-lexical/map-type-make	-
+FAIL	spec-examples-lexical/method-expressions/derived-pointer-receiver-expr	frontend-export
+FAIL	spec-examples-lexical/method-expressions/pointer-receiver-expr	frontend-export
+FAIL	spec-examples-lexical/method-expressions/value-receiver-expr	frontend-export
+PASS	spec-examples-lexical/method-values/pointer-receiver-method-value	-
+PASS	spec-examples-lexical/method-values/value-receiver-method-value	-
+FAIL	spec-examples-lexical/panic-values/panic-error	lean-observation
+PASS	spec-examples-lexical/panic-values/panic-int	-
+PASS	spec-examples-lexical/panic-values/panic-string	-
+PASS	spec-examples-lexical/pointer-type-forms	-
+FAIL	spec-examples-lexical/qualified-identifier	frontend-export
+PASS	spec-examples-lexical/selectors-depth	-
+PASS	spec-examples-lexical/slice-expression-defaults	-
+PASS	spec-examples-lexical/string-literal-forms	-
+PASS	spec-examples-lexical/string-to-bytes	-
+FAIL	spec-examples-lexical/string-to-runes	lean-observation
+PASS	spec-examples-lexical/type-assertion-form	-
+PASS	spec-examples-stmt/assign-forms	-
+PASS	spec-examples-stmt/break-label/item-found	-
+PASS	spec-examples-stmt/break-label/nil-error	-
+PASS	spec-examples-stmt/break-label/no-hit	-
+PASS	spec-examples-stmt/complit-array-lengths	-
+PASS	spec-examples-stmt/complit-empty-slice-vs-new	-
+PASS	spec-examples-stmt/complit-keyed-examples	-
+PASS	spec-examples-stmt/complit-paren-ambiguity/match	-
+PASS	spec-examples-stmt/complit-paren-ambiguity/no-match	-
+PASS	spec-examples-stmt/complit-slice-is-array	-
+PASS	spec-examples-stmt/complit-struct-zero	-
+PASS	spec-examples-stmt/continue-label	-
+PASS	spec-examples-stmt/eval-order-calls/traced-recv	-
+PASS	spec-examples-stmt/eval-order-calls/verbatim	-
+PASS	spec-examples-stmt/expr-switch-forms/first-match-f1	-
+PASS	spec-examples-stmt/expr-switch-forms/first-match-f2	-
+PASS	spec-examples-stmt/expr-switch-forms/first-match-f3	-
+PASS	spec-examples-stmt/expr-switch-forms/first-match-none	-
+PASS	spec-examples-stmt/expr-switch-forms/no-expr-negative	-
+PASS	spec-examples-stmt/expr-switch-forms/no-expr-positive	-
+PASS	spec-examples-stmt/expr-switch-forms/tag-default	-
+PASS	spec-examples-stmt/expr-switch-forms/tag-first-list	-
+PASS	spec-examples-stmt/expr-switch-forms/tag-negative	-
+PASS	spec-examples-stmt/expr-switch-forms/tag-second-list	-
+PASS	spec-examples-stmt/fma-forced-rounding/conv-add	-
+PASS	spec-examples-stmt/fma-forced-rounding/forms-agree	-
+PASS	spec-examples-stmt/fma-forced-rounding/plus-assign	-
+PASS	spec-examples-stmt/fma-forced-rounding/temp-conv	-
+PASS	spec-examples-stmt/for-clause	-
+PASS	spec-examples-stmt/for-condition/boundary	-
+PASS	spec-examples-stmt/for-condition/doubles	-
+PASS	spec-examples-stmt/for-condition/zero-iter	-
+PASS	spec-examples-stmt/for-forms-equiv/cond-pair	-
+PASS	spec-examples-stmt/for-forms-equiv/infinite-pair	-
+PASS	spec-examples-stmt/go-statements/func-literal	-
+PASS	spec-examples-stmt/go-statements/named-call	-
+PASS	spec-examples-stmt/go-statements/params-at-go	-
+PASS	spec-examples-stmt/if-init-else-chain/boundary-y	-
+PASS	spec-examples-stmt/if-init-else-chain/boundary-z	-
+PASS	spec-examples-stmt/if-init-else-chain/else-branch	-
+PASS	spec-examples-stmt/if-init-else-chain/first-branch	-
+PASS	spec-examples-stmt/if-init-else-chain/second-branch	-
+PASS	spec-examples-stmt/if-simple/above	-
+PASS	spec-examples-stmt/if-simple/at	-
+PASS	spec-examples-stmt/if-simple/below	-
+FAIL	spec-examples-stmt/method-expr-five-forms	frontend-export
+PASS	spec-examples-stmt/method-value-two-forms/saved-receiver	-
+PASS	spec-examples-stmt/method-value-two-forms/two-forms	-
+FAIL	spec-examples-stmt/min-max-float-specials/infinities	lean-observation
+FAIL	spec-examples-stmt/min-max-float-specials/nan	lean-observation
+FAIL	spec-examples-stmt/min-max-float-specials/signed-zero	lean-observation
+PASS	spec-examples-stmt/min-max-strings/assoc	-
+PASS	spec-examples-stmt/min-max-strings/pairs	-
+PASS	spec-examples-stmt/operator-precedence/add-sub	-
+PASS	spec-examples-stmt/operator-precedence/cmp-call	-
+FAIL	spec-examples-stmt/operator-precedence/mixed-chan	frontend-export
+PASS	spec-examples-stmt/operator-precedence/mul-index	-
+PASS	spec-examples-stmt/operator-precedence/not-shift	-
+PASS	spec-examples-stmt/operator-precedence/or-calls	-
+PASS	spec-examples-stmt/operator-precedence/unary-plus	-
+PASS	spec-examples-stmt/prime-sieve/eight	-
+PASS	spec-examples-stmt/prime-sieve/five	-
+PASS	spec-examples-stmt/receive-forms	-
+PASS	spec-examples-stmt/representability/complex-to-real	-
+PASS	spec-examples-stmt/representability/float-rounding	-
+PASS	spec-examples-stmt/representability/ints-strings	-
+PASS	spec-examples-stmt/representability/neg-tiny-unsigned-zero	-
+PASS	spec-examples-stmt/short-var-decl	-
+PASS	spec-examples-stmt/slice-full	-
+PASS	spec-examples-stmt/slice-simple	-
+PASS	spec-examples-stmt/string-concat	-
+FAIL	spec-examples-stmt/struct-tags	frontend-export
+PASS	spec-examples-stmt/type-switch-equiv-if/agree-bool	-
+PASS	spec-examples-stmt/type-switch-equiv-if/agree-default	-
+PASS	spec-examples-stmt/type-switch-equiv-if/agree-float64	-
+PASS	spec-examples-stmt/type-switch-equiv-if/agree-func	-
+PASS	spec-examples-stmt/type-switch-equiv-if/agree-int	-
+PASS	spec-examples-stmt/type-switch-equiv-if/agree-nil	-
+PASS	spec-examples-stmt/type-switch-equiv-if/agree-string	-
+PASS	spec-examples-stmt/type-switch-equiv-if/if-chain-bool	-
+PASS	spec-examples-stmt/type-switch-equiv-if/if-chain-default	-
+PASS	spec-examples-stmt/type-switch-equiv-if/if-chain-float64	-
+PASS	spec-examples-stmt/type-switch-equiv-if/if-chain-func	-
+PASS	spec-examples-stmt/type-switch-equiv-if/if-chain-int	-
+PASS	spec-examples-stmt/type-switch-equiv-if/if-chain-nil	-
+PASS	spec-examples-stmt/type-switch-equiv-if/if-chain-string	-
+PASS	spec-examples-stmt/type-switch/bool-in-list	-
+PASS	spec-examples-stmt/type-switch/default-case	-
+PASS	spec-examples-stmt/type-switch/float64-case	-
+PASS	spec-examples-stmt/type-switch/func-case	-
+PASS	spec-examples-stmt/type-switch/int-case	-
+PASS	spec-examples-stmt/type-switch/nil-case	-
+PASS	spec-examples-stmt/type-switch/string-in-list	-
+FAIL	spec-examples-stmt/type-unify-struct-array	frontend-export
+PASS	spec-examples-stmt/variadic-slice-passthrough	-
 PASS	strings/byte-conversion-cap	-
 PASS	strings/byte-slice-to-string-copy	-
 PASS	strings/concat-eval-order	-

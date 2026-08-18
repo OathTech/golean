@@ -1,0 +1,2 @@
+# expected_substring	features
+untyped int constant 9223372036854775808) overflows int	make,slices,builtins,overflow,compile_error

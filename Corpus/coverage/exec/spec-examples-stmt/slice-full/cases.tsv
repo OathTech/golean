@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	sliceFullExpr	-	ok	-	slices,arrays,full_slice,len,cap,indexing

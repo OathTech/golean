@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+exchange	exchange	-	ok	-	assignment,multi_assign
+index-then-var	indexThenVar	-	ok	-	assignment,multi_assign,evaluation_order,slices,indexing
+panic-second-target	panicSecondTarget	-	ok	-	assignment,multi_assign,evaluation_order,panic,recover,slices
+panic-nil-field	panicNilField	-	ok	-	assignment,multi_assign,evaluation_order,panic,recover,pointers,nil
+range-assign	rangeAssignForm	-	ok	-	assignment,multi_assign,range,evaluation_order,slices,break

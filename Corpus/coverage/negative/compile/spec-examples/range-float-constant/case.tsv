@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot range over 1e3 (untyped float constant 1000)	range,loops,floats,untyped,compile_error

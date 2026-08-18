@@ -1,0 +1,2 @@
+# expected_substring	features
+shifted operand 1 (type float32) must be integer	shifts,untyped,floats,compile_error

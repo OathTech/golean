@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+two-forms	methodValueTwoForms	-	ok	-	methods,structs,higher_order,calls
+saved-receiver	methodValueSavedReceiver	-	ok	-	methods,structs,higher_order,copy_semantics

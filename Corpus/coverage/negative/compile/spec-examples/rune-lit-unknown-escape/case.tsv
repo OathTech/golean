@@ -1,0 +1,2 @@
+# expected_substring	features
+unknown escape	runes,literals,compile_error

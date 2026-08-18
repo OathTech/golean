@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+fields	selectorFields	-	ok	-	embedding,fields,structs,pointers
+methods	selectorMethods	-	ok	-	embedding,methods,structs,pointers,calls

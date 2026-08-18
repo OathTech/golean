@@ -1,0 +1,2 @@
+# expected_substring	features
+shifted operand 1 (type string) must be integer	shifts,untyped,strings,conversions,compile_error

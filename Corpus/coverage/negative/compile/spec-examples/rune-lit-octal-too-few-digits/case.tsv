@@ -1,0 +1,2 @@
+# expected_substring	features
+in octal escape	runes,literals,compile_error

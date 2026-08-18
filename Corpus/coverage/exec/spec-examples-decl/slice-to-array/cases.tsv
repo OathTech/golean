@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+ok-forms	sliceToArrayOk	-	ok	-	conversions,slices,arrays,pointers,nil,aliasing
+short-array	sliceToArrayShort	-	panic	cannot convert slice with length 2 to array or pointer to array with length 4	conversions,slices,arrays,panic
+short-array-ptr	sliceToArrayPtrShort	-	panic	cannot convert slice with length 2 to array or pointer to array with length 4	conversions,slices,arrays,pointers,panic
+nil-to-longer-ptr	nilSliceToArrayPtr	-	panic	cannot convert slice with length 0 to array or pointer to array with length 1	conversions,slices,arrays,pointers,nil,panic

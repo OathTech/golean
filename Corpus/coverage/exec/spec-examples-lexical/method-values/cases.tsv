@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+value-receiver-method-value	methodValueFromValue	-	ok	-	methods,higher_order,functions,calls,structs
+pointer-receiver-method-value	methodValueFromPointer	-	ok	-	methods,higher_order,functions,calls,structs,pointers,floats

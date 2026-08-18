@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	sliceAliasing	-	ok	-	slices,slicing,aliasing,arrays,nil,pointers

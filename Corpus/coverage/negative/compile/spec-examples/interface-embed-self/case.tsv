@@ -1,0 +1,2 @@
+# expected_substring	features
+invalid recursive type: Bad refers to itself	interfaces,embedding,compile_error

@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+conv-add	fmaForcedConvAdd	1	ok	-	floats,conversions,division
+plus-assign	fmaForcedPlusAssign	1	ok	-	floats,conversions,division,assignment
+temp-conv	fmaForcedTempConv	1	ok	-	floats,conversions,division,assignment
+forms-agree	fmaForcedFormsAgree	1	ok	-	floats,conversions,division,comparisons

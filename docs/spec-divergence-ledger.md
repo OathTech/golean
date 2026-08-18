@@ -126,6 +126,49 @@ Discipline notes, recorded up front:
   the P4 audit caught this line claiming them before the P2 landing;
   updated at the post-P2 rebase, 2026-08-18).
 
+### L-007 — the spec's type-switch translation is not legal Go — `spec-bug` (erratum class, UNREPORTED)
+
+- How found: spec-re-read (P3 curation, worker 2; block
+  `Type_switches-4`).
+- Sources: spec#Type_switches — the section's own if-chain
+  "equivalent" translation of a type switch declares `i := v` in
+  arms that never use `i`, which gc rejects ("declared and not
+  used"). The spec's illustrative equivalence is un-compilable
+  verbatim.
+- Sharp question: is the translation exhibit intended to be legal Go?
+- Data: gc go1.26.5 rejects the verbatim exhibit; the corpus case
+  (`spec-examples-stmt/`, adapted with `_ = i`, adaptation flagged in
+  its header) pins the translation's SEMANTICS.
+- Stance: cosmetic spec erratum; upstream-report candidate (needs
+  Mike's per-filing sign-off). Bound: neither.
+
+### L-008 — the spec's Read-method exhibit collides receiver and parameter — `spec-bug` (erratum class, UNREPORTED)
+
+- How found: spec-re-read (P3 curation, worker 4; block in
+  spec#Interface_types' basic-interfaces run).
+- Sources: `func (p T) Read(p []byte) (n int, err error)` — gc:
+  "p redeclared in this block". The exhibit's receiver name shadows
+  its parameter.
+- Stance: cosmetic erratum, same class as L-007; the two could travel
+  in one upstream report. Bound: neither.
+
+### L-009 — the spec carries version-gated semantics inline — informational (4.4 evidence)
+
+- How found: P3 curation (worker 3's SKIP of the For_clause "6 6 6"
+  exhibit), verified against the pinned text.
+- Sources: spec#For_clause — "[Prior to Go 1.22], iterations share
+  one set of variables" with the old-semantics output exhibit kept
+  as a deliberate historical note.
+- Stance: the spec text itself is version-CONDITIONAL, not merely
+  versioned: a single pinned document describes two language
+  behaviors gated on the go.mod directive. Mechanism 4.4's agreement
+  rule (spec pin = oracle = corpus directive) is what keeps our
+  corpus on one side of such gates; the exhibit's post-1.22 sibling
+  is pinned as an exec case, the pre-1.22 member deliberately not.
+  Bound: upper (the pre-1.22 behavior is still conforming FOR
+  MODULES DECLARING go < 1.22 — out of our declared Go 1.26 scope,
+  recorded here so the scope boundary is explicit).
+
 ## Feed status (honest accounting)
 
 Census at the go1.26.5 pin (post-audit regeneration): **926 spec

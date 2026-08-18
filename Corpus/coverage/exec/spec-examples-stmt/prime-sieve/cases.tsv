@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+five	primeSieveFirst	5	ok	-	goroutines,channels,range,loops,modulo
+eight	primeSieveFirst	8	ok	-	goroutines,channels,range,loops,modulo

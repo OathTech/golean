@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+first-branch	ifInitElseChain	5	ok	-	if,scoping,closures,control_flow
+second-branch	ifInitElseChain	25	ok	-	if,scoping,closures,control_flow
+else-branch	ifInitElseChain	15	ok	-	if,scoping,closures,control_flow
+boundary-y	ifInitElseChain	10	ok	-	if,scoping,closures,control_flow
+boundary-z	ifInitElseChain	20	ok	-	if,scoping,closures,control_flow

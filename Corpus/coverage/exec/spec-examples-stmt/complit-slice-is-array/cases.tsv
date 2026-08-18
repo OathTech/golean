@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	complitSliceIsArraySlice	-	ok	-	literals,slices,arrays,slicing,len,cap

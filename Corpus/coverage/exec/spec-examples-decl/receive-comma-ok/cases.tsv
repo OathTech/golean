@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+forms	receiveCommaOk	-	ok	-	channels,comma_ok,close,short_decl,zero_values
+typed-form	receiveCommaOkTyped	-	ok	-	channels,comma_ok,bools,typed

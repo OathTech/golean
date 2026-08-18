@@ -1,0 +1,2 @@
+# expected_substring	features
+result parameter err not in scope at return	returns,named-results,shadowing,scoping,compile_error

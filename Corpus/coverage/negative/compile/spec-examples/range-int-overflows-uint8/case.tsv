@@ -1,0 +1,2 @@
+# expected_substring	features
+as uint8 value in range clause (overflows)	range,loops,ints,overflow,compile_error

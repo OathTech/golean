@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+goto-taken	gotoError	3	ok	-	control_flow,goto,labels,loops
+goto-not-taken	gotoError	99	ok	-	control_flow,goto,labels,loops

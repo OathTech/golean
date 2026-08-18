@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+unary-plus	opPrecUnaryPlus	-	ok	-	ints
+add-sub	opPrecAddSub	-	ok	-	ints
+mul-index	opPrecMulIndex	-	ok	-	ints,slices,indexing
+cmp-call	opPrecCmpCall	-	ok	-	comparisons,closures,calls
+not-shift	opPrecNotShift	-	ok	-	ints,bitwise,shifts,conversions
+or-calls	opPrecOrCalls	-	ok	-	bools,closures,calls,evaluation_order
+mixed-chan	opPrecMixed	-	ok	-	comparisons,bools,channels,make

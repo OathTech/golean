@@ -1,0 +1,2 @@
+# expected_substring	features
+hexadecimal mantissa requires a 'p' exponent	floats,literals,compile_error

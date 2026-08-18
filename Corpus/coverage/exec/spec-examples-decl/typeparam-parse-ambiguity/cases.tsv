@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+arrays	typeparamParseArrays	-	ok	-	generics,arrays,constants,len
+conversion-form	typeparamParseConversionForm	-	ok	-	arrays,conversions,constants,aliases,len
+forced-generic	typeparamParseForced	-	ok	-	generics,constraints,pointers,structs

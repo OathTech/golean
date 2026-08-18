@@ -1,0 +1,2 @@
+# expected_substring	features
+unexpected ~ in type declaration	generics,constraints,compile_error

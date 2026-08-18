@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+nil	variadicNil	-	ok	-	variadic,nil,slices,calls
+three	variadicThree	-	ok	-	variadic,slices,strings,calls

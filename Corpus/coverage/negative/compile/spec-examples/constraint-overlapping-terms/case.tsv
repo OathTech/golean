@@ -1,0 +1,2 @@
+# expected_substring	features
+overlapping terms	interfaces,generics,constraints,type_sets,compile_error

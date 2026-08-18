@@ -1,12 +1,15 @@
 # GoLean negative-corpus (compile-rejection) baseline
-# recorded: 2026-08-05  commit: general-coverage-generics (G0: +instantiation-cycle)  oracle: go build (rejection) + frontend fail-closed
-# manifest_cases: 311  pass: 311  fail: 0
+# recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection) + frontend fail-closed
+# manifest_cases: 390  pass: 390  fail: 0
 # Columns: result<TAB>id<TAB>stage (sorted by id); detail omitted (churns).
 # Regression = any flip/stage change vs this file (scripts/coverage-baseline-diff
 # --baseline baselines/negative-full.tsv artifacts/coverage/negative-latest.tsv).
-# Re-pin reason: 1 NEW id — generics/instantiation-cycle (G0 negative probe:
-# unbounded recursive instantiation is rejected by go/types' mono check at
-# compile time on BOTH sides of the differential; design note §2b/§2e).
+# Re-pin reason: 79 NEW ids, no other change — the spec-examples negative
+# tranche (P3, mechanism 4.2): all 35 contains-illegal spec blocks converted
+# (76 cases, worker-built, every expected_substring from actual go build
+# stderr) + 3 integration handovers (two goto negatives the classifier had
+# misfiled as runnable, one selector-promotion case). Every pre-existing id
+# keeps its result and stage; all 390 PASS.
 result	id	stage
 PASS	arrays/array-compare-different-length	-
 PASS	arrays/array-index-float	-
@@ -131,11 +134,11 @@ PASS	defer/defer-len-result	-
 PASS	defer/defer-non-call	-
 PASS	defer/defer-receive-expression	-
 PASS	floats/defined-type-mixed-add	-
-PASS	floats/float32-constant-overflow	-
 PASS	floats/float-bitwise-and	-
 PASS	floats/float-modulo	-
 PASS	floats/float-shift	-
 PASS	floats/float-to-string	-
+PASS	floats/float32-constant-overflow	-
 PASS	floats/generic-float-bitwise	-
 PASS	floats/generic-float-modulo	-
 PASS	floats/generic-float-shift	-
@@ -176,9 +179,9 @@ PASS	imports/package-mismatch	-
 PASS	imports/unused-import	-
 PASS	init/call-init	-
 PASS	init/duplicate-global	-
-PASS	init/initialization-cycle	-
 PASS	init/init-return-value	-
 PASS	init/init-with-params	-
+PASS	init/initialization-cycle	-
 PASS	interfaces/ambiguous-promoted-method-interface	-
 PASS	interfaces/duplicate-method	-
 PASS	interfaces/embedded-conflicting-method	-
@@ -272,11 +275,90 @@ PASS	slices/full-slice-string	-
 PASS	slices/slice-compare	-
 PASS	slices/slice-index-float	-
 PASS	slices/slice-unaddressable-array	-
+PASS	spec-examples/array-type-mutual-cycle	-
+PASS	spec-examples/array-type-self-element	-
+PASS	spec-examples/array-type-struct-cycle	-
+PASS	spec-examples/bare-return-shadowed-result	-
+PASS	spec-examples/builtin-len-statement	-
+PASS	spec-examples/complex-arg-shift	-
+PASS	spec-examples/const-complement-uint8	-
+PASS	spec-examples/const-conversion-float-to-int	-
+PASS	spec-examples/const-conversion-float-to-string	-
+PASS	spec-examples/const-division-by-zero	-
+PASS	spec-examples/const-len-nonconstant-call	-
+PASS	spec-examples/const-shift-overflows-int32	-
+PASS	spec-examples/const-shift-typed-float	-
+PASS	spec-examples/constraint-overlapping-terms	-
+PASS	spec-examples/constraint-term-type-parameter	-
+PASS	spec-examples/constraint-union-tilde-type-parameter	-
+PASS	spec-examples/embedded-method-signature-conflict	-
+PASS	spec-examples/empty-type-arg-list	-
+PASS	spec-examples/float-lit-hex-e-exponent	-
+PASS	spec-examples/float-lit-hex-no-mantissa-digits	-
+PASS	spec-examples/float-lit-p-exponent-decimal	-
+PASS	spec-examples/float-lit-trailing-underscore	-
+PASS	spec-examples/float-lit-underscore-after-dot	-
+PASS	spec-examples/float-lit-underscore-after-e	-
+PASS	spec-examples/float-lit-underscore-before-dot	-
+PASS	spec-examples/float-lit-underscore-before-e	-
+PASS	spec-examples/generic-alias-own-type-param	-
+PASS	spec-examples/generic-func-no-instantiation	-
+PASS	spec-examples/goto-into-block	-
+PASS	spec-examples/goto-over-declaration	-
+PASS	spec-examples/imag-arg-shift	-
+PASS	spec-examples/impossible-type-assertion	-
+PASS	spec-examples/int-lit-double-underscore	-
+PASS	spec-examples/int-lit-trailing-underscore	-
+PASS	spec-examples/int-lit-underscore-in-prefix	-
+PASS	spec-examples/interface-blank-method-name	-
+PASS	spec-examples/interface-duplicate-method	-
+PASS	spec-examples/interface-embed-array-self	-
+PASS	spec-examples/interface-embed-mutual	-
+PASS	spec-examples/interface-embed-self	-
+PASS	spec-examples/interface-embed-union-self	-
+PASS	spec-examples/make-len-exceeds-cap	-
+PASS	spec-examples/make-len-not-representable	-
+PASS	spec-examples/method-recv-alias-instantiated	-
+PASS	spec-examples/method-recv-alias-instantiated-ptr	-
+PASS	spec-examples/method-recv-generic-alias	-
+PASS	spec-examples/method-value-unaddressable-recv	-
+PASS	spec-examples/min-slice-spread	-
+PASS	spec-examples/missing-return-terminating-stmt	-
+PASS	spec-examples/nonbasic-interface-conversion	-
+PASS	spec-examples/nonbasic-interface-struct-field	-
+PASS	spec-examples/nonbasic-interface-variable	-
+PASS	spec-examples/range-float-constant	-
+PASS	spec-examples/range-int-overflows-uint8	-
+PASS	spec-examples/rune-lit-code-point-too-large	-
+PASS	spec-examples/rune-lit-hex-too-few-digits	-
+PASS	spec-examples/rune-lit-octal-over-255	-
+PASS	spec-examples/rune-lit-octal-too-few-digits	-
+PASS	spec-examples/rune-lit-surrogate-half	-
+PASS	spec-examples/rune-lit-too-many-chars	-
+PASS	spec-examples/rune-lit-unknown-escape	-
+PASS	spec-examples/selector-no-pointer-promotion	-
+PASS	spec-examples/shift-float32-var	-
+PASS	spec-examples/shift-int-float-context	-
+PASS	spec-examples/shift-string-conversion	-
+PASS	spec-examples/shift-untyped-float-compare	-
+PASS	spec-examples/shift-untyped-float-var	-
+PASS	spec-examples/short-decl-repeated-ident	-
+PASS	spec-examples/string-lit-code-point-too-large	-
+PASS	spec-examples/string-lit-surrogate-half	-
+PASS	spec-examples/struct-type-array-cycle	-
+PASS	spec-examples/struct-type-mutual-cycle	-
+PASS	spec-examples/struct-type-self-embed	-
+PASS	spec-examples/tilde-defined-type	-
+PASS	spec-examples/tilde-interface	-
+PASS	spec-examples/tilde-outside-type-param-list	-
+PASS	spec-examples/typedef-enclosing-type-param	-
+PASS	spec-examples/typedef-own-type-param	-
+PASS	spec-examples/var-init-untyped-nil	-
 PASS	strings/cap-string	-
 PASS	strings/compare-string-bytes	-
 PASS	strings/hex-escape-too-short	-
-PASS	strings/interpreted-string-newline	-
 PASS	strings/int-slice-to-string	-
+PASS	strings/interpreted-string-newline	-
 PASS	strings/invalid-string-escape	-
 PASS	strings/octal-escape-overflow	-
 PASS	strings/raw-string-backquote	-

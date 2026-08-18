@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+float64	dotProductFloat64	-	ok	-	generics,constraints,floats,slices,range
+named	dotProductNamed	-	ok	-	generics,constraints,floats,defined_type,range

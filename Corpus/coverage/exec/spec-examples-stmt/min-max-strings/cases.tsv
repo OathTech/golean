@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+pairs	minMaxStringsPair	-	ok	-	min,max,builtins,strings,comparisons
+assoc	minMaxStringsAssoc	-	ok	-	min,max,builtins,strings,comparisons

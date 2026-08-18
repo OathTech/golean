@@ -1,0 +1,2 @@
+# expected_substring	features
+escape is invalid Unicode code point U+DFFF	runes,literals,unicode,compile_error

@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+ints-strings	reprIntsAndStrings	-	ok	-	representability,constants,ints,strings,runes
+float-rounding	reprFloatRounding	-	ok	-	representability,constants,floats
+neg-tiny-unsigned-zero	reprNegTinyIsUnsignedZero	-	ok	-	representability,constants,floats,division
+complex-to-real	reprComplexConstants	-	ok	-	representability,constants,complex,floats,ints

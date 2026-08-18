@@ -1,0 +1,2 @@
+# expected_substring	features
+invalid recursive type: Bad3 refers to itself	interfaces,embedding,type_sets,compile_error

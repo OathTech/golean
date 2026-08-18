@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+doubles	forConditionDouble	1,100	ok	-	loops,comparisons,control_flow
+zero-iter	forConditionDouble	5,3	ok	-	loops,comparisons,control_flow
+boundary	forConditionDouble	3,3	ok	-	loops,comparisons,control_flow

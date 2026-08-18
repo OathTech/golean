@@ -1,0 +1,2 @@
+# expected_substring	features
+invalid use of ~ (error is an interface)	interfaces,generics,constraints,type_sets,compile_error

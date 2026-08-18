@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+verbatim	evalOrderCallsVerbatim	-	ok	-	evaluation_order,calls,closures,channels,multi_assign,indexing
+traced-recv	evalOrderCallsTracedRecv	-	ok	-	evaluation_order,calls,closures,channels,multi_assign,indexing

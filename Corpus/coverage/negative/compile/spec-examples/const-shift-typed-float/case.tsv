@@ -1,0 +1,2 @@
+# expected_substring	features
+shifted operand float64(2) (constant 2 of type float64) must be integer	constants,shifts,floats,compile_error

@@ -1,0 +1,2 @@
+# expected_substring	features
+(constant 3 of type int) is not used	builtins,len,compile_error

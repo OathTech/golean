@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot use a type parameter as RHS in type declaration	generics,defined_type,compile_error

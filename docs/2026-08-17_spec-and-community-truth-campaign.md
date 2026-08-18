@@ -24,7 +24,15 @@ still carries prose §-cites — queued for its next touch; scope
 precision per the P2 audit, which also caught five misquotes the
 resolution-only lint structurally cannot see — fixed, and the lesson
 recorded in the lint's header: quote fidelity is the covmap layer's
-case). P4 (archaeology) next, parallel lane.
+case). P2 MERGED to main (d54c8280) and P4 MERGED to main (c0a2c7fd), both
+2026-08-18 after two-Opus-lane audits + a delta-review (all findings
+fixed; notable catches: five retrofit misquotes, census honesty
+labels, the discussions #47141/#56010 identification). **P3
+EXECUTING** on lane `spec-p3`: slice 1 = the 326-block inventory
+(scripts/extract-spec-examples); slice 2 = four-worker curation
+fan-out (negative lane from the 35 contains-illegal blocks, exec
+cases from stmt/expr + token + decl fragments), integration +
+full-run baseline re-pin to follow.
 Companion doctrine: `docs/2026-08-11_essence-of-go-doctrine.md` (the two
 bounds), `docs/2026-08-11_latitude-inventory.md` (the per-point census).
 

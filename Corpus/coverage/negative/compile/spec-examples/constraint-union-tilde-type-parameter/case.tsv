@@ -1,0 +1,2 @@
+# expected_substring	features
+type in term ~P cannot be a type parameter	interfaces,generics,constraints,type_sets,compile_error

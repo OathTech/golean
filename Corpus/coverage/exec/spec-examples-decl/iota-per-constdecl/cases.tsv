@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	iotaPerConstDecl	-	ok	-	constants,iota,shifts,typed,untyped

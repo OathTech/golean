@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot define new methods on instantiated type GPoint[int]	methods,aliases,generics,pointers,compile_error

@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot call pointer method Mp on T	methods,addressability,pointers,compile_error

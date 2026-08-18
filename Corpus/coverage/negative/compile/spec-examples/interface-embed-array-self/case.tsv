@@ -1,0 +1,2 @@
+# expected_substring	features
+invalid recursive type: Bad4 refers to itself	interfaces,embedding,arrays,compile_error

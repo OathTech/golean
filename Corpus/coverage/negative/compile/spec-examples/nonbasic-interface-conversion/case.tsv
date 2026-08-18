@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot use interface Float in conversion	interfaces,generics,constraints,conversions,compile_error

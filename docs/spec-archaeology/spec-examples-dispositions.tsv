@@ -1,0 +1,207 @@
+# P3 curation dispositions — the tracked join of the four worker reports
+# + integrator rows (2026-08-18). One row per (block, worker); a block may
+# appear twice when a handover was completed at integration (the later
+# integ row supersedes the earlier SKIPPED/NEGATIVE-MATERIAL row).
+# dispositions: CASES=171, COMPILE-ONLY=5, NEGATIVE-MATERIAL=1, SKIPPED=21
+# KNOWN GAP (w3 cross-check): the legal lines of the contains-illegal
+# literal grids (Integer/Float/Rune/String_literals) are rejected-line
+# covered only; their legal-value pinning is a recorded follow-on.
+block_id	worker	disposition	case_ids	note
+Address_operators-1-7fb9c29a	w4	CASES	spec-examples-decl/address-op-nil-indirection/forms,spec-examples-decl/address-op-nil-indirection/deref-nil,spec-examples-decl/address-op-nil-indirection/addr-deref-nil	all legal &-operand forms + nil *x and &*x panics; gc panics on &*x as the spec requires (no tension)
+Alias_declarations-2-1a9a3d08	w4	CASES	spec-examples-decl/alias-identity	-
+Alias_declarations-3-d69c972f	w4	CASES	spec-examples-decl/generic-alias-set	generic alias [Go 1.24]; identical to map[string]bool
+Alias_declarations-4-74451fb2	w1	CASES	spec-examples/generic-alias-own-type-param	illegal line only; the block's legal half (type A = P inside f[P any]) omitted as unneeded scaffolding. Requires go1.24+ generic aliases (toolchain is 1.26).
+Allocation-1-26a175c5	w4	CASES	spec-examples-decl/allocation-new	-
+An_example_package-1-d5a327de	w2	CASES	spec-examples-stmt/prime-sieve/five spec-examples-stmt/prime-sieve/eight	the spec's concurrent prime sieve; generate/filter verbatim, fmt.Print -> accumulation, bounded at k primes (noted); synchronous chain is schedule-independent
+Appending_and_copying_slices-2-7f95cfda	w4	CASES	spec-examples-decl/append-forms/ints,spec-examples-decl/append-forms/interface,spec-examples-decl/append-forms/string	every asserted result checked incl. the overlapping append s4
+Appending_and_copying_slices-4-820d26f7	w4	CASES	spec-examples-decl/copy-forms	n1/n2/n3 and post-states incl. overlapping copy
+Arithmetic_operators-2-9bb79253	w4	CASES	spec-examples-decl/generic-dot-product/float64,spec-examples-decl/generic-dot-product/named	-
+Array_types-3-e776b27a	w1	CASES	spec-examples/array-type-self-element,spec-examples/array-type-struct-cycle,spec-examples/array-type-mutual-cycle	4 invalid type decls -> 3 cases (T3/T4 are one mutual cycle; T3's illegality depends on T4, kept together per block scaffolding rule). Valid T5-T7 omitted.
+Assignment_statements-2-4c295deb	w2	CASES	spec-examples-stmt/assign-forms	all four target forms incl. parenthesized (k) = <-ch
+Assignment_statements-7-5f7deaa8	w4	CASES	spec-examples-decl/assign-tuple-order/exchange,spec-examples-decl/assign-tuple-order/index-then-var,spec-examples-decl/assign-tuple-order/panic-second-target,spec-examples-decl/assign-tuple-order/panic-nil-field,spec-examples-decl/assign-tuple-order/range-assign	partial-effect-before-panic pinned via recover; for i,x[i] = range with break pinned (i==0, x==[3 5 3])
+Assignment_statements-8-bcd96992	w4	CASES	spec-examples-decl/slice-map-sharing/slice,spec-examples-decl/slice-map-sharing/map	fmt.Println observations returned instead of printed
+Basic_interfaces-2-c4d2a811	w1	CASES	spec-examples/interface-duplicate-method,spec-examples/interface-blank-method-name	both illegal lines, split (each must be the file's only error).
+Basic_interfaces-3-fb7165ac	w4	SKIPPED	-	FINDING: illegal verbatim — receiver p redeclared by parameter p (go: "p redeclared in this block"); a spec-example defect (cosmetic). Satisfaction content pinned by locker-satisfaction + embedded-readwriter
+Basic_interfaces-5-0c73e0fa	w4	CASES	spec-examples-decl/locker-satisfaction	-
+Basic_interfaces-6-30e0b4a6	w4	CASES	spec-examples-decl/locker-satisfaction	elided bodies realized as recorders
+Break_statements-2-c25228fa	w2	CASES	spec-examples-stmt/break-label/nil-error spec-examples-stmt/break-label/item-found spec-examples-stmt/break-label/no-hit	labeled break exits switch+both loops; i,j,state retain values (112/220/34)
+Calls-2-061c787e	w4	SKIPPED	-	syntax illustration (math.Atan2 needs math; pt is nil so pt.Scale would nil-deref, unasserted by the spec); method-call form pinned by point-methods/scale
+Calls-3-bd483f5e	w4	CASES	spec-examples-decl/multi-value-call-chain	log.Panic realized as returned marker
+Calls-4-6010d7a1	w4	CASES	spec-examples-decl/point-methods/scale	-
+Channel_types-2-04dbba2f	w3	CASES	spec-examples-lexical/channel-direction-forms	chan T / chan<- float64 / <-chan int; directional views of one channel round-trip values; returns 7
+Comparison_operators-2-60d7731d	w4	CASES	spec-examples-decl/untyped-bool-comparison	-
+Complex_numbers-2-00dfb7ad	w1	CASES	spec-examples/complex-arg-shift,spec-examples/imag-arg-shift	both illegal lines; scaffolding keeps the spec's own `var s int = complex(1, 0)` (itself a legal spec example).
+Composite_literals-10-34318a7a	w4	CASES	spec-examples-decl/composite-literal-elision	all seven elision forms incl. named-pointer element type PPoint and struct map keys
+Composite_literals-11-e14616e7	w2	CASES	spec-examples-stmt/complit-keyed-examples	primes (incl. the spec's 9), vowels rune keys, filter == stated array, map literal lookups; verbatim literals
+Composite_literals-2-0f327af4	w2	CASES	spec-examples-stmt/complit-paren-ambiguity/match spec-examples-stmt/complit-paren-ambiguity/no-match	both parenthesization forms, equal outcomes
+Composite_literals-3-5424b977	w4	CASES	spec-examples-decl/composite-literal-pointer	-
+Composite_literals-4-56653998	w2	CASES	spec-examples-stmt/complit-struct-zero	zero value for line.q.x pinned (bits 0)
+Composite_literals-5-3a437841	w4	CASES	spec-examples-decl/composite-literal-pointer	-
+Composite_literals-6-98e6a258	w2	CASES	spec-examples-stmt/complit-empty-slice-vs-new	&[]int{} non-nil empty vs new([]int) nil
+Composite_literals-7-ee492ce1	w2	CASES	spec-examples-stmt/complit-array-lengths	lens 10/6/2 + zero fill of missing elements
+Composite_literals-9-bb382c43	w2	CASES	spec-examples-stmt/complit-slice-is-array	slice literal == tmp := [n]T{...}; tmp[0:n] (len/cap/elements agree)
+Constant_declarations-2-b9b19c33	w4	CASES	spec-examples-decl/const-decl-forms	-
+Constant_declarations-3-7c6d4b28	w4	CASES	spec-examples-decl/weekday-iota	-
+Constant_expressions-1-665fef14	w1	CASES	spec-examples/const-shift-overflows-int32,spec-examples/const-shift-typed-float	the 2 illegal lines (f, g); rest of the block is legal.
+Constant_expressions-2-93cb2295	w4	CASES	spec-examples-decl/const-complex/untyped,spec-examples-decl/const-complex/typed	supporting consts c/Theta from the section's earlier block; ASCII names c2/theta noted
+Constant_expressions-3-8a328e0d	w4	CASES	spec-examples-decl/const-huge-shift	1<<100 exact constant arithmetic; Four int8 == 4
+Constant_expressions-4-f8ad9971	w1	CASES	spec-examples/const-division-by-zero	3.14 / 0.0 wrapped as const initializer (block context is constant expressions).
+Constant_expressions-6-dc29f1de	w1	CASES	spec-examples/const-complement-uint8	uint8(^1): "constant -2 overflows uint8". Other 4 lines legal.
+Continue_statements-2-69d844a3	w2	CASES	spec-examples-stmt/continue-label	labeled continue abandons rest of row; row[x] writes through; positional encoding pins untouched tail
+Conversions-2-afcd996f	w4	CASES	spec-examples-decl/conversion-parse-forms	partial: executable disambiguations pinned (incl. <-chan int(c) as receive and unambiguous func() int(x)); pure parse annotations (*Point(p), func()(x)) noted only
+Conversions-3-aa36f537	w1	CASES	spec-examples/const-conversion-float-to-int,spec-examples/const-conversion-float-to-string	both illegal lines; "not a constant" comment lines (string([]byte{'a'}), (*int)(nil)) are legal expressions, not converted.
+Conversions-4-e2ad0265	w4	CASES	spec-examples-decl/generic-conversion/f64,spec-examples-decl/generic-conversion/f32	per-instantiation constant conversion; float32 rounding of 1.1 visible
+Conversions-5-b1bcceec	w4	CASES	spec-examples-decl/struct-tag-conversion	tag-ignoring struct identity incl. nested tagged struct; nil-pointer conversion at package init
+Conversions_from_slice_to_array_or_array_pointer-1-2861064a	w4	CASES	spec-examples-decl/slice-to-array/ok-forms,spec-examples-decl/slice-to-array/short-array,spec-examples-decl/slice-to-array/short-array-ptr,spec-examples-decl/slice-to-array/nil-to-longer-ptr	aliasing through array pointer + all three panic forms
+Conversions_to_and_from_a_string_type-1-7a8a44d8	w4	CASES	spec-examples-decl/string-from-bytes	-
+Conversions_to_and_from_a_string_type-2-79d2a1ba	w4	CASES	spec-examples-decl/string-from-runes	-
+Conversions_to_and_from_a_string_type-3-5710b646	w3	CASES	spec-examples-lexical/string-to-bytes	all five lines' byte values pinned incl. []byte("") non-nil (prose assertion — held in gc) and 4-byte UTF-8 of U+1F30F; returns 31
+Conversions_to_and_from_a_string_type-4-e4dd55f2	w3	CASES	spec-examples-lexical/string-to-runes	all five lines' code points pinned (0x767d/0x9d6c/0x7fd4, 0x266b/0x266c, 0x1f310); non-nil NOT pinned for []rune("") — prose asserts it only for byte slices; returns 31
+Conversions_to_and_from_a_string_type-5-e2a4cb7a	w4	CASES	spec-examples-decl/string-from-int	string(-1) == "\ufffd" CONFIRMED legal + spec-conformant in gc (vet flags it; compile does not)
+Defer_statements-2-1f99afbe	w4	CASES	spec-examples-decl/defer-order-named-result/loop-order,spec-examples-decl/defer-order-named-result/named-result	LIFO 3210 + named-result mutation to 42; lock/unlock prose line not executable, noted
+Embedded_interfaces-1-bf873c1a	w4	CASES	spec-examples-decl/embedded-readwriter	union method set incl. duplicated Close through both embeddings
+Embedded_interfaces-2-0b6490ef	w1	CASES	spec-examples/embedded-method-signature-conflict	needs Reader from the preceding spec block as scaffolding (included). gc reports "duplicate method Close" for the signature conflict.
+Errors-1-cf107147	w4	COMPILE-ONLY	spec-examples-decl/compile-only-forms	package-level redeclaration of error is legal and shadows the universe identifier — pinned as an accepted form
+Errors-2-011342e6	w4	COMPILE-ONLY	spec-examples-decl/compile-only-forms	error-last signature convention; File stand-in + stub body added
+Expression_statements-3-7bc85688	w1	CASES	spec-examples/builtin-len-statement	len("foo") in statement context; gc frames the rejection as `len("foo") (constant 3 of type int) is not used` - same rule (builtins not permitted in statement context), different wording than the spec's.
+Expression_switches-2-8d84f981	w2	CASES	spec-examples-stmt/expr-switch-forms/tag-first-list spec-examples-stmt/expr-switch-forms/tag-second-list spec-examples-stmt/expr-switch-forms/tag-default spec-examples-stmt/expr-switch-forms/tag-negative spec-examples-stmt/expr-switch-forms/no-expr-negative spec-examples-stmt/expr-switch-forms/no-expr-positive spec-examples-stmt/expr-switch-forms/first-match-f1 spec-examples-stmt/expr-switch-forms/first-match-f2 spec-examples-stmt/expr-switch-forms/first-match-f3 spec-examples-stmt/expr-switch-forms/first-match-none	default-clause-first order irrelevance; missing expression means true; first-match-wins
+Floating-point_literals-2-152a0d95	w1	CASES	spec-examples/float-lit-hex-no-mantissa-digits,spec-examples/float-lit-p-exponent-decimal,spec-examples/float-lit-hex-e-exponent,spec-examples/float-lit-underscore-before-dot,spec-examples/float-lit-underscore-after-dot,spec-examples/float-lit-underscore-before-e,spec-examples/float-lit-underscore-after-e,spec-examples/float-lit-trailing-underscore	all 8 invalid lines converted. gc words 0x.p1 as "hexadecimal literal has no digits" (spec: mantissa has no digits) - same rule.
+Floating_point_operators-1-72956e18	w2	CASES	spec-examples-stmt/fma-forced-rounding/conv-add spec-examples-stmt/fma-forced-rounding/plus-assign spec-examples-stmt/fma-forced-rounding/temp-conv spec-examples-stmt/fma-forced-rounding/forms-agree	FORCED half only (explicit float64() conversion must round; all 3 forms agree, value 0.0 discriminates vs fused -2^-54); FMA-ALLOWED half is implementation latitude, already tripwired at floats/fma-shape — deliberately not strict-pinned here
+For_clause-2-1acd7fef	w2	CASES	spec-examples-stmt/for-clause	f sees exactly 0..9 in order (count/sum/positional trace)
+For_clause-3-d61c1c53	w2	CASES	spec-examples-stmt/for-forms-equiv/cond-pair spec-examples-stmt/for-forms-equiv/infinite-pair	both stated equivalences; `for ; cond ; {` kept literally (not gofmt-normalized — the syntax IS the point; corpus has no gofmt gate)
+For_clause-4-9af0c9d2	w4	CASES	spec-examples-decl/loopvar-per-iteration	Go 1.22 per-iteration variables: closures observe 1 3 5 (pre-1.22: 6 6 6); println realized as recorder
+For_clause-5-ceac0281	w3	CASES	spec-examples-lexical/for-clause-loopvar	Go 1.22 per-iteration loop variable: closures observe 1,3,5 -> returns 135 (spec's println outputs as digits)
+For_clause-6-930576d8	w3	SKIPPED	-	pre-Go-1.22 output exhibit (6 6 6, shared loop variable) — superseded semantics at the campaign's Go 1.26 language pin; version skew is divergence-ledger material (campaign 4.4), not corpus
+For_condition-1-fcb62f60	w2	CASES	spec-examples-stmt/for-condition/doubles spec-examples-stmt/for-condition/zero-iter spec-examples-stmt/for-condition/boundary	condition checked before each iteration incl. zero-iteration entry
+For_range-3-065c311b	w1	CASES	spec-examples/range-int-overflows-uint8,spec-examples/range-float-constant	both invalid snippets of this 73-line block; the rest is legal and covered by other P3 lanes.
+Function_declarations-2-6d67373d	w1	CASES	spec-examples/missing-return-terminating-stmt	spec's IndexRune verbatim; gc says "missing return".
+Function_declarations-3-9873b045	w4	CASES	spec-examples-decl/generic-min	package-level min shadows the predeclared builtin
+Function_declarations-4-d7af4440	w4	SKIPPED	-	body-less func "implemented externally" needs assembly/linker support; cannot build in the one-file corpus
+Function_literals-2-a0dfaa1c	w4	CASES	spec-examples-decl/function-literals	-
+Function_literals-3-0b0ad6e6	w4	CASES	spec-examples-decl/function-literals	directly-invoked literal; ACK/replyChan realized
+Function_types-2-90bee491	w4	COMPILE-ONLY	spec-examples-decl/compile-only-forms	all eight function-type forms as blank package vars; T realized as Tfn
+General_interfaces-2-46b76d35	w1	CASES	spec-examples/tilde-defined-type,spec-examples/tilde-interface	both illegal terms; ~[]byte legal line omitted (would not compile alongside without hiding which error fired).
+General_interfaces-3-cbe6a5b5	w4	CASES	spec-examples-decl/general-interface-float	-
+General_interfaces-4-51fa039a	w1	CASES	spec-examples/constraint-term-type-parameter,spec-examples/constraint-union-tilde-type-parameter,spec-examples/constraint-overlapping-terms	3 illegal lines ("Given a type parameter P" realized as func f[P any, _ interface{...}]); 4th line (float32|Float) is legal per spec, omitted.
+General_interfaces-5-61c674f4	w1	CASES	spec-examples/nonbasic-interface-variable,spec-examples/nonbasic-interface-conversion,spec-examples/nonbasic-interface-struct-field	all 3 illegal lines; Float defined per the spec's earlier block.
+General_interfaces-6-42003263	w1	CASES	spec-examples/interface-embed-self,spec-examples/interface-embed-mutual,spec-examples/interface-embed-union-self,spec-examples/interface-embed-array-self	all 4 illegal declarations (Bad1/Bad2 kept together: mutual embedding).
+Go_statements-2-c0556425	w2	CASES	spec-examples-stmt/go-statements/named-call spec-examples-stmt/go-statements/func-literal spec-examples-stmt/go-statements/params-at-go	Server/sleep undefined in spec -> stand-ins (noted); rendezvous-fixed observables, strict lane per goroutines/pipeline precedent; params-evaluated-in-calling-goroutine pinned race-free
+Goto_statements-2-a502299a	w3	CASES	spec-examples-lexical/goto-label/goto-taken,spec-examples-lexical/goto-label/goto-not-taken	goto Error form, taken (arg 3 -> -6) and not taken (arg 99 -> 45)
+Goto_statements-3-474e8f9f	integ	CASES	spec-examples/goto-over-declaration	handover from w2 SKIPPED: negative case built at integration
+Goto_statements-3-474e8f9f	w2	SKIPPED	-	the spec marks it BAD: "jump to label L skips the creation of v" — compile-negative material (negative/compile lane, outside this exec subtree); verified: gc rejects "goto L jumps over declaration of v"
+Goto_statements-4-42aaa746	integ	CASES	spec-examples/goto-into-block	handover from w2 SKIPPED: negative case built at integration
+Goto_statements-4-42aaa746	w2	SKIPPED	-	spec prose: "is erroneous because the label L1 is inside the for statement's block but the goto is not" — compile-negative material (negative/compile lane, outside this exec subtree); verified: gc rejects "goto L1 jumps into block"
+Handling_panics-2-e7d4cef6	w3	CASES	spec-examples-lexical/panic-values/panic-int,spec-examples-lexical/panic-values/panic-string,spec-examples-lexical/panic-values/panic-error	each spec panic value recovered and pinned exactly (dynamic type + value); Error realized as defined string type implementing error (spec leaves it undeclared); each returns 1
+Handling_panics-3-620051a5	w4	CASES	spec-examples-decl/recover-protect/panics,spec-examples-decl/recover-protect/clean	log calls realized as recorder (log outside import norms)
+Identifiers-2-b38494c4	w3	CASES	spec-examples-lexical/identifiers	four identifier forms declared+used; subject returns 4321 (each identifier carries a distinct digit); Unicode identifier included
+If_statements-2-3dfe8916	w2	CASES	spec-examples-stmt/if-simple/above spec-examples-stmt/if-simple/at spec-examples-stmt/if-simple/below	clamp shape, boundary included
+If_statements-3-23172299	w2	CASES	spec-examples-stmt/if-init-else-chain/first-branch spec-examples-stmt/if-init-else-chain/second-branch spec-examples-stmt/if-init-else-chain/else-branch spec-examples-stmt/if-init-else-chain/boundary-y spec-examples-stmt/if-init-else-chain/boundary-z	init statement + else-if chain, all branches + boundaries
+Imaginary_literals-2-b6efe7cf	w3	CASES	spec-examples-lexical/imaginary-literals	all 12 forms pinned to values via complex(re,im); spec's own assertions (0123i==123i decimal, 0o123i==83i, 0xabci==2748i, 0x1p-2i==0.25i) each a score bit; returns 4095. FILE MUST NOT BE gofmt'd — gofmt rewrites 0123i/1E6i/.12345E+5i spellings (warning comment in file)
+Import_declarations-3-d4dcbade	w4	SKIPPED	-	blank import of nonexistent path lib/math; not runnable in the one-file corpus
+Index_expressions-1-366168ca	w3	CASES	spec-examples-lexical/index-expression-form	a[x] over array/slice/string/map operand kinds from prose; returns 164
+Index_expressions-2-e0e8e639	w4	CASES	spec-examples-decl/index-comma-ok	-
+Instantiations-1-1a7fd952	w4	COMPILE-ONLY	spec-examples-decl/compile-only-forms	legal table rows instantiated; the illegal io.Writer row is negative material outside this positive lane
+Instantiations-2-e6028196	w1	CASES	spec-examples/generic-func-no-instantiation	x := sum; sum's elided body ({ ... }) filled in minimally.
+Instantiations-3-8fe1b1b6	w1	CASES	spec-examples/empty-type-arg-list	apply[]; rejected at parse level ("syntax error: unexpected ]").
+Integer_literals-2-919e22f8	w1	CASES	spec-examples/int-lit-trailing-underscore,spec-examples/int-lit-double-underscore,spec-examples/int-lit-underscore-in-prefix	3 illegal literals (42_, 4__2, 0_xBadFace); _42 line is legal (identifier). 0_xBadFace also cascades a follow-on syntax error after the intended '_' diagnostic (lexical re-tokenization).
+Integer_operators-3-b892259b	w3	CASES	spec-examples-lexical/integer-division-overflow	most-negative x / -1 == x, r == 0 at all four widths (runtime operands — constant form is rejected by gc); returns 15
+Iota-1-b1d75795	w4	CASES	spec-examples-decl/iota-per-constdecl	-
+Iota-2-7755546c	w4	CASES	spec-examples-decl/iota-multi-pair	-
+Length_and_capacity-3-4eda3abb	w1	CASES	spec-examples/const-len-nonconstant-call	c5 invalid (imag(z) non-constant call in const initializer); legal c4 kept as in-block contrast, z declared after the const block as in the spec.
+Making_slices_maps_and_channels-2-3bf764de	w1	CASES	spec-examples/make-len-not-representable,spec-examples/make-len-exceeds-cap	both illegal lines. gc words len>cap as "invalid argument: length and capacity swapped".
+Map_types-3-e7a32402	w3	CASES	spec-examples-lexical/map-type-make	both make forms; capacity hint does not affect len; returns 31
+Method_declarations-2-2c71f0c0	w4	CASES	spec-examples-decl/point-methods/scale,spec-examples-decl/point-methods/length	math.Sqrt outside import norms; replaced by local Newton sqrt, noted in header
+Method_declarations-3-9efcc696	w4	CASES	spec-examples-decl/generic-pair-swap	receiver type-param rename + blank (Pair[First, _])
+Method_declarations-4-fa8d3c1f	w1	CASES	spec-examples/method-recv-generic-alias,spec-examples/method-recv-alias-instantiated-ptr,spec-examples/method-recv-alias-instantiated	all 3 illegal method decls. NOTE: spec's `func (HPoint) Draw(P)` uses P with no P in scope (would add an undefined-P error); param written as int so the receiver error is the only one - flagged in the main.go comment. gc's error for the HPoint case names the alias target ("instantiated type GPoint[int]"), matching the spec's stated reason.
+Method_expressions-2-c6a16b09	w4	CASES	spec-examples-decl/method-expressions	T.Mv, (*T).Mp, and derived (*T).Mv
+Method_expressions-3-13bad155	w3	CASES	spec-examples-lexical/method-expressions/value-receiver-expr	T.Mv: spec's five equivalent invocations all yield 0; returns 31
+Method_expressions-4-6010ca5d	w4	SKIPPED	-	signature-only prose; the described type is the type of f1 in spec-examples-decl/method-expressions
+Method_expressions-5-8134ce9d	w2	CASES	spec-examples-stmt/method-expr-five-forms	five equivalent invocations; Mv body made discriminating (spec's returns 0), noted
+Method_expressions-6-b357a017	w3	CASES	spec-examples-lexical/method-expressions/pointer-receiver-expr	(*T).Mp as func(tp *T, f float32) float32 yields 1; returns 3
+Method_expressions-7-073e566a	w4	SKIPPED	-	signature-only prose; the described type is the type of f2 in spec-examples-decl/method-expressions
+Method_expressions-8-b1e270fb	w3	CASES	spec-examples-lexical/method-expressions/derived-pointer-receiver-expr	(*T).Mv derived pointer-receiver fn; indirects, does not overwrite receiver value; returns 3
+Method_expressions-9-6a939495	w4	SKIPPED	-	signature-only prose; the described type is the type of f3 in spec-examples-decl/method-expressions
+Method_values-1-0352b892	w4	CASES	spec-examples-decl/method-values-receiver-copy	receiver saved at method-value creation; *t = 42 unobserved by f and g
+Method_values-2-555de57d	w4	CASES	spec-examples-decl/method-values-binding/binding	bodiless makeT given a body; auto-deref pt.Mv and auto-address t.Mp included
+Method_values-3-2c73bff5	w3	CASES	spec-examples-lexical/method-values/value-receiver-method-value	t.Mv as func(int) int; both spec invocations agree; returns 3
+Method_values-4-d151433c	w4	SKIPPED	-	signature-only prose; exercised by spec-examples-decl/method-values-binding
+Method_values-5-b62c3e1c	w2	CASES	spec-examples-stmt/method-value-two-forms/two-forms spec-examples-stmt/method-value-two-forms/saved-receiver	two equivalent invocations + same-anchor prose pin (receiver saved at bind time)
+Method_values-6-def3a9b7	w3	CASES	spec-examples-lexical/method-values/pointer-receiver-method-value	pt.Mp as func(float32) float32; returns 3
+Method_values-7-d9193993	w4	SKIPPED	-	signature-only prose; exercised by spec-examples-decl/method-values-binding
+Method_values-8-90f77b27	w1	CASES	spec-examples/method-value-unaddressable-recv	f := makeT().Mp; gc: "cannot call pointer method Mp on T". Block's other lines are legal usage examples.
+Method_values-9-a2533909	w4	CASES	spec-examples-decl/method-values-binding/interface	method value from an interface value; f(7) acts like i.M(7)
+Min_and_max-1-4d1986f3	w1	CASES	spec-examples/min-slice-spread	min(s...): "invalid use of ... with built-in min".
+Min_and_max-3-fea8bda1	w2	CASES	spec-examples-stmt/min-max-float-specials/signed-zero spec-examples-stmt/min-max-float-specials/infinities spec-examples-stmt/min-max-float-specials/nan	all 4 table rows; zero signs via 1/r, NaN-ness (not payload) via r != r; runtime -0.0 (constants can't produce one per Representability)
+Min_and_max-4-c767f355	w2	CASES	spec-examples-stmt/min-max-strings/pairs spec-examples-stmt/min-max-strings/assoc	string min/max == manual if x <= y form (byte-wise, incl. prefix pairs); 3-arg == nested 2-arg
+Operator_precedence-2-c640b54b	w2	CASES	spec-examples-stmt/operator-precedence/unary-plus spec-examples-stmt/operator-precedence/add-sub spec-examples-stmt/operator-precedence/mul-index spec-examples-stmt/operator-precedence/cmp-call spec-examples-stmt/operator-precedence/not-shift spec-examples-stmt/operator-precedence/or-calls spec-examples-stmt/operator-precedence/mixed-chan	one subject per line; values chosen to discriminate wrong groupings (e.g. ^a>>b: 126 vs 254)
+Operators-2-7ca475c4	w1	CASES	spec-examples/shift-untyped-float-var,spec-examples/shift-untyped-float-compare,spec-examples/shift-int-float-context,spec-examples/shift-float32-var,spec-examples/shift-string-conversion	the 5 illegal lines of the 64-bit section (u,u1,u2,v1,v2). Lines marked "panics" (a[1.0<<s]) are runtime behavior, not compile-illegal.
+Operators-2-7ca475c4	w1	SKIPPED	-	line `var pp = 1<<s == 1<<33` is illegal ONLY for 32-bit ints (spec's 32-bit section). Verified: compiles on amd64 (spec-consistent), and GOARCH=386 rejects it with "1 << 33 (untyped int constant 8589934592) overflows int". The negative runner builds host-arch only, so no portable case; not a divergence.
+Order_of_evaluation-1-8d2525f7	w2	CASES	spec-examples-stmt/eval-order-calls/verbatim spec-examples-stmt/eval-order-calls/traced-recv	spec-fixed call trace f,h,i,j,<-c,g,k observed (verbatim raw <-c + traced-receive variant); z=false so h runs
+Order_of_evaluation-2-267c660a	w2	SKIPPED	-	spec-UNSPECIFIED evaluation order ("x may be [1, 2] or [2, 2]") — nondeterministic observable; membership-lane material
+Order_of_evaluation-3-af118e1b	w4	CASES	spec-examples-decl/init-call-order/order,spec-examples-decl/init-call-order/values	the spec-forced call order u,sqr,v,f,v,g pinned via recorder; u/v realized as independent recorders
+Package_clause-2-d0ac3a8e	w4	SKIPPED	-	package clause prose; every corpus file exercises it
+Package_initialization-1-235612be	w4	CASES	spec-examples-decl/pkg-init-together	a and b initialized together (f runs once) and before x
+Package_initialization-2-5310cffb	w4	CASES	spec-examples-decl/pkg-init-deps	order d,b,c,a with a==9 b==4 c==5 d==5
+Package_initialization-3-c7d2c156	w4	SKIPPED	-	LATITUDE, spec-explicit: with the hidden method dependency the init order of x/sideEffect relative to a,b "is not specified" — a strict-lane pin would freeze gc's choice as if forced; membership-lane + divergence-ledger candidate
+Package_initialization-4-fb4fe100	w4	SKIPPED	-	the init() form as prose; Corpus/coverage/exec/init/ already exercises init semantics
+Package_unsafe-2-b04c645a	w4	SKIPPED	-	unsafe.Pointer forms — unsafe is outside corpus norms
+Package_unsafe-5-6bae1118	w3	SKIPPED	-	(*[len]ArbitraryType)(unsafe.Pointer(ptr))[:] is a schematic pattern (placeholder len and ArbitraryType — not compilable as written) and unsafe is outside the modeled fragment
+Passing_arguments_to_..._parameters-1-0cf283d3	w4	CASES	spec-examples-decl/variadic-greeting-nil/nil,spec-examples-decl/variadic-greeting-nil/three	who == nil for the zero-arg call, fresh slice of 3 for the second
+Passing_arguments_to_..._parameters-2-c2755fcd	w2	CASES	spec-examples-stmt/variadic-slice-passthrough	s... passed unchanged: same underlying array observed via callee mutation; len/cap = 2
+Pointer_types-2-4fa35dec	w3	CASES	spec-examples-lexical/pointer-type-forms	*Point and *[4]int declared+exercised; also pins uninitialized-pointer==nil prose; returns 31
+Program_execution-1-0592f9b6	w4	SKIPPED	-	func main() prose; exercised by every program
+Qualified_identifiers-2-cfbc14aa	w3	CASES	spec-examples-lexical/qualified-identifier	math.Sin as direct call and function value, Sin(0)==0; NOTE: needs stdlib "math" import — expect a visible frontend-blocked red (guardrail-first), triage at landing
+Receive_operator-1-fc6a6263	w2	CASES	spec-examples-stmt/receive-forms	all four receive forms; preloaded buffered channels keep it single-goroutine deterministic
+Receive_operator-2-5d49b546	w4	CASES	spec-examples-decl/receive-comma-ok/forms,spec-examples-decl/receive-comma-ok/typed-form	the var x, ok T = <-ch form forces T = bool over chan bool
+Representability-1-25bd0473	w2	CASES	spec-examples-stmt/representability/ints-strings spec-examples-stmt/representability/float-rounding spec-examples-stmt/representability/neg-tiny-unsigned-zero spec-examples-stmt/representability/complex-to-real	all 10 table rows; -1e-1000 -> UNSIGNED zero pinned via 1/f > 0; 2.718281828459045 -> float32 bits 0x402DF854 (2.7182817) confirmed
+Return_statements-2-b1385fe7	w4	CASES	spec-examples-decl/return-forms	-
+Return_statements-3-0dfcaa71	w4	CASES	spec-examples-decl/return-forms	-
+Return_statements-4-6dfcf122	w4	CASES	spec-examples-decl/return-forms	multi-valued call forwarded as return value
+Return_statements-5-d7698a1e	w4	CASES	spec-examples-decl/return-forms	naked return + blank-named result returned as zero value; devnull declared as support
+Return_statements-6-a013b9d5	w1	CASES	spec-examples/bare-return-shadowed-result	spec's f verbatim; gc: "result parameter err not in scope at return".
+Run_time_panics-1-d30d9de1	w4	SKIPPED	-	declares runtime.Error inside package runtime; not user-writable as such; run-time panics exercised across the corpus panic cases
+Rune_literals-3-57f8f4f9	w1	CASES	spec-examples/rune-lit-too-many-chars,spec-examples/rune-lit-unknown-escape,spec-examples/rune-lit-hex-too-few-digits,spec-examples/rune-lit-octal-too-few-digits,spec-examples/rune-lit-octal-over-255,spec-examples/rune-lit-surrogate-half,spec-examples/rune-lit-code-point-too-large	all 7 illegal lines. gc words too-few-digits as "invalid character '\'' in hexadecimal/octal escape" (scanner hits closing quote where a digit is required) - same rule.
+Satisfying_a_type_constraint-1-1c69f8c6	w4	COMPILE-ONLY	spec-examples-decl/compile-only-forms	satisfied rows instantiated (incl. any-satisfies-comparable, struct{f any}, interface{m()} vs comparable;m()); not-satisfied rows are negative material outside this positive lane
+Select_statements-2-b1ed8c96	w4	CASES	spec-examples-decl/select-forms/ready,spec-examples-decl/select-forms/default,spec-examples-decl/select-forms/block-forever	partial: LHS a[f()] non-evaluation pinned (f never runs when c4 nil); select{} pinned as deadlock; the random-bit send loop is genuinely nondet — membership-lane candidate, not pinned here
+Selectors-1-4580a32c	w3	CASES	spec-examples-lexical/selectors-depth	x.f form exercised throughout the selectors-depth subject (credited jointly with Selectors-3)
+Selectors-2-3fcac2bf	w4	CASES	spec-examples-decl/selectors-embedding-depth/fields,spec-examples-decl/selectors-embedding-depth/methods	depth rules incl. q.x through named pointer type; invalid q.M0() is negative material, noted not emitted
+Selectors-3-361b7011	w3	CASES	spec-examples-lexical/selectors-depth	spec's T0/T1/T2 embedding decls verbatim (method bodies added: each appends a digit to a trace); all 11 documented resolutions pinned incl. defined-pointer-type exception q.x; returns 255
+Selectors-4-c76451a2	integ	CASES	spec-examples/selector-no-pointer-promotion	handover from w3 NEGATIVE-MATERIAL: negative case built at integration
+Selectors-4-c76451a2	w3	NEGATIVE-MATERIAL	-	q.M0() — spec marks invalid ((*q).M0 valid but not a field selector; methods not promoted through defined pointer type Q); must-not-compile case for the negative lane
+Short_variable_declarations-3-b4785831	w2	CASES	spec-examples-stmt/short-var-decl	os.Pipe()/coord(p) replaced by local stand-ins (noted in header); declaration forms verbatim
+Short_variable_declarations-4-c0320034	w1	CASES	spec-examples/short-decl-repeated-ident	x,y,x := 1,2,3; block's field1/field2 redeclare lines are legal and omitted (need nextField scaffolding, irrelevant to the illegality).
+Slice_expressions-2-3678d32a	w2	CASES	spec-examples-stmt/slice-simple	len 3, cap 4, elements 2,3,4 as stated
+Slice_expressions-4-5e36e5ff	w3	CASES	spec-examples-lexical/slice-expression-defaults	a[2:]/a[:3]/a[:] each pinned against written-out form + len/cap/elements over spec's [5]int{1..5}; returns 15
+Slice_expressions-5-891e8f16	w4	CASES	spec-examples-decl/slice-aliasing	incl. the s3 := s[:0] == nil claim for nil s (confirmed in gc)
+Slice_expressions-7-6feb1778	w2	CASES	spec-examples-stmt/slice-full	len 2, cap 4, elements 2,3 as stated
+String_concatenation-1-994ecb2e	w2	CASES	spec-examples-stmt/string-concat	+ and += concat; new-string claim pinned via unchanged operand
+String_literals-2-d7b1cc56	w1	CASES	spec-examples/string-lit-surrogate-half,spec-examples/string-lit-code-point-too-large	both illegal lines.
+String_literals-3-01d5cea4	w3	CASES	spec-examples-lexical/string-literal-forms	five equivalent spellings of "日本語" pinned pairwise-equal + len 9 + exact UTF-8 bytes; returns 63
+Struct_types-5-677bedbd	w2	CASES	spec-examples-stmt/struct-tags	tags (incl. beside a blank field) leave ordinary field access unchanged; anonymous struct types kept verbatim
+Struct_types-6-4cfd4d7d	w1	CASES	spec-examples/struct-type-self-embed,spec-examples/struct-type-array-cycle,spec-examples/struct-type-mutual-cycle	4 invalid type decls -> 3 cases (T3/T4 mutual cycle merged, same reason as Array_types).
+The_zero_value-1-3e4f442c	w4	CASES	spec-examples-decl/zero-value	-
+The_zero_value-2-91c9d45b	w4	CASES	spec-examples-decl/zero-value	-
+The_zero_value-4-ac95c519	w4	CASES	spec-examples-decl/zero-value	-
+Type_assertions-1-e1930fb0	w3	CASES	spec-examples-lexical/type-assertion-form	x.(T) yields stored value for int and string dynamic types; returns 3
+Type_assertions-2-f31bbf04	w1	CASES	spec-examples/impossible-type-assertion	y.(string) with I{m()}: "impossible type assertion"; legal y.(io.Reader) line kept as in the spec block.
+Type_assertions-3-4a92a9bb	w4	CASES	spec-examples-decl/assert-comma-ok	incl. var v, ok interface{} = x.(T) with dynamic types T and bool
+Type_constraints-2-d68bf28b	w1	CASES	spec-examples/tilde-outside-type-param-list	rejected at parse level: "syntax error: unexpected ~ in type declaration". The 3 bracketed lines are constraint-elision equivalences (not standalone code), not converted.
+Type_definitions-2-15b8a5c5	w4	CASES	spec-examples-decl/type-definitions-distinct	-
+Type_definitions-3-1cc92870	w4	CASES	spec-examples-decl/method-sets-defined-types/promotion,spec-examples-decl/method-sets-defined-types/interface-method-set	NewMutex empty-method-set claim observable only negatively (must-not-compile) — negative half left for the contains-illegal lane
+Type_definitions-4-43d28461	w4	CASES	spec-examples-decl/timezone-stringer	keeps fmt.Sprintf verbatim; frontend may block on fmt (honest red, never false pass)
+Type_definitions-5-2ef7be8d	w4	CASES	spec-examples-decl/generic-list	-
+Type_definitions-6-92a5f453	w1	CASES	spec-examples/typedef-own-type-param,spec-examples/typedef-enclosing-type-param	both illegal lines (own type-param list; enclosing function's type param).
+Type_definitions-7-df4fe91f	w4	CASES	spec-examples-decl/generic-list	elided Len body realized as recursive count incl. nil receiver
+Type_identity-1-f7f5ddf5	w4	CASES	spec-examples-decl/type-identity	-
+Type_identity-2-3852e9af	w4	CASES	spec-examples-decl/type-identity	prose claim list; each identity row realized as a conversion-free assignment in the same case
+Type_inference-1-21633371	w4	CASES	spec-examples-decl/dedup-inference	elided dedup body realized; inference pinned by conversion-free s = dedup(s) at named Slice
+Type_parameter_declarations-3-c1263bf1	w4	CASES	spec-examples-decl/typeparam-parse-ambiguity/arrays,spec-examples-decl/typeparam-parse-ambiguity/conversion-form	array-parse of [P *C], [P (C)], [P *C|Q] observable via len == 6/3/14
+Type_parameter_declarations-4-eee1623c	w4	CASES	spec-examples-decl/typeparam-parse-ambiguity/forced-generic	interface{*C} and trailing-comma forms force generic parse; trailing comma survives gofmt
+Type_switches-3-8bc27ecc	w2	CASES	spec-examples-stmt/type-switch/nil-case spec-examples-stmt/type-switch/int-case spec-examples-stmt/type-switch/float64-case spec-examples-stmt/type-switch/func-case spec-examples-stmt/type-switch/bool-in-list spec-examples-stmt/type-switch/string-in-list spec-examples-stmt/type-switch/default-case	print* helpers -> returned labels + typed-use detail (int i, float i, i(4) for the func case)
+Type_switches-4-595985f9	w2	CASES	spec-examples-stmt/type-switch-equiv-if/if-chain-nil spec-examples-stmt/type-switch-equiv-if/if-chain-int spec-examples-stmt/type-switch-equiv-if/if-chain-float64 spec-examples-stmt/type-switch-equiv-if/if-chain-func spec-examples-stmt/type-switch-equiv-if/if-chain-bool spec-examples-stmt/type-switch-equiv-if/if-chain-string spec-examples-stmt/type-switch-equiv-if/if-chain-default spec-examples-stmt/type-switch-equiv-if/agree-nil spec-examples-stmt/type-switch-equiv-if/agree-int spec-examples-stmt/type-switch-equiv-if/agree-float64 spec-examples-stmt/type-switch-equiv-if/agree-func spec-examples-stmt/type-switch-equiv-if/agree-bool spec-examples-stmt/type-switch-equiv-if/agree-string spec-examples-stmt/type-switch-equiv-if/agree-default	spec's if-chain translation + agree subjects vs the switch form; spec's unused i := v bindings need _ = i to compile (noted — the verbatim block is not legal Go)
+Type_switches-5-0b078ebe	w4	CASES	spec-examples-decl/generic-type-switch	type parameter as switch case; first-match-wins for the duplicated string case
+Type_unification-1-8c22e47c	w2	CASES	spec-examples-stmt/type-unify-struct-array	block is unification META-notation (and uses a comma where Go needs ;) — converted to its consequence: generic call infers P=string; noted in header
+Underlying_types-1-6ede4d8d	w4	CASES	spec-examples-decl/underlying-conversions	elided f body realized
+Variable_declarations-2-e27bbbcf	w4	CASES	spec-examples-decl/var-decl-forms	the two i declarations cannot share a scope: grouped form moved to function scope (shadowing); complexSqrt/entries realized as supporting decls
+Variable_declarations-3-f13e0b23	w1	CASES	spec-examples/var-init-untyped-nil	var n = nil.
+Variables-1-60262a8d	w4	CASES	spec-examples-decl/typed-nil-interface	dynamic-type tracking: x = v stores (*T)(nil) with dynamic type *T, so x != nil

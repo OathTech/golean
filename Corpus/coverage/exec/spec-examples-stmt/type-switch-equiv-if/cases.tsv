@@ -1,0 +1,15 @@
+# id	subject	args	expected_status	expected_reason	features
+if-chain-nil	typeSwitchIfChain	0	ok	-	type_assertions,interfaces,nil,comma_ok,strings
+if-chain-int	typeSwitchIfChain	1	ok	-	type_assertions,interfaces,ints,comma_ok,strings
+if-chain-float64	typeSwitchIfChain	2	ok	-	type_assertions,interfaces,floats,comma_ok,strings
+if-chain-func	typeSwitchIfChain	3	ok	-	type_assertions,interfaces,higher_order,comma_ok,strings
+if-chain-bool	typeSwitchIfChain	4	ok	-	type_assertions,interfaces,bools,comma_ok,strings
+if-chain-string	typeSwitchIfChain	5	ok	-	type_assertions,interfaces,comma_ok,strings
+if-chain-default	typeSwitchIfChain	6	ok	-	type_assertions,interfaces,comma_ok,strings
+agree-nil	typeSwitchFormsAgree	0	ok	-	type_switch,type_assertions,interfaces,equality
+agree-int	typeSwitchFormsAgree	1	ok	-	type_switch,type_assertions,interfaces,equality
+agree-float64	typeSwitchFormsAgree	2	ok	-	type_switch,type_assertions,interfaces,equality
+agree-func	typeSwitchFormsAgree	3	ok	-	type_switch,type_assertions,interfaces,equality
+agree-bool	typeSwitchFormsAgree	4	ok	-	type_switch,type_assertions,interfaces,equality
+agree-string	typeSwitchFormsAgree	5	ok	-	type_switch,type_assertions,interfaces,equality
+agree-default	typeSwitchFormsAgree	6	ok	-	type_switch,type_assertions,interfaces,equality

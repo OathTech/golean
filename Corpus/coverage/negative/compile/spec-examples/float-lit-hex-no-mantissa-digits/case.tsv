@@ -1,0 +1,2 @@
+# expected_substring	features
+hexadecimal literal has no digits	floats,literals,compile_error

@@ -1,0 +1,2 @@
+# expected_substring	features
+invalid recursive type: T2 refers to itself	arrays,structs,compile_error

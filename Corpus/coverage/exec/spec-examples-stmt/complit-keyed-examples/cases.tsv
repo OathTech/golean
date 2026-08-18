@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	complitKeyedExamples	-	ok	-	literals,slices,arrays,maps,keys,indexing,floats,len,runes

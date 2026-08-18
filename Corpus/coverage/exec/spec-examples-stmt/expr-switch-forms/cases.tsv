@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+tag-first-list	exprSwitchTag	2	ok	-	switch,cases,default,control_flow
+tag-second-list	exprSwitchTag	7	ok	-	switch,cases,default,control_flow
+tag-default	exprSwitchTag	9	ok	-	switch,cases,default,control_flow
+tag-negative	exprSwitchTag	-3	ok	-	switch,cases,default,control_flow
+no-expr-negative	exprSwitchNoExpr	-8	ok	-	switch,cases,default,control_flow,scoping
+no-expr-positive	exprSwitchNoExpr	8	ok	-	switch,cases,default,control_flow,scoping
+first-match-f1	exprSwitchFirstMatch	-5	ok	-	switch,cases,comparisons,control_flow
+first-match-f2	exprSwitchFirstMatch	0	ok	-	switch,cases,comparisons,control_flow
+first-match-f3	exprSwitchFirstMatch	4	ok	-	switch,cases,comparisons,control_flow
+first-match-none	exprSwitchFirstMatch	9	ok	-	switch,cases,comparisons,control_flow

@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+nil-error	breakLabelScan	0	ok	-	labels,break,loops,switch,nested,interfaces,nil
+item-found	breakLabelScan	1	ok	-	labels,break,loops,switch,nested,interfaces
+no-hit	breakLabelScan	2	ok	-	labels,break,loops,switch,nested,interfaces

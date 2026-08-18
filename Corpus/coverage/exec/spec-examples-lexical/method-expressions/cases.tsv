@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+value-receiver-expr	methodExprValueReceiver	-	ok	-	methods,functions,higher_order,calls,structs
+pointer-receiver-expr	methodExprPointerReceiver	-	ok	-	methods,functions,higher_order,calls,structs,floats
+derived-pointer-receiver-expr	methodExprDerivedPointerReceiver	-	ok	-	methods,functions,higher_order,calls,structs,pointers

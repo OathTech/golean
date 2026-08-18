@@ -1,0 +1,2 @@
+# expected_substring	features
+length and capacity swapped	make,slices,builtins,compile_error

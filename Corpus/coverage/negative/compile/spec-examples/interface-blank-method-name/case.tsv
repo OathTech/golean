@@ -1,0 +1,2 @@
+# expected_substring	features
+methods must have a unique non-blank name	interfaces,methods,compile_error

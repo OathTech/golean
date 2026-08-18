@@ -1,0 +1,2 @@
+# expected_substring	features
+use of untyped nil in variable declaration	nil,untyped,compile_error

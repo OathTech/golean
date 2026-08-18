@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+promotion	promotedThroughEmbedding	-	ok	-	methods,defined_type,embedding,structs,pointers
+interface-method-set	interfaceKeepsMethodSet	-	ok	-	interfaces,defined_type,methods

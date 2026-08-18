@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+panic-int	panicInt	-	ok	-	panic,recover,defer,type_assertions,comma_ok,named-results
+panic-string	panicString	-	ok	-	panic,recover,defer,type_assertions,comma_ok,strings,named-results
+panic-error	panicErrorValue	-	ok	-	panic,recover,defer,type_assertions,comma_ok,defined_type,interfaces,named-results

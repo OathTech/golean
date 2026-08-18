@@ -1,0 +1,2 @@
+# expected_substring	features
+x repeated on left side of :=	short_decl,scoping,compile_error

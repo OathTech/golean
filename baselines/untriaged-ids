@@ -69,3 +69,19 @@ channels/select-select/beside-loop
 #   moved to its honest frontend-export refusal stage, leaving the
 #   fidelity ledger entirely. History in the entries above and the
 #   untriaged-count log.)
+# 2026-08-18 (spec-truth P3): nine spec-example coverage gaps enter —
+# genuine Go features GoCore does not yet implement, surfaced by the
+# spec's own examples and failing CLOSED (status=unsupported), never
+# false passes: slice-to-array conversions, string<->rune conversions,
+# and min/max over float operands (governing anchors in the case
+# headers). Each flips PASS when its feature
+# lands; they are coverage backlog, not fidelity wrong-answers.
+spec-examples-decl/slice-to-array/ok-forms
+spec-examples-decl/slice-to-array/short-array
+spec-examples-decl/slice-to-array/short-array-ptr
+spec-examples-decl/slice-to-array/nil-to-longer-ptr
+spec-examples-decl/string-from-runes
+spec-examples-lexical/string-to-runes
+spec-examples-stmt/min-max-float-specials/signed-zero
+spec-examples-stmt/min-max-float-specials/infinities
+spec-examples-stmt/min-max-float-specials/nan

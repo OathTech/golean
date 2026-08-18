@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+slice	sliceDescriptorSharing	-	ok	-	slices,aliasing,assignment,copy_semantics
+map	mapDescriptorSharing	-	ok	-	maps,aliasing,assignment,copy_semantics

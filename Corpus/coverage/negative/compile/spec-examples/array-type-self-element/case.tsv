@@ -1,0 +1,2 @@
+# expected_substring	features
+invalid recursive type: T1 refers to itself	arrays,compile_error

@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	generalInterfaceFloat	-	ok	-	generics,constraints,type_sets,floats,defined_type

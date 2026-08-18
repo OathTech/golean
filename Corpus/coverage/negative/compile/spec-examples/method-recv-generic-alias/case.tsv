@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot define new methods on generic alias type	methods,aliases,generics,compile_error

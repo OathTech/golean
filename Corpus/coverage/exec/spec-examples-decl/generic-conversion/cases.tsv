@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+f64	genericConversionF64	-	ok	-	generics,conversions,constants,floats
+f32	genericConversionF32	-	ok	-	generics,conversions,constants,floats,defined_type,representability

@@ -1,0 +1,2 @@
+# expected_substring	features
+escape is invalid Unicode code point U+110000	strings,literals,unicode,compile_error

@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot use generic function sum without instantiation	generics,functions,inference,compile_error

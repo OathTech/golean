@@ -1,0 +1,2 @@
+# expected_substring	features
+impossible type assertion	type_assertions,interfaces,compile_error

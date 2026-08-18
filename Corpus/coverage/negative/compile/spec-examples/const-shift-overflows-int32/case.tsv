@@ -1,0 +1,2 @@
+# expected_substring	features
+constant 8589934592 of type int32) overflows int32	constants,shifts,overflow,compile_error

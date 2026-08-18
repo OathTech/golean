@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+above	ifSimpleClamp	9,5	ok	-	if,comparisons,control_flow
+at	ifSimpleClamp	5,5	ok	-	if,comparisons,control_flow
+below	ifSimpleClamp	2,5	ok	-	if,comparisons,control_flow

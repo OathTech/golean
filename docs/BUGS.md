@@ -2373,3 +2373,55 @@ answer). Fix shape: assignability-aware normalization for identical
 underlying struct types (or frontend-side retagging of untyped
 composite literals at their assignment type); guardrail corpus case
 FIRST per the standing rule.
+
+## BUG-056 — `&*x` on a nil pointer collapses instead of panicking
+
+- Status: open (discovered 2026-08-18, spec-truth P3 — a spec-example
+  guardrail case found the unexercised path; interpreter fix is a
+  semantic-core arc, out of P3's corpus-lane scope).
+- Pinned-by: differential
+- Cases: spec-examples-decl/address-op-nil-indirection/addr-deref-nil
+- Discovered: spec#Address_operators' own exhibit — "if the evaluation
+  of x would cause a run-time panic, then the evaluation of &x does
+  too" — so `&*p` with `p == nil` must panic (gc go1.26.5: panics;
+  spec-derived expectation computed first). The machine returns ok/0:
+  the `&*` composition is collapsed before the nil indirection check
+  fires. Sibling case `deref-nil` (bare `*p`) PASSES — the panic
+  machinery exists; the address-of-indirection path skips it.
+- Class: unexercised path (the audit doctrine's first structural
+  class); nothing in the pre-P3 corpus exercised `&*` on nil.
+
+## BUG-057 — typed two-variable receive declaration drops the received value
+
+- Status: open (discovered 2026-08-18, spec-truth P3, same provenance
+  as BUG-056).
+- Pinned-by: differential
+- Cases: spec-examples-decl/receive-comma-ok/typed-form
+- Discovered: spec#Receive_operator lists four equivalent comma-ok
+  forms; the TYPED declaration form `var x, ok bool = <-ch` (chan
+  bool holding true) must yield x=true, ok=true (gc: 1). The machine
+  returns 0 — the typed two-var receive declaration mis-lowers (the
+  untyped `var x, ok = <-ch` and assignment forms in the sibling
+  subject PASS, isolating the defect to the typed-declaration path).
+- Class: unexercised path; the comma-ok coverage predating P3 never
+  used the typed var-declaration form.
+
+## BUG-058 — comma-ok type assertion in a recover handler exports, then dies unbound
+
+- Status: open (discovered 2026-08-18, spec-truth P3; classification
+  defect in the fail-closed chain).
+- Pinned-by: differential
+- Cases: spec-examples-lexical/panic-values/panic-error
+- Discovered: `if e, ok := x.(error); ok && ...` inside a
+  recover-handler closure passes frontend export but the emitted
+  GoCore dies with "unbound GoCore variable address: ok" — an
+  internal error at run time where the sibling comma-ok-assert shape
+  (spec-examples-decl/assert-comma-ok) is refused AT EXPORT. The
+  unsupported shape leaks past the frontend boundary and surfaces as
+  a machine internal error instead of a frontend-export refusal —
+  the fail-closed-classification audit class, caught red either way
+  but at the wrong stage.
+- Class: fail-closed classification (the boundary should refuse what
+  the machine cannot bind); the fix is a frontend guard or the
+  comma-ok lowering, a semantic-core/frontend arc.
+

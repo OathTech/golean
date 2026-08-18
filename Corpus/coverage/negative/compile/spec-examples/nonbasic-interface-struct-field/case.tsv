@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot use type Float outside a type constraint	interfaces,generics,constraints,structs,fields,compile_error

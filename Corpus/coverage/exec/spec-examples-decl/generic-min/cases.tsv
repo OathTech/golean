@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	genericMin	-	ok	-	generics,constraints,functions,shadowing,min

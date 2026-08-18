@@ -1,0 +1,2 @@
+# expected_substring	features
+'_' must separate successive digits	ints,literals,compile_error

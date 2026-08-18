@@ -1,0 +1,2 @@
+# expected_substring	features
+invalid recursive type Bad1	interfaces,embedding,compile_error

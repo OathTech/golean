@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+panics	protectPanics	-	ok	-	panic,recover,defer,closures,higher_order
+clean	protectClean	-	ok	-	recover,defer,closures,higher_order

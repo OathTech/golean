@@ -1,0 +1,2 @@
+# expected_substring	features
+octal escape value 256 > 255	runes,literals,compile_error

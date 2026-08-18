@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	complitEmptySliceVsNew	-	ok	-	literals,slices,new,nil,len,pointers,zero_values

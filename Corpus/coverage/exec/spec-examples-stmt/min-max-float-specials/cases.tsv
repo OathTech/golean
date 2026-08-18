@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+signed-zero	minMaxSignedZero	-	ok	-	min,max,builtins,floats,division,comparisons
+infinities	minMaxInfinities	-	ok	-	min,max,builtins,floats,division
+nan	minMaxNaN	-	ok	-	min,max,builtins,floats,division,comparisons

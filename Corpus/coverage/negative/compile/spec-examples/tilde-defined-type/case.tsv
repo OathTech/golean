@@ -1,0 +1,2 @@
+# expected_substring	features
+invalid use of ~ (underlying type of MyInt is int)	interfaces,generics,constraints,type_sets,compile_error

@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+named-call	goStatementNamedCall	-	ok	-	goroutines,channels,make
+func-literal	goStatementFuncLiteral	-	ok	-	goroutines,channels,closures,loops,bools
+params-at-go	goStatementParamsEvaluatedAtGo	-	ok	-	goroutines,channels,evaluation_order,closures

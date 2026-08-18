@@ -1,0 +1,2 @@
+# expected_substring	features
+constant -2 overflows uint8	constants,bitwise,representability,compile_error

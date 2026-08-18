@@ -1,0 +1,2 @@
+# expected_substring	features
+type Q has no field or method M0	methods,pointers,compile_error
