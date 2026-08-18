@@ -43,11 +43,131 @@ The kit:
 Same-commit discharge witness (non-vacuity): the fib exemplar's
 symbolic termination (`Examples/Fib.lean`, `fibTerminates` — the
 94-seed kernel enumeration this kit REPLACES is deleted there).
+
+## PUBLIC API — the sealed interface (the W6 convention, as in
+`StepKit`/`SliceMem`; section added WP arc s3, 2026-08-18)
+
+**Every declaration in this module is public API** — measured, not
+asserted: the module has no `private` names, and `stepFnIter_chain`
+alone carries the whole gallery's segment composition. The groups
+are indexed by PROOF SITUATION (the WP arc s3 convention: a group is
+"what you are trying to do", not "which lift landed it"); the in-file
+`/-! ## … -/` section headers carry the group number, and one group
+may span more than one section.
+
+**Group 1** — *you are stating or composing COMPLETION within a fuel
+bound*: `CompletesIn` (the vocabulary), `CompletesIn.mono` (fuel
+monotonicity), `terminates_of_completesIn` (the bridge to the
+statement-layer `Terminates`), `execStmtLoop_of_stepFnIter` (a
+successful `k`-step prefix folds into the loop), `completesIn_comp`
+(segment composition at a per-stream bounded step count),
+`completesIn_next_stop` and `execStmtLoop_next_stop` (the driver's
+own terminal, at any fuel).
+
+**Group 2** — *you must prove a loop TERMINATES symbolically*:
+`completesIn_measure_loop`, the measure rule — a measure-indexed
+state family, a per-iteration fuel bound with a STRICT decrease, an
+exit bound at measure `0`, yielding `c_iter * μ + c_exit`. No Iris,
+no relation, no enumeration.
+
+**Group 3** — *you have a total headline and want the
+RUN-CONDITIONED twin*: `normal_readout_of_total` (the direct route's
+`execStmt` form) and `harness_readout_of_total` (the harness route's
+`runFunctionWithContextM` form). One lemma each, so no example walks
+its run twice.
+
+**Group 4** — *your headline states the machine's native function
+ENTRY* — the `runConfig` glue (harness ruling 2026-08-13, form note
+§11): `runConfig_unfold`, `runConfig_step`, `runConfig_of_stepFnIter`,
+`runConfig_next_stop`, `runConfig_mono`, and the entry-level
+`runFunctionWithContextM_mono`.
+
+**Group 5** — *you are composing MULTI-STEP segments*:
+`stepFnIter_chain` (the workhorse), `stepFnIter_call_span` (a whole
+call: `enterFrame` + callee body + exit segment, the three callee
+facts as hypotheses), and the queue glue composites
+`stepFnIter_splice_pop`, `stepFnIter_drain3`, `stepFnIter_block_pop`.
+
+**Group 6** — *you are running a LOOP a symbolic number of times*:
+`stepFnIter_iterate` (the counted loop — every iteration the same
+step count, uniform in `i`), `stepFnIter_iterate_bail` (the TWO-EXIT
+loop — the loop may leave early) with its measure-indexed relational
+schema `stepFnIter_iterate_bail_rel`, and `stepFnIter_iterate_exit`
+(the exit leg).
+
+**Internal**: none — this module has no `private` declarations.
+
+**Naming note** (WP arc s3): a lemma that CONSUMES a predicate is
+dot-namespaced so `h.mono` works (`CompletesIn.mono`); a lemma that
+PRODUCES one from non-predicate premises is snake-cased
+(`completesIn_comp`, `completesIn_measure_loop`,
+`completesIn_next_stop`). That is the kit-wide rule, not a local
+quirk — the same split holds for `StepKit`'s `DeadFrom.*`/`FreshFrom.*`
+and `Frame/Threshold`'s `CellFixed.of_locFree`. Also: `_rel` marks
+the relational/measure-indexed variant of an iteration schema
+(`stepFnIter_iterate_bail_rel`). No aliases added
+(`docs/wp-arc-log/s3.md` § Near-misses).
+
+**The API discipline**:
+
+1. Everything here is UNTRUSTED METHOD (proof-side) EXCEPT
+   `CompletesIn`, which is completion vocabulary; even it enters a
+   headline only under the §11 statement closure rules (the headline
+   spells `Terminates`, and `terminates_of_completesIn` is the
+   bridge) — a kit lemma NAME never appears in a headline statement
+   (form note §12b).
+2. What consumers may rely on is each lemma's STATEMENT — the
+   fuel arithmetic and the hypothesis shapes (each hypothesis type
+   pins both states). Proof bodies may be rewritten freely.
+3. Additions follow the §12 active-abstraction loop (≥2 consumers
+   retrofitted in the lifting commit, measured deltas);
+   single-consumer shapes stay private copies in their example
+   module with a promotion-ledger row.
+4. Every public THEOREM above carries an exact `#print axioms` pin in
+   `Audit/Kit.lean` § FuelMeasure; `CompletesIn` is a vocabulary def,
+   unpinned by the standing convention. A new public lemma lands with
+   its pin in the same commit.
+5. **Storm/signature discipline: StepKit rules 1–5** (that module's
+   `## THE FIVE RULES` section is the kit's single copy — cite, never
+   restate). Rule 2 is what every schema here is built on: the
+   per-iteration/per-segment FACT enters as a hypothesis whose type
+   pins both states, which is why one schema serves every placement.
+
+## WHAT LIVES WHERE (the kit map — WP arc s3, 2026-08-18)
+
+THIS module: everything MULTI-step — chaining, spans, loop schemas,
+fuel arithmetic, termination, and the readouts that turn a total
+headline into a run-conditioned one. If the statement mentions a step
+COUNT or a fuel bound, it belongs here.
+
+Siblings, and the boundary with each:
+
+* `StepKit` — the SINGLE conditioned step (and the heap algebra a
+  step argument needs). We compose its lemmas; we never prove one.
+  `stepFn_block` is StepKit's, `stepFnIter_block_pop` is ours.
+* `MapLoops` — map-SPECIFIC loop schemas. Our group 6 is the general
+  shape (any loop with a uniform per-iteration step count); a schema
+  that mentions a map belongs there.
+* `SliceMem` / `MapMem` / `StringMem` — the operand facts a
+  per-iteration composite is built from; group 6's `hstep`
+  hypothesis is where they arrive.
+* `Frame/Threshold` — the per-pass rename/rebase layer for
+  loop-LOCAL allocation. A loop whose body allocates needs BOTH: our
+  iteration schema for the counting, its rebase for the addresses.
+* `Surface` — the statement-layer `Terminates`/`execStmt` vocabulary
+  group 1 and group 3 bridge to. That layer is above us and frozen.
+
+Future `docs/kit-guide.md` (slice 6) sections fed by this module:
+**Composition**, **Counted loop**, **Two-exit loop**,
+**Recursion / call span**, **Termination**, **Readout**,
+**Entry** (the `runConfig` half).
 -/
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine
 
 namespace GoLean.Surface
+
+/-! ## API group 1 — completion within a fuel bound, and its algebra -/
 
 /-- **Completion within a fuel bound from a configuration, at every
 choice stream** — `Terminates`' core at configuration granularity.
@@ -111,6 +231,8 @@ theorem completesIn_comp {k₀ f : Nat} {σ : ExecState} {c : Config}
   exact execStmtLoop_mono (k + f) (k₀ + f) _ _ _ _ (by omega)
     (hfold.trans hrun)
 
+/-! ## API group 2 — symbolic TERMINATION: the measure loop rule -/
+
 /-- **The fuel-measure loop rule** — the completion-side twin of
 `wp_while_inv_break` (designed as a pair; the value side keeps the
 Iris invariant, this side does induction over the executable):
@@ -155,6 +277,8 @@ theorem completesIn_measure_loop {c_iter c_exit : Nat} {chead : Config}
         (c_iter * (μ₁ + 1) + c_exit) _ _ _ _
         (by omega) (hfold.trans hrun)
 
+/-! ### API group 1, continued — the driver's own terminal -/
+
 /-- Completion at the driver's own terminal: `.next .stop` is the
 `.normal` completion at ANY fuel (the loop's terminal arm consumes no
 fuel). -/
@@ -169,6 +293,8 @@ fuel (the loop's terminal arm consumes none). -/
 theorem execStmtLoop_next_stop {f : Nat} {σ : ExecState} {ch : Choices} :
     execStmtLoop f σ (.next .stop) ch = .ok (.normal σ, ch) := by
   rw [execStmtLoop_unfold]
+
+/-! ## API group 3 — the RUN-CONDITIONED readout from a total headline -/
 
 /-- **The D1 run-conditioned readout, derived from a total headline**
 (verified-examples slice 2c): the ∃N completes-AND-verdict form already
@@ -195,7 +321,8 @@ theorem normal_readout_of_total {env : LocalEnv} {σ : ExecState}
   injection hout with hσ
   exact hσ ▸ hP
 
-/-! ### The harness-entry glue (harness ruling 2026-08-13, form note
+/-! ## API group 4 — the machine's native function ENTRY: the
+`runConfig` glue (harness ruling 2026-08-13, form note
 §11): the same fold/terminal lemmas as `execStmtLoop`'s, for
 `runConfig` — the loop inside the machine's native function entry
 `runFunctionWithContextM`, which every harness headline states. Built
@@ -317,6 +444,8 @@ theorem runFunctionWithContextM_mono {N fuel : Nat} {types : TypeEnv}
     exact ⟨u, hu, (env, s₁), hbp, (frameEnv, s₂), had, locs, hpin,
       (sF, chF), runConfig_mono N fuel _ _ _ _ hle hrc, vs, hload, hres⟩
 
+/-! ### API group 3, continued — the harness-route readout -/
+
 /-- **The D1 run-conditioned readout for harness headlines**: the
 `.ok`-equation headline form (∃N-∀fuel≥N-∀ch, entry = `.ok r₀`)
 already determines EVERY successful completion — the entry is a
@@ -339,6 +468,8 @@ theorem harness_readout_of_total {types : TypeEnv}
   have h2 := hN (max N fuel) (Nat.le_max_left _ _) ch
   rw [h1] at h2
   exact Except.ok.inj h2
+
+/-! ## API group 5 — composing MULTI-STEP segments -/
 
 /-- Chain two successful `stepFnIter` prefixes. -/
 theorem stepFnIter_chain :
@@ -364,7 +495,8 @@ theorem stepFnIter_chain :
     simp only [stepFnIter, bind_eq_ok]
     exact ⟨(cm, σm, chm), hstep, ih hrest h₂⟩
 
-/-! ### Multi-step control glue (WP arc s1 lift 6 — promoted from
+/-! ### API group 5, continued — the queue control glue (WP arc s1
+lift 6 — promoted from
 `SliceQueue`'s four dequeue glue combinators; `stepFn_block` and the
 single-step members live in `StepKit`, these compose them with
 `stepFnIter_chain`. Stack's exit analysis is the recorded latent
@@ -431,7 +563,8 @@ theorem stepFnIter_block_pop {σ : ExecState} {ss : Array Stmt} {t : Stmt}
   rw [hs] at h1
   exact stepFnIter_chain h1 (stepFnIter_one stepFn_seq_pop)
 
-/-! ### The setup-loop iteration schema (Gallery Campaign G0 item 3a,
+/-! ## API group 6 — running a LOOP a symbolic number of times
+(Gallery Campaign G0 item 3a,
 2026-08-15 — the P5 promotion, reopened from the scale-out ledger)
 
 Every shipped array example proves the same strong induction for its

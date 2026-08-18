@@ -27,13 +27,116 @@ drafted at g1.md §THE KIT-GAP LIST (selsort)/(bubble):
 The per-example residue is genuinely the fixed-cell enumeration (the
 `hfront`/`hret` discharges) plus the program's own `bodies` fact —
 what the ledger predicted and nothing more.
+
+## PUBLIC API — the sealed interface (the W6 convention, as in
+`StepKit`/`SliceMem`; section added WP arc s3, 2026-08-18)
+
+**Every declaration in this module is public API** — the module has
+no `private` names. The groups are indexed by PROOF SITUATION (the
+WP arc s3 convention: a group is "what you are trying to do", not
+"which lift landed it"); the in-file `/-! ## … -/` section headers
+carry the group number.
+
+**Group 1** — *you need the per-pass SHIFT itself*: `ρT T d`
+(identity below the threshold `T`, `+d` above it) with `ρT_lt`,
+`ρT_ge`, and `shiftSpec_ρT` (the shift meets the frame layer's
+`ShiftSpec` contract).
+
+**Group 2** — *you must show the shift is the IDENTITY at `d = 0`*
+(the loop-entry case): `ρT_zero_app`, `base_ne_of_ne`,
+`renameLoc_ρT_zero`, `renameValue_id`, `renameCell_ρT_zero`.
+
+**Group 3** — *a cell must survive every shift* (it holds no
+address): `CellFixed` with `CellFixed.of_locFree`.
+
+**Group 4** — *you are transporting between CONSECUTIVE shifts*:
+`bumpAt T r` with `renameLoc_ρT_bump` — the generic form of the
+per-example `renameLoc_bump2`/`bump3`.
+
+**Group 5** — *you are naming the RETIRED pass-local cells*:
+`retiredFrame` with `retiredFrame_lookup_base_none`,
+`retiredFrame_lookup_field`, `retiredFrame_lookup_index`,
+`retiredFrame_lookup_some_inv`.
+
+**Group 6** — *you are at the loop ENTRY and need the trivial frame*:
+`frameSim_seed` (generic; it kills the per-example `frameSim_zero`
+cell enumeration — only the allocator position and the `bodies` fact
+remain per example).
+
+**Group 7** — *the pass ENDED and you must retire its cells into the
+frame*: `rebaseSimT` — the front's per-cell obligations enter as ONE
+hypothesis (`hfront`), the retired-cell LIST is a parameter and lands
+in the frame as `retiredFrame`.
+
+**Group 8** — *you must TRANSFER a segment across the rebase*:
+`transfer_segT`, the corollary the five hand copies all ended at.
+
+**Internal**: none — this module has no `private` declarations.
+
+**Naming note** (WP arc s3): the `T` suffix marks the
+THRESHOLD-generic form of a composite the examples had spelled at a
+fixed threshold (`rebaseSimT`, `transfer_segT`, `ρT`); transport
+lemmas read `<renamed thing>_<shift>_<situation>`
+(`renameLoc_ρT_bump`, `renameCell_ρT_zero`), and `CellFixed.of_locFree`
+follows the kit-wide dot rule (a lemma that PRODUCES a predicate from
+a non-predicate premise would be snake-cased, but this one is a
+constructor-style view of `CellFixed` and dot notation is the point).
+No aliases added (`docs/wp-arc-log/s3.md` § Near-misses).
+
+**The API discipline**:
+
+1. Everything here is UNTRUSTED METHOD (proof-side): no name from
+   this module may appear in a headline statement closure (§12b).
+   The frames it builds are existential in the headline, which is why
+   parameterizing them moved no statement.
+2. What consumers may rely on is each lemma's STATEMENT — in
+   particular that `hfront`/`hret` are the ONLY per-example
+   obligations and that the retired list is a parameter.
+3. Additions follow the §12 active-abstraction loop (≥2 consumers
+   retrofitted in the lifting commit, measured deltas).
+4. Every public THEOREM above carries an exact `#print axioms` pin in
+   `Audit/Kit.lean` § Frame/Threshold; the vocabulary defs `ρT`,
+   `bumpAt`, `retiredFrame`, `CellFixed` are unpinned by the standing
+   convention. A new public lemma lands with its pin in the same
+   commit.
+5. **Storm/signature discipline: StepKit rules 1–5** (that module's
+   `## THE FIVE RULES` section is the kit's single copy — cite, never
+   restate). Rule 3 is the one that bites here: pass `retiredFrame`
+   in the outer inductions' frame arguments rather than an explicit
+   cell list — the consecutive addresses `b+1+1` are NOT defeq to the
+   examples' `17+d`/`18+d` spellings (s1 lift-4 gotcha 3), and rule 3's
+   fully-pinned `have` is what keeps that from becoming a storm.
+
+## WHAT LIVES WHERE (the kit map — WP arc s3, 2026-08-18)
+
+THIS module: the ADDRESS half of a loop whose body ALLOCATES — the
+per-pass shift, the rebase that retires pass-local cells, and the
+transfer corollary. It knows nothing about values or step counts.
+
+Siblings, and the boundary with each:
+
+* `Frame/Transfer`, `Frame/RenameId`, `Frame/Sim`, `Frame/…` — the
+  general frame/rename THEORY this layer instantiates. A fact about
+  renaming in general belongs there; a fact about the per-pass
+  THRESHOLD shape belongs here.
+* `FuelMeasure` — the counting half of the same loop. A loop whose
+  body allocates needs BOTH: its iteration schema for the steps, our
+  rebase for the addresses.
+* `StepKit` — the heap algebra (`DeadFrom`/`FreshFrom`, the symbolic
+  split) the front obligations are discharged with; `lookup_append`
+  is the match form this module's pins reference.
+* `SliceMem` / `MapMem` — values. Untouched by renaming, which is
+  precisely why the two halves compose.
+
+Future `docs/kit-guide.md` (slice 6) section fed by this module:
+**Loop-local allocation → threshold frame**.
 -/
 
 namespace GoLean.Frame
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.Surface
 
-/-! ## The threshold shift -/
+/-! ## API group 1 — the per-pass threshold shift -/
 
 /-- The per-pass shift: identity on the fixed cells `0..T-1`, shift by
 `d` on the pass-local region. -/
@@ -65,7 +168,7 @@ theorem base_ne_of_ne {x y : Nat} (h : x ≠ y) :
   simp only [Loc.base.injEq, Addr.mk.injEq] at hc
   exact h hc
 
-/-! ## Rename identity at the zero shift -/
+/-! ## API group 2 — rename identity at the zero shift -/
 
 theorem renameLoc_ρT_zero (T : Nat) (l : Loc) :
     renameLoc (ρT T 0) l = l :=
@@ -127,7 +230,7 @@ theorem renameCell_ρT_zero (T : Nat) (c : HeapCell) :
     renameCell (ρT T 0) c = c := by
   simp [renameCell, renameValue_id (ρT_zero_app T)]
 
-/-! ## Threshold-fixed cells -/
+/-! ## API group 3 — threshold-fixed cells -/
 
 /-- A heap cell fixed by EVERY threshold-`T` shift — the per-cell
 obligation of the rebase (data cells are fixed under any `ρ`; handles
@@ -141,7 +244,7 @@ theorem CellFixed.of_locFree {T : Nat} {c : HeapCell}
   intro d
   simp [renameCell, renameValue_locFree _ _ h]
 
-/-! ## The bump transport between consecutive shifts -/
+/-! ## API group 4 — the bump transport between consecutive shifts -/
 
 /-- Root bump by `r` above the fixed cells. -/
 def bumpAt (T r : Nat) : Loc → Loc
@@ -166,7 +269,7 @@ theorem renameLoc_ρT_bump (T d r : Nat) (l : Loc) :
   | field b tid f ih => simp only [renameLoc, bumpAt, ih]
   | index b i ih => simp only [renameLoc, bumpAt, ih]
 
-/-! ## The retired-cell frame -/
+/-! ## API group 5 — the retired-cell frame -/
 
 /-- The retired cells laid out consecutively from `base`. -/
 def retiredFrame (base : Nat) : List HeapCell → Heap
@@ -223,7 +326,7 @@ theorem retiredFrame_lookup_some_inv {base : Nat} {cs : List HeapCell}
         exact ⟨j + 1, by simpa using hj,
           by rw [hl]; congr 1; simp; omega, by simpa using hc⟩
 
-/-! ## The trivial frame at the loop entry (generic seed) -/
+/-! ## API group 6 — the trivial frame at the loop entry (generic seed) -/
 
 /-- **The zero-shift seed**: any state whose allocator sits exactly at
 the threshold simulates itself under the zero shift with the empty
@@ -248,7 +351,7 @@ theorem frameSim_seed {T : Nat} {σ : ExecState}
   · intro l c hl
     cases hl
 
-/-! ## The frame REBASE (retire the pass-local cells) -/
+/-! ## API group 7 — the frame REBASE (retire the pass-local cells) -/
 
 /-- **The generic rebase**: the pass's retired cells (canonical
 `T..T+r-1`) move INTO the frame at their true addresses
@@ -451,7 +554,7 @@ theorem rebaseSimT {T d : Nat} {fr : Heap} {retired : List HeapCell}
           from by omega, h2,
         retiredFrame_lookup_base_none (by omega)]
 
-/-! ## The transfer corollary -/
+/-! ## API group 8 — the transfer corollary -/
 
 /-- A canonical segment between shift-fixed configurations transfers to
 the true placement (verbatim from the five per-example copies,

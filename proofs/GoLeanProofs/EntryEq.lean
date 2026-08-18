@@ -86,12 +86,85 @@ quoted for scalar values, arrays OF scalars, nil slices/maps. Anything
 else — float/chan/struct/interface parameters, nested aggregate
 defaults, variadic entry — is a hard elaboration error naming the
 unsupported piece. Widen the quoters when a real harness needs it.
+
+## PUBLIC API — the sealed interface (the W6 convention, as in
+`StepKit`/`SliceMem`; section added WP arc s3, 2026-08-18)
+
+This module's public surface is a COMMAND, not a lemma family, so the
+contract is shaped differently from its siblings — but the same rule
+holds: consumers depend on what is listed here and nothing else.
+
+**Group 1 — the command** (the whole intended API):
+`derive_entry_eq <thm> <prog> <func> <stateName> <contName> [<base>]`.
+Its contract is the three declarations it emits IN THE CALLER'S
+NAMESPACE under the caller's chosen names (the state `def`, the start
+`Config` `def`, the entry-equation `theorem`), the computed layout
+above, and the fail-closed scope above. Consumers name the emitted
+declarations, never anything in this module.
+
+**Group 2 — the meta plumbing** (public because Lean's elaborator
+needs it; NOT a consumer surface, and spelling may change):
+`EntryLayout`, `computeEntryLayout`, the `opaque`/`unsafe` evaluation
+pairs `evalLayout`/`evalLayoutUnsafe` and `evalBool`/`evalBoolUnsafe`,
+the quoters `quoteIntKind`,
+`quoteScalarTy`, `quoteTy`, `quoteScalarVal`, `quoteVal`, `quoteLoc`,
+`binderIdentFor`, and the elaborator `elabDeriveEntryEq`. Treat this
+group as `private`-by-contract: it is public only because
+`unsafe`/`CommandElab` declarations cannot be hidden and still be
+wired up.
+
+**The API discipline**:
+
+1. Everything here is UNTRUSTED METHOD, twice over (see above): the
+   macro emits declarations the elaborator and kernel check like any
+   hand-written ones, and no emitted name may enter a headline
+   statement closure (§12b; the entry equation is §11 GLUE).
+2. The emitted THEOREMS carry `#print axioms` pins in
+   `Audit/Kit.lean` § the `derive_entry_eq` emitted-theorem fixtures
+   — the pins live on the fixtures, not on this module's meta
+   declarations, which have no meaningful axiom content.
+3. Scope widens DELIBERATELY: a new value shape means a new quoter
+   arm plus its fail-closed error, never a silent fallback.
+4. This module is the kit's ONLY `escape-hatch` allowlist entry
+   (`scripts/ci` meta-layer check) — the `unsafe` evaluation is
+   scoped to layout/probe computation and guarded by the final `rfl`.
+5. **Storm/signature discipline: StepKit rules 1–5** apply to what
+   the macro EMITS: the emitted state is the fully-pinned form rule 1
+   asks for, which is why the emitted entry equation is
+   program-size-independent where the hand-written dances were not.
+
+## WHAT LIVES WHERE (the kit map — WP arc s3, 2026-08-18)
+
+THIS module: the program ENTRY — from `runFunctionWithContextM` at
+symbolic arguments to a `runConfig` from a named post-prelude state.
+It is the only kit module that generates code.
+
+Siblings, and the boundary with each:
+
+* `FuelMeasure` — the `runConfig` glue (API group 4 there) that the
+  emitted entry equation hands off to; the readouts that turn the
+  resulting total headline into a run-conditioned one.
+* `StepKit` — `stepFn_call_enter`, the conditioned call-entry step
+  the emitted equation's continuation is chained onto.
+* `StringMem` — its examples' entry equations are the ones the s2
+  string arm closed; the arm itself quotes only `GoString.empty` (the
+  sole string default `defaultValue` produces), and the `gs`-spelled
+  cells appear DOWNSTREAM, in the segments those examples chain.
+* `SliceMem` / `MapMem` — the slice/map result defaults the quoters
+  emit are the NIL handles (`.slice ⟨none, …⟩`, `.map ⟨none⟩`), not
+  those modules' `sliceVal`/`mapVal` (which name a BACKED handle);
+  the vocabulary enters later, when the harness allocates.
+
+Future `docs/kit-guide.md` (slice 6) section fed by this module:
+**Entry**.
 -/
 
 open Lean Elab Command Term Meta
 open GoLean GoLean.GoCore GoLean.GoCore.Machine
 
 namespace GoLean.Surface.EntryEq
+
+/-! ### API group 2 — the computed layout. -/
 
 /-- The computed entry layout: parameter names with their integer
 kinds, result names with their declared types and default values. -/
@@ -119,7 +192,8 @@ def computeEntryLayout (types : TypeEnv) (func : Func) :
         '{p.id}': {reprStr e}")
   return { args, results }
 
-/-! ### Meta plumbing: unsafe evaluation behind opaque wrappers.
+/-! ### API group 2 — meta plumbing: unsafe evaluation behind opaque
+wrappers.
 The results only ever shape SYNTAX that is then elaborated and
 kernel-checked; a wrong evaluation yields a refused `rfl`, never a
 wrong theorem. -/
@@ -145,7 +219,8 @@ unsafe def evalBoolUnsafe (stx : Term) : TermElabM Bool := do
 @[implemented_by evalBoolUnsafe]
 opaque evalBool (stx : Term) : TermElabM Bool
 
-/-! ### Quoters — data back to syntax, on the fail-closed fragment. -/
+/-! ### API group 2, continued — quoters: data back to syntax, on the
+fail-closed fragment. -/
 
 def quoteIntKind : IntKind → CommandElabM Term
   | .int => `(IntKind.int)
@@ -221,7 +296,7 @@ def binderIdentFor (goName : String) (i : Nat) : Ident :=
     | c :: rest => c.isAlpha && rest.all (fun c => c.isAlphanum || c == '_')
   mkIdent (Name.mkSimple (if ok then goName else s!"a{i}"))
 
-/-! ### The command
+/-! ## API group 1 — THE COMMAND (the whole intended API).
 
 Two forms (the optional trailing ident is the PROGRAM-GENERIC
 extension, Gallery Campaign G0 item 3c, 2026-08-15):
