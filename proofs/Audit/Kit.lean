@@ -65,6 +65,45 @@ vocabulary defs) -/
 #guard_msgs in #print axioms GoLean.Surface.lookup_singleton_self
 /-- info: 'GoLean.Surface.DeadFrom.push' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.DeadFrom.push
+-- WP arc s2 item 1 (2026-08-18): the footprint pack — the lookup/set
+-- battery + the DeadFrom algebra + the FreshFrom (whole-heap footprint
+-- reading) views. Fresh probe: `.tmp/pinprobe8.lean`.
+/-- info: 'GoLean.Surface.lookup_set_self' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.lookup_set_self
+/-- info: 'GoLean.Surface.lookup_set_other' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.lookup_set_other
+/-- info: 'GoLean.Surface.lookup_cons_self' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.lookup_cons_self
+/-- info: 'GoLean.Surface.set_cons_ne' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Surface.set_cons_ne
+/-- info: 'GoLean.Surface.set_cons_self' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.set_cons_self
+/-- info: 'GoLean.Surface.set_set' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.set_set
+/-- info: 'GoLean.Surface.set_comm' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.set_comm
+/-- info: 'GoLean.Surface.set_self_of_lookup' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Surface.set_self_of_lookup
+/-- info: 'GoLean.Surface.DeadFrom.mono' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.DeadFrom.mono
+/-- info: 'GoLean.Surface.DeadFrom.push3' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.DeadFrom.push3
+/-- info: 'GoLean.Surface.DeadFrom.set' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.DeadFrom.set
+/-- info: 'GoLean.Surface.DeadFrom.lt_of_lookup' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Surface.DeadFrom.lt_of_lookup
+/-- info: 'GoLean.Surface.FreshFrom.mono' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.FreshFrom.mono
+/-- info: 'GoLean.Surface.FreshFrom.push' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.FreshFrom.push
+/-- info: 'GoLean.Surface.FreshFrom.push2' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.FreshFrom.push2
+/-- info: 'GoLean.Surface.FreshFrom.push3' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.FreshFrom.push3
+/-- info: 'GoLean.Surface.FreshFrom.set' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.FreshFrom.set
+/-- info: 'GoLean.Surface.FreshFrom.lt_of_lookup' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Surface.FreshFrom.lt_of_lookup
 /-- info: 'GoLean.Surface.DeadFrom.push2' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.DeadFrom.push2
 /-- info: 'GoLean.Surface.stepFnIter_one' depends on axioms: [propext, Quot.sound] -/

@@ -608,7 +608,7 @@ theorem sc_close_inplace (i : Nat) (sv2 cv : Int) (f : List UInt8)
       set_append_left hDb,
       set_scanD nv sv qv bnv bsv l q biv b fs.length cap
         ((i : Nat) : Int) sv2 true false _ (by omega),
-      set_c5of5 (DeadFrom.set_below hD hblt)] at happly
+      set_c5of5 (DeadFrom.set hD hblt)] at happly
     exact happly
   have hl17 : Heap.lookup
       ((Heap.set D (.base ⟨b⟩)
@@ -625,7 +625,7 @@ theorem sc_close_inplace (i : Nat) (sv2 cv : Int) (f : List UInt8)
       := by
     rw [show (fs ++ [f]).length
         = fs.length + 1 from by simp]
-    exact lookup_c5of5 (DeadFrom.set_below hD hblt)
+    exact lookup_c5of5 (DeadFrom.set hD hblt)
   have hlw : Heap.lookup
       ((Heap.set D (.base ⟨b⟩)
           (strArrCell (fs ++ [f]) cap))
@@ -636,7 +636,7 @@ theorem sc_close_inplace (i : Nat) (sv2 cv : Int) (f : List UInt8)
           (.base ⟨na + 4⟩,
             ⟨some tSlS, slsVal b 0 (fs.length + 1) cap⟩)])
       (.base ⟨na⟩) = some (sint 1) :=
-    lookup_c1of5 (DeadFrom.set_below hD hblt)
+    lookup_c1of5 (DeadFrom.set hD hblt)
   have htail := sc_closeTail σ nv sv qv bnv bsv l q biv b cap fs
     sv2
     ((Heap.set D (.base ⟨b⟩)
@@ -902,9 +902,9 @@ theorem sc_arm_close (s i : Nat) (cv : Int) (f : List UInt8)
       na + 5, ch,
       stepFnIter_chain hpre hrest,
       hb31,
-      lookup_append_left (lookup_set_self D (Loc.base ⟨b⟩) _),
+      lookup_append_left (lookup_set_self (h := D) (l := Loc.base ⟨b⟩)),
       by omega,
-      DeadFrom.push5 (DeadFrom.set_below hD hblt),
+      DeadFrom.push5 (DeadFrom.set hD hblt),
       by omega, by omega⟩
   · -- SPILL
     have heq : fs.length = cap := by omega

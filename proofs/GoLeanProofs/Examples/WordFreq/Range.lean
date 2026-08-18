@@ -363,7 +363,7 @@ theorem rg_iter (rem : List (List UInt8 × Nat)) (idx : Nat)
       by omega, ?_, ?_, ?_⟩
     · rw [show ((max bv p.2 : Nat) : Int) = ((p.2 : Nat) : Int) from by
         rw [Nat.max_eq_right (Nat.le_of_lt hcmp)]]
-      exact lookup_append_left (lookup_set_self tail (.base ⟨nb⟩) _)
+      exact lookup_append_left (lookup_set_self (h := tail) (l := .base ⟨nb⟩))
     · intro x hx
       rw [lookup_append_right (by
         rw [Machine.Heap.lookup_set_ne

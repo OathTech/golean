@@ -908,16 +908,8 @@ theorem cp_loopH (σ : ExecState) (n seed q : Nat) (hn : n < 2 ^ 63)
 
 /-! ## The range loop (GAP-R1) -/
 
-private theorem lookup_set_self {h : Heap} {k : Loc} {c : HeapCell} :
-    Heap.lookup (Heap.set h k c) k = some c := by
-  induction h with
-  | nil => simp [Heap.set, Heap.lookup]
-  | cons p rest ih =>
-      obtain ⟨loc, old⟩ := p
-      simp only [Heap.set]
-      cases hb : (loc == k) with
-      | true => simp [Heap.lookup, eq_of_beq hb]
-      | false => simp [Heap.lookup, hb, ih]
+-- (`lookup_set_self`, formerly a private copy here, is StepKit's
+-- since WP arc s2 item 1.)
 
 /-- The choice-pick at this placement: one choice consumed, one entry
 erased, NO cell allocated. -/

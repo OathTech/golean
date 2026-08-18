@@ -72,6 +72,26 @@ layers elaborate in seconds because there is nothing to normalize, and
 per-placement instantiation is lemma application against fully-pinned
 statements.
 
+Two SIGNATURE disciplines for footprint-style composites (WP arc s2
+footprint pack, 2026-08-18; each backed by a measured storm from the
+WordFreq route, g1.md §Unit G1.wordfreq route notes):
+
+4. **State lookup hypotheses D-RELATIVE, never full-heap.** A
+   composite lemma over a front+D heap takes
+   `Heap.lookup D (.base ⟨a⟩) = some c` (or the front cell fact),
+   NEVER `Heap.lookup (front ++ D) … = …` — full-heap hypotheses in
+   composite-lemma signatures cause isDefEq storms (every
+   instantiation re-traverses the concrete front); D-relative
+   hypotheses + a base bound are the safe signature shape (the
+   WordFreq route's storm finding 1 — it cost that unit two honest
+   parks).
+5. **Qualify `Loc.base` (write `Loc.base ⟨a⟩`, not `.base ⟨a⟩`)
+   inside BIG positional arguments** — the unqualified dot in pair
+   positions of big-state positional arguments leaves postponed
+   metavariables that whnf-grind `Heap.lookup`/`BEq` (measured, the
+   WordFreq route's storm finding 2: 502k `BEq.beq` unfoldings, a
+   50-minute storm → 12 s after writing `Loc.base`).
+
 ## Long CONCRETE runs: the PROGRAM-generic form (slice 1.5, 2026-08-14)
 
 The other cost class slice 0 measured — a single `with_unfolding_all
@@ -275,6 +295,105 @@ theorem lookup_singleton_self {l : Loc} {c : HeapCell} :
     Heap.lookup [(l, c)] l = some c := by
   simp [Heap.lookup]
 
+/-! ### The footprint pack's lookup/set battery (WP arc s2 item 1,
+2026-08-18 — promoted from the five program-local copies: FibMemo/Rec,
+Stein/Run, Sieve/Machine, the WordFreq route, SliceStack; the two
+signature disciplines that go with it are rules 4/5 of the module
+docstring). -/
+
+/-- Lookup at the `set` address itself. -/
+theorem lookup_set_self {h : Heap} {l : Loc} {c : HeapCell} :
+    Heap.lookup (Heap.set h l c) l = some c := by
+  induction h with
+  | nil => simp [Heap.set, Heap.lookup]
+  | cons p rest ih =>
+      obtain ⟨loc, old⟩ := p
+      simp only [Heap.set]
+      cases hb : (loc == l) with
+      | true => simp [Heap.lookup, eq_of_beq hb]
+      | false => simp [Heap.lookup, hb, ih]
+
+/-- Lookup through a `set` at a DIFFERENT base address. -/
+theorem lookup_set_other {h : Heap} {a x : Nat} {c : HeapCell}
+    (hne : a ≠ x) :
+    Heap.lookup (Heap.set h (.base ⟨a⟩) c) (.base ⟨x⟩)
+      = Heap.lookup h (.base ⟨x⟩) :=
+  Heap.lookup_set_ne
+    (by simp only [ne_eq, Loc.base.injEq, Addr.mk.injEq]; omega)
+
+/-- Lookup at a matching head cell. -/
+theorem lookup_cons_self {l : Loc} {c : HeapCell} {rest : Heap} :
+    Heap.lookup ((l, c) :: rest) l = some c := by
+  simp [Heap.lookup]
+
+/-- `Heap.set` skips a mismatching head cell. -/
+theorem set_cons_ne {l needle : Loc} {c₀ c : HeapCell} {rest : Heap}
+    (hne : (l == needle) = false) :
+    Heap.set ((l, c₀) :: rest) needle c
+      = (l, c₀) :: Heap.set rest needle c := by
+  simp [Heap.set, hne]
+
+/-- `Heap.set` replaces a matching head cell. -/
+theorem set_cons_self {l : Loc} {c c' : HeapCell} {rest : Heap} :
+    Heap.set ((l, c) :: rest) l c' = (l, c') :: rest := by
+  simp [Heap.set]
+
+/-- Consecutive sets at the same key collapse. -/
+theorem set_set {h : Heap} {l : Loc} {c₁ c₂ : HeapCell} :
+    Heap.set (Heap.set h l c₁) l c₂ = Heap.set h l c₂ := by
+  induction h with
+  | nil => simp [Heap.set]
+  | cons p rest ih =>
+      obtain ⟨k, c₀⟩ := p
+      cases hb : (k == l) with
+      | true => simp [Heap.set, hb]
+      | false => simp [Heap.set, hb, ih]
+
+/-- Sets at distinct keys commute when the first key is PRESENT.
+Shipped WITH the presence hypothesis on purpose — the obvious
+unconditional statement is FALSE on assoc-list heaps (two absent-key
+appends land in opposite orders), which is exactly why this belongs in
+the kit rather than being re-guessed per example. -/
+theorem set_comm {h : Heap} {l₁ l₂ : Loc} {c₁ c₂ d₁ : HeapCell}
+    (hne : l₁ ≠ l₂) (hp : Heap.lookup h l₁ = some d₁) :
+    Heap.set (Heap.set h l₁ c₁) l₂ c₂
+      = Heap.set (Heap.set h l₂ c₂) l₁ c₁ := by
+  induction h with
+  | nil => cases hp
+  | cons pr rest ih =>
+      obtain ⟨kk, c₀⟩ := pr
+      by_cases h1 : (kk == l₁) = true
+      · have h2 : (kk == l₂) = false := by
+          have hk : kk = l₁ := by simpa using h1
+          subst hk
+          simpa using hne
+        simp [Heap.set, h1, h2]
+      · simp only [Bool.not_eq_true] at h1
+        by_cases h2 : (kk == l₂) = true
+        · simp [Heap.set, h1, h2]
+        · simp only [Bool.not_eq_true] at h2
+          have hp' : Heap.lookup rest l₁ = some d₁ := by
+            simpa [Heap.lookup, h1] using hp
+          simp [Heap.set, h1, h2, ih hp']
+
+/-- Setting a cell to its current value is the identity. -/
+theorem set_self_of_lookup {h : Heap} {l : Loc} {c : HeapCell}
+    (hl : Heap.lookup h l = some c) : Heap.set h l c = h := by
+  induction h with
+  | nil => cases hl
+  | cons p rest ih =>
+      obtain ⟨k, c₀⟩ := p
+      simp only [Heap.lookup] at hl
+      cases hb : (k == l) with
+      | true =>
+          simp only [hb, if_true] at hl
+          have hc : c₀ = c := by simpa using hl
+          simp [Heap.set, hb, hc]
+      | false =>
+          rw [hb] at hl
+          simp only [Bool.false_eq_true, if_false] at hl
+          simp [Heap.set, hb, ih hl]
+
 /-- Freshness of a heap tail from an address up: the symbolic dead-cell
 region past a placement's concrete front (GAP-M2 lift, 2026-08-15 —
 formerly a per-example copy in the wordcount and histogram machine
@@ -302,6 +421,81 @@ theorem DeadFrom.push2 {dead : Heap} {na : Nat} {c c' : HeapCell}
     lookup_cons_ne (base_beq_false (by omega : na ≠ x)),
     lookup_cons_ne (base_beq_false (by omega : na + 1 ≠ x))]
   rfl
+
+/-! ### The footprint pack's freshness algebra (WP arc s2 item 1).
+
+`DeadFrom` and the footprint style's `FreshFrom` are ONE formula read
+two ways: a dead TAIL past a concrete front, or the WHOLE heap of a
+footprint-style state (`∀ x ≥ na`, the lookup is `none`). The kit
+carries the predicate once — `FreshFrom` is an `abbrev`, the algebra
+is stated on `DeadFrom`, and `FreshFrom.*` views delegate so both
+vocabularies apply (the five program-local packs this replaces spelled
+the SAME lemmas under both names). -/
+
+/-- Raising the boundary preserves freshness. -/
+theorem DeadFrom.mono {dead : Heap} {na na' : Nat} (hle : na ≤ na')
+    (h : DeadFrom dead na) : DeadFrom dead na' :=
+  fun x hx => h x (by omega)
+
+/-- Appending three fresh cells at the boundary. -/
+theorem DeadFrom.push3 {dead : Heap} {na : Nat} {c c' c'' : HeapCell}
+    (h : DeadFrom dead na) :
+    DeadFrom (dead ++ [(.base ⟨na⟩, c), (.base ⟨na + 1⟩, c'),
+      (.base ⟨na + 2⟩, c'')]) (na + 3) := by
+  intro x hx
+  rw [lookup_append_right (h x (by omega)),
+    lookup_cons_ne (base_beq_false (by omega : na ≠ x)),
+    lookup_cons_ne (base_beq_false (by omega : na + 1 ≠ x)),
+    lookup_cons_ne (base_beq_false (by omega : na + 2 ≠ x))]
+  rfl
+
+/-- A `set` below the boundary preserves freshness. -/
+theorem DeadFrom.set {dead : Heap} {na a : Nat} {c : HeapCell}
+    (h : DeadFrom dead na) (ha : a < na) :
+    DeadFrom (Heap.set dead (.base ⟨a⟩) c) na := by
+  intro x hx
+  rw [Heap.lookup_set_ne
+    (by simp only [ne_eq, Loc.base.injEq, Addr.mk.injEq]; omega
+      : (Loc.base ⟨a⟩ : Loc) ≠ .base ⟨x⟩)]
+  exact h x hx
+
+/-- A present cell sits below the freshness boundary. -/
+theorem DeadFrom.lt_of_lookup {dead : Heap} {na a : Nat}
+    {c : HeapCell} (h : DeadFrom dead na)
+    (hl : Heap.lookup dead (.base ⟨a⟩) = some c) : a < na := by
+  cases Nat.lt_or_ge a na with
+  | inl hlt => exact hlt
+  | inr hge => rw [h a hge] at hl; cases hl
+
+/-- Whole-heap freshness at and above `na` — the FOOTPRINT reading of
+`DeadFrom` (see the section note above). -/
+abbrev FreshFrom : Heap → Nat → Prop := DeadFrom
+
+theorem FreshFrom.mono {h : Heap} {na na' : Nat} (hle : na ≤ na')
+    (hf : FreshFrom h na) : FreshFrom h na' := DeadFrom.mono hle hf
+
+theorem FreshFrom.push {h : Heap} {na : Nat} {c : HeapCell}
+    (hf : FreshFrom h na) :
+    FreshFrom (h ++ [(.base ⟨na⟩, c)]) (na + 1) := DeadFrom.push hf
+
+theorem FreshFrom.push2 {h : Heap} {na : Nat} {c c' : HeapCell}
+    (hf : FreshFrom h na) :
+    FreshFrom (h ++ [(.base ⟨na⟩, c), (.base ⟨na + 1⟩, c')]) (na + 2) :=
+  DeadFrom.push2 hf
+
+theorem FreshFrom.push3 {h : Heap} {na : Nat} {c c' c'' : HeapCell}
+    (hf : FreshFrom h na) :
+    FreshFrom (h ++ [(.base ⟨na⟩, c), (.base ⟨na + 1⟩, c'),
+      (.base ⟨na + 2⟩, c'')]) (na + 3) := DeadFrom.push3 hf
+
+theorem FreshFrom.set {h : Heap} {na a : Nat} {c : HeapCell}
+    (hf : FreshFrom h na) (ha : a < na) :
+    FreshFrom (Heap.set h (.base ⟨a⟩) c) na := DeadFrom.set hf ha
+
+theorem FreshFrom.lt_of_lookup {h : Heap} {na a : Nat}
+    {c : HeapCell} (hf : FreshFrom h na)
+    (hl : Heap.lookup h (.base ⟨a⟩) = some c) : a < na :=
+  DeadFrom.lt_of_lookup hf hl
 
 /-! ## P1: the conditioned one-step glue -/
 

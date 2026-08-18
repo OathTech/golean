@@ -92,86 +92,12 @@ private def stSt (h : Heap) (na : Nat) : ExecState :=
     methods := steinLowered.methods,
     heap := h, nextAddr := na }
 
-/-- Whole-heap freshness at and above `na`. -/
-private def FreshFrom (h : Heap) (na : Nat) : Prop :=
-  ∀ x : Nat, na ≤ x → Heap.lookup h (.base ⟨x⟩) = none
-
-private theorem FreshFrom.mono {h : Heap} {na na' : Nat} (hle : na ≤ na')
-    (hf : FreshFrom h na) : FreshFrom h na' :=
-  fun x hx => hf x (by omega)
-
-private theorem FreshFrom.push {h : Heap} {na : Nat} {c : HeapCell}
-    (hf : FreshFrom h na) :
-    FreshFrom (h ++ [(.base ⟨na⟩, c)]) (na + 1) := by
-  intro x hx
-  rw [lookup_append_right (hf x (by omega)),
-    lookup_cons_ne (base_beq_false (by omega : na ≠ x))]
-  rfl
-
-private theorem FreshFrom.push3 {h : Heap} {na : Nat} {c c' c'' : HeapCell}
-    (hf : FreshFrom h na) :
-    FreshFrom (h ++ [(.base ⟨na⟩, c), (.base ⟨na + 1⟩, c'),
-      (.base ⟨na + 2⟩, c'')]) (na + 3) := by
-  intro x hx
-  rw [lookup_append_right (hf x (by omega)),
-    lookup_cons_ne (base_beq_false (by omega : na ≠ x)),
-    lookup_cons_ne (base_beq_false (by omega : na + 1 ≠ x)),
-    lookup_cons_ne (base_beq_false (by omega : na + 2 ≠ x))]
-  rfl
-
-/-- A `set` below the boundary preserves freshness. -/
-private theorem FreshFrom.set {h : Heap} {na a : Nat} {c : HeapCell}
-    (hf : FreshFrom h na) (ha : a < na) :
-    FreshFrom (Heap.set h (.base ⟨a⟩) c) na := by
-  intro x hx
-  rw [Machine.Heap.lookup_set_ne
-    (by simp only [ne_eq, Loc.base.injEq, Addr.mk.injEq]; omega
-      : (Loc.base ⟨a⟩ : Loc) ≠ .base ⟨x⟩)]
-  exact hf x hx
-
-/-- A present cell sits below the freshness boundary. -/
-private theorem FreshFrom.lt_of_lookup {h : Heap} {na a : Nat}
-    {c : HeapCell} (hf : FreshFrom h na)
-    (hl : Heap.lookup h (.base ⟨a⟩) = some c) : a < na := by
-  cases Nat.lt_or_ge a na with
-  | inl h => exact h
-  | inr h => rw [hf a h] at hl; cases hl
-
-/-- Lookup through a `set` at a DIFFERENT base address. -/
-private theorem lookup_set_other {h : Heap} {a x : Nat} {c : HeapCell}
-    (hne : a ≠ x) :
-    Heap.lookup (Heap.set h (.base ⟨a⟩) c) (.base ⟨x⟩)
-      = Heap.lookup h (.base ⟨x⟩) :=
-  Machine.Heap.lookup_set_ne
-    (by simp only [ne_eq, Loc.base.injEq, Addr.mk.injEq]; omega)
-
-/-- Lookup at the `set` address itself. -/
-private theorem lookup_set_self {h : Heap} {l : Loc} {c : HeapCell} :
-    Heap.lookup (Heap.set h l c) l = some c := by
-  induction h with
-  | nil => simp [Heap.set, Heap.lookup]
-  | cons p rest ih =>
-      obtain ⟨loc, old⟩ := p
-      simp only [Heap.set]
-      cases hb : (loc == l) with
-      | true => simp [Heap.lookup, eq_of_beq hb]
-      | false => simp [Heap.lookup, hb, ih]
-
-/-- `Heap.set` skips a mismatching head cell. -/
-private theorem set_cons_ne {l needle : Loc} {c₀ c : HeapCell} {rest : Heap}
-    (hne : (l == needle) = false) :
-    Heap.set ((l, c₀) :: rest) needle c
-      = (l, c₀) :: Heap.set rest needle c := by
-  simp [Heap.set, hne]
-
-/-- `Heap.set` replaces a matching head cell. -/
-private theorem set_cons_self {l : Loc} {c c' : HeapCell} {rest : Heap} :
-    Heap.set ((l, c) :: rest) l c' = (l, c') :: rest := by
-  simp [Heap.set]
-
-private theorem lookup_cons_self {l : Loc} {c : HeapCell} {rest : Heap} :
-    Heap.lookup ((l, c) :: rest) l = some c := by
-  simp [Heap.lookup]
+-- The private `FreshFrom` footprint pack that sat here (the def,
+-- `.mono`, `.push`, `.push3`, `.set`, `.lt_of_lookup`,
+-- `lookup_set_other`, `lookup_set_self`, `set_cons_ne`,
+-- `set_cons_self`, `lookup_cons_self`) was PROMOTED to the kit in WP
+-- arc s2 item 1 (StepKit). Statements below are textually unchanged;
+-- the names resolve through `open GoLean.Surface`.
 
 /-! ## The pinned callee `Func`s, transcribed
 

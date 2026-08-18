@@ -1278,17 +1278,8 @@ theorem ck_c3TestF (σ : ExecState) (a : Nat) (cv v : Int)
       (stepFnIter_chain (stepFnIter_chain h0 h1) h2) h3) h4) h5) h6)
         h7) h8
 
-/-- `DeadFrom` after appending 3 fresh cells. -/
-theorem DeadFrom.push3 {dead : Heap} {na : Nat} {c0 c1 c2 : HeapCell}
-    (h : DeadFrom dead na) :
-    DeadFrom (dead ++ [(.base ⟨na⟩, c0), (.base ⟨na + 1⟩, c1),
-      (.base ⟨na + 2⟩, c2)]) (na + 3) := by
-  intro x hx
-  rw [lookup_append_right (h x (by omega)),
-    lookup_cons_ne (base_beq_false (by omega : na ≠ x)),
-    lookup_cons_ne (base_beq_false (by omega : na + 1 ≠ x)),
-    lookup_cons_ne (base_beq_false (by omega : na + 2 ≠ x))]
-  rfl
+-- (`DeadFrom.push3`, formerly here, is StepKit's since WP arc s2
+-- item 1; `push5`/`push6` below stay — arities the kit does not carry.)
 
 section ClsLetter
 
@@ -1931,21 +1922,8 @@ end ClsLetter
 
 /-! ## The arm layer: heap helpers, statements, envs, chunks -/
 
-/-- A set at a present key is looked up as the new cell. -/
-theorem lookup_set_self (h : Heap) (l : Loc) (c : HeapCell) :
-    Heap.lookup (Heap.set h l c) l = some c := by
-  induction h with
-  | nil =>
-      simp [Heap.set, Heap.lookup]
-  | cons kv rest ih =>
-      obtain ⟨k, c₀⟩ := kv
-      simp only [Heap.set]
-      by_cases hk : (k == l) = true
-      · rw [if_pos hk]
-        simp [Heap.lookup, hk]
-      · rw [if_neg hk]
-        simp only [Heap.lookup, hk, Bool.false_eq_true, if_false]
-        exact ih
+-- (`lookup_set_self`, formerly here with explicit args, is StepKit's
+-- since WP arc s2 item 1.)
 
 theorem lookup_c6of6 {D : Heap} {na : Nat} (hD : DeadFrom D na)
     {c0 c1 c2 c3 c4 c5 : HeapCell} :

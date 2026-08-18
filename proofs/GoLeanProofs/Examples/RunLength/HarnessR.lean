@@ -496,22 +496,13 @@ theorem buildAppendBackingValue_one (σ : ExecState) {v : Int}
       rw [hacc, List.replicate_succ']
       simp [← List.toArray_replicate]
 
-/-- Setting one key leaves every OTHER key's lookup unchanged (local
-plumbing for the spill lemma; the kit's set/lookup laws are all
-append-shaped). -/
+/-- Setting one key leaves every OTHER key's lookup unchanged (the
+beq-hypothesis view of the core's `Heap.lookup_set_ne`; a zero-proof
+delegation since WP arc s2 item 1). -/
 theorem lookup_set_ne_local {h : Heap} {l l' : Loc} {c : HeapCell}
     (hne : (l' == l) = false) :
-    Heap.lookup (Heap.set h l' c) l = Heap.lookup h l := by
-  induction h with
-  | nil => simp [Heap.set, Heap.lookup, hne]
-  | cons p rest ih =>
-    obtain ⟨loc, old⟩ := p
-    by_cases hb : loc = l'
-    · subst hb
-      simp [Heap.set, Heap.lookup, hne]
-    · simp only [Heap.set, show (loc == l') = false from by simpa using hb,
-        Bool.false_eq_true, if_false]
-      simp only [Heap.lookup, ih]
+    Heap.lookup (Heap.set h l' c) l = Heap.lookup h l :=
+  Machine.Heap.lookup_set_ne (fun heq => by subst heq; simp at hne)
 
 /-- **The append-spill executable fact** at this example's shape:
 appending a one-element slice onto an EMPTY (cap 0) slice. The spill

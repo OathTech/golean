@@ -125,15 +125,8 @@ theorem DeadFrom.push4 {dead : Heap} {na : Nat} {c0 c1 c2 c3 : HeapCell}
     lookup_cons_ne (base_beq_false (by omega : na + 3 ≠ x))]
   rfl
 
-/-- `DeadFrom` after a set strictly below the boundary. -/
-theorem DeadFrom.set_below {dead : Heap} {na a : Nat} {c : HeapCell}
-    (h : DeadFrom dead na) (ha : a < na) :
-    DeadFrom (Heap.set dead (.base ⟨a⟩) c) na := by
-  intro x hx
-  rw [Machine.Heap.lookup_set_ne
-    (by simp only [ne_eq, Loc.base.injEq, Addr.mk.injEq]; omega
-      : (Loc.base ⟨a⟩ : Loc) ≠ .base ⟨x⟩)]
-  exact h x hx
+-- (`DeadFrom.set_below`, formerly here, is StepKit's `DeadFrom.set`
+-- since WP arc s2 item 1; call sites re-pointed.)
 
 /-! ## The `[]string` conditioned op facts (KIT-GAP block, see the
 module docstring) -/

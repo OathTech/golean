@@ -357,46 +357,11 @@ def svStFin (n₀ nv ans : Int) (m : Nat) (bs : List Bool)
   svSt (svFrontFin n₀ nv ans m bs ivo ++ (dead ++ kLive b cv iv2 false))
     (b + 3)
 
-/-! ## Heap-algebra helpers (mirror the FibMemo unit's; kit
-candidates — the lane owner consolidates) -/
-
-/-- Lookup through a `set` at a DIFFERENT base address (mirrors
-FibMemo's `lookup_set_other`). -/
-private theorem lookup_set_other {h : Heap} {a x : Nat} {c : HeapCell}
-    (hne : a ≠ x) :
-    Heap.lookup (Heap.set h (.base ⟨a⟩) c) (.base ⟨x⟩)
-      = Heap.lookup h (.base ⟨x⟩) :=
-  Machine.Heap.lookup_set_ne
-    (by simp only [ne_eq, Loc.base.injEq, Addr.mk.injEq]; omega)
-
-/-- Lookup at the `set` address itself (mirrors FibMemo's). -/
-private theorem lookup_set_self {h : Heap} {l : Loc} {c : HeapCell} :
-    Heap.lookup (Heap.set h l c) l = some c := by
-  induction h with
-  | nil => simp [Heap.set, Heap.lookup]
-  | cons p rest ih =>
-      obtain ⟨loc, old⟩ := p
-      simp only [Heap.set]
-      cases hb : (loc == l) with
-      | true => simp [Heap.lookup, eq_of_beq hb]
-      | false => simp [Heap.lookup, hb, ih]
-
-/-- `Heap.set` skips a mismatching head cell (mirrors FibMemo's). -/
-private theorem set_cons_ne {l needle : Loc} {c₀ c : HeapCell} {rest : Heap}
-    (hne : (l == needle) = false) :
-    Heap.set ((l, c₀) :: rest) needle c
-      = (l, c₀) :: Heap.set rest needle c := by
-  simp [Heap.set, hne]
-
-/-- `Heap.set` at the head cell (mirrors FibMemo's `set_cons_self`). -/
-private theorem set_cons_self {l : Loc} {c c' : HeapCell} {rest : Heap} :
-    Heap.set ((l, c) :: rest) l c' = (l, c') :: rest := by
-  simp [Heap.set]
-
-/-- Lookup at the head cell. -/
-private theorem lookup_cons_self {l : Loc} {c : HeapCell} {rest : Heap} :
-    Heap.lookup ((l, c) :: rest) l = some c := by
-  simp [Heap.lookup]
+/-! ## Heap-algebra helpers — PROMOTED (WP arc s2 item 1): the five
+private mirrors that sat here (`lookup_set_other`, `lookup_set_self`,
+`set_cons_ne`, `set_cons_self`, `lookup_cons_self`) are StepKit's
+footprint battery now; call sites resolve through
+`open GoLean.Surface`. -/
 
 /-- The 10-cell front is fresh at and above address 10. -/
 private theorem front_lookup_none {n₀ nv : Int} {m : Nat} {bs : List Bool}

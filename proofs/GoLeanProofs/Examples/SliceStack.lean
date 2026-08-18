@@ -1351,18 +1351,8 @@ theorem pu_F2 (σ : ExecState) (nv sv kv : Int) (sh : GoValue)
 
 /-! ### Heap micro-helpers for the workspace region -/
 
-theorem lookup_cons_self {l : Loc} {c : HeapCell} {h : Heap} :
-    Heap.lookup ((l, c) :: h) l = some c := by
-  simp [Heap.lookup]
-
-theorem set_cons_self {l : Loc} {c c' : HeapCell} {h : Heap} :
-    Heap.set ((l, c) :: h) l c' = (l, c') :: h := by
-  simp [Heap.set]
-
-theorem set_cons_ne {k l : Loc} {c c' : HeapCell} {h : Heap}
-    (hne : (k == l) = false) :
-    Heap.set ((k, c) :: h) l c' = (k, c) :: Heap.set h l c' := by
-  simp [Heap.set, hne]
+-- (`lookup_cons_self`/`set_cons_self`/`set_cons_ne`, formerly here,
+-- are StepKit's footprint battery since WP arc s2 item 1.)
 
 /-- Setting the `pushed` cell (front 9) rewrites the front in place. -/
 theorem stF_set9 {nv sv kv : Int} {r3 r4 : List Int} {r5 : Int}

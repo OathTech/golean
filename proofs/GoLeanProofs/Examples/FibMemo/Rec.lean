@@ -81,51 +81,12 @@ def fmSt (h : Heap) (na : Nat) : ExecState :=
     methods := fibmemoLowered.methods,
     heap := h, nextAddr := na }
 
-/-- Whole-heap freshness at and above `na` (the `DeadFrom` shape, on
-the full heap rather than a dead tail). -/
-def FreshFrom (h : Heap) (na : Nat) : Prop :=
-  ∀ x : Nat, na ≤ x → Heap.lookup h (.base ⟨x⟩) = none
-
-theorem FreshFrom.mono {h : Heap} {na na' : Nat} (hle : na ≤ na')
-    (hf : FreshFrom h na) : FreshFrom h na' :=
-  fun x hx => hf x (by omega)
-
-/-- Appending a cell AT the boundary preserves freshness one up. -/
-theorem FreshFrom.push {h : Heap} {na : Nat} {c : HeapCell}
-    (hf : FreshFrom h na) :
-    FreshFrom (h ++ [(.base ⟨na⟩, c)]) (na + 1) := by
-  intro x hx
-  rw [lookup_append_right (hf x (by omega)),
-    lookup_cons_ne (base_beq_false (by omega : na ≠ x))]
-  rfl
-
-/-- A `set` below the boundary preserves freshness. -/
-theorem FreshFrom.set {h : Heap} {na a : Nat} {c : HeapCell}
-    (hf : FreshFrom h na) (ha : a < na) :
-    FreshFrom (Heap.set h (.base ⟨a⟩) c) na := by
-  intro x hx
-  rw [Machine.Heap.lookup_set_ne
-    (by simp only [ne_eq, Loc.base.injEq, Addr.mk.injEq]; omega
-      : (Loc.base ⟨a⟩ : Loc) ≠ .base ⟨x⟩)]
-  exact hf x hx
-
-/-- Lookup through a `set` at a DIFFERENT base address. -/
-theorem lookup_set_other {h : Heap} {a x : Nat} {c : HeapCell} (hne : a ≠ x) :
-    Heap.lookup (Heap.set h (.base ⟨a⟩) c) (.base ⟨x⟩) = Heap.lookup h (.base ⟨x⟩) :=
-  Machine.Heap.lookup_set_ne
-    (by simp only [ne_eq, Loc.base.injEq, Addr.mk.injEq]; omega)
-
-/-- Lookup at the `set` address itself. -/
-theorem lookup_set_self {h : Heap} {l : Loc} {c : HeapCell} :
-    Heap.lookup (Heap.set h l c) l = some c := by
-  induction h with
-  | nil => simp [Heap.set, Heap.lookup]
-  | cons p rest ih =>
-      obtain ⟨loc, old⟩ := p
-      simp only [Heap.set]
-      cases hb : (loc == l) with
-      | true => simp [Heap.lookup, eq_of_beq hb]
-      | false => simp [Heap.lookup, hb, ih]
+-- The `FreshFrom` footprint pack that sat here (the def, `.mono`,
+-- `.push`, `.set`, `lookup_set_other`, `lookup_set_self`) was
+-- PROMOTED to the kit in WP arc s2 item 1 (StepKit: `FreshFrom` =
+-- the footprint reading of `DeadFrom`, plus the lookup/set battery).
+-- Statements below are textually unchanged; the names resolve
+-- through `open GoLean.Surface`.
 
 /-! ## The callee `Func`, verbatim, pinned -/
 
@@ -457,12 +418,6 @@ theorem fm_seg2b (h : Heap) (na f aT : Nat) (rv oldT : Int)
     (ss := #[]) (env := envC) (rest := rest) (k := K₀) (ch := ch))
   exact stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
     (stepFnIter_chain (stepFnIter_chain h1 h2) h3) h4) h5) h6
-
-/-- `Heap.set` skips a mismatching head cell. -/
-theorem set_cons_ne {l needle : Loc} {c₀ c : HeapCell} {rest : Heap}
-    (hne : (l == needle) = false) :
-    Heap.set ((l, c₀) :: rest) needle c = (l, c₀) :: Heap.set rest needle c := by
-  simp [Heap.set, hne]
 
 /-- The three frame cells of a call at base `f` with argument `kv`,
 result cell at `rv`. -/
@@ -929,14 +884,6 @@ theorem fm_seg4 (h : Heap) (na f : Nat) (dv old0 : Int)
     (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
       (stepFnIter_chain (stepFnIter_chain hA1 hA2) hA3) hval) hB) hC)
       hD1) hD2) hD3
-
-theorem lookup_cons_self {l : Loc} {c : HeapCell} {rest : Heap} :
-    Heap.lookup ((l, c) :: rest) l = some c := by
-  simp [Heap.lookup]
-
-theorem set_cons_self {l : Loc} {c c' : HeapCell} {rest : Heap} :
-    Heap.set ((l, c) :: rest) l c' = (l, c') :: rest := by
-  simp [Heap.set]
 
 /-- The five dead cells a HIT frame leaves behind. -/
 def hitCells (f bM : Nat) (kv rv : Int) : Heap :=
@@ -1714,24 +1661,6 @@ theorem fm_seg10 (h : Heap) (na f a0 a1 a2 : Nat) (rv old0 : Int)
       (stepFnIter_chain (stepFnIter_chain h1 h2) h3) h4) h5) h6) h7)
       h8) h9
 
-/-- Setting a cell to its current value is the identity. -/
-theorem set_self_of_lookup {h : Heap} {l : Loc} {c : HeapCell}
-    (hl : Heap.lookup h l = some c) : Heap.set h l c = h := by
-  induction h with
-  | nil => cases hl
-  | cons p rest ih =>
-      obtain ⟨k, c₀⟩ := p
-      simp only [Heap.lookup] at hl
-      cases hb : (k == l) with
-      | true =>
-          simp only [hb, if_true] at hl
-          have hc : c₀ = c := by simpa using hl
-          simp [Heap.set, hb, hc]
-      | false =>
-          rw [hb] at hl
-          simp only [Bool.false_eq_true, if_false] at hl
-          simp [Heap.set, hb, ih hl]
-
 /-- **The BUILD tail** — shared by every `fmCall_build` case: from the
 `$c1` sequence head with `$c0` already holding `fibW (k−1)` and the
 memo at `mtbl (k−1)`, through the second (quick) call, the wrapped
@@ -2077,39 +2006,8 @@ theorem fmBuild_tail (g : Heap) (na₁ f bM aT a0 : Nat) (k : Nat) (oldT : Int)
           exact h0)]
         rw [lookup_cons_ne (base_beq_false (by omega : na₂ ≠ x))]
         rfl
-/-- Consecutive sets at the same key collapse. -/
-theorem set_set {h : Heap} {l : Loc} {c₁ c₂ : HeapCell} :
-    Heap.set (Heap.set h l c₁) l c₂ = Heap.set h l c₂ := by
-  induction h with
-  | nil => simp [Heap.set]
-  | cons p rest ih =>
-      obtain ⟨k, c₀⟩ := p
-      cases hb : (k == l) with
-      | true => simp [Heap.set, hb]
-      | false => simp [Heap.set, hb, ih]
-
-/-- Sets at distinct keys commute when the first key is PRESENT
-(assoc-list heaps do not commute two absent-key appends). -/
-theorem set_comm {h : Heap} {l₁ l₂ : Loc} {c₁ c₂ d₁ : HeapCell}
-    (hne : l₁ ≠ l₂) (hp : Heap.lookup h l₁ = some d₁) :
-    Heap.set (Heap.set h l₁ c₁) l₂ c₂ = Heap.set (Heap.set h l₂ c₂) l₁ c₁ := by
-  induction h with
-  | nil => cases hp
-  | cons pr rest ih =>
-      obtain ⟨kk, c₀⟩ := pr
-      by_cases h1 : (kk == l₁) = true
-      · have h2 : (kk == l₂) = false := by
-          have hk : kk = l₁ := by simpa using h1
-          subst hk
-          simpa using hne
-        simp [Heap.set, h1, h2]
-      · simp only [Bool.not_eq_true] at h1
-        by_cases h2 : (kk == l₂) = true
-        · simp [Heap.set, h1, h2]
-        · simp only [Bool.not_eq_true] at h2
-          have hp' : Heap.lookup rest l₁ = some d₁ := by
-            simpa [Heap.lookup, h1] using hp
-          simp [Heap.set, h1, h2, ih hp']
+-- (`set_set`/`set_comm`, formerly here, are the kit's since WP arc
+-- s2 item 1 — StepKit's footprint battery.)
 
 /-- **The BUILD call span** (`1 ≤ j < k`, memo `mtbl j`): the memoized
 recursion computes and stores every key up to `k`; the caller's target
