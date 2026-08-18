@@ -75,7 +75,7 @@ private theorem wcH_count_iter (ws : List Int) (sv siv : Int) (i : Nat)
   have hcnt : cnt (countsFold (ws.take i)) (ws.getD i 0) + 1 < 2 ^ 64 := by
     have := cnt_take_le (ws := ws) (i := i) (ws.getD i 0)
     omega
-  have h := mapCountIter_at "words" (σH ws.length sv siv ws)
+  have h := mapCountIter_at "words" "counts" "$c1" "$c2" "i" (σH ws.length sv siv ws)
     (wcSeed ws 1 [] 2)
     (fun kvs iv => frontH ws.length sv siv ws kvs iv false) ws 4 12 16
     headCH cmpContCH postBodyKH env3H u1EnvH uEnvH

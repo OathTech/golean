@@ -80,18 +80,19 @@ abbrev wsHG (bArr L : Nat) : GoValue :=
 
 /-- `$c1 = counts` (both consumers name the map local `counts` — the
 frontend's temp for the map operand). -/
-abbrev asgnC1G : Stmt := .assign (.var "$c1") (.var "counts")
+abbrev asgnC1G (mapVar c1 : String) : Stmt := .assign (.var c1) (.var mapVar)
 /-- `$c2 = slVar[i]` — the ONE statement that embeds the input slice's
 Go name. -/
-abbrev asgnReadG (slVar : String) : Stmt :=
-  .assign (.var "$c2") (.indexGet (.var slVar) (.var "i"))
+abbrev asgnReadG (slVar c2 iVar : String) : Stmt :=
+  .assign (.var c2) (.indexGet (.var slVar) (.var iVar))
 /-- The `$c2` declaration + read, as the frontend splices it. -/
-abbrev seqnC2G (slVar : String) : Stmt :=
-  .seqn #[.initialization { id := "$c2", typ := tU64 }, asgnReadG slVar]
+abbrev seqnC2G (slVar c2 iVar : String) : Stmt :=
+  .seqn #[.initialization { id := c2, typ := tU64 },
+    asgnReadG slVar c2 iVar]
 /-- The `mapAssign` spine of `counts[$c2]++`. -/
-abbrev mapAsgnG : Stmt :=
-  .mapAssign (.var "$c1") (.var "$c2")
-    (.add (.mapGet (.var "$c1") (.var "$c2") tU64 tU64) (.intLit 1 .uint64))
+abbrev mapAsgnG (c1 c2 : String) : Stmt :=
+  .mapAssign (.var c1) (.var c2)
+    (.add (.mapGet (.var c1) (.var c2) tU64 tU64) (.intLit 1 .uint64))
     tU64 tU64
 
 /-- **The placement- and name-generic counting ITERATION** (53 steps):
@@ -103,7 +104,7 @@ instantiation can send the unifier into the concrete front (the
 storm-class fix). Lifted from `wcIter_generic` (GAP-C1): the only
 change of content is that the three body statements are the
 `slVar`-parameterized forms above. -/
-theorem mapCountIter_generic (slVar : String)
+theorem mapCountIter_generic (slVar mapVar c1 c2 iVar : String)
     (S : List (Int × Nat) → Int → Bool → Heap → Nat → ExecState)
     (ws : List Int) (bArr bMap base0 : Nat)
     (head : Config) (cmp postK : Cont)
@@ -111,56 +112,56 @@ theorem mapCountIter_generic (slVar : String)
     -- the segment facts
     (hC1 : ∀ kvs iv dead na ch,
       stepFnIter 7 (S kvs iv false dead na) (.retV (.bool true) cmp) ch
-        = .ok (.exec (.initialization { id := "$c1", typ := tMap }) env3g
-            (.seq [asgnC1G, seqnC2G slVar, mapAsgnG] env3g postK),
+        = .ok (.exec (.initialization { id := c1, typ := tMap }) env3g
+            (.seq [asgnC1G mapVar c1, seqnC2G slVar c2 iVar, mapAsgnG c1 c2] env3g postK),
           S kvs iv false dead na, ch))
     (hInit1 : ∀ kvs iv dead na ch, base0 ≤ na → DeadFrom dead na →
       stepFn (S kvs iv false dead na)
-          (.exec (.initialization { id := "$c1", typ := tMap }) env3g
-            (.seq [asgnC1G, seqnC2G slVar, mapAsgnG] env3g postK)) ch
-        = .ok (.next (.seq [asgnC1G, seqnC2G slVar, mapAsgnG] (u1Envg na)
+          (.exec (.initialization { id := c1, typ := tMap }) env3g
+            (.seq [asgnC1G mapVar c1, seqnC2G slVar c2 iVar, mapAsgnG c1 c2] env3g postK)) ch
+        = .ok (.next (.seq [asgnC1G mapVar c1, seqnC2G slVar c2 iVar, mapAsgnG c1 c2] (u1Envg na)
               postK),
           S kvs iv false (dead ++ [(Loc.base ⟨na⟩, nilMapCell)]) (na + 1), ch))
     (hC2 : ∀ kvs iv dead na₀ na ch,
       stepFnIter 6 (S kvs iv false dead na)
-          (.next (.seq [asgnC1G, seqnC2G slVar, mapAsgnG] (u1Envg na₀)
+          (.next (.seq [asgnC1G mapVar c1, seqnC2G slVar c2 iVar, mapAsgnG c1 c2] (u1Envg na₀)
             postK)) ch
         = .ok (.next (.storeK [.chain (.addr (.base ⟨na₀⟩)) [] []]
               [.map ⟨some (.base ⟨bMap⟩)⟩] (.seqn #[]) (u1Envg na₀)
-              (.seq [seqnC2G slVar, mapAsgnG] (u1Envg na₀) postK)),
+              (.seq [seqnC2G slVar c2 iVar, mapAsgnG c1 c2] (u1Envg na₀) postK)),
           S kvs iv false dead na, ch))
     (hSt1 : ∀ kvs iv dead na₀ na ch, base0 ≤ na₀ → DeadFrom dead na₀ →
       stepFn (S kvs iv false (dead ++ [(Loc.base ⟨na₀⟩, nilMapCell)]) na)
           (.next (.storeK [.chain (.addr (.base ⟨na₀⟩)) [] []]
             [.map ⟨some (.base ⟨bMap⟩)⟩] (.seqn #[]) (u1Envg na₀)
-            (.seq [seqnC2G slVar, mapAsgnG] (u1Envg na₀) postK))) ch
+            (.seq [seqnC2G slVar c2 iVar, mapAsgnG c1 c2] (u1Envg na₀) postK))) ch
         = .ok (.next (.storeK [] [] (.seqn #[]) (u1Envg na₀)
-              (.seq [seqnC2G slVar, mapAsgnG] (u1Envg na₀) postK)),
+              (.seq [seqnC2G slVar c2 iVar, mapAsgnG c1 c2] (u1Envg na₀) postK)),
           S kvs iv false (dead ++ [(Loc.base ⟨na₀⟩, mhG bMap)]) na, ch))
     (hC3 : ∀ kvs iv dead na₀ na ch,
       stepFnIter 5 (S kvs iv false dead na)
           (.next (.storeK [] [] (.seqn #[]) (u1Envg na₀)
-            (.seq [seqnC2G slVar, mapAsgnG] (u1Envg na₀) postK))) ch
-        = .ok (.exec (.initialization { id := "$c2", typ := tU64 })
+            (.seq [seqnC2G slVar c2 iVar, mapAsgnG c1 c2] (u1Envg na₀) postK))) ch
+        = .ok (.exec (.initialization { id := c2, typ := tU64 })
               (u1Envg na₀)
-              (.seq [asgnReadG slVar, mapAsgnG] (u1Envg na₀) postK),
+              (.seq [asgnReadG slVar c2 iVar, mapAsgnG c1 c2] (u1Envg na₀) postK),
           S kvs iv false dead na, ch))
     (hInit2 : ∀ kvs iv dead na₀ ch, base0 ≤ na₀ → DeadFrom dead na₀ →
       stepFn (S kvs iv false (dead ++ [(Loc.base ⟨na₀⟩, mhG bMap)]) (na₀ + 1))
-          (.exec (.initialization { id := "$c2", typ := tU64 }) (u1Envg na₀)
-            (.seq [asgnReadG slVar, mapAsgnG] (u1Envg na₀) postK)) ch
-        = .ok (.next (.seq [asgnReadG slVar, mapAsgnG] (uEnvg na₀) postK),
+          (.exec (.initialization { id := c2, typ := tU64 }) (u1Envg na₀)
+            (.seq [asgnReadG slVar c2 iVar, mapAsgnG c1 c2] (u1Envg na₀) postK)) ch
+        = .ok (.next (.seq [asgnReadG slVar c2 iVar, mapAsgnG c1 c2] (uEnvg na₀) postK),
           S kvs iv false
             (dead ++ [(Loc.base ⟨na₀⟩, mhG bMap), (Loc.base ⟨na₀ + 1⟩, u64cell 0)])
             (na₀ + 2), ch))
     (hC4 : ∀ kvs iv dead na₀ na ch,
       stepFnIter 8 (S kvs iv false dead na)
-          (.next (.seq [asgnReadG slVar, mapAsgnG] (uEnvg na₀) postK)) ch
+          (.next (.seq [asgnReadG slVar c2 iVar, mapAsgnG c1 c2] (uEnvg na₀) postK)) ch
         = .ok (.retV (.int iv .int)
               (.strictK .indexGet [wsHG bArr ws.length] [] (uEnvg na₀)
                 (.rhsK .vals [.chain (.addr (.base ⟨na₀ + 1⟩)) [] []] [] []
                   (.seqn #[]) (uEnvg na₀)
-                  (.seq [mapAsgnG] (uEnvg na₀) postK))),
+                  (.seq [mapAsgnG c1 c2] (uEnvg na₀) postK))),
           S kvs iv false dead na, ch))
     (hRead : ∀ kvs (i : Nat) dead na, i < ws.length →
       applyStrictOp (S kvs ((i : Nat) : Int) false dead na) .indexGet
@@ -171,10 +172,10 @@ theorem mapCountIter_generic (slVar : String)
       stepFnIter 1 (S kvs iv false dead na)
           (.retV w (.rhsK .vals [.chain (.addr (.base ⟨na₀ + 1⟩)) [] []] [] []
             (.seqn #[]) (uEnvg na₀)
-            (.seq [mapAsgnG] (uEnvg na₀) postK))) ch
+            (.seq [mapAsgnG c1 c2] (uEnvg na₀) postK))) ch
         = .ok (.next (.storeK [.chain (.addr (.base ⟨na₀ + 1⟩)) [] []] [w]
               (.seqn #[]) (uEnvg na₀)
-              (.seq [mapAsgnG] (uEnvg na₀) postK)),
+              (.seq [mapAsgnG c1 c2] (uEnvg na₀) postK)),
           S kvs iv false dead na, ch))
     (hSt2 : ∀ kvs iv dead na₀ na (w : Int) ch, 0 ≤ w → w < 2 ^ 64 →
       base0 ≤ na₀ → DeadFrom dead na₀ →
@@ -183,20 +184,20 @@ theorem mapCountIter_generic (slVar : String)
           na)
           (.next (.storeK [.chain (.addr (.base ⟨na₀ + 1⟩)) [] []]
             [.int w .uint64] (.seqn #[]) (uEnvg na₀)
-            (.seq [mapAsgnG] (uEnvg na₀) postK))) ch
+            (.seq [mapAsgnG c1 c2] (uEnvg na₀) postK))) ch
         = .ok (.next (.storeK [] [] (.seqn #[]) (uEnvg na₀)
-              (.seq [mapAsgnG] (uEnvg na₀) postK)),
+              (.seq [mapAsgnG c1 c2] (uEnvg na₀) postK)),
           S kvs iv false
             (dead ++ [(Loc.base ⟨na₀⟩, mhG bMap), (Loc.base ⟨na₀ + 1⟩, u64cell w)])
             na, ch))
     (hC6 : ∀ kvs iv dead na₀ na ch,
       stepFnIter 4 (S kvs iv false dead na)
           (.next (.storeK [] [] (.seqn #[]) (uEnvg na₀)
-            (.seq [mapAsgnG] (uEnvg na₀) postK))) ch
-        = .ok (.evalE (.var "$c1") (uEnvg na₀)
+            (.seq [mapAsgnG c1 c2] (uEnvg na₀) postK))) ch
+        = .ok (.evalE (.var c1) (uEnvg na₀)
               (.stmtOpK (.mapAssign tU64 tU64) 0 []
-                [.var "$c2",
-                 .add (.mapGet (.var "$c1") (.var "$c2") tU64 tU64)
+                [.var c2,
+                 .add (.mapGet (.var c1) (.var c2) tU64 tU64)
                    (.intLit 1 .uint64)]
                 (uEnvg na₀) (.seq [] (uEnvg na₀) postK)),
           S kvs iv false dead na, ch))
@@ -205,7 +206,7 @@ theorem mapCountIter_generic (slVar : String)
       stepFn (S kvs iv false
           (dead ++ [(Loc.base ⟨na₀⟩, mhG bMap), (Loc.base ⟨na₀ + 1⟩, u64cell w)])
           na)
-          (.evalE (.var "$c1") (uEnvg na₀) k) ch
+          (.evalE (.var c1) (uEnvg na₀) k) ch
         = .ok (.retV (.map ⟨some (.base ⟨bMap⟩)⟩) k,
             S kvs iv false
               (dead ++ [(Loc.base ⟨na₀⟩, mhG bMap), (Loc.base ⟨na₀ + 1⟩, u64cell w)])
@@ -215,7 +216,7 @@ theorem mapCountIter_generic (slVar : String)
       stepFn (S kvs iv false
           (dead ++ [(Loc.base ⟨na₀⟩, mhG bMap), (Loc.base ⟨na₀ + 1⟩, u64cell w)])
           na)
-          (.evalE (.var "$c2") (uEnvg na₀) k) ch
+          (.evalE (.var c2) (uEnvg na₀) k) ch
         = .ok (.retV (.int w .uint64) k,
             S kvs iv false
               (dead ++ [(Loc.base ⟨na₀⟩, mhG bMap), (Loc.base ⟨na₀ + 1⟩, u64cell w)])
@@ -224,13 +225,13 @@ theorem mapCountIter_generic (slVar : String)
       stepFnIter 1 (S kvs iv false dead na)
           (.retV (.map ⟨some (.base ⟨bMap⟩)⟩)
             (.stmtOpK (.mapAssign tU64 tU64) 0 []
-              [.var "$c2",
-               .add (.mapGet (.var "$c1") (.var "$c2") tU64 tU64)
+              [.var c2,
+               .add (.mapGet (.var c1) (.var c2) tU64 tU64)
                  (.intLit 1 .uint64)]
               (uEnvg na₀) (.seq [] (uEnvg na₀) postK))) ch
-        = .ok (.evalE (.var "$c2") (uEnvg na₀)
+        = .ok (.evalE (.var c2) (uEnvg na₀)
               (.stmtOpK (.mapAssign tU64 tU64) 0 [.map ⟨some (.base ⟨bMap⟩)⟩]
-                [.add (.mapGet (.var "$c1") (.var "$c2") tU64 tU64)
+                [.add (.mapGet (.var c1) (.var c2) tU64 tU64)
                   (.intLit 1 .uint64)]
                 (uEnvg na₀) (.seq [] (uEnvg na₀) postK)),
           S kvs iv false dead na, ch))
@@ -238,11 +239,11 @@ theorem mapCountIter_generic (slVar : String)
       stepFnIter 3 (S kvs iv false dead na)
           (.retV (.int w .uint64)
             (.stmtOpK (.mapAssign tU64 tU64) 0 [.map ⟨some (.base ⟨bMap⟩)⟩]
-              [.add (.mapGet (.var "$c1") (.var "$c2") tU64 tU64)
+              [.add (.mapGet (.var c1) (.var c2) tU64 tU64)
                 (.intLit 1 .uint64)]
               (uEnvg na₀) (.seq [] (uEnvg na₀) postK))) ch
-        = .ok (.evalE (.var "$c1") (uEnvg na₀)
-              (.strictK (.mapGet tU64 tU64) [] [.var "$c2"] (uEnvg na₀)
+        = .ok (.evalE (.var c1) (uEnvg na₀)
+              (.strictK (.mapGet tU64 tU64) [] [.var c2] (uEnvg na₀)
                 (.strictK .add [] [.intLit 1 .uint64] (uEnvg na₀)
                   (.stmtOpK (.mapAssign tU64 tU64) 0
                     [.int w .uint64, .map ⟨some (.base ⟨bMap⟩)⟩] []
@@ -251,12 +252,12 @@ theorem mapCountIter_generic (slVar : String)
     (hC9 : ∀ kvs iv dead na₀ na (w : Int) ch,
       stepFnIter 1 (S kvs iv false dead na)
           (.retV (.map ⟨some (.base ⟨bMap⟩)⟩)
-            (.strictK (.mapGet tU64 tU64) [] [.var "$c2"] (uEnvg na₀)
+            (.strictK (.mapGet tU64 tU64) [] [.var c2] (uEnvg na₀)
               (.strictK .add [] [.intLit 1 .uint64] (uEnvg na₀)
                 (.stmtOpK (.mapAssign tU64 tU64) 0
                   [.int w .uint64, .map ⟨some (.base ⟨bMap⟩)⟩] []
                   (uEnvg na₀) (.seq [] (uEnvg na₀) postK))))) ch
-        = .ok (.evalE (.var "$c2") (uEnvg na₀)
+        = .ok (.evalE (.var c2) (uEnvg na₀)
               (.strictK (.mapGet tU64 tU64) [.map ⟨some (.base ⟨bMap⟩)⟩] []
                 (uEnvg na₀)
                 (.strictK .add [] [.intLit 1 .uint64] (uEnvg na₀)
@@ -552,7 +553,7 @@ them. The placement facts:
   placement's loop-body environments (`rfl`);
 * `hEnv1`/`hEnv2` — those environments resolve `$c1`/`$c2` at
   `na₀`/`na₀ + 1` (`rfl`). -/
-theorem mapCountIter_at (slVar : String)
+theorem mapCountIter_at (slVar mapVar c1 c2 iVar : String)
     (S : List (Int × Nat) → Int → Bool → Heap → Nat → ExecState)
     (base : ExecState) (front : List (Int × Nat) → Int → Heap)
     (ws : List Int) (bArr bMap base0 : Nat)
@@ -572,61 +573,61 @@ theorem mapCountIter_at (slVar : String)
       Heap.set (front kvs iv) (.base ⟨bMap⟩)
           ⟨none, .mapData (toEntries (setk kvs w v))⟩
         = front (setk kvs w v) iv)
-    (hDecl1 : ∀ na : Nat, env3g.declare "$c1" (.base ⟨na⟩) = u1Envg na)
+    (hDecl1 : ∀ na : Nat, env3g.declare c1 (.base ⟨na⟩) = u1Envg na)
     (hDecl2 : ∀ na₀ : Nat,
-      (u1Envg na₀).declare "$c2" (.base ⟨na₀ + 1⟩) = uEnvg na₀)
+      (u1Envg na₀).declare c2 (.base ⟨na₀ + 1⟩) = uEnvg na₀)
     (hEnv1 : ∀ na₀ : Nat,
-      LocalEnv.lookup (uEnvg na₀) "$c1" = some (.base ⟨na₀⟩))
+      LocalEnv.lookup (uEnvg na₀) c1 = some (.base ⟨na₀⟩))
     (hEnv2 : ∀ na₀ : Nat,
-      LocalEnv.lookup (uEnvg na₀) "$c2" = some (.base ⟨na₀ + 1⟩))
+      LocalEnv.lookup (uEnvg na₀) c2 = some (.base ⟨na₀ + 1⟩))
     -- the raw segments (as in `mapCountIter_generic`)
     (hC1 : ∀ kvs iv dead na ch,
       stepFnIter 7 (S kvs iv false dead na) (.retV (.bool true) cmp) ch
-        = .ok (.exec (.initialization { id := "$c1", typ := tMap }) env3g
-            (.seq [asgnC1G, seqnC2G slVar, mapAsgnG] env3g postK),
+        = .ok (.exec (.initialization { id := c1, typ := tMap }) env3g
+            (.seq [asgnC1G mapVar c1, seqnC2G slVar c2 iVar, mapAsgnG c1 c2] env3g postK),
           S kvs iv false dead na, ch))
     (hC2 : ∀ kvs iv dead na₀ na ch,
       stepFnIter 6 (S kvs iv false dead na)
-          (.next (.seq [asgnC1G, seqnC2G slVar, mapAsgnG] (u1Envg na₀)
+          (.next (.seq [asgnC1G mapVar c1, seqnC2G slVar c2 iVar, mapAsgnG c1 c2] (u1Envg na₀)
             postK)) ch
         = .ok (.next (.storeK [.chain (.addr (.base ⟨na₀⟩)) [] []]
               [.map ⟨some (.base ⟨bMap⟩)⟩] (.seqn #[]) (u1Envg na₀)
-              (.seq [seqnC2G slVar, mapAsgnG] (u1Envg na₀) postK)),
+              (.seq [seqnC2G slVar c2 iVar, mapAsgnG c1 c2] (u1Envg na₀) postK)),
           S kvs iv false dead na, ch))
     (hC3 : ∀ kvs iv dead na₀ na ch,
       stepFnIter 5 (S kvs iv false dead na)
           (.next (.storeK [] [] (.seqn #[]) (u1Envg na₀)
-            (.seq [seqnC2G slVar, mapAsgnG] (u1Envg na₀) postK))) ch
-        = .ok (.exec (.initialization { id := "$c2", typ := tU64 })
+            (.seq [seqnC2G slVar c2 iVar, mapAsgnG c1 c2] (u1Envg na₀) postK))) ch
+        = .ok (.exec (.initialization { id := c2, typ := tU64 })
               (u1Envg na₀)
-              (.seq [asgnReadG slVar, mapAsgnG] (u1Envg na₀) postK),
+              (.seq [asgnReadG slVar c2 iVar, mapAsgnG c1 c2] (u1Envg na₀) postK),
           S kvs iv false dead na, ch))
     (hC4 : ∀ kvs iv dead na₀ na ch,
       stepFnIter 8 (S kvs iv false dead na)
-          (.next (.seq [asgnReadG slVar, mapAsgnG] (uEnvg na₀) postK)) ch
+          (.next (.seq [asgnReadG slVar c2 iVar, mapAsgnG c1 c2] (uEnvg na₀) postK)) ch
         = .ok (.retV (.int iv .int)
               (.strictK .indexGet [wsHG bArr ws.length] [] (uEnvg na₀)
                 (.rhsK .vals [.chain (.addr (.base ⟨na₀ + 1⟩)) [] []] [] []
                   (.seqn #[]) (uEnvg na₀)
-                  (.seq [mapAsgnG] (uEnvg na₀) postK))),
+                  (.seq [mapAsgnG c1 c2] (uEnvg na₀) postK))),
           S kvs iv false dead na, ch))
     (hC5 : ∀ kvs iv dead na₀ na (w : GoValue) ch,
       stepFnIter 1 (S kvs iv false dead na)
           (.retV w (.rhsK .vals [.chain (.addr (.base ⟨na₀ + 1⟩)) [] []] [] []
             (.seqn #[]) (uEnvg na₀)
-            (.seq [mapAsgnG] (uEnvg na₀) postK))) ch
+            (.seq [mapAsgnG c1 c2] (uEnvg na₀) postK))) ch
         = .ok (.next (.storeK [.chain (.addr (.base ⟨na₀ + 1⟩)) [] []] [w]
               (.seqn #[]) (uEnvg na₀)
-              (.seq [mapAsgnG] (uEnvg na₀) postK)),
+              (.seq [mapAsgnG c1 c2] (uEnvg na₀) postK)),
           S kvs iv false dead na, ch))
     (hC6 : ∀ kvs iv dead na₀ na ch,
       stepFnIter 4 (S kvs iv false dead na)
           (.next (.storeK [] [] (.seqn #[]) (uEnvg na₀)
-            (.seq [mapAsgnG] (uEnvg na₀) postK))) ch
-        = .ok (.evalE (.var "$c1") (uEnvg na₀)
+            (.seq [mapAsgnG c1 c2] (uEnvg na₀) postK))) ch
+        = .ok (.evalE (.var c1) (uEnvg na₀)
               (.stmtOpK (.mapAssign tU64 tU64) 0 []
-                [.var "$c2",
-                 .add (.mapGet (.var "$c1") (.var "$c2") tU64 tU64)
+                [.var c2,
+                 .add (.mapGet (.var c1) (.var c2) tU64 tU64)
                    (.intLit 1 .uint64)]
                 (uEnvg na₀) (.seq [] (uEnvg na₀) postK)),
           S kvs iv false dead na, ch))
@@ -634,13 +635,13 @@ theorem mapCountIter_at (slVar : String)
       stepFnIter 1 (S kvs iv false dead na)
           (.retV (.map ⟨some (.base ⟨bMap⟩)⟩)
             (.stmtOpK (.mapAssign tU64 tU64) 0 []
-              [.var "$c2",
-               .add (.mapGet (.var "$c1") (.var "$c2") tU64 tU64)
+              [.var c2,
+               .add (.mapGet (.var c1) (.var c2) tU64 tU64)
                  (.intLit 1 .uint64)]
               (uEnvg na₀) (.seq [] (uEnvg na₀) postK))) ch
-        = .ok (.evalE (.var "$c2") (uEnvg na₀)
+        = .ok (.evalE (.var c2) (uEnvg na₀)
               (.stmtOpK (.mapAssign tU64 tU64) 0 [.map ⟨some (.base ⟨bMap⟩)⟩]
-                [.add (.mapGet (.var "$c1") (.var "$c2") tU64 tU64)
+                [.add (.mapGet (.var c1) (.var c2) tU64 tU64)
                   (.intLit 1 .uint64)]
                 (uEnvg na₀) (.seq [] (uEnvg na₀) postK)),
           S kvs iv false dead na, ch))
@@ -648,11 +649,11 @@ theorem mapCountIter_at (slVar : String)
       stepFnIter 3 (S kvs iv false dead na)
           (.retV (.int w .uint64)
             (.stmtOpK (.mapAssign tU64 tU64) 0 [.map ⟨some (.base ⟨bMap⟩)⟩]
-              [.add (.mapGet (.var "$c1") (.var "$c2") tU64 tU64)
+              [.add (.mapGet (.var c1) (.var c2) tU64 tU64)
                 (.intLit 1 .uint64)]
               (uEnvg na₀) (.seq [] (uEnvg na₀) postK))) ch
-        = .ok (.evalE (.var "$c1") (uEnvg na₀)
-              (.strictK (.mapGet tU64 tU64) [] [.var "$c2"] (uEnvg na₀)
+        = .ok (.evalE (.var c1) (uEnvg na₀)
+              (.strictK (.mapGet tU64 tU64) [] [.var c2] (uEnvg na₀)
                 (.strictK .add [] [.intLit 1 .uint64] (uEnvg na₀)
                   (.stmtOpK (.mapAssign tU64 tU64) 0
                     [.int w .uint64, .map ⟨some (.base ⟨bMap⟩)⟩] []
@@ -661,12 +662,12 @@ theorem mapCountIter_at (slVar : String)
     (hC9 : ∀ kvs iv dead na₀ na (w : Int) ch,
       stepFnIter 1 (S kvs iv false dead na)
           (.retV (.map ⟨some (.base ⟨bMap⟩)⟩)
-            (.strictK (.mapGet tU64 tU64) [] [.var "$c2"] (uEnvg na₀)
+            (.strictK (.mapGet tU64 tU64) [] [.var c2] (uEnvg na₀)
               (.strictK .add [] [.intLit 1 .uint64] (uEnvg na₀)
                 (.stmtOpK (.mapAssign tU64 tU64) 0
                   [.int w .uint64, .map ⟨some (.base ⟨bMap⟩)⟩] []
                   (uEnvg na₀) (.seq [] (uEnvg na₀) postK))))) ch
-        = .ok (.evalE (.var "$c2") (uEnvg na₀)
+        = .ok (.evalE (.var c2) (uEnvg na₀)
               (.strictK (.mapGet tU64 tU64) [.map ⟨some (.base ⟨bMap⟩)⟩] []
                 (uEnvg na₀)
                 (.strictK .add [] [.intLit 1 .uint64] (uEnvg na₀)
@@ -708,9 +709,9 @@ theorem mapCountIter_at (slVar : String)
   -- facts
   have hInit1 : ∀ kvs iv dead na ch, base0 ≤ na → DeadFrom dead na →
       stepFn (S kvs iv false dead na)
-          (.exec (.initialization { id := "$c1", typ := tMap }) env3g
-            (.seq [asgnC1G, seqnC2G slVar, mapAsgnG] env3g postK)) ch
-        = .ok (.next (.seq [asgnC1G, seqnC2G slVar, mapAsgnG] (u1Envg na)
+          (.exec (.initialization { id := c1, typ := tMap }) env3g
+            (.seq [asgnC1G mapVar c1, seqnC2G slVar c2 iVar, mapAsgnG c1 c2] env3g postK)) ch
+        = .ok (.next (.seq [asgnC1G mapVar c1, seqnC2G slVar c2 iVar, mapAsgnG c1 c2] (u1Envg na)
               postK),
           S kvs iv false (dead ++ [(Loc.base ⟨na⟩, nilMapCell)]) (na + 1),
           ch) := by
@@ -722,8 +723,8 @@ theorem mapCountIter_at (slVar : String)
       exact hdead na (Nat.le_refl na)
     have h := stepFn_init_seq
       (σ := { base with heap := front kvs iv ++ dead, nextAddr := na })
-      (p := { id := "$c1", typ := tMap })
-      (rest := [asgnC1G, seqnC2G slVar, mapAsgnG]) (env := env3g)
+      (p := { id := c1, typ := tMap })
+      (rest := [asgnC1G mapVar c1, seqnC2G slVar c2 iVar, mapAsgnG c1 c2]) (env := env3g)
       (k := postK) (ch := ch) (v := .map ⟨none⟩) (defaultValue_tMap _)
     rw [show ({ base with heap := front kvs iv ++ dead, nextAddr := na }
           : ExecState).nextAddr = na from rfl,
@@ -735,9 +736,9 @@ theorem mapCountIter_at (slVar : String)
       stepFn (S kvs iv false (dead ++ [(Loc.base ⟨na₀⟩, nilMapCell)]) na)
           (.next (.storeK [.chain (.addr (.base ⟨na₀⟩)) [] []]
             [.map ⟨some (.base ⟨bMap⟩)⟩] (.seqn #[]) (u1Envg na₀)
-            (.seq [seqnC2G slVar, mapAsgnG] (u1Envg na₀) postK))) ch
+            (.seq [seqnC2G slVar c2 iVar, mapAsgnG c1 c2] (u1Envg na₀) postK))) ch
         = .ok (.next (.storeK [] [] (.seqn #[]) (u1Envg na₀)
-              (.seq [seqnC2G slVar, mapAsgnG] (u1Envg na₀) postK)),
+              (.seq [seqnC2G slVar c2 iVar, mapAsgnG c1 c2] (u1Envg na₀) postK)),
           S kvs iv false (dead ++ [(Loc.base ⟨na₀⟩, mhG bMap)]) na, ch) := by
     intro kvs iv dead na₀ na ch hna hdead
     rw [hS kvs iv (dead ++ [(Loc.base ⟨na₀⟩, nilMapCell)]) na,
@@ -764,9 +765,9 @@ theorem mapCountIter_at (slVar : String)
     exact stepFn_store_step h
   have hInit2 : ∀ kvs iv dead na₀ ch, base0 ≤ na₀ → DeadFrom dead na₀ →
       stepFn (S kvs iv false (dead ++ [(Loc.base ⟨na₀⟩, mhG bMap)]) (na₀ + 1))
-          (.exec (.initialization { id := "$c2", typ := tU64 }) (u1Envg na₀)
-            (.seq [asgnReadG slVar, mapAsgnG] (u1Envg na₀) postK)) ch
-        = .ok (.next (.seq [asgnReadG slVar, mapAsgnG] (uEnvg na₀) postK),
+          (.exec (.initialization { id := c2, typ := tU64 }) (u1Envg na₀)
+            (.seq [asgnReadG slVar c2 iVar, mapAsgnG c1 c2] (u1Envg na₀) postK)) ch
+        = .ok (.next (.seq [asgnReadG slVar c2 iVar, mapAsgnG c1 c2] (uEnvg na₀) postK),
           S kvs iv false
             (dead ++ [(Loc.base ⟨na₀⟩, mhG bMap), (Loc.base ⟨na₀ + 1⟩, u64cell 0)])
             (na₀ + 2), ch) := by
@@ -785,8 +786,8 @@ theorem mapCountIter_at (slVar : String)
       (σ := { base with
         heap := front kvs iv ++ (dead ++ [(Loc.base ⟨na₀⟩, mhG bMap)]),
         nextAddr := na₀ + 1 })
-      (p := { id := "$c2", typ := tU64 })
-      (rest := [asgnReadG slVar, mapAsgnG])
+      (p := { id := c2, typ := tU64 })
+      (rest := [asgnReadG slVar c2 iVar, mapAsgnG c1 c2])
       (env := u1Envg na₀) (k := postK) (ch := ch) (v := .int 0 .uint64)
       (defaultValue_tU64 _)
     rw [show ({ base with
@@ -805,9 +806,9 @@ theorem mapCountIter_at (slVar : String)
           na)
           (.next (.storeK [.chain (.addr (.base ⟨na₀ + 1⟩)) [] []]
             [.int w .uint64] (.seqn #[]) (uEnvg na₀)
-            (.seq [mapAsgnG] (uEnvg na₀) postK))) ch
+            (.seq [mapAsgnG c1 c2] (uEnvg na₀) postK))) ch
         = .ok (.next (.storeK [] [] (.seqn #[]) (uEnvg na₀)
-              (.seq [mapAsgnG] (uEnvg na₀) postK)),
+              (.seq [mapAsgnG c1 c2] (uEnvg na₀) postK)),
           S kvs iv false
             (dead ++ [(Loc.base ⟨na₀⟩, mhG bMap), (Loc.base ⟨na₀ + 1⟩, u64cell w)])
             na, ch) := by
@@ -885,7 +886,7 @@ theorem mapCountIter_at (slVar : String)
       stepFn (S kvs iv false
           (dead ++ [(Loc.base ⟨na₀⟩, mhG bMap), (Loc.base ⟨na₀ + 1⟩, u64cell w)])
           na)
-          (.evalE (.var "$c1") (uEnvg na₀) k) ch
+          (.evalE (.var c1) (uEnvg na₀) k) ch
         = .ok (.retV (.map ⟨some (.base ⟨bMap⟩)⟩) k,
             S kvs iv false
               (dead ++ [(Loc.base ⟨na₀⟩, mhG bMap),
@@ -899,7 +900,7 @@ theorem mapCountIter_at (slVar : String)
       stepFn (S kvs iv false
           (dead ++ [(Loc.base ⟨na₀⟩, mhG bMap), (Loc.base ⟨na₀ + 1⟩, u64cell w)])
           na)
-          (.evalE (.var "$c2") (uEnvg na₀) k) ch
+          (.evalE (.var c2) (uEnvg na₀) k) ch
         = .ok (.retV (.int w .uint64) k,
             S kvs iv false
               (dead ++ [(Loc.base ⟨na₀⟩, mhG bMap),
@@ -972,7 +973,7 @@ theorem mapCountIter_at (slVar : String)
             : ExecState).heap = front kvs iv ++ dead from rfl,
         set_append_left (hmapCell kvs iv), hsetMap kvs iv w v]] at hMA
     exact stepFn_mapAssign_apply hMA
-  exact mapCountIter_generic slVar S ws bArr bMap base0 head cmp postK
+  exact mapCountIter_generic slVar mapVar c1 c2 iVar S ws bArr bMap base0 head cmp postK
     env3g u1Envg uEnvg hC1 hInit1 hC2 hSt1 hC3 hInit2 hC4 hRead hC5 hSt2
     hC6 hVar1 hVar2 hC7 hC8 hC9 hMapGet hC10 hMapAsgn hC11
     kvs i dead na ch hi hw0 hw64 hcnt hna hdead

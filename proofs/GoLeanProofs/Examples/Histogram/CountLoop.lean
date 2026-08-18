@@ -292,7 +292,7 @@ theorem hg_count_iter (σ : ExecState) (sv qv siv civ : Int)
   have hcnt : cnt (countsFold (ws.take i)) (ws.getD i 0) + 1 < 2 ^ 64 := by
     have := cnt_take_le (ws := ws) (i := i) (ws.getD i 0)
     omega
-  have h := mapCountIter_at "vals" (σH σ ws.length sv qv siv civ ws lp) σ
+  have h := mapCountIter_at "vals" "counts" "$c1" "$c2" "i" (σH σ ws.length sv qv siv civ ws lp) σ
     (fun kvs iv => frontH ws.length sv qv siv civ ws lp kvs iv false)
     ws 7 21 25 headCH cmpContCH postBodyKH env3H u1EnvH uEnvH
     (fun _ _ _ _ => rfl)

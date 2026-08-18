@@ -20,7 +20,7 @@ toward totals.
 | slice | scope (charter §) | status | units done | landed lines deleted | kit pins added |
 |---|---|---|---|---|---|
 | s1 | lift wave 1 (pure lifts) | **COMPLETE** — all 6 lift families landed (lift-5 stragglers resolved in S1.5b) | 8 / 8 | 2,483 (consumers; net −1,551 with +932 delegation/instantiation lines) | +79 (116 → 195) |
-| s2 | lift wave 2 (new shapes) | not started | — | — | — |
+| s2 | lift wave 2 (new shapes) | **COMPLETE** — all 7 chartered items landed | 7 / 7 | 1,103 (consumers; net −633 with +470 delegation/instantiation lines) | +38 (195 → 233) |
 | s3 | library regularity | not started | — | — | — |
 | s4 | mirror symbolic evaluator | not started (USER design-note gate) | — | — | — |
 | s5 | emission + instantiation sugar | not started | — | — | — |
@@ -45,3 +45,18 @@ twosum + bubble retrofitted, rle verified NO-OP) and S1.6 (GAP-RESLICE
 + `stepFn_return_frame`/`stepFn_block` + the queue glue composites),
 one commit each, `scripts/ci` PASS at each. P6 sweeps re-verified at
 the tip; totals above. Close-out entry: `s1.md` §SLICE 1 CLOSE-OUT.
+
+**Checkpoint 3 — S2 COMPLETE (2026-08-18, tip = the S2.7 commit;
+≤5-unit cadence met at units S2.1–S2.5 + this close).** All seven
+chartered new-shape items landed, one commit each, `scripts/ci` PASS
+at every commit: footprint pack (FreshFrom/DeadFrom unified + the
+lookup/set battery + the two docstring signature disciplines),
+call-span combinator + loadMany pair, GAP-APPEND
+(element-type-generic one-element append with the envelope
+existential), `StringMem` (values only, no heap half), growing-heap
+front support (`keysBelow` executable front bound +
+`storeTarget_live`), the `derive_entry_eq` string arm (zero
+hand-written entry dances survive, claim sites updated), GAP-C1b
+(`MapLoops` name parameterization). Totals above; close-out entry:
+`s2.md` §SLICE 2 CLOSE-OUT. Next per the charter: slice 3 (library
+regularity).

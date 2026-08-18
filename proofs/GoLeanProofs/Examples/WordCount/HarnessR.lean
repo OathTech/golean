@@ -1177,7 +1177,7 @@ private theorem wcR_count_iter (σ : ExecState) (sv siv civ : Int)
   have hcnt : cnt (countsFold (ws.take i)) (ws.getD i 0) + 1 < 2 ^ 64 := by
     have := cnt_take_le (ws := ws) (i := i) (ws.getD i 0)
     omega
-  have h := mapCountIter_at "words" (σR σ ws.length sv siv civ ws lp) σ
+  have h := mapCountIter_at "words" "counts" "$c1" "$c2" "i" (σR σ ws.length sv siv civ ws lp) σ
     (fun kvs iv => frontR ws.length sv siv civ ws lp kvs iv false) ws 5 16 20
     headCR cmpContCR postBodyKR env3R u1EnvR uEnvR
     (fun _ _ _ _ => rfl)
