@@ -131,6 +131,15 @@ inductive Expr where
   for anything env-resolved. -/
   | locLit (l : Loc)
   | deref (ptr : Expr) (typ : Ty)
+  /-- `&*p` / `&(*p)` — the spec's own composite (spec#Address_operators:
+  "if the evaluation of `x` would cause a run-time panic, then the
+  evaluation of `&x` does too", with `&*x // causes a run-time panic`
+  as its exhibit): assert the pointer non-nil, yield the SAME pointer,
+  touch NO memory. gc compiles it to a single uninstrumented hardware
+  nil-probe (`TESTB`) with no pointee load, so lowering it through a
+  real `deref` would fabricate a race-visible read gc never performs
+  (BUG-056, memo §2–§3; fix ruled 2026-08-19, memo §6). -/
+  | addrOfDeref (ptr : Expr)
   | structLit (typ : Ty) (args : Array Expr)
   | fieldGet (recv : Expr) (typeId : TypeId) (fieldName : String)
   | fieldAddr (base : Expr) (typeId : TypeId) (fieldName : String)

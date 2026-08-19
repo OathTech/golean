@@ -25,5 +25,11 @@ array-read-write	freeArrayReadWrite	-	ok	-	goroutines,channels,arrays,race
 # the method-value (deref at call, not creation) and spawn-entry
 # (write-before-go ordered by the spawn edge) dispatch pins.
 promoted-ptr-box	freePromotedPtrBox	-	ok	-	goroutines,channels,interfaces,methods,embedding,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4
+# BUG-056 acceptance pin (fix 2026-08-19): &*p beside a concurrent
+# pointee write is race-FREE (gc: uninstrumented TESTB nil-probe, no
+# load — TSan-green 20/20 at the fix probe; the real-load control is
+# TSan-red exit 66). Red here means the addrOfDeref op grew a memory
+# access it must not have.
+addr-deref-no-read	freeAddrDerefNoRead	-	ok	-	goroutines,channels,pointers,race	confluent	join-ordered readout; the &*p window is race-free only because addrOfDeref touches no pointee memory	width=4
 method-value-order	freeMethodValueOrder	-	ok	-	goroutines,channels,interfaces,methods,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4
 spawn-dispatch-free	freeSpawnDispatch	-	ok	-	goroutines,channels,interfaces,methods,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4

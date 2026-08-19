@@ -174,6 +174,32 @@ type dispSGetter interface {
 	Send(ch chan int)
 }
 
+// BUG-056 acceptance (fix 2026-08-19): `&*p` is a nil-probe on the
+// pointer VALUE, not a pointee access — gc compiles it to an
+// uninstrumented TESTB (memo §2: TSan-green beside a concurrent
+// pointee write, where a real `*p` read is TSan-red exit 66; both
+// re-probed at the fix, artifacts/probe/addr056-accept, scratch).
+// Main takes `&*p` and compares pointer identity while the child
+// writes the POINTEE; the only pointee read is after the join. A fix
+// that materialized a load (the rejected a1 desugar) turns this row
+// red with a raceDetected refusal.
+func freeAddrDerefNoRead() int {
+	x := 0
+	p := &x
+	done := make(chan int)
+	go func() {
+		*p = 42
+		done <- 1
+	}()
+	q := &*p
+	same := 0
+	if q == p {
+		same = 1
+	}
+	<-done
+	return same*100 + *q
+}
+
 func main() {
 	println(freeSliceDisjoint())
 	println(freeFieldDisjoint())
@@ -183,4 +209,5 @@ func main() {
 	println(freePromotedPtrBox())
 	println(freeMethodValueOrder())
 	println(freeSpawnDispatch())
+	println(freeAddrDerefNoRead())
 }

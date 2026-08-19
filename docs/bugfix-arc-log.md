@@ -13,7 +13,7 @@ its reasoning, for user review; every number is derivation-anchored
 | --- | --- | --- |
 | 1 | BUG-058 — if-init condition-hoist scope | DONE (`8a42e402` enumeration, `740f09f8` fix; gate PASS at `740f09f8`) |
 | 2 | BUG-057 — two-var comma-ok var-decl arity | DONE (`d5ce2dc0` enumeration, `2d840744` fix; gate PASS at `2d840744`) |
-| 3 | BUG-056 — `&*p` nil collapse (design-gated) | RULED (2026-08-19: option (b) approved, memo §6) — implementation in progress |
+| 3 | BUG-056 — `&*p` nil collapse (design-gated) | DONE (ruled 2026-08-19, memo §6; fix landed — the addrOfDeref strict op; 5 reds flipped, acceptance pin green) |
 | 4 | BUG-005 — live map iteration (design-gated) | RULED (2026-08-19: (L) approved, narrowings REJECTED — full literal envelope; memo §5) — implementation in progress |
 | 5 | full red/bug triage (kill or justify) | TABLE DELIVERED (`docs/2026-08-19_triage-table.md`); A1 landed `1ca434b2`; (c) list + two gates await the user |
 | 6 | the whole-language bar (coverage ledger) | not started |
@@ -777,6 +777,74 @@ The headline deltas from the memos' recommendations:
 - New standing doc directed: `docs/spec-interpretations.md` (curated
   index of adopted spec readings, ledger-backed, CLAUDE.md-linked) —
   executed as this arc's slice 3+4 docs commit.
+
+### Slice 3 implementation — the BUG-056 fix (ruled mechanism (b))
+
+The memo's ~10 arms, all landed in one commit:
+`emitUnaryExpr` (the `&` operator's immediate-`*` operand → wire
+`addr-of-deref`), `decodeExpr` arm, `Expr.addrOfDeref` constructor,
+`StrictOp.addrOfDeref` + `strictPlan` row + the 3-line apply arm
+(nil-assert via `valueAsLoc`'s existing runtime-panic arm, yield the
+pointer, NO memory access), `Expr.locSup` + `applyStrictOp_wf` cases,
+`renameExpr` arm, mirror `applyStrictOp'` arm (computes on concrete
+pointers, `.nil` quits Q6, atoms Q10), `applyStrictOp_conc` and
+`applyStrictOp_sim` cases (fieldAddr's shape minus the field
+constructor), and the Race.lean call-site-inventory NO-ACCESS entry
+(the deliberate no-footprint decision — gc's TESTB is uninstrumented
+and our model performs no load at all). Relation: zero new rules (the
+generic strict-op frame machinery; `strictPlan_locSup` is generic
+over unary constructors). Core + proofs built green first try.
+
+**JUDGMENT (slice 3, THE ONE DEVIATION FROM THE MEMO — emitter arm
+placement, found by the differential).** The memo's blast-radius table
+said "the StarExpr arm of emitAddressOf". Implemented that way, the
+full run flipped FIVE store-order pins red
+(`assign-order/target-check-vs-rhs/nil-deref-target`,
+`channels/recv-edge/second-target-panic-stores-first`,
+`channels/recv-map-elem/first-store-lands`,
+`multi-assign/store-order-plain`,
+`pointers/nil-array-elem-store/second-target`): `emitAddressOf` is
+not the `&` operator — it is the GENERAL addressable path, reached by
+assignment targets, slice/array bases and receiver addresses, where
+the nil check belongs to each consumer's own spec point (a store
+target panics in PHASE 2, after the RHS — BUG-029's timing).
+addr-of-deref there made the panic fire at target-address evaluation,
+before the RHS — observably too early. The arm was re-scoped to
+`emitUnaryExpr`'s `token.AND` path (parens stripped, immediate
+`*` operand only), which IS spec#Address_operators' `&x`; the
+StarExpr arm of `emitAddressOf` keeps the collapse with a comment
+naming the five guards. All five back green, matrix 10/10,
+both memo pins green. Recorded because the memo's own scoping
+sentence ("the immediate `&`-of-`*` composition ONLY") was right and
+its file-table row was imprecise — and the differential caught it,
+which is the guardrails-first discipline doing exactly its job.
+
+**Acceptance tests (memo §6, both ground truths):**
+- **No load / no race visibility:** new pinned green
+  `race/free/addr-deref-no-read` — main takes `&*p` and compares
+  pointer identity while a child writes the POINTEE; only pointee
+  read is after the join. gc probe at the fix
+  (artifacts/probe/addr056-accept, scratch): plain 142, `-race` green
+  20/20; the real-load control (`y := *p`) is TSan-red exit 66 — so
+  the row is load-bearing: a fix that materialized a pointee read
+  turns it red with a raceDetected refusal. Machine: PASS, confluent
+  (|set|=1 certified over all schedules).
+- **Race negative stays quiet:** `race/negative` focused run 14/15
+  with the one fail the expected BUG-005 pin
+  (`race/negative/map-range-iter`); no new refusals anywhere in the
+  full run.
+
+**Predicted flip set, stated before the confirming run (5 red→green +
+1 new green, nothing else):** the five BUG-056 Cases
+(`address-op-nil-indirection/{addr-deref-nil,addr-deref-nil-paren}`,
+`addr-deref-nil-matrix/{two-deref-inner-nil,deref-arg,deref-call}`)
+FAIL/lean-observation → PASS, plus `race/free/addr-deref-no-read`
+NEW → PASS/confluent. **Full run: drift was exactly that set** —
+2180 cases, 2053 PASS / 127 FAIL (was 2179, 2047/132); the 7 matrix
+guard greens and the 5 store-order guards all held. Baseline
+re-pinned in this commit from that run, reason in its header.
+BUGS.md BUG-056 → fixed (mechanism one-liner + flip list + the
+acceptance pin; discovery record kept verbatim).
 
 ---
 

@@ -154,6 +154,7 @@ def Expr.locSup : Expr → Nat
   | .locLit l => Loc.locSup l
   | .convert _ e | .bytesFromString e | .stringFromByteSlice e
   | .stringFromRune e | .bitNeg e | .neg e | .not e | .deref e _
+  | .addrOfDeref e
   | .fieldGet e _ _ | .fieldAddr e _ _ | .toInterface _ _ e
   | .typeAssert e _ _ | .length e _ | .capacity e _ =>
       Expr.locSup e
@@ -2984,6 +2985,14 @@ theorem applyStrictOp_wf {σ : ExecState} {op : StrictOp} {vs : List GoValue}
     obtain ⟨l, hl, lv, hlv, rfl, rfl⟩ := h
     have := loadLoc_locSup hlv
     exact strictWfSame hw (by omega)
+  · -- addrOfDeref (BUG-056): nil-assert on the pointer VALUE, no load
+    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨l, hl, rfl, rfl⟩ := h
+    have := valueAsLoc_locSup hl
+    simp only [goValueListSup] at hvs
+    refine strictWfSame hw ?_
+    show Loc.locSup l ≤ σ.nextAddr
+    omega
   · -- fieldGet
     split at h
     · -- struct value

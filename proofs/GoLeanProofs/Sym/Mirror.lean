@@ -1459,6 +1459,12 @@ def applyStrictOp' (s : State D) : StrictOp → List (Value D) →
       let loc ← v.asLoc
       let value ← loadLoc' s loc
       .ok (value, s)
+  | .addrOfDeref, [v] => do
+      -- BUG-056: the nil-vs-addr decision is on the value STRUCTURE
+      -- (`asLoc`: `.addr` computes, `.nil` quits Q6 like every
+      -- machine panic, atoms quit Q10) — no scalar payload, no load.
+      let loc ← v.asLoc
+      .ok (.addr loc, s)
   | .fieldGet typeId fieldName, [v] => do
       match v with
       | .struct actualType fields =>

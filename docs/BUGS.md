@@ -2541,9 +2541,21 @@ FIRST per the standing rule.
 
 ## BUG-056 — `&*x` on a nil pointer collapses instead of panicking
 
-- Status: open (discovered 2026-08-18, spec-truth P3 — a spec-example
-  guardrail case found the unexercised path; interpreter fix is a
-  semantic-core arc, out of P3's corpus-lane scope).
+- Status: fixed (2026-08-19, bug-fix arc slice 3, user-gated — memo
+  `docs/2026-08-19_bug056-addr-deref-memo.md`, ruling §6. Mechanism
+  (b): one new GoCore strict op `addrOfDeref` (wire `addr-of-deref`) —
+  evaluate the pointer operand, nil-assert on the VALUE via
+  `valueAsLoc`'s existing runtime-panic arm, yield the same pointer,
+  touch NO memory (gc's TESTB shape; no race-footprint arm ON PURPOSE
+  — Race.lean's call-site inventory records the decision). The
+  emitter's `emitAddressOf` StarExpr arm emits it for the immediate
+  `&`-of-`*` composition only; field/index compositions keep their
+  pinned-green lowerings. Flipped exactly the 5 pinned reds; the 7
+  matrix guard greens held. Acceptance: `race/free/addr-deref-no-read`
+  pins the no-load/no-race-visibility ground truths — `&*p` beside a
+  concurrent pointee write stays race-free (gc TSan-green 20/20 at the
+  fix probe; the real-load control TSan-red), and would go red if the
+  op ever grew a memory access. Discovery record below kept verbatim.)
 - Pinned-by: differential
 - Cases: spec-examples-decl/address-op-nil-indirection/addr-deref-nil, spec-examples-decl/address-op-nil-indirection/addr-deref-nil-paren, spec-examples-decl/addr-deref-nil-matrix/two-deref-inner-nil, spec-examples-decl/addr-deref-nil-matrix/deref-arg, spec-examples-decl/addr-deref-nil-matrix/deref-call
 - PROBE MATRIX (bug-fix arc slice 3, 2026-08-19; design memo
