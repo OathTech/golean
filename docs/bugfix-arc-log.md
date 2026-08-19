@@ -15,7 +15,7 @@ its reasoning, for user review; every number is derivation-anchored
 | 2 | BUG-057 — two-var comma-ok var-decl arity | DONE (`d5ce2dc0` enumeration, `2d840744` fix; gate PASS at `2d840744`) |
 | 3 | BUG-056 — `&*p` nil collapse (design-gated) | MEMO DELIVERED, awaiting user ruling (probe matrix landed, 10 rows; `docs/2026-08-19_bug056-addr-deref-memo.md`) |
 | 4 | BUG-005 — live map iteration (design-gated) | MEMO DELIVERED, awaiting user ruling (3 probe rows landed; `docs/2026-08-19_bug005-map-range-memo.md`) |
-| 5 | full red/bug triage (kill or justify) | not started |
+| 5 | full red/bug triage (kill or justify) | IN PROGRESS |
 | 6 | the whole-language bar (coverage ledger) | not started |
 
 ---
@@ -752,3 +752,105 @@ at their charter-designed user gates: no implementation exists or
 begins until Mike rules on the two memos' decision blocks
 (`docs/2026-08-19_bug056-addr-deref-memo.md` §5,
 `docs/2026-08-19_bug005-map-range-memo.md` §4).
+
+---
+
+## Slice 5 — the full red/bug triage (kill or justify)
+
+Deliverable: **`docs/2026-08-19_triage-table.md`** — one row per open
+`docs/BUGS.md` entry and per root-cause GROUP of baseline reds, each in
+exactly one of the charter's three categories. Split out of this log
+because a 40-plus-row table with written arguments buries everything
+else; this section carries the slice's judgment calls and gate records.
+
+### Step 0 — the denominators, re-derived (the charter said to)
+
+`awk '/^## BUG-/{id=$2} /^- Status: open/{print id}' docs/BUGS.md` → **9**
+open entries, not the charter's 13. At the charter commit `df3adbfc`
+the open set was already **11** (BUG-002/004/005/008/014/041/056/057/058/
+059/061); slices 1–2 closed 057 and 058. **The charter's "13" was never
+right** — recorded because DONE clause 5 counts "13/13"; the honest
+conjunction is 9/9. Baseline reds at `0c21aa21`: **138** (7 differential,
+92 frontend-export, 37 lean-observation, 1 go-run, 1 nondet), not the
+charter's 136 — the 13 probe rows of slices 3+4 moved the split.
+
+### Step 1 — mini-slice A1: `copy` and `recover` in statement position
+
+**Category (a), executed.** spec#Expression_statements: "With the
+exception of specific built-in functions, function and method calls and
+receive operations can appear in statement context", and the
+not-permitted list is exactly
+`append cap complex imag len make new real unsafe.*`. So `copy` and
+`recover` ARE legal expression statements — and the frontend refused
+them (`emit.go`, `emitStmt`'s ExprStmt builtin switch: `unsup("builtin
+%s in statement position")`), quarantining the whole declaration.
+`copy` in statement position occurs in **etcd-io/raft** (`util.go`,
+`tracker/inflights.go`), so the refusal was on the north-star path.
+
+**Guardrails FIRST, colors recorded before the fix.** New package
+`Corpus/coverage/exec/builtins/statement-position/`, 7 rows, every
+expectation computed from `go run` before the differential ran
+(`artifacts/probe/triage-stmtbuiltin`, scratch — 450, 11234, 12450,
+105050, 5, 4, 7 in declaration order). `scripts/coverage run --prefix
+builtins/statement-position` against the UNMODIFIED emitter:
+**7 cases, 0 PASS / 7 FAIL**, every one at `frontend-export` with the
+exact refusal string. The rows are chosen to be load-bearing, not
+decorative: `copy-stmt-eval-order` pins that discarding the RESULT does
+not discard the OPERAND order (dst before src, trace 12);
+`copy-stmt-overlap` pins the spec's as-if-intermediate overlap clause in
+the new position; `recover-stmt-in-defer` pins that a bare `recover()`
+statement still counts as "called directly by a deferred function"
+(spec#Handling_panics) and squashes the panic; `recover-stmt-no-panic`
+and `recover-stmt-outside-defer` pin the two no-op directions, so a fix
+that swallowed something would go red.
+
+**The fix** (`tools/nativefrontend/emit.go`, one switch arm, +27/-6):
+`copy`/`recover` lower through the already-green EXPRESSION node under a
+BLANK assignment target — literally the `_ = copy(dst, src)` shape that
+`n := copy(...)` and `_ = recover()` already take — instead of a new
+statement node. `print`/`println` keep the refusal (implementation-
+specific debug builtins the spec says may be removed).
+
+**JUDGMENT (slice 5, A1 mechanism).** The alternative was a dedicated
+`copy` statement wire node. Rejected: the expression node is already
+differentially validated in every operand shape (`builtins/copy-edge`,
+10 green rows), a second lowering would be a second thing to keep
+correct, and the blank-target assign is a shape the decoder already
+builds. Frontend-only; no wire-schema, decoder or GoCore change.
+
+**JUDGMENT (slice 5, A1 scope).** `copy` and `recover` only — NOT a
+general "route any builtin through the expression node". The spec's
+permitted set in statement context is a closed list, and `print`/
+`println` have no expression form the machine models; a blanket route
+would have turned a precise refusal into a decoder-level failure for
+them. Fail closed on the rest, by name.
+
+**Predicted flip set, stated before the confirming full run (3 red→green,
+7 new green ids, nothing else):**
+
+- `goroutines/spawn-edge/child-recovers` (FAIL/frontend-export → PASS)
+- `imported-goose/semantics/copy/copy-simple` (FAIL/frontend-export → PASS)
+- `imported-goose/unittest/copy/copy-simple` (FAIL/frontend-export → PASS)
+- `builtins/statement-position/*` (7 NEW → PASS)
+
+**Full run at the fix tree:** `scripts/coverage run` → cases=2174
+pass=2039 fail=135 (was 2167, 2029/138). `scripts/coverage-baseline-diff`
+drift was **exactly the predicted set and nothing else** — 10 lines, no
+other id moved. Baseline re-pinned in this commit from that run, reason
+in its header. No `docs/BUGS.md` change is owed: statement-position
+builtins were a frontend COVERAGE refusal (`frontend-export`), which
+BUGS.md's own preamble excludes from the bug index by definition.
+
+**Gate at the A1 commit.** `GOLEAN_MEM_MAX=24G scripts/ci --diff`, full
+run at the fix tree → **`RESULT: PASS`**, exit 0, every step ok:
+`baseline diff FULL (2174/2174, no regression)`, `re-pin guard
+(0 PASS→non-PASS flips, all listed in BUGS.md Cases)`, `bug-index
+cross-check ok`, `eval tests (136 ok)`, `negative baseline diff (no
+regression)`, golden-lowering and imported-goose R2 pins ok,
+spec-anchor citations resolve at the pin, frontend unit tests ok
+(`artifacts/probe/a1-ci.log`, scratch). `scripts/check-bugs.sh`: ok
+(61 bugs) with the untriaged-fidelity backlog unchanged at **25/25** —
+A1 retired three FRONTEND-COVERAGE reds, which never counted toward the
+fidelity backlog, so the number correctly does not move. The ONLY
+difference between the gated tree and the committed tree is this
+paragraph, written afterward (a gate cannot precede its own record).

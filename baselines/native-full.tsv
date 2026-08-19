@@ -1,36 +1,32 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-19 (bug-fix arc slices 3+4, probe-matrix step —
-#   MEMOS ONLY, no machine or frontend change in this commit)
-#   commit: this commit (on 779ab199, the slice-2 fix tip)
-#   re-pin reason: 13 NEW ids from the two design-gated slices' probe
-#   matrices, landed guardrails-first with colors recorded BEFORE any
-#   fix (docs/2026-08-19_bug056-addr-deref-memo.md,
-#   docs/2026-08-19_bug005-map-range-memo.md,
-#   docs/bugfix-arc-log.md §slices 3-4). No existing id moved.
-#   Deltas — the predicted set exactly:
-#     NEW FAIL (4):
-#       + spec-examples-decl/addr-deref-nil-matrix/two-deref-inner-nil
-#         (lean-observation) — BUG-056: inner load yields nil, the
-#         collapsed outer &* never checks it
-#       + spec-examples-decl/addr-deref-nil-matrix/deref-arg
-#         (lean-observation) — BUG-056 in argument position
-#       + spec-examples-decl/addr-deref-nil-matrix/deref-call
-#         (lean-observation) — BUG-056 on a call-result operand
-#       + maps/delete-unreached-during-range (differential) — BUG-005:
-#         the forced removal clause isolated (machine 20, go 11)
-#     NEW PASS (9):
-#       + spec-examples-decl/addr-deref-nil-matrix/{two-deref-outer-nil,
-#         index-slice-ptr-nil,index-arr-ptr-nil,index-auto-deref,
-#         field-explicit,field-auto-deref,alias-non-nil} — the
-#         compositions where an enclosing address node re-checks the
-#         base (pinned green so the BUG-056 fix cannot regress them)
-#         and the non-nil &*p aliasing identity
-#       + maps/added-entries-bound, maps/delete-readd-during-range —
-#         member-invariant envelope-bound pins for the BUG-005
-#         added-entries latitude (green under snapshot AND under any
-#         conforming live model; red on over-production, alien keys,
-#         or divergence)
-# counts: cases=2167 pass=2029 fail=138
+# recorded: 2026-08-19 (bug-fix arc slice 5, triage mini-slice A1 —
+#   `copy` and `recover` in EXPRESSION-STATEMENT position)
+#   commit: this commit (on 0c21aa21, the slices-3+4 memo tip)
+#   re-pin reason: a category-(a) triage fix. spec#Expression_statements
+#   permits every builtin in statement context except
+#   append/cap/complex/imag/len/make/new/real/unsafe.* — so `copy` and
+#   `recover` are legal there and were being REFUSED
+#   ("builtin %s in statement position"), quarantining the whole
+#   declaration. `copy` in statement position occurs in etcd-io/raft
+#   (util.go, tracker/inflights.go), so the refusal was on the
+#   north-star path. emitStmt's ExprStmt builtin switch now lowers both
+#   through the existing (green) EXPRESSION node under a BLANK
+#   assignment target — the `_ = copy(dst, src)` shape — and `print`/
+#   `println` keep the refusal. Frontend-only; no decoder or GoCore
+#   change. Guardrails landed FIRST in the same slice and verified RED
+#   pre-fix (7/7, exact refusal strings recorded in
+#   docs/bugfix-arc-log.md §slice 5).
+#   Deltas — the predicted set exactly, nothing else moved:
+#     FAIL/frontend-export -> PASS (3):
+#       goroutines/spawn-edge/child-recovers
+#       imported-goose/semantics/copy/copy-simple
+#       imported-goose/unittest/copy/copy-simple
+#     NEW PASS (7): builtins/statement-position/{copy-stmt,
+#       copy-stmt-overlap,copy-stmt-eval-order,copy-stmt-string-source,
+#       recover-stmt-in-defer,recover-stmt-no-panic,
+#       recover-stmt-outside-defer} — the edge enumeration, every
+#       expectation computed from `go run` before the fix
+# counts: cases=2174 pass=2039 fail=135
 # frontend: native (tools/nativefrontend + NativeToIR)
 # format: result<TAB>id<TAB>stage (stage "-" for PASS)
 PASS	arrays/array-bounds	-
@@ -153,6 +149,13 @@ PASS	builtins/min-max-ints	-
 PASS	builtins/min-max-strings	-
 FAIL	builtins/real-imag	frontend-export
 PASS	builtins/recover-outside-defer	-
+PASS	builtins/statement-position/copy-stmt	-
+PASS	builtins/statement-position/copy-stmt-eval-order	-
+PASS	builtins/statement-position/copy-stmt-overlap	-
+PASS	builtins/statement-position/copy-stmt-string-source	-
+PASS	builtins/statement-position/recover-stmt-in-defer	-
+PASS	builtins/statement-position/recover-stmt-no-panic	-
+PASS	builtins/statement-position/recover-stmt-outside-defer	-
 PASS	channels/buffered-basic	-
 PASS	channels/close-closed-panic	-
 PASS	channels/closed-receive	-
@@ -933,7 +936,7 @@ PASS	goroutines/select-wake-multi	membership
 PASS	goroutines/select-wake/recv	confluent
 PASS	goroutines/select-wake/send	confluent
 PASS	goroutines/spawn-edge/child-panic-aborts	confluent
-FAIL	goroutines/spawn-edge/child-recovers	frontend-export
+PASS	goroutines/spawn-edge/child-recovers	-
 FAIL	goroutines/spawn-edge/nil-func-fatal	go-run
 PASS	goroutines/spawn-edge/nil-interface-recovered	-
 PASS	goroutines/spawn-edge/ptr-box-child-aborts	confluent
@@ -973,7 +976,7 @@ PASS	imported-goose/semantics/comparisons/compare-l-t	-
 PASS	imported-goose/semantics/conversions/byte-slice-to-string	-
 PASS	imported-goose/semantics/copy/copy-shorter-dst	-
 PASS	imported-goose/semantics/copy/copy-shorter-src	-
-FAIL	imported-goose/semantics/copy/copy-simple	frontend-export
+PASS	imported-goose/semantics/copy/copy-simple	-
 PASS	imported-goose/semantics/defer/defer	-
 PASS	imported-goose/semantics/defer/defer-func-lit	-
 PASS	imported-goose/semantics/first-class-function/first-class-function	-
@@ -1086,7 +1089,7 @@ PASS	imported-goose/unittest/conversions/conversion-literal	-
 PASS	imported-goose/unittest/conversions/u32-newtype-len	-
 PASS	imported-goose/unittest/conversions/wrapper	-
 PASS	imported-goose/unittest/copy/copy-different-lengths	-
-FAIL	imported-goose/unittest/copy/copy-simple	frontend-export
+PASS	imported-goose/unittest/copy/copy-simple	-
 PASS	imported-goose/unittest/embedded/field-nil-promote	-
 PASS	imported-goose/unittest/embedded/live	-
 PASS	imported-goose/unittest/embedded/nil-promote	-
