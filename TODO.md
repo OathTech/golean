@@ -739,3 +739,44 @@ widened an arc mid-audit. Roughly in priority order.
   stale rewrites); every other module builds. Guardrails are already
   green-pinned at `e44bf1c4` (35 go-run-verified sync cases + the fatal
   status class). Resuming means finishing the proof half.
+
+## W3.2 re-envelope arc backlog (2026-08-20, charter DRAFT)
+
+Booked by the W3.2 charter draft
+(`docs/2026-08-20_w32-re-envelope-charter.md`) so the repo carries
+them, not chat. Each rides the arc's slice/exit-artifact structure;
+none is scheduled independently of it.
+
+- [ ] **iris-lean refresh + reuse survey** (charter §S6b). Move the
+      Lake dep + `deps/iris-lean` reading copy to a current pin — the
+      pin move is its OWN gated commit (trust-tools discipline) — and
+      produce the reuse table (theirs / ours / keep-ours-with-reason,
+      one row per carried Iris-layer component). Demand driver: the
+      parked channel-logic lane's Iris consumers (the channel WP law
+      family, the LangDM simulation, `dspCompTripleC`).
+- [ ] **grossmith re-run + the metamorphic axis** (charter §Parallel
+      instruments). Re-run the differential campaign against the
+      widened machine (the last campaign predates every envelope in
+      the charter; findings arrive as dated docs per
+      `docs/2026-08-07_grossmith-findings.md`'s pattern), and extend
+      grossmith with a metamorphic axis: semantics-preserving
+      transforms (unordered-latitude statement reorders, map-literal
+      permutations, spawn-order shuffles) whose observation sets must
+      relate as the envelope predicts — a width-exercising instrument
+      the point oracle cannot be. External project; hand over the axis
+      spec with the re-run request.
+- [ ] **The opsem write-up's route question** (charter OQ4, decided
+      before any writing): hand-written LaTeX rules with a citation
+      lint (rule ↔ interpreter arm + spec anchor, lint-checked) vs
+      rule skeletons DERIVED from the machine — the WP arc's mirror
+      `stepFn'` transcription machinery is the standing derivation
+      asset. User decision; record the ruling in the charter's log.
+- [ ] **Perf: map-iteration pick walks** (post-BUG-005 (L) surgery,
+      bugfix-arc branch). `mapIterCandidates` recomputes live entries
+      minus produced keys per PICK (`mapIterLiveEntries` walk +
+      produced-key filter, GoCore/Machine.lean), making a full range
+      O(n²)-ish in map size and multiplying into enumerator trees at
+      membership certification. Fine at corpus scale today; measure
+      before the re-envelope's enumerator pressure lands, and lift to
+      an incremental candidate structure only with the obliviousness
+      analysis replayed (same discipline as the surgery itself).
