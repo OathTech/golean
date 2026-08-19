@@ -860,8 +860,29 @@ theorem applyStrictOp_conc (hI : I.Sound) (σ : ExecState) {s : State D}
         cases h
       · rw [if_neg (by simpa using hatom)] at h
         by_cases hfl : anyFloatOperand' (v :: rest) = true
-        · rw [if_pos hfl] at h
-          cases h
+        · -- the IEEE float fold (triage L3)
+          rw [if_pos hfl] at h
+          obtain ⟨best, hfold, h⟩ := bind_eq_ok.mp h
+          obtain ⟨rfl, rfl⟩ : out = best ∧ s' = s := by
+            simpa [pure, Except.pure, eq_comm, and_comm] using h
+          simp only [List.map_cons, applyStrictOp]
+          rw [show anyFloatOperand (concV I v :: rest.map (concV I))
+                = true from by
+              rw [show concV I v :: rest.map (concV I)
+                    = (v :: rest).map (concV I) from rfl,
+                anyFloat_conc (by simpa using hatom)]
+              simpa using hfl]
+          rw [if_pos rfl]
+          refine bind_eq_ok.mpr ⟨concV I out, ?_, rfl⟩
+          refine forIn_conc_map (t := concV I) (φ := concV I)
+            (fun a _ x st hst => ?_) hfold
+          obtain ⟨c, hc, hst⟩ := bind_eq_ok.mp hst
+          refine bind_eq_ok.mpr ⟨concV I c, floatMinMax_conc hc, ?_⟩
+          have hstv : st = .yield c := by
+            simpa [pure, Except.pure, Bind.bind, Except.bind, eq_comm]
+              using hst
+          subst hstv
+          simp [stepImage, pure, Except.pure, Bind.bind, Except.bind]
         · rw [if_neg (by simpa using hfl)] at h
           obtain ⟨best, hfold, h⟩ := bind_eq_ok.mp h
           obtain ⟨rfl, rfl⟩ : out = best ∧ s' = s := by
@@ -900,8 +921,29 @@ theorem applyStrictOp_conc (hI : I.Sound) (σ : ExecState) {s : State D}
         cases h
       · rw [if_neg (by simpa using hatom)] at h
         by_cases hfl : anyFloatOperand' (v :: rest) = true
-        · rw [if_pos hfl] at h
-          cases h
+        · -- the IEEE float fold (triage L3)
+          rw [if_pos hfl] at h
+          obtain ⟨best, hfold, h⟩ := bind_eq_ok.mp h
+          obtain ⟨rfl, rfl⟩ : out = best ∧ s' = s := by
+            simpa [pure, Except.pure, eq_comm, and_comm] using h
+          simp only [List.map_cons, applyStrictOp]
+          rw [show anyFloatOperand (concV I v :: rest.map (concV I))
+                = true from by
+              rw [show concV I v :: rest.map (concV I)
+                    = (v :: rest).map (concV I) from rfl,
+                anyFloat_conc (by simpa using hatom)]
+              simpa using hfl]
+          rw [if_pos rfl]
+          refine bind_eq_ok.mpr ⟨concV I out, ?_, rfl⟩
+          refine forIn_conc_map (t := concV I) (φ := concV I)
+            (fun a _ x st hst => ?_) hfold
+          obtain ⟨c, hc, hst⟩ := bind_eq_ok.mp hst
+          refine bind_eq_ok.mpr ⟨concV I c, floatMinMax_conc hc, ?_⟩
+          have hstv : st = .yield c := by
+            simpa [pure, Except.pure, Bind.bind, Except.bind, eq_comm]
+              using hst
+          subst hstv
+          simp [stepImage, pure, Except.pure, Bind.bind, Except.bind]
         · rw [if_neg (by simpa using hfl)] at h
           obtain ⟨best, hfold, h⟩ := bind_eq_ok.mp h
           obtain ⟨rfl, rfl⟩ : out = best ∧ s' = s := by

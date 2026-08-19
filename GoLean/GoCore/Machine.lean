@@ -488,11 +488,16 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
           | other => unsupported s!"cap for non-array/slice value {repr other}"
   | .funcValOf fid, vs => return (.funcVal fid vs, s)
   | .minOf, v :: vs =>
-      -- Float min/max stays FAIL-CLOSED (design note §9): Go's builtin
-      -- is NaN-propagating with -0 < +0 — a valueLess fold would get
-      -- NaN silently wrong, and no corpus case pins it yet.
-      if anyFloatOperand (v :: vs) then
-        unsupported "min builtin over float operands"
+      -- Float operands take the IEEE fold (triage L3, spec#Min_and_max:
+      -- NaN propagates, min(-0,+0) = -0) over the softfloat comparison
+      -- kernel — never valueLess, whose unordered `<` is false at NaN
+      -- in BOTH directions and would silently make the first operand
+      -- win. Left-associative like gc's lowering.
+      if anyFloatOperand (v :: vs) then do
+        let mut best := v
+        for w in vs do
+          best ← floatMinMax true best w
+        return (best, s)
       else do
         let mut best := v
         for w in vs do
@@ -500,8 +505,11 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
             best := w
         return (best, s)
   | .maxOf, v :: vs =>
-      if anyFloatOperand (v :: vs) then
-        unsupported "max builtin over float operands"
+      if anyFloatOperand (v :: vs) then do
+        let mut best := v
+        for w in vs do
+          best ← floatMinMax false best w
+        return (best, s)
       else do
         let mut best := v
         for w in vs do

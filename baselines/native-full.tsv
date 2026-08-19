@@ -1,18 +1,18 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-19 (bug-fix arc, 19-red GoCore slice family 2 =
-#   triage row L2a: slice->array conversion length-check panics)
-#   commit: this commit (on eca39e4d, the family-1 tip)
-#   re-pin reason: the length-check PANIC arms land in
-#   convertValueToTyFuel (array and array-pointer targets over a slice
-#   operand; gc-exact message, probe go1.26.5, fires before any element
-#   is touched). The SUCCEEDING forms stay refused (triage L2b frontier:
-#   Loc has no subarray-view constructor) — slice-to-array/ok-forms
-#   stays FAIL/lean-observation by design. Deltas — the predicted set
-#   exactly, nothing else moved:
+# recorded: 2026-08-19 (bug-fix arc, 19-red GoCore slice family 3 =
+#   triage row L3: IEEE min/max over float operands)
+#   commit: this commit (on 374432ef, the family-2 tip)
+#   re-pin reason: the min/max builtins' float refusal is replaced by
+#   the IEEE fold over the shared floatMinMaxBits kernel (softfloat
+#   fcmp64/fcmp32): NaN propagates (the NaN operand), an equal compare
+#   breaks the +/-0 tie by sign (min keeps -0, max keeps +0), the
+#   result is always one of the operands — spec#Min_and_max's
+#   special-case table. Mirror transcribes the same kernel. Deltas —
+#   the predicted set exactly, nothing else moved:
 #     FAIL/lean-observation -> PASS (3):
-#       spec-examples-decl/slice-to-array/{short-array, short-array-ptr,
-#       nil-to-longer-ptr}
-#   counts: 2181 cases, 2071 PASS / 110 FAIL (was 2181, 2068/113)
+#       spec-examples-stmt/min-max-float-specials/{infinities, nan,
+#       signed-zero}
+#   counts: 2181 cases, 2074 PASS / 107 FAIL (was 2181, 2071/110)
 #   frontend: native (tools/nativefrontend + NativeToIR)
 # columns: result<TAB>id<TAB>stage
 PASS	arrays/array-bounds	-
@@ -1968,9 +1968,9 @@ PASS	spec-examples-stmt/init-hoist-relatives/type-switch-init-reads-init	-
 PASS	spec-examples-stmt/method-expr-five-forms	-
 PASS	spec-examples-stmt/method-value-two-forms/saved-receiver	-
 PASS	spec-examples-stmt/method-value-two-forms/two-forms	-
-FAIL	spec-examples-stmt/min-max-float-specials/infinities	lean-observation
-FAIL	spec-examples-stmt/min-max-float-specials/nan	lean-observation
-FAIL	spec-examples-stmt/min-max-float-specials/signed-zero	lean-observation
+PASS	spec-examples-stmt/min-max-float-specials/infinities	-
+PASS	spec-examples-stmt/min-max-float-specials/nan	-
+PASS	spec-examples-stmt/min-max-float-specials/signed-zero	-
 PASS	spec-examples-stmt/min-max-strings/assoc	-
 PASS	spec-examples-stmt/min-max-strings/pairs	-
 PASS	spec-examples-stmt/operator-precedence/add-sub	-

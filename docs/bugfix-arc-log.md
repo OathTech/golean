@@ -1470,3 +1470,43 @@ L2b justification. Backlog 16 → 13.
 exit 0, baseline diff FULL (2181/2181), re-pin guard 0 flips, eval
 tests 136 ok (`/tmp/f2-ci.log`, scratch). Tier: `--diff` (same
 rationale as family 1).
+
+### Family 3 — IEEE min/max over floats (triage L3, 3 reds)
+
+**Diagnosis confirmed**: all 3 red at the diagnosed refusal
+(`unsupported "min builtin over float operands"`,
+Machine.lean minOf/maxOf guard). The cases themselves pin the whole
+spec#Min_and_max special-case table (signed zero through `1/r`,
+NaN-ness through `r != r`, ±Inf propagation) — written at P3 with
+expectations from `go run`; no expectation edits, no edge gaps noted
+(the table IS the edge enumeration; judgment: no rows added).
+
+**The fix**: the float refusal becomes the IEEE fold. The selection is
+factored into a PURE bits kernel `floatMinMaxBits` (Ops.lean) over the
+existing softfloat `fcmp64`/`fcmp32`: NaN propagates (the NaN
+OPERAND's bits — payloads unobservable in-language, R7's own scope
+condition), an equal compare is identical bits or the ±0 pair and the
+tie breaks by sign (`min` keeps the negative-signed operand), the
+result is always ONE OF THE OPERANDS. `floatMinMax` wraps it with the
+kind check; the fold in minOf/maxOf dispatches float-vs-ordered on the
+existing `anyFloatOperand` guard (the design-note §9 reason — a
+`valueLess` fold gets NaN silently wrong — is exactly why the fold
+never touches `valueLess`). **Mirror realigned same-commit**: the
+minOf/maxOf float branches transcribe the SAME `floatMinMaxBits`
+kernel (bits concrete in the mirror; the shared-kernel factoring is
+what makes `floatMinMax_conc` a two-line transport instead of an
+if-tree walk). Frame: `floatMinMax_sim` (results rename-inert) + the
+float-fold branches in arm_min/arm_max. StateWf: `floatMinMax_locSup`
+(every ok result is a `.float`, loc-free) + the split bullets.
+Inventory R7 updated (refusal lifted, the NaN-operand narrowing
+recorded); §5's refusal list drops the min/max row.
+
+**Predicted flips (pre-run): the 3 ids FAIL/lean-observation → PASS,
+nothing else.** Full run: 2181 cases 2074/107 (was 2071/110); drift =
+exactly the 3. Baseline re-pinned; untriaged-ids: 3 retired. Backlog
+13 → 10.
+
+**Gate**: `GOLEAN_MEM_MAX=24G scripts/ci --diff` → **`RESULT: PASS`**,
+exit 0, baseline diff FULL (2181/2181), re-pin guard 0 flips
+(`/tmp/f3-ci.log`, scratch). Tier: `--diff` (same rationale; the fold
+is sequential-value machinery, no choice site or enumerator surface).

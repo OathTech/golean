@@ -113,7 +113,8 @@ channels/select-select/beside-loop
 #   SUCCEEDING forms are triage L2b, category (b) frontier (feature:
 #   array-pointer views over slice storage; `Loc` has no subarray-view
 #   constructor).]
+# [spec-examples-stmt/min-max-float-specials/{signed-zero,infinities,
+#   nan}: FLIPPED PASS 2026-08-19 (19-red slice family 3 = triage L3):
+#   the IEEE min/max fold over the shared floatMinMaxBits kernel landed
+#   (NaN propagates, min(-0,+0) = -0). Entries retired.]
 spec-examples-decl/slice-to-array/ok-forms
-spec-examples-stmt/min-max-float-specials/signed-zero
-spec-examples-stmt/min-max-float-specials/infinities
-spec-examples-stmt/min-max-float-specials/nan

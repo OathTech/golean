@@ -1294,6 +1294,18 @@ is false without it. -/
 def anyAtomOperand' (vs : List (Value D)) : Bool :=
   vs.any fun v => match v with | .atom _ => true | _ => false
 
+/-- Mirror of `floatMinMax` (triage L3): float bits are CONCRETE in the
+mirror, so the selection delegates to the SAME `floatMinMaxBits`
+kernel; the machine's stuck arms quit Q11 (atoms are excluded upstream
+by `anyAtomOperand'`, and again here for the two-operand shape). -/
+def floatMinMax' (isMin : Bool) : Value D → Value D → M (Value D)
+  | .float a ka, .float b kb =>
+      if ka == kb then .ok (.float (floatMinMaxBits isMin ka a b) ka)
+      else quit .q11Internal
+  | .atom _, _ => quit .q10Atom
+  | _, .atom _ => quit .q10Atom
+  | _, _ => quit .q11Internal
+
 /-- Mirror of `applyStrictOp`, arm-for-arm in the same order. Quit
 classes per the §1.4 table: comparisons/arith at ints are FORMERS;
 bitwise/shift close-or-Q5; `structLit`/`toInterface`/`typeAssert`/
@@ -1597,7 +1609,12 @@ def applyStrictOp' (s : State D) : StrictOp → List (Value D) →
   | .funcValOf fid, vs => .ok (.funcVal fid vs, s)
   | .minOf, v :: vs =>
       if anyAtomOperand' (v :: vs) then quit .q10Atom
-      else if anyFloatOperand' (v :: vs) then quit .q11Internal
+      else if anyFloatOperand' (v :: vs) then do
+        -- the IEEE float fold (triage L3), transcribed — bits concrete
+        let mut best := v
+        for w in vs do
+          best ← floatMinMax' true best w
+        return (best, s)
       else do
         let mut best := v
         for w in vs do
@@ -1607,7 +1624,11 @@ def applyStrictOp' (s : State D) : StrictOp → List (Value D) →
         return (best, s)
   | .maxOf, v :: vs =>
       if anyAtomOperand' (v :: vs) then quit .q10Atom
-      else if anyFloatOperand' (v :: vs) then quit .q11Internal
+      else if anyFloatOperand' (v :: vs) then do
+        let mut best := v
+        for w in vs do
+          best ← floatMinMax' false best w
+        return (best, s)
       else do
         let mut best := v
         for w in vs do

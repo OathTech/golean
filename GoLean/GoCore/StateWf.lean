@@ -1412,6 +1412,22 @@ theorem convertValueToTyFuel_locSup :
              | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
                 simp [GoValue.locSup]))
 
+/-- Every ok result of the IEEE `min`/`max` selection is one of the
+`.float` operands — loc-free (triage L3). -/
+theorem floatMinMax_locSup {isMin : Bool} {l r v : GoValue}
+    (h : floatMinMax isMin l r = .ok v) : GoValue.locSup v = 0 := by
+  cases l <;> cases r <;>
+    first
+    | (simp [floatMinMax] at h; done)
+    | skip
+  case float.float a ka b kb =>
+    simp only [floatMinMax] at h
+    (repeat' split at h) <;>
+      first
+      | (simp at h; done)
+      | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
+         simp [GoValue.locSup])
+
 /-! ## Soundness of the self-normalization check
 
 `isNormalForTyFuel` (Ops.lean) mirrors the normalizer arm-for-arm; here
@@ -3468,54 +3484,81 @@ theorem applyStrictOp_wf {σ : ExecState} {op : StrictOp} {vs : List GoValue}
     omega
   · -- minOf
     rename_i v₀ rest
-    -- the float guard (floats slice F2): the refusing branch is never
-    -- ok; the passing branch is the pre-float fold verbatim
-    replace h := guard_ite_eq_ok (fun y => by simp [unsupported]) h
-    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨best, hbest, rfl, rfl⟩ := h
     simp only [goValueListSup] at hvs
-    have hP := forIn_list_inv
-      (P := fun b : GoValue => GoValue.locSup b ≤ σ.nextAddr)
-      ?_ (by omega) hbest
-    · exact strictWfSame hw hP
-    · intro a ha b rr hbb hr
-      have hmem : GoValue.locSup a ≤ goValueListSup rest := by
-        rw [goValueListSup_eq]; exact supBy_mem ha
-      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-      obtain ⟨c, hc, hr⟩ := hr
-      split at hr <;>
-        (simp_all only [Bind.bind, Except.bind, pure_eq_ok, Except.ok.injEq]
-         try subst rr
-         first
-           | (show GoValue.locSup a ≤ σ.nextAddr
-              omega)
-           | (show GoValue.locSup b ≤ σ.nextAddr
-              omega))
+    -- float-vs-ordered dispatch (triage L3): the IEEE fold's every ok
+    -- step is one of the .float operands (locSup 0); the ordered fold
+    -- keeps the pre-float invariant proof verbatim.
+    split at h
+    · -- IEEE float fold
+      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨best, hbest, rfl, rfl⟩ := h
+      have hP := forIn_list_inv
+        (P := fun b : GoValue => GoValue.locSup b ≤ σ.nextAddr)
+        ?_ (by omega) hbest
+      · exact strictWfSame hw hP
+      · intro a ha b rr hbb hr
+        rw [bind_eq_ok] at hr
+        obtain ⟨c, hc, hr2⟩ := hr
+        simp only [Bind.bind, Except.bind, Except.ok.injEq] at hr2
+        subst hr2
+        simp [forInStepVal, floatMinMax_locSup hc]
+    · -- ordered fold
+      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨best, hbest, rfl, rfl⟩ := h
+      have hP := forIn_list_inv
+        (P := fun b : GoValue => GoValue.locSup b ≤ σ.nextAddr)
+        ?_ (by omega) hbest
+      · exact strictWfSame hw hP
+      · intro a ha b rr hbb hr
+        have hmem : GoValue.locSup a ≤ goValueListSup rest := by
+          rw [goValueListSup_eq]; exact supBy_mem ha
+        simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
+        obtain ⟨c, hc, hr⟩ := hr
+        split at hr <;>
+          (simp_all only [Bind.bind, Except.bind, pure_eq_ok, Except.ok.injEq]
+           try subst rr
+           first
+             | (show GoValue.locSup a ≤ σ.nextAddr
+                omega)
+             | (show GoValue.locSup b ≤ σ.nextAddr
+                omega))
   · -- maxOf
     rename_i v₀ rest
-    -- the float guard (floats slice F2): the refusing branch is never
-    -- ok; the passing branch is the pre-float fold verbatim
-    replace h := guard_ite_eq_ok (fun y => by simp [unsupported]) h
-    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨best, hbest, rfl, rfl⟩ := h
     simp only [goValueListSup] at hvs
-    have hP := forIn_list_inv
-      (P := fun b : GoValue => GoValue.locSup b ≤ σ.nextAddr)
-      ?_ (by omega) hbest
-    · exact strictWfSame hw hP
-    · intro a ha b rr hbb hr
-      have hmem : GoValue.locSup a ≤ goValueListSup rest := by
-        rw [goValueListSup_eq]; exact supBy_mem ha
-      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-      obtain ⟨c, hc, hr⟩ := hr
-      split at hr <;>
-        (simp_all only [Bind.bind, Except.bind, pure_eq_ok, Except.ok.injEq]
-         try subst rr
-         first
-           | (show GoValue.locSup a ≤ σ.nextAddr
-              omega)
-           | (show GoValue.locSup b ≤ σ.nextAddr
-              omega))
+    split at h
+    · -- IEEE float fold (as in minOf)
+      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨best, hbest, rfl, rfl⟩ := h
+      have hP := forIn_list_inv
+        (P := fun b : GoValue => GoValue.locSup b ≤ σ.nextAddr)
+        ?_ (by omega) hbest
+      · exact strictWfSame hw hP
+      · intro a ha b rr hbb hr
+        rw [bind_eq_ok] at hr
+        obtain ⟨c, hc, hr2⟩ := hr
+        simp only [Bind.bind, Except.bind, Except.ok.injEq] at hr2
+        subst hr2
+        simp [forInStepVal, floatMinMax_locSup hc]
+    · -- ordered fold
+      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨best, hbest, rfl, rfl⟩ := h
+      have hP := forIn_list_inv
+        (P := fun b : GoValue => GoValue.locSup b ≤ σ.nextAddr)
+        ?_ (by omega) hbest
+      · exact strictWfSame hw hP
+      · intro a ha b rr hbb hr
+        have hmem : GoValue.locSup a ≤ goValueListSup rest := by
+          rw [goValueListSup_eq]; exact supBy_mem ha
+        simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
+        obtain ⟨c, hc, hr⟩ := hr
+        split at hr <;>
+          (simp_all only [Bind.bind, Except.bind, pure_eq_ok, Except.ok.injEq]
+           try subst rr
+           first
+             | (show GoValue.locSup a ≤ σ.nextAddr
+                omega)
+             | (show GoValue.locSup b ≤ σ.nextAddr
+                omega))
   · -- runeAt
     split at h
     · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h

@@ -1570,6 +1570,27 @@ private theorem arm_capacity (hS : FrameSim ρ na₀ na fr σ σF)
         all_goals exact arm_capacity_body hS v
     all_goals exact arm_capacity_body hS v
 
+/-- The IEEE `min`/`max` selection commutes with the renaming: floats
+are loc-free, so both sides run the SAME computation and every ok
+result renames to itself (triage L3). -/
+private theorem floatMinMax_sim (isMin : Bool) (a b : GoValue) :
+    ExSim (fun r rF => rF = renameValue ρ r)
+      (floatMinMax isMin a b)
+      (floatMinMax isMin (renameValue ρ a) (renameValue ρ b)) := by
+  cases a <;> cases b <;> simp only [renameValue] <;>
+    first
+    | exact ExSim.stuck'
+    | skip
+  case float.float x kx y ky =>
+    refine exsim_ren_self ρ ?_
+    intro r hr
+    unfold floatMinMax at hr
+    (repeat' split at hr) <;>
+      first
+      | (simp at hr; done)
+      | (simp only [pure_eq_ok, Except.ok.injEq] at hr; subst hr;
+         simp [renameValue])
+
 private theorem arm_min (hS : FrameSim ρ na₀ na fr σ σF)
     (v : GoValue) (vs : List GoValue) :
     ExSim (PairSim ρ na₀ na fr)
@@ -1581,8 +1602,19 @@ private theorem arm_min (hS : FrameSim ρ na₀ na fr σ σF)
     simpa [renameValueList] using anyFloatOperand_ren ρ (v :: vs)
   rw [hfl]
   by_cases hf : anyFloatOperand (v :: vs) = true
-  · rw [if_pos hf, if_pos hf]
-    exact ExSim.unsupported'
+  · -- the IEEE float fold (triage L3)
+    rw [if_pos hf, if_pos hf]
+    refine ExSim.bind (R := fun b b' => b' = renameValue ρ b) ?_ ?_
+    · rw [renameValueList_eq_map]
+      refine forIn_sim (t := renameValue ρ) rfl ?_
+      intro w _ x y hxy
+      subst hxy
+      refine ExSim.bind (floatMinMax_sim (ρ := ρ) true x w) ?_
+      intro c c' hc
+      subst hc
+      exact ExSim.ok rfl
+    · intro b b' hb
+      exact ExSim.ok ⟨hb, hS⟩
   · rw [if_neg hf, if_neg hf]
     refine ExSim.bind (R := fun b b' => b' = renameValue ρ b) ?_ ?_
     · rw [renameValueList_eq_map]
@@ -1609,8 +1641,19 @@ private theorem arm_max (hS : FrameSim ρ na₀ na fr σ σF)
     simpa [renameValueList] using anyFloatOperand_ren ρ (v :: vs)
   rw [hfl]
   by_cases hf : anyFloatOperand (v :: vs) = true
-  · rw [if_pos hf, if_pos hf]
-    exact ExSim.unsupported'
+  · -- the IEEE float fold (triage L3)
+    rw [if_pos hf, if_pos hf]
+    refine ExSim.bind (R := fun b b' => b' = renameValue ρ b) ?_ ?_
+    · rw [renameValueList_eq_map]
+      refine forIn_sim (t := renameValue ρ) rfl ?_
+      intro w _ x y hxy
+      subst hxy
+      refine ExSim.bind (floatMinMax_sim (ρ := ρ) false x w) ?_
+      intro c c' hc
+      subst hc
+      exact ExSim.ok rfl
+    · intro b b' hb
+      exact ExSim.ok ⟨hb, hS⟩
   · rw [if_neg hf, if_neg hf]
     refine ExSim.bind (R := fun b b' => b' = renameValue ρ b) ?_ ?_
     · rw [renameValueList_eq_map]
