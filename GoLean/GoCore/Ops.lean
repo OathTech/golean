@@ -1148,6 +1148,28 @@ from {actual.key} (non-identical underlying)"
   -- struct-arm comment feared ((*B)(pa) aliasing one cell under two
   -- tags) stays fail-closed DOWNSTREAM: every field load/store checks
   -- the stored struct tag (structs/tag-pointer-conversion stays red).
+  -- Slice→array / slice→array-pointer conversions (triage L2a,
+  -- 2026-08-19): spec#Conversions_from_slice_to_array_or_array_pointer
+  -- — "if the length of the slice is less than the length of the
+  -- array, a run-time panic occurs". The length-check PANIC is
+  -- gc-exact (probe go1.26.5) and fires before any element is touched,
+  -- so these arms read no state. The SUCCEEDING forms stay REFUSED
+  -- (triage L2b, category (b)): the array-pointer form must ALIAS the
+  -- slice's backing segment and `Loc` has no subarray-view
+  -- constructor; the value-copy form rides the same frontier row
+  -- (spec-examples-decl/slice-to-array/ok-forms pins both red).
+  | _, _, .array n _, .slice slice =>
+      if slice.len < n then
+        panic s!"runtime error: cannot convert slice with length {slice.len} \
+to array or pointer to array with length {n}"
+      else
+        unsupported "slice-to-array value conversion (succeeding form; triage L2b frontier)"
+  | _, _, .pointer (.array n _), .slice slice =>
+      if slice.len < n then
+        panic s!"runtime error: cannot convert slice with length {slice.len} \
+to array or pointer to array with length {n}"
+      else
+        unsupported "slice-to-array-pointer conversion (aliasing view over slice storage; triage L2b frontier)"
   | _, _, .pointer _, value@(.addr _) => return value
   | _, _, .pointer _, .nil => return .nil
   | _, _, .slice _, value@(.slice _) => return value

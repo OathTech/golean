@@ -106,10 +106,14 @@ channels/select-select/beside-loop
 # [spec-examples-decl/string-from-runes, spec-examples-lexical/
 #   string-to-runes: FLIPPED PASS 2026-08-19 with the L1 family above.
 #   Entries retired.]
+# [spec-examples-decl/slice-to-array/{short-array,short-array-ptr,
+#   nil-to-longer-ptr}: FLIPPED PASS 2026-08-19 (19-red slice family 2
+#   = triage L2a): the length-check panic arms landed in
+#   convertValueToTyFuel. Entries retired. ok-forms stays below — the
+#   SUCCEEDING forms are triage L2b, category (b) frontier (feature:
+#   array-pointer views over slice storage; `Loc` has no subarray-view
+#   constructor).]
 spec-examples-decl/slice-to-array/ok-forms
-spec-examples-decl/slice-to-array/short-array
-spec-examples-decl/slice-to-array/short-array-ptr
-spec-examples-decl/slice-to-array/nil-to-longer-ptr
 spec-examples-stmt/min-max-float-specials/signed-zero
 spec-examples-stmt/min-max-float-specials/infinities
 spec-examples-stmt/min-max-float-specials/nan

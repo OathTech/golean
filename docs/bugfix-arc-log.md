@@ -1431,3 +1431,42 @@ exit 0 — core + proofs builds (Audit gate ok), eval tests (136 ok),
 frontend unit tests ok, baseline diff FULL (2181/2181, no regression),
 re-pin guard (0 PASS→non-PASS flips), negative baseline diff ok
 (`/tmp/f1-ci.log`, scratch). Tier: `--diff` (rationale above).
+
+### Family 2 — slice→array conversion panics (triage L2a, 3 reds)
+
+**Diagnosis confirmed**: all 3 red at the same conversion catch-all
+(focused run pre-fix: `unsupported "conversion to …Ty.pointer
+(…Ty.array 4 …)"` etc.). Panic message probed at go1.26.5
+(`artifacts/probe`-class scratch, recovered `.Error()`):
+`runtime error: cannot convert slice with length L to array or pointer
+to array with length N` — matches the rows' `expected_reason`.
+
+**The fix**: two arms in `convertValueToTyFuel` (array target and
+array-pointer target over a `.slice` operand): `len < N` → the gc-exact
+panic, which fires before any element is touched (the arms read no
+state); `len ≥ N` → the succeeding forms stay REFUSED per the triage's
+own L2a/L2b split (`Loc` has no subarray-view constructor;
+`slice-to-array/ok-forms` pins both succeeding forms red as the (b)
+frontier row). **This is the kernel's FIRST panicking arm**, so the
+frame layer's `convertValueToTy_noPanic` became false by design: it is
+retired, replaced by `convertValueToTyFuel_panic_ren` (panic transfer —
+the message embeds `len` and `N` only, both rename-invariant;
+`renameValue` rewrites a slice's base alone) and a per-result-class
+`arm_convert`. `_ren`/`_locSup` gained the elem-dispatch cells the new
+arms opened. **JUDGMENT (mirror)**: `convertValueToTy'`'s catch-all
+already quits Q11 at array-target cells — the mirror asserts nothing
+there and the drift theorem holds without realignment (verified by the
+green drift build, not assumed); the panic arms are NOT transcribed
+because mirror panics are Q6 quits by convention.
+
+**Predicted flips (pre-run): the 3 panic rows FAIL/lean-observation →
+PASS; `ok-forms` stays FAIL/lean-observation (message changes, stage
+does not — the baseline records result+stage only).** Full run:
+2181 cases 2071/110 (was 2068/113); drift = exactly the 3. Baseline
+re-pinned; untriaged-ids: 3 entries retired, ok-forms kept with its
+L2b justification. Backlog 16 → 13.
+
+**Gate**: `GOLEAN_MEM_MAX=24G scripts/ci --diff` → **`RESULT: PASS`**,
+exit 0, baseline diff FULL (2181/2181), re-pin guard 0 flips, eval
+tests 136 ok (`/tmp/f2-ci.log`, scratch). Tier: `--diff` (same
+rationale as family 1).

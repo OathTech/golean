@@ -773,11 +773,19 @@ theorem convertValueToTyFuel_ren (htypes : σF.types = σ.types) :
             | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
                simp [convertValueToTyFuel, renameValue])
       | pointer elem =>
-          cases v <;> simp only [convertValueToTyFuel] at h <;>
+          cases v <;>
             first
-            | (simp at h; done)
-            | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
-               simp [convertValueToTyFuel, renameValue])
+            | (simp only [convertValueToTyFuel] at h;
+               first
+               | (simp at h; done)
+               | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
+                  simp [convertValueToTyFuel, renameValue]))
+            | -- slice operand (triage L2a): elem dispatch, panic or
+              -- unsupported only — no ok.
+              (cases elem <;> simp only [convertValueToTyFuel] at h <;>
+                first
+                | (simp at h; done)
+                | (split at h <;> simp at h))
       | slice elem =>
           cases v <;> simp only [convertValueToTyFuel] at h <;>
             first
@@ -810,7 +818,12 @@ theorem convertValueToTyFuel_ren (htypes : σF.types = σ.types) :
                simp [convertValueToTyFuel, renameValue])
       | bool => simp [convertValueToTyFuel] at h
       | unsupported f => simp [convertValueToTyFuel] at h
-      | array length elem => simp [convertValueToTyFuel] at h
+      | array length elem =>
+          -- slice operand (triage L2a): panic or unsupported — no ok.
+          cases v <;> simp only [convertValueToTyFuel] at h <;>
+            first
+            | (simp at h; done)
+            | (split at h <;> simp at h)
       | sync kind => simp [convertValueToTyFuel] at h
   | succ n ih =>
       intro ty v r h
@@ -883,11 +896,19 @@ theorem convertValueToTyFuel_ren (htypes : σF.types = σ.types) :
             | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
                simp [convertValueToTyFuel, renameValue])
       | pointer elem =>
-          cases v <;> simp only [convertValueToTyFuel] at h <;>
+          cases v <;>
             first
-            | (simp at h; done)
-            | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
-               simp [convertValueToTyFuel, renameValue])
+            | (simp only [convertValueToTyFuel] at h;
+               first
+               | (simp at h; done)
+               | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
+                  simp [convertValueToTyFuel, renameValue]))
+            | -- slice operand (triage L2a): elem dispatch, panic or
+              -- unsupported only — no ok.
+              (cases elem <;> simp only [convertValueToTyFuel] at h <;>
+                first
+                | (simp at h; done)
+                | (split at h <;> simp at h))
       | slice elem =>
           cases v <;> simp only [convertValueToTyFuel] at h <;>
             first
@@ -920,7 +941,12 @@ theorem convertValueToTyFuel_ren (htypes : σF.types = σ.types) :
                simp [convertValueToTyFuel, renameValue])
       | bool => simp [convertValueToTyFuel] at h
       | unsupported f => simp [convertValueToTyFuel] at h
-      | array length elem => simp [convertValueToTyFuel] at h
+      | array length elem =>
+          -- slice operand (triage L2a): panic or unsupported — no ok.
+          cases v <;> simp only [convertValueToTyFuel] at h <;>
+            first
+            | (simp at h; done)
+            | (split at h <;> simp at h)
       | sync kind => simp [convertValueToTyFuel] at h
 
 theorem convertValueToTy_ren (htypes : σF.types = σ.types)
@@ -929,6 +955,113 @@ theorem convertValueToTy_ren (htypes : σF.types = σ.types)
     convertValueToTy σF ty (renameValue ρ v) = .ok (renameValue ρ r) := by
   rw [convertValueToTy] at h ⊢
   exact convertValueToTyFuel_ren ρ htypes _ h
+
+/-- Panic transfer for the conversion kernel (triage L2a, 2026-08-19):
+the ONLY panicking arms are the slice→array(-pointer) length checks,
+whose message depends on the slice's `len` and the target length alone
+— both rename-invariant (`renameValue` rewrites a slice's BASE only) —
+and whose dispatch depends only on the types map (equal by `htypes`).
+Every other arm errs stuck/unsupported or recurses through the
+`defined` chain; this replaces the retired `convertValueToTy_noPanic`
+in `arm_convert`. -/
+theorem convertValueToTyFuel_panic_ren (htypes : σF.types = σ.types) :
+    ∀ (fuel : Nat) {ty : Ty} {v : GoValue} {m : String},
+      convertValueToTyFuel fuel σ ty v = .error (.panic m) →
+      convertValueToTyFuel fuel σF ty (renameValue ρ v) = .error (.panic m) := by
+  intro fuel
+  induction fuel with
+  | zero =>
+      intro ty v m h
+      cases ty <;> cases v <;>
+        first
+        | (simp [convertValueToTyFuel] at h; done)
+        | (simp only [convertValueToTyFuel] at h;
+           (repeat' split at h) <;> simp_all; done)
+        | skip
+      case array.slice n elem sl =>
+        simp only [convertValueToTyFuel] at h
+        simp only [renameValue, convertValueToTyFuel]
+        split at h
+        · rename_i hlt
+          rw [if_pos hlt]
+          exact h
+        · simp at h
+      case pointer.slice elem sl =>
+        cases elem <;>
+          first
+          | (simp [convertValueToTyFuel] at h; done)
+          | skip
+        case array n e =>
+          simp only [convertValueToTyFuel] at h
+          simp only [renameValue, convertValueToTyFuel]
+          split at h
+          · rename_i hlt
+            rw [if_pos hlt]
+            exact h
+          · simp at h
+  | succ n ih =>
+      intro ty v m h
+      cases ty with
+      | defined name =>
+          simp only [convertValueToTyFuel, htypes] at h ⊢
+          cases hlook : TypeEnv.lookup σ.types name with
+          | none => rw [hlook] at h; simp at h
+          | some td =>
+              rw [hlook] at h
+              cases td with
+              | alias target => exact ih h
+              | defined target => exact ih h
+              | struct targetFields =>
+                  cases v <;> (try (simp at h; done))
+                  rename_i actual actualFields
+                  simp only at h
+                  (repeat' split at h) <;> simp_all
+              | interfaceDef x => simp at h
+              | unsupported f => simp at h
+      | array n' elem =>
+          cases v <;>
+            first
+            | (simp [convertValueToTyFuel] at h; done)
+            | skip
+          case slice sl =>
+            simp only [convertValueToTyFuel] at h
+            simp only [renameValue, convertValueToTyFuel]
+            split at h
+            · rename_i hlt
+              rw [if_pos hlt]
+              exact h
+            · simp at h
+      | pointer elem =>
+          cases v <;>
+            first
+            | (simp [convertValueToTyFuel] at h; done)
+            | skip
+          case slice sl =>
+            cases elem <;>
+              first
+              | (simp [convertValueToTyFuel] at h; done)
+              | skip
+            case array n' e =>
+              simp only [convertValueToTyFuel] at h
+              simp only [renameValue, convertValueToTyFuel]
+              split at h
+              · rename_i hlt
+                rw [if_pos hlt]
+                exact h
+              · simp at h
+      | _ =>
+          cases v <;>
+            first
+            | (simp [convertValueToTyFuel] at h; done)
+            | (simp only [convertValueToTyFuel] at h;
+               (repeat' split at h) <;> simp_all; done)
+
+theorem convertValueToTy_panic_ren (htypes : σF.types = σ.types)
+    {ty : Ty} {v : GoValue} {m : String}
+    (h : convertValueToTy σ ty v = .error (.panic m)) :
+    convertValueToTy σF ty (renameValue ρ v) = .error (.panic m) := by
+  rw [convertValueToTy] at h ⊢
+  exact convertValueToTyFuel_panic_ren ρ htypes _ h
 
 end Convert
 
