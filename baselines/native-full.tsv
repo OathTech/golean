@@ -1,43 +1,44 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-18 (raft-w1 delta-review fix round, slice 2 —
-#   gc's PRUNED initialization schedule, with the residual pinned RED)
-#   commit: this commit (on 156539fc); prior re-pin same-day slice 1
-#   re-pin reason: the frontend now computes gc's schedule instead of
-#   the spec's literal reading. Two departures, both observable:
-#   (1) PRUNING — cmd/compile emits a `..inittask` record only for a
-#   package with residual init work (what survives staticinit) or an
-#   inittask-bearing import, and cmd/link orders exactly those
-#   records, so a package with no record gates nothing; (2) the
-#   TIE-BREAK is by linker symbol name, PathToPrefix(path) +
-#   "..inittask", not by import path. Source node facts are
-#   approximated syntactically (a non-empty init body, or a var
-#   initializer go/types did not fold to a constant); STDLIB node
-#   facts and edges are read from the compiled archives into the
-#   tracked, embedded tools/nativefrontend/inittask-std.tsv
-#   (scripts/gen-inittask-table), and any std import absent from it
-#   REFUSES. That table also retires the old go/build reading of
-#   stdlib imports.
-#   Deltas — exactly the four rows this fix targets:
-#     ~ multipkg/init-order-pruned/static       FAIL/differential -> PASS
-#       (machine 21 -> 12, matching go run);
-#     ~ multipkg/init-order-pruned-stdlib/seq   FAIL/differential -> PASS
-#       (machine 21 -> 12);
-#     ~ multipkg/init-order-tiebreak/seq        FAIL/differential -> PASS
-#       (machine 12 -> 21);
-#     + multipkg/init-order-staticinit/seq      NEW -> FAIL/differential
-#       (the KNOWN residual, pinned RED on purpose: the syntactic rule
-#       under-approximates staticinit, so a statically-initialized
-#       package is still scheduled. BUG-061; measured at 11 of 26
-#       initializer flavors, all one-directional; ledger L-011 records
-#       that one of the eleven is optimizer-dependent within gc itself
-#       — `go run` and `go run -gcflags=all='-N -l'` disagree — which
-#       is why this is latitude rather than a forced point).
-#   ZERO drift beyond the four across 2089 cases: no single-package
-#   case moves (they short-circuit on one source unit), and every
-#   pre-existing multipkg row holds, incl. init-order,
-#   init-order-stdlib/{seq,marks}, diamond-import, and
-#   same-name-identity-panic (still BUG-059's red).
-#   Full run: 2089 cases (1953 PASS / 136 FAIL), native frontend.
+# recorded: 2026-08-19 (bug-fix arc slice 1, step 1 — the BUG-058 EDGE
+#   ENUMERATION, landed BEFORE the fix per the guardrails-first rule)
+#   commit: this commit (on 8eee06df)
+#   re-pin reason: 13 NEW ids, zero movement on any pre-existing row
+#   (verified: the only baseline-diff drift in the full run was the 13
+#   "NEW id" lines). No fix has been applied yet — these colors are the
+#   DEFECTIVE machine's, recorded so the fix commit's flips are a
+#   prediction the run confirms rather than a story told afterwards.
+#   Deltas — 13 new rows, 7 red + 6 green:
+#     + spec-examples-stmt/if-init-hoist-order/else-if-chain
+#         NEW -> FAIL/differential   (go 12348, machine 21438)
+#     + spec-examples-stmt/if-init-hoist-order/func-literal
+#         NEW -> FAIL/differential   (go 125, machine 215)
+#     + spec-examples-stmt/if-init-hoist-order/nested
+#         NEW -> FAIL/differential   (go 12349, machine 21439)
+#     + spec-examples-stmt/if-init-hoist-order/cond-panic-after-init
+#         NEW -> FAIL/differential   (go 321, machine 21)
+#     + spec-examples-stmt/if-init-hoist-order/cond-hoist-reads-init
+#         NEW -> FAIL/lean-observation (stuck: unbound … x)
+#     + spec-examples-stmt/if-init-hoist-order/comma-ok-short-circuit
+#         NEW -> FAIL/lean-observation (stuck: unbound … ok)
+#     + spec-examples-stmt/if-init-hoist-order/comma-ok-method-short-circuit
+#         NEW -> FAIL/lean-observation (stuck: unbound … ok)
+#       — the seven walk the positions BUG-058's trigger can occupy
+#       (else-if chains, function literals, nesting, the two panic
+#       orderings, and the raft `if v, ok := m[k]; ok && f(v)` shape in
+#       both plain-call and method form) and pin all three observable
+#       modes of the entry. They join the two P3 pins
+#       (cond-call-after-init, init-panic-first) already red here.
+#     + spec-examples-stmt/init-hoist-relatives/{for-init-cond,
+#         for-init-cond-reads-init,switch-init-tag,
+#         switch-init-tag-reads-init,type-switch-init,
+#         type-switch-init-reads-init}   NEW -> PASS
+#       — the NON-affected relatives (for-init, switch-init,
+#       type-switch-init), pinned GREEN before the fix so a silent
+#       regression in emitFor/emitSwitch/emitTypeSwitch cannot hide.
+#       Each also ships a `-reads-init` form putting the init-declared
+#       variable INSIDE the hoisting call — the exact position that
+#       goes stuck for `if` — so the pins are load-bearing.
+#   Full run: 2102 cases (1959 PASS / 143 FAIL), native frontend.
 #
 result	id	stage
 PASS	arrays/array-bounds	-
@@ -1893,11 +1894,24 @@ PASS	spec-examples-stmt/if-init-else-chain/boundary-z	-
 PASS	spec-examples-stmt/if-init-else-chain/else-branch	-
 PASS	spec-examples-stmt/if-init-else-chain/first-branch	-
 PASS	spec-examples-stmt/if-init-else-chain/second-branch	-
+FAIL	spec-examples-stmt/if-init-hoist-order/comma-ok-method-short-circuit	lean-observation
+FAIL	spec-examples-stmt/if-init-hoist-order/comma-ok-short-circuit	lean-observation
 FAIL	spec-examples-stmt/if-init-hoist-order/cond-call-after-init	differential
+FAIL	spec-examples-stmt/if-init-hoist-order/cond-hoist-reads-init	lean-observation
+FAIL	spec-examples-stmt/if-init-hoist-order/cond-panic-after-init	differential
+FAIL	spec-examples-stmt/if-init-hoist-order/else-if-chain	differential
+FAIL	spec-examples-stmt/if-init-hoist-order/func-literal	differential
 FAIL	spec-examples-stmt/if-init-hoist-order/init-panic-first	differential
+FAIL	spec-examples-stmt/if-init-hoist-order/nested	differential
 PASS	spec-examples-stmt/if-simple/above	-
 PASS	spec-examples-stmt/if-simple/at	-
 PASS	spec-examples-stmt/if-simple/below	-
+PASS	spec-examples-stmt/init-hoist-relatives/for-init-cond	-
+PASS	spec-examples-stmt/init-hoist-relatives/for-init-cond-reads-init	-
+PASS	spec-examples-stmt/init-hoist-relatives/switch-init-tag	-
+PASS	spec-examples-stmt/init-hoist-relatives/switch-init-tag-reads-init	-
+PASS	spec-examples-stmt/init-hoist-relatives/type-switch-init	-
+PASS	spec-examples-stmt/init-hoist-relatives/type-switch-init-reads-init	-
 FAIL	spec-examples-stmt/method-expr-five-forms	frontend-export
 PASS	spec-examples-stmt/method-value-two-forms/saved-receiver	-
 PASS	spec-examples-stmt/method-value-two-forms/two-forms	-
