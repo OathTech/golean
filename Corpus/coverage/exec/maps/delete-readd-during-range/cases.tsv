@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	mapDeleteReAddDuringRange	-	ok	-	maps,delete,range,evaluation_order

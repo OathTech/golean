@@ -1,75 +1,38 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-19 (bug-fix arc slice 2, step 2 — THE BUG-057 FIX:
-#   the two-variable comma-ok var-declaration arity hole)
-#   commit: this commit (on d5ce2dc0, the edge-enumeration commit)
-#   re-pin reason: `emitDeclStmt` (tools/nativefrontend/emit.go) now
-#   ARITY-CHECKS each ValueSpec before pairing names to initializers. A
-#   spec whose ONE initializer has a *types.Tuple type of exactly
-#   len(Names) components — how go/types records all three comma-ok
-#   sources (receive, map index, type assertion) and a multi-valued
-#   call — is lowered by emitAssign on a fabricated
-#   ast.AssignStmt{Lhs: Names, Tok: DEFINE, Rhs: Values}: the SAME path
-#   the correct short declaration `v, ok := m[k]` uses, and the same
-#   path the package-level declaration has always used. Any other
-#   name/value mismatch is now an explicit refusal instead of a silent
-#   drop. A grouped declaration mixing ordinary and multi-value specs
-#   lowers to a SEQUENCE of wire statements at the same scope (via the
-#   hoist accumulator, NOT a wire `block`, which would scope the
-#   declarations away). The interface-conversion refusal the old
-#   blanket tuple/interface check provided is preserved at the reroute,
-#   sharpened to fire only when a conversion is genuinely owed
-#   (declared name interface-typed, tuple component not). A declaration
-#   with 0 or N initializers emits exactly the wire it emitted before.
-#   No wire-schema change, no decoder change, no GoCore change.
-#   Deltas — the predicted set exactly, stated in the commit message
-#   before this run confirmed it: 24 red -> green, 4 new green ids,
-#   1 new red id, and nothing else across 2154 cases.
-#     FAIL/differential -> PASS (15) — the silent ok-drop, gone:
-#       ~ spec-examples-decl/receive-comma-ok/typed-form
-#       ~ spec-examples-decl/receive-comma-ok/untyped-form-live
-#       ~ spec-examples-decl/index-comma-ok/var-form-present
-#       ~ spec-examples-decl/var-decl-forms/found-present
-#       ~ spec-examples-decl/var-comma-ok-matrix/recv-untyped
-#       ~ spec-examples-decl/var-comma-ok-matrix/recv-untyped-blank-value
-#       ~ spec-examples-decl/var-comma-ok-matrix/recv-typed
-#       ~ spec-examples-decl/var-comma-ok-matrix/recv-typed-blank-value
-#       ~ spec-examples-decl/var-comma-ok-matrix/index-untyped
-#       ~ spec-examples-decl/var-comma-ok-matrix/index-untyped-blank-value
-#       ~ spec-examples-decl/var-comma-ok-matrix/index-typed
-#       ~ spec-examples-decl/var-comma-ok-matrix/index-typed-blank-value
-#       ~ spec-examples-decl/var-comma-ok-matrix/func-literal
-#       ~ spec-examples-decl/var-comma-ok-matrix/grouped-spec
-#       ~ spec-examples-decl/var-comma-ok-matrix/after-goto
-#     FAIL/frontend-export -> PASS (9) — refusals the reroute retires:
-#       ~ spec-examples-decl/var-comma-ok-matrix/assert-untyped
-#       ~ spec-examples-decl/var-comma-ok-matrix/assert-untyped-blank-value
-#       ~ spec-examples-decl/var-comma-ok-matrix/assert-untyped-blank-ok
-#       ~ spec-examples-decl/var-comma-ok-matrix/assert-typed
-#       ~ spec-examples-decl/var-comma-ok-matrix/assert-typed-blank-value
-#       ~ spec-examples-decl/var-comma-ok-matrix/assert-typed-blank-ok
-#       ~ spec-examples-decl/var-comma-ok-matrix/iface-value
-#       ~ spec-examples-decl/var-comma-ok-matrix/tuple-call-untyped
-#       ~ spec-examples-decl/var-comma-ok-matrix/tuple-call-typed
-#     NEW -> PASS (4):
-#       + spec-examples-decl/var-comma-ok-matrix/after-goto-recv
-#       + spec-examples-decl/var-comma-ok-matrix/after-goto-assert
-#       + spec-examples-decl/var-comma-ok-matrix/tuple-call-three
-#       + spec-examples-decl/var-comma-ok-matrix/tuple-call-blank
-#     NEW -> FAIL/frontend-export (1):
-#       + spec-examples-decl/var-comma-ok-matrix/tuple-call-iface
-#     All five NEW ids were verified RED under the PRE-FIX emitter
-#     (git stash of emit.go) before being added, so they are genuine
-#     BUG-057 witnesses, not cases written to match the implementation.
-#   UNCHANGED red, deliberately: {recv,index,assert}-typed-iface,
-#   tuple-call-iface and spec-examples-decl/assert-comma-ok (the
-#   deferred implicit multi-value interface conversion, refused by the
-#   PRESERVED guard — a reroute that relaxed it into an unboxed store
-#   would have been a silent wrong answer) and shadow-capture (the
-#   capture pre-bind cannot hoist a tuple to a temp). All fail closed;
-#   all handed to the arc's slice-5 triage as frontier rows.
-#   Full run: 2154 cases (2020 PASS / 134 FAIL), native frontend.
-#
-result	id	stage
+# recorded: 2026-08-19 (bug-fix arc slices 3+4, probe-matrix step —
+#   MEMOS ONLY, no machine or frontend change in this commit)
+#   commit: this commit (on 779ab199, the slice-2 fix tip)
+#   re-pin reason: 13 NEW ids from the two design-gated slices' probe
+#   matrices, landed guardrails-first with colors recorded BEFORE any
+#   fix (docs/2026-08-19_bug056-addr-deref-memo.md,
+#   docs/2026-08-19_bug005-map-range-memo.md,
+#   docs/bugfix-arc-log.md §slices 3-4). No existing id moved.
+#   Deltas — the predicted set exactly:
+#     NEW FAIL (4):
+#       + spec-examples-decl/addr-deref-nil-matrix/two-deref-inner-nil
+#         (lean-observation) — BUG-056: inner load yields nil, the
+#         collapsed outer &* never checks it
+#       + spec-examples-decl/addr-deref-nil-matrix/deref-arg
+#         (lean-observation) — BUG-056 in argument position
+#       + spec-examples-decl/addr-deref-nil-matrix/deref-call
+#         (lean-observation) — BUG-056 on a call-result operand
+#       + maps/delete-unreached-during-range (differential) — BUG-005:
+#         the forced removal clause isolated (machine 20, go 11)
+#     NEW PASS (9):
+#       + spec-examples-decl/addr-deref-nil-matrix/{two-deref-outer-nil,
+#         index-slice-ptr-nil,index-arr-ptr-nil,index-auto-deref,
+#         field-explicit,field-auto-deref,alias-non-nil} — the
+#         compositions where an enclosing address node re-checks the
+#         base (pinned green so the BUG-056 fix cannot regress them)
+#         and the non-nil &*p aliasing identity
+#       + maps/added-entries-bound, maps/delete-readd-during-range —
+#         member-invariant envelope-bound pins for the BUG-005
+#         added-entries latitude (green under snapshot AND under any
+#         conforming live model; red on over-production, alien keys,
+#         or divergence)
+# counts: cases=2167 pass=2029 fail=138
+# frontend: native (tools/nativefrontend + NativeToIR)
+# format: result<TAB>id<TAB>stage (stage "-" for PASS)
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -77,10 +40,10 @@ PASS	arrays/array-element-compound	-
 PASS	arrays/array-len-cap	-
 PASS	arrays/array-of-struct-field-write	-
 PASS	arrays/array-param-return	-
-PASS	arrays/array-slice-alias	-
-PASS	arrays/array-zero	-
 PASS	arrays/arrays	-
 PASS	arrays/arrays-are-values	-
+PASS	arrays/array-slice-alias	-
+PASS	arrays/array-zero	-
 PASS	arrays/defined-array-receiver	-
 PASS	arrays/index-eval-order	-
 PASS	arrays/keyed-literal-eval-order	-
@@ -192,6 +155,7 @@ FAIL	builtins/real-imag	frontend-export
 PASS	builtins/recover-outside-defer	-
 PASS	channels/buffered-basic	-
 PASS	channels/close-closed-panic	-
+PASS	channels/closed-receive	-
 PASS	channels/close-edge/defer-close	-
 PASS	channels/close-edge/drain-zero-after-close	-
 PASS	channels/close-edge/recover-close-closed	-
@@ -200,7 +164,6 @@ PASS	channels/close-edge/recover-negative-make	-
 PASS	channels/close-edge/recover-send-closed	-
 PASS	channels/close-nil-panic	-
 PASS	channels/close-send-only	-
-PASS	channels/closed-receive	-
 PASS	channels/comparison/chan-of-chan	-
 PASS	channels/comparison/directional-equal	-
 PASS	channels/comparison/identity	-
@@ -319,10 +282,10 @@ FAIL	complex/zero-value	frontend-export
 PASS	constants/array-bound	-
 PASS	constants/builtin-len-cap-constants	-
 PASS	constants/complex-constant	-
-PASS	constants/const-precision	-
 PASS	constants/constant-character-representability	-
 PASS	constants/constant-comparison	-
 PASS	constants/constant-division	-
+PASS	constants/const-precision	-
 PASS	constants/default-bool-string	-
 FAIL	constants/default-types	frontend-export
 PASS	constants/dependent-constants	-
@@ -521,12 +484,6 @@ PASS	examples/dotprod/one-wrap-u64max	-
 PASS	examples/dotprod/uneven	-
 PASS	examples/fib/harness-ten	-
 PASS	examples/fib/harness-wrap	-
-PASS	examples/fib/ninety-four-wrap	-
-PASS	examples/fib/ninety-three	-
-PASS	examples/fib/one	-
-PASS	examples/fib/ten	-
-PASS	examples/fib/two	-
-PASS	examples/fib/zero	-
 PASS	examples/fibmemo/harness-one	-
 PASS	examples/fibmemo/harness-thirty	-
 PASS	examples/fibmemo/memosize-one	-
@@ -537,6 +494,12 @@ PASS	examples/fibmemo/ten	-
 PASS	examples/fibmemo/thirty	-
 PASS	examples/fibmemo/two	-
 PASS	examples/fibmemo/zero	-
+PASS	examples/fib/ninety-four-wrap	-
+PASS	examples/fib/ninety-three	-
+PASS	examples/fib/one	-
+PASS	examples/fib/ten	-
+PASS	examples/fib/two	-
+PASS	examples/fib/zero	-
 PASS	examples/gcd/a-zero	-
 PASS	examples/gcd/big	-
 PASS	examples/gcd/chain	-
@@ -825,8 +788,8 @@ PASS	functions/closure-loop-var-capture	-
 PASS	functions/closure-nested-recapture	-
 PASS	functions/closure-param-shadows-capture	-
 PASS	functions/closure-recursion	-
-PASS	functions/closure-return-state	-
 PASS	functions/closure-returns-closure	-
+PASS	functions/closure-return-state	-
 PASS	functions/closure-share	-
 PASS	functions/closure-two-vars-one-closure	-
 PASS	functions/closure-value-reassigned	-
@@ -964,9 +927,9 @@ PASS	goroutines/select-closed-arrival/recv-parked-sender	racy
 PASS	goroutines/select-closed-arrival/send	confluent
 PASS	goroutines/select-closed-arrival/send-close-race	racy
 PASS	goroutines/select-closed-arrival/send-paired-then-close	confluent
-PASS	goroutines/select-wake-multi	membership
 PASS	goroutines/select-wake/buffered-data	confluent
 PASS	goroutines/select-wake/closed	confluent
+PASS	goroutines/select-wake-multi	membership
 PASS	goroutines/select-wake/recv	confluent
 PASS	goroutines/select-wake/send	confluent
 PASS	goroutines/spawn-edge/child-panic-aborts	confluent
@@ -985,10 +948,10 @@ PASS	if/if-init-scope	-
 PASS	if/init-before-condition	-
 PASS	imported-goose/channel/actris-example	confluent
 PASS	imported-goose/channel/google-search	membership
-PASS	imported-goose/channel/muxer-unverified/done	-
-PASS	imported-goose/channel/muxer-unverified/drained	-
 PASS	imported-goose/channel/muxer/async	confluent
 PASS	imported-goose/channel/muxer/client	confluent
+PASS	imported-goose/channel/muxer-unverified/done	-
+PASS	imported-goose/channel/muxer-unverified/drained	-
 PASS	imported-goose/channel/parallel-search-replace/search-replace	-
 PASS	imported-goose/channel/select-tricky-examples/nb-full-buffer-not-ready	-
 PASS	imported-goose/channel/select-tricky-examples/nb-guaranteed-ready	-
@@ -1021,6 +984,9 @@ PASS	imported-goose/semantics/int-conversions/u32-newtype-len	-
 PASS	imported-goose/semantics/int-conversions/u32-to-u64	-
 PASS	imported-goose/semantics/int-conversions/u64-to-u32	-
 PASS	imported-goose/semantics/int-conversions/uint32-untyped	-
+PASS	imported-goose/semantics/interfaces/assign-interface	-
+PASS	imported-goose/semantics/interfaces/basic-interface	-
+PASS	imported-goose/semantics/interfaces/binary-expr-interface	-
 PASS	imported-goose/semantics/interfaces-complex/accept-address-interface	-
 PASS	imported-goose/semantics/interfaces-complex/double-pointer-interface	-
 PASS	imported-goose/semantics/interfaces-complex/downcast-interface	-
@@ -1032,9 +998,6 @@ PASS	imported-goose/semantics/interfaces-complex/polymorphism-interface	-
 PASS	imported-goose/semantics/interfaces-complex/shared-functions-interface	-
 PASS	imported-goose/semantics/interfaces-complex/string-interface	-
 PASS	imported-goose/semantics/interfaces-complex/type-assertion-interface	-
-PASS	imported-goose/semantics/interfaces/assign-interface	-
-PASS	imported-goose/semantics/interfaces/basic-interface	-
-PASS	imported-goose/semantics/interfaces/binary-expr-interface	-
 PASS	imported-goose/semantics/interfaces/if-stmt-interface	-
 PASS	imported-goose/semantics/interfaces/multiple-interface	-
 PASS	imported-goose/semantics/lock/s-use-locks	-
@@ -1171,8 +1134,8 @@ PASS	init/init-defer-recover	-
 PASS	init/init-panic	-
 PASS	init/init-sees-var-values	-
 PASS	init/multi-file-order	-
-PASS	init/multi-value-var-init	-
 PASS	init/multiple-init-order	-
+PASS	init/multi-value-var-init	-
 PASS	init/package-init-order	-
 PASS	init/quarantined-init-dep	-
 PASS	init/quarantined-init-iface	-
@@ -1189,11 +1152,11 @@ PASS	interfaces/assert-imported-interface/negative	-
 PASS	interfaces/assert-imported-interface/positive	-
 PASS	interfaces/assert-imported-method-set/comma-ok	-
 PASS	interfaces/assert-imported-method-set/panic-form	-
+PASS	interfaces/call-assign-boxing/assign-any	-
+PASS	interfaces/call-assign-boxing/assign-error	-
 PASS	interfaces/call-assign-boxing-controls/concrete	-
 PASS	interfaces/call-assign-boxing-controls/per-pair	-
 PASS	interfaces/call-assign-boxing-controls/var-init	-
-PASS	interfaces/call-assign-boxing/assign-any	-
-PASS	interfaces/call-assign-boxing/assign-error	-
 PASS	interfaces/call-assign-boxing/named-result	-
 PASS	interfaces/deep-incomparable-dynamic-eq	-
 PASS	interfaces/embedded-interface	-
@@ -1279,6 +1242,12 @@ PASS	interfaces/type-assert-interface-panic/missing-one	-
 PASS	interfaces/type-assert-interface-panic/nil	-
 PASS	interfaces/type-assertions/comma-ok	-
 PASS	interfaces/type-assertions/panic	-
+PASS	interfaces/typed-nil-channel	-
+PASS	interfaces/typed-nil-composite	-
+PASS	interfaces/typed-nil-func	-
+PASS	interfaces/typed-nil-map	-
+PASS	interfaces/typed-nil-pointer-compare	-
+PASS	interfaces/typed-nil-slice	-
 PASS	interfaces/type-switch-default-binding	-
 PASS	interfaces/type-switch-default-binding-type	-
 PASS	interfaces/type-switch-dynamic	-
@@ -1297,12 +1266,6 @@ PASS	interfaces/type-switch-nil-multi-case	-
 PASS	interfaces/type-switch-single-binding	-
 PASS	interfaces/type-switch-typed-nil	-
 PASS	interfaces/type-switch-typed-nil-binding	-
-PASS	interfaces/typed-nil-channel	-
-PASS	interfaces/typed-nil-composite	-
-PASS	interfaces/typed-nil-func	-
-PASS	interfaces/typed-nil-map	-
-PASS	interfaces/typed-nil-pointer-compare	-
-PASS	interfaces/typed-nil-slice	-
 PASS	ints/bitwise	-
 PASS	ints/break-continue	-
 PASS	ints/byte-conversion	-
@@ -1320,9 +1283,9 @@ PASS	ints/defined-incdec/unnamed-control	-
 PASS	ints/defined-int-conversion	-
 PASS	ints/defined-type-ops	-
 PASS	ints/defined-underlying-conversion	-
-PASS	ints/div-mod-signs	-
 PASS	ints/divide-by-zero	-
 PASS	ints/division-overflow	-
+PASS	ints/div-mod-signs	-
 PASS	ints/if-return	-
 PASS	ints/int8-wrap	-
 PASS	ints/multi-assign	-
@@ -1334,8 +1297,8 @@ PASS	ints/observation-kind/struct-fields	-
 PASS	ints/observation-kind/uint64-max	-
 PASS	ints/observation-kind/uint8-incr	-
 PASS	ints/scalars	-
-PASS	ints/shift-width-boundaries	-
 PASS	ints/shifts	-
+PASS	ints/shift-width-boundaries	-
 PASS	ints/signed-unsigned-conversion	-
 PASS	ints/signed-width-wrap	-
 PASS	ints/truncate-conversion	-
@@ -1344,6 +1307,7 @@ PASS	ints/uint-wrap	-
 PASS	ints/unsigned-right-shift	-
 PASS	ints/while1	-
 PASS	ints/wrap-width-boundaries	-
+PASS	maps/added-entries-bound	-
 PASS	maps/array-key	-
 PASS	maps/array-key-interface-elem-unhashable/access-empty	-
 PASS	maps/array-key-interface-elem-unhashable/assign	-
@@ -1364,6 +1328,8 @@ PASS	maps/delete-nil-interface-key-panic	-
 PASS	maps/delete-nil-key-types	-
 PASS	maps/delete-nil-map	-
 PASS	maps/delete-nil-value-types	-
+PASS	maps/delete-readd-during-range	-
+FAIL	maps/delete-unreached-during-range	differential
 FAIL	maps/imported-named-key-unhashable	lean-observation
 PASS	maps/incdec-value-kinds/defined	-
 PASS	maps/incdec-value-kinds/uint8	-
@@ -1464,16 +1430,16 @@ PASS	methods/value-receiver-via-pointer-var/addr-of-var	-
 PASS	multi-assign/blank-dep-index	-
 PASS	multi-assign/blank-discard-nonint	-
 PASS	multi-assign/call-return-assignment	-
-PASS	multi-assign/call-write-back-order-value/deref-target	-
-PASS	multi-assign/call-write-back-order-value/index-target	-
+PASS	multi-assign/call-write-back/effects-suppressed	-
+PASS	multi-assign/call-write-back/nil-field-store	-
 PASS	multi-assign/call-write-back-order/deref-target	-
 PASS	multi-assign/call-write-back-order/global-index	-
 PASS	multi-assign/call-write-back-order/hoisted-control	-
 PASS	multi-assign/call-write-back-order/index-missed-panic	-
 PASS	multi-assign/call-write-back-order/index-spurious-panic	-
 PASS	multi-assign/call-write-back-order/slice-header-base	-
-PASS	multi-assign/call-write-back/effects-suppressed	-
-PASS	multi-assign/call-write-back/nil-field-store	-
+PASS	multi-assign/call-write-back-order-value/deref-target	-
+PASS	multi-assign/call-write-back-order-value/index-target	-
 PASS	multi-assign/call-write-back/panic-identity	-
 PASS	multi-assign/chain-field-over-index	-
 PASS	multi-assign/chain-field-over-index/array-field	-
@@ -1500,15 +1466,15 @@ PASS	multipkg/cross-type-method	-
 PASS	multipkg/cross-var	-
 PASS	multipkg/diamond-import	-
 PASS	multipkg/init-order	-
-PASS	multipkg/init-order-pruned-stdlib/seq	-
 PASS	multipkg/init-order-pruned/dynamic	-
 PASS	multipkg/init-order-pruned/static	-
+PASS	multipkg/init-order-pruned-stdlib/seq	-
 FAIL	multipkg/init-order-staticinit/seq	differential
 PASS	multipkg/init-order-stdlib/marks	-
 PASS	multipkg/init-order-stdlib/seq	-
 PASS	multipkg/init-order-tiebreak/seq	-
-FAIL	multipkg/same-name-identity-panic	differential
 PASS	multipkg/same-name-identity/func-identity	-
+FAIL	multipkg/same-name-identity-panic	differential
 PASS	multipkg/same-name-identity/type-identity	-
 PASS	native-smoke/arith	-
 PASS	native-smoke/maprange	-
@@ -1529,8 +1495,8 @@ PASS	panic-recover/defer-arg-during-panic	-
 PASS	panic-recover/defer-panic-after-return	-
 PASS	panic-recover/defer-panic-recovered-after-return	-
 PASS	panic-recover/defer-recover-builtin	-
-PASS	panic-recover/defer-registered-during-unwind	-
 PASS	panic-recover/deferred-panic-replaces	-
+PASS	panic-recover/defer-registered-during-unwind	-
 PASS	panic-recover/named-result-preserved-after-recover	-
 PASS	panic-recover/nested-frame-recover	-
 PASS	panic-recover/nil-defer-during-unwind	-
@@ -1581,9 +1547,13 @@ PASS	pointers/pointer-identity	-
 PASS	pointers/pointer-param-alias	-
 PASS	pointers/pointer-slice-header	-
 PASS	pointers/pointer-to-pointer	-
+PASS	quorum/committed-index/all-acked	-
 PASS	quorum/committed-index-edges/all-unacked	-
 PASS	quorum/committed-index-edges/n1-acked	-
 PASS	quorum/committed-index-edges/n1-unacked	-
+PASS	quorum/committed-index/empty-maxuint	-
+PASS	quorum/committed-index/heap	-
+PASS	quorum/committed-index/on-stack	-
 PASS	quorum/committed-index-real/empty	-
 PASS	quorum/committed-index-real/five-dup	-
 PASS	quorum/committed-index-real/five-spread	-
@@ -1601,10 +1571,6 @@ PASS	quorum/committed-index-real/three-two	-
 PASS	quorum/committed-index-real/two-half	-
 PASS	quorum/committed-index-real/two-known	-
 PASS	quorum/committed-index-real/two-missing	-
-PASS	quorum/committed-index/all-acked	-
-PASS	quorum/committed-index/empty-maxuint	-
-PASS	quorum/committed-index/heap	-
-PASS	quorum/committed-index/on-stack	-
 PASS	quorum/committed-index/unacked	-
 PASS	quorum/joint/committed-min	-
 PASS	quorum/joint/ids-union	-
@@ -1612,23 +1578,19 @@ PASS	quorum/joint/vote-both-pending	-
 PASS	quorum/joint/vote-both-win	-
 PASS	quorum/joint/vote-disagree-lost	-
 PASS	quorum/joint/vote-disagree-pending	-
+PASS	quorum/vote-result/empty-wins	-
+PASS	quorum/vote-result/even-one-short	-
+PASS	quorum/vote-result/even-won	-
+PASS	quorum/vote-result/lost	-
+PASS	quorum/vote-result/pending	-
 PASS	quorum/vote-result-small-n/n1-lost	-
 PASS	quorum/vote-result-small-n/n1-pending	-
 PASS	quorum/vote-result-small-n/n1-won	-
 PASS	quorum/vote-result-small-n/n2-one-missing-pending	-
 PASS	quorum/vote-result-small-n/n2-one-yes-lost	-
 PASS	quorum/vote-result-small-n/n2-won	-
-PASS	quorum/vote-result/empty-wins	-
-PASS	quorum/vote-result/even-one-short	-
-PASS	quorum/vote-result/even-won	-
-PASS	quorum/vote-result/lost	-
-PASS	quorum/vote-result/pending	-
 PASS	quorum/vote-result/tie-lost	-
 PASS	quorum/vote-result/won-exact	-
-PASS	race/free-sync/mutex	confluent
-PASS	race/free-sync/once-edge	confluent
-PASS	race/free-sync/rw-writers	confluent
-PASS	race/free-sync/wg-edge	confluent
 FAIL	race/free/array-read-write	lean-observation
 PASS	race/free/field-disjoint	confluent
 PASS	race/free/field-read-write	confluent
@@ -1637,15 +1599,16 @@ PASS	race/free/promoted-ptr-box	confluent
 PASS	race/free/ptr-field-read-write	confluent
 PASS	race/free/slice-disjoint	confluent
 PASS	race/free/spawn-dispatch-free	confluent
+PASS	race/free-sync/mutex	confluent
+PASS	race/free-sync/once-edge	confluent
+PASS	race/free-sync/rw-writers	confluent
+PASS	race/free-sync/wg-edge	confluent
 PASS	race/litmus/chan-mutex	confluent
 PASS	race/litmus/close-hb	confluent
 PASS	race/litmus/lb-racy	racy
 PASS	race/litmus/mp-racy	racy
 PASS	race/litmus/mp-sync	confluent
 PASS	race/litmus/sb-chan	membership
-PASS	race/negative-sync/one-side	racy
-PASS	race/negative-sync/rlock-serialized	racy
-PASS	race/negative-sync/wg-no-edge	racy
 PASS	race/negative/defer-dispatch	racy
 PASS	race/negative/iface-dispatch	racy
 PASS	race/negative/increment	racy
@@ -1657,6 +1620,9 @@ PASS	race/negative/promoted-dispatch	racy
 PASS	race/negative/read-write	racy
 PASS	race/negative/slice-elem	racy
 PASS	race/negative/spawn-dispatch	racy
+PASS	race/negative-sync/one-side	racy
+PASS	race/negative-sync/rlock-serialized	racy
+PASS	race/negative-sync/wg-no-edge	racy
 PASS	race/negative/write-write	racy
 PASS	range/assign-form-interface-target/assert-escalation	-
 PASS	range/assign-form-interface-target/index	-
@@ -1697,8 +1663,8 @@ PASS	range/range-struct-copy	-
 PASS	returns/early-return-named	-
 PASS	returns/method-multi-result-arg	-
 PASS	returns/multi-result-argument	-
-PASS	returns/multi-result-assign-order	-
 PASS	returns/multi-result-assignment	-
+PASS	returns/multi-result-assign-order	-
 PASS	returns/multi-result-blank-forward	-
 PASS	returns/multi-result-forward	-
 PASS	returns/multi-result-forward-named	-
@@ -1758,10 +1724,20 @@ PASS	slices/slices-sort-edges/signed-negatives	-
 PASS	slices/slices-sort-edges/single-element	-
 PASS	slices/slices-sort-edges/subslice-aliasing	-
 PASS	slices/slices-sort-edges/unsigned-above-half	-
-FAIL	slices/slices-sort-non-integer-refusal	frontend-export
 PASS	slices/slices-sort/ints	-
+FAIL	slices/slices-sort-non-integer-refusal	frontend-export
 PASS	slices/slices-sort/uint64	-
 PASS	slices/three-index-slice	-
+PASS	spec-examples-decl/addr-deref-nil-matrix/alias-non-nil	-
+FAIL	spec-examples-decl/addr-deref-nil-matrix/deref-arg	lean-observation
+FAIL	spec-examples-decl/addr-deref-nil-matrix/deref-call	lean-observation
+PASS	spec-examples-decl/addr-deref-nil-matrix/field-auto-deref	-
+PASS	spec-examples-decl/addr-deref-nil-matrix/field-explicit	-
+PASS	spec-examples-decl/addr-deref-nil-matrix/index-arr-ptr-nil	-
+PASS	spec-examples-decl/addr-deref-nil-matrix/index-auto-deref	-
+PASS	spec-examples-decl/addr-deref-nil-matrix/index-slice-ptr-nil	-
+FAIL	spec-examples-decl/addr-deref-nil-matrix/two-deref-inner-nil	lean-observation
+PASS	spec-examples-decl/addr-deref-nil-matrix/two-deref-outer-nil	-
 FAIL	spec-examples-decl/address-op-nil-indirection/addr-deref-nil	lean-observation
 FAIL	spec-examples-decl/address-op-nil-indirection/addr-deref-nil-paren	lean-observation
 PASS	spec-examples-decl/address-op-nil-indirection/deref-nil	-
@@ -1844,8 +1820,8 @@ FAIL	spec-examples-decl/string-from-runes	lean-observation
 FAIL	spec-examples-decl/struct-tag-conversion	frontend-export
 FAIL	spec-examples-decl/timezone-stringer	frontend-export
 FAIL	spec-examples-decl/type-definitions-distinct	frontend-export
-PASS	spec-examples-decl/type-identity	-
 PASS	spec-examples-decl/typed-nil-interface	-
+PASS	spec-examples-decl/type-identity	-
 PASS	spec-examples-decl/typeparam-parse-ambiguity/arrays	-
 PASS	spec-examples-decl/typeparam-parse-ambiguity/conversion-form	-
 PASS	spec-examples-decl/typeparam-parse-ambiguity/forced-generic	-
@@ -2020,6 +1996,8 @@ PASS	spec-examples-stmt/slice-full	-
 PASS	spec-examples-stmt/slice-simple	-
 PASS	spec-examples-stmt/string-concat	-
 FAIL	spec-examples-stmt/struct-tags	frontend-export
+PASS	spec-examples-stmt/type-switch/bool-in-list	-
+PASS	spec-examples-stmt/type-switch/default-case	-
 PASS	spec-examples-stmt/type-switch-equiv-if/agree-bool	-
 PASS	spec-examples-stmt/type-switch-equiv-if/agree-default	-
 PASS	spec-examples-stmt/type-switch-equiv-if/agree-float64	-
@@ -2034,8 +2012,6 @@ PASS	spec-examples-stmt/type-switch-equiv-if/if-chain-func	-
 PASS	spec-examples-stmt/type-switch-equiv-if/if-chain-int	-
 PASS	spec-examples-stmt/type-switch-equiv-if/if-chain-nil	-
 PASS	spec-examples-stmt/type-switch-equiv-if/if-chain-string	-
-PASS	spec-examples-stmt/type-switch/bool-in-list	-
-PASS	spec-examples-stmt/type-switch/default-case	-
 PASS	spec-examples-stmt/type-switch/float64-case	-
 PASS	spec-examples-stmt/type-switch/func-case	-
 PASS	spec-examples-stmt/type-switch/int-case	-
@@ -2127,7 +2103,6 @@ PASS	structs/pointer-literal-elision/spec-example	-
 PASS	structs/positional-literal	-
 PASS	structs/positional-literal-eval-order	-
 PASS	structs/recursive-pointer	-
-PASS	structs/selector-address-pointer	-
 PASS	structs/selector-addressability-edge/map-value-copy-then-assign	-
 PASS	structs/selector-addressability-edge/map-value-pointer-field-write	-
 PASS	structs/selector-addressability-edge/map-value-slice-field-write	-
@@ -2135,6 +2110,7 @@ PASS	structs/selector-addressability-edge/pointer-field-from-call-result	-
 PASS	structs/selector-addressability-edge/pointer-result-assign	-
 PASS	structs/selector-addressability-edge/read-call-result	-
 PASS	structs/selector-addressability-edge/read-conversion-result	-
+PASS	structs/selector-address-pointer	-
 PASS	structs/selector-eval-once	-
 PASS	structs/struct-array-element-write	-
 PASS	structs/swap	-
@@ -2189,13 +2165,13 @@ PASS	sync/rwmutex-misuse-fatal/runlock-while-write-locked	-
 PASS	sync/rwmutex-misuse-fatal/wunlock-of-unlocked	-
 PASS	sync/rwmutex-order/acquisition	membership
 PASS	sync/rwmutex-rlock-then-lock/rlock-then-lock	-
-PASS	sync/satisfaction-locker-sig/assert-ok-rwmutex	-
 PASS	sync/satisfaction/assert-negative-missing	-
 PASS	sync/satisfaction/assert-ok-mutex	-
 PASS	sync/satisfaction/assert-ok-once	-
 PASS	sync/satisfaction/assert-ok-waitgroup	-
 PASS	sync/satisfaction/bare-assert-missing-panics	-
 PASS	sync/satisfaction/bare-assert-mutex	-
+PASS	sync/satisfaction-locker-sig/assert-ok-rwmutex	-
 PASS	sync/satisfaction/trylock-sig-satisfies	-
 PASS	sync/satisfaction/type-switch-mutex	-
 PASS	sync/stub-satisfaction/satisfies	-

@@ -2231,8 +2231,28 @@ the re-pin guard. The guard treats an untyped-nil source as exact
 
 - Status: open
 - Pinned-by: differential
-- Cases: maps/delete-during-range, maps/clear-during-range, maps/update-during-range, race/negative/map-range-iter
+- Cases: maps/delete-during-range, maps/clear-during-range, maps/update-during-range, race/negative/map-range-iter, maps/delete-unreached-during-range
 - Discovered: 2026-07-26 (pre-merge adversarial audit of `wrong-answers-builtins`)
+- PROBES + design memo (bug-fix arc slice 4, 2026-08-19;
+  `docs/2026-08-19_bug005-map-range-memo.md` — slice 4 is
+  design-gated, no fix in that commit). Three rows added:
+  `delete-unreached-during-range` (RED, differential — the forced
+  removal clause isolated from the delete-everything shape: machine
+  20, go 11) and two member-invariant GREEN envelope-bound pins
+  (`maps/added-entries-bound`, `maps/delete-readd-during-range` —
+  guard pins, deliberately NOT on the Cases line, which the bug-index
+  cross-check reserves for this bug's reds) that stay green under
+  snapshot AND any conforming live model and go red on
+  over-production, alien keys, or divergence. Probe findings the memo
+  rests on (artifacts/probe/map005, scratch; 400 runs each): gc
+  exhibits the FULL added-entries latitude across plain re-runs
+  (counts 4..8 all realized on a 4+4 shape); gc NEVER re-produces a
+  deleted-then-re-created already-produced key, even under forced
+  mid-iteration growth (800 runs) — though the spec's created-entries
+  sentence literally admits it; and the memo SHARPENS this entry:
+  stale values violate a FORCED point (the range clause's production
+  table defines the map 2nd value as `m[k]`, produced "for each
+  iteration"), not merely gc behavior.
 
 **Fourth symptom, added 2026-08-07 (S3 pre-merge audit, major): RACE
 INVISIBILITY.** gc's live iteration reads the map at every
@@ -2525,7 +2545,29 @@ FIRST per the standing rule.
   guardrail case found the unexercised path; interpreter fix is a
   semantic-core arc, out of P3's corpus-lane scope).
 - Pinned-by: differential
-- Cases: spec-examples-decl/address-op-nil-indirection/addr-deref-nil, spec-examples-decl/address-op-nil-indirection/addr-deref-nil-paren
+- Cases: spec-examples-decl/address-op-nil-indirection/addr-deref-nil, spec-examples-decl/address-op-nil-indirection/addr-deref-nil-paren, spec-examples-decl/addr-deref-nil-matrix/two-deref-inner-nil, spec-examples-decl/addr-deref-nil-matrix/deref-arg, spec-examples-decl/addr-deref-nil-matrix/deref-call
+- PROBE MATRIX (bug-fix arc slice 3, 2026-08-19; design memo
+  `docs/2026-08-19_bug056-addr-deref-memo.md` — slice 3 is
+  design-gated, no fix in that commit): 10 rows in
+  `spec-examples-decl/addr-deref-nil-matrix/`, colors recorded
+  PRE-fix (7 PASS / 3 FAIL, every color predicted from the wire
+  reading before the run). The red boundary is sharp: exactly the
+  compositions where `*` is the immediate operand of `&` and no
+  enclosing address node re-checks the base (`two-deref-inner-nil`,
+  `deref-arg`, `deref-call` join the two pins above); every neighbor
+  — field/index composition either sugar direction, the operand's own
+  inner deref, and the non-nil `&*p` aliasing identity — is pinned
+  GREEN so a fix cannot regress it (the 7 green rows
+  `two-deref-outer-nil`, `index-slice-ptr-nil`, `index-arr-ptr-nil`,
+  `index-auto-deref`, `field-explicit`, `field-auto-deref`,
+  `alias-non-nil` — guard pins, deliberately NOT on the Cases line,
+  which the bug-index cross-check reserves for this bug's reds). The
+  entry's record-only claims (`&p.f`/`&p[i]` on nil panic correctly)
+  are now case-witnessed (`field-auto-deref`, `index-auto-deref`). Ground truths for any
+  mechanism (probed, gc go1.26.5: memo §2): `&*p` compiles to a
+  single uninstrumented `TESTB` nil-probe — NO pointee load even for
+  a 64-byte pointee, TSan-green beside a concurrent pointee write —
+  so a `_ = *p` desugar is wrong by probe, not just by taste.
 - Discovered: spec#Address_operators' own exhibit — "if the evaluation
   of x would cause a run-time panic, then the evaluation of &x does
   too" — so `&*p` with `p == nil` must panic (gc go1.26.5: panics;
