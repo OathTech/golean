@@ -1,4 +1,11 @@
-# The bug-fix arc charter — BUG-058, BUG-057, BUG-056 (2026-08-19, DRAFT for user review)
+# The bug-fix + frontier arc charter (2026-08-19, DRAFT for user review)
+
+Scope set by user direction 2026-08-19: fix BUG-058/057/056/005; then
+**all bugs and differentials are killed unless there is a profound
+reason they exist** (each such reason written down and put to the
+user); and the arc **stakes out the unsupported frontier** — a
+guardrail suite strong enough that future feature arcs start with
+their targets pinned.
 
 The three machine bugs the spec-truth campaign found (P3, all
 audit-hardened diagnoses in `docs/BUGS.md`), fixed in one arc, ordered
@@ -120,16 +127,73 @@ detector. Three differential reds + `race/negative/map-range-iter`.
    same-commit, and record the added-entries choice in the latitude
    inventory with its membership/re-envelope obligation.
 
+## Slice 5 — the full red/bug triage (kill or justify, nothing else)
+
+The complete accounting, mechanized as a tracked triage table
+(`docs/bugfix-arc-log.md` §triage): **all 13 open BUGS.md entries**
+and **all 136 baseline reds** (12 differential, 87 frontend-export,
+35 lean-observation, 1 go-run, 1 nondet — the counts at charter time;
+re-derive at execution). Every row lands in exactly one category:
+
+- **(a) FIXED in this arc** — pulled into slices 1–4, or a new
+  mini-slice when the fix is cheap and diagnosed (judgment call,
+  logged). The receive-hoist family (BUG-023/026) is expected
+  category-(a) candidates — same evaluation-order class as BUG-058;
+  triage confirms.
+- **(b) FRONTIER** — red because the feature is unsupported; the row
+  names the feature and hands it to slice 6. Expected home of most
+  of the 87 frontend-export reds.
+- **(c) PROFOUND-REASON PIN** — latitude (optimizer-dependent,
+  spec-open) or impossibility (non-injective rendering); the row
+  carries the ledger entry and the re-envelope obligation. The known
+  three (BUG-061 residual, hidden-dep-order, BUG-059) start here;
+  anything else claiming (c) must argue it fresh.
+
+There is NO fourth category. "Known issue" without a written profound
+reason is not a state this arc may end in. The category-(c) list is
+put to the user at the arc gate — profound-ness is the user's call,
+not ours.
+
+## Slice 6 — the unsupported frontier, staked out
+
+For every feature the frontend refuses (the refusal census from the
+frontier sweep + slice 5's category-(b) rows): build the guardrail
+suite BEFORE any support exists, per the doctrine ("a tool feature is
+not started until its guardrail cases exist and classify correctly").
+
+1. **The frontier map** (`docs/frontier-map.md`, tracked): feature →
+   refusal point (file:line, the error string) → oracle-verified
+   guardrail case ids → the spec anchors → estimated implementation
+   scope (frontend-only / GoCore-touching / envelope-question). This
+   is the coverage roadmap the arc leaves behind.
+2. **The suite**: per feature, isolated cases + edge enumeration
+   (three-layer strategy, `docs/native-frontend-goal.md`), expected
+   outputs computed from `go run` and hand-argued against the spec.
+   Every case must classify as a visible frontend/feature-blocked
+   red — never a false pass, never silently skipped. These land in
+   the baseline as explained frontend-export rows: the frontier
+   becomes ENUMERATED red, not absent grey.
+3. Depth is a judgment call per feature, logged: a feature near the
+   raft path (goroutines/channels/select/sync, interfaces, defer
+   breadth) gets the full enumeration; an exotic one (cgo, unsafe
+   arithmetic) gets a marker suite + an explicit deferral note.
+
 ## The arc's end-state claim (the honest ledger)
 
-After this arc, the differential-red set is EXACTLY the pins that
-must not be "fixed" by matching gc: BUG-061's staticinit residual +
-`init/hidden-dep-order` (optimizer-dependent init-order latitude,
-L-011 — gc's own answer changes under `-N -l`) and BUG-059
-(non-injective panic rendering). Each carries its ledger entry and
-its W3.2 re-envelope obligation; zero unexplained reds. Forcing
-those three green against one compiler's optimizer would be modeling
-gc, not Go — the doctrine's exact anti-goal.
+After this arc (user's formulation, the arc's law): **all bugs and
+differentials are killed unless there is a profound reason they
+exist.** Concretely: every baseline red is category-(b) frontier
+(feature named, guardrails landed, on the frontier map) or
+category-(c) profound-reason (ledgered, user-ratified at the gate);
+every BUGS.md entry is fixed or category-(c); zero rows outside the
+triage table. The starting category-(c) set — BUG-061's staticinit
+residual + `init/hidden-dep-order` (optimizer-dependent init-order
+latitude, L-011 — gc's own answer changes under `-N -l`) and BUG-059
+(non-injective panic rendering) — is argued in the table, not
+grandfathered: forcing those green against one compiler's optimizer
+would be modeling gc, not Go — the doctrine's exact anti-goal. If
+the user rules any (c) row insufficiently profound, it converts to a
+fix obligation (this arc or a named successor).
 
 ## Cross-cutting obligations
 
@@ -161,16 +225,23 @@ gc, not Go — the doctrine's exact anti-goal.
 4. BUG-005: same structure as 056 — memo + gate outcome, implemented
    or explicitly deferred, never half. If implemented: three map reds
    + the race negative green, the added-entries latitude recorded.
-5. The end-state claim verified: the differential-red set is exactly
-   the named latitude/rendering pins, cross-referenced to ledger +
-   W3.2.
-6. Untriaged-25 cross-check recorded.
-7. `scripts/ci --diff` green at tip; every flip predicted; BUGS.md
+5. The triage table complete: 13/13 open bugs + every baseline red
+   in exactly one category; category-(a) rows fixed; category-(c)
+   rows put to the user.
+6. The frontier map + guardrail suite landed; every refused feature
+   enumerated with oracle-verified cases classifying frontend-blocked;
+   raft-path features at full enumeration depth.
+7. The end-state claim verified against the final baseline: zero
+   reds outside the triage table.
+8. Untriaged-25 cross-check recorded.
+9. `scripts/ci --diff` green at tip; every flip predicted; BUGS.md
    current; arc log (`docs/bugfix-arc-log.md`) current.
-8. Pre-merge audit ASK posed (proposed size: 1 Opus reviewer for
-   the frontend slices + 1 Fable reviewer for the semantic-core
+10. Pre-merge audit ASK posed (proposed size: 1 Opus reviewer for
+   the frontend slices, 1 Fable reviewer for the semantic-core
    slice if BUG-005 is implemented — the interpreter is the primary
-   dimension, always audited; Mike may trim/waive).
+   dimension, always audited — and 1 Opus reviewer for the triage
+   table + frontier map's honesty (every red truly categorized, no
+   quiet grandfathering); Mike may trim/waive).
 
 ## Boundaries (hard)
 
