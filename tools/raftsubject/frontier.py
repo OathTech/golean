@@ -23,13 +23,28 @@ main (`probe-main.go`) and the walk plan (`frontier-plan.tsv`).  Re-running it
 after any frontend or subject change reproduces — or refutes — the inventory
 in docs/raft-w2-log.md.
 
-PLAN.tsv rows:  <file>\t<decl>\t<expected refusal substring>
+PLAN.tsv rows:  <file>\t<decl>\t<expected refusal substring>[\t<fixups>]
 where <decl> is `Type.Method`, `func Name`, or `*` for "no more removals;
 this row asserts the tree now exports clean".  The `*` row is MANDATORY and
 must be last: it is the difference between "each step went as predicted" and
 "this is the whole frontier".  A plan without it is refused, and the final
 state is re-checked in the exit code, so truncating the plan fails rather than
 silently reporting a shorter inventory.
+
+TWO MORE ACTIONS (W2.2), because the raft ROOT package refuses in places a
+body replacement cannot reach — a package-level `var Err = errors.New(...)`
+has no body, and an import can refuse before any declaration is looked at:
+
+    <file>\t$drop-import:pkg[,pkg]\t<expected>     delete those import lines
+    <file>\t$rewrite:OLD==>NEW\t<expected>         one exact textual swap
+
+Both are PROBE DELTAS and nothing else: they change the WORK COPY of the tree
+so the walk can continue past a known-and-recorded gap and see what is behind
+it.  They never touch `raftsubject/`, and each one owes a row in the probe-
+delta ledger of docs/raft-w3-log.md naming the gap it is standing in for.  A
+`$rewrite` whose OLD text is not present exactly once refuses — a probe delta
+that silently matched nothing would make the walk a claim about a tree that
+does not exist.
 """
 
 import argparse
@@ -38,6 +53,13 @@ import re
 import shutil
 import subprocess
 import sys
+
+# NOTE for anything that IMPORTS this module (measurement scripts do): set
+# `sys.dont_write_bytecode = True` in the IMPORTER, before the import, the way
+# difftest.py does. Setting it here would be too late — the loader writes the
+# .pyc before the module body runs, which was checked rather than assumed — and
+# an untracked __pycache__/ beside tracked sources is noise a lane should not
+# push onto the shared .gitignore.
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -102,7 +124,17 @@ def neutralise(path, decl, keepalive=None):
         # plan names the now-unused imports; they become BLANK imports, which
         # keeps the file type-checking without introducing any declaration the
         # frontend then has to lower.
+        #
+        # A `-pkg` entry DELETES the import instead.  Needed where the import
+        # itself is the refusal: a blank import is still a node of the
+        # program's initialization schedule, so blanking `crypto/rand` does
+        # not get past a refusal that came from its transitive closure.
         for pkg in keepalive.split(","):
+            if pkg.startswith("-"):
+                open(path, "w").write(text)
+                drop_imports(path, pkg[1:])
+                text = open(path).read()
+                continue
             new, n = re.subn(r'^\t"%s"$' % re.escape(pkg), '\t_ "%s"' % pkg,
                              text, count=1, flags=re.M)
             if not n:
@@ -113,6 +145,61 @@ def neutralise(path, decl, keepalive=None):
                          % (pkg, path))
             text = new
     open(path, "w").write(text)
+
+
+def drop_imports(path, pkgs):
+    """Delete import lines (a PROBE DELTA — see the module docstring).
+
+    Blanking is not enough for the two raft-root cases: the initialization
+    schedule ranges over EVERY import, blank ones included (that is the whole
+    point of a blank import), so `_ "crypto/rand"` refuses exactly as the
+    named import did.
+    """
+    text = open(path).read()
+    for pkg in pkgs.split(","):
+        new, n = re.subn(r'^\t(?:\w+ )?"%s"\n' % re.escape(pkg), "", text,
+                         count=1, flags=re.M)
+        if not n:
+            new, n = re.subn(r'^import (?:\w+ )?"%s"\n' % re.escape(pkg), "",
+                             text, count=1, flags=re.M)
+        if not n:
+            sys.exit("frontier.py: import %s not found in %s" % (pkg, path))
+        text = new
+    open(path, "w").write(text)
+
+
+def rewrite(path, spec):
+    """One exact textual replacement (a PROBE DELTA)."""
+    if "==>" not in spec:
+        sys.exit("frontier.py: $rewrite needs OLD==>NEW, got %r" % spec)
+    old, new = spec.split("==>", 1)
+    text = open(path).read()
+    if text.count(old) != 1:
+        sys.exit("frontier.py: $rewrite OLD occurs %d times in %s (must be "
+                 "exactly once): %r" % (text.count(old), path, old))
+    open(path, "w").write(text.replace(old, new))
+
+
+def add_file(work, fil, src):
+    """Copy a tracked probe file into the work tree (a PROBE DELTA)."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    s = os.path.join(here, "probe", src)
+    if not os.path.exists(s):
+        sys.exit("frontier.py: probe file %s does not exist" % s)
+    shutil.copy(s, os.path.join(work, fil))
+
+
+def apply_step(work, fil, decl, keepalive):
+    """Perform one plan row's action on the work tree."""
+    path = os.path.join(work, fil)
+    if decl.startswith("$drop-import:"):
+        drop_imports(path, decl[len("$drop-import:"):])
+    elif decl.startswith("$rewrite:"):
+        rewrite(path, decl[len("$rewrite:"):])
+    elif decl.startswith("$add:"):
+        add_file(work, fil, decl[len("$add:"):])
+    else:
+        neutralise(path, decl, keepalive)
 
 
 def run_frontend(fe, tree):
@@ -174,7 +261,7 @@ def main():
         print("%2d %s %-52s %s :: %s" % (n, mark, got, fil, decl))
         if decl == "*":
             break
-        neutralise(os.path.join(args.work, fil), decl, keepalive)
+        apply_step(args.work, fil, decl, keepalive)
 
     # The FINAL STATE is part of the verdict, not a footer.  Row-by-row
     # agreement only says each predicted refusal was the one the frontend
