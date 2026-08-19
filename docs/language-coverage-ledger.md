@@ -338,7 +338,10 @@ open obligations, which precede everything below.
 **Stage 0 (this arc's open obligations, triage table §6):** mini-slices
 A3 (map multi-assign targets), A4 (chan type args), A5
 (shadow-capture tuple), A6 (ordered-event hoist predicate — now owns
-BUG-062, guardrails landed this slice); the (c)-list ratification.
+BUG-062, guardrails landed this slice), **A7 (multi-line panic payload
+— 1 red, `panic-recover/panic-newline-abort`; added 2026-08-20 by the
+user's C4 split, triage §7/L12b)**; the (c)-list ratification —
+**DONE 2026-08-20**, C1–C8 ratified with that split taken.
 
 | # | arc | FR | reds retired | est. |
 | --- | --- | --- | --- | --- |
@@ -380,8 +383,14 @@ requires a written profound reason. The complete list:
    spec's own sentence (implementation-specific, "may be removed").
 4. **The (c)-pinned reds** (C1 hidden-dep init order, C2 staticinit
    `callinit`, C3 panic-qualifier rendering, C4 abort rendering, C5
-   float→int out-of-range — 9 reds) — latitude/impossibility arguments
-   written fresh in triage §4, pending the same ratification.
+   float→int out-of-range — **8 reds** after the 2026-08-20 split;
+   it was 9 while C4 counted 4) — latitude/impossibility arguments
+   written fresh in triage §4. **RATIFIED 2026-08-20** (C1–C8), with
+   the C4 split taken: `panic-recover/panic-newline-abort` left this
+   list for queue stage 0 as mini-slice A7. Their re-envelope
+   obligations route to W3.2 (raft master plan §W3.2) — a routing,
+   not a promised flip: C3/C6 and the unsafe marker are
+   impossibility/out-of-language rows no envelope machinery converts.
 5. **Body-less (externally-implemented) function declarations** —
    assembly linkage; not representable in the corpus or the machine's
    trust story (P3 SKIPPED row records it).
@@ -452,9 +461,14 @@ mechanically at the re-pin — zero unmapped, zero double-mapped):**
 | --- | --- |
 | frontier FR-1…FR-15 (§4) | 84 |
 | design questions Q-* (§6) | 21 |
-| (c) profound-reason pins (triage §4 + the unsafe marker) | 10 + 1 |
-| (a)-queued fixes (triage §3.2: A3 5, A4 1, A5 1, A6 4 + BUG-062 2) | 13 |
+| (c) profound-reason pins (triage §4 + the unsafe marker) | 9 + 1 |
+| (a)-queued fixes (triage §3.2: A3 5, A4 1, A5 1, A6 4, A7 1 + BUG-062 2) | 14 |
 | **total** | **129** |
+
+*(Two rows re-balanced 2026-08-20 by the ratified C4 split — the (c)
+column went 10+1 → 9+1 and the (a)-queued column 13 → 14 as
+`panic-recover/panic-newline-abort` became mini-slice A7. The total is
+untouched: nothing flipped, one red changed bucket.)*
 
 The only red not in the triage table's original 138 groups or a slice-6
 FR/Q suite is `unsafe/boundary/pointer-roundtrip` — the out-of-language

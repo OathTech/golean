@@ -66,7 +66,7 @@ derivations of the same 25; §5 is their cross-check.
 | bug | subject | reds pinned | category | disposition |
 | --- | --- | --- | --- | --- |
 | BUG-002 | expression-step atomicity wrong for concurrent Go (latent) | 0 (`Pinned-by: none`) | **(c)** | C-BUG-002 below |
-| BUG-004 | panic abort rendering: eface boxing identity, multi-line payloads, `preprintpanics` rewrite | 4 | **(c)** | C-BUG-004 below |
+| BUG-004 | panic abort rendering: eface boxing identity, multi-line payloads, `preprintpanics` rewrite | 4 | **(c)** ×3 + **(a)** ×1 | C-BUG-004 below — SPLIT ratified 2026-08-20 (§7): the multi-line row is (a), the other three (c) |
 | BUG-005 | map `range` snapshots entries (delete/clear/update invisible; race-invisible) | 5 | **(a)** | slice 4 — memo delivered, USER GATE open |
 | BUG-008 | imported named types carry no wire declaration ⇒ comparability UNKNOWN | 1 | **(b)** | frontier: imported-type declaration emission |
 | BUG-014 | untyped nil at defined-slice/map literal elements stays a raw nil | 2 | **(b)** | frontier: defined-type-aware typed nil (GoCore) |
@@ -146,7 +146,8 @@ traced to its source line — which is the point of doing it.
 | L9 | select↔select rendezvous (the offer/retract protocol) is not built; only select↔plain-chan pairing is | `GoCore/Multi.lean:665-666`, `:674-675` — `.unsupported "select-with-select rendezvous (unmodeled this slice)"` | `spec#Select_statements` | `channels/select-select/core` (lean-observation), `channels/select-select/beside-loop` (nondet) (2) | **(b)** feature: select-to-select rendezvous |
 | L10 | `go` of a nil func value: gc raises an unrecoverable runtime FATAL in the spawner, the machine refuses — **and the case's `expected_status panic` encodes a harness limitation that no longer exists** | `GoCore/Multi.lean:302-303` — `.unsupported "go of nil func value (gc raises an unrecoverable runtime fatal at the spawn; the fatal class is unmodeled this slice)"` | `spec#Go_statements` | `goroutines/spawn-edge/nil-func-fatal` (1, stage `go-run`) | **(a)** GoCore-GATED |
 | L11 | BUG-056: the `&`-of-`*` composition collapses before the nil-indirection check fires | frontend wire (`&*p` and `&(*p)` are byte-identical) | `spec#Address_operators` | `spec-examples-decl/address-op-nil-indirection/{addr-deref-nil,addr-deref-nil-paren}`, `spec-examples-decl/addr-deref-nil-matrix/{two-deref-inner-nil,deref-arg,deref-call}` (5) | **(a)** slice 3 |
-| L12 | BUG-004: eface boxing IDENTITY, multi-line payloads, and `preprintpanics`' method-rewrite are not decidable from the machine's value-level state — `renderPanicHead` returns none | `GoCore/Ops.lean` (`renderPanicPayload` / `renderPanicHead`) — `unsupported "panic abort rendering for payload …"` | `spec#Handling_panics` (+ gc runtime, spec-silent) | `panic-recover/{repanic-same-value-abort,panic-newline-abort,panic-defined-payload-methods/error,panic-defined-payload-methods/stringer}` (4) | **(c)** C4 |
+| L12 | BUG-004: eface boxing IDENTITY and `preprintpanics`' method-rewrite are not decidable from the machine's value-level state — `renderPanicHead` returns none | `GoCore/Ops.lean` (`renderPanicPayload` / `renderPanicHead`) — `unsupported "panic abort rendering for payload …"` | `spec#Handling_panics` (+ gc runtime, spec-silent) | `panic-recover/{repanic-same-value-abort,panic-defined-payload-methods/error,panic-defined-payload-methods/stringer}` (3) | **(c)** C4 |
+| L12b | BUG-004 item 3 ALONE, split out of L12 by the 2026-08-20 ratification: gc's abort FIRST LINE stops at an embedded `\n` (`printindented`). No allocation identity and no abort-time method call stand behind it — it is a rendering shape | same refusal point as L12 (the same `renderPanicHead` none, reached before the shape is examined) | `spec#Handling_panics` (+ gc runtime, spec-silent) | `panic-recover/panic-newline-abort` (1) | **(a)** mini-slice A7, QUEUED |
 | L13 | BUG-014: the nil-literal arm rejects `.defined` targets, so a defined-slice/map map-literal element stores a RAW `.nil` that goes unsupported at `len` | `GoCore` nil-literal arm — `unsupported "len for non-array/slice/map value GoLean.GoValue.nil"` at use | `spec#Composite_literals` + `spec#The_zero_value` | `maps/nil-literal-values/{defined-map-element,defined-slice-element}` (2) | **(b)** feature: defined-type-aware typed nil |
 | L14 | BUG-008: imported named types get no wire `TypeDef`, so `tyUncomparable` answers `none` and the map-key hash precheck fails closed | `GoCore/Ops.lean` (`tyUncomparable`) — `unsupported "map key hashability for unknown defined type sort.IntSlice"` | `spec#Comparison_operators` (map key comparability) | `maps/imported-named-key-unhashable` (1) | **(b)** feature: declarations for imported named types |
 | L15 | BUG-041: `stepAccesses` records a WHOLE-CELL read for a materialized composite, so a value-path array-element read over-approximates and REFUSES a `-race`-green program | `GoCore/Race.lean` (inventory O1) — observation `status: race` where `ok` is expected | mem model (`mem#restrictions`) | `race/free/array-read-write` (1) | **(b)** feature: path-precise element reads |
@@ -225,6 +226,7 @@ met while one is open).
 | **A4** | unnamed channel types as generic type arguments (F16) | 1 | a `*types.Chan` arm in `mono.go`'s `renderTypeArg` spelling `chan int` / `<-chan int` / `chan<- int` | ~half a day, but it moves the MANGLING/identity surface: the arm owes a reflect-spelling probe (every existing arm cites one), an injectivity argument, and an update to `TestManglingSurfaceFailsClosed`, which pins the refusal. Identity work deserves its own slice |
 | **A5** | shadow-capture over a tuple-typed comma-ok RHS (F22) | 1 | in the `captures` branch, when `goTypeOf(r)` is a `*types.Tuple`, pre-bind the comma-ok SOURCE'S OPERANDS to temps instead of hoisting the whole RHS | ~half–1 day; a BUG-057-family edge whose oracle is the case's own expected `(7, true)` with the outer `v` |
 | **A6** | scope the `len`/`cap` hoist predicate to the STATEMENT (F23) | 4 | `stmtHasRecv`, recomputed at `emitStmt` with save/restore and **defaulting true**, ANDed into `emit.go:6724` — so a receive-free statement keeps `len` inline (gc's realization; the receive-free control `channels/recv-order/len-embedded-no-recv` is already green end-to-end) and only a same-statement receive keeps the hoist and its residual refusal | **deferred on a finding, not on cost** — see §3.4. It also owes a new red guardrail row for the residual same-statement shape, which is currently unpinned |
+| **A7** | multi-line panic payload: the abort FIRST LINE stops at an embedded `\n` (L12b) | 1 | in `renderPanicHead`, truncate the rendered payload at the first `\n` (gc's `printindented` shape) — the guard that must survive is the ORDER of checks: the eface-identity and method-set refusals of items 1/2 keep returning none FIRST, so the truncation arm can never widen into them | added 2026-08-20 by the user's C4 split. Deferred within the arc for the reason C4 itself named: a partial fix to this surface re-opens the "unconditional arm" regression class (BUGS.md BUG-004 item 2, audit 2026-07-31 finding 3), so it owes an edge enumeration of the check order, not a ride-along |
 
 **JUDGMENT (slice 5, A6 is deferred rather than taken).** The charter
 named the receive-hoist family as an expected (a). It is — but not by
@@ -329,11 +331,23 @@ Two consequences, both recorded rather than acted on here:
 
 ## 4. Category (c) — the profound-reason pins, argued fresh
 
-**7 rows, covering 9 baseline reds + 1 unpinned entry.** The charter
-seeded three; two of those survive as seeded, one is re-scoped, and four
-more are argued here for the first time. Each argument is written to be
-JUDGED — if Mike rules any of them insufficiently profound, it converts
-to a fix obligation in this arc or a named successor.
+**8 rows, covering 10 baseline reds + 1 unpinned entry (C7/BUG-002).**
+The charter seeded three; two of those survive as seeded, one is
+re-scoped, four more are argued here for the first time, and C8 (the
+unsafe boundary marker) was added by slice 6's postscript 3. Each
+argument is written to be JUDGED — if Mike rules any of them
+insufficiently profound, it converts to a fix obligation in this arc or
+a named successor.
+
+*(Count corrected 2026-08-20. This line originally read "7 rows,
+covering 9 baseline reds" — an arithmetic slip: C1…C6 summed to 10
+reds, not 9, at the time it was written, and §6's (c) row said 10. The
+figure above is the post-split, post-C8 total, re-derived from the
+per-row counts and checked against the baseline: C1 1 + C2 1 + C3 1 +
+C4 3 + C5 2 + C6 1 + C7 0 + C8 1 = 10, and every one of those ids is
+FAIL in `baselines/native-full.tsv` (verified id-by-id; the split-out
+eleventh, `panic-newline-abort`, is FAIL too but now counts under (a)
+as row L12b).)*
 
 ### C1 — `init/hidden-dep-order`: hidden-dependency initialization order
 
@@ -421,11 +435,13 @@ GoCore change and this row converts.
 
 ### C4 — BUG-004: panic ABORT rendering at its unmodelable edges
 
-*4 reds: `panic-recover/{repanic-same-value-abort,panic-newline-abort,
-panic-defined-payload-methods/error,panic-defined-payload-methods/
-stringer}`. Ledger: latitude inventory R10.*
+*3 reds after the 2026-08-20 split: `panic-recover/{repanic-same-value-
+abort,panic-defined-payload-methods/error,panic-defined-payload-methods/
+stringer}`. The fourth, `panic-newline-abort`, is now row L12b, category
+(a), mini-slice A7 — the user took the split this row flagged (§7).
+Ledger: latitude inventory R10.*
 
-Three distinct impossibilities, all in gc's abort-line output (which the
+Two distinct impossibilities, both in gc's abort-line output (which the
 spec does not describe at all — this is `preprintpanics` behavior):
 
 1. **`[recovered, repanicked]` collapse is eface IDENTITY** — a bitwise
@@ -444,17 +460,28 @@ spec does not describe at all — this is `preprintpanics` behavior):
    another step. The machine detects the method set and refuses rather
    than printing the `main.T(v)` form — which is what it did once, and
    it was a fail-closed→wrong-answer regression caught by audit.
-3. **Multi-line payloads**: gc's first line stops at an embedded `\n`.
+(A third item of BUG-004 — multi-line payloads, where gc's first line
+stops at an embedded `\n` — used to sit in this row. It is no longer a
+(c) claim: see the split below.)
 
 **Why (c) and not (b):** items 1 and 2 are not missing features; they
 are demands that the machine's own structure cannot satisfy without
 changing what the machine IS (allocation identity; evaluation inside a
-terminal). Item 3 alone is cheap — and that is the honest weak point of
-this row. **If the user wants the row split, `panic-newline-abort` is
-(a)-shaped and the other three are (c).** We have not split it because
-the entry treats them as one rendering surface and a partial fix
-re-opens the "unconditional arm" regression class; but the split is
-legitimate and we flag it rather than hide it.
+terminal).
+
+**THE SPLIT, RATIFIED 2026-08-20 (§7).** This row shipped with its own
+weak point flagged in the open: the multi-line item alone is cheap and
+(a)-shaped, and only the entry's "one rendering surface" framing kept it
+inside a (c) argument it did not need. The user took the split. The
+`panic-newline-abort` red moves to row **L12b**, category (a), mini-slice
+**A7**, and joins the build queue (`docs/language-coverage-ledger.md`
+§5 stage 0). The reason we had NOT split it survives as A7's
+implementation constraint rather than as a categorization: a partial fix
+to this surface re-opens the "unconditional arm" regression class
+(BUG-004 item 2's 2026-07-31 audit finding), so A7 owes an edge
+enumeration proving the identity/method-set refusals still fire FIRST.
+Recording it this way is the point of having flagged the weak point:
+the argument was judged on its merits, not grandfathered.
 
 ### C5 — out-of-range / NaN float→int conversion
 
@@ -520,15 +547,19 @@ points.
 
 ### The (c) list, in one place, for ratification
 
+**RATIFIED 2026-08-20 by the user, all eight rows, with the C4 split
+taken — see §7 for the ruling and its framing.**
+
 | row | reds | one-line argument |
 | --- | --- | --- |
 | C1 hidden-dep init order | 1 | the spec says the order between hidden-dependency variables "is unspecified"; go/types and gc realize two DIFFERENT conforming orders and we hold the spec-shaped one |
 | C2 BUG-061 staticinit residual | 1 | the un-chaseable flavor is one where `go run` and `go run -gcflags=-N -l` disagree — there is no single gc answer to match, only an optimizer artifact |
 | C3 BUG-059 panic-message qualifier | 1 | no one key string can be both path-injective (identity) and byte-equal to gc's deliberately ambiguous name-qualified message |
-| C4 BUG-004 abort rendering | 4 | the collapse is eface ALLOCATION identity and the rewrite requires CALLING a method at abort time — both outside what the machine's terminal rule can express (weak point flagged: `panic-newline-abort` alone is (a)-shaped) |
+| C4 BUG-004 abort rendering | 3 | the collapse is eface ALLOCATION identity and the rewrite requires CALLING a method at abort time — both outside what the machine's terminal rule can express (the flagged weak point was RULED: `panic-newline-abort` split out to (a)/L12b/A7) |
 | C5 float→int out of range | 2 | the spec declares the result implementation-dependent and gc's own ports disagree (amd64 wrap vs arm64 saturate); a refusal is the honest resolution of an unoracleable point |
 | C6 local defined type as type argument | 1 | gc's observable name carries a compiler-internal counter (`score·1`) that is not a function of anything the language defines; guessing it would be modeling gc, and a bare name is not injective |
 | C7 BUG-002 atomicity | 0 | unobservable today by construction (no call constructor in `Expr`); the fix is a decision F4 must make, and the entry is the record that keeps it from rotting |
+| C8 unsafe boundary marker | 1 | `Package_unsafe` is OUT-OF-LANGUAGE by the spec's own implementation-specific guard; modeling its observables means modeling gc's layout, and the type-safety escape defeats the memory model — the red keeps the boundary visible rather than grey (added by postscript 3; argued there and in the coverage ledger's `Package_unsafe` row) |
 
 ## 5. The untriaged-25 cross-check (the charter's cross-cutting obligation)
 
@@ -602,8 +633,20 @@ At `0c21aa21` (before this slice's A1), by RED and by GROUP:
 | **(c)** profound-reason pin | **10** | 6 | 4 (BUG-002, BUG-004, BUG-059, BUG-061) |
 | total | **138** | 45 | 9 |
 
-The (a) 46 decompose as: **6 fixed in this slice** (A1 3 + A2 3) +
-**11 queued frontend-only mini-slices** (A3 5, A4 1, A5 1, A6 4) +
+**RATIFICATION AMENDMENT (2026-08-20).** The C4 split re-categorizes
+exactly one of these 138 reds — `panic-recover/panic-newline-abort`
+moves (c)→(a) — and splits its group in two (L12, L12b). On the same
+`0c21aa21` basis the table therefore reads **(a) 47 reds / 17 groups**,
+**(c) 9 reds / 6 groups**, total **138 / 46 groups**; the bug-entry
+column is unchanged (BUG-004 still pins all four of its cases, now
+across two categories). Nothing moved in the baseline: this is a
+re-categorization, not a flip. Slice 6's postscript 3 separately took
+(b) 82→86 and added C8's 1 red on a LATER basis, which the pinned
+`0c21aa21` numbers deliberately do not absorb.
+
+The (a) 46 (47 post-amendment) decompose as: **6 fixed in this slice**
+(A1 3 + A2 3) + **11 queued frontend-only mini-slices** (A3 5, A4 1,
+A5 1, A6 4; +A7 1 post-amendment, making 12) +
 **19 gated on the GoCore pause** (§3.3) + **10 already at the charter's
 slice-3/4 gates** (BUG-056 5, BUG-005 5). After A1 and A2 the tip
 baseline is 2179 cases / 2047 PASS / 132 FAIL — 11 new green ids and 6
@@ -623,10 +666,12 @@ that the categorisation and the fix record cannot drift into each other.
 "every baseline red is category-(b) frontier … or category-(c)
 profound-reason … every BUGS.md entry is fixed or category-(c)"):
 
-1. the 11 queued frontend-only (a) reds — A3…A6, mechanisms in §3.2;
+1. the 11 queued frontend-only (a) reds — A3…A6, mechanisms in §3.2
+   (12 after the ratification added A7);
 2. the 19 GoCore-gated (a) reds — ONE user gate, §3.3;
 3. the two design gates already open (BUG-056, BUG-005);
-4. user ratification of the 7-row (c) list, §4;
+4. user ratification of the (c) list, §4 — **DISCHARGED 2026-08-20**,
+   §7: C1–C8 ratified, C4 split;
 5. the len-vs-call divergence of §3.4 — a corpus obligation (guardrail
    case + `diff-one`) before A6 can be written correctly.
 
@@ -698,3 +743,58 @@ Two of the 22 reds surface at fidelity-adjacent stages
 in `baselines/untriaged-count`) — the §5 metric finding's class,
 whose clean resolution (a disposition column) the ledger records as
 T-5, an operator decision.
+
+## 7. USER RATIFICATION (2026-08-20) — the arc gate's (c) ruling
+
+The gate the §4 list was written for. Recorded here because the
+category-(c) call is the user's by construction ("profound-ness is the
+user's call, not ours", §0) and because an unrecorded ruling is a
+ruling that rots.
+
+**The ruling.** All eight rows — **C1, C2, C3, C4, C5, C6, C7, C8** —
+are RATIFIED as profound-reason pins, **with the C4 split taken**. C4's
+`panic-newline-abort` moves to category (a) as row **L12b**, becomes
+mini-slice **A7**, and joins the build queue
+(`docs/language-coverage-ledger.md` §5 stage 0). The remaining three
+C4 reds stay pinned. No other row was trimmed, re-scoped, or converted.
+The split is executed in this same commit — §§1, 2.2, 3.2, 4, 6 above.
+
+**The framing Mike gave, which is the substantive part of the ruling.**
+These rows are not "reds we have given up on". Their CORRECT green is
+**membership**: the machine's answer at a latitude point is an
+ENVELOPE, and the honest question is whether Go's observation is
+*included* in it — not whether two singletons are byte-equal. Read that
+way, today's red does not say "we are wrong here". It says **inclusion
+is not yet checkable**, and the red is **fail-closed bookkeeping** that
+keeps the point visible until it is. That is a statement about our
+INSTRUMENTS, not about the semantics — exactly the distinction the
+two-bounds doctrine draws (`CLAUDE.md`: the differential is the LOWER
+bound, and a lower-bound instrument cannot adjudicate an envelope's
+width).
+
+**Where the obligation goes: W3.2, the re-envelope arc**
+(`docs/2026-08-15_raft-master-plan.md` §W3.2 — reshape `Choices` for
+the widened envelope, honoring fairness non-preclusion). That arc is
+where "inclusion in the envelope" becomes a thing a gate can decide,
+so it is where the (c) rows' re-envelope obligations are routed. This
+is a ROUTING, not a promise of a flip: C3, C6 and C8 are
+impossibility/out-of-language rows that no envelope machinery converts,
+and they are expected to stay red under any instrument. The rows that
+W3.2 could genuinely re-color are the latitude ones — C1 (conforming
+init orders), C5 (the implementation-dependent float→int value), and
+the L2/latitude-inventory obligations each already names (E7, R6).
+
+**The scoping instruction, verbatim in substance:** *"we don't need to
+push into the niches; leave things as long as they're honestly
+accounted for."* This is the standard the (c) list is held to and the
+one that governs its successors — an open row is legitimate exactly as
+long as it carries a written, judged reason and a named owner. It is
+NOT a licence to stop counting: the accounting obligations stand
+unchanged (zero rows outside the table, the untriaged ratchet, the
+ledger's zero-unclassified rule). What it retires is the pressure to
+manufacture work in the niches for the sake of a zero.
+
+**What this ruling does NOT discharge.** Obligations 1, 3 and 5 of §6
+remain open (the A3–A7 queue, the two design gates, the len-vs-call
+corpus obligation now filed as BUG-062). Ratification closes obligation
+4 only.
