@@ -1,24 +1,29 @@
 # GoLean native-frontend full-corpus differential baseline
 # recorded: 2026-08-19 (bug-fix arc, slice 6 = the whole-language bar,
-#   suite tranche A: build-queue-top frontier guardrails + the
-#   len-vs-call divergence pin the slice-5 triage §3.4 owed)
-#   commit: this commit (on b4924afe, the slice-6 denominator tip)
-#   re-pin reason: 15 NEW ids and nothing else (zero flips on the 2193
-#   pre-existing ids), all guardrails-first colors recorded from go run
-#   before the differential ran (artifacts/probe/slice6a, scratch):
-#     NEW/FAIL differential (2, BUG-062 — the len-vs-CALL forced-point
-#       divergence, machine 3 vs go 1, now MEASURED on both sides):
-#       builtins/len-vs-call-order/{chan,slice}
-#     NEW/PASS (3, controls): builtins/len-vs-call-order/recv-bearing
-#       (the accident-green receive-bearing shape A6 must not regress),
-#       channels/recv-short-circuit/{and-lhs,funclit-rhs} (the green
-#       neighbouring positions of the F24 refusal)
-#     NEW/FAIL frontend-export (10, red by design — enumerated
-#       frontier): channels/recv-short-circuit/{and-rhs,or-rhs,
-#       and-rhs-skipped} (F24), range/assign-form-nonident/{field-target,
-#       deref-target,map-elem-target} (F20),
-#       goroutines/go-builtin/{delete,copy,recover,panic} (F15)
-#   counts: 2208 cases, 2089 PASS / 119 FAIL (was 2193, 2086/107)
+#   suite tranche B: concurrency-entangled design-question cases-in-hand
+#   + boundary markers)
+#   commit: this commit (on 5a8f7002, the tranche-A tip)
+#   re-pin reason: 11 NEW ids and nothing else (zero flips on the 2208
+#   pre-existing ids), colors recorded from go run at the pin before
+#   the differential ran (artifacts/probe/slice6b, scratch):
+#     NEW/FAIL (10, red by design — enumerated frontier boundaries):
+#       sync/atomic-frontier/{add-load-store,cas,swap} (frontend-export)
+#       sync/atomic-frontier/value (lean-observation: the atomic.Value
+#         zero value is a D5 imported-type stub refusal) and
+#       sync/atomic-frontier/mp-litmus (membership: the SC litmus,
+#         admitted {0,1,11} argued from mem#atomic) — both entered in
+#         baselines/untriaged-ids with justification, ceiling 7 -> 9
+#         (reason in baselines/untriaged-count)
+#       sync/out-of-scope-cond/{cond-wait-signal,cond-broadcast}
+#         (Q-COND cases-in-hand, wire.go sync.Cond refusal)
+#       unsafe/boundary/pointer-roundtrip ("basic type unsafe.Pointer")
+#       goroutines/goexit-marker/child (mem#goexit boundary)
+#       generics/stencil-quarantine/sibling (the H-3 residual measured:
+#         whole-export refusal for someone else's stencil)
+#     NEW/PASS (1): unsafe/boundary/sizeof-const — a spec-forced
+#       constant folded by go/constant at the frontend (the honest
+#       direction of the S3 delegated-constant caveat)
+#   counts: 2219 cases, 2090 PASS / 129 FAIL (was 2208, 2089/119)
 #   frontend: native (tools/nativefrontend + NativeToIR)
 # columns: result<TAB>id<TAB>stage
 PASS	arrays/array-bounds	-
@@ -873,6 +878,7 @@ PASS	generics/recursive-constraints/comparable	-
 PASS	generics/recursive-constraints/pointer-self	-
 PASS	generics/recursive-generic-type	-
 PASS	generics/self-recursive	-
+FAIL	generics/stencil-quarantine/sibling	frontend-export
 PASS	generics/structural-transparency	-
 PASS	generics/type-aliases/func-type	-
 PASS	generics/type-aliases/map-literal	-
@@ -915,6 +921,7 @@ FAIL	goroutines/go-builtin/copy	frontend-export
 FAIL	goroutines/go-builtin/delete	frontend-export
 FAIL	goroutines/go-builtin/panic	frontend-export
 FAIL	goroutines/go-builtin/recover	frontend-export
+FAIL	goroutines/goexit-marker/child	frontend-export
 PASS	goroutines/main-exit/blocked-goroutine	confluent
 PASS	goroutines/main-exit/two-leaked	confluent
 PASS	goroutines/ping-pong/alternate	confluent
@@ -2161,6 +2168,11 @@ PASS	structs/unnamed-conversion-targets/slice	-
 PASS	structs/unnamed-conversion-targets/slice-nil	-
 PASS	structs/unnamed-conversion-targets/slice-to-defined	-
 PASS	structs/zero-value	-
+FAIL	sync/atomic-frontier/add-load-store	frontend-export
+FAIL	sync/atomic-frontier/cas	frontend-export
+FAIL	sync/atomic-frontier/mp-litmus	membership
+FAIL	sync/atomic-frontier/swap	frontend-export
+FAIL	sync/atomic-frontier/value	lean-observation
 FAIL	sync/composite-literal/mutex-addr-lit	frontend-export
 FAIL	sync/composite-literal/waitgroup-value-lit	frontend-export
 FAIL	sync/escapes/defer-embedded	frontend-export
@@ -2185,7 +2197,9 @@ PASS	sync/once-basic/across-goroutines	confluent
 PASS	sync/once-basic/panicking-f	-
 PASS	sync/once-basic/runs-once	-
 PASS	sync/once-nested-do/nested-do	-
+FAIL	sync/out-of-scope-cond/cond-broadcast	frontend-export
 FAIL	sync/out-of-scope-cond/cond-signal-no-waiter	frontend-export
+FAIL	sync/out-of-scope-cond/cond-wait-signal	frontend-export
 FAIL	sync/out-of-scope-trylock/trylock-uncontended	frontend-export
 PASS	sync/rwmutex-basic/rlock-twice	-
 PASS	sync/rwmutex-basic/write-then-read-ordered	confluent
@@ -2214,6 +2228,8 @@ PASS	sync/waitgroup-negative-panic/negative-counter	-
 PASS	sync/waitgroup-panic-payload/payload-is-string	-
 PASS	sync/waitgroup-wait-deadlock/wait-deadlock	-
 PASS	sync/waitgroup-workers-join/workers-join	-
+FAIL	unsafe/boundary/pointer-roundtrip	frontend-export
+PASS	unsafe/boundary/sizeof-const	-
 PASS	variadic/defined-slice-spread	-
 PASS	variadic/forwarding	-
 PASS	variadic/literal-args-local-slice	-

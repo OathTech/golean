@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+# FRONTIER PIN (slice 6): the H-3 residual — an unlowerable method
+# STENCIL refuses the whole export, so the sibling is red for someone
+# else's declaration. Flips green when the stencil quarantine lands
+# (ledger FR row); the H-3 method-set-completeness invariant applies
+# there too (a quarantined stencil must stay in the instantiated
+# type's method set).
+sibling	stencilSibling	-	ok	-	generics,methods,stdlib

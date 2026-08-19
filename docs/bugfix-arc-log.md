@@ -2056,3 +2056,63 @@ backlog unchanged 7/7), `eval tests (136 ok)`, negative lane clean
 (`/tmp/s6-trancheA-ci2.log`, scratch; the failed first run
 `/tmp/s6-trancheA-ci.log`). The husk check firing on uncommitted WIP is
 the gate working as designed; recorded per the gate-honesty rule.
+
+### Step 3 — suite tranche B: concurrency-entangled cases-in-hand + boundary markers
+
+Five packages / 11 rows, oracle-first (`artifacts/probe/slice6b`,
+scratch; `-race`-clean where goroutines are involved; the mp-litmus
+distribution sampled 400×). Full-run drift **exactly the 11 NEW ids**
+(2219 cases, 2090/129; was 2208, 2089/119); baseline re-pinned in this
+commit.
+
+- **`sync/atomic-frontier/` (5)** — the Q-ATOMIC design question's
+  cases-in-hand (mem#atomic, inventory U-6): core op classes
+  (load/store/add, cas, swap, Value) + `mp-litmus`, the MODEL pin — a
+  membership row whose admitted set {0, 1, 11} is argued from the
+  seq_cst clause (SC excludes 10; gc sample 400/400 → 0, one member
+  witnessed — the too-wide direction has no oracle, which is the
+  membership lane's whole job). Enumeration judgment logged in the
+  case file: op CLASSES enumerated, typed variants ride the same
+  lowering.
+- **`sync/out-of-scope-cond/` (+2)** — Q-COND cases-in-hand
+  (wait+signal, broadcast) whose observables are deterministic ACROSS
+  the wakeup envelope (order normalized away), so the eventual Cond
+  model can go green without freezing a wakeup choice.
+- **`unsafe/boundary/` (2)** — the out-of-language boundary made
+  visible: `pointer-roundtrip` RED ("basic type unsafe.Pointer");
+  `sizeof-const` GREEN, a measured FINDING — the spec-forced sizes
+  (spec#Size_and_alignment_guarantees) are constants go/constant folds
+  at the frontend, so the green attests the delegation, not a layout
+  model (comment rewritten to say exactly that). Marker-only, with the
+  logged justification (full unsafe enumeration would pin gc's layout).
+- **`goroutines/goexit-marker/` (1)** — mem#goexit's API surface RED
+  (Q-GOEXIT, F4-owned).
+- **`generics/stencil-quarantine/` (1)** — the H-3 residual MEASURED:
+  an unlowerable method stencil still refuses the whole export, so the
+  innocent sibling is red for someone else's declaration (the exact
+  defect shape H-3 fixed for ordinary methods). The frontier row's
+  guardrail now exists before any implementation.
+
+**JUDGMENT (slice 6, two fidelity-stage entrants, ceiling 7 → 9):**
+`atomic-frontier/value` (lean-observation — the atomic.Value zero
+value is a D5 imported-type stub refusal) and `mp-litmus` (membership —
+the enumerator refuses at the quarantined store) surface at
+fidelity-adjacent stages by the same mechanics as the select-select
+and trylock precedents. Both entered `baselines/untriaged-ids` with
+written justifications; `baselines/untriaged-count` raised 7 → 9 with
+the dated reason (the file's own rule: raising requires justification
+in the same commit). This is exactly the class the triage-§5 metric
+finding describes — frontier refusals the backlog can never retire —
+and the ledger's T-5 row records the clean resolution (a disposition
+column) as an operator decision, deliberately not taken here.
+
+**Gate at the tranche-B commit.** `GOLEAN_MEM_MAX=24G scripts/ci
+--diff` → **`RESULT: PASS`**, exit 0, every step ok: `baseline diff
+FULL (2219/2219, no regression)`, `re-pin guard (0 PASS→non-PASS
+flips)`, `bug-index cross-check ok` (62 bugs; backlog 9/9 at the raised
+ceiling, both entrants justified), `eval tests (136 ok)`, negative lane
+clean, feature-coverage ok with the honest WARN (atomics/cond/goexit
+join `real` as all-failing tags — unimplemented features, exactly what
+the frontier suites pin) (`/tmp/s6-trancheB-ci.log`, scratch). The only
+difference between the gated tree and the committed tree is this
+paragraph and the untracked ledger draft in `artifacts/` (scratch).
