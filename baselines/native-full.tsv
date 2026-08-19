@@ -1,62 +1,43 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-18 (delta-review re-pin)  commit: 69d9a0dc / prior ab317283+ (spec-truth P3 audit-response
-#   re-pin; supersedes the slice-2 re-pin)
-#   re-pin reason: SIX new ids, ONE removed, ONE flip — all
-#   audit-driven, no other change:
-#     + 5 RED bug pins: the BUG-057 unmasking rows
-#       (receive-comma-ok/untyped-form-live, index-comma-ok/
-#       var-form-present, var-decl-forms/found-present — the audit
-#       showed the ok-flag drop hits ALL two-var comma-ok var
-#       declarations; the prior greens read closed/absent lookups
-#       where ok=false was coincidentally right) and the BUG-058
-#       wrong-answer guardrails (if-init-hoist-order/* — the real
-#       defect is if-init + short-circuit hoist scoping, with silent
-#       wrong-answer modes the original stuck-only diagnosis missed).
-#     + 1 GREEN boundary witness: address-op-nil-indirection/
-#       addr-deref-nil-paren — the audit claimed &(*p) shares
-#       BUG-056; measured: it panics correctly; the case pins the
-#       narrower boundary.
-#     - spec-examples-lexical/for-clause-loopvar removed (audit S6:
-#       an output-exhibit block double-credited; its program is
-#       loopvar-per-iteration).
-#     ~ append-forms/ints frontend-export -> PASS: the slices import
-#       (its only blocker) replaced by hand-rolled equality, and the
-#       audit-triggered nondet trip fixed by checking each slice
-#       BEFORE the overlapping append (the post-hoc check observed
-#       append-capacity latitude).
-#   Corrected classification of the tranche's 17 frontend-export
-#   reds (audit S4, recount softened at the delta-review F-5 — class
-#   sizes depend on the cut): anonymous non-empty struct types (4),
-#   selector-call-not-method-value (4), method expressions (5 by
-#   concept), complex128, channel-receive-in-short-circuit-operand,
-#   struct-tag conversions, imaginary literals, comma-ok assert
-#   outside 2-target assignment, range-assign, and one fmt import
-#   (timezone-stringer). All verified fail-closed
-#   frontend-quarantined refusals.
-#   Attestation (audit F3): latest.meta.tsv may record full_run
-#   unknown when the run is driven through the gate; fullness is
-#   established by manifest_sha256 equality with the regenerated
-#   manifest, which is what scripts/ci checks. RECORD CORRECTION:
-#   slice-2 commit f8ffcec8's message claimed 'check-spec-anchors
-#   34+73' — that gate was RED at that commit (10 truncated-anchor
-#   UNRESOLVEDs; the count matches no commit); fixed by the grammar
-#   commit and disclosed here per audit F1.
-#   Open-bug reds pinned by docs/BUGS.md: BUG-056 (1), BUG-057 (4),
-#   BUG-058 (3, incl. panic-values/panic-error). Untriaged coverage
-#   gaps unchanged at 25.
-#   Full run: 2073 cases (1938 PASS / 135 FAIL), native frontend.
-#
-#   DELTA-REVIEW re-pin (same day, supersedes the audit-response
-#   re-pin): +1 id restored (spec-examples-lexical/for-clause-loopvar
-#   — the S6 duplicate case retained-with-a-note because the re-pin
-#   guard has no deliberate-removal channel; guard-gap recorded in
-#   the campaign follow-ons) and ~1 flip addr-deref-nil-paren
-#   PASS -> FAIL/lean-observation: the delta-review (F-1) proved the
-#   earlier green was MASKED (a trailing deref panicked regardless;
-#   the &*/&(*) wire is byte-identical) — the discriminating shape is
-#   red and pinned on BUG-056's Cases line. The prior header's
-#   'GREEN boundary witness' bullet and 'the audit's claim REFUTED'
-#   sentence are hereby corrected: the audit's N2 was right.
+# recorded: 2026-08-18 (raft-w1 delta-review fix round, slice 2 —
+#   gc's PRUNED initialization schedule, with the residual pinned RED)
+#   commit: this commit (on 156539fc); prior re-pin same-day slice 1
+#   re-pin reason: the frontend now computes gc's schedule instead of
+#   the spec's literal reading. Two departures, both observable:
+#   (1) PRUNING — cmd/compile emits a `..inittask` record only for a
+#   package with residual init work (what survives staticinit) or an
+#   inittask-bearing import, and cmd/link orders exactly those
+#   records, so a package with no record gates nothing; (2) the
+#   TIE-BREAK is by linker symbol name, PathToPrefix(path) +
+#   "..inittask", not by import path. Source node facts are
+#   approximated syntactically (a non-empty init body, or a var
+#   initializer go/types did not fold to a constant); STDLIB node
+#   facts and edges are read from the compiled archives into the
+#   tracked, embedded tools/nativefrontend/inittask-std.tsv
+#   (scripts/gen-inittask-table), and any std import absent from it
+#   REFUSES. That table also retires the old go/build reading of
+#   stdlib imports.
+#   Deltas — exactly the four rows this fix targets:
+#     ~ multipkg/init-order-pruned/static       FAIL/differential -> PASS
+#       (machine 21 -> 12, matching go run);
+#     ~ multipkg/init-order-pruned-stdlib/seq   FAIL/differential -> PASS
+#       (machine 21 -> 12);
+#     ~ multipkg/init-order-tiebreak/seq        FAIL/differential -> PASS
+#       (machine 12 -> 21);
+#     + multipkg/init-order-staticinit/seq      NEW -> FAIL/differential
+#       (the KNOWN residual, pinned RED on purpose: the syntactic rule
+#       under-approximates staticinit, so a statically-initialized
+#       package is still scheduled. BUG-061; measured at 11 of 26
+#       initializer flavors, all one-directional; ledger L-011 records
+#       that one of the eleven is optimizer-dependent within gc itself
+#       — `go run` and `go run -gcflags=all='-N -l'` disagree — which
+#       is why this is latitude rather than a forced point).
+#   ZERO drift beyond the four across 2089 cases: no single-package
+#   case moves (they short-circuit on one source unit), and every
+#   pre-existing multipkg row holds, incl. init-order,
+#   init-order-stdlib/{seq,marks}, diamond-import, and
+#   same-name-identity-panic (still BUG-059's red).
+#   Full run: 2089 cases (1953 PASS / 136 FAIL), native frontend.
 #
 result	id	stage
 PASS	arrays/array-bounds	-
@@ -1202,7 +1183,7 @@ PASS	interfaces/error-idioms/promoted-method	-
 PASS	interfaces/error-idioms/uncomparable-panic	-
 PASS	interfaces/error-idioms/value-equality	-
 PASS	interfaces/error-interface	-
-FAIL	interfaces/imported-package-name-collision	frontend-export
+PASS	interfaces/imported-package-name-collision	-
 PASS	interfaces/interface-array-compare-panic	-
 PASS	interfaces/interface-compare	-
 PASS	interfaces/interface-compare-panic	-
@@ -1482,6 +1463,22 @@ PASS	multi-assign/selector-target-before-rhs	-
 PASS	multi-assign/store-order-plain	-
 PASS	multi-assign/target-eval-before-call	-
 PASS	multi-assign/tuple-assign-order	-
+PASS	multipkg/cross-const	-
+PASS	multipkg/cross-func-call	-
+PASS	multipkg/cross-type-method	-
+PASS	multipkg/cross-var	-
+PASS	multipkg/diamond-import	-
+PASS	multipkg/init-order	-
+PASS	multipkg/init-order-pruned-stdlib/seq	-
+PASS	multipkg/init-order-pruned/dynamic	-
+PASS	multipkg/init-order-pruned/static	-
+FAIL	multipkg/init-order-staticinit/seq	differential
+PASS	multipkg/init-order-stdlib/marks	-
+PASS	multipkg/init-order-stdlib/seq	-
+PASS	multipkg/init-order-tiebreak/seq	-
+FAIL	multipkg/same-name-identity-panic	differential
+PASS	multipkg/same-name-identity/func-identity	-
+PASS	multipkg/same-name-identity/type-identity	-
 PASS	native-smoke/arith	-
 PASS	native-smoke/maprange	-
 PASS	native-smoke/method	-

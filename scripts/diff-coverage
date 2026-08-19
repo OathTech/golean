@@ -719,7 +719,16 @@ go_run_oracle() {
   if [[ "$expected_status" == "race" || "${1:-}" == "race" ]]; then
     race_flag=(-race)
   fi
+  # Multi-package cases (raft W1.1): the harness assembled the case's
+  # local packages under <go_run_dir>/gopath; hand that tree (ABSOLUTE —
+  # GOPATH rejects relative entries) to Go's own resolution. Absent for
+  # single-package cases, whose environment stays byte-identical.
+  local gopath_env=()
+  if [[ -d "$go_run_dir/gopath" ]]; then
+    gopath_env=(GOPATH="$(cd "$go_run_dir/gopath" && pwd -P)")
+  fi
   run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GODEBUG=panicnil=0 GOCACHE="$GO_BUILD_CACHE" \
+    ${gopath_env[@]+"${gopath_env[@]}"} \
     bash -c 'cd "$1" && shift && exec go run "$@" .' go-run-oracle "$go_run_dir" ${race_flag[@]+"${race_flag[@]}"}
 }
 

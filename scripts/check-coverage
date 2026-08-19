@@ -89,10 +89,172 @@ for cf in glob.glob("Corpus/coverage/negative/**/case.tsv", recursive=True):
 # roots with no metadata file anywhere beneath it is INVISIBLE to case
 # discovery — silently skipped, contra fail-closed. Hard-fail on any
 # (dot-directories excluded: tool droppings, not case dirs).
+# EXEMPTION (multi-package cases, raft W1.1, identity note §7): a case
+# directory's IMPORTED source-package subdirs carry .go files and no
+# metadata BY DESIGN (import path = case-relative subdir path; import-
+# driven discovery on both pipeline legs). A dir is exempt iff it lies
+# on the path to a subdir that (a) holds non-test .go files and (b) is
+# named by an IMPORT DECLARATION in a .go file in the case's package
+# tree — mirroring the pipeline's own discovery rule, so a FORGOTTEN
+# nested case (go files, no metadata, never imported) still husks
+# loudly.
+#
+# The import-declaration scope is load-bearing (pre-merge audit F2).
+# The first version scanned the WHOLE file text for quoted strings, so
+# ANY string literal that happened to spell a sibling directory's name
+# — `var label = "forgotten"` — silently exempted that directory and
+# the husk gate went quiet on exactly the omission it exists to catch.
+#
+# The SECOND version scoped the scan to import declarations but did its
+# comment stripping with plain regexes over the whole text, so it had
+# no idea where the string literals were (delta-review F2 residual).
+# Both directions of that were reachable, and the dangerous one is
+# fail-OPEN: a RAW string that quotes an import block — a doc example,
+# a codegen template, a test fixture —
+#
+#     var tmpl = `
+#     import (
+#     	"forgotten"
+#     )
+#     `
+#
+# forged an exemption for `forgotten`, silencing the husk gate again.
+# (The other direction: a raw string containing `/*` ate a real import
+# block and dropped a live exemption — noisy but fail-closed.)
+#
+# So the masking is now LEXICAL, one pass, in Go's own token order:
+# comments become whitespace, and every string / rune literal becomes an
+# opaque token, so nothing inside a literal can be read as code and
+# nothing outside one can be swallowed by a literal's delimiters.
+# Reproduced before and re-checked after, both times: the forgotten dir
+# husks, every live exemption survives.
+import re
+
+def _mask_literals(text):
+    """Mask a Go source file's comments and literals, lexically.
+
+    Returns (masked, literals): `masked` has every comment replaced by
+    whitespace (newlines preserved, so line anchors still mean what
+    they say) and every string / rune literal replaced by the opaque
+    token `"@i@"`; `literals[i]` is the i-th string literal's content.
+    Raw (backquoted) strings are masked too and can still be read as
+    import paths, which Go permits — ImportPath is a string_lit, and a
+    raw one is a string_lit.
+    """
+    out, lits = [], []
+    i, n = 0, len(text)
+    while i < n:
+        c = text[i]
+        nxt = text[i + 1] if i + 1 < n else ""
+        if c == "/" and nxt == "/":
+            j = text.find("\n", i)
+            i = n if j < 0 else j          # keep the newline itself
+        elif c == "/" and nxt == "*":
+            j = text.find("*/", i + 2)
+            j = n if j < 0 else j + 2
+            # A block comment separates tokens; keep its newlines so
+            # the `^`/`$` anchors below do not drift.
+            out.append(" " + "\n" * text.count("\n", i, j))
+            i = j
+        elif c == "`":
+            j = text.find("`", i + 1)
+            j = n if j < 0 else j
+            lits.append(text[i + 1:j])
+            out.append('"@%d@"' % (len(lits) - 1))
+            i = j + 1
+        elif c == '"':
+            j, buf = i + 1, []
+            while j < n and text[j] != '"' and text[j] != "\n":
+                if text[j] == "\\" and j + 1 < n:
+                    buf.append(text[j:j + 2])
+                    j += 2
+                    continue
+                buf.append(text[j])
+                j += 1
+            lits.append("".join(buf))
+            out.append('"@%d@"' % (len(lits) - 1))
+            i = j + 1 if j < n and text[j] == '"' else j
+        elif c == "'":
+            j = i + 1
+            while j < n and text[j] != "'" and text[j] != "\n":
+                j += 2 if text[j] == "\\" else 1
+            out.append("'@'")
+            i = j + 1 if j < n and text[j] == "'" else j
+        else:
+            out.append(c)
+            i += 1
+    return "".join(out), lits
+
+_IMPORT_BLOCK  = re.compile(r'^import\s*\(\s*$(.*?)^\s*\)\s*$', re.M | re.S)
+_IMPORT_SINGLE = re.compile(r'^import\s+(?:[A-Za-z_.][A-Za-z0-9_]*\s+)?"@(\d+)@"\s*$', re.M)
+_IMPORT_SPEC   = re.compile(r'^\s*(?:[A-Za-z_.][A-Za-z0-9_]*\s+)?"@(\d+)@"\s*$', re.M)
+
+def _import_paths(text):
+    """Import paths DECLARED by a Go source file (both decl forms).
+
+    Deliberately a parser for import declarations only, not a string
+    scanner: a path counts iff it appears as an import spec in an
+    `import ( ... )` block or an `import "p"` line, in code position.
+    The optional leading identifier covers named, blank (`_`) and dot
+    imports — all of which are real imports of the package.
+    """
+    masked, lits = _mask_literals(text)
+    idx = []
+    for body in _IMPORT_BLOCK.findall(masked):
+        idx += _IMPORT_SPEC.findall(body)
+    idx += _IMPORT_SINGLE.findall(masked)
+    return [lits[int(i)] for i in idx]
+
+def _go_files(d):
+    try:
+        return [os.path.join(d, f) for f in os.listdir(d)
+                if f.endswith(".go") and not f.endswith("_test.go")
+                and os.path.isfile(os.path.join(d, f))]
+    except OSError:
+        return []
+def _imported_pkg_dirs(case_dir):
+    """Transitively imported local package dirs of a case dir."""
+    exempt, pending = set(), [case_dir]
+    while pending:
+        d = pending.pop()
+        for gf in _go_files(d):
+            try:
+                with open(gf, encoding="utf-8", errors="replace") as f:
+                    text = f.read()
+            except OSError:
+                continue
+            for ip in _import_paths(text):
+                # Same shape guard as the frontend loader's localDirFor:
+                # nothing that could escape the case dir is ever local.
+                if not ip or ip.startswith("/") or ".." in ip:
+                    continue
+                p = os.path.normpath(os.path.join(case_dir, ip))
+                if p.startswith(case_dir + os.sep) and os.path.isdir(p) \
+                        and _go_files(p) and p not in exempt:
+                    exempt.add(p)
+                    pending.append(p)
+    return exempt
+
+case_dirs = set()
+for root in ("Corpus/coverage/exec", "Corpus/coverage/negative"):
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if not d.startswith(".")]
+        if any(f in ("cases.tsv", "case.tsv") for f in filenames):
+            case_dirs.add(dirpath)
+pkg_exempt = set()
+for cd in case_dirs:
+    for p in _imported_pkg_dirs(cd):
+        # The package dir and every intermediate dir down to it.
+        while p != cd:
+            pkg_exempt.add(p)
+            p = os.path.dirname(p)
+
 husks = []
 for root in ("Corpus/coverage/exec", "Corpus/coverage/negative"):
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if not d.startswith(".")]
+        if dirpath in pkg_exempt:
+            continue
         has_meta = any(
             f in ("cases.tsv", "case.tsv")
             for _, _, fs in os.walk(dirpath) for f in fs

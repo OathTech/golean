@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	initOrder	-	ok	-	multipackage,imports,init,globals,evaluation_order

@@ -337,12 +337,15 @@ func TestManglingSurfaceFailsClosed(t *testing.T) {
 			t.Errorf("type argument %s mangled instead of refusing", b)
 		}
 	}
-	// The qualifier machinery still records packages for the collision
-	// gate: rendering an Inner-argument key registers "main"'s path.
-	if _, err := e.instFuncId("f", []types.Type{inner}); err != nil {
+	// The qualifier machinery keys by IMPORT PATH (W1.1 / BUG-010 fix):
+	// rendering an Inner-argument key qualifies it by the declaring
+	// package's path — "main" here, where path == name, so the key is
+	// byte-identical to the pre-multi-package one.
+	key, err := e.instFuncId("f", []types.Type{inner})
+	if err != nil {
 		t.Fatalf("inner: %v", err)
 	}
-	if len(e.qualPkgPaths["main"]) == 0 {
-		t.Errorf("type-argument rendering did not record the package qualifier for the collision gate")
+	if key != "f[main.Inner]" {
+		t.Errorf("type-argument rendering did not path-qualify: got %q, want %q", key, "f[main.Inner]")
 	}
 }

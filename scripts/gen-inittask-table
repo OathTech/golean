@@ -1,0 +1,215 @@
+#!/usr/bin/env python3
+"""Regenerate tools/nativefrontend/inittask-std.tsv.
+
+The table says which STANDARD LIBRARY packages gc schedules for
+initialization, and what each one's initialization-order edges are.
+
+WHY A TABLE (raft W1.1 delta-review F1, 2026-08-18). The program
+initialization order the frontend must reproduce is not the spec's
+literal "list of all packages" — gc schedules a PRUNED node set:
+
+  cmd/compile/internal/pkginit.MakeTask emits a `..inittask` record for
+  a package only if the package has residual initialization WORK (a
+  non-empty init function, or a variable initializer that
+  cmd/compile/internal/staticinit could not fold into the data section)
+  or an import that itself bears an inittask:
+
+      if len(deps) == 0 && len(fns) == 0 &&
+         path != "main" && path != "runtime" { return }
+
+  and the record's R_INITORDER relocations name exactly the imports
+  that bear inittasks. cmd/link/internal/ld.inittaskSym then walks
+  those records, popping the lexicographically first READY one BY
+  SYMBOL NAME (objabi.PathToPrefix(path) + "..inittask").
+
+For SOURCE packages the frontend can approximate that decision from the
+AST + go/types. For the stdlib it cannot: whether `sync/atomic` has
+residual init work is a fact about compiled objects, not about anything
+the frontend can see. Guessing would be a silent wrong answer, which is
+the one outcome the fail-closed rule forbids.
+
+So the answer is taken FROM THE COMPILER, mechanically: for each std
+package `go list -export` produces the compiled archive and `go tool nm`
+reads the inittask symbols out of it.
+
+  D <prefix>..inittask   the package emitted a record  => it IS a node
+  U <other>..inittask    an R_INITORDER reference      => an EDGE
+  (no inittask symbol at all)                          => PRUNED
+
+Those are gc's own node set and gc's own edge set, not a model of them
+— strictly better than the import-declaration reading this replaces
+(`go/build`'s import clauses), which had to reason around export data
+listing imports the package does not declare.
+
+THE TABLE IS PINNED TO A GO TOOLCHAIN. Regenerate it whenever the Go
+pin moves; the header records the version the rows were read from, and
+the frontend refuses any std import absent from the table.
+
+usage: scripts/gen-inittask-table [-o <out.tsv>]
+"""
+
+import concurrent.futures
+import datetime
+import os
+import subprocess
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+os.chdir(ROOT)
+
+OUT = "tools/nativefrontend/inittask-std.tsv"
+if len(sys.argv) >= 3 and sys.argv[1] == "-o":
+    OUT = sys.argv[2]
+
+ENV = dict(os.environ)
+ENV["GO111MODULE"] = "off"
+ENV.setdefault("GOCACHE", os.path.join(ROOT, "artifacts", "go-build-cache"))
+os.makedirs(ENV["GOCACHE"], exist_ok=True)
+
+SUFFIX = "..inittask"
+
+
+def path_to_prefix(path):
+    """objabi.PathToPrefix — the package path as it appears in symbols.
+
+    Port of deps/go/src/cmd/internal/objabi/path.go: percent-escape any
+    byte <= ' ', '%', '"', >= 0x7F, or a '.' AFTER the last '/'. The
+    escaping is live in the standard library today (Go 1.26 ships
+    crypto/internal/entropy/v1.0.0), and it is not order-preserving, so
+    it has to be the frontend's sort key too.
+    """
+    raw = path.encode("utf-8")
+    slash = raw.rfind(b"/")
+    out = []
+    for i, c in enumerate(raw):
+        if c <= 0x20 or (c == ord(".") and i > slash) or c in (ord("%"), ord('"')) or c >= 0x7F:
+            out.append("%%%02x" % c)
+        else:
+            out.append(chr(c))
+    return "".join(out)
+
+
+def go(*args):
+    return subprocess.run(args, capture_output=True, text=True, env=ENV)
+
+
+def inittask_symbols(export_file):
+    """(defined, undefined) inittask symbol names in a compiled archive."""
+    r = go("go", "tool", "nm", export_file)
+    if r.returncode != 0:
+        return None, None
+    defined, undefined = set(), set()
+    for line in r.stdout.splitlines():
+        fields = line.split()
+        if len(fields) < 2 or not fields[-1].endswith(SUFFIX):
+            continue
+        (defined if fields[-2] == "D" else undefined).add(fields[-1])
+    return defined, undefined
+
+
+def row_for(path, export_file):
+    prefix = path_to_prefix(path)
+    if not export_file:
+        # No archive => no compiled object to read. `unsafe` is the
+        # compiler's built-in package and provably never bears an
+        # inittask (MakeTask's `pkg.Lookup(".inittask")` finds nothing
+        # for it), so it is recorded as a non-node. Everything else
+        # with no archive is a directory with no buildable non-test Go
+        # files: it cannot be imported, and is recorded UNKNOWN so an
+        # import of it refuses instead of guessing.
+        return (prefix, "0" if path == "unsafe" else "?", "", path)
+    defined, undefined = inittask_symbols(export_file)
+    if defined is None:
+        return (prefix, "?", "", path)
+    node = (prefix + SUFFIX) in defined
+    extra = defined - {prefix + SUFFIX}
+    if extra:
+        die("%s defines inittask symbols it does not own: %s" % (path, sorted(extra)))
+    deps = sorted(s[: -len(SUFFIX)] for s in undefined)
+    # A pruned package can have no inittask-bearing imports: such an
+    # import is by itself enough to force a record (MakeTask's `deps`
+    # test). Check it rather than assume it — it is the property that
+    # makes pruning SAFE, because it means a pruned node can never hide
+    # an edge to a node behind it.
+    if not node and deps:
+        die("%s has no inittask but names deps %s" % (path, deps))
+    return (prefix, "1" if node else "0", ",".join(deps), path)
+
+
+def die(msg):
+    sys.stderr.write("gen-inittask-table: %s — refusing\n" % msg)
+    sys.exit(1)
+
+
+gover = go("go", "version").stdout.strip()
+if not gover.startswith("go version "):
+    die("cannot read `go version`")
+gover = gover[len("go version "):]
+sys.stderr.write("gen-inittask-table: %s\n" % gover)
+
+# One `go list` for the whole standard library: import path + the path
+# of the compiled archive. -e keeps packages that fail to build (test-
+# only directories, and `unsafe`, which has no archive at all) in the
+# list with an empty Export field instead of aborting the run.
+listed = go("go", "list", "-export", "-e", "-f", "{{.ImportPath}}\t{{.Export}}", "std")
+if listed.returncode != 0:
+    die("go list std failed: %s" % listed.stderr.strip()[:400])
+
+pkgs = []
+for line in listed.stdout.splitlines():
+    path, _, export_file = line.partition("\t")
+    if path:
+        pkgs.append((path, export_file))
+
+with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 8) as pool:
+    rows = sorted(pool.map(lambda pe: row_for(*pe), pkgs))
+
+# Every dep named by a row must itself be a row: a dangling edge would
+# make the walk silently skip a node.
+known = {r[0] for r in rows}
+dangling = sorted({d for r in rows for d in r[2].split(",") if d} - known)
+if dangling:
+    die("edges name packages absent from the table: %s" % dangling)
+
+nodes = sum(1 for r in rows if r[1] == "1")
+unknown = sum(1 for r in rows if r[1] == "?")
+escaped = [r for r in rows if r[0] != r[3]]
+
+with open(OUT, "w", encoding="utf-8") as f:
+    f.write("""\
+# GoLean stdlib inittask table — GENERATED by scripts/gen-inittask-table.
+# DO NOT EDIT BY HAND; regenerate when the Go toolchain pin moves.
+#
+# toolchain: {gover}
+# generated: {date}
+# rows: {total} ({nodes} with an inittask, {unknown} unknown, {escaped} escaped)
+#
+# gc schedules a PRUNED set of packages for initialization: a package
+# gets a `..inittask` record only if it has residual init work or an
+# inittask-bearing import (cmd/compile/internal/pkginit.MakeTask), and
+# cmd/link/internal/ld.inittaskSym orders exactly those records. Rows
+# are read straight out of the compiled archives with `go tool nm`: a
+# defined `p..inittask` means p is a node; the undefined `q..inittask`
+# references are p's R_INITORDER edges.
+#
+# Columns, tab-separated:
+#   1  LINKER SYMBOL PREFIX — objabi.PathToPrefix of the import path,
+#      which is the namespace the edges and the schedule's sort key
+#      live in. Equal to the import path except where the path needs
+#      escaping ('.' after the last '/', and other symbol-hostile
+#      bytes); column 4 carries the unescaped path for those.
+#   2  1 = has an inittask (a NODE of the schedule)
+#      0 = pruned (not a node; gates nothing)
+#      ? = unknown — no buildable archive; the frontend REFUSES an
+#          import of it rather than guessing
+#   3  comma-separated inittask-bearing direct imports (the edges), as
+#      symbol prefixes; empty for a pruned package, which by
+#      construction can have none
+#   4  the import path, when it differs from column 1; otherwise empty
+""".format(gover=gover, date=datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d"),
+           total=len(rows), nodes=nodes, unknown=unknown, escaped=len(escaped)))
+    for prefix, node, deps, path in rows:
+        f.write("%s\t%s\t%s\t%s\n" % (prefix, node, deps, "" if prefix == path else path))
+
+sys.stderr.write("gen-inittask-table: wrote %s (%d rows, %d nodes, %d unknown, %d escaped)\n"
+                 % (OUT, len(rows), nodes, unknown, len(escaped)))

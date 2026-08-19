@@ -30,6 +30,138 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
 
+## BUG-061 — the pruning rule under-approximates `staticinit`, so a package gc folded into the data section is still scheduled
+
+- Status: open
+- Pinned-by: differential
+- Cases: multipkg/init-order-staticinit/seq
+
+gc schedules a PRUNED set of packages: `MakeTask`
+(`cmd/compile/internal/pkginit/init.go`) emits a `..inittask` record
+only for a package with residual initialization work or an
+inittask-bearing import, and `cmd/link` orders exactly those records.
+"Residual work" means what survives
+`cmd/compile/internal/staticinit`. The frontend
+(`tools/nativefrontend/load.go`, `sourceHasInitWork`) approximates that
+syntactically: a `func init()` with a non-empty body is work, and a
+package-scope variable initializer is work unless go/types folded it to
+a constant.
+
+`staticinit` folds strictly more than "is a constant" — composite
+literals of static elements, copies from other statically initialized
+globals, addresses of globals, conversions of constants, and, with the
+inliner on, whole function calls. So the frontend UNDER-PRUNES: it
+keeps a node gc deleted, which leaves a spurious EDGE, which can delay
+an importer past a package it should have beaten.
+
+Pinned witness (`multipkg/init-order-staticinit`): `zq`'s only
+initializer is `var A = [3]int{1, 2, 3}`. Go has no array constants, so
+go/types records no constant value, but the array goes straight into
+the data section and `zq` gets no record. gc: `la` is ready at step one
+and beats `lb` — 12. Frontend: `la` waits for `zq` — 21.
+
+**Size, measured.** A 26-flavor probe over the ways a package can be
+initialized (recorded in `docs/spec-divergence-ledger.md` L-011) puts
+the residual at 11 of 26 flavors, every one in the same direction:
+`addrglobal`, `arraylit`, `arrayofstr`, `bytesconv`, `callinit`,
+`funcvalue`, `nestedlit`, `slicelit`, `staticcopy`, `structlit`,
+`structzero`. The 120-seed randomized differential harness is at 0
+mismatches and cannot see any of it — every package it generates has a
+call-valued initializer, so it is a node under both rules. This bug is
+found by construction, not by the corpus.
+
+**Why it is not simply closed.** Ten of the eleven are chaseable: a
+recursive "is this expression statically initializable" predicate over
+composite literals, `&global`, static copies and constant conversions
+would fold them in, at the cost of a mini-`staticinit` port whose own
+failure mode would be OVER-pruning — deleting a real edge, the unsafe
+direction. The eleventh, `callinit` (`var X = f()` for a foldable `f`),
+is not chaseable at all: `go run` and
+`go run -gcflags=all='-N -l'` produce DIFFERENT observable orders for
+the same source, so that part of the schedule is an optimizer artifact
+rather than a property of the program. Closing this bug therefore means
+deciding what the machine should model at a point where gc itself is
+not single-valued — see ledger L-011, which classes the whole area as
+latitude rather than a forced point.
+
+## BUG-060 — the initialization schedule omits the imported STDLIB packages, so a local package gated by a stdlib import is scheduled too early
+
+- Status: fixed (2026-08-18, audit-fix round F1b, then RE-DIAGNOSED and
+  re-fixed in the delta-review fix round: `specInitOrder` in
+  `tools/nativefrontend/load.go` now builds gc's PRUNED node set — a
+  package is a node iff it has residual init work or an
+  inittask-bearing import — with stdlib node facts and edges read from
+  the compiled archives via `tools/nativefrontend/inittask-std.tsv`,
+  and walks it by linker symbol name. Non-source nodes are dropped only
+  after taking their positions. Type-check order — a separate, weaker
+  requirement — stays local-only; conflating the two was the original
+  defect. Both cases PASS.)
+- Pinned-by: differential
+- Cases: multipkg/init-order-stdlib/seq, multipkg/init-order-stdlib/marks
+
+The W1.1 loader built the initialization list over the case-local
+source packages only, dropping every stdlib node, so a local package
+whose readiness is gated by a stdlib import looked ready too early and
+could be scheduled ahead of a lexicographically later package that was
+genuinely ready.
+
+The pinned witness: `aaa` (imports `rec` and `sync`) sorts before `bbb`
+(imports `rec` only), yet Go observes 21 — `bbb` first — and the
+local-only machine observed 12.
+
+**MECHANISM CORRECTED (delta review, 2026-08-18).** The original entry
+explained the 21 as "real Go initializes `rec` before `sync`, so at the
+step after `rec` only `bbb` is ready". That is not what happens. `rec`
+has no variable initializers and no `init` function, so it has no
+initialization work at all: gc emits no record for it and it is NOT IN
+THE SCHEDULE — it is never "initialized before `sync`", and it never
+gates anybody. The real mechanism is that `bbb`'s only import is the
+pruned `rec`, so `bbb` is ready at step ONE, while `aaa` is blocked by
+`sync`, which does have work and IS a node. `bbb` goes first; hence 21.
+Same observation, same fix direction, wrong story — and the wrong story
+was load-bearing, because it implied every imported package occupies a
+position, which is exactly the belief the delta review refuted
+(BUG-061, `multipkg/init-order-pruned-stdlib`).
+
+Likewise the original closing line — "the ORDERING effect of those
+packages ... is computable from the import graph alone" — is false as
+written. Which stdlib packages are nodes is NOT computable from the
+import graph; it is a fact about compiled objects, which is why the
+frontend now reads it from a generated table and refuses any std import
+the table does not cover.
+
+Found by the W1.1 pre-merge audit (finding F1), not by any green gate:
+the lower bound cannot see an omission that no corpus case exercises,
+which is why the reproduction lands as a case before the fix. The
+re-diagnosis was found the same way one level down — by reading gc,
+not by running anything.
+
+## BUG-059 — panic messages render multi-segment TypeId qualifiers as the import PATH where gc renders the package NAME
+
+- Status: open
+- Pinned-by: differential
+- Cases: multipkg/same-name-identity-panic
+
+Path-keyed TypeIds (the BUG-010 fix, multi-package arc W1.1,
+`docs/2026-08-18_multipackage-identity.md` §3) made identity DECISIONS
+correct, but GoCore's message renderers print `TypeId.key` VERBATIM
+(`goTypeNameForMessage` / `dynamicTypeName?`, `GoLean/GoCore/Ops.lean`),
+while gc qualifies panic-message type names by the package NAME: for
+the pinned witness the machine says `interface conversion: interface {}
+is red/inner.T, not blue/inner.T` where gc says `... is inner.T, not
+inner.T (types from different packages)`. The divergence exists only
+for types from packages whose import path ≠ package name (multi-segment
+paths); for the whole vendored-raft scope (short paths, path == name,
+identity note §4) rendering is exact. Not fixable frontend-side: no one
+key string is both path-injective and byte-equal to gc's deliberately
+ambiguous name-qualified message. The structural fix is separating
+DISPLAY from IDENTITY in GoCore (a display-name table or TypeId field)
+— a semantic-core change deliberately out of the W1.1 arc's scope;
+dotted paths (which would additionally break `TypeId.unqualified`'s
+reflect-Name strip) are refused at the frontend boundary
+(`checkKeyPathGrammar`), so only the message-string channel diverges,
+and only differentially-visibly.
+
 ## BUG-053 — interface satisfaction on bare sync primitives answered a false "no" (wrong comma-ok bool, wrong type-switch branch, fabricated missing-method panic)
 
 - Status: fixed (2026-08-10, spec-parity arc-end fix round: the
@@ -1863,7 +1995,19 @@ correct it when the lowering is fixed. Tracked in `TODO.md` (F1).
 
 ## BUG-010 — TypeId keys are qualified by package NAME, not import PATH
 
-- Status: open
+- Status: fixed (2026-08-18, multi-package arc W1.1 — the REAL fix this
+  entry always named: `qualifiedTypeName`/`funcWireName` qualify by
+  `pkg.Path()` at the identity boundary
+  (`tools/nativefrontend/identity.go`;
+  `docs/2026-08-18_multipackage-identity.md` §1). Single-package keys
+  are byte-identical (the main package's path IS its name — golden
+  pins verified by `scripts/check-golden`), so no re-key wave
+  materialized; the v1 name-collision refusal
+  (`checkPackageNameCollisions`) retired in favor of the dotted-path
+  key-grammar guard (`checkKeyPathGrammar`), and the pinned case now
+  PASSES with Go's `false`. Residue split out honestly: the
+  panic-message RENDERING of multi-segment qualifiers is BUG-059,
+  pinned by multipkg/same-name-identity-panic.)
 - Pinned-by: differential
 - Cases: interfaces/imported-package-name-collision
 - Discovered: 2026-07-31 (final pre-merge adversarial audit of
@@ -1895,12 +2039,13 @@ mangling strip happens at exactly one boundary constructor and
 collision-checks", which `TypeId` (unlike `FuncId`) did not honour. The
 pinned case is now an honest `frontend-export` refusal naming both paths.
 
-The REAL fix is widening the key to `obj.Pkg().Path()`. It is deferred,
-not forgotten: it re-keys every `TypeId` — every pinned lowering, every
-`main.T(v)` panic rendering, every `TypeId.unqualified` observation — so
-it belongs with the multi-package slice, scoped in
-`docs/2026-07-30_quorum-extern-policy.md`. Escalate the moment
-multi-package lowering is claimed.
+The REAL fix — widening the key to `obj.Pkg().Path()` — landed with the
+multi-package slice (2026-08-18), as this entry's escalation clause
+demanded. The feared re-key wave did not materialize: `main`-package and
+single-segment stdlib qualifiers are path == name, so every pinned
+lowering, `main.T(v)` panic rendering, and `TypeId.unqualified`
+observation is byte-identical; the one genuinely divergent channel
+(multi-segment-path qualifiers in panic MESSAGES) is BUG-059.
 
 ## BUG-009 — an imported named type's METHOD SET is not on the wire, so interface satisfaction is UNKNOWN
 

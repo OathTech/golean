@@ -196,6 +196,94 @@ Discipline notes, recorded up front:
   L-007/L-008's travel companion for any upstream report. Bound:
   upper (an accepting implementation is conforming by the prose).
 
+### L-011 — package initialization order is not determined at the pruning boundary — `spec-ambiguity`
+
+- How found: probe (raft W1.1 delta review; then a 26-flavor probe and
+  a 120-seed randomized differential harness, both under
+  `artifacts/delta-review-probe/`).
+- Sources: spec#Program_initialization, spec#Program_execution;
+  `deps/go/src/cmd/compile/internal/pkginit/init.go` (`MakeTask`),
+  `deps/go/src/cmd/compile/internal/staticinit/sched.go`,
+  `deps/go/src/cmd/link/internal/ld/inittask.go` (`inittaskSym`,
+  `lexHeap`), `deps/go/src/cmd/internal/objabi/path.go`
+  (`PathToPrefix`). All at the go1.26.5 pin.
+- Sharp question: **does the spec's "list of all packages, sorted by
+  import path" algorithm bind for a package whose initialization is
+  unobservable?** The text ranges over every package of the complete
+  program. gc ranges over the packages that have residual
+  initialization work — and the difference is observable in the order
+  the OTHER packages initialize in, even though nothing about the
+  omitted package is.
+
+- Minimal program (the whole disagreement in four packages; `rec`
+  records, `la` sorts before `lb`, both are otherwise ready at step
+  one, and `la` blank-imports `zq`):
+
+  ```go
+  package zq; var A = [3]int{1, 2, 3}          // no init WORK: static
+  package la; import (_ "zq"; "rec"); var V = rec.Push(1)
+  package lb; import "rec";           var V = rec.Push(2)
+  ```
+
+  Spec's literal reading: `zq` is in the list, so `la` waits for it and
+  `lb` records first — 21. gc: `zq` has no `..inittask`, so `la` is
+  ready at step one and wins the tie — 12. `go run` says 12.
+
+- Per-implementation data (gc is the only oracle, so the verdict is
+  ARGUED per the N=1 discipline — but the argument has an unusual
+  amount of room, because gc disagrees with ITSELF):
+
+  | flavor of `zq`'s initializer | `go run` | `-gcflags=all='-N -l'` |
+  |---|---|---|
+  | `var A = 5` (constant) | 12 | 12 |
+  | `var A = [3]int{1,2,3}` and 9 other static forms | 12 | 12 |
+  | `var X = f()`, `f` foldable | **12** | **21** |
+  | `func init() { X = 5 }`, `map`/`chan` literals | 21 | 21 |
+
+  The third row is the decisive one: **the same compiler on the same
+  source produces both orders**, selected by the inliner. Package
+  initialization order is therefore not a function of the spec plus the
+  program at this boundary. Full 26-flavor split: 15 flavors where the
+  frontend and gc agree, 11 where they do not, all 11 in the
+  under-prune direction, exactly 1 of them optimizer-dependent.
+
+- Usage-vs-implementation split (the `gc-divergence-tolerated`
+  question, answered here even though the kind is `spec-ambiguity`):
+  what real code RELIES on is that a package it imports is fully
+  initialized before its own initializers run — which pruning never
+  breaks, since a pruned package's values are in the data section
+  before anything runs. What no code can rely on is the RELATIVE order
+  of two packages that do not import each other, which is precisely
+  what pruning perturbs. The blank-import idiom (`_ "p"` for p's
+  side effects) is the usage that comes closest to depending on it, and
+  it is safe for the same reason: if p has side effects it has work, so
+  it has a record and is not pruned.
+
+- Stance: **latitude, not a forced point** — which reverses this arc's
+  earlier reading (the design note's §5 said "forced point, no latitude
+  entry"; corrected 2026-08-18). The spec's algorithm is best read as
+  constraining the observable order of packages that HAVE observable
+  initialization, and leaving the rest to the implementation; gc's
+  pruning is then conforming, and so is a compiler that prunes nothing.
+  The machine currently realizes a THIRD point — gc's pruning for
+  everything it can see syntactically, no pruning for the rest — which
+  is a member of the envelope but not a principled choice of one.
+  Corpus cases `multipkg/init-order-pruned{,-stdlib}` and
+  `multipkg/init-order-tiebreak` pin gc-at-default-flags: deterministic
+  gc-pins of latitude carrying a re-envelope obligation, not fidelity
+  achievements. All five landed init-order cases were re-checked under
+  `-gcflags=all='-N -l'` and are stable there.
+- Bound affected: **both**, in opposite directions. Lower: the machine
+  must contain gc's observed order, and did not — fixed, with the
+  residual pinned RED as BUG-061 (`multipkg/init-order-staticinit`).
+  Upper: a machine that emits ONE order where a conforming
+  implementation may emit several is too narrow; widening the model to
+  admit the envelope (rather than picking a point) is the open work
+  this entry books.
+- Status: open. Owed: (a) BUG-061, the measured residual; (b) the
+  re-envelope decision above; (c) a latitude-inventory entry, since
+  this ledger records faults and the envelope itself belongs there.
+
 ## Feed status (honest accounting)
 
 Census at the go1.26.5 pin (post-audit regeneration): **926 spec

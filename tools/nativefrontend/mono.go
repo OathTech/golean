@@ -46,6 +46,11 @@ type funcInstWork struct {
 	// local type with the enclosing instantiation's arguments,
 	// reflect.Name() "box[int]").
 	targs []types.Type
+	// The DECLARING unit (multi-package W1.1): the stencil body's AST
+	// nodes are keyed in that unit's types.Info, so emitFuncInst
+	// switches e.pkg/e.info to it. Nil = the current package (direct
+	// emitter construction in unit tests).
+	unit *sourcePkg
 }
 
 // applySubst applies the ACTIVE stencil substitution to a type reaching a
@@ -350,7 +355,10 @@ func (e *emitter) funcInstanceAt(id *ast.Ident, fn *types.Func) (string, *types.
 		}
 		targs[i] = arg
 	}
-	mangled, err := e.instFuncId(fn.Name(), targs)
+	// The stencil FuncId roots at the identity-boundary wire name
+	// (W1.1): a source-package generic mangles as "path.F[int]", so two
+	// same-named generics in different packages stencil apart.
+	mangled, err := e.instFuncId(e.funcWireName(fn), targs)
 	if err != nil {
 		return "", nil, err
 	}
@@ -395,7 +403,11 @@ func (e *emitter) registerFuncInst(mangled string, fn *types.Func, targs []types
 	if e.funcInsts == nil {
 		e.funcInsts = map[string]*funcInstWork{}
 	}
-	work := &funcInstWork{mangled: mangled, decl: decl, env: env, targs: targs}
+	var unit *sourcePkg
+	if e.srcPkgSet != nil {
+		unit = e.srcPkgSet[fn.Pkg()]
+	}
+	work := &funcInstWork{mangled: mangled, decl: decl, env: env, targs: targs, unit: unit}
 	e.funcInsts[mangled] = work
 	e.funcInstQueue = append(e.funcInstQueue, work)
 	e.monoLog = append(e.monoLog, monoLogEntry{monoLogFuncInst, mangled})
@@ -413,6 +425,9 @@ func (e *emitter) registerFuncInst(mangled string, fn *types.Func, targs []types
 type typeInstWork struct {
 	key  string
 	inst *types.Named
+	// The DECLARING unit (multi-package W1.1), like funcInstWork.unit:
+	// the TypeDef/method stencils emit under it. Nil = current package.
+	unit *sourcePkg
 }
 
 // instTypeIdForWire is instTypeId plus the TypeDef enqueue: use it
@@ -433,8 +448,15 @@ func (e *emitter) instTypeIdForWire(inst *types.Named) (string, error) {
 
 func (e *emitter) enqueueTypeInst(inst *types.Named, key string) error {
 	obj := inst.Obj()
-	if obj.Pkg() == nil || obj.Pkg() != e.pkg {
+	// SOURCE-package generic types stencil (their declaration AST is
+	// loaded — multi-package W1.1); stdlib generic types keep the
+	// standing refusal (no AST to stencil from).
+	if obj.Pkg() == nil || !e.isSourcePackage(obj.Pkg()) {
 		return unsup("instantiation of imported generic type %s", key)
+	}
+	var unit *sourcePkg
+	if e.srcPkgSet != nil {
+		unit = e.srcPkgSet[obj.Pkg()]
 	}
 	// Instantiated INTERFACES get no TypeDef stencil here: their
 	// declaration (the satisfaction requirement list, with go/types'
@@ -454,7 +476,7 @@ func (e *emitter) enqueueTypeInst(inst *types.Named, key string) error {
 	if _, done := e.typeInsts[key]; done {
 		return nil
 	}
-	work := &typeInstWork{key: key, inst: inst}
+	work := &typeInstWork{key: key, inst: inst, unit: unit}
 	e.typeInsts[key] = work
 	e.typeInstQueue = append(e.typeInstQueue, work)
 	e.monoLog = append(e.monoLog, monoLogEntry{monoLogTypeInst, key})
@@ -471,6 +493,12 @@ func (e *emitter) flushTypeInsts(typeDefs, methods, funcs []any) ([]any, []any, 
 		work := e.typeInstQueue[0]
 		e.typeInstQueue = e.typeInstQueue[1:]
 		did = true
+		// Stencil under the DECLARING unit (multi-package W1.1): the
+		// method declarations' AST nodes key into that unit's Info.
+		savedPkg, savedInfo := e.pkg, e.info
+		if work.unit != nil {
+			e.setUnit(work.unit)
+		}
 		underlying := work.inst.Underlying()
 		if st, isStruct := underlying.(*types.Struct); isStruct {
 			fields := []any{}
@@ -508,6 +536,7 @@ func (e *emitter) flushTypeInsts(typeDefs, methods, funcs []any) ([]any, []any, 
 			e.lifted = nil
 			methods = append(methods, m)
 		}
+		e.pkg, e.info = savedPkg, savedInfo
 	}
 	return typeDefs, methods, funcs, did, nil
 }
@@ -537,7 +566,8 @@ func (e *emitter) emitMethodInst(work *typeInstWork, d *ast.FuncDecl) (map[strin
 		targsList[i] = targs.At(i)
 	}
 	return e.emitFuncInst(&funcInstWork{
-		mangled: work.key + "." + d.Name.Name, decl: d, env: env, targs: targsList})
+		mangled: work.key + "." + d.Name.Name, decl: d, env: env,
+		targs: targsList, unit: work.unit})
 }
 
 // recordGenericMethod indexes a generic-receiver method declaration by
@@ -623,6 +653,12 @@ func (e *emitter) flushFuncInsts(funcs []any) ([]any, error) {
 func (e *emitter) emitFuncInst(work *funcInstWork) (map[string]any, error) {
 	savedSubst, savedName, savedErr := e.curSubst, e.curFuncName, e.substErr
 	savedTargs := e.curTargs
+	// Stencil bodies emit under their DECLARING unit's type-checker
+	// record (multi-package W1.1): the body's AST nodes are keyed there.
+	savedPkg, savedInfo := e.pkg, e.info
+	if work.unit != nil {
+		e.setUnit(work.unit)
+	}
 	e.curSubst, e.curFuncName, e.substErr = work.env, work.mangled, nil
 	e.curTargs = work.targs
 	e.liftSeq = 0
@@ -642,6 +678,7 @@ func (e *emitter) emitFuncInst(work *funcInstWork) (map[string]any, error) {
 	}
 	e.curSubst, e.curFuncName, e.substErr = savedSubst, savedName, savedErr
 	e.curTargs = savedTargs
+	e.pkg, e.info = savedPkg, savedInfo
 	if err != nil {
 		e.lifted = e.lifted[:liftedMark]
 		e.deferNoopEmitted = deferNoopMark

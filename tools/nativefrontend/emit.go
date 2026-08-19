@@ -22,34 +22,51 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	methods := []any{}
 	typeDefs := []any{}
 
-	// Package-level variables first (init slice): gids assigned here are
-	// what every `globaladdr` in the emitted bodies refers to.
-	if err := e.collectGlobals(files); err != nil {
-		return nil, err
+	// Source units in PROGRAM INITIALIZATION ORDER (multi-package,
+	// docs/2026-08-18_multipackage-identity.md §5; main LAST). A
+	// directly constructed emitter (unit tests) synthesizes its single
+	// package as the one unit — byte-identical single-package wires.
+	if e.units == nil {
+		e.setUnits([]*sourcePkg{{path: e.pkg.Path(), files: files, info: e.info, pkg: e.pkg}})
 	}
 
-	for _, f := range files {
+	// Package-level variables first (init slice): gids assigned here are
+	// what every `globaladdr` in the emitted bodies refers to — dense
+	// PROGRAM-wide, assigned per unit in initialization order (the
+	// single gid source rule, unchanged).
+	for _, unit := range e.units {
+		e.setUnit(unit)
+		if err := e.collectGlobals(unit.files); err != nil {
+			return nil, err
+		}
+	}
+
+	for _, unit := range e.units {
+		e.setUnit(unit)
+		for _, f := range unit.files {
 		for _, decl := range f.Decls {
 			switch d := decl.(type) {
 			case *ast.FuncDecl:
 				// main is the standalone entry point (it prints observations for
 				// `go run`); GoCore runs the named subject, never main. Skip it,
-				// matching the coverage harness.
-				if d.Recv == nil && d.Name.Name == "main" {
+				// matching the coverage harness. MAIN UNIT ONLY: in an
+				// imported package, `main` is an ordinary function.
+				if d.Recv == nil && d.Name.Name == "main" && e.isMainPackage(unit.pkg) {
 					continue
 				}
 				// init() functions (init slice): exported under reserved
 				// mangled ids `$initN` (source order, files in lexical
-				// filename order — the spec's presentation order), called
-				// by the synthesized $pkginit after the variable
+				// filename order — the spec's presentation order; non-main
+				// units prefix their import path), called by the
+				// synthesized $pkginit after the unit's variable
 				// initializers. go/types enforces the declaration rules
 				// (no params/results, not callable, not referenceable).
 				// NO per-decl quarantine: init runs before every subject,
 				// so an unsupported init body refuses the whole export
 				// (design note §2).
 				if d.Recv == nil && d.Name.Name == "init" {
-					mangled := "$init" + itoa(len(e.initFuncNames))
-					e.initFuncNames = append(e.initFuncNames, mangled)
+					mangled := e.initFuncWireName(unit, len(unit.initNames))
+					unit.initNames = append(unit.initNames, mangled)
 					e.curFuncName = mangled
 					e.liftSeq = 0
 					fn, err := e.emitFuncDecl(d)
@@ -89,8 +106,17 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 				// Lifted-literal names must be unique program-wide: methods
 				// qualify by receiver type (A.go1$lit0 vs B.go1$lit0 — the
 				// pre-merge audit found same-named methods colliding and the
-				// wrong body executing). The decoder collision-checks too.
+				// wrong body executing), plain functions by their package's
+				// import path (funcWireName; main stays bare). The decoder
+				// collision-checks too.
+				var declObj *types.Func
+				if fo, isFn := e.info.Defs[d.Name].(*types.Func); isFn {
+					declObj = fo
+				}
 				e.curFuncName = d.Name.Name
+				if d.Recv == nil && declObj != nil {
+					e.curFuncName = e.funcWireName(declObj)
+				}
 				if d.Recv != nil && len(d.Recv.List) > 0 {
 					rt := e.info.Defs[d.Name].Type().(*types.Signature).Recv().Type()
 					if ptr, ok := rt.(*types.Pointer); ok {
@@ -146,8 +172,12 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 								arity += n
 							}
 						}
+						quarantineName := d.Name.Name
+						if declObj != nil {
+							quarantineName = e.funcWireName(declObj)
+						}
 						funcs = append(funcs, map[string]any{
-							"name": d.Name.Name, "unsupported": u.what, "arity": arity})
+							"name": quarantineName, "unsupported": u.what, "arity": arity})
 						continue
 					}
 					return nil, err
@@ -157,6 +187,11 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 				if d.Recv != nil {
 					methods = append(methods, fn)
 				} else {
+					// The wire FuncId: qualified for non-main units
+					// (emitFuncDecl records the bare declared name).
+					if declObj != nil {
+						fn["name"] = e.funcWireName(declObj)
+					}
 					funcs = append(funcs, fn)
 				}
 			case *ast.GenDecl:
@@ -168,12 +203,18 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 				methods = append(methods, ims...)
 			}
 		}
+		}
 	}
+	// Body emission below (worklists, anchors, $pkginit) runs with the
+	// MAIN unit current; mono stencils switch to their declaring unit
+	// per work item (mono.go).
+	e.setUnit(e.units[len(e.units)-1])
 
-	// The synthesized $pkginit (init slice): variable initializers in
-	// go/types' InitOrder, then the $initN calls. After the FuncDecl loop
-	// so initFuncNames is complete; its lifted literals flush like any
-	// other function's.
+	// The synthesized $pkginit (init slice): per-unit variable
+	// initializers in go/types' InitOrder, then the unit's $initN
+	// calls — units concatenated in program initialization order.
+	// After the FuncDecl loop so every unit's initNames is complete;
+	// its lifted literals flush like any other function's.
 	pkginit, err := e.synthesizePkgInit()
 	if err != nil {
 		return nil, err
@@ -375,9 +416,10 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	typeDefs = append(typeDefs, e.localTypeDefs...)
 	methods = append(methods, e.localIfaceMethods...)
 
-	// The TypeId keys are built; refuse the export if two import paths
-	// collided on one package-name qualifier (findings 4/7).
-	if err := e.checkPackageNameCollisions(); err != nil {
+	// The identity keys are built; refuse the export if any dotted
+	// import path reached a qualifier (the key grammar guard —
+	// successor of the retired package-name collision check, BUG-010).
+	if err := e.checkKeyPathGrammar(); err != nil {
 		return nil, err
 	}
 	// Duplicate TypeIds (e.g. two functions each declaring a local
@@ -510,8 +552,14 @@ func methodSetCoverageForKind(name, kind string) (coverage string, carrier bool,
 // every global before any subject runs, so there is no per-decl
 // quarantine for init code (design note §2).
 func (e *emitter) collectGlobals(files []*ast.File) error {
-	e.globalVars = map[*types.Var]int{}
-	e.globalInitStmt = map[ast.Expr]*ast.AssignStmt{}
+	// Called once PER UNIT in program initialization order (W1.1):
+	// the maps are program-wide accumulators keyed by object/expr.
+	if e.globalVars == nil {
+		e.globalVars = map[*types.Var]int{}
+	}
+	if e.globalInitStmt == nil {
+		e.globalInitStmt = map[ast.Expr]*ast.AssignStmt{}
+	}
 	for _, f := range files {
 		for _, decl := range f.Decls {
 			gd, ok := decl.(*ast.GenDecl)
@@ -535,7 +583,7 @@ func (e *emitter) collectGlobals(files []*ast.File) error {
 						}
 						e.globalVars[obj] = len(e.globalDefs)
 						e.globalDefs = append(e.globalDefs, map[string]any{
-							"name": name.Name, "type": ty})
+							"name": e.globalWireName(obj), "type": ty})
 					}
 					// Fabricated assignment per initializer value, keyed by
 					// the RHS expression (pointer identity — types.Initializer
@@ -699,7 +747,7 @@ func (e *emitter) globalAddr(v *types.Var) (any, bool) {
 // the name resolution).
 func (e *emitter) isPackageVar(obj types.Object) (*types.Var, bool) {
 	v, isVar := obj.(*types.Var)
-	if !isVar || v == nil || v.Parent() != e.pkg.Scope() {
+	if !isVar || v == nil || !e.isSourceScope(v.Parent()) {
 		return nil, false
 	}
 	return v, true
@@ -712,32 +760,56 @@ func (e *emitter) isPackageVar(obj types.Object) (*types.Var, bool) {
 // neither. Failures refuse the whole export (no per-decl quarantine for
 // init code).
 func (e *emitter) synthesizePkgInit() (map[string]any, error) {
-	if len(e.info.InitOrder) == 0 && len(e.initFuncNames) == 0 {
+	work := false
+	for _, u := range e.units {
+		if len(u.info.InitOrder) > 0 || len(u.initNames) > 0 {
+			work = true
+			break
+		}
+	}
+	if !work {
 		return nil, nil
 	}
 	e.curFuncName = "$pkginit"
 	e.liftSeq = 0
 	e.curResults = nil
-	stmts := make([]ast.Stmt, 0, len(e.info.InitOrder))
+	// One function body, one receive flag (the flag is FUNCTION-scoped
+	// by design — BUG-026): scan every unit's initializers before
+	// emitting any segment.
 	e.fnHasRecv = false
-	for _, ini := range e.info.InitOrder {
-		as, ok := e.globalInitStmt[ini.Rhs]
-		if !ok {
-			return nil, unsup("package-level initializer with no declaration site")
+	perUnit := make([][]ast.Stmt, len(e.units))
+	for i, u := range e.units {
+		stmts := make([]ast.Stmt, 0, len(u.info.InitOrder))
+		for _, ini := range u.info.InitOrder {
+			as, ok := e.globalInitStmt[ini.Rhs]
+			if !ok {
+				return nil, unsup("package-level initializer with no declaration site")
+			}
+			if containsRecv(as) {
+				e.fnHasRecv = true
+			}
+			stmts = append(stmts, as)
 		}
-		if containsRecv(as) {
-			e.fnHasRecv = true
+		perUnit[i] = stmts
+	}
+	// Per-unit segments in program initialization order (identity note
+	// §5: the spec's Go 1.21+ schedule — the unit ORDER encodes it):
+	// the unit's variable initializers, then its init() calls. liftSeq
+	// runs through so $pkginit$litN stays unique across segments.
+	body := []any{}
+	for i, u := range e.units {
+		e.setUnit(u)
+		seg, err := e.emitStmtList(perUnit[i])
+		if err != nil {
+			return nil, err
 		}
-		stmts = append(stmts, as)
+		body = append(body, seg...)
+		for _, name := range u.initNames {
+			body = append(body, map[string]any{"stmt": "expr", "expr": map[string]any{
+				"expr": "call", "func": name, "args": []any{}, "resultTypes": []any{}}})
+		}
 	}
-	body, err := e.emitStmtList(stmts)
-	if err != nil {
-		return nil, err
-	}
-	for _, name := range e.initFuncNames {
-		body = append(body, map[string]any{"stmt": "expr", "expr": map[string]any{
-			"expr": "call", "func": name, "args": []any{}, "resultTypes": []any{}}})
-	}
+	e.setUnit(e.units[len(e.units)-1])
 	return map[string]any{
 		"name":     "$pkginit",
 		"params":   []any{},
@@ -2338,6 +2410,25 @@ func (e *emitter) emitAssignTarget(l ast.Expr, define bool) (any, error) {
 		}
 		return map[string]any{"target": "var", "id": id.Name}, nil
 	}
+	// A QUALIFIED package-level variable (`base.Seed = ...` — W1.1)
+	// writes through its seeded cell exactly like a local global; it is
+	// name resolution, not field selection, so it must not reach the
+	// lvalue field machinery.
+	if sel, isSel := l.(*ast.SelectorExpr); isSel {
+		if pkgName, ok := e.qualifiedPkgRef(sel); ok {
+			v, isVar := e.info.Uses[sel.Sel].(*types.Var)
+			if !isVar {
+				return nil, unsup("assignment to qualified non-variable %s.%s",
+					pkgName.Imported().Path(), sel.Sel.Name)
+			}
+			ga, ok := e.globalAddr(v)
+			if !ok {
+				return nil, unsup("imported package-level variable %s.%s has no seeded cell",
+					pkgName.Imported().Path(), sel.Sel.Name)
+			}
+			return map[string]any{"target": "addr", "expr": ga}, nil
+		}
+	}
 	// Non-ident lvalue (field, index, deref): emit as an addressed location.
 	return e.emitLValue(l)
 }
@@ -3691,42 +3782,24 @@ func (e *emitter) emitSliceExpr(se *ast.SliceExpr) (any, error) {
 	return node, nil
 }
 
-// qualifiedTypeName renders a declared type's wire name PACKAGE-QUALIFIED
-// ("main.sliceError") — Go renders panic messages qualified, and the TypeId
-// is what GoCore decides dynamic-type IDENTITY on. Predeclared (universe)
-// types like `error` have no package and stay bare.
-//
-// The qualifier is the package NAME, which is NOT Go's identity: Go keys
-// type identity on the IMPORT PATH, so `html/template.Template` and
-// `text/template.Template` — both in a package named `template` — are
-// distinct types that this prefix cannot tell apart (pre-merge audit
-// 2026-07-31, findings 4/7; the assert between them answered `true` where
-// Go answers `false`). Widening the key to the import path is the real
-// fix and is scoped in docs/2026-07-30_quorum-extern-policy.md; until
-// then every qualifier is RECORDED here and
-// `checkPackageNameCollisions` fails the export CLOSED when two distinct
-// import paths would produce the same prefix.
+// qualifiedTypeName renders a declared type's wire name QUALIFIED BY
+// ITS PACKAGE'S IMPORT PATH ("main.sliceError", "red/inner.T") — Go
+// keys type identity on the import path (the BUG-010 fix; identity
+// design docs/2026-08-18_multipackage-identity.md §1), and the TypeId
+// is what GoCore decides dynamic-type IDENTITY on. Predeclared
+// (universe) types like `error` have no package and stay bare. The
+// main package's path is its name, so pre-multi-package keys are
+// byte-identical. Dotted paths are recorded by pkgQualifier and refuse
+// the export (checkKeyPathGrammar — the key grammar's separator).
+// Rendering residue for multi-segment paths (gc panic messages qualify
+// by package NAME) is argued in the design note §3 and pinned by
+// multipkg/same-name-identity-panic; identity answers are exact.
 func (e *emitter) qualifiedTypeName(obj *types.TypeName) string {
 	pkg := obj.Pkg()
 	if pkg == nil {
 		return obj.Name()
 	}
-	if e.qualPkgPaths == nil {
-		e.qualPkgPaths = map[string][]string{}
-	}
-	name := pkg.Name()
-	paths := e.qualPkgPaths[name]
-	seen := false
-	for _, p := range paths {
-		if p == pkg.Path() {
-			seen = true
-			break
-		}
-	}
-	if !seen {
-		e.qualPkgPaths[name] = append(paths, pkg.Path())
-	}
-	base := name + "." + obj.Name()
+	base := e.pkgQualifier(pkg) + "." + obj.Name()
 	// A type DECLARED INSIDE a generic function (its scope is not the
 	// package scope) is named by gc with the ENCLOSING INSTANTIATION's
 	// type arguments — probe-verified go1.26.5: reflect.Name() =
@@ -3756,31 +3829,6 @@ func (e *emitter) qualifiedTypeName(obj *types.TypeName) string {
 		}
 	}
 	return base
-}
-
-// checkPackageNameCollisions fails the export when two DISTINCT import
-// paths contributed type names under the same package-name qualifier: the
-// wire's TypeIds would collide and GoCore would decide two unrelated Go
-// types identical. Fail closed at the one boundary that constructs the key
-// (CLAUDE.md: "every mangling strip happens at exactly one boundary
-// constructor and collision-checks").
-func (e *emitter) checkPackageNameCollisions() error {
-	names := make([]string, 0, len(e.qualPkgPaths))
-	for name := range e.qualPkgPaths {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	for _, name := range names {
-		paths := e.qualPkgPaths[name]
-		if len(paths) > 1 {
-			sorted := append([]string(nil), paths...)
-			sort.Strings(sorted)
-			return unsup("package-name collision in TypeId keys: %q is the package name of %v — "+
-				"Go keys type identity on the import PATH, so these declare DISTINCT types that "+
-				"the name-qualified wire key cannot tell apart", name, sorted)
-		}
-	}
-	return nil
 }
 
 // namedTypeName returns the qualified declared name of a (possibly
@@ -4514,6 +4562,14 @@ func (e *emitter) fieldBase(sel *ast.SelectorExpr) (any, string, error) {
 }
 
 func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
+	// A source-package qualified identifier (`base.Seed` — W1.1) is
+	// name resolution, not selection: route it to the qualified arm
+	// before any Selections lookup (go/types records no Selection for
+	// qualified identifiers). Stdlib-qualified selectors fall through
+	// to the standing paths and refusals.
+	if pkgName, ok := e.qualifiedPkgRef(sel); ok {
+		return e.emitQualifiedSelector(sel, pkgName)
+	}
 	// Sync-primitive METHOD VALUES / METHOD EXPRESSIONS (`f := m.Lock`,
 	// `go wg.Done()`'s callee, `(*sync.Mutex).Lock`) fail closed here
 	// (audit fix round F4): the lowering would otherwise emit a
@@ -4790,6 +4846,22 @@ func (e *emitter) emitAddressOf(x ast.Expr) (any, error) {
 		}
 		return map[string]any{"expr": "ref", "id": ex.Name}, nil
 	case *ast.SelectorExpr:
+		// &pkg.V on a QUALIFIED package-level variable (W1.1): the
+		// seeded cell address, exactly like &global above — name
+		// resolution, never field selection.
+		if pkgName, ok := e.qualifiedPkgRef(ex); ok {
+			v, isVar := e.info.Uses[ex.Sel].(*types.Var)
+			if !isVar {
+				return nil, unsup("address of qualified non-variable %s.%s",
+					pkgName.Imported().Path(), ex.Sel.Name)
+			}
+			ga, ok := e.globalAddr(v)
+			if !ok {
+				return nil, unsup("imported package-level variable %s.%s has no seeded cell",
+					pkgName.Imported().Path(), ex.Sel.Name)
+			}
+			return ga, nil
+		}
 		// PROMOTED field address (BUG-007, design note D1): the embedded
 		// hop path flattens to a field-addr chain from the addressable
 		// root (pointer hops read the pointer VALUE — heap identity).
@@ -5258,7 +5330,8 @@ func (e *emitter) freeCaptures(lit *ast.FuncLit) []*types.Var {
 		// statically to their driver-seeded cell (`globaladdr`, init
 		// slice), so a literal's body reads and writes the shared cell
 		// with no capture machinery (pinned by init/global-in-closure).
-		if v.Parent() == nil || v.Parent() == e.pkg.Scope() {
+		// ANY source unit's package scope counts (multi-package, W1.1).
+		if v.Parent() == nil || e.isSourceScope(v.Parent()) {
 			return true
 		}
 		seen[v] = true
@@ -5414,7 +5487,7 @@ func (e *emitter) emitIdent(id *ast.Ident) (any, error) {
 	// the mangled stencil.
 	if fn, ok := e.info.Uses[id].(*types.Func); ok {
 		if sig, isSig := fn.Type().(*types.Signature); isSig {
-			name := fn.Name()
+			name := e.funcWireName(fn)
 			if sig.TypeParams().Len() > 0 {
 				mangled, _, err := e.funcInstanceAt(id, fn)
 				if err != nil {
@@ -5767,6 +5840,13 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 		if node, handled, err := e.emitStdlibShimCall(c, sel); handled || err != nil {
 			return node, handled, err
 		}
+		// Qualified call into a SOURCE package (`tracker.F(x)` — W1.1):
+		// a static call to the path-qualified FuncId. Stdlib-qualified
+		// selectors fall through to the standing method machinery and
+		// its refusals, byte-identical.
+		if node, handled, err := e.emitQualifiedCall(c, sel); handled || err != nil {
+			return node, handled, err
+		}
 		return e.emitMethodCall(c, sel)
 	}
 
@@ -5836,9 +5916,15 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 		return nil, false, unsup("call target %T", c.Fun)
 	}
 	var sig *types.Signature
+	var calleeName string
 	switch obj := e.info.Uses[fnID].(type) {
 	case *types.Func:
 		sig, _ = obj.Type().(*types.Signature)
+		// Wire FuncId via the identity boundary (W1.1): same-package
+		// calls inside a non-main unit must target the QUALIFIED id.
+		// Stdlib objects stay bare — the recorded dot-import defect's
+		// exact shape (identity note §6), neither fixed nor widened.
+		calleeName = e.funcWireName(obj)
 	case *types.Builtin:
 		return e.emitBuiltin(c, fnID.Name)
 	case *types.Var:
@@ -5873,7 +5959,7 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 	if err != nil {
 		return nil, false, err
 	}
-	return map[string]any{"expr": "call", "func": fnID.Name, "args": args, "resultTypes": resultTypes}, true, nil
+	return map[string]any{"expr": "call", "func": calleeName, "args": args, "resultTypes": resultTypes}, true, nil
 }
 
 // genericFuncValue emits the func value of an explicitly instantiated
@@ -6146,6 +6232,130 @@ func (e *emitter) emitStdlibShimCall(c *ast.CallExpr, sel *ast.SelectorExpr) (an
 	}
 	return map[string]any{"expr": "call", "func": shimName, "args": args,
 		"resultTypes": resultTypes}, true, nil
+}
+
+// qualifiedPkgRef resolves a selector whose base is a package
+// identifier naming a SOURCE package (`tracker.F`, `base.Seed`):
+// returns the imported package's PkgName use. handled=false for every
+// other shape — including stdlib-qualified selectors, which keep
+// their standing refusals byte-identical (identity note §6).
+func (e *emitter) qualifiedPkgRef(sel *ast.SelectorExpr) (*types.PkgName, bool) {
+	x, ok := sel.X.(*ast.Ident)
+	if !ok {
+		return nil, false
+	}
+	pkgName, ok := e.info.Uses[x].(*types.PkgName)
+	if !ok {
+		return nil, false
+	}
+	if !e.isSourcePackage(pkgName.Imported()) {
+		return nil, false
+	}
+	return pkgName, true
+}
+
+// emitQualifiedCall lowers a call whose callee is a source-package
+// qualified identifier (multi-package W1.1, identity note §1): a
+// plain exported function becomes a static call to the path-qualified
+// FuncId (generic ones route through the stencil worklist exactly
+// like local generics); a func-typed package VARIABLE becomes a call
+// through the value read from its seeded cell. Anything else refuses
+// loudly.
+func (e *emitter) emitQualifiedCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool, error) {
+	pkgName, ok := e.qualifiedPkgRef(sel)
+	if !ok {
+		return nil, false, nil
+	}
+	switch obj := e.info.Uses[sel.Sel].(type) {
+	case *types.Func:
+		sig, isSig := obj.Type().(*types.Signature)
+		if !isSig {
+			return nil, false, unsup("qualified call %s.%s has no signature", pkgName.Imported().Path(), sel.Sel.Name)
+		}
+		name := e.funcWireName(obj)
+		if sig.TypeParams().Len() > 0 {
+			mangled, csig, err := e.funcInstanceAt(sel.Sel, obj)
+			if err != nil {
+				return nil, false, err
+			}
+			name, sig = mangled, csig
+		}
+		args, err := e.emitCallArgs(sig, c)
+		if err != nil {
+			return nil, false, err
+		}
+		resultTypes, err := e.emitResultTypes(sig)
+		if err != nil {
+			return nil, false, err
+		}
+		return map[string]any{"expr": "call", "func": name, "args": args,
+			"resultTypes": resultTypes}, true, nil
+	case *types.Var:
+		// A func-typed package variable of the imported package: an
+		// ordinary call through the value (the §8 machinery).
+		vsig, isSig := obj.Type().Underlying().(*types.Signature)
+		if !isSig {
+			return nil, false, unsup("qualified call through non-function variable %s.%s", pkgName.Imported().Path(), sel.Sel.Name)
+		}
+		callee, err := e.emitSelector(sel)
+		if err != nil {
+			return nil, false, err
+		}
+		args, err := e.emitCallArgs(vsig, c)
+		if err != nil {
+			return nil, false, err
+		}
+		resultTypes, err := e.emitResultTypes(vsig)
+		if err != nil {
+			return nil, false, err
+		}
+		return map[string]any{"expr": "call-value", "callee": callee,
+			"args": args, "resultTypes": resultTypes}, true, nil
+	default:
+		return nil, false, unsup("qualified call %s.%s (object kind %T is not callable here)",
+			pkgName.Imported().Path(), sel.Sel.Name, obj)
+	}
+}
+
+// emitQualifiedSelector lowers a source-package qualified identifier
+// in VALUE position (`base.Seed`, `mathutil.Add` as a func value —
+// W1.1). Constants never reach here (emitExprBare folds every
+// constant-valued non-ident expression upstream). Fail closed on
+// every unhandled object kind.
+func (e *emitter) emitQualifiedSelector(sel *ast.SelectorExpr, pkgName *types.PkgName) (any, error) {
+	switch obj := e.info.Uses[sel.Sel].(type) {
+	case *types.Var:
+		// A package-level variable reads as a typed load from its
+		// driver-seeded cell, exactly like a local global (init slice).
+		ga, ok := e.globalAddr(obj)
+		if !ok {
+			return nil, unsup("imported package-level variable %s.%s has no seeded cell",
+				pkgName.Imported().Path(), sel.Sel.Name)
+		}
+		ty, err := e.emitType(obj.Type())
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"expr": "deref", "ptr": ga, "type": ty}, nil
+	case *types.Func:
+		sig, isSig := obj.Type().(*types.Signature)
+		if !isSig {
+			return nil, unsup("qualified selector %s.%s is not a value", pkgName.Imported().Path(), sel.Sel.Name)
+		}
+		name := e.funcWireName(obj)
+		if sig.TypeParams().Len() > 0 {
+			mangled, _, err := e.funcInstanceAt(sel.Sel, obj)
+			if err != nil {
+				return nil, err
+			}
+			name = mangled
+		}
+		return map[string]any{"expr": "func-value", "func": name,
+			"captured": []any{}}, nil
+	default:
+		return nil, unsup("qualified selector %s.%s (object kind %T) in value position",
+			pkgName.Imported().Path(), sel.Sel.Name, obj)
+	}
 }
 
 func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool, error) {
