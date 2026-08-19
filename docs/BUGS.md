@@ -2549,12 +2549,34 @@ FIRST per the standing rule.
 
 ## BUG-057 — two-variable comma-ok VAR DECLARATIONS drop the ok flag
 
-- Status: open (discovered 2026-08-18, spec-truth P3; DIAGNOSIS
+- Status: fixed (2026-08-19, bug-fix arc slice 2 — `emitDeclStmt` now
+  ARITY-CHECKS each `ValueSpec` before pairing names to initializers.
+  A spec whose ONE initializer has a `*types.Tuple` type of exactly
+  `len(Names)` components (the comma-ok sources and a multi-valued
+  call) is lowered by `emitAssign` on a fabricated
+  `ast.AssignStmt{Lhs: Names, Tok: DEFINE, Rhs: Values}` — the SAME
+  path the correct short declaration `v, ok := m[k]` uses, and the
+  same path the package-level declaration has always used
+  (emit.go:600-607). Any other name/value mismatch is now an explicit
+  refusal instead of a silent drop. A grouped declaration that mixes
+  ordinary and multi-value specs lowers to a SEQUENCE of wire
+  statements, each spec's own hoists captured ahead of its own
+  statement and all but the last placed in the hoist accumulator that
+  `emitStmtList` splices in at the same scope — not a wire `block`,
+  which would scope the declarations away. The interface-conversion
+  refusal the old blanket tuple/interface check provided is preserved
+  at the reroute, sharpened to fire only when a conversion is
+  genuinely owed (declared name interface-typed, tuple component not).
+  A declaration with 0 or N initializers emits exactly the wire it
+  emitted before. Flips, all in the fix commit: 24 red→green
+  (15 differential, 9 frontend-export) plus 4 new green ids and 1 new
+  red id — the full list is in `docs/bugfix-arc-log.md` §slice 2.)
+  (discovered 2026-08-18, spec-truth P3; DIAGNOSIS
   CORRECTED at the P3 pre-merge audit — the original entry titled
   this "typed receive declaration drops the received value" and both
   halves were wrong).
 - Pinned-by: differential
-- Cases: spec-examples-decl/receive-comma-ok/typed-form, spec-examples-decl/receive-comma-ok/untyped-form-live, spec-examples-decl/index-comma-ok/var-form-present, spec-examples-decl/var-decl-forms/found-present, spec-examples-decl/var-comma-ok-matrix/recv-untyped, spec-examples-decl/var-comma-ok-matrix/recv-untyped-blank-value, spec-examples-decl/var-comma-ok-matrix/recv-typed, spec-examples-decl/var-comma-ok-matrix/recv-typed-blank-value, spec-examples-decl/var-comma-ok-matrix/index-untyped, spec-examples-decl/var-comma-ok-matrix/index-untyped-blank-value, spec-examples-decl/var-comma-ok-matrix/index-typed, spec-examples-decl/var-comma-ok-matrix/index-typed-blank-value, spec-examples-decl/var-comma-ok-matrix/func-literal, spec-examples-decl/var-comma-ok-matrix/grouped-spec, spec-examples-decl/var-comma-ok-matrix/after-goto
+- Cases: spec-examples-decl/receive-comma-ok/typed-form, spec-examples-decl/receive-comma-ok/untyped-form-live, spec-examples-decl/index-comma-ok/var-form-present, spec-examples-decl/var-decl-forms/found-present, spec-examples-decl/var-comma-ok-matrix/recv-untyped, spec-examples-decl/var-comma-ok-matrix/recv-untyped-blank-value, spec-examples-decl/var-comma-ok-matrix/recv-typed, spec-examples-decl/var-comma-ok-matrix/recv-typed-blank-value, spec-examples-decl/var-comma-ok-matrix/index-untyped, spec-examples-decl/var-comma-ok-matrix/index-untyped-blank-value, spec-examples-decl/var-comma-ok-matrix/index-typed, spec-examples-decl/var-comma-ok-matrix/index-typed-blank-value, spec-examples-decl/var-comma-ok-matrix/func-literal, spec-examples-decl/var-comma-ok-matrix/grouped-spec, spec-examples-decl/var-comma-ok-matrix/after-goto, spec-examples-decl/var-comma-ok-matrix/after-goto-recv, spec-examples-decl/var-comma-ok-matrix/after-goto-assert, spec-examples-decl/var-comma-ok-matrix/assert-untyped, spec-examples-decl/var-comma-ok-matrix/assert-untyped-blank-value, spec-examples-decl/var-comma-ok-matrix/assert-untyped-blank-ok, spec-examples-decl/var-comma-ok-matrix/assert-typed, spec-examples-decl/var-comma-ok-matrix/assert-typed-blank-value, spec-examples-decl/var-comma-ok-matrix/assert-typed-blank-ok
 - Discovered: spec#Receive_operator's four comma-ok forms. Audit
   probe matrix (machine vs go, value/ok per form): assignment and
   short-decl forms are CORRECT; `var x, ok = <-ch` (untyped) and
@@ -2629,6 +2651,42 @@ FIRST per the standing rule.
   lookup — refused by the var path's BLANKET tuple/interface guard,
   which fires whenever a declared name is interface-typed even when
   the tuple component already is one, so no conversion is owed).
+- STILL RED after the fix, all fail-closed and all handed to the
+  arc's triage (slice 5) as frontier rows, none of them a wrong
+  answer: `{recv,index,assert}-typed-iface`, `tuple-call-iface` and
+  `spec-examples-decl/assert-comma-ok` — the deferred implicit
+  multi-value interface conversion, refused by the preserved guard;
+  and `shadow-capture` — the capture pre-bind cannot hoist a tuple to
+  a temp, so a comma-ok initializer that reads a name the same
+  VarSpec declares is refused rather than mis-scoped. Both are
+  language gaps that predate this bug and are out of its scope; the
+  reroute neither widened nor narrowed them.
+- MASKED-GREEN SWEEP (bug-fix arc slice 2): mechanized with an AST
+  scan (`artifacts/probe/sweep057`, scratch) over every `.go` file
+  under `Corpus/`, `raftharness/`, `compat/`, `tools/`, `scripts/`,
+  `proofs/`, `GoLean/` and `deps/raft`, reporting every `ValueSpec`
+  with ≥2 names and exactly ONE initializer, classified by source
+  kind and by package/function scope — the exact arity shape this bug
+  mis-lowers, found structurally so multi-line and grouped forms
+  cannot hide. 62 hits, 51 of them this bug's own package. The other
+  **11**: 4 package-level (`init/multi-value-var-init:11`,
+  `pkg-init-together:13`, `var-decl-forms:{28,30}` — the correct
+  $pkginit path, PASS throughout), 3 that are the P3 audit's own
+  unmasking rows (`index-comma-ok:34`, `receive-comma-ok:50`,
+  `var-decl-forms:68`), 1 that is the typed pin
+  (`receive-comma-ok:35`), 1 already-red fail-closed
+  (`assert-comma-ok:15`, the interface-typed assertion — so it was
+  never a masked green), and exactly **2 masked greens**:
+  `index-comma-ok:15` (`var v3, ok3 = a["missing"]`, absent key) and
+  `receive-comma-ok:18` (`var x3, ok3 = <-ch`, closed and drained).
+  **Those two are precisely the pair the P3 delta-review's MASKING
+  record already names, and both already carry an unmasking row.** So
+  the sweep found no NEW masked green and confirms the record is
+  complete rather than merely plausible. `deps/raft` has ZERO
+  occurrences of the shape (contrast slice 1, where raft had 103
+  if-with-init statements) — this bug's raft blast radius was
+  indirect: it is the `if v, ok := m[k]` short-decl form raft writes,
+  which was never affected.
 
 ## BUG-058 — if-statement init scope: condition hoist block emitted OUTSIDE the init
 

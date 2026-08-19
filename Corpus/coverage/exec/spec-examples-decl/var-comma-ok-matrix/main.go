@@ -323,6 +323,38 @@ again:
 	return v, ok
 }
 
+// commaOkAfterGotoRecv / commaOkAfterGotoAssert: the same
+// goto-restructured position for the OTHER two sources. Each lowers to a
+// different wire node (`chan-recv` with a `targets` list, `type-assert`
+// with `target`/`okTarget`) than the map form's `assign` with an `lhs`
+// list, and degradeGotoDeclares rewrites declarations per node shape — so
+// one green does not cover the other two. go: 7, true / 7, true.
+func commaOkAfterGotoRecv() (int, bool) {
+	ch := make(chan int, 2)
+	ch <- 7
+	ch <- 7
+	n := 0
+again:
+	var v, ok = <-ch
+	n++
+	if n < 2 {
+		goto again
+	}
+	return v, ok
+}
+
+func commaOkAfterGotoAssert() (int, bool) {
+	var x any = 7
+	n := 0
+again:
+	var v, ok = x.(int)
+	n++
+	if n < 2 {
+		goto again
+	}
+	return v, ok
+}
+
 // ---- the adjacent tuple-call declaration (NOT comma-ok) ----
 //
 // `var a, b = two()` pairs two names with one MULTI-VALUE CALL. The
@@ -340,5 +372,29 @@ func tupleCallUntyped() (int, int) {
 // tupleCallTyped: `var a, b int = two()`. go: 4, 5.
 func tupleCallTyped() (int, int) {
 	var a, b int = two()
+	return a, b
+}
+
+func three() (int, int, int) { return 4, 5, 6 }
+
+// tupleCallThree: a THREE-result call declaration — the arity route is
+// general in the number of names, not a two-name special case. go: 4, 5, 6.
+func tupleCallThree() (int, int, int) {
+	var a, b, c = three()
+	return a, b, c
+}
+
+// tupleCallBlank: a blank in a tuple-call declaration. go: 4.
+func tupleCallBlank() int {
+	var a, _ = two()
+	return a
+}
+
+// tupleCallIface: interface-typed names over non-interface components —
+// the implicit multi-value interface conversion the interfaces campaign
+// defers, refused for the tuple-call source exactly as for the comma-ok
+// ones. go (were it supported): 4, 5.
+func tupleCallIface() (any, any) {
+	var a, b any = two()
 	return a, b
 }

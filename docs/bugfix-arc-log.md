@@ -12,7 +12,7 @@ its reasoning, for user review; every number is derivation-anchored
 | slice | subject | state |
 | --- | --- | --- |
 | 1 | BUG-058 — if-init condition-hoist scope | DONE (`8a42e402` enumeration, `740f09f8` fix; gate PASS at `740f09f8`) |
-| 2 | BUG-057 — two-var comma-ok var-decl arity | enumeration landed; fix pending |
+| 2 | BUG-057 — two-var comma-ok var-decl arity | DONE (`d5ce2dc0` enumeration, fix commit below) |
 | 3 | BUG-056 — `&*p` nil collapse (design-gated) | not started |
 | 4 | BUG-005 — live map iteration (design-gated) | not started |
 | 5 | full red/bug triage (kill or justify) | not started |
@@ -407,3 +407,216 @@ regression)`, `re-pin guard (0 PASS→non-PASS flips…)`,
 `eval tests (136 ok)`, negative lane clean, and
 `scripts/check-bugs.sh: ok (61 bugs; pinned cases behave as claimed)`
 with the untriaged backlog unchanged at 25/25.
+
+### Step 2 — the fix
+
+`tools/nativefrontend/emit.go`, `emitDeclStmt` only (+114/-2 lines, all
+of it in that one function). Three parts:
+
+1. **The arity check** the entry says was missing. `isMultiValueSpec`
+   holds when a `ValueSpec` has ≥2 names, exactly ONE initializer, and
+   that initializer's go/types type is a `*types.Tuple` with exactly
+   `len(Names)` components — which is how go/types records all three
+   comma-ok sources and a multi-valued call. Every other name/value
+   mismatch is now an explicit `unsup("var declaration pairs %d names
+   with %d initializers")` instead of a silent drop. (Unreachable on
+   type-checked Go; a refusal rather than a drop is the point.)
+2. **The reroute.** A multi-value spec lowers by calling `emitAssign`
+   on a fabricated `ast.AssignStmt{Lhs: Names, Tok: token.DEFINE,
+   Rhs: Values}`. `emitAssignTarget(_, define=true)` reads each name's
+   type from `e.info.Defs`, which a var declaration populates exactly
+   as a short declaration does, so the typed form's declared T is
+   honoured; from there the type-assertion branch (emit.go:2136-2157),
+   the channel-receive branch (emit.go:2163-2167) and the generic
+   two-target path each do what they already do correctly for
+   `v, ok := …`. Blank names reach `emitAssignTarget`'s `_` case and
+   `emitChanRecvAssign`'s blank handling unchanged.
+3. **Grouped declarations.** A `var (…)` may mix ordinary and
+   multi-value specs, and each spec's initializer runs in source
+   order, so the specs lower to a SEQUENCE of wire statements: each
+   spec is emitted with its own saved/nil'd/restored hoist
+   accumulator (the emitStmtList discipline), its hoists placed ahead
+   of its own statement, and all but the last statement appended to
+   the enclosing accumulator that `emitStmtList` splices in — at the
+   SAME scope.
+
+**JUDGMENT (slice 2, why a sequence and not a wire `block`).** The
+obvious way to return several statements is a `block` node. Rejected,
+and this is the one place the two slices' mechanisms differ for the
+opposite reason: `decodeStmt`'s `"block"` builds `.block #[] #[…]`,
+which is a SCOPE — exactly what slice 1 needed to re-establish the
+init's scope, and exactly what a declaration must NOT have, since the
+names have to outlive the statement. `e.hoisted` is the existing
+mechanism for "more statements, same scope"; `decodeVar` and
+`decodeAssign` both already lower to a non-scoping `.seqn`. No wire
+schema change, no decoder change, no GoCore change.
+
+**JUDGMENT (slice 2, why emitDeclStmt is safe to reach for the hoist
+accumulator).** Appending to `e.hoisted` is only correct where a
+caller splices it. Go's grammar admits a Declaration in a
+StatementList and nowhere else — an if/for/switch init is a
+SimpleStmt, which excludes declarations — so `emitDeclStmt` is
+reachable only from `emitStmtList` (directly, or via `emitLabeled`'s
+pass-through at emit.go:1068, which returns into the same list).
+Verified by inspecting all eight `e.emitStmt(` call sites.
+
+**JUDGMENT (slice 2, THE TUPLE-CALL CALL: taken, not deferred).** The
+charter left `var a, b = two()` as take-or-defer, "fail closed or full,
+never half". TAKEN, because the arity route supports it with no
+tuple-call-specific code at all: the same `isMultiValueSpec` predicate
+matches it (go/types gives the call a tuple type of `len(Names)`
+components), and `emitAssign`'s multi-value-call branch
+(emit.go:2300-2343) then does exactly what it does for
+`a, b := two()`. "Full" is demonstrated, not asserted — three rows
+added in this commit and each verified RED under the pre-fix emitter
+first: `tuple-call-three` (`var a, b, c = three()`, so the route is
+general in the number of names, not a two-name special case),
+`tuple-call-blank` (`var a, _ = two()`), and `tuple-call-iface`
+(`var a, b any = two()`), which stays RED at `frontend-export` —
+the deferred implicit multi-value interface conversion, refused for
+the tuple-call source by the same guard that refuses it for the
+comma-ok ones. A half-support end state — say, untyped taken and
+typed left refusing — is what the charter forbade, and is not what
+this is: the two forms take one path.
+
+**JUDGMENT (slice 2, the interface guard MOVED rather than dropped).**
+The pre-fix body refused any multi-value spec with an interface-typed
+name (a blanket check). The reroute bypasses that body entirely, so a
+naive reroute would have turned five fail-closed refusals into
+unboxed interface stores — silent wrong answers, and the audit
+doctrine's "fail-closed classification" blindness, invisible to every
+gate. The check therefore moves to the reroute site, SHARPENED to
+`target is interface && component is not` — the same condition
+`emitAssign`'s own generic multi-value guard uses (emit.go:2218-2230),
+which the type-assertion and channel-receive branches return before
+reaching. That sharpening is why `iface-value` (`map[string]any`,
+where the component is ALREADY an interface so no conversion is owed)
+legitimately turns green while `{recv,index,assert}-typed-iface`,
+`tuple-call-iface` and `spec-examples-decl/assert-comma-ok` stay red.
+The three `-typed-iface` rows were pinned in the enumeration commit
+for exactly this reason.
+
+**JUDGMENT (slice 2, minimality).** The sequence path fires ONLY when
+some spec of the declaration is multi-value. A declaration with zero
+or N initializers takes the original loop, in the original single
+`var` node — which is why the full run's drift is this bug's own
+family and nothing else.
+
+**Predicted flip set, stated before the confirming run — 24 red→green,
+4 new green ids, 1 new red id, nothing else:**
+
+- FAIL/differential → PASS (15): the four P3 pins
+  (`receive-comma-ok/{typed-form,untyped-form-live}`,
+  `index-comma-ok/var-form-present`,
+  `var-decl-forms/found-present`) and the eleven matrix rows
+  (`var-comma-ok-matrix/{recv-untyped, recv-untyped-blank-value,
+  recv-typed, recv-typed-blank-value, index-untyped,
+  index-untyped-blank-value, index-typed, index-typed-blank-value,
+  func-literal, grouped-spec, after-goto}`).
+- FAIL/frontend-export → PASS (9): `var-comma-ok-matrix/{assert-untyped,
+  assert-untyped-blank-value, assert-untyped-blank-ok, assert-typed,
+  assert-typed-blank-value, assert-typed-blank-ok, iface-value,
+  tuple-call-untyped, tuple-call-typed}`.
+- NEW → PASS (4): `var-comma-ok-matrix/{after-goto-recv,
+  after-goto-assert, tuple-call-three, tuple-call-blank}`.
+- NEW → FAIL/frontend-export (1): `var-comma-ok-matrix/tuple-call-iface`.
+- UNCHANGED red, verified: `var-comma-ok-matrix/{recv,index,assert}-typed-iface`
+  and `var-comma-ok-matrix/shadow-capture` (frontend-export), and
+  `spec-examples-decl/assert-comma-ok` (frontend-export).
+
+**The five NEW ids, and why they are in the fix commit.** Four of them
+probe interactions that are properties of the FIX, not of the bug:
+`after-goto-recv` and `after-goto-assert` put the declaration at the
+top level of a goto-restructured body for the two sources whose wire
+node is NOT the map form's `assign` (`chan-recv` carries a `targets`
+list, `type-assert` a `target`/`okTarget` pair) and
+`degradeGotoDeclares` rewrites declarations per node shape, so the
+map form's green does not cover them; `tuple-call-three` and
+`tuple-call-blank` are the take-or-defer evidence above. All five —
+including `tuple-call-iface` — were verified RED under the pre-fix
+emitter first (`git stash push tools/nativefrontend/emit.go`, then
+`scripts/coverage run --id …` → `cases=5 pass=0 fail=5`), so they are
+genuine witnesses, not cases written to match the implementation.
+
+### Step 3 — masked-green sweep
+
+**Scope and method.** Mechanized: an AST scan
+(`artifacts/probe/sweep057`, scratch) over every `.go` file under
+`Corpus/`, `raftharness/`, `compat/`, `tools/`, `scripts/`, `proofs/`,
+`GoLean/` and `deps/raft`, reporting every `ValueSpec` with ≥2 names
+and exactly ONE initializer — the arity shape itself, not a guess at
+it — classified by source kind (receive / map index / type assertion /
+call) and by package vs function scope. AST-based rather than
+grep-based because grouped and multi-line declarations hide from a
+line grep. (The scan reports parse errors rather than skipping them:
+the only ones are the 37 deliberately-invalid programs in
+`Corpus/coverage/negative/compile/`, which never reach the emitter.)
+
+**Findings: 62 hits, 51 of them this bug's own package. Of the other
+11:**
+
+- **4 package-level** — `init/multi-value-var-init:11`,
+  `spec-examples-decl/pkg-init-together:13`,
+  `spec-examples-decl/var-decl-forms:{28,30}`. The correct $pkginit
+  path; PASS before the fix and after it.
+- **4 already-pinned rows of this bug** — `index-comma-ok:34`,
+  `receive-comma-ok:{35,50}`, `var-decl-forms:68`.
+- **1 already-red and fail-closed** — `assert-comma-ok:15`
+  (`var v4, ok4 interface{} = x.(int)`). It was never a masked green:
+  the case has been FAIL/frontend-export throughout, and stays so.
+- **2 masked greens** — `index-comma-ok:15`
+  (`var v3, ok3 = a["missing"]`, absent key) and
+  `receive-comma-ok:18` (`var x3, ok3 = <-ch`, closed and drained).
+  In both, ok=false is the RIGHT answer, so the dropped flag
+  coincided with correctness.
+
+**Conclusion: no NEW masked green.** The two found are precisely the
+pair the P3 delta-review's MASKING record already names, and each
+already carries an unmasking row (`index-comma-ok/var-form-present`,
+`receive-comma-ok/untyped-form-live`). The sweep's value is therefore
+to CONFIRM that record is complete rather than merely plausible — the
+mechanized enumeration of the shape found nothing the audit's reading
+had missed — and to add one precision the entry did not have: the
+third candidate an eye-scan would flag, `assert-comma-ok`, was never
+a masked green because that source fails closed.
+
+**`deps/raft` has ZERO occurrences of the shape** (89 `.go` files).
+The contrast with slice 1 (103 if-with-init statements, 12 with a
+call in the condition) is worth stating plainly: BUG-057's raft blast
+radius is *indirect*. Raft writes `if v, ok := m[k]; …` — the SHORT
+declaration, which was always correct — so what this fix buys the W4
+tracker differential is not raft code that was mis-lowered, but the
+removal of a silent-wrong-answer class from the corpus the
+differential's signal is read against.
+
+### Gate at the fix commit
+
+`GOLEAN_MEM_MAX=24G scripts/ci --diff`, full run at the fix tree. The
+baseline diff's drift was **exactly the predicted set and nothing
+else** — 29 lines across 2154 cases: the 24 red→green flips (15
+`differential`, 9 `frontend-export`), the 4 NEW/PASS ids and the 1
+NEW/FAIL/frontend-export id listed above. In particular the 18 `pkg-*`
+greens and the 4 local `*-blank-ok` greens all held, so the reroute
+did not disturb the $pkginit path or the value-delivery half; and the
+five deliberate reds (`{recv,index,assert}-typed-iface`,
+`tuple-call-iface`, `shadow-capture`, plus
+`spec-examples-decl/assert-comma-ok`) all held red, so the preserved
+interface guard did what it was moved for. Every other step `ok`,
+including `eval tests (136 ok)`, the negative lane, the golden-lowering
+and imported-goose R2 pins, and the re-pin guard. Baseline re-pinned in
+this commit from that run: **2154 cases, 2020 PASS / 134 FAIL** (was
+2149, 1992/157), reason in its header. `scripts/check-bugs.sh` then
+reports ok (61 bugs) with BUG-057 marked fixed — the cross-check is
+what refuses a "fixed" entry whose cases are still red, so its green is
+a real confirmation. The untriaged-fidelity backlog is unchanged at
+25/25: this fix retired 15 fidelity reds that were already explained by
+BUG-057's `Cases:` line, and introduced none.
+
+**Slice 2 state: BUG-057 fixed and closed.** All 23 of its pinned cases
+green, the 51-row matrix landed with a TRUE ok and separated
+value/ok observations throughout (closing F-10), package-level
+correctness case-pinned rather than wire-argued, the tuple-call
+declaration taken to full support with its generality demonstrated,
+the interface-conversion refusal preserved and sharpened, and the
+masked-green sweep recorded with its scope, its two hits and its
+confirmation that the P3 MASKING record was complete.

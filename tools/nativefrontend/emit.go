@@ -2470,9 +2470,38 @@ func (e *emitter) emitDeclStmt(st *ast.DeclStmt) (any, error) {
 			}
 		}
 	}
-	decls := []any{}
+	// ARITY (BUG-057). A VarSpec pairs its N names with either 0 or N
+	// initializer expressions — EXCEPT the one-expression multi-value
+	// forms, where ONE expression delivers all N values: the comma-ok
+	// sources (spec#Receive_operator `<-ch`, spec#Index_expressions
+	// `m[k]`, spec#Type_assertions `x.(T)`) and a multi-valued call.
+	// go/types records those with a TUPLE type. The per-name loop below
+	// pairs positionally, so before this check every name past the first
+	// got no initializer at all and the ok flag was silently lost.
+	// Those specs lower through emitAssign — the SAME path the correct
+	// short declaration `v, ok := m[k]` uses (the scope rule is the same
+	// too: spec#Declarations_and_scope starts a function-local variable's
+	// scope at the END of its VarSpec / ShortVarDecl).
+	isMultiValueSpec := func(vs *ast.ValueSpec) bool {
+		if len(vs.Values) != 1 || len(vs.Names) < 2 {
+			return false
+		}
+		tup, isTup := e.goTypeOf(vs.Values[0]).(*types.Tuple)
+		return isTup && tup.Len() == len(vs.Names)
+	}
 	for _, spec := range gd.Specs {
 		vs := spec.(*ast.ValueSpec)
+		if len(vs.Values) != 0 && len(vs.Values) != len(vs.Names) && !isMultiValueSpec(vs) {
+			// Unreachable on type-checked Go; a refusal rather than a
+			// silent drop is the point (fail closed, always).
+			return nil, unsup("var declaration pairs %d names with %d initializers",
+				len(vs.Names), len(vs.Values))
+		}
+	}
+	// emitSpecDecls lowers ONE ordinary (positionally paired) spec to
+	// `var`-node decl entries. Unchanged from the pre-BUG-057 body.
+	emitSpecDecls := func(vs *ast.ValueSpec) ([]any, error) {
+		decls := []any{}
 		for i, name := range vs.Names {
 			obj := e.info.Defs[name]
 			ty, err := e.emitType(obj.Type())
@@ -2510,8 +2539,91 @@ func (e *emitter) emitDeclStmt(st *ast.DeclStmt) (any, error) {
 			}
 			decls = append(decls, d)
 		}
+		return decls, nil
 	}
-	return map[string]any{"stmt": "var", "decls": decls}, nil
+	multi := false
+	for _, spec := range gd.Specs {
+		if isMultiValueSpec(spec.(*ast.ValueSpec)) {
+			multi = true
+		}
+	}
+	if !multi {
+		// The ordinary declaration: one `var` node for the whole GenDecl,
+		// byte-identical to what this function emitted before.
+		decls := []any{}
+		for _, spec := range gd.Specs {
+			d, err := emitSpecDecls(spec.(*ast.ValueSpec))
+			if err != nil {
+				return nil, err
+			}
+			decls = append(decls, d...)
+		}
+		return map[string]any{"stmt": "var", "decls": decls}, nil
+	}
+	// A grouped declaration may MIX ordinary and multi-value specs, and
+	// each spec's initializer runs in source order, so the specs lower to a
+	// SEQUENCE of wire statements rather than one node. All but the last go
+	// into the hoist accumulator, which emitStmtList splices immediately
+	// before this statement in the SAME scope — a wire `block` would scope
+	// the declarations away, and emitDeclStmt is only ever reached from a
+	// statement list (Go's grammar admits a declaration nowhere else; a
+	// labeled declaration re-enters through emitLabeled into the same
+	// list). Per-spec hoist capture keeps each spec's own temps ahead of
+	// its own statement instead of ahead of the whole group.
+	seq := []any{}
+	for _, spec := range gd.Specs {
+		vs := spec.(*ast.ValueSpec)
+		saved := e.hoisted
+		e.hoisted = nil
+		var node any
+		var err error
+		if isMultiValueSpec(vs) {
+			// The typed form `var v, ok T = x` types BOTH names with T,
+			// and T may be an INTERFACE both values are assignable to —
+			// spec#Type_assertions writes `var v, ok interface{} = x.(T)`.
+			// That is an implicit multi-value interface conversion, which
+			// the tuple-producing nodes cannot express (the machine would
+			// store the component RAW into an interface cell); the
+			// interfaces campaign defers it. The pre-BUG-057 body refused
+			// it via its blanket tuple/interface check, and the reroute
+			// must NOT relax that into a silent unboxed store — so the
+			// check moves here, sharpened to fire only when a conversion
+			// is actually owed (target interface, component not), the same
+			// condition emitAssign's generic multi-value guard uses.
+			tup := e.goTypeOf(vs.Values[0]).(*types.Tuple)
+			for i, n := range vs.Names {
+				obj := e.info.Defs[n]
+				if obj == nil || n.Name == "_" {
+					continue
+				}
+				comp := e.applySubst(tup.At(i).Type())
+				if types.IsInterface(e.applySubst(obj.Type())) && !types.IsInterface(comp) {
+					return nil, unsup("implicit interface conversion in multi-value assignment (interfaces campaign, deferred)")
+				}
+			}
+			lhs := make([]ast.Expr, len(vs.Names))
+			for i, n := range vs.Names {
+				lhs[i] = n
+			}
+			node, err = e.emitAssign(&ast.AssignStmt{
+				Lhs: lhs, TokPos: vs.Pos(), Tok: token.DEFINE, Rhs: vs.Values})
+		} else {
+			var decls []any
+			decls, err = emitSpecDecls(vs)
+			if err == nil {
+				node = map[string]any{"stmt": "var", "decls": decls}
+			}
+		}
+		hoists := e.hoisted
+		e.hoisted = saved
+		if err != nil {
+			return nil, err
+		}
+		seq = append(seq, hoists...)
+		seq = append(seq, node)
+	}
+	e.hoisted = append(e.hoisted, seq[:len(seq)-1]...)
+	return seq[len(seq)-1], nil
 }
 
 func (e *emitter) emitIf(st *ast.IfStmt) (any, error) {

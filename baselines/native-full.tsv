@@ -1,43 +1,73 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-19 (bug-fix arc slice 2, step 1 — THE BUG-057 EDGE
-#   ENUMERATION, red/green recorded BEFORE any fix)
-#   commit: this commit (on 740f09f8, the BUG-058 fix)
-#   re-pin reason: 46 NEW ids and NOTHING ELSE. The new package
-#   Corpus/coverage/exec/spec-examples-decl/var-comma-ok-matrix walks
-#   the full BUG-057 matrix — three comma-ok sources (receive, map
-#   index, type assertion) x untyped/typed declaration x blank in the
-#   value position / blank in the ok position / neither x
-#   function-local / package-level — plus the positions the
-#   declaration can occupy (function literal, grouped multi-spec
-#   declaration, goto-restructured body, interface-valued map), the
-#   shadow-capture shape, the three interface-TYPED forms, and the
-#   adjacent tuple-call declaration. These are the DEFECTIVE emitter's
-#   colours: the fix commit's flips are a prediction this record lets
-#   the next run confirm, not a story told afterwards.
-#   Every new row observes a TRUE ok (a false ok cannot distinguish
-#   delivery from drop) and returns value and ok as SEPARATE
-#   observables (closing F-10, where `x && ok` collapsed the two
-#   deliveries into one bit).
-#   Breakdown of the 46:
-#     22 PASS — the 18 pkg-* rows (package-level is correct for every
-#        source, typedness and blank position; the $pkginit path
-#        fabricates one AssignStmt per multi-value spec and runs
-#        emitAssign) and the 4 local *-blank-ok rows, which observe the
-#        VALUE half only and were never wrong.
-#     11 FAIL/differential — the silent drop: recv-untyped,
-#        recv-untyped-blank-value, recv-typed, recv-typed-blank-value,
-#        index-untyped, index-untyped-blank-value, index-typed,
-#        index-typed-blank-value, func-literal, grouped-spec,
-#        after-goto. All 11 join BUG-057's Cases: list in this commit.
-#     13 FAIL/frontend-export — fail-closed, NOT wrong answers: the six
-#        local type-assertion rows ("type assert form outside a
-#        2-target assignment"), {recv,index,assert}-typed-iface and
-#        iface-value ("implicit interface conversion in multi-value
-#        assignment"), shadow-capture and tuple-call-{untyped,typed}
-#        ("type *types.Tuple").
-#   ZERO drift on the 2103 pre-existing rows — no PASS<->FAIL flip, no
-#   stage change, no dropped id.
-#   Full run: 2149 cases (1992 PASS / 157 FAIL), native frontend.
+# recorded: 2026-08-19 (bug-fix arc slice 2, step 2 — THE BUG-057 FIX:
+#   the two-variable comma-ok var-declaration arity hole)
+#   commit: this commit (on d5ce2dc0, the edge-enumeration commit)
+#   re-pin reason: `emitDeclStmt` (tools/nativefrontend/emit.go) now
+#   ARITY-CHECKS each ValueSpec before pairing names to initializers. A
+#   spec whose ONE initializer has a *types.Tuple type of exactly
+#   len(Names) components — how go/types records all three comma-ok
+#   sources (receive, map index, type assertion) and a multi-valued
+#   call — is lowered by emitAssign on a fabricated
+#   ast.AssignStmt{Lhs: Names, Tok: DEFINE, Rhs: Values}: the SAME path
+#   the correct short declaration `v, ok := m[k]` uses, and the same
+#   path the package-level declaration has always used. Any other
+#   name/value mismatch is now an explicit refusal instead of a silent
+#   drop. A grouped declaration mixing ordinary and multi-value specs
+#   lowers to a SEQUENCE of wire statements at the same scope (via the
+#   hoist accumulator, NOT a wire `block`, which would scope the
+#   declarations away). The interface-conversion refusal the old
+#   blanket tuple/interface check provided is preserved at the reroute,
+#   sharpened to fire only when a conversion is genuinely owed
+#   (declared name interface-typed, tuple component not). A declaration
+#   with 0 or N initializers emits exactly the wire it emitted before.
+#   No wire-schema change, no decoder change, no GoCore change.
+#   Deltas — the predicted set exactly, stated in the commit message
+#   before this run confirmed it: 24 red -> green, 4 new green ids,
+#   1 new red id, and nothing else across 2154 cases.
+#     FAIL/differential -> PASS (15) — the silent ok-drop, gone:
+#       ~ spec-examples-decl/receive-comma-ok/typed-form
+#       ~ spec-examples-decl/receive-comma-ok/untyped-form-live
+#       ~ spec-examples-decl/index-comma-ok/var-form-present
+#       ~ spec-examples-decl/var-decl-forms/found-present
+#       ~ spec-examples-decl/var-comma-ok-matrix/recv-untyped
+#       ~ spec-examples-decl/var-comma-ok-matrix/recv-untyped-blank-value
+#       ~ spec-examples-decl/var-comma-ok-matrix/recv-typed
+#       ~ spec-examples-decl/var-comma-ok-matrix/recv-typed-blank-value
+#       ~ spec-examples-decl/var-comma-ok-matrix/index-untyped
+#       ~ spec-examples-decl/var-comma-ok-matrix/index-untyped-blank-value
+#       ~ spec-examples-decl/var-comma-ok-matrix/index-typed
+#       ~ spec-examples-decl/var-comma-ok-matrix/index-typed-blank-value
+#       ~ spec-examples-decl/var-comma-ok-matrix/func-literal
+#       ~ spec-examples-decl/var-comma-ok-matrix/grouped-spec
+#       ~ spec-examples-decl/var-comma-ok-matrix/after-goto
+#     FAIL/frontend-export -> PASS (9) — refusals the reroute retires:
+#       ~ spec-examples-decl/var-comma-ok-matrix/assert-untyped
+#       ~ spec-examples-decl/var-comma-ok-matrix/assert-untyped-blank-value
+#       ~ spec-examples-decl/var-comma-ok-matrix/assert-untyped-blank-ok
+#       ~ spec-examples-decl/var-comma-ok-matrix/assert-typed
+#       ~ spec-examples-decl/var-comma-ok-matrix/assert-typed-blank-value
+#       ~ spec-examples-decl/var-comma-ok-matrix/assert-typed-blank-ok
+#       ~ spec-examples-decl/var-comma-ok-matrix/iface-value
+#       ~ spec-examples-decl/var-comma-ok-matrix/tuple-call-untyped
+#       ~ spec-examples-decl/var-comma-ok-matrix/tuple-call-typed
+#     NEW -> PASS (4):
+#       + spec-examples-decl/var-comma-ok-matrix/after-goto-recv
+#       + spec-examples-decl/var-comma-ok-matrix/after-goto-assert
+#       + spec-examples-decl/var-comma-ok-matrix/tuple-call-three
+#       + spec-examples-decl/var-comma-ok-matrix/tuple-call-blank
+#     NEW -> FAIL/frontend-export (1):
+#       + spec-examples-decl/var-comma-ok-matrix/tuple-call-iface
+#     All five NEW ids were verified RED under the PRE-FIX emitter
+#     (git stash of emit.go) before being added, so they are genuine
+#     BUG-057 witnesses, not cases written to match the implementation.
+#   UNCHANGED red, deliberately: {recv,index,assert}-typed-iface,
+#   tuple-call-iface and spec-examples-decl/assert-comma-ok (the
+#   deferred implicit multi-value interface conversion, refused by the
+#   PRESERVED guard — a reroute that relaxed it into an unboxed store
+#   would have been a silent wrong answer) and shadow-capture (the
+#   capture pre-bind cannot hoist a tuple to a temp). All fail closed;
+#   all handed to the arc's slice-5 triage as frontier rows.
+#   Full run: 2154 cases (2020 PASS / 134 FAIL), native frontend.
 #
 result	id	stage
 PASS	arrays/array-bounds	-
@@ -1772,7 +1802,7 @@ PASS	spec-examples-decl/generic-min	-
 PASS	spec-examples-decl/generic-pair-swap	-
 PASS	spec-examples-decl/generic-type-switch	-
 PASS	spec-examples-decl/index-comma-ok	-
-FAIL	spec-examples-decl/index-comma-ok/var-form-present	differential
+PASS	spec-examples-decl/index-comma-ok/var-form-present	-
 PASS	spec-examples-decl/init-call-order/order	-
 PASS	spec-examples-decl/init-call-order/values	-
 PASS	spec-examples-decl/iota-multi-pair	-
@@ -1791,8 +1821,8 @@ PASS	spec-examples-decl/pkg-init-together	-
 PASS	spec-examples-decl/point-methods/length	-
 PASS	spec-examples-decl/point-methods/scale	-
 PASS	spec-examples-decl/receive-comma-ok/forms	-
-FAIL	spec-examples-decl/receive-comma-ok/typed-form	differential
-FAIL	spec-examples-decl/receive-comma-ok/untyped-form-live	differential
+PASS	spec-examples-decl/receive-comma-ok/typed-form	-
+PASS	spec-examples-decl/receive-comma-ok/untyped-form-live	-
 PASS	spec-examples-decl/recover-protect/clean	-
 PASS	spec-examples-decl/recover-protect/panics	-
 PASS	spec-examples-decl/return-forms	-
@@ -1821,24 +1851,26 @@ PASS	spec-examples-decl/typeparam-parse-ambiguity/conversion-form	-
 PASS	spec-examples-decl/typeparam-parse-ambiguity/forced-generic	-
 PASS	spec-examples-decl/underlying-conversions	-
 PASS	spec-examples-decl/untyped-bool-comparison	-
-FAIL	spec-examples-decl/var-comma-ok-matrix/after-goto	differential
-FAIL	spec-examples-decl/var-comma-ok-matrix/assert-typed	frontend-export
-FAIL	spec-examples-decl/var-comma-ok-matrix/assert-typed-blank-ok	frontend-export
-FAIL	spec-examples-decl/var-comma-ok-matrix/assert-typed-blank-value	frontend-export
+PASS	spec-examples-decl/var-comma-ok-matrix/after-goto	-
+PASS	spec-examples-decl/var-comma-ok-matrix/after-goto-assert	-
+PASS	spec-examples-decl/var-comma-ok-matrix/after-goto-recv	-
+PASS	spec-examples-decl/var-comma-ok-matrix/assert-typed	-
+PASS	spec-examples-decl/var-comma-ok-matrix/assert-typed-blank-ok	-
+PASS	spec-examples-decl/var-comma-ok-matrix/assert-typed-blank-value	-
 FAIL	spec-examples-decl/var-comma-ok-matrix/assert-typed-iface	frontend-export
-FAIL	spec-examples-decl/var-comma-ok-matrix/assert-untyped	frontend-export
-FAIL	spec-examples-decl/var-comma-ok-matrix/assert-untyped-blank-ok	frontend-export
-FAIL	spec-examples-decl/var-comma-ok-matrix/assert-untyped-blank-value	frontend-export
-FAIL	spec-examples-decl/var-comma-ok-matrix/func-literal	differential
-FAIL	spec-examples-decl/var-comma-ok-matrix/grouped-spec	differential
-FAIL	spec-examples-decl/var-comma-ok-matrix/iface-value	frontend-export
-FAIL	spec-examples-decl/var-comma-ok-matrix/index-typed	differential
+PASS	spec-examples-decl/var-comma-ok-matrix/assert-untyped	-
+PASS	spec-examples-decl/var-comma-ok-matrix/assert-untyped-blank-ok	-
+PASS	spec-examples-decl/var-comma-ok-matrix/assert-untyped-blank-value	-
+PASS	spec-examples-decl/var-comma-ok-matrix/func-literal	-
+PASS	spec-examples-decl/var-comma-ok-matrix/grouped-spec	-
+PASS	spec-examples-decl/var-comma-ok-matrix/iface-value	-
+PASS	spec-examples-decl/var-comma-ok-matrix/index-typed	-
 PASS	spec-examples-decl/var-comma-ok-matrix/index-typed-blank-ok	-
-FAIL	spec-examples-decl/var-comma-ok-matrix/index-typed-blank-value	differential
+PASS	spec-examples-decl/var-comma-ok-matrix/index-typed-blank-value	-
 FAIL	spec-examples-decl/var-comma-ok-matrix/index-typed-iface	frontend-export
-FAIL	spec-examples-decl/var-comma-ok-matrix/index-untyped	differential
+PASS	spec-examples-decl/var-comma-ok-matrix/index-untyped	-
 PASS	spec-examples-decl/var-comma-ok-matrix/index-untyped-blank-ok	-
-FAIL	spec-examples-decl/var-comma-ok-matrix/index-untyped-blank-value	differential
+PASS	spec-examples-decl/var-comma-ok-matrix/index-untyped-blank-value	-
 PASS	spec-examples-decl/var-comma-ok-matrix/pkg-assert-typed	-
 PASS	spec-examples-decl/var-comma-ok-matrix/pkg-assert-typed-blank-ok	-
 PASS	spec-examples-decl/var-comma-ok-matrix/pkg-assert-typed-blank-value	-
@@ -1857,18 +1889,21 @@ PASS	spec-examples-decl/var-comma-ok-matrix/pkg-recv-typed-blank-value	-
 PASS	spec-examples-decl/var-comma-ok-matrix/pkg-recv-untyped	-
 PASS	spec-examples-decl/var-comma-ok-matrix/pkg-recv-untyped-blank-ok	-
 PASS	spec-examples-decl/var-comma-ok-matrix/pkg-recv-untyped-blank-value	-
-FAIL	spec-examples-decl/var-comma-ok-matrix/recv-typed	differential
+PASS	spec-examples-decl/var-comma-ok-matrix/recv-typed	-
 PASS	spec-examples-decl/var-comma-ok-matrix/recv-typed-blank-ok	-
-FAIL	spec-examples-decl/var-comma-ok-matrix/recv-typed-blank-value	differential
+PASS	spec-examples-decl/var-comma-ok-matrix/recv-typed-blank-value	-
 FAIL	spec-examples-decl/var-comma-ok-matrix/recv-typed-iface	frontend-export
-FAIL	spec-examples-decl/var-comma-ok-matrix/recv-untyped	differential
+PASS	spec-examples-decl/var-comma-ok-matrix/recv-untyped	-
 PASS	spec-examples-decl/var-comma-ok-matrix/recv-untyped-blank-ok	-
-FAIL	spec-examples-decl/var-comma-ok-matrix/recv-untyped-blank-value	differential
+PASS	spec-examples-decl/var-comma-ok-matrix/recv-untyped-blank-value	-
 FAIL	spec-examples-decl/var-comma-ok-matrix/shadow-capture	frontend-export
-FAIL	spec-examples-decl/var-comma-ok-matrix/tuple-call-typed	frontend-export
-FAIL	spec-examples-decl/var-comma-ok-matrix/tuple-call-untyped	frontend-export
+PASS	spec-examples-decl/var-comma-ok-matrix/tuple-call-blank	-
+FAIL	spec-examples-decl/var-comma-ok-matrix/tuple-call-iface	frontend-export
+PASS	spec-examples-decl/var-comma-ok-matrix/tuple-call-three	-
+PASS	spec-examples-decl/var-comma-ok-matrix/tuple-call-typed	-
+PASS	spec-examples-decl/var-comma-ok-matrix/tuple-call-untyped	-
 PASS	spec-examples-decl/var-decl-forms	-
-FAIL	spec-examples-decl/var-decl-forms/found-present	differential
+PASS	spec-examples-decl/var-decl-forms/found-present	-
 PASS	spec-examples-decl/variadic-greeting-nil/nil	-
 PASS	spec-examples-decl/variadic-greeting-nil/three	-
 PASS	spec-examples-decl/weekday-iota	-
