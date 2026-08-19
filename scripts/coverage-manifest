@@ -9,7 +9,12 @@ TAGS_FILE="Corpus/coverage/tags.tsv"
 ARTIFACT_ROOT="${GOLEAN_COVERAGE_ARTIFACTS:-artifacts/coverage}"
 LIST_ONLY=0
 STATUS_FILTER=""
-PREFIX_FILTER=""
+# Repeated --prefix flags ACCUMULATE (union): the old single variable
+# silently kept only the LAST one, so `--prefix a --prefix b` ran b
+# alone while looking like it ran both (audit fix round F-B5 — and it
+# bit that round's own guardrail run before the fix).
+PREFIX_FILTERS=()
+PREFIX_FILTER_COUNT=0
 TAG_FILTERS=()
 EXACT_IDS=()
 TAG_FILTER_COUNT=0
@@ -54,7 +59,8 @@ while [[ "$#" -gt 0 ]]; do
         echo "coverage-manifest: --prefix requires an argument" >&2
         exit 2
       fi
-      PREFIX_FILTER="$2"
+      PREFIX_FILTERS+=("$2")
+      PREFIX_FILTER_COUNT=$((PREFIX_FILTER_COUNT + 1))
       shift 2
       ;;
     --tag)
@@ -370,8 +376,15 @@ include_case() {
   local features="$3"
 
   contains_exact_id "$full_id" || return 1
-  if [[ -n "$PREFIX_FILTER" && "$full_id" != "$PREFIX_FILTER"* ]]; then
-    return 1
+  if [[ "$PREFIX_FILTER_COUNT" -gt 0 ]]; then
+    local prefix matched=0
+    for prefix in "${PREFIX_FILTERS[@]}"; do
+      if [[ "$full_id" == "$prefix"* ]]; then
+        matched=1
+        break
+      fi
+    done
+    [[ "$matched" -eq 1 ]] || return 1
   fi
   if [[ -n "$STATUS_FILTER" && "$status" != "$STATUS_FILTER" ]]; then
     return 1

@@ -131,7 +131,10 @@ fi
 # retire by being fixed sat inside a number captioned "ratchet toward 0" —
 # unreachable by construction — while a real wrong answer could enter behind a
 # frontier refusal that left, with the scalar unmoved. Ceilings are per class,
-# so `wrong-answer` can be a hard floor independent of frontier churn.
+# so any rise of `wrong-answer` above 0 requires an explicit reviewable
+# two-file edit (an untriaged-ids row + the untriaged-count ceiling, justified
+# in the same commit), independent of frontier churn — an honest speedbump,
+# not an unraisable floor.
 #
 # Fail-closed everywhere: an unexplained id with no VALID tracked disposition
 # buckets as `unclassified` and fails; a malformed or duplicated tracked line

@@ -2202,11 +2202,19 @@ def stepFn' (s : State D) (c : Config D) : M (Config D × State D) := do
       | .breakableK k' => .ok (.next k', s)
       | .labelK _ k' => .ok (.next k', s)
       | .mapIterK _ _ _ _ _ base _ _ _ k' =>
-          -- BUG-005 (L): doneness needs the LIVE cell. Compute when
-          -- the cell answers "no entries" (nil/empty map — exactly the
-          -- windows the retired snapshot model kept computing); quit
+          -- BUG-005 (L): doneness needs the LIVE cell. Compute only
+          -- when the cell answers "no entries" (nil/empty map); quit
           -- Q3 at any nonempty cell (a pick or the stop slot consumes
-          -- a choice there — a quit asserts nothing).
+          -- a choice there — a quit asserts nothing). This is a QUIT
+          -- WIDENING vs the retired snapshot model, not the same
+          -- windows (audit fix round A3): the snapshot mirror also
+          -- computed EXHAUSTION of a nonempty snapshot (remaining-list
+          -- empty, live cell still full), and a deleting body can make
+          -- the live cell empty where the snapshot's remaining was
+          -- not. Computing exhaustion here would need the produced-set
+          -- /candidates walk over semantic keys, which the domain
+          -- leaves undecided — same reason as the delete-prune quit
+          -- below.
           (match base with
            | none => .ok (.next k', s)
            | some l => do

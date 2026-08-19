@@ -27,8 +27,10 @@
 # constructs — which can leave neither by being fixed nor by being triaged
 # — were counted inside a number captioned "ratchet toward 0", and a real
 # wrong answer could enter behind a frontier refusal that left. Ceilings
-# are now per class in baselines/untriaged-count; `wrong-answer 0` is a
-# hard floor independent of frontier churn. An id here with no valid
+# are now per class in baselines/untriaged-count; raising `wrong-answer`
+# above 0 requires an explicit reviewable two-file edit (a row here + the
+# ceiling there, justified in the same commit), independent of frontier
+# churn. An id here with no valid
 # disposition, or a current unexplained id with no row here at all, FAILS
 # the gate — the classification is never optional.
 # floats/to-int-out-of-range/{nan,range}: DELIBERATE fail-closed

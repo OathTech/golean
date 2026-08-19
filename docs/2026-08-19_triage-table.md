@@ -226,7 +226,7 @@ met while one is open).
 | **A4** | unnamed channel types as generic type arguments (F16) | 1 | a `*types.Chan` arm in `mono.go`'s `renderTypeArg` spelling `chan int` / `<-chan int` / `chan<- int` | ~half a day, but it moves the MANGLING/identity surface: the arm owes a reflect-spelling probe (every existing arm cites one), an injectivity argument, and an update to `TestManglingSurfaceFailsClosed`, which pins the refusal. Identity work deserves its own slice |
 | **A5** | shadow-capture over a tuple-typed comma-ok RHS (F22) | 1 | in the `captures` branch, when `goTypeOf(r)` is a `*types.Tuple`, pre-bind the comma-ok SOURCE'S OPERANDS to temps instead of hoisting the whole RHS | ~half–1 day; a BUG-057-family edge whose oracle is the case's own expected `(7, true)` with the outer `v` |
 | **A6** | scope the `len`/`cap` hoist predicate to the STATEMENT (F23) | 4 | `stmtHasRecv`, recomputed at `emitStmt` with save/restore and **defaulting true**, ANDed into `emit.go:6724` — so a receive-free statement keeps `len` inline (gc's realization; the receive-free control `channels/recv-order/len-embedded-no-recv` is already green end-to-end) and only a same-statement receive keeps the hoist and its residual refusal | **deferred on a finding, not on cost** — see §3.4. It also owes a new red guardrail row for the residual same-statement shape, which is currently unpinned |
-| **A7** | multi-line panic payload: the abort FIRST LINE stops at an embedded `\n` (L12b) | 1 | in `renderPanicHead`, truncate the rendered payload at the first `\n` (gc's `printindented` shape) — the guard that must survive is the ORDER of checks: the eface-identity and method-set refusals of items 1/2 keep returning none FIRST, so the truncation arm can never widen into them | added 2026-08-20 by the user's C4 split. Deferred within the arc for the reason C4 itself named: a partial fix to this surface re-opens the "unconditional arm" regression class (BUGS.md BUG-004 item 2, audit 2026-07-31 finding 3), so it owes an edge enumeration of the check order, not a ride-along |
+| **A7** | multi-line panic payload: the abort FIRST LINE stops at an embedded `\n` (L12b) | 1 | in `renderPanicHead`, truncate the rendered payload at the first `\n` (gc's `printindented` shape) — the guard that must survive is the ORDER of checks: the eface-identity and method-set refusals of items 1/4 keep returning none FIRST (cite corrected 1/2 -> 1/4 at the audit fix round: item 2 is the FIXED qualified-print arm; the method-set refusal is item 4), so the truncation arm can never widen into them | added 2026-08-20 by the user's C4 split. Deferred within the arc for the reason C4 itself named: a partial fix to this surface re-opens the "unconditional arm" regression class (BUGS.md BUG-004 item 4, audit 2026-07-31 finding 3 — cite corrected item 2 -> item 4 at the audit fix round: the regression record lives under item 4), so it owes an edge enumeration of the check order, not a ride-along |
 
 **JUDGMENT (slice 5, A6 is deferred rather than taken).** The charter
 named the receive-hoist family as an expected (a). It is — but not by
@@ -478,7 +478,7 @@ inside a (c) argument it did not need. The user took the split. The
 §5 stage 0). The reason we had NOT split it survives as A7's
 implementation constraint rather than as a categorization: a partial fix
 to this surface re-opens the "unconditional arm" regression class
-(BUG-004 item 2's 2026-07-31 audit finding), so A7 owes an edge
+(BUG-004 item 4's 2026-07-31 audit finding; cite corrected at the audit fix round), so A7 owes an edge
 enumeration proving the identity/method-set refusals still fire FIRST.
 Recording it this way is the point of having flagged the weak point:
 the argument was judged on its merits, not grandfathered.
@@ -750,7 +750,7 @@ holds:
   user rules unsafe in-language, the row converts to a frontier
   feature with a design question, not silently.
 
-Two of the 22 reds surface at fidelity-adjacent stages
+Two of the 22 reds surface at fidelity stages (lean-observation and membership, both in check-bugs' filter; label corrected at the audit fix round)
 (`atomic-frontier/{value,mp-litmus}`) and entered
 `baselines/untriaged-ids` with justifications (ceiling 7 → 9, reason
 in `baselines/untriaged-count`) — the §5 metric finding's class,

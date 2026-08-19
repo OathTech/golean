@@ -493,6 +493,14 @@ func (e *emitter) emitType(t types.Type) (any, error) {
 			return map[string]any{"kind": "named", "name": emptyStructName}, nil
 		}
 		return nil, unsup("anonymous non-empty struct type %s", ty)
+	case *types.Tuple:
+		// A tuple is never a type a Go program can name — it reaches
+		// here only when a lowering hoists a MULTI-VALUE expression
+		// whole (e.g. the shadow-capture pre-bind of a comma-ok
+		// initializer, triage F22 / mini-slice A5). Name the construct,
+		// not the go/types internal (audit fix round F-B3: the old
+		// catch-all printed "type *types.Tuple ((int, bool))").
+		return nil, unsup("multi-value expression hoisted as a single value (%s) — no tuple type exists on the wire", ty)
 	default:
 		return nil, unsup("type %T (%s)", t, t)
 	}

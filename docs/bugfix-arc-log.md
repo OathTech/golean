@@ -950,8 +950,12 @@ ruled FULL literal envelope):
   makes the FORCED removed-before-reached clause exact. Residual,
   recorded in `Cont.mapIterK`'s docstring AND inventory E9: a
   cross-goroutine delete does not prune the other goroutine's frames —
-  such shapes are racy-red via the new footprint, and the widening is
-  owed at the first non-racy cross-goroutine range case.
+  an UNSYNCHRONIZED one is racy-red via the new pick-time read
+  footprint, but a SYNCHRONIZED cross-goroutine delete is not, and the
+  widening (or justification) is owed at the first cross-goroutine
+  range case that is not already racy-red (E9's wording; this line
+  originally said "such shapes are racy-red", which over-claimed —
+  corrected at the audit fix round, reviewer A nit).
 - RACE: `stepAccesses` gained the mapIterK per-pick READ arm — closes
   inventory under-approximation U1 (BUG-005's fourth symptom;
   `race/negative/map-range-iter` flips green as a true racy-red).
@@ -2097,8 +2101,10 @@ commit.
 `atomic-frontier/value` (lean-observation — the atomic.Value zero
 value is a D5 imported-type stub refusal) and `mp-litmus` (membership —
 the enumerator refuses at the quarantined store) surface at
-fidelity-adjacent stages by the same mechanics as the select-select
-and trylock precedents. Both entered `baselines/untriaged-ids` with
+FIDELITY stages (both are in check-bugs' own fidelity filter:
+lean-observation, membership — "fidelity-adjacent" was the wrong
+label here, corrected at the audit fix round, reviewer C F8) by the
+same mechanics as the select-select and trylock precedents. Both entered `baselines/untriaged-ids` with
 written justifications; `baselines/untriaged-count` raised 7 → 9 with
 the dated reason (the file's own rule: raising requires justification
 in the same commit). This is exactly the class the triage-§5 metric
@@ -2197,7 +2203,7 @@ the T-5 gate-change decision (untriaged disposition column).
 | 2 | BUG-057 fixed, matrix green, tuple-decl taken-full, logged | DONE (slice 2) |
 | 3 | BUG-056 memo + USER RULING + implemented, both acceptance tests green | DONE (memo + 0aeb92db) |
 | 4 | BUG-005 memo + USER RULING (literal envelope) + implemented, membership rows exhibit the envelope | DONE (memo + 233fd8ed) |
-| 5 | Triage complete: 9 bugs + all reds in exactly one category; (a) minis + 19-red batch executed | DONE (table + postscripts; 34 (a)-reds killed this arc) |
+| 5 | Triage complete: 9 bugs + all reds in exactly one category; (a) minis + 19-red batch executed | DONE (table + postscripts; **35** (a)-reds killed this arc — corrected from 34 at the audit fix round (reviewer C F4), re-derived: 6 mini-slice (A1 3 + A2 3) + 19 GoCore batch + 10 design-gate basis reds (BUG-056's 5 + BUG-005's 5 on the `0c21aa21` basis)) |
 | 6 | Ledger complete: 176 sections zero-unclassified, suites landed, build queue + design questions | DONE (slice 6) |
 | 7 | End-state claim: zero reds outside the triage/ledger accounting | DONE (129/129 bucket exactly, script-verified) |
 | 8 | Untriaged cross-check | DONE (slice 5; backlog 25→7→9 with dated reasons) |
@@ -2346,9 +2352,12 @@ from two sides.
 
 **Why the ceilings stay per-class rather than collapsing to one.** A
 single ceiling lets a wrong answer enter under a retiring refusal. Per
-class, `wrong-answer 0` is a hard floor: any new unexplained forced-point
-divergence trips check (4) immediately, no matter what the frontier
-rows are doing that week. The `coverage` ceiling ratchets when features
+class, raising `wrong-answer` above 0 requires an explicit reviewable
+two-file edit (the disposition row in `baselines/untriaged-ids` plus
+the ceiling in `baselines/untriaged-count`, justified in the same
+commit) — never a silent drift, whatever the frontier rows are doing
+that week ("hard floor" here originally overstated this as
+unraisable; corrected at the audit fix round, reviewer C F6). The `coverage` ceiling ratchets when features
 land (the build queue's own accounting); the `latitude` ceiling moves
 only by a ratified (c) argument or an envelope — which is precisely the
 W3.2 routing above.
@@ -2491,3 +2500,78 @@ cross-check ok` (63 bugs, BUG-063 fixed), `frontend unit tests ok`,
 `eval tests (136 ok)`, negative lane clean (`/tmp/afr-fix-ci.log`,
 scratch). As throughout, the only difference between the gated tree
 and the committed tree is this paragraph.
+
+### The records commit (A2, A3, reviewer nits, F-B3/4/5)
+
+One commit, no semantic change; every corrected site carries its own
+"corrected at the audit fix round" note so the history is legible.
+
+- **A2 — BUGS.md BUG-056 misdescription.** The fixed entry placed the
+  emitter arm in `emitAddressOf`'s StarExpr arm — the EXACT placement
+  the slice-3 JUDGMENT rejected (it flipped the five store-order pins).
+  Corrected: the arm lives in `emitUnaryExpr`'s `token.AND` path; the
+  StarExpr arm deliberately kept the collapse; the BUG-063 implicit-&
+  extension is noted in the same entry.
+- **A3 — the two QUIT-WIDENINGS of the (L) surgery, recorded** (they
+  were implemented and correct but unlogged — mirror-coverage
+  narrowings the drift theorem cannot see, exactly the class that
+  deserves a written record):
+  1. `Mirror.lean` `stmtOpK` apply position: `mapDelete`/`clearMap`
+     now QUIT Q4 instead of transcribing `applyStmtOp'` — the
+     delete-prune is a semantic-key computation the domain leaves
+     undecided.
+  2. `Mirror.lean` `mapIterK` doneness: the mirror computes only at a
+     nil/EMPTY live cell and quits Q3 at any nonempty one — a genuine
+     widening vs the snapshot model, which also computed EXHAUSTION of
+     a nonempty snapshot. The in-source comment claimed "exactly the
+     windows the retired snapshot model kept computing" — an
+     overstatement, rewritten to say what widened and why computing
+     exhaustion is out of the domain's reach (reviewer A's A3).
+- **Reviewer A nits:** the slice-4 residual line's "such shapes are
+  racy-red" narrowed to E9's honest form (a SYNCHRONIZED
+  cross-goroutine delete is not racy-red and still hits unpruned
+  frames); the live-pick walk cost recorded as a PERF TODO
+  (`TODO.md`, enumerator-optimization section: ~O(n²) picks per range,
+  ~cubic under the ∀-stream certifier — not semantics; the fuel-out on
+  self-inserting loops is the ruled behavior); `contAfterStmtOp`'s
+  docstring no longer claims the nullary rule shares it (it named a
+  nonexistent rule and the nullary path cannot prune — `stmtOpNullary`
+  steps to `.next k` directly, soundly).
+- **Reviewer C:** F3 — the ledger's Import_declarations NAMED GAP
+  pointer corrected T-5 → T-4 (T-5 is the disposition column). F4 —
+  DONE-table clause 5's "34 (a)-reds killed" re-derived to **35**
+  (6 mini-slice + 19 batch + 10 design-gate basis reds). F6 — the four
+  "hard floor" sites (this log, check-bugs.sh, untriaged-count,
+  untriaged-ids) reworded to the honest claim: raising `wrong-answer`
+  above 0 requires an explicit reviewable two-file edit, never a
+  silent drift — a speedbump, not an unraisable floor. F7 — FR-15's
+  count split corrected 21+6 → 20+7 (satellites enumerated in the
+  row; `constants/default-types` was the miscount; total 27
+  unchanged). F8 — "fidelity-adjacent stages" → fidelity stages at
+  all three sites (lean-observation and membership are IN check-bugs'
+  filter). F9 — the two BUG-004 "item 2" cites in the triage table
+  corrected to item 4 (item 2 is the FIXED qualified-print arm; the
+  unconditional-arm regression record lives under item 4).
+- **Reviewer B:** F-B3 — `wire.go`'s emitType catch-all gains a
+  `*types.Tuple` case naming the CONSTRUCT (a multi-value expression
+  hoisted whole) instead of leaking `*types.Tuple ((int, bool))`.
+  F-B4 — `emitMethodCall`'s fall-through refusal now distinguishes a
+  PACKAGE-selector call (`package-selector call fmt.Sprintf (package
+  "fmt" surface not modeled)`) from a genuine non-method selector —
+  the F8/F19 one-string-two-causes conflation cannot recur. F-B5 —
+  `coverage-manifest --prefix` now ACCUMULATES (union) instead of
+  silently keeping the last flag; verified live (two prefixes → 4+1
+  rows) — and the old behavior bit this very round's first guardrail
+  run, which is the finding demonstrating its worth. Detail strings of
+  affected red rows change; no stage or result moves (the baseline
+  records result+stage only, by design).
+
+**Gate at the records commit.** The commit changes refusal DETAIL
+strings (F-B3/F-B4) and the manifest filter (F-B5) beside the record
+corrections, so the full gate ran with the differential:
+`GOLEAN_MEM_MAX=24G scripts/ci --diff` → **`RESULT: PASS`**, exit 0,
+every step ok — `baseline diff FULL (2224/2224, no regression)` (the
+detail churn is invisible to the result+stage record, as designed),
+frontend unit tests ok, eval tests 136 ok (`/tmp/afr-records-ci.log`,
+scratch). Only this paragraph differs between the gated and committed
+trees.
