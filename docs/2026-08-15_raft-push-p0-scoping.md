@@ -429,4 +429,56 @@ A costs nothing until P2 and is a redesign, not a gap.
    folded into the autonomous push.
 6. raftpb strategy: gogo-rev pin vs `plainpb` shim (both with
    marshal-avoidance, §7 layer C) — user ruling needed (it moves a
-   deps pin / touches verbatim-ness).
+   deps pin / touches verbatim-ness). **RULED 2026-08-19 — see the
+   RULING block below.**
+
+### §8.6 RULING — `plainpb` shim over the gogo-rev pin (Mike, 2026-08-19)
+
+**The ruling: the `plainpb` shim (option 2), composed with
+marshal-avoidance (option 3). NOT the gogo-rev pin.**
+
+**Rationale, as given.** The choice is forward-looking. We verify the
+logic of the raft that exists NOW, with the wire types *declared*
+rather than *generated* — pinning `deps/raft` backward to the last
+gogo rev would buy plain-Go `Marshal`/`Unmarshal` at the price of
+verifying a library etcd has already moved off. The encode paths are
+provably never taken under marshal-avoidance, so declaring the types
+costs nothing we were going to exercise, and the restrictions the shim
+imposes are liftable later (a wire-accurate `Size`, a real encoder)
+without re-deciding this.
+
+**A NOTE THE RULING RESTS ON** (raft-w1, tier-1 probe, `docs/raft-w1-log.md`):
+at the pinned rev the runtime is `google.golang.org/protobuf`, not
+gogo — raft has *already* migrated. §7 layer C's "pin `deps/raft` to
+the last gogo-protobuf rev" therefore means pinning BACKWARD, which is
+what the ruling declines.
+
+**Requirements attached to the ruling** (all four are conditions on the
+implementation, not suggestions):
+
+- **(a) Mechanically derived.** The shim is produced by STRIPPING the
+  actual generated `raftpb` file, and the derivation is a re-runnable,
+  documented script, so the delta re-derives when the raft pin moves.
+  `scripts/` is off-limits to the lane, so it lives in
+  `tools/raftsubject/` (noted here per the ruling).
+- **(b) Fail-closed, never silent.** Every runtime-touching method —
+  `Marshal`, `Unmarshal`, `Size`, descriptor init/registration — is an
+  explicit panic/refusal a differential would see. Never a silent zero.
+- **(c) Recorded delta.** Every divergence from the upstream raftpb
+  source is itemised in a subject-delta section of the lane log and
+  the design note.
+- **(d) Differential obligation on real logic.** Any shim method
+  carrying real logic (ConfState equivalence; the `Entry`/`Message`
+  helpers raft's logic calls) is probed against upstream under
+  `go run` and the comparison recorded.
+
+**Implemented by raft lane W2.1** — `raftsubject/raftpb/` (the shim),
+`tools/raftsubject/derive.py` (the derivation, requirement a),
+`tools/raftsubject/difftest.py` (requirement d), and
+`docs/raft-w2-log.md` (requirements b and c: the fail-closed register
+and the subject-delta ledger). One requirement is discharged with a
+named residue rather than fully: `proto.Size` is a fail-closed stub
+today, while raft's flow control computes wire sizes on its NORMAL path
+(§7 layer C's audit-found residue). That is not reached by the packages
+vendored so far and is the head of W4's obligation list, recorded as
+such — not quietly deferred.
