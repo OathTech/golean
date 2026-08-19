@@ -217,6 +217,10 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
       let ptr ← decodeExpr s!"{path}.ptr" (← StrictJson.field path obj "ptr")
       let typ ← decodeTy s!"{path}.type" (← StrictJson.field path obj "type")
       pure (.deref ptr typ)
+  | "addr-of-deref" =>
+      -- `&*p` / `&(*p)` (BUG-056): nil-assert + pass-through, no load.
+      let ptr ← decodeExpr s!"{path}.ptr" (← StrictJson.field path obj "ptr")
+      pure (.addrOfDeref ptr)
   | "field-get" =>
       let recv ← decodeExpr s!"{path}.recv" (← StrictJson.field path obj "recv")
       let typeId ← StrictJson.string s!"{path}.typeId" (← StrictJson.field path obj "typeId")

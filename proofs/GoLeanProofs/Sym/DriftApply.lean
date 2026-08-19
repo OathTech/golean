@@ -649,6 +649,17 @@ theorem applyStrictOp_conc (hI : I.Sound) (σ : ExecState) {s : State D}
       simp only [List.map_cons, List.map_nil, applyStrictOp]
       refine bind_eq_ok.mpr ⟨loc, asLoc_conc hloc, ?_⟩
       simp [concV_addr, pure, Except.pure]
+  | addrOfDeref =>
+      -- BUG-056: nil-assert + pass-through; fieldAddr's shape minus
+      -- the field constructor.
+      rcases vs with _ | ⟨v, _ | ⟨x, rest⟩⟩ <;>
+        simp only [applyStrictOp', quit] at h <;> try (cases h; done)
+      obtain ⟨loc, hloc, h2⟩ := bind_eq_ok.mp h
+      obtain ⟨rfl, rfl⟩ : out = .addr loc ∧ s' = s := by
+        simpa [pure, Except.pure, eq_comm, and_comm] using h2
+      simp only [List.map_cons, List.map_nil, applyStrictOp]
+      refine bind_eq_ok.mpr ⟨loc, asLoc_conc hloc, ?_⟩
+      simp [concV_addr, pure, Except.pure]
   | structLit ty =>
       simp [applyStrictOp', quit] at h
   | arrayLit n elem keys =>

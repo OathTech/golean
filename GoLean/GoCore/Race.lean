@@ -181,6 +181,16 @@ S3 convergence: these two rows were missing from the first
   chanlen reads `c.qcount` uninstrumented (probe p26 green).
 - `.capacityOf` CHANNEL load → U2, same basis.
 
+NO ACCESS AT ALL (neither `loadLoc` nor `storeLoc` — listed so the
+absence is legible as a decision, not an omission):
+- `applyStrictOp .addrOfDeref` (BUG-056, fix 2026-08-19): `&*p`'s nil
+  check consumes the pointer VALUE already in hand and touches no
+  cell. gc's counterpart is a 1-byte hardware `TESTB` nil-probe that
+  `-race` does not instrument (memo §2: TSan-green beside a
+  concurrent pointee write where a real `*p` read is TSan-red), and
+  our model performs NO load at all — so this is deliberately not
+  even a READ-BUT-UNINSTRUMENTED row.
+
 MODEL-INTERNAL loads gc never performs (excluded on purpose):
 - the `.spawned` marker's pool strip (BUG-040, slice 4): a pure
   control step — touches no memory (`stepAccesses` catch-all; the

@@ -5102,7 +5102,19 @@ func (e *emitter) emitAddressOf(x ast.Expr) (any, error) {
 		}
 		return map[string]any{"expr": "index-addr", "base": base, "index": index}, nil
 	case *ast.StarExpr:
-		// &(*p) is p.
+		// The address of *p is p — and HERE (the general addressable
+		// path: assignment targets, slice/array bases, receiver
+		// addresses) the collapse is exactly right, because every
+		// consumer nil-checks the base at ITS OWN spec-mandated point
+		// (a store target in phase 2 — BUG-029/BUG-038's timing pins
+		// assign-order/target-check-vs-rhs/nil-deref-target and
+		// friends; index/field/slice nodes at their own evaluation).
+		// The `&` OPERATOR's composite `&*p` does NOT take this arm:
+		// spec#Address_operators gives it its own eager panic clause,
+		// and emitUnaryExpr lowers it to addr-of-deref (BUG-056) —
+		// scoping it there and not here is what the five store-order
+		// pins above guard (the first draft of the BUG-056 fix put
+		// addr-of-deref in this arm and flipped all five red).
 		return e.emitExpr(ex.X)
 	case *ast.ParenExpr:
 		return e.emitAddressOf(ex.X)
@@ -5939,6 +5951,36 @@ func (e *emitter) emitUnary(u *ast.UnaryExpr) (any, error) {
 // <- (a receive in expression position) to the chan-recv hoist.
 func (e *emitter) emitUnaryExpr(u *ast.UnaryExpr) (any, error) {
 	if u.Op == token.AND {
+		// &*p / &(*p) (BUG-056): NOT the general addressable collapse.
+		// spec#Address_operators gives &-of-indirection its own panic
+		// clause ("if the evaluation of x would cause a run-time
+		// panic, then the evaluation of &x does too", exhibit
+		// `&*x  // causes a run-time panic`), and gc compiles the
+		// composite to a bare nil-probe (TESTB — no pointee load,
+		// invisible to -race). It lowers to the machine's
+		// addr-of-deref strict op: nil-assert on the pointer VALUE,
+		// yield the same pointer, touch no memory. Scoped HERE — the
+		// `&` operator's immediate `*` operand only — because
+		// emitAddressOf is also the general addressable path
+		// (assignment targets, slice bases, receivers), where the
+		// nil check belongs to each consumer's own point (phase-2
+		// stores; the enclosing index/field/slice node) and the plain
+		// collapse is correct.
+		inner := u.X
+		for {
+			if p, ok := inner.(*ast.ParenExpr); ok {
+				inner = p.X
+				continue
+			}
+			break
+		}
+		if st, ok := inner.(*ast.StarExpr); ok {
+			ptr, err := e.emitExpr(st.X)
+			if err != nil {
+				return nil, err
+			}
+			return map[string]any{"expr": "addr-of-deref", "ptr": ptr}, nil
+		}
 		return e.emitAddressOf(u.X)
 	}
 	if u.Op == token.ARROW {

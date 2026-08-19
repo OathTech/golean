@@ -1206,6 +1206,17 @@ private theorem arm_fieldAddr (hS : FrameSim ρ na₀ na fr σ σF)
   subst hl
   exact ExSim.ok ⟨by simp only [renameValue, renameLoc], hS⟩
 
+private theorem arm_addrOfDeref (hS : FrameSim ρ na₀ na fr σ σF)
+    (v : GoValue) :
+    ExSim (PairSim ρ na₀ na fr)
+      (applyStrictOp σ .addrOfDeref [v])
+      (applyStrictOp σF .addrOfDeref [renameValue ρ v]) := by
+  simp only [applyStrictOp]
+  refine ExSim.bind (valueAsLoc_sim ρ v) ?_
+  intro l lF hl
+  subst hl
+  exact ExSim.ok ⟨by simp only [renameValue, renameLoc], hS⟩
+
 private theorem arm_structLit (hS : FrameSim ρ na₀ na fr σ σF)
     (ty : Ty) (vs : List GoValue) :
     ExSim (PairSim ρ na₀ na fr)
@@ -1824,6 +1835,11 @@ theorem applyStrictOp_sim (hS : FrameSim ρ na₀ na fr σ σF)
       rcases vs with _ | ⟨v, _ | ⟨x, t⟩⟩
       · exact ExSim.stuck'
       · simp only [renameValueList]; exact arm_fieldAddr hS tid fname v
+      · exact ExSim.stuck'
+  | addrOfDeref =>
+      rcases vs with _ | ⟨v, _ | ⟨x, t⟩⟩
+      · exact ExSim.stuck'
+      · simp only [renameValueList]; exact arm_addrOfDeref hS v
       · exact ExSim.stuck'
   | structLit ty => exact arm_structLit hS ty vs
   | arrayLit n elem keys => exact arm_arrayLit hS n elem keys vs

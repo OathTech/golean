@@ -105,6 +105,9 @@ inductive StrictOp where
   | convert (ty : Ty)
   | bytesFromString | stringFromByteSlice | stringFromRune
   | deref (ty : Ty)
+  /-- `&*p`: nil-assert on the pointer VALUE, yield it unchanged, no
+  memory access (BUG-056 — gc's `TESTB` probe shape). -/
+  | addrOfDeref
   | fieldGet (typeId : TypeId) (fieldName : String)
   | fieldAddr (typeId : TypeId) (fieldName : String)
   | structLit (ty : Ty)
@@ -159,6 +162,7 @@ def strictPlan : Expr → Option (StrictOp × List Expr)
   | .lessCmp l r => some (.lessCmp, [l, r])
   | .greaterCmp l r => some (.greaterCmp, [l, r])
   | .deref e ty => some (.deref ty, [e])
+  | .addrOfDeref e => some (.addrOfDeref, [e])
   | .structLit ty args => some (.structLit ty, args.toList)
   | .fieldGet recv typeId fieldName => some (.fieldGet typeId fieldName, [recv])
   | .fieldAddr base typeId fieldName => some (.fieldAddr typeId fieldName, [base])
@@ -347,6 +351,13 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
   | .stringFromRune, [v] => do
       return (.string (GoString.fromCodePoint (← valueAsInt v)), s)
   | .deref _, [v] => do return ((← loadLoc s (← valueAsLoc v)), s)
+  -- `&*p` (BUG-056): the nil check consumes the pointer VALUE already
+  -- in hand — `.addr` passes through, `.nil` panics via `valueAsLoc`'s
+  -- runtime-error arm, anything else is stuck. It reads and writes NO
+  -- memory cell (gc: a bare TESTB nil-probe, no pointee load — memo
+  -- §2), so it has no race-footprint arm on purpose (Race.lean's
+  -- call-site inventory records the decision).
+  | .addrOfDeref, [v] => do return (.addr (← valueAsLoc v), s)
   | .fieldGet typeId fieldName, [v] => do
       match v with
       | .struct actualType fields =>

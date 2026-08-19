@@ -202,6 +202,7 @@ def renameExpr : Expr → Expr
   | .funcVal fid captured => .funcVal fid (renameExprList captured.toList).toArray
   | .locLit l => .locLit (renameLoc ρ l)
   | .deref e t => .deref (renameExpr e) t
+  | .addrOfDeref e => .addrOfDeref (renameExpr e)
   | .structLit t args => .structLit t (renameExprList args.toList).toArray
   | .fieldGet e tid f => .fieldGet (renameExpr e) tid f
   | .fieldAddr e tid f => .fieldAddr (renameExpr e) tid f
