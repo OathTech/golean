@@ -1,17 +1,18 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-19 (bug-fix arc, 19-red GoCore slice family 4 =
-#   triage rows L5+L6: pointer-to-array indexing in READ position)
-#   commit: this commit (on e16477cd, the family-3 tip)
-#   re-pin reason: .indexGet gains the .addr auto-deref arm
-#   (spec#Index_expressions: p[x] is shorthand for (*p)[x]; array
-#   pointee only — read position never carries a target's base-cell
-#   address) and the .nil arm (gc's recoverable nil-pointer-dereference
-#   panic) — the read siblings of BUG-038's write-path arms. Race
-#   footprint: element-precise read (.index base idx), gc's compiled
-#   single element load. Deltas — the predicted set exactly:
-#     FAIL/lean-observation -> PASS (2):
-#       arrays/pointer-array, pointers/nil-array-index-panic
-#   counts: 2181 cases, 2076 PASS / 105 FAIL (was 2181, 2074/107)
+# recorded: 2026-08-19 (bug-fix arc, 19-red GoCore slice family 5 =
+#   triage row L7: struct-tag pointer conversion field access)
+#   commit: this commit (on 3ccd25c2, the family-4 tip)
+#   re-pin reason: the nominal mint-tag check at field access
+#   (fieldGet / loadLoc / storeLoc field arms) relaxes to
+#   tag-CONVERTIBLE: identical underlying struct types, decided by wire
+#   FieldDef-list equality via structTagCompatible (the struct
+#   VALUE-conversion arm's own identity rule — the wire strips tags per
+#   spec#Conversions' struct-tag clause). The cell keeps its mint tag;
+#   the conversion aliases, never retags. Deltas — the predicted set
+#   exactly, nothing else moved (the relaxation admits nothing the
+#   corpus exercises beyond the pinned case):
+#     FAIL/lean-observation -> PASS (1): structs/tag-pointer-conversion
+#   counts: 2181 cases, 2077 PASS / 104 FAIL (was 2181, 2076/105)
 #   frontend: native (tools/nativefrontend + NativeToIR)
 # columns: result<TAB>id<TAB>stage
 PASS	arrays/array-bounds	-
@@ -2114,7 +2115,7 @@ PASS	structs/tag-comparable	-
 PASS	structs/tag-defined-conversion	-
 PASS	structs/tag-embedded-field	-
 FAIL	structs/tag-nested-conversion	frontend-export
-FAIL	structs/tag-pointer-conversion	lean-observation
+PASS	structs/tag-pointer-conversion	-
 FAIL	structs/tag-unnamed-conversion	frontend-export
 PASS	structs/tuple-field-swap	-
 PASS	structs/unnamed-conversion-targets/func	-

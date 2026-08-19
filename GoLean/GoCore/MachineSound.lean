@@ -849,9 +849,19 @@ theorem Heap.lookup_set_ne {h : Heap} {k l : Loc} {c : HeapCell}
       simp [Heap.lookup, beq_eq_false_iff_ne.mpr hne]
     | false => simp [Heap.lookup, ih]
 
-/-- `loadLoc` is determined by the ROOT cell: two states agreeing on the
-path's root cell load identically along the whole path. -/
-theorem loadLoc_root_congr {σ₁ σ₂ : ExecState} :
+/-- The tag-compatibility check reads only the types map (triage L7). -/
+theorem structTagCompatible_congr {σ₁ σ₂ : ExecState}
+    (htypes : σ₂.types = σ₁.types) :
+    structTagCompatible σ₂ = structTagCompatible σ₁ := by
+  funext a b
+  simp [structTagCompatible, htypes]
+
+/-- `loadLoc` is determined by the ROOT cell and the types map (the
+latter entering only through the field arm's tag-compatibility check,
+triage L7): two states agreeing on both load identically along the
+whole path. -/
+theorem loadLoc_root_congr {σ₁ σ₂ : ExecState}
+    (htypes : σ₂.types = σ₁.types) :
     ∀ {l : Loc},
       Heap.lookup σ₂.heap (Loc.rootLoc l) = Heap.lookup σ₁.heap (Loc.rootLoc l) →
       loadLoc σ₂ l = loadLoc σ₁ l := by
@@ -865,7 +875,7 @@ theorem loadLoc_root_congr {σ₁ σ₂ : ExecState} :
   | field b t f ih =>
     intro hl
     simp only [loadLoc]
-    rw [ih hl]
+    rw [ih hl, structTagCompatible_congr htypes]
   | index b i ih =>
     intro hl
     simp only [loadLoc]
@@ -1701,7 +1711,8 @@ theorem storeLoc_congr {σ₁ σ₂ : ExecState} (htypes : σ₂.types = σ₁.t
   | field b tid fname ih =>
     intro v w hl hcc
     simp only [storeLoc]
-    rw [loadLoc_root_congr (l := b) hl]
+    rw [loadLoc_root_congr htypes (l := b) hl,
+      structTagCompatible_congr htypes]
     cases hload : loadLoc σ₁ b with
     | error e => exact rfl
     | ok bv =>
@@ -1718,7 +1729,7 @@ theorem storeLoc_congr {σ₁ σ₂ : ExecState} (htypes : σ₂.types = σ₁.t
   | index b i ih =>
     intro v w hl hcc
     simp only [storeLoc]
-    rw [loadLoc_root_congr (l := b) hl]
+    rw [loadLoc_root_congr htypes (l := b) hl]
     cases hload : loadLoc σ₁ b with
     | error e => exact rfl
     | ok bv =>

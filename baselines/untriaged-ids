@@ -31,12 +31,10 @@
 #   gained the `.addr` auto-deref and `.nil` nil-deref-panic arms —
 #   BUG-038's read-position siblings, its entry updated. Entries
 #   retired.]
-# structs/tag-pointer-conversion: triage row L7 — `(*B)(a)` passes the
-#   pointer through (BUG-020's arm) but the heap cell keeps its mint tag,
-#   and field access checks the NOMINAL tag, while spec#Conversions says
-#   struct tags are ignored for conversion identity. The wire already
-#   strips tags, so both TypeIds map to identical FieldDef lists.
-#   Category (a), GoCore gate.
+# [structs/tag-pointer-conversion: FLIPPED PASS 2026-08-19 (19-red
+#   slice family 5 = triage L7): field access accepts tag-CONVERTIBLE
+#   mint tags (identical underlying via wire FieldDef equality,
+#   structTagCompatible); the cell keeps its mint tag. Entry retired.]
 # [strings/{defined-slice-string-conversion,nil-slice-string-conversion,
 #   rune-invalid-values,rune-slice-conversion,rune-slice-to-string-copy,
 #   rune-string-conversion,string-to-rune-copy}: FLIPPED PASS 2026-08-19
@@ -50,7 +48,6 @@
 floats/to-int-out-of-range/nan
 floats/to-int-out-of-range/range
 init/hidden-dep-order
-structs/tag-pointer-conversion
 # goroutines/sched-dependent/first-come: DELIBERATE slice-4 red pin
 #   (channels arc slice 2): a schedule-DEPENDENT observable (which
 #   sender commits first is L1 latitude, admitted set {12,21}) declared

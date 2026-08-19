@@ -243,7 +243,10 @@ theorem loadLoc_sim (hS : FrameSim ρ na₀ na fr σ σF) :
       cases v
       case struct actual fields =>
           simp only [renameValue]
-          by_cases hne : (actual != tid) = true
+          -- the compat check reads only the types map (triage L7)
+          rw [structTagCompatible_congr hS.types_eq]
+          by_cases hne :
+              (actual != tid && !structTagCompatible σ actual tid) = true
           · rw [if_pos hne]
             exact ExSim.stuck'
           · rw [if_neg hne, if_neg hne]
@@ -340,7 +343,9 @@ theorem storeLoc_sim (hS : FrameSim ρ na₀ na fr σ σF) :
       cases bv
       case struct actual fields =>
         simp only [renameValue]
-        by_cases hne : (actual != tid) = true
+        rw [structTagCompatible_congr hS.types_eq]
+        by_cases hne :
+            (actual != tid && !structTagCompatible σ actual tid) = true
         · rw [if_pos hne]
           exact ExSim.stuck'
         · rw [if_neg hne, if_neg hne]
