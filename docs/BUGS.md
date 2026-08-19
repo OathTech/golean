@@ -2938,7 +2938,23 @@ docs/language-coverage-ledger.md).
 
 ## BUG-063 — receiver-position implicit `&*q` collapses instead of panicking (BUG-056's implicit-& sibling)
 
-- Status: open
+- Status: fixed (2026-08-19, bug-fix arc AUDIT FIX ROUND — new
+  `receiverAddr` helper in `tools/nativefrontend/emit.go`: the
+  receiver-position implicit `&` (parens stripped, immediate `*`
+  operand only) lowers to the existing `addr-of-deref` strict op, every
+  other operand keeps the general `emitAddressOf` path.
+  `methodReceiverArg`'s pointer-receiver arm and `syncRecvAddr` route
+  through it; `emitAddressOf`'s StarExpr arm keeps its collapse
+  UNTOUCHED for the store-target/index/field/slice consumers (the five
+  store-order pins — the slice-3 JUDGMENT's trap, avoided by
+  construction this time). No GoCore, decoder, or wire-schema change:
+  the strict op is BUG-056's, reused. Flipped exactly the 2 predicted
+  reds (both Cases below); the 5 store-order pins, the 10-row
+  addr-deref-nil-matrix, both guardrail controls, and the
+  nil-receiver/nil-pointer-method-value family all held in the same
+  full run. `slice-expr-nil` (the lesser sibling) stays red by scope,
+  as its untriaged-ids row records. Discovery record below kept
+  verbatim.)
 - Pinned-by: differential
 - Cases: methods/recv-implicit-addr-deref/explicit-call-nil, methods/recv-implicit-addr-deref/method-value-nil
 
