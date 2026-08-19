@@ -254,6 +254,27 @@ def decodeRuneAt (s : GoString) (off : Nat) : Int × Nat :=
     else bad
   else bad
 
+/-- The full rune decode of a string: `decodeRuneAt` at successive
+offsets until the bytes are exhausted — spec §Conversions to and from a
+string type, "Converting a value of a string type to a slice of runes
+type yields a slice containing the individual Unicode code points of
+the string" (invalid encodings yield U+FFFD, one byte at a time, per
+the same accept-range table as range-over-string). Total: the offset
+strictly advances (every decode width is ≥ 1, and `max 1 w` makes that
+structural for the termination checker without changing any value). -/
+def runesOfStringAux (s : GoString) (off : Nat) (acc : Array Int) : Array Int :=
+  if _h : off < s.length then
+    runesOfStringAux s (off + max 1 (decodeRuneAt s off).2)
+      (acc.push (decodeRuneAt s off).1)
+  else acc
+termination_by s.length - off
+decreasing_by
+  have : 1 ≤ max 1 (decodeRuneAt s off).2 := Nat.le_max_left _ _
+  omega
+
+def runesOfString (s : GoString) : Array Int :=
+  runesOfStringAux s 0 #[]
+
 def stringByteGet (value : GoString) (index : Int) : Except GoError GoValue := do
   if index < 0 then
     indexOutOfRangePanic index value.length

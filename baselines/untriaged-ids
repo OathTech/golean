@@ -42,30 +42,21 @@
 #   struct tags are ignored for conversion identity. The wire already
 #   strips tags, so both TypeIds map to identical FieldDef lists.
 #   Category (a), GoCore gate.
-# strings/{defined-slice-string-conversion,nil-slice-string-conversion,
+# [strings/{defined-slice-string-conversion,nil-slice-string-conversion,
 #   rune-invalid-values,rune-slice-conversion,rune-slice-to-string-copy,
-#   rune-string-conversion,string-to-rune-copy}: triage row L1 —
-#   `[]rune(s)` and `string([]rune)` have no conversion arm; the frontend
-#   classifier routes only []byte<->string and string(int) to ops, so both
-#   directions land at the machine's fail-closed catch-all
-#   ("conversion to ..."). spec#Conversions_to_and_from_a_string_type.
-#   BUG-020's fixed entry predicted exactly this ("they stay untriaged —
-#   they need real conversion logic, not a retag"); the triage upgrades
-#   that to category (a) because BOTH kernels already exist and are
-#   oracle-pinned (decodeRuneAt for U+FFFD-correct decoding,
-#   GoString.fromCodePoint for the encode direction). GoCore gate.
+#   rune-string-conversion,string-to-rune-copy}: FLIPPED PASS 2026-08-19
+#   (19-red GoCore slice, family 1 = triage row L1): the ruled GoCore
+#   gate landed `runesFromString`/`stringFromRuneSlice` over the
+#   existing oracle-pinned kernels (decodeRuneAt, fromCodePoint), with
+#   the frontend classifier routing both directions by underlying type.
+#   Entries retired. The cap-of-[]rune(s) LATITUDE point stays
+#   unpinnable (gc's non-escaping point is cap=32, outside the
+#   cap=len singleton — recorded at latitude inventory R3, no case).]
 arrays/pointer-array
 floats/to-int-out-of-range/nan
 floats/to-int-out-of-range/range
 init/hidden-dep-order
 pointers/nil-array-index-panic
-strings/defined-slice-string-conversion
-strings/nil-slice-string-conversion
-strings/rune-invalid-values
-strings/rune-slice-conversion
-strings/rune-slice-to-string-copy
-strings/rune-string-conversion
-strings/string-to-rune-copy
 structs/tag-pointer-conversion
 # goroutines/sched-dependent/first-come: DELIBERATE slice-4 red pin
 #   (channels arc slice 2): a schedule-DEPENDENT observable (which
@@ -112,12 +103,13 @@ channels/select-select/beside-loop
 # and min/max over float operands (governing anchors in the case
 # headers). Each flips PASS when its feature
 # lands; they are coverage backlog, not fidelity wrong-answers.
+# [spec-examples-decl/string-from-runes, spec-examples-lexical/
+#   string-to-runes: FLIPPED PASS 2026-08-19 with the L1 family above.
+#   Entries retired.]
 spec-examples-decl/slice-to-array/ok-forms
 spec-examples-decl/slice-to-array/short-array
 spec-examples-decl/slice-to-array/short-array-ptr
 spec-examples-decl/slice-to-array/nil-to-longer-ptr
-spec-examples-decl/string-from-runes
-spec-examples-lexical/string-to-runes
 spec-examples-stmt/min-max-float-specials/signed-zero
 spec-examples-stmt/min-max-float-specials/infinities
 spec-examples-stmt/min-max-float-specials/nan

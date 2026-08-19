@@ -195,6 +195,10 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
       pure (.stringFromByteSlice (← decodeExpr s!"{path}.x" (← StrictJson.field path obj "x")))
   | "string-from-rune" =>
       pure (.stringFromRune (← decodeExpr s!"{path}.x" (← StrictJson.field path obj "x")))
+  | "runes-from-string" =>
+      pure (.runesFromString (← decodeExpr s!"{path}.x" (← StrictJson.field path obj "x")))
+  | "string-from-runes" =>
+      pure (.stringFromRuneSlice (← decodeExpr s!"{path}.x" (← StrictJson.field path obj "x")))
   | "ref" =>
       pure (.ref (← StrictJson.string s!"{path}.id" (← StrictJson.field path obj "id")))
   | "globaladdr" =>

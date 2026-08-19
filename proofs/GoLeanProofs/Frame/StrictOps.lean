@@ -1165,6 +1165,78 @@ private theorem arm_stringFromRune (hS : FrameSim ρ na₀ na fr σ σF)
   subst hn
   exact ExSim.ok ⟨by simp only [renameValue], hS⟩
 
+private theorem arm_runesFromString (hS : FrameSim ρ na₀ na fr σ σF)
+    (v : GoValue) :
+    ExSim (PairSim ρ na₀ na fr)
+      (applyStrictOp σ .runesFromString [v])
+      (applyStrictOp σF .runesFromString [renameValue ρ v]) := by
+  simp only [applyStrictOp]
+  cases v <;> simp only [renameValue]
+  case string gs =>
+      have hb : renameValue ρ
+          (.array ((runesOfString gs).map fun r => GoValue.int r .int32))
+          = .array ((runesOfString gs).map fun r => GoValue.int r .int32) := by
+        simp only [renameValue, renameValueList_eq_map, Array.toList_map,
+          List.map_map]
+        congr 1
+        apply Array.toList_inj.mp
+        simp [Function.comp_def, renameValue]
+      have h1 : (σF.alloc
+            (.array ((runesOfString gs).map fun r => GoValue.int r .int32))
+            (some (.array ((runesOfString gs).map fun r =>
+              GoValue.int r .int32).size (.int .int32)))).1
+          = renameLoc ρ ((σ.alloc
+            (.array ((runesOfString gs).map fun r => GoValue.int r .int32))
+            (some (.array ((runesOfString gs).map fun r =>
+              GoValue.int r .int32).size (.int .int32)))).1) := by
+        have h := hS.alloc_fst
+          (.array ((runesOfString gs).map fun r => GoValue.int r .int32))
+          (some (.array ((runesOfString gs).map fun r =>
+            GoValue.int r .int32).size (.int .int32)))
+        rwa [hb] at h
+      have h2 : FrameSim ρ na₀ na fr
+          (σ.alloc
+            (.array ((runesOfString gs).map fun r => GoValue.int r .int32))
+            (some (.array ((runesOfString gs).map fun r =>
+              GoValue.int r .int32).size (.int .int32)))).2
+          (σF.alloc
+            (.array ((runesOfString gs).map fun r => GoValue.int r .int32))
+            (some (.array ((runesOfString gs).map fun r =>
+              GoValue.int r .int32).size (.int .int32)))).2 := by
+        have := hS.alloc_snd
+          (.array ((runesOfString gs).map fun r => GoValue.int r .int32))
+          (some (.array ((runesOfString gs).map fun r =>
+            GoValue.int r .int32).size (.int .int32)))
+        rwa [hb] at this
+      exact ExSim.ok ⟨by simp only [renameValue, Option.map_some, h1], h2⟩
+  all_goals exact ExSim.stuck'
+
+private theorem arm_stringFromRuneSlice (hS : FrameSim ρ na₀ na fr σ σF)
+    (v : GoValue) :
+    ExSim (PairSim ρ na₀ na fr)
+      (applyStrictOp σ .stringFromRuneSlice [v])
+      (applyStrictOp σF .stringFromRuneSlice [renameValue ρ v]) := by
+  simp only [applyStrictOp]
+  refine ExSim.bind (valueAsSlice_sim ρ v) ?_
+  intro sl slF hslF
+  subst hslF
+  refine ExSim.bind (sliceVisibleValues_sim hS sl) ?_
+  intro vs vsF hvsF
+  subst hvsF
+  refine ExSim.bind (R := Eq) ?_ ?_
+  · rw [← Array.forIn_toList, ← Array.forIn_toList, List.toList_toArray,
+      renameValueList_eq_map]
+    refine forIn_sim (t := renameValue ρ) rfl ?_
+    intro a _ x y hxy
+    subst hxy
+    cases a <;>
+      first
+      | exact ExSim.stuck'
+      | (simp only [renameValue]; exact exsim_stepSim_refl _)
+  · intro b b' hb
+    subst hb
+    exact ExSim.ok ⟨by simp only [renameValue], hS⟩
+
 private theorem arm_deref (hS : FrameSim ρ na₀ na fr σ σF)
     (ty : Ty) (v : GoValue) :
     ExSim (PairSim ρ na₀ na fr)
@@ -1820,6 +1892,16 @@ theorem applyStrictOp_sim (hS : FrameSim ρ na₀ na fr σ σF)
       rcases vs with _ | ⟨v, _ | ⟨x, t⟩⟩
       · exact ExSim.stuck'
       · simp only [renameValueList]; exact arm_stringFromRune hS v
+      · exact ExSim.stuck'
+  | runesFromString =>
+      rcases vs with _ | ⟨v, _ | ⟨x, t⟩⟩
+      · exact ExSim.stuck'
+      · simp only [renameValueList]; exact arm_runesFromString hS v
+      · exact ExSim.stuck'
+  | stringFromRuneSlice =>
+      rcases vs with _ | ⟨v, _ | ⟨x, t⟩⟩
+      · exact ExSim.stuck'
+      · simp only [renameValueList]; exact arm_stringFromRuneSlice hS v
       · exact ExSim.stuck'
   | deref ty =>
       rcases vs with _ | ⟨v, _ | ⟨x, t⟩⟩

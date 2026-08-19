@@ -6026,6 +6026,16 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 		if isStringType(tt) && isByteSlice(ot) {
 			return map[string]any{"expr": "string-from-bytes", "x": arg}, false, nil
 		}
+		// []rune(s) / string([]rune) (triage L1, 2026-08-19): the two
+		// rune-slice directions get their own machine operators, like
+		// the byte forms above (defined slice/element/string types
+		// route by underlying, which is go/types' conversion rule).
+		if isRuneSlice(tt) && isStringType(ot) {
+			return map[string]any{"expr": "runes-from-string", "x": arg}, false, nil
+		}
+		if isStringType(tt) && isRuneSlice(ot) {
+			return map[string]any{"expr": "string-from-runes", "x": arg}, false, nil
+		}
 		if isStringType(tt) {
 			if b, ok := ot.(*types.Basic); ok && b.Info()&types.IsInteger != 0 {
 				return map[string]any{"expr": "string-from-rune", "x": arg}, false, nil
@@ -7401,6 +7411,18 @@ func isByteSlice(t types.Type) bool {
 func isStringType(t types.Type) bool {
 	b, ok := t.(*types.Basic)
 	return ok && b.Info()&types.IsString != 0
+}
+
+// isRuneSlice reports whether an underlying type is a slice whose
+// element's underlying type is rune (= int32; the byte-slice rule's
+// sibling — a defined element type routes by its underlying kind).
+func isRuneSlice(t types.Type) bool {
+	sl, ok := t.(*types.Slice)
+	if !ok {
+		return false
+	}
+	b, ok := sl.Elem().Underlying().(*types.Basic)
+	return ok && b.Kind() == types.Int32
 }
 
 // byteSliceOrWrappedString emits a []byte-typed operand: a string-typed

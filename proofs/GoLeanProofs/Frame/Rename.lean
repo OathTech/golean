@@ -176,6 +176,8 @@ def renameExpr : Expr → Expr
   | .bytesFromString e => .bytesFromString (renameExpr e)
   | .stringFromByteSlice e => .stringFromByteSlice (renameExpr e)
   | .stringFromRune e => .stringFromRune (renameExpr e)
+  | .runesFromString e => .runesFromString (renameExpr e)
+  | .stringFromRuneSlice e => .stringFromRuneSlice (renameExpr e)
   | .add l r => .add (renameExpr l) (renameExpr r)
   | .sub l r => .sub (renameExpr l) (renameExpr r)
   | .mul l r => .mul (renameExpr l) (renameExpr r)

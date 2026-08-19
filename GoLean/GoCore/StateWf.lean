@@ -153,7 +153,8 @@ def Expr.locSup : Expr → Nat
   | .defaultValue _ | .recoverCall | .unsupported _ => 0
   | .locLit l => Loc.locSup l
   | .convert _ e | .bytesFromString e | .stringFromByteSlice e
-  | .stringFromRune e | .bitNeg e | .neg e | .not e | .deref e _
+  | .stringFromRune e | .runesFromString e | .stringFromRuneSlice e
+  | .bitNeg e | .neg e | .not e | .deref e _
   | .addrOfDeref e
   | .fieldGet e _ _ | .fieldAddr e _ _ | .toInterface _ _ e
   | .typeAssert e _ _ | .length e _ | .capacity e _ =>
@@ -3536,6 +3537,40 @@ theorem applyStrictOp_wf {σ : ExecState} {op : StrictOp} {vs : List GoValue}
         exact strictWfSame hw (by simp [GoValue.locSup])
       · simp at h
       · simp at h
+  · -- runesFromString: the second allocating arm (triage L1, mirrors
+    -- bytesFromString's proof with the rune-decode map)
+    split at h
+    · rename_i str
+      try dsimp only at h
+      cases halloc : σ.alloc
+          (GoValue.array ((runesOfString str).map fun r =>
+            GoValue.int r IntKind.int32))
+          (some (Ty.array ((runesOfString str).map fun r =>
+            GoValue.int r IntKind.int32).size
+            (Ty.int IntKind.int32))) with
+      | mk base σa =>
+        rw [halloc] at h
+        dsimp only at h
+        simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        have hvb : GoValue.locSup (.array ((runesOfString str).map fun r =>
+            GoValue.int r IntKind.int32)) ≤ σ.nextAddr := by
+          simp only [GoValue.locSup, goValueListSup_eq]
+          refine Nat.le_trans (supBy_le_iff.mpr fun x hx => ?_) (Nat.zero_le _)
+          rw [Array.toList_map] at hx
+          obtain ⟨r, _, rfl⟩ := List.mem_map.mp hx
+          exact Nat.le_refl _
+        obtain ⟨w1, w2, w3, w4⟩ := alloc_wf hw hvb halloc
+        obtain ⟨d1, d2, d3, d4, d5, d6⟩ := alloc_shape halloc
+        refine ⟨w1, by omega, w4, d3, d5, ?_⟩
+        show Loc.locSup base ≤ σa.nextAddr
+        omega
+    · simp at h
+  · -- stringFromRuneSlice
+    try dsimp only at h
+    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨sl, hsl, vals, hvals, r, hr, rfl, rfl⟩ := h
+    exact strictWfSame hw (by simp [GoValue.locSup])
   · -- catch-all
     simp at h
 
