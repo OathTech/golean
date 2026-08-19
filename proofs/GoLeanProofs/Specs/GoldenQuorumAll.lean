@@ -186,7 +186,7 @@ array, the fill index and the slice are not read on this path, so
 demanding them would be a lie about the step's footprint. -/
 theorem wp_ci_range_body_miss {la lba pa : Addr} {lty : Option Ty}
     {aentries : Array (GoValue × GoValue)} {q : Int}
-    {rem' : Array (GoValue × GoValue)} {env k}
+    {env : LocalEnv} {kIter : Cont}
     (hprog : GoCoreGS.prog GF = quorumLowered.funcs)
     (hmeths : GoCoreGS.methods GF = quorumLowered.methods)
     (htypes : GoCoreGS.types GF = quorumLowered.typeDefs.toList)
@@ -206,12 +206,9 @@ theorem wp_ci_range_body_miss {la lba pa : Addr} {lty : Option Ty}
                   .interface (.defined ⟨"main.mapAckIndexer"⟩)
                     (.map ⟨some (.base lba)⟩)⟩ : HeapCell)
           ∗ lba.id ↦ (⟨lty, .mapData aentries⟩ : HeapCell)
-          -∗ WP (Config.next (.mapIterK (some "id") none (.int .uint64)
-                  (.defined ⟨"struct{}"⟩) rangeBody rem' env k))
-              @ s ; E {{ Φ }})
+          -∗ WP (Config.next kIter) @ s ; E {{ Φ }})
       ⊢ WP (Config.exec rangeBody (env.pushScope.declare "id" (.base pa))
-            (.mapIterK (some "id") none (.int .uint64)
-              (.defined ⟨"struct{}"⟩) rangeBody rem' env k)) @ s ; E {{ Φ }} := by
+            kIter) @ s ; E {{ Φ }} := by
   iintro ⟨Hid, Hl, Hlb, Hk⟩
   rw [rangeBody_eq]
   go_walk
@@ -298,6 +295,7 @@ theorem wp_ci_loop_all {na ca cba la lba sra sta : Addr} {cty lty : Option Ty}
     (htypes : GoCoreGS.types GF = quorumLowered.typeDefs.toList)
     (hcap : ks₀.length + trail = cap)
     (hsmall : ks₀.length < 2 ^ 63)
+    (hnodup : ks₀.Nodup)
     (hnormk : ∀ q ∈ ks₀, IntKind.uint64.normalize q = q)
     (hnormv : ∀ q ∈ ks₀, ∀ v : Int, ack q = some v →
       IntKind.uint64.normalize v = v)
@@ -355,20 +353,43 @@ theorem wp_ci_loop_all {na ca cba la lba sra sta : Addr} {cty lty : Option Ty}
       exact h)) as [Hi]
   rw [rangeStmt_eq]
   go_walk
-  go_walk_step (wp_map_range_snapshot (ba := cba) (mty := cty)
-    (entries := cfgSnapshot ks₀)
-    (hnorm := by
-      rw [htypes]
-      refine snapshotEntriesSelfNormalizedList_of_mem fun e he => ?_
-      obtain ⟨q, hq, rfl⟩ : ∃ q, q ∈ ks₀ ∧ voterEntry q = e := by
-        simpa [cfgSnapshot] using he
-      refine ⟨?_, show isNormalForTy quorumLowered.typeDefs.toList
-        (.defined ⟨"struct{}"⟩) (.struct ⟨"struct{}"⟩ #[]) = true
-        by decide +kernel⟩
-      simp [voterEntry, u64, isNormalForTy, isNormalForTyFuel,
-        typeResolutionFuel, hnormk q hq]))
+  go_walk_step (wp_map_range_enter (ba := cba) (mty := cty)
+    (entries := cfgSnapshot ks₀)) as [Hcb]
   -- THE RANGE, through the INDUCTIVE RANGE RULE
   iapply (wp_map_iter_inv
+    (ba := cba)
+    (cell := (⟨cty, .mapData (cfgSnapshot ks₀)⟩ : HeapCell))
+    (produced0 := #[])
+    (entries0 := cfgSnapshot ks₀)
+    (P := fun pr rem => ∃ done : List Int,
+      pr = GoLean.MapMem.toKeys done
+      ∧ rem = cfgSnapshot (ks₀.filter (fun q => !done.contains q)))
+    (hP0 := ⟨[], rfl, by
+      have h : ks₀.filter (fun q => !([] : List Int).contains q) = ks₀ :=
+        List.filter_eq_self.mpr (fun _ _ => rfl)
+      rw [h]⟩)
+    (hfact := fun pr rem hP σ hσ hlook' => by
+      obtain ⟨done, rfl, rfl⟩ := hP
+      have hty : σ.types = quorumLowered.typeDefs.toList := hσ.trans htypes
+      refine ⟨candidates_cfg done hty hlook' hnormk, fun hpos => ?_⟩
+      rw [cfgKeys_toKeys]
+      refine mandatory_cfg σ ?_ ?_
+      · intro hc
+        rw [hc] at hpos
+        simp [cfgSnapshot] at hpos
+      · intro q hq
+        simpa using (List.mem_filter.mp hq).1)
+    (hstep := fun pr rem i h hP => by
+      obtain ⟨done, rfl, rfl⟩ := hP
+      have hik : i < (ks₀.filter (fun q => !done.contains q)).length := by
+        rw [cfgSnapshot_size] at h; exact h
+      refine ⟨done ++ [(ks₀.filter (fun q => !done.contains q))[i]'hik],
+        ?_, ?_⟩
+      · rw [cfgSnapshot_getElem]
+        simp [GoLean.MapMem.toKeys, voterEntry, u64, List.map_append]
+      · rw [cfgSnapshot_eraseIdx]
+        exact congrArg cfgSnapshot (filter_push_int hnodup
+          (List.getElem?_eq_getElem hik)).symm)
     (I := fun rem => iprop(∃ ks : List Int, ∃ filled : List Int, ∃ zeros : Nat,
       ⌜rem = cfgSnapshot ks ∧ (∀ x ∈ ks, x ∈ ks₀)
         ∧ ((ks.map ack).reduceOption ++ filled).Perm ((ks₀.map ack).reduceOption)
@@ -381,12 +402,8 @@ theorem wp_ci_loop_all {na ca cba la lba sra sta : Addr} {cty lty : Option Ty}
                    .slice ⟨some (.base sta), 0, ks₀.length, cap⟩⟩ : HeapCell)
       ∗ ia.id ↦ (⟨some (.int .int), .int ((zeros : Int) - 1) .int⟩ : HeapCell)
       ∗ sta.id ↦ stkCell cap zeros filled trail))
-    (hnorm := fun σ _htypes p hp => by
-      obtain ⟨x, hx, rfl⟩ := List.mem_map.1 (by simpa [cfgSnapshot] using hp)
-      simp [voterEntry, u64, normalizeValueForTy, normalizeValueForTyFuel,
-        hnormk x hx, typeResolutionFuel])
     (Hbody := by
-      intro rem i hidx pa
+      intro pr rem i hidx pa _hP
       iintro ⟨⟨%ks, %filled, %zeros, %hpure, Hl, Hlb, Hsr, Hi, Hst⟩, Hid, Hk⟩
       obtain ⟨hrem, hsub, hperm, hzf, hkz⟩ := hpure
       subst hrem
@@ -474,7 +491,9 @@ theorem wp_ci_loop_all {na ca cba la lba sra sta : Addr} {cty lty : Option Ty}
             rw [hp]
           · rw [herase]; omega
         · iframe))
-  -- the invariant at ENTRY
+  -- the cell, then the invariant at ENTRY
+  isplitl [Hcb]
+  · iexact Hcb
   isplitl [Hl Hlb Hsr Hi Hst]
   · iexists ks₀
     iexists ([] : List Int)
@@ -483,7 +502,7 @@ theorem wp_ci_loop_all {na ca cba la lba sra sta : Addr} {cty lty : Option Ty}
     · ipureintro
       exact ⟨rfl, fun _ h => h, by simp, by simp, by omega⟩
     · iframe
-  · iintro ⟨%ks, %filled, %zeros, %hpure, Hl, Hlb, Hsr, Hi, Hst⟩
+  · iintro ⟨⟨%ks, %filled, %zeros, %hpure, Hl, Hlb, Hsr, Hi, Hst⟩, Hcb⟩
     obtain ⟨hrem, -, hperm, hzf, -⟩ := hpure
     obtain rfl : ks = [] := by
       have hnil : (ks.map voterEntry) = [] := by
@@ -722,6 +741,7 @@ theorem wp_committedIndex_body_all {ca cba la lba ra : Addr}
     (hmeths : GoCoreGS.methods GF = quorumLowered.methods)
     (htypes : GoCoreGS.types GF = quorumLowered.typeDefs.toList)
     (hne : ks₀ ≠ []) (hsmall : ks₀.length < 2 ^ 63)
+    (hnodup : ks₀.Nodup)
     (hnormk : ∀ q ∈ ks₀, IntKind.uint64.normalize q = q)
     (hnormv : ∀ q ∈ ks₀, ∀ v : Int, ack q = some v →
       IntKind.uint64.normalize v = v)
@@ -780,7 +800,7 @@ theorem wp_committedIndex_body_all {ca cba la lba ra : Addr}
   go_walk_step (wp_ci_loop_all (na := na) (ca := ca) (cba := cba) (la := la)
     (lba := lba) (sra := sra) (sta := ba) (cty := cty) (lty := lty)
     (ks₀ := ks₀) (ack := ack) (aentries := aentries) (trail := trail)
-    (cap := cap) hprog hmeths htypes hcap hsmall hnormk hnormv hlook
+    (cap := cap) hprog hmeths htypes hcap hsmall hnodup hnormk hnormv hlook
     rfl rfl rfl rfl)
     as [filled, zeros, Hloop, Hn2, Hc2, Hcb2, Hl2, Hlb2, Hsr2, Hst2]
   icases Hloop with %hloop
@@ -1033,6 +1053,7 @@ theorem wp_committedIndexCall_all {ca cba la lba ta : Addr}
     (hmeths : GoCoreGS.methods GF = quorumLowered.methods)
     (htypes : GoCoreGS.types GF = quorumLowered.typeDefs.toList)
     (hsmall : ks₀.length < 2 ^ 63)
+    (hnodup : ks₀.Nodup)
     (hnormk : ∀ q ∈ ks₀, IntKind.uint64.normalize q = q)
     (hnormv : ∀ q ∈ ks₀, ∀ v : Int, ack q = some v →
       IntKind.uint64.normalize v = v)
@@ -1116,8 +1137,8 @@ theorem wp_committedIndexCall_all {ca cba la lba ta : Addr}
   · go_walk_step (wp_committedIndex_body_all (ca := a₀) (cba := cba)
       (la := a₁) (lba := lba) (ra := a₂) (cty := cty) (lty := lty)
       (ks₀ := ks₀) (srt := srt) (ack := ack) (aentries := aentries) (res := res)
-      hprog hmeths htypes hne hsmall hnormk hnormv hlook hperm hsorted
-      hnormsrt hget)
+      hprog hmeths htypes hne hsmall hnodup hnormk hnormv hlook hperm
+      hsorted hnormsrt hget)
     go_walk_step (wp_frame_return₁ (ta := ta) (ra := a₂)
       (rcell := ⟨some (.defined ⟨"main.Index"⟩), .int res .uint64⟩)
       (tcell := ⟨some (.int .uint64), w⟩)
@@ -1255,6 +1276,10 @@ spec by `QuorumRefSpec.committedIndexRef_meets_spec_of_any`. -/
 theorem committedIndexAllConfigs : committedIndexAllConfigs_statement := by
   intro c acked ce ae cty lty ca cba la lba ra w hnd hsmall hce hae _hnodup
   obtain ⟨ks₀, rfl, hks, hrange⟩ := encodesConfig_cfgSnapshot hnd hce
+  have hks₀nd : ks₀.Nodup := by
+    refine hks.symm.nodup ?_
+    exact List.Pairwise.map (fun v : Nat => (v : Int))
+      (fun a b hab hcon => hab (by exact_mod_cast hcon)) hnd
   have hkslen : ks₀.length = c.length := by
     have h := hks.length_eq
     simpa using h
@@ -1268,7 +1293,7 @@ theorem committedIndexAllConfigs : committedIndexAllConfigs_statement := by
     (ack := ackOf acked) (aentries := ae)
     (res := if c = [] then 18446744073709551615
             else ((committedIndexRef c acked : Nat) : Int))
-    (w := w) hprog hmeths htypes (by omega)
+    (w := w) hprog hmeths htypes (by omega) hks₀nd
     (fun q hq => by
       obtain ⟨h0, h1⟩ := hrange q hq
       exact uint64_normalize_of_lt h0 h1)

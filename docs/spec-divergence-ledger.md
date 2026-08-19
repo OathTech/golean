@@ -335,9 +335,9 @@ Discipline notes, recorded up front:
   implementation that re-produces; none observed — the XIMPL lane
   would bear here when it exists).
 - Status: adopted; indexed as `docs/spec-interpretations.md` I-1;
-  realized by the BUG-005 (L) surgery (this arc; guardrail rows
-  landed first: `maps/delete-readd-during-range`,
-  `maps/added-entry-count`).
+  LANDED 2026-08-19 by the BUG-005 (L) surgery (this arc; guardrail
+  rows landed first and flipped green at the surgery:
+  `maps/delete-readd-during-range`, `maps/added-entry-count`).
 
 ### L-013 — "not specified" evaluation order: either-order or unsequenced? — `spec-ambiguity` (ADOPTED READING)
 

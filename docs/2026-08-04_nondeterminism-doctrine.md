@@ -194,19 +194,20 @@ directions are asymmetric:
    soundness direction). Under the charter this statement is the
    site-local instance of the upper-bound argument — it must name its
    evidence class(es) per requirement 4. Current sites' statements:
-   map iteration — spec says unspecified order, envelope = all
-   permutations of the snapshot, which is ⊇ any Go ONLY for programs
-   that do not mutate the map during iteration: the spec MANDATES that
-   an entry removed before being reached "will not be produced", and
-   the snapshot model still produces it (and stale values) — BUG-005,
-   triple-pinned red, under the charter a DEFINITIONAL bug (a violation
-   of a FORCED point, worse than latitude — inventory E9, register #11,
-   re-envelope priority 2), deliberately deferred to its live-iteration
-   fix; until then the map envelope statement is scoped to
-   mutation-free iteration (arc-final audit F14, 2026-08-06), and the
-   snapshot's resolution of the created-entries MAY-latitude to "never
-   produced" is a recorded singleton narrowing owed its site-level
-   statement when the BUG-005 surgery lands (inventory §9 flag 4);
+   map iteration — spec says unspecified order plus the production
+   table's mutation clauses; envelope (BUG-005 (L) surgery,
+   2026-08-19, user-ruled FULL literal envelope) = per-pick choice
+   over the LIVE candidates (surviving entries minus produced keys,
+   values loaded live) with a stop slot legal exactly when no
+   never-removed start key remains unproduced — so: all orders of
+   surviving entries; removed-before-reached never produced (the
+   FORCED point, made exact by delete-prune); created entries
+   may-produce-or-skip at any legal position (the delete-then-recreate
+   = NEW-entry reading is `docs/spec-interpretations.md` I-1). ⊇ any
+   Go for single-goroutine mutation too, not just mutation-free
+   iteration (the old F14 scope is lifted); the recorded residual is
+   the cross-goroutine delete-prune narrowing at inventory E9 (such
+   shapes are racy-red via the per-pick read footprint, U1 closed);
    append spill — spec allows any sufficient capacity ("a new,
    sufficiently large underlying array"), envelope = [newLen, max(32,
    2·growth formula)] (WIDENED deliberately at the arc-final audit,

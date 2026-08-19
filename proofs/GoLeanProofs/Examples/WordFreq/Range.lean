@@ -34,12 +34,12 @@ def rEnv (a nb : Nat) : LocalEnv := [rScope a nb, wfFrameScope]
 /-- The result-store seam: everything after the range statement. -/
 def rKRes (a nb : Nat) : Cont := .seq [wfResSeqn] (rEnv a nb) wfFrameK
 /-- The pick point at snapshot remainder `rem`. -/
-def rIterK (a nb : Nat) (rem : List (List UInt8 × Nat)) : Cont :=
+def rIterK (a nb : Nat) (st pr : Array GoValue) : Cont :=
   .mapIterK none (some "c") tStr tU64 wordFreqFunc.wfRangeBody
-    (toEntriesW rem) (rEnv a nb) (rKRes a nb)
+    (some (.base ⟨a + 1⟩)) pr st (rEnv a nb) (rKRes a nb)
 /-- The range head configuration. -/
-def rHead (a nb : Nat) (rem : List (List UInt8 × Nat)) : Config :=
-  .next (rIterK a nb rem)
+def rHead (a nb : Nat) (st pr : Array GoValue) : Config :=
+  .next (rIterK a nb st pr)
 /-- The iteration env: `c` at the pick cell. -/
 def rEnvIter (a nb nc : Nat) : LocalEnv :=
   [("c", .base ⟨nc⟩)] :: rEnv a nb
@@ -47,30 +47,30 @@ def rEnvIf (a nb nc : Nat) : LocalEnv := [] :: rEnvIter a nb nc
 /-- The body's then-arm. -/
 abbrev rThenBlk : Stmt :=
   .block #[] #[.seqn #[.assign (.var "best") (.var "c")]]
-def rIfK (a nb nc : Nat) (rem : List (List UInt8 × Nat)) : Cont :=
+def rIfK (a nb nc : Nat) (st pr : Array GoValue) : Cont :=
   .ifK rThenBlk (.seqn #[]) (rEnvIf a nb nc)
-    (.seq [] (rEnvIf a nb nc) (rIterK a nb rem))
+    (.seq [] (rEnvIf a nb nc) (rIterK a nb st pr))
 def rEnv4 (a nb nc : Nat) : LocalEnv := [] :: rEnvIf a nb nc
-def rStoreBestK (a nb nc : Nat) (rem : List (List UInt8 × Nat)) :
+def rStoreBestK (a nb nc : Nat) (st pr : Array GoValue) :
     Cont :=
   .seq [] (rEnv4 a nb nc)
-    (.seq [] (rEnvIf a nb nc) (rIterK a nb rem))
+    (.seq [] (rEnvIf a nb nc) (rIterK a nb st pr))
 
 /-! ## The σ-abstract body segments (no heap touch — the state rides) -/
 
 section RangeSegs
 
-variable (σR : ExecState) (rem : List (List UInt8 × Nat))
+variable (σR : ExecState) (stW prW : Array GoValue)
   (a nb nc : Nat) (ch : Choices)
 
 /-- R1: body entry → the `c` read of the comparison. 4 steps. -/
 theorem rg_R1 :
     stepFnIter 4 σR
       (.exec wordFreqFunc.wfRangeBody (rEnvIter a nb nc)
-        (rIterK a nb rem)) ch
+        (rIterK a nb stW prW)) ch
       = .ok (.evalE (.var "c") (rEnvIf a nb nc)
             (.strictK .greaterCmp [] [.var "best"] (rEnvIf a nb nc)
-              (rIfK a nb nc rem)),
+              (rIfK a nb nc stW prW)),
           σR, ch) := by
   with_unfolding_all rfl
 
@@ -79,10 +79,10 @@ theorem rg_R2 (cv : GoValue) :
     stepFnIter 1 σR
       (.retV cv
         (.strictK .greaterCmp [] [.var "best"] (rEnvIf a nb nc)
-          (rIfK a nb nc rem))) ch
+          (rIfK a nb nc stW prW))) ch
       = .ok (.evalE (.var "best") (rEnvIf a nb nc)
             (.strictK .greaterCmp [cv] [] (rEnvIf a nb nc)
-              (rIfK a nb nc rem)),
+              (rIfK a nb nc stW prW)),
           σR, ch) := by
   with_unfolding_all rfl
 
@@ -91,19 +91,19 @@ theorem rg_R3 (cv bv : Int) :
     stepFnIter 1 σR
       (.retV (.int bv .uint64)
         (.strictK .greaterCmp [.int cv .uint64] [] (rEnvIf a nb nc)
-          (rIfK a nb nc rem))) ch
-      = .ok (.retV (.bool (decide (bv < cv))) (rIfK a nb nc rem),
+          (rIfK a nb nc stW prW))) ch
+      = .ok (.retV (.bool (decide (bv < cv))) (rIfK a nb nc stW prW),
           σR, ch) := by
   with_unfolding_all rfl
 
 /-- R4a (then): comparison true → the inner store seqn's exec point.
 3 steps. -/
 theorem rg_R4a :
-    stepFnIter 3 σR (.retV (.bool true) (rIfK a nb nc rem)) ch
+    stepFnIter 3 σR (.retV (.bool true) (rIfK a nb nc stW prW)) ch
       = .ok (.exec (.seqn #[.assign (.var "best") (.var "c")])
             (rEnv4 a nb nc)
             (.seq [] (rEnv4 a nb nc)
-              (.seq [] (rEnvIf a nb nc) (rIterK a nb rem))),
+              (.seq [] (rEnvIf a nb nc) (rIterK a nb stW prW))),
           σR, ch) := by
   with_unfolding_all rfl
 
@@ -112,9 +112,9 @@ theorem rg_R4c (cv : GoValue) :
     stepFnIter 1 σR
       (.retV cv
         (.rhsK .vals [.chain (.addr (.base ⟨nb⟩)) [] []] [] []
-          (.seqn #[]) (rEnv4 a nb nc) (rStoreBestK a nb nc rem))) ch
+          (.seqn #[]) (rEnv4 a nb nc) (rStoreBestK a nb nc stW prW))) ch
       = .ok (.next (.storeK [.chain (.addr (.base ⟨nb⟩)) [] []] [cv]
-            (.seqn #[]) (rEnv4 a nb nc) (rStoreBestK a nb nc rem)),
+            (.seqn #[]) (rEnv4 a nb nc) (rStoreBestK a nb nc stW prW)),
           σR, ch) := by
   with_unfolding_all rfl
 
@@ -122,47 +122,49 @@ theorem rg_R4c (cv : GoValue) :
 theorem rg_R5 :
     stepFnIter 4 σR
       (.next (.storeK [] [] (.seqn #[]) (rEnv4 a nb nc)
-        (rStoreBestK a nb nc rem))) ch
-      = .ok (rHead a nb rem, σR, ch) := by
+        (rStoreBestK a nb nc stW prW))) ch
+      = .ok (rHead a nb stW prW, σR, ch) := by
   have h1 := stepFnIter_one (stepFn_storeK_nil (σ := σR)
     (body := .seqn #[]) (env := rEnv4 a nb nc)
-    (k := rStoreBestK a nb nc rem) (ch := ch))
+    (k := rStoreBestK a nb nc stW prW) (ch := ch))
   have h2 := stepFnIter_one (stepFn_seqn_splice (σ := σR)
     (ss := #[]) (env := rEnv4 a nb nc) (rest := [])
-    (k := .seq [] (rEnvIf a nb nc) (rIterK a nb rem)) (ch := ch))
+    (k := .seq [] (rEnvIf a nb nc) (rIterK a nb stW prW)) (ch := ch))
   have h3 : stepFnIter 2 σR
       (.next (.seq ((#[] : Array Stmt).toList ++ []) (rEnv4 a nb nc)
-        (.seq [] (rEnvIf a nb nc) (rIterK a nb rem)))) ch
-      = .ok (rHead a nb rem, σR, ch) := by
+        (.seq [] (rEnvIf a nb nc) (rIterK a nb stW prW)))) ch
+      = .ok (rHead a nb stW prW, σR, ch) := by
     with_unfolding_all rfl
   exact stepFnIter_chain (stepFnIter_chain h1 h2) h3
 
 /-- R4e (else): comparison false → the next pick point. 3 steps. -/
 theorem rg_R4e :
-    stepFnIter 3 σR (.retV (.bool false) (rIfK a nb nc rem)) ch
-      = .ok (rHead a nb rem, σR, ch) := by
+    stepFnIter 3 σR (.retV (.bool false) (rIfK a nb nc stW prW)) ch
+      = .ok (rHead a nb stW prW, σR, ch) := by
   have h1 : stepFnIter 1 σR
-      (.retV (.bool false) (rIfK a nb nc rem)) ch
+      (.retV (.bool false) (rIfK a nb nc stW prW)) ch
       = .ok (.exec (.seqn #[]) (rEnvIf a nb nc)
-            (.seq [] (rEnvIf a nb nc) (rIterK a nb rem)),
+            (.seq [] (rEnvIf a nb nc) (rIterK a nb stW prW)),
           σR, ch) := by
     with_unfolding_all rfl
   have h2 := stepFnIter_one (stepFn_seqn_splice (σ := σR)
     (ss := #[]) (env := rEnvIf a nb nc) (rest := [])
-    (k := rIterK a nb rem) (ch := ch))
+    (k := rIterK a nb stW prW) (ch := ch))
   have h3 : stepFnIter 1 σR
       (.next (.seq ((#[] : Array Stmt).toList ++ []) (rEnvIf a nb nc)
-        (rIterK a nb rem))) ch
-      = .ok (rHead a nb rem, σR, ch) := by
+        (rIterK a nb stW prW))) ch
+      = .ok (rHead a nb stW prW, σR, ch) := by
     with_unfolding_all rfl
   exact stepFnIter_chain (stepFnIter_chain h1 h2) h3
 
-/-- The empty-snapshot drain: the loop exits to the result seam. 1
-step. -/
-theorem rg_exit :
-    stepFnIter 1 σR (rHead a nb []) ch
-      = .ok (.next (rKRes a nb), σR, ch) := by
-  with_unfolding_all rfl
+/-- The candidate-free drain: the loop exits to the result seam. 1
+step (BUG-005 (L): doneness is a state fact, supplied). -/
+theorem rg_exit
+    (hcands : mapIterCandidates σR .string tU64
+      (some (.base ⟨a + 1⟩)) prW = .ok #[]) :
+    stepFnIter 1 σR (rHead a nb stW prW) ch
+      = .ok (.next (rKRes a nb), σR, ch) :=
+  stepFnIter_one (stepFn_iter_doneW hcands)
 
 end RangeSegs
 
@@ -174,11 +176,21 @@ variable (σ : ExecState) (nv sv qv bnv bsv : Int) (l q : List UInt8)
   (biv : Int) (b k cap : Nat) (iv0 sv2 : Int) (D : Heap) (a : Nat)
   (kvs : List (List UInt8 × Nat)) (civ : Int)
 
+/-- The pick-coherence relation of this placement's walk (BUG-005
+(L)). -/
+def rgPC (kvs : List (List UInt8 × Nat)) (pr : Array GoValue)
+    (rem : List (List UInt8 × Nat)) : Prop :=
+  ∃ done : List (List UInt8), pr = toKeysW done
+    ∧ rem = kvs.filter (fun p => !done.contains p.1)
+
 /-- The choice-pick at this placement: one choice consumed, the picked
-VALUE cell allocated at `na`, one snapshot entry erased. -/
-theorem rg_pick (rem : List (List UInt8 × Nat)) (idx : Nat)
+key joins the produced set, the picked VALUE cell allocated at `na`. -/
+theorem rg_pick (rem : List (List UInt8 × Nat)) (pr : Array GoValue)
+    (idx : Nat)
     (p : List UInt8 × Nat) (ch ch₂ : Choices) (nb : Nat) (tail : Heap)
     (na : Nat)
+    (hkv : ∀ z ∈ kvs, IntKind.normalize .uint64 (z.2 : Int) = (z.2 : Int))
+    (hPC : rgPC kvs pr rem)
     (hcons : Choices.consume ch rem.length = (idx, ch₂))
     (hidx : idx < rem.length) (hp : rem[idx]? = some p)
     (hvnorm : IntKind.normalize .uint64 (p.2 : Int) = (p.2 : Int))
@@ -187,18 +199,56 @@ theorem rg_pick (rem : List (List UInt8 × Nat)) (idx : Nat)
     stepFn
       (cnSt σ nv sv qv bnv bsv l q biv b k cap iv0 sv2 D a kvs civ
         false tail na)
-      (rHead a nb rem) ch
+      (rHead a nb (toKeysW (kvs.map (·.1))) pr) ch
       = .ok (.exec wordFreqFunc.wfRangeBody (rEnvIter a nb na)
-            (rIterK a nb (rem.eraseIdx idx)),
+            (rIterK a nb (toKeysW (kvs.map (·.1)))
+              (pr.push (.string (gs p.1)))),
           cnSt σ nv sv qv bnv bsv l q biv b k cap iv0 sv2 D a kvs civ
             false (tail ++ [(Loc.base ⟨na⟩, su64 ((p.2 : Nat) : Int))])
             (na + 1), ch₂) := by
+  obtain ⟨done, rfl, hrem⟩ := hPC
+  have hWD' : DeadFrom
+      (wHeapCount nv sv qv bnv bsv l q biv b k cap iv0 sv2 ++ D) a :=
+    fun x hx => by
+      rw [lookup_append_right
+        (lookup_wHeapCount_none nv sv qv bnv bsv l q biv b k cap iv0 sv2
+          (by omega))]
+      exact hD x hx
+  have hlook : Heap.lookup
+      (cnSt σ nv sv qv bnv bsv l q biv b k cap iv0 sv2 D a kvs civ
+        false tail na).heap (.base ⟨a + 1⟩)
+      = some (mdW kvs) :=
+    lookup_five hWD' (by omega : (1 : Nat) < 5)
+  have hcands : mapIterCandidates
+      (cnSt σ nv sv qv bnv bsv l q biv b k cap iv0 sv2 D a kvs civ
+        false tail na) .string tU64
+      (some (.base ⟨a + 1⟩)) (toKeysW done) = .ok (toEntriesW rem) := by
+    rw [hrem]
+    exact candidates_toEntriesW hlook hkv
+  have hrem_sub : ∀ z ∈ rem, (kvs.map (·.1)).contains z.1 := by
+    intro z hz
+    rw [hrem] at hz
+    have := (List.mem_filter.mp hz).1
+    exact List.contains_iff_exists_mem_beq.mpr
+      ⟨z.1, List.mem_map.mpr ⟨z, this, rfl⟩, by simp⟩
+  have hne : rem ≠ [] := by
+    intro hc
+    rw [hc] at hidx
+    exact absurd hidx (by simp)
+  have hmand : mapIterMandatoryRemains
+      (cnSt σ nv sv qv bnv bsv l q biv b k cap iv0 sv2 D a kvs civ
+        false tail na) .string
+      (toEntriesW rem) (toKeysW (kvs.map (·.1))) = .ok true :=
+    mandatory_true_of_allW _ hne hrem_sub
+  have hcons' : Choices.consume ch
+      (rem.length + (if true then 0 else 1)) = (idx, ch₂) := by
+    simpa using hcons
   have h := stepFn_pickW_value
     (σ := cnSt σ nv sv qv bnv bsv l q biv b k cap iv0 sv2 D a kvs civ
       false tail na)
     (rem := rem) (idx := idx) (ch := ch) (ch' := ch₂) (v := "c")
     (body := wordFreqFunc.wfRangeBody) (env := rEnv a nb)
-    (k := rKRes a nb) (p := p) hcons hidx hp hvnorm
+    (k := rKRes a nb) (p := p) hcands hmand hcons' hidx hp hvnorm
   rw [show Heap.set
       (cnSt σ nv sv qv bnv bsv l q biv b k cap iv0 sv2 D a kvs civ
         false tail na).heap
@@ -220,9 +270,12 @@ theorem rg_pick (rem : List (List UInt8 × Nat)) (idx : Nat)
 /-- **One range iteration, GIVEN the pick** (both branches): within 24
 steps the state advances to the erased snapshot with `best` at
 `max bv p.2` and one fresh dead value cell. -/
-theorem rg_iter (rem : List (List UInt8 × Nat)) (idx : Nat)
+theorem rg_iter (rem : List (List UInt8 × Nat)) (pr : Array GoValue)
+    (idx : Nat)
     (p : List UInt8 × Nat) (ch ch₂ : Choices) (nb : Nat) (bv : Nat)
     (tail : Heap) (na : Nat)
+    (hkv : ∀ z ∈ kvs, IntKind.normalize .uint64 (z.2 : Int) = (z.2 : Int))
+    (hPC : rgPC kvs pr rem)
     (hcons : Choices.consume ch rem.length = (idx, ch₂))
     (hidx : idx < rem.length) (hp : rem[idx]? = some p)
     (hvnorm : IntKind.normalize .uint64 (p.2 : Int) = (p.2 : Int))
@@ -238,17 +291,19 @@ theorem rg_iter (rem : List (List UInt8 × Nat)) (idx : Nat)
       ∧ stepFnIter kk
           (cnSt σ nv sv qv bnv bsv l q biv b k cap iv0 sv2 D a kvs civ
             false tail na)
-          (rHead a nb rem) ch
-        = .ok (rHead a nb (rem.eraseIdx idx),
+          (rHead a nb (toKeysW (kvs.map (·.1))) pr) ch
+        = .ok (rHead a nb (toKeysW (kvs.map (·.1)))
+              (pr.push (.string (gs p.1))),
             cnSt σ nv sv qv bnv bsv l q biv b k cap iv0 sv2 D a kvs
               civ false tail' (na + 1), ch₂) := by
   have hpick := stepFnIter_one
     (rg_pick σ nv sv qv bnv bsv l q biv b k cap iv0 sv2 D a kvs civ rem
-      idx p ch ch₂ nb tail na hcons hidx hp hvnorm ha hD htail hna)
+      pr idx p ch ch₂ nb tail na hkv hPC hcons hidx hp hvnorm ha hD
+      htail hna)
   let σ₁ := cnSt σ nv sv qv bnv bsv l q biv b k cap iv0 sv2 D a kvs civ
     false (tail ++ [(Loc.base ⟨na⟩, su64 ((p.2 : Nat) : Int))])
     (na + 1)
-  have hR1 := rg_R1 σ₁ (rem.eraseIdx idx) a nb na ch₂
+  have hR1 := rg_R1 σ₁ (toKeysW (kvs.map (·.1))) (pr.push (.string (gs p.1))) a nb na ch₂
   -- the `c` read
   have hlkc : Heap.lookup σ₁.heap (.base ⟨na⟩)
       = some (su64 ((p.2 : Nat) : Int)) := by
@@ -262,9 +317,9 @@ theorem rg_iter (rem : List (List UInt8 × Nat)) (idx : Nat)
   have hVc1 := stepFnIter_one (stepFn_var (σ := σ₁) (x := "c")
     (env := rEnvIf a nb na) (a := ⟨na⟩)
     (k := .strictK .greaterCmp [] [.var "best"] (rEnvIf a nb na)
-      (rIfK a nb na (rem.eraseIdx idx)))
+      (rIfK a nb na (toKeysW (kvs.map (·.1))) (pr.push (.string (gs p.1)))))
     (ch := ch₂) rfl hlkc)
-  have hR2 := rg_R2 σ₁ (rem.eraseIdx idx) a nb na ch₂
+  have hR2 := rg_R2 σ₁ (toKeysW (kvs.map (·.1))) (pr.push (.string (gs p.1))) a nb na ch₂
     (.int ((p.2 : Nat) : Int) .uint64)
   -- the `best` read
   have hlkb : Heap.lookup σ₁.heap (.base ⟨nb⟩)
@@ -278,48 +333,48 @@ theorem rg_iter (rem : List (List UInt8 × Nat)) (idx : Nat)
   have hVb := stepFnIter_one (stepFn_var (σ := σ₁) (x := "best")
     (env := rEnvIf a nb na) (a := ⟨nb⟩)
     (k := .strictK .greaterCmp [.int ((p.2 : Nat) : Int) .uint64] []
-      (rEnvIf a nb na) (rIfK a nb na (rem.eraseIdx idx)))
+      (rEnvIf a nb na) (rIfK a nb na (toKeysW (kvs.map (·.1))) (pr.push (.string (gs p.1)))))
     (ch := ch₂) rfl hlkb)
-  have hR3 := rg_R3 σ₁ (rem.eraseIdx idx) a nb na ch₂
+  have hR3 := rg_R3 σ₁ (toKeysW (kvs.map (·.1))) (pr.push (.string (gs p.1))) a nb na ch₂
     ((p.2 : Nat) : Int) ((bv : Nat) : Int)
   have hpre := stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
     (stepFnIter_chain (stepFnIter_chain hpick hR1) hVc1) hR2) hVb) hR3
   by_cases hcmp : bv < p.2
   · rw [show (decide (((bv : Nat) : Int) < ((p.2 : Nat) : Int)))
         = true from decide_eq_true (by exact_mod_cast hcmp)] at hpre
-    have hR4a := rg_R4a σ₁ (rem.eraseIdx idx) a nb na ch₂
+    have hR4a := rg_R4a σ₁ (toKeysW (kvs.map (·.1))) (pr.push (.string (gs p.1))) a nb na ch₂
     have hsplice := stepFnIter_one (stepFn_seqn_splice (σ := σ₁)
       (ss := #[.assign (.var "best") (.var "c")])
       (env := rEnv4 a nb na) (rest := [])
-      (k := .seq [] (rEnvIf a nb na) (rIterK a nb (rem.eraseIdx idx)))
+      (k := .seq [] (rEnvIf a nb na) (rIterK a nb (toKeysW (kvs.map (·.1))) (pr.push (.string (gs p.1)))))
       (ch := ch₂))
     have hR4b : stepFnIter 4 σ₁
         (.next (.seq ((#[.assign (.var "best") (.var "c")]
           : Array Stmt).toList ++ []) (rEnv4 a nb na)
-          (.seq [] (rEnvIf a nb na) (rIterK a nb (rem.eraseIdx idx)))))
+          (.seq [] (rEnvIf a nb na) (rIterK a nb (toKeysW (kvs.map (·.1))) (pr.push (.string (gs p.1)))))))
         ch₂
         = .ok (.evalE (.var "c") (rEnv4 a nb na)
               (.rhsK .vals [.chain (.addr (.base ⟨nb⟩)) [] []] [] []
                 (.seqn #[]) (rEnv4 a nb na)
-                (rStoreBestK a nb na (rem.eraseIdx idx))),
+                (rStoreBestK a nb na (toKeysW (kvs.map (·.1))) (pr.push (.string (gs p.1))))),
             σ₁, ch₂) := by
       with_unfolding_all rfl
     have hVc2 := stepFnIter_one (stepFn_var (σ := σ₁) (x := "c")
       (env := rEnv4 a nb na) (a := ⟨na⟩)
       (k := .rhsK .vals [.chain (.addr (.base ⟨nb⟩)) [] []] [] []
         (.seqn #[]) (rEnv4 a nb na)
-        (rStoreBestK a nb na (rem.eraseIdx idx)))
+        (rStoreBestK a nb na (toKeysW (kvs.map (·.1))) (pr.push (.string (gs p.1)))))
       (ch := ch₂) rfl hlkc)
-    have hR4c := rg_R4c σ₁ (rem.eraseIdx idx) a nb na ch₂
+    have hR4c := rg_R4c σ₁ (toKeysW (kvs.map (·.1))) (pr.push (.string (gs p.1))) a nb na ch₂
       (.int ((p.2 : Nat) : Int) .uint64)
     -- the `best` store
     have hstore : stepFnIter 1 σ₁
         (.next (.storeK [.chain (.addr (.base ⟨nb⟩)) [] []]
           [.int ((p.2 : Nat) : Int) .uint64] (.seqn #[])
-          (rEnv4 a nb na) (rStoreBestK a nb na (rem.eraseIdx idx))))
+          (rEnv4 a nb na) (rStoreBestK a nb na (toKeysW (kvs.map (·.1))) (pr.push (.string (gs p.1))))))
         ch₂
         = .ok (.next (.storeK [] [] (.seqn #[]) (rEnv4 a nb na)
-              (rStoreBestK a nb na (rem.eraseIdx idx))),
+              (rStoreBestK a nb na (toKeysW (kvs.map (·.1))) (pr.push (.string (gs p.1))))),
             cnSt σ nv sv qv bnv bsv l q biv b k cap iv0 sv2 D a kvs
               civ false
               (Heap.set tail (.base ⟨nb⟩) (su64 ((p.2 : Nat) : Int))
@@ -356,7 +411,7 @@ theorem rg_iter (rem : List (List UInt8 × Nat)) (idx : Nat)
         false
         (Heap.set tail (.base ⟨nb⟩) (su64 ((p.2 : Nat) : Int))
           ++ [(Loc.base ⟨na⟩, su64 ((p.2 : Nat) : Int))]) (na + 1))
-      (rem.eraseIdx idx) a nb na ch₂
+      (toKeysW (kvs.map (·.1))) (pr.push (.string (gs p.1))) a nb na ch₂
     refine ⟨1 + 4 + 1 + 1 + 1 + 1 + 3 + 1 + 4 + 1 + 1 + 1 + 4,
       Heap.set tail (.base ⟨nb⟩) (su64 ((p.2 : Nat) : Int))
         ++ [(Loc.base ⟨na⟩, su64 ((p.2 : Nat) : Int))],
@@ -381,7 +436,7 @@ theorem rg_iter (rem : List (List UInt8 × Nat)) (idx : Nat)
         = false from decide_eq_false (by
           intro hc
           exact hcmp (by exact_mod_cast hc))] at hpre
-    have hR4e := rg_R4e σ₁ (rem.eraseIdx idx) a nb na ch₂
+    have hR4e := rg_R4e σ₁ (toKeysW (kvs.map (·.1))) (pr.push (.string (gs p.1))) a nb na ch₂
     refine ⟨1 + 4 + 1 + 1 + 1 + 1 + 3,
       tail ++ [(Loc.base ⟨na⟩, su64 ((p.2 : Nat) : Int))],
       by omega, ?_, DeadFrom.push htail,
@@ -394,9 +449,13 @@ theorem rg_iter (rem : List (List UInt8 × Nat)) (idx : Nat)
 snapshot drains, `best` ends at `max bv (maxOf values)`, the machine
 parks at the result seam. -/
 theorem rg_loop (bound : Nat) (hbound : bound < 2 ^ 64)
-    (ha : 31 ≤ a) (hD : DeadFrom D a) :
+    (ha : 31 ≤ a) (hD : DeadFrom D a)
+    (hkv : ∀ z ∈ kvs, IntKind.normalize .uint64 (z.2 : Int) = (z.2 : Int))
+    (hnodup : (kvs.map (·.1)).Nodup) :
     ∀ (m : Nat) (rem : List (List UInt8 × Nat)), rem.length = m →
-    ∀ (bv : Nat) (nb : Nat) (tail : Heap) (na : Nat) (ch : Choices),
+    ∀ (pr : Array GoValue) (bv : Nat) (nb : Nat) (tail : Heap) (na : Nat)
+      (ch : Choices),
+    rgPC kvs pr rem →
     (∀ p ∈ rem, p.2 ≤ bound) → bv ≤ bound →
     a + 5 ≤ nb → nb < na → a + 5 ≤ na →
     Heap.lookup tail (.base ⟨nb⟩) = some (su64 ((bv : Nat) : Int)) →
@@ -409,29 +468,30 @@ theorem rg_loop (bound : Nat) (hbound : bound < 2 ^ 64)
       ∧ stepFnIter kk
           (cnSt σ nv sv qv bnv bsv l q biv b k cap iv0 sv2 D a kvs civ
             false tail na)
-          (rHead a nb rem) ch
+          (rHead a nb (toKeysW (kvs.map (·.1))) pr) ch
         = .ok (.next (rKRes a nb),
             cnSt σ nv sv qv bnv bsv l q biv b k cap iv0 sv2 D a kvs
               civ false tail' na', ch') := by
-  intro m rem hm bv nb tail na ch hrem hbv hnb hbna hna hbest htail
+  intro m rem hm pr bv nb tail na ch hPC hrem hbv hnb hbna hna hbest htail
   obtain ⟨kk, d', ch', hk, hP', hrun⟩ :=
     mapPickLoopW
-      (T := fun d : Heap × Nat × Nat =>
+      (T := fun d : Heap × Nat × Nat × Array GoValue =>
         cnSt σ nv sv qv bnv bsv l q biv b k cap iv0 sv2 D a kvs civ
           false d.1 d.2.1)
-      (cfg := fun r => rHead a nb r)
+      (cfg := fun d _ => rHead a nb (toKeysW (kvs.map (·.1))) d.2.2.2)
       (exitCfg := .next (rKRes a nb))
       (P := fun d r =>
-        d.2.2 ≤ bound ∧ (∀ p ∈ r, p.2 ≤ bound) ∧ na ≤ d.2.1
+        d.2.2.1 ≤ bound ∧ (∀ p ∈ r, p.2 ≤ bound) ∧ na ≤ d.2.1
         ∧ nb < d.2.1
         ∧ Heap.lookup d.1 (.base ⟨nb⟩)
-            = some (su64 ((d.2.2 : Nat) : Int))
+            = some (su64 ((d.2.2.1 : Nat) : Int))
         ∧ DeadFrom d.1 d.2.1
-        ∧ max d.2.2 (maxOf (r.map Prod.snd))
+        ∧ rgPC kvs d.2.2.2 r
+        ∧ max d.2.2.1 (maxOf (r.map Prod.snd))
             = max bv (maxOf (rem.map Prod.snd)))
       (c := 24) (e := 1)
       (fun d r idx p ch₀ ch₂ hcons hidx hp hP => by
-        obtain ⟨hbv', hr, hna', hbna', hbest', htl, hmax⟩ := hP
+        obtain ⟨hbv', hr, hna', hbna', hbest', htl, hPCd, hmax⟩ := hP
         have hpmem : p ∈ r := by
           obtain ⟨h1, h2⟩ := List.getElem?_eq_some_iff.mp hp
           exact h2 ▸ List.getElem_mem h1
@@ -441,8 +501,19 @@ theorem rg_loop (bound : Nat) (hbound : bound < 2 ^ 64)
           unorm_nat_of_lt (by omega)
         obtain ⟨k₁, tl', hk₁, hb', htl', hrun₁⟩ :=
           rg_iter σ nv sv qv bnv bsv l q biv b k cap iv0 sv2 D a kvs
-            civ r idx p ch₀ ch₂ nb d.2.2 d.1 d.2.1 hcons hidx hp
+            civ r d.2.2.2 idx p ch₀ ch₂ nb d.2.2.1 d.1 d.2.1 hkv hPCd
+            hcons hidx hp
             hvnorm ha hD htl (by omega) hnb hbna' hbest'
+        have hPC' : rgPC kvs (d.2.2.2.push (.string (gs p.1)))
+            (r.eraseIdx idx) := by
+          obtain ⟨done, hdone, hrem'⟩ := hPCd
+          refine ⟨done ++ [p.1], ?_, ?_⟩
+          · rw [hdone]
+            simp [toKeysW, List.map_append]
+          · rw [hrem']
+            refine (filter_push_key hnodup ?_).symm
+            rw [← hrem']
+            exact hp
         have hgetbang : (r.map Prod.snd)[idx]! = p.2 := by
           have hmap : (r.map Prod.snd)[idx]? = some p.2 := by
             simp [List.getElem?_map, hp]
@@ -451,23 +522,47 @@ theorem rg_loop (bound : Nat) (hbound : bound < 2 ^ 64)
             = max p.2 (maxOf ((r.eraseIdx idx).map Prod.snd)) := by
           rw [← maxOf_eraseIdx (r.map Prod.snd) idx
               (by simpa using hidx), hgetbang, map_eraseIdx]
-        refine ⟨k₁, (tl', d.2.1 + 1, max d.2.2 p.2), hk₁,
+        refine ⟨k₁, (tl', d.2.1 + 1, max d.2.2.1 p.2,
+            d.2.2.2.push (.string (gs p.1))), hk₁,
           ⟨Nat.max_le.mpr ⟨hbv', hpc⟩,
             fun z hz => hr z (GoLean.MapLoops.mem_of_mem_eraseIdx hz),
             Nat.le_succ_of_le hna', Nat.lt_succ_of_lt hbna', hb',
-            htl', ?_⟩, hrun₁⟩
-        show max (max d.2.2 p.2) (maxOf ((r.eraseIdx idx).map Prod.snd))
+            htl', hPC', ?_⟩, hrun₁⟩
+        show max (max d.2.2.1 p.2) (maxOf ((r.eraseIdx idx).map Prod.snd))
           = max bv (maxOf (rem.map Prod.snd))
         rw [← hmax, hmaxsplit, Nat.max_assoc])
-      (fun d ch₀ _ =>
-        rg_exit
+      (fun d ch₀ hP => by
+        obtain ⟨-, -, -, -, -, -, hPCd, -⟩ := hP
+        obtain ⟨done, hdone, hnilf⟩ := hPCd
+        have hWD' : DeadFrom
+            (wHeapCount nv sv qv bnv bsv l q biv b k cap iv0 sv2 ++ D) a :=
+          fun x hx => by
+            rw [lookup_append_right
+              (lookup_wHeapCount_none nv sv qv bnv bsv l q biv b k cap
+                iv0 sv2 (by omega))]
+            exact hD x hx
+        have hlook : Heap.lookup
+            (cnSt σ nv sv qv bnv bsv l q biv b k cap iv0 sv2 D a kvs civ
+              false d.1 d.2.1).heap (.base ⟨a + 1⟩)
+            = some (mdW kvs) :=
+          lookup_five hWD' (by omega : (1 : Nat) < 5)
+        have hcands : mapIterCandidates
+            (cnSt σ nv sv qv bnv bsv l q biv b k cap iv0 sv2 D a kvs civ
+              false d.1 d.2.1) .string tU64
+            (some (.base ⟨a + 1⟩)) d.2.2.2 = .ok #[] := by
+          rw [hdone]
+          have := candidates_toEntriesW (ks := done) hlook hkv
+          rw [← hnilf] at this
+          simpa [toEntriesW] using this
+        exact rg_exit
           (cnSt σ nv sv qv bnv bsv l q biv b k cap iv0 sv2 D a kvs civ
-            false d.1 d.2.1) a nb ch₀)
-      m rem hm (tail, na, bv) ch
-      ⟨hbv, hrem, Nat.le_refl na, hbna, hbest, htail, rfl⟩
-  obtain ⟨hbv', -, hna', hbna', hbest', htl', hmax⟩ := hP'
+            false d.1 d.2.1) (toKeysW (kvs.map (·.1))) d.2.2.2 a nb ch₀
+          hcands)
+      m rem hm (tail, na, bv, pr) ch
+      ⟨hbv, hrem, Nat.le_refl na, hbna, hbest, htail, hPC, rfl⟩
+  obtain ⟨hbv', -, hna', hbna', hbest', htl', -, hmax⟩ := hP'
   refine ⟨kk, ch', d'.1, d'.2.1, by omega, hna', ?_, htl', hrun⟩
-  rw [show max bv (maxOf (rem.map Prod.snd)) = d'.2.2 from by
+  rw [show max bv (maxOf (rem.map Prod.snd)) = d'.2.2.1 from by
     rw [← hmax]
     simp [maxOf_nil]]
   exact hbest'
@@ -504,7 +599,7 @@ theorem rg_head (ha : 31 ≤ a) (hD : DeadFrom D a)
         false tail na)
       (.exec wfBestSeqn (cEnvC a)
         (.seq [wfRangeStmt, wfResSeqn] (cEnvC a) wfFrameK)) ch
-      = .ok (rHead a na kvs,
+      = .ok (rHead a na (toKeysW (kvs.map (·.1))) #[],
           cnSt σ nv sv qv bnv bsv l q biv b k cap iv0 sv2 D a kvs civ
             false (tail ++ [(Loc.base ⟨na⟩, su64 0)]) (na + 1), ch) := by
   have hWD' : DeadFrom
@@ -659,19 +754,19 @@ theorem rg_head (ha : 31 ≤ a) (hD : DeadFrom D a)
     refine stepFnIter_one (stepFn_var (a := ⟨a + 2⟩)
       (c := mhW (a + 1)) rfl ?_)
     exact lookup_five hWD' (by omega : (2 : Nat) < 5)
-  -- g10: the snapshot
+  -- g10: the range START (base + start keys; produced begins empty)
   have h10 : stepFnIter 1
       (cnSt σ nv sv qv bnv bsv l q biv b k cap iv0 sv2 D a kvs civ
         false (tail ++ [(Loc.base ⟨na⟩, su64 0)]) (na + 1))
       (.retV (.map ⟨some (Loc.base ⟨a + 1⟩)⟩)
         (.mapRangeK none (some "c") tStr tU64
           wordFreqFunc.wfRangeBody (rEnv a na) (rKRes a na))) ch
-      = .ok (rHead a na kvs,
+      = .ok (rHead a na (toKeysW (kvs.map (·.1))) #[],
           cnSt σ nv sv qv bnv bsv l q biv b k cap iv0 sv2 D a kvs civ
             false (tail ++ [(Loc.base ⟨na⟩, su64 0)]) (na + 1), ch) := by
-    refine stepFnIter_one (stepFn_snapshot ?_)
-    exact snapshot_toEntriesW
-      (lookup_five hWD' (by omega : (1 : Nat) < 5)) hkv
+    refine stepFnIter_one (stepFn_mapRangeStart ?_)
+    exact rangeStart_toEntriesW
+      (lookup_five hWD' (by omega : (1 : Nat) < 5))
   exact stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
     (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
       (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain h1 h2) h3)

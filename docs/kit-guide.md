@@ -740,7 +740,13 @@ Do not spend an hour looking for these. Each is recorded, not hidden.
 
 * **Key-generic maps.** `MapMem`/`MapLoops` are `uint64`-keyed;
   `Examples/WordFreq/*` re-derived the whole family at `List UInt8`
-  keys (the `*W` mirror). Parked pending a puller.
+  keys (the `*W` mirror). Parked pending a puller — and the puller
+  count is now THREE: the BUG-005 (L) surgery (2026-08-19) re-derived
+  the live-pick candidates/mandatory algebra a third time at the
+  quorum voter encoding (`Specs/GoldenQuorumThree.candidates_cfg`/
+  `mandatory_cfg`/`filter_push_int` beside `MapMem.candidates_toEntries`
+  and the WordFreq `*W` forms) — a ≥2-consumer consolidation slice is
+  owed (arc-log slice-4 step-3 kit obligation 3).
 * **Element-kind-generic `SliceMem`.** The append family is
   element-generic; the rest of `SliceMem` is `[]uint64`. The i64/bool
   mirror families are parked.

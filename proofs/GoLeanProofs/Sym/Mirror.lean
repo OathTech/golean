@@ -239,7 +239,8 @@ inductive Cont (D : ScalarDom) where
   | mapRangeK (keyVar valVar : Option String) (keyTy valTy : Ty)
       (body : Stmt) (env : LocalEnv) (k : Cont D)
   | mapIterK (keyVar valVar : Option String) (keyTy valTy : Ty) (body : Stmt)
-      (remaining : Array (Value D × Value D)) (env : LocalEnv) (k : Cont D)
+      (base : Option Loc) (produced start : Array (Value D))
+      (env : LocalEnv) (k : Cont D)
   | panicArgK (k : Cont D)
   | panicResumeK (chain : List (PanicEntry D)) (k : Cont D)
   | chanStK (op : ChanStOp) (done : List (Value D))
@@ -1182,8 +1183,8 @@ def pushDefer' (d : Value D × List (Value D)) : Cont D → Option (Cont D)
   | .loop c b env k => (pushDefer' d k).map (Cont.loop c b env)
   | .breakableK k => (pushDefer' d k).map Cont.breakableK
   | .labelK name k => (pushDefer' d k).map (Cont.labelK name)
-  | .mapIterK kv vv kt vt b rem env k =>
-      (pushDefer' d k).map (Cont.mapIterK kv vv kt vt b rem env)
+  | .mapIterK kv vv kt vt b base prod st env k =>
+      (pushDefer' d k).map (Cont.mapIterK kv vv kt vt b base prod st env)
   | _ => none
 
 /-! ## The strict-op apply (mirror of `applyStrictOp`) -/
@@ -1837,37 +1838,20 @@ def applyStmtOp' (s : State D) (op : StmtOp) (vs : List (Value D)) :
        | _ => quit .q11Internal)
   | op => applyStmtOpCore' s op vs
 
-/-! ## mapRange snapshot (the validated snapshot step; the PICK quits
-Q3) -/
+/-! ## mapRange start (BUG-005 (L): base + start-key set; the snapshot
+transcriptions are retired with the snapshot itself. The PICK quits Q3
+at any nonempty cell — one more slot of the SAME consumption site.) -/
 
-def mapRangeEntries' (s : State D) (v : Value D) :
-    M (Array (Value D × Value D)) := do
+def mapRangeStartSets' (s : State D) (v : Value D) :
+    M (Option Loc × Array (Value D)) := do
   let map ← v.asMap
   match map.base with
-  | none => .ok #[]
+  | none => .ok (none, #[])
   | some base =>
       (match ← loadLoc' s base with
-       | .mapData es => .ok es
+       | .mapData es => .ok (some base, es.map (·.1))
        | .atom _ => quit .q10Atom
        | _ => quit .q11Internal)
-
-def snapshotEntriesSelfNormalizedList' (keyTy valTy : Ty) :
-    List (Value D × Value D) → M Bool
-  | [] => .ok true
-  | (k, v) :: rest => do
-      let bk ← isNormalForTy' keyTy k
-      if bk then do
-        let bv ← isNormalForTy' valTy v
-        if bv then snapshotEntriesSelfNormalizedList' keyTy valTy rest
-        else .ok false
-      else .ok false
-
-def mapRangeSnapshotEntries' (s : State D) (keyTy valTy : Ty) (v : Value D) :
-    M (Array (Value D × Value D)) := do
-  let entries ← mapRangeEntries' s v
-  let ok ← snapshotEntriesSelfNormalizedList' keyTy valTy entries.toList
-  if ok then .ok entries
-  else quit .q11Internal
 
 /-! ## THE MIRROR STEP -/
 
@@ -2041,9 +2025,19 @@ def stepFn' (s : State D) (c : Config D) : M (Config D × State D) := do
                 .ok (.evalE e env (.stmtOpK op nt (v :: done) rest env k'), s)
               else
                 .ok (.evalE e env (.stmtOpK op nt (v :: done) rest env k'), s)
-           | [] => do
-              let s' ← applyStmtOp' s op (v :: done).reverse
-              .ok (.next k', s'))
+           | [] =>
+              -- BUG-005 (L): mapDelete/clearMap REWRITE the
+              -- continuation (the delete-prune of in-flight iteration
+              -- frames) — a semantic-key computation the domain leaves
+              -- undecided, so the mirror QUITS on those two ops rather
+              -- than transcribing the prune (a quit asserts nothing;
+              -- the drift theorem forces fidelity of what remains).
+              (match op with
+               | .mapDelete _ => quit .q4Program
+               | .clearMap => quit .q4Program
+               | _ => do
+                  let s' ← applyStmtOp' s op (v :: done).reverse
+                  .ok (.next k', s')))
       | .callValCalleeK plans args env k' =>
           (match v, args with
            | .funcVal _ _, [] => quit .q4Program
@@ -2086,8 +2080,9 @@ def stepFn' (s : State D) (c : Config D) : M (Config D × State D) := do
                | some k'' => .ok (.next k'', s)
                | none => quit .q11Internal))
       | .mapRangeK keyVar valVar keyTy valTy body env k' => do
-          let entries ← mapRangeSnapshotEntries' s keyTy valTy v
-          .ok (.next (.mapIterK keyVar valVar keyTy valTy body entries env k'), s)
+          let bs ← mapRangeStartSets' s v
+          .ok (.next (.mapIterK keyVar valVar keyTy valTy body
+            bs.1 #[] bs.2 env k'), s)
       | .panicArgK _ => quit .q6Panic
       | .chanStK _ _ _ _ _ => quit .q7Concurrency
       | .selectOpsK _ _ _ _ _ _ => quit .q7Concurrency
@@ -2146,11 +2141,21 @@ def stepFn' (s : State D) (c : Config D) : M (Config D × State D) := do
       | .panicResumeK _ _ => quit .q6Panic
       | .breakableK k' => .ok (.next k', s)
       | .labelK _ k' => .ok (.next k', s)
-      | .mapIterK _ _ _ _ _ remaining _ k' =>
-          if remaining.isEmpty then
-            .ok (.next k', s)
-          else
-            quit .q3Choice
+      | .mapIterK _ _ _ _ _ base _ _ _ k' =>
+          -- BUG-005 (L): doneness needs the LIVE cell. Compute when
+          -- the cell answers "no entries" (nil/empty map — exactly the
+          -- windows the retired snapshot model kept computing); quit
+          -- Q3 at any nonempty cell (a pick or the stop slot consumes
+          -- a choice there — a quit asserts nothing).
+          (match base with
+           | none => .ok (.next k', s)
+           | some l => do
+              (match ← loadLoc' s l with
+               | .mapData es =>
+                  if es.isEmpty then .ok (.next k', s)
+                  else quit .q3Choice
+               | .atom _ => quit .q10Atom
+               | _ => quit .q11Internal))
       | .storeK refs vals body env k' =>
           (match refs, vals with
            | r :: rs, val :: vrest => do
@@ -2165,7 +2170,7 @@ def stepFn' (s : State D) (c : Config D) : M (Config D × State D) := do
       | .loop _ _ _ k' => .ok (.next k', s)
       | .breakableK k' => .ok (.next k', s)
       | .labelK _ k' => .ok (.breaking k', s)
-      | .mapIterK _ _ _ _ _ _ _ k' => .ok (.next k', s)
+      | .mapIterK _ _ _ _ _ _ _ _ _ k' => .ok (.next k', s)
       | .frame _ _ _ _ _ _ => quit .q11Internal
       | .stop => quit .q11Internal
       | _ => quit .q11Internal
@@ -2175,8 +2180,8 @@ def stepFn' (s : State D) (c : Config D) : M (Config D × State D) := do
       | .breakableK k' => .ok (.continuing k', s)
       | .labelK _ k' => .ok (.continuing k', s)
       | .loop c b env k' => .ok (.exec (.while c b) env k', s)
-      | .mapIterK keyVar valVar keyTy valTy body remaining env k' =>
-          .ok (.next (.mapIterK keyVar valVar keyTy valTy body remaining env k'), s)
+      | .mapIterK keyVar valVar keyTy valTy body base produced start env k' =>
+          .ok (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k'), s)
       | .frame _ _ _ _ _ _ => quit .q11Internal
       | .stop => quit .q11Internal
       | _ => quit .q11Internal
@@ -2186,7 +2191,7 @@ def stepFn' (s : State D) (c : Config D) : M (Config D × State D) := do
       | .breakableK k' => .ok (.returning k', s)
       | .labelK _ k' => .ok (.returning k', s)
       | .loop _ _ _ k' => .ok (.returning k', s)
-      | .mapIterK _ _ _ _ _ _ _ k' => .ok (.returning k', s)
+      | .mapIterK _ _ _ _ _ _ _ _ _ k' => .ok (.returning k', s)
       | .frame [] _ [] [] k' _ => .ok (.next k', s)
       | .frame [] _ (_ :: _) [] _ _ => quit .q11Internal
       | .frame ((sh, e :: ops) :: rest) tenv results [] k' _ => do
@@ -2207,7 +2212,7 @@ def stepFn' (s : State D) (c : Config D) : M (Config D × State D) := do
       | .seq _ _ k' => .ok (.breakingTo L k', s)
       | .loop _ _ _ k' => .ok (.breakingTo L k', s)
       | .breakableK k' => .ok (.breakingTo L k', s)
-      | .mapIterK _ _ _ _ _ _ _ k' => .ok (.breakingTo L k', s)
+      | .mapIterK _ _ _ _ _ _ _ _ _ k' => .ok (.breakingTo L k', s)
       | .labelK name k' =>
           if name = L then .ok (.next k', s)
           else .ok (.breakingTo L k', s)
@@ -2225,9 +2230,9 @@ def stepFn' (s : State D) (c : Config D) : M (Config D × State D) := do
           if contHeadLabel' k' = some L then
             .ok (.exec (.while c b) env k', s)
           else .ok (.continuingTo L k', s)
-      | .mapIterK keyVar valVar keyTy valTy body remaining env k' =>
+      | .mapIterK keyVar valVar keyTy valTy body base produced start env k' =>
           if contHeadLabel' k' = some L then
-            .ok (.next (.mapIterK keyVar valVar keyTy valTy body remaining env k'), s)
+            .ok (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k'), s)
           else .ok (.continuingTo L k', s)
       | .frame _ _ _ _ _ _ => quit .q11Internal
       | .stop => quit .q11Internal
@@ -2367,9 +2372,9 @@ def reflectK (D : ScalarDom) : Machine.Cont → Cont D
       .stmtOpK op nt (done.map (reflectV D)) pending env (reflectK D k)
   | .mapRangeK kv vv kt vt body env k =>
       .mapRangeK kv vv kt vt body env (reflectK D k)
-  | .mapIterK kv vv kt vt body remaining env k =>
-      .mapIterK kv vv kt vt body
-        (remaining.attach.map (fun ⟨(a, b), _⟩ => (reflectV D a, reflectV D b)))
+  | .mapIterK kv vv kt vt body base produced start env k =>
+      .mapIterK kv vv kt vt body base
+        (produced.map (reflectV D)) (start.map (reflectV D))
         env (reflectK D k)
   | .panicArgK k => .panicArgK (reflectK D k)
   | .panicResumeK chain k =>

@@ -119,8 +119,9 @@ private theorem wc_runs (ws : List Int)
   have hC := stepFnIter_chain hD hrun₁
   -- the range loop
   obtain ⟨k₂, ch₂, tail₂, na₂, hk₂, hna₂, hbest₂, htail₂, hrun₂⟩ :=
-    wc_range_loop ws (countsFold ws) (countsFold ws).length (countsFold ws)
-      rfl 0 (9 + 2 * (ws.length - 0)) (9 + 2 * (ws.length - 0) + 1) tail₁
+    wc_range_loop ws (countsFold ws) (countsFold_norm ws hws hlen)
+      (countsFold_nodup_keys ws)
+      0 (9 + 2 * (ws.length - 0)) (9 + 2 * (ws.length - 0) + 1) tail₁
       ch (fun p hp => countsFold_val_le ws hp) hlen (by omega) (by omega)
       (by omega) hbest₁ htail₁
   have hR := stepFnIter_chain hC hrun₂

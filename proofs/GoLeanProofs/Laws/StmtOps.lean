@@ -161,33 +161,27 @@ variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 
 /-! ## 1. The map-range snapshot step -/
 
-/-- **The snapshot step (state-reading)**: `for … range m` with `m` a
-non-nil map value loads the map's data cell and installs its entries as
-the iteration snapshot. The data cell rides through unchanged (`mapRange`
-snapshots — later writes to the map do not affect the iteration), so this
-is a `wp_det_step_keep` read, exactly like `wp_eval_var`. `Laws/Range`
-picks up from the `mapIterK` this produces.
-
-`hnorm` is the snapshot step's fail-closed validation (sem-adequacy
-slice 3, 2026-08-04): every snapshot entry must be self-normalized at the
-range key/value types — true of the already-normalized entries `mapAssign`
-stores. It carries the `σ.types` GHOST PIN through `GoCoreGS.types GF`,
-exactly like `wp_map_iter_next_key`'s `hnorm` (its per-pick twin, which
-this snapshot-time check now subsumes machine-side); at pinned data it
-discharges by `decide`. -/
-theorem wp_map_range_snapshot {ba : Addr} {mty : Option Ty}
+/-- **The range-START step (state-reading; BUG-005 (L))**: `for … range
+m` with `m` a non-nil map value loads the map's data cell ONCE to
+record the base loc and the START-KEY set (keys present when the range
+begins — the spec-forced traversal set). The data cell rides through
+unchanged — but unlike the retired snapshot, the ITERATION keeps
+reading it live (`Laws/Range`'s pick law takes the cell again at every
+step). No normalization premise: the fail-closed validation moved to
+the pick (`mapIterCandidates`). -/
+theorem wp_map_range_enter {ba : Addr} {mty : Option Ty}
     {entries : Array (GoValue × GoValue)} {keyVar valVar : Option String}
-    {keyTy valTy : Ty} {body : Stmt} {env k}
-    (hnorm : snapshotEntriesSelfNormalized (GoCoreGS.types GF) keyTy valTy
-      entries = true) :
+    {keyTy valTy : Ty} {body : Stmt} {env k} :
     ba.id ↦ (⟨mty, .mapData entries⟩ : HeapCell)
       ∗ (ba.id ↦ (⟨mty, .mapData entries⟩ : HeapCell) -∗
-          WP (Config.next (.mapIterK keyVar valVar keyTy valTy body entries env k))
+          WP (Config.next (.mapIterK keyVar valVar keyTy valTy body
+              (some (.base ba)) #[] (entries.map (·.1)) env k))
             @ s ; E {{ Φ }})
       ⊢ WP (Config.retV (.map ⟨some (.base ba)⟩)
             (.mapRangeK keyVar valVar keyTy valTy body env k)) @ s ; E {{ Φ }} := by
   iapply wp_det_step_keep (P := iprop(ba.id ↦ (⟨mty, .mapData entries⟩ : HeapCell)))
-    (c₁ := Config.next (.mapIterK keyVar valVar keyTy valTy body entries env k))
+    (c₁ := Config.next (.mapIterK keyVar valVar keyTy valTy body
+      (some (.base ba)) #[] (entries.map (·.1)) env k))
     (hnv := rfl)
   intro σ₁ _hfns _hmeths htypes
   iintro ⟨Hσ, Hpt⟩
@@ -197,36 +191,31 @@ theorem wp_map_range_snapshot {ba : Addr} {mty : Option Ty}
     itrivial
   have hlook : Heap.lookup σ₁.heap (.base ba) = some ⟨mty, .mapData entries⟩ := by
     rw [get?_heapToMap] at Hmap; simpa using Hmap
-  have hentries : mapRangeEntries σ₁ (.map ⟨some (.base ba)⟩) = .ok entries := by
-    simp [mapRangeEntries, valueAsMap, loadLoc, hlook, Bind.bind, Except.bind]
-  have hsnap : mapRangeSnapshotEntries σ₁ keyTy valTy (.map ⟨some (.base ba)⟩)
-      = .ok entries := by
-    unfold mapRangeSnapshotEntries
-    rw [htypes]
-    simp [hentries, hnorm, Bind.bind, Except.bind]
+  have hstart : mapRangeStartSets σ₁ (.map ⟨some (.base ba)⟩)
+      = .ok (some (.base ba), entries.map (·.1)) := by
+    simp [mapRangeStartSets, valueAsMap, loadLoc, hlook, Bind.bind,
+      Except.bind]
   imodintro
   ipureintro
-  refine ⟨Step.mapRangeSnapshot hsnap, ?_⟩
+  refine ⟨Step.mapRangeStart hstart, ?_⟩
   intro c' s' hst
-  obtain ⟨h1, h2⟩ := step_det (by trivial) (Step.mapRangeSnapshot hsnap) hst
+  obtain ⟨h1, h2⟩ := step_det (by trivial) (Step.mapRangeStart hstart) hst
   exact ⟨h1.symm, h2.symm⟩
 
-/-- **The nil-map snapshot step (pure)**: a nil map has no data cell, so
-the machine reads nothing and the snapshot is empty — no resources
-needed. (`Laws/Range.wp_map_iter_done` then exits the loop in one more
-step.) -/
-theorem wp_map_range_snapshot_nil {keyVar valVar : Option String}
+/-- **The nil-map range-start step (pure)**: a nil map has no data
+cell — base `none`, empty start set. (`Laws/Range.wp_map_iter_done_nil`
+then exits the loop in one more step.) -/
+theorem wp_map_range_enter_nil {keyVar valVar : Option String}
     {keyTy valTy : Ty} {body : Stmt} {env k} :
     (|={E}[E]▷=> £ 1 -∗
-      WP (Config.next (.mapIterK keyVar valVar keyTy valTy body #[] env k))
+      WP (Config.next (.mapIterK keyVar valVar keyTy valTy body
+          none #[] #[] env k))
         @ s ; E {{ Φ }}) ⊢
       WP (Config.retV (.map ⟨none⟩)
             (.mapRangeK keyVar valVar keyTy valTy body env k)) @ s ; E {{ Φ }} :=
   wp_pure_det rfl trivial
-    (fun _ => Step.mapRangeSnapshot
-      (by simp [mapRangeSnapshotEntries, mapRangeEntries, valueAsMap,
-        snapshotEntriesSelfNormalized, snapshotEntriesSelfNormalizedList,
-        Bind.bind, Except.bind]))
+    (fun _ => Step.mapRangeStart
+      (by simp [mapRangeStartSets, valueAsMap, Bind.bind, Except.bind]))
 
 /-! ## 2. The wide-statement (`stmtOpK`) walk -/
 
@@ -281,20 +270,29 @@ theorem wp_stmt_op_apply_store {op : StmtOp} {nt : Nat} {done : List GoValue}
     (happly : ∀ (σ : ExecState) (ch : Choices), σ.types = GoCoreGS.types GF →
       Heap.lookup σ.heap (.base a) = some oldcell →
       applyStmtOp σ ch op nt (v :: done).reverse
-        = .ok ({ σ with heap := Heap.set σ.heap (.base a) newcell }, ch)) :
+        = .ok ({ σ with heap := Heap.set σ.heap (.base a) newcell }, ch))
+    -- BUG-005 (L): the ops this law serves never prune (identity at
+    -- every concrete non-delete/clear op — discharged by `rfl`).
+    (hcont : ∀ σ' : ExecState,
+      contAfterStmtOp σ' op (v :: done).reverse k = .ok k := by
+        intro _; rfl) :
     a.id ↦ oldcell ∗ (a.id ↦ newcell -∗ WP (Config.next k) @ s ; E {{ Φ }})
       ⊢ WP (Config.retV v (.stmtOpK op nt done [] env k)) @ s ; E {{ Φ }} := by
   iapply wp_store_step (hnv := rfl)
   intro σ₁ hfns hmeths htypes hlook
-  refine ⟨Step.stmtOpApply (ch := []) (happly σ₁ [] htypes hlook), ?_⟩
+  refine ⟨Step.stmtOpApply (ch := []) (happly σ₁ [] htypes hlook)
+    (hcont _), ?_⟩
   intro c' s' hst
   cases hst with
-  | @stmtOpApply _ _ _ _ _ _ _ _ ch _ hap =>
-    rw [happly σ₁ ch htypes hlook] at hap
+  | stmtOpApply hap hcont' =>
+    rw [happly σ₁ _ htypes hlook] at hap
     injection hap with hap
-    exact ⟨rfl, (Prod.mk.inj hap).1.symm⟩
-  | @stmtOpApplyPanic _ _ _ _ _ _ _ _ ch hap =>
-    rw [happly σ₁ ch htypes hlook] at hap
+    obtain ⟨hσ, -⟩ := Prod.mk.inj hap
+    rw [← hσ, hcont _] at hcont'
+    injection hcont' with hk
+    exact ⟨congrArg Config.next hk.symm, hσ.symm⟩
+  | stmtOpApplyPanic hap =>
+    rw [happly σ₁ _ htypes hlook] at hap
     exact absurd hap (by simp)
 
 /-! ## 2b. The ALLOCATING apply step (`makeMap`, `makeSlice`, `newValue`)
@@ -321,22 +319,29 @@ theorem wp_stmt_op_apply_alloc_store {op : StmtOp} {nt : Nat}
         = .ok ({ σ with
                  heap := Heap.set (Heap.set σ.heap (.base ⟨σ.nextAddr⟩) fcell)
                            (.base a) (newcell ⟨σ.nextAddr⟩),
-                 nextAddr := σ.nextAddr + 1 }, ch)) :
+                 nextAddr := σ.nextAddr + 1 }, ch))
+    (hcont : ∀ σ' : ExecState,
+      contAfterStmtOp σ' op (v :: done).reverse k = .ok k := by
+        intro _; rfl) :
     a.id ↦ oldcell
       ∗ iprop(∀ fa : Addr, fa.id ↦ fcell ∗ a.id ↦ newcell fa -∗
           WP (Config.next k) @ s ; E {{ Φ }})
       ⊢ WP (Config.retV v (.stmtOpK op nt done [] env k)) @ s ; E {{ Φ }} := by
   iapply (wp_alloc_store_step newcell (hnv := rfl))
   intro σ₁ _hfns _hmeths htypes hlook hne
-  refine ⟨Step.stmtOpApply (ch := []) (happly σ₁ [] htypes hlook hne), ?_⟩
+  refine ⟨Step.stmtOpApply (ch := []) (happly σ₁ [] htypes hlook hne)
+    (hcont _), ?_⟩
   intro c' s' hst
   cases hst with
-  | @stmtOpApply _ _ _ _ _ _ _ _ ch _ hap =>
-    rw [happly σ₁ ch htypes hlook hne] at hap
+  | stmtOpApply hap hcont' =>
+    rw [happly σ₁ _ htypes hlook hne] at hap
     injection hap with hap
-    exact ⟨rfl, (Prod.mk.inj hap).1.symm⟩
-  | @stmtOpApplyPanic _ _ _ _ _ _ _ _ ch hap =>
-    rw [happly σ₁ ch htypes hlook hne] at hap
+    obtain ⟨hσ, -⟩ := Prod.mk.inj hap
+    rw [← hσ, hcont _] at hcont'
+    injection hcont' with hk
+    exact ⟨congrArg Config.next hk.symm, hσ.symm⟩
+  | stmtOpApplyPanic hap =>
+    rw [happly σ₁ _ htypes hlook hne] at hap
     exact absurd hap (by simp)
 
 /-- **`m = make(map[K]V)`** as ONE step: allocate the map's data cell

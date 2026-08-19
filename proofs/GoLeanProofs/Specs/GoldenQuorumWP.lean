@@ -447,7 +447,7 @@ through the `main.AckedIndexer.AckedIndex` anchor into
 two-result frame exit, and the store THROUGH A SLICE INDEX into the
 on-stack backing array. -/
 theorem wp_ci_range_body_one {ia la lba sra sta pa : Addr}
-    {lty : Option Ty} {env k}
+    {lty : Option Ty} {env : LocalEnv} {kIter : Cont}
     (hprog : GoCoreGS.prog GF = quorumLowered.funcs)
     (hmeths : GoCoreGS.methods GF = quorumLowered.methods)
     (htypes : GoCoreGS.types GF = quorumLowered.typeDefs.toList)
@@ -471,12 +471,9 @@ theorem wp_ci_range_body_one {ia la lba sra sta pa : Addr}
                    .slice ⟨some (.base sta), 0, 1, 7⟩⟩ : HeapCell)
           ∗ ia.id ↦ (⟨some (.int .int), .int (-1) .int⟩ : HeapCell)
           ∗ sta.id ↦ (⟨some (.array 7 (.int .uint64)), stkOne 12⟩ : HeapCell)
-          -∗ WP (Config.next (.mapIterK (some "id") none (.int .uint64)
-                  (.defined ⟨"struct{}"⟩) rangeBody #[] env k))
-              @ s ; E {{ Φ }})
+          -∗ WP (Config.next kIter) @ s ; E {{ Φ }})
       ⊢ WP (Config.exec rangeBody (env.pushScope.declare "id" (.base pa))
-            (.mapIterK (some "id") none (.int .uint64)
-              (.defined ⟨"struct{}"⟩) rangeBody #[] env k)) @ s ; E {{ Φ }} := by
+            kIter) @ s ; E {{ Φ }} := by
   iintro ⟨Hid, Hl, Hlb, Hsr, Hi, Hst, Hk⟩
   rw [rangeBody_eq]
   go_walk
@@ -602,12 +599,12 @@ theorem wp_ci_loop_one {na ca cba la lba sra sta : Addr}
       have h := storeLoc_int_any (mkind := .int) hl' 0
       rw [show IntKind.int.normalize 0 = 0 from by decide] at h
       exact h))
-  -- the range itself: dispatch, read the map cell, take the snapshot
+  -- the range itself: dispatch, read the map cell, enter the live
+  -- iteration (BUG-005 (L): base/start read off the cell, no snapshot)
   rw [rangeStmt_eq]
   go_walk
-  go_walk_step (wp_map_range_snapshot (ba := cba) (mty := cty)
-    (entries := #[(.int 1 .uint64, .struct ⟨"struct{}"⟩ #[])])
-    (hnorm := by rw [htypes]; decide +kernel))
+  go_walk_step (wp_map_range_enter (ba := cba) (mty := cty)
+    (entries := #[(.int 1 .uint64, .struct ⟨"struct{}"⟩ #[])]))
   -- THE RANGE, through the INDUCTIVE RANGE RULE (`Laws/Range`,
   -- `wp_map_iter_inv`): one generic-iteration obligation
   -- (`wp_ci_range_body_one`) and an invariant over the REMAINING
@@ -619,6 +616,14 @@ theorem wp_ci_loop_one {na ca cba la lba sra sta : Addr}
   -- `n`, `c` and the config's data cell are untouched by the body, so
   -- they stay in the ambient context rather than in the invariant.
   iapply (wp_map_iter_inv
+    (ba := cba)
+    (cell := (⟨cty, .mapData #[(.int 1 .uint64,
+      .struct ⟨"struct{}"⟩ #[])]⟩ : HeapCell))
+    (P := fun pr rem =>
+      (pr = #[] ∧ rem = #[((GoValue.int 1 .uint64),
+          (GoValue.struct ⟨"struct{}"⟩ #[]))])
+      ∨ (pr = #[GoValue.int 1 .uint64] ∧ rem = #[]))
+    (hP0 := Or.inl ⟨rfl, rfl⟩)
     (I := fun rem =>
       if rem.size = 0 then
         iprop(la.id ↦ (⟨some (.interface ⟨"main.AckedIndexer"⟩),
@@ -640,16 +645,37 @@ theorem wp_ci_loop_one {na ca cba la lba sra sta : Addr}
                    .slice ⟨some (.base sta), 0, 1, 7⟩⟩ : HeapCell)
           ∗ ia.id ↦ (⟨some (.int .int), .int 0 .int⟩ : HeapCell)
           ∗ sta.id ↦ (⟨some (.array 7 (.int .uint64)), stkZero⟩ : HeapCell)))
-    (hnorm := fun σ _htypes p hp => by
-      obtain rfl : p = ((GoValue.int 1 .uint64),
-          (GoValue.struct ⟨"struct{}"⟩ #[])) := by simpa using hp
-      simp [normalizeValueForTy, normalizeValueForTyFuel,
-        show IntKind.uint64.normalize 1 = 1 from by decide, typeResolutionFuel])
+    (hfact := fun pr rem hP σ hσ hlook => by
+      have hty : σ.types = quorumLowered.typeDefs.toList := hσ.trans htypes
+      rcases hP with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+      · refine ⟨?_, fun _ => ?_⟩
+        · simp +decide [mapIterCandidates, mapIterLiveEntries, loadLoc,
+            hlook, filterCandidateList, keyInKeys, keyInKeyList,
+            snapshotEntriesSelfNormalized, snapshotEntriesSelfNormalizedList,
+            isNormalForTy, isNormalForTyFuel, typeResolutionFuel, hty,
+            TypeEnv.lookup, Bind.bind, Except.bind, pure, Except.pure]
+        · simp [mapIterMandatoryRemains, mandatoryInList, keyInKeys,
+            keyInKeyList, valueEq, valueEqFuel, typeResolutionFuel,
+            Bind.bind, Except.bind, pure, Except.pure]
+      · refine ⟨?_, fun h => absurd h (by simp)⟩
+        simp +decide [mapIterCandidates, mapIterLiveEntries, loadLoc,
+          hlook, filterCandidateList, keyInKeys, keyInKeyList, valueEq,
+          valueEqFuel, typeResolutionFuel, snapshotEntriesSelfNormalized,
+          snapshotEntriesSelfNormalizedList,
+          Bind.bind, Except.bind, pure, Except.pure])
+    (hstep := fun pr rem i h hP => by
+      rcases hP with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+      · obtain rfl : i = 0 := Nat.lt_one_iff.mp (by simpa using h)
+        exact Or.inr ⟨rfl, by simp⟩
+      · exact absurd h (by simp))
     (Hbody := by
-      intro rem i hidx pa
-      rw [if_neg (by omega : ¬ rem.size = 0)]
-      iintro ⟨⟨%hrem, Hl, Hlb, Hsr, Hi, Hst⟩, Hid, Hk⟩
-      subst hrem
+      intro pr rem i hidx pa hP
+      rcases hP with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+      case inr => exact absurd hidx (by simp)
+      rw [if_neg (by decide : ¬ (#[((GoValue.int 1 .uint64),
+          (GoValue.struct ⟨"struct{}"⟩ #[]))] : Array (GoValue × GoValue)).size
+            = 0)]
+      iintro ⟨⟨%_hrem, Hl, Hlb, Hsr, Hi, Hst⟩, Hid, Hk⟩
       obtain rfl : i = 0 := Nat.lt_one_iff.mp (by simpa using hidx)
       have herase : (#[((GoValue.int 1 .uint64),
             (GoValue.struct ⟨"struct{}"⟩ #[]))] : Array (GoValue × GoValue)).eraseIdx
@@ -676,7 +702,7 @@ theorem wp_ci_loop_one {na ca cba la lba sra sta : Addr}
   · ipureintro
     rfl
   · rw [if_pos (by decide : (#[] : Array (GoValue × GoValue)).size = 0)]
-    iintro ⟨Hl, Hsr, Hi, Hst⟩
+    iintro ⟨⟨Hl, Hsr, Hi, Hst⟩, Hcb⟩
     go_walk_finish Hcont
 
 /-- **The tail** — `slices.Sort(srt)`, `pos := n - (n/2+1)`,

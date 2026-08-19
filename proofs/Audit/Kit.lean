@@ -169,8 +169,8 @@ vocabulary defs) -/
 #guard_msgs in #print axioms GoLean.Surface.storeTarget_addr
 /-- info: 'GoLean.Surface.stepFn_mapAssign_apply' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.stepFn_mapAssign_apply
-/-- info: 'GoLean.Surface.stepFn_snapshot' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Surface.stepFn_snapshot
+/-- info: 'GoLean.Surface.stepFn_mapRangeStart' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.stepFn_mapRangeStart
 /-- info: 'GoLean.Surface.natFromNonneg_cast' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.natFromNonneg_cast
 
@@ -484,18 +484,32 @@ GAP-M1 choice-pick lift, 2026-08-15 — the `bump`/`countsFold`/
 #guard_msgs in #print axioms GoLean.MapMem.take_succ_getD
 /-- info: 'GoLean.MapMem.cnt_take_le' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.MapMem.cnt_take_le
-/-- info: 'GoLean.MapMem.stepFn_pick_bind' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+-- (BUG-005 (L), 2026-08-19: the pick lemmas lost `Classical.choice` —
+-- the live-cell candidates path is fully constructive.)
+/-- info: 'GoLean.MapMem.stepFn_pick_bind' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.MapMem.stepFn_pick_bind
-/-- info: 'GoLean.MapMem.stepFn_pick_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'GoLean.MapMem.stepFn_pick_value' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.MapMem.stepFn_pick_value
-/-- info: 'GoLean.MapMem.stepFn_pick_novars' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'GoLean.MapMem.stepFn_pick_novars' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.MapMem.stepFn_pick_novars
 /-- info: 'GoLean.MapMem.applyStrictOp_mapGet' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.MapMem.applyStrictOp_mapGet
 /-- info: 'GoLean.MapMem.mapAssignValue_toEntries' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.MapMem.mapAssignValue_toEntries
-/-- info: 'GoLean.MapMem.snapshot_toEntries' depends on axioms: [propext] -/
-#guard_msgs in #print axioms GoLean.MapMem.snapshot_toEntries
+-- (BUG-005 (L), 2026-08-19: `snapshot_toEntries` retired with the
+-- snapshot step; the live-pick kit surface replaces it.)
+/-- info: 'GoLean.MapMem.rangeStart_toEntries' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.MapMem.rangeStart_toEntries
+/-- info: 'GoLean.MapMem.candidates_toEntries' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.MapMem.candidates_toEntries
+/-- info: 'GoLean.MapMem.mandatory_toEntries' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.MapMem.mandatory_toEntries
+/-- info: 'GoLean.MapMem.mandatory_true_of_all' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.MapMem.mandatory_true_of_all
+/-- info: 'GoLean.MapMem.filter_push_key' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.MapMem.filter_push_key
+/-- info: 'GoLean.MapMem.stepFn_iter_done' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.MapMem.stepFn_iter_done
 
 /-! ## MapLoops — the map-loop schemas (7 public lemmas; the GAP-C1
 counting-loop lift + the GAP-R1 pick-loop lift, 2026-08-15) -/

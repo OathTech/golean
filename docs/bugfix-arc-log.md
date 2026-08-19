@@ -922,6 +922,147 @@ both new reds are explained by BUG-005's Cases line).
 
 ---
 
+### Slice 4, step 3 — the (L) surgery (the ruled fix, machine + proofs)
+
+**The machine change** (one semantic concern: live map iteration at the
+ruled FULL literal envelope):
+
+- `Cont.mapIterK` now carries `(base : Option Loc)` (the map's data
+  cell), the PRODUCED key set, and the START-KEY set (read at range
+  entry by `mapRangeStartSets` — the snapshot step is retired).
+- Each pick recomputes `mapIterCandidates` = live entries minus
+  produced keys, VALIDATED self-normalized at the range key/value types
+  (fail closed — the sem-adequacy guard moved from the retired snapshot
+  step to the pick, keeping pick success choices-independent), and
+  loads the value from the LIVE cell. Width = `candidates.size +
+  (if mandatory then 0 else 1)`; the stop slot is LAST, so the ZERO
+  stream is the canonical member BY DEFINITION (ruling Q3) — and a
+  self-inserting loop fuels out VISIBLY there, which is correct.
+- `mapIterMandatoryRemains`: the stop slot is legal exactly when no
+  candidate key is a never-removed START key (the spec's production
+  table forces surviving start entries; created entries are
+  may-produce-or-skip — interpretations I-1/L-012).
+- DELETE-PRUNE: `mapDelete`/`clearMap` rewrite the SAME-GOROUTINE
+  continuation via `contAfterStmtOp` → `pruneIterFramesKey`/
+  `pruneIterFramesAll` (rule `stmtOpApply` gained the `hcont'`
+  premise; identity per concrete non-delete op by `rfl`). This is what
+  makes the FORCED removed-before-reached clause exact. Residual,
+  recorded in `Cont.mapIterK`'s docstring AND inventory E9: a
+  cross-goroutine delete does not prune the other goroutine's frames —
+  such shapes are racy-red via the new footprint, and the widening is
+  owed at the first non-racy cross-goroutine range case.
+- RACE: `stepAccesses` gained the mapIterK per-pick READ arm — closes
+  inventory under-approximation U1 (BUG-005's fourth symptom;
+  `race/negative/map-range-iter` flips green as a true racy-red).
+
+**Proof blast radius, all repaired to a full green `lake build` (none
+parked; the ~day stop-rule was consciously overrun once the remaining
+work became enumerable — recorded as a judgment call, the alternative
+was abandoning a green progression):**
+
+- Core: `StepFn`/`Machine` rule pair (`mapIterNext` premises now
+  hcands/hmand/hbind state facts; `mapIterStop`; `mapRangeStart`),
+  `StateWf` (`itersNormalized` moved to per-pick validation),
+  `MachineSound` (`step_complete_any_wf`'s mapIterNext case replayed on
+  the live design), `MultiStreams`, obliviousness (`stepFn_oblivious`
+  fun_cases tags remapped after the pick-arm collapse).
+- Kit: `MapMem` gained the live-pick surface — `rangeStart_toEntries`,
+  `candidates_toEntries`, `mandatory_toEntries`/`mandatory_true_of_all`,
+  `stepFn_pick_bind/value/novars` (hcands/hmand/hconsume form),
+  `stepFn_iter_done`, and the produced-set walk algebra
+  (`toKeys`, `filter_push_key`, `filter_ne_key_eraseIdx`) — the
+  pick-coherence relation "produced = toKeys done, remaining = the
+  filter" every placement threads through `mapPickLoop_generic`.
+  The pick lemmas LOST `Classical.choice` (now `[propext, Quot.sound]`
+  — the live-candidates path is constructive; Audit/Kit pins updated,
+  shrink direction).
+- WP laws (`Laws/StmtOps`, `Laws/Range`): `wp_map_range_snapshot` →
+  `wp_map_range_enter` (+`_nil`) — the range START reads base/start off
+  the owned cell, NO snapshot, hnorm premise gone (validation is now
+  the iter laws' hcands state facts); `wp_map_iter_next_key`/`_done`
+  take owned-cell candidate/mandatory facts quantified over
+  `σ.types`-pinned states; `wp_map_iter_inv` is the (L) form — caller
+  supplies the reachable relation `P pr rem`, `hfact` (pick-time
+  candidates/mandatory against the cell), `hstep` (P closed under
+  picks), and the cell rides through and returns at exhaustion. Scope
+  (recorded in its docstring): key-only, normally-completing,
+  mutation-free-range walks — the stop-admitting and mutating forms
+  are KIT OBLIGATIONS landing with the first walk that needs them.
+  Witnesses: basic-key + defined-key pick witnesses recomputed against
+  owned cells; the key-sum inv witness reworked (its
+  `keyIntSum_eraseIdx`/`keyIntSum_nonneg` helpers retired — Audit.lean
+  example pins updated with a tombstone note).
+- `Specs/AutomationTargets` TARGET 3 (`mapIterInvRule_statement`)
+  DELIBERATELY RESHAPED to the (L) rule type — recorded as a widening
+  per its own docstring contract, not a quiet accommodation.
+- Examples/placements re-proved on the pick-coherence pattern:
+  WordCount (CanonCount/CanonRange/CanonRun, HarnessSubject/HarnessR/
+  HarnessRun — `wc_range_loop` and the R/H instantiations now take
+  `hkv`+`hnodup` and start at `pr = #[]`; `wcRange_generic` carries
+  `PC : kvs → produced → remaining → Prop` with the state's kvs pinned
+  inside PC), Histogram, WordFreq, RangeGeneric.
+- Quorum pilot: `GoldenQuorumPin` witness renamed
+  `wp_map_range_enter_committed` (hnorm dropped); `GoldenQuorumWP`
+  (n = 1) walks the two-state reachable relation; `GoldenQuorumThree`
+  gained the voter-encoding live-pick data layer (`cfgKeys_toKeys`,
+  `filter_ne_eraseIdx_int`, `filter_push_int`,
+  `filterCandidateList_cfgList`, `candidates_cfg`, `mandatory_cfg`)
+  and `wp_ci_loop`/`wp_ci_loop_all`/`wp_committedIndex{Call,_body}_all`
+  gained a `ks₀.Nodup` hypothesis — DISCHARGED at both consumers (the
+  3-voter rung by `decide`; the ∀-config summit from its existing
+  `c.Nodup` via the perm transport), so `committedIndexAllConfigs`'
+  STATEMENT is unchanged (the nodup lives in already-present
+  hypotheses of the statement's encoding layer). Body-iteration
+  lemmas (`wp_ci_range_body{,_one,_miss}`) generalized over the
+  iteration continuation (`kIter : Cont`) — strictly weaker-premised,
+  same walks.
+
+**Kit obligations recorded (not proved, per the ruling):**
+
+1. TERMINATION: "body stores no key into the ranged map ⇒ the range
+   terminates" — the user-facing theorem the fuel-out-on-zero-stream
+   behavior of self-inserting loops points at.
+2. Stop-admitting and mutating-range WP forms of `wp_map_iter_inv`
+   (docstring-scoped out today).
+3. Abstract-key candidates algebra: `candidates_toEntries` (Int-keyed
+   counts), `candidates_toEntriesW` (string-keyed), and
+   `candidates_cfg` (voter encoding) are three instances of one
+   ≥2-consumer pattern — a consolidation slice should lift the generic
+   form (promotion-ledger entry).
+
+**Corpus, predicted BEFORE the runs and confirmed exactly:** the
+focused slice then the FULL run flip precisely BUG-005's seven Cases —
+`maps/{delete,clear,update,delete-unreached}-during-range`
+FAIL/differential → PASS; `maps/delete-readd-during-range`
+FAIL/membership → PASS/membership (admitted {3,4,-1}, exhibited 1);
+`maps/added-entry-count` FAIL/membership → PASS/membership ({1,2},
+BOTH exhibited); `race/negative/map-range-iter` FAIL/lean-observation →
+PASS/racy — and `maps/added-entries-bound` STAYED PASS/strict, as
+required. Full run: 2181 cases, 2059 PASS / 122 FAIL (was 2052/129);
+`coverage-baseline-diff` drift = exactly those seven lines; baseline
+re-pinned in this commit (reason in its header). Docs updated in the
+same movement: inventory E9 re-enveloped (+ §9 flags 4/11 and the
+census counts closed out), the nondeterminism doctrine's
+requirement-1 map statement rewritten to the live envelope (F14 scope
+lifted), BUGS.md 005 → fixed (residuals + obligations on the entry).
+
+**Gate at the surgery commit.** `GOLEAN_MEM_MAX=24G scripts/ci --slow`
+(the interpreter changed, so the tiered-checking rule demands full
+slow-tier re-certification, not just `--diff`) → **`RESULT: PASS`**,
+exit 0, every step ok: core build warning-free (the first `--slow` run
+FAILED on two warnings my surgery introduced — an unused `hidx :`
+match binder in `stepFn`'s pick arm and two unused simp args in
+`MachineSound` — fixed, core+proofs rebuilt green, gate re-run in
+full), `proofs + Audit gate` ok (axiom allowlist + non-vacuity),
+`baseline diff FULL (2181/2181, no regression)` against the re-pinned
+baseline with slow-tier rows RE-CERTIFIED (`GOLEAN_SLOW=1`), `re-pin
+guard (0 PASS→non-PASS flips)`, `bug-index cross-check ok`, `eval
+tests (136 ok)`, membership/negative lanes ok, statement-TCB +
+import-direction + surface-purity ok (`artifacts/probe/
+b005-ci-slow2.log`, scratch). As with the earlier slices, the only
+difference between the gated tree and the committed tree is this
+paragraph.
+
 ## Slice 5 — the full red/bug triage (kill or justify)
 
 Deliverable: **`docs/2026-08-19_triage-table.md`** — one row per open

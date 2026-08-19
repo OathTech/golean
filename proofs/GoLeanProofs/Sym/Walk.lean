@@ -378,15 +378,22 @@ theorem stepFn'_conc (hI : I.Sound) (σ : ExecState) (ch : Choices)
               rfl
         | nil =>
             simp only [stepFn'] at h
-            obtain ⟨s2, happ, h2⟩ := bind_eq_ok.mp h
-            have hov : c₁ = .next k' ∧ s₁ = s2 := by
-              simpa [pure, Except.pure, eq_comm, and_comm] using h2
-            rw [hov.1, hov.2]
-            simp only [concC, concK, stepFn]
-            have := applyStmtOp_conc hI σ happ nt ch
-            simp only [List.map_reverse, List.map_cons] at this
-            rw [this]
-            rfl
+            -- BUG-005 (L): the mirror quits on mapDelete/clearMap (the
+            -- cont-prune ops); at every other op the machine's prune
+            -- is the definitional identity, discharged per concrete op.
+            cases op <;> simp only [quit] at h <;> try (cases h; done)
+            all_goals (
+              obtain ⟨s2, happ, h2⟩ := bind_eq_ok.mp h
+              have hov : c₁ = .next k' ∧ s₁ = s2 := by
+                simpa [pure, Except.pure, eq_comm, and_comm] using h2
+              rw [hov.1, hov.2]
+              simp only [concC, concK, stepFn]
+              have := applyStmtOp_conc hI σ happ nt ch
+              simp only [List.map_reverse, List.map_cons] at this
+              rw [this]
+              simp only [contAfterStmtOp, Bind.bind, Except.bind, pure,
+                Except.pure]
+              try rfl)
       case callValCalleeK plans args env k' =>
         cases args with
         | nil => cases v <;> simp [stepFn', quit] at h
@@ -460,17 +467,17 @@ theorem stepFn'_conc (hI : I.Sound) (σ : ExecState) (ch : Choices)
               rfl
       case mapRangeK keyVar valVar keyTy valTy body env k' =>
         simp only [stepFn'] at h
-        obtain ⟨entries, hentries, h2⟩ := bind_eq_ok.mp h
+        obtain ⟨bs, hbs, h2⟩ := bind_eq_ok.mp h
         have hov : c₁ = .next (.mapIterK keyVar valVar keyTy valTy body
-            entries env k') ∧ s₁ = s := by
+            bs.1 #[] bs.2 env k') ∧ s₁ = s := by
           simpa [pure, Except.pure, eq_comm, and_comm] using h2
         rw [hov.1, hov.2]
         simp only [concC, concK, stepFn]
-        rw [show mapRangeSnapshotEntries (concS I σ s) keyTy valTy
-              (concV I v) = .ok (concEntries I entries)
-            from mapRangeSnapshotEntries_conc hI σ hentries]
+        rw [show mapRangeStartSets (concS I σ s) (concV I v)
+              = .ok (bs.1, bs.2.map (concV I))
+            from mapRangeStartSets_conc σ hbs]
         simp only [ok_bind]
-        rfl
+        simp [pure, Except.pure]
       case panicArgK k' => simp [stepFn', quit] at h
       case panicResumeK chain k' => simp [stepFn', quit] at h
       case chanStK a b c d e => simp [stepFn', quit] at h
@@ -565,16 +572,40 @@ theorem stepFn'_conc (hI : I.Sound) (σ : ExecState) (ch : Choices)
       case panicResumeK chain k' => simp [stepFn', quit] at h
       case breakableK k' => cases h; rfl
       case labelK name k' => cases h; rfl
-      case mapIterK keyVar valVar keyTy valTy body remaining env k' =>
+      case mapIterK keyVar valVar keyTy valTy body base produced start env k' =>
         simp only [stepFn'] at h
-        by_cases hemp : remaining.isEmpty = true
-        · rw [if_pos hemp] at h
-          cases h
-          simp only [concC, concK, stepFn]
-          rw [if_pos (by simpa [Array.isEmpty_iff] using hemp)]
-          rfl
-        · rw [if_neg hemp] at h
-          cases h
+        cases base with
+        | none =>
+            simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+            obtain ⟨rfl, rfl⟩ := h
+            simp only [concC, concK, stepFn]
+            simp [mapIterCandidates, mapIterLiveEntries,
+              filterCandidateList, snapshotEntriesSelfNormalized,
+              snapshotEntriesSelfNormalizedList, Bind.bind, Except.bind,
+              pure, Except.pure]
+        | some l =>
+            simp only [bind_eq_ok] at h
+            obtain ⟨bv, hbv, h2⟩ := h
+            cases bv <;> simp only [quit] at h2 <;> try (cases h2; done)
+            next es =>
+              by_cases hemp : es.isEmpty = true
+              · rw [if_pos hemp] at h2
+                simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h2
+                obtain ⟨rfl, rfl⟩ := h2
+                simp only [concC, concK, stepFn]
+                have hload := loadLoc_conc (I := I) σ hbv
+                have hcand : mapIterCandidates (concS I σ s) keyTy valTy
+                    (some l) (produced.map (concV I)) = .ok #[] := by
+                  rw [Array.isEmpty_iff] at hemp
+                  subst hemp
+                  simp [mapIterCandidates, mapIterLiveEntries, hload,
+                    concV_mapData, concEntries, filterCandidateList,
+                    snapshotEntriesSelfNormalized,
+                    snapshotEntriesSelfNormalizedList,
+                    Bind.bind, Except.bind, pure, Except.pure]
+                simp [hcand, Bind.bind, Except.bind, pure, Except.pure]
+              · rw [if_neg hemp] at h2
+                simp [quit] at h2
       case storeK refs vals body env k' =>
         cases refs with
         | nil =>

@@ -593,22 +593,19 @@ theorem hg_rB_raw (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
     with_unfolding_all rfl
   exact stepFnIter_chain (stepFnIter_chain h1 h2) h3
 
-/-- The range SNAPSHOT: the map data cell read, every entry checked
-self-normalized. -/
-theorem hg_snap (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
+/-- The range START (BUG-005 (L)): the map data cell read once for the
+base loc and the start-key set; the produced set begins empty. -/
+theorem hg_rangeStart (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
     (ws lp : List Int) :
     ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (B na : Nat)
       (ch : Choices),
-      (∀ p ∈ kvs, IntKind.normalize .uint64 p.1 = p.1
-        ∧ IntKind.normalize .uint64 ((p.2 : Nat) : Int)
-            = ((p.2 : Nat) : Int)) →
     stepFn (σH σ L sv qv siv civ ws lp kvs iv false dead na)
         (.retV (.map ⟨some (.base ⟨21⟩)⟩)
           (.mapRangeK none none tU64 tU64 hRangeBody (envRBDH B) (kRH B))) ch
-      = .ok (.next (iterKH B kvs),
+      = .ok (.next (iterKH B (toKeys (kvs.map (·.1))) #[]),
           σH σ L sv qv siv civ ws lp kvs iv false dead na, ch) := by
-  intro kvs iv dead B na ch hkv
-  exact stepFn_snapshot (snapshot_toEntries (a := ⟨21⟩) (dty := none) rfl hkv)
+  intro kvs iv dead B na ch
+  exact stepFn_mapRangeStart (rangeStart_toEntries (a := ⟨21⟩) (dty := none) rfl)
 
 /-! ## The range loop (GAP-R1)
 
@@ -621,11 +618,12 @@ and "the first key visited" would not be. -/
 
 /-- Range R1: after the pick, up to the `distinct` read. 6 steps. -/
 theorem hg_R1_raw (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
-    (ws lp : List Int) (kvs rem : List (Int × Nat)) (iv : Int) (dead : Heap)
+    (ws lp : List Int) (kvs : List (Int × Nat)) (st pr : Array GoValue)
+    (iv : Int) (dead : Heap)
     (B na : Nat) (ch : Choices) :
     stepFnIter 6 (σH σ L sv qv siv civ ws lp kvs iv false dead na)
-      (.exec hRangeBody (envIt1 B) (iterKH B rem)) ch
-      = .ok (.evalE (.var "distinct") (envIt2 B) (rngAddK B rem),
+      (.exec hRangeBody (envIt1 B) (iterKH B st pr)) ch
+      = .ok (.evalE (.var "distinct") (envIt2 B) (rngAddK B st pr),
           σH σ L sv qv siv civ ws lp kvs iv false dead na, ch) := by
   with_unfolding_all rfl
 
@@ -650,35 +648,37 @@ theorem hg_varDistinct (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
 
 /-- Range R2: the read value → the `distinct` store point. 4 steps. -/
 theorem hg_R2_raw (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
-    (ws lp : List Int) (kvs rem : List (Int × Nat)) (iv : Int) (dead : Heap)
+    (ws lp : List Int) (kvs : List (Int × Nat)) (st pr : Array GoValue)
+    (iv : Int) (dead : Heap)
     (B na : Nat) (dv : Int) (ch : Choices) :
     stepFnIter 4 (σH σ L sv qv siv civ ws lp kvs iv false dead na)
-      (.retV (.int dv .uint64) (rngAddK B rem)) ch
+      (.retV (.int dv .uint64) (rngAddK B st pr)) ch
       = .ok (.next (.storeK [rngRef B]
             [.int (IntKind.normalize .uint64 (dv + 1)) .uint64] (.seqn #[])
-            (envIt2 B) (rngStoreK B rem)),
+            (envIt2 B) (rngStoreK B st pr)),
           σH σ L sv qv siv civ ws lp kvs iv false dead na, ch) := by
   with_unfolding_all rfl
 
 /-- Range R3: the store drains → the next `mapIterK`. 3 steps. -/
 theorem hg_R3_raw (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
-    (ws lp : List Int) (kvs rem : List (Int × Nat)) (iv : Int) (dead : Heap)
+    (ws lp : List Int) (kvs : List (Int × Nat)) (st pr : Array GoValue)
+    (iv : Int) (dead : Heap)
     (B na : Nat) (ch : Choices) :
     stepFnIter 3 (σH σ L sv qv siv civ ws lp kvs iv false dead na)
-      (.next (.storeK [] [] (.seqn #[]) (envIt2 B) (rngStoreK B rem))) ch
-      = .ok (.next (iterKH B rem),
+      (.next (.storeK [] [] (.seqn #[]) (envIt2 B) (rngStoreK B st pr))) ch
+      = .ok (.next (iterKH B st pr),
           σH σ L sv qv siv civ ws lp kvs iv false dead na, ch) := by
   have h1 := stepFnIter_one (stepFn_storeK_nil
     (σ := σH σ L sv qv siv civ ws lp kvs iv false dead na)
     (body := .seqn #[]) (env := envIt2 B) (k := .seq [] (envIt2 B)
-      (iterKH B rem)) (ch := ch))
+      (iterKH B st pr)) (ch := ch))
   have h2 := stepFnIter_one (stepFn_seqn_splice
     (σ := σH σ L sv qv siv civ ws lp kvs iv false dead na) (ss := #[])
-    (env := envIt2 B) (rest := []) (k := iterKH B rem) (ch := ch))
+    (env := envIt2 B) (rest := []) (k := iterKH B st pr) (ch := ch))
   have h3 : stepFnIter 1 (σH σ L sv qv siv civ ws lp kvs iv false dead na)
       (.next (.seq ((#[] : Array Stmt).toList ++ []) (envIt2 B)
-        (iterKH B rem))) ch
-      = .ok (.next (iterKH B rem),
+        (iterKH B st pr))) ch
+      = .ok (.next (iterKH B st pr),
           σH σ L sv qv siv civ ws lp kvs iv false dead na, ch) := by
     with_unfolding_all rfl
   exact stepFnIter_chain (stepFnIter_chain h1 h2) h3
@@ -911,20 +911,62 @@ theorem cp_loopH (σ : ExecState) (n seed q : Nat) (hn : n < 2 ^ 63)
 -- (`lookup_set_self`, formerly a private copy here, is StepKit's
 -- since WP arc s2 item 1.)
 
-/-- The choice-pick at this placement: one choice consumed, one entry
-erased, NO cell allocated. -/
+/-- The pick-coherence relation of this placement's walk (BUG-005
+(L)): the produced set is the wrapped `done` keys, the remaining
+candidates are the cell's entries minus them. -/
+def hgPC (kvs : List (Int × Nat)) (pr : Array GoValue)
+    (rem : List (Int × Nat)) : Prop :=
+  ∃ done : List Int, pr = toKeys done
+    ∧ rem = kvs.filter (fun p => !done.contains p.1)
+
+/-- The choice-pick at this placement: one choice consumed, the picked
+key joins the produced set, NO cell allocated. The candidates and the
+mandatory bit are computed against the map cell at base 21 (the lookup
+is definitional in `σH`), given the entries' normalization and the
+coherence relation. -/
 theorem hg_pick (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
     (ws lp : List Int) :
-    ∀ (kvs rem : List (Int × Nat)) (idx : Nat) (ch ch₂ : Choices)
-      (iv : Int) (dead : Heap) (B na : Nat),
-      Choices.consume ch rem.length = (idx, ch₂) → idx < rem.length →
+    ∀ (kvs rem : List (Int × Nat)) (pr : Array GoValue) (idx : Nat)
+      (ch ch₂ : Choices)
+      (iv : Int) (dead : Heap) (B na : Nat)
+      (_hkv : ∀ p ∈ kvs, IntKind.normalize .uint64 p.1 = p.1
+        ∧ IntKind.normalize .uint64 ((p.2 : Nat) : Int)
+            = ((p.2 : Nat) : Int))
+      (_hPC : hgPC kvs pr rem)
+      (_hcons : Choices.consume ch rem.length = (idx, ch₂))
+      (hidx : idx < rem.length),
     stepFn (σH σ L sv qv siv civ ws lp kvs iv false dead na)
-        (.next (iterKH B rem)) ch
-      = .ok (.exec hRangeBody (envIt1 B) (iterKH B (rem.eraseIdx idx)),
+        (.next (iterKH B (toKeys (kvs.map (·.1))) pr)) ch
+      = .ok (.exec hRangeBody (envIt1 B)
+            (iterKH B (toKeys (kvs.map (·.1)))
+              (pr.push (.int (rem[idx]'hidx).1 .uint64))),
           σH σ L sv qv siv civ ws lp kvs iv false dead na, ch₂) := by
-  intro kvs rem idx ch ch₂ iv dead B na hcons hidx
+  intro kvs rem pr idx ch ch₂ iv dead B na hkv hPC hcons hidx
+  obtain ⟨done, rfl, hrem⟩ := hPC
+  have hcands : mapIterCandidates
+      (σH σ L sv qv siv civ ws lp kvs iv false dead na) tU64 tU64
+      (some (.base ⟨21⟩)) (toKeys done) = .ok (toEntries rem) := by
+    rw [hrem]
+    exact candidates_toEntries (a := ⟨21⟩) (dty := none) rfl hkv
+  have hrem_sub : ∀ p ∈ rem, (kvs.map (·.1)).contains p.1 := by
+    intro p hp
+    rw [hrem] at hp
+    have := (List.mem_filter.mp hp).1
+    exact List.contains_iff_exists_mem_beq.mpr
+      ⟨p.1, List.mem_map.mpr ⟨p, this, rfl⟩, by simp⟩
+  have hne : rem ≠ [] := by
+    intro hc
+    rw [hc] at hidx
+    exact absurd hidx (by simp)
+  have hmand : mapIterMandatoryRemains
+      (σH σ L sv qv siv civ ws lp kvs iv false dead na) tU64
+      (toEntries rem) (toKeys (kvs.map (·.1))) = .ok true :=
+    mandatory_true_of_all _ hne hrem_sub
+  have hcons' : Choices.consume ch
+      (rem.length + (if true then 0 else 1)) = (idx, ch₂) := by
+    simpa using hcons
   exact stepFn_pick_novars (body := hRangeBody) (env := envRBDH B)
-    (k := kRH B) hcons hidx
+    (k := kRH B) hcands hmand hcons' hidx
 
 /-- **One range iteration, GIVEN the pick**: 16 steps, one entry gone,
 `distinct` up by one — and the state is otherwise IDENTICAL (GAP-R1
@@ -933,28 +975,40 @@ the kit's `mapPickLoop_generic`; this placement supplies only the
 iteration). -/
 theorem hg_range_iter (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
     (ws lp : List Int) :
-    ∀ (kvs rem : List (Int × Nat)) (idx : Nat) (ch ch₂ : Choices)
-      (iv : Int) (dead : Heap) (B na : Nat) (dv : Nat),
-      Choices.consume ch rem.length = (idx, ch₂) → idx < rem.length →
-      25 ≤ B + 1 → dv + 1 < 2 ^ 64 →
-      Heap.lookup dead (.base ⟨B + 1⟩) = some (u64cell ((dv : Nat) : Int)) →
+    ∀ (kvs rem : List (Int × Nat)) (pr : Array GoValue) (idx : Nat)
+      (ch ch₂ : Choices)
+      (iv : Int) (dead : Heap) (B na : Nat) (dv : Nat)
+      (_hkv : ∀ p ∈ kvs, IntKind.normalize .uint64 p.1 = p.1
+        ∧ IntKind.normalize .uint64 ((p.2 : Nat) : Int)
+            = ((p.2 : Nat) : Int))
+      (_hPC : hgPC kvs pr rem)
+      (_hcons : Choices.consume ch rem.length = (idx, ch₂))
+      (hidx : idx < rem.length)
+      (_hB : 25 ≤ B + 1) (_hdv : dv + 1 < 2 ^ 64)
+      (_hlk : Heap.lookup dead (.base ⟨B + 1⟩)
+        = some (u64cell ((dv : Nat) : Int))),
       stepFnIter 16 (σH σ L sv qv siv civ ws lp kvs iv false dead na)
-          (.next (iterKH B rem)) ch
-        = .ok (.next (iterKH B (rem.eraseIdx idx)),
+          (.next (iterKH B (toKeys (kvs.map (·.1))) pr)) ch
+        = .ok (.next (iterKH B (toKeys (kvs.map (·.1)))
+              (pr.push (.int (rem[idx]'hidx).1 .uint64))),
             σH σ L sv qv siv civ ws lp kvs iv false
               (Heap.set dead (.base ⟨B + 1⟩)
                 (u64cell ((dv + 1 : Nat) : Int))) na, ch₂) := by
-  intro kvs rem idx ch ch₂ iv dead B na dv hcons hidx hB hdv hlk
+  intro kvs rem pr idx ch ch₂ iv dead B na dv hkv hPC hcons hidx hB hdv hlk
   have hp := stepFnIter_one
-    (hg_pick σ L sv qv siv civ ws lp kvs rem idx ch ch₂ iv dead B na hcons
-      hidx)
-  have hR1 := hg_R1_raw σ L sv qv siv civ ws lp kvs (rem.eraseIdx idx) iv
+    (hg_pick σ L sv qv siv civ ws lp kvs rem pr idx ch ch₂ iv dead B na
+      hkv hPC hcons hidx)
+  have hR1 := hg_R1_raw σ L sv qv siv civ ws lp kvs
+    (toKeys (kvs.map (·.1))) (pr.push (.int (rem[idx]'hidx).1 .uint64)) iv
     dead B na ch₂
   have hvar := stepFnIter_one
     (hg_varDistinct σ L sv qv siv civ ws lp kvs iv dead B na
-      ((dv : Nat) : Int) (envIt2 B) (rngAddK B (rem.eraseIdx idx)) ch₂
+      ((dv : Nat) : Int) (envIt2 B)
+      (rngAddK B (toKeys (kvs.map (·.1)))
+        (pr.push (.int (rem[idx]'hidx).1 .uint64))) ch₂
       rfl hB hlk)
-  have hR2 := hg_R2_raw σ L sv qv siv civ ws lp kvs (rem.eraseIdx idx) iv
+  have hR2 := hg_R2_raw σ L sv qv siv civ ws lp kvs
+    (toKeys (kvs.map (·.1))) (pr.push (.int (rem[idx]'hidx).1 .uint64)) iv
     dead B na ((dv : Nat) : Int) ch₂
   rw [show ((dv : Nat) : Int) + 1 = ((dv + 1 : Nat) : Int) from by omega,
     unorm_of_range (v := ((dv + 1 : Nat) : Int)) (by omega)
@@ -962,10 +1016,12 @@ theorem hg_range_iter (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
   have hst := stepFnIter_one
     (hg_stDistinct σ L sv qv siv civ ws lp kvs iv dead B na
       ((dv : Nat) : Int) ((dv + 1 : Nat) : Int)
-      (rngStoreK B (rem.eraseIdx idx)) ch₂ hB hlk
+      (rngStoreK B (toKeys (kvs.map (·.1)))
+        (pr.push (.int (rem[idx]'hidx).1 .uint64))) ch₂ hB hlk
       (unorm_of_range (v := ((dv + 1 : Nat) : Int)) (by omega) (by omega))
       [] [] (.seqn #[]) (envIt2 B))
-  have hR3 := hg_R3_raw σ L sv qv siv civ ws lp kvs (rem.eraseIdx idx) iv
+  have hR3 := hg_R3_raw σ L sv qv siv civ ws lp kvs
+    (toKeys (kvs.map (·.1))) (pr.push (.int (rem[idx]'hidx).1 .uint64)) iv
     (Heap.set dead (.base ⟨B + 1⟩) (u64cell ((dv + 1 : Nat) : Int))) B na ch₂
   exact stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
     (stepFnIter_chain (stepFnIter_chain hp hR1) hvar) hR2) hst) hR3
@@ -979,9 +1035,15 @@ conservation invariant "`distinct` + remaining entries = `dv + m`"
 `∃ k ≤ 16·m + 1` — the run assembly's fuel arithmetic carries the
 bound). -/
 theorem hg_range_loop (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
-    (ws lp : List Int) (kvs : List (Int × Nat)) (iv : Int) :
+    (ws lp : List Int) (kvs : List (Int × Nat)) (iv : Int)
+    (hkv : ∀ p ∈ kvs, IntKind.normalize .uint64 p.1 = p.1
+      ∧ IntKind.normalize .uint64 ((p.2 : Nat) : Int)
+          = ((p.2 : Nat) : Int))
+    (hnodup : (kvs.map (·.1)).Nodup) :
     ∀ (m : Nat) (rem : List (Int × Nat)), rem.length = m →
-    ∀ (dv : Nat) (dead : Heap) (B na : Nat) (ch : Choices),
+    ∀ (pr : Array GoValue) (dv : Nat) (dead : Heap) (B na : Nat)
+      (ch : Choices),
+      hgPC kvs pr rem →
       25 ≤ B + 1 → B + 1 < na → dv + m < 2 ^ 64 →
       Heap.lookup dead (.base ⟨B + 1⟩) = some (u64cell ((dv : Nat) : Int)) →
       DeadFrom dead na →
@@ -993,34 +1055,37 @@ theorem hg_range_loop (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
       ∧ DeadFrom tail na
       ∧ stepFnIter k
           (σH σ L sv qv siv civ ws lp kvs iv false dead na)
-          (.next (iterKH B rem))
+          (.next (iterKH B (toKeys (kvs.map (·.1))) pr))
           ch
         = .ok (.next (kRH B),
             σH σ L sv qv siv civ ws lp kvs iv false tail na, ch') := by
-  intro m rem hm dv dead B na ch hB hBna hdv hlk hdead
+  intro m rem hm pr dv dead B na ch hPC hB hBna hdv hlk hdead
   subst hm
-  obtain ⟨k, tail, ch', hk, hP, hrun⟩ :=
+  obtain ⟨k, d', ch', hk, hP, hrun⟩ :=
     mapPickLoop_generic
-      (T := fun tl : Heap => σH σ L sv qv siv civ ws lp kvs iv false tl na)
-      (cfg := fun r => .next (iterKH B r))
+      (T := fun d : Heap × Array GoValue =>
+        σH σ L sv qv siv civ ws lp kvs iv false d.1 na)
+      (cfg := fun d _ => .next (iterKH B (toKeys (kvs.map (·.1))) d.2))
       (exitCfg := .next (kRH B))
-      (P := fun tl r =>
+      (P := fun d r =>
         r.length ≤ rem.length
-        ∧ Heap.lookup tl (.base ⟨B + 1⟩)
+        ∧ hgPC kvs d.2 r
+        ∧ Heap.lookup d.1 (.base ⟨B + 1⟩)
             = some (u64cell ((dv + (rem.length - r.length) : Nat) : Int))
-        ∧ Heap.lookup tl (.base ⟨B⟩) = Heap.lookup dead (.base ⟨B⟩)
-        ∧ DeadFrom tl na)
+        ∧ Heap.lookup d.1 (.base ⟨B⟩) = Heap.lookup dead (.base ⟨B⟩)
+        ∧ DeadFrom d.1 na)
       (c := 16) (e := 1)
-      (fun tl r idx p ch₀ ch₂ hcons hidx hp hP => by
-        obtain ⟨hlen, hlk', hlkB, hdead'⟩ := hP
+      (fun d r idx p ch₀ ch₂ hcons hidx hp hP => by
+        obtain ⟨hlen, hPCd, hlk', hlkB, hdead'⟩ := hP
         have hlpos : 0 < r.length := by omega
-        have hiter := hg_range_iter σ L sv qv siv civ ws lp kvs r idx ch₀
-          ch₂ iv tl B na (dv + (rem.length - r.length)) hcons hidx hB (by omega) hlk'
+        have hiter := hg_range_iter σ L sv qv siv civ ws lp kvs r d.2 idx
+          ch₀ ch₂ iv d.1 B na (dv + (rem.length - r.length)) hkv hPCd
+          hcons hidx hB (by omega) hlk'
         have hne : ∀ x : Nat, x ≠ B + 1 →
-            Heap.lookup (Heap.set tl (.base ⟨B + 1⟩)
+            Heap.lookup (Heap.set d.1 (.base ⟨B + 1⟩)
                 (u64cell ((dv + (rem.length - r.length) + 1 : Nat) : Int)))
               (.base ⟨x⟩)
-              = Heap.lookup tl (.base ⟨x⟩) := by
+              = Heap.lookup d.1 (.base ⟨x⟩) := by
           intro x hx
           refine Machine.Heap.lookup_set_ne ?_
           intro hc
@@ -1028,10 +1093,27 @@ theorem hg_range_loop (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
             have h := congrArg Loc.rootBase hc
             simp only [Loc.rootBase] at h
             omega)
-        refine ⟨16, Heap.set tl (.base ⟨B + 1⟩)
+        have hkey : (r[idx]'hidx) = p := by
+          have hg := List.getElem?_eq_getElem hidx
+          rw [hp] at hg
+          exact (Option.some.inj hg).symm
+        rw [hkey] at hiter
+        have hPC' : hgPC kvs (d.2.push (.int p.1 .uint64))
+            (r.eraseIdx idx) := by
+          obtain ⟨done, hdone, hrem'⟩ := hPCd
+          refine ⟨done ++ [p.1], ?_, ?_⟩
+          · rw [hdone]
+            simp [toKeys, List.map_append]
+          · rw [hrem']
+            refine (filter_push_key hnodup ?_).symm
+            rw [← hrem']
+            exact hp
+        refine ⟨16, (Heap.set d.1 (.base ⟨B + 1⟩)
             (u64cell ((dv + (rem.length - r.length) + 1 : Nat) : Int)),
+            d.2.push (.int p.1 .uint64)),
           Nat.le_refl _,
-          ⟨by rw [eraseIdx_length_of_lt hidx]; omega, ?_, ?_, ?_⟩, hiter⟩
+          ⟨by rw [eraseIdx_length_of_lt hidx]; omega, hPC', ?_, ?_, ?_⟩,
+          hiter⟩
         · rw [lookup_set_self]
           congr 3
           rw [eraseIdx_length_of_lt hidx]
@@ -1041,13 +1123,23 @@ theorem hg_range_loop (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
         · intro x hx
           rw [hne x (by omega)]
           exact hdead' x hx)
-      (fun tl ch₀ _ => by
-        show stepFnIter 1 _ _ _ = _
-        with_unfolding_all rfl)
-      rem.length rem rfl dead ch
-      ⟨Nat.le_refl _, by simpa using hlk, rfl, hdead⟩
-  obtain ⟨-, hlk', hlkB, hdead'⟩ := hP
-  refine ⟨k, ch', tail, hk, ?_, hlkB, hdead', hrun⟩
+      (fun d ch₀ hP => by
+        obtain ⟨-, hPCd, -, -, -⟩ := hP
+        obtain ⟨done, hdone, hnilf⟩ := hPCd
+        have hcands : mapIterCandidates
+            (σH σ L sv qv siv civ ws lp kvs iv false d.1 na) tU64 tU64
+            (some (.base ⟨21⟩)) d.2 = .ok #[] := by
+          rw [hdone]
+          have := candidates_toEntries (σ :=
+              σH σ L sv qv siv civ ws lp kvs iv false d.1 na)
+            (a := ⟨21⟩) (dty := none) (kvs := kvs) (ks := done) rfl hkv
+          rw [← hnilf] at this
+          simpa [toEntries] using this
+        exact stepFnIter_one (stepFn_iter_done hcands))
+      rem.length rem rfl (dead, pr) ch
+      ⟨Nat.le_refl _, hPC, by simpa using hlk, rfl, hdead⟩
+  obtain ⟨-, -, hlk', hlkB, hdead'⟩ := hP
+  refine ⟨k, ch', d'.1, hk, ?_, hlkB, hdead', hrun⟩
   simpa using hlk'
 
 /-! ## Normalization of the map's entries (the snapshot's side
@@ -1548,7 +1640,7 @@ theorem hg_runs_generic (σ : ExecState) (n seed q : Nat) (hcap : n ≤ 8)
     (25 + 2 * n) (25 + 2 * n + 2) ch
   have hS15 := stepFnIter_chain hS14 hrB
   have hsnap := stepFnIter_one
-    (hg_snap σ n ((seed : Nat) : Int) ((q : Nat) : Int) ((n : Nat) : Int)
+    (hg_rangeStart σ n ((seed : Nat) : Int) ((q : Nat) : Int) ((n : Nat) : Int)
       ((n : Nat) : Int) (histFamily n seed) (histPre n seed)
       (countsFold (histFamily n seed)) ((n : Nat) : Int)
       (tail₁ ++ [(.base ⟨25 + 2 * n⟩,
@@ -1556,8 +1648,7 @@ theorem hg_runs_generic (σ : ExecState) (n seed q : Nat) (hcap : n ≤ 8)
           .int ((occurrences ((q : Nat) : Int)
             (histFamily n seed) : Nat) : Int) .uint64⟩)]
         ++ [(.base ⟨25 + 2 * n + 1⟩, u64cell 0)])
-      (25 + 2 * n) (25 + 2 * n + 2) ch
-      (countsFold_norm (histFamily n seed) hws (by omega)))
+      (25 + 2 * n) (25 + 2 * n + 2) ch)
   have hS16 := stepFnIter_chain hS15 hsnap
   -- THE RANGE LOOP, at every choice stream
   have hlkH3 : Heap.lookup (tail₁ ++ [(.base ⟨25 + 2 * n⟩,
@@ -1578,14 +1669,22 @@ theorem hg_runs_generic (σ : ExecState) (n seed q : Nat) (hcap : n ≤ 8)
     hg_range_loop σ n ((seed : Nat) : Int) ((q : Nat) : Int) ((n : Nat) : Int)
       ((n : Nat) : Int) (histFamily n seed) (histPre n seed)
       (countsFold (histFamily n seed)) ((n : Nat) : Int)
+      (countsFold_norm (histFamily n seed) hws (by omega))
+      (countsFold_nodup_keys (histFamily n seed))
       (countsFold (histFamily n seed)).length (countsFold (histFamily n seed))
-      rfl 0
+      rfl #[] 0
       (tail₁ ++ [(.base ⟨25 + 2 * n⟩,
         ⟨some tU64,
           .int ((occurrences ((q : Nat) : Int)
             (histFamily n seed) : Nat) : Int) .uint64⟩)]
         ++ [(.base ⟨25 + 2 * n + 1⟩, u64cell 0)])
-      (25 + 2 * n) (25 + 2 * n + 2) ch (by omega) (by omega) (by omega) hlkD
+      (25 + 2 * n) (25 + 2 * n + 2) ch
+      ⟨[], by simp [toKeys], by
+        symm
+        apply List.filter_eq_self.mpr
+        intro q _
+        simp⟩
+      (by omega) (by omega) (by omega) hlkD
       hdead2.push
   rw [hlkH3] at hd2
   rw [Nat.zero_add, hdlen] at hd1

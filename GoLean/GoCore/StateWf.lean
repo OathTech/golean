@@ -379,8 +379,10 @@ def Cont.locSup : Cont → Nat
         (max (LocalEnv.locSup env) (Cont.locSup k))
   | .mapRangeK _ _ _ _ body env k =>
       max (max (Stmt.locSup body) (LocalEnv.locSup env)) (Cont.locSup k)
-  | .mapIterK _ _ _ _ body remaining env k =>
-      max (max (Stmt.locSup body) (goValueEntriesSup remaining.toList))
+  | .mapIterK _ _ _ _ body base produced start env k =>
+      max (max (Stmt.locSup body)
+          (max (optLocSup base)
+            (max (goValueListSup produced.toList) (goValueListSup start.toList))))
         (max (LocalEnv.locSup env) (Cont.locSup k))
   | .panicArgK k => Cont.locSup k
   | .panicResumeK chain k => max (panicChainSup chain) (Cont.locSup k)
@@ -495,9 +497,11 @@ def Cont.itersNormalized (types : TypeEnv) : Cont → Bool
   | .callArgsK _ _ _ _ _ k => Cont.itersNormalized types k
   | .stmtOpK _ _ _ _ _ k => Cont.itersNormalized types k
   | .mapRangeK _ _ _ _ _ _ k => Cont.itersNormalized types k
-  | .mapIterK _ _ keyTy valTy _ remaining _ k =>
-      snapshotEntriesSelfNormalized types keyTy valTy remaining
-        && Cont.itersNormalized types k
+  -- BUG-005 (L) surgery: the frame carries no snapshot to validate —
+  -- pick-time validation lives in `mapIterCandidates` (fail closed at
+  -- the step), which is what keeps pick success choices-independent;
+  -- the component's remaining content is the recursion.
+  | .mapIterK _ _ _ _ _ _ _ _ _ k => Cont.itersNormalized types k
   | .panicArgK k => Cont.itersNormalized types k
   | .panicResumeK _ k => Cont.itersNormalized types k
   | .chanStK _ _ _ _ k => Cont.itersNormalized types k
@@ -527,6 +531,25 @@ def Config.itersNormalized (types : TypeEnv) : Config → Bool
   | .spawned k => Cont.itersNormalized types k
   | .blockedSync _ _ _ k => Cont.itersNormalized types k
   | .panicked _ => true
+
+/-- VACUITY, stated loudly (BUG-005 (L) surgery): with the snapshot
+retired, no constructor contributes a check, so the component is
+constantly `true`. It is RETAINED this arc to bound the surgery's
+diff (`MachineWf`/`MultiWf` and their transports keep their shapes);
+its removal is recorded as a follow-up in the arc log. Every proof
+obligation about it discharges by this lemma. -/
+theorem Cont.itersNormalized_true (types : TypeEnv) :
+    ∀ k : Cont, Cont.itersNormalized types k = true := by
+  intro k
+  induction k <;> simp only [Cont.itersNormalized] <;>
+    first | rfl | assumption
+
+@[inherit_doc Cont.itersNormalized_true]
+theorem Config.itersNormalized_true (types : TypeEnv) :
+    ∀ c : Config, Config.itersNormalized types c = true := by
+  intro c
+  cases c <;> simp only [Config.itersNormalized] <;>
+    first | rfl | exact Cont.itersNormalized_true types _
 
 /-! ## The Prop wrappers -/
 
@@ -2417,50 +2440,216 @@ theorem bindIterVars_wf {env : LocalEnv} {σ : ExecState}
       obtain ⟨rfl, rfl⟩ := h
       exact ⟨hw, Nat.le_refl _, rfl, rfl, rfl, henv⟩
 
-theorem mapRangeEntries_locSup {σ : ExecState} {v : GoValue}
-    {entries : Array (GoValue × GoValue)}
-    (h : mapRangeEntries σ v = .ok entries) :
-    goValueEntriesSup entries.toList ≤ Heap.locSup σ.heap := by
-  unfold mapRangeEntries at h
+/-- Keys are bounded by their entries. -/
+theorem goValueListSup_map_fst_le :
+    ∀ (l : List (GoValue × GoValue)),
+      goValueListSup (l.map (·.1)) ≤ goValueEntriesSup l := by
+  intro l
+  induction l with
+  | nil => simp [goValueListSup, goValueEntriesSup]
+  | cons e rest ih =>
+      obtain ⟨k, v⟩ := e
+      simp only [List.map_cons, goValueListSup, goValueEntriesSup]
+      omega
+
+/-- Range-start bounds (BUG-005 (L) surgery): the recorded base loc is
+bounded by the ranged map VALUE's sup, and the start keys by the
+heap's (they come out of a loaded cell). -/
+theorem mapRangeStartSets_locSup {σ : ExecState} {v : GoValue}
+    {base : Option Loc} {start : Array GoValue}
+    (h : mapRangeStartSets σ v = .ok (base, start)) :
+    optLocSup base ≤ GoValue.locSup v
+      ∧ goValueListSup start.toList ≤ Heap.locSup σ.heap := by
+  unfold mapRangeStartSets at h
   simp only [bind_eq_ok] at h
   obtain ⟨m, hm, h⟩ := h
+  have hmv : optLocSup m.base ≤ GoValue.locSup v := by
+    unfold valueAsMap at hm
+    split at hm <;> simp_all [GoValue.locSup, pure, Except.pure]
   split at h
-  · simp only [pure_eq_ok, Except.ok.injEq] at h
-    subst h
-    simp [goValueEntriesSup]
-  · rename_i base
+  · rename_i hbase
+    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    simp [optLocSup, goValueListSup]
+  · rename_i base' hbase
     simp only [bind_eq_ok] at h
     obtain ⟨bv, hbv, h⟩ := h
     split at h
-    · simp only [pure_eq_ok, Except.ok.injEq] at h
-      subst h
-      have := loadLoc_locSup hbv
-      simpa [GoValue.locSup] using this
+    · rename_i es
+      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      refine ⟨by simpa [hbase] using hmv, ?_⟩
+      have hload := loadLoc_locSup hbv
+      simp only [GoValue.locSup] at hload
+      rw [Array.toList_map]
+      exact Nat.le_trans (goValueListSup_map_fst_le es.toList) hload
     · simp at h
 
-/-- Inversion of the validated snapshot premise (sem-adequacy slice 3):
-a successful `mapRangeSnapshotEntries` is exactly a successful raw
-snapshot whose entries pass the self-normalization check. -/
-theorem mapRangeSnapshotEntries_ok {σ : ExecState} {keyTy valTy : Ty}
-    {v : GoValue} {entries : Array (GoValue × GoValue)}
-    (h : mapRangeSnapshotEntries σ keyTy valTy v = .ok entries) :
-    mapRangeEntries σ v = .ok entries
-      ∧ snapshotEntriesSelfNormalized σ.types keyTy valTy entries = true := by
-  unfold mapRangeSnapshotEntries at h
+/-- The pick-time filter only drops entries. -/
+theorem filterCandidateList_sup {σ : ExecState} {keyTy : Ty}
+    {produced : Array GoValue} :
+    ∀ {es out : List (GoValue × GoValue)},
+      filterCandidateList σ keyTy produced es = .ok out →
+      goValueEntriesSup out ≤ goValueEntriesSup es := by
+  intro es
+  induction es with
+  | nil =>
+      intro out h
+      simp only [filterCandidateList, pure_eq_ok, Except.ok.injEq] at h
+      subst h
+      exact Nat.le_refl _
+  | cons e rest ih =>
+      intro out h
+      obtain ⟨k, v⟩ := e
+      simp only [filterCandidateList, bind_eq_ok] at h
+      obtain ⟨inp, hinp, tail, htail, h⟩ := h
+      have := ih htail
+      split at h <;>
+        (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
+         simp only [goValueEntriesSup] at *; omega)
+
+/-- Every candidate list is drawn from the live cell: the pick-time
+candidates are heap-bounded (BUG-005 (L) surgery — the mapIterNext wf
+case's bound, replacing the retired snapshot bound). -/
+theorem mapIterCandidates_locSup {σ : ExecState} {keyTy valTy : Ty}
+    {base : Option Loc} {produced : Array GoValue}
+    {cands : Array (GoValue × GoValue)}
+    (h : mapIterCandidates σ keyTy valTy base produced = .ok cands) :
+    goValueEntriesSup cands.toList ≤ Heap.locSup σ.heap := by
+  unfold mapIterCandidates at h
   simp only [bind_eq_ok] at h
-  obtain ⟨es, hes, h⟩ := h
+  obtain ⟨es, hes, fl, hfl, h⟩ := h
+  have hlive : goValueEntriesSup es.toList ≤ Heap.locSup σ.heap := by
+    cases base with
+    | none =>
+        simp only [mapIterLiveEntries, pure_eq_ok, Except.ok.injEq] at hes
+        subst hes
+        simp [goValueEntriesSup]
+    | some l =>
+        simp only [mapIterLiveEntries, bind_eq_ok] at hes
+        obtain ⟨bv, hbv, hes⟩ := hes
+        split at hes
+        · simp only [pure_eq_ok, Except.ok.injEq] at hes
+          subst hes
+          have := loadLoc_locSup hbv
+          simpa [GoValue.locSup] using this
+        · simp at hes
+  have hfil := filterCandidateList_sup hfl
   split at h
-  · rename_i hchk
-    simp only [pure_eq_ok, Except.ok.injEq] at h
+  · simp only [pure_eq_ok, Except.ok.injEq] at h
     subst h
-    exact ⟨hes, hchk⟩
+    simp only [List.toList_toArray]
+    exact Nat.le_trans hfil hlive
   · simp [throw, throwThe, MonadExceptOf.throw] at h
 
-theorem mapRangeSnapshotEntries_locSup {σ : ExecState} {keyTy valTy : Ty}
-    {v : GoValue} {entries : Array (GoValue × GoValue)}
-    (h : mapRangeSnapshotEntries σ keyTy valTy v = .ok entries) :
-    goValueEntriesSup entries.toList ≤ Heap.locSup σ.heap :=
-  mapRangeEntries_locSup (mapRangeSnapshotEntries_ok h).1
+/-- The delete-prune's set subtraction only removes elements. -/
+theorem removeKeyList_sup {σ : ExecState} {keyTy : Ty} {key : GoValue} :
+    ∀ {ks out : List GoValue},
+      removeKeyList σ keyTy key ks = .ok out →
+      goValueListSup out ≤ goValueListSup ks := by
+  intro ks
+  induction ks with
+  | nil =>
+      intro out h
+      simp only [removeKeyList, pure_eq_ok, Except.ok.injEq] at h
+      subst h
+      exact Nat.le_refl _
+  | cons p rest ih =>
+      intro out h
+      simp only [removeKeyList, bind_eq_ok] at h
+      obtain ⟨tail, htail, eq, heq, h⟩ := h
+      have := ih htail
+      split at h <;>
+        (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
+         simp only [goValueListSup] at *; omega)
+
+/-- The delete-prune never grows a continuation's loc sup: it only
+removes keys from `mapIterK` frames' produced/start sets. -/
+theorem pruneIterFramesKey_locSup {σ : ExecState} {delBase : Loc}
+    {key : GoValue} :
+    ∀ (k : Cont) {k' : Cont},
+      pruneIterFramesKey σ delBase key k = .ok k' →
+      Cont.locSup k' ≤ Cont.locSup k := by
+  intro k
+  induction k <;> intro k' h <;>
+    simp only [pruneIterFramesKey, pure_eq_ok, Except.ok.injEq,
+      bind_eq_ok] at h
+  case stop =>
+    subst h
+    exact Nat.le_refl _
+  case mapIterK kv vv keyTy valTy body base produced start env k ih =>
+    obtain ⟨k'', hk'', h⟩ := h
+    have hk := ih hk''
+    split at h
+    · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
+      obtain ⟨p', hp', s', hs', h⟩ := h
+      subst h
+      have h1 := removeKeyList_sup hp'
+      have h2 := removeKeyList_sup hs'
+      simp only [Cont.locSup, List.toList_toArray] at *
+      omega
+    · simp only [pure_eq_ok, Except.ok.injEq] at h
+      subst h
+      simp only [Cont.locSup] at *
+      omega
+  all_goals
+    (obtain ⟨k'', hk'', h⟩ := h
+     subst h
+     rename_i ih
+     have := ih hk''
+     simp only [Cont.locSup] at *
+     omega)
+
+/-- `clear`'s prune never grows a continuation's loc sup. -/
+theorem pruneIterFramesAll_locSup {delBase : Loc} :
+    ∀ (k : Cont), Cont.locSup (pruneIterFramesAll delBase k) ≤ Cont.locSup k := by
+  intro k
+  induction k <;> simp only [pruneIterFramesAll, Cont.locSup] <;>
+    first
+    | exact Nat.le_refl _
+    | (rename_i ih
+       split <;>
+         simp only [Cont.locSup, goValueListSup,
+           List.toList_toArray] <;>
+         omega)
+    | (rename_i ih; omega)
+
+/-- `contAfterStmtOp` never grows a continuation's loc sup (identity
+for every op but the two prunes). -/
+theorem contAfterStmtOp_locSup {σ : ExecState} {op : StmtOp}
+    {vs : List GoValue} {k k' : Cont}
+    (h : contAfterStmtOp σ op vs k = .ok k') :
+    Cont.locSup k' ≤ Cont.locSup k := by
+  unfold contAfterStmtOp at h
+  split at h <;>
+    first
+    | -- identity arms (every other op; delete/clear with malformed vs)
+      (split at h <;>
+        first
+        | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
+           exact Nat.le_refl _)
+        | -- mapDelete, well-formed operands
+          (simp only [bind_eq_ok] at h
+           obtain ⟨m, hm, h⟩ := h
+           split at h
+           · simp only [pure_eq_ok, Except.ok.injEq] at h
+             subst h
+             exact Nat.le_refl _
+           · simp only [bind_eq_ok] at h
+             obtain ⟨nk, hnk, h⟩ := h
+             exact pruneIterFramesKey_locSup k h)
+        | -- clearMap, well-formed operand
+          (simp only [bind_eq_ok] at h
+           obtain ⟨m, hm, h⟩ := h
+           split at h
+           · simp only [pure_eq_ok, Except.ok.injEq] at h
+             subst h
+             exact Nat.le_refl _
+           · simp only [pure_eq_ok, Except.ok.injEq] at h
+             subst h
+             exact pruneIterFramesAll_locSup k))
+    | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
+       exact Nat.le_refl _)
 
 /-! ## Literal/aggregate builders -/
 
@@ -5741,7 +5930,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
-  case stmtOpApply op nt done v env k ch ch' happly =>
+  case stmtOpApply op nt done v env k k' ch ch' hprune happly =>
     have hop : goValueListSup (v :: done).reverse ≤ σ.nextAddr := by
       rw [goValueListSup_reverse]
       simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
@@ -5756,6 +5945,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       simp only [goValueListSup]
       omega
     obtain ⟨w1, w2, w3, w4, w5⟩ := applyStmtOp_wf hs hop happly
+    have hkp := contAfterStmtOp_locSup hprune
     refine ⟨w1, ?_, w4, w2⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -5767,9 +5957,9 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
-  case mapRangeSnapshot v entries keyVar valVar keyTy valTy body env k hsnap =>
+  case mapRangeStart v base start keyVar valVar keyTy valTy body env k hstart =>
     refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
-    have h1 := mapRangeSnapshotEntries_locSup hsnap
+    obtain ⟨hb, hst⟩ := mapRangeStartSets_locSup hstart
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -5778,23 +5968,15 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       targetRefListSup, targetPlansSup, targetRefListSup_append,
       LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
-      Nat.max_le] at hc ⊢
+      List.toList_toArray,
+      Nat.max_le] at hc hb ⊢
     omega
-  case mapIterNext keyVar valVar keyTy valTy body remaining idx env env' k 
- hidx hbind =>
-    have hentb : goValueEntriesSup remaining.toList ≤ σ.nextAddr := by
-      simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
-      GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
-      stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
-      goValueListSup_append, exprListSup_append, stmtListSup_append,
-      locListSup_append, panicChainSup_append, goValueListSup_reverse,
-      targetRefListSup, targetPlansSup, targetRefListSup_append,
-      LocalEnv.locSup, Scope.locSup,
-      runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
-      Nat.max_le] at hc
-      omega
-    have hkb : max (GoValue.locSup remaining[idx].1)
-        (GoValue.locSup remaining[idx].2) ≤ σ.nextAddr := by
+  case mapIterNext keyVar valVar keyTy valTy body base produced start cands mand idx env env' k 
+ hidx hcands hmand hbind =>
+    have hentb : goValueEntriesSup cands.toList ≤ σ.nextAddr :=
+      Nat.le_trans (mapIterCandidates_locSup hcands) hheap
+    have hkb : max (GoValue.locSup cands[idx].1)
+        (GoValue.locSup cands[idx].2) ≤ σ.nextAddr := by
       refine Nat.le_trans (goValueEntriesSup_mem ?_) hentb
       exact List.mem_of_getElem? (by
         rw [Array.getElem?_toList]
@@ -5810,8 +5992,11 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc; omega)
       (by omega) (by omega) hbind
-    have herase : goValueEntriesSup ((remaining.eraseIdx idx hidx).toList)
-        ≤ goValueEntriesSup remaining.toList := goValueEntriesSup_eraseIdx
+    have hpush : goValueListSup (produced.push cands[idx].1).toList
+        ≤ max (goValueListSup produced.toList) (GoValue.locSup cands[idx].1) := by
+      rw [Array.toList_push, goValueListSup_append]
+      simp only [goValueListSup]
+      omega
     refine ⟨w1, ?_, w4, w2⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -6365,49 +6550,8 @@ decomposes continuations structurally. -/
 theorem step_preserves_iters {c : Config} {σ : ExecState} {c' : Config}
     {σ' : ExecState} (h : Step c σ c' σ')
     (hi : Config.itersNormalized σ.types c = true) :
-    Config.itersNormalized σ.types c' = true := by
-  cases h
-  all_goals try (exact hi)
-  all_goals try (
-    simp_all only [Config.itersNormalized, Cont.itersNormalized,
-      Bool.and_eq_true]
-    done)
-  case seqn ss env k =>
-    simp only [Config.itersNormalized] at hi ⊢
-    rw [seqCont_itersNormalized]
-    exact hi
-  case mapRangeSnapshot v entries keyVar valVar keyTy valTy body env k hsnap =>
-    simp only [Config.itersNormalized, Cont.itersNormalized,
-      Bool.and_eq_true] at hi ⊢
-    exact ⟨(mapRangeSnapshotEntries_ok hsnap).2, hi⟩
-  case mapIterNext keyVar valVar keyTy valTy body remaining idx env env' k
-      hidx hbind =>
-    simp only [Config.itersNormalized, Cont.itersNormalized,
-      Bool.and_eq_true] at hi ⊢
-    exact ⟨snapshotEntriesSelfNormalized_eraseIdx hi.1, hi.2⟩
-  case deferCalleeNoArgs cv env k k' hdc hpush =>
-    simp only [Config.itersNormalized, Cont.itersNormalized] at hi ⊢
-    rw [pushDefer_itersNormalized hpush]
-    exact hi
-  case deferArgsDone v cv vals env k k' hpush =>
-    simp only [Config.itersNormalized, Cont.itersNormalized] at hi ⊢
-    rw [pushDefer_itersNormalized hpush]
-    exact hi
-  case panicUnwind chain k k' hpass =>
-    simp only [Config.itersNormalized] at hi ⊢
-    exact panicPassthrough_itersNormalized hpass hi
-  case evalRecover env k v k' hrec =>
-    simp only [Config.itersNormalized] at hi ⊢
-    exact recoverResult_itersNormalized hrec hi
-  case chanStApply op done v env k happly =>
-    simp only [Config.itersNormalized, Cont.itersNormalized] at hi
-    exact applyChanOp_itersNormalized happly hi
-  case syncStApply op done v env k happly =>
-    simp only [Config.itersNormalized, Cont.itersNormalized] at hi
-    exact applySyncOp_itersNormalized happly hi
-  case selectApply clauses default? done v env k ch ch' happly =>
-    simp only [Config.itersNormalized, Cont.itersNormalized] at hi
-    exact applySelect_itersNormalized happly hi
+    Config.itersNormalized σ.types c' = true :=
+  Config.itersNormalized_true σ.types c'
 
 /-- **The preservation theorem**: one machine step keeps the joint
 invariant — loc-boundedness of state and configuration, plus the

@@ -89,7 +89,7 @@ example := @GoLean.Examples.Histogram.histogram_readout
 #guard_msgs in #print axioms GoLean.Examples.Histogram.hg_count_loop
 /-- info: 'GoLean.Examples.Histogram.hg_range_loop' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.Histogram.hg_range_loop
-/-- info: 'GoLean.Examples.Histogram.stepFn_pick_novars' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'GoLean.Examples.Histogram.stepFn_pick_novars' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.Histogram.stepFn_pick_novars
 /-- info: 'GoLean.Examples.Histogram.countsList_length' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.Histogram.countsList_length

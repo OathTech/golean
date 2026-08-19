@@ -58,7 +58,7 @@ set_option linter.unusedSimpArgs false
 snapshot the sequential checker probes obliviously — the pool checker
 fails closed on both rather than reasoning about emptiness.) -/
 def isMapIterNext : Config → Bool
-  | .next (.mapIterK _ _ _ _ _ _ _ _) => true
+  | .next (.mapIterK _ _ _ _ _ _ _ _ _ _) => true
   | _ => false
 
 /-- Is this select-apply configuration's apply NON-consuming — i.e.
@@ -106,9 +106,10 @@ def poolThreadOblivious (s : ExecState) (ts : Array Config) (i : Nat) : Bool :=
 /-- The `mapIterK` exclusion in the shape `stepFn_oblivious` consumes. -/
 theorem isMapIterNext_false_elim {c : Config} (h : isMapIterNext c = false) :
     ∀ (kv vv : Option String) (kt vt : Ty) (body : Stmt)
-      (rem : Array (GoValue × GoValue)) (env : LocalEnv) (k : Cont),
-      c ≠ .next (.mapIterK kv vv kt vt body rem env k) := by
-  intro kv vv kt vt body rem env k heq
+      (base : Option Loc) (produced start : Array GoValue)
+      (env : LocalEnv) (k : Cont),
+      c ≠ .next (.mapIterK kv vv kt vt body base produced start env k) := by
+  intro kv vv kt vt body base produced start env k heq
   subst heq
   simp [isMapIterNext] at h
 

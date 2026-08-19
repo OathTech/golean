@@ -2229,7 +2229,34 @@ the re-pin guard. The guard treats an untyped-nil source as exact
 
 ## BUG-005 — map iteration snapshots ENTRIES, so it observes neither delete/clear nor value updates
 
-- Status: open
+- Status: fixed (2026-08-19, bug-fix arc slice 4 — the (L) surgery,
+  user-ruled full literal envelope: `Cont.mapIterK` carries the map's
+  base loc, the produced-key set and the START-KEY set; each pick
+  recomputes candidates = live entries minus produced (validated
+  self-normalized, fail closed) and LOADS the value from the live
+  cell (the per-pick read footprint closes race-inventory U1); the
+  stop slot (width candidates+1, stop LAST — the zero stream is the
+  canonical member BY DEFINITION) is legal exactly when no
+  never-removed start key remains unproduced; `mapDelete`/`clearMap`
+  prune deleted keys out of same-goroutine `mapIterK` frames via
+  `contAfterStmtOp` (delete-prune), making the FORCED
+  removed-before-reached clause exact. All seven Cases flipped green
+  (the five differential/race reds PASS; the two membership rows PASS
+  with the admitted sets exhibited); `maps/added-entries-bound`
+  stayed green as required. The obliviousness and wf analyses were
+  replayed (`step_complete_any_wf`'s mapIterNext case re-proved on
+  the live design; `MachineWf.itersNormalized` moved to per-pick
+  validation); the WP kit moved to owned-cell laws
+  (`wp_map_range_enter`, `wp_map_iter_next_key`/`_done`/`_inv` with
+  the pick-coherence relation `P pr rem`). Residual, recorded at
+  inventory E9 + `Cont.mapIterK`'s docstring: delete-prune rewrites
+  only same-goroutine frames — cross-goroutine delete-during-range is
+  racy-red via the new footprint, and the prune widening is owed at
+  the first non-racy cross-goroutine shape. Kit obligations recorded
+  in the arc log: the termination theorem "body stores no key into
+  the ranged map ⇒ range terminates" (record, not prove);
+  stop-admitting/mutating-range WP laws land with the first walk that
+  needs them.)
 - Pinned-by: differential
 - Cases: maps/delete-during-range, maps/clear-during-range, maps/update-during-range, race/negative/map-range-iter, maps/delete-unreached-during-range, maps/delete-readd-during-range, maps/added-entry-count
 - Discovered: 2026-07-26 (pre-merge adversarial audit of `wrong-answers-builtins`)
@@ -2287,7 +2314,7 @@ snapshot range performs no per-iteration read (the pick steps consume
 the snapshot from `Cont.mapIterK`, touching no user memory), so the S3
 race detector records only the entry-snapshot read and such programs
 run to a silent value (`race/negative/map-range-iter`, the fourth
-Cases pin — red until this entry's live-iteration surgery lands). The
+Cases pin — red until this entry's live-iteration surgery landed). The
 detector's footprint-table lockstep obligation is structurally blind
 here because the gc accesses have no `stepFn` arm at all; recorded as
 under-approximation U1 in `GoLean/GoCore/Race.lean`'s inventory. The

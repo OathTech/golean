@@ -740,25 +740,144 @@ lemma parameterized over `(keyVar valVar : Option String)` with the
 allocation described by `bindIterVars` (`stepFn_pick_bind`), plus the
 two corollaries at the binder shapes that actually occur. -/
 
-/-- **The choice-pick step, at any binder shape** (§10b): at a
-nonempty snapshot ONE choice is consumed (`idx < size` from
-`Choices.consume`'s `% bound` contract), the picked entry is erased,
-and the iteration's bindings/allocation are whatever `bindIterVars`
-says — supplied as the `hbind` fact. -/
-theorem stepFn_pick_bind {σ σ' : ExecState} {rem : List (Int × Nat)}
+/-- Wrapped uint64 KEY list (the produced/start sets' encoding). -/
+def toKeys (ks : List Int) : Array GoValue :=
+  ⟨ks.map (fun k => .int k .uint64)⟩
+
+theorem keyInKeyList_toKeys (σ : ExecState) (w : Int) :
+    ∀ ks : List Int,
+      keyInKeyList σ (.int .uint64) (.int w .uint64)
+        (ks.map (fun k => .int k .uint64))
+        = .ok (ks.contains w) := by
+  intro ks
+  induction ks with
+  | nil => rfl
+  | cons k rest ih =>
+      simp only [List.map_cons, keyInKeyList, valueEq_u64, Bind.bind,
+        Except.bind]
+      by_cases hk : k = w
+      · subst hk
+        simp [List.contains_cons]
+      · have hkb : (k == w) = false := beq_eq_false_iff_ne.mpr hk
+        have hwk : (w == k) = false := beq_eq_false_iff_ne.mpr (Ne.symm hk)
+        rw [hkb]
+        simp only [Bool.false_eq_true, if_false, ih, List.contains_cons,
+          hwk, Bool.false_or]
+
+theorem keyInKeys_toKeys (σ : ExecState) (ks : List Int) (w : Int) :
+    keyInKeys σ (.int .uint64) (toKeys ks) (.int w .uint64)
+      = .ok (ks.contains w) := by
+  simp only [keyInKeys, toKeys]
+  exact keyInKeyList_toKeys σ w ks
+
+/-- The pick-time filter over the counts encoding is the list-model
+filter. -/
+theorem filterCandidateList_toEntries (σ : ExecState) (ks : List Int) :
+    ∀ kvs : List (Int × Nat),
+      filterCandidateList σ (.int .uint64) (toKeys ks)
+        (kvs.map (fun kv =>
+          ((.int kv.1 .uint64 : GoValue), (.int (kv.2 : Int) .uint64 : GoValue))))
+        = .ok ((kvs.filter (fun p => !ks.contains p.1)).map (fun kv =>
+          ((.int kv.1 .uint64 : GoValue), (.int (kv.2 : Int) .uint64 : GoValue)))) := by
+  intro kvs
+  induction kvs with
+  | nil => rfl
+  | cons p rest ih =>
+      obtain ⟨k, c⟩ := p
+      simp only [List.map_cons, filterCandidateList, keyInKeys_toKeys,
+        Bind.bind, Except.bind, ih, List.filter_cons]
+      by_cases hk : ks.contains k
+      · have hmem : k ∈ ks := by simpa using hk
+        simp [hk, hmem]
+      · have hmem : k ∉ ks := by simpa using hk
+        simp only [Bool.not_eq_true] at hk
+        simp [hk, hmem]
+
+/-- Pick-time candidates over the counts encoding: LOAD the cell,
+filter by the produced keys, validated by normalization. -/
+theorem candidates_toEntries {σ : ExecState} {a : Addr} {dty : Option Ty}
+    {kvs : List (Int × Nat)} {ks : List Int}
+    (hlook : Heap.lookup σ.heap (.base a)
+      = some ⟨dty, .mapData (toEntries kvs)⟩)
+    (hkv : ∀ p ∈ kvs, IntKind.normalize .uint64 p.1 = p.1
+      ∧ IntKind.normalize .uint64 (p.2 : Int) = (p.2 : Int)) :
+    mapIterCandidates σ (.int .uint64) (.int .uint64)
+      (some (.base a)) (toKeys ks)
+      = .ok (toEntries (kvs.filter (fun p => !ks.contains p.1))) := by
+  have hnorm := snapshot_norm σ.types
+    (kvs.filter (fun p => !ks.contains p.1))
+    (fun p hp => hkv p (List.mem_filter.mp hp).1)
+  have hfil := filterCandidateList_toEntries σ ks kvs
+  simp only [mapIterCandidates, mapIterLiveEntries, loadLoc, hlook,
+    Bind.bind, Except.bind, pure, Except.pure]
+  rw [show (toEntries kvs).toList = kvs.map (fun kv =>
+      ((.int kv.1 .uint64 : GoValue), (.int (kv.2 : Int) .uint64 : GoValue)))
+    from rfl, hfil]
+  simp only [snapshotEntriesSelfNormalized, List.toList_toArray, hnorm,
+    if_pos]
+  rfl
+
+/-- Mandatory-remains over the counts encoding is the list-model
+any-membership scan. -/
+theorem mandatory_toEntries (σ : ExecState) (ss : List Int) :
+    ∀ rem : List (Int × Nat),
+      mapIterMandatoryRemains σ (.int .uint64) (toEntries rem) (toKeys ss)
+        = .ok (rem.any (fun p => ss.contains p.1)) := by
+  intro rem
+  induction rem with
+  | nil => rfl
+  | cons p rest ih
+ =>
+      obtain ⟨k, c⟩ := p
+      simp only [mapIterMandatoryRemains, toEntries, List.map_cons,
+        List.toList_toArray, mandatoryInList, keyInKeys_toKeys,
+        Bind.bind, Except.bind, List.any_cons] at ih ⊢
+      by_cases hk : ss.contains k
+      · have hmem : k ∈ ss := by simpa using hk
+        simp [hk, hmem]
+      · have hmem : k ∉ ss := by simpa using hk
+        simp only [Bool.not_eq_true] at hk
+        simp [hk, hmem, ih]
+
+/-- The DONE step: no candidate remains (a state fact now — the live
+cell minus the produced set), the frame pops. -/
+theorem stepFn_iter_done {σ : ExecState} {base : Option Loc}
+    {produced start : Array GoValue} {ko vo : Option String} {body : Stmt}
+    {env : LocalEnv} {k : Cont} {ch : Choices}
+    (hcands : mapIterCandidates σ (.int .uint64) (.int .uint64)
+      base produced = .ok #[]) :
+    stepFn σ
+      (.next (.mapIterK ko vo (.int .uint64) (.int .uint64) body
+        base produced start env k)) ch
+      = .ok (.next k, σ, ch) := by
+  simp [stepFn, hcands, Bind.bind, Except.bind, pure, Except.pure]
+
+/-- **The choice-pick step, at any binder shape** (§10b, the (L)
+form): candidates and the mandatory bit are STATE facts supplied as
+premises (`candidates_toEntries` / `mandatory_toEntries` compute them
+over the counts encoding); ONE choice of width `candidates + stop` is
+consumed, the picked key joins the produced set, and the iteration's
+bindings/allocation are whatever `bindIterVars` says. -/
+theorem stepFn_pick_bind {σ σ' : ExecState} {base : Option Loc}
+    {produced start : Array GoValue} {rem : List (Int × Nat)} {mand : Bool}
     {idx : Nat} {ch ch' : Choices} {ko vo : Option String} {body : Stmt}
     {env env' : LocalEnv} {k : Cont} {p : Int × Nat}
-    (hconsume : Choices.consume ch rem.length = (idx, ch'))
+    (hcands : mapIterCandidates σ (.int .uint64) (.int .uint64)
+      base produced = .ok (toEntries rem))
+    (hmand : mapIterMandatoryRemains σ (.int .uint64) (toEntries rem) start
+      = .ok mand)
+    (hconsume : Choices.consume ch
+      (rem.length + (if mand then 0 else 1)) = (idx, ch'))
     (hidx : idx < rem.length)
     (hp : rem[idx]? = some p)
     (hbind : bindIterVars env.pushScope σ ko vo (.int .uint64) (.int .uint64)
       (.int p.1 .uint64) (.int (p.2 : Int) .uint64) = .ok (env', σ')) :
     stepFn σ
       (.next (.mapIterK ko vo (.int .uint64) (.int .uint64) body
-        (toEntries rem) env k)) ch
+        base produced start env k)) ch
       = .ok (.exec body env'
           (.mapIterK ko vo (.int .uint64) (.int .uint64) body
-            (toEntries (rem.eraseIdx idx)) env k),
+            base (produced.push (.int p.1 .uint64)) start env k),
         σ', ch') := by
   have hne : (toEntries rem).isEmpty = false := by
     cases rem with
@@ -768,47 +887,52 @@ theorem stepFn_pick_bind {σ σ' : ExecState} {rem : List (Int × Nat)}
   have hget : (toEntries rem)[idx]?
       = some (.int p.1 .uint64, .int (p.2 : Int) .uint64) :=
     toEntries_getElem? rem idx hp
-  have hidx' : idx < (toEntries rem).size := by rw [hsz]; exact hidx
-  simp only [stepFn, hne, Bool.false_eq_true, if_false]
+  simp only [stepFn, hcands, Bind.bind, Except.bind, hne,
+    Bool.false_eq_true, if_false, hmand]
+  rw [show (if mand = true then 0 else 1) = (if mand then 0 else 1)
+      from rfl]
+  rw [hsz, hconsume]
+  dsimp only
   split
   · rename_i hnone
-    rw [hsz, hconsume] at hnone
-    simp only at hnone
     rw [hget] at hnone
     cases hnone
   · rename_i key value hsome
-    rw [hsz, hconsume] at hsome
-    simp only at hsome
     rw [hget] at hsome
     injection hsome with h1
     injection h1 with hk hv2
     subst hk
     subst hv2
-    simp only [Bind.bind, Except.bind, hbind, pure, Except.pure, hsz,
-      hconsume, toEntries_eraseIdx rem idx hidx']
+    simp only [hbind, pure, Except.pure]
 
 /-- The pick at a VALUE-ONLY binder (`for _, v := range m`): the
 picked entry's value cell is freshly allocated at the current
 `nextAddr` and the binder declared over a pushed scope. -/
-theorem stepFn_pick_value {σ : ExecState} {rem : List (Int × Nat)}
+theorem stepFn_pick_value {σ : ExecState} {base : Option Loc}
+    {produced start : Array GoValue} {rem : List (Int × Nat)} {mand : Bool}
     {idx : Nat} {ch ch' : Choices} {v : String} {body : Stmt}
     {env : LocalEnv} {k : Cont} {p : Int × Nat}
-    (hconsume : Choices.consume ch rem.length = (idx, ch'))
+    (hcands : mapIterCandidates σ (.int .uint64) (.int .uint64)
+      base produced = .ok (toEntries rem))
+    (hmand : mapIterMandatoryRemains σ (.int .uint64) (toEntries rem) start
+      = .ok mand)
+    (hconsume : Choices.consume ch
+      (rem.length + (if mand then 0 else 1)) = (idx, ch'))
     (hidx : idx < rem.length)
     (hp : rem[idx]? = some p)
     (hv : IntKind.normalize .uint64 (p.2 : Int) = (p.2 : Int)) :
     stepFn σ
       (.next (.mapIterK none (some v) (.int .uint64) (.int .uint64) body
-        (toEntries rem) env k)) ch
+        base produced start env k)) ch
       = .ok (.exec body (env.pushScope.declare v (.base ⟨σ.nextAddr⟩))
           (.mapIterK none (some v) (.int .uint64) (.int .uint64) body
-            (toEntries (rem.eraseIdx idx)) env k),
+            base (produced.push (.int p.1 .uint64)) start env k),
         { σ with
             heap := Heap.set σ.heap (.base ⟨σ.nextAddr⟩)
               ⟨some (.int .uint64), .int (p.2 : Int) .uint64⟩,
             nextAddr := σ.nextAddr + 1 },
         ch') := by
-  refine stepFn_pick_bind hconsume hidx hp ?_
+  refine stepFn_pick_bind hcands hmand hconsume hidx hp ?_
   simp only [bindIterVars, Bind.bind, Except.bind, pure, Except.pure]
   rw [show normalizeValueForTy σ (.int .uint64) (.int (p.2 : Int) .uint64)
       = .ok (.int (p.2 : Int) .uint64) from by
@@ -821,43 +945,132 @@ theorem stepFn_pick_value {σ : ExecState} {rem : List (Int × Nat)}
 `bindIterVars` with neither binder allocates NOTHING — the state is
 unchanged and only the scope is pushed. This is why a variable-free
 range loop is state-stable, and why order-invariance is so visible
-there: the machine's only per-iteration effect is "one fewer
-entry". -/
-theorem stepFn_pick_novars {σ : ExecState} {rem : List (Int × Nat)}
+there: the machine's only per-iteration effect is "one key into the
+produced set". -/
+theorem stepFn_pick_novars {σ : ExecState} {base : Option Loc}
+    {produced start : Array GoValue} {rem : List (Int × Nat)} {mand : Bool}
     {idx : Nat} {ch ch' : Choices} {body : Stmt} {env : LocalEnv} {k : Cont}
-    (hconsume : Choices.consume ch rem.length = (idx, ch'))
+    (hcands : mapIterCandidates σ (.int .uint64) (.int .uint64)
+      base produced = .ok (toEntries rem))
+    (hmand : mapIterMandatoryRemains σ (.int .uint64) (toEntries rem) start
+      = .ok mand)
+    (hconsume : Choices.consume ch
+      (rem.length + (if mand then 0 else 1)) = (idx, ch'))
     (hidx : idx < rem.length) :
     stepFn σ
       (.next (.mapIterK none none (.int .uint64) (.int .uint64) body
-        (toEntries rem) env k)) ch
+        base produced start env k)) ch
       = .ok (.exec body env.pushScope
           (.mapIterK none none (.int .uint64) (.int .uint64) body
-            (toEntries (rem.eraseIdx idx)) env k),
+            base (produced.push (.int (rem[idx]'hidx).1 .uint64)) start env k),
         σ, ch') := by
-  obtain ⟨p, hp⟩ : ∃ p, rem[idx]? = some p :=
-    ⟨rem[idx]'hidx, List.getElem?_eq_getElem hidx⟩
-  exact stepFn_pick_bind hconsume hidx hp rfl
+  have hp : rem[idx]? = some (rem[idx]'hidx) := List.getElem?_eq_getElem hidx
+  exact stepFn_pick_bind hcands hmand hconsume hidx hp rfl
 
-/-- **The range snapshot** (`mapRangeK`): reads the data cell and
-validates every entry self-normalized — on the in-range fragment, the
-identity. -/
-theorem snapshot_toEntries {σ : ExecState} {a : Addr}
+/-- **The range START** (`mapRangeK`, BUG-005 (L)): reads the data
+cell for the base loc and START-KEY set — on the counts encoding, the
+keys column. -/
+theorem rangeStart_toEntries {σ : ExecState} {a : Addr}
     {kvs : List (Int × Nat)} {dty : Option Ty}
     (hlook : Heap.lookup σ.heap (.base a)
-      = some ⟨dty, .mapData (toEntries kvs)⟩)
-    (hkv : ∀ p ∈ kvs, IntKind.normalize .uint64 p.1 = p.1
-      ∧ IntKind.normalize .uint64 (p.2 : Int) = (p.2 : Int)) :
-    mapRangeSnapshotEntries σ (.int .uint64) (.int .uint64)
-      (.map ⟨some (.base a)⟩)
-      = .ok (toEntries kvs) := by
-  have hnorm := snapshot_norm σ.types kvs hkv
-  simp only [mapRangeSnapshotEntries, mapRangeEntries, valueAsMap, Bind.bind,
-    Except.bind, pure, Except.pure, loadLoc, hlook,
-    snapshotEntriesSelfNormalized]
-  rw [show (toEntries kvs).toList
-      = kvs.map (fun kv =>
-        ((.int kv.1 .uint64 : GoValue), (.int (kv.2 : Int) .uint64 : GoValue)))
-      from rfl, hnorm]
-  simp
+      = some ⟨dty, .mapData (toEntries kvs)⟩) :
+    mapRangeStartSets σ (.map ⟨some (.base a)⟩)
+      = .ok (some (.base a), toKeys (kvs.map (·.1))) := by
+  simp only [mapRangeStartSets, valueAsMap, Bind.bind,
+    Except.bind, pure, Except.pure, loadLoc, hlook]
+  rw [show (toEntries kvs).map (·.1) = toKeys (kvs.map (·.1)) from by
+    simp [toEntries, toKeys, List.map_map, Function.comp]]
+
+/-! ### The produced-set walk algebra (BUG-005 (L)): the list-model
+bookkeeping the placements thread through `mapPickLoop_generic` — the
+pick-coherence relation "produced = toKeys done, remaining = the
+filter", closed under picks (nodup keys) and empty at exhaustion. -/
+
+theorem filter_keys_self_nil {κ β : Type} [BEq κ] (ks : List κ) :
+    ∀ kvs : List (κ × β), (∀ p ∈ kvs, ks.contains p.1) →
+      kvs.filter (fun p => !ks.contains p.1) = [] := by
+  intro kvs
+  induction kvs with
+  | nil => intro _; rfl
+  | cons p rest ih =>
+      intro h
+      have hp := h p (by simp)
+      simp only [List.filter_cons, hp, Bool.not_true, Bool.false_eq_true,
+        if_false]
+      exact ih (fun q hq => h q (by simp [hq]))
+
+theorem filter_ne_key_eraseIdx {κ β : Type} [BEq κ] [LawfulBEq κ] :
+    ∀ (rem : List (κ × β)) (idx : Nat) (p : κ × β),
+      (rem.map (·.1)).Nodup → rem[idx]? = some p →
+      rem.filter (fun q => !(q.1 == p.1)) = rem.eraseIdx idx := by
+  intro rem
+  induction rem with
+  | nil =>
+      intro idx p _ hp
+      simp at hp
+  | cons a rest ih =>
+      intro idx p hnodup hp
+      simp only [List.map_cons, List.nodup_cons] at hnodup
+      cases idx with
+      | zero =>
+          simp only [List.getElem?_cons_zero, Option.some.injEq] at hp
+          subst hp
+          simp only [List.filter_cons, beq_self_eq_true, Bool.not_true,
+            Bool.false_eq_true, if_false, List.eraseIdx_cons_zero]
+          apply List.filter_eq_self.mpr
+          intro q hq
+          simp only [Bool.not_eq_eq_eq_not, Bool.not_true]
+          refine beq_eq_false_iff_ne.mpr ?_
+          intro hc
+          exact hnodup.1 (List.mem_map.mpr ⟨q, hq, hc⟩)
+      | succ i =>
+          simp only [List.getElem?_cons_succ] at hp
+          have hmem : p ∈ rest := by
+            obtain ⟨hlt, hg⟩ := List.getElem?_eq_some_iff.mp hp
+            exact hg ▸ List.getElem_mem hlt
+          have hne : (a.1 == p.1) = false :=
+            beq_eq_false_iff_ne.mpr (fun hc =>
+              hnodup.1 (hc ▸ List.mem_map.mpr ⟨p, hmem, rfl⟩))
+          simp only [List.filter_cons, hne, Bool.not_false, if_true,
+            List.eraseIdx_cons_succ, List.cons.injEq, true_and]
+          exact ih i p hnodup.2 hp
+
+/-- Filtering by one more key is erasing its (unique, by nodup) entry
+from the filtered list. -/
+theorem filter_push_key {κ β : Type} [BEq κ] [LawfulBEq κ]
+    {kvs : List (κ × β)} {done : List κ}
+    {idx : Nat} {p : κ × β}
+    (hnodup : (kvs.map (·.1)).Nodup)
+    (hp : (kvs.filter (fun q => !done.contains q.1))[idx]? = some p) :
+    kvs.filter (fun q => !(done ++ [p.1]).contains q.1)
+      = (kvs.filter (fun q => !done.contains q.1)).eraseIdx idx := by
+  have hsub : (kvs.filter (fun q => !done.contains q.1)).Sublist kvs :=
+    List.filter_sublist
+  have hnodup' : ((kvs.filter (fun q => !done.contains q.1)).map (·.1)).Nodup :=
+    List.Nodup.sublist (List.Sublist.map _ hsub) hnodup
+  have hcompose : kvs.filter (fun q => !(done ++ [p.1]).contains q.1)
+      = (kvs.filter (fun q => !done.contains q.1)).filter
+          (fun q => !(q.1 == p.1)) := by
+    rw [List.filter_filter]
+    apply List.filter_congr
+    intro q _
+    by_cases h : q.1 = p.1 <;>
+      simp [List.contains_append, Bool.not_or, Bool.and_comm, h]
+  rw [hcompose]
+  exact filter_ne_key_eraseIdx _ idx p hnodup' hp
+
+/-- Nonempty candidates whose keys all sit in the start set have a
+mandatory member. -/
+theorem mandatory_true_of_all (σ : ExecState) {ss : List Int}
+    {rem : List (Int × Nat)} (hne : rem ≠ [])
+    (hall : ∀ p ∈ rem, ss.contains p.1) :
+    mapIterMandatoryRemains σ (.int .uint64) (toEntries rem) (toKeys ss)
+      = .ok true := by
+  rw [mandatory_toEntries]
+  congr 1
+  rw [List.any_eq_true]
+  cases rem with
+  | nil => exact absurd rfl hne
+  | cons p rest => exact ⟨p, by simp, hall p (by simp)⟩
 
 end GoLean.MapMem

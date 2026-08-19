@@ -291,18 +291,25 @@ pushed. That is the whole reason this example's range loop is cheap,
 and it is also why order-invariance is so visible here: the machine's
 only per-iteration effect is "one fewer entry", so a claim about the
 number of iterations cannot depend on the pick. -/
-theorem stepFn_pick_novars {σ : ExecState} {rem : List (Int × Nat)}
+theorem stepFn_pick_novars {σ : ExecState} {base : Option Loc}
+    {produced start : Array GoValue} {rem : List (Int × Nat)} {mand : Bool}
     {idx : Nat} {ch ch' : Choices} {body : Stmt} {env : LocalEnv} {k : Cont}
-    (hconsume : Choices.consume ch rem.length = (idx, ch'))
+    (hcands : mapIterCandidates σ tU64 tU64 base produced
+      = .ok (toEntries rem))
+    (hmand : mapIterMandatoryRemains σ tU64 (toEntries rem) start
+      = .ok mand)
+    (hconsume : Choices.consume ch
+      (rem.length + (if mand then 0 else 1)) = (idx, ch'))
     (hidx : idx < rem.length) :
     stepFn σ
-      (.next (.mapIterK none none tU64 tU64 body (toEntries rem) env k))
+      (.next (.mapIterK none none tU64 tU64 body base produced start env k))
       ch
       = .ok (.exec body env.pushScope
           (.mapIterK none none tU64 tU64 body
-            (toEntries (rem.eraseIdx idx)) env k),
+            base (produced.push (.int (rem[idx]'hidx).1 .uint64)) start
+            env k),
         σ, ch') :=
-  GoLean.MapMem.stepFn_pick_novars hconsume hidx
+  GoLean.MapMem.stepFn_pick_novars hcands hmand hconsume hidx
 
 -- (`eraseIdx_length_of_lt` and `consume_lt` are the kit's, via
 -- `open GoLean.MapLoops` at the use sites — the re-derived copies were
@@ -505,17 +512,18 @@ def envRBH (B : Nat) : LocalEnv := (("hits", .base ⟨B⟩) :: sc1H) :: [sc0H]
 def envRBDH (B : Nat) : LocalEnv :=
   (("distinct", .base ⟨B + 1⟩) :: ("hits", .base ⟨B⟩) :: sc1H) :: [sc0H]
 def kRH (B : Nat) : Cont := .seq [hRetSeqn] (envRBDH B) frameKH
-def iterKH (B : Nat) (rem : List (Int × Nat)) : Cont :=
-  .mapIterK none none tU64 tU64 hRangeBody (toEntries rem) (envRBDH B) (kRH B)
+def iterKH (B : Nat) (st pr : Array GoValue) : Cont :=
+  .mapIterK none none tU64 tU64 hRangeBody (some (.base ⟨21⟩)) pr st
+    (envRBDH B) (kRH B)
 def envIt1 (B : Nat) : LocalEnv := [] :: envRBDH B
 def envIt2 (B : Nat) : LocalEnv := [] :: envIt1 B
 def rngRef (B : Nat) : TargetRef := .chain (.addr (.base ⟨B + 1⟩)) [] []
-def rngStoreK (B : Nat) (rem : List (Int × Nat)) : Cont :=
-  .seq [] (envIt2 B) (iterKH B rem)
-def rngRhsK (B : Nat) (rem : List (Int × Nat)) : Cont :=
-  .rhsK .vals [rngRef B] [] [] (.seqn #[]) (envIt2 B) (rngStoreK B rem)
-def rngAddK (B : Nat) (rem : List (Int × Nat)) : Cont :=
-  .strictK .add [] [.intLit 1 .uint64] (envIt2 B) (rngRhsK B rem)
+def rngStoreK (B : Nat) (st pr : Array GoValue) : Cont :=
+  .seq [] (envIt2 B) (iterKH B st pr)
+def rngRhsK (B : Nat) (st pr : Array GoValue) : Cont :=
+  .rhsK .vals [rngRef B] [] [] (.seqn #[]) (envIt2 B) (rngStoreK B st pr)
+def rngAddK (B : Nat) (st pr : Array GoValue) : Cont :=
+  .strictK .add [] [.intLit 1 .uint64] (envIt2 B) (rngRhsK B st pr)
 
 /-! ### Heap fronts (program-generic) -/
 

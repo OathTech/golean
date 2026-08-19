@@ -28,7 +28,7 @@ but no law needs that) and every select apply position (single-ready
 applies are in fact choice-independent, but no law steps through a
 select). -/
 def Config.choiceFree : Config → Prop
-  | .next (.mapIterK _ _ _ _ _ _ _ _) => False
+  | .next (.mapIterK _ _ _ _ _ _ _ _ _ _) => False
   | .retV _ (.stmtOpK _ _ _ [] _ _) => False
   | .retV _ (.selectOpsK _ _ _ [] _ _) => False
   | .exec stmt _ _ =>

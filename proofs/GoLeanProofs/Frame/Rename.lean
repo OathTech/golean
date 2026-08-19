@@ -413,9 +413,11 @@ def renameCont : Cont → Cont
         (renameEnv ρ env) (renameCont k)
   | .mapRangeK kv vv kt vt body env k =>
       .mapRangeK kv vv kt vt (renameStmt ρ body) (renameEnv ρ env) (renameCont k)
-  | .mapIterK kv vv kt vt body remaining env k =>
+  | .mapIterK kv vv kt vt body base produced start env k =>
       .mapIterK kv vv kt vt (renameStmt ρ body)
-        (renameValueEntries ρ remaining.toList).toArray
+        (base.map (renameLoc ρ))
+        (renameValueList ρ produced.toList).toArray
+        (renameValueList ρ start.toList).toArray
         (renameEnv ρ env) (renameCont k)
   | .panicArgK k => .panicArgK (renameCont k)
   | .panicResumeK chain k => .panicResumeK (renameChain ρ chain) (renameCont k)

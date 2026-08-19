@@ -397,7 +397,7 @@ theorem stepFn_sim {ρ : Nat → Nat} {na₀ na : Nat} {fr : Heap}
     intro f e ls hbody
     ren_simp_only hinj
     rw [hbody]
-  case case197 =>
+  case case195 =>
     ren_simp_all hinj
     rw [← renameValueList_append]
     refine enterFrameStep_sim hS _ _ _ _ _ _ ?_
@@ -424,12 +424,17 @@ theorem stepFn_sim {ρ : Nat → Nat} {na₀ na : Nat} {fr : Heap}
         = renameDefer ρ (cv, vals ++ [v]) from rfl]
     rw [pushDefer_ren, hpush]
     exact ExSim.ok ⟨rfl, hS, rfl⟩
-  -- mapRange snapshot
+  -- mapRange start (BUG-005 (L): base + start keys)
   case case117 =>
     ren_simp_only hinj
-    refine ExSim.bind (mapRangeSnapshotEntries_sim hS _ _ _) ?_
-    intro es esF h
-    subst h
+    refine ExSim.bind (mapRangeStartSets_sim hS _) ?_
+    intro bs bsF h
+    obtain ⟨b1, s1⟩ := bs
+    obtain ⟨b1F, s1F⟩ := bsF
+    obtain ⟨h1, h2⟩ := h
+    dsimp only at h1 h2
+    subst h1
+    subst h2
     refine ExSim.ok ⟨?_, hS, rfl⟩
     ren_simp_only hinj
   -- chan apply: ok / panic
@@ -499,7 +504,7 @@ theorem stepFn_sim {ρ : Nat → Nat} {na₀ na : Nat} {fr : Heap}
     refine ExSim.bind (loadMany_sim hS _) ?_
     intro vs vsF h
     exact ExSim.stuck'
-  case case194 =>
+  case case192 =>
     ren_simp_only hinj
     refine ExSim.bind (loadMany_sim hS _) ?_
     intro vs vsF h
@@ -511,67 +516,57 @@ theorem stepFn_sim {ρ : Nat → Nat} {na₀ na : Nat} {fr : Heap}
     subst h
     refine ExSim.ok ⟨?_, hS, rfl⟩
     ren_simp_only hinj
-  case case195 =>
+  case case193 =>
     ren_simp_only hinj
     refine ExSim.bind (loadMany_sim hS _) ?_
     intro vs vsF h
     subst h
     refine ExSim.ok ⟨?_, hS, rfl⟩
     ren_simp_only hinj
-  -- map iteration: done / pick-next
+  -- map iteration (BUG-005 (L)): the unified live pick arm — the
+  -- candidates load precedes every split, so done / stop / pick are
+  -- separated manually here.
   case case163 =>
-    rename_i keyVar valVar keyTy valTy body remaining env k' hemp
+    rename_i keyVar valVar keyTy valTy body base produced start env k'
     ren_simp_only hinj
-    rw [renEntriesArr_isEmpty, if_pos hemp]
-    exact ExSim.ok ⟨rfl, hS, rfl⟩
-  case case165 =>
-    rename_i keyVar valVar keyTy valTy body remaining env k' hne idx choices2
-      hcons key value hidx hlt
-    have hidxF : ((renameValueEntries ρ remaining.toList).toArray)[idx]?
-        = some (renameValue ρ key, renameValue ρ value) := by
-      rw [renEntriesArr_getElem?, hidx]
-      rfl
-    ren_simp_only hinj
-    rw [renEntriesArr_isEmpty, if_neg (by simp [hne])]
-    split
-    · rename_i heqnone
-      rw [renEntriesArr_size, hcons] at heqnone
-      rw [hidxF] at heqnone
-      cases heqnone
-    rename_i k2 v2 heqsome
-    rw [renEntriesArr_size, hcons] at heqsome
-    rw [hidxF] at heqsome
-    injection heqsome with hkv
-    injection hkv with hk2 hv2
-    subst hk2
-    subst hv2
-    have hfst : ((ch.consume
-        ((renameValueEntries ρ remaining.toList).toArray).size).fst) = idx := by
-      rw [renEntriesArr_size, hcons]
-    have hsnd : ((ch.consume
-        ((renameValueEntries ρ remaining.toList).toArray).size).snd)
-          = choices2 := by
-      rw [renEntriesArr_size, hcons]
-    have hfst' : (ch.consume remaining.size).fst = idx := by rw [hcons]
-    have hsnd' : (ch.consume remaining.size).snd = choices2 := by rw [hcons]
-    rw [← localEnv_pushScope_ren]
-    refine ExSim.bind (bindIterVars_sim hS _ _ _ _ _ _ _) ?_
-    intro r rF hr
-    obtain ⟨env1, σ1⟩ := r
-    obtain ⟨env1F, σ1F⟩ := rF
-    obtain ⟨henv1, hS1⟩ := hr
-    dsimp only at henv1 hS1 ⊢
-    subst henv1
-    refine ExSim.ok ⟨?_, hS1, ?_⟩
-    · ren_simp_only hinj
-      congr 2
-      apply Array.toList_inj.mp
-      simp [renameValueEntries_eq_map, Array.toList_eraseIdx,
-        list_eraseIdx_map, hfst, hfst']
-    · have hlen : (renameValueEntries ρ remaining.toList).length
-          = remaining.size := by simp [renameValueEntries_eq_map]
-      simp only [hlen]
-      exact hsnd'
+    refine ExSim.bind (mapIterCandidates_sim hinj hS keyTy valTy base produced) ?_
+    intro cands candsF hcandsF
+    subst hcandsF
+    rw [renEntriesArr_isEmpty]
+    by_cases hemp : cands.isEmpty
+    · rw [if_pos hemp, if_pos hemp]
+      exact ExSim.ok ⟨rfl, hS, rfl⟩
+    · rw [if_neg hemp, if_neg hemp]
+      refine ExSim.bind
+        (mapIterMandatoryRemains_sim hinj hS.types_eq keyTy cands start) ?_
+      intro mand mandF hmand
+      subst hmand
+      rw [renEntriesArr_size]
+      rcases hcons : ch.consume (cands.size + (if mand = true then 0 else 1))
+        with ⟨idx, tail⟩
+      dsimp only
+      rw [renEntriesArr_getElem?]
+      cases hidx : cands[idx]? with
+      | none =>
+          simp only [Option.map_none]
+          exact ExSim.ok ⟨rfl, hS, rfl⟩
+      | some kv =>
+          obtain ⟨key, value⟩ := kv
+          simp only [Option.map_some]
+          rw [← localEnv_pushScope_ren]
+          refine ExSim.bind (bindIterVars_sim hS _ _ _ _ _ _ _) ?_
+          intro r rF hr
+          obtain ⟨env1, σ1⟩ := r
+          obtain ⟨env1F, σ1F⟩ := rF
+          obtain ⟨henv1, hS1⟩ := hr
+          dsimp only at henv1 hS1 ⊢
+          subst henv1
+          refine ExSim.ok ⟨?_, hS1, rfl⟩
+          ren_simp_only hinj
+          congr 2
+          apply Array.toList_inj.mp
+          simp [renameValueList_eq_map, List.toList_toArray,
+            Array.toList_push]
   -- chanRecv entry (named scrutinee)
   case case41 =>
     rename_i env k targets chE elem op e rest hplan
@@ -725,6 +720,13 @@ theorem stepFn_sim {ρ : Nat → Nat} {na₀ na : Nat} {fr : Heap}
     subst hch
     ren_simp_only hinj
     rw [hF]
+    -- BUG-005 (L): the contAfterStmtOp bind rides between the apply
+    -- and the return on both sides.
+    have hcsim := contAfterStmtOp_sim hinj hst op ((v :: done).reverse) k'
+    simp only [renameValueList_reverse, renameValueList] at hcsim
+    refine ExSim.bind hcsim ?_
+    intro k1 k1F hk1
+    subst hk1
     exact ExSim.ok ⟨rfl, hst, rfl⟩
   case case99 =>
     rename_i v op nt done env k' msg happ
@@ -772,7 +774,7 @@ theorem stepFn_sim {ρ : Nat → Nat} {na₀ na : Nat} {fr : Heap}
     rw [hF]
     exact ExSim.ok ⟨by ren_simp_only hinj, hS, rfl⟩
   -- storeK stores: ok / panic
-  case case166 =>
+  case case164 =>
     rename_i body env k' r rs val vrest s' hstore
     have hsim := storeTarget_sim (ρ := ρ) hS hinj r val
     obtain ⟨sF2, hF, hrel⟩ := hsim.ok_inv hstore
@@ -780,7 +782,7 @@ theorem stepFn_sim {ρ : Nat → Nat} {na₀ na : Nat} {fr : Heap}
     ren_simp_only hinj
     rw [hF]
     exact ExSim.ok ⟨rfl, hrel, rfl⟩
-  case case167 =>
+  case case165 =>
     rename_i body env k' r rs val vrest msg hstore
     have hsim := storeTarget_sim (ρ := ρ) hS hinj r val
     have hF := hsim.panic_inv hstore

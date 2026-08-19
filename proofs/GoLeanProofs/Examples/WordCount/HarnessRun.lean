@@ -177,21 +177,20 @@ private theorem wcH_stBest (ws : List Int) (sv siv : Int) :
     set_singleton_self] at h
   exact stepFn_store_step h
 
-private theorem wcH_snap (ws : List Int) (sv siv : Int) :
+private theorem wcH_rangeStart (ws : List Int) (sv siv : Int) :
     ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (B na : Nat)
       (ch : Choices),
-      (∀ p ∈ kvs, IntKind.normalize .uint64 p.1 = p.1
-        ∧ IntKind.normalize .uint64 ((p.2 : Nat) : Int)
-            = ((p.2 : Nat) : Int)) →
     stepFn (σH ws.length sv siv ws kvs iv false dead na)
         (.retV (.map ⟨some (.base ⟨12⟩)⟩)
           (.mapRangeK none (some "c") tU64 tU64 wcRangeBody (envRBH B)
             (kRH B))) ch
       = .ok (.next (.mapIterK none (some "c") tU64 tU64 wcRangeBody
-            (toEntries kvs) (envRBH B) (kRH B)),
+            (some (.base ⟨12⟩)) #[] (toKeys (kvs.map (·.1)))
+            (envRBH B) (kRH B)),
           σH ws.length sv siv ws kvs iv false dead na, ch) := by
-  intro kvs iv dead B na ch hkv
-  exact stepFn_snapshot (snapshot_toEntries (a := ⟨12⟩) (dty := none) rfl hkv)
+  intro kvs iv dead B na ch
+  exact stepFn_mapRangeStart
+    (rangeStart_toEntries (a := ⟨12⟩) (dty := none) rfl)
 
 /-- **The counting loop**, by strong induction on the remaining word
 count: from the exit-test delivery at word `i`, the run reaches the
@@ -214,7 +213,8 @@ private theorem wcH_count_loop (ws : List Int) (sv siv : Int)
           (σH ws.length sv siv ws (countsFold (ws.take i)) (i : Int) false dead na)
           (.retV (.bool (decide ((i : Int) < (ws.length : Int)))) cmpContCH)
           ch
-        = .ok (rangeHeadH (na + 2 * n) (countsFold ws),
+        = .ok (rangeHeadH (na + 2 * n)
+              (toKeys ((countsFold ws).map (·.1))) #[],
             σH ws.length sv siv ws (countsFold ws) (ws.length : Int) false tail
               (na + 2 * n + 1), ch) := by
   intro n i hn hi dead na hna hdead ch
@@ -243,9 +243,10 @@ private theorem wcH_count_loop (ws : List Int) (sv siv : Int)
     ((ws.length : Nat) : Int) (tail₀ ++ [(.base ⟨na + 2 * n⟩, u64cell 0)])
     (na + 2 * n) (na + 2 * n + 1) ch
   have h4 := stepFnIter_chain h3 hXc
-  have hSn := wcH_snap ws sv siv (countsFold ws) ((ws.length : Nat) : Int)
+  have hSn := wcH_rangeStart ws sv siv (countsFold ws)
+    ((ws.length : Nat) : Int)
     (tail₀ ++ [(.base ⟨na + 2 * n⟩, u64cell 0)]) (na + 2 * n)
-    (na + 2 * n + 1) ch (countsFold_norm ws hws hlen)
+    (na + 2 * n + 1) ch
   have h5 := stepFnIter_chain h4 (stepFnIter_one hSn)
   refine ⟨84 * n + 23, tail₀ ++ [(.base ⟨na + 2 * n⟩, u64cell 0)],
     Nat.le_refl _, ?_, ?_, ?_⟩
@@ -257,52 +258,124 @@ private theorem wcH_count_loop (ws : List Int) (sv siv : Int)
 
 /-! ### The HARNESS placement's range-loop discharges + wrapper -/
 
-private theorem wcH_pick (ws : List Int) (sv siv : Int) :
-    ∀ (kvs rem : List (Int × Nat)) (idx : Nat) (ch ch₂ : Choices)
+/-- The pick-coherence relation of the harness placement's walk
+(BUG-005 (L)). -/
+private def wcHPC (kvs kvs' : List (Int × Nat)) (pr : Array GoValue)
+    (rem : List (Int × Nat)) : Prop :=
+  kvs' = kvs ∧ ∃ done : List Int, pr = toKeys done
+    ∧ rem = kvs.filter (fun p => !done.contains p.1)
+
+private theorem wcH_PCstep (kvs : List (Int × Nat))
+    (hnodup : (kvs.map (·.1)).Nodup) :
+    ∀ (kvs' : List (Int × Nat)) (pr : Array GoValue)
+      (r : List (Int × Nat)) (idx : Nat) (p : Int × Nat),
+      r[idx]? = some p → wcHPC kvs kvs' pr r →
+      wcHPC kvs kvs' (pr.push (.int p.1 .uint64)) (r.eraseIdx idx) := by
+  intro kvs' pr r idx p hp hPC
+  obtain ⟨rfl, done, rfl, rfl⟩ := hPC
+  refine ⟨rfl, done ++ [p.1], ?_, (filter_push_key hnodup hp).symm⟩
+  simp [toKeys, List.map_append]
+
+private theorem wcH_pick (ws : List Int) (sv siv : Int)
+    (kvs : List (Int × Nat))
+    (hkv : ∀ p ∈ kvs, IntKind.normalize .uint64 p.1 = p.1
+      ∧ IntKind.normalize .uint64 (p.2 : Int) = (p.2 : Int)) :
+    ∀ (kvs' rem : List (Int × Nat)) (pr : Array GoValue) (idx : Nat)
+      (ch ch₂ : Choices)
       (p : Int × Nat) (tail : Heap) (B na : Nat),
+      wcHPC kvs kvs' pr rem →
       Choices.consume ch rem.length = (idx, ch₂) → idx < rem.length →
       rem[idx]? = some p →
       IntKind.normalize .uint64 (p.2 : Int) = (p.2 : Int) →
       16 ≤ na → DeadFrom tail na →
-      stepFn (σH ws.length sv siv ws kvs (ws.length : Int) false tail na)
-          (rangeHeadR envRBH kRH B rem) ch
+      stepFn (σH ws.length sv siv ws kvs' (ws.length : Int) false tail na)
+          (rangeHeadR envRBH kRH 12 (toKeys (kvs.map (·.1))) B pr) ch
         = .ok (.exec wcRangeBody (envIterR envRBH B na)
-              (iterKR envRBH kRH B (rem.eraseIdx idx)),
-            σH ws.length sv siv ws kvs (ws.length : Int) false
+              (iterKR envRBH kRH 12 (toKeys (kvs.map (·.1))) B
+                (pr.push (.int p.1 .uint64))),
+            σH ws.length sv siv ws kvs' (ws.length : Int) false
               (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
               (na + 1), ch₂) := by
-  intro kvs rem idx ch ch₂ p tail B na hcons hidx hp hvnorm hna htail
+  intro kvs' rem pr idx ch ch₂ p tail B na hPC hcons hidx hp hvnorm hna htail
+  obtain ⟨rfl, done, rfl, rfl⟩ := hPC
   have hmiss : Heap.lookup
-      (frontH ws.length sv siv ws kvs (ws.length : Int) false ++ tail)
+      (frontH ws.length sv siv ws kvs' (ws.length : Int) false ++ tail)
       (.base ⟨na⟩) = none := by
-    rw [lookup_append_right (lookup_frontH_none ws.length sv siv ws kvs
+    rw [lookup_append_right (lookup_frontH_none ws.length sv siv ws kvs'
       (ws.length : Int) false hna)]
     exact htail na (Nat.le_refl na)
+  have hcands : mapIterCandidates
+      (σH ws.length sv siv ws kvs' (ws.length : Int) false tail na)
+      (.int .uint64) (.int .uint64) (some (.base ⟨12⟩)) (toKeys done)
+      = .ok (toEntries (kvs'.filter (fun p => !done.contains p.1))) :=
+    candidates_toEntries (a := ⟨12⟩) (dty := none) (ks := done) rfl hkv
+  have hne : kvs'.filter (fun p => !done.contains p.1) ≠ [] := by
+    intro hc
+    rw [hc] at hidx
+    exact absurd hidx (by simp)
+  have hsub : ∀ z ∈ kvs'.filter (fun p => !done.contains p.1),
+      (kvs'.map (·.1)).contains z.1 := by
+    intro z hz
+    have := (List.mem_filter.mp hz).1
+    exact List.contains_iff_exists_mem_beq.mpr
+      ⟨z.1, List.mem_map.mpr ⟨z, this, rfl⟩, by simp⟩
+  have hmand := mandatory_true_of_all
+    (σH ws.length sv siv ws kvs' (ws.length : Int) false tail na) hne hsub
+  have hcons' : Choices.consume ch
+      ((kvs'.filter (fun p => !done.contains p.1)).length
+        + (if true then 0 else 1)) = (idx, ch₂) := by
+    simpa using hcons
   have hPick := GoLean.MapMem.stepFn_pick_value (v := "c")
-    (σ := σH ws.length sv siv ws kvs (ws.length : Int) false tail na)
+    (σ := σH ws.length sv siv ws kvs' (ws.length : Int) false tail na)
     (body := wcRangeBody) (env := envRBH B) (k := kRH B)
-    hcons hidx hp hvnorm
-  rw [show (σH ws.length sv siv ws kvs (ws.length : Int) false tail
+    hcands hmand hcons' hidx hp hvnorm
+  rw [show (σH ws.length sv siv ws kvs' (ws.length : Int) false tail
         na).nextAddr = na from rfl,
-    show (σH ws.length sv siv ws kvs (ws.length : Int) false tail na).heap
-      = frontH ws.length sv siv ws kvs (ws.length : Int) false ++ tail
+    show (σH ws.length sv siv ws kvs' (ws.length : Int) false tail na).heap
+      = frontH ws.length sv siv ws kvs' (ws.length : Int) false ++ tail
       from rfl,
     set_fresh hmiss, List.append_assoc] at hPick
   exact hPick
 
+private theorem wcH_exit (ws : List Int) (sv siv : Int)
+    (kvs : List (Int × Nat))
+    (hkv : ∀ p ∈ kvs, IntKind.normalize .uint64 p.1 = p.1
+      ∧ IntKind.normalize .uint64 (p.2 : Int) = (p.2 : Int)) :
+    ∀ (kvs' : List (Int × Nat)) (pr : Array GoValue) (tail : Heap)
+      (B na : Nat) (ch : Choices), wcHPC kvs kvs' pr [] →
+      stepFnIter 1
+          (σH ws.length sv siv ws kvs' (ws.length : Int) false tail na)
+          (rangeHeadR envRBH kRH 12 (toKeys (kvs.map (·.1))) B pr) ch
+        = .ok (.next (kRH B),
+            σH ws.length sv siv ws kvs' (ws.length : Int) false tail na,
+            ch) := by
+  intro kvs' pr tail B na ch hPC
+  obtain ⟨rfl, done, rfl, hnil⟩ := hPC
+  have hcands : mapIterCandidates
+      (σH ws.length sv siv ws kvs' (ws.length : Int) false tail na)
+      (.int .uint64) (.int .uint64) (some (.base ⟨12⟩)) (toKeys done)
+      = .ok #[] := by
+    have := candidates_toEntries (a := ⟨12⟩) (dty := none) (ks := done)
+      (σ := σH ws.length sv siv ws kvs' (ws.length : Int) false tail na)
+      rfl hkv
+    rw [← hnil] at this
+    simpa [toEntries] using this
+  exact stepFnIter_one (stepFn_iter_done hcands)
+
 private theorem wcH_R4b (ws : List Int) (sv siv : Int) :
-    ∀ (kvs rem : List (Int × Nat)) (tail : Heap) (B na₀ na : Nat)
-      (ch : Choices),
+    ∀ (kvs : List (Int × Nat)) (st pr : Array GoValue) (tail : Heap)
+      (B na₀ na : Nat) (ch : Choices),
       stepFnIter 4 (σH ws.length sv siv ws kvs (ws.length : Int) false tail na)
           (.next (.seq [.assign (.var "best") (.var "c")]
             (env4R envRBH B na₀)
-            (.seq [] (envIfR envRBH B na₀) (iterKR envRBH kRH B rem)))) ch
+            (.seq [] (envIfR envRBH B na₀)
+              (iterKR envRBH kRH 12 st B pr)))) ch
         = .ok (.evalE (.var "c") (env4R envRBH B na₀)
               (.rhsK .vals [.chain (.addr (.base ⟨B⟩)) [] []] [] []
                 (.seqn #[]) (env4R envRBH B na₀)
-                (storeBestKR envRBH kRH B na₀ rem)),
+                (storeBestKR envRBH kRH 12 st B na₀ pr)),
             σH ws.length sv siv ws kvs (ws.length : Int) false tail na, ch) := by
-  intro kvs rem tail B na₀ na ch
+  intro kvs st pr tail B na₀ na ch
   with_unfolding_all rfl
 
 private theorem wcH_varC (ws : List Int) (sv siv : Int) :
@@ -347,20 +420,20 @@ private theorem wcH_varBest (ws : List Int) (sv siv : Int) :
   exact hlkB
 
 private theorem wcH_stB (ws : List Int) (sv siv : Int) :
-    ∀ (kvs rem : List (Int × Nat)) (tail : Heap) (B na₀ na : Nat)
-      (bv v : Int) (ch : Choices),
+    ∀ (kvs : List (Int × Nat)) (st pr : Array GoValue) (tail : Heap)
+      (B na₀ na : Nat) (bv v : Int) (ch : Choices),
       16 ≤ B → Heap.lookup tail (.base ⟨B⟩) = some (u64cell bv) →
       IntKind.normalize .uint64 v = v →
       stepFn (σH ws.length sv siv ws kvs (ws.length : Int) false tail na)
           (.next (.storeK [.chain (.addr (.base ⟨B⟩)) [] []]
             [.int v .uint64] (.seqn #[]) (env4R envRBH B na₀)
-            (storeBestKR envRBH kRH B na₀ rem))) ch
+            (storeBestKR envRBH kRH 12 st B na₀ pr))) ch
         = .ok (.next (.storeK [] [] (.seqn #[]) (env4R envRBH B na₀)
-              (storeBestKR envRBH kRH B na₀ rem)),
+              (storeBestKR envRBH kRH 12 st B na₀ pr)),
             σH ws.length sv siv ws kvs (ws.length : Int) false
               (Heap.set tail (.base ⟨B⟩) ⟨some tU64, .int v .uint64⟩) na,
             ch) := by
-  intro kvs rem tail B na₀ na bv v ch hB hlkB hvn
+  intro kvs st pr tail B na₀ na bv v ch hB hlkB hvn
   have hlook : Heap.lookup
       (σH ws.length sv siv ws kvs (ws.length : Int) false tail na).heap
       (.base ⟨B⟩) = some ⟨some tU64, .int bv .uint64⟩ := by
@@ -387,30 +460,42 @@ private theorem wcH_stB (ws : List Int) (sv siv : Int) :
 placement-generic `wcRange_generic` (§10b; consolidation slice
 2026-08-13). -/
 private theorem wcH_range_loop (ws : List Int) (sv siv : Int)
-    (kvs : List (Int × Nat)) :
-    ∀ (m : Nat) (rem : List (Int × Nat)), rem.length = m →
-    ∀ (bv : Nat) (B na : Nat) (tail : Heap) (ch : Choices),
-    (∀ p ∈ rem, p.2 ≤ ws.length) → ws.length < 2 ^ 63 → bv ≤ ws.length →
+    (kvs : List (Int × Nat))
+    (hkv : ∀ p ∈ kvs, IntKind.normalize .uint64 p.1 = p.1
+      ∧ IntKind.normalize .uint64 (p.2 : Int) = (p.2 : Int))
+    (hnodup : (kvs.map (·.1)).Nodup) :
+    ∀ (bv B na : Nat) (tail : Heap) (ch : Choices),
+    (∀ p ∈ kvs, p.2 ≤ ws.length) → ws.length < 2 ^ 63 → bv ≤ ws.length →
     16 ≤ B → B < na →
     Heap.lookup tail (.base ⟨B⟩) = some (u64cell (bv : Int)) →
     (∀ x : Nat, na ≤ x → Heap.lookup tail (.base ⟨x⟩) = none) →
     ∃ (k : Nat) (ch' : Choices) (tail' : Heap) (na' : Nat),
-      k ≤ 24 * m + 1 ∧ na ≤ na'
+      k ≤ 24 * kvs.length + 1 ∧ na ≤ na'
       ∧ Heap.lookup tail' (.base ⟨B⟩)
-          = some (u64cell ((max bv (maxOf (rem.map Prod.snd)) : Nat) : Int))
+          = some (u64cell ((max bv (maxOf (kvs.map Prod.snd)) : Nat) : Int))
       ∧ (∀ x : Nat, na' ≤ x → Heap.lookup tail' (.base ⟨x⟩) = none)
-      ∧ stepFnIter k (σH ws.length sv siv ws kvs (ws.length : Int) false tail na)
-          (rangeHeadH B rem) ch
+      ∧ stepFnIter k
+          (σH ws.length sv siv ws kvs (ws.length : Int) false tail na)
+          (rangeHeadH B (toKeys (kvs.map (·.1))) #[]) ch
         = .ok (.next (kRH B),
-            σH ws.length sv siv ws kvs (ws.length : Int) false tail' na', ch') := by
-  intro m rem hm bv B na tail ch hrem hlen hbv hB hBna hbest htail
+            σH ws.length sv siv ws kvs (ws.length : Int) false tail' na',
+            ch') := by
+  intro bv B na tail ch hrem hlen hbv hB hBna hbest htail
   obtain ⟨k, ch', tail', na', hk, hna', hbest', htail', hrun⟩ :=
-    wcRange_generic envRBH kRH (σH ws.length sv siv ws) (ws.length : Int)
-      16 ws.length hlen
+    wcRange_generic envRBH kRH 12 (toKeys (kvs.map (·.1)))
+      (σH ws.length sv siv ws) (ws.length : Int) 16 ws.length hlen
+      (wcHPC kvs) (wcH_PCstep kvs hnodup)
       (fun B na₀ => rfl)
-      (wcH_pick ws sv siv) (wcH_R4b ws sv siv) (wcH_varC ws sv siv) (wcH_varBest ws sv siv)
-      (wcH_stB ws sv siv)
-      m kvs rem hm bv B na tail ch hrem hbv hB hBna hbest htail
+      (wcH_pick ws sv siv kvs hkv) (wcH_exit ws sv siv kvs hkv)
+      (fun kvs' pr tail B na₀ na ch =>
+        wcH_R4b ws sv siv kvs' (toKeys (kvs.map (·.1))) pr tail B na₀ na ch)
+      (wcH_varC ws sv siv) (wcH_varBest ws sv siv)
+      (fun kvs' pr tail B na₀ na bv v ch =>
+        wcH_stB ws sv siv kvs' (toKeys (kvs.map (·.1))) pr tail B na₀ na
+          bv v ch)
+      kvs.length kvs kvs rfl #[] bv B na tail ch
+      ⟨rfl, [], rfl, (List.filter_eq_self.mpr (fun _ _ => rfl)).symm⟩
+      hrem hbv hB hBna hbest htail
   exact ⟨k, ch', tail', na', hk, hna', hbest', htail', hrun⟩
 
 
@@ -611,8 +696,10 @@ theorem wcH_runs (n seed : Nat) (hn : n < 2 ^ 63) (ch : Choices) :
   -- the range loop
   obtain ⟨k₂, ch₂, tail₂, na₂, hk₂, hna₂, hbest₂, htail₂, hrun₂⟩ :=
     wcH_range_loop (wcFamily n seed) ((seed : Nat) : Int) ((n : Nat) : Int)
-      (countsFold (wcFamily n seed)) (countsFold (wcFamily n seed)).length
-      (countsFold (wcFamily n seed)) rfl 0 (16 + 2 * (n - 0))
+      (countsFold (wcFamily n seed))
+      (countsFold_norm (wcFamily n seed) hws hlen)
+      (countsFold_nodup_keys (wcFamily n seed))
+      0 (16 + 2 * (n - 0))
       (16 + 2 * (n - 0) + 1) tail₁ ch
       (fun p hp => by
         have := countsFold_val_le (wcFamily n seed) hp

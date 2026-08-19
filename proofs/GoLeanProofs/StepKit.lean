@@ -636,13 +636,14 @@ theorem stepFn_store_step {σ σ' : ExecState} {r : TargetRef}
 `stepFn_strict_apply` for the statement-op spine). -/
 theorem stepFn_stmtOp_apply {σ σ' : ExecState} {op : StmtOp}
     {nt : Nat} {done : List GoValue} {v : GoValue} {env : LocalEnv}
-    {k : Cont} {ch ch' : Choices}
-    (h : applyStmtOp σ ch op nt (v :: done).reverse = .ok (σ', ch')) :
+    {k k' : Cont} {ch ch' : Choices}
+    (h : applyStmtOp σ ch op nt (v :: done).reverse = .ok (σ', ch'))
+    (hk : contAfterStmtOp σ' op (v :: done).reverse k = .ok k' := by rfl) :
     stepFn σ (.retV v (.stmtOpK op nt done [] env k)) ch
-      = .ok (.next k, σ', ch') := by
+      = .ok (.next k', σ', ch') := by
   simp only [stepFn]
   rw [h]
-  rfl
+  simp only [Bind.bind, Except.bind, hk, pure, Except.pure]
 
 /-- The variable-read step at a symbolic heap address, conditioned on
 the env binding and the cell lookup. -/
@@ -849,19 +850,21 @@ theorem stepFn_mapAssign_apply {σ σ' : ExecState} {kt vt : Ty}
     stepFn σ (.retV vv (.stmtOpK (.mapAssign kt vt) 0 [kv, b] [] env k))
       ch
       = .ok (.next k, σ', ch) := by
-  simp only [stepFn, applyStmtOp, applyStmtOpCore, List.reverse_cons,
+  simp only [stepFn, applyStmtOp, applyStmtOpCore, contAfterStmtOp,
+    List.reverse_cons,
     List.reverse_nil, List.nil_append, List.cons_append, h, Bind.bind,
     Except.bind, pure, Except.pure]
 
-/-- The `mapRangeK` snapshot step, conditioned on the snapshot fact
+/-- The `mapRangeK` range-START step (BUG-005 (L): base + start keys,
+replacing the retired snapshot), conditioned on the start fact
 (generic in the key/value types and bound names). -/
-theorem stepFn_snapshot {σ : ExecState} {v : GoValue} {kt vt : Ty}
-    {ko vo : Option String}
-    {entries : Array (GoValue × GoValue)} {body : Stmt} {env : LocalEnv}
+theorem stepFn_mapRangeStart {σ : ExecState} {v : GoValue} {kt vt : Ty}
+    {ko vo : Option String} {base : Option Loc} {start : Array GoValue}
+    {body : Stmt} {env : LocalEnv}
     {k : Cont} {ch : Choices}
-    (h : mapRangeSnapshotEntries σ kt vt v = .ok entries) :
+    (h : mapRangeStartSets σ v = .ok (base, start)) :
     stepFn σ (.retV v (.mapRangeK ko vo kt vt body env k)) ch
-      = .ok (.next (.mapIterK ko vo kt vt body entries env k),
+      = .ok (.next (.mapIterK ko vo kt vt body base #[] start env k),
           σ, ch) := by
   simp only [stepFn, h, Bind.bind, Except.bind, pure, Except.pure]
 
