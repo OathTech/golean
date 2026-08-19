@@ -15,6 +15,9 @@
 #       the pile, and deleting a BUG entry raises the count and trips this.
 #       When the count drops, lower the ceiling in the same commit (the check
 #       says so). Below the ceiling it reports the remainder as the backlog.
+#       Since 2026-08-20 the ratchet is PER DISPOSITION CLASS — see the
+#       disposition block below check (3) for what the classes mean and why
+#       one scalar was dishonest.
 #
 #   scripts/check-bugs.sh --list   print that untriaged surface (id + stage),
 #                                  the concrete backlog to triage into BUGS.md.
@@ -108,17 +111,121 @@ if [ "$LIST" -eq 1 ]; then
   exit 0
 fi
 
-# (4) The ratchet: unexplained count must not exceed the recorded ceiling.
+# ---------------------------------------------------------------------------
+# THE DISPOSITION COLUMN (2026-08-20; coverage-ledger T-5, triage-table §5).
+#
+# Every tracked row in baselines/untriaged-ids is `<id><TAB><disposition>`,
+# disposition one of:
+#
+#   coverage     the machine or frontend REFUSES a construct it does not model
+#                (a fail-closed .unsupported / stuck at a fidelity stage).
+#                Never a wrong answer. Retires only when the feature lands.
+#   latitude     a spec-open point the machine declines to pick a member of,
+#                or holds a different conforming member at. Retires by an
+#                ENVELOPE (membership), never by "a fix".
+#   wrong-answer a machine-vs-Go divergence at a FORCED point that no
+#                docs/BUGS.md entry yet explains. THE class this ratchet
+#                exists to drive to zero.
+#
+# Why the split: the old single count mixed all three, so rows that can never
+# retire by being fixed sat inside a number captioned "ratchet toward 0" —
+# unreachable by construction — while a real wrong answer could enter behind a
+# frontier refusal that left, with the scalar unmoved. Ceilings are per class,
+# so `wrong-answer` can be a hard floor independent of frontier churn.
+#
+# Fail-closed everywhere: an unexplained id with no VALID tracked disposition
+# buckets as `unclassified` and fails; a malformed or duplicated tracked line
+# fails; a ceiling file missing a class, naming an unknown class, duplicating
+# one, or carrying a non-number fails. The buckets must also sum back to the
+# total — the split may never lose a row.
+# ---------------------------------------------------------------------------
+DISPOSITIONS='coverage latitude wrong-answer'
+IDS_FILE=baselines/untriaged-ids
 CEIL_FILE=baselines/untriaged-count
-if [ -f "$CEIL_FILE" ]; then
-  ceil="$(grep -vE '^#' "$CEIL_FILE" | head -1 | tr -d '[:space:]')"
-  if [ "$nun" -gt "$ceil" ]; then
-    echo "FAIL (4): unexplained fidelity failures rose ${ceil} -> ${nun} — a new bug is hiding in the pile (or a BUG entry was deleted). Triage the new id(s) into docs/BUGS.md ('scripts/check-bugs.sh --list') or, if genuinely pre-existing, raise $CEIL_FILE with justification."
+
+current_ids="$(printf '%s\n' "$unexplained" | cut -f1 | grep . | sort || true)"
+tracked_ids=""      # first field of every non-comment line (the 4b set)
+tracked_pairs=""    # only the lines that PARSE (the disposition source)
+ceil_rows=""        # set below; referenced by the summary, which only runs green
+
+if [ ! -f "$IDS_FILE" ]; then
+  echo "FAIL (4b): missing $IDS_FILE (the tracked untriaged id set) — create it with one '<id><TAB><disposition>' line per id from 'scripts/check-bugs.sh --list' (disposition one of: $DISPOSITIONS)"
+  fail=1
+else
+  ids_rows="$(grep -vE '^#' "$IDS_FILE" | grep . || true)"
+  tracked_ids="$(printf '%s\n' "$ids_rows" | cut -f1 | grep . | sort || true)"
+  bad_rows="$(printf '%s\n' "$ids_rows" | grep . | awk -F'\t' -v OK="$DISPOSITIONS" '
+    BEGIN { n=split(OK,a," "); for(i=1;i<=n;i++) ok[a[i]]=1 }
+    NF!=2 || $1=="" || !($2 in ok) { print }' || true)"
+  if [ -n "$bad_rows" ]; then
+    echo "FAIL (4b): malformed row(s) in $IDS_FILE — every tracked row is '<id><TAB><disposition>' with disposition one of: $DISPOSITIONS"
+    printf '%s\n' "$bad_rows" | sed 's/^/  /'
     fail=1
   fi
-else
-  echo "FAIL (4): missing $CEIL_FILE (the untriaged ceiling) — create it with the current count $nun"
+  dup_rows="$(printf '%s\n' "$tracked_ids" | grep . | uniq -d || true)"
+  if [ -n "$dup_rows" ]; then
+    echo "FAIL (4b): duplicate id(s) in $IDS_FILE — a second row would silently shadow the first's disposition:"
+    printf '%s\n' "$dup_rows" | sed 's/^/  /'
+    fail=1
+  fi
+  tracked_pairs="$(printf '%s\n' "$ids_rows" | grep . | awk -F'\t' -v OK="$DISPOSITIONS" '
+    BEGIN { n=split(OK,a," "); for(i=1;i<=n;i++) ok[a[i]]=1 }
+    NF==2 && $1!="" && ($2 in ok) { print }' || true)"
+fi
+
+# (4) The ratchet, per disposition class. Bucket the CURRENT unexplained ids
+#     by their tracked disposition; anything without one is `unclassified`.
+declare -A cnt
+for d in $DISPOSITIONS unclassified; do cnt[$d]=0; done
+unclassified_ids=""
+while read -r uid; do
+  [ -z "$uid" ] && continue
+  d="$(printf '%s\n' "$tracked_pairs" | awk -F'\t' -v i="$uid" '$1==i {print $2; exit}')"
+  if [ -z "$d" ]; then d=unclassified; unclassified_ids="$unclassified_ids$uid"$'\n'; fi
+  cnt[$d]=$(( ${cnt[$d]} + 1 ))
+done <<< "$current_ids"
+
+bsum=0
+for d in $DISPOSITIONS unclassified; do bsum=$(( bsum + ${cnt[$d]} )); done
+if [ "$bsum" -ne "$nun" ]; then
+  echo "FAIL (4): disposition buckets sum to $bsum but there are $nun unexplained fidelity failure(s) — the split lost a row"
   fail=1
+fi
+if [ "${cnt[unclassified]}" -gt 0 ]; then
+  echo "FAIL (4): ${cnt[unclassified]} unexplained fidelity failure(s) carry no valid disposition in $IDS_FILE — classify each as one of: $DISPOSITIONS (fail closed; an unclassified row is never counted as harmless):"
+  printf '%s' "$unclassified_ids" | sed 's/^/  /'
+  fail=1
+fi
+
+if [ ! -f "$CEIL_FILE" ]; then
+  echo "FAIL (4): missing $CEIL_FILE (the per-class untriaged ceilings) — create it with one '<class> <n>' line per class: $DISPOSITIONS"
+  fail=1
+else
+  ceil_rows="$(grep -vE '^#' "$CEIL_FILE" | grep . || true)"
+  bad_ceil="$(printf '%s\n' "$ceil_rows" | grep . | awk -v OK="$DISPOSITIONS" '
+    BEGIN { n=split(OK,a," "); for(i=1;i<=n;i++) ok[a[i]]=1 }
+    NF!=2 || !($1 in ok) || $2 !~ /^[0-9]+$/ { print }' || true)"
+  if [ -n "$bad_ceil" ]; then
+    echo "FAIL (4): malformed ceiling row(s) in $CEIL_FILE — every row is '<class> <n>' with class one of: $DISPOSITIONS"
+    printf '%s\n' "$bad_ceil" | sed 's/^/  /'
+    fail=1
+  fi
+  dup_ceil="$(printf '%s\n' "$ceil_rows" | grep . | awk '{print $1}' | sort | uniq -d || true)"
+  if [ -n "$dup_ceil" ]; then
+    echo "FAIL (4): duplicate ceiling row(s) in $CEIL_FILE (the second would be ignored): $dup_ceil"
+    fail=1
+  fi
+  for d in $DISPOSITIONS; do
+    c="$(printf '%s\n' "$ceil_rows" | awk -v k="$d" '$1==k {print $2; exit}')"
+    if [ -z "$c" ]; then
+      echo "FAIL (4): $CEIL_FILE has no ceiling row for class '$d' — every class carries its own ceiling"
+      fail=1; continue
+    fi
+    if [ "${cnt[$d]}" -gt "$c" ]; then
+      echo "FAIL (4): unexplained '$d' fidelity failures rose ${c} -> ${cnt[$d]} — triage the new id(s) into docs/BUGS.md ('scripts/check-bugs.sh --list') or, if genuinely pre-existing, raise the '$d' row in $CEIL_FILE with justification in the same commit."
+      fail=1
+    fi
+  done
 fi
 
 # (4b) The SET ratchet: the count alone launders equal-sized swaps (N fixed
@@ -127,12 +234,13 @@ fi
 # docs/BUGS.md or added to the tracked set with in-file justification, and
 # a departed id must be removed in the same commit (a stale entry would
 # re-admit a regression silently).
-IDS_FILE=baselines/untriaged-ids
-if [ -f "$IDS_FILE" ]; then
-  current_ids="$(printf '%s\n' "$unexplained" | cut -f1 | grep . | sort || true)"
-  tracked_ids="$(grep -vE '^#' "$IDS_FILE" | grep . | sort || true)"
-  new_ids="$(comm -13 <(printf '%s\n' "$tracked_ids") <(printf '%s\n' "$current_ids") || true)"
-  gone_ids="$(comm -23 <(printf '%s\n' "$tracked_ids") <(printf '%s\n' "$current_ids") || true)"
+if [ -f "$IDS_FILE" ]; then   # its absence already FAILed (4b) above
+  # -u on the tracked side: a duplicated row is already reported by the
+  # dup check above, and letting the extra copy fall out of `comm -23` here
+  # would report it a second time as a phantom "no longer failing" id.
+  tracked_ids_u="$(printf '%s\n' "$tracked_ids" | sort -u || true)"
+  new_ids="$(comm -13 <(printf '%s\n' "$tracked_ids_u") <(printf '%s\n' "$current_ids") || true)"
+  gone_ids="$(comm -23 <(printf '%s\n' "$tracked_ids_u") <(printf '%s\n' "$current_ids") || true)"
   if [ -n "$new_ids" ]; then
     echo "FAIL (4b): NEW untriaged fidelity failure(s) not in $IDS_FILE:"
     printf '%s\n' "$new_ids" | sed 's/^/  /'
@@ -143,16 +251,22 @@ if [ -f "$IDS_FILE" ]; then
     printf '%s\n' "$gone_ids" | sed 's/^/  /'
     fail=1
   fi
-else
-  echo "FAIL (4b): missing $IDS_FILE (the tracked untriaged id set) — create it from 'scripts/check-bugs.sh --list'"
-  fail=1
 fi
 
 if [ "$fail" -ne 0 ]; then echo "check-bugs: FAIL"; exit 1; fi
 echo "check-bugs: ok ($nbugs bug(s); pinned cases behave as claimed)"
 if [ "$nun" -gt 0 ]; then
-  echo "check-bugs: backlog — $nun/$ceil unexplained fidelity failure(s) ('scripts/check-bugs.sh --list'; ratchet toward 0)"
-  if [ "$nun" -lt "$ceil" ]; then
-    echo "check-bugs: ceiling is $ceil but count is $nun — lower $CEIL_FILE to $nun in this commit (ratchet down)"
-  fi
+  line=""
+  for d in $DISPOSITIONS; do
+    c="$(printf '%s\n' "$ceil_rows" | awk -v k="$d" '$1==k {print $2; exit}')"
+    line="$line $d ${cnt[$d]}/$c;"
+  done
+  echo "check-bugs: backlog — $nun unexplained fidelity failure(s):${line%;} ('scripts/check-bugs.sh --list')"
+  echo "check-bugs: 'wrong-answer' is the class that ratchets toward 0; 'coverage' retires when the feature lands and 'latitude' only by an envelope."
+  for d in $DISPOSITIONS; do
+    c="$(printf '%s\n' "$ceil_rows" | awk -v k="$d" '$1==k {print $2; exit}')"
+    if [ "${cnt[$d]}" -lt "$c" ]; then
+      echo "check-bugs: '$d' ceiling is $c but count is ${cnt[$d]} — lower it in $CEIL_FILE in this commit (ratchet down)"
+    fi
+  done
 fi

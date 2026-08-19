@@ -622,6 +622,19 @@ check subtracts — a change to a GATE, which this slice deliberately does
 not touch. Slice 6's coverage ledger is the natural owner; flagged here
 so the number is read honestly in the meantime.
 
+**RESOLVED 2026-08-20 (ledger T-5, user-approved at the arc gate).** The
+column is built. One deliberate difference from the sketch above: the
+check does **not** *subtract* the coverage/latitude rows — subtracting
+would make them invisible, and an invisible row is one nobody retires.
+It BUCKETS them, and carries a ceiling per class, so each class ratchets
+on its own terms (`coverage` when a feature lands, `latitude` only by an
+envelope, `wrong-answer` toward zero). The result on the same 9 ids:
+`coverage 6 / latitude 3 / wrong-answer 0` — the class this ratchet
+exists for was already empty, and the old scalar `9` was hiding that in
+both directions. Mechanism, per-id derivation and the fail-closed
+behaviours: `docs/bugfix-arc-log.md` §T-5, and the headers of
+`baselines/untriaged-{ids,count}`.
+
 ## 6. Counts, and the end-state check
 
 At `0c21aa21` (before this slice's A1), by RED and by GROUP:
