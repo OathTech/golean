@@ -1,24 +1,21 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-19 (bug-fix arc AUDIT FIX ROUND, the A1/BUG-063 fix
-#   commit — receiver-position implicit & routed through addr-of-deref)
-#   commit: this commit (on 46bcee2f, the guardrail tip)
-#   re-pin reason: exactly the 2 predicted red->green flips and nothing
-#   else (zero other movement on the 2224 ids):
-#     methods/recv-implicit-addr-deref/explicit-call-nil
-#       FAIL/differential -> PASS
-#     methods/recv-implicit-addr-deref/method-value-nil
-#       FAIL/differential -> PASS
-#   held, verified in the same run: the 5 store-order pins
-#   (assign-order/target-check-vs-rhs/nil-deref-target,
-#   channels/recv-edge/second-target-panic-stores-first,
-#   channels/recv-map-elem/first-store-lands,
-#   multi-assign/store-order-plain,
-#   pointers/nil-array-elem-store/second-target), the 10-row
-#   addr-deref-nil-matrix, the sync-recv-nil + non-nil-control guards,
-#   methods/nil-receiver + nil-pointer-method-value, and
-#   pointers/nil-array-ptr-slice/slice-expr-nil (stays
-#   FAIL/lean-observation — scoped out on purpose, see BUG-063)
-#   counts: 2224 cases, 2094 PASS / 130 FAIL (was 2224, 2092/132)
+# recorded: 2026-08-19 (bug-fix arc AUDIT FIX ROUND, F1/F2 commit — the
+#   zero-size address-identity latitude, inventory R15)
+#   commit: this commit (on 4bc2ca12, the records tip)
+#   re-pin reason: 2 NEW ids and nothing else (zero movement on the
+#   2224 pre-existing ids), expectations from go run at go1.26.5 before
+#   the differential ran (artifacts/probe/zerosize, scratch):
+#     NEW/FAIL (1): pointers/zero-size-address/escaped-same
+#       (differential, machine 0 vs go 1 — the R15 LATITUDE deviation
+#       record: both answers conform to "may have the same address";
+#       gc's escaped realization is runtime.zerobase-equal, the
+#       machine's fresh-cell realization is distinct. untriaged-ids
+#       disposition latitude, ceiling 3 -> 4; retires only by a W3.2
+#       envelope, never by a fix)
+#     NEW/PASS (1): pointers/zero-size-address/stack-distinct — the
+#       member-agreement pin (gc's stack realization = the machine's
+#       singleton), version-tracked
+#   counts: 2226 cases, 2095 PASS / 131 FAIL (was 2224, 2094/130)
 #   frontend: native (tools/nativefrontend + NativeToIR)
 # columns: result<TAB>id<TAB>stage
 PASS	arrays/array-bounds	-
@@ -1580,6 +1577,8 @@ PASS	pointers/pointer-identity	-
 PASS	pointers/pointer-param-alias	-
 PASS	pointers/pointer-slice-header	-
 PASS	pointers/pointer-to-pointer	-
+FAIL	pointers/zero-size-address/escaped-same	differential
+PASS	pointers/zero-size-address/stack-distinct	-
 PASS	quorum/committed-index/all-acked	-
 PASS	quorum/committed-index-edges/all-unacked	-
 PASS	quorum/committed-index-edges/n1-acked	-

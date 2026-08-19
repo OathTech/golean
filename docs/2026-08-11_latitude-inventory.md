@@ -948,6 +948,36 @@ implementation REJECTING constants go/types accepts, or rounding where
 it doesn't) has not been analyzed. Negative-lane relevance only; no
 runtime observable. OPEN QUESTION as stated.
 
+### R15. Zero-size variable address identity — (b) PINNED never-same; gc probed NON-single-valued (added 2026-08-19, audit fix round F1)
+
+- WHERE: spec#Size_and_alignment_guarantees — "Two distinct zero-size
+  variables may have the same address in memory." — and
+  spec#Comparison_operators — "Pointers to distinct zero-size
+  variables may or may not be equal." (both verbatim at the
+  `deps/go` pin). The observable is plain pointer equality:
+  in-language, no unsafe/reflect needed — which is why the coverage
+  ledger's Size_and_alignment_guarantees row can NOT claim int/uint
+  width as the section's only in-language-observable consequence
+  (that claim stood until this row; the ledger row is corrected in
+  the same commit).
+- MACHINE: every variable gets a fresh cell (`Loc` identity), so the
+  machine is the deterministic NEVER-SAME member of the two-member
+  envelope, on every shape. A conforming member — but a singleton.
+- EVIDENCE gc IS non-single-valued (go1.26.5 probe,
+  artifacts/probe/zerosize, scratch): two non-escaping stack
+  zero-size variables compare DISTINCT (0); two escaping ones both
+  land on `runtime.zerobase` and compare EQUAL (1); `new(struct{})`
+  twice without escape is stack-shaped (0). Case-pinned both ways:
+  `pointers/zero-size-address/stack-distinct` GREEN (member
+  agreement, version-tracked) and `pointers/zero-size-address/
+  escaped-same` RED differential (machine 0 vs gc 1 — observed ∉
+  modeled-singleton at a latitude point; the init/hidden-dep-order
+  class, disposition `latitude` in baselines/untriaged-ids).
+- RE-ENVELOPE obligation (W3.2): a may-equal choice at zero-size
+  address creation (or a membership-lane row admitting {0,1}) turns
+  the deviation record into an inclusion check. Until then the red is
+  the honest version-tracked pin, never a fidelity bug.
+
 ---
 
 ## 4. Forced points — the compact list (class (c))
