@@ -8,6 +8,9 @@
 > layer is underway** (in-repo `proofs/`), no longer just "a later phase." Read
 > the body as historical context; current state of record lives in `TODO.md`,
 > `CLAUDE.md`, and the dated design notes. Full rewrite tracked as a task.
+> **(3) Coverage claims (2026-08-19):** language coverage is measured
+> against the pinned spec in `docs/language-coverage-ledger.md`; every
+> coverage statement in the body below is superseded by that ledger.
 
 This project aims to build an Aeneas-like Go-to-Lean tool with broad Go
 coverage and executable semantics in Lean. Proof infrastructure (the Iris layer)
@@ -258,39 +261,21 @@ execution against generated Lean execution where the feature is executable.
 
 Goal: cover as much Go/Gobra code as practical.
 
-Status: started, but gated by the hardening pass above. The executable subset
-now includes scalar arithmetic and
-comparisons, boolean connectives, divide-by-zero panic classification, a first
-typed-integer subset with fixed-width normalization and integer-to-integer
-conversions/shifts, and a first fixed-size
-array subset: array types, array literals, indexing, indexed assignment, and
-array equality through GoCore values. The control-flow subset now includes
-`if`, explicit `return`, and unlabeled `break`/`continue`.
-Fixed-size array `len` and `cap` are supported for array values.
-Zero-value arrays, nested arrays, arrays through function parameters and
-results, pointer-to-array indexing/assignment, array-to-slice aliasing,
-nonzero-capacity and zero-length slice `make`, slice literals, typed nil slice
-behavior, overlapping slice `copy`, and slice `append` aliasing/growth are
-covered by differential smoke tests.
+Status (re-pointed 2026-08-19, bug-fix arc slice 6): **the current
+coverage claim lives in `docs/language-coverage-ledger.md`** — one
+classified row per section of the pinned go1.26.5 spec and memory
+model (covered-with-grade / frontier / latitude / out-of-language,
+zero unclassified), the frontier feature table with every refusal
+point, the ordered sequential build queue, and the named
+concurrency-entangled design questions. The feature-list prose that
+used to sit here (and the "expected progression" below) is superseded:
+any statement about what GoLean supports cites the ledger's rows and
+grades, not this file.
 
-Feature order should be driven by corpus failures and semantic dependencies,
-but the expected progression is:
-
-- integer and boolean operators with Go-sized words. The first fixed-width
-  integer slice is in place, including first integer-to-integer conversions;
-  first shift and bitwise support are also in place. Byte-backed string
-  literals, string slicing, and string/`[]byte` conversions are in place.
-  Constants, broader conversions, and richer rune behavior should be added
-  incrementally with differential tests;
-- arrays and slices, including indexing, slicing, append, len, and cap. Slices
-  should follow `docs/slice-model.md`: descriptor values over backing
-  locations, with append growth treated carefully because post-growth capacity
-  is observable but not fully specified by Go;
-- maps, including nil-map behavior and comma-ok lookup;
-- named types, aliases, conversions, and zero values;
-- methods and interfaces;
-- panics/defer/recover where needed by real code;
-- goroutines, channels, atomics, and selected sync primitives.
+Feature order is the ledger's build queue (smallest-diagnosed first,
+raft-path rows boosted, complex last as the one large arc);
+concurrency-entangled features advance by design ruling, not queue
+position.
 
 New Goose gives useful decomposition here: desugar simple constructs during
 lowering, encode ordinary sequencing/calls in GoCore, and add semantic
