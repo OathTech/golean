@@ -843,11 +843,14 @@ subexpressions of one binary operator).
 
 - FloatBits.lean:68–72. Go the language cannot observe NaN payloads
   (math.Float64bits is out of scope); becomes latitude-relevant only if
-  math lands. Also: float min/max builtins REFUSED (Ops.lean:85–90 —
-  spec-pinned semantics, refusal over unvalidated pin; "zero coverage"
-  retired at P3: spec-examples-stmt/min-max-float-specials pins the
-  spec's signed-zero/Inf/NaN table as three fail-closed reds in
-  baselines/untriaged-ids, flipping PASS when the builtins land).
+  math lands. Float min/max builtins LANDED (2026-08-19, 19-red slice
+  family 3 = triage L3): the IEEE fold over `floatMinMaxBits`
+  (spec#Min_and_max's special-case table — NaN propagates,
+  min(-0,+0) = -0), validated by the three
+  spec-examples-stmt/min-max-float-specials pins, now PASS. The one
+  NaN-adjacent narrowing: a NaN result carries the NaN OPERAND's bits
+  (payload unobservable in-language — this entry's own scope
+  condition).
 
 ### R8. WaitGroup counter representation — (b) PINNED to gc's bit layout
 
@@ -966,7 +969,7 @@ exit having no HB edge.
 
 ## 5. Refusals standing in for latitude (inventory of fail-closed resolutions)
 
-R6 (float→int out-of-range), E6 (len/cap hoist shapes), R7's min/max,
+R6 (float→int out-of-range), E6 (len/cap hoist shapes),
 go-of-nil-func fatal (R11), select-with-select
 rendezvous (Multi.lean:92–97), racy programs (C10 — by doctrine),
 uintptr observations, `go` during `$pkginit` (StepFn.lean:501–521).

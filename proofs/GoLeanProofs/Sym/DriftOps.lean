@@ -449,6 +449,21 @@ theorem floatBinary_conc {op64 op32 : Nat → Nat → Nat}
     · rw [if_neg hk] at h
       cases h
 
+/-- The IEEE `min`/`max` selection (triage L3): both sides delegate to
+the SAME `floatMinMaxBits` kernel over concrete bits. -/
+theorem floatMinMax_conc {isMin : Bool} {a b r : Value D}
+    (h : floatMinMax' isMin a b = .ok r) :
+    floatMinMax isMin (concV I a) (concV I b) = .ok (concV I r) := by
+  cases a <;> cases b <;>
+    simp only [floatMinMax', quit] at h <;> try (cases h; done)
+  case float.float x kx y ky =>
+    by_cases hk : (kx == ky) = true
+    · rw [if_pos hk] at h
+      cases h
+      simp [floatMinMax, if_pos hk, pure, Except.pure]
+    · rw [if_neg hk] at h
+      cases h
+
 /-! ## Conversion -/
 
 set_option maxHeartbeats 3200000 in

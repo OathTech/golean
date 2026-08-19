@@ -82,12 +82,50 @@ def floatCompareResult (opName : String) (cmp64 cmp32 : Nat → Nat → Bool)
         stuck s!"mismatched {opName} float kinds: {lk.name} and {rk.name}"
   | _, _ => stuck s!"mismatched {opName} operands: {repr left} and {repr right}"
 
-/-- Is any operand a float value? Guard for `min`/`max`, which stay
-FAIL-CLOSED on floats (design note §9: NaN-propagating, `-0 < +0`
-builtin semantics are spec-pinned but have zero corpus coverage — a
-`valueLess`-based fold would silently get NaN wrong). -/
+/-- Is any operand a float value? Dispatch guard for `min`/`max`: float
+operands take the IEEE fold (`floatMinMax` below), everything else the
+`valueLess` fold. (Until triage L3, 2026-08-19, the float side was a
+fail-closed refusal — the design-note §9 reason, "a `valueLess`-based
+fold would silently get NaN wrong", is exactly why the float fold uses
+the softfloat comparison kernel instead.) -/
 def anyFloatOperand (vs : List GoValue) : Bool :=
   vs.any fun v => match v with | .float _ _ => true | _ => false
+
+/-- IEEE `min`/`max` selection over two float operands (triage L3,
+spec §Min_and_max's special-case table, pinned by
+`spec-examples-stmt/min-max-float-specials`): a NaN operand propagates
+(the result is the NaN OPERAND — payload bits are unobservable through
+the observation channel, which renders NaN-ness only); an equal
+compare is either identical bits or the ±0 pair, and the tie breaks by
+SIGN — "negative zero is smaller than (non-negative) zero", so `min`
+keeps the negative-signed operand and `max` the other. The result is
+always ONE OF THE OPERANDS. Non-float or kind-mismatched pairs are
+stuck (go/types makes them unreachable from typed Go). -/
+def floatMinMaxBits (isMin : Bool) (kind : FloatKind) (a b : Nat) : Nat :=
+  let (cmp, isnan) :=
+    match kind with
+    | .float64 => FloatBits.fcmp64 a b
+    | .float32 => FloatBits.fcmp32 a b
+  if isnan then
+    let aIsNaN :=
+      match kind with
+      | .float64 => (FloatBits.fcmp64 a a).2
+      | .float32 => (FloatBits.fcmp32 a a).2
+    if aIsNaN then a else b
+  else if cmp < 0 then (if isMin then a else b)
+  else if 0 < cmp then (if isMin then b else a)
+  else
+    let aNegSign :=
+      match kind with
+      | .float64 => a >>> 63 == 1
+      | .float32 => a >>> 31 == 1
+    if isMin == aNegSign then a else b
+
+def floatMinMax (isMin : Bool) : GoValue → GoValue → Except GoError GoValue
+  | .float a ka, .float b kb =>
+      if ka == kb then return .float (floatMinMaxBits isMin ka a b) ka
+      else stuck s!"mismatched min/max float kinds: {ka.name} and {kb.name}"
+  | l, r => stuck s!"mismatched min/max float operands: {repr l} and {repr r}"
 
 def indexOutOfRangePanic (index : Int) (length : Nat) : Except GoError α :=
   if index < 0 then
