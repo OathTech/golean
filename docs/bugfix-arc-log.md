@@ -2188,3 +2188,24 @@ Open FOR THE USER at the arc gate (unchanged by this slice, plus one):
 the (c) ratification list is now C1-C7 + **C8** (the unsafe boundary
 marker, triage postscript 3); the A3-A6 queue (A6 now carries BUG-062);
 the T-5 gate-change decision (untriaged disposition column).
+
+## FINAL CHECKPOINT — the DONE conjunction at b48489de (2026-08-20)
+
+| # | clause | state |
+|---|---|---|
+| 1 | BUG-058 fixed, pins+edges green, relatives pinned, sweep recorded | DONE (slice 1) |
+| 2 | BUG-057 fixed, matrix green, tuple-decl taken-full, logged | DONE (slice 2) |
+| 3 | BUG-056 memo + USER RULING + implemented, both acceptance tests green | DONE (memo + 0aeb92db) |
+| 4 | BUG-005 memo + USER RULING (literal envelope) + implemented, membership rows exhibit the envelope | DONE (memo + 233fd8ed) |
+| 5 | Triage complete: 9 bugs + all reds in exactly one category; (a) minis + 19-red batch executed | DONE (table + postscripts; 34 (a)-reds killed this arc) |
+| 6 | Ledger complete: 176 sections zero-unclassified, suites landed, build queue + design questions | DONE (slice 6) |
+| 7 | End-state claim: zero reds outside the triage/ledger accounting | DONE (129/129 bucket exactly, script-verified) |
+| 8 | Untriaged cross-check | DONE (slice 5; backlog 25→7→9 with dated reasons) |
+| 9 | Gates green at tip; flips predicted throughout | DONE (ci --diff PASS at b48489de) |
+| 10 | H-3 (slice 5b, user-directed): per-method quarantine + never-drop invariant + W2.2 forecast | DONE (f1cf7edc) |
+| — | Audit ask POSED | accompanies this commit |
+
+Beyond charter, user-directed during the arc: the 19-red GoCore batch
+(approved 2026-08-19, 19/19 killed), H-3, the sequential-support
+default, spec-interpretations.md + CLAUDE.md link.
+Awaiting the user at the gate: (c) ratification C1–C8, T-5, the audit.
