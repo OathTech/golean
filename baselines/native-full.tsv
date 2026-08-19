@@ -1,33 +1,27 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-19 (bug-fix arc slice 3 — BUG-056 fix: the GoCore
-#   strict op addrOfDeref, user-ruled memo §6)
-#   commit: this commit (on d3ae14eb, the rulings tip)
-#   re-pin reason: the slice-3 gated fix, ruled YES 2026-08-19.
-#   `&*p` / `&(*p)` no longer collapses to `p` in the `&` OPERATOR
-#   path: emitUnaryExpr lowers the immediate &-of-* composition to the
-#   new wire kind addr-of-deref -> GoCore StrictOp.addrOfDeref, which
-#   nil-asserts the pointer VALUE via valueAsLoc's runtime-panic arm,
-#   yields the same pointer, and touches NO memory (gc's TESTB shape:
-#   no pointee load, invisible to -race — memo §2's two ground truths,
-#   both re-probed at the fix). emitAddressOf's StarExpr arm keeps the
-#   plain collapse: it is the general addressable path (assignment
-#   targets, slice bases, receivers) whose consumers nil-check at
-#   their own spec-mandated points (phase-2 stores etc.) — the first
-#   draft put addr-of-deref there and the full differential flipped
-#   assign-order/target-check-vs-rhs/nil-deref-target and four other
-#   store-order pins red; the re-scope is recorded in the arc log.
+# recorded: 2026-08-19 (bug-fix arc slice 4, guardrails-first rework —
+#   the BUG-005 ruling's membership-lane rows, ahead of the (L) surgery)
+#   commit: this commit (on 0aeb92db, the BUG-056-fix tip)
+#   re-pin reason: the 2026-08-19 ruling (BUG-005 memo §5) REJECTS the
+#   memo's two narrowings — the full literal envelope ships. The two
+#   guard rows whose exact-count strict pins encoded the dead
+#   narrowings are reworked FIRST, per the ruling: raw-latitude
+#   observables on the MEMBERSHIP lane, deliberately RED under the
+#   snapshot machine (both now on BUG-005's Cases line), flipping green
+#   at the (L) surgery. maps/added-entries-bound (member-invariant
+#   bound 7) STAYS strict: the membership lint correctly refused its
+#   singleton set — recorded in the case file so the split reads as the
+#   lint working, not tag-dodging.
 #   Deltas — the predicted set exactly, nothing else moved:
-#     FAIL/lean-observation -> PASS (5):
-#       spec-examples-decl/address-op-nil-indirection/addr-deref-nil
-#       spec-examples-decl/address-op-nil-indirection/addr-deref-nil-paren
-#       spec-examples-decl/addr-deref-nil-matrix/two-deref-inner-nil
-#       spec-examples-decl/addr-deref-nil-matrix/deref-arg
-#       spec-examples-decl/addr-deref-nil-matrix/deref-call
-#     NEW -> PASS/confluent (1):
-#       race/free/addr-deref-no-read (the acceptance pin: &*p beside a
-#       concurrent pointee write is race-free ONLY because addrOfDeref
-#       performs no load)
-#   counts: 2180 cases, 2053 PASS / 127 FAIL (was 2179, 2047/132)
+#     PASS/- -> FAIL/membership (1):
+#       maps/delete-readd-during-range (raw count, admitted {3,4,-1};
+#       snapshot machine enumerates the singleton {3})
+#     NEW -> FAIL/membership (1):
+#       maps/added-entry-count (raw created-entry produce-or-skip
+#       count, admitted {1,2}; gc exhibits BOTH members — 9/60 vs
+#       51/60 at the rework probe — the snapshot narrowing is
+#       oracle-visible on this shape)
+#   counts: 2181 cases, 2052 PASS / 129 FAIL (was 2180, 2053/127)
 #   frontend: native (tools/nativefrontend + NativeToIR)
 # columns: result<TAB>id<TAB>stage
 PASS	arrays/array-bounds	-
@@ -1312,6 +1306,7 @@ PASS	ints/unsigned-right-shift	-
 PASS	ints/while1	-
 PASS	ints/wrap-width-boundaries	-
 PASS	maps/added-entries-bound	-
+FAIL	maps/added-entry-count	membership
 PASS	maps/array-key	-
 PASS	maps/array-key-interface-elem-unhashable/access-empty	-
 PASS	maps/array-key-interface-elem-unhashable/assign	-
@@ -1332,7 +1327,7 @@ PASS	maps/delete-nil-interface-key-panic	-
 PASS	maps/delete-nil-key-types	-
 PASS	maps/delete-nil-map	-
 PASS	maps/delete-nil-value-types	-
-PASS	maps/delete-readd-during-range	-
+FAIL	maps/delete-readd-during-range	membership
 FAIL	maps/delete-unreached-during-range	differential
 FAIL	maps/imported-named-key-unhashable	lean-observation
 PASS	maps/incdec-value-kinds/defined	-
