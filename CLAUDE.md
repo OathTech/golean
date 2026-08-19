@@ -23,7 +23,10 @@ always ours). Deterministic gc-pins of latitude are velocity
 scaffolding carrying re-envelope obligations — never fidelity
 achievements. Full doctrine + the simplifying-assumptions register:
 `docs/2026-08-11_essence-of-go-doctrine.md`; the per-point census:
-`docs/2026-08-11_latitude-inventory.md`.
+`docs/2026-08-11_latitude-inventory.md`. Adopted spec READINGS are
+indexed in `docs/spec-interpretations.md` (one row per reading, each
+backed by a spec-divergence-ledger entry) — consult it before
+re-deriving or re-deciding an interpretation.
 
 ## The validation gate (always, before any commit that touches runtime code)
 
