@@ -2436,6 +2436,23 @@ package-qualification story (2)" as outstanding — item 2 SHIPPED on
 items that really are open. `scripts/check-bugs.sh` parses Status/Cases
 and never prose, so no gate could catch it.)
 
+**Triage disposition, user-ratified 2026-08-20** (bug-fix arc gate,
+`docs/2026-08-19_triage-table.md` §7): this entry's four cases are NOT
+one category. Items 1 and 4 — eface allocation identity and the
+`preprintpanics` method rewrite, i.e. `repanic-same-value-abort` and
+`panic-defined-payload-methods/{error,stringer}` — are ratified
+category-(c) profound-reason pins (triage row C4/L12). **Item 3, the
+multi-line payload (`panic-newline-abort`), is category (a)** (triage
+row L12b) and is queued as mini-slice **A7** in the coverage ledger's
+build queue: gc's first abort line stops at an embedded `\n`
+(`printindented`), which is a rendering shape with no identity or
+abort-time-method demand behind it. A7's binding constraint is the
+CHECK ORDER — the item-1/item-4 refusals must keep returning `none`
+first, or the fix re-opens the unconditional-arm regression class this
+entry already paid for once (2026-07-31 finding 3, above). Status and
+Cases are unchanged: all four cases remain open and red under this
+entry until A7 lands.
+
 ## BUG-003 — for-clause per-iteration loop variables (Go 1.22) are not lowered
 
 - Status: fixed

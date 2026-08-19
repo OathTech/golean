@@ -2209,3 +2209,53 @@ Beyond charter, user-directed during the arc: the 19-red GoCore batch
 (approved 2026-08-19, 19/19 killed), H-3, the sequential-support
 default, spec-interpretations.md + CLAUDE.md link.
 Awaiting the user at the gate: (c) ratification C1–C8, T-5, the audit.
+
+## USER RATIFICATION at the arc gate (2026-08-20)
+
+The gate's two open decisions came back. Full text of the (c) ruling
+and its framing: `docs/2026-08-19_triage-table.md` §7 (the table is the
+record; this is the log's index into it).
+
+**1. The (c) list — RATIFIED, C1 through C8, with the C4 split taken.**
+Eight rows ratified as profound-reason pins. One change from what was
+put up: C4's flagged weak point was ruled, and
+`panic-recover/panic-newline-abort` moves category (c) → (a). It
+becomes triage row **L12b** and mini-slice **A7** (1 red), and joins
+the coverage ledger's build queue at stage 0. The other three C4 reds
+stay pinned. Executed in the same commit — triage §§1, 2.2, 3.2, 4, 6,
+7; coverage ledger §5 stage 0, §5.1 item 4, §8; `docs/BUGS.md`
+BUG-004 (a disposition note; Status and Cases unchanged — all four
+cases stay open and red under the entry until A7 lands).
+
+Bucket movement, no baseline movement: on the triage table's pinned
+`0c21aa21` basis (a) 46 → 47 reds / 16 → 17 groups and (c) 10 → 9
+reds; on the coverage ledger's slice-6 basis the §8 arithmetic
+re-balances 10+1 → 9+1 (c) and 13 → 14 (a)-queued, total still
+129/129. Nothing flipped; one red changed bucket.
+
+**The framing, which is the substantive part.** These rows' correct
+green is **membership** — inclusion of Go's observation in the
+machine's envelope, not byte-equality of two singletons. So today's red
+is not "we are wrong here"; it is **"inclusion is not yet checkable"**,
+held as fail-closed bookkeeping until an instrument exists. That is a
+statement about instruments, not semantics. The re-envelope
+obligations therefore route to **W3.2**, the re-envelope arc
+(`docs/2026-08-15_raft-master-plan.md` §W3), which is where envelope
+inclusion becomes gate-decidable. A routing, not a promised flip: C3,
+C6 and C8 are impossibility/out-of-language rows no envelope machinery
+converts. Scoping instruction recorded with it: *"we don't need to push
+into the niches; leave things as long as they're honestly accounted
+for"* — which retires the pressure to manufacture niche work for a
+zero, and changes none of the accounting obligations.
+
+**2. T-5 — APPROVED** (the untriaged disposition column; coverage
+ledger §7 T-5, triage §5's metric finding). Executed in the next
+commit, which carries its own log entry, before/after counts and gate.
+
+**Doctrine sharpening recorded alongside** (`docs/spec-divergence-
+ledger.md`, discipline notes): gc is NOT definitionally legitimate Go.
+The lower bound's exception channel is first-class — where the spec
+DEFINES a behavior and gc contradicts it, that is a `gc-bug` FINDING
+and the machine holds with the standard. *"If the standard and gc
+disagree, that's a finding!"* With the whole language now enumerated,
+the ledger should be hunting these, not only receiving them.

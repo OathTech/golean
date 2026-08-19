@@ -38,6 +38,22 @@ Discipline notes, recorded up front:
 - Upstream expectations (CH2O note §4): filings buy standing and
   answers; normative text moves slowly even for the best cases.
   Per-filing sign-off by Mike, always.
+- **gc is NOT definitionally legitimate Go** (user doctrine sharpening,
+  2026-08-20). The differential's lower bound is "observed ∈ modeled",
+  but that membership claim has a first-class EXCEPTION CHANNEL, and it
+  runs through this ledger: where the spec DEFINES the behavior — a
+  forced point, not a latitude one — and gc contradicts it, the honest
+  verdict is a **`gc-bug` finding**, not a divergence to chase. The
+  machine holds with the standard; the red is the record. In Mike's
+  words: *"If the standard and gc disagree, that's a finding!"* Two
+  consequences. (1) `gc-divergence-tolerated` is the deliberate,
+  argued fallback — never the default landing spot for an
+  uncomfortable red, and never a substitute for filing. (2) This
+  ledger should now be **HUNTING** these rather than only receiving
+  them: with the whole language enumerated section-by-section
+  (`docs/language-coverage-ledger.md`), the forced points are a listed
+  surface, so a spec-defined clause with no gc-conformance evidence is
+  a curation target. Filings keep their per-filing sign-off, above.
 
 ## Entries
 
