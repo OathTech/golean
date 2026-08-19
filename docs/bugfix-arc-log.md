@@ -17,7 +17,7 @@ its reasoning, for user review; every number is derivation-anchored
 | 4 | BUG-005 — live map iteration (design-gated) | RULED (2026-08-19, memo §5); guardrails-first rework LANDED (2 membership red pins); (L) surgery in progress |
 | 5 | full red/bug triage (kill or justify) | TABLE DELIVERED (`docs/2026-08-19_triage-table.md`); A1 landed `1ca434b2`; (c) list + two gates await the user |
 | 5b | H-3 — per-declaration quarantine for METHODS (scope addition) | DONE (this commit; 12 guardrail rows 12-red → 8 green + 4 red-by-design, gate PASS, baseline re-pinned 2181→2193) |
-| 6 | the whole-language bar (coverage ledger) | IN PROGRESS — denominator landed; suites + ledger + roadmap re-point to follow |
+| 6 | the whole-language bar (coverage ledger) | DONE (denominator `b4924afe`; suites `5a8f7002` + `ebf6949f`, 26 rows; ledger `fc54f1b4`; roadmap re-point this commit; gates PASS throughout) |
 
 ---
 
@@ -2163,3 +2163,28 @@ CATEGORIES, the ledger for the FRONTIER MAP):** postscript 3 records
 the handoff and the 26 new ids' categories, including the one new
 (c)-class row (C8, the unsafe marker) added to the user-ratification
 list.
+
+### Step 5 — the roadmap re-point (this commit)
+
+Surgical, per the brief: the STALE banner gains item (3) pointing every
+coverage statement at the ledger, and Phase 4's stale
+executable-subset paragraph + "expected progression" list are replaced
+by the pointer (the queue and design-question split stated in one
+sentence). Nothing else in the roadmap rewritten — the full rewrite
+stays a tracked task, as the banner already says.
+
+### Slice 6 state — DONE
+
+| deliverable | state |
+| --- | --- |
+| denominator | `docs/spec-archaeology/section-census.tsv` (158+18), generator `scripts/extract-spec-sections`, fail-closed at the pin (`b4924afe`) |
+| frontier suites | tranche A 15 rows (`5a8f7002`: 12 red / 3 green; BUG-062 filed) + tranche B 11 rows (`ebf6949f`: 10 red / 1 green); every color oracle-first, every gate's drift exactly the predicted NEW ids |
+| the ledger | `docs/language-coverage-ledger.md` (`fc54f1b4`): 176 rows, zero unclassified; FR-1…FR-15; Q-* ×9; queue ×15; §5.1 profound reasons ×5; §7 TODOs ×7; §8 arithmetic closes over all 129 reds |
+| sufficiency grading | A 30 / B 80 / C 0 / D 28 (spec side); five graded TODO rows for the gaps judged cheaper as records than as speculative cases |
+| roadmap | re-pointed (this commit) |
+| gates | `scripts/ci --diff` PASS at both suite tranches; `scripts/ci` PASS at the denominator, ledger and roadmap commits |
+
+Open FOR THE USER at the arc gate (unchanged by this slice, plus one):
+the (c) ratification list is now C1-C7 + **C8** (the unsafe boundary
+marker, triage postscript 3); the A3-A6 queue (A6 now carries BUG-062);
+the T-5 gate-change decision (untriaged disposition column).
