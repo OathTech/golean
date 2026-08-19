@@ -25,7 +25,11 @@ in docs/raft-w2-log.md.
 
 PLAN.tsv rows:  <file>\t<decl>\t<expected refusal substring>
 where <decl> is `Type.Method`, `func Name`, or `*` for "no more removals;
-this row asserts the tree now exports clean".
+this row asserts the tree now exports clean".  The `*` row is MANDATORY and
+must be last: it is the difference between "each step went as predicted" and
+"this is the whole frontier".  A plan without it is refused, and the final
+state is re-checked in the exit code, so truncating the plan fails rather than
+silently reporting a shorter inventory.
 """
 
 import argparse
@@ -147,6 +151,17 @@ def main():
             continue
         plan.append(ln.split("\t"))
 
+    # The plan must END with the terminal row (`*`), which is what turns a list
+    # of steps into a claim about the FRONTIER: "with exactly these
+    # neutralised, nothing is left".  A plan without it walks its rows, passes
+    # them all, and asserts nothing about the state it stopped in — the failure
+    # mode a truncated plan produces, which is why this is checked and not
+    # merely documented.
+    if not plan or plan[-1][1] != "*":
+        sys.exit("frontier.py: %s has no terminal `*` row — a plan that does "
+                 "not assert the tree exports clean at its end cannot be "
+                 "trusted to have reached the frontier" % args.plan)
+
     bad = 0
     for n, row in enumerate(plan, 1):
         fil, decl, expect = row[0], row[1], row[2]
@@ -161,8 +176,17 @@ def main():
             break
         neutralise(os.path.join(args.work, fil), decl, keepalive)
 
+    # The FINAL STATE is part of the verdict, not a footer.  Row-by-row
+    # agreement only says each predicted refusal was the one the frontend
+    # actually gave; it says nothing about whether the walk finished.  Folding
+    # this into the exit code is what makes a truncated plan fail (it used to
+    # exit 0 having simply stopped early).
     final = run_frontend(args.frontend, args.work)
     print("\nfinal: %s" % (final if final else "EXPORTS CLEAN"))
+    if final is not None:
+        bad += 1
+        print("FAIL: the walk did not reach a clean export — the plan does not "
+              "cover the frontier")
     sys.exit(1 if bad else 0)
 
 

@@ -1,5 +1,12 @@
 # W2 frontier walk plan — tools/raftsubject/frontier.py
 # file	declaration	expected refusal substring	blank-import fixups
+#
+# The LAST row must be the terminal row: declaration `*`, expecting
+# "(exports clean)".  It asserts the walk is COMPLETE — that with exactly the
+# preceding declarations neutralised the tree exports with no refusal left.
+# Without it a truncated plan would walk its rows, pass every one, and say
+# nothing about the frontier it never reached.  frontier.py refuses a plan
+# that does not end this way, and re-checks the final state in its exit code.
 quorum/majority.go	MajorityConfig.String	selector call Fprintf is not a method value
 quorum/majority.go	MajorityConfig.Describe	slices.SortFunc	cmp,fmt,strings
 quorum/quorum.go	Index.String	selector call FormatUint is not a method value	math,strconv
@@ -10,3 +17,4 @@ tracker/progress.go	Progress.SentEntries	selector call Sprintf is not a method v
 tracker/progress.go	Progress.String	selector call Fprintf is not a method value
 tracker/progress.go	ProgressMap.String	selector call Fprintf is not a method value	fmt,strings,slices
 tracker/tracker.go	Config.String	selector call Fprintf is not a method value	fmt,strings
+*	*	(exports clean)
