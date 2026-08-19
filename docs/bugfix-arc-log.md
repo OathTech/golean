@@ -12,7 +12,7 @@ its reasoning, for user review; every number is derivation-anchored
 | slice | subject | state |
 | --- | --- | --- |
 | 1 | BUG-058 — if-init condition-hoist scope | DONE (`8a42e402` enumeration, `740f09f8` fix; gate PASS at `740f09f8`) |
-| 2 | BUG-057 — two-var comma-ok var-decl arity | not started |
+| 2 | BUG-057 — two-var comma-ok var-decl arity | enumeration landed; fix pending |
 | 3 | BUG-056 — `&*p` nil collapse (design-gated) | not started |
 | 4 | BUG-005 — live map iteration (design-gated) | not started |
 | 5 | full red/bug triage (kill or justify) | not started |
@@ -263,3 +263,147 @@ cases green, the edge set landed, the raft integration shape green in
 both plain and method form, the non-affected relatives pinned green,
 the masked-green sweep recorded with its scope and its one
 disposition-level finding.
+
+---
+
+## Slice 2 — BUG-057: the two-variable comma-ok var-declaration arity hole
+
+Entry: `docs/BUGS.md` "BUG-057 — two-variable comma-ok VAR DECLARATIONS
+drop the ok flag". Diagnosis audit-hardened at the P3 pre-merge audit
+(F-2 corrected the scope, F-10 recorded the typed form's observational
+limitation); this slice re-verified its cites before touching anything.
+
+### Diagnosis re-verification (before any change)
+
+- The pairing site is `emitDeclStmt`, `tools/nativefrontend/emit.go`.
+  The entry's "2383-2392" cite is the P3-era line number; at slice-2
+  start `emitDeclStmt` begins at emit.go:2436 and the offending loop is
+  emit.go:2473-2513. The MECHANISM is exact:
+  `for i, name := range vs.Names { … if i < len(vs.Values) { … } }`
+  pairs the spec's names to its initializer expressions POSITIONALLY,
+  with no arity check, so for `var v, ok = m[k]` (2 names, 1 value)
+  name `v` gets the initializer and name `ok` gets a decl entry with no
+  `init` key at all. `decodeVar` (`GoLean/NativeToIR.lean:1130-1141`)
+  emits `.initialization` for every decl and `.assign` only when `init`
+  is present, so `ok` is left at its zero value — false.
+- The contrast the entry names is also exact, and it is in this same
+  file: the PACKAGE-level path never uses `emitDeclStmt`. It fabricates
+  ONE `ast.AssignStmt` carrying every name of a multi-value spec
+  (emit.go:600-607) and runs it through `emitAssign`, whose comma-ok
+  branches (type assertion emit.go:2136-2157, channel receive
+  emit.go:2163-2167, map index via the generic 2-target path) are
+  correct. So the fix direction the charter names — "lowered through the
+  same path as the correct short-decl form" — is also the path the
+  package-level declaration has always used.
+
+### Step 1 — edge enumeration (own commit, colors recorded BEFORE the fix)
+
+Every expectation is `go run`'s, computed before the differential ran
+(`artifacts/probe/commaok`; scratch, not tracked). Colors from
+`scripts/coverage run --prefix spec-examples-decl/var-comma-ok-matrix`
+against the UNMODIFIED emitter: **46 cases, 22 PASS / 24 FAIL.**
+
+**The matrix.** Three comma-ok sources (receive `<-ch`, map index
+`m[k]`, type assertion `x.(T)`) × untyped (`var v, ok = …`) / typed
+(`var v, ok T = …`) × blank in the value position / blank in the ok
+position / neither × function-local / package-level = 36 rows, plus 3
+interface-typed rows, 5 position/shape rows and 2 tuple-call rows.
+
+Two design rules every row obeys:
+
+- **TRUE ok on the observing line** (the MASKING lesson): a comma-ok
+  case whose ok is FALSE cannot distinguish delivery from drop, because
+  the dropped flag's zero value *is* false. That is exactly how the
+  original P3 evidence went green on a closed-drained channel and an
+  absent key.
+- **Value and ok as SEPARATE observables** (closes F-10): the harness
+  supports multi-result subjects, so every row returns `(value, ok)`
+  rather than `value && ok`. Correct is `(v, true)`; a dropped ok is
+  `(v, false)`; a dropped value is `(zero, true)` — three distinct
+  observations where the old subject had one bit.
+
+**Pre-fix reds — silent wrong answer, `differential` (11):**
+
+| row | shape | go | machine (pre-fix) |
+| --- | --- | --- | --- |
+| `recv-untyped` | `var v, ok = <-ch` | 7, true | 7, **false** |
+| `recv-untyped-blank-value` | `var _, ok = <-ch` | true | **false** |
+| `recv-typed` | `var v, ok bool = <-ch` | true, true | true, **false** |
+| `recv-typed-blank-value` | `var _, ok bool = <-ch` | true | **false** |
+| `index-untyped` | `var v, ok = m[k]` | 7, true | 7, **false** |
+| `index-untyped-blank-value` | `var _, ok = m[k]` | true | **false** |
+| `index-typed` | `var v, ok bool = m[k]` | true, true | true, **false** |
+| `index-typed-blank-value` | `var _, ok bool = m[k]` | true | **false** |
+| `func-literal` | the declaration inside a closure | 7, true | 7, **false** |
+| `grouped-spec` | comma-ok spec BETWEEN two ordinary specs | 2, 7, true | 2, 7, **false** |
+| `after-goto` | the declaration in a goto-restructured body | 7, true | 7, **false** |
+
+Note what the typed rows now show that F-10's `x && ok` could not: the
+VALUE arrives correctly (`true`, not the zero `false`) and only the ok
+is lost. The entry's "the value arrives, the boolean is lost" is now
+case-pinned rather than wire-argued.
+
+**Pre-fix reds — fail closed, `frontend-export` (13):** the six local
+type-assertion rows (`assert-{untyped,typed}[-blank-value|-blank-ok]`,
+"type assert form outside a 2-target assignment"); the three
+interface-typed rows `{recv,index,assert}-typed-iface`; `iface-value`;
+`shadow-capture`; and `tuple-call-{untyped,typed}` ("type
+*types.Tuple").
+
+**Pre-fix greens (22):** all **18** `pkg-*` rows — the package-level
+form is correct for every source, typedness and blank position, now
+with a TRUE ok observed — and the **4** local `*-blank-ok` rows
+(`var v, _ = …`), which observe the VALUE half only and were therefore
+never wrong. Those four are load-bearing pins, not decoration: they are
+the only rows that can catch a fix which delivers `ok` by breaking the
+value.
+
+**Three findings the enumeration establishes** (all folded into the
+BUGS.md entry):
+
+1. The silent drop is **receive + map index only** — the type-assertion
+   source fails CLOSED. The entry's "(probe: `= x.(T)`)" is resolved,
+   and `spec-examples-decl/assert-comma-ok` was already red for exactly
+   that reason.
+2. Package-level correctness is now **case-pinned with a true ok**, not
+   only wire-argued.
+3. The typed form is **not bool-only**: `var v, ok T = x` also admits an
+   interface T both values are assignable to — the shape
+   spec#Type_assertions itself writes,
+   `var v, ok interface{} = x.(T)`. My first draft of this package
+   asserted "T must be bool"; the sweep (step 3) found
+   `assert-comma-ok`'s `var v4, ok4 interface{} = x.(int)` and refuted
+   it, which is why the three `-typed-iface` rows exist.
+
+**JUDGMENT (slice 2, package placement):** the matrix went into a NEW
+package `spec-examples-decl/var-comma-ok-matrix/` rather than being
+appended to the three existing pin packages. Those three are
+spec-BLOCK packages (`Receive_operator-2-…`, `Index_expressions-2-…`,
+`Variable_declarations-2-…`) whose subjects mirror one spec block's
+example; a 46-row cross-product indexed by lowering shape rather than
+by spec block would misfile there and would break the one-block-one-
+package reading of the dispositions. The four existing pins stay where
+they are and stay in the entry's `Cases:` list.
+
+**JUDGMENT (slice 2, the -typed-iface rows are RED on purpose):** they
+are pinned even though they cannot pass, because the fix REROUTES
+exactly these specs away from the guard that refuses them today. A
+reroute that silently turned a fail-closed refusal into an unboxed
+interface store would be invisible without them — the "fail-closed
+classification" blindness the audit doctrine names.
+
+**Gate at the enumeration commit:** `GOLEAN_MEM_MAX=24G scripts/ci
+--diff`, full run. The pre-re-pin run's ONLY drift was the **46
+`NEW id` lines** (2149 cases run vs the 2103-row baseline: no
+PASS↔FAIL flip, no stage change, no dropped id on any pre-existing
+row), and `bug-index cross-check` failed only with 11 "case not found
+in baseline" lines — the new BUG-057 `Cases:` rows, which the ratchet
+requires so 11 fresh `differential` reds cannot hide in the untriaged
+pile. Baseline re-pinned in this commit from that full run: **2149
+cases, 1992 PASS / 157 FAIL** (was 2103, 1970/133), reason in its
+header. The confirming re-run at the committed tree is **`RESULT:
+PASS`** — every step ok, `baseline diff FULL (2149/2149, no
+regression)`, `re-pin guard (0 PASS→non-PASS flips…)`,
+`eval tests (136 ok)`, negative lane clean, and
+`scripts/check-bugs.sh: ok (61 bugs; pinned cases behave as claimed)`
+with the untriaged backlog unchanged at 25/25.

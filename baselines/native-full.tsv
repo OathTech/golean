@@ -1,53 +1,43 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-19 (bug-fix arc slice 1, step 2 — THE BUG-058 FIX:
-#   the if-init condition-hoist scope)
-#   commit: this commit (on 8a42e402, the edge-enumeration commit)
-#   re-pin reason: `emitIf` (tools/nativefrontend/emit.go) now emits the
-#   condition into its OWN hoist accumulator and, when that accumulator
-#   is non-empty, returns a wire `block` of [init, condHoists…, if]
-#   instead of an `if` node carrying an `init` key. That block is the
-#   SAME scope decodeIf already builds for the `init` key
-#   (.block #[] #[init, ifThenElse …], GoLean/NativeToIR.lean), so the
-#   init-declared names are visible to the hoisted work, the condition
-#   and both branches — the implicit block spec#Blocks gives the
-#   statement. No wire-schema change, no decoder change, no GoCore
-#   change; an `if` with no init, or with an init and a hoist-free
-#   condition, emits exactly the wire it emitted before.
-#   Deltas — the predicted set exactly, stated in the commit message
-#   before this run confirmed it: 10 red -> green + 1 new green id.
-#     ~ spec-examples-lexical/panic-values/panic-error
-#         FAIL/lean-observation -> PASS  (was stuck: unbound … e)
-#     ~ spec-examples-stmt/if-init-hoist-order/cond-call-after-init
-#         FAIL/differential     -> PASS  (machine 21 -> 12)
-#     ~ spec-examples-stmt/if-init-hoist-order/init-panic-first
-#         FAIL/differential     -> PASS  (machine 21 -> 1)
-#     ~ spec-examples-stmt/if-init-hoist-order/else-if-chain
-#         FAIL/differential     -> PASS  (machine 21438 -> 12348)
-#     ~ spec-examples-stmt/if-init-hoist-order/func-literal
-#         FAIL/differential     -> PASS  (machine 215 -> 125)
-#     ~ spec-examples-stmt/if-init-hoist-order/nested
-#         FAIL/differential     -> PASS  (machine 21439 -> 12349)
-#     ~ spec-examples-stmt/if-init-hoist-order/cond-panic-after-init
-#         FAIL/differential     -> PASS  (machine 21 -> 321)
-#     ~ spec-examples-stmt/if-init-hoist-order/cond-hoist-reads-init
-#         FAIL/lean-observation -> PASS  (was stuck: unbound … x)
-#     ~ spec-examples-stmt/if-init-hoist-order/comma-ok-short-circuit
-#         FAIL/lean-observation -> PASS  (was stuck: unbound … ok)
-#     ~ spec-examples-stmt/if-init-hoist-order/comma-ok-method-short-circuit
-#         FAIL/lean-observation -> PASS  (was stuck: unbound … ok)
-#     + control-flow/goto-if-init-cond-hoist    NEW -> PASS
-#       (the fix changes the SHAPE of a top-level statement inside a
-#       goto-restructured segment — an `if` node becomes a `block` —
-#       so this pins that degradeGotoDeclares still treats the init's
-#       declaration correctly. Verified RED under the pre-fix emitter
-#       before it was added, so it is a BUG-058 witness, not a case
-#       written to match the implementation.)
-#   ZERO drift beyond those 11 across 2103 cases — in particular the 6
-#   non-affected relatives pinned green in the enumeration commit
-#   (spec-examples-stmt/init-hoist-relatives/*: for-init, switch-init,
-#   type-switch-init, each also in a -reads-init form) all hold, so the
-#   fix did not disturb emitFor/emitSwitch/emitTypeSwitch.
-#   Full run: 2103 cases (1970 PASS / 133 FAIL), native frontend.
+# recorded: 2026-08-19 (bug-fix arc slice 2, step 1 — THE BUG-057 EDGE
+#   ENUMERATION, red/green recorded BEFORE any fix)
+#   commit: this commit (on 740f09f8, the BUG-058 fix)
+#   re-pin reason: 46 NEW ids and NOTHING ELSE. The new package
+#   Corpus/coverage/exec/spec-examples-decl/var-comma-ok-matrix walks
+#   the full BUG-057 matrix — three comma-ok sources (receive, map
+#   index, type assertion) x untyped/typed declaration x blank in the
+#   value position / blank in the ok position / neither x
+#   function-local / package-level — plus the positions the
+#   declaration can occupy (function literal, grouped multi-spec
+#   declaration, goto-restructured body, interface-valued map), the
+#   shadow-capture shape, the three interface-TYPED forms, and the
+#   adjacent tuple-call declaration. These are the DEFECTIVE emitter's
+#   colours: the fix commit's flips are a prediction this record lets
+#   the next run confirm, not a story told afterwards.
+#   Every new row observes a TRUE ok (a false ok cannot distinguish
+#   delivery from drop) and returns value and ok as SEPARATE
+#   observables (closing F-10, where `x && ok` collapsed the two
+#   deliveries into one bit).
+#   Breakdown of the 46:
+#     22 PASS — the 18 pkg-* rows (package-level is correct for every
+#        source, typedness and blank position; the $pkginit path
+#        fabricates one AssignStmt per multi-value spec and runs
+#        emitAssign) and the 4 local *-blank-ok rows, which observe the
+#        VALUE half only and were never wrong.
+#     11 FAIL/differential — the silent drop: recv-untyped,
+#        recv-untyped-blank-value, recv-typed, recv-typed-blank-value,
+#        index-untyped, index-untyped-blank-value, index-typed,
+#        index-typed-blank-value, func-literal, grouped-spec,
+#        after-goto. All 11 join BUG-057's Cases: list in this commit.
+#     13 FAIL/frontend-export — fail-closed, NOT wrong answers: the six
+#        local type-assertion rows ("type assert form outside a
+#        2-target assignment"), {recv,index,assert}-typed-iface and
+#        iface-value ("implicit interface conversion in multi-value
+#        assignment"), shadow-capture and tuple-call-{untyped,typed}
+#        ("type *types.Tuple").
+#   ZERO drift on the 2103 pre-existing rows — no PASS<->FAIL flip, no
+#   stage change, no dropped id.
+#   Full run: 2149 cases (1992 PASS / 157 FAIL), native frontend.
 #
 result	id	stage
 PASS	arrays/array-bounds	-
@@ -1831,6 +1821,52 @@ PASS	spec-examples-decl/typeparam-parse-ambiguity/conversion-form	-
 PASS	spec-examples-decl/typeparam-parse-ambiguity/forced-generic	-
 PASS	spec-examples-decl/underlying-conversions	-
 PASS	spec-examples-decl/untyped-bool-comparison	-
+FAIL	spec-examples-decl/var-comma-ok-matrix/after-goto	differential
+FAIL	spec-examples-decl/var-comma-ok-matrix/assert-typed	frontend-export
+FAIL	spec-examples-decl/var-comma-ok-matrix/assert-typed-blank-ok	frontend-export
+FAIL	spec-examples-decl/var-comma-ok-matrix/assert-typed-blank-value	frontend-export
+FAIL	spec-examples-decl/var-comma-ok-matrix/assert-typed-iface	frontend-export
+FAIL	spec-examples-decl/var-comma-ok-matrix/assert-untyped	frontend-export
+FAIL	spec-examples-decl/var-comma-ok-matrix/assert-untyped-blank-ok	frontend-export
+FAIL	spec-examples-decl/var-comma-ok-matrix/assert-untyped-blank-value	frontend-export
+FAIL	spec-examples-decl/var-comma-ok-matrix/func-literal	differential
+FAIL	spec-examples-decl/var-comma-ok-matrix/grouped-spec	differential
+FAIL	spec-examples-decl/var-comma-ok-matrix/iface-value	frontend-export
+FAIL	spec-examples-decl/var-comma-ok-matrix/index-typed	differential
+PASS	spec-examples-decl/var-comma-ok-matrix/index-typed-blank-ok	-
+FAIL	spec-examples-decl/var-comma-ok-matrix/index-typed-blank-value	differential
+FAIL	spec-examples-decl/var-comma-ok-matrix/index-typed-iface	frontend-export
+FAIL	spec-examples-decl/var-comma-ok-matrix/index-untyped	differential
+PASS	spec-examples-decl/var-comma-ok-matrix/index-untyped-blank-ok	-
+FAIL	spec-examples-decl/var-comma-ok-matrix/index-untyped-blank-value	differential
+PASS	spec-examples-decl/var-comma-ok-matrix/pkg-assert-typed	-
+PASS	spec-examples-decl/var-comma-ok-matrix/pkg-assert-typed-blank-ok	-
+PASS	spec-examples-decl/var-comma-ok-matrix/pkg-assert-typed-blank-value	-
+PASS	spec-examples-decl/var-comma-ok-matrix/pkg-assert-untyped	-
+PASS	spec-examples-decl/var-comma-ok-matrix/pkg-assert-untyped-blank-ok	-
+PASS	spec-examples-decl/var-comma-ok-matrix/pkg-assert-untyped-blank-value	-
+PASS	spec-examples-decl/var-comma-ok-matrix/pkg-index-typed	-
+PASS	spec-examples-decl/var-comma-ok-matrix/pkg-index-typed-blank-ok	-
+PASS	spec-examples-decl/var-comma-ok-matrix/pkg-index-typed-blank-value	-
+PASS	spec-examples-decl/var-comma-ok-matrix/pkg-index-untyped	-
+PASS	spec-examples-decl/var-comma-ok-matrix/pkg-index-untyped-blank-ok	-
+PASS	spec-examples-decl/var-comma-ok-matrix/pkg-index-untyped-blank-value	-
+PASS	spec-examples-decl/var-comma-ok-matrix/pkg-recv-typed	-
+PASS	spec-examples-decl/var-comma-ok-matrix/pkg-recv-typed-blank-ok	-
+PASS	spec-examples-decl/var-comma-ok-matrix/pkg-recv-typed-blank-value	-
+PASS	spec-examples-decl/var-comma-ok-matrix/pkg-recv-untyped	-
+PASS	spec-examples-decl/var-comma-ok-matrix/pkg-recv-untyped-blank-ok	-
+PASS	spec-examples-decl/var-comma-ok-matrix/pkg-recv-untyped-blank-value	-
+FAIL	spec-examples-decl/var-comma-ok-matrix/recv-typed	differential
+PASS	spec-examples-decl/var-comma-ok-matrix/recv-typed-blank-ok	-
+FAIL	spec-examples-decl/var-comma-ok-matrix/recv-typed-blank-value	differential
+FAIL	spec-examples-decl/var-comma-ok-matrix/recv-typed-iface	frontend-export
+FAIL	spec-examples-decl/var-comma-ok-matrix/recv-untyped	differential
+PASS	spec-examples-decl/var-comma-ok-matrix/recv-untyped-blank-ok	-
+FAIL	spec-examples-decl/var-comma-ok-matrix/recv-untyped-blank-value	differential
+FAIL	spec-examples-decl/var-comma-ok-matrix/shadow-capture	frontend-export
+FAIL	spec-examples-decl/var-comma-ok-matrix/tuple-call-typed	frontend-export
+FAIL	spec-examples-decl/var-comma-ok-matrix/tuple-call-untyped	frontend-export
 PASS	spec-examples-decl/var-decl-forms	-
 FAIL	spec-examples-decl/var-decl-forms/found-present	differential
 PASS	spec-examples-decl/variadic-greeting-nil/nil	-
