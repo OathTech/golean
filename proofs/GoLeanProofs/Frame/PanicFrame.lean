@@ -100,10 +100,24 @@ section MapRange
 
 variable {ρ : Nat → Nat} {na₀ na : Nat} {fr : Heap} {σ σF : ExecState}
 
-theorem mapRangeEntries_sim (hS : FrameSim ρ na₀ na fr σ σF) (v : GoValue) :
-    ExSim (fun es esF => esF = (renameValueEntries ρ es.toList).toArray)
-      (mapRangeEntries σ v) (mapRangeEntries σF (renameValue ρ v)) := by
-  simp only [mapRangeEntries]
+theorem map_fst_renameValueEntries (ρ : Nat → Nat) :
+    ∀ l : List (GoValue × GoValue),
+      (renameValueEntries ρ l).map (·.1) = renameValueList ρ (l.map (·.1)) := by
+  intro l
+  induction l with
+  | nil => rfl
+  | cons e rest ih =>
+      obtain ⟨k, v⟩ := e
+      simp [renameValueEntries, renameValueList, ih]
+
+/-- Range start renames pointwise (BUG-005 (L): base loc + start-key
+set, replacing the retired snapshot sim). -/
+theorem mapRangeStartSets_sim (hS : FrameSim ρ na₀ na fr σ σF) (v : GoValue) :
+    ExSim (fun (bs bsF : Option Loc × Array GoValue) =>
+        bsF.1 = bs.1.map (renameLoc ρ)
+          ∧ bsF.2 = (renameValueList ρ bs.2.toList).toArray)
+      (mapRangeStartSets σ v) (mapRangeStartSets σF (renameValue ρ v)) := by
+  simp only [mapRangeStartSets]
   refine ExSim.bind (R := fun m mF =>
       mF = { base := m.base.map (renameLoc ρ) }) ?_ ?_
   · cases v
@@ -114,16 +128,39 @@ theorem mapRangeEntries_sim (hS : FrameSim ρ na₀ na fr σ σF) (v : GoValue) 
     obtain ⟨base⟩ := m
     cases base with
     | none =>
-        refine ExSim.ok ?_
-        simp [renameValueEntries]
+        refine ExSim.ok ⟨rfl, ?_⟩
+        simp [renameValueList]
     | some baseLoc =>
         simp only [Option.map_some]
         refine ExSim.bind (loadLoc_sim hS baseLoc) ?_
         intro w wF hwF
         subst hwF
         cases w
-        case mapData es => exact ExSim.ok rfl
+        case mapData es =>
+            refine ExSim.ok ⟨rfl, ?_⟩
+            simp only [renameValue, List.map_toArray, Array.toList_map,
+              map_fst_renameValueEntries]
         all_goals exact ExSim.stuck'
+
+/-- The live-cell load renames pointwise. -/
+theorem mapIterLiveEntries_sim (hS : FrameSim ρ na₀ na fr σ σF)
+    (base : Option Loc) :
+    ExSim (fun es esF => esF = (renameValueEntries ρ es.toList).toArray)
+      (mapIterLiveEntries σ base)
+      (mapIterLiveEntries σF (base.map (renameLoc ρ))) := by
+  cases base with
+  | none =>
+      simp only [mapIterLiveEntries, Option.map_none]
+      refine ExSim.ok ?_
+      simp [renameValueEntries]
+  | some l =>
+      simp only [mapIterLiveEntries, Option.map_some]
+      refine ExSim.bind (loadLoc_sim hS l) ?_
+      intro w wF hwF
+      subst hwF
+      cases w
+      case mapData es => exact ExSim.ok rfl
+      all_goals exact ExSim.stuck'
 
 theorem snapshotEntriesSelfNormalizedList_ren (ρ : Nat → Nat)
     (types : TypeEnv) (kt vt : Ty) :
@@ -138,20 +175,261 @@ theorem snapshotEntriesSelfNormalizedList_ren (ρ : Nat → Nat)
       simp [renameValueEntries, snapshotEntriesSelfNormalizedList,
         isNormalForTy_ren, ih]
 
-theorem mapRangeSnapshotEntries_sim (hS : FrameSim ρ na₀ na fr σ σF)
-    (kt vt : Ty) (v : GoValue) :
+/-- Key membership is renaming-invariant (Go map-key equality renames —
+`valueEq_sim`). -/
+theorem keyInKeyList_sim
+    (hinj : ∀ {x y : Nat}, ρ x = ρ y → x = y)
+    (htypes : σF.types = σ.types) (kt : Ty) (key : GoValue) :
+    ∀ keys : List GoValue,
+      ExSim Eq (keyInKeyList σ kt key keys)
+        (keyInKeyList σF kt (renameValue ρ key) (renameValueList ρ keys)) := by
+  intro keys
+  induction keys with
+  | nil => exact ExSim.ok rfl
+  | cons p rest ih =>
+      simp only [keyInKeyList, renameValueList]
+      refine ExSim.bind (valueEq_sim hinj htypes kt p key) ?_
+      intro b bF hb
+      subst hb
+      cases b
+      · simpa using ih
+      · exact ExSim.ok rfl
+
+@[inherit_doc keyInKeyList_sim]
+theorem keyInKeys_sim
+    (hinj : ∀ {x y : Nat}, ρ x = ρ y → x = y)
+    (htypes : σF.types = σ.types) (kt : Ty)
+    (keys : Array GoValue) (key : GoValue) :
+    ExSim Eq (keyInKeys σ kt keys key)
+      (keyInKeys σF kt ((renameValueList ρ keys.toList).toArray)
+        (renameValue ρ key)) := by
+  simp only [keyInKeys, List.toList_toArray]
+  exact keyInKeyList_sim hinj htypes kt key keys.toList
+
+/-- The candidate filter renames pointwise. -/
+theorem filterCandidateList_sim
+    (hinj : ∀ {x y : Nat}, ρ x = ρ y → x = y)
+    (htypes : σF.types = σ.types) (kt : Ty) (produced : Array GoValue) :
+    ∀ es : List (GoValue × GoValue),
+      ExSim (fun out outF => outF = renameValueEntries ρ out)
+        (filterCandidateList σ kt produced es)
+        (filterCandidateList σF kt
+          ((renameValueList ρ produced.toList).toArray)
+          (renameValueEntries ρ es)) := by
+  intro es
+  induction es with
+  | nil => exact ExSim.ok rfl
+  | cons e rest ih =>
+      obtain ⟨k, v⟩ := e
+      simp only [filterCandidateList, renameValueEntries]
+      refine ExSim.bind (keyInKeys_sim hinj htypes kt produced k) ?_
+      intro b bF hb
+      subst hb
+      refine ExSim.bind ih ?_
+      intro tail tailF htail
+      subst htail
+      cases b
+      · exact ExSim.ok rfl
+      · exact ExSim.ok rfl
+
+/-- Pick-time candidates rename pointwise. -/
+theorem mapIterCandidates_sim
+    (hinj : ∀ {x y : Nat}, ρ x = ρ y → x = y)
+    (hS : FrameSim ρ na₀ na fr σ σF) (kt vt : Ty)
+    (base : Option Loc) (produced : Array GoValue) :
     ExSim (fun es esF => esF = (renameValueEntries ρ es.toList).toArray)
-      (mapRangeSnapshotEntries σ kt vt v)
-      (mapRangeSnapshotEntries σF kt vt (renameValue ρ v)) := by
-  simp only [mapRangeSnapshotEntries]
-  refine ExSim.bind (mapRangeEntries_sim hS v) ?_
+      (mapIterCandidates σ kt vt base produced)
+      (mapIterCandidates σF kt vt (base.map (renameLoc ρ))
+        ((renameValueList ρ produced.toList).toArray)) := by
+  simp only [mapIterCandidates]
+  refine ExSim.bind (mapIterLiveEntries_sim hS base) ?_
   intro es esF hesF
   subst hesF
-  simp only [snapshotEntriesSelfNormalized, hS.types_eq,
-    List.toList_toArray, snapshotEntriesSelfNormalizedList_ren]
-  split
-  · exact ExSim.ok rfl
-  · exact ExSim.stuck'
+  refine ExSim.bind (R := fun out outF => outF = renameValueEntries ρ out)
+    ?_ ?_
+  · simpa [List.toList_toArray]
+      using filterCandidateList_sim hinj hS.types_eq kt produced es.toList
+  · intro out outF hout
+    subst hout
+    rw [show snapshotEntriesSelfNormalized σF.types kt vt
+          (renameValueEntries ρ out).toArray
+        = snapshotEntriesSelfNormalized σ.types kt vt out.toArray by
+      simp only [snapshotEntriesSelfNormalized, hS.types_eq,
+        List.toList_toArray, snapshotEntriesSelfNormalizedList_ren]]
+    split
+    · exact ExSim.ok rfl
+    · exact ExSim.stuck'
+
+/-- Mandatory-remains is renaming-invariant. -/
+theorem mandatoryInList_sim
+    (hinj : ∀ {x y : Nat}, ρ x = ρ y → x = y)
+    (htypes : σF.types = σ.types) (kt : Ty) (start : Array GoValue) :
+    ∀ cands : List (GoValue × GoValue),
+      ExSim Eq (mandatoryInList σ kt start cands)
+        (mandatoryInList σF kt ((renameValueList ρ start.toList).toArray)
+          (renameValueEntries ρ cands)) := by
+  intro cands
+  induction cands with
+  | nil => exact ExSim.ok rfl
+  | cons e rest ih =>
+      obtain ⟨k, v⟩ := e
+      simp only [mandatoryInList, renameValueEntries]
+      refine ExSim.bind (keyInKeys_sim hinj htypes kt start k) ?_
+      intro b bF hb
+      subst hb
+      cases b
+      · simpa using ih
+      · exact ExSim.ok rfl
+
+@[inherit_doc mandatoryInList_sim]
+theorem mapIterMandatoryRemains_sim
+    (hinj : ∀ {x y : Nat}, ρ x = ρ y → x = y)
+    (htypes : σF.types = σ.types) (kt : Ty)
+    (cands : Array (GoValue × GoValue)) (start : Array GoValue) :
+    ExSim Eq (mapIterMandatoryRemains σ kt cands start)
+      (mapIterMandatoryRemains σF kt
+        ((renameValueEntries ρ cands.toList).toArray)
+        ((renameValueList ρ start.toList).toArray)) := by
+  simp only [mapIterMandatoryRemains, List.toList_toArray]
+  exact mandatoryInList_sim hinj htypes kt start cands.toList
+
+/-- The delete-prune's set subtraction renames pointwise. -/
+theorem removeKeyList_sim
+    (hinj : ∀ {x y : Nat}, ρ x = ρ y → x = y)
+    (htypes : σF.types = σ.types) (kt : Ty) (key : GoValue) :
+    ∀ ks : List GoValue,
+      ExSim (fun out outF => outF = renameValueList ρ out)
+        (removeKeyList σ kt key ks)
+        (removeKeyList σF kt (renameValue ρ key) (renameValueList ρ ks)) := by
+  intro ks
+  induction ks with
+  | nil => exact ExSim.ok rfl
+  | cons p rest ih =>
+      simp only [removeKeyList, renameValueList]
+      refine ExSim.bind ih ?_
+      intro tail tailF htail
+      subst htail
+      refine ExSim.bind (valueEq_sim hinj htypes kt p key) ?_
+      intro b bF hb
+      subst hb
+      cases b
+      · exact ExSim.ok rfl
+      · exact ExSim.ok rfl
+
+/-- The per-key delete-prune commutes with renaming (BUG-005 (L)): the
+frame-base test transfers by `renameLoc` injectivity, the set
+subtraction by `valueEq_sim`. -/
+theorem pruneIterFramesKey_sim
+    (hinj : ∀ {x y : Nat}, ρ x = ρ y → x = y)
+    (htypes : σF.types = σ.types) (l : Loc) (key : GoValue) :
+    ∀ k : Cont,
+      ExSim (fun k1 k1F => k1F = renameCont ρ k1)
+        (pruneIterFramesKey σ l key k)
+        (pruneIterFramesKey σF (renameLoc ρ l) (renameValue ρ key)
+          (renameCont ρ k)) := by
+  intro k
+  induction k <;> simp only [pruneIterFramesKey, renameCont]
+  case stop => exact ExSim.ok rfl
+  case mapIterK kv vv kt vt body base produced start env k ih =>
+    refine ExSim.bind ih ?_
+    intro k1 k1F hk1
+    subst hk1
+    have hbeq : (base.map (renameLoc ρ) == some (renameLoc ρ l))
+        = (base == some l) := by
+      simpa using renameOptLoc_beq hinj base (some l)
+    rw [hbeq]
+    split
+    · refine ExSim.bind
+        (by simpa [List.toList_toArray]
+          using removeKeyList_sim hinj htypes kt key produced.toList) ?_
+      intro p1 p1F hp1
+      subst hp1
+      refine ExSim.bind
+        (by simpa [List.toList_toArray]
+          using removeKeyList_sim hinj htypes kt key start.toList) ?_
+      intro s1 s1F hs1
+      subst hs1
+      exact ExSim.ok (by simp only [renameCont])
+    · exact ExSim.ok (by simp only [renameCont])
+  all_goals
+    (rename_i ih
+     refine ExSim.bind ih ?_
+     intro k1 k1F hk1
+     subst hk1
+     exact ExSim.ok (by simp only [renameCont]))
+
+/-- `clear`'s prune commutes with renaming (pure). -/
+theorem pruneIterFramesAll_ren
+    (hinj : ∀ {x y : Nat}, ρ x = ρ y → x = y) (l : Loc) :
+    ∀ k : Cont,
+      pruneIterFramesAll (renameLoc ρ l) (renameCont ρ k)
+        = renameCont ρ (pruneIterFramesAll l k) := by
+  intro k
+  induction k <;> simp only [pruneIterFramesAll, renameCont]
+  case mapIterK kv vv kt vt body base produced start env k ih =>
+    have hbeq : (base.map (renameLoc ρ) == some (renameLoc ρ l))
+        = (base == some l) := by
+      simpa using renameOptLoc_beq hinj base (some l)
+    rw [hbeq]
+    split <;> simp only [renameCont, ih] <;>
+      simp [renameValueList]
+  all_goals
+    (try rename_i ih
+     try rw [ih])
+
+/-- `contAfterStmtOp` commutes with renaming: the two pruning ops
+transfer through `valueAsMap`/`normalizeValueForTy`/the prune sims;
+every other op is the identity on both sides. -/
+theorem contAfterStmtOp_sim
+    (hinj : ∀ {x y : Nat}, ρ x = ρ y → x = y)
+    (hS : FrameSim ρ na₀ na fr σ σF)
+    (op : StmtOp) (vs : List GoValue) (k : Cont) :
+    ExSim (fun k1 k1F => k1F = renameCont ρ k1)
+      (contAfterStmtOp σ op vs k)
+      (contAfterStmtOp σF op (renameValueList ρ vs) (renameCont ρ k)) := by
+  cases op <;> simp only [contAfterStmtOp] <;> try exact ExSim.ok rfl
+  case mapDelete kt =>
+    match vs with
+    | [] => exact ExSim.ok rfl
+    | [_] => exact ExSim.ok rfl
+    | (_ :: _ :: _ :: _) => exact ExSim.ok rfl
+    | [baseV, keyV] =>
+        simp only [renameValueList]
+        refine ExSim.bind (R := fun m mF =>
+            mF = { base := m.base.map (renameLoc ρ) }) ?_ ?_
+        · cases baseV
+          case map m => exact ExSim.ok rfl
+          all_goals exact ExSim.stuck'
+        · intro m mF hm
+          subst hm
+          obtain ⟨base⟩ := m
+          cases base with
+          | none => exact ExSim.ok rfl
+          | some l =>
+              simp only [Option.map_some]
+              refine ExSim.bind (normalizeValueForTy_sim hS.types_eq kt keyV) ?_
+              intro nk nkF hnk
+              subst hnk
+              exact pruneIterFramesKey_sim hinj hS.types_eq l nk k
+  case clearMap =>
+    match vs with
+    | [] => exact ExSim.ok rfl
+    | (_ :: _ :: _) => exact ExSim.ok rfl
+    | [baseV] =>
+        simp only [renameValueList]
+        refine ExSim.bind (R := fun m mF =>
+            mF = { base := m.base.map (renameLoc ρ) }) ?_ ?_
+        · cases baseV
+          case map m => exact ExSim.ok rfl
+          all_goals exact ExSim.stuck'
+        · intro m mF hm
+          subst hm
+          obtain ⟨base⟩ := m
+          cases base with
+          | none => exact ExSim.ok rfl
+          | some l =>
+              simp only [Option.map_some]
+              exact ExSim.ok (pruneIterFramesAll_ren hinj l k)
 
 theorem bindIterVars_sim (hS : FrameSim ρ na₀ na fr σ σF)
     (env : LocalEnv) (keyVar valVar : Option String) (kt vt : Ty)

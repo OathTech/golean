@@ -388,10 +388,11 @@ theorem wcH_segC11_raw (L : Nat) (sv siv : Int) (ws : List Int)
 def envRBH (B : Nat) : LocalEnv :=
   (("best", .base ⟨B⟩) :: sc1H) :: [sc0H]
 def kRH (B : Nat) : Cont := .seq [retSeqn] (envRBH B) frameKH
-/-- The range-loop head: the `mapIterK` pick point at snapshot `rem`. -/
-def rangeHeadH (B : Nat) (rem : List (Int × Nat)) : Config :=
-  .next (.mapIterK none (some "c") tU64 tU64 wcRangeBody (toEntries rem)
-    (envRBH B) (kRH B))
+/-- The range-loop head: the live `mapIterK` pick point (BUG-005 (L)):
+map cell at base 12, start keys `st`, produced set `pr`. -/
+def rangeHeadH (B : Nat) (st pr : Array GoValue) : Config :=
+  .next (.mapIterK none (some "c") tU64 tU64 wcRangeBody
+    (some (.base ⟨12⟩)) pr st (envRBH B) (kRH B))
 
 /-- X0: exit test false → break unwinding → the `best` initialization.
 9 steps. -/

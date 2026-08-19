@@ -1107,7 +1107,7 @@ snapshot — one consumed choice and one erased entry per iteration
 `c·|rem| + e` steps, ending at `exitCfg` in a state satisfying
 `P d' []`. -/
 theorem mapPickLoop_generic {δ : Type}
-    (T : δ → ExecState) (cfg : List (Int × Nat) → Config)
+    (T : δ → ExecState) (cfg : δ → List (Int × Nat) → Config)
     (exitCfg : Config) (P : δ → List (Int × Nat) → Prop)
     (c e : Nat)
     (hIter : ∀ (d : δ) (rem : List (Int × Nat)) (idx : Nat)
@@ -1115,15 +1115,15 @@ theorem mapPickLoop_generic {δ : Type}
       Choices.consume ch rem.length = (idx, ch₂) → idx < rem.length →
       rem[idx]? = some p → P d rem →
       ∃ (k : Nat) (d' : δ), k ≤ c ∧ P d' (rem.eraseIdx idx) ∧
-        stepFnIter k (T d) (cfg rem) ch
-          = .ok (cfg (rem.eraseIdx idx), T d', ch₂))
+        stepFnIter k (T d) (cfg d rem) ch
+          = .ok (cfg d' (rem.eraseIdx idx), T d', ch₂))
     (hExit : ∀ (d : δ) (ch : Choices), P d [] →
-      stepFnIter e (T d) (cfg []) ch = .ok (exitCfg, T d, ch)) :
+      stepFnIter e (T d) (cfg d []) ch = .ok (exitCfg, T d, ch)) :
     ∀ (m : Nat) (rem : List (Int × Nat)), rem.length = m →
     ∀ (d : δ) (ch : Choices), P d rem →
     ∃ (k : Nat) (d' : δ) (ch' : Choices),
       k ≤ c * m + e ∧ P d' [] ∧
-      stepFnIter k (T d) (cfg rem) ch = .ok (exitCfg, T d', ch') := by
+      stepFnIter k (T d) (cfg d rem) ch = .ok (exitCfg, T d', ch') := by
   intro m
   induction m with
   | zero =>

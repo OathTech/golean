@@ -1,27 +1,24 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-19 (bug-fix arc slice 4, guardrails-first rework —
-#   the BUG-005 ruling's membership-lane rows, ahead of the (L) surgery)
-#   commit: this commit (on 0aeb92db, the BUG-056-fix tip)
-#   re-pin reason: the 2026-08-19 ruling (BUG-005 memo §5) REJECTS the
-#   memo's two narrowings — the full literal envelope ships. The two
-#   guard rows whose exact-count strict pins encoded the dead
-#   narrowings are reworked FIRST, per the ruling: raw-latitude
-#   observables on the MEMBERSHIP lane, deliberately RED under the
-#   snapshot machine (both now on BUG-005's Cases line), flipping green
-#   at the (L) surgery. maps/added-entries-bound (member-invariant
-#   bound 7) STAYS strict: the membership lint correctly refused its
-#   singleton set — recorded in the case file so the split reads as the
-#   lint working, not tag-dodging.
-#   Deltas — the predicted set exactly, nothing else moved:
-#     PASS/- -> FAIL/membership (1):
-#       maps/delete-readd-during-range (raw count, admitted {3,4,-1};
-#       snapshot machine enumerates the singleton {3})
-#     NEW -> FAIL/membership (1):
-#       maps/added-entry-count (raw created-entry produce-or-skip
-#       count, admitted {1,2}; gc exhibits BOTH members — 9/60 vs
-#       51/60 at the rework probe — the snapshot narrowing is
-#       oracle-visible on this shape)
-#   counts: 2181 cases, 2052 PASS / 129 FAIL (was 2180, 2053/127)
+# recorded: 2026-08-19 (bug-fix arc slice 4, the BUG-005 (L) surgery —
+#   live map iteration at the user-ruled FULL literal envelope)
+#   commit: this commit (on 5e3e5be4, the guardrails-rework tip)
+#   re-pin reason: the (L) surgery lands — Cont.mapIterK walks the
+#   LIVE cell (per-pick candidates = surviving entries minus produced,
+#   values loaded live, stop slot legal exactly when no never-removed
+#   start key remains, delete-prune making the FORCED
+#   removed-before-reached clause exact; per-pick read footprint
+#   closes race-inventory U1). Deltas — the predicted set exactly,
+#   nothing else moved (all seven of BUG-005's Cases go green):
+#     FAIL/differential -> PASS (4):
+#       maps/delete-during-range, maps/clear-during-range,
+#       maps/update-during-range, maps/delete-unreached-during-range
+#     FAIL/membership -> PASS/membership (2):
+#       maps/delete-readd-during-range (admitted {3,4,-1}, exhibited 1),
+#       maps/added-entry-count (admitted {1,2}, exhibited 2)
+#     FAIL/lean-observation -> PASS/racy (1):
+#       race/negative/map-range-iter (the U1 footprint arm)
+#   maps/added-entries-bound stayed PASS/strict, as required.
+#   counts: 2181 cases, 2059 PASS / 122 FAIL (was 2181, 2052/129)
 #   frontend: native (tools/nativefrontend + NativeToIR)
 # columns: result<TAB>id<TAB>stage
 PASS	arrays/array-bounds	-
@@ -1306,18 +1303,18 @@ PASS	ints/unsigned-right-shift	-
 PASS	ints/while1	-
 PASS	ints/wrap-width-boundaries	-
 PASS	maps/added-entries-bound	-
-FAIL	maps/added-entry-count	membership
+PASS	maps/added-entry-count	membership
 PASS	maps/array-key	-
 PASS	maps/array-key-interface-elem-unhashable/access-empty	-
 PASS	maps/array-key-interface-elem-unhashable/assign	-
 PASS	maps/array-value-copy	-
 PASS	maps/channel-key	-
-FAIL	maps/clear-during-range	differential
+PASS	maps/clear-during-range	-
 PASS	maps/compound-assign-eval-once	-
 PASS	maps/deep-incomparable-insert	-
 PASS	maps/defined-map-value	-
 PASS	maps/delete-alias-visible	-
-FAIL	maps/delete-during-range	differential
+PASS	maps/delete-during-range	-
 PASS	maps/delete-eval-order	-
 PASS	maps/delete-existing	-
 PASS	maps/delete-interface-dynamic-key	-
@@ -1327,8 +1324,8 @@ PASS	maps/delete-nil-interface-key-panic	-
 PASS	maps/delete-nil-key-types	-
 PASS	maps/delete-nil-map	-
 PASS	maps/delete-nil-value-types	-
-FAIL	maps/delete-readd-during-range	membership
-FAIL	maps/delete-unreached-during-range	differential
+PASS	maps/delete-readd-during-range	membership
+PASS	maps/delete-unreached-during-range	-
 FAIL	maps/imported-named-key-unhashable	lean-observation
 PASS	maps/incdec-value-kinds/defined	-
 PASS	maps/incdec-value-kinds/uint8	-
@@ -1397,7 +1394,7 @@ FAIL	maps/tuple-assign-key-eval	frontend-export
 FAIL	maps/tuple-map-expr-targets	frontend-export
 FAIL	maps/tuple-rhs-before-target-write	frontend-export
 FAIL	maps/tuple-swap-values	frontend-export
-FAIL	maps/update-during-range	differential
+PASS	maps/update-during-range	-
 PASS	methods/alias-promoted-method-expression/direct	-
 PASS	methods/alias-promoted-method-expression/promoted	-
 PASS	methods/defined-int-receiver	-
@@ -1621,7 +1618,7 @@ PASS	race/negative/defer-dispatch	racy
 PASS	race/negative/iface-dispatch	racy
 PASS	race/negative/increment	racy
 PASS	race/negative/len-map	racy
-FAIL	race/negative/map-range-iter	lean-observation
+PASS	race/negative/map-range-iter	racy
 PASS	race/negative/map-rw	racy
 PASS	race/negative/method-value	racy
 PASS	race/negative/promoted-dispatch	racy

@@ -83,15 +83,15 @@ OVER-approximations (fail-closed direction — may REFUSE a
 UNDER-approximations (fail-OPEN vs the `-race` oracle — each recorded
 loudly; the racy-negative lane's claim is scoped by these):
 
-* **U1 — map-range performs NO per-iteration read.** gc's live
-  iteration reads the map at every `mapIterNext` (`-race`-instrumented,
-  probed); our range is snapshot-based (BUG-005), so only the entry
-  snapshot read is real in the model — a write landing mid-range is a
-  silent value run. The lockstep obligation is structurally blind here
-  (the gc accesses have no `stepFn` arm at all). Carried by BUG-005
-  (race-symptom paragraph there); red-pinned by
-  `race/negative/map-range-iter`; the footprint arm falls out of
-  BUG-005's live-iteration surgery.
+* **U1 — CLOSED (BUG-005 (L) surgery, 2026-08-19): map-range now
+  performs a real per-iteration read.** The live-iteration pick loads
+  the map cell at EVERY `mapIterNext` step including the final
+  done-check (gc's exhausted `mapIterNext` still reads — probed:
+  "Previous read ... runtime.mapIterNext()"), recorded by the
+  `stepAccesses` mapIterK arm; `race/negative/map-range-iter` flipped
+  green with the arm. The old snapshot model's blindness (a write
+  landing mid-range ran to a silent value) is retired with the
+  snapshot itself.
 * **U2 — `len`/`cap` on CHANNELS record nothing** — correct per spec
   ("without further synchronization") and per probe p26 (gc does not
   instrument chanlen). `len` on MAPS IS recorded (S3 audit refuted the
@@ -166,7 +166,10 @@ FOOTPRINT ARMS (recorded accesses):
   the caller-target WRITES are per-target `storeK` steps since the
   BUG-025 spine migration (`storeTargetAccess`, phase 2 — `storeMany`
   is retired from the frame exit).
-- `mapRangeEntries` snapshot load → `stepAccesses` mapRangeK arm (U1).
+- `mapRangeStartSets` range-start load (base + start keys) →
+  `stepAccesses` mapRangeK arm.
+- `mapIterLiveEntries` per-pick live load (BUG-005 (L): every pick
+  incl. the done-check) → `stepAccesses` mapIterK arm (closed U1).
 - `dynamicDispatch?` needsDeref load (frame ENTRY) →
   `dispatchAccesses`, at the call/defer/spawn entry arms — narrowed to
   the promotion hop path when the target is a synthesized wrapper
@@ -926,6 +929,14 @@ def stepAccesses (s : ExecState) (c : Config) : List RaceAccess :=
        | .mapLookup _ _, [bv, _] => mapAccess false bv
        | _, _ => [])
   | .retV v (.mapRangeK _ _ _ _ _ _ _) => mapAccess false v
+  -- BUG-005 (L) surgery: EVERY mapIterK pick step — including the
+  -- final done-check — loads the live map cell (gc's exhausted
+  -- mapIterNext still reads; this is the arm that closed U1). Nil-map
+  -- ranges (base none) read nothing.
+  | .next (.mapIterK _ _ _ _ _ base _ _ _ _) =>
+      (match base with
+       | some l => [(false, l)]
+       | none => [])
   -- Frame ENTRIES with a possible interface-dispatch receiver deref
   -- (S3 audit major: dynamicDispatch?'s needsDeref read): the ordinary
   -- call shapes with their last operand arriving, and the deferred-call

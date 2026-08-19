@@ -369,7 +369,12 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
                 return (.evalE e env (.stmtOpK op nt (v :: done) rest env k'), s, choices)
           | [] =>
               match applyStmtOp s choices op nt (v :: done).reverse with
-              | .ok (s', choices') => return (.next k', s', choices')
+              | .ok (s', choices') =>
+                  -- BUG-005 (L): mapDelete/clearMap prune the deleted
+                  -- key(s) from in-flight iterations over the same map
+                  -- (contAfterStmtOp — identity for every other op).
+                  let k'' ← contAfterStmtOp s' op ((v :: done).reverse) k'
+                  return (.next k'', s', choices')
               | .error (.panic msg) =>
                   return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
               | .error err => throw err
@@ -426,8 +431,10 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               | some k'' => return (.next k'', s, choices)
               | none => throw (.stuck "defer outside a call frame")
       | .mapRangeK keyVar valVar keyTy valTy body env k' => do
-          let entries ← mapRangeSnapshotEntries s keyTy valTy v
-          return (.next (.mapIterK keyVar valVar keyTy valTy body entries env k'), s, choices)
+          -- BUG-005 (L): record the base cell and the START-KEY set;
+          -- no snapshot, no validation here (per-pick, live).
+          let bs ← mapRangeStartSets s v
+          return (.next (.mapIterK keyVar valVar keyTy valTy body bs.1 #[] bs.2 env k'), s, choices)
       | .panicArgK k' =>
           return (.panicking [⟨panicPayload v, false⟩] k', s, choices)
       | .chanStK op done pending env k' =>
@@ -592,21 +599,35 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
             return (.panicking chain k', s, choices)
       | .breakableK k' => return (.next k', s, choices)
       | .labelK _ k' => return (.next k', s, choices)
-      | .mapIterK keyVar valVar keyTy valTy body remaining env k' =>
-          if remaining.isEmpty then
+      | .mapIterK keyVar valVar keyTy valTy body base produced start env k' => do
+          -- BUG-005 (L): LOAD the live cell (the U1-closing footprint
+          -- read — every pick, including this done-check), filter by
+          -- the produced-key set, validate (fail closed), then consume
+          -- ONE choice of width candidates + stop, stop LAST — the
+          -- zero stream IS the canonical member by definition (memo §5
+          -- ruling Q3): first candidate in cell order, never stop
+          -- while a candidate remains, so mutation-free ranges keep
+          -- the old first-remaining pick sequence and self-inserting
+          -- loops fuel-out VISIBLY.
+          let cands ← mapIterCandidates s keyTy valTy base produced
+          if cands.isEmpty then
             return (.next k', s, choices)
           else do
-            let (idx, choices') := choices.consume remaining.size
-            match hidx : remaining[idx]? with
-            | none => throw (.internal "mapRange choice index out of bounds")
+            let mandatory ← mapIterMandatoryRemains s keyTy cands start
+            let width := cands.size + (if mandatory then 0 else 1)
+            let (idx, choices') := choices.consume width
+            match cands[idx]? with
+            | none =>
+                -- idx = cands.size: the STOP slot (only reachable when
+                -- no mandatory start key remains — width excludes it
+                -- otherwise).
+                return (.next k', s, choices')
             | some (key, value) => do
-                have hlt : idx < remaining.size :=
-                  (Array.getElem?_eq_some_iff.mp hidx).1
                 let (env', s') ← bindIterVars env.pushScope s
                   keyVar valVar keyTy valTy key value
                 return (.exec body env'
                   (.mapIterK keyVar valVar keyTy valTy body
-                    (remaining.eraseIdx idx hlt) env k'), s', choices')
+                    base (produced.push key) start env k'), s', choices')
       | .storeK refs vals body env k' =>
           -- Delivery PHASE 2 (convergence round, BUG-029): one store
           -- per step, LEFT-TO-RIGHT; a store-time panic (nil address,
@@ -627,7 +648,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .loop _ _ _ k' => return (.next k', s, choices)
       | .breakableK k' => return (.next k', s, choices)
       | .labelK _ k' => return (.breaking k', s, choices)
-      | .mapIterK _ _ _ _ _ _ _ k' => return (.next k', s, choices)
+      | .mapIterK _ _ _ _ _ _ _ _ _ k' => return (.next k', s, choices)
       | .frame _ _ _ _ _ _ => throw (.stuck "function body escaped with break")
       | .stop => throw (.stuck "break outside loop")
       | _ => throw (.internal "break delivered to expression continuation")
@@ -637,8 +658,8 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .breakableK k' => return (.continuing k', s, choices)
       | .labelK _ k' => return (.continuing k', s, choices)
       | .loop c b env k' => return (.exec (.while c b) env k', s, choices)
-      | .mapIterK keyVar valVar keyTy valTy body remaining env k' =>
-          return (.next (.mapIterK keyVar valVar keyTy valTy body remaining env k'), s, choices)
+      | .mapIterK keyVar valVar keyTy valTy body base produced start env k' =>
+          return (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k'), s, choices)
       | .frame _ _ _ _ _ _ => throw (.stuck "function body escaped with continue")
       | .stop => throw (.stuck "continue outside loop")
       | _ => throw (.internal "continue delivered to expression continuation")
@@ -648,7 +669,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .breakableK k' => return (.returning k', s, choices)
       | .labelK _ k' => return (.returning k', s, choices)
       | .loop _ _ _ k' => return (.returning k', s, choices)
-      | .mapIterK _ _ _ _ _ _ _ k' => return (.returning k', s, choices)
+      | .mapIterK _ _ _ _ _ _ _ _ _ k' => return (.returning k', s, choices)
       | .frame [] _ [] [] k' _ => return (.next k', s, choices)
       | .frame [] _ (rl :: rls) [] _ _ => do
           -- Targetless frame with pinned results: the frontend always
@@ -697,7 +718,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .seq _ _ k' => return (.breakingTo L k', s, choices)
       | .loop _ _ _ k' => return (.breakingTo L k', s, choices)
       | .breakableK k' => return (.breakingTo L k', s, choices)
-      | .mapIterK _ _ _ _ _ _ _ k' => return (.breakingTo L k', s, choices)
+      | .mapIterK _ _ _ _ _ _ _ _ _ k' => return (.breakingTo L k', s, choices)
       | .labelK name k' =>
           if name = L then return (.next k', s, choices)
           else return (.breakingTo L k', s, choices)
@@ -715,9 +736,9 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           if contHeadLabel k' = some L then
             return (.exec (.while c b) env k', s, choices)
           else return (.continuingTo L k', s, choices)
-      | .mapIterK keyVar valVar keyTy valTy body remaining env k' =>
+      | .mapIterK keyVar valVar keyTy valTy body base produced start env k' =>
           if contHeadLabel k' = some L then
-            return (.next (.mapIterK keyVar valVar keyTy valTy body remaining env k'), s, choices)
+            return (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k'), s, choices)
           else return (.continuingTo L k', s, choices)
       | .frame _ _ _ _ _ _ => throw (.stuck "function body escaped with labeled continue")
       | .stop => throw (.stuck s!"labeled continue escaped its label: {L}")

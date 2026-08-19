@@ -199,9 +199,17 @@ widening rather than a quiet accommodation. -/
 
 /-- **TARGET 3 (discharged below by `wp_map_iter_inv`)**: the
 loop-invariant rule for the nondeterministic key-only map range. One
-generic-iteration obligation over an ARBITRARY remaining snapshot and an
-ARBITRARY pick, plus the invariant at entry and at exhaustion, entails
-the WP of the whole range — independent of the `k!` iteration orders.
+generic-iteration obligation over an ARBITRARY remaining candidate set
+and an ARBITRARY pick, plus the invariant at entry and at exhaustion,
+entails the WP of the whole range — independent of the `k!` iteration
+orders.
+
+DELIBERATELY RESHAPED 2026-08-19 (BUG-005 (L) surgery, a recorded
+widening, not a quiet accommodation): the rule now walks the OWNED
+LIVE CELL — candidates are pick-time state facts computed against the
+cell (`hfact`, under the caller's reachable-state relation `P` over
+produced/remaining, closed under picks by `hstep`), the continuation
+carries the produced set, and the cell is returned at exhaustion.
 
 Stated over abstract `GF`/`hlc`/stuckness/mask/postcondition so the
 statement is a closed `Prop`; it is the exact type of
@@ -210,30 +218,43 @@ def mapIterInvRule_statement : Prop :=
   ∀ (GF : BundledGFunctors) (hlc : HasLC) (_inst : GoCoreGS hlc GF)
     (s : Stuckness) (E : CoPset) (Φ : Unit → IProp GF)
     (kid : String) (keyTy valTy : Ty) (bodyStmt : Stmt)
-    (entries : Array (GoValue × GoValue)) (env : LocalEnv) (k : Cont)
+    (ba : Addr) (cell : HeapCell) (start : Array GoValue)
+    (env : LocalEnv) (k : Cont)
+    (P : Array GoValue → Array (GoValue × GoValue) → Prop)
+    (produced0 : Array GoValue) (entries0 : Array (GoValue × GoValue))
     (I : Array (GoValue × GoValue) → IProp GF),
-    (∀ (σ : ExecState), σ.types = GoCoreGS.types GF →
-      ∀ p ∈ entries, normalizeValueForTy σ keyTy p.1 = .ok p.1) →
-    (∀ (rem : Array (GoValue × GoValue)) (i : Nat) (h : i < rem.size)
-        (pa : Addr),
+    P produced0 entries0 →
+    (∀ pr rem, P pr rem → ∀ (σ : ExecState),
+      σ.types = GoCoreGS.types GF →
+      Heap.lookup σ.heap (.base ba) = some cell →
+      mapIterCandidates σ keyTy valTy (some (.base ba)) pr = .ok rem
+        ∧ (0 < rem.size →
+            mapIterMandatoryRemains σ keyTy rem start = .ok true)) →
+    (∀ pr rem (i : Nat) (h : i < rem.size), P pr rem →
+      P (pr.push (rem[i]'h).1) (rem.eraseIdx i h)) →
+    (∀ pr rem (i : Nat) (h : i < rem.size) (pa : Addr), P pr rem →
       iprop(I rem
         ∗ pa.id ↦ (⟨some keyTy, (rem[i]'h).1⟩ : HeapCell)
         ∗ (I (rem.eraseIdx i h) -∗
             WP (Config.next (.mapIterK (some kid) none keyTy valTy bodyStmt
-                  (rem.eraseIdx i h) env k)) @ s ; E {{ Φ }}))
+                  (some (.base ba)) (pr.push (rem[i]'h).1) start env k))
+              @ s ; E {{ Φ }}))
       ⊢ WP (Config.exec bodyStmt (env.pushScope.declare kid (.base pa))
               (.mapIterK (some kid) none keyTy valTy bodyStmt
-                (rem.eraseIdx i h) env k)) @ s ; E {{ Φ }}) →
-    iprop(I entries ∗ (I #[] -∗ WP (Config.next k) @ s ; E {{ Φ }}))
+                (some (.base ba)) (pr.push (rem[i]'h).1) start env k))
+          @ s ; E {{ Φ }}) →
+    iprop(ba.id ↦ cell ∗ I entries0
+        ∗ (I #[] ∗ ba.id ↦ cell -∗ WP (Config.next k) @ s ; E {{ Φ }}))
       ⊢ WP (Config.next (.mapIterK (some kid) none keyTy valTy bodyStmt
-              entries env k)) @ s ; E {{ Φ }}
+            (some (.base ba)) produced0 start env k)) @ s ; E {{ Φ }}
 
 /-- Target 3 is a THEOREM (proof-automation arc phase 1, same commit).
 The `fun … => wp_map_iter_inv …` body is the statement-identity check:
 if the rule's shape ever drifts from the stated target, this breaks. -/
 theorem mapIterInvRule : mapIterInvRule_statement :=
-  fun _GF _hlc _inst _s _E _Φ _kid _keyTy _valTy _body _entries _env _k _I
-    hnorm hbody => wp_map_iter_inv hnorm hbody
+  fun _GF _hlc _inst _s _E _Φ _kid _keyTy _valTy _body _ba _cell _start
+    _env _k _P _produced0 _entries0 _I hP0 hfact hstep hbody =>
+    wp_map_iter_inv hP0 hfact hstep hbody
 
 end GoLean.Iris
 

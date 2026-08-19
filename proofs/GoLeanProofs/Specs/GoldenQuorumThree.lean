@@ -1,4 +1,5 @@
 import GoLeanProofs.Specs.AutomationTargets
+import GoLeanProofs.MapMem
 import GoLeanProofs.Specs.Statements
 import GoLeanProofs.Laws.Values
 
@@ -174,6 +175,143 @@ theorem cfgSnapshot_eraseIdx (ks : List Int) (i : Nat) (h : i < (cfgSnapshot ks)
   apply Array.toList_inj.mp
   simp [cfgSnapshot, Array.toList_eraseIdx, list_map_eraseIdx]
 
+
+/-! ### The live-pick data layer (BUG-005 (L))
+
+The range reads the LIVE cell at every pick: candidates are the cell's
+entries minus the produced keys, and the walk's bookkeeping is the
+pick-coherence shape "produced = a key list's image, remaining = the
+filter". The four lemmas below compute the machine's pick-time facts
+over the voter encoding — the `cfgSnapshot`-shaped mirror of
+`GoLeanProofs/MapMem`'s counts-encoding kit. -/
+
+/-- The key column of a voter snapshot is the `toKeys` image. -/
+theorem cfgKeys_toKeys (ks : List Int) :
+    (cfgSnapshot ks).map (·.1) = GoLean.MapMem.toKeys ks := by
+  apply Array.toList_inj.mp
+  simp [cfgSnapshot, GoLean.MapMem.toKeys, voterEntry, u64]
+
+/-- Filtering a NODUP key list by one more taken key erases exactly the
+picked position (list-level mirror of `MapMem.filter_ne_key_eraseIdx`). -/
+theorem filter_ne_eraseIdx_int :
+    ∀ (l : List Int) (i : Nat) (q : Int),
+      l.Nodup → l[i]? = some q →
+      l.filter (fun x => !(x == q)) = l.eraseIdx i := by
+  intro l
+  induction l with
+  | nil =>
+      intro i q _ hq
+      simp at hq
+  | cons a rest ih =>
+      intro i q hnodup hq
+      rw [List.nodup_cons] at hnodup
+      cases i with
+      | zero =>
+          simp only [List.getElem?_cons_zero, Option.some.injEq] at hq
+          subst hq
+          simp only [List.filter_cons, beq_self_eq_true, Bool.not_true,
+            Bool.false_eq_true, if_false, List.eraseIdx_cons_zero]
+          apply List.filter_eq_self.mpr
+          intro x hx
+          simp only [Bool.not_eq_eq_eq_not, Bool.not_true]
+          refine beq_eq_false_iff_ne.mpr ?_
+          intro hc
+          exact hnodup.1 (hc ▸ hx)
+      | succ i =>
+          simp only [List.getElem?_cons_succ] at hq
+          have hmem : q ∈ rest := by
+            obtain ⟨hlt, hg⟩ := List.getElem?_eq_some_iff.mp hq
+            exact hg ▸ List.getElem_mem hlt
+          have hne : (a == q) = false :=
+            beq_eq_false_iff_ne.mpr (fun hc => hnodup.1 (hc ▸ hmem))
+          simp only [List.filter_cons, hne, Bool.not_false, if_true,
+            List.eraseIdx_cons_succ, List.cons.injEq, true_and]
+          exact ih i q hnodup.2 hq
+
+/-- One pick moves one key from the filter to the taken set. -/
+theorem filter_push_int {ks done : List Int} {i : Nat} {q : Int}
+    (hnodup : ks.Nodup)
+    (hq : (ks.filter (fun x => !done.contains x))[i]? = some q) :
+    ks.filter (fun x => !(done ++ [q]).contains x)
+      = (ks.filter (fun x => !done.contains x)).eraseIdx i := by
+  have hnodup' : (ks.filter (fun x => !done.contains x)).Nodup :=
+    List.Sublist.nodup List.filter_sublist hnodup
+  have hcompose : ks.filter (fun x => !(done ++ [q]).contains x)
+      = (ks.filter (fun x => !done.contains x)).filter (fun x => !(x == q)) := by
+    rw [List.filter_filter]
+    apply List.filter_congr
+    intro x _
+    by_cases h : x = q <;>
+      simp [List.contains_append, Bool.not_or, Bool.and_comm, h]
+  rw [hcompose]
+  exact filter_ne_eraseIdx_int _ i q hnodup' hq
+
+/-- The pick-time filter over the voter encoding is the list-model
+filter. -/
+theorem filterCandidateList_cfgList (σ : ExecState) (done : List Int) :
+    ∀ ks : List Int,
+      filterCandidateList σ (.int .uint64) (GoLean.MapMem.toKeys done)
+        (ks.map voterEntry)
+      = .ok ((ks.filter (fun q => !done.contains q)).map voterEntry) := by
+  intro ks
+  induction ks with
+  | nil => rfl
+  | cons q rest ih =>
+      simp only [List.map_cons, filterCandidateList, voterEntry, u64,
+        GoLean.MapMem.keyInKeys_toKeys, Bind.bind, Except.bind, ih,
+        List.filter_cons]
+      by_cases hq : q ∈ done
+      · simp [hq]
+      · simp [hq, voterEntry, u64]
+
+/-- Pick-time candidates over the voter encoding: LOAD the live cell,
+filter by the produced keys, validated normalized (keys by `hnormk`,
+the `struct{}` values through the pinned type environment). -/
+theorem candidates_cfg {σ : ExecState} {a : Addr} {cty : Option Ty}
+    {ks : List Int} (done : List Int)
+    (hty : σ.types = GoLean.Iris.GoldenQuorum.quorumLowered.typeDefs.toList)
+    (hlook : Heap.lookup σ.heap (.base a)
+      = some ⟨cty, .mapData (cfgSnapshot ks)⟩)
+    (hnormk : ∀ q ∈ ks, IntKind.uint64.normalize q = q) :
+    mapIterCandidates σ (.int .uint64) (.defined ⟨"struct{}"⟩)
+      (some (.base a)) (GoLean.MapMem.toKeys done)
+      = .ok (cfgSnapshot (ks.filter (fun q => !done.contains q))) := by
+  have hfil := filterCandidateList_cfgList σ done ks
+  have hval : snapshotEntriesSelfNormalizedList σ.types (.int .uint64)
+      (.defined ⟨"struct{}"⟩)
+      ((ks.filter (fun q => !done.contains q)).map voterEntry) = true := by
+    rw [hty]
+    refine snapshotEntriesSelfNormalizedList_of_mem fun e he => ?_
+    obtain ⟨q, hq, rfl⟩ : ∃ q, q ∈ ks.filter (fun q => !done.contains q)
+        ∧ voterEntry q = e := by simpa using he
+    refine ⟨?_, show isNormalForTy GoLean.Iris.GoldenQuorum.quorumLowered.typeDefs.toList
+      (.defined ⟨"struct{}"⟩) (.struct ⟨"struct{}"⟩ #[]) = true
+      by decide +kernel⟩
+    simp [voterEntry, u64, isNormalForTy, isNormalForTyFuel,
+      typeResolutionFuel, hnormk q (List.mem_filter.mp hq).1]
+  simp only [mapIterCandidates, mapIterLiveEntries, loadLoc, hlook,
+    Bind.bind, Except.bind, pure, Except.pure]
+  rw [show (cfgSnapshot ks).toList = ks.map voterEntry from by
+    simp [cfgSnapshot], hfil]
+  simp only [Bind.bind, Except.bind, pure, Except.pure,
+    snapshotEntriesSelfNormalized, List.toList_toArray, hval, if_pos]
+  rfl
+
+/-- Nonempty candidates whose keys all sit in the start set have a
+mandatory member (voter encoding). -/
+theorem mandatory_cfg (σ : ExecState) {ss ks : List Int}
+    (hne : ks ≠ []) (hall : ∀ q ∈ ks, ss.contains q) :
+    mapIterMandatoryRemains σ (.int .uint64) (cfgSnapshot ks)
+      (GoLean.MapMem.toKeys ss) = .ok true := by
+  cases ks with
+  | nil => exact absurd rfl hne
+  | cons q rest =>
+      simp only [mapIterMandatoryRemains, cfgSnapshot, List.map_cons,
+        List.toList_toArray, mandatoryInList, voterEntry, u64,
+        GoLean.MapMem.keyInKeys_toKeys, Bind.bind, Except.bind]
+      have hmem : q ∈ ss := by simpa using hall q (by simp)
+      simp [hmem]
+
 /-- **The multiset-conservation step.** Erasing position `i` from the
 "still to come" list and prepending its value to the "already written"
 list preserves the total multiset. This is what makes the range
@@ -319,7 +457,7 @@ backing array — the last one now at a SYMBOLIC index, which is what
 theorem wp_ci_range_body {ia la lba sra sta pa : Addr} {lty : Option Ty}
     {aentries : Array (GoValue × GoValue)} {q v : Int}
     {zeros trail cap slen : Nat} {filled : List Int}
-    {rem' : Array (GoValue × GoValue)} {env k}
+    {env : LocalEnv} {kIter : Cont}
     (hprog : GoCoreGS.prog GF = quorumLowered.funcs)
     (hmeths : GoCoreGS.methods GF = quorumLowered.methods)
     (htypes : GoCoreGS.types GF = quorumLowered.typeDefs.toList)
@@ -354,12 +492,9 @@ theorem wp_ci_range_body {ia la lba sra sta pa : Addr} {lty : Option Ty}
                        .slice ⟨some (.base sta), 0, slen, cap⟩⟩ : HeapCell)
           ∗ ia.id ↦ (⟨some (.int .int), .int ((zeros : Int) - 1) .int⟩ : HeapCell)
           ∗ sta.id ↦ stkCell cap zeros (v :: filled) trail
-          -∗ WP (Config.next (.mapIterK (some "id") none (.int .uint64)
-                  (.defined ⟨"struct{}"⟩) rangeBody rem' env k))
-              @ s ; E {{ Φ }})
+          -∗ WP (Config.next kIter) @ s ; E {{ Φ }})
       ⊢ WP (Config.exec rangeBody (env.pushScope.declare "id" (.base pa))
-            (.mapIterK (some "id") none (.int .uint64)
-              (.defined ⟨"struct{}"⟩) rangeBody rem' env k)) @ s ; E {{ Φ }} := by
+            kIter) @ s ; E {{ Φ }} := by
   iintro ⟨Hid, Hl, Hlb, Hsr, Hi, Hst, Hk⟩
   rw [rangeBody_eq]
   go_walk
@@ -469,6 +604,7 @@ theorem wp_ci_loop {na ca cba la lba sra sta : Addr} {cty lty : Option Ty}
     (htypes : GoCoreGS.types GF = quorumLowered.typeDefs.toList)
     (hcap : ks₀.length + trail = cap)
     (hsmall : ks₀.length < 2 ^ 63)
+    (hnodup : ks₀.Nodup)
     (hnormk : ∀ q ∈ ks₀, IntKind.uint64.normalize q = q)
     (hnormv : ∀ q ∈ ks₀, IntKind.uint64.normalize (ack q) = ack q)
     (hlook : ∀ q ∈ ks₀, ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
@@ -524,23 +660,47 @@ theorem wp_ci_loop {na ca cba la lba sra sta : Addr} {cty lty : Option Ty}
       have h := storeLoc_int_any (mkind := .int) hl' ((ks₀.length : Int) - 1)
       rw [hdecn] at h
       exact h)) as [Hi]
-  -- the range itself: dispatch, read the map cell, take the snapshot
+  -- the range itself: dispatch, read the map cell, enter the live
+  -- iteration (BUG-005 (L): base/start read off the cell, no snapshot)
   rw [rangeStmt_eq]
   go_walk
-  go_walk_step (wp_map_range_snapshot (ba := cba) (mty := cty)
-    (entries := cfgSnapshot ks₀)
-    (hnorm := by
-      rw [htypes]
-      refine snapshotEntriesSelfNormalizedList_of_mem fun e he => ?_
-      obtain ⟨q, hq, rfl⟩ : ∃ q, q ∈ ks₀ ∧ voterEntry q = e := by
-        simpa [cfgSnapshot] using he
-      refine ⟨?_, show isNormalForTy quorumLowered.typeDefs.toList
-        (.defined ⟨"struct{}"⟩) (.struct ⟨"struct{}"⟩ #[]) = true
-        by decide +kernel⟩
-      simp [voterEntry, u64, isNormalForTy, isNormalForTyFuel,
-        typeResolutionFuel, hnormk q hq]))
+  go_walk_step (wp_map_range_enter (ba := cba) (mty := cty)
+    (entries := cfgSnapshot ks₀)) as [Hcb]
   -- THE RANGE, through the INDUCTIVE RANGE RULE
   iapply (wp_map_iter_inv
+    (ba := cba)
+    (cell := (⟨cty, .mapData (cfgSnapshot ks₀)⟩ : HeapCell))
+    (produced0 := #[])
+    (entries0 := cfgSnapshot ks₀)
+    (P := fun pr rem => ∃ done : List Int,
+      pr = GoLean.MapMem.toKeys done
+      ∧ rem = cfgSnapshot (ks₀.filter (fun q => !done.contains q)))
+    (hP0 := ⟨[], rfl, by
+      have h : ks₀.filter (fun q => !([] : List Int).contains q) = ks₀ :=
+        List.filter_eq_self.mpr (fun _ _ => rfl)
+      rw [h]⟩)
+    (hfact := fun pr rem hP σ hσ hlook' => by
+      obtain ⟨done, rfl, rfl⟩ := hP
+      have hty : σ.types = quorumLowered.typeDefs.toList := hσ.trans htypes
+      refine ⟨candidates_cfg done hty hlook' hnormk, fun hpos => ?_⟩
+      rw [cfgKeys_toKeys]
+      refine mandatory_cfg σ ?_ ?_
+      · intro hc
+        rw [hc] at hpos
+        simp [cfgSnapshot] at hpos
+      · intro q hq
+        simpa using (List.mem_filter.mp hq).1)
+    (hstep := fun pr rem i h hP => by
+      obtain ⟨done, rfl, rfl⟩ := hP
+      have hik : i < (ks₀.filter (fun q => !done.contains q)).length := by
+        rw [cfgSnapshot_size] at h; exact h
+      refine ⟨done ++ [(ks₀.filter (fun q => !done.contains q))[i]'hik],
+        ?_, ?_⟩
+      · rw [cfgSnapshot_getElem]
+        simp [GoLean.MapMem.toKeys, voterEntry, u64, List.map_append]
+      · rw [cfgSnapshot_eraseIdx]
+        exact congrArg cfgSnapshot (filter_push_int hnodup
+          (List.getElem?_eq_getElem hik)).symm)
     (I := fun rem => iprop(∃ ks : List Int, ∃ filled : List Int,
       ⌜rem = cfgSnapshot ks ∧ (∀ x ∈ ks, x ∈ ks₀)
         ∧ ((ks.map ack) ++ filled).Perm (ks₀.map ack)⌝
@@ -552,12 +712,8 @@ theorem wp_ci_loop {na ca cba la lba sra sta : Addr} {cty lty : Option Ty}
                    .slice ⟨some (.base sta), 0, ks₀.length, cap⟩⟩ : HeapCell)
       ∗ ia.id ↦ (⟨some (.int .int), .int ((ks.length : Int) - 1) .int⟩ : HeapCell)
       ∗ sta.id ↦ stkCell cap ks.length filled trail))
-    (hnorm := fun σ _htypes p hp => by
-      obtain ⟨x, hx, rfl⟩ := List.mem_map.1 (by simpa [cfgSnapshot] using hp)
-      simp [voterEntry, u64, normalizeValueForTy, normalizeValueForTyFuel,
-        hnormk x hx, typeResolutionFuel])
     (Hbody := by
-      intro rem i hidx pa
+      intro pr rem i hidx pa _hP
       iintro ⟨⟨%ks, %filled, %hpure, Hl, Hlb, Hsr, Hi, Hst⟩, Hid, Hk⟩
       obtain ⟨hrem, hsub, hperm⟩ := hpure
       subst hrem
@@ -613,7 +769,9 @@ theorem wp_ci_loop {na ca cba la lba sra sta : Addr} {cty lty : Option Ty}
         exact this
       · rw [herase, show ((m : Int) - 1) = ((m : Int) - 1) from rfl]
         iframe))
-  -- the invariant at ENTRY
+  -- the cell, then the invariant at ENTRY
+  isplitl [Hcb]
+  · iexact Hcb
   isplitl [Hl Hlb Hsr Hi Hst]
   · iexists ks₀
     iexists ([] : List Int)
@@ -621,7 +779,7 @@ theorem wp_ci_loop {na ca cba la lba sra sta : Addr} {cty lty : Option Ty}
     · ipureintro
       exact ⟨rfl, fun _ h => h, by simp⟩
     · iframe
-  · iintro ⟨%ks, %filled, %hpure, Hl, Hlb, Hsr, Hi, Hst⟩
+  · iintro ⟨⟨%ks, %filled, %hpure, Hl, Hlb, Hsr, Hi, Hst⟩, Hcb⟩
     obtain ⟨hrem, -, hperm⟩ := hpure
     obtain rfl : ks = [] := by
       have : (ks.map voterEntry) = [] := by
@@ -916,7 +1074,7 @@ theorem wp_committedIndex_body_three {ca cba la lba ra : Addr}
     (lba := lba) (sra := sra) (sta := sta) (cty := cty) (lty := lty)
     (ks₀ := [1, 2, 3]) (ack := ack3) (aentries := threeAckedEntries)
     (trail := 4) (cap := 7)
-    hprog hmeths htypes rfl (by decide)
+    hprog hmeths htypes rfl (by decide) (by decide)
     (fun q hq => by
       have : q = 1 ∨ q = 2 ∨ q = 3 := by simpa using hq
       rcases this with rfl | rfl | rfl <;> decide)

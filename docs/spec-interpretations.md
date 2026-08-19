@@ -44,7 +44,8 @@ Rules of the file:
   again, even across delete + re-create") — no spec sentence keys
   "reached" by key, and it narrows the machine below the literal text
   (the BUG-005 memo's narrowing 1, rejected at the ruling).
-- Depends on it: the BUG-005 (L) surgery's produced-set semantics;
+- Depends on it (LANDED 2026-08-19, the (L) surgery): the surgery's
+  produced-set semantics;
   corpus rows `maps/delete-readd-during-range` (admitted {3,4,-1}) and
   `maps/added-entry-count` ({1,2}); ∀-streams certification failing
   closed on self-inserting loops (genuinely unbounded traces under

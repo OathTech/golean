@@ -486,8 +486,14 @@ theorem wf_run (n seed qsel : Nat) (hn : n < 2 ^ 60)
       (textFamily n seed) (qWord qsel) ((n : Nat) : Int) b n cap
       ((wPos n : Nat) : Int) sv2 D a (countsFoldW fs)
       ((n : Nat) : Int) n (by omega) ha31 hD
-      (countsFoldW fs).length (countsFoldW fs) rfl 0 na₁
+      hkvnorm (countsFoldW_nodup_keys fs)
+      (countsFoldW fs).length (countsFoldW fs) rfl #[] 0 na₁
       (tail₁ ++ [(Loc.base ⟨na₁⟩, su64 0)]) (na₁ + 1) ch₁
+      ⟨[], by simp [toKeysW], by
+        symm
+        apply List.filter_eq_self.mpr
+        intro z _
+        simp⟩
       hvals (by omega) hna₁ (by omega) (by omega)
       (by
         rw [lookup_append_right (htail₁ na₁ (Nat.le_refl _))]

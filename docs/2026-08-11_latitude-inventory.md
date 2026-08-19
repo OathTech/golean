@@ -371,8 +371,9 @@ The race detector replays consumption without consuming
   fail-closed refusal. The latitude the DETECTOR itself resolves is its
   HB edge set: targeted at TSan's REALIZED edges (gc's instrumentation),
   not go_mem's minimal relation — each divergence quoted at its
-  implementation site. Scope ledger, code-verified: U1 (map-range has
-  no per-iteration read — BUG-005 coupling), U2 (len/cap on channels
+  implementation site. Scope ledger, code-verified: U1 CLOSED 2026-08-19
+  (the (L) surgery's pick loads the live cell — map-range now has a
+  per-iteration read footprint), U2 (len/cap on channels
   uninstrumented both sides; len on MAPS recorded), U3 CLOSED
   (BUG-045/046 chan-object accesses), U4 (sync-object internal
   accesses unmodeled — misuse-only), U5 (release merge-vs-overwrite:
@@ -592,37 +593,46 @@ concurrent observer).
   order — outside the envelope; revisit only if a target ships one.
   PERMANENT-record candidate; cost of widening near-zero benefit.
 
-### E9. Map iteration order — (a) ENVELOPED (all permutations of the snapshot) — scoped, with one FORCED-point violation
+### E9. Map iteration order — (a) ENVELOPED (full literal envelope over the LIVE map) — RE-ENVELOPED 2026-08-19 (BUG-005 (L) surgery, user-ruled)
 
 - WHERE: spec#For_range (tightened from the parent section per the
   P2 audit): "The iteration order over maps is not
   specified and is not guaranteed to be the same from one iteration to
-  the next." Machine: snapshot at range entry
-  (`mapRangeSnapshotEntries` Machine.lean:873–921), pick-any-remaining
-  per iteration (StepFn.lean:595–609; relation rules
-  Machine.lean:2683–2702).
-- ENVELOPE: all permutations of the entry snapshot. MAXIMAL for the
-  order axis — but the envelope statement is SCOPED to mutation-free
-  iteration (arc-final F14), because the snapshot design violates a
-  FORCED point: the spec MANDATES "If a map entry that has not yet been
-  reached is removed during iteration, the corresponding iteration
-  value will not be produced" — we still produce it, and stale values
-  (BUG-005, open; three red pins + the U1 race-invisibility symptom).
-  `observed ∉ modeled` in live-mutation shapes: definitional bug, not
-  latitude. Entries CREATED during iteration: spec latitude ("may or
-  may not be produced") which the snapshot resolves to the singleton
-  "never produced" — a (b-n) narrowing INSIDE the envelope, currently
-  recorded only via BUG-005's dismissal sentence (see §9, flag 4).
-- EVIDENCE: GC — per-run re-randomization makes sampling dense (the
-  doctrine's best-sampled envelope); the live-mutation divergences are
-  probe-pinned red.
-- RE-ENVELOPE (= the BUG-005 fix): live iteration — `Cont.mapIterK`
-  carries the map's base loc, pick-next skips absent keys, re-reads
-  values, adds the per-iteration footprint arm (U1), replays the
-  stream-obliviousness analysis and `step_complete_any_wf`. Cost:
-  MODERATE machine surgery, scheduled as its own slice (recorded in
-  BUG-005); also the created-entries narrowing should get its explicit
-  statement at the site in the same movement.
+  the next", plus the production table's three mutation clauses.
+  Machine (post-surgery): range entry reads base loc + START-KEY set
+  off the live cell (`mapRangeStartSets`); each pick recomputes
+  CANDIDATES = live entries minus produced keys, validated
+  self-normalized, and loads the value from the LIVE cell
+  (`mapIterCandidates`/`mapIterLiveEntries`, Machine.lean); the stop
+  slot (width `candidates + 1`, stop LAST) is legal exactly when no
+  MANDATORY candidate remains (`mapIterMandatoryRemains` — a candidate
+  whose key is a never-removed start key must still be produced);
+  `mapDelete`/`clearMap` prune deleted keys out of same-goroutine
+  `mapIterK` frames via `contAfterStmtOp` (delete-prune), which is
+  what makes "removed before being reached ⇒ not produced" exact.
+- ENVELOPE: the FULL literal envelope of the spec's production table,
+  user-ruled 2026-08-19 ("any latitude in the Go spec should be
+  supported" — no narrowings): all orders of surviving entries;
+  deleted-then-not-reached never produced (FORCED); created entries
+  may be produced or skipped, each at any legal position (the
+  delete-then-recreate reading — a re-created key is a NEW entry — is
+  I-1 in `docs/spec-interpretations.md`, ledger L-012). The canonical
+  member is DEFINED as the machine at the zero stream (pick index 0
+  every time, stop last); self-inserting loops are genuinely unbounded
+  and fuel out visibly there — correct, and the ∀-stream confluence
+  checker FAILS CLOSED on them (membership lane instead).
+- EVIDENCE: GC — per-run re-randomization makes sampling dense; the
+  formerly red live-mutation pins (delete/clear/update/
+  delete-unreached-during-range) are green post-surgery, and the
+  created-entry latitude rows are MEMBERSHIP rows
+  (maps/delete-readd-during-range, maps/added-entry-count).
+- RESIDUAL NARROWING (recorded, owed): delete-prune rewrites only the
+  SAME-GOROUTINE continuation — a cross-goroutine delete during
+  another goroutine's range (already a data race by the race
+  footprint's pick-time read, U1 now closed) does not prune that
+  goroutine's frames. Recorded in `Cont.mapIterK`'s docstring; the
+  re-envelope obligation is to widen or justify at the first
+  cross-goroutine-range case that is not already racy-red.
 
 ### E10. Which `==`-equal map key is retained on overwrite — (b) PINNED (always-replace)
 
@@ -1012,11 +1022,10 @@ concurrency-relevance (the charter: concurrency matters most),
    be schedulable); registry-free-spinner termination is FairStream's
    quantifier question, not this item's (widening only ADDS streams —
    the never-yielding stream survives).
-2. **E9/BUG-005 — live map iteration.** Oracle-red today (three
-   differential pins + the race-invisibility pin), violates a FORCED
-   spec point (worse than latitude), couples into the detector (U1) —
-   concurrency-relevant through the race lane. Cost: moderate, already
-   scoped in BUG-005 (its own slice).
+2. **E9/BUG-005 — live map iteration.** DONE 2026-08-19 (the (L)
+   surgery): live-cell candidates, delete-prune, per-pick footprint
+   (U1 closed), full literal envelope user-ruled — see E9's entry for
+   the residual cross-goroutine-prune narrowing and its obligation.
 3. **E7 — hidden-dep init order.** Oracle-red today (standing
    deviation record), the only pin KNOWN to sit beside the oracle's
    realization on the SEQUENTIAL side, soundness-direction
@@ -1087,12 +1096,12 @@ costs). Numbering continues the doctrine draft's 1–5.
     probed (roundupsize) rather than merely possible. Why: shipped as a
     singleton before the append-spill widening precedent existed.
     Removing: cheap (the append mold) — queued at priority 4.
-11. **Map iteration is snapshot-based.** Violates the spec-MANDATED
-    delete-visibility (BUG-005 — a definitional bug carried openly, red
-    pins standing), resolves the created-entry MAY-latitude to "never",
-    and is invisible to the race detector per-iteration (U1). Removing:
-    the live-iteration surgery, its own slice, with the obliviousness
-    and wf analyses replayed.
+11. **Map iteration is snapshot-based.** REMOVED 2026-08-19 — the
+    BUG-005 (L) surgery made iteration live (per-pick candidates,
+    delete-prune, per-pick read footprint closing U1, created-entry
+    latitude enveloped); the obliviousness and wf analyses were
+    replayed. Residual: the cross-goroutine delete-prune narrowing
+    recorded at E9.
 12. **A woken select head-commits; only entry-time selects draw L2.**
     A deliberate wake-path narrowing carried on the recorded
     gc-commit-at-wake argument (each gc wake outcome realized by a
@@ -1143,10 +1152,10 @@ permanent; the deviation is not.)
 3. **Doctrine draft seeded #2's "to gc's realization"** — see §8's
    correction paragraph.
 4. **The created-entries map narrowing is recorded only inside
-   BUG-005's dismissal sentence** ("may or may not be produced, so the
-   snapshot's not-producing them is fine") — fine as a soundness note,
-   but it is a singleton narrowing per F8/F15 and should get its
-   explicit statement at the site when the BUG-005 surgery lands.
+   BUG-005's dismissal sentence** — RESOLVED 2026-08-19: the (L)
+   surgery lifted the narrowing entirely (created entries are
+   enveloped may-produce-or-skip; see E9 and
+   `docs/spec-interpretations.md` I-1).
 5. **Census agreement (positive finding)**: the doctrine's canonical
    7-site list, the module docstrings, and the executable consume sites
    agree exactly; the map-iteration site is the only one that consumes
@@ -1165,9 +1174,12 @@ permanent; the deviation is not.)
   E3 (known ≠ gc), E4, E5, E7 (known ≠ gc), E10, E11; representation/
   runtime: R1, R8, R9, R10, R11 (+R12 harness-level).
 - (b-n) NARROWED with recorded caveat: 6 — C7, E8, R3 (known outside),
-  R4, R5, R13 (+ E9's created-entries sub-point).
-- (c) FORCED: the §4 list (machine follows; divergences are plain
-  bugs — one open: BUG-005's mandated point).
+  R4, R5, R13 (E9's created-entries sub-point was LIFTED to the full
+  envelope 2026-08-19; its residual is the cross-goroutine delete-prune
+  narrowing recorded in E9).
+- (c) FORCED: the §4 list (machine follows; BUG-005's mandated
+  point — removed-before-reached never produced — CLOSED 2026-08-19
+  by the (L) surgery's delete-prune).
 - (d) UNKNOWN: 7 (U-1 … U-7).
 - REFUSED standing in for latitude: 9 (§5).
 - Known-≠-oracle deterministic points (the honesty-critical subset of

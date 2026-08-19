@@ -982,11 +982,24 @@ def stepNeeds (m : GoCore.Machine.MultiConfig) (picks : GoCore.Choices) :
               | .ok .cellPath =>
                   -- The sequential machine's own sites, per shape.
                   match c with
-                  | .next (.mapIterK _ _ _ _ _ remaining _ _) =>
-                      if remaining.isEmpty then none
-                      else match ch with
-                        | [] => some remaining.size
-                        | _ :: _ => none
+                  | .next (.mapIterK _ _ keyTy valTy _ base produced start _ _) =>
+                      -- BUG-005 (L): the pick width is candidates + the
+                      -- stop slot, computed from the STATE with the
+                      -- machine's own analysis functions (never a
+                      -- hand-copied bound).
+                      (match GoCore.Machine.mapIterCandidates m.shared
+                          keyTy valTy base produced with
+                      | .error _ => none
+                      | .ok cands =>
+                          if cands.isEmpty then none
+                          else match GoCore.Machine.mapIterMandatoryRemains
+                              m.shared keyTy cands start with
+                            | .error _ => none
+                            | .ok mand =>
+                                match ch with
+                                | [] => some (cands.size
+                                    + (if mand then 0 else 1))
+                                | _ :: _ => none)
                   | .retV v (.selectOpsK clauses default? done [] env k) =>
                       (match GoCore.Machine.applySelectCore m.shared clauses
                           default? ((v :: done).reverse) env k with
@@ -1019,8 +1032,15 @@ step draws a pick, with bound `b`. -/
 def stepNeedsSeq (σ : GoCore.ExecState) (c : GoCore.Machine.Config) :
     Option Nat :=
   match c with
-  | .next (.mapIterK _ _ _ _ _ remaining _ _) =>
-      if remaining.isEmpty then none else some remaining.size
+  | .next (.mapIterK _ _ keyTy valTy _ base produced start _ _) =>
+      (match GoCore.Machine.mapIterCandidates σ keyTy valTy base produced with
+      | .error _ => none
+      | .ok cands =>
+          if cands.isEmpty then none
+          else match GoCore.Machine.mapIterMandatoryRemains
+              σ keyTy cands start with
+            | .error _ => none
+            | .ok mand => some (cands.size + (if mand then 0 else 1)))
   | .retV v (.selectOpsK clauses default? done [] env k) =>
       (match GoCore.Machine.applySelectCore σ clauses default?
           ((v :: done).reverse) env k with

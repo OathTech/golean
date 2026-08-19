@@ -568,61 +568,21 @@ theorem mapEntries_conc (σ : ExecState) {s : State D} {map : MapValue}
       cases h2
       simp [concV_mapData, concEntries, pure, Except.pure]
 
-/-! ## The mapRange snapshot family -/
+/-! ## The mapRange start family (BUG-005 (L): base + start keys; the
+snapshot transports are retired with the snapshot itself) -/
 
-theorem snapshotList_conc (hI : I.Sound) (types : TypeEnv)
-    {keyTy valTy : Ty} :
-    ∀ (l : List (Value D × Value D)) {b : Bool},
-      snapshotEntriesSelfNormalizedList' keyTy valTy l = .ok b →
-      snapshotEntriesSelfNormalizedList types keyTy valTy
-        (l.map (fun q => (concV I q.1, concV I q.2))) = b := by
-  intro l
-  induction l with
-  | nil =>
-      intro b h
-      simp only [snapshotEntriesSelfNormalizedList'] at h
-      cases h
-      rfl
-  | cons p rest ih =>
-      intro b h
-      obtain ⟨k, v⟩ := p
-      simp only [snapshotEntriesSelfNormalizedList', bind_eq_ok] at h
-      obtain ⟨bk, hbk, h2⟩ := h
-      cases bk with
-      | false =>
-          rw [if_neg (by decide)] at h2
-          cases h2
-          simp [snapshotEntriesSelfNormalizedList,
-            isNormal_conc hI types hbk]
-      | true =>
-          rw [if_pos rfl] at h2
-          rcases hbv : isNormalForTy' valTy v with e | bv <;>
-            rw [hbv] at h2 <;> (try simp only [] at h2) <;>
-            (try simp only [Bind.bind, Except.bind] at h2)
-          · cases h2
-          cases bv with
-          | false =>
-              rw [if_neg (by decide)] at h2
-              cases h2
-              simp [snapshotEntriesSelfNormalizedList,
-                isNormal_conc hI types hbk, isNormal_conc hI types hbv]
-          | true =>
-              rw [if_pos rfl] at h2
-              simp [snapshotEntriesSelfNormalizedList,
-                isNormal_conc hI types hbk, isNormal_conc hI types hbv,
-                ih h2]
-
-theorem mapRangeEntries_conc (σ : ExecState) {s : State D} {v : Value D}
-    {es : Array (Value D × Value D)}
-    (h : mapRangeEntries' s v = .ok es) :
-    mapRangeEntries (concS I σ s) (concV I v) = .ok (concEntries I es) := by
-  simp only [mapRangeEntries', bind_eq_ok] at h
+theorem mapRangeStartSets_conc (σ : ExecState) {s : State D} {v : Value D}
+    {bs : Option Loc × Array (Value D)}
+    (h : mapRangeStartSets' s v = .ok bs) :
+    mapRangeStartSets (concS I σ s) (concV I v)
+      = .ok (bs.1, bs.2.map (concV I)) := by
+  simp only [mapRangeStartSets', bind_eq_ok] at h
   obtain ⟨map, hmap, h2⟩ := h
-  simp only [mapRangeEntries, bind_eq_ok]
+  simp only [mapRangeStartSets, bind_eq_ok]
   refine ⟨map, asMap_conc hmap, ?_⟩
   rcases hb : map.base with _ | base <;> rw [hb] at h2
   · cases h2
-    simp [concEntries, pure, Except.pure]
+    simp [pure, Except.pure]
   · simp only [bind_eq_ok] at h2
     obtain ⟨bv, hbv, h3⟩ := h2
     simp only [bind_eq_ok]
@@ -630,36 +590,7 @@ theorem mapRangeEntries_conc (σ : ExecState) {s : State D} {v : Value D}
     cases bv <;> simp only [quit] at h3 <;> try (cases h3; done)
     next entries =>
       cases h3
-      simp [concV_mapData, concEntries, pure, Except.pure]
-
-theorem mapRangeSnapshotEntries_conc (hI : I.Sound) (σ : ExecState)
-    {s : State D} {keyTy valTy : Ty} {v : Value D}
-    {es : Array (Value D × Value D)}
-    (h : mapRangeSnapshotEntries' s keyTy valTy v = .ok es) :
-    mapRangeSnapshotEntries (concS I σ s) keyTy valTy (concV I v)
-      = .ok (concEntries I es) := by
-  simp only [mapRangeSnapshotEntries', bind_eq_ok] at h
-  obtain ⟨entries, hentries, h2⟩ := h
-  obtain ⟨ok, hok, h3⟩ := h2
-  cases ok with
-  | false =>
-      rw [if_neg (by decide)] at h3
-      cases h3
-  | true =>
-      rw [if_pos rfl] at h3
-      cases h3
-      simp only [mapRangeSnapshotEntries, bind_eq_ok]
-      refine ⟨concEntries I es, mapRangeEntries_conc σ hentries, ?_⟩
-      have hsnap := snapshotList_conc (I := I) hI
-        (concS I σ s).types (keyTy := keyTy) (valTy := valTy)
-        es.toList hok
-      have hcond : snapshotEntriesSelfNormalized (concS I σ s).types
-          keyTy valTy (concEntries I es) = true := by
-        simp only [snapshotEntriesSelfNormalized, concEntries,
-          Array.toList_map]
-        exact hsnap
-      rw [if_pos hcond]
-      rfl
+      simp [concV_mapData, pure, Except.pure, Array.map_map, Function.comp]
 
 /-! ## Loop transports (the `forIn` shapes of the mirrored op-table
 loops; `forIn_conc` in `Sym/Drift.lean` is the mapped-list base) -/

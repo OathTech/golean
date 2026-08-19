@@ -376,10 +376,11 @@ private theorem wc_count_iter (ws : List Int) (i : Nat) (dead : Heap)
 
 def envRB (B : Nat) : LocalEnv := (("best", .base ⟨B⟩) :: sc1) :: [sc0]
 def kR (B : Nat) : Cont := .seq [retSeqn] (envRB B) frameK
-/-- The range-loop head: the `mapIterK` pick point at snapshot `rem`. -/
-def rangeHead (B : Nat) (rem : List (Int × Nat)) : Config :=
-  .next (.mapIterK none (some "c") tU64 tU64 wcRangeBody (toEntries rem)
-    (envRB B) (kR B))
+/-- The range-loop head: the live `mapIterK` pick point (BUG-005 (L)):
+map cell at base 5, start keys `st`, produced set `pr`. -/
+def rangeHead (B : Nat) (st pr : Array GoValue) : Config :=
+  .next (.mapIterK none (some "c") tU64 tU64 wcRangeBody
+    (some (.base ⟨5⟩)) pr st (envRB B) (kR B))
 
 /-- X0: exit test false → break unwinding → the `best` initialization.
 9 steps. -/
@@ -515,21 +516,20 @@ private theorem wcC_stBest (ws : List Int) :
     set_singleton_self] at h
   exact stepFn_store_step h
 
-private theorem wcC_snap (ws : List Int) :
+private theorem wcC_rangeStart (ws : List Int) :
     ∀ (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (B na : Nat)
       (ch : Choices),
-      (∀ p ∈ kvs, IntKind.normalize .uint64 p.1 = p.1
-        ∧ IntKind.normalize .uint64 ((p.2 : Nat) : Int)
-            = ((p.2 : Nat) : Int)) →
     stepFn (σC ws.length ws kvs iv false dead na)
         (.retV (.map ⟨some (.base ⟨5⟩)⟩)
           (.mapRangeK none (some "c") tU64 tU64 wcRangeBody (envRB B)
             (kR B))) ch
       = .ok (.next (.mapIterK none (some "c") tU64 tU64 wcRangeBody
-            (toEntries kvs) (envRB B) (kR B)),
+            (some (.base ⟨5⟩)) #[] (toKeys (kvs.map (·.1)))
+            (envRB B) (kR B)),
           σC ws.length ws kvs iv false dead na, ch) := by
-  intro kvs iv dead B na ch hkv
-  exact stepFn_snapshot (snapshot_toEntries (a := ⟨5⟩) (dty := none) rfl hkv)
+  intro kvs iv dead B na ch
+  exact stepFn_mapRangeStart
+    (rangeStart_toEntries (a := ⟨5⟩) (dty := none) rfl)
 
 /-- **The counting loop**, by strong induction on the remaining word
 count: from the exit-test delivery at word `i`, the run reaches the
@@ -554,7 +554,8 @@ theorem wc_count_loop (ws : List Int)
           (σC ws.length ws (countsFold (ws.take i)) (i : Int) false dead na)
           (.retV (.bool (decide ((i : Int) < (ws.length : Int)))) cmpContC)
           ch
-        = .ok (rangeHead (na + 2 * n) (countsFold ws),
+        = .ok (rangeHead (na + 2 * n)
+              (toKeys ((countsFold ws).map (·.1))) #[],
             σC ws.length ws (countsFold ws) (ws.length : Int) false tail
               (na + 2 * n + 1), ch) := by
   intro n i hn hi dead na hna hdead ch
@@ -582,9 +583,9 @@ theorem wc_count_loop (ws : List Int)
     ((ws.length : Nat) : Int) (tail₀ ++ [(.base ⟨na + 2 * n⟩, u64cell 0)])
     (na + 2 * n) (na + 2 * n + 1) ch
   have h4 := stepFnIter_chain h3 hXc
-  have hSn := wcC_snap ws (countsFold ws) ((ws.length : Nat) : Int)
+  have hSn := wcC_rangeStart ws (countsFold ws) ((ws.length : Nat) : Int)
     (tail₀ ++ [(.base ⟨na + 2 * n⟩, u64cell 0)]) (na + 2 * n)
-    (na + 2 * n + 1) ch (countsFold_norm ws hws hlen)
+    (na + 2 * n + 1) ch
   have h5 := stepFnIter_chain h4 (stepFnIter_one hSn)
   refine ⟨84 * n + 23, tail₀ ++ [(.base ⟨na + 2 * n⟩, u64cell 0)],
     Nat.le_refl _, ?_, ?_, ?_⟩

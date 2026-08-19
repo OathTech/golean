@@ -21,7 +21,7 @@ Contents:
   rather than silently invalidating a walk.
 - **The non-vacuity witnesses** on the pinned lowering, one per law
   family the `CommittedIndex`/`AckedIndex` walks consume:
-  `wp_map_range_snapshot_committed`, `wp_sort_slice_srt`,
+  `wp_map_range_enter_committed`, `wp_sort_slice_srt`,
   `wp_map_lookup_ackedIndex_entries` (+ the registered one-entry
   specialization `wp_map_lookup_ackedIndex`), `wp_make_slice_c2`,
   `wp_call_dynamic_enter_ackedIndex`, `wp_call_enter_ackedIndexImpl`.
@@ -427,20 +427,17 @@ variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 
 /-! ## Non-vacuity witnesses, on the pinned lowering -/
 
-/-- **Witness for `wp_map_range_snapshot`** on the REAL voter loop
+/-- **Witness for `wp_map_range_enter`** on the REAL voter loop
 (`QuorumPin.rangeStmt`, `rfl`-projected out of the pin): dispatch the
-range, load `c`, snapshot its data cell — landing exactly on the
-`mapIterK` that `Laws/Range`'s nondeterministic law consumes. Premise-free
-beyond the environment resolution, the two owned cells, and — since the
-snapshot step's fail-closed validation (sem-adequacy slice 3, 2026-08-04)
-— the self-normalization of the (here symbolic) entries at the range
-key/value types, which concrete walks discharge by `decide` at their
-pinned snapshots. -/
-theorem wp_map_range_snapshot_committed {ca mba : Addr}
+range, load `c`, read the range's base/start off the live data cell
+(BUG-005 (L) — no snapshot is taken) — landing exactly on the
+`mapIterK` pick point that `Laws/Range`'s nondeterministic laws
+consume, produced set empty, start keys the cell's key column.
+Premise-free beyond the environment resolution and the two owned
+cells. -/
+theorem wp_map_range_enter_committed {ca mba : Addr}
     {entries : Array (GoValue × GoValue)} {env k}
-    (hres : LocalEnv.lookup env "c" = some (.base ca))
-    (hnorm : snapshotEntriesSelfNormalized (GoCoreGS.types GF) (.int .uint64)
-      (.defined ⟨"struct{}"⟩) entries = true) :
+    (hres : LocalEnv.lookup env "c" = some (.base ca)) :
     ca.id ↦ (⟨some (.defined ⟨"main.MajorityConfig"⟩),
               .map ⟨some (.base mba)⟩⟩ : HeapCell)
       ∗ mba.id ↦ (⟨some (.map (.int .uint64) (.defined ⟨"struct{}"⟩)),
@@ -450,7 +447,8 @@ theorem wp_map_range_snapshot_committed {ca mba : Addr}
           ∗ mba.id ↦ (⟨some (.map (.int .uint64) (.defined ⟨"struct{}"⟩)),
                        .mapData entries⟩ : HeapCell)
           -∗ WP (Config.next (.mapIterK (some "id") none (.int .uint64)
-                (.defined ⟨"struct{}"⟩) QuorumPin.rangeBody entries env k))
+                (.defined ⟨"struct{}"⟩) QuorumPin.rangeBody
+                (some (.base mba)) #[] (entries.map (·.1)) env k))
               @ s ; E {{ Φ }})
       ⊢ WP (Config.exec QuorumPin.rangeStmt env k) @ s ; E {{ Φ }} := by
   iintro ⟨Hc, Hm, Hcont⟩
@@ -465,7 +463,7 @@ theorem wp_map_range_snapshot_committed {ca mba : Addr}
   isplitl [Hc]
   · iexact Hc
   iintro Hc
-  iapply (wp_map_range_snapshot hnorm)
+  iapply wp_map_range_enter
   isplitl [Hm]
   · iexact Hm
   iintro Hm

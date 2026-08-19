@@ -780,8 +780,8 @@ open Lean in
 #guard_msgs in #print axioms GoLean.Iris.wp_map_lookup
 /-- info: 'GoLean.Iris.wp_sort_slice_srt' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.wp_sort_slice_srt
-/-- info: 'GoLean.Iris.wp_map_range_snapshot_committed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Iris.wp_map_range_snapshot_committed
+/-- info: 'GoLean.Iris.wp_map_range_enter_committed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wp_map_range_enter_committed
 -- (Axiom set SHRANK [propext, Quot.sound] → [propext] at the de-WF
 -- restructure 2026-08-03 — the refuting counterexample's evaluation no
 -- longer routes through Quot-based machinery. Shrinking is the safe
@@ -971,17 +971,15 @@ projections stop being `rfl`):
   `idx` cell declared `uint64` where the lowering declares
   `main.Index`) is CLOSED by the `σ.types` pin: the witness now names the
   faithful `.defined main.Index` cell;
-- `wp_map_range_snapshot` (+ the nil form) — the state-reading step
-  feeding `Laws/Range`'s nondeterministic `mapIterK` law; witness
-  `wp_map_range_snapshot_committed` on the REAL voter loop. (Ledger
-  update, sub-branch audit 2026-08-04: the law gained the snapshot
-  self-normalization premise `hnorm` — the law-side twin of the
-  SEMANTICS' own snapshot-time validation, sem-adequacy slice 3 — and
-  the committed witness now PROPAGATES that premise to its callers,
-  who discharge it at pinned data by `decide +kernel` and at symbolic
-  voter lists from their `hnormk` facts; both discharge shapes are in
-  the walk files, so the premise is exhibited satisfiable, not just
-  forwarded.)
+- `wp_map_range_enter` (+ the nil form; né `wp_map_range_snapshot`,
+  reshaped by the BUG-005 (L) surgery 2026-08-19) — the state-reading
+  range-START step feeding `Laws/Range`'s nondeterministic `mapIterK`
+  law: it reads the base loc and start-key set off the LIVE cell and
+  takes NO snapshot, so the old snapshot-normalization premise `hnorm`
+  is gone from this step — the fail-closed validation moved to the
+  PICK (`mapIterCandidates`), where the iter laws carry it as the
+  `hfact`/`hcands` state facts. Witness `wp_map_range_enter_committed`
+  on the REAL voter loop.
 
 `✓ The nondeterministic map-iteration law is PINNED and WITNESSED`
 (2026-07-31, pre-merge audit finding 9). `wp_map_iter_next_key` shipped
@@ -1041,7 +1039,7 @@ dispatch fact was kernel-provable at all. `Ty.eqb`/`Ty.eqbFuel`
 transparent, fuel-bounded structural equality that fails closed on
 exhaustion; the differential is unchanged by it (872/872 against the
 recorded baseline, re-pinned by the final audit response). -/
-example := @GoLean.Iris.wp_map_range_snapshot
+example := @GoLean.Iris.wp_map_range_enter
 example := @GoLean.Iris.wp_sort_slice
 example := @GoLean.Iris.wp_map_lookup
 example := @GoLean.Iris.wp_stmt_op_first
@@ -1049,8 +1047,8 @@ example := @GoLean.Iris.wp_stmt_op_shift_target
 example := @GoLean.Iris.wp_stmt_op_shift_plain
 example := @GoLean.Iris.wp_sort_slice_srt
 example := @GoLean.Iris.wp_map_lookup_ackedIndex
-example := @GoLean.Iris.wp_map_range_snapshot_committed
-example := @GoLean.Iris.wp_map_range_snapshot_nil
+example := @GoLean.Iris.wp_map_range_enter_committed
+example := @GoLean.Iris.wp_map_range_enter_nil
 example := @GoLean.Iris.wp_map_iter_next_key
 example := @GoLean.Iris.wp_map_iter_next_key_basic_key_witness
 example := @GoLean.Iris.wp_map_iter_next_key_defined_key_witness
@@ -1465,8 +1463,9 @@ non-quorum:
   exactly the acceptance shape phase 2 will need for `go_walk`. -/
 example := @GoLean.Iris.wp_map_iter_inv
 example := @GoLean.Iris.wp_map_iter_inv_key_sum_witness
-example := @GoLean.Iris.keyIntSum_eraseIdx
-example := @GoLean.Iris.keyIntSum_nonneg
+-- (`keyIntSum_eraseIdx`/`keyIntSum_nonneg` retired 2026-08-19 with the
+-- BUG-005 (L) witness rework — the key-sum bookkeeping is now inlined
+-- per reachable shape in the witness's own invariant discharge.)
 example := @GoLean.Iris.int_normalize_of_nonneg_lt
 example := @GoLean.Iris.mapIterInvRule
 /-- `✓` **The proof-automation arc's phase-0 TARGETS**
