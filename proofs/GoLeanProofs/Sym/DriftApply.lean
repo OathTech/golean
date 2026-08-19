@@ -632,13 +632,17 @@ theorem applyStrictOp_conc (hI : I.Sound) (σ : ExecState) {s : State D}
         · rw [if_pos hty] at h
           cases h
         · rw [if_neg hty] at h
+          have hty2 : ¬(actual != tid
+              && !structTagCompatible (concS I σ s) actual tid) = true := by
+            simp only [Bool.not_eq_true] at hty
+            simp [hty]
           rcases hf : StructFields.lookup' fields fname with _ | w <;>
             rw [hf] at h
           · cases h
           cases h
           simp only [List.map_cons, List.map_nil, concV_struct,
             applyStrictOp]
-          rw [if_neg hty, structLookup_conc, hf]
+          rw [if_neg hty2, structLookup_conc, hf]
           simp [pure, Except.pure, Bind.bind, Except.bind]
   | fieldAddr tid fname =>
       rcases vs with _ | ⟨v, _ | ⟨x, rest⟩⟩ <;>

@@ -683,7 +683,11 @@ theorem loadLoc_conc (σ : ExecState) {s : State D} :
         · rw [if_pos hty] at h2
           cases h2
         · rw [if_neg hty] at h2
-          rw [if_neg hty]
+          have hty2 : ¬(actual != tid
+              && !structTagCompatible (concS I σ s) actual tid) = true := by
+            simp only [Bool.not_eq_true] at hty
+            simp [hty]
+          rw [if_neg hty2]
           rcases hf : StructFields.lookup' fields fname with _ | value
           · rw [hf] at h2
             cases h2
@@ -764,7 +768,11 @@ theorem storeLoc_conc (hI : I.Sound) (σ : ExecState) {s : State D} :
         · rw [if_pos hty] at h2
           cases h2
         · rw [if_neg hty] at h2
-          rw [if_neg hty]
+          have hty2 : ¬(actual != tid
+              && !structTagCompatible (concS I σ s) actual tid) = true := by
+            simp only [Bool.not_eq_true] at hty
+            simp [hty]
+          rw [if_neg hty2]
           simp only [bind_eq_ok] at h2
           obtain ⟨updated, hupd, h3⟩ := h2
           simp only [pure_bind, bind_eq_ok]

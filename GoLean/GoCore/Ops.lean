@@ -1047,6 +1047,20 @@ def isNormalForTyFuel : Nat → TypeEnv → Ty → GoValue → Bool
 def isNormalForTy (types : TypeEnv) (ty : Ty) (value : GoValue) : Bool :=
   isNormalForTyFuel typeResolutionFuel types ty value
 
+/-- Field access at a CONVERTIBLE mint tag (triage L7, 2026-08-19 —
+spec#Conversions' struct-tag clause): a pointer conversion `(*B)(a)`
+aliases the cell, which keeps its MINT tag, so a field access may
+arrive at a TypeId differing from the stored one. Go permits exactly
+the tag-convertible case — identical underlying struct types; the wire
+strips tags, so identity is wire `FieldDef`-list equality (the same
+rule the struct VALUE-conversion arm uses; embeddedness compared,
+spec-exact per arc-final audit F20). Anything else — unknown TypeIds
+included — answers false and the access stays stuck. -/
+def structTagCompatible (state : ExecState) (actual expected : TypeId) : Bool :=
+  match TypeEnv.lookup state.types actual, TypeEnv.lookup state.types expected with
+  | some (.struct fa), some (.struct fb) => fa == fb
+  | _, _ => false
+
 -- Total: structural recursion on the `Loc` argument (field/index bases are
 -- strict subterms). loadLoc depends only on itself and total helpers, so it is
 -- a genuine `def` — the premise of the eventual `wp_load` proof rule.
@@ -1058,7 +1072,7 @@ def loadLoc (state : ExecState) : Loc → Except GoError GoValue
   | .field base typeId fieldName => do
       match ← loadLoc state base with
       | .struct actualType fields =>
-          if actualType != typeId then
+          if actualType != typeId && !structTagCompatible state actualType typeId then
             stuck s!"expected struct {typeId.key}, got struct {actualType.key}"
           match StructFields.lookup fields fieldName with
           | some value => return value
@@ -1086,9 +1100,11 @@ def storeLoc (state : ExecState) : Loc → GoValue → Except GoError ExecState
     | .field base typeId fieldName, value => do
         match ← loadLoc state base with
         | .struct actualType fields =>
-            if actualType != typeId then
+            if actualType != typeId && !structTagCompatible state actualType typeId then
               stuck s!"expected struct {typeId.key}, got struct {actualType.key}"
             let updated ← StructFields.set fields fieldName value
+            -- The cell KEEPS its mint tag (`actualType`) — the
+            -- conversion aliases, never retags (triage L7).
             storeLoc state base (.struct actualType updated)
         | other => stuck s!"expected struct base for field store, got {repr other}"
     | .index base index, value => do

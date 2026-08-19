@@ -1200,7 +1200,10 @@ private theorem arm_fieldGet (hS : FrameSim ρ na₀ na fr σ σF)
   simp only [applyStrictOp]
   cases v <;> simp only [renameValue]
   case struct actual fields =>
-      by_cases hne : (actual != tid) = true
+      -- the compat check reads only the types map (triage L7)
+      rw [structTagCompatible_congr hS.types_eq]
+      by_cases hne :
+          (actual != tid && !structTagCompatible σ actual tid) = true
       · rw [if_pos hne]
         exact ExSim.stuck'
       · rw [if_neg hne, if_neg hne]

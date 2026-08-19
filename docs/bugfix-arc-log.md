@@ -1552,3 +1552,49 @@ baseline diff FULL (2181/2181), re-pin guard 0 flips
 (`/tmp/f4-ci2.log`, scratch; the failed first run `/tmp/f4-ci.log` —
 its differential half was already green, the FAIL was the ledger
 consistency check). Tier: `--diff` (same rationale).
+
+### Family 5 — struct-tag pointer-conversion field access (triage L7, 1 red)
+
+**Diagnosis confirmed**: red at the exact diagnosed check
+(`stuck "expected struct main.tagPointerB, got struct main.tagPointerA"`
+— the NOMINAL mint-tag comparison at field access). Expectation
+oracle-derived (ok/110: the write through `b` is visible through `a` —
+the conversion ALIASES); spec anchor: `spec#Conversions`' struct-tag
+clause. No edge gaps noted; judgment: none added — the frontend's
+tag-conversion F3 rows (`structs/tag-{nested,unnamed}-conversion`,
+`spec-examples-decl/struct-tag-conversion`) already pin the adjacent
+shapes as frontend-export refusals, and they did not move (verified in
+the drift).
+
+**The fix**: the three nominal checks (`fieldGet`, `loadLoc`/`storeLoc`
+field arms) relax to tag-CONVERTIBLE — `structTagCompatible` (new, in
+Ops.lean): identical underlying struct types decided by wire
+`FieldDef`-list equality, the SAME identity rule the struct
+VALUE-conversion arm uses (the wire strips tags per the spec's clause;
+embeddedness compared, F20-exact). The cell KEEPS its mint tag — the
+conversion aliases, never retags. Two Go-facts make the relaxation
+exact rather than a widening: two structs with equal FieldDef lists
+are identical-underlying, which is precisely Go's convertibility rule;
+and unknown TypeIds answer false, so nothing fails open. SEMANTIC
+COUPLING recorded: `loadLoc` now reads `state.types` (the check), so
+`loadLoc_root_congr` gained a `types`-equality hypothesis
+(`structTagCompatible_congr`; its one external caller NPDRF's read
+mover supplies `(storeLoc_shape h).1` — types are store-invariant).
+Frame sims rewrite the framed check via `types_eq`; drift proofs
+reduce the compound condition from the mirror's simple-mismatch quit
+(the mirror still QUITS on any mismatch — it asserts nothing there,
+and `State D` carries no types map to transcribe the check against;
+recorded as a mirror-coverage note, drift theorem green).
+
+**Predicted flips (pre-run): the 1 id FAIL/lean-observation → PASS,
+nothing else.** Full run: 2181 cases 2077/104 (was 2076/105); drift =
+exactly the 1 — the relaxation admits nothing else the corpus
+exercises. Baseline re-pinned; untriaged-ids: 1 retired. Backlog
+8 → 7, and the COUNT ceiling ratcheted down 25 → 7 in this commit
+(the check's advisory; the batch's whole movement recorded in
+`baselines/untriaged-count`).
+
+**Gate**: `GOLEAN_MEM_MAX=24G scripts/ci --diff` → **`RESULT: PASS`**,
+exit 0, baseline diff FULL (2181/2181), re-pin guard 0 flips,
+bug-index cross-check ok at the new ceiling (`/tmp/f5-ci.log`,
+scratch). Tier: `--diff` (same rationale).

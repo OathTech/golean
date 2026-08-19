@@ -367,7 +367,9 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
   | .fieldGet typeId fieldName, [v] => do
       match v with
       | .struct actualType fields =>
-          if actualType != typeId then
+          -- Tag-convertible mint tags are accepted (triage L7): the
+          -- pointer conversion aliases the cell, whose tag stays.
+          if actualType != typeId && !structTagCompatible s actualType typeId then
             stuck s!"expected struct {typeId.key}, got struct {actualType.key}"
           match StructFields.lookup fields fieldName with
           | some value => return (value, s)

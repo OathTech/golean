@@ -455,6 +455,6 @@ theorem loadLoc_after_disjoint_store {l m : Loc} {s s' : ExecState}
     {v : GoValue} (h : storeLoc s l v = .ok s')
     (hne : Loc.rootBase m ≠ Loc.rootBase l) :
     loadLoc s' m = loadLoc s m :=
-  loadLoc_root_congr (storeLoc_root_frame h hne)
+  loadLoc_root_congr (storeLoc_shape h).1 (storeLoc_root_frame h hne)
 
 end GoLean.GoCore.Machine
