@@ -14,7 +14,7 @@ its reasoning, for user review; every number is derivation-anchored
 | 1 | BUG-058 — if-init condition-hoist scope | DONE (`8a42e402` enumeration, `740f09f8` fix; gate PASS at `740f09f8`) |
 | 2 | BUG-057 — two-var comma-ok var-decl arity | DONE (`d5ce2dc0` enumeration, `2d840744` fix; gate PASS at `2d840744`) |
 | 3 | BUG-056 — `&*p` nil collapse (design-gated) | DONE (ruled 2026-08-19, memo §6; fix landed — the addrOfDeref strict op; 5 reds flipped, acceptance pin green) |
-| 4 | BUG-005 — live map iteration (design-gated) | RULED (2026-08-19: (L) approved, narrowings REJECTED — full literal envelope; memo §5) — implementation in progress |
+| 4 | BUG-005 — live map iteration (design-gated) | RULED (2026-08-19, memo §5); guardrails-first rework LANDED (2 membership red pins); (L) surgery in progress |
 | 5 | full red/bug triage (kill or justify) | TABLE DELIVERED (`docs/2026-08-19_triage-table.md`); A1 landed `1ca434b2`; (c) list + two gates await the user |
 | 6 | the whole-language bar (coverage ledger) | not started |
 
@@ -845,6 +845,50 @@ guard greens and the 5 store-order guards all held. Baseline
 re-pinned in this commit from that run, reason in its header.
 BUGS.md BUG-056 → fixed (mechanism one-liner + flip list + the
 acceptance pin; discovery record kept verbatim).
+
+### Slice 4, step 1 — the guardrails-first rework (ruled envelope made visible BEFORE the surgery)
+
+Per the ruling's execution order: the rows whose exact-count pins
+encoded the DEAD narrowings are reworked ahead of any machine change,
+so the surgery lands against guardrails that already state the ruled
+envelope.
+
+- **`maps/delete-readd-during-range`** — strict exact-count pin (3) →
+  MEMBERSHIP row observing the raw production count, runaway guard
+  lowered 50 → 4 so the trace tree is enumerable: admitted set
+  {3, 4, -1}, where -1 is the subject's own truncation of the
+  genuinely unbounded tail (an ADMITTED member under the full literal
+  envelope — a re-created key is re-producible forever — not a
+  violation). gc at the rework probe: 3 in 60/60.
+- **`maps/added-entry-count`** — NEW membership row: the raw
+  created-entry produce-or-skip observable its strict sibling
+  normalizes away. Admitted set {1, 2}; gc exhibits BOTH members
+  (1: 9/60, 2: 51/60, artifacts/probe/map005-rework, scratch) — so on
+  this shape the snapshot machine's "never produced" narrowing is
+  ORACLE-VISIBLE (observed ∉ modeled, the bug definition, sampled).
+- **Both are deliberately RED pre-surgery** (FAIL/membership: the
+  snapshot machine enumerates singletons — {3} and {1} — and the
+  membership lint refuses singleton-set membership rows) and are now
+  on BUG-005's Cases line; both flip green at the (L) surgery.
+- **JUDGMENT (slice 4, added-entries-bound stays STRICT).** The ruling
+  says created-entry-latitude cases ride membership rows; the
+  member-invariant bound subject (returns 7 across the WHOLE ruled
+  envelope — key 1 is a mandatory never-removed start key, so entry 2
+  is created exactly once and producible at most once) was attempted
+  as a membership row and the harness lint REFUSED it ("enumerated
+  observation set is a singleton — the case belongs in the strict or
+  confluent lane"). The lint is right: member-invariant observables
+  are what the strict lane is FOR; the ruling's substance (the raw
+  latitude on a membership row) is carried by `added-entry-count`.
+  Recorded in the case file so the split reads as the lint working,
+  not tag-dodging.
+
+**Predicted drift, stated before the run (2 lines):**
+`delete-readd-during-range` PASS/- → FAIL/membership;
+`added-entry-count` NEW → FAIL/membership. **Full run: exactly that**
+— 2181 cases, 2052 PASS / 129 FAIL (was 2180, 2053/127). Baseline
+re-pinned in this commit; check-bugs ok (backlog unchanged 25/25 —
+both new reds are explained by BUG-005's Cases line).
 
 ---
 

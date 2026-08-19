@@ -2231,8 +2231,30 @@ the re-pin guard. The guard treats an untyped-nil source as exact
 
 - Status: open
 - Pinned-by: differential
-- Cases: maps/delete-during-range, maps/clear-during-range, maps/update-during-range, race/negative/map-range-iter, maps/delete-unreached-during-range
+- Cases: maps/delete-during-range, maps/clear-during-range, maps/update-during-range, race/negative/map-range-iter, maps/delete-unreached-during-range, maps/delete-readd-during-range, maps/added-entry-count
 - Discovered: 2026-07-26 (pre-merge adversarial audit of `wrong-answers-builtins`)
+- RULING + guardrail REWORK (2026-08-19, memo §5 USER RULING): the (L)
+  surgery is approved with the memo's two narrowings REJECTED — the
+  FULL literal envelope ships (deletion prunes the produced-set AND
+  the mandatory start-set; a deleted-then-re-created key is a NEW
+  created entry, re-producible — the adopted reading, ledger L-012).
+  Guardrails-first: the two rows whose exact-count pins encoded the
+  dead narrowings are reworked to MEMBERSHIP rows ahead of the
+  surgery, and both are deliberately RED under the snapshot machine
+  (now on the Cases line): `maps/delete-readd-during-range` (raw
+  count, admitted set {3,4,-1} with -1 the subject's own truncation of
+  the genuinely unbounded tail; snapshot machine enumerates the
+  singleton {3} — the membership lint refuses it) and the NEW
+  `maps/added-entry-count` (raw created-entry produce-or-skip count,
+  admitted set {1,2}; gc exhibits BOTH members — 1: 9/60, 2: 51/60 at
+  the rework probe — while the snapshot machine enumerates {1}: the
+  narrowing is oracle-visible on this shape). The member-invariant
+  strict bound `maps/added-entries-bound` STAYS strict (attempted
+  membership; the harness lint correctly refused the singleton-set
+  row — its observable is 7 across the whole ruled envelope). Both
+  reds flip green at the (L) surgery; self-inserting loops are
+  genuinely unbounded there and ∀-streams certification fails closed
+  on them (the membership lane carries them, and the claim says so).
 - PROBES + design memo (bug-fix arc slice 4, 2026-08-19;
   `docs/2026-08-19_bug005-map-range-memo.md` — slice 4 is
   design-gated, no fix in that commit). Three rows added:
@@ -2240,10 +2262,12 @@ the re-pin guard. The guard treats an untyped-nil source as exact
   removal clause isolated from the delete-everything shape: machine
   20, go 11) and two member-invariant GREEN envelope-bound pins
   (`maps/added-entries-bound`, `maps/delete-readd-during-range` —
-  guard pins, deliberately NOT on the Cases line, which the bug-index
-  cross-check reserves for this bug's reds) that stay green under
-  snapshot AND any conforming live model and go red on
-  over-production, alien keys, or divergence. Probe findings the memo
+  guard pins, at memo time deliberately NOT on the Cases line; the
+  2026-08-19 ruling rework since moved `delete-readd-during-range` to
+  a membership row that is deliberately RED pre-surgery and therefore
+  IS on the Cases line now — see the RULING + REWORK bullet above)
+  that stay green under snapshot AND any conforming live model and go
+  red on over-production, alien keys, or divergence. Probe findings the memo
   rests on (artifacts/probe/map005, scratch; 400 runs each): gc
   exhibits the FULL added-entries latitude across plain re-runs
   (counts 4..8 all realized on a 4+4 shape); gc NEVER re-produces a

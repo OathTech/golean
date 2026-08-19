@@ -17,6 +17,20 @@ package main
 // latitude to "never produced"), green under any conforming live model,
 // RED if a fix ever produces an added entry twice, produces a key the map
 // never held, or fails to terminate.
+//
+// LANE DISPOSITION (2026-08-19 ruling execution): the ruling moves
+// created-entry-latitude cases to membership rows — attempted here and
+// correctly REFUSED by the harness lint ("enumerated observation set is
+// a singleton — the case belongs in the strict or confluent lane"),
+// because this subject's observable is 7 across the WHOLE ruled
+// envelope (key 1 is a mandatory never-removed start key, so entry 2 is
+// created exactly once and producible at most once): member-invariant
+// bounds are exactly what the strict lane is for. The MEMBERSHIP form
+// of this shape is the sibling package maps/added-entry-count, which
+// observes the raw production count (admitted set {1,2} under the
+// ruled envelope) — red under the snapshot machine, green at the (L)
+// surgery. Recorded so the lane split reads as the lint working, not
+// tag-dodging.
 
 func mapAddedEntriesBound() int {
 	m := map[int]int{1: 10}

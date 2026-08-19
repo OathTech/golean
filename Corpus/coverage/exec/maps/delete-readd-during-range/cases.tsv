@@ -1,2 +1,2 @@
-# id	subject	args	expected_status	expected_reason	features
--	mapDeleteReAddDuringRange	-	ok	-	maps,delete,range,evaluation_order
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+-	mapDeleteReAddDuringRange	-	ok	-	maps,delete,range,evaluation_order,nondet	membership	REWORKED from a strict exact-count pin (2026-08-19 ruling: full literal envelope — the old count-3 pin encoded the dead at-most-once-per-key narrowing). A deleted-then-re-created key is a NEW created entry and may be produced again, so the honest claim is membership: gc's sample (3, its only exhibited member, 400/400 probe runs) lies inside the admitted set {3, 4, -1}; -1 is the subject's own truncation of the genuinely unbounded tail, an admitted member. Width bound: the pick-next site's bound is live candidates + the stop slot, at most 3+1 — width 16 >= 4	width=16
