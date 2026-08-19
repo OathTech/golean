@@ -111,8 +111,152 @@ this commit from that full run: 2102 cases, 1959 PASS / 143 FAIL.
 
 ### Step 2 — the fix
 
-(recorded at the fix commit)
+`tools/nativefrontend/emit.go`, `emitIf` only (+52/-3 lines, all of it
+in that one function). Two halves:
+
+1. **Scope the condition's accumulator** — when `st.Init != nil`, the
+   condition is emitted with `e.hoisted` saved/nil'd/restored around
+   `e.emitExpr(st.Cond)`, the same save/capture/restore the ELSE
+   branch has used since the else-if fix and `emitFor` uses for
+   `condPre`/`post`. When `st.Init == nil` the old path is kept
+   verbatim: there is no scope to stay inside, and the enclosing
+   accumulator already places the temps immediately before the if.
+2. **Re-establish the init's scope around them** — with a non-empty
+   condition accumulator, `emitIf` returns a wire
+   `block` of `[init, condHoists…, if]` instead of an `if` node
+   carrying an `init` key. That block is *the same scope the decoder
+   already builds*: `decodeIf` lowers the `init` key as
+   `.block #[] #[init, ifThenElse …]`
+   (`GoLean/NativeToIR.lean:1143-1153`). So the init-declared names
+   are visible to the hoists, to the condition and to both branches —
+   the implicit block spec#Blocks gives the statement ("Each `if`,
+   `for`, and `switch` statement is considered to be in its own
+   implicit block").
+
+**JUDGMENT (slice 1, mechanism choice).** The obvious alternative was
+to mirror `emitFor` exactly: add a `condPre` key to the wire `if`
+node and splice it in `decodeIf`. Rejected: that is a wire-schema
+change plus a decoder change to buy a shape the decoder *already*
+produces for `init`. The block wrapper is frontend-local (the
+charter's "emitIf-local"), touches no Lean file, and cannot introduce
+a scope the decoder did not already have. `for` genuinely needs
+`condPre` because its condition is re-tested every iteration —
+`if` tests once, so a straight-line splice is exact.
+
+**JUDGMENT (slice 1, minimality).** The wrap fires ONLY when there is
+both an init and a non-empty condition accumulator. An `if` without an
+init, or with an init and a hoist-free condition, emits the same bytes
+as before — which is why the full run's drift is exactly the bug's own
+family and nothing else.
+
+**Predicted flip set, stated before the confirming run (10 red→green,
+1 new green id, nothing else):**
+
+- `spec-examples-lexical/panic-values/panic-error`
+  (FAIL/lean-observation → PASS)
+- `spec-examples-stmt/if-init-hoist-order/{cond-call-after-init,
+  init-panic-first, else-if-chain, func-literal, nested,
+  cond-panic-after-init}` (FAIL/differential → PASS)
+- `spec-examples-stmt/if-init-hoist-order/{cond-hoist-reads-init,
+  comma-ok-short-circuit, comma-ok-method-short-circuit}`
+  (FAIL/lean-observation → PASS)
+- `control-flow/goto-if-init-cond-hoist` (NEW → PASS)
+
+**The goto interaction case, and why it is in this commit.** The fix
+changes the SHAPE of a top-level statement inside a goto-restructured
+segment (an `if` node becomes a `block`), and `degradeGotoDeclares`
+(emit.go:1130) rewrites top-level source declarations there. The
+init's declaration is nested in both shapes — under the `init` key
+before, inside the block after — so it keeps its `declare` in both,
+which is correct (a backward jump re-declares it). "Correct by the
+same argument in both shapes" is the kind of claim that deserves a
+case, so `control-flow/goto-if-init-cond-hoist` pins it.
+**JUDGMENT (slice 1):** it is a NEW id in the fix commit rather than
+in the enumeration commit because the interaction it probes is a
+property of the fix, not of the bug — but it was verified RED under
+the pre-fix emitter first (`git stash` of `emit.go`,
+`scripts/coverage run --prefix control-flow/goto-if-init-cond-hoist`
+→ `cases=1 pass=0 fail=1`), so it is a genuine BUG-058 witness and
+not a case written to match the implementation.
 
 ### Step 3 — masked-green sweep
 
-(recorded at the fix commit)
+**Scope and method.** Mechanized: an AST scan
+(`artifacts/probe/sweep`, scratch) over every `.go` file under
+`Corpus/`, `raftharness/` and `compat/`, finding every `ast.IfStmt`
+with `Init != nil` and reporting whether its `Cond` contains a
+hoist-capable construct (call, composite literal, receive, func
+literal). AST-based rather than grep-based so that multi-line and
+nested shapes cannot hide — a line grep had already missed shapes,
+which is why this was mechanized.
+
+**Findings.**
+
+- `Corpus/`: **85** if-with-init statements; **17** with a
+  hoist-capable construct in the condition. 15 of the 17 are this
+  slice's own `if-init-hoist-order` package. Of the other two:
+  - `spec-examples-lexical/panic-values:40` — the already-pinned red
+    (`ok && e.Error() == …`), now green.
+  - `spec-examples-lexical/channel-direction-forms:19` —
+    `if got := <-bidi; int(got) == 7`. The scanner counts `int(got)`
+    as a call; it is a CONVERSION, which the frontend does not hoist.
+    Green before the fix and after it — and that green is itself the
+    evidence that conversions do not hoist (if they did, `got` would
+    have been unbound and the case stuck).
+- `raftharness/`: 20 if-with-init, 1 flagged (`scenarios.go:54`,
+  `len(v) > 0` — a builtin, not a hoist). Not a differential case in
+  any event; the harness runs in real Go.
+- `compat/`: 0 if-with-init statements.
+
+**Conclusion: no masked green.** No corpus case outside this bug's own
+family combined an if-with-init with a hoisting condition, so no
+green could have coincided with correctness. This is the honest
+negative result the charter asked for, with its scope stated — not an
+absence of looking.
+
+**One disposition-level finding, recorded rather than dropped.** It is
+a *sufficiency* gap, not a mask: `If_statements-3-23172299`'s five
+rows (`spec-examples-stmt/if-init-else-chain/*`) pin the branch
+structure of `if x := f(); x < y … else if … else …`, but nothing in
+them can observe ORDER — the init's `f()` is un-hoisted and every
+condition is a pure comparison. So the spec block's own sentence
+("which executes before the expression is evaluated") was unwitnessed
+while the machine had exactly that order wrong. The order witnesses
+are the `if-init-hoist-order` and `init-hoist-relatives` families;
+the disposition row now says so, and
+`Handling_panics-2-e7d4cef6` now records that `panic-int` /
+`panic-string` were never masked (a pure short-circuit right operand
+hoists nothing) while `panic-error` was the family's only red.
+
+**For the arc's later slices:** `deps/raft` itself has 103
+if-with-init statements, 12 with a call in the condition — the shape
+this fix unblocks is not hypothetical for W4.
+
+### Gate at the fix commit
+
+`GOLEAN_MEM_MAX=24G scripts/ci --diff`, full run at the fix tree. The
+baseline diff's drift was **exactly the predicted set and nothing
+else**: the 10 red→green flips listed above plus
+`control-flow/goto-if-init-cond-hoist` as a NEW/PASS id, across 2103
+cases. In particular the 6 `init-hoist-relatives` greens all held, so
+the fix did not disturb `emitFor`/`emitSwitch`/`emitTypeSwitch`. Every
+other step `ok`, including the re-pin guard (0 PASS→non-PASS flips)
+and `eval tests (136 ok)`. Baseline re-pinned in the fix commit from
+that run: 2103 cases, 1970 PASS / 133 FAIL (was 1959/143), reason in
+its header. `scripts/check-bugs.sh` then reports ok (61 bugs) with
+BUG-058 marked fixed — the cross-check is what refuses a
+"fixed" entry whose cases are still red, so its green is a real
+confirmation, not a formality.
+
+The run that produced these numbers was started before two
+COMMENT-ONLY edits to `emit.go` (a spec citation corrected from
+`spec#Declarations_and_scope` to the accurate `spec#Blocks` implicit
+-block sentence), so the gate was re-run at the committed tree to
+keep the record exact; that re-run is the one recorded as the slice's
+gate (see the slice-1 tail below).
+
+**Slice 1 state: BUG-058 fixed and closed.** All 10 of its pinned
+cases green, the edge set landed, the raft integration shape green in
+both plain and method form, the non-affected relatives pinned green,
+the masked-green sweep recorded with its scope and its one
+disposition-level finding.

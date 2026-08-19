@@ -2586,7 +2586,21 @@ FIRST per the standing rule.
 
 ## BUG-058 — if-statement init scope: condition hoist block emitted OUTSIDE the init
 
-- Status: open (discovered 2026-08-18, spec-truth P3; DIAGNOSIS
+- Status: fixed (2026-08-19, bug-fix arc slice 1 — `emitIf` now emits
+  the condition into its OWN hoist accumulator and, when that
+  accumulator is non-empty, returns a wire `block` of
+  `[init, condHoists…, if]` instead of an `if` node carrying an
+  `init` key. That block is the same scope `decodeIf` already builds
+  for the `init` key (`.block #[] #[init, ifThenElse …]`,
+  GoLean/NativeToIR.lean:1143-1153), so the init-declared names are
+  visible to the hoists, the condition and both branches — no wire
+  schema change, no decoder change, no GoCore change. An `if` with no
+  init, or with an init and a hoist-free condition, emits exactly the
+  wire it emitted before. Flipped, all in the fix commit: the 9
+  `if-init-hoist-order/*` rows and `panic-values/panic-error`
+  (10 red→green), plus the new `control-flow/goto-if-init-cond-hoist`
+  landing green; nothing else moved in the full run.)
+  (discovered 2026-08-18, spec-truth P3; DIAGNOSIS
   REWRITTEN at the P3 pre-merge audit — the original entry blamed
   comma-ok assertion in a recover handler and prescribed a frontend
   quarantine; every axis of that was wrong, and the quarantine would
@@ -2637,4 +2651,21 @@ FIRST per the standing rule.
   the fix cannot regress them silently.
 - Emitter line numbers in this entry are the P3-era ones; at the fix
   commit `emitIf` is at emit.go:2517.
+- MASKED-GREEN SWEEP (bug-fix arc slice 1): mechanized with an AST
+  scan of every `.go` file under `Corpus/` — 85 `if`-with-init
+  statements, 17 with a hoist-capable construct in the CONDITION, of
+  which 15 are this bug's own package, 1 is `panic-values/panic-error`
+  (already pinned red) and 1 is
+  `spec-examples-lexical/channel-direction-forms:19`, where the
+  "call" is the CONVERSION `int(got)`, which the frontend does not
+  hoist — the case was green before the fix and after it, so the
+  scanner's classification is conservative there. **No masked green:
+  no corpus case outside this family combined an if-init with a
+  hoisting condition, so none could coincide with correctness.** The
+  disposition-level finding is a SUFFICIENCY gap rather than a mask:
+  `If_statements-3-23172299`'s five green rows
+  (`if-init-else-chain/*`) cannot observe order at all, so the spec
+  block's own "executes before the expression is evaluated" was
+  unwitnessed while the machine had it wrong — recorded on that row
+  in docs/spec-archaeology/spec-examples-dispositions.tsv.
 

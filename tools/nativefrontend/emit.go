@@ -2516,14 +2516,39 @@ func (e *emitter) emitDeclStmt(st *ast.DeclStmt) (any, error) {
 
 func (e *emitter) emitIf(st *ast.IfStmt) (any, error) {
 	node := map[string]any{"stmt": "if"}
+	var initNode any
 	if st.Init != nil {
 		init, err := e.emitStmt(st.Init)
 		if err != nil {
 			return nil, err
 		}
-		node["init"] = init
+		initNode = init
 	}
-	cond, err := e.emitExpr(st.Cond)
+	// The condition is evaluated AFTER the init statement and INSIDE its
+	// scope (spec#If_statements: the expression "may be preceded by a
+	// simple statement, which executes before the expression is
+	// evaluated"), so the condition's hoisted temps belong BETWEEN them.
+	// The enclosing accumulator would place them before the whole if —
+	// ahead of the init, and outside its scope, which is a wrong order
+	// when the hoisted work is effectful and a STUCK run when it reads an
+	// init-declared name (BUG-058). Same class as the else accumulator
+	// below, and as emitFor's condPre/post. Scope it here; the wrap that
+	// re-establishes the init's scope happens at the return.
+	var condHoists []any
+	var cond any
+	var err error
+	if st.Init != nil {
+		saved := e.hoisted
+		e.hoisted = nil
+		cond, err = e.emitExpr(st.Cond)
+		condHoists = e.hoisted
+		e.hoisted = saved
+	} else {
+		// No init: there is no scope to stay inside, and the enclosing
+		// accumulator already places the temps immediately before the if.
+		// Keep that path byte-identical.
+		cond, err = e.emitExpr(st.Cond)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -2553,7 +2578,29 @@ func (e *emitter) emitIf(st *ast.IfStmt) (any, error) {
 		}
 		node["else"] = els
 	}
-	return node, nil
+	if st.Init == nil {
+		return node, nil
+	}
+	if len(condHoists) == 0 {
+		// Nothing to place: keep the plain `init` key, so every if that
+		// does not trip the bug emits exactly the wire it emitted before.
+		node["init"] = initNode
+		return node, nil
+	}
+	// Make the init's scope EXPLICIT and splice the condition's hoists
+	// into it, after the init. This is the same scope decodeIf builds for
+	// the `init` key — `.block #[] #[init, ifThenElse …]`
+	// (GoLean/NativeToIR.lean) — so the init-declared names are visible to
+	// the hoists, to the condition and to both branches, which is the
+	// implicit block spec#Blocks gives the statement ("Each \"if\",
+	// \"for\", and \"switch\" statement is considered to be in its own
+	// implicit block"). No wire-schema change and no decoder change: the
+	// wrapper is an ordinary `block`.
+	body := make([]any, 0, len(condHoists)+2)
+	body = append(body, initNode)
+	body = append(body, condHoists...)
+	body = append(body, node)
+	return map[string]any{"stmt": "block", "body": body}, nil
 }
 
 func (e *emitter) emitFor(st *ast.ForStmt) (any, error) {
