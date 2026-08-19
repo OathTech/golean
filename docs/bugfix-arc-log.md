@@ -2626,3 +2626,58 @@ re-pinned (reason in its header); check-bugs ok (63 bugs; coverage
 `GOLEAN_MEM_MAX=24G scripts/ci --diff` → **`RESULT: PASS`**, exit 0,
 every step ok (`/tmp/afr-f1-ci.log`, scratch). Only this paragraph
 differs between the gated and committed trees.
+
+### Rebase onto main + the raft-lane join validation
+
+- **Snapshot ref** `refs/snapshots/bugfix-arc-prerebase` at `570f2ee6`
+  (the pre-rebase tip), per the crash rule.
+- **`git rebase main`** (main at `ee1e5628`, the raft-W2 landing):
+  clean, 40 commits replayed, ZERO conflicts — reviewer B's zero-file-
+  overlap claim (F-B2) verified independently before the rebase
+  (`git diff --name-only` both sides of the merge base, empty
+  intersection).
+- **F-B2's confirming read — `docs/raft-w2-log.md` "§6b" vs the H-3
+  mechanism.** Outcome: CONSISTENT. The cite resolves to §6's
+  "(b) Export-dead: NO — and this is the finding" subsection (the file
+  has no literal §6b heading — the letter is the requirement label,
+  worth knowing when following the cite): methods have no per-decl
+  quarantine, evidenced at `mono.go:489` + `emit.go:537` — exactly the
+  two comments the H-3 commit corrected, and the H-3 stub mechanism
+  (signature-carrying entries that refuse when CALLED, satisfaction
+  answered from real signatures, whole-export refusal when a signature
+  itself does not lower) is precisely the contract §8's H-3 handoff row
+  asks for. W2's §8 also carries H-4 (statement-position `copy`),
+  which slice 5's A1 discharged — the raft lane can drop it, as the
+  H-3 measurement section already forecast.
+- **`tools/raftsubject/frontier.py` against the rebased emitter**
+  (binary built per its README: `GO111MODULE=off go build -o
+  artifacts/nativefrontend ./tools/nativefrontend`). Tracked plan
+  (10 rows + terminal): all ten rows report `MISMATCH (exports clean)`
+  — every predicted refusal RETIRED by this branch's H-3, the exact
+  shape the slice-5b measurement forecast — terminal row ok,
+  `final: EXPORTS CLEAN`, EXIT=1 only because the stale 10 rows are
+  W2.2's edit to make, not ours. Terminal-only plan (the plan shape
+  W2.2 will track): `1 ok (exports clean)`, `final: EXPORTS CLEAN`,
+  **EXIT=0** — the subject tree exports clean with zero
+  neutralisations under this branch's frontend.
+- **`tools/raftsubject/difftest.py`**: **PASS** unchanged, EXIT=0
+  ("plainpb agrees with upstream raftpb on every probed value") — it
+  tests the shim under `go run`, not our emitter, run to certify the
+  lane's own gate green at the join.
+
+### THE FINAL GATE at the rebased tip (C's procedural note discharged)
+
+The pre-rebase tip's recorded run had been judged from a PARTIAL slice
+at one point in the arc's history; the merge wants the full-class
+certification at the actual join, so the FULL gate ran at the rebased
+tip with the differential: `GOLEAN_MEM_MAX=24G scripts/ci --diff` →
+**`RESULT: PASS`**, exit 0, every step ok — `differential coverage
+summary: cases=2226 pass=2095 fail=131` (the predicted post-A1/post-F1
+count: 2219 arc-gate + 5 BUG-063-round ids + 2 R15 ids), `baseline
+diff FULL (2226/2226, no regression)`, `negative baseline diff (no
+regression)`, `re-pin guard (0 PASS→non-PASS flips)`, frontend unit
+tests ok, `eval tests (136 ok)` (`/tmp/afr-final-ci.log`, scratch).
+The branch is rebase-complete on `main@ee1e5628`, lane-validated at
+the join (frontier terminal-row EXIT=0, difftest PASS), gate-green at
+the tip. The audit ask for the fix round's own delta remains the
+operator's call, per protocol.
