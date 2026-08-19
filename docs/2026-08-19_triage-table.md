@@ -166,7 +166,7 @@ the 24 groups (77 of the 92 reds) are **(b)**.
 | F4 | implicit boxing of tuple COMPONENTS into interface-typed targets | `emit.go:2225`, `:2529`, `:2601` — `unsup("implicit interface conversion in multi-value assignment (interfaces campaign, deferred)")` | `spec#Assignment_statements` + `spec#Assignability`; the shape is written verbatim in `spec#Type_assertions` | `imported-goose/unittest/interfaces`, `spec-examples-decl/assert-comma-ok`, `spec-examples-decl/var-comma-ok-matrix/{assert-typed-iface,index-typed-iface,recv-typed-iface,tuple-call-iface}` (6) | **(b)** a recorded interfaces-campaign deferral; three of the six were pinned red DELIBERATELY by slice 2 so the BUG-057 reroute could not relax into a silent unboxed store |
 | F5 | `goto` over a declaration whose per-execution cell identity is observable (captured / address-taken / array-storage-sliced / pointer-method receiver) | `emit.go:1459`, `:1474`, `:1476`, `:1478` — `unsup("goto function hoists …")` | `spec#Goto_statements` (the jumps are LEGAL; the refusal is our hoisting lowering's honesty check — a backward jump gives Go a FRESH cell, the hoisted lowering one shared cell) | `control-flow/goto-backward-{array-slice,capture,elem-addr,field-addr,nested-recv}` (5) | **(b)** fresh-cell-per-execution goto lowering; not raft-path (no `goto` in `deps/raft`) |
 | F6 | map elements as targets in a MULTI-assignment (`m[0], m[1] = m[1], m[0]`) | `emit.go:5125` — `unsup("map element as assignment target outside a single assignment")` | `spec#Assignment_statements` (two-phase) + `spec#Address_operators` (map elements not addressable) | `imported-goose/semantics/multiple-assign/multiple-assign-to-map`, `maps/{tuple-assign-key-eval,tuple-map-expr-targets,tuple-rhs-before-target-write,tuple-swap-values}` (5) | **(a)** mini-slice A3, QUEUED |
-| F7 | method expressions in CALL position (`T.Mv(t, 7)`, `(*T).Mp(&t, .5)`) | `emit.go:6567` — `unsup("selector call %s is not a method value", sel.Sel.Name)` | `spec#Method_expressions` | `spec-examples-lexical/method-expressions/{pointer-receiver-expr,value-receiver-expr}`, `spec-examples-stmt/method-expr-five-forms` (3) | **(a)** mini-slice A2 |
+| F7 | method expressions in CALL position (`T.Mv(t, 7)`, `(*T).Mp(&t, .5)`) | `emit.go:6567` — `unsup("selector call %s is not a method value", sel.Sel.Name)` | `spec#Method_expressions` | `spec-examples-lexical/method-expressions/{pointer-receiver-expr,value-receiver-expr}`, `spec-examples-stmt/method-expr-five-forms` (3) | **(a)** mini-slice A2 — **FIXED in this slice** |
 | F8 | the derived pointer-receiver function for a VALUE-receiver method (`(*T).Mv` deref adapter) | `emit.go:4919` — `unsup("method expression (*%s).%s over a value-receiver method (deref adapter not modeled)")` | `spec#Method_expressions` | `spec-examples-decl/method-expressions`, `spec-examples-lexical/method-expressions/derived-pointer-receiver-expr` (2) | **(b)** a SYNTHESIZED wire adapter, not routing — distinct from F7 |
 | F9 | promoted/embedded and expression-position sync-primitive calls | `emit.go:6541` — `unsup("sync.%s.%s outside a direct statement/defer position (promoted, embedded, and expression-position sync ops are unmodeled)")` | n/a (sync stdlib surface; design note §9) | `sync/escapes/{defer-embedded,promoted}`, `sync/out-of-scope-trylock/trylock-uncontended` (3) | **(b)** — **the highest-priority raft-path frontier row in this table**: `deps/raft/storage.go:108` embeds `sync.Mutex` in `MemoryStorage` and `storage.go:139,147` are exactly the promoted-`defer ms.Unlock()` shape. TryLock is separately deferred to the atomics arc (its spin-wait termination class is a FairStream question) |
 | F10 | sync methods through interface dispatch (`sync.Locker`, user interfaces) | stub at `emit.go:4679-4681`; quarantined by `NativeToIR.lean`'s `decodeFunc` — `"sync-primitive method sync.X.Y through interface dispatch (declaration-only stub: satisfaction answers; only direct statement/defer-position calls are modeled)"` | n/a (sync surface; design note §12) | `sync/iface-dispatch/{locker-box-dispatch,mutex-user-iface,wg-user-iface}` (3) | **(b)**; note the pin is itself an audit fix — before the stub pass this shape ESCAPED to runtime `stuck` |
@@ -197,9 +197,20 @@ gates — those are the arc's designed pauses"), not a preference:
 | mini-slice | subject | reds flipped | new ids |
 | --- | --- | --- | --- |
 | **A1** | `copy`/`recover` in expression-statement position (F14) | 3 | 7 (the edge enumeration, all PASS) |
+| **A2** | method expressions in CALL position (F7) | 3 | 5 (the five paths `emitSelector`'s MethodExpr arm distinguishes, all PASS) |
 
-Recorded in `docs/bugfix-arc-log.md` §slice 5 with its judgment calls,
-its guardrails-first colors and its gate.
+Both recorded in `docs/bugfix-arc-log.md` §slice 5 with their judgment
+calls, their guardrails-first colors and their gates (`scripts/ci --diff`
+→ PASS at each). Commits `1ca434b2` and `357b7297`; the tip baseline is
+2179 cases / 2047 PASS / **132 FAIL**.
+
+**A2's drift is evidence for a triage split.** The four
+"selector call X is not a method value" reds were ONE group by error
+STRING and TWO groups by CAUSE: three are method expressions (F7) and
+`spec-examples-decl/timezone-stringer` is blocked by `fmt.Sprintf`, i.e.
+the stdlib surface (F19). A2 greened exactly the three and left
+`timezone-stringer` red — which is what a correct grouping predicts and
+a lazy one does not.
 
 ### 3.2 QUEUED frontend-only mini-slices (no user gate; a scheduling call)
 
@@ -210,7 +221,6 @@ met while one is open).
 
 | id | subject | reds | mechanism | why deferred here |
 | --- | --- | --- | --- | --- |
-| **A2** | method expressions in call position (F7) | 3 | add a `types.MethodExpr` branch to `emitMethodCall` mirroring the FieldVal `call-value` branch (`emit.go:6549-6563`); the callee comes from `emitSelector`'s MethodExpr arm (`emit.go:4864-4922`), which already emits correct func-values in VALUE position — this is routing, not synthesis | ~half a day; taken next if the slice has room. The F8 deref-adapter rows stay red by the guard at `emit.go:4919`, so the split is load-bearing |
 | **A3** | map elements as multi-assignment targets (F6) | 5 | in `emitAssign`'s generic multi-target path, hoist base+key temps in TARGET order alongside the RHS hoists, then emit the existing `map-assign` store nodes in target order | ~1 day, and it lands inside the ASSIGNMENT SPINE that BUG-025/BUG-052 own (phase-1 operand order, inter-target order — an open-envelope area). It needs its own edge enumeration of the two phases, not a ride-along |
 | **A4** | unnamed channel types as generic type arguments (F16) | 1 | a `*types.Chan` arm in `mono.go`'s `renderTypeArg` spelling `chan int` / `<-chan int` / `chan<- int` | ~half a day, but it moves the MANGLING/identity surface: the arm owes a reflect-spelling probe (every existing arm cites one), an injectivity argument, and an update to `TestManglingSurfaceFailsClosed`, which pins the refusal. Identity work deserves its own slice |
 | **A5** | shadow-capture over a tuple-typed comma-ok RHS (F22) | 1 | in the `captures` branch, when `goTypeOf(r)` is a `*types.Tuple`, pre-bind the comma-ok SOURCE'S OPERANDS to temps instead of hoisting the whole RHS | ~half–1 day; a BUG-057-family edge whose oracle is the case's own expected `(7, true)` with the outer `v` |
@@ -592,10 +602,12 @@ At `0c21aa21` (before this slice's A1), by RED and by GROUP:
 | **(c)** profound-reason pin | **10** | 6 | 4 (BUG-002, BUG-004, BUG-059, BUG-061) |
 | total | **138** | 45 | 9 |
 
-The (a) 46 decompose as: **3 fixed in this slice** (A1) + **14 queued
-frontend-only mini-slices** (A2 3, A3 5, A4 1, A5 1, A6 4) + **19 gated
-on the GoCore pause** (§3.3) + **10 already at the charter's slice-3/4
-gates** (BUG-056 5, BUG-005 5).
+The (a) 46 decompose as: **6 fixed in this slice** (A1 3 + A2 3) +
+**11 queued frontend-only mini-slices** (A3 5, A4 1, A5 1, A6 4) +
+**19 gated on the GoCore pause** (§3.3) + **10 already at the charter's
+slice-3/4 gates** (BUG-056 5, BUG-005 5). After A1 and A2 the tip
+baseline is 2179 cases / 2047 PASS / 132 FAIL — 11 new green ids and 6
+reds retired, with zero unpredicted drift at either gate.
 
 The (b) 82 decompose as: 74 `frontend-export` + 8 fidelity-stage
 (L2b 1, L8 1, L9 2, L13 2, L14 1, L15 1).
@@ -611,7 +623,7 @@ that the categorisation and the fix record cannot drift into each other.
 "every baseline red is category-(b) frontier … or category-(c)
 profound-reason … every BUGS.md entry is fixed or category-(c)"):
 
-1. the 14 queued frontend-only (a) reds — A2…A6, mechanisms in §3.2;
+1. the 11 queued frontend-only (a) reds — A3…A6, mechanisms in §3.2;
 2. the 19 GoCore-gated (a) reds — ONE user gate, §3.3;
 3. the two design gates already open (BUG-056, BUG-005);
 4. user ratification of the 7-row (c) list, §4;
