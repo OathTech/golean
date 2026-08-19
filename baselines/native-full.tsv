@@ -1,32 +1,39 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-19 (bug-fix arc slice 5, triage mini-slice A1 —
-#   `copy` and `recover` in EXPRESSION-STATEMENT position)
-#   commit: this commit (on 0c21aa21, the slices-3+4 memo tip)
-#   re-pin reason: a category-(a) triage fix. spec#Expression_statements
-#   permits every builtin in statement context except
-#   append/cap/complex/imag/len/make/new/real/unsafe.* — so `copy` and
-#   `recover` are legal there and were being REFUSED
-#   ("builtin %s in statement position"), quarantining the whole
-#   declaration. `copy` in statement position occurs in etcd-io/raft
-#   (util.go, tracker/inflights.go), so the refusal was on the
-#   north-star path. emitStmt's ExprStmt builtin switch now lowers both
-#   through the existing (green) EXPRESSION node under a BLANK
-#   assignment target — the `_ = copy(dst, src)` shape — and `print`/
-#   `println` keep the refusal. Frontend-only; no decoder or GoCore
-#   change. Guardrails landed FIRST in the same slice and verified RED
-#   pre-fix (7/7, exact refusal strings recorded in
-#   docs/bugfix-arc-log.md §slice 5).
+# recorded: 2026-08-19 (bug-fix arc slice 5, triage mini-slice A2 —
+#   method expressions in CALL position)
+#   commit: this commit (on 4065fe6e, the triage-table tip)
+#   re-pin reason: a category-(a) triage fix. spec#Method_expressions:
+#   `T.Mv` "yields a function equivalent to Mv but with an explicit
+#   receiver as its first argument", and the spec's own
+#   five-equivalent-invocations block writes the DIRECT call forms
+#   `T.Mv(t, 7)` / `(T).Mv(t, 7)`. Method expressions were supported in
+#   VALUE position but refused in CALL position — emitMethodCall's
+#   selection dispatch fell past the MethodVal and FieldVal branches
+#   into `unsup("selector call %s is not a method value")`,
+#   quarantining the declaration. A MethodExpr branch now routes the
+#   call through emitSelector's existing (green) MethodExpr func-value
+#   under the same `call-value` shape a func-typed field takes:
+#   routing, not synthesis. Frontend-only; no decoder or GoCore change.
+#   The refusals inside emitSelector ride along unchanged — the
+#   `(*T).Mv` DEREF ADAPTER rows stay red (spec-examples-decl/
+#   method-expressions, spec-examples-lexical/method-expressions/
+#   derived-pointer-receiver-expr), and so does the sync
+#   method-expression guard. spec-examples-decl/timezone-stringer also
+#   stays red: it reaches the same refusal STRING but its blocking
+#   construct is `fmt.Sprintf` — the stdlib surface, a different
+#   frontier row (triage table F19).
+#   Guardrails landed FIRST in the same slice and verified RED pre-fix
+#   (5/5, exact refusal strings; docs/bugfix-arc-log.md §slice 5).
 #   Deltas — the predicted set exactly, nothing else moved:
 #     FAIL/frontend-export -> PASS (3):
-#       goroutines/spawn-edge/child-recovers
-#       imported-goose/semantics/copy/copy-simple
-#       imported-goose/unittest/copy/copy-simple
-#     NEW PASS (7): builtins/statement-position/{copy-stmt,
-#       copy-stmt-overlap,copy-stmt-eval-order,copy-stmt-string-source,
-#       recover-stmt-in-defer,recover-stmt-no-panic,
-#       recover-stmt-outside-defer} — the edge enumeration, every
+#       spec-examples-lexical/method-expressions/value-receiver-expr
+#       spec-examples-lexical/method-expressions/pointer-receiver-expr
+#       spec-examples-stmt/method-expr-five-forms
+#     NEW PASS (5): methods/method-expr-call-position/{value-receiver,
+#       pointer-receiver,interface-receiver,promoted,call-order} — the
+#       five paths emitSelector's MethodExpr arm distinguishes, every
 #       expectation computed from `go run` before the fix
-# counts: cases=2174 pass=2039 fail=135
+# counts: cases=2179 pass=2047 fail=132
 # frontend: native (tools/nativefrontend + NativeToIR)
 # format: result<TAB>id<TAB>stage (stage "-" for PASS)
 PASS	arrays/array-bounds	-
@@ -1408,6 +1415,11 @@ PASS	methods/defined-int-receiver	-
 PASS	methods/defined-map-receiver	-
 PASS	methods/embedded-interface-satisfaction	-
 PASS	methods/interface-dispatch	-
+PASS	methods/method-expr-call-position/call-order	-
+PASS	methods/method-expr-call-position/interface-receiver	-
+PASS	methods/method-expr-call-position/pointer-receiver	-
+PASS	methods/method-expr-call-position/promoted	-
+PASS	methods/method-expr-call-position/value-receiver	-
 PASS	methods/method-expression	-
 PASS	methods/method-value-capture-vs-pointer	-
 PASS	methods/method-value-copy	-
@@ -1897,8 +1909,8 @@ PASS	spec-examples-lexical/index-expression-form	-
 PASS	spec-examples-lexical/integer-division-overflow	-
 PASS	spec-examples-lexical/map-type-make	-
 FAIL	spec-examples-lexical/method-expressions/derived-pointer-receiver-expr	frontend-export
-FAIL	spec-examples-lexical/method-expressions/pointer-receiver-expr	frontend-export
-FAIL	spec-examples-lexical/method-expressions/value-receiver-expr	frontend-export
+PASS	spec-examples-lexical/method-expressions/pointer-receiver-expr	-
+PASS	spec-examples-lexical/method-expressions/value-receiver-expr	-
 PASS	spec-examples-lexical/method-values/pointer-receiver-method-value	-
 PASS	spec-examples-lexical/method-values/value-receiver-method-value	-
 PASS	spec-examples-lexical/panic-values/panic-error	-
@@ -1972,7 +1984,7 @@ PASS	spec-examples-stmt/init-hoist-relatives/switch-init-tag	-
 PASS	spec-examples-stmt/init-hoist-relatives/switch-init-tag-reads-init	-
 PASS	spec-examples-stmt/init-hoist-relatives/type-switch-init	-
 PASS	spec-examples-stmt/init-hoist-relatives/type-switch-init-reads-init	-
-FAIL	spec-examples-stmt/method-expr-five-forms	frontend-export
+PASS	spec-examples-stmt/method-expr-five-forms	-
 PASS	spec-examples-stmt/method-value-two-forms/saved-receiver	-
 PASS	spec-examples-stmt/method-value-two-forms/two-forms	-
 FAIL	spec-examples-stmt/min-max-float-specials/infinities	lean-observation

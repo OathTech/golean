@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+value-receiver	mecValueCall	-	ok	-	methods,structs,calls
+pointer-receiver	mecPointerCall	-	ok	-	methods,structs,pointers,calls
+interface-receiver	mecIfaceCall	-	ok	-	methods,interfaces,calls
+promoted	mecPromotedCall	-	ok	-	methods,embedding,structs,calls
+call-order	mecCallOrder	-	ok	-	methods,structs,evaluation_order,calls
