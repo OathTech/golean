@@ -2880,3 +2880,41 @@ FIRST per the standing rule.
   unwitnessed while the machine had it wrong — recorded on that row
   in docs/spec-archaeology/spec-examples-dispositions.tsv.
 
+
+## BUG-062 — inline `len`/`cap` reads reorder against calls in the same expression (receive-free functions)
+
+- Status: open
+- Pinned-by: differential
+- Cases: builtins/len-vs-call-order/chan, builtins/len-vs-call-order/slice
+
+`spec#Order_of_evaluation` orders "all function calls, method calls,
+receive operations, and binary logical operations" lexically
+left-to-right when evaluating an expression's operands, and
+`spec#Built-in_functions` says built-ins "are called like any other
+function" — so in `len(ch) + fill(ch)` the `len` operand is read BEFORE
+the call runs. gc agrees (probed at go1.26.5, slice-5 triage §3.4:
+`go run` → 1, and re-derived at the slice-6 pin,
+artifacts/probe/slice6a).
+
+The frontend hoists CALLS out of expressions (ANF) but leaves `len`
+inline in a receive-FREE function — the `fnHasRecv` hoist is the only
+mechanism that ever hoists `len` — so the machine runs `fill` first and
+reads the post-call length: machine 3 vs go 1 on both pinned rows, a
+FORCED-point silent wrong answer. BUG-023's exact class on the
+len-vs-CALL axis instead of len-vs-RECEIVE, in exactly the functions
+BUG-023's fix did not cover. Found by the slice-5 triage REASONING over
+the emitter (no case could see it — the shape had no corpus row), and
+measured on both sides when slice 6 landed the guardrail.
+
+Receive-BEARING functions get this RIGHT by accident today (the hoisted
+`len` is appended to the accumulator before the call's hoist) — pinned
+green by `builtins/len-vs-call-order/recv-bearing`, so the fix cannot
+regress them.
+
+Fix shape (triage §3.4, mini-slice A6's corrected mechanism): the hoist
+predicate becomes "the statement's sweep contains an ORDERED EVENT"
+(receive OR call), scoped to the STATEMENT — one movement that fixes
+both this entry and the A6 refusal family (F23) without extending the
+divergence. Owner: mini-slice A6 (queued, category (a) in
+docs/2026-08-19_triage-table.md; queue position in
+docs/language-coverage-ledger.md).

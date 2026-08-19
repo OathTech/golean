@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+# RED PINS (2 of 3): the len-vs-CALL forced-point divergence found by
+# the slice-5 triage (§3.4) — spec#Order_of_evaluation + the built-ins-
+# are-called-like-any-other-function sentence force len BEFORE the
+# call; the frontend's ANF call hoist runs the call first in a
+# receive-free function. Flips green at mini-slice A6 (ordered-event
+# predicate). recv-bearing is the accident-green control and must stay
+# green through A6.
+chan	lenVsCallChan	-	ok	-	channels,len,evaluation_order,calls
+slice	lenVsCallSlice	-	ok	-	slices,len,evaluation_order,calls,append
+recv-bearing	lenVsCallRecvBearing	-	ok	-	channels,len,evaluation_order,calls

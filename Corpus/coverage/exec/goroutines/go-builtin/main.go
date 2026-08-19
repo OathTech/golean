@@ -26,6 +26,42 @@ func goCloseBuiltin() int {
 	return v + 3
 }
 
+// Slice-6 enumeration (the whole-language bar, F15): the other legal
+// builtin callees, one row per builtin the desugar must wrap. gc
+// itself synthesizes a wrapper (`gowrap1` in the panic probe's
+// traceback, artifacts/probe/slice6a — evidence FOR the thunk
+// mechanism the F22 marker names). delete/copy observe COMPLETION
+// only: `go delete(m,k)` offers no completion signal, so the child's
+// effect is unobservable without a wrapper — the builtin's own effect
+// suites carry effect correctness; these rows pin the CALLEE shape.
+
+func goDeleteBuiltin() int {
+	m := map[int]int{1: 1}
+	go delete(m, 1)
+	return 4
+}
+
+func goCopyBuiltin() int {
+	dst := make([]int, 1)
+	src := []int{5}
+	go copy(dst, src)
+	return 6
+}
+
+func goRecoverBuiltin() int {
+	go recover() // never "directly by a deferred function": a no-op child
+	return 7
+}
+
+func goPanicBuiltin() int {
+	go panic("boom") // the child's unrecovered panic aborts the program
+	<-make(chan int)
+	return 0
+}
+
 func main() {
 	goCloseBuiltin()
+	goDeleteBuiltin()
+	goCopyBuiltin()
+	goRecoverBuiltin()
 }

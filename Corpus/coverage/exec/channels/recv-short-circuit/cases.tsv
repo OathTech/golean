@@ -1,0 +1,12 @@
+# id	subject	args	expected_status	expected_reason	features
+# F24 frontier suite (slice 6): receive in a short-circuit RHS refuses
+# at the frontend (hoistChanRecv guard) — the three RHS rows are RED at
+# frontend-export by design until the E3 conditional normalization
+# extends to receives. and-rhs-skipped pins the skip (channel keeps its
+# element). The two controls (lhs, funclit-rhs) pin the ALREADY-GREEN
+# neighbouring positions so a lift cannot regress them silently.
+and-rhs	rscAndRhs	-	ok	-	channels,bools,evaluation_order
+or-rhs	rscOrRhs	-	ok	-	channels,bools,evaluation_order
+and-rhs-skipped	rscAndRhsSkipped	-	ok	-	channels,bools,evaluation_order,len
+and-lhs	rscAndLhs	-	ok	-	channels,bools,evaluation_order
+funclit-rhs	rscFuncLitRhs	-	ok	-	channels,bools,closures,evaluation_order

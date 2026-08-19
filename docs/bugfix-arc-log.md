@@ -1989,3 +1989,70 @@ the spec itself addresses, the lint resolves, and covmap segments by.
 Chapter (h2) rows whose content is entirely delegated to their h3/h4
 children are classified `container` — explicitly, with the children
 listed, never skipped (zero-unclassified means zero).
+
+### Step 2 — suite tranche A: build-queue-top guardrails + the owed len-vs-call pin
+
+Four packages, 15 rows, every expectation from `go run` at the pin
+BEFORE the differential ran (`artifacts/probe/slice6a`, scratch), every
+color verified focused before the full run, and the full run's drift
+was **exactly the 15 NEW ids and nothing else** (2208 cases, 2089/119;
+was 2193, 2086/107). Baseline re-pinned in this commit, reason in its
+header. `scripts/check-bugs.sh`: ok (62 bugs), backlog unchanged 7/7.
+
+- **`builtins/len-vs-call-order/` (3)** — the slice-5 triage §3.4
+  divergence, now MEASURED on both sides instead of reasoned on one:
+  `chan` and `slice` RED/differential (machine 3 vs go 1 — len read
+  after the hoisted call), `recv-bearing` GREEN (the accident-green
+  control A6 must not regress). Filed as **BUG-062** (new entry,
+  Cases: the two reds) so the fidelity backlog stays fully explained —
+  the fix owner is mini-slice A6's ordered-event predicate.
+- **`channels/recv-short-circuit/` (5)** — the F24 enumeration E3's
+  design note owed: `and-rhs`, `or-rhs` RED/frontend-export (the
+  hoistChanRecv refusal, exact string), `and-rhs-skipped` RED and
+  load-bearing (the skip: channel keeps its element — an unconditional
+  hoist drains it), `and-lhs` + `funclit-rhs` GREEN controls (the
+  unconditional position and the E3-normalized call path).
+- **`range/assign-form-nonident/` (3)** — the F20 enumeration:
+  field/deref/map-elem targets RED/frontend-export;
+  `map-elem-target`'s 161 pins per-iteration phase-1 target evaluation
+  (old k indexes m), hand-derived then oracle-confirmed.
+- **`goroutines/go-builtin/` (+4)** — the F15 full enumeration beside
+  the existing `close` marker: `delete`, `copy`, `recover`, `panic`
+  RED/frontend-export. gc's own traceback wraps the builtin in a
+  synthesized `gowrap1` (probe) — evidence FOR the thunk desugar the
+  F22 marker names.
+
+**JUDGMENT (slice 6, go-builtin lane):** the four new rows were first
+written `confluent` (schedule honesty) and came back
+`stage=confluent` — the quarantine surfaced through the enumerator,
+which would have entered them into the FIDELITY backlog as coverage
+refusals. Re-laned `strict` to match the `close` precedent so the
+refusal classifies as frontend-export (a COVERAGE red); the confluent
+upgrade rides with the thunk fix. The observables are
+schedule-invariant by construction, so strict is honest for the pin.
+
+**JUDGMENT (slice 6, BUG-008 gets no new rows this tranche):** its
+frontier suite stays the single pinned red
+(`maps/imported-named-key-unhashable`) — marker-level, justification
+logged in the ledger row: the feature's observable surface (which
+programs newly lower once imported TypeDefs exist) is wide, and its
+edge enumeration is exactly the consuming arc's first guardrail step
+against its own design; enumerating blind against an undesigned wire
+mechanism would pin guesses, not behavior.
+
+**Gate at the tranche-A commit.** The FIRST `ci --diff` run FAILED on
+one step — feature-coverage's husk check flagged five directories, all
+of them TRANCHE-B work-in-progress this session had created early
+(atomic-frontier, unsafe/boundary, goexit-marker, stencil-quarantine —
+none of them part of this commit); every other step was ok including
+`baseline diff FULL (2208/2208, no regression)`. The WIP moved to
+`artifacts/slice6/trancheB-wip/` (scratch), the unused tag additions
+reverted, and the gate RE-RUN IN FULL at the exact tranche-A tree:
+`GOLEAN_MEM_MAX=24G scripts/ci --diff` → **`RESULT: PASS`**, exit 0,
+every step ok — `baseline diff FULL (2208/2208, no regression)`,
+`re-pin guard (0 PASS→non-PASS flips)`, `bug-index cross-check ok`
+(62 bugs — BUG-062 registered with both reds on its Cases line;
+backlog unchanged 7/7), `eval tests (136 ok)`, negative lane clean
+(`/tmp/s6-trancheA-ci2.log`, scratch; the failed first run
+`/tmp/s6-trancheA-ci.log`). The husk check firing on uncommitted WIP is
+the gate working as designed; recorded per the gate-honesty rule.

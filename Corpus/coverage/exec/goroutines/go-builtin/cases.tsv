@@ -5,3 +5,17 @@
 # GoStmt lowering (wrap the builtin in a synthesized thunk). The class
 # is unused in deps/raft and deps/goose (probed).
 close	goCloseBuiltin	-	ok	-	goroutines,channels,close,comma_ok	strict	-	-
+# Slice-6 enumeration (F15, full-enumeration default): the remaining
+# legal builtin callees, one row per builtin, all red at
+# frontend-export by design (the same emit.go refusal, per-declaration
+# quarantine) — strict lane like the close row above, so the refusal
+# classifies as a COVERAGE red (frontend-export), not a fidelity-stage
+# entrant. The observables are schedule-invariant by construction
+# (delete/copy/recover: the child's effect is unobserved; panic: the
+# child's unrecovered panic aborts on every schedule — the spawn-edge
+# child-panic-aborts argument). A confluent upgrade rides with the
+# thunk-desugar fix if the fix wants schedule certification.
+delete	goDeleteBuiltin	-	ok	-	goroutines,maps,delete	strict	-	-
+copy	goCopyBuiltin	-	ok	-	goroutines,slices,copy	strict	-	-
+recover	goRecoverBuiltin	-	ok	-	goroutines,recover	strict	-	-
+panic	goPanicBuiltin	-	panic	boom	goroutines,panic	strict	-	-
