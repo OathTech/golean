@@ -18,6 +18,42 @@
 # (was:) DELIBERATE fail-closed refusal pin
 #   (multi-ready select = the L2 choice envelope, scheduler arc slice 4);
 #   permanently red until that slice — see untriaged-count 2026-08-06.
+# 2026-08-19 (bug-fix arc slice 5, the full red/bug triage): the TEN ids
+#   below carried no justification of their own — they sat bare under an
+#   older block's comment. Each now has a written disposition in
+#   docs/2026-08-19_triage-table.md; the row ids are quoted here so the
+#   two records cannot drift. NONE of the 25 was explained by slices 1-2's
+#   fixes (BUG-057/058): the seven fidelity reds those closed were already
+#   on their own Cases: lines, so this file is unchanged in MEMBERSHIP —
+#   only in what it says about itself.
+# arrays/pointer-array: triage row L5 — `.indexGet` has no `.addr`
+#   auto-deref arm, so `p[1]` for `p *[N]T` goes stuck where
+#   spec#Index_expressions makes it shorthand for `(*p)[1]`. The WRITE
+#   path got its arm at BUG-038; the read path did not. Category (a)
+#   (cheap + diagnosed) but GoCore-touching, so it is gated on the
+#   charter's semantic-core pause, not on discovery.
+# pointers/nil-array-index-panic: triage row L6 — the same missing-arm
+#   class for `.nil`; gc raises the recoverable nil-deref panic. BUG-038's
+#   entry already NAMES this case as the deferred read-position sibling.
+#   Category (a), same GoCore gate, same commit as L5.
+# structs/tag-pointer-conversion: triage row L7 — `(*B)(a)` passes the
+#   pointer through (BUG-020's arm) but the heap cell keeps its mint tag,
+#   and field access checks the NOMINAL tag, while spec#Conversions says
+#   struct tags are ignored for conversion identity. The wire already
+#   strips tags, so both TypeIds map to identical FieldDef lists.
+#   Category (a), GoCore gate.
+# strings/{defined-slice-string-conversion,nil-slice-string-conversion,
+#   rune-invalid-values,rune-slice-conversion,rune-slice-to-string-copy,
+#   rune-string-conversion,string-to-rune-copy}: triage row L1 —
+#   `[]rune(s)` and `string([]rune)` have no conversion arm; the frontend
+#   classifier routes only []byte<->string and string(int) to ops, so both
+#   directions land at the machine's fail-closed catch-all
+#   ("conversion to ..."). spec#Conversions_to_and_from_a_string_type.
+#   BUG-020's fixed entry predicted exactly this ("they stay untriaged —
+#   they need real conversion logic, not a retag"); the triage upgrades
+#   that to category (a) because BOTH kernels already exist and are
+#   oracle-pinned (decodeRuneAt for U+FFFD-correct decoding,
+#   GoString.fromCodePoint for the encode direction). GoCore gate.
 arrays/pointer-array
 floats/to-int-out-of-range/nan
 floats/to-int-out-of-range/range
