@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+# H-3 edge: the quarantined method has a POINTER receiver. Both
+# satisfaction rows are fail-closed guards on the stub's recorded receiver
+# type — `value-not-satisfies` must answer 0 (Go's method-set asymmetry)
+# and `pointer-satisfies` must answer 1. `pointer-call` is red at
+# frontend-export by design.
+value-not-satisfies	quarantinePtrValueNotSatisfies	-	ok	-	pointers,interfaces,methods,type_assertions
+pointer-satisfies	quarantinePtrSatisfies	-	ok	-	pointers,interfaces,methods,type_assertions
+pointer-call	quarantinePtrCall	-	ok	-	pointers,methods,calls,strings

@@ -643,3 +643,19 @@ and the batch-end `--slow` re-certification green. Execution record:
 `docs/bugfix-arc-log.md` §19-red. The table above deliberately keeps
 its numbers at `0c21aa21`; the L10 row's expectation correction and
 the L2a/L2b split landed exactly as written here.
+
+**POSTSCRIPT 2 (2026-08-19, same day — slice 5b / H-3).** The
+per-declaration quarantine now covers METHODS
+(`docs/bugfix-arc-log.md` §H-3), which adds **four** baseline reds and
+retires none. All four are the CALL rows of the H-3 guardrail suite —
+`methods/quarantine-sibling/quarantined-call`,
+`methods/quarantine-interface/dispatch-quarantined`,
+`methods/quarantine-embedded/promoted-call`,
+`methods/quarantine-pointer-receiver/pointer-call` — and all four are
+**F19** (`fmt.Sprintf` reaching `emit.go`'s "selector call … is not a
+method value"), i.e. category **(b)**, the stdlib-surface frontier row
+that §2.3 already marks raft-path-in-aggregate. F19's id list goes 2 →
+6 and the (b) column 82 → 86; the table's own counts stay pinned at
+`0c21aa21` per its stated convention. Zero rows outside the table
+still holds: these four are red for a feature the table names, and
+their eight green siblings are the fix's flips, not reds.

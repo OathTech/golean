@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+# H-3 (methods have no per-decl quarantine): before the fix ALL THREE rows
+# are FAIL/frontend-export — one unlowerable method refused the whole
+# package. After it, only the row that CALLS the quarantined method is red,
+# and it is red at frontend-export by design (a PERMANENT-until-lifted
+# marker: the machine cannot run `fmt.Sprintf`, and the stub says so by
+# name). The other two rows are the flip the fix exists for.
+good-method	quarantineSiblingMethod	-	ok	-	methods,calls,structs
+plain-func	quarantineSiblingPlain	-	ok	-	functions,calls
+quarantined-call	quarantineSiblingCall	-	ok	-	methods,calls,strings

@@ -484,9 +484,14 @@ func (e *emitter) enqueueTypeInst(inst *types.Named, key string) error {
 }
 
 // flushTypeInsts drains the instantiated-type queue, appending TypeDefs,
-// stenciled methods, and their lifted literals. Method stencils follow
-// the standing method policy: an unsupported method fails the whole
-// export (methods have no per-decl quarantine).
+// stenciled methods, and their lifted literals. RESIDUAL SCOPE of H-3
+// (2026-08-19): DECLARED methods now quarantine per-declaration
+// (emit.go, quarantinedMethodStub), but a method STENCIL — a method of a
+// generic type at one receiver instantiation — still fails the whole
+// export. Extending the stub to stencils needs the instantiation
+// rollback to interact with a stub that keeps a substituted signature
+// alive; deliberately not done in the same slice. Recorded in
+// docs/bugfix-arc-log.md §H-3.
 func (e *emitter) flushTypeInsts(typeDefs, methods, funcs []any) ([]any, []any, []any, bool, error) {
 	did := false
 	for len(e.typeInstQueue) > 0 {

@@ -1,19 +1,25 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-19 (bug-fix arc, 19-red GoCore slice family 6 =
-#   triage row L10: go-of-nil-func routed through the fatal class)
-#   commit: this commit (on 835e9102, the family-5 tip)
-#   re-pin reason: the spawn arm's refusal becomes
-#   GoError.fatal "go of nil func value" (gc's unrecoverable runtime
-#   fatal AT THE SPAWN, probed 2026-08-07) — the machine's honest fatal
-#   classification, not a panic masquerade. The case's expected_status
-#   corrects panic -> fatal: the old red pin's stated reason ("neither
-#   harness status class describes a non-panic fatal") EXPIRED when the
-#   fatal class landed at spec-parity slice 2, two days after the pin
-#   was written (triage §3.3 L10, argued there and user-approved).
-#   Feature tag `fatal` added to the corpus vocabulary. Deltas — the
-#   predicted set exactly:
-#     FAIL/go-run -> PASS (1): goroutines/spawn-edge/nil-func-fatal
-#   counts: 2181 cases, 2078 PASS / 103 FAIL (was 2181, 2077/104)
+# recorded: 2026-08-19 (bug-fix arc, H-3 = per-declaration quarantine for
+#   METHODS; scope addition, user-directed — raft-w2 handoff H-3)
+#   commit: this commit (on adde311d, the 19-red/triage-postscript tip)
+#   re-pin reason: an unlowerable METHOD no longer refuses the whole
+#   package export. It lands as a signature-carrying stub that refuses
+#   when CALLED (tools/nativefrontend/emit.go, quarantinedMethodStub) —
+#   the contract plain functions have had since the wrong-answers-builtins
+#   arc. The method-set entry is NEVER dropped, so interface satisfaction
+#   still answers what gc answers.
+#   Deltas — 12 NEW ids and nothing else (zero flips on the 2181
+#   pre-existing ids):
+#     NEW/PASS (8): methods/quarantine-sibling/{good-method,plain-func},
+#       methods/quarantine-interface/{satisfies,dispatch-good},
+#       methods/quarantine-embedded/{promoted-good,promoted-satisfies},
+#       methods/quarantine-pointer-receiver/{value-not-satisfies,pointer-satisfies}
+#     NEW/FAIL frontend-export (4, by design — the call into a stub):
+#       methods/quarantine-sibling/quarantined-call,
+#       methods/quarantine-interface/dispatch-quarantined,
+#       methods/quarantine-embedded/promoted-call,
+#       methods/quarantine-pointer-receiver/pointer-call
+#   counts: 2193 cases, 2086 PASS / 107 FAIL (was 2181, 2078/103)
 #   frontend: native (tools/nativefrontend + NativeToIR)
 # columns: result<TAB>id<TAB>stage
 PASS	arrays/array-bounds	-
@@ -1418,6 +1424,18 @@ PASS	methods/pointer-method-value-read	-
 PASS	methods/pointer-receiver-array-element	-
 PASS	methods/pointer-receiver-method-set	-
 PASS	methods/pointer-receiver-slice-element	-
+FAIL	methods/quarantine-embedded/promoted-call	frontend-export
+PASS	methods/quarantine-embedded/promoted-good	-
+PASS	methods/quarantine-embedded/promoted-satisfies	-
+PASS	methods/quarantine-interface/dispatch-good	-
+FAIL	methods/quarantine-interface/dispatch-quarantined	frontend-export
+PASS	methods/quarantine-interface/satisfies	-
+FAIL	methods/quarantine-pointer-receiver/pointer-call	frontend-export
+PASS	methods/quarantine-pointer-receiver/pointer-satisfies	-
+PASS	methods/quarantine-pointer-receiver/value-not-satisfies	-
+PASS	methods/quarantine-sibling/good-method	-
+PASS	methods/quarantine-sibling/plain-func	-
+FAIL	methods/quarantine-sibling/quarantined-call	frontend-export
 PASS	methods/recursive-method	-
 PASS	methods/same-name-method-closures	-
 PASS	methods/value-auto-deref	-

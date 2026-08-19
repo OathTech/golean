@@ -160,6 +160,55 @@ reason is not a state this arc may end in. The category-(c) list is
 put to the user at the arc gate — profound-ness is the user's call,
 not ours.
 
+## Slice 5b — H-3: per-declaration quarantine for METHODS (SCOPE ADDITION, user-directed 2026-08-19)
+
+Added to this arc's scope by user direction on 2026-08-19, with the
+rationale stated as **"keep the fork maintenance to a minimum"**.
+
+The finding is the raft-W2 lane's handoff item **H-3**
+(`docs/raft-w2-log.md` §6b, §8): plain functions have had a
+per-declaration quarantine since the wrong-answers-builtins arc — an
+unlowerable one becomes a stub that refuses when CALLED — but METHODS
+had none (`tools/nativefrontend/mono.go:489`, the D2 contract note at
+`emit.go:537`), so ONE unlowerable method refused the whole package
+export. The W2 measurement found ten such declarations in the derived
+raft tree, six of them runtime-dead `String()`/`Describe()` renderers,
+all ten methods.
+
+**Why it belongs to THIS arc and to this lane, not to the raft lane.**
+It is a frontend change of exactly the shape the arc already makes, and
+the raft lane may not make it (worktree ownership). The alternative the
+raft lane would otherwise be pushed toward is a recorded SUBJECT DELTA
+per blocked method — hand-stubbing upstream's text in
+`raftsubject/` — i.e. a growing fork of etcd's source maintained by
+hand, in the direction the verbatim discipline exists to prevent. That
+is the fork-maintenance cost the user's direction names: a
+20-line frontend mechanism removes it at the source, and every future
+vendored package inherits the removal.
+
+**Sequencing: after the 19-red batch, before slice 6.** Slice 6's
+frontier ledger SNAPSHOTS the frontier (refusal point + error string per
+unsupported feature); H-3 MOVES that frontier — an unlowerable method
+stops being an export-time refusal and becomes a call-time one — so
+taking it first keeps slice 6 from cataloguing a state it is about to
+invalidate.
+
+**Contract (unchanged from the function case, plus one invariant).**
+Signature-carrying stubs that refuse when called, naming
+`package.Type.Method`. The invariant methods add: a quarantined method
+is **never dropped from its type's method set** — dropping it would
+change INTERFACE SATISFACTION, so a type would stop satisfying an
+interface it satisfies in Go and a comma-ok assert would answer a
+silently wrong `false` instead of refusing. Guardrails first, as
+always: the satisfaction rows are the fail-closed guards and are
+written to be GREEN after the fix, while the rows that CALL a
+quarantined method stay red at `frontend-export` by design.
+
+Out of scope, recorded rather than done: method STENCILS (a method of a
+generic type at one receiver instantiation) still fail the whole export
+(`mono.go`, `flushTypeInsts`) — the rollback interaction is a separate
+concern and no raft-path instance exists.
+
 ## Slice 6 — the whole-language bar
 
 Coverage measured against the language: the denominator is the
@@ -261,7 +310,13 @@ fix obligation (this arc or a named successor).
 8. Untriaged-25 cross-check recorded.
 9. `scripts/ci --diff` green at tip; every flip predicted; BUGS.md
    current; arc log (`docs/bugfix-arc-log.md`) current.
-10. Pre-merge audit ASK posed (proposed size: 1 Opus reviewer for
+10. H-3 (slice 5b, scope addition): methods quarantine per
+   declaration; the guardrail suite landed with its satisfaction rows
+   green and its call rows red-by-design; the method-set-completeness
+   invariant pinned by unit tests as well as the differential; the
+   raft-frontier effect MEASURED in scratch and reported to the raft
+   lane (no `raftsubject/` or `tools/raftsubject/` edit from here).
+11. Pre-merge audit ASK posed (proposed size: 1 Opus reviewer for
    the frontend slices, 1 Fable reviewer for the semantic-core
    slice if BUG-005 is implemented — the interpreter is the primary
    dimension, always audited — and 1 Opus reviewer for the triage
