@@ -140,6 +140,19 @@ obligation:
       decidable-equality/canonicalization layer first.
 - [ ] PCT / portfolio sampling beyond enumeration scale — sample
       source only, never certification.
+- [ ] Map-range live-pick walk cost (BUG-005 (L), audit fix round
+      2026-08-19 — a PERF item, not semantics): every `mapIterNext`
+      pick recomputes `mapIterCandidates` = live entries minus the
+      produced-key set (a linear scan filtered by a linear membership
+      walk), so a full mutation-free range is ~O(n²) picks and the
+      ∀-stream confluence certifier multiplies that again — ~cubic
+      pick walks at scale. Invisible on today's corpus sizes; will
+      bite on raft-scale maps and enumerator workloads. Candidate:
+      an indexed produced-set (or incremental candidates) behind the
+      BOTH-EXPLORERS adoption gate above, with the pick-coherence
+      relation (`MapMem`) as the soundness obligation. Semantics is
+      NOT in question — the fuel-out on self-inserting loops is the
+      ruled behavior, not this item.
 
 ## Epistemic hardening / pipeline error-resistance (2026-07-19, priority #0)
 

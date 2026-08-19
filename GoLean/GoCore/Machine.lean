@@ -2171,9 +2171,15 @@ surgery): `mapDelete` prunes the deleted key from every in-flight
 iteration over the same map; `clearMap` prunes everything; every other
 op leaves the continuation untouched (`.ok k` by `rfl` per op — the
 existing wide-statement laws keep their shape at any concrete op).
-Shared VERBATIM by rules `stmtOpApply`/`stmtOpStart`'s nullary twin
-and `stepFn`'s apply arms. The state argument is the POST-apply state
-(key comparison consults `types` only, which no wide op mutates). -/
+Shared VERBATIM by rule `stmtOpApply` and `stepFn`'s apply arm. The
+nullary rule (`stmtOpNullary`) deliberately does NOT thread it: no
+nullary op is a pruning op — `mapDelete` carries two operands and
+`clearMap` one — so it would be the identity there (docstring
+corrected at the audit fix round, reviewer A nit: it used to claim
+the nullary rule shares this function, under a rule name —
+`stmtOpStart` — that does not exist). The state argument is the
+POST-apply state (key comparison consults `types` only, which no wide
+op mutates). -/
 def contAfterStmtOp (s : ExecState) (op : StmtOp) (vs : List GoValue)
     (k : Cont) : Except GoError Cont :=
   match op with

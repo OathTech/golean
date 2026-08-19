@@ -11,8 +11,10 @@
 # points (latitude) can retire neither by a fix nor by a triage, so a
 # scalar captioned "ratchet toward 0" was unreachable by construction —
 # and a genuine wrong answer could enter behind a frontier refusal that
-# left it, moving nothing. Per class, `wrong-answer` is a hard floor
-# whatever the frontier rows do. The classes are defined in the header of
+# left it, moving nothing. Per class, raising `wrong-answer` above 0
+# requires an explicit reviewable two-file edit (an untriaged-ids row +
+# this file's ceiling, justified in the same commit), whatever the
+# frontier rows do. The classes are defined in the header of
 # baselines/untriaged-ids; the log below is chronological and its
 # pre-2026-08-20 numbers are the old single scalar (kept verbatim — they
 # are the record of what was true when written, not restatements in the
@@ -208,7 +210,9 @@ wrong-answer 0
 # 2026-08-19 (bug-fix arc slice 6, the whole-language bar)  7 -> 9: the
 #   sync/atomic FRONTIER suite lands (concurrency-entangled design
 #   question Q-ATOMIC, docs/language-coverage-ledger.md) and two of its
-#   five red rows surface at fidelity-adjacent stages —
+#   five red rows surface at FIDELITY stages (lean-observation, membership
+#   — both in the check-bugs filter; label corrected at the audit fix
+#   round) —
 #   atomic-frontier/value (lean-observation: the atomic.Value zero
 #   value is a D5 imported-type stub refusal) and
 #   atomic-frontier/mp-litmus (membership: the enumerator refuses at

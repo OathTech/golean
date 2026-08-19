@@ -6797,6 +6797,18 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 					"args": args, "resultTypes": resultTypes}, true, nil
 			}
 		}
+		// Distinguish a PACKAGE-selector call (a stdlib-surface gap —
+		// `fmt.Sprintf`, `strconv.FormatUint`, …) from a genuine
+		// non-method selector: the two used to share one refusal
+		// string, and the conflation cost a triage split (rows F8 vs
+		// F19 were one group by error string, two by cause). Audit fix
+		// round F-B4.
+		if id, isIdent := sel.X.(*ast.Ident); isIdent {
+			if pn, isPkg := e.info.Uses[id].(*types.PkgName); isPkg {
+				return nil, false, unsup("package-selector call %s.%s (package %q surface not modeled)",
+					id.Name, sel.Sel.Name, pn.Imported().Path())
+			}
+		}
 		return nil, false, unsup("selector call %s is not a method value", sel.Sel.Name)
 	}
 	fn, ok := seln.Obj().(*types.Func)

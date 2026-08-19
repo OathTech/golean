@@ -2618,8 +2618,18 @@ FIRST per the standing rule.
   `valueAsLoc`'s existing runtime-panic arm, yield the same pointer,
   touch NO memory (gc's TESTB shape; no race-footprint arm ON PURPOSE
   — Race.lean's call-site inventory records the decision). The
-  emitter's `emitAddressOf` StarExpr arm emits it for the immediate
-  `&`-of-`*` composition only; field/index compositions keep their
+  emitter arm lives in `emitUnaryExpr`'s `token.AND` path — the `&`
+  OPERATOR's immediate-`*` operand only; `emitAddressOf`'s StarExpr
+  arm DELIBERATELY kept the collapse, because that is the general
+  addressable path whose consumers nil-check at their own spec points
+  (the five store-order pins — the slice-3 JUDGMENT records the first
+  draft putting the op there and flipping all five red). Corrected at
+  the audit fix round (A2): this sentence used to place the arm in
+  `emitAddressOf`, the exact placement the fix rejected. EXTENSION
+  (same round): the RECEIVER-position IMPLICIT `&` reused that
+  collapse and lost the panic silently — BUG-063, fixed by routing
+  `methodReceiverArg`/`syncRecvAddr` through `receiverAddr`'s
+  addr-of-deref emission. Field/index compositions keep their
   pinned-green lowerings. Flipped exactly the 5 pinned reds; the 7
   matrix guard greens held. Acceptance: `race/free/addr-deref-no-read`
   pins the no-load/no-race-visibility ground truths — `&*p` beside a
