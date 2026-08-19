@@ -163,3 +163,13 @@ sync/atomic-frontier/mp-litmus	coverage
 #   fix, whose scope is receiver-position only (the store-order pins
 #   forbid a blanket change at emitAddressOf).
 pointers/nil-array-ptr-slice/slice-expr-nil	coverage
+# pointers/zero-size-address/escaped-same: LATITUDE deviation record
+#   (inventory R15, audit fix round F1 2026-08-19): "Two distinct
+#   zero-size variables may have the same address" — gc's heap/escaped
+#   realization compares EQUAL (runtime.zerobase), the machine's
+#   fresh-cell realization compares DISTINCT; both conform. The red is
+#   the version-tracked pin of gc's exhibited member outside our
+#   deterministic singleton (the init/hidden-dep-order class); retires
+#   by a W3.2 envelope (may-equal choice or membership row), never by
+#   a fix. Sibling stack-distinct is the green member-agreement pin.
+pointers/zero-size-address/escaped-same	latitude

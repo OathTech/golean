@@ -2575,3 +2575,54 @@ detail churn is invisible to the result+stage record, as designed),
 frontend unit tests ok, eval tests 136 ok (`/tmp/afr-records-ci.log`,
 scratch). Only this paragraph differs between the gated and committed
 trees.
+
+### F1 + F2 — the zero-size-address latitude, and the covered(A) carve-outs
+
+**F1 (reviewer C, MEDIUM) — determined by running it, as the finding
+asked.** The Size_and_alignment_guarantees ledger row claimed int/uint
+width as the section's ONLY in-language-observable consequence — false:
+"Two distinct zero-size variables may have the same address in memory"
+(and Comparison_operators' own "Pointers to distinct zero-size
+variables may or may not be equal") is observable by plain pointer
+equality. The determination C could not make: the machine neither
+panics wrongly NOR refuses — it ANSWERS, the deterministic never-same
+member (fresh `Loc` per variable), on every shape. gc at the pin is
+NON-single-valued (probe artifacts/probe/zerosize, go1.26.5): stack
+variables distinct (0), escaped/heap variables EQUAL via
+runtime.zerobase (1), `new(struct{})` non-escaping stack-shaped (0).
+So the honest landing is neither a BUG entry (no forced point is
+violated — both answers conform) nor a frontier row (nothing refuses):
+it is a LATITUDE pin, the init/hidden-dep-order class. Landed:
+
+- inventory **R15** (both spec sentences verbatim at the pin, the
+  probe data, the machine's singleton, the W3.2 re-envelope
+  obligation);
+- `pointers/zero-size-address/` — `stack-distinct` GREEN (member
+  agreement, version-tracked) + `escaped-same` RED/differential
+  (machine 0 vs gc 1 — gc's exhibited member outside our singleton),
+  expectations from `go run` before the differential ran;
+- `escaped-same` → `baselines/untriaged-ids` disposition `latitude`
+  (ceiling 3 → 4, dated reason);
+- the ledger row reworded (still out-of-language for LAYOUT — that
+  judgment survives — but naming BOTH in-language consequences), and
+  Comparison_operators gains the L:R15 ref for its own sentence.
+
+**F2 — five covered(A) rows gain one-clause carve-outs; NO regrades.**
+Each A grade's "green implies covered" claim survives with its scope
+stated (the clause rescues the definition in all five, so no honest
+regrade was forced): Arithmetic_operators (COMPLEX operands → FR-15;
+pinned red `complex/{basic,division,compound-assign}`) and
+Receive_operator (SHORT-CIRCUIT-RHS receives → FR-2/A6; pinned red
+`channels/recv-short-circuit/{and-rhs,or-rhs}` + BUG-032's family) are
+the two substantive ones; The_zero_value (complex zero values →
+FR-15, pinned), Composite_literals and Index_expressions (complex
+element types ride FR-15's upstream type refusal, no dedicated pin)
+the three smaller.
+
+**Gate at the F1/F2 commit.** Full run 2226 cases, 2095 PASS / 131
+FAIL (was 2224, 2094/130); drift exactly the 2 NEW ids; baseline
+re-pinned (reason in its header); check-bugs ok (63 bugs; coverage
+7/7, latitude 4/4, wrong-answer 0/0). Confirming
+`GOLEAN_MEM_MAX=24G scripts/ci --diff` → **`RESULT: PASS`**, exit 0,
+every step ok (`/tmp/afr-f1-ci.log`, scratch). Only this paragraph
+differs between the gated and committed trees.

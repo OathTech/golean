@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+stack-distinct	stackDistinct	-	ok	-	pointers,structs,empty,comparisons,equality,identity
+escaped-same	escapedSame	-	ok	-	pointers,structs,empty,comparisons,equality,identity,globals
