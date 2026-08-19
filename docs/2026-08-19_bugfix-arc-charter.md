@@ -1,11 +1,17 @@
-# The bug-fix + frontier arc charter (2026-08-19, DRAFT for user review)
+# The bug-fix + language-bar arc charter (2026-08-19)
 
 Scope set by user direction 2026-08-19: fix BUG-058/057/056/005; then
 **all bugs and differentials are killed unless there is a profound
 reason they exist** (each such reason written down and put to the
-user); and the arc **stakes out the unsupported frontier** — a
-guardrail suite strong enough that future feature arcs start with
-their targets pinned.
+user); and the arc **sets the bar for the whole language** (user direction,
+second round): coverage is measured against the PINNED SPEC, not
+against what the corpus happens to try — every spec section gets a
+classified row, and every unsupported feature gets its oracle-verified
+guardrail suite before any implementation exists. This arc sets the
+bar; CLEARING the frontier (implementing complex, iterators, method
+expressions, atomic, ...) is a ladder of successor feature arcs that
+consume the ledger, raft-path first — explicitly out of this arc's
+scope so DONE stays bounded.
 
 The three machine bugs the spec-truth campaign found (P3, all
 audit-hardened diagnoses in `docs/BUGS.md`), fixed in one arc, ordered
@@ -154,29 +160,47 @@ reason is not a state this arc may end in. The category-(c) list is
 put to the user at the arc gate — profound-ness is the user's call,
 not ours.
 
-## Slice 6 — the unsupported frontier, staked out
+## Slice 6 — the whole-language bar
 
-For every feature the frontend refuses (the refusal census from the
-frontier sweep + slice 5's category-(b) rows): build the guardrail
-suite BEFORE any support exists, per the doctrine ("a tool feature is
-not started until its guardrail cases exist and classify correctly").
+Coverage measured against the language: the denominator is the
+PINNED SPEC (go1.26.5, `docs/spec-sources.md`) section census — the
+spec-truth campaign's instruments (the anchor namespace, P3's
+326-block inventory + dispositions, the archaeology TSVs) are the
+input, not rebuilt — plus the memory model for the concurrency
+chapters.
 
-1. **The frontier map** (`docs/frontier-map.md`, tracked): feature →
-   refusal point (file:line, the error string) → oracle-verified
-   guardrail case ids → the spec anchors → estimated implementation
-   scope (frontend-only / GoCore-touching / envelope-question). This
-   is the coverage roadmap the arc leaves behind.
-2. **The suite**: per feature, isolated cases + edge enumeration
-   (three-layer strategy, `docs/native-frontend-goal.md`), expected
-   outputs computed from `go run` and hand-argued against the spec.
-   Every case must classify as a visible frontend/feature-blocked
-   red — never a false pass, never silently skipped. These land in
-   the baseline as explained frontend-export rows: the frontier
-   becomes ENUMERATED red, not absent grey.
-3. Depth is a judgment call per feature, logged: a feature near the
-   raft path (goroutines/channels/select/sync, interfaces, defer
-   breadth) gets the full enumeration; an exotic one (cgo, unsafe
-   arithmetic) gets a marker suite + an explicit deferral note.
+1. **The language coverage ledger**
+   (`docs/language-coverage-ledger.md`, tracked): one row per spec
+   section/feature, status ∈
+   - **covered** — green corpus case ids + the sufficiency argument
+     (the three-layer strategy: does green here IMPLY the section is
+     covered, or just touched? graded honestly);
+   - **frontier** — guardrail suite landed, red, refusal point
+     (file:line + error string), spec anchors, implementation-scope
+     estimate (frontend-only / GoCore-touching / envelope-question),
+     raft-path priority mark;
+   - **latitude** — ledger/inventory cross-reference;
+   - **out-of-language** — justified case by case (cgo is FFI, not
+     spec; implementation-restriction sections), never a convenience
+     bucket.
+   No unclassified sections. The ledger IS the bar: the repo's
+   coverage claim becomes "these rows, with these grades," and any
+   future "GoLean supports Go" statement cites it.
+2. **The suites**: per frontier feature, isolated cases + edge
+   enumeration, expected outputs computed from `go run` and
+   hand-argued against the spec text. Every case classifies as a
+   visible feature-blocked red — never a false pass. The frontier
+   becomes ENUMERATED red, not absent grey. **Full enumeration is
+   the DEFAULT for every in-language feature**; a marker-only suite
+   requires a logged justification (expected to be rare — unsafe's
+   pointer-arithmetic corners, perhaps).
+3. **Covered ≠ done**: sections currently green get their
+   sufficiency GRADED (the P3 dispositions + covmap subject-delta
+   tooling assist); a section whose green is one shallow case gets
+   its gap enumerated in the same pass — the bar applies to what we
+   claim to support, not only to what we refuse.
+4. `docs/roadmap.md`'s stale coverage prose is replaced by a pointer
+   to the ledger.
 
 ## The arc's end-state claim (the honest ledger)
 
@@ -228,9 +252,10 @@ fix obligation (this arc or a named successor).
 5. The triage table complete: 13/13 open bugs + every baseline red
    in exactly one category; category-(a) rows fixed; category-(c)
    rows put to the user.
-6. The frontier map + guardrail suite landed; every refused feature
-   enumerated with oracle-verified cases classifying frontend-blocked;
-   raft-path features at full enumeration depth.
+6. The language coverage ledger complete: every spec section
+   classified (covered-with-grade / frontier / latitude /
+   out-of-language-justified), zero unclassified; frontier suites
+   landed at full-enumeration default; roadmap re-pointed.
 7. The end-state claim verified against the final baseline: zero
    reds outside the triage table.
 8. Untriaged-25 cross-check recorded.
