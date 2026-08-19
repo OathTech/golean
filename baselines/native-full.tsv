@@ -1,25 +1,24 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-19 (bug-fix arc, H-3 = per-declaration quarantine for
-#   METHODS; scope addition, user-directed — raft-w2 handoff H-3)
-#   commit: this commit (on adde311d, the 19-red/triage-postscript tip)
-#   re-pin reason: an unlowerable METHOD no longer refuses the whole
-#   package export. It lands as a signature-carrying stub that refuses
-#   when CALLED (tools/nativefrontend/emit.go, quarantinedMethodStub) —
-#   the contract plain functions have had since the wrong-answers-builtins
-#   arc. The method-set entry is NEVER dropped, so interface satisfaction
-#   still answers what gc answers.
-#   Deltas — 12 NEW ids and nothing else (zero flips on the 2181
-#   pre-existing ids):
-#     NEW/PASS (8): methods/quarantine-sibling/{good-method,plain-func},
-#       methods/quarantine-interface/{satisfies,dispatch-good},
-#       methods/quarantine-embedded/{promoted-good,promoted-satisfies},
-#       methods/quarantine-pointer-receiver/{value-not-satisfies,pointer-satisfies}
-#     NEW/FAIL frontend-export (4, by design — the call into a stub):
-#       methods/quarantine-sibling/quarantined-call,
-#       methods/quarantine-interface/dispatch-quarantined,
-#       methods/quarantine-embedded/promoted-call,
-#       methods/quarantine-pointer-receiver/pointer-call
-#   counts: 2193 cases, 2086 PASS / 107 FAIL (was 2181, 2078/103)
+# recorded: 2026-08-19 (bug-fix arc, slice 6 = the whole-language bar,
+#   suite tranche A: build-queue-top frontier guardrails + the
+#   len-vs-call divergence pin the slice-5 triage §3.4 owed)
+#   commit: this commit (on b4924afe, the slice-6 denominator tip)
+#   re-pin reason: 15 NEW ids and nothing else (zero flips on the 2193
+#   pre-existing ids), all guardrails-first colors recorded from go run
+#   before the differential ran (artifacts/probe/slice6a, scratch):
+#     NEW/FAIL differential (2, BUG-062 — the len-vs-CALL forced-point
+#       divergence, machine 3 vs go 1, now MEASURED on both sides):
+#       builtins/len-vs-call-order/{chan,slice}
+#     NEW/PASS (3, controls): builtins/len-vs-call-order/recv-bearing
+#       (the accident-green receive-bearing shape A6 must not regress),
+#       channels/recv-short-circuit/{and-lhs,funclit-rhs} (the green
+#       neighbouring positions of the F24 refusal)
+#     NEW/FAIL frontend-export (10, red by design — enumerated
+#       frontier): channels/recv-short-circuit/{and-rhs,or-rhs,
+#       and-rhs-skipped} (F24), range/assign-form-nonident/{field-target,
+#       deref-target,map-elem-target} (F20),
+#       goroutines/go-builtin/{delete,copy,recover,panic} (F15)
+#   counts: 2208 cases, 2089 PASS / 119 FAIL (was 2193, 2086/107)
 #   frontend: native (tools/nativefrontend + NativeToIR)
 # columns: result<TAB>id<TAB>stage
 PASS	arrays/array-bounds	-
@@ -128,6 +127,9 @@ PASS	builtins/copy-edge/nil-source	-
 PASS	builtins/copy-edge/string-prefix	-
 PASS	builtins/copy-string-to-bytes	-
 PASS	builtins/len-cap-array-pointer	-
+FAIL	builtins/len-vs-call-order/chan	differential
+PASS	builtins/len-vs-call-order/recv-bearing	-
+FAIL	builtins/len-vs-call-order/slice	differential
 PASS	builtins/make-channel-len-cap	-
 PASS	builtins/make-map-hint	-
 PASS	builtins/min-max-edge/defined-int	-
@@ -216,6 +218,11 @@ PASS	channels/recv-order/len-embedded-no-recv	-
 PASS	channels/recv-order/multi-assign	-
 PASS	channels/recv-order/return-list	-
 PASS	channels/recv-order/switch-case	-
+PASS	channels/recv-short-circuit/and-lhs	-
+FAIL	channels/recv-short-circuit/and-rhs	frontend-export
+FAIL	channels/recv-short-circuit/and-rhs-skipped	frontend-export
+PASS	channels/recv-short-circuit/funclit-rhs	-
+FAIL	channels/recv-short-circuit/or-rhs	frontend-export
 PASS	channels/recv-stmt	-
 PASS	channels/select-deterministic/channel-operands-eval-order	-
 PASS	channels/select-deterministic/closed-buffered-receive	-
@@ -904,6 +911,10 @@ PASS	goroutines/fork-join/result-discarded	confluent
 PASS	goroutines/fork-join/two-workers-own-chans	confluent
 PASS	goroutines/fork-join/unbuffered	confluent
 FAIL	goroutines/go-builtin/close	frontend-export
+FAIL	goroutines/go-builtin/copy	frontend-export
+FAIL	goroutines/go-builtin/delete	frontend-export
+FAIL	goroutines/go-builtin/panic	frontend-export
+FAIL	goroutines/go-builtin/recover	frontend-export
 PASS	goroutines/main-exit/blocked-goroutine	confluent
 PASS	goroutines/main-exit/two-leaked	confluent
 PASS	goroutines/ping-pong/alternate	confluent
@@ -1644,6 +1655,9 @@ PASS	range/assign-form-interface-target/index	-
 PASS	range/assign-form-interface-target/map-key	-
 PASS	range/assign-form-interface-target/slice-value	-
 PASS	range/assign-form-interface-target/string-rune	-
+FAIL	range/assign-form-nonident/deref-target	frontend-export
+FAIL	range/assign-form-nonident/field-target	frontend-export
+FAIL	range/assign-form-nonident/map-elem-target	frontend-export
 PASS	range/int-kind-arith/conversion-control	-
 PASS	range/int-kind-arith/defined-arith	-
 PASS	range/int-kind-arith/int8-arith	-

@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+# F20 frontier suite (slice 6): assignment-form range with
+# non-identifier targets — all RED at frontend-export by design
+# (emit.go: "range assignment to non-identifier target (operands
+# evaluate per iteration)"). map-elem-target observes the
+# per-iteration phase-1 target evaluation (old k indexes m), so a lift
+# that evaluated targets once, or after the assignment, goes red here.
+field-target	rafFieldTarget	-	ok	-	range,structs,evaluation_order
+deref-target	rafDerefTarget	-	ok	-	range,pointers,evaluation_order
+map-elem-target	rafMapElemTarget	-	ok	-	range,maps,evaluation_order
