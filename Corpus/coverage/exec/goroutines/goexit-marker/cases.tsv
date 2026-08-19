@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+# FRONTIER MARKER (slice 6): mem#goexit's API surface, red at
+# frontend-export by design — see main.go and the ledger's Q-GOEXIT
+# design question. Marker-only by logged justification: Goexit's
+# observable surface is one call with one semantics (terminate this
+# goroutine after its defers); the design question, not enumeration
+# breadth, is what blocks it.
+child	goexitChild	-	ok	-	goroutines,goexit,channels

@@ -151,7 +151,7 @@
 #   operand; the frontend now emits the spec's auto-deref), repaired by
 #   its fix and folded into its Cases. The buildout's import of
 #   unittest/embedded.go re-surfaced the class and forced the triage.
-7
+9
 # 2026-08-09 (spec-parity slice 2, sync guardrails)  16 -> 50, mostly
 #   TRANSIENT: the 34 fidelity-stage sync-package red pins enter
 #   red-first BEFORE the machine/frontend sync work (design note
@@ -187,3 +187,15 @@
 #   spawn-in-init (frontier), select-select x2 (frontier),
 #   slice-to-array/ok-forms (L2b frontier). Family 6 (go-of-nil-func,
 #   L10) is not in this ledger — its red is stage go-run.
+# 2026-08-19 (bug-fix arc slice 6, the whole-language bar)  7 -> 9: the
+#   sync/atomic FRONTIER suite lands (concurrency-entangled design
+#   question Q-ATOMIC, docs/language-coverage-ledger.md) and two of its
+#   five red rows surface at fidelity-adjacent stages —
+#   atomic-frontier/value (lean-observation: the atomic.Value zero
+#   value is a D5 imported-type stub refusal) and
+#   atomic-frontier/mp-litmus (membership: the enumerator refuses at
+#   the quarantined store). Same class as the select-select and
+#   trylock markers: coverage backlog failing closed, never wrong
+#   answers; both flip at the atomics arc. The other three atomic rows
+#   (add-load-store, cas, swap) refuse at frontend-export, outside this
+#   ledger.

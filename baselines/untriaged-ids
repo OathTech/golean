@@ -108,3 +108,19 @@ channels/select-select/beside-loop
 #   the IEEE min/max fold over the shared floatMinMaxBits kernel landed
 #   (NaN propagates, min(-0,+0) = -0). Entries retired.]
 spec-examples-decl/slice-to-array/ok-forms
+# 2026-08-19 (bug-fix arc slice 6, the whole-language bar): two
+#   sync/atomic FRONTIER-suite rows enter — coverage backlog, not
+#   fidelity wrong-answers, both fail-closed refusals of an unmodeled
+#   feature that happen to surface at fidelity-adjacent stages (the
+#   select-select/trylock precedent):
+# sync/atomic-frontier/value: the atomic.Value zero value refuses at
+#   RUN time ("default value for imported named type sync/atomic.Value"
+#   — a D5 imported-type stub, so lean-observation is the nearest
+#   stage). Flips at the atomics arc (ledger design question Q-ATOMIC).
+sync/atomic-frontier/value
+# sync/atomic-frontier/mp-litmus: the membership-lane SC litmus row —
+#   the enumerator refuses at the quarantined StoreInt32 call
+#   (stage membership). Its admitted set {0,1,11} is argued from
+#   mem#atomic's seq_cst clause in the case file; flips at the same
+#   arc, which re-certifies the set.
+sync/atomic-frontier/mp-litmus

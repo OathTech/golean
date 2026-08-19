@@ -2,3 +2,9 @@
 # PERMANENT-until-lifted refusal marker (design note §9, D4:
 # sync.Cond OUT): red at frontend-export by design until a Cond slice.
 cond-signal-no-waiter	condSignalNoWaiter	-	ok	-	sync
+# Slice-6 rows: the Q-COND design question's cases-in-hand (ledger).
+# Deterministic-across-the-envelope observables (wakeup order
+# normalized away), red at frontend-export by design with the row
+# above until a Cond slice.
+cond-wait-signal	condWaitSignal	-	ok	-	sync,cond,goroutines
+cond-broadcast	condBroadcast	-	ok	-	sync,cond,goroutines
