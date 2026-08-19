@@ -6,8 +6,10 @@ package main
 // newproc), exit status 2. This REFUTES the machine-shape note §6's
 // analysis ("nil-callee panics at invocation in the CHILD, the
 // deferCall rule") — defer's nil-invocation panic does NOT carry over
-// to go. The machine fails CLOSED on a nil spawn callee this slice
-// (the fatal class is unmodeled); the case is a deliberate red pin.
+// to go. Modeled since the 19-red slice (triage L10, 2026-08-19): the
+// machine raises GoError.fatal at the spawn, and the row pins the
+// class and gc's fixed message through expected_status fatal (the
+// class landed at spec-parity slice 2, expiring the old red pin).
 
 func spawnNilFuncFatal() int {
 	var f func()

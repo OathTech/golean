@@ -2200,8 +2200,8 @@ def main : IO UInt32 := do
     (GoCore.Machine.runProgramPoolM 100000 poolProgram "poolMainExit_F" #[]) 7)
   passed := passed && (← expectIntResult "GoCore pool close wakes parked receiver (drained zero)"
     (GoCore.Machine.runProgramPoolM 100000 poolProgram "poolCloseWakeMain_F" #[]) 55)
-  passed := passed && (← expectErrorStatus "GoCore pool nil spawn callee fail-closed (gc fatal unmodeled)"
-    (GoCore.Machine.runProgramPoolM 100000 poolProgram "poolNilSpawn_F" #[]) "unsupported")
+  passed := passed && (← expectErrorStatus "GoCore pool nil spawn callee is gc's runtime fatal (triage L10; the fatal class, not a refusal)"
+    (GoCore.Machine.runProgramPoolM 100000 poolProgram "poolNilSpawn_F" #[]) "fatal")
   passed := passed && (← expectIntResult "GoCore poller family: shorter stream completes at fuel 165 (min 165 at [2]*16)"
     (GoCore.Machine.runProgramPoolM 165 pollerProgram "pollerMain_F" #[]
       (List.replicate 16 2)) 42)

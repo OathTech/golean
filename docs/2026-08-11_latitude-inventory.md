@@ -909,9 +909,12 @@ subexpressions of one binary operator).
   recover does NOT catch — probes p01–p03). Machine: `GoError.fatal`
   with gc's fixed strings; recorded narrowing: the fatal observation
   carries the fatal alone, dropping gc's pending-panic line when raised
-  during unwinding (sync design §8). go-of-nil-func fatal remains
-  REFUSED (not migrated to the class; permanent red pin
-  spawn-edge/nil-func-fatal).
+  during unwinding (sync design §8). go-of-nil-func fatal MIGRATED to
+  the class (2026-08-19, 19-red slice family 6 = triage L10:
+  `GoError.fatal "go of nil func value"` at the spawn arm;
+  spawn-edge/nil-func-fatal now a GREEN pin at expected_status fatal —
+  the old red pin's "the class is unmodeled" reason expired when the
+  class landed at spec-parity slice 2, two days after the pin).
 - Plausible envelope: {recoverable panic, unrecoverable fatal} — a
   historical gc change class (ARCH would bear: pre-1.8 realizations
   differed). PERMANENT-pin candidate at gc's current point,
@@ -970,7 +973,7 @@ exit having no HB edge.
 ## 5. Refusals standing in for latitude (inventory of fail-closed resolutions)
 
 R6 (float→int out-of-range), E6 (len/cap hoist shapes),
-go-of-nil-func fatal (R11), select-with-select
+select-with-select
 rendezvous (Multi.lean:92–97), racy programs (C10 — by doctrine),
 uintptr observations, `go` during `$pkginit` (StepFn.lean:501–521).
 Each is honest (visible red, never a wrong answer); none is a fidelity
