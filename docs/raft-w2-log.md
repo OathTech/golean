@@ -43,12 +43,19 @@ tier-1 probe.
 | c | the subject delta is RECORDED — every divergence from upstream raftpb source itemised | §4, the subject-delta ledger |
 | d | any shim method with real logic gets a differential obligation, probed against upstream under `go run`, comparison recorded | §5, `tools/raftsubject/difftest.py` |
 
-Requirement (b) carries one named residue rather than a clean discharge:
-`proto.Size` is absent/fail-closed, while raft's flow control computes
-protobuf wire sizes on its NORMAL path (`entsSize`/`limitSize` in the raft
-root package — scoping §7's audit-found residue). Nothing in the packages
-vendored so far reaches it. It is handoff item **H-1** below, not a quiet
-deferral.
+Requirement (b) carries named residues rather than a clean discharge. The one
+scoping §7 found is `proto.Size`: absent/fail-closed, while raft's flow
+control computes protobuf wire sizes on its NORMAL path (`entsSize`/`limitSize`
+in the raft root package). The pre-merge audit found a second and larger one —
+`proto.Unmarshal` on raft's conf-change ADMISSION path (`raft.go:1314`/`:1320`)
+— so the residue is decode-and-encode, not sizing alone; §3 censuses all four
+sites and ranks them. Nothing in the packages vendored so far reaches any of
+them. They are handoff item **H-1** below, not a quiet deferral.
+
+Requirement (b) carries one further BOUND, also audit-found and recorded in §3:
+the stub panics are a fail-closed guarantee for DIRECT calls, and `fmt` recovers
+Stringer panics rather than propagating them. Unexploitable in the tree as it
+stands; an input to the H-6 fmt ruling.
 
 ---
 
@@ -85,7 +92,7 @@ reassemble the source byte-for-byte.
 
 **The getters are the interesting kept case.** raft calls `GetTerm`,
 `GetIndex`, `GetType`, `GetAutoLeave` and friends on every normal path, so the
-37 generated getters are kept VERBATIM — and the derivation shape-checks each
+**40** generated getters are kept VERBATIM — and the derivation shape-checks each
 one against the stripped struct's field list (canonical pointer shape vs
 canonical value shape, receiver/field agreement, pointer-shape-only-over-
 pointer-field, `nil` zero for the value shape). "Kept verbatim" is therefore
@@ -94,10 +101,31 @@ a checked claim, not an assumption.
 **Sizes.** Upstream `raft.pb.go` 1233 lines → derived 765, plus 624 lines of
 generated `plain_clone.go`. 9 message structs (40 fields, field numbers
 preserved in the struct tags), 4 enums with constants and name/value maps,
-37 getters, 4 `Enum()`, 9 `Reset()`, 9 `ProtoMessage()`.
+**40** getters, 4 `Enum()`, 9 `Reset()`, 9 `ProtoMessage()`.
+
+The getter count breaks down per message as: `Entry` 4, `SnapshotMetadata` 3,
+`Snapshot` 2, `Message` 14, `HardState` 3, `ConfState` 5, `ConfChange` 4,
+`ConfChangeSingle` 2, `ConfChangeV2` 3 — 40 total, and **the per-message
+counts equal the per-message FIELD counts, every one of the nine**. That
+equality is the check worth stating: the shim exposes exactly one getter per
+declared field, so the 40 matching the struct field count above is a property,
+not a coincidence to be squinted at.
+
+*(Corrected 2026-08-19 from "37", which the pre-merge audit caught, and the
+provenance was reproduced rather than guessed: a counting regex whose receiver
+class was `[A-Za-z]+` —* `^func \(x \*[A-Za-z]+\) Get[A-Za-z]+` *— returns
+exactly 37, because the class admits no DIGIT and so misses all three getters
+on `ConfChangeV2`, the one message type with a digit in its name. 40 − 37 = 3,
+the whole gap. The lesson is cheap and general: **a count that feeds a doc
+claim is re-derived by re-running it, and a type-name pattern in Go uses `\w`,
+because Go identifiers contain digits** — here the language's own naming
+convention for protobuf versions (`V2`, `V3`) guarantees they will.)
 
 Reproduce: `tools/raftsubject/derive.py --check` (re-derives to a temp dir and
-diffs; exit 1 on drift).
+diffs; exit 1 on drift). Scope note: the drift walk compares every DERIVED file
+against the tree, and the reverse walk (tracked-but-not-derived) scans `.go`
+files only — `raftsubject/README.md` is hand-written and deliberately exempt,
+which is also why `frontier.py` copies the tree with `README.md` ignored.
 
 ---
 
@@ -136,22 +164,82 @@ implementation reads the ruling rather than following it literally.
 **Marshal-avoidance is structural, not stubbed.** `Marshal`, `Unmarshal` and
 `Size` do not exist in the shim at all — there is no encoder to call. The only
 in-tree caller of any of them was `MarshalConfChange`, which is the one
-hand-written stub above. `proto.Size`'s absence is H-1.
+hand-written stub above. Their absence beyond the vendored tree is H-1, and
+H-1 is BIGGER than `proto.Size` — see the residue census immediately below.
+
+**The upstream residue, censused (2026-08-19, pre-merge audit).** "H-1 =
+`proto.Size`" was too narrow: the DECODE side is at least as load-bearing, and
+it sits on a decision path, which `Size` mostly does not. Measured against
+`deps/raft` @ `56e3200`, root package, non-test:
+
+| site | call | why it matters |
+|---|---|---|
+| `raft.go:1314`, `raft.go:1320` | `proto.Unmarshal` into `ConfChange` / `ConfChangeV2` | **DECISION PATH.** `stepLeader`'s `MsgProp` handler decodes each proposed entry to decide whether to ADMIT the conf change or rewrite it to a no-op (`alreadyPending`/`alreadyJoint`/`wantsLeaveJoint`). The decode result steers raft's membership-change safety check; a failure `panic`s. Not rendering, not optional. |
+| `bootstrap.go:56` | `proto.Marshal` of a `ConfChange` | `Bootstrap` encodes the initial peer set into `Entry.Data`. An ENCODE on a setup path — avoidable by snapshot-seeding membership (which is what marshal-avoidance assumes), but only if W4 declines `Bootstrap`. |
+| `util.go:225`, `util.go:232` | `proto.Unmarshal` in `DescribeEntry` | rendering-internal (§6(a)); decode, but behind a `Describe*`. Lowest rank of the three. |
+| `util.go:277`, `:290`, `:292` | `proto.Size` in `entsSize`/`limitSize` | the originally-named residue: flow control sizes entries in WIRE bytes. Normal path, but the value feeds a LIMIT, not a branch on message content. |
+
+**Re-ranked W4 obligation list**, which is the point of the census: (1) the
+`stepLeader` decode, because a decision path cannot be papered over with a
+seam and no snapshot-seeding trick removes it — the entries arrive as
+proposals; (2) `proto.Size`, which needs wire-accurate byte counts derived
+from the same field lists + tags the shim already parses, or an explicitly
+argued size seam; (3) `bootstrap.go`'s encode, retired for free if W4 seeds
+membership by snapshot and declines `Bootstrap` — a scoping decision, not an
+implementation; (4) `DescribeEntry`'s decode, which rides on whatever §7/H-6
+rules for rendering. Note that (1) and (2) are the same missing artefact seen
+from two ends: a wire codec derived from the pinned `.proto` field numbers
+would discharge both, which is the argument for building one rather than four
+seams.
 
 **The frontend's own fail-closed behaviour was exercised, not assumed.** The
 two plain functions that could not lower — `raftpb.ConfChangesFromString` and
-`raftpb.ConfChangesToString` (both `strings`/`strconv` parsing helpers, both
-called only from `rafttest` upstream) — land on the wire as `unsupported`
-entries via the per-decl quarantine, i.e. they refuse WHEN CALLED. That is the
-paired control for §6's finding about methods.
+`raftpb.ConfChangesToString` (both `strings`/`strconv` helpers) — land on the
+wire as `unsupported` entries via the per-decl quarantine, i.e. they refuse
+WHEN CALLED. That is the paired control for §6's finding about methods.
+
+**Correction (2026-08-19, pre-merge audit).** An earlier version of the
+sentence above justified those two as "called only from `rafttest` upstream".
+That justification was WRONG for `ConfChangesToString`: it is called from
+`deps/raft/util.go:216`, inside `DescribeEntry`, which is root-package
+non-test code. The conclusion survives, but on the OTHER argument — §6(a)'s:
+`DescribeEntry` is itself a rendering function, so the call is
+rendering-internal and no decision path reaches it. Recorded rather than
+quietly repaired, because the two arguments have different reach: "only
+`rafttest` calls it" would have survived W4 vendoring the root package, and
+the argument that actually holds does not — W4's `Describe*` helpers put a
+live in-tree caller in the tree, at which point this stub's refusal becomes
+reachable from anything that renders. See the fmt bound below and H-6.
+
+**The fail-closed guarantee is bounded: it covers DIRECT calls.** The 9
+`(*T).String` and 4 `E.String` stubs panic, and a direct call therefore
+refuses loudly, as intended. But the normal way a `String()` method is invoked
+in Go is through `fmt` — and `fmt` does not propagate a Stringer's panic. Its
+`catchPanic` recovers it and renders the verb as `%!s(PANIC=String method:
+...)`, after which formatting and the program CONTINUE. So a `%s`/`%v` on one
+of these types is not a refusal a differential would see as a stop; it is a
+funny-looking string. In-tree this is currently unexploitable in the direction
+that matters, and that was checked rather than assumed: of the twelve `fmt`
+verb sites in the vendored tree's Go code, exactly ONE formats a type carrying
+a fail-closed stub — `confchange.go:109`'s `%+v` over a `*ConfChangeV2` (see
+§6(a)) — and it is inside a panic ARGUMENT, where the outer `panic` fires
+regardless of what the argument rendered to. The other eleven format integers
+or `tracker`/`quorum` types whose `String` methods are upstream's real ones. The no-op logger never calls `fmt` at all. It stops being unexploitable at W4: the `Describe*` helpers
+RETURN rendered strings, so a recovered panic there becomes a value that flows
+onward. This is an INPUT to the H-6 fmt ruling (§7), not a separate item —
+whichever of §7's three options is taken must say what `fmt`-mediated
+rendering of a fail-closed type does.
 
 ---
 
 ## §4 The subject-delta ledger (requirement c)
 
-Every divergence of `raftsubject/` from upstream `deps/raft`. Nothing else
-differs: `quorum/*`, `tracker/*`, `raftpb/alias.go` and `raftpb/util.go` are
-upstream text with only the two import-path rewrites.
+Every divergence of `raftsubject/` from upstream `deps/raft`. Outside the five
+files itemised below nothing differs: `quorum/*`, `tracker/*`,
+`raftpb/alias.go` and `raftpb/util.go` are upstream text with only the two
+import-path rewrites. (Wording tightened 2026-08-19: the old "nothing else
+differs" read as a completeness claim over the whole tree including
+`raft.pb.go`, whose comment-stripping D-1 had not named. It now does.)
 
 ### D-1 `raftpb/raft.pb.go` — the strip (mechanical)
 Structs keep their fields, types and protobuf struct tags; the three
@@ -160,6 +248,22 @@ Structs keep their fields, types and protobuf struct tags; the three
 store. Everything else per §3. **Observable weight:** the types no longer
 implement `proto.Message`, so nothing outside the shim can marshal, reflect
 over, or JSON-decode them. Under marshal-avoidance nothing tries.
+
+**One non-semantic delta the ledger owed and did not name (audit-found,
+2026-08-19): the strip drops every TOP-LEVEL doc comment — all 64 of them.**
+This is structural, not incidental: `split_decls` treats a column-0 `//` as a
+declaration start, so a doc comment becomes its own chunk, and a chunk with no
+declaration text is skipped. FIELD-level comments (indented, inside the struct
+bodies) are kept — 46 of them survive into the derived file — as are the
+protobuf struct tags, so the field-number provenance a reader needs is intact.
+The 23 top-level `//` lines in the derived file are all `PLAINPB_HEADER`; zero
+upstream ones survive. Weight: NIL semantically — no declaration, type, field,
+tag or body changes — but it is a real textual divergence, and a ledger whose
+whole job is "every divergence, itemised" owed it a line. It is also why §4's
+opening sentence now says "outside the five files itemised below" rather than
+"nothing else differs": the verbatim claim is about `quorum/*`, `tracker/*`,
+`raftpb/alias.go` and `raftpb/util.go`, and it was never a claim about
+`raft.pb.go`, which this section itemises.
 
 ### D-2 `raftpb/plain_clone.go` — GENERATED, no upstream counterpart
 Plain-Go `CloneMessage()`/`EqualMessage()` per message type (9 each), derived
@@ -306,13 +410,34 @@ against upstream raftpb under `go run`, and against the machine.
 rendering paths (W1 rows 1–4, 6) quarantine-dead under harness-shaped entry
 points? **Measured, and the answer is two-part.**
 
-**(a) Runtime-dead: YES.** Every `String()`/`Describe()` call site in raft's
-non-test code sits inside another rendering function — `util.go`'s `Describe*`
-helpers, or the `String` methods themselves. Nothing on a decision path calls
-them. (The one apparent exception, `state_trace.go`, is behind
+**(a) Runtime-dead: YES, with one named exception that does not change the
+verdict.** Almost every `String()`/`Describe()` call site in raft's non-test
+code sits inside another rendering function — `util.go`'s `Describe*` helpers,
+or the `String` methods themselves — and nothing on a decision path calls them.
+
+**The exception, audit-found 2026-08-19, because the claim was written
+categorically and is not:** `raftpb/confchange.go:109`, inside
+`(*ConfChangeV2).EnterJoint`, is `panic(fmt.Sprintf("unknown transition: %+v",
+c))`. That `%+v` over `c` — a `*ConfChangeV2` — REACHES `(*ConfChangeV2).String`,
+one of the 9 fail-closed stubs, and it is not inside a rendering function:
+`EnterJoint` is semantic. So a `String` stub is reachable from a non-rendering
+path after all. Why the verdict survives anyway, on the merits rather than by
+narrowing: the site is raft's own defensive-unreachable default over a closed
+enum (`ConfChangeTransitionAuto`/`JointImplicit`/`JointExplicit` are exhaustive
+for a well-formed value), it is inside a `panic` ARGUMENT, and per §3's fmt
+bound the recovered Stringer panic only degrades the message — **the outer
+`panic` still fires**, so the program still stops, which is the behaviour the
+fail-closed register is actually promising. It is F-5 in the inventory below
+and one of the two sites §7's fmt ruling exists to settle; it is NOT a
+quarantine-deadness counterexample, but the earlier "every call site sits
+inside another rendering function" was simply false and is withdrawn.
+
+(The other apparent exception, `state_trace.go`, is behind
 `//go:build with_tla`; the default build takes `state_trace_nop.go`, whose
 `traceChangeConfEvent` is an empty body. It becomes live only if the subject
-is ever vendored with that tag, which would be a recorded decision.) With the no-op logger, the `%s` verbs
+is ever vendored with that tag, which would be a recorded decision.)
+
+With the no-op logger, the `%s` verbs
 in `logger.Infof(...)` never run, so the `String()` methods behind them are
 never invoked — Go evaluates the argument (a field read) but only `fmt` calls
 `String`, and `fmt` is never reached. The injection does what W2.2 wanted.
@@ -338,6 +463,31 @@ package's type-check and the next thing you see is a cascade of your own
 removal, which is exactly what W1's row 2 (`c[0].String undefined`) was. Each
 step is driven from a tracked plan (`tools/raftsubject/frontier-plan.tsv`) and
 checked against its recorded expectation, so the walk reproduces or refutes.
+
+**The instrument's own gate, hardened 2026-08-19 (pre-merge audit).** The walk
+checked each row's predicted refusal against the frontend's actual one, but
+its exit code said nothing about the state it STOPPED in — so a plan truncated
+to its first few rows walked them, matched them all, printed a live refusal in
+its `final:` line, and **exited 0**. The auditor demonstrated exactly that,
+and it is the failure mode that matters here: this instrument's output is the
+inventory in this section, so an under-complete plan does not report an error,
+it reports a SHORTER FRONTIER — a claim about raft that is simply false, made
+by a green run. Two changes, both re-demonstrated:
+
+- the plan now ends with a **terminal `*` row** asserting `(exports clean)` —
+  documented in the docstring before, present in the file now — and
+  `frontier.py` REFUSES a plan lacking it, because a walk with no terminal
+  assertion is a list of steps, not a measurement of a frontier;
+- the final state is folded into the **exit code**, so completeness is checked
+  even if the terminal row is present but premature.
+
+Demonstrated on both truncation shapes: a 3-row plan with the terminal row
+dropped is refused (`EXIT=1`), and a 3-row plan that keeps the terminal row —
+i.e. one that falsely CLAIMS completeness — fails it as a MISMATCH and then
+fails the final check (`EXIT=1`). The same 3-row plan against the pre-fix
+instrument still exits 0, which is the before/after pair. Full plan: 10 rows +
+terminal, all `ok`, `final: EXPORTS CLEAN`, `EXIT=0` — so the inventory below
+is unchanged by the hardening; it is now load-bearing rather than advisory.
 
 ### The inventory (2026-08-19, `deps/raft` @ 56e3200, full derived tree)
 
@@ -442,7 +592,7 @@ This lane records the options and the measurement; the ruling is W2.3's.
 
 | id | item | owner |
 |---|---|---|
-| H-1 | **`proto.Size` is fail-closed while raft's flow control needs it on the normal path** (`entsSize`/`limitSize` → `proto.Size`, callers in storage/log/raft/rawnode). Under plainpb this needs a wire-accurate `Size` derived from the same field lists + tags, or a size-seam with a recorded fidelity argument. Not reached by the packages vendored so far. Scoping §7 layer C named it; this is its ticket. | W4 (head of its obligation list) |
+| H-1 | **The protobuf residue in the root package — DECODE first, then `Size`.** Ranked in §3's census: (1) `proto.Unmarshal` at `raft.go:1314`/`:1320`, `stepLeader`'s `MsgProp` conf-change admission — a DECISION path, unavoidable by seeding; (2) `proto.Size` in `entsSize`/`limitSize` (`util.go:277`/`:290`/`:292`), flow control's wire-byte limit; (3) `proto.Marshal` at `bootstrap.go:56`, retired for free if W4 declines `Bootstrap`; (4) `proto.Unmarshal` in `DescribeEntry` (`util.go:225`/`:232`), rendering-internal. (1) and (2) are one artefact from two ends: a wire codec derived from the pinned field numbers + tags discharges both. Not reached by the packages vendored so far. Scoping §7 layer C named the `Size` half; this is the whole ticket. (Widened 2026-08-19 — the pre-merge audit found the decode side, which the original H-1 missed entirely.) | W4 (head of its obligation list) |
 | H-2 | **The no-op logger's `Fatal`/`Panic` do not abort** (D-5), which SILENCES raft's own assertions: `assertConfStatesEquivalent` (`util.go:320`, called from `raft.go:479`/`:1936`) routes a failed ConfState-equivalence assertion through `Logger.Panic`. Must be settled BEFORE W4 vendors the root package; candidate answer is "Panic/Panicf panic with a fixed string, the rest stay empty". | W4 / W2.3 — blocking for W4 |
 | H-3 | **Methods have no per-decl quarantine** (`mono.go:489`), so six runtime-dead rendering methods block the whole export. Extending the quarantine to methods — signature-carrying stubs that refuse when called, the same contract plain functions already get — would unblock the subject tree with no subject delta at all. Frontend change; this lane must not make it. | W1 / frontend lane |
 | H-4 | **`copy` in statement position** (F-6, `emit.go:1767`) → the bug-fix arc's slice-6 language-coverage ledger as a `frontier` row with a raft-path priority mark. | bug-fix arc |

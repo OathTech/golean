@@ -476,9 +476,26 @@ implementation, not suggestions):
 `tools/raftsubject/derive.py` (the derivation, requirement a),
 `tools/raftsubject/difftest.py` (requirement d), and
 `docs/raft-w2-log.md` (requirements b and c: the fail-closed register
-and the subject-delta ledger). One requirement is discharged with a
-named residue rather than fully: `proto.Size` is a fail-closed stub
-today, while raft's flow control computes wire sizes on its NORMAL path
-(§7 layer C's audit-found residue). That is not reached by the packages
-vendored so far and is the head of W4's obligation list, recorded as
-such — not quietly deferred.
+and the subject-delta ledger). Requirement (b) is discharged with named
+residues rather than fully, all recorded in the lane log rather than
+quietly deferred, and none reached by the packages vendored so far:
+
+- **The protobuf residue in the root package is decode-first, not just
+  `Size`** (widened 2026-08-19 by the W2.1 pre-merge audit). `proto.Size`
+  in flow control (`entsSize`/`limitSize`) was §7 layer C's find; the
+  audit added `proto.Unmarshal` at `raft.go:1314`/`:1320`, which is
+  `stepLeader`'s conf-change ADMISSION path — a decision path, and so
+  ranked above `Size`. Plus `proto.Marshal` at `bootstrap.go:56` and the
+  decode inside `DescribeEntry`. Censused and ranked at
+  `docs/raft-w2-log.md` §3; the whole of it is handoff H-1, the head of
+  W4's obligation list.
+- **"Explicit panic a differential would see" holds for DIRECT calls.**
+  The `String`-family stubs panic as required, but Go's `fmt` recovers a
+  Stringer panic into a `%!s(PANIC=...)` string and continues, so a
+  stub reached THROUGH `fmt` degrades a message rather than stopping.
+  Unexploitable in the tree as it stands (the one reachable site is
+  inside a `panic` argument, where the outer panic still fires; the
+  no-op logger never calls `fmt`), and it becomes live when W4 vendors
+  the `Describe*` helpers, which return rendered strings. It is an
+  INPUT to the owed fmt ruling (H-6), recorded at `docs/raft-w2-log.md`
+  §3 — the requirement's intent is met, its literal wording is bounded.
