@@ -869,9 +869,9 @@ refusal points would bury everything else here. Counts at `0c21aa21`:
 | (c) profound-reason pin | 10 | 6 | 4 (BUG-002, BUG-004, BUG-059, BUG-061) |
 | total | 138 | 45 | 9 |
 
-The (a) 46: 3 fixed here (A1) + 14 queued frontend-only mini-slices
-(A2-A6) + 19 gated on the charter's GoCore pause + 10 already at the
-slice-3/4 design gates.
+The (a) 46: **6 fixed here** (A1 3 + A2 3, steps 1 and 4) + 11 queued
+frontend-only mini-slices (A3-A6) + 19 gated on the charter's GoCore
+pause + 10 already at the slice-3/4 design gates.
 
 **JUDGMENT (slice 5, the (a) rows that are GoCore-touching are ASKED, not
 taken).** Nineteen reds are cheap and fully diagnosed to a named arm
@@ -887,12 +887,12 @@ that erodes a designed pause.
 
 **JUDGMENT (slice 5, which frontend-only (a) rows were taken).** A1 was
 taken (raft-path, hours, guardrails trivially available, zero
-neighbour surface). A2-A5 are queued with mechanisms; each is a
-scheduling call with its reason in the table (A3 lands inside the
-BUG-025/052 assignment spine and needs its own two-phase edge
-enumeration; A4 moves the mangling/identity surface and owes a
-reflect-spelling probe plus a `TestManglingSurfaceFailsClosed` update;
-A5 is a BUG-057-family edge; A2 is the cleanest and is next).
+neighbour surface); A2 was taken next for the same reasons (step 4).
+A3-A5 are queued with mechanisms; each is a scheduling call with its
+reason in the table (A3 lands inside the BUG-025/052 assignment spine
+and needs its own two-phase edge enumeration; A4 moves the
+mangling/identity surface and owes a reflect-spelling probe plus a
+`TestManglingSurfaceFailsClosed` update; A5 is a BUG-057-family edge).
 
 **JUDGMENT (slice 5, A6 / the charter's named receive-hoist item is
 deferred on a FINDING, not on cost).** The charter expected BUG-023/026
@@ -1037,3 +1037,24 @@ run at the fix tree → **`RESULT: PASS`**, exit 0, every step ok:
 R2 pins ok, spec-anchor citations resolve at the pin
 (`artifacts/probe/a2-ci.log`, scratch). As with A1, the only difference
 between the gated tree and the committed tree is this paragraph.
+
+### Slice 5 state
+
+**Table delivered; two mini-slices landed; three things wait on Mike.**
+
+| deliverable | state |
+| --- | --- |
+| the triage table (9 bugs + 138 reds, 45 groups, 3 categories, zero rows outside) | DONE — `docs/2026-08-19_triage-table.md` |
+| category-(a) mini-slices executed | A1 (`1ca434b2`) and A2 (`357b7297`) — 6 reds retired, 12 new green ids, zero unpredicted drift at either gate |
+| category-(a) queued frontend-only | A3-A6, mechanisms written, reasons logged |
+| category-(a) GoCore-touching | 19 reds, ONE gate ask (§3.3 of the table) |
+| category-(c) list | 7 rows argued fresh, awaiting user ratification |
+| untriaged-25 cross-check | DONE — unchanged at 25/25, derivation recorded, ten missing justifications written |
+| new finding | the len-vs-CALL forced-point divergence (§3.4) — corpus obligation, blocks A6 |
+
+**Gate at the table-update commit.** Docs-only, so
+`GOLEAN_MEM_MAX=24G scripts/ci` without `--diff` → **`RESULT: PASS`**,
+exit 0, `baseline diff FULL (2179/2179, no regression)` from A2's own
+`--diff` record (labelled stale by commit hash only — no runtime file
+changed since), `spec-anchor citations resolve at the pin` (347 spec# +
+75 mem#), `bug-index cross-check ok`, `eval tests (136 ok)`.
