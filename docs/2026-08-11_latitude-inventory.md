@@ -789,8 +789,16 @@ subexpressions of one binary operator).
 - RE-ENVELOPE OBLIGATION + COST: the append-spill mold — envelope
   [len, roundupsize-style upper], one arm + width metadata + a
   membership pin for the escaping regime. LOW cost; ranked high on
-  value-per-cost (§7). String→[]rune stays REFUSED (BUG-020), so only
-  the byte arm needs it today.
+  value-per-cost (§7).
+- RUNE ARM (2026-08-19, bugfix-arc 19-red slice): `[]rune(s)` now
+  EXISTS (`runesFromString`, triage L1) and shares the singleton
+  cap = len — with a WIDER caveat: gc is outside the singleton even on
+  the small non-escaping shape (probe go1.26.5: `cap([]rune("héllo"))`
+  = 32, the runtime's 32-rune conversion buffer; the escaping path
+  roundups like bytes). So the rune direction has NO agreeing
+  version-tracking pin (a cap-observing case was measured red and
+  deliberately not added — this entry is the record instead); the
+  re-envelope obligation above covers both arms.
 
 ### R4. Float fusion + extra intermediate precision — (b-n) NARROWED to per-op rounding (platform-scoped singleton)
 
@@ -959,8 +967,7 @@ exit having no HB edge.
 ## 5. Refusals standing in for latitude (inventory of fail-closed resolutions)
 
 R6 (float→int out-of-range), E6 (len/cap hoist shapes), R7's min/max,
-string→[]rune capacity (BUG-020 — refused before its cap latitude is
-even reachable), go-of-nil-func fatal (R11), select-with-select
+go-of-nil-func fatal (R11), select-with-select
 rendezvous (Multi.lean:92–97), racy programs (C10 — by doctrine),
 uintptr observations, `go` during `$pkginit` (StepFn.lean:501–521).
 Each is honest (visible red, never a wrong answer); none is a fidelity

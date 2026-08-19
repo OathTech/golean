@@ -1366,3 +1366,68 @@ exit 0, `baseline diff FULL (2179/2179, no regression)` from A2's own
 `--diff` record (labelled stale by commit hash only — no runtime file
 changed since), `spec-anchor citations resolve at the pin` (347 spec# +
 75 mem#), `bug-index cross-check ok`, `eval tests (136 ok)`.
+
+## §19-red — the GoCore-gated (a) reds (triage §3.3, user-approved batch 2026-08-19)
+
+The ruled GoCore gate: ONE slice, SIX COMMITS, one per arm-family, in
+the triage's order (L1 9, L2a 3, L3 3, L5+L6 2, L7 1, L10 1). Per
+family: guardrails confirmed against `go run` + the spec anchor first;
+the fix at the named arm with the flip set predicted in the commit
+message pre-run; same-commit re-pin; full `scripts/ci --diff` between
+families. TIER RULE (logged per family): families 1–5 are
+conversions/indexing/floats — no choice-consumption site, enumerator,
+or tier=slow row's program surface moves, so `--diff` carries them;
+`--slow` runs at the batch end with family 6, whose arm lives in the
+concurrent spawn path (`Multi.lean`) — the tiered rule's own case.
+
+### Family 1 — rune↔string conversions (triage L1, 9 reds)
+
+**Diagnosis confirmed before any change**: all 9 red at exactly the
+diagnosed catch-all (`scripts/coverage run` on the 9 ids →
+`unsupported "conversion to GoLean.GoCore.Ty.string"` /
+`"…Ty.slice (…int32)"`, stage lean-observation, go side green).
+**BUG-020-latitude check (the brief's special care)**: none of the 9
+observes `cap()` of a `[]rune(s)` conversion — verified against each
+case's source — so none is R3's capacity-latitude point; all 9 are
+plain missing-arm defects. The 19-count stands.
+
+**The fix**: two new strict ops over the EXISTING oracle-pinned
+kernels — `runesFromString` (new total `runesOfString` offset-walk over
+`decodeRuneAt`, U+FFFD per invalid byte; fresh backing array, the
+`bytesFromString` shape, cap = len) and `stringFromRuneSlice`
+(`sliceVisibleValues` + `GoString.fromCodePoint`, invalid code points →
+U+FFFD). Frontend classifier routes both directions by UNDERLYING type
+(`isRuneSlice`, `emit.go`), so defined slice/element/string types ride
+through — exactly go/types' conversion rule. Full blast radius landed
+same-commit: Syntax/Machine/Race/StateWf/NativeToIR + Frame (Rename,
+StrictOps arms + dispatch), Sym (Mirror transcription, DriftApply
+arms). Both builds green FIRST pass; the mirror transcribes both new
+arms (rune payloads close via `D.toInt?`, the byte-loop treatment).
+
+**JUDGMENT (family 1, the cap edge row)**: an edge row
+`strings/rune-conversion-cap` (mirroring `byte-conversion-cap`, the
+version-tracking pin the singleton would want) was written and RUN —
+and found gc OUTSIDE the cap=len singleton on the small NON-escaping
+shape: `cap([]rune("héllo")) = 32` (go1.26.5; the runtime's 32-rune
+conversion buffer), machine 55 vs go 325. So the rune direction has NO
+agreeing pin; shipping the row would be a deliberate permanent red in
+the arc that exists to kill reds. Following R3's own precedent (the
+escaping byte shape was measured red and deliberately not added), the
+row was REMOVED and the measurement recorded instead: at the
+`runesFromString` arm (a WIDER transfer caveat than the byte arm's)
+and in latitude inventory R3 (new RUNE ARM paragraph). The re-envelope
+obligation is R3's, covering both arms.
+
+**Predicted flips (stated pre-run): the 9 L1 ids FAIL/lean-observation
+→ PASS, nothing else.** Full run: cases=2181 pass=2068 fail=113 (was
+2181, 2059/122); `scripts/coverage-baseline-diff` drift = exactly the
+9, nothing else. Baseline re-pinned in this commit (header reason).
+`baselines/untriaged-ids`: the 7 strings/* and 2 spec-examples entries
+retired with flip notes (check 4b's departed-id rule). Backlog
+25 → 16.
+
+**Gate**: `GOLEAN_MEM_MAX=24G scripts/ci --diff` → **`RESULT: PASS`**,
+exit 0 — core + proofs builds (Audit gate ok), eval tests (136 ok),
+frontend unit tests ok, baseline diff FULL (2181/2181, no regression),
+re-pin guard (0 PASS→non-PASS flips), negative baseline diff ok
+(`/tmp/f1-ci.log`, scratch). Tier: `--diff` (rationale above).

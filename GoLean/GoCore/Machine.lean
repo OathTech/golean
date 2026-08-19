@@ -129,6 +129,10 @@ inductive StrictOp where
   /-- UTF-8 rune decode at a byte offset (range-over-string desugar). -/
   | runeAt
   | runeSizeAt
+  /-- `[]rune(s)` / `string([]rune)` (triage L1, 2026-08-19). Appended
+  last so positional proof bullets over earlier arms stay put. -/
+  | runesFromString
+  | stringFromRuneSlice
   deriving Repr, BEq
 
 /-- Classify an expression as a strict-operator application: the head and
@@ -184,6 +188,8 @@ def strictPlan : Expr → Option (StrictOp × List Expr)
   | .maxOf args => some (.maxOf, args.toList)
   | .runeAt s off => some (.runeAt, [s, off])
   | .runeSizeAt s off => some (.runeSizeAt, [s, off])
+  | .runesFromString e => some (.runesFromString, [e])
+  | .stringFromRuneSlice e => some (.stringFromRuneSlice, [e])
   | _ => none
 
 /-- Slice-expression application, after all operands are values (base, low,
@@ -530,6 +536,46 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
           | .pointer _ => return (.nil, s)
           | .unsupported feature => unsupported s!"nil literal for {feature}"
           | other => stuck s!"nil literal for non-nilable type {repr other}"
+  -- `[]rune(s)` (triage L1, 2026-08-19): decode every code point
+  -- (`runesOfString` — invalid encodings yield U+FFFD per byte, the
+  -- same accept-range kernel as range-over-string) into a FRESH backing
+  -- array, exactly the `bytesFromString` shape. ENVELOPE STATEMENT: the
+  -- resulting capacity shares `bytesFromString`'s recorded narrowing —
+  -- spec §Conversions declares the cap implementation-specific; the
+  -- model pins the SINGLETON cap = len. The transfer caveat here is
+  -- WIDER than the bytes arm's: gc is outside the singleton even on
+  -- the small NON-escaping shape (probe go1.26.5:
+  -- cap([]rune("héllo")) = 32 — the runtime's 32-rune conversion
+  -- buffer), so no cap-observing rune case can pin an agreeing point
+  -- (the byte-conversion-cap sibling was measured red and deliberately
+  -- NOT added, R3's own precedent for the escaping byte shape). A
+  -- theorem asserting cap([]rune(s)) = len does not transfer to gc;
+  -- the re-envelope obligation is R3's, covering both arms (latitude
+  -- inventory R3).
+  | .runesFromString, [v] =>
+      match v with
+      | .string value =>
+          let runes := (runesOfString value).map
+            (fun r => GoValue.int r .int32)
+          let (base, s') := s.alloc (.array runes)
+            (some (.array runes.size (.int .int32)))
+          return (.slice { base := some base, offset := 0,
+                           len := runes.size, cap := runes.size }, s')
+      | other => stuck s!"expected string operand for []rune conversion, got {repr other}"
+  -- `string(rs)` over a rune slice (triage L1): concatenate the UTF-8
+  -- encodings of the individual rune values (spec §Conversions to and
+  -- from a string type) — values outside the valid code-point range
+  -- (negative, surrogate, > U+10FFFF) encode U+FFFD via the same
+  -- `fromCodePoint` kernel `string(int)` uses.
+  | .stringFromRuneSlice, [v] => do
+      let slice ← valueAsSlice v
+      let values ← sliceVisibleValues s slice
+      let mut str := GoString.empty
+      for value in values do
+        match value with
+        | .int r .int32 => str := str.append (GoString.fromCodePoint r)
+        | other => stuck s!"expected rune element in string conversion, got {repr other}"
+      return (.string str, s)
   | op, vs => stuck s!"malformed strict-operator application: {repr op} on {vs.length} operand(s)"
 
 /-! ## Shared list operations (env-threading; used as rule premises and by

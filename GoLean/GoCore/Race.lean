@@ -146,6 +146,10 @@ FOOTPRINT ARMS (recorded accesses):
 - `.mapGet` via map base load → `strictOpAccesses` (`mapAccess`).
 - `.lengthOf` MAP load → `strictOpAccesses` (U2's map half).
 - `.stringFromByteSlice` via `sliceVisibleValues` → `strictOpAccesses`.
+- `.stringFromRuneSlice` via `sliceVisibleValues` → `strictOpAccesses`
+  (triage L1, same treatment; `.runesFromString`'s operand is a string
+  VALUE in hand and its allocation is fresh — no footprint, like
+  `.bytesFromString`).
 - `applyStmtOpCore` newValue/makeSlice/makeMap/makeChan target stores,
   mapAssign/mapDelete/clearMap (via `mapEntries`/`mapAssignValue`),
   clearSlice/sortSlice/copySlice element loops, appendSlice (in-place
@@ -391,6 +395,10 @@ def strictOpAccesses (op : StrictOp) (vs : List GoValue) : List RaceAccess :=
   | .mapGet _ _, [b, _] => mapAccess false b
   | .lengthOf _, [v] => mapAccess false v
   | .stringFromByteSlice, [v] =>
+      match valueAsSlice v with
+      | .ok slice => (sliceElemLocs slice slice.len).map ((false, ·))
+      | .error _ => []
+  | .stringFromRuneSlice, [v] =>
       match valueAsSlice v with
       | .ok slice => (sliceElemLocs slice slice.len).map ((false, ·))
       | .error _ => []

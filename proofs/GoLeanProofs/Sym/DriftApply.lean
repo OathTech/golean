@@ -975,6 +975,68 @@ theorem applyStrictOp_conc (hI : I.Sound) (σ : ExecState) {s : State D}
             by simp [valueAsInt, hI.toInt? _ _ hot], ?_⟩
           rw [if_neg hneg]
           simp [hI.litI, pure, Except.pure, Bind.bind, Except.bind]
+  | runesFromString =>
+      rcases vs with _ | ⟨v, _ | ⟨x, rest⟩⟩ <;>
+        simp only [applyStrictOp', quit] at h <;> try (cases h; done)
+      cases v <;> simp only [quit] at h <;> try (cases h; done)
+      next str =>
+        rcases halloc : s.alloc
+            (.array ((runesOfString str).map
+              (fun r => Value.int (D := D) (D.litI r) .int32)))
+            (some (.array ((runesOfString str).map
+              (fun r : Int =>
+                Value.int (D := D) (D.litI r) .int32)).size
+              (.int .int32)))
+          with ⟨base, s₁⟩
+        rw [halloc] at h
+        simp only [Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨h1, h2⟩ := h
+        subst h1
+        subst h2
+        have hallocm := alloc_conc (I := I) (σ := σ) (s := s)
+          (v := .array ((runesOfString str).map
+            (fun r => Value.int (D := D) (D.litI r) .int32)))
+          (ty := some (.array ((runesOfString str).map
+            (fun r : Int =>
+              Value.int (D := D) (D.litI r) .int32)).size
+            (.int .int32)))
+        rw [halloc] at hallocm
+        simp only [concV_array, Array.map_map, Function.comp_def,
+          concV_int, hI.litI, Array.size_map] at hallocm
+        simp only [List.map_cons, List.map_nil, concV_string,
+          applyStrictOp, Array.size_map]
+        rw [hallocm]
+        simp [concV_slice, Array.size_map, pure, Except.pure]
+  | stringFromRuneSlice =>
+      rcases vs with _ | ⟨v, _ | ⟨x, rest⟩⟩ <;>
+        simp only [applyStrictOp', quit] at h <;> try (cases h; done)
+      obtain ⟨sl, hsl, h⟩ := bind_eq_ok.mp h
+      obtain ⟨values, hvis, h⟩ := bind_eq_ok.mp h
+      obtain ⟨str, hstr, h⟩ := bind_eq_ok.mp h
+      obtain ⟨rfl, rfl⟩ : out = .string str ∧ s' = s := by
+        simpa [pure, Except.pure, eq_comm, and_comm] using h
+      simp only [List.map_cons, List.map_nil, applyStrictOp]
+      refine bind_eq_ok.mpr ⟨sl, asSlice_conc hsl, ?_⟩
+      refine bind_eq_ok.mpr
+        ⟨values.map (concV I), sliceVisible_conc σ hvis, ?_⟩
+      refine bind_eq_ok.mpr ⟨str, ?_, by simp [pure, Except.pure]⟩
+      -- the rune-append loop: mapped elements, same state
+      rw [← Array.forIn_toList] at hstr
+      rw [← Array.forIn_toList, Array.toList_map]
+      refine forIn_conc_id (fun a ha x st hst => ?_) hstr
+      cases a <;> (try simp only [quit] at hst) <;> try (cases hst; done)
+      next rR kd =>
+        cases kd <;> (try simp only [quit] at hst) <;>
+          try (cases hst; done)
+        rcases ht : D.toInt? rR with _ | r <;> rw [ht] at hst <;>
+          (try simp only [] at hst)
+        · exact absurd hst (by simp [quit, Bind.bind, Except.bind])
+        have hstv : st = .yield (x.append (GoString.fromCodePoint r)) := by
+          simpa [pure, Except.pure, Bind.bind, Except.bind, eq_comm]
+            using hst
+        subst hstv
+        simp only [concV_int, show I.intV rR = r from hI.toInt? _ _ ht]
+        simp [pure, Except.pure, Bind.bind, Except.bind]
   | lengthOf typ =>
       rcases vs with _ | ⟨v, _ | ⟨x, rest⟩⟩ <;>
         simp only [applyStrictOp', quit] at h <;> try (cases h; done)

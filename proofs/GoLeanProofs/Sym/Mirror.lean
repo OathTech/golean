@@ -1651,6 +1651,34 @@ def applyStrictOp' (s : State D) : StrictOp → List (Value D) →
           | .pointer _ => .ok (.nil, s)
           | .unsupported _ => quit .q11Internal
           | _ => quit .q11Internal)
+  -- `[]rune(s)` / `string([]rune)` (triage L1, 2026-08-19): transcribed
+  -- from the machine arms. Strings are concrete in the mirror, so the
+  -- decode kernel runs as-is; rune elements are payloads that must
+  -- close (Q5), exactly the byte-loop treatment.
+  | .runesFromString, [v] =>
+      (match v with
+       | .string value =>
+          let runes := (runesOfString value).map
+            (fun r => Value.int (D := D) (D.litI r) .int32)
+          let (base, s') := s.alloc (.array runes)
+            (some (.array runes.size (.int .int32)))
+          .ok (.slice { base := some base, offset := 0,
+                        len := runes.size, cap := runes.size }, s')
+       | .atom _ => quit .q10Atom
+       | _ => quit .q11Internal)
+  | .stringFromRuneSlice, [v] => do
+      let slice ← v.asSlice
+      let values ← sliceVisibleValues' s slice
+      let mut str := GoString.empty
+      for value in values do
+        match value with
+        | .int rR .int32 =>
+            match D.toInt? rR with
+            | some r => str := str.append (GoString.fromCodePoint r)
+            | none => quit .q5OpPayload
+        | .atom _ => quit .q10Atom
+        | _ => quit .q11Internal
+      return (.string str, s)
   | _, _ => quit .q11Internal
 
 /-! ## Wide-statement apply (mirror of `applyStmtOpCore`/`applyStmtOp`) -/

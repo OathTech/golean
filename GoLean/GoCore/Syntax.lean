@@ -168,6 +168,13 @@ inductive Expr where
   primitives (`decodeRuneAt`: invalid encodings yield U+FFFD, width 1). -/
   | runeAt (s off : Expr)
   | runeSizeAt (s off : Expr)
+  /-- `[]rune(s)` / `string([]rune)` (triage L1, 2026-08-19): the two
+  rune-slice conversion directions, over the same `decodeRuneAt` /
+  `GoString.fromCodePoint` kernels as the range desugar and
+  `string(int)`. Appended at the end of the strict forms so positional
+  proofs over earlier constructors stay put. -/
+  | runesFromString (operand : Expr)
+  | stringFromRuneSlice (operand : Expr)
   /-- The `recover()` builtin. Not a strict operator: its value depends on
   the continuation (it recovers exactly when called directly by a deferred
   function invoked by a panic — the unwinding arc,
