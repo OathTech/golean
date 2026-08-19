@@ -2554,7 +2554,7 @@ FIRST per the standing rule.
   this "typed receive declaration drops the received value" and both
   halves were wrong).
 - Pinned-by: differential
-- Cases: spec-examples-decl/receive-comma-ok/typed-form, spec-examples-decl/receive-comma-ok/untyped-form-live, spec-examples-decl/index-comma-ok/var-form-present, spec-examples-decl/var-decl-forms/found-present
+- Cases: spec-examples-decl/receive-comma-ok/typed-form, spec-examples-decl/receive-comma-ok/untyped-form-live, spec-examples-decl/index-comma-ok/var-form-present, spec-examples-decl/var-decl-forms/found-present, spec-examples-decl/var-comma-ok-matrix/recv-untyped, spec-examples-decl/var-comma-ok-matrix/recv-untyped-blank-value, spec-examples-decl/var-comma-ok-matrix/recv-typed, spec-examples-decl/var-comma-ok-matrix/recv-typed-blank-value, spec-examples-decl/var-comma-ok-matrix/index-untyped, spec-examples-decl/var-comma-ok-matrix/index-untyped-blank-value, spec-examples-decl/var-comma-ok-matrix/index-typed, spec-examples-decl/var-comma-ok-matrix/index-typed-blank-value, spec-examples-decl/var-comma-ok-matrix/func-literal, spec-examples-decl/var-comma-ok-matrix/grouped-spec, spec-examples-decl/var-comma-ok-matrix/after-goto
 - Discovered: spec#Receive_operator's four comma-ok forms. Audit
   probe matrix (machine vs go, value/ok per form): assignment and
   short-decl forms are CORRECT; `var x, ok = <-ch` (untyped) and
@@ -2583,6 +2583,52 @@ FIRST per the standing rule.
   LOCAL form instead. All three unmasking rows red and pinned here.
 - Class: unexercised path (no pre-P3 case used a two-var comma-ok
   var declaration with a TRUE ok on the line that matters).
+- EDGE ENUMERATION (bug-fix arc slice 2, 2026-08-19; landed as its
+  own commit BEFORE any fix, colors recorded pre-fix). 46 rows in the
+  new package `spec-examples-decl/var-comma-ok-matrix/` walk the full
+  matrix — three comma-ok sources (receive, map index, type assertion)
+  × untyped/typed declaration × blank in the value position / blank in
+  the ok position / neither × function-local vs package-level — plus
+  the positions the declaration can occupy (function literal, grouped
+  multi-spec declaration, goto-restructured body, interface-valued
+  map), the shadow-capture shape, and the adjacent tuple-call
+  declaration. EVERY new row observes a TRUE ok (the MASKING record
+  above), and every row returns the value and the ok as SEPARATE
+  observables, which closes F-10: `x && ok` collapsed the two
+  deliveries into one bit, so a dropped value and a dropped ok were
+  indistinguishable. Pre-fix colors (`scripts/coverage run --prefix
+  spec-examples-decl/var-comma-ok-matrix`): 22 PASS / 24 FAIL.
+  Three findings the enumeration establishes and this entry did not
+  previously state exactly:
+  1. **The silent drop is receive + map index only.** All six
+     function-local TYPE-ASSERTION rows FAIL CLOSED at
+     `frontend-export` ("type assert form outside a 2-target
+     assignment"), not silently. The entry's "(probe: `= x.(T)`)" is
+     resolved: the type-assertion source never produced a wrong
+     answer, and `spec-examples-decl/assert-comma-ok` was already red
+     for that reason.
+  2. **Package-level is correct with a TRUE ok, now case-pinned.** All
+     18 `pkg-*` rows PASS pre-fix, so the "$pkginit is
+     correct-by-construction" claim is no longer only wire-argued —
+     the $pkginit path fabricates ONE `ast.AssignStmt` carrying every
+     name for a multi-value spec and runs `emitAssign`
+     (emit.go:600-607), which is exactly the lowering the
+     function-local path was missing.
+  3. **The typed form is not bool-only.** `var v, ok T = x` also
+     admits an INTERFACE T that both values are assignable to — the
+     shape spec#Type_assertions itself writes,
+     `var v, ok interface{} = x.(T)`. Those three rows
+     (`{recv,index,assert}-typed-iface`) are red at `frontend-export`
+     under the deferred interfaces campaign and must STAY red across
+     the fix: the reroute must not turn a fail-closed refusal into an
+     unboxed store.
+  Two further pre-fix reds, both fail-closed: `shadow-capture`
+  (`{ var v, ok = m[v] }`, whose initializer reads the OUTER v per
+  spec#Declarations_and_scope — refused because the capture hoist
+  cannot type a tuple temp) and `iface-value` (a `map[string]any`
+  lookup — refused by the var path's BLANKET tuple/interface guard,
+  which fires whenever a declared name is interface-typed even when
+  the tuple component already is one, so no conversion is owed).
 
 ## BUG-058 — if-statement init scope: condition hoist block emitted OUTSIDE the init
 
