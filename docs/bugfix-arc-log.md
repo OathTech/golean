@@ -13,8 +13,8 @@ its reasoning, for user review; every number is derivation-anchored
 | --- | --- | --- |
 | 1 | BUG-058 — if-init condition-hoist scope | DONE (`8a42e402` enumeration, `740f09f8` fix; gate PASS at `740f09f8`) |
 | 2 | BUG-057 — two-var comma-ok var-decl arity | DONE (`d5ce2dc0` enumeration, `2d840744` fix; gate PASS at `2d840744`) |
-| 3 | BUG-056 — `&*p` nil collapse (design-gated) | not started |
-| 4 | BUG-005 — live map iteration (design-gated) | not started |
+| 3 | BUG-056 — `&*p` nil collapse (design-gated) | MEMO DELIVERED, awaiting user ruling (probe matrix landed, 10 rows; `docs/2026-08-19_bug056-addr-deref-memo.md`) |
+| 4 | BUG-005 — live map iteration (design-gated) | MEMO DELIVERED, awaiting user ruling (3 probe rows landed; `docs/2026-08-19_bug005-map-range-memo.md`) |
 | 5 | full red/bug triage (kill or justify) | not started |
 | 6 | the whole-language bar (coverage ledger) | not started |
 
@@ -627,3 +627,128 @@ was then committed (no edit between the run and `git add`):
 every step ok, `baseline diff FULL (2154/2154, no regression)`,
 `re-pin guard (0 PASS→non-PASS flips, all listed in BUGS.md Cases)`,
 `bug-index cross-check ok`, `eval tests (136 ok)`, negative lane clean.
+
+---
+
+## Slices 3 + 4 — the design memos (MEMOS AND PROBES ONLY, per the charter's gates)
+
+Both slices are user-gated; this section records the probe/memo commit
+only. NO machine, frontend, or decoder change is in it — the diff is
+corpus rows, the two memos, BUGS.md probe records, this log, and the
+baseline re-pin for the new ids.
+
+### Slice 3 — BUG-056 probe matrix + memo
+
+- **Deliverable:** `docs/2026-08-19_bug056-addr-deref-memo.md`.
+  Recommendation: a GoCore strict op `addrOfDeref` (evaluate the
+  pointer, panic on nil via the existing `valueAsLoc` arm, yield the
+  pointer, touch NO memory), emitter arm scoped to the immediate
+  `&`-of-`*` composition. Frontend desugars are rejected BY PROBE, not
+  taste: gc's `&*p` is a single uninstrumented `TESTB` nil-probe
+  (`-gcflags=-S`: no pointee load even at a 64-byte pointee;
+  `-race`: TSan-green beside a concurrent pointee write where a real
+  `*p` read is TSan-red exit 66) — so `_ = *p` materializes a
+  race-visible load gc never performs, and a fabricated
+  `if p == nil { panic(...) }` mints a user-panic payload where Go
+  delivers a `runtime.Error`.
+- **Probe matrix landed:** `spec-examples-decl/addr-deref-nil-matrix/`,
+  10 rows, every go expectation computed from `go run` first
+  (artifacts/probe/addr056, scratch), colors recorded pre-fix:
+  7 PASS / 3 FAIL (`two-deref-inner-nil`, `deref-arg`, `deref-call` —
+  all bare-`&*` shapes), 10/10 as predicted from the wire reading
+  before the run. The red set (5 with the two P3 pins) has a sharp
+  boundary: `*` immediately under `&` with no enclosing address node
+  re-checking the base. The entry's record-only `&p.f`/`&p[i]` claims
+  are now case-witnessed.
+- **Masked-green sweep** (scoped to this bug's shape): `&*`/`&(*`
+  appears in no corpus `.go` outside the two BUG-056 packages and has
+  ZERO occurrences in deps/raft (89 files) — no masked green possible:
+  for non-nil pointers the collapse is value-identical to correct
+  behavior, so only nil-path cases can differ, and all are pinned.
+- JUDGMENT: matrix landed as a NEW package rather than rows appended to
+  `address-op-nil-indirection` — keeps the P3 pins' file byte-stable
+  while their entry is still open (same reasoning as slice 1's
+  relatives package).
+
+### Slice 4 — BUG-005 probes + memo
+
+- **Deliverable:** `docs/2026-08-19_bug005-map-range-memo.md`.
+  Recommendation: model (L) — live-read-per-iterNext (`Cont.mapIterK`
+  carries base loc + produced-key set + start-key set; pick-next loads
+  the map cell, candidates = live entries minus produced, one choice of
+  width candidates+stop with stop legal only when no start-key
+  candidate remains). Forced clauses exact; the added-entries latitude
+  becomes a genuine choice at the existing Q3 pick site (never gc's
+  member silently); the per-iterNext load is the U1-closing race
+  footprint arm; canonical empty-stream member keeps mutation-free
+  ranges byte-identical to today's pick sequence (zero baseline drift
+  outside the predicted flips). Two narrowings recorded with
+  re-envelope obligations: at-most-once production per KEY (the
+  literal spec text admits re-producing a deleted-then-re-created
+  entry; gc never does, 800 probe runs incl. forced growth — and the
+  literal reading admits unbounded traces, killing ∀-streams
+  certification) and re-created start keys mandatory.
+- **Memo sharpening beyond the BUG entry:** stale VALUES violate a
+  FORCED point — the range clause's production table defines the map
+  second value as `m[k]`, produced "for each iteration" — so
+  update-visibility is spec-mandated, not a gc member.
+- **Probe findings** (artifacts/probe/map005, scratch; 400 runs each):
+  gc exhibits the FULL added-entries latitude across plain re-runs of
+  one binary (4+4 shape: counts {4:53, 5:34, 6:55, 7:60, 8:198} — all
+  five members, no GODEBUG needed), which KILLS the tempting
+  "live but skip all created entries" simplification (observed ∉
+  modeled); delete-unreached is forced (n=1, 400/400); no
+  re-production ever (probes C/D).
+- **Probe rows landed** (only where they add coverage beyond the three
+  reds): `maps/delete-unreached-during-range` (RED, machine 20 vs go
+  11 — the removal clause isolated: current key kept, only the
+  unreached key deleted) plus two member-invariant GREEN envelope
+  bounds (`maps/added-entries-bound`, `maps/delete-readd-during-range`)
+  that stay green under snapshot AND any conforming live model, and go
+  red on over-production, alien keys, or divergence. Neither green pin
+  asserts a latitude member.
+- JUDGMENT: `added-entries-bound` initially carried the `nondet`
+  feature tag; the manifest lint correctly refused it (nondet demands
+  lane=membership). The tag was dropped rather than the lane changed:
+  the subject NORMALIZES the member away — its observable is
+  deterministic (7) across the entire envelope — so strict equality is
+  an honest oracle for it. Recorded because it looks like tag-dodging
+  unless the reasoning is stated.
+- JUDGMENT: `delete-readd-during-range` pins gc's exact count (3) —
+  deliberately: it encodes the memo's narrowing 1, so it goes red the
+  moment an implementation admits re-production, forcing that decision
+  through the memo's decision block instead of past it. If the user
+  rules for the literal envelope, this row is reworked to
+  membership-lane FIRST (stated in the case comment and the memo).
+
+### Gate at the probe/memo commit
+
+Full run at this tree: `scripts/coverage run` → cases=2167 pass=2029
+fail=138; `scripts/coverage-baseline-diff` drift was EXACTLY the 13 new
+ids (4 NEW FAIL: the three addr-matrix reds + delete-unreached; 9 NEW
+PASS) and no existing id moved. Baseline re-pinned from that full run
+in this commit (header carries the delta list and reason; was 2154,
+2020/134).
+
+Confirming gate: `GOLEAN_MEM_MAX=24G scripts/ci --diff` → **RESULT:
+PASS**, exit 0, every step ok. Precision on the gated tree: the run
+covered every substantive file in this commit; the ONLY difference
+between the gate's tree and the committed tree is this log's own
+gate-record paragraph, written afterward to record the result (a gate
+cannot precede its own record) — `baseline
+diff FULL (2167/2167, no regression)`, `re-pin guard (0 PASS→non-PASS
+flips)`, `bug-index cross-check ok`, eval tests 136 ok, negative lane
+390/390 clean, golden-lowering and imported-goose pins ok
+(artifacts/probe/ci-slice34-final.log, scratch). HONESTY note: a FIRST
+`ci --diff` was launched before the BUGS.md Cases edit settled and its
+bug-index step correctly FAILED — the green guard pins were briefly on
+the open entries' Cases lines, which the cross-check reserves for
+reds. The pins were moved into the entries' prose (recorded there
+explicitly) and the full gate re-run from scratch at the final tree;
+nothing else differed between the two runs.
+
+**Slices 3+4 state: memos delivered, HARD PAUSE.** Both slices now sit
+at their charter-designed user gates: no implementation exists or
+begins until Mike rules on the two memos' decision blocks
+(`docs/2026-08-19_bug056-addr-deref-memo.md` §5,
+`docs/2026-08-19_bug005-map-range-memo.md` §4).

@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+two-deref-outer-nil	addrTwoDerefOuterNil	-	panic	nil pointer dereference	pointers,nil,panic,addressability
+two-deref-inner-nil	addrTwoDerefInnerNil	-	panic	nil pointer dereference	pointers,nil,panic,addressability
+index-slice-ptr-nil	addrIndexSlicePtrNil	-	panic	nil pointer dereference	pointers,nil,panic,addressability,slices,indexing
+index-arr-ptr-nil	addrIndexArrPtrNil	-	panic	nil pointer dereference	pointers,nil,panic,addressability,arrays,indexing
+index-auto-deref	addrIndexAutoDeref	-	panic	nil pointer dereference	pointers,nil,panic,addressability,arrays,indexing
+field-explicit	addrFieldExplicit	-	panic	nil pointer dereference	pointers,nil,panic,addressability,structs,fields
+field-auto-deref	addrFieldAutoDeref	-	panic	nil pointer dereference	pointers,nil,panic,addressability,structs,fields
+alias-non-nil	addrDerefAlias	-	ok	-	pointers,addressability,aliasing
+deref-arg	addrDerefArg	-	panic	nil pointer dereference	pointers,nil,panic,addressability,calls
+deref-call	addrDerefCall	-	panic	nil pointer dereference	pointers,nil,panic,addressability,calls
