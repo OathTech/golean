@@ -34,6 +34,10 @@ import subprocess
 import sys
 import tempfile
 
+# No .pyc alongside a tracked toolkit: this is the only script here that
+# IMPORTS another, and an untracked __pycache__/ beside tracked sources is
+# noise a lane should not push onto the shared .gitignore.
+sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import derive  # noqa: E402
 
