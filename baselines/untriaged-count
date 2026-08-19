@@ -167,7 +167,7 @@
 #   operand; the frontend now emits the spec's auto-deref), repaired by
 #   its fix and folded into its Cases. The buildout's import of
 #   unittest/embedded.go re-surfaced the class and forced the triage.
-coverage 6
+coverage 7
 latitude 3
 wrong-answer 0
 # 2026-08-09 (spec-parity slice 2, sync guardrails)  16 -> 50, mostly
@@ -240,3 +240,12 @@ wrong-answer 0
 #       check (4) immediately against this floor, whatever the other two
 #       classes are doing. Raising this row is the one raise that should
 #       never be routine.
+# 2026-08-19 (bugfix-arc audit fix round, BUG-063 guardrails)
+#   coverage 6 -> 7: pointers/nil-array-ptr-slice/slice-expr-nil ENTERS
+#   as an honest-STUCK refusal pin (the slice-base nil arm is
+#   unmodeled; the machine refuses visibly where gc panics — BUG-063's
+#   lesser sibling, scoped OUT of that fix on purpose: its base
+#   position is a store-adjacent emitAddressOf consumer, the five
+#   store-order pins' territory). Same class as slice-to-array/ok-forms.
+#   The two BUG-063 differential reds are NOT here — they pin on the
+#   entry's Cases line.

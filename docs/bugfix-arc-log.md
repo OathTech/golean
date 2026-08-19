@@ -2360,3 +2360,86 @@ check (4) — `coverage 6/6; latitude 3/3; wrong-answer 0/0`. The gate
 itself is what changed, so the meaningful evidence is the probe table
 above (the rewritten check refuses everything it must) alongside the
 green run (it accepts the state it should).
+
+---
+
+## AUDIT FIX ROUND (2026-08-19, post-arc pre-merge audit)
+
+All findings auditor-verified; fixes land on this branch before the
+rebase onto `main` and the final full gate. Order: A1 (the substantive
+fix, guardrails first) → records commit (A2/A3 + reviewer nits) → F1/F2
+(ledger latitude honesty) → snapshot ref → rebase → post-rebase lane
+validation → full `scripts/ci --diff` at the tip.
+
+### A1 step 1 — BUG-063 guardrails (colors recorded BEFORE the fix)
+
+The finding (reviewer A, MAJOR): the implicit address-of in RECEIVER
+position bypasses `addrOfDeref`. BUG-056's fix scoped the strict op to
+the explicit `&` operator and deliberately kept `emitAddressOf`'s
+StarExpr collapse for the general addressable path — but
+`methodReceiverArg` (emit.go pointer-receiver arm) and `syncRecvAddr`
+reuse that collapse for spec#Calls' implicit `(&x)`, where no
+downstream consumer owes the nil check. Filed as **BUG-063** (BUG-056's
+implicit-& sibling; entry carries the full spec argument).
+
+New package `methods/recv-implicit-addr-deref/` (4 rows) +
+`pointers/nil-array-ptr-slice/` (1 row), every expectation from
+`go run` at go1.26.5 BEFORE the differential ran
+(`artifacts/probe/a1-recv`, scratch: 100, 100, 7808, 100, 100).
+Pre-fix colors from the focused run against the unmodified emitter:
+
+| row | shape | go | machine (pre-fix) | stage |
+| --- | --- | --- | --- | --- |
+| `explicit-call-nil` | `(*q).M()`, nil q, recover | 100 | **5** (M runs on nil receiver) | differential |
+| `method-value-nil` | `f := (*q).M` then call, nil q | 100 (panic AT BIND) | **15** (binds and calls) | differential |
+| `non-nil-control` | both shapes, valid q, aliasing observed | 7808 | 7808 | PASS |
+| `sync-recv-nil` | `(*mp).Lock()`, nil mp | 100 | 100 | PASS |
+| `slice-expr-nil` | `(*ap)[0:1]`, nil ap | 100 | stuck "expected array or slice value …, got GoValue.nil" | lean-observation |
+
+**Two measured corrections to the audit's expectations, recorded
+rather than glossed:**
+
+- **The sync-receiver shape is GREEN, not red.** The collapse fires in
+  `syncRecvAddr` exactly as the finding says, but the sync-op consumer
+  nil-checks its own operand (`valueAsLoc`) — the benign-composition
+  precedent of `index-arr-ptr-nil`. Pinned green as the control the
+  unified routing must not disturb.
+- **No strict row exists for the sync ARG-ORDER observable.** The probe
+  `(*wp).Add(bump())` (artifacts/probe/a1-recv/sync2.go) shows gc runs
+  the argument call BEFORE the implicit-& nil panic (1007): the
+  receiver probe is not a call, so spec#Order_of_evaluation's
+  left-to-right clause does not order it — UNSEQ latitude (I-2's
+  reading). A strict pin there would pin one conforming member against
+  another; the machine's receiver-first order post-fix is a conforming
+  member. Recorded in the case file and the BUG-063 entry.
+
+**JUDGMENT (A1, the (e) row's disposition):** `slice-expr-nil` is
+honest-STUCK — a visible refusal, never a wrong answer — so it enters
+`baselines/untriaged-ids` as a `coverage` row (ceiling 6 → 7, dated
+reason in `baselines/untriaged-count`) rather than BUG-063's Cases
+line. It is deliberately NOT ridden on the A1 fix: its base position is
+a store-adjacent `emitAddressOf` consumer, the five store-order pins'
+territory, and the fix's scope is receiver-position only.
+
+**Masked-green sweep (scoped to this bug's shape):** the receiver-
+position `(*expr).M` syntax appears NOWHERE in `Corpus/`,
+`raftharness/`, `compat/`, or `deps/raft` outside the new package (the
+grep hits are field selectors `(*p).x`, method expressions `(*T).M`,
+and comments) — no masked green possible: for non-nil pointers the
+collapse is value-identical to `addr-of-deref`, so only nil-path cases
+can differ, and all are pinned.
+
+**Gate at the guardrail commit.** Full run: 2224 cases, 2092 PASS /
+132 FAIL (was 2219, 2090/129); `coverage-baseline-diff` drift was
+EXACTLY the 5 NEW ids (2 FAIL/differential = BUG-063's Cases,
+1 FAIL/lean-observation = the coverage sibling, 2 PASS = the controls)
+and no existing id moved. Baseline re-pinned in this commit (reason in
+its header); `scripts/check-bugs.sh` ok (63 bugs; coverage 7/7,
+latitude 3/3, wrong-answer 0/0). Confirming gate at the exact
+committed tree: `GOLEAN_MEM_MAX=24G scripts/ci --diff` →
+**`RESULT: PASS`**, exit 0, every step ok — `baseline diff FULL
+(2224/2224, no regression)`, `re-pin guard (0 PASS→non-PASS flips, all
+listed in BUGS.md Cases)`, `bug-index cross-check ok`, `eval tests
+(136 ok)`, negative lane clean (`/tmp/afr-guardrail-ci.log`, scratch).
+As throughout the arc, the only difference between the gated tree and
+the committed tree is this gate paragraph.

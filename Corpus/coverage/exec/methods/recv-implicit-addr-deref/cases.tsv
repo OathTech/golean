@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+explicit-call-nil	explicitCallNil	-	ok	-	methods,pointers,nil,panic,recover,calls
+method-value-nil	methodValueNil	-	ok	-	methods,pointers,nil,panic,recover,functions
+non-nil-control	nonNilControl	-	ok	-	methods,pointers,aliasing,calls
+sync-recv-nil	syncRecvNil	-	ok	-	sync,mutex,pointers,nil,panic,recover

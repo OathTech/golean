@@ -150,3 +150,14 @@ sync/atomic-frontier/value	coverage
 #   mem#atomic's seq_cst clause in the case file; flips at the same
 #   arc, which re-certifies the set.
 sync/atomic-frontier/mp-litmus	coverage
+# pointers/nil-array-ptr-slice/slice-expr-nil: BUG-063's lesser sibling
+#   pinned at its CURRENT class (audit fix round 2026-08-19): the
+#   implicit &(*ap) collapse hands the slice node a nil base and the
+#   machine goes honest-STUCK ("expected array or slice value for slice
+#   expression, got GoValue.nil") — a fail-closed refusal of the
+#   slice-base nil arm, never a wrong answer (gc panics; the case file
+#   records the go run derivation). Retires if/when the slice-base path
+#   grows its own nil handling; deliberately NOT ridden on the BUG-063
+#   fix, whose scope is receiver-position only (the store-order pins
+#   forbid a blanket change at emitAddressOf).
+pointers/nil-array-ptr-slice/slice-expr-nil	coverage

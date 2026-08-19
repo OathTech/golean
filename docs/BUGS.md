@@ -2935,3 +2935,63 @@ both this entry and the A6 refusal family (F23) without extending the
 divergence. Owner: mini-slice A6 (queued, category (a) in
 docs/2026-08-19_triage-table.md; queue position in
 docs/language-coverage-ledger.md).
+
+## BUG-063 — receiver-position implicit `&*q` collapses instead of panicking (BUG-056's implicit-& sibling)
+
+- Status: open
+- Pinned-by: differential
+- Cases: methods/recv-implicit-addr-deref/explicit-call-nil, methods/recv-implicit-addr-deref/method-value-nil
+
+spec#Calls: for a pointer-receiver method `m` in `&x`'s method set,
+"x.m() is shorthand for (&x).m()" when `x` is addressable. When `x` is
+itself the indirection `*q`, that implicit `&x` is the `&*q`
+composition spec#Address_operators gives an eager panic clause ("if the
+evaluation of x would cause a run-time panic, then the evaluation of &x
+does too"). gc panics on nil `q` at receiver evaluation (probed
+go1.26.5, artifacts/probe/a1-recv, scratch — expectations computed from
+`go run` before the differential ran). spec#Method_values makes the
+method-value form `f := (*q).M` panic at the BINDING (the receiver is
+evaluated and saved then).
+
+BUG-056's fix scoped `addr-of-deref` to the EXPLICIT `&` operator
+(`emitUnaryExpr`) and deliberately left `emitAddressOf`'s StarExpr arm
+collapsing `&*x` to `x` — correct for its store-target/index/field
+consumers, whose own spec points nil-check the base (the five
+store-order pins). But the RECEIVER-position callers of `emitAddressOf`
+(`methodReceiverArg` for method calls and method values,
+`syncRecvAddr` for sync primitives) reuse that collapse for the
+implicit `&`, where NO downstream consumer owes the check: the method
+runs on a nil receiver and the panic is silently lost. Machine 5 vs go
+100 on the call form, 15 vs 100 on the method-value form (the machine
+also mis-times the loss: it binds and calls where gc never passes the
+binding). Found by the pre-merge audit (finding A1) reasoning over the
+emitter's caller graph — the corpus had zero `(*q).M` receiver shapes
+(sweep at the guardrail commit: none in `Corpus/`, `raftharness/`,
+`compat/`, or `deps/raft` outside this bug's package), the
+unexercised-path class.
+
+Boundaries established by the same guardrail package, so the fix cannot
+overshoot:
+
+- `sync-recv-nil` is GREEN pre-fix: the sync-op consumer nil-checks its
+  operand itself (`valueAsLoc`), so the collapse is benign there — the
+  `index-arr-ptr-nil` precedent. The row is the control that unified
+  receiver routing must not disturb.
+- The implicit-& panic's order against ARGUMENT calls
+  (`(*wp).Add(bump())`) is UNSEQ latitude (the receiver probe is not a
+  call, so lexical left-to-right does not order it; I-2's reading), and
+  gc realizes args-first (probe: 1007). No strict row pins that shape —
+  it would pin one conforming member against another.
+- `pointers/nil-array-ptr-slice/slice-expr-nil` pins the LESSER sibling
+  at its CURRENT class: `(*ap)[0:1]` on nil `ap` goes honest-STUCK
+  ("expected array or slice value for slice expression, got
+  GoValue.nil") — a visible refusal, never a wrong answer, so it is a
+  coverage-disposition row in `baselines/untriaged-ids`, NOT on this
+  Cases line; it flips only if the slice-base path grows nil handling.
+
+Fix shape: route the receiver-position implicit-& emission
+(`methodReceiverArg`'s pointer-receiver arm, `syncRecvAddr`) through
+the same scoped `addr-of-deref` lowering the explicit arm uses when the
+operand (parens stripped) is an immediate `*` — preserving
+`emitAddressOf`'s collapse for the store-target positions where the
+five store-order pins live (the slice-3 JUDGMENT's exact trap).
