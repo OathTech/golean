@@ -1,22 +1,18 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-19 (bug-fix arc, 19-red GoCore slice family 1 =
-#   triage row L1: rune<->string conversions)
-#   commit: this commit (on 233fd8ed, the slice-4 tip)
-#   re-pin reason: the ruled GoCore gate's first family lands —
-#   runesFromString/stringFromRuneSlice strict ops over the existing
-#   oracle-pinned kernels (decodeRuneAt U+FFFD decode,
-#   GoString.fromCodePoint encode), cap = len singleton (R3's mold,
-#   caveat recorded at the arm), frontend classifier routing both
-#   directions by underlying type. Deltas — the predicted set exactly,
-#   nothing else moved:
-#     FAIL/lean-observation -> PASS (9):
-#       spec-examples-decl/string-from-runes,
-#       spec-examples-lexical/string-to-runes,
-#       strings/{defined-slice-string-conversion,
-#       nil-slice-string-conversion, rune-invalid-values,
-#       rune-slice-conversion, rune-slice-to-string-copy,
-#       rune-string-conversion, string-to-rune-copy}
-#   counts: 2181 cases, 2068 PASS / 113 FAIL (was 2181, 2059/122)
+# recorded: 2026-08-19 (bug-fix arc, 19-red GoCore slice family 2 =
+#   triage row L2a: slice->array conversion length-check panics)
+#   commit: this commit (on eca39e4d, the family-1 tip)
+#   re-pin reason: the length-check PANIC arms land in
+#   convertValueToTyFuel (array and array-pointer targets over a slice
+#   operand; gc-exact message, probe go1.26.5, fires before any element
+#   is touched). The SUCCEEDING forms stay refused (triage L2b frontier:
+#   Loc has no subarray-view constructor) — slice-to-array/ok-forms
+#   stays FAIL/lean-observation by design. Deltas — the predicted set
+#   exactly, nothing else moved:
+#     FAIL/lean-observation -> PASS (3):
+#       spec-examples-decl/slice-to-array/{short-array, short-array-ptr,
+#       nil-to-longer-ptr}
+#   counts: 2181 cases, 2071 PASS / 110 FAIL (was 2181, 2068/113)
 #   frontend: native (tools/nativefrontend + NativeToIR)
 # columns: result<TAB>id<TAB>stage
 PASS	arrays/array-bounds	-
@@ -1810,10 +1806,10 @@ PASS	spec-examples-decl/selectors-embedding-depth/methods	-
 PASS	spec-examples-decl/slice-aliasing	-
 PASS	spec-examples-decl/slice-map-sharing/map	-
 PASS	spec-examples-decl/slice-map-sharing/slice	-
-FAIL	spec-examples-decl/slice-to-array/nil-to-longer-ptr	lean-observation
+PASS	spec-examples-decl/slice-to-array/nil-to-longer-ptr	-
 FAIL	spec-examples-decl/slice-to-array/ok-forms	lean-observation
-FAIL	spec-examples-decl/slice-to-array/short-array	lean-observation
-FAIL	spec-examples-decl/slice-to-array/short-array-ptr	lean-observation
+PASS	spec-examples-decl/slice-to-array/short-array	-
+PASS	spec-examples-decl/slice-to-array/short-array-ptr	-
 PASS	spec-examples-decl/string-from-bytes	-
 PASS	spec-examples-decl/string-from-int	-
 PASS	spec-examples-decl/string-from-runes	-

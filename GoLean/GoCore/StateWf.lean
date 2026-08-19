@@ -1345,6 +1345,15 @@ theorem convertValueToTyFuel_locSup :
                   simp [GoValue.locSup]))
            | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
               simp [GoValue.locSup]))
+      | skip
+    -- pointer target × slice operand (triage L2a): the elem dispatch
+    -- blocks the generic reduction; every branch is panic/unsupported,
+    -- so no ok exists.
+    case pointer.slice elem sl =>
+      cases elem <;> simp only [convertValueToTyFuel] at h <;>
+        first
+        | (simp at h; done)
+        | (split at h <;> simp at h)
   | succ n ih =>
     intro s ty v r h
     cases ty
@@ -1371,6 +1380,19 @@ theorem convertValueToTyFuel_locSup :
       · simp at h
       · simp at h
       · simp at h
+    case pointer elem =>
+      cases v <;>
+        first
+        | (simp [convertValueToTyFuel] at h; done)
+        | (simp only [convertValueToTyFuel, pure_eq_ok, Except.ok.injEq] at h;
+           subst h; first | exact Nat.le_refl _ | simp [GoValue.locSup])
+        | skip
+      -- slice operand (triage L2a): elem dispatch, no ok branch.
+      case slice sl =>
+        cases elem <;> simp only [convertValueToTyFuel] at h <;>
+          first
+          | (simp at h; done)
+          | (split at h <;> simp at h)
     all_goals
       cases v <;>
         first

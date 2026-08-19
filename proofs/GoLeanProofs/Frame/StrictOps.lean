@@ -524,77 +524,11 @@ private theorem valueAtLeast_sim (ρ : Nat → Nat) (l r : GoValue) :
       (valueAtLeast (renameValue ρ l) (renameValue ρ r)) :=
   exsim_eq_of_ren (valueAtLeast_noPanic l r) fun _ hb => valueAtLeast_ren ρ hb
 
-/-! ## Panic-freedom of `convertValueToTy` (errors are stuck/unsupported) -/
-
-private theorem convertValueToTyFuel_noPanic (σ₀ : ExecState) :
-    ∀ (fuel : Nat) (ty : Ty) (v : GoValue),
-      NoPanic (convertValueToTyFuel fuel σ₀ ty v) := by
-  intro fuel
-  induction fuel with
-  | zero =>
-      intro ty v
-      rw [convertValueToTyFuel.eq_def]
-      split <;>
-        first
-        | exact NoPanic.pure'
-        | exact NoPanic.stuck'
-        | exact NoPanic.unsupported'
-        | (rename_i heq; exact absurd heq.symm (Nat.succ_ne_zero _))
-        | skip
-      all_goals
-        first
-        | (dsimp only
-           split
-           · split
-             · exact NoPanic.pure'
-             · exact NoPanic.unsupported'
-           · exact NoPanic.unsupported')
-        | (split <;> exact NoPanic.pure')
-  | succ n ih =>
-      intro ty v
-      rw [convertValueToTyFuel.eq_def]
-      split <;>
-        first
-        | exact NoPanic.pure'
-        | exact NoPanic.stuck'
-        | exact NoPanic.unsupported'
-        | (rename_i heq; exact absurd heq (Nat.succ_ne_zero _))
-        | skip
-      all_goals
-        first
-        | -- float → int truncation (one goal per FloatKind)
-          (dsimp only
-           split
-           · split
-             · exact NoPanic.pure'
-             · exact NoPanic.unsupported'
-           · exact NoPanic.unsupported')
-        | -- float ← float kind dispatch
-          (split <;> exact NoPanic.pure')
-        | -- defined name (recover `fuel = n` from the row equation)
-          (rename_i heq
-           injection heq with hfe
-           subst hfe
-           split
-           · exact ih _ _
-           · exact ih _ _
-           · split
-             · split
-               · exact NoPanic.pure'
-               · split
-                 · split
-                   · exact NoPanic.pure'
-                   · exact NoPanic.unsupported'
-                 · exact NoPanic.unsupported'
-             · exact NoPanic.unsupported'
-           · exact NoPanic.unsupported'
-           · exact NoPanic.unsupported'
-           · exact NoPanic.unsupported')
-
-private theorem convertValueToTy_noPanic (σ₀ : ExecState) (ty : Ty)
-    (v : GoValue) : NoPanic (convertValueToTy σ₀ ty v) := by
-  rw [convertValueToTy]
-  exact convertValueToTyFuel_noPanic σ₀ _ ty v
+/-! ## Convert result transfer (ok via the rename lemma; the
+slice→array length-check PANIC — triage L2a, 2026-08-19 — via
+`convertValueToTy_panic_ren`; the `_noPanic` lemma this section
+carried is retired: the length check made it false, and the arm proof
+now transfers each result class directly.) -/
 
 /-! ## Panic-freedom of `defaultValue` -/
 
@@ -1078,9 +1012,19 @@ private theorem arm_convert (hS : FrameSim ρ na₀ na fr σ σF)
       (applyStrictOp σF (.convert ty) [renameValue ρ v]) := by
   simp only [applyStrictOp]
   refine scalar_pair hS ?_
-  refine exSim_of_ren (convertValueToTy_noPanic σ ty v) ?_
-  intro a ha
-  exact convertValueToTy_ren ρ hS.types_eq ha
+  cases hx : convertValueToTy σ ty v with
+  | ok a =>
+      rw [convertValueToTy_ren ρ hS.types_eq hx]
+      exact ExSim.ok rfl
+  | error e =>
+      cases e with
+      | panic m =>
+          -- The slice→array(-pointer) length check (triage L2a): the
+          -- message embeds `len` and the target length only, both
+          -- rename-invariant. `ExSim` at a canonical panic IS the
+          -- framed-side equation, which is the transfer lemma verbatim.
+          exact convertValueToTy_panic_ren ρ hS.types_eq hx
+      | _ => trivial
 
 private theorem arm_bytesFromString (hS : FrameSim ρ na₀ na fr σ σF)
     (v : GoValue) :
