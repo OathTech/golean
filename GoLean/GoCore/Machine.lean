@@ -410,6 +410,22 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
       | .string value => return ((← stringByteGet value indexValue), s)
       | .slice slice =>
           return ((← loadLoc s (← sliceIndexLoc slice indexValue)), s)
+      -- Pointer-to-array base in READ position (triage L5;
+      -- spec#Index_expressions: for `a` of pointer to array type,
+      -- `a[x]` is shorthand for `(*a)[x]`): the read sibling of
+      -- BUG-038's write-path `.addr` arm in `indexTargetLoc`. Only an
+      -- ARRAY pointee is accepted — Go's index auto-deref applies to
+      -- pointer-to-array alone; the write path's slice-pointee arm
+      -- exists because assignment TARGETS carry the base cell's
+      -- address, a shape read position never produces.
+      | .addr baseLoc =>
+          match ← loadLoc s baseLoc with
+          | .array values => return ((← arrayGet values indexValue), s)
+          | other => stuck s!"expected array pointee for index access, got {repr other}"
+      -- A nil pointer-to-array base is gc's recoverable nil-pointer
+      -- dereference (triage L6; BUG-038's entry names this case as the
+      -- deferred read-position sibling).
+      | .nil => panic "runtime error: invalid memory address or nil pointer dereference"
       | other => stuck s!"expected array, slice, or string value for index access, got {repr other}"
   | .indexAddr, [b, i] => do
       return (.addr (← indexTargetLoc s b i), s)

@@ -1,18 +1,17 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-19 (bug-fix arc, 19-red GoCore slice family 3 =
-#   triage row L3: IEEE min/max over float operands)
-#   commit: this commit (on 374432ef, the family-2 tip)
-#   re-pin reason: the min/max builtins' float refusal is replaced by
-#   the IEEE fold over the shared floatMinMaxBits kernel (softfloat
-#   fcmp64/fcmp32): NaN propagates (the NaN operand), an equal compare
-#   breaks the +/-0 tie by sign (min keeps -0, max keeps +0), the
-#   result is always one of the operands — spec#Min_and_max's
-#   special-case table. Mirror transcribes the same kernel. Deltas —
-#   the predicted set exactly, nothing else moved:
-#     FAIL/lean-observation -> PASS (3):
-#       spec-examples-stmt/min-max-float-specials/{infinities, nan,
-#       signed-zero}
-#   counts: 2181 cases, 2074 PASS / 107 FAIL (was 2181, 2071/110)
+# recorded: 2026-08-19 (bug-fix arc, 19-red GoCore slice family 4 =
+#   triage rows L5+L6: pointer-to-array indexing in READ position)
+#   commit: this commit (on e16477cd, the family-3 tip)
+#   re-pin reason: .indexGet gains the .addr auto-deref arm
+#   (spec#Index_expressions: p[x] is shorthand for (*p)[x]; array
+#   pointee only — read position never carries a target's base-cell
+#   address) and the .nil arm (gc's recoverable nil-pointer-dereference
+#   panic) — the read siblings of BUG-038's write-path arms. Race
+#   footprint: element-precise read (.index base idx), gc's compiled
+#   single element load. Deltas — the predicted set exactly:
+#     FAIL/lean-observation -> PASS (2):
+#       arrays/pointer-array, pointers/nil-array-index-panic
+#   counts: 2181 cases, 2076 PASS / 105 FAIL (was 2181, 2074/107)
 #   frontend: native (tools/nativefrontend + NativeToIR)
 # columns: result<TAB>id<TAB>stage
 PASS	arrays/array-bounds	-
@@ -33,7 +32,7 @@ PASS	arrays/keyed-literal-sparse	-
 PASS	arrays/nested-arrays	-
 PASS	arrays/nested-copy-value	-
 PASS	arrays/nil-pointer-len-cap	-
-FAIL	arrays/pointer-array	lean-observation
+PASS	arrays/pointer-array	-
 PASS	assign-order/conversion-call-eval-once/assign	-
 PASS	assign-order/conversion-call-eval-once/define	-
 PASS	assign-order/target-check-vs-rhs/index-target	-
@@ -1531,7 +1530,7 @@ PASS	pointers/deref-target-rhs-call-order	-
 PASS	pointers/inc-via-call	-
 PASS	pointers/nil-array-elem-store	-
 PASS	pointers/nil-array-elem-store/second-target	-
-FAIL	pointers/nil-array-index-panic	lean-observation
+PASS	pointers/nil-array-index-panic	-
 PASS	pointers/nil-deref-panic	-
 PASS	pointers/nil-selector-panic	-
 PASS	pointers/nil-value-receiver-call-panic	-

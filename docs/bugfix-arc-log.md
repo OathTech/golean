@@ -1510,3 +1510,45 @@ exactly the 3. Baseline re-pinned; untriaged-ids: 3 retired. Backlog
 exit 0, baseline diff FULL (2181/2181), re-pin guard 0 flips
 (`/tmp/f3-ci.log`, scratch). Tier: `--diff` (same rationale; the fold
 is sequential-value machinery, no choice site or enumerator surface).
+
+### Family 4 — pointer-to-array indexing (triage L5+L6, 2 reds)
+
+**Diagnosis confirmed**: both red at the exact diagnosed stuck arm
+(`stuck "expected array, slice, or string value for index access, got
+GoValue.addr …"` / `… got GoValue.nil`). Expectations already
+oracle-derived (`pointer-array` expects ok/13; `nil-array-index-panic`
+expects gc's recoverable nil-deref panic); spec anchor
+`spec#Index_expressions` ("for `a` of pointer to array type, `a[x]` is
+shorthand for `(*a)[x]`") + `spec#Run_time_panics`. No edge gaps noted
+in the triage row; judgment: none added — the write-position edges
+(OOB, second-target ordering) are BUG-038's existing green cases.
+
+**The fix**: `.indexGet` gains the two read-position siblings of
+BUG-038's write-path arms: `.addr` loads the pointee and projects
+(ARRAY pointee only — read position never carries a target's
+base-cell address, which is why `indexTargetLoc`'s slice-pointee arm
+is deliberately NOT mirrored; the narrower arm is the honest one) and
+`.nil` raises gc's recoverable nil-pointer-dereference panic. Race
+footprint: element-precise read `(false, .index base idx)` — gc
+compiles `p[i]` to a single element load, and the loc shape matches
+element STORES, keeping disjoint elements race-free. **Mirror
+realigned same-commit** (the `.addr` transcription; `.nil` quits Q6,
+the machine-panic convention); Frame `arm_indexGet` gains the
+load+project and fixed-message panic cases; DriftApply's `indexGet`
+gains the addr transport; StateWf the two bullets. BUG-038's entry
+updated (its named deferred sibling is now fixed).
+
+**Predicted flips (pre-run): the 2 ids FAIL/lean-observation → PASS,
+nothing else.** Full run: 2181 cases 2076/105 (was 2074/107); drift =
+exactly the 2. Baseline re-pinned; untriaged-ids: 2 retired. Backlog
+10 → 8.
+
+**Gate**: first run **FAIL — the check-4b ratchet caught my own
+incomplete edit** (the two departed ids' comment block was rewritten
+but their bare id lines stayed in the active list; the gate's
+departed-id rule fired exactly as designed). Ids removed, re-run:
+`GOLEAN_MEM_MAX=24G scripts/ci --diff` → **`RESULT: PASS`**, exit 0,
+baseline diff FULL (2181/2181), re-pin guard 0 flips
+(`/tmp/f4-ci2.log`, scratch; the failed first run `/tmp/f4-ci.log` —
+its differential half was already green, the FAIL was the ledger
+consistency check). Tier: `--diff` (same rationale).

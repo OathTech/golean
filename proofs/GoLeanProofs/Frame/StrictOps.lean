@@ -1355,6 +1355,16 @@ private theorem arm_indexGet (hS : FrameSim ρ na₀ na fr σ σF)
       intro l lF hl
       subst hl
       exact scalar_pair hS (loadLoc_sim hS l)
+  -- pointer-to-array read (triage L5): load commutes, then the array
+  -- projection; the nil arm's panic message is fixed text.
+  case addr l =>
+      refine ExSim.bind (loadLoc_sim hS l) ?_
+      intro bv bvF hbv
+      subst hbv
+      cases bv <;> simp only [renameValue]
+      case array vals => exact scalar_pair hS (arrayGet_sim ρ vals n)
+      all_goals exact ExSim.stuck'
+  case nil => exact ExSim.panic
   all_goals exact ExSim.stuck'
 
 private theorem arm_indexAddr (hS : FrameSim ρ na₀ na fr σ σF)

@@ -391,6 +391,15 @@ def strictOpAccesses (op : StrictOp) (vs : List GoValue) : List RaceAccess :=
               | .ok l => [(false, l)]
               | .error _ => []
           | .error _ => []
+      -- Pointer-to-array read `p[i]` (triage L5): gc compiles a single
+      -- ELEMENT load, so the footprint is the element loc — the same
+      -- `.index base idx` shape element STORES use, keeping read/write
+      -- pairs aligned and disjoint elements race-free. A nil base
+      -- panics before any access.
+      | .addr baseLoc =>
+          match valueAsInt i with
+          | .ok idx => [(false, .index baseLoc idx)]
+          | .error _ => []
       | _ => []  -- array/string VALUES are in hand (read recorded at their producer)
   | .mapGet _ _, [b, _] => mapAccess false b
   | .lengthOf _, [v] => mapAccess false v
