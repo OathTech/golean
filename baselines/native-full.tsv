@@ -1,18 +1,19 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-19 (bug-fix arc, 19-red GoCore slice family 5 =
-#   triage row L7: struct-tag pointer conversion field access)
-#   commit: this commit (on 3ccd25c2, the family-4 tip)
-#   re-pin reason: the nominal mint-tag check at field access
-#   (fieldGet / loadLoc / storeLoc field arms) relaxes to
-#   tag-CONVERTIBLE: identical underlying struct types, decided by wire
-#   FieldDef-list equality via structTagCompatible (the struct
-#   VALUE-conversion arm's own identity rule — the wire strips tags per
-#   spec#Conversions' struct-tag clause). The cell keeps its mint tag;
-#   the conversion aliases, never retags. Deltas — the predicted set
-#   exactly, nothing else moved (the relaxation admits nothing the
-#   corpus exercises beyond the pinned case):
-#     FAIL/lean-observation -> PASS (1): structs/tag-pointer-conversion
-#   counts: 2181 cases, 2077 PASS / 104 FAIL (was 2181, 2076/105)
+# recorded: 2026-08-19 (bug-fix arc, 19-red GoCore slice family 6 =
+#   triage row L10: go-of-nil-func routed through the fatal class)
+#   commit: this commit (on 835e9102, the family-5 tip)
+#   re-pin reason: the spawn arm's refusal becomes
+#   GoError.fatal "go of nil func value" (gc's unrecoverable runtime
+#   fatal AT THE SPAWN, probed 2026-08-07) — the machine's honest fatal
+#   classification, not a panic masquerade. The case's expected_status
+#   corrects panic -> fatal: the old red pin's stated reason ("neither
+#   harness status class describes a non-panic fatal") EXPIRED when the
+#   fatal class landed at spec-parity slice 2, two days after the pin
+#   was written (triage §3.3 L10, argued there and user-approved).
+#   Feature tag `fatal` added to the corpus vocabulary. Deltas — the
+#   predicted set exactly:
+#     FAIL/go-run -> PASS (1): goroutines/spawn-edge/nil-func-fatal
+#   counts: 2181 cases, 2078 PASS / 103 FAIL (was 2181, 2077/104)
 #   frontend: native (tools/nativefrontend + NativeToIR)
 # columns: result<TAB>id<TAB>stage
 PASS	arrays/array-bounds	-
@@ -923,7 +924,7 @@ PASS	goroutines/select-wake/recv	confluent
 PASS	goroutines/select-wake/send	confluent
 PASS	goroutines/spawn-edge/child-panic-aborts	confluent
 PASS	goroutines/spawn-edge/child-recovers	-
-FAIL	goroutines/spawn-edge/nil-func-fatal	go-run
+PASS	goroutines/spawn-edge/nil-func-fatal	-
 PASS	goroutines/spawn-edge/nil-interface-recovered	-
 PASS	goroutines/spawn-edge/ptr-box-child-aborts	confluent
 FAIL	goroutines/spawn-in-init/in-init	lean-observation

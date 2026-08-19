@@ -42,6 +42,7 @@ equality
 escapes
 evaluation_order
 fallthrough
+fatal
 fields
 floats
 full_slice

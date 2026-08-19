@@ -1598,3 +1598,64 @@ exercises. Baseline re-pinned; untriaged-ids: 1 retired. Backlog
 exit 0, baseline diff FULL (2181/2181), re-pin guard 0 flips,
 bug-index cross-check ok at the new ceiling (`/tmp/f5-ci.log`,
 scratch). Tier: `--diff` (same rationale).
+
+### Family 6 — go-of-nil-func through the fatal class (triage L10, 1 red)
+
+**Diagnosis confirmed**: red at stage go-run — `go run` emits
+`fatal error: go of nil func value` where the row expected `panic`;
+i.e. the RED was the expectation, exactly as triage §3.3's L10
+paragraph argued (the pin's stated reason — "neither harness status
+class describes a non-panic fatal" — expired when the `fatal` class
+landed at spec-parity slice 2, two days after the pin was written; six
+sync-fatal cases pass through the class today).
+
+**The fix**: the spawn arm's `.unsupported` refusal becomes
+`GoError.fatal "go of nil func value"` — the machine's HONEST fatal
+classification (gc's fixed string after "fatal error: ", raised at the
+spawn in the spawning goroutine, unrecoverable — probe 2026-08-07),
+never a panic masquerade. The case's `expected_status` corrects
+`panic → fatal` (correcting an expectation whose justification
+expired, argued in the user-approved triage — not editing a case to
+make it pass); its stale RED-PIN comments (cases.tsv + main.go) and
+`Multi.lean`'s two stale "fatal class is unmodeled" comments rewritten.
+The corpus tag vocabulary gains `fatal` (the row's honest class tag;
+`coverage-manifest` failed closed on it, as designed). Latitude
+inventory R11 updated (the go-of-nil-func line migrates from REFUSED
+to the class); §5's refusal list drops the item. One eval unit test
+pinned the OLD refusal ("expected unsupported") — updated to pin the
+fatal, which is the mutation-visible direction.
+
+**Predicted flips (pre-run): the 1 id FAIL/go-run → PASS, nothing
+else.** Full run: 2181 cases 2078/103 (was 2077/104); drift = exactly
+the 1. Baseline re-pinned (header carries the expectation-correction
+argument). Backlog unchanged at 7 (this red was stage go-run, outside
+the fidelity ledger).
+
+**Gate — the batch-end `--slow`**: first run **FAIL** on the eval
+test still pinning the old refusal (fixed above; the differential half
+was already green); re-run `GOLEAN_MEM_MAX=24G scripts/ci --slow` →
+**`RESULT: PASS`**, exit 0 — `--slow` implies `--diff` AND re-certifies
+tier=slow rows fully (`GOLEAN_SLOW=1` through the differential; zero
+drift, 2181/2181), eval tests 136 ok (`/tmp/f6-ci2.log`, scratch).
+Tier: `--slow` — family 6 touches `Multi.lean`'s spawn path (the
+concurrent cluster), and this run discharges the batch-level slow
+obligation for families 1–5 as well.
+
+### The 19-red batch — end state
+
+| family | row | reds | flips vs predicted | tier | commit |
+| --- | --- | --- | --- | --- | --- |
+| 1 rune↔string conversions | L1 | 9 | exact (9) | --diff | `eca39e4d` |
+| 2 slice→array panics | L2a | 3 | exact (3) | --diff | `374432ef` |
+| 3 IEEE min/max floats | L3 | 3 | exact (3) | --diff | `e16477cd` |
+| 4 pointer-to-array indexing | L5+L6 | 2 | exact (2) | --diff | `3ccd25c2` |
+| 5 struct-tag field access | L7 | 1 | exact (1) | --diff | `835e9102` |
+| 6 go-of-nil-func fatal | L10 | 1 | exact (1) | --slow | this commit |
+
+19/19 red→green, zero unpredicted drift at any gate, no family
+stopped. Baseline: 2181 cases, 2078 PASS / 103 FAIL (from 2059/122 at
+the batch start). Fidelity backlog 25 → 7 (ids + count ratchets both
+lowered). Proof blast radius: every family's frame/drift/wf lemmas
+realigned same-commit (family 2 retired `convertValueToTy_noPanic` for
+a panic-transfer lemma; family 5 recorded the loadLoc→types coupling);
+the 005 map-internals surgery was untouched, as predicted.

@@ -89,10 +89,12 @@ Design points (docs/2026-08-06_channels-arc-design.md):
   `GoError.deadlock` terminal, generalizing slice 1's immediate
   single-thread classification and matching Go's detector state.
 
-Fail closed (each a visible `.unsupported`, never a silent
-approximation): `go` of a nil func value (gc's "go of nil func value"
-runtime FATAL — probed 2026-08-07; the fatal class is unmodeled) and
-select-with-select rendezvous. Multi-ready select went LIVE at slice 4
+Fail closed (a visible `.unsupported`, never a silent approximation):
+select-with-select rendezvous. `go` of a nil func value is gc's
+"go of nil func value" runtime FATAL (probed 2026-08-07), MODELED via
+`GoError.fatal` since the 19-red slice (triage L10, 2026-08-19; the
+class itself landed at spec-parity slice 2). Multi-ready select went
+LIVE at slice 4
 (the L2 site — envelope statement at `applySelect`; arrival-path
 `.multi` analysis here; wake-path head-commit at `resumeThread`).
 -/
@@ -282,8 +284,8 @@ that leaks the nil-interface class through a spawn would be misrouted
 to a child abort by this arm — keep the hoist, or split the classes
 upstream (recorded hazard, S2 audit response). A nil callee is gc's
 "go of nil func value" runtime FATAL at the spawn (probed 2026-08-07,
-refuting the older child-panic analysis): the fatal class is unmodeled
-— fail closed. -/
+refuting the older child-panic analysis): modeled as `GoError.fatal`
+(triage L10). -/
 def spawnStep (s : ExecState) (cv : GoValue) (args : List GoValue) (k : Cont) :
     Except GoError (Config × Config × ExecState) := do
   match cv with
@@ -299,8 +301,14 @@ def spawnStep (s : ExecState) (cv : GoValue) (args : List GoValue) (k : Cont) :
       | .error (.panic msg) =>
           return (.spawned k, .panicking [⟨runtimeErrorValue msg, false⟩] .stop, s)
       | .error e => throw e
-  | .nil => throw (.unsupported
-      "go of nil func value (gc raises an unrecoverable runtime fatal at the spawn; the fatal class is unmodeled this slice)")
+  -- A nil callee is gc's "go of nil func value" runtime FATAL, raised
+  -- AT THE SPAWN in the spawning goroutine (probed 2026-08-07;
+  -- unrecoverable, exit 2). Routed through the machine's own fatal
+  -- class (triage L10, 2026-08-19) — the sync-misuse `GoError.fatal`
+  -- convention, gc's fixed string after "fatal error: ". The old
+  -- refusal's stated reason ("the fatal class is unmodeled this
+  -- slice") expired when the class landed at spec-parity slice 2.
+  | .nil => throw (.fatal "go of nil func value")
   | other => throw (.stuck s!"go callee is not a function value: {repr other}")
 
 /-- Deliver a received value to a chan-recv STATEMENT's parked targets:
