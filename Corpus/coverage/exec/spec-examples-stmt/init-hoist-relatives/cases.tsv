@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+for-init-cond	forInitCondOrder	-	ok	-	control_flow,closures,evaluation_order,loops,scoping
+for-init-cond-reads-init	forInitCondReadsInit	-	ok	-	control_flow,closures,evaluation_order,loops,break,scoping
+switch-init-tag	switchInitTagOrder	-	ok	-	control_flow,closures,evaluation_order,switch,scoping
+switch-init-tag-reads-init	switchInitTagReadsInit	-	ok	-	control_flow,closures,evaluation_order,switch,scoping
+type-switch-init	typeSwitchInitOrder	-	ok	-	control_flow,closures,evaluation_order,type_switch,interfaces,scoping
+type-switch-init-reads-init	typeSwitchInitReadsInit	-	ok	-	control_flow,closures,evaluation_order,type_switch,interfaces,scoping

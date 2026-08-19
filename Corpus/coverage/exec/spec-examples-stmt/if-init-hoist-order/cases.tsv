@@ -1,3 +1,10 @@
 # id	subject	args	expected_status	expected_reason	features
 cond-call-after-init	condCallAfterInit	-	ok	-	control_flow,closures,evaluation_order
 init-panic-first	initPanicFirst	-	ok	-	control_flow,closures,panic,evaluation_order,slices
+else-if-chain	elseIfChainOrder	-	ok	-	control_flow,closures,evaluation_order,if,scoping
+func-literal	ifInitInFuncLit	-	ok	-	control_flow,closures,evaluation_order,if,scoping
+nested	nestedIfInit	-	ok	-	control_flow,closures,evaluation_order,if,nested,scoping
+cond-hoist-reads-init	condHoistReadsInit	-	ok	-	control_flow,evaluation_order,if,calls,scoping
+cond-panic-after-init	condPanicAfterInit	-	ok	-	control_flow,closures,evaluation_order,if,panic,recover,defer,slices
+comma-ok-short-circuit	commaOkShortCircuit	-	ok	-	control_flow,evaluation_order,if,maps,comma_ok,bools,scoping
+comma-ok-method-short-circuit	commaOkMethodShortCircuit	-	ok	-	control_flow,evaluation_order,if,maps,comma_ok,bools,methods,structs,scoping

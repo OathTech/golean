@@ -2593,7 +2593,7 @@ FIRST per the standing rule.
   have permanently darkened `if v, ok := m[k]; ok && f(v)` — one of
   the most common shapes in real Go, including deps/raft).
 - Pinned-by: differential
-- Cases: spec-examples-lexical/panic-values/panic-error, spec-examples-stmt/if-init-hoist-order/cond-call-after-init, spec-examples-stmt/if-init-hoist-order/init-panic-first
+- Cases: spec-examples-lexical/panic-values/panic-error, spec-examples-stmt/if-init-hoist-order/cond-call-after-init, spec-examples-stmt/if-init-hoist-order/init-panic-first, spec-examples-stmt/if-init-hoist-order/else-if-chain, spec-examples-stmt/if-init-hoist-order/func-literal, spec-examples-stmt/if-init-hoist-order/nested, spec-examples-stmt/if-init-hoist-order/cond-hoist-reads-init, spec-examples-stmt/if-init-hoist-order/cond-panic-after-init, spec-examples-stmt/if-init-hoist-order/comma-ok-short-circuit, spec-examples-stmt/if-init-hoist-order/comma-ok-method-short-circuit
 - Discovered: `emitIf` (tools/nativefrontend/emit.go:2426) emits
   `st.Init` INSIDE the if node, but the condition is emitted with the
   enclosing hoist accumulator in force, so `emitStmtList` places the
@@ -2622,4 +2622,19 @@ FIRST per the standing rule.
   hoists into condPre inside the loop node; emitSwitch/emitTypeSwitch
   append tag hoists after the init); the receive-hoist family
   (BUG-023/026) is a different position set.
+- EDGE ENUMERATION (bug-fix arc slice 1, 2026-08-19; landed as its
+  own commit BEFORE any fix, colors recorded pre-fix): the `Cases:`
+  list above grew from the 2 P3 pins to 9 — `else-if-chain`,
+  `func-literal`, `nested`, `cond-hoist-reads-init`,
+  `cond-panic-after-init`, `comma-ok-short-circuit` and
+  `comma-ok-method-short-circuit` walk the positions the trigger can
+  occupy and pin all three observable modes (see
+  `docs/bugfix-arc-log.md` §slice 1 for the per-row go/machine
+  values). The non-affected relatives are now pinned GREEN in
+  `spec-examples-stmt/init-hoist-relatives/` (6 rows: for-init,
+  switch-init, type-switch-init, each also in a `-reads-init` form
+  that puts the init-declared variable inside the hoisting call), so
+  the fix cannot regress them silently.
+- Emitter line numbers in this entry are the P3-era ones; at the fix
+  commit `emitIf` is at emit.go:2517.
 
