@@ -17,7 +17,7 @@ its reasoning, for user review; every number is derivation-anchored
 | 4 | BUG-005 — live map iteration (design-gated) | RULED (2026-08-19, memo §5); guardrails-first rework LANDED (2 membership red pins); (L) surgery in progress |
 | 5 | full red/bug triage (kill or justify) | TABLE DELIVERED (`docs/2026-08-19_triage-table.md`); A1 landed `1ca434b2`; (c) list + two gates await the user |
 | 5b | H-3 — per-declaration quarantine for METHODS (scope addition) | DONE (this commit; 12 guardrail rows 12-red → 8 green + 4 red-by-design, gate PASS, baseline re-pinned 2181→2193) |
-| 6 | the whole-language bar (coverage ledger) | not started |
+| 6 | the whole-language bar (coverage ledger) | IN PROGRESS — denominator landed; suites + ledger + roadmap re-point to follow |
 
 ---
 
@@ -1950,3 +1950,42 @@ so the before/after pair differs only in the frontend.
   time. Still fail-closed, still visible, but only when exercised — the
   same trade the plain-function quarantine made and the reason the
   guardrail suite pins a CALL row per shape.
+
+---
+
+## Slice 6 — the whole-language bar
+
+Charter block: `docs/2026-08-19_bugfix-arc-charter.md` "Slice 6".
+USER DIRECTION added since the charter (2026-08-19, recorded in the
+ledger header as directed): (1) the bar is set for the WHOLE language;
+(2) sequential-frontier DEFAULT = SUPPORT — the ledger carries a
+sequential | concurrency-entangled column; sequential frontier rows
+form an ORDERED BUILD QUEUE (smallest-diagnosed first, complex last as
+the one large arc); concurrency-entangled rows get a named design
+question each, never a queue slot; a sequential feature NOT queued
+needs a written profound reason.
+
+### Step 1 — the denominator (this commit)
+
+`scripts/extract-spec-sections` (new generator, the
+`extract-spec-examples` pattern: pin-checked, fail-closed) →
+`docs/spec-archaeology/section-census.tsv`: **158 spec + 18 mem rows**,
+one per h2/h3/h4 heading anchor of the pinned go1.26.5 docs, document
+order. Two properties verified at generation, not assumed:
+
+- every `id="…"` in each doc is a HEADING id (158 ids = 158 headings;
+  18 = 18), so the census, the anchor-lint namespace
+  (`scripts/check-spec-anchors`) and the P3 archaeology anchors all
+  coincide — one namespace, three instruments. The generator FAILS
+  CLOSED if a future re-pin breaks this, so the denominator can never
+  silently shrink.
+- the P3 inventory/dispositions and anchor-rollup TSVs are REUSED as
+  evidence inputs (per the charter: "the input, not rebuilt").
+
+**JUDGMENT (slice 6, census granularity):** the ledger's row unit is
+the heading anchor (h2-h4), not the P3 <pre>-block. Blocks are example
+EXHIBITS; the bar is about language surface, and the anchor is the unit
+the spec itself addresses, the lint resolves, and covmap segments by.
+Chapter (h2) rows whose content is entirely delegated to their h3/h4
+children are classified `container` — explicitly, with the children
+listed, never skipped (zero-unclassified means zero).
