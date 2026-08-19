@@ -13,8 +13,8 @@ its reasoning, for user review; every number is derivation-anchored
 | --- | --- | --- |
 | 1 | BUG-058 — if-init condition-hoist scope | DONE (`8a42e402` enumeration, `740f09f8` fix; gate PASS at `740f09f8`) |
 | 2 | BUG-057 — two-var comma-ok var-decl arity | DONE (`d5ce2dc0` enumeration, `2d840744` fix; gate PASS at `2d840744`) |
-| 3 | BUG-056 — `&*p` nil collapse (design-gated) | MEMO DELIVERED, awaiting user ruling (probe matrix landed, 10 rows; `docs/2026-08-19_bug056-addr-deref-memo.md`) |
-| 4 | BUG-005 — live map iteration (design-gated) | MEMO DELIVERED, awaiting user ruling (3 probe rows landed; `docs/2026-08-19_bug005-map-range-memo.md`) |
+| 3 | BUG-056 — `&*p` nil collapse (design-gated) | RULED (2026-08-19: option (b) approved, memo §6) — implementation in progress |
+| 4 | BUG-005 — live map iteration (design-gated) | RULED (2026-08-19: (L) approved, narrowings REJECTED — full literal envelope; memo §5) — implementation in progress |
 | 5 | full red/bug triage (kill or justify) | TABLE DELIVERED (`docs/2026-08-19_triage-table.md`); A1 landed `1ca434b2`; (c) list + two gates await the user |
 | 6 | the whole-language bar (coverage ledger) | not started |
 
@@ -752,6 +752,31 @@ at their charter-designed user gates: no implementation exists or
 begins until Mike rules on the two memos' decision blocks
 (`docs/2026-08-19_bug056-addr-deref-memo.md` §5,
 `docs/2026-08-19_bug005-map-range-memo.md` §4).
+
+### The rulings (2026-08-19) — gate lifted
+
+Mike ruled on both decision blocks; the verbatim substance is recorded
+as a dated USER RULING section in each memo (§6 of the BUG-056 memo,
+§5 of the BUG-005 memo — appended before any implementation began).
+The headline deltas from the memos' recommendations:
+
+- BUG-056: (b) approved as recommended, name/wire key as recommended.
+- BUG-005: (L) approved but the two narrowings are **REJECTED** — the
+  implementation carries the FULL literal envelope (deletion prunes
+  the produced-set AND the mandatory start-set; a re-created key is an
+  ordinary created entry, re-producible). Self-inserting loops are
+  genuinely unbounded: ∀-streams certification fails closed on them
+  and such cases ride the membership lane. The canonical member is
+  DEFINITIONALLY the machine at the zero stream (stop LAST).
+- **KIT OBLIGATION (recorded, NOT proven this slice, per Mike):** a
+  tiny syntactic termination theorem for the map-range kit — "body
+  stores no key into the ranged map ⇒ range terminates" — most
+  programs terminate structurally because surviving never-removed
+  start keys are forced. Owed to the post-WP-arc kit alongside the
+  map lemmas the surgery touches.
+- New standing doc directed: `docs/spec-interpretations.md` (curated
+  index of adopted spec readings, ledger-backed, CLAUDE.md-linked) —
+  executed as this arc's slice 3+4 docs commit.
 
 ---
 

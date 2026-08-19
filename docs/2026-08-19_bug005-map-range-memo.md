@@ -333,3 +333,47 @@ explicit re-envelope obligations at E9.
   closed on self-re-adding loops and say so in the claim.
 - **No to 3:** flip the stop slot to index 0; no shipped case moves;
   record the canonical-member choice either way at the site.
+
+## 5. USER RULING (2026-08-19, Mike — recorded before implementation)
+
+- **Q1: YES** — the (L) surgery.
+- **Q2: NO — the narrowings are NOT allowed.** Mike: "any latitude in
+  the Go spec should be supported" — implement the **FULL literal
+  envelope**. Consequences explicitly ruled in:
+  - **a deleted key is removed from the produced-set** — a re-created
+    key is an ORDINARY created entry (may be produced, may be
+    skipped; and having been removed from produced, it may be
+    produced AGAIN). Narrowing 1 is dead.
+  - **surviving never-removed start keys remain MANDATORY** — that
+    clause is spec-forced ("will not be produced" applies only to
+    removed entries; an entry neither removed nor created must be
+    traversed), not a narrowing. A start key that was DELETED loses
+    its mandatory status forever; its re-creation is an ordinary
+    created entry. Narrowing 2 is dead (the mandatory set is pruned
+    by deletion, not held).
+  - **self-inserting loops have genuinely unbounded traces** — the
+    ∀-streams/confluence checker FAILS CLOSED on them; such cases
+    ride the membership lane instead, and the claim says so.
+  - **cases exercising created-entry latitude move to membership
+    rows, not equality rows** (the §2 rework clause fires:
+    `maps/delete-readd-during-range` and `maps/added-entries-bound`
+    are reworked FIRST, guardrails-first).
+- **Q3: YES, with a strengthening** — the canonical/deterministic
+  member is **DEFINED as the nondeterministic machine at the zero
+  choice stream** (`[0,0,…]`; stop ordered LAST at every pick), so
+  deterministic runs are members BY CONSTRUCTION, not by lemma. Make
+  it definitional in the code/docs. Corollary to state plainly in the
+  record: on self-inserting loops the zero stream is an infinite
+  trace and the executable interpreter fuel-outs VISIBLY — correct
+  behavior, not a bug.
+- **Interpretive reading to the ledger:** "a deleted-then-recreated
+  key is a NEW entry (created-during-iteration latitude), not the old
+  entry resurrected" — filed as a spec-ambiguity ledger entry quoting
+  the spec sentences, our reading, the rejected alternative.
+- **Follow-on recorded as a kit obligation (NOT proven this slice):**
+  a tiny syntactic termination theorem — "body stores no key into the
+  ranged map ⇒ range terminates" — most programs terminate
+  structurally since surviving start keys are forced.
+- **New doc directed:** `docs/spec-interpretations.md` — the curated
+  index of adopted spec readings, one row per reading, each backed by
+  a ledger entry, linked concisely from CLAUDE.md.

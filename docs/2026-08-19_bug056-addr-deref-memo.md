@@ -277,3 +277,19 @@ distinguish.
   modified shape against §2's two ground truths (no load; no race
   visibility) before implementation — those two facts are the fix's
   acceptance tests regardless of mechanism.
+
+## 6. USER RULING (2026-08-19, Mike — recorded before implementation)
+
+- **Q1: YES** — implement option (b), the GoCore strict op
+  `addrOfDeref`.
+- **Q2:** name and wire key as recommended (`addrOfDeref` /
+  `addr-of-deref`).
+- **Acceptance tests** = §2's two ground truths: **no load** (the
+  machine trace / race footprint shows no read of the pointee) and
+  **no race visibility** (the TSan-green probe shape stays quiet in
+  our race lane; the race negative does not flip).
+
+Implementation proceeds per §5's "Yes" branch: the ~10 arms of §3(b),
+emitter scoped to the immediate `&`-of-`*` composition, the 5 pinned
+reds flip, the 7 matrix greens must not move, BUGS.md BUG-056 →
+fixed.
