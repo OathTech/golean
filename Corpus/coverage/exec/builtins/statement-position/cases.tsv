@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+copy-stmt	stmtCopy	-	ok	-	builtins,copy,slices
+copy-stmt-overlap	stmtCopyOverlap	-	ok	-	builtins,copy,slices,overlap,aliasing
+copy-stmt-eval-order	stmtCopyEvalOrder	-	ok	-	builtins,copy,slices,evaluation_order
+copy-stmt-string-source	stmtCopyStringToBytes	-	ok	-	builtins,copy,strings,bytes
+recover-stmt-in-defer	stmtRecoverInDefer	-	ok	-	builtins,recover,defer,panic
+recover-stmt-no-panic	stmtRecoverNoPanic	-	ok	-	builtins,recover,defer
+recover-stmt-outside-defer	stmtRecoverOutsideDefer	-	ok	-	builtins,recover

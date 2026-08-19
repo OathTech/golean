@@ -1753,17 +1753,46 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 						return e.emitClearStmt(call)
 					case "close":
 						return e.emitCloseStmt(call)
+					case "copy", "recover":
+						// spec#Expression_statements: `copy` and `recover`
+						// ARE permitted in statement context — the
+						// not-permitted list is
+						// append/cap/complex/imag/len/make/new/real/unsafe.* —
+						// and their result is simply discarded. Lower
+						// through the (already correct) EXPRESSION node
+						// under a BLANK assignment target, i.e. exactly the
+						// `_ = copy(dst, src)` shape, rather than inventing
+						// a statement node: `n := copy(...)` and
+						// `_ = recover()` already take this path and are
+						// green. Discarding the result changes nothing the
+						// spec observes — in particular a bare `recover()`
+						// keeps its frame position, so it is still "called
+						// directly by a deferred function"
+						// (spec#Handling_panics), and copy's operand order
+						// is the expression node's. Any operand temps land
+						// in the enclosing hoist accumulator that
+						// emitStmtList splices, as for every other
+						// statement here.
+						w, err := e.emitExpr(call)
+						if err != nil {
+							return nil, err
+						}
+						return map[string]any{"stmt": "assign", "define": false,
+							"lhs": []any{map[string]any{"target": "blank"}},
+							"rhs": []any{w}}, nil
 					default:
-						// Any other builtin in STATEMENT position (a bare
-						// `recover()`, `print`, ...) has no statement
-						// lowering: refuse HERE so the decl quarantines
-						// per-function. The old fall-through emitted the
-						// builtin's EXPRESSION node inside an expr
-						// statement, which the decoder rejects as a
+						// Any REMAINING builtin in statement position
+						// (`print`, `println` — implementation-specific
+						// debug builtins the spec says "may be removed") has
+						// no statement lowering: refuse HERE so the decl
+						// quarantines per-function. The old fall-through
+						// emitted the builtin's EXPRESSION node inside an
+						// expr statement, which the decoder rejects as a
 						// whole-package error (found by
 						// goroutines/spawn-edge/child-recovers, whose bare
 						// deferred recover() took its package siblings
-						// down — a fail-open, not a semantics gap).
+						// down — a fail-open, not a semantics gap; that
+						// case is green since the copy/recover arm above).
 						return nil, unsup("builtin %s in statement position", id.Name)
 					}
 				}
