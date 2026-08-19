@@ -6593,6 +6593,38 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 					"args": args, "resultTypes": resultTypes}, true, nil
 			}
 		}
+		// A METHOD EXPRESSION in CALL position — `T.Mv(t, 7)`,
+		// `(*T).Mp(&t, 5)`, `I.Mv(i, 9)`, and the promoted form.
+		// spec#Method_expressions: `T.Mv` "yields a function equivalent to
+		// Mv but with an explicit receiver as its first argument", and the
+		// spec's own five-equivalent-invocations block writes the DIRECT
+		// call forms. `emitSelector`'s MethodExpr arm already emits exactly
+		// that func value (green in VALUE position since the methods
+		// campaign: the declared method / promotion wrapper / interface
+		// dispatch anchor, receiver-first, no captures), so calling it is
+		// the same `call-value` shape a func-typed field takes above —
+		// routing, not synthesis. Its own refusals ride along unchanged:
+		// the `(*T).Mv` deref adapter, unnameable interface receivers, and
+		// the sync method-expression guard all live inside `emitSelector`
+		// and propagate from here.
+		if ok && seln.Kind() == types.MethodExpr {
+			if msig, isSig := e.goTypeOf(sel).Underlying().(*types.Signature); isSig {
+				callee, err := e.emitSelector(sel)
+				if err != nil {
+					return nil, false, err
+				}
+				args, err := e.emitCallArgs(msig, c)
+				if err != nil {
+					return nil, false, err
+				}
+				resultTypes, err := e.emitResultTypes(msig)
+				if err != nil {
+					return nil, false, err
+				}
+				return map[string]any{"expr": "call-value", "callee": callee,
+					"args": args, "resultTypes": resultTypes}, true, nil
+			}
+		}
 		return nil, false, unsup("selector call %s is not a method value", sel.Sel.Name)
 	}
 	fn, ok := seln.Obj().(*types.Func)

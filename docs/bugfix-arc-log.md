@@ -970,3 +970,70 @@ regression)`. That last step reports `[recorded at 0c21aa2, HEAD is
 exact code tree that A1 then committed, so the label is about the commit
 HASH and not the tree — no runtime file changed between the run and
 either commit. Stated rather than glossed, per the gate-honesty rule.
+
+### Step 4 — mini-slice A2: method expressions in CALL position
+
+**Category (a), executed.** `spec#Method_expressions`: `T.Mv` "yields a
+function equivalent to Mv but with an explicit receiver as its first
+argument", and the spec's own five-equivalent-invocations block writes
+the DIRECT call forms `T.Mv(t, 7)` and `(T).Mv(t, 7)`. The frontend
+supported method expressions in VALUE position (`f1 := mefT.Mv`) and
+refused them in CALL position: `emitMethodCall`'s selection dispatch
+fell past the MethodVal and FieldVal branches into
+`unsup("selector call %s is not a method value", …)`, quarantining the
+whole declaration.
+
+**Guardrails FIRST.** New package
+`Corpus/coverage/exec/methods/method-expr-call-position/`, 5 rows, every
+expectation from `go run` before the differential ran
+(`artifacts/probe/triage-methodexpr`, scratch — 307, 16, 409, 2006,
+120307). All 5 verified RED against the unmodified emitter with the
+exact refusal string. **JUDGMENT (slice 5, A2 row choice):** the five
+rows are exactly the paths `emitSelector`'s own MethodExpr arm
+distinguishes — concrete value receiver, concrete POINTER receiver (the
+trailing `+ t.a` fails if the receiver is copied instead of addressed),
+INTERFACE method expression (dispatch anchor, receiver as argument
+rather than capture), PROMOTED method expression (wrapper receiver form,
+embedded hop on the argument) and argument evaluation ORDER through the
+call. A routing fix that greened one path while mis-lowering another
+would otherwise be invisible.
+
+**The fix** (`tools/nativefrontend/emit.go`, one branch, +30): route a
+`types.MethodExpr` selection through `emitSelector` — which already
+emits the correct receiver-first func value — under the same
+`call-value` shape a func-typed field takes. Routing, not synthesis.
+`emitSelector`'s own refusals propagate unchanged, which is what keeps
+the deliberate reds red.
+
+**Predicted flip set, stated before the confirming run (3 red→green, 5
+new green ids, nothing else; three named UNCHANGED reds):**
+
+- `spec-examples-lexical/method-expressions/{value-receiver-expr,
+  pointer-receiver-expr}`, `spec-examples-stmt/method-expr-five-forms`
+  (FAIL/frontend-export → PASS)
+- `methods/method-expr-call-position/*` (5 NEW → PASS)
+- UNCHANGED red, verified: `spec-examples-decl/method-expressions` and
+  `spec-examples-lexical/method-expressions/derived-pointer-receiver-expr`
+  (the `(*T).Mv` DEREF ADAPTER — triage row F8, category (b): a
+  synthesized adapter, not routing), and `spec-examples-decl/
+  timezone-stringer`, which reaches the same refusal STRING but whose
+  blocking construct is `fmt.Sprintf` — the stdlib surface (row F19).
+  **That third one is a triage finding landing as evidence:** the four
+  "not a method value" reds were ONE group by error string and TWO
+  groups by cause, and the fix's own drift proves the split.
+
+**Full run at the fix tree:** `scripts/coverage run` → cases=2179
+pass=2047 fail=132 (was 2174, 2039/135). `scripts/coverage-baseline-diff`
+drift was **exactly the predicted set and nothing else** — 8 lines.
+Baseline re-pinned in this commit from that run, reason in its header.
+`scripts/check-bugs.sh`: ok (61 bugs), backlog unchanged at 25/25 (these
+were frontend-COVERAGE reds, outside the fidelity ledger).
+
+**Gate at the A2 commit.** `GOLEAN_MEM_MAX=24G scripts/ci --diff`, full
+run at the fix tree → **`RESULT: PASS`**, exit 0, every step ok:
+`baseline diff FULL (2179/2179, no regression)`, `re-pin guard
+(0 PASS→non-PASS flips)`, `bug-index cross-check ok`, `eval tests
+(136 ok)`, `negative baseline diff`, golden-lowering and imported-goose
+R2 pins ok, spec-anchor citations resolve at the pin
+(`artifacts/probe/a2-ci.log`, scratch). As with A1, the only difference
+between the gated tree and the committed tree is this paragraph.
