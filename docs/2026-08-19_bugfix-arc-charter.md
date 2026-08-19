@@ -92,6 +92,45 @@ obviously frontend-local:
 3. On the ruling: implement, flip the two pinned reds
    (`addr-deref-nil`, `addr-deref-nil-paren`), re-pin same-commit.
 
+## Slice 4 — BUG-005: live map iteration (DESIGN-GATED; added at user
+direction 2026-08-19 — "the deliberately pinned bugs should be fixed")
+
+The oldest open red (2026-07-26): map `range` snapshots entries at
+iteration start, so it observes neither delete/clear nor value
+updates (spec is explicit: deleted entries "will not be produced"),
+and — the S3 audit's fourth symptom — performs no per-iteration user-
+memory read, making concurrent map writes invisible to the race
+detector. Three differential reds + `race/negative/map-range-iter`.
+
+1. **Design memo first, no implementation**: the live-read iteration
+   model (gc reads at every `mapIterNext`) vs the snapshot model;
+   what a per-iteration read step does to the granularity ledger
+   (this is BUG-002's class — the decision IS the design); the
+   added-entries envelope (spec: new entries "may be produced ... or
+   may be skipped" — a genuine latitude point INSIDE the fix, so the
+   memo must state the envelope, not pick gc's member silently);
+   race-detector integration (the per-iteration read the S3 detector
+   must see); interaction with the mirror evaluator's Q3 quit (the
+   Sym mapIterK arm quits — confirm the fix does not widen the
+   mirror's obligations).
+2. **USER GATE — hard pause** on the memo: this is an interpreter/
+   GoCore change, always gated. Slices 1–2 land regardless.
+3. On the ruling: implement, flip the three map reds (the race
+   negative flips when the detector sees the read), re-pin
+   same-commit, and record the added-entries choice in the latitude
+   inventory with its membership/re-envelope obligation.
+
+## The arc's end-state claim (the honest ledger)
+
+After this arc, the differential-red set is EXACTLY the pins that
+must not be "fixed" by matching gc: BUG-061's staticinit residual +
+`init/hidden-dep-order` (optimizer-dependent init-order latitude,
+L-011 — gc's own answer changes under `-N -l`) and BUG-059
+(non-injective panic rendering). Each carries its ledger entry and
+its W3.2 re-envelope obligation; zero unexplained reds. Forcing
+those three green against one compiler's optimizer would be modeling
+gc, not Go — the doctrine's exact anti-goal.
+
 ## Cross-cutting obligations
 
 - **Untriaged-25 cross-check** (end of arc): re-run the P3 untriaged
@@ -119,23 +158,30 @@ obviously frontend-local:
    outcome recorded (deferral is a legitimate end-state if Mike rules
    the mechanism needs the re-envelope arc's machinery — the arc is
    then DONE with 056 documented as gated, never half-implemented).
-4. Untriaged-25 cross-check recorded.
-5. `scripts/ci --diff` green at tip; every flip predicted; BUGS.md
+4. BUG-005: same structure as 056 — memo + gate outcome, implemented
+   or explicitly deferred, never half. If implemented: three map reds
+   + the race negative green, the added-entries latitude recorded.
+5. The end-state claim verified: the differential-red set is exactly
+   the named latitude/rendering pins, cross-referenced to ledger +
+   W3.2.
+6. Untriaged-25 cross-check recorded.
+7. `scripts/ci --diff` green at tip; every flip predicted; BUGS.md
    current; arc log (`docs/bugfix-arc-log.md`) current.
-6. Pre-merge audit ASK posed (proposed size: 1 Opus reviewer —
-   frontend-lowering correctness + masked-green honesty + the 056
-   memo's granularity reasoning if implemented; Mike may trim/waive).
+8. Pre-merge audit ASK posed (proposed size: 1 Opus reviewer for
+   the frontend slices + 1 Fable reviewer for the semantic-core
+   slice if BUG-005 is implemented — the interpreter is the primary
+   dimension, always audited; Mike may trim/waive).
 
 ## Boundaries (hard)
 
-- No GoCore/semantic-core change without the slice-3 gate — that is
-  the arc's one designed pause.
+- No GoCore/semantic-core change without the slice-3/slice-4 gates —
+  those are the arc's designed pauses.
 - This lane owns `Corpus/` + `baselines/`; W4 stage-2 does not start
   until this arc lands (worktree discipline).
 - Fix commits touch the frontend + corpus + baselines + BUGS.md +
   log; anything else is scope drift and gets logged before it gets
   done.
 - Workers: slices 1–2 are Opus-executable (diagnosed mechanisms,
-  mechanical-adjacent); the slice-3 memo is Fable (conceptual,
-  granularity reasoning). Judgment calls logged in the arc log for
+  mechanical-adjacent); the slice-3 and slice-4 memos and any gated
+  implementation are Fable (conceptual, granularity reasoning). Judgment calls logged in the arc log for
   user review, per the standing conventions.
