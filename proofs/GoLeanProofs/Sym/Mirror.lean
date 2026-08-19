@@ -1512,6 +1512,17 @@ def applyStrictOp' (s : State D) : StrictOp → List (Value D) →
           let loc ← sliceIndexLoc' slice indexValue
           let v ← loadLoc' s loc
           .ok (v, s)
+      -- Pointer-to-array read (triage L5), transcribed; the machine's
+      -- nil arm PANICS, which quits Q6 by convention.
+      | .addr baseLoc => do
+          let base ← loadLoc' s baseLoc
+          match base with
+          | .array values => do
+              let v ← arrayGet' values indexValue
+              .ok (v, s)
+          | .atom _ => quit .q10Atom
+          | _ => quit .q11Internal
+      | .nil => quit .q6Panic
       | .atom _ => quit .q10Atom
       | _ => quit .q11Internal
   | .indexAddr, [b, i] => do

@@ -26,16 +26,11 @@
 #   fixes (BUG-057/058): the seven fidelity reds those closed were already
 #   on their own Cases: lines, so this file is unchanged in MEMBERSHIP —
 #   only in what it says about itself.
-# arrays/pointer-array: triage row L5 — `.indexGet` has no `.addr`
-#   auto-deref arm, so `p[1]` for `p *[N]T` goes stuck where
-#   spec#Index_expressions makes it shorthand for `(*p)[1]`. The WRITE
-#   path got its arm at BUG-038; the read path did not. Category (a)
-#   (cheap + diagnosed) but GoCore-touching, so it is gated on the
-#   charter's semantic-core pause, not on discovery.
-# pointers/nil-array-index-panic: triage row L6 — the same missing-arm
-#   class for `.nil`; gc raises the recoverable nil-deref panic. BUG-038's
-#   entry already NAMES this case as the deferred read-position sibling.
-#   Category (a), same GoCore gate, same commit as L5.
+# [arrays/pointer-array, pointers/nil-array-index-panic: FLIPPED PASS
+#   2026-08-19 (19-red slice family 4 = triage L5+L6): `.indexGet`
+#   gained the `.addr` auto-deref and `.nil` nil-deref-panic arms —
+#   BUG-038's read-position siblings, its entry updated. Entries
+#   retired.]
 # structs/tag-pointer-conversion: triage row L7 — `(*B)(a)` passes the
 #   pointer through (BUG-020's arm) but the heap cell keeps its mint tag,
 #   and field access checks the NOMINAL tag, while spec#Conversions says
@@ -52,11 +47,9 @@
 #   Entries retired. The cap-of-[]rune(s) LATITUDE point stays
 #   unpinnable (gc's non-escaping point is cap=32, outside the
 #   cap=len singleton — recorded at latitude inventory R3, no case).]
-arrays/pointer-array
 floats/to-int-out-of-range/nan
 floats/to-int-out-of-range/range
 init/hidden-dep-order
-pointers/nil-array-index-panic
 structs/tag-pointer-conversion
 # goroutines/sched-dependent/first-come: DELIBERATE slice-4 red pin
 #   (channels arc slice 2): a schedule-DEPENDENT observable (which

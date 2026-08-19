@@ -1168,8 +1168,10 @@ frames.
   panic — the `valueAsLoc` convention — which fires at the store on
   the phase-2 path (second-target pin: earlier store lands first,
   go 105). The READ-position sibling `pointers/nil-array-index-panic`
-  takes a different path (index-GET) and remains in the untriaged
-  ledger, unchanged.)
+  takes a different path (index-GET) and remained in the untriaged
+  ledger until 2026-08-19, when the 19-red GoCore slice (triage
+  L5+L6) gave `.indexGet` the matching `.addr` auto-deref and `.nil`
+  panic arms — both read-position cases now PASS.)
 - Pinned-by: differential
 - Cases: pointers/nil-array-elem-store, pointers/nil-array-elem-store/second-target
 - Discovered: 2026-08-06 (round-4 convergence check, verified minor;

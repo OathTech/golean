@@ -3321,6 +3321,21 @@ theorem applyStrictOp_wf {σ : ExecState} {op : StrictOp} {vs : List GoValue}
       have := loadLoc_locSup hlv
       have h2 := sliceIndexLoc_locSup hl
       exact strictWfSame hw (by omega)
+    · -- pointer-to-array read (triage L5): load, then the projection
+      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨bv, hbv, h⟩ := h
+      split at h
+      · rename_i values
+        simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨gv, hgv, rfl, rfl⟩ := h
+        have hb := arrayGet_locSup hgv
+        have hload := loadLoc_locSup hbv
+        have h3 : GoValue.locSup (GoValue.array values)
+            = goValueListSup values.toList := rfl
+        exact strictWfSame hw (by omega)
+      · simp at h
+    · -- nil pointer-to-array base (triage L6): the panic is never ok
+      simp at h
     · simp at h
   · -- indexAddr
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h

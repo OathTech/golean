@@ -728,6 +728,23 @@ theorem applyStrictOp_conc (hI : I.Sound) (σ : ExecState) {s : State D}
         refine bind_eq_ok.mpr ⟨loc, sliceIndexLoc_conc hloc, ?_⟩
         refine bind_eq_ok.mpr ⟨concV I out, loadLoc_conc σ hw, ?_⟩
         simp [pure, Except.pure]
+      case addr baseLoc =>
+        -- pointer-to-array read (triage L5): load, then the projection
+        obtain ⟨bv, hbv, h3⟩ := bind_eq_ok.mp h2
+        cases bv <;> simp only [quit] at h3 <;> try (cases h3; done)
+        case array values =>
+          obtain ⟨w, hw, h4⟩ := bind_eq_ok.mp h3
+          obtain ⟨rfl, rfl⟩ : out = w ∧ s' = s := by
+            simpa [pure, Except.pure, eq_comm, and_comm] using h4
+          simp only [List.map_cons, List.map_nil, concV_addr, concV_int,
+            applyStrictOp]
+          refine bind_eq_ok.mpr ⟨iv,
+            by simp [valueAsInt, hI.toInt? _ _ hit], ?_⟩
+          refine bind_eq_ok.mpr
+            ⟨concV I (.array values), loadLoc_conc σ hbv, ?_⟩
+          simp only [concV_array]
+          refine bind_eq_ok.mpr ⟨concV I out, arrayGet_conc hw, ?_⟩
+          simp [pure, Except.pure]
   | indexAddr =>
       rcases vs with _ | ⟨b, _ | ⟨i, _ | ⟨x, rest⟩⟩⟩ <;>
         simp only [applyStrictOp', quit] at h <;> try (cases h; done)
