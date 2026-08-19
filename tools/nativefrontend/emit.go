@@ -4161,7 +4161,39 @@ func (e *emitter) methodReceiverArg(sel *ast.SelectorExpr, pointerRecv bool) (an
 	if _, alreadyPtr := e.goTypeOf(sel.X).Underlying().(*types.Pointer); alreadyPtr {
 		return e.emitExpr(sel.X)
 	}
-	return e.emitAddressOf(sel.X)
+	return e.receiverAddr(sel.X)
+}
+
+// receiverAddr emits the IMPLICIT &x of a receiver-position operand
+// (pointer-receiver method call, method value, sync-primitive
+// receiver). spec#Calls makes x.m() shorthand for (&x).m(), and when x
+// is itself the indirection *p, spec#Address_operators' eager panic
+// clause applies to the implicit &*p exactly as to the explicit form —
+// so the immediate-`*` operand (parens stripped) lowers to the
+// addr-of-deref strict op (BUG-056's mechanism, BUG-063's extension:
+// nil-assert the pointer VALUE, yield the same pointer, touch no
+// memory), never the collapsed pointer. Every other operand takes the
+// general addressable path. Scoped HERE and not in emitAddressOf's
+// StarExpr arm because the general path's consumers (store targets,
+// index/field/slice bases) nil-check at their own spec point — the
+// five store-order pins named in that arm's comment.
+func (e *emitter) receiverAddr(x ast.Expr) (any, error) {
+	inner := x
+	for {
+		if p, ok := inner.(*ast.ParenExpr); ok {
+			inner = p.X
+			continue
+		}
+		break
+	}
+	if st, ok := inner.(*ast.StarExpr); ok {
+		ptr, err := e.emitExpr(st.X)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"expr": "addr-of-deref", "ptr": ptr}, nil
+	}
+	return e.emitAddressOf(x)
 }
 
 // ---- promotion (embedded fields; design note 2026-08-05 D1) ----
@@ -5199,7 +5231,10 @@ func (e *emitter) emitAddressOf(x ast.Expr) (any, error) {
 		// and emitUnaryExpr lowers it to addr-of-deref (BUG-056) —
 		// scoping it there and not here is what the five store-order
 		// pins above guard (the first draft of the BUG-056 fix put
-		// addr-of-deref in this arm and flipped all five red).
+		// addr-of-deref in this arm and flipped all five red). The
+		// RECEIVER-position IMPLICIT & (spec#Calls' (&x) shorthand)
+		// likewise bypasses this arm via receiverAddr (BUG-063) — its
+		// consumers, unlike this arm's, owe no downstream nil check.
 		return e.emitExpr(ex.X)
 	case *ast.ParenExpr:
 		return e.emitAddressOf(ex.X)
@@ -7255,7 +7290,13 @@ func (e *emitter) syncRecvAddr(sel *ast.SelectorExpr) (any, error) {
 	if _, isPtr := recvGo.(*types.Pointer); isPtr {
 		return e.emitExpr(sel.X)
 	}
-	return e.emitAddressOf(sel.X)
+	// Receiver position: the implicit & of a `(*mp).Lock()` operand is
+	// the eager-panicking &* composition (BUG-063) — route through the
+	// same addr-of-deref emission as methodReceiverArg. Observably a
+	// no-op for the modeled sync ops today (the ops nil-check their
+	// operand; sync-recv-nil pins the green), taken for spec-point
+	// unity, not for a flip.
+	return e.receiverAddr(sel.X)
 }
 
 // syncOpFor maps a primitive+method pair to its wire sync-op name for

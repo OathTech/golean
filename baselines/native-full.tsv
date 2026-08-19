@@ -1,23 +1,24 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-19 (bug-fix arc AUDIT FIX ROUND, BUG-063 guardrail
-#   commit — reviewer A's finding A1: receiver-position implicit &*q
-#   bypasses addrOfDeref)
-#   commit: this commit (on 529bab12, the arc-gate tip)
-#   re-pin reason: 5 NEW ids and nothing else (zero flips on the 2219
-#   pre-existing ids), colors recorded from go run at go1.26.5 before
-#   the differential ran (artifacts/probe/a1-recv, scratch):
-#     NEW/FAIL (3):
-#       methods/recv-implicit-addr-deref/{explicit-call-nil,
-#         method-value-nil} (differential — the silent wrong answers,
-#         BUG-063 Cases: machine 5/15 vs go 100/100)
-#       pointers/nil-array-ptr-slice/slice-expr-nil (lean-observation —
-#         BUG-063's lesser sibling, honest-STUCK, pinned at its current
-#         class; untriaged-ids coverage row, ceiling 6 -> 7)
-#     NEW/PASS (2): methods/recv-implicit-addr-deref/{non-nil-control,
-#       sync-recv-nil} — the aliasing control and the benign sync
-#       composition (the sync op nil-checks its own operand), the
-#       guards the A1 fix must not disturb
-#   counts: 2224 cases, 2092 PASS / 132 FAIL (was 2219, 2090/129)
+# recorded: 2026-08-19 (bug-fix arc AUDIT FIX ROUND, the A1/BUG-063 fix
+#   commit — receiver-position implicit & routed through addr-of-deref)
+#   commit: this commit (on 46bcee2f, the guardrail tip)
+#   re-pin reason: exactly the 2 predicted red->green flips and nothing
+#   else (zero other movement on the 2224 ids):
+#     methods/recv-implicit-addr-deref/explicit-call-nil
+#       FAIL/differential -> PASS
+#     methods/recv-implicit-addr-deref/method-value-nil
+#       FAIL/differential -> PASS
+#   held, verified in the same run: the 5 store-order pins
+#   (assign-order/target-check-vs-rhs/nil-deref-target,
+#   channels/recv-edge/second-target-panic-stores-first,
+#   channels/recv-map-elem/first-store-lands,
+#   multi-assign/store-order-plain,
+#   pointers/nil-array-elem-store/second-target), the 10-row
+#   addr-deref-nil-matrix, the sync-recv-nil + non-nil-control guards,
+#   methods/nil-receiver + nil-pointer-method-value, and
+#   pointers/nil-array-ptr-slice/slice-expr-nil (stays
+#   FAIL/lean-observation — scoped out on purpose, see BUG-063)
+#   counts: 2224 cases, 2094 PASS / 130 FAIL (was 2224, 2092/132)
 #   frontend: native (tools/nativefrontend + NativeToIR)
 # columns: result<TAB>id<TAB>stage
 PASS	arrays/array-bounds	-
@@ -1450,8 +1451,8 @@ PASS	methods/quarantine-sibling/good-method	-
 PASS	methods/quarantine-sibling/plain-func	-
 FAIL	methods/quarantine-sibling/quarantined-call	frontend-export
 PASS	methods/recursive-method	-
-FAIL	methods/recv-implicit-addr-deref/explicit-call-nil	differential
-FAIL	methods/recv-implicit-addr-deref/method-value-nil	differential
+PASS	methods/recv-implicit-addr-deref/explicit-call-nil	-
+PASS	methods/recv-implicit-addr-deref/method-value-nil	-
 PASS	methods/recv-implicit-addr-deref/non-nil-control	-
 PASS	methods/recv-implicit-addr-deref/sync-recv-nil	-
 PASS	methods/same-name-method-closures	-

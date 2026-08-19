@@ -2443,3 +2443,51 @@ listed in BUGS.md Cases)`, `bug-index cross-check ok`, `eval tests
 (136 ok)`, negative lane clean (`/tmp/afr-guardrail-ci.log`, scratch).
 As throughout the arc, the only difference between the gated tree and
 the committed tree is this gate paragraph.
+
+### A1 step 2 — the fix
+
+`tools/nativefrontend/emit.go` only (+~40 lines, no GoCore/decoder/wire
+change — the strict op is BUG-056's, reused). One new helper,
+`receiverAddr`: the IMPLICIT `&x` of a receiver-position operand — when
+`x` strips (parens) to an immediate `*p` — lowers to `addr-of-deref`
+(nil-assert the pointer VALUE, yield the same pointer, no memory
+access); every other operand keeps the general `emitAddressOf` path.
+Routed through it: `methodReceiverArg`'s pointer-receiver arm (method
+calls AND method values — `promotedReceiverArg` funnels the hop-free
+case there) and `syncRecvAddr`. NOT routed, on purpose:
+
+- `emitAddressOf`'s StarExpr arm is byte-identical — the slice-3
+  JUDGMENT's trap (the naive nil-check there flipped the 5 store-order
+  pins) is avoided by construction: the fix adds a caller-side path
+  instead of touching the shared arm. Its comment now names BUG-063
+  beside BUG-056.
+- The PROMOTED pointer-receiver path (hops > 0) already nil-checks via
+  its field-addr nodes (`addr-deref-nil-matrix/field-explicit` is the
+  green witness), and the method-expression deref adapter does not
+  exist (refused at `emitSelector`, triage F8/FR-3) — so there is no
+  adapter path to route.
+
+**Predicted flips, stated before the confirming run (2 red→green,
+nothing else):** `methods/recv-implicit-addr-deref/{explicit-call-nil,
+method-value-nil}` FAIL/differential → PASS; the 5 store-order pins,
+the 10-row matrix, both controls, the nil-receiver family, and
+`slice-expr-nil` (stays red by scope) all unmoved.
+
+**Full run: drift was exactly that set** — 2224 cases, 2094 PASS /
+130 FAIL (was 2092/132); every named guard verified unmoved in the
+same run (focused slices first: new package 4/4, store-order pins 5/5,
+matrix 10/10, methods/nil* 4/4, sibling still 0/1). Baseline re-pinned
+in this commit (held-guards list in its header); BUGS.md BUG-063 →
+fixed (mechanism one-liner; discovery record kept verbatim).
+`scripts/check-bugs.sh` ok (63 bugs; coverage 7/7, latitude 3/3,
+wrong-answer 0/0) — the cross-check is what refuses a "fixed" entry
+whose cases are still red, so its green is a real confirmation.
+
+**Gate at the A1 fix commit.** `GOLEAN_MEM_MAX=24G scripts/ci --diff`
+at the fix tree → **`RESULT: PASS`**, exit 0, every step ok —
+`baseline diff FULL (2224/2224, no regression)` against the re-pinned
+baseline, `re-pin guard (0 PASS→non-PASS flips)`, `bug-index
+cross-check ok` (63 bugs, BUG-063 fixed), `frontend unit tests ok`,
+`eval tests (136 ok)`, negative lane clean (`/tmp/afr-fix-ci.log`,
+scratch). As throughout, the only difference between the gated tree
+and the committed tree is this paragraph.
