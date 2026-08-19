@@ -11,7 +11,7 @@ its reasoning, for user review; every number is derivation-anchored
 
 | slice | subject | state |
 | --- | --- | --- |
-| 1 | BUG-058 — if-init condition-hoist scope | in progress |
+| 1 | BUG-058 — if-init condition-hoist scope | DONE (`8a42e402` enumeration, `740f09f8` fix; gate PASS at `740f09f8`) |
 | 2 | BUG-057 — two-var comma-ok var-decl arity | not started |
 | 3 | BUG-056 — `&*p` nil collapse (design-gated) | not started |
 | 4 | BUG-005 — live map iteration (design-gated) | not started |
@@ -252,8 +252,11 @@ The run that produced these numbers was started before two
 COMMENT-ONLY edits to `emit.go` (a spec citation corrected from
 `spec#Declarations_and_scope` to the accurate `spec#Blocks` implicit
 -block sentence), so the gate was re-run at the committed tree to
-keep the record exact; that re-run is the one recorded as the slice's
-gate (see the slice-1 tail below).
+keep the record exact. **That re-run is the slice's recorded gate:
+`GOLEAN_MEM_MAX=24G scripts/ci --diff` at `740f09f8` →
+`RESULT: PASS`, every step ok, `baseline diff FULL (2103/2103, no
+regression)`, negative lane 390/390, `re-pin guard (0 PASS→non-PASS
+flips, all listed in BUGS.md Cases)`.**
 
 **Slice 1 state: BUG-058 fixed and closed.** All 10 of its pinned
 cases green, the edge set landed, the raft integration shape green in
