@@ -15,7 +15,7 @@ its reasoning, for user review; every number is derivation-anchored
 | 2 | BUG-057 — two-var comma-ok var-decl arity | DONE (`d5ce2dc0` enumeration, `2d840744` fix; gate PASS at `2d840744`) |
 | 3 | BUG-056 — `&*p` nil collapse (design-gated) | MEMO DELIVERED, awaiting user ruling (probe matrix landed, 10 rows; `docs/2026-08-19_bug056-addr-deref-memo.md`) |
 | 4 | BUG-005 — live map iteration (design-gated) | MEMO DELIVERED, awaiting user ruling (3 probe rows landed; `docs/2026-08-19_bug005-map-range-memo.md`) |
-| 5 | full red/bug triage (kill or justify) | IN PROGRESS |
+| 5 | full red/bug triage (kill or justify) | TABLE DELIVERED (`docs/2026-08-19_triage-table.md`); A1 landed `1ca434b2`; (c) list + two gates await the user |
 | 6 | the whole-language bar (coverage ledger) | not started |
 
 ---
@@ -854,3 +854,119 @@ A1 retired three FRONTEND-COVERAGE reds, which never counted toward the
 fidelity backlog, so the number correctly does not move. The ONLY
 difference between the gated tree and the committed tree is this
 paragraph, written afterward (a gate cannot precede its own record).
+
+### Step 2 — the triage table
+
+**`docs/2026-08-19_triage-table.md`**: 9 open BUGS.md entries + all 138
+baseline reds in **45 root-cause groups**, each in exactly one category.
+Split out of this log because 45 grouped rows with written arguments and
+refusal points would bury everything else here. Counts at `0c21aa21`:
+
+| category | reds | groups | bug entries |
+| --- | --- | --- | --- |
+| (a) fix in this arc | 46 | 16 | 2 (BUG-005, BUG-056) |
+| (b) frontier | 82 | 23 | 3 (BUG-008, BUG-014, BUG-041) |
+| (c) profound-reason pin | 10 | 6 | 4 (BUG-002, BUG-004, BUG-059, BUG-061) |
+| total | 138 | 45 | 9 |
+
+The (a) 46: 3 fixed here (A1) + 14 queued frontend-only mini-slices
+(A2-A6) + 19 gated on the charter's GoCore pause + 10 already at the
+slice-3/4 design gates.
+
+**JUDGMENT (slice 5, the (a) rows that are GoCore-touching are ASKED, not
+taken).** Nineteen reds are cheap and fully diagnosed to a named arm
+(rune/string conversions, slice→array length panics, IEEE min/max,
+pointer-to-array indexing both live and nil, the struct-tag conversion
+check, go-of-nil-func), and every one is red→green-only movement over a
+currently-refusing path. All nineteen change `GoLean/GoCore/*.lean`. The
+charter's hard boundary is explicit — "No GoCore/semantic-core change
+without the slice-3/slice-4 gates — those are the arc's designed
+pauses" — so they are put to Mike as ONE gate item rather than executed.
+Recorded because "cheap and obviously right" is exactly the argument
+that erodes a designed pause.
+
+**JUDGMENT (slice 5, which frontend-only (a) rows were taken).** A1 was
+taken (raft-path, hours, guardrails trivially available, zero
+neighbour surface). A2-A5 are queued with mechanisms; each is a
+scheduling call with its reason in the table (A3 lands inside the
+BUG-025/052 assignment spine and needs its own two-phase edge
+enumeration; A4 moves the mangling/identity surface and owes a
+reflect-spelling probe plus a `TestManglingSurfaceFailsClosed` update;
+A5 is a BUG-057-family edge; A2 is the cleanest and is next).
+
+**JUDGMENT (slice 5, A6 / the charter's named receive-hoist item is
+deferred on a FINDING, not on cost).** The charter expected BUG-023/026
+to be category (a). Both are FIXED and all nine of their pins are green;
+the four residual reds belong to **BUG-032**, whose "fix" was a
+deliberate fail-closed refusal, and the fifth
+(`operator-precedence/mixed-chan`) is not in the family at all — it is
+the E3 short-circuit-receive boundary, category (b). For the four,
+(a) survives but by a different mechanism than "restore the hoist":
+`fnHasRecv` is FUNCTION-scoped, so it refuses statements where the
+forced constraint it protects (len-vs-receive lexical order) cannot
+bind; scoping the predicate to the STATEMENT makes `len` inline in a
+receive-free statement, which is gc's realization — the receive-free
+control `channels/recv-order/len-embedded-no-recv` is already green
+end-to-end as the witness. It was NOT taken because the triage turned up
+the following.
+
+**A NEW divergence, found by triage, outside all 138 reds.**
+`spec#Order_of_evaluation` orders "all function calls, method calls,
+receive operations, and binary logical operations" left-to-right, and
+`spec#Built-in_functions` says built-ins "are called like any other
+function" — so in `len(ch) + fill(ch)` the `len` must be read first. gc
+agrees (probed at the pin, `artifacts/probe/triage-lencall`, scratch:
+`go run` → 1, not 3). The frontend hoists CALLS out of expressions but
+leaves `len` inline in a receive-FREE function, so the machine should
+read `len` AFTER the call — a FORCED-point divergence, BUG-023's exact
+class on the `len`-vs-CALL axis instead of `len`-vs-RECEIVE, and
+pre-existing. The machine half is REASONED off the emitter, not run, so
+the first step is a guardrail case and a `diff-one`, not a fix. It is
+also why A6 waits: receive-BEARING functions hoist `len` today and
+therefore get `len`-vs-call RIGHT by accident, so A6's statement-scoped
+predicate would EXTEND the divergence to them unless the predicate is
+"the statement's sweep contains an ORDERED EVENT" (receive **or call**).
+A one-word difference in the mechanism, invisible without the probe.
+
+### Step 3 — the untriaged-25 cross-check (charter cross-cutting obligation)
+
+The set is exactly `baselines/untriaged-ids` (the P3 dispositions TSV has
+no untriaged marker; three independent derivations agree on the same 25 —
+`check-bugs.sh --list`, the tracked file, and the reds-minus-Cases
+arithmetic). **Outcome: no member was explained by slices 1-2's fixes**,
+derived from the fidelity-red sets at `df3adbfc`/`740f09f8`/`2d840744`/
+`0c21aa21` (48/45/41/45) — the seven fidelity reds those slices killed
+were every one already on BUG-057's or BUG-058's `Cases:` line, i.e.
+already explained, never in the backlog. The honest negative result.
+
+What DID change: ten of the 25 carried no justification at all in
+`baselines/untriaged-ids`. All ten now have one, with their triage row
+id (`arrays/pointer-array` → L5, `pointers/nil-array-index-panic` → L6,
+`structs/tag-pointer-conversion` → L7, the seven `strings/*` rune
+conversions → L1). Membership is unchanged; only the record improved.
+
+**A metric finding, recorded and deliberately NOT acted on.** The backlog
+counts any fidelity-stage red no BUGS.md entry explains — but
+`lean-observation` is also where the INTERPRETER's fail-closed refusal of
+an unmodeled construct lands, which BUGS.md's own preamble excludes from
+the bug index ("tracked as coverage, not here"). So frontier rows like
+`channels/select-select/core` and latitude rows like
+`floats/to-int-out-of-range/*` can leave the backlog neither by being
+fixed nor by being triaged, and "ratchet toward 0" is unreachable for
+them by construction. The clean resolution is a disposition column the
+check subtracts — a GATE change, which this slice does not touch (gates
+are speedbumps; slice 6's coverage ledger is the natural owner). Flagged
+so the 25 is read honestly.
+
+**Gate at the triage-table commit.** Docs-only (`docs/` +
+`baselines/untriaged-ids`, which is a check-bugs INPUT, not a run
+record), so `GOLEAN_MEM_MAX=24G scripts/ci` without `--diff` →
+**`RESULT: PASS`**, exit 0, every step ok including `bug-index
+cross-check`, `spec-anchor citations resolve at the pin` (289 spec# +
+73 mem#, all resolving at `c19862e5f`), `eval tests (136 ok)`,
+`negative baseline diff`, and `baseline diff FULL (2174/2174, no
+regression)`. That last step reports `[recorded at 0c21aa2, HEAD is
+1ca434b — stale]`: the record is A1's own `ci --diff` run, taken at the
+exact code tree that A1 then committed, so the label is about the commit
+HASH and not the tree — no runtime file changed between the run and
+either commit. Stated rather than glossed, per the gate-honesty rule.
