@@ -5,6 +5,32 @@
 # builtins: the count-only ratchet cannot see equal-sized swaps — this
 # branch itself swapped 3 fixed strings conversions for 3 newly-visible
 # interface-key delete gaps, invisible to the count).
+#
+# FORMAT (since 2026-08-20, ledger T-5): every tracked row is
+#   <id><TAB><disposition>
+# with disposition exactly one of:
+#
+#   coverage      the machine or frontend REFUSES a construct it does not
+#                 model — a fail-closed .unsupported/stuck that happens to
+#                 surface at a fidelity stage. Structurally never a wrong
+#                 answer. Retires only when the feature lands.
+#   latitude      a spec-open point the machine declines to pick a member
+#                 of, or holds a different conforming member at. Retires by
+#                 an ENVELOPE (membership), never by "a fix".
+#   wrong-answer  a machine-vs-Go divergence at a FORCED point that no
+#                 docs/BUGS.md entry yet explains. This is the class the
+#                 ratchet exists to drive to zero.
+#
+# WHY the column (triage-table §5's metric finding, ruled at the arc gate
+# 2026-08-20): the pre-2026-08-20 file was a bare id list and check 4
+# compared its size against one scalar ceiling, so refusals of unmodeled
+# constructs — which can leave neither by being fixed nor by being triaged
+# — were counted inside a number captioned "ratchet toward 0", and a real
+# wrong answer could enter behind a frontier refusal that left. Ceilings
+# are now per class in baselines/untriaged-count; `wrong-answer 0` is a
+# hard floor independent of frontier churn. An id here with no valid
+# disposition, or a current unexplained id with no row here at all, FAILS
+# the gate — the classification is never optional.
 # floats/to-int-out-of-range/{nan,range}: DELIBERATE fail-closed
 #   refusal pins (floats design note §3.3), permanently red — see
 #   baselines/untriaged-count 2026-08-05 entry.
@@ -45,9 +71,9 @@
 #   Entries retired. The cap-of-[]rune(s) LATITUDE point stays
 #   unpinnable (gc's non-escaping point is cap=32, outside the
 #   cap=len singleton — recorded at latitude inventory R3, no case).]
-floats/to-int-out-of-range/nan
-floats/to-int-out-of-range/range
-init/hidden-dep-order
+floats/to-int-out-of-range/nan	latitude
+floats/to-int-out-of-range/range	latitude
+init/hidden-dep-order	latitude
 # goroutines/sched-dependent/first-come: DELIBERATE slice-4 red pin
 #   (channels arc slice 2): a schedule-DEPENDENT observable (which
 #   sender commits first is L1 latitude, admitted set {12,21}) declared
@@ -59,7 +85,7 @@ init/hidden-dep-order
 #   the init phase runs on the SEQUENTIAL driver this slice — the spawn
 #   position refuses with a precise .unsupported. Flips when a later
 #   slice runs init on the pool.
-goroutines/spawn-in-init/in-init
+goroutines/spawn-in-init/in-init	coverage
 # [sched-dependent/{select-default-handshake,len-handoff}: FLIPPED
 #   PASS when the slice-4 pool enumerator certified their sets —
 #   entries retired.]
@@ -74,13 +100,13 @@ goroutines/spawn-in-init/in-init
 #   (arc-final audit F11/F10, 2026-08-08) — select-with-select
 #   rendezvous refused fail-closed at the machine boundary
 #   (lean-observation is the nearest stage); not a fidelity bug.
-channels/select-select/core
+channels/select-select/core	coverage
 # channels/select-select/beside-loop: the same marker's over-broad-
 #   trigger sibling (F10), at stage nondet (default stream commits the
 #   cell-ready clause; adversarial streams hit the refusal). Entered
 #   when the ledger filter gained nondet (convergence response,
 #   2026-08-08); not a fidelity bug.
-channels/select-select/beside-loop
+channels/select-select/beside-loop	coverage
 # (2026-08-09, spec-parity slice 2 flip commit: the 34 transient sync
 #   guardrail entries retired — 33 flipped PASS, out-of-scope-trylock
 #   moved to its honest frontend-export refusal stage, leaving the
@@ -107,7 +133,7 @@ channels/select-select/beside-loop
 #   nan}: FLIPPED PASS 2026-08-19 (19-red slice family 3 = triage L3):
 #   the IEEE min/max fold over the shared floatMinMaxBits kernel landed
 #   (NaN propagates, min(-0,+0) = -0). Entries retired.]
-spec-examples-decl/slice-to-array/ok-forms
+spec-examples-decl/slice-to-array/ok-forms	coverage
 # 2026-08-19 (bug-fix arc slice 6, the whole-language bar): two
 #   sync/atomic FRONTIER-suite rows enter — coverage backlog, not
 #   fidelity wrong-answers, both fail-closed refusals of an unmodeled
@@ -117,10 +143,10 @@ spec-examples-decl/slice-to-array/ok-forms
 #   RUN time ("default value for imported named type sync/atomic.Value"
 #   — a D5 imported-type stub, so lean-observation is the nearest
 #   stage). Flips at the atomics arc (ledger design question Q-ATOMIC).
-sync/atomic-frontier/value
+sync/atomic-frontier/value	coverage
 # sync/atomic-frontier/mp-litmus: the membership-lane SC litmus row —
 #   the enumerator refuses at the quarantined StoreInt32 call
 #   (stage membership). Its admitted set {0,1,11} is argued from
 #   mem#atomic's seq_cst clause in the case file; flips at the same
 #   arc, which re-certifies the set.
-sync/atomic-frontier/mp-litmus
+sync/atomic-frontier/mp-litmus	coverage

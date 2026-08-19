@@ -2259,3 +2259,104 @@ DEFINES a behavior and gc contradicts it, that is a `gc-bug` FINDING
 and the machine holds with the standard. *"If the standard and gc
 disagree, that's a finding!"* With the whole language now enumerated,
 the ledger should be hunting these, not only receiving them.
+## §T-5 — the untriaged disposition column (2026-08-20, approved and executed)
+
+**The finding it closes** (triage §5, coverage ledger §7 T-5): the
+untriaged-fidelity backlog conflated two different things. A baseline
+FAIL at a fidelity stage lands in the ratchet whether it is a WRONG
+ANSWER or the interpreter's fail-closed REFUSAL of a construct it does
+not model — and BUGS.md's own preamble says the latter "is not a
+bug… tracked as coverage, not here". So rows like
+`channels/select-select/core` (frontier) and
+`floats/to-int-out-of-range/*` (latitude) could never leave the pile by
+being fixed OR by being triaged, and the caption "ratchet toward 0" was
+unreachable by construction for them. Worse in the other direction: a
+real wrong answer could enter the pile behind a frontier refusal that
+left it, with the count unchanged and the set check satisfied by the
+swap only if the ids differed — the count ceiling itself said nothing
+about WHAT it was ceiling.
+
+**The mechanism.** `baselines/untriaged-ids` gains a disposition
+column: each tracked row is `<id><TAB><disposition>` with disposition
+∈ {`coverage`, `latitude`, `wrong-answer`}. `baselines/untriaged-count`
+carries one ceiling PER CLASS instead of one scalar.
+`scripts/check-bugs.sh` check (4) now buckets the current unexplained
+ids by their tracked disposition and compares each bucket against its
+own ceiling; check (4b) — the set ratchet — is unchanged in meaning.
+
+Rows are **bucketed, not subtracted.** Triage §5 sketched a column "the
+check subtracts"; subtracting would drop coverage/latitude rows out of
+the reported number, and an invisible row is one nobody retires. Every
+row stays counted and visible, under a ceiling that ratchets on its own
+terms.
+
+Fail-closed, and each path was RUN rather than asserted — ten probes
+against the real gate, nine of them expected-red, each file restored
+after:
+
+| probe | expected | got |
+| --- | --- | --- |
+| tracked row with no disposition (bare id) | red | FAIL 4b malformed + FAIL 4 unclassified |
+| tracked row with a disposition outside the three | red | FAIL 4b malformed + FAIL 4 unclassified |
+| duplicate tracked id | red | FAIL 4b duplicate (the second row would shadow the first's disposition) |
+| tracked row deleted while the case still fails | red | FAIL 4 unclassified + FAIL 4b NEW entrant |
+| ceiling file missing a class | red | FAIL 4 no ceiling row for 'latitude' |
+| ceiling class renamed to an unknown one | red | FAIL 4 malformed + FAIL 4 missing class |
+| ceiling value non-numeric | red | FAIL 4 malformed ceiling row |
+| ceiling class duplicated | red | FAIL 4 duplicate ceiling row |
+| a class's count above its ceiling | red | FAIL 4 'coverage' rose 5 -> 6 |
+| a class's ceiling slack | green + advisory | ok + "'wrong-answer' ceiling is 4 but count is 0 — lower it" |
+
+Exit codes were checked, not just messages: 1 on each red, 0 green. No
+row can be lost — the three buckets plus `unclassified` partition the
+set and the script asserts that partition sums back to the total, so a
+future editor cannot quietly drop a class. The ratchet-down advisory
+now fires per class.
+
+**Before / after, same 9 ids, same baseline:**
+
+| | before | after |
+| --- | --- | --- |
+| ceiling | one scalar: `9` | `coverage 6` · `latitude 3` · `wrong-answer 0` |
+| what it claimed | 9 unexplained fidelity failures, "ratchet toward 0" | 6 unmodeled-construct refusals, 3 spec-latitude pins, **0 unexplained wrong answers** |
+
+The honest headline is the third number. The class the ratchet actually
+exists to drive to zero — machine-vs-Go divergence at a forced point,
+unexplained by any BUGS.md entry — **is already at zero, and now says
+so**. All 9 tracked rows are `coverage` or `latitude`; not one of them
+was ever a candidate for that class. The classification per id is
+derived from the triage table and the ledger, not asserted —
+every one of the 9 lands on a row that already existed:
+
+| disposition | ids | the row that owns it |
+| --- | --- | --- |
+| `coverage` | `goroutines/spawn-in-init/in-init` | ledger **Q-INITSPAWN** (triage L8) |
+| `coverage` | `channels/select-select/{core,beside-loop}` | ledger **Q-SELSEL** (triage L9) |
+| `coverage` | `spec-examples-decl/slice-to-array/ok-forms` | ledger **FR-10**, queue slot 10 (triage L2b) |
+| `coverage` | `sync/atomic-frontier/{value,mp-litmus}` | ledger **Q-ATOMIC** |
+| `latitude` | `floats/to-int-out-of-range/{nan,range}` | triage **C5**, ratified |
+| `latitude` | `init/hidden-dep-order` | triage **C1**, ratified |
+
+Worth noting where those owners point: three of the four `coverage`
+owners are design questions (Q-INITSPAWN, Q-SELSEL, Q-ATOMIC), and all
+three name **W3.2** as their home — the same arc the (c) ratification
+routes the latitude rows to. The fourth is FR-10, a queued build. So
+the disposition column and the ratification are describing one boundary
+from two sides.
+
+**Why the ceilings stay per-class rather than collapsing to one.** A
+single ceiling lets a wrong answer enter under a retiring refusal. Per
+class, `wrong-answer 0` is a hard floor: any new unexplained forced-point
+divergence trips check (4) immediately, no matter what the frontier
+rows are doing that week. The `coverage` ceiling ratchets when features
+land (the build queue's own accounting); the `latitude` ceiling moves
+only by a ratified (c) argument or an envelope — which is precisely the
+W3.2 routing above.
+
+**Gate.** `scripts/ci --diff` PASS at this commit (`GOLEAN_MEM_MAX=24G`):
+2219/2219 differential, no regression; negative baseline no regression;
+136 eval tests; the bug-index cross-check green through the rewritten
+check (4) — `coverage 6/6; latitude 3/3; wrong-answer 0/0`. The gate
+itself is what changed, so the meaningful evidence is the probe table
+above (the rewritten check refuses everything it must) alongside the
+green run (it accepts the state it should).
