@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+# H-3 edge: the quarantined method sits in an interface's method set.
+# `satisfies` is the fail-closed guard — it must be GREEN after the fix
+# (a dropped stub would make it answer 0, a silent wrong answer, not a
+# refusal). `dispatch-quarantined` must REFUSE, never vanish or return a
+# zero value: it is red at frontend-export by design.
+satisfies	quarantineIfaceSatisfies	-	ok	-	interfaces,methods,type_assertions,comma_ok
+dispatch-good	quarantineIfaceDispatchGood	-	ok	-	interfaces,methods,calls
+dispatch-quarantined	quarantineIfaceDispatchBad	-	ok	-	interfaces,methods,calls,strings

@@ -16,6 +16,7 @@ its reasoning, for user review; every number is derivation-anchored
 | 3 | BUG-056 — `&*p` nil collapse (design-gated) | DONE (ruled 2026-08-19, memo §6; fix landed — the addrOfDeref strict op; 5 reds flipped, acceptance pin green) |
 | 4 | BUG-005 — live map iteration (design-gated) | RULED (2026-08-19, memo §5); guardrails-first rework LANDED (2 membership red pins); (L) surgery in progress |
 | 5 | full red/bug triage (kill or justify) | TABLE DELIVERED (`docs/2026-08-19_triage-table.md`); A1 landed `1ca434b2`; (c) list + two gates await the user |
+| 5b | H-3 — per-declaration quarantine for METHODS (scope addition) | DONE (this commit; 12 guardrail rows 12-red → 8 green + 4 red-by-design, gate PASS, baseline re-pinned 2181→2193) |
 | 6 | the whole-language bar (coverage ledger) | not started |
 
 ---
@@ -1659,3 +1660,293 @@ lowered). Proof blast radius: every family's frame/drift/wf lemmas
 realigned same-commit (family 2 retired `convertValueToTy_noPanic` for
 a panic-transfer lemma; family 5 recorded the loadLoc→types coupling);
 the 005 map-internals surgery was untouched, as predicted.
+
+---
+
+## §H-3 — per-declaration quarantine for METHODS (slice 5b, scope addition)
+
+Chartered at `docs/2026-08-19_bugfix-arc-charter.md` "Slice 5b" (user
+direction 2026-08-19, "keep the fork maintenance to a minimum").
+Sequenced after the 19-red batch and before slice 6, because H-3 MOVES
+the frontier slice 6 is going to snapshot.
+
+### The finding, re-verified before any change
+
+The raft-W2 lane's handoff (`docs/raft-w2-log.md` §6b, §8) says methods
+have no per-declaration quarantine. Verified three ways at
+`adde311d`, not taken on trust:
+
+- The CODE. `emit.go`'s FuncDecl loop gated the quarantine on
+  `errors.As(err, &u) && d.Recv == nil` — the `d.Recv == nil` conjunct
+  IS the finding. Two comments asserted the policy in the same words
+  (`mono.go:489` "methods have no per-decl quarantine";
+  `emit.go:537` "quarantined methods fail the export") and one asserted
+  the OPPOSITE (`emit.go:458` "quarantined methods still land
+  signature-carrying stubs") — the last was aspirational and is now
+  true.
+- A PROBE. A three-declaration package (`T.Good`, `T.Bad` using
+  `fmt.Sprintf`, plain `plainGood`) refused whole:
+  `nativefrontend: native frontend unsupported: selector call Sprintf
+  is not a method value`, exit 1.
+- The DIFFERENTIAL. All 12 guardrail rows below were red at
+  `frontend-export` before the fix, every one of them carrying that
+  same whole-export refusal in its detail — including the eight rows
+  that never touch the unlowerable method.
+
+### Step 1 — guardrails first (colors recorded BEFORE the fix)
+
+Four packages, twelve rows, under `Corpus/coverage/exec/methods/`. The
+unlowerable construct is `fmt.Sprintf` in every case — the actual raft
+trigger (F-1/F-3…F-10 of the W2 inventory), and a gap that is not going
+away this arc, so the pins stay meaningful.
+
+| case | rows | what it pins |
+| --- | --- | --- |
+| `quarantine-sibling` | `good-method`, `plain-func`, `quarantined-call` | the headline: a good method and a plain function beside an unlowerable method |
+| `quarantine-interface` | `satisfies`, `dispatch-good`, `dispatch-quarantined` | the quarantined method in an INTERFACE's method set: `_, ok := x.(stringer)` must still answer `true`, and dispatch to the quarantined member must REFUSE, not vanish |
+| `quarantine-embedded` | `promoted-good`, `promoted-satisfies`, `promoted-call` | the method PROMOTED through embedding — the synthesized promotion wrapper forwards to the stub |
+| `quarantine-pointer-receiver` | `value-not-satisfies`, `pointer-satisfies`, `pointer-call` | Go's method-set asymmetry: a value must NOT satisfy an interface whose members are pointer-receiver, the pointer must |
+
+`scripts/coverage run --prefix methods/quarantine` before the fix:
+`cases=12 pass=0 fail=12`, all `stage=frontend-export`, all with
+`selector call Sprintf is not a method value` — i.e. the eight rows
+that do not call the quarantined method were red for someone ELSE's
+declaration, which is the defect stated as a measurement.
+
+The four satisfaction rows are the FAIL-CLOSED guards and they are the
+reason the suite is shaped this way: if a fix dropped the quarantined
+method from the method set instead of stubbing it, `satisfies`,
+`promoted-satisfies` and `pointer-satisfies` would go green-looking-red
+— they would return `0` where Go returns `1`, a silently wrong boolean
+rather than a refusal. They fail as `lean-observation`, not as
+`frontend-export`, so the two failure modes are distinguishable in the
+baseline.
+
+### Step 2 — the fix
+
+`tools/nativefrontend/emit.go`:
+
+- the FuncDecl-loop quarantine branch drops the `d.Recv == nil` gate;
+  after the existing rollbacks (lifted literals, defer-noop flag, local
+  type defs, local interface methods, named struct types, mono
+  registrations) a method takes a new arm;
+- `quarantinedMethodStub` (new, in the `---- functions ----` section)
+  builds the entry: `name`, `recvType`, `recv`, `params`, `results`,
+  `variadic`, `unsupported`. The wire shape is the one
+  `importedMethodStubs` (D5 imported named types) and `syncPromotedStub`
+  already use, so **no wire-schema change and no Lean change were
+  needed** — `NativeToIR.lean`'s `decodeMethod` has decoded an
+  `unsupported` method into a real-signature `MethodInfo` over a
+  `.unsupported` body since the D5 slice. The stub reaches interface
+  dispatch because it is an ordinary concrete method-table entry.
+
+**Why a method's stub carries the real SIGNATURE where a plain
+function's carries only its arity.** A method-table entry is what
+interface satisfaction reads; `satisfiesMethodSig` compares receiver,
+params, results and the variadic marker. A truncated or guessed
+signature would answer a satisfaction question wrongly — the
+silent-wrong-answer class. So the receiver's pointer-ness, the param
+and result lists and the variadic bit are all carried verbatim.
+
+**And the fail-closed edge that follows from it:** when the SIGNATURE
+itself does not lower there is no honest stub to record, so the WHOLE
+export refuses, with both reasons in one message ("… is unsupported (…)
+and its own SIGNATURE does not lower either (…)"). An incomplete method
+set is worse than a visible red — that is the whole point of the
+mechanism, and it would be self-defeating to relax it here.
+
+Two stale comments corrected in the same commit (`mono.go:489`,
+`emit.go:537`); `mono.go`'s now records the residual instead.
+
+**Interface-dispatch semantics — the decision, stated.** A quarantined
+method stays in the method set and dispatch REACHES it, so
+`i.render()` on an interface holding the quarantined type refuses at
+the call with `frontend-quarantined: method main.item.render (…)`. The
+rejected alternative was dropping the entry (or emitting a nil-bodied
+anchor), which would have made `firstUnsatisfiedMethod?` answer a
+definite FALSE — the BUG-007 finding-5 mode the D2 contract exists to
+close. Existing machinery that already handles this shape needed no
+change and was confirmed rather than assumed: promotion wrappers
+forward to the stub by FuncId (so a promoted quarantined method refuses
+instead of disappearing), and `checkInitQuarantine` already recorded
+methods and expanded interface-dispatch anchors, so a `$pkginit` whose
+call graph reaches a quarantined METHOD refuses the export exactly as
+it does for a function.
+
+### Step 3 — the unit tests (`tools/nativefrontend/quarantine_test.go`)
+
+`go test ./tools/nativefrontend` is a gate step, and it is where two
+properties live that the differential structurally CANNOT see: a corpus
+row witnesses one satisfaction question, never that the RECORDED
+signature is right; and the baseline records `result`+`stage` only, so
+a call row's refusal TEXT is invisible to it (the `quarantined-call`
+rows are `FAIL/frontend-export` both before and after the fix — the
+change is in the detail, which the baseline deliberately omits).
+
+Four tests: the package still exports and its siblings keep their
+bodies; the quarantined entry is never dropped and its reason names
+`main.T.Bad`; the signature is real (2 params, 2 results, the variadic
+marker, and a POINTER receiver recorded as a pointer); and an
+un-lowerable signature (`complex128` param) refuses the whole export
+naming the method and the word `SIGNATURE`.
+
+### Step 4 — colors after the fix
+
+`scripts/coverage run --prefix methods/quarantine`: `cases=12 pass=8
+fail=4`. The four reds are the call rows, each now carrying its own
+refusal by name:
+
+```
+frontend-quarantined: method main.counter.rendered (selector call Sprintf is not a method value; satisfaction answers, calls fail closed)
+frontend-quarantined: method main.item.render     (…)
+frontend-quarantined: method main.base.render     (…)   <- through the promotion wrapper
+frontend-quarantined: method main.ptrOnly.render  (…)
+```
+
+`value-not-satisfies` PASS and `pointer-satisfies` PASS together are
+the method-set-asymmetry pin: the machine answers `0` and `1` where gc
+answers `0` and `1`, with a stub standing in for one of the two
+members.
+
+### Step 4b — the residual shapes, probed rather than pinned
+
+Three shapes the guardrail suite does not cover — a METHOD VALUE
+(`f := t.Bad`), a METHOD EXPRESSION (`f := T.Bad`) and an INTERFACE
+method value (`f := i.Bad`) over a quarantined method — were probed
+directly rather than added as three more red-by-design corpus rows
+(`artifacts/h3scratch/probe2/`; export clean, then
+`.lake/build/bin/golean native-json-run --input … --function {mv,me,ifaceMV}`).
+All three answer
+
+```
+{"status":"unsupported","message":"frontend-quarantined: method main.T.Bad (…)"}
+```
+
+i.e. BINDING is fine and INVOCATION refuses by name, the same contract
+the pinned rows hold. **JUDGMENT:** recorded as a probe, not as corpus
+rows — three more `FAIL/frontend-export` ids would add triage-table
+weight and no new information, since the refusal comes from the same
+stub body the pinned rows already exercise. If the method-value
+lowering ever changes, this note says what to re-check.
+
+### Gate at the fix commit
+
+`GOLEAN_MEM_MAX=24G scripts/ci --diff`, full run at the fix tree.
+Differential: `cases=2193 pass=2086 fail=107`. The baseline diff's
+drift was **exactly the 12 NEW ids and nothing else** — zero flips,
+zero stage changes and zero dropped ids across the 2181 pre-existing
+cases:
+
+```
+methods/quarantine-embedded/promoted-call            NEW -> FAIL/frontend-export
+methods/quarantine-embedded/promoted-good            NEW -> PASS/-
+methods/quarantine-embedded/promoted-satisfies       NEW -> PASS/-
+methods/quarantine-interface/dispatch-good           NEW -> PASS/-
+methods/quarantine-interface/dispatch-quarantined    NEW -> FAIL/frontend-export
+methods/quarantine-interface/satisfies               NEW -> PASS/-
+methods/quarantine-pointer-receiver/pointer-call     NEW -> FAIL/frontend-export
+methods/quarantine-pointer-receiver/pointer-satisfies NEW -> PASS/-
+methods/quarantine-pointer-receiver/value-not-satisfies NEW -> PASS/-
+methods/quarantine-sibling/good-method               NEW -> PASS/-
+methods/quarantine-sibling/plain-func                NEW -> PASS/-
+methods/quarantine-sibling/quarantined-call          NEW -> FAIL/frontend-export
+```
+
+Every other step `ok` (core build, proofs + Audit gate, golden
+lowering, imported-goose R2 pins, frontend unit tests, eval tests 136
+ok, negative lane and its baseline diff). The run's only FAIL was the
+baseline diff itself, on those 12 new ids — which is what a re-pin is
+for. Baseline re-pinned from that run in this commit: **2193 cases,
+2086 PASS / 107 FAIL** (was 2181, 2078/103), reason in its header;
+`scripts/coverage-baseline-diff` then reports `no regression`. No
+PASS→non-PASS flip exists, so the re-pin guard has nothing to check.
+
+**The recorded gate is the RE-RUN at the final tree** (the first run
+predated the re-pin and the doc edits, and a gate whose baseline diff
+FAILs is a re-pin instruction, not a green): `GOLEAN_MEM_MAX=24G
+scripts/ci --diff` → **`RESULT: PASS`**, every step ok, `differential
+coverage summary: cases=2193 pass=2086 fail=107`, `baseline diff FULL
+(2193/2193, no regression)`, `negative baseline diff (no regression)`,
+`re-pin guard (0 PASS→non-PASS flips, all listed in BUGS.md Cases)`,
+`frontend unit tests ok`, `eval tests (136 ok)`. The runtime tree was
+byte-identical across the two runs; only the baseline and docs moved.
+
+### Flips vs predicted
+
+Predicted (brief): "the known blocked exports … your corpus cases from
+step 1 are the flips" — `raftsubject/` is not in the corpus, so the
+prediction was exactly the 12 rows. **Realized: exactly those 12, 8
+green and 4 red-by-design, and nothing else moved.**
+
+### The raft-frontier measurement (report-only; no raft-lane file touched)
+
+Method: the raft lane's own instrument, run in scratch. `raftsubject/`
+and `tools/raftsubject/` were COPIED from `main` (`ee1e5628`) into
+`artifacts/h3scratch/` — neither tree is on this branch and neither was
+edited. Both frontends were built and pointed at the same copied tree,
+so the before/after pair differs only in the frontend.
+
+- **The tree exports CLEAN with ZERO neutralisations.** A plan
+  consisting of only the mandatory terminal row (`*  (exports clean)`)
+  passes under the fixed frontend (`EXIT=0`) and fails under `main`'s
+  (`final: selector call Fprintf is not a method value`, `EXIT=1`).
+- **All 10 rows of `frontier-plan.tsv` retire.** Run against the fixed
+  frontend, every one of the ten reports `MISMATCH … (exports clean)`:
+  each predicted a refusal that no longer happens. All ten W2 frontier
+  items (F-1…F-10) were METHODS, which is why the whole inventory
+  moves at once. The plan is now a single terminal row — W2.2's edit to
+  make, not ours.
+- **The wire, measured:** 206 methods / 20 funcs / 34 types / 31
+  method-set records / 14 globals — IDENTICAL to §6's counts for the
+  hand-neutralised tree, so the fix buys the export without changing
+  its shape. 21 of the 206 methods are stubs: the 9 W2 items still
+  unlowerable (F-1…F-5, F-7…F-10), plus the pre-existing `strings.Builder`
+  (9) and `sync.Mutex` (3) D5 stubs.
+- **F-6 (`Inflights.grow`, statement-position `copy`) is GONE
+  independently of H-3** — it lowers with a body on this branch. Slice
+  5's mini-slice A1 (`1ca434b2`) implemented it. Handoff **H-4** to
+  this arc is therefore already discharged; the raft lane should stop
+  carrying it.
+- **The `raft/logger.go` overlay (D-5) is NOT retired by H-3, and the
+  reason is a design invariant, not an omission.** Upstream's
+  `logger.go` verbatim still refuses: `selector call New is not a
+  method value` — the package-level `defaultLogger = &DefaultLogger{
+  Logger: log.New(os.Stderr, …)}` initializer runs through `$pkginit`,
+  which has NO per-declaration quarantine BY DESIGN (init runs before
+  every subject; init design note §2).
+- **But the overlay SHRINKS from 144 changed lines to 8** (3
+  substantive). Measured: with only the two `log.New(...)` initializers
+  replaced by `&DefaultLogger{}`, the upstream file — all twelve
+  `DefaultLogger` methods verbatim, `fmt`/`log`/`os` imports intact —
+  exports clean; the ten `fmt`-bearing methods become stubs and the
+  twelve-method `noopLogger` invention disappears.
+- **That shape also bears on H-2**, which W2.2 owns: under it,
+  `DefaultLogger.Panic`/`Panicf` lower as calls into the `*log.Logger`
+  D5 stubs and `Fatal`/`Fatalf` are quarantined stubs, so an assertion
+  routed through `Logger.Panic` (`util.go:320`) REFUSES instead of
+  silently continuing. That is the fail-closed direction H-2 wants,
+  reached without inventing a logger. **It is a measurement offered to
+  W2.2, not a ruling** — a nil embedded `*log.Logger` is a real
+  behavioural choice and the subject-delta call is the raft lane's.
+
+### JUDGMENT calls
+
+- **JUDGMENT (scope):** method STENCILS (a method of a generic type at
+  one receiver instantiation, `mono.go` `flushTypeInsts`) still fail
+  the whole export. Extending the stub there needs the instantiation
+  rollback to interact with a stub whose signature must stay alive, a
+  different concern; no raft-path instance exists. Recorded in the
+  charter's slice-5b block and in `mono.go`'s docstring rather than
+  half-done.
+- **JUDGMENT (message):** only the METHOD stub's reason names its
+  declaration (`method main.T.Bad (…)`); the plain-function stub's
+  reason is still the bare construct string. Making functions name
+  themselves too is a one-line change with a corpus-wide detail churn
+  and no failing case behind it — left alone, noted here so the
+  asymmetry is deliberate rather than forgotten.
+- **JUDGMENT (class change, stated because it is a real cost):**
+  quarantining a method on a SEMANTIC path (raft's `Progress.SentEntries`,
+  `ConfChangeV2.EnterJoint`) moves its refusal from export time to call
+  time. Still fail-closed, still visible, but only when exercised — the
+  same trade the plain-function quarantine made and the reason the
+  guardrail suite pins a CALL row per shape.

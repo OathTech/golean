@@ -137,14 +137,17 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 				monoMark := e.markMono()
 				fn, err := e.emitFuncDecl(d)
 				if err != nil {
-					// Per-decl quarantine: an UNSUPPORTED plain function
-					// becomes a stub that fails closed when CALLED (params
-					// typed unsupported carry the reason; arity preserved),
-					// so one generic/float helper no longer poisons every
-					// other subject in its file. Methods and non-unsupported
-					// errors still fail the whole export.
+					// Per-decl quarantine: an UNSUPPORTED declaration
+					// becomes a stub that fails closed when CALLED, so one
+					// generic/float/fmt helper no longer poisons every
+					// other subject in its package. A plain function
+					// carries its ARITY (params typed unsupported carry
+					// the reason); a METHOD carries its REAL SIGNATURE
+					// (H-3, 2026-08-19 — see quarantinedMethodStub for
+					// why the two shapes differ). Non-unsupported errors
+					// still fail the whole export.
 					var u unsupported
-					if errors.As(err, &u) && d.Recv == nil {
+					if errors.As(err, &u) {
 						e.lifted = nil
 						e.deferNoopEmitted = deferNoopMark
 						// Drop any local type defs the quarantined body
@@ -162,6 +165,14 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 						// already stubbed out (pinned by
 						// generics/quarantined-instantiation).
 						e.rollbackMono(monoMark)
+						if d.Recv != nil {
+							stub, serr := e.quarantinedMethodStub(d, u)
+							if serr != nil {
+								return nil, serr
+							}
+							methods = append(methods, stub)
+							continue
+						}
 						arity := 0
 						if d.Type.Params != nil {
 							for _, f := range d.Type.Params.List {
@@ -534,7 +545,9 @@ func methodSetCoverageForKind(name, kind string) (coverage string, carrier bool,
 		return "exported", true, nil
 	case "struct", "defined":
 		// Locally declared named types: the FULL method table is on the
-		// wire (D2 contract; quarantined methods fail the export).
+		// wire (D2 contract; a quarantined method is on it too, as a
+		// signature-carrying stub — H-3, 2026-08-19 — never dropped,
+		// which is what keeps "full" true).
 		return "full", true, nil
 	default:
 		return "", false, unsup("method-set record classifier: unknown TypeDef kind %q for %q — a new kind must choose its record coverage explicitly (fail closed; BUG-053 class)", kind, name)
@@ -947,6 +960,78 @@ func (e *emitter) emitGenDeclTypes(d *ast.GenDecl) ([]any, []any, error) {
 }
 
 // ---- functions ----
+
+// quarantinedMethodStub builds the declaration-only stub for a METHOD whose
+// BODY the frontend cannot lower (H-3, 2026-08-19; the finding is
+// docs/raft-w2-log.md §6b — six runtime-dead rendering methods blocked the
+// whole raft subject export while the two unsupported plain functions beside
+// them quarantined cleanly). Same contract as a quarantined plain function —
+// refuse when CALLED, never when merely declared — in the wire shape
+// `importedMethodStubs`/`syncPromotedStub` already use.
+//
+// Why a method's stub carries its REAL SIGNATURE where a function's carries
+// only its arity: a method-table entry is what INTERFACE SATISFACTION reads.
+// `satisfiesMethodSig` compares receiver, params, results and the variadic
+// marker, so a stub with a guessed or truncated signature would answer a
+// satisfaction question WRONGLY — a type would stop satisfying (or start
+// satisfying) an interface it does not in Go, and a comma-ok assert turns
+// that into a silently wrong boolean rather than a refusal. That is the one
+// failure mode this mechanism exists to prevent, so:
+//
+//   - the entry is NEVER dropped: satisfaction and dynamic dispatch still
+//     find the method, and the refusal happens at the call, naming
+//     `package.Type.Method`;
+//   - if the SIGNATURE itself does not lower, the whole export refuses
+//     (below) — an incomplete method set is worse than a visible red.
+func (e *emitter) quarantinedMethodStub(d *ast.FuncDecl, u unsupported) (map[string]any, error) {
+	fnObj, isFn := e.info.Defs[d.Name].(*types.Func)
+	if !isFn {
+		return nil, unsup("quarantined method %s has no definition object", d.Name.Name)
+	}
+	sig, isSig := fnObj.Type().(*types.Signature)
+	if !isSig || sig.Recv() == nil {
+		return nil, unsup("quarantined method %s has no receiver signature", d.Name.Name)
+	}
+	recv := sig.Recv()
+	defType := recv.Type()
+	if ptr, isPtr := defType.(*types.Pointer); isPtr {
+		defType = ptr.Elem()
+	}
+	tName, okName := e.namedTypeName(defType)
+	if !okName {
+		return nil, unsup("quarantined method on anonymous type %s", defType)
+	}
+	// A signature that does not lower cannot be recorded honestly: refuse the
+	// whole export, carrying BOTH reasons so the log says why a method that
+	// looked quarantinable was not.
+	sigRefusal := func(cause error) error {
+		return unsup("method %s.%s is unsupported (%s) and its own SIGNATURE does not lower either (%v): "+
+			"no signature-carrying stub exists, so the export refuses rather than record an incomplete method set",
+			tName, d.Name.Name, u.what, cause)
+	}
+	recvTy, err := e.emitType(recv.Type())
+	if err != nil {
+		return nil, sigRefusal(err)
+	}
+	params, err := e.emitParams(sig.Params())
+	if err != nil {
+		return nil, sigRefusal(err)
+	}
+	results, err := e.emitResults(sig.Results())
+	if err != nil {
+		return nil, sigRefusal(err)
+	}
+	return map[string]any{
+		"name":     d.Name.Name,
+		"recvType": tName,
+		"recv":     map[string]any{"id": "$recv", "type": recvTy},
+		"params":   params,
+		"results":  results,
+		"variadic": sig.Variadic(),
+		"unsupported": "method " + tName + "." + d.Name.Name + " (" + u.what +
+			"; satisfaction answers, calls fail closed)",
+	}, nil
+}
 
 func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
 	sig := e.info.Defs[d.Name].Type().(*types.Signature)

@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+# H-3 edge: promoted/embedded quarantined method. `promoted-satisfies` is
+# the fail-closed guard for the PROMOTION WRAPPER path (a wrapper that
+# refused to synthesize would drop the entry and answer a wrong 0).
+# `promoted-call` is red at frontend-export by design.
+promoted-good	quarantinePromotedGood	-	ok	-	embedding,methods,calls
+promoted-satisfies	quarantinePromotedSatisfies	-	ok	-	embedding,interfaces,type_assertions,comma_ok
+promoted-call	quarantinePromotedCall	-	ok	-	embedding,methods,calls,strings
