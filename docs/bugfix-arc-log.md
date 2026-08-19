@@ -890,6 +890,36 @@ envelope.
 re-pinned in this commit; check-bugs ok (backlog unchanged 25/25 —
 both new reds are explained by BUG-005's Cases line).
 
+### Slice 4, step 2 — the interpretations index (Mike-directed docs)
+
+- **`docs/spec-interpretations.md`** established: the curated index of
+  adopted spec readings — one row per reading (spec sentence verbatim,
+  our reading, rejected alternative, what depends on it), every row
+  BACKED by a `docs/spec-divergence-ledger.md` entry (the file's own
+  standing rule: no ledger entry, no row). Seeded with 7 rows from the
+  directed sweep: I-1 delete-then-recreate = NEW entry (L-012, the
+  ruling's interpretive reading, filed with the verbatim sentence
+  pair, the probe data, and the rejected key-identity alternative);
+  I-2 "not specified" order = UNSEQ not either-order (the inventory's
+  E2–E5/E12 F2 readings — backing entry L-013 CREATED, per the
+  every-row-backed rule); I-3 may-restriction prose over exhibit
+  (L-010); I-4 init-order binds observably-initializing packages
+  (L-011); I-5 version-conditional spec, declared-version scope
+  (L-009); I-6 mem sequenced-before delegates to the spec's eval
+  order (L-004); I-7 select's normative basis is spec-only (L-005).
+  All quoted sentences re-verified against the pinned
+  `deps/go` text before landing.
+- CLAUDE.md gains one linking sentence in the two-bounds section (the
+  always-loaded file stays lean; the doctrine section is where a
+  reader deciding an interpretation already is).
+- Sweep scope, honestly stated: the ledger's `spec-ambiguity` stances
+  (L-010, L-011 — both indexed) plus its interpretation-shaped
+  informational entries (L-004, L-005, L-009); the latitude
+  inventory's interpretive notes (the F2/UNSEQ readings — indexed via
+  the new L-013). NOT indexed: envelope *realizations* (pins), which
+  stay in the inventory; text-fault records (L-001, L-006, L-007,
+  L-008), which are not readings; prior-art records (L-002, L-003).
+
 ---
 
 ## Slice 5 — the full red/bug triage (kill or justify)

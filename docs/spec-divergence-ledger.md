@@ -284,6 +284,96 @@ Discipline notes, recorded up front:
   re-envelope decision above; (c) a latitude-inventory entry, since
   this ledger records faults and the envelope itself belongs there.
 
+### L-012 — deleted-then-recreated map entry during range: new entry or resurrected? — `spec-ambiguity` (ADOPTED READING, user ruling 2026-08-19)
+
+- How found: spec-re-read (BUG-005 design memo, bug-fix arc slice 4 —
+  `docs/2026-08-19_bug005-map-range-memo.md` §1 probes C/D; ruled at
+  the memo's decision block).
+- Sources: spec#For_statements (range clause, maps), quotes verified
+  at the go1.26.5 pin; probes `artifacts/probe/map005` (scratch;
+  results recorded in the memo and BUGS.md BUG-005) and
+  `artifacts/probe/map005-rework` (scratch; recorded in the slice-4
+  rework commit).
+- Sharp question: during `for k := range m`, the body deletes an
+  already-produced key and re-adds it. Is the re-added entry (i) a
+  NEW entry "created during iteration" — the may-produce-may-skip
+  clause applies, so it MAY BE PRODUCED AGAIN — or (ii) the old entry
+  resurrected — already "reached", so producing it again is forbidden?
+- The sentences in tension (verbatim): "If a map entry that has not
+  yet been reached is removed during iteration, the corresponding
+  iteration value will not be produced." / "If a map entry is created
+  during iteration, that entry may be produced during the iteration
+  or may be skipped. The choice may vary for each entry created and
+  from one iteration to the next." The text never defines entry
+  identity across delete + re-create at the same key, and "reached"
+  is said of entries, never of keys.
+- Minimal program: `maps/delete-readd-during-range` (3 keys; each
+  iteration deletes the CURRENT key then re-adds it). Reading (i)
+  admits unbounded production counts; reading (ii) forces exactly 3.
+- Per-implementation data (N=1, argued per the discipline note): gc
+  go1.26.5 never re-produces — 400/400 plain runs and 400/400 under
+  forced mid-iteration growth and shrink (memo probes C/D) —
+  CONSISTENT WITH BOTH readings, since may-skip is always conforming
+  under (i). The oracle cannot discriminate the readings; only the
+  upper-bound argument can.
+- Stance — OUR READING (adopted, Mike's ruling 2026-08-19): **(i) —
+  a deleted-then-recreated key is a NEW entry (created-during-
+  iteration latitude), not the old entry resurrected.** Deletion
+  removes the key from the iteration's produced-set and from its
+  mandatory never-removed-start-keys set; the re-created entry is an
+  ordinary created entry. REJECTED alternative: (ii) key-identity
+  ("at-most-once per key") — the BUG-005 memo's narrowing 1,
+  explicitly rejected at the ruling ("any latitude in the Go spec
+  should be supported"); no spec sentence keys "reached" by key.
+- Consequences ruled in with the reading: self-inserting loops have
+  genuinely unbounded trace sets (the ∀-streams/confluence checker
+  FAILS CLOSED on them; such cases ride the membership lane and say
+  so); the canonical member is DEFINED as the machine at the zero
+  choice stream (stop ordered LAST), so on those loops the executable
+  interpreter fuel-outs VISIBLY — correct behavior, not a bug.
+- Bound affected: upper (reading (ii) would exclude a conforming
+  implementation that re-produces; none observed — the XIMPL lane
+  would bear here when it exists).
+- Status: adopted; indexed as `docs/spec-interpretations.md` I-1;
+  realized by the BUG-005 (L) surgery (this arc; guardrail rows
+  landed first: `maps/delete-readd-during-range`,
+  `maps/added-entry-count`).
+
+### L-013 — "not specified" evaluation order: either-order or unsequenced? — `spec-ambiguity` (ADOPTED READING)
+
+- How found: spec-re-read (latitude-inventory P2 retrofit's F2
+  readings, Cerberus vocabulary — prior-art note §3; backing entry
+  created 2026-08-19 when the interpretations index was established,
+  per its every-row-backed rule).
+- Sources: spec#Order_of_evaluation — "the order of those events
+  compared to the evaluation and indexing of x and the evaluation of
+  y is not specified" (the section's own example commentary); the
+  inventory's E2–E5 and E12 envelope statements.
+- Sharp question: when the spec leaves the order of two event groups
+  "not specified", is a conforming implementation restricted to one
+  of the two SEQUENTIAL orders per expression (either-order), or may
+  the groups' observable sub-events INTERLEAVE (UNSEQ)?
+- Minimal program (the discriminating shape, from E2's record): a
+  compound target operand (`aa[i][j]`) beside a call whose effects
+  land between the operand's index reads — observable only under the
+  UNSEQ reading.
+- Per-implementation data: gc realizes one point (call-first,
+  probed); no oracle exists for the width direction — this is the
+  doctrine's too-wide-has-no-oracle case, decided by argument.
+- Stance — OUR READING: **UNSEQ** — spec silence licenses
+  interleavings; nothing in the text grants atomicity to the
+  unordered event groups. REJECTED alternative: either-order — a
+  strictly narrower claim the text does not support, and adopting it
+  would let ∀-stream theorems transfer to executions the machine
+  never modeled if a real implementation interleaves.
+- Bound affected: upper (either-order would narrow the claimed
+  envelope below the plausible weakest machine).
+- Status: adopted; indexed as `docs/spec-interpretations.md` I-2;
+  carried operationally by the inventory's E2–E5/E12 plausible-
+  envelope statements (the machine's PINS at those points are
+  unchanged — this entry fixes the ENVELOPE's reading, not the
+  realization).
+
 ## Feed status (honest accounting)
 
 Census at the go1.26.5 pin (post-audit regeneration): **926 spec
