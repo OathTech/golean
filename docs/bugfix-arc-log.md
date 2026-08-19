@@ -12,7 +12,7 @@ its reasoning, for user review; every number is derivation-anchored
 | slice | subject | state |
 | --- | --- | --- |
 | 1 | BUG-058 — if-init condition-hoist scope | DONE (`8a42e402` enumeration, `740f09f8` fix; gate PASS at `740f09f8`) |
-| 2 | BUG-057 — two-var comma-ok var-decl arity | DONE (`d5ce2dc0` enumeration, fix commit below) |
+| 2 | BUG-057 — two-var comma-ok var-decl arity | DONE (`d5ce2dc0` enumeration, `2d840744` fix; gate PASS at `2d840744`) |
 | 3 | BUG-056 — `&*p` nil collapse (design-gated) | not started |
 | 4 | BUG-005 — live map iteration (design-gated) | not started |
 | 5 | full red/bug triage (kill or justify) | not started |
@@ -620,3 +620,10 @@ declaration taken to full support with its generality demonstrated,
 the interface-conversion refusal preserved and sharpened, and the
 masked-green sweep recorded with its scope, its two hits and its
 confirmation that the P3 MASKING record was complete.
+
+The confirming gate for the fix commit was run at the exact tree that
+was then committed (no edit between the run and `git add`):
+`GOLEAN_MEM_MAX=24G scripts/ci --diff` at `2d840744` -> `RESULT: PASS`,
+every step ok, `baseline diff FULL (2154/2154, no regression)`,
+`re-pin guard (0 PASS→non-PASS flips, all listed in BUGS.md Cases)`,
+`bug-index cross-check ok`, `eval tests (136 ok)`, negative lane clean.
