@@ -45,6 +45,18 @@ THE THREE DERIVATION MODES
             overlay must be revisited by hand.  That digest pin is the
             re-derivation contract for the files a script cannot derive.
 
+  select    (W2.2) Keep a NAMED SET of top-level declarations from an upstream
+            file VERBATIM and drop the rest, dropping named imports with them.
+            One file uses it: node.go, whose type declarations (Ready,
+            SoftState, Peer, IsEmptySnap, ...) RawNode needs and whose `node`
+            goroutine loop — `context`, channels, the whole Node API — the
+            plan of record excludes (master plan §W2.2: "RawNode-driven node
+            loops (no node.go / context / time)").  The kept text is
+            byte-verbatim per declaration; the DROPPED set is the delta, and
+            it is enumerated in the ledger.  Fail-closed both ways: a named
+            declaration that is not found refuses, and so does a dropped
+            import whose name still appears in the kept text.
+
 FAIL-CLOSED POSTURE.  Refusals are `sys.exit(2)` with the offending
 declaration printed.  There is deliberately no `--force` and no
 `--update-digests`: refreshing the pin is a human act (`--print-digests`
@@ -70,6 +82,39 @@ REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 # gate, and this is the human-legible half of it.
 PINNED_RAFT_REV = "56e32004b1af3a4cb625fbfe5dbca24fb6023d09"
 
+# The node.go declarations RawNode needs, and NOTHING else (mode `select`).
+# Everything omitted is the `node` implementation — the Node interface, the
+# goroutine loop, StartNode/RestartNode and their `context` plumbing — which
+# the plan of record replaces with a machine-side harness loop.
+NODE_KEEP = [
+    "$package", "$imports",
+    "SnapshotStatus", "const(SnapshotFinish)", "var(emptyState)",
+    "SoftState", "SoftState.equal", "Ready",
+    "isHardStateEqual", "IsEmptyHardState", "IsEmptySnap",
+    "Peer", "confChangeToMsg",
+]
+# Imports dropped with them; the derivation refuses if the kept text still
+# names one.
+NODE_DROP_IMPORTS = ["context"]
+
+# The protobuf-runtime functions the vendored tree calls.  `derive.py` emits a
+# subject-local `proto` package declaring exactly these, every one a
+# FAIL-CLOSED stub, and REFUSES if the tree reaches for one that is not here —
+# so a raft rev that starts calling `proto.Merge` cannot slip through.
+#
+# This is the H-1 residue given a home rather than a discharge: the shim makes
+# the tree type-check, build and lower, and every call site stops the machine
+# loudly instead of computing a wrong answer.  W4 replaces these bodies with
+# derived plain Go (Clone from the parsed field lists, Size from the field
+# numbers + tags, a real codec for Unmarshal) — docs/raft-w2-log.md §3.
+PROTO_FUNCS = {
+    "Clone": ("func Clone(m Message) Message", "Message"),
+    "Marshal": ("func Marshal(m Message) ([]byte, error)", "([]byte, error)"),
+    "Unmarshal": ("func Unmarshal(b []byte, m Message) error", "error"),
+    "Size": ("func Size(m Message) int", "int"),
+}
+PROTO_PATH = "google.golang.org/protobuf/proto"
+
 # Upstream files -> (out path, mode).  Order is the emission order.
 VENDOR = [
     ("raftpb/raft.pb.go", "raftpb/raft.pb.go", "plainpb"),
@@ -86,6 +131,25 @@ VENDOR = [
     ("tracker/state.go", "tracker/state.go", "verbatim"),
     ("tracker/tracker.go", "tracker/tracker.go", "verbatim"),
     ("logger.go", "raft/logger.go", "overlay"),
+    # W2.2: the raft ROOT package, scoped to what RawNode's decision paths
+    # need.  node.go arrives as a declaration subset (mode `select`); the
+    # `with_tla` variant of the tracing file is not vendored (the default
+    # build takes state_trace_nop.go, and vendoring both would redeclare
+    # every trace function — go/parser does not apply build constraints).
+    ("confchange/confchange.go", "confchange/confchange.go", "verbatim"),
+    ("confchange/restore.go", "confchange/restore.go", "verbatim"),
+    ("bootstrap.go", "raft/bootstrap.go", "verbatim"),
+    ("log.go", "raft/log.go", "verbatim"),
+    ("log_unstable.go", "raft/log_unstable.go", "verbatim"),
+    ("node.go", "raft/node_decls.go", "select"),
+    ("raft.go", "raft/raft.go", "verbatim"),
+    ("rawnode.go", "raft/rawnode.go", "verbatim"),
+    ("read_only.go", "raft/read_only.go", "verbatim"),
+    ("state_trace_nop.go", "raft/state_trace_nop.go", "verbatim"),
+    ("status.go", "raft/status.go", "verbatim"),
+    ("storage.go", "raft/storage.go", "verbatim"),
+    ("types.go", "raft/types.go", "verbatim"),
+    ("util.go", "raft/util.go", "verbatim"),
 ]
 
 # SHA-256 of each upstream file at PINNED_RAFT_REV.  ANY change trips the
@@ -108,11 +172,25 @@ DIGESTS = {
     "tracker/state.go": "b4a19e82ddc422d15fb6cfa2738c16abe42cdf14166bc788d8fd536d79652fe8",
     "tracker/tracker.go": "1ffda5213765af23030c9a7b640478ff69c070231307adcd2bc9ecac6675d452",
     "logger.go": "bcf4b575b30d51d21956213dbc6d455fc8687c89cd45eab6f84f80dd9384a00b",
+    "confchange/confchange.go": "b4e082d86bb67bff630a5f1465d5fedf794a6806d47bd420c705b9de8291d6b3",
+    "confchange/restore.go": "744a5f97b4a9cc7d561ef96a155f8759102fa6553b651cff4f6901dada2007d1",
+    "bootstrap.go": "92dee0b87b8a9ab0239514b3bb2e6c562b5be39645a5d4a7e575584179d40998",
+    "log.go": "58316f5ae5a7e02067f83b9715af04ad375e1ba3e96f89ccd166e5cf947544d2",
+    "log_unstable.go": "668447df175bba1ce5e5c2579b290844f9603631b5ce3de226758b62dca596e7",
+    "node.go": "311ece789019299836c97ca24908a52ca0e96ea11d3c81109444b41f625607a9",
+    "raft.go": "d3d8fa573e1488e3aa35b9b997ba943454f3f357740a550d4bcc44d81975f07f",
+    "rawnode.go": "531cac8b286fd6e0bcd430c12053590325b9b00d113a584b8d3e6d1314c50f05",
+    "read_only.go": "7277fd552348bee2dcc7f9afe8ce24860f35bb9693b64d293b3d343ca38d669a",
+    "state_trace_nop.go": "0f358917d5769791c312811b5a30fca23fb0e2973f0439582ce1983d215bd2fb",
+    "status.go": "67cea0e18c32d29f7b6f65e3d3450d4e92ee6e6cb3961122a7a2863eccd24c59",
+    "storage.go": "22020183114fe7555bc44ebda1b5b0d67de6534b0c8735c08c8667a0bd245403",
+    "types.go": "60068200885b00bbaff3daa09d468db89473c61c2150867f33d90ccfe16b438f",
+    "util.go": "b85b6fd2915e7d09eb534df528c4ede99890ec3770b60b2ff75a69f2ad17b33e",
 }
 
 # Packages that exist in the subject tree, hence whose import paths get
 # rewritten from the module path to the short dot-free form.
-SUBJECT_PACKAGES = ["quorum", "raftpb", "tracker"]
+SUBJECT_PACKAGES = ["confchange", "quorum", "raftpb", "tracker"]
 
 MODULE_PATH = "go.etcd.io/raft/v3"
 
@@ -590,7 +668,121 @@ def rewrite_imports(src):
     if MODULE_PATH in src:
         refuse("an unrewritten %s import path survived: the subject tree does "
                "not vendor that package yet" % MODULE_PATH)
+    # The protobuf runtime import becomes the subject-local `proto` package
+    # (emitted below).  Same shape of rewrite as the module-path one and for
+    # the same reason: the frontend's case-relative convention has no place
+    # for a dotted path, and the tree must name what it actually links.
+    src, k = re.subn(r'"%s"' % re.escape(PROTO_PATH), '"proto"', src)
+    n += k
     return src, n
+
+
+# ------------------------------------------------- the proto stand-in ------
+
+PROTO_HEADER = """// Code GENERATED by tools/raftsubject/derive.py. DO NOT EDIT — edit the
+// derivation.
+//
+// The subject-local stand-in for %s, which the
+// vendored raft root package calls on four functions.  Under the plainpb
+// ruling (docs/2026-08-15_raft-push-p0-scoping.md §8.6) the protobuf runtime
+// is engineered out, so these have no implementation to delegate to: each one
+// is a FAIL-CLOSED STUB, and each call site therefore STOPS the machine
+// loudly rather than computing a wrong answer.
+//
+// This is handoff H-1 given a home, not a discharge.  W4 replaces these
+// bodies with derived plain Go — Clone from the parsed message field lists
+// (raftpb/plain_clone.go already generates the per-type half), Size from the
+// field numbers and tags, and a real codec for Unmarshal — each with the
+// differential obligation the ruling's requirement (d) attaches to real
+// logic.  The measured liveness of each, under a RawNode-driven harness, is
+// in docs/raft-w3-log.md: Clone, Size and Unmarshal are all LIVE; Marshal is
+// reached only from Bootstrap, which the harness declines.
+
+package proto
+
+// Message is the interface the vendored callers pass.  Every plainpb message
+// type satisfies it — the derivation keeps their generated ProtoMessage()
+// marker methods verbatim — so the stand-in type-checks exactly where the
+// runtime's own proto.Message did.
+type Message interface {
+	ProtoMessage()
+}
+"""
+
+PROTO_STUB_BODY = ('\tpanic("proto: %s is a fail-closed stub (the protobuf '
+                   'runtime is engineered out; handoff H-1, '
+                   'docs/raft-w2-log.md §3)")')
+
+
+def gen_proto(used):
+    """Emit the subject-local proto package for exactly the used functions."""
+    unknown = sorted(u for u in used if u not in PROTO_FUNCS)
+    if unknown:
+        refuse("the vendored tree calls proto.%s, which the stand-in does not "
+               "declare — read the new call site and extend PROTO_FUNCS "
+               "(fail-closed by design)" % ", proto.".join(unknown))
+    out = [PROTO_HEADER % PROTO_PATH]
+    for name in sorted(used):
+        sig, _res = PROTO_FUNCS[name]
+        out.append("%s {\n%s\n}" % (sig, PROTO_STUB_BODY % name))
+    return "\n\n".join(out) + "\n"
+
+
+# ------------------------------------------------ declaration selection ----
+
+def decl_name(decl):
+    """The key a `select` rule names a top-level declaration by."""
+    head = decl.split("\n")[0]
+    m = re.match(r"^func \((?:\w+ )?\*?(\w+)\) (\w+)", head)
+    if m:
+        return "%s.%s" % (m.group(1), m.group(2))
+    for pat, fmt in ((r"^func (\w+)", "%s"), (r"^type (\w+)", "%s"),
+                     (r"^(?:var|const) (\w+)", "%s")):
+        m = re.match(pat, head)
+        if m:
+            return fmt % m.group(1)
+    m = re.match(r"^(var|const) \($", head)
+    if m:
+        names = re.findall(r"^\t(\w+)", decl, re.M)
+        return "%s(%s)" % (m.group(1), names[0] if names else "?")
+    if head.startswith("import"):
+        return "$imports"
+    if head.startswith("package"):
+        return "$package"
+    return "?" + head[:40]
+
+
+def select_decls(src, keep, drop_imports):
+    """Keep the named top-level declarations verbatim; drop everything else."""
+    _head, chunks = split_decls(src)
+    kept, found, dropped = [], set(), []
+    for chunk in chunks:
+        comment, decl = strip_comment(chunk)
+        if not decl.strip():
+            continue
+        name = decl_name(decl)
+        if name in keep:
+            found.add(name)
+            text = decl.rstrip("\n")
+            if comment.strip():
+                text = comment.rstrip("\n") + "\n" + text
+            kept.append(text)
+        else:
+            dropped.append(name)
+    missing = [k for k in keep if k not in found]
+    if missing:
+        refuse("select: no such top-level declaration(s): %s — upstream moved "
+               "them, so the subset must be re-read" % ", ".join(missing))
+    text = "\n\n".join(kept) + "\n"
+    for pkg in drop_imports:
+        text, n = re.subn(r'^\t(?:\w+ )?"%s"\n' % re.escape(pkg), "", text,
+                          count=1, flags=re.M)
+        if not n:
+            refuse("select: import %r to drop is not in the kept text" % pkg)
+        if re.search(r"\b%s\." % re.escape(pkg.split("/")[-1]), text):
+            refuse("select: the kept declarations still reference %s after "
+                   "dropping its import" % pkg)
+    return text, dropped
 
 
 # ------------------------------------------------------------- driver ------
@@ -620,6 +812,7 @@ def derive(raft_dir, out_dir, verbose=True):
                    % (up, got[:12], want[:12]))
 
     report = []
+    proto_used = set()
     for up, outp, mode in VENDOR:
         src = open(os.path.join(raft_dir, up)).read()
         dst = os.path.join(out_dir, outp)
@@ -628,6 +821,13 @@ def derive(raft_dir, out_dir, verbose=True):
             text, n = rewrite_imports(src)
             report.append("verbatim %-32s (%d import path%s rewritten)"
                           % (outp, n, "" if n == 1 else "s"))
+        elif mode == "select":
+            text, dropped = select_decls(src, NODE_KEEP, NODE_DROP_IMPORTS)
+            text, n = rewrite_imports(text)
+            report.append("select   %-32s (%d declarations kept, %d dropped, "
+                          "%d import%s rewritten)"
+                          % (outp, len(NODE_KEEP) - 2, len(dropped), n,
+                             "" if n == 1 else "s"))
         elif mode == "plainpb":
             text, msgs, enums, stubbed, dropped = plainpb(src)
             with open(os.path.join(out_dir, "raftpb", "plain_clone.go"), "w") as f:
@@ -645,8 +845,23 @@ def derive(raft_dir, out_dir, verbose=True):
             report.append("overlay  %-32s (upstream digest pinned)" % outp)
         else:
             refuse("unknown mode %s" % mode)
+        # Census the proto surface from CODE, not comments: the confstate
+        # overlay's header names `proto.Clone`/`proto.Equal` while describing
+        # what it replaced them with, and a stand-in generated from that would
+        # declare functions nothing calls.
+        code = "\n".join(re.sub(r"//.*$", "", ln) for ln in text.split("\n"))
+        proto_used.update(re.findall(r"\bproto\.(\w+)\(", code))
         with open(dst, "w") as f:
             f.write(text)
+
+    if proto_used:
+        os.makedirs(os.path.join(out_dir, "proto"), exist_ok=True)
+        with open(os.path.join(out_dir, "proto", "proto.go"), "w") as f:
+            f.write(gen_proto(proto_used))
+        report.append("generate %-32s (%d fail-closed stub%s: %s)"
+                      % ("proto/proto.go", len(proto_used),
+                         "" if len(proto_used) == 1 else "s",
+                         ", ".join(sorted(proto_used))))
 
     gofmt = subprocess.run(["gofmt", "-w", out_dir], capture_output=True, text=True)
     if gofmt.returncode != 0:
