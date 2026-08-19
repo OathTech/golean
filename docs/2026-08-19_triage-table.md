@@ -634,3 +634,12 @@ None of these is a "known issue" parked without a reason: each is an
 open obligation with a named owner and a written mechanism, which is the
 state the charter's law permits and the state this table exists to make
 checkable.
+
+**POSTSCRIPT (2026-08-19, same day):** obligation 2 — the 19
+GoCore-gated (a) reds — is DISCHARGED: the user approved the §3.3 ask
+as one slice of six arm-family commits (`eca39e4d`…`d6df87cc`, L1,
+L2a, L3, L5+L6, L7, L10), 19/19 red→green with zero unpredicted drift
+and the batch-end `--slow` re-certification green. Execution record:
+`docs/bugfix-arc-log.md` §19-red. The table above deliberately keeps
+its numbers at `0c21aa21`; the L10 row's expectation correction and
+the L2a/L2b split landed exactly as written here.
