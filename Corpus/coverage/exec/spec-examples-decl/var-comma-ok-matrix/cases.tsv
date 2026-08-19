@@ -43,5 +43,10 @@ grouped-spec	commaOkGroupedSpec	-	ok	-	maps,comma_ok,untyped,multi_result
 iface-value	commaOkIfaceValue	-	ok	-	maps,comma_ok,interfaces,type_assertions,multi_result
 shadow-capture	commaOkShadowCapture	-	ok	-	maps,comma_ok,shadowing,scoping,multi_result
 after-goto	commaOkAfterGoto	-	ok	-	maps,comma_ok,goto,multi_result
+after-goto-recv	commaOkAfterGotoRecv	-	ok	-	channels,comma_ok,goto,multi_result
+after-goto-assert	commaOkAfterGotoAssert	-	ok	-	type_assertions,comma_ok,goto,interfaces,multi_result
 tuple-call-untyped	tupleCallUntyped	-	ok	-	calls,multi_result,untyped
 tuple-call-typed	tupleCallTyped	-	ok	-	calls,multi_result,typed
+tuple-call-three	tupleCallThree	-	ok	-	calls,multi_result,untyped
+tuple-call-blank	tupleCallBlank	-	ok	-	calls,multi_result,untyped
+tuple-call-iface	tupleCallIface	-	ok	-	calls,multi_result,interfaces,typed
