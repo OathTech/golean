@@ -2116,3 +2116,50 @@ join `real` as all-failing tags — unimplemented features, exactly what
 the frontier suites pin) (`/tmp/s6-trancheB-ci.log`, scratch). The only
 difference between the gated tree and the committed tree is this
 paragraph and the untracked ledger draft in `artifacts/` (scratch).
+
+### Step 4 — the ledger (this commit)
+
+**`docs/language-coverage-ledger.md`** — the deliverable. One row per
+section of the pinned spec (158) and memory model (18), ZERO
+unclassified; the USER DIRECTIONS recorded in its header; the four
+statuses + the A/B/C/D sufficiency grades defined in §1 and applied
+row by row.
+
+The headline numbers (§8 of the ledger, all derivation-anchored):
+
+- **spec 158**: covered(A) 30, covered(B) 80, covered(C) 0,
+  covered(D) 28, frontier 2, out-of-language 18 (each justified row by
+  row), latitude-as-primary 0 (every latitude point lives inside a
+  covered row via its L:ref).
+- **mem 18**: covered 10, frontier 2 (atomic, goexit), latitude 1
+  (mem#model — the DRF-SC fragment via the refusal doctrine, C10),
+  out-of-language 5.
+- **the 129 baseline reds bucket exactly** (verified mechanically —
+  zero unmapped, zero double-mapped, script in the session's scratch;
+  re-derivable from §4/§6's id lists against the baseline): 84
+  frontier (FR-1…FR-15), 21 design questions (Q-*), 10 (c)-pins + 1
+  unsafe boundary marker (the new C8, triage postscript 3), 13
+  (a)-queued (A3-A6 + BUG-062).
+- **the build queue** (§5): 15 ordered sequential arcs,
+  smallest-diagnosed first, FR-5 (sync promoted/embedded routing)
+  boosted as the raft-path top, FR-15 (complex, 27 reds) LAST as the
+  one large arc — the user direction verbatim. §5.1 lists every
+  sequential feature NOT queued with its written profound reason
+  (5 rows).
+- **the design questions** (§6): 9, each with its cases in hand and an
+  owner (W3.2 or a named arc/ruling).
+
+**JUDGMENT (slice 6, grade discipline):** no covered(C) row survived —
+every "touched" green was either argued up to B with named evidence or
+its gap became a §7 TODO row (T-1, T-2, T-4, T-6, T-7 — five graded
+follow-ons). The delegation grade D is EXPLICIT about what its green
+attests (go/types enforcement upstream of both differential sides; the
+S3 constant-folding caveat generalized), so nobody reads a D row as
+interpreter coverage — the slice-1 "green rows that cannot observe
+order" lesson applied to a whole class.
+
+**JUDGMENT (slice 6, the triage table stays authoritative for
+CATEGORIES, the ledger for the FRONTIER MAP):** postscript 3 records
+the handoff and the 26 new ids' categories, including the one new
+(c)-class row (C8, the unsafe marker) added to the user-ratification
+list.

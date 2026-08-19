@@ -659,3 +659,42 @@ that §2.3 already marks raft-path-in-aggregate. F19's id list goes 2 →
 `0c21aa21` per its stated convention. Zero rows outside the table
 still holds: these four are red for a feature the table names, and
 their eight green siblings are the fix's flips, not reds.
+
+**POSTSCRIPT 3 (2026-08-19, slice 6 — the whole-language bar).** The
+frontier map's authority moves to **`docs/language-coverage-ledger.md`**
+(§4 frontier features FR-1…FR-15, §6 design questions Q-*); the F-row
+ids above remain as the historical record and the ledger cross-refs
+them. Slice 6 adds 26 baseline ids (+15 tranche A `5a8f7002`, +11
+tranche B): 4 new greens (3 position/accident-green controls + the
+delegated `unsafe/boundary/sizeof-const` constant) and 22 new reds,
+each in exactly one category, so zero-rows-outside-the-table still
+holds:
+
+- **(a)**: `builtins/len-vs-call-order/{chan,slice}` — the §3.4
+  divergence, now MEASURED on both sides and filed as **BUG-062**
+  (Cases: those two ids; owner mini-slice A6, whose predicate the
+  entry restates).
+- **(b)**: the frontier suites — `channels/recv-short-circuit/*` 3
+  (F24), `range/assign-form-nonident/*` 3 (F20),
+  `goroutines/go-builtin/*` +4 (F15: 1 → 5),
+  `sync/atomic-frontier/*` 5 (NEW row: sync/atomic, the ledger's
+  Q-ATOMIC), `sync/out-of-scope-cond/*` +2 (F13: 1 → 3),
+  `goroutines/goexit-marker/child` 1 (NEW row: mem#goexit,
+  Q-GOEXIT), `generics/stencil-quarantine/sibling` 1 (NEW row: the
+  H-3 method-stencil residual, measured).
+- **(c)-class, NEW ROW C8 — the unsafe boundary marker**:
+  `unsafe/boundary/pointer-roundtrip`. Argument: Package_unsafe is
+  OUT-OF-LANGUAGE (the ledger's row carries the justification — the
+  spec's own implementation-specific guard; modeling its observables
+  means modeling gc's layout; the type-safety escape defeats the
+  machine's memory model), and the red exists so that boundary is
+  visible rather than grey. Joins the §4 ratification list: if the
+  user rules unsafe in-language, the row converts to a frontier
+  feature with a design question, not silently.
+
+Two of the 22 reds surface at fidelity-adjacent stages
+(`atomic-frontier/{value,mp-litmus}`) and entered
+`baselines/untriaged-ids` with justifications (ceiling 7 → 9, reason
+in `baselines/untriaged-count`) — the §5 metric finding's class,
+whose clean resolution (a disposition column) the ledger records as
+T-5, an operator decision.
