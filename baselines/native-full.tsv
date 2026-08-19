@@ -1,29 +1,23 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-19 (bug-fix arc, slice 6 = the whole-language bar,
-#   suite tranche B: concurrency-entangled design-question cases-in-hand
-#   + boundary markers)
-#   commit: this commit (on 5a8f7002, the tranche-A tip)
-#   re-pin reason: 11 NEW ids and nothing else (zero flips on the 2208
-#   pre-existing ids), colors recorded from go run at the pin before
-#   the differential ran (artifacts/probe/slice6b, scratch):
-#     NEW/FAIL (10, red by design — enumerated frontier boundaries):
-#       sync/atomic-frontier/{add-load-store,cas,swap} (frontend-export)
-#       sync/atomic-frontier/value (lean-observation: the atomic.Value
-#         zero value is a D5 imported-type stub refusal) and
-#       sync/atomic-frontier/mp-litmus (membership: the SC litmus,
-#         admitted {0,1,11} argued from mem#atomic) — both entered in
-#         baselines/untriaged-ids with justification, ceiling 7 -> 9
-#         (reason in baselines/untriaged-count)
-#       sync/out-of-scope-cond/{cond-wait-signal,cond-broadcast}
-#         (Q-COND cases-in-hand, wire.go sync.Cond refusal)
-#       unsafe/boundary/pointer-roundtrip ("basic type unsafe.Pointer")
-#       goroutines/goexit-marker/child (mem#goexit boundary)
-#       generics/stencil-quarantine/sibling (the H-3 residual measured:
-#         whole-export refusal for someone else's stencil)
-#     NEW/PASS (1): unsafe/boundary/sizeof-const — a spec-forced
-#       constant folded by go/constant at the frontend (the honest
-#       direction of the S3 delegated-constant caveat)
-#   counts: 2219 cases, 2090 PASS / 129 FAIL (was 2208, 2089/119)
+# recorded: 2026-08-19 (bug-fix arc AUDIT FIX ROUND, BUG-063 guardrail
+#   commit — reviewer A's finding A1: receiver-position implicit &*q
+#   bypasses addrOfDeref)
+#   commit: this commit (on 529bab12, the arc-gate tip)
+#   re-pin reason: 5 NEW ids and nothing else (zero flips on the 2219
+#   pre-existing ids), colors recorded from go run at go1.26.5 before
+#   the differential ran (artifacts/probe/a1-recv, scratch):
+#     NEW/FAIL (3):
+#       methods/recv-implicit-addr-deref/{explicit-call-nil,
+#         method-value-nil} (differential — the silent wrong answers,
+#         BUG-063 Cases: machine 5/15 vs go 100/100)
+#       pointers/nil-array-ptr-slice/slice-expr-nil (lean-observation —
+#         BUG-063's lesser sibling, honest-STUCK, pinned at its current
+#         class; untriaged-ids coverage row, ceiling 6 -> 7)
+#     NEW/PASS (2): methods/recv-implicit-addr-deref/{non-nil-control,
+#       sync-recv-nil} — the aliasing control and the benign sync
+#       composition (the sync op nil-checks its own operand), the
+#       guards the A1 fix must not disturb
+#   counts: 2224 cases, 2092 PASS / 132 FAIL (was 2219, 2090/129)
 #   frontend: native (tools/nativefrontend + NativeToIR)
 # columns: result<TAB>id<TAB>stage
 PASS	arrays/array-bounds	-
@@ -956,6 +950,7 @@ PASS	goroutines/wake-window/buffered-send	membership
 PASS	goroutines/wake-window/close-recv	membership
 PASS	goroutines/worker-pool/shared-feed	-
 PASS	goroutines/worker-pool/sum	confluent
+result	id	stage
 PASS	if/condition-evaluated-once	-
 PASS	if/else-if-first-match	-
 PASS	if/if-init-scope	-
@@ -1455,6 +1450,10 @@ PASS	methods/quarantine-sibling/good-method	-
 PASS	methods/quarantine-sibling/plain-func	-
 FAIL	methods/quarantine-sibling/quarantined-call	frontend-export
 PASS	methods/recursive-method	-
+FAIL	methods/recv-implicit-addr-deref/explicit-call-nil	differential
+FAIL	methods/recv-implicit-addr-deref/method-value-nil	differential
+PASS	methods/recv-implicit-addr-deref/non-nil-control	-
+PASS	methods/recv-implicit-addr-deref/sync-recv-nil	-
 PASS	methods/same-name-method-closures	-
 PASS	methods/value-auto-deref	-
 PASS	methods/value-receiver-via-pointer-var/addr-of-literal	-
@@ -1569,6 +1568,7 @@ PASS	pointers/inc-via-call	-
 PASS	pointers/nil-array-elem-store	-
 PASS	pointers/nil-array-elem-store/second-target	-
 PASS	pointers/nil-array-index-panic	-
+FAIL	pointers/nil-array-ptr-slice/slice-expr-nil	lean-observation
 PASS	pointers/nil-deref-panic	-
 PASS	pointers/nil-selector-panic	-
 PASS	pointers/nil-value-receiver-call-panic	-
