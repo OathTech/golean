@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+# H-11 boundary: source-function callee keeps the C3 whole-export
+# refusal — red at frontend-export by design, siblings included.
+sibling	quarCalleeSibling	-	ok	-	init,globals,calls

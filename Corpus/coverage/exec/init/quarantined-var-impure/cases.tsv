@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+# H-11 boundary: effectful lowerable subexpression (source-call arg)
+# keeps the whole-export refusal — red at frontend-export by design.
+counter	quarImpureCounter	-	ok	-	init,globals,calls,evaluation_order

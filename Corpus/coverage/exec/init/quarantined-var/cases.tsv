@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+# H-11 guardrails. Pre-fix: the WHOLE package refuses (all six rows red
+# at frontend-export). Post-fix: siblings green; the five
+# reference-shape rows stay red at frontend-export BY DESIGN (the
+# reading function is an H-3 quarantined stub naming the var). A row
+# here flipping PASS without a design change means the poison broke —
+# the cell answered a silent zero.
+siblings	quarVarSiblings	-	ok	-	init,globals
+read	quarVarRead	-	ok	-	init,globals,stdlib
+cascade	quarVarCascade	-	ok	-	init,globals,stdlib
+write	quarVarWrite	-	ok	-	init,globals,assignment
+addr	quarVarAddr	-	ok	-	init,globals,addressability
+multi	quarVarMulti	-	ok	-	init,globals,comma_ok,stdlib
