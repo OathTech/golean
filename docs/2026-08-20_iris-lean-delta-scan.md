@@ -359,6 +359,22 @@ master afterwards.
 
 ---
 
+## 6. USER RULINGS (2026-08-20, Mike)
+
+- **The recommendation is ADOPTED**: the iris-lean pin moves in W3.2
+  slice 6b as chartered — not earlier; every reuse row pays off at the
+  channel-logic resume, and a toolchain bump does not belong under
+  semantics surgery.
+- **The comparator re-pin is PRE-APPROVED**: at the slice-6b boundary,
+  `deps/comparator`'s `lean-toolchain` and its `lean4export` build
+  move to MATCH the main proof toolchain (4.32.2 at the boundary —
+  matching, not "latest", is the rule: the judge replays what the
+  kernel checks, so the versions must be identical; today they
+  coincide). Conditions per the trust-tools rule: a version move
+  only — comparator/lean4export sources stay pristine; the re-pin
+  commit records old→new + rebuild provenance; the judge re-runs on
+  a known-good landmark as the post-move check.
+
 ## Provenance
 
 Everything above was read from `deps/iris-lean` via `git` at
