@@ -1,16 +1,26 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-20 (raft W4.1 item 4 — the smalls: strings.Join
-#   (H-17) + bytes.Equal (H-13) as E5 shims, and
-#   binary.LittleEndian.Uint64/PutUint64 (H-14) as the package-variable
-#   method desugar; commit: this commit, raft-w41)
-#   re-pin reason: 12 NEW ids, all PASS, and ZERO movement on the 2294
-#   pre-existing ids — exactly the flips predicted before the run
-#   (docs/raft-w41-log.md item 4):
-#     NEW/PASS (12): strings/join-conformance/* (5 — incl. the newRaft
-#       shape), bytes/equal-conformance/* (3 — incl. nil==empty TRUE),
-#       binary/little-endian/* (4 — incl. the bounds-check panic and
-#       the read_only.go heartbeat-ctx shape).
-#   counts: 2306 cases, 2164 PASS / 142 FAIL (was 2294, 2152/142)
+# recorded: 2026-08-20 (raft W4.1 item 5 — promoted sync ops (H-12) +
+#   the named-typed-nil fix the first RawNode probe found;
+#   commit: this commit, raft-w41)
+#   re-pin reason: 10 NEW ids + 4 red->green flips, ZERO other movement
+#   on the 2306 pre-existing ids (docs/raft-w41-log.md item 5):
+#     NEW (5): sync/promoted-mutex/* — 4 PASS (stmt, defer-unlock,
+#       value-var, counter [confluent, certified over all schedules])
+#       + trylock-expr FAIL/frontend-export BY DESIGN (expression-
+#       position sync ops stay refused).
+#     NEW/PASS (5): maps/named-nil-flows/* — the named-typed-nil flow
+#       class (return/composite/literal-elem/arg/slice).
+#     FLIPS (4, red->green — UNPREDICTED, investigated, each a RECORDED
+#       red-until-lifted witness of exactly the two lifted classes):
+#       sync/escapes/{promoted,defer-embedded} — their header called
+#         the promoted shape "the north-star idiom; lifting it is the
+#         recorded follow-up" (H-12 is that follow-up);
+#       maps/nil-literal-values/{defined-map,defined-slice}-element —
+#         expected_status ok rows stuck on the old BUG-014/BUG-016
+#         defined-type boundary, green now that the nil-typing arm
+#         keys on the underlying kind.
+#     sync/escapes/{method-value,go-stmt} stay red by design.
+#   counts: 2316 cases, 2177 PASS / 139 FAIL (was 2306, 2164/142)
 #   frontend: native (tools/nativefrontend + NativeToIR)
 # columns: result<TAB>id<TAB>stage
 result	id	stage
@@ -1429,13 +1439,18 @@ PASS	maps/map-literal-nan-keys	-
 PASS	maps/map-nil-assign	-
 PASS	maps/map-nil-eq	-
 PASS	maps/map-value-inner-write	-
+PASS	maps/named-nil-flows/arg	-
+PASS	maps/named-nil-flows/composite	-
+PASS	maps/named-nil-flows/literal-elem	-
+PASS	maps/named-nil-flows/return	-
+PASS	maps/named-nil-flows/slice	-
 PASS	maps/nan-key-clear	-
 PASS	maps/nil-assign-eval-before-panic	-
 PASS	maps/nil-channel-key	-
 PASS	maps/nil-literal-values/defined-func-element	-
-FAIL	maps/nil-literal-values/defined-map-element	lean-observation
+PASS	maps/nil-literal-values/defined-map-element	-
 PASS	maps/nil-literal-values/defined-pointer-element	-
-FAIL	maps/nil-literal-values/defined-slice-element	lean-observation
+PASS	maps/nil-literal-values/defined-slice-element	-
 PASS	maps/nil-literal-values/func-element	-
 PASS	maps/nil-literal-values/map-element	-
 PASS	maps/nil-literal-values/pointer-element	-
@@ -2250,10 +2265,10 @@ FAIL	sync/atomic-frontier/swap	frontend-export
 FAIL	sync/atomic-frontier/value	lean-observation
 FAIL	sync/composite-literal/mutex-addr-lit	frontend-export
 FAIL	sync/composite-literal/waitgroup-value-lit	frontend-export
-FAIL	sync/escapes/defer-embedded	frontend-export
+PASS	sync/escapes/defer-embedded	-
 FAIL	sync/escapes/go-stmt	frontend-export
 FAIL	sync/escapes/method-value	frontend-export
-FAIL	sync/escapes/promoted	frontend-export
+PASS	sync/escapes/promoted	-
 FAIL	sync/iface-dispatch/locker-box-dispatch	frontend-export
 FAIL	sync/iface-dispatch/mutex-user-iface	frontend-export
 FAIL	sync/iface-dispatch/wg-user-iface	frontend-export
@@ -2276,6 +2291,11 @@ FAIL	sync/out-of-scope-cond/cond-broadcast	frontend-export
 FAIL	sync/out-of-scope-cond/cond-signal-no-waiter	frontend-export
 FAIL	sync/out-of-scope-cond/cond-wait-signal	frontend-export
 FAIL	sync/out-of-scope-trylock/trylock-uncontended	frontend-export
+PASS	sync/promoted-mutex/counter	confluent
+PASS	sync/promoted-mutex/defer-unlock	-
+PASS	sync/promoted-mutex/stmt	-
+FAIL	sync/promoted-mutex/trylock-expr	frontend-export
+PASS	sync/promoted-mutex/value-var	-
 PASS	sync/rwmutex-basic/rlock-twice	-
 PASS	sync/rwmutex-basic/write-then-read-ordered	confluent
 PASS	sync/rwmutex-misuse-fatal/runlock-of-unlocked	-

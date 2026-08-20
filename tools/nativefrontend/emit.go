@@ -2646,15 +2646,26 @@ func (e *emitter) wrapInterfaceConversion(target types.Type, rhs types.Type, ope
 	// slice, map, channel, and interface types) — ONE mechanism for
 	// every assignable context that flows through this wrap (BUG-016,
 	// arc-final audit F6, 2026-08-06; generalizes the audit-response M1
-	// map-literal fix). Same kind restriction as M1: DIRECT
-	// slice/map/pointer only — func-typed and defined-typed slots keep
-	// the bare-nil base emission (the machine's nil-literal arm rejects
-	// their typed nil, BUG-014's boundary); interface slots keep the
-	// bare nil below (a nil interface IS nil).
+	// map-literal fix). The classification keys on the UNDERLYING kind
+	// and the emitted nil carries the UNDERLYING type's wire node
+	// (raft W4.1, found by the first RawNode probe: tracker's Clone
+	// returns nil at the DEFINED map type quorum.MajorityConfig, and
+	// the old direct-kind switch skipped defined types, storing a bare
+	// nil that the machine's fail-closed map comparison later refused —
+	// maps/named-nil-flows pins all four flows). Emitting the
+	// underlying kind is representation only — the same argument as the
+	// bool-conversion retyping above: static-type consequences (boxing,
+	// dynamic names) come from go/types at the use sites, never from
+	// this node — and it is also what the machine's nil-literal arm
+	// accepts (a NAMED wire type there was BUG-014's boundary).
+	// Func- and chan-typed slots keep the bare-nil base emission
+	// (their comparison arms accept nil/nil; a chan op on a stored
+	// bare nil is untested surface, recorded not widened); interface
+	// slots keep the bare nil below (a nil interface IS nil).
 	if b, ok := rhs.(*types.Basic); ok && b.Kind() == types.UntypedNil && target != nil && !types.IsInterface(target) {
-		switch types.Unalias(target).(type) {
+		switch u := types.Unalias(target).Underlying().(type) {
 		case *types.Slice, *types.Map, *types.Pointer:
-			tw, err := e.emitType(target)
+			tw, err := e.emitType(u)
 			if err != nil {
 				return nil, err
 			}
@@ -4884,7 +4895,7 @@ func (e *emitter) syncPromotedStub(named *types.Named, tName string, mfn *types.
 		"results":  results,
 		"variadic": sig.Variadic(),
 		"unsupported": "promoted sync-primitive method sync." + prim + "." + mfn.Name() +
-			" (only direct statement/defer-position sync ops are modeled; satisfaction answers, calls fail closed)",
+			" (statement/defer-position sync ops — direct and promoted — lower at their call sites; this method-table entry answers satisfaction, and calls THROUGH it — interface dispatch, method values — fail closed)",
 	}, nil
 }
 
@@ -7313,7 +7324,7 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 	// escaped to a runtime `stuck` — sync/iface-dispatch pins it).
 	if seln := e.info.Selections[sel]; seln != nil && seln.Kind() == types.MethodVal {
 		if prim := e.syncMethodPrim(seln); prim != "" {
-			return nil, false, unsup("sync.%s.%s outside a direct statement/defer position (promoted, embedded, and expression-position sync ops are unmodeled)", prim, sel.Sel.Name)
+			return nil, false, unsup("sync.%s.%s outside a statement/defer position (expression-position sync ops and sync method values are unmodeled; direct AND promoted statement/defer ops lower — H-12)", prim, sel.Sel.Name)
 		}
 	}
 	seln, ok := e.info.Selections[sel]
@@ -7885,6 +7896,39 @@ func (e *emitter) syncRecvAddr(sel *ast.SelectorExpr) (any, error) {
 	return e.receiverAddr(sel.X)
 }
 
+// syncSelectionPrim recognizes a sync-primitive method selection in
+// DIRECT or PROMOTED form (H-12, raft W4.1 item 5 — the MemoryStorage
+// shape: `ms.Lock()` with the mutex an embedded field). Direct: the
+// receiver EXPRESSION's type is the primitive (hops nil, byte-identical
+// to the historic path). Promoted: the resolved method's declared
+// receiver is the primitive and the selection walks embedded hops
+// (Selection.Index's prefix). ok=false when the call is not a
+// sync-primitive method at all.
+func (e *emitter) syncSelectionPrim(sel *ast.SelectorExpr, seln *types.Selection) (string, []int, bool) {
+	if prim := e.syncPrimName(e.goTypeOf(sel.X)); prim != "" {
+		return prim, nil, true
+	}
+	if prim := e.syncMethodPrim(seln); prim != "" {
+		index := seln.Index()
+		return prim, index[:len(index)-1], true
+	}
+	return "", nil, false
+}
+
+// syncSelectionRecvAddr emits the receiver ADDRESS for a (possibly
+// promoted) sync-primitive op: the direct form keeps syncRecvAddr
+// byte-identical; the promoted form adjusts through the embedded hops
+// to the primitive field's address (promotedReceiverArg with a pointer
+// receiver — every modeled sync op is pointer-receiver, so the final
+// field's address is what the op takes; a nil embedded-pointer hop
+// panics at the deref, Go's promoted-access panic).
+func (e *emitter) syncSelectionRecvAddr(sel *ast.SelectorExpr, hops []int) (any, error) {
+	if len(hops) == 0 {
+		return e.syncRecvAddr(sel)
+	}
+	return e.promotedReceiverArg(sel, hops, true)
+}
+
 // syncOpFor maps a primitive+method pair to its wire sync-op name for
 // the ZERO-ARGUMENT ops ("" = not a zero-argument modeled op; Done maps
 // to its wgAdd(-1) lowering at both call sites, gc's own definition).
@@ -7937,11 +7981,11 @@ func (e *emitter) emitSyncOpStmt(call *ast.CallExpr) (any, bool, error) {
 	if seln == nil || seln.Kind() != types.MethodVal {
 		return nil, false, nil
 	}
-	prim := e.syncPrimName(e.goTypeOf(sel.X))
-	if prim == "" {
+	prim, hops, ok := e.syncSelectionPrim(sel, seln)
+	if !ok {
 		return nil, false, nil
 	}
-	recvW, err := e.syncRecvAddr(sel)
+	recvW, err := e.syncSelectionRecvAddr(sel, hops)
 	if err != nil {
 		return nil, true, err
 	}
@@ -8069,8 +8113,8 @@ func (e *emitter) emitDeferSyncOp(call *ast.CallExpr) (any, bool, error) {
 	if seln == nil || seln.Kind() != types.MethodVal {
 		return nil, false, nil
 	}
-	prim := e.syncPrimName(e.goTypeOf(sel.X))
-	if prim == "" {
+	prim, hops, ok := e.syncSelectionPrim(sel, seln)
+	if !ok {
 		return nil, false, nil
 	}
 	m := sel.Sel.Name
@@ -8084,7 +8128,7 @@ func (e *emitter) emitDeferSyncOp(call *ast.CallExpr) (any, bool, error) {
 			return nil, true, unsup("defer sync.%s.%s (only the zero-argument sync ops and Done are modeled in defer position)", prim, m)
 		}
 	}
-	recvW, err := e.syncRecvAddr(sel)
+	recvW, err := e.syncSelectionRecvAddr(sel, hops)
 	if err != nil {
 		return nil, true, err
 	}

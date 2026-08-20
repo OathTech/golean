@@ -326,6 +326,131 @@ residual sinks none; `frontier.py` EXPORTS CLEAN.
 exactly 12 NEW ids, all PASS; zero movement on the 2294 pre-existing
 ids. Baseline re-pinned same-commit with this reason.
 
+**Gate:** `scripts/ci --diff` at the item-4 commit — full PASS
+(2306/2306, no regression).
+
+---
+
+## Item 5 — H-12, promoted sync ops — and the run itself
+
+**Landed (one commit, two named concerns — coupled because the second
+was FOUND BY the first's unblocked probe):**
+
+1. **Promoted/embedded sync ops in statement/defer position**
+   (`emit.go`): `emitSyncOpStmt`/`emitDeferSyncOp` now recognize a
+   selection whose RESOLVED method is a sync primitive's
+   (`syncSelectionPrim` — direct form byte-identical to before;
+   promoted form takes the embedded hops) and the receiver address
+   walks the hops (`promotedReceiverArg`, pointer receiver — every
+   modeled sync op is). Expression-position ops and sync method values
+   KEEP failing closed, with the guard and stub messages reworded to
+   say what actually remains refused. Guardrails
+   (`sync/promoted-mutex`, 5 rows, witnessed red first): stmt,
+   defer-unlock, value-var, the confluent goroutine counter (mutual
+   exclusion through the promoted lock certified over ALL schedules),
+   and trylock-expr RED BY DESIGN. The two standing red-until-lifted
+   witnesses (`sync/escapes/{promoted,defer-embedded}` — whose own
+   header called the promoted shape "the north-star idiom" and this
+   lift "the recorded follow-up") flip green;
+   `sync/escapes/{method-value,go-stmt}` stay red.
+2. **The named-typed-nil representation fix (BUG-016's arm, found by
+   THE-MOMENT probe).** With zero live quarantines the first RawNode
+   drive still STUCK the machine: `map equality expected map/nil
+   operands, got GoValue.nil and GoValue.nil`. Minimized (probe
+   ladder in artifacts/w41/probe-mapnil*): a nil at a DEFINED
+   slice/map type — `tracker.Config.Clone`'s `return nil` at
+   `quorum.MajorityConfig`, stored into a `JointConfig` composite,
+   compared by `checkInvariants`' `outgoing(cfg.Voters) != nil` — was
+   emitted as a BARE nil (the BUG-016 nil-typing arm deliberately
+   skipped defined types, BUG-014's boundary), and the machine's
+   fail-closed comparison refused two bare nils. Fix: the arm keys on
+   the UNDERLYING kind and emits the UNDERLYING type's wire node —
+   representation only (the bool-conversion-retyping argument: static
+   consequences come from go/types at use sites), and exactly what the
+   machine's nil-literal arm accepts. Func/chan slots keep bare nil
+   (their comparison arms take nil/nil; chan ops on stored bare nil
+   recorded as untested surface, not widened). Guardrails
+   (`maps/named-nil-flows`, 5 rows witnessed red): the nil flowing
+   through return/composite/literal-elem/arg at named map + named
+   slice. The two standing stuck rows
+   (`maps/nil-literal-values/defined-{map,slice}-element`) flip green.
+
+**`sweep.py`'s cause-flatten table is EMPTIED — the fail-closed
+direction.** Every cause it carried is modeled now; keeping the
+flattening would let a regression that re-quarantines one be silently
+flattened over in PASS 2 instead of surfacing as a residual sink. The
+probe-helper injection and the mutex-op drop go with it; PASS 2 is now
+purely neutralize-believed-dead + re-census to fixpoint.
+
+**Predicted flips for the full differential (stated before the run):**
+10 NEW ids (9 PASS incl. the confluent row + trylock-expr
+FAIL/frontend-export by design), zero other movement. **The run REFUTED
+the zero-movement half by FOUR rows — every one investigated before
+re-pinning, and every one a RECORDED red-until-lifted witness of
+exactly the two lifted classes** (named above; the honest reading is
+that the prediction failed to grep for standing witnesses, not that
+the change moved anything unexplained). Baseline re-pinned same-commit
+(2316 cases, 2177/139).
+
+---
+
+## The W4.1 DONE criterion, clause by clause (harness design §8)
+
+Census instruments at this tip: `frontier.py` EXPORTS CLEAN;
+`sweep.py` (with the clause-2 extension and the emptied flatten);
+`derive.py --check` clean; `codeccheck.py` PASS; subject `go build`
+clean.
+
+1. **Zero live QUARANTINED subject declarations** — **HEADLINE: 0 LIVE
+   (0 first-order + 0 behind sinks) out of 15 quarantined in PASS 1.**
+   The 15 dead: the rendering/JSON family (`Describe*`,
+   `ConfChanges*String`, `String`s over strconv/fmt.Fprint/%q-Stringer
+   shapes, `MarshalJSON`s), `MemoryStorage.{Lock,TryLock,Unlock}`
+   method-set stubs, `slices.SortFunc`'s `MajorityConfig.Describe` —
+   all unreachable from the twin's 16-entry API surface.
+2. **Zero live quarantined IMPORTED stdlib stubs** — extended the sweep
+   to census this class (it previously only counted them): **0 LIVE of
+   30** (bytes.Buffer x24, strings.Builder's Cap/Grow/WriteRune,
+   sync x3).
+3. **Zero live fail-closed panic stand-ins** — the four `proto.*`
+   bodies are REAL (item 1), and the fifth the W4.0 list missed
+   (`MarshalConfChange`, JC-13) is real too. The plainpb
+   `String`/`Descriptor`/`UnmarshalJSON` stubs remain panic bodies BY
+   DESIGN and are not run-stops: `Descriptor`/`UnmarshalJSON` are
+   unreachable; the enum/message `String`s are reached ONLY inside the
+   fmt render helpers, where BOTH oracles run the same panicking body
+   and fmt's recover renders identically (`%!v(PANIC=...)` — pinned by
+   fmt/sprintf-verbs) — a symmetric, agreed behavior, not a stop.
+4. **Nothing masked by a body-replacing walk row** — the tracked plan
+   is the TERMINAL ROW alone since W4.0; D-11 (the jitter draw) is a
+   DERIVATION patch carried by the subject itself — both oracles run
+   the patched body, and the census reads the derived tree, so nothing
+   is masked from it (the ledger records the delta; the membership row
+   pins its envelope).
+5. **Residual-sink report empty** — over subject AND imported stubs
+   (the clause-2 extension widened the check), with the cause-flatten
+   table EMPTY, so any reappearing cause would surface here rather
+   than be flattened over.
+
+## THE MOMENT — the first RawNode execution
+
+`tools/raftsubject/runprobe.py` (tracked; both oracles, first stop
+verbatim), probe `rawnode-probe-main.go`: a single snapshot-seeded
+voter — `NewMemoryStorage`, `ApplySnapshot`, `NewRawNode`, `Tick`,
+`Campaign`, Ready harvest (`HasReady`/`Ready`/`SetHardState`/`Append`/
+`Advance`), `Propose([]byte("x"))`, harvest again — summary packed as
+isLeader/term/committedNormal/applied/rounds.
+
+> **`runprobe: go run probeRawNode -> 111035`**
+> **`runprobe: machine probeRawNode -> 111035`**
+> **`runprobe: PASS — both oracles agree: 111035`**
+
+The machine executes etcd-io/raft's RawNode end to end — election,
+leadership, a committed proposal, five Ready rounds — and agrees with
+gc on the drive's whole observable summary. (Fuel used: well under the
+2*10^8 given; wall clock ~seconds.) This is the W4.1 exit: every
+remaining step to the W4.2 twin is harness Go, not machine surface.
+
 ### Judgment calls
 
 - **JC-11: the codec is GENERATED by `derive.py`, not hand-written.** The
