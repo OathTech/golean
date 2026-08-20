@@ -41,6 +41,27 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		}
 	}
 
+	// Generic declaration registry BEFORE the H-11 dry-run: an
+	// initializer may instantiate a generic function or type declared
+	// anywhere in the program (`var v1 = f[string]("foo")`), and its
+	// dry-run emission consults genericFuncDecls/genericMethodDecls —
+	// which the FuncDecl loop below used to populate. Registering here
+	// keeps the dry-run's answer identical to the real emission's
+	// (caught by spec-examples-decl/generic-type-switch going red when
+	// the pre-pass ran unregistered). The loop below no longer
+	// registers — recordGenericMethod APPENDS, so double registration
+	// would duplicate method stencils.
+	e.registerGenericDecls()
+
+	// H-11 dry-run pre-pass: decide which package-level initializers
+	// quarantine their vars instead of refusing the export. MUST run
+	// before any function body is emitted — the poison (globalAddr)
+	// has to be armed when bodies that reference a quarantined var
+	// lower, so they land as H-3 per-declaration stubs.
+	if err := e.quarantineUnlowerableGlobals(); err != nil {
+		return nil, err
+	}
+
 	for _, unit := range e.units {
 		e.setUnit(unit)
 		for _, f := range unit.files {
@@ -85,21 +106,10 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 				// uninstantiated form). Function stencils are emitted from
 				// the instantiation worklist (mono.go); generic METHODS
 				// stencil with their receiver instantiation (G3).
+				// Registration happened in registerGenericDecls (before
+				// the H-11 pre-pass); here they are only skipped.
 				if fsig, isSig := e.info.Defs[d.Name].Type().(*types.Signature); isSig {
-					if fsig.TypeParams().Len() > 0 {
-						if fnObj, isFn := e.info.Defs[d.Name].(*types.Func); isFn {
-							if e.genericFuncDecls == nil {
-								e.genericFuncDecls = map[*types.Func]*ast.FuncDecl{}
-							}
-							e.genericFuncDecls[fnObj] = d
-						}
-						continue
-					}
-					if fsig.RecvTypeParams().Len() > 0 {
-						// Method on a generic type: stenciled per receiver
-						// instantiation (G3); uses of the instantiated
-						// type fail closed until then.
-						e.recordGenericMethod(d)
+					if fsig.TypeParams().Len() > 0 || fsig.RecvTypeParams().Len() > 0 {
 						continue
 					}
 				}
@@ -626,6 +636,260 @@ func (e *emitter) collectGlobals(files []*ast.File) error {
 	return nil
 }
 
+// registerGenericDecls populates the generic-declaration registries
+// (genericFuncDecls; genericMethodDecls via recordGenericMethod) over
+// EVERY unit, before anything that can instantiate them emits — the
+// H-11 dry-run pre-pass included. Runs exactly once per program: the
+// FuncDecl loop skips generic declarations without re-registering
+// (recordGenericMethod appends, so re-registration would duplicate
+// method stencils).
+func (e *emitter) registerGenericDecls() {
+	savedPkg, savedInfo := e.pkg, e.info
+	defer func() { e.pkg, e.info = savedPkg, savedInfo }()
+	for _, unit := range e.units {
+		e.setUnit(unit)
+		for _, f := range unit.files {
+			for _, decl := range f.Decls {
+				d, isFn := decl.(*ast.FuncDecl)
+				if !isFn {
+					continue
+				}
+				def := e.info.Defs[d.Name]
+				if def == nil {
+					continue
+				}
+				fsig, isSig := def.Type().(*types.Signature)
+				if !isSig {
+					continue
+				}
+				if fsig.TypeParams().Len() > 0 {
+					if fnObj, isFunc := def.(*types.Func); isFunc {
+						if e.genericFuncDecls == nil {
+							e.genericFuncDecls = map[*types.Func]*ast.FuncDecl{}
+						}
+						e.genericFuncDecls[fnObj] = d
+					}
+					continue
+				}
+				if fsig.RecvTypeParams().Len() > 0 {
+					e.recordGenericMethod(d)
+				}
+			}
+		}
+	}
+}
+
+// quarantineUnlowerableGlobals is H-11's dry-run pre-pass (raft W4.0):
+// every package-level initializer is emitted once, in program
+// initialization order, with ALL side effects rolled back — the only
+// question asked is "does it lower". One that does not, with an
+// UNSUPPORTED refusal, and whose expression is effect-isolated
+// (initializerEffectIsolated), quarantines its declared vars instead
+// of refusing the export: the vars' cells stay on the wire (typed,
+// zero-seeded, gid-dense — never dropped), $pkginit skips the
+// initializer, and every reference refuses through globalAddr's
+// poison. Anything else keeps today's whole-export refusal.
+//
+// The poison is armed DURING this pass, so a later initializer that
+// merely reads a quarantined var fails its own dry-run through the
+// poison and cascades (its expression is a pure read — eligible), with
+// the reason chained. go/types' InitOrder guarantees the dependency
+// direction: a reader's initializer always runs after its dependency's.
+//
+// Soundness of the SKIP, argued once here (and pinned by
+// init/quarantined-var{,-callee,-impure}): an eligible initializer's
+// lowerable parts cannot touch modeled state (no receives, no source
+// or builtin calls, unmodeled callees get only value-isolated
+// arguments), so the machine state after skipping differs from Go's
+// only in the poisoned cells — which no emitted body can read. A
+// skipped initializer that would PANIC (or print) under Go diverges
+// VISIBLY in the differential (machine ok vs go panic), never
+// silently.
+func (e *emitter) quarantineUnlowerableGlobals() error {
+	e.quarantinedGlobals = map[*types.Var]string{}
+	e.quarantinedInits = map[ast.Expr]bool{}
+	savedPkg, savedInfo := e.pkg, e.info
+	savedFn, savedSeq, savedRecv, savedResults := e.curFuncName, e.liftSeq, e.fnHasRecv, e.curResults
+	defer func() {
+		e.pkg, e.info = savedPkg, savedInfo
+		e.curFuncName, e.liftSeq, e.fnHasRecv, e.curResults = savedFn, savedSeq, savedRecv, savedResults
+	}()
+	for _, u := range e.units {
+		e.setUnit(u)
+		for _, ini := range u.info.InitOrder {
+			as, ok := e.globalInitStmt[ini.Rhs]
+			if !ok {
+				return unsup("package-level initializer with no declaration site")
+			}
+			// Dry-run context: same knobs synthesizePkgInit sets, so
+			// "lowers here" and "lowers there" are the same question.
+			e.curFuncName = "$pkginit"
+			e.liftSeq = 0
+			e.curResults = nil
+			e.fnHasRecv = containsRecv(as)
+			localTypesMark := len(e.localTypeDefs)
+			localIfaceMark := len(e.localIfaceMethods)
+			namedStructMark := len(e.namedStructTypes)
+			deferNoopMark := e.deferNoopEmitted
+			monoMark := e.markMono()
+			_, err := e.emitStmtList([]ast.Stmt{as})
+			// ALWAYS roll back — success or failure, the dry run must
+			// leave no trace (the real emission happens in
+			// synthesizePkgInit, after the function bodies, exactly
+			// where it always did). Same rollback set as the H-3
+			// quarantine path in emitProgram.
+			e.lifted = nil
+			e.deferNoopEmitted = deferNoopMark
+			e.localTypeDefs = e.localTypeDefs[:localTypesMark]
+			e.localIfaceMethods = e.localIfaceMethods[:localIfaceMark]
+			e.namedStructTypes = e.namedStructTypes[:namedStructMark]
+			e.rollbackMono(monoMark)
+			if err == nil {
+				continue
+			}
+			var uerr unsupported
+			if !errors.As(err, &uerr) {
+				return err
+			}
+			if !e.initializerEffectIsolated(ini.Rhs) {
+				// Not isolatable: the failing initializer has lowerable
+				// parts with potential modeled effects. Whole-export
+				// refusal, exactly as before H-11.
+				return err
+			}
+			for _, v := range ini.Lhs {
+				if v.Name() != "_" {
+					e.quarantinedGlobals[v] = uerr.what
+				}
+			}
+			e.quarantinedInits[ini.Rhs] = true
+		}
+	}
+	return nil
+}
+
+// initializerEffectIsolated reports whether SKIPPING the initializer
+// expression could be observed by modeled code anywhere OTHER than
+// through the declared variables themselves (which globalAddr
+// poisons). false is the sound direction (whole-export refusal —
+// today's behavior); true admits H-11's per-declaration quarantine.
+// Conservative by construction:
+//   - no receive anywhere (consuming from a modeled channel is an
+//     effect on modeled state);
+//   - every call is either a type CONVERSION of admissible operands or
+//     a direct `pkg.Fn(...)` call into a NON-source package — a body
+//     the machine does not model in any case — whose every argument is
+//     effect-free syntax (no calls, receives, address-of, or function
+//     literals) of a VALUE-ISOLATED static type (basics, or
+//     arrays/structs of basics), so nothing the callee receives can
+//     alias or invoke modeled state;
+//   - method calls, builtin calls, and source-package calls all answer
+//     false: their effects are modeled, and skipping them would lose
+//     observable state changes (the C3 init-reachability rule keeps
+//     covering the quarantined-source-callee shape).
+func (e *emitter) initializerEffectIsolated(rhs ast.Expr) bool {
+	// pureArg: effect-free syntax, usable inside an unmodeled callee's
+	// argument list.
+	var pureArg func(x ast.Expr) bool
+	pureArg = func(x ast.Expr) bool {
+		pure := true
+		ast.Inspect(x, func(n ast.Node) bool {
+			switch nn := n.(type) {
+			case *ast.CallExpr, *ast.FuncLit:
+				pure = false
+				return false
+			case *ast.UnaryExpr:
+				if nn.Op == token.ARROW || nn.Op == token.AND {
+					pure = false
+					return false
+				}
+			}
+			return pure
+		})
+		return pure
+	}
+	var isolatedType func(t types.Type, depth int) bool
+	isolatedType = func(t types.Type, depth int) bool {
+		if depth > 16 {
+			return false
+		}
+		switch u := t.Underlying().(type) {
+		case *types.Basic:
+			return u.Kind() != types.Invalid && u.Kind() != types.UnsafePointer
+		case *types.Array:
+			return isolatedType(u.Elem(), depth+1)
+		case *types.Struct:
+			for i := 0; i < u.NumFields(); i++ {
+				if !isolatedType(u.Field(i).Type(), depth+1) {
+					return false
+				}
+			}
+			return true
+		default:
+			return false
+		}
+	}
+	var walk func(x ast.Expr) bool
+	walk = func(x ast.Expr) bool {
+		ok := true
+		ast.Inspect(x, func(n ast.Node) bool {
+			if !ok {
+				return false
+			}
+			switch nn := n.(type) {
+			case *ast.UnaryExpr:
+				if nn.Op == token.ARROW {
+					ok = false
+					return false
+				}
+			case *ast.FuncLit:
+				// A stored func value never runs: the only place it
+				// lands is the poisoned var. Its body is not walked.
+				return false
+			case *ast.CallExpr:
+				if tv, isConv := e.info.Types[nn.Fun]; isConv && tv.IsType() {
+					// Conversion: walk the operand, skip the type expr.
+					for _, a := range nn.Args {
+						if !walk(a) {
+							ok = false
+						}
+					}
+					return false
+				}
+				sel, isSel := nn.Fun.(*ast.SelectorExpr)
+				if !isSel {
+					ok = false
+					return false
+				}
+				base, isIdent := sel.X.(*ast.Ident)
+				if !isIdent {
+					ok = false
+					return false
+				}
+				pkgName, isPkg := e.info.Uses[base].(*types.PkgName)
+				if !isPkg || e.isSourcePackage(pkgName.Imported()) {
+					ok = false
+					return false
+				}
+				if _, isFn := e.info.Uses[sel.Sel].(*types.Func); !isFn {
+					ok = false
+					return false
+				}
+				for _, a := range nn.Args {
+					if !pureArg(a) || !isolatedType(e.goTypeOf(a), 0) {
+						ok = false
+						return false
+					}
+				}
+				return false // args vetted above; don't re-walk
+			}
+			return true
+		})
+		return ok
+	}
+	return walk(rhs)
+}
+
 // collectCalledFuncs walks a wire subtree recording every function NAME it
 // references — "func" is the one key carrying callee/func-value identities
 // (call, func-value, method-call nodes). Conservative on purpose: a
@@ -746,13 +1010,24 @@ func checkInitQuarantine(funcs, methods []any) error {
 }
 
 // globalAddr returns the wire address node for a package-level variable,
-// when it has a seeded cell.
-func (e *emitter) globalAddr(v *types.Var) (any, bool) {
+// when it has a seeded cell. The error return is H-11's poison: a
+// QUARANTINED global (initializer does not lower) refuses EVERY
+// reference — read, write, address-of — naming the variable, at this
+// single choke point (every reference shape resolves through here).
+// In a function or method body the refusal lands as the standing H-3
+// per-declaration quarantine; in init code (another initializer, an
+// init() body) it refuses the whole export, or cascades the
+// quarantine when the referencing initializer is itself eligible.
+func (e *emitter) globalAddr(v *types.Var) (any, bool, error) {
+	if reason, bad := e.quarantinedGlobals[v]; bad {
+		return nil, false, unsup("references quarantined package-level variable %s (its initializer does not lower: %s) — the cell is zero-seeded but poisoned, every reference fails closed (H-11)",
+			e.globalWireName(v), reason)
+	}
 	gid, ok := e.globalVars[v]
 	if !ok {
-		return nil, false
+		return nil, false, nil
 	}
-	return map[string]any{"expr": "globaladdr", "gid": gid}, true
+	return map[string]any{"expr": "globaladdr", "gid": gid}, true, nil
 }
 
 // isPackageVar classifies an object as a package-level variable of THIS
@@ -794,6 +1069,14 @@ func (e *emitter) synthesizePkgInit() (map[string]any, error) {
 	for i, u := range e.units {
 		stmts := make([]ast.Stmt, 0, len(u.info.InitOrder))
 		for _, ini := range u.info.InitOrder {
+			// H-11: a quarantined initializer is SKIPPED — its vars'
+			// cells stay zero-seeded and poisoned (globalAddr), so
+			// $pkginit must not attempt the emission that already
+			// failed the dry-run. The recv scan below ranges over the
+			// KEPT initializers only, matching what actually emits.
+			if e.quarantinedInits[ini.Rhs] {
+				continue
+			}
 			as, ok := e.globalInitStmt[ini.Rhs]
 			if !ok {
 				return nil, unsup("package-level initializer with no declaration site")
@@ -2516,7 +2799,10 @@ func (e *emitter) emitAssignTarget(l ast.Expr, define bool) (any, error) {
 			obj = e.info.Defs[id]
 		}
 		if v, ok := e.isPackageVar(obj); ok {
-			ga, ok := e.globalAddr(v)
+			ga, ok, gaErr := e.globalAddr(v)
+			if gaErr != nil {
+				return nil, gaErr
+			}
 			if !ok {
 				return nil, unsup("package-level variable %s has no seeded cell", id.Name)
 			}
@@ -2535,7 +2821,10 @@ func (e *emitter) emitAssignTarget(l ast.Expr, define bool) (any, error) {
 				return nil, unsup("assignment to qualified non-variable %s.%s",
 					pkgName.Imported().Path(), sel.Sel.Name)
 			}
-			ga, ok := e.globalAddr(v)
+			ga, ok, gaErr := e.globalAddr(v)
+			if gaErr != nil {
+				return nil, gaErr
+			}
 			if !ok {
 				return nil, unsup("imported package-level variable %s.%s has no seeded cell",
 					pkgName.Imported().Path(), sel.Sel.Name)
@@ -5143,7 +5432,10 @@ func (e *emitter) emitAddressOf(x ast.Expr) (any, error) {
 		// aliasing through the pointer observes the same cell as direct
 		// reads (pinned by init/global-addr-taken).
 		if v, ok := e.isPackageVar(e.info.Uses[ex]); ok {
-			ga, ok := e.globalAddr(v)
+			ga, ok, gaErr := e.globalAddr(v)
+			if gaErr != nil {
+				return nil, gaErr
+			}
 			if !ok {
 				return nil, unsup("package-level variable %s has no seeded cell", ex.Name)
 			}
@@ -5160,7 +5452,10 @@ func (e *emitter) emitAddressOf(x ast.Expr) (any, error) {
 				return nil, unsup("address of qualified non-variable %s.%s",
 					pkgName.Imported().Path(), ex.Sel.Name)
 			}
-			ga, ok := e.globalAddr(v)
+			ga, ok, gaErr := e.globalAddr(v)
+			if gaErr != nil {
+				return nil, gaErr
+			}
 			if !ok {
 				return nil, unsup("imported package-level variable %s.%s has no seeded cell",
 					pkgName.Imported().Path(), ex.Sel.Name)
@@ -5269,7 +5564,10 @@ func (e *emitter) emitLValue(x ast.Expr) (any, error) {
 		// Package-level variables assign through their cell address
 		// (init slice), like every other addressed location.
 		if v, ok := e.isPackageVar(e.info.Uses[id]); ok {
-			ga, ok := e.globalAddr(v)
+			ga, ok, gaErr := e.globalAddr(v)
+			if gaErr != nil {
+				return nil, gaErr
+			}
 			if !ok {
 				return nil, unsup("package-level variable %s has no seeded cell", id.Name)
 			}
@@ -5836,7 +6134,10 @@ func (e *emitter) emitIdent(id *ast.Ident) (any, error) {
 		// docs/2026-08-05_init-design.md §2). No frame-environment cell
 		// exists for it, so a missing gid fails closed at the boundary.
 		if v, ok := e.isPackageVar(obj); ok {
-			ga, ok := e.globalAddr(v)
+			ga, ok, gaErr := e.globalAddr(v)
+			if gaErr != nil {
+				return nil, gaErr
+			}
 			if !ok {
 				return nil, unsup("package-level variable %s has no seeded cell", id.Name)
 			}
@@ -6697,7 +6998,10 @@ func (e *emitter) emitQualifiedSelector(sel *ast.SelectorExpr, pkgName *types.Pk
 	case *types.Var:
 		// A package-level variable reads as a typed load from its
 		// driver-seeded cell, exactly like a local global (init slice).
-		ga, ok := e.globalAddr(obj)
+		ga, ok, gaErr := e.globalAddr(obj)
+		if gaErr != nil {
+			return nil, gaErr
+		}
 		if !ok {
 			return nil, unsup("imported package-level variable %s.%s has no seeded cell",
 				pkgName.Imported().Path(), sel.Sel.Name)

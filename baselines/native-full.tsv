@@ -1,16 +1,29 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-20 (raft W4.0 item 2 — errors.New as an E5 stdlib
-#   shim, G-2/H-10; commit: this commit, on the raft-w4 lane)
-#   re-pin reason: 13 NEW ids and nothing else (zero movement on the
-#   2229 pre-existing ids), the errors.New conformance suites landed in
-#   the same commit-group as the shim (predicted flips stated pre-run,
-#   docs/raft-w4-log.md item 2; reds witnessed pre-shim):
-#     NEW/PASS (13): errors/new-conformance/{fresh-not-eq,self-eq,
-#       nilness,readback,cross-impl,assert-ok},
-#       errors/new-sentinel/{identity,distinct,classify,readback},
-#       multipkg/errors-new/{identity-across,distinct-across,
-#       text-across}
-#   counts: 2242 cases, 2111 PASS / 131 FAIL (was 2229, 2098/131)
+# recorded: 2026-08-20 (raft W4.0 item 3 — H-11, per-declaration
+#   quarantine for package-level vars; commit: this commit, raft-w4)
+#   re-pin reason: 8 NEW ids + 1 explained flip, zero other movement
+#   on the 2242 pre-existing ids (predicted flips + the two-row
+#   refutation record: docs/raft-w4-log.md item 3):
+#     NEW/PASS (1): init/quarantined-var/siblings — healthy siblings
+#       beside a quarantined var now export and run
+#     NEW/FAIL frontend-export, BY DESIGN (7):
+#       init/quarantined-var/{read,cascade,write,addr,multi} — every
+#       reference shape refuses naming the var (a PASS flip here means
+#       the poison broke and the cell answered a silent zero);
+#       init/quarantined-var-callee/sibling (C3 whole-export refusal
+#       preserved for source-call initializers);
+#       init/quarantined-var-impure/counter (effectful lowerable
+#       subexpression keeps the whole-export refusal)
+#     FLIP FAIL/frontend-export -> PASS (1):
+#       spec-examples-decl/compile-only-forms — its package-level
+#       `var _ = genericFn[T]` rows are pure, effect-isolated,
+#       blank-target initializers, now skipped; machine and go AGREE
+#       (gc evaluates a generic func value with no observable effect).
+#       Unpredicted, investigated, kept — see the log's refutation
+#       record, which also covers generic-type-switch (a real pre-pass
+#       ordering defect the first full run caught; fixed pre-landing
+#       by registerGenericDecls, no baseline movement).
+#   counts: 2250 cases, 2113 PASS / 137 FAIL (was 2242, 2111/131)
 #   frontend: native (tools/nativefrontend + NativeToIR)
 # columns: result<TAB>id<TAB>stage
 result	id	stage
@@ -1151,6 +1164,14 @@ PASS	init/multiple-init-order	-
 PASS	init/package-init-order	-
 PASS	init/quarantined-init-dep	-
 PASS	init/quarantined-init-iface	-
+FAIL	init/quarantined-var-callee/sibling	frontend-export
+FAIL	init/quarantined-var-impure/counter	frontend-export
+FAIL	init/quarantined-var/addr	frontend-export
+FAIL	init/quarantined-var/cascade	frontend-export
+FAIL	init/quarantined-var/multi	frontend-export
+FAIL	init/quarantined-var/read	frontend-export
+PASS	init/quarantined-var/siblings	-
+FAIL	init/quarantined-var/write	frontend-export
 PASS	init/spec-dependency-example	-
 PASS	init/var-init-sequence	-
 PASS	interfaces/acked-indexer/hit	-
@@ -1800,7 +1821,7 @@ PASS	spec-examples-decl/assign-tuple-order/index-then-var	-
 PASS	spec-examples-decl/assign-tuple-order/panic-nil-field	-
 PASS	spec-examples-decl/assign-tuple-order/panic-second-target	-
 FAIL	spec-examples-decl/assign-tuple-order/range-assign	frontend-export
-FAIL	spec-examples-decl/compile-only-forms	frontend-export
+PASS	spec-examples-decl/compile-only-forms	-
 PASS	spec-examples-decl/composite-literal-elision	-
 PASS	spec-examples-decl/composite-literal-pointer	-
 PASS	spec-examples-decl/const-complex/typed	-

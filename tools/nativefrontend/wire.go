@@ -229,6 +229,19 @@ type emitter struct {
 	globalVars     map[*types.Var]int
 	globalDefs     []any
 	globalInitStmt map[ast.Expr]*ast.AssignStmt
+
+	// H-11 (raft W4.0): per-declaration quarantine for package-level
+	// vars whose initializer does not lower. The var KEEPS its
+	// type-carrying globals entry (gid density, zero-seeding) but its
+	// initializer is SKIPPED by $pkginit (`quarantinedInits`, keyed by
+	// the initializer's RHS like globalInitStmt) and EVERY reference —
+	// read, write, address-of, qualified or not — refuses at the
+	// globalAddr choke point naming the var, so the zero in the cell is
+	// unreachable, never a silent answer. Populated by
+	// quarantineUnlowerableGlobals (the dry-run pre-pass) BEFORE any
+	// function body is emitted.
+	quarantinedGlobals map[*types.Var]string
+	quarantinedInits   map[ast.Expr]bool
 }
 
 // noteInterface records an interface type for the `interface` TypeDef pass.

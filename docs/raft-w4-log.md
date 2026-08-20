@@ -129,4 +129,93 @@ confirms 13/13 PASS against the go oracle. Baseline re-pinned same-commit.
 suite (the E5 pattern's "the corpus is the shim's conformance suite") — every
 future run re-validates the shim against real `errors.New` through `go run`.
 
-## Item 3 — H-11, package-level var quarantine — pending
+## Item 3 — H-11, package-level var quarantine
+
+**The mechanism** (all frontend; no wire-schema, decoder, or GoCore change):
+
+1. **A dry-run pre-pass** (`quarantineUnlowerableGlobals`, emit.go) emits
+   every package-level initializer once, in program initialization order,
+   BEFORE any function body — with ALL side effects rolled back (the H-3
+   rollback set: lifted, local types, iface methods, named structs,
+   deferNoop, the mono journal). The only question asked is "does it lower".
+2. An initializer that fails with an UNSUPPORTED refusal AND is
+   **effect-isolated** (below) quarantines its declared vars: reason
+   recorded per `*types.Var`, initializer marked skipped. Any other failure
+   keeps today's whole-export refusal.
+3. **The poison lives at the single choke point** every reference shape
+   resolves through — `globalAddr` (reads, writes, address-of, qualified
+   `pkg.V` included; its signature now returns an error and all 7 call
+   sites propagate). A function body referencing a quarantined var refuses
+   emission and lands as an H-3 per-declaration stub NAMING THE VAR; the
+   runtime stop is the standing `frontend-quarantined:` refusal (stage
+   `frontend-export`). Init code referencing one refuses the whole export —
+   except another initializer, which fails its own dry-run through the
+   poison and CASCADES (its RHS is a pure read — eligible), reason chained.
+   InitOrder guarantees the dependency direction, so the cascade is one
+   pass.
+4. **The cell is never dropped and never silently zero**: the var keeps its
+   typed globals entry (gid density, driver zero-seeding untouched), and
+   the poison makes the zero unreachable — no emitted body can contain a
+   reference. `$pkginit` skips exactly the quarantined initializers (and
+   its recv scan ranges over the kept ones).
+
+**Effect-isolation, the eligibility predicate** (`initializerEffectIsolated`)
+— sound direction false = refuse the export: no receives anywhere; every
+call is a type conversion or a direct `pkg.Fn(...)` into a NON-source
+package (a body the machine does not model in any case) whose arguments are
+effect-free syntax (no calls/receives/`&`/func-literals) of value-isolated
+static type (basics, arrays/structs of basics); method calls, builtins, and
+source-package calls all refuse. **Why this makes the skip sound:** an
+eligible initializer's lowerable parts cannot touch modeled state, so after
+the skip the machine differs from Go only in the poisoned cells, which
+nothing can read. Residual, recorded: a skipped initializer that would
+PANIC (or print) under Go diverges VISIBLY in the differential (machine ok
+vs go panic/output) — never silently. The transitive shape (`var x =
+quarantinedSourceFn()`) is deliberately OUT of v1: the initializer lowers,
+so the dry-run never fails on it, and the standing C3 rule
+(`checkInitQuarantine`) keeps refusing the whole export — widening that owes
+a fresh effect argument (the callee's lowerable parts have modeled effects).
+
+**Guardrails (landed first, reds witnessed pre-fix — all three suites were
+whole-export refusals):**
+
+| suite | rows | post-fix (predicted and focused-run confirmed) |
+|---|---|---|
+| `init/quarantined-var` | siblings + read, cascade, write, addr, multi (one os.Getenv var, a cascade dependent, two healthy siblings, a two-var os.LookupEnv, a blank `var _`) | `siblings` PASS; the 5 reference-shape rows FAIL `frontend-export` BY DESIGN (frontend-quarantined naming the var — a silent-zero regression would flip them, which is the pin's point) |
+| `init/quarantined-var-callee` | sibling | stays whole-export red (C3 preserved) |
+| `init/quarantined-var-impure` | counter (source-call argument: `os.Getenv(bump())`, bump mutates a modeled global) | stays whole-export red (not effect-isolated) |
+
+os.Getenv/os.LookupEnv are the unlowerable initializers of choice because
+ambient-environment reads can never gain a faithful shim — the rows won't
+change meaning when other stdlib surface lands.
+
+**Predicted flips for the full differential (stated before the run):** exactly
+the 8 NEW ids (1 PASS, 7 FAIL/frontend-export as above), zero movement on the
+2242 pre-existing ids (the dry-run rolls back everything; all-healthy packages
+emit byte-identical wires — golden pins are the check). Baseline re-pinned
+same-commit.
+
+**The first full run REFUTED that prediction by two rows — both investigated
+before landing, honesty over tidiness:**
+
+- `spec-examples-decl/generic-type-switch` PASS→FAIL — **a real defect in the
+  first H-11 cut, caught by the full run and fixed in this commit.** The
+  dry-run ran before the FuncDecl loop, which was where generic declarations
+  registered (`genericFuncDecls`/`recordGenericMethod`), so an initializer
+  instantiating a generic (`var v1 = f[string]("foo")`) failed its dry-run
+  with "generic function f has no declaration in this package" — ineligible
+  (a call) — whole-export refusal. Fix: `registerGenericDecls`, a dedicated
+  pre-scan before the pre-pass; the FuncDecl loop now only SKIPS generic
+  declarations (`recordGenericMethod` appends, so re-registering would
+  duplicate method stencils). Post-fix the whole `spec-examples-decl/generic*`
+  and `generics/` slices reproduce their baseline exactly.
+- `spec-examples-decl/compile-only-forms` FAIL→PASS — **an unpredicted but
+  correct consequence of the blank-var skip, kept.** The case's package-level
+  `var _ = satTildeInt[int]` rows (generic func VALUES, unlowerable) used to
+  refuse the whole export; they are pure, effect-isolated, blank-target
+  initializers, so H-11 skips them — faithfully: gc evaluates a generic func
+  value with no observable effect, so machine and go AGREE (the PASS is a
+  true differential agreement, not a masked skip). Noted honestly: the case's
+  green no longer witnesses that the frontend can EMIT those forms — the
+  generic-func-value feature itself stays red where it is load-bearing
+  (`generics/` reds unchanged).
