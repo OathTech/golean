@@ -81,12 +81,26 @@ const errorsNewShimTypeName = "goleanShimErrorString"
 // first helper's name.
 const fmtShimBundleKey = "goleanShimFmtUint"
 
+// The W4.1 item-4 smalls (docs/raft-w41-log.md item 4): strings.Join
+// (H-17) and bytes.Equal (H-13) as ordinary E5 direct-call shims, and
+// binary.LittleEndian.{Uint64,PutUint64} (H-14) as PACKAGE-VARIABLE
+// METHOD desugars (the callee is a method on the exported var
+// `binary.LittleEndian` of an unexported type, so the plain selector
+// path cannot name it; fmtdesugar.go's emitBinaryVarMethodCall
+// rewrites the two modeled methods to the shims below and every other
+// member keeps failing closed).
+const stringsJoinShimName = "goleanShimStringsJoin"
+const bytesEqualShimName = "goleanShimBytesEqual"
+const binaryLEUint64ShimName = "goleanShimLEUint64"
+const binaryLEPutUint64ShimName = "goleanShimLEPutUint64"
+
 // stdlibShimAllowlist: package import path -> selector name -> shim
 // declaration name (the KEY declaration; a shim may inject more, see
 // stdlibShimDeclNames).
 var stdlibShimAllowlist = map[string]map[string]string{
-	"strings": {"Fields": stringsFieldsShimName},
+	"strings": {"Fields": stringsFieldsShimName, "Join": stringsJoinShimName},
 	"errors":  {"New": errorsNewShimName},
+	"bytes":   {"Equal": bytesEqualShimName},
 }
 
 // stdlibDesugarInject: package import path -> selector names whose
@@ -102,6 +116,19 @@ var stdlibDesugarInject = map[string]map[string][]string{
 	},
 }
 
+// stdlibVarMethodInject: package import path -> exported package
+// VARIABLE -> method -> shims to inject when the two-level call shape
+// `pkg.Var.Method(args)` occurs (fmtdesugar.go,
+// emitBinaryVarMethodCall).
+var stdlibVarMethodInject = map[string]map[string]map[string][]string{
+	"encoding/binary": {
+		"LittleEndian": {
+			"Uint64":    {binaryLEUint64ShimName},
+			"PutUint64": {binaryLEPutUint64ShimName},
+		},
+	},
+}
+
 // stdlibShimDeclNames: every RESERVED top-level name a shim injects,
 // keyed by the shim's key declaration name. The collision check ranges
 // over all of them — a user declaration matching ANY injected name
@@ -114,6 +141,10 @@ var stdlibShimDeclNames = map[string][]string{
 	fmtShimBundleKey: {fmtShimBundleKey, "goleanShimFmtInt", "goleanShimFmtHex",
 		"goleanShimFmtBool", "goleanShimFmtQuoteBytes", "goleanShimFmtRender",
 		"goleanShimFmtError", "goleanShimFmtPanicValue"},
+	stringsJoinShimName:       {stringsJoinShimName},
+	bytesEqualShimName:        {bytesEqualShimName},
+	binaryLEUint64ShimName:    {binaryLEUint64ShimName},
+	binaryLEPutUint64ShimName: {binaryLEPutUint64ShimName},
 }
 
 // stdlibShimSources: shim declaration name -> Go source of the
@@ -377,6 +408,82 @@ func goleanShimFmtPanicValue(r any) string {
 	panic("golean fmt shim: a String/Error method panicked with a value kind outside the modeled subset (fail closed)")
 }
 `,
+
+	// strings.Join: "concatenates the elements of its first argument to
+	// create a single string. The separator string sep is placed between
+	// elements in the resulting string." Plain concatenation is
+	// byte-identical to upstream's Builder-based body (same elements,
+	// same separators, in order); the conformance rows
+	// (strings/join-conformance) pin it against the real one.
+	stringsJoinShimName: `
+// goleanShimStringsJoin is the native frontend's strings.Join shim
+// (extension E5, raft W4.1 item 4). Injected declaration — not user
+// code.
+func goleanShimStringsJoin(elems []string, sep string) string {
+	if len(elems) == 0 {
+		return ""
+	}
+	out := elems[0]
+	for i := 1; i < len(elems); i++ {
+		out += sep
+		out += elems[i]
+	}
+	return out
+}
+`,
+
+	// bytes.Equal: "reports whether a and b are the same length and
+	// contain the same bytes. A nil argument is equivalent to an empty
+	// slice." Length-then-bytes gives exactly that (nil and empty both
+	// have length 0); bytes/equal-conformance pins nil==empty TRUE.
+	bytesEqualShimName: `
+// goleanShimBytesEqual is the native frontend's bytes.Equal shim
+// (extension E5, raft W4.1 item 4). Injected declaration — not user
+// code.
+func goleanShimBytesEqual(a, b []byte) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := 0; i < len(a); i++ {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+`,
+
+	// binary.LittleEndian.Uint64/PutUint64: encoding/binary's own
+	// bodies modulo names, including the leading bounds check whose
+	// early out-of-range panic is part of the contract
+	// (binary/little-endian/short-read pins it).
+	binaryLEUint64ShimName: `
+// goleanShimLEUint64 is the native frontend's
+// binary.LittleEndian.Uint64 shim (raft W4.1 item 4). Injected
+// declaration — not user code.
+func goleanShimLEUint64(b []byte) uint64 {
+	_ = b[7] // bounds check (upstream's early panic shape)
+	return uint64(b[0]) | uint64(b[1])<<8 | uint64(b[2])<<16 | uint64(b[3])<<24 |
+		uint64(b[4])<<32 | uint64(b[5])<<40 | uint64(b[6])<<48 | uint64(b[7])<<56
+}
+`,
+
+	binaryLEPutUint64ShimName: `
+// goleanShimLEPutUint64 is the native frontend's
+// binary.LittleEndian.PutUint64 shim (raft W4.1 item 4). Injected
+// declaration — not user code.
+func goleanShimLEPutUint64(b []byte, v uint64) {
+	_ = b[7] // bounds check (upstream's early panic shape)
+	b[0] = byte(v)
+	b[1] = byte(v >> 8)
+	b[2] = byte(v >> 16)
+	b[3] = byte(v >> 24)
+	b[4] = byte(v >> 32)
+	b[5] = byte(v >> 40)
+	b[6] = byte(v >> 48)
+	b[7] = byte(v >> 56)
+}
+`,
 }
 
 // injectStdlibShims scans the parsed (pre-type-check) files for
@@ -393,14 +500,25 @@ func injectStdlibShims(fset *token.FileSet, files []*ast.File) (*ast.File, error
 	for _, f := range files {
 		local := map[string]map[string]string{}
 		localDesugar := map[string]map[string][]string{}
+		localVarMethods := map[string]map[string]map[string][]string{}
 		for _, imp := range f.Imports {
 			path := importPathOf(imp)
 			fns, isShim := stdlibShimAllowlist[path]
 			desugar, isDesugar := stdlibDesugarInject[path]
-			if !isShim && !isDesugar {
+			varMethods, isVarMethod := stdlibVarMethodInject[path]
+			if !isShim && !isDesugar && !isVarMethod {
 				continue
 			}
+			// The default local name is the path's LAST SEGMENT (the
+			// stdlib convention; exact for every listed package —
+			// "encoding/binary" binds `binary`). A package whose name
+			// diverged from its last segment would make this scan miss
+			// — which fails CLOSED: no injection, and the emitter's
+			// "shim not injected" refusal names the gap.
 			name := path
+			if i := lastSlash(path); i >= 0 {
+				name = path[i+1:]
+			}
 			if imp.Name != nil {
 				name = imp.Name.Name
 			}
@@ -415,8 +533,11 @@ func injectStdlibShims(fset *token.FileSet, files []*ast.File) (*ast.File, error
 			if isDesugar {
 				localDesugar[name] = desugar
 			}
+			if isVarMethod {
+				localVarMethods[name] = varMethods
+			}
 		}
-		if len(local) == 0 && len(localDesugar) == 0 {
+		if len(local) == 0 && len(localDesugar) == 0 && len(localVarMethods) == 0 {
 			continue
 		}
 		ast.Inspect(f, func(n ast.Node) bool {
@@ -441,6 +562,39 @@ func injectStdlibShims(fset *token.FileSet, files []*ast.File) (*ast.File, error
 				for _, shim := range desugar[sel.Sel.Name] {
 					needed[shim] = true
 				}
+			}
+			return true
+		})
+		// The two-level package-VARIABLE method shape
+		// (`binary.LittleEndian.Uint64(x)`): the callee's base is
+		// itself a selector, so the ident scan above cannot see it.
+		ast.Inspect(f, func(n ast.Node) bool {
+			call, ok := n.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+			sel, ok := call.Fun.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
+			sel2, ok := sel.X.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
+			x2, ok := sel2.X.(*ast.Ident)
+			if !ok {
+				return true
+			}
+			vars, ok := localVarMethods[x2.Name]
+			if !ok {
+				return true
+			}
+			methods, ok := vars[sel2.Sel.Name]
+			if !ok {
+				return true
+			}
+			for _, shim := range methods[sel.Sel.Name] {
+				needed[shim] = true
 			}
 			return true
 		})
@@ -497,6 +651,15 @@ func injectStdlibShims(fset *token.FileSet, files []*ast.File) (*ast.File, error
 		return nil, fmt.Errorf("internal: stdlib shim source failed to parse: %w", err)
 	}
 	return shimFile, nil
+}
+
+func lastSlash(s string) int {
+	for i := len(s) - 1; i >= 0; i-- {
+		if s[i] == '/' {
+			return i
+		}
+	}
+	return -1
 }
 
 func importPathOf(imp *ast.ImportSpec) string {

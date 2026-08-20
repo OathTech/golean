@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+# H-13 guardrails (raft W4.1 item 4): bytes.Equal as an E5 shim. Red at
+# frontend-export until the shim lands; green after.
+basic	bytesEqualBasic	-	ok	-	stdlib,bytes,slices,equality
+nil-empty	bytesEqualNilEmpty	-	ok	-	stdlib,bytes,slices,equality,nil
+step-shape	bytesEqualStepShape	-	ok	-	stdlib,bytes,slices,equality,append
