@@ -5455,13 +5455,13 @@ bounds argument is per committed clause, membership-generalized). -/
 theorem applySelect_wf {σ : ExecState}
     {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
-    {σ' : ExecState} {ch ch' : Choices}
+    {σ' : ExecState} {ch ch' : Choices} {cl? : Option EvClause}
     (hw : StateWf σ) (hcl : selectClausesSup clauses ≤ σ.nextAddr)
     (hd : optStmtSup default? ≤ σ.nextAddr)
     (hvs : goValueListSup vs ≤ σ.nextAddr)
     (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (hk : Cont.locSup k ≤ σ.nextAddr)
-    (h : applySelect σ clauses default? vs env k ch = .ok (c', σ', ch')) :
+    (h : applySelect σ clauses default? vs env k ch = .ok (c', σ', ch', cl?)) :
     StateWf σ' ∧ Config.locSup c' ≤ σ'.nextAddr ∧ σ'.types = σ.types
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
   rw [applySelect.eq_def] at h
@@ -5484,14 +5484,14 @@ theorem applySelect_wf {σ : ExecState}
       exact Nat.le_trans (evClausesSup_mem hmem') hevsb
     exact commitClause_wf hw hcb henv hk hcom
   split at h
-  · -- outc = .done c₂ σ₂: no pick was consumed
-    rename_i c₂ σ₂
+  · -- outc = .done c₂ σ₂ clq: no pick was consumed
+    rename_i c₂ σ₂ clq
     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
     split at hcore
     · split at hcore <;>
         (simp only [pure_eq_ok, Except.ok.injEq, SelectOutcome.done.injEq] at hcore;
-         obtain ⟨rfl, rfl⟩ := hcore)
+         obtain ⟨rfl, rfl, rfl⟩ := hcore)
       · rename_i d
         refine ⟨hw, ?_, rfl, Nat.le_refl _⟩
         simp only [optStmtSup] at hd
@@ -5504,7 +5504,7 @@ theorem applySelect_wf {σ : ExecState}
       simp only [bind_eq_ok] at hcore
       obtain ⟨⟨c₃, σ₃⟩, hcom, hcore⟩ := hcore
       simp only [pure_eq_ok, Except.ok.injEq, SelectOutcome.done.injEq] at hcore
-      obtain ⟨rfl, rfl⟩ := hcore
+      obtain ⟨rfl, rfl, rfl⟩ := hcore
       exact hcommit c (List.mem_cons_self ..) hcom
     · simp only [bind_eq_ok] at hcore
       obtain ⟨commits, hcommits, hcore⟩ := hcore
@@ -5513,9 +5513,9 @@ theorem applySelect_wf {σ : ExecState}
   · -- outc = .picks commits: the L2 pick indexes the pre-committed list
     rename_i commits
     split at h
-    · rename_i r₂c r₂σ hget
+    · rename_i clp r₂c r₂σ hget
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
       split at hcore
       · split at hcore <;>
           (simp only [pure_eq_ok, Except.ok.injEq] at hcore; cases hcore)
@@ -5538,7 +5538,7 @@ theorem applySelect_wf {σ : ExecState}
     · -- defensive `.inr` (unreachable today): the picked panic as a
       -- `.panicking` configuration over the input state
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
       refine ⟨hw, ?_, rfl, Nat.le_refl _⟩
       simp only [Config.locSup, panicChainSup, runtimeErrorValue_locSup,
         Nat.max_le]
@@ -5728,8 +5728,9 @@ theorem commitClause_itersNormalized {σ : ExecState} {env : LocalEnv}
 theorem applySelect_itersNormalized {σ : ExecState}
     {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
-    {σ' : ExecState} {ch ch' : Choices} {types : TypeEnv}
-    (h : applySelect σ clauses default? vs env k ch = .ok (c', σ', ch'))
+    {σ' : ExecState} {ch ch' : Choices} {cl? : Option EvClause}
+    {types : TypeEnv}
+    (h : applySelect σ clauses default? vs env k ch = .ok (c', σ', ch', cl?))
     (hk : Cont.itersNormalized types k = true) :
     Config.itersNormalized types c' = true := by
   rw [applySelect.eq_def] at h
@@ -5740,19 +5741,19 @@ theorem applySelect_itersNormalized {σ : ExecState}
   obtain ⟨evs, hevs, hcore⟩ := hcore
   obtain ⟨rc, hrc, hcore⟩ := hcore
   split at h
-  · -- outc = .done c₂ σ₂
-    rename_i c₂ σ₂
+  · -- outc = .done c₂ σ₂ clq
+    rename_i c₂ σ₂ clq
     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
     split at hcore
     · split at hcore <;>
         (simp only [pure_eq_ok, Except.ok.injEq, SelectOutcome.done.injEq] at hcore;
-         obtain ⟨rfl, rfl⟩ := hcore;
+         obtain ⟨rfl, rfl, rfl⟩ := hcore;
          simpa [Config.itersNormalized] using hk)
     · simp only [bind_eq_ok] at hcore
       obtain ⟨⟨c₃, σ₃⟩, hcom, hcore⟩ := hcore
       simp only [pure_eq_ok, Except.ok.injEq, SelectOutcome.done.injEq] at hcore
-      obtain ⟨rfl, rfl⟩ := hcore
+      obtain ⟨rfl, rfl, rfl⟩ := hcore
       exact commitClause_itersNormalized hcom hk
     · simp only [bind_eq_ok] at hcore
       obtain ⟨commits, hcommits, hcore⟩ := hcore
@@ -5761,9 +5762,9 @@ theorem applySelect_itersNormalized {σ : ExecState}
   · -- outc = .picks commits
     rename_i commits
     split at h
-    · rename_i r₂c r₂σ hget
+    · rename_i clp r₂c r₂σ hget
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
       split at hcore
       · split at hcore <;>
           (simp only [pure_eq_ok, Except.ok.injEq] at hcore; cases hcore)
@@ -5785,7 +5786,7 @@ theorem applySelect_itersNormalized {σ : ExecState}
         exact commitClause_itersNormalized hcom hk
     · -- defensive `.inr`: the panicking configuration forwards `k`
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
       simpa [Config.itersNormalized] using hk
     · simp [throw, throwThe, MonadExceptOf.throw] at h
 
@@ -6404,7 +6405,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, evClausesSup,
       Nat.max_le] at hc ⊢
     omega
-  case selectApply clauses default? done v env k ch ch' happly =>
+  case selectApply clauses default? done v env k ch ch' cl? happly =>
     have hcomp : selectClausesSup clauses ≤ σ.nextAddr
         ∧ optStmtSup default? ≤ σ.nextAddr
         ∧ goValueListSup (v :: done).reverse ≤ σ.nextAddr

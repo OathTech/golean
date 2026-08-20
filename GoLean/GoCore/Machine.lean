@@ -2661,13 +2661,16 @@ Shared by rule `Step.selectApply` (which quantifies the stream — the
 the stream-free `applySelectCore` below (`applySelect` adds only the
 L2 consumption). -/
 inductive SelectOutcome where
-  /-- No pick consumed: default taken, park, or a singleton-ready
-  commit. -/
-  | done (c : Config) (σ : ExecState)
+  /-- No pick consumed: default taken, park (`committed? = none`), or
+  a singleton-ready commit (`committed? = some` the clause — Q2: the
+  commit identity is EMITTED by the apply, so the step event and the
+  detector never re-derive it from the readiness analysis). -/
+  | done (c : Config) (σ : ExecState) (committed? : Option EvClause)
   /-- Multi-ready (≥ 2): the PRE-COMMITTED result of every ready
-  clause, clause order, for the L2 pick — `.inl` a committed
-  configuration, `.inr` a panic message. -/
-  | picks (commits : List (Sum (Config × ExecState) String))
+  clause, clause order, for the L2 pick — each paired with ITS clause
+  (Q2's emitted commit identity) — `.inl` a committed configuration,
+  `.inr` a panic message. -/
+  | picks (commits : List (EvClause × Sum (Config × ExecState) String))
 
 /-- The stream-FREE core of `applySelect` (the `applyStmtOpCore`
 precedent: choices-obliviousness of apply-SUCCESS is true by
@@ -2695,38 +2698,44 @@ def applySelectCore (s : ExecState)
   match ← readyClauses s evs with
   | [] =>
       match default? with
-      | some d => return .done (.exec d env k) s
-      | none => return .done (.blockedSelect evs env k) s
+      | some d => return .done (.exec d env k) s none
+      | none => return .done (.blockedSelect evs env k) s none
   | [c] => do
       let (c', s') ← commitClause s env k c
-      return .done c' s'
+      return .done c' s' (some c)
   | ready => do
       let commits ← ready.mapM fun cl =>
         (match commitClause s env k cl with
-        | .ok r => .ok (.inl r)
-        | .error (.panic msg) => .ok (.inr msg)
+        | .ok r => .ok (cl, .inl r)
+        | .error (.panic msg) => .ok (cl, .inr msg)
         | .error e => .error e :
-          Except GoError (Sum (Config × ExecState) String))
+          Except GoError (EvClause × Sum (Config × ExecState) String))
       return .picks commits
 
 @[inherit_doc applySelectCore]
 def applySelect (s : ExecState) (clauses : List (SelectClauseHead × Stmt))
     (default? : Option Stmt) (vs : List GoValue) (env : LocalEnv) (k : Cont)
-    (ch : Choices) : Except GoError (Config × ExecState × Choices) := do
+    (ch : Choices) :
+    Except GoError (Config × ExecState × Choices × Option EvClause) := do
+  -- The 4th component is Q2's emitted commit identity (`none` =
+  -- default taken or parked): the sequential `stepFn` arm PROJECTS it
+  -- away; the pool's select interception (`stepThread`) carries it
+  -- into the step event so the race detector folds it instead of
+  -- replaying the readiness analysis and the stream.
   match ← applySelectCore s clauses default? vs env k with
-  | .done c' s' => return (c', s', ch)
+  | .done c' s' cl? => return (c', s', ch, cl?)
   | .picks commits =>
       -- THE L2 CONSUMPTION (envelope statement in the docstring
       -- above): bound = the ready-clause count, ≥ 2 by construction
       -- (`.picks` arises only from a multi-ready analysis).
       let (idx, ch') := Choices.consumeAt .l2Entry commits.length ch
       match commits[idx]? with
-      | some (.inl (c', s')) => return (c', s', ch')
-      | some (.inr msg) =>
+      | some (cl, .inl (c', s')) => return (c', s', ch', some cl)
+      | some (cl, .inr msg) =>
           -- Defensive arm (unreachable today — docstring above): the
           -- picked clause's panic becomes a `.panicking` configuration
           -- with the pick CONSUMED, exactly like the `.inl` route.
-          return (.panicking [⟨runtimeErrorValue msg, false⟩] k, s, ch')
+          return (.panicking [⟨runtimeErrorValue msg, false⟩] k, s, ch', some cl)
       | none => throw (.internal "select ready-clause pick out of range")
 
 /-! ## The step relation -/
@@ -3363,8 +3372,11 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   -- multi-ready readiness draws the L2 clause pick from it (slice 4 —
   -- the envelope statement is `applySelect`'s docstring), so any
   -- ready clause's commit is a legal step.
-  | selectApply {clauses default? done v c' env k s s' ch ch'} :
-      applySelect s clauses default? (v :: done).reverse env k ch = .ok (c', s', ch') →
+  | selectApply {clauses default? done v c' env k s s' ch ch' cl?} :
+      -- The rule quantifies the stream AND the apply's emitted commit
+      -- identity (Q2's 4th component — instrumentation, not semantics;
+      -- the successor configuration is what the rule relates).
+      applySelect s clauses default? (v :: done).reverse env k ch = .ok (c', s', ch', cl?) →
       Step (.retV v (.selectOpsK clauses default? done [] env k)) s c' s'
   | selectApplyPanic {clauses default? done v msg env k s ch} :
       applySelect s clauses default? (v :: done).reverse env k ch = .error (.panic msg) →

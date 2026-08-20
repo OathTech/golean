@@ -284,6 +284,63 @@ theorem Choices.consumeAt_of_lt {site : ChoiceSite} {bound : Nat}
     Choices.consumeAt site bound ch = ch.consume bound := by
   simp [Choices.consumeAt, Nat.not_le_of_lt hb]
 
+/-- One labeled consumption: which site drew, at what bound, which
+slot (W3.2 slice 1 stage B — the Q2 step-event channel's atom). The
+labeled trace is what a future `Fair : Choices → Prop` quantifies over
+and what the membership enumerator's width metadata rides on. -/
+structure PickRecord where
+  site  : ChoiceSite
+  bound : Nat
+  pick  : Nat
+  deriving Repr, BEq
+
+/-- `Choices.consumeAt` with its pick RECORD emitted (Q2): the record
+list is `[]` exactly when the consultation consumed nothing (a guarded
+site at bound ≤ 1), else the singleton labeled pick — emitted BY the
+consuming site, never reconstructed from the stream. -/
+def Choices.consumeAtE (site : ChoiceSite) (bound : Nat) (ch : Choices) :
+    Nat × Choices × List PickRecord :=
+  let (p, ch') := Choices.consumeAt site bound ch
+  if bound ≤ 1 ∧ !site.policy.consumeAtOne then (p, ch', [])
+  else (p, ch', [⟨site, bound, p⟩])
+
+/-- The record-emitting form projects onto `consumeAt` (the two can
+never disagree on pick or stream). -/
+theorem Choices.consumeAtE_fst_snd {site : ChoiceSite} {bound : Nat}
+    {ch : Choices} :
+    ((Choices.consumeAtE site bound ch).1,
+      (Choices.consumeAtE site bound ch).2.1)
+      = Choices.consumeAt site bound ch := by
+  simp only [Choices.consumeAtE]
+  split <;> rfl
+
+/-- An always-popping site's record-emitting consultation, in raw-pop
+terms (the proof layer's working shape at `l2Arrival`-class sites). -/
+theorem Choices.consumeAtE_pop {site : ChoiceSite} {bound : Nat}
+    {ch : Choices} (h : site.policy.consumeAtOne = true) :
+    Choices.consumeAtE site bound ch
+      = ((ch.consume bound).1, (ch.consume bound).2,
+         [⟨site, bound, (ch.consume bound).1⟩]) := by
+  simp [Choices.consumeAtE, Choices.consumeAt, h]
+
+/-- A guarded site's bound-≤-1 record-emitting consultation consumes
+nothing and records nothing. -/
+theorem Choices.consumeAtE_le_one {site : ChoiceSite} {bound : Nat}
+    {ch : Choices} (hb : bound ≤ 1)
+    (h : site.policy.consumeAtOne = false) :
+    Choices.consumeAtE site bound ch = (0, ch, []) := by
+  simp [Choices.consumeAtE, Choices.consumeAt, hb, h]
+
+/-- A guarded site's bound-≥-2 record-emitting consultation is the raw
+pop plus its record. -/
+theorem Choices.consumeAtE_of_lt {site : ChoiceSite} {bound : Nat}
+    {ch : Choices} (hb : 1 < bound) :
+    Choices.consumeAtE site bound ch
+      = ((ch.consume bound).1, (ch.consume bound).2,
+         [⟨site, bound, (ch.consume bound).1⟩]) := by
+  have hnb : ¬ bound ≤ 1 := Nat.not_le_of_lt hb
+  simp [Choices.consumeAtE, Choices.consumeAt, hnb]
+
 def ExecState.freshLoc (state : ExecState) : Loc × ExecState :=
   let loc := Loc.base { id := state.nextAddr }
   (loc, { state with nextAddr := state.nextAddr + 1 })

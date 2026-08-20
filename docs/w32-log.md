@@ -181,3 +181,96 @@ judgment calls recorded as they are made; checkpoints every ≤5 units.
   lane no regression, **baseline diff FULL 2226/2226, no regression —
   the predicted ZERO drift, confirmed**. Log:
   `artifacts/w32-s1A-ci.log` (untracked). Cap 24G honored.
+
+## Slice 1 stage B — Q2, the step-event channel (behavior-identical, 2026-08-20)
+
+- Base: `8e1c7b12` (stage A), tree clean. G0-ruled rider only — NO new
+  scheduling points (G1 pending); acceptance = the existing baseline
+  holding exactly, race verdicts included (the racy/negative lanes).
+- Mechanism: `PickRecord` + `Choices.consumeAtE` (State.lean — the
+  labeled consumption atom, emitted BY the site); `StepAction` +
+  `StepEvent` (Multi.lean); `stepThread`/`stepThreadInto`/`stepMulti`
+  return the step's event; `arrivalPlan` returns its L2 pick record;
+  **`raceUpdate` is now a FOLD over the event** — signature
+  `sPre tsPre ev m' r`, NO stream argument — dispatching on
+  spawned/woke/paired/selectCommit/selectPass/opDoneStrip/privateStep.
+- Deleted (audit O-2's kill list): `wokenPartner` (pre/post pool
+  diffing — the partner now arrives in `.paired`); the detector's
+  THREE-way stream replication (the L1 replay, the `arrivalCases`+
+  L2-arrival replay, the `applySelect` L2-entry replay + its
+  `readyClauses` re-derivation — the committed clause now arrives in
+  `.selectCommit`); `raceUpdate_oblivious` + `poolThreadOblivious_sel`
+  (MultiStreams — the detector takes no stream, so verdict
+  stream-independence holds BY SIGNATURE; net −88 lines in that file).
+  `enumPoolRun`/`poolStepDFS` (CLI) fold events too — the enumerator's
+  detector replication concern dies with the machine's.
+- THE SELECT INTERCEPTION: `SelectOutcome`/`applySelect` now EMIT the
+  committed clause (`.done` carries `committed? : Option EvClause`;
+  `.picks` pairs each pre-commit with its clause); the sequential
+  `stepFn` arm projects it away (behavior byte-identical); the pool's
+  cell path intercepts the select-apply shape (`selectApplyPlan`, the
+  `spawnPlan` extraction mold) and calls the SAME `applySelect` —
+  one consuming definition, the identity kept only where the event
+  needs it.
+- SCOPE DEVIATION from the boundary note §3, recorded: the note's
+  `stepFn : … × List PickRecord` reshape is NOT taken this stage. The
+  sequential proof surface pins stepFn's 3-tuple in hundreds of
+  statements (MachineSound's correspondence, StepKit's ~200-use-site
+  kit, ~40 gallery example files, the Sym mirror's transcription) —
+  re-stating it is far beyond this stage's re-proof budget (the
+  brief's ~a-day stop rule), and NO stage-B consumer needs apply-layer
+  picks: the detector gets the commit identity from `applySelect`'s
+  emitted component, fairness quantifies SCHEDULING picks (all
+  pool-layer, in `StepEvent.picks`: l1Sched/l2Arrival/l4Waiter; C/D
+  add postOp/backEdge), and the enumerator's widths ride `stepNeeds`.
+  `StepEvent.picks` therefore carries pool-layer consumption only;
+  apply-layer data picks (mapIter/appendSpill/l2Entry) are not in the
+  event stream. Re-open trigger (docstring'd at `StepEvent`): a
+  consumer needing the full labeled sequential trace (e.g. S6a's rule
+  labels) — then the stepFn reshape lands with its own budget.
+  Second recorded residual: `raceWakeEvent`'s blockedSelect arm still
+  re-derives `resumeThread`'s deterministic head-commit from the cell
+  (shape-derived, stream-free, lockstep-by-construction; would fold
+  too if `resumeThread` ever emits its commit identity — kept out of
+  scope because `resumeThread` appears in `StepM.wake`'s premise, so
+  its signature is relation-statement surface).
+- Relation: `Step.selectApply` quantifies the emitted identity
+  existentially (instrumentation, not semantics — the rule relates
+  configurations exactly as before); `StepM` otherwise untouched.
+- Proofs re-aligned, ALL green (no stopped pieces): MachineSound
+  (select realization/completeness arms over the 4-tuple), StateWf
+  (`applySelect_wf`/`_itersNormalized` + the Step case), MultiSound
+  (arrivalPlan lemmas carry records; `stepThread_single`/
+  `stepMulti_single` become ∃-event forms; `stepThreadInto_sound`/
+  `stepMulti_sound` gain the interception case via
+  `Step.selectApply/Panic`; `stepM_complete` realizes through the
+  interception with `stepFn_selectApply_inv`, the new bridge;
+  `execProg_single_eq_execStmt` re-proved — sequential conservation
+  holds verbatim), MultiWfSound (`stepThread_wf` gains the
+  interception case via `applySelect_wf`), MultiStreams
+  (`stepThread_oblivious` STRENGTHENED: same successor AND same event
+  under every stream — what replaces the deleted detector-oblivious
+  lemma in `stepAllBranchesOk_sound`; checker + unfold/mono/le chain
+  event-threaded), proofs/: Frame/ChanSync (SelectOutSim/PickRel over
+  the clause-carrying payloads), Frame/StepSim (select arm), Audit
+  (deletion anchors updated). NPDRF: untouched (statement-level,
+  relation-only). Sym mirror: NO re-transcription needed (stepFn's
+  signature unchanged; the select arm's re-text is outside the spike
+  fragment's gated arms — concurrency arms still quit `.q7Concurrency`,
+  obligations unwidened, default build green).
+- Census docs: CLI accountant inventory + latitude-inventory §0
+  detector sentences updated (raceUpdate consumes/replays NOTHING).
+- Gates: `GOLEAN_MEM_MAX=24G scripts/ci --slow` — **PASS**: core build
+  warning-free, proofs + Audit gate ok, eval tests 136 ok (incl. the
+  two sentinel pins re-stated over the event triple), differential +
+  negative lanes, **baseline diff FULL 2226/2226, no regression — the
+  predicted ZERO drift, confirmed; race verdicts unchanged** (the
+  membership rows' enumerated sets stable, incl. both tier=slow rows
+  re-certified under --slow: google-search enumerated=6,
+  rwmutex-order enumerated=2). Logs: `artifacts/w32-s1B-ci2.log`
+  (--slow PASS), `artifacts/w32-s1B-ci3.log` (fast re-run at the
+  exact final tree after a docstring-only follow-up). Cap 24G honored
+  (raft-w4 lane concurrent).
+- CHECKPOINT slice-1-B: stages A+B landed; the machine is tagged and
+  evented, behavior-identical; stages C/D (the observable-set changes)
+  remain gated on Mike's G1 ruling on the boundary-set note §8.
