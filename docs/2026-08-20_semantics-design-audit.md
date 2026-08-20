@@ -505,3 +505,19 @@ note; no runtime change owes a differential), `GOLEAN_MEM_MAX=24G`
 slice 1 (Q1/Q2 recommended, Q3 staged before, Q7 opportunistic), what
 is owned by later slices (Q10→5, Q11→4), and whether Q6 lands before
 S6a. No code moves until then.
+
+## §11 G0 RULING (2026-08-20, Mike): as recommended
+
+- Q1 (tagged choice sites) + Q2 (step-event channel): RIDE SLICE 1.
+- Q3 (field bundling) + Q4 (Cont traversal/recover dedup): precede or
+  defer at the operator's discretion; Q3 lands with slice 4's
+  mapIterK respin.
+- Q6 (signal unification): DEFERRED past slice 1 — re-decided at the
+  opsem gate (slice 6a's readability criterion is the forcing
+  function).
+- Q11 (entry-identity stamps): routed as input to slice 4's E9 ruling.
+- NEW (Mike, same ruling): a SECOND PL-nitpicker review runs once all
+  the surgery is done — post-slice-5, pre-opsem-write-up: it grades
+  the surgery's outcome against this audit's findings, supplies the
+  Q6 evidence, and its verdict feeds the opsem document's structure.
+  Added to the charter's slice-6a entry criteria.
