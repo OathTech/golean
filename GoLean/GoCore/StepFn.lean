@@ -457,9 +457,12 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
                 (.selectOpsK clauses default? (v :: done) rest env k'), s, choices)
           | [] =>
               -- The stream threads through the apply: multi-ready
-              -- readiness consumes the L2 clause pick (slice 4).
+              -- readiness consumes the L2 clause pick (slice 4). The
+              -- SEQUENTIAL step projects away the emitted commit
+              -- identity (Q2) — the pool's select interception in
+              -- `stepThread` is its consumer.
               match applySelect s clauses default? (v :: done).reverse env k' choices with
-              | .ok (c', s', choices') => return (c', s', choices')
+              | .ok (c', s', choices', _) => return (c', s', choices')
               | .error (.panic msg) =>
                   return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
               | .error err => throw err

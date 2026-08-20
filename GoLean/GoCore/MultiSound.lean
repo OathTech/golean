@@ -102,7 +102,7 @@ theorem arrivalCases_singleton {s : ExecState} {c c' : Config} :
 
 @[inherit_doc chanArrivalPlan_singleton]
 theorem arrivalPlan_singleton {s : ExecState} {c c' : Config} {ch : Choices} :
-    arrivalPlan s #[c] 0 c' ch = .ok (none, ch) := by
+    arrivalPlan s #[c] 0 c' ch = .ok (none, ch, []) := by
   unfold arrivalPlan
   rw [show arrivalCases s #[c] 0 c' = .ok .cellPath from arrivalCases_singleton]
   rfl
@@ -113,7 +113,7 @@ the consuming wrapper the executable calls). -/
 theorem arrivalPlan_of_cellPath {s : ExecState} {threads : Array Config}
     {i : Nat} {c : Config} {ch : Choices}
     (h : arrivalCases s threads i c = .ok .cellPath) :
-    arrivalPlan s threads i c ch = .ok (none, ch) := by
+    arrivalPlan s threads i c ch = .ok (none, ch, []) := by
   unfold arrivalPlan
   rw [h]
   rfl
@@ -122,7 +122,7 @@ theorem arrivalPlan_of_cellPath {s : ExecState} {threads : Array Config}
 theorem arrivalPlan_of_single {s : ExecState} {threads : Array Config}
     {i : Nat} {c bc : Config} {cs : List (Nat × PairTarget)} {ch : Choices}
     (h : arrivalCases s threads i c = .ok (.single bc cs)) :
-    arrivalPlan s threads i c ch = .ok (some (.pair bc cs), ch) := by
+    arrivalPlan s threads i c ch = .ok (some (.pair bc cs), ch, []) := by
   unfold arrivalPlan
   rw [h]
   rfl
@@ -144,17 +144,17 @@ theorem arrivalPlan_of_multi {s : ExecState} {threads : Array Config}
     (hcons : Choices.consume ch os.length = (sel, ch₁)) :
     arrivalPlan s threads i c ch
       = (match os[sel]? with
-        | some o => .ok (some o, ch₁)
+        | some o => .ok (some o, ch₁, [⟨.l2Arrival, os.length, sel⟩])
         | none => .error (.internal "select L2 ready pick out of range")) := by
   unfold arrivalPlan
   rw [h]
   show (do
-    let (idx, ch') := Choices.consumeAt .l2Arrival os.length ch
+    let (idx, ch', ps) := Choices.consumeAtE .l2Arrival os.length ch
     match os[idx]? with
-    | some o => pure ((some o : Option ArrivalOutcome), ch')
+    | some o => pure ((some o : Option ArrivalOutcome), ch', ps)
     | none => throw (.internal "select L2 ready pick out of range")
-    : Except GoError (Option ArrivalOutcome × Choices)) = _
-  rw [Choices.consumeAt_l2Arrival, hcons]
+    : Except GoError (Option ArrivalOutcome × Choices × List PickRecord)) = _
+  rw [Choices.consumeAtE_pop rfl, hcons]
   dsimp only
   cases os[sel]? <;> rfl
 
@@ -167,27 +167,116 @@ theorem spawnedCont_stepFn_internal {c : Config} {σ : ExecState}
   match c, h with
   | .spawned k', _ => rfl
 
-/-- The one-thread `stepThread` is `stepFn`, results re-wrapped (the
-arrival plan is a pure no-op with no other goroutines —
-`arrivalPlan_singleton`; the post-spawn marker is excluded — its pool
-strip has no sequential counterpart). -/
+/-- A `selectApplyPlan` extraction pins the configuration's shape (the
+`spawnedCont_shape` mold). -/
+theorem selectApplyPlan_shape {c : Config} {v : GoValue}
+    {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt}
+    {done : List GoValue} {env : LocalEnv} {k' : Cont}
+    (h : selectApplyPlan c = some (v, clauses, default?, done, env, k')) :
+    c = .retV v (.selectOpsK clauses default? done [] env k') := by
+  match c, h with
+  | .retV v' (.selectOpsK cl' d' dn' [] env' k''), h =>
+      simp only [selectApplyPlan, Option.some.injEq] at h
+      obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ := h
+      rfl
+
+/-- `stepFn`'s select-apply arm, inverted: a successful sequential
+step at the apply position is `applySelect`'s success (with SOME
+emitted commit identity, which the arm projects away) or its
+defensive panic wrapping. The bridge the conservation and
+completeness proofs cross at the pool's select interception. -/
+theorem stepFn_selectApply_inv {σ : ExecState} {v : GoValue}
+    {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt}
+    {done : List GoValue} {env : LocalEnv} {k' : Cont}
+    {ch : Choices} {c' : Config} {σ' : ExecState} {ch' : Choices}
+    (h : stepFn σ (.retV v (.selectOpsK clauses default? done [] env k')) ch
+      = .ok (c', σ', ch')) :
+    (∃ cl?, applySelect σ clauses default? ((v :: done).reverse) env k' ch
+        = .ok (c', σ', ch', cl?))
+      ∨ (∃ msg, applySelect σ clauses default? ((v :: done).reverse) env k' ch
+          = .error (.panic msg)
+          ∧ c' = .panicking [⟨runtimeErrorValue msg, false⟩] k'
+          ∧ σ' = σ ∧ ch' = ch) := by
+  unfold stepFn at h
+  dsimp only at h
+  cases happ : applySelect σ clauses default? ((v :: done).reverse) env k' ch with
+  | ok r =>
+      obtain ⟨c₂, s₂, ch₂, cl₂⟩ := r
+      rw [happ] at h
+      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      exact .inl ⟨cl₂, rfl⟩
+  | error e =>
+      rw [happ] at h
+      cases e <;>
+        simp only [throw, throwThe, MonadExceptOf.throw, pure_eq_ok,
+          Except.ok.injEq, Prod.mk.injEq, reduceCtorEq] at h
+      case panic msg =>
+        obtain ⟨rfl, rfl, rfl⟩ := h
+        exact .inr ⟨msg, rfl, rfl, rfl, rfl⟩
+
+/-- The one-thread `stepThread` is `stepFn`, results re-wrapped with a
+step event attached (the arrival plan is a pure no-op with no other
+goroutines — `arrivalPlan_singleton`; the post-spawn marker is
+excluded — its pool strip has no sequential counterpart; the select
+interception path lands on `stepFn`'s own result — one consuming
+definition, `applySelect`, whose commit identity the sequential arm
+projects away). -/
 theorem stepThread_single {σ : ExecState} {c : Config} {ch : Choices}
     (hbl : isBlockedConfig c = false) (hsc : spawnedCont c = none)
     (hsp : spawnPlan c = none) :
-    stepThread σ #[c] 0 ch
-      = (stepFn σ c ch).map (fun r => (#[r.1], r.2.1, r.2.2)) := by
+    ∃ ev, stepThread σ #[c] 0 ch
+      = (stepFn σ c ch).map (fun r => (#[r.1], r.2.1, r.2.2, ev)) := by
   unfold stepThread
   have h0 : (#[c] : Array Config)[0]? = some c := rfl
   rw [h0]
   simp only [hbl, Bool.false_eq_true, reduceIte, hsc, hsp]
-  rw [show arrivalPlan σ #[c] 0 c ch = .ok (none, ch)
+  rw [show arrivalPlan σ #[c] 0 c ch = .ok (none, ch, [])
     from arrivalPlan_singleton]
   simp only [Bind.bind, Except.bind]
-  cases hstep : stepFn σ c ch with
-  | error e => rfl
-  | ok r =>
-      obtain ⟨c', s', ch₁⟩ := r
-      simp [Functor.map, Except.map]
+  cases hselp : selectApplyPlan c with
+  | none =>
+      refine ⟨⟨0, .privateStep, []⟩, ?_⟩
+      cases hstep : stepFn σ c ch with
+      | error e => rfl
+      | ok r =>
+          obtain ⟨c', s', ch₁⟩ := r
+          simp [Functor.map, Except.map]
+  | some p =>
+      obtain ⟨v, clauses, default?, done, env, k'⟩ := p
+      obtain rfl := selectApplyPlan_shape hselp
+      dsimp only
+      cases happly : applySelect σ clauses default?
+          ((v :: done).reverse) env k' ch with
+      | ok r =>
+          obtain ⟨c', s', ch₂, cl?⟩ := r
+          have hfn : stepFn σ
+              (.retV v (.selectOpsK clauses default? done [] env k')) ch
+              = .ok (c', s', ch₂) := by
+            unfold stepFn
+            dsimp only
+            rw [happly]
+            rfl
+          refine ⟨⟨0, match cl? with
+            | some cl => .selectCommit cl
+            | none => .selectPass, []⟩, ?_⟩
+          rw [hfn]
+          simp only [Functor.map, Except.map]
+          cases cl? <;> rfl
+      | error e =>
+          have hfn : stepFn σ
+              (.retV v (.selectOpsK clauses default? done [] env k')) ch
+              = (match e with
+                 | .panic msg =>
+                     .ok (.panicking [⟨runtimeErrorValue msg, false⟩] k', σ, ch)
+                 | e => .error e) := by
+            unfold stepFn
+            dsimp only
+            simp only [happly]
+            cases e <;> rfl
+          refine ⟨⟨0, .selectPass, []⟩, ?_⟩
+          rw [hfn]
+          cases e <;> first | rfl | simp [Functor.map, Except.map]
 
 theorem runnableIdxs_singleton {σ : ExecState} {c : Config}
     (h : threadRunnable σ c = true) :
@@ -201,15 +290,17 @@ theorem stepMulti_single {σ : ExecState} {c : Config} {ch : Choices}
     (hbl : isBlockedConfig c = false) (hsc : spawnedCont c = none)
     (hsp : spawnPlan c = none)
     (hdone : threadDone c = false) :
-    stepMulti ⟨#[c], σ, 0⟩ ch
-      = (stepFn σ c ch).map (fun r => (⟨#[r.1], r.2.1, 0⟩, r.2.2)) := by
+    ∃ ev, stepMulti ⟨#[c], σ, 0⟩ ch
+      = (stepFn σ c ch).map (fun r => (⟨#[r.1], r.2.1, 0⟩, r.2.2, ev)) := by
   have hrun : threadRunnable σ c = true := by
     simp [threadRunnable, hdone, hbl]
+  obtain ⟨ev, hst⟩ := stepThread_single (σ := σ) (ch := ch) hbl hsc hsp
+  refine ⟨ev, ?_⟩
   have hinto : stepThreadInto ⟨#[c], σ, 0⟩ 0 ch
-      = (stepFn σ c ch).map (fun r => (⟨#[r.1], r.2.1, 0⟩, r.2.2)) := by
+      = (stepFn σ c ch).map (fun r => (⟨#[r.1], r.2.1, 0⟩, r.2.2, ev)) := by
     unfold stepThreadInto
     show (stepThread σ #[c] 0 ch).bind _ = _
-    rw [stepThread_single hbl hsc hsp]
+    rw [hst]
     cases stepFn σ c ch <;>
       simp [Bind.bind, Except.bind, Functor.map, Except.map]
   unfold stepMulti
@@ -218,7 +309,17 @@ theorem stepMulti_single {σ : ExecState} {c : Config} {ch : Choices}
   by_cases hb : Config.atBoundary c = true
   · simp only [hb, reduceIte]
     rw [show runnableIdxs σ #[c] = [0] from runnableIdxs_singleton hrun]
-    exact hinto
+    dsimp only
+    rw [show Choices.consumeAtE .l1Sched [0].length ch = (0, ch, [])
+      from Choices.consumeAtE_le_one (by simp) rfl]
+    simp only [List.getElem?_cons_zero]
+    simp only [Bind.bind, Except.bind]
+    rw [hinto]
+    cases hstep : stepFn σ c ch with
+    | error e => simp [Except.map]
+    | ok r =>
+        obtain ⟨c', s', ch₂⟩ := r
+        simp [Except.map]
   · simp only [Bool.not_eq_true] at hb
     simp only [hb, Bool.false_eq_true, reduceIte]
     exact hinto
@@ -274,8 +375,8 @@ def transferable : Except GoError (ExecOutcome × Choices) → Prop
 itself. The conservation proof's detector hinge — sequential runs
 thread the `RaceState` through untouched. -/
 theorem raceUpdate_single {σ : ExecState} {ts : Array Config} {c : Config}
-    {σ' : ExecState} {i : Nat} {ch : Choices} {rs : RaceState} :
-    raceUpdate σ ts ch ⟨#[c], σ', i⟩ rs = .ok rs := by
+    {σ' : ExecState} {i : Nat} {ev : StepEvent} {rs : RaceState} :
+    raceUpdate σ ts ev ⟨#[c], σ', i⟩ rs = .ok rs := by
   simp [raceUpdate]
 
 /-- The singleton-pool projections of a mid-run (non-terminal,
@@ -383,7 +484,8 @@ theorem execProgLoop_single :
               subst hr
               cases e <;> simp_all [transferable]
       | none =>
-          have hmulti := stepMulti_single (σ := σ) (ch := ch) hb hsc hsp hd
+          obtain ⟨ev, hmulti⟩ :=
+            stepMulti_single (σ := σ) (ch := ch) hb hsc hsp hd
           cases hstep : stepFn σ c ch with
           | error e =>
               rw [hstep] at hr
@@ -450,17 +552,17 @@ theorem schedPick_cur {m : MultiConfig} {c : Config}
 legal scheduler pick). Case-for-case with `stepThread`'s arms: wake,
 spawn, arrival pairing, partnerless step. -/
 theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
-    {m' : MultiConfig} (hsched : schedPick m i)
-    (h : stepThreadInto m i ch = .ok (m', ch')) : StepM m m' := by
+    {m' : MultiConfig} {ev : StepEvent} (hsched : schedPick m i)
+    (h : stepThreadInto m i ch = .ok (m', ch', ev)) : StepM m m' := by
   unfold stepThreadInto at h
   simp only [Bind.bind, Except.bind] at h
   cases hst : stepThread m.shared m.threads i ch with
   | error e => rw [hst] at h; cases h
   | ok r =>
-    obtain ⟨ts, s', chX⟩ := r
+    obtain ⟨ts, s', chX, evX⟩ := r
     rw [hst] at h
     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl, rfl⟩ := h
     unfold stepThread at hst
     cases hti : m.threads[i]? with
     | none => rw [hti] at hst; cases hst
@@ -475,7 +577,7 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
           obtain ⟨c', s₂⟩ := r₂
           rw [hres] at hst
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
-          obtain ⟨rfl, rfl, rfl⟩ := hst
+          obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
           exact StepM.wake hsched hti hbl hres
       · simp only [Bool.not_eq_true] at hbl
         simp only [hbl, Bool.false_eq_true, reduceIte] at hst
@@ -484,7 +586,7 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
           -- The post-spawn marker STRIP (BUG-040).
           rw [hsc] at hst
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
-          obtain ⟨rfl, rfl, rfl⟩ := hst
+          obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
           have hcfg : c = .spawned kk := by
             cases c <;> simp_all [spawnedCont]
           subst hcfg
@@ -502,7 +604,7 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
             obtain ⟨parent', child, s₂⟩ := r₂
             rw [hspawn] at hst
             simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
-            obtain ⟨rfl, rfl, rfl⟩ := hst
+            obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
             have hplanNone : arrivalCases m.shared m.threads i c
                 = .ok .cellPath := by
               match c, hsp with
@@ -525,31 +627,72 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
             | cellPath =>
               rw [arrivalPlan_of_cellPath hac] at hst
               simp only [Bind.bind, Except.bind] at hst
-              cases hstep : stepFn m.shared c ch with
-              | error e => rw [hstep] at hst; cases hst
-              | ok r₂ =>
-                obtain ⟨c', s₂, ch₂⟩ := r₂
-                rw [hstep] at hst
-                simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
-                obtain ⟨rfl, rfl, rfl⟩ := hst
-                have hts : m.threads.setIfInBounds i c'
-                    = (m.threads.setIfInBounds i c') ++ ([] : List Config).toArray := by
-                  simp
-                rw [hts]
-                exact StepM.thread hsched hti hbl hac
-                  (StepE.lift (stepFn_sound hstep))
+              cases hselp : selectApplyPlan c with
+              | none =>
+                rw [hselp] at hst
+                dsimp only at hst
+                cases hstep : stepFn m.shared c ch with
+                | error e => rw [hstep] at hst; cases hst
+                | ok r₂ =>
+                  obtain ⟨c', s₂, ch₂⟩ := r₂
+                  rw [hstep] at hst
+                  simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
+                  obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
+                  have hts : m.threads.setIfInBounds i c'
+                      = (m.threads.setIfInBounds i c') ++ ([] : List Config).toArray := by
+                    simp
+                  rw [hts]
+                  exact StepM.thread hsched hti hbl hac
+                    (StepE.lift (stepFn_sound hstep))
+              | some p =>
+                -- THE SELECT INTERCEPTION (Q2): the pool ran
+                -- `applySelect` itself; the relation's own select rules
+                -- absorb both outcomes.
+                obtain ⟨v, clauses, default?, done, env, k'⟩ := p
+                obtain rfl := selectApplyPlan_shape hselp
+                rw [hselp] at hst
+                dsimp only at hst
+                cases happly : applySelect m.shared clauses default?
+                    ((v :: done).reverse) env k' ch with
+                | ok r₂ =>
+                  obtain ⟨c', s₂, ch₂, cl?⟩ := r₂
+                  rw [happly] at hst
+                  simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
+                  obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
+                  have hts : m.threads.setIfInBounds i c'
+                      = (m.threads.setIfInBounds i c') ++ ([] : List Config).toArray := by
+                    simp
+                  rw [hts]
+                  exact StepM.thread hsched hti hbl hac
+                    (StepE.lift (Step.selectApply happly))
+                | error e =>
+                  rw [happly] at hst
+                  cases e <;>
+                    simp only [throw, throwThe, MonadExceptOf.throw, pure_eq_ok,
+                      Except.ok.injEq, Prod.mk.injEq, reduceCtorEq] at hst
+                  case panic msg =>
+                  obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
+                  have hts : m.threads.setIfInBounds i
+                        (.panicking [⟨runtimeErrorValue msg, false⟩] k')
+                      = (m.threads.setIfInBounds i
+                          (.panicking [⟨runtimeErrorValue msg, false⟩] k'))
+                        ++ ([] : List Config).toArray := by
+                    simp
+                  rw [hts]
+                  exact StepM.thread hsched hti hbl hac
+                    (StepE.lift (Step.selectApplyPanic happly))
             | single bc cs =>
               rw [arrivalPlan_of_single hac] at hst
               simp only [Bind.bind, Except.bind] at hst
               cases cs with
               | nil => cases hst
               | cons cand rest =>
-                  -- The L4 site (`consumeAt .l4Waiter`): one arm covers
+                  -- The L4 site (`consumeAtE .l4Waiter`): one arm covers
                   -- singleton and multi-candidate plans — the singleton
                   -- non-consumption is the site's policy now.
                   simp only [Bind.bind, Except.bind] at hst
-                  rcases hcons : Choices.consumeAt .l4Waiter
-                      (cand :: rest).length ch with ⟨idx, ch₃⟩
+                  rcases hcons : Choices.consumeAtE .l4Waiter
+                      (cand :: rest).length ch with ⟨idx, ch₃, ps₃⟩
                   rw [hcons] at hst
                   cases hget : (cand :: rest)[idx]? with
                   | none => rw [hget] at hst; cases hst
@@ -562,7 +705,7 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
                       obtain ⟨ts', s₃⟩ := r₃
                       rw [hap] at hst
                       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
-                      obtain ⟨rfl, rfl, rfl⟩ := hst
+                      obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
                       obtain ⟨hlt, hidxeq⟩ := List.getElem?_eq_some_iff.mp hget
                       exact StepM.pair hsched hti hbl hsp hac
                         (idx := idx) hlt (by rw [hidxeq]; exact hap)
@@ -580,8 +723,8 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
                   | nil => cases hst
                   | cons cand rest =>
                       simp only [Bind.bind, Except.bind] at hst
-                      rcases hconsL : Choices.consumeAt .l4Waiter
-                          (cand :: rest).length chL with ⟨idx, ch₃⟩
+                      rcases hconsL : Choices.consumeAtE .l4Waiter
+                          (cand :: rest).length chL with ⟨idx, ch₃, ps₃⟩
                       rw [hconsL] at hst
                       cases hgetL : (cand :: rest)[idx]? with
                       | none => rw [hgetL] at hst; cases hst
@@ -594,7 +737,7 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
                           obtain ⟨ts', s₃⟩ := r₃
                           rw [hap] at hst
                           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
-                          obtain ⟨rfl, rfl, rfl⟩ := hst
+                          obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
                           obtain ⟨hlt, hidxeq⟩ := List.getElem?_eq_some_iff.mp hgetL
                           exact StepM.pickPair hsched hti hbl hsp hac hget
                             (idx := idx) hlt (by rw [hidxeq]; exact hap)
@@ -606,13 +749,14 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
                     obtain ⟨c₃, s₃⟩ := r₃
                     rw [hcom] at hst
                     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
-                    obtain ⟨rfl, rfl, rfl⟩ := hst
+                    obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
                     exact StepM.pickCommit hsched hti hbl hsp hac hget hcom
 
 /-- **Soundness of the pool step**: every `.ok` step of `stepMulti` is a
 step of the pool relation `StepM`. -/
 theorem stepMulti_sound {m : MultiConfig} {ch ch' : Choices}
-    {m' : MultiConfig} (h : stepMulti m ch = .ok (m', ch')) : StepM m m' := by
+    {m' : MultiConfig} {ev : StepEvent}
+    (h : stepMulti m ch = .ok (m', ch', ev)) : StepM m m' := by
   unfold stepMulti at h
   cases hcur : m.threads[m.cur]? with
   | none => rw [hcur] at h; cases h
@@ -624,20 +768,28 @@ theorem stepMulti_sound {m : MultiConfig} {ch ch' : Choices}
       | nil => rw [hrs] at h; cases h
       | cons r0 rest =>
         rw [hrs] at h
-        -- The L1 site (`consumeAt .l1Sched`): one arm covers the sole
+        -- The L1 site (`consumeAtE .l1Sched`): one arm covers the sole
         -- runnable (policy: no pop at bound 1) and the consuming pick.
         dsimp only at h
-        rcases hcons : Choices.consumeAt .l1Sched (r0 :: rest).length ch
-          with ⟨pick, ch₁⟩
+        rcases hcons : Choices.consumeAtE .l1Sched (r0 :: rest).length ch
+          with ⟨pick, ch₁, ps⟩
         rw [hcons] at h
         cases hget : (r0 :: rest)[pick]? with
         | none => rw [hget] at h; cases h
         | some i =>
           rw [hget] at h
-          have hmem : i ∈ runnableIdxs m.shared m.threads := by
-            rw [hrs]
-            exact List.mem_of_getElem? hget
-          exact stepThreadInto_sound (schedPick_of_boundary hcur hb hmem) h
+          simp only [Bind.bind, Except.bind] at h
+          cases hinto : stepThreadInto m i ch₁ with
+          | error e => rw [hinto] at h; cases h
+          | ok r =>
+            obtain ⟨m₂, ch₂, evI⟩ := r
+            rw [hinto] at h
+            simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+            obtain ⟨rfl, rfl, rfl⟩ := h
+            have hmem : i ∈ runnableIdxs m.shared m.threads := by
+              rw [hrs]
+              exact List.mem_of_getElem? hget
+            exact stepThreadInto_sound (schedPick_of_boundary hcur hb hmem) hinto
     · simp only [Bool.not_eq_true] at hb
       simp only [hb, Bool.false_eq_true, reduceIte] at h
       exact stepThreadInto_sound (schedPick_cur hcur hb) h
@@ -685,10 +837,10 @@ theorem spawnedCont_of_blocked {c : Config}
 realization: a legal pick is realized by the scheduler site (consumed
 only at `|runnable| > 1`, the pick index prepended to the stream). -/
 theorem stepMulti_of_inner {m : MultiConfig} {i : Nat} {chI chI' : Choices}
-    {ts : Array Config} {s' : ExecState}
+    {ts : Array Config} {s' : ExecState} {evI : StepEvent}
     (hsched : schedPick m i)
-    (hinner : stepThread m.shared m.threads i chI = .ok (ts, s', chI')) :
-    ∃ ch ch', stepMulti m ch = .ok (⟨ts, s', i⟩, ch') := by
+    (hinner : stepThread m.shared m.threads i chI = .ok (ts, s', chI', evI)) :
+    ∃ ch ch' ev, stepMulti m ch = .ok (⟨ts, s', i⟩, ch', ev) := by
   unfold schedPick at hsched
   cases hcur : m.threads[m.cur]? with
   | none => rw [hcur] at hsched; exact absurd hsched (by simp)
@@ -708,50 +860,56 @@ theorem stepMulti_of_inner {m : MultiConfig} {i : Nat} {chI chI' : Choices}
             rw [hrs] at hsched
             simpa using hsched
           subst hi
-          refine ⟨chI, chI', ?_⟩
-          unfold stepMulti
-          rw [hcur]
-          simp only [hbnd, reduceIte]
-          rw [hrs]
-          dsimp only
-          -- sole runnable: the L1 site's policy consumes nothing
-          rw [show Choices.consumeAt .l1Sched [i].length chI = (0, chI)
-            from Choices.consumeAt_le_one (by simp) rfl]
-          simp only [List.getElem?_cons_zero]
-          unfold stepThreadInto
-          rw [hinner]
-          rfl
+          exact ⟨chI, chI', _, by
+            unfold stepMulti
+            rw [hcur]
+            simp only [hbnd, reduceIte]
+            rw [hrs]
+            dsimp only
+            -- sole runnable: the L1 site's policy consumes nothing
+            rw [show Choices.consumeAtE .l1Sched [i].length chI = (0, chI, [])
+              from Choices.consumeAtE_le_one (by simp) rfl]
+            simp only [List.getElem?_cons_zero]
+            simp only [Bind.bind, Except.bind]
+            unfold stepThreadInto
+            rw [hinner]
+            rfl⟩
         | cons r1 rest' =>
           rw [hrs] at hsched
           obtain ⟨p, hp⟩ := List.getElem?_of_mem hsched
           have hplen : p < (r0 :: r1 :: rest').length :=
             (List.getElem?_eq_some_iff.mp hp).1
-          refine ⟨p :: chI, chI', ?_⟩
-          unfold stepMulti
-          rw [hcur]
-          simp only [hbnd, reduceIte]
-          rw [hrs]
-          dsimp only
-          have hcons : Choices.consumeAt .l1Sched (r0 :: r1 :: rest').length
-              (p :: chI) = (p, chI) := by
-            rw [Choices.consumeAt_of_lt (by simp only [List.length_cons]; omega)]
-            simp only [Choices.consume]
-            congr 1
-            have : max 1 (r0 :: r1 :: rest').length
-                = (r0 :: r1 :: rest').length := by
-              simp only [List.length_cons]
-              omega
-            rw [this]
-            exact Nat.mod_eq_of_lt hplen
-          rw [hcons, hp]
-          dsimp only
-          unfold stepThreadInto
-          rw [hinner]
-          rfl
+          have hcons : Choices.consumeAtE .l1Sched (r0 :: r1 :: rest').length
+              (p :: chI)
+              = (p, chI, [⟨.l1Sched, (r0 :: r1 :: rest').length, p⟩]) := by
+            rw [Choices.consumeAtE_of_lt (by simp only [List.length_cons]; omega)]
+            have hcc : Choices.consume (p :: chI) (r0 :: r1 :: rest').length
+                = (p, chI) := by
+              simp only [Choices.consume]
+              congr 1
+              have : max 1 (r0 :: r1 :: rest').length
+                  = (r0 :: r1 :: rest').length := by
+                simp only [List.length_cons]
+                omega
+              rw [this]
+              exact Nat.mod_eq_of_lt hplen
+            rw [hcc]
+          exact ⟨p :: chI, chI', _, by
+            unfold stepMulti
+            rw [hcur]
+            simp only [hbnd, reduceIte]
+            rw [hrs]
+            dsimp only
+            rw [hcons, hp]
+            dsimp only
+            simp only [Bind.bind, Except.bind]
+            unfold stepThreadInto
+            rw [hinner]
+            rfl⟩
     · simp only [Bool.not_eq_true] at hbnd
       rw [if_neg (by simp [hbnd])] at hsched
       subst hsched
-      refine ⟨chI, chI', ?_⟩
+      refine ⟨chI, chI', evI, ?_⟩
       unfold stepMulti
       rw [hcur]
       simp only [hbnd, Bool.false_eq_true, reduceIte]
@@ -765,13 +923,12 @@ pick encoded in the stream; the goroutine's own step realized through
 the sequential kit's `step_complete`; the pairing path never touches
 `stepFn`, so its stream is exactly the waiter pick). -/
 theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
-    ∃ ch ch', stepMulti m ch = .ok (m', ch') := by
+    ∃ ch ch' ev, stepMulti m ch = .ok (m', ch', ev) := by
   cases h with
   | thread hsched hti hblc hplan hstepE =>
     rename_i i c c' σ' efs
     cases hstepE with
     | lift hstep =>
-      obtain ⟨ch₀, ch₀', hfn⟩ := step_complete hstep
       have hsp : spawnPlan c = none := by
         cases hspq : spawnPlan c with
         | none => rfl
@@ -780,32 +937,83 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
         cases hscq : spawnedCont c with
         | none => rfl
         | some kk => exact absurd hstep (step_spawnedMarker_elim hscq)
-      have hinner : stepThread m.shared m.threads i ch₀
-          = .ok (m.threads.setIfInBounds i c', σ', ch₀') := by
-        unfold stepThread
-        rw [hti]
-        simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp]
-        rw [show arrivalPlan m.shared m.threads i c ch₀ = .ok (none, ch₀)
-          from arrivalPlan_of_cellPath hplan]
-        simp only [Bind.bind, Except.bind]
-        rw [hfn]
-        rfl
+      obtain ⟨ch₀, ch₀', hfn⟩ := step_complete hstep
       have heq : (m.threads.setIfInBounds i c') ++ ([] : List Config).toArray
           = m.threads.setIfInBounds i c' := by
         rw [show (([] : List Config)).toArray = #[] from rfl, Array.append_empty]
       rw [heq]
-      exact stepMulti_of_inner hsched hinner
+      cases hselp : selectApplyPlan c with
+      | none =>
+        have hinner : ∃ evI, stepThread m.shared m.threads i ch₀
+            = .ok (m.threads.setIfInBounds i c', σ', ch₀', evI) :=
+          ⟨_, by
+            unfold stepThread
+            rw [hti]
+            simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp]
+            rw [show arrivalPlan m.shared m.threads i c ch₀ = .ok (none, ch₀, [])
+              from arrivalPlan_of_cellPath hplan]
+            simp only [Bind.bind, Except.bind]
+            rw [hselp]
+            dsimp only
+            rw [hfn]
+            rfl⟩
+        obtain ⟨evI, hinner⟩ := hinner
+        exact stepMulti_of_inner hsched hinner
+      | some p =>
+        -- THE SELECT INTERCEPTION (Q2): realize through the pool's own
+        -- `applySelect` path, inverting `stepFn`'s arm.
+        obtain ⟨v, clauses, default?, done, env, k'⟩ := p
+        have hshape := selectApplyPlan_shape hselp
+        subst hshape
+        rcases stepFn_selectApply_inv hfn with ⟨cl?, happly⟩
+          | ⟨msg, happly, rfl, rfl, -⟩
+        · have hinner : ∃ evI, stepThread m.shared m.threads i ch₀
+              = .ok (m.threads.setIfInBounds i c', σ', ch₀', evI) :=
+            ⟨_, by
+              unfold stepThread
+              rw [hti]
+              simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp]
+              rw [show arrivalPlan m.shared m.threads i
+                    (.retV v (.selectOpsK clauses default? done [] env k')) ch₀
+                  = .ok (none, ch₀, []) from arrivalPlan_of_cellPath hplan]
+              simp only [Bind.bind, Except.bind]
+              rw [hselp]
+              dsimp only
+              rw [happly]
+              rfl⟩
+          obtain ⟨evI, hinner⟩ := hinner
+          exact stepMulti_of_inner hsched hinner
+        · have hinner : ∃ evI, stepThread m.shared m.threads i ch₀
+              = .ok (m.threads.setIfInBounds i
+                    (.panicking [⟨runtimeErrorValue msg, false⟩] k'),
+                  m.shared, ch₀, evI) :=
+            ⟨_, by
+              unfold stepThread
+              rw [hti]
+              simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp]
+              rw [show arrivalPlan m.shared m.threads i
+                    (.retV v (.selectOpsK clauses default? done [] env k')) ch₀
+                  = .ok (none, ch₀, []) from arrivalPlan_of_cellPath hplan]
+              simp only [Bind.bind, Except.bind]
+              rw [hselp]
+              dsimp only
+              rw [happly]
+              rfl⟩
+          obtain ⟨evI, hinner⟩ := hinner
+          exact stepMulti_of_inner hsched hinner
     | spawn hplan' hspawn =>
       rename_i cv args k child
-      have hinner : stepThread m.shared m.threads i []
-          = .ok ((m.threads.setIfInBounds i c').push child, σ', []) := by
-        unfold stepThread
-        rw [hti]
-        simp only [hblc, Bool.false_eq_true, reduceIte,
-          spawnedCont_of_spawnPlan hplan', hplan', Bind.bind,
-          Except.bind]
-        rw [hspawn]
-        rfl
+      have hinner : ∃ evI, stepThread m.shared m.threads i []
+          = .ok ((m.threads.setIfInBounds i c').push child, σ', [], evI) :=
+        ⟨_, by
+          unfold stepThread
+          rw [hti]
+          simp only [hblc, Bool.false_eq_true, reduceIte,
+            spawnedCont_of_spawnPlan hplan', hplan', Bind.bind,
+            Except.bind]
+          rw [hspawn]
+          rfl⟩
+      obtain ⟨evI, hinner⟩ := hinner
       have heq : (m.threads.setIfInBounds i c') ++ ([child] : List Config).toArray
           = (m.threads.setIfInBounds i c').push child := by
         rw [Array.push_eq_append]
@@ -834,33 +1042,30 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
             omega
           subst h0
           exact hap
-        have hinner : stepThread m.shared m.threads i []
-            = .ok (ts', σ'', []) := by
-          unfold stepThread
-          rw [hti]
-          simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, Bind.bind,
-            Except.bind]
-          rw [arrivalPlan_of_single hplan]
-          dsimp only
-          -- singleton candidate: the L4 site's policy consumes nothing
-          rw [show Choices.consumeAt .l4Waiter [cand].length ([] : Choices)
-            = (0, []) from Choices.consumeAt_le_one (by simp) rfl]
-          simp only [List.getElem?_cons_zero]
-          rw [hap']
-          rfl
+        have hinner : ∃ evI, stepThread m.shared m.threads i []
+            = .ok (ts', σ'', [], evI) :=
+          ⟨_, by
+            unfold stepThread
+            rw [hti]
+            simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, Bind.bind,
+              Except.bind]
+            rw [arrivalPlan_of_single hplan]
+            dsimp only
+            -- singleton candidate: the L4 site's policy consumes nothing
+            rw [show Choices.consumeAtE .l4Waiter [cand].length ([] : Choices)
+              = (0, [], []) from Choices.consumeAtE_le_one (by simp) rfl]
+            simp only [List.getElem?_cons_zero]
+            rw [hap']
+            rfl⟩
+        obtain ⟨evI, hinner⟩ := hinner
         exact stepMulti_of_inner hsched hinner
       | cons b rest' =>
-        have hinner : stepThread m.shared m.threads i [idx]
-            = .ok (ts', σ'', []) := by
-          unfold stepThread
-          rw [hti]
-          simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, Bind.bind,
-            Except.bind]
-          rw [arrivalPlan_of_single hplan]
-          dsimp only
-          have hcons : Choices.consumeAt .l4Waiter (cand :: b :: rest').length
-              [idx] = (idx, []) := by
-            rw [Choices.consumeAt_of_lt (by simp only [List.length_cons]; omega)]
+        have hconsL : Choices.consumeAtE .l4Waiter (cand :: b :: rest').length
+            [idx] = (idx, [],
+              [⟨.l4Waiter, (cand :: b :: rest').length, idx⟩]) := by
+          rw [Choices.consumeAtE_of_lt (by simp only [List.length_cons]; omega)]
+          have hcc : Choices.consume [idx] (cand :: b :: rest').length
+              = (idx, []) := by
             simp only [Choices.consume]
             congr 1
             have hmax : max 1 (cand :: b :: rest').length
@@ -869,12 +1074,23 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
               omega
             rw [hmax]
             exact Nat.mod_eq_of_lt hidx
-          rw [hcons]
-          dsimp only
-          rw [List.getElem?_eq_getElem hidx]
-          dsimp only
-          rw [hap]
-          rfl
+          rw [hcc]
+        have hinner : ∃ evI, stepThread m.shared m.threads i [idx]
+            = .ok (ts', σ'', [], evI) :=
+          ⟨_, by
+            unfold stepThread
+            rw [hti]
+            simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, Bind.bind,
+              Except.bind]
+            rw [arrivalPlan_of_single hplan]
+            dsimp only
+            rw [hconsL]
+            dsimp only
+            rw [List.getElem?_eq_getElem hidx]
+            dsimp only
+            rw [hap]
+            rfl⟩
+        obtain ⟨evI, hinner⟩ := hinner
         exact stepMulti_of_inner hsched hinner
   | pickPair hsched hti hblc hsp hplan hget hidx hap =>
     rename_i i c bc σ'' os sel cs idx ts'
@@ -889,6 +1105,12 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
             = .ok .cellPath from rfl] at hplan
           cases hplan
     have hsel : sel < os.length := (List.getElem?_eq_some_iff.mp hget).1
+    have hconsS : Choices.consume [sel] os.length = (sel, []) := by
+      simp only [Choices.consume]
+      congr 1
+      have hmax : max 1 os.length = os.length := by omega
+      rw [hmax]
+      exact Nat.mod_eq_of_lt hsel
     cases cs with
     | nil => exact absurd hidx (by simp)
     | cons cand rest =>
@@ -900,58 +1122,60 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
             omega
           subst h0
           exact hap
-        have hconsS : Choices.consume [sel] os.length = (sel, []) := by
-          simp only [Choices.consume]
-          congr 1
-          have hmax : max 1 os.length = os.length := by omega
-          rw [hmax]
-          exact Nat.mod_eq_of_lt hsel
-        have hinner : stepThread m.shared m.threads i [sel]
-            = .ok (ts', σ'', []) := by
-          unfold stepThread
-          rw [hti]
-          simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, Bind.bind,
-            Except.bind]
-          rw [arrivalPlan_of_multi hplan hconsS, hget]
-          dsimp only
-          rw [show Choices.consumeAt .l4Waiter [cand].length ([] : Choices)
-            = (0, []) from Choices.consumeAt_le_one (by simp) rfl]
-          simp only [List.getElem?_cons_zero]
-          rw [hap']
-          rfl
+        have hinner : ∃ evI, stepThread m.shared m.threads i [sel]
+            = .ok (ts', σ'', [], evI) :=
+          ⟨_, by
+            unfold stepThread
+            rw [hti]
+            simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, Bind.bind,
+              Except.bind]
+            rw [arrivalPlan_of_multi hplan hconsS, hget]
+            dsimp only
+            rw [show Choices.consumeAtE .l4Waiter [cand].length ([] : Choices)
+              = (0, [], []) from Choices.consumeAtE_le_one (by simp) rfl]
+            simp only [List.getElem?_cons_zero]
+            rw [hap']
+            rfl⟩
+        obtain ⟨evI, hinner⟩ := hinner
         exact stepMulti_of_inner hsched hinner
       | cons b rest' =>
-        have hconsS : Choices.consume (sel :: [idx]) os.length = (sel, [idx]) := by
+        have hconsS2 : Choices.consume (sel :: [idx]) os.length = (sel, [idx]) := by
           simp only [Choices.consume]
           congr 1
           have hmax : max 1 os.length = os.length := by omega
           rw [hmax]
           exact Nat.mod_eq_of_lt hsel
-        have hconsL : Choices.consumeAt .l4Waiter (cand :: b :: rest').length
-            [idx] = (idx, []) := by
-          rw [Choices.consumeAt_of_lt (by simp only [List.length_cons]; omega)]
-          simp only [Choices.consume]
-          congr 1
-          have hmax : max 1 (cand :: b :: rest').length
-              = (cand :: b :: rest').length := by
-            simp only [List.length_cons]
-            omega
-          rw [hmax]
-          exact Nat.mod_eq_of_lt hidx
-        have hinner : stepThread m.shared m.threads i (sel :: [idx])
-            = .ok (ts', σ'', []) := by
-          unfold stepThread
-          rw [hti]
-          simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, Bind.bind,
-            Except.bind]
-          rw [arrivalPlan_of_multi hplan hconsS, hget]
-          dsimp only
-          rw [hconsL]
-          dsimp only
-          rw [List.getElem?_eq_getElem hidx]
-          dsimp only
-          rw [hap]
-          rfl
+        have hconsL : Choices.consumeAtE .l4Waiter (cand :: b :: rest').length
+            [idx] = (idx, [],
+              [⟨.l4Waiter, (cand :: b :: rest').length, idx⟩]) := by
+          rw [Choices.consumeAtE_of_lt (by simp only [List.length_cons]; omega)]
+          have hcc : Choices.consume [idx] (cand :: b :: rest').length
+              = (idx, []) := by
+            simp only [Choices.consume]
+            congr 1
+            have hmax : max 1 (cand :: b :: rest').length
+                = (cand :: b :: rest').length := by
+              simp only [List.length_cons]
+              omega
+            rw [hmax]
+            exact Nat.mod_eq_of_lt hidx
+          rw [hcc]
+        have hinner : ∃ evI, stepThread m.shared m.threads i (sel :: [idx])
+            = .ok (ts', σ'', [], evI) :=
+          ⟨_, by
+            unfold stepThread
+            rw [hti]
+            simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, Bind.bind,
+              Except.bind]
+            rw [arrivalPlan_of_multi hplan hconsS2, hget]
+            dsimp only
+            rw [hconsL]
+            dsimp only
+            rw [List.getElem?_eq_getElem hidx]
+            dsimp only
+            rw [hap]
+            rfl⟩
+        obtain ⟨evI, hinner⟩ := hinner
         exact stepMulti_of_inner hsched hinner
   | pickCommit hsched hti hblc hsp hplan hget hcom =>
     rename_i i c cl envc kc os sel c' σ'
@@ -972,34 +1196,40 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
       have hmax : max 1 os.length = os.length := by omega
       rw [hmax]
       exact Nat.mod_eq_of_lt hsel
-    have hinner : stepThread m.shared m.threads i [sel]
-        = .ok (m.threads.setIfInBounds i c', σ', []) := by
-      unfold stepThread
-      rw [hti]
-      simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, Bind.bind,
-        Except.bind]
-      rw [arrivalPlan_of_multi hplan hconsS, hget]
-      dsimp only
-      rw [hcom]
-      rfl
+    have hinner : ∃ evI, stepThread m.shared m.threads i [sel]
+        = .ok (m.threads.setIfInBounds i c', σ', [], evI) :=
+      ⟨_, by
+        unfold stepThread
+        rw [hti]
+        simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, Bind.bind,
+          Except.bind]
+        rw [arrivalPlan_of_multi hplan hconsS, hget]
+        dsimp only
+        rw [hcom]
+        rfl⟩
+    obtain ⟨evI, hinner⟩ := hinner
     exact stepMulti_of_inner hsched hinner
   | wake hsched hti hblc hres =>
     rename_i i c c' σ'
-    have hinner : stepThread m.shared m.threads i []
-        = .ok (m.threads.setIfInBounds i c', σ', []) := by
-      unfold stepThread
-      rw [hti]
-      simp only [hblc, reduceIte, Bind.bind, Except.bind]
-      rw [hres]
-      rfl
+    have hinner : ∃ evI, stepThread m.shared m.threads i []
+        = .ok (m.threads.setIfInBounds i c', σ', [], evI) :=
+      ⟨_, by
+        unfold stepThread
+        rw [hti]
+        simp only [hblc, reduceIte, Bind.bind, Except.bind]
+        rw [hres]
+        rfl⟩
+    obtain ⟨evI, hinner⟩ := hinner
     exact stepMulti_of_inner hsched hinner
   | spawned hsched hti =>
     rename_i i k
-    have hinner : stepThread m.shared m.threads i []
-        = .ok (m.threads.setIfInBounds i (.next k), m.shared, []) := by
-      unfold stepThread
-      rw [hti]
-      rfl
+    have hinner : ∃ evI, stepThread m.shared m.threads i []
+        = .ok (m.threads.setIfInBounds i (.next k), m.shared, [], evI) :=
+      ⟨_, by
+        unfold stepThread
+        rw [hti]
+        rfl⟩
+    obtain ⟨evI, hinner⟩ := hinner
     exact stepMulti_of_inner hsched hinner
 
 end GoLean.GoCore.Machine
