@@ -17,16 +17,19 @@
 // tools/raftsubject/derive.py. Upstream is hand-written Go that imports the
 // protobuf runtime, so it cannot be mechanically stripped.
 //
-// SUBJECT DELTA, itemised (docs/raft-w2-log.md, subject-delta ledger) — it is
-// ONE change:
+// SUBJECT DELTA, itemised (docs/raft-w2-log.md, subject-delta ledger;
+// revised W4.1, docs/raft-w41-log.md item 1 JC-13) — it is ONE change:
 //
-//  1. The `google.golang.org/protobuf/proto` import is gone, and with it
-//     MarshalConfChange's two proto.Marshal calls: the body is now a
-//     FAIL-CLOSED STUB that panics. This is the marshal-avoidance ruling
-//     made executable — under the machine twin, membership is snapshot-seeded
-//     and the only caller (node.go's confChangeToMsg) is not in the subject
-//     tree, so the encode path is provably never taken. If it is ever taken,
-//     a differential sees a panic, never a silent nil.
+//  1. The `google.golang.org/protobuf/proto` import is gone, and
+//     MarshalConfChange's two proto.Marshal calls are the per-type
+//     AppendMessage of the generated plainpb codec (raftpb cannot import
+//     the subject-local `proto` package, which imports raftpb). The
+//     empty-message fixup mirrors proto.Marshal's non-nil zero-length
+//     return. W2.2's fail-closed stub here rested on a STALE liveness
+//     claim — `confChangeToMsg` IS in the subject tree (node_decls.go),
+//     so `RawNode.ProposeConfChange` reaches this function; the W4.0
+//     census missed it because a panic body lowers and is not the proto
+//     package (JC-13 in the W4.1 log records the census correction).
 //
 // Everything else in this file is upstream verbatim, INCLUDING the parts the
 // frontend cannot lower today: EnterJoint's `panic(fmt.Sprintf(...))` and the
@@ -53,13 +56,34 @@ type ConfChangeI interface {
 // MarshalConfChange calls Marshal on the underlying ConfChange or ConfChangeV2
 // and returns the result along with the corresponding EntryType.
 //
-// FAIL-CLOSED STUB (subject delta 1). Upstream's body is two proto.Marshal
-// calls; the plainpb shim has no encoder, by ruling. Under marshal-avoidance
-// this is unreachable — membership is snapshot-seeded, so no ConfChange entry
-// is ever encoded — and its only in-library caller (node.go confChangeToMsg)
-// is outside the subject tree. Reaching it is a visible panic, not a nil.
+// SUBJECT DELTA 1 (see the header): upstream's two proto.Marshal calls
+// are the generated codec's AppendMessage, with proto.Marshal's
+// non-nil-empty fixup inlined; err is always nil (the codec's encoder
+// cannot fail on these types — upstream's err came from the runtime's
+// size-overflow paths). The nil-ConfChangeI arm is upstream verbatim.
 func MarshalConfChange(c ConfChangeI) (EntryType, []byte, error) {
-	panic("plainpb: MarshalConfChange is a fail-closed stub (marshal-avoidance ruling, docs/raft-w2-log.md)")
+	var typ EntryType
+	var ccdata []byte
+	if c == nil {
+		// A nil data unmarshals into an empty ConfChangeV2 and has the benefit
+		// that appendEntry can never refuse it based on its size (which
+		// registers as zero).
+		typ = EntryConfChangeV2
+		ccdata = nil
+	} else if ccv1, ok := c.AsV1(); ok {
+		typ = EntryConfChange
+		ccdata = ccv1.AppendMessage(nil)
+		if ccdata == nil {
+			ccdata = []byte{}
+		}
+	} else {
+		typ = EntryConfChangeV2
+		ccdata = c.AsV2().AppendMessage(nil)
+		if ccdata == nil {
+			ccdata = []byte{}
+		}
+	}
+	return typ, ccdata, nil
 }
 
 // AsV2 returns a V2 configuration change carrying out the same operation.
