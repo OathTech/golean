@@ -437,7 +437,20 @@ func (l *loader) buildInitGraph(units []*sourcePkg, mainUnit *sourcePkg) (*initG
 		node: map[string]bool{},
 		work: map[string]bool{},
 	}
-	pending := []string{}
+	// THE WORKLIST CARRIES LINKER SYMBOL PREFIXES, NEVER IMPORT PATHS
+	// (BUG-064). Source imports are converted by pathToPrefix exactly
+	// once, on push; the table's dep columns are ALREADY prefixes (gc's
+	// R_INITORDER edges, read from the compiled archives) and go on the
+	// worklist verbatim. The old code pushed both and re-escaped every
+	// popped item, so an already-escaped prefix — the stdlib ships one,
+	// crypto/internal/entropy/v1%2e0%2e0 — was escaped AGAIN ('%' ->
+	// '%25') and the table lookup missed a row the table has, refusing
+	// every multi-package program whose init closure reaches it
+	// (crypto/rand and the rest of the crypto family; raft's route is
+	// the election-jitter draw). display carries the import path where
+	// one is known, for the refusal message only.
+	type workItem struct{ prefix, display string }
+	pending := []workItem{}
 	for _, u := range units {
 		prefix := pathToPrefix(u.path)
 		if other, dup := g.src[prefix]; dup {
@@ -447,35 +460,38 @@ func (l *loader) buildInitGraph(units []*sourcePkg, mainUnit *sourcePkg) (*initG
 		ds := []string{}
 		for _, p := range importPathsOf(u.files) {
 			ds = append(ds, pathToPrefix(p))
+			pending = append(pending, workItem{prefix: pathToPrefix(p), display: p})
 		}
 		g.deps[prefix] = ds
 		// cmd/compile emits main's record unconditionally, whether or
 		// not it has any work of its own (MakeTask's pruning test
 		// exempts `main` and `runtime` by name).
 		g.work[prefix] = u == mainUnit || sourceHasInitWork(u)
-		pending = append(pending, importPathsOf(u.files)...)
 	}
 	// Close over the non-source packages, taking their node facts and
 	// their edges from the generated table — gc's own answers, read
 	// out of the compiled archives (inittask.go).
 	for len(pending) > 0 {
-		path := pending[0]
+		item := pending[0]
 		pending = pending[1:]
-		prefix := pathToPrefix(path)
-		if _, seen := g.deps[prefix]; seen {
+		if _, seen := g.deps[item.prefix]; seen {
 			continue
 		}
-		if _, isSrc := g.src[prefix]; isSrc {
+		if _, isSrc := g.src[item.prefix]; isSrc {
 			continue
 		}
-		entry, err := stdInitLookup(prefix, path)
+		entry, err := stdInitLookup(item.prefix, item.display)
 		if err != nil {
 			return nil, err
 		}
-		g.deps[prefix] = entry.deps
-		g.node[prefix] = entry.node
-		g.work[prefix] = entry.node
-		pending = append(pending, entry.deps...)
+		g.deps[item.prefix] = entry.deps
+		g.node[item.prefix] = entry.node
+		g.work[item.prefix] = entry.node
+		for _, dep := range entry.deps {
+			// A table dep is a prefix; its unescaped path is not
+			// recorded, so the prefix doubles as the display name.
+			pending = append(pending, workItem{prefix: dep, display: dep})
+		}
 	}
 	// Node set to fixpoint: a package is a node iff it has work of its
 	// own or imports a node. Only the SOURCE packages need solving —

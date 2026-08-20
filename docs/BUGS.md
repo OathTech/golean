@@ -3021,3 +3021,46 @@ the same scoped `addr-of-deref` lowering the explicit arm uses when the
 operand (parens stripped) is an immediate `*` — preserving
 `emitAddressOf`'s collapse for the store-target positions where the
 five store-order pins live (the slice-3 JUDGMENT's exact trap).
+
+## BUG-064 — the inittask double-escape: the init-graph worklist re-escapes the table's symbol prefixes
+
+- Status: fixed (2026-08-20, raft W4.0 — `buildInitGraph`
+  (`tools/nativefrontend/load.go`) now carries LINKER SYMBOL PREFIXES on
+  its worklist, never import paths: source imports convert via
+  `pathToPrefix` exactly once, on push, and the table's dep columns —
+  already prefixes, gc's own R_INITORDER edges — go on verbatim. No
+  wire, decoder, or table change; the graph's CONTENT was always right,
+  only the closure's lookups missed. Flipped exactly the 2 predicted
+  reds; the single-package control and the whole pre-existing baseline
+  held.)
+- Pinned-by: differential
+- Cases: multipkg/inittask-escape, multipkg/inittask-escape-closure
+  (multipkg/inittask-escape-single is the green single-package control)
+
+Found by the raft-W2.2 frontier sweep (`docs/raft-w3-log.md` §2.2,
+handoff H-9): with the raft root package vendored, the export refused
+with `package "crypto/internal/entropy/v1%2e0%2e0" is not in the stdlib
+inittask table` — and the table HAS that row (`inittask-std.tsv`, the
+one escaped prefix in the go1.26.5 stdlib, with the unescaped path in
+its 4th column).
+
+The defect: `buildInitGraph`'s worklist mixed two namespaces. Source
+units pushed their imports as PATHS; the closure loop then pushed
+`entry.deps` — which are already-escaped symbol PREFIXES read from the
+compiled archives — onto the same list, and re-applied `pathToPrefix`
+to every popped item. `pathToPrefix` escapes `%` (it must — objabi
+does), so `crypto/internal/entropy/v1%2e0%2e0` became
+`crypto/internal/entropy/v1%252e0%252e0` and the lookup missed. Not a
+raft quirk: ANY multi-package program whose stdlib init closure reaches
+the fips140 entropy module refused — measured from the table, that is
+the whole crypto family plus net/http, expvar, and ~30 more non-internal
+std packages, most of them deps-of-deps away from the escaped row
+(the `-closure` case pins crypto/sha256, which never names entropy
+directly).
+
+Why no corpus case ever hit it: `specInitOrder` returns early below two
+source units (`load.go`), so single-package programs — the overwhelming
+majority of the corpus — never build the init graph at all
+(`inittask-escape-single` pins that immunity as a control). The bug was
+reachable only from the multi-package corpus, whose stdlib imports
+(`sync`, `errors`) all carry escape-free prefixes.
