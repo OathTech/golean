@@ -108,70 +108,6 @@ IMPORTED_PREFIXES = ("bytes.", "strings.", "sync.", "math/", "crypto/",
                      "log.", "fmt.", "errors.", "context.", "unicode/",
                      "strconv.", "reflect.")
 
-# The error constructor the probe helpers themselves use
-# (goleanProbeErrorf returns one).  Since W4.0 `errors.New` is MODELED (the E5
-# shim), so the flattening below no longer rewrites errors.New call sites —
-# they lower for real — but the helpers still need a local ctor.  Pointer
-# identity is preserved, so `err == ErrCompacted` still discriminates — the
-# property raft actually reads off an error (log §2.4).
-PROBE_ERRORS = """
-type goleanProbeErrorString struct{ s string }
-
-func (e *goleanProbeErrorString) Error() string { return e.s }
-
-func goleanProbeErrorsNew(text string) error { return &goleanProbeErrorString{s: text} }
-"""
-
-# Every stand-in takes the SAME arguments as the call it replaces (variadic
-# `...any` where the original was variadic), so the arguments are still
-# evaluated and the call-graph edges through them survive.
-PROBE_HELPERS = """package %s
-
-// PROBE helpers (sweep measurement only; see sweep.py).  Not Go anyone should
-// run: the returned values are placeholders.  Only the CALL GRAPH is asked of
-// this tree.
-
-func goleanProbeSprintf(format string, v ...any) string { return "sweep" }
-
-func goleanProbeSprint(v ...any) string { return "sweep" }
-
-func goleanProbeErrorf(format string, v ...any) error {
-	return goleanProbeErrorsNew("sweep")
-}
-
-func goleanProbeFprint(w any, v ...any) (int, error) { return 0, nil }
-
-func goleanProbeJoin(elems []string, sep string) string { return "sweep" }
-
-func goleanProbeBytesEqual(a, b []byte) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
-}
-
-func goleanProbeLEUint64(b []byte) uint64 {
-	var v uint64
-	for i := 7; i >= 0; i-- {
-		v = v<<8 | uint64(b[i])
-	}
-	return v
-}
-
-func goleanProbeLEPutUint64(b []byte, v uint64) {
-	for i := 0; i < 8; i++ {
-		b[i] = byte(v)
-		v >>= 8
-	}
-}
-"""
-
-
 def run_frontend(fe, tree, out):
     r = subprocess.run([fe, "--dir", tree, "--out", out],
                        capture_output=True, text=True)
@@ -233,70 +169,16 @@ def flatten(tree, dead):
             continue
         frontier.neutralise(p, ".".join(name.split(".")[1:]))
 
-    # EVERY cause that quarantines a declaration on a live path is flattened —
-    # not just the ones a previous run happened to need.  A cause left standing
-    # keeps its declarations as sinks, and a sink is precisely what this pass
-    # exists to remove; the residual-sink report at the end is the check that
-    # nothing was forgotten.
-    #
-    # The replacement is of the call HEAD ONLY, never the whole call.  Two
-    # reasons, and the second is the load-bearing one:
-    #   * replacing `fmt.Sprintf(...)` with a constant orphans whatever the
-    #     arguments used, so the tree stops type-checking (`declared and not
-    #     used: c`) and the sweep would have to guess its way out;
-    #   * ARGUMENT EVALUATION IS AN EDGE.  `stepLeader` calls
-    #     `DescribeConfChange(cc)` as an ARGUMENT to `Infof`, and Go evaluates
-    #     it whatever the callee does — which is exactly why that rendering
-    #     path is live (log §2.3).  Dropping the arguments would delete the
-    #     edge the sweep exists to find.
+    # THE CAUSE-FLATTEN TABLE IS EMPTY SINCE W4.1 ITEM 5 — deliberately.
+    # Every cause it ever carried (fmt.*, strings.Join, bytes.Equal,
+    # binary.LittleEndian.*, globalRand.Intn, the promoted mutex ops) is
+    # MODELED now, and keeping the flattening would let a REGRESSION that
+    # re-quarantines one of them be silently flattened over in PASS 2
+    # instead of surfacing as a RESIDUAL SINK — the fail-closed direction
+    # is an empty table. A future unmodeled cause on a live path re-adds
+    # a row here (call-head-only replacement; argument evaluation is an
+    # edge — see the git history for the retired implementation).
     counts = {}
-    for root, _, files in os.walk(tree):
-        for f in files:
-            if not f.endswith(".go") or f.startswith("probe_"):
-                continue
-            p = os.path.join(root, f)
-            s = old = open(p).read()
-            for call, repl in (
-                ("fmt.Sprintf", "goleanProbeSprintf"),
-                ("fmt.Sprint", "goleanProbeSprint"),
-                ("fmt.Errorf", "goleanProbeErrorf"),
-                ("fmt.Fprintf", "goleanProbeFprint"),
-                ("fmt.Fprint", "goleanProbeFprint"),
-                ("strings.Join", "goleanProbeJoin"),
-                ("bytes.Equal", "goleanProbeBytesEqual"),
-                # globalRand.Intn is NOT flattened since W4.1 item 3: the
-                # D-11 patch makes the draw a plain-Go map-range choice
-                # site, so it lowers for real — G-1 retired (see the
-                # module docstring).
-                # errors.New is NOT flattened since W4.0: it is modeled (the
-                # E5 shim, per-unit injection), lowers for real, and is no
-                # longer a census cause anywhere in this tree — G-2 retired.
-                # G-8, the two read_only.go sites.
-                ("binary.LittleEndian.Uint64", "goleanProbeLEUint64"),
-                ("binary.LittleEndian.PutUint64", "goleanProbeLEPutUint64"),
-            ):
-                n = s.count(call + "(")
-                if n:
-                    s = s.replace(call + "(", repl + "(")
-                    counts[call] = counts.get(call, 0) + n
-            if s != old:
-                open(p, "w").write(s)
-
-    for pkg in sorted(os.listdir(tree)):
-        d = os.path.join(tree, pkg)
-        if not os.path.isdir(d):
-            continue
-        # Every package gets the ctor: since W4.0 the walk plan injects
-        # nothing (terminal row only), so no package carries one already.
-        body = PROBE_HELPERS % pkg + PROBE_ERRORS
-        open(os.path.join(d, "probe_helpers.go"), "w").write(body)
-
-    p = os.path.join(tree, "raft", "storage.go")
-    s, n = re.subn(r"^(\t+)(defer )?ms\.(Lock|Unlock|TryLock)\(\)$",
-                   r"\1_ = 0 // sweep: promoted mutex op dropped",
-                   open(p).read(), flags=re.M)
-    counts["promoted mutex op"] = n
-    open(p, "w").write(s)
     return counts, skipped
 
 
@@ -358,6 +240,11 @@ def main():
     subject1, imported1 = census(wire1)
     live1 = liveness(wire1, subject1)
     dead1 = sorted(set(subject1) - set(live1))
+    # The W4.1 done criterion's clause 2: imported declaration-only
+    # stubs are the same fail-closed stop class as subject quarantines
+    # when REACHABLE, so their liveness is censused too (G-10 —
+    # strings.Builder.String — was exactly such a stop).
+    live_imported1 = liveness(wire1, imported1)
 
     # ---- PASS 2, TO A FIXPOINT ---------------------------------------------
     #
@@ -387,7 +274,7 @@ def main():
         if err:
             sys.exit("sweep.py: PASS 2 round %d did not export cleanly: %s"
                      % (rounds, err))
-        subject2, _ = census(wire2)
+        subject2, _ = census(wire2)  # (re-censused after the loop for the residual check)
         # The QUERY SET is PASS 1's, not PASS 2's: PASS 2 gives the believed-dead
         # declarations panic bodies, so they lower and drop out of PASS 2's own
         # census.  Asking PASS 2 "what is quarantined AND reachable" would answer
@@ -406,7 +293,9 @@ def main():
     # the final PASS-2 wire AND reachable there is a sink the flattening did not
     # open, and everything behind it is unmeasured — so it is reported, by name
     # and by cause, instead of being folded silently into the headline.
-    residual = {n: subject2[n] for n in liveness(wire2, subject2)}
+    subject2b, imported2 = census(wire2)
+    residual = {n: subject2b[n] for n in liveness(wire2, subject2b)}
+    residual.update({n: imported2[n] for n in liveness(wire2, imported2)})
 
     # ---- report ------------------------------------------------------------
     print("# sweep.py — frontend %s" % args.frontend)
@@ -417,6 +306,10 @@ def main():
     print("        %d LIVE, %d dead" % (len(live1), len(dead1)))
     for n in sorted(live1):
         print("  LIVE %-42s %s" % (n, live1[n]))
+    print("        %d LIVE imported stdlib stubs (done-criterion clause 2)"
+          % len(live_imported1))
+    for n in sorted(live_imported1):
+        print("  LIVE-IMPORTED %-33s %s" % (n, live_imported1[n]))
     print()
     print("PASS 2 (sinks opened, %d rounds to fixpoint): flattened %s; %d "
           "believed-dead declarations neutralised in the last round (%d had no "
@@ -452,10 +345,11 @@ def main():
                      "before reading the census")
     print("HEADLINE: %d LIVE quarantined subject declarations "
           "(%d first-order + %d behind sinks) out of %d quarantined in "
-          "PASS 1, plus %d imported stdlib stubs that are the "
-          "declaration-only-stub contract and not a raft gap."
+          "PASS 1, plus %d imported stdlib stubs (%d LIVE) — a live "
+          "imported stub is a run-blocker exactly like a live subject "
+          "quarantine (done-criterion clause 2)."
           % (len(live), len(live1), len(revealed), len(subject1),
-             len(imported1)))
+             len(imported1), len(live_imported1)))
 
 
 if __name__ == "__main__":

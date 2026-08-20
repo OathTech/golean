@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+# The named-typed-nil flow class (raft W4.1, THE-MOMENT probe's find):
+# a nil at a DEFINED map/slice type stored via return/composite/arg and
+# compared later. Red (stuck at lean-observation) until the BUG-016
+# nil-typing arm keys on the UNDERLYING kind; green after.
+return	namedNilReturn	-	ok	-	maps,nil,defined_type,equality
+composite	namedNilComposite	-	ok	-	maps,nil,defined_type,equality,structs
+literal-elem	namedNilLiteralElem	-	ok	-	maps,nil,defined_type,equality
+arg	namedNilArg	-	ok	-	maps,nil,defined_type,equality,calls
+slice	namedNilSlice	-	ok	-	slices,nil,defined_type,equality

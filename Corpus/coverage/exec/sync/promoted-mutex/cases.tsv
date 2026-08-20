@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# H-12 guardrails (raft W4.1 item 5): promoted/embedded sync.Mutex ops
+# in statement/defer position (the MemoryStorage shape). Red at
+# frontend-export until the promoted recognition lands; green after —
+# EXCEPT trylock-expr, which stays red BY DESIGN (expression-position
+# sync ops keep failing closed).
+stmt	promotedStmt	-	ok	-	sync,mutex,embedding,methods
+defer-unlock	promotedDefer	-	ok	-	sync,mutex,embedding,methods,defer
+value-var	promotedValueVar	-	ok	-	sync,mutex,embedding,addressability
+counter	promotedCounter	-	ok	-	sync,mutex,embedding,goroutines,channels	confluent	mutual exclusion through the PROMOTED lock (the hops-adjusted receiver reaches the same embedded mutex cell) makes the two increments commute; the channel join closes the run: every schedule yields 2	width=4,sites=40,work=20000000
+trylock-expr	promotedTryLockExpr	-	ok	-	sync,mutex,embedding
