@@ -1,17 +1,16 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-20 (raft W4.0 item 1 — BUG-064, the inittask
-#   double-escape fix; commit: this commit, on the raft-w4 lane)
-#   re-pin reason: 3 NEW ids and nothing else (zero movement on the
-#   2226 pre-existing ids), the guardrail suite for BUG-064 landed in
-#   the same commit-group as the fix (predicted flips stated pre-run,
-#   docs/raft-w4-log.md item 1):
-#     NEW/PASS (3): multipkg/inittask-escape (2-pkg + crypto/rand,
-#       red at frontend-export pre-fix — witnessed),
-#       multipkg/inittask-escape-closure (2-pkg + crypto/sha256, the
-#       deps-of-deps route — red pre-fix, witnessed),
-#       multipkg/inittask-escape-single (1-pkg control, green
-#       throughout — specInitOrder's early return)
-#   counts: 2229 cases, 2098 PASS / 131 FAIL (was 2226, 2095/131)
+# recorded: 2026-08-20 (raft W4.0 item 2 — errors.New as an E5 stdlib
+#   shim, G-2/H-10; commit: this commit, on the raft-w4 lane)
+#   re-pin reason: 13 NEW ids and nothing else (zero movement on the
+#   2229 pre-existing ids), the errors.New conformance suites landed in
+#   the same commit-group as the shim (predicted flips stated pre-run,
+#   docs/raft-w4-log.md item 2; reds witnessed pre-shim):
+#     NEW/PASS (13): errors/new-conformance/{fresh-not-eq,self-eq,
+#       nilness,readback,cross-impl,assert-ok},
+#       errors/new-sentinel/{identity,distinct,classify,readback},
+#       multipkg/errors-new/{identity-across,distinct-across,
+#       text-across}
+#   counts: 2242 cases, 2111 PASS / 131 FAIL (was 2229, 2098/131)
 #   frontend: native (tools/nativefrontend + NativeToIR)
 # columns: result<TAB>id<TAB>stage
 result	id	stage
@@ -420,6 +419,16 @@ PASS	embedding/promoted-pointer-receiver-method-set/value-box	-
 PASS	embedding/value-embedded-pointer-promotion/dynamic-dispatch	-
 PASS	embedding/value-embedded-pointer-promotion/static-call	-
 PASS	embedding/value-embedded-pointer-promotion/value-box-satisfies	-
+PASS	errors/new-conformance/assert-ok	-
+PASS	errors/new-conformance/cross-impl	-
+PASS	errors/new-conformance/fresh-not-eq	-
+PASS	errors/new-conformance/nilness	-
+PASS	errors/new-conformance/readback	-
+PASS	errors/new-conformance/self-eq	-
+PASS	errors/new-sentinel/classify	-
+PASS	errors/new-sentinel/distinct	-
+PASS	errors/new-sentinel/identity	-
+PASS	errors/new-sentinel/readback	-
 PASS	examples/binsearch/absent-above	-
 PASS	examples/binsearch/absent-below	-
 PASS	examples/binsearch/absent-gap	-
@@ -1490,6 +1499,9 @@ PASS	multipkg/cross-func-call	-
 PASS	multipkg/cross-type-method	-
 PASS	multipkg/cross-var	-
 PASS	multipkg/diamond-import	-
+PASS	multipkg/errors-new/distinct-across	-
+PASS	multipkg/errors-new/identity-across	-
+PASS	multipkg/errors-new/text-across	-
 PASS	multipkg/init-order	-
 PASS	multipkg/init-order-pruned-stdlib/seq	-
 PASS	multipkg/init-order-pruned/dynamic	-

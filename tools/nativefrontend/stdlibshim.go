@@ -60,10 +60,30 @@ import (
 // collision-checked at injection instead).
 const stringsFieldsShimName = "goleanShimStringsFields"
 
+// errorsNewShimName / errorsNewShimTypeName are the reserved
+// declaration names of the errors.New shim (raft W4.0, G-2/H-10). The
+// shim is TWO declarations — the constructor and its unexported
+// concrete type — so both names are reserved (stdlibShimDeclNames).
+const errorsNewShimName = "goleanShimErrorsNew"
+const errorsNewShimTypeName = "goleanShimErrorString"
+
 // stdlibShimAllowlist: package import path -> selector name -> shim
-// declaration name. ONE entry (E5's whole scope).
+// declaration name (the KEY declaration; a shim may inject more, see
+// stdlibShimDeclNames).
 var stdlibShimAllowlist = map[string]map[string]string{
 	"strings": {"Fields": stringsFieldsShimName},
+	"errors":  {"New": errorsNewShimName},
+}
+
+// stdlibShimDeclNames: every RESERVED top-level name a shim injects,
+// keyed by the shim's key declaration name. The collision check ranges
+// over all of them — a user declaration matching ANY injected name
+// refuses the export loudly (never a silent merge). Methods on shim
+// types need no row: declaring one requires naming the receiver type,
+// which is itself reserved here.
+var stdlibShimDeclNames = map[string][]string{
+	stringsFieldsShimName: {stringsFieldsShimName},
+	errorsNewShimName:     {errorsNewShimName, errorsNewShimTypeName},
 }
 
 // stdlibShimSources: shim declaration name -> Go source of the
@@ -141,6 +161,51 @@ func goleanShimStringsFields(s string) []string {
 	return out
 }
 `,
+
+	// errors.New: "returns an error that formats as the given text.
+	// Each call to New returns a distinct error value even if the text
+	// is identical."
+	//
+	// The body is BYTE-EQUIVALENT to go/src/errors/errors.go's
+	// New/errorString modulo names (upstream: `return &errorString{text}`;
+	// the field is keyed here for readability, same composite). The
+	// fidelity argument (raft W4.0, docs/raft-w4-log.md item 2), in
+	// full:
+	//   - IDENTITY: `==` on error values compares (dynamic type,
+	//     dynamic value); the dynamic value is a fresh *T per call
+	//     (nonzero-size allocations are distinct — probed against
+	//     go1.26.5: two News of equal text are !=, self-== holds,
+	//     sentinel identity survives helper returns), so freshness and
+	//     sentinel discrimination are inherited from the machine's
+	//     allocator, not asserted. A shim that interned by text would
+	//     silently make every same-text comparison true (raft branches
+	//     on `err == errBreak` — W3 log §2.4).
+	//   - NIL-NESS: the shim returns a non-nil interface always, as
+	//     upstream does.
+	//   - Error(): returns the constructor's string verbatim.
+	//   - THE ONE DELTA: the dynamic type NAME (*errors.errorString
+	//     upstream vs *<pkg>.goleanShimErrorString here, one type PER
+	//     INJECTED PACKAGE where upstream has one total). Unobservable
+	//     in the modeled subset: user code cannot name the unexported
+	//     upstream type (no assertion/type-switch can target it), fmt
+	//     verbs and reflection are not modeled (they refuse), and the
+	//     type component of `==` cannot flip an answer — values from
+	//     different calls are distinct pointers (both sides false
+	//     regardless of type), values from the same call are identical
+	//     in both components.
+	errorsNewShimName: `
+// goleanShimErrorString / goleanShimErrorsNew are the native frontend's
+// errors.New shim (extension E5, raft W4.0). Injected declarations —
+// not user code. See tools/nativefrontend/stdlibshim.go for the
+// contract and docs/raft-w4-log.md item 2 for the fidelity argument.
+type goleanShimErrorString struct{ s string }
+
+func (e *goleanShimErrorString) Error() string { return e.s }
+
+func goleanShimErrorsNew(text string) error {
+	return &goleanShimErrorString{s: text}
+}
+`,
 }
 
 // injectStdlibShims scans the parsed (pre-type-check) files for
@@ -203,24 +268,32 @@ func injectStdlibShims(fset *token.FileSet, files []*ast.File) (*ast.File, error
 		return nil, nil
 	}
 	// Reserved-name collision check: fail closed, loudly, BEFORE the
-	// type-checker reports a bare redeclaration.
+	// type-checker reports a bare redeclaration. Ranges over EVERY name
+	// a needed shim injects (stdlibShimDeclNames), not just the key
+	// declaration — the errors.New shim injects its concrete type too.
+	reserved := map[string]bool{}
+	for shim := range needed {
+		for _, name := range stdlibShimDeclNames[shim] {
+			reserved[name] = true
+		}
+	}
 	for _, f := range files {
 		for _, decl := range f.Decls {
 			switch d := decl.(type) {
 			case *ast.FuncDecl:
-				if d.Recv == nil && needed[d.Name.Name] {
+				if d.Recv == nil && reserved[d.Name.Name] {
 					return nil, fmt.Errorf("package declares %s, which is a reserved stdlib-shim name (E5); rename the declaration", d.Name.Name)
 				}
 			case *ast.GenDecl:
 				for _, spec := range d.Specs {
 					switch s := spec.(type) {
 					case *ast.TypeSpec:
-						if needed[s.Name.Name] {
+						if reserved[s.Name.Name] {
 							return nil, fmt.Errorf("package declares %s, which is a reserved stdlib-shim name (E5); rename the declaration", s.Name.Name)
 						}
 					case *ast.ValueSpec:
 						for _, id := range s.Names {
-							if needed[id.Name] {
+							if reserved[id.Name] {
 								return nil, fmt.Errorf("package declares %s, which is a reserved stdlib-shim name (E5); rename the declaration", id.Name)
 							}
 						}

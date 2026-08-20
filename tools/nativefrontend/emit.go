@@ -6573,10 +6573,20 @@ func (e *emitter) emitStdlibShimCall(c *ast.CallExpr, sel *ast.SelectorExpr) (an
 		return nil, false, unsup("stdlib call %s.%s did not resolve to a function",
 			pkgName.Imported().Path(), sel.Sel.Name)
 	}
-	if e.pkg.Scope().Lookup(shimName) == nil {
+	// The shim is injected into the CALLING unit (main.go for the main
+	// package, parseLocal for imported source packages), so it is
+	// looked up — and its FuncId minted — in the current unit's scope:
+	// bare for main, path-qualified otherwise (funcWireName).
+	shimObj := e.pkg.Scope().Lookup(shimName)
+	if shimObj == nil {
 		return nil, false, unsup("stdlib shim %s not injected for %s.%s",
 			shimName, pkgName.Imported().Path(), sel.Sel.Name)
 	}
+	shimFn, ok := shimObj.(*types.Func)
+	if !ok {
+		return nil, false, unsup("stdlib shim %s resolved to a non-function (reserved-name check hole?)", shimName)
+	}
+	shimWireName := e.funcWireName(shimFn)
 	sig, ok := fn.Type().(*types.Signature)
 	if !ok {
 		return nil, false, unsup("stdlib call %s.%s has no signature",
@@ -6590,7 +6600,7 @@ func (e *emitter) emitStdlibShimCall(c *ast.CallExpr, sel *ast.SelectorExpr) (an
 	if err != nil {
 		return nil, false, err
 	}
-	return map[string]any{"expr": "call", "func": shimName, "args": args,
+	return map[string]any{"expr": "call", "func": shimWireName, "args": args,
 		"resultTypes": resultTypes}, true, nil
 }
 

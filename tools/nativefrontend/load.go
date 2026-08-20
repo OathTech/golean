@@ -203,6 +203,19 @@ func (l *loader) parseLocal(path, dir string) (*sourcePkg, error) {
 			unit.files = append(unit.files, pkg.Files[p])
 		}
 	}
+	// E5 stdlib shims are PER UNIT (raft W4.0): a local package calling
+	// an allowlisted stdlib function gets its own injected shim
+	// declarations, before ITS type-check — exactly like the main
+	// package's injection in main.go. Reserved-name collisions refuse
+	// here, loudly. (raft's errors.New sentinels live in non-main
+	// units, which is why main-only injection was not enough.)
+	shimFile, err := injectStdlibShims(l.fset, unit.files)
+	if err != nil {
+		return nil, err
+	}
+	if shimFile != nil {
+		unit.files = append(unit.files, shimFile)
+	}
 	return unit, nil
 }
 
