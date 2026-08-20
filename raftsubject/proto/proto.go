@@ -2,22 +2,27 @@
 // derivation.
 //
 // The subject-local stand-in for google.golang.org/protobuf/proto, which the
-// vendored raft root package calls on four functions.  Under the plainpb
-// ruling (docs/2026-08-15_raft-push-p0-scoping.md §8.6) the protobuf runtime
-// is engineered out, so these have no implementation to delegate to: each one
-// is a FAIL-CLOSED STUB, and each call site therefore STOPS the machine
-// loudly rather than computing a wrong answer.
+// vendored raft root package calls on four functions.  Since W4.1 (H-1
+// discharged — docs/raft-w41-log.md item 1) the four bodies are REAL:
+// type-switch dispatch over the nine plainpb message types into the
+// generated per-type codec (raftpb/plain_codec.go: AppendMessage /
+// SizeMessage / UnmarshalMessage) and deep clone (raftpb/plain_clone.go:
+// CloneMessage).  A message type outside the nine cannot exist in the
+// subject tree (the derivation refuses unknown proto surface), and the
+// dispatch defaults still fail closed with an explicit panic — never a
+// silent zero.
 //
-// This is handoff H-1 given a home, not a discharge.  W4 replaces these
-// bodies with derived plain Go — Clone from the parsed message field lists
-// (raftpb/plain_clone.go already generates the per-type half), Size from the
-// field numbers and tags, and a real codec for Unmarshal — each with the
-// differential obligation the ruling's requirement (d) attaches to real
-// logic.  The measured liveness of each, under a RawNode-driven harness, is
-// in docs/raft-w3-log.md: Clone, Size and Unmarshal are all LIVE; Marshal is
-// reached only from Bootstrap, which the harness declines.
+// Semantics deltas vs the runtime, recorded (JC-14/JC-15 in the log):
+// Clone of a TYPED-NIL message returns the typed nil (the runtime returns
+// a read-only zero message) — unreachable in the tree, every clone site
+// guards or guarantees non-nil; Unmarshal DROPS unknown fields after
+// skipping them (the runtime preserves them for re-marshal).
 
 package proto
+
+import (
+	"raftpb"
+)
 
 // Message is the interface the vendored callers pass.  Every plainpb message
 // type satisfies it — the derivation keeps their generated ProtoMessage()
@@ -27,18 +32,119 @@ type Message interface {
 	ProtoMessage()
 }
 
+// nonNil matches proto.Marshal's empty-message behavior: a valid message
+// with nothing to encode marshals to a zero-length NON-NIL slice.
+func nonNil(b []byte) []byte {
+	if b == nil {
+		return []byte{}
+	}
+	return b
+}
+
 func Clone(m Message) Message {
-	panic("proto: Clone is a fail-closed stub (the protobuf runtime is engineered out; handoff H-1, docs/raft-w2-log.md §3)")
+	if m == nil {
+		return nil
+	}
+	switch x := m.(type) {
+	case *raftpb.Entry:
+		return x.CloneMessage()
+	case *raftpb.SnapshotMetadata:
+		return x.CloneMessage()
+	case *raftpb.Snapshot:
+		return x.CloneMessage()
+	case *raftpb.Message:
+		return x.CloneMessage()
+	case *raftpb.HardState:
+		return x.CloneMessage()
+	case *raftpb.ConfState:
+		return x.CloneMessage()
+	case *raftpb.ConfChange:
+		return x.CloneMessage()
+	case *raftpb.ConfChangeSingle:
+		return x.CloneMessage()
+	case *raftpb.ConfChangeV2:
+		return x.CloneMessage()
+	}
+	panic("proto: Clone on a message type outside the plainpb nine (fail closed; extend the derivation after reading the new type)")
 }
 
 func Marshal(m Message) ([]byte, error) {
-	panic("proto: Marshal is a fail-closed stub (the protobuf runtime is engineered out; handoff H-1, docs/raft-w2-log.md §3)")
+	switch x := m.(type) {
+	case *raftpb.Entry:
+		return nonNil(x.AppendMessage(nil)), nil
+	case *raftpb.SnapshotMetadata:
+		return nonNil(x.AppendMessage(nil)), nil
+	case *raftpb.Snapshot:
+		return nonNil(x.AppendMessage(nil)), nil
+	case *raftpb.Message:
+		return nonNil(x.AppendMessage(nil)), nil
+	case *raftpb.HardState:
+		return nonNil(x.AppendMessage(nil)), nil
+	case *raftpb.ConfState:
+		return nonNil(x.AppendMessage(nil)), nil
+	case *raftpb.ConfChange:
+		return nonNil(x.AppendMessage(nil)), nil
+	case *raftpb.ConfChangeSingle:
+		return nonNil(x.AppendMessage(nil)), nil
+	case *raftpb.ConfChangeV2:
+		return nonNil(x.AppendMessage(nil)), nil
+	}
+	panic("proto: Marshal on a message type outside the plainpb nine (fail closed; extend the derivation after reading the new type)")
 }
 
 func Size(m Message) int {
-	panic("proto: Size is a fail-closed stub (the protobuf runtime is engineered out; handoff H-1, docs/raft-w2-log.md §3)")
+	switch x := m.(type) {
+	case *raftpb.Entry:
+		return x.SizeMessage()
+	case *raftpb.SnapshotMetadata:
+		return x.SizeMessage()
+	case *raftpb.Snapshot:
+		return x.SizeMessage()
+	case *raftpb.Message:
+		return x.SizeMessage()
+	case *raftpb.HardState:
+		return x.SizeMessage()
+	case *raftpb.ConfState:
+		return x.SizeMessage()
+	case *raftpb.ConfChange:
+		return x.SizeMessage()
+	case *raftpb.ConfChangeSingle:
+		return x.SizeMessage()
+	case *raftpb.ConfChangeV2:
+		return x.SizeMessage()
+	}
+	panic("proto: Size on a message type outside the plainpb nine (fail closed; extend the derivation after reading the new type)")
 }
 
 func Unmarshal(b []byte, m Message) error {
-	panic("proto: Unmarshal is a fail-closed stub (the protobuf runtime is engineered out; handoff H-1, docs/raft-w2-log.md §3)")
+	switch x := m.(type) {
+	case *raftpb.Entry:
+		x.Reset()
+		return x.UnmarshalMessage(b)
+	case *raftpb.SnapshotMetadata:
+		x.Reset()
+		return x.UnmarshalMessage(b)
+	case *raftpb.Snapshot:
+		x.Reset()
+		return x.UnmarshalMessage(b)
+	case *raftpb.Message:
+		x.Reset()
+		return x.UnmarshalMessage(b)
+	case *raftpb.HardState:
+		x.Reset()
+		return x.UnmarshalMessage(b)
+	case *raftpb.ConfState:
+		x.Reset()
+		return x.UnmarshalMessage(b)
+	case *raftpb.ConfChange:
+		x.Reset()
+		return x.UnmarshalMessage(b)
+	case *raftpb.ConfChangeSingle:
+		x.Reset()
+		return x.UnmarshalMessage(b)
+	case *raftpb.ConfChangeV2:
+		x.Reset()
+		return x.UnmarshalMessage(b)
+	}
+	panic("proto: Unmarshal on a message type outside the plainpb nine (fail closed; extend the derivation after reading the new type)")
 }

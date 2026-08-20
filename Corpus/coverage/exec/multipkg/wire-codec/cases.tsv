@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+# H-1 codec guardrails (raft W4.1 item 1): the language shapes the
+# generated plainpb codec runs on — pinned green BEFORE the derived
+# codec landed (the shapes were already modeled; these rows keep them
+# so). wirepb mirrors gen_codec's output forms; the derived codec's own
+# batteries are codeccheck.py (both oracles) + difftest.py section 7.
+roundtrip	codecRoundTrip	-	ok	-	slices,strings,pointers,structs,methods,multipackage,imports
+size	codecSize	-	ok	-	slices,pointers,structs,methods,range,multipackage,imports
+golden	codecGolden	-	ok	-	slices,structs,methods,multipackage,imports
+unknown-skip	codecUnknownSkip	-	ok	-	slices,structs,methods,switch,multipackage,imports
+malformed	codecMalformed	-	ok	-	slices,structs,methods,range,multipackage,imports

@@ -6,13 +6,16 @@ requires that "any shim method with real logic (e.g. ConfState equivalence,
 Entry/Message helpers raft's logic calls) gets a differential obligation —
 probe it against upstream under go run and record the comparison".
 
-plainpb has exactly three pieces of real logic that are NOT upstream text
-kept verbatim:
+plainpb's real logic that is NOT upstream text kept verbatim:
 
   * `(*T).CloneMessage()`   generated, stands in for proto.Clone
   * `(*T).EqualMessage(y)`  generated, stands in for proto.Equal
   * `(*ConfState).Equivalent(cs2)`  overlay, upstream's algorithm with the
     two proto calls swapped for the two above
+  * the WIRE CODEC (W4.1, H-1): `(*T).AppendMessage/SizeMessage/
+    UnmarshalMessage`, standing in for proto.Marshal/Size/Unmarshal —
+    section 7 compares BYTES against the real runtime's Marshal, Size
+    against Size, and cross-unmarshals each side's bytes through the other
 
 This script builds a throwaway Go module that links BOTH the upstream raftpb
 (deps/raft, with the real protobuf runtime) and the derived plainpb, converts
@@ -109,6 +112,7 @@ MAIN_GO = r'''// The plainpb differential battery. See tools/raftsubject/difftes
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 
@@ -429,6 +433,148 @@ func main() {
 		nilness("Msg.Context", a.name, wc.Context == nil, gc.Context == nil)
 	}
 	fmt.Printf("ok  Clone nil-ness      %d Go-level nil/empty divergence(s) recorded (invisible to proto.Equal)\n", notes)
+
+	// 7. THE WIRE CODEC (W4.1, H-1): byte equality of the plainpb encoder
+	//    against the real runtime's Marshal, Size against Size, and a
+	//    cross-unmarshal each way (their bytes through our decoder, our
+	//    bytes through theirs), judged by UPSTREAM's proto.Equal.
+	codecChecks := 0
+	codecCheck := func(kind, name string, upMsg proto.Message, upBytes []byte, upSize int, ppBytes []byte, ppSize int, ppFromUp proto.Message, upFromPp proto.Message) {
+		codecChecks++
+		if !bytes.Equal(upBytes, ppBytes) {
+			report("Codec/bytes/"+kind, name, fmt.Sprintf("%x", upBytes), fmt.Sprintf("%x", ppBytes))
+		}
+		if (upBytes == nil) != (ppBytes == nil) {
+			fmt.Printf("NOTE     codec-nil %-10s %-36s upstream-nil=%v plainpb-nil=%v\n",
+				kind, name, upBytes == nil, ppBytes == nil)
+			notes++
+		}
+		if upSize != ppSize {
+			report("Codec/size/"+kind, name, upSize, ppSize)
+		}
+		if !proto.Equal(upMsg, ppFromUp) {
+			report("Codec/dec-theirs/"+kind, name, upMsg, ppFromUp)
+		}
+		if !proto.Equal(upMsg, upFromPp) {
+			report("Codec/dec-ours/"+kind, name, upMsg, upFromPp)
+		}
+	}
+	for _, a := range cs {
+		if a.cs == nil {
+			continue
+		}
+		upB, upErr := proto.Marshal(a.cs)
+		if upErr != nil {
+			report("Codec/marshal-err/CS", a.name, nil, upErr)
+			continue
+		}
+		ppv := upToPlainConfState(a.cs)
+		ppB := ppv.AppendMessage(nil)
+		dec := &pp.ConfState{}
+		if err := dec.UnmarshalMessage(upB); err != nil {
+			report("Codec/dec-theirs-err/CS", a.name, nil, err)
+			continue
+		}
+		upDec := &up.ConfState{}
+		if err := proto.Unmarshal(ppB, upDec); err != nil {
+			report("Codec/dec-ours-err/CS", a.name, nil, err)
+			continue
+		}
+		codecCheck("CS", a.name, a.cs, upB, proto.Size(a.cs), ppB, ppv.SizeMessage(), plainToUpConfState(dec), upDec)
+	}
+	for _, a := range entries() {
+		if a.e == nil {
+			continue
+		}
+		upB, upErr := proto.Marshal(a.e)
+		if upErr != nil {
+			report("Codec/marshal-err/Entry", a.name, nil, upErr)
+			continue
+		}
+		ppv := upToPlainEntry(a.e)
+		ppB := ppv.AppendMessage(nil)
+		dec := &pp.Entry{}
+		if err := dec.UnmarshalMessage(upB); err != nil {
+			report("Codec/dec-theirs-err/Entry", a.name, nil, err)
+			continue
+		}
+		upDec := &up.Entry{}
+		if err := proto.Unmarshal(ppB, upDec); err != nil {
+			report("Codec/dec-ours-err/Entry", a.name, nil, err)
+			continue
+		}
+		codecCheck("Entry", a.name, a.e, upB, proto.Size(a.e), ppB, ppv.SizeMessage(), plainToUpEntry(dec), upDec)
+	}
+	for _, a := range messages() {
+		if a.m == nil {
+			continue
+		}
+		upB, upErr := proto.Marshal(a.m)
+		if upErr != nil {
+			report("Codec/marshal-err/Msg", a.name, nil, upErr)
+			continue
+		}
+		ppv := upToPlainMessage(a.m)
+		ppB := ppv.AppendMessage(nil)
+		dec := &pp.Message{}
+		if err := dec.UnmarshalMessage(upB); err != nil {
+			report("Codec/dec-theirs-err/Msg", a.name, nil, err)
+			continue
+		}
+		upDec := &up.Message{}
+		if err := proto.Unmarshal(ppB, upDec); err != nil {
+			report("Codec/dec-ours-err/Msg", a.name, nil, err)
+			continue
+		}
+		codecCheck("Msg", a.name, a.m, upB, proto.Size(a.m), ppB, ppv.SizeMessage(), plainToUpMessage(dec), upDec)
+	}
+	for _, a := range confChangeV2s() {
+		if a.c == nil {
+			continue
+		}
+		upB, upErr := proto.Marshal(a.c)
+		if upErr != nil {
+			report("Codec/marshal-err/CCV2", a.name, nil, upErr)
+			continue
+		}
+		ppv := upToPlainConfChangeV2(a.c)
+		ppB := ppv.AppendMessage(nil)
+		dec := &pp.ConfChangeV2{}
+		if err := dec.UnmarshalMessage(upB); err != nil {
+			report("Codec/dec-theirs-err/CCV2", a.name, nil, err)
+			continue
+		}
+		upDec := &up.ConfChangeV2{}
+		if err := proto.Unmarshal(ppB, upDec); err != nil {
+			report("Codec/dec-ours-err/CCV2", a.name, nil, err)
+			continue
+		}
+		codecCheck("CCV2", a.name, a.c, upB, proto.Size(a.c), ppB, ppv.SizeMessage(), plainToUpConfChangeV2(dec), upDec)
+	}
+	for _, a := range hardStates() {
+		if a.h == nil {
+			continue
+		}
+		upB, upErr := proto.Marshal(a.h)
+		if upErr != nil {
+			report("Codec/marshal-err/HS", a.name, nil, upErr)
+			continue
+		}
+		ppv := upToPlainHardState(a.h)
+		ppB := ppv.AppendMessage(nil)
+		dec := &pp.HardState{}
+		if err := dec.UnmarshalMessage(upB); err != nil {
+			report("Codec/dec-theirs-err/HS", a.name, nil, err)
+			continue
+		}
+		upDec := &up.HardState{}
+		if err := proto.Unmarshal(ppB, upDec); err != nil {
+			report("Codec/dec-ours-err/HS", a.name, nil, err)
+			continue
+		}
+		codecCheck("HS", a.name, a.h, upB, proto.Size(a.h), ppB, ppv.SizeMessage(), plainToUpHardState(dec), upDec)
+	}
+	fmt.Printf("ok  Codec               %d values: bytes, Size, and both cross-unmarshals across 5 message types\n", codecChecks)
 
 	if fails > 0 {
 		fmt.Printf("\nFAIL %d disagreement(s)\n", fails)

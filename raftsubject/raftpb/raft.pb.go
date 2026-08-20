@@ -16,11 +16,13 @@
 // Dropped: the file-descriptor machinery and ProtoReflect (see the log's
 // subject-delta ledger for the itemised list and the reasoning).
 //
-// MARSHAL-AVOIDANCE: no Marshal/Unmarshal/Size lives here at all. The
-// harness passes structs (no wire encode), MemoryStorage stores structs,
-// and membership is snapshot-seeded, so the encode paths are provably never
-// taken. Anything that reaches for them hits an explicit panic, never a
-// silent zero.
+// WIRE CODEC (W4.1, H-1 discharged — docs/raft-w41-log.md item 1): the
+// per-type Marshal/Unmarshal/Size live in the generated plain_codec.go
+// (AppendMessage / SizeMessage / UnmarshalMessage), derived from the field
+// numbers and wire types pinned in the struct tags below. The byte-format
+// contract is protobuf wire compatibility for exactly these nine messages;
+// the differential obligation is difftest.py section 7 (vs the real
+// protobuf runtime) plus the in-sandbox codeccheck.py battery.
 package raftpb
 
 type EntryType int32
