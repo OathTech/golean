@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+# G-2/H-10 guardrails (function-local errors.New). Red at
+# frontend-export until the shim lands (the subject function is
+# per-decl quarantined on the errors.New selector call); green after.
+fresh-not-eq	errNewFreshNotEq	-	ok	-	stdlib,interfaces,equality,identity
+self-eq	errNewSelfEq	-	ok	-	stdlib,interfaces,equality,identity
+nilness	errNewNilness	-	ok	-	stdlib,interfaces,equality
+readback	errNewReadback	-	ok	-	stdlib,interfaces,strings,methods
+cross-impl	errNewCrossImpl	-	ok	-	stdlib,interfaces,equality,identity
+assert-ok	errNewAssertOk	-	ok	-	stdlib,interfaces,type_assertions,comma_ok

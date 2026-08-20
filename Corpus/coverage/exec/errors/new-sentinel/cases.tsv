@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+# G-2/H-10 guardrails (package-level errors.New sentinels — the shape
+# of raft's nine `var Err... = errors.New(...)` globals). Red at
+# frontend-export until the shim lands (whole-export refusal: init code
+# has no per-decl quarantine); green after.
+identity	errSentinelIdentity	-	ok	-	stdlib,interfaces,equality,identity,globals,init
+distinct	errSentinelDistinct	-	ok	-	stdlib,interfaces,equality,globals,init
+classify	errSentinelClassify	-	ok	-	stdlib,interfaces,equality,identity,globals,init
+readback	errSentinelReadback	-	ok	-	stdlib,interfaces,strings,globals,init

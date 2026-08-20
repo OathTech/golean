@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+# G-2/H-10 multipkg edge: per-unit shim injection + cross-package
+# sentinel identity. Red at frontend-export until the shim lands.
+identity-across	mpErrIdentityAcross	-	ok	-	stdlib,interfaces,equality,identity,globals,multipackage,imports
+distinct-across	mpErrDistinctAcross	-	ok	-	stdlib,interfaces,equality,globals,multipackage,imports
+text-across	mpErrTextAcross	-	ok	-	stdlib,interfaces,strings,multipackage,imports
