@@ -190,44 +190,6 @@ def liveness(wire_path, names):
     return {n: reachability.path_of(pred, n) for n in names if n in pred}
 
 
-def find_call_end(s, i):
-    depth = 0
-    while i < len(s):
-        c = s[i]
-        if c in "\"`'":
-            q = c
-            i += 1
-            while i < len(s):
-                if s[i] == "\\" and q != "`":
-                    i += 2
-                    continue
-                if s[i] == q:
-                    break
-                i += 1
-        elif c == "(":
-            depth += 1
-        elif c == ")":
-            depth -= 1
-            if depth == 0:
-                return i + 1
-        i += 1
-    sys.exit("sweep.py: unbalanced call while flattening")
-
-
-def replace_calls(s, name, repl):
-    out, i, n = [], 0, 0
-    while True:
-        j = s.find(name + "(", i)
-        if j < 0:
-            out.append(s[i:])
-            break
-        out.append(s[i:j])
-        i = find_call_end(s, j + len(name))
-        out.append(repl)
-        n += 1
-    return "".join(out), n
-
-
 def locate(tree, qualified):
     """`pkg.Type.Method` / `pkg.Func` -> the file declaring it, or None.
 
