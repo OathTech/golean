@@ -62,3 +62,66 @@ judgment calls recorded as they are made; checkpoints every ≤5 units.
   report the visible `note … NOT RUN (no record; explicitly allowed
   here)` — the docs-only hatch working as specified. Log:
   `artifacts/w32-s0-ci2.log` (untracked).
+
+## Slice 1 phase A — the boundary-set design note (G1 artifact, 2026-08-20)
+
+- Base: `10aad750` (G0 ruled + slice 5b added), tree clean. NO SURGERY
+  — this phase writes the G1 gate artifact only; the charter gates
+  implementation on Mike's approval of the note.
+- Wedge reproduced FRESH at this tip (not quoted from the 2026-08-12
+  record): gc send-then-spin exit0-and-prints-42 60/60 (+20/20 at
+  GOMAXPROCS=1); machine fuel-out on the default stream and 511/511
+  fuel-out on the exhaustive mod-2 depth-8 sweep (--fuel 100000; the
+  probe record's closed reachable-set argument re-applies). Control
+  probe (b) re-run: ok/7 on default/[0]/[2]/[0,1]/[0,0,0,0], fuel-out
+  on [1]/[1,0] — matches the record exactly.
+- U-1's owed directed probe RUN (new this session): wake-then-abort
+  (cap-1 send wakes main, worker panics in its private segment). gc
+  200 runs: 0 exit-0, 189 exit-2-with-"42"-printed, 11 exit-2-silent.
+  Machine 127/127 panic on the mod-2 depth-6 sweep. The DOMINANT gc
+  member (partner progress between wake and abort) is observed ∉
+  modeled — U-1 moves from (d) UNKNOWN to a measured datum; probe
+  source is inline in the note (evidence-dir + corpus rows land with
+  stage C — this lane's writes are the note + this log only).
+- Judgment call: probe artifacts kept under `artifacts/w32-probes/`
+  (gitignored) per the lane brief — raft-w4 concurrently owns
+  `Corpus/` + `baselines/`; nothing under either was touched.
+- Judgment call: the U-1 probe's finding (gc dominant member is
+  print-THEN-abort, exit-0 never observed in 200) reshaped the note's
+  B3 stance — the abort window is proposed DEFERRED to slice 5
+  because no OBSERVED member needs it (B1+L5 admit both observed
+  members); the probe is recorded as B3's trigger baseline.
+- Judgment call: canonical-slot convention for the new sites (slot 0
+  = issuer/current continues) chosen over uniform goroutine-order —
+  it is what makes "default stream = old schedule" literal, the
+  zero-strict-flips prediction falsifiable, and the non-preclusion
+  argument structural; posed as decision question 4, not buried.
+- Output: `docs/2026-08-20_w32-boundary-set.md` — §1 wedge fresh
+  reproduction + file:line mechanism; §2 the set (B1 post-op markers
+  at ALL registry-op completions via `.opDone` unifying `.spawned`;
+  B2 back-edge boundaries; B3 considered-and-deferred), each with
+  spec-anchored envelope argument + admitted members + granularity
+  footprint (incl. one owed correction to the inventory's C2/C3
+  "segments shrink" cost prose); §3 the G0-ruled Q1/Q2 designs with
+  signatures; §4 fairness non-preclusion (4-point argument; B2 is
+  what makes Fair non-vacuous); §5 cost surface (proof blast radius
+  by file, corpus prediction "new ids only" stated falsifiably, both
+  tier=slow rows scoped, the enumerator's per-site modes +
+  allow-nonterm accounting); §6 U-1 pinned; §7 staged plan A–E each
+  gate-green; §8 decision block (6 questions, per-strike
+  consequences).
+- CHECKPOINT slice-1-A: note written; gate run below; **G1 ask POSED
+  — awaiting Mike's ruling on §8 before any surgery.**
+
+### Gate (slice 1 phase A, docs-only)
+
+- `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci` — **PASS**
+  (exit 0): all steps ok (escape hatches, purity/TCB/import-direction,
+  core build warning-free, proofs + Audit gate, verdi compat, goose
+  fixtures/pins, golden lowering, frontend unit tests, eval tests 136
+  ok); the two baseline-diff steps report the visible
+  `note … NOT RUN (no record; explicitly allowed here)` — the
+  docs-only hatch as specified (this phase changed no runtime code;
+  probes are gitignored under `artifacts/w32-probes/`). Log:
+  `artifacts/w32-s1a-ci.log` (untracked). Cap 24G honored (raft-w4
+  lane concurrent).
