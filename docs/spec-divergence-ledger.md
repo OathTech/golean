@@ -390,6 +390,158 @@ Discipline notes, recorded up front:
   unchanged — this entry fixes the ENVELOPE's reading, not the
   realization).
 
+### L-014 — an optimized constant fold truncates to 32 bits — `gc-bug` (UNFILED; upstream filing pending Mike)
+
+- How found: differential (grossmith campaign 2, `case_10480`, m2pairs
+  seed 4010480 — `docs/2026-08-20_grossmith-findings-2.md` §2). **The
+  first entry in this ledger where the differential ORACLE, not the
+  machine, was the wrong side.**
+- Sources: `docs/2026-08-20_grossmith-findings-2.md` §2 (localization,
+  characterization, whole-program confirmation) and §10 (seed replay);
+  spec#Numeric_types (`int` is implementation-specific 32-or-64-bit —
+  64 at the oracle host, inventory R1) and spec#Arithmetic_operators,
+  whose signed-integer paragraph is the governing text: "the operations
+  `+`, `-`, `*`, `/`, and `<<` may legally overflow and the resulting
+  value exists and is deterministically defined by the signed integer
+  representation, the operation, and its operands" (verbatim at the
+  go1.26.5 pin). Nothing in the program below even overflows at 64 bits
+  — every intermediate is small — so the defined value is just the
+  arithmetic one. No upstream issue number yet (see Status).
+- Sharp question: at default flags, does gc compute the *defined*
+  64-bit value of an `int` expression whose operands become compile-
+  time constants after inlining — or may an intermediate fold be
+  performed at 32 bits?
+- Minimal program (11 lines, reduced from the generated case):
+
+  ```go
+  package main
+
+  func tf0(p0 int) (int, int) {
+  	p0 = (p0 >> 4) - max(p0>>31, max(p0, -51))
+  	return ((p0/-2147483648)*(p0/-10) + (-p0)), max(p0>>3, p0<<6) * -2147483648
+  }
+
+  func main() {
+  	a, b := tf0(-54)
+  	println(-4 + a*31 + b) // want 2147483737
+  }
+  ```
+
+  Hand derivation (no latitude anywhere in it): `p0 = -54` →
+  `-54>>4 = -4`, `max(-54>>31, max(-54,-51)) = max(-1,-51) = -1`, so
+  `p0 = -4 - (-1) = -3`; `a = (-3/-2147483648)*(-3/-10) + 3 = 3` and
+  `b = max(-1,-192) * -2147483648 = 2147483648`; the sum is
+  `-4 + 93 + 2147483648 = 2147483737`. gc prints `a` and `b`
+  **correctly** and then computes the final sum exactly 2^32 low.
+
+- Per-implementation data (gc is the only implementation, so the
+  verdict is ARGUED per the N=1 discipline note — but gc disagrees with
+  ITSELF, which is the unusually strong form of the argument, as at
+  L-011). Version matrix, linux/amd64; the 1.26.6 and 1.27rc3 rows are
+  post-findings-doc probes, both toolchains **built from source
+  2026-08-20**:
+
+  | toolchain | default flags | `-gcflags=all=-N` | `-gcflags=all=-l` | `-gcflags=all='-N -l'` |
+  |---|---|---|---|---|
+  | go1.26.5 (the pinned oracle) | **-2147483559** (2^32 low) | 2147483737 | 2147483737 | 2147483737 |
+  | go1.26.6 | **-2147483559** | 2147483737 | 2147483737 | 2147483737 |
+  | go1.27rc3 | **-2147483559** | 2147483737 | 2147483737 | 2147483737 |
+
+  So it is not a fixed-in-tip regression of the pin: it survives into
+  the next point release and the next release candidate. Further
+  characterization (§2.3, at the pin): suppressed by EITHER `-N` or
+  `-l`, and by `//go:noinline` on `tf0` — it needs inlining *and* the
+  optimizer; not the `prove` pass (`-d=ssa/prove/off` still
+  miscompiles); independent of `GOAMD64=v1/v2/v3`; and making the input
+  opaque (`-54 * len(os.Args)`) makes it disappear. Consistent with a
+  **constant fold performed after inlining that truncates to 32 bits**.
+
+- Stance: **the machine is right and gc at default flags is wrong** —
+  the doctrine sharpening's exception channel (above) fires exactly
+  here. This is a forced point (defined 64-bit integer arithmetic), not
+  a latitude one, so gc's default-flag answer is a `gc-bug` finding
+  rather than a divergence to chase. The confirmation is not an
+  argument from our own correctness: on the unmodified generated case,
+  `go run -gcflags=all='-N -l'` differs from the default-flags run in
+  exactly one of 15 observed values, and that value —
+  `8217745495067144867` — is **byte-identical to the machine's**. The
+  machine matched unoptimized gc on all 15 values (§2.4). Regehr-class.
+- Bound affected: **none.** The lower bound is "observed ∈ modeled"
+  measured against the ORACLE's answer, and the oracle's answer here is
+  not Go's. The entry's operational content is a triage lesson, not a
+  model obligation: **a differential red is not automatically ours** —
+  before attributing one, re-run the case under `-gcflags=all='-N -l'`
+  and see which side moves. (Cheap corollary for future campaigns,
+  §5: metamorphic *compile*-mode checks over the whole population cost
+  almost nothing and are what caught L-015 for free.)
+- Status: **open, upstream-filing-pending-Mike** — Mike is filing this
+  upstream separately; per-filing sign-off is his, per the discipline
+  note. No corpus row: the program is a gc miscompile, and pinning it
+  would pin gc's wrong answer as the expected one. When the filing
+  lands, record the issue number in Sources.
+
+### L-015 — gc refuses to assemble a legal program ("offset too large") — `gc-bug`, reference-infra class (RECORDED, not filing)
+
+- How found: differential (grossmith campaign 2, two cases —
+  `case_09214` m1a seed 1009214 and `case_02834` m2pairs seed 4002834;
+  `docs/2026-08-20_grossmith-findings-2.md` §3). Both were classified
+  `reference-infra-failure`: the harness refused them BEFORE the clone
+  ran, so the machine never saw them and nothing was misattributed.
+- Sources: `docs/2026-08-20_grossmith-findings-2.md` §3, which carries
+  the 25-line repro and the flag matrix inline (not duplicated here —
+  it plateaued at 25 lines for a reason recorded below);
+  spec#Index_expressions and spec#Run_time_panics (the defined behavior
+  is a runtime index-out-of-range panic). No upstream issue.
+- Sharp question: **is a program whose defined behavior is a runtime
+  panic allowed to fail at ASSEMBLY time?** gc emits a stack
+  displacement above 2^31 for a provably-out-of-range constant index
+  and the assembler rejects the instruction it just emitted:
+
+  ```
+  <autogenerated>:1: offset too large in 00699 (…/subject.go:143)
+  	MOVB	SIB, main..autotmp_100+2147483682(SP)(R12*1)
+  ```
+
+- Minimal program: 25 lines, at §3.1 of the findings doc. Shape:
+  `v0 := 2147483647` grown through a variadic helper and a loop-folded
+  function, then used to index a 3-element `[]int8`. Reducing further
+  fails by design — folding the index to a syntactic constant by hand
+  (`v0 += -558`) does NOT reproduce; the constant has to arrive through
+  the SSA pipeline.
+- Per-implementation data (gc only; ARGUED, and again gc-vs-itself):
+
+  | build mode | outcome |
+  |---|---|
+  | default flags | `offset too large` (assembly fails) |
+  | `-gcflags=all=-l` | `offset too large` (still) |
+  | `-gcflags=all=-N` | compiles |
+  | `-gcflags=all='-N -l'` | compiles; runs; `panic: runtime error: index out of range [2147483089] with length 3` |
+  | `GOARCH=386` | compiles |
+
+  So it is the optimizer, not inlining (`-N` suppresses it, `-l` does
+  not) — the opposite dependency from L-014, which needs both. The
+  programs are legal Go: `go vet` type-checks them with style warnings
+  only. Rate: **2 in 79,800** generated programs (~1 in 40,000).
+- Stance: `gc-bug` of the **reference-infra class** — the fault is not
+  a wrong answer but a refusal to BUILD a program the language admits,
+  so it never reaches a semantic verdict on either side. Recorded here
+  rather than in the latitude inventory because "which legal programs
+  an implementation can build" is a fault question, not an envelope:
+  the spec's implementation restrictions (cf. L-010) are enumerated and
+  do not include stack-displacement encodability. Related to L-014 only
+  as a HYPOTHESIS, stated as one: both are amd64 constant handling near
+  2^31; they were **not** root-caused to a shared pass.
+- Bound affected: **none.** Same reasoning as L-014 — the machine never
+  ran these programs. The operational content is for the harness: a
+  `reference-infra-failure` verdict is a real signal about gc, not
+  noise to filter, and the campaign found it only because every case is
+  compiled at default flags by the reference pass.
+- Status: **recorded, NOT filing** (Mike's call, currently hold —
+  unlike L-014, which he is filing). Upstream-reportable if that
+  changes; the repro and matrix are preserved above and at §3 so a
+  later filing needs no re-derivation. No corpus row: the corpus cannot
+  hold a program the oracle refuses to build.
+
 ## Feed status (honest accounting)
 
 Census at the go1.26.5 pin (post-audit regeneration): **926 spec
@@ -403,7 +555,13 @@ before the pin (historic keys, not covmap segment names) and 148+1 pre-anchor-er
 are 2009; delta-review N3) carry the explicit `(pre-anchor-era)`
 marker (the pre-HTML file had no anchors) — the
 uncurated feed.
-Curated above: 6. Issue-metadata enrichment DONE (2026-08-17,
+Curated above: **15 entries, L-001…L-015** (recounted 2026-08-20 in the
+docs-gcbugs slice: the bare "6" predates L-011…L-015 and was never
+updated as entries landed; it is a count of ENTRIES, and the ledger
+holds every kind, including the `prior-art` and informational rows).
+Of those, **2 are `gc-bug`** — L-014 and L-015, both from the 2026-08-20
+grossmith campaign, and both arriving through the differential channel
+rather than the census feed. Issue-metadata enrichment DONE (2026-08-17,
 sandbox opened by operator; counts updated after the census
 regeneration retired two false-positive refs): 370 of 372 refs
 resolved into the tracked `docs/spec-archaeology/issue-index.tsv`

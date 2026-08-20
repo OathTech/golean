@@ -729,6 +729,82 @@ subexpressions of one binary operator).
   duplicate-map-key evaluation order, and map-literal key-vs-value
   order; E12 covers binary operators only.
 
+### E13. Non-call panicking operations (type assertion, indexing) vs SIBLING calls — (b) PINNED, structural (the same frontend ANF hoist): calls first
+
+Added 2026-08-20 from the grossmith campaign-2 record
+(`docs/2026-08-20_grossmith-findings-2.md` §4, case `case_16162`, seed
+4016162; F-3 of that document's owed follow-ups). E12's sibling on the
+same spec ground, one level up: E12 is the order of the operand events
+of ONE binary operator against the calls in it; this entry is the order
+of a non-call operation's PANIC against calls that are its lexical
+SIBLINGS — other elements of the same RHS list, or other arguments of
+the same call.
+
+- WHERE: spec#Order_of_evaluation, OMISSION-grounded (the absence is
+  the anchor, as at C1/C5/E12(ii)): the left-to-right rule's scope is
+  "function calls, method calls, receive operations, and binary logical
+  operations" — a **type assertion** is none of these, and neither is
+  an **index expression**. The "except as required lexically" clause
+  does not reach a sibling: it forces a non-call operation only when
+  that operation is an ARGUMENT of a lexically earlier call ("g cannot
+  be called before its arguments are evaluated"). **That distinction is
+  the whole entry**, and getting it wrong in the other direction is a
+  BUG, not latitude: the argument position IS forced, which is exactly
+  the forced point BUG-062 is open on (findings §1 — built-in call
+  arguments; §1.4's `user-arg-index` and `b3-append-arg-index` probes
+  are the machine getting the forced side right). Machine realization
+  point: no GoCore choice site — the frontend's A-normal-form pass
+  (`tools/nativefrontend/wire.go:25`, the same pass E12 names) hoists
+  the sibling calls to temps ahead of the expression, leaving the
+  assertion's type check and the index's bounds check in place, so the
+  calls run first.
+- PIN: a sibling call's effects land BEFORE a type assertion's failure
+  panic and before an index expression's bounds panic. Plausible
+  envelope: any relative order of the non-call operation's panic and
+  the sibling calls' effects, SUBJECT to the spec's hard constraints
+  (calls/receives/binary-logical stay lexically ordered among
+  themselves; a call's own arguments precede it). Reading: **UNSEQ**,
+  not merely either-order — `docs/spec-interpretations.md` **I-2**,
+  backed by ledger `L-013`; the F2 sentence E12 leaves owed is answered
+  for this entry by that adopted reading.
+- EVIDENCE: GC — and unusually, the two axes fall on OPPOSITE sides,
+  which is the cleanest possible demonstration that the point is
+  latitude rather than a machine defect on one of them:
+
+  | probe | shape | gc | machine | source |
+  |---|---|---|---|---|
+  | `d1-assert-vs-call` | `iv.(T0), w(max(w(1,4), w(59,5)), 6)` | 0 (assertion panics first) | 4005 (all three `w` calls ran) | findings §4 |
+  | `d2-assert-as-call-arg` | `sink(iv.(T0), w(7,9))` | 0 | 9 | findings §4 |
+  | `bare-index` | `s[i], wit()` | 9 | 9 | findings §1.4 |
+
+  `4005 = ((0*31+4)*31+5)*31+6`, i.e. the machine ran the whole `w`
+  chain before the assertion panicked. On the **assertion** axis gc
+  realizes the other member; on the **indexing** axis gc happens to
+  realize ours. gc is SELF-STABLE on the assertion axis (default flags
+  and `-gcflags=all='-N -l'` agree), so this is latitude in the spec,
+  not instability in gc — the contrast with E3, where gc's realization
+  is compiler-internal and hence unpinnable, is worth keeping. XIMPL
+  would bear on whether any implementation orders these; none known.
+- NO PIN MAY BE TAKEN HERE. Deliberately **not** a corpus case, and no
+  strict-lane row may pin either axis: the machine and gc realize
+  different members on the assertion axis, so a strict pin would record
+  a divergence as a fidelity failure, and a pin on the indexing axis
+  would freeze an agreement that the spec does not require. This is a
+  census row, nothing more. (Campaign disposition, findings §4:
+  "an inventory entry, not a fix".) The generator-side observation that
+  a STRICT-lane outcome-determinism claim can land on a point like this
+  is grossmith's, handed back as F-5 — external, no patch.
+- RE-ENVELOPE OBLIGATION + COST: rides E2/E12's family — the same
+  panic-identity membership treatment §7 item 5 queues (admit any of
+  the candidate panics) covers this entry's observable, since the only
+  thing visible here is WHICH panic wins and what ran before it. Until
+  E2 opens, no new machine arms. MODERATE, sequential-only observable.
+  Census follow-on, in E12's spirit: the same reasoning applies to
+  every other non-call panicking operation in operand position
+  (division by zero, slice-to-array conversion, nil-map write, nil
+  dereference) against sibling calls — not separately probed, and NOT
+  claimed by this entry.
+
 ## 3. Representation, runtime, and library realization
 
 ### R1. `int`/`uint` width — (b) PINNED to 64 bits
@@ -1213,9 +1289,14 @@ permanent; the deviation is not.)
   C6 owns two sites (L2 entry + arrival), C8 rides C1's site; E9's
   order axis). (Count corrected 2026-08-12 — the old "6 entries" was
   off by one against this line's own list.)
-- (b) PINNED: 14 entries — structural: C2, C3; sequential order: E2,
-  E3 (known ≠ gc), E4, E5, E7 (known ≠ gc), E10, E11; representation/
-  runtime: R1, R8, R9, R10, R11 (+R12 harness-level).
+- (b) PINNED: **17 entries** — structural: C2, C3; sequential order:
+  E2, E3 (known ≠ gc), E4, E5, E7 (known ≠ gc), E10, E11, E12, E13
+  (known ≠ gc on its assertion axis); representation/runtime: R1, R8,
+  R9, R10, R11, R15 (+R12 harness-level). (Recount 2026-08-20, the
+  docs-gcbugs slice: the old "14" listed neither E12, added at the
+  2026-08-17 P2 retrofit, nor R15, added at the 2026-08-19 audit fix
+  round — this line had not been touched since 2026-08-12. E13 is this
+  slice's addition.)
 - (b-n) NARROWED with recorded caveat: 6 — C7, E8, R3 (known outside),
   R4, R5, R13 (E9's created-entries sub-point was LIFTED to the full
   envelope 2026-08-19; its residual is the cross-goroutine delete-prune
@@ -1226,5 +1307,6 @@ permanent; the deviation is not.)
 - (d) UNKNOWN: 7 (U-1 … U-7).
 - REFUSED standing in for latitude: 9 (§5).
 - Known-≠-oracle deterministic points (the honesty-critical subset of
-  (b)): E3, E5, E7, R3(escaping path) — plus the C2+C3 send-then-spin
-  wedge as the oracle-visible structural instance.
+  (b)): E3, E5, E7, E13(type-assertion axis; the indexing axis agrees),
+  R3(escaping path) — plus the C2+C3 send-then-spin wedge as the
+  oracle-visible structural instance. (E13 added 2026-08-20.)

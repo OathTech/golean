@@ -793,15 +793,19 @@ charter's §Open questions, each with a stated default.
       own follow-ups are routed below.
 - [ ] **Campaign-2 follow-up ROUTING** (from
       `docs/2026-08-20_grossmith-findings-2.md` §9 — this row is the
-      routing table only; no item is executed here). Each of the five
-      owed follow-ups has an owner:
+      routing table; each of the five owed follow-ups has an owner).
+      **Status 2026-08-20: F-3 and F-4 are EXECUTED** by the
+      docs-gcbugs slice (rows struck through below); **F-1 and F-2
+      remain routed to the build queue's A6** and are NOT this slice's
+      to take; F-5 is external. The row stays open until A6 lands
+      F-1/F-2:
 
       | item | what it owes | routed to |
       | --- | --- | --- |
       | **F-1** | widen BUG-062's statement (the gap is that the ordered-event set omits the value-returning BUILT-INS, not just inline `len`/`cap`) and re-scope mini-slice **A6** to enumerate built-in call sites, with `append` recorded as already-correct so A6 cannot regress it | **the build queue's A6** (`docs/language-coverage-ledger.md` §5; A6's deferral reason is triage-table §3.4). The findings doc asks that this annotate a merge ask rather than block one — A6's scope as written is known-incomplete |
       | **F-2** | promote 5 corpus-ready probe rows (`builtins/min-max-vs-call-order/*`: 3 RED under BUG-062, 2 GREEN controls) — and, if promoted, three new red pins attributed to BUG-062 in the untriaged ratchet | **A6's guardrail set** — the greens are exactly the controls that stop A6 over-reaching, so they land with A6, not before it |
-      | **F-3** | one latitude-inventory row for the UNSEQ non-call-operand axis (type assertion + indexing witnesses; deliberately NOT a corpus case, and no strict row may pin it) | **a small docs slice** against `docs/2026-08-11_latitude-inventory.md` — W3.2-adjacent (it is a census row, and §8 of this charter's arc keeps the census true), takeable any time |
-      | **F-4** | two `spec-divergence-ledger` entries of kind `gc-bug`: the 2^32 constant-fold truncation, and the "offset too large" assembler refusal — both minimized, both upstream-reportable; the first is also the record's first case where the *oracle*, not the machine, was the wrong side | **the same small docs slice** (`docs/spec-divergence-ledger.md`); the gc-bug channel already exists from the bugfix arc's gate commit |
+      | ~~**F-3**~~ | ~~one latitude-inventory row for the UNSEQ non-call-operand axis~~ — **EXECUTED 2026-08-20** (docs-gcbugs slice): inventory **E13**, "Non-call panicking operations (type assertion, indexing) vs SIBLING calls" — (b) PINNED, structural (the frontend ANF hoist), reading I-2/ledger L-013, both witnesses recorded (gc realizes the OTHER member on the assertion axis, OURS on the indexing axis), no corpus case and no strict-lane pin permitted. §10's counts recounted in the same slice (they had missed E12 and R15 since 2026-08-12) | ~~a small docs slice~~ DONE |
+      | ~~**F-4**~~ | ~~two `spec-divergence-ledger` entries of kind `gc-bug`~~ — **EXECUTED 2026-08-20** (same slice): **L-014** the 2^32 constant-fold truncation (11-line repro inline; version matrix widened past the findings doc — go1.26.5, **go1.26.6 and go1.27rc3**, all wrong at default flags, all correct under either `-N` or `-l`; status **upstream-filing-pending-Mike**) and **L-015** the "offset too large" assembler refusal (reference-infra class; repro pointer to findings §3.1; status **recorded, NOT filing** — Mike's call, currently hold). Both record **bound affected: none**, with L-014 carrying the triage lesson that a differential red is not automatically ours | ~~the same small docs slice~~ DONE |
       | **F-5** | hand back to grossmith the observation that its STRICT lane's `order_witness` construct can land on unsequenced points | **external, observation only** — no patch to `deps/grossmith` (trust-tools rule). Pairs with the W3.2 charter's R-1 note about the golean clone's blanket `-panic-policy` refusal |
 - [x] ~~**The opsem write-up's route question**~~ — **RULED 2026-08-20**
       (charter §Rulings **R-2**): the DERIVED route, rule skeletons
