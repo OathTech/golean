@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+# BUG-064 guardrail: multi-package + crypto/rand in the stdlib init
+# closure. Red (whole-export refusal, frontend-export) until the
+# double-escape fix; green after.
+-	inittaskEscape	-	ok	-	multipackage,imports,init,globals,stdlib

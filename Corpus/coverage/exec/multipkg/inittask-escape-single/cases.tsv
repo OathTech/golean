@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+# BUG-064 control: single package, green throughout (early return).
+-	inittaskEscapeSingle	-	ok	-	imports,init,stdlib

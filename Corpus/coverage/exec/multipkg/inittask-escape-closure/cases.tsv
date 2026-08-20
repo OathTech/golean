@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+# BUG-064 edge: escaped prefix reached deps-of-deps (crypto/sha256).
+-	inittaskEscapeClosure	-	ok	-	multipackage,imports,init,globals,stdlib
