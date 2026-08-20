@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+# H-6 Errorf guardrails (raft W4.1 item 2): Errorf = errors.New over the
+# desugared text (no %w in the modeled subset). Red at frontend-export
+# until the desugar lands; green after.
+fresh	errorfFresh	-	ok	-	stdlib,interfaces,equality,identity
+text	errorfText	-	ok	-	stdlib,interfaces,strings
+sentinel-classify	errorfSentinelClassify	-	ok	-	stdlib,interfaces,equality,identity,globals,closures
+vs-errors-new	errorfVsErrorsNew	-	ok	-	stdlib,interfaces,equality,strings

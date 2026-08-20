@@ -351,6 +351,34 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	typeDefs = append(typeDefs, importedDefs...)
 	methods = append(methods, importedStubs...)
 
+	// E5-T modeled imported types (importedmodel.go): harvest the
+	// shadow models' real TypeDefs and method bodies. AFTER
+	// importedTypeDecls (which suppressed their markers and filtered
+	// their stubs); the interfaces a model's signatures mention that
+	// the host also emits (error) are dropped inside the harvest.
+	// hostDefNames is a PREDICTION of the host's interface pass: the
+	// host stubs' signatures registered those interfaces in
+	// seenInterfaces during emission, so every interface the model
+	// would duplicate is present there.
+	hostDefNames := map[string]bool{}
+	for _, td := range typeDefs {
+		if m, isMap := td.(map[string]any); isMap {
+			if n, _ := m["name"].(string); n != "" {
+				hostDefNames[n] = true
+			}
+		}
+	}
+	for n := range e.seenInterfaces {
+		hostDefNames[n] = true
+	}
+	hostDefNames["error"] = true // the predeclared interface: always the host's
+	modelDefs, modelMethods, err := e.harvestImportedModels(hostDefNames)
+	if err != nil {
+		return nil, err
+	}
+	typeDefs = append(typeDefs, modelDefs...)
+	methods = append(methods, modelMethods...)
+
 	// Sync-primitive method-set stubs (arc-end fix round 2026-08-10):
 	// the four modeled sync types' FULL exported pointer method sets,
 	// so interface satisfaction answers what gc answers (the early
@@ -5161,6 +5189,27 @@ func (e *emitter) importedTypeDecls() ([]any, []any) {
 		sort.Strings(pending)
 		for _, qname := range pending {
 			done[qname] = true
+			// A MODELED imported type (E5-T, importedmodel.go) gets no
+			// marker TypeDef — its real def and method bodies are
+			// harvested from the shadow model in emitProgram — and its
+			// stubs cover only the methods the model does NOT declare
+			// (satisfaction still answers from the complete set; calls
+			// to unmodeled members keep failing closed).
+			if modeled := importedModelStubFilter(qname); modeled != nil {
+				ms, ok := e.importedMethodStubsFiltered(qname, e.importedNamed[qname], modeled)
+				if !ok {
+					// An un-emittable residual signature would skip the
+					// stub half while the model still ships bodies —
+					// a PARTIAL method set, exactly what D5's skip-whole
+					// rule exists to prevent. Refuse via a marker-less
+					// skip is not available here, so keep the standing
+					// skip-whole behavior: no stubs, and the harvest in
+					// emitProgram refuses the export loudly instead.
+					continue
+				}
+				stubs = append(stubs, ms...)
+				continue
+			}
 			ms, ok := e.importedMethodStubs(qname, e.importedNamed[qname])
 			if !ok {
 				continue
@@ -5172,6 +5221,27 @@ func (e *emitter) importedTypeDecls() ([]any, []any) {
 			stubs = append(stubs, ms...)
 		}
 	}
+}
+
+// importedMethodStubsFiltered is importedMethodStubs restricted to the
+// exported methods NOT carried by an E5-T model (importedmodel.go).
+func (e *emitter) importedMethodStubsFiltered(qname string, named *types.Named, modeled map[string]bool) ([]any, bool) {
+	all, ok := e.importedMethodStubs(qname, named)
+	if !ok {
+		return nil, false
+	}
+	out := []any{}
+	for _, s := range all {
+		m, isMap := s.(map[string]any)
+		if !isMap {
+			return nil, false
+		}
+		if name, _ := m["name"].(string); modeled[name] {
+			continue
+		}
+		out = append(out, s)
+	}
+	return out, true
 }
 
 func (e *emitter) importedMethodStubs(qname string, named *types.Named) ([]any, bool) {
@@ -6675,6 +6745,14 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 	// the method machinery and its standing refusals, byte-identical.
 	if sel, ok := c.Fun.(*ast.SelectorExpr); ok {
 		if node, handled, err := e.emitStdlibShimCall(c, sel); handled || err != nil {
+			return node, handled, err
+		}
+		// The H-6 fmt desugar (fmtdesugar.go): Sprintf/Errorf/Fprintf
+		// over a constant format string and the modeled verb/kind
+		// matrix; refusals for the three names stay INSIDE the hook
+		// (a modeled-surface gap must not read as an unmodeled
+		// package).
+		if node, handled, err := e.emitFmtCall(c, sel); handled || err != nil {
 			return node, handled, err
 		}
 		// Qualified call into a SOURCE package (`tracker.F(x)` — W1.1):

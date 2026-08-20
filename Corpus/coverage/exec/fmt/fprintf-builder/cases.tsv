@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+# H-6/H-18 Fprintf-into-Builder guardrails (raft W4.1 item 2). Red at
+# frontend-export until the desugar + the Builder model land.
+describe-shape	fprintfDescribeShape	-	ok	-	stdlib,strings,methods,interfaces,panic,recover,range
+returns	fprintfReturns	-	ok	-	stdlib,strings,methods,returns

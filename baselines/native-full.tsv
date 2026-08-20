@@ -1,16 +1,27 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-20 (raft W4.1 item 1 — the plainpb wire codec, H-1;
+# recorded: 2026-08-20 (raft W4.1 item 2 — the fmt desugar (H-6, Q3
+#   OPTION 1) + the strings.Builder E5-T model (H-18);
 #   commit: this commit, raft-w41)
-#   re-pin reason: 5 NEW ids, all PASS, and ZERO movement on the 2253
-#   pre-existing ids — exactly the flips predicted before the run
-#   (docs/raft-w41-log.md item 1):
-#     NEW/PASS (5): multipkg/wire-codec/{roundtrip,size,golden,
-#       unknown-skip,malformed} — the codec's language-shape guardrails
-#       (varint bit-ops, field-number-ordered encode, presence pointers,
-#       merge decode with unknown skip, cross-package type-switch
-#       dispatch). No frontend change in this item; the codec itself is
-#       subject-tree Go (raftsubject/raftpb/plain_codec.go, generated).
-#   counts: 2258 cases, 2118 PASS / 140 FAIL (was 2253, 2113/140)
+#   re-pin reason: 35 NEW ids and ZERO movement on the 2258 pre-existing
+#   ids — exactly the flips predicted before the run
+#   (docs/raft-w41-log.md item 2):
+#     NEW/PASS (33): fmt/sprintf-verbs/* (one per modeled verb x kind
+#       pair incl. both panic-render shapes, nil-ptr, nil-error,
+#       eval-order), fmt/errorf/*, fmt/fprintf-builder/*,
+#       strings/builder-model/* (incl. copy-panics: upstream's copy
+#       check verbatim).
+#     NEW/FAIL frontend-export BY DESIGN (2):
+#       fmt/sprintf-verbs/verb-outside-set — a verb outside the modeled
+#         matrix (the %T probe) refuses;
+#       fmt/sprintf-verbs/nonconst-format — a non-constant format
+#         string refuses (the verb/kind pairing is an emit-time check).
+#   Zero pre-existing movement is DESIGNED, not lucky: the five H-3
+#   quarantine witnesses whose fmt.Sprintf fixture would have flipped
+#   green were retargeted to fmt.Sprint in the same commit (JC-17 —
+#   the F3 lost-witness rule), and spec-examples-decl/timezone-stringer
+#   moved detail only (its message now names the modeled-subset
+#   boundary).
+#   counts: 2293 cases, 2151 PASS / 142 FAIL (was 2258, 2118/140)
 #   frontend: native (tools/nativefrontend + NativeToIR)
 # columns: result<TAB>id<TAB>stage
 result	id	stage
@@ -780,6 +791,34 @@ FAIL	floats/to-int-out-of-range/range	lean-observation
 PASS	floats/to-int-truncation	-
 PASS	floats/to-uint-truncation	-
 PASS	floats/typed-constant-adaptation	-
+PASS	fmt/errorf/fresh	-
+PASS	fmt/errorf/sentinel-classify	-
+PASS	fmt/errorf/text	-
+PASS	fmt/errorf/vs-errors-new	-
+PASS	fmt/fprintf-builder/describe-shape	-
+PASS	fmt/fprintf-builder/returns	-
+PASS	fmt/sprintf-verbs/d-enum	-
+PASS	fmt/sprintf-verbs/d-int	-
+PASS	fmt/sprintf-verbs/d-uint	-
+PASS	fmt/sprintf-verbs/decision-path	-
+PASS	fmt/sprintf-verbs/eval-order	-
+PASS	fmt/sprintf-verbs/literal-only	-
+FAIL	fmt/sprintf-verbs/nonconst-format	frontend-export
+PASS	fmt/sprintf-verbs/percent	-
+PASS	fmt/sprintf-verbs/plusv-nil-ptr	-
+PASS	fmt/sprintf-verbs/plusv-ptr-stringer	-
+PASS	fmt/sprintf-verbs/q-bytes	-
+PASS	fmt/sprintf-verbs/q-bytes-empty	-
+PASS	fmt/sprintf-verbs/s-error	-
+PASS	fmt/sprintf-verbs/s-nil-error	-
+PASS	fmt/sprintf-verbs/s-string	-
+PASS	fmt/sprintf-verbs/s-stringer	-
+PASS	fmt/sprintf-verbs/s-stringer-panic	-
+PASS	fmt/sprintf-verbs/v-kinds	-
+PASS	fmt/sprintf-verbs/v-nil-error	-
+PASS	fmt/sprintf-verbs/v-stringer-panic	-
+FAIL	fmt/sprintf-verbs/verb-outside-set	frontend-export
+PASS	fmt/sprintf-verbs/x-uint	-
 PASS	functions/bare-call-chain/chain	-
 PASS	functions/bare-call-chain/func-value	-
 PASS	functions/bare-call-chain/helper	-
@@ -2082,6 +2121,13 @@ PASS	spec-examples-stmt/type-switch/nil-case	-
 PASS	spec-examples-stmt/type-switch/string-in-list	-
 FAIL	spec-examples-stmt/type-unify-struct-array	frontend-export
 PASS	spec-examples-stmt/variadic-slice-passthrough	-
+PASS	strings/builder-model/copy-panics	-
+PASS	strings/builder-model/copy-zero-ok	-
+PASS	strings/builder-model/len-reset	-
+PASS	strings/builder-model/string-stable	-
+PASS	strings/builder-model/write-bytes	-
+PASS	strings/builder-model/write-string	-
+PASS	strings/builder-model/zero	-
 PASS	strings/byte-conversion-cap	-
 PASS	strings/byte-slice-to-string-copy	-
 PASS	strings/concat-eval-order	-

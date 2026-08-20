@@ -91,6 +91,124 @@ exactly 5 NEW ids (`multipkg/wire-codec/*`), all PASS; zero movement on
 the 2253 pre-existing ids (no frontend change in this item; corpus
 otherwise untouched). Baseline re-pinned same-commit with this reason.
 
+**Gate:** `scripts/ci --diff` at the item-1 commit — full PASS; the
+baseline drift was exactly the 5 predicted NEW ids. (The first run's 4
+unrelated FAILs were this fresh worktree missing `proofs/.lake/packages`
+— network clone denied by the sandbox; populated from the primary
+checkout at the manifest pins: batteries fa08db5, iris 3877dbe, Qq
+f463249. Environment, recorded.)
+
+---
+
+## Item 2 — H-6 (fmt, the Q3 OPTION 1 ruling) + H-18 (strings.Builder)
+
+**Landed.** Two mechanisms, both frontend-side, no GoCore/wire-schema
+change:
+
+1. **The fmt desugar** (`tools/nativefrontend/fmtdesugar.go`):
+   `Sprintf`/`Errorf`/`Fprintf` over a CONSTANT format string, parsed at
+   emit time; each verb pairs with its argument's STATIC type against the
+   modeled matrix (%d signed/unsigned ints incl. enums; %x unsigned; %s
+   string/error/Stringer; %v ints/string/bool/error/Stringer; %+v = %v
+   over this matrix; %q byte slices, ASCII subset; %%); anything else —
+   other verbs, flags, width, non-constant formats, spread args,
+   arity mismatches — refuses per-declaration naming the pair. The call
+   site becomes a call to a LIFTED per-site `$fmtN(...) string` whose
+   parameters receive the (converted/boxed/method-value) arguments — the
+   lift is what preserves fmt's argument-evaluation order (all args
+   before any String/Error call; probed against gc, pinned by
+   `fmt/sprintf-verbs/eval-order`). The per-verb helpers are E5-injected
+   Go source (`stdlibshim.go`, `goleanShimFmt*`): digit loops, the ASCII
+   %q quoter (fail-closed on bytes >= 0x80 — real %q prints printable
+   non-ASCII runes; recorded bound), and the recover-and-render helpers
+   reproducing fmt's `%!<verb>(PANIC=String method: ...)` forms, the
+   nil-pointer `<nil>`, and the nil-error `%!s(<nil>)`/`<nil>` split
+   (all probed against gc first — artifacts/w41/probe-fmt).
+   `Errorf` = `goleanShimErrorsNew(<lift>)` (without %w, fmt.Errorf IS
+   errors.New over the text — fmt/errors.go); the errors shim is
+   co-injected. `Fprintf` is modeled for writer static type
+   `*strings.Builder` only and becomes `w.WriteString(<lift>)` (same
+   results, same writer-then-args order).
+2. **The strings.Builder model — "E5-T"**
+   (`tools/nativefrontend/importedmodel.go`): a pinned mini
+   `package strings` source (struct{addr *Builder; buf []byte} + the
+   copy check + WriteString/WriteByte/Write/String/Len/Reset) is lowered
+   by a FRESH emitter through the ordinary pipeline and its wire output
+   harvested under the type's own identity (`strings.Builder`,
+   `strings.Builder.WriteString`, ...) — host references need no
+   rewrite. Cap/Grow/WriteRune stay declaration-only stubs (Cap would
+   expose append's growth policy — allocator latitude); the D5 marker is
+   suppressed for modeled types and the harvest asserts its shape (no
+   funcs, no globals, no unlowered method) fail-closed. The copy check
+   is SEMANTICS and panics with upstream's exact message
+   (`strings/builder-model/copy-panics` pins it).
+
+**Judgment calls:**
+
+- **JC-16: renderers take the CONCRETE METHOD VALUE, not an interface.**
+  The first cut boxed Stringer args into an injected
+  `goleanShimStringer` interface; the shim's `v.String()` dispatch edge
+  made the reachability instruments mark EVERY String method in the
+  program a live candidate — measured on the raft tree: the census
+  jumped to 18 LIVE with 5 false candidates (`quorum.Index.String`,
+  `quorum.VoteResult.String`, `tracker.{Config,Progress}.String`,
+  `raft.Status.MarshalJSON` via `Status.String`), whose causes
+  (strconv, fmt.Fprint, %q-over-Stringer) would have dragged a widening
+  cascade. The fix is also the more FAITHFUL shape: at every modeled
+  site the static type is concrete, so the dynamic dispatch target is
+  exactly one method — the desugar captures `arg.String` as a
+  `func() string` (nil-pointer flag computed from the once-hoisted
+  pointer; value-receiver-through-pointer args REFUSED — capture-time
+  vs render-time deref differ on nil) and `goleanShimFmtRender` invokes
+  it under the recover. Static-`error` args keep the interface helper
+  (`goleanShimFmtError`) — its `error.Error` anchor edge marks only
+  Error methods, all of which lower.
+- **JC-17: five H-3 quarantine witnesses retargeted, not surrendered.**
+  `methods/quarantine-{sibling,interface,pointer-receiver,embedded}` and
+  `generics/stencil-quarantine` used `fmt.Sprintf` as their canonical
+  unlowerable construct; the desugar made their red rows flip green,
+  silently un-witnessing the per-declaration method quarantine (the F3
+  lost-witness class). Their fixtures moved to `fmt.Sprint` (outside the
+  modeled three) with the reason recorded in each file; every row keeps
+  its exact baseline result+stage. Same for the frontend unit fixture
+  (`quarantine_test.go`). `spec-examples-decl/timezone-stringer` stays
+  FAIL at the same stage with a new detail (`%+d` outside the subset —
+  detail is not a baseline column).
+- **JC-18: %v over bool included though unmeasured in the census.** The
+  matrix models %v over the basic kinds ints/string/bool as one
+  language-natural completion (each differential-pinned:
+  `fmt/sprintf-verbs/v-kinds`); everything else in fmt stays out.
+
+**Guardrails (landed FIRST, 35 rows, all witnessed red pre-fix** — fmt
+rows at `frontend-export` on the package-selector refusal, builder rows
+at `lean-observation` on the marker-type default-value refusal**):**
+`fmt/sprintf-verbs` (23: one per verb x kind incl. both panic-render
+shapes, nil-ptr, nil-error, decision-path, eval-order, and 2 RED-BY-
+DESIGN boundary rows — verb-outside-set `%T`, nonconst-format),
+`fmt/errorf` (4: fresh/text/sentinel-classify/vs-errors-new),
+`fmt/fprintf-builder` (2: the DescribeConfChange shape whole, returns),
+`strings/builder-model` (7: write paths, len/reset, zero, copy-zero-ok,
+copy-panics with upstream's message, string-stable). Post-fix: 33 PASS
++ 2 red-by-design. Frontend unit tests green.
+
+**The census after item 2** (`sweep.py`, tracked instruments): **22 → 13
+LIVE** quarantined subject declarations (30 quarantined in PASS 1, was
+49; imported stubs 113 → 107 — Builder's six modeled methods left the
+stub set). G-5 (all 10 fmt declarations) and G-10 retired on the wire;
+`DescribeConfChange` lowers whole. The 13 = G-6's 8 MemoryStorage
+(item 5) + G-1's `lockedRand.Intn` (item 3) + `newRaft` (G-9
+strings.Join), `(*raft).Step` (G-7 bytes.Equal), `readOnly.{recvAck,
+heartbeatCtx}` (G-8 binary.LittleEndian) — items 4's set exactly.
+Residual sinks none; G-1 cross-check OK; `frontier.py` EXPORTS CLEAN;
+`codeccheck.py` PASS (frontend change re-validated against the codec).
+
+**Predicted flips for the full differential (stated before the run):**
+exactly 35 NEW ids — 33 PASS + 2 FAIL/frontend-export by design
+(`fmt/sprintf-verbs/{verb-outside-set,nonconst-format}`); ZERO movement
+on the 2258 pre-existing ids (the five retargeted witnesses keep their
+rows; timezone-stringer moves detail only). Baseline re-pinned
+same-commit with this reason.
+
 ### Judgment calls
 
 - **JC-11: the codec is GENERATED by `derive.py`, not hand-written.** The

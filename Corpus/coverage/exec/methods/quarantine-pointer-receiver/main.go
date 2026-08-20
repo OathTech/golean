@@ -12,7 +12,7 @@ type ptrOnly struct{ n int }
 
 func (p *ptrOnly) bump() int { p.n++; return p.n }
 
-func (p *ptrOnly) render() string { return fmt.Sprintf("ptrOnly(%d)", p.n) }
+func (p *ptrOnly) render() string { return fmt.Sprint(p.n) }
 
 type ptrIface interface {
 	bump() int

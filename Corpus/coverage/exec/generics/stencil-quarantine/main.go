@@ -11,12 +11,12 @@ import "fmt"
 // methods (docs/bugfix-arc-log.md §H-3), pinned here so the frontier
 // row (ledger FR row, sequential build queue) has its guardrail before
 // any implementation exists. The instantiation s6box[int] is USED, so
-// the stencil set flushes; render's fmt.Sprintf is the unlowerable
+// the stencil set flushes; render's fmt.Sprint is the unlowerable
 // construct (the same trigger as the H-3 suite).
 
 type s6box[T any] struct{ v T }
 
-func (b s6box[T]) render() string { return fmt.Sprintf("%v", b.v) }
+func (b s6box[T]) render() string { return fmt.Sprint(b.v) }
 
 func stencilSibling() int {
 	b := s6box[int]{v: 3}
