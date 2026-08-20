@@ -81,9 +81,11 @@ into the table at stage A, behavior-identical):
 | L1 scheduler pick | Multi.lean:926 | \|runnable\| | only width > 1 | lowest runnable goroutine id |
 | L5 main-exit window | Multi.lean:1422 | 2 | main terminal ∧ others runnable | 0 = exit now |
 
-The race detector replays consumption without consuming
-(Multi.lean:1242–1263); the relation quantifies every pick
-(Machine.lean:2645–2702, Multi.lean:1487–1559).
+The race detector consumes NOTHING and replays nothing (stage B, Q2:
+`raceUpdate` folds the step's emitted `StepEvent` — the old
+consumption replication is deleted); the relation quantifies every
+pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
+`StepM`'s pick indices).
 
 ---
 

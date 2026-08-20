@@ -470,6 +470,92 @@ def PairTarget.isSelect : PairTarget → Bool
   | .selectWaiter _ _ => true
   | _ => false
 
+/-- The parked partner a pairing candidate names. -/
+def PairTarget.partnerIdx : PairTarget → Nat
+  | .opWaiter j => j
+  | .selectWaiter j _ => j
+
+/-- The completed select-apply positions (`spawnPlan`'s extraction
+mold): operands evaluated, ready for the readiness/commit apply.
+`stepThread`'s cell path intercepts exactly these (Q2: the apply's
+emitted commit identity reaches the step event); every other shape
+steps by `stepFn`. -/
+def selectApplyPlan : Config →
+    Option (GoValue × List (SelectClauseHead × Stmt) × Option Stmt
+      × List GoValue × LocalEnv × Cont)
+  | .retV v (.selectOpsK clauses default? done [] env k) =>
+      some (v, clauses, default?, done, env, k)
+  | _ => none
+
+/-! ## The step-event channel (W3.2 slice 1 stage B — audit Q2)
+
+What one pool step DID — EMITTED by the step, never reconstructed from
+it. This is what deletes the detector's parallel classification: the
+old `raceUpdate` recovered the pairing partner by DIFFING pre/post
+pools (`wokenPartner`, deleted) and recovered the committed select
+clause by REPLAYING the step's stream consumption (three consumption
+re-derivations in lockstep by review alone — audit O-2/C-4); both now
+arrive in the event.
+
+Scope (stage B, recorded deviation from the boundary note §3): the
+event channel lives at the POOL layer. `stepFn`'s signature is
+UNCHANGED — the note's `stepFn : … × List PickRecord` reshape would
+re-state the entire sequential correspondence + gallery surface
+(hundreds of pinned 3-tuple equations in `MachineSound`, `StepKit`,
+and ~40 example files), far beyond this stage's re-proof budget, and
+no stage-B consumer needs the apply-layer picks: the detector gets
+the select-commit identity from `applySelect`'s emitted 4th component
+(the pool's select interception in `stepThread`), fairness quantifies
+SCHEDULING picks (all pool-layer), and the enumerator's widths ride
+`stepNeeds`. Consequently `StepEvent.picks` carries the POOL-layer
+consumption (`l1Sched`, `l2Arrival`, `l4Waiter`); the apply-layer
+data picks (`mapIter`, `appendSpill`, `l2Entry`) are not in the event
+stream. Re-open trigger: a consumer that needs the full labeled
+sequential trace (e.g. S6a's rule-label runtime counterpart) — then
+the `stepFn` reshape lands with its own budget. Stages C/D add the
+`postOp`/`backEdge` scheduling picks here when the boundary set
+widens (G1). -/
+
+/-- The action classification of one pool step (the note's
+`StepAction`, instantiated at the machine's real types: the note's
+`chanCell`/`syncEv` fine-grained arms are folded into `privateStep` —
+the detector's chan/sync cell-path FOOTPRINT classification stays
+derived from the pre-configuration per the footprint-table-not-
+autologging decision (Race.lean:26-53); what the event kills is the
+pool diffing and the stream replay, not the footprint table). -/
+inductive StepAction where
+  /-- `spawnStep` ran; `child` is the new goroutine's pool index. -/
+  | spawned (child : Nat)
+  /-- `resumeThread` ran: a parked goroutine's op completed (the
+  woken shape is the pre-configuration at `who`). -/
+  | woke
+  /-- The arrival intercept paired the issuer with parked partner
+  `partner` (kills `wokenPartner`). -/
+  | paired (partner : Nat)
+  /-- A select clause committed against the cell — the entry-path
+  apply (singleton or L2-picked) or the arrival-path `.commit`; the
+  clause is the apply's EMITTED commit identity (kills the
+  detector's readiness/stream replay). -/
+  | selectCommit (cl : EvClause)
+  /-- A select apply that committed nothing: default taken or
+  parked. -/
+  | selectPass
+  /-- The post-spawn marker strip (BUG-040) — a pure control step,
+  no footprint (stage C renames the marker `.opDone` and this action
+  covers it unchanged). -/
+  | opDoneStrip
+  /-- Any other `stepFn` step: chan/sync cell-path applies, parks,
+  and private steps — the detector classifies the footprint from the
+  pre-configuration as before. -/
+  | privateStep
+
+/-- One pool step's event (Q2): who ran, what the step did, and the
+POOL-layer picks it consumed, in order (scope note above). -/
+structure StepEvent where
+  who : Nat
+  action : StepAction
+  picks : List PickRecord
+
 /-- The per-clause channel of a select's evaluated entry operands,
 extracted TOTALLY (no exceptions): `(isSend, loc)` per clause, `none`
 for nil channels / non-channel garbage, and `none` OVERALL on an
@@ -710,19 +796,20 @@ def arrivalCases (s : ExecState) (threads : Array Config) (i : Nat) :
 at a `.multi` analysis (bound = the ready count; consumed ONLY then —
 `.cellPath`/`.single` return the stream untouched, which is what keeps
 partnerless and singleton arrivals stream-transparent and sequential
-conservation literal). -/
+conservation literal). Q2: the pick rides out as its `PickRecord`
+(empty on the non-consuming analyses) for the step event. -/
 def arrivalPlan (s : ExecState) (threads : Array Config) (i : Nat)
     (c : Config) (ch : Choices) :
-    Except GoError (Option ArrivalOutcome × Choices) := do
+    Except GoError (Option ArrivalOutcome × Choices × List PickRecord) := do
   match ← arrivalCases s threads i c with
-  | .cellPath => return (none, ch)
-  | .single bc cands => return (some (.pair bc cands), ch)
+  | .cellPath => return (none, ch, [])
+  | .single bc cands => return (some (.pair bc cands), ch, [])
   | .multi os =>
       -- `ChoiceSite.l2Arrival` (the census row): bound = the ready
       -- count, ≥ 2 by construction of `.multi`.
-      let (idx, ch') := Choices.consumeAt .l2Arrival os.length ch
+      let (idx, ch', ps) := Choices.consumeAtE .l2Arrival os.length ch
       match os[idx]? with
-      | some o => return (some o, ch')
+      | some o => return (some o, ch', ps)
       | none => throw (.internal "select L2 ready pick out of range")
 
 /-- Perform ONE pairing: the arriving goroutine `i` (whose op takes
@@ -862,13 +949,14 @@ matches); everything else — including every partnerless op — steps by
 the sequential `stepFn`, a blocked outcome simply parking (partners
 were already ruled out by the plan). -/
 def stepThread (s : ExecState) (threads : Array Config) (i : Nat)
-    (ch : Choices) : Except GoError (Array Config × ExecState × Choices) := do
+    (ch : Choices) :
+    Except GoError (Array Config × ExecState × Choices × StepEvent) := do
   match threads[i]? with
   | none => throw (.internal "thread index out of range")
   | some c =>
     if isBlockedConfig c then do
       let (c', s') ← resumeThread s c
-      return (threads.setIfInBounds i c', s', ch)
+      return (threads.setIfInBounds i c', s', ch, ⟨i, .woke, []⟩)
     else
       match spawnedCont c with
       | some k =>
@@ -876,15 +964,17 @@ def stepThread (s : ExecState) (threads : Array Config) (i : Nat)
           -- goroutine-step, consuming nothing (the scheduling decision
           -- it exists for was taken by `stepMulti`'s L1 site at this
           -- boundary).
-          return (threads.setIfInBounds i (.next k), s, ch)
+          return (threads.setIfInBounds i (.next k), s, ch,
+            ⟨i, .opDoneStrip, []⟩)
       | none =>
       match spawnPlan c with
       | some (cv, args, k) => do
           let (parent', child, s') ← spawnStep s cv args k
-          return ((threads.setIfInBounds i parent').push child, s', ch)
+          return ((threads.setIfInBounds i parent').push child, s', ch,
+            ⟨i, .spawned threads.size, []⟩)
       | none => do
           match ← arrivalPlan s threads i c ch with
-          | (some (.pair bc cs), ch₁) =>
+          | (some (.pair bc cs), ch₁, ps₁) =>
               match cs with
               | [] => throw (.internal "empty arrival pairing plan")
               | _ :: _ => do
@@ -892,29 +982,55 @@ def stepThread (s : ExecState) (threads : Array Config) (i : Nat)
                   -- The singleton non-consumption that used to be a
                   -- caller-side special case here is now the site's
                   -- declared policy (`consumeAtOne := false`).
-                  let (idx, ch₂) := Choices.consumeAt .l4Waiter cs.length ch₁
+                  let (idx, ch₂, ps₂) := Choices.consumeAtE .l4Waiter cs.length ch₁
                   match cs[idx]? with
                   | some cand => do
                       let (ts', s'') ← applyPairing s threads i bc cand
-                      return (ts', s'', ch₂)
+                      return (ts', s'', ch₂,
+                        ⟨i, .paired cand.2.partnerIdx, ps₁ ++ ps₂⟩)
                   | none => throw (.internal "waiter pick out of range")
-          | (some (.commit cl env k), ch₁) => do
+          | (some (.commit cl env k), ch₁, ps₁) => do
               -- The L2-picked clause is cell-only ready: commit it
               -- against the cell at the pool level (`applySelect`'s
               -- cell bound differs from the waiter-extended one the
               -- pick was drawn over).
               let (c', s') ← commitClause s env k cl
-              return (threads.setIfInBounds i c', s', ch₁)
-          | (none, ch₁) => do
-              let (c', s', ch₂) ← stepFn s c ch₁
-              return (threads.setIfInBounds i c', s', ch₂)
+              return (threads.setIfInBounds i c', s', ch₁,
+                ⟨i, .selectCommit cl, ps₁⟩)
+          | (none, ch₁, ps₁) =>
+              match selectApplyPlan c with
+              | some (v, clauses, default?, done, env, k') =>
+                  -- THE SELECT INTERCEPTION (Q2): the cell-path select
+                  -- apply runs HERE instead of through `stepFn`'s arm,
+                  -- so the apply's emitted commit identity reaches the
+                  -- event. Byte-identical to `stepFn`'s arm: the same
+                  -- `applySelect` call (one consuming definition — the
+                  -- sequential arm projects the identity away, this
+                  -- path keeps it), the same defensive panic wrapping
+                  -- with the pre-consumption stream.
+                  match applySelect s clauses default?
+                      ((v :: done).reverse) env k' ch₁ with
+                  | .ok (c', s', ch₂, cl?) =>
+                      return (threads.setIfInBounds i c', s', ch₂,
+                        ⟨i, match cl? with
+                            | some cl => .selectCommit cl
+                            | none => .selectPass, ps₁⟩)
+                  | .error (.panic msg) =>
+                      return (threads.setIfInBounds i
+                        (.panicking [⟨runtimeErrorValue msg, false⟩] k'),
+                        s, ch₁, ⟨i, .selectPass, ps₁⟩)
+                  | .error err => throw err
+              | none => do
+                  let (c', s', ch₂) ← stepFn s c ch₁
+                  return (threads.setIfInBounds i c', s', ch₂,
+                    ⟨i, .privateStep, ps₁⟩)
 
 /-- `stepThread` lifted back into a `MultiConfig` (the stepped goroutine
 becomes the running one). -/
 def stepThreadInto (m : MultiConfig) (i : Nat) (ch : Choices) :
-    Except GoError (MultiConfig × Choices) := do
-  let (ts, s', ch') ← stepThread m.shared m.threads i ch
-  return ({ threads := ts, shared := s', cur := i }, ch')
+    Except GoError (MultiConfig × Choices × StepEvent) := do
+  let (ts, s', ch', ev) ← stepThread m.shared m.threads i ch
+  return ({ threads := ts, shared := s', cur := i }, ch', ev)
 
 /-- One pool step (D2a). If the running goroutine is at a registry
 boundary, RESCHEDULE: the L1 scheduler site picks among the runnable
@@ -925,7 +1041,7 @@ step). No runnable goroutine at a boundary is the DEADLOCK terminal
 (all goroutines are asleep). Between boundaries the running goroutine
 steps privately. -/
 def stepMulti (m : MultiConfig) (ch : Choices) :
-    Except GoError (MultiConfig × Choices) := do
+    Except GoError (MultiConfig × Choices × StepEvent) := do
   match m.threads[m.cur]? with
   | none => throw (.internal "running goroutine out of range")
   | some c =>
@@ -937,10 +1053,13 @@ def stepMulti (m : MultiConfig) (ch : Choices) :
           -- non-consumption that used to be a caller-side `[i]`
           -- special case is now the site's declared policy
           -- (`consumeAtOne := false`) — sequential conservation's
-          -- hinge, as a table row.
-          let (pick, ch₁) := Choices.consumeAt .l1Sched rs.length ch
+          -- hinge, as a table row. Q2: the pick record prefixes the
+          -- picked goroutine's own event picks.
+          let (pick, ch₁, ps) := Choices.consumeAtE .l1Sched rs.length ch
           match rs[pick]? with
-          | some i => stepThreadInto m i ch₁
+          | some i => do
+              let (m', ch₂, ev) ← stepThreadInto m i ch₁
+              return (m', ch₂, { ev with picks := ps ++ ev.picks })
           | none => throw (.internal "scheduler pick out of range")
     else
       stepThreadInto m m.cur ch
@@ -951,16 +1070,26 @@ detection (slice 3, D2+D3(b))
 Execution between registry ops is a SEGMENT: a goroutine's vector
 clock changes only at registry-op HB edges, so every private step in
 between records its accesses (`stepAccesses`, Race.lean) under one
-clock — the segment's. `raceUpdate` below is the event dispatcher the
-detecting loop (`execProgLoop`) runs after every pool step: it
-classifies the step it just observed (spawn / wake / pairing /
-cell-path channel or select op / private step) from the pre- and
-post-configurations — deterministically, consuming NOTHING — and
-either advances the clocks (the go_mem channel rules, quoted at
-`ChanClocks`/`RaceState.spawn` in Race.lean) or checks-and-records the
-step's footprint. A conflict is the terminal `raceDetected`: races
-fail closed per run, on every run where the conflicting accesses
-execute, deterministically given the stream.
+clock — the segment's. `raceUpdate` below is the event FOLD the
+detecting loop (`execProgLoop`) runs after every pool step (stage B,
+audit Q2/O-2): the step's classification — spawn / wake / pairing
+(with its partner) / select commit (with its clause) / private step —
+arrives IN the `StepEvent` the step emitted, so the old parallel
+dispatch (partner recovery by pool diffing, committed-clause recovery
+by replaying the stream consumption) is deleted rather than
+maintained in lockstep by review. The fold either advances the clocks
+(the go_mem channel rules, quoted at `ChanClocks`/`RaceState.spawn`
+in Race.lean) or checks-and-records the step's footprint — the
+FOOTPRINT classification of chan/sync cell-path applies stays derived
+from the pre-configuration (the footprint-table-not-autologging
+decision, Race.lean:26-53). A conflict is the terminal
+`raceDetected`: races fail closed per run, on every run where the
+conflicting accesses execute, deterministically given the stream.
+One remaining textual mirror, recorded: the WAKE arm's head-commit
+classification (`raceWakeEvent`'s `.blockedSelect` case) re-derives
+`resumeThread`'s deterministic head-commit from the cell — shape-
+derived and stream-free, so it is lockstep-by-construction, but a
+future `resumeThread` commit-identity emission would fold it too.
 
 The detector is EXTERNAL instrumentation in the `Choices`/fuel mold:
 `stepMulti`, the `StepM` relation, and the whole correspondence kit
@@ -985,16 +1114,9 @@ def raceWgAddEvent (r : RaceState) (i : Nat) (loc : Loc) (delta : Int)
   else
     return r
 
-/-- The parked partner a pairing step woke, if any: the unique OTHER
-index whose configuration went blocked → unblocked. Every non-pairing
-pool step leaves all other goroutines' configurations untouched, and
-`applyPairing`'s outcomes are never blocked shapes — so this is exactly
-the pairing partner, recovered without re-running the L4 pick. -/
-def wokenPartner (tsPre tsPost : Array Config) (i : Nat) : Option Nat :=
-  (List.range tsPre.size).find? fun j =>
-    j != i
-      && (match tsPre[j]? with | some c => isBlockedConfig c | none => false)
-      && (match tsPost[j]? with | some c => !isBlockedConfig c | none => false)
+-- `wokenPartner` DELETED (stage B, audit O-2): the pairing partner
+-- arrives in the step event (`StepAction.paired`) — emitted by the
+-- step that paired, never recovered by diffing pre/post pools.
 
 /-- The channel a chan-op apply position is about to operate on, with
 its direction (`true` = send side). -/
@@ -1129,232 +1251,202 @@ def racePairEvent (s : ExecState) (tsPre : Array Config) (i j : Nat)
       | none => return r
   | _ => return r
 
-/-- **The detector's event dispatcher** — run by the detecting loop
-after every successful pool step, over the PRE-step pool
-(`sPre`/`tsPre`), the PRE-step choice stream `chPre` (slice 4: the
-multi-ready select commit is stream-dependent, so the dispatcher
-REPLICATES the step's consumption to recover the committed clause —
-it observes the stream, deterministic given it, and consumes
-nothing), and the post-step pool `m'` (whose `cur` is the goroutine
-that stepped). Inert while the pool holds ≤ 1 goroutine.
-Classification mirrors `stepThread`'s dispatch order: spawn (pool
-grew), wake (pre-config blocked), channel/select apply (pairing when a
-partner was woken, cell path otherwise), private step (footprint
-check-and-record; a step that PANICKED performed no access — the
-panic fired in place of it). -/
-def raceUpdate (sPre : ExecState) (tsPre : Array Config) (chPre : Choices)
+/-- The per-shape ENTRY reads a channel/select apply records WHATEVER
+its outcome (commit, park, pairing, panic) — BUG-045's plain-send
+chan-object read (gc's `chansend` reads `c.raceaddr()` at entry) and
+BUG-046's selectgo pass-1 read per polled SEND clause (recv cases are
+acquire-only; nil-channel cases match the `none` skip; recording in
+clause order is detection-equivalent — same pre-op clock, same-
+goroutine re-records upsert). Factored out of `raceUpdate` so the
+pairing / commit / pass arms share it. -/
+def raceChanEntryReads (i : Nat) (cPre : Config)
+    (r : RaceState) : Except GoError RaceState := do
+  match cPre with
+  | .retV v (.chanStK op done [] _ _) =>
+      (match op, (v :: done).reverse with
+      | .send _, chv :: _ =>
+          (match chanValueLoc chv with
+          | some loc => r.chanObjAccess i loc false
+          | none => pure r)
+      | _, _ => pure r)
+  | .retV v (.selectOpsK clauses _ done [] _ _) =>
+      (match selectClauseChans clauses ((v :: done).reverse) with
+      | some sides =>
+          sides.foldlM (fun r side =>
+            match side with
+            | some (true, loc) => r.chanObjAccess i loc false
+            | _ => pure r) r
+      | none => pure r)
+  | _ => return r
+
+/-- **The detector's event FOLD** (stage B — module docstring above):
+run by the detecting loop after every successful pool step, over the
+PRE-step pool (`sPre`/`tsPre`), the step's emitted `StepEvent`, and
+the post-step pool `m'`. Inert while the pool holds ≤ 1 goroutine.
+Dispatch is ON THE EVENT; per-shape footprints and entry reads are
+derived from the pre-configuration (the footprint table's job); no
+stream is consulted — `raceUpdate` no longer takes one. -/
+def raceUpdate (sPre : ExecState) (tsPre : Array Config) (ev : StepEvent)
     (m' : MultiConfig)
     (r : RaceState) : Except GoError RaceState := do
   if m'.threads.size ≤ 1 then return r
   else
-    let i := m'.cur
+    let i := ev.who
     match tsPre[i]? with
     | none => return r
     | some cPre =>
-      if m'.threads.size > tsPre.size then
-        -- Spawn: the go_mem edge, PLUS the child frame entry's possible
-        -- interface-dispatch receiver deref (recorded under the CHILD's
-        -- id, after the edge — gc attributes the read to the spawned
-        -- goroutine; S3 audit, the dispatch-read footprint).
-        let r₁ := r.spawn i tsPre.size
-        match spawnPlan cPre with
-        | some (.funcVal fid captured, args, _) =>
-            r₁.accesses tsPre.size (dispatchAccesses sPre fid (captured ++ args))
-        | _ => return r₁
-      else if isBlockedConfig cPre then
-        raceWakeEvent sPre i r cPre
-      else
-        match cPre with
-        | .retV v (.chanStK op done [] _ _) => do
-            -- BUG-045: the channel-OBJECT pair (`chanObjAccess`) — a
-            -- plain send's ENTRY read, checked-and-recorded before any
-            -- dispatch (gc's chansend reads `c.raceaddr()` at entry, so
-            -- the read exists whether the send commits, parks, pairs,
-            -- or panics on closed).
-            let r ← (match op, (v :: done).reverse with
+      match ev.action with
+      | .spawned child =>
+          -- Spawn: the go_mem edge, PLUS the child frame entry's
+          -- possible interface-dispatch receiver deref (recorded under
+          -- the CHILD's id, after the edge — gc attributes the read to
+          -- the spawned goroutine; S3 audit).
+          let r₁ := r.spawn i child
+          match spawnPlan cPre with
+          | some (.funcVal fid captured, args, _) =>
+              r₁.accesses child (dispatchAccesses sPre fid (captured ++ args))
+          | _ => return r₁
+      | .woke => raceWakeEvent sPre i r cPre
+      | .paired j => do
+          let r ← raceChanEntryReads i cPre r
+          racePairEvent sPre tsPre i j cPre r
+      | .selectCommit cl => do
+          -- Entry-path commit (singleton or L2-picked, the apply's
+          -- emitted identity) and the arrival-path `.commit` both land
+          -- here. `raceCommitClauseEvent` reads the pre-cell, so a
+          -- panicking commit (send on closed) correctly yields no
+          -- edge.
+          let r ← raceChanEntryReads i cPre r
+          raceCommitClauseEvent sPre i r cl
+      | .selectPass => raceChanEntryReads i cPre r
+      | .opDoneStrip =>
+          -- The marker strip is a pure control step: no accesses, no
+          -- edges (`stepAccesses`'s catch-all recorded it as `[]`
+          -- before; Race.lean's model-internal-loads inventory).
+          return r
+      | .privateStep =>
+          match cPre with
+          | .retV v (.chanStK op done [] _ _) => do
+              let r ← raceChanEntryReads i cPre r
+              -- cell path: classify from the pre-cell + outcome shape
+              match op, (v :: done).reverse with
               | .send _, chv :: _ =>
                   (match chanValueLoc chv with
-                  | some loc => r.chanObjAccess i loc false
-                  | none => pure r)
-              | _, _ => pure r)
-            match wokenPartner tsPre m'.threads i with
-            | some j => racePairEvent sPre tsPre i j cPre r
-            | none =>
-                -- cell path: classify from the pre-cell + outcome shape
-                match op, (v :: done).reverse with
-                | .send _, chv :: _ =>
-                    (match chanValueLoc chv with
-                    | some loc =>
-                        (match m'.threads[i]? with
-                        | some (.next _) => do
-                            let (_, cap, _) ← chanCell sPre loc
-                            return (r.slotOp i loc cap true)
-                        | _ => return r)  -- parked / panicked: no edge yet
-                    | none => return r)
-                | .recv _ _, [chv] =>
-                    (match chanValueLoc chv with
-                    | some loc =>
-                        (match m'.threads[i]? with
-                        | some (.blockedRecv _ _ _ _ _) => return r
-                        | _ => do
-                            let (buf, cap, closed) ← chanCell sPre loc
-                            if buf.size > 0 then return (r.slotOp i loc cap false)
-                            else if closed then return (r.closeAcquire i loc)
-                            else return r)
-                    | none => return r)
-                | .close, [chv] =>
-                    (match chanValueLoc chv with
-                    | some loc =>
-                        (match m'.threads[i]? with
-                        | some (.next _) => do
-                            -- BUG-045: closechan's racewritepc — on the
-                            -- SUCCESS path only (gc panics on closed/nil
-                            -- before instrumenting), checked under the
-                            -- pre-release clock, then the release.
-                            let r ← r.chanObjAccess i loc true
-                            let (_, cap, _) ← chanCell sPre loc
-                            return (r.closeOp i loc cap)
-                        | _ => return r)  -- close panic: no edge, no write
-                    | none => return r)
-                | _, _ => return r
-        | .retV v (.selectOpsK clauses _ done [] _ _) => do
-            -- BUG-046: selectgo pass 1's chan-object READ per polled
-            -- SEND case (runtime/select.go:288 — `racereadpc` in the
-            -- send branch, ABOVE the closed check and before parking;
-            -- recv cases are acquire-only, and nil-channel cases are
-            -- excluded from pollorder, matching the `none` skip).
-            -- Recorded ONCE at the select's apply position, whatever
-            -- the outcome (commit, park, pairing, panic) — gc-exact
-            -- granularity: selectgo runs pass 1 once per call and a
-            -- woken parked select does not re-poll with racereadpc
-            -- (the wake handles the woken sudog's case directly), so
-            -- our wake path correctly records nothing. Poll ORDER is
-            -- a random permutation in gc; recording in clause order
-            -- is detection-equivalent (all reads carry the same
-            -- pre-op clock, and same-goroutine re-records upsert).
-            let r ← (match selectClauseChans clauses ((v :: done).reverse) with
-              | some sides =>
-                  sides.foldlM (fun r side =>
-                    match side with
-                    | some (true, loc) => r.chanObjAccess i loc false
-                    | _ => pure r) r
-              | none => pure r)
-            match wokenPartner tsPre m'.threads i with
-            | some j => racePairEvent sPre tsPre i j cPre r
-            | none => do
-                match m'.threads[i]? with
-                | some (.blockedSelect _ _ _) => return r
-                | _ => do
-                    -- Slice 4 (multi-ready live): REPLICATE the step's
-                    -- choice consumption to recover the COMMITTED
-                    -- clause. The select apply is a boundary, so the
-                    -- reschedule branch ran and the L1 pick was
-                    -- consumed iff |runnable| > 1 over the PRE pool;
-                    -- then the arrival analysis' L2 pick (the same
-                    -- pure `arrivalCases` + `Choices.consumeAt` the
-                    -- step used), then `applySelect`'s L2 on the cell
-                    -- path.
-                    -- Deterministic given the stream; consumes nothing.
-                    let rs := runnableIdxs sPre tsPre
-                    let ch₁ := (Choices.consumeAt .l1Sched rs.length chPre).2
-                    match ← arrivalCases sPre tsPre i cPre with
-                    | .multi os =>
-                        let (sel, _) := Choices.consumeAt .l2Arrival os.length ch₁
-                        (match os[sel]? with
-                        | some (.commit cl _ _) =>
-                            raceCommitClauseEvent sPre i r cl
-                        | _ => return r)  -- pair: a partner was woken (path above)
-                    | .single _ _ => return r  -- pair: partner woken (path above)
-                    | .cellPath => do
-                        let evs ← evalClauses clauses ((v :: done).reverse)
-                        match ← readyClauses sPre evs with
-                        | [] => return r  -- default taken
-                        | [cl] => raceCommitClauseEvent sPre i r cl
-                        | ready =>
-                            let (idx, _) := Choices.consumeAt .l2Entry ready.length ch₁
-                            (match ready[idx]? with
-                            | some cl => raceCommitClauseEvent sPre i r cl
-                            | none => return r)
-        | .retV v (.syncStK op done [] _ _) => do
-            -- THE SYNC REGISTRY ENTRY'S SECOND DUTY (spec-parity slice
-            -- 2, design note §5): classify the apply from the pre-step
-            -- shape and the outcome, and advance the sync clocks per
-            -- the package-doc HB sentences (quoted at `SyncClocks`).
-            -- Fatal outcomes never reach here (the pool step errored);
-            -- parked outcomes carry no edge (the wake does, above).
-            match (v :: done).reverse.head? with
-            | some (.addr loc) =>
-                (match op with
-                | .lock | .rlock =>
-                    (match m'.threads[i]? with
-                    | some (.next _) => return (r.syncAcquire i loc)
-                    | _ => return r)
-                | .wlock =>
-                    (match m'.threads[i]? with
-                    | some (.next _) => return (r.syncAcquire i loc (alsoB := true))
-                    | _ => return r)
-                | .unlock =>
-                    (match m'.threads[i]? with
-                    | some (.next _) => return (r.syncRelease i loc)
-                    | _ => return r)
-                | .wunlock =>
-                    (match m'.threads[i]? with
-                    | some (.next _) => return (r.syncRelease i loc)
-                    | _ => return r)
-                | .runlock =>
-                    (match m'.threads[i]? with
-                    | some (.next _) => return (r.syncRelease i loc (toB := true))
-                    | _ => return r)
-                | .wgAdd =>
-                    -- gc's Add (waitgroup.go): ReleaseMerge FIRST when
-                    -- delta < 0 (so a Done whose negative-counter panic
-                    -- is later recovered still released — probed
-                    -- ordering, design note §4), then the sema READ
-                    -- when the counter departs 0 upward (the misuse
-                    -- pair's Add half; it too precedes the panics) —
-                    -- `raceWgAddEvent`.
-                    raceWgAddEvent r i loc
-                      (match (v :: done).reverse[1]? with
-                        | some dv =>
-                            (match valueAsInt dv with
-                            | .ok d => d
-                            | .error _ => 0)
-                        | none => 0)
-                      (match syncCell sPre loc with
-                        | .ok (.waitGroup c _) => some c
-                        | _ => none)
-                | .wgWait =>
-                    (match m'.threads[i]? with
-                    | some (.next _) => return (r.syncAcquire i loc)
-                    | some (.blockedSync _ _ _ _) =>
-                        -- First-waiter registration writes the sema slot
-                        -- (waitgroup.go:185-190: only when the pre-park
-                        -- waiter count was 0 — concurrent Waits must not
-                        -- race each other).
+                  | some loc =>
+                      (match m'.threads[i]? with
+                      | some (.next _) => do
+                          let (_, cap, _) ← chanCell sPre loc
+                          return (r.slotOp i loc cap true)
+                      | _ => return r)  -- parked / panicked: no edge yet
+                  | none => return r)
+              | .recv _ _, [chv] =>
+                  (match chanValueLoc chv with
+                  | some loc =>
+                      (match m'.threads[i]? with
+                      | some (.blockedRecv _ _ _ _ _) => return r
+                      | _ => do
+                          let (buf, cap, closed) ← chanCell sPre loc
+                          if buf.size > 0 then return (r.slotOp i loc cap false)
+                          else if closed then return (r.closeAcquire i loc)
+                          else return r)
+                  | none => return r)
+              | .close, [chv] =>
+                  (match chanValueLoc chv with
+                  | some loc =>
+                      (match m'.threads[i]? with
+                      | some (.next _) => do
+                          -- BUG-045: closechan's racewritepc — on the
+                          -- SUCCESS path only (gc panics on closed/nil
+                          -- before instrumenting), checked under the
+                          -- pre-release clock, then the release.
+                          let r ← r.chanObjAccess i loc true
+                          let (_, cap, _) ← chanCell sPre loc
+                          return (r.closeOp i loc cap)
+                      | _ => return r)  -- close panic: no edge, no write
+                  | none => return r)
+              | _, _ => return r
+          | .retV v (.syncStK op done [] _ _) => do
+              -- THE SYNC REGISTRY ENTRY'S SECOND DUTY (spec-parity
+              -- slice 2, design note §5): classify the apply from the
+              -- pre-step shape and the outcome, and advance the sync
+              -- clocks per the package-doc HB sentences (quoted at
+              -- `SyncClocks`). Fatal outcomes never reach here (the
+              -- pool step errored); parked outcomes carry no edge (the
+              -- wake does, above).
+              match (v :: done).reverse.head? with
+              | some (.addr loc) =>
+                  (match op with
+                  | .lock | .rlock =>
+                      (match m'.threads[i]? with
+                      | some (.next _) => return (r.syncAcquire i loc)
+                      | _ => return r)
+                  | .wlock =>
+                      (match m'.threads[i]? with
+                      | some (.next _) => return (r.syncAcquire i loc (alsoB := true))
+                      | _ => return r)
+                  | .unlock =>
+                      (match m'.threads[i]? with
+                      | some (.next _) => return (r.syncRelease i loc)
+                      | _ => return r)
+                  | .wunlock =>
+                      (match m'.threads[i]? with
+                      | some (.next _) => return (r.syncRelease i loc)
+                      | _ => return r)
+                  | .runlock =>
+                      (match m'.threads[i]? with
+                      | some (.next _) => return (r.syncRelease i loc (toB := true))
+                      | _ => return r)
+                  | .wgAdd =>
+                      -- gc's Add (waitgroup.go): ReleaseMerge FIRST when
+                      -- delta < 0 (so a Done whose negative-counter panic
+                      -- is later recovered still released — probed
+                      -- ordering, design note §4), then the sema READ
+                      -- when the counter departs 0 upward (the misuse
+                      -- pair's Add half; it too precedes the panics) —
+                      -- `raceWgAddEvent`.
+                      raceWgAddEvent r i loc
+                        (match (v :: done).reverse[1]? with
+                          | some dv =>
+                              (match valueAsInt dv with
+                              | .ok d => d
+                              | .error _ => 0)
+                          | none => 0)
                         (match syncCell sPre loc with
-                        | .ok (.waitGroup _ 0) => r.wgSemaAccess i loc true
-                        | _ => return r)
-                    | _ => return r)
-                | .onceBegin _ =>
-                    -- Acquire only when the apply OBSERVED completion
-                    -- (pre-cell started ∧ done → the delivered false
-                    -- acquires); a fresh begin or a park carries no
-                    -- edge (the completion release is onceComplete's).
-                    (match syncCell sPre loc with
-                    | .ok (.once true true) => return (r.syncAcquire i loc)
-                    | _ => return r)
-                | .onceComplete =>
-                    (match m'.threads[i]? with
-                    | some (.next _) => return (r.syncRelease i loc)
-                    | _ => return r))
-            | _ => return r  -- nil/garbage receiver: the apply panicked
-        | _ =>
-            match m'.threads[i]? with
-            | some (.panicking _ _) =>
-                match cPre with
-                | .panicking _ _ => r.accesses i (stepAccesses sPre cPre)
-                | _ => return r  -- the step panicked: the access never happened
-            | _ => r.accesses i (stepAccesses sPre cPre)
+                          | .ok (.waitGroup c _) => some c
+                          | _ => none)
+                  | .wgWait =>
+                      (match m'.threads[i]? with
+                      | some (.next _) => return (r.syncAcquire i loc)
+                      | some (.blockedSync _ _ _ _) =>
+                          -- First-waiter registration writes the sema slot
+                          -- (waitgroup.go:185-190: only when the pre-park
+                          -- waiter count was 0 — concurrent Waits must not
+                          -- race each other).
+                          (match syncCell sPre loc with
+                          | .ok (.waitGroup _ 0) => r.wgSemaAccess i loc true
+                          | _ => return r)
+                      | _ => return r)
+                  | .onceBegin _ =>
+                      -- Acquire only when the apply OBSERVED completion
+                      -- (pre-cell started ∧ done → the delivered false
+                      -- acquires); a fresh begin or a park carries no
+                      -- edge (the completion release is onceComplete's).
+                      (match syncCell sPre loc with
+                      | .ok (.once true true) => return (r.syncAcquire i loc)
+                      | _ => return r)
+                  | .onceComplete =>
+                      (match m'.threads[i]? with
+                      | some (.next _) => return (r.syncRelease i loc)
+                      | _ => return r))
+              | _ => return r  -- nil/garbage receiver: the apply panicked
+          | _ =>
+              match m'.threads[i]? with
+              | some (.panicking _ _) =>
+                  match cPre with
+                  | .panicking _ _ => r.accesses i (stepAccesses sPre cPre)
+                  | _ => return r  -- the step panicked: the access never happened
+              | _ => r.accesses i (stepAccesses sPre cPre)
+
 
 /-- The first unrecovered-panic abort among the goroutines: an
 unrecovered panic in ANY goroutine terminates the program (Go). -/
@@ -1440,8 +1532,8 @@ def execProgLoop : Nat → MultiConfig → RaceState → Choices →
                       match fuel with
                       | 0 => throw .fuelOut
                       | fuel + 1 => do
-                          let (m', choices') ← stepMulti m choices₁
-                          let r' ← raceUpdate m.shared m.threads choices₁ m' r
+                          let (m', choices', ev) ← stepMulti m choices₁
+                          let r' ← raceUpdate m.shared m.threads ev m' r
                           execProgLoop fuel m' r' choices')
             | none =>
                 if (runnableIdxs m.shared m.threads).isEmpty then
@@ -1450,8 +1542,8 @@ def execProgLoop : Nat → MultiConfig → RaceState → Choices →
                   match fuel with
                   | 0 => throw .fuelOut
                   | fuel + 1 => do
-                      let (m', choices') ← stepMulti m choices
-                      let r' ← raceUpdate m.shared m.threads choices m' r
+                      let (m', choices', ev) ← stepMulti m choices
+                      let r' ← raceUpdate m.shared m.threads ev m' r
                       execProgLoop fuel m' r' choices'
 
 /-- **The `execStmt`-shaped POOL wrapper** (D8's carrier swap): run

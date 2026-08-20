@@ -73,7 +73,7 @@ checker. -/
 def selectApplyDone (s : ExecState) : Config → Bool
   | .retV v (.selectOpsK clauses default? done [] env k) =>
       match applySelectCore s clauses default? ((v :: done).reverse) env k with
-      | .ok (.done _ _) => true
+      | .ok (.done _ _ _) => true
       | _ => false
   | _ => false
 
@@ -122,16 +122,25 @@ theorem consumesSelect_shape {c : Config} (h : consumesSelect c = true) :
   | .retV v (.selectOpsK clauses default? done [] env k), _ =>
     exact ⟨v, clauses, default?, done, env, k, rfl⟩
 
+/-- A non-select shape extracts no select-apply plan (the interception
+dispatch's negative side, from the certified flag). -/
+theorem selectApplyPlan_none_of_consumesSelect {c : Config}
+    (h : consumesSelect c = false) : selectApplyPlan c = none := by
+  cases hsp : selectApplyPlan c with
+  | none => rfl
+  | some p =>
+      obtain ⟨v, clauses, d, dn, env, k⟩ := p
+      obtain rfl := selectApplyPlan_shape hsp
+      simp [consumesSelect] at h
+
 /-- Inversion of the non-consuming apply shape: `.done` arises only
 from a zero-ready analysis (default or park) or a singleton-ready
-commit — never from the `.picks` (≥ 2 ready) arm. Feeds the detector's
-obliviousness (`raceUpdate` reads the stream only in its multi-ready
-branches). -/
+commit — never from the `.picks` (≥ 2 ready) arm. -/
 theorem applySelectCore_done_inv {s : ExecState}
     {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt}
     {vs : List GoValue} {env : LocalEnv} {k : Cont}
-    {c' : Config} {s' : ExecState}
-    (h : applySelectCore s clauses default? vs env k = .ok (.done c' s')) :
+    {c' : Config} {s' : ExecState} {cl? : Option EvClause}
+    (h : applySelectCore s clauses default? vs env k = .ok (.done c' s' cl?)) :
     ∃ evs, evalClauses clauses vs = .ok evs
       ∧ (readyClauses s evs = .ok []
         ∨ ∃ cl, readyClauses s evs = .ok [cl]) := by
@@ -153,27 +162,28 @@ theorem applySelectCore_done_inv {s : ExecState}
       cases h
 
 /-- A non-consuming apply returns the stream untouched, whatever the
-stream. -/
+stream — with its emitted commit identity (Q2's 4th component). -/
 theorem applySelect_of_done {s : ExecState}
     {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt}
     {vs : List GoValue} {env : LocalEnv} {k : Cont}
-    {c' : Config} {s' : ExecState}
-    (h : applySelectCore s clauses default? vs env k = .ok (.done c' s')) :
+    {c' : Config} {s' : ExecState} {cl? : Option EvClause}
+    (h : applySelectCore s clauses default? vs env k = .ok (.done c' s' cl?)) :
     ∀ ch : Choices,
-      applySelect s clauses default? vs env k ch = .ok (c', s', ch) := by
+      applySelect s clauses default? vs env k ch = .ok (c', s', ch, cl?) := by
   intro ch
   unfold applySelect
   simp only [h, Bind.bind, Except.bind]
   rfl
 
 /-- `stepFn` at a `.done`-shaped select apply is stream-independent:
-the apply commits/parks/defaults with the stream returned verbatim. -/
+the apply commits/parks/defaults with the stream returned verbatim
+(the sequential arm projects the commit identity away). -/
 theorem stepFn_select_done {s : ExecState} {v : GoValue}
     {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt}
     {done : List GoValue} {env : LocalEnv} {k : Cont}
-    {c' : Config} {s' : ExecState}
+    {c' : Config} {s' : ExecState} {cl? : Option EvClause}
     (h : applySelectCore s clauses default? ((v :: done).reverse) env k
-      = .ok (.done c' s')) :
+      = .ok (.done c' s' cl?)) :
     ∀ ch : Choices,
       stepFn s (.retV v (.selectOpsK clauses default? done [] env k)) ch
         = .ok (c', s', ch) := by
@@ -184,13 +194,19 @@ theorem stepFn_select_done {s : ExecState} {v : GoValue}
 
 /-- **Stream obliviousness of the certified goroutine-step shapes**:
 under the `poolThreadOblivious` flags, a `stepThread` that succeeds
-under one stream succeeds under EVERY stream, with the same successor
-and the stream returned untouched. -/
+under one stream succeeds under EVERY stream, with the same successor,
+the stream returned untouched, and the SAME step event (stage B: the
+detector folds events, so obliviousness of the verdict rides on
+obliviousness of the event — which holds by construction on certified
+shapes, whose picks lists are empty and whose actions are computed
+stream-freely). -/
 theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
     {ch₀ : Choices} {ts' : Array Config} {s' : ExecState} {ch₀' : Choices}
+    {ev : StepEvent}
     (hobl : poolThreadOblivious s ts i = true)
-    (h : stepThread s ts i ch₀ = .ok (ts', s', ch₀')) :
-    ch₀' = ch₀ ∧ ∀ ch : Choices, stepThread s ts i ch = .ok (ts', s', ch) := by
+    (h : stepThread s ts i ch₀ = .ok (ts', s', ch₀', ev)) :
+    ch₀' = ch₀
+      ∧ ∀ ch : Choices, stepThread s ts i ch = .ok (ts', s', ch, ev) := by
   unfold poolThreadOblivious at hobl
   unfold stepThread at h
   cases hti : ts[i]? with
@@ -201,7 +217,7 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
     · simp only [hblc, reduceIte, bind_eq_ok] at h
       obtain ⟨⟨c₂, s₂⟩, hres, h⟩ := h
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
       refine ⟨rfl, fun ch => ?_⟩
       unfold stepThread
       rw [hti]
@@ -213,7 +229,7 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
       | some k =>
         rw [hsc] at h
         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl, rfl, rfl⟩ := h
         refine ⟨rfl, fun ch => ?_⟩
         unfold stepThread
         rw [hti]
@@ -229,7 +245,7 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
           simp only [bind_eq_ok] at h
           obtain ⟨⟨parent', child, s₂⟩, hspawn, h⟩ := h
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl, rfl⟩ := h
           refine ⟨rfl, fun ch => ?_⟩
           unfold stepThread
           rw [hti]
@@ -243,7 +259,9 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
           cases hnsel : consumesSelect c with
           | true =>
             -- the slice-4 refinement: a select apply certified as
-            -- partnerless AND non-consuming (`.done`) is oblivious
+            -- partnerless AND non-consuming (`.done`) is oblivious —
+            -- stage B: through the pool's select interception, whose
+            -- event carries the stream-freely computed commit identity.
             rw [hnsel] at hobl
             simp only [reduceIte] at hobl
             obtain ⟨v, clauses, default?, dn, envS, kS, rfl⟩ :=
@@ -265,37 +283,32 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
                 | ok o =>
                   cases o with
                   | picks commits => rw [happly] at hobl; cases hobl
-                  | done c₂ s₂ =>
+                  | done c₂ s₂ cl? =>
                     simp only [bind_eq_ok] at h
-                    obtain ⟨⟨plan, ch₁⟩, hplan, h⟩ := h
+                    obtain ⟨⟨plan, ch₁, ps₁⟩, hplan, h⟩ := h
                     rw [arrivalPlan_of_cellPath (ch := ch₀) harr] at hplan
                     simp only [Except.ok.injEq, Prod.mk.injEq] at hplan
-                    obtain ⟨hp1, hp2⟩ := hplan
+                    obtain ⟨hp1, hp2, hp3⟩ := hplan
                     subst hp1
                     subst hp2
-                    simp only [bind_eq_ok] at h
-                    obtain ⟨⟨c₃, s₃, ch₃⟩, hstep, h⟩ := h
-                    simp only [pure_eq_ok, Except.ok.injEq,
-                      Prod.mk.injEq] at h
-                    obtain ⟨rfl, rfl, rfl⟩ := h
-                    rw [stepFn_select_done happly ch₀] at hstep
-                    injection hstep with hstep
-                    injection hstep with hc hrest
-                    injection hrest with hs hch
-                    subst hc
-                    subst hs
-                    subst hch
+                    subst hp3
+                    simp only [selectApplyPlan] at h
+                    rw [applySelect_of_done happly ch₀] at h
+                    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+                    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
                     refine ⟨rfl, fun ch => ?_⟩
                     unfold stepThread
                     rw [hti]
                     simp only [hblc, Bool.false_eq_true, reduceIte, hsc,
                       hsp, Bind.bind, Except.bind,
                       arrivalPlan_of_cellPath (ch := ch) harr]
-                    rw [stepFn_select_done happly ch]
+                    simp only [selectApplyPlan]
+                    rw [applySelect_of_done happly ch]
                     rfl
           | false =>
           rw [hnsel] at hobl
           simp only [Bool.false_eq_true, reduceIte] at hobl
+          have hselp := selectApplyPlan_none_of_consumesSelect hnsel
           cases hnapp : consumesAppendSlice c with
           | true => rw [hnapp] at hobl; simp at hobl
           | false =>
@@ -307,7 +320,7 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
           rw [hnmi] at hobl
           simp only [Bool.false_eq_true, reduceIte] at hobl
           simp only [bind_eq_ok] at h
-          obtain ⟨⟨plan, ch₁⟩, hplan, h⟩ := h
+          obtain ⟨⟨plan, ch₁, ps₁⟩, hplan, h⟩ := h
           cases harr : arrivalCases s ts i c with
           | error e =>
             rw [harr] at hobl
@@ -317,13 +330,16 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
             | cellPath =>
               rw [arrivalPlan_of_cellPath (ch := ch₀) harr] at hplan
               simp only [Except.ok.injEq, Prod.mk.injEq] at hplan
-              obtain ⟨hp1, hp2⟩ := hplan
+              obtain ⟨hp1, hp2, hp3⟩ := hplan
               subst hp1
               subst hp2
+              subst hp3
+              rw [hselp] at h
+              dsimp only at h
               simp only [bind_eq_ok] at h
               obtain ⟨⟨c₂, s₂, ch₂⟩, hstep, h⟩ := h
               simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-              obtain ⟨rfl, rfl, rfl⟩ := h
+              obtain ⟨rfl, rfl, rfl, rfl⟩ := h
               obtain ⟨rfl, hall⟩ := stepFn_oblivious
                 (isMapIterNext_false_elim hnmi) hnapp hnsel hstep
               refine ⟨rfl, fun ch => ?_⟩
@@ -331,15 +347,18 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
               rw [hti]
               simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp,
                 Bind.bind, Except.bind, arrivalPlan_of_cellPath (ch := ch) harr]
+              rw [hselp]
+              dsimp only
               rw [hall ch]
               rfl
             | single bc cands =>
               rw [harr] at hobl
               rw [arrivalPlan_of_single (ch := ch₀) harr] at hplan
               simp only [Except.ok.injEq, Prod.mk.injEq] at hplan
-              obtain ⟨hp1, hp2⟩ := hplan
+              obtain ⟨hp1, hp2, hp3⟩ := hplan
               subst hp1
               subst hp2
+              subst hp3
               cases cands with
               | nil => simp at hobl
               | cons cand rest =>
@@ -347,21 +366,21 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
                 | nil =>
                   dsimp only at h
                   -- singleton candidate: the L4 site consumes nothing
-                  rw [show Choices.consumeAt .l4Waiter [cand].length ch₀
-                    = (0, ch₀) from Choices.consumeAt_le_one (by simp) rfl] at h
+                  rw [show Choices.consumeAtE .l4Waiter [cand].length ch₀
+                    = (0, ch₀, []) from Choices.consumeAtE_le_one (by simp) rfl] at h
                   simp only [List.getElem?_cons_zero] at h
                   simp only [bind_eq_ok] at h
                   obtain ⟨⟨ts₂, s₂⟩, hpair, h⟩ := h
                   simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-                  obtain ⟨rfl, rfl, rfl⟩ := h
+                  obtain ⟨rfl, rfl, rfl, rfl⟩ := h
                   refine ⟨rfl, fun ch => ?_⟩
                   unfold stepThread
                   rw [hti]
                   simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp,
                     Bind.bind, Except.bind,
                     arrivalPlan_of_single (ch := ch) harr]
-                  rw [show Choices.consumeAt .l4Waiter [cand].length ch
-                    = (0, ch) from Choices.consumeAt_le_one (by simp) rfl]
+                  rw [show Choices.consumeAtE .l4Waiter [cand].length ch
+                    = (0, ch, []) from Choices.consumeAtE_le_one (by simp) rfl]
                   simp only [List.getElem?_cons_zero]
                   rw [hpair]
                   rfl
@@ -370,84 +389,11 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
               rw [harr] at hobl
               cases hobl
 
-/-- **The detector's dispatcher is stream-independent away from
-CONSUMING select applies** (its only replication site, slice 4;
-hypothesis generalized at spec-parity slice 4: a select apply
-certified partnerless + non-consuming is also covered — the detector's
-select arm reads the stream only in its multi-ready branches, which
-the `.done` inversion excludes). -/
-theorem raceUpdate_oblivious {sPre : ExecState} {tsPre : Array Config}
-    {ch ch' : Choices} {m' : MultiConfig} {r : RaceState}
-    (hns : ∀ cPre, tsPre[m'.cur]? = some cPre →
-      consumesSelect cPre = false
-        ∨ (arrivalCases sPre tsPre m'.cur cPre = .ok .cellPath
-            ∧ selectApplyDone sPre cPre = true)) :
-    raceUpdate sPre tsPre ch m' r = raceUpdate sPre tsPre ch' m' r := by
-  unfold raceUpdate
-  by_cases hsz : m'.threads.size ≤ 1
-  · simp [hsz]
-  · simp only [hsz, Bool.false_eq_true, reduceIte]
-    cases hti : tsPre[m'.cur]? with
-    | none => rfl
-    | some cPre =>
-      have hsel := hns cPre hti
-      by_cases hgrow : tsPre.size < m'.threads.size
-      · simp [hgrow]
-      · simp only [if_neg hgrow]
-        by_cases hblk : isBlockedConfig cPre = true
-        · simp [hblk]
-        · simp only [hblk, Bool.false_eq_true, reduceIte]
-          cases cPre <;> try rfl
-          case retV v k =>
-            cases k <;> try rfl
-            case chanStK op done pending env kk =>
-              cases pending <;> rfl
-            -- syncStK (spec-parity slice 2): the sync arm never reads
-            -- the stream (zero new Choices sites).
-            case syncStK op done pending env kk =>
-              cases pending <;> rfl
-            case selectOpsK clauses d done pending env kk =>
-              cases pending with
-              | cons e rest => rfl
-              | nil =>
-                -- the slice-4 case: partnerless + `.done` — the arm's
-                -- stream reads are all in branches the inversion of
-                -- `.done` excludes
-                rcases hsel with hfalse | ⟨harr, hdone⟩
-                · simp [consumesSelect] at hfalse
-                · have hdone' : ∃ c₂ s₂,
-                      applySelectCore sPre clauses d ((v :: done).reverse)
-                        env kk = .ok (.done c₂ s₂) := by
-                    simp only [selectApplyDone] at hdone
-                    cases happ : applySelectCore sPre clauses d
-                        ((v :: done).reverse) env kk with
-                    | error e => rw [happ] at hdone; cases hdone
-                    | ok o =>
-                      cases o with
-                      | picks commits => rw [happ] at hdone; cases hdone
-                      | done c₂ s₂ => exact ⟨c₂, s₂, rfl⟩
-                  obtain ⟨c₂, s₂, happly⟩ := hdone'
-                  obtain ⟨evs, hevs, hready⟩ :=
-                    applySelectCore_done_inv happly
-                  simp only [Bind.bind, Except.bind]
-                  congr 1
-                  funext r₁
-                  cases hwp : wokenPartner tsPre m'.threads m'.cur with
-                  | some j => rfl
-                  | none =>
-                    dsimp only
-                    cases hpost : m'.threads[m'.cur]? with
-                    | none =>
-                      simp only [harr, hevs, Bind.bind, Except.bind]
-                      rcases hready with hready | ⟨cl, hready⟩ <;>
-                        simp only [hready]
-                    | some cPost =>
-                      cases cPost <;>
-                        first
-                        | rfl
-                        | (simp only [harr, hevs, Bind.bind, Except.bind]
-                           rcases hready with hready | ⟨cl, hready⟩ <;>
-                             simp only [hready])
+-- `raceUpdate_oblivious` DELETED (stage B, audit Q2): the detector
+-- folds the step's EVENT and takes no stream, so its verdict is
+-- stream-independent by SIGNATURE — the lemma's whole content moved
+-- into the types. Event equality across streams on certified shapes
+-- is `stepThread_oblivious`'s strengthened conclusion.
 
 /-- One all-runnable-branches STEP probe — the checker's stepping core,
 factored out (BUG-044: the main-exit window makes it reachable from TWO
@@ -462,9 +408,9 @@ def stepAllBranchesOk (next : MultiConfig → RaceState → Bool)
   let probe : Nat → Choices → Bool := fun i probeCh =>
     poolThreadOblivious m.shared m.threads i &&
     match stepMulti m probeCh with
-    | .ok (m', chRem) =>
+    | .ok (m', chRem, ev) =>
         chRem.isEmpty &&
-        (match raceUpdate m.shared m.threads probeCh m' r with
+        (match raceUpdate m.shared m.threads ev m' r with
          | .ok r' => next m' r'
          | .error _ => false)
     | .error _ => false
@@ -511,54 +457,6 @@ def allStreamsOkPool (post : ExecState → Bool) :
           else stepAllBranchesOk (allStreamsOkPool post fuel) m r
 
 
-/-- A certified thread shape is either not a select apply at all, or a
-select apply certified partnerless AND non-consuming (the slice-4
-refinement — the old conclusion was the bare `consumesSelect c =
-false`). Feeds `raceUpdate_oblivious`. -/
-theorem poolThreadOblivious_sel {s : ExecState} {ts : Array Config}
-    {i : Nat} {c : Config}
-    (hobl : poolThreadOblivious s ts i = true) (hti : ts[i]? = some c) :
-    consumesSelect c = false
-      ∨ (arrivalCases s ts i c = .ok .cellPath
-          ∧ selectApplyDone s c = true) := by
-  unfold poolThreadOblivious at hobl
-  rw [hti] at hobl
-  dsimp only at hobl
-  by_cases hblc : isBlockedConfig c = true
-  · cases c <;> simp_all [isBlockedConfig, consumesSelect]
-  · simp only [Bool.not_eq_true] at hblc
-    simp only [hblc, Bool.false_eq_true, reduceIte] at hobl
-    cases hsc : spawnedCont c with
-    | some k =>
-      obtain rfl := spawnedCont_shape hsc
-      exact .inl rfl
-    | none =>
-      simp only [hsc, Option.isSome_none, Bool.false_eq_true,
-        reduceIte] at hobl
-      cases hsp : spawnPlan c with
-      | some p =>
-        match c, hsp with
-        | .retV cv (.goCalleeK [] env k), _ => exact .inl rfl
-        | .retV v (.goArgsK cv vals [] env k), _ => exact .inl rfl
-      | none =>
-        simp only [hsp, Option.isSome_none, Bool.false_eq_true,
-          reduceIte] at hobl
-        cases hnsel : consumesSelect c with
-        | true =>
-          rw [hnsel] at hobl
-          simp only [reduceIte] at hobl
-          refine .inr ?_
-          cases harr : arrivalCases s ts i c with
-          | error e => rw [harr] at hobl; cases hobl
-          | ok a =>
-            cases a with
-            | single bc cands => rw [harr] at hobl; cases hobl
-            | multi os => rw [harr] at hobl; cases hobl
-            | cellPath =>
-              rw [harr] at hobl
-              exact ⟨rfl, hobl⟩
-        | false => exact .inl rfl
-
 /-- The one-layer unfolding of `execProgLoop`, as an equation
 (incl. the BUG-044 main-exit window at `mainOutcome?`-some). -/
 theorem execProgLoop_unfold (fuel : Nat) (m : MultiConfig) (r : RaceState)
@@ -581,8 +479,8 @@ theorem execProgLoop_unfold (fuel : Nat) (m : MultiConfig) (r : RaceState)
                     match fuel with
                     | 0 => throw .fuelOut
                     | fuel + 1 => do
-                        let (m', choices') ← stepMulti m ch₁
-                        let r' ← raceUpdate m.shared m.threads ch₁ m' r
+                        let (m', choices', ev) ← stepMulti m ch₁
+                        let r' ← raceUpdate m.shared m.threads ev m' r
                         execProgLoop fuel m' r' choices')
             | none =>
               if (runnableIdxs m.shared m.threads).isEmpty then
@@ -591,8 +489,8 @@ theorem execProgLoop_unfold (fuel : Nat) (m : MultiConfig) (r : RaceState)
                 match fuel with
                 | 0 => throw .fuelOut
                 | fuel + 1 => do
-                    let (m', choices') ← stepMulti m ch
-                    let r' ← raceUpdate m.shared m.threads ch m' r
+                    let (m', choices', ev) ← stepMulti m ch
+                    let r' ← raceUpdate m.shared m.threads ev m' r
                     execProgLoop fuel m' r' choices') := by
   rw [execProgLoop.eq_def]
   rfl
@@ -604,7 +502,10 @@ branch of one pool step certifies (with `next` = the fuel-`n` checker,
 whose soundness is the induction hypothesis `ih`), then under EVERY
 stream the step-then-recurse pipeline completes at main's `.normal`
 terminal with `post`. Shared verbatim by both classification arms that
-step (mid-run, and the BUG-044 main-exit window's continue branch). -/
+step (mid-run, and the BUG-044 main-exit window's continue branch).
+Stage B: the detector folds the step EVENT — the probe's event equals
+the real run's on certified shapes (`stepThread_oblivious`), so the
+probe's detector verdict transfers with no oblivious-detector lemma. -/
 theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
     {m : MultiConfig} {r : RaceState}
     (ih : ∀ {m' : MultiConfig} {r' : RaceState},
@@ -616,8 +517,8 @@ theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
       ((do
         let x ← stepMulti m ch
         match x with
-        | (m', choices') => do
-            let r' ← raceUpdate m.shared m.threads ch m' r
+        | (m', choices', ev) => do
+            let r' ← raceUpdate m.shared m.threads ev m' r
             execProgLoop n m' r' choices')
         : Except GoError (ExecOutcome × Choices))
         = .ok (.normal σf, ch') ∧ post σf = true := by
@@ -628,19 +529,16 @@ theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
   have hprobe : ∀ {i : Nat} {probeCh : Choices},
       (poolThreadOblivious m.shared m.threads i &&
         match stepMulti m probeCh with
-        | .ok (m', chRem) =>
+        | .ok (m', chRem, ev) =>
             chRem.isEmpty &&
-            (match raceUpdate m.shared m.threads probeCh m' r with
+            (match raceUpdate m.shared m.threads ev m' r with
              | .ok r' => allStreamsOkPool post n m' r'
              | .error _ => false)
         | .error _ => false) = true →
-      -- what the induction needs: the probe's successor pool,
-      -- the empty remainder, the detector verdict, and the
-      -- recursive certificate
-      ∃ (m' : MultiConfig) (r' : RaceState),
+      ∃ (m' : MultiConfig) (r' : RaceState) (ev : StepEvent),
         poolThreadOblivious m.shared m.threads i = true
-        ∧ stepMulti m probeCh = .ok (m', [])
-        ∧ raceUpdate m.shared m.threads probeCh m' r = .ok r'
+        ∧ stepMulti m probeCh = .ok (m', [], ev)
+        ∧ raceUpdate m.shared m.threads ev m' r = .ok r'
         ∧ allStreamsOkPool post n m' r' = true := by
     intro i probeCh hpr
     rw [Bool.and_eq_true] at hpr
@@ -648,7 +546,7 @@ theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
     cases hsm : stepMulti m probeCh with
     | error e => rw [hsm] at hpr; cases hpr
     | ok p =>
-      obtain ⟨m', chRem⟩ := p
+      obtain ⟨m', chRem, ev⟩ := p
       rw [hsm] at hpr
       dsimp only at hpr
       rw [Bool.and_eq_true] at hpr
@@ -658,48 +556,40 @@ theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
         | nil => rfl
         | cons a l => simp [List.isEmpty] at hemp'
       subst hchRem
-      cases hru : raceUpdate m.shared m.threads probeCh m' r with
+      cases hru : raceUpdate m.shared m.threads ev m' r with
       | error e => rw [hru] at hpr; cases hpr
       | ok r' =>
         rw [hru] at hpr
-        exact ⟨m', r', hobl, rfl, hru, hpr⟩
+        exact ⟨m', r', ev, hobl, rfl, hru, hpr⟩
   cases hti : m.threads[m.cur]? with
   | none => rw [hti] at hall; cases hall
   | some c =>
     rw [hti] at hall
     dsimp only at hall
-    -- shared finisher: from a certified probe for thread `i`
-    -- and the real `stepMulti` landing on the same successor,
-    -- chain the detector and the induction hypothesis.
-    have hfinish : ∀ {i : Nat} {probeCh chTail : Choices}
+    -- shared finisher: from a certified probe and the real `stepMulti`
+    -- landing on the same successor WITH THE SAME EVENT, chain the
+    -- detector verdict and the induction hypothesis.
+    have hfinish : ∀ {chTail : Choices} {ev : StepEvent}
         {m' : MultiConfig} {r' : RaceState},
-        poolThreadOblivious m.shared m.threads i = true →
-        raceUpdate m.shared m.threads probeCh m' r = .ok r' →
+        raceUpdate m.shared m.threads ev m' r = .ok r' →
         allStreamsOkPool post n m' r' = true →
-        stepMulti m ch = .ok (m', chTail) →
-        m'.cur = i →
+        stepMulti m ch = .ok (m', chTail, ev) →
         ∃ (σf : ExecState) (ch' : Choices),
           ((do
             let x ← stepMulti m ch
             match x with
-            | (m', choices') => do
-                let r' ← raceUpdate m.shared m.threads ch m' r
+            | (m', choices', ev) => do
+                let r' ← raceUpdate m.shared m.threads ev m' r
                 execProgLoop n m' r' choices')
             : Except GoError (ExecOutcome × Choices))
             = .ok (.normal σf, ch') ∧ post σf = true := by
-      intro i probeCh chTail m' r' hobl hru hnext hreal hcur
-      have hruReal : raceUpdate m.shared m.threads ch m' r = .ok r' := by
-        rw [raceUpdate_oblivious (ch' := probeCh)
-          (fun cPre hcp => by
-            rw [hcur]
-            exact poolThreadOblivious_sel hobl (hcur ▸ hcp))]
-        exact hru
+      intro chTail ev m' r' hru hnext hreal
       obtain ⟨σf, ch'', hrec, hpost⟩ := ih hnext chTail
       refine ⟨σf, ch'', ?_, hpost⟩
       dsimp only
       rw [hreal]
       simp only [Bind.bind, Except.bind]
-      rw [hruReal]
+      rw [hru]
       exact hrec
     by_cases hb : c.atBoundary = true
     · rw [if_pos hb] at hall
@@ -709,48 +599,58 @@ theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
         rw [hrs] at hall
         cases rest with
         | nil =>
-          obtain ⟨m', r', hobl, hsm, hru, hnext⟩ := hprobe hall
-          have hinto : stepThreadInto m r0 [] = .ok (m', []) := by
-            unfold stepMulti at hsm
-            rw [hti] at hsm
-            dsimp only at hsm
-            rw [if_pos hb, hrs] at hsm
-            exact hsm
-          obtain ⟨ts₂, s₂, hst, hm'⟩ :
-              ∃ ts₂ s₂,
-                stepThread m.shared m.threads r0 [] = .ok (ts₂, s₂, [])
-                ∧ m' = ⟨ts₂, s₂, r0⟩ := by
+          obtain ⟨m', r', ev, hobl, hsm, hru, hnext⟩ := hprobe hall
+          -- peel the probe's stepMulti to its inner goroutine-step
+          unfold stepMulti at hsm
+          rw [hti] at hsm
+          dsimp only at hsm
+          rw [if_pos hb, hrs] at hsm
+          dsimp only at hsm
+          rw [show Choices.consumeAtE .l1Sched [r0].length ([] : Choices)
+            = (0, [], []) from Choices.consumeAtE_le_one (by simp) rfl] at hsm
+          simp only [List.getElem?_cons_zero] at hsm
+          simp only [bind_eq_ok] at hsm
+          obtain ⟨⟨m₂, ch₂, ev₂⟩, hinto, hsm⟩ := hsm
+          simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hsm
+          obtain ⟨rfl, rfl, hEv⟩ := hsm
+          obtain ⟨ts₂, s₂, ev₃, hst, hm'⟩ :
+              ∃ ts₂ s₂ ev₃,
+                stepThread m.shared m.threads r0 [] = .ok (ts₂, s₂, [], ev₃)
+                ∧ m₂ = ⟨ts₂, s₂, r0⟩ ∧ ev₂ = ev₃ := by
             unfold stepThreadInto at hinto
             simp only [bind_eq_ok] at hinto
-            obtain ⟨⟨ts₂, s₂, chr⟩, hst, hinto⟩ := hinto
-            simp only [pure_eq_ok, Except.ok.injEq,
-              Prod.mk.injEq] at hinto
-            obtain ⟨rfl, rfl⟩ := hinto
-            exact ⟨ts₂, s₂, hst, rfl⟩
+            obtain ⟨⟨ts₂, s₂, chr, ev₃⟩, hst, hinto⟩ := hinto
+            simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hinto
+            obtain ⟨rfl, rfl, rfl⟩ := hinto
+            exact ⟨ts₂, s₂, ev₃, hst, rfl, rfl⟩
+          obtain ⟨hm', hev23⟩ := hm'
+          subst hev23
           obtain ⟨-, hallst⟩ := stepThread_oblivious hobl hst
-          have hreal : stepMulti m ch = .ok (m', ch) := by
+          have hreal : stepMulti m ch = .ok (m₂, ch, ev) := by
             unfold stepMulti
             rw [hti]
             dsimp only
             rw [if_pos hb, hrs]
             dsimp only
-            rw [show Choices.consumeAt .l1Sched [r0].length ch = (0, ch)
-              from Choices.consumeAt_le_one (by simp) rfl]
+            rw [show Choices.consumeAtE .l1Sched [r0].length ch = (0, ch, [])
+              from Choices.consumeAtE_le_one (by simp) rfl]
             simp only [List.getElem?_cons_zero]
+            simp only [Bind.bind, Except.bind]
             unfold stepThreadInto
             rw [hallst ch]
-            subst hm'
+            dsimp only
+            rw [← hEv, hm']
             rfl
-          exact hfinish hobl hru hnext hreal (by rw [hm'])
+          exact hfinish hru hnext hreal
         | cons r1 rest' =>
           have hlt2 : 1 < (r0 :: r1 :: rest').length := by
             simp only [List.length_cons]; omega
-          rcases hcons : Choices.consumeAt .l1Sched (r0 :: r1 :: rest').length ch
+          rcases hconsC : Choices.consume ch (r0 :: r1 :: rest').length
             with ⟨pick, tail⟩
-          have hconsC : Choices.consume ch (r0 :: r1 :: rest').length
-              = (pick, tail) := by
-            rw [← Choices.consumeAt_of_lt hlt2]
-            exact hcons
+          have hcons : Choices.consumeAtE .l1Sched (r0 :: r1 :: rest').length ch
+              = (pick, tail,
+                 [⟨.l1Sched, (r0 :: r1 :: rest').length, pick⟩]) := by
+            rw [Choices.consumeAtE_of_lt hlt2, hconsC]
           have hpicklt : pick < (r0 :: r1 :: rest').length := by
             have hb0 : 0 < (r0 :: r1 :: rest').length := by simp
             have := consume_fst_lt (ch := ch) hb0
@@ -765,36 +665,45 @@ theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
             omega
           | some i =>
             rw [hget] at hj
-            obtain ⟨m', r', hobl, hsm, hru, hnext⟩ := hprobe hj
+            obtain ⟨m', r', ev, hobl, hsm, hru, hnext⟩ := hprobe hj
             have hconsProbe :
-                Choices.consumeAt .l1Sched (r0 :: r1 :: rest').length [pick]
+                Choices.consumeAtE .l1Sched (r0 :: r1 :: rest').length [pick]
+                  = (pick, [],
+                     [⟨.l1Sched, (r0 :: r1 :: rest').length, pick⟩]) := by
+              rw [Choices.consumeAtE_of_lt hlt2]
+              have hcc : Choices.consume [pick] (r0 :: r1 :: rest').length
                   = (pick, []) := by
-              rw [Choices.consumeAt_of_lt hlt2]
-              simp only [Choices.consume, Prod.mk.injEq]
-              refine ⟨Nat.mod_eq_of_lt ?_, trivial⟩
-              omega
-            have hinto : stepThreadInto m i [] = .ok (m', []) := by
-              unfold stepMulti at hsm
-              rw [hti] at hsm
-              dsimp only at hsm
-              rw [if_pos hb, hrs] at hsm
-              dsimp only at hsm
-              simp only [hconsProbe, hget] at hsm
-              exact hsm
-            obtain ⟨ts₂, s₂, hst, hm'⟩ :
-                ∃ ts₂ s₂,
+                simp only [Choices.consume, Prod.mk.injEq]
+                refine ⟨Nat.mod_eq_of_lt ?_, trivial⟩
+                omega
+              rw [hcc]
+            unfold stepMulti at hsm
+            rw [hti] at hsm
+            dsimp only at hsm
+            rw [if_pos hb, hrs] at hsm
+            dsimp only at hsm
+            rw [hconsProbe] at hsm
+            dsimp only at hsm
+            rw [hget] at hsm
+            dsimp only at hsm
+            simp only [bind_eq_ok] at hsm
+            obtain ⟨⟨m₂, ch₂, ev₂⟩, hinto, hsm⟩ := hsm
+            simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hsm
+            obtain ⟨rfl, rfl, hEv⟩ := hsm
+            obtain ⟨ts₂, s₂, ev₃, hst, hm', hev23⟩ :
+                ∃ ts₂ s₂ ev₃,
                   stepThread m.shared m.threads i []
-                    = .ok (ts₂, s₂, [])
-                  ∧ m' = ⟨ts₂, s₂, i⟩ := by
+                    = .ok (ts₂, s₂, [], ev₃)
+                  ∧ m₂ = ⟨ts₂, s₂, i⟩ ∧ ev₂ = ev₃ := by
               unfold stepThreadInto at hinto
               simp only [bind_eq_ok] at hinto
-              obtain ⟨⟨ts₂, s₂, chr⟩, hst, hinto⟩ := hinto
-              simp only [pure_eq_ok, Except.ok.injEq,
-                Prod.mk.injEq] at hinto
-              obtain ⟨rfl, rfl⟩ := hinto
-              exact ⟨ts₂, s₂, hst, rfl⟩
+              obtain ⟨⟨ts₂, s₂, chr, ev₃⟩, hst, hinto⟩ := hinto
+              simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hinto
+              obtain ⟨rfl, rfl, rfl⟩ := hinto
+              exact ⟨ts₂, s₂, ev₃, hst, rfl, rfl⟩
+            subst hev23
             obtain ⟨-, hallst⟩ := stepThread_oblivious hobl hst
-            have hreal : stepMulti m ch = .ok (m', tail) := by
+            have hreal : stepMulti m ch = .ok (m₂, tail, ev) := by
               unfold stepMulti
               rw [hti]
               dsimp only
@@ -804,32 +713,35 @@ theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
               dsimp only
               rw [hget]
               dsimp only
+              simp only [Bind.bind, Except.bind]
               unfold stepThreadInto
               rw [hallst tail]
-              subst hm'
+              dsimp only
+              rw [← hEv, hm']
               rfl
-            exact hfinish hobl hru hnext hreal (by rw [hm'])
+            exact hfinish hru hnext hreal
     · rw [if_neg hb] at hall
-      obtain ⟨m', r', hobl, hsm, hru, hnext⟩ := hprobe hall
-      have hinto : stepThreadInto m m.cur [] = .ok (m', []) := by
+      obtain ⟨m', r', ev, hobl, hsm, hru, hnext⟩ := hprobe hall
+      have hinto : stepThreadInto m m.cur [] = .ok (m', [], ev) := by
         unfold stepMulti at hsm
         rw [hti] at hsm
         dsimp only at hsm
         rw [if_neg hb] at hsm
         exact hsm
-      obtain ⟨ts₂, s₂, hst, hm'⟩ :
-          ∃ ts₂ s₂,
+      obtain ⟨ts₂, s₂, ev₃, hst, hm', hev23⟩ :
+          ∃ ts₂ s₂ ev₃,
             stepThread m.shared m.threads m.cur []
-              = .ok (ts₂, s₂, [])
-            ∧ m' = ⟨ts₂, s₂, m.cur⟩ := by
+              = .ok (ts₂, s₂, [], ev₃)
+            ∧ m' = ⟨ts₂, s₂, m.cur⟩ ∧ ev = ev₃ := by
         unfold stepThreadInto at hinto
         simp only [bind_eq_ok] at hinto
-        obtain ⟨⟨ts₂, s₂, chr⟩, hst, hinto⟩ := hinto
+        obtain ⟨⟨ts₂, s₂, chr, ev₃⟩, hst, hinto⟩ := hinto
         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hinto
-        obtain ⟨rfl, rfl⟩ := hinto
-        exact ⟨ts₂, s₂, hst, rfl⟩
+        obtain ⟨rfl, rfl, rfl⟩ := hinto
+        exact ⟨ts₂, s₂, ev₃, hst, rfl, rfl⟩
+      subst hev23
       obtain ⟨-, hallst⟩ := stepThread_oblivious hobl hst
-      have hreal : stepMulti m ch = .ok (m', ch) := by
+      have hreal : stepMulti m ch = .ok (m', ch, ev) := by
         unfold stepMulti
         rw [hti]
         dsimp only
@@ -838,7 +750,7 @@ theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
         rw [hallst ch]
         subst hm'
         rfl
-      exact hfinish hobl hru hnext hreal (by rw [hm'])
+      exact hfinish hru hnext hreal
 
 set_option maxHeartbeats 1600000 in
 /-- **Checker soundness**: `allStreamsOkPool post fuel m r = true`
@@ -995,10 +907,10 @@ theorem execProgLoop_mono :
                   rw [hsm] at h
                   simp [Bind.bind, Except.bind] at h
                 | ok p =>
-                  obtain ⟨m', ch₂⟩ := p
+                  obtain ⟨m', ch₂, ev⟩ := p
                   rw [hsm] at h
                   simp only [Bind.bind, Except.bind] at h ⊢
-                  cases hru : raceUpdate m.shared m.threads ch₁ m' r with
+                  cases hru : raceUpdate m.shared m.threads ev m' r with
                   | error e =>
                     rw [hru] at h
                     simp at h
@@ -1017,10 +929,10 @@ theorem execProgLoop_mono :
                 rw [hsm] at h
                 simp [Bind.bind, Except.bind] at h
               | ok p =>
-                obtain ⟨m', ch₁⟩ := p
+                obtain ⟨m', ch₁, ev⟩ := p
                 rw [hsm] at h
                 simp only [Bind.bind, Except.bind] at h ⊢
-                cases hru : raceUpdate m.shared m.threads ch m' r with
+                cases hru : raceUpdate m.shared m.threads ev m' r with
                 | error e =>
                   rw [hru] at h
                   simp at h
@@ -1134,10 +1046,10 @@ theorem execProgLoop_le :
                   rw [hsm] at h
                   simp [Bind.bind, Except.bind] at h
                 | ok p =>
-                  obtain ⟨m', ch₂⟩ := p
+                  obtain ⟨m', ch₂, ev⟩ := p
                   rw [hsm] at h
                   simp only [Bind.bind, Except.bind] at h ⊢
-                  cases hru : raceUpdate m.shared m.threads ch₁ m' r with
+                  cases hru : raceUpdate m.shared m.threads ev m' r with
                   | error e =>
                     rw [hru] at h
                     simp at h
@@ -1156,10 +1068,10 @@ theorem execProgLoop_le :
                 rw [hsm] at h
                 simp [Bind.bind, Except.bind] at h
               | ok p =>
-                obtain ⟨m', ch₁⟩ := p
+                obtain ⟨m', ch₁, ev⟩ := p
                 rw [hsm] at h
                 simp only [Bind.bind, Except.bind] at h ⊢
-                cases hru : raceUpdate m.shared m.threads ch m' r with
+                cases hru : raceUpdate m.shared m.threads ev m' r with
                 | error e =>
                   rw [hru] at h
                   simp at h
@@ -1181,17 +1093,17 @@ theorem stepAllBranchesOk_mono {next next' : MultiConfig → RaceState → Bool}
   have hprobe : ∀ (i : Nat) (probeCh : Choices),
       (poolThreadOblivious m.shared m.threads i &&
         match stepMulti m probeCh with
-        | .ok (m', chRem) =>
+        | .ok (m', chRem, ev) =>
             chRem.isEmpty &&
-            (match raceUpdate m.shared m.threads probeCh m' r with
+            (match raceUpdate m.shared m.threads ev m' r with
              | .ok r' => next m' r'
              | .error _ => false)
         | .error _ => false) = true →
       (poolThreadOblivious m.shared m.threads i &&
         match stepMulti m probeCh with
-        | .ok (m', chRem) =>
+        | .ok (m', chRem, ev) =>
             chRem.isEmpty &&
-            (match raceUpdate m.shared m.threads probeCh m' r with
+            (match raceUpdate m.shared m.threads ev m' r with
              | .ok r' => next' m' r'
              | .error _ => false)
         | .error _ => false) = true := by
@@ -1202,13 +1114,13 @@ theorem stepAllBranchesOk_mono {next next' : MultiConfig → RaceState → Bool}
     cases hsm : stepMulti m probeCh with
     | error e => rw [hsm] at hpr; cases hpr
     | ok p =>
-      obtain ⟨m', chRem⟩ := p
+      obtain ⟨m', chRem, ev⟩ := p
       rw [hsm] at hpr
       dsimp only at hpr ⊢
       rw [Bool.and_eq_true] at hpr ⊢
       obtain ⟨hemp', hpr⟩ := hpr
       refine ⟨hemp', ?_⟩
-      cases hru : raceUpdate m.shared m.threads probeCh m' r with
+      cases hru : raceUpdate m.shared m.threads ev m' r with
       | error e => rw [hru] at hpr; cases hpr
       | ok r' =>
         rw [hru] at hpr

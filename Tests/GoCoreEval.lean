@@ -2466,14 +2466,14 @@ def main : IO UInt32 := do
       .exec (.selectStmt #[] (some (.seqn #[]))) [] .stop
      CLI.stepNeeds ⟨#[selB, selB], {}, 0⟩ [] == some 2
       && (match GoCore.Machine.stepMulti ⟨#[selB, selB], {}, 0⟩ [0] with
-          | .ok (_, leftover) => leftover.isEmpty
+          | .ok (_, leftover, _) => leftover.isEmpty
           | .error _ => false)))
   passed := passed && (← expectTrue "GoCore accountant sentinel: a non-site leaves the sentinel (stepNeeds none, leftover [0])"
     (let selB : GoCore.Machine.Config :=
       .exec (.selectStmt #[] (some (.seqn #[]))) [] .stop
      CLI.stepNeeds ⟨#[selB], {}, 0⟩ [] == none
       && (match GoCore.Machine.stepMulti ⟨#[selB], {}, 0⟩ [0] with
-          | .ok (_, leftover) => leftover == [0]
+          | .ok (_, leftover, _) => leftover == [0]
           | .error _ => false)))
   -- Audit response 2026-08-05, C6 (made NON-VACUOUS by delta-review M2 —
   -- the wp_assign lesson in test form: the original used the
