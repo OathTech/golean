@@ -522,7 +522,9 @@ paragraph here described the retired uniform-width engine: alphabet
 `[0, B)` at every position, "the enumerator CANNOT read a site's
 bound", the author-asserted width PRECONDITION, and the `+B/+2B+1/+4B+3`
 offset ladder; all four are false of the shipped engine). The current
-claim:] `Choices.consume` takes each pick modulo the site's bound, and
+claim:] `Choices.consumeAt` (the tagged consumption combinator — W3.2
+stage A; each site names its `ChoiceSite` census row) takes each pick
+modulo the site's bound, and
 the stepwise engine below explores exactly `[0, bound)` at each site,
 with every bound COMPUTED by the consumption accountant
 (`stepNeeds`/`stepNeedsSeq`) from the machine's own analysis functions
@@ -545,9 +547,11 @@ coupling pins above. Depth `D`, the observation cap `N`, and
 the work cap all fail LOUD, never truncate silently.
 
 THE ACCOUNTANT-EXHAUSTIVENESS INVENTORY (a standing LOCKSTEP
-obligation, the Race.lean-inventory mold: a new `Choices.consume`
-call site in the semantic core MUST add its `stepNeeds`/`stepNeedsSeq`
-arm AND its row here; the sentinel alarm is the executable check).
+obligation, the Race.lean-inventory mold: a new `Choices.consumeAt`
+call site in the semantic core MUST add its `ChoiceSite` constructor
+and policy row (State.lean — the census as code, exhaustiveness-checked),
+its `stepNeeds`/`stepNeedsSeq` arm, AND its row here; the sentinel
+alarm is the executable check).
 The semantic core's consume sites and their accountant arms:
 1. `stepMulti`'s L1 scheduler pick (Multi.lean, `rs.length` at a
    boundary with |runnable| > 1) → `stepNeeds`' boundary arm.
@@ -753,7 +757,8 @@ def enumPoolRun (resultLocs : List Loc) :
                       { values := (← GoCore.Machine.loadMany σf resultLocs).toArray },
                       choices)
                 | _ :: _ =>
-                    let (pick, choices₁) := choices.consume 2
+                    let (pick, choices₁) :=
+                      GoCore.Choices.consumeAt .l5ExitWindow 2 choices
                     if pick == 0 then
                       return ("ok", runJson
                         { values := (← GoCore.Machine.loadMany σf resultLocs).toArray },

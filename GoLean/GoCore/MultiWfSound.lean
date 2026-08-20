@@ -1136,23 +1136,12 @@ theorem stepThread_wf {s : ExecState} {threads : Array Config} {i : Nat}
               cases cands with
               | nil => simp [throw, throwThe, MonadExceptOf.throw] at h
               | cons cand rest =>
-                cases rest with
-                | nil =>
                   dsimp only at h
-                  simp only [bind_eq_ok] at h
-                  obtain ⟨⟨ts₂, s₂⟩, hpair, h⟩ := h
-                  simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-                  obtain ⟨rfl, rfl, rfl⟩ := h
-                  obtain ⟨q1, q2, q3, q4, q5⟩ := applyPairing_wf hw hts hbcb
-                    hbci hpair
-                  exact ⟨q1, q2, q3, by omega, q5⟩
-                | cons cand2 rest2 =>
-                  dsimp only at h
-                  rcases hcons : Choices.consume ch
-                      (cand :: cand2 :: rest2).length with ⟨idx, ch₂⟩
+                  rcases hcons : Choices.consumeAt .l4Waiter
+                      (cand :: rest).length ch with ⟨idx, ch₂⟩
                   rw [hcons] at h
                   dsimp only at h
-                  cases hget : (cand :: cand2 :: rest2)[idx]? with
+                  cases hget : (cand :: rest)[idx]? with
                   | none =>
                     rw [hget] at h
                     simp [throw, throwThe, MonadExceptOf.throw] at h
@@ -1186,23 +1175,12 @@ theorem stepThread_wf {s : ExecState} {threads : Array Config} {i : Nat}
                   cases cands with
                   | nil => simp [throw, throwThe, MonadExceptOf.throw] at h
                   | cons cand rest =>
-                    cases rest with
-                    | nil =>
                       dsimp only at h
-                      simp only [bind_eq_ok] at h
-                      obtain ⟨⟨ts₂, s₂⟩, hpair, h⟩ := h
-                      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-                      obtain ⟨rfl, rfl, rfl⟩ := h
-                      obtain ⟨q1, q2, q3, q4, q5⟩ := applyPairing_wf hw hts
-                        hbcb hbci hpair
-                      exact ⟨q1, q2, q3, by omega, q5⟩
-                    | cons cand2 rest2 =>
-                      dsimp only at h
-                      rcases hcons2 : Choices.consume chs
-                          (cand :: cand2 :: rest2).length with ⟨idx, ch₂⟩
+                      rcases hcons2 : Choices.consumeAt .l4Waiter
+                          (cand :: rest).length chs with ⟨idx, ch₂⟩
                       rw [hcons2] at h
                       dsimp only at h
-                      cases hget2 : (cand :: cand2 :: rest2)[idx]? with
+                      cases hget2 : (cand :: rest)[idx]? with
                       | none =>
                         rw [hget2] at h
                         simp [throw, throwThe, MonadExceptOf.throw] at h
@@ -1260,23 +1238,18 @@ theorem stepMulti_wf {m m' : MultiConfig} {ch ch' : Choices}
       | nil => rw [hrs] at h; cases h
       | cons r0 rest =>
         rw [hrs] at h
-        cases rest with
-        | nil =>
-          refine hstep r0 (runnableIdxs_lt (s := m.shared) (ts := m.threads) ?_) h
+        dsimp only at h
+        rcases hcons : Choices.consumeAt .l1Sched (r0 :: rest).length ch
+          with ⟨pick, ch₁⟩
+        rw [hcons] at h
+        cases hget : (r0 :: rest)[pick]? with
+        | none => rw [hget] at h; cases h
+        | some i =>
+          rw [hget] at h
+          refine hstep i
+            (runnableIdxs_lt (s := m.shared) (ts := m.threads) ?_) h
           rw [hrs]
-          exact List.mem_singleton.mpr rfl
-        | cons r1 rest' =>
-          dsimp only at h
-          rcases hcons : ch.consume (r0 :: r1 :: rest').length with ⟨pick, ch₁⟩
-          rw [hcons] at h
-          cases hget : (r0 :: r1 :: rest')[pick]? with
-          | none => rw [hget] at h; cases h
-          | some i =>
-            rw [hget] at h
-            refine hstep i
-              (runnableIdxs_lt (s := m.shared) (ts := m.threads) ?_) h
-            rw [hrs]
-            exact List.mem_of_getElem? hget
+          exact List.mem_of_getElem? hget
     · simp only [Bool.not_eq_true] at hb
       simp only [hb, Bool.false_eq_true, reduceIte] at h
       exact hstep m.cur hcur h

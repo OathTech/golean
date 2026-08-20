@@ -431,7 +431,7 @@ theorem stepFn_pickW_value {σ : ExecState} {base : Option Loc}
         typeResolutionFuel, hv]]
     simp only [Bind.bind, Except.bind, pure, Except.pure,
       ExecState.alloc, ExecState.freshLoc]
-  simp only [stepFn, hcands, Bind.bind, Except.bind, hne,
+  simp only [stepFn, Choices.consumeAt_mapIter, hcands, Bind.bind, Except.bind, hne,
     Bool.false_eq_true, if_false, hmand]
   rw [show (if mand = true then 0 else 1) = (if mand then 0 else 1)
       from rfl]

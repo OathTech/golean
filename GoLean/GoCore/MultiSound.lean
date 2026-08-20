@@ -149,12 +149,12 @@ theorem arrivalPlan_of_multi {s : ExecState} {threads : Array Config}
   unfold arrivalPlan
   rw [h]
   show (do
-    let (idx, ch') := Choices.consume ch os.length
+    let (idx, ch') := Choices.consumeAt .l2Arrival os.length ch
     match os[idx]? with
     | some o => pure ((some o : Option ArrivalOutcome), ch')
     | none => throw (.internal "select L2 ready pick out of range")
     : Except GoError (Option ArrivalOutcome × Choices)) = _
-  rw [hcons]
+  rw [Choices.consumeAt_l2Arrival, hcons]
   dsimp only
   cases os[sel]? <;> rfl
 
@@ -544,23 +544,14 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
               cases cs with
               | nil => cases hst
               | cons cand rest =>
-                cases rest with
-                | nil =>
+                  -- The L4 site (`consumeAt .l4Waiter`): one arm covers
+                  -- singleton and multi-candidate plans — the singleton
+                  -- non-consumption is the site's policy now.
                   simp only [Bind.bind, Except.bind] at hst
-                  cases hap : applyPairing m.shared m.threads i bc cand with
-                  | error e => rw [hap] at hst; cases hst
-                  | ok r₃ =>
-                    obtain ⟨ts', s₃⟩ := r₃
-                    rw [hap] at hst
-                    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
-                    obtain ⟨rfl, rfl, rfl⟩ := hst
-                    exact StepM.pair hsched hti hbl hsp hac
-                      (idx := 0) (by simp) hap
-                | cons b rest' =>
-                  simp only [Bind.bind, Except.bind] at hst
-                  rcases hcons : ch.consume (cand :: b :: rest').length with ⟨idx, ch₃⟩
+                  rcases hcons : Choices.consumeAt .l4Waiter
+                      (cand :: rest).length ch with ⟨idx, ch₃⟩
                   rw [hcons] at hst
-                  cases hget : (cand :: b :: rest')[idx]? with
+                  cases hget : (cand :: rest)[idx]? with
                   | none => rw [hget] at hst; cases hst
                   | some cand' =>
                     rw [hget] at hst
@@ -588,23 +579,11 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
                   cases cs with
                   | nil => cases hst
                   | cons cand rest =>
-                    cases rest with
-                    | nil =>
                       simp only [Bind.bind, Except.bind] at hst
-                      cases hap : applyPairing m.shared m.threads i bc cand with
-                      | error e => rw [hap] at hst; cases hst
-                      | ok r₃ =>
-                        obtain ⟨ts', s₃⟩ := r₃
-                        rw [hap] at hst
-                        simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
-                        obtain ⟨rfl, rfl, rfl⟩ := hst
-                        exact StepM.pickPair hsched hti hbl hsp hac hget
-                          (idx := 0) (by simp) hap
-                    | cons b rest' =>
-                      simp only [Bind.bind, Except.bind] at hst
-                      rcases hconsL : chL.consume (cand :: b :: rest').length with ⟨idx, ch₃⟩
+                      rcases hconsL : Choices.consumeAt .l4Waiter
+                          (cand :: rest).length chL with ⟨idx, ch₃⟩
                       rw [hconsL] at hst
-                      cases hgetL : (cand :: b :: rest')[idx]? with
+                      cases hgetL : (cand :: rest)[idx]? with
                       | none => rw [hgetL] at hst; cases hst
                       | some cand' =>
                         rw [hgetL] at hst
@@ -645,23 +624,20 @@ theorem stepMulti_sound {m : MultiConfig} {ch ch' : Choices}
       | nil => rw [hrs] at h; cases h
       | cons r0 rest =>
         rw [hrs] at h
-        cases rest with
-        | nil =>
-          have hmem : r0 ∈ runnableIdxs m.shared m.threads := by
-            rw [hrs]; exact List.mem_singleton.mpr rfl
+        -- The L1 site (`consumeAt .l1Sched`): one arm covers the sole
+        -- runnable (policy: no pop at bound 1) and the consuming pick.
+        dsimp only at h
+        rcases hcons : Choices.consumeAt .l1Sched (r0 :: rest).length ch
+          with ⟨pick, ch₁⟩
+        rw [hcons] at h
+        cases hget : (r0 :: rest)[pick]? with
+        | none => rw [hget] at h; cases h
+        | some i =>
+          rw [hget] at h
+          have hmem : i ∈ runnableIdxs m.shared m.threads := by
+            rw [hrs]
+            exact List.mem_of_getElem? hget
           exact stepThreadInto_sound (schedPick_of_boundary hcur hb hmem) h
-        | cons r1 rest' =>
-          dsimp only at h
-          rcases hcons : ch.consume (r0 :: r1 :: rest').length with ⟨pick, ch₁⟩
-          rw [hcons] at h
-          cases hget : (r0 :: r1 :: rest')[pick]? with
-          | none => rw [hget] at h; cases h
-          | some i =>
-            rw [hget] at h
-            have hmem : i ∈ runnableIdxs m.shared m.threads := by
-              rw [hrs]
-              exact List.mem_of_getElem? hget
-            exact stepThreadInto_sound (schedPick_of_boundary hcur hb hmem) h
     · simp only [Bool.not_eq_true] at hb
       simp only [hb, Bool.false_eq_true, reduceIte] at h
       exact stepThreadInto_sound (schedPick_cur hcur hb) h
@@ -738,6 +714,10 @@ theorem stepMulti_of_inner {m : MultiConfig} {i : Nat} {chI chI' : Choices}
           simp only [hbnd, reduceIte]
           rw [hrs]
           dsimp only
+          -- sole runnable: the L1 site's policy consumes nothing
+          rw [show Choices.consumeAt .l1Sched [i].length chI = (0, chI)
+            from Choices.consumeAt_le_one (by simp) rfl]
+          simp only [List.getElem?_cons_zero]
           unfold stepThreadInto
           rw [hinner]
           rfl
@@ -752,8 +732,9 @@ theorem stepMulti_of_inner {m : MultiConfig} {i : Nat} {chI chI' : Choices}
           simp only [hbnd, reduceIte]
           rw [hrs]
           dsimp only
-          have hcons : Choices.consume (p :: chI) (r0 :: r1 :: rest').length
-              = (p, chI) := by
+          have hcons : Choices.consumeAt .l1Sched (r0 :: r1 :: rest').length
+              (p :: chI) = (p, chI) := by
+            rw [Choices.consumeAt_of_lt (by simp only [List.length_cons]; omega)]
             simp only [Choices.consume]
             congr 1
             have : max 1 (r0 :: r1 :: rest').length
@@ -861,6 +842,10 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
             Except.bind]
           rw [arrivalPlan_of_single hplan]
           dsimp only
+          -- singleton candidate: the L4 site's policy consumes nothing
+          rw [show Choices.consumeAt .l4Waiter [cand].length ([] : Choices)
+            = (0, []) from Choices.consumeAt_le_one (by simp) rfl]
+          simp only [List.getElem?_cons_zero]
           rw [hap']
           rfl
         exact stepMulti_of_inner hsched hinner
@@ -873,8 +858,9 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
             Except.bind]
           rw [arrivalPlan_of_single hplan]
           dsimp only
-          have hcons : Choices.consume [idx] (cand :: b :: rest').length
-              = (idx, []) := by
+          have hcons : Choices.consumeAt .l4Waiter (cand :: b :: rest').length
+              [idx] = (idx, []) := by
+            rw [Choices.consumeAt_of_lt (by simp only [List.length_cons]; omega)]
             simp only [Choices.consume]
             congr 1
             have hmax : max 1 (cand :: b :: rest').length
@@ -928,6 +914,9 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
             Except.bind]
           rw [arrivalPlan_of_multi hplan hconsS, hget]
           dsimp only
+          rw [show Choices.consumeAt .l4Waiter [cand].length ([] : Choices)
+            = (0, []) from Choices.consumeAt_le_one (by simp) rfl]
+          simp only [List.getElem?_cons_zero]
           rw [hap']
           rfl
         exact stepMulti_of_inner hsched hinner
@@ -938,8 +927,9 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
           have hmax : max 1 os.length = os.length := by omega
           rw [hmax]
           exact Nat.mod_eq_of_lt hsel
-        have hconsL : Choices.consume [idx] (cand :: b :: rest').length
-            = (idx, []) := by
+        have hconsL : Choices.consumeAt .l4Waiter (cand :: b :: rest').length
+            [idx] = (idx, []) := by
+          rw [Choices.consumeAt_of_lt (by simp only [List.length_cons]; omega)]
           simp only [Choices.consume]
           congr 1
           have hmax : max 1 (cand :: b :: rest').length

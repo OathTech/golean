@@ -4232,7 +4232,8 @@ theorem applyStmtOp_wf {σ : ExecState} {ch : Choices} {op : StmtOp} {nt : Nat}
         · show optLocSup slice.base ≤ st.1.nextAddr
           omega
       · -- spill path
-        simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        simp only [Choices.consumeAt_appendSpill, bind_eq_ok, pure_eq_ok,
+          Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨oldValues, holdValues, backing, hbacking, σ₂, h, hσ, hch⟩ := h
         subst hσ
         have holdb : goValueListSup oldValues.toList ≤ σ.nextAddr := by

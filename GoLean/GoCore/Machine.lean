@@ -943,7 +943,7 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
             -- strict lane's deterministic behavior is unchanged — while
             -- extra ranges bijectively over the whole envelope.
             let width := appendSpillWidth slice.cap newLen
-            let (extra, choices) := choices.consume width
+            let (extra, choices) := Choices.consumeAt .appendSpill width choices
             let newCap := newLen +
               ((appendGrowthCap slice.cap newLen - newLen + extra) % width)
             let backing ← buildAppendBackingValue s elem oldValues elemValues newCap
@@ -2628,9 +2628,10 @@ it documents the `SelectOutcome`/`applySelectCore`/`applySelect`
 trio): pair the evaluated
 entry operands with their clauses, compute the ready set; none ready →
 `default` (consuming NOTHING) or block; exactly one ready → commit it
-(consuming nothing — `Choices.consume` pops even at bound 1, and the
-sequential/deterministic behavior depends on non-consumption at
-singleton readiness). MULTIPLE ready clauses are THE L2 SITE (design
+(consuming nothing — the singleton-ready commit is the `.done` shape,
+which never consults the `l2Entry` site; the sequential/deterministic
+behavior depends on that structural non-consumption). MULTIPLE ready
+clauses are THE L2 SITE (`ChoiceSite.l2Entry` — the census row; design
 D4, live since slice 4):
 
 The spec's step 3 — "If one or more of the communications can
@@ -2716,8 +2717,9 @@ def applySelect (s : ExecState) (clauses : List (SelectClauseHead × Stmt))
   | .done c' s' => return (c', s', ch)
   | .picks commits =>
       -- THE L2 CONSUMPTION (envelope statement in the docstring
-      -- above): bound = the ready-clause count.
-      let (idx, ch') := ch.consume commits.length
+      -- above): bound = the ready-clause count, ≥ 2 by construction
+      -- (`.picks` arises only from a multi-ready analysis).
+      let (idx, ch') := Choices.consumeAt .l2Entry commits.length ch
       match commits[idx]? with
       | some (.inl (c', s')) => return (c', s', ch')
       | some (.inr msg) =>
