@@ -486,6 +486,11 @@ channel WP law family, the LangDM simulation, `dspCompTripleC`'s
 machinery — are the demand driver: what the resume will instantiate is
 what the table must cover). DONE: pin moved green in its own commit;
 the table exists with a reason on every keep-ours row.
+*Pre-arc reconnaissance, done and read-only:*
+`docs/2026-08-20_iris-lean-delta-scan.md` — 135-commit delta, draft reuse
+table, breaking-changes list, and the recommendation (move here, as
+chartered); note its §3 finding that the toolchain bump likely forces a
+comparator/lean4export re-pin, which needs its own approval.
 
 **S6c. The channel-logic RESUME-READINESS assessment.** The park
 record's promises, sized against the ACTUAL widened machine: what the
