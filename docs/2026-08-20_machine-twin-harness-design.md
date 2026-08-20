@@ -14,6 +14,31 @@ family — the executable specification this twin must not rewrite),
 `docs/2026-08-04_nondeterminism-doctrine.md` (choice-site discipline),
 `docs/2026-08-14_harness-style-scoping.md` §8 (capstone form).
 
+## Rulings and corrections, 2026-08-20
+
+**USER RULINGS** (also recorded in `docs/raft-w3-log.md` §5; not this lane's to
+re-open):
+
+- **Q2 — the H-2 logger seam: the revised recommendation is ADOPTED.** Upstream
+  `logger.go` stays VERBATIM and the HARNESS supplies the `Logger`. **Amended**
+  by the audit: the harness supplies BOTH `Config.Logger` AND
+  `raft.SetLogger(...)`, with the same stateless logger value — `getLogger()`
+  has six call sites, not one, and three live ones are in `MemoryStorage`, which
+  never consults `Config.Logger`. §5.
+- **Q3 — the fmt story: OPTION 1.** A modeled `Sprintf` SUBSET over the measured
+  verb/kind set, differential-pinned per verb. The census it ranges over is log
+  §2.4, corrected: `Sprintf` ×6, `Errorf` ×11, `Fprintf` ×3, verbs
+  `%d %s %v %+v %x %q` (`%v` and `%q` arrive with `DescribeConfChange`'s three
+  `Fprintf` sites, which the first liveness census could not see). §8's W4.1.
+
+**CORRECTIONS this round made to the design's own claims**, each argued in
+place: the Ready-harvest atomicity is a deliberate ENVELOPE NARROWING with a
+re-envelope obligation, NOT a consequence of etcd's contract (§2, refuted by
+`rawnode.go:411`, `node.go`'s select, `doc.go:101-103`); the logger seam is two
+places, not one (§5); the election-jitter draw is a LIVE RUN BLOCKER, not a
+deferred design question (§5); §7's "every block's expectation is rendered text"
+is false for 249 of 558 blocks (§7); W4.1's done criterion was fail-open (§8).
+
 ---
 
 ## §1 What the twin is, in one paragraph
@@ -60,25 +85,45 @@ the same shape; the first three are what a first twin needs.
 
 **The harvest is part of the event, not a separate one.** After the RawNode
 call: `if rn.HasReady() { rd := rn.Ready(); persist(rd); record(rd); send(rd);
-apply(rd); rn.Advance(rd) }`. Bundling it is a deliberate ATOMICITY choice and
-it is the design's most consequential one, so it is argued rather than assumed:
+apply(rd); rn.Advance(rd) }`.
 
-- etcd's own contract is that `Ready` must be processed and `Advance`d before
-  the next one is taken; a driver that interleaves other nodes' steps INSIDE
-  one node's ready-cycle is not modelling a faster network, it is modelling an
-  application that violates the contract.
-- The nondeterminism that matters — which message arrives when, which node
-  times out first — lives in the EVENT ORDER, which is fully free. Splitting
-  the harvest would add interleavings that no conforming application exhibits
-  and that raft does not defend against.
-- The go-run family already runs the harvest as one loop iteration per node
-  (`harness.go`, `case rd := <-n.rn.Ready():`), so the twin's atomicity matches
-  the executable spec's, which is what makes them twins.
+**This is a DELIBERATE ENVELOPE NARROWING, not a fact derived from etcd's
+contract** (rewritten 2026-08-20; the first draft claimed the contract forbids
+interleaving, and the audit refuted it):
 
-Recorded as a design decision with an obligation attached: **when the goroutine
-tier arrives, this bundling stops being a modelling choice and becomes a
-property of the harness code**, and the granularity question moves to the
-registry-boundary discussion (C-C), not here.
+- `rawnode.go:411` keeps per-RawNode `stepsOnAdvance`, i.e. upstream's own code
+  is built to accept steps that arrive DURING a ready-cycle and replay them at
+  `Advance`. A driver that interleaves is not violating anything; upstream has a
+  mechanism for exactly that case.
+- upstream's `node.go` loop is single-threaded but keeps `recvc`, `propc` and
+  `tickc` ARMED while `advancec` is pending — so real etcd applications do step
+  a node between `Ready()` and `Advance()`, routinely.
+- `doc.go:101-103` says an application may call `Advance` "at any time after
+  step 1", which is a licence to interleave, not a prohibition.
+
+So the honest statement is: **the v1 twin models FEWER interleavings than
+upstream licenses.** The bundling is ours, chosen because S1–S4 are the first
+thing to prove and a narrower interleaving space makes the first proofs
+tractable; it is not a claim about what conforming applications do.
+
+**Recorded with a re-envelope obligation** (the W3.2 register pattern — a
+narrowing is scaffolding carrying a debt, never a fidelity achievement):
+
+| | |
+|---|---|
+| **what is excluded** | every schedule in which node `i` is stepped, ticked or proposed to between its own `Ready()` and its `Advance(rd)` — including the `stepsOnAdvance` replay path, and including another node's harvest running inside `i`'s |
+| **why v1 accepts it** | the S1–S4 proofs come first, and they are about the message-passing algorithm, whose adversary is the network and the timer; the excluded schedules add no new message orders, only new points at which a node's local state is observed mid-cycle |
+| **what it costs** | a theorem about the twin is, at v1, a theorem about a SUBSET of conforming drivers. Any statement must say so (scoping §3.5) |
+| **how it widens** | additively, and without touching the checker: split `harvest` into its own event kind with the node index as its argument, and the excluded schedules become reachable. The event vocabulary is already indexed by node, so this is a new row in §2's table, not a redesign |
+| **when** | W4.5, beside the other envelope work, and before any claim that the twin covers upstream's driver contract |
+
+The go-run family (`harness.go`, `case rd := <-n.rn.Ready():`) happens to run
+the harvest as one loop iteration per node, so the twin and the executable spec
+are narrowed the SAME way — which is what keeps them twins, and is also why
+neither of them witnesses the excluded schedules. When the goroutine tier
+arrives the bundling stops being a modelling choice and becomes a property of
+the harness code, and the granularity question moves to the registry-boundary
+discussion (C-C).
 
 ### The choice-site spec (what `∀ch` quantifies)
 
@@ -134,7 +179,8 @@ DESIGN INPUTS here, not trivia:
    `node.go` problem — the propc channel — and the twin does not have it, by
    construction: `node.go` is not in the subject tree (only its declaration
    subset is), and `RawNode.Propose` is a direct `rn.raft.Step(MsgProp)`
-   (`rawnode.go:89`) that RETURNS an error (`ErrProposalDropped` when there is
+   (`rawnode.go:91`, in `Propose` at `rawnode.go:90`) that RETURNS an error
+   (`ErrProposalDropped` when there is
    no leader to accept it). The
    twin's client is therefore DROP-AND-RETRY: a `propose` event whose error is
    non-nil leaves the command in the pending list. That is the "drop-and-retry
@@ -160,7 +206,12 @@ whole run.
 | S1 election safety — at most one leader per term, from claims recorded when a Ready carries `SoftState.RaftState == StateLeader` | identical, but the claim is recorded inside the harvest, so the check runs on every event: `leaderOf[term]` map, violation on disagreement |
 | S2 log/apply agreement — no two nodes apply different `(term, data)` at one index | identical: an `appliedAt[index] = (term, data)` map, checked at apply time |
 | S3 apply monotonicity + the anomaly channel | identical, per node, at apply time |
-| S4 completion — every node applied every command | a TERMINATION condition, not a per-step invariant: the driver stops when it holds, and the run is a completion WITNESS |
+| S4 completion — every node applied every command | a TERMINATION condition, **not** a per-step invariant: the driver stops when it holds, and the run is a completion WITNESS |
+
+**S1–S3 are the invariant; S4 is the stopping condition.** Stated because §8's
+slice criteria used to say "S1–S4 hold at every step", which is not a thing S4
+can do — S4 is false at every step of a run until the last one, by construction.
+The W4.3 criterion below says the checkable thing instead.
 
 **The per-step form is the important change.** A verdict folded at the end can
 only say "this run was safe"; a per-step invariant is a state predicate, which
@@ -180,6 +231,10 @@ warns. Floor: at least one leader claim and at least one committed command.
 
 ## §5 The H-2 seam decision — RECOMMENDED, with the measurement behind it
 
+**Status: RULED by the user 2026-08-20 (Q2) — the revised recommendation below
+is ADOPTED, with the `SetLogger` amendment the audit forced.** Recorded also in
+`docs/raft-w3-log.md` §5.
+
 **The question** (raft-w2 log §4 D-5, handoff H-2): the no-op `Logger` overlay
 makes `Fatal`/`Panic` do nothing, which SILENCES raft's own assertions —
 `assertConfStatesEquivalent` (`util.go:320`, called from `raft.go:479` and
@@ -187,23 +242,23 @@ makes `Fatal`/`Panic` do nothing, which SILENCES raft's own assertions —
 W2.1's candidate answer was "`Panic`/`Panicf` panic with a fixed string, the
 rest stay empty".
 
-**The recommendation: neither. Keep upstream's `logger.go` VERBATIM and let the
+**The ruling: neither. Keep upstream's `logger.go` VERBATIM and let the
 HARNESS supply the Logger implementation.** H-3 makes this possible and the
 measurement is in the log:
 
-- With upstream `logger.go` in the tree, the export is clean and all ten
-  `DefaultLogger` formatting methods land as fail-closed stubs. They are
-  reachable ONLY through the `Logger` interface, and raft reaches for the
-  package default at exactly one place — `Config.validate`, `raft.go:332`:
-  `if c.Logger == nil { c.Logger = getLogger() }`. So a harness that SETS
-  `Config.Logger` (the go-run family already does) never makes `DefaultLogger`
-  the dynamic target, and a harness that forgets gets a loud fail-closed stop
-  the first time raft logs — which is the right failure for a forgotten seam.
-- The subject delta collapses from D-5's 144 changed lines to **two**: the two
-  package-level initializers `defaultLogger`/`discardLogger`, which call
-  `log.New(os.Stderr, …)` and are export-blocking under G-3 (a package-level
-  variable has no per-declaration quarantine). Land H-11 and the delta is
-  **zero** — the whole file becomes verbatim.
+- With upstream `logger.go` in the tree the export is clean, and **eleven**
+  declarations land as fail-closed stubs: the ten `DefaultLogger` formatting
+  methods (`Debug`/`Debugf`/`Info`/`Infof`/`Error`/`Errorf`/`Warning`/
+  `Warningf`/`Fatal`/`Fatalf`) **and the package-level `header` helper**
+  (`logger.go:140`, `fmt.Sprintf`), which the first draft missed. `Panic` and
+  `Panicf` are NOT among them — they delegate to the embedded `*log.Logger`, so
+  they lower and fail closed at the imported stub when called, which is the same
+  outcome by a different route.
+- The subject delta is **three lines**, not two: the two package-level
+  initializers `defaultLogger`/`discardLogger` (which call `log.New(os.Stderr, …)`
+  and are export-blocking under G-3), plus the `"io"` import they orphan.
+  Measured, not estimated — the walk was run with upstream's file in the tree.
+  Land H-11 and the delta is **zero** — the whole file becomes verbatim.
 - The assertion question answers itself: the harness's `Logger.Panic` /
   `Panicf` genuinely `panic(...)`, so `assertConfStatesEquivalent` keeps its
   teeth, and the panic value is ours to choose (harness code carries no
@@ -211,6 +266,48 @@ measurement is in the log:
   six informational levels are empty bodies. `Fatal` panics too: under the twin
   there is no `os.Exit` to model and "stop the machine" is the honest reading
   of a fatal.
+
+### The amendment: `Config.Logger` alone is NOT the seam
+
+The recommendation as first written said raft reaches for the package default
+"at exactly one place — `Config.validate`". **That is false, and the difference
+matters.** `getLogger()` has SIX call sites, and only one of them is
+`Config.validate`:
+
+| site | declaration | live under the twin? |
+|---|---|---|
+| `raft.go:333` | `Config.validate` — `if c.Logger == nil { c.Logger = getLogger() }` | LIVE |
+| `storage.go:154` | `MemoryStorage.Entries` | **LIVE** |
+| `storage.go:252` | `MemoryStorage.CreateSnapshot` | **LIVE** |
+| `storage.go:322` | `MemoryStorage.Append` | **LIVE** |
+| `storage.go:276` | `MemoryStorage.Compact` | dead (the twin never compacts) |
+| `status.go:102` | `Status.String` | dead |
+
+The four `MemoryStorage` sites are `getLogger().Panicf(...)` on bound-violation
+paths, and they consult the package-level REGISTRY — `Config.Logger` is not in
+scope there and setting it does nothing for them. Three are live.
+
+**So the harness supplies BOTH.** At setup, before any node is constructed:
+
+```go
+lg := &harnessLogger{}     // stateless: no fields, no writes
+raft.SetLogger(lg)         // the package registry — covers the 6 getLogger() sites
+cfg.Logger = lg            // the per-node seam — covers every r.logger.* call
+```
+
+**Sharing one logger value across all n nodes is shared-nothing-safe, and this
+is a side condition of the reduction theorem (§6), not a stylistic note.** It
+holds because `harnessLogger` is STATELESS: no fields, so every method writes
+nothing and reads nothing, so its footprint is empty and it cannot appear in any
+pairwise-disjointness obligation. A logger that buffered output — the obvious
+"let me see what happened" temptation — would be shared MUTABLE state touched by
+every node on every event, and would silently invalidate §6's whole argument. If
+the twin ever needs a recording logger it must be PER NODE, and §6's footprint
+check must be re-run.
+
+The registry is written once, before the run, and never again, so
+`raftLoggerMu`/`raftLogger` are read-only during the run — which §6 lists as a
+fact the footprint check should CONFIRM rather than the design assert.
 
 **Why this beats the ruled fixed-string seam.** The fixed-string seam puts the
 teeth in the SUBJECT (a delta on upstream text, growing the ledger, re-derived
@@ -221,23 +318,36 @@ recurring one at every rev bump.
 
 **The residue, stated.** Two things do NOT change: (i) the argument-evaluation
 finding — `stepLeader` calls `DescribeConfChange(cc)` as an argument to
-`Infof`, so that rendering path runs whatever the logger does (log §2.3), and
-(ii) `fmt`'s recovery of a Stringer panic (W2.1 §3's bound) still applies to
-any harness logger that formats. A harness logger that formats NOTHING — empty
-bodies plus a panic — has neither problem, which is another reason to prefer
-it.
+`Infof` (`raft.go:1340`), so that rendering path runs whatever the logger does
+(log §2.3), and it drags three `fmt.Fprintf`s and a live `strings.Builder`
+(G-10) in with it; and (ii) `fmt`'s recovery of a Stringer panic (W2.1 §3's
+bound) still applies to any harness logger that formats. A harness logger that
+formats NOTHING — empty bodies plus a panic — has neither problem, which is
+another reason to prefer it. Note that (i) is NOT fixed by the logger choice at
+all: it is an argument, and Go evaluates it.
 
-**The election-jitter seam (G-1 / H-15), same shape, same recommendation.** The
-draw is one method body (`(*lockedRand).Intn`, `raft.go:96`) feeding one line
-(`raft.go:2054`). Upstream itself treats the value as injectable — its
-datadriven test env has a `set-randomized-election-timeout` command — which is
-the fidelity argument that the jitter is a free parameter of the algorithm and
-not semantics. So: seam `Intn` to draw from the harness's choice stream, record
-it as a subject delta, and file the latitude entry against the RANGE
-(`[electionTimeout, 2*electionTimeout)`), which is what the algorithm's
-liveness argument actually depends on. Modelling `crypto/rand.Int` +
-`math/big` as machine nondeterminism (the doctrinal alternative) buys nothing
-the range does not already give and costs a big-integer model.
+**The election-jitter seam (G-1 / H-15) — same shape, but it is a LIVE RUN
+BLOCKER, not a design question with time on it.** The audit's correction (log
+§2.5): the walk's own probe delta replaced `(*lockedRand).Intn`'s body, so the
+census never saw the draw's refusal and G-1 read as a pure export blocker. It
+is not. `Intn` (`raft.go:97`) feeds `resetRandomizedElectionTimeout`
+(`raft.go:2054`), which `becomeFollower` calls, which `(*raft).Step` reaches —
+so the twin stops on it the first time a node becomes a follower, which is
+immediately. Measured refusal:
+`package-selector call rand.Int (package "crypto/rand" surface not modeled)`.
+
+**The fix direction is the CHOICE SITE, and this is doctrine rather than
+convenience.** Election jitter is nondeterminism; nondeterminism belongs to the
+ENVELOPE, and the envelope is argued against the algorithm's own contract. So:
+the draw becomes a choice-consumption point (§2's draw 4), the latitude entry is
+filed against the RANGE `[electionTimeout, 2*electionTimeout)` — which is what
+raft's liveness argument actually depends on — and `crypto/rand` + `math/big`
+are never modeled. Modelling them would buy nothing the range does not already
+give, cost a big-integer model, and (worse) turn a latitude point into a
+deterministic pin. Upstream agrees the value is a free parameter: its datadriven
+test env has a `set-randomized-election-timeout` command.
+
+Scheduled in **W4.1**, with the other run-blockers.
 
 ---
 
@@ -269,9 +379,32 @@ every `var` in the tree — and `MemoryStorage` is per node.
 **The one shared object that is NOT the network:** `raftLoggerMu` /
 `raftLogger`, the package-level logger registry (kept in W2.1's overlay
 precisely because dropping the mutex would smuggle in a concurrency delta).
-Under the recommended §5 seam the twin never calls `SetLogger` after setup, so
-the registry is read-only during the run — which is exactly the kind of fact
-the footprint check should CONFIRM rather than the design ASSERT.
+Under the ruled §5 seam the twin calls `SetLogger` ONCE, at setup, before any
+node exists, and never again — so the registry is read-only during the run.
+Which is exactly the kind of fact the footprint check should CONFIRM rather
+than the design ASSERT.
+
+**The checklist the footprint run must discharge**, each item a place where
+"shared nothing" is a claim rather than an obvious truth:
+
+1. **`raftLogger` is written once, pre-run.** Violated the moment anything calls
+   `SetLogger` mid-run.
+2. **The `Logger` VALUE is stateless.** §5's amendment shares one logger across
+   all n nodes; that is only safe because `harnessLogger` has no fields. A
+   logger with a buffer is shared mutable state on every node's every event.
+3. **`emptyState` is an aliased pointer** (`node_decls.go:17`,
+   `emptyState = &pb.HardState{}`), and `bootstrap.go:48` assigns it straight
+   into a RawNode's `prevHardSt`. Two bootstrapped nodes would share one
+   `*pb.HardState`. Dead under the v1 twin (`Bootstrap` is measured dead, log
+   §2.3) and read-only through `IsEmptyHardState` — but it is a package-level
+   pointer that reaches per-node state, which is precisely the shape this check
+   exists to catch, so it is enumerated rather than waved off.
+4. **Every other package-level `var` in the tree is an error sentinel or an
+   immutable lookup table** — checked by reading all of them; `globalRand` is
+   the exception and the §5 jitter choice site leaves it inert.
+5. **`MemoryStorage` is per node**, and its embedded mutex is uncontended once
+   the driver is sequential — which is a reason the G-6 fix must not quietly
+   become "drop the lock".
 
 **Where the theorem goes.** The disjointness result is the bridge from the
 sequential twin to the goroutine twin (W5). Stating it now, with the
@@ -281,8 +414,11 @@ mechanization named, is what stops the sequential twin from being a dead end.
 
 ## §7 The datadriven-trace differential (W4's oracle) — feasibility, measured
 
-`deps/raft/testdata/` holds **28 traces, 6,724 lines**. Command census across all of them, counted by
-line-initial token (so a few may be output text rather than commands):
+`deps/raft/testdata/` holds **28 traces, 6,724 lines, 558 blocks**. Command
+census across all of them, counted by the command line of each `----`-separated
+block (re-counted 2026-08-20 — the first draft counted line-initial tokens and
+hedged that "a few may be output text"; block-anchored counting removes the
+hedge and reproduces the same numbers):
 `stabilize` 136, `campaign` 54, `process-ready` 53, `propose` 50,
 `deliver-msgs` 48, `add-nodes` 37, `raft-state` 30, `status` 18,
 `propose-conf-change` 18, `raft-log` 15, `tick-heartbeat` 12,
@@ -295,15 +431,27 @@ driver is `deps/raft/rafttest/interaction_env*.go` (a `RawNode` per node plus a
 message bag — i.e. structurally the twin already), with `cockroachdb/datadriven`
 supplying the parse-and-compare loop.
 
-**The finding that decides the plan: the expected output is RENDERED TEXT.**
-Every block's expectation is log lines (`INFO 1 became follower at term 0`) and
-`DescribeReady` dumps. Reproducing those byte-for-byte needs the whole
-rendering stack — `fmt` with `%x`/`%+v`, every `String()`, every `Describe*` —
-which is precisely the machinery the sweep found dead-and-unlowerable. So:
+**The finding that shapes the plan: most expectations are RENDERED TEXT — but
+not all, and the first draft's "every block" was wrong.** Counted exactly
+(a block is a `----` separator; 558 of them):
 
-- **Do NOT plan to replay upstream's expected outputs.** That path makes the
-  fmt subset (§7 option 1 of the W2 log) a PREREQUISITE for the stage-4
-  differential, inverting the dependency the roadmap wants.
+| expected output | blocks | share |
+|---|---|---|
+| literally `ok` | 249 | **44.6%** |
+| rendered text — log lines (`INFO 1 became follower at term 0`), `DescribeReady` dumps, `raft-state` tables | 309 | 55.4% |
+
+Reproducing the 309 byte-for-byte needs the whole rendering stack — `fmt` with
+`%x`/`%+v`, every `String()`, every `Describe*` — which is precisely the
+machinery the sweep found mostly dead-and-unlowerable. But the 249 need NO
+rendering at all: their expectation is a constant. So:
+
+- **Do NOT make replaying upstream's expected outputs the PLAN.** Requiring all
+  558 would make the fmt subset a PREREQUISITE for the stage-4 differential,
+  inverting the dependency the roadmap wants.
+- **The 249 `ok` blocks are a free tier, and should be taken.** They are a real
+  check — they assert the command was ACCEPTED, which catches a driver that
+  silently no-ops — and they cost nothing beyond the driver W4.3 already builds.
+  Fold them into W4.4 rather than deferring them with the rendering ones.
 - **Use the traces as COMMAND SEQUENCES and take the oracle from `go run`.**
   The differential is: our driver + one trace's commands, executed under
   `go run` and under the machine, comparing a canonical STATE PROJECTION
@@ -312,7 +460,7 @@ which is precisely the machinery the sweep found dead-and-unlowerable. So:
   outgoing-message summaries). This is the "single-file driver on both sides"
   the master plan §W4 already specifies; the sweep is why it is the only
   reading that works.
-- Upstream's expected-output blocks remain useful as a THIRD check, later,
+- The 309 RENDERING-bearing blocks remain useful as a THIRD check, later,
   wherever rendering exists — a bonus tier, never a gate.
 
 **Coverage estimate.** The command vocabulary the twin needs for the bulk of
@@ -320,9 +468,18 @@ the suite is `add-nodes`, `campaign`, `propose`, `deliver-msgs`,
 `process-ready`, `stabilize`, `tick-heartbeat`/`tick-election`, plus the
 read-only inspectors (`raft-state`, `raft-log`, `status`) which become
 projections rather than commands. That is 8 command handlers, 3 projections and
-a no-op `log-level` — **456 of the 506 non-`log-level` command instances,
-~90%**. `process-append-thread`/`process-apply-thread` (16 instances) belong
+a no-op `log-level` — **456 of the 506 non-`log-level` blocks, 90.1%**.
+`process-append-thread`/`process-apply-thread` (16 blocks) belong
 to async storage writes and can be deferred with the traces that use them named.
+
+**Read that 90% as blocks, not as traces.** Only **7 of the 28 traces (25%)**
+are covered ENTIRELY by the 8+3 handler set (`campaign`, `checkquorum`,
+`lagging_commit`, `prevote`, `probe_and_replicate`, `replicate_pause`,
+`single_node`); the other 21 each contain at least one command outside it. So
+"90% coverage" buys a broad SAMPLE of raft behaviour, and a small set of
+end-to-end replayable traces. Both are worth having and they are not the same
+claim — W4.4's done criterion should name the whole-trace set, since a partially
+replayed trace has no meaningful pass/fail.
 `stabilize` is not a primitive: it is "run to quiescence", which in the twin is
 a driver loop over the enabled set — and it is worth noting that stabilize's
 determinism is exactly what the twin's choice stream generalizes.
@@ -333,21 +490,57 @@ determinism is exactly what the twin's choice stream generalizes.
 
 Each slice is validated before the next starts; each names what makes it done.
 
-**W4.0 — unblock the export (3 gaps, all frontend-side).** H-9 (the inittask
-double-escape), H-10 (`errors.New`), H-11 (per-declaration quarantine for
-package-level vars). Done when `frontier-plan-postmerge.tsv` reduces to its
-terminal row alone with no probe deltas. *Scope: small each; H-11 carries a
-design question (what a quarantined global's read does) and should be ruled
-before it is written.* Not this lane's to do.
+**W4.0 — unblock the export (2 measured blockers, both frontend-side).** H-9
+(the inittask double-escape) and H-10 (`errors.New`). H-11 (per-declaration
+quarantine for package-level vars) is an ALTERNATIVE to H-10 for the nine
+globals, not a third requirement — do one of the two, and prefer H-10, which is
+shim-shaped and retires the in-body sites too. Done when `frontier-plan.tsv`
+reduces to its terminal row alone with no probe deltas. *Scope: small each;
+H-11, if taken, carries a design question (what a quarantined global's read
+does) and should be ruled before it is written.* Not this lane's to do.
 
-**W4.1 — unblock the run (5 gaps).** H-12 (promoted `sync.Mutex` — 8 live
-`MemoryStorage` methods), H-13 (`bytes.Equal` — 1 live), H-14 (`binary.LittleEndian`
-— 2 live), H-6's ruling + implementation (`fmt` — 9 live), H-1's codec
-(`proto.Clone`/`Size`/`Unmarshal` — all live). Done when
-`reachability.py` reports ZERO live quarantined declarations over the tracked
-tree. *Scope: H-1's codec dominates — it is the only one needing a fidelity
-argument and a differential battery of its own (the `difftest.py` pattern
-extends to it directly). H-12 is a semantics question, not a shim.*
+**W4.1 — unblock the run (8 causes over 26 live declarations; G-2's in-body
+`errors.New` sites are the ninth and retire with W4.0's H-10).** H-12 (promoted
+`sync.Mutex` — 8 live `MemoryStorage` methods), H-13 (`bytes.Equal` — 1 live),
+H-14 (`binary.LittleEndian` — 2 live), H-6's implementation (`fmt`, ruled
+OPTION 1 — a modeled `Sprintf` subset over the measured verb/kind set,
+differential-pinned per verb; 20 calls in 10 live declarations, verbs
+`%d %s %v %+v %x %q`),
+H-17 (`strings.Join` — 1 live, and note it is INSIDE `newRaft`, so H-6 alone
+does not unblock `NewRawNode`), H-18 (`strings.Builder`, a rider on H-6),
+**H-15 (the election-jitter CHOICE SITE — 1 live, `(*lockedRand).Intn`; the
+draw becomes a choice-consumption point with the range
+`[electionTimeout, 2*electionTimeout)` filed as a latitude entry, never a
+modeled `crypto/rand`)**, and H-1's codec (`proto.Clone`/`Size`/`Unmarshal` —
+all three live).
+
+*DONE CRITERION — restated, because the first version was FAIL-OPEN.* It used
+to read "`reachability.py` reports ZERO live quarantined declarations", which
+three classes of fail-closed stop slip straight past: the `proto.*` stand-ins
+are explicit `panic`s, so they LOWER and were never quarantined; imported
+stdlib declaration-only stubs (`strings.Builder.String`) are quarantined but
+were filtered out of the query set as "not a raft gap"; and a probe delta that
+replaces a body hides whatever that body would have refused (`Intn` — the
+defect that cost this design its G-1 row). So:
+
+> **W4.1 is done when `sweep.py` reports ZERO REACHABLE fail-closed stops of
+> ANY class over the tracked tree, enumerated by class:**
+> 1. zero live QUARANTINED subject declarations,
+> 2. zero live quarantined IMPORTED stdlib stubs,
+> 3. zero live subject declarations whose body is a fail-closed `panic` stand-in
+>    (the `proto` package: `Clone`, `Marshal`, `Unmarshal`, `Size`),
+> 4. zero live declarations MASKED by a probe delta — equivalently, the walk
+>    plan has no body-replacing rows left, since W4.0 retires the only one,
+> 5. and the RESIDUAL-SINK report is empty, so (1)–(4) range over the whole
+>    reachable graph rather than over what the first-order walk could see.
+>
+> Classes (2)–(5) are exactly the ones a green run would not have shown you.
+
+*Scope: H-1's codec dominates — it is the only one needing a fidelity argument
+and a differential battery of its own (the `difftest.py` pattern extends to it
+directly). H-12 is a semantics question, not a shim. H-15 is an envelope
+question and its latitude entry is W4.5's, but the choice site itself must land
+here or the twin cannot run.*
 
 **W4.2 — the twin, single node.** The driver, the event vocabulary, the harvest,
 the projection function; n=1, no network. Runs under `go run` and the machine;
@@ -356,23 +549,32 @@ written and where the corpus gains its first raft-shaped case.*
 
 **W4.3 — the twin, n=3, reliable-first.** The network multiset, `deliver`,
 `tick`, `propose`, the per-step invariant, the exercise floor. Done when a
-recorded stream elects a leader, commits every command on every node, and S1–S4
-hold at every step under both oracles. *Scope: one arc; this is M1 and most of
+recorded stream elects a leader, commits every command on every node, **S1–S3
+hold at EVERY step and S4 holds at the last** (S4 is the stopping condition, not
+an invariant — §4), under both oracles, with the exercise floor met so the
+verdict is not vacuous. *Scope: one arc; this is M1 and most of
 M3's mechanism.*
 
 **W4.4 — the trace differential.** The 9-handler driver of §7, the state
-projection, the 28 traces replayed under both oracles. Done when the suite is
-green and recorded, with any skipped trace named and reasoned. *Scope: one to
+projection, the traces replayed under both oracles. Done when (a) the **7
+whole-trace-covered files** replay green end to end, (b) the **249 `ok`-expecting
+blocks** are asserted directly (they need no rendering — §7), and (c) every
+partially-covered trace is named with the command that stops it. A partially
+replayed trace has no meaningful pass/fail, so it is reported, not counted. *Scope: one to
 two arcs; the variance is the handler set, not the traces.*
 
-**W4.5 — the envelope.** The jitter seam's latitude entry, the network draws'
-latitude entries, the perturbed-stream battery, the footprint check of §6.
-Done when C-B's checklist item has its artifacts. *Scope: one arc, plus the
+**W4.5 — the envelope.** The jitter draw's latitude entry (range
+`[electionTimeout, 2*electionTimeout)`), the network draws' latitude entries,
+the perturbed-stream battery, the footprint check of §6 against its five-item
+checklist, and **the harvest-atomicity re-envelope obligation of §2** — the one
+narrowing this design takes knowingly. Done when C-B's checklist item has its
+artifacts and the §2 obligation is either discharged (the `harvest` event exists
+and the excluded schedules are reachable) or re-recorded with a date. *Scope: one arc, plus the
 re-envelope arc's own schedule (W3.2), which it does not depend on but does
 interact with.*
 
 **Ordering note.** W4.2 can start against a scratch frontend carrying W4.0's
-three fixes before they land, but must not be DECLARED green until they do —
+two fixes before they land, but must not be DECLARED green until they do —
 the twin's value is that it runs on the real pipeline. W4.4 depends on W4.3's
 driver, not the other way round: the traces are a breadth instrument over a
 mechanism that already works, not the way to get the mechanism working.
