@@ -139,8 +139,10 @@ var stdlibShimDeclNames = map[string][]string{
 	stringsFieldsShimName: {stringsFieldsShimName},
 	errorsNewShimName:     {errorsNewShimName, errorsNewShimTypeName},
 	fmtShimBundleKey: {fmtShimBundleKey, "goleanShimFmtInt", "goleanShimFmtHex",
-		"goleanShimFmtBool", "goleanShimFmtQuoteBytes", "goleanShimFmtRender",
-		"goleanShimFmtError", "goleanShimFmtPanicValue"},
+		"goleanShimFmtBool", "goleanShimFmtQuoteBytes", "goleanShimFmtQuoteString",
+		"goleanShimFmtStringVerb", "goleanShimFmtHexString", "goleanShimFmtRender",
+		"goleanShimFmtRenderCall", "goleanShimFmtError", "goleanShimFmtErrorCall",
+		"goleanShimFmtPanicValue"},
 	stringsJoinShimName:       {stringsJoinShimName},
 	bytesEqualShimName:        {bytesEqualShimName},
 	binaryLEUint64ShimName:    {binaryLEUint64ShimName},
@@ -284,6 +286,14 @@ func goleanShimErrorsNew(text string) error {
 	//     value that is neither string nor error, or a nested panic,
 	//     fails closed by re-panicking (fmt would nest-render; the
 	//     subject's stubs panic with string literals).
+	//   - the VERB post-process on a method result
+	//     (goleanShimFmtStringVerb): %x hexes it, %q quotes it, %s/%v
+	//     pass it through — gc hands the String()/Error() result to the
+	//     same code that formats a plain string. It runs OUTSIDE the
+	//     recover frame on purpose (audit A-F1): the PANIC render must
+	//     not be post-processed, and %q's fail-closed non-ASCII panic
+	//     must PROPAGATE rather than be caught and mis-rendered as a
+	//     String-method panic.
 	fmtShimBundleKey: `
 // goleanShimFmt* are the native frontend's fmt-desugar helpers
 // (raft W4.1 item 2). Injected declarations — not user code. See
@@ -336,9 +346,14 @@ func goleanShimFmtBool(v bool) string {
 }
 
 func goleanShimFmtQuoteBytes(b []byte) string {
+	return goleanShimFmtQuoteString(string(b))
+}
+
+func goleanShimFmtQuoteString(s string) string {
 	hexits := "0123456789abcdef"
 	out := []byte{'"'}
-	for _, c := range b {
+	for i := 0; i < len(s); i++ {
+		c := s[i]
 		switch {
 		case c == '"':
 			out = append(out, '\\', '"')
@@ -370,9 +385,48 @@ func goleanShimFmtQuoteBytes(b []byte) string {
 	return string(out)
 }
 
-func goleanShimFmtRender(verb string, method string, isNilPtr bool, call func() string) (out string) {
+// goleanShimFmtStringVerb applies the VERB to a method result that has
+// already been produced. gc's fmt hands the String()/Error() result to
+// the same code that formats a plain string, so %x hexes it (two
+// lowercase hexits per byte, zero-padded: probed "\x01\x0f\xff" ->
+// 010fff) and %q quotes it; %s and %v pass it through. The PANIC render
+// never reaches here (probed: %!x(PANIC=String method: ...) verbatim,
+// not hex) — which is exactly why the recover lives in its own frame
+// below and this call sits OUTSIDE it. If it sat inside, %q's
+// fail-closed non-ASCII panic would be caught and re-rendered as a
+// String-method panic: a silent wrong answer replacing a refusal.
+func goleanShimFmtStringVerb(verb string, s string) string {
+	if verb == "x" {
+		return goleanShimFmtHexString(s)
+	}
+	if verb == "q" {
+		return goleanShimFmtQuoteString(s)
+	}
+	return s
+}
+
+func goleanShimFmtHexString(s string) string {
+	hexits := "0123456789abcdef"
+	out := []byte{}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		out = append(out, hexits[c>>4], hexits[c&0xf])
+	}
+	return string(out)
+}
+
+func goleanShimFmtRender(verb string, method string, isNilPtr bool, call func() string) string {
+	s, panicked := goleanShimFmtRenderCall(verb, method, isNilPtr, call)
+	if panicked {
+		return s
+	}
+	return goleanShimFmtStringVerb(verb, s)
+}
+
+func goleanShimFmtRenderCall(verb string, method string, isNilPtr bool, call func() string) (out string, panicked bool) {
 	defer func() {
 		if r := recover(); r != nil {
+			panicked = true
 			if isNilPtr {
 				out = "<nil>"
 				return
@@ -380,22 +434,31 @@ func goleanShimFmtRender(verb string, method string, isNilPtr bool, call func() 
 			out = "%!" + verb + "(PANIC=" + method + " method: " + goleanShimFmtPanicValue(r) + ")"
 		}
 	}()
-	return call()
+	return call(), false
 }
 
-func goleanShimFmtError(verb string, v error) (out string) {
+func goleanShimFmtError(verb string, v error) string {
 	if v == nil {
 		if verb == "v" {
 			return "<nil>"
 		}
 		return "%!" + verb + "(<nil>)"
 	}
+	s, panicked := goleanShimFmtErrorCall(verb, v)
+	if panicked {
+		return s
+	}
+	return goleanShimFmtStringVerb(verb, s)
+}
+
+func goleanShimFmtErrorCall(verb string, v error) (out string, panicked bool) {
 	defer func() {
 		if r := recover(); r != nil {
+			panicked = true
 			out = "%!" + verb + "(PANIC=Error method: " + goleanShimFmtPanicValue(r) + ")"
 		}
 	}()
-	return v.Error()
+	return v.Error(), false
 }
 
 func goleanShimFmtPanicValue(r any) string {

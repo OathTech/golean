@@ -107,6 +107,8 @@ unchanged (nothing in this arc touched raftpb).
 ### Subject-delta ledger additions (requirement (c) of the §8.6 ruling)
 
 Continuing `docs/raft-w2-log.md` §4, whose D-1…D-6 are unchanged.
+(Continued again in `docs/raft-w41-log.md` — D-11, the jitter choice
+site. 2026-08-20.)
 
 **D-7 the raft root package — verbatim, import paths only.** Eleven files plus
 the two `confchange` files carry NO change but the import rewrite (2–5 paths
@@ -130,6 +132,19 @@ fail-closed stubs standing in for the protobuf runtime. **Observable weight:**
 `Clone`, `Size` and `Unmarshal` are all LIVE under a RawNode harness (§2.3), so
 this delta is the reason the twin cannot run yet, stated as loudly as possible.
 `Marshal` is reached only from `Bootstrap`, which the harness declines.
+
+> **Corrected 2026-08-20 (W4.1 item 1; audit B-4).** "The reason the twin
+> cannot run yet" is REFUTED and no longer describes the tree. All four
+> `proto.*` bodies are real now — `derive.py`'s `gen_codec` emits a
+> generated per-type `SizeMessage`/`AppendMessage`/`UnmarshalMessage` and
+> the `proto` dispatchers call it — as is the fifth stand-in the W4.0
+> census missed (`MarshalConfChange`, JC-13). The twin does run: the
+> RawNode probe agrees with `go run` end to end
+> (`docs/raft-w41-log.md`, "THE MOMENT"). What survives of D-9 is the
+> delta itself — a generated `proto` package with no upstream counterpart
+> — whose byte-fidelity obligation against the real runtime is
+> `difftest.py` section 7 (OWED-with-command; the sandbox denies the
+> module proxy).
 
 **D-10 `state_trace.go` is not vendored.** The `with_tla` build variant is
 absent; the default build's `state_trace_nop.go` (empty trace bodies) is in the

@@ -13,6 +13,15 @@ import "fmt"
 // any implementation exists. The instantiation s6box[int] is USED, so
 // the stencil set flushes; render's fmt.Sprint is the unlowerable
 // construct (the same trigger as the H-3 suite).
+//
+// WHY `fmt.Sprint` AND NOT `fmt.Sprintf` (JC-17, raft W4.1 item 2): the
+// unlowerable construct is load-bearing — it is what makes the stencil
+// refuse at all. The fixture used `fmt.Sprintf` until the W4.1 fmt
+// desugar modeled Sprintf/Errorf/Fprintf, at which point this row would
+// have flipped green and silently stopped witnessing the frontier shape
+// it pins (the F3 lost-witness class). `fmt.Sprint` is outside the
+// modeled three. Any future widening that models it must retarget this
+// fixture again, not let the row go green.
 
 type s6box[T any] struct{ v T }
 

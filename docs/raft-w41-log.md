@@ -70,6 +70,20 @@ rewritten to describe the codec.
   NOT RUN — owed.** The sandbox denies the module cache/proxy (environment
   notes). The generated Go parses (`gofmt -e` clean); the command owed:
   `python3 tools/raftsubject/difftest.py` with normal GOPROXY access.
+  **WIDENED by the audit round (finding A-minor):** section 7 covered five
+  types as TOP-LEVEL subjects (ConfState, Entry, Message, ConfChangeV2,
+  HardState), reaching `Snapshot`/`SnapshotMetadata` only nested inside a
+  `Message` and `ConfChangeSingle` only nested inside a `ConfChangeV2`,
+  and `ConfChange` not at all. A nested subject exercises the
+  length-delimited SUB-encoder but never the type's own
+  `AppendMessage`/`SizeMessage`/`UnmarshalMessage` entry points — which is
+  exactly what section 7 exists to compare — so four of the nine entry-point
+  triples had no upstream comparison even in the owed run. All **nine**
+  types are top-level subjects now (batteries added for the four:
+  presence/nil/empty/nested shapes in the same style), so the owed run
+  covers the full 27-method surface. Re-verified structurally in-sandbox:
+  the generated `main.go` parses, all 8 converters and all 27 codec entry
+  points resolve. The RUN is still owed, with the same command.
 - **Instruments:** `derive.py --check` clean; `frontier.py` EXPORTS CLEAN
   (terminal-row plan unchanged); `sweep.py` reproduces the W4.0 census
   EXACTLY (22 LIVE / 49 quarantined / 113 imported stubs, residual sinks
@@ -182,7 +196,9 @@ change:
 **Guardrails (landed FIRST, 35 rows, all witnessed red pre-fix** — fmt
 rows at `frontend-export` on the package-selector refusal, builder rows
 at `lean-observation` on the marker-type default-value refusal**):**
-`fmt/sprintf-verbs` (23: one per verb x kind incl. both panic-render
+`fmt/sprintf-verbs` (22 — the count read "23" until the audit round
+recounted the file against the 35 total, which only closes at 22:
+audit B-6: one per verb x kind incl. both panic-render
 shapes, nil-ptr, nil-error, decision-path, eval-order, and 2 RED-BY-
 DESIGN boundary rows — verb-outside-set `%T`, nonconst-format),
 `fmt/errorf` (4: fresh/text/sentinel-classify/vs-errors-new),
@@ -396,6 +412,14 @@ the change moved anything unexplained). Baseline re-pinned same-commit
 
 ## The W4.1 DONE criterion, clause by clause (harness design §8)
 
+**SCOPE OF EVERY NUMBER BELOW, stated first because it is the one thing a
+reader can misread (audit B-1): the census is over the tree AS DERIVED —
+that is, with D-5's no-op `logger.go` in it.** It is not a claim about the
+tree W4.2 will run. The harness design §5 RULES that `logger.go` goes back
+to upstream VERBATIM and the harness supplies the `Logger`; that swap
+re-opens census entries this headline does not carry, and they are dead for
+a DIFFERENT reason — see "What the ruled logger swap re-owes" below.
+
 Census instruments at this tip: `frontier.py` EXPORTS CLEAN;
 `sweep.py` (with the clause-2 extension and the emptied flatten);
 `derive.py --check` clean; `codeccheck.py` PASS; subject `go build`
@@ -406,8 +430,15 @@ clean.
    The 15 dead: the rendering/JSON family (`Describe*`,
    `ConfChanges*String`, `String`s over strconv/fmt.Fprint/%q-Stringer
    shapes, `MarshalJSON`s), `MemoryStorage.{Lock,TryLock,Unlock}`
-   method-set stubs, `slices.SortFunc`'s `MajorityConfig.Describe` —
-   all unreachable from the twin's 16-entry API surface.
+   method-set stubs, `slices.SortFunc`'s `MajorityConfig.Describe`, and
+   — the one the gloss omitted, so the enumeration summed to 14 while
+   the headline said 15 (audit B-5) — **`logSlice.valid`**
+   (`raft/types.go:93`), whose two `fmt.Errorf`s render `%+v` over
+   `entryID` STRUCT values, outside the modeled matrix (%+v covers
+   ints/string/bool/error/Stringer, not structs), and which no live
+   path calls — `raft.go:1802` leaves validating the `logSlice` as an
+   upstream TODO. All 15 are unreachable from the twin's 16-entry API
+   surface.
 2. **Zero live quarantined IMPORTED stdlib stubs** — extended the sweep
    to census this class (it previously only counted them): **0 LIVE of
    30** (bytes.Buffer x24, strings.Builder's Cap/Grow/WriteRune,
@@ -432,6 +463,57 @@ clean.
    table EMPTY, so any reappearing cause would surface here rather
    than be flattened over.
 
+### What the ruled logger swap re-owes (audit B-1 — READ THIS BEFORE W4.2)
+
+The "0 LIVE" headline holds for the tree as derived. It does NOT survive
+the §5 ruling unchanged, and the difference is a change of ARGUMENT, not a
+change of outcome:
+
+- Under D-5 the twelve `Logger` methods resolve to `noopLogger`'s empty
+  bodies, which lower. Nothing about logging is a census entry at all —
+  which is why the headline is 0.
+- Under the ruled VERBATIM `logger.go` the concrete implementation in the
+  tree is `DefaultLogger`, and the design's own walk measured **eleven**
+  declarations landing as fail-closed stubs there (§5: the ten formatting
+  methods plus `header`; `Panic`/`Panicf` lower and stop at the imported
+  `*log.Logger` stub instead — same outcome, different route).
+- Of those, the subject tree actually CALLS seven distinct `Logger`
+  methods, so seven are what a re-run census would report as STATICALLY
+  live (`reachability.py` over-approximates interface dispatch: a call to
+  `Logger.m` edges to every concrete `m`). Measured at this tip over
+  `raftsubject/**.go` — call-site counts, distinct names:
+
+  | method | subject call sites | under verbatim `logger.go` |
+  |---|---|---|
+  | `Infof` | 43 | quarantined decl (of the §5 eleven) |
+  | `Panicf` | 23 | lowers; stops at the imported `*log.Logger` stub |
+  | `Debugf` | 21 | quarantined decl |
+  | `Warningf` | 7 | quarantined decl |
+  | `Panic` | 2 | lowers; stops at the imported stub |
+  | `Error` | 2 | quarantined decl |
+  | `Errorf` | 1 | quarantined decl |
+
+  (Reproduce: `grep -rhoE "(logger|l)\.(Debug|Debugf|Info|Infof|Warning|
+  Warningf|Error|Errorf|Fatal|Fatalf|Panic|Panicf)\(" raftsubject
+  --include='*.go' | sed 's/.*\.//' | sort | uniq -c`. `Fatal`/`Fatalf`
+  have zero subject call sites; `Debug`/`Info`/`Warning` likewise.)
+
+- **They are all DEAD under the twin, but dead DYNAMICALLY, not
+  statically** — the harness installs its own stateless `Logger` through
+  BOTH seams (`raft.SetLogger(lg)` for the six `getLogger()` sites,
+  `cfg.Logger = lg` for every `r.logger.*` call — §5's amendment), so
+  `DefaultLogger` is never the dynamic dispatch target and none of its
+  bodies runs. A static census cannot see that.
+
+**So the swap task (W4.2) OWES two things this arc did not produce:** (i) a
+census RUN against the swapped tree, reporting those entries honestly as
+statically live, and (ii) the written *dead-because-the-harness-installs*
+argument — that both seams are covered, that no path reaches
+`DefaultLogger` before `SetLogger`/`Config.Logger` are set, and that the
+harness logger's own twelve methods (eight empty, four panicking) are
+inside the modeled subset. Clause 1's "0 LIVE" must not be quoted forward
+past the swap as if it already covered this.
+
 ## THE MOMENT — the first RawNode execution
 
 `tools/raftsubject/runprobe.py` (tracked; both oracles, first stop
@@ -453,11 +535,98 @@ remaining step to the W4.2 twin is harness Go, not machine surface.
 
 ---
 
+## The audit-fix round (2026-08-20, pre-merge adversarial audit response)
+
+One MAJOR semantics finding, one minor instrument gap, and eight record
+corrections. Every finding was auditor-verified before the fix; each fix
+below names what was actually wrong, not what was tidied.
+
+### A-F1 (MAJOR) — the `%x`/`%q` Stringer-precedence hole: a SILENT WRONG ANSWER
+
+**The defect.** `fmtdesugar.go`'s verb switch consulted
+`implementsError`/`implementsStringer` in the `'s', 'v'` case only. The
+`'x'` and `'q'` cases went straight to the kind matrix. But gc's fmt gives
+error/Stringer precedence to the STRINGABLE verbs — `v`, `s`, `x`, `X`, `q`
+(`fmt/print.go` `handleMethods` switches on exactly that set) — and skips
+it only for the pure-numeric family (`%d` and friends) plus `%T`/`%p`.
+`printArg`'s concrete-type fast switch never matches a NAMED type, so a
+defined `uint64`/`[]byte` carrying a `String` method always reaches
+`handleMethods`. The header comment stated the rule BACKWARDS ("numeric
+verbs never consult String"), which is how the hole survived review.
+
+**Consequence, and why no gate could see it.** Not a refusal — a wrong
+ANSWER with `status: ok`. Witnessed before the fix, verbatim from the
+differential:
+
+| case | machine said | gc says |
+|---|---|---|
+| `%x` over a Stringer `uint64` (`hexer(255)`, `String() = "HI!"`) | `[ff]` | `[484921]` |
+| `%q` over a Stringer `[]byte` (`String() = "qs\"\n"`) | `["\x01\x02\x03"]` | `["qs\"\n"]` |
+| `%x` over a panicking Stringer | `[ff]` | `[%!x(PANIC=String method: hex stub)]` |
+| `%q` over a panicking Stringer | `["\x01\x02\x03"]` | `[%!q(PANIC=String method: q stub)]` |
+| `%x`/`%q` over a static `error` | refused (fail-closed) | hex/quote of `Error()` |
+
+**Guardrails first, as the charter requires.** Six rows added to
+`fmt/sprintf-verbs` and run BEFORE the fix: four came back FAIL at
+`stage=differential` (the silent wrong answers above, each a
+machine-vs-gc byte mismatch) and two FAIL at `frontend-export` (the
+error rows, which the old `'x'` case refused). That is the witness.
+
+**The fix.** The error/Stringer precedence check is hoisted AHEAD of the
+kind matrix and runs for all four modeled stringable verbs (`s`, `v`,
+`x`, `q`), matching gc's set. The render path then post-processes the
+method result by verb — `goleanShimFmtStringVerb`: `%x` hexes it (two
+lowercase hexits per byte, zero-padded — probed `"\x01\x0f\xff"` ->
+`010fff`), `%q` quotes it, `%s`/`%v` pass through.
+
+**The one subtle part, recorded because getting it wrong would have been
+worse than the bug.** The post-process CANNOT live inside the render's
+recover frame. Two reasons, both probed: (i) gc does not post-process the
+PANIC render (`%!x(PANIC=String method: ...)` is verbatim, not hex), and
+(ii) `%q`'s modeled-subset bound is a fail-closed panic on bytes >= 0x80
+— caught by that recover, it would have come back out as
+`%!q(PANIC=String method: golean fmt shim: ...)`, a silent wrong answer
+REPLACING a refusal. So `goleanShimFmtRender`/`goleanShimFmtError` now
+split into a recover-carrying inner call returning `(out, panicked)` and
+an outer frame that post-processes only when `panicked` is false. On a
+non-ASCII method result the quoter's panic PROPAGATES — fail closed, as
+it must.
+
+**Also fixed:** the false rule in `fmtdesugar.go`'s header matrix and in
+the corpus fixture's `enumT` comment, both restated as "the `%d` family
+is the one that skips the Stringer check"; `stdlibShimDeclNames`
+extended with the five new injected names (the collision check would
+otherwise not have reserved them).
+
+**Post-fix:** all 6 new rows PASS; the 2 red-by-design boundary rows
+(`verb-outside-set`, `nonconst-format`) unchanged. **Predicted drift for
+the full gate, stated pre-run: exactly 6 NEW ids, all PASS; zero movement
+on the pre-existing ids** (the precedence hoist can only change verb x
+kind cells that previously took the numeric/byte path with a Stringer
+present, and no other corpus case has one).
+
+### The record corrections
+
+| id | what was wrong | where |
+|---|---|---|
+| A-minor | difftest section 7 covered 5 of 9 types as top-level subjects | `tools/raftsubject/difftest.py`; item 1's bullet, JC-15, H-1's row |
+| B-1 | "0 LIVE" read as a claim about the tree W4.2 will run | clause-1 scope note, "What the ruled logger swap re-owes", the W4.2 handoff row |
+| B-2 | "every landing's PASS is recorded" contradicted its own next sentence | W4.1 exit state |
+| B-3 | the tip's gate record was attributed to a commit it was not run at | W4.1 exit state |
+| B-4 | D-11 was in prose, not in the ledger; `raft-w3-log.md:130`'s "the reason the twin cannot run yet" was refuted by item 1 | this log's ledger continuation; `docs/raft-w3-log.md` (dated correction) |
+| B-5 | the 15-dead gloss enumerated 14 (`logSlice.valid` unnamed) | clause 1 |
+| B-6 | `fmt/sprintf-verbs` counted 23; the file has 22 | item 2's guardrails |
+| B-7 | 4 of the 5 JC-17 retargeted witnesses carried no reason comment | `methods/quarantine-{interface,pointer-receiver,embedded}`, `generics/stencil-quarantine` |
+| B-8 | the header called both rows "RED pins ... never answer"; both are GREEN and answer | `interfaces/assert-imported-method-set/main.go` |
+| B-9 | committing item 5 on a red gate was undisclosed as a deviation | W4.1 exit state |
+
+---
+
 ## Handoff ledger effects (W3 §4's table)
 
 | id | disposition |
 |---|---|
-| H-1 | **DISCHARGED** (item 1) — the generated codec; difftest section 7 OWED with command where the sandbox denies the module proxy; codeccheck.py is the standing in-sandbox battery. |
+| H-1 | **DISCHARGED** (item 1) — the generated codec; difftest section 7 OWED with command where the sandbox denies the module proxy (widened by the audit round to all 9 types top-level — the owed run must cover that full surface, not the original 5); codeccheck.py is the standing in-sandbox battery. |
 | H-6 | **DISCHARGED** (item 2) — the Q3 OPTION 1 desugar, per-verb pins. |
 | H-12 | **DISCHARGED** (item 5) — promoted statement/defer sync ops. |
 | H-13, H-17 | **DISCHARGED** (item 4) — E5 shims. |
@@ -465,20 +634,44 @@ remaining step to the W4.2 twin is harness Go, not machine surface.
 | H-15 | **DISCHARGED as D-11** (item 3) — the map-range choice site; the RANGE's latitude entry remains W4.5's. |
 | H-18 | **DISCHARGED** (item 2) — the E5-T Builder model. |
 | H-19 | unchanged (ErrStopped chunk granularity; its errors.New row stopped mattering when G-2 retired). |
-| NEW → W4.2+ | the harness supplies `Config.Logger` AND `raft.SetLogger` (Q2, §5); `sync/escapes/{method-value,go-stmt}` remain the sync fail-closed frontier; chan-typed bare-nil ops recorded untested (item 5's fix note); the fmt matrix's boundary rows are the widening protocol's entry point. |
+| NEW → W4.2+ | the harness supplies `Config.Logger` AND `raft.SetLogger` (Q2, §5) — **and that swap RE-OWES a census run plus a dead-because-the-harness-installs argument: 7 `DefaultLogger` methods go statically live (the table in "What the ruled logger swap re-owes"), killed only DYNAMICALLY by the installed logger. W4.1's "0 LIVE" is scoped to the tree AS DERIVED (D-5) and must not be quoted forward past the swap.** `sync/escapes/{method-value,go-stmt}` remain the sync fail-closed frontier; chan-typed bare-nil ops recorded untested (item 5's fix note); the fmt matrix's boundary rows are the widening protocol's entry point. |
 
 ## W4.1 exit state
 
 Branch `raft-w41`, six commits over `main` @ `0bb74f18`, one per
 commit-group (items 1–5 + the follow-through), each landed
 guardrails-first with predicted flips stated pre-run and same-commit
-re-pins; every landing's `scripts/ci --diff` PASS is recorded in its
-section. **Final gate at the tip: PASS** (2316 cases, 2177/139;
-baseline diff FULL 2316/2316 no regression; negative lane no
-regression; frontend unit tests, eval tests 136, proofs + Audit gate
-all green). The one red any gate showed post-item-1 was the bug-index
-cross-check catching BUG-014's pins flipping before the entry closed —
-the gate doing its job; closed in the follow-through.
+re-pins.
+
+**Gate record, corrected by the audit round (B-2, B-3, B-9) — the
+earlier summary sentence here claimed "every landing's `scripts/ci
+--diff` PASS is recorded in its section", and that was FALSE:**
+
+- **Item 5's landing gate was RED, not green.** The bug-index
+  cross-check caught BUG-014's pins flipping before the entry was
+  closed. That was disclosed in the very next sentence of the old
+  paragraph — "the gate doing its job; closed in the follow-through" —
+  but the summary sentence above it contradicted the disclosure, and a
+  summary that contradicts its own next line is the drift the honesty
+  conventions exist to stop. The disclosure is canonical; the summary
+  sentence is gone. Item 5's section carries no `**Gate:**` line
+  precisely because there was no green one to record.
+- **B-9, the process note owed:** committing item 5 with a red gate is
+  a DEVIATION from the validation gate ("Any new red is investigated
+  before committing"), not a pattern. It was disclosed at the time and
+  fixed in the next commit, and the fix-in-the-next-commit shape is
+  what makes it recoverable — but it is not the rule, and it should
+  not be read as licensing "land red, fix after". The rule stands: red
+  gate ⇒ no commit.
+- **B-3, run attribution.** The "Final gate at the tip: PASS (2316
+  cases, 2177/139)" claim recorded here was backed by a run made in
+  `e0e94b6b`'s PRE-COMMIT working tree, not by a run at the tip commit
+  it was attributed to. The SUBSTANCE held (the tree under test was
+  the same content); the ATTRIBUTION did not, and a gate record whose
+  commit is wrong is not a gate record. Superseded outright: the audit
+  round re-ran a full `scripts/ci --diff` at the rebased tip, and THAT
+  run — recorded in the audit-round commit — is this branch's gate of
+  record.
 
 The DONE criterion's five clauses are discharged (the clause-by-clause
 section above); THE MOMENT is recorded (go=111035 = machine=111035).
@@ -486,22 +679,44 @@ W4.2 (the twin, single node) starts from a machine that RUNS RawNode.
 
 Open obligations carried forward: difftest.py section 7 vs the real
 protobuf runtime (OWED with command — this sandbox denies the module
-cache/proxy); the W4.5 latitude entries (the jitter range, the §2
+cache/proxy; widened by the audit round to all NINE message types as
+top-level subjects, so the owed run covers the full 27-entry-point
+surface rather than five types' worth); the W4.5 latitude entries (the jitter range, the §2
 harvest-atomicity re-envelope); the Q2 harness logger (W4.2's, the
 design's §5 both-seams form); the fmt matrix's boundary rows as the
 widening protocol's entry point.
 
-**D-11 `(*lockedRand).Intn` — the jitter CHOICE SITE** (item 3, JC-19):
-body replaced by the exact-text-keyed `SUBJECT_PATCHES` derivation
-patch (map-range draw, envelope [0,n) on both oracles; upstream's
-n<=0 panic preserved; mutex kept); `crypto/rand` + `math/big` imports
-dropped. **Observable weight:** the draw's DISTRIBUTION differs (go's
-map-iteration randomness vs crypto/rand uniformity) — the ENVELOPE is
-identical, which is the semantics the twin's theorems quantify over
-(possibilistic doctrine); the latitude entry against
+### Subject-delta ledger additions (requirement (c) of the §8.6 ruling)
+
+Continuing `docs/raft-w2-log.md` §4 (D-1…D-6) and `docs/raft-w3-log.md`'s
+continuation (D-7…D-10), all unchanged. **This section is where D-11 lives
+in the ledger; it was previously recorded only in prose in this log's exit
+state, which is not the ledger — audit B-4.**
+
+**D-11 `raft/rand.go`, `(*lockedRand).Intn` — the jitter CHOICE SITE**
+(item 3, JC-19). Body replaced by the exact-text-keyed `SUBJECT_PATCHES`
+derivation patch: the draw becomes the first key of a range over a fresh
+n-key map — a construct the machine ALREADY treats as a choice site — so
+no GoCore node, frontend rule or wire change is involved. Upstream's
+`n <= 0` panic is preserved and the `sync.Mutex` around `globalRand` is
+KEPT (dropping it would smuggle a concurrency delta). The `crypto/rand`
+and `math/big` imports are dropped with the old body. The patch keys on
+upstream's EXACT `Intn` text and refuses on drift, so a new pin must be
+re-read rather than silently re-patched. **Observable weight:** the
+draw's DISTRIBUTION differs (Go's map-iteration randomness vs
+`crypto/rand` uniformity); the ENVELOPE is identical — `[0, n)` on both
+oracles — which is the semantics the twin's theorems quantify over
+(possibilistic doctrine). The latitude entry against
 `[electionTimeout, 2*electionTimeout)` is W4.5's. Pinned by the
-`maps/jitter-draw` membership row (admitted set = the contract range,
-all members exhibited).
+`maps/jitter-draw` membership row (admitted set = the contract range, all
+5 members exhibited).
+
+**Ledger consequence for `sweep.py`'s masking limit:** D-11 IS a
+body-replacing delta, but it is a DERIVATION delta, not a walk-probe
+delta — both oracles run the patched body and the census reads the
+derived tree, so it masks nothing from the census (clause 4 above states
+this). The sweep's "no body-replacing probe deltas exist" invariant is
+about the walk plan and is untouched.
 
 ### Judgment calls
 
@@ -549,7 +764,8 @@ all members exhibited).
   unmarshals to a non-nil empty slice (proto2 bytes presence). Marshal of a
   message with nothing set returns `[]byte{}` non-nil (protobuf-go's
   empty-message behavior). The upstream differential (difftest.py section 7,
-  byte-equality vs proto.Marshal + cross-unmarshal + Size) is OWED — the
+  byte-equality vs proto.Marshal + cross-unmarshal + Size, over all NINE
+  message types as top-level subjects since the audit round) is OWED — the
   sandbox denies the module cache/proxy (see environment notes); command:
   `python3 tools/raftsubject/difftest.py` with normal GOPROXY. In-sandbox:
   `tools/raftsubject/codeccheck.py` (new instrument) runs the DERIVED codec

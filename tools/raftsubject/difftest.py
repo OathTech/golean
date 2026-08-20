@@ -15,7 +15,10 @@ plainpb's real logic that is NOT upstream text kept verbatim:
   * the WIRE CODEC (W4.1, H-1): `(*T).AppendMessage/SizeMessage/
     UnmarshalMessage`, standing in for proto.Marshal/Size/Unmarshal —
     section 7 compares BYTES against the real runtime's Marshal, Size
-    against Size, and cross-unmarshals each side's bytes through the other
+    against Size, and cross-unmarshals each side's bytes through the other,
+    for ALL NINE message types as TOP-LEVEL subjects (widened by the W4.1
+    audit round: a type reached only nested exercises the sub-encoder, not
+    its own Append/Size/Unmarshal entry points)
 
 This script builds a throwaway Go module that links BOTH the upstream raftpb
 (deps/raft, with the real protobuf runtime) and the derived plainpb, converts
@@ -249,6 +252,88 @@ func hardStates() []struct {
 		{"zero", &up.HardState{}},
 		{"term0-set", &up.HardState{Term: u64(0)}},
 		{"t1v2c3", &up.HardState{Term: u64(1), Vote: u64(2), Commit: u64(3)}},
+	}
+}
+
+// The four remaining message types as TOP-LEVEL codec subjects (audit
+// A-minor). Section 7 used to reach Snapshot/SnapshotMetadata only
+// NESTED inside a Message and ConfChangeSingle only nested inside a
+// ConfChangeV2, and ConfChange not at all — a nested subject exercises
+// the length-delimited sub-encoder but never the type's own
+// AppendMessage/SizeMessage/UnmarshalMessage entry points, which is
+// exactly what section 7 exists to compare. All 9 are top-level now.
+
+func snapshotMetas() []struct {
+	name string
+	s    *up.SnapshotMetadata
+} {
+	return []struct {
+		name string
+		s    *up.SnapshotMetadata
+	}{
+		{"nil", nil},
+		{"zero", &up.SnapshotMetadata{}},
+		{"index0-set", &up.SnapshotMetadata{Index: u64(0)}},
+		{"index7-term2", &up.SnapshotMetadata{Index: u64(7), Term: u64(2)}},
+		{"cs-nil", &up.SnapshotMetadata{ConfState: nil}},
+		{"cs-zero", &up.SnapshotMetadata{ConfState: &up.ConfState{}}},
+		{"cs-v123", &up.SnapshotMetadata{ConfState: &up.ConfState{Voters: []uint64{1, 2, 3}}, Index: u64(9), Term: u64(3)}},
+		{"cs-joint", &up.SnapshotMetadata{ConfState: &up.ConfState{Voters: []uint64{1}, VotersOutgoing: []uint64{2}, AutoLeave: bl(true)}}},
+	}
+}
+
+func snapshots() []struct {
+	name string
+	s    *up.Snapshot
+} {
+	return []struct {
+		name string
+		s    *up.Snapshot
+	}{
+		{"nil", nil},
+		{"zero", &up.Snapshot{}},
+		{"data-nil", &up.Snapshot{Data: nil}},
+		{"data-empty", &up.Snapshot{Data: []byte{}}},
+		{"data-ab", &up.Snapshot{Data: []byte("ab")}},
+		{"meta-nil", &up.Snapshot{Metadata: nil}},
+		{"meta-zero", &up.Snapshot{Metadata: &up.SnapshotMetadata{}}},
+		{"meta-full", &up.Snapshot{Data: []byte("d"), Metadata: &up.SnapshotMetadata{Index: u64(7), Term: u64(2), ConfState: &up.ConfState{Voters: []uint64{1, 2}}}}},
+	}
+}
+
+func confChangeSingles() []struct {
+	name string
+	c    *up.ConfChangeSingle
+} {
+	return []struct {
+		name string
+		c    *up.ConfChangeSingle
+	}{
+		{"nil", nil},
+		{"zero", &up.ConfChangeSingle{}},
+		{"type-add-set", &up.ConfChangeSingle{Type: up.ConfChangeAddNode.Enum()}},
+		{"type-remove", &up.ConfChangeSingle{Type: up.ConfChangeRemoveNode.Enum()}},
+		{"node0-set", &up.ConfChangeSingle{NodeId: u64(0)}},
+		{"add-node3", &up.ConfChangeSingle{Type: up.ConfChangeAddNode.Enum(), NodeId: u64(3)}},
+	}
+}
+
+func confChanges() []struct {
+	name string
+	c    *up.ConfChange
+} {
+	return []struct {
+		name string
+		c    *up.ConfChange
+	}{
+		{"nil", nil},
+		{"zero", &up.ConfChange{}},
+		{"id0-set", &up.ConfChange{Id: u64(0)}},
+		{"type-add-set", &up.ConfChange{Type: up.ConfChangeAddNode.Enum()}},
+		{"type-remove", &up.ConfChange{Type: up.ConfChangeRemoveNode.Enum()}},
+		{"ctx-nil", &up.ConfChange{Context: nil}},
+		{"ctx-empty", &up.ConfChange{Context: []byte{}}},
+		{"full", &up.ConfChange{Id: u64(5), Type: up.ConfChangeAddLearnerNode.Enum(), NodeId: u64(3), Context: []byte("q")}},
 	}
 }
 
@@ -574,7 +659,99 @@ func main() {
 		}
 		codecCheck("HS", a.name, a.h, upB, proto.Size(a.h), ppB, ppv.SizeMessage(), plainToUpHardState(dec), upDec)
 	}
-	fmt.Printf("ok  Codec               %d values: bytes, Size, and both cross-unmarshals across 5 message types\n", codecChecks)
+	for _, a := range snapshotMetas() {
+		if a.s == nil {
+			continue
+		}
+		upB, upErr := proto.Marshal(a.s)
+		if upErr != nil {
+			report("Codec/marshal-err/SnapMeta", a.name, nil, upErr)
+			continue
+		}
+		ppv := upToPlainSnapshotMetadata(a.s)
+		ppB := ppv.AppendMessage(nil)
+		dec := &pp.SnapshotMetadata{}
+		if err := dec.UnmarshalMessage(upB); err != nil {
+			report("Codec/dec-theirs-err/SnapMeta", a.name, nil, err)
+			continue
+		}
+		upDec := &up.SnapshotMetadata{}
+		if err := proto.Unmarshal(ppB, upDec); err != nil {
+			report("Codec/dec-ours-err/SnapMeta", a.name, nil, err)
+			continue
+		}
+		codecCheck("SnapMeta", a.name, a.s, upB, proto.Size(a.s), ppB, ppv.SizeMessage(), plainToUpSnapshotMetadata(dec), upDec)
+	}
+	for _, a := range snapshots() {
+		if a.s == nil {
+			continue
+		}
+		upB, upErr := proto.Marshal(a.s)
+		if upErr != nil {
+			report("Codec/marshal-err/Snap", a.name, nil, upErr)
+			continue
+		}
+		ppv := upToPlainSnapshot(a.s)
+		ppB := ppv.AppendMessage(nil)
+		dec := &pp.Snapshot{}
+		if err := dec.UnmarshalMessage(upB); err != nil {
+			report("Codec/dec-theirs-err/Snap", a.name, nil, err)
+			continue
+		}
+		upDec := &up.Snapshot{}
+		if err := proto.Unmarshal(ppB, upDec); err != nil {
+			report("Codec/dec-ours-err/Snap", a.name, nil, err)
+			continue
+		}
+		codecCheck("Snap", a.name, a.s, upB, proto.Size(a.s), ppB, ppv.SizeMessage(), plainToUpSnapshot(dec), upDec)
+	}
+	for _, a := range confChangeSingles() {
+		if a.c == nil {
+			continue
+		}
+		upB, upErr := proto.Marshal(a.c)
+		if upErr != nil {
+			report("Codec/marshal-err/CCS", a.name, nil, upErr)
+			continue
+		}
+		ppv := upToPlainConfChangeSingle(a.c)
+		ppB := ppv.AppendMessage(nil)
+		dec := &pp.ConfChangeSingle{}
+		if err := dec.UnmarshalMessage(upB); err != nil {
+			report("Codec/dec-theirs-err/CCS", a.name, nil, err)
+			continue
+		}
+		upDec := &up.ConfChangeSingle{}
+		if err := proto.Unmarshal(ppB, upDec); err != nil {
+			report("Codec/dec-ours-err/CCS", a.name, nil, err)
+			continue
+		}
+		codecCheck("CCS", a.name, a.c, upB, proto.Size(a.c), ppB, ppv.SizeMessage(), plainToUpConfChangeSingle(dec), upDec)
+	}
+	for _, a := range confChanges() {
+		if a.c == nil {
+			continue
+		}
+		upB, upErr := proto.Marshal(a.c)
+		if upErr != nil {
+			report("Codec/marshal-err/CC", a.name, nil, upErr)
+			continue
+		}
+		ppv := upToPlainConfChange(a.c)
+		ppB := ppv.AppendMessage(nil)
+		dec := &pp.ConfChange{}
+		if err := dec.UnmarshalMessage(upB); err != nil {
+			report("Codec/dec-theirs-err/CC", a.name, nil, err)
+			continue
+		}
+		upDec := &up.ConfChange{}
+		if err := proto.Unmarshal(ppB, upDec); err != nil {
+			report("Codec/dec-ours-err/CC", a.name, nil, err)
+			continue
+		}
+		codecCheck("CC", a.name, a.c, upB, proto.Size(a.c), ppB, ppv.SizeMessage(), plainToUpConfChange(dec), upDec)
+	}
+	fmt.Printf("ok  Codec               %d values: bytes, Size, and both cross-unmarshals across all 9 message types\n", codecChecks)
 
 	if fails > 0 {
 		fmt.Printf("\nFAIL %d disagreement(s)\n", fails)

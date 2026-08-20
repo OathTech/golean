@@ -13,8 +13,10 @@ package main
 import "fmt"
 
 // enumT mirrors the plainpb enum shape: a named int32 WITH a String
-// method — %d must render the NUMBER (fmt never consults String for
-// numeric verbs), %v/%s must call String.
+// method — %d must render the NUMBER (%d is a PURE-NUMERIC verb, the
+// one family that skips the Stringer check), %v/%s must call String.
+// The stringable verbs are v, s, x, X, q — see the Stringer-precedence
+// block below.
 type enumT int32
 
 func (e enumT) String() string { return "enum!" }
@@ -147,6 +149,61 @@ func sprintfVNilError() string {
 	return fmt.Sprintf("[%v]", err)
 }
 
+// ---- %x / %q Stringer precedence (audit A-F1) ----
+//
+// gc's fmt consults error/Stringer for the STRINGABLE verbs — v, s, x,
+// X, q (fmt/print.go handleMethods) — and skips it only for the
+// pure-numeric verbs (%d and family). So %x over a Stringer-implementing
+// UNSIGNED type is the hex of the String() RESULT, never of the number
+// (probed against gc: "HI!" -> 484921, two lowercase hexits per byte,
+// zero-padded), and %q over a Stringer-implementing []byte type quotes
+// the String() result, never the bytes. The panic render does NOT get
+// post-processed by the verb (probed: %!x(PANIC=String method: ...)
+// verbatim, not hex).
+
+type hexer uint64
+
+func (h hexer) String() string { return "HI!" }
+
+type hexPanicky uint64
+
+func (h hexPanicky) String() string { panic("hex stub") }
+
+type qbytes []byte
+
+func (q qbytes) String() string { return "qs\"\n" }
+
+type qbytesPanicky []byte
+
+func (q qbytesPanicky) String() string { panic("q stub") }
+
+func sprintfXStringer() string {
+	return fmt.Sprintf("[%x]", hexer(255))
+}
+
+func sprintfXStringerPanic() string {
+	return fmt.Sprintf("[%x]", hexPanicky(255))
+}
+
+func sprintfQStringer() string {
+	return fmt.Sprintf("[%q]", qbytes{1, 2, 3})
+}
+
+func sprintfQStringerPanic() string {
+	return fmt.Sprintf("[%q]", qbytesPanicky{1, 2, 3})
+}
+
+// The same precedence through a static `error` interface argument.
+func sprintfXError() string {
+	err := fmt.Errorf("got %d entries", 0)
+	return fmt.Sprintf("[%x]", err)
+}
+
+func sprintfXNilError() string {
+	var err error
+	return fmt.Sprintf("[%x]", err)
+}
+
 // ---- fail-closed boundary rows (red at frontend-export BY DESIGN) ----
 
 func sprintfVerbOutsideSet() string {
@@ -169,5 +226,7 @@ func main() {
 		sprintfPlusVNilPtr(), sprintfQBytes(), sprintfQBytesEmpty(),
 		sprintfPercent(), sprintfLiteralOnly(), sprintfDecisionPath(),
 		r, o, sprintfSError(), sprintfSNilError(), sprintfVNilError(),
+		sprintfXStringer(), sprintfXStringerPanic(), sprintfQStringer(),
+		sprintfQStringerPanic(), sprintfXError(), sprintfXNilError(),
 		sprintfVerbOutsideSet(), sprintfNonConstFormat(1))
 }

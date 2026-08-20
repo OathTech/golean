@@ -8,6 +8,15 @@ import "fmt"
 // satisfy in Go — and a comma-ok assert would then answer a silently wrong
 // `false`. The stub carries the real signature, so satisfaction answers
 // what gc answers and only the dispatched CALL refuses.
+//
+// WHY `fmt.Sprint` AND NOT `fmt.Sprintf` (JC-17, raft W4.1 item 2): the
+// unlowerable construct here is load-bearing — it is what makes `render`
+// quarantined at all. The fixture used `fmt.Sprintf` until the W4.1 fmt
+// desugar modeled Sprintf/Errorf/Fprintf, at which point this row would
+// have flipped green and silently stopped witnessing the quarantine
+// shape (the F3 lost-witness class). `fmt.Sprint` is outside the modeled
+// three. Any future widening that models it must retarget this fixture
+// again, not let the row go green.
 
 type stringer interface {
 	tag() int

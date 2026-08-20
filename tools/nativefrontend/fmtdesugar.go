@@ -30,19 +30,38 @@
 //     w.WriteString(<the lift>), whose results ((len, nil)) and
 //     writer-then-args evaluation order equal Fprintf's.
 //
+// THE STRINGABLE-VERB RULE (audit A-F1 — the header used to state this
+// backwards): gc's fmt consults error/Stringer for the verbs v, s, x,
+// X, q (fmt/print.go handleMethods switches on exactly that set) and
+// skips it ONLY for the pure-numeric verbs — %d and family — plus %T
+// and %p. It is therefore %d-family, not "numeric verbs" in the loose
+// sense, that renders an enum's NUMBER: %x over that same enum type
+// would render the hex of its String() result. printArg's concrete-type
+// fast switch never matches a NAMED type, so a defined uint64/[]byte
+// with a String method always reaches handleMethods. The precedence
+// check runs before the kind matrix below, for all four modeled
+// stringable verbs.
+//
 // THE MODELED MATRIX (everything else refuses, naming the pair):
 //
 //   %d   signed / unsigned integer kinds (named included; enums are
-//        named int32 — numeric verbs never consult String)
-//   %x   unsigned integer kinds (lowercase hex)
-//   %s   string kinds; error implementors; Stringer implementors
-//   %v   integer kinds, string kinds, bool; error; Stringer
+//        named int32 — %d is the pure-numeric family, which skips the
+//        Stringer check)
+//   %x   error implementors; Stringer implementors (hex OF the method
+//        result — probed: "HI!" -> 484921); else unsigned integer kinds
+//        (lowercase hex of the number)
+//   %s   error implementors; Stringer implementors; else string kinds
+//   %v   error; Stringer; else integer kinds, string kinds, bool
 //   %+v  exactly %v over this matrix (for these kinds the flag changes
 //        nothing: Stringer/error take precedence, and the PANIC render
 //        drops flags — probed: %!v, never %!+v)
-//   %q   byte-slice kinds (ASCII subset — the helper fails closed on
-//        bytes >= 0x80, where real %q prints printable non-ASCII runes
-//        literally; recorded modeled-subset bound)
+//   %q   error implementors; Stringer implementors (the QUOTED method
+//        result); else byte-slice kinds. ASCII subset either way — the
+//        helper fails closed on bytes >= 0x80, where real %q prints
+//        printable non-ASCII runes literally; recorded modeled-subset
+//        bound. On a method result that bound is a PROPAGATING panic
+//        (the post-process sits outside the render's recover frame), so
+//        it stays fail-closed rather than becoming a PANIC render.
 //   %%   a literal percent
 //
 // RECORDED BOUNDS (visible, never silent): a TYPED-NIL error boxed in
@@ -483,6 +502,32 @@ func (e *emitter) fmtVerbArg(fn, format string, v fmtVerb, arg ast.Expr, k int) 
 	implementsError := types.Implements(argTy, errIface)
 	implementsStringer := types.Implements(argTy, fmtStringerIface)
 
+	// THE STRINGABLE-VERB PRECEDENCE, FIRST (audit A-F1). gc's fmt
+	// consults error/Stringer for v, s, x, X, q — fmt/print.go
+	// handleMethods switches on exactly that set — and skips it only
+	// for the pure-numeric verbs (%d and family) and %T/%p. A named
+	// type never matches printArg's concrete-type fast switch, so a
+	// Stringer-implementing uint64 reaches handleMethods and %x prints
+	// the hex OF THE String() RESULT, not of the number (probed: "HI!"
+	// -> 484921). Putting this ahead of the kind matrix is what keeps
+	// %x/%q honest; the render helpers post-process the method result
+	// by verb (goleanShimFmtStringVerb).
+	switch v.verb {
+	case 's', 'v', 'x', 'q':
+		if implementsError {
+			if types.IsInterface(argTy) {
+				return renderErrIface()
+			}
+			return render("Error", "Error")
+		}
+		if implementsStringer {
+			if types.IsInterface(argTy) {
+				return nil, unsup("fmt.%s verb %s over a non-error interface type %s is outside the modeled subset", fn, verbName, argTy)
+			}
+			return render("String", "String")
+		}
+	}
+
 	switch v.verb {
 	case 'd':
 		if basic != nil && basic.Info()&types.IsInteger != 0 {
@@ -496,18 +541,6 @@ func (e *emitter) fmtVerbArg(fn, format string, v fmtVerb, arg ast.Expr, k int) 
 			return scalar(types.Typ[types.Uint64], "goleanShimFmtHex")
 		}
 	case 's', 'v':
-		if implementsError {
-			if types.IsInterface(argTy) {
-				return renderErrIface()
-			}
-			return render("Error", "Error")
-		}
-		if implementsStringer {
-			if types.IsInterface(argTy) {
-				return nil, unsup("fmt.%s verb %s over a non-error interface type %s is outside the modeled subset", fn, verbName, argTy)
-			}
-			return render("String", "String")
-		}
 		if basic != nil && basic.Info()&types.IsString != 0 {
 			return scalar(types.Typ[types.String], "")
 		}

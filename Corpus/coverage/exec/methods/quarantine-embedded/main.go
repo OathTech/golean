@@ -7,6 +7,15 @@ import "fmt"
 // to `base.render` — which is the quarantined stub — so `wrapper` keeps a
 // complete method set (it still satisfies `describer`, as in Go) and the
 // call through the promoted name refuses instead of disappearing.
+//
+// WHY `fmt.Sprint` AND NOT `fmt.Sprintf` (JC-17, raft W4.1 item 2): the
+// unlowerable construct is load-bearing — it is what makes `base.render`
+// quarantined at all. The fixture used `fmt.Sprintf` until the W4.1 fmt
+// desugar modeled Sprintf/Errorf/Fprintf, at which point this row would
+// have flipped green and silently stopped witnessing the quarantine
+// shape (the F3 lost-witness class). `fmt.Sprint` is outside the modeled
+// three. Any future widening that models it must retarget this fixture
+// again, not let the row go green.
 
 type base struct{ n int }
 
