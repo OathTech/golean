@@ -1,72 +1,30 @@
-# W2.2 frontier walk plan — THE plan, against the mainline frontend.
+# W4.0 frontier walk plan — THE plan, against the W4.0 frontend.
 #
-# Re-pinned 2026-08-20 (audit fix round) onto `main` @ 7ca8908e, which carries
-# the merged bug-fix arc.  Before that merge there were TWO plans: a "pre-merge"
-# one (71 action rows, because a method with an unlowerable body blocked the
-# WHOLE export) and a "post-merge" one written against H-3.  H-3 landed as
-# c7938b25, so the post-merge plan is simply the plan now and the pre-merge one
-# is retired per handoff H-16.  What it measured is preserved as a NUMBER in
-# docs/raft-w3-log.md §2.2 rather than as a file: 71 action rows vs 14, the
-# difference being 35 method-body replacements + 22 further import drops, all
-# artefacts of the missing per-declaration quarantine.
+# Re-pinned 2026-08-20 (raft W4.0, the export unblock): the raft subject tree
+# exports clean with ZERO probe deltas — the terminal row is the whole plan,
+# which is exactly §8's W4.0 done criterion ("frontier-plan.tsv reduces to its
+# terminal row alone with no probe deltas").  What retired the 14 action rows
+# of the previous plan (docs/raft-w3-log.md §2.5, the probe-delta ledger):
+#
+#   - the `lockedRand.Intn` body replacement + `crypto/rand`/`math/big` import
+#     drops (H-9's stand-in): H-9 is FIXED (BUG-064 — the inittask worklist
+#     carries symbol prefixes, never import paths), so the multi-package export
+#     no longer refuses on the entropy prefix, and the method's verbatim body
+#     now lands as an ordinary H-3 per-declaration quarantined stub.  The G-1
+#     jitter draw is therefore UNMASKED: it appears in the main census with its
+#     real refusal (no separate single-package probe needed to see it, though
+#     sweep.py still runs one as a cross-check).
+#   - the `probe/errors_new.go` injection + nine `$rewrite` rows + three
+#     `$drop-import:errors` rows (G-2/G-3's stand-ins): errors.New is MODELED
+#     as an E5 stdlib shim (per-unit injection), so the nine package-level
+#     sentinel initializers and every in-body call site lower for real.  G-3's
+#     mechanism (H-11, per-declaration quarantine for package-level vars)
+#     landed in the same slice as the general backstop; nothing in this tree
+#     needs it once errors.New lowers.
+#
+# The previous plan's content survives as the difference measurement in
+# docs/raft-w3-log.md §2.2/§2.5 (JC-9's rule: expectations are what the
+# frontend said at that step; the per-declaration causes are the census's).
 #
 # file	declaration-or-action	expected refusal substring	fixups
-#
-# The last row is the terminal `*` row: it asserts the walk is COMPLETE.
-# frontier.py refuses a plan without it and re-checks the final state in its
-# exit code, so a truncated plan fails instead of reporting a shorter frontier.
-#
-# Nothing in the subject tree blocks the export except the EXPORT-BLOCKING gaps
-# below, none of which a per-declaration quarantine can catch — an import
-# refuses before any declaration is read, and a package-level variable has no
-# body to replace with a refusing stub.
-#
-# Every row here is a PROBE DELTA standing in for a recorded gap
-# (docs/raft-w3-log.md §3, the probe-delta ledger).  The subject tree keeps
-# upstream's text; only the walk's work copy is touched.
-#
-# READ THE EXPECTATIONS AS "WHAT THE FRONTEND SAID AT THAT STEP", not as the
-# cause of that declaration's refusal: the frontend reports ONE refusal at a
-# time (JC-9).  The per-declaration causes are the CENSUS's job, and the census
-# is taken off the wire by sweep.py after this walk reaches a clean export.
-#
-# G-1  the election-jitter seam.  raft's randomized election timeout draws from
-#      crypto/rand + math/big inside (*lockedRand).Intn (raft.go:97).  The
-#      refusal recorded here is NOT the draw: it is the transitive stdlib
-#      closure of crypto/rand reaching crypto/internal/entropy/v1.0.0, whose
-#      ESCAPED linker prefix the init graph re-escapes and then cannot find in
-#      the inittask table (H-9, a frontend defect, minimised to a 6-line
-#      2-package program — see the log).
-#
-#      THIS ROW MASKS A LIVE GAP, and the masking is the reason G-1 is two rows
-#      in the census and not one.  Replacing Intn's body is forced — the body
-#      cannot type-check once the imports H-9 refuses on are dropped — so the
-#      draw's own refusal never reaches this wire.  sweep.py censuses it
-#      separately, in a SINGLE-package probe where H-9 does not fire
-#      (specInitOrder returns early below two units), and reports it beside the
-#      walk's own numbers.  Any future probe delta that replaces a BODY owes
-#      the same treatment.
-raft/raft.go	lockedRand.Intn	crypto/internal/entropy	-crypto/rand,-math/big
-# G-2/G-3  errors.New is unmodeled (G-2), and a package-level variable has no
-#      per-declaration quarantine (G-3), so each of the NINE `var Err… =
-#      errors.New(…)` initializers refuses the whole export.  G-3 is an
-#      ALTERNATIVE route past G-2's globals, not an independent export blocker:
-#      fix either one and these nine rows go away, which is why the log counts
-#      TWO measured export-blocking gaps and not three.  The probe file
-#      supplies Go's own implementation of errors.New under another name; the
-#      errors.New calls inside function BODIES are deliberately left alone, so
-#      the quarantine census still reports what G-2 costs.
-raft/probe_errors_new.go	$add:errors_new.go	package-selector call errors.New (package "errors" surface not modeled)
-raft/raft.go	$rewrite:var ErrProposalDropped = errors.New(==>var ErrProposalDropped = goleanProbeErrorsNew(	package-selector call errors.New (package "errors" surface not modeled)
-raft/raft.go	$rewrite:var errBreak = errors.New(==>var errBreak = goleanProbeErrorsNew(	package-selector call errors.New (package "errors" surface not modeled)
-raft/rawnode.go	$rewrite:var ErrStepLocalMsg = errors.New(==>var ErrStepLocalMsg = goleanProbeErrorsNew(	package-selector call errors.New (package "errors" surface not modeled)
-raft/rawnode.go	$rewrite:var ErrStepPeerNotFound = errors.New(==>var ErrStepPeerNotFound = goleanProbeErrorsNew(	package-selector call errors.New (package "errors" surface not modeled)
-raft/rawnode.go	$drop-import:errors	"errors" imported and not used
-raft/node_decls.go	$rewrite:ErrStopped = errors.New(==>ErrStopped = goleanProbeErrorsNew(	package-selector call errors.New (package "errors" surface not modeled)
-raft/node_decls.go	$drop-import:errors	"errors" imported and not used
-raft/storage.go	$rewrite:var ErrCompacted = errors.New(==>var ErrCompacted = goleanProbeErrorsNew(	package-selector call errors.New (package "errors" surface not modeled)
-raft/storage.go	$rewrite:var ErrSnapOutOfDate = errors.New(==>var ErrSnapOutOfDate = goleanProbeErrorsNew(	package-selector call errors.New (package "errors" surface not modeled)
-raft/storage.go	$rewrite:var ErrUnavailable = errors.New(==>var ErrUnavailable = goleanProbeErrorsNew(	package-selector call errors.New (package "errors" surface not modeled)
-raft/storage.go	$rewrite:var ErrSnapshotTemporarilyUnavailable = errors.New(==>var ErrSnapshotTemporarilyUnavailable = goleanProbeErrorsNew(	package-selector call errors.New (package "errors" surface not modeled)
-raft/storage.go	$drop-import:errors	"errors" imported and not used
 *	*	(exports clean)

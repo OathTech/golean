@@ -22,7 +22,7 @@ a RawNode-driven twin runs" — is the union of:
           FIXPOINT: neutralising a declaration cuts its own edges, so one
           round's dead set is the next round's blind spot, and stopping after
           one round is how a hand-curated dead list becomes self-confirming.
-  the G-1 probe  the one declaration BOTH passes mask (below).
+  the G-1 probe  a standalone CROSS-CHECK since W4.0 (below).
 
 All three run here from tracked inputs only, and the union is printed as the
 headline.  This file replaces the untracked `artifacts/patch2.py` the W2.2
@@ -48,15 +48,18 @@ never touches `raftsubject/`.  Note that the stand-ins take the SAME arguments
 as the calls they replace, because argument evaluation is itself an edge
 (`Infof(..., DescribeConfChange(cc), ...)` is why that rendering path is live).
 
-THE MASKING LIMIT, stated because it bounds the headline.  A declaration whose
-FIRST refusal is flattened here reveals its SECOND (that is the point), but a
-declaration the walk's own probe deltas REPLACED THE BODY OF is invisible to
-both passes.  Exactly one is: `(*lockedRand).Intn`, whose body cannot survive
-dropping the `crypto/rand` import that H-9 refuses on.  It is censused
-separately, by putting the method verbatim in a SINGLE-package program where
-H-9 does not fire (`specInitOrder` returns early below two units), and the
-refusal that comes back is the real one.  Any future probe delta that replaces
-a BODY owes the same treatment; `$drop-import` and `$rewrite` deltas do not.
+THE MASKING LIMIT, stated because it once bound the headline.  A declaration
+whose FIRST refusal is flattened here reveals its SECOND (that is the point),
+but a declaration a walk probe delta REPLACED THE BODY OF would be invisible
+to both passes.  Since W4.0 the tracked plan is the terminal row alone — NO
+body-replacing deltas exist, so nothing is masked: `(*lockedRand).Intn`
+(historically the one masked declaration, when H-9 forced its body out)
+appears in PASS 1 with its real refusal.  The standalone single-package probe
+is RETAINED AS A CROSS-CHECK: it must agree with PASS 1's row, and it fails
+closed in the useful direction — if `crypto/rand` ever becomes modeled the
+probe stops finding Intn quarantined and exits telling you to retire G-1's
+row.  Any future body-replacing probe delta re-owes a standalone census;
+`$drop-import` and `$rewrite` deltas do not.
 """
 
 import argparse
@@ -101,8 +104,10 @@ IMPORTED_PREFIXES = ("bytes.", "strings.", "sync.", "math/", "crypto/",
                      "log.", "fmt.", "errors.", "context.", "unicode/",
                      "strconv.", "reflect.")
 
-# The error constructor, kept separate because the `raft` package already gets
-# one from the walk's own tracked probe file (probe/errors_new.go).  Pointer
+# The error constructor the probe helpers themselves use
+# (goleanProbeErrorf returns one).  Since W4.0 `errors.New` is MODELED (the E5
+# shim), so the flattening below no longer rewrites errors.New call sites —
+# they lower for real — but the helpers still need a local ctor.  Pointer
 # identity is preserved, so `err == ErrCompacted` still discriminates — the
 # property raft actually reads off an error (log §2.4).
 PROBE_ERRORS = """
@@ -131,6 +136,8 @@ func goleanProbeErrorf(format string, v ...any) error {
 }
 
 func goleanProbeFprint(w any, v ...any) (int, error) { return 0, nil }
+
+func goleanProbeIntn(n int) int { return 0 }
 
 func goleanProbeJoin(elems []string, sep string) string { return "sweep" }
 
@@ -255,11 +262,15 @@ def flatten(tree, dead):
                 ("fmt.Fprint", "goleanProbeFprint"),
                 ("strings.Join", "goleanProbeJoin"),
                 ("bytes.Equal", "goleanProbeBytesEqual"),
-                # G-2 inside function BODIES.  The walk plan leaves these alone
-                # on purpose (so the census reports what errors.New costs); the
-                # sweep must not, or Changer.{EnterJoint,LeaveJoint,Simple} and
-                # (*raft).Step stay sinks and everything behind them is invisible.
-                ("errors.New", "goleanProbeErrorsNew"),
+                # G-1's sink, opened at its ONE call site (raft.go's
+                # resetRandomizedElectionTimeout) so the quarantined
+                # (*lockedRand).Intn stops being a reachable sink and the
+                # closure check ranges behind it (nothing subject-level is
+                # there - its callees are crypto/rand + math/big).
+                ("globalRand.Intn", "goleanProbeIntn"),
+                # errors.New is NOT flattened since W4.0: it is modeled (the
+                # E5 shim, per-unit injection), lowers for real, and is no
+                # longer a census cause anywhere in this tree — G-2 retired.
                 # G-8, the two read_only.go sites.
                 ("binary.LittleEndian.Uint64", "goleanProbeLEUint64"),
                 ("binary.LittleEndian.PutUint64", "goleanProbeLEPutUint64"),
@@ -275,10 +286,9 @@ def flatten(tree, dead):
         d = os.path.join(tree, pkg)
         if not os.path.isdir(d):
             continue
-        # `raft` already carries the walk's own probe file for the error ctor.
-        body = PROBE_HELPERS % pkg
-        if pkg != "raft":
-            body += PROBE_ERRORS
+        # Every package gets the ctor: since W4.0 the walk plan injects
+        # nothing (terminal row only), so no package carries one already.
+        body = PROBE_HELPERS % pkg + PROBE_ERRORS
         open(os.path.join(d, "probe_helpers.go"), "w").write(body)
 
     p = os.path.join(tree, "raft", "storage.go")
@@ -477,14 +487,25 @@ def main():
               "PASS-2 wire has a body, so the census is CLOSED over this tree "
               "(nothing is hidden behind a refusal).")
     print()
-    print("G-1 probe (masked in both passes, censused standalone):")
-    print("  LIVE raft.lockedRand.Intn                       %s" % g1_probe(args.frontend, args.out))
+    # Since W4.0 nothing masks Intn (the plan has no body-replacing deltas),
+    # so the standalone probe is a CROSS-CHECK: PASS 1 must have censused the
+    # method itself, with the same refusal cause the probe sees.
+    g1 = g1_probe(args.frontend, args.out)
+    in_pass1 = any(n.endswith("lockedRand.Intn") for n in live1)
+    print("G-1 cross-check (standalone single-package probe of the jitter draw):")
+    print("  LIVE raft.lockedRand.Intn                       %s" % g1)
+    print("  PASS-1 row agreement: %s"
+          % ("OK - the walk censuses Intn itself (unmasked since W4.0)"
+             if in_pass1 else
+             "MISMATCH - PASS 1 did not report lockedRand.Intn LIVE; "
+             "either the entry set or the masking story changed - investigate"))
     print()
     print("HEADLINE: %d LIVE quarantined subject declarations "
-          "(%d first-order + %d behind sinks + 1 masked G-1) out of %d "
-          "quarantined in PASS 1, plus %d imported stdlib stubs that are the "
-          "declaration-only-stub contract and not a raft gap."
-          % (len(live) + 1, len(live1), len(revealed), len(subject1),
+          "(%d first-order + %d behind sinks; the G-1 draw is IN the "
+          "first-order set since W4.0) out of %d quarantined in PASS 1, plus "
+          "%d imported stdlib stubs that are the declaration-only-stub "
+          "contract and not a raft gap."
+          % (len(live), len(live1), len(revealed), len(subject1),
              len(imported1)))
 
 

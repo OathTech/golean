@@ -219,3 +219,84 @@ before landing, honesty over tidiness:**
   green no longer witnesses that the frontend can EMIT those forms — the
   generic-func-value feature itself stays red where it is load-bearing
   (`generics/` reds unchanged).
+
+---
+
+## The post-W4.0 census (sweep re-run, 2026-08-20)
+
+Instruments re-run against the W4.0 frontend (built from this branch;
+`frontier.py`, `sweep.py`, `derive.py --check`). The tracked plan
+(`tools/raftsubject/frontier-plan.tsv`) is re-pinned to its TERMINAL ROW ALONE
+— the subject tree exports clean with ZERO probe deltas, which is §8's W4.0
+done criterion verbatim. `probe/errors_new.go` is deleted (its body was lifted
+into the frontend shim); `sweep.py` is updated for the unmasked world (no
+errors.New flattening — it lowers for real; the `globalRand.Intn` call site
+joins the PASS-2 flatten so the census closes behind the one new PASS-1 sink;
+the standalone G-1 probe becomes a CROSS-CHECK that must agree with PASS 1's
+own Intn row, and does).
+
+**Headline: 22 LIVE quarantined subject declarations (19 first-order + 3
+behind sinks), residual sinks NONE — the census is CLOSED.** PASS 1: 49
+quarantined subject declarations (was 53) and 113 imported stdlib stubs (was
+36 — the growth is H-9's fix letting `crypto/rand`, `math/rand`, `math/big`
+resolve as imports, landing their declaration-only marker stubs: math/big 61,
+bytes 24, math/rand 16, strings 9, sync 3; the pre-existing contract, not a
+raft gap).
+
+**Retired by W4.0, confirmed on the wire:**
+- **H-9 / BUG-064** — fixed; the multi-package export proceeds.
+- **G-2 (`errors.New`)** — retired everywhere: the nine sentinel globals AND
+  every in-body site lower through the shim. The four declarations whose ONLY
+  refusal was errors.New now lower fully (`Changer.{EnterJoint, LeaveJoint,
+  Simple}`, `Config.validate` — checked by name against the wire);
+  `(*raft).Step`'s census cause shifted to `bytes.Equal`, exactly W3's
+  second-cause prediction (G-7).
+- **G-3** — the mechanism (H-11) landed as the general backstop; with
+  errors.New modeled, nothing in this tree needs it.
+- **G-1's MASKING** — gone: `(*lockedRand).Intn` appears in PASS 1 with its
+  real refusal (`package-selector call rand.Int`). The DRAW itself is of
+  course not retired — it is W4.1's H-15 choice site.
+
+**What remains, and it is exactly the run-blocker set (26 → 22 live, 9 → 7
+causes):** the live partition is an exact cover, 8 + 10 + 1 + 1 + 2 = 22 —
+- **G-6** promoted `sync.Mutex` (H-12): the 8 `MemoryStorage` methods;
+- **G-5** fmt (H-6, ruled Option 1): 10 declarations — `Changer.apply`,
+  `checkInvariants`, `newRaft`, `(*raft).restore`, `raftLog.scan`,
+  `stepLeader`, `voteRespMsgType`, `ConfChangeV2.EnterJoint`,
+  `Progress.SentEntries`, `DescribeConfChange`;
+- **G-7** `bytes.Equal` (H-13): `(*raft).Step`;
+- **G-1** the jitter draw (H-15): `(*lockedRand).Intn`;
+- **G-8** `binary.LittleEndian` (H-14): `readOnly.{recvAck, heartbeatCtx}`.
+Plus the two run-blockers that never were quarantines: **G-4** the proto codec
+(H-1 — `Clone`/`Size`/`Unmarshal` lower as explicit fail-closed panics, all
+three live) and the two G-5 riders **G-9** (`strings.Join` inside `newRaft` —
+still the reason H-6 alone does not unblock `NewRawNode`) and **G-10**
+(`strings.Builder` via `DescribeConfChange`).
+
+**What W4.1 inherits** (harness design §8, unchanged in substance, sharpened
+in numbers): H-12, H-13, H-14, H-6's implementation (+H-17/H-18 riders), H-15,
+and H-1's codec — 7 causes over 22 live quarantined declarations + 3 live
+codec panics + 1 live imported stub (`strings.Builder.String`). G-2's in-body
+ninth cause retired with W4.0, as §8 predicted.
+
+**Instrument status at the census:** `frontier.py` (terminal-only plan):
+EXPORTS CLEAN, exit 0. `sweep.py`: the report above, fixpoint in 2 rounds,
+residual sinks none, G-1 cross-check OK. `derive.py --check`: clean (the tree
+is untouched by this arc — nothing in W4.0 edited `raftsubject/`).
+`difftest.py`: **NOT RUN — environment, not signal**: this workspace's sandbox
+denies both the shared Go module cache (`/home/dev/go/pkg/mod`, foreign
+ziphash unreadable) and `proxy.golang.org`, so the throwaway module linking
+real protobuf cannot build. raftpb/plainpb is untouched by this arc (the
+differential's subject), and the last green run is the raft-w3 tip. To re-run
+outside the sandbox: `python3 tools/raftsubject/difftest.py` with normal
+GOPROXY access. Recorded per the ask-don't-hack rule rather than worked
+around.
+
+## W4.0 exit state
+
+The three items are landed, each guardrails-first with its full-gate run and
+same-commit re-pin: BUG-064 (+3 ids), the errors.New shim (+13 ids), H-11
+(+8 ids, +1 explained flip, one pre-landing defect caught and fixed by the
+gate's own refutation of a prediction). `frontier-plan.tsv` is the terminal
+row alone. The export blockers of the W3 measurement are ZERO; every remaining
+gap is a run-blocker, enumerated above, owned by W4.1.
