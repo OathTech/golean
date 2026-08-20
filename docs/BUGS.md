@@ -1864,7 +1864,28 @@ wrapper frames as transparent.
 
 ## BUG-014 — untyped nil at defined-slice/defined-map map-literal elements stays a raw nil (stuck at len/ops)
 
-- Status: open
+- Status: fixed
+- Closed: 2026-08-20 (raft W4.1 item 5, branch `raft-w41` — found LIVE
+  by the first RawNode probe: tracker.Config.Clone returns nil at the
+  defined map type quorum.MajorityConfig and checkInvariants' map
+  comparison stuck the machine on two raw nils)
+- Fix: the SECOND shape the entry below envisioned — a defined-type-
+  aware typed-nil emission, realized in the FRONTEND: the BUG-016
+  nil-typing arm (wrapInterfaceConversion) now classifies by the
+  target's UNDERLYING kind and emits the UNDERLYING type's wire node,
+  so a defined-slice/map/pointer slot receives the same typed nil an
+  unnamed one always did (representation only — static-type
+  consequences stay with go/types at the use sites; the machine's
+  nil-literal arm never sees a `.defined` target). Covers every
+  assignable context through the wrap: composite elements, returns,
+  call arguments, assigns. The two pinned cases flip FAIL→PASS, plus
+  the new maps/named-nil-flows family (5 rows) pins the
+  return/composite/literal-elem/arg/slice flows; full-run re-pin in
+  the fix commit (the item-5 baseline header records the flips).
+  Func/chan slots keep the bare-nil emission (their comparison arms
+  accept nil/nil; chan ops on a stored bare nil are recorded untested
+  surface).
+- Original status: open
 - Pinned-by: differential
 - Cases: maps/nil-literal-values/defined-slice-element, maps/nil-literal-values/defined-map-element
 - Discovered: 2026-08-05 (delta-review R2 of the generics-branch audit
