@@ -1,5 +1,11 @@
 # The W3.2 re-envelope arc — from gc-pins to honest envelopes (2026-08-20)
 
+**SIGNED OFF (2026-08-20, Mike): approved with defaults.** The four
+open questions below (OQ1–OQ4) are resolved to their stated defaults,
+recorded as user rulings with Mike's framing: "reasonable first cuts
+we might revisit later" — revisiting is legitimate at any gate, by the
+user. The arc is dispatchable once this charter lands on main.
+
 Status: **DRAFT for user review, REVISION 1 (2026-08-20)** — two of the
 draft's six open questions are now RULED (§Rulings); the rest stay open
 and nothing here is chartered until the user rules on them and the
