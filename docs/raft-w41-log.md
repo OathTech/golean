@@ -467,7 +467,29 @@ remaining step to the W4.2 twin is harness Go, not machine surface.
 | H-19 | unchanged (ErrStopped chunk granularity; its errors.New row stopped mattering when G-2 retired). |
 | NEW → W4.2+ | the harness supplies `Config.Logger` AND `raft.SetLogger` (Q2, §5); `sync/escapes/{method-value,go-stmt}` remain the sync fail-closed frontier; chan-typed bare-nil ops recorded untested (item 5's fix note); the fmt matrix's boundary rows are the widening protocol's entry point. |
 
-## Subject-delta ledger addition
+## W4.1 exit state
+
+Branch `raft-w41`, six commits over `main` @ `0bb74f18`, one per
+commit-group (items 1–5 + the follow-through), each landed
+guardrails-first with predicted flips stated pre-run and same-commit
+re-pins; every landing's `scripts/ci --diff` PASS is recorded in its
+section. **Final gate at the tip: PASS** (2316 cases, 2177/139;
+baseline diff FULL 2316/2316 no regression; negative lane no
+regression; frontend unit tests, eval tests 136, proofs + Audit gate
+all green). The one red any gate showed post-item-1 was the bug-index
+cross-check catching BUG-014's pins flipping before the entry closed —
+the gate doing its job; closed in the follow-through.
+
+The DONE criterion's five clauses are discharged (the clause-by-clause
+section above); THE MOMENT is recorded (go=111035 = machine=111035).
+W4.2 (the twin, single node) starts from a machine that RUNS RawNode.
+
+Open obligations carried forward: difftest.py section 7 vs the real
+protobuf runtime (OWED with command — this sandbox denies the module
+cache/proxy); the W4.5 latitude entries (the jitter range, the §2
+harvest-atomicity re-envelope); the Q2 harness logger (W4.2's, the
+design's §5 both-seams form); the fmt matrix's boundary rows as the
+widening protocol's entry point.
 
 **D-11 `(*lockedRand).Intn` — the jitter CHOICE SITE** (item 3, JC-19):
 body replaced by the exact-text-keyed `SUBJECT_PATCHES` derivation
