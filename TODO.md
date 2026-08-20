@@ -753,12 +753,15 @@ widened an arc mid-audit. Roughly in priority order.
   green-pinned at `e44bf1c4` (35 go-run-verified sync cases + the fatal
   status class). Resuming means finishing the proof half.
 
-## W3.2 re-envelope arc backlog (2026-08-20, charter DRAFT)
+## W3.2 re-envelope arc backlog (2026-08-20, charter DRAFT rev 1)
 
 Booked by the W3.2 charter draft
 (`docs/2026-08-20_w32-re-envelope-charter.md`) so the repo carries
 them, not chat. Each rides the arc's slice/exit-artifact structure;
-none is scheduled independently of it.
+none is scheduled independently of it. Revision 1 (2026-08-20) folds in
+the user's two rulings (R-1 rendering split, R-2 opsem route) and
+records campaign 2's outcome; four open questions remain in the
+charter's §Open questions, each with a stated default.
 
 - [ ] **iris-lean refresh + reuse survey** (charter §S6b). Move the
       Lake dep + `deps/iris-lean` reading copy to a current pin — the
@@ -767,25 +770,59 @@ none is scheduled independently of it.
       one row per carried Iris-layer component). Demand driver: the
       parked channel-logic lane's Iris consumers (the channel WP law
       family, the LangDM simulation, `dspCompTripleC`).
-- [ ] **grossmith re-run + the metamorphic axis** (charter §Parallel
-      instruments). Re-run the differential campaign against the
-      widened machine (the last campaign predates every envelope in
-      the charter; findings arrive as dated docs per
-      `docs/2026-08-07_grossmith-findings.md`'s pattern), and extend
-      grossmith with a metamorphic axis: semantics-preserving
-      transforms (unordered-latitude statement reorders, map-literal
-      permutations, spawn-order shuffles) whose observation sets must
-      relate as the envelope predicts — a width-exercising instrument
-      the point oracle cannot be. External project; hand over the axis
-      spec with the re-run request.
-- [ ] **The opsem write-up's route question** (charter OQ4, decided
-      before any writing): hand-written LaTeX rules with a citation
-      lint (rule ↔ interpreter arm + spec anchor, lint-checked) vs
-      rule skeletons DERIVED from the machine — the WP arc's mirror
-      `stepFn'` transcription machinery is the standing derivation
-      asset. User decision; record the ruling in the charter's log.
+- [x] ~~**grossmith re-run + the metamorphic axis**~~ — **DONE
+      2026-08-20 as CAMPAIGN 2** (`docs/2026-08-20_grossmith-findings-2.md`,
+      on `main` @ `7ca8908e`): 79,800 programs — 1 divergence ours
+      (`min`/`max` are not ordered events; widens BUG-062), 3
+      gc-attributed cases across 2 distinct gc bugs (§2, §3), 1
+      latitude point, plus a cross-arch discrimination control with
+      0 off-tag divergences. **The metamorphic axis now has its first
+      probe**: 6,995 sampled cases, 6,995 stable, 0 run-unstable, 0
+      optmode-unstable — read honestly by the doc as the predicted
+      result at a 1-in-79,800 rate, so the leg's demonstrated value
+      this round was as an ATTRIBUTION instrument (which side is
+      wrong), not as a sampler; its advice for next time is
+      metamorphic *compile* checks over the whole population.
+      **Two things remain owed and are NOT closed by this row**: the
+      re-run against the *widened* machine (campaign 2 measures the
+      pre-W3.2 machine, and its §8 lists what it structurally cannot
+      reach — no pointers, channels, floats, goroutines, `init`,
+      generics), and the width-exercising formulation of the axis
+      (observation SETS related as the envelope predicts). Both stay
+      with the W3.2 charter's §Parallel instruments; the campaign's
+      own follow-ups are routed below.
+- [ ] **Campaign-2 follow-up ROUTING** (from
+      `docs/2026-08-20_grossmith-findings-2.md` §9 — this row is the
+      routing table only; no item is executed here). Each of the five
+      owed follow-ups has an owner:
+
+      | item | what it owes | routed to |
+      | --- | --- | --- |
+      | **F-1** | widen BUG-062's statement (the gap is that the ordered-event set omits the value-returning BUILT-INS, not just inline `len`/`cap`) and re-scope mini-slice **A6** to enumerate built-in call sites, with `append` recorded as already-correct so A6 cannot regress it | **the build queue's A6** (`docs/language-coverage-ledger.md` §5; A6's deferral reason is triage-table §3.4). The findings doc asks that this annotate a merge ask rather than block one — A6's scope as written is known-incomplete |
+      | **F-2** | promote 5 corpus-ready probe rows (`builtins/min-max-vs-call-order/*`: 3 RED under BUG-062, 2 GREEN controls) — and, if promoted, three new red pins attributed to BUG-062 in the untriaged ratchet | **A6's guardrail set** — the greens are exactly the controls that stop A6 over-reaching, so they land with A6, not before it |
+      | **F-3** | one latitude-inventory row for the UNSEQ non-call-operand axis (type assertion + indexing witnesses; deliberately NOT a corpus case, and no strict row may pin it) | **a small docs slice** against `docs/2026-08-11_latitude-inventory.md` — W3.2-adjacent (it is a census row, and §8 of this charter's arc keeps the census true), takeable any time |
+      | **F-4** | two `spec-divergence-ledger` entries of kind `gc-bug`: the 2^32 constant-fold truncation, and the "offset too large" assembler refusal — both minimized, both upstream-reportable; the first is also the record's first case where the *oracle*, not the machine, was the wrong side | **the same small docs slice** (`docs/spec-divergence-ledger.md`); the gc-bug channel already exists from the bugfix arc's gate commit |
+      | **F-5** | hand back to grossmith the observation that its STRICT lane's `order_witness` construct can land on unsequenced points | **external, observation only** — no patch to `deps/grossmith` (trust-tools rule). Pairs with the W3.2 charter's R-1 note about the golean clone's blanket `-panic-policy` refusal |
+- [x] ~~**The opsem write-up's route question**~~ — **RULED 2026-08-20**
+      (charter §Rulings **R-2**): the DERIVED route, rule skeletons
+      extracted mechanically from the Lean arms over the WP arc's
+      mirror (`stepFn'` + its default-build drift theorem) — the
+      transcription machinery, not the document, is the asset.
+      Conditional on an explicit acceptance criterion: *a PL theorist
+      finds it pleasant to read*; the recorded fallback if generation
+      fights readability is hand-written rules with a citation lint.
+      Execution lives in charter §S6a.
+- [x] ~~**The rendering rows' observable question**~~ — **RULED
+      2026-08-20** (charter §Rulings **R-1**): the rendering-class (c)
+      rows convert to membership greens under an observable SPLIT —
+      panic event + payload kind + control flow stay forced and
+      exactly compared; the rendered TEXT is spec-unspecified latitude
+      (program-observable, but the spec defines none of these strings)
+      quotiented via membership rows with our member recorded. Same
+      doctrine as grossmith's `-panic-policy exact|kind`. C6/C8 are
+      NOT touched and stay red. Execution lives in charter §S3(b).
 - [ ] **Perf: map-iteration pick walks** (post-BUG-005 (L) surgery,
-      bugfix-arc branch). `mapIterCandidates` recomputes live entries
+      `main` @ `e193af24`). `mapIterCandidates` recomputes live entries
       minus produced keys per PICK (`mapIterLiveEntries` walk +
       produced-key filter, GoCore/Machine.lean), making a full range
       O(n²)-ish in map size and multiplying into enumerator trees at
