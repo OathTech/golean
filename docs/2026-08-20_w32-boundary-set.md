@@ -810,3 +810,49 @@ as input. For slice 5: B3; the completeness enumeration over the NEW
 set; the NPDRF/register #5 ruling. For the liveness tier: the
 FairStream carrier and `Fair`'s definition (non-precluded, §4; not
 built here).
+
+---
+
+## USER RULING — G1 (Mike, 2026-08-20)
+
+Recorded verbatim-in-substance before any surgery, per the merge
+protocol's decision-capture rule; stages C–E proceed under it.
+
+- **B1 (post-op scheduling points via the unified `.opDone` marker):
+  APPROVED as proposed** — all-ops scope, the `sched`-tagged marker
+  unifying `.spawned`, `postOp` site with slot 0 = issuer-continues,
+  spawn's BUG-040 default preserved via the `l1Sched` tag (questions
+  1, 4, 5 ruled as recommended).
+- **B2 (back-edge boundaries): APPROVED as proposed** — `atBoundary`
+  loop/mapIterK arms, `backEdge` site with slot 0 = current-continues,
+  the §5d per-site enumeration modes + explicit `allow-nonterm`
+  accounting (questions 2, 4, 6 ruled as recommended).
+- **B3 (abort window): DEFERRED**, with the evidence door open — §6's
+  probe is its trigger baseline; slice 5 owns the ruling (question 3
+  accepted as proposed).
+
+The governing principle, quoted in substance: *"make this aspect of
+the model (1) as faithful to our reasonable understanding as we can,
+and (2) as pessimistic/permissive as seems plausible. If we prove our
+theorems against a pessimistic model, they definitionally will work
+against a more optimistic model."* The proof burden is accepted as
+the price. Evidence channels named for the future: gc scheduler
+archaeology and standards-discussion mining — now partially
+discharged by `docs/2026-08-20_go-scheduling-semantics-dossier.md`
+(landed on main 2026-08-20, in this branch's history post-rebase),
+whose findings the envelope statements below cite:
+
+- **Dossier §1.1** — scheduling is deliberately unspecified (Go 1.5
+  release note: "The properties of the scheduler were never defined
+  by the language"; ILT: "there are no guarantees … Different
+  implementations may act differently"). The widening is CONSERVATIVE
+  relative to what the language licenses.
+- **Dossier §3.1** — the spec allows starvation (Mills, #65178: "the
+  runtime is theoretically allowed to produce this behavior according
+  to the language spec"); eventual scheduling is runtime INTENT, not
+  language contract. The unfair member stays in the envelope BY RIGHT.
+- **Dossier §4.3** — the wedge verdict, verbatim: "The portable model
+  should include the completing execution and an unfair execution in
+  which the needed goroutine is never selected." The B1+B2 surgery
+  implements exactly this: the completing execution becomes a member
+  (the wedge flip), and the unfair fuel-out member survives.
