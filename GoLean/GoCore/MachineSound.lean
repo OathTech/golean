@@ -501,7 +501,7 @@ theorem step_complete {c : Config} {s : ExecState} {c' : Config} {s' : ExecState
   -- The select apply rules carry their own stream (the L2 pick, slice
   -- 4): realize under exactly it.
   case selectApply =>
-    rename_i ch₀ ch₀' happly
+    rename_i ch₀ ch₀' cl₀ happly
     simp only [List.reverse_cons] at happly
     exact ⟨ch₀, ch₀', by simp [stepFn, happly]⟩
   case selectApplyPanic =>
@@ -2326,8 +2326,10 @@ theorem applySelect_ok_or_panic_any_ch {σ : ExecState}
               dsimp only
               rw [List.getElem?_eq_getElem hlt]
               cases hb : (b :: rest)[idx] with
-              | inl r => exact .inl ⟨_, rfl⟩
-              | inr msg => exact .inl ⟨_, rfl⟩
+              | mk cl sr =>
+                cases sr with
+                | inl r => exact .inl ⟨_, rfl⟩
+                | inr msg => exact .inl ⟨_, rfl⟩
 
 /-- Non-`appendSlice` wide ops dispatch through the choices-free core:
 the result is the core's, with the stream threaded through untouched —
@@ -2524,16 +2526,16 @@ theorem step_complete_any_wf_aux {c : Config} {σ : ExecState} {c' : Config}
   -- The select apply is pick-independent in apply-SUCCESS (slice 4;
   -- `applySelect_ok_or_panic_any_ch`): under any stream it lands `.ok`
   -- or a panic, and `stepFn` maps both to `.ok` configurations.
-  case selectApply clauses default? done v env k ch₀ ch₁ happly =>
+  case selectApply clauses default? done v env k ch₀ ch₁ cl₀ happly =>
     rcases applySelect_ok_or_panic_any_ch (.inl ⟨_, happly⟩) ch with
-      ⟨⟨c₂, σ₂, ch₂⟩, hap⟩ | ⟨msg, hap⟩ <;>
+      ⟨⟨c₂, σ₂, ch₂, cl₂⟩, hap⟩ | ⟨msg, hap⟩ <;>
       simp only [List.reverse_cons] at hap
     · exact ⟨(c₂, σ₂, ch₂), by simp [stepFn, hap]⟩
     · exact ⟨(.panicking [⟨runtimeErrorValue msg, false⟩] k, σ, ch),
         by simp [stepFn, hap]⟩
   case selectApplyPanic clauses default? done v msg env k ch₀ happly =>
     rcases applySelect_ok_or_panic_any_ch (.inr ⟨_, happly⟩) ch with
-      ⟨⟨c₂, σ₂, ch₂⟩, hap⟩ | ⟨msg', hap⟩ <;>
+      ⟨⟨c₂, σ₂, ch₂, cl₂⟩, hap⟩ | ⟨msg', hap⟩ <;>
       simp only [List.reverse_cons] at hap
     · exact ⟨(c₂, σ₂, ch₂), by simp [stepFn, hap]⟩
     · exact ⟨(.panicking [⟨runtimeErrorValue msg', false⟩] k, σ, ch),

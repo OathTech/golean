@@ -1097,8 +1097,11 @@ example := @GoLean.Surface.forkJoinTerminatesNormallyC
 example := @GoLean.GoCore.Machine.allStreamsOkPool
 example := @GoLean.GoCore.Machine.execProgLoop_ok_of_allStreamsOkPool
 example := @GoLean.GoCore.Machine.stepThread_oblivious
-example := @GoLean.GoCore.Machine.raceUpdate_oblivious
-example := @GoLean.GoCore.Machine.poolThreadOblivious_sel
+-- `raceUpdate_oblivious`/`poolThreadOblivious_sel` DELETED (W3.2
+-- stage B, Q2): the detector folds the step EVENT and takes no
+-- stream, so verdict stream-independence holds by signature; event
+-- equality across streams is `stepThread_oblivious`'s strengthened
+-- conclusion.
 example := @GoLean.GoCore.Machine.execProgLoop_mono
 -- Slice 6 (fuel-independence lift): sub-bound classification + the
 -- checker's fuel-monotonicity pair.

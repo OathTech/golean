@@ -697,40 +697,41 @@ theorem commitClause_sim (hS : FrameSim ρ na₀ na fr σ σF)
 
 /-! ## The select apply -/
 
--- The SelectOutcome relation: done-config renamed + FrameSim, or the
--- pre-committed pick lists pointwise related (inl: CfgSim; inr: same
--- panic message).
-def SelectOutSim (ρ : Nat → Nat) (na₀ na : Nat) (fr : Heap) :
-    SelectOutcome → SelectOutcome → Prop
-  | .done c s, .done cF sF => cF = renameConfig ρ c ∧ FrameSim ρ na₀ na fr s sF
-  | .picks l, .picks lF =>
-      ListSim (fun x xF =>
-        match x, xF with
-        | .inl r, .inl rF => CfgSim ρ na₀ na fr r rF
-        | .inr m, .inr mF => mF = m
-        | _, _ => False) l lF
-  | _, _ => False
+-- The SelectOutcome relation: done-config renamed + FrameSim (with
+-- the emitted commit identity renamed — stage B's Q2 payload), or the
+-- pre-committed pick lists pointwise related (clause renamed; inl:
+-- CfgSim; inr: same panic message).
 
 /-- The pointwise relation of `SelectOutSim`'s `.picks` arm, named so
 the `mapM` induction and the `applySelect` pick-transfer can traverse
 it without restating the match. -/
 private def PickRel (ρ : Nat → Nat) (na₀ na : Nat) (fr : Heap) :
-    Sum (Config × ExecState) String → Sum (Config × ExecState) String → Prop
-  | .inl r, .inl rF => CfgSim ρ na₀ na fr r rF
-  | .inr m, .inr mF => mF = m
+    (EvClause × Sum (Config × ExecState) String) →
+      (EvClause × Sum (Config × ExecState) String) → Prop
+  | (cl, x), (clF, xF) =>
+      clF = renameEvClause ρ cl ∧
+      match x, xF with
+      | .inl r, .inl rF => CfgSim ρ na₀ na fr r rF
+      | .inr m, .inr mF => mF = m
+      | _, _ => False
+
+def SelectOutSim (ρ : Nat → Nat) (na₀ na : Nat) (fr : Heap) :
+    SelectOutcome → SelectOutcome → Prop
+  | .done c s cl?, .done cF sF clF? =>
+      cF = renameConfig ρ c ∧ FrameSim ρ na₀ na fr s sF
+        ∧ clF? = cl?.map (renameEvClause ρ)
+  | .picks l, .picks lF => ListSim (PickRel ρ na₀ na fr) l lF
   | _, _ => False
 
 private theorem selectOutSim_of_picks
-    {l lF : List (Sum (Config × ExecState) String)}
+    {l lF : List (EvClause × Sum (Config × ExecState) String)}
     (h : ListSim (PickRel ρ na₀ na fr) l lF) :
-    SelectOutSim ρ na₀ na fr (.picks l) (.picks lF) :=
-  listSim_imp (fun a b hab => by cases a <;> cases b <;> exact hab) h
+    SelectOutSim ρ na₀ na fr (.picks l) (.picks lF) := h
 
 private theorem selectOutSim_picks
-    {l lF : List (Sum (Config × ExecState) String)}
+    {l lF : List (EvClause × Sum (Config × ExecState) String)}
     (h : SelectOutSim ρ na₀ na fr (.picks l) (.picks lF)) :
-    ListSim (PickRel ρ na₀ na fr) l lF :=
-  listSim_imp (fun a b hab => by cases a <;> cases b <;> exact hab) h
+    ListSim (PickRel ρ na₀ na fr) l lF := h
 
 /-- `evalClauses` never panics: its failures are `stuck` (operand-arity
 drift) and `unsupported` (receive-target assignees), both vacuous under
@@ -786,8 +787,8 @@ theorem applySelectCore_sim (hS : FrameSim ρ na₀ na fr σ σF)
   cases r with
   | nil =>
       cases default? with
-      | some d => exact ExSim.ok ⟨rfl, hS⟩
-      | none => exact ExSim.ok ⟨rfl, hS⟩
+      | some d => exact ExSim.ok ⟨rfl, hS, rfl⟩
+      | none => exact ExSim.ok ⟨rfl, hS, rfl⟩
   | cons c₁ rest =>
       cases rest with
       | nil =>
@@ -797,7 +798,7 @@ theorem applySelectCore_sim (hS : FrameSim ρ na₀ na fr σ σF)
               ∧ FrameSim ρ na₀ na fr p.2 pF.2 := hp
           obtain ⟨c', s'⟩ := p
           obtain ⟨cF', sF'⟩ := pF
-          exact ExSim.ok ⟨hp'.1, hp'.2⟩
+          exact ExSim.ok ⟨hp'.1, hp'.2, rfl⟩
       | cons c₂ rest₂ =>
           refine ExSim.bind
             (mapM_sim (t := renameEvClause ρ) (R := PickRel ρ na₀ na fr)
@@ -808,12 +809,12 @@ theorem applySelectCore_sim (hS : FrameSim ρ na₀ na fr σ σF)
             | ok r =>
                 obtain ⟨rr, hrF, hrel⟩ := hcc.ok_inv hc
                 rw [hrF]
-                exact ExSim.ok hrel
+                exact ExSim.ok ⟨rfl, hrel⟩
             | error e =>
                 cases e with
                 | panic msg =>
                     rw [hcc.panic_inv hc]
-                    exact ExSim.ok rfl
+                    exact ExSim.ok ⟨rfl, rfl⟩
                 | _ => exact ExSim.skip fun _ h => GoError.noConfusion h
           · intro l lF hl
             exact ExSim.ok (selectOutSim_of_picks hl)
@@ -821,9 +822,10 @@ theorem applySelectCore_sim (hS : FrameSim ρ na₀ na fr σ σF)
 theorem applySelect_sim (hS : FrameSim ρ na₀ na fr σ σF)
     (clauses : List (SelectClauseHead × Stmt)) (default? : Option Stmt)
     (vs : List GoValue) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    ExSim (fun (r rF : Config × ExecState × Choices) =>
+    ExSim (fun (r rF : Config × ExecState × Choices × Option EvClause) =>
         rF.1 = renameConfig ρ r.1 ∧ FrameSim ρ na₀ na fr r.2.1 rF.2.1
-          ∧ rF.2.2 = r.2.2)
+          ∧ rF.2.2.1 = r.2.2.1
+          ∧ rF.2.2.2 = r.2.2.2.map (renameEvClause ρ))
       (applySelect σ clauses default? vs env k ch)
       (applySelect σF (renameSelectClauses ρ clauses)
         (renameOptStmt ρ default?) (renameValueList ρ vs)
@@ -832,16 +834,17 @@ theorem applySelect_sim (hS : FrameSim ρ na₀ na fr σ σF)
   refine ExSim.bind (applySelectCore_sim hS clauses default? vs env k) ?_
   intro o oF ho
   cases o with
-  | done c' s' =>
+  | done c' s' cl? =>
       cases oF with
-      | done cF' sF' =>
+      | done cF' sF' clF? =>
           have hd : cF' = renameConfig ρ c'
-              ∧ FrameSim ρ na₀ na fr s' sF' := ho
-          exact ExSim.ok ⟨hd.1, hd.2, rfl⟩
+              ∧ FrameSim ρ na₀ na fr s' sF'
+              ∧ clF? = cl?.map (renameEvClause ρ) := ho
+          exact ExSim.ok ⟨hd.1, hd.2.1, rfl, hd.2.2⟩
       | picks _ => exact False.elim ho
   | picks commits =>
       cases oF with
-      | done _ _ => exact False.elim ho
+      | done _ _ _ => exact False.elim ho
       | picks commitsF =>
           have hls := selectOutSim_picks ho
           have hlen : commits.length = commitsF.length := hls.length_eq
@@ -853,24 +856,28 @@ theorem applySelect_sim (hS : FrameSim ρ na₀ na fr σ σF)
           · rw [h1, h2]
             exact ExSim.internal'
           · rw [ha, hb]
-            cases a with
+            obtain ⟨cla, xa⟩ := a
+            obtain ⟨clb, xb⟩ := b
+            obtain ⟨hcl, hab⟩ := hab
+            subst hcl
+            cases xa with
             | inl r =>
-                cases b with
+                cases xb with
                 | inl rF =>
                     have hr : rF.1 = renameConfig ρ r.1
                         ∧ FrameSim ρ na₀ na fr r.2 rF.2 := hab
                     obtain ⟨c', s'⟩ := r
                     obtain ⟨cF', sF'⟩ := rF
-                    exact ExSim.ok ⟨hr.1, hr.2, rfl⟩
+                    exact ExSim.ok ⟨hr.1, hr.2, rfl, rfl⟩
                 | inr m => exact False.elim hab
             | inr m =>
-                cases b with
+                cases xb with
                 | inl rF => exact False.elim hab
                 | inr mF =>
                     have hm : mF = m := hab
                     subst hm
                     exact ExSim.ok
-                      ⟨(renameConfig_panicking_rt _ _).symm, hS, rfl⟩
+                      ⟨(renameConfig_panicking_rt _ _).symm, hS, rfl, rfl⟩
 
 end
 

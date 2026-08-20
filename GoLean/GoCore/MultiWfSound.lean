@@ -1051,11 +1051,11 @@ set_option maxHeartbeats 1600000 in
 shared state wf (allocator monotone, types unchanged), never shrinks
 the pool, and leaves every slot bounded and iteration-typed. -/
 theorem stepThread_wf {s : ExecState} {threads : Array Config} {i : Nat}
-    {ch ch' : Choices} {ts' : Array Config} {s' : ExecState}
+    {ch ch' : Choices} {ts' : Array Config} {s' : ExecState} {ev : StepEvent}
     (hw : StateWf s)
     (hts : ∀ t (ht : t < threads.size), ConfigWf s.nextAddr threads[t]
       ∧ Config.itersNormalized s.types threads[t] = true)
-    (h : stepThread s threads i ch = .ok (ts', s', ch')) :
+    (h : stepThread s threads i ch = .ok (ts', s', ch', ev)) :
     StateWf s' ∧ s'.types = s.types ∧ s.nextAddr ≤ s'.nextAddr
       ∧ threads.size ≤ ts'.size
       ∧ ∀ t (ht : t < ts'.size), ConfigWf s'.nextAddr ts'[t]
@@ -1070,7 +1070,7 @@ theorem stepThread_wf {s : ExecState} {threads : Array Config} {i : Nat}
     · simp only [hblc, reduceIte, bind_eq_ok] at h
       obtain ⟨⟨c₂, s₂⟩, hres, h⟩ := h
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
       obtain ⟨q1, q2, q3, q4, q5⟩ := resumeThread_wf hw hc hic hres
       exact ⟨q1, q3, q4, by simp, pool_set1_wf q4 hts q2 q5⟩
     · simp only [Bool.not_eq_true] at hblc
@@ -1079,7 +1079,7 @@ theorem stepThread_wf {s : ExecState} {threads : Array Config} {i : Nat}
       | some k =>
         rw [hsc] at h
         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl, rfl, rfl⟩ := h
         obtain rfl := spawnedCont_shape hsc
         refine ⟨hw, rfl, Nat.le_refl _, by simp, ?_⟩
         refine pool_set1_wf (Nat.le_refl _) hts ?_ ?_
@@ -1094,7 +1094,7 @@ theorem stepThread_wf {s : ExecState} {threads : Array Config} {i : Nat}
           simp only [bind_eq_ok] at h
           obtain ⟨⟨parent', child, s₂⟩, hspawn, h⟩ := h
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl, rfl⟩ := h
           obtain ⟨hcvb, hargsb, hkb⟩ := spawnPlan_locSup hsp
           obtain ⟨q1, q2, q3, q4, q5, q6, q7⟩ := spawnStep_wf hw
             (Nat.le_trans hcvb hc) (Nat.le_trans hargsb hc)
@@ -1104,7 +1104,7 @@ theorem stepThread_wf {s : ExecState} {threads : Array Config} {i : Nat}
         | none =>
           rw [hsp] at h
           simp only [bind_eq_ok] at h
-          obtain ⟨⟨plan, ch₁⟩, hplan, h⟩ := h
+          obtain ⟨⟨plan, ch₁, ps₁⟩, hplan, h⟩ := h
           cases harr : arrivalCases s threads i c with
           | error e =>
             rw [arrivalPlan_of_error (ch := ch) harr] at hplan
@@ -1114,31 +1114,80 @@ theorem stepThread_wf {s : ExecState} {threads : Array Config} {i : Nat}
             | cellPath =>
               rw [arrivalPlan_of_cellPath (ch := ch) harr] at hplan
               simp only [Except.ok.injEq, Prod.mk.injEq] at hplan
-              obtain ⟨hp1, hp2⟩ := hplan
+              obtain ⟨hp1, hp2, hp3⟩ := hplan
               subst hp1
               subst hp2
+              subst hp3
               dsimp only at h
-              simp only [bind_eq_ok] at h
-              obtain ⟨⟨c₂, s₂, ch₂⟩, hstep, h⟩ := h
-              simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-              obtain ⟨rfl, rfl, rfl⟩ := h
-              have hstepr := stepFn_sound hstep
-              obtain ⟨q1, q2, q3, q4⟩ := step_preserves_wf_loc hstepr hw hc
-              have q5 := step_preserves_iters hstepr hic
-              exact ⟨q1, q3, q4, by simp, pool_set1_wf q4 hts q2 q5⟩
+              cases hselp : selectApplyPlan c with
+              | none =>
+                rw [hselp] at h
+                dsimp only at h
+                simp only [bind_eq_ok] at h
+                obtain ⟨⟨c₂, s₂, ch₂⟩, hstep, h⟩ := h
+                simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+                obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+                have hstepr := stepFn_sound hstep
+                obtain ⟨q1, q2, q3, q4⟩ := step_preserves_wf_loc hstepr hw hc
+                have q5 := step_preserves_iters hstepr hic
+                exact ⟨q1, q3, q4, by simp, pool_set1_wf q4 hts q2 q5⟩
+              | some p =>
+                obtain ⟨v, clauses, default?, done, env, k'⟩ := p
+                obtain rfl := selectApplyPlan_shape hselp
+                rw [hselp] at h
+                dsimp only at h
+                have hcomp : selectClausesSup clauses ≤ s.nextAddr
+                    ∧ optStmtSup default? ≤ s.nextAddr
+                    ∧ goValueListSup ((v :: done).reverse) ≤ s.nextAddr
+                    ∧ LocalEnv.locSup env ≤ s.nextAddr
+                    ∧ Cont.locSup k' ≤ s.nextAddr := by
+                  rw [goValueListSup_reverse]
+                  simp only [ConfigWf, Config.locSup, Cont.locSup,
+                    goValueListSup, exprListSup, Nat.max_le] at hc
+                  simp only [goValueListSup]
+                  omega
+                obtain ⟨hb1, hb2, hb3, hb4, hb5⟩ := hcomp
+                cases happly : applySelect s clauses default?
+                    ((v :: done).reverse) env k' ch with
+                | ok r₂ =>
+                  obtain ⟨c₂, s₂, ch₂, cl?⟩ := r₂
+                  rw [happly] at h
+                  simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+                  obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+                  obtain ⟨q1, q2, q3, q4⟩ :=
+                    applySelect_wf hw hb1 hb2 hb3 hb4 hb5 happly
+                  have hkin : Cont.itersNormalized s.types k' = true := by
+                    simpa [Config.itersNormalized, Cont.itersNormalized] using hic
+                  have q5 := applySelect_itersNormalized happly hkin
+                  exact ⟨q1, q3, q4, by simp, pool_set1_wf q4 hts q2 q5⟩
+                | error e =>
+                  rw [happly] at h
+                  cases e <;>
+                    simp only [throw, throwThe, MonadExceptOf.throw, pure_eq_ok,
+                      Except.ok.injEq, Prod.mk.injEq, reduceCtorEq] at h
+                  case panic msg =>
+                  obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+                  refine ⟨hw, rfl, Nat.le_refl _, by simp, ?_⟩
+                  refine pool_set1_wf (Nat.le_refl _) hts ?_ ?_
+                  · simp only [ConfigWf, Config.locSup, Cont.locSup,
+                      goValueListSup, exprListSup, Nat.max_le] at hc ⊢
+                    simp only [panicChainSup, runtimeErrorValue_locSup]
+                    omega
+                  · simpa [Config.itersNormalized, Cont.itersNormalized] using hic
             | single bc cands =>
               rw [arrivalPlan_of_single (ch := ch) harr] at hplan
               simp only [Except.ok.injEq, Prod.mk.injEq] at hplan
-              obtain ⟨hp1, hp2⟩ := hplan
+              obtain ⟨hp1, hp2, hp3⟩ := hplan
               subst hp1
               subst hp2
+              subst hp3
               obtain ⟨hbcb, hbci⟩ := arrivalCases_single_wf hw hc hic harr
               cases cands with
               | nil => simp [throw, throwThe, MonadExceptOf.throw] at h
               | cons cand rest =>
                   dsimp only at h
-                  rcases hcons : Choices.consumeAt .l4Waiter
-                      (cand :: rest).length ch with ⟨idx, ch₂⟩
+                  rcases hcons : Choices.consumeAtE .l4Waiter
+                      (cand :: rest).length ch with ⟨idx, ch₂, ps₂⟩
                   rw [hcons] at h
                   dsimp only at h
                   cases hget : (cand :: rest)[idx]? with
@@ -1150,7 +1199,7 @@ theorem stepThread_wf {s : ExecState} {threads : Array Config} {i : Nat}
                     simp only [bind_eq_ok] at h
                     obtain ⟨⟨ts₂, s₂⟩, hpair, h⟩ := h
                     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-                    obtain ⟨rfl, rfl, rfl⟩ := h
+                    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
                     obtain ⟨q1, q2, q3, q4, q5⟩ := applyPairing_wf hw hts hbcb
                       hbci hpair
                     exact ⟨q1, q2, q3, by omega, q5⟩
@@ -1164,9 +1213,10 @@ theorem stepThread_wf {s : ExecState} {threads : Array Config} {i : Nat}
               | some o =>
                 rw [hget] at hplan
                 simp only [Except.ok.injEq, Prod.mk.injEq] at hplan
-                obtain ⟨hp1, hp2⟩ := hplan
+                obtain ⟨hp1, hp2, hp3⟩ := hplan
                 subst hp1
                 subst hp2
+                subst hp3
                 obtain ⟨hpairb, hcommitb⟩ := arrivalCases_multi_wf hw hc hic
                   harr hget
                 cases o with
@@ -1176,8 +1226,8 @@ theorem stepThread_wf {s : ExecState} {threads : Array Config} {i : Nat}
                   | nil => simp [throw, throwThe, MonadExceptOf.throw] at h
                   | cons cand rest =>
                       dsimp only at h
-                      rcases hcons2 : Choices.consumeAt .l4Waiter
-                          (cand :: rest).length chs with ⟨idx, ch₂⟩
+                      rcases hcons2 : Choices.consumeAtE .l4Waiter
+                          (cand :: rest).length chs with ⟨idx, ch₂, ps₂⟩
                       rw [hcons2] at h
                       dsimp only at h
                       cases hget2 : (cand :: rest)[idx]? with
@@ -1190,7 +1240,7 @@ theorem stepThread_wf {s : ExecState} {threads : Array Config} {i : Nat}
                         obtain ⟨⟨ts₂, s₂⟩, hpair, h⟩ := h
                         simp only [pure_eq_ok, Except.ok.injEq,
                           Prod.mk.injEq] at h
-                        obtain ⟨rfl, rfl, rfl⟩ := h
+                        obtain ⟨rfl, rfl, rfl, rfl⟩ := h
                         obtain ⟨q1, q2, q3, q4, q5⟩ := applyPairing_wf hw hts
                           hbcb hbci hpair
                         exact ⟨q1, q2, q3, by omega, q5⟩
@@ -1200,7 +1250,7 @@ theorem stepThread_wf {s : ExecState} {threads : Array Config} {i : Nat}
                   simp only [bind_eq_ok] at h
                   obtain ⟨⟨c₂, s₂⟩, hcom, h⟩ := h
                   simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-                  obtain ⟨rfl, rfl, rfl⟩ := h
+                  obtain ⟨rfl, rfl, rfl, rfl⟩ := h
                   obtain ⟨q1, q2, q3, q4⟩ := commitClause_wf hw hclb henvb
                     hkb hcom
                   have q5 := commitClause_itersNormalized hcom hki
@@ -1210,17 +1260,18 @@ theorem stepThread_wf {s : ExecState} {threads : Array Config} {i : Nat}
 thread-indexed invariant. This is the slice-2 scaffold's owed theorem
 (`Multi.lean`, `MultiWf`'s docstring): the invariant carrier is now a
 PRESERVED invariant, not a definition awaiting one. -/
-theorem stepMulti_wf {m m' : MultiConfig} {ch ch' : Choices}
-    (hwf : MultiWf m) (h : stepMulti m ch = .ok (m', ch')) : MultiWf m' := by
+theorem stepMulti_wf {m m' : MultiConfig} {ch ch' : Choices} {ev : StepEvent}
+    (hwf : MultiWf m) (h : stepMulti m ch = .ok (m', ch', ev)) : MultiWf m' := by
   obtain ⟨hs, hcur, hth⟩ := hwf
   have hstep : ∀ i, i < m.threads.size →
-      ∀ {ch₀ : Choices}, stepThreadInto m i ch₀ = .ok (m', ch') → MultiWf m' := by
-    intro i hi ch₀ hinto
+      ∀ {ch₀ : Choices} {ev₀ : StepEvent},
+        stepThreadInto m i ch₀ = .ok (m', ch', ev₀) → MultiWf m' := by
+    intro i hi ch₀ ev₀ hinto
     unfold stepThreadInto at hinto
     simp only [bind_eq_ok] at hinto
-    obtain ⟨⟨ts, s₂, ch₂⟩, hst, hinto⟩ := hinto
+    obtain ⟨⟨ts, s₂, ch₂, ev₂⟩, hst, hinto⟩ := hinto
     simp only [pure_eq_ok, Except.ok.injEq] at hinto
-    obtain ⟨rfl, rfl⟩ := hinto
+    obtain ⟨rfl, rfl, rfl⟩ := hinto
     obtain ⟨q1, q2, q3, q4, q5⟩ := stepThread_wf hs hth hst
     refine ⟨q1, Nat.lt_of_lt_of_le hi q4, ?_⟩
     intro t ht
@@ -1239,15 +1290,19 @@ theorem stepMulti_wf {m m' : MultiConfig} {ch ch' : Choices}
       | cons r0 rest =>
         rw [hrs] at h
         dsimp only at h
-        rcases hcons : Choices.consumeAt .l1Sched (r0 :: rest).length ch
-          with ⟨pick, ch₁⟩
+        rcases hcons : Choices.consumeAtE .l1Sched (r0 :: rest).length ch
+          with ⟨pick, ch₁, ps⟩
         rw [hcons] at h
         cases hget : (r0 :: rest)[pick]? with
         | none => rw [hget] at h; cases h
         | some i =>
           rw [hget] at h
+          simp only [bind_eq_ok] at h
+          obtain ⟨⟨m₂, ch₂, ev₂⟩, hinto, h⟩ := h
+          simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl, rfl⟩ := h
           refine hstep i
-            (runnableIdxs_lt (s := m.shared) (ts := m.threads) ?_) h
+            (runnableIdxs_lt (s := m.shared) (ts := m.threads) ?_) hinto
           rw [hrs]
           exact List.mem_of_getElem? hget
     · simp only [Bool.not_eq_true] at hb

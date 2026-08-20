@@ -570,7 +570,9 @@ The semantic core's consume sites and their accountant arms:
    accountants (via the same `applySelectCore`).
 Non-consuming by signature (no arm needed): `resumeThread`,
 `spawnStep`, `commitClause`, `applyPairing`, the `.spawned` strip,
-`raceUpdate` (which REPLICATES consumption but draws nothing), and —
+`raceUpdate` (stage B: it folds the step's emitted `StepEvent` and
+takes NO stream at all — the old consumption replication is deleted),
+and —
 spec-parity slice 2 — `applySyncOp` and the sync wake path: the sync
 registry entry adds NEW BOUNDARIES to `Config.atBoundary` (row 1's
 L1 bound reuses the machine's `runnableIdxs`/`atBoundary` directly,
@@ -767,8 +769,8 @@ def enumPoolRun (resultLocs : List Loc) :
                       match fuel with
                       | 0 => throw .fuelOut
                       | fuel + 1 => do
-                          let (m', choices') ← GoCore.Machine.stepMulti m choices₁
-                          match GoCore.Machine.raceUpdate m.shared m.threads choices₁ m' r with
+                          let (m', choices', ev) ← GoCore.Machine.stepMulti m choices₁
+                          match GoCore.Machine.raceUpdate m.shared m.threads ev m' r with
                           | .error .raceDetected =>
                               return ("race", errorJson .raceDetected, choices')
                           | .error e => throw e
@@ -781,8 +783,8 @@ def enumPoolRun (resultLocs : List Loc) :
                   match fuel with
                   | 0 => throw .fuelOut
                   | fuel + 1 => do
-                      let (m', choices') ← GoCore.Machine.stepMulti m choices
-                      match GoCore.Machine.raceUpdate m.shared m.threads choices m' r with
+                      let (m', choices', ev) ← GoCore.Machine.stepMulti m choices
+                      match GoCore.Machine.raceUpdate m.shared m.threads ev m' r with
                       | .error .raceDetected =>
                           return ("race", errorJson .raceDetected, choices')
                       | .error e => throw e
@@ -1222,11 +1224,11 @@ partial def poolStepDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
       match GoCore.Machine.stepMulti m (picks ++ [0]) with
       | .error e =>
           .error s!"machine step failed under pick assignment {path.reverse} — cannot certify the observation set: {renderGoError e}"
-      | .ok (m', leftover) =>
+      | .ok (m', leftover, ev) =>
           if leftover != [0] then
             .error s!"consumption accountant drift under {path.reverse}: sentinel-suffixed step left {leftover} (expected the sentinel alone) — the accountant {if leftover.isEmpty then "MISSED a consumption site (the machine drew the sentinel)" else "over-counted (supplied picks went unconsumed)"}; driver-copy drift, cannot certify"
           else
-            match GoCore.Machine.raceUpdate m.shared m.threads picks m' r with
+            match GoCore.Machine.raceUpdate m.shared m.threads ev m' r with
             | .error .raceDetected =>
                 recordLeaf ctx { out with steps := out.steps + 1 } path
                   "race" (errorJson .raceDetected) path.length

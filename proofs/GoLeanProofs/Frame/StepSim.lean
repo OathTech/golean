@@ -459,13 +459,13 @@ theorem stepFn_sim {ρ : Nat → Nat} {na₀ na : Nat} {fr : Heap}
     exact ExSim.ok ⟨by ren_simp_only hinj, hS, rfl⟩
   -- select apply: ok / panic
   case case124 =>
-    rename_i v clauses default? done env k' c' s' choices' happ
+    rename_i v clauses default? done env k' c' s' choices' cl? happ
     have hsim := applySelect_sim (ρ := ρ) hS clauses default?
       ((v :: done).reverse) env k' ch
     simp only [renameValueList_reverse, renameValueList] at hsim
     obtain ⟨rF, hF, hrel⟩ := hsim.ok_inv happ
-    obtain ⟨cF, sF2, chF2⟩ := rF
-    obtain ⟨hc, hst, hch⟩ := hrel
+    obtain ⟨cF, sF2, chF2, clF2⟩ := rF
+    obtain ⟨hc, hst, hch, hcl⟩ := hrel
     ren_simp_only hinj
     rw [hF]
     exact ExSim.ok ⟨hc, hst, hch⟩
