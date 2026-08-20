@@ -887,7 +887,7 @@ theorem stepFn_pick_bind {σ σ' : ExecState} {base : Option Loc}
   have hget : (toEntries rem)[idx]?
       = some (.int p.1 .uint64, .int (p.2 : Int) .uint64) :=
     toEntries_getElem? rem idx hp
-  simp only [stepFn, hcands, Bind.bind, Except.bind, hne,
+  simp only [stepFn, Choices.consumeAt_mapIter, hcands, Bind.bind, Except.bind, hne,
     Bool.false_eq_true, if_false, hmand]
   rw [show (if mand = true then 0 else 1) = (if mand then 0 else 1)
       from rfl]

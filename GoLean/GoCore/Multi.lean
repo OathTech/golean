@@ -25,10 +25,11 @@ Design points (docs/2026-08-06_channels-arc-design.md):
   fork" is a registry op of its own, so a child can preempt a
   sync-free parent segment — goroutine exit, parked-blocked configs);
   between boundaries the running goroutine steps without any scheduler
-  involvement. The scheduler `Choices` site is consumed ONLY when
-  `|runnable| > 1` — `Choices.consume` pops even at bound 1, so
-  unconditional consumption would desynchronize every existing
-  adversarial-stream run; sequential conservation depends on this.
+  involvement. The scheduler `Choices` site (`ChoiceSite.l1Sched`) is
+  consumed ONLY when `|runnable| > 1` — its declared policy
+  (`consumeAtOne := false`): a raw pop at bound 1 would desynchronize
+  every existing adversarial-stream run; sequential conservation
+  depends on this.
 
 * **D7 — pairing over waiter queues, WITH gc's waiter-queue
   PRIORITY** (re-designed at the S2 audit response — the original
@@ -717,7 +718,9 @@ def arrivalPlan (s : ExecState) (threads : Array Config) (i : Nat)
   | .cellPath => return (none, ch)
   | .single bc cands => return (some (.pair bc cands), ch)
   | .multi os =>
-      let (idx, ch') := ch.consume os.length
+      -- `ChoiceSite.l2Arrival` (the census row): bound = the ready
+      -- count, ≥ 2 by construction of `.multi`.
+      let (idx, ch') := Choices.consumeAt .l2Arrival os.length ch
       match os[idx]? with
       | some o => return (some o, ch')
       | none => throw (.internal "select L2 ready pick out of range")
@@ -884,12 +887,12 @@ def stepThread (s : ExecState) (threads : Array Config) (i : Nat)
           | (some (.pair bc cs), ch₁) =>
               match cs with
               | [] => throw (.internal "empty arrival pairing plan")
-              | [cand] => do
-                  let (ts', s'') ← applyPairing s threads i bc cand
-                  return (ts', s'', ch₁)
-              | _ :: _ :: _ => do
-                  -- L4: any matching waiter (consumed only at width > 1)
-                  let (idx, ch₂) := ch₁.consume cs.length
+              | _ :: _ => do
+                  -- L4 (`ChoiceSite.l4Waiter`): any matching waiter.
+                  -- The singleton non-consumption that used to be a
+                  -- caller-side special case here is now the site's
+                  -- declared policy (`consumeAtOne := false`).
+                  let (idx, ch₂) := Choices.consumeAt .l4Waiter cs.length ch₁
                   match cs[idx]? with
                   | some cand => do
                       let (ts', s'') ← applyPairing s threads i bc cand
@@ -929,9 +932,13 @@ def stepMulti (m : MultiConfig) (ch : Choices) :
     if c.atBoundary then
       match runnableIdxs m.shared m.threads with
       | [] => throw .deadlock
-      | [i] => stepThreadInto m i ch
       | rs => do
-          let (pick, ch₁) := ch.consume rs.length
+          -- L1 (`ChoiceSite.l1Sched`): the sole-runnable
+          -- non-consumption that used to be a caller-side `[i]`
+          -- special case is now the site's declared policy
+          -- (`consumeAtOne := false`) — sequential conservation's
+          -- hinge, as a table row.
+          let (pick, ch₁) := Choices.consumeAt .l1Sched rs.length ch
           match rs[pick]? with
           | some i => stepThreadInto m i ch₁
           | none => throw (.internal "scheduler pick out of range")
@@ -1244,16 +1251,15 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (chPre : Choices)
                     -- reschedule branch ran and the L1 pick was
                     -- consumed iff |runnable| > 1 over the PRE pool;
                     -- then the arrival analysis' L2 pick (the same
-                    -- pure `arrivalCases` + `Choices.consume` the step
-                    -- used), then `applySelect`'s L2 on the cell path.
+                    -- pure `arrivalCases` + `Choices.consumeAt` the
+                    -- step used), then `applySelect`'s L2 on the cell
+                    -- path.
                     -- Deterministic given the stream; consumes nothing.
                     let rs := runnableIdxs sPre tsPre
-                    let ch₁ :=
-                      if rs.length > 1 then (chPre.consume rs.length).2
-                      else chPre
+                    let ch₁ := (Choices.consumeAt .l1Sched rs.length chPre).2
                     match ← arrivalCases sPre tsPre i cPre with
                     | .multi os =>
-                        let (sel, _) := ch₁.consume os.length
+                        let (sel, _) := Choices.consumeAt .l2Arrival os.length ch₁
                         (match os[sel]? with
                         | some (.commit cl _ _) =>
                             raceCommitClauseEvent sPre i r cl
@@ -1265,7 +1271,7 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (chPre : Choices)
                         | [] => return r  -- default taken
                         | [cl] => raceCommitClauseEvent sPre i r cl
                         | ready =>
-                            let (idx, _) := ch₁.consume ready.length
+                            let (idx, _) := Choices.consumeAt .l2Entry ready.length ch₁
                             (match ready[idx]? with
                             | some cl => raceCommitClauseEvent sPre i r cl
                             | none => return r)
@@ -1426,8 +1432,9 @@ def execProgLoop : Nat → MultiConfig → RaceState → Choices →
                 (match runnableIdxs m.shared m.threads with
                 | [] => return (out, choices)
                 | _ :: _ =>
-                    -- The main-exit window (L5): 0 = exit, 1 = step.
-                    let (pick, choices₁) := choices.consume 2
+                    -- The main-exit window (L5, `ChoiceSite.l5ExitWindow`):
+                    -- 0 = exit, 1 = step.
+                    let (pick, choices₁) := Choices.consumeAt .l5ExitWindow 2 choices
                     if pick == 0 then return (out, choices₁)
                     else
                       match fuel with
