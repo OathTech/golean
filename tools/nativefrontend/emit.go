@@ -6755,6 +6755,12 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 		if node, handled, err := e.emitFmtCall(c, sel); handled || err != nil {
 			return node, handled, err
 		}
+		// The H-14 package-variable method desugar (fmtdesugar.go):
+		// binary.LittleEndian.{Uint64,PutUint64} to their shims;
+		// unmodeled members of a listed variable refuse in-hook.
+		if node, handled, err := e.emitBinaryVarMethodCall(c, sel); handled || err != nil {
+			return node, handled, err
+		}
 		// Qualified call into a SOURCE package (`tracker.F(x)` — W1.1):
 		// a static call to the path-qualified FuncId. Stdlib-qualified
 		// selectors fall through to the standing method machinery and

@@ -1,16 +1,16 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-20 (raft W4.1 item 3 — the election-jitter CHOICE
-#   SITE, subject-delta D-11 (H-15, G-1 retired);
-#   commit: this commit, raft-w41)
-#   re-pin reason: 1 NEW id and ZERO movement on the 2293 pre-existing
-#   ids — exactly the flip predicted before the run
-#   (docs/raft-w41-log.md item 3):
-#     NEW/PASS at stage membership (1): maps/jitter-draw — the D-11
-#       draw shape as a membership row; the machine enumerates exactly
-#       {5..9} = [electionTimeout, 2*electionTimeout) and every go-run
-#       sample lands inside (all 5 members exhibited on the recording
-#       run).
-#   counts: 2294 cases, 2152 PASS / 142 FAIL (was 2293, 2151/142)
+# recorded: 2026-08-20 (raft W4.1 item 4 — the smalls: strings.Join
+#   (H-17) + bytes.Equal (H-13) as E5 shims, and
+#   binary.LittleEndian.Uint64/PutUint64 (H-14) as the package-variable
+#   method desugar; commit: this commit, raft-w41)
+#   re-pin reason: 12 NEW ids, all PASS, and ZERO movement on the 2294
+#   pre-existing ids — exactly the flips predicted before the run
+#   (docs/raft-w41-log.md item 4):
+#     NEW/PASS (12): strings/join-conformance/* (5 — incl. the newRaft
+#       shape), bytes/equal-conformance/* (3 — incl. nil==empty TRUE),
+#       binary/little-endian/* (4 — incl. the bounds-check panic and
+#       the read_only.go heartbeat-ctx shape).
+#   counts: 2306 cases, 2164 PASS / 142 FAIL (was 2294, 2152/142)
 #   frontend: native (tools/nativefrontend + NativeToIR)
 # columns: result<TAB>id<TAB>stage
 result	id	stage
@@ -38,6 +38,10 @@ PASS	assign-order/conversion-call-eval-once/define	-
 PASS	assign-order/target-check-vs-rhs/index-target	-
 PASS	assign-order/target-check-vs-rhs/nil-deref-target	-
 PASS	assign-order/target-check-vs-rhs/nil-field-target	-
+PASS	binary/little-endian/golden	-
+PASS	binary/little-endian/heartbeat-ctx-shape	-
+PASS	binary/little-endian/roundtrip	-
+PASS	binary/little-endian/short-read	-
 PASS	binop-order/operand-panic-vs-call/call-before-left	-
 PASS	binop-order/operand-panic-vs-call/call-before-left-div	-
 PASS	binop-order/operand-panic-vs-call/left-first	-
@@ -144,6 +148,9 @@ PASS	builtins/statement-position/copy-stmt-string-source	-
 PASS	builtins/statement-position/recover-stmt-in-defer	-
 PASS	builtins/statement-position/recover-stmt-no-panic	-
 PASS	builtins/statement-position/recover-stmt-outside-defer	-
+PASS	bytes/equal-conformance/basic	-
+PASS	bytes/equal-conformance/nil-empty	-
+PASS	bytes/equal-conformance/step-shape	-
 PASS	channels/buffered-basic	-
 PASS	channels/close-closed-panic	-
 PASS	channels/close-edge/defer-close	-
@@ -2132,6 +2139,11 @@ PASS	strings/fields-conformance/single	-
 PASS	strings/fields-conformance/unicode-non-space	-
 PASS	strings/fields-conformance/unicode-space	-
 PASS	strings/index-eval-order	-
+PASS	strings/join-conformance/basic	-
+PASS	strings/join-conformance/empty-sep	-
+PASS	strings/join-conformance/empty-slice	-
+PASS	strings/join-conformance/newraft-shape	-
+PASS	strings/join-conformance/single	-
 PASS	strings/literal-edge/interpreted-nul-byte	-
 PASS	strings/literal-edge/interpreted-octal-hex-escapes	-
 PASS	strings/literal-edge/interpreted-simple-escapes	-

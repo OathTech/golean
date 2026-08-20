@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+# H-14 guardrails (raft W4.1 item 4): binary.LittleEndian.{Uint64,
+# PutUint64} via the package-variable-method desugar. Red until the
+# hook lands; green after. short-read pins the bounds-check panic.
+roundtrip	leRoundTrip	-	ok	-	stdlib,bytes,slices,bitwise
+golden	leGolden	-	ok	-	stdlib,bytes,slices,bitwise
+heartbeat-ctx-shape	leHeartbeatCtxShape	-	ok	-	stdlib,bytes,slices,bitwise
+short-read	leShortRead	-	panic	index out of range	stdlib,bytes,slices,panic

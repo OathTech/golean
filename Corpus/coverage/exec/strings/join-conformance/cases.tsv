@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+# H-17 guardrails (raft W4.1 item 4): strings.Join as an E5 shim. Red
+# at frontend-export until the shim lands; green after.
+basic	joinBasic	-	ok	-	stdlib,strings,slices
+empty-slice	joinEmptySlice	-	ok	-	stdlib,strings,slices,nil
+single	joinSingle	-	ok	-	stdlib,strings,slices
+empty-sep	joinEmptySep	-	ok	-	stdlib,strings,slices
+newraft-shape	joinNewRaftShape	-	ok	-	stdlib,strings,slices,range,append
