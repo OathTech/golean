@@ -16,11 +16,9 @@ package raft
 
 import (
 	"bytes"
-	"crypto/rand"
 	"errors"
 	"fmt"
 	"math"
-	"math/big"
 	"slices"
 	"strings"
 	"sync"
@@ -94,11 +92,32 @@ type lockedRand struct {
 	mu sync.Mutex
 }
 
+// GOLEAN SUBJECT DELTA D-11 (H-15, the election-jitter CHOICE SITE —
+// docs/raft-w41-log.md item 3). Upstream draws via crypto/rand +
+// math/big, which the machine never models (jitter is nondeterminism;
+// the envelope, not a stream of modeled bits, is the semantics). The
+// draw below has envelope [0, n) on BOTH oracles: under the machine the
+// first key of a map range is the map-iteration choice site; under
+// `go run` it is Go's own randomized iteration order. The n <= 0 panic
+// preserves upstream's failure mode (the upstream draw panics on a
+// non-positive max). The mutex stays: globalRand is shared package
+// state and dropping the lock would smuggle in a concurrency delta.
 func (r *lockedRand) Intn(n int) int {
+	if n <= 0 {
+		panic("golean subject delta D-11: Intn requires n > 0 (the upstream draw panics on a non-positive max)")
+	}
 	r.mu.Lock()
-	v, _ := rand.Int(rand.Reader, big.NewInt(int64(n)))
+	draws := make(map[int]struct{}, n)
+	for i := 0; i < n; i++ {
+		draws[i] = struct{}{}
+	}
+	v := 0
+	for k := range draws {
+		v = k
+		break
+	}
 	r.mu.Unlock()
-	return int(v.Int64())
+	return v
 }
 
 var globalRand = &lockedRand{}
