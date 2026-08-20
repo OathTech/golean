@@ -501,9 +501,13 @@ func (l *loader) buildInitGraph(units []*sourcePkg, mainUnit *sourcePkg) (*initG
 		g.node[item.prefix] = entry.node
 		g.work[item.prefix] = entry.node
 		for _, dep := range entry.deps {
-			// A table dep is a prefix; its unescaped path is not
-			// recorded, so the prefix doubles as the display name.
-			pending = append(pending, workItem{prefix: dep, display: dep})
+			// A table dep is a PREFIX (never a path — handing it to
+			// pathToPrefix would double-escape it: BUG-064). Column 4
+			// of the table carries the unescaped path for the rows
+			// where the two differ, so refusal messages can name the
+			// package the way it is written in source; stdInitDisplay
+			// falls back to the prefix for every other row.
+			pending = append(pending, workItem{prefix: dep, display: stdInitDisplay(dep)})
 		}
 	}
 	// Node set to fixpoint: a package is a node iff it has work of its

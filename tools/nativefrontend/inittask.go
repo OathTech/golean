@@ -74,6 +74,22 @@ type stdInitEntry struct {
 	// known is false for a row the generator could not read (no
 	// buildable archive). Looking one up REFUSES rather than guessing.
 	known bool
+	// path is the UNESCAPED import path, carried in column 4 of the
+	// table for exactly the rows whose prefix differs from it (the
+	// percent-escaped ones, e.g. crypto/internal/entropy/v1.0.0). Empty
+	// means "same as the prefix". Display only — refusal messages name
+	// the package the way a Go programmer wrote it.
+	path string
+}
+
+// stdInitDisplay is the human-readable name of a table prefix: the
+// unescaped import path when the table records one, else the prefix
+// itself.
+func stdInitDisplay(prefix string) string {
+	if entry, ok := stdInitTable[prefix]; ok && entry.path != "" {
+		return entry.path
+	}
+	return prefix
 }
 
 // stdInitTable maps a linker symbol prefix to its row. Built once.
@@ -92,6 +108,9 @@ func parseStdInitTable(tsv string) map[string]stdInitEntry {
 		entry := stdInitEntry{known: cols[1] != "?", node: cols[1] == "1"}
 		if cols[2] != "" {
 			entry.deps = strings.Split(cols[2], ",")
+		}
+		if len(cols) >= 4 {
+			entry.path = cols[3]
 		}
 		table[cols[0]] = entry
 	}
@@ -134,9 +153,14 @@ func pathToPrefix(path string) string {
 	return b.String()
 }
 
-// initSortKey is the schedule's ordering key for a package path: the
-// name of its inittask record.
-func initSortKey(path string) string { return pathToPrefix(path) + initTaskSuffix }
+// The schedule's ordering key is the inittask SYMBOL NAME, i.e.
+// pathToPrefix(path) + initTaskSuffix. There is deliberately no
+// path-taking helper for it (BUG-064 residual, audit fix round
+// 2026-08-20): the dead `initSortKey(path string)` that used to sit
+// here is the exact shape that reintroduced the bug — outside this
+// file every identifier in flight is already a PREFIX, and handing a
+// prefix to a path-shaped function silently double-escapes it. Callers
+// append initTaskSuffix to the prefix they already hold.
 
 // stdInitLookup answers "is this non-source package a node, and what
 // are its edges?" from the generated table.

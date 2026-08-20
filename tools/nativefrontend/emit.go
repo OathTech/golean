@@ -697,14 +697,25 @@ func (e *emitter) registerGenericDecls() {
 // direction: a reader's initializer always runs after its dependency's.
 //
 // Soundness of the SKIP, argued once here (and pinned by
-// init/quarantined-var{,-callee,-impure}): an eligible initializer's
-// lowerable parts cannot touch modeled state (no receives, no source
-// or builtin calls, unmodeled callees get only value-isolated
-// arguments), so the machine state after skipping differs from Go's
-// only in the poisoned cells — which no emitted body can read. A
-// skipped initializer that would PANIC (or print) under Go diverges
-// VISIBLY in the differential (machine ok vs go panic), never
-// silently.
+// init/quarantined-var{,-callee,-impure,-print,-syscall,-panicking}):
+// an eligible initializer is built ONLY from expression shapes that
+// are both effect-free on any observable state and panic-free by
+// construction — see initializerEffectIsolated's positive list — and
+// every call in it is a direct call to a function on the PURE-CALLEE
+// ALLOWLIST (pureUnmodeledCallees). So evaluating it or not is
+// unobservable anywhere except in the declared cells themselves, which
+// globalAddr poisons and no emitted body can read.
+//
+// The argument this comment made before the 2026-08-20 audit fix round
+// was WEAKER AND WRONG (F1/F1b): it admitted any call into a non-source
+// package on the grounds that "the machine does not model the body in
+// any case", and it excused panics as visible divergences. Both were
+// refuted by probes — `var _ = fmt.Println("x")` has an effect the
+// differential compares directly even though its body is unmodeled,
+// and a skipped `[4]int(shortSlice)` turns go's init panic into a clean
+// machine run, which is a silent wrong answer, not a visible one. The
+// current argument rests on ALLOWLIST PURITY plus panic-freedom, not on
+// modelledness of the callee's body.
 func (e *emitter) quarantineUnlowerableGlobals() error {
 	e.quarantinedGlobals = map[*types.Var]string{}
 	e.quarantinedInits = map[ast.Expr]bool{}
@@ -731,19 +742,48 @@ func (e *emitter) quarantineUnlowerableGlobals() error {
 			localIfaceMark := len(e.localIfaceMethods)
 			namedStructMark := len(e.namedStructTypes)
 			deferNoopMark := e.deferNoopEmitted
+			tmpSeqMark := e.tmpSeq
 			monoMark := e.markMono()
 			_, err := e.emitStmtList([]ast.Stmt{as})
 			// ALWAYS roll back — success or failure, the dry run must
 			// leave no trace (the real emission happens in
 			// synthesizePkgInit, after the function bodies, exactly
 			// where it always did). Same rollback set as the H-3
-			// quarantine path in emitProgram.
+			// quarantine path in emitProgram, plus tmpSeq.
+			//
+			// tmpSeq was MISSING from the first cut (audit F2,
+			// 2026-08-20): the dry run's discarded temporaries still
+			// bumped the program-wide counter, so 9 otherwise-unchanged
+			// corpus wires came out alpha-renamed ($c3 where main emits
+			// $c1). Semantically inert — the names are function-local
+			// and stay unique because the counter is still monotonic
+			// WITHIN each real emission — but it made "the dry run
+			// leaves no trace" false, and golden pins compare bytes.
+			// Restoring it is safe precisely because no name crosses a
+			// declaration boundary: lifted closures carry their own
+			// liftSeq (already reset per dry run), and a $c name is
+			// never recorded anywhere the rollback does not reach.
 			e.lifted = nil
 			e.deferNoopEmitted = deferNoopMark
+			e.tmpSeq = tmpSeqMark
 			e.localTypeDefs = e.localTypeDefs[:localTypesMark]
 			e.localIfaceMethods = e.localIfaceMethods[:localIfaceMark]
 			e.namedStructTypes = e.namedStructTypes[:namedStructMark]
 			e.rollbackMono(monoMark)
+			// KNOWN ROLLBACK-SET GAPS, recorded rather than fixed
+			// (audit F2 could-not-verify, 2026-08-20): syncUsed
+			// (wire.go:392), importedNamed (wire.go:416) and
+			// badKeyPaths (identity.go:83) accumulate during the dry
+			// run and are NOT restored, so an entry a SKIPPED
+			// initializer was alone in reaching survives into the real
+			// export. The direction is conservative — a stale
+			// badKeyPaths entry refuses, a stale syncUsed/importedNamed
+			// entry adds an unreferenced method-set row or stub — never
+			// a changed answer for emitted code. No corpus case
+			// currently reaches one (the quarantined initializers are
+			// os.Getenv/os.LookupEnv calls, which touch none of the
+			// three); if one ever does, add them here with marks, the
+			// same shape as the lines above.
 			if err == nil {
 				continue
 			}
@@ -768,46 +808,61 @@ func (e *emitter) quarantineUnlowerableGlobals() error {
 	return nil
 }
 
+// pureUnmodeledCallees is the POSITIVE ALLOWLIST of unmodeled standard
+// library functions H-11's eligibility predicate may treat as pure:
+// keyed by "<import path>.<func name>", so a local import alias cannot
+// smuggle anything in.
+//
+// The bar for a row: calling the function has no effect observable by
+// ANY oracle the differential uses — not on modeled state, not on
+// stdout/stderr, not on the filesystem, not on the process — and it
+// cannot panic on the arguments the predicate admits. The two founding
+// rows read the ambient environment, which is permanently outside the
+// machine's world (no shim can ever model it faithfully), so they never
+// change meaning when other stdlib surface gains a shim.
+//
+// KEEP THIS MINIMAL. It is not a "functions we have not modeled yet"
+// list — that was exactly the refuted reasoning (audit F1,
+// 2026-08-20). Anything absent refuses the whole export, which is the
+// sound direction.
+var pureUnmodeledCallees = map[string]bool{
+	"os.Getenv":    true,
+	"os.LookupEnv": true,
+}
+
 // initializerEffectIsolated reports whether SKIPPING the initializer
-// expression could be observed by modeled code anywhere OTHER than
-// through the declared variables themselves (which globalAddr
-// poisons). false is the sound direction (whole-export refusal —
-// today's behavior); true admits H-11's per-declaration quarantine.
-// Conservative by construction:
-//   - no receive anywhere (consuming from a modeled channel is an
-//     effect on modeled state);
-//   - every call is either a type CONVERSION of admissible operands or
-//     a direct `pkg.Fn(...)` call into a NON-source package — a body
-//     the machine does not model in any case — whose every argument is
-//     effect-free syntax (no calls, receives, address-of, or function
-//     literals) of a VALUE-ISOLATED static type (basics, or
-//     arrays/structs of basics), so nothing the callee receives can
-//     alias or invoke modeled state;
-//   - method calls, builtin calls, and source-package calls all answer
-//     false: their effects are modeled, and skipping them would lose
-//     observable state changes (the C3 init-reachability rule keeps
-//     covering the quarantined-source-callee shape).
+// expression could be observed anywhere OTHER than through the declared
+// variables themselves (which globalAddr poisons). false is the sound
+// direction (whole-export refusal — the pre-H-11 behavior); true admits
+// H-11's per-declaration quarantine.
+//
+// It is a POSITIVE ALLOWLIST over expression shapes: an expression is
+// admissible only if its form appears below, so any form the frontend
+// grows later defaults to refusal. Two properties are required of every
+// admitted shape, and they are DIFFERENT properties — the first cut
+// checked only the first, which is what audit finding F1b caught:
+//
+//	EFFECT-FREE — evaluating it cannot change any state an oracle can
+//	see. Reads are fine; receives, address-of, and every call outside
+//	pureUnmodeledCallees are not. In particular a call whose BODY the
+//	machine does not model is NOT thereby effect-free: fmt.Println is
+//	unmodeled and writes to the stdout the differential compares.
+//
+//	PANIC-FREE — evaluating it cannot abort the program. A skipped
+//	panicking initializer is a SILENT wrong answer (the machine runs on
+//	where go dies in init), so the panicking shapes are excluded by
+//	construction: array-target conversions, indexing, slicing, pointer
+//	dereference, type assertion, division/remainder and shifts by a
+//	non-constant, interface comparison, and method values (whose
+//	receiver evaluation can deref nil).
+//
+// Method calls, builtin calls, and source-package calls all answer
+// false: their effects are modeled, and skipping them would lose
+// observable state changes (the C3 init-reachability rule keeps
+// covering the quarantined-source-callee shape).
 func (e *emitter) initializerEffectIsolated(rhs ast.Expr) bool {
-	// pureArg: effect-free syntax, usable inside an unmodeled callee's
-	// argument list.
-	var pureArg func(x ast.Expr) bool
-	pureArg = func(x ast.Expr) bool {
-		pure := true
-		ast.Inspect(x, func(n ast.Node) bool {
-			switch nn := n.(type) {
-			case *ast.CallExpr, *ast.FuncLit:
-				pure = false
-				return false
-			case *ast.UnaryExpr:
-				if nn.Op == token.ARROW || nn.Op == token.AND {
-					pure = false
-					return false
-				}
-			}
-			return pure
-		})
-		return pure
-	}
+	// isolatedType: a static type nothing the callee receives can use to
+	// alias or invoke modeled state (basics, or arrays/structs of them).
 	var isolatedType func(t types.Type, depth int) bool
 	isolatedType = func(t types.Type, depth int) bool {
 		if depth > 16 {
@@ -829,65 +884,186 @@ func (e *emitter) initializerEffectIsolated(rhs ast.Expr) bool {
 			return false
 		}
 	}
-	var walk func(x ast.Expr) bool
-	walk = func(x ast.Expr) bool {
-		ok := true
-		ast.Inspect(x, func(n ast.Node) bool {
-			if !ok {
+	// isInterface: interface comparison can panic on uncomparable
+	// dynamic types, so == / != over interfaces is not panic-free.
+	isInterface := func(x ast.Expr) bool {
+		t := e.goTypeOf(x)
+		if t == nil {
+			return true // unknown: assume the panicking case
+		}
+		_, iface := t.Underlying().(*types.Interface)
+		return iface
+	}
+	isConstant := func(x ast.Expr) bool {
+		tv, ok := e.info.Types[x]
+		return ok && tv.Value != nil
+	}
+	// arrayTargetConversion: the ONE conversion class that panics —
+	// slice to array or to array pointer, when the slice is too short
+	// (spec#Conversions_from_slice_to_array_or_array_pointer). Refused
+	// whatever the operand, since the length is a runtime fact.
+	arrayTarget := func(t types.Type) bool {
+		if t == nil {
+			return true
+		}
+		switch u := t.Underlying().(type) {
+		case *types.Array:
+			return true
+		case *types.Pointer:
+			_, arr := u.Elem().Underlying().(*types.Array)
+			return arr
+		}
+		return false
+	}
+	var admissible func(x ast.Expr, depth int) bool
+	admissible = func(x ast.Expr, depth int) bool {
+		if depth > 64 {
+			return false
+		}
+		switch nn := x.(type) {
+		case *ast.BasicLit:
+			return true
+		case *ast.Ident:
+			// A read. Reads of a POISONED var are caught by the dry run
+			// itself (globalAddr refuses), not here.
+			return true
+		case *ast.ParenExpr:
+			return admissible(nn.X, depth+1)
+		case *ast.FuncLit:
+			// A stored func value never runs: the only place it lands is
+			// the poisoned cell. Its body is deliberately not walked.
+			return true
+		case *ast.CompositeLit:
+			// The Type expression is a type, not a value: not walked.
+			for _, elt := range nn.Elts {
+				if kv, isKV := elt.(*ast.KeyValueExpr); isKV {
+					// A struct field-name key is an Ident (admissible);
+					// map and array keys are values, so walk both sides.
+					if !admissible(kv.Key, depth+1) || !admissible(kv.Value, depth+1) {
+						return false
+					}
+					continue
+				}
+				if !admissible(elt, depth+1) {
+					return false
+				}
+			}
+			return true
+		case *ast.SelectorExpr:
+			if base, isIdent := nn.X.(*ast.Ident); isIdent {
+				if _, isPkg := e.info.Uses[base].(*types.PkgName); isPkg {
+					// Qualified identifier: a read of a package-level
+					// const/var/func value. No deref, no call.
+					return true
+				}
+			}
+			sel, known := e.info.Selections[nn]
+			if !known {
 				return false
 			}
-			switch nn := n.(type) {
-			case *ast.UnaryExpr:
-				if nn.Op == token.ARROW {
-					ok = false
-					return false
-				}
-			case *ast.FuncLit:
-				// A stored func value never runs: the only place it
-				// lands is the poisoned var. Its body is not walked.
+			// Field selection only, and only without an implicit deref
+			// (which can panic on a nil pointer). Method values are
+			// refused: evaluating one copies the receiver.
+			if sel.Kind() != types.FieldVal || sel.Indirect() {
 				return false
-			case *ast.CallExpr:
-				if tv, isConv := e.info.Types[nn.Fun]; isConv && tv.IsType() {
-					// Conversion: walk the operand, skip the type expr.
-					for _, a := range nn.Args {
-						if !walk(a) {
-							ok = false
-						}
-					}
+			}
+			return admissible(nn.X, depth+1)
+		case *ast.UnaryExpr:
+			switch nn.Op {
+			case token.ADD, token.SUB, token.XOR, token.NOT:
+				return admissible(nn.X, depth+1)
+			default:
+				// AND (address-of, escapes a pointer into the cell) and
+				// ARROW (a receive is an effect on a modeled channel).
+				return false
+			}
+		case *ast.BinaryExpr:
+			switch nn.Op {
+			case token.QUO, token.REM:
+				// Division by a non-constant can panic; a constant
+				// zero divisor is a compile error.
+				if !isConstant(nn.Y) {
 					return false
 				}
-				sel, isSel := nn.Fun.(*ast.SelectorExpr)
-				if !isSel {
-					ok = false
+			case token.SHL, token.SHR:
+				// A negative shift count panics; a constant one is a
+				// compile error.
+				if !isConstant(nn.Y) {
 					return false
 				}
-				base, isIdent := sel.X.(*ast.Ident)
-				if !isIdent {
-					ok = false
+			case token.EQL, token.NEQ:
+				// Comparing interfaces holding uncomparable dynamic
+				// types panics.
+				if isInterface(nn.X) || isInterface(nn.Y) {
 					return false
 				}
-				pkgName, isPkg := e.info.Uses[base].(*types.PkgName)
-				if !isPkg || e.isSourcePackage(pkgName.Imported()) {
-					ok = false
-					return false
-				}
-				if _, isFn := e.info.Uses[sel.Sel].(*types.Func); !isFn {
-					ok = false
+			}
+			return admissible(nn.X, depth+1) && admissible(nn.Y, depth+1)
+		case *ast.IndexExpr:
+			// ONLY a generic instantiation — real indexing can panic.
+			return e.isInstantiation(nn.X)
+		case *ast.IndexListExpr:
+			return e.isInstantiation(nn.X)
+		case *ast.CallExpr:
+			if tv, isConv := e.info.Types[nn.Fun]; isConv && tv.IsType() {
+				if arrayTarget(tv.Type) {
 					return false
 				}
 				for _, a := range nn.Args {
-					if !pureArg(a) || !isolatedType(e.goTypeOf(a), 0) {
-						ok = false
+					if !admissible(a, depth+1) {
 						return false
 					}
 				}
-				return false // args vetted above; don't re-walk
+				return true
+			}
+			sel, isSel := nn.Fun.(*ast.SelectorExpr)
+			if !isSel {
+				return false
+			}
+			base, isIdent := sel.X.(*ast.Ident)
+			if !isIdent {
+				return false
+			}
+			pkgName, isPkg := e.info.Uses[base].(*types.PkgName)
+			if !isPkg || e.isSourcePackage(pkgName.Imported()) {
+				return false
+			}
+			fn, isFn := e.info.Uses[sel.Sel].(*types.Func)
+			if !isFn {
+				return false
+			}
+			if !pureUnmodeledCallees[pkgName.Imported().Path()+"."+fn.Name()] {
+				return false
+			}
+			for _, a := range nn.Args {
+				if !admissible(a, depth+1) || !isolatedType(e.goTypeOf(a), 0) {
+					return false
+				}
 			}
 			return true
-		})
-		return ok
+		default:
+			// TypeAssertExpr, SliceExpr, StarExpr, and every form the
+			// frontend grows later: refuse.
+			return false
+		}
 	}
-	return walk(rhs)
+	return admissible(rhs, 0)
+}
+
+// isInstantiation reports whether the head of an IndexExpr /
+// IndexListExpr is a generic function being instantiated (as opposed to
+// a value being indexed, which can panic).
+func (e *emitter) isInstantiation(head ast.Expr) bool {
+	id, isIdent := head.(*ast.Ident)
+	if !isIdent {
+		if sel, isSel := head.(*ast.SelectorExpr); isSel {
+			id = sel.Sel
+		} else {
+			return false
+		}
+	}
+	_, inst := e.info.Instances[id]
+	return inst
 }
 
 // collectCalledFuncs walks a wire subtree recording every function NAME it

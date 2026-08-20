@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+# F1b guardrail: an eligible-looking initializer that PANICS at init
+# keeps the whole-export refusal — red at frontend-export by design.
+# Go's own behavior is the init panic recorded here; the machine must
+# never answer it with a clean run.
+sibling	quarPanicSibling	-	panic	runtime error: cannot convert slice with length 2 to array or pointer to array with length 4	init,globals,conversions,arrays,slices,panic

@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+# F1 guardrail: an unmodeled callee with a world effect (a syscall)
+# keeps the whole-export refusal — red at frontend-export by design.
+# A PASS here means the effect-isolation allowlist re-opened.
+sibling	quarMkdirSibling	-	ok	-	init,globals,stdlib

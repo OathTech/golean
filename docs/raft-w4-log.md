@@ -195,6 +195,20 @@ the 8 NEW ids (1 PASS, 7 FAIL/frontend-export as above), zero movement on the
 emit byte-identical wires — golden pins are the check). Baseline re-pinned
 same-commit.
 
+*(Byte-identity corrected in the audit fix round, 2026-08-20 — finding F2. The
+claim was FALSE as shipped: `e.tmpSeq` was missing from the rollback set, so
+the dry run's discarded temporaries leaked counter increments and 9 wires came
+out alpha-renamed — semantically inert, function-local names, and outside
+golden-pin coverage, but not byte-identical. Fixed by rolling `tmpSeq` back
+with the rest; the claim is now MEASURED, not asserted: over all 1103 corpus
+package directories, `nativefrontend` at this tip vs the pre-branch binary
+differs in exactly 1 wire — `errors/new-conformance`, item 2's errors.New
+shim — plus the 6 export-status flips, all recorded W4.0 ones. Zero
+alpha-renames. Three rollback-set gaps stay RECORDED rather than fixed —
+`syncUsed`, `importedNamed`, `badKeyPaths` — with the direction argued at the
+rollback site: worst case an extra unreferenced stub or an over-refusal, never
+a changed answer for emitted code, and no corpus case reaches one today.)*
+
 **The first full run REFUTED that prediction by two rows — both investigated
 before landing, honesty over tidiness:**
 
@@ -210,15 +224,23 @@ before landing, honesty over tidiness:**
   duplicate method stencils). Post-fix the whole `spec-examples-decl/generic*`
   and `generics/` slices reproduce their baseline exactly.
 - `spec-examples-decl/compile-only-forms` FAIL→PASS — **an unpredicted but
-  correct consequence of the blank-var skip, kept.** The case's package-level
-  `var _ = satTildeInt[int]` rows (generic func VALUES, unlowerable) used to
-  refuse the whole export; they are pure, effect-isolated, blank-target
-  initializers, so H-11 skips them — faithfully: gc evaluates a generic func
-  value with no observable effect, so machine and go AGREE (the PASS is a
-  true differential agreement, not a masked skip). Noted honestly: the case's
-  green no longer witnesses that the frontend can EMIT those forms — the
-  generic-func-value feature itself stays red where it is load-bearing
-  (`generics/` reds unchanged).
+  correct consequence of the blank-var skip, kept.** *(Reason corrected in the
+  audit fix round, 2026-08-20 — finding F3. The text below is the corrected
+  one; the original named "generic func VALUES, unlowerable" as the skipped
+  form, which is WRONG: generic function values lower fine, and the case was
+  never red for them.)* The case's ONE unlowerable package-level row is
+  `var _ = satComparable[struct{ f any }]` — an anonymous NON-EMPTY struct as
+  a type argument, refused by the mangler at `mono.go:965`
+  (`anonymous non-empty struct as a type argument`), which is ledger row
+  FR-13. It used to refuse the whole export; it is a pure, effect-isolated,
+  blank-target initializer, so H-11 skips it — faithfully: gc evaluates the
+  generic func value with no observable effect, so machine and go AGREE (the
+  PASS is a true differential agreement, not a masked skip).
+  **The witness that flip LOST is now restored**: `generics/`
+  `anon-struct-type-argument` pins the same FR-13 boundary in a form the
+  quarantine cannot mask (the instantiation is in a function BODY, so it is
+  emitted, not skipped) and is red at `frontend-export` by design. The
+  `generics/` reds are otherwise unchanged.
 
 ---
 
@@ -300,3 +322,160 @@ same-commit re-pin: BUG-064 (+3 ids), the errors.New shim (+13 ids), H-11
 gate's own refutation of a prediction). `frontier-plan.tsv` is the terminal
 row alone. The export blockers of the W3 measurement are ZERO; every remaining
 gap is a run-blocker, enumerated above, owned by W4.1.
+
+---
+
+## Audit fix round (2026-08-20)
+
+Pre-merge adversarial audit of the branch tip. Five findings, all
+auditor-verified, all fixed here; the auditor's probes are reused as the
+guardrail material rather than re-derived.
+
+### F1 (CRITICAL) — the effect-isolation predicate admitted real effects
+
+H-11's `initializerEffectIsolated` admitted **any** direct `pkg.Fn(...)` call
+into a non-source package whose arguments were value-isolated, on the stated
+reasoning that such a body "the machine does not model in any case". That
+reasoning is **false**, and the counterexample is one line: a package-level
+`var _ = fmt.Println("x")` was declared effect-isolated, quarantined and
+SKIPPED — so the machine ran the program printing nothing where `go run`
+prints. Unmodelled ≠ effect-free: the effect landed on the very stdout the
+differential compares. `os.Mkdir` and `os.Setenv` were admitted the same way.
+
+**Fix: a positive allowlist**, `pureUnmodeledCallees` (emit.go), keyed by
+`<import path>.<name>` so an import alias cannot smuggle anything in, and
+minimal by charter — `os.Getenv`, `os.LookupEnv`, exactly what the existing
+guardrails use. The bar for a row is written above it: no effect observable by
+ANY oracle the differential uses, and no panic on the arguments the predicate
+admits. Everything else refuses the whole export, which is the pre-H-11
+behavior and the sound direction. **It is not a "not modelled yet" list** —
+that was the refuted reasoning.
+
+### F1b — panic-freedom is a SECOND property, and it was missing entirely
+
+The conversion-operand recursion admitted `[4]int(shortSlice)`. Probing that
+out showed the hole is not conversion-specific: paired with an admissible
+`os.Getenv` call, **six panicking shapes were all admitted and skipped** —
+slice→array conversion, index-out-of-range, nil deref, divide-by-zero, failed
+type assertion, negative shift — each turning go's init panic into a clean
+machine run. A skipped panic is a SILENT wrong answer, not the "visible
+divergence" the old soundness comment claimed.
+
+**Fix: `initializerEffectIsolated` is now a POSITIVE ALLOWLIST OVER EXPRESSION
+SHAPES** rather than a walk that refuses a denylist. An expression is
+admissible only if its form is listed, so every form the frontend grows later
+defaults to refusal. The panicking shapes are excluded by construction:
+array-target conversions (the one conversion class that can panic), indexing,
+slicing, pointer deref, type assertion, `/` and `%` and shifts by a
+non-constant, interface `==`/`!=` (uncomparable dynamic types), and method
+values (whose receiver evaluation can deref nil). `IndexExpr` is admitted ONLY
+as a generic instantiation — which is what keeps `compile-only-forms` green.
+The old `pureArg` helper is gone: call arguments now go through the same
+admissibility walk, which strictly subsumes it (it used to permit `sl[7]` as
+an argument).
+
+The soundness comment on `quarantineUnlowerableGlobals` now states the ACTUAL
+argument — allowlist purity plus panic-freedom — and records verbatim that the
+argument it made before was refuted, so nobody re-derives it.
+
+### F1/F1b guardrails (written before the fix, and deletion-tested)
+
+- `init/quarantined-var-syscall` — `os.Mkdir("")` (always ENOENT, creates
+  nothing, no platform dependence): whole-export refusal, red at
+  `frontend-export`. The subject is a sibling that touches nothing, so a
+  re-opened allowlist flips the row PASS.
+- `init/quarantined-var-panicking` — an allowlisted `os.Getenv` call beside
+  `[4]int(sl)` on a length-2 slice: whole-export refusal. Go's own behavior
+  (`expected_status panic`) is recorded in the row, so a re-opened predicate
+  moves the row's STAGE to `go-observation` — tracked-baseline drift either
+  way.
+- `init/quarantined-var/siblings` is the green control for the allowlist's
+  positive half and stays PASS.
+- **`fmt.Println` is NOT expressible as a differential row** — measured, not
+  assumed: the harness reads a case's observation off the subject program's
+  stdout, so a program that prints during init dies at stage
+  `go-observation` before the frontend is ever consulted. It would be a red
+  row pinning nothing. That pin therefore lives in
+  `tools/nativefrontend/effectisolation_test.go`, run by the gate's
+  `go test ./tools/nativefrontend` step, together with the whole panicking-shape
+  family (11 shapes) and the call shapes outside the allowlist.
+  **Deletion test RUN**, not asserted: against the pre-fix `emit.go`, 15 of
+  the 16 new sub-tests fail and the positive control passes (the 16th,
+  an immediately-invoked function literal, was already refused).
+
+### F2 (LOW) — the dry run leaked `tmpSeq`
+
+`e.tmpSeq` was missing from the rollback set, so the discarded temporaries of
+the dry-run pre-pass still bumped the program-wide counter and **9 corpus
+wires came out alpha-renamed**. Semantically inert — the names are
+function-local and stay unique because the counter is still monotonic within
+each real emission — but it made item 3's "byte-identical wires" claim false,
+and golden pins compare bytes. **Rollback taken (the preferred fix), and it is
+safe for a checkable reason**: no `$c` name crosses a declaration boundary
+(lifted closures carry `liftSeq`, already reset per dry run). Verified by
+measurement, not argument: all 8 of the affected non-`errors.New` wires are now
+BYTE-IDENTICAL to the pre-branch binary's, and over all 1103 corpus package
+directories the tip differs from pre-branch in exactly 1 wire
+(`errors/new-conformance`, item 2's shim) plus the 6 recorded status flips.
+
+Three rollback-set gaps are RECORDED rather than fixed (the auditor's
+could-not-verify): `syncUsed`, `importedNamed`, `badKeyPaths` accumulate during
+the dry run and are not restored. The direction is argued at the rollback site —
+worst case a stale `badKeyPaths` entry over-refuses, or a stale
+`syncUsed`/`importedNamed` entry adds an unreferenced method-set row or stub;
+never a changed answer for emitted code. No corpus case reaches one today
+(the quarantined initializers are `os.Getenv`/`os.LookupEnv` calls, which touch
+none of the three), and the fix shape if one ever does is the two lines above
+it.
+
+### F3 (MEDIUM) — the compile-only-forms flip's recorded reason was wrong
+
+Item 3 and the baseline header both recorded the flip as caused by
+"`var _ = satTildeInt[int]` rows (generic func VALUES, unlowerable)". Wrong:
+generic function values lower fine. The case's single unlowerable row is
+`var _ = satComparable[struct{ f any }]` — an anonymous NON-EMPTY struct as a
+type argument, refused at `mono.go:965`, ledger row FR-13. Both records are
+corrected in place, with the wrong text quoted so the correction is legible.
+
+**The lost witness is restored.** The flip was correct, but it left FR-13's
+type-argument half with no red row. `generics/anon-struct-type-argument` pins
+it in a form the quarantine structurally cannot mask — the instantiation is in
+a FUNCTION BODY, so it is emitted (as an H-3 quarantined stub) rather than
+skipped — and is red at `frontend-export` by design. The ledger's FR-13 row
+and its `Satisfying_a_type_constraint` row now cite it instead of
+`compile-only-forms` (and their stale `wire.go:495` / `mono.go:960` line
+anchors are corrected to 508 / 965).
+
+### BUG-064 residuals (LOW)
+
+- The dead, path-shaped `initSortKey(path string)` is **deleted**. It is the
+  exact shape that caused BUG-064 — outside `inittask.go` every identifier in
+  flight is already a PREFIX, and handing a prefix to a path-shaped function
+  silently double-escapes it. A comment in its place says so; the one real
+  caller (`load.go:387`) appends `initTaskSuffix` to the prefix it holds.
+- `load.go`'s comment claimed the unescaped path "is not recorded". It **is** —
+  column 4 of `inittask-std.tsv`, for exactly the rows where prefix and path
+  differ (`crypto/internal/entropy/v1%2e0%2e0` → `crypto/internal/entropy/v1.0.0`).
+  Comment corrected AND the column put to use: `stdInitEntry.path` +
+  `stdInitDisplay`, so a refusal message names the package the way it is
+  written in source. Display only — the schedule still keys on the prefix.
+
+### The gate, and the raft subject re-censused
+
+`scripts/ci --diff` at the fix-round tip: **green**, with the differential
+baseline diff reporting exactly the three predicted NEW ids and nothing else —
+the prediction was stated before the run and held. 2253 cases, 2113 PASS /
+140 FAIL; negative lane 390/390, no regression; frontend unit tests ok; eval
+tests 136 ok. Baseline re-pinned in the same commit with the reason.
+
+**The F1 tightening does not touch the raft subject**, which was the risk worth
+checking (a narrower allowlist can only ever over-refuse, and over-refusal on
+the north-star target would have cost the W4.0 unblock). Re-run at this tip:
+`frontier.py` — **EXPORTS CLEAN, exit 0**, terminal-row plan unchanged;
+`sweep.py` — the census reproduces the W4.0 report **exactly**: PASS 1 49
+quarantined subject declarations / 113 imported stdlib stubs, 19 first-order
+LIVE, PASS 2 fixpoint in 2 rounds adding 3 behind the sinks, **HEADLINE 22
+LIVE**, residual sinks NONE, G-1 cross-check OK. The mechanism is the expected
+one: every package-level initializer in the subject tree is a composite literal
+or an `errors.New` call, both of which LOWER, so none of them ever reaches the
+eligibility predicate the fix narrowed.

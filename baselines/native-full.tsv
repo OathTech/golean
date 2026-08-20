@@ -1,29 +1,36 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-20 (raft W4.0 item 3 — H-11, per-declaration
-#   quarantine for package-level vars; commit: this commit, raft-w4)
-#   re-pin reason: 8 NEW ids + 1 explained flip, zero other movement
-#   on the 2242 pre-existing ids (predicted flips + the two-row
-#   refutation record: docs/raft-w4-log.md item 3):
-#     NEW/PASS (1): init/quarantined-var/siblings — healthy siblings
-#       beside a quarantined var now export and run
-#     NEW/FAIL frontend-export, BY DESIGN (7):
-#       init/quarantined-var/{read,cascade,write,addr,multi} — every
-#       reference shape refuses naming the var (a PASS flip here means
-#       the poison broke and the cell answered a silent zero);
-#       init/quarantined-var-callee/sibling (C3 whole-export refusal
-#       preserved for source-call initializers);
-#       init/quarantined-var-impure/counter (effectful lowerable
-#       subexpression keeps the whole-export refusal)
-#     FLIP FAIL/frontend-export -> PASS (1):
-#       spec-examples-decl/compile-only-forms — its package-level
-#       `var _ = genericFn[T]` rows are pure, effect-isolated,
-#       blank-target initializers, now skipped; machine and go AGREE
-#       (gc evaluates a generic func value with no observable effect).
-#       Unpredicted, investigated, kept — see the log's refutation
-#       record, which also covers generic-type-switch (a real pre-pass
-#       ordering defect the first full run caught; fixed pre-landing
-#       by registerGenericDecls, no baseline movement).
-#   counts: 2250 cases, 2113 PASS / 137 FAIL (was 2242, 2111/131)
+# recorded: 2026-08-20 (raft W4.0 AUDIT FIX ROUND — F1/F1b effect-isolation
+#   allowlist + F3 witness restore; commit: this commit, raft-w4)
+#   re-pin reason: 3 NEW ids, all FAIL/frontend-export BY DESIGN, and ZERO
+#   movement on the 2250 pre-existing ids — exactly the flips predicted
+#   before the run (docs/raft-w4-log.md, "Audit fix round"):
+#     NEW/FAIL frontend-export (3):
+#       init/quarantined-var-syscall/sibling — an unmodeled callee with a
+#         world effect (os.Mkdir) is NOT on the pure-callee allowlist, so
+#         the whole export refuses (F1). The subject is a sibling that
+#         touches nothing: a PASS here means the allowlist re-opened.
+#       init/quarantined-var-panicking/sibling — an initializer that can
+#         PANIC at init ([4]int of a length-2 slice) keeps the whole-export
+#         refusal (F1b). Go's own behavior is the recorded init panic; a
+#         re-opened predicate moves this row's STAGE to go-observation.
+#       generics/anon-struct-type-argument — ledger FR-13's type-argument
+#         half, restored as its own witness (F3) after H-11's blank-var
+#         skip turned spec-examples-decl/compile-only-forms green. Red
+#         until structural TypeIds land; re-pin then.
+#   The F1/F1b tightening moved NO pre-existing id: measured before the run
+#   by exporting all 1103 corpus package directories with both binaries —
+#   8 wire diffs, every one the F2 tmpSeq alpha-rename REVERTING to the
+#   pre-branch bytes, and status changes only in the two new suites.
+#   NOTE, corrected here (audit F3): the previous header attributed the
+#   compile-only-forms flip to "`var _ = genericFn[T]` rows (generic func
+#   VALUES, unlowerable)". That was WRONG — generic function values lower
+#   fine. The case's one unlowerable package-level row is
+#   `var _ = satComparable[struct{ f any }]`, an anonymous non-empty struct
+#   as a type argument, refused at mono.go:965 (ledger FR-13). The flip
+#   itself stands: the row is a pure, effect-isolated, blank-target
+#   initializer, gc evaluates the generic func value with no observable
+#   effect, and machine and go AGREE.
+#   counts: 2253 cases, 2113 PASS / 140 FAIL (was 2250, 2113/137)
 #   frontend: native (tools/nativefrontend + NativeToIR)
 # columns: result<TAB>id<TAB>stage
 result	id	stage
@@ -837,6 +844,7 @@ PASS	functions/untyped-nil-sinks/struct-lit-append	-
 PASS	functions/untyped-nil-sinks/struct-lit-field	-
 PASS	functions/untyped-nil-sinks/struct-lit-map-field	-
 PASS	functions/untyped-nil-sinks/variadic-spread	-
+FAIL	generics/anon-struct-type-argument	frontend-export
 FAIL	generics/chan-type-arg/first	frontend-export
 PASS	generics/comparable-constraint	-
 PASS	generics/comparable-runtime-edge/any-different-dynamic-types	-
@@ -1166,6 +1174,8 @@ PASS	init/quarantined-init-dep	-
 PASS	init/quarantined-init-iface	-
 FAIL	init/quarantined-var-callee/sibling	frontend-export
 FAIL	init/quarantined-var-impure/counter	frontend-export
+FAIL	init/quarantined-var-panicking/sibling	frontend-export
+FAIL	init/quarantined-var-syscall/sibling	frontend-export
 FAIL	init/quarantined-var/addr	frontend-export
 FAIL	init/quarantined-var/cascade	frontend-export
 FAIL	init/quarantined-var/multi	frontend-export

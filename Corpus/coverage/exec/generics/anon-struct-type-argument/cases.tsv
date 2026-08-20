@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+# FR-13 frontier witness (type-argument half): red at frontend-export
+# by design — mono.go refuses `anonymous non-empty struct as a type
+# argument`. Green here means structural TypeIds landed; re-pin then.
+-	genericAnonStructTypeArgument	-	ok	-	generics,structs,comparability
