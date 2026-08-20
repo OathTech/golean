@@ -648,7 +648,7 @@ func main() {
 
 > In all these examples, the solution is the same: use explicit synchronization.
 
-([Go memory model, `Incorrect synchronization`](https://go.dev/ref/mem#incorrect))
+(Go memory model, §"Incorrect synchronization" — mem#badsync at the pin; live: https://go.dev/ref/mem, anchor `incorrect`)
 
 [synthesis] This example alone defeats any claim that an ordinary racy spin is guaranteed to complete. Its stated reason is memory observation, so it does not by itself settle a race-free atomic spin; scheduler evidence does.
 
