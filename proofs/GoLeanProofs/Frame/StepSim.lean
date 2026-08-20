@@ -542,6 +542,7 @@ theorem stepFn_sim {ρ : Nat → Nat} {na₀ na : Nat} {fr : Heap}
       intro mand mandF hmand
       subst hmand
       rw [renEntriesArr_size]
+      simp only [Choices.consumeAt_mapIter]
       rcases hcons : ch.consume (cands.size + (if mand = true then 0 else 1))
         with ⟨idx, tail⟩
       dsimp only

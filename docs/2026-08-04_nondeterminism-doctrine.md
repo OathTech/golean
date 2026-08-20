@@ -60,10 +60,14 @@ register, never left implicit.) The interpreter is total and
 deterministic GIVEN a stream (executability — the differential trust
 root — is the project's foundational requirement and the reason a
 set-valued semantics was never an option). Consumption sites are named
-and few — the CANONICAL LIST (kept current per this doctrine's
-binding-site rule; brought current at the arc-final audit F16,
-2026-08-08, after the channels arc left this preamble at its two
-sequential sites):
+and few — **the canonical census is now CODE**: the `ChoiceSite`
+datatype + `ChoiceSite.policy` table (`GoLean/GoCore/State.lean`, W3.2
+slice 1 stage A per the design audit's Q1/C-3 finding). Adding a site
+requires a constructor and a policy row, so the F16-style periodic doc
+sweep that used to keep this preamble current is retired by
+exhaustiveness; the list below is a READER'S MIRROR of that datatype
+(historical note: brought current by hand at the arc-final audit F16,
+2026-08-08, when the census was doc-resident):
 
 - map iteration pick (`StepFn.lean`);
 - append spill capacity (`Machine.lean`, `appendSpillWidth` envelope);

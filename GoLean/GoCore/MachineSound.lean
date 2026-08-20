@@ -234,7 +234,7 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
     -- BUG-005 (L): the pick arm is ONE fun_cases equation now (the
     -- candidates load precedes every split), so done/stop/pick are
     -- separated manually here.
-    simp only [stepFn, bind_eq_ok] at h
+    simp only [stepFn, Choices.consumeAt_mapIter, bind_eq_ok] at h
     obtain ⟨cands, hcands, h⟩ := h
     by_cases hemp : cands.isEmpty
     · rw [if_pos hemp] at h
@@ -439,7 +439,7 @@ theorem step_complete {c : Config} {s : ExecState} {c' : Config} {s' : ExecState
     have hcons : Choices.consume [idx]
         (cands.size + (if mand then 0 else 1)) = (idx, []) := by
       simp [Choices.consume, Nat.mod_eq_of_lt hwidth]
-    simp only [stepFn, hcands, bind_eq_ok]
+    simp only [stepFn, Choices.consumeAt_mapIter, hcands, bind_eq_ok]
     refine ⟨cands, rfl, ?_⟩
     rw [if_neg (by
       simp only [Array.isEmpty_iff]
@@ -467,7 +467,7 @@ theorem step_complete {c : Config} {s : ExecState} {c' : Config} {s' : ExecState
         = (cands.size, []) := by
       simp [Choices.consume, Nat.mod_eq_of_lt
         (show cands.size < max 1 (cands.size + 1) by omega)]
-    simp only [stepFn, hcands, bind_eq_ok]
+    simp only [stepFn, Choices.consumeAt_mapIter, hcands, bind_eq_ok]
     refine ⟨cands, rfl, ?_⟩
     rw [if_neg (by simp only [Array.isEmpty_iff, ← Array.size_eq_zero_iff]; exact hne)]
     simp only [bind_eq_ok]
@@ -2315,6 +2315,7 @@ theorem applySelect_ok_or_panic_any_ch {σ : ExecState}
               rcases h with ⟨out, h⟩ | ⟨msg, h⟩ <;>
                 simp [throw, throwThe, MonadExceptOf.throw] at h
           | cons b rest =>
+              simp only [Choices.consumeAt_l2Entry] at h ⊢
               rcases hcons : Choices.consume ch (b :: rest).length
                 with ⟨idx, ch'⟩
               have hlt : idx < (b :: rest).length := by
@@ -2381,7 +2382,7 @@ theorem stepFn_mapIter_ok_any {σ : ExecState} {kv vv : Option String}
         = .ok out := by
   intro ch
   have hsnap := mapIterCandidates_normalized hcands
-  simp only [stepFn, hcands, hmand, Bind.bind, Except.bind]
+  simp only [stepFn, Choices.consumeAt_mapIter, hcands, hmand, Bind.bind, Except.bind]
   rw [if_neg hne]
   rcases hcons : ch.consume (cands.size + (if mand = true then 0 else 1))
     with ⟨idx', rest'⟩
@@ -3148,7 +3149,7 @@ theorem stepFn_mapIter_pick {σ : ExecState} {kv vv : Option String}
             (.mapIterK kv vv kt vt body base (produced.push cands[idx].1)
               start env k),
             p.2, tail)) := by
-  simp only [stepFn, hcands, hmand, Bind.bind, Except.bind]
+  simp only [stepFn, Choices.consumeAt_mapIter, hcands, hmand, Bind.bind, Except.bind]
   rw [if_neg hne, hcons]
   dsimp only
   split
@@ -3180,7 +3181,7 @@ theorem stepFn_mapIter_stop {σ : ExecState} {kv vv : Option String}
     (hcons : Choices.consume ch (cands.size + 1) = (cands.size, tail)) :
     stepFn σ (.next (.mapIterK kv vv kt vt body base produced start env k)) ch
       = .ok (.next k, σ, tail) := by
-  simp only [stepFn, hcands, hmand, Bind.bind, Except.bind]
+  simp only [stepFn, Choices.consumeAt_mapIter, hcands, hmand, Bind.bind, Except.bind]
   rw [if_neg hne]
   have hred : (cands.size + if false = true then 0 else 1)
       = cands.size + 1 := by simp

@@ -571,7 +571,8 @@ theorem applyStmtOp_append1_spill {σ : ExecState} {elem : Ty}
     validateSlice_ok hec, hvisE]
   rw [if_neg (by simp; omega)]
   simp only [hvisO, Bind.bind, Except.bind, pure, Except.pure]
-  simp only [show (#[w] : Array GoValue).size = 1 from rfl, hcons]
+  simp only [Choices.consumeAt_appendSpill,
+    show (#[w] : Array GoValue).size = 1 from rfl, hcons]
   rw [show len + 1 + ((appendGrowthCap cap (len + 1) - (len + 1)
         + extra) % appendSpillWidth cap (len + 1))
       = appendRealizedCap cap (len + 1) extra from rfl]

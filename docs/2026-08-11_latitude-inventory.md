@@ -61,10 +61,15 @@ lower-bound instrument), XIMPL (cross-implementation — none exists yet;
 noted where it would bear), ARCH (proposal/issue archaeology — none done
 yet; noted where it would bear).
 
-**The choice-site census agrees between records and code.** The
-nondeterminism doctrine's canonical list (7 sites, kept current per its
-binding-site rule) matches the executable machine's `Choices.consume`
-call sites exactly:
+**The choice-site census IS code** (W3.2 slice 1 stage A): the
+`ChoiceSite` datatype + `ChoiceSite.policy` table in
+`GoLean/GoCore/State.lean` is the census of record — every consumption
+goes through `Choices.consumeAt` with its site tag, so a new site
+requires a constructor (exhaustiveness-checked) and this table below is
+a reader's mirror, no longer a hand-synced record. The per-site
+consume-when column is the `consumeAtOne` policy declaration (the
+L1/L4 singleton non-consumption moved from caller-side special cases
+into the table at stage A, behavior-identical):
 
 | Site | Code | Bound | Consumed when | Empty-stream default |
 |---|---|---|---|---|

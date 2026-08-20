@@ -346,6 +346,10 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
                 cases rest with
                 | nil =>
                   dsimp only at h
+                  -- singleton candidate: the L4 site consumes nothing
+                  rw [show Choices.consumeAt .l4Waiter [cand].length ch₀
+                    = (0, ch₀) from Choices.consumeAt_le_one (by simp) rfl] at h
+                  simp only [List.getElem?_cons_zero] at h
                   simp only [bind_eq_ok] at h
                   obtain ⟨⟨ts₂, s₂⟩, hpair, h⟩ := h
                   simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
@@ -356,6 +360,9 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
                   simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp,
                     Bind.bind, Except.bind,
                     arrivalPlan_of_single (ch := ch) harr]
+                  rw [show Choices.consumeAt .l4Waiter [cand].length ch
+                    = (0, ch) from Choices.consumeAt_le_one (by simp) rfl]
+                  simp only [List.getElem?_cons_zero]
                   rw [hpair]
                   rfl
                 | cons cand2 rest2 => simp at hobl
@@ -727,18 +734,27 @@ theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
             dsimp only
             rw [if_pos hb, hrs]
             dsimp only
+            rw [show Choices.consumeAt .l1Sched [r0].length ch = (0, ch)
+              from Choices.consumeAt_le_one (by simp) rfl]
+            simp only [List.getElem?_cons_zero]
             unfold stepThreadInto
             rw [hallst ch]
             subst hm'
             rfl
           exact hfinish hobl hru hnext hreal (by rw [hm'])
         | cons r1 rest' =>
-          rcases hcons : Choices.consume ch (r0 :: r1 :: rest').length
+          have hlt2 : 1 < (r0 :: r1 :: rest').length := by
+            simp only [List.length_cons]; omega
+          rcases hcons : Choices.consumeAt .l1Sched (r0 :: r1 :: rest').length ch
             with ⟨pick, tail⟩
+          have hconsC : Choices.consume ch (r0 :: r1 :: rest').length
+              = (pick, tail) := by
+            rw [← Choices.consumeAt_of_lt hlt2]
+            exact hcons
           have hpicklt : pick < (r0 :: r1 :: rest').length := by
             have hb0 : 0 < (r0 :: r1 :: rest').length := by simp
             have := consume_fst_lt (ch := ch) hb0
-            rw [hcons] at this
+            rw [hconsC] at this
             exact this
           rw [List.all_eq_true] at hall
           have hj := hall pick (by
@@ -751,8 +767,9 @@ theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
             rw [hget] at hj
             obtain ⟨m', r', hobl, hsm, hru, hnext⟩ := hprobe hj
             have hconsProbe :
-                Choices.consume [pick] (r0 :: r1 :: rest').length
+                Choices.consumeAt .l1Sched (r0 :: r1 :: rest').length [pick]
                   = (pick, []) := by
+              rw [Choices.consumeAt_of_lt hlt2]
               simp only [Choices.consume, Prod.mk.injEq]
               refine ⟨Nat.mod_eq_of_lt ?_, trivial⟩
               omega

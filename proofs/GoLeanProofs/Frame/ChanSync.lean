@@ -846,6 +846,7 @@ theorem applySelect_sim (hS : FrameSim ρ na₀ na fr σ σF)
           have hls := selectOutSim_picks ho
           have hlen : commits.length = commitsF.length := hls.length_eq
           dsimp only
+          simp only [Choices.consumeAt_l2Entry]
           rw [← hlen]
           rcases hls.getElem? (ch.consume commits.length).fst with
             ⟨h1, h2⟩ | ⟨a, b, ha, hb, hab⟩

@@ -125,3 +125,59 @@ judgment calls recorded as they are made; checkpoints every ≤5 units.
   probes are gitignored under `artifacts/w32-probes/`). Log:
   `artifacts/w32-s1a-ci.log` (untracked). Cap 24G honored (raft-w4
   lane concurrent).
+
+## Slice 1 stage A — Q1, tagged choice sites (behavior-identical, 2026-08-20)
+
+- Base: `f2e2ee28` (G1 note), tree clean. G0-ruled rider only — NO new
+  scheduling points (G1 pending); the acceptance test is the existing
+  baseline holding exactly.
+- Mechanism: `ChoiceSite` (7 constructors = the census as code) +
+  `SitePolicy` (consumeAtOne + canonicalSlot0 docstring) +
+  `Choices.consumeAt` in State.lean; every interpreter consume site
+  converted to `consumeAt` with its tag; `Choices.consume` demoted to
+  the raw primitive (public only because proofs unfold through it —
+  the note's "private" implemented as a documented discipline, since a
+  Lean-`private` def would be unnameable in the proof layer's simp
+  sets; greppable: zero bare `.consume` calls remain in interpreter
+  code).
+- Judgment call (policy flags vs the note's sketch): the note's Q1
+  sketch said "mapIter: true; every other site: false". Shipped table:
+  mapIter/appendSpill/l2Entry/l2Arrival = true (these sites' code pops
+  UNCONDITIONALLY wherever it consults the stream — their width-1
+  protection is structural upstream: spill width ≥ 2 always,
+  `.picks`/`.multi` carry ≥ 2 ready), l4Waiter/l1Sched/l5ExitWindow =
+  false. Rationale: `true` transcribes the current text exactly (byte-
+  identical even under a hypothetical width-1 reach), and keeps the
+  proof bridges rfl-simp (`consumeAt_pop` family) instead of needing
+  bound-≥-2 arithmetic at every unfolding.
+- The C-1 payoff landed: the L1 `[i]`-singleton and L4 `[cand]`-
+  singleton caller-side special cases in `stepMulti`/`stepThread`
+  collapsed into `consumeAt` (the non-consumption is now the table's
+  `consumeAtOne := false` row) — same behavior on every stream, at
+  every bound, by the policy.
+- raceUpdate's three consumption replicas converted in lockstep
+  (l1Sched/l2Arrival/l2Entry tags); CLI: enumPoolRun's L5 mirror
+  converted; the accountant-inventory prose now names `consumeAt` +
+  the constructor obligation. stepNeeds/stepNeedsSeq unchanged (they
+  mirror decisions by `%`-indexing, never call consume; the sentinel
+  eval-test pins still pass).
+- Census-doc retirement: nondeterminism-doctrine preamble +
+  latitude-inventory §0 now point at `ChoiceSite` as the census of
+  record (their lists demoted to reader's mirrors).
+- Proofs re-aligned (bridge lemmas `consumeAt_mapIter/appendSpill/
+  l2Entry/l2Arrival`, `consumeAt_le_one`, `consumeAt_of_lt`):
+  MachineSound (6 simp sets + the applySelect picks case), MultiSound
+  (arrivalPlan_of_multi, stepThreadInto_sound single/multi unified
+  arms, stepMulti_sound, stepMulti_of_inner, stepM_complete pair/
+  pickPair realizations), MultiWfSound (stepThread_wf/stepMulti_wf
+  arms), MultiStreams (stepThread_oblivious singleton-pair case,
+  stepAllBranchesOk_sound L1 rewrites), StateWf (spill arm), proofs/
+  MapMem, SliceMem, Frame/ChanSync, Frame/Ops2, Frame/StepSim,
+  Examples/WordFreq/Count. Zero statement-strength changes; no
+  witness stream shifted (consumeAt consumes at exactly the old
+  positions).
+- Gate: `GOLEAN_MEM_MAX=24G scripts/ci --diff` — **PASS**: core build
+  warning-free, proofs + Audit gate ok, eval tests 136 ok, negative
+  lane no regression, **baseline diff FULL 2226/2226, no regression —
+  the predicted ZERO drift, confirmed**. Log:
+  `artifacts/w32-s1A-ci.log` (untracked). Cap 24G honored.
