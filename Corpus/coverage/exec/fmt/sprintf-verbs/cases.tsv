@@ -1,0 +1,28 @@
+# id	subject	args	expected_status	expected_reason	features
+# H-6 guardrails (raft W4.1 item 2, Q3 ruling OPTION 1): one row per
+# verb x kind pair of the MODELED Sprintf subset, oracle = real fmt.
+# Red at frontend-export until the desugar lands; green after. The two
+# boundary rows at the bottom stay RED BY DESIGN (fail closed): a verb
+# outside the set and a non-constant format string both refuse.
+d-uint	sprintfDUint	-	ok	-	stdlib,strings,ints
+d-int	sprintfDInt	-	ok	-	stdlib,strings,ints
+d-enum	sprintfDEnum	-	ok	-	stdlib,strings,ints,methods,defined_type
+x-uint	sprintfXUint	-	ok	-	stdlib,strings,ints,bitwise
+s-string	sprintfSString	-	ok	-	stdlib,strings
+s-stringer	sprintfSStringer	-	ok	-	stdlib,strings,methods,interfaces
+s-stringer-panic	sprintfSStringerPanic	-	ok	-	stdlib,strings,methods,interfaces,panic,recover
+v-kinds	sprintfVKinds	-	ok	-	stdlib,strings,ints,bools
+v-stringer-panic	sprintfVStringerPanic	-	ok	-	stdlib,strings,methods,interfaces,panic,recover
+plusv-ptr-stringer	sprintfPlusVPtrStringer	-	ok	-	stdlib,strings,methods,interfaces,pointers,panic,recover
+plusv-nil-ptr	sprintfPlusVNilPtr	-	ok	-	stdlib,strings,methods,interfaces,pointers,nil
+q-bytes	sprintfQBytes	-	ok	-	stdlib,strings,slices,bytes
+q-bytes-empty	sprintfQBytesEmpty	-	ok	-	stdlib,strings,slices,bytes,nil
+percent	sprintfPercent	-	ok	-	stdlib,strings
+literal-only	sprintfLiteralOnly	-	ok	-	stdlib,strings
+decision-path	sprintfDecisionPath	-	ok	-	stdlib,strings,ints,if
+eval-order	sprintfEvalOrder	-	ok	-	stdlib,strings,methods,evaluation_order,globals
+s-error	sprintfSError	-	ok	-	stdlib,strings,interfaces
+s-nil-error	sprintfSNilError	-	ok	-	stdlib,strings,interfaces,nil
+v-nil-error	sprintfVNilError	-	ok	-	stdlib,strings,interfaces,nil
+verb-outside-set	sprintfVerbOutsideSet	-	ok	-	stdlib,strings
+nonconst-format	sprintfNonConstFormat	1	ok	-	stdlib,strings

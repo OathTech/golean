@@ -67,12 +67,39 @@ const stringsFieldsShimName = "goleanShimStringsFields"
 const errorsNewShimName = "goleanShimErrorsNew"
 const errorsNewShimTypeName = "goleanShimErrorString"
 
+// fmtShimBundleKey: the fmt DESUGAR bundle (raft W4.1 item 2, H-6 —
+// fmtdesugar.go). fmt.{Sprintf,Errorf,Fprintf} are NOT direct-call
+// shims: the emitter parses the constant format string and desugars per
+// verb; the bundle injects the per-verb helper functions those desugars
+// call. Stringer/error rendering takes the CONCRETE method VALUE (a
+// func() string parameter), never an interface dispatch — which is both
+// fmt-faithful (the dynamic type is the static one at every modeled
+// site) and what keeps the reachability instruments PRECISE (an
+// interface dispatch edge inside a shim would mark every String method
+// in the program a live candidate — measured on the raft tree before
+// this shape was chosen, docs/raft-w41-log.md item 2). Keyed by the
+// first helper's name.
+const fmtShimBundleKey = "goleanShimFmtUint"
+
 // stdlibShimAllowlist: package import path -> selector name -> shim
 // declaration name (the KEY declaration; a shim may inject more, see
 // stdlibShimDeclNames).
 var stdlibShimAllowlist = map[string]map[string]string{
 	"strings": {"Fields": stringsFieldsShimName},
 	"errors":  {"New": errorsNewShimName},
+}
+
+// stdlibDesugarInject: package import path -> selector names whose
+// CALL presence triggers a shim-bundle injection although the call
+// itself is DESUGARED rather than rewritten to a direct shim call
+// (fmtdesugar.go). The fmt bundle co-injects the errors.New shim:
+// fmt.Errorf desugars to goleanShimErrorsNew over the formatted text.
+var stdlibDesugarInject = map[string]map[string][]string{
+	"fmt": {
+		"Sprintf": {fmtShimBundleKey},
+		"Errorf":  {fmtShimBundleKey, errorsNewShimName},
+		"Fprintf": {fmtShimBundleKey},
+	},
 }
 
 // stdlibShimDeclNames: every RESERVED top-level name a shim injects,
@@ -84,6 +111,9 @@ var stdlibShimAllowlist = map[string]map[string]string{
 var stdlibShimDeclNames = map[string][]string{
 	stringsFieldsShimName: {stringsFieldsShimName},
 	errorsNewShimName:     {errorsNewShimName, errorsNewShimTypeName},
+	fmtShimBundleKey: {fmtShimBundleKey, "goleanShimFmtInt", "goleanShimFmtHex",
+		"goleanShimFmtBool", "goleanShimFmtQuoteBytes", "goleanShimFmtRender",
+		"goleanShimFmtError", "goleanShimFmtPanicValue"},
 }
 
 // stdlibShimSources: shim declaration name -> Go source of the
@@ -206,6 +236,147 @@ func goleanShimErrorsNew(text string) error {
 	return &goleanShimErrorString{s: text}
 }
 `,
+
+	// The fmt DESUGAR bundle (raft W4.1 item 2, H-6 — see fmtdesugar.go
+	// for the modeled matrix and the fidelity bounds; every behavior
+	// below is probed against gc and pinned by fmt/sprintf-verbs):
+	//   - decimal/hex digit loops (no strconv);
+	//   - the ASCII %q quoter (fails closed on bytes >= 0x80, where the
+	//     real %q prints printable non-ASCII runes literally);
+	//   - the Stringer/error renderers (the render helper takes the
+	//     CONCRETE method value — see fmtShimBundleKey's comment), with
+	//     fmt's recover-and-render:
+	//     panic value rendered after "String method: "/"Error method: "
+	//     under "%!<verb>(PANIC=...)" (verb WITHOUT flags), a panicking
+	//     NIL-POINTER receiver rendering "<nil>", a nil error interface
+	//     rendering "<nil>" for %v and "%!s(<nil>)" for %s. A panic
+	//     value that is neither string nor error, or a nested panic,
+	//     fails closed by re-panicking (fmt would nest-render; the
+	//     subject's stubs panic with string literals).
+	fmtShimBundleKey: `
+// goleanShimFmt* are the native frontend's fmt-desugar helpers
+// (raft W4.1 item 2). Injected declarations — not user code. See
+// tools/nativefrontend/fmtdesugar.go for the contract.
+func goleanShimFmtUint(v uint64) string {
+	if v == 0 {
+		return "0"
+	}
+	digits := []byte{}
+	for v > 0 {
+		digits = append(digits, byte('0'+v%10))
+		v /= 10
+	}
+	out := []byte{}
+	for i := len(digits) - 1; i >= 0; i-- {
+		out = append(out, digits[i])
+	}
+	return string(out)
+}
+
+func goleanShimFmtInt(v int64) string {
+	if v < 0 {
+		return "-" + goleanShimFmtUint(^uint64(v)+1)
+	}
+	return goleanShimFmtUint(uint64(v))
+}
+
+func goleanShimFmtHex(v uint64) string {
+	if v == 0 {
+		return "0"
+	}
+	hexits := "0123456789abcdef"
+	digits := []byte{}
+	for v > 0 {
+		digits = append(digits, hexits[v&0xf])
+		v >>= 4
+	}
+	out := []byte{}
+	for i := len(digits) - 1; i >= 0; i-- {
+		out = append(out, digits[i])
+	}
+	return string(out)
+}
+
+func goleanShimFmtBool(v bool) string {
+	if v {
+		return "true"
+	}
+	return "false"
+}
+
+func goleanShimFmtQuoteBytes(b []byte) string {
+	hexits := "0123456789abcdef"
+	out := []byte{'"'}
+	for _, c := range b {
+		switch {
+		case c == '"':
+			out = append(out, '\\', '"')
+		case c == '\\':
+			out = append(out, '\\', '\\')
+		case c == '\a':
+			out = append(out, '\\', 'a')
+		case c == '\b':
+			out = append(out, '\\', 'b')
+		case c == '\f':
+			out = append(out, '\\', 'f')
+		case c == '\n':
+			out = append(out, '\\', 'n')
+		case c == '\r':
+			out = append(out, '\\', 'r')
+		case c == '\t':
+			out = append(out, '\\', 't')
+		case c == '\v':
+			out = append(out, '\\', 'v')
+		case c >= 0x20 && c < 0x7f:
+			out = append(out, c)
+		case c < 0x80:
+			out = append(out, '\\', 'x', hexits[c>>4], hexits[c&0xf])
+		default:
+			panic("golean fmt shim: %q over a non-ASCII byte is outside the modeled subset (fail closed; the modeled %q covers ASCII)")
+		}
+	}
+	out = append(out, '"')
+	return string(out)
+}
+
+func goleanShimFmtRender(verb string, method string, isNilPtr bool, call func() string) (out string) {
+	defer func() {
+		if r := recover(); r != nil {
+			if isNilPtr {
+				out = "<nil>"
+				return
+			}
+			out = "%!" + verb + "(PANIC=" + method + " method: " + goleanShimFmtPanicValue(r) + ")"
+		}
+	}()
+	return call()
+}
+
+func goleanShimFmtError(verb string, v error) (out string) {
+	if v == nil {
+		if verb == "v" {
+			return "<nil>"
+		}
+		return "%!" + verb + "(<nil>)"
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			out = "%!" + verb + "(PANIC=Error method: " + goleanShimFmtPanicValue(r) + ")"
+		}
+	}()
+	return v.Error()
+}
+
+func goleanShimFmtPanicValue(r any) string {
+	if s, ok := r.(string); ok {
+		return s
+	}
+	if e, ok := r.(error); ok {
+		return e.Error()
+	}
+	panic("golean fmt shim: a String/Error method panicked with a value kind outside the modeled subset (fail closed)")
+}
+`,
 }
 
 // injectStdlibShims scans the parsed (pre-type-check) files for
@@ -221,10 +392,12 @@ func injectStdlibShims(fset *token.FileSet, files []*ast.File) (*ast.File, error
 	needed := map[string]bool{}
 	for _, f := range files {
 		local := map[string]map[string]string{}
+		localDesugar := map[string]map[string][]string{}
 		for _, imp := range f.Imports {
 			path := importPathOf(imp)
-			fns, ok := stdlibShimAllowlist[path]
-			if !ok {
+			fns, isShim := stdlibShimAllowlist[path]
+			desugar, isDesugar := stdlibDesugarInject[path]
+			if !isShim && !isDesugar {
 				continue
 			}
 			name := path
@@ -236,9 +409,14 @@ func injectStdlibShims(fset *token.FileSet, files []*ast.File) (*ast.File, error
 			if name == "." || name == "_" {
 				continue
 			}
-			local[name] = fns
+			if isShim {
+				local[name] = fns
+			}
+			if isDesugar {
+				localDesugar[name] = desugar
+			}
 		}
-		if len(local) == 0 {
+		if len(local) == 0 && len(localDesugar) == 0 {
 			continue
 		}
 		ast.Inspect(f, func(n ast.Node) bool {
@@ -254,12 +432,15 @@ func injectStdlibShims(fset *token.FileSet, files []*ast.File) (*ast.File, error
 			if !ok {
 				return true
 			}
-			fns, ok := local[x.Name]
-			if !ok {
-				return true
+			if fns, ok := local[x.Name]; ok {
+				if shim, ok := fns[sel.Sel.Name]; ok {
+					needed[shim] = true
+				}
 			}
-			if shim, ok := fns[sel.Sel.Name]; ok {
-				needed[shim] = true
+			if desugar, ok := localDesugar[x.Name]; ok {
+				for _, shim := range desugar[sel.Sel.Name] {
+					needed[shim] = true
+				}
 			}
 			return true
 		})

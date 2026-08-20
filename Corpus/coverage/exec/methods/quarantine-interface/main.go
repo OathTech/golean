@@ -18,7 +18,7 @@ type item struct{ n int }
 
 func (i item) tag() int { return i.n * 2 }
 
-func (i item) render() string { return fmt.Sprintf("item(%d)", i.n) }
+func (i item) render() string { return fmt.Sprint(i.n) }
 
 func quarantineIfaceSatisfies() int {
 	var x any = item{n: 3}

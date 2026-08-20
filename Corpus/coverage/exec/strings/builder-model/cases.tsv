@@ -1,0 +1,12 @@
+# id	subject	args	expected_status	expected_reason	features
+# H-18 strings.Builder model guardrails (raft W4.1 item 2). Red until
+# the shadow model lands (today: runtime stops on the declaration-only
+# stubs). copy-panics pins the upstream copy check VERBATIM — a model
+# that dropped it would flip this row from panic to ok, visibly.
+write-string	builderWriteString	-	ok	-	stdlib,strings,methods
+write-bytes	builderWriteBytes	-	ok	-	stdlib,strings,methods,slices,nil
+len-reset	builderLenReset	-	ok	-	stdlib,strings,methods
+zero	builderZero	-	ok	-	stdlib,strings,methods
+copy-zero-ok	builderCopyZeroOk	-	ok	-	stdlib,strings,methods,copy_semantics
+copy-panics	builderCopyPanics	-	panic	illegal use of non-zero Builder	stdlib,strings,methods,copy_semantics,panic
+string-stable	builderStringStable	-	ok	-	stdlib,strings,methods,aliasing

@@ -12,7 +12,7 @@ type base struct{ n int }
 
 func (b base) plain() int { return b.n + 5 }
 
-func (b base) render() string { return fmt.Sprintf("base(%d)", b.n) }
+func (b base) render() string { return fmt.Sprint(b.n) }
 
 type wrapper struct{ base }
 

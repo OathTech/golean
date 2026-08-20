@@ -65,10 +65,15 @@ type T struct{ n int }
 func (t T) Good() int { return t.n + 1 }
 
 func (t T) Bad(a int, rest ...string) (int, error) {
-	return len(fmt.Sprintf("%d", a)), nil
+	// fmt.Sprint is OUTSIDE the modeled fmt desugar (W4.1 item 2 models
+	// Sprintf/Errorf/Fprintf only), so it keeps the package-selector
+	// refusal this fixture needs. (fmt.Sprintf lowered here until the
+	// desugar landed and this fixture stopped refusing — the test went
+	// red and moved to the still-unmodeled sibling.)
+	return len(fmt.Sprint(a)), nil
 }
 
-func (t *T) PtrBad() string { return fmt.Sprintf("%d", t.n) }
+func (t *T) PtrBad() string { return fmt.Sprint(t.n) }
 
 func main() {}
 `
@@ -113,7 +118,7 @@ func TestQuarantinedMethodNeverDropped(t *testing.T) {
 	if !strings.Contains(reason, "main.T.Bad") {
 		t.Fatalf("refusal does not name package.Type.Method: %q", reason)
 	}
-	if !strings.Contains(reason, "Sprintf") {
+	if !strings.Contains(reason, "Sprint") {
 		t.Fatalf("refusal drops the underlying cause: %q", reason)
 	}
 	if bad["body"] != nil {
