@@ -52,14 +52,18 @@ THE MASKING LIMIT, stated because it once bound the headline.  A declaration
 whose FIRST refusal is flattened here reveals its SECOND (that is the point),
 but a declaration a walk probe delta REPLACED THE BODY OF would be invisible
 to both passes.  Since W4.0 the tracked plan is the terminal row alone — NO
-body-replacing deltas exist, so nothing is masked: `(*lockedRand).Intn`
-(historically the one masked declaration, when H-9 forced its body out)
-appears in PASS 1 with its real refusal.  The standalone single-package probe
-is RETAINED AS A CROSS-CHECK: it must agree with PASS 1's row, and it fails
-closed in the useful direction — if `crypto/rand` ever becomes modeled the
-probe stops finding Intn quarantined and exits telling you to retire G-1's
-row.  Any future body-replacing probe delta re-owes a standalone census;
-`$drop-import` and `$rewrite` deltas do not.
+body-replacing deltas exist, so nothing is masked.  Any future body-replacing
+probe delta re-owes a standalone census; `$drop-import` and `$rewrite` deltas
+do not.
+
+G-1 IS RETIRED (W4.1 item 3, docs/raft-w41-log.md): `(*lockedRand).Intn` no
+longer touches crypto/rand at all — the DERIVATION carries the recorded D-11
+patch (derive.py SUBJECT_PATCHES) that makes the draw a plain-Go map-range
+choice site with envelope [0, n), so the declaration lowers and the sweep
+sees no row for it.  The historical G-1 probe (a single-package copy of the
+UPSTREAM body) probed the frontend's crypto/rand surface, which the ruling
+says is never modeled — with the subject off that surface the probe answered
+a question nothing depends on, and it is deleted rather than kept green.
 """
 
 import argparse
@@ -136,8 +140,6 @@ func goleanProbeErrorf(format string, v ...any) error {
 }
 
 func goleanProbeFprint(w any, v ...any) (int, error) { return 0, nil }
-
-func goleanProbeIntn(n int) int { return 0 }
 
 func goleanProbeJoin(elems []string, sep string) string { return "sweep" }
 
@@ -262,12 +264,10 @@ def flatten(tree, dead):
                 ("fmt.Fprint", "goleanProbeFprint"),
                 ("strings.Join", "goleanProbeJoin"),
                 ("bytes.Equal", "goleanProbeBytesEqual"),
-                # G-1's sink, opened at its ONE call site (raft.go's
-                # resetRandomizedElectionTimeout) so the quarantined
-                # (*lockedRand).Intn stops being a reachable sink and the
-                # closure check ranges behind it (nothing subject-level is
-                # there - its callees are crypto/rand + math/big).
-                ("globalRand.Intn", "goleanProbeIntn"),
+                # globalRand.Intn is NOT flattened since W4.1 item 3: the
+                # D-11 patch makes the draw a plain-Go map-range choice
+                # site, so it lowers for real — G-1 retired (see the
+                # module docstring).
                 # errors.New is NOT flattened since W4.0: it is modeled (the
                 # E5 shim, per-unit injection), lowers for real, and is no
                 # longer a census cause anywhere in this tree — G-2 retired.
@@ -323,54 +323,6 @@ def drain_imports(fe, tree, out, limit=60):
         open(path, "w").write(s)
         dropped += 1
     return dropped, "import drain did not converge"
-
-
-G1_PROBE = '''package main
-
-// The G-1 probe: `(*lockedRand).Intn` verbatim from raft.go:93-104, in a
-// SINGLE-package program.  H-9 (the inittask double-escape) only fires at two
-// or more packages (`specInitOrder` returns early below two units), so this is
-// the one place the frontend gets far enough to say what the election-jitter
-// draw itself costs.  See sweep.py's masking-limit note.
-
-import (
-	"crypto/rand"
-	"math/big"
-	"sync"
-)
-
-type lockedRand struct {
-	mu sync.Mutex
-}
-
-func (r *lockedRand) Intn(n int) int {
-	r.mu.Lock()
-	v, _ := rand.Int(rand.Reader, big.NewInt(int64(n)))
-	r.mu.Unlock()
-	return int(v.Int64())
-}
-
-var globalRand = &lockedRand{}
-
-func main() { println(globalRand.Intn(10)) }
-'''
-
-
-def g1_probe(fe, out):
-    d = os.path.join(out, "g1")
-    shutil.rmtree(d, ignore_errors=True)
-    os.makedirs(d)
-    open(os.path.join(d, "main.go"), "w").write(G1_PROBE)
-    wire = os.path.join(out, "g1.json")
-    rc, err = run_frontend(fe, d, wire)
-    if rc != 0:
-        sys.exit("sweep.py: the G-1 probe did not export: %s" % err)
-    subject, _ = census(wire)
-    for name, why in subject.items():
-        if name.endswith("lockedRand.Intn"):
-            return why
-    sys.exit("sweep.py: the G-1 probe exported with lockedRand.Intn NOT "
-             "quarantined — crypto/rand is modeled now; retire G-1's row")
 
 
 def main():
@@ -487,24 +439,21 @@ def main():
               "PASS-2 wire has a body, so the census is CLOSED over this tree "
               "(nothing is hidden behind a refusal).")
     print()
-    # Since W4.0 nothing masks Intn (the plan has no body-replacing deltas),
-    # so the standalone probe is a CROSS-CHECK: PASS 1 must have censused the
-    # method itself, with the same refusal cause the probe sees.
-    g1 = g1_probe(args.frontend, args.out)
-    in_pass1 = any(n.endswith("lockedRand.Intn") for n in live1)
-    print("G-1 cross-check (standalone single-package probe of the jitter draw):")
-    print("  LIVE raft.lockedRand.Intn                       %s" % g1)
-    print("  PASS-1 row agreement: %s"
-          % ("OK - the walk censuses Intn itself (unmasked since W4.0)"
-             if in_pass1 else
-             "MISMATCH - PASS 1 did not report lockedRand.Intn LIVE; "
-             "either the entry set or the masking story changed - investigate"))
-    print()
+    # G-1 retired (W4.1 item 3): the D-11 patch makes the jitter draw a
+    # plain-Go choice site, so Intn LOWERS.  Fail closed in the direction
+    # that matters now: a re-appearing Intn row means the patch stopped
+    # applying (derive.py would have refused first) or a regression
+    # un-lowered the body — either way, investigate before trusting the
+    # headline.
+    for n in list(live1) + list(revealed):
+        if n.endswith("lockedRand.Intn"):
+            sys.exit("sweep.py: lockedRand.Intn is quarantined again — the "
+                     "D-11 choice-site patch is not in effect; investigate "
+                     "before reading the census")
     print("HEADLINE: %d LIVE quarantined subject declarations "
-          "(%d first-order + %d behind sinks; the G-1 draw is IN the "
-          "first-order set since W4.0) out of %d quarantined in PASS 1, plus "
-          "%d imported stdlib stubs that are the declaration-only-stub "
-          "contract and not a raft gap."
+          "(%d first-order + %d behind sinks) out of %d quarantined in "
+          "PASS 1, plus %d imported stdlib stubs that are the "
+          "declaration-only-stub contract and not a raft gap."
           % (len(live), len(live1), len(revealed), len(subject1),
              len(imported1)))
 

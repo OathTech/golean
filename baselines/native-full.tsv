@@ -1,27 +1,16 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-20 (raft W4.1 item 2 — the fmt desugar (H-6, Q3
-#   OPTION 1) + the strings.Builder E5-T model (H-18);
+# recorded: 2026-08-20 (raft W4.1 item 3 — the election-jitter CHOICE
+#   SITE, subject-delta D-11 (H-15, G-1 retired);
 #   commit: this commit, raft-w41)
-#   re-pin reason: 35 NEW ids and ZERO movement on the 2258 pre-existing
-#   ids — exactly the flips predicted before the run
-#   (docs/raft-w41-log.md item 2):
-#     NEW/PASS (33): fmt/sprintf-verbs/* (one per modeled verb x kind
-#       pair incl. both panic-render shapes, nil-ptr, nil-error,
-#       eval-order), fmt/errorf/*, fmt/fprintf-builder/*,
-#       strings/builder-model/* (incl. copy-panics: upstream's copy
-#       check verbatim).
-#     NEW/FAIL frontend-export BY DESIGN (2):
-#       fmt/sprintf-verbs/verb-outside-set — a verb outside the modeled
-#         matrix (the %T probe) refuses;
-#       fmt/sprintf-verbs/nonconst-format — a non-constant format
-#         string refuses (the verb/kind pairing is an emit-time check).
-#   Zero pre-existing movement is DESIGNED, not lucky: the five H-3
-#   quarantine witnesses whose fmt.Sprintf fixture would have flipped
-#   green were retargeted to fmt.Sprint in the same commit (JC-17 —
-#   the F3 lost-witness rule), and spec-examples-decl/timezone-stringer
-#   moved detail only (its message now names the modeled-subset
-#   boundary).
-#   counts: 2293 cases, 2151 PASS / 142 FAIL (was 2258, 2118/140)
+#   re-pin reason: 1 NEW id and ZERO movement on the 2293 pre-existing
+#   ids — exactly the flip predicted before the run
+#   (docs/raft-w41-log.md item 3):
+#     NEW/PASS at stage membership (1): maps/jitter-draw — the D-11
+#       draw shape as a membership row; the machine enumerates exactly
+#       {5..9} = [electionTimeout, 2*electionTimeout) and every go-run
+#       sample lands inside (all 5 members exhibited on the recording
+#       run).
+#   counts: 2294 cases, 2152 PASS / 142 FAIL (was 2293, 2151/142)
 #   frontend: native (tools/nativefrontend + NativeToIR)
 # columns: result<TAB>id<TAB>stage
 result	id	stage
@@ -1411,6 +1400,7 @@ PASS	maps/interface-key-nested-unhashable/access-empty	-
 PASS	maps/interface-key-nested-unhashable/array-access-nonempty	-
 PASS	maps/interface-key-nested-unhashable/assign	-
 PASS	maps/interface-slice-key-panic	-
+PASS	maps/jitter-draw	membership
 PASS	maps/literal-eval-order	-
 PASS	maps/map-alias	-
 PASS	maps/map-basic	-

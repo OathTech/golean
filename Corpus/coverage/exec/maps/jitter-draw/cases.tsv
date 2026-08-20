@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+# H-15 guardrail (raft W4.1 item 3): the election-jitter draw as a
+# MEMBERSHIP row — the machine certifies the admitted set
+# {5,6,7,8,9} = [electionTimeout, 2*electionTimeout) at timeout 5, and
+# every go-run sample must fall inside it. The draw's shape is the
+# D-11 subject patch verbatim (first key of a range over a fresh n-key
+# map = the map-iteration choice site).
+-	jitterDraw	-	ok	-	maps,range,keys,loops,nondet	membership	the composed observable electionTimeout + (first key of a fresh 5-key map range) realizes raft's jitter contract range [5,10): admitted set {5,6,7,8,9} (members=5); the only consumption site is the map pick-next, bound = remaining snapshot size + stop, at most 5+1 — width 16 >= 6	width=16

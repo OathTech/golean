@@ -189,6 +189,92 @@ DIGESTS = {
     "util.go": "b85b6fd2915e7d09eb534df528c4ede99890ec3770b60b2ff75a69f2ad17b33e",
 }
 
+# ---- recorded subject patches (H-15, the election-jitter CHOICE SITE) ----
+#
+# W4.1 item 3 (docs/raft-w41-log.md; the ruling: docs/raft-w3-log.md H-15,
+# harness design §5): the jitter draw is NONDETERMINISM and belongs to the
+# ENVELOPE — `crypto/rand` + `math/big` are never modeled. The subject
+# carries ONE recorded patch: `(*lockedRand).Intn`'s body becomes a plain-Go
+# draw whose nondeterminism ENVELOPE under the machine is exactly [0, n) —
+# the first key produced by ranging over a fresh n-key map, which is the
+# machine's map-iteration choice site (and, under `go run`, Go's own
+# randomized iteration order). `resetRandomizedElectionTimeout` then
+# realizes raft's contract range [electionTimeout, 2*electionTimeout),
+# which is what the latitude entry files (W4.5). Upstream itself treats
+# the value as injectable (rafttest's set-randomized-election-timeout).
+#
+# The patch is keyed to upstream's EXACT text and fails closed on drift —
+# a new rev's Intn must be re-read, not silently re-patched. Subject-delta
+# ledger row: D-11 (the W4.1 log).
+INTN_UPSTREAM = """func (r *lockedRand) Intn(n int) int {
+	r.mu.Lock()
+	v, _ := rand.Int(rand.Reader, big.NewInt(int64(n)))
+	r.mu.Unlock()
+	return int(v.Int64())
+}"""
+
+INTN_PATCHED = """// GOLEAN SUBJECT DELTA D-11 (H-15, the election-jitter CHOICE SITE —
+// docs/raft-w41-log.md item 3). Upstream draws via crypto/rand +
+// math/big, which the machine never models (jitter is nondeterminism;
+// the envelope, not a stream of modeled bits, is the semantics). The
+// draw below has envelope [0, n) on BOTH oracles: under the machine the
+// first key of a map range is the map-iteration choice site; under
+// `go run` it is Go's own randomized iteration order. The n <= 0 panic
+// preserves upstream's failure mode (the upstream draw panics on a
+// non-positive max). The mutex stays: globalRand is shared package
+// state and dropping the lock would smuggle in a concurrency delta.
+func (r *lockedRand) Intn(n int) int {
+	if n <= 0 {
+		panic("golean subject delta D-11: Intn requires n > 0 (the upstream draw panics on a non-positive max)")
+	}
+	r.mu.Lock()
+	draws := make(map[int]struct{}, n)
+	for i := 0; i < n; i++ {
+		draws[i] = struct{}{}
+	}
+	v := 0
+	for k := range draws {
+		v = k
+		break
+	}
+	r.mu.Unlock()
+	return v
+}"""
+
+# file (by OUT path) -> ordered (exact-once old, new) pairs + imports to drop.
+SUBJECT_PATCHES = {
+    "raft/raft.go": {
+        "swaps": [(INTN_UPSTREAM, INTN_PATCHED)],
+        "drop_imports": ["crypto/rand", "math/big"],
+    },
+}
+
+
+def apply_subject_patches(outp, text):
+    """Apply the recorded patches for one output file (fail closed)."""
+    spec = SUBJECT_PATCHES.get(outp)
+    if spec is None:
+        return text, 0
+    for old, new in spec["swaps"]:
+        if text.count(old) != 1:
+            refuse("subject patch for %s: expected text occurs %d times "
+                   "(must be exactly once) — upstream moved under the patch; "
+                   "re-read it:\n%s" % (outp, text.count(old), old[:120]))
+        text = text.replace(old, new)
+    # The residual-reference check ranges over CODE, not comments
+    # (upstream's own doc comment above lockedRand says "rand.Rand").
+    code = "\n".join(re.sub(r"//.*$", "", ln) for ln in text.split("\n"))
+    for pkg in spec["drop_imports"]:
+        text, n = re.subn(r'^\t(?:\w+ )?"%s"\n' % re.escape(pkg), "", text,
+                          count=1, flags=re.M)
+        if not n:
+            refuse("subject patch for %s: import %r to drop is not present" % (outp, pkg))
+        if re.search(r"\b%s\." % re.escape(pkg.split("/")[-1]), code):
+            refuse("subject patch for %s: the code still references %s after "
+                   "dropping its import" % (outp, pkg))
+    return text, len(spec["swaps"]) + len(spec["drop_imports"])
+
+
 # Packages that exist in the subject tree, hence whose import paths get
 # rewritten from the module path to the short dot-free form.
 SUBJECT_PACKAGES = ["confchange", "quorum", "raftpb", "tracker"]
@@ -1273,8 +1359,15 @@ def derive(raft_dir, out_dir, verbose=True):
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         if mode == "verbatim":
             text, n = rewrite_imports(src)
-            report.append("verbatim %-32s (%d import path%s rewritten)"
-                          % (outp, n, "" if n == 1 else "s"))
+            text, npatch = apply_subject_patches(outp, text)
+            if npatch:
+                report.append("verbatim %-32s (%d import path%s rewritten; "
+                              "%d recorded patch action%s — SUBJECT_PATCHES)"
+                              % (outp, n, "" if n == 1 else "s",
+                                 npatch, "" if npatch == 1 else "s"))
+            else:
+                report.append("verbatim %-32s (%d import path%s rewritten)"
+                              % (outp, n, "" if n == 1 else "s"))
         elif mode == "select":
             text, dropped = select_decls(src, NODE_KEEP, NODE_DROP_IMPORTS)
             text, n = rewrite_imports(text)
