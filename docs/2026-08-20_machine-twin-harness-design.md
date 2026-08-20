@@ -229,7 +229,7 @@ warns. Floor: at least one leader claim and at least one committed command.
 
 ---
 
-## §5 The H-2 seam decision — RECOMMENDED, with the measurement behind it
+## §5 The H-2 seam decision — RULED, with the measurement behind it
 
 **Status: RULED by the user 2026-08-20 (Q2) — the revised recommendation below
 is ADOPTED, with the `SetLogger` amendment the audit forced.** Recorded also in
@@ -263,7 +263,10 @@ measurement is in the log:
   `Panicf` genuinely `panic(...)`, so `assertConfStatesEquivalent` keeps its
   teeth, and the panic value is ours to choose (harness code carries no
   verbatim-ness claim, so it can be a fixed string with no fidelity debt). The
-  six informational levels are empty bodies. `Fatal` panics too: under the twin
+  harness logger implements the `Logger` interface's twelve methods as
+  **eight empty bodies** (`Debug`/`Debugf`/`Info`/`Infof`/`Error`/`Errorf`/
+  `Warning`/`Warningf` — four informational levels, each with a formatted
+  variant) and **four that panic**. `Fatal` panics too: under the twin
   there is no `os.Exit` to model and "stop the machine" is the honest reading
   of a fatal.
 
