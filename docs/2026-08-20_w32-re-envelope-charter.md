@@ -509,6 +509,11 @@ salvage the families, not the claim), and the reduction-line re-target
 (slice 5's ruling is its input). DONE: the assessment is a dated doc
 the resume charter can consume without re-deriving anything.
 
+**Slice 6a timing amendment (2026-08-20, Mike):** 6a HOLDS for the
+Lean-SpecTec prototype (roadmap §W7, expected within days) — spectec
+may become the opsem's master notation; the extraction machinery
+stays notation-agnostic regardless.
+
 ## Parallel instruments — recorded here, NOT slices
 
 - **The grossmith re-run + the metamorphic axis.** *Campaign 2 ran

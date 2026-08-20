@@ -363,3 +363,34 @@ against GoCore-level specification hooks.
    slice cases have deterministic coverage, typed integer policy, and feature
    filters.
 7. Keep checking old/new Goose before adding each larger semantic feature.
+
+## W7 — SpecTec-Go: the AST-level spec and frontend correctness (added 2026-08-20, Mike)
+
+Mike is building a **Lean version of SpecTec** (the Wasm spec DSL:
+human-readable formal specifications rendering LaTeX and generating
+prover definitions; prior art reviewed in
+`docs/2026-08-17_prior-art-spectec.md`). Plan of record:
+
+- **The tool** (external, Mike's): first prototype expected within
+  days of 2026-08-20.
+- **The big rock: the Go spectec document** — an AST-level formal
+  spec covering a large proportion of sequential Go (no concurrency
+  initially). Convergence strategy: **differential testing** — the
+  spec's generated Lean semantics runs the existing corpus against
+  `go run` and against GoCore, so the corpus (2,300+ cases, the
+  language-coverage ledger's sequential sections as the fragment
+  map, `docs/spec-interpretations.md` as the pinned readings) drives
+  the spec document to correctness the same way it drove the machine.
+- **Frontend correctness enters scope**: preferred route is
+  **translation validation** — per-program simulation certificates
+  (spectec-AST semantics ≃ GoCore semantics of the emitted wire,
+  checked in Lean per corpus case / subject file) rather than a
+  verified re-implemented elaborator. This gives the twin's theorems
+  "lowering checked" instead of "lowering trusted" and targets the
+  TCB component where every recent silent-wrong-answer bug lived
+  (BUG-057/058/062/063, the hoist family).
+- **Interaction with W3.2 slice 6a (the opsem artifact): 6a HOLDS
+  for the prototype** — if the tool lands on its expected timeline,
+  spectec becomes the master notation (GoCore proven against it)
+  rather than a bespoke LaTeX derivation; the rule-extraction
+  machinery stays notation-agnostic either way.
