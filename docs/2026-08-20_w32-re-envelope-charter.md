@@ -439,6 +439,15 @@ DONE: the class enumeration note; the register #5 ruling recorded
 (theorem or scoped docstring); U-5's granularity-ledger re-audit done
 or explicitly re-owed with its trigger named.
 
+## Slice 5b (added at G0, Mike 2026-08-20) — the second PL-nitpicker review
+
+Once all surgery is done (slices 1-5), the design audit's persona
+returns: re-read the post-surgery core against the slice-0 findings —
+did the queue items that rode deliver; did the surgery introduce new
+winces; is the choice-site system now legible AS a system. Its verdict
+is the opsem write-up's entry evidence (incl. the deferred Q6
+decision). Read-only; findings doc + an updated refactor queue.
+
 ## Slice 6 — exit artifacts
 
 **S6a. The LaTeX opsem write-up** (user-directed). A human-readable
