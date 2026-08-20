@@ -135,12 +135,10 @@ def StructFields.set (fields : Array (String × GoValue)) (needle : String)
 
 /-- The nondeterminism choice stream ("parser of randomness"): each
 nondeterministic point consumes the next choice. The CANONICAL SITE
-LIST lives in the doctrine's preamble
-(`docs/2026-08-04_nondeterminism-doctrine.md` §The model — brought
-current at the arc-final audit F16, 2026-08-08): map iteration order
-and append capacity (sequential), plus the channels arc's L2 select
-picks (entry + arrival), L4 waiter pick, L1 scheduler pick, and L5
-main-exit window. It is threaded by the interpreter **external to
+LIST is the `ChoiceSite` datatype below (W3.2 slice 1 stage A — the
+census as code; the doctrine preamble and latitude-inventory §0
+tables now point here instead of being hand-synced at audits). It is
+threaded by the interpreter **external to
 `ExecState`**, so the relation and the interpreter/relation
 correspondence compare oracle-free states. GoCore never commits to
 determinism Go lacks; the interpreter only picks a behavior by
@@ -150,14 +148,141 @@ concurrency sites — the doctrine preamble is the current record) and
 `docs/2026-07-19_reshape-b-oracle-externalization.md`. -/
 abbrev Choices := List Nat
 
-/-- Consume the next nondeterministic choice from the external stream, bounded by
-the number of alternatives at this point. Exhaustion yields 0 (the canonical
-default). This is the sole way the interpreter resolves nondeterminism. -/
+/-- The RAW stream pop: next choice modulo the bound, exhaustion
+yielding 0 (the canonical default). Interpreter code NEVER calls this
+directly — every consumption site goes through `Choices.consumeAt`
+with its census tag (W3.2 slice 1 stage A, audit Q1); this primitive
+remains public only because the proof layer unfolds through it. -/
 def Choices.consume (choices : Choices) (bound : Nat) : Nat × Choices :=
   let b := max 1 bound
   match choices with
   | [] => (0, choices)
   | c :: rest => (c % b, rest)
+
+/-- **The choice-site census, as a datatype** (W3.2 slice 1 stage A —
+audit finding C-3/queue Q1, ruled G0 2026-08-20). One constructor per
+consumption site in the semantic core; adding a site REQUIRES a
+constructor here plus a `ChoiceSite.policy` row, an accountant arm
+(`stepNeeds`/`stepNeedsSeq`, CLI.lean's lockstep inventory), and the
+site's envelope statement in situ — the doc-resident census sweeps
+(nondeterminism doctrine preamble, latitude inventory §0) are retired
+by this type's exhaustiveness and now point here.
+
+The sites and their consuming definitions:
+* `mapIter`      — range-over-map pick-next (`stepFn`'s `.mapIterK`
+                   arm, StepFn.lean). Envelope at `Cont.mapIterK`.
+* `appendSpill`  — append reallocation capacity (`applyStmtOp`'s
+                   `appendSlice` arm, Machine.lean). Envelope at
+                   `appendSpillUpper` (Ops.lean).
+* `l2Entry`      — multi-ready select clause pick, cell path
+                   (`applySelect`, Machine.lean — its docstring is the
+                   L2 envelope statement).
+* `l2Arrival`    — multi-ready select clause pick, arrival path
+                   (`arrivalPlan` at a `.multi` analysis, Multi.lean).
+* `l4Waiter`     — parked-partner pick at a multi-candidate pairing
+                   (`stepThread`, Multi.lean; envelope at
+                   `chanArrivalPlan`).
+* `l1Sched`      — the scheduler pick at a registry boundary
+                   (`stepMulti`, Multi.lean; envelope at
+                   `runnableIdxs`).
+* `l5ExitWindow` — the main-exit window (`execProgLoop`, Multi.lean;
+                   envelope at its docstring; bound is constant 2).
+
+The scheduling sites — what a future `Fair : Choices → Prop`
+quantifies over — are exactly `{l1Sched, l5ExitWindow}` today
+(slice-1 stages C/D add `postOp`/`backEdge` constructors with the
+boundary widening; they are NOT pre-declared here — an enum row
+without a consuming site would be an inert placeholder). -/
+inductive ChoiceSite where
+  | mapIter | appendSpill
+  | l2Entry | l2Arrival | l4Waiter
+  | l1Sched | l5ExitWindow
+  deriving Repr, DecidableEq
+
+/-- Per-site consumption policy — ONE table (audit C-1: the per-site
+width-1 behaviors become declarations instead of per-site
+discoveries). -/
+structure SitePolicy where
+  /-- Does a CONSULTATION of this site pop the stream even at bound
+  ≤ 1? `true` = the consuming code pops unconditionally wherever it
+  consults the site (`mapIter` genuinely consults at width 1 — §9
+  flag 5, the done-check pick; `appendSpill`/`l2Entry`/`l2Arrival`
+  consult only where the bound is ≥ 2 BY CONSTRUCTION — spill width
+  ≥ 2 always, `.picks`/`.multi` carry ≥ 2 ready clauses — so their
+  `true` transcribes the current unconditional pop exactly and is
+  vacuous at 1). `false` = a bound-≤-1 consultation consumes nothing
+  (the L1/L4 singleton non-consumption that sequential conservation
+  depends on, formerly caller-side special cases). -/
+  consumeAtOne : Bool
+  /-- The canonical member at slot 0 (audit C-2's cross-site
+  convention, docstring-checked): the empty/exhausted stream must
+  realize the machine's default behavior at this site. -/
+  canonicalSlot0 : String
+
+/-- The policy table. Every row transcribes the pre-Q1 code's exact
+behavior at its site — byte-identical streams (stage A's acceptance:
+the full differential holds with zero drift). -/
+def ChoiceSite.policy : ChoiceSite → SitePolicy
+  | .mapIter => ⟨true,
+      "first remaining candidate in cell order (stop LAST; consumed even at width 1 — memo §5 ruling Q3)"⟩
+  | .appendSpill => ⟨true,
+      "the growth-formula capacity (extra = 0 keeps gc's deterministic point; width ≥ 2 always)"⟩
+  | .l2Entry => ⟨true,
+      "first ready clause in clause order (.picks is ≥ 2 ready by construction; singleton commit is .done upstream)"⟩
+  | .l2Arrival => ⟨true,
+      "first waiter-extended-ready clause in clause order (.multi is ≥ 2 ready by construction)"⟩
+  | .l4Waiter => ⟨false,
+      "first matched waiter in goroutine order (clause order within a select); a singleton candidate pairs without a pop"⟩
+  | .l1Sched => ⟨false,
+      "lowest-index runnable goroutine; a sole runnable steps without a pop (sequential conservation's hinge)"⟩
+  | .l5ExitWindow => ⟨false,
+      "exit now (0 = teardown at main's terminal; bound is constant 2, so the flag is inert)"⟩
+
+/-- **THE one consumption combinator** (audit Q1): every
+nondeterministic point in the interpreter resolves through this, with
+its census tag — which is what makes a labeled consumption trace (Q2)
+and per-site enumeration policy expressible. `Choices` itself stays
+`List Nat` (streams stay writable by hand and by the enumerator). -/
+def Choices.consumeAt (site : ChoiceSite) (bound : Nat) (ch : Choices) :
+    Nat × Choices :=
+  if bound ≤ 1 ∧ !site.policy.consumeAtOne then (0, ch)
+  else ch.consume bound
+
+/-- An always-popping site's consultation is the raw pop. -/
+theorem Choices.consumeAt_pop {site : ChoiceSite} {bound : Nat}
+    {ch : Choices} (h : site.policy.consumeAtOne = true) :
+    Choices.consumeAt site bound ch = ch.consume bound := by
+  simp [Choices.consumeAt, h]
+
+@[simp] theorem Choices.consumeAt_mapIter {bound : Nat} {ch : Choices} :
+    Choices.consumeAt .mapIter bound ch = ch.consume bound :=
+  Choices.consumeAt_pop rfl
+
+@[simp] theorem Choices.consumeAt_appendSpill {bound : Nat} {ch : Choices} :
+    Choices.consumeAt .appendSpill bound ch = ch.consume bound :=
+  Choices.consumeAt_pop rfl
+
+@[simp] theorem Choices.consumeAt_l2Entry {bound : Nat} {ch : Choices} :
+    Choices.consumeAt .l2Entry bound ch = ch.consume bound :=
+  Choices.consumeAt_pop rfl
+
+@[simp] theorem Choices.consumeAt_l2Arrival {bound : Nat} {ch : Choices} :
+    Choices.consumeAt .l2Arrival bound ch = ch.consume bound :=
+  Choices.consumeAt_pop rfl
+
+/-- A guarded site's bound-≤-1 consultation consumes nothing (the
+declared singleton non-consumption). -/
+theorem Choices.consumeAt_le_one {site : ChoiceSite} {bound : Nat}
+    {ch : Choices} (hb : bound ≤ 1)
+    (h : site.policy.consumeAtOne = false) :
+    Choices.consumeAt site bound ch = (0, ch) := by
+  simp [Choices.consumeAt, hb, h]
+
+/-- A guarded site's bound-≥-2 consultation is the raw pop. -/
+theorem Choices.consumeAt_of_lt {site : ChoiceSite} {bound : Nat}
+    {ch : Choices} (hb : 1 < bound) :
+    Choices.consumeAt site bound ch = ch.consume bound := by
+  simp [Choices.consumeAt, Nat.not_le_of_lt hb]
 
 def ExecState.freshLoc (state : ExecState) : Loc × ExecState :=
   let loc := Loc.base { id := state.nextAddr }

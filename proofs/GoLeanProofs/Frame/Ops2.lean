@@ -319,7 +319,7 @@ theorem applyStmtOp_sim (hS : FrameSim ρ na₀ na fr σ σF)
           subst hovF
           rcases hcs : ch.consume (appendSpillWidth cap (len + ev.size))
             with ⟨extra, ch2⟩
-          simp only [hcs]
+          simp only [Choices.consumeAt_appendSpill, hcs]
           refine ExSim.bind (buildAppendBackingValue_sim hS elem ov ev
             (len + ev.size +
               (appendGrowthCap cap (len + ev.size) - (len + ev.size) + extra) %

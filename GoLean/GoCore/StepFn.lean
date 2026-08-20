@@ -615,7 +615,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           else do
             let mandatory ← mapIterMandatoryRemains s keyTy cands start
             let width := cands.size + (if mandatory then 0 else 1)
-            let (idx, choices') := choices.consume width
+            let (idx, choices') := Choices.consumeAt .mapIter width choices
             match cands[idx]? with
             | none =>
                 -- idx = cands.size: the STOP slot (only reachable when
