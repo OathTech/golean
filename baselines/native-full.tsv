@@ -18,12 +18,24 @@
 #       to exactly it, awaiting the mover/reduction lane.
 #   Also this slice (sets unchanged, result rows unchanged):
 #     rwmutex-order / fifo / cap-one / alternate / rw-writers /
-#     first-come dropped tier=slow (certify in <1 s under dedup;
-#     records deleted); google-search re-certified with a fresh
+#     first-come dropped tier=slow (all five in the FAST lane under
+#     dedup — walls re-measured 2026-08-21 at the audit-fix tip, 3 runs
+#     each: fifo 0.27 s, cap-one 0.07 s, alternate 0.09 s, rw-writers
+#     0.22 s, first-come 1.35 s; the original "<1 s" was wrong for
+#     first-come, audit finding B-F7; records deleted);
+#     google-search re-certified with a fresh
 #     theorem-backed tier=slow record — both standing --slow alarms
 #     RESOLVED; fifo/alternate backedge narrowings lifted.
 #   counts: 2324 cases, 2184 PASS / 140 FAIL (was 2182/142)
 #   frontend: native (tools/nativefrontend + NativeToIR)
+#   columns row restored 2026-08-21 (audit finding B-F10): the POR
+#   slice's re-pin dropped the `# columns:` comment and the literal
+#   `result<TAB>id<TAB>stage` header row that main's format carries
+#   (main @ 065edaec, lines 22-23). Format drift in a tracked baseline
+#   is exactly the thing that makes a diff hard to read across a merge,
+#   so it is restored here rather than at the next re-pin.
+# columns: result<TAB>id<TAB>stage
+result	id	stage
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-

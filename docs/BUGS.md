@@ -3093,7 +3093,10 @@ reachable only from the multi-package corpus, whose stdlib imports
   `docs/2026-08-21_w32-por-design.md`): four of the five certify under
   `engine=dedup` — the state-graph dedup certifier whose accepted
   certificates are THEOREM-backed equal to `SlowObs`
-  (`checkCertM_slowObs`) — request-reply (18k node+edge work),
+  (`checkCertM_slowObs`) — request-reply (36k node+edge work: 17.6k
+  nodes + 18.4k edges, 0.3 s; corrected 2026-08-21 from "18k", which
+  was the EDGE count alone and so was inconsistent with the three
+  node+edge sums beside it — audit finding B-F6),
   sb-chan (736k, 5.7 s), google-search (12.8M, ~157 s; fresh
   tier=slow record), rwmutex-order (207k, 0.9 s; tier dropped). The
   two standing `--slow` alarms are RESOLVED. Residual:
