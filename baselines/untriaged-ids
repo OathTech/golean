@@ -73,9 +73,6 @@
 #   Entries retired. The cap-of-[]rune(s) LATITUDE point stays
 #   unpinnable (gc's non-escaping point is cap=32, outside the
 #   cap=len singleton — recorded at latitude inventory R3, no case).]
-floats/to-int-out-of-range/nan	latitude
-floats/to-int-out-of-range/range	latitude
-init/hidden-dep-order	latitude
 # goroutines/sched-dependent/first-come: DELIBERATE slice-4 red pin
 #   (channels arc slice 2): a schedule-DEPENDENT observable (which
 #   sender commits first is L1 latitude, admitted set {12,21}) declared
@@ -87,7 +84,6 @@ init/hidden-dep-order	latitude
 #   the init phase runs on the SEQUENTIAL driver this slice — the spawn
 #   position refuses with a precise .unsupported. Flips when a later
 #   slice runs init on the pool.
-goroutines/spawn-in-init/in-init	coverage
 # [sched-dependent/{select-default-handshake,len-handoff}: FLIPPED
 #   PASS when the slice-4 pool enumerator certified their sets —
 #   entries retired.]
@@ -102,13 +98,11 @@ goroutines/spawn-in-init/in-init	coverage
 #   (arc-final audit F11/F10, 2026-08-08) — select-with-select
 #   rendezvous refused fail-closed at the machine boundary
 #   (lean-observation is the nearest stage); not a fidelity bug.
-channels/select-select/core	coverage
 # channels/select-select/beside-loop: the same marker's over-broad-
 #   trigger sibling (F10), at stage nondet (default stream commits the
 #   cell-ready clause; adversarial streams hit the refusal). Entered
 #   when the ledger filter gained nondet (convergence response,
 #   2026-08-08); not a fidelity bug.
-channels/select-select/beside-loop	coverage
 # (2026-08-09, spec-parity slice 2 flip commit: the 34 transient sync
 #   guardrail entries retired — 33 flipped PASS, out-of-scope-trylock
 #   moved to its honest frontend-export refusal stage, leaving the
@@ -135,7 +129,6 @@ channels/select-select/beside-loop	coverage
 #   nan}: FLIPPED PASS 2026-08-19 (19-red slice family 3 = triage L3):
 #   the IEEE min/max fold over the shared floatMinMaxBits kernel landed
 #   (NaN propagates, min(-0,+0) = -0). Entries retired.]
-spec-examples-decl/slice-to-array/ok-forms	coverage
 # 2026-08-19 (bug-fix arc slice 6, the whole-language bar): two
 #   sync/atomic FRONTIER-suite rows enter — coverage backlog, not
 #   fidelity wrong-answers, both fail-closed refusals of an unmodeled
@@ -145,13 +138,11 @@ spec-examples-decl/slice-to-array/ok-forms	coverage
 #   RUN time ("default value for imported named type sync/atomic.Value"
 #   — a D5 imported-type stub, so lean-observation is the nearest
 #   stage). Flips at the atomics arc (ledger design question Q-ATOMIC).
-sync/atomic-frontier/value	coverage
 # sync/atomic-frontier/mp-litmus: the membership-lane SC litmus row —
 #   the enumerator refuses at the quarantined StoreInt32 call
 #   (stage membership). Its admitted set {0,1,11} is argued from
 #   mem#atomic's seq_cst clause in the case file; flips at the same
 #   arc, which re-certifies the set.
-sync/atomic-frontier/mp-litmus	coverage
 # pointers/nil-array-ptr-slice/slice-expr-nil: BUG-063's lesser sibling
 #   pinned at its CURRENT class (audit fix round 2026-08-19): the
 #   implicit &(*ap) collapse hands the slice node a nil base and the
@@ -162,7 +153,6 @@ sync/atomic-frontier/mp-litmus	coverage
 #   grows its own nil handling; deliberately NOT ridden on the BUG-063
 #   fix, whose scope is receiver-position only (the store-order pins
 #   forbid a blanket change at emitAddressOf).
-pointers/nil-array-ptr-slice/slice-expr-nil	coverage
 # pointers/nil-array-ptr-slice-elided-high/{deref-elided-high,
 #   deref-low-only,pointer-form,zero-length-array}: the ELIDED-HIGH half
 #   of the row above's family, entering at the holes-arc audit fix round
@@ -183,10 +173,6 @@ pointers/nil-array-ptr-slice/slice-expr-nil	coverage
 #   The dir's two green rows (field-through-nil-{ptr,call}) are the scope
 #   control and are NOT tracked here: a nil pointer reached through a
 #   FIELD selector still panics correctly on both sides.
-pointers/nil-array-ptr-slice-elided-high/deref-elided-high	coverage
-pointers/nil-array-ptr-slice-elided-high/deref-low-only	coverage
-pointers/nil-array-ptr-slice-elided-high/pointer-form	coverage
-pointers/nil-array-ptr-slice-elided-high/zero-length-array	coverage
 # pointers/zero-size-address/escaped-same: LATITUDE deviation record
 #   (inventory R15, audit fix round F1 2026-08-19): "Two distinct
 #   zero-size variables may have the same address" — gc's heap/escaped
@@ -196,4 +182,19 @@ pointers/nil-array-ptr-slice-elided-high/zero-length-array	coverage
 #   deterministic singleton (the init/hidden-dep-order class); retires
 #   by a W3.2 envelope (may-equal choice or membership row), never by
 #   a fix. Sibling stack-distinct is the green member-agreement pin.
+channels/select-select/beside-loop	coverage
+channels/select-select/core	coverage
+floats/to-int-out-of-range/nan	latitude
+floats/to-int-out-of-range/range	latitude
+goroutines/spawn-in-init/in-init	coverage
+init/hidden-dep-order	latitude
+pointers/nil-array-ptr-slice-elided-high/deref-elided-high	coverage
+pointers/nil-array-ptr-slice-elided-high/deref-low-only	coverage
+pointers/nil-array-ptr-slice-elided-high/pointer-form	coverage
+pointers/nil-array-ptr-slice-elided-high/zero-length-array	coverage
+pointers/nil-array-ptr-slice/slice-expr-nil	coverage
 pointers/zero-size-address/escaped-same	latitude
+spec-examples-decl/slice-to-array/ok-forms	coverage
+strings/split-conformance/empty-sep	coverage
+sync/atomic-frontier/mp-litmus	coverage
+sync/atomic-frontier/value	coverage
