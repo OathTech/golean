@@ -763,6 +763,37 @@ the user's two rulings (R-1 rendering split, R-2 opsem route) and
 records campaign 2's outcome; four open questions remain in the
 charter's §Open questions, each with a stated default.
 
+- [ ] **RULE the eight Q-rows** (charter §Slice 2 — memos WRITTEN
+      2026-08-21, `docs/2026-08-21_w32-qrow-memos.md`, one DECISION
+      BLOCK per row + the one-page RULING SHEET at the tail;
+      implementations are explicitly POST-LAUNCH frontier slices, and
+      defer-with-reason is a first-class ruling on every row). Routing
+      per row — the ruling lands in the memo's decision block and the
+      ledger §6 row; an implementation ruling then spawns its own
+      slice with envelope statement + membership wiring + budget:
+      - **Q-INITSPAWN** (1 red; memo §1) — recommended: rule the
+        L1-children envelope now (during-init execution gc-probed
+        40/40, `docs/evidence/2026-08-21_w32-qrow-probes/`);
+        implementation rides slice 3(a)'s `$pkginit` surgery.
+      - **Q-ATOMIC** (5 reds; memo §2) — recommended: ratify the
+        atomics-arc design (fused SC steps, zero new sites,
+        FairStream tier bundled). Owns Q-TRYLOCK's vehicle.
+      - **Q-SELSEL** (2 reds; memo §3) — recommended: asymmetric-
+        arrival envelope; sequence the slice before the raft node
+        layer (node.go's select↔select idiom is a hard dependency).
+      - **Q-RACEPATH** (1 red; memo §4) — recommended:
+        constant-index narrowing (S) at the next footprint-touching
+        slice (slice 4 natural).
+      - **Q-TRYLOCK** (1 red; memo §5) — recommended: defer into the
+        atomics arc with the spurious-failure envelope pre-ruled.
+      - **Q-SYNCVAL** (5 reds; memo §6) — recommended: ratify the
+        op-identity principle + green-light P-S2-6 (frontend-only).
+      - **Q-SYNCLIT** (2 reds; memo §7) — recommended: S lowering
+        (semantics forced: empty literal ≡ zero value); rider on the
+        Q-SYNCVAL slice.
+      - **Q-COND** (3 reds; memo §8) — recommended: defer with the
+        DOCS-text envelope pre-ruled (no spurious wakeups; Signal =
+        any-waiter; Broadcast forced-all; copy = fatal).
 - [ ] **RULE what `nonterm=` MEANS under `engine=dedup`** (charter
       §Open questions **OQ5**, added 2026-08-21 by the POR slice; row
       booked here by audit finding B-F4 so it is visible outside the
