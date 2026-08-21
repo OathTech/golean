@@ -549,7 +549,7 @@ run_case_rows() {
   confluent_member=""
   confluent_detail=""
   if [[ "$lane" == "confluent" ]]; then
-    local width sites obs_cap samples work members statuses tier
+    local width sites obs_cap samples work members statuses tier backedge nonterm
     parse_lane_params || return 0
     local conf_dir="$OUT/membership/$id"
     mkdir -p "$conf_dir"
@@ -584,6 +584,9 @@ run_case_rows() {
     local conf_args=(coverage-observations --input "$wire_json" --function "$function_name"
       --max-width "$width" --max-sites "$sites" --cap "$obs_cap" --work-cap "$work"
       --expect-status "$expected_status")
+    if [[ -n "$backedge" ]]; then
+      conf_args+=(--backedge "$backedge")
+    fi
     if [[ "$arg_ints" != "-" ]]; then
       local v2
       IFS=',' read -r -a ints2 <<< "$arg_ints"
@@ -691,13 +694,16 @@ run_case_rows() {
   # approximation (the old adversarial-stream loop is subsumed: every
   # stream's path is in the enumerated tree).
   if [[ "$lane" == "racy" ]]; then
-    local width sites obs_cap samples work members statuses
+    local width sites obs_cap samples work members statuses tier backedge nonterm
     parse_lane_params || return 0
     local racy_dir="$OUT/membership/$id"
     mkdir -p "$racy_dir"
     local racy_args=(coverage-observations --input "$wire_json" --function "$function_name"
       --max-width "$width" --max-sites "$sites" --cap "$obs_cap" --work-cap "$work"
       --expect-status race)
+    if [[ -n "$backedge" ]]; then
+      racy_args+=(--backedge "$backedge")
+    fi
     if [[ "$arg_ints" != "-" ]]; then
       local v3
       IFS=',' read -r -a ints3 <<< "$arg_ints"
@@ -858,7 +864,7 @@ membership_go_observation() {
 # and since slice 4 the assertion is checked MECHANICALLY per site by the
 # enumerator. Returns nonzero after reporting on a bad shape.
 parse_lane_params() {
-  width="" sites=8 obs_cap=64 samples=5 work=200000 members="" statuses="$expected_status" tier=""
+  width="" sites=8 obs_cap=64 samples=5 work=200000 members="" statuses="$expected_status" tier="" backedge="" nonterm=""
   if [[ "$params" != "-" ]]; then
     local kv key value
     IFS=',' read -r -a kvs <<< "$params"
@@ -919,6 +925,42 @@ parse_lane_params() {
         tier="slow"
         continue
       fi
+      if [[ "$key" == "backedge" ]]; then
+        # backEdge per-site enumeration mode (W3.2 stage D §5d):
+        # 'full' = exhaustive (loop-length-exponential — a row saying
+        # so pays for it), <k> = canonical slot + k anti-progress
+        # slots per occurrence (k may be 0; the enumerator prints the
+        # capped-occurrence count into the run record so the claim
+        # states exactly which tree it certified). Enumerating lanes
+        # only (membership/confluent/racy).
+        if [[ "$lane" == "strict" ]]; then
+          report_fail "$id" "$features" "manifest" "backedge= is an enumerating-lane param: $kv (lane=$lane)"
+          return 1
+        fi
+        if [[ "$value" != "full" && ! "$value" =~ ^(0|[1-9][0-9]*)$ ]]; then
+          report_fail "$id" "$features" "manifest" "backedge= must be 'full' or a non-negative integer: $kv"
+          return 1
+        fi
+        backedge="$value"
+        continue
+      fi
+      if [[ "$key" == "nonterm" ]]; then
+        # allow-nonterm (stage D §5d): per-branch pool fuel N with
+        # fuel-exhausted branches counted (never members; membership =
+        # oracle observation ∈ TERMINATING members). Membership-only:
+        # a confluent/racy claim has no honest divergent-branch
+        # reading.
+        if [[ "$lane" != "membership" ]]; then
+          report_fail "$id" "$features" "manifest" "nonterm= is a membership-lane param: $kv (lane=$lane)"
+          return 1
+        fi
+        if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
+          report_fail "$id" "$features" "manifest" "nonterm= must be a positive integer (the per-branch fuel): $kv"
+          return 1
+        fi
+        nonterm="$value"
+        continue
+      fi
       if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
         report_fail "$id" "$features" "manifest" "lane param $key must be a positive integer: $kv"
         return 1
@@ -951,7 +993,7 @@ member_status_allowed() {
 }
 
 run_membership_case_rows() {
-  local width sites obs_cap samples work members statuses
+  local width sites obs_cap samples work members statuses tier backedge nonterm
   parse_lane_params || return 0
 
   local mem_dir="$OUT/membership/$id"
@@ -1045,6 +1087,12 @@ run_membership_case_rows() {
     local enum_args=(coverage-observations --input "$wire_json" --function "$function_name"
       --max-width "$width" --max-sites "$sites" --cap "$obs_cap" --work-cap "$work"
       --expect-status "${statuses//+/,}" ${int_flags+"${int_flags[@]}"})
+    if [[ -n "$backedge" ]]; then
+      enum_args+=(--backedge "$backedge")
+    fi
+    if [[ -n "$nonterm" ]]; then
+      enum_args+=(--allow-nonterm "$nonterm")
+    fi
     # tier=slow re-enumeration gets the slow budget (see the two constants
     # at the top). Capture the exit code and NAME a timeout in the detail:
     # the 2026-08-13 nightly flake was undiagnosable from CI logs because
@@ -1087,8 +1135,12 @@ run_membership_case_rows() {
 
   local member_count
   member_count="$(grep -c . "$mem_dir/observations.txt" || true)"
-  if [[ "$member_count" -le 1 ]]; then
+  if [[ "$member_count" -le 1 && -z "$nonterm" ]]; then
     report_fail "$id" "$features" "membership" "enumerated observation set is a singleton ($member_count member) — the case belongs in the strict or confluent lane"
+    return 0
+  fi
+  if [[ "$member_count" -lt 1 ]]; then
+    report_fail "$id" "$features" "membership" "enumerated TERMINATING observation set is empty — nothing for the oracle to be a member of"
     return 0
   fi
   # The set-cardinality pin (slice 4, members=<n>): the certified set's
@@ -1112,6 +1164,14 @@ run_membership_case_rows() {
       run_args+=(--choices "$cs")
     fi
     if coupling_obs="$(lean "${run_args[@]}" 2>&1)"; then :; fi
+    if [[ -n "$nonterm" && "$coupling_obs" == *'"status":"fuel-out"'* ]]; then
+      # Declared-nonterm row (stage D §5d): a coupling stream landing
+      # on a DIVERGENT branch is the counted-nonterm class, not a
+      # member — the same honest bucket the enumeration reports
+      # (`nonterm=` in the run record). Terminating coupling
+      # observations still must be members.
+      continue
+    fi
     m_found=0
     while IFS= read -r member; do
       if lean observation-eq --left "$member" --right "$coupling_obs" >/dev/null 2>&1; then

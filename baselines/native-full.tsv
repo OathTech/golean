@@ -1,5 +1,13 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-21 (W3.2 slice 1 stage C — B1 post-op scheduling
+# recorded: 2026-08-21 (W3.2 slice 1 stage D — B2 back-edge boundaries
+#   + the §5d enumerator modes; re-pin #2: ONE new id,
+#   goroutines/send-then-spin PASS/membership — THE WEDGE ROW (register
+#   #1's discharge exhibit: terminating set {42} certified with counted
+#   nonterm branches; backedge=1 exhaustive at its bound-2 menus). Zero
+#   other movement — the stage-D sweep's four backEdge-declaring rows
+#   and the four re-measured tier=slow rows all held their results.
+#   Stage-C header retained below for the full stage record.
+# previously recorded: 2026-08-21 (W3.2 slice 1 stage C — B1 post-op scheduling
 #   boundaries, the `.opDone` marker; branch w32-re-envelope; G1 ruling
 #   2026-08-20). Re-pin #1 of the stage plan (boundary-set note §7).
 #   re-pin reason: 1 NEW id and 3 EXPLAINED honest-red flips; ZERO
@@ -27,7 +35,7 @@
 #     two drifts as the STANDING RECORDED ALARM until the fallback
 #     ruling (docs/w32-log.md stage C).
 #   frontend: native (tools/nativefrontend + NativeToIR)
-#   cases: 2254 (PASS 2111 / FAIL 143)
+#   cases: 2255 (PASS 2112 / FAIL 143)
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -959,6 +967,7 @@ PASS	goroutines/select-wake/buffered-data	confluent
 PASS	goroutines/select-wake/closed	confluent
 PASS	goroutines/select-wake/recv	confluent
 PASS	goroutines/select-wake/send	confluent
+PASS	goroutines/send-then-spin	membership
 PASS	goroutines/spawn-edge/child-panic-aborts	confluent
 PASS	goroutines/spawn-edge/child-recovers	-
 PASS	goroutines/spawn-edge/nil-func-fatal	-

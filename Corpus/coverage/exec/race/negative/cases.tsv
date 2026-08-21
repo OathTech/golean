@@ -34,4 +34,4 @@ promoted-dispatch	racePromotedDispatch	-	race	-	goroutines,channels,interfaces,m
 # performs no per-iteration read, so the write landing mid-range is a
 # silent value run — carried by BUG-005 until the live-iteration
 # surgery lands (its footprint arm falls out of that fix).
-map-range-iter	raceMapRangeIter	-	race	-	goroutines,channels,maps,range,race	racy	-	width=4
+map-range-iter	raceMapRangeIter	-	race	-	goroutines,channels,maps,range,race	racy	-	width=4,sites=16,backedge=full

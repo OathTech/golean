@@ -80,23 +80,36 @@ plausible envelope. Seeded at drafting; the latitude inventory will
 extend it; every entry names what is assumed, why, and what removing it
 costs. We do not BS ourselves about the distance to the goal.
 
-1. **Scheduling is gc-shaped.** The coarse scheduler's
-   forced-continuation (run-to-boundary) and the fused effect boundary
-   narrow scheduling latitude below what Go permits — including one
-   oracle-visible divergence, the SEND-THEN-SPIN wedge: a worker
-   performs one registry op (a cap-1 send that wakes main) and then
-   spins with no further registry op, and the machine pins the
-   scheduler on the worker forever — exit-0 unreachable on EVERY
-   stream (511/511 fuel-out in an exhaustive mod-2 depth-8 sweep)
-   where gc exits 0, 60/60. `observed ∉ modeled` — a definitional
-   bug, first in the re-envelope queue; recorded probe:
-   `docs/evidence/2026-08-12_scheduler-wedge-probes/`. (Exhibit
-   corrected at the 2026-08-12 audit: a REGISTRY-FREE spinner — no
-   registry op anywhere — is NOT this bug: gc's exit-0 there is in
-   the modeled set via the default stream; its extra never-yielding
-   streams are the too-wide, transfer-safe direction, and ∀-stream
-   termination on that shape is the fairness quantifier's territory,
-   not this re-envelope's.)
+1. **Scheduling is gc-shaped — DISCHARGED (W3.2 slice 1, stages C+D,
+   2026-08-20/21; G1 ruling of 2026-08-20).** The two narrowing seams
+   are widened: every registry-op COMPLETION is a scheduling point
+   (B1 — the `.opDone` marker, site `postOp`; envelope statement at
+   `Config.opDone`, Machine.lean) and every loop BACK-EDGE is a
+   scheduling point (B2 — site `backEdge`; envelope statement at
+   `Config.atBoundary`, Multi.lean), both grounded in the
+   scheduling-semantics dossier (§1.1 scheduling deliberately
+   unspecified; §3.1 the spec allows starvation; §4.3 the wedge
+   verdict). THE FORMER DEFINITIONAL BUG IS DEAD: the SEND-THEN-SPIN
+   wedge's completing execution (gc: exit 0, 42 — 60/60, +20/20 at
+   GOMAXPROCS=1) is a MEMBER again — machine stream `[0,0,1]` realizes
+   it (pre-widening: 511/511 fuel-out over the exhaustive mod-2
+   depth-8 sweep), and the corpus row
+   `goroutines/send-then-spin` certifies the terminating set {42} with
+   the always-spin schedules counted honestly (the §5d nonterm
+   accounting) — in the envelope BY RIGHT, per dossier §3.1, exactly
+   §4.3's "the completing execution and an unfair execution".
+   Records: `docs/evidence/2026-08-12_scheduler-wedge-probes/` (the
+   discovery), `docs/evidence/2026-08-20_w32-postop-probes/` (the
+   flip). RESIDUE, stated: (i) the abort window at panic terminals is
+   B3, DEFERRED at G1 with the U-1 probe as its trigger baseline
+   (inventory C3); (ii) ∀-stream termination of spinner shapes is the
+   liveness tier's `Fair` question (now non-vacuous BY B2 — the
+   backEdge site's docstring); (iii) scheduling points remain
+   REGISTRY/BACK-EDGE-granular, not per-instruction — register #5's
+   residual, the reduction line's territory. (The 2026-08-12 exhibit
+   correction stands: a REGISTRY-FREE spinner was never this bug —
+   gc's exit-0 there was already in the modeled set via the default
+   stream.)
 2. **Sequential evaluation-order latitude is pinned**, each axis to a
    recorded conforming point — gc's where pinnable (call-vs-operand
    order, BUG-052), OURS where gc's realization is compiler-internal
@@ -119,10 +132,14 @@ costs. We do not BS ourselves about the distance to the goal.
    unmodelable as a testable artifact today, a position the plmm
    record shows is state-of-the-art-aligned, not a shortcut).
 5. **Registry-granularity scheduling points**: sound only where
-   scheduling is unobservable between them for race-free programs; the
-   fused-boundary discovery shows the current point set is incomplete
-   (termination-ordering races are schedule-observable without data
-   races).
+   scheduling is unobservable between them for race-free programs.
+   The fused-boundary incompleteness this entry recorded is CLOSED
+   (W3.2 stages C+D: op completions and loop back-edges are points
+   now — entry 1); the remaining named gaps are the B3 abort window
+   (deferred at G1, trigger baseline recorded at inventory C3/U-1)
+   and sub-statement granularity generally, which is the NPDRF/
+   reduction line's territory — the mover theorem resumes over the
+   WIDENED point set (slice 5).
 6. **Sequential allocation addressing — DISCHARGED BY QUOTIENT
    (2026-08-13), the register's first theorem-closed entry.** The
    deterministic `nextAddr` allocator models less than Go promises
