@@ -390,15 +390,22 @@ prover definitions; prior art reviewed in
   TCB component where every recent silent-wrong-answer bug lived
   (BUG-057/058/062/063, the hoist family).
 - **Prep artifact (2026-08-21): the desugar-obligation inventory**,
-  `docs/2026-08-21_w7-desugar-inventory.md` — 246 rows censusing every
+  `docs/2026-08-21_w7-desugar-inventory.md` — 249 rows censusing every
   semantic lowering decision the native frontend makes, each with its
   anchor, spec anchor, correctness-statement shape, guardrail case
   families and a difficulty guess. It also fixes the vocabulary the
-  route needs (five obligation KINDS, of which the latitude one is a
-  MEMBERSHIP claim, never equality with a gc-pin), proposes an order
-  for the first certificates (if-init hoisting, then comma-ok, then
-  shadow-capture), and lists W7's open design questions (§12) and six
-  suspected holes the census turned up (§10).
+  route needs (five obligation KINDS plus K2m, of which the latitude
+  ones are MEMBERSHIP claims, never equality with a gc-pin — 13 K2
+  rows, counted exactly), proposes an order for the first certificates
+  (if-init hoisting, then comma-ok, then shadow-capture), and lists
+  W7's open design questions (§12) and six holes the census turned up
+  (§10). **Two of those holes are confirmed live silent wrong answers**
+  after the pre-merge audit round — H-a (a slice expression's elided
+  high emits its base twice, so a call-valued base runs twice) and H-d
+  (the wire drops func types' variadic bit, so a comma-ok assert
+  answers `true` where Go answers `false`), both with witnesses, both
+  predating the branch, both owing a BUG id. They head the follow-on
+  holes arc and outrank every certificate in §11.
 - **Interaction with W3.2 slice 6a (the opsem artifact): 6a HOLDS
   for the prototype** — if the tool lands on its expected timeline,
   spectec becomes the master notation (GoCore proven against it)
