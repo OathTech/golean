@@ -1,0 +1,13 @@
+# sweep.py — frontend /home/dev/projects/golean/.claude/worktrees/raft-w42/artifacts/nativefrontend
+# entries: raft.NewRawNode, raft.RawNode.Tick, raft.RawNode.Step, raft.RawNode.HasReady, raft.RawNode.Ready, raft.RawNode.Advance, raft.RawNode.Propose, raft.RawNode.Campaign, raft.RawNode.ApplyConfChange, raft.RawNode.ProposeConfChange, raft.NewMemoryStorage, raft.MemoryStorage.SetHardState, raft.MemoryStorage.Append, raft.MemoryStorage.CreateSnapshot, raft.IsEmptyHardState, raft.IsEmptySnap
+
+PASS 1 (the walk's tree): 14 quarantined subject declarations, 30 imported stdlib stubs
+        0 LIVE, 14 dead
+        0 LIVE imported stdlib stubs (done-criterion clause 2)
+
+PASS 2 (sinks opened, 1 rounds to fixpoint): flattened ; 11 believed-dead declarations neutralised in the last round (3 had no source decl: raft.MemoryStorage.Lock, raft.MemoryStorage.TryLock, raft.MemoryStorage.Unlock); 8 orphaned imports drained
+        0 NEWLY live behind the PASS-1 sinks
+
+RESIDUAL SINKS: none — every reachable declaration in the final PASS-2 wire has a body, so the census is CLOSED over this tree (nothing is hidden behind a refusal).
+
+HEADLINE: 0 LIVE quarantined subject declarations (0 first-order + 0 behind sinks) out of 14 quarantined in PASS 1, plus 30 imported stdlib stubs (0 LIVE) — a live imported stub is a run-blocker exactly like a live subject quarantine (done-criterion clause 2).

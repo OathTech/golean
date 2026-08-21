@@ -27,3 +27,9 @@
 # ignored only from 2026-08-14 (audit fix round); until then the sentence
 # was aspirational and .tmp/ showed up as untracked in every status.
 /.tmp/
+# Python bytecode caches. The tools/raftsubject/ scripts import each other
+# (tracefamilies.py reuses tracereplay.py's block parser), so running one
+# drops a __pycache__/ beside them; two pre-merge auditors flagged the
+# resulting untracked directory as build residue (2026-08-21).
+__pycache__/
+*.pyc

@@ -1,0 +1,27 @@
+# sweep.py — frontend /home/dev/projects/golean/.claude/worktrees/raft-w42/artifacts/nativefrontend
+# entries: raft.NewRawNode, raft.RawNode.Tick, raft.RawNode.Step, raft.RawNode.HasReady, raft.RawNode.Ready, raft.RawNode.Advance, raft.RawNode.Propose, raft.RawNode.Campaign, raft.RawNode.ApplyConfChange, raft.RawNode.ProposeConfChange, raft.NewMemoryStorage, raft.MemoryStorage.SetHardState, raft.MemoryStorage.Append, raft.MemoryStorage.CreateSnapshot, raft.IsEmptyHardState, raft.IsEmptySnap
+
+PASS 1 (the walk's tree): 24 quarantined subject declarations, 46 imported stdlib stubs
+        5 LIVE, 19 dead
+  LIVE raft.DefaultLogger.Debugf                  raft.DefaultLogger.Debugf <- raft.raft.appliedTo <- raft.raft.Step <- raft.RawNode.Step
+  LIVE raft.DefaultLogger.Error                   raft.DefaultLogger.Error <- raft.newRaft <- raft.NewRawNode
+  LIVE raft.DefaultLogger.Errorf                  raft.DefaultLogger.Errorf <- raft.stepFollower <- raft.raft.becomeFollower <- raft.newRaft <- raft.NewRawNode
+  LIVE raft.DefaultLogger.Infof                   raft.DefaultLogger.Infof <- raft.newRaft <- raft.NewRawNode
+  LIVE raft.DefaultLogger.Warningf                raft.DefaultLogger.Warningf <- raft.raft.hup <- raft.raft.Step <- raft.RawNode.Step
+        2 LIVE imported stdlib stubs (done-criterion clause 2)
+  LIVE-IMPORTED log.Logger.Panic                  log.Logger.Panic <- raft.assertConfStatesEquivalent <- raft.newRaft <- raft.NewRawNode
+  LIVE-IMPORTED log.Logger.Panicf                 log.Logger.Panicf <- raft.RawNode.Advance
+
+PASS 2 (sinks opened, 1 rounds to fixpoint): flattened ; 16 believed-dead declarations neutralised in the last round (3 had no source decl: raft.MemoryStorage.Lock, raft.MemoryStorage.TryLock, raft.MemoryStorage.Unlock); 9 orphaned imports drained
+        0 NEWLY live behind the PASS-1 sinks
+
+RESIDUAL SINKS: 7 declarations are still quarantined AND reachable in the final PASS-2 wire — whatever they call is UNMEASURED, so the census is not closed:
+  sink log.Logger.Panic                           imported method log.Logger.Panic (declaration-only stub: satisfaction answers, calls fail closed)
+  sink log.Logger.Panicf                          imported method log.Logger.Panicf (declaration-only stub: satisfaction answers, calls fail closed)
+  sink raft.DefaultLogger.Debugf                  method raft.DefaultLogger.Debugf (fmt.Sprintf with a spread argument (args...) is outside the modeled subset; satisfacti
+  sink raft.DefaultLogger.Error                   method raft.DefaultLogger.Error (package-selector call fmt.Sprint (package "fmt" surface not modeled); satisfaction answ
+  sink raft.DefaultLogger.Errorf                  method raft.DefaultLogger.Errorf (fmt.Sprintf with a spread argument (args...) is outside the modeled subset; satisfacti
+  sink raft.DefaultLogger.Infof                   method raft.DefaultLogger.Infof (fmt.Sprintf with a spread argument (args...) is outside the modeled subset; satisfactio
+  sink raft.DefaultLogger.Warningf                method raft.DefaultLogger.Warningf (fmt.Sprintf with a spread argument (args...) is outside the modeled subset; satisfac
+
+HEADLINE: 5 LIVE quarantined subject declarations (5 first-order + 0 behind sinks) out of 24 quarantined in PASS 1, plus 46 imported stdlib stubs (2 LIVE) — a live imported stub is a run-blocker exactly like a live subject quarantine (done-criterion clause 2).
