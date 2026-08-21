@@ -340,6 +340,32 @@ revisited on new releases, not applied blindly).
 
 ---
 
+### The launch gate (added at Mike's direction, 2026-08-21)
+
+The campaign does not launch on the trace-differential milestone
+alone. **Launch is preceded by a comprehensive Q/A audit of the whole
+stack** — scoped and signed by Mike — distinct in kind from the
+per-arc audits: those review diffs; this reviews the INTEGRATED state
+as a composed claim chain, at one settled tip:
+
+- spec → machine: the differential + divergence-ledger accounting
+  audited as a whole (do the per-arc accountings still compose?);
+- machine → twin: the agreement evidence, the harness's scope
+  statements, the envelope tier's fine print;
+- kit → statements: pins, the walker, witnesses, the designation
+  list, the statement-TCB closure;
+- the instruments: whether the gates compose honestly end-to-end
+  (the class of defect no single arc's audit can see);
+- the records: the ledgers reconciled against each other
+  (coverage ↔ divergence ↔ interpretations ↔ latitude ↔ BUGS);
+- the campaign machinery itself: this constitution operative, the
+  continuity conventions provisioned, worker briefs carrying the
+  honesty conventions.
+
+Findings are fixed before launch; the audit's scope/scale proposal is
+posed to Mike like any audit ask, but the ASK is constitutional — the
+campaign may not start without it having run.
+
 ## §5 The Latitude — everything else is the campaign's
 
 Inside §2's ends and §3/§4's rails, the campaign decides — without
