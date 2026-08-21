@@ -173,6 +173,24 @@ successor campaign?**
 
 ## §3 The Inviolables — "no cheating", made mechanical
 
+**The governing ideology (Mike, 2026-08-21, verbatim-in-substance):
+user-auditable theorems are very dumb.** The imposition: there is an
+easy-and-obviously-correct semantics that is too slow to run, and a
+semantics we execute — and the observation set is ported to the
+obviously-correct one. Top-level statements read ONLY over the slow
+semantics; every optimization (the dedup enumerator, the symbolic
+evaluator, any future accelerator) is entirely outside the TCB,
+bridged by a kernel-checked equivalence. The corollary that directs
+audit effort: **the observation notion is load-bearing** — the dumb
+statement and the observation vocabulary (`SlowObs`/`obsOf?`, readout
+corollaries, the agreement predicate) are the only artifacts a human
+must read and believe, because they define what the theorems are
+ABOUT, and aboutness is the one thing no kernel checks. Skepticism
+spent auditing a kernel-internalized component is skepticism wasted;
+statement-adequacy review — enumerating what the records' prose
+promises against what the observation function projects — is where it
+belongs, every time.
+
 Each rule is standing doctrine cited to its source. These bind every
 worker, every arc, every tier, for the campaign's life. They are not
 advice; a violation is a defect even when the theorem is true.
