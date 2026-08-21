@@ -436,4 +436,388 @@ theorem stepMulti_total_covered {m : MultiConfig} {vecs : List (List Nat)}
         rw [hchstep]
         rfl
 
+
+/-! ## The driver: soundness and completeness of `checkCert` -/
+
+theorem Obs.eqb_sound {a b : Obs} (h : Obs.eqb a b = true) : a = b := by
+  cases a <;> cases b <;> (try exact Bool.noConfusion h)
+  case ok.ok vs ws =>
+    cases eqbListP_sound (fun _ _ hh => GoValue.eqb_sound hh)
+      (show eqbListP GoValue.eqb vs ws = true from h)
+    rfl
+  case panic.panic x y =>
+    cases eq_of_beq (show (x == y) = true from h)
+    rfl
+  case race.race => rfl
+
+theorem obsMem_mem {mems : Array (Obs × Choices × Nat)} {o : Obs}
+    (h : obsMem mems o = true) : o ∈ mems.toList.map (·.1) := by
+  unfold obsMem at h
+  rw [List.any_eq_true] at h
+  obtain ⟨t, htm, hq⟩ := h
+  cases Obs.eqb_sound hq
+  exact List.mem_map.mpr ⟨t, htm, rfl⟩
+
+/-- Extract `checkStep`'s content: certified vectors exist, indices
+align, and every edge checks. -/
+theorem checkStep_parts {nodeEqb : DedupNode → DedupNode → Bool}
+    {mems : Array (Obs × Choices × Nat)} {nodes : Array DedupNode}
+    {succs : Array Nat} {nd : DedupNode}
+    (h : checkStep nodeEqb mems nodes succs nd = true) :
+    ∃ vecs, nodeVecs nd.m = some vecs
+      ∧ vecs.length = succs.size
+      ∧ ∀ (j : Nat) (vec : List Nat), vecs[j]? = some vec →
+          ∃ kj, succs[j]? = some kj
+            ∧ checkEdge nodeEqb mems nodes nd vec kj = true := by
+  unfold checkStep at h
+  cases hv : nodeVecs nd.m with
+  | none => rw [hv] at h; cases h
+  | some vecs =>
+    rw [hv] at h
+    dsimp only at h
+    rw [Bool.and_eq_true] at h
+    obtain ⟨hlen, hall⟩ := h
+    rw [List.all_eq_true] at hall
+    refine ⟨vecs, rfl, by simpa using hlen, ?_⟩
+    intro (j : Nat) vec hj
+    have hjlt : j < vecs.length := by
+      rw [List.getElem?_eq_some_iff] at hj
+      exact hj.1
+    have := hall j (by simpa using List.mem_range.mpr hjlt)
+    rw [hj] at this
+    cases hsk : succs[j]? with
+    | none => rw [hsk] at this; cases this
+    | some kj =>
+      rw [hsk] at this
+      exact ⟨kj, rfl, this⟩
+
+/-- The per-edge successes `stepMulti_total_covered` consumes, from a
+passed `checkStep`. -/
+theorem checkStep_edges {nodeEqb : DedupNode → DedupNode → Bool}
+    {mems : Array (Obs × Choices × Nat)} {nodes : Array DedupNode}
+    {succs : Array Nat} {nd : DedupNode} {vecs : List (List Nat)}
+    (hv : nodeVecs nd.m = some vecs)
+    (hparts : ∀ (j : Nat) (vec : List Nat), vecs[j]? = some vec →
+      ∃ kj, succs[j]? = some kj
+        ∧ checkEdge nodeEqb mems nodes nd vec kj = true) :
+    ∀ vec ∈ vecs, ∃ m' ev, stepMulti nd.m vec = .ok (m', [], ev) := by
+  intro vec hvm
+  obtain ⟨j, hj⟩ := List.getElem?_of_mem hvm
+  obtain ⟨kj, -, hedge⟩ := hparts j vec hj
+  unfold checkEdge at hedge
+  cases hsm : stepMulti nd.m vec with
+  | error e => rw [hsm] at hedge; cases hedge
+  | ok p =>
+    obtain ⟨m', chRem, ev⟩ := p
+    rw [hsm] at hedge
+    dsimp only at hedge
+    rw [Bool.and_eq_true] at hedge
+    obtain ⟨hemp, -⟩ := hedge
+    have : chRem = [] := by
+      cases chRem with
+      | nil => rfl
+      | cons a l => simp [List.isEmpty] at hemp
+    subst this
+    exact ⟨m', ev, rfl⟩
+
+set_option maxHeartbeats 1600000 in
+/-- **Completeness** (the dangerous direction): from any certificate
+node, any stream's observation at any fuel is a member. Induction on
+fuel; the step arm rides `stepMulti_total_covered` — the run's step is
+determined by a checked vector's, so the successor is a certificate
+node (or the race refusal, a member). -/
+theorem checkCert_complete_aux
+    {nodeEqb : DedupNode → DedupNode → Bool}
+    (hEqb : ∀ a b, nodeEqb a b = true → a = b)
+    {resultLocs : List Loc} {cert : DedupCert}
+    (hsz : cert.succ.size = cert.nodes.size)
+    (hall : ∀ (k : Nat) (nd : DedupNode) (succs : Array Nat), cert.nodes[k]? = some nd →
+      cert.succ[k]? = some succs →
+      checkNode nodeEqb cert.members cert.nodes resultLocs succs nd = true) :
+    ∀ (fuel : Nat) (m : MultiConfig) (r : RaceState),
+      (∃ k : Nat, cert.nodes[k]? = some ⟨m, r⟩) →
+      ∀ (ch : Choices) (o : Obs),
+        obsOf? resultLocs (execProgLoop fuel m r ch) = some o →
+        o ∈ cert.obsSet := by
+  intro fuel
+  induction fuel with
+  | zero =>
+    intro m r hin ch o hobs
+    obtain ⟨k, hk⟩ := hin
+    have hklt : k < cert.nodes.size := by
+      rw [Array.getElem?_eq_some_iff] at hk
+      exact hk.1
+    obtain ⟨succs, hsk⟩ : ∃ succs, cert.succ[k]? = some succs :=
+      ⟨cert.succ[k]'(by omega), Array.getElem?_eq_getElem (by omega)⟩
+    have hnode := hall k ⟨m, r⟩ succs hk hsk
+    unfold checkNode at hnode
+    rw [execProgLoop_unfold] at hobs
+    try dsimp only at hobs
+    dsimp only at hnode
+    by_cases hemp : m.threads.isEmpty
+    · rw [if_pos hemp] at hnode; cases hnode
+    · rw [if_neg hemp] at hnode
+      rw [if_neg hemp] at hobs
+      try dsimp only at hobs
+      cases hp : m.panicMsg? with
+      | some msg =>
+        rw [hp] at hnode hobs
+        try dsimp only at hnode hobs
+        simp only [obsOf?, throw, throwThe, MonadExceptOf.throw,
+          Option.some.injEq] at hobs
+        cases hobs
+        exact obsMem_mem hnode
+      | none =>
+        rw [hp] at hnode hobs
+        try dsimp only at hnode hobs
+        cases hm : m.mainOutcome? with
+        | some out =>
+          rw [hm] at hnode hobs
+          try dsimp only at hnode hobs
+          cases out with
+          | normal σf =>
+            try dsimp only at hnode hobs
+            cases hload : loadMany σf resultLocs with
+            | error e =>
+              rw [hload] at hnode; cases hnode
+            | ok vs =>
+              rw [hload] at hnode
+              try dsimp only at hnode
+              cases hrs : runnableIdxs m.shared m.threads with
+              | nil =>
+                rw [hrs] at hnode hobs
+                try dsimp only at hnode hobs
+                simp only [obsOf?, pure_eq_ok] at hobs
+                rw [hload] at hobs
+                simp only [Option.some.injEq] at hobs
+                cases hobs
+                exact obsMem_mem hnode
+              | cons r0 rest =>
+                rw [hrs] at hnode hobs
+                try dsimp only at hnode hobs
+                try dsimp only at hobs
+                rcases hcons : Choices.consume ch 2 with ⟨pick, ch₁⟩
+                rw [hcons] at hobs
+                try dsimp only at hobs
+                try dsimp only at hobs
+                rw [Bool.and_eq_true] at hnode
+                try dsimp only at hnode
+                obtain ⟨hmem, -⟩ := hnode
+                by_cases hpick : (pick == 0) = true
+                · rw [if_pos hpick] at hobs
+                  simp only [obsOf?, pure_eq_ok] at hobs
+                  rw [hload] at hobs
+                  simp only [Option.some.injEq] at hobs
+                  cases hobs
+                  exact obsMem_mem hmem
+                · rw [if_neg hpick] at hobs
+                  simp [obsOf?, throw, throwThe, MonadExceptOf.throw] at hobs
+          | returned σf =>
+              try dsimp only at hnode
+              cases hnode
+          | broke σf =>
+              try dsimp only at hnode
+              cases hnode
+          | continued σf =>
+              try dsimp only at hnode
+              cases hnode
+        | none =>
+          rw [hm] at hnode hobs
+          try dsimp only at hnode hobs
+          by_cases hrun : (runnableIdxs m.shared m.threads).isEmpty
+          · rw [if_pos hrun] at hnode; cases hnode
+          · rw [if_neg hrun] at hnode
+            rw [if_neg hrun] at hobs
+            try dsimp only at hobs
+            simp [obsOf?, throw, throwThe, MonadExceptOf.throw] at hobs
+  | succ n ih =>
+    intro m r hin ch o hobs
+    obtain ⟨k, hk⟩ := hin
+    have hklt : k < cert.nodes.size := by
+      rw [Array.getElem?_eq_some_iff] at hk
+      exact hk.1
+    obtain ⟨succs, hsk⟩ : ∃ succs, cert.succ[k]? = some succs :=
+      ⟨cert.succ[k]'(by omega), Array.getElem?_eq_getElem (by omega)⟩
+    have hnode := hall k ⟨m, r⟩ succs hk hsk
+    unfold checkNode at hnode
+    rw [execProgLoop_unfold] at hobs
+    try dsimp only at hobs
+    dsimp only at hnode
+    -- the shared STEP argument, used by both stepping arms below
+    have hstepArm : ∀ (chS : Choices),
+        checkStep nodeEqb cert.members cert.nodes succs ⟨m, r⟩ = true →
+        obsOf? resultLocs
+          ((do
+            let x ← stepMulti m chS
+            match x with
+            | (m', choices', ev) => do
+                let r' ← raceUpdate m.shared m.threads ev m' r
+                execProgLoop n m' r' choices')
+           : Except GoError (ExecOutcome × Choices)) = some o →
+        o ∈ cert.obsSet := by
+      intro chS hstep hobs'
+      obtain ⟨vecs, hv, -, hparts⟩ := checkStep_parts hstep
+      have hedges := checkStep_edges hv hparts
+      obtain ⟨vec, hvm, m', ev, tail, hvstep, hchstep⟩ :=
+        stepMulti_total_covered hv hedges chS
+      obtain ⟨j, hj⟩ := List.getElem?_of_mem hvm
+      obtain ⟨kj, hkj, hedge⟩ := hparts j vec hj
+      unfold checkEdge at hedge
+      rw [hvstep] at hedge
+      dsimp only at hedge
+      rw [Bool.and_eq_true] at hedge
+      obtain ⟨-, hedge⟩ := hedge
+      rw [hchstep] at hobs'
+      simp only [Bind.bind, Except.bind] at hobs'
+      cases hru : raceUpdate m.shared m.threads ev m' r with
+      | ok r' =>
+        rw [hru] at hedge hobs'
+        dsimp only at hedge
+        cases hnd : cert.nodes[kj]? with
+        | none => rw [hnd] at hedge; cases hedge
+        | some ndS =>
+          rw [hnd] at hedge
+          cases hEqb _ _ hedge
+          exact ih m' r' ⟨kj, hnd⟩ tail o hobs'
+      | error e =>
+        rw [hru] at hedge hobs'
+        cases e with
+        | raceDetected =>
+          simp only [obsOf?, Option.some.injEq] at hobs'
+          cases hobs'
+          exact obsMem_mem hedge
+        | _ => cases hedge
+    by_cases hemp : m.threads.isEmpty
+    · rw [if_pos hemp] at hnode; cases hnode
+    · rw [if_neg hemp] at hnode
+      rw [if_neg hemp] at hobs
+      try dsimp only at hobs
+      cases hp : m.panicMsg? with
+      | some msg =>
+        rw [hp] at hnode hobs
+        try dsimp only at hnode hobs
+        simp only [obsOf?, throw, throwThe, MonadExceptOf.throw,
+          Option.some.injEq] at hobs
+        cases hobs
+        exact obsMem_mem hnode
+      | none =>
+        rw [hp] at hnode hobs
+        try dsimp only at hnode hobs
+        cases hm : m.mainOutcome? with
+        | some out =>
+          rw [hm] at hnode hobs
+          try dsimp only at hnode hobs
+          cases out with
+          | normal σf =>
+            try dsimp only at hnode hobs
+            cases hload : loadMany σf resultLocs with
+            | error e =>
+              rw [hload] at hnode; cases hnode
+            | ok vs =>
+              rw [hload] at hnode
+              try dsimp only at hnode
+              cases hrs : runnableIdxs m.shared m.threads with
+              | nil =>
+                rw [hrs] at hnode hobs
+                try dsimp only at hnode hobs
+                simp only [obsOf?, pure_eq_ok] at hobs
+                rw [hload] at hobs
+                simp only [Option.some.injEq] at hobs
+                cases hobs
+                exact obsMem_mem hnode
+              | cons r0 rest =>
+                rw [hrs] at hnode hobs
+                try dsimp only at hnode hobs
+                try dsimp only at hobs
+                rcases hcons : Choices.consume ch 2 with ⟨pick, ch₁⟩
+                rw [hcons] at hobs
+                try dsimp only at hobs
+                try dsimp only at hobs
+                rw [Bool.and_eq_true] at hnode
+                try dsimp only at hnode
+                obtain ⟨hmem, hstep⟩ := hnode
+                by_cases hpick : (pick == 0) = true
+                · rw [if_pos hpick] at hobs
+                  simp only [obsOf?, pure_eq_ok] at hobs
+                  rw [hload] at hobs
+                  simp only [Option.some.injEq] at hobs
+                  cases hobs
+                  exact obsMem_mem hmem
+                · rw [if_neg hpick] at hobs
+                  exact hstepArm ch₁ hstep hobs
+          | returned σf =>
+              try dsimp only at hnode
+              cases hnode
+          | broke σf =>
+              try dsimp only at hnode
+              cases hnode
+          | continued σf =>
+              try dsimp only at hnode
+              cases hnode
+        | none =>
+          rw [hm] at hnode hobs
+          try dsimp only at hnode hobs
+          by_cases hrun : (runnableIdxs m.shared m.threads).isEmpty
+          · rw [if_pos hrun] at hnode; cases hnode
+          · rw [if_neg hrun] at hnode
+            rw [if_neg hrun] at hobs
+            try dsimp only at hobs
+            exact hstepArm ch hnode hobs
+
+/-- **THE THEOREM** (design note §4; the binding constraint's shape):
+an accepted certificate's member set EQUALS the slow semantics'
+observation set — soundness by witness replay, completeness by the
+fuel induction over the certified graph. `hEqb` is the node equality's
+soundness (discharged by `dedupNodeEqb_sound`, `MachineEqb.lean`). -/
+theorem checkCert_slowObs
+    {nodeEqb : DedupNode → DedupNode → Bool}
+    (hEqb : ∀ a b, nodeEqb a b = true → a = b)
+    {resultLocs : List Loc} {m₀ : MultiConfig} {r₀ : RaceState}
+    {cert : DedupCert}
+    (hc : checkCert nodeEqb resultLocs m₀ r₀ cert = true) :
+    ∀ o : Obs, o ∈ cert.obsSet ↔ SlowObs resultLocs m₀ r₀ o := by
+  unfold checkCert at hc
+  simp only [Bool.and_eq_true] at hc
+  obtain ⟨⟨⟨hroot, hsz⟩, hnodes⟩, hwits⟩ := hc
+  have hsz' : cert.succ.size = cert.nodes.size := by simpa using hsz
+  rw [List.all_eq_true] at hnodes
+  have hall : ∀ (k : Nat) (nd : DedupNode) (succs : Array Nat), cert.nodes[k]? = some nd →
+      cert.succ[k]? = some succs →
+      checkNode nodeEqb cert.members cert.nodes resultLocs succs nd
+        = true := by
+    intro k nd succs hk hsk
+    have hklt : k < cert.nodes.size := by
+      rw [Array.getElem?_eq_some_iff] at hk
+      exact hk.1
+    have := hnodes k (by simpa using List.mem_range.mpr hklt)
+    rw [hk, hsk] at this
+    exact this
+  intro o
+  constructor
+  · -- soundness: the witness replay
+    intro hmem
+    rw [List.all_eq_true] at hwits
+    unfold DedupCert.obsSet at hmem
+    rw [List.mem_map] at hmem
+    obtain ⟨t, htm, hto⟩ := hmem
+    have := hwits t htm
+    unfold obsOfEqb at this
+    cases hrep : obsOf? resultLocs
+        (execProgLoop t.2.2 m₀ r₀ t.2.1) with
+    | none => rw [hrep] at this; cases this
+    | some a =>
+      rw [hrep] at this
+      cases Obs.eqb_sound this
+      exact ⟨t.2.2, t.2.1, hto ▸ hrep⟩
+  · -- completeness
+    intro hslow
+    obtain ⟨fuel, ch, hobs⟩ := hslow
+    cases hnd0 : cert.nodes[0]? with
+    | none => rw [hnd0] at hroot; cases hroot
+    | some nd0 =>
+      rw [hnd0] at hroot
+      cases hEqb _ _ hroot
+      exact checkCert_complete_aux hEqb hsz' hall fuel m₀ r₀
+        ⟨0, hnd0⟩ ch o hobs
+
 end GoLean.GoCore.Machine
