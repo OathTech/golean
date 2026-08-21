@@ -13,10 +13,20 @@ GoCore semantics of the emitted wire are in simulation. That only becomes
 tractable if we know, before the tool lands, *what the lowering actually does*.
 This file is that census.
 
-**What this is not.** Not a bug list (though it names four suspected holes, see
-§10), not a design proposal, not a work plan beyond §11's ordering suggestion.
-Rows are descriptive: what the code does today, at commit `4ef05649`, with
-verified anchors.
+**What this is not.** Not a bug list (though §10 names six holes, **two of them
+now confirmed live silent wrong answers**), not a design proposal, not a work
+plan beyond §11's ordering suggestion. Rows are descriptive: what the code does
+today, at commit `4ef05649`, with verified anchors.
+
+**Audit-fix round, 2026-08-21.** A pre-merge adversarial audit of the first
+pass found, and this round fixed: the K2 register (wrong in three places and
+under §0.2's own definition — see §13), an unsplit forced/latitude conjunct at
+C-38, H-d's classification (now confirmed live, with a witness), a false
+uniqueness claim at E-1, a false "no marker" claim at B-44, a Tier-0
+recommendation that does not transfer as written (§11), three lowerings the
+census missed (§3.9), and a dozen counts and anchors. Every correction in this
+file is marked in place with the date rather than silently applied — a census
+whose errors are invisible is worth less than one whose corrections are legible.
 
 **Maintenance.** Anchors are line numbers at `4ef05649` and *will* rot. When a
 row's code moves, move the anchor in the same change. When a desugar is
@@ -51,7 +61,7 @@ Every row carries six things:
   equalities: effect ordering, cell identity, frame scoping, dispatch
   selection, non-interference of an *untaken* path.
 
-### 0.2 The five obligation KINDS
+### 0.2 The five obligation KINDS (plus one sub-kind, K2m)
 
 Not every row wants the same theorem. Mixing these up is the fastest way to
 write a certificate that proves the wrong thing.
@@ -63,15 +73,41 @@ write a certificate that proves the wrong thing.
   order open and the *frontend* is the choice site. The certificate must state
   **membership in the envelope**, never equality with the current pin — pinning
   the pin into a theorem freezes a scaffold as a fidelity claim, which is
-  exactly what the doctrine forbids. The frontend's ANF pass is named as the
+  exactly what the doctrine forbids. The frontend's ANF pass is the named
   realization point of latitude entries **E12** and **E13**
-  (`docs/2026-08-11_latitude-inventory.md`; both say "no GoCore choice site —
-  the frontend's A-normal-form pass"). The K2 rows are **A-1** (the ANF pass
-  itself, E12/E13), **C-7** (map iteration order, E9), **C-34** (call vs.
-  assignment-target operands, E2), **C-38** (the pre/post-receive partition,
-  E13), **D-11** (file presentation order, E8), **F-3/F-6/F-7** (the init
-  schedule, L-011) and **J-39** (select clause order, C6/C7). Reading for "not
-  specified": **UNSEQ**, per `docs/spec-interpretations.md` **I-2**.
+  (`docs/2026-08-11_latitude-inventory.md:672`, `:732`). The verbatim
+  "**no GoCore choice site** — the frontend's A-normal-form pass" is **E13's**
+  wording; E12 says the same thing differently ("call-first is a FRONTEND
+  normalization, not a GoCore choice site") — the quote is attributed to one
+  entry, the claim holds for both (attribution corrected in the 2026-08-21
+  audit-fix round: the original text put one quote in both entries' mouths).
+  The **K2 rows — 13, the corrected set** (audit-fix round; the membership
+  question is the one the doctrine cares about, so this list is exact):
+  **A-1** (the ANF pass itself, E12/E13), **B-6** (argument order among
+  non-call operands, E12/E13), **B-19** (composite-literal element order,
+  E12's census follow-on), **B-27** (`append` element order, same ground),
+  **C-34** (call vs. assignment-target operands, E2 — the frontend's
+  three-way *routing* selects which member of E2's envelope each arity class
+  realizes, which is what makes this a frontend choice site even though E2's
+  pin itself lives in the machine's call rules), **C-36** (map compound
+  assign: target operands vs. RHS, E4), **C-38** (the pre/post-receive
+  partition of a panicking non-call operand, E13), **C-40** (map element
+  assign: base → key → value, E3/E4), **D-11** (file presentation order, E8),
+  **F-2** (hidden-dependency init order, E7), **F-3/F-6/F-7** (the init
+  schedule, L-011). Reading for "not specified": **UNSEQ**, per
+  `docs/spec-interpretations.md` **I-2**.
+- **K2m · MACHINE-side latitude (the frontend is NOT the choice site).** A
+  sub-kind, split out in the audit-fix round because two rows were filed under
+  K2 against §0.2's own definition. Here the envelope lives in GoCore and the
+  frontend's obligation is the *dual* one: hand the machine everything the
+  envelope needs and **never narrow it**. Certificates for these rows state
+  preservation of the choice structure, not membership in an order.
+  **C-7** (map iteration order — E9, re-enveloped 2026-08-19 machine-side) and
+  **J-39** (select clause order feeding the machine's commit choice, C6/C7).
+  Rows whose *own* obligation is forced but which carry a machine-side
+  latitude note — **C-17** (multi-ready select commit), **C-30** (panic
+  payload, R9/R10), **B-25** (negative make sizes), **B-27**'s append-growth
+  half (R2) — stay K1 and say so in their notes.
 - **K3 · LIBRARY-SPEC refinement.** For the shims there is no Go AST to
   simulate — the obligation is `REFINE(pkg.Fn, D)`: on the modeled domain `D`
   the shim's observable behavior (values, heap effect, panic value and
@@ -105,9 +141,9 @@ partial. The desugaring is split across three stages:
 A per-program certificate must relate the **source AST** to the **GoCore
 program**, so it spans all three; a certificate that stops at the wire proves
 nothing about stage 2, and stage 2 owns real semantic content (the range
-desugars, the comma-ok shape recognition at `NativeToIR.lean:441`, the
-declaration-before-RHS ordering at `:1129-1136` that §9 J-38 shows is
-load-bearing). Stage 3 is worse: a shadow package is type-checked and emitted
+desugars, the comma-ok shape recognition at `NativeToIR.lean:1076-1091` via
+`asMapGet?` (`:439-445`), the declaration-before-RHS ordering at `:1129-1136`
+that §9 J-38 shows is load-bearing). Stage 3 is worse: a shadow package is type-checked and emitted
 by a *fresh emitter run* and merged into the host wire (`importedmodel.go:183`),
 so the certificate's subject program is not the one the user wrote.
 
@@ -141,8 +177,15 @@ row's statement is vacuous.
 - *Notes*: a certificate that states trace *equality* against a
   left-to-right AST semantics is provably false here. The correct statement
   quantifies over the AST semantics' permitted set. Accumulators are saved and
-  restored at ~10 nested sites (if-cond 3270, else 3298, for-condPre 3428,
-  post 3446, switch tag 4219, per-case 4304, funcLit 6286, select 8682/8701).
+  restored at **17 nested sites** (count corrected from "~10" in the
+  2026-08-21 audit-fix round; derivation: every `saved := e.hoisted` in
+  `emit.go` except `emitStmtList`'s own splice at 2194) — decl-stmt 3194,
+  if-cond 3271, else 3297, for-condPre 3428, for-post 3445,
+  per-iteration 3493/3553/3574, type-switch guard 4059, switch tag 4219,
+  per-case 4305, funcLit 6286, short-circuit RHS 6516, select machine
+  targets 8682/8701, select recv fallback 8768/8791. Every one of them is a
+  place where the splice point of A-1's prefix moves, so the "each temp is
+  dead after `S`" half of the statement has 17 non-trivial instances, not 10.
 
 **A-2 · hoist temp binding and fresh-name discipline — S — K1**
 - *Does*: binds an effectful wire node to a fresh `$cN` temp via a
@@ -318,15 +361,27 @@ Callee expression evaluates first, then arguments.
 
 **B-5 · immediately-invoked func literal — S — K1** · `emit.go:6787-6803`.
 
-**B-6 · argument evaluation and variadic packing — M — K1**
+**B-6 · argument evaluation and variadic packing — M — K1+K2**
 - *Anchor*: `emit.go:6961`; non-variadic/spread 7040–7069; fixed prefix
   7071–7084; **nil-slice** 7090–7096; pack loop 7097–7113.
-- *Spec*: spec#Calls, spec#Passing_arguments_to_..._parameters.
-- *Must preserve*: arguments evaluate in source order; each parameter receives
-  the value boxed iff the slot is interface-typed; the variadic slot receives a
-  slice of the packed tail in order — **`nil`, not empty, when the tail is
-  empty**; a spread argument aliases the caller's slice with no copy. The pack
-  itself is a hoisted slice-lit allocation, part of the caller's effect prefix.
+- *Spec*: spec#Calls, spec#Passing_arguments_to_..._parameters,
+  spec#Order_of_evaluation.
+- *Must preserve*: each parameter receives the value boxed iff the slot is
+  interface-typed; the variadic slot receives a slice of the packed tail in
+  order — **`nil`, not empty, when the tail is empty**; a spread argument
+  aliases the caller's slice with no copy. The pack itself is a hoisted
+  slice-lit allocation, part of the caller's effect prefix.
+- *The order half is MEMBERSHIP, not equality* (retagged K1 → K1+K2 in the
+  2026-08-21 audit-fix round). "Arguments evaluate in source order" is
+  spec-forced only for the arguments that are themselves **function calls,
+  method calls, receive operations or binary logical operations** — the
+  left-to-right rule's scope. A non-call argument's events (an index's bounds
+  check, an assertion's type check, a deref) are ordered against a sibling
+  call **only** by E12/E13's frontend pin, which realizes calls-first via the
+  ANF hoist; E13 records gc on the *other* member for the assertion axis. The
+  one direction that is forced, and is a BUG rather than latitude when wrong,
+  is that a call's own arguments precede it ("g cannot be called before its
+  arguments are evaluated") — the forced point **BUG-062** is open on.
 - *Guardrails*: `variadic/*` (12 rows incl. `no-args-vs-empty-spread`,
   `spread-aliasing`, `forwarding`, `multi-result-call`).
 
@@ -374,8 +429,16 @@ owning package's own references (F-8).
   BUG-049, BUG-050 (`range/assign-form-interface-target`), BUG-051
   (`interfaces/call-assign-boxing`).
 - *Notes*: L not because a site is hard but because the obligation quantifies
-  over ~25 call sites (assign, return, args, map keys/values, struct/slice/
-  array/map literal elements, send, case slots, comparisons, `new`, `append`).
+  over **37 call sites** (assign, return, args, map keys/values, struct/slice/
+  array/map literal elements, send, case slots, comparisons, `new`, `append`,
+  chan-recv and select delivery, the fmt error shim). Count corrected from
+  "~25" in the 2026-08-21 audit-fix round; derivation: `grep -c
+  'wrapInterfaceConversion(' tools/nativefrontend/*.go` = 38 at `4ef05649`,
+  minus the definition at `emit.go:2638` — 36 in `emit.go`, 1 in
+  `fmtdesugar.go:488`. All 37 funnel into the single `to-interface` producer
+  (`emit.go:2696`), which is the one thing that makes the obligation
+  tractable; `panic`'s own `wrap` key (`emit.go:7691`, C-30) is a separate,
+  38th boxing decision that does **not** go through this function.
   A missed site is a silent raw store — that is four of the BUG ids above.
   **Two order pins in tension**: box AFTER hoist so the temp keeps the value's
   static type (2973–2975); box BEFORE hoist for map-compound keys so the temp
@@ -422,25 +485,41 @@ location). Map element as target outside a single assignment fails closed
 `emit.go:4516`; base 4520–4524; **default high 4539–4550**; max 4552–4558.
 Array bases slice through their address (`a[:] ≡ (&a)[:]`, so slicing aliases
 the array cell); default `high` is `builtin-len` of a **second emission of the
-base**. ⚠ See §10 hole H-a: that second emission is unguarded for effectful
-bases. Guardrails `slices/*`, `strings/slice-eval-order`,
-`pointers/pointer-array-full-slice`.
+base**. ⚠⚠ **§10 hole H-a, CONFIRMED 2026-08-21**: that second emission is
+unguarded, and for a call-valued base the call runs **twice** — gc 1, machine
+2, status `ok`. Not a proof obligation; a bug with a witness. Guardrails
+`slices/*`, `strings/slice-eval-order`, `pointers/pointer-array-full-slice` —
+none of which covers an effectful base, which is how it survived.
 
-**B-19 · struct literal (keyed / positional) — M — K1**
+**B-19 · struct literal (keyed / positional) — M — K1+K2**
 - *Anchor*: `emit.go:5928`; pre-bind 5953–5974; declaration-order fill
   5975–6020; sync refusal 5929–5937.
 - *Spec*: spec#Composite_literals; spec#Order_of_evaluation.
-- *Must preserve*: **value evaluation order is SOURCE order** even though
-  GoCore's `structLit` takes declaration-order args; each field holds its
-  (boxed) initializer or `default ⟦Field(i).Type()⟧`.
+- *Must preserve* (K1): each field holds its (boxed) initializer or
+  `default ⟦Field(i).Type()⟧`, and the **effects** of the element expressions
+  occur exactly once each, in source order, despite GoCore's `structLit`
+  taking declaration-order args.
+- *The panic-order half is MEMBERSHIP* (retagged K1 → K1+K2 in the
+  2026-08-21 audit-fix round): ⚠ the reorder is justified by `containsCall`
+  (`emit.go:5917`) as the effectfulness oracle — "pure values need no temp;
+  their evaluation moment is unobservable". That is only true for *effects*; a
+  non-call **panicking** value (index, assert, deref) is not hoisted, so its
+  panic can land out of source order against a hoisted sibling call. And here
+  the latitude is **not** by omission — spec#Order_of_evaluation's own example
+  block states it outright, with a composite literal:
+  > `x := []int{a, f()}  // x may be [1, 2] or [2, 2]: evaluation order between
+  > a and f() is not specified`
+  (go1.26.5 pin; the two lines under it say the same for duplicate map keys and
+  for map-literal key-vs-value). E12's census follow-on lists all three as
+  **not yet censused**, so a certificate must state membership in an envelope
+  nobody has written down yet, not equality with the current shape. §10 hole
+  H-e —
+  where the audit-fix round's probe result is recorded: on
+  `S{A: arr[i], B: f()}` with `arr[i]` out of range, gc runs `f()` first, the
+  same member the ANF hoist realizes, so the shape is not a *divergence*; it
+  is an uncensused latitude point that happens to agree today.
 - *Guardrails*: `structs/keyed-literal-eval-order`,
   `structs/positional-literal-eval-order`.
-- *Notes*: ⚠ the reorder is justified by `containsCall` (`emit.go:5917`) as the
-  effectfulness oracle — "pure values need no temp; their evaluation moment is
-  unobservable". That is only true for *effects*; a non-call **panicking**
-  value (index, assert, deref) is not hoisted, so its panic can land out of
-  source order against a hoisted sibling call. E12's census follow-on names
-  composite-literal element order as **not yet censused**. §10 hole H-e.
 
 **B-20 · slice literal — S/M — K1** · `emit.go:6043`, hoist 6026;
 constant-key refusal 6056–6058. Allocates a fresh backing of length
@@ -475,11 +554,18 @@ are the machine's recoverable panic. `channels/make-edge/*`,
 expr form 7586–7605. Expression form evaluates its operand **exactly once** —
 `new/new-expr/eval-once` pinned a silent default-init bug.
 
-**B-27 · `append` — M — K1** · `emit.go:8204`; spread 8225–8232; pack
-8233–8250; string spread 8185–8187. Base first, then elements left-to-right;
-shared-backing vs reallocation is machine-side (latitude R2, a declared
-pragmatic subset). `slices/slice-append`, `slices/append-self`,
-`slices/append-overlap-window`; BUG-021 (the envelope was too narrow).
+**B-27 · `append` — M — K1+K2** · `emit.go:8204`; spread 8225–8232; pack
+8233–8250; string spread 8185–8187. Base first, then elements left-to-right.
+`slices/slice-append`, `slices/append-self`, `slices/append-overlap-window`;
+BUG-021 (the envelope was too narrow).
+- *Two latitude halves, both membership, neither an equality* (retagged
+  K1 → K1+K2 in the 2026-08-21 audit-fix round). (i) **K2, frontend:**
+  base-then-elements-left-to-right is B-6's ground — spec#Order_of_evaluation
+  orders only calls/receives/binary-logical, so the placement of a non-call
+  element's panic against a sibling call is E12/E13's pin, realized by the ANF
+  hoist. (ii) **K2m, machine:** shared-backing vs reallocation on spill is
+  latitude **R2** (a declared pragmatic subset) and lives in GoCore, not here —
+  the frontend's only duty on that axis is not to narrow it.
 
 **B-28 · `copy` — S — K1** · `emit.go:8269`. `builtins/copy-edge/*` (7).
 
@@ -586,12 +672,32 @@ runtime value (audit 2026-07-31 finding 8).
 **B-44 · map index and comma-ok map index — M — K1+K5**
 - *Anchor*: `emit.go:5638`, map arm 5648–5663; interface key boxing 5649–5654;
   the 2-target form rides the **generic assign path** (2819 + 2958–2985) and
-  the *decoder* recognizes the shape at `NativeToIR.lean:441`.
+  the *decoder* recognizes the shape at `NativeToIR.lean:1076-1091` via
+  `asMapGet?` (`:439-445`).
 - *Must preserve*: 1-value read yields the element or the elem zero (nil map
   reads as empty); 2-value additionally yields presence, **from one lookup**.
-- *Notes*: this is a **stage-1/stage-2 seam with no explicit marker** — the
-  wire shape "assign, 2 lhs, 1 rhs = map-get" must never be produced meaning
-  anything else. A certificate has to make the implicit contract explicit.
+- *Notes*: **the marker EXISTS — this row's original claim that the seam has
+  "no explicit marker" was wrong, corrected in the 2026-08-21 audit-fix
+  round.** The emitter tags the node `{"expr":"map-get", …}`
+  (`emit.go:5663`, and again for the compound-assign read at `:3954`), and
+  `asMapGet?` matches on that tag, requiring `base`/`index`/`keyType`/
+  `valueType` through `StrictJson.field` — so a *malformed* map-get fails
+  closed. What is implicit is not the tag but the **arity gate**: the decoder
+  consults `asMapGet?` only under `lhs.size == 2 && rhs.size == 1`
+  (`NativeToIR.lean:1076`), and the same tag under any other arity decodes as
+  an ordinary expression through `decodeExpr`'s `"map-get"` arm (`:252`). So
+  the real contract a certificate must discharge is a **biconditional over the
+  gate**, in both directions:
+  (i) *soundness* — a wire `assign` with 2 lhs, 1 rhs and a `map-get` RHS is
+  emitted **only** for a source comma-ok map read (nothing else may produce
+  that combination, and the emitter must never route a comma-ok map read
+  through a shape that also has 2 lhs and 1 rhs for a different reason);
+  (ii) *completeness* — every source comma-ok map read reaches exactly that
+  shape. Direction (ii) is the cheaper one: a 2-lhs assign whose RHS is **not**
+  tagged `map-get` falls through to the arity test at `:1093`, where
+  `2 ≠ 1` fails the decode loudly, so a lost tag is a visible red rather than a
+  silent answer. Direction (i) has no net at all and is the one a certificate
+  owes. The four keys themselves are already discharged at the boundary.
   Guardrails `maps/map-comma-ok`, `multi-assign/comma-ok-forms` (BUG-034).
 
 **B-45 · package-level variable read / write / address — S/M — K1** ·
@@ -605,8 +711,9 @@ aliasing through `&global` observes direct reads
 
 ## 3. Chapter C — statements and control flow
 
-Forty-one rows. Ledger chapters: *If and basic loops*, *Range loops*,
-*Switch*, *Labels/break/continue/goto*, *Functions and returns*,
+Forty-four rows (41 in the first pass; C-42/C-43/C-44 added by the 2026-08-21
+audit-fix round — see §3.9). Ledger chapters: *If and basic loops*,
+*Range loops*, *Switch*, *Labels/break/continue/goto*, *Functions and returns*,
 *Defer, panic, recover*, *Assignment and evaluation order*, *Channels*.
 
 ### 3.1 If
@@ -616,7 +723,9 @@ Forty-one rows. Ledger chapters: *If and basic loops*, *Range loops*,
   explicit block `{init; condHoists…; if}`; without cond-hoists the plain
   `init` key is kept (byte-identical legacy wire).
 - *Anchor*: `emit.go:3247`; scoped accumulator 3267–3284; wrap 3311–3333;
-  the decoder's matching scope `NativeToIR.lean:1143-1153`.
+  the decoder's matching scope `NativeToIR.lean:1157-1161` (`decodeIf`'s
+  `init` arm wrapping `core` in a `.block`; anchor corrected in the
+  2026-08-21 audit-fix round — the old `:1143-1153` pointed at `decodeVar`).
 - *Spec*: spec#If_statements ("the init statement executes before the
   expression is evaluated"), spec#Blocks.
 - *Must preserve*: init executes exactly once before **any** condition event;
@@ -698,14 +807,19 @@ instead of re-evaluated per iteration). BUG-050
 (`range/assign-form-interface-target`: raw temps landed unboxed in interface
 targets — a silent wrong answer).
 
-**C-7 · range over slice / array / map / string / int — M — K1+K2** ·
+**C-7 · range over slice / array / map / string / int — M — K1+K2m** ·
 `emit.go:3758-3829`; node 3840–3850; `rangeVarName` 3598. Emits a kind-tagged
 node; **stage 2 does the desugar** (`NativeToIR.lean:856-998`) — index-able
 kinds to an index loop, map to the `mapRange` primitive. Collection evaluates
 once at entry; the int form takes the **operand's** type (BUG-043's
 `operandType`, fail-closed at `NativeToIR.lean:910-918`). Map iteration order
 is latitude **E9** re-enveloped 2026-08-19 under reading **I-1**, machine-side,
-not the frontend's. `range/*` (20 rows), `strings/range-*`.
+not the frontend's — which is exactly why the 2026-08-21 audit-fix round moved
+this row out of **K2** (whose definition names the *frontend* as the choice
+site) into **K2m**: the obligation is that the `mapRange` primitive is handed
+the LIVE map and that no narrowing of E9's envelope is smuggled into the
+desugar, not that some frontend-chosen order is a member of one.
+`range/*` (20 rows), `strings/range-*`.
 
 **C-8 · range over `*[N]T` — M — K1** · `emit.go:3708-3757`. Index-only form:
 the pointer evaluates once into a discarded temp and the range becomes
@@ -911,7 +1025,8 @@ panic. **BUG-027**: bare `$deferClose<N>` names collided across functions
 **C-28 · defer sync-op wrapper — S — K1** · `emit.go:2468-2477`, 8107;
 refusal 8128. `defer mu.Unlock()` / `wg.Done()`: receiver **address** evaluated
 now, op at exit. `defer wg.Add(n)` / `once.Do(f)` fail closed — deferred-operand
-threading is a recorded capability gap.
+threading is a recorded capability gap. The statement-position twins are
+**C-43** (the ops) and **C-44** (`once.Do`), §3.9.
 
 **C-29 · `go` statement — S — K1** · `emit.go:2491-2515`; builtin-callee
 refusal 2498. All argument evaluation events belong to the **spawning**
@@ -970,9 +1085,20 @@ which is what makes `a,b = b,a` work.
   certificate that pins the current order into its statement freezes a gc-pin
   as a fidelity claim. BUG-052 is the record of the machine being on the wrong
   member.
-- *Notes*: the two double-emission traps (B-10) live here. A multi-value call
-  onto addressed targets cannot be hoisted and falls to the generic path, which
-  refuses tuple shapes — verify that in a certificate rather than assume it.
+- *Notes*: the two double-emission traps (B-10) live here. ⚠ **A
+  COUNTERFACTUAL, marked as one** (2026-08-21 audit-fix round): the sentence
+  that used to stand here — "a multi-value call onto addressed targets cannot
+  be hoisted and falls to the generic path, which refuses tuple shapes" — was
+  reconstructed from the in-code comment at `emit.go:2869-2872` ("a MULTI-value
+  call onto addressed targets cannot be hoisted and fails closed rather than
+  silently reordering") and does **not** describe the code. The routing test at
+  `:2922` is `allIdentTargets || isMultiValue`, so a multi-value call onto
+  *addressed* targets takes the **call-statement path** via the `isMultiValue`
+  disjunct — target addresses first, no refusal. The only tuple refusal on this
+  spine is `:2830-2841`, and it fires on a different condition
+  (an interface-typed target in a multi-value assignment), before the routing.
+  So the comment and the code disagree, the census inherited the comment, and a
+  certificate must read the routing rather than either prose.
 
 **C-35 · compound assign `x op= e` — M — K1** · `emit.go:2717-2742`;
 `emitReadWriteTarget` 3860; `containsCall` test 3861. Pure lvalues emit target
@@ -987,12 +1113,23 @@ evaluated once.
 - *Guardrails*: `structs/selector-eval-once`, `maps/compound-assign-eval-once`,
   `ints/compound-assign-wrap`, `floats/compound-assign`.
 
-**C-36 · map compound assign / `m[k]++` — M — K1** · `emit.go:3896`;
+**C-36 · map compound assign / `m[k]++` — M — K1+K2** · `emit.go:3896`;
 key-box comment 3909–3915; RHS-order comment 3892–3895; synthetic `1`
 3928–3947; dispatch 2729–2733, 3969–3973. Base and key hoisted once each (key
-boxed **before** hoist for interface keys); RHS emitted after base and key (gc
-order); the synthetic `1` takes the value type's underlying numeric kind
-(BUG-042). Nil-map store panics with operands already evaluated.
+boxed **before** hoist for interface keys); the synthetic `1` takes the value
+type's underlying numeric kind (BUG-042). Nil-map store panics with operands
+already evaluated.
+- *The order half is MEMBERSHIP, not equality* (retagged K1 → K1+K2 in the
+  2026-08-21 audit-fix round — this was a misclassification in the *worse*
+  direction, a latitude pin sold as a forced order). "RHS emitted after base
+  and key" is annotated **gc order** in the code's own comment
+  (`emit.go:3892-3895`), and that is precisely latitude **E4** (targets-vs-RHS
+  unordered panic order, "(b) PINNED to OUR point"; base-vs-key inside the
+  target is E3's axis, whose F2 reading is UNSEQ across the target's compound
+  sub-events). The frontend is the choice site — the hoist order *is* the
+  realization — so a certificate must say "the emitted order is a member of
+  E3/E4's envelope", never "the emitted order is the order". Observable only
+  as which panic wins.
 
 **C-37 · inc/dec — S — K1** · `emit.go:3961`; type resolution 3986–3994;
 decoder fail-closed on a non-numeric carried type `NativeToIR.lean:572-576`.
@@ -1011,26 +1148,63 @@ type defaulted the literal kind to `int` → stuck; grossmith seed 559);
   two-target 8554–8571; map single-target 8573–8614; refusals 8620–8623, 8564;
   `emitMapTargetWire` 8491.
 - *Spec*: spec#Receive_operator + spec#Assignment_statements' two phases.
-- *Must preserve*: communication commits before target-operand evaluation;
-  call-bearing target operands still auto-hoist **pre**-receive (spec-ordered),
-  while panicking **non-call** operands fire post-receive (argued at
-  8577–8582); stores left-to-right; blank forms equal full forms minus the
-  store.
+- *Must preserve — K1, the spec-FORCED conjuncts* (three, and the certificate
+  states these as trace equality):
+  (i) the **communication commits before target-operand evaluation** — spec's
+  two phases with the receive as the RHS operand;
+  (ii) **call-bearing target operands auto-hoist pre-receive** — forced,
+  because spec#Order_of_evaluation puts function calls and **receive
+  operations** in one lexical left-to-right order, so a call lexically left of
+  the receive must run before it;
+  (iii) **stores land left-to-right** after all operand evaluation, and blank
+  forms equal full forms minus the store.
+- *MEMBERSHIP — the K2 conjunct, stated separately because it is a different
+  kind of claim* (split out in the 2026-08-21 audit-fix round; the row
+  previously ran all four conjuncts together under one "must preserve", which
+  invites a certificate to pin the fourth). **Conjunct (iv):** where a
+  **panicking non-call** target operand's panic lands relative to the
+  receive — post-receive today,
+  argued in-code at `emit.go:8577-8582` — is latitude **E13** (non-call
+  panicking operations vs sibling calls/receives; reading **UNSEQ**, I-2 /
+  L-013). E13's own disposition is unambiguous and is quoted here so this row
+  cannot regress into a pin:
+  > **NO PIN MAY BE TAKEN HERE.** Deliberately **not** a corpus case, and no
+  > strict-lane row may pin either axis: the machine and gc realize different
+  > members on the assertion axis, so a strict pin would record a divergence as
+  > a fidelity failure, and a pin on the indexing axis would freeze an
+  > agreement that the spec does not require. This is a census row, nothing
+  > more.
+  > — `docs/2026-08-11_latitude-inventory.md:732` (E13)
+  So the certificate has exactly two honest options for conjunct (iv): state it
+  as **membership in E13's envelope** (any relative order of the non-call
+  operand's panic and the communication, subject to the hard constraints —
+  calls/receives/binary-logical lexically ordered among themselves, a call's
+  arguments before it), or declare it **explicitly out of certificate scope**
+  and prove only (i)–(iii). It may never be stated as equality with the
+  current post-receive placement, and no guardrail row may be added to pin it.
 - *Guardrails*: `channels/recv-edge/*`, `channels/recv-order/*`,
   `channels/recv-map-elem/*` — BUG-022, BUG-028, BUG-029, BUG-030, BUG-033.
-- *Notes*: K2 tag because the pre/post-receive partition of panicking non-call
-  operands sits on E13's ground (non-call panicking operations vs siblings —
-  **no pin may be taken**), while the communication-before-targets half is
-  spec-forced.
+  None of these pins conjunct (iv), and none may be extended to.
 
 **C-39 · bare receive statement `<-ch` — S — K1** · `emit.go:2292-2312`.
 Zero-target `chan-recv`. **BUG-024**: the expression-position hoist path left a
 residual ident the decoder rejected — a whole-program error rather than
 receive-and-discard, i.e. a fail-open history at the boundary.
 
-**C-40 · map element assignment `m[k] = v` — S — K1** · `emit.go:2783-2816`.
-Base → key → value order; nil-map store panics after operand evaluation.
-`maps/index-assign-eval-order`, `maps/nil-assign-eval-before-panic`.
+**C-40 · map element assignment `m[k] = v` — S — K1+K2** ·
+`emit.go:2783-2816`. Base → key → value order; nil-map store panics after
+operand evaluation. `maps/index-assign-eval-order`,
+`maps/nil-assign-eval-before-panic`.
+- *The order is MEMBERSHIP, not equality* (retagged K1 → K1+K2 in the
+  2026-08-21 audit-fix round, same worse-direction misclassification as C-36).
+  spec#Order_of_evaluation orders only calls, method calls, receives and binary
+  logical operations; `m`, `k` and `v` are none of those unless they contain
+  one. Base-before-key is E3's axis (inter/intra-target operand order, PINNED
+  to OUR point, **known ≠ gc** at the multi-target shape) and
+  target-operands-before-RHS is E4's — both open envelopes, both realized right
+  here by the emission order. What IS forced, and stays K1: the nil-map store
+  panics only after every operand has been evaluated, and a call among the
+  operands keeps its lexical position.
 
 **C-41 · blank identifier — S — K1** · targets `emit.go:2996-2998`; chan-recv
 8544–8552; goto-degrade 1718–1732; range vars 3598–3603; hoist collector skips
@@ -1038,6 +1212,106 @@ blanks 1971–1973. Blank targets evaluate their RHS or communication exactly as
 non-blank, store nothing, and create no binding.
 - *Notes*: **BUG-035** (a blank among the targets diverted multi-assign off the
   spine, losing phase-1 capture) and the goto blank-decl F4 both lived here.
+
+### 3.9 Send, and the statement-position sync surface
+
+Three rows the first pass MISSED — added by the 2026-08-21 audit-fix round
+after the auditor found statement kinds and a whole lowering family with no
+census entry. Their absence is itself the datum: a census is only useful if it
+is total, and the gap was on the concurrency side of the statement dispatch,
+which is where the census's own §0 says the unexercised-path risk lives.
+
+**C-42 · send statement `ch <- v` — S/M — K1** · `emit.go:2412-2437`; channel
+`:2421`, value `:2425`, boxing `:2429`, element type `:2433`; non-channel
+operand refuses `:2419`.
+- *Spec*: spec#Send_statements — "**Both the channel and the value expression
+  are evaluated before communication begins.**" (verbatim, go1.26.5 pin).
+- *Must preserve*: both operands are evaluated, each exactly once, **before**
+  the communication begins; the value is boxed iff the element type is
+  interface-typed, at the element type; the wire carries the element type so
+  the machine's blocking/buffer semantics type the transfer; a send on a closed
+  channel panics at communication time, i.e. after both operands are evaluated.
+  Effectful operands ride A-1's hoists, so their events land in the statement
+  prefix — the same order-preservation obligation as every other operand list,
+  not a special one.
+- ⚠ *An open census question this row surfaces, recorded not decided*
+  (2026-08-21): the code emits **channel then value** and its comment
+  (`emit.go:2413-2416`) cites "spec §Send statements" for that *order*. The
+  spec text above orders neither against the other — it orders both against the
+  communication. And spec#Order_of_evaluation's left-to-right rule is scoped to
+  "the operands of an **expression, assignment, or return statement**", a list
+  that does **not** name the send statement. So whether channel-before-value is
+  forced, or is one more E12/E13-class frontend pin, is **not settled by the
+  text**, and the corpus pins one order today
+  (`channels/make-edge/ordinary-send-eval-order`, whose operands are two
+  calls). This row does not rule on it: the ruling belongs to
+  `docs/2026-08-11_latitude-inventory.md`, and the honest disposition is to
+  census the point there before any certificate states C-42's order clause as
+  equality. Until then, treat the order half as unresolved rather than K1.
+- *Guardrails*: `channels/make-edge/ordinary-send-eval-order`,
+  `channels/send-closed-panic`,
+  `channels/deadlock/{send-full,send-nil,send-unbuffered}`,
+  `goroutines/close-wake/*`, plus the select send clause's twin (C-17,
+  `emit.go:8843-8865`, where the *entry-time* order channel-before-value **is**
+  pinned by spec#Select_statements' step 1).
+
+**C-43 · statement-position sync-primitive method call — M — K1** ·
+dispatch `emit.go:2387-2396`; handler `emitSyncOpStmt` `:7975-8014`; op table
+`syncOpFor` `:7935-7961`; `Done` → `wgAdd(-1)` `:7997-7999`
+(`syncNegOne` `:7963-7965`); `Add` arity guard `:8001-8003`; refusal `:8013`;
+receiver recognition `syncSelectionPrim` `:7907-7916` and address
+`syncSelectionRecvAddr` `:7925-7930`. Design: `docs/2026-08-09_sync-package-design.md`
+§7; decoder arity re-validation `NativeToIR.lean:683-701` + `syncPlan`.
+- *Does*: `mu.Lock()` / `mu.Unlock()` / `rw.{Lock,Unlock,RLock,RUnlock}()` /
+  `wg.{Add,Done,Wait}()` in statement position become a `sync-op` wire
+  statement whose single argument is the primitive's **address**; direct and
+  **promoted** (embedded-field) receivers both resolve, the promoted form
+  walking `Selection.Index`'s prefix to the field's address.
+- *Must preserve*: the op's argument is the address of the *same* cell the Go
+  selection denotes, computed at the statement's position (a nil embedded
+  pointer hop panics at the deref, at Go's point); `Done` is exactly
+  `Add(-1)` — gc's own definition, so the lowering is a definitional unfolding
+  and not an approximation; **every recognized-but-unmodeled member fails
+  closed** (`TryLock`, `WaitGroup.Go`, …), never falls through to an ordinary
+  call, since a `sync.Mutex` method that lowered to a plain call would run no
+  synchronization at all and answer with status ok. The blocking/fatal
+  semantics themselves are the machine's (latitude R8/R11), not this row's.
+- *Guardrails*: `sync/mutex-{basic,double-lock,order,protected,unlock-fatal}`,
+  `sync/rwmutex-*` (5), `sync/waitgroup-*` (7), `sync/promoted-mutex`,
+  `sync/out-of-scope-{cond,trylock}` (the fail-closed pins),
+  `sync/composite-literal`, `sync/escapes`. See C-28 for the `defer` twin and
+  its recorded deferred-operand gap.
+
+**C-44 · `once.Do(f)` — the two-function desugar — L — K1** ·
+`emitOnceDo` `emit.go:8030-8093`, rationale 8016–8029; arity/signature
+refusals 8031–8038; `$onceDone<N>` lift 8057–8066; `$onceDo<N>` lift
+8067–8090; call site 8091–8093. Design: `docs/2026-08-09_sync-package-design.md` §3.
+- *Does*: `once.Do(f)` becomes a call to a **synthetic per-site function**
+  `<enclosingFunc>$onceDo<N>(&once, f)` whose body is
+  `$onceStarted := onceBegin(&once); if $onceStarted { defer $onceDone<N>(&once); f() }`,
+  with `$onceDone<N>` a second synthetic that runs `onceComplete`.
+- *Must preserve*: (i) the receiver address and `f` are evaluated **once, at
+  the call**, in that order (they are the synthetic's arguments, so this is
+  C-25/B-6's machinery, not new); (ii) **completion is deferred inside the
+  synthetic's own frame**, matching gc's `doSlow`, so `done` is set when `Do`
+  returns and not when the *caller's* frame exits — the first inline version
+  deferred to the caller and starved every later `Do` in the same function
+  into the park, caught red by `sync/once-basic/runs-once`; (iii) a panicking
+  `f` still completes, through the ordinary panic-path defer drain; (iv) the
+  happens-before edge the doc's `Do` promises — "the return from f
+  *synchronizes before* the return from any call of once.Do(f)" — is carried
+  by `onceBegin`'s acquire, which is machine semantics this row must hand over
+  intact rather than reproduce; (v) the two lifted names are per-site and
+  qualified by the enclosing function (`liftSeq`, the BUG-027 discipline), so
+  D-7's injectivity covers them.
+- *Notes*: the only sync member whose lowering **synthesizes control flow**
+  rather than emitting one op, which is why it is L: the obligation is a
+  simulation between `sync.Once`'s documented contract and a two-frame,
+  defer-bearing program shape, and three of its five conjuncts are about frames
+  and scheduling rather than values. Nested `Do` parks into the deadlock gc
+  realizes (`sync/once-nested-do`).
+- *Guardrails*: `sync/once-basic/{runs-once,panicking-f,across-goroutines}`,
+  `sync/once-nested-do`; `defer once.Do(f)` is a recorded refusal (C-28).
 
 ---
 
@@ -1168,14 +1442,39 @@ and fields*, *Methods and method sets*, *Interfaces*, *Generics*.
 
 ### 5.1 Type lowering
 
-**E-1 · the single type choke point — M — K1** · `wire.go:344`; substitution
-applied first 348–350. Every wire type comes from exactly one function.
-- *Must preserve*: `emitType(t) = ⟦σ(t)⟧` under the active stencil environment,
-  and **`emitType` is the only producer of `Ty` nodes**. Injectivity is not
-  needed; soundness of `Ty.eqb` w.r.t. Go type identity is:
+**E-1 · the type choke point — M — K1** · `wire.go:344`; substitution applied
+first 348–350.
+- *Must preserve*: `emitType(t) = ⟦σ(t)⟧` under the active stencil environment;
+  soundness of `Ty.eqb` w.r.t. Go type identity is
   `Ty.eqb ⟦t₁⟧ ⟦t₂⟧ = true ⟹ types.Identical(t₁,t₂)` on the admitted surface.
-- *Notes*: a second producer voids the argument. Substitution is the identity
-  outside stenciling.
+  Injectivity is not needed.
+- ⚠ *The uniqueness claim is FALSE as a fact and must be carried as an
+  OBLIGATION* (corrected 2026-08-21, audit-fix round). The row previously
+  asserted "**`emitType` is the only producer of `Ty` nodes**" and that "every
+  wire type comes from exactly one function". Measured at `4ef05649`:
+  - **37 inline wire-type literals** outside `wire.go`'s `emitType` family —
+    32 in `emit.go`, 3 in `fmtdesugar.go` (231, 352, 448), 2 in `mono.go`
+    (521, 532). Derivation: `grep -n 'map\[string\]any{"kind":' *.go` minus
+    `wire.go`'s own 20 (all inside `emitType`/`emitBasic`/`intType`/
+    `floatType`/`emitInstantiatedNamed`). Most are structurally trivial
+    (`{"kind":"bool"}`, `{"kind":"pointer","elem":…}` over an already-emitted
+    element), which is why nobody noticed — but "trivial" is a per-site
+    argument, and there are 37 of them.
+  - **5 `emitBasic` bypasses** — `emit.go:3800, 3938, 3988, 6428, 6445` call
+    `e.emitBasic(b)` directly, skipping `emitType`'s `applySubst` step
+    (`wire.go:348-350`). Sound today only because a `*types.Basic` is
+    substitution-invariant — an argument that holds for `emitBasic`'s domain
+    and nowhere else. Five further sites reuse the `intType`/`floatType`
+    helpers (`fmtdesugar.go:334`; `emit.go:3733, 4528, 7964, 8286`).
+- *So the real statement is a CONSOLIDATION obligation*, and it comes in two
+  parts: (a) discharge the 42 bypasses one by one — for each, show the literal
+  equals `emitType` of the Go type it stands for under the active
+  substitution; or (b) do the cheap thing first and route them through
+  `emitType`/typed constructors so the uniqueness argument becomes true by
+  construction, leaving a single site to reason about. (b) is a mechanical
+  refactor of the kind Tier 0 (§11) collects, and it converts an argument that
+  is currently 42 separate hand-waves into one lemma.
+- *Notes*: substitution is the identity outside stenciling.
 
 **E-2 · basic kinds and untyped-constant defaults — S — K1** ·
 `wire.go:522-568`; `intType` 570; `floatType` 574. `byte`/`rune` are handled by
@@ -1191,8 +1490,13 @@ inside a mangled key but cannot be emitted as a wire type. Latitude **R1** pins
 **E-3 · alias transparency — S — K1** · `wire.go:359-364`; mirrored at
 `mono.go:200-203`, `mono.go:915-918`, `emit.go:4620`, `emit.go:5071`.
 Spec#Alias_declarations: an alias contributes nothing to type identity and no
-`TypeDef` is minted under its name. **Four independent sites must agree**;
-audits M2 and R3 each record one being missed, causing mis-refusals.
+`TypeDef` is minted under its name. **Five independent sites must agree** (the
+anchor list above is five; the row said "four" — corrected 2026-08-21, and the
+off-by-one is exactly the kind of miscount that made M2/R3 possible); audits M2
+and R3 each record one being missed, causing mis-refusals. A sixth alias arm,
+`mentionsTypeParam`'s (`mono.go:116-117`), is on the *refusal* side rather than
+the identity side and is not part of the agreement obligation — but any
+certificate enumerating alias handling should say so rather than omit it.
 - *Notes*: `main.go:39-45` sets `GODEBUG=gotypesalias=1` **before any go/types
   use** — a global process configuration the certificate depends on (under the
   toolchain's GOPATH default, go/types aborts on generic aliases). Shared by
@@ -1215,13 +1519,18 @@ audits M2 and R3 each record one being missed, causing mis-refusals.
 `types.Identical` structurally. **Channel direction is carried and is part of
 identity** (451–463). `channels/directional-types`, `channels/make-directional`.
 
-**E-7 · ⚠ function-type lowering DROPS the variadic bit — M — K1** ·
-`wire.go:483-500`; `GoLean/GoCore/Value.lean:292-294`
+**E-7 · ⚠⚠ function-type lowering DROPS the variadic bit — M — K1 — a
+CONFIRMED live silent wrong answer** · `wire.go:483-500`;
+`GoLean/GoCore/Value.lean:292-294`
 (`| funcType (params results : List Ty)`). Spec#Type_identity distinguishes
 `func(...int)` from `func([]int)`; the wire does not. **Contrast is
 deliberate elsewhere**: `variadic` IS carried on `Func`/method-table entries
 (`emit.go:1544-1550`) and on interface-method requirements (`emit.go:439-446`),
-both citing pre-merge audit 2026-07-31 finding 0. See §10 hole H-d.
+both citing pre-merge audit 2026-07-31 finding 0. **§10 hole H-d, promoted
+2026-08-21 from "suspected" to CONFIRMED**: a comma-ok assert on a boxed
+variadic function answers `true` where Go answers `false`, with status `ok` —
+so this row is not a proof obligation but a bug with a witness, and no
+certificate for it should be written before the bit is carried.
 
 **E-8 · anonymous interface canonical rendering — M — K1** · `wire.go:465-482`;
 `any` 330; duplicate `emit.go:5075-5081`. Soundness rests on Go interface
@@ -1476,10 +1785,17 @@ it.
   source". Int-domain cases cannot see it; only float/complex generic cases pin
   it (`floats/generic-type-set`, `complex/generic-type-set`).
 
-**E-33 · joint fixpoint drain — M — K1** · `mono.go:710`, 620, 495; called
-**four** times in `emitProgram` (`emit.go:257`, 288, and inside the interface
-fixpoint at 411). Function stencils reach new instantiated types and type
-stencils reach new function instantiations, so the fixpoint must be joint.
+**E-33 · joint fixpoint drain — M — K1** · `drainMono` `mono.go:710`, loop
+711–726, joint-termination test 722–723; `flushFuncInsts` `:620`;
+`flushTypeInsts` `:495-547`, whose `did` flag (returned at `:546`) is what
+makes the termination test joint rather than per-queue. Called **three** times
+in `emitProgram` — `emit.go:257`, `288`, and inside the interface fixpoint at
+`411` (the row said "four" while listing three; count corrected 2026-08-21,
+audit-fix round — `grep -n 'drainMono' tools/nativefrontend/*.go`). Function
+stencils reach new instantiated types and type stencils reach new function
+instantiations, so the fixpoint must be joint: the obligation is that
+`drainMono` returns only when **both** queues are empty *and* the last
+`flushTypeInsts` pass did no work, which is precisely `!did && len(funcInstQueue) == 0`.
 
 **E-34 · instantiated type declarations and method stenciling — M — K1** ·
 `mono.go:449`, 461–472 (interface carve-out), 495–547, 555; wire arm
@@ -1592,15 +1908,32 @@ construction, but a port or a Go-pin move re-derives the table.
 empty one); a package-scope var initializer is work unless go/types assigned it
 a **constant** value.
 - *Direction, stated honestly*: `staticinit` folds strictly more than "is a
-  constant" (composite literals of static elements, copies from other statically
-  initialized globals, addresses of globals, constant conversions, and with the
-  inliner on, whole calls). So the rule can call a package a node that gc pruned,
-  **never the reverse**. Over-pruning would delete a real edge (unsafe);
-  under-pruning keeps a spurious one, which can delay an importer past a package
-  it should have beaten — a real divergence, not a safe one.
+  constant", so the rule can call a package a node that gc pruned, **never the
+  reverse**. Over-pruning would delete a real edge (unsafe); under-pruning keeps
+  a spurious one, which can delay an importer past a package it should have
+  beaten — a real divergence, not a safe one.
+- *The five extra things `staticinit` folds, re-anchored* (2026-08-21 audit-fix
+  round — the list was previously given without a source, and the in-code
+  comment carries only three of the five): composite literals of static
+  elements, copies from other statically initialized globals, addresses of
+  globals, **conversions of constants**, and — **with the inliner on** — whole
+  function calls. The three-item form is `load.go:273-276`; the five-item form
+  is `docs/2026-08-18_multipackage-identity.md:255-259` and `docs/BUGS.md`
+  BUG-061, and the primary source both cite is
+  `deps/go/src/cmd/compile/internal/staticinit/sched.go` at the go1.26.5 pin
+  (ledger **L-011**'s source list). The two items missing from the code comment
+  are the two that matter most to a certificate: constant conversions are
+  common, and the inliner-conditional one is what makes F-7 latitude rather
+  than a bug.
 - *Guardrails*: pinned RED by `multipkg/init-order-staticinit` — **BUG-061,
-  open**. Measured, not assumed: a 26-flavor probe puts it at 11 of 26, all
-  one-directional, carried by a 120-seed randomized harness. Chosen over a deeper
+  open**. Measured, not assumed: a 26-flavor probe puts the residual at 11 of
+  26 flavors, all one-directional — `addrglobal`, `arraylit`, `arrayofstr`,
+  `bytesconv`, `callinit`, `funcvalue`, `nestedlit`, `slicelit`, `staticcopy`,
+  `structlit`, `structzero` (`docs/BUGS.md` BUG-061, "Size, measured"). The
+  120-seed randomized harness is at **0 mismatches and cannot see any of it** —
+  every package it generates has a call-valued initializer, so it is a node
+  under both rules; the bug is found by construction, not by the corpus, which
+  is the honest reading of "carried by a 120-seed harness". Chosen over a deeper
   staticinit port because "the rule is legible and its failure mode is a wrong
   ORDER we can measure, whereas a half-ported staticinit's failure mode is a
   wrong order we would believe."
@@ -2233,12 +2566,18 @@ is no `panic!`/`unreachable`, and every `Array.get!` is guarded by a preceding
 size test. *The hole is not unknown tags — it is unknown or missing KEYS.*
 
 **Unknown/EXTRA keys: NOT checked at all — fail-OPEN.**
-`StrictJson.requireExactKeys` exists (`StrictJson.lean:15`) and is used ~20× in
-`CLI.lean`'s state decoder, and **zero times** in `NativeToIR.lean`. Every wire
-object is read key-by-key; unrecognized keys are silently ignored (demonstrated
-live: the emitter writes `"package"` at `emit.go:550` and the decoder never
-reads it). Consequence: **a dropped optional key is indistinguishable from a
-deliberately absent one**, which makes every row in §9.2 reachable.
+`StrictJson.requireExactKeys` exists (`StrictJson.lean:15-19`) and is used 19×
+in `CLI.lean`'s state decoder, and **zero times** in `NativeToIR.lean`. Every
+wire object is read key-by-key; unrecognized keys are silently ignored
+(demonstrated live: the emitter writes `"package"` at `emit.go:547` — anchor
+corrected 2026-08-21; `:550` is the `"methods"` key — and the
+decoder never reads it). Consequence: **a dropped optional key is
+indistinguishable from a deliberately absent one**, which makes every row in
+§9.2 reachable. Note what the existing primitive can and cannot do, because
+§11's Tier-0 recommendation turns on it: `requireExactKeys` tests **set
+equality** against one literal key list (`exactKeys` = `size == length &&
+all contains`, `StrictJson.lean:12-13`), so it is exactly right for a node
+shape with no optional keys and unusable for one with them — see §11.
 
 **Round-trip / schema agreement: essentially none.** The only format agreement
 is the literal string `"golean-native-v1"` (`emit.go:546` vs
@@ -2401,9 +2740,16 @@ decoder has no idea the hazard exists.** Pure silent wrong answer if the pass
 ever misses a shape; historically found by a guardrail case, not by any gate.
 See A-9. **The single most proof-worthy row in this chapter.**
 
-**J-39 · select clause ORDER is preserved into `.selectStmt` — M** · `:711-738`.
-No check is possible; flagged because it is a **nondeterminism-envelope**
-correspondence — the class with no differential oracle (latitude C6/C7).
+**J-39 · select clause ORDER is preserved into `.selectStmt` — M — K5+K2m** ·
+`:711-738`. No check is possible; flagged because it is a
+**nondeterminism-envelope** correspondence — the class with no differential
+oracle (latitude C6/C7). *Kind corrected 2026-08-21 (audit-fix round)*: this
+row was listed in the K2 register, but §0.2 defines K2 as latitude where **the
+frontend is the choice site**, and here it is not — the commit choice belongs
+to the machine. The frontend/decoder obligation is the dual one (**K2m**):
+hand the machine the clause list in source order and unabridged, so its
+envelope is neither reordered nor narrowed. J-9's dropped-clause hazard
+(`:734`, a silent `| none => pure ()`) is the concrete way this can fail.
 
 **J-40 · synthetic-name namespace disjointness — M** — see A-10.
 
@@ -2472,51 +2818,154 @@ signature (`:1285`) · J-4's `$lit`/`$maplit` · J-22's targetless call · J-41.
 
 ---
 
-## 10. Suspected holes found while cataloguing
+## 10. Holes found while cataloguing
 
 Six things the census turned up that are **not** in `docs/BUGS.md`, the ledgers
-or the corpus. Recorded here as leads, not as confirmed defects — none was
-reduced to a witness program, and reducing them is not this arc's scope. Each
-is exactly the class the audit doctrine says green gates structurally cannot
-see, which is the point of writing the census at all.
+or the corpus. Each is exactly the class the audit doctrine says green gates
+structurally cannot see, which is the point of writing the census at all.
 
-- **H-a · slice-expression default-high emits the base TWICE.** `emit.go:4522`
-  (base or its address) and `:4541` (inside the `builtin-len` for the elided
-  high). Each `emitExpr` of a call hoists a **fresh** temp, so `expensive()[:]`
-  or `f().arr[2:]` would call twice. Every other documented eval-once hazard in
-  the file is guarded (`emitReadWriteTarget` 3860; BUG-047's conversion guard
-  2893–2905); this one appears unguarded and unpinned. **Recommended: a probe,
-  then a corpus row.** Closest relative: BUG-047, same silent-divergence shape.
-- **H-b · `Expr.intLit`'s `| _ => .int` default** (J-1). A live silent coercion
+**Status after the 2026-08-21 audit-fix round.** The first pass recorded all
+six as "leads, not confirmed defects — none was reduced to a witness program".
+That is no longer true of two of them: the pre-merge auditor reduced H-a and
+H-d to witnesses and this round re-ran them end to end. **Both are LIVE SILENT
+WRONG ANSWERS with status `ok`.** The table is the follow-on holes arc's
+charter input. The probes live in the auditor's scratch (`.tmp/audit/`,
+untracked), so each row below restates its witness — H-d's source verbatim,
+the others in enough detail to retype — and nothing here depends on a file
+that is not in the repo.
+
+| hole | verdict | witness / why not | owed |
+|---|---|---|---|
+| **H-a** slice default-high double emission | **VERIFIED — live silent wrong answer, status `ok`** | gc 1 call, machine 2, on both a slice base and a pointer-to-array base; explicit-high control agrees at 1 | BUG entry + corpus row + fix |
+| **H-b** `Expr.intLit`'s `\| _ => .int` | **not probed this round** — reachability argument (J-1) unchallenged, no witness constructed | reachability is by code reading (`emit.go:6439`, `:3727`), not execution | reduce to a witness, then fix (Tier 0) |
+| **H-c** two missing decoder checks | **not a defect — a proposal**, restated as such | duplicate-TypeId sweep (J-42) and literal index bounds (J-33); J-33's *spurious panic* direction re-read and stands | land both (Tier 0) |
+| **H-d** wire func types drop the variadic bit | **VERIFIED — live silent wrong answer, status `ok`**; the first pass's "not confirmed observable" is **REFUTED** | comma-ok assert on a boxed variadic func: gc `false true`, machine `true true` — no reflection needed | BUG entry + corpus row + `Ty` carries variadic |
+| **H-e** composite-literal element order | **probed — NOT a divergence on the probed shape**; remains an uncensused latitude point | gc runs the sibling call before the non-call element's panic, the same member the ANF hoist realizes (machine 1 = gc 1) | census E12's follow-on, then a membership statement (B-19) |
+| **H-f** struct tags dropped | **not probed** — genuine identity collapse in `Ty`, observability open | unlike H-d, the plausible witnesses go through reflection (globally refused) or anonymous non-empty structs (refused, `wire.go:508`) | try to construct a witness; if none exists, record as an argued-unobservable narrowing rather than leaving it a lead |
+
+**Both confirmed holes PREDATE this branch** — they were found *by* the census,
+not introduced by it: H-a's second emission dates to `a18ebd24` (2026-07-18,
+"Native frontend: make (slice/map) and slice expressions"), H-d's
+variadic-dropping `funcType` to `7ce738bc` (2026-07-25, "W5 slice 1b: frontend
+lambda lifting"). Neither has a BUG id yet; **both owe one, and the follow-on
+holes arc heads with them** — they are the two rows in this file that are
+demonstrated wrong answers rather than proof obligations, so they outrank every
+certificate in §11.
+
+- **H-a · slice-expression default-high emits the base TWICE — CONFIRMED
+  LIVE.** `emit.go:4521/4523` (base or its address) and `:4541` (a second
+  `emitExpr` of the same operand, inside the `builtin-len` for the elided
+  high). Each `emitExpr` of a call hoists a **fresh** temp, so the base runs
+  twice. Every other documented eval-once hazard in the file is guarded
+  (`emitReadWriteTarget` 3860; BUG-047's conversion guard 2893–2905); this one
+  is unguarded and unpinned. Closest relative: BUG-047, same
+  silent-divergence shape.
+  - *Witness (verified end to end, this round).* Two forms, both reproducing:
+    a **slice base**, `s := expensive()[:]` with `expensive` incrementing a
+    counter, and a **pointer-returning array base**, `s := pf().arr[2:]` with
+    `pf` returning `*box`. The emitted wire for each contains **two** call
+    statements — `$c1 := expensive(); $c2 := expensive();` — with `$c1` as the
+    slice base and `$c2` as the `builtin-len` operand. `go run`: **1**.
+    `golean native-json-run`: `{"status":"ok","values":[{"tag":"int",
+    "value":2}]}` — **2**. Control: the explicit-high form
+    `expensive()[0:3]` emits one call and both sides answer 1.
+  - *Example corrected*: the first pass wrote the second form as `f().arr[2:]`
+    with `f` returning a **value**. That is not legal Go — slicing an array
+    requires an addressable operand, and a call result is not addressable — so
+    the pointer-returning `pf().arr[2:]` is the form that actually witnesses
+    the hole (auditor's probe; re-verified here).
+- **H-b · `Expr.intLit`'s `| _ => .int` default** (J-1). A silent coercion
   whose two siblings (`incdec`, range-over-int) are already fail-closed for
   exactly this reason. Likely a small **bug fix before a proof**, not a proof
-  obligation.
+  obligation. **Not probed this round**: the reachability claim rests on code
+  reading (`emit.go:6439` attaches `"type"` only when the underlying is a basic
+  integer; `emit.go:3727` emits a typeless int node unconditionally), and it is
+  unchallenged but unwitnessed — say "unwitnessed", not "live", until someone
+  runs it.
 - **H-c · two two-line decoder checks that would convert unchecked obligations
   into free lemmas**: a duplicate-TypeId sweep (J-42) and a
   `0 ≤ index < length` bound on literal element indices (J-33, which produces a
   *spurious panic*, not a stuck). Doing these first shrinks the certificate's
   surface.
-- **H-d · wire func types drop the VARIADIC bit** (E-7) while `Func` and
-  interface-requirement entries carry it, citing the audit finding that says the
-  distinction matters. No BUG entry, no ledger row, no corpus case. Not confirmed
-  observable in the current refusal envelope (reflection is globally refused),
-  but it is a genuine identity collapse in `Ty`.
-- **H-e · composite-literal element order vs a sibling call's panic** (B-19).
-  `containsCall` is the effectfulness oracle, so a non-call *panicking* element
-  is not hoisted and its panic can land out of source order against a hoisted
-  sibling. E12's own census follow-on names composite-literal element order,
-  duplicate-map-key order, and map-literal key-vs-value order as **not yet
-  censused**. This is a latitude-census gap, not necessarily a bug — but it must
-  be censused before a certificate can state the membership claim.
+- **H-d · wire func types drop the VARIADIC bit — CONFIRMED LIVE SILENT WRONG
+  ANSWER, status `ok`** (E-7). `wire.go:483-500` lowers `func(...int) int` and
+  `func([]int) int` to the same `funcType [[]int] [int]`, while `Func` and
+  interface-requirement entries **do** carry `variadic` (`emit.go:1544-1550`,
+  `:439-446`), both citing the pre-merge audit finding that says the
+  distinction matters. Spec#Type_identity makes them different types.
+  - *Witness (auditor's probe, re-verified end to end this round).*
+    ```go
+    func variadic(xs ...int) int { return len(xs) }
+    func probeAssert() (bool, bool) {
+        var i any = variadic
+        _, okSlice := i.(func([]int) int)   // Go: FALSE
+        _, okVar   := i.(func(...int) int)  // Go: TRUE
+        return okSlice, okVar
+    }
+    ```
+    `go run`: **`false true`**. `golean native-json-run --function
+    probeAssert`: **`{"status":"ok","values":[{"tag":"bool","value":true},
+    {"tag":"bool","value":true}]}`** — `okSlice` is wrong, and the run is
+    `ok`: no refusal, no panic, nothing red anywhere. The wire shows *why* it
+    cannot be otherwise: the two `type-assert` statements carry **byte-identical
+    `targetType`** (`{"kind":"func","params":[{"kind":"slice","elem":int}],
+    "results":[int]}`), and the boxed value's `dynamic` is that same node, so
+    the machine has no information left to tell the two assertions apart. It
+    answers the same for both; Go answers differently; therefore one of them is
+    wrong for *any* semantics the machine could give the node.
+  - *The first pass's "not confirmed observable in the current refusal envelope
+    (reflection is globally refused)" is REFUTED*: comma-ok type assertion at a
+    func type is enough, and it is ordinary supported Go. **No BUG entry, no
+    ledger row, no corpus case** — all three owed. The fix is `Ty.funcType`
+    carrying the bit, plus the decoder requiring it (the same shape as the
+    `variadic`-REQUIRED discipline §9.5 already records for funcs, methods and
+    interface method signatures).
+- **H-e · composite-literal element order vs a sibling call's panic** (B-19) —
+  **probed; not a divergence on the probed shape.** `containsCall` is the
+  effectfulness oracle, so a non-call *panicking* element is not hoisted and its
+  panic can land out of source order against a hoisted sibling.
+  - *Witness attempt*: `S{A: arr[i], B: f()}` with `i` out of range and `f`
+    bumping a counter, the counter read from a `recover`. `go run`: **1** — gc
+    ran `f()` **before** the index panic. Machine: **1**. Both realize
+    call-first; the hoist agrees with gc here.
+  - So this is a **latitude-census gap, not a bug** — and a gap on a point the
+    spec states *explicitly*, not one it merely omits: spec#Order_of_evaluation's
+    example block says `x := []int{a, f()}` "may be [1, 2] or [2, 2]:
+    evaluation order between a and f() is not specified", with sibling lines
+    for duplicate map keys and map-literal key-vs-value. E12's census follow-on
+    lists all three as **not yet censused**, and the probe shows only that our
+    member and gc's coincide on one shape — exactly the lower-bound reading the
+    doctrine allows and no more. It must be censused before B-19's certificate
+    can state its membership claim.
 - **H-f · struct TAGS are dropped from the wire** (E-16) though
   spec#Struct_types makes them part of type identity. Preserved through
-  substitution, never emitted. Same caveat as H-d.
+  substitution, never emitted. **Not probed.** The "same caveat as H-d" the
+  first pass attached here no longer means what it did — H-d turned out to be
+  observable — so state H-f's own position instead: it is a genuine identity
+  collapse in `Ty`, and the plausible witnesses run through either reflection
+  (globally refused) or **anonymous** non-empty struct types (refused,
+  `wire.go:508`), with named struct types keeping their TypeId. Whether a
+  witness exists inside the refusal envelope is **open**, and the honest
+  outcome of trying is either a BUG or a recorded argued-unobservable
+  narrowing — not a lead left standing.
 
 Two documentation drifts also worth fixing when W7 opens:
 `docs/2026-08-18_multipackage-identity.md` §6 still says shims are
 main-package-only, which `load.go:206-218` widened in raft W4.0 (G-35); and the
 `%X` doctrine/code split at `fmtdesugar.go:35` vs `:516` (G-11) is a two-file
 invariant nothing checks.
+
+**One open census question the audit-fix round surfaced and deliberately did
+not rule on** (C-42): `emit.go:2413-2416` cites spec#Send_statements for
+emitting a send's **channel before its value**, but that section orders both
+operands only against the *communication*, and spec#Order_of_evaluation's
+left-to-right rule is scoped to "the operands of an expression, assignment, or
+return statement" — which does not name the send statement. So channel-vs-value
+order in a send may be an E12/E13-class frontend pin rather than a forced
+order. The corpus pins one order (`channels/make-edge/ordinary-send-eval-order`,
+two calls). **This belongs in `docs/2026-08-11_latitude-inventory.md` as a
+census decision, not in a census row** — recorded here so it is not lost, and
+flagged so no certificate states C-42's order clause as equality first.
 
 ---
 
@@ -2530,12 +2979,38 @@ exists as red-then-green corpus rows.
 **Tier 0 — do before proving anything (cheap, shrinks the surface).**
 Land H-b and H-c (three small decoder/emitter changes). Each converts an
 unchecked emitter obligation into a boundary-discharged free lemma, and H-b is
-plausibly a live silent coercion. Consider `requireExactKeys` across the ~30
-wire node shapes — it is already written (`StrictJson.lean:15`) and already the
-discipline `CLI.lean` applies to the state decoder; **it collapses the whole of
-§9.2 (rows J-10..J-27) from "unguarded emitter obligation" to "checked at the
-boundary" in one mechanical pass.** That single move is probably worth more than
-the first three certificates.
+plausibly a live silent coercion.
+
+Then a key-checking pass over the ~30 wire node shapes — **but not the one this
+section originally proposed** (restated 2026-08-21, audit-fix round; the old
+text claimed `requireExactKeys` "collapses the whole of §9.2 (rows J-10..J-27)
+… in one mechanical pass", and it does not).
+- *Why it does not transfer as-is*: `requireExactKeys` (`StrictJson.lean:15`)
+  tests **set equality** against a single literal key list. Wire shapes have
+  optional keys, and a shape with `k` of them has `2^k` legal key sets — the
+  `for` node (`NativeToIR.lean:1163-1205`) has four (`cond`, `post`, `condPre`,
+  `init`) beside the required `body`, i.e. **16 legal key sets**, so no single
+  expected list exists to pass. Applied with the maximal list it rejects legal
+  wires; applied with the minimal one it rejects every optional key.
+- *What to build instead*: a **known-keys primitive** — every key present is in
+  the shape's declared vocabulary, every required key is present — plus a
+  per-shape **key grammar** naming which optional keys the shape admits (and,
+  where there are dependencies, which combinations: e.g. `condPre` without
+  `cond` is meaningless). The primitive is a dozen lines beside
+  `requireExactKeys`; the grammars are ~30 small declarations.
+- *What that actually buys, scoped honestly*: it closes the unknown/extra-key
+  fail-open (the `"package"` demonstration) and it catches a key **misspelled**
+  or emitted under the wrong shape — a real class, and the one that makes the
+  decoder's "read key-by-key" style safe. It does **not** collapse §9.2: J-10's
+  missing `for.cond` (an infinite loop), J-15's missing `make-chan.cap`
+  (unbuffered), J-17's missing `select.default` (blocking) are all *legal key
+  sets* by construction, so no key check can see them. Those rows stay emitter
+  obligations of the form "key `K` is emitted iff the construct has feature
+  `F`", and the honest ways to retire them are per-shape grammars strong enough
+  to make absence *illegal* where it should be (e.g. require `cond`, emitting
+  `true` explicitly for `for {}`), or a certificate.
+- Still worth doing early, and still cheaper than a certificate — just not the
+  one-move collapse of §9.2 the first draft advertised.
 
 **1 · C-1, if-init condition-hoist scoping.** *The* place to start. Small, local,
 one linear event sequence, one scope; nine dedicated corpus rows plus six
@@ -2545,11 +3020,13 @@ most common shapes in real Go including `deps/raft`. If a certificate cannot be
 made to work here, the route is in trouble, and finding that out costs a week
 rather than a quarter.
 
-**2 · B-42/B-44/D-1, the comma-ok family.** BUG-034, BUG-057 and the implicit
-"assign, 2 lhs, 1 rhs = map-get" seam (B-44) all live here. Two extra payoffs
-beyond the bug class: it forces the certificate to span **stage 1 and stage 2**
-(the shape recognition is the decoder's), and it forces the wire's implicit
-contracts to be written down.
+**2 · B-42/B-44/D-1, the comma-ok family.** BUG-034, BUG-057 and the
+**arity-gated** map-get seam (B-44 — the `map-get` tag is explicit; what is
+implicit is that `lhs.size == 2 && rhs.size == 1` means "comma-ok map read"
+and can mean nothing else) all live here. Two extra payoffs beyond the bug
+class: it forces the certificate to span **stage 1 and stage 2** (the shape
+recognition is the decoder's), and it forces the wire's implicit contracts to
+be written down.
 
 **3 · A-9 + J-38, shadow-capture pre-binding.** The only obligation in the census
 that is both genuinely non-local and a demonstrated near-miss, with one arm still
@@ -2610,7 +3087,10 @@ wire≃GoCore proved separately, which needs a *third* semantics nobody has
 written; (c) **stage-2-trusted** — certify AST≃wire only, leaving the decoder in
 the TCB, which is cheap and wrong (four of the six §10 holes are stage-2 or
 stage-1/2-joint). Recommendation, for the record: (a), with §9's rows as
-*side conditions on the wire* discharged by the boundary checks Tier 0 adds.
+*side conditions on the wire* — discharged by the boundary checks Tier 0 adds
+**where a key check can reach them**, and carried as explicit side conditions
+where it cannot (§11's restated Tier 0: §9.2's optional-key rows are legal key
+sets by construction and survive any key check).
 Stage 3 (the shim/shadow-model re-entry, G-28/G-35) is not covered by any of the
 three and needs its own answer — the certificate's subject program is not the one
 the user wrote.
@@ -2623,14 +3103,22 @@ per-expression choice between total orders. If the spectec-derived semantics is
 a deterministic interpreter — SpecTec's own backend runs latitude points as
 `EitherI` with backtracking, i.e. **a deterministic pin**
 (`docs/2026-08-17_prior-art-spectec.md` §1, caveat 3) — then the simulation can
-only be equality with one member, and every K2 row in this census (A-1, C-34,
-C-38, D-11, F-3, F-6, F-7) becomes a certificate that freezes a gc-pin as a
-fidelity claim. The doctrine forbids exactly that. So: **the spec document needs
-a nondeterministic reduction relation at the E-series points, and the
-certificates need to be membership statements.** If that is too expensive for the
-prototype, the honest interim is to certify the *forced* rows (K1) and mark the
-K2 rows explicitly out of certificate scope — never to certify them against the
-pin.
+only be equality with one member, and every K2 row in this census — the
+corrected set of **13**: A-1, B-6, B-19, B-27, C-34, C-36, C-38, C-40, D-11,
+F-2, F-3, F-6, F-7 (§0.2) — becomes a certificate that freezes a gc-pin as a
+fidelity claim. The doctrine forbids exactly that. The two **K2m** rows (C-7,
+J-39) are not exposed the same way: their envelope lives in GoCore, so what
+they need from the spectec side is only that the frontend obligation
+("preserve the choice structure, narrow nothing") is statable. So: **the spec
+document needs a nondeterministic reduction relation at the E-series points,
+and the certificates need to be membership statements.** If that is too
+expensive for the prototype, the honest interim is to certify the *forced*
+rows (K1) and mark the K2 rows explicitly out of certificate scope — never to
+certify them against the pin. C-38 is the worked example of doing this at the
+level of a single row rather than a whole row-set: three conjuncts certified as
+forced, the fourth either stated as membership or declared out of scope, with
+E13's "NO PIN MAY BE TAKEN HERE" quoted in place so the split cannot quietly
+close.
 
 **12.3 · How are the shims specified?** §7's 35 rows are `REFINE(pkg.Fn, D)`
 obligations against **documented library behavior**, not against the language
@@ -2688,42 +3176,63 @@ should be made deliberately rather than by default.
 |---|---|
 | A · normalization core | 10 |
 | B · expressions | 45 |
-| C · statements and control flow | 41 |
+| C · statements and control flow | 44 |
 | D · declarations, scoping, identity | 13 |
 | E · types, method sets, generics | 36 |
 | F · packages, initialization, globals | 15 |
 | G · library models | 35 |
 | H · quarantine and fail-closed contracts | 6 |
 | J · decode-half wire invariants | 45 |
-| **total** | **246** |
+| **total** | **249** |
+
+Chapter C moved 41 → 44 (and the total 246 → 249) in the 2026-08-21 audit-fix
+round: C-42 (send statement), C-43 (statement-position sync ops), C-44
+(`once.Do`) — three lowerings the first pass missed entirely, §3.9.
 
 By obligation kind, **K2 is the one that is counted exactly** because it is the
-one the doctrine cares about: **9 rows** — A-1, C-7, C-34, C-38, D-11, F-3,
-F-6, F-7, J-39. The rest are approximate: K1 (forced-order simulation) ~150,
+one the doctrine cares about: **13 rows** — A-1, B-6, B-19, B-27, C-34, C-36,
+C-38, C-40, D-11, F-2, F-3, F-6, F-7 — plus **2 K2m rows** (C-7, J-39) where
+the latitude is the machine's and the frontend's duty is not to narrow it.
+*This register was wrong in the first pass and is the audit-fix round's largest
+correction*: it listed 9, of which C-7 and J-39 do not meet §0.2's own
+definition (the frontend is not the choice site) and F-2 was missing despite
+being tagged K2 in its own row header, while five further rows (B-6, B-19,
+B-27, C-36, C-40) were tagged plain K1 although their order clauses are
+frontend realizations of E3/E4/E12/E13 — the misclassification in the **worse**
+direction, since a K1 tag invites a certificate to state equality with a
+gc-pin. The other kinds stay approximate: K1 (forced-order simulation) ~150,
 K3 (library refinement) 35, K4 (partiality/fail-closed) ~25, K5 (wire
 invariants) 45; several rows carry two kinds.
 
-The **L set is enumerated** (31 rows) rather than tallied, since it is the
+The **L set is enumerated** (33 rows) rather than tallied, since it is the
 planning-relevant one — every row here has a correctness statement that is not
 a value equality:
 
 > A-1 (ANF membership) · A-8 (closure conversion) · B-1 (short-circuit) ·
-> B-8 (generic call) · B-11 (interface boxing, ~25 sites) · B-35 (promoted
+> B-8 (generic call) · B-11 (interface boxing, 37 sites) · B-35 (promoted
 > receiver path algebra) · C-4 (loop-var trigger completeness) · C-5
 > (per-iteration cell identity) · C-11 (switch index machine) · C-18 (select
 > delivery) · C-20 (goto restructuring) · C-21 (the goto envelope's
-> sufficiency) · C-38 (chan-recv phases) · D-8 (display vs identity, not
-> frontend-fixable) · E-13 (layout, conditional on §12.5) · E-17 (satisfaction
-> completeness) · E-18 (promotion flattening + method-table completeness) ·
-> E-23 (monomorphization) · F-2 (hidden init dependencies) · F-3 (the pruned
-> schedule) · F-7 (init order is latitude) · F-12 (H-11 skip soundness) ·
-> G-5 (fmt effect-trace order) · G-11 (gc dispatch precedence) · G-16
-> (typed-nil error, to close) · G-18 (the recover-frame split) · G-23
-> (byte-scan ≡ rune-scan) · G-28 (shadow-model merge) · H-4 · J-29
-> (call typing) · J-38 (shadow capture).
+> sufficiency) · **C-34 (call-RHS arity/order routing)** · C-38 (chan-recv
+> phases) · **C-44 (`once.Do`'s two-frame desugar)** · D-8 (display vs
+> identity, not frontend-fixable) · E-13 (layout, conditional on §12.5) ·
+> E-17 (satisfaction completeness) · E-18 (promotion flattening +
+> method-table completeness) · E-23 (monomorphization) · F-2 (hidden init
+> dependencies) · F-3 (the pruned schedule) · F-7 (init order is latitude) ·
+> F-12 (H-11 skip soundness) · G-5 (fmt effect-trace order) · G-11 (gc
+> dispatch precedence) · G-16 (typed-nil error, to close) · G-18 (the
+> recover-frame split) · G-23 (byte-scan ≡ rune-scan) · G-28 (shadow-model
+> merge) · H-4 · J-29 (call typing) · J-38 (shadow capture).
 
-S/M are not counted; the per-row tags carry them.
+C-34 was tagged L in its own row header but omitted from this enumeration
+(31 → 33 with C-44, corrected 2026-08-21). S/M are not counted; the per-row
+tags carry them.
 
-Suspected holes: 6 (§10). Documentation drifts: 2 (§10). Cross-file invariants
-nothing checks: 3 (`%X` parser↔dispatch, `%T`-refusal↔`errors.New` identity,
-emitter↔decoder `$`-prefix disjointness).
+Holes: 6 (§10) — **2 confirmed live silent wrong answers** (H-a, H-d, both
+predating this branch and both owing a BUG id), 1 refuted-as-divergence (H-e,
+now a latitude-census gap), 1 unwitnessed (H-b), 1 restated as a proposal
+rather than a defect (H-c), 1 unprobed with observability open (H-f).
+Documentation drifts: 2 (§10). Open census questions handed to the latitude
+inventory rather than ruled on here: 1 (C-42's channel-vs-value order, §10).
+Cross-file invariants nothing checks: 3 (`%X` parser↔dispatch,
+`%T`-refusal↔`errors.New` identity, emitter↔decoder `$`-prefix disjointness).
