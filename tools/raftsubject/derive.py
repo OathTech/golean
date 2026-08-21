@@ -256,14 +256,40 @@ func (r *lockedRand) Intn(n int) int {
 # getLogger() sites AND Config.Logger for every r.logger.* call).
 #
 # The one delta the frontend still forces is the two package-level
-# initializers: `log.New(os.Stderr, ...)` / `log.New(io.Discard, ...)` are
-# package-selector calls in PACKAGE-LEVEL var initializers, and a var has no
-# per-declaration quarantine (G-3 / handoff H-11) — an unlowerable
-# initializer refuses the WHOLE export. Until H-11 lands, the initializers
-# become bare `&DefaultLogger{}` composite literals and the orphaned `io`
-# import is dropped (`fmt`, `log`, `os` stay: DefaultLogger's method bodies
-# still name them, and those methods land as per-declaration fail-closed
-# stubs, which is the honest shape).
+# initializers: `log.New(os.Stderr, ...)` / `log.New(io.Discard, ...)` do not
+# lower, so the initializers become bare `&DefaultLogger{}` composite
+# literals and the orphaned `io` import is dropped (`fmt`, `log`, `os` stay:
+# DefaultLogger's method bodies still name them, and those methods land as
+# per-declaration fail-closed stubs, which is the honest shape).
+#
+# WHAT WOULD RETIRE THIS DELTA — corrected 2026-08-21 (audit B-F1). An
+# earlier version of this comment said "until H-11 lands". That is FALSE:
+# H-11, the package-level-var quarantine, SHIPPED in W4.0 (docs/raft-w4-log.md
+# item 3). H-11 does not retire D-12, because its per-declaration quarantine
+# is GATED on `initializerEffectIsolated` (tools/nativefrontend/emit.go), and
+# upstream's initializer is refused there on THREE INDEPENDENT axes, any one
+# of which is sufficient:
+#   (a) the whole RHS is `&DefaultLogger{...}` — an address-of expression,
+#       which the shape allowlist answers false for (a pointer escaping into
+#       the cell). This axis holds for the PATCHED bare `&DefaultLogger{}`
+#       too, so no amount of argument rewriting gets past it.
+#   (b) `log.New` is not in `pureUnmodeledCallees`, so the call answers
+#       false. It must NOT be casually added: that allowlist is minimal by
+#       charter after audit F1 (2026-08-20, docs/raft-w4-log.md), where
+#       `var _ = fmt.Println("x")` was declared effect-isolated and SKIPPED —
+#       the machine printed nothing where `go run` printed. Unmodeled is not
+#       effect-free, and `log.New` RETAINS a writer whose later writes land
+#       on stderr, an oracle-visible surface.
+#   (c) even granting (b), the arguments fail `isolatedType`: `os.Stderr` is
+#       a `*os.File` (pointer) and `io.Discard` an `io.Writer` (interface),
+#       while the predicate admits only basics and arrays/structs of basics.
+# So D-12 retires only when the initializer LOWERS — a frontend model for
+# `log.New` plus the `io.Writer`/`os.Stderr` surface — or when an
+# effect/isolation story for WRITER-TYPED globals is built that is sound in
+# audit-F1's sense. That is handoff H-20 (docs/raft-w42-log.md). The honest
+# alternative is on the table: D-12 is three code lines, exact-text-keyed,
+# refusing on drift, on a path the twin cannot reach — leaving it permanent
+# is cheap.
 #
 # OBSERVABLE WEIGHT, stated: under `go run`, a Logger call BEFORE the
 # harness installs its logger would nil-deref inside DefaultLogger (the
@@ -279,11 +305,18 @@ LOGGER_VARS_UPSTREAM = """var (
 )"""
 
 LOGGER_VARS_PATCHED = """// GOLEAN SUBJECT DELTA D-12 (the Q2 logger ruling — docs/raft-w42-log.md
-// item 1): the two initializers lose their `log.New(...)` calls (a
-// package-level var has no per-declaration quarantine — G-3/H-11 — so an
-// unlowerable initializer refuses the whole export). The harness installs
-// its own Logger through BOTH seams before any node exists; a pre-install
-// Logger call under `go run` nil-derefs loudly instead of printing.
+// item 1): the two initializers lose their `log.New(...)` calls, which do
+// not lower. The harness installs its own Logger through BOTH seams before
+// any node exists; a pre-install Logger call under `go run` nil-derefs
+// loudly instead of printing.
+//
+// NOT retired by H-11 (which shipped in W4.0). H-11's per-declaration
+// quarantine is gated on `initializerEffectIsolated`, which refuses this
+// initializer on three independent axes: the `&`-composite shape, `log.New`
+// being outside `pureUnmodeledCallees` (kept minimal by audit F1 — an
+// unmodeled call is NOT effect-free), and `os.Stderr`/`io.Discard` failing
+// `isolatedType`. Retiring D-12 needs a writer-typed-global effect story:
+// handoff H-20. See tools/raftsubject/derive.py for the full argument.
 var (
 	defaultLogger = &DefaultLogger{}
 	discardLogger = &DefaultLogger{}

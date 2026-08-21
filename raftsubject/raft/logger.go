@@ -58,11 +58,18 @@ func getLogger() Logger {
 }
 
 // GOLEAN SUBJECT DELTA D-12 (the Q2 logger ruling — docs/raft-w42-log.md
-// item 1): the two initializers lose their `log.New(...)` calls (a
-// package-level var has no per-declaration quarantine — G-3/H-11 — so an
-// unlowerable initializer refuses the whole export). The harness installs
-// its own Logger through BOTH seams before any node exists; a pre-install
-// Logger call under `go run` nil-derefs loudly instead of printing.
+// item 1): the two initializers lose their `log.New(...)` calls, which do
+// not lower. The harness installs its own Logger through BOTH seams before
+// any node exists; a pre-install Logger call under `go run` nil-derefs
+// loudly instead of printing.
+//
+// NOT retired by H-11 (which shipped in W4.0). H-11's per-declaration
+// quarantine is gated on `initializerEffectIsolated`, which refuses this
+// initializer on three independent axes: the `&`-composite shape, `log.New`
+// being outside `pureUnmodeledCallees` (kept minimal by audit F1 — an
+// unmodeled call is NOT effect-free), and `os.Stderr`/`io.Discard` failing
+// `isolatedType`. Retiring D-12 needs a writer-typed-global effect story:
+// handoff H-20. See tools/raftsubject/derive.py for the full argument.
 var (
 	defaultLogger = &DefaultLogger{}
 	discardLogger = &DefaultLogger{}
