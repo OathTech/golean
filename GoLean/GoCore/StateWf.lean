@@ -451,10 +451,13 @@ def Config.locSup : Config → Nat
           (max (LocalEnv.locSup env) (Cont.locSup k)))
   | .blockedSelect clauses env k =>
       max (evClausesSup clauses) (max (LocalEnv.locSup env) (Cont.locSup k))
-  | .spawned k => Cont.locSup k
+  | .opDone _ inner => Config.locSup inner
   | .blockedSync op loc env k =>
       max (max (syncOpSup op) (Loc.locSup loc))
         (max (LocalEnv.locSup env) (Cont.locSup k))
+
+@[simp] theorem Config.locSup_opDone {sc : ChoiceSite} {c : Config} :
+    Config.locSup (.opDone sc c) = Config.locSup c := rfl
 
 /-- State sup: heap keys+values, and every stored function body
 (bodies enter the configuration at `enterFrame`). -/
@@ -529,9 +532,14 @@ def Config.itersNormalized (types : TypeEnv) : Config → Bool
   | .blockedSend _ _ k => Cont.itersNormalized types k
   | .blockedRecv _ _ _ _ k => Cont.itersNormalized types k
   | .blockedSelect _ _ k => Cont.itersNormalized types k
-  | .spawned k => Cont.itersNormalized types k
+  | .opDone _ inner => Config.itersNormalized types inner
   | .blockedSync _ _ _ k => Cont.itersNormalized types k
   | .panicked _ => true
+
+@[simp] theorem Config.itersNormalized_opDone {types : TypeEnv}
+    {sc : ChoiceSite} {c : Config} :
+    Config.itersNormalized types (.opDone sc c)
+      = Config.itersNormalized types c := rfl
 
 /-- VACUITY, stated loudly (BUG-005 (L) surgery): with the snapshot
 retired, no constructor contributes a check, so the component is
@@ -549,8 +557,8 @@ theorem Cont.itersNormalized_true (types : TypeEnv) :
 theorem Config.itersNormalized_true (types : TypeEnv) :
     ∀ c : Config, Config.itersNormalized types c = true := by
   intro c
-  cases c <;> simp only [Config.itersNormalized] <;>
-    first | rfl | exact Cont.itersNormalized_true types _
+  induction c <;> simp only [Config.itersNormalized] <;>
+    first | rfl | assumption | exact Cont.itersNormalized_true types _
 
 /-! ## The Prop wrappers -/
 
@@ -4966,11 +4974,15 @@ theorem commitClause_wf {σ : ExecState} {env : LocalEnv} {k : Cont}
           simp only [Config.locSup, Nat.max_le]
           omega
         · rename_i t ts
+          simp only [bind_eq_ok] at h
+          obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
+          simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
           obtain ⟨q1, q2, q3, q4⟩ := enterRecvTargets_wf w1
             (by omega)
             (Nat.le_trans (recvStores_locSup ((t :: ts).length)) (by omega))
-            (by omega) (by omega) (by omega) h
-          exact ⟨q1, q2, q3.trans w4, Nat.le_trans w2 q4⟩
+            (by omega) (by omega) (by omega) hent
+          exact ⟨q1, by simpa using q2, q3.trans w4, Nat.le_trans w2 q4⟩
       · -- closed-and-drained or unready
         split at h
         · simp only [pure_bind, bind_eq_ok] at h
@@ -4984,11 +4996,15 @@ theorem commitClause_wf {σ : ExecState} {env : LocalEnv} {k : Cont}
             simp only [Config.locSup, Nat.max_le]
             omega
           · rename_i t ts
+            simp only [bind_eq_ok] at h
+            obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
+            simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+            obtain ⟨rfl, rfl⟩ := h
             obtain ⟨q1, q2, q3, q4⟩ := enterRecvTargets_wf hw
               (by omega)
               (Nat.le_trans (recvStores_locSup ((t :: ts).length)) (by omega))
-              (by omega) (by omega) (by omega) h
-            exact ⟨q1, q2, q3, q4⟩
+              (by omega) (by omega) (by omega) hent
+            exact ⟨q1, by simpa using q2, q3, q4⟩
         · simp [stuck, throw, throwThe, MonadExceptOf.throw, Bind.bind,
             Except.bind] at h
 
@@ -5096,11 +5112,15 @@ theorem applyChanOp_wf {σ : ExecState} {op : ChanStOp}
           simp only [Config.locSup, Nat.max_le]
           omega
         · rename_i t ts
+          simp only [bind_eq_ok] at h
+          obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
+          simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
           obtain ⟨q1, q2, q3, q4⟩ := enterRecvTargets_wf w1
             (by omega)
             (Nat.le_trans (recvStores_locSup ((t :: ts).length)) (by omega))
-            (by simp [Stmt.locSup, stmtListSup]) (by omega) (by omega) h
-          exact ⟨q1, q2, q3.trans w4, Nat.le_trans w2 q4⟩
+            (by simp [Stmt.locSup, stmtListSup]) (by omega) (by omega) hent
+          exact ⟨q1, by simpa using q2, q3.trans w4, Nat.le_trans w2 q4⟩
       · split at h
         · -- closed-and-drained: zero value, then deliver
           simp only [bind_eq_ok] at h
@@ -5112,11 +5132,15 @@ theorem applyChanOp_wf {σ : ExecState} {op : ChanStOp}
             obtain ⟨rfl, rfl⟩ := h
             exact ⟨hw, by simp only [Config.locSup, Nat.max_le]; omega, rfl, Nat.le_refl _⟩
           · rename_i t ts
+            simp only [bind_eq_ok] at h
+            obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
+            simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+            obtain ⟨rfl, rfl⟩ := h
             obtain ⟨q1, q2, q3, q4⟩ := enterRecvTargets_wf hw
               (by omega)
               (Nat.le_trans (recvStores_locSup ((t :: ts).length)) (by omega))
-              (by simp [Stmt.locSup, stmtListSup]) (by omega) (by omega) h
-            exact ⟨q1, q2, q3, q4⟩
+              (by simp [Stmt.locSup, stmtListSup]) (by omega) (by omega) hent
+            exact ⟨q1, by simpa using q2, q3, q4⟩
         · -- open-and-empty: block
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl⟩ := h
@@ -5387,15 +5411,22 @@ theorem applySyncOp_wf {σ : ExecState} {op : SyncOp}
         obtain ⟨σ₂, hst, h⟩ := h
         obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hw hlocb
           (by simp [syncData_locSup]) hst
+        obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
+        simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
         obtain ⟨q1, q2, q3, q4⟩ := enterRecvTargets_wf w1
           (by omega) (by simp [goValueListSup, GoValue.locSup])
-          (by simp [Stmt.locSup, stmtListSup]) (by omega) (by omega) h
-        exact ⟨q1, q2, q3.trans w4, Nat.le_trans w2 q4⟩
+          (by simp [Stmt.locSup, stmtListSup]) (by omega) (by omega) hent
+        exact ⟨q1, by simpa using q2, q3.trans w4, Nat.le_trans w2 q4⟩
       · split at h
-        · obtain ⟨q1, q2, q3, q4⟩ := enterRecvTargets_wf hw
+        · simp only [bind_eq_ok] at h
+          obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
+          simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨q1, q2, q3, q4⟩ := enterRecvTargets_wf hw
             (by omega) (by simp [goValueListSup, GoValue.locSup])
-            (by simp [Stmt.locSup, stmtListSup]) (by omega) (by omega) h
-          exact ⟨q1, q2, q3, q4⟩
+            (by simp [Stmt.locSup, stmtListSup]) (by omega) (by omega) hent
+          exact ⟨q1, by simpa using q2, q3, q4⟩
         · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl⟩ := h
           refine ⟨hw, ?_, rfl, Nat.le_refl _⟩
@@ -5570,72 +5601,11 @@ theorem applyChanOp_itersNormalized {σ : ExecState} {op : ChanStOp}
     (h : applyChanOp σ op vs env k = .ok (c', σ'))
     (hk : Cont.itersNormalized types k = true) :
     Config.itersNormalized types c' = true := by
-  rw [applyChanOp.eq_def] at h
-  split at h
-  · -- send
-    simp only [bind_eq_ok] at h
-    obtain ⟨ch, hch, v', hv', h⟩ := h
-    split at h
-    · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      simpa [Config.itersNormalized] using hk
-    · simp only [bind_eq_ok] at h
-      obtain ⟨⟨buf, capacity, closed⟩, hcell, h⟩ := h
-      split at h
-      · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        simpa [Config.itersNormalized] using hk
-      · split at h <;>
-          (simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h)
-        · obtain ⟨σ₂, hst, rfl, rfl⟩ := h
-          simpa [Config.itersNormalized] using hk
-        · obtain ⟨rfl, rfl⟩ := h
-          simpa [Config.itersNormalized] using hk
-  · -- recv: every outcome's continuation is k (or a tgtOpK over k)
-    simp only [bind_eq_ok] at h
-    obtain ⟨ch, hch, h⟩ := h
-    split at h
-    · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      simpa [Config.itersNormalized] using hk
-    · simp only [bind_eq_ok] at h
-      obtain ⟨⟨buf, capacity, closed⟩, hcell, h⟩ := h
-      split at h
-      · simp only [bind_eq_ok] at h
-        obtain ⟨σ₁, hst, h⟩ := h
-        split at h
-        · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          simpa [Config.itersNormalized, Cont.itersNormalized] using hk
-        · exact enterRecvTargets_itersNormalized h hk
-      · split at h
-        · simp only [bind_eq_ok] at h
-          obtain ⟨z, hz, h⟩ := h
-          split at h
-          · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-            obtain ⟨rfl, rfl⟩ := h
-            simpa [Config.itersNormalized, Cont.itersNormalized] using hk
-          · exact enterRecvTargets_itersNormalized h hk
-        · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          simpa [Config.itersNormalized] using hk
-  · -- close
-    simp only [bind_eq_ok] at h
-    obtain ⟨ch, hch, h⟩ := h
-    split at h
-    · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      simpa [Config.itersNormalized] using hk
-    · simp only [bind_eq_ok] at h
-      obtain ⟨⟨buf, capacity, closed⟩, hcell, h⟩ := h
-      split at h
-      · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        simpa [Config.itersNormalized] using hk
-      · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨σ₂, hst, rfl, rfl⟩ := h
-        simpa [Config.itersNormalized] using hk
-  · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+  -- Vacuously by the retained-component lemma (BUG-005 (L)
+  -- surgery: the component is constantly true); the old per-arm
+  -- walk broke on stage C's `.opDone` wrap shapes and carried no
+  -- information the vacuity lemma does not.
+  exact Config.itersNormalized_true types c'
 
 @[inherit_doc applySyncOp_wf]
 theorem applySyncOp_itersNormalized {σ : ExecState} {op : SyncOp}
@@ -5644,34 +5614,11 @@ theorem applySyncOp_itersNormalized {σ : ExecState} {op : SyncOp}
     (h : applySyncOp σ op vs env k = .ok (c', σ'))
     (hk : Cont.itersNormalized types k = true) :
     Config.itersNormalized types c' = true := by
-  rw [applySyncOp.eq_def] at h
-  split at h
-  all_goals
-    try (simp [stuck, throw, throwThe, MonadExceptOf.throw] at h; done)
-  all_goals
-    simp only [bind_eq_ok] at h
-  all_goals
-    obtain ⟨loc, hloc, h⟩ := h
-  all_goals
-    try obtain ⟨delta, hdelta, h⟩ := h  -- extra bind: wgAdd's delta
-  all_goals
-    try obtain ⟨p, hcell, h⟩ := h
-  all_goals
-    split at h
-  all_goals
-    try (simp [stuck, throw, throwThe, MonadExceptOf.throw] at h; done)
-  all_goals
-    repeat
-      first
-      | (simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h;
-         obtain ⟨rfl, rfl⟩ := h;
-         simpa [Config.itersNormalized] using hk)
-      | (exact enterRecvTargets_itersNormalized h hk)
-      | (simp [throw, throwThe, MonadExceptOf.throw] at h; done)
-      | (simp only [bind_eq_ok] at h;
-         obtain ⟨σ₂, hst, h⟩ := h)
-      | split at h
-
+  -- Vacuously by the retained-component lemma (BUG-005 (L)
+  -- surgery: the component is constantly true); the old per-arm
+  -- walk broke on stage C's `.opDone` wrap shapes and carried no
+  -- information the vacuity lemma does not.
+  exact Config.itersNormalized_true types c'
 
 /-- Iteration-typing transparency of `commitClause`. -/
 theorem commitClause_itersNormalized {σ : ExecState} {env : LocalEnv}
@@ -5679,50 +5626,11 @@ theorem commitClause_itersNormalized {σ : ExecState} {env : LocalEnv}
     (h : commitClause σ env k cl = .ok (c', σ'))
     (hk : Cont.itersNormalized types k = true) :
     Config.itersNormalized types c' = true := by
-  rw [commitClause.eq_def] at h
-  split at h
-  · -- sendEv
-    simp only [bind_eq_ok] at h
-    obtain ⟨ch, hch, h⟩ := h
-    split at h
-    · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
-    · simp only [bind_eq_ok] at h
-      obtain ⟨⟨buf, capacity, closed⟩, hcell, h⟩ := h
-      split at h
-      · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        simpa [Config.itersNormalized] using hk
-      · split at h
-        · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨v', hv', σ₂, hst, rfl, rfl⟩ := h
-          simpa [Config.itersNormalized] using hk
-        · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
-  · -- recvEv
-    simp only [bind_eq_ok] at h
-    obtain ⟨ch, hch, h⟩ := h
-    split at h
-    · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
-    · simp only [bind_eq_ok] at h
-      obtain ⟨⟨buf, capacity, closed⟩, hcell, h⟩ := h
-      -- The dequeue-or-zero prelude inlines its continuation per branch.
-      split at h
-      · simp only [pure_bind, bind_eq_ok] at h
-        obtain ⟨σ₁, hst, h⟩ := h
-        split at h
-        · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          simpa [Config.itersNormalized, Cont.itersNormalized] using hk
-        · exact enterRecvTargets_itersNormalized h hk
-      · split at h
-        · simp only [pure_bind, bind_eq_ok] at h
-          obtain ⟨z, hz, h⟩ := h
-          split at h
-          · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-            obtain ⟨rfl, rfl⟩ := h
-            simpa [Config.itersNormalized, Cont.itersNormalized] using hk
-          · exact enterRecvTargets_itersNormalized h hk
-        · simp [stuck, throw, throwThe, MonadExceptOf.throw, Bind.bind,
-            Except.bind] at h
+  -- Vacuously by the retained-component lemma (BUG-005 (L)
+  -- surgery: the component is constantly true); the old per-arm
+  -- walk broke on stage C's `.opDone` wrap shapes and carried no
+  -- information the vacuity lemma does not.
+  exact Config.itersNormalized_true types c'
 
 /-- Iteration-typing transparency of `applySelect`. -/
 theorem applySelect_itersNormalized {σ : ExecState}

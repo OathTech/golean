@@ -1,4 +1,8 @@
 # id	subject	args	expected_status	expected_reason	features	lane	why	params
+# 2026-08-20 W3.2 slice 1 stage C (B1 post-op boundaries): the widened
+# machine branches at every registry-op COMPLETION, so enumeration
+# trees grew; sites/work caps re-measured per row (sets unchanged
+# unless stated). Record: docs/w32-log.md stage C.
 # sum: CONFLUENT (slice 4) — the certified singleton over ~60k schedule
 # leaves is the lane's heaviest measured tree (~9.9M steps+probes,
 # ~65 s); params sized from the probe.

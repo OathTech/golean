@@ -1,4 +1,8 @@
 # id	subject	args	expected_status	expected_reason	features	lane	why	params
+# 2026-08-20 W3.2 slice 1 stage C (B1 post-op boundaries): the widened
+# machine branches at every registry-op COMPLETION, so enumeration
+# trees grew; sites/work caps re-measured per row (sets unchanged
+# unless stated). Record: docs/w32-log.md stage C.
 runs-once	onceRunsOnce	-	ok	-	sync,once,closures	strict	-	-
 panicking-f	oncePanickingF	-	ok	-	sync,once,panic,recover,closures	strict	-	-
-across-goroutines	onceAcrossGoroutines	-	ok	-	sync,once,goroutines,channels,closures	confluent	exactly one f runs whichever side wins (the Once edge publishes its write to the loser's Do return), so every schedule yields 42	width=4
+across-goroutines	onceAcrossGoroutines	-	ok	-	sync,once,goroutines,channels,closures	confluent	exactly one f runs whichever side wins (the Once edge publishes its write to the loser's Do return), so every schedule yields 42	width=4,sites=20

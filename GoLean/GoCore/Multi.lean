@@ -18,18 +18,23 @@ Design points (docs/2026-08-06_channels-arc-design.md):
   index IS the goroutine's stable identity for its whole life (main is
   goroutine 0). Nothing is removed, nothing shifts.
 
-* **D2(a) — the scheduler consumption rule.** Context switches happen
-  ONLY at registry ops (`Config.atBoundary`: channel-op/select apply
-  positions, spawn positions, spawn COMPLETIONS — the `.spawned`
-  marker, BUG-040's slice-4 fix: the decision "who runs after the
-  fork" is a registry op of its own, so a child can preempt a
-  sync-free parent segment — goroutine exit, parked-blocked configs);
+* **D2(a) — the scheduler consumption rule, WIDENED at W3.2 stage C
+  (B1, G1 ruling 2026-08-20).** Context switches happen at registry
+  ops (`Config.atBoundary`: channel-op/select/sync apply positions,
+  spawn positions, goroutine exit, parked-blocked configs) AND at
+  registry-op COMPLETIONS — the `.opDone` marker (generalizing
+  BUG-040's post-spawn `.spawned`: every completing chan/sync/select
+  op, pairing issuer, wake, and spawn now leaves the acting goroutine
+  on a marker boundary, so "who runs after the op" is a scheduling
+  point; envelope statement at `Config.opDone`, dossier-grounded);
   between boundaries the running goroutine steps without any scheduler
-  involvement. The scheduler `Choices` site (`ChoiceSite.l1Sched`) is
-  consumed ONLY when `|runnable| > 1` — its declared policy
-  (`consumeAtOne := false`): a raw pop at bound 1 would desynchronize
-  every existing adversarial-stream run; sequential conservation
-  depends on this.
+  involvement. The scheduling `Choices` sites (`ChoiceSite.l1Sched`,
+  `ChoiceSite.postOp` — the site is the boundary shape's own,
+  `Config.boundarySite`; the postOp slot menu is issuer-first,
+  `schedSlots`) are consumed ONLY when the menu has ≥ 2 slots — their
+  declared policy (`consumeAtOne := false`): a raw pop at bound 1
+  would desynchronize every existing adversarial-stream run;
+  sequential conservation depends on this.
 
 * **D7 — pairing over waiter queues, WITH gc's waiter-queue
   PRIORITY** (re-designed at the S2 audit response — the original
@@ -125,18 +130,15 @@ def isBlockedConfig : Config → Bool
   | .blockedSync _ _ _ _ => true
   | _ => false
 
-/-- The post-spawn completion marker (BUG-040, slice 4). Its only step
-is the pool-level strip to `.next k` (`stepThread`); it is a registry
-boundary (`Config.atBoundary`) and runnable, which is exactly what puts
-the "who runs after the fork" decision inside the L1 envelope. -/
-def Config.isSpawned : Config → Bool
-  | .spawned _ => true
-  | _ => false
-
-/-- The marker's continuation, in the `spawnPlan` extraction mold (what
-keeps the `stepThread` dispatch and its proofs plan-shaped). -/
-def spawnedCont : Config → Option Cont
-  | .spawned k => some k
+/-- The completion marker's inner configuration, in the `spawnPlan`
+extraction mold (what keeps the `stepThread` dispatch and its proofs
+plan-shaped). W3.2 stage C: `.opDone` generalizes the old `.spawned`
+marker (envelope statement at `Config.opDone`); its only step is the
+strip to `inner`, and it is a registry boundary (`Config.atBoundary`)
+and runnable — which is what makes "who runs after the op" a real
+scheduling point. -/
+def opDoneInner : Config → Option Config
+  | .opDone _ c => some c
   | _ => none
 
 /-- A goroutine with nothing left to do: the four unwound terminals
@@ -232,14 +234,14 @@ def Config.atBoundary : Config → Bool
   | .retV _ (.selectOpsK _ _ _ [] _ _) => true
   | .retV _ (.goCalleeK [] _ _) => true
   | .retV _ (.goArgsK _ _ [] _ _) => true
-  -- Spawn COMPLETION (BUG-040, slice 4): the parent's post-fork marker
-  -- is a registry op of its own, so the "who runs after the fork"
-  -- decision is a real L1 scheduling point — the child can preempt a
-  -- sync-free parent segment. Without it the pre-fork spawn position
-  -- was the only boundary, where the child does not exist yet
-  -- (|runnable| counts the parent alone), and the child-first
-  -- interleaving was outside the modeled envelope on every stream.
-  | .spawned _ => true
+  -- Registry-op COMPLETION (W3.2 stage C, B1 — generalizing BUG-040's
+  -- post-spawn marker): the completion marker is a registry boundary
+  -- of its own, so "who runs after the op" is a real scheduling
+  -- point — the site the boundary consults is the marker's own tag
+  -- (`Config.boundarySite`: `postOp` for op completions with slot 0 =
+  -- issuer-continues; `l1Sched` for spawn completions, preserving
+  -- BUG-040's shipped default). Envelope statement at `Config.opDone`.
+  | .opDone _ _ => true
   | .exec (.selectStmt clauses _) _ _ => (selectOperands clauses.toList).isEmpty
   | .next .stop => true
   | .returning .stop => true
@@ -293,14 +295,19 @@ def spawnStep (s : ExecState) (cv : GoValue) (args : List GoValue) (k : Cont) :
   | .funcVal fid captured =>
       match enterFrame s fid (captured ++ args) with
       | .ok (func, frameEnv, _resultLocs, s') =>
-          -- The parent lands on the POST-SPAWN marker (BUG-040, slice
-          -- 4): a registry boundary of its own, so the next pool step
-          -- reschedules among {parent, child, …} instead of running
-          -- the parent privately to its next sync op.
-          return (.spawned k,
+          -- The parent lands on the completion marker (BUG-040, slice
+          -- 4; stage C: `.spawned k` unified into `.opDone .l1Sched
+          -- (.next k)`): a registry boundary of its own, so the next
+          -- pool step reschedules among {parent, child, …} instead of
+          -- running the parent privately to its next sync op. The
+          -- `l1Sched` tag preserves the spawn boundary's exact shipped
+          -- default (slot 0 = lowest-index runnable), NOT the postOp
+          -- issuer-continues convention.
+          return (.opDone .l1Sched (.next k),
             .exec func.body frameEnv (.frame [] [] [] [] .stop func.wrapper), s')
       | .error (.panic msg) =>
-          return (.spawned k, .panicking [⟨runtimeErrorValue msg, false⟩] .stop, s)
+          return (.opDone .l1Sched (.next k),
+            .panicking [⟨runtimeErrorValue msg, false⟩] .stop, s)
       | .error e => throw e
   -- A nil callee is gc's "go of nil func value" runtime FATAL, raised
   -- AT THE SPAWN in the spawning goroutine (probed 2026-08-07;
@@ -357,7 +364,12 @@ and the later wake's head-commit is a spec-legal member of "any case
 that can proceed". The wake-order latitude thus lives entirely at
 L1/L4; the wake itself is not a choice site. Unready resumes are
 `.internal` (the scheduler only picks wake-ready parked goroutines —
-fail closed, never a silent no-op). -/
+fail closed, never a silent no-op).
+
+B1 (stage C): a parked op's completion is a completion — every
+proceeding resume lands on `.opDone .postOp` (the select arm through
+`commitClause`'s own wrap); the close-woken sender's panic is not
+wrapped (B3 deferred). -/
 def resumeThread (s : ExecState) : Config → Except GoError (Config × ExecState)
   | .blockedSend (some loc) v k => do
       let (buf, capacity, closed) ← chanCell s loc
@@ -365,18 +377,20 @@ def resumeThread (s : ExecState) : Config → Except GoError (Config × ExecStat
         return (.panicking [⟨runtimeErrorValue "send on closed channel", false⟩] k, s)
       else if buf.size < capacity then do
         let s' ← storeLoc s loc (.chanData (buf.push v) capacity closed)
-        return (.next k, s')
+        return (.opDone .postOp (.next k), s')
       else throw (.internal "resume on an unready blocked send")
   | .blockedRecv (some loc) targets elem env k => do
       let (buf, capacity, closed) ← chanCell s loc
       match buf[0]? with
       | some v => do
           let s₁ ← storeLoc s loc (.chanData (buf.eraseIdx! 0) capacity closed)
-          resumeRecvDelivery s₁ v true targets env k
+          let (c', s₂) ← resumeRecvDelivery s₁ v true targets env k
+          return (.opDone .postOp c', s₂)
       | none =>
           if closed then do
             let zero ← defaultValue s elem
-            resumeRecvDelivery s zero false targets env k
+            let (c', s₂) ← resumeRecvDelivery s zero false targets env k
+            return (.opDone .postOp c', s₂)
           else throw (.internal "resume on an unready blocked receive")
   | .blockedSelect evs env k => do
       match ← readyClauses s evs with
@@ -396,25 +410,26 @@ def resumeThread (s : ExecState) : Config → Except GoError (Config × ExecStat
           if locked then throw (.internal "resume on an unready blocked Lock")
           else do
             let s' ← storeLoc s loc (.syncData (.mutex true))
-            return (.next k, s')
+            return (.opDone .postOp (.next k), s')
       | .wlock, .rwmutex writer readers pendingW =>
           if !writer && readers == 0 then do
             let s' ← storeLoc s loc (.syncData (.rwmutex true 0 (pendingW - 1)))
-            return (.next k, s')
+            return (.opDone .postOp (.next k), s')
           else throw (.internal "resume on an unready blocked write-Lock")
       | .rlock, .rwmutex writer readers pendingW =>
           if !writer && pendingW == 0 then do
             let s' ← storeLoc s loc (.syncData (.rwmutex writer (readers + 1) pendingW))
-            return (.next k, s')
+            return (.opDone .postOp (.next k), s')
           else throw (.internal "resume on an unready blocked RLock")
       | .wgWait, .waitGroup counter waiters =>
           if counter == 0 then do
             let s' ← storeLoc s loc (.syncData (.waitGroup counter (waiters - 1)))
-            return (.next k, s')
+            return (.opDone .postOp (.next k), s')
           else throw (.internal "resume on an unready blocked Wait")
       | .onceBegin targets, .once started done =>
-          if started && done then
-            enterRecvTargets s targets [.bool false] (.seqn #[]) env k
+          if started && done then do
+            let (c', s₂) ← enterRecvTargets s targets [.bool false] (.seqn #[]) env k
+            return (.opDone .postOp c', s₂)
           else throw (.internal "resume on an unready blocked Once.Do")
       | _, _ => throw (.internal "blocked sync op / cell shape mismatch")
   | _ => throw (.internal "resume on a non-blocked configuration")
@@ -540,9 +555,8 @@ inductive StepAction where
   /-- A select apply that committed nothing: default taken or
   parked. -/
   | selectPass
-  /-- The post-spawn marker strip (BUG-040) — a pure control step,
-  no footprint (stage C renames the marker `.opDone` and this action
-  covers it unchanged). -/
+  /-- The completion-marker strip (stage C, `.opDone` — generalizing
+  BUG-040's post-spawn marker) — a pure control step, no footprint. -/
   | opDoneStrip
   /-- Any other `stepFn` step: chan/sync cell-path applies, parks,
   and private steps — the detector classifies the footprint from the
@@ -826,7 +840,14 @@ shapes, both gc's:
 A matched RECV-SIDE waiter beside a nonempty buffer is an
 hchan-invariant breach: fail closed (`.internal`), never a
 queue-jumping delivery. Shape mismatches are `.internal` (the
-candidates were just scanned). -/
+candidates were just scanned).
+
+B1 (stage C): the pairing ISSUER's successor (index `i`) is wrapped
+in `.opDone .postOp` — the issuer's op just completed. The passive
+PARTNER (index `j`) is NOT wrapped: its delivery is part of the
+issuer's step, and it becomes schedulable at the issuer's very next
+boundary — the `.opDone` this rule just created — so wrapping it
+would add a no-op step and no latitude (boundary-set note §2 B1). -/
 def applyPairing (s : ExecState) (threads : Array Config) (i : Nat)
     (bc : Config) (cand : Nat × PairTarget) :
     Except GoError (Array Config × ExecState) := do
@@ -837,7 +858,7 @@ def applyPairing (s : ExecState) (threads : Array Config) (i : Nat)
           let (buf, _, _) ← chanCell s loc
           if buf.isEmpty then do
             let (cr, s') ← resumeRecvDelivery s v true targets envr kr
-            return ((threads.setIfInBounds i (.next k)).setIfInBounds j cr, s')
+            return ((threads.setIfInBounds i (.opDone .postOp (.next k))).setIfInBounds j cr, s')
           else throw (.internal
             "parked receiver beside a nonempty buffer (hchan invariant breach)")
       | _ => throw (.internal "pairing partner shape mismatch")
@@ -849,7 +870,7 @@ def applyPairing (s : ExecState) (threads : Array Config) (i : Nat)
               let (buf, _, _) ← chanCell s loc
               if buf.isEmpty then do
                 let (cs', s') ← selectRecvDelivery s v true targets body envs ks
-                return ((threads.setIfInBounds i (.next k)).setIfInBounds j cs', s')
+                return ((threads.setIfInBounds i (.opDone .postOp (.next k))).setIfInBounds j cs', s')
               else throw (.internal
                 "parked select receiver beside a nonempty buffer (hchan invariant breach)")
           | _ => throw (.internal "pairing partner clause mismatch")
@@ -862,13 +883,13 @@ def applyPairing (s : ExecState) (threads : Array Config) (i : Nat)
           | none => do
               -- empty (capacity 0): direct handoff
               let (cr, s') ← resumeRecvDelivery s vs true targets env k
-              return ((threads.setIfInBounds i cr).setIfInBounds j (.next ks), s')
+              return ((threads.setIfInBounds i (.opDone .postOp cr)).setIfInBounds j (.next ks), s')
           | some hd => do
               -- gc recv(): head out, parked sender's value in at the tail
               let s₁ ← storeLoc s loc
                 (.chanData ((buf.eraseIdx! 0).push vs) capacity closed)
               let (cr, s') ← resumeRecvDelivery s₁ hd true targets env k
-              return ((threads.setIfInBounds i cr).setIfInBounds j (.next ks), s')
+              return ((threads.setIfInBounds i (.opDone .postOp cr)).setIfInBounds j (.next ks), s')
       | _ => throw (.internal "pairing partner shape mismatch")
   | .blockedRecv (some loc) targets _ env k, .selectWaiter j ci =>
       match threads[j]? with
@@ -882,13 +903,13 @@ def applyPairing (s : ExecState) (threads : Array Config) (i : Nat)
               match buf[0]? with
               | none => do
                   let (cr, s') ← resumeRecvDelivery s v' true targets env k
-                  return ((threads.setIfInBounds i cr).setIfInBounds j
+                  return ((threads.setIfInBounds i (.opDone .postOp cr)).setIfInBounds j
                     (.exec body envs ks), s')
               | some hd => do
                   let s₁ ← storeLoc s loc
                     (.chanData ((buf.eraseIdx! 0).push v') capacity closed)
                   let (cr, s') ← resumeRecvDelivery s₁ hd true targets env k
-                  return ((threads.setIfInBounds i cr).setIfInBounds j
+                  return ((threads.setIfInBounds i (.opDone .postOp cr)).setIfInBounds j
                     (.exec body envs ks), s')
           | _ => throw (.internal "pairing partner clause mismatch")
       | _ => throw (.internal "pairing partner shape mismatch")
@@ -906,13 +927,13 @@ def applyPairing (s : ExecState) (threads : Array Config) (i : Nat)
                       match buf[0]? with
                       | none => do
                           let (ci', s') ← selectRecvDelivery s vs true targets body env k
-                          return ((threads.setIfInBounds i ci').setIfInBounds j
+                          return ((threads.setIfInBounds i (.opDone .postOp ci')).setIfInBounds j
                             (.next ks), s')
                       | some hd => do
                           let s₁ ← storeLoc s loc
                             (.chanData ((buf.eraseIdx! 0).push vs) capacity closed)
                           let (ci', s') ← selectRecvDelivery s₁ hd true targets body env k
-                          return ((threads.setIfInBounds i ci').setIfInBounds j
+                          return ((threads.setIfInBounds i (.opDone .postOp ci')).setIfInBounds j
                             (.next ks), s')
               | _ => throw (.internal "pairing partner shape mismatch")
           | .selectWaiter _ _ => throw (.internal
@@ -929,7 +950,7 @@ def applyPairing (s : ExecState) (threads : Array Config) (i : Nat)
                       if buf.isEmpty then do
                         let v' ← normalizeValueForTy s selem vv
                         let (cr, s') ← resumeRecvDelivery s v' true targetsr envr kr
-                        return ((threads.setIfInBounds i (.exec body env k)).setIfInBounds j cr, s')
+                        return ((threads.setIfInBounds i (.opDone .postOp (.exec body env k))).setIfInBounds j cr, s')
                       else throw (.internal
                         "parked receiver beside a nonempty buffer (hchan invariant breach)")
               | _ => throw (.internal "pairing partner shape mismatch")
@@ -939,9 +960,10 @@ def applyPairing (s : ExecState) (threads : Array Config) (i : Nat)
   | _, _ => throw (.internal "pairing on a non-blocked configuration")
 
 /-- One step of goroutine `i` in the pool: a parked goroutine WAKES
-(`resumeThread`); the post-spawn marker STRIPS to `.next k` (BUG-040 —
-the fork's own registry op, whose boundary is where the child may first
-preempt); a completed spawn position FORKS (`spawnStep`,
+(`resumeThread`); the completion marker STRIPS to its inner
+configuration (stage C, generalizing BUG-040's post-spawn strip — the
+op's own boundary, where any runnable goroutine may have preempted);
+a completed spawn position FORKS (`spawnStep`,
 appending the child — stable ids); a channel/select apply position
 consults PARKED PARTNERS FIRST (`arrivalPlan` — gc's waiter-queue
 priority; the L4 pick is consumed ONLY when more than one candidate
@@ -958,13 +980,16 @@ def stepThread (s : ExecState) (threads : Array Config) (i : Nat)
       let (c', s') ← resumeThread s c
       return (threads.setIfInBounds i c', s', ch, ⟨i, .woke, []⟩)
     else
-      match spawnedCont c with
-      | some k =>
-          -- BUG-040 (slice 4): strip the post-spawn marker — one
-          -- goroutine-step, consuming nothing (the scheduling decision
-          -- it exists for was taken by `stepMulti`'s L1 site at this
-          -- boundary).
-          return (threads.setIfInBounds i (.next k), s, ch,
+      match opDoneInner c with
+      | some inner =>
+          -- The completion-marker strip (stage C, generalizing
+          -- BUG-040's spawn marker): one goroutine-step, consuming
+          -- nothing (the scheduling decision the marker exists for was
+          -- taken by `stepMulti`'s site consultation at this
+          -- boundary). Identical to `stepFn`'s `.opDone` arm — the
+          -- dedicated arm exists so the step event says
+          -- `.opDoneStrip` and no waiter scan runs on a marker.
+          return (threads.setIfInBounds i inner, s, ch,
             ⟨i, .opDoneStrip, []⟩)
       | none =>
       match spawnPlan c with
@@ -1032,30 +1057,65 @@ def stepThreadInto (m : MultiConfig) (i : Nat) (ch : Choices) :
   let (ts, s', ch', ev) ← stepThread m.shared m.threads i ch
   return ({ threads := ts, shared := s', cur := i }, ch', ev)
 
+/-- The scheduling SITE a boundary configuration consults (stage C):
+an `.opDone` marker carries its own tag (`postOp` for op completions,
+`l1Sched` for spawn completions — BUG-040's shipped default preserved
+bit-for-bit); every other boundary shape is the L1 site. The match is
+CLAMPED: a marker hand-built with a non-scheduling tag (no emitter
+produces one) consults the L1 site — the universal pre-widening
+behavior — so the site's non-popping policy holds for ARBITRARY
+configurations (`Config.boundarySite_consumeAtOne`), which the
+sequential-conservation lemmas quantify over. Stage D adds the
+back-edge shapes with their `backEdge` tag. -/
+def Config.boundarySite : Config → ChoiceSite
+  | .opDone .postOp _ => .postOp
+  | _ => .l1Sched
+
+/-- The slot MENU of a scheduling consultation at a boundary (stage C).
+For `l1Sched` (and every non-postOp site) the menu is `runnableIdxs`
+in goroutine order — slot 0 = lowest-index runnable, today's exact
+behavior. For `postOp` the menu is ISSUER-FIRST: slot 0 = `cur` (the
+goroutine whose op just completed — the old machine's schedule, audit
+C-2's canonical-slot convention, which is what makes the empty/default
+stream reproduce the pre-widening schedule literally), slots 1.. = the
+other runnables in goroutine order. The issuer holds the `.opDone`
+marker, which is neither done nor blocked, so it is always runnable
+and the postOp menu is never empty; the menu's SET equals the runnable
+set either way — the relation's `schedPick` (membership in
+`runnableIdxs`) is unchanged by the slot reordering. -/
+def schedSlots (s : ExecState) (threads : Array Config) (cur : Nat) :
+    ChoiceSite → List Nat
+  | .postOp => cur :: (runnableIdxs s threads).filter (· != cur)
+  | _ => runnableIdxs s threads
+
 /-- One pool step (D2a). If the running goroutine is at a registry
-boundary, RESCHEDULE: the L1 scheduler site picks among the runnable
-goroutines — consumed ONLY when `|runnable| > 1` (`runnableIdxs` has
-the envelope statement) — and the picked goroutine takes its step in
-the same call (so fuel counts exactly one goroutine-step per pool
-step). No runnable goroutine at a boundary is the DEADLOCK terminal
-(all goroutines are asleep). Between boundaries the running goroutine
-steps privately. -/
+boundary, RESCHEDULE: the boundary's scheduling site
+(`Config.boundarySite` — L1, or the marker's `postOp`) picks among the
+runnable goroutines via its slot menu (`schedSlots`) — consumed ONLY
+when the menu has ≥ 2 slots (`runnableIdxs` has the L1 envelope
+statement; `Config.opDone` the postOp one) — and the picked goroutine
+takes its step in the same call (so fuel counts exactly one
+goroutine-step per pool step). No runnable goroutine at a boundary is
+the DEADLOCK terminal (all goroutines are asleep; unreachable at a
+postOp boundary, whose issuer is runnable). Between boundaries the
+running goroutine steps privately. -/
 def stepMulti (m : MultiConfig) (ch : Choices) :
     Except GoError (MultiConfig × Choices × StepEvent) := do
   match m.threads[m.cur]? with
   | none => throw (.internal "running goroutine out of range")
   | some c =>
     if c.atBoundary then
-      match runnableIdxs m.shared m.threads with
+      match schedSlots m.shared m.threads m.cur c.boundarySite with
       | [] => throw .deadlock
       | rs => do
-          -- L1 (`ChoiceSite.l1Sched`): the sole-runnable
-          -- non-consumption that used to be a caller-side `[i]`
-          -- special case is now the site's declared policy
-          -- (`consumeAtOne := false`) — sequential conservation's
-          -- hinge, as a table row. Q2: the pick record prefixes the
-          -- picked goroutine's own event picks.
-          let (pick, ch₁, ps) := Choices.consumeAtE .l1Sched rs.length ch
+          -- The site consultation (`l1Sched`/`postOp`): the
+          -- sole-runnable non-consumption that used to be a
+          -- caller-side `[i]` special case is now each site's declared
+          -- policy (`consumeAtOne := false`) — sequential
+          -- conservation's hinge, as table rows. Q2: the pick record
+          -- prefixes the picked goroutine's own event picks.
+          let (pick, ch₁, ps) :=
+            Choices.consumeAtE c.boundarySite rs.length ch
           match rs[pick]? with
           | some i => do
               let (m', ch₂, ev) ← stepThreadInto m i ch₁
@@ -1325,6 +1385,10 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (ev : StepEvent)
           -- before; Race.lean's model-internal-loads inventory).
           return r
       | .privateStep =>
+          -- Outcome-shape discrimination (stage C): a PROCEEDING
+          -- chan/sync apply outcome is now the `.opDone` completion
+          -- marker (B1) — the success checks match the marker, parked
+          -- and panicking outcomes stay unwrapped.
           match cPre with
           | .retV v (.chanStK op done [] _ _) => do
               let r ← raceChanEntryReads i cPre r
@@ -1334,7 +1398,7 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (ev : StepEvent)
                   (match chanValueLoc chv with
                   | some loc =>
                       (match m'.threads[i]? with
-                      | some (.next _) => do
+                      | some (.opDone _ _) => do
                           let (_, cap, _) ← chanCell sPre loc
                           return (r.slotOp i loc cap true)
                       | _ => return r)  -- parked / panicked: no edge yet
@@ -1354,7 +1418,7 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (ev : StepEvent)
                   (match chanValueLoc chv with
                   | some loc =>
                       (match m'.threads[i]? with
-                      | some (.next _) => do
+                      | some (.opDone _ _) => do
                           -- BUG-045: closechan's racewritepc — on the
                           -- SUCCESS path only (gc panics on closed/nil
                           -- before instrumenting), checked under the
@@ -1378,23 +1442,23 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (ev : StepEvent)
                   (match op with
                   | .lock | .rlock =>
                       (match m'.threads[i]? with
-                      | some (.next _) => return (r.syncAcquire i loc)
+                      | some (.opDone _ _) => return (r.syncAcquire i loc)
                       | _ => return r)
                   | .wlock =>
                       (match m'.threads[i]? with
-                      | some (.next _) => return (r.syncAcquire i loc (alsoB := true))
+                      | some (.opDone _ _) => return (r.syncAcquire i loc (alsoB := true))
                       | _ => return r)
                   | .unlock =>
                       (match m'.threads[i]? with
-                      | some (.next _) => return (r.syncRelease i loc)
+                      | some (.opDone _ _) => return (r.syncRelease i loc)
                       | _ => return r)
                   | .wunlock =>
                       (match m'.threads[i]? with
-                      | some (.next _) => return (r.syncRelease i loc)
+                      | some (.opDone _ _) => return (r.syncRelease i loc)
                       | _ => return r)
                   | .runlock =>
                       (match m'.threads[i]? with
-                      | some (.next _) => return (r.syncRelease i loc (toB := true))
+                      | some (.opDone _ _) => return (r.syncRelease i loc (toB := true))
                       | _ => return r)
                   | .wgAdd =>
                       -- gc's Add (waitgroup.go): ReleaseMerge FIRST when
@@ -1416,7 +1480,7 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (ev : StepEvent)
                           | _ => none)
                   | .wgWait =>
                       (match m'.threads[i]? with
-                      | some (.next _) => return (r.syncAcquire i loc)
+                      | some (.opDone _ _) => return (r.syncAcquire i loc)
                       | some (.blockedSync _ _ _ _) =>
                           -- First-waiter registration writes the sema slot
                           -- (waitgroup.go:185-190: only when the pre-park
@@ -1436,7 +1500,7 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (ev : StepEvent)
                       | _ => return r)
                   | .onceComplete =>
                       (match m'.threads[i]? with
-                      | some (.next _) => return (r.syncRelease i loc)
+                      | some (.opDone _ _) => return (r.syncRelease i loc)
                       | _ => return r))
               | _ => return r  -- nil/garbage receiver: the apply panicked
           | _ =>
@@ -1600,16 +1664,18 @@ def schedPick (m : MultiConfig) (i : Nat) : Prop :=
   | none => False
 
 /-- The POOL relation (proof infrastructure; `stepMulti` is its
-executable instantiation — `stepMulti_sound`/`stepM_complete`). Six
+executable instantiation — `stepMulti_sound`/`stepM_complete`). Five
 rule classes: a partnerless goroutine step (`thread` — ordinary, spawn,
-or park: the arrival analysis found no waiter involvement, so a blocked
-outcome simply parks), the singleton arrival pairing (`pair` — gc's
-waiter-queue priority; the L4 waiter pick is the rule's `idx`), the
-multi-ready select arrival's two L2-picked shapes (`pickPair` /
-`pickCommit` — the rule's `sel` is the L2 clause pick over the pure
-`.multi` analysis, slice 4), the wake of a parked goroutine (`wake` —
-head-commit, no re-randomization), and the post-spawn marker strip
-(`spawned` — BUG-040's registry op at fork completion). Deadlock is
+park, or the completion-marker strip via `Step.opDoneStrip`: the
+arrival analysis found no waiter involvement, so a blocked outcome
+simply parks; stage C retired the dedicated `spawned` rule into this
+one — the marker strip is an ordinary lifted step now that the
+sequential relation has its rule), the singleton arrival pairing
+(`pair` — gc's waiter-queue priority; the L4 waiter pick is the rule's
+`idx`), the multi-ready select arrival's two L2-picked shapes
+(`pickPair` / `pickCommit` — the rule's `sel` is the L2 clause pick
+over the pure `.multi` analysis, slice 4), and the wake of a parked
+goroutine (`wake` — head-commit, no re-randomization). Deadlock is
 relation-SILENT (no rule from an all-asleep pool), mirroring the
 sequential machine's silent blocked configs. -/
 inductive StepM : MultiConfig → MultiConfig → Prop where
@@ -1660,10 +1726,6 @@ inductive StepM : MultiConfig → MultiConfig → Prop where
       isBlockedConfig c = true →
       resumeThread m.shared c = .ok (c', σ') →
       StepM m ⟨m.threads.setIfInBounds i c', σ', i⟩
-  | spawned {m : MultiConfig} {i : Nat} {k : Cont} :
-      schedPick m i →
-      m.threads[i]? = some (.spawned k) →
-      StepM m ⟨m.threads.setIfInBounds i (.next k), m.shared, i⟩
 
 /-! ## Well-formedness (the thread-indexed carrier) -/
 

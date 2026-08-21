@@ -17,11 +17,11 @@ import GoLeanProofs.Adequacy
 iris-lean's thread-pool `Language` instantiated over the POOL's
 per-goroutine relation — `StepE` with its spawn component (`Multi.lean`;
 the interface was built for exactly this shape: one thread steps, forked
-threads are appended) — plus the per-goroutine marker strip: BUG-040's
-`.spawned` boundary is pool-level in `StepM` (`StepM.spawned`), so the
-Iris-side per-thread relation `StepEC` adds it as a thread-local rule
-(otherwise a parent could never proceed past its own fork in the
-Language's world). Everything here is INTERNAL machinery: no designated
+threads are appended). Stage C (W3.2 B1): the completion marker's strip
+is a SEQUENTIAL rule now (`Step.opDoneStrip`), so the old thread-local
+`strip` rule of `StepEC` is retired — the lift covers it, and `StepEC`
+remains only as the (now single-rule) wrapper the Language instance was
+built over. Everything here is INTERNAL machinery: no designated
 statement mentions any of it (the statement-TCB gate walks would flag
 it), and the statement layer's concurrent notions live in `Surface.lean`
 over `execProg` alone.
@@ -61,13 +61,12 @@ structure PoolCfg where
   c : Config
 
 /-- The per-goroutine relation the concurrent `Language` runs on:
-`StepE` (sequential steps + the spawn, forking one child) plus the
-thread-local `.spawned` marker strip (pool-level `StepM.spawned`,
-needed thread-locally here — see the module docstring). Proof
-infrastructure, exactly like `Step`/`StepE`/`StepM`. -/
+`StepE` (sequential steps + the spawn, forking one child). The old
+thread-local `strip` rule is retired (stage C): the completion
+marker's strip is `Step.opDoneStrip`, an ordinary liftable sequential
+step. Proof infrastructure, exactly like `Step`/`StepE`/`StepM`. -/
 inductive StepEC : Config → ExecState → Config → ExecState → List Config → Prop where
   | lift {c σ c' σ' efs} : StepE c σ c' σ' efs → StepEC c σ c' σ' efs
-  | strip {k σ} : StepEC (.spawned k) σ (.next k) σ []
 
 /-- A spawn position is not the terminal (feeds `val_stuck`). -/
 private theorem spawnPlan_toVal_aux {c : Config}
@@ -109,7 +108,6 @@ instance : Language PoolCfg ExecState Unit Unit where
         cases ste with
         | lift sq => cases sq <;> rfl
         | spawn hsp hstep => exact spawnPlan_toVal_aux hsp
-      | strip => rfl
 
 instance : Inhabited PoolCfg := ⟨⟨.next .stop⟩⟩
 
@@ -131,12 +129,12 @@ variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 
 /-- **The pure deterministic lift on the pool carrier**: a sequential
 `Step` that is pure (state unchanged) and deterministic, at a
-configuration that is neither a spawn position nor the marker, is a
-`WP` step of the concurrent Language — the strip and spawn rules are
-refuted by the side conditions, so the sequential behavior is the
-whole behavior. -/
+non-spawn configuration, is a `WP` step of the concurrent Language —
+the spawn rule is refuted by the side condition, so the sequential
+behavior is the whole behavior (the completion marker's strip is
+itself such a step now — `wpC_opDone_strip`). -/
 theorem wpC_pure_det {c c' : Config}
-    (hsp : spawnPlan c = none) (hsc : spawnedCont c = none)
+    (hsp : spawnPlan c = none)
     (hstep : ∀ σ : ExecState, Step c σ c' σ)
     (hdet : ∀ (σ : ExecState) (c₂ : Config) (σ₂ : ExecState),
       Step c σ c₂ σ₂ → c₂ = c' ∧ σ₂ = σ) :
@@ -155,7 +153,6 @@ theorem wpC_pure_det {c c' : Config}
       cases h with
       | step st =>
         cases st with
-        | strip => simp [spawnedCont] at hsc
         | lift ste =>
           cases ste with
           | lift sq =>
@@ -166,33 +163,19 @@ theorem wpC_pure_det {c c' : Config}
             cases hsp'))
   iexact H
 
-/-- **The marker strip on the pool carrier**: the parent's `.spawned`
-boundary marker steps to its continuation — thread-locally here, the
-Iris-side twin of `StepM.spawned`. Pure and deterministic: the strip
-is the ONLY `StepEC` rule from the marker (sequential steps and spawns
-are relation-silent there — `step_spawnedMarker_elim`,
-`spawnPlan (.spawned k) = none`). -/
-theorem wpC_spawned_strip {k : Cont} :
-    (|={E}[E]▷=> £ 1 -∗ WP (PoolCfg.mk (.next k)) @ s ; E {{ Φ }}) ⊢
-      WP (PoolCfg.mk (.spawned k)) @ s ; E {{ Φ }} := by
-  iintro H
-  iapply (wp_lift_pure_det_step_no_fork (E₂ := E) (e₂ := PoolCfg.mk (.next k))
-    (Hsafe := by
-      intro σ
-      cases s
-      · exact ⟨[], ⟨.next k⟩, σ, [], GoPrimStepC.step .strip⟩
-      · rfl)
-    (Hpuredet := by
-      intro σ₁ obs e₂' σ₂ eₜ' h
-      cases h with
-      | step st =>
-        cases st with
-        | strip => exact ⟨rfl, rfl, rfl, rfl⟩
-        | lift ste =>
-          cases ste with
-          | lift sq => exact absurd sq (step_spawnedMarker_elim rfl)
-          | spawn hsp' _ => cases hsp'))
-  iexact H
+/-- **The marker strip on the pool carrier** (stage C): the completion
+marker `.opDone sc c` steps to `c` — an ordinary pure deterministic
+sequential step now (`Step.opDoneStrip` is the ONLY rule from a
+marker), so the law is a `wpC_pure_det` instance. -/
+theorem wpC_opDone_strip {sc : GoCore.ChoiceSite} {c : Config} :
+    (|={E}[E]▷=> £ 1 -∗ WP (PoolCfg.mk c) @ s ; E {{ Φ }}) ⊢
+      WP (PoolCfg.mk (.opDone sc c)) @ s ; E {{ Φ }} :=
+  wpC_pure_det (hsp := rfl)
+    (hstep := fun _ => Step.opDoneStrip)
+    (hdet := by
+      intro σ c₂ σ₂ sq
+      cases sq
+      exact ⟨rfl, rfl⟩)
 
 /-- **THE FORK RULE** (the `go` statement's WP law — heap_lang's
 `wp_fork`, over GoCore's spawn step). At a completed spawn position
@@ -200,9 +183,11 @@ whose `spawnStep` is STATE-PRESERVING under the pins (the no-fresh-cell
 class: a callee with no parameters, results, or declarations — the
 witness's shape; the allocating class needs the gen_heap-update
 variant, which lands with its first consumer), the parent proceeds to
-its `.spawned` marker and the child runs under the trivial `forkPost`:
+its completion marker (stage C: `.opDone .l1Sched (.next k)` — the
+spawn boundary's tagged form) and the child runs under the trivial
+`forkPost`:
 
-    ▷ WP child {{ True }} ∗ ▷ WP (.spawned k) {{ Φ }} ⊢ WP c {{ Φ }}
+    ▷ WP child {{ True }} ∗ ▷ WP (.opDone .l1Sched (.next k)) {{ Φ }} ⊢ WP c {{ Φ }}
 
 The `hspawn` premise pins the child configuration and the
 state-preservation; determinism of the spawn position (the sequential
@@ -213,9 +198,9 @@ theorem wpC_fork {c child : Config} {cv : GoValue} {args : List GoValue}
     (hsp : spawnPlan c = some (cv, args, k))
     (hspawn : ∀ σ : ExecState, σ.functions = GoCoreGS.prog GF →
       σ.methods = GoCoreGS.methods GF → σ.types = GoCoreGS.types GF →
-      spawnStep σ cv args k = .ok (.spawned k, child, σ)) :
+      spawnStep σ cv args k = .ok (.opDone .l1Sched (.next k), child, σ)) :
     ▷ WP (PoolCfg.mk child) @ s ; ⊤ {{ fun _ => iprop(True) }}
-      ∗ ▷ WP (PoolCfg.mk (.spawned k)) @ s ; E {{ Φ }}
+      ∗ ▷ WP (PoolCfg.mk (.opDone .l1Sched (.next k))) @ s ; E {{ Φ }}
       ⊢ WP (PoolCfg.mk c) @ s ; E {{ Φ }} := by
   iintro ⟨Hchild, Hparent⟩
   have hnv : ToVal.toVal (PoolCfg.mk c) = (none : Option Unit) := by
@@ -232,17 +217,16 @@ theorem wpC_fork {c child : Config} {cv : GoValue} {args : List GoValue}
   isplitr
   · ipureintro
     cases s
-    · exact ⟨[], ⟨.spawned k⟩, σ₁, [⟨child⟩],
+    · exact ⟨[], ⟨.opDone .l1Sched (.next k)⟩, σ₁, [⟨child⟩],
         GoPrimStepC.step (.lift (.spawn hsp (hspawn σ₁ hfns hmeths htypes)))⟩
     · trivial
   inext
   iintro %e₂ %σ₂ %eₜ %Hstep Hcred
-  have hshape : e₂ = PoolCfg.mk (.spawned k) ∧ σ₂ = σ₁
+  have hshape : e₂ = PoolCfg.mk (.opDone .l1Sched (.next k)) ∧ σ₂ = σ₁
       ∧ eₜ = [PoolCfg.mk child] := by
     cases Hstep with
     | step st =>
       cases st with
-      | strip => simp [spawnPlan] at hsp
       | lift ste =>
         cases ste with
         | lift sq => exact absurd sq (step_spawnPos_elim hsp)
@@ -287,7 +271,7 @@ walked end to end through the concurrent laws, then discharged into a
 CLOSED `adequate` statement over the pool Language: the first
 demonstration that the concurrent Iris layer dissolves into an
 operational claim, and the same-commit discharge witness for
-`wpC_fork`/`wpC_pure_det`/`wpC_spawned_strip`. -/
+`wpC_fork`/`wpC_pure_det`/`wpC_opDone_strip`. -/
 
 /-- The no-op worker: no parameters, no results, empty body (the
 state-preserving spawn class `wpC_fork` covers). -/
@@ -313,7 +297,7 @@ theorem wpC_spawn_noop_witness
     ⊢@{IProp GF} WP (PoolCfg.mk (.exec spawnNoopProg [] .stop))
       {{ _v, iprop(True) }} := by
   -- main: goStmt entry (pure det)
-  iapply (wpC_pure_det (hsp := rfl) (hsc := rfl)
+  iapply (wpC_pure_det (hsp := rfl)
     (hstep := fun σ => Step.goStmtEntry)
     (hdet := by
       intro σ c₂ σ₂ sq
@@ -323,7 +307,7 @@ theorem wpC_spawn_noop_witness
   iapply fupd_intro
   iintro Hcred1
   -- main: the callee literal evaluates (nullary strict op, pure det)
-  iapply (wpC_pure_det (hsp := rfl) (hsc := rfl)
+  iapply (wpC_pure_det (hsp := rfl)
     (hstep := fun σ => Step.evalStrictNullary rfl rfl)
     (hdet := by
       intro σ c₂ σ₂ sq
@@ -361,7 +345,7 @@ theorem wpC_spawn_noop_witness
   isplitl []
   · -- the CHILD: empty body under its barrier frame, to the terminal
     inext
-    iapply (wpC_pure_det (hsp := rfl) (hsc := rfl)
+    iapply (wpC_pure_det (hsp := rfl)
       (hstep := fun σ => Step.seqn)
       (hdet := by
         intro σ c₂ σ₂ sq
@@ -371,7 +355,7 @@ theorem wpC_spawn_noop_witness
     iapply fupd_intro
     iintro Hcred3
     simp only [seqCont]
-    iapply (wpC_pure_det (hsp := rfl) (hsc := rfl)
+    iapply (wpC_pure_det (hsp := rfl)
       (hstep := fun σ => Step.seqDone)
       (hdet := by
         intro σ c₂ σ₂ sq
@@ -380,7 +364,7 @@ theorem wpC_spawn_noop_witness
     inext
     iapply fupd_intro
     iintro Hcred3b
-    iapply (wpC_pure_det (hsp := rfl) (hsc := rfl)
+    iapply (wpC_pure_det (hsp := rfl)
       (hstep := fun σ => Step.frameFall)
       (hdet := by
         intro σ c₂ σ₂ sq
@@ -393,7 +377,7 @@ theorem wpC_spawn_noop_witness
     itrivial
   · -- the PARENT: strip the marker, stop
     inext
-    iapply wpC_spawned_strip
+    iapply wpC_opDone_strip
     iapply fupd_intro
     inext
     iapply fupd_intro

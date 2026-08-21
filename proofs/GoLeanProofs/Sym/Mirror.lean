@@ -101,7 +101,8 @@ inductive QuitSite where
   exist; no consumer wants one. -/
   | q6Panic
   /-- Q7 — concurrency surface: chan/select/sync/go statement arms
-  (entry AND apply — JC-5b), the blocked shapes, `spawned`. Out of the
+  (entry AND apply — JC-5b), the blocked shapes, the `.opDone`
+  completion marker (stage C's B1 boundary machinery). Out of the
   sequential gallery fragment; nothing in the campaign corpus
   regresses. -/
   | q7Concurrency
@@ -279,7 +280,7 @@ inductive Config (D : ScalarDom) where
   | blockedRecv (ch : Option Loc) (targets : List Assignee) (elem : Ty)
       (env : LocalEnv) (k : Cont D)
   | blockedSelect (clauses : List (EvClause D)) (env : LocalEnv) (k : Cont D)
-  | spawned (k : Cont D)
+  | opDone (sched : GoCore.ChoiceSite) (inner : Config D)
   | blockedSync (op : SyncOp) (loc : Loc) (env : LocalEnv) (k : Cont D)
 
 variable {D : ScalarDom}
@@ -2308,7 +2309,7 @@ def stepFn' (s : State D) (c : Config D) : M (Config D × State D) := do
   | .blockedSend _ _ _ => quit .q7Concurrency
   | .blockedRecv _ _ _ _ _ => quit .q7Concurrency
   | .blockedSelect _ _ _ => quit .q7Concurrency
-  | .spawned _ => quit .q7Concurrency
+  | .opDone _ _ => quit .q7Concurrency
   | .blockedSync _ _ _ _ => quit .q7Concurrency
 
 /-! ## The symbolic instance and the window driver (design §6.1) -/
@@ -2486,7 +2487,7 @@ def reflectC (D : ScalarDom) : Machine.Config → Config D
       .blockedRecv ch targets elem env (reflectK D k)
   | .blockedSelect clauses env k =>
       .blockedSelect (clauses.map (reflectClause D)) env (reflectK D k)
-  | .spawned k => .spawned (reflectK D k)
+  | .opDone sc inner => .opDone sc (reflectC D inner)
   | .blockedSync op loc env k => .blockedSync op loc env (reflectK D k)
 
 end GoLean.Sym

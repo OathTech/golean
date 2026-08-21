@@ -274,3 +274,196 @@ judgment calls recorded as they are made; checkpoints every ≤5 units.
 - CHECKPOINT slice-1-B: stages A+B landed; the machine is tagged and
   evented, behavior-identical; stages C/D (the observable-set changes)
   remain gated on Mike's G1 ruling on the boundary-set note §8.
+
+## Slice 1 stage C — B1: the `.opDone` post-op boundaries (2026-08-20/21)
+
+- Base: `e9954282` (stage B) REBASED onto main `d332434d` (the
+  scheduling-semantics dossier landed there; snapshot
+  `refs/snapshots/w32-pre-rebase-20260820` taken first, clean rebase,
+  5 commits replayed). Mike's G1 ruling recorded verbatim-in-substance
+  as the dated USER RULING block in the boundary-set note §8
+  (commit `1c4e5f07`) BEFORE any surgery: B1+B2 approved as proposed,
+  B3 deferred with the evidence door open; the governing
+  pessimistic-model principle quoted; dossier §§1.1/3.1/4.3 cited into
+  the envelope statements.
+- MECHANISM (the note §2 B1, all-ops scope): `Config.spawned` replaced
+  in place by `Config.opDone (sched : ChoiceSite) (inner : Config)` —
+  the site-tagged completion marker, envelope statement in situ at the
+  constructor (dossier-cited). Emitters: `applyChanOp` /
+  `applySyncOp` / `commitClause` wrap every PROCEEDING outcome in
+  `.opDone .postOp` (blocked outcomes are boundaries already;
+  panicking outcomes unwrapped — B3 deferred); `resumeThread` wraps
+  its non-select resumes (the select wake rides `commitClause`);
+  `applyPairing` wraps the ISSUER's successor only (the passive
+  partner is schedulable at the issuer's next boundary — no-op step
+  avoided, per the note); `spawnStep` emits
+  `.opDone .l1Sched (.next k)` — BUG-040's boundary default preserved
+  bit-for-bit by the tag. `ChoiceSite.postOp` (consumeAtOne=false,
+  slot 0 = issuer) appended to the census; `Config.boundarySite`
+  (CLAMPED: non-scheduling tags consult L1 — makes the non-popping
+  policy provable for arbitrary configs) + `schedSlots` (issuer-first
+  menu at postOp) carry the consultation in `stepMulti`. The strip is
+  `stepFn`'s new `.opDone` arm on BOTH drivers + rule
+  `Step.opDoneStrip` (appended last, tags stable); `StepM.spawned`
+  RETIRED — the strip is an ordinary `.thread` lift now.
+- Judgment call (wrap-inside-the-applies vs at stepFn's arm): wrapped
+  INSIDE `applyChanOp`/`applySyncOp`/`commitClause`, so
+  `Step.chanStApply`/`syncStApply`/`selectApply` and `stepFn`'s arms
+  keep their exact statements (the correspondence holds verbatim);
+  the cost moved to the `*_wf` outcome-shape proofs (bind+wrap
+  destructuring at each enterRecvTargets site) — paid.
+- Judgment call (marker tag type): kept `ChoiceSite` per the note, with
+  `Config.boundarySite` clamping junk tags to `.l1Sched` (the
+  pre-widening universal behavior) rather than a fresh 2-value type —
+  the sequential-conservation lemmas quantify arbitrary configs and
+  need the non-popping policy unconditionally
+  (`Config.boundarySite_consumeAtOne`).
+- DETECTOR: `raceUpdate`'s outcome-shape SUCCESS checks
+  (`some (.next _)`) moved to the marker (`some (.opDone _ _)`) — found
+  by eval pins going red (BUG-045/046 races vanishing, U5 false race:
+  lost HB edges), not by the build; the `.opDoneStrip` event arm was
+  already no-access. The marker strip emits `.opDoneStrip` at the pool
+  (dedicated arm kept: clean event + no waiter scan on markers).
+- PROOFS re-aligned, ALL green (no stopped pieces): StateWf
+  (`.opDone` locSup/itersNormalized arms + rfl simp lemmas; the three
+  `*_itersNormalized` walk proofs replaced by the vacuity lemma
+  `Config.itersNormalized_true` — the walks broke on the wrap shapes
+  and carried nothing the retained-component lemma doesn't);
+  MachineSound untouched (statement-preserving wraps); MultiSound
+  (`opDoneInner_shape`/`opDoneInner_stepFn_strip`/`step_opDone_inv`;
+  `stepThread_single`/`stepMulti_single` now COVER the marker — the
+  hsc hypothesis dropped, `schedSlots_singleton`; `stepMulti_sound` /
+  `stepMulti_of_inner` over the slot menu with `schedSlots_mem` /
+  `mem_schedSlots_of_runnable` — `schedPick`'s membership statement
+  unchanged, the menu's set = the runnable set; `stepM_complete`'s
+  marker case via `Step.opDoneStrip`; the `spawned` completeness case
+  deleted with the rule; `execProgLoop_single`'s marker special-case
+  DELETED — the strip is now transferable, both drivers step it
+  identically); MultiWfSound (marker case via `opDoneInner_shape`;
+  wrapped-outcome destructuring; `stepMulti_wf` over `schedSlots`);
+  MultiStreams (`poolThreadOblivious` marker flag; `stepAllBranchesOk`
+  branches over the SLOT MENU — the probe `[j]` prefix indexes exactly
+  the machine's slot; soundness + mono chains re-pointed); NPDRF
+  (`StepMFine.spawned` retired with `StepM.spawned`); proofs/: Rename
+  + Sym/Conc + Sym/Walk `.opDone` arms (recursive renames/reflects);
+  Sym/Mirror: mirror `Config.opDone` + the arm QUITS `.q7Concurrency`
+  (obligations unwidened, drift gate green); LangC/LangD: `StepEC`/
+  `StepDC`'s thread-local `strip` rules RETIRED (the lift covers the
+  marker), `wpC/wpD_spawned_strip` → `wpC/wpD_opDone_strip` (now
+  `wp*_pure_det` instances), `wpC/wpD_fork` restated over
+  `.opDone .l1Sched (.next k)`, witnesses re-walked; Audit anchors
+  renamed.
+- EVAL pins re-derived (the budgeted witness class): poller min fuel
+  165→166 / 309→310 (one marker strip on the realized path);
+  wake-multi head-commit stream [0,0,1,1,1] → [0,0,0,1,1,1]
+  (re-derived by machine search; comment updated). 136/136 ok.
+- **THE WEDGE FLIPS (register #1's definitional bug dies here).**
+  send-then-spin on the stage-C machine: default stream → fuel-out
+  (the unfair member, in the envelope BY RIGHT — dossier §3.1);
+  `--choices 0,0,1` → **ok, 42** — the note §2 B1's predicted trace,
+  realized (postOp pick 1 = main after the worker's send). gc's
+  60/60 observation is a member again: observed ∈ modeled restored.
+  Dossier §4.3's verdict ("the completing execution and an unfair
+  execution") implemented exactly. Record:
+  `docs/evidence/2026-08-20_w32-postop-probes/README.md` §1. (The
+  register/inventory text rewrite lands with the wedge corpus row at
+  stage D per the note's staging; C3+U-1 inventory rows updated in
+  THIS commit.)
+- U-1 ADMITTED: wake-then-abort probe re-run (gc 200: 0 exit-0, 60
+  printed-42-then-abort, 140 silent — dominance load-varying vs phase
+  A's 189/11); machine: default = panic (old sole member, canonical),
+  `[0,0,1]` = ok 42 (partner progress between wake and abort),
+  enumerator certifies {panic, ok 42} (obs=2, 373 steps, depth 15).
+  Corpus row `goroutines/wake-then-abort` (membership, members=2,
+  statuses=ok+panic) + evidence README §2. Inventory: C3 → (a)
+  ENVELOPED (with the owed C2-cost-prose correction recorded), U-1 →
+  probed-and-admitted, counts re-tallied; B3's trigger baseline
+  recorded.
+- **THE ENUMERATION-COST FINDING (the §5b prediction, half right).**
+  Zero STRICT-lane flips — confirmed exactly. But the enumeration
+  lanes' trees grew 3x–300x+ (postOp branches at every op completion
+  in a ≥2-runnable window — roughly squaring interleaving counts):
+  22 existing enumeration rows tripped their caps (sites= mostly).
+  Re-measured every one (sets: UNCHANGED in all 19 that completed —
+  the §5b set-stability prediction held everywhere measurable):
+  - 16 rows: caps re-measured in place (biggest: ping-pong/alternate
+    16.2M work, depth 60), fast lane.
+  - 3 rows moved tier=slow with fresh certified records + measured
+    stats: buffered-wake/fifo (114.4M, singleton), free-sync/
+    rw-writers (87.3M, singleton), sched-dependent/first-come (84.8M,
+    {12,21}; member 21 witnessed at stream [0,0,2,2]). This WIDENED
+    tier=slow to the confluent lane in scripts/diff-coverage — same
+    cached-record discipline (record + wire-sha + params guards,
+    --slow re-certifies exhaustively, fail-closed): a caching-cadence
+    change, NOT a claim change. LEAN_ENUM_SLOW_TIMEOUT default
+    1200→3600 with the post-mortem's headroom arithmetic recorded.
+  - **5 rows are EXHAUSTIVELY INTRACTABLE at B1 granularity** (the
+    note's §5c contingency, hit harder than predicted):
+    imported-goose/channel/google-search (>900M steps, unfinished;
+    pre-B1 40.0M), sync/rwmutex-order (>~900M, unfinished; pre-B1
+    2.2M), goroutines/worker-pool/sum (>400M; pre-B1 ≤15M),
+    goroutines/pipeline/request-reply (>400M; pre-B1 ≤1.2M),
+    race/litmus/sb-chan (>400M; pre-B1 ≤5M). These go HONESTLY RED at
+    their existing caps (fail-loud cap breaches, seconds-to-minutes
+    each) — recorded as explained regressions in the re-pin, never
+    laundered. THE RULING IS MIKE'S (posed in the stage report): the
+    note §5c's sampled fallback (witness-replay machinery was drafted;
+    the auto-mode classifier flagged it as a claim-standard change, so
+    it was REVERTED — the prepared witness streams for google-search's
+    6 members are in this entry for the decision: 123=default,
+    132=[1,1,0,0,0,2,2], 213=[0,0,2,2], 231=[2,1,2,3,2,0,0,3,2,0,0,2,1,2,1],
+    312=[0,0,0,0,3,3], 321=[2,0,3,0,3,2,1,3,0,2,1]) vs budget raises
+    vs waiting for the reduction/DPOR lane (NPDRF, slice 5 — the
+    principled fix: sound schedule reduction re-shrinks these trees).
+    Note the fast lane: google-search/rwmutex-order stay
+    CERTIFIED-CACHED green per the tiering design (records pre-B1;
+    the staleness is exactly what the --slow red surfaces); sum/
+    request-reply/sb-chan red in the fast lane too (they re-enumerate
+    per run).
+- Gate mechanics of the finding (recorded for the audit): the widened
+  tier validation touched THREE gate surfaces, each updated in
+  lockstep — scripts/diff-coverage (the confluent cached path + slow
+  re-cert), scripts/coverage-manifest (param validation), and
+  scripts/test-lane-validation (the "tier on a confluent row" REJECT
+  fixture became an ACCEPT fixture; the reject direction moved to a
+  racy-row shape). ping-pong/alternate additionally moved tier=slow
+  AFTER the first --slow run showed its 16.2M-work tree is PROBE-heavy
+  (depth 60; each probe replays a run) and broke the 300 s fast wall
+  despite fitting its work cap.
+- BASELINE POLICY for the intractable five (decided, recorded): the
+  tracked baseline is pinned from the FAST view — worker-pool/sum,
+  pipeline/request-reply, race/litmus/sb-chan pinned FAIL (they
+  re-enumerate per run and breach their caps in seconds; explained
+  regressions, the honest-red protocol); google-search and
+  rwmutex-order stay PASS (CERTIFIED-CACHED per the tiering design —
+  records are pre-B1) so every `--slow` run reports EXACTLY those two
+  drifts as the standing, recorded re-envelope alarm until Mike rules
+  on the §5c fallback (options + prepared witnesses in the entry
+  above). Never a silent skip: the alarm is the design surfacing the
+  staleness.
+
+### Gates (slice 1 stage C)
+
+- `GOLEAN_MEM_MAX=24G scripts/ci --slow` (artifacts/w32-sC-ci3.log,
+  untracked): all build/proof/eval steps ok (core warning-free, proofs
+  + Audit gate, eval 136 ok); the --slow differential's drift list was
+  EXACTLY the designed set — the 5 intractable rows FAIL + the new
+  wake-then-abort PASS — plus two stage-C fix-round items it caught:
+  the "tier on a confluent row" fixture (updated with the widening)
+  and ping-pong/alternate's probe-heavy 300 s wall breach (moved
+  tier=slow). fifo / rw-writers / first-come re-certified EXHAUSTIVELY
+  under GOLEAN_SLOW=1 against their fresh records in that run.
+- `GOLEAN_MEM_MAX=24G scripts/ci --diff` after the fix round
+  (artifacts/w32-sC-ci4.log, untracked): every step ok; drift =
+  exactly {3 explained FAILs, 1 NEW PASS} — the re-pin set, nothing
+  else. **Baseline re-pin #1** recorded in `baselines/native-full.tsv`
+  (2254 cases, PASS 2111 / FAIL 143) with the full reason in its
+  header; `scripts/coverage-baseline-diff` = no regression at the
+  pinned tree. The standing `--slow` alarm (google-search,
+  rwmutex-order — stale pre-B1 records, fallback ruling Mike's) is
+  recorded above and in the baseline header.
+- CHECKPOINT slice-1-C: B1 landed end-to-end (machine, relation,
+  metatheory, detector, mirror, Iris layers, witnesses, corpus,
+  baseline); THE WEDGE FLIPS on stream [0,0,1]; U-1 admitted with its
+  membership row green. Stage D (B2 back-edges + enumerator modes +
+  allow-nonterm + the wedge corpus row) next.

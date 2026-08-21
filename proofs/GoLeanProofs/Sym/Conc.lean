@@ -192,7 +192,7 @@ def concC (I : Interp D) : Config D → Machine.Config
       .blockedRecv ch targets elem env (concK I k)
   | .blockedSelect clauses env k =>
       .blockedSelect (clauses.map (concClause I)) env (concK I k)
-  | .spawned k => .spawned (concK I k)
+  | .opDone sc inner => .opDone sc (concC I inner)
   | .blockedSync op loc env k => .blockedSync op loc env (concK I k)
 
 /-! ## The two interpretations -/

@@ -1,4 +1,8 @@
 # id	subject	args	expected_status	expected_reason	features	lane	why	params
+# 2026-08-20 W3.2 slice 1 stage C (B1 post-op boundaries): the widened
+# machine branches at every registry-op COMPLETION, so enumeration
+# trees grew; sites/work caps re-measured per row (sets unchanged
+# unless stated). Record: docs/w32-log.md stage C.
 # CONFLUENT lane (D9(b), slice 4): the enumerator certifies |set| = 1
 # over ALL schedules (mechanically-computed per-site bounds; width caps
 # them), then the ordinary full-strength strict differential runs —
@@ -21,8 +25,8 @@
 # send entry that then parks), so under DRF-SC no race-free program
 # exercises that wake arm — recorded in the design note and at
 # resumeThread.
-receiver	closeWakesReceiver	-	ok	-	goroutines,channels,close,comma_ok	confluent	the receiver proceeds only via the close wake; the comma-ok readout is fixed on every schedule	width=4
-receiver-drain-first	closeWakesReceiverDrainFirst	-	ok	-	goroutines,channels,close,comma_ok	confluent	buffered values drain in FIFO order before the closed-zero on every schedule	width=4
+receiver	closeWakesReceiver	-	ok	-	goroutines,channels,close,comma_ok	confluent	the receiver proceeds only via the close wake; the comma-ok readout is fixed on every schedule	width=4,sites=20
+receiver-drain-first	closeWakesReceiverDrainFirst	-	ok	-	goroutines,channels,close,comma_ok	confluent	buffered values drain in FIFO order before the closed-zero on every schedule	width=4,sites=20
 sender-panics	closeWakesSenderPanics	-	race	-	goroutines,channels,close,recover,race	racy	-	width=4,sites=16
 sender-full-buffer	closeWakesSenderFullBuffer	-	race	-	goroutines,channels,close,recover,race	racy	-	width=4,sites=16
 close-after-send-drains	closeAfterSendDrains	-	ok	-	goroutines,channels,close,comma_ok	confluent	the send completes and is ordered before the close through the done rendezvous (race-free); the buffered value survives the close and drains before the closed-zero on every schedule	width=4,sites=24

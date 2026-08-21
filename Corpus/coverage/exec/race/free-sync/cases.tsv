@@ -1,4 +1,8 @@
 # id	subject	args	expected_status	expected_reason	features	lane	why	params
+# 2026-08-20 W3.2 slice 1 stage C (B1 post-op boundaries): the widened
+# machine branches at every registry-op COMPLETION, so enumeration
+# trees grew; sites/work caps re-measured per row (sets unchanged
+# unless stated). Record: docs/w32-log.md stage C.
 # FALSE-POSITIVE guards for the sync-package HB edges (spec-parity
 # slice 2, design note §5): each subject is race-free exactly through
 # one sync edge; go run -race verified green 2026-08-09.
@@ -7,5 +11,5 @@
 # in-file note per the audit fix round).
 mutex	freeSyncMutex	-	ok	-	sync,mutex,goroutines,channels,globals,race	confluent	the mutex edges order the commuting increments and the join closes the run; a missed edge would break the certified singleton on some schedule	width=4,sites=60,work=30000000
 wg-edge	freeSyncWgEdge	-	ok	-	sync,waitgroup,goroutines,globals,race	confluent	the Done-to-Wait edge orders the bare-looking write/read pair on every schedule	width=4
-once-edge	freeSyncOnceEdge	-	ok	-	sync,once,goroutines,channels,globals,race,closures	confluent	the Once completion edge orders the single write before both Do returns on every schedule	width=4
-rw-writers	freeSyncRwWriters	-	ok	-	sync,rwmutex,waitgroup,goroutines,globals,race	confluent	write-unlock to write-lock (semA) orders the two increments whichever order the schedule realizes — the green twin of negative-sync/rlock-serialized	width=4,sites=30,work=20000000
+once-edge	freeSyncOnceEdge	-	ok	-	sync,once,goroutines,channels,globals,race,closures	confluent	the Once completion edge orders the single write before both Do returns on every schedule	width=4,sites=20
+rw-writers	freeSyncRwWriters	-	ok	-	sync,rwmutex,waitgroup,goroutines,globals,race	confluent	write-unlock to write-lock (semA) orders the two increments whichever order the schedule realizes — the green twin of negative-sync/rlock-serialized	width=4,sites=40,work=120000000,tier=slow

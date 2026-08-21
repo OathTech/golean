@@ -1,0 +1,12 @@
+# Certified observation set — tier=slow row (tiered checking, user
+# directive 2026-08-08; confluent-lane tier widening W3.2 slice 1
+# stage C, 2026-08-20: B1's post-op boundaries grew this row's
+# certification tree past the fast-lane budget — the set itself is
+# UNCHANGED by the widening). Membership set {12, 21}.
+# certified: 2026-08-20  commit: w32-re-envelope stage C (B1 post-op boundaries)
+# case: goroutines/sched-dependent/first-come
+# params: width=3,sites=40,work=120000000,members=2,tier=slow
+# wire-sha256: 17bdeb13eb3b85884c462319f06566f1851abb815f9c8b8ebd90551758ea505b
+# enum-stats: observations=2 steps=76054068 probes=8699430 sites=2899810 leaves=3065252 maxdepth=26 width=3 (measured 2026-08-20 at 400M work cap; member 12 on the default stream, member 21 at stream [0,0,2,2])
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":12}]}
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":21}]}

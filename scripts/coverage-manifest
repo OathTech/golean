@@ -296,19 +296,27 @@ validate_lane_params() {
       # verify against the row's TRACKED certified-set record
       # (baselines/certified/) and report CERTIFIED-CACHED; only
       # `scripts/ci --slow` (or GOLEAN_SLOW=1) re-enumerates. Membership
-      # rows only for now — the other lanes have no cached path, so the
-      # param fails closed there.
+      # and (since W3.2 stage C) confluent rows — the other lanes have
+      # no cached path, so the param fails closed there.
       if [[ "$value" != "slow" ]]; then
         echo "coverage-manifest: $cases_file: tier must be 'slow' (the only tier): $kv" >&2
         return 1
       fi
-      if [[ "$lane_ctx" != "membership" ]]; then
-        echo "coverage-manifest: $cases_file: tier=slow is a membership-lane param (lane=$lane_ctx has no cached certification path): $kv" >&2
+      # Membership OR confluent (W3.2 stage C: the confluent lane
+      # gained the same cached-certification path — the record is a
+      # certified singleton; scripts/diff-coverage's rule widened in
+      # the same commit).
+      if [[ "$lane_ctx" != "membership" && "$lane_ctx" != "confluent" ]]; then
+        echo "coverage-manifest: $cases_file: tier=slow is a membership/confluent-lane param (lane=$lane_ctx has no cached certification path): $kv" >&2
         return 1
       fi
-      # A cached row's only machine-cardinality constraint is the
-      # members= pin against the recorded set (pre-merge audit,
-      # 2026-08-08) — require it explicitly.
+      # A cached MEMBERSHIP row's only machine-cardinality constraint
+      # is the members= pin against the recorded set (pre-merge audit,
+      # 2026-08-08) — require it explicitly. (A confluent row's
+      # cardinality is the lane itself: |set| = 1.)
+      if [[ "$lane_ctx" != "membership" ]]; then
+        continue
+      fi
       case ",$params," in
         *,members=*) ;;
         *)

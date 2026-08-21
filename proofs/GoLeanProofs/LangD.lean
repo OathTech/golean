@@ -17,7 +17,8 @@ The `StepM` pairing decomposition through iris-lean's one-thread-step
 `Language` interface — the recorded channels-arc successor debt, built
 per `docs/2026-08-10_gospecc-decomposition.md` §§3–4. `StepDC` is a
 PROOF-LAYER per-thread relation (the machine is untouched): `StepEC`'s
-rules (sequential lift + spawn + the `.spawned` strip) plus the
+rules (sequential lift + spawn; stage C retired the dedicated strip —
+the `.opDone` completion marker strips via `Step.opDoneStrip`) plus the
 park-side rules a pairing needs — `wake` (the parked re-attempt,
 `resumeThread`), `pairArrive` (the arriving side of a pairing takes its
 own successor AND the pairing's whole state delta), `pairRelease` (the
@@ -75,8 +76,6 @@ infrastructure, exactly like `Step`/`StepE`/`StepM`/`StepEC`. -/
 inductive StepDC : Config → ExecState → Config → ExecState → List Config → Prop where
   /-- Sequential steps + the spawn (`StepE`), verbatim. -/
   | lift {c σ c' σ' efs} : StepE c σ c' σ' efs → StepDC c σ c' σ' efs
-  /-- The post-spawn marker strip (thread-local, as in `StepEC`). -/
-  | strip {k σ} : StepDC (.spawned k) σ (.next k) σ []
   /-- The parked re-attempt against the cell (`StepM.wake`'s payload —
   already per-thread: it reads only the shared state and own config). -/
   | wake {c σ c' σ'} :
@@ -192,7 +191,6 @@ instance : Language PoolCfgD ExecState Unit Unit where
         cases ste with
         | lift sq => cases sq <;> rfl
         | spawn hsp hstep => exact spawnPlanD_toVal_aux hsp
-      | strip => rfl
       | wake hblk _ => exact blocked_toVal_aux hblk
       | pairRelease hblk _ => exact blocked_toVal_aux hblk
       | pairArrive hti hblk hpair hidx happly hproj =>
@@ -488,12 +486,6 @@ theorem stepM_erasedD {m m' : MultiConfig} (h : StepM m m') :
     have hs := poolStepD_at (poolOf_get hti) (.step (.lift hstep))
     simp only [poolOf, Array.toList_append, Array.toList_setIfInBounds,
       List.map_set, List.map_append]
-    exact hs
-  | spawned hpick hti =>
-    refine .tail .refl ?_
-    have hs := poolStepD_at (poolOf_get hti) (.step (.strip (σ := m.shared)))
-    simp only [List.map_nil, List.append_nil] at hs
-    simp only [poolOf, Array.toList_setIfInBounds, List.map_set]
     exact hs
   | wake hpick hti hblk hres =>
     refine .tail .refl ?_
@@ -808,10 +800,9 @@ theorem stepDC_shape_cases {c : Config} {σ : ExecState} {c' : Config}
     (hblk : isBlockedConfig c = false)
     (hpos : chanSelApplyPos c = false)
     (h : StepDC c σ c' σ' efs) :
-    StepE c σ c' σ' efs ∨ (∃ k, c = .spawned k ∧ c' = .next k ∧ σ' = σ ∧ efs = []) := by
+    StepE c σ c' σ' efs := by
   cases h with
-  | lift hs => exact .inl hs
-  | strip => exact .inr ⟨_, rfl, rfl, rfl, rfl⟩
+  | lift hs => exact hs
   | wake hb _ => rw [hblk] at hb; cases hb
   | pairRelease hb _ => rw [hblk] at hb; cases hb
   | pairArrive hti hb hpair hidx happly hproj =>
@@ -832,7 +823,7 @@ variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 /-- The pure deterministic lift on the D-carrier (`wpC_pure_det`'s
 port; two NEW side conditions refute the decomposed rules). -/
 theorem wpD_pure_det {c c' : Config}
-    (hsp : spawnPlan c = none) (hsc : spawnedCont c = none)
+    (hsp : spawnPlan c = none)
     (hblk : isBlockedConfig c = false) (hpos : chanSelApplyPos c = false)
     (hstep : ∀ σ : ExecState, Step c σ c' σ)
     (hdet : ∀ (σ : ExecState) (c₂ : Config) (σ₂ : ExecState),
@@ -851,40 +842,27 @@ theorem wpD_pure_det {c c' : Config}
       intro σ₁ obs e₂' σ₂ eₜ' h
       cases h with
       | step st =>
-        rcases stepDC_shape_cases hblk hpos st with hse | ⟨k, rfl, -⟩
-        · cases hse with
-          | lift sq =>
+        cases stepDC_shape_cases hblk hpos st with
+        | lift sq =>
             obtain ⟨rfl, rfl⟩ := hdet _ _ _ sq
             exact ⟨rfl, rfl, rfl, rfl⟩
-          | spawn hsp' _ =>
+        | spawn hsp' _ =>
             rw [hsp] at hsp'
-            cases hsp'
-        · simp [spawnedCont] at hsc))
+            cases hsp'))
   iexact H
 
-/-- The marker strip on the D-carrier (`wpC_spawned_strip`'s port). -/
-theorem wpD_spawned_strip {k : Cont} :
-    (|={E}[E]▷=> £ 1 -∗ WP (PoolCfgD.mk (.next k)) @ s ; E {{ Φ }}) ⊢
-      WP (PoolCfgD.mk (.spawned k)) @ s ; E {{ Φ }} := by
-  iintro H
-  iapply (wp_lift_pure_det_step_no_fork (E₂ := E) (e₂ := PoolCfgD.mk (.next k))
-    (Hsafe := by
-      intro σ
-      cases s
-      · exact ⟨[], ⟨.next k⟩, σ, [], GoPrimStepD.step .strip⟩
-      · rfl)
-    (Hpuredet := by
-      intro σ₁ obs e₂' σ₂ eₜ' h
-      cases h with
-      | step st =>
-        rcases stepDC_shape_cases rfl rfl st with hse | ⟨k', hk, rfl, rfl, rfl⟩
-        · cases hse with
-          | lift sq => exact absurd sq (step_spawnedMarker_elim rfl)
-          | spawn hsp' _ => cases hsp'
-        · injection hk with hk
-          subst hk
-          exact ⟨rfl, rfl, rfl, rfl⟩))
-  iexact H
+/-- The marker strip on the D-carrier (`wpC_opDone_strip`'s port —
+stage C: an ordinary pure deterministic step, a `wpD_pure_det`
+instance). -/
+theorem wpD_opDone_strip {sc : GoCore.ChoiceSite} {c : Config} :
+    (|={E}[E]▷=> £ 1 -∗ WP (PoolCfgD.mk c) @ s ; E {{ Φ }}) ⊢
+      WP (PoolCfgD.mk (.opDone sc c)) @ s ; E {{ Φ }} :=
+  wpD_pure_det (hsp := rfl) (hblk := rfl) (hpos := rfl)
+    (hstep := fun _ => Step.opDoneStrip)
+    (hdet := by
+      intro σ c₂ σ₂ sq
+      cases sq
+      exact ⟨rfl, rfl⟩)
 
 /-- **THE FORK RULE on the D-carrier** (`wpC_fork`'s port; the same
 state-preserving spawn class). -/
@@ -893,9 +871,9 @@ theorem wpD_fork {c child : Config} {cv : GoValue} {args : List GoValue}
     (hsp : spawnPlan c = some (cv, args, k))
     (hspawn : ∀ σ : ExecState, σ.functions = GoCoreGS.prog GF →
       σ.methods = GoCoreGS.methods GF → σ.types = GoCoreGS.types GF →
-      spawnStep σ cv args k = .ok (.spawned k, child, σ)) :
+      spawnStep σ cv args k = .ok (.opDone .l1Sched (.next k), child, σ)) :
     ▷ WP (PoolCfgD.mk child) @ s ; ⊤ {{ fun _ => iprop(True) }}
-      ∗ ▷ WP (PoolCfgD.mk (.spawned k)) @ s ; E {{ Φ }}
+      ∗ ▷ WP (PoolCfgD.mk (.opDone .l1Sched (.next k))) @ s ; E {{ Φ }}
       ⊢ WP (PoolCfgD.mk c) @ s ; E {{ Φ }} := by
   iintro ⟨Hchild, Hparent⟩
   have hnv : ToVal.toVal (PoolCfgD.mk c) = (none : Option Unit) := by
@@ -920,17 +898,16 @@ theorem wpD_fork {c child : Config} {cv : GoValue} {args : List GoValue}
   isplitr
   · ipureintro
     cases s
-    · exact ⟨[], ⟨.spawned k⟩, σ₁, [⟨child⟩],
+    · exact ⟨[], ⟨.opDone .l1Sched (.next k)⟩, σ₁, [⟨child⟩],
         GoPrimStepD.step (.lift (.spawn hsp (hspawn σ₁ hfns hmeths htypes)))⟩
     · trivial
   inext
   iintro %e₂ %σ₂ %eₜ %Hstep Hcred
-  have hshape : e₂ = PoolCfgD.mk (.spawned k) ∧ σ₂ = σ₁
+  have hshape : e₂ = PoolCfgD.mk (.opDone .l1Sched (.next k)) ∧ σ₂ = σ₁
       ∧ eₜ = [PoolCfgD.mk child] := by
     cases Hstep with
     | step st =>
-      rcases stepDC_shape_cases hblk hpos st with hse | ⟨k', hk, -⟩
-      · cases hse with
+      cases stepDC_shape_cases hblk hpos st with
         | lift sq => exact absurd sq (step_spawnPos_elim hsp)
         | spawn hsp' hstep' =>
           rw [hsp] at hsp'
@@ -948,8 +925,6 @@ theorem wpD_fork {c child : Config} {cv : GoValue} {args : List GoValue}
           subst hchild
           subst hσ
           exact ⟨rfl, rfl, rfl⟩
-      · rw [hk] at hsp
-        cases hsp
   obtain ⟨rfl, rfl, rfl⟩ := hshape
   imod Hclose
   imodintro
@@ -989,7 +964,7 @@ theorem wpD_spawn_noop_witness
         {{ _v, embed (GF := GF) spawnNoopCell }} := by
   iintro HP
   -- main: goStmt entry (pure det)
-  iapply (wpD_pure_det (hsp := rfl) (hsc := rfl) (hblk := rfl) (hpos := rfl)
+  iapply (wpD_pure_det (hsp := rfl) (hblk := rfl) (hpos := rfl)
     (hstep := fun σ => Step.goStmtEntry)
     (hdet := by
       intro σ c₂ σ₂ sq
@@ -999,7 +974,7 @@ theorem wpD_spawn_noop_witness
   iapply fupd_intro
   iintro Hcred1
   -- main: the callee literal evaluates (nullary strict op, pure det)
-  iapply (wpD_pure_det (hsp := rfl) (hsc := rfl) (hblk := rfl) (hpos := rfl)
+  iapply (wpD_pure_det (hsp := rfl) (hblk := rfl) (hpos := rfl)
     (hstep := fun σ => Step.evalStrictNullary rfl rfl)
     (hdet := by
       intro σ c₂ σ₂ sq
@@ -1037,7 +1012,7 @@ theorem wpD_spawn_noop_witness
   isplitl []
   · -- the CHILD: empty body under its barrier frame, to the terminal
     inext
-    iapply (wpD_pure_det (hsp := rfl) (hsc := rfl) (hblk := rfl) (hpos := rfl)
+    iapply (wpD_pure_det (hsp := rfl) (hblk := rfl) (hpos := rfl)
       (hstep := fun σ => Step.seqn)
       (hdet := by
         intro σ c₂ σ₂ sq
@@ -1047,7 +1022,7 @@ theorem wpD_spawn_noop_witness
     iapply fupd_intro
     iintro Hcred3
     simp only [seqCont]
-    iapply (wpD_pure_det (hsp := rfl) (hsc := rfl) (hblk := rfl) (hpos := rfl)
+    iapply (wpD_pure_det (hsp := rfl) (hblk := rfl) (hpos := rfl)
       (hstep := fun σ => Step.seqDone)
       (hdet := by
         intro σ c₂ σ₂ sq
@@ -1056,7 +1031,7 @@ theorem wpD_spawn_noop_witness
     inext
     iapply fupd_intro
     iintro Hcred3b
-    iapply (wpD_pure_det (hsp := rfl) (hsc := rfl) (hblk := rfl) (hpos := rfl)
+    iapply (wpD_pure_det (hsp := rfl) (hblk := rfl) (hpos := rfl)
       (hstep := fun σ => Step.frameFall)
       (hdet := by
         intro σ c₂ σ₂ sq
@@ -1069,7 +1044,7 @@ theorem wpD_spawn_noop_witness
     itrivial
   · -- the PARENT: strip the marker, stop, deliver the cell
     inext
-    iapply wpD_spawned_strip
+    iapply wpD_opDone_strip
     iapply fupd_intro
     inext
     iapply fupd_intro

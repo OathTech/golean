@@ -187,16 +187,23 @@ The sites and their consuming definitions:
                    `runnableIdxs`).
 * `l5ExitWindow` — the main-exit window (`execProgLoop`, Multi.lean;
                    envelope at its docstring; bound is constant 2).
+* `postOp`       — the post-op scheduling point at a registry-op
+                   COMPLETION (W3.2 slice 1 stage C, B1 — G1 ruling
+                   2026-08-20): the `.opDone` marker boundary
+                   (`Config.opDone`, Machine.lean — the envelope
+                   statement lives at the marker; consumed in
+                   `stepMulti` via `schedSlots`).
 
 The scheduling sites — what a future `Fair : Choices → Prop`
-quantifies over — are exactly `{l1Sched, l5ExitWindow}` today
-(slice-1 stages C/D add `postOp`/`backEdge` constructors with the
-boundary widening; they are NOT pre-declared here — an enum row
+quantifies over — are exactly `{l1Sched, l5ExitWindow, postOp}`
+(slice-1 stage D adds the `backEdge` constructor with the loop
+boundary widening; it is NOT pre-declared here — an enum row
 without a consuming site would be an inert placeholder). -/
 inductive ChoiceSite where
   | mapIter | appendSpill
   | l2Entry | l2Arrival | l4Waiter
   | l1Sched | l5ExitWindow
+  | postOp
   deriving Repr, DecidableEq
 
 /-- Per-site consumption policy — ONE table (audit C-1: the per-site
@@ -237,6 +244,8 @@ def ChoiceSite.policy : ChoiceSite → SitePolicy
       "lowest-index runnable goroutine; a sole runnable steps without a pop (sequential conservation's hinge)"⟩
   | .l5ExitWindow => ⟨false,
       "exit now (0 = teardown at main's terminal; bound is constant 2, so the flag is inert)"⟩
+  | .postOp => ⟨false,
+      "the ISSUER continues (slot 0 = the goroutine that completed the op — the old machine's schedule, so the empty/default stream reproduces it exactly; slots 1.. = the other runnables in goroutine order; a sole-runnable issuer consults at bound 1 without a pop — sequential conservation's hinge, as at l1Sched)"⟩
 
 /-- **THE one consumption combinator** (audit Q1): every
 nondeterministic point in the interpreter resolves through this, with

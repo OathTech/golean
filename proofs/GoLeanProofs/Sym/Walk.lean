@@ -47,7 +47,7 @@ theorem stepFn'_conc (hI : I.Sound) (σ : ExecState) (ch : Choices)
   | blockedSend a b c => simp [stepFn', quit] at h
   | blockedRecv a b c d e => simp [stepFn', quit] at h
   | blockedSelect a b c => simp [stepFn', quit] at h
-  | spawned k => simp [stepFn', quit] at h
+  | opDone sc inner => simp [stepFn', quit] at h
   | blockedSync a b c d => simp [stepFn', quit] at h
   | exec stmt env k =>
       cases stmt

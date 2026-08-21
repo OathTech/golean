@@ -148,6 +148,19 @@ private theorem enterRecvTargets_sim' (hS : FrameSim ρ na₀ na fr σ σF)
   subst hvals hbody
   exact enterRecvTargets_sim hS targets vals body env k
 
+/-- Stage C (W3.2 B1): the completion-marker wrap transports through
+`ExSim` — `renameConfig` commutes with `.opDone` (Rename.lean's arm),
+so wrapping both sides preserves `CfgSim`. -/
+private theorem opDoneWrap_sim
+    {x y : Except GoError (Machine.Config × ExecState)}
+    (h : ExSim (CfgSim ρ na₀ na fr) x y) :
+    ExSim (CfgSim ρ na₀ na fr)
+      (do let r ← x; pure (Machine.Config.opDone .postOp r.1, r.2))
+      (do let r ← y; pure (Machine.Config.opDone .postOp r.1, r.2)) := by
+  refine ExSim.bind h ?_
+  intro r rF hr
+  exact ExSim.ok ⟨by simp only [renameConfig, hr.1], hr.2⟩
+
 /-! ## The channel apply -/
 
 theorem applyChanOp_sim (hS : FrameSim ρ na₀ na fr σ σF)
@@ -229,11 +242,11 @@ theorem applyChanOp_sim (hS : FrameSim ρ na₀ na fr σ σF)
                       cases targets with
                       | nil => exact ExSim.ok ⟨rfl, hS₁⟩
                       | cons a ts =>
-                          exact enterRecvTargets_sim' hS₁ (a :: ts)
+                          exact opDoneWrap_sim (enterRecvTargets_sim' hS₁ (a :: ts)
                             (recvStores v true (a :: ts).length) (.seqn #[])
                             env k
                             (by rw [recvStores_ren, renameAssigneeList_length])
-                            renameStmt_seqn_empty.symm
+                            renameStmt_seqn_empty.symm)
                   | none =>
                       simp only [Option.map_none]
                       by_cases hcl : closed = true
@@ -245,11 +258,11 @@ theorem applyChanOp_sim (hS : FrameSim ρ na₀ na fr σ σF)
                         cases targets with
                         | nil => exact ExSim.ok ⟨rfl, hS⟩
                         | cons a ts =>
-                            exact enterRecvTargets_sim' hS (a :: ts)
+                            exact opDoneWrap_sim (enterRecvTargets_sim' hS (a :: ts)
                               (recvStores z false (a :: ts).length) (.seqn #[])
                               env k
                               (by rw [recvStores_ren, renameAssigneeList_length])
-                              renameStmt_seqn_empty.symm
+                              renameStmt_seqn_empty.symm)
                       · simp only [if_neg hcl]
                         exact ExSim.ok ⟨rfl, hS⟩
   | close =>
@@ -510,15 +523,15 @@ theorem applySyncOp_sim (hS : FrameSim ρ na₀ na fr σ σF)
                   · simp only [if_pos hst]
                     refine ExSim.bind (storeLoc_sim hS loc _) ?_
                     intro σ' σF' hS'
-                    exact enterRecvTargets_sim' hS' targets [.bool true]
+                    exact opDoneWrap_sim (enterRecvTargets_sim' hS' targets [.bool true]
                       (.seqn #[]) env k (by simp [renameValueList, renameValue])
-                      renameStmt_seqn_empty.symm
+                      renameStmt_seqn_empty.symm)
                   · simp only [if_neg hst]
                     by_cases hdn : dn = true
                     · simp only [if_pos hdn]
-                      exact enterRecvTargets_sim' hS targets [.bool false]
+                      exact opDoneWrap_sim (enterRecvTargets_sim' hS targets [.bool false]
                         (.seqn #[]) env k (by simp [renameValueList, renameValue])
-                        renameStmt_seqn_empty.symm
+                        renameStmt_seqn_empty.symm)
                     · simp only [if_neg hdn]
                       exact ExSim.ok ⟨rfl, hS⟩
               | _ => exact ExSim.stuck'
@@ -674,9 +687,9 @@ theorem commitClause_sim (hS : FrameSim ρ na₀ na fr σ σF)
               cases targets with
               | nil => exact ExSim.ok ⟨rfl, hS₁⟩
               | cons a ts =>
-                  exact enterRecvTargets_sim' hS₁ (a :: ts)
+                  exact opDoneWrap_sim (enterRecvTargets_sim' hS₁ (a :: ts)
                     (recvStores v true (a :: ts).length) body env k
-                    (by rw [recvStores_ren, renameAssigneeList_length]) rfl
+                    (by rw [recvStores_ren, renameAssigneeList_length]) rfl)
           | none =>
               simp only [Option.map_none]
               by_cases hcl : closed = true
@@ -689,9 +702,9 @@ theorem commitClause_sim (hS : FrameSim ρ na₀ na fr σ σF)
                 cases targets with
                 | nil => exact ExSim.ok ⟨rfl, hS⟩
                 | cons a ts =>
-                    exact enterRecvTargets_sim' hS (a :: ts)
+                    exact opDoneWrap_sim (enterRecvTargets_sim' hS (a :: ts)
                       (recvStores z false (a :: ts).length) body env k
-                      (by rw [recvStores_ren, renameAssigneeList_length]) rfl
+                      (by rw [recvStores_ren, renameAssigneeList_length]) rfl)
               · simp only [if_neg hcl]
                 exact ExSim.stuck'
 

@@ -471,7 +471,7 @@ def renameConfig : Config → Config
   | .blockedSelect clauses env k =>
       .blockedSelect (clauses.map (renameEvClause ρ)) (renameEnv ρ env)
         (renameCont ρ k)
-  | .spawned k => .spawned (renameCont ρ k)
+  | .opDone sc inner => .opDone sc (renameConfig inner)
   | .blockedSync op loc env k =>
       .blockedSync (renameSyncOp ρ op) (renameLoc ρ loc) (renameEnv ρ env)
         (renameCont ρ k)
