@@ -200,7 +200,22 @@ theorem Config.boundarySite_postOp_shape {c : Config}
   unfold Config.boundarySite at h
   split at h
   · rename_i inner; exact ⟨inner, rfl⟩
-  · cases h
+  all_goals cases h
+
+/-- A backEdge boundary site's configuration is RUNNABLE (stage D: the
+loop re-entry shapes are neither done nor blocked — what puts the
+current goroutine at slot 0 of its own menu). -/
+theorem Config.boundarySite_backEdge_runnable {s : ExecState} {c : Config}
+    (h : Config.boundarySite c = .backEdge) :
+    threadRunnable s c = true := by
+  unfold Config.boundarySite at h
+  -- Order matters: `cases h` on the MATCHING arms' `refl` proof
+  -- succeeds vacuously and leaves the goal, so the computation goes
+  -- first.
+  split at h <;>
+    first
+    | (simp [threadRunnable, threadDone, isBlockedConfig]; done)
+    | cases h
 
 /-- A `selectApplyPlan` extraction pins the configuration's shape (the
 `spawnedCont_shape` mold). -/
@@ -618,12 +633,19 @@ theorem schedSlots_mem {s : ExecState} {ts : Array Config} {cur i : Nat}
     · obtain ⟨inner, rfl⟩ := Config.boundarySite_postOp_shape hpost
       exact mem_runnableIdxs_of hcur rfl
     · exact (List.mem_filter.mp hmem').1
-  · have heq : schedSlots s ts cur c.boundarySite = runnableIdxs s ts := by
-      unfold schedSlots
-      cases hbs : c.boundarySite <;>
-        first | (exact absurd hbs hpost) | rfl
-    rw [heq] at hmem
-    exact hmem
+  · by_cases hback : c.boundarySite = .backEdge
+    · rw [hback] at hmem
+      unfold schedSlots at hmem
+      rcases List.mem_cons.mp hmem with rfl | hmem'
+      · exact mem_runnableIdxs_of hcur
+          (Config.boundarySite_backEdge_runnable hback)
+      · exact (List.mem_filter.mp hmem').1
+    · have heq : schedSlots s ts cur c.boundarySite = runnableIdxs s ts := by
+        unfold schedSlots
+        cases hbs : c.boundarySite <;>
+          first | (exact absurd hbs hpost) | (exact absurd hbs hback) | rfl
+      rw [heq] at hmem
+      exact hmem
 
 /-- Every runnable goroutine appears in the slot menu at every site
 (completeness direction: the menu never LOSES a member either). -/
@@ -633,12 +655,14 @@ theorem mem_schedSlots_of_runnable {s : ExecState} {ts : Array Config}
     i ∈ schedSlots s ts cur site := by
   unfold schedSlots
   cases site <;> try exact hmem
-  -- postOp: issuer-first is a reordering-plus-cons, never a loss
-  by_cases hi : i = cur
-  · subst hi
-    exact List.mem_cons_self ..
-  · exact List.mem_cons.mpr (Or.inr (List.mem_filter.mpr
-      ⟨hmem, by simpa using hi⟩))
+  -- postOp/backEdge: current-first is a reordering-plus-cons, never a
+  -- loss
+  all_goals
+    by_cases hi : i = cur
+    · subst hi
+      exact List.mem_cons_self ..
+    · exact List.mem_cons.mpr (Or.inr (List.mem_filter.mpr
+        ⟨hmem, by simpa using hi⟩))
 
 theorem schedPick_cur {m : MultiConfig} {c : Config}
     (hcur : m.threads[m.cur]? = some c) (hb : c.atBoundary = false) :

@@ -3085,3 +3085,42 @@ majority of the corpus — never build the init graph at all
 (`inittask-escape-single` pins that immunity as a control). The bug was
 reachable only from the multi-package corpus, whose stdlib imports
 (`sync`, `errors`) all carry escape-free prefixes.
+
+
+## BUG-065 — W3.2 boundary widening: five rows' exhaustive envelope certification left tractability
+
+- Status: open (a COST regression, not a semantic one — the machine
+  widened CORRECTLY per the G1 ruling; the certification lanes cannot
+  exhaustively enumerate the widened trees for these rows; the ruling
+  on the note §5c fallback vs budget raises vs the reduction lane is
+  the user's, posed in the W3.2 stage report)
+- Pinned-by: differential (enumeration cap breaches, fail-loud)
+- Cases: goroutines/pipeline/request-reply, goroutines/worker-pool/sum, race/litmus/sb-chan
+
+W3.2 slice 1 stages C/D (B1 `.opDone` post-op boundaries + B2
+back-edge boundaries; G1 ruling 2026-08-20) widen the scheduling-point
+set — the doctrine's re-envelope of register #1, implemented as
+designed. The cost: enumeration trees branch at every new point, and
+five rows' exhaustive certification left tractability entirely
+(measured 2026-08-20/21, dev box):
+
+- goroutines/pipeline/request-reply (confluent): >400M steps
+  unfinished (pre-B1 tree ≤ 1.2M).
+- goroutines/worker-pool/sum (confluent): >400M (pre-B1 ≤ 15M).
+- race/litmus/sb-chan (membership, members=3): >400M (pre-B1 ≤ 5M).
+- imported-goose/channel/google-search (membership, tier=slow):
+  >900M (pre-B1 40.0M). NOT on the Cases line: its fast-lane result
+  is CERTIFIED-CACHED green against the pre-B1 record per the tiering
+  design; the staleness surfaces as the recorded `--slow` drift alarm.
+- sync/rwmutex-order (membership, tier=slow): >~900M (pre-B1 2.2M).
+  Same cached-green/slow-alarm structure.
+
+The three Cases rows fail loud at their existing caps on every run
+(honest reds, seconds each). Fix directions, all recorded in
+`docs/w32-log.md` stage C: (a) the boundary-set note §5c sampled
+fallback (witness-replay machinery drafted and REVERTED pending the
+user ruling — a claim-standard change is not the arc's to make);
+(b) budget raises (measured infeasible at hosted-runner scale);
+(c) THE PRINCIPLED FIX: the reduction/DPOR lane (NPDRF, slice 5) —
+sound schedule reduction re-shrinks exactly these trees, and the
+mover theorem resumes over the widened point set by design.

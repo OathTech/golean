@@ -121,21 +121,29 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   already "anything"). Upper bound argued from SPEC silence + MM
   blocking rules.
 
-### C2. Preemption inside a boundary-free segment — (b) PINNED, structural: forced continuation (run-to-boundary)
+### C2. Preemption inside a boundary-free segment — (a) ENVELOPED at back-edge granularity (W3.2 stage D, B2)
 
 - WHERE: spec — silent on scheduling, so preemption at ANY point is
   conforming (gc itself realizes asynchronous preemption since 1.14 —
-  DOCS/GC). Machine: `stepMulti`'s non-boundary arm, Multi.lean:930–931
-  (`else stepThreadInto m m.cur ch`) — between registry boundaries the
-  running goroutine steps privately and CANNOT be preempted on any
-  stream. `Config.atBoundary` (Multi.lean:227–255) is the complete
-  boundary set; ordinary statement/expression steps, calls, loads,
-  stores, loop back-edges are all private.
-- PLAUSIBLE ENVELOPE: a scheduling point at (at least) every loop
-  back-edge / bounded-compute interval inside boundary-free segments —
-  enough that a goroutine stuck in a registry-free loop can always be
-  descheduled, which is what every real Go implementation does.
-- WHY IT IS THE DOCTRINE'S KNOWN FIRST ITEM (register #1): the
+  DOCS/GC; dossier §1.1). MACHINE (W3.2 stage D, G1 — B2): the loop
+  RE-ENTRY shapes (`.next/.continuing (.loop …)`,
+  `.next (.mapIterK …)`) are boundaries now (`Config.atBoundary`, the
+  envelope statement in situ; site `ChoiceSite.backEdge`, slot 0 =
+  current-continues via `schedSlots`), so a goroutine inside a
+  registry-free segment can be descheduled at every iteration edge.
+  Ordinary straight-line statement/expression steps, calls, loads and
+  stores between boundaries remain private — the residual is
+  SUB-STATEMENT granularity, register #5's reduction-line territory,
+  not an iteration-monopoly any more.
+- ENVELOPE, SHIPPED: a scheduling point at every loop back-edge — a
+  goroutine stuck in a registry-free loop can always be descheduled
+  (which is what every real Go implementation does), and the site is
+  exactly what makes the liveness tier's `Fair` NON-VACUOUS (the
+  fairness-expressibility note at `ChoiceSite.backEdge`'s policy
+  docstring; boundary-set note §4).
+- WHY IT WAS THE DOCTRINE'S KNOWN FIRST ITEM (register #1, now
+  DISCHARGED there — the wedge row goroutines/send-then-spin is the
+  standing exhibit): the
   SEND-THEN-SPIN wedge (recorded probe:
   `docs/evidence/2026-08-12_scheduler-wedge-probes/`) — a worker
   performs one registry op (a cap-1 send that wakes main) and then
@@ -158,16 +166,21 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   conformity in normative-adjacent text — "The loop in main is not
   guaranteed to finish"; the WEDGE's bug status itself rests on the
   sync edges existing at all, mem#chan.)
-- RE-ENVELOPE OBLIGATION + COST: add preemption points inside segments
-  (loop back-edges are the registry-granularity-style candidate) —
-  boundary-set change ⇒ every pinned stream shifts (BUG-040 precedent:
-  fork/join designated witnesses re-derived, Comparator landmark),
-  enumeration trees branch at every new point (enumerator caps/DPOR
-  pressure), fuel/step accounting and `MultiSound`/`MultiStreams`
-  metatheory re-proved, NPDRF statement restated over the new point
-  set, race-detector segments shrink (more, smaller segments — clock
-  traffic grows). The largest single re-envelope in the queue; also
-  the highest-value one.
+- COST, PAID (W3.2 stages C+D; the note §5's budget): pinned streams
+  shifted and were re-derived (the poller family's deferral witnesses
+  moved to [1]*n); metatheory re-proved over the widened boundary set;
+  enumeration trees branch at every new point — the REAL cost center:
+  several rows' exhaustive certification left tractability entirely
+  (the stage-C log's intractable five; the §5d per-site enumeration
+  modes + nonterm accounting are the G1-ruled answer, DPOR/NPDRF the
+  principled one, slice 5). CORRECTION to this entry's old cost prose
+  (owed at landing, note §2): "race-detector segments shrink … clock
+  traffic grows" over-predicted — boundaries are scheduling points,
+  not clock edges (`raceUpdate` advances clocks at
+  spawn/wake/pairing/sync EVENTS only), so B2 added zero clock
+  traffic; only the interleaving of recorded accesses refines. The
+  segment-HB prose's "private segment" notion narrowed from "between
+  registry ops" to "between boundaries" with clocks unchanged.
 
 ### C3. Scheduling between an op's effect and its continuation — (a) ENVELOPED (W3.2 stage C, B1: the `.opDone` post-op boundary)
 
@@ -1307,12 +1320,14 @@ permanent; the deviation is not.)
 
 ## 10. Counts
 
-- (a) ENVELOPED: 8 sites / 8 entries (C1, C3, C4, C5, C6, C8, E9,
-  R2 — C6 owns two sites (L2 entry + arrival), C8 rides C1's site;
-  E9's order axis; C3 owns the postOp site, W3.2 stage C). (Count
-  corrected 2026-08-12; C3 moved (b)→(a) 2026-08-20.)
-- (b) PINNED: **16 entries** — structural: C2 (stage D's target;
-  C3 moved to (a) at stage C, 2026-08-20); sequential order:
+- (a) ENVELOPED: 9 sites / 9 entries (C1, C2, C3, C4, C5, C6, C8,
+  E9, R2 — C6 owns two sites (L2 entry + arrival), C8 rides C1's
+  site; E9's order axis; C3 owns the postOp site and C2 the backEdge
+  site, W3.2 stages C/D). (Count corrected 2026-08-12; C3 moved
+  (b)→(a) 2026-08-20, C2 2026-08-21.)
+- (b) PINNED: **15 entries** — structural: none remaining (C3 moved
+  to (a) at stage C 2026-08-20, C2 at stage D 2026-08-21); sequential
+  order:
   E2, E3 (known ≠ gc), E4, E5, E7 (known ≠ gc), E10, E11, E12, E13
   (known ≠ gc on its assertion axis); representation/runtime: R1, R8,
   R9, R10, R11, R15 (+R12 harness-level). (Recount 2026-08-20, the
@@ -1331,5 +1346,6 @@ permanent; the deviation is not.)
 - REFUSED standing in for latitude: 9 (§5).
 - Known-≠-oracle deterministic points (the honesty-critical subset of
   (b)): E3, E5, E7, E13(type-assertion axis; the indexing axis agrees),
-  R3(escaping path) — plus the C2+C3 send-then-spin wedge as the
-  oracle-visible structural instance. (E13 added 2026-08-20.)
+  R3(escaping path). (E13 added 2026-08-20; the C2+C3 send-then-spin
+  wedge LEFT this list 2026-08-21 — W3.2 stages C/D re-enveloped it,
+  register #1 discharged.)
