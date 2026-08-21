@@ -47,7 +47,7 @@ false: H-11 landed in W4.0).
 
 | | diff lines vs upstream |
 |---|---|
-| D-5 no-op overlay (retired) | **142** (the whole 142-line file replaced by a 116-line no-op) |
+| D-5 no-op overlay (retired) | **142** diff lines (84 removed + 58 added; coincidentally also upstream's file length — audit B-F9) |
 | the swapped tree | **11**, of which **3 are code** (2 initializer lines rewritten to `&DefaultLogger{}`, 1 dropped `"io"` import) and 6 are the D-12 recorded-delta comment + 2 context |
 
 So the design §5's "three lines, not two" is confirmed exactly; its
