@@ -4517,7 +4517,8 @@ func (e *emitter) emitSliceExpr(se *ast.SliceExpr) (any, error) {
 	// Array bases slice through their address; slice/string bases by value.
 	var base any
 	var err error
-	if _, isArray := e.goTypeOf(se.X).Underlying().(*types.Array); isArray {
+	arr, baseIsArray := e.goTypeOf(se.X).Underlying().(*types.Array)
+	if baseIsArray {
 		base, err = e.emitAddressOf(se.X)
 	} else {
 		base, err = e.emitExpr(se.X)
@@ -4537,16 +4538,32 @@ func (e *emitter) emitSliceExpr(se *ast.SliceExpr) (any, error) {
 			return nil, err
 		}
 	} else {
-		// default high is len(base)
-		operand, err := e.emitExpr(se.X)
-		if err != nil {
-			return nil, err
+		// Default high = len OF THE ONE EVALUATED OPERAND
+		// (spec#Slice_expressions: "for arrays or strings ... the
+		// length of the sliced operand"; the default is defined over
+		// the operand the slice expression already evaluated, never a
+		// second evaluation). BUG-066: this arm used to re-emit se.X,
+		// and each emission of a call-valued operand hoists a FRESH
+		// `$cN := call` temp — so `expensive()[:]` ran the call twice,
+		// gc 1 vs machine 2, status ok.
+		if baseIsArray {
+			// An array operand's length is the static constant — even
+			// when the operand expression contains calls (those ran
+			// once, in the base emission above, through its address).
+			high = map[string]any{"expr": "int", "value": itoa(int(arr.Len())), "type": intType("int")}
+		} else {
+			// Slice/string operand: reuse the SINGLE emitted base node.
+			// Its effects were hoisted by that one emission, so the
+			// reuse re-reads a temp (effectful base) or duplicates a
+			// pure node byte-identically to the old second emission
+			// (pure base) — the wire changes only where the old one
+			// was wrong.
+			opTy, err := e.typeOf(se.X)
+			if err != nil {
+				return nil, err
+			}
+			high = map[string]any{"expr": "builtin-len", "operand": base, "operandType": opTy}
 		}
-		opTy, err := e.typeOf(se.X)
-		if err != nil {
-			return nil, err
-		}
-		high = map[string]any{"expr": "builtin-len", "operand": operand, "operandType": opTy}
 	}
 	node := map[string]any{"expr": "slice", "base": base, "low": low, "high": high}
 	if se.Slice3 && se.Max != nil {

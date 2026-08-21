@@ -3137,7 +3137,11 @@ mover theorem resumes over the widened point set by design.
 
 ## BUG-066 — slice expression with an elided high bound evaluates its base TWICE
 
-- Status: open
+- Status: fixed (2026-08-21, holes arc — `emitSliceExpr`'s default-high
+  arm: an array operand takes its static length constant; a
+  slice/string operand's `builtin-len` reuses the single emitted base
+  node. All four pinned rows flipped FAIL→PASS; explicit-high control
+  and every slice/eval-order relative unmoved; goldens unchanged.)
 - Pinned-by: differential
 - Cases: slices/slice-elided-high-eval-once/call-base, slices/slice-elided-high-eval-once/call-base-low-only, pointers/slice-elided-high-pointer-array-base, strings/slice-eval-order-elided-high
 

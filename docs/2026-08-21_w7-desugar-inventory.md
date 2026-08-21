@@ -482,14 +482,20 @@ location). Map element as target outside a single assignment fails closed
 (5839–5842) — maps are unaddressable and this would otherwise die as a stuck.
 
 **B-18 · slice expression, including 3-index — M — K1** ·
-`emit.go:4516`; base 4520–4524; **default high 4539–4550**; max 4552–4558.
+`emit.go:4516`; base 4520–4528; default high 4535–4567; max 4569–4575.
 Array bases slice through their address (`a[:] ≡ (&a)[:]`, so slicing aliases
-the array cell); default `high` is `builtin-len` of a **second emission of the
-base**. ⚠⚠ **§10 hole H-a, CONFIRMED 2026-08-21**: that second emission is
-unguarded, and for a call-valued base the call runs **twice** — gc 1, machine
-2, status `ok`. Not a proof obligation; a bug with a witness. Guardrails
-`slices/*`, `strings/slice-eval-order`, `pointers/pointer-array-full-slice` —
-none of which covers an effectful base, which is how it survived.
+the array cell). Default `high` (**BUG-066 FIXED 2026-08-21, holes arc** —
+this row's ⚠⚠ hole H-a: the old arm re-emitted the base as the `builtin-len`
+operand, so a call-valued base ran twice, gc 1 vs machine 2, status `ok`): an
+array operand takes its STATIC length constant (the spec's `len(a)` over the
+one evaluated operand); a slice/string operand's `builtin-len` reuses the
+SINGLE emitted base node — effects hoisted once, pure nodes byte-identical to
+the old wire. Guardrails `slices/slice-elided-high-eval-once/*` (call base,
+low-only sibling, explicit-high green control),
+`pointers/slice-elided-high-pointer-array-base`,
+`strings/slice-eval-order-elided-high`, plus the pre-existing `slices/*`,
+`strings/slice-eval-order`, `pointers/pointer-array-full-slice` (none of which
+covered an effectful base, which is how the hole survived).
 
 **B-19 · struct literal (keyed / positional) — M — K1+K2**
 - *Anchor*: `emit.go:5928`; pre-bind 5953–5974; declaration-order fill
@@ -2190,7 +2196,15 @@ now second); doctrine header 33–43.
   review** — the doc was the failure vector.
 - *Residual*: `X` is in the doctrine set (`:35`) but absent from the code's case
   list (`:516`). Consistent only because the parser never produces `X`. A
-  two-file invariant a validation harness should name.
+  two-file invariant a validation harness should name. **Reconciled 2026-08-21
+  (holes arc)**: gc probed at go1.26.5 — `%X` over an Error-implementing
+  `uint64` prints the UPPERCASE hex of the method result (`4F4F5053`), so the
+  doctrine side was right about gc; the code side is safe purely via
+  `parseFmtFormat`'s verb-set refusal of `%X`. The invariant is now NAMED at
+  both sites (the header's "%X AND THE TWO-SITE INVARIANT" block and a comment
+  on the stringable switch's case list), each pointing at the other and at the
+  render-helper third leg; admitting `%X` remains a matrix widening owing its
+  own differential pins.
 
 **G-12 · Stringer/error render over a CONCRETE static type — M** ·
 `fmtdesugar.go:397-469`; promotion refusal 398–402; func-value node 445–446,
@@ -2836,7 +2850,7 @@ that is not in the repo.
 
 | hole | verdict | witness / why not | owed |
 |---|---|---|---|
-| **H-a** slice default-high double emission | **VERIFIED — live silent wrong answer, status `ok`** | gc 1 call, machine 2, on both a slice base and a pointer-to-array base; explicit-high control agrees at 1 | BUG entry + corpus row + fix |
+| **H-a** slice default-high double emission | **FIXED 2026-08-21 (holes arc, BUG-066)** — was: verified live silent wrong answer, status `ok` | gc 1 call, machine 2, on both a slice base and a pointer-to-array base; explicit-high control agrees at 1 | ~~BUG entry + corpus row + fix~~ all landed; see B-18 |
 | **H-b** `Expr.intLit`'s `\| _ => .int` | **not probed this round** — reachability argument (J-1) unchallenged, no witness constructed | reachability is by code reading (`emit.go:6439`, `:3727`), not execution | reduce to a witness, then fix (Tier 0) |
 | **H-c** two missing decoder checks | **not a defect — a proposal**, restated as such | duplicate-TypeId sweep (J-42) and literal index bounds (J-33); J-33's *spurious panic* direction re-read and stands | land both (Tier 0) |
 | **H-d** wire func types drop the variadic bit | **VERIFIED — live silent wrong answer, status `ok`**; the first pass's "not confirmed observable" is **REFUTED** | comma-ok assert on a boxed variadic func: gc `false true`, machine `true true` — no reflection needed | BUG entry + corpus row + `Ty` carries variadic |
@@ -2852,14 +2866,15 @@ holes arc heads with them** — they are the two rows in this file that are
 demonstrated wrong answers rather than proof obligations, so they outrank every
 certificate in §11.
 
-- **H-a · slice-expression default-high emits the base TWICE — CONFIRMED
-  LIVE.** `emit.go:4521/4523` (base or its address) and `:4541` (a second
+- **H-a · slice-expression default-high emits the base TWICE — FIXED
+  2026-08-21 (holes arc, BUG-066; anchors below describe the PRE-FIX code).**
+  Was `emit.go:4521/4523` (base or its address) and `:4541` (a second
   `emitExpr` of the same operand, inside the `builtin-len` for the elided
-  high). Each `emitExpr` of a call hoists a **fresh** temp, so the base runs
+  high). Each `emitExpr` of a call hoists a **fresh** temp, so the base ran
   twice. Every other documented eval-once hazard in the file is guarded
   (`emitReadWriteTarget` 3860; BUG-047's conversion guard 2893–2905); this one
-  is unguarded and unpinned. Closest relative: BUG-047, same
-  silent-divergence shape.
+  was unguarded and unpinned. Closest relative: BUG-047, same
+  silent-divergence shape. Fix + guardrails: B-18's updated row.
   - *Witness (verified end to end, this round).* Two forms, both reproducing:
     a **slice base**, `s := expensive()[:]` with `expensive` incrementing a
     counter, and a **pointer-returning array base**, `s := pf().arr[2:]` with
@@ -2949,11 +2964,14 @@ certificate in §11.
   outcome of trying is either a BUG or a recorded argued-unobservable
   narrowing — not a lead left standing.
 
-Two documentation drifts also worth fixing when W7 opens:
-`docs/2026-08-18_multipackage-identity.md` §6 still says shims are
-main-package-only, which `load.go:206-218` widened in raft W4.0 (G-35); and the
-`%X` doctrine/code split at `fmtdesugar.go:35` vs `:516` (G-11) is a two-file
-invariant nothing checks.
+Two documentation drifts also worth fixing when W7 opens — **both fixed
+2026-08-21 (holes arc)**: `docs/2026-08-18_multipackage-identity.md` §6 said
+shims are main-package-only, which `load.go:206-218` widened in raft W4.0
+(G-35) — the section now records the per-unit injection with the supersession
+dated in place; and the `%X` doctrine/code split at `fmtdesugar.go:35` vs
+`:516` (G-11) was reconciled by gc probe (doctrine right about gc, code safe
+via the parser's `%X` refusal) and the two-site invariant is now named at both
+sites — see G-11's residual note.
 
 **One open census question the audit-fix round surfaced and deliberately did
 not rule on** (C-42): `emit.go:2413-2416` cites spec#Send_statements for

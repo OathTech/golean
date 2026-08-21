@@ -1,22 +1,15 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-21 (holes arc, guardrails wave — branch holes-arc
-#   atop 720e02fb; census docs/2026-08-21_w7-desugar-inventory.md §10
-#   H-a/H-d confirmed live silent wrong answers, reduced to corpus
-#   rows BEFORE their fixes per the bugfix-arc convention).
-#   re-pin reason: EIGHT new ids, zero other movement on the 2324
-#   standing ids (--full: no missing, no flips):
-#     FAIL/differential (6) — the witnessed wrong answers, red on
-#       purpose until their fix commits (BUG-066, BUG-067):
-#       slices/slice-elided-high-eval-once/call-base (machine 230,
-#       go 130), .../call-base-low-only (220 vs 120),
-#       pointers/slice-elided-high-pointer-array-base (223 vs 123),
-#       strings/slice-eval-order-elided-high (12228 vs 1328),
-#       interfaces/assert-func-variadic/mismatch-variadic-at-slice
-#       (11 vs 1), .../mismatch-slice-at-variadic (11 vs 1).
-#     PASS (2) — the green controls:
-#       slices/slice-elided-high-eval-once/explicit-high-control,
-#       interfaces/assert-func-variadic/match-right-types.
-#   counts: 2332 cases, 2186 PASS / 146 FAIL (was 2184/140)
+# recorded: 2026-08-21 (holes arc, BUG-066 fix — branch holes-arc;
+#   emitSliceExpr default-high: array operand -> static length
+#   constant, slice/string operand -> builtin-len over the SINGLE
+#   emitted base node; census H-a / B-18).
+#   re-pin reason: exactly the four predicted FAIL->PASS flips, zero
+#   other movement on the 2332 ids (--full: no missing):
+#     slices/slice-elided-high-eval-once/call-base,
+#     slices/slice-elided-high-eval-once/call-base-low-only,
+#     pointers/slice-elided-high-pointer-array-base,
+#     strings/slice-eval-order-elided-high.
+#   counts: 2332 cases, 2190 PASS / 142 FAIL (was 2186/146)
 #   frontend: native (tools/nativefrontend + NativeToIR)
 # columns: result<TAB>id<TAB>stage
 result	id	stage
@@ -1662,7 +1655,7 @@ PASS	pointers/pointer-identity	-
 PASS	pointers/pointer-param-alias	-
 PASS	pointers/pointer-slice-header	-
 PASS	pointers/pointer-to-pointer	-
-FAIL	pointers/slice-elided-high-pointer-array-base	differential
+PASS	pointers/slice-elided-high-pointer-array-base	-
 FAIL	pointers/zero-size-address/escaped-same	differential
 PASS	pointers/zero-size-address/stack-distinct	-
 PASS	quorum/committed-index-edges/all-unacked	-
@@ -1833,8 +1826,8 @@ PASS	slices/make-slice-zero	-
 PASS	slices/reslice-capacity	-
 PASS	slices/slice-append	-
 PASS	slices/slice-copy	-
-FAIL	slices/slice-elided-high-eval-once/call-base	differential
-FAIL	slices/slice-elided-high-eval-once/call-base-low-only	differential
+PASS	slices/slice-elided-high-eval-once/call-base	-
+PASS	slices/slice-elided-high-eval-once/call-base-low-only	-
 PASS	slices/slice-elided-high-eval-once/explicit-high-control	-
 PASS	slices/slice-expr-eval-order	-
 PASS	slices/slice-header-by-value	-
@@ -2189,7 +2182,7 @@ PASS	strings/rune-slice-conversion	-
 PASS	strings/rune-slice-to-string-copy	-
 PASS	strings/rune-string-conversion	-
 PASS	strings/slice-eval-order	-
-FAIL	strings/slice-eval-order-elided-high	differential
+PASS	strings/slice-eval-order-elided-high	-
 PASS	strings/string-basic	-
 PASS	strings/string-byte-conversion	-
 PASS	strings/string-byte-len	-

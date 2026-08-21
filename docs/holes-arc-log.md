@@ -39,6 +39,16 @@ raft-w42 lane runs concurrently and owns `raftsubject/` +
   wire shape of every array-base elided-high slice from
   `builtin-len(second emission)` to an int literal, so golden repr
   pins may re-pin in the fix commit, with this as the reason.
+- PREDICTED FLIPS (written before the confirming full run): exactly
+  the four pinned reds FAIL→PASS
+  (slice-elided-high-eval-once/{call-base,call-base-low-only},
+  slice-elided-high-pointer-array-base, slice-eval-order-elided-high);
+  zero other movement; goldens unchanged (check-golden ran clean
+  post-fix — no golden program slices an array with elided high or an
+  effectful base). Focused 11-id slice post-fix: 11/11 PASS including
+  all relatives (slice-expr-eval-order, slice-eval-order,
+  pointer-array-full-slice, full-slice, three-index-slice,
+  array-to-slice-conditional).
 
 ## Item 2 — BUG-067 (census H-d): wire func types drop the variadic bit
 
