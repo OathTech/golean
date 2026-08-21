@@ -66,10 +66,15 @@ rewritten to describe the codec.
   differential family (local package `wirepb` mirrors the generator's
   output forms; ConfChange numbering deliberately differs from struct
   order so number-ordered encoding is pinned). Focused run: 5/5 PASS.
-- **`difftest.py` section 7 (the upstream-runtime differential): WRITTEN,
-  NOT RUN — owed.** The sandbox denies the module cache/proxy (environment
-  notes). The generated Go parses (`gofmt -e` clean); the command owed:
-  `python3 tools/raftsubject/difftest.py` with normal GOPROXY access.
+- **`difftest.py` section 7 (the upstream-runtime differential):
+  DISCHARGED 2026-08-21** under the nono claude-local 1.8.0 profile
+  (module cache + proxy granted): exit 0, **PASS — plainpb agrees with
+  upstream raftpb on every probed value** (72 values across all 9
+  message types: bytes, Size, both cross-unmarshals; 20 recorded
+  nil-vs-empty marshal-asymmetry NOTEs, observations not failures).
+  Run log: artifacts/difftest-s7-run.log (gitignored; re-run =
+  `python3 tools/raftsubject/difftest.py`). Original record: WRITTEN,
+  NOT RUN — the pre-1.8.0 sandbox denied the module proxy.
   **WIDENED by the audit round (finding A-minor):** section 7 covered five
   types as TOP-LEVEL subjects (ConfState, Entry, Message, ConfChangeV2,
   HardState), reaching `Snapshot`/`SnapshotMetadata` only nested inside a
@@ -626,7 +631,7 @@ present, and no other corpus case has one).
 
 | id | disposition |
 |---|---|
-| H-1 | **DISCHARGED** (item 1) — the generated codec; difftest section 7 OWED with command where the sandbox denies the module proxy (widened by the audit round to all 9 types top-level — the owed run must cover that full surface, not the original 5); codeccheck.py is the standing in-sandbox battery. |
+| H-1 | **DISCHARGED** (item 1) — the generated codec; difftest section 7 DISCHARGED 2026-08-21 (all 9 types top-level, PASS vs the real runtime — see item 1's updated bullet); codeccheck.py is the standing in-sandbox battery. |
 | H-6 | **DISCHARGED** (item 2) — the Q3 OPTION 1 desugar, per-verb pins. |
 | H-12 | **DISCHARGED** (item 5) — promoted statement/defer sync ops. |
 | H-13, H-17 | **DISCHARGED** (item 4) — E5 shims. |
