@@ -11,8 +11,14 @@ and the executable *specification precursor* for the raft verification
 push (`docs/2026-08-15_raft-push-p0-scoping.md`).
 
 **What this is NOT:** interpreter-facing. Nothing here runs through the
-golean frontend or machine; the machine-runnable harness twin is a later
-slice of the push.
+golean frontend or machine. The machine-runnable TWIN exists since W4.2:
+`tools/raftsubject/twin-lib.go` (+ the `twin-*-main.go` runners) — n
+RawNodes, no goroutines/clock/context, the network as a multiset, this
+family's `checkSafety` reshaped to per-step form, schedules as the input,
+run under both `go run` and the machine (`docs/raft-w42-log.md` item 2).
+This family stays the concurrent, wall-clock, chaos-network EXECUTABLE
+SPEC the twin is a twin OF — same properties, different mechanism
+(`docs/2026-08-20_machine-twin-harness-design.md` §1).
 
 ## Run
 

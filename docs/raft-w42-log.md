@@ -165,7 +165,7 @@ item-1 commit — see the exit-state section for the verbatim result lines.
 
 ---
 
-## Item 2 — the n-node twin (`tools/raftsubject/twin-main.go`)
+## Item 2 — the n-node twin (`tools/raftsubject/twin-lib.go` + the twin mains)
 
 **Landed.** The harness design §1-§4 realized as a probe-main-style Go
 program run under BOTH oracles by `runprobe.py`: n RawNodes, no
@@ -313,13 +313,18 @@ proved interpreter-slow):
   slices (25 in the main slice incl. lagging_commit 17/17 and prevote
   16/16 end-to-end; replicate_pause 32/32 end-to-end).
   **probe_and_replicate's machine run is the one OUTSTANDING verdict at
-  the item-3 commit**: its single-process interpreter run needs upward
-  of an hour and was twice killed by the session environment's
-  background-task lifetime (~1 h) before completing — an environment
-  bound, not a machine stop; a detached run is in flight and its
-  verdict is recorded in the exit-state section as measured (command:
+  arc close**: its single-process interpreter run was twice killed by
+  the session environment's ~1 h background-task lifetime (an
+  environment bound, not a machine stop), and the setsid-DETACHED rerun
+  was still executing past the 2 h mark when the arc closed — left
+  running, writing its verdict to `artifacts/w42/tracereplay-par.txt`
+  on completion (command to reproduce:
   `tools/raftsubject/tracereplay.py --traces probe_and_replicate
-  --fuel 20000000000`).
+  --fuel 20000000000`). Its GO-side measurement is complete (57/57
+  ok-tier); the machine byte-agreement verdict is OWED — read the
+  artifact before quoting a 27/27, and if it ever reads DISAGREE or
+  fuel-out, that is W4.4's first diagnosis item, not a number to
+  average away.
 - **6 traces replay END TO END**: campaign (4), lagging_commit (17),
   prevote (16), probe_and_replicate (74), replicate_pause (32),
   single_node (4) — the design §7 predicted 7; the seventh
@@ -387,7 +392,7 @@ owner should land, with the witness already built here)
 
 | owed row | witness here |
 |---|---|
-| the twin as a corpus family (multipkg raft-shaped case: n=3 elect + propose + commit, schedule-determined trace, PASS under both oracles) — §8 W4.2's "the corpus gains its first raft-shaped case" | `twin-main.go` + artifacts/w42/twin-runprobe.txt |
+| the twin as a corpus family (multipkg raft-shaped case: n=3 elect + propose + commit, schedule-determined trace, PASS under both oracles) — §8 W4.2's "the corpus gains its first raft-shaped case" | `twin-lib.go` + `artifacts/w42/twin-*.txt` |
 | the perturbation schedules as corpus rows (drainRev / picks / starve — S1-S3 under reordering + starvation) | same |
 | the logger-teeth pair as corpus rows (fail-closed interface-stub dispatch: uninstalled -> visible stop; installed -> green) | logger-teeth / logger-installed probe mains |
 | a membership row for the choice-stream-driven twin (events drawn from `∀ch` over the enabled set — the envelope form of the schedule input) | mechanism in twin-main.go; the draw plumbing is new work |
@@ -442,9 +447,23 @@ every gate PASS carries the two visible NOT-RUN notes the hatch owes).
 - item 1 `5eaa9d1b` — the logger swap + re-owed census (gate PASS).
 - item 2 `8fe49dca` — the twin, both oracles agree on every schedule
   (gate PASS).
-- item 3 — the trace ok-tier instrument + measurements (gate PASS at
-  its commit; verdicts in this log's item 3).
-- item 4 rides in this log (the handoff sections above).
+- item 3 `fd6efc7d` — the trace ok-tier instrument + measurements (gate
+  PASS at its commit; verdicts in this log's item 3).
+- item 4 rides in this log (the handoff sections above) + the final
+  record commit.
+
+**Gate record, verbatim result lines** (each run's full transcript in
+`artifacts/w42/ci-item2.txt` / `ci-item3.txt` / `ci-final.txt`; item 1's
+ran identically before its commit):
+
+```
+note negative baseline diff NOT RUN (no record; explicitly allowed here)
+note differential baseline diff NOT RUN (no record; explicitly allowed here)
+RESULT: PASS
+```
+
+— all four runs (items 1, 2, 3 and the final working-tree state this
+record commit lands) PASS with exactly those two hatch notes.
 
 DELIVERABLE STATUS against the lane charter: (1) DONE — swap landed,
 delta re-measured, census re-run WITH the checkable dead-DYNAMICALLY
@@ -452,6 +471,7 @@ argument (probe pair); (2) DONE — n=3 election/proposal/commit + the
 perturbation matrix, go-vs-machine agreement on every schedule, 111035
 reproduced, zero disagreements to diagnose; (3) DONE as measurement —
 268/558 blocks replayed, 178/178 ok-tier agreement, machine byte-level
-agreement on every completed replay (probe_and_replicate's long-fuel
-verdict recorded in item 3); (4) DONE — the handoff sections above.
-Owed corpus rows: item 4's table — NONE landed here, by charter.
+agreement on all 26 completed replays; probe_and_replicate's machine
+verdict OWED (in flight past 2 h at arc close — item 3's note has the
+command and the reading discipline); (4) DONE — the handoff sections
+above. Owed corpus rows: item 4's table — NONE landed here, by charter.
