@@ -142,10 +142,6 @@ private def optType (path : String) (obj : StrictJson.Obj) : LowerM (Option Ty) 
   | some t => pure (some (← decodeTy s!"{path}.type" t))
   | none => pure none
 
-private def intKindOfOptType : Option Ty → IntKind
-  | some (.int k) => k
-  | _ => .int
-
 partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
   let obj ← StrictJson.obj path json
   let tag ← StrictJson.string s!"{path}.expr" (← StrictJson.field path obj "expr")
@@ -160,7 +156,17 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
   | "int" =>
       let s ← StrictJson.string s!"{path}.value" (← StrictJson.field path obj "value")
       match s.toInt? with
-      | some v => pure (.intLit v (intKindOfOptType (← optType path obj)))
+      | some v =>
+          -- FAIL CLOSED on a missing or non-integer `type` (census §10
+          -- H-b / J-1: the old `intKindOfOptType`'s `| _ => .int`
+          -- default silently widened an untyped literal to 64-bit —
+          -- BUG-042/043's defect class, already hardened at its two
+          -- siblings, incdec and range-over-int; this arm is the third
+          -- and last).
+          match (← optType path obj) with
+          | some (.int k) => pure (.intLit v k)
+          | some other => fail s!"integer literal at {path} typed non-integer ({repr other})"
+          | none => fail s!"integer literal at {path} carries no type"
       | none => fail s!"invalid integer literal {s} at {path}"
   | "float" =>
       -- The EXACT RATIONAL of a float-typed constant (floats design note

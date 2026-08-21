@@ -118,9 +118,16 @@ raft-w42 lane runs concurrently and owns `raftsubject/` +
 - Fix: attach `type` at 3727 (emitter) and make the decoder's int arm
   fail closed on a missing or non-integer `type` — the exact hardening
   its two siblings (incdec `:572-576`, range-over-int `:910-918`)
-  already got for BUG-042/043's class. Predicted flips: ZERO; the full
-  run is the confirmation, and the census J-1/H-b rows get updated to
-  "hardened" in the same commit.
+  already got for BUG-042/043's class; `intKindOfOptType` deleted
+  outright (its only consumer was the int arm — J-7's warning about
+  re-armable defaults sitting next to hardened code applies one level
+  up). Predicted flips: ZERO; static sweep backs the prediction: no
+  handwritten wire fixtures with int nodes exist anywhere
+  (Tests/tools/Corpus/proofs/scripts/compat grep), the frontend is the
+  only producer, and 3727 was its only typeless site. Range family
+  post-fix: 27 PASS / 12 FAIL, every FAIL a pre-existing
+  frontend-export gap. Census J-1/J-24/§10-H-b updated to "hardened";
+  no BUG entry (nothing observable was ever wrong — closed as latent).
 
 ## Item 4 — the two doc drifts
 

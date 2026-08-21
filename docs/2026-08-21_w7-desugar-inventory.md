@@ -2613,17 +2613,18 @@ X".
 
 ### 9.1 Silent coercion and silent defaulting — the dangerous class
 
-**J-1 · ⚠ integer-literal kind defaults to `int` — M** ·
-`NativeToIR.lean:137-139` (`| _ => .int`), consumed `:155`.
-`intKindOfOptType` maps **both** "no `type` key" and "type present but not
-`Ty.int`" to `IntKind.int`. Obligation: every `{"expr":"int"}` carries a `type`
-decoding to `Ty.int k` with `k` the literal's underlying integer kind.
-**SILENT COERCION** — a `uint8` literal arriving typeless becomes 64-bit and
-arithmetic wraps at the wrong width. This is BUG-042/BUG-043's defect class,
-already fixed with explicit fail-closed arms for `incdec` (`:572-576`) and
-range-over-int (`:910-918`) — **`Expr.intLit` still has the default**, and it is
-reachable (`emit.go:6439` attaches `"type"` only if the underlying is a basic
-integer; `emit.go:3727` emits a typeless int node unconditionally). §10 hole H-b.
+**J-1 · integer-literal kind is REQUIRED — S (⚠ retired: HARDENED
+2026-08-21, holes arc)** · the decoder's `"int"` arm fails closed on a
+missing or non-integer `type` (`intKindOfOptType` and its `| _ => .int`
+default are DELETED — the exact hardening its two siblings got for
+BUG-042/BUG-043: incdec and range-over-int). The obligation the old row
+stated — every `{"expr":"int"}` carries a `type` decoding to `Ty.int k` —
+is now boundary-discharged: a violation is a loud decode `fail`, never a
+silent 64-bit widening. Emitter side closed in the same change:
+`emit.go:3727` (the range-over-`*[N]T` index-only collection, the one
+emitter site shipping a typeless int) now attaches the type;
+`emit.go:6439` already attached it for every basic-integer constant.
+Predicted and confirmed flips from the hardening: ZERO (full-run clean).
 
 **J-2 · blank/discard temp type defaults to `int` — S** ·
 `NativeToIR.lean:1039`, `:1066`; feeders `:1032`, `:1057`.
@@ -2695,7 +2696,7 @@ feature `F`". None fails closed.
 | J-21 | `range`.`arrType` / `range`.`len` | `:925-930` | not an array-pointer range / dynamic len | changes whether the element read derefs (C-8) |
 | J-22 | expr-stmt `.resultTypes` | `:600-609` | targetless call | **deliberately** fail-open-to-old-lowering; a value-returning callee then goes stuck |
 | J-23 | `var`.`init` | `:1146-1148` | zero value | S |
-| J-24 | expr `.type` (`optType`) | `:132-135` | `none` | feeds J-1/J-3; **float and incdec fail closed** (`:167`, `:575`), int and nil do not |
+| J-24 | expr `.type` (`optType`) | `:132-135` | `none` | feeds J-1/J-3; **float, incdec AND int fail closed** (int hardened 2026-08-21, holes arc — J-1), nil does not |
 | J-25 | `func`/`method`.`unsupported` | `:1275`, `:1321` | a real declaration | a dropped marker makes a quarantined decl look real |
 | J-26 | `method`.`interface` / `.wrapper` | `:1332-1334`, `:1315-1317` | `false` | strict when present (delta-review R2); E-18's recover transparency rides `wrapper` |
 | J-27 | `program`.`globals` | `:1362-1364` | zero globals — and `nGlobals = 0` disarms J-28's bound check into "reject every `globaladdr`" | fails **safe** (over-rejects) |
@@ -2857,7 +2858,7 @@ that is not in the repo.
 | hole | verdict | witness / why not | owed |
 |---|---|---|---|
 | **H-a** slice default-high double emission | **FIXED 2026-08-21 (holes arc, BUG-066)** — was: verified live silent wrong answer, status `ok` | gc 1 call, machine 2, on both a slice base and a pointer-to-array base; explicit-high control agrees at 1 | ~~BUG entry + corpus row + fix~~ all landed; see B-18 |
-| **H-b** `Expr.intLit`'s `\| _ => .int` | **not probed this round** — reachability argument (J-1) unchallenged, no witness constructed | reachability is by code reading (`emit.go:6439`, `:3727`), not execution | reduce to a witness, then fix (Tier 0) |
+| **H-b** `Expr.intLit`'s `\| _ => .int` | **HARDENED 2026-08-21 (holes arc)** — never witnessed live (the reachability argument stood unrefuted; latent, not a confirmed wrong answer) | the arm now fails closed and `emit.go:3727` attaches the type; zero flips predicted and confirmed | ~~reduce to a witness, then fix~~ closed without a witness — fixed AS latent; see J-1 |
 | **H-c** two missing decoder checks | **not a defect — a proposal**, restated as such | duplicate-TypeId sweep (J-42) and literal index bounds (J-33); J-33's *spurious panic* direction re-read and stands | land both (Tier 0) |
 | **H-d** wire func types drop the variadic bit | **FIXED 2026-08-21 (holes arc, BUG-067)** — was: verified live silent wrong answer, status `ok`; the first pass's "not confirmed observable" is **REFUTED** | comma-ok assert on a boxed variadic func: gc `false true`, machine `true true` — no reflection needed | ~~BUG entry + corpus row + `Ty` carries variadic~~ all landed; see E-7 |
 | **H-e** composite-literal element order | **probed — NOT a divergence on the probed shape**; remains an uncensused latitude point | gc runs the sibling call before the non-call element's panic, the same member the ANF hoist realizes (machine 1 = gc 1) | census E12's follow-on, then a membership statement (B-19) |
@@ -2895,14 +2896,17 @@ certificate in §11.
     requires an addressable operand, and a call result is not addressable — so
     the pointer-returning `pf().arr[2:]` is the form that actually witnesses
     the hole (auditor's probe; re-verified here).
-- **H-b · `Expr.intLit`'s `| _ => .int` default** (J-1). A silent coercion
-  whose two siblings (`incdec`, range-over-int) are already fail-closed for
-  exactly this reason. Likely a small **bug fix before a proof**, not a proof
-  obligation. **Not probed this round**: the reachability claim rests on code
-  reading (`emit.go:6439` attaches `"type"` only when the underlying is a basic
-  integer; `emit.go:3727` emits a typeless int node unconditionally), and it is
-  unchallenged but unwitnessed — say "unwitnessed", not "live", until someone
-  runs it.
+- **H-b · `Expr.intLit`'s `| _ => .int` default** (J-1) — **HARDENED
+  2026-08-21 (holes arc), closed AS latent, no witness ever constructed.**
+  Was: a silent coercion whose two siblings (`incdec`, range-over-int) are
+  already fail-closed for exactly this reason, unchallenged but unwitnessed
+  by execution. The hardening deleted the default (the decoder's int arm
+  fails closed on missing/non-integer `type`) and closed the one emitter
+  site shipping a typeless int (`emit.go:3727`, the range-over-`*[N]T`
+  index-only collection) in the same change; predicted flips zero, full run
+  confirmed zero. No BUG entry — nothing observable was ever wrong, which
+  is exactly what "latent" claimed; the fix removes the arm a future edit
+  could have re-armed (J-7's warning).
 - **H-c · two two-line decoder checks that would convert unchecked obligations
   into free lemmas**: a duplicate-TypeId sweep (J-42) and a
   `0 ≤ index < length` bound on literal element indices (J-33, which produces a

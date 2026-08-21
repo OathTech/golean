@@ -3724,7 +3724,11 @@ func (e *emitter) emitRange(rs *ast.RangeStmt) (any, error) {
 			if _, err := e.hoist(pw, e.goTypeOf(rs.X)); err != nil {
 				return nil, err
 			}
-			coll = map[string]any{"expr": "int", "value": itoa(int(arr.Len()))}
+			// `type` is REQUIRED on every wire int node (census H-b:
+			// this was the one emitter site shipping a typeless int,
+			// live only because the decoder's `| _ => .int` default
+			// silently absorbed it — both hardened together).
+			coll = map[string]any{"expr": "int", "value": itoa(int(arr.Len())), "type": intType("int")}
 			kindFields["kind"] = "int"
 			// Ranging an array (through the pointer) indexes with int
 			// (spec §For statements) — the static-length int desugar
