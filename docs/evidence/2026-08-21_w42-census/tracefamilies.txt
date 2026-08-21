@@ -1,0 +1,36 @@
+# tracefamilies.py — /home/dev/projects/golean/.claude/worktrees/raft-w42/deps/raft/testdata
+# 28 trace files, 558 blocks, 249 expect literal ok, 309 rendered
+
+| blocks (command-anchored) | blocks (content-anchored) | family |
+|---|---|---|
+| 128 | 90 | ready dumps |
+| 58 | 58 | pure log lines |
+| 40 | 11 | message describe lines |
+| 30 | 30 | raft-state tables |
+| 20 | 87 | other/mixed |
+| 18 | 18 | status tables |
+| 15 | 15 | raft-log dumps |
+
+TOTAL rendered-tier blocks (command-anchored): 309
+TOTAL rendered-tier blocks (content-anchored): 309
+
+rendered blocks by COMMAND (the schedulable unit for W4.3):
+  stabilize                     78   -> ready dumps
+  process-ready                 50   -> ready dumps
+  deliver-msgs                  40   -> message describe lines
+  raft-state                    30   -> raft-state tables
+  campaign                      29   -> pure log lines
+  status                        18   -> status tables
+  add-nodes                     17   -> pure log lines
+  raft-log                      15   -> raft-log dumps
+  process-append-thread         12   -> other/mixed
+  forget-leader                  6   -> pure log lines
+  process-apply-thread           4   -> other/mixed
+  propose                        2   -> pure log lines
+  propose-conf-change            2   -> other/mixed
+  tick-election                  1   -> pure log lines
+  transfer-leadership            1   -> pure log lines
+  tick-heartbeat                 1   -> pure log lines
+  report-unreachable             1   -> pure log lines
+  compact                        1   -> other/mixed
+  send-snapshot                  1   -> other/mixed
