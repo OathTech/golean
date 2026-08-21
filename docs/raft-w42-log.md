@@ -224,7 +224,7 @@ mechanism.
   of the PROPERTIES, not of a config; recorded, not hidden.
 
 **The schedules and what each witnesses** (full traces:
-artifacts/w42/twin-runprobe.txt): `elect` (baseline election; commits
+`artifacts/w42/twin-{single,elect,perturb,ticks}.txt`): `elect` (baseline election; commits
 nothing by design, so its floor line reads floor=0 honestly — an
 election-only schedule has no committed command), `elect-propose-commit`
 (a dropped-then-retried proposal — the drop-and-retry client, §3 —
@@ -297,20 +297,44 @@ named deferral), transfer-leadership/forget-leader/report-unreachable
 (tier-2 vocabulary), add-nodes with async-storage-writes/content/
 read-only args.
 
-**The go-oracle numbers** (full report: artifacts/w42/tracereplay
-report artifacts):
+**The numbers** (report artifacts:
+`artifacts/w42/tracereplay-{main,replicate_pause,par}.txt`; the machine
+tier ran as three parallel slices after the whole-suite single process
+proved interpreter-slow):
 
 - 28 traces, **558 blocks**, of which **249 expect literal `ok`**.
 - **268 blocks (48.0%) inside supported prefixes**; **178 ok-expectation
   blocks** among them.
 - **OK-TIER: 178/178 agree** — the driver said ok exactly where upstream
-  expects ok, on every replayed block.
+  expects ok, on every replayed block (121/121 across the 27 smaller
+  traces + 57/57 in probe_and_replicate).
+- **MACHINE TIER: every replayed trace that completed its machine run
+  agrees BYTE-FOR-BYTE with go run** — 26/26 across the two smaller
+  slices (25 in the main slice incl. lagging_commit 17/17 and prevote
+  16/16 end-to-end; replicate_pause 32/32 end-to-end).
+  **probe_and_replicate's machine run is the one OUTSTANDING verdict at
+  the item-3 commit**: its single-process interpreter run needs upward
+  of an hour and was twice killed by the session environment's
+  background-task lifetime (~1 h) before completing — an environment
+  bound, not a machine stop; a detached run is in flight and its
+  verdict is recorded in the exit-state section as measured (command:
+  `tools/raftsubject/tracereplay.py --traces probe_and_replicate
+  --fuel 20000000000`).
 - **6 traces replay END TO END**: campaign (4), lagging_commit (17),
   prevote (16), probe_and_replicate (74), replicate_pause (32),
   single_node (4) — the design §7 predicted 7; the seventh
   (checkquorum) stops at `tick-election`, which is jitter-EXCLUDED here
   by design, so 6 is the honest count for this tier.
-- Machine-tier verdicts: recorded below as measured.
+- **First-divergence report: EMPTY.** No ok-tier disagreement and no
+  machine-vs-go trace divergence occurred anywhere; there was nothing to
+  diagnose. The stops in the per-trace table are all
+  unsupported-COMMAND stops (the by-design list above), not behavioral
+  divergences.
+- The stopper census over the 22 partial traces: `propose-conf-change`
+  bodies ("multi-line command input") 11, compact/send-snapshot 3,
+  forget-leader 2, async-storage-writes 2, tick-election 1,
+  set-randomized-election-timeout 1, report-unreachable 1,
+  add-nodes read-only 1 — each named per trace in the report artifact.
 
 ---
 
@@ -397,8 +421,37 @@ owner should land, with the witness already built here)
   choice) once the trace tier no longer anchors config to upstream's
   stub? Both are legitimate; today the trace-replay compat argument
   wins.
-- The machine's twin run is ~2 orders slower than the trace replays
-  (minutes vs seconds); if the schedule battery grows, either split the
-  probe functions per schedule or profile the interpreter's string-append
-  path (the twin's trace concatenation is the obvious suspect). Not
-  blocking at current sizes.
+- **Interpreter wall-time is the practical bound on this instrument
+  family**, measured: small traces are seconds, replicate_pause (32
+  blocks) ~6 machine-minutes, the twin's elect/perturb groups ~20-24
+  minutes each, probe_and_replicate (74 blocks, 7 nodes) the better
+  part of an hour. Splitting into parallel bounded runs is the working
+  answer; an interpreter-performance pass (or a compiled evaluation
+  path) is the real one if this family is to run in any gate. Nothing
+  here lands in a gate today.
+
+## W4.2 exit state
+
+Branch `raft-w42` off `main` @ `4ef05649`, one commit per item, each
+landed with its gate run recorded in `artifacts/w42/ci-*.txt` (the
+charter's per-landing `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G
+scripts/ci` — legitimate throughout: no commit touches runtime code,
+`Corpus/`, `baselines/`, GoCore, `tools/nativefrontend/` or `scripts/`;
+every gate PASS carries the two visible NOT-RUN notes the hatch owes).
+
+- item 1 `5eaa9d1b` — the logger swap + re-owed census (gate PASS).
+- item 2 `8fe49dca` — the twin, both oracles agree on every schedule
+  (gate PASS).
+- item 3 — the trace ok-tier instrument + measurements (gate PASS at
+  its commit; verdicts in this log's item 3).
+- item 4 rides in this log (the handoff sections above).
+
+DELIVERABLE STATUS against the lane charter: (1) DONE — swap landed,
+delta re-measured, census re-run WITH the checkable dead-DYNAMICALLY
+argument (probe pair); (2) DONE — n=3 election/proposal/commit + the
+perturbation matrix, go-vs-machine agreement on every schedule, 111035
+reproduced, zero disagreements to diagnose; (3) DONE as measurement —
+268/558 blocks replayed, 178/178 ok-tier agreement, machine byte-level
+agreement on every completed replay (probe_and_replicate's long-fuel
+verdict recorded in item 3); (4) DONE — the handoff sections above.
+Owed corpus rows: item 4's table — NONE landed here, by charter.
