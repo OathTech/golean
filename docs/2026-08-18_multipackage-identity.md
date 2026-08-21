@@ -343,8 +343,11 @@ another platform or a move of the Go pin re-derives the table;
   2026-08-16) is deliberately NOT fixed or widened here.
 - **Stdlib shims** (`E5`) are injected PER UNIT. (Superseded text: this
   section originally said shims "stay MAIN-PACKAGE-ONLY" — raft W4.0
-  widened injection to every source unit, `load.go` `newSourcePkg`'s
-  `injectStdlibShims` call before that unit's type-check, because
+  widened injection to every source unit, `load.go` `parseLocal`'s
+  (`:187`) `injectStdlibShims` call at `:212`, before that unit's
+  type-check (the correction of 2026-08-21 named a function
+  `newSourcePkg` that does not exist — `sourcePkg` is the TYPE
+  `parseLocal` returns; re-anchored at the audit fix round), because
   raft's `errors.New` sentinels live in non-main units. Corrected
   2026-08-21, holes arc — the census's G-35 row and its §10 drift note
   flagged the stale claim.) Reserved-name collisions in ANY unit

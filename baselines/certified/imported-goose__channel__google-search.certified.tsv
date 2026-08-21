@@ -11,11 +11,33 @@
 #   only, the 2026-08-10 methodSets precedent's exact class. The fresh
 #   GOLEAN_SLOW=1 dedup enumeration reproduced the set AND the graph
 #   bit-for-bit: the same six permutation members, nodes=6193933
-#   edges=6565663 dedupHits=371731, certified=checkCert. (The
-#   enum-stats `width=` figure now reports 4 where the previous line
-#   said 16 — a report-shape difference only; every graph count is
-#   identical, and the B-INFO params-note already records that width
-#   does not bound the dedup claim.)
+#   edges=6565663 dedupHits=371731, certified=checkCert.
+# width= NOTE — CORRECTED 2026-08-21 at the audit fix round (F4). The
+#   text that stood here called the `width=` move from 16 to 4 "a
+#   report-shape difference only". That was WRONG, and it explained away
+#   the one thing worth reading. `width=` in the enum-stats line is the
+#   enumerator's ECHO of the width it ran under. The PREVIOUS record
+#   (the POR engine=dedup certification, `802a32de`, carried unchanged
+#   through `9f307641`) declared `params: width=4` and echoed
+#   `width=16` — so its enum-stats line was NOT produced by a run at
+#   its own declared params. Every one of the seven pre-arc versions of
+#   this record declares `width=4` in the params column; only those two
+#   echo 16. This arc's re-certification RESOLVED the inconsistency:
+#   the fresh run declares 4, echoes 4, and reproduces the previous
+#   record's set AND graph counts bit-for-bit (re-verified here), so the
+#   record is now self-consistent and its content is unchanged.
+#   OPEN QUESTION, recorded honestly as moot-but-noted: what the OLD
+#   record was actually certified under cannot be recovered from the
+#   file — the echo says 16, the params say 4, and only one of them can
+#   be what ran. It is MOOT because the current record was produced by a
+#   run whose declared and echoed params agree and which reproduced the
+#   graph exactly; it is NOTED because a params/echo mismatch is
+#   precisely the shape a stale or mis-parameterized record takes, and
+#   nothing in the gate compared those two fields at the time. (Under
+#   engine=dedup the B-INFO note below is still right that `width=`
+#   does not BOUND the claim — but "does not bound the claim" is not
+#   "may disagree with the params it was run under", which is what had
+#   happened.)
 # previously: certified: 2026-08-21  commit: w32-por engine=dedup re-certification (atop 4f3036f5)
 # re-certification reason (POR slice, docs/2026-08-21_w32-por-design.md):
 #   the row moves to engine=dedup — the state-graph dedup engine + THE

@@ -483,7 +483,10 @@ location). Map element as target outside a single assignment fails closed
 (5839–5842) — maps are unaddressable and this would otherwise die as a stuck.
 
 **B-18 · slice expression, including 3-index — M — K1** ·
-`emit.go:4516`; base 4520–4528; default high 4535–4567; max 4569–4575.
+`emit.go:4520`; base 4521–4532; default high 4539–4571; max 4573–4579
+(anchors re-shifted to the POST-fix file, audit fix round 2026-08-21 —
+the pre-fix numbers this row first carried were `:4516`/4520–4528/
+4535–4567/4569–4575).
 Array bases slice through their address (`a[:] ≡ (&a)[:]`, so slicing aliases
 the array cell). Default `high` (**BUG-066 FIXED 2026-08-21, holes arc** —
 this row's ⚠⚠ hole H-a: the old arm re-emitted the base as the `builtin-len`
@@ -497,6 +500,30 @@ low-only sibling, explicit-high green control),
 `strings/slice-eval-order-elided-high`, plus the pre-existing `slices/*`,
 `strings/slice-eval-order`, `pointers/pointer-array-full-slice` (none of which
 covered an effectful base, which is how the hole survived).
+- *Four more base shapes pinned in the audit fix round* (F2), each a live
+  re-evaluation nothing covered: `f()[1:][1:]` — the nested case, where the
+  inner slice expression IS the outer's base and the call therefore ran
+  **four** times (gc 133, pre-fix machine 433) — a map-index base with an
+  effectful key (122/222), `pf()[1:]` on the pointer-reuse path (128/228),
+  and a conversion base `[]byte(f())[1:]` (131/231, outside BUG-047's
+  conversion guard). All green post-fix,
+  `slices/slice-elided-high-eval-once/{nested-slice-expr,
+  map-index-effectful-key,pointer-array-call-base,conversion-base}`.
+- ⚠ *The fix WIDENED one refusal* (F1), recorded because a movement is a
+  movement: for a NIL pointer-to-array with an elided high, `(*ap)[:]` and
+  `(*ap)[1:]` used to answer gc's recovered panic BY ACCIDENT — the
+  re-emitted operand inside the `builtin-len` dereferenced the nil pointer.
+  With one evaluation and a static default high nothing dereferences, and
+  the shape converges on B-33's documented `emitAddressOf` StarExpr-collapse
+  hole: an honest STUCK on the unmodeled slice-base nil arm, the same
+  message and the same class as the explicit-high sibling
+  `pointers/nil-array-ptr-slice/slice-expr-nil`. Fail-closed in both
+  directions — a right answer for the wrong reason became a visible
+  refusal, never a wrong answer.
+  `pointers/nil-array-ptr-slice-elided-high/*` (four reds at the sibling's
+  `coverage` disposition; two greens showing a nil pointer reached through a
+  FIELD selector still panics correctly, so the refusal is the slice-base
+  arm and nothing wider). BUG-066's entry carries the measurement.
 
 **B-19 · struct literal (keyed / positional) — M — K1+K2**
 - *Anchor*: `emit.go:5928`; pre-bind 5953–5974; declaration-order fill
@@ -613,15 +640,29 @@ previously a fail-open decoder rejection.
   `methods/pointer-receiver-{slice,array}-element`.
 
 **B-33 · receiver-position implicit `&*p` — M — K1** ·
-`emit.go:4684`; emission 4693–4698; rationale 4671–4683. For `(*p).M()` with a
+`emit.go:4705` (`receiverAddr`); emission 4714–4719; rationale 4692–4704
+(anchors re-shifted to the post-BUG-066 file, audit fix round 2026-08-21;
+the first pass wrote `:4684`/4693–4698/4671–4683). For `(*p).M()` with a
 pointer-receiver `M`, receiver evaluation panics iff `p` is nil, **at receiver
 time, touching no memory**. BUG-063; `methods/recv-implicit-addr-deref`.
 - *Notes*: **the sharpest store-order pin in the file.** The strict
   addr-of-deref is deliberately scoped HERE and NOT put in `emitAddressOf`'s
-  `StarExpr` arm (5773–5790), which keeps the plain collapse because its
-  consumers nil-check at their own spec points — five store-order pins
+  `StarExpr` arm (5794–5811, re-shifted with the rest), which keeps the plain
+  collapse because its consumers nil-check at their own spec points — five
+  store-order pins
   (`assign-order/target-check-vs-rhs/nil-deref-target` and friends) went red
   when it was moved there. Any certificate for B-33 must carry that scoping.
+- *The collapse's cost, now pinned on BOTH bound spellings* (audit fix round
+  2026-08-21, F1): the slice-base consumer is one of the arm's "nil-checks at
+  its own spec point" claims that **is not true yet** — it has no nil arm, so
+  `(*ap)[…]` with a nil `ap` goes honest-STUCK where gc panics. The
+  explicit-high spelling was already pinned (`slice-expr-nil`, 2026-08-19);
+  the elided-high spellings looked correct only because BUG-066's second
+  emission dereferenced the pointer, and joined the pin when that accident
+  was removed (`pointers/nil-array-ptr-slice-elided-high/*`, four reds at
+  `coverage`). Both spellings retire together when the slice-base path grows
+  its nil arm — and until then, a certificate for this arm must state the
+  slice-base consumer as an OBLIGATION, not a discharged premise.
 
 **B-34 · explicit `&*p` — S — K1** · `emit.go:6630`, 6647–6662. BUG-056;
 `spec-examples-decl/address-op-nil-indirection/*`,
@@ -2846,15 +2887,23 @@ Six things the census turned up that are **not** in `docs/BUGS.md`, the ledgers
 or the corpus. Each is exactly the class the audit doctrine says green gates
 structurally cannot see, which is the point of writing the census at all.
 
-**Status after the 2026-08-21 audit-fix round.** The first pass recorded all
-six as "leads, not confirmed defects — none was reduced to a witness program".
-That is no longer true of two of them: the pre-merge auditor reduced H-a and
-H-d to witnesses and this round re-ran them end to end. **Both are LIVE SILENT
-WRONG ANSWERS with status `ok`.** The table is the follow-on holes arc's
-charter input. The probes live in the auditor's scratch (`.tmp/audit/`,
-untracked), so each row below restates its witness — H-d's source verbatim,
-the others in enough detail to retype — and nothing here depends on a file
-that is not in the repo.
+**Status (updated 2026-08-21 at the holes arc's own audit fix round; the
+paragraph below used to be written in the present tense of the census's
+first pass and had gone stale by two fixes).** The first pass recorded all
+six as "leads, not confirmed defects — none was reduced to a witness
+program". That stopped being true of two of them: the pre-merge auditor
+reduced H-a and H-d to witnesses, the census round re-ran them end to end,
+and **both WERE live silent wrong answers with status `ok`.** They are now
+**FIXED** — H-a as BUG-066, H-d as BUG-067, both in the holes arc
+(`docs/holes-arc-log.md`), each with a BUG entry, guardrail rows red before
+the fix and green after, and a re-pinned baseline. H-b was hardened as
+latent in the same arc. The table's verdict column is the authority; the
+per-hole bullets below keep the pre-fix text and witnesses ON PURPOSE, each
+labelled as describing the pre-fix state, because that is the evidence the
+fixes were argued from. The probes live in the auditor's scratch
+(`.tmp/audit/`, untracked), so each row restates its witness — H-d's source
+verbatim, the others in enough detail to retype — and nothing here depends
+on a file that is not in the repo.
 
 | hole | verdict | witness / why not | owed |
 |---|---|---|---|
@@ -2865,14 +2914,14 @@ that is not in the repo.
 | **H-e** composite-literal element order | **probed — NOT a divergence on the probed shape**; remains an uncensused latitude point | gc runs the sibling call before the non-call element's panic, the same member the ANF hoist realizes (machine 1 = gc 1) | census E12's follow-on, then a membership statement (B-19) |
 | **H-f** struct tags dropped | **not probed** — genuine identity collapse in `Ty`, observability open | unlike H-d, the plausible witnesses go through reflection (globally refused) or anonymous non-empty structs (refused, `wire.go:508`) | try to construct a witness; if none exists, record as an argued-unobservable narrowing rather than leaving it a lead |
 
-**Both confirmed holes PREDATE this branch** — they were found *by* the census,
-not introduced by it: H-a's second emission dates to `a18ebd24` (2026-07-18,
-"Native frontend: make (slice/map) and slice expressions"), H-d's
+**Both confirmed holes PREDATED this branch** — they were found *by* the
+census, not introduced by it: H-a's second emission dated to `a18ebd24`
+(2026-07-18, "Native frontend: make (slice/map) and slice expressions"), H-d's
 variadic-dropping `funcType` to `7ce738bc` (2026-07-25, "W5 slice 1b: frontend
-lambda lifting"). Neither has a BUG id yet; **both owe one, and the follow-on
-holes arc heads with them** — they are the two rows in this file that are
-demonstrated wrong answers rather than proof obligations, so they outrank every
-certificate in §11.
+lambda lifting"). **Both now have BUG ids** — BUG-066 and BUG-067, landed by
+the follow-on holes arc, which headed with them exactly because they were the
+two rows in this file that were demonstrated wrong answers rather than proof
+obligations. Nothing in §11 was built on them in the meantime.
 
 - **H-a · slice-expression default-high emits the base TWICE — FIXED
   2026-08-21 (holes arc, BUG-066; anchors below describe the PRE-FIX code).**
@@ -3008,9 +3057,13 @@ are the desugars that have already bitten us: a certificate there retires a bug
 exists as red-then-green corpus rows.
 
 **Tier 0 — do before proving anything (cheap, shrinks the surface).**
-Land H-b and H-c (three small decoder/emitter changes). Each converts an
-unchecked emitter obligation into a boundary-discharged free lemma, and H-b is
-plausibly a live silent coercion.
+~~Land H-b and H-c~~ — **H-b LANDED 2026-08-21** (holes arc item 3: the
+decoder's int arm fails closed on a missing or non-integer `type` and
+`emit.go:3727` attaches one; the "plausibly a live silent coercion" reading
+was never witnessed and it closed AS latent, zero flips). **H-c remains the
+Tier-0 queue**: the duplicate-`TypeId` sweep (J-42) and the literal
+index-bounds check (J-33), two small decoder changes, each converting an
+unchecked emitter obligation into a boundary-discharged free lemma.
 
 Then a key-checking pass over the ~30 wire node shapes — **but not the one this
 section originally proposed** (restated 2026-08-21, audit-fix round; the old

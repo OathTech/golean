@@ -1,8 +1,104 @@
 # Holes arc log — the census's confirmed silent-wrong-answer holes
 
+## AUDIT FIX ROUND (2026-08-21, after the pre-merge audit of `4490bc24`)
+
+The audit ran on the branch's final state and returned four findings
+plus three `scripts/setup-deps` defects and a set of doc drifts. All are
+fixed on the branch; the exit state below is otherwise unchanged and
+still stands. What moved:
+
+- **F1 (MEDIUM) — the fix WIDENED a refusal, and nothing said so.**
+  Removing BUG-066's second base emission removed an ACCIDENT: for a nil
+  pointer-to-array with an elided high, `(*ap)[:]` and `(*ap)[1:]` used
+  to answer gc's recovered panic *because the re-emitted operand
+  dereferenced the nil pointer*. With one evaluation and a static
+  default high they converge on B-33's documented `emitAddressOf`
+  StarExpr-collapse hole — an honest STUCK, the same message and class
+  as the already-red explicit-high sibling. Measured through one
+  decoder (emitter `6146b217` vs `90b12339`): those two ok/100 → stuck;
+  `ap[:]` and the `*[0]int` form were ALREADY stuck. Landed: a corpus
+  row per variant class (`pointers/nil-array-ptr-slice-elided-high/*` —
+  4 reds at `lean-observation` + 2 greens proving the refusal is the
+  slice-base arm and not the field-selector path), the untriaged-ids row
+  extended with the four ids at `coverage` (ceiling 7 → 11), BUG-066's
+  widening paragraph, and the census B-18/B-33 cross-refs.
+  **Fail-closed in both directions — never a wrong answer.**
+- **F2 (LOW) — four newly-fixed classes were unpinned.** Now green rows
+  with gc-derived expectations: `f()[1:][1:]` (the nested case, the
+  sharpest: the inner slice expression is the outer's base, so the call
+  ran **four** times pre-fix — gc 133, machine 433), a map-index base
+  with an effectful key (122/222), `pf()[1:]` on the pointer-reuse path
+  (128/228), and a conversion base `[]byte(f())[1:]` (131/231).
+- **F3 (LOW-MEDIUM) — BUG-067's panic direction was unpinned.** The
+  comma-ok witness loses a boolean; the single-result form loses the
+  CONTROL PATH: pre-fix `_ = i.(func([]int) int)` on a boxed variadic
+  func returned normally at status `ok` where gc panics. The new row is
+  green post-fix and pins the `...E` render byte-exact against gc's
+  message, so dropping the bit from the MESSAGE (not just from
+  identity) is red too.
+- **F4 (LOW-MEDIUM) — the google-search record's width note was wrong.**
+  It called the `width=` move from 16 to 4 "a report-shape difference
+  only". It was not: the PREVIOUS record declared `params: width=4` and
+  echoed `width=16`, so its enum-stats line was not produced by a run at
+  its own declared params (all seven pre-arc versions declare 4; only
+  the two POR ones echo 16). This arc's re-certification RESOLVED the
+  inconsistency — declares 4, echoes 4, reproduces set and graph
+  bit-for-bit, re-verified here. The open question (what the old record
+  was certified under) is unrecoverable from the file and is recorded in
+  the record as moot-but-noted.
+- **`scripts/setup-deps`, three defects**, all fixed with the five
+  scratch-root probes re-run: (1) `--only` now scopes the Lake section
+  (pseudo-names `lake` / `lake:<pkg>`), so the documented replicate
+  command at `docs/spec-sources.md` works again; (2) the
+  `--from <deps dir>` spelling now resolves the repo root too, so the
+  Lake section uses the offline sibling instead of silently reaching the
+  network; (3) a POPULATED non-git package directory is REFUSED, never
+  `rm -rf`'d. Defect 3's hazard was demonstrated, not argued: the same
+  scratch state under the pre-fix script deleted a hand-populated
+  `proofs/.lake/packages/iris` — which is precisely the state the five
+  lanes' manual `cp -a` leaves behind, i.e. this script would have eaten
+  the very workaround it was written to retire.
+- **Doc drifts fixed**: census §10's status prose put in FIXED tense
+  (the paragraph still read as if H-a/H-d were live) and §11's Tier-0
+  queue (H-b has landed; H-c is what remains); census B-18 and B-33
+  anchors re-shifted to the post-fix file; this log's item-3 sweep
+  sentence corrected (below — it was false); BUG-067's `tyEq` →
+  `Ty.eqbFuel`; `docs/2026-08-18_multipackage-identity.md` §6's
+  `newSourcePkg` → `parseLocal` (`load.go:187`, the shim call at `:212`;
+  `newSourcePkg` does not exist — `sourcePkg` is the returned TYPE); the
+  baseline header now states its sort collation and why `6146b217`'s
+  diff moved ~90 unchanged lines.
+
+**Landing gate for the round: full `scripts/ci --diff` at the tip
+(`82df0451`) — RESULT: PASS.** Verbatim from the run: `eval tests (141
+ok)`, `differential run completed (exit 1; failing-set judged by
+baseline diff)`, `negative baseline diff (no regression)`, **`baseline
+diff FULL (2343/2343, no regression)`**; goldens, imported-goose R2
+pins, verbatim guard, statement-TCB closure, import-direction, core
+build, proofs + Audit gate all ok; the two report-only notes
+(proof-cost trend 0 modules over +25%, storm lint) unchanged. Predicted
+drift was the eleven new ids and nothing else — confirmed at re-pin
+time by the run's own drift report, every line reading "NEW id (not in
+baseline)". (Recorded by amending the docs commit that carries this
+line; the tree the gate ran on differs from the committed tree in this
+paragraph only.)
+
+**Bootstrap test for the setup-deps changes, re-run end to end:** a
+fresh detached worktree at this tip, `scripts/setup-deps --from
+/home/dev/projects/golean` with no other flags — five deps (goose
+`3be88bb`, perennial `43d4efa`, raft `56e3200`, iris-lean `3877dbe`, go
+`c19862e5f8`) and three Lake packages (iris `3877dbe`, batteries
+`fa08db58`, Qq `f463249`) all cloned OFFLINE, `setup-deps: complete` —
+then `GOLEAN_ALLOW_NO_DIFF=1 scripts/ci`: **PASS**, including the proofs
++ Audit gate, with NO manual `cp` anywhere and the two visible
+`NOT RUN (no record; explicitly allowed here)` notes the hatch owes.
+Scratch worktree pruned after.
+
 ## EXIT STATE (2026-08-21)
 
 All five charter items DONE; branch-complete, awaiting the audit ask.
+(The audit was then run and its findings fixed — see the section above;
+the merge sign-off is still the user's and still outstanding.)
 
 - Item 1 · BUG-066 (H-a, elided-high slice base double-eval): FIXED.
   Guardrails wave (both bugs' rows witnessed red) `6146b217`, fix
@@ -148,10 +244,18 @@ raft-w42 lane runs concurrently and owns `raftsubject/` +
   already got for BUG-042/043's class; `intKindOfOptType` deleted
   outright (its only consumer was the int arm — J-7's warning about
   re-armable defaults sitting next to hardened code applies one level
-  up). Predicted flips: ZERO; static sweep backs the prediction: no
-  handwritten wire fixtures with int nodes exist anywhere
-  (Tests/tools/Corpus/proofs/scripts/compat grep), the frontend is the
-  only producer, and 3727 was its only typeless site. Range family
+  up). Predicted flips: ZERO. **CORRECTION (audit fix round
+  2026-08-21):** the sentence that stood here — "no handwritten wire
+  fixtures with int nodes exist anywhere" — was FALSE, and the sweep
+  behind it was reported wrong. One handwritten fixture exists,
+  `compat/gobra/testdata/sum/wire.json`, and it carries **6 int-kind
+  nodes** (and 0 func-kind TYPE nodes, the BUG-067 sweep's question).
+  The CONCLUSION survives, and for a better reason than the false one:
+  all 6 already carry `type`, so the hardened int arm accepts them
+  unchanged — the prediction was right, the evidence for it was not.
+  What the corrected sweep says: the frontend is the only wire producer
+  at scale, `3727` was its only typeless int site, and the single
+  handwritten fixture is typed throughout. Range family
   post-fix: 27 PASS / 12 FAIL, every FAIL a pre-existing
   frontend-export gap. Census J-1/J-24/§10-H-b updated to "hardened";
   no BUG entry (nothing observable was ever wrong — closed as latent).
