@@ -22,12 +22,17 @@ can re-derive from tracked material is not a record.
 
 `sweep-pre.txt` needs the PRE-swap subject tree — `raftsubject/` with the
 D-5 no-op `logger.go` overlay in place of the verbatim upstream file, as
-it stood before W4.2 item 1. Reconstruct it by checking out
-`raftsubject/` at `4ef05649` (the branch point) and pointing the sweep at
-it:
+it stood before W4.2 item 1. That tree is exactly `raftsubject/` at the
+parent of the item-1 commit (verified file-for-file; the only difference
+from the scratch copy the arc swept is `README.md`, which `sweep.py`
+ignores):
 
-    git worktree add <tmp> 4ef05649
-    tools/raftsubject/sweep.py --tree <tmp>/raftsubject --out <scratch>
+    git archive <item-1 commit>^ raftsubject | tar -x -C <scratch>
+    tools/raftsubject/sweep.py --tree <scratch>/raftsubject --out <out>
+
+Both reports were re-run after the branch was rebased onto `main`, against
+a frontend rebuilt from `main`'s `tools/nativefrontend`, and reproduce
+byte-for-byte apart from the header's frontend path.
 
 `tracefamilies.txt` needs only `deps/raft` (`scripts/setup-deps`):
 
