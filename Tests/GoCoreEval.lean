@@ -1,5 +1,12 @@
 import GoLean.GoCore
 import GoLean.CLI
+-- The UNTRUSTED dedup engine, explicitly: the certificate-mutation
+-- regression tests below manufacture a real certificate with it and
+-- then assert only about the verified checker. Tests are a CLI-side
+-- consumer, outside the engine-isolation clause's scope (core/proofs);
+-- the import is spelled out rather than inherited through CLI so that
+-- dependency is legible.
+import GoLean.EnumDedup
 import Tests.FloatVectors
 
 namespace Tests.GoCoreEval
@@ -2675,6 +2682,50 @@ def main : IO UInt32 := do
     (GoCore.Machine.renderPanicPayload dispNoRecord dispBox).isNone)
   passed := passed && (← expectTrue "MS: the same payload WITH the record renders main.T(7) (mutation sensitivity)"
     (GoCore.Machine.renderPanicPayload dispWithRecord dispBox == some "main.T(7)"))
+  -- THE DEDUP CERTIFIER'S REFUSALS (POR slice, audit fix 2026-08-21,
+  -- finding B-LOW): the slice landed `checkCert` with its fail-closed
+  -- behavior demonstrated ONCE, by hand, in a session probe — no
+  -- standing test. A certificate the checker wrongly ACCEPTS is the
+  -- whole trust surface of every `engine=dedup` row (the accepted
+  -- certificate's member set is what `checkCertM_slowObs` then says is
+  -- EQUAL to `SlowObs`), so the mutation refusals get a regression test
+  -- of their own here. Fixture: the smallest real pool that closes — a
+  -- 2-thread pool of default-taking selects, whose state graph is 13
+  -- nodes with a single member. The engine is the UNTRUSTED side and is
+  -- used only to MANUFACTURE the certificate; every assertion below is
+  -- about the checker.
+  let selCfg : GoCore.Machine.Config :=
+    .exec (.selectStmt #[] (some (.seqn #[]))) [] .stop
+  let dedupM0 : GoCore.Machine.MultiConfig := ⟨#[selCfg, selCfg], {}, 0⟩
+  let dedupR0 : GoCore.Machine.RaceState := {}
+  match GoLean.EnumDedup.buildCert [] dedupM0 dedupR0 100000 with
+  | .error e =>
+      passed := passed && (← expectTrue s!"DEDUP: engine builds the fixture certificate (got error: {e})" false)
+  | .ok (cert, _) =>
+    let accepts (c : GoCore.Machine.DedupCert) : Bool :=
+      GoCore.Machine.checkCert GoCore.Machine.dedupNodeEqb [] dedupM0 dedupR0 c
+    -- The positive control. Without it the four refusals below could all
+    -- be a checker that refuses everything.
+    passed := passed && (← expectTrue "DEDUP: the UNMUTATED certificate is ACCEPTED (13 nodes, 1 member — the positive control the refusals are measured against)"
+      (cert.nodes.size == 13 && cert.members.size == 1 && accepts cert))
+    -- M1: drop a member. Completeness direction — the graph still
+    -- reaches an observation the member list no longer claims.
+    passed := passed && (← expectTrue "DEDUP: M1 dropped member REFUSED (a reachable observation missing from the claimed set)"
+      (!accepts { cert with members := cert.members.pop }))
+    -- M2: redirect every successor hint to node 0. The checker re-runs
+    -- the REAL stepMulti per edge and compares against the hint, so a
+    -- lying hint cannot smuggle in a smaller graph.
+    passed := passed && (← expectTrue "DEDUP: M2 successor hints all redirected to node 0 REFUSED (hints are re-derived, never trusted)"
+      (!accepts { cert with succ := cert.succ.map (fun a => a.map (fun _ => 0)) }))
+    -- M3: drop the last node. The graph is no longer closed under the
+    -- real step relation.
+    passed := passed && (← expectTrue "DEDUP: M3 dropped node REFUSED (the state graph is no longer closed under stepMulti)"
+      (!accepts { cert with nodes := cert.nodes.pop }))
+    -- M5: fabricate a member with a bogus witness. Soundness direction —
+    -- the witness replay through the unmodified execProgLoop is what
+    -- makes a claimed member earn its place.
+    passed := passed && (← expectTrue "DEDUP: M5 fabricated member REFUSED (its witness does not replay to that observation)"
+      (!accepts { cert with members := cert.members.push (.panic "fabricated", [], 10) }))
   if passed then
     return 0
   else

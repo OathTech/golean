@@ -603,6 +603,24 @@ open Lean in
 #guard_msgs in #print axioms GoLean.GoCore.Machine.execProgLoop_ok_of_allStreamsOkPool
 /-- info: 'GoLean.GoCore.Machine.execProgLoop_mono' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.GoCore.Machine.execProgLoop_mono
+-- The POR slice's dedup certifier (design note
+-- `docs/2026-08-21_w32-por-design.md` §3/§4). `checkCertM_slowObs` is
+-- what every `engine=dedup` certified record now MEANS: an accepted
+-- certificate's member set is EQUAL to `SlowObs` — the ∃-fuel ∃-stream
+-- image of the unmodified `execProgLoop`. `checkCert_slowObs` is the
+-- `nodeEqb`-parametric form it instantiates, and `dedupNodeEqb_sound`
+-- is the soundness hypothesis that instantiation discharges; all three
+-- are pinned because the theorem REPLACES the DFS path's accountant /
+-- sentinel / alias-ladder guards on those rows (audit fix 2026-08-21,
+-- finding B-F1: the slice shipped its headline theorem with no axiom
+-- pin at all, so a `sorry` reintroduced anywhere under it would have
+-- been invisible to this gate).
+/-- info: 'GoLean.GoCore.Machine.checkCertM_slowObs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.checkCertM_slowObs
+/-- info: 'GoLean.GoCore.Machine.checkCert_slowObs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.checkCert_slowObs
+/-- info: 'GoLean.GoCore.Machine.dedupNodeEqb_sound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.dedupNodeEqb_sound
 -- The slice-6 fuel-independence pair (constructive): sub-bound
 -- truncation classification and checker fuel-monotonicity — what
 -- lifts every certificate-backed channel-bundle statement off its
