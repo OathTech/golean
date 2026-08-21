@@ -672,11 +672,21 @@ fi
 # core (GoLean/GoCore/**) and the proofs must never import it (only
 # the CLI may). This is the module's deletion test, mechanized; fail
 # closed if the engine file vanishes without this clause moving.
+# SCOPE, honest (audit fix 2026-08-21, finding B-F2): the scan is
+# DIRECT-import only — a `GoLean/*.lean` intermediary that imported the
+# engine and was itself imported by a scanned file would be missed.
+# Recorded, not fixed: the aggregators below are the realistic vector
+# and they ARE scanned; a transitive closure needs the olean graph.
+# The two proofs aggregators are listed EXPLICITLY: they are exempt
+# from the Specs clause above by design, which is exactly why they must
+# be in THIS scan (B-F2 — `proofs/GoLeanProofs.lean` and
+# `proofs/Audit.lean` are files, not inside the `proofs/GoLeanProofs/`
+# directory the find below walks, so they were invisible here).
 if [ ! -f GoLean/EnumDedup.lean ]; then
   echo "  dedup engine file MISSING: GoLean/EnumDedup.lean (deleted/renamed without re-pointing this clause?)" >&2
   dir_bad=1
 else
-  eng_files=$(find GoLean/GoCore proofs/GoLeanProofs -name '*.lean' -not -path '*/.lake/*'; echo GoLean/GoCore.lean)
+  eng_files=$(find GoLean/GoCore proofs/GoLeanProofs -name '*.lean' -not -path '*/.lake/*'; echo GoLean/GoCore.lean; echo proofs/GoLeanProofs.lean; echo proofs/Audit.lean)
   while IFS= read -r ef; do
     hits=$(grep -nE "${IMPORT_RE}GoLean\.EnumDedup([^A-Za-z].*)?\$" "$ef"); rc=$?
     if [ "$rc" -ge 2 ]; then
@@ -858,7 +868,14 @@ if [ "$evrc" -eq 0 ] && [ "$evbad" -eq 0 ]; then ok "eval tests ($evok ok)"; els
 # reported as partial and NEVER as a full certification — and if the recorded
 # run predates HEAD, that staleness is surfaced too.
 if [ "$RUN_DIFF" -eq 1 ]; then
-  step "re-run full native differential corpus (--diff)"
+  # Mode in the banner (audit fix 2026-08-21, finding A-INFO): --diff and
+  # --slow print otherwise-identical step lists, so a saved log could not
+  # be told apart after the fact. Say which one ran.
+  if [ "$RUN_SLOW" -eq 1 ]; then
+    step "re-run full native differential corpus (--slow: --diff + GOLEAN_SLOW=1 tier=slow re-certification)"
+  else
+    step "re-run full native differential corpus (--diff: tier=slow rows verified against their cached certified records)"
+  fi
   # Exit semantics of diff-coverage: 1 = some cases FAIL (expected — the corpus
   # deliberately outruns the tool; whether the failing SET is acceptable is the
   # baseline diff's job below), >=2 = the run itself broke (no cases, bad
