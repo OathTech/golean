@@ -37,10 +37,25 @@ REPO = os.path.dirname(os.path.dirname(HERE))
 SUBJECT_PKGS = ["quorum", "raftpb", "tracker", "proto", "confchange", "raft"]
 
 
+def decode_value(v):
+    """One observation value -> comparable text. Ints/bools arrive under
+    'value'; strings arrive as {'bytes': [...], 'tag': 'string'} (UTF-8
+    code units). Returns None on an unrecognized shape — the caller
+    fails loud, never compares a placeholder."""
+    if "value" in v:
+        return str(v["value"])
+    if v.get("tag") == "string" and isinstance(v.get("bytes"), list):
+        return bytes(v["bytes"]).decode("utf-8").strip()
+    return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--function", default="probeRawNode")
     ap.add_argument("--main", default="rawnode-probe-main.go")
+    ap.add_argument("--lib", action="append", default=[],
+                    help="additional package-main library source(s) copied "
+                         "beside the probe main (e.g. twin-lib.go)")
     ap.add_argument("--fuel", default="200000000")
     ap.add_argument("--expect-stop", default=None, metavar="SUBSTR",
                     help="NEGATIVE probe mode (W4.2 logger-teeth): PASS iff "
@@ -69,6 +84,8 @@ def main():
     for pkg in SUBJECT_PKGS:
         shutil.copytree(os.path.join(REPO, "raftsubject", pkg), os.path.join(prog, pkg))
     shutil.copy(os.path.join(HERE, args.main), os.path.join(prog, "main.go"))
+    for lib in args.lib:
+        shutil.copy(os.path.join(HERE, lib), os.path.join(prog, os.path.basename(lib)))
     gopath = os.path.join(out, "gopath")
     os.makedirs(os.path.join(gopath, "src"))
     for pkg in SUBJECT_PKGS:
@@ -78,7 +95,7 @@ def main():
     env["GOCACHE"] = os.path.join(REPO, "artifacts", "go-build-cache")
     env["GO111MODULE"] = "off"
     env["GOPATH"] = gopath
-    r = subprocess.run(["go", "run", "main.go"], cwd=prog, env=env,
+    r = subprocess.run(["go", "run", "."], cwd=prog, env=env,
                        capture_output=True, text=True)
     if args.expect_stop is not None:
         if r.returncode == 0:
@@ -129,7 +146,10 @@ def main():
     vals = obs.get("values", [])
     if len(vals) != 1:
         sys.exit("runprobe.py: unexpected observation shape: %s" % raw)
-    machine_verdict = str(vals[0].get("value"))
+    machine_verdict = decode_value(vals[0])
+    if machine_verdict is None:
+        sys.exit("runprobe.py: unreadable observation value (neither 'value' "
+                 "nor a string 'bytes' form): %s" % raw[:400])
     print("runprobe: machine %s -> %s" % (args.function, machine_verdict))
 
     if not args.keep:
