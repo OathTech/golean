@@ -1,2 +1,3 @@
 # id	subject	args	expected_status	expected_reason	features
 -	repanicSameValueAbort	-	panic	orig	panic,recover,defer
+forced-half	repanicSameValueForcedHalf	-	ok	-	panic,recover,defer,identity

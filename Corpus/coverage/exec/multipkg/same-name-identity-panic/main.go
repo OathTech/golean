@@ -22,3 +22,36 @@ func sameNameIdentityPanic() int {
 }
 
 func main() {}
+
+// W4.3 item 5: the R-1 forced-half row, as far as the machine allows.
+// The forced half here is: the failed assert PANICS, control flow
+// (recover catches it), and the run continues. The payload's KIND
+// (a runtime error value) is NOT yet in-language checkable under the
+// machine: asserting the recovered value to `error` refuses (the
+// runtime error type carries no MethodSetRecord — the BUG-009/BUG-053
+// fail-closed class), so the kind clause of the forced half is
+// RECORDED AS BLOCKED on that semantic-core surface, not silently
+// skipped. The TEXT half's two members are recorded in this file for
+// the day the split completes:
+//   gc:  interface conversion: interface {} is inner.T, not inner.T
+//        (types from different packages)
+//   ours: the path-qualified form over red/inner.T / blue/inner.T
+// (the machine's abort rendering — the differential red above IS the
+// member disagreement, kept red until the machine can carry the
+// quotient).
+func sameNameForcedHalf() string {
+	out := ""
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				out = "panicked-and-recovered"
+				return
+			}
+			out = "no-panic"
+		}()
+		var a any = ri.T{Tag: 1}
+		v := a.(bi.T)
+		_ = v
+	}()
+	return out
+}

@@ -376,6 +376,58 @@ against what exists, row by row:
 | ok-tier trace replays as corpus rows | **DISPOSED as instrument-covered (JC-33)**: the trace differential is a standing instrument (`tracereplay.py`, all three channels) whose per-trace machine runs cost interpreter-minutes-to-hours — the same wall-time bound that keeps it out of the gate keeps it out of the corpus (a corpus row would either vendor the subject tree or time out). The instrument, not a corpus duplicate, is the record; gate inclusion re-opens if an interpreter-performance pass lands (the W4.2 open question, unchanged). |
 | the D-12 refusal tripwire | **LANDED**: `init/quarantined-var-writer` — the raftsubject logger.go initializer shape VERBATIM (`&T{F: log.New(os.Stderr, ...)}`), red at frontend-export by design; a future widening that silently admitted the three-axis shape flips it PASS, which is the alarm. (The related F1-widening rows `init/quarantined-var-{impure,syscall,...}` landed in the holes arc and stand — cross-checked; this row adds the WRITER-typed instance H-20's ledger entry names.) |
 
+Landing gate: `scripts/ci --diff` at `ce961a39` — **RESULT: PASS**
+(`artifacts/w43/ci-item4.txt`).
+
+---
+
+## Wave 5b (item 5) — the §S3(b) membership-green conversions, case-level
+
+The w32 charter's R-1 ruling executed AS FAR AS CASE-LEVEL WORK
+REACHES, with the boundary stated honestly up front: the full
+conversion of the four ratified (c) rows to text-quotiented membership
+greens needs machine-side surfaces this lane does not own —
+`renderPanicHead` producing OUR conforming member (C4), the
+display/identity split (C3), and a MethodSetRecord for the runtime
+error type (C3's kind clause) — all semantic-core, the W3.2 lane's.
+What case-level work CAN deliver is §S3(b)'s first clause, and it is
+delivered:
+
+- **The forced halves are PROVED, per row, in-language** — four new
+  GREEN strict rows:
+  `panic-defined-payload-methods/{error,stringer}-forced-half` (the
+  same payloads recovered: kind via type assertion — user types carry
+  method-set records — identity via the method results and value
+  round-trips), `repanic-same-value-abort/forced-half` (the repanic
+  caught in an outer frame and compared `r == orig` — the very eface
+  identity the collapse renders, DECIDED in-language where the abort
+  line cannot), and `same-name-identity-panic/forced-half` (the failed
+  assert panics and is recoverable; the KIND clause recorded as
+  BLOCKED on the runtime-error MethodSetRecord — probed:
+  `artifacts/w43/probe-c3`, the refusal named in the case comment,
+  never silently skipped).
+- **The anti-laundering branch holds**: all four original rows stay
+  RED at their exact prior stages (differential ×1,
+  lean-observation ×3) — nothing relaxed, no comparison weakened.
+  Their red now reads, per the ratification's own words, "inclusion
+  is not yet checkable": the machine has no text member for C4 (the
+  refusal is the absence of a member, and under the quotient a member
+  need only CONFORM — the door R-1 opens for the W3.2 lane), and C3's
+  member EXISTS (`interface conversion: interface {} is red/inner.T,
+  not blue/inner.T` — confirmed verbatim in this run's detail) but
+  the runner's exact comparison cannot quotient it case-level.
+- **Both text members RECORDED per row** in the case files (gc's
+  strings and ours), so the drift-visibility half of R-1 is in place
+  the day the machine member lands.
+- **BUGS.md cross-refs updated** (BUG-004 and BUG-059 carry dated
+  R-1-conversion-state blocks naming the green forced-half rows, the
+  blockers, and the no-relaxation guarantee).
+
+The grossmith `-panic-policy kind` mapping note (R-1's
+cross-instrument clause) is not re-recorded here — the charter's
+§Rulings already carries it, and the observation owed back to
+grossmith is theirs to consume.
+
 **JC-32 (item 3's checkquorum question): DEFERRED, with the reason.**
 checkquorum's full replay needs `tick-election` +
 `set-randomized-election-timeout`, i.e. a harness-facing PIN of the

@@ -142,6 +142,21 @@ not by running anything.
 - Pinned-by: differential
 - Cases: multipkg/same-name-identity-panic
 
+> **R-1 conversion state (2026-08-21, raft W4.3 item 5 —
+> docs/raft-w43-log.md).** The 2026-08-20 R-1 ruling quotients this
+> row's TEXT (the spec defines no panic-message string) and keeps the
+> FORCED half exact. Executed case-level: the forced half is now
+> PROVED by `multipkg/same-name-identity-panic/forced-half` (green:
+> the failed assert panics and is recoverable, both oracles) — with
+> the KIND clause recorded as BLOCKED (asserting the recovered value
+> to `error` refuses: the runtime error type carries no
+> MethodSetRecord, the BUG-009/BUG-053 fail-closed class). BOTH text
+> members are recorded in the case file (gc's name-qualified ambiguous
+> form; ours the path-qualified form). The row itself stays RED until
+> the machine can carry the quotient — the display/identity split
+> below is semantic-core work (the W3.2 lane's), and this red is
+> "inclusion not yet checkable", never relaxed.
+
 Path-keyed TypeIds (the BUG-010 fix, multi-package arc W1.1,
 `docs/2026-08-18_multipackage-identity.md` §3) made identity DECISIONS
 correct, but GoCore's message renderers print `TypeId.key` VERBATIM
@@ -2397,6 +2412,25 @@ without re-running `step_complete_any_wf`'s mapIterNext case.
 - Status: open
 - Pinned-by: differential
 - Cases: panic-recover/repanic-same-value-abort, panic-recover/panic-newline-abort, panic-recover/panic-defined-payload-methods/error, panic-recover/panic-defined-payload-methods/stringer
+
+> **R-1 conversion state (2026-08-21, raft W4.3 item 5 —
+> docs/raft-w43-log.md).** The 2026-08-20 R-1 ruling quotients the
+> abort-line TEXT of the three (c) rows here (the spec describes none
+> of preprintpanics' rewriting or the [recovered, repanicked]
+> collapse) and keeps the FORCED half exact. Executed case-level: the
+> forced halves are now PROVED in-language by the green rows
+> `panic-defined-payload-methods/{error,stringer}-forced-half` (the
+> same payloads recovered: kind via type assertion, identity via the
+> method results and the value round-trip) and
+> `repanic-same-value-abort/forced-half` (the repanic caught in an
+> outer frame, `r == orig` — the very identity the collapse renders,
+> decided in-language where the abort line cannot). The three (c)
+> rows stay RED: the machine has NO text member yet
+> (`renderPanicHead` refuses — the impossibilities below are about
+> producing gc's bytes, but under the quotient a member need only
+> CONFORM, and producing ours is semantic-core work owned by the
+> W3.2 lane). No red was relaxed; the conversion completes when the
+> member lands.
 - Discovered: 2026-07-25 (pre-merge adversarial audit of `unwinding-arc`)
 
 Go's abort output makes four demands the machine's value-level state

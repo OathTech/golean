@@ -1,19 +1,19 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-21 (raft W4.3 wave 5a / the owed-rows wave —
-#   branch raft-w43; docs/raft-w43-log.md "Wave 5a").
-#   re-pin reason: NINE NEW ids, zero movement on any of the 2409 ids
+# recorded: 2026-08-21 (raft W4.3 wave 5b / the §S3(b) forced-half
+#   rows — branch raft-w43; docs/raft-w43-log.md "Wave 5b").
+#   re-pin reason: FOUR NEW ids, zero movement on any of the 2418 ids
 #   the previous record held (verified by the run's drift report:
 #   every drifted line reads "NEW id (not in baseline)").
-#     The W4.2 owed corpus rows: multipkg/mini-raft-twin — 5 strict
-#     PASS (the self-contained 3-node twin-shaped family: elect/
-#     propose/commit + the perturbation schedules) + choice-order
-#     PASS at stage=membership (the delivery-order draw, enumerated=2
-#     exhibited=2); interfaces/quarantined-dispatch-teeth — installed
-#     PASS + uninstalled FAIL/frontend-export RED BY DESIGN (dispatch
-#     to a quarantined concrete method is a visible stop);
-#     init/quarantined-var-writer/read FAIL/frontend-export RED BY
-#     DESIGN (the D-12/H-20 writer-typed-global tripwire).
-# cases: 2418 (2263 PASS / 155 FAIL)
+#     The R-1 conversion's case-level half: the four ratified (c)
+#     rendering rows' FORCED HALVES proved in-language as green
+#     strict rows — panic-defined-payload-methods/
+#     {error,stringer}-forced-half, repanic-same-value-abort/
+#     forced-half, same-name-identity-panic/forced-half. The four
+#     original rows stay RED at their prior stages (nothing relaxed;
+#     the text-quotient greens await the machine member — the W3.2
+#     lane's semantic-core work; docs/BUGS.md BUG-004/BUG-059 carry
+#     the dated conversion-state blocks).
+# cases: 2422 (2267 PASS / 155 FAIL)
 # frontend: native (tools/nativefrontend)
 result	id	stage
 PASS	arrays/array-bounds	-
@@ -1626,6 +1626,7 @@ PASS	multipkg/mini-raft-twin/perturb-picks	-
 PASS	multipkg/mini-raft-twin/perturb-rev	-
 PASS	multipkg/mini-raft-twin/starve-node	-
 FAIL	multipkg/same-name-identity-panic	differential
+PASS	multipkg/same-name-identity-panic/forced-half	-
 PASS	multipkg/same-name-identity/func-identity	-
 PASS	multipkg/same-name-identity/type-identity	-
 PASS	multipkg/wire-codec/golden	-
@@ -1661,8 +1662,10 @@ PASS	panic-recover/nil-defer-during-unwind-abort	-
 PASS	panic-recover/panic-bool-abort	-
 PASS	panic-recover/panic-defer-order	-
 FAIL	panic-recover/panic-defined-payload-methods/error	lean-observation
+PASS	panic-recover/panic-defined-payload-methods/error-forced-half	-
 PASS	panic-recover/panic-defined-payload-methods/plain	-
 FAIL	panic-recover/panic-defined-payload-methods/stringer	lean-observation
+PASS	panic-recover/panic-defined-payload-methods/stringer-forced-half	-
 PASS	panic-recover/panic-int-abort	-
 PASS	panic-recover/panic-named-type-abort	-
 FAIL	panic-recover/panic-newline-abort	lean-observation
@@ -1682,6 +1685,7 @@ PASS	panic-recover/recover-twice	-
 PASS	panic-recover/recover-value	-
 PASS	panic-recover/repanic-recovered-by-outer	-
 FAIL	panic-recover/repanic-same-value-abort	lean-observation
+PASS	panic-recover/repanic-same-value-abort/forced-half	-
 PASS	panic-recover/return-expression-panic-recovered	-
 PASS	panic-recover/self-recovered-defer-panic	-
 PASS	panic-recover/unnamed-recover-zero-return	-
