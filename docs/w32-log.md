@@ -730,3 +730,30 @@ judgment calls recorded as they are made; checkpoints every ≤5 units.
   SOUND tower eqb (a false-negative only duplicates nodes); its hash
   needed race-state structure (shadow/chan clocks) before sb-chan
   closed — 47k-nodes-at-2267-hashes was the diagnostic.
+
+### Gates (POR slice — the exit gates)
+
+- `GOLEAN_MEM_MAX=24G scripts/ci --diff`
+  (artifacts/w32-por-ci-diff.log, untracked): **RESULT: PASS** —
+  every step ok (escape hatches, purity/TCB/import-direction, core
+  build warning-free, proofs + Audit gate, verdi compat, goose
+  fixtures/pins, golden lowering, frontend units, eval 136 ok, lane
+  fixtures both halves, negative no-regression, **baseline diff FULL
+  2324/2324 no regression**, re-pin guard ok — 0 PASS→non-PASS flips,
+  the two FAIL→PASS flips explained in the re-pin header).
+- `GOLEAN_MEM_MAX=24G scripts/ci --slow`
+  (artifacts/w32-por-ci-slow.log, untracked): **RESULT: PASS** — same
+  step list all ok, with the differential under GOLEAN_SLOW=1:
+  google-search FULLY RE-ENUMERATED by the dedup engine in-run
+  (fresh stats `observations=6 … engine=dedup nodes=6193933
+  edges=6565663 … certified=checkCert`) and matching the tracked
+  record; NO standing drift alarms remain (the stage-C alarm pair is
+  gone: google-search's record is fresh, rwmutex-order has no record
+  to go stale). worker-pool/sum FAIL as pinned (the honest residual).
+  The import-direction gate now carries the ENGINE-ISOLATION clause
+  (core/proofs ↛ EnumDedup) — its line reads
+  `ok import-direction (general ↛ Specs; Tactics ↛ GoCore;
+  core/proofs ↛ EnumDedup)`.
+- CHECKPOINT POR-slice: branch-complete pending the wrap-up commit;
+  merge/audit remain Mike's (the audit ask is posed in the session
+  report, per the charter's hard boundary).
