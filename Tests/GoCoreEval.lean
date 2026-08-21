@@ -1637,7 +1637,7 @@ def coreClosureShareFunction : GoCore.Func := {
   results := #[⟨"r", .int .int⟩]
   body := .seqn #[
     .initialization ⟨"x", .int .int⟩,
-    .initialization ⟨"f", .funcType [] []⟩,
+    .initialization ⟨"f", .funcType [] [] false⟩,
     .assign (.var "f") (.funcVal ⟨"main$lit0"⟩ #[.ref "x"]),
     .callValue #[] (.var "f") #[],
     .callValue #[] (.var "f") #[],

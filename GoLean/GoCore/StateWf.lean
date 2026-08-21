@@ -1217,7 +1217,7 @@ theorem normalizeValueForTyFuel_locSup :
       simp only [normalizeValueForTyFuel, pure_eq_ok, Except.ok.injEq] at h
       subst h
       exact Nat.le_refl _
-    case funcType ps rs =>
+    case funcType ps rs _ =>
       cases v <;> simp [normalizeValueForTyFuel] at h <;> subst h <;>
         exact Nat.le_refl _
     case defined name =>
@@ -1520,7 +1520,7 @@ theorem isNormalForTyFuel_sound {σ : ExecState} :
           Except.map, Functor.map, pure, Except.pure]
       all_goals exact absurd h (by simp [isNormalForTyFuel])
     | interface _ => simp [normalizeValueForTyFuel, pure, Except.pure]
-    | funcType params results =>
+    | funcType params results _ =>
       cases v
       case funcVal fid captured =>
         simp [normalizeValueForTyFuel, pure, Except.pure]

@@ -1525,18 +1525,24 @@ certificate enumerating alias handling should say so rather than omit it.
 `types.Identical` structurally. **Channel direction is carried and is part of
 identity** (451–463). `channels/directional-types`, `channels/make-directional`.
 
-**E-7 · ⚠⚠ function-type lowering DROPS the variadic bit — M — K1 — a
-CONFIRMED live silent wrong answer** · `wire.go:483-500`;
-`GoLean/GoCore/Value.lean:292-294`
-(`| funcType (params results : List Ty)`). Spec#Type_identity distinguishes
-`func(...int)` from `func([]int)`; the wire does not. **Contrast is
-deliberate elsewhere**: `variadic` IS carried on `Func`/method-table entries
-(`emit.go:1544-1550`) and on interface-method requirements (`emit.go:439-446`),
-both citing pre-merge audit 2026-07-31 finding 0. **§10 hole H-d, promoted
-2026-08-21 from "suspected" to CONFIRMED**: a comma-ok assert on a boxed
-variadic function answers `true` where Go answers `false`, with status `ok` —
-so this row is not a proof obligation but a bug with a witness, and no
-certificate for it should be written before the bit is carried.
+**E-7 · function-type lowering carries the variadic bit — M — K1 —
+FIXED 2026-08-21 (holes arc, BUG-067; was the census's ⚠⚠ CONFIRMED live
+silent wrong answer)** · emitter `wire.go` Signature arm (`"variadic":
+ty.Variadic()`); decoder requires it (`NativeToIR.lean` `decodeTy` `"func"`
+arm, the §9.5 fail-closed discipline); `Ty.funcType (params results : List
+Ty) (variadic : Bool)` carries it into identity (`Ty.eqbFuel` compares it)
+and into panic-message rendering (`goTypeNameForMessageFuel`: `...E` for the
+last parameter). Spec#Type_identity distinguishes `func(...int)` from
+`func([]int)`; pre-fix the wire did not — a comma-ok assert on a boxed
+variadic function answered `true` where Go answers `false`, status `ok`
+(§10 hole H-d, promoted 2026-08-21 from "suspected" to CONFIRMED, then
+fixed the same day). The contrast was deliberate elsewhere: `variadic` was
+already carried on `Func`/method-table entries (`emit.go:1544-1550`) and on
+interface-method requirements (`emit.go:439-446`), both citing pre-merge
+audit 2026-07-31 finding 0 — the TYPE node was the third leg. Guardrails
+`interfaces/assert-func-variadic/*` (both mismatch directions red pre-fix,
+right-type control), `interfaces/method-set-variadic-mismatch/*` (finding
+0's family, the standing method-set control).
 
 **E-8 · anonymous interface canonical rendering — M — K1** · `wire.go:465-482`;
 `any` 330; duplicate `emit.go:5075-5081`. Soundness rests on Go interface
@@ -2853,7 +2859,7 @@ that is not in the repo.
 | **H-a** slice default-high double emission | **FIXED 2026-08-21 (holes arc, BUG-066)** — was: verified live silent wrong answer, status `ok` | gc 1 call, machine 2, on both a slice base and a pointer-to-array base; explicit-high control agrees at 1 | ~~BUG entry + corpus row + fix~~ all landed; see B-18 |
 | **H-b** `Expr.intLit`'s `\| _ => .int` | **not probed this round** — reachability argument (J-1) unchallenged, no witness constructed | reachability is by code reading (`emit.go:6439`, `:3727`), not execution | reduce to a witness, then fix (Tier 0) |
 | **H-c** two missing decoder checks | **not a defect — a proposal**, restated as such | duplicate-TypeId sweep (J-42) and literal index bounds (J-33); J-33's *spurious panic* direction re-read and stands | land both (Tier 0) |
-| **H-d** wire func types drop the variadic bit | **VERIFIED — live silent wrong answer, status `ok`**; the first pass's "not confirmed observable" is **REFUTED** | comma-ok assert on a boxed variadic func: gc `false true`, machine `true true` — no reflection needed | BUG entry + corpus row + `Ty` carries variadic |
+| **H-d** wire func types drop the variadic bit | **FIXED 2026-08-21 (holes arc, BUG-067)** — was: verified live silent wrong answer, status `ok`; the first pass's "not confirmed observable" is **REFUTED** | comma-ok assert on a boxed variadic func: gc `false true`, machine `true true` — no reflection needed | ~~BUG entry + corpus row + `Ty` carries variadic~~ all landed; see E-7 |
 | **H-e** composite-literal element order | **probed — NOT a divergence on the probed shape**; remains an uncensused latitude point | gc runs the sibling call before the non-call element's panic, the same member the ANF hoist realizes (machine 1 = gc 1) | census E12's follow-on, then a membership statement (B-19) |
 | **H-f** struct tags dropped | **not probed** — genuine identity collapse in `Ty`, observability open | unlike H-d, the plausible witnesses go through reflection (globally refused) or anonymous non-empty structs (refused, `wire.go:508`) | try to construct a witness; if none exists, record as an argued-unobservable narrowing rather than leaving it a lead |
 
@@ -2902,8 +2908,10 @@ certificate in §11.
   `0 ≤ index < length` bound on literal element indices (J-33, which produces a
   *spurious panic*, not a stuck). Doing these first shrinks the certificate's
   surface.
-- **H-d · wire func types drop the VARIADIC bit — CONFIRMED LIVE SILENT WRONG
-  ANSWER, status `ok`** (E-7). `wire.go:483-500` lowers `func(...int) int` and
+- **H-d · wire func types drop the VARIADIC bit — FIXED 2026-08-21 (holes
+  arc, BUG-067; the text below describes the PRE-FIX state and the witness,
+  kept for the record; the fix is E-7's updated row)** (E-7). Was: CONFIRMED
+  LIVE SILENT WRONG ANSWER, status `ok` — `wire.go:483-500` lowered `func(...int) int` and
   `func([]int) int` to the same `funcType [[]int] [int]`, while `Func` and
   interface-requirement entries **do** carry `variadic` (`emit.go:1544-1550`,
   `:439-446`), both citing the pre-merge audit finding that says the

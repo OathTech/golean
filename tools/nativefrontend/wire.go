@@ -497,7 +497,16 @@ func (e *emitter) emitType(t types.Type) (any, error) {
 			}
 			results = append(results, rt)
 		}
-		return map[string]any{"kind": "func", "params": params, "results": results}, nil
+		// `variadic` is part of func TYPE IDENTITY (spec#Type_identity:
+		// "either both functions are variadic or neither is") — go/types
+		// types the variadic parameter []T, so without this bit
+		// `func(...int)` and `func([]int)` collapsed to one wire node and
+		// a comma-ok assert answered true for both where gc distinguishes
+		// (BUG-067, census H-d). Func declarations and interface-method
+		// requirements always carried it (finding 0); the TYPE node is
+		// the third leg.
+		return map[string]any{"kind": "func", "params": params, "results": results,
+			"variadic": ty.Variadic()}, nil
 	case *types.Struct:
 		// The empty struct struct{} (the set-value idiom map[K]struct{}) is a
 		// canonical named empty struct in GoCore; other anonymous structs are

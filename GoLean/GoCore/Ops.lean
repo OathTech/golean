@@ -431,9 +431,9 @@ def canonicalTyFuel : Nat → ExecState → Ty → Ty
   | fuel + 1, state, .map k v =>
       .map (canonicalTyFuel fuel state k) (canonicalTyFuel fuel state v)
   | fuel + 1, state, .chan d e => .chan d (canonicalTyFuel fuel state e)
-  | fuel + 1, state, .funcType ps rs =>
+  | fuel + 1, state, .funcType ps rs v =>
       .funcType (ps.map (canonicalTyFuel fuel state))
-        (rs.map (canonicalTyFuel fuel state))
+        (rs.map (canonicalTyFuel fuel state)) v
   -- Fuel exhausted on a type that still needs resolving: fail closed.
   | 0, _, .defined _ => .unsupported "canonical type: type nesting too deep"
   | 0, _, .pointer _ => .unsupported "canonical type: type nesting too deep"
@@ -441,7 +441,7 @@ def canonicalTyFuel : Nat → ExecState → Ty → Ty
   | 0, _, .array _ _ => .unsupported "canonical type: type nesting too deep"
   | 0, _, .map _ _ => .unsupported "canonical type: type nesting too deep"
   | 0, _, .chan _ _ => .unsupported "canonical type: type nesting too deep"
-  | 0, _, .funcType _ _ => .unsupported "canonical type: type nesting too deep"
+  | 0, _, .funcType _ _ _ => .unsupported "canonical type: type nesting too deep"
   | _, _, other => other
 
 def canonicalTy (state : ExecState) (typ : Ty) : Ty :=
@@ -462,7 +462,7 @@ def Ty.mentionsUnsupportedFuel : Nat → Ty → Bool
     | .array _ e => Ty.mentionsUnsupportedFuel fuel e
     | .chan _ e => Ty.mentionsUnsupportedFuel fuel e
     | .map k v => Ty.mentionsUnsupportedFuel fuel k || Ty.mentionsUnsupportedFuel fuel v
-    | .funcType ps rs =>
+    | .funcType ps rs _ =>
         ps.any (fun t => Ty.mentionsUnsupportedFuel fuel t)
           || rs.any (fun t => Ty.mentionsUnsupportedFuel fuel t)
     | _ => false
@@ -503,7 +503,7 @@ which silently accepted `m[sort.IntSlice{1,2}] = 1` where Go panics
 def tyUncomparableFuel : Nat → ExecState → Ty → Option Bool
   | _, _, .slice _ => some true
   | _, _, .map _ _ => some true
-  | _, _, .funcType _ _ => some true
+  | _, _, .funcType _ _ _ => some true
   | fuel + 1, state, .defined name =>
       (match TypeEnv.lookup state.types name with
        | some (.alias t) => tyUncomparableFuel fuel state t
@@ -561,10 +561,24 @@ def goTypeNameForMessageFuel : Nat → ExecState → Ty → String
       | .interface name => if isEmptyInterfaceName name then "interface {}" else name.key
       | .defined name => name.key
       | .array length elem => s!"[{length}]{goTypeNameForMessageFuel fuel state elem}"
-      | .funcType params results =>
+      | .funcType params results variadic =>
           -- Go renders the signature: `func()`, `func(int) bool`,
-          -- `func() (int, error)` (message-fidelity, 2026-07-30).
-          let ps := ", ".intercalate (params.map (goTypeNameForMessageFuel fuel state))
+          -- `func() (int, error)` (message-fidelity, 2026-07-30). A
+          -- variadic signature's LAST parameter renders `...E`
+          -- (`func(...int) int` — gc's failed-assert message names it;
+          -- BUG-067 carried the bit here). A variadic marker on a
+          -- non-slice last param cannot arrive from the emitter
+          -- (go/types types it []E); if it ever does, the plain render
+          -- is a message blemish, never a semantic answer.
+          let names := params.map (goTypeNameForMessageFuel fuel state)
+          let names :=
+            if variadic then
+              match params.getLast?, names.reverse with
+              | some (.slice e), _ :: front =>
+                  (s!"...{goTypeNameForMessageFuel fuel state e}" :: front).reverse
+              | _, _ => names
+            else names
+          let ps := ", ".intercalate names
           let base := s!"func({ps})"
           match results with
           | [] => base
@@ -922,9 +936,9 @@ def normalizeValueForTyFuel : Nat → ExecState → Ty → GoValue → Except Go
   | _ + 1, _, .array length _, value => stuck s!"expected array({length}) value, got {repr value}"
   | _ + 1, _, .interface _, value => return value
   -- Func values carry their own identity; nil is the zero value.
-  | _ + 1, _, .funcType _ _, .funcVal fid captured => return .funcVal fid captured
-  | _ + 1, _, .funcType _ _, .nil => return .nil
-  | _ + 1, _, .funcType _ _, value => stuck s!"expected func value, got {repr value}"
+  | _ + 1, _, .funcType _ _ _, .funcVal fid captured => return .funcVal fid captured
+  | _ + 1, _, .funcType _ _ _, .nil => return .nil
+  | _ + 1, _, .funcType _ _ _, value => stuck s!"expected func value, got {repr value}"
   -- Channel cells canonicalize the nil representation (channels arc
   -- slice 1): a raw `.nil` reaching a channel-typed slot (an untyped
   -- `return nil`, a nil literal the frontend left untyped) becomes the
@@ -1016,9 +1030,9 @@ def isNormalForTyFuel : Nat → TypeEnv → Ty → GoValue → Bool
         && isNormalListWith (isNormalForTyFuel fuel types elem) values.toList
   | _ + 1, _, .array _ _, _ => false
   | _ + 1, _, .interface _, _ => true
-  | _ + 1, _, .funcType _ _, .funcVal _ _ => true
-  | _ + 1, _, .funcType _ _, .nil => true
-  | _ + 1, _, .funcType _ _, _ => false
+  | _ + 1, _, .funcType _ _ _, .funcVal _ _ => true
+  | _ + 1, _, .funcType _ _ _, .nil => true
+  | _ + 1, _, .funcType _ _ _, _ => false
   -- LOCKSTEP with the normalizer's chan arms: only a `.chan` value is
   -- self-normalized (a raw `.nil` normalizes to the canonical form).
   | _ + 1, _, .chan _ _, .chan _ => true
@@ -1245,8 +1259,8 @@ to array or pointer to array with length {n}"
   -- nil-channel representation, like the map/slice arms above.
   | _, _, .chan _ _, value@(.chan _) => return value
   | _, _, .chan _ _, .nil => return .chan { base := none }
-  | _, _, .funcType _ _, value@(.funcVal _ _) => return value
-  | _, _, .funcType _ _, .nil => return .nil
+  | _, _, .funcType _ _ _, value@(.funcVal _ _) => return value
+  | _, _, .funcType _ _ _, .nil => return .nil
   -- Conversion INTO an interface type at a machine site (map key slots,
   -- assert results): a box or nil interface passes as-is (the frontend's
   -- to-interface wrap already built the box); a raw value here is a
@@ -1298,7 +1312,7 @@ def defaultValueFuel : Nat → ExecState → Ty → Except GoError GoValue
   -- for a Mutex is an unlocked mutex"; likewise RWMutex/WaitGroup/Once).
   | _ + 1, _, .sync kind => return .syncData kind.zero
   | _ + 1, _, .pointer _ => return .nil
-  | _ + 1, _, .funcType _ _ => return .nil
+  | _ + 1, _, .funcType _ _ _ => return .nil
   | _ + 1, _, .interface _ => return .nil
   | fuel + 1, state, .defined name => do
       match TypeEnv.lookup state.types name with
@@ -1527,10 +1541,10 @@ def valueEqFuel : Nat → ExecState → Ty → GoValue → GoValue → Except Go
     | _ + 1, _, .string, .string left, .string right => return left == right
     | _ + 1, _, .string, left, right => stuck s!"string equality expected string operands, got {repr left} and {repr right}"
     -- Go: func values are comparable only against nil.
-    | _ + 1, _, .funcType _ _, .nil, .nil => return true
-    | _ + 1, _, .funcType _ _, .funcVal _ _, .nil => return false
-    | _ + 1, _, .funcType _ _, .nil, .funcVal _ _ => return false
-    | _ + 1, _, .funcType _ _, left, right =>
+    | _ + 1, _, .funcType _ _ _, .nil, .nil => return true
+    | _ + 1, _, .funcType _ _ _, .funcVal _ _, .nil => return false
+    | _ + 1, _, .funcType _ _ _, .nil, .funcVal _ _ => return false
+    | _ + 1, _, .funcType _ _ _, left, right =>
         stuck s!"func values are not comparable: {repr left} and {repr right}"
     | _ + 1, _, .pointer _, .addr left, .addr right => return left == right
     | _ + 1, _, .pointer _, .nil, .nil => return true

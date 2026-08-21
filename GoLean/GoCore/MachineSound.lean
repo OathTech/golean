@@ -1292,7 +1292,7 @@ theorem normalizeValueForTyFuel_congr {σ₁ σ₂ : ExecState}
            exact hcc)
         | (obtain rfl := GoValue.capCong_eq hcc rfl
            exact exceptCong.self fun a => GoValue.capCong_refl a)
-    | funcType params results =>
+    | funcType params results _ =>
       cases v <;>
         first
         | (obtain ⟨b, rfl, _, _, _⟩ := GoValue.capCong_slice_left hcc
@@ -1830,7 +1830,7 @@ theorem defaultValueFuel_ok_of_normalize_ok {σ : ExecState} :
         simp [defaultValueFuel, pure, Except.pure]⟩
     | pointer _ =>
       exact ⟨.nil, by simp [defaultValueFuel, pure, Except.pure]⟩
-    | funcType _ _ =>
+    | funcType _ _ _ =>
       exact ⟨.nil, by simp [defaultValueFuel, pure, Except.pure]⟩
     | interface _ =>
       exact ⟨.nil, by simp [defaultValueFuel, pure, Except.pure]⟩

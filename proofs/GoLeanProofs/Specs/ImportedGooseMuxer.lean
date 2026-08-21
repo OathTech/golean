@@ -40,11 +40,11 @@ def muxerLowered : Program :=
                          typ := GoLean.GoCore.Ty.chan (GoLean.GoCore.ChanDir.both) (GoLean.GoCore.Ty.string),
                          embedded := false },
                        { name := "f",
-                         typ := GoLean.GoCore.Ty.funcType [GoLean.GoCore.Ty.string] [GoLean.GoCore.Ty.string],
+                         typ := GoLean.GoCore.Ty.funcType [GoLean.GoCore.Ty.string] [GoLean.GoCore.Ty.string] false,
                          embedded := false }])],
     funcs := #[{ id := { key := "mkStream" },
                  args := #[{ id := "f",
-                             typ := GoLean.GoCore.Ty.funcType [GoLean.GoCore.Ty.string] [GoLean.GoCore.Ty.string] }],
+                             typ := GoLean.GoCore.Ty.funcType [GoLean.GoCore.Ty.string] [GoLean.GoCore.Ty.string] false }],
                  results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.defined { key := "main.streamold" } }],
                  body := GoLean.GoCore.Stmt.block
                            #[]
@@ -83,7 +83,7 @@ def muxerLowered : Program :=
                              typ := GoLean.GoCore.Ty.pointer
                                       (GoLean.GoCore.Ty.chan (GoLean.GoCore.ChanDir.both) (GoLean.GoCore.Ty.string)) },
                            { id := "f$cap",
-                             typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.funcType [] [GoLean.GoCore.Ty.string]) }],
+                             typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.funcType [] [GoLean.GoCore.Ty.string] false) }],
                  results := #[],
                  body := GoLean.GoCore.Stmt.block
                            #[]
@@ -93,7 +93,7 @@ def muxerLowered : Program :=
                                    #[GoLean.GoCore.Assignee.var "$c3"]
                                    (GoLean.GoCore.Expr.deref
                                      (GoLean.GoCore.Expr.var "f$cap")
-                                     (GoLean.GoCore.Ty.funcType [] [GoLean.GoCore.Ty.string]))
+                                     (GoLean.GoCore.Ty.funcType [] [GoLean.GoCore.Ty.string] false))
                                    #[]],
                              GoLean.GoCore.Stmt.chanSend
                                (GoLean.GoCore.Expr.deref
@@ -104,7 +104,7 @@ def muxerLowered : Program :=
                  variadic := false,
                  wrapper := false },
                { id := { key := "Async" },
-                 args := #[{ id := "f", typ := GoLean.GoCore.Ty.funcType [] [GoLean.GoCore.Ty.string] }],
+                 args := #[{ id := "f", typ := GoLean.GoCore.Ty.funcType [] [GoLean.GoCore.Ty.string] false }],
                  results := #[{ id := "$res0",
                                 typ := GoLean.GoCore.Ty.chan (GoLean.GoCore.ChanDir.both) (GoLean.GoCore.Ty.string) }],
                  body := GoLean.GoCore.Stmt.block
@@ -145,7 +145,7 @@ def muxerLowered : Program :=
                              typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.stream" }) },
                            { id := "f$cap",
                              typ := GoLean.GoCore.Ty.pointer
-                                      (GoLean.GoCore.Ty.funcType [GoLean.GoCore.Ty.string] [GoLean.GoCore.Ty.string]) }],
+                                      (GoLean.GoCore.Ty.funcType [GoLean.GoCore.Ty.string] [GoLean.GoCore.Ty.string] false) }],
                  results := #[],
                  body := GoLean.GoCore.Stmt.block
                            #[]
@@ -193,7 +193,8 @@ def muxerLowered : Program :=
                                                    (GoLean.GoCore.Expr.var "f$cap")
                                                    (GoLean.GoCore.Ty.funcType
                                                      [GoLean.GoCore.Ty.string]
-                                                     [GoLean.GoCore.Ty.string]))
+                                                     [GoLean.GoCore.Ty.string]
+                                                     false))
                                                  #[GoLean.GoCore.Expr.var "$c8"]],
                                            GoLean.GoCore.Stmt.chanSend
                                              (GoLean.GoCore.Expr.fieldGet
@@ -208,7 +209,7 @@ def muxerLowered : Program :=
                  wrapper := false },
                { id := { key := "Serve" },
                  args := #[{ id := "f",
-                             typ := GoLean.GoCore.Ty.funcType [GoLean.GoCore.Ty.string] [GoLean.GoCore.Ty.string] }],
+                             typ := GoLean.GoCore.Ty.funcType [GoLean.GoCore.Ty.string] [GoLean.GoCore.Ty.string] false }],
                  results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.defined { key := "main.stream" } }],
                  body := GoLean.GoCore.Stmt.block
                            #[]

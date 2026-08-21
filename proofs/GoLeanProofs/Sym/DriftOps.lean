@@ -124,7 +124,7 @@ theorem valueEqBFuel_conc (hI : I.Sound) (σ : ExecState) :
           case string.string ls rs =>
             cases h
             simp [valueEqFuel, pure, Except.pure]
-      | funcType args results =>
+      | funcType args results _ =>
           cases l <;> cases r <;>
             simp only [valueEqBFuel', quit] at h <;> try (cases h; done)
           all_goals (cases h; simp [valueEqFuel, pure, Except.pure])

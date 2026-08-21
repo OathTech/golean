@@ -199,6 +199,11 @@ theorem Ty.eqbFuel_sound_all :
           | exact ⟨ih1 _ _ h.1, ih1 _ _ h.2⟩
           | exact ⟨GoCore.ChanDir.beq_sound h.1, ih1 _ _ h.2⟩
           | exact ⟨ih2 _ _ h.1, ih2 _ _ h.2⟩
+          -- funcType: `v₁ == v₂ && eqbList p && eqbList r` flattens to
+          -- `(v₁ = v₂ ∧ P) ∧ R` (BUG-067 added the variadic conjunct;
+          -- the Bool equality is consumed by simp_all, the lists by ih2).
+          | exact ⟨ih2 _ _ h.1.2, ih2 _ _ h.2⟩
+          | exact ⟨ih2 _ _ h.1.2, ih2 _ _ h.2.1, h.2.2⟩
           | exact ih1 _ _ h.2
     · intro as bs h
       cases as <;> cases bs <;> simp_all [Ty.eqbListFuel]

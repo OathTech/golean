@@ -529,7 +529,7 @@ theorem valueEqFuel_sim (fuel : Nat) (ty : Ty) (l r : GoValue) :
       | string =>
           cases l <;> cases r <;> simp only [renameValue, valueEqFuel] <;>
             first | exact ExSim.stuck' | exact ExSim.refl _
-      | funcType params results =>
+      | funcType params results _ =>
           cases l <;> cases r <;> simp only [renameValue, valueEqFuel] <;>
             first | exact ExSim.stuck' | exact ExSim.refl _
       | pointer elem =>

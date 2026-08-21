@@ -68,11 +68,45 @@ raft-w42 lane runs concurrently and owns `raftsubject/` +
   `--full` used for the re-pin diff.
 - Fix: `variadic` on the wire func TYPE node (emitType Signature arm),
   REQUIRED at decode (§9.5 discipline), carried on `Ty.funcType` into
-  type identity. Blast radius sweep before the confirming run: every
-  wire func type node changes (gains the key), so the corpus wire
-  sweep + golden repr diff is the prediction instrument; predicted
-  behavioral flips are ONLY rows asserting/comparing at func types
-  where variadic-ness differs — i.e. the two new reds.
+  type identity (`Ty.eqbFuel` compares it), and rendered in panic
+  messages (`goTypeNameForMessageFuel`: the last parameter prints
+  `...E` — gc's failed-assert message names the variadic signature).
+- BLAST-RADIUS SWEEP (run BEFORE the confirming run, as charged): all
+  1119 emittable corpus dirs swept with the new emitter; exactly FOUR
+  contain a func TYPE node with `variadic:true` —
+  `interfaces/assert-func-variadic` (the new guardrails, the intended
+  flips) plus `variadic/variadic-function-value`,
+  `variadic/variadic-method-expression`,
+  `variadic/variadic-method-value-copy`. The three pre-existing rows
+  store/call variadic func VALUES through func-typed slots: no
+  type-assert, no func-type equality, and normalization's funcType
+  arms are param-wildcards, so nothing consumes the new bit there.
+  11 dirs refuse at the frontend (pre-existing coverage gaps,
+  unchanged). PREDICTED FLIPS: exactly the two new reds FAIL→PASS,
+  zero other movement.
+- UNPREDICTED MOVEMENT, investigated and explained (the honest miss in
+  the sweep's frame): `imported-goose/channel/google-search` went
+  PASS/membership → FAIL/membership on the first confirming run — NOT
+  a behavior flip but the tier=slow certified record's fail-loud
+  staleness alarm: the wire sha moved because every func TYPE node now
+  carries `variadic` (schema widening; the record's own 2026-08-10
+  methodSets precedent is the exact class). GOLEAN_SLOW=1
+  re-enumeration reproduced the set AND graph bit-for-bit (six
+  members, nodes=6193933 edges=6565663 dedupHits=371731,
+  certified=checkCert); record updated deliberately with the new sha
+  and the reason, row green again. Lesson recorded: a wire-schema
+  widening's blast radius includes every wire-sha-keyed cache, not
+  just behavior.
+- Also missed by the first grep sweep: `Tests/GoCoreEval.lean:1640`'s
+  `.funcType [] []` term (eval-tests build failed loud; fixed with the
+  explicit `false`, 141/141 ok).
+- Proof-layer fallout of the Ty field, all mechanical: pattern arity
+  at ~30 sites (Ops/Mirror/Frame/StateWf/MachineSound/DriftOps),
+  `false` added to the 9 pinned-term constructions (Muxer/Defer —
+  matches what the fresh decode now produces), one new conjunct
+  alternative in `StateEqb`'s `Ty.eqbFuel` soundness `first` block,
+  and `ih` added to TypeCongr's funcType nil-results branch (the
+  variadic render's new fully-applied recursive call).
 
 ## Item 3 — census H-b: `intKindOfOptType`'s silent `.int` coerce arm
 

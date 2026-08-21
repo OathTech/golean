@@ -112,9 +112,17 @@ partial def decodeTy (path : String) (json : Json) : LowerM Ty := do
   | "func" =>
       let params ← StrictJson.array s!"{path}.params" (← StrictJson.field path obj "params")
       let results ← StrictJson.array s!"{path}.results" (← StrictJson.field path obj "results")
+      -- REQUIRED: the variadic half of func TYPE identity (BUG-067 —
+      -- spec#Type_identity distinguishes `func(...int)` from
+      -- `func([]int)`; a missing marker silently collapsed them and a
+      -- comma-ok assert answered true for both). The same fail-closed
+      -- discipline as the func / method-table / interface-requirement
+      -- decodes (§9.5 of the census).
+      let variadic ← StrictJson.bool s!"{path}.variadic" (← StrictJson.field path obj "variadic")
       pure (.funcType
         (← params.toList.mapIdxM (fun i t => decodeTy s!"{path}.params[{i}]" t))
-        (← results.toList.mapIdxM (fun i t => decodeTy s!"{path}.results[{i}]" t)))
+        (← results.toList.mapIdxM (fun i t => decodeTy s!"{path}.results[{i}]" t))
+        variadic)
   | other => fail s!"unsupported type kind {other} at {path}"
 
 private def decodeParam (path : String) (json : Json) : LowerM Param := do

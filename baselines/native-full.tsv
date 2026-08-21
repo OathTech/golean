@@ -1,15 +1,19 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-21 (holes arc, BUG-066 fix — branch holes-arc;
-#   emitSliceExpr default-high: array operand -> static length
-#   constant, slice/string operand -> builtin-len over the SINGLE
-#   emitted base node; census H-a / B-18).
-#   re-pin reason: exactly the four predicted FAIL->PASS flips, zero
+# recorded: 2026-08-21 (holes arc, BUG-067 fix — branch holes-arc;
+#   wire func TYPE nodes carry `variadic`, decoder requires it,
+#   Ty.funcType carries it into identity + panic-message render;
+#   census H-d / E-7).
+#   re-pin reason: exactly the two predicted FAIL->PASS flips, zero
 #   other movement on the 2332 ids (--full: no missing):
-#     slices/slice-elided-high-eval-once/call-base,
-#     slices/slice-elided-high-eval-once/call-base-low-only,
-#     pointers/slice-elided-high-pointer-array-base,
-#     strings/slice-eval-order-elided-high.
-#   counts: 2332 cases, 2190 PASS / 142 FAIL (was 2186/146)
+#     interfaces/assert-func-variadic/mismatch-variadic-at-slice,
+#     interfaces/assert-func-variadic/mismatch-slice-at-variadic.
+#   Blast radius: swept all 1119 emittable corpus wires pre-run —
+#   only the guardrails and three variadic/* value-storage rows carry
+#   a variadic:true func TYPE node; nothing else consumes the bit.
+#   The tier=slow google-search certified record was re-certified in
+#   the same change (wire-sha staleness alarm, schema widening only —
+#   set and graph reproduced bit-for-bit).
+#   counts: 2332 cases, 2192 PASS / 140 FAIL (was 2190/142)
 #   frontend: native (tools/nativefrontend + NativeToIR)
 # columns: result<TAB>id<TAB>stage
 result	id	stage
@@ -1214,8 +1218,8 @@ PASS	interfaces/assert-error-satisfaction/declared-not-called	-
 PASS	interfaces/assert-error-satisfaction/no-call	-
 PASS	interfaces/assert-error-satisfaction/positive	-
 PASS	interfaces/assert-func-variadic/match-right-types	-
-FAIL	interfaces/assert-func-variadic/mismatch-slice-at-variadic	differential
-FAIL	interfaces/assert-func-variadic/mismatch-variadic-at-slice	differential
+PASS	interfaces/assert-func-variadic/mismatch-slice-at-variadic	-
+PASS	interfaces/assert-func-variadic/mismatch-variadic-at-slice	-
 PASS	interfaces/assert-imported-interface/negative	-
 PASS	interfaces/assert-imported-interface/positive	-
 PASS	interfaces/assert-imported-method-set/comma-ok	-

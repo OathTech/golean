@@ -241,7 +241,7 @@ theorem normalizeValueForTyFuel_noPanic (σ : ExecState) :
           · exact NoPanic.bind NoPanic.pure' fun _ =>
               NoPanic.map (normalizeListWith_noPanic (fun v => ih _ v) _)
       | interface id => exact NoPanic.pure'
-      | funcType ps rs =>
+      | funcType ps rs _ =>
           cases v <;> simp only [normalizeValueForTyFuel] <;>
             first
             | exact NoPanic.pure'

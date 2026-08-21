@@ -83,12 +83,14 @@ theorem goTypeNameForMessageFuel_congr :
       simp only [goTypeNameForMessageFuel, resolveDefinedAliases_congr htypes]
       cases hres : resolveDefinedAliases σ ty with
       | chan dir e => cases dir <;> simp [ih]
-      | funcType params results =>
+      | funcType params results _ =>
           have hmap : List.map (goTypeNameForMessageFuel n σF) params
               = List.map (goTypeNameForMessageFuel n σ) params :=
             List.map_congr_left (fun t _ => ih t)
           cases results with
-          | nil => simp [hmap]
+          -- `ih` also rewrites the variadic arm's render of the last
+          -- parameter's element type (BUG-067: `...E` in the message).
+          | nil => simp [ih, hmap]
           | cons r rs =>
               have hmap' : List.map (goTypeNameForMessageFuel n σF) (r :: rs)
                   = List.map (goTypeNameForMessageFuel n σ) (r :: rs) :=

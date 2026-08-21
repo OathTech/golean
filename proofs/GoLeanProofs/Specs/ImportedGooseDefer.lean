@@ -193,7 +193,7 @@ def deferLowered : Program :=
                                    (GoLean.GoCore.Assignee.var "x")
                                    (GoLean.GoCore.Expr.intLit 10 (GoLean.GoCore.IntKind.int))],
                              GoLean.GoCore.Stmt.seqn
-                               #[GoLean.GoCore.Stmt.initialization { id := "f", typ := GoLean.GoCore.Ty.funcType [] [] },
+                               #[GoLean.GoCore.Stmt.initialization { id := "f", typ := GoLean.GoCore.Ty.funcType [] [] false },
                                  GoLean.GoCore.Stmt.assign
                                    (GoLean.GoCore.Assignee.var "f")
                                    (GoLean.GoCore.Expr.funcVal

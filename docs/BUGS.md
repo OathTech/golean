@@ -3184,7 +3184,16 @@ itself still evaluates once at the base slot, through its address).
 
 ## BUG-067 — wire func TYPE nodes drop the variadic bit: `func(...int)` ≡ `func([]int)` to the machine
 
-- Status: open
+- Status: fixed (2026-08-21, holes arc — the wire func type node
+  carries `variadic`, the decoder REQUIRES it, `Ty.funcType` gained
+  the field into `Ty.eqbFuel` identity and the panic-message render
+  (`...E` last parameter). Blast radius swept over all 1119 emittable
+  corpus wires BEFORE the confirming run: besides the new guardrails,
+  exactly three `variadic/*` rows carry a `variadic:true` func TYPE
+  node, all value-storage/call shapes with nothing consuming the bit —
+  predicted flips exactly the two pinned reds, confirmed. Pinned
+  Muxer/Defer terms extended with the explicit `false` the fresh
+  decode now produces; imported-pin and golden gates green.)
 - Pinned-by: differential
 - Cases: interfaces/assert-func-variadic/mismatch-variadic-at-slice, interfaces/assert-func-variadic/mismatch-slice-at-variadic
 

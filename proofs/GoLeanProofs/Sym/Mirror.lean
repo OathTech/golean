@@ -558,10 +558,10 @@ def normalizeValueForTyFuel' : Nat → Ty → Value D → M (Value D)
   | _ + 1, .array _ _, .atom _ => quit .q10Atom
   | _ + 1, .array _ _, _ => quit .q11Internal
   | _ + 1, .interface _, value => .ok value
-  | _ + 1, .funcType _ _, .funcVal fid captured => .ok (.funcVal fid captured)
-  | _ + 1, .funcType _ _, .nil => .ok .nil
-  | _ + 1, .funcType _ _, .atom _ => quit .q10Atom
-  | _ + 1, .funcType _ _, _ => quit .q11Internal
+  | _ + 1, .funcType _ _ _, .funcVal fid captured => .ok (.funcVal fid captured)
+  | _ + 1, .funcType _ _ _, .nil => .ok .nil
+  | _ + 1, .funcType _ _ _, .atom _ => quit .q10Atom
+  | _ + 1, .funcType _ _ _, _ => quit .q11Internal
   | _ + 1, .chan _ _, .chan cv => .ok (.chan cv)
   | _ + 1, .chan _ _, .nil => .ok (.chan { base := none })
   | _ + 1, .chan _ _, .atom _ => quit .q10Atom
@@ -606,10 +606,10 @@ def isNormalForTyFuel' : Nat → Ty → Value D → M Bool
   | _ + 1, .array _ _, .atom _ => quit .q10Atom
   | _ + 1, .array _ _, _ => .ok false
   | _ + 1, .interface _, _ => .ok true
-  | _ + 1, .funcType _ _, .funcVal _ _ => .ok true
-  | _ + 1, .funcType _ _, .nil => .ok true
-  | _ + 1, .funcType _ _, .atom _ => quit .q10Atom
-  | _ + 1, .funcType _ _, _ => .ok false
+  | _ + 1, .funcType _ _ _, .funcVal _ _ => .ok true
+  | _ + 1, .funcType _ _ _, .nil => .ok true
+  | _ + 1, .funcType _ _ _, .atom _ => quit .q10Atom
+  | _ + 1, .funcType _ _ _, _ => .ok false
   | _ + 1, .chan _ _, .chan _ => .ok true
   | _ + 1, .chan _ _, .atom _ => quit .q10Atom
   | _ + 1, .chan _ _, _ => .ok false
@@ -642,7 +642,7 @@ def defaultValueFuel' : Nat → Ty → M (Value D)
   | _ + 1, .chan _ _ => .ok (.chan { base := none })
   | _ + 1, .sync kind => .ok (.syncData kind.zero)
   | _ + 1, .pointer _ => .ok .nil
-  | _ + 1, .funcType _ _ => .ok .nil
+  | _ + 1, .funcType _ _ _ => .ok .nil
   | _ + 1, .interface _ => .ok .nil
   | _ + 1, .defined _ => quit .q4Program
   | _ + 1, .unsupported _ => quit .q11Internal
@@ -693,12 +693,12 @@ def valueEqBFuel' : Nat → Ty → Value D → Value D → M Bool
   | _ + 1, .string, .atom _, _ => quit .q10Atom
   | _ + 1, .string, _, .atom _ => quit .q10Atom
   | _ + 1, .string, _, _ => quit .q11Internal
-  | _ + 1, .funcType _ _, .nil, .nil => .ok true
-  | _ + 1, .funcType _ _, .funcVal _ _, .nil => .ok false
-  | _ + 1, .funcType _ _, .nil, .funcVal _ _ => .ok false
-  | _ + 1, .funcType _ _, .atom _, _ => quit .q10Atom
-  | _ + 1, .funcType _ _, _, .atom _ => quit .q10Atom
-  | _ + 1, .funcType _ _, _, _ => quit .q11Internal
+  | _ + 1, .funcType _ _ _, .nil, .nil => .ok true
+  | _ + 1, .funcType _ _ _, .funcVal _ _, .nil => .ok false
+  | _ + 1, .funcType _ _ _, .nil, .funcVal _ _ => .ok false
+  | _ + 1, .funcType _ _ _, .atom _, _ => quit .q10Atom
+  | _ + 1, .funcType _ _ _, _, .atom _ => quit .q10Atom
+  | _ + 1, .funcType _ _ _, _, _ => quit .q11Internal
   | _ + 1, .pointer _, .addr left, .addr right => .ok (left == right)
   | _ + 1, .pointer _, .nil, .nil => .ok true
   | _ + 1, .pointer _, .addr _, .nil => .ok false
@@ -1247,8 +1247,8 @@ def convertValueToTyFuel' : Nat → Ty → Value D → M (Value D)
   | _, .map _ _, .nil => .ok (.map { base := none })
   | _, .chan _ _, .chan cv => .ok (.chan cv)
   | _, .chan _ _, .nil => .ok (.chan { base := none })
-  | _, .funcType _ _, .funcVal fid captured => .ok (.funcVal fid captured)
-  | _, .funcType _ _, .nil => .ok .nil
+  | _, .funcType _ _ _, .funcVal fid captured => .ok (.funcVal fid captured)
+  | _, .funcType _ _ _, .nil => .ok .nil
   | _, .interface _, .interface dynTy inner => .ok (.interface dynTy inner)
   | _, .interface _, .nil => .ok .nil
   | 0, .defined _, _ => quit .q11Internal

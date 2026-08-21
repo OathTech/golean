@@ -289,9 +289,14 @@ inductive Ty where
   the reference. -/
   | chan (dir : ChanDir) (elem : Ty)
   | pointer (elem : Ty)
-  /-- A function type. Structural detail is carried for zero values and
-  typing only — dispatch is by `FuncId`, never by this. -/
-  | funcType (params results : List Ty)
+  /-- A function type. Structural detail is carried for zero values,
+  typing and TYPE IDENTITY (assert/boxing compare it structurally) —
+  dispatch is by `FuncId`, never by this. `variadic` is the identity
+  half spec#Type_identity adds beyond the param/result lists ("either
+  both functions are variadic or neither is"): the variadic parameter's
+  TYPE is `[]T` on both sides, so without the bit `func(...int)` and
+  `func([]int)` are indistinguishable (BUG-067). -/
+  | funcType (params results : List Ty) (variadic : Bool)
   | interface (id : TypeId)
   | defined (id : TypeId)
   | unsupported (feature : String)
@@ -333,8 +338,8 @@ def Ty.eqbFuel : Nat → Ty → Ty → Bool
   | f + 1, .map k₁ v₁, .map k₂ v₂ => Ty.eqbFuel f k₁ k₂ && Ty.eqbFuel f v₁ v₂
   | f + 1, .chan d₁ e₁, .chan d₂ e₂ => d₁ == d₂ && Ty.eqbFuel f e₁ e₂
   | f + 1, .pointer e₁, .pointer e₂ => Ty.eqbFuel f e₁ e₂
-  | f + 1, .funcType p₁ r₁, .funcType p₂ r₂ =>
-      Ty.eqbListFuel f p₁ p₂ && Ty.eqbListFuel f r₁ r₂
+  | f + 1, .funcType p₁ r₁ v₁, .funcType p₂ r₂ v₂ =>
+      v₁ == v₂ && Ty.eqbListFuel f p₁ p₂ && Ty.eqbListFuel f r₁ r₂
   | _, .interface a, .interface b => a == b
   | _, .defined a, .defined b => a == b
   | _, .unsupported a, .unsupported b => a == b
@@ -376,7 +381,7 @@ def Ty.dynamicName : Ty → String
   | .chan .both e => "chan " ++ Ty.dynamicName e
   | .chan .send e => "chan<- " ++ Ty.dynamicName e
   | .chan .recv e => "<-chan " ++ Ty.dynamicName e
-  | .funcType _ _ => "func"
+  | .funcType _ _ _ => "func"
   | .unsupported f => s!"<unsupported {f}>"
   -- reflect.Type.Name() on sync.Mutex is "Mutex" (package-unqualified,
   -- the observation channel's contract).

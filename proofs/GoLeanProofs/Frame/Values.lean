@@ -543,7 +543,7 @@ theorem normalizeValueForTyFuel_ren (htypes : σF.types = σ.types) :
           simp only [normalizeValueForTyFuel, pure_eq_ok, Except.ok.injEq] at h
           subst h
           simp [normalizeValueForTyFuel]
-      | funcType ps rs =>
+      | funcType ps rs _ =>
           cases v <;> simp only [normalizeValueForTyFuel] at h <;>
             first
             | (simp at h; done)
@@ -653,7 +653,7 @@ theorem isNormalForTyFuel_ren :
             renameValueList_length,
             isNormalListWith_ren ρ (fun v => ih types elem v)]
       | interface id => cases v <;> simp [isNormalForTyFuel, renameValue]
-      | funcType ps rs => cases v <;> simp [isNormalForTyFuel, renameValue]
+      | funcType ps rs _ => cases v <;> simp [isNormalForTyFuel, renameValue]
       | chan dir elem => cases v <;> simp [isNormalForTyFuel, renameValue]
       | sync kind => cases v <;> simp [isNormalForTyFuel, renameValue]
       | defined name =>
@@ -804,7 +804,7 @@ theorem convertValueToTyFuel_ren (htypes : σF.types = σ.types) :
             | (simp at h; done)
             | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
                simp [convertValueToTyFuel, renameValue])
-      | funcType ps rs =>
+      | funcType ps rs _ =>
           cases v <;> simp only [convertValueToTyFuel] at h <;>
             first
             | (simp at h; done)
@@ -927,7 +927,7 @@ theorem convertValueToTyFuel_ren (htypes : σF.types = σ.types) :
             | (simp at h; done)
             | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
                simp [convertValueToTyFuel, renameValue])
-      | funcType ps rs =>
+      | funcType ps rs _ =>
           cases v <;> simp only [convertValueToTyFuel] at h <;>
             first
             | (simp at h; done)
