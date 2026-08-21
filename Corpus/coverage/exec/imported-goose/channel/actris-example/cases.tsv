@@ -1,2 +1,6 @@
 # id	subject	args	expected_status	expected_reason	features
--	goleanDSPExample	-	ok	-	imported_goose,channels,goroutines,pointers	confluent	unbuffered rendezvous on c then signal serializes the pointer handoff and write-back before the deref on every schedule; width 4 covers the 2-thread bounds	width=4
+# 2026-08-20 W3.2 slice 1 stage C (B1 post-op boundaries): the widened
+# machine branches at every registry-op COMPLETION, so enumeration
+# trees grew; sites/work caps re-measured per row (sets unchanged
+# unless stated). Record: docs/w32-log.md stage C.
+-	goleanDSPExample	-	ok	-	imported_goose,channels,goroutines,pointers	confluent	unbuffered rendezvous on c then signal serializes the pointer handoff and write-back before the deref on every schedule; width 4 covers the 2-thread bounds	width=4,sites=16

@@ -692,8 +692,8 @@ open Lean in
 #guard_msgs in #print axioms GoLean.Iris.goTripleC_of_wpD
 /-- info: 'GoLean.Iris.wpD_pure_det' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.wpD_pure_det
-/-- info: 'GoLean.Iris.wpD_spawned_strip' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Iris.wpD_spawned_strip
+/-- info: 'GoLean.Iris.wpD_opDone_strip' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpD_opDone_strip
 /-- info: 'GoLean.Iris.wpD_fork' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.wpD_fork
 /-- info: 'GoLean.Iris.wpD_spawn_noop_witness' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -1717,7 +1717,7 @@ touches two threads; the thread-pool Language steps one) and the
 decomposition route. -/
 example := @GoLean.Iris.wpC_fork
 example := @GoLean.Iris.wpC_pure_det
-example := @GoLean.Iris.wpC_spawned_strip
+example := @GoLean.Iris.wpC_opDone_strip
 example := @GoLean.Iris.wpC_spawn_noop_witness
 example := @GoLean.Iris.goC_adequacy
 example := @GoLean.Iris.adequateC_spawn_noop

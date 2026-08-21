@@ -2247,19 +2247,52 @@ inductive Config where
   | blockedSend (ch : Option Loc) (v : GoValue) (k : Cont)
   | blockedRecv (ch : Option Loc) (targets : List Assignee) (elem : Ty) (env : LocalEnv) (k : Cont)
   | blockedSelect (clauses : List EvClause) (env : LocalEnv) (k : Cont)
-  -- The POST-SPAWN completion marker (channels arc slice 4, BUG-040):
-  -- the spawn step leaves the PARENT here instead of at `.next k`, and
-  -- the pool treats it as a registry boundary — so the scheduling
-  -- decision "who runs after the fork" exists as its own registry op
-  -- (the child now CAN preempt a sync-free parent segment; without
-  -- this the child-first interleaving of the exit-no-sync class was
-  -- outside the L1 envelope on every stream). Its only step is the
-  -- pool-level strip to `.next k` (`stepThread`; rule
-  -- `StepM.spawned`). Pool-only: the sequential machine never
-  -- constructs it (`stepFn` fails closed `.internal`), and it is
-  -- relation-silent in the per-goroutine `Step` like the blocked
-  -- shapes.
-  | spawned (k : Cont)
+  /-- **The registry-op COMPLETION marker — B1's post-op scheduling
+  point, and THE ENVELOPE STATEMENT of `ChoiceSite.postOp`** (W3.2
+  slice 1 stage C, G1 ruling 2026-08-20; generalizing BUG-040's
+  post-SPAWN marker `.spawned`, which unified into this shape — the
+  audit's T-6 mold: one marker mechanism, site-tagged). Every
+  registry-op completion that PROCEEDS — channel send commit / recv
+  delivery entry / close, sync-op acquisition/release, select commit
+  (entry, arrival-`.commit`, and wake paths), the pairing ISSUER's
+  successor, a woken goroutine's completed op, and spawn completion —
+  leaves the acting goroutine HERE, wrapping its successor
+  configuration `inner`; the pool treats the marker as a registry
+  boundary (`Config.atBoundary`), so "who runs after the op" is a
+  real scheduling point. Its only step is the strip to `inner` — one
+  step, on both drivers identically (`stepFn`'s `.opDone` arm; rule
+  `Step.opDoneStrip`).
+
+  THE ENVELOPE (nondeterminism doctrine requirement 1): the spec
+  orders NOTHING between an op-completing goroutine's continuation
+  and any other runnable goroutine's progress — spec#Go_statements
+  makes goroutines *independent* threads of control, and the memory
+  model's chan rule (1) synchronizes a send before the COMPLETION OF
+  THE RECEIVE, never before anything in the sender's own continuation
+  (the inventory C3 anchor-from-absence) — so ANY runnable goroutine
+  may run next at a completion. The scheduling-semantics dossier
+  (`docs/2026-08-20_go-scheduling-semantics-dossier.md`) grounds
+  both directions: §1.1 — scheduling is deliberately unspecified
+  ("The properties of the scheduler were never defined by the
+  language", Go 1.5 notes; "there are no guarantees … Different
+  implementations may act differently", ILT), so this widening is
+  CONSERVATIVE relative to what the language licenses; §4.3 — the
+  wedge verdict: "the portable model should include the completing
+  execution and an unfair execution", which is exactly what this
+  boundary admits (gc itself exhibits the flagship added member,
+  send-then-spin exit-0, 60/60). Width bound: only
+  registry-granularity interleavings consistent with blocking + HB —
+  inside the L1 envelope's argued-maximal class.
+
+  `sched` names the scheduling SITE the boundary consults (the Q1
+  tag, carried in the configuration): new emitters tag `.postOp`
+  (slot 0 = the issuer continues — the old machine's schedule, so
+  default streams are conservative); the SPAWN emitter tags
+  `.l1Sched`, preserving BUG-040's shipped boundary bit-for-bit
+  (slot 0 = lowest-index runnable, NOT issuer-continues — one
+  untagged marker would silently change the spawn default wherever
+  the parent is not the lowest-index runnable). -/
+  | opDone (sched : ChoiceSite) (inner : Config)
   /-- A goroutine parked on a sync primitive (spec-parity slice 2,
   design note §6): the op it will re-attempt, the primitive's cell.
   Relation-silent per-goroutine like the channel blocked shapes; the
@@ -2299,7 +2332,13 @@ out-of-range panics, spec §Assignments PHASE-2 events) follow
 left-to-right, exactly like the select path's step 4 (BUG-022/BUG-029;
 pinned by `channels/recv-edge/*` — the drain discriminators and the
 blocks-not-panics classification). Shared verbatim by rule
-`Step.chanStApply` and `stepFn`'s `chanStK` apply arm. -/
+`Step.chanStApply` and `stepFn`'s `chanStK` apply arm.
+
+B1 (W3.2 slice 1 stage C): every PROCEEDING outcome is wrapped in the
+completion marker `.opDone .postOp` — the post-op scheduling point
+(envelope statement at `Config.opDone`). Blocked outcomes are not
+wrapped (a park IS a boundary shape already) and panicking outcomes
+are not (the abort window is B3, deferred — boundary-set note §2). -/
 def applyChanOp (s : ExecState) (op : ChanStOp) (vs : List GoValue)
     (env : LocalEnv) (k : Cont) : Except GoError (Config × ExecState) := do
   match op, vs with
@@ -2316,7 +2355,7 @@ def applyChanOp (s : ExecState) (op : ChanStOp) (vs : List GoValue)
             return (.panicking [⟨runtimeErrorValue "send on closed channel", false⟩] k, s)
           else if buf.size < capacity then do
             let s' ← storeLoc s loc (.chanData (buf.push v') capacity closed)
-            return (.next k, s')
+            return (.opDone .postOp (.next k), s')
           else
             return (.blockedSend (some loc) v' k, s)
   | .recv targets elem, [chv] => do
@@ -2331,18 +2370,20 @@ def applyChanOp (s : ExecState) (op : ChanStOp) (vs : List GoValue)
               -- with ok = true before yielding zeros (probe p06).
               let s₁ ← storeLoc s loc (.chanData (buf.eraseIdx! 0) capacity closed)
               match targets with
-              | [] => return (.next k, s₁)
-              | _ :: _ =>
-                  enterRecvTargets s₁ targets (recvStores v true targets.length)
-                    (.seqn #[]) env k
+              | [] => return (.opDone .postOp (.next k), s₁)
+              | _ :: _ => do
+                  let (c', s₂) ← enterRecvTargets s₁ targets
+                    (recvStores v true targets.length) (.seqn #[]) env k
+                  return (.opDone .postOp c', s₂)
           | none =>
               if closed then do
                 let zero ← defaultValue s elem
                 match targets with
-                | [] => return (.next k, s)
-                | _ :: _ =>
-                    enterRecvTargets s targets (recvStores zero false targets.length)
-                      (.seqn #[]) env k
+                | [] => return (.opDone .postOp (.next k), s)
+                | _ :: _ => do
+                    let (c', s₂) ← enterRecvTargets s targets
+                      (recvStores zero false targets.length) (.seqn #[]) env k
+                    return (.opDone .postOp c', s₂)
               else
                 return (.blockedRecv (some loc) targets elem env k, s)
   | .close, [chv] => do
@@ -2355,7 +2396,7 @@ def applyChanOp (s : ExecState) (op : ChanStOp) (vs : List GoValue)
             return (.panicking [⟨runtimeErrorValue "close of closed channel", false⟩] k, s)
           else do
             let s' ← storeLoc s loc (.chanData buf capacity true)
-            return (.next k, s')
+            return (.opDone .postOp (.next k), s')
   | op, vs => stuck s!"malformed channel-operator application: {repr op} on {vs.length} operand(s)"
 
 /-- **Apply a sync statement's head to its evaluated operands — the
@@ -2435,7 +2476,7 @@ def applySyncOp (s : ExecState) (op : SyncOp) (vs : List GoValue)
           if locked then return (.blockedSync .lock loc env k, s)
           else do
             let s' ← storeLoc s loc (.syncData (.mutex true))
-            return (.next k, s')
+            return (.opDone .postOp (.next k), s')
       | other => stuck s!"Lock on a non-mutex sync cell: {repr other}"
   | .unlock, [av] => do
       let loc ← valueAsLoc av
@@ -2443,7 +2484,7 @@ def applySyncOp (s : ExecState) (op : SyncOp) (vs : List GoValue)
       | .mutex locked =>
           if locked then do
             let s' ← storeLoc s loc (.syncData (.mutex false))
-            return (.next k, s')
+            return (.opDone .postOp (.next k), s')
           else throw (.fatal "sync: unlock of unlocked mutex")
       | other => stuck s!"Unlock on a non-mutex sync cell: {repr other}"
   | .rlock, [av] => do
@@ -2454,7 +2495,7 @@ def applySyncOp (s : ExecState) (op : SyncOp) (vs : List GoValue)
             return (.blockedSync .rlock loc env k, s)
           else do
             let s' ← storeLoc s loc (.syncData (.rwmutex writer (readers + 1) pendingW))
-            return (.next k, s')
+            return (.opDone .postOp (.next k), s')
       | other => stuck s!"RLock on a non-RWMutex sync cell: {repr other}"
   | .runlock, [av] => do
       let loc ← valueAsLoc av
@@ -2463,7 +2504,7 @@ def applySyncOp (s : ExecState) (op : SyncOp) (vs : List GoValue)
           match readers with
           | r + 1 => do
               let s' ← storeLoc s loc (.syncData (.rwmutex writer r pendingW))
-              return (.next k, s')
+              return (.opDone .postOp (.next k), s')
           | 0 => throw (.fatal "sync: RUnlock of unlocked RWMutex")
       | other => stuck s!"RUnlock on a non-RWMutex sync cell: {repr other}"
   | .wlock, [av] => do
@@ -2472,7 +2513,7 @@ def applySyncOp (s : ExecState) (op : SyncOp) (vs : List GoValue)
       | .rwmutex writer readers pendingW =>
           if !writer && readers == 0 then do
             let s' ← storeLoc s loc (.syncData (.rwmutex true 0 pendingW))
-            return (.next k, s')
+            return (.opDone .postOp (.next k), s')
           else do
             -- Park AND register as a pending writer: the documented
             -- exclusion of new readers starts at the BLOCKED Lock call
@@ -2486,7 +2527,7 @@ def applySyncOp (s : ExecState) (op : SyncOp) (vs : List GoValue)
       | .rwmutex writer readers pendingW =>
           if writer then do
             let s' ← storeLoc s loc (.syncData (.rwmutex false readers pendingW))
-            return (.next k, s')
+            return (.opDone .postOp (.next k), s')
           else throw (.fatal "sync: Unlock of unlocked RWMutex")
       | other => stuck s!"write-Unlock on a non-RWMutex sync cell: {repr other}"
   | .wgAdd, [av, dv] => do
@@ -2545,13 +2586,13 @@ def applySyncOp (s : ExecState) (op : SyncOp) (vs : List GoValue)
             -- machine's atomic ops realize as the wg-sema race or as
             -- clean runs. No arm is kept (no inert dead code); the
             -- audit fix round removed it with this record.
-            return (.next k, s')
+            return (.opDone .postOp (.next k), s')
       | other => stuck s!"Add on a non-WaitGroup sync cell: {repr other}"
   | .wgWait, [av] => do
       let loc ← valueAsLoc av
       match ← syncCell s loc with
       | .waitGroup counter waiters =>
-          if counter == 0 then return (.next k, s)
+          if counter == 0 then return (.opDone .postOp (.next k), s)
           else do
             let s' ← storeLoc s loc (.syncData (.waitGroup counter (waiters + 1)))
             return (.blockedSync .wgWait loc env k, s')
@@ -2562,9 +2603,11 @@ def applySyncOp (s : ExecState) (op : SyncOp) (vs : List GoValue)
       | .once started done =>
           if !started then do
             let s' ← storeLoc s loc (.syncData (.once true false))
-            enterRecvTargets s' targets [.bool true] (.seqn #[]) env k
-          else if done then
-            enterRecvTargets s targets [.bool false] (.seqn #[]) env k
+            let (c', s'') ← enterRecvTargets s' targets [.bool true] (.seqn #[]) env k
+            return (.opDone .postOp c', s'')
+          else if done then do
+            let (c', s'') ← enterRecvTargets s targets [.bool false] (.seqn #[]) env k
+            return (.opDone .postOp c', s'')
           else
             return (.blockedSync (.onceBegin targets) loc env k, s)
       | other => stuck s!"Once.Do begin on a non-Once sync cell: {repr other}"
@@ -2574,7 +2617,7 @@ def applySyncOp (s : ExecState) (op : SyncOp) (vs : List GoValue)
       | .once started _ =>
           if started then do
             let s' ← storeLoc s loc (.syncData (.once true true))
-            return (.next k, s')
+            return (.opDone .postOp (.next k), s')
           else throw (.internal "onceComplete without a matching onceBegin")
       | other => stuck s!"Once.Do complete on a non-Once sync cell: {repr other}"
   | op, vs => stuck s!"malformed sync-operator application: {repr op} on {vs.length} operand(s)"
@@ -2585,7 +2628,14 @@ the phase-1/phase-2 delivery frames (`enterRecvTargets`; spec step 4:
 LHS after the communication). A committed SEND on a closed channel
 panics (probe p23 — closed counts as ready). The "unready" stuck arms
 are unreachable from `applySelect` (which commits only ready clauses) —
-fail closed, never a silent default. -/
+fail closed, never a silent default.
+
+B1 (W3.2 slice 1 stage C): a PROCEEDING commit is a registry-op
+completion, wrapped in `.opDone .postOp` (the envelope statement at
+`Config.opDone`) — which covers all three commit paths at once (the
+entry-path `applySelect`, the arrival-path `.commit` in `stepThread`,
+and the wake path `resumeThread`); the panicking commit is not
+wrapped (B3 deferred). -/
 def commitClause (s : ExecState) (env : LocalEnv) (k : Cont) :
     EvClause → Except GoError (Config × ExecState)
   | .sendEv chv vv elem body => do
@@ -2599,7 +2649,7 @@ def commitClause (s : ExecState) (env : LocalEnv) (k : Cont) :
           else if buf.size < capacity then do
             let v' ← normalizeValueForTy s elem vv
             let s' ← storeLoc s loc (.chanData (buf.push v') capacity closed)
-            return (.exec body env k, s')
+            return (.opDone .postOp (.exec body env k), s')
           else stuck "select committed an unready send clause"
   | .recvEv chv targets elem body => do
       let ch ← valueAsChan chv
@@ -2618,9 +2668,11 @@ def commitClause (s : ExecState) (env : LocalEnv) (k : Cont) :
                   pure (zero, false, s)
                 else stuck "select committed an unready receive clause"
           match targets with
-          | [] => return (.exec body env k, s₁)
-          | _ :: _ =>
-              enterRecvTargets s₁ targets (recvStores v ok targets.length) body env k
+          | [] => return (.opDone .postOp (.exec body env k), s₁)
+          | _ :: _ => do
+              let (c', s₂) ← enterRecvTargets s₁ targets
+                (recvStores v ok targets.length) body env k
+              return (.opDone .postOp c', s₂)
 
 /-- **The `select` READINESS step and THE L2 ENVELOPE** (spec steps
 2-3; this docstring is the envelope statement, shipped with its site —
@@ -3490,6 +3542,14 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       applySyncOp s op (v :: done).reverse env k = .error (.panic msg) →
       Step (.retV v (.syncStK op done [] env k)) s
         (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
+  /-- The registry-op completion marker's strip (W3.2 slice 1 stage C,
+  B1): one pure control step to the wrapped successor, on both drivers
+  (`stepFn`'s `.opDone` arm) — the marker exists only to BE a
+  scheduling boundary at the pool level (`Config.atBoundary`; envelope
+  statement at `Config.opDone`). Appended at the END of the inductive
+  so the correspondence proofs' positional case tags stay stable. -/
+  | opDoneStrip {sc c s} :
+      Step (.opDone sc c) s c s
 
 /-- Reflexive-transitive closure of `Step`. -/
 inductive Steps : Config → ExecState → Config → ExecState → Prop where

@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# MEMBERSHIP lane, STATUS-DIVERSE envelope (W3.2 slice 1 stage C — the
+# B1 post-op boundary's directed-probe row; U-1 moved (d)->(a)): the
+# observable depends on whether MAIN runs between the worker's
+# wake-producing send and the worker's panic. Pre-B1 the machine's set
+# was the singleton {panic} on every stream (the fused effect boundary
+# C3); B1's `.opDone` completion boundary admits the partner-progress
+# member, and gc exhibits the class (print-then-abort 60/200 this
+# session, 189/200 at the phase-A run). Measured tree: observations=2
+# steps=373 sites=75 leaves=76 maxdepth=15 at width 4.
+-	wakeThenAbort	-	ok	-	goroutines,channels,panic,nondet	membership	partner progress between wake and abort is B1 postOp + L5 exit-window latitude: certified set {panic "worker abort in the private segment", 42} (members=2, statuses=ok+panic); pre-B1 the panic member was the sole member on every stream — the U-1 class row	width=4,members=2,statuses=ok+panic,sites=16

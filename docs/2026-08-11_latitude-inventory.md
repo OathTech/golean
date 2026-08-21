@@ -169,7 +169,7 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   traffic grows). The largest single re-envelope in the queue; also
   the highest-value one.
 
-### C3. Scheduling between an op's effect and its continuation — (b) PINNED, structural: the fused effect boundary
+### C3. Scheduling between an op's effect and its continuation — (a) ENVELOPED (W3.2 stage C, B1: the `.opDone` post-op boundary)
 
 - WHERE: spec — spec#Program_execution and the MM give no ordering
   between one goroutine's post-synchronization progress and a woken
@@ -177,42 +177,46 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   Anchors-from-absence (P2 retrofit): the load-bearing SILENCE is
   mem#chan + mem#model — and note mem#chan rule (1)'s direction: a
   send is synchronized before the COMPLETION OF THE RECEIVE, not
-  before anything in the sender's continuation, so the fused
-  boundary's excluded members are scheduling-latitude observables,
-  never HB violations. Machine: `Config.atBoundary`
-  marks PRE-op apply positions only; the ONLY post-op boundary is the
-  spawn-completion marker `.spawned` (Multi.lean:232–239, BUG-040's
-  fix). Every other registry op's effect and the issuer's subsequent
-  private segment are FUSED: after (e.g.) a send that wakes a partner,
-  no scheduling point occurs until the issuer's next boundary or
-  terminal.
-- PLAUSIBLE ENVELOPE: a scheduling point at every registry op's
-  COMPLETION (post-op boundaries), so a woken partner can interleave
-  before the issuer's next private segment.
-- KNOWN INSTANCES, both fixed pointwise: BUG-040 (post-spawn — fixed by
-  `.spawned`), BUG-044 (wake-then-main-terminal — fixed by the L5
-  window, C4). REMAINING GAP, recorded here: the mid-program analogue —
-  a wake-producing op followed by a private segment that ABORTS (an
-  unrecovered panic) discards the woken partner's continuation on every
-  stream exactly as BUG-044 did at main's terminal (`execProgLoop`
-  classifies `panicMsg?` before stepping, Multi.lean:1413; the
-  partner's alternative abort/observable is excluded). For race-free
-  programs the excluded members are termination/abort-ordering
-  observables — schedule-observable without data races (register #5's
-  closing sentence). No corpus case pins this today; it is the same
-  class the BUG-044 dossier scope-corrected to "ANY main-goroutine
-  registry op ... " but for non-main issuers and abort terminals.
-- EVIDENCE: GC probes exist for the two fixed instances (BUG-044:
-  model {ok} vs gc-plain 1/100→50/50 panic at delay; BUG-040 eval
-  pins). The mid-program abort instance is UNPROBED — a directed gc
-  probe (wake partner, then panic in the issuer's private segment,
-  observably different partner abort) is the cheap next datum.
-- RE-ENVELOPE OBLIGATION + COST: post-op boundaries for wake-producing
-  registry ops (or all registry ops — simpler rule, wider trees). Same
-  cost class as C2 (stream shifts, witnesses, enumerator, NPDRF), but
-  strictly smaller: the boundary set grows by op-completion positions
-  only. Can land with or before C2; the doctrine queues them together
-  as "the fused-boundary/forced-continuation" item.
+  before anything in the sender's continuation, so the members this
+  envelope admits are scheduling-latitude observables, never HB
+  violations. The scheduling-semantics dossier
+  (`docs/2026-08-20_go-scheduling-semantics-dossier.md`) grounds the
+  width from the language side: §1.1 — scheduling deliberately
+  unspecified, so the widening is conservative relative to what the
+  language licenses.
+- MACHINE (W3.2 slice 1 stage C, G1 ruling 2026-08-20 — B1 at
+  ALL-ops scope): every registry-op completion that proceeds — chan
+  send/recv/close, sync ops, select commits on all three paths,
+  the pairing ISSUER, wakes, and spawn — leaves the acting goroutine
+  on the `.opDone` completion marker, a registry boundary of its own
+  (`Config.opDone`, the envelope statement in situ; `Config.atBoundary`;
+  site `ChoiceSite.postOp`, slot 0 = issuer-continues so the
+  default stream reproduces the pre-widening schedule literally; the
+  spawn marker keeps its `l1Sched` tag — BUG-040's shipped default
+  bit-for-bit). A woken partner can now interleave before the
+  issuer's next private segment on an explicit stream.
+- FORMER KNOWN INSTANCES, subsumed: BUG-040 (post-spawn) and BUG-044
+  (wake-then-main-terminal, the L5 window, C4) were the two probed
+  corners of this class; B1 is the general rule they were corners of.
+  The formerly-recorded REMAINING GAP — the mid-program
+  wake-then-abort analogue — is U-1, now PROBED AND ADMITTED (see
+  U-1): gc's partner-progress member (print-"42"-then-abort, 60/200–
+  189/200 across sessions) was `observed ∉ modeled` pre-B1 and is a
+  member now (corpus row goroutines/wake-then-abort, members=2
+  statuses=ok+panic; exhibition record
+  `docs/evidence/2026-08-20_w32-postop-probes/`). The abort WINDOW at
+  panic terminals (post-RAISE partner progress, L5's analogue) stays
+  open as B3 — DEFERRED at G1 with the U-1 probe as its trigger
+  baseline: no observed member needs it.
+- COST, PAID (the boundary-set note §5's budget): witnesses/pinned
+  streams re-derived (BUG-040 precedent), MultiSound/MultiStreams/
+  MultiWfSound metatheory re-proved over the widened set, detector
+  outcome-shape classification moved to the marker. CORRECTION to the
+  old cost prose here (owed at landing, note §2 B1): "race-detector
+  segments shrink … clock traffic grows" over-predicted — in this
+  machine boundaries are scheduling points, not clock edges
+  (`raceUpdate` advances clocks at spawn/wake/pairing/sync EVENTS
+  only), so B1 added no clock traffic.
 
 ### C4. How long after main's terminal other goroutines may run (L5) — (a) ENVELOPED
 
@@ -1094,10 +1098,20 @@ achievement.
 
 ## 6. Unknowns — suspected latitude, not yet analyzed (class (d))
 
-- **U-1 Mid-program fused-boundary members** (C3): the
-  wake-then-private-abort exclusion class is characterized but UNPROBED
-  — no gc datum yet exhibits an excluded member mid-program. Cheap
-  directed probe owed.
+- **U-1 Mid-program fused-boundary members** (C3) — PROBED, then
+  ADMITTED (W3.2 slice 1: probe at phase A, admission at stage C).
+  The owed directed probe ran (wake partner, then panic in the
+  issuer's private segment): gc's DOMINANT member is partner progress
+  between the wake and the abort — main prints "42" and the program
+  still aborts (189/200 phase A; 60/200 at the stage-C rerun; exit-0
+  0/200 both) — and the pre-B1 machine excluded that class on every
+  stream (127/127 panic, no output, mod-2 depth-6 sweep). B1's
+  `.opDone` post-op boundary admits it: the machine's certified set
+  is now {panic, ok 42} (corpus row goroutines/wake-then-abort,
+  members=2 statuses=ok+panic; record
+  `docs/evidence/2026-08-20_w32-postop-probes/`). Residual, recorded
+  at C3: post-RAISE partner progress is B3's window, DEFERRED at G1
+  with this probe as its trigger baseline. No longer a (d) unknown.
 - **U-2 L4 ⊆ L1-reachability**: the envelope-width review's [ANALYSIS]
   that every width>1 L4 member is also realizable by arrival timing has
   no theorem and no counterexample search beyond the probed shapes.
@@ -1283,8 +1297,9 @@ permanent; the deviation is not.)
    enveloped may-produce-or-skip; see E9 and
    `docs/spec-interpretations.md` I-1).
 5. **Census agreement (positive finding)**: the doctrine's canonical
-   7-site list, the module docstrings, and the executable consume sites
-   agree exactly; the map-iteration site is the only one that consumes
+   site list (7 at this audit; 8 with stage C's `postOp` — the census
+   is the `ChoiceSite` datatype now, exhaustiveness-checked), the
+   module docstrings, and the executable consume sites agree exactly; the map-iteration site is the only one that consumes
    even at width 1 (StepFn.lean:599 — the doctrine's width>1 phrasing
    describes the pool sites and append's always-consume is width-formed;
    no behavioral consequence, but stream authors should know the
@@ -1292,11 +1307,12 @@ permanent; the deviation is not.)
 
 ## 10. Counts
 
-- (a) ENVELOPED: 7 sites / 7 entries (C1, C4, C5, C6, C8, E9, R2 —
-  C6 owns two sites (L2 entry + arrival), C8 rides C1's site; E9's
-  order axis). (Count corrected 2026-08-12 — the old "6 entries" was
-  off by one against this line's own list.)
-- (b) PINNED: **17 entries** — structural: C2, C3; sequential order:
+- (a) ENVELOPED: 8 sites / 8 entries (C1, C3, C4, C5, C6, C8, E9,
+  R2 — C6 owns two sites (L2 entry + arrival), C8 rides C1's site;
+  E9's order axis; C3 owns the postOp site, W3.2 stage C). (Count
+  corrected 2026-08-12; C3 moved (b)→(a) 2026-08-20.)
+- (b) PINNED: **16 entries** — structural: C2 (stage D's target;
+  C3 moved to (a) at stage C, 2026-08-20); sequential order:
   E2, E3 (known ≠ gc), E4, E5, E7 (known ≠ gc), E10, E11, E12, E13
   (known ≠ gc on its assertion axis); representation/runtime: R1, R8,
   R9, R10, R11, R15 (+R12 harness-level). (Recount 2026-08-20, the
@@ -1311,7 +1327,7 @@ permanent; the deviation is not.)
 - (c) FORCED: the §4 list (machine follows; BUG-005's mandated
   point — removed-before-reached never produced — CLOSED 2026-08-19
   by the (L) surgery's delete-prune).
-- (d) UNKNOWN: 7 (U-1 … U-7).
+- (d) UNKNOWN: 6 (U-2 … U-7; U-1 probed and admitted at W3.2 stage C, 2026-08-20).
 - REFUSED standing in for latitude: 9 (§5).
 - Known-≠-oracle deterministic points (the honesty-critical subset of
   (b)): E3, E5, E7, E13(type-assertion axis; the indexing axis agrees),

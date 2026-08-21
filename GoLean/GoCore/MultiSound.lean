@@ -158,14 +158,49 @@ theorem arrivalPlan_of_multi {s : ExecState} {threads : Array Config}
   dsimp only
   cases os[sel]? <;> rfl
 
-/-- The post-spawn marker never steps sequentially — `stepFn` fails
-closed there (`.internal`; the marker is pool-only, BUG-040). -/
-theorem spawnedCont_stepFn_internal {c : Config} {σ : ExecState}
-    {ch : Choices} {k : Cont} (h : spawnedCont c = some k) :
-    stepFn σ c ch
-      = .error (.internal "post-spawn marker outside the thread pool") := by
+/-- An `opDoneInner` extraction pins the marker's shape (the
+`spawnPlan` extraction mold). -/
+theorem opDoneInner_shape {c inner : Config}
+    (h : opDoneInner c = some inner) : ∃ sc, c = .opDone sc inner := by
   match c, h with
-  | .spawned k', _ => rfl
+  | .opDone sc i', h =>
+      simp only [opDoneInner, Option.some.injEq] at h
+      exact ⟨sc, by rw [h]⟩
+
+/-- The completion marker STRIPS sequentially too (stage C, B1 —
+`stepFn`'s `.opDone` arm; the old `.spawned` marker failed closed
+here, which is what made the strip pool-only pre-widening). -/
+theorem opDoneInner_stepFn_strip {c inner : Config} {σ : ExecState}
+    {ch : Choices} (h : opDoneInner c = some inner) :
+    stepFn σ c ch = .ok (inner, σ, ch) := by
+  obtain ⟨sc, rfl⟩ := opDoneInner_shape h
+  rfl
+
+/-- The sequential relation's marker rule, inverted: the strip is the
+ONLY step from a marker. -/
+theorem step_opDone_inv {sc : ChoiceSite} {c c' : Config}
+    {σ σ' : ExecState} (h : Step (.opDone sc c) σ c' σ') :
+    c' = c ∧ σ' = σ := by
+  cases h
+  exact ⟨rfl, rfl⟩
+
+/-- The clamped boundary site never pops at bound 1 — for ARBITRARY
+configurations (the clamp in `Config.boundarySite` is what makes this
+unconditional; the sequential-conservation lemmas quantify over any
+config). -/
+theorem Config.boundarySite_consumeAtOne (c : Config) :
+    (Config.boundarySite c).policy.consumeAtOne = false := by
+  unfold Config.boundarySite
+  split <;> rfl
+
+/-- A postOp boundary site is exactly a postOp-tagged marker. -/
+theorem Config.boundarySite_postOp_shape {c : Config}
+    (h : Config.boundarySite c = .postOp) :
+    ∃ inner, c = .opDone .postOp inner := by
+  unfold Config.boundarySite at h
+  split at h
+  · rename_i inner; exact ⟨inner, rfl⟩
+  · cases h
 
 /-- A `selectApplyPlan` extraction pins the configuration's shape (the
 `spawnedCont_shape` mold). -/
@@ -217,16 +252,23 @@ theorem stepFn_selectApply_inv {σ : ExecState} {v : GoValue}
 
 /-- The one-thread `stepThread` is `stepFn`, results re-wrapped with a
 step event attached (the arrival plan is a pure no-op with no other
-goroutines — `arrivalPlan_singleton`; the post-spawn marker is
-excluded — its pool strip has no sequential counterpart; the select
-interception path lands on `stepFn`'s own result — one consuming
-definition, `applySelect`, whose commit identity the sequential arm
-projects away). -/
+goroutines — `arrivalPlan_singleton`; the completion marker's pool
+strip matches `stepFn`'s own `.opDone` arm exactly — stage C's
+both-drivers strip; the select interception path lands on `stepFn`'s
+own result — one consuming definition, `applySelect`, whose commit
+identity the sequential arm projects away). -/
 theorem stepThread_single {σ : ExecState} {c : Config} {ch : Choices}
-    (hbl : isBlockedConfig c = false) (hsc : spawnedCont c = none)
+    (hbl : isBlockedConfig c = false)
     (hsp : spawnPlan c = none) :
     ∃ ev, stepThread σ #[c] 0 ch
       = (stepFn σ c ch).map (fun r => (#[r.1], r.2.1, r.2.2, ev)) := by
+  cases hsc : opDoneInner c with
+  | some inner =>
+      -- The marker strip: the pool arm and `stepFn`'s arm coincide.
+      refine ⟨⟨0, .opDoneStrip, []⟩, ?_⟩
+      obtain ⟨sc, rfl⟩ := opDoneInner_shape hsc
+      rfl
+  | none =>
   unfold stepThread
   have h0 : (#[c] : Array Config)[0]? = some c := rfl
   rw [h0]
@@ -283,18 +325,30 @@ theorem runnableIdxs_singleton {σ : ExecState} {c : Config}
     runnableIdxs σ #[c] = [0] := by
   simp [runnableIdxs, h]
 
+/-- A singleton pool's slot menu is `[0]` at EVERY site (postOp's
+issuer-first reordering is invisible with one goroutine). -/
+theorem schedSlots_singleton {σ : ExecState} {c : Config}
+    {site : ChoiceSite} (h : threadRunnable σ c = true) :
+    schedSlots σ #[c] 0 site = [0] := by
+  unfold schedSlots
+  cases site <;>
+    simp [runnableIdxs_singleton h]
+
 /-- **The one-thread pool step is the sequential step** (the D2a
 consumption rule at work: a single runnable goroutine never consumes a
-scheduler choice, and with no partner the intercept never fires). -/
+scheduler choice — at the L1 site AND at stage C's postOp site, both
+by the declared `consumeAtOne := false` policy via the clamped
+`Config.boundarySite` — and with no partner the intercept never
+fires). -/
 theorem stepMulti_single {σ : ExecState} {c : Config} {ch : Choices}
-    (hbl : isBlockedConfig c = false) (hsc : spawnedCont c = none)
+    (hbl : isBlockedConfig c = false)
     (hsp : spawnPlan c = none)
     (hdone : threadDone c = false) :
     ∃ ev, stepMulti ⟨#[c], σ, 0⟩ ch
       = (stepFn σ c ch).map (fun r => (⟨#[r.1], r.2.1, 0⟩, r.2.2, ev)) := by
   have hrun : threadRunnable σ c = true := by
     simp [threadRunnable, hdone, hbl]
-  obtain ⟨ev, hst⟩ := stepThread_single (σ := σ) (ch := ch) hbl hsc hsp
+  obtain ⟨ev, hst⟩ := stepThread_single (σ := σ) (ch := ch) hbl hsp
   refine ⟨ev, ?_⟩
   have hinto : stepThreadInto ⟨#[c], σ, 0⟩ 0 ch
       = (stepFn σ c ch).map (fun r => (⟨#[r.1], r.2.1, 0⟩, r.2.2, ev)) := by
@@ -308,10 +362,12 @@ theorem stepMulti_single {σ : ExecState} {c : Config} {ch : Choices}
   simp only [h0]
   by_cases hb : Config.atBoundary c = true
   · simp only [hb, reduceIte]
-    rw [show runnableIdxs σ #[c] = [0] from runnableIdxs_singleton hrun]
+    rw [show schedSlots σ #[c] 0 c.boundarySite = [0]
+      from schedSlots_singleton hrun]
     dsimp only
-    rw [show Choices.consumeAtE .l1Sched [0].length ch = (0, ch, [])
-      from Choices.consumeAtE_le_one (by simp) rfl]
+    rw [show Choices.consumeAtE c.boundarySite [0].length ch = (0, ch, [])
+      from Choices.consumeAtE_le_one (by simp)
+        (Config.boundarySite_consumeAtOne c)]
     simp only [List.getElem?_cons_zero]
     simp only [Bind.bind, Except.bind]
     rw [hinto]
@@ -465,14 +521,10 @@ theorem execProgLoop_single :
         simp [threadRunnable, hd, hb]
       unfold execProgLoop
       simp only [Bind.bind, Except.bind] at hr
-      cases hsc : spawnedCont c with
-      | some kk =>
-          -- The post-spawn marker refuses sequentially (`.internal`) —
-          -- outside the transferable classes.
-          rw [spawnedCont_stepFn_internal (σ := σ) (ch := ch) hsc] at hr
-          subst hr
-          simp [transferable] at htr
-      | none =>
+      -- Stage C: the completion marker is NOT a special case any
+      -- more — `stepFn` strips it on the sequential driver and
+      -- `stepThread`'s marker arm does the identical strip on the
+      -- pool, so `stepMulti_single` covers it like any private step.
       cases hsp : spawnPlan c with
       | some p =>
           have hcls := spawnPlan_stepFn_refuses (σ := σ) (ch := ch) hsp
@@ -485,7 +537,7 @@ theorem execProgLoop_single :
               cases e <;> simp_all [transferable]
       | none =>
           obtain ⟨ev, hmulti⟩ :=
-            stepMulti_single (σ := σ) (ch := ch) hb hsc hsp hd
+            stepMulti_single (σ := σ) (ch := ch) hb hsp hd
           cases hstep : stepFn σ c ch with
           | error e =>
               rw [hstep] at hr
@@ -522,12 +574,14 @@ theorem execProg_single_eq_execStmt {fuel : Nat} {env : LocalEnv}
 
 /-! ## Correspondence: `stepMulti` instantiates `StepM` -/
 
-/-- A successful spawn's PARENT successor is always the post-spawn
-marker `.spawned k` (BUG-040: the fork's completion is a registry op;
-the marker strips to `.next k` at the next pool step). -/
+/-- A successful spawn's PARENT successor is always the completion
+marker `.opDone .l1Sched (.next k)` (BUG-040: the fork's completion is
+a registry op; stage C: the `l1Sched` tag preserves the spawn
+boundary's shipped default; the marker strips at the next step). -/
 theorem spawnStep_shape {s : ExecState} {cv : GoValue} {args : List GoValue}
     {k : Cont} {p c : Config} {s' : ExecState}
-    (h : spawnStep s cv args k = .ok (p, c, s')) : p = .spawned k := by
+    (h : spawnStep s cv args k = .ok (p, c, s')) :
+    p = .opDone .l1Sched (.next k) := by
   unfold spawnStep at h
   cases cv <;>
     simp_all [Bind.bind, Except.bind, throw, throwThe, MonadExceptOf.throw]
@@ -540,6 +594,51 @@ theorem schedPick_of_boundary {m : MultiConfig} {c : Config} {i : Nat}
   unfold schedPick
   rw [hcur]
   simp [hb, hmem]
+
+/-- Runnable-list membership from an indexed runnable configuration. -/
+theorem mem_runnableIdxs_of {s : ExecState} {ts : Array Config} {j : Nat}
+    {c : Config} (hj : ts[j]? = some c) (hr : threadRunnable s c = true) :
+    j ∈ runnableIdxs s ts := by
+  obtain ⟨hlt, -⟩ := Array.getElem?_eq_some_iff.mp hj
+  unfold runnableIdxs
+  refine List.mem_filter.mpr ⟨List.mem_range.mpr hlt, ?_⟩
+  simp only [hj, hr]
+
+/-- The slot menu's SET is contained in the runnable set — the slot
+reordering at postOp adds no member (`schedPick`'s membership
+formulation is therefore unchanged by the widening). -/
+theorem schedSlots_mem {s : ExecState} {ts : Array Config} {cur i : Nat}
+    {c : Config} (hcur : ts[cur]? = some c)
+    (hmem : i ∈ schedSlots s ts cur c.boundarySite) :
+    i ∈ runnableIdxs s ts := by
+  by_cases hpost : c.boundarySite = .postOp
+  · rw [hpost] at hmem
+    unfold schedSlots at hmem
+    rcases List.mem_cons.mp hmem with rfl | hmem'
+    · obtain ⟨inner, rfl⟩ := Config.boundarySite_postOp_shape hpost
+      exact mem_runnableIdxs_of hcur rfl
+    · exact (List.mem_filter.mp hmem').1
+  · have heq : schedSlots s ts cur c.boundarySite = runnableIdxs s ts := by
+      unfold schedSlots
+      cases hbs : c.boundarySite <;>
+        first | (exact absurd hbs hpost) | rfl
+    rw [heq] at hmem
+    exact hmem
+
+/-- Every runnable goroutine appears in the slot menu at every site
+(completeness direction: the menu never LOSES a member either). -/
+theorem mem_schedSlots_of_runnable {s : ExecState} {ts : Array Config}
+    {cur i : Nat} {site : ChoiceSite}
+    (hmem : i ∈ runnableIdxs s ts) :
+    i ∈ schedSlots s ts cur site := by
+  unfold schedSlots
+  cases site <;> try exact hmem
+  -- postOp: issuer-first is a reordering-plus-cons, never a loss
+  by_cases hi : i = cur
+  · subst hi
+    exact List.mem_cons_self ..
+  · exact List.mem_cons.mpr (Or.inr (List.mem_filter.mpr
+      ⟨hmem, by simpa using hi⟩))
 
 theorem schedPick_cur {m : MultiConfig} {c : Config}
     (hcur : m.threads[m.cur]? = some c) (hb : c.atBoundary = false) :
@@ -581,16 +680,21 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
           exact StepM.wake hsched hti hbl hres
       · simp only [Bool.not_eq_true] at hbl
         simp only [hbl, Bool.false_eq_true, reduceIte] at hst
-        cases hsc : spawnedCont c with
-        | some kk =>
-          -- The post-spawn marker STRIP (BUG-040).
+        cases hsc : opDoneInner c with
+        | some inner =>
+          -- The completion-marker STRIP (stage C): an ordinary
+          -- `.thread` step now — `Step.opDoneStrip` lifted.
           rw [hsc] at hst
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
           obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
-          have hcfg : c = .spawned kk := by
-            cases c <;> simp_all [spawnedCont]
+          obtain ⟨sc, hcfg⟩ := opDoneInner_shape hsc
           subst hcfg
-          exact StepM.spawned hsched hti
+          have hts : m.threads.setIfInBounds i inner
+              = (m.threads.setIfInBounds i inner) ++ ([] : List Config).toArray := by
+            simp
+          rw [hts]
+          exact StepM.thread hsched hti hbl rfl
+            (StepE.lift Step.opDoneStrip)
         | none =>
         rw [hsc] at hst
         cases hsp : spawnPlan c with
@@ -764,14 +868,17 @@ theorem stepMulti_sound {m : MultiConfig} {ch ch' : Choices}
     rw [hcur] at h
     by_cases hb : c.atBoundary = true
     · simp only [hb, reduceIte] at h
-      cases hrs : runnableIdxs m.shared m.threads with
+      cases hrs : schedSlots m.shared m.threads m.cur c.boundarySite with
       | nil => rw [hrs] at h; cases h
       | cons r0 rest =>
         rw [hrs] at h
-        -- The L1 site (`consumeAtE .l1Sched`): one arm covers the sole
-        -- runnable (policy: no pop at bound 1) and the consuming pick.
+        -- The boundary site (`consumeAtE c.boundarySite` — l1Sched or
+        -- stage C's postOp): one arm covers the sole slot (policy: no
+        -- pop at bound 1, `boundarySite_consumeAtOne`) and the
+        -- consuming pick.
         dsimp only at h
-        rcases hcons : Choices.consumeAtE .l1Sched (r0 :: rest).length ch
+        rcases hcons : Choices.consumeAtE c.boundarySite
+            (r0 :: rest).length ch
           with ⟨pick, ch₁, ps⟩
         rw [hcons] at h
         cases hget : (r0 :: rest)[pick]? with
@@ -787,6 +894,7 @@ theorem stepMulti_sound {m : MultiConfig} {ch ch' : Choices}
             simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
             obtain ⟨rfl, rfl, rfl⟩ := h
             have hmem : i ∈ runnableIdxs m.shared m.threads := by
+              refine schedSlots_mem hcur ?_
               rw [hrs]
               exact List.mem_of_getElem? hget
             exact stepThreadInto_sound (schedPick_of_boundary hcur hb hmem) hinto
@@ -806,27 +914,22 @@ theorem step_spawnPos_elim {c : Config} {σ : ExecState} {c' : Config}
   | .retV cv (.goCalleeK [] env k), _ => cases h
   | .retV v (.goArgsK cv vals [] env k), _ => cases h
 
-/-- The per-goroutine relation is silent at the post-spawn marker (the
-strip is `StepM.spawned`'s rule — pool-only, BUG-040). -/
-theorem step_spawnedMarker_elim {c : Config} {σ : ExecState} {c' : Config}
-    {σ' : ExecState} {k : Cont}
-    (hsc : spawnedCont c = some k) : ¬ Step c σ c' σ' := by
-  intro h
-  match c, hsc with
-  | .spawned _, _ => cases h
+-- `step_spawnedMarker_elim` DELETED (stage C): the marker now HAS a
+-- sequential rule (`Step.opDoneStrip`) — the strip is an ordinary
+-- lifted step, no longer relation-silent.
 
 /-- A completed spawn position is not the marker (plan disjointness for
 the `stepThread` dispatch proofs). -/
-theorem spawnedCont_of_spawnPlan {c : Config}
+theorem opDoneInner_of_spawnPlan {c : Config}
     {p : GoValue × List GoValue × Cont}
-    (h : spawnPlan c = some p) : spawnedCont c = none := by
+    (h : spawnPlan c = some p) : opDoneInner c = none := by
   match c, h with
   | .retV cv (.goCalleeK [] env k), _ => rfl
   | .retV v (.goArgsK cv vals [] env k), _ => rfl
 
 /-- A blocked configuration is not the marker. -/
-theorem spawnedCont_of_blocked {c : Config}
-    (h : isBlockedConfig c = true) : spawnedCont c = none := by
+theorem opDoneInner_of_blocked {c : Config}
+    (h : isBlockedConfig c = true) : opDoneInner c = none := by
   match c, h with
   | .blockedSend _ _ _, _ => rfl
   | .blockedRecv _ _ _ _ _, _ => rfl
@@ -849,16 +952,23 @@ theorem stepMulti_of_inner {m : MultiConfig} {i : Nat} {chI chI' : Choices}
     dsimp only at hsched
     by_cases hbnd : c₀.atBoundary = true
     · rw [if_pos hbnd] at hsched
-      cases hrs : runnableIdxs m.shared m.threads with
+      -- Realize the pick through the boundary's own slot menu
+      -- (`schedSlots`/`boundarySite` — stage C): every runnable
+      -- goroutine is IN the menu (`mem_schedSlots_of_runnable`), and
+      -- the site never pops at a singleton menu
+      -- (`boundarySite_consumeAtOne`).
+      have hmenu : i ∈ schedSlots m.shared m.threads m.cur c₀.boundarySite :=
+        mem_schedSlots_of_runnable hsched
+      cases hrs : schedSlots m.shared m.threads m.cur c₀.boundarySite with
       | nil =>
-        rw [hrs] at hsched
-        exact absurd hsched (by simp)
+        rw [hrs] at hmenu
+        exact absurd hmenu (by simp)
       | cons r0 rest =>
+        rw [hrs] at hmenu
         cases rest with
         | nil =>
           have hi : i = r0 := by
-            rw [hrs] at hsched
-            simpa using hsched
+            simpa using hmenu
           subst hi
           exact ⟨chI, chI', _, by
             unfold stepMulti
@@ -866,22 +976,23 @@ theorem stepMulti_of_inner {m : MultiConfig} {i : Nat} {chI chI' : Choices}
             simp only [hbnd, reduceIte]
             rw [hrs]
             dsimp only
-            -- sole runnable: the L1 site's policy consumes nothing
-            rw [show Choices.consumeAtE .l1Sched [i].length chI = (0, chI, [])
-              from Choices.consumeAtE_le_one (by simp) rfl]
+            -- sole slot: the site's policy consumes nothing
+            rw [show Choices.consumeAtE c₀.boundarySite [i].length chI
+                = (0, chI, [])
+              from Choices.consumeAtE_le_one (by simp)
+                (Config.boundarySite_consumeAtOne c₀)]
             simp only [List.getElem?_cons_zero]
             simp only [Bind.bind, Except.bind]
             unfold stepThreadInto
             rw [hinner]
             rfl⟩
         | cons r1 rest' =>
-          rw [hrs] at hsched
-          obtain ⟨p, hp⟩ := List.getElem?_of_mem hsched
+          obtain ⟨p, hp⟩ := List.getElem?_of_mem hmenu
           have hplen : p < (r0 :: r1 :: rest').length :=
             (List.getElem?_eq_some_iff.mp hp).1
-          have hcons : Choices.consumeAtE .l1Sched (r0 :: r1 :: rest').length
-              (p :: chI)
-              = (p, chI, [⟨.l1Sched, (r0 :: r1 :: rest').length, p⟩]) := by
+          have hcons : Choices.consumeAtE c₀.boundarySite
+              (r0 :: r1 :: rest').length (p :: chI)
+              = (p, chI, [⟨c₀.boundarySite, (r0 :: r1 :: rest').length, p⟩]) := by
             rw [Choices.consumeAtE_of_lt (by simp only [List.length_cons]; omega)]
             have hcc : Choices.consume (p :: chI) (r0 :: r1 :: rest').length
                 = (p, chI) := by
@@ -933,15 +1044,29 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
         cases hspq : spawnPlan c with
         | none => rfl
         | some p => exact absurd hstep (step_spawnPos_elim hspq)
-      have hsc : spawnedCont c = none := by
-        cases hscq : spawnedCont c with
-        | none => rfl
-        | some kk => exact absurd hstep (step_spawnedMarker_elim hscq)
-      obtain ⟨ch₀, ch₀', hfn⟩ := step_complete hstep
       have heq : (m.threads.setIfInBounds i c') ++ ([] : List Config).toArray
           = m.threads.setIfInBounds i c' := by
         rw [show (([] : List Config)).toArray = #[] from rfl, Array.append_empty]
       rw [heq]
+      cases hsc : opDoneInner c with
+      | some inner =>
+          -- The marker strip (stage C): `Step.opDoneStrip` is the only
+          -- rule from a marker; the pool's marker arm realizes it on
+          -- the empty stream.
+          obtain ⟨sc, hcfg⟩ := opDoneInner_shape hsc
+          subst hcfg
+          obtain ⟨hc', rfl⟩ := step_opDone_inv hstep
+          rw [hc']
+          have hinner : ∃ evI, stepThread m.shared m.threads i []
+              = .ok (m.threads.setIfInBounds i inner, m.shared, [], evI) :=
+            ⟨_, by
+              unfold stepThread
+              rw [hti]
+              rfl⟩
+          obtain ⟨evI, hinner⟩ := hinner
+          exact stepMulti_of_inner hsched hinner
+      | none =>
+      obtain ⟨ch₀, ch₀', hfn⟩ := step_complete hstep
       cases hselp : selectApplyPlan c with
       | none =>
         have hinner : ∃ evI, stepThread m.shared m.threads i ch₀
@@ -1009,7 +1134,7 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
           unfold stepThread
           rw [hti]
           simp only [hblc, Bool.false_eq_true, reduceIte,
-            spawnedCont_of_spawnPlan hplan', hplan', Bind.bind,
+            opDoneInner_of_spawnPlan hplan', hplan', Bind.bind,
             Except.bind]
           rw [hspawn]
           rfl⟩
@@ -1021,14 +1146,13 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
       exact stepMulti_of_inner hsched hinner
   | pair hsched hti hblc hsp hplan hidx hap =>
     rename_i i c bc σ'' cs idx ts'
-    have hsc : spawnedCont c = none := by
-      cases hscq : spawnedCont c with
+    have hsc : opDoneInner c = none := by
+      cases hscq : opDoneInner c with
       | none => rfl
       | some kk =>
-          have hcfg : c = .spawned kk := by
-            cases c <;> simp_all [spawnedCont]
+          obtain ⟨sc, hcfg⟩ := opDoneInner_shape hscq
           subst hcfg
-          rw [show arrivalCases m.shared m.threads i (.spawned kk)
+          rw [show arrivalCases m.shared m.threads i (.opDone sc kk)
             = .ok .cellPath from rfl] at hplan
           cases hplan
     cases cs with
@@ -1094,14 +1218,13 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
         exact stepMulti_of_inner hsched hinner
   | pickPair hsched hti hblc hsp hplan hget hidx hap =>
     rename_i i c bc σ'' os sel cs idx ts'
-    have hsc : spawnedCont c = none := by
-      cases hscq : spawnedCont c with
+    have hsc : opDoneInner c = none := by
+      cases hscq : opDoneInner c with
       | none => rfl
       | some kk =>
-          have hcfg : c = .spawned kk := by
-            cases c <;> simp_all [spawnedCont]
+          obtain ⟨sc, hcfg⟩ := opDoneInner_shape hscq
           subst hcfg
-          rw [show arrivalCases m.shared m.threads i (.spawned kk)
+          rw [show arrivalCases m.shared m.threads i (.opDone sc kk)
             = .ok .cellPath from rfl] at hplan
           cases hplan
     have hsel : sel < os.length := (List.getElem?_eq_some_iff.mp hget).1
@@ -1179,14 +1302,13 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
         exact stepMulti_of_inner hsched hinner
   | pickCommit hsched hti hblc hsp hplan hget hcom =>
     rename_i i c cl envc kc os sel c' σ'
-    have hsc : spawnedCont c = none := by
-      cases hscq : spawnedCont c with
+    have hsc : opDoneInner c = none := by
+      cases hscq : opDoneInner c with
       | none => rfl
       | some kk =>
-          have hcfg : c = .spawned kk := by
-            cases c <;> simp_all [spawnedCont]
+          obtain ⟨sc, hcfg⟩ := opDoneInner_shape hscq
           subst hcfg
-          rw [show arrivalCases m.shared m.threads i (.spawned kk)
+          rw [show arrivalCases m.shared m.threads i (.opDone sc kk)
             = .ok .cellPath from rfl] at hplan
           cases hplan
     have hsel : sel < os.length := (List.getElem?_eq_some_iff.mp hget).1
@@ -1218,16 +1340,6 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
         rw [hti]
         simp only [hblc, reduceIte, Bind.bind, Except.bind]
         rw [hres]
-        rfl⟩
-    obtain ⟨evI, hinner⟩ := hinner
-    exact stepMulti_of_inner hsched hinner
-  | spawned hsched hti =>
-    rename_i i k
-    have hinner : ∃ evI, stepThread m.shared m.threads i []
-        = .ok (m.threads.setIfInBounds i (.next k), m.shared, [], evI) :=
-      ⟨_, by
-        unfold stepThread
-        rw [hti]
         rfl⟩
     obtain ⟨evI, hinner⟩ := hinner
     exact stepMulti_of_inner hsched hinner

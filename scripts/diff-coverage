@@ -31,7 +31,16 @@ LEAN_ENUM_TIMEOUT_SECONDS="${LEAN_ENUM_TIMEOUT_SECONDS:-300}"
 # timeout.md). Still a hard bound — the guard stays fail-closed, it just
 # no longer sits inside normal runner variance. Quick-lane enumerations
 # keep 300 s.
-LEAN_ENUM_SLOW_TIMEOUT_SECONDS="${LEAN_ENUM_SLOW_TIMEOUT_SECONDS:-1200}"
+# Slow-tier wall clock raised 1200 -> 3600 (W3.2 slice 1 stage C,
+# 2026-08-20): B1's post-op boundaries grew the certified slow trees —
+# the largest still-tractable row (goroutines/buffered-wake/fifo,
+# 114.4M steps+probes) measures ~4.5 min single-core on the dev box,
+# ~760 s at a hosted 2-core runner's ~150k steps/s; 3600 keeps the
+# 2026-08-14 post-mortem's ~4x headroom rule. Still a hard bound —
+# fail-closed unchanged. Composition caveat (same post-mortem): the
+# nightly job timeout must cover the slow rows' sum; see the stage-C
+# log entry for the measured per-row costs.
+LEAN_ENUM_SLOW_TIMEOUT_SECONDS="${LEAN_ENUM_SLOW_TIMEOUT_SECONDS:-3600}"
 
 # GATE INTEGRITY (grossmith findings §2,
 # docs/2026-08-07_grossmith-findings.md; hoisted ABOVE every infra exit
@@ -540,10 +549,38 @@ run_case_rows() {
   confluent_member=""
   confluent_detail=""
   if [[ "$lane" == "confluent" ]]; then
-    local width sites obs_cap samples work members statuses
+    local width sites obs_cap samples work members statuses tier
     parse_lane_params || return 0
     local conf_dir="$OUT/membership/$id"
     mkdir -p "$conf_dir"
+    # tier=slow (confluent; W3.2 stage C): the same cached-record
+    # discipline as the membership lane — quick runs verify against the
+    # tracked certified record (fail-closed on a missing record, a
+    # stale wire sha, or moved params); scripts/ci --slow re-certifies
+    # the singleton fully. The driver observation-eq check below still
+    # runs on the CACHED member, so machine drift against the certified
+    # singleton is caught per-commit.
+    local conf_cert="baselines/certified/${id//\//__}.certified.tsv"
+    local conf_wire_sha conf_rec_sha conf_rec_params
+    if [[ "$tier" == "slow" && "${GOLEAN_SLOW:-0}" != "1" ]]; then
+      if [[ ! -f "$conf_cert" ]]; then
+        report_fail "$id" "$features" "confluent" "tier=slow but no certified record at $conf_cert — certify with scripts/ci --slow and commit the record"
+        return 0
+      fi
+      conf_wire_sha="$(sha256sum "$wire_json" | cut -d' ' -f1)"
+      conf_rec_sha="$(sed -n 's/^# wire-sha256: //p' "$conf_cert" | head -1)"
+      if [[ -z "$conf_rec_sha" || "$conf_wire_sha" != "$conf_rec_sha" ]]; then
+        report_fail "$id" "$features" "confluent" "certified record is STALE (wire sha ${conf_wire_sha:0:12} != recorded ${conf_rec_sha:0:12}) — re-certify with scripts/ci --slow"
+        return 0
+      fi
+      conf_rec_params="$(sed -n 's/^# params: //p' "$conf_cert" | head -1)"
+      if [[ -z "$conf_rec_params" || "$conf_rec_params" != "$params" ]]; then
+        report_fail "$id" "$features" "confluent" "certified record was certified under params '$conf_rec_params' but the row now declares '$params' — re-certify with scripts/ci --slow"
+        return 0
+      fi
+      grep -v '^#' "$conf_cert" | grep . > "$conf_dir/observations.txt" || true
+      echo "CERTIFIED-CACHED $(sed -n 's/^# certified: //p' "$conf_cert" | head -1)" > "$conf_dir/enum-stats.txt"
+    else
     local conf_args=(coverage-observations --input "$wire_json" --function "$function_name"
       --max-width "$width" --max-sites "$sites" --cap "$obs_cap" --work-cap "$work"
       --expect-status "$expected_status")
@@ -554,8 +591,11 @@ run_case_rows() {
         conf_args+=(--arg-int "$v2")
       done
     fi
-    local conf_rc=0
-    run_with_timeout "$LEAN_ENUM_TIMEOUT_SECONDS" "$GOLEAN_BIN" "${conf_args[@]}" \
+    local conf_rc=0 conf_timeout="$LEAN_ENUM_TIMEOUT_SECONDS"
+    if [[ "$tier" == "slow" ]]; then
+      conf_timeout="$LEAN_ENUM_SLOW_TIMEOUT_SECONDS"
+    fi
+    run_with_timeout "$conf_timeout" "$GOLEAN_BIN" "${conf_args[@]}" \
         > "$conf_dir/observations.txt" 2> "$conf_dir/enum-stats.txt" || conf_rc=$?
     if [[ "$conf_rc" -ne 0 ]]; then
       # Timeouts NAMED here too (audit F4, 2026-08-15): the empty-detail-
@@ -564,10 +604,28 @@ run_case_rows() {
       # round named timeouts only in the membership lane.
       local conf_what="enumerator failed (exit $conf_rc; schedule-confluence not certified)"
       if [[ "$conf_rc" -eq 124 ]]; then
-        conf_what="enumerator TIMED OUT after ${LEAN_ENUM_TIMEOUT_SECONDS}s (schedule-confluence not certified)"
+        conf_what="enumerator TIMED OUT after ${conf_timeout}s (schedule-confluence not certified)"
       fi
       report_fail "$id" "$features" "confluent" "$conf_what: $(cat "$conf_dir/enum-stats.txt")"
       return 0
+    fi
+    if [[ "$tier" == "slow" ]]; then
+      # --slow re-certification: fresh singleton must equal the tracked
+      # record at the current wire hash (the membership lane's rule).
+      conf_wire_sha="$(sha256sum "$wire_json" | cut -d' ' -f1)"
+      if [[ ! -f "$conf_cert" ]]; then
+        report_fail "$id" "$features" "confluent" "tier=slow re-certified but no tracked record exists — create $conf_cert from $conf_dir/observations.txt (header: '# certified: <date>  commit: <rev>', '# params: $params', '# wire-sha256: $conf_wire_sha') and commit it"
+        return 0
+      fi
+      conf_rec_sha="$(sed -n 's/^# wire-sha256: //p' "$conf_cert" | head -1)"
+      conf_rec_params="$(sed -n 's/^# params: //p' "$conf_cert" | head -1)"
+      if [[ "$conf_wire_sha" != "$conf_rec_sha" || "$conf_rec_params" != "$params" ]] \
+         || ! diff <(grep -v '^#' "$conf_cert" | grep . | sort) \
+                   <(sort "$conf_dir/observations.txt") > /dev/null; then
+        report_fail "$id" "$features" "confluent" "re-certification DIFFERS from the tracked record $conf_cert (set, params, or wire hash moved) — update the record deliberately in this commit (fresh singleton in $conf_dir/observations.txt, wire-sha256 $conf_wire_sha)"
+        return 0
+      fi
+    fi
     fi
     local conf_count
     conf_count="$(grep -c . "$conf_dir/observations.txt" || true)"
@@ -837,19 +895,27 @@ parse_lane_params() {
       fi
       if [[ "$key" == "tier" ]]; then
         # Re-validated like every param (F4's discipline); members= is
-        # required (the cached path's cardinality constraint — pre-merge
-        # audit 2026-08-08).
-        if [[ "$value" != "slow" || "$lane" != "membership" ]]; then
-          report_fail "$id" "$features" "manifest" "tier=slow is the only tier and is membership-only: $kv (lane=$lane)"
+        # required for the membership lane (the cached path's
+        # cardinality constraint — pre-merge audit 2026-08-08). W3.2
+        # stage C widened the tier to the CONFLUENT lane: B1's post-op
+        # boundaries grew several confluent rows' certification trees
+        # past the fast-lane wall-clock budget, and the tiering design's
+        # cached-record discipline (certified record + nightly/--slow
+        # re-certification, fail-closed on sha/params drift) applies to
+        # a certified singleton exactly as to a certified set.
+        if [[ "$value" != "slow" ]]            || [[ "$lane" != "membership" && "$lane" != "confluent" ]]; then
+          report_fail "$id" "$features" "manifest" "tier=slow is the only tier and is membership/confluent-only: $kv (lane=$lane)"
           return 1
         fi
-        case ",$params," in
-          *,members=*) ;;
-          *)
-            report_fail "$id" "$features" "manifest" "tier=slow requires an explicit members=<n> pin"
-            return 1
-            ;;
-        esac
+        if [[ "$lane" == "membership" ]]; then
+          case ",$params," in
+            *,members=*) ;;
+            *)
+              report_fail "$id" "$features" "manifest" "tier=slow requires an explicit members=<n> pin"
+              return 1
+              ;;
+          esac
+        fi
         tier="slow"
         continue
       fi

@@ -202,10 +202,6 @@ inductive StepMFine : MultiConfig → MultiConfig → Prop where
       isBlockedConfig c = true →
       resumeThread m.shared c = .ok (c', σ') →
       StepMFine m ⟨m.threads.setIfInBounds i c', σ', i⟩
-  | spawned {m : MultiConfig} {i : Nat} {k : Cont} :
-      schedPickFine m i →
-      m.threads[i]? = some (.spawned k) →
-      StepMFine m ⟨m.threads.setIfInBounds i (.next k), m.shared, i⟩
 
 /-- A finished goroutine's configuration is a registry boundary
 (goroutine exit is a registry op). -/
@@ -277,8 +273,6 @@ theorem stepM_le_stepMFine {m m' : MultiConfig} (h : StepM m m') :
         hcom
   | wake hs hti hbl hres =>
       exact StepMFine.wake (schedPick_le_fine hs) hti hbl hres
-  | spawned hs hti =>
-      exact StepMFine.spawned (schedPick_le_fine hs) hti
 
 /-! ## Reachability and program results -/
 
