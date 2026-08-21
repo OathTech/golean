@@ -39,6 +39,16 @@
 #   enumeration confirms it). Wire sha unchanged. Prior re-cert
 #   (same date): F15 kind-carrying observation shape.
 # case: imported-goose/channel/google-search
+# params-note (2026-08-21, audit finding B-INFO): under `engine=dedup`
+#   the `width=`/`sites=` figures below DO NOT BOUND THE CLAIM. They are
+#   DFS-path parameters (per-site menu width and the site budget of a
+#   bounded tree walk); the dedup certification covers the CLOSED STATE
+#   GRAPH, and the accepted certificate's member set is theorem-backed
+#   EQUAL to `SlowObs` — the full ∃-fuel ∃-stream image of
+#   `execProgLoop` — with no width or site restriction. They are kept in
+#   the row so a revert to the DFS engine has its parameters, and
+#   `work=` still bounds the dedup run (it fails loud on breach).
+#   Standard: docs/2026-08-21_w32-por-design.md §1/§3/§4.
 # params: width=4,sites=48,work=60000000,members=6,engine=dedup,tier=slow
 # wire-sha256: 4a2ccadf9e2389570786ccb5c4eb5dd171a215f3e68ca4c52cd4eaed6c2a623b
 # enum-stats: observations=6 steps=6565663 probes=0 sites=6193933 leaves=0 maxdepth=0 width=16 engine=dedup nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert

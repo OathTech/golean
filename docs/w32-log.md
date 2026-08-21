@@ -697,7 +697,7 @@ judgment calls recorded as they are made; checkpoints every ≤5 units.
   | buffered-wake/cap-one (confluent, was backedge=full) | 29.1M (tier=slow) | 4.5k / 4.8k | <1 s |
   | ping-pong/alternate (confluent, was backedge=0) | 16.2M + probe-heavy (tier=slow) | 7.0k / 7.3k | <1 s |
   | free-sync/rw-writers (confluent) | 87.3M (tier=slow) | 10.5k / 13.2k | <1 s |
-  | sched-dependent/first-come ({12,21}) | 84.8M (tier=slow) | 98.7k / 114.2k | <1 s |
+  | sched-dependent/first-come ({12,21}) | 84.8M (tier=slow) | 98.7k / 114.2k | ≈1.35 s |
 
   Both standing `--slow` alarms RESOLVED (google-search: fresh
   theorem-backed record, stage-C witnesses cross-check; rwmutex-order:
@@ -720,6 +720,15 @@ judgment calls recorded as they are made; checkpoints every ≤5 units.
   the principled fix remains the mover/reduction lane (slice 5),
   which now COMPOSES with dedup (ample-set restriction of the
   checker's per-node vectors, its own completeness lemma).
+- DEVIATION from the pinning rule, acknowledged (audit finding B-F11,
+  recorded 2026-08-21): CLAUDE.md says re-pin the baseline "in the same
+  change that caused the move". Here the nine rows moved in **P5a**
+  (`6a62c4a0`) and the re-pin landed one commit later in **P5b**
+  (`f801558c`). The flips were explained and the re-pin header states
+  them, so nothing was laundered — but the same-commit rule was missed,
+  and it is recorded as missed rather than rationalized. The staging
+  reason (measure the moves, then re-pin from one full run) is a reason
+  to sequence the WORK that way, not to split the COMMIT.
 - Fragment-extension judgment calls, logged: (1) N-APP added when
   google-search's refusal diagnosed as a NON-spilling append (the
   conservative `consumesAppendSlice` refusal was wider than the
@@ -733,7 +742,12 @@ judgment calls recorded as they are made; checkpoints every ≤5 units.
 
 ### Gates (POR slice — the exit gates)
 
-- `GOLEAN_MEM_MAX=24G scripts/ci --diff`
+- `GOLEAN_MEM_MAX=24G scripts/ci --diff` **at `e2b460e7`** (the POR
+  slice's exit tip; commit-qualified 2026-08-21 per audit finding
+  B-F9 — the citation was bare and tip-relative, so it silently
+  re-pointed at whatever the branch tip became. **SUPERSEDED by the
+  audit-fix round's full run at that round's tip**; kept as the record
+  of the state it actually judged)
   (artifacts/w32-por-ci-diff.log, untracked): **RESULT: PASS** —
   every step ok (escape hatches, purity/TCB/import-direction, core
   build warning-free, proofs + Audit gate, verdi compat, goose
@@ -741,7 +755,7 @@ judgment calls recorded as they are made; checkpoints every ≤5 units.
   fixtures both halves, negative no-regression, **baseline diff FULL
   2324/2324 no regression**, re-pin guard ok — 0 PASS→non-PASS flips,
   the two FAIL→PASS flips explained in the re-pin header).
-- `GOLEAN_MEM_MAX=24G scripts/ci --slow`
+- `GOLEAN_MEM_MAX=24G scripts/ci --slow` **at `e2b460e7`**
   (artifacts/w32-por-ci-slow.log, untracked): **RESULT: PASS** — same
   step list all ok, with the differential under GOLEAN_SLOW=1:
   google-search FULLY RE-ENUMERATED by the dedup engine in-run
@@ -757,3 +771,169 @@ judgment calls recorded as they are made; checkpoints every ≤5 units.
 - CHECKPOINT POR-slice: branch-complete pending the wrap-up commit;
   merge/audit remain Mike's (the audit ask is posed in the session
   report, per the charter's hard boundary).
+
+## POR slice — the AUDIT-FIX ROUND (2026-08-21)
+
+Response to the pre-merge adversarial audit of the POR slice at
+`e2b460e7` (reviewers A and B; every finding below was
+auditor-verified before it was fixed). Two gate holes, one standing
+regression test, one in-situ envelope argument, and ten record
+corrections. **No gate was weakened, no claim strengthened, no re-pin
+laundered** — the two code fixes both make a gate see MORE, and the
+one baseline edit restores a format field main already carries.
+
+### The two gate holes (the ones that mattered)
+
+- **B-F2 — the engine-isolation clause could not see the proofs
+  aggregators.** `scripts/ci`'s POR-slice clause scanned
+  `find GoLean/GoCore proofs/GoLeanProofs` plus `GoLean/GoCore.lean`.
+  But `proofs/GoLeanProofs.lean` and `proofs/Audit.lean` are FILES
+  beside that directory, not inside it — and they are exactly the two
+  files exempted from the import-direction gate's Specs clause by
+  design, which is why they had to be in this one. Fixed by appending
+  both to `eng_files`. **PROBED, both directions** (reviewer B's probe,
+  re-run at this tip): with `import GoLean.EnumDedup` planted at the
+  top of both aggregators, the OLD clause reports `dir_bad=0` (251
+  files scanned — the hole, reproduced) while the NEW clause reports
+  `dir_bad=1` naming both files at line 1 (253 files scanned); with the
+  plant reverted, the new clause is `dir_bad=0` and the tree is clean.
+  Also recorded in situ, not fixed: the scan is DIRECT-import only, so
+  a `GoLean/*.lean` intermediary between a scanned file and the engine
+  would still be missed — a transitive closure needs the olean graph,
+  and the aggregators were the realistic vector.
+- **B-F1 — the slice's headline theorem had no axiom pin.**
+  `checkCertM_slowObs` is what every `engine=dedup` certified record
+  now MEANS, and nothing in `proofs/Audit.lean` guarded it: a `sorry`
+  reintroduced anywhere beneath it would have passed every green step.
+  Pinned, in the checker-soundness-kit block: `checkCertM_slowObs`,
+  `checkCert_slowObs` (the `nodeEqb`-parametric form) and
+  `dedupNodeEqb_sound` (the soundness hypothesis the instantiation
+  discharges) — all three
+  `[propext, Classical.choice, Quot.sound]`, measured before pinning.
+  Proofs build green with the pins in place.
+
+### The standing regression test (B-LOW)
+
+The checker's fail-closed behavior had been DEMONSTRATED once, by hand,
+in a session probe — and then nothing held it. A certificate the
+checker wrongly ACCEPTS is the whole trust surface of every
+`engine=dedup` row, so the mutation refusals now live in
+`Tests/GoCoreEval.lean`. Fixture: the smallest real pool that closes —
+a 2-thread pool of default-taking selects, 13 nodes, 1 member. The
+untrusted engine only MANUFACTURES the certificate; every assertion is
+about the checker.
+
+| pin | mutation | expected |
+|---|---|---|
+| positive control | none | **ACCEPTED** (13 nodes, 1 member) |
+| M1 | drop a member | REFUSED (completeness: a reachable observation is unclaimed) |
+| M2 | redirect every successor hint to node 0 | REFUSED (hints are re-derived, never trusted) |
+| M3 | drop the last node | REFUSED (graph not closed under `stepMulti`) |
+| M5 | push a fabricated `.panic` member | REFUSED (soundness: its witness does not replay) |
+
+The positive control is load-bearing: without it the four refusals are
+also satisfied by a checker that refuses everything. (Reviewer B's M4 —
+junk appended to a member's witness stream — is ACCEPTED and correctly
+so: choices past the consumption point are ignored by the replay, which
+is sound. Not pinned, because it pins a non-property.)
+**Eval-test count: 136 → 141 ok** (5 new).
+
+### The other two code-adjacent fixes
+
+- **A-INFO** — `scripts/ci`'s differential step now names its MODE
+  (`--diff: … cached certified records` vs `--slow: … GOLEAN_SLOW=1
+  tier=slow re-certification`). The two modes printed identical step
+  lists, so a saved log could not be told apart after the fact.
+- **A-W-1** — the select **default-take / park** path takes no `.opDone`
+  wrapper, because B1 scopes post-op boundaries to select COMMITS
+  (`docs/2026-08-20_w32-boundary-set.md` §B1). The
+  envelope-neutrality argument for that now sits in situ at
+  `applySelectCore`'s no-ready-clause arm, on the passive-partner
+  argument's pattern: a default-take changes no channel or sync state
+  and wakes nobody, so nothing depends on a boundary placed after it;
+  the latitude deciding whether the select saw a ready clause is
+  consumed earlier, at the other goroutines' boundaries. Comment only —
+  no semantic change.
+
+### Record corrections
+
+- **B-F3** — `docs/2026-08-21_w32-por-design.md` §1: the `SlowObs`
+  restatement is now SCOPED, explicitly, to `engine=dedup` rows. DFS
+  rows keep the old bounded-tree claim, stated as such and stated as
+  NOT `SlowObs`-certified. The paragraph previously read as if it
+  restated every certified record.
+- **B-F4** — the `nonterm=`-under-dedup ruling is now where Mike will
+  see it: charter **OQ5** (`docs/2026-08-20_w32-re-envelope-charter.md`,
+  with the three candidate rulings and the wedge measurements) plus a
+  **TODO.md** row. It is a claim-standard question, not an
+  implementation detail — the membership singleton-guard exemption and
+  the wedge row's engine both ride on it — and it had been living only
+  in this log.
+- **B-F5** — `Corpus/…/sched-dependent/cases.tsv` first-come's
+  why-column: the stale DFS-tree prose is replaced by the dedup-graph
+  facts (98,664 nodes / 114,247 edges, closed and checker-accepted, so
+  the set is theorem-backed equal to `SlowObs`; tier dropped). The
+  superseded DFS measurement is kept, marked as superseded.
+- **B-F6** — BUG-065's request-reply figure `18k` → **36k** node+edge
+  (17.6k nodes + 18.4k edges). `18k` was the edge count alone, so it
+  was inconsistent with the three node+edge sums beside it in the same
+  sentence. The same figure appears in `6a62c4a0`'s commit MESSAGE,
+  which is immutable history — this entry is its correction.
+- **B-F7** — the `<1 s` claim for first-come was wrong. Walls
+  **re-measured** at this tip, 3 runs each, dev box: fifo 0.27 s,
+  cap-one 0.07 s, alternate 0.09 s, rw-writers 0.22 s,
+  **first-come 1.34-1.35 s**, request-reply 0.31 s. Corrected at all
+  three sites (this log's table, the design note's §5 outcome 3, the
+  cases.tsv header). Four of the five were fine; only the blanket
+  claim was wrong.
+- **B-F8** — `docs/2026-08-04_membership-lane-design.md` gains a dated
+  addendum pointing at the POR design note as the authority for
+  `engine=dedup` rows (what the set MEANS, what discharges it, what the
+  bounds mean, what is unchanged). The certified-record headers cite
+  that doc, so it has to forward correctly; it did not.
+- **B-F9** — the POR slice's exit-gate citations are **commit-qualified**
+  to `e2b460e7`, and marked superseded by this round's run. A bare
+  tip-relative citation silently re-points at whatever the branch tip
+  becomes.
+- **B-F10** — `baselines/native-full.tsv` regains the `# columns:`
+  comment and the literal `result<TAB>id<TAB>stage` header row that
+  main's format carries (main @ `065edaec`, lines 22-23); the POR
+  re-pin had dropped both. `scripts/coverage-baseline-diff` skips
+  `$1 == "result"` by construction, so this is format restoration, not
+  a data change — verified green.
+- **B-F11** — the P5a/P5b re-pin DEVIATION is acknowledged in the POR
+  entry above: rows moved in `6a62c4a0`, the re-pin landed in
+  `f801558c`, one commit later than CLAUDE.md's same-commit rule.
+  Recorded as missed, not rationalized.
+- **B-INFO** — the google-search certified record's `# params:` line
+  gains a note that under `engine=dedup` the `width=`/`sites=` figures
+  DO NOT BOUND THE CLAIM (they are DFS-path parameters; the
+  certification covers the closed state graph). Kept in the row so a
+  revert to the DFS engine has its parameters; `work=` still bounds the
+  dedup run and fails loud on breach. Written as `# params-note`, which
+  the record parser's `sed -n 's/^# params: //p'` does not match.
+
+### Gate (audit-fix round — the exit gate)
+
+`GOLEAN_MEM_MAX=24G scripts/ci --diff`
+(`artifacts/w32-auditfix-ci-diff.log`, untracked), at the audit-fix
+tip: **RESULT: PASS**. Verbatim, the lines that matter:
+
+    ok   import-direction (general ↛ Specs; Tactics ↛ GoCore; core/proofs ↛ EnumDedup)
+    ok   core build (warning-free)
+    ok   proofs + Audit gate
+    ok   eval tests (141 ok)
+    ok   differential run completed (exit 1; failing-set judged by baseline diff)
+    ok   negative baseline diff (no regression)
+    ok   baseline diff FULL (2324/2324, no regression)
+    ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
+    RESULT: PASS
+
+Every other step `ok`; the three `note` lines are the report-only
+speedbumps (build parallelism, proof-cost trend, storm lint). **No
+baseline movement** — 2324/2324, so none of this round's edits touched
+a case result, which is the expected shape for two gate-scope
+widenings, five new eval pins, one comment, and ten record fixes.
+`--slow` was NOT re-run this round: nothing here touches a `tier=slow`
+row's set, the enumerator, or the interpreter (the POR slice's `--slow`
+PASS at `e2b460e7` stands, and is cited as such above).
