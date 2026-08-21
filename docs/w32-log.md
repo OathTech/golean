@@ -916,8 +916,9 @@ is sound. Not pinned, because it pins a non-property.)
 ### Gate (audit-fix round — the exit gate)
 
 `GOLEAN_MEM_MAX=24G scripts/ci --diff`
-(`artifacts/w32-auditfix-ci-diff.log`, untracked), at the audit-fix
-tip: **RESULT: PASS**. Verbatim, the lines that matter:
+(`artifacts/w32-auditfix-ci-diff.log`, untracked) on the complete
+working tree, before the three commits below were cut:
+**RESULT: PASS**. Verbatim, the lines that matter:
 
     ok   import-direction (general ↛ Specs; Tactics ↛ GoCore; core/proofs ↛ EnumDedup)
     ok   core build (warning-free)
@@ -937,3 +938,32 @@ widenings, five new eval pins, one comment, and ten record fixes.
 `--slow` was NOT re-run this round: nothing here touches a `tier=slow`
 row's set, the enumerator, or the interpreter (the POR slice's `--slow`
 PASS at `e2b460e7` stands, and is cited as such above).
+
+### Exit-gate record (audit-fix round, at the branch tip)
+
+The gate above judged the complete working tree; it necessarily ran
+before the round's three commits existed. Re-run at the COMMITTED tip
+`b8a8ddf3` (a commit cannot cite its own hash — this is the same reason
+P5d exists, and B-F9 is precisely the finding about bare tip-relative
+citations):
+
+`GOLEAN_MEM_MAX=24G scripts/ci --diff`
+(`artifacts/w32-auditfix-ci-diff-tip.log`, untracked) at `b8a8ddf3`,
+tree clean: **RESULT: PASS**, all 27 `ok` steps, three report-only
+`note` lines (build parallelism, proof-cost trend, storm lint), zero
+`bad`. Identical step-for-step to the pre-commit run — as it must be,
+since the only delta was this log's own text.
+
+    ok   import-direction (general ↛ Specs; Tactics ↛ GoCore; core/proofs ↛ EnumDedup)
+    ok   core build (warning-free)
+    ok   proofs + Audit gate
+    ok   eval tests (141 ok)
+    ok   differential run completed (exit 1; failing-set judged by baseline diff)
+    ok   negative baseline diff (no regression)
+    ok   baseline diff FULL (2324/2324, no regression)
+    ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
+    RESULT: PASS
+
+Branch state: audit findings fixed, gate green at the tip, tree clean.
+**Merge and the audit sign-off remain Mike's** — this round is a
+response to the audit, not a substitute for the ask.
