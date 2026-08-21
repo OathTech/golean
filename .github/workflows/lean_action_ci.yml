@@ -155,15 +155,17 @@ jobs:
       - name: Set up Go (pinned to the oracle family)
         uses: actions/setup-go@v5
         with:
-          # The differential oracle IS go1.26.x: every fatal-message,
-          # panic-payload, and probe claim in the repo is measured against
-          # it, and the goose-imported corpus uses 1.26 language features
-          # (new(expr) — semantics/new, channel/actris-example). A floating
-          # version let the fast gate run on the runner image's pre-1.26 Go
-          # and fail check-imported-pins with "3 is not a type" (2026-08-11).
-          # Bump this pin ONLY together with a re-validated oracle (probes +
-          # baseline re-pin rationale), never to chase "stable".
-          go-version: '1.26.x'
+          # The differential oracle IS go1.26.5 EXACTLY (docs/spec-sources.md
+          # — the doctrine pin): every fatal-message, panic-payload, and probe
+          # claim is measured against it, and patch releases differ observably
+          # (go1.26.6 ships 7 compiler changes; L-014's miscompile class).
+          # HISTORY: '1.26.x' (2026-08-11) fixed a pre-1.26 family float but
+          # still floated WITHIN the family — go1.26.6's release moved the
+          # oracle under CI silently (2026-08-21, the worker-pool/sum CI
+          # failure's suspect). A pin that names a family is still a float.
+          # Bump ONLY together with a re-validated oracle (probes + baseline
+          # re-pin rationale + the deps/go clone tag above, in one change).
+          go-version: '1.26.5'
           cache: false
 
       - name: Fast gate (scripts/ci)
