@@ -666,8 +666,33 @@ EOF_TACFILES
     fi
   fi
 fi
+# Engine-isolation clause (POR slice 2026-08-21,
+# docs/2026-08-21_w32-por-design.md §7): the dedup ENGINE
+# (GoLean/EnumDedup.lean) is untrusted and deletable — the semantic
+# core (GoLean/GoCore/**) and the proofs must never import it (only
+# the CLI may). This is the module's deletion test, mechanized; fail
+# closed if the engine file vanishes without this clause moving.
+if [ ! -f GoLean/EnumDedup.lean ]; then
+  echo "  dedup engine file MISSING: GoLean/EnumDedup.lean (deleted/renamed without re-pointing this clause?)" >&2
+  dir_bad=1
+else
+  eng_files=$(find GoLean/GoCore proofs/GoLeanProofs -name '*.lean' -not -path '*/.lake/*'; echo GoLean/GoCore.lean)
+  while IFS= read -r ef; do
+    hits=$(grep -nE "${IMPORT_RE}GoLean\.EnumDedup([^A-Za-z].*)?\$" "$ef"); rc=$?
+    if [ "$rc" -ge 2 ]; then
+      echo "  engine-isolation scan ERRORED on $ef (rc=$rc) — failing closed" >&2
+      dir_bad=1
+    elif [ "$rc" -eq 0 ]; then
+      echo "  $ef imports the untrusted dedup engine (GoLean.EnumDedup — CLI-only by design):" >&2
+      echo "$hits" | sed 's/^/    /' >&2
+      dir_bad=1
+    fi
+  done <<EOF_ENGFILES
+$eng_files
+EOF_ENGFILES
+fi
 if [ "$dir_bad" = 0 ]; then
-  ok "import-direction (general ↛ Specs; Tactics ↛ GoCore)"
+  ok "import-direction (general ↛ Specs; Tactics ↛ GoCore; core/proofs ↛ EnumDedup)"
 else
   bad "import-direction violated (move the pin/witness to Specs/, or record an exception with a reason)"
 fi
