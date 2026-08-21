@@ -444,6 +444,26 @@ clean.
    path calls — `raft.go:1802` leaves validating the `logSlice` as an
    upstream TODO. All 15 are unreachable from the twin's 16-entry API
    surface.
+
+   > **Correction (2026-08-21, W4.2 pre-merge audit).** At the MERGED tip
+   > the number is **14, not 15** — `0 LIVE out of 14 quarantined in
+   > PASS 1`. The 15 was recorded mid-arc, before this branch's own
+   > audit-fix round landed the `%x`/`%q` Stringer-precedence widening
+   > (`c6886a99`), and the prose was not re-derived afterwards. The
+   > declaration that widening freed is **`raft.Status.MarshalJSON`**
+   > (`raft/status.go:80`), whose `fmt.Sprintf` renders `%x` over uint64
+   > ids and `%q` over `s.RaftState`, a `StateType` Stringer — precisely
+   > the shape that landed. Reconciled per-declaration against the
+   > re-swept wire, not reconstructed: the remaining 14 are
+   > `quorum.{Index.String, MajorityConfig.Describe, VoteResult.String}`,
+   > `raft.{DescribeConfState, DescribeReady, StateType.MarshalJSON,
+   > describeMessageWithIndent, logSlice.valid}`,
+   > `raft.MemoryStorage.{Lock, TryLock, Unlock}`,
+   > `raftpb.ConfChangesFromString`, `tracker.Config.String` and
+   > `tracker.Progress.String`. The conclusion — zero LIVE, all
+   > unreachable from the twin's 16-entry API surface — is unchanged;
+   > only the denominator moves. The tracked report is
+   > `docs/evidence/2026-08-21_w42-census/sweep-pre.txt`.
 2. **Zero live quarantined IMPORTED stdlib stubs** — extended the sweep
    to census this class (it previously only counted them): **0 LIVE of
    30** (bytes.Buffer x24, strings.Builder's Cap/Grow/WriteRune,
