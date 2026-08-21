@@ -454,7 +454,11 @@ proved interpreter-slow):
   divergences.
 - **Two LATENT mirror divergences, found by reading the mirror against
   upstream `rafttest` (pre-merge audit, 2026-08-21); both recorded in
-  `replayenv.go` at the site, neither fixed.** (i) upstream `splitMsgs`
+  `replayenv.go` at the site, neither fixed.** *(RETIRED 2026-08-21,
+  W4.3 wave 1 — the rendered tier is exactly the "moment the subset
+  grows" this record named: replayenv v2 mirrors `splitMsgs`'s
+  local-message guard verbatim and walks upstream's ONE ordered
+  recipient list; docs/raft-w43-log.md.)* (i) upstream `splitMsgs`
   guards with `!(drop && isLocalMsg(msg))` — local messages are never
   dropped — and `splitStep` drops them; unreachable here on two
   independent grounds (local-target messages need AsyncStorageWrites,
@@ -597,6 +601,17 @@ owner should land, with the witness already built here)
 | a membership row for the choice-stream-driven twin (events drawn from `∀ch` over the enabled set — the envelope form of the schedule input) | mechanism in twin-main.go; the draw plumbing is new work |
 | ok-tier trace replays as corpus rows (the 6 end-to-end traces, go-vs-machine trace equality) | tracereplay.py artifacts |
 | **the D-12 refusal itself** (H-20's guardrail): a package-level `var p = &T{F: pkg.New(w)}` over a writer-typed argument must refuse the WHOLE export, so a later widening of `pureUnmodeledCallees` or of the shape allowlist that silently admitted it goes red | the three-axis reading in item 1's ledger entry; `raftsubject/raft/logger.go`'s upstream form is the live instance |
+
+> **Consumed (2026-08-21, W4.3 wave 5a — docs/raft-w43-log.md).** Every
+> row above is landed or honestly disposed: the twin family + the
+> perturbation schedules (`multipkg/mini-raft-twin`, 5 strict rows), the
+> logger-teeth pair (`interfaces/quarantined-dispatch-teeth`), the
+> choice-stream membership row (`mini-raft-twin/choice-order`,
+> enumerated=2 exhibited=2), the D-12 tripwire
+> (`init/quarantined-var-writer`); the ok-tier-replays-as-corpus-rows
+> row is DISPOSED as instrument-covered (JC-33 there — the wall-time
+> bound that keeps the instrument out of the gate keeps a corpus
+> duplicate out too).
 
 ### Standing handoff items
 
