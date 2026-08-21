@@ -1,68 +1,28 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-21 (W3.2 slice 1 stage D — B2 back-edge boundaries
-#   + the §5d enumerator modes; re-pin #2: ONE new id,
-#   goroutines/send-then-spin PASS/membership — THE WEDGE ROW (register
-#   #1's discharge exhibit: terminating set {42} certified with counted
-#   nonterm branches; backedge=1 exhaustive at its bound-2 menus). Zero
-#   other movement — the stage-D sweep's four backEdge-declaring rows
-#   and the four re-measured tier=slow rows all held their results.
-#   Stage-C header retained below for the full stage record.
-# previously recorded: 2026-08-21 (W3.2 slice 1 stage C — B1 post-op scheduling
-#   boundaries, the `.opDone` marker; branch w32-re-envelope; G1 ruling
-#   2026-08-20). Re-pin #1 of the stage plan (boundary-set note §7).
-#   re-pin reason: 1 NEW id and 3 EXPLAINED honest-red flips; ZERO
-#   movement on the other 2250 pre-existing ids — the note §5b's
-#   zero-strict-flips prediction confirmed line-by-line (all movement is
-#   enumeration-lane, none strict):
-#     NEW/PASS membership (1):
-#       goroutines/wake-then-abort — U-1's directed-probe row (members=2,
-#         statuses=ok+panic): B1 admits the partner-progress member gc
-#         exhibits; pre-B1 the machine's set was the singleton {panic}.
-#     PASS->FAIL, EXPLAINED (3; the honest-regression record — B1's
-#     post-op boundaries grow these rows' enumeration trees past
-#     tractability; sets never observed to change where measurable;
-#     ruling on the §5c fallback is Mike's, posed in the stage report;
-#     the principled fix is the reduction/DPOR lane, NPDRF slice 5):
-#       goroutines/pipeline/request-reply  confluent, >400M steps (pre-B1 <=1.2M)
-#       goroutines/worker-pool/sum         confluent, >400M steps (pre-B1 <=15M)
-#       race/litmus/sb-chan                membership, >400M steps (pre-B1 <=5M)
-#     Additionally 20 enumeration rows re-capped/re-tiered with their
-#     sets UNCHANGED (16 caps re-measured in place; fifo, rw-writers,
-#     first-come, ping-pong/alternate -> tier=slow with fresh certified
-#     records — the confluent-lane tier widening, gates updated in
-#     lockstep). google-search + rwmutex-order keep their pre-B1
-#     CERTIFIED-CACHED records: every `--slow` run reports exactly those
-#     two drifts as the STANDING RECORDED ALARM until the fallback
-#     ruling (docs/w32-log.md stage C).
-#   frontend: native (tools/nativefrontend + NativeToIR)
-#   cases: 2324 (PASS 2182 / FAIL 142)
-#   rebase note (2026-08-21): stage-C+D re-pins re-composed atop main
-#     065edaec during the w32-re-envelope rebase — the W4.1 audit-fix
-#     re-pin (6 fmt/sprintf-verbs ids + the raft W4.1 rows, header
-#     retained below) is incorporated; the stage-C delta (1 NEW id +
-#     3 explained honest-red flips; stage D adds send-then-spin) is
-#     IDENTICAL in substance, counts restated for the merged corpus
-#     (2255->2324).
-# previously recorded (main 065edaec):
-# recorded: 2026-08-20 (raft W4.1 AUDIT-FIX ROUND — the %x/%q
-#   Stringer-precedence hole, finding A-F1;
-#   commit: this commit, raft-w41 rebased onto main d332434d)
-#   re-pin reason: 6 NEW ids, all PASS, ZERO other movement on the 2316
-#   pre-existing ids — exactly the drift predicted pre-run
-#   (docs/raft-w41-log.md, "The audit-fix round"):
-#     NEW/PASS (6): fmt/sprintf-verbs/{x-stringer,x-stringer-panic,
-#       q-stringer,q-stringer-panic,x-error,x-nil-error} — the
-#       STRINGABLE-verb precedence cells. gc's fmt consults
-#       error/Stringer for v, s, x, X, q and skips it only for the
-#       pure-numeric %d family; the desugar checked it in the 's','v'
-#       case alone, so %x over a Stringer uint64 rendered the hex of
-#       the NUMBER ([ff] where gc says [484921]) and %q over a Stringer
-#       []byte quoted the RAW BYTES. These 6 rows were added FIRST and
-#       witnessed RED pre-fix: 4 FAIL/differential (the silent wrong
-#       answers) + 2 FAIL/frontend-export (the error rows the old 'x'
-#       case refused). Green here because the precedence check now runs
-#       ahead of the kind matrix for all four modeled stringable verbs.
-#   counts: 2322 cases, 2183 PASS / 139 FAIL (was 2316, 2177/139)
+# recorded: 2026-08-21 (W3.2 POR slice — the dedup certifier; branch
+#   w32-re-envelope atop 6a62c4a0; design note
+#   docs/2026-08-21_w32-por-design.md; full run
+#   artifacts/w32-por-fullrun.log).
+#   re-pin reason: TWO explained PASS<-FAIL flips, ZERO other movement
+#   on the 2322 remaining ids — stage C's honest-red protocol paying
+#   out:
+#     FAIL->PASS (2): goroutines/pipeline/request-reply,
+#       race/litmus/sb-chan — the rows moved to engine=dedup (the
+#       verified state-graph certifier; accepted certificates are
+#       theorem-backed equal to SlowObs, checkCertM_slowObs) and their
+#       widened-boundary envelopes are exhaustively certified again
+#       (17.6k / 350k state-graph nodes vs the >400M-step intractable
+#       DFS trees).
+#     STILL FAIL (1, deliberate): goroutines/worker-pool/sum — does
+#       not close under dedup either (>9.5M nodes); BUG-065 narrowed
+#       to exactly it, awaiting the mover/reduction lane.
+#   Also this slice (sets unchanged, result rows unchanged):
+#     rwmutex-order / fifo / cap-one / alternate / rw-writers /
+#     first-come dropped tier=slow (certify in <1 s under dedup;
+#     records deleted); google-search re-certified with a fresh
+#     theorem-backed tier=slow record — both standing --slow alarms
+#     RESOLVED; fifo/alternate backedge narrowings lifted.
+#   counts: 2324 cases, 2184 PASS / 140 FAIL (was 2182/142)
 #   frontend: native (tools/nativefrontend + NativeToIR)
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
@@ -1017,7 +977,7 @@ PASS	goroutines/main-exit/two-leaked	confluent
 PASS	goroutines/ping-pong/alternate	confluent
 PASS	goroutines/ping-pong/cap-zero	confluent
 PASS	goroutines/pipeline/buffered-stage	-
-FAIL	goroutines/pipeline/request-reply	confluent
+PASS	goroutines/pipeline/request-reply	confluent
 PASS	goroutines/pipeline/two-stage	-
 PASS	goroutines/rendezvous-hb/recv-hb	confluent
 PASS	goroutines/rendezvous-hb/send-hb	confluent
@@ -1767,7 +1727,7 @@ PASS	race/litmus/close-hb	confluent
 PASS	race/litmus/lb-racy	racy
 PASS	race/litmus/mp-racy	racy
 PASS	race/litmus/mp-sync	confluent
-FAIL	race/litmus/sb-chan	membership
+PASS	race/litmus/sb-chan	membership
 PASS	race/negative/defer-dispatch	racy
 PASS	race/negative/iface-dispatch	racy
 PASS	race/negative/increment	racy

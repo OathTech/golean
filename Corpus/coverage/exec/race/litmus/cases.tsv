@@ -1,4 +1,7 @@
 # id	subject	args	expected_status	expected_reason	features	lane	why	params
+# 2026-08-21 POR slice: sb-chan -> engine=dedup — the stage-C
+# honest-red is CERTIFIED again (350k nodes, ~5.7 s, set {1,10,11}
+# theorem-backed equal to SlowObs; docs/2026-08-21_w32-por-design.md).
 # 2026-08-20 W3.2 slice 1 stage C (B1 post-op boundaries): the widened
 # machine branches at every registry-op COMPLETION, so enumeration
 # trees grew; sites/work caps re-measured per row (sets unchanged

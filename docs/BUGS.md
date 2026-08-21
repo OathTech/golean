@@ -3089,13 +3089,20 @@ reachable only from the multi-package corpus, whose stdlib imports
 
 ## BUG-065 — W3.2 boundary widening: five rows' exhaustive envelope certification left tractability
 
-- Status: open (a COST regression, not a semantic one — the machine
-  widened CORRECTLY per the G1 ruling; the certification lanes cannot
-  exhaustively enumerate the widened trees for these rows; the ruling
-  on the note §5c fallback vs budget raises vs the reduction lane is
-  the user's, posed in the W3.2 stage report)
+- Status: open — NARROWED to one row (POR slice 2026-08-21,
+  `docs/2026-08-21_w32-por-design.md`): four of the five certify under
+  `engine=dedup` — the state-graph dedup certifier whose accepted
+  certificates are THEOREM-backed equal to `SlowObs`
+  (`checkCertM_slowObs`) — request-reply (18k node+edge work),
+  sb-chan (736k, 5.7 s), google-search (12.8M, ~157 s; fresh
+  tier=slow record), rwmutex-order (207k, 0.9 s; tier dropped). The
+  two standing `--slow` alarms are RESOLVED. Residual:
+  goroutines/worker-pool/sum — its (pool × detector) state graph
+  exceeds the dedup budget too (>9.5M nodes without closure); it
+  stays an honest fast-lane red awaiting the reduction/mover lane
+  (slice 5) or a per-row ruling.
 - Pinned-by: differential (enumeration cap breaches, fail-loud)
-- Cases: goroutines/pipeline/request-reply, goroutines/worker-pool/sum, race/litmus/sb-chan
+- Cases: goroutines/worker-pool/sum
 
 W3.2 slice 1 stages C/D (B1 `.opDone` post-op boundaries + B2
 back-edge boundaries; G1 ruling 2026-08-20) widen the scheduling-point
