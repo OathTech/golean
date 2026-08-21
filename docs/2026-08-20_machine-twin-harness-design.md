@@ -258,7 +258,20 @@ measurement is in the log:
   initializers `defaultLogger`/`discardLogger` (which call `log.New(os.Stderr, …)`
   and are export-blocking under G-3), plus the `"io"` import they orphan.
   Measured, not estimated — the walk was run with upstream's file in the tree.
-  Land H-11 and the delta is **zero** — the whole file becomes verbatim.
+  ~~Land H-11 and the delta is **zero** — the whole file becomes verbatim.~~
+  **Correction (2026-08-21, W4.2 pre-merge audit B-F1).** That sentence is
+  FALSE and was the source the W4.2 log then propagated. H-11 (the
+  package-level-var quarantine) had ALREADY landed, in W4.0
+  (`docs/raft-w4-log.md` item 3), and it does not retire the delta: its
+  quarantine is gated on `initializerEffectIsolated`, which refuses this
+  initializer on three independent axes — the `&`-composite shape, `log.New`
+  being outside `pureUnmodeledCallees` (kept minimal by charter after audit
+  F1: an unmodeled call is not effect-free), and `os.Stderr`/`io.Discard`
+  failing `isolatedType`. The real retirement condition is a
+  writer-typed-global effect story, tracked as **H-20** in
+  `docs/raft-w42-log.md`; the honest alternative — leave D-12 permanent,
+  since it is three exact-text-keyed lines on a path the twin cannot reach —
+  is recorded there beside it.
 - The assertion question answers itself: the harness's `Logger.Panic` /
   `Panicf` genuinely `panic(...)`, so `assertConfStatesEquivalent` keeps its
   teeth, and the panic value is ours to choose (harness code carries no
