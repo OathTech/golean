@@ -375,3 +375,40 @@ cycle. Design (minimal, fail-closed, NO silent skips):
   value) in `scripts/test-lane-validation` Part A; the cached path's
   missing-record and stale-hash refusals probed live at design time
   (both fail loud); the slow path's record-match verified live.
+
+## Addendum 2026-08-21 — `engine=dedup` rows are certified by a THEOREM, not by this note's guards
+
+**Read this before treating anything above as the current standard for
+a row whose params carry `engine=dedup`.** The certified-set records
+under `baselines/certified/` cite THIS document in their headers, so it
+has to forward correctly; it did not, until the W3.2 POR slice's
+audit-fix round (finding B-F8).
+
+The authority for the dedup path is
+**`docs/2026-08-21_w32-por-design.md`** (§1 the spec, §3 the
+architecture, §4 the theorem). What changes, and only for
+`engine=dedup` rows:
+
+- **What the certified set MEANS.** This note's lane certifies "the
+  distinct observations of the enumerated tree" under declared
+  `width`/`sites`/`work`/`backedge` bounds. A dedup row's set means
+  `∀ o, o ∈ S ↔ SlowObs resultLocs m₀ r₀ o` — `SlowObs` being the
+  ∃-fuel, ∃-stream image of the unmodified `execProgLoop`
+  (`GoLean/GoCore/EnumSpec.lean`). That is a statement about the
+  MACHINE, not about a tree the CLI happened to walk.
+- **What discharges it.** Not the accountant, the sentinel, or the
+  alias ladder — those guards do not apply on this path and are
+  REPLACED by `checkCertM_slowObs`: an untrusted engine
+  (`GoLean/EnumDedup.lean`, deletable) emits a certificate, and the
+  total fail-closed checker (`GoLean/GoCore/EnumDedupCheck.lean`)
+  re-derives every branch vector, re-runs the real `stepMulti` per
+  edge, and replays every member's witness through `execProgLoop`
+  before anything is printed. The axiom pins are in `proofs/Audit.lean`.
+- **What the bounds mean.** See the `# params:` note in the certified
+  records: `width`/`sites` are DFS-path bounds and do not constrain a
+  dedup certification, which covers the closed state graph.
+- **What is unchanged.** The lane classification, the go-oracle
+  sampling, the `members=` cardinality pin, the tier=slow cached /
+  `--slow` re-certification split, and the fail-loud record-mismatch
+  discipline — all as described above. Rows WITHOUT `engine=dedup` keep
+  this note's original claim in full, unmodified.

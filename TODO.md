@@ -763,6 +763,19 @@ the user's two rulings (R-1 rendering split, R-2 opsem route) and
 records campaign 2's outcome; four open questions remain in the
 charter's §Open questions, each with a stated default.
 
+- [ ] **RULE what `nonterm=` MEANS under `engine=dedup`** (charter
+      §Open questions **OQ5**, added 2026-08-21 by the POR slice; row
+      booked here by audit finding B-F4 so it is visible outside the
+      slice log). Under the DFS engine `nonterm=N` is a declared
+      per-branch fuel and the record tallies the branches it CUT; the
+      dedup engine cuts nothing — a spin is a graph cycle — so the
+      parameter has no dedup meaning. **This is a claim-standard
+      question, not an implementation detail**: the membership
+      singleton-guard exemption for declared-nonterm rows rides on it,
+      and THE WEDGE row (`goroutines/send-then-spin`) stays on the DFS
+      engine until it is ruled, even though dedup already certifies it
+      exhaustively at 760 nodes. Candidates and measurements in the
+      charter's OQ5; reference detail in `docs/w32-log.md`, POR slice.
 - [ ] **iris-lean refresh + reuse survey** (charter §S6b). Move the
       Lake dep + `deps/iris-lean` reading copy to a current pin — the
       pin move is its OWN gated commit (trust-tools discipline) — and
