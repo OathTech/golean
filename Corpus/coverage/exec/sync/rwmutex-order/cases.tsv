@@ -17,4 +17,4 @@
 # stats are tracked in baselines/certified/ — round 3 aligned this
 # block, which still carried the retracted 16.4M/29.5s figures and
 # the singular "gc's realized point" framing).
-acquisition	rwOrder	-	ok	-	sync,rwmutex,goroutines,channels,globals,nondet	membership	which contender acquires after main's write-unlock is schedule latitude at registry granularity (both-parked successor divergence recorded in design note §8 R1): width 4 caps the three-goroutine bounds; certified set {10,20}, members=2	width=4,sites=40,work=30000000,members=2,tier=slow
+acquisition	rwOrder	-	ok	-	sync,rwmutex,goroutines,channels,globals,nondet	membership	which contender acquires after main's write-unlock is schedule latitude at registry granularity (both-parked successor divergence recorded in design note §8 R1): width 4 caps the three-goroutine bounds; certified set {10,20}, members=2	width=4,sites=40,work=30000000,members=2,engine=dedup

@@ -12,4 +12,4 @@
 # DPOR (the recorded later-additive layer, D9(c)).
 two-stage	pipelineTwoStage	-	ok	-	goroutines,channels,range,close
 buffered-stage	pipelineBufferedStage	-	ok	-	goroutines,channels,range,close
-request-reply	pipelineRequestReply	-	ok	-	goroutines,channels,range,close	confluent	each request's reply is received before the next request is sent, serializing the exchange on every schedule	width=4,sites=64,work=1200000
+request-reply	pipelineRequestReply	-	ok	-	goroutines,channels,range,close	confluent	each request's reply is received before the next request is sent, serializing the exchange on every schedule	width=4,sites=64,work=1200000,engine=dedup

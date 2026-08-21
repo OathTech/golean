@@ -278,7 +278,7 @@ validate_lane_params() {
     key="${kv%%=*}"
     value="${kv#*=}"
     case "$key" in
-      width|sites|cap|samples|work|members|statuses|tier|backedge|nonterm) ;;
+      width|sites|cap|samples|work|members|statuses|tier|backedge|nonterm|engine) ;;
       *)
         echo "coverage-manifest: $cases_file: unknown lane param key: $kv" >&2
         return 1
@@ -344,6 +344,19 @@ validate_lane_params() {
       fi
       if [[ "$value" == *ok*ok* || "$value" == *panic*panic* ]]; then
         echo "coverage-manifest: $cases_file: statuses has a duplicate entry: $kv" >&2
+        return 1
+      fi
+      continue
+    fi
+    if [[ "$key" == "engine" ]]; then
+      # engine=dedup (POR slice 2026-08-21): the verified dedup
+      # certifier; enumerating lanes only, value fixed.
+      if [[ "$lane_ctx" == "strict" ]]; then
+        echo "coverage-manifest: $cases_file: engine= is an enumerating-lane param (lane=$lane_ctx): $kv" >&2
+        return 1
+      fi
+      if [[ "$value" != "dedup" ]]; then
+        echo "coverage-manifest: $cases_file: engine= must be 'dedup': $kv" >&2
         return 1
       fi
       continue
