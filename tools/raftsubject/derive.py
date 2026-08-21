@@ -620,10 +620,22 @@ def plainpb(src):
             emit = decl  # T12: plain Go, kept verbatim
         elif re.match(r"^func \(x (\w+)\) String\(\) string \{$", first) and \
                 re.match(r"^func \(x (\w+)\)", first).group(1) in enums:
+            # Enum String gets a REAL body (W4.3 item 1, the rendered
+            # tier — docs/raft-w43-log.md): upstream's generated body is
+            # protoimpl.X.EnumStringOf over the same _name map this file
+            # keeps, i.e. the mapped name, else the decimal number. The
+            # W2 stub was a recorded delta; this removes it. The decimal
+            # fallback (unreachable for in-range values, which is every
+            # value the traces carry) goes through the shared helper
+            # appended at the end of the file — no strconv import, so
+            # the derivation stays import-free.
             name = re.match(r"^func \(x (\w+)\)", first).group(1)
-            emit = "func (x %s) String() string {\n%s\n}" % (
-                name, STUB_BODY % ("%s.String" % name))
-            stubbed.append("%s.String" % name)
+            emit = ("func (x %s) String() string {\n"
+                    "\tif s, ok := %s_name[int32(x)]; ok {\n"
+                    "\t\treturn s\n"
+                    "\t}\n"
+                    "\treturn plainpbEnumUnknown(int32(x))\n"
+                    "}" % (name, name))
         elif re.match(r"^func \((\w+)\) Descriptor\(\) protoreflect\.EnumDescriptor", first) or \
                 re.match(r"^func \((\w+)\) Type\(\) protoreflect\.EnumType", first) or \
                 re.match(r"^func \(x (\w+)\) Number\(\) protoreflect\.EnumNumber", first):
@@ -673,6 +685,34 @@ def plainpb(src):
             emit = comment.rstrip("\n") + "\n" + emit
         out.append(emit)
 
+    # The enum-String fallback helper (see the enum String rule above):
+    # decimal rendering of an out-of-range value, mirroring the protobuf
+    # runtime's EnumStringOf fallback, digit loop so the file stays
+    # import-free.
+    out.append(
+        "// plainpbEnumUnknown renders an out-of-range enum value the way the\n"
+        "// protobuf runtime's EnumStringOf fallback does: the decimal number.\n"
+        "// Unreachable for every value the name maps carry.\n"
+        "func plainpbEnumUnknown(v int32) string {\n"
+        "\tif v == 0 {\n"
+        "\t\treturn \"0\"\n"
+        "\t}\n"
+        "\tneg := v < 0\n"
+        "\tu := uint32(v)\n"
+        "\tif neg {\n"
+        "\t\tu = uint32(-int64(v))\n"
+        "\t}\n"
+        "\ts := \"\"\n"
+        "\tfor u > 0 {\n"
+        "\t\ts = string(rune('0'+int(u%10))) + s\n"
+        "\t\tu /= 10\n"
+        "\t}\n"
+        "\tif neg {\n"
+        "\t\ts = \"-\" + s\n"
+        "\t}\n"
+        "\treturn s\n"
+        "}")
+
     body = "\n\n".join(out)
     if "protoimpl" in body or "protoreflect" in body or "unsafe." in body:
         refuse("protobuf runtime survived the strip — check the rule table")
@@ -696,7 +736,9 @@ PLAINPB_HEADER = """// Code DERIVED from etcd-io/raft raftpb/raft.pb.go by
 // %d enums with their constants and name/value maps, every generated getter
 // (verbatim, shape-checked by the derivation), Enum(), ProtoMessage(),
 // Reset() reduced to its plain-Go half.
-// Fail-closed stubs: %d (String, Descriptor, EnumDescriptor, UnmarshalJSON).
+// Fail-closed stubs: %d (message String, Descriptor, EnumDescriptor,
+// UnmarshalJSON). Enum String is REAL (W4.3 item 1): the _name map plus
+// the decimal fallback, mirroring the runtime's EnumStringOf.
 // Dropped: the file-descriptor machinery and ProtoReflect (see the log's
 // subject-delta ledger for the itemised list and the reasoning).
 //

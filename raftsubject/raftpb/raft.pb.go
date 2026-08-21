@@ -12,7 +12,9 @@
 // 4 enums with their constants and name/value maps, every generated getter
 // (verbatim, shape-checked by the derivation), Enum(), ProtoMessage(),
 // Reset() reduced to its plain-Go half.
-// Fail-closed stubs: 30 (String, Descriptor, EnumDescriptor, UnmarshalJSON).
+// Fail-closed stubs: 26 (message String, Descriptor, EnumDescriptor,
+// UnmarshalJSON). Enum String is REAL (W4.3 item 1): the _name map plus
+// the decimal fallback, mirroring the runtime's EnumStringOf.
 // Dropped: the file-descriptor machinery and ProtoReflect (see the log's
 // subject-delta ledger for the itemised list and the reasoning).
 //
@@ -53,7 +55,10 @@ func (x EntryType) Enum() *EntryType {
 }
 
 func (x EntryType) String() string {
-	panic("plainpb: EntryType.String is a fail-closed stub (protobuf runtime engineered out; docs/raft-w2-log.md)")
+	if s, ok := EntryType_name[int32(x)]; ok {
+		return s
+	}
+	return plainpbEnumUnknown(int32(x))
 }
 
 func (x *EntryType) UnmarshalJSON(b []byte) error {
@@ -155,7 +160,10 @@ func (x MessageType) Enum() *MessageType {
 }
 
 func (x MessageType) String() string {
-	panic("plainpb: MessageType.String is a fail-closed stub (protobuf runtime engineered out; docs/raft-w2-log.md)")
+	if s, ok := MessageType_name[int32(x)]; ok {
+		return s
+	}
+	return plainpbEnumUnknown(int32(x))
 }
 
 func (x *MessageType) UnmarshalJSON(b []byte) error {
@@ -206,7 +214,10 @@ func (x ConfChangeTransition) Enum() *ConfChangeTransition {
 }
 
 func (x ConfChangeTransition) String() string {
-	panic("plainpb: ConfChangeTransition.String is a fail-closed stub (protobuf runtime engineered out; docs/raft-w2-log.md)")
+	if s, ok := ConfChangeTransition_name[int32(x)]; ok {
+		return s
+	}
+	return plainpbEnumUnknown(int32(x))
 }
 
 func (x *ConfChangeTransition) UnmarshalJSON(b []byte) error {
@@ -248,7 +259,10 @@ func (x ConfChangeType) Enum() *ConfChangeType {
 }
 
 func (x ConfChangeType) String() string {
-	panic("plainpb: ConfChangeType.String is a fail-closed stub (protobuf runtime engineered out; docs/raft-w2-log.md)")
+	if s, ok := ConfChangeType_name[int32(x)]; ok {
+		return s
+	}
+	return plainpbEnumUnknown(int32(x))
 }
 
 func (x *ConfChangeType) UnmarshalJSON(b []byte) error {
@@ -764,4 +778,27 @@ func (x *ConfChangeV2) GetContext() []byte {
 		return x.Context
 	}
 	return nil
+}
+
+// plainpbEnumUnknown renders an out-of-range enum value the way the
+// protobuf runtime's EnumStringOf fallback does: the decimal number.
+// Unreachable for every value the name maps carry.
+func plainpbEnumUnknown(v int32) string {
+	if v == 0 {
+		return "0"
+	}
+	neg := v < 0
+	u := uint32(v)
+	if neg {
+		u = uint32(-int64(v))
+	}
+	s := ""
+	for u > 0 {
+		s = string(rune('0'+int(u%10))) + s
+		u /= 10
+	}
+	if neg {
+		s = "-" + s
+	}
+	return s
 }
