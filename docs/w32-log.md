@@ -607,3 +607,126 @@ judgment calls recorded as they are made; checkpoints every ≤5 units.
   confluent-lane tier=slow widening + the slow-timeout 3600 default —
   gate-surface changes made in lockstep, flagged for the pre-merge
   audit's gates dimension.
+
+## POR slice — the dedup certifier (2026-08-21)
+
+- Base: stage E rebased onto main `065edaec` (snapshot
+  `refs/snapshots/w32-pre-rebase-20260821`; ONE conflicted file,
+  `baselines/native-full.tsv` — main's W4.1 audit-fix re-pin composed
+  with the stage-C/D deltas by applying the recorded per-stage row
+  deltas to main's row set; counts restated in its header, 2324 rows).
+  Charter for this slice: the POR-slice brief; THE BINDING CONSTRAINT
+  (Mike 2026-08-20) recorded at the top of
+  `docs/2026-08-21_w32-por-design.md` BEFORE any building.
+- REDUCTION CHOSEN (design note §2, argued from the machine's shape):
+  a certified STATE-IDENTITY QUOTIENT — not sleep sets/DPOR/movers —
+  because (1) the B1/B2 blowup is path-multiplicity over a small state
+  grid, (2) dedup has no independence relation to be wrong about (the
+  binding constraint's dangerous direction cannot arise), (3) the
+  exhaustiveness assets existed (`stepThread_oblivious`,
+  `stepAllBranchesOk_sound`), (4) the mover lane composes later.
+  Judgment logged: audit Q11 (entry-identity stamps) NOT consumed —
+  no footprint lemmas anywhere in this slice; Q11 stays slice-4-routed.
+- THE SPEC (trust surface, ~40 lines): `EnumSpec.lean` — `Obs`,
+  `obsOf?`, and `SlowObs resultLocs m₀ r₀ o :=
+  ∃ fuel ch, obsOf? resultLocs (execProgLoop fuel m₀ r₀ ch) = some o`.
+  The certified records' meaning restated over it: "certified set S" =
+  `∀ o, o ∈ S ↔ SlowObs …` — same substance as the lane's claim
+  (wording change flagged in the design note §1: stated over the
+  interpreter, not the CLI tree; the ∃-fuel form makes "terminating
+  members" literal).
+- THE THEOREM (proven, axiom-clean [propext, Classical.choice,
+  Quot.sound]):
+
+      checkCertM_slowObs :
+        checkCert dedupNodeEqb resultLocs m₀ r₀ cert = true →
+        ∀ o, o ∈ cert.obsSet ↔ SlowObs resultLocs m₀ r₀ o
+
+  Architecture (Sym mold + comparator mold): UNTRUSTED engine
+  (`GoLean/EnumDedup.lean`, partial, deletable — worklist search,
+  hand-rolled hash, witness streams from discovery paths) emits a
+  `DedupCert` (nodes + per-vector successor hints + members with
+  witnesses); the TOTAL fail-closed checker (`EnumDedupCheck.lean`)
+  re-derives every branch vector, re-runs the REAL
+  `stepMulti`/`raceUpdate` per edge, matches successors via the SOUND
+  equality, and replays every member's witness through the unmodified
+  `execProgLoop`. Soundness = the replays; completeness = fuel
+  induction + TOTAL coverage (`stepMulti_total_covered`, stated
+  vec→run so no "stepFn never throws .panic" walk is ever needed:
+  the checker's vector successes DETERMINE every stream's step).
+- The certified fragment: N-OBL (`poolThreadOblivious` targets —
+  `stepThread_oblivious`), N-L4 (single-arrival multi-candidate
+  pairings — NEW `stepThread_l4_run`, the one-pick determinization),
+  N-APP (NON-spilling append applies — NEW
+  `applyStmtOp_append_nospill`/`stepFn_append_nospill`/
+  `stepThread_append_oblivious`; added when google-search's refusal
+  diagnosed as a non-spill append). Refused, fail closed: L2 `.multi`
+  arrivals, consuming (multi-ready) selects, `mapIterK`, genuine
+  spills, `$pkginit` rows. Fail-closed DEMONSTRATED: a diagnostic
+  detector-blind certificate was REFUSED by the checker.
+- The sound-equality tower (`StateEqb`/`SyntaxEqb`/`MachineEqb`, the
+  last two worker-built to the established pattern and verified):
+  fuel-structural `eqb → =` over Ty/GoValue (existing eqbs, new
+  soundness) and Expr(58)/Stmt(40)/Assignee/SelectClauseHead/Func/
+  StrictOp(48)/StmtOp/Cont(30)/Config(16)/ExecState/RaceState/
+  MultiConfig — soundness ONLY (fuel exhaustion ⇒ checker refusal,
+  never unsoundness). `deriving DecidableEq` verified to fail on the
+  nested inductives, hence the hand tower.
+- CLI: `coverage-observations --engine dedup` — cert → THE VERIFIED
+  CHECKER → only then print; the DFS's accountant/sentinel/
+  alias-ladder guards do not apply on this path (replaced by the
+  theorem); status discipline unchanged. Gate surfaces in lockstep:
+  `engine=dedup` row param (diff-coverage + coverage-manifest;
+  test-lane-validation green).
+- Deletion test RUN: with `GoLean/EnumDedup.lean` deleted,
+  `lake build GoLean.GoCore` is green (the checker + theorem stand);
+  `import GoLean.EnumDedup` occurs ONLY in `CLI.lean` (grep-verified —
+  the intended dependency direction; the proofs package never sees
+  it). Restored, full build green.
+- RE-CERTIFICATION RESULTS (the iteration-loop payoff — before/after,
+  dev box, all "after" runs CHECKER-ACCEPTED with the set equal to the
+  recorded claim):
+
+  | row | DFS (post-B1/B2) | dedup | wall |
+  |---|---|---|---|
+  | pipeline/request-reply (confluent) | >400M steps, INTRACTABLE (honest-red) | 17.6k nodes / 18.4k edges | 0.3 s |
+  | race/litmus/sb-chan (membership {1,10,11}) | >400M, INTRACTABLE (honest-red) | 350.5k / 385.8k | 5.7 s |
+  | sync/rwmutex-order ({10,20}) | >~900M, tier=slow stale record (standing alarm) | 95.2k / 111.4k | 0.9 s |
+  | imported-goose/google-search (6 members) | >900M, tier=slow stale record (standing alarm) | 6.19M / 6.57M | ~157 s |
+  | buffered-wake/fifo (confluent) | 114.4M steps (tier=slow) | 14.9k / 15.5k | <1 s |
+  | buffered-wake/cap-one (confluent, was backedge=full) | 29.1M (tier=slow) | 4.5k / 4.8k | <1 s |
+  | ping-pong/alternate (confluent, was backedge=0) | 16.2M + probe-heavy (tier=slow) | 7.0k / 7.3k | <1 s |
+  | free-sync/rw-writers (confluent) | 87.3M (tier=slow) | 10.5k / 13.2k | <1 s |
+  | sched-dependent/first-come ({12,21}) | 84.8M (tier=slow) | 98.7k / 114.2k | <1 s |
+
+  Both standing `--slow` alarms RESOLVED (google-search: fresh
+  theorem-backed record, stage-C witnesses cross-check; rwmutex-order:
+  tier dropped — 0.9 s in the fast lane). The five stage-C/D
+  re-tierings REVERSED (records deleted); fifo/alternate's backedge=0
+  narrowings LIFTED — dedup explores back-edges exhaustively at
+  state-graph cost, so those claims STRENGTHEN to the full tree.
+  Bonus measurements (not switched, recorded): wake-then-abort
+  certifies at 221 nodes; send-then-spin (THE WEDGE) certifies {42}
+  EXHAUSTIVELY at 760 nodes — the spin's divergent branches collapse
+  into graph cycles, no nonterm counting, no backedge cap; switching
+  its row awaits a small ruling on what nonterm= means under
+  engine=dedup (the membership singleton-guard exemption rides it).
+- RESIDUAL, honest: goroutines/worker-pool/sum does NOT close —
+  >9.5M nodes / 10.5M edges on the first probe; the strong-hash run
+  did not reach closure within an 80M node+edge budget / ~20 min
+  wall. Its (pool × detector) state graph is genuinely large (4
+  goroutines × loops × clock states). BUG-065 NARROWED to this one
+  row (Cases line updated in the same commit as the baseline re-pin);
+  the principled fix remains the mover/reduction lane (slice 5),
+  which now COMPOSES with dedup (ample-set restriction of the
+  checker's per-node vectors, its own completeness lemma).
+- Fragment-extension judgment calls, logged: (1) N-APP added when
+  google-search's refusal diagnosed as a NON-spilling append (the
+  conservative `consumesAppendSlice` refusal was wider than the
+  consumption reality); the spill branch still refuses. (2)
+  poolThreadOblivious itself NOT widened (the ∀-streams checker's
+  trust surface stays untouched this slice; promoting N-APP there is
+  recorded follow-through). (3) The engine's dedup equality is the
+  SOUND tower eqb (a false-negative only duplicates nodes); its hash
+  needed race-state structure (shadow/chan clocks) before sb-chan
+  closed — 47k-nodes-at-2267-hashes was the diagnostic.

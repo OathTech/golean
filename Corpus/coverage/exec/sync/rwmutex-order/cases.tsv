@@ -1,4 +1,7 @@
 # id	subject	args	expected_status	expected_reason	features	lane	why	params
+# 2026-08-21 POR slice: -> engine=dedup, tier=slow DROPPED (95k
+# nodes, ~0.9 s in the fast lane; record retired — the standing --slow
+# alarm resolved; docs/2026-08-21_w32-por-design.md).
 # The F1 envelope pin (audit fix round 2026-08-10): the model's
 # pendingW exclusion attaches to every PARKED writer, gc's only to the
 # rw.w-owning one, and gc's Unlock releases every parked reader before

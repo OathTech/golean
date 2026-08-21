@@ -1,4 +1,6 @@
 # id	subject	args	expected_status	expected_reason	features	lane	why	params
+# 2026-08-21 POR slice: rw-writers -> engine=dedup, tier=slow DROPPED
+# (10.5k nodes, <1 s; docs/2026-08-21_w32-por-design.md).
 # 2026-08-20 W3.2 slice 1 stage C (B1 post-op boundaries): the widened
 # machine branches at every registry-op COMPLETION, so enumeration
 # trees grew; sites/work caps re-measured per row (sets unchanged

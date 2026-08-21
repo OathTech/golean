@@ -1,4 +1,7 @@
 # id	subject	args	expected_status	expected_reason	features
+# 2026-08-21 POR slice: -> engine=dedup, tier=slow kept (12.8M
+# node+edge work, ~157 s dev-box; fresh theorem-backed record — the
+# standing --slow alarm resolved; docs/2026-08-21_w32-por-design.md).
 # tier=slow: certification measured 39,976,295 steps / 94 s single-core
 # wall on the dev box at these params (2026-08-14) — the largest slow
 # row by far (rwmutex-order is ~26 s). A hosted 2-core runner plausibly
