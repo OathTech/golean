@@ -12,3 +12,4 @@ import GoLean.GoCore.MultiStreams
 import GoLean.GoCore.EnumSpec
 import GoLean.GoCore.EnumDedupCheck
 import GoLean.GoCore.EnumDedupSound
+import GoLean.GoCore.MachineEqb
