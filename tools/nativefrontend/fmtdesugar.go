@@ -116,17 +116,23 @@ var fmtStringerIface = func() *types.Interface {
 	return iface
 }()
 
-// fmtVerb is one parsed conversion: the verb letter, plus the one
-// modeled flag ('+' on v — recorded but semantically inert here).
+// fmtVerb is one parsed conversion: the verb letter, the one modeled
+// flag ('+' on v — recorded but semantically inert for the scalar
+// matrix; it switches field names on for composites), and the one
+// modeled width (digits before 'd' ONLY — the MajorityConfig.Describe
+// `%5d`; space-pad left, sign inside, no truncation — gc-probed
+// artifacts/w43/probe-fmt E1-E4).
 type fmtVerb struct {
-	verb rune
-	plus bool
+	verb  rune
+	plus  bool
+	width int
 }
 
 // parseFmtFormat splits a format string into literal segments and
 // verbs: segs[0] verb[0] segs[1] verb[1] ... segs[n]. %% folds into
-// the segments. Anything else — flags, width, precision, argument
-// indexes, unknown verbs — errors, naming the construct.
+// the segments. Anything else — flags, width on a non-d verb,
+// precision, argument indexes, unknown verbs — errors, naming the
+// construct.
 func parseFmtFormat(f string) ([]string, []fmtVerb, error) {
 	segs := []string{}
 	verbs := []fmtVerb{}
@@ -141,14 +147,28 @@ func parseFmtFormat(f string) ([]string, []fmtVerb, error) {
 			return nil, nil, fmt.Errorf("format string ends in %%")
 		}
 		i++
-		switch f[i] {
-		case '%':
+		switch {
+		case f[i] == '%':
 			cur = append(cur, '%')
-		case 'd', 'x', 's', 'v', 'q':
+		case f[i] == 'd' || f[i] == 'x' || f[i] == 's' || f[i] == 'v' ||
+			f[i] == 'q' || f[i] == 't':
 			segs = append(segs, string(cur))
 			cur = nil
 			verbs = append(verbs, fmtVerb{verb: rune(f[i])})
-		case '+':
+		case f[i] >= '1' && f[i] <= '9':
+			// Width digits: modeled for %d ONLY (the `%5d` shape).
+			w := 0
+			for i < len(f) && f[i] >= '0' && f[i] <= '9' {
+				w = w*10 + int(f[i]-'0')
+				i++
+			}
+			if i >= len(f) || f[i] != 'd' {
+				return nil, nil, fmt.Errorf("width %d on verb %%%c is outside the modeled fmt subset (width is modeled for %%d only)", w, safeByte(f, i))
+			}
+			segs = append(segs, string(cur))
+			cur = nil
+			verbs = append(verbs, fmtVerb{verb: 'd', width: w})
+		case f[i] == '+':
 			if i+1 < len(f) && f[i+1] == 'v' {
 				i++
 				segs = append(segs, string(cur))
@@ -158,7 +178,7 @@ func parseFmtFormat(f string) ([]string, []fmtVerb, error) {
 			}
 			return nil, nil, fmt.Errorf("verb %%+%c is outside the modeled fmt subset", safeByte(f, i+1))
 		default:
-			return nil, nil, fmt.Errorf("verb %%%c is outside the modeled fmt subset (modeled: %%d %%x %%s %%v %%+v %%q %%%%)", f[i])
+			return nil, nil, fmt.Errorf("verb %%%c is outside the modeled fmt subset (modeled: %%d %%x %%s %%v %%+v %%q %%t %%%%)", f[i])
 		}
 	}
 	segs = append(segs, string(cur))
@@ -367,6 +387,9 @@ func (e *emitter) fmtVerbArg(fn, format string, v fmtVerb, arg ast.Expr, k int) 
 	if v.plus {
 		verbName = "%+v"
 	}
+	if v.width > 0 {
+		verbName = "%" + itoa(v.width) + string(v.verb)
+	}
 	pname := "$a" + itoa(k)
 	paramRef := func(ty any) map[string]any {
 		return map[string]any{"expr": "ident", "name": pname, "type": ty}
@@ -546,13 +569,45 @@ func (e *emitter) fmtVerbArg(fn, format string, v fmtVerb, arg ast.Expr, k int) 
 		}
 	}
 
+	// One converted scalar argument rendered through a helper taking an
+	// extra WIDTH argument (the %5d family): same shape as scalar(), the
+	// width traveling as an int literal.
+	scalarPad := func(target types.Type, helperName string, width int) (*fmtArgPlan, error) {
+		tw, err := e.emitType(target)
+		if err != nil {
+			return nil, err
+		}
+		node, err := e.emitExpr(arg)
+		if err != nil {
+			return nil, err
+		}
+		if !types.Identical(argTy, target) {
+			node = map[string]any{"expr": "convert", "target": tw, "x": node}
+		}
+		widthLit := map[string]any{"expr": "int", "value": itoa(width),
+			"type": map[string]any{"kind": "int", "int": "int"}}
+		return &fmtArgPlan{callArgs: []any{node},
+			params: []any{map[string]any{"id": pname, "type": tw}},
+			body:   helper(helperName, paramRef(tw), widthLit)}, nil
+	}
+
 	switch v.verb {
 	case 'd':
 		if basic != nil && basic.Info()&types.IsInteger != 0 {
+			if v.width > 0 {
+				if basic.Info()&types.IsUnsigned != 0 {
+					return scalarPad(types.Typ[types.Uint64], "goleanShimFmtUintPad", v.width)
+				}
+				return scalarPad(types.Typ[types.Int64], "goleanShimFmtIntPad", v.width)
+			}
 			if basic.Info()&types.IsUnsigned != 0 {
 				return scalar(types.Typ[types.Uint64], "goleanShimFmtUint")
 			}
 			return scalar(types.Typ[types.Int64], "goleanShimFmtInt")
+		}
+	case 't':
+		if basic != nil && basic.Info()&types.IsBoolean != 0 {
+			return scalar(types.Typ[types.Bool], "goleanShimFmtBool")
 		}
 	case 'x':
 		if basic != nil && basic.Info()&types.IsInteger != 0 && basic.Info()&types.IsUnsigned != 0 {
@@ -576,6 +631,20 @@ func (e *emitter) fmtVerbArg(fn, format string, v fmtVerb, arg ast.Expr, k int) 
 	case 'q':
 		if isByteSlice(argTy.Underlying()) {
 			return scalar(types.NewSlice(types.Typ[types.Byte]), "goleanShimFmtQuoteBytes")
+		}
+		if basic != nil && basic.Info()&types.IsString != 0 {
+			// The StateType.MarshalJSON shape (%q over st.String()'s
+			// result). Same ASCII bound as the byte-slice cell.
+			return scalar(types.Typ[types.String], "goleanShimFmtQuoteString")
+		}
+	}
+	// %v/%+v over a modeled COMPOSITE static type (slices, named structs,
+	// recursively — fmtcomposite.go). Tried after the scalar matrix so a
+	// scalar cell never re-routes; handled=false falls to the refusal.
+	if v.verb == 'v' {
+		plan, handled, err := e.fmtCompositeArg(fn, v, arg, k)
+		if handled || err != nil {
+			return plan, err
 		}
 	}
 	return nil, unsup("fmt.%s verb %s over an argument of type %s is outside the modeled verb/kind matrix (format %q; fail closed — widen with a differential pin first)", fn, verbName, argTy, format)

@@ -142,7 +142,8 @@ var stdlibShimDeclNames = map[string][]string{
 		"goleanShimFmtBool", "goleanShimFmtQuoteBytes", "goleanShimFmtQuoteString",
 		"goleanShimFmtStringVerb", "goleanShimFmtHexString", "goleanShimFmtRender",
 		"goleanShimFmtRenderCall", "goleanShimFmtError", "goleanShimFmtErrorCall",
-		"goleanShimFmtPanicValue"},
+		"goleanShimFmtPanicValue", "goleanShimFmtIntPad", "goleanShimFmtUintPad",
+		"goleanShimFmtPadLeft"},
 	stringsJoinShimName:       {stringsJoinShimName},
 	bytesEqualShimName:        {bytesEqualShimName},
 	binaryLEUint64ShimName:    {binaryLEUint64ShimName},
@@ -469,6 +470,24 @@ func goleanShimFmtPanicValue(r any) string {
 		return e.Error()
 	}
 	panic("golean fmt shim: a String/Error method panicked with a value kind outside the modeled subset (fail closed)")
+}
+
+// The %<width>d family (W4.3 item 1): space-pad LEFT to the width, the
+// sign inside the padding, no truncation when the digits are wider —
+// gc-probed (artifacts/w43/probe-fmt E1-E4: "    7", "123456", "  -42").
+func goleanShimFmtPadLeft(s string, w int) string {
+	for len(s) < w {
+		s = " " + s
+	}
+	return s
+}
+
+func goleanShimFmtIntPad(v int64, w int) string {
+	return goleanShimFmtPadLeft(goleanShimFmtInt(v), w)
+}
+
+func goleanShimFmtUintPad(v uint64, w int) string {
+	return goleanShimFmtPadLeft(goleanShimFmtUint(v), w)
 }
 `,
 

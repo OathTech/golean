@@ -1,0 +1,19 @@
+# id	subject	args	expected_status	expected_reason	features
+# W4.3 item 1 (docs/raft-w43-log.md): %v/%+v over composites — the
+# recursive emit-time matrix (slices, named structs, Stringer/error
+# leaves consulted at depth). Red at frontend-export until the widening
+# lands. The last two rows stay RED BY DESIGN: maps and pointer fields
+# are outside the modeled composite subset (fail closed).
+v-slice-uint64	vSliceUint64	-	ok	-	stdlib,strings,slices,nil
+v-conf-state-shape	vConfStateShape	-	ok	-	stdlib,strings,slices,bools
+v-struct	vStruct	-	ok	-	stdlib,strings,structs
+plusv-struct	plusVStruct	-	ok	-	stdlib,strings,structs
+v-slice-struct-bytes	vSliceStructBytes	-	ok	-	stdlib,strings,slices,structs,bytes,nil
+plusv-slice-struct	plusVSliceStruct	-	ok	-	stdlib,strings,slices,structs,bytes,nil
+v-stringer-elems	vStringerElems	-	ok	-	stdlib,strings,slices,methods,defined_type
+v-stringer-elem-panic	vStringerElemPanic	-	ok	-	stdlib,strings,slices,methods,defined_type,panic,recover
+plusv-stringer-field	plusVStringerField	-	ok	-	stdlib,strings,structs,methods,defined_type
+v-named-slice	vNamedSlice	-	ok	-	stdlib,strings,slices,defined_type
+v-nested-struct	vNestedStruct	-	ok	-	stdlib,strings,structs,nested
+v-map-outside	vMapOutside	-	ok	-	stdlib,strings,maps
+v-ptr-field-outside	vPtrFieldOutside	-	ok	-	stdlib,strings,structs,pointers

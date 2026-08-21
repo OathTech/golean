@@ -196,3 +196,47 @@ machine tier re-runs after the item-1 frontend slices land.
 Scope note: the machine tier of this instrument is exercised at wave 4;
 nothing in wave 1 touches GoCore, the frontend, `Corpus/` or
 `baselines/`.
+
+Wave-1 landing gate: `GOLEAN_MEM_MAX=24G scripts/ci` (fast; no runtime
+change) — **RESULT: PASS** (`artifacts/w43/ci-wave1.txt`; the baseline
+step judges the initial run's recorded full differential, which no
+wave-1 file affects).
+
+---
+
+## Wave 2 (item 1, landing A) — fmt matrix widenings
+
+Frontend: `%q` over string kinds, `%t` over bool, `%<width>d`
+(space-pad left, `%d` only — `parseFmtFormat` width digits +
+`goleanShimFmt{Int,Uint}Pad`), and the **composite matrix**
+(`fmtcomposite.go`): `%v`/`%+v` over slices and named structs,
+RECURSIVE over the static type at emit time — generated lifted
+renderers (a counted loop per slice level, per-field concatenation for
+structs), leaves through the SAME scalar helpers as the flat matrix,
+error/Stringer consulted per element/field (gc's printValue-at-depth,
+probed D1–D4), `%+v` field names propagating to every depth, nil/empty
+slices both `[]`. Fail closed beyond: maps, pointers (incl.
+pointer-receiver Stringer leaves), anonymous structs, floats,
+recursive types (cycle guard), width on any verb but `%d`.
+
+**Guardrails first, witnessed red**: 18 new rows (5 in
+`fmt/sprintf-verbs` — q-string, q-string-empty, t-bool, d-width,
+width-outside-set; 13 in the new `fmt/v-composites` — incl. the
+DescribeConfState shape verbatim, the ReadStates `[]struct{uint64,
+[]byte}` shape, entryID `%+v`, Stringer elements + a panicking one,
+and 2 boundary rows) — all 18 FAIL at `frontend-export` pre-fix
+(recorded in the focused run before the widening).
+
+**Post-fix focused slice**: 41/46 PASS in the two families; the 5
+fails are EXACTLY the red-by-design set (verb-outside-set,
+nonconst-format, width-outside-set, v-map-outside, v-ptr-field-outside).
+Frontend unit tests green.
+
+**Predicted flips for the full differential (stated before the run):**
+exactly 18 NEW ids — 15 PASS + 3 FAIL/frontend-export by design
+(`width-outside-set`, `v-map-outside`, `v-ptr-field-outside`); zero
+movement on the 2343 pre-existing ids (the parser accepts only
+previously-refused forms; the composite hook runs only after the
+scalar matrix misses, where every case previously refused; refusal
+DETAIL text changes are not a baseline column). Baseline re-pinned
+same-commit with this reason.

@@ -36,3 +36,11 @@ x-error	sprintfXError	-	ok	-	stdlib,strings,interfaces
 x-nil-error	sprintfXNilError	-	ok	-	stdlib,strings,interfaces,nil
 verb-outside-set	sprintfVerbOutsideSet	-	ok	-	stdlib,strings
 nonconst-format	sprintfNonConstFormat	1	ok	-	stdlib,strings
+# W4.3 item 1 matrix smalls (docs/raft-w43-log.md): %q over string, %t,
+# %d width. Red at frontend-export until the widening lands; the last
+# row stays RED BY DESIGN (width modeled for %d only).
+q-string	sprintfQString	-	ok	-	stdlib,strings
+q-string-empty	sprintfQStringEmpty	-	ok	-	stdlib,strings
+t-bool	sprintfTBool	-	ok	-	stdlib,strings,bools
+d-width	sprintfDWidth	-	ok	-	stdlib,strings,ints,widths
+width-outside-set	sprintfWidthOutsideSet	-	ok	-	stdlib,strings,ints,widths

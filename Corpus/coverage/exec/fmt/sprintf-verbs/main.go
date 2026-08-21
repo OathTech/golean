@@ -228,5 +228,39 @@ func main() {
 		r, o, sprintfSError(), sprintfSNilError(), sprintfVNilError(),
 		sprintfXStringer(), sprintfXStringerPanic(), sprintfQStringer(),
 		sprintfQStringerPanic(), sprintfXError(), sprintfXNilError(),
-		sprintfVerbOutsideSet(), sprintfNonConstFormat(1))
+		sprintfVerbOutsideSet(), sprintfNonConstFormat(1),
+		sprintfQString(), sprintfQStringEmpty(), sprintfTBool(),
+		sprintfDWidth(), sprintfWidthOutsideSet())
+}
+
+// ---- W4.3 item 1, the rendered-tier matrix smalls (docs/raft-w43-log.md)
+// Guardrails landed FIRST: red at frontend-export until the matrix
+// widening lands. gc probes: artifacts/w43/probe-fmt (G1/G2/E1-E4/F1).
+
+// %q over a plain string kind (the StateType.MarshalJSON shape:
+// fmt.Sprintf("%q", st.String())). ASCII subset, escapes included.
+func sprintfQString() string {
+	return fmt.Sprintf("%q", "hi\"\n\x01\\ ok")
+}
+
+func sprintfQStringEmpty() string {
+	return fmt.Sprintf("state=%q!", "")
+}
+
+// %t over bool (the DescribeReady MustSync shape).
+func sprintfTBool() string {
+	return fmt.Sprintf("Ready MustSync=%t or %t:", true, false)
+}
+
+// %5d width (the MajorityConfig.Describe shape " %5d    (id=%x)"):
+// space-pad left, sign inside the padding, no truncation when wider,
+// unsigned + enum (named int32, %d skips the Stringer check) included.
+func sprintfDWidth() string {
+	return fmt.Sprintf("[%5d|%5d|%5d|%5d|%3d]", 7, 123456, -42, uint64(99), enumT(6))
+}
+
+// ---- fail-closed boundary row: width is modeled for %d ONLY ----
+
+func sprintfWidthOutsideSet() string {
+	return fmt.Sprintf("%5x", uint64(255))
 }

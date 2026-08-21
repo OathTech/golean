@@ -1,42 +1,20 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-21 (holes arc AUDIT FIX ROUND — branch holes-arc;
-#   findings F1/F2/F3 of the pre-merge audit of `4490bc24`).
-#   re-pin reason: eleven NEW ids, zero movement on any of the 2332 ids
-#   the previous record held (verified by the run's own drift report:
-#   every drifted line reads "NEW id (not in baseline)").
-#     F1, 4 NEW REDS at lean-observation, all one class —
-#       pointers/nil-array-ptr-slice-elided-high/{deref-elided-high,
-#       deref-low-only,pointer-form,zero-length-array}: the elided-high
-#       spellings of the nil pointer-to-array slice base whose
-#       explicit-high sibling (pointers/nil-array-ptr-slice/
-#       slice-expr-nil) has been red since 2026-08-19. Two of them were
-#       ACCIDENTALLY CORRECT before BUG-066 — the removed second base
-#       emission dereferenced the nil pointer — so this is a WIDENED
-#       fail-closed refusal, never a wrong answer (BUG-066's widening
-#       paragraph; tracked in baselines/untriaged-ids at `coverage`,
-#       ceiling 7 -> 11 in baselines/untriaged-count).
-#     F1 control + F2 + F3, 7 NEW GREENS —
-#       pointers/nil-array-ptr-slice-elided-high/{field-through-nil-ptr,
-#       field-through-nil-call} (the refusal is the slice-base nil arm
-#       and nothing wider); slices/slice-elided-high-eval-once/
-#       {nested-slice-expr,map-index-effectful-key,
-#       pointer-array-call-base,conversion-base} (four base shapes
-#       BUG-066 fixed that nothing pinned — the nested one ran the base
-#       FOUR times pre-fix); interfaces/assert-func-variadic/
-#       assert-variadic-at-slice-panic (BUG-067's panic direction: a
-#       status-`ok` divergence pre-fix, and the byte-exact `...E`
-#       message render).
-#   counts: 2343 cases, 2199 PASS / 144 FAIL (was 2332: 2192/140)
-#   frontend: native (tools/nativefrontend + NativeToIR)
-#   COLLATION (recorded 2026-08-21, audit fix round — it had never been
-#   said): rows are sorted by id under LC_ALL=C. The guardrails commit
-#   `6146b217` regenerated the file under C where every earlier record
-#   had used en_US.UTF-8, which is why that commit's diff moved ~90
-#   unchanged lines. Re-verified at this re-pin: sorted C-side, the
-#   pre-arc record and `6146b217`'s differ by exactly the eight
-#   guardrail rows that commit added — the re-sort hid nothing. Keep
-#   regenerating under LC_ALL=C.
-# columns: result<TAB>id<TAB>stage
+# recorded: 2026-08-21 (raft W4.3 wave 2 / landing A — branch raft-w43;
+#   docs/raft-w43-log.md "Wave 2").
+#   re-pin reason: EIGHTEEN NEW ids, zero movement on any of the 2343
+#   ids the previous record held (verified by the run's own drift
+#   report: every drifted line reads "NEW id (not in baseline)").
+#     The fmt matrix widenings' guardrails (item 1 landing A):
+#     fmt/sprintf-verbs/{q-string,q-string-empty,t-bool,d-width} PASS +
+#     width-outside-set FAIL/frontend-export (RED BY DESIGN: width is
+#     modeled for the d verb only), and the new fmt/v-composites family
+#     — 11 PASS (the recursive v/+v composite matrix: slices, named
+#     structs, Stringer/error leaves at depth, the DescribeConfState
+#     and ReadStates shapes verbatim) + {v-map-outside,
+#     v-ptr-field-outside} FAIL/frontend-export (RED BY DESIGN: maps
+#     and pointer fields are outside the modeled composite subset).
+# cases: 2361 (2214 PASS / 147 FAIL)
+# frontend: native (tools/nativefrontend)
 result	id	stage
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
@@ -820,6 +798,7 @@ PASS	fmt/fprintf-builder/returns	-
 PASS	fmt/sprintf-verbs/d-enum	-
 PASS	fmt/sprintf-verbs/d-int	-
 PASS	fmt/sprintf-verbs/d-uint	-
+PASS	fmt/sprintf-verbs/d-width	-
 PASS	fmt/sprintf-verbs/decision-path	-
 PASS	fmt/sprintf-verbs/eval-order	-
 PASS	fmt/sprintf-verbs/literal-only	-
@@ -829,6 +808,8 @@ PASS	fmt/sprintf-verbs/plusv-nil-ptr	-
 PASS	fmt/sprintf-verbs/plusv-ptr-stringer	-
 PASS	fmt/sprintf-verbs/q-bytes	-
 PASS	fmt/sprintf-verbs/q-bytes-empty	-
+PASS	fmt/sprintf-verbs/q-string	-
+PASS	fmt/sprintf-verbs/q-string-empty	-
 PASS	fmt/sprintf-verbs/q-stringer	-
 PASS	fmt/sprintf-verbs/q-stringer-panic	-
 PASS	fmt/sprintf-verbs/s-error	-
@@ -836,15 +817,30 @@ PASS	fmt/sprintf-verbs/s-nil-error	-
 PASS	fmt/sprintf-verbs/s-string	-
 PASS	fmt/sprintf-verbs/s-stringer	-
 PASS	fmt/sprintf-verbs/s-stringer-panic	-
+PASS	fmt/sprintf-verbs/t-bool	-
 PASS	fmt/sprintf-verbs/v-kinds	-
 PASS	fmt/sprintf-verbs/v-nil-error	-
 PASS	fmt/sprintf-verbs/v-stringer-panic	-
 FAIL	fmt/sprintf-verbs/verb-outside-set	frontend-export
+FAIL	fmt/sprintf-verbs/width-outside-set	frontend-export
 PASS	fmt/sprintf-verbs/x-error	-
 PASS	fmt/sprintf-verbs/x-nil-error	-
 PASS	fmt/sprintf-verbs/x-stringer	-
 PASS	fmt/sprintf-verbs/x-stringer-panic	-
 PASS	fmt/sprintf-verbs/x-uint	-
+PASS	fmt/v-composites/plusv-slice-struct	-
+PASS	fmt/v-composites/plusv-stringer-field	-
+PASS	fmt/v-composites/plusv-struct	-
+PASS	fmt/v-composites/v-conf-state-shape	-
+FAIL	fmt/v-composites/v-map-outside	frontend-export
+PASS	fmt/v-composites/v-named-slice	-
+PASS	fmt/v-composites/v-nested-struct	-
+FAIL	fmt/v-composites/v-ptr-field-outside	frontend-export
+PASS	fmt/v-composites/v-slice-struct-bytes	-
+PASS	fmt/v-composites/v-slice-uint64	-
+PASS	fmt/v-composites/v-stringer-elem-panic	-
+PASS	fmt/v-composites/v-stringer-elems	-
+PASS	fmt/v-composites/v-struct	-
 PASS	functions/bare-call-chain/chain	-
 PASS	functions/bare-call-chain/func-value	-
 PASS	functions/bare-call-chain/helper	-
