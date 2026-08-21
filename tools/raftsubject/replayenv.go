@@ -226,6 +226,22 @@ func (e *renv) processReady(idx int) bool {
 // deliverMsgs mirrors upstream DeliverMsgs/splitMsgs: for each recipient
 // in the given order, remove ALL its bag messages (of type typ; -1 =
 // all) in bag order and either step or drop them. Returns handled count.
+//
+// LATENT MIRROR DIVERGENCE #2, recorded not fixed (pre-merge audit,
+// 2026-08-21). Upstream iterates ONE ordered `rs ...Recipient` list with
+// a per-recipient Drop flag; this takes two lists and runs every deliver
+// before every drop. The two orders differ whenever a command names a
+// drop recipient BEFORE a deliver recipient — which no trace in
+// `deps/raft/testdata` does (every `deliver-msgs` with both puts the
+// deliver first, e.g. `deliver-msgs 1 drop=(2,4,5,6,7)`). Even then the
+// ok-tier verdict is insensitive to it: recipients partition the bag by
+// `to`, and stepping a node never adds to the bag (messages enter only
+// through processReady), so delivers and drops to DISTINCT recipients
+// commute. The one shape that would not commute is the same node named
+// in both lists, where order decides whether its messages are stepped or
+// discarded; upstream would resolve it by argument position and this by
+// deliver-wins. Fix the day a trace needs it — and the rendered tier
+// will need it anyway, since output order is observable there.
 func (e *renv) deliverMsgs(deliver []uint64, drop []uint64, typ int32) int {
 	n := 0
 	for _, id := range deliver {
@@ -237,6 +253,25 @@ func (e *renv) deliverMsgs(deliver []uint64, drop []uint64, typ int32) int {
 	return n
 }
 
+// LATENT MIRROR DIVERGENCE #1, recorded not fixed (pre-merge audit,
+// 2026-08-21). Upstream's splitMsgs guards its selection with
+// `!(drop && isLocalMsg(msg))` — "don't drop local messages, which
+// require reliable delivery", where local means `From == To` or either
+// endpoint is an `IsLocalMsgTarget`. This drops them. UNREACHABLE in the
+// supported subset, on two independent grounds, both checked:
+//   - `IsLocalMsgTarget` messages (MsgStorageAppend/MsgStorageApply) only
+//     arise under AsyncStorageWrites, which raftConfigStub leaves false;
+//     upstream's own ProcessReady panics on one in that mode, so they
+//     cannot reach the bag at all.
+//   - self-addressed (`From == To`) message lines appear in exactly two
+//     testdata traces, async_storage_writes.txt and
+//     async_storage_writes_append_aba_race.txt, both of which stop at
+//     their first unsupported command and are never replayed.
+//
+// So no replayed block can reach the difference. It is written down
+// because "unreachable today" is a property of the supported subset, and
+// the subset is what W4.3/W4.4 grow: re-check this the moment async
+// storage writes or a local-target message enters the vocabulary.
 func (e *renv) splitStep(to uint64, typ int32, drop bool) int {
 	var mine []*pb.Message
 	var rest []*pb.Message

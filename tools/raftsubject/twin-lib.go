@@ -13,8 +13,17 @@
 //
 // The event vocabulary (design §2): tick(i), campaign(i), propose(i),
 // deliver(i,k) — plus the drain/drainRev macros (deliver-to-quiescence in
-// insertion / reverse-insertion order), which is what upstream's
-// `stabilize` is and what the perturbation schedules vary. drop/dup are
+// insertion / reverse-insertion order), which play the ROLE upstream's
+// `stabilize` plays and are what the perturbation schedules vary. They
+// are not the same procedure, and the gloss that said they were is
+// corrected here (pre-merge audit, 2026-08-21): upstream `stabilize`
+// alternates "harvest EVERY listed node that HasReady" with "deliver
+// every listed node's bag", to a fixed point; `drain` delivers one
+// message at a time and harvests only the RECIPIENT (deliverIdx). A node
+// holding a Ready but receiving nothing is harvested by `stabilize` and
+// not by `drain`. Same quiescence target, different interleaving — which
+// is the point of an event vocabulary whose grain is one node per step
+// (design §2). drop/dup are
 // OFF in v1 (the reliable-first envelope: the network reorders and
 // delays without bound — a message may sit in the multiset forever — but
 // never loses or duplicates; a strictly weaker theorem than raft's
@@ -370,7 +379,7 @@ const (
 	opCampaign
 	opPropose
 	opDeliver   // node, k: the k-th live message addressed to node
-	opDrain     // deliver-to-quiescence, insertion order (upstream's stabilize)
+	opDrain     // deliver-to-quiescence, insertion order (stabilize's ROLE, not its procedure — header)
 	opDrainRev  // deliver-to-quiescence, reverse-insertion order
 	opDrainSkip // node: drain everything NOT addressed to node (starvation)
 )

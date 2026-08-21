@@ -37,9 +37,10 @@ predicate this twin integrates).
 (`tools/raftsubject/overlay/raft/logger.go`) is DELETED. The one delta the
 frontend still forces is recorded as **D-12** (ledger below): the two
 package-level initializers lose their `log.New(...)` calls and the orphaned
-`io` import drops — a package-level `var` has no per-declaration quarantine
-(G-3 / handoff H-11), so an unlowerable initializer refuses the WHOLE
-export. Land H-11 and D-12 retires to zero.
+`io` import drops. **What retires D-12 is H-20, not H-11** — see the ledger
+entry below for the three-axis refusal and the corrected condition (this
+paragraph originally read "land H-11 and D-12 retires to zero", which is
+false: H-11 landed in W4.0).
 
 **The 144→2-3-line claim, RE-MEASURED** (artifacts/w42, diff vs
 `deps/raft/logger.go`):
@@ -64,15 +65,26 @@ point of the ruling.
 
 ### The re-owed census, run (what W4.1's "0 LIVE" becomes after the swap)
 
-`sweep.py` at the swapped tree (artifacts/w42/sweep-post-swap.txt;
-`frontier.py` EXPORTS CLEAN, `derive.py --check` clean, subject
-`go build` clean):
+`sweep.py` at the swapped tree (`frontier.py` EXPORTS CLEAN, `derive.py
+--check` clean, subject `go build` clean). **Both sweep reports are
+TRACKED**, under `docs/evidence/2026-08-21_w42-census/`:
 
-- **PASS 1: 24 quarantined subject declarations** (pre-swap tree
-  re-derived and re-swept at THIS tip for an exact diff: **14** — the
-  swap's delta is EXACTLY the ten `DefaultLogger` formatting methods
-  joining, nothing leaving; artifacts/w42/sweep-pre). Imported stubs
-  30 → **46** (the `log` package's declaration-only stubs join).
+| file | what it is | headline |
+|---|---|---|
+| `sweep-post-swap.txt` | the swapped tree | 24 quarantined / 5 LIVE / 46 imported stubs (2 LIVE), 7 residual sinks |
+| `sweep-pre.txt` | the pre-swap tree re-derived and re-swept at this tip | 14 quarantined / 0 LIVE / 30 imported stubs, census CLOSED |
+
+(Corrected 2026-08-21, audit B-F4: this section previously called
+`artifacts/w42/sweep-{pre,post-swap}` "the tracked artifact pair".
+`artifacts/` is gitignored, so neither was tracked, and the `sweep-pre`
+directory held only the exported wires — its report text had never been
+saved at all. Both report texts are now committed at the path above;
+regenerate with `tools/raftsubject/sweep.py [--tree <tree>]`.)
+
+- **PASS 1: 24 quarantined subject declarations** (pre-swap: **14** —
+  the swap's delta is EXACTLY the ten `DefaultLogger` formatting methods
+  joining, nothing leaving). Imported stubs 30 → **46** (the `log`
+  package's declaration-only stubs join).
 - **5 STATICALLY LIVE** quarantined subject declarations —
   `DefaultLogger.{Infof, Debugf, Warningf, Error, Errorf}` — plus
   **2 LIVE imported stubs** — `log.Logger.{Panic, Panicf}`, which is
@@ -91,9 +103,12 @@ quarantined in PASS 1"; the reproduction at this tip (same tree content,
 this frontend) censuses 14. The 15 was recorded mid-arc before the
 audit-fix round's `%x`/`%q` Stringer-precedence widening landed in the
 same branch; one rendering declaration evidently lowered with it and the
-prose number was not re-derived at the audit tip. Reconstructed, not
-verified per-declaration; the tracked artifact pair (sweep-pre /
-sweep-post-swap) is the number of record going forward.
+prose number was not re-derived at the audit tip. **Reconciled
+per-declaration at the pre-merge audit (2026-08-21): the freed
+declaration is `raft.Status.MarshalJSON`.** A dated correction is
+appended at the W4.1 log's clause-1 headline, per the W2-log convention.
+The tracked report pair in `docs/evidence/2026-08-21_w42-census/` is the
+number of record going forward.
 
 ### The dead-DYNAMICALLY argument (owed item ii), and why it is checkable
 
@@ -148,17 +163,73 @@ gone from the tree.
 **D-12 `raft/logger.go`, the two package-level Logger initializers**
 (item 1). Exact-text-keyed `SUBJECT_PATCHES` derivation patch:
 `defaultLogger`/`discardLogger` lose their `log.New(os.Stderr,...)` /
-`log.New(io.Discard,...)` calls (unlowerable package-level initializers,
-G-3/H-11) and become bare `&DefaultLogger{}`; the orphaned `io` import
-drops. Everything else in the file — the Logger interface,
+`log.New(io.Discard,...)` calls (unlowerable package-level initializers)
+and become bare `&DefaultLogger{}`; the orphaned `io` import drops.
+Everything else in the file — the Logger interface,
 `SetLogger`/`getLogger`/`ResetDefaultLogger`, `DefaultLogger` and all its
 methods, `header`, the `raftLoggerMu` mutex — is upstream text.
 **Observable weight:** a Logger call before the harness installs its own
 nil-derefs loudly under `go run` (upstream would print to stderr) and
 stops the machine at a quarantined stub; unreachable under the twin
-(the dead-DYNAMICALLY argument above, both halves probed). Retires to
-ZERO when H-11 lands. The patch keys on upstream's exact `var (...)`
-block and refuses on drift.
+(the dead-DYNAMICALLY argument above, both halves probed). The patch keys
+on upstream's exact `var (...)` block and refuses on drift.
+
+**THE RETIREMENT CONDITION, corrected (2026-08-21, pre-merge audit B-F1).**
+This log shipped, in three places, the claim that D-12 "retires to zero
+when H-11 lands", inherited from the harness design §5's bullet (itself
+now corrected in place). **It is false. H-11 — the package-level-`var`
+per-declaration quarantine — LANDED IN W4.0** (`docs/raft-w4-log.md`
+item 3, `quarantineUnlowerableGlobals` + the `globalAddr` poison). D-12
+survived it, and would survive it again, because H-11's quarantine is
+GATED on the eligibility predicate `initializerEffectIsolated`
+(`tools/nativefrontend/emit.go`), and upstream's initializer
+
+```go
+defaultLogger = &DefaultLogger{Logger: log.New(os.Stderr, "raft", log.LstdFlags)}
+```
+
+is refused by that predicate on **three independent axes**, each
+sufficient on its own (auditor-probed, then re-read against the source at
+this tip):
+
+1. **The `&`-composite shape.** The whole RHS is an address-of
+   expression; the shape allowlist answers `false` for `token.AND` — "a
+   pointer escaping into the cell". This axis does not depend on the
+   arguments at all, and it holds for the *patched* bare
+   `&DefaultLogger{}` too, so no rewriting of `log.New`'s arguments can
+   get past it.
+2. **`log.New` is not in `pureUnmodeledCallees`**, so the call answers
+   `false`. **It must not be casually added.** That allowlist is minimal
+   *by charter*, and the charter is a scar: audit F1 (2026-08-20,
+   `docs/raft-w4-log.md`) found `var _ = fmt.Println("x")` declared
+   effect-isolated and SKIPPED — the machine ran printing nothing where
+   `go run` printed, on exactly the stdout the differential compares.
+   "The machine does not model this body" is NOT "this call has no
+   effect", and `log.New` is a worse case than most: it does not write
+   during construction, it *retains a writer* that later writes land on.
+3. **The arguments fail `isolatedType`.** `os.Stderr` is a `*os.File`
+   (pointer) and `io.Discard` an `io.Writer` (interface); the predicate
+   admits only basics and arrays/structs of basics.
+
+So the real blocking shape is **an isolation/effect story for
+WRITER-TYPED package-level globals** — a value the machine cannot model
+but whose *construction* is inert, held in a cell whose *later use* is
+oracle-visible. Ticketed as **H-20** (standing handoff items below);
+it is frontend-lane work, and it is not small.
+
+**The honest alternative, stated so nobody schedules H-20 by default:
+D-12 is CHEAP and may as well be PERMANENT.** It is three code lines,
+keyed on upstream's exact `var (...)` block and refusing on drift; its
+observable weight is a loud nil-deref on a path the twin provably cannot
+reach (the dead-DYNAMICALLY argument above, both halves probed). Nothing
+in the raft push is blocked by it. H-20 buys back verbatim-ness on one
+declaration and buys no coverage; it should be ranked accordingly.
+
+**Owed corpus row (this lane is corpus-free):** a guardrail pinning the
+refusal itself — a package-level `var p = &T{F: pkg.New(writer)}` whose
+initializer must refuse the whole export, so a future widening of
+`pureUnmodeledCallees` or of the shape allowlist that silently admitted
+it would go red. Listed in the owed-rows table below.
 
 **Gate:** `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci` at the
 item-1 commit — see the exit-state section for the verbatim result lines.
@@ -181,23 +252,52 @@ S2 byIndex slot map at apply time, S3 per-node monotonicity + the anomaly
 channel, S4 all-driven-commands-applied).
 
 **THE SCHEDULE IS THE INPUT.** v1 drives named hand schedules (tables in
-the file); determinism measured, not assumed: three consecutive `go run`s
-of the full schedule battery produce byte-identical traces (md5
-`2508c1de20caec3596585358354cdf3b` ×3). The ∀ch form — events drawn from
-the machine's choice stream — is the membership lane's, over this same
-mechanism.
+the file); determinism measured, not assumed: consecutive `go run`s of
+the full schedule battery (`twin-main.go` + `twin-lib.go` over the
+tracked `raftsubject/` tree) produce byte-identical traces, md5
+**`12fe50c5d949c4382ba44f2ad2060471`**. Reproduced at the audit-fix round
+3× from the tracked sources and 3× from the auditor's recorded copy of
+the same program — six runs, one digest. The capture is the program's
+combined output (`println` writes to stderr, so `2>&1`; stdout alone is
+empty). The ∀ch form — events drawn from the machine's choice stream —
+is the membership lane's, over this same mechanism.
+
+> **Correction (2026-08-21, pre-merge audit B-F3).** This paragraph
+> originally recorded md5 `2508c1de20caec3596585358354cdf3b` ×3. That
+> digest is **not reproducible** — not from the tracked sources, not
+> from the recorded artifact program, and not under any capture shape
+> tried (`2>&1`, stderr only, file redirect; stdout alone hashes empty).
+> It is presumed to have been taken over a differently-shaped capture or
+> an intermediate state of the battery, and it is retracted rather than
+> explained. The digit-for-digit value above is the one of record and is
+> the one to re-check against.
 
 **Judgment calls, recorded:**
 
 - **JC-22: `campaign(i)` is IN the v1 vocabulary** (the design's §2 table
-  has it tier-2). Measured reason: a timeout-driven election consumes the
-  D-11 jitter draw, whose VALUE legitimately differs across oracles (that
-  is what a choice site is), so a jitter-sensitive schedule cannot
-  promise same-trace-on-both-oracles. v1 schedules keep per-node unreset
-  election ticks far below ElectionTick=10 and drive elections
-  explicitly — exactly what upstream's own datadriven traces do with
-  their `campaign` command (54 blocks). The jitter-sensitive tier
-  belongs to the membership lane (owed row below).
+  has it tier-2). Reason: a timeout-driven election consumes the D-11
+  jitter draw, whose VALUE legitimately differs across oracles (that is
+  what a choice site is), so a jitter-sensitive schedule cannot promise
+  same-trace-on-both-oracles. v1 schedules keep per-node unreset election
+  ticks far below ElectionTick=10 — the `heartbeat` schedule gives each
+  follower exactly ONE election tick — and drive elections explicitly,
+  exactly what upstream's own datadriven traces do with their `campaign`
+  command (54 blocks). The jitter-sensitive tier belongs to the
+  membership lane (owed row below).
+
+  **Now MEASURED, not mechanism-derived (2026-08-21, pre-merge audit
+  B-F8).** As shipped this judgment call rested on reading the choice
+  site; the sensitivity itself had never been observed. A minimal
+  timeout-driven drive (one node, ElectionTick=10, tick until the
+  SoftState leaves StateFollower) was run as repeated `go run` campaigns:
+  the auditor's six landed at ticks **10, 12, 13, 18, 11, 11**; six
+  independent re-runs at this fix round landed at **10, 16, 18, 15, 19,
+  19**. Twelve runs, eight distinct values, every one inside raft's
+  `[electionTimeout, 2*electionTimeout-1] = [10, 19]` window. So the
+  claim "a timeout-driven election is not trace-stable even under ONE
+  oracle" is now a measurement, and JC-22's exclusion is load-bearing
+  rather than precautionary — the ×3 determinism digest above holds only
+  because no v1 schedule crosses this site.
 - **JC-23: the harvest loops to LOCAL quiescence** (`for HasReady`),
   not a single `if`. Same recorded §2 narrowing either way (no other
   node is stepped inside the bundle); the loop form is what W4.1's
@@ -208,7 +308,15 @@ mechanism.
 - **JC-24: `drain`/`drainRev`/`drainSkip(i)` are schedule MACROS over
   `deliver`, not new event kinds** — deliver-to-quiescence in insertion /
   reverse-insertion / all-but-node-i order (bounded 10000, fail closed).
-  `drain` is upstream's `stabilize`; `drainSkip` is unbounded delay made
+  `drain` plays the ROLE upstream's `stabilize` plays but is not the same
+  procedure — corrected 2026-08-21 (pre-merge audit): `stabilize`
+  alternates "harvest every listed node that `HasReady`" with "deliver
+  every listed node's bag" to a fixed point, while `drain` delivers one
+  message at a time and harvests only the RECIPIENT, so a node holding a
+  Ready but receiving nothing is harvested by `stabilize` and not by
+  `drain`. Same quiescence target, different interleaving, which is the
+  point of a vocabulary whose grain is one node per step. `drainSkip` is
+  unbounded delay made
   concrete (fairness non-assumption: a starved node's messages are "not
   chosen yet" forever). drop/dup are OFF in v1 — the reliable-first
   envelope, a strictly weaker claim than raft's design point, stated
@@ -308,23 +416,23 @@ proved interpreter-slow):
 - **OK-TIER: 178/178 agree** — the driver said ok exactly where upstream
   expects ok, on every replayed block (121/121 across the 27 smaller
   traces + 57/57 in probe_and_replicate).
-- **MACHINE TIER: every replayed trace that completed its machine run
-  agrees BYTE-FOR-BYTE with go run** — 26/26 across the two smaller
-  slices (25 in the main slice incl. lagging_commit 17/17 and prevote
-  16/16 end-to-end; replicate_pause 32/32 end-to-end).
-  **probe_and_replicate's machine run is the one OUTSTANDING verdict at
-  arc close**: its single-process interpreter run was twice killed by
-  the session environment's ~1 h background-task lifetime (an
-  environment bound, not a machine stop), and the setsid-DETACHED rerun
-  was still executing past the 2 h mark when the arc closed — left
-  running, writing its verdict to `artifacts/w42/tracereplay-par.txt`
-  on completion (command to reproduce:
+- **MACHINE TIER: 27/27 — COMPLETE, nothing outstanding.** Every
+  replayed trace agrees BYTE-FOR-BYTE with `go run`: 26 across the two
+  smaller slices (25 in the main slice incl. lagging_commit 17/17 and
+  prevote 16/16 end-to-end; replicate_pause 32/32 end-to-end) plus
+  probe_and_replicate, the last one out.
+  **probe_and_replicate LANDED** (`artifacts/w42/tracereplay-par.txt`,
+  verbatim): `74/74 blocks`, `OK-TIER: 57/57`, `MACHINE: 1/1 replayed
+  traces agree byte-for-byte with go run`. It was the one outstanding
+  verdict when the arc closed — its single-process interpreter run had
+  been twice killed by the session environment's ~1 h background-task
+  lifetime (an environment bound, never a machine stop), and the
+  setsid-DETACHED rerun was still executing past the 2 h mark. It
+  completed clean. Command to reproduce:
   `tools/raftsubject/tracereplay.py --traces probe_and_replicate
-  --fuel 20000000000`). Its GO-side measurement is complete (57/57
-  ok-tier); the machine byte-agreement verdict is OWED — read the
-  artifact before quoting a 27/27, and if it ever reads DISAGREE or
-  fuel-out, that is W4.4's first diagnosis item, not a number to
-  average away.
+  --fuel 20000000000`. **The reading discipline that stood while it was
+  in flight is retired with it** — the earlier text told readers not to
+  quote 27/27 until the artifact said so; the artifact now says so.
 - **6 traces replay END TO END**: campaign (4), lagging_commit (17),
   prevote (16), probe_and_replicate (74), replicate_pause (32),
   single_node (4) — the design §7 predicted 7; the seventh
@@ -335,6 +443,32 @@ proved interpreter-slow):
   diagnose. The stops in the per-trace table are all
   unsupported-COMMAND stops (the by-design list above), not behavioral
   divergences.
+- **Two LATENT mirror divergences, found by reading the mirror against
+  upstream `rafttest` (pre-merge audit, 2026-08-21); both recorded in
+  `replayenv.go` at the site, neither fixed.** (i) upstream `splitMsgs`
+  guards with `!(drop && isLocalMsg(msg))` — local messages are never
+  dropped — and `splitStep` drops them; unreachable here on two
+  independent grounds (local-target messages need AsyncStorageWrites,
+  which `raftConfigStub` leaves false and upstream's own `ProcessReady`
+  panics on; self-addressed message lines appear only in the two
+  `async_storage_writes*` traces, both of which stop at their first
+  unsupported command). (ii) upstream walks ONE ordered recipient list
+  with a per-recipient Drop flag; `deliverMsgs` runs every deliver before
+  every drop — no testdata trace names a drop before a deliver, and
+  distinct recipients commute anyway (recipients partition the bag by
+  `to`, and stepping never adds to the bag). Both are properties of the
+  SUPPORTED SUBSET, so they are re-owed the moment the subset grows.
+- **The strictness inversion, stated: this mirror is STRICTER than
+  upstream, so its failure direction is FALSE RED, never false green.**
+  `processReady` stops on a snapshot in Ready and on a non-normal
+  committed entry rather than handling them; `deliverMsgs` stops on a
+  delivery to an uninstantiated node where upstream tolerates one for
+  drops. Every one of those is a case upstream would have processed.
+  A trace that ought to pass can therefore be stopped by the mirror and
+  show up as an unsupported stop (visible, diagnosable); a trace that
+  ought to fail cannot be turned green by any of them. That asymmetry is
+  what makes the stopper census below readable as a coverage gap list
+  rather than a correctness claim.
 - The stopper census over the 22 partial traces: `propose-conf-change`
   bodies ("multi-line command input") 11, compact/send-snapshot 3,
   forget-leader 2, async-storage-writes 2, tick-election 1,
@@ -345,20 +479,76 @@ proved interpreter-slow):
 
 ## Item 4 — the W4.3/W4.4 handoff
 
+### THE TIER-STRENGTH BOUND — read this before writing W4.3's charter
+
+Recorded prominently because it changes what W4.3's rendered tier is FOR
+(pre-merge audit, 2026-08-21). Item 3 ships two green tiers. **Neither
+can falsify the replay mirror**, and the reason is structural in each:
+
+- **The ok-tier is blind to delivery-order unfaithfulness.** An `ok`
+  block asserts only that a command was ACCEPTED. A mirror that delivered
+  a node's messages in a different order from upstream's, or ran a
+  deliver where upstream ran a drop, would still answer `ok` on every one
+  of the 178 blocks. 178/178 is therefore a real result about command
+  acceptance and *no* result about the network discipline underneath it.
+- **The machine/byte tier is oracle-SYMMETRIC.** It compares our driver
+  under `go run` against our driver under the machine — the same
+  `replayenv.go` on both sides. It is exactly the right instrument for
+  "does the machine agree with Go", which is what it was built for, and
+  it is structurally incapable of noticing that `replayenv.go` disagrees
+  with `rafttest`. A mirror bug is invariant under it.
+
+So the mirror's fidelity today rests on **code reading**, not on either
+green number — and the reading is what turned up the two latent
+divergences and the strictness inversion recorded in item 3. The
+consequence for W4.3: **the rendered tier is not "more coverage", it is
+the first tier that can FALSIFY the mirror.** Rendered expectations carry
+message order, drop markers and per-node Ready contents verbatim against
+upstream's own recorded output, which is a different oracle from `go
+run` — the only one in this instrument family that is external to us.
+Charter it that way, and pick the families in the order that maximizes
+mirror-falsifying reach rather than block count (the `deliver-msgs`
+family, 40 blocks, is small and aimed straight at divergence (ii)).
+
 ### What the FULL trace tier (the 309 rendered-expectation blocks) needs
 
-The 309 non-`ok` blocks, classified by required renderer family
-(block-anchored count over all 28 files, method in this log's history):
+The 309 non-`ok` blocks, classified by required renderer family over all
+28 files. **The classifier is tracked** —
+`tools/raftsubject/tracefamilies.py`, output recorded at
+`docs/evidence/2026-08-21_w42-census/tracefamilies.txt`. It prints TWO
+readings, because "which family is this block" has a rule choice in it: a
+`stabilize` expectation interleaves Ready dumps, message-describe lines
+and env log lines, so command-anchoring and content-anchoring disagree
+about where that mass sits.
 
-| blocks | family |
-|---|---|
-| 106 | ready dumps (`> N handling Ready` — DescribeReady + DescribeMessage + interleaved log lines) |
-| 58 | pure log lines (INFO/WARN/DEBUG — upstream's env logger formatting) |
-| 42 | other/mixed |
-| 40 | message describe lines (deliver-msgs output — DescribeMessage) |
-| 30 | raft-state tables (StateType + tracker.Config rendering) |
-| 18 | status tables (Progress rendering) |
-| 15 | raft-log dumps (entry describe + the `%q` entry formatter) |
+| blocks (command-anchored) | blocks (content-anchored) | family |
+|---|---|---|
+| 128 | 90 | ready dumps (`stabilize` + `process-ready` — DescribeReady + DescribeMessage + interleaved log lines) |
+| 58 | 58 | pure log lines (INFO/WARN/DEBUG — upstream's env logger formatting) |
+| 40 | 11 | message describe lines (`deliver-msgs` output — DescribeMessage) |
+| 30 | 30 | raft-state tables (StateType + tracker.Config rendering) |
+| 20 | 87 | other/mixed |
+| 18 | 18 | status tables (Progress rendering) |
+| 15 | 15 | raft-log dumps (entry describe + the `%q` entry formatter) |
+
+Both readings sum to 309 (the script fails closed if they do not, and
+fails closed on any command with no family row). **They agree exactly on
+`pure log lines` 58, `raft-state` 30, `status` 18 and `raft-log` 15** —
+those four are the load-bearing numbers; the audit's independent
+classifier reproduced them too. Command-anchored is the one to schedule
+against: you make `process-ready` render, not "blocks containing a
+marker".
+
+> **Correction (2026-08-21, pre-merge audit B-F5).** The table shipped
+> mid-arc as `106 / 58 / 42 / 40 / 30 / 18 / 15`, computed by an ad hoc
+> classification that was never committed — so the numbers could not be
+> re-derived from tracked material, which is the finding. Rebuilt as a
+> tracked classifier, the `58 / 30 / 18 / 15` reproduce under both rules
+> and the `40` reproduces as the command-anchored `deliver-msgs` count;
+> what does NOT reproduce is the `106 / 42` split of the 148
+> `stabilize` + `process-ready` + straggler blocks, under either rule
+> (command-anchored says 128/20, content-anchored 90/87). Those two
+> numbers are retracted. The script's output is the record.
 
 **The bonus probe's honest answer: 0 of the 309 render TODAY.** Every
 renderer behind them is still fail-closed quarantined; the one renderer
@@ -379,7 +569,7 @@ the installed twin logger).
 
 **A structural finding for the rendered tier, stated before anyone
 builds it:** the 58 pure-log-line blocks (and the log lines inside the
-106 ready dumps) are produced by upstream's env OUTPUT logger — the twin
+ready dumps) are produced by upstream's env OUTPUT logger — the twin
 CANNOT reproduce them through its installed logger, whose whole design
 is to render nothing (stateless, §5/§6). Reproducing them requires a
 RECORDING logger, which is shared mutable state unless made per-node —
@@ -397,11 +587,21 @@ owner should land, with the witness already built here)
 | the logger-teeth pair as corpus rows (fail-closed interface-stub dispatch: uninstalled -> visible stop; installed -> green) | logger-teeth / logger-installed probe mains |
 | a membership row for the choice-stream-driven twin (events drawn from `∀ch` over the enabled set — the envelope form of the schedule input) | mechanism in twin-main.go; the draw plumbing is new work |
 | ok-tier trace replays as corpus rows (the 6 end-to-end traces, go-vs-machine trace equality) | tracereplay.py artifacts |
+| **the D-12 refusal itself** (H-20's guardrail): a package-level `var p = &T{F: pkg.New(w)}` over a writer-typed argument must refuse the WHOLE export, so a later widening of `pureUnmodeledCallees` or of the shape allowlist that silently admitted it goes red | the three-axis reading in item 1's ledger entry; `raftsubject/raft/logger.go`'s upstream form is the live instance |
 
 ### Standing handoff items
 
-- **H-11** (package-level var quarantine) retires D-12 to zero — the
-  logger file becomes fully verbatim. Frontend lane.
+- **H-20 (NEW) — an effect/isolation story for WRITER-TYPED package-level
+  globals.** This replaces the item that stood here through the arc
+  ("H-11 retires D-12 to zero"), which was false: H-11 shipped in W4.0 and
+  D-12 survives it on three independent axes (item 1's ledger entry has
+  the argument and the file-level detail). What H-20 must supply, if it is
+  ever built: a sound reading of `&T{F: unmodeledCtor(writer)}` in a
+  package-level initializer — sound in audit-F1's sense, i.e. accounting
+  for the writer's LATER oracle-visible writes and not merely for the
+  constructor's inertness. Frontend lane. **Rank it against the honest
+  alternative first:** D-12 is three drift-checked lines on an unreachable
+  path, and leaving it permanent costs the project nothing.
 - **W4.5 obligations unchanged**: the §2 harvest-atomicity re-envelope
   (the `harvest` event kind), the jitter RANGE latitude entry, the §6
   footprint run against its five-item checklist.
@@ -444,17 +644,16 @@ scripts/ci` — legitimate throughout: no commit touches runtime code,
 `Corpus/`, `baselines/`, GoCore, `tools/nativefrontend/` or `scripts/`;
 every gate PASS carries the two visible NOT-RUN notes the hatch owes).
 
-- item 1 `5eaa9d1b` — the logger swap + re-owed census (gate PASS).
+- item 1 `5eaa9d1b` — the logger swap + re-owed census.
 - item 2 `8fe49dca` — the twin, both oracles agree on every schedule
-  (gate PASS).
+  (gate PASS, `artifacts/w42/ci-item2.txt`).
 - item 3 `fd6efc7d` — the trace ok-tier instrument + measurements (gate
-  PASS at its commit; verdicts in this log's item 3).
+  PASS at its commit, `ci-item3.txt`; verdicts in this log's item 3).
 - item 4 rides in this log (the handoff sections above) + the final
-  record commit.
+  record commit (gate PASS, `ci-final.txt`).
+- the branch TIP was gated in its own right: `ci-tip-f7777003.txt`.
 
-**Gate record, verbatim result lines** (each run's full transcript in
-`artifacts/w42/ci-item2.txt` / `ci-item3.txt` / `ci-final.txt`; item 1's
-ran identically before its commit):
+**Gate record, verbatim result lines:**
 
 ```
 note negative baseline diff NOT RUN (no record; explicitly allowed here)
@@ -462,16 +661,49 @@ note differential baseline diff NOT RUN (no record; explicitly allowed here)
 RESULT: PASS
 ```
 
-— all four runs (items 1, 2, 3 and the final working-tree state this
-record commit lands) PASS with exactly those two hatch notes.
+**THE TIP IS THE RECORD**, and the one to cite:
+`artifacts/w42/ci-tip-f7777003.txt`, the run at `f7777003` covering the
+final state of every item. The per-item runs above (`ci-item2.txt`,
+`ci-item3.txt`, `ci-final.txt`) are the landing-time gates and each
+carries the same three lines.
+
+> **Correction (2026-08-21, pre-merge audit B-F7).** This section
+> originally claimed "all four runs (items 1, 2, 3 and the final
+> working-tree state) PASS", with the parenthetical "item 1's ran
+> identically before its commit". **Item 1's transcript was not saved**,
+> so that sentence asserted a gate result with nothing behind it. Stated
+> honestly instead: three per-item transcripts exist (items 2, 3, final),
+> item 1's does not, and the tip run at `f7777003` covers the final state
+> of the whole branch. The claim is now exactly what the artifacts show.
 
 DELIVERABLE STATUS against the lane charter: (1) DONE — swap landed,
 delta re-measured, census re-run WITH the checkable dead-DYNAMICALLY
 argument (probe pair); (2) DONE — n=3 election/proposal/commit + the
 perturbation matrix, go-vs-machine agreement on every schedule, 111035
 reproduced, zero disagreements to diagnose; (3) DONE as measurement —
-268/558 blocks replayed, 178/178 ok-tier agreement, machine byte-level
-agreement on all 26 completed replays; probe_and_replicate's machine
-verdict OWED (in flight past 2 h at arc close — item 3's note has the
-command and the reading discipline); (4) DONE — the handoff sections
-above. Owed corpus rows: item 4's table — NONE landed here, by charter.
+268/558 blocks replayed, **178/178 ok-tier agreement and 27/27 machine
+byte-for-byte agreement, COMPLETE with nothing outstanding**
+(probe_and_replicate, the one verdict in flight at arc close, landed:
+`artifacts/w42/tracereplay-par.txt`, 74/74 blocks, ok-tier 57/57,
+machine 1/1); (4) DONE — the handoff sections above, including the
+tier-strength bound W4.3's charter needs. Owed corpus rows: item 4's
+table — NONE landed here, by charter.
+
+**Audit-fix round, 2026-08-21.** Two decorrelated pre-merge reviewers;
+every finding auditor-verified and fixed on this branch. B-F1 the false
+"H-11 retires D-12" claim — corrected at all three sites in this log, in
+`derive.py`'s D-12 comment (and so in the derived
+`raftsubject/raft/logger.go`), and at its SOURCE, the harness design §5
+bullet it was inherited from — with the three-axis true condition and
+ticket H-20; B-F2 probe_and_replicate's verdict landed; B-F3 the twin
+determinism digest re-derived and the stale one retracted; B-F4 both
+census sweep reports made tracked records under
+`docs/evidence/2026-08-21_w42-census/`; B-F5 the rendered-tier classifier
+made a tracked tool with its unreproducible split retracted; B-F7 the
+gate record pinned to the tip transcript and the unbacked item-1 claim
+dropped; B-F8 JC-22's jitter sensitivity measured rather than derived;
+the `drain`/`stabilize` gloss corrected in the log and in `twin-lib.go`.
+From reviewer A: the two latent mirror divergences and the strictness
+inversion recorded at their sites in `replayenv.go` and in item 3, and
+the tier-strength bound written into the handoff. Ride-along:
+`docs/raft-w41-log.md` gains the dated 15→14 correction.
