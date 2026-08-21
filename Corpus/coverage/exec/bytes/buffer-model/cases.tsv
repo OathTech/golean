@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+# W4.3 item 1 landing B: the bytes.Buffer E5-T shadow model. Red at
+# lean-observation (marker-type default value) until the model lands.
+write-paths	bufWritePaths	-	ok	-	stdlib,bytes,strings,methods
+len-reset	bufLenReset	-	ok	-	stdlib,bytes,len,methods
+zero-value	bufZeroValue	-	ok	-	stdlib,bytes,zero_values
+nil-receiver-string	bufNilReceiverString	-	ok	-	stdlib,bytes,nil,pointers,methods
+pointer-use	bufPointerUse	-	ok	-	stdlib,bytes,pointers,methods

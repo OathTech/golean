@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+# W4.3 item 1 landing B: strconv shims. Red at frontend-export until
+# they land. format-illegal-base is an expected-panic row (the shim
+# panics with upstream's exact message).
+format-uint-bases	formatUintBases	-	ok	-	stdlib,strings,ints
+format-int-vals	formatIntVals	-	ok	-	stdlib,strings,ints,overflow
+format-illegal-base	formatIllegalBase	-	panic	strconv: illegal AppendInt/FormatInt base	stdlib,strings,ints,panic
+parse-uint-happy	parseUintHappy	-	ok	-	stdlib,strings,ints,multi_result
+parse-uint-errors	parseUintErrors	-	ok	-	stdlib,strings,ints,range,concat
+parse-uint-bitsize	parseUintBitSize	-	ok	-	stdlib,strings,ints,widths

@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+# W4.3 item 1 landing B: strings.Split shim. Red until it lands.
+# empty-sep stays RED BY DESIGN: the per-rune explode needs UTF-8
+# decoding, outside the modeled subset — the machine shim panics fail
+# closed where go run explodes (a visible red, never a wrong answer).
+basic	splitBasic	-	ok	-	stdlib,strings,slices
+empty-input	splitEmptyInput	-	ok	-	stdlib,strings,slices,empty
+whole-match	splitWholeMatch	-	ok	-	stdlib,strings,slices
+single-byte-sep	splitSingleByteSep	-	ok	-	stdlib,strings,slices
+overlap	splitOverlap	-	ok	-	stdlib,strings,slices,prefix
+multi-byte-sep	splitMultiByteSep	-	ok	-	stdlib,strings,slices,unicode
+confchange-shape	splitConfChangeShape	-	ok	-	stdlib,strings,slices
+empty-sep	splitEmptySep	-	ok	-	stdlib,strings,slices,runes

@@ -102,6 +102,75 @@ func (b *Builder) WriteString(s string) (int, error) {
 }
 `
 
+// bytesBufferModelSrc is the pinned shadow model for bytes.Buffer
+// (W4.3 item 1 landing B — the describeMessageWithIndent /
+// DescribeEntries writer). WRITE-side surface only: Write/WriteString/
+// WriteByte/String/Len/Reset; the read-side methods (Read, Next,
+// Bytes, ...) stay declaration-only stubs, so the `off` read cursor is
+// provably 0 through every modeled path — it is KEPT in the struct so
+// String()/Len() carry upstream's unread-portion contract rather than
+// a simplification of it. The field TYPES mirror upstream exactly
+// (incl. the defined `readOp` for lastRead): a user-side composite
+// literal `&bytes.Buffer{}` is emitted from the REAL package's type
+// info, so the shadow TypeDef must declare the same field types or the
+// zero value refuses (witnessed by buffer-model/pointer-use pre-fix).
+// Fidelity notes vs go/src/bytes/buffer.go:
+// upstream's tryGrowByReslice/grow capacity machinery is elided —
+// append's growth is the machine's own (allocator latitude, same
+// argument as the Builder model's Grow elision); the lastRead
+// bookkeeping is read-side and elided with it; String() on a NIL
+// receiver returns "<nil>" (upstream's special case, pinned by
+// bytes/buffer-model/nil-receiver-string); Reset keeps the array
+// (buf[:0], upstream's shape) — unobservable through modeled methods
+// but kept to stay textually parallel.
+const bytesBufferModelSrc = `package bytes
+
+// The bytes.Buffer shadow model (E5-T, W4.3). Mirrors go/src/bytes/
+// buffer.go's write-side semantics over plain Go; see importedmodel.go
+// for the fidelity argument and the modeled-method contract.
+type readOp int8
+
+type Buffer struct {
+	buf      []byte
+	off      int
+	lastRead readOp
+}
+
+func (b *Buffer) String() string {
+	if b == nil {
+		// Special case, useful in debugging.
+		return "<nil>"
+	}
+	return string(b.buf[b.off:])
+}
+
+func (b *Buffer) Len() int { return len(b.buf) - b.off }
+
+func (b *Buffer) Reset() {
+	b.buf = b.buf[:0]
+	b.off = 0
+	b.lastRead = 0
+}
+
+func (b *Buffer) Write(p []byte) (int, error) {
+	b.lastRead = 0
+	b.buf = append(b.buf, p...)
+	return len(p), nil
+}
+
+func (b *Buffer) WriteString(s string) (int, error) {
+	b.lastRead = 0
+	b.buf = append(b.buf, s...)
+	return len(s), nil
+}
+
+func (b *Buffer) WriteByte(c byte) error {
+	b.lastRead = 0
+	b.buf = append(b.buf, c)
+	return nil
+}
+`
+
 // importedTypeModel describes one modeled imported type.
 type importedTypeModel struct {
 	pkgPath string
@@ -120,6 +189,15 @@ var modeledImportedTypes = map[string]*importedTypeModel{
 		src:     stringsBuilderModelSrc,
 		modeled: map[string]bool{
 			"copyCheck": true, "String": true, "Len": true, "Reset": true,
+			"Write": true, "WriteByte": true, "WriteString": true,
+		},
+	},
+	"bytes.Buffer": {
+		pkgPath: "bytes",
+		pkgName: "bytes",
+		src:     bytesBufferModelSrc,
+		modeled: map[string]bool{
+			"String": true, "Len": true, "Reset": true,
 			"Write": true, "WriteByte": true, "WriteString": true,
 		},
 	},
@@ -164,6 +242,12 @@ func (e *emitter) harvestImportedModels(hostDefNames map[string]bool) ([]any, []
 			}
 			name, _ := m["name"].(string)
 			if len(name) > len(model.pkgPath) && name[:len(model.pkgPath)+1] == model.pkgPath+"." {
+				// A def in the MODEL's package is the model's to
+				// declare — including named FIELD types (bytes.readOp)
+				// the host may have reached through the real package's
+				// type info and emitted only as a D5 MARKER (whose
+				// default value refuses). The merge site REPLACES any
+				// same-named host def with this one.
 				outDefs = append(outDefs, td)
 				continue
 			}

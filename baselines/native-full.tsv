@@ -1,19 +1,21 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-21 (raft W4.3 wave 2 / landing A — branch raft-w43;
-#   docs/raft-w43-log.md "Wave 2").
-#   re-pin reason: EIGHTEEN NEW ids, zero movement on any of the 2343
-#   ids the previous record held (verified by the run's own drift
+# recorded: 2026-08-21 (raft W4.3 wave 3 / landing B — branch raft-w43;
+#   docs/raft-w43-log.md "Wave 3").
+#   re-pin reason: THIRTY-NINE NEW ids, zero movement on any of the
+#   2361 ids the previous record held (verified by the run's drift
 #   report: every drifted line reads "NEW id (not in baseline)").
-#     The fmt matrix widenings' guardrails (item 1 landing A):
-#     fmt/sprintf-verbs/{q-string,q-string-empty,t-bool,d-width} PASS +
-#     width-outside-set FAIL/frontend-export (RED BY DESIGN: width is
-#     modeled for the d verb only), and the new fmt/v-composites family
-#     — 11 PASS (the recursive v/+v composite matrix: slices, named
-#     structs, Stringer/error leaves at depth, the DescribeConfState
-#     and ReadStates shapes verbatim) + {v-map-outside,
-#     v-ptr-field-outside} FAIL/frontend-export (RED BY DESIGN: maps
-#     and pointer fields are outside the modeled composite subset).
-# cases: 2361 (2214 PASS / 147 FAIL)
+#     Landing B's guardrails: bytes/buffer-model 5 PASS (the E5-T
+#     bytes.Buffer shadow model), fmt/fprint-writers 3 PASS + 2
+#     FAIL/frontend-export RED BY DESIGN (multi-operand and non-string
+#     Fprint are outside the modeled subset), strconv/format-parse 6
+#     PASS (Format/Parse shims incl. the expected-panic illegal-base
+#     row), strings/split-conformance 7 PASS + empty-sep
+#     FAIL/lean-observation RED BY DESIGN (the per-rune explode fails
+#     closed on the machine), strings/trimspace-repeat 8 PASS,
+#     slices/sortfunc-cmp 6 PASS + sortfunc-local-type
+#     FAIL/frontend-export RED BY DESIGN (function-local type
+#     arguments keep the standing C6-class refusal).
+# cases: 2400 (2249 PASS / 151 FAIL)
 # frontend: native (tools/nativefrontend)
 result	id	stage
 PASS	arrays/array-bounds	-
@@ -150,6 +152,11 @@ PASS	builtins/statement-position/copy-stmt-string-source	-
 PASS	builtins/statement-position/recover-stmt-in-defer	-
 PASS	builtins/statement-position/recover-stmt-no-panic	-
 PASS	builtins/statement-position/recover-stmt-outside-defer	-
+PASS	bytes/buffer-model/len-reset	-
+PASS	bytes/buffer-model/nil-receiver-string	-
+PASS	bytes/buffer-model/pointer-use	-
+PASS	bytes/buffer-model/write-paths	-
+PASS	bytes/buffer-model/zero-value	-
 PASS	bytes/equal-conformance/basic	-
 PASS	bytes/equal-conformance/nil-empty	-
 PASS	bytes/equal-conformance/step-shape	-
@@ -793,6 +800,11 @@ PASS	fmt/errorf/fresh	-
 PASS	fmt/errorf/sentinel-classify	-
 PASS	fmt/errorf/text	-
 PASS	fmt/errorf/vs-errors-new	-
+PASS	fmt/fprint-writers/buffer-single	-
+PASS	fmt/fprint-writers/builder-single	-
+PASS	fmt/fprint-writers/fprintf-buffer-shape	-
+FAIL	fmt/fprint-writers/multi-operand	frontend-export
+FAIL	fmt/fprint-writers/non-string	frontend-export
 PASS	fmt/fprintf-builder/describe-shape	-
 PASS	fmt/fprintf-builder/returns	-
 PASS	fmt/sprintf-verbs/d-enum	-
@@ -1877,6 +1889,13 @@ PASS	slices/slices-sort-edges/unsigned-above-half	-
 FAIL	slices/slices-sort-non-integer-refusal	frontend-export
 PASS	slices/slices-sort/ints	-
 PASS	slices/slices-sort/uint64	-
+PASS	slices/sortfunc-cmp/cmp-compare-kinds	-
+PASS	slices/sortfunc-cmp/sort-ties-projected	-
+PASS	slices/sortfunc-cmp/sortfunc-empty-single	-
+PASS	slices/sortfunc-cmp/sortfunc-ints	-
+FAIL	slices/sortfunc-cmp/sortfunc-local-type	frontend-export
+PASS	slices/sortfunc-cmp/sortfunc-reverse	-
+PASS	slices/sortfunc-cmp/sortfunc-struct-two-key	-
 PASS	slices/three-index-slice	-
 PASS	spec-examples-decl/addr-deref-nil-matrix/alias-non-nil	-
 PASS	spec-examples-decl/addr-deref-nil-matrix/deref-arg	-
@@ -2169,6 +2188,12 @@ PASS	spec-examples-stmt/type-switch/nil-case	-
 PASS	spec-examples-stmt/type-switch/string-in-list	-
 FAIL	spec-examples-stmt/type-unify-struct-array	frontend-export
 PASS	spec-examples-stmt/variadic-slice-passthrough	-
+PASS	strconv/format-parse/format-illegal-base	-
+PASS	strconv/format-parse/format-int-vals	-
+PASS	strconv/format-parse/format-uint-bases	-
+PASS	strconv/format-parse/parse-uint-bitsize	-
+PASS	strconv/format-parse/parse-uint-errors	-
+PASS	strconv/format-parse/parse-uint-happy	-
 PASS	strings/builder-model/copy-panics	-
 PASS	strings/builder-model/copy-zero-ok	-
 PASS	strings/builder-model/len-reset	-
@@ -2215,6 +2240,14 @@ PASS	strings/rune-slice-to-string-copy	-
 PASS	strings/rune-string-conversion	-
 PASS	strings/slice-eval-order	-
 PASS	strings/slice-eval-order-elided-high	-
+PASS	strings/split-conformance/basic	-
+PASS	strings/split-conformance/confchange-shape	-
+PASS	strings/split-conformance/empty-input	-
+FAIL	strings/split-conformance/empty-sep	lean-observation
+PASS	strings/split-conformance/multi-byte-sep	-
+PASS	strings/split-conformance/overlap	-
+PASS	strings/split-conformance/single-byte-sep	-
+PASS	strings/split-conformance/whole-match	-
 PASS	strings/string-basic	-
 PASS	strings/string-byte-conversion	-
 PASS	strings/string-byte-len	-
@@ -2232,6 +2265,14 @@ PASS	strings/string-slice-bounds	-
 PASS	strings/string-slice-low-high-panic	-
 PASS	strings/string-slice-panic-eval-order	-
 PASS	strings/string-to-rune-copy	-
+PASS	strings/trimspace-repeat/repeat-basic	-
+PASS	strings/trimspace-repeat/repeat-describe-shape	-
+PASS	strings/trimspace-repeat/repeat-negative	-
+PASS	strings/trimspace-repeat/trim-all-space	-
+PASS	strings/trimspace-repeat/trim-ascii	-
+PASS	strings/trimspace-repeat/trim-empty	-
+PASS	strings/trimspace-repeat/trim-inner-runes	-
+PASS	strings/trimspace-repeat/trim-unicode	-
 PASS	structs/anonymous-field	-
 PASS	structs/blank-field	-
 PASS	structs/comparable	-

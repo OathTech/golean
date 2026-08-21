@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+# W4.3 item 1 landing B: TrimSpace + Repeat shims. Red until they land.
+trim-ascii	trimSpaceAscii	-	ok	-	stdlib,strings
+trim-unicode	trimSpaceUnicode	-	ok	-	stdlib,strings,unicode
+trim-all-space	trimSpaceAllSpace	-	ok	-	stdlib,strings,empty
+trim-empty	trimSpaceEmpty	-	ok	-	stdlib,strings,empty
+trim-inner-runes	trimSpaceInnerRunes	-	ok	-	stdlib,strings,unicode
+repeat-basic	repeatBasic	-	ok	-	stdlib,strings,concat
+repeat-describe-shape	repeatDescribeShape	-	ok	-	stdlib,strings,concat
+repeat-negative	repeatNegative	-	panic	strings: negative Repeat count	stdlib,strings,panic

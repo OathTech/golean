@@ -94,13 +94,55 @@ const bytesEqualShimName = "goleanShimBytesEqual"
 const binaryLEUint64ShimName = "goleanShimLEUint64"
 const binaryLEPutUint64ShimName = "goleanShimLEPutUint64"
 
+// The W4.3 landing-B shims (docs/raft-w43-log.md item 1): strconv's
+// Format/Parse trio (general bases 2..36; ParseUint's error TEXTS
+// verbatim — the dynamic error TYPE is a recorded delta, upstream's
+// *strconv.NumError vs the shim's string carrier, unobservable without
+// asserting to the unexported upstream type), strings.Split (byte scan
+// — upstream's own semantics for every non-empty separator; the empty
+// separator's rune explode fails closed), strings.TrimSpace (the
+// Fields byte-pattern table at both ends), strings.Repeat (loop concat
+// + upstream's negative-count panic), slices.SortFunc (a GENERIC
+// insertion-sort shim stenciled at the call's element type — emit.go's
+// emitSortFuncCall; tie order is recorded latitude, upstream is "not
+// guaranteed to be stable"), and cmp.Compare's kind shims (emit-time
+// dispatch by static kind with explicit converts — floats excluded,
+// NaN ordering is cmp.Compare-specific and unneeded).
+const strconvFormatUintShimName = "goleanShimStrconvFormatUint"
+const strconvFormatIntShimName = "goleanShimStrconvFormatInt"
+const strconvParseUintShimName = "goleanShimStrconvParseUint"
+const stringsSplitShimName = "goleanShimStringsSplit"
+const stringsTrimSpaceShimName = "goleanShimStringsTrimSpace"
+const stringsRepeatShimName = "goleanShimStringsRepeat"
+const slicesSortFuncShimName = "goleanShimSlicesSortFunc"
+const cmpCompareUintShimName = "goleanShimCmpCompareUint"
+const cmpCompareIntShimName = "goleanShimCmpCompareInt"
+const cmpCompareStringShimName = "goleanShimCmpCompareString"
+
 // stdlibShimAllowlist: package import path -> selector name -> shim
 // declaration name (the KEY declaration; a shim may inject more, see
 // stdlibShimDeclNames).
 var stdlibShimAllowlist = map[string]map[string]string{
-	"strings": {"Fields": stringsFieldsShimName, "Join": stringsJoinShimName},
-	"errors":  {"New": errorsNewShimName},
-	"bytes":   {"Equal": bytesEqualShimName},
+	"strings": {"Fields": stringsFieldsShimName, "Join": stringsJoinShimName,
+		"Split": stringsSplitShimName, "TrimSpace": stringsTrimSpaceShimName,
+		"Repeat": stringsRepeatShimName},
+	"errors": {"New": errorsNewShimName},
+	"bytes":  {"Equal": bytesEqualShimName},
+	"strconv": {"FormatUint": strconvFormatUintShimName,
+		"FormatInt": strconvFormatIntShimName,
+		"ParseUint": strconvParseUintShimName},
+}
+
+// stdlibGenericDesugarInject: packages whose GENERIC members desugar at
+// emit time (emit.go: emitSortFuncCall / emitCmpCompareCall) — the
+// injection scan must plant their shims on call presence, like
+// stdlibDesugarInject, but they are not direct-call rewrites (the
+// callee is generic: SortFunc stencils the injected generic shim at
+// the element type; Compare dispatches to a kind shim with converts).
+var stdlibGenericDesugarInject = map[string]map[string][]string{
+	"slices": {"SortFunc": {slicesSortFuncShimName}},
+	"cmp": {"Compare": {cmpCompareUintShimName, cmpCompareIntShimName,
+		cmpCompareStringShimName}},
 }
 
 // stdlibDesugarInject: package import path -> selector names whose
@@ -148,6 +190,17 @@ var stdlibShimDeclNames = map[string][]string{
 	bytesEqualShimName:        {bytesEqualShimName},
 	binaryLEUint64ShimName:    {binaryLEUint64ShimName},
 	binaryLEPutUint64ShimName: {binaryLEPutUint64ShimName},
+	strconvFormatUintShimName: {strconvFormatUintShimName},
+	strconvFormatIntShimName:  {strconvFormatIntShimName},
+	strconvParseUintShimName: {strconvParseUintShimName,
+		"goleanShimStrconvQuote", "goleanShimStrconvError"},
+	stringsSplitShimName:     {stringsSplitShimName},
+	stringsTrimSpaceShimName: {stringsTrimSpaceShimName},
+	stringsRepeatShimName:    {stringsRepeatShimName},
+	slicesSortFuncShimName:   {slicesSortFuncShimName},
+	cmpCompareUintShimName:   {cmpCompareUintShimName},
+	cmpCompareIntShimName:    {cmpCompareIntShimName},
+	cmpCompareStringShimName: {cmpCompareStringShimName},
 }
 
 // stdlibShimSources: shim declaration name -> Go source of the
@@ -566,6 +619,318 @@ func goleanShimLEPutUint64(b []byte, v uint64) {
 	b[7] = byte(v >> 56)
 }
 `,
+
+	// strconv.FormatUint/FormatInt: digit loops over bases 2..36
+	// (lowercase digits, upstream's alphabet), with upstream's exact
+	// illegal-base panic (shared by both, from AppendInt/FormatInt —
+	// gc-probed artifacts/w43/probe-b P6).
+	strconvFormatUintShimName: `
+// goleanShimStrconvFormatUint is the native frontend's
+// strconv.FormatUint shim (W4.3 item 1 landing B). Injected
+// declaration — not user code.
+func goleanShimStrconvFormatUint(v uint64, base int) string {
+	if base < 2 || base > 36 {
+		panic("strconv: illegal AppendInt/FormatInt base")
+	}
+	digits := "0123456789abcdefghijklmnopqrstuvwxyz"
+	if v == 0 {
+		return "0"
+	}
+	out := []byte{}
+	for v > 0 {
+		out = append([]byte{digits[v%uint64(base)]}, out...)
+		v /= uint64(base)
+	}
+	return string(out)
+}
+`,
+
+	strconvFormatIntShimName: `
+// goleanShimStrconvFormatInt is the native frontend's
+// strconv.FormatInt shim (W4.3 item 1 landing B). Injected
+// declaration — not user code.
+func goleanShimStrconvFormatInt(v int64, base int) string {
+	if base < 2 || base > 36 {
+		panic("strconv: illegal AppendInt/FormatInt base")
+	}
+	if v < 0 {
+		return "-" + goleanShimStrconvFormatUint(^uint64(v)+1, base)
+	}
+	return goleanShimStrconvFormatUint(uint64(v), base)
+}
+`,
+
+	// strconv.ParseUint over explicit bases 2..36 and bitSize 0..64,
+	// with upstream's two error TEXTS verbatim ("invalid syntax" /
+	// "value out of range", the input quoted — gc-probed
+	// artifacts/w43/probe-b P1-P5, P7; underscores are invalid outside
+	// base 0, which matches the digit loop for free). RECORDED BOUNDS,
+	// fail closed: base 0 (prefix detection) and bitSize outside 0..64
+	// panic — the machine stops visibly where the real strconv would
+	// parse; no subject site passes either. The error's dynamic TYPE is
+	// the E5 delta (see the landing-B block comment).
+	strconvParseUintShimName: `
+// goleanShimStrconvParseUint and friends are the native frontend's
+// strconv.ParseUint shim (W4.3 item 1 landing B). Injected
+// declarations — not user code.
+type goleanShimStrconvError struct{ s string }
+
+func (e *goleanShimStrconvError) Error() string { return e.s }
+
+func goleanShimStrconvQuote(s string) string {
+	hexits := "0123456789abcdef"
+	out := []byte{'"'}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch {
+		case c == '"':
+			out = append(out, '\\', '"')
+		case c == '\\':
+			out = append(out, '\\', '\\')
+		case c >= 0x20 && c < 0x7f:
+			out = append(out, c)
+		case c == '\n':
+			out = append(out, '\\', 'n')
+		case c == '\t':
+			out = append(out, '\\', 't')
+		case c == '\r':
+			out = append(out, '\\', 'r')
+		case c < 0x80:
+			out = append(out, '\\', 'x', hexits[c>>4], hexits[c&0xf])
+		default:
+			panic("golean strconv shim: quoting a non-ASCII input is outside the modeled subset (fail closed)")
+		}
+	}
+	out = append(out, '"')
+	return string(out)
+}
+
+func goleanShimStrconvParseUint(s string, base int, bitSize int) (uint64, error) {
+	if base < 2 || base > 36 {
+		panic("golean strconv shim: ParseUint base outside 2..36 (base-0 prefix detection is outside the modeled subset; fail closed)")
+	}
+	if bitSize == 0 {
+		bitSize = 64
+	}
+	if bitSize < 0 || bitSize > 64 {
+		panic("golean strconv shim: ParseUint bitSize outside 0..64 (fail closed)")
+	}
+	syntaxErr := func() (uint64, error) {
+		return 0, &goleanShimStrconvError{s: "strconv.ParseUint: parsing " + goleanShimStrconvQuote(s) + ": invalid syntax"}
+	}
+	rangeErr := func() (uint64, error) {
+		return 0, &goleanShimStrconvError{s: "strconv.ParseUint: parsing " + goleanShimStrconvQuote(s) + ": value out of range"}
+	}
+	if len(s) == 0 {
+		return syntaxErr()
+	}
+	var max uint64 = 1<<uint(bitSize) - 1
+	if bitSize == 64 {
+		max = 18446744073709551615
+	}
+	var v uint64
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		var d uint64
+		switch {
+		case c >= '0' && c <= '9':
+			d = uint64(c - '0')
+		case c >= 'a' && c <= 'z':
+			d = uint64(c-'a') + 10
+		case c >= 'A' && c <= 'Z':
+			d = uint64(c-'A') + 10
+		default:
+			return syntaxErr()
+		}
+		if d >= uint64(base) {
+			return syntaxErr()
+		}
+		if v > (18446744073709551615-d)/uint64(base) {
+			return rangeErr()
+		}
+		v = v*uint64(base) + d
+		if v > max {
+			return rangeErr()
+		}
+	}
+	return v, nil
+}
+`,
+
+	// strings.Split: byte scan, upstream's own semantics (genSplit is
+	// strings.Index-based) for every NON-EMPTY separator; the empty
+	// separator's per-rune explode fails closed (gc-probed
+	// artifacts/w43/probe-b I1-I5, incl. the non-overlapping left scan).
+	stringsSplitShimName: `
+// goleanShimStringsSplit is the native frontend's strings.Split shim
+// (W4.3 item 1 landing B). Injected declaration — not user code.
+func goleanShimStringsSplit(s, sep string) []string {
+	if len(sep) == 0 {
+		panic("golean strings shim: Split with an empty separator (per-rune explode) is outside the modeled subset (fail closed)")
+	}
+	out := []string{}
+	start := 0
+	i := 0
+	for i+len(sep) <= len(s) {
+		match := true
+		for j := 0; j < len(sep); j++ {
+			if s[i+j] != sep[j] {
+				match = false
+				break
+			}
+		}
+		if match {
+			out = append(out, s[start:i])
+			i += len(sep)
+			start = i
+		} else {
+			i++
+		}
+	}
+	out = append(out, s[start:])
+	return out
+}
+`,
+
+	// strings.TrimSpace: both-ends trim of the full unicode White_Space
+	// class via the SAME finite byte-pattern table as the Fields shim
+	// (no pattern starts with a UTF-8 continuation byte, and the
+	// multi-byte pattern leads C2/E1/E2/E3 cannot occur inside another
+	// rune, so a pattern can never fire from inside a preceding rune —
+	// the Fields shim's argument, unchanged). One forward pass records
+	// the first non-space start and the byte after the last non-space.
+	stringsTrimSpaceShimName: `
+// goleanShimStringsTrimSpace is the native frontend's strings.TrimSpace
+// shim (W4.3 item 1 landing B). Injected declaration — not user code.
+func goleanShimStringsTrimSpace(s string) string {
+	spaceW := func(i int) int {
+		c := s[i]
+		if c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r' {
+			return 1
+		}
+		if c == 0xC2 && i+1 < len(s) && (s[i+1] == 0x85 || s[i+1] == 0xA0) {
+			return 2
+		}
+		if i+2 < len(s) {
+			c1 := s[i+1]
+			c2 := s[i+2]
+			if (c == 0xE1 && c1 == 0x9A && c2 == 0x80) ||
+				(c == 0xE2 && c1 == 0x80 && ((c2 >= 0x80 && c2 <= 0x8A) || c2 == 0xA8 || c2 == 0xA9 || c2 == 0xAF)) ||
+				(c == 0xE2 && c1 == 0x81 && c2 == 0x9F) ||
+				(c == 0xE3 && c1 == 0x80 && c2 == 0x80) {
+				return 3
+			}
+		}
+		return 0
+	}
+	first := -1
+	last := 0
+	i := 0
+	for i < len(s) {
+		w := spaceW(i)
+		if w > 0 {
+			i += w
+		} else {
+			if first < 0 {
+				first = i
+			}
+			i++
+			last = i
+		}
+	}
+	if first < 0 {
+		return ""
+	}
+	return s[first:last]
+}
+`,
+
+	// strings.Repeat: loop concatenation; upstream's negative-count
+	// panic verbatim (gc-probed artifacts/w43/probe-b R1). Upstream's
+	// output-length overflow panic is NOT modeled (the machine would
+	// grow the string until fuel/memory bounds it — a visible stop,
+	// never a wrong answer; recorded bound).
+	stringsRepeatShimName: `
+// goleanShimStringsRepeat is the native frontend's strings.Repeat shim
+// (W4.3 item 1 landing B). Injected declaration — not user code.
+func goleanShimStringsRepeat(s string, count int) string {
+	if count < 0 {
+		panic("strings: negative Repeat count")
+	}
+	out := ""
+	for i := 0; i < count; i++ {
+		out += s
+	}
+	return out
+}
+`,
+
+	// slices.SortFunc: a GENERIC insertion sort, stenciled at the call
+	// site's element type through the ordinary mono pipeline
+	// (emit.go, emitSortFuncCall). Insertion sort is cmp-consistent —
+	// the whole contract; upstream's "not guaranteed to be stable"
+	// makes tie order LATITUDE (our member is stable; recorded, pinned
+	// tie-insensitively by slices/sortfunc-cmp/sort-ties-projected).
+	slicesSortFuncShimName: `
+// goleanShimSlicesSortFunc is the native frontend's slices.SortFunc
+// shim (W4.3 item 1 landing B). Injected declaration — not user code.
+func goleanShimSlicesSortFunc[E any](x []E, cmp func(a, b E) int) {
+	for i := 1; i < len(x); i++ {
+		for j := i; j > 0 && cmp(x[j], x[j-1]) < 0; j-- {
+			x[j], x[j-1] = x[j-1], x[j]
+		}
+	}
+}
+`,
+
+	// cmp.Compare kind shims (emit-time dispatch with explicit
+	// converts, emit.go's emitCmpCompareCall). For integer and string
+	// kinds these are exactly cmp.Compare's semantics; floats (the NaN
+	// arm) are excluded from the dispatch, so the shims never see them.
+	cmpCompareUintShimName: `
+// goleanShimCmpCompareUint is the native frontend's cmp.Compare shim
+// at unsigned-integer kinds (W4.3 item 1 landing B). Injected
+// declaration — not user code.
+func goleanShimCmpCompareUint(a, b uint64) int {
+	if a < b {
+		return -1
+	}
+	if a > b {
+		return 1
+	}
+	return 0
+}
+`,
+
+	cmpCompareIntShimName: `
+// goleanShimCmpCompareInt is the native frontend's cmp.Compare shim at
+// signed-integer kinds (W4.3 item 1 landing B). Injected declaration —
+// not user code.
+func goleanShimCmpCompareInt(a, b int64) int {
+	if a < b {
+		return -1
+	}
+	if a > b {
+		return 1
+	}
+	return 0
+}
+`,
+
+	cmpCompareStringShimName: `
+// goleanShimCmpCompareString is the native frontend's cmp.Compare shim
+// at string kinds (W4.3 item 1 landing B). Injected declaration — not
+// user code.
+func goleanShimCmpCompareString(a, b string) int {
+	if a < b {
+		return -1
+	}
+	if a > b {
+		return 1
+	}
+	return 0
+}
+`,
 }
 
 // injectStdlibShims scans the parsed (pre-type-check) files for
@@ -582,13 +947,15 @@ func injectStdlibShims(fset *token.FileSet, files []*ast.File) (*ast.File, error
 	for _, f := range files {
 		local := map[string]map[string]string{}
 		localDesugar := map[string]map[string][]string{}
+		localGeneric := map[string]map[string][]string{}
 		localVarMethods := map[string]map[string]map[string][]string{}
 		for _, imp := range f.Imports {
 			path := importPathOf(imp)
 			fns, isShim := stdlibShimAllowlist[path]
 			desugar, isDesugar := stdlibDesugarInject[path]
+			generic, isGeneric := stdlibGenericDesugarInject[path]
 			varMethods, isVarMethod := stdlibVarMethodInject[path]
-			if !isShim && !isDesugar && !isVarMethod {
+			if !isShim && !isDesugar && !isVarMethod && !isGeneric {
 				continue
 			}
 			// The default local name is the path's LAST SEGMENT (the
@@ -615,11 +982,15 @@ func injectStdlibShims(fset *token.FileSet, files []*ast.File) (*ast.File, error
 			if isDesugar {
 				localDesugar[name] = desugar
 			}
+			if isGeneric {
+				localGeneric[name] = generic
+			}
 			if isVarMethod {
 				localVarMethods[name] = varMethods
 			}
 		}
-		if len(local) == 0 && len(localDesugar) == 0 && len(localVarMethods) == 0 {
+		if len(local) == 0 && len(localDesugar) == 0 &&
+			len(localGeneric) == 0 && len(localVarMethods) == 0 {
 			continue
 		}
 		ast.Inspect(f, func(n ast.Node) bool {
@@ -642,6 +1013,11 @@ func injectStdlibShims(fset *token.FileSet, files []*ast.File) (*ast.File, error
 			}
 			if desugar, ok := localDesugar[x.Name]; ok {
 				for _, shim := range desugar[sel.Sel.Name] {
+					needed[shim] = true
+				}
+			}
+			if generic, ok := localGeneric[x.Name]; ok {
+				for _, shim := range generic[sel.Sel.Name] {
 					needed[shim] = true
 				}
 			}

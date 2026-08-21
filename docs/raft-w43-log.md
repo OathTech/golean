@@ -240,3 +240,66 @@ previously-refused forms; the composite hook runs only after the
 scalar matrix misses, where every case previously refused; refusal
 DETAIL text changes are not a baseline column). Baseline re-pinned
 same-commit with this reason.
+
+**The run confirmed the prediction exactly** (artifacts/w43/
+wave2-drift.txt: 18 lines, every one "NEW id"). Landing gate:
+`GOLEAN_MEM_MAX=24G scripts/ci --diff` at `929dcb6e` — **RESULT: PASS,
+baseline diff FULL (2361/2361, no regression)**
+(`artifacts/w43/ci-landingA.txt`).
+
+---
+
+## Wave 3 (item 1, landing B) — writers, shims, SortFunc
+
+Frontend, six mechanisms:
+
+1. **`fmt.Fprint` (unformatted)**: modeled for exactly ONE operand of
+   string kind (every subject site's shape) as `w.WriteString(s)`;
+   multi-operand and non-string operands refuse (2 boundary rows).
+2. **`bytes.Buffer` E5-T shadow model** (`importedmodel.go`):
+   write-side surface (Write/WriteString/WriteByte/String/Len/Reset),
+   field types mirroring upstream EXACTLY incl. the defined `readOp` —
+   found by the pointer-use guardrail: a user `&bytes.Buffer{}` is
+   emitted from the REAL package's type info, so the shadow TypeDef
+   must declare the same fields, and the model's def now REPLACES the
+   host's D5 marker at the merge (markers refuse on default values).
+   Nil-receiver `String()` = `"<nil>"` (upstream's special case,
+   pinned). Writer allowlist for Fprintf/Fprint: `*strings.Builder` +
+   `*bytes.Buffer`.
+3. **strconv shims**: FormatUint/FormatInt (bases 2..36, upstream's
+   illegal-base panic verbatim — an expected-panic row), ParseUint
+   (error TEXTS verbatim incl. the quoted input; the error's dynamic
+   TYPE is the recorded E5 delta; base 0 and bitSize outside 0..64
+   fail closed).
+4. **strings.Split** (byte scan — upstream's own semantics for every
+   non-empty separator; empty-sep rune explode fails closed, its row
+   RED BY DESIGN), **strings.TrimSpace** (the Fields byte-pattern
+   table, both ends, one forward pass), **strings.Repeat** (upstream's
+   negative-count panic verbatim, an expected-panic row).
+5. **`slices.SortFunc`** (`genericshim.go`): an injected GENERIC
+   insertion-sort shim stenciled at the call's element type through
+   the ORDINARY mono pipeline (`registerFuncInst` — the same machinery
+   user generics use); `S ~[]E` narrowed to `S == []E` (recorded).
+   Tie order is recorded LATITUDE (upstream: "not guaranteed to be
+   stable"); rows are tie-free except `sort-ties-projected`, whose
+   observation projects the cmp key and is green under ANY conforming
+   order. **The REAL `MajorityConfig.Describe` shape stays quarantined
+   on a NARROWER, named cause**: its `tup` is function-LOCAL, and
+   local defined types as type arguments keep the standing C6-class
+   refusal (the compiler-internal `·1` suffix) — pinned red by
+   `sortfunc-local-type`, recorded here as the honest residual of the
+   slices.SortFunc item (`Describe` is off every trace path, so the
+   milestone does not need it).
+6. **`cmp.Compare`**: emit-time kind dispatch (unsigned/signed/string
+   shims with explicit converts); floats excluded (the NaN arm),
+   refuse.
+
+**Guardrails first**: 38 rows across 6 new packages, ALL witnessed red
+pre-fix (the focused run before any frontend edit). Post-fix: 35
+PASS + 4 red-by-design exactly. Frontend unit tests green.
+
+**Predicted flips (stated before the full run): exactly 39 NEW ids —
+35 PASS + 4 FAIL by design; zero movement on the 2361 pre-existing.**
+The run confirmed exactly (artifacts/w43/landingB-drift.txt: 39 lines,
+all "NEW id"; the 4 FAILs are the red-by-design set). Baseline
+re-pinned same-commit (2400 cases, 2249/151).

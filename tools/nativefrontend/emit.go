@@ -376,6 +376,33 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
+	// A model-package def REPLACES any same-named host def: the host may
+	// have emitted a D5 MARKER for a model-package named type it reached
+	// through the real package's type info (bytes.readOp via Buffer's
+	// lastRead field in a user composite literal) — the model's real
+	// TypeDef is the declaration of record, and keeping both would
+	// collide at the decoder while keeping the marker alone refuses on
+	// its default value.
+	if len(modelDefs) > 0 {
+		replaced := map[string]bool{}
+		for _, td := range modelDefs {
+			if m, isMap := td.(map[string]any); isMap {
+				if n, _ := m["name"].(string); n != "" {
+					replaced[n] = true
+				}
+			}
+		}
+		kept := typeDefs[:0]
+		for _, td := range typeDefs {
+			if m, isMap := td.(map[string]any); isMap {
+				if n, _ := m["name"].(string); n != "" && replaced[n] {
+					continue
+				}
+			}
+			kept = append(kept, td)
+		}
+		typeDefs = kept
+	}
 	typeDefs = append(typeDefs, modelDefs...)
 	methods = append(methods, modelMethods...)
 
@@ -2370,15 +2397,26 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 				}
 			}
 			// slices.Sort at an integer element kind: the quorum-pilot
-			// extern (docs/2026-07-30_quorum-extern-policy.md). Any other
-			// slices.*/sort.* member falls through to the normal call
-			// path and fails closed there (unresolvable package func).
+			// extern (docs/2026-07-30_quorum-extern-policy.md).
+			// slices.SortFunc (W4.3, genericshim.go): the injected
+			// generic shim, stenciled at the element type — routed to
+			// the shared hook so statement and expression positions
+			// agree. Any other slices.*/sort.* member refuses here.
 			if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
 				if pkgIdent, ok := sel.X.(*ast.Ident); ok {
 					if pkgName, ok := e.info.Uses[pkgIdent].(*types.PkgName); ok &&
 						pkgName.Imported().Path() == "slices" {
+						if sel.Sel.Name == "SortFunc" {
+							node, handled, err := e.emitSortFuncCall(call, sel)
+							if err != nil {
+								return nil, err
+							}
+							if handled {
+								return map[string]any{"stmt": "expr", "expr": node}, nil
+							}
+						}
 						if sel.Sel.Name != "Sort" {
-							return nil, unsup("slices.%s (only slices.Sort at integer elements is modeled)", sel.Sel.Name)
+							return nil, unsup("slices.%s (only slices.Sort at integer elements and slices.SortFunc are modeled)", sel.Sel.Name)
 						}
 						return e.emitSortStmt(call)
 					}
@@ -6791,6 +6829,15 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 		// binary.LittleEndian.{Uint64,PutUint64} to their shims;
 		// unmodeled members of a listed variable refuse in-hook.
 		if node, handled, err := e.emitBinaryVarMethodCall(c, sel); handled || err != nil {
+			return node, handled, err
+		}
+		// The generic-stdlib desugars (genericshim.go, W4.3):
+		// slices.SortFunc stencils the injected generic shim at the
+		// call's element type; cmp.Compare dispatches to a kind shim.
+		if node, handled, err := e.emitSortFuncCall(c, sel); handled || err != nil {
+			return node, handled, err
+		}
+		if node, handled, err := e.emitCmpCompareCall(c, sel); handled || err != nil {
 			return node, handled, err
 		}
 		// Qualified call into a SOURCE package (`tracker.F(x)` — W1.1):

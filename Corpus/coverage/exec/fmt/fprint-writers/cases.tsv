@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+# W4.3 item 1 landing B: Fprint single-string + the bytes.Buffer
+# writer. Red until the widening lands; the last two rows stay RED BY
+# DESIGN (multi-operand Fprint and non-string operands are outside the
+# modeled subset — fail closed).
+builder-single	fprintBuilderSingle	-	ok	-	stdlib,strings,concat
+buffer-single	fprintBufferSingle	-	ok	-	stdlib,strings,bytes,multi_result
+fprintf-buffer-shape	fprintfBufferShape	-	ok	-	stdlib,strings,bytes,ints
+multi-operand	fprintMultiOperand	-	ok	-	stdlib,strings
+non-string	fprintNonString	-	ok	-	stdlib,strings,ints

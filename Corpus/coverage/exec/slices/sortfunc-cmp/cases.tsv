@@ -1,0 +1,12 @@
+# id	subject	args	expected_status	expected_reason	features
+# W4.3 item 1 landing B: slices.SortFunc + cmp.Compare. Red until the
+# mechanisms land. Tie order is recorded latitude (unstable sort); the
+# rows are tie-free except sort-ties-projected, whose observation is
+# tie-invariant by construction.
+cmp-compare-kinds	cmpCompareKinds	-	ok	-	stdlib,sort,ints,defined_type
+sortfunc-ints	sortFuncInts	-	ok	-	stdlib,sort,slices,closures,higher_order
+sortfunc-reverse	sortFuncReverse	-	ok	-	stdlib,sort,slices,closures,higher_order
+sortfunc-struct-two-key	sortFuncStructTwoKey	-	ok	-	stdlib,sort,slices,structs,closures,generics
+sortfunc-empty-single	sortFuncEmptySingle	-	ok	-	stdlib,sort,slices,empty,nil
+sort-ties-projected	sortTiesProjected	-	ok	-	stdlib,sort,slices,structs
+sortfunc-local-type	sortFuncLocalType	-	ok	-	stdlib,sort,slices,structs,generics

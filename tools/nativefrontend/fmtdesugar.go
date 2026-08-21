@@ -103,6 +103,33 @@ var fmtDesugarFuncs = map[string]bool{
 	"Sprintf": true,
 	"Errorf":  true,
 	"Fprintf": true,
+	"Fprint":  true,
+}
+
+// fmtWriterWriteString: the modeled Fprintf/Fprint writer set — the
+// static type's WriteString FuncId, or "" (refuse). *strings.Builder
+// (W4.1's E5-T) and *bytes.Buffer (W4.3's — describeMessageWithIndent,
+// DescribeEntries).
+func fmtWriterWriteString(wTy types.Type) string {
+	ptr, ok := types.Unalias(wTy).(*types.Pointer)
+	if !ok {
+		return ""
+	}
+	n, ok := types.Unalias(ptr.Elem()).(*types.Named)
+	if !ok {
+		return ""
+	}
+	obj := n.Obj()
+	if obj.Pkg() == nil {
+		return ""
+	}
+	switch obj.Pkg().Path() + "." + obj.Name() {
+	case "strings.Builder":
+		return "strings.Builder.WriteString"
+	case "bytes.Buffer":
+		return "bytes.Buffer.WriteString"
+	}
+	return ""
 }
 
 // fmtStringerIface is fmt.Stringer's shape, constructed rather than
@@ -219,6 +246,47 @@ func (e *emitter) emitFmtCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool
 	if c.Ellipsis.IsValid() {
 		return nil, false, unsup("fmt.%s with a spread argument (args...) is outside the modeled subset", fn)
 	}
+
+	// fmt.Fprint (UNFORMATTED): modeled for exactly ONE operand of
+	// string kind — every subject site's shape (DescribeReady,
+	// MajorityConfig.Describe, Progress/Config.String). Multi-operand
+	// Fprint (the space rule consults operand kinds) and non-string
+	// operands refuse. Fprint(w, s) IS w.WriteString(s): same bytes,
+	// same (n, err) results, same writer-then-operand order.
+	if fn == "Fprint" {
+		if len(c.Args) != 2 {
+			return nil, false, unsup("fmt.Fprint with %d operand(s) is outside the modeled subset (modeled: exactly one operand of string kind)", len(c.Args)-1)
+		}
+		writeFn := fmtWriterWriteString(e.goTypeOf(c.Args[0]))
+		if writeFn == "" {
+			return nil, false, unsup("fmt.Fprint writer of type %s is outside the modeled subset (modeled: *strings.Builder, *bytes.Buffer)", e.goTypeOf(c.Args[0]))
+		}
+		recvNode, err := e.emitExpr(c.Args[0])
+		if err != nil {
+			return nil, false, err
+		}
+		argTy := e.goTypeOf(c.Args[1])
+		basic, _ := argTy.Underlying().(*types.Basic)
+		if basic == nil || basic.Info()&types.IsString == 0 {
+			return nil, false, unsup("fmt.Fprint operand of type %s is outside the modeled subset (modeled: string kinds)", argTy)
+		}
+		argNode, err := e.emitExpr(c.Args[1])
+		if err != nil {
+			return nil, false, err
+		}
+		if !types.Identical(argTy, types.Typ[types.String]) {
+			argNode = map[string]any{"expr": "convert",
+				"target": map[string]any{"kind": "string"}, "x": argNode}
+		}
+		errTy, err := e.emitType(types.Universe.Lookup("error").Type())
+		if err != nil {
+			return nil, false, err
+		}
+		return map[string]any{"expr": "call", "func": writeFn,
+			"args":        []any{recvNode, argNode},
+			"resultTypes": []any{intType("int"), errTy}}, true, nil
+	}
+
 	formatIdx := 0
 	if fn == "Fprintf" {
 		formatIdx = 1
@@ -230,11 +298,11 @@ func (e *emitter) emitFmtCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool
 	// Fprintf's WRITER evaluates before the format arguments (fmt's own
 	// argument order) — emit it first so its hoists land first.
 	var recvNode any
+	writerWriteFn := ""
 	if fn == "Fprintf" {
-		wTy := e.goTypeOf(c.Args[0])
-		ptr, okPtr := types.Unalias(wTy).(*types.Pointer)
-		if !okPtr || !isStringsBuilder(ptr.Elem()) {
-			return nil, false, unsup("fmt.Fprintf writer of type %s is outside the modeled subset (modeled: *strings.Builder)", wTy)
+		writerWriteFn = fmtWriterWriteString(e.goTypeOf(c.Args[0]))
+		if writerWriteFn == "" {
+			return nil, false, unsup("fmt.Fprintf writer of type %s is outside the modeled subset (modeled: *strings.Builder, *bytes.Buffer)", e.goTypeOf(c.Args[0]))
 		}
 		var err error
 		recvNode, err = e.emitExpr(c.Args[0])
@@ -361,22 +429,13 @@ func (e *emitter) emitFmtCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool
 		if err != nil {
 			return nil, false, err
 		}
-		return map[string]any{"expr": "call", "func": "strings.Builder.WriteString",
+		return map[string]any{"expr": "call", "func": writerWriteFn,
 			"args":        []any{recvNode, inner},
 			"resultTypes": []any{intType("int"), errTy}}, true, nil
 	}
 	return nil, false, unsup("fmt.%s (internal: unreachable dispatch)", fn)
 }
 
-// isStringsBuilder reports whether t is the named type strings.Builder.
-func isStringsBuilder(t types.Type) bool {
-	n, ok := types.Unalias(t).(*types.Named)
-	if !ok {
-		return false
-	}
-	obj := n.Obj()
-	return obj.Pkg() != nil && obj.Pkg().Path() == "strings" && obj.Name() == "Builder"
-}
 
 // fmtVerbArg compiles one verb x static-kind pair, or refuses naming
 // it. Every call-site argument expression is emitted EXACTLY ONCE.
