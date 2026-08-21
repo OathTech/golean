@@ -98,14 +98,18 @@ expect_reject "non-positive param value" \
 expect_reject "membership without the nondet tag" \
   '-\trangeFirstKey\t-\tok\t-\tmaps\tmembership\twhy text\twidth=16' \
   "requires the nondet feature tag"
-# Tiered checking (user directive 2026-08-08): tier is membership-only
-# and 'slow' is the only tier — both directions fail closed at the
+# Tiered checking (user directive 2026-08-08; W3.2 stage C widened the
+# tier to the CONFLUENT lane — the certified-singleton record uses the
+# same cached-record discipline): tier is membership/confluent-only and
+# 'slow' is the only tier — the strict direction fails closed at the
 # manifest (the harness re-validates, F4 discipline; its cached path's
 # missing-record/stale-hash refusals are exercised by the tier=slow row
 # itself in the full run).
-expect_reject "tier on a confluent row" \
-  '-\trangeFirstKey\t-\tok\t-\tmaps\tconfluent\twhy text\twidth=4,tier=slow' \
-  "membership-lane param"
+expect_reject "tier on a racy row" \
+  '-\trangeFirstKey\t-\trace\t-\tmaps,race\tracy\t-\twidth=4,tier=slow' \
+  "membership/confluent-lane param"
+expect_accept "tier on a confluent row (W3.2 stage C widening)" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tconfluent\twhy text\twidth=4,tier=slow'
 expect_reject "invalid tier value" \
   '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=4,tier=fast' \
   "tier must be 'slow'"

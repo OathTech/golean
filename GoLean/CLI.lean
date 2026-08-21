@@ -553,8 +553,12 @@ and policy row (State.lean — the census as code, exhaustiveness-checked),
 its `stepNeeds`/`stepNeedsSeq` arm, AND its row here; the sentinel
 alarm is the executable check).
 The semantic core's consume sites and their accountant arms:
-1. `stepMulti`'s L1 scheduler pick (Multi.lean, `rs.length` at a
-   boundary with |runnable| > 1) → `stepNeeds`' boundary arm.
+1. `stepMulti`'s boundary scheduling pick (Multi.lean, the slot-menu
+   length at a boundary with ≥ 2 menu entries — the L1 site, and
+   stage C's `postOp` site at an `.opDone` completion marker: same
+   `Choices.consumeAtE c.boundarySite` call, menu from `schedSlots`,
+   issuer-first at postOp) → `stepNeeds`' boundary arm (which mirrors
+   `schedSlots`, never bare `runnableIdxs`).
 2. `arrivalPlan`'s L2 arrival pick (Multi.lean, `os.length` at a
    `.multi` analysis) → `stepNeeds`' `.multi` arm.
 3. `stepThread`'s L4 waiter pick (Multi.lean, `cs.length` at a
@@ -569,7 +573,7 @@ The semantic core's consume sites and their accountant arms:
    a `.picks` core outcome) → the `.selectOpsK` apply arm of both
    accountants (via the same `applySelectCore`).
 Non-consuming by signature (no arm needed): `resumeThread`,
-`spawnStep`, `commitClause`, `applyPairing`, the `.spawned` strip,
+`spawnStep`, `commitClause`, `applyPairing`, the `.opDone` strip,
 `raceUpdate` (stage B: it folds the step's emitted `StepEvent` and
 takes NO stream at all — the old consumption replication is deleted),
 and —
@@ -938,10 +942,17 @@ def stepNeeds (m : GoCore.Machine.MultiConfig) (picks : GoCore.Choices) :
   match m.threads[m.cur]? with
   | none => none
   | some c₀ =>
-    -- Site: the L1 scheduler pick (consumed only at |runnable| > 1).
+    -- Site: the boundary scheduling pick (l1Sched, or stage C's
+    -- postOp — the marker's own site; consumed only when the slot
+    -- MENU has ≥ 2 entries). The mirror indexes the same menu the
+    -- machine does (`schedSlots` — issuer-first at postOp), never
+    -- bare `runnableIdxs`: the slot→goroutine mapping is part of the
+    -- decision being mirrored.
+    let menu := GoCore.Machine.schedSlots m.shared m.threads m.cur
+      c₀.boundarySite
     let l1 : Option (Nat × GoCore.Choices) :=
       if c₀.atBoundary then
-        match GoCore.Machine.runnableIdxs m.shared m.threads with
+        match menu with
         | [] => none  -- all asleep: classified before stepping
         | [j] => some (j, picks)
         | rs =>
@@ -952,9 +963,8 @@ def stepNeeds (m : GoCore.Machine.MultiConfig) (picks : GoCore.Choices) :
                 | some j => some (j, rest)
                 | none => none
       else some (m.cur, picks)
-    match c₀.atBoundary, GoCore.Machine.runnableIdxs m.shared m.threads, picks with
-    | true, _ :: _ :: _, [] =>
-        some (GoCore.Machine.runnableIdxs m.shared m.threads).length
+    match c₀.atBoundary, menu, picks with
+    | true, _ :: _ :: _, [] => some menu.length
     | _, _, _ =>
       match l1 with
       | none => none
@@ -963,7 +973,7 @@ def stepNeeds (m : GoCore.Machine.MultiConfig) (picks : GoCore.Choices) :
         | none => none
         | some c =>
           if GoCore.Machine.isBlockedConfig c then none
-          else if (GoCore.Machine.spawnedCont c).isSome then none
+          else if (GoCore.Machine.opDoneInner c).isSome then none
           else
             match GoCore.Machine.spawnPlan c with
             | some _ => none

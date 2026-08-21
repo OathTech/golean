@@ -2202,11 +2202,11 @@ def main : IO UInt32 := do
     (GoCore.Machine.runProgramPoolM 100000 poolProgram "poolCloseWakeMain_F" #[]) 55)
   passed := passed && (← expectErrorStatus "GoCore pool nil spawn callee is gc's runtime fatal (triage L10; the fatal class, not a refusal)"
     (GoCore.Machine.runProgramPoolM 100000 poolProgram "poolNilSpawn_F" #[]) "fatal")
-  passed := passed && (← expectIntResult "GoCore poller family: shorter stream completes at fuel 165 (min 165 at [2]*16)"
-    (GoCore.Machine.runProgramPoolM 165 pollerProgram "pollerMain_F" #[]
+  passed := passed && (← expectIntResult "GoCore poller family: shorter stream completes at fuel 166 (min 166 at [2]*16; was 165 pre-B1 — one .opDone strip on the realized path, stage C)"
+    (GoCore.Machine.runProgramPoolM 166 pollerProgram "pollerMain_F" #[]
       (List.replicate 16 2)) 42)
-  passed := passed && (← expectErrorStatus "GoCore poller family: longer stream exhausts the same fuel (min 309 at [2]*32 — min fuel grows with the stream; no uniform bound)"
-    (GoCore.Machine.runProgramPoolM 165 pollerProgram "pollerMain_F" #[]
+  passed := passed && (← expectErrorStatus "GoCore poller family: longer stream exhausts the same fuel (min 310 at [2]*32 — min fuel grows with the stream; no uniform bound)"
+    (GoCore.Machine.runProgramPoolM 166 pollerProgram "pollerMain_F" #[]
       (List.replicate 32 2)) "fuel-out")
   passed := passed && (← expectIntResult "GoCore pool waiter priority: buffered send hands off to the parked receiver (len 0; gc chansend recvq-first)"
     (GoCore.Machine.runProgramPoolM 100000 prioProgram "prioSendHandoffMain_F" #[] [1, 1]) 100)
@@ -2445,13 +2445,17 @@ def main : IO UInt32 := do
   -- wake-ready clause in clause order (b-first => 2) — the trailing 1s
   -- prove no further pick is drawn at the wake (a re-randomizing wake
   -- would consume one and commit the a-clause instead).
-  -- Stream [0,0,1,1,1]: picks — post-spawn 0 (main strips), select
-  -- apply 0 (main parks), close-b boundary 1 (worker closes b before
-  -- the wake). The wake then sees BOTH clauses ready and head-commits
-  -- b (listed first) WITHOUT consuming: the trailing 1s would flip the
-  -- commit to the a-clause under a re-randomizing wake.
+  -- Stream [0,0,0,1,1,1] (re-derived at stage C — B1's post-op
+  -- boundaries consume at new positions): picks — spawn-completion 0
+  -- (main runs), main's select-apply boundary 0 (main parks),
+  -- close-b COMPLETION (.opDone postOp, main now wake-ready) 0
+  -- (worker continues), worker's close-a apply boundary 1 (worker
+  -- closes a before the wake). The wake then sees BOTH clauses ready
+  -- and head-commits b (listed first) WITHOUT consuming: the trailing
+  -- 1s would flip the commit to the a-clause under a re-randomizing
+  -- wake.
   passed := passed && (← expectIntResult "GoCore pool wake-path head-commit: both-closed wake commits the first clause in clause order, consuming nothing"
-    (GoCore.Machine.runProgramPoolM 100000 wakeMultiProgram "wakeMultiMain_F" #[] [0, 0, 1, 1, 1]) 2)
+    (GoCore.Machine.runProgramPoolM 100000 wakeMultiProgram "wakeMultiMain_F" #[] [0, 0, 0, 1, 1, 1]) 2)
   passed := passed && (← expectEnumMembers "GoCore pool enumerator: wake/entry multi-ready select set is {1, 2}"
     (enumerate wakeMultiProgram "wakeMultiMain_F" (some ["ok"])) 2)
   -- S4 audit (the TWO-SIDED sentinel drift alarm's detection

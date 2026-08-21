@@ -1,9 +1,13 @@
 # id	subject	args	expected_status	expected_reason	features	lane	why	params
+# 2026-08-20 W3.2 slice 1 stage C (B1 post-op boundaries): the widened
+# machine branches at every registry-op COMPLETION, so enumeration
+# trees grew; sites/work caps re-measured per row (sets unchanged
+# unless stated). Record: docs/w32-log.md stage C.
 # CONFLUENT lane (D9(b), slice 4): the enumerator certifies |set| = 1
 # over ALL schedules (mechanically-computed per-site bounds; width caps
 # them), then the ordinary full-strength strict differential runs —
 # schedule-independence is now a certified claim, not a 3-stream spot
 # check. Params: sites/work raised only where the measured tree needs
 # them (probed at reclassification).
-alternate	pingPong	-	ok	-	goroutines,channels,loops	confluent	the two unbuffered channels force strict alternation; every schedule realizes the same rally	width=4,sites=64,work=600000
-cap-zero	pingPongCapZero	-	ok	-	goroutines,channels,make	confluent	the cap-0 rendezvous serializes the exchange on every schedule	width=4
+alternate	pingPong	-	ok	-	goroutines,channels,loops	confluent	the two unbuffered channels force strict alternation; every schedule realizes the same rally	width=4,sites=80,work=24000000,tier=slow
+cap-zero	pingPongCapZero	-	ok	-	goroutines,channels,make	confluent	the cap-0 rendezvous serializes the exchange on every schedule	width=4,sites=16

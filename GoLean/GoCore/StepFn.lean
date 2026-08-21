@@ -758,10 +758,15 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
   | .blockedSend _ _ _ => throw .deadlock
   | .blockedRecv _ _ _ _ _ => throw .deadlock
   | .blockedSelect _ _ _ => throw .deadlock
-  -- The post-spawn marker (BUG-040, slice 4) is pool-only: the
-  -- sequential machine never spawns, so reaching it here is an
-  -- internal invariant break, never Go behavior.
-  | .spawned _ => throw (.internal "post-spawn marker outside the thread pool")
+  -- The registry-op completion marker's STRIP (W3.2 slice 1 stage C,
+  -- B1; rule `Step.opDoneStrip`): one pure control step to the wrapped
+  -- successor. It runs on BOTH drivers identically — sequential runs
+  -- of completing chan/sync/select ops carry the marker too (emitted
+  -- by the applies in Machine.lean), which is what keeps
+  -- `execProg_single_eq_execStmt` step-for-step at shifted-but-equal
+  -- fuel. The marker's boundary/scheduling meaning is pool-only
+  -- (`Config.atBoundary`; envelope statement at `Config.opDone`).
+  | .opDone _ c => return (c, s, choices)
   -- A parked sync op with no sibling goroutine IS the deadlocked run
   -- (probes p06-p08: gc's detector fires on a single goroutine parked
   -- in Lock/Wait/Do) — the channel blocked shapes' classification.

@@ -1,4 +1,8 @@
 # id	subject	args	expected_status	expected_reason	features	lane	why	params
+# 2026-08-20 W3.2 slice 1 stage C (B1 post-op boundaries): the widened
+# machine branches at every registry-op COMPLETION, so enumeration
+# trees grew; sites/work caps re-measured per row (sets unchanged
+# unless stated). Record: docs/w32-log.md stage C.
 # LITMUS PAIRS (slice 3, validation note lane e; lanes upgraded at
 # slice 4): channel-synchronized forms admit exactly the SC outcomes —
 # the CONFLUENT lane certifies |set|=1 over ALL schedules and then runs
@@ -11,7 +15,7 @@ mp-sync	litmusMPSync	-	ok	-	goroutines,channels,race	confluent	the child's write
 mp-racy	litmusMPRacy	-	race	-	goroutines,channels,race	racy	-	width=4
 lb-racy	litmusLBRacy	-	race	-	goroutines,channels,race	racy	-	width=4
 close-hb	litmusCloseHB	-	ok	-	goroutines,channels,close,race	confluent	main can only proceed past its receive after the close, whose HB edge orders the child's write before main's read on every schedule — 9 is the only member	width=4
-chan-mutex	litmusChanMutex	-	ok	-	goroutines,channels,race	confluent	the cap-1 channel's k/k+C edge serializes the two increments on every schedule (the counting-semaphore idiom), so 2 is the only member	width=4
+chan-mutex	litmusChanMutex	-	ok	-	goroutines,channels,race	confluent	the cap-1 channel's k/k+C edge serializes the two increments on every schedule (the counting-semaphore idiom), so 2 is the only member	width=4,sites=20
 # CERTIFIED at slice 4 (formerly the sb-chan RED PIN): the SB shape's
 # admitted set is {1, 10, 11} with 00 SC-FORBIDDEN (r1 = 0 puts T1's
 # poll before T2's publish, hence T1's publish before T2's poll,

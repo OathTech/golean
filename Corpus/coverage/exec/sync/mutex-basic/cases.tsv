@@ -1,4 +1,8 @@
 # id	subject	args	expected_status	expected_reason	features	lane	why	params
+# 2026-08-20 W3.2 slice 1 stage C (B1 post-op boundaries): the widened
+# machine branches at every registry-op COMPLETION, so enumeration
+# trees grew; sites/work caps re-measured per row (sets unchanged
+# unless stated). Record: docs/w32-log.md stage C.
 # SYNC-PACKAGE guardrails (spec-parity slice 2, design note
 # docs/2026-08-09_sync-package-design.md §10): red-first, all
 # go-run-verified 2026-08-09 BEFORE any machine/frontend work. Until
@@ -8,4 +12,4 @@
 lock-unlock	lockUnlock	-	ok	-	sync,mutex	strict	-	-
 defer-unlock	deferUnlock	-	ok	-	sync,mutex,defer,closures	strict	-	-
 copy-carries-state	copyCarriesState	-	ok	-	sync,mutex,assignment	strict	-	-
-cross-goroutine-unlock	crossGoroutineUnlock	-	ok	-	sync,mutex,goroutines,channels	confluent	channel receives order the unlock/relock phases; a locked Mutex is not goroutine-associated (probe p09), so every schedule yields the one member	width=4
+cross-goroutine-unlock	crossGoroutineUnlock	-	ok	-	sync,mutex,goroutines,channels	confluent	channel receives order the unlock/relock phases; a locked Mutex is not goroutine-associated (probe p09), so every schedule yields the one member	width=4,sites=20

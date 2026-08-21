@@ -199,10 +199,12 @@ absence is legible as a decision, not an omission):
   even a READ-BUT-UNINSTRUMENTED row.
 
 MODEL-INTERNAL loads gc never performs (excluded on purpose):
-- the `.spawned` marker's pool strip (BUG-040, slice 4): a pure
-  control step — touches no memory (`stepAccesses` catch-all; the
-  spawn's own edge and the child's dispatch read are recorded at the
-  FORK step by `raceUpdate`, unchanged).
+- the `.opDone` completion marker's strip (stage C, generalizing
+  BUG-040's `.spawned` strip): a pure control step — touches no
+  memory (`stepAccesses` catch-all; the wrapped op's own accesses and
+  HB edges were recorded at the APPLY step, and the spawn's edge plus
+  the child's dispatch read at the FORK step, by `raceUpdate` —
+  unchanged).
 - `loadLoc`/`storeLoc` own path recursion (walking to the root cell).
 - `indexTargetLoc`/`resolveChain` bounds-check loads (address
   formation; bounds come from headers/types in gc).

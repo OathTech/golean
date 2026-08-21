@@ -89,7 +89,7 @@ def poolThreadOblivious (s : ExecState) (ts : Array Config) (i : Nat) : Bool :=
   | none => false
   | some c =>
     if isBlockedConfig c then true
-    else if (spawnedCont c).isSome then true
+    else if (opDoneInner c).isSome then true
     else if (spawnPlan c).isSome then true
     else if consumesSelect c then
       (match arrivalCases s ts i c with
@@ -225,8 +225,8 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
       rfl
     · simp only [Bool.not_eq_true] at hblc
       simp only [hblc, Bool.false_eq_true, reduceIte] at h hobl
-      cases hsc : spawnedCont c with
-      | some k =>
+      cases hsc : opDoneInner c with
+      | some inner =>
         rw [hsc] at h
         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl, rfl, rfl⟩ := h
@@ -418,7 +418,11 @@ def stepAllBranchesOk (next : MultiConfig → RaceState → Bool)
   | none => false
   | some c =>
     if c.atBoundary then
-      match runnableIdxs m.shared m.threads with
+      -- Branch over the boundary's SLOT MENU (stage C: `schedSlots`
+      -- at the boundary's own site — issuer-first at postOp), so the
+      -- probe's `[j]` prefix indexes exactly the slot the machine's
+      -- `consumeAtE c.boundarySite` resolves.
+      match schedSlots m.shared m.threads m.cur c.boundarySite with
       | [] => false
       | [i] => probe i []
       | rs =>
@@ -593,7 +597,7 @@ theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
       exact hrec
     by_cases hb : c.atBoundary = true
     · rw [if_pos hb] at hall
-      cases hrs : runnableIdxs m.shared m.threads with
+      cases hrs : schedSlots m.shared m.threads m.cur c.boundarySite with
       | nil => rw [hrs] at hall; cases hall
       | cons r0 rest =>
         rw [hrs] at hall
@@ -606,8 +610,9 @@ theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
           dsimp only at hsm
           rw [if_pos hb, hrs] at hsm
           dsimp only at hsm
-          rw [show Choices.consumeAtE .l1Sched [r0].length ([] : Choices)
-            = (0, [], []) from Choices.consumeAtE_le_one (by simp) rfl] at hsm
+          rw [show Choices.consumeAtE c.boundarySite [r0].length ([] : Choices)
+            = (0, [], []) from Choices.consumeAtE_le_one (by simp)
+              (Config.boundarySite_consumeAtOne c)] at hsm
           simp only [List.getElem?_cons_zero] at hsm
           simp only [bind_eq_ok] at hsm
           obtain ⟨⟨m₂, ch₂, ev₂⟩, hinto, hsm⟩ := hsm
@@ -632,8 +637,10 @@ theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
             dsimp only
             rw [if_pos hb, hrs]
             dsimp only
-            rw [show Choices.consumeAtE .l1Sched [r0].length ch = (0, ch, [])
-              from Choices.consumeAtE_le_one (by simp) rfl]
+            rw [show Choices.consumeAtE c.boundarySite [r0].length ch
+                = (0, ch, [])
+              from Choices.consumeAtE_le_one (by simp)
+                (Config.boundarySite_consumeAtOne c)]
             simp only [List.getElem?_cons_zero]
             simp only [Bind.bind, Except.bind]
             unfold stepThreadInto
@@ -647,9 +654,10 @@ theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
             simp only [List.length_cons]; omega
           rcases hconsC : Choices.consume ch (r0 :: r1 :: rest').length
             with ⟨pick, tail⟩
-          have hcons : Choices.consumeAtE .l1Sched (r0 :: r1 :: rest').length ch
+          have hcons : Choices.consumeAtE c.boundarySite
+              (r0 :: r1 :: rest').length ch
               = (pick, tail,
-                 [⟨.l1Sched, (r0 :: r1 :: rest').length, pick⟩]) := by
+                 [⟨c.boundarySite, (r0 :: r1 :: rest').length, pick⟩]) := by
             rw [Choices.consumeAtE_of_lt hlt2, hconsC]
           have hpicklt : pick < (r0 :: r1 :: rest').length := by
             have hb0 : 0 < (r0 :: r1 :: rest').length := by simp
@@ -667,9 +675,10 @@ theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
             rw [hget] at hj
             obtain ⟨m', r', ev, hobl, hsm, hru, hnext⟩ := hprobe hj
             have hconsProbe :
-                Choices.consumeAtE .l1Sched (r0 :: r1 :: rest').length [pick]
+                Choices.consumeAtE c.boundarySite
+                    (r0 :: r1 :: rest').length [pick]
                   = (pick, [],
-                     [⟨.l1Sched, (r0 :: r1 :: rest').length, pick⟩]) := by
+                     [⟨c.boundarySite, (r0 :: r1 :: rest').length, pick⟩]) := by
               rw [Choices.consumeAtE_of_lt hlt2]
               have hcc : Choices.consume [pick] (r0 :: r1 :: rest').length
                   = (pick, []) := by
@@ -1133,7 +1142,7 @@ theorem stepAllBranchesOk_mono {next next' : MultiConfig → RaceState → Bool}
     dsimp only at hall ⊢
     by_cases hb : c.atBoundary = true
     · rw [if_pos hb] at hall ⊢
-      cases hrs : runnableIdxs m.shared m.threads with
+      cases hrs : schedSlots m.shared m.threads m.cur c.boundarySite with
       | nil => rw [hrs] at hall; cases hall
       | cons r0 rest =>
         rw [hrs] at hall

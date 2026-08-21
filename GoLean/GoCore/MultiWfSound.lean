@@ -29,11 +29,8 @@ monotonicity, and its iteration-typing component along the step's
 types-invariance. `stepMulti_wf` is the preservation theorem the
 slice-2 scaffold owed. -/
 
-/-- `spawnedCont` inversion. -/
-theorem spawnedCont_shape {c : Config} {k : Cont}
-    (h : spawnedCont c = some k) : c = .spawned k := by
-  match c, h with
-  | .spawned _, h => cases h; rfl
+-- `spawnedCont_shape` retired with the marker unification (stage C):
+-- `opDoneInner_shape` (MultiSound) is the inversion now.
 
 /-- The spawn position's components are bounded by the configuration. -/
 theorem spawnPlan_locSup {c : Config} {cv : GoValue} {args : List GoValue}
@@ -240,18 +237,26 @@ theorem resumeThread_wf {s : ExecState} {c c' : Config} {s' : ExecState}
         (by rw [show GoValue.locSup (.chanData (buf.eraseIdx! 0) capacity closed)
               = goValueListSup (buf.eraseIdx! 0).toList from rfl]
             exact Nat.le_trans goValueListSup_eraseIdx! (by omega)) hst
+      obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
+      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
       obtain ⟨q1, q2, q3, q4, q5⟩ := resumeRecvDelivery_wf w1 (by omega)
-        (by omega) (by omega) (by omega) hik h
-      exact ⟨q1, q2, q3.trans w4, Nat.le_trans w2 q4, q5⟩
+        (by omega) (by omega) (by omega) hik hent
+      exact ⟨q1, by simpa using q2, q3.trans w4, Nat.le_trans w2 q4,
+        Config.itersNormalized_true _ _⟩
     · split at h
       · -- closed: zero value
         simp only [bind_eq_ok] at h
         obtain ⟨z, hz, h⟩ := h
         have hzb : GoValue.locSup z ≤ s.nextAddr := by
           rw [defaultValue_locSup hz]; omega
+        obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
+        simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
         obtain ⟨q1, q2, q3, q4, q5⟩ := resumeRecvDelivery_wf hw hzb hb.2.1
-          hb.2.2.1 hb.2.2.2 hik h
-        exact ⟨q1, q2, q3, q4, q5⟩
+          hb.2.2.1 hb.2.2.2 hik hent
+        exact ⟨q1, by simpa using q2, q3, q4,
+          Config.itersNormalized_true _ _⟩
       · simp [throw, throwThe, MonadExceptOf.throw] at h
   · -- blockedSelect
     rename_i evs env k
@@ -296,11 +301,16 @@ theorem resumeThread_wf {s : ExecState} {c c' : Config} {s' : ExecState}
          · simp only [Config.locSup]
            omega
          · simpa [Config.itersNormalized] using hik)
-      | (obtain ⟨q1, q2, q3, q4⟩ := enterRecvTargets_wf hw
+      | (simp only [bind_eq_ok] at h
+         obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
+         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+         obtain ⟨rfl, rfl⟩ := h
+         obtain ⟨q1, q2, q3, q4⟩ := enterRecvTargets_wf hw
            (by simpa [syncOpSup] using hb.1)
            (by simp [goValueListSup, GoValue.locSup])
-           (by simp [Stmt.locSup, stmtListSup]) hb.2.2.1 hb.2.2.2 h
-         exact ⟨q1, q2, q3, q4, enterRecvTargets_itersNormalized h hik⟩)
+           (by simp [Stmt.locSup, stmtListSup]) hb.2.2.1 hb.2.2.2 hent
+         exact ⟨q1, by simpa using q2, q3, q4,
+           Config.itersNormalized_true _ _⟩)
   · simp [throw, throwThe, MonadExceptOf.throw] at h
 
 
@@ -1075,12 +1085,12 @@ theorem stepThread_wf {s : ExecState} {threads : Array Config} {i : Nat}
       exact ⟨q1, q3, q4, by simp, pool_set1_wf q4 hts q2 q5⟩
     · simp only [Bool.not_eq_true] at hblc
       simp only [hblc, Bool.false_eq_true, reduceIte] at h
-      cases hsc : spawnedCont c with
-      | some k =>
+      cases hsc : opDoneInner c with
+      | some inner =>
         rw [hsc] at h
         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-        obtain rfl := spawnedCont_shape hsc
+        obtain ⟨sc, rfl⟩ := opDoneInner_shape hsc
         refine ⟨hw, rfl, Nat.le_refl _, by simp, ?_⟩
         refine pool_set1_wf (Nat.le_refl _) hts ?_ ?_
         · simpa [ConfigWf, Config.locSup] using hc
@@ -1285,12 +1295,13 @@ theorem stepMulti_wf {m m' : MultiConfig} {ch ch' : Choices} {ev : StepEvent}
     rw [hti] at h
     by_cases hb : c.atBoundary = true
     · simp only [hb, reduceIte] at h
-      cases hrs : runnableIdxs m.shared m.threads with
+      cases hrs : schedSlots m.shared m.threads m.cur c.boundarySite with
       | nil => rw [hrs] at h; cases h
       | cons r0 rest =>
         rw [hrs] at h
         dsimp only at h
-        rcases hcons : Choices.consumeAtE .l1Sched (r0 :: rest).length ch
+        rcases hcons : Choices.consumeAtE c.boundarySite
+            (r0 :: rest).length ch
           with ⟨pick, ch₁, ps⟩
         rw [hcons] at h
         cases hget : (r0 :: rest)[pick]? with
@@ -1303,6 +1314,7 @@ theorem stepMulti_wf {m m' : MultiConfig} {ch ch' : Choices} {ev : StepEvent}
           obtain ⟨rfl, rfl, rfl⟩ := h
           refine hstep i
             (runnableIdxs_lt (s := m.shared) (ts := m.threads) ?_) hinto
+          refine schedSlots_mem hti ?_
           rw [hrs]
           exact List.mem_of_getElem? hget
     · simp only [Bool.not_eq_true] at hb

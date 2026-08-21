@@ -1,0 +1,13 @@
+# Certified observation set — tier=slow row (tiered checking, user
+# directive 2026-08-08; confluent-lane tier widening W3.2 slice 1
+# stage C, 2026-08-20: B1's post-op boundaries grew this row's
+# certification tree past the fast-lane wall clock — 16.2M
+# steps+probes at depth 60 is probe-heavy (each probe replays a full
+# run), >300 s wall. The singleton itself is UNCHANGED. Confluent
+# singleton.
+# certified: 2026-08-20  commit: w32-re-envelope stage C (B1 post-op boundaries)
+# case: goroutines/ping-pong/alternate
+# params: width=4,sites=80,work=24000000,tier=slow
+# wire-sha256: acb03d2f36fe65e4952c0250654228aa39c876bbe10a212edeaf41d8a5551b9f
+# enum-stats: observations=1 steps=10261842 probes=5948637 sites=1982879 leaves=1982880 maxdepth=60 width=4 (measured 2026-08-20)
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":7}]}
