@@ -437,3 +437,44 @@ latitude entry for the range — landing it here as a replay convenience
 would be exactly the deterministic-gc-pin scaffolding the doctrine
 warns against. The milestone claim carries checkquorum's stop as a
 named by-design exclusion.
+
+---
+
+## Wave 6 — BUG-068: the rendered tier falsifies the MACHINE
+
+The tier-strength bound's first campaign paid off exactly as the W4.2
+handoff predicted, except the mirror it falsified was on the OTHER
+side. The machine tier's first full batch (25 traces) came back
+23/25: `confchange_v2_add_double_{auto,implicit}` DISAGREED —
+`INFO 1 switched to configuration voters=(1 2 3)&&(1) autoleave` (go)
+vs the same line WITHOUT ` autoleave` (machine). Diagnosis, the three
+channels: not a mirror bug (both oracles run the same driver), not
+latitude (a bool at a forced point) — a MACHINE-side silent wrong
+answer. Minimized in two probe steps
+(`artifacts/w43/probe-autoleave`) to a 40-line reproducer: **a
+function-local variable shadowing a NAMED RESULT** (upstream
+`ConfChangeV2.EnterJoint`'s exact shape) aliased the result slot at
+the return/frame-exit seam — the wire carries names, and the return's
+write landed on the inner binding while frame exit read the outer
+result local. go = 111110, machine = 111010, the difference the
+shadowed closure returning false.
+
+Fixed: `tools/nativefrontend/resultshadow.go` — emit-time renaming of
+shadowing locals, keyed by go/types OBJECT identity, applied at the
+four local-name emission sites; shadows arising in constructs outside
+the rename set (range clauses, type-switch guards, receive bindings)
+REFUSE rather than alias. Guardrails: `scoping/named-result-shadow`
+(4 PASS incl. the EnterJoint shape verbatim + the deferred-write and
+bare-return interplays; `range-clause` RED BY DESIGN pinning the
+fail-closed guard). BUGS.md gains BUG-068. Both traces re-verified:
+**2/2 byte-for-byte AGREE**. Drift = exactly 5 NEW ids; baseline
+re-pinned same-commit (2427 cases, 2271/156).
+
+Worth stating for the audit: the ok tier and the oracle-symmetric
+byte tier were STRUCTURALLY blind to this bug (it sat inside a
+rendered log line's conditional suffix, produced identically-typed
+green `ok` blocks, and the byte tier only compares our driver against
+our driver — which is how it DID catch it, go-side vs machine-side,
+but only because the rendered output made the divergent bit
+observable at all). One campaign, one forced-point silent wrong
+answer found and fixed — the rendered tier earned its charter.

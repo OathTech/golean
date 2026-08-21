@@ -1,0 +1,41 @@
+# tracereplay.py v2 — 28 traces, 558 blocks total
+# supported-prefix blocks: 354 (63.4%)
+
+OK-TIER:       206/206 ok-expectation blocks agree (empty handler output where upstream expects ok)
+RENDERED-TIER: 148/148 rendered-expectation blocks agree byte-for-byte with upstream's recorded output
+  family ready dumps                70/  70
+  family pure log lines             35/  35
+  family raft-state tables          14/  14
+  family status tables              10/  10
+  family raft-log dumps              9/   9
+  family message describe lines      8/   8
+  family other/mixed                 2/   2
+
+async_storage_writes                         0/ 44 blocks  [stops at: add-nodes async-storage-writes]
+async_storage_writes_append_aba_race         1/ 47 blocks  ok 1/1  rendered 0/0  [stops at: add-nodes async-storage-writes]
+campaign                                     4/  4 blocks  ok 1/1  rendered 3/3
+campaign_learner_must_vote                  12/ 12 blocks  ok 8/8  rendered 4/4
+checkquorum                                  7/ 15 blocks  ok 5/5  rendered 2/2  [stops at: tick-election]
+confchange_disable_validation                9/  9 blocks  ok 4/4  rendered 5/5
+confchange_v1_add_single                     6/  6 blocks  ok 1/1  rendered 5/5
+confchange_v1_remove_leader                 21/ 21 blocks  ok 9/9  rendered 12/12
+confchange_v1_remove_leader_stepdown        19/ 19 blocks  ok 8/8  rendered 11/11
+confchange_v2_add_double_auto               19/ 19 blocks  ok 5/5  rendered 14/14
+confchange_v2_add_double_implicit            6/  6 blocks  ok 1/1  rendered 5/5
+confchange_v2_add_single_auto                6/  6 blocks  ok 1/1  rendered 5/5
+confchange_v2_add_single_explicit           11/ 11 blocks  ok 2/2  rendered 9/9
+confchange_v2_replace_leader                 9/ 17 blocks  ok 6/6  rendered 3/3  [stops at: transfer-leadership]
+confchange_v2_replace_leader_stepdown       17/ 17 blocks  ok 9/9  rendered 8/8
+forget_leader                                5/ 29 blocks  ok 5/5  rendered 0/0  [stops at: forget-leader]
+forget_leader_prevote_checkquorum           11/ 29 blocks  ok 6/6  rendered 5/5  [stops at: forget-leader]
+forget_leader_read_only_lease_based          1/  7 blocks  ok 1/1  rendered 0/0  [stops at: add-nodes read-only]
+heartbeat_resp_recovers_from_probing         6/ 11 blocks  ok 5/5  rendered 1/1  [stops at: report-unreachable]
+lagging_commit                              17/ 17 blocks  ok 9/9  rendered 8/8
+prevote                                     16/ 16 blocks  ok 6/6  rendered 10/10
+prevote_checkquorum                          7/ 18 blocks  ok 5/5  rendered 2/2  [stops at: set-randomized-election-timeout]
+probe_and_replicate                         74/ 74 blocks  ok 57/57  rendered 17/17
+replicate_pause                             32/ 32 blocks  ok 22/22  rendered 10/10
+single_node                                  4/  4 blocks  ok 1/1  rendered 3/3
+slow_follower_after_compaction              19/ 25 blocks  ok 16/16  rendered 3/3  [stops at: compact]
+snapshot_succeed_via_app_resp                4/ 18 blocks  ok 4/4  rendered 0/0  [stops at: compact]
+snapshot_succeed_via_app_resp_behind        11/ 25 blocks  ok 8/8  rendered 3/3  [stops at: send-snapshot]
