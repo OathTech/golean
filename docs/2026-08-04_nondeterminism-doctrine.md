@@ -98,14 +98,14 @@ the MODELED latitude. The charter scopes the old boast here: "stronger
 than any single Go implementation" is earned envelope-by-envelope,
 never assumed — where the machine is pinned or structurally narrowed,
 the stream quantifier ranges over FEWER behaviors than conforming Go
-has, and the census counts the under-coverage honestly: 14 pins and 6
-recorded narrowings, 4 of them KNOWN ≠ gc (inventory §10; C2/C3 are
-the structural scheduling pair). A ∀-stream claim shape can even be
-FALSE of programs gc always satisfies (send-then-spin:
-`TerminatesNormallyC` false — fuel-out on every stream — where gc
-exits 0, 60/60; register #1, recorded probe at
-`docs/evidence/2026-08-12_scheduler-wedge-probes/`). A ∀-stream
-theorem is exactly as strong as the envelope it quantifies.
+has, and the census counts the under-coverage honestly (inventory
+§10's live tallies; the structural scheduling pair C2/C3 moved to
+ENVELOPED at W3.2 slice 1, 2026-08-20/21 — register #1 discharged,
+the wedge row `goroutines/send-then-spin` is the standing exhibit).
+The historical illustration stands as a WARNING SHAPE: pre-widening,
+`TerminatesNormallyC` was FALSE on send-then-spin (fuel-out on every
+stream) while gc exited 0, 60/60 — a ∀-stream theorem is exactly as
+strong as the envelope it quantifies.
 
 ## The lanes beneath the bounds (2026-08-12)
 
@@ -323,8 +323,11 @@ the fused effect boundary (no post-op scheduling point except
 model's granularity DESIGN, with the NPDRF reduction as the bridge that
 would justify claiming more. Under the charter the reading inverts:
 
-- **The narrowing is a definitional bug, queued for re-envelope.** It
-  is oracle-visible TODAY, and the recorded exhibit is SEND-THEN-SPIN
+- **The narrowing WAS a definitional bug; the re-envelope LANDED**
+  (W3.2 slice 1 stages C/D, 2026-08-20/21 — B1 `.opDone` post-op
+  boundaries + B2 back-edge boundaries, G1-ruled; register #1
+  discharged; this bullet is kept as the historical position with its
+  discharge noted here). The recorded exhibit was SEND-THEN-SPIN
   (`docs/evidence/2026-08-12_scheduler-wedge-probes/`): a worker
   performs one registry op (a cap-1 send that wakes main) and then
   spins with no further registry op; the fused effect boundary (C3)
@@ -348,12 +351,14 @@ would justify claiming more. Under the charter the reading inverts:
   schedulable); it cannot and need not remove the registry-free
   spinner's divergent branches — adding preemption points only ADDS
   streams, and the never-yielding stream survives any boundary-set
-  widening. C2+C3 land together as "the fused-boundary/
-  forced-continuation" item — priority 1 in the inventory's re-envelope
-  queue (§7), the largest single re-envelope and the highest-value one.
-  BUG-040 and BUG-044 were pointwise instances of the same class, fixed
-  pointwise; C3 records the remaining mid-program abort gap (unprobed —
-  U-1).
+  widening — exactly what landed: the widened machine keeps the
+  spinner's divergent branches BY RIGHT (dossier §3.1) while the
+  completing execution is a member again (stream [0,0,1]; the corpus
+  row certifies {42} with counted nonterm branches). C2+C3 landed
+  together as designed; BUG-040 and BUG-044 were pointwise instances
+  of the same class, now subsumed by the general rule; the mid-program
+  abort gap was probed (U-1) and ADMITTED, with post-RAISE partner
+  progress deferred as B3 (G1, trigger baseline recorded at C3).
 - **The reduction line resumes AFTER the machine widens, as the
   upper-bound theorem it should always have been.** Once preemption
   points exist inside segments, NPDRF's job is the scheduling upper

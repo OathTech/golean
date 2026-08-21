@@ -549,3 +549,61 @@ judgment calls recorded as they are made; checkpoints every ≤5 units.
   --slow run validates the D-touched records + the E closure together;
   the C gate ran its own --slow) — recorded here as the deliberate
   economy.
+
+## Slice 1 stage E — closure (2026-08-21)
+
+- NPDRF: obstruction-3 note updated — `StepM`/`StepMFine` and the
+  DRAFT statement now range over the WIDENED boundary set
+  automatically (`StepMFine` already relaxed all boundaries), so the
+  coarse-vs-fine residual the draft measures SHRANK; the weakening
+  ruling + proof effort stay slice 5's, over the new point set.
+- Doctrine sweep to the discharged state: nondeterminism doctrine's
+  ∀-stream illustration re-scoped as the historical warning shape and
+  the granularity-position bullet marked landed (history kept in
+  place, discharge noted inline); inventory §7 queue item 1 → DONE
+  with residual pointers; register #1/#5, C2, C3, U-1, the tallies
+  and the known-≠-oracle list were updated at stages C/D.
+- Fairness non-preclusion: recorded as the STATED PROPERTY at
+  `docs/2026-08-07_fairness-precision-note.md` §5 (stage D) — four
+  clauses, each with its mechanical anchor (`schedSlots_mem` /
+  `mem_schedSlots_of_runnable` are the proved menu-set facts); no
+  proof obligations, per the note's own commitments.
+- Mirror: unwidened throughout — `.opDone` quits `.q7Concurrency`
+  like every concurrency shape; default build + drift gate green at
+  every landing commit.
+
+### Gates (slice 1 stage E — the slice exit gate)
+
+- `GOLEAN_MEM_MAX=24G scripts/ci --slow` (artifacts/w32-sE-ci.log,
+  untracked; ~65 min wall): EVERY step ok — escape hatches,
+  purity/TCB/import-direction, core build warning-free, proofs +
+  Audit gate, verdi compat, goose fixtures/pins, golden lowering,
+  frontend units, eval 136 ok, lane fixtures both halves, negative
+  lane no-regression, re-pin guard — with the differential
+  baseline-diff step reporting EXACTLY the two RECORDED standing
+  alarms and nothing else:
+      imported-goose/channel/google-search  PASS→FAIL (--slow only)
+      sync/rwmutex-order/acquisition       PASS→FAIL (--slow only)
+  — the stale pre-B1 certified records surfacing exactly as the
+  tiering design intends (stage-C log: BUG-065; the §5c-fallback
+  ruling is Mike's, posed in the stage report). All five re-tiered
+  rows (fifo, cap-one, alternate, rw-writers, first-come)
+  RE-CERTIFIED exhaustively under GOLEAN_SLOW=1 against their fresh
+  records — no drift. The wedge row green under --slow.
+- §5b prediction, checked line-by-line across the slice: ZERO
+  strict-lane flips at every landing (confirmed at C, D, E); new ids
+  exactly {goroutines/wake-then-abort, goroutines/send-then-spin};
+  membership/confluent sets UNCHANGED everywhere measurable; the
+  UNPREDICTED residue is the enumeration-tractability fallout
+  (BUG-065 + the cap/tier re-measurements), recorded honestly at
+  stage C.
+- CHECKPOINT slice-1-E: stages C-D-E COMPLETE on the lane. The
+  boundary set is B1+B2 as ruled; the wedge is flipped and
+  corpus-exhibited; register #1 discharged; C2/C3/U-1 enveloped;
+  fairness non-preclusion stated; NPDRF restated over the widened
+  set. OPEN for Mike (posed in the stage report): (1) the BUG-065
+  five — §5c sampled fallback (machinery drafted+reverted; witnesses
+  recorded at stage C) vs budgets vs the reduction lane; (2) the
+  confluent-lane tier=slow widening + the slow-timeout 3600 default —
+  gate-surface changes made in lockstep, flagged for the pre-merge
+  audit's gates dimension.
