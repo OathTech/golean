@@ -341,10 +341,15 @@ another platform or a move of the Go pin re-derives the table;
   recorded pre-existing stdlib dot-import defect (stdlibshim.go
   FAIL-CLOSED RULES: dangling plain call → runtime `stuck`, recorded
   2026-08-16) is deliberately NOT fixed or widened here.
-- **Stdlib shims** (`E5`) stay MAIN-PACKAGE-ONLY: a source package
-  calling `strings.Fields` keeps the standing selector refusal. The
-  W1.2 `slices.SortFunc` work inherits this seam decision and may
-  widen injection to source packages with its own fidelity argument.
+- **Stdlib shims** (`E5`) are injected PER UNIT. (Superseded text: this
+  section originally said shims "stay MAIN-PACKAGE-ONLY" — raft W4.0
+  widened injection to every source unit, `load.go` `newSourcePkg`'s
+  `injectStdlibShims` call before that unit's type-check, because
+  raft's `errors.New` sentinels live in non-main units. Corrected
+  2026-08-21, holes arc — the census's G-35 row and its §10 drift note
+  flagged the stale claim.) Reserved-name collisions in ANY unit
+  refuse loudly; a call to a non-allowlisted stdlib function keeps the
+  standing selector refusal, in every unit alike.
 - **cgo (`import "C"`), embed, unsafe, reflect**: unchanged standing
   refusals (none become admissible via the new loader; `C` is not a
   subdir and not stdlib → path refusal; runtime-touching stdlib keeps

@@ -133,9 +133,24 @@ raft-w42 lane runs concurrently and owns `raftsubject/` +
 
 - `docs/2026-08-18_multipackage-identity.md` §6: "shims are
   main-package-only" → per-unit (G-35, `load.go:206-218`, raft W4.0).
-- fmt `%X` doctrine/code split (G-11): header at `fmtdesugar.go:35`
-  claims Stringer/error consult for `x, X, q, s, v`; the verb switch
-  at `:516` handles `s, v, x, q` — no `X`. Reconcile by gc probe.
+  Fixed with the supersession dated in place.
+- fmt `%X` doctrine/code split (G-11): RECONCILED BY GC PROBE
+  (go1.26.5): `%X` over an Error-implementing named uint64 prints
+  `4F4F5053` — the UPPERCASE hex of the method result — so gc DOES
+  consult error/Stringer for `X` (the doctrine header was right about
+  gc). The code is safe purely because `parseFmtFormat` refuses `%X`
+  (verb-set default arm) — no wrong answer, a two-site invariant.
+  Reconciliation = the invariant NAMED at both sites (the header's
+  "%X AND THE TWO-SITE INVARIANT" block; a comment on the stringable
+  switch's case list), each naming the other and the render-helper
+  third leg; admitting `%X` stays a matrix widening owing differential
+  pins. Census G-11 residual + §10 drift paragraph updated (those
+  census paragraphs landed with the BUG-066 commit, which swept the
+  census file — cross-noted here for the record).
+- Judgment call: no code change for `%X` — implementing it would be a
+  modeled-matrix widening (needs its own guardrails), out of this
+  arc's charter; the drift item asked for reconciliation, which the
+  probe settles on the doctrine's side with the code fail-closed.
 
 ## Item 5 — setup-deps populates proofs/.lake/packages
 

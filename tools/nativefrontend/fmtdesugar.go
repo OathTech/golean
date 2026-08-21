@@ -42,6 +42,18 @@
 // check runs before the kind matrix below, for all four modeled
 // stringable verbs.
 //
+// %X AND THE TWO-SITE INVARIANT (census G-11 residual, reconciled
+// 2026-08-21 by gc probe): gc's set is {v,s,x,X,q} — probed at
+// go1.26.5, `%X` over an Error-implementing uint64 prints the
+// UPPERCASE hex of the method result ("OOPS" -> 4F4F5053), never the
+// number — but `X` is OUTSIDE the modeled subset: parseFmtFormat
+// refuses `%X` (the verb-set default arm), so the stringable switch
+// below deliberately omits it. These two sites move together:
+// admitting %X means adding it to the parser's verb set, to the
+// stringable switch, AND an uppercase render arm in
+// goleanShimFmtStringVerb — differential-pinned first, like every
+// matrix widening.
+//
 // THE MODELED MATRIX (everything else refuses, naming the pair):
 //
 //   %d   signed / unsigned integer kinds (named included; enums are
@@ -513,6 +525,12 @@ func (e *emitter) fmtVerbArg(fn, format string, v fmtVerb, arg ast.Expr, k int) 
 	// %x/%q honest; the render helpers post-process the method result
 	// by verb (goleanShimFmtStringVerb).
 	switch v.verb {
+	// No 'X' here BY PAIRING with the parser, not by oversight: gc
+	// consults error/Stringer for %X too (uppercase hex of the method
+	// result, probed 2026-08-21), but parseFmtFormat refuses %X, so it
+	// cannot arrive. If the parser ever admits it, this case list and
+	// the render helper gain it in the same change (header: "%X AND
+	// THE TWO-SITE INVARIANT").
 	case 's', 'v', 'x', 'q':
 		if implementsError {
 			if types.IsInterface(argTy) {
