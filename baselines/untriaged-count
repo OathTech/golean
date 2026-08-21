@@ -169,7 +169,7 @@
 #   operand; the frontend now emits the spec's auto-deref), repaired by
 #   its fix and folded into its Cases. The buildout's import of
 #   unittest/embedded.go re-surfaced the class and forced the triage.
-coverage 12
+coverage 14
 latitude 4
 wrong-answer 0
 # 2026-08-09 (spec-parity slice 2, sync guardrails)  16 -> 50, mostly
@@ -283,3 +283,10 @@ wrong-answer 0
 # panics naming the gap where go run explodes). Landed deliberately
 # with the feature as its boundary guardrail, not an accidental
 # entrant; retires only if the rune explode is ever modeled.
+# 12 -> 14 (2026-08-21, raft W4.3 landing C): fmt/sprintf-dyn/
+# {unmodeled-kind,arity-mismatch} enter as `coverage` BY DESIGN — the
+# dynamic-fmt shims' fail-closed bound pins (an unmodeled dynamic kind
+# and a verb/argument arity mismatch are machine panics naming the gap
+# where go run renders). Landed deliberately with the feature as its
+# boundary guardrails; each retires only if its dynamic arm is ever
+# modeled.

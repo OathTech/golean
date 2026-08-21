@@ -1,0 +1,16 @@
+# id	subject	args	expected_status	expected_reason	features
+# W4.3 item 1 landing C (docs/raft-w43-log.md): the DYNAMIC fmt family
+# — Sprintf/Sprint/Sprintln with a spread []any argument (the
+# DefaultLogger / recording-logger shape). Red until the dyn shims
+# land. The last two rows stay RED BY DESIGN: an unmodeled dynamic
+# kind and a verb/argument arity mismatch are fail-closed machine
+# panics where go run renders (visible red, never a wrong answer).
+logger-shape	dynLoggerShape	-	ok	-	stdlib,strings,variadic,interfaces,methods
+verb-kinds	dynVerbKinds	-	ok	-	stdlib,strings,variadic,ints,bools
+stringer-error	dynStringerError	-	ok	-	stdlib,strings,variadic,methods,interfaces,nil
+stringer-panic	dynStringerPanic	-	ok	-	stdlib,strings,variadic,methods,panic,recover
+sprint-space-rule	dynSprintSpaceRule	-	ok	-	stdlib,strings,variadic
+sprintln	dynSprintln	-	ok	-	stdlib,strings,variadic
+sprint-nil	dynSprintNil	-	ok	-	stdlib,strings,variadic,nil
+unmodeled-kind	dynUnmodeledKind	-	ok	-	stdlib,strings,variadic,floats
+arity-mismatch	dynArityMismatch	-	ok	-	stdlib,strings,variadic

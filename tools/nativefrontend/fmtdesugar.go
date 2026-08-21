@@ -100,10 +100,12 @@ import (
 // fmtDesugarFuncs is the modeled fmt surface. Consulted by the
 // injection scan (stdlibshim.go) and by emitFmtCall.
 var fmtDesugarFuncs = map[string]bool{
-	"Sprintf": true,
-	"Errorf":  true,
-	"Fprintf": true,
-	"Fprint":  true,
+	"Sprintf":  true,
+	"Errorf":   true,
+	"Fprintf":  true,
+	"Fprint":   true,
+	"Sprint":   true,
+	"Sprintln": true,
 }
 
 // fmtWriterWriteString: the modeled Fprintf/Fprint writer set — the
@@ -244,7 +246,21 @@ func (e *emitter) emitFmtCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool
 	}
 	fn := sel.Sel.Name
 	if c.Ellipsis.IsValid() {
-		return nil, false, unsup("fmt.%s with a spread argument (args...) is outside the modeled subset", fn)
+		// The DYNAMIC route (W4.3 landing C, cause 9): Sprintf/Sprint/
+		// Sprintln with a spread []any argument — the DefaultLogger /
+		// recording-logger shape, where the format string is a runtime
+		// value and the verb x kind pairing can only happen at run time.
+		// The dyn shims parse the format at runtime over the SAME verb
+		// set as this desugar and dispatch on the dynamic kind, failing
+		// CLOSED (a machine panic naming the verb) outside the modeled
+		// dynamic matrix. Any other spread shape keeps refusing.
+		return e.emitFmtDynCall(c, fn)
+	}
+	if fn == "Sprint" || fn == "Sprintln" {
+		// Fixed-arity Sprint/Sprintln stay outside the modeled subset
+		// (the JC-17 retargeted quarantine witnesses depend on
+		// fmt.Sprint refusing — the refusal moves in-hook, same stage).
+		return nil, false, unsup("fmt.%s without a spread argument is outside the modeled subset (modeled: the spread []any form)", fn)
 	}
 
 	// fmt.Fprint (UNFORMATTED): modeled for exactly ONE operand of
@@ -707,6 +723,69 @@ func (e *emitter) fmtVerbArg(fn, format string, v fmtVerb, arg ast.Expr, k int) 
 		}
 	}
 	return nil, unsup("fmt.%s verb %s over an argument of type %s is outside the modeled verb/kind matrix (format %q; fail closed — widen with a differential pin first)", fn, verbName, argTy, format)
+}
+
+// emitFmtDynCall is the dynamic route: fmt.{Sprintf,Sprint,Sprintln}
+// with a spread []any final argument rewrite to the runtime-formatter
+// shims (stdlibshim.go, the fmtDynShimKey bundle). Everything else
+// with a spread refuses here, naming the shape.
+func (e *emitter) emitFmtDynCall(c *ast.CallExpr, fn string) (any, bool, error) {
+	var shim string
+	var wantArgs int
+	switch fn {
+	case "Sprintf":
+		shim, wantArgs = "goleanShimFmtSprintfDyn", 2
+	case "Sprint":
+		shim, wantArgs = "goleanShimFmtSprintDyn", 1
+	case "Sprintln":
+		shim, wantArgs = "goleanShimFmtSprintlnDyn", 1
+	default:
+		return nil, false, unsup("fmt.%s with a spread argument (args...) is outside the modeled subset", fn)
+	}
+	if len(c.Args) != wantArgs {
+		return nil, false, unsup("fmt.%s spread form with %d argument(s) is outside the modeled subset", fn, len(c.Args))
+	}
+	spread := c.Args[len(c.Args)-1]
+	spreadTy := e.goTypeOf(spread)
+	okSpread := false
+	if sl, isSlice := spreadTy.Underlying().(*types.Slice); isSlice {
+		if iface, isIface := sl.Elem().Underlying().(*types.Interface); isIface {
+			okSpread = iface.NumMethods() == 0
+		}
+	}
+	if !okSpread {
+		return nil, false, unsup("fmt.%s spread argument of type %s is outside the modeled subset (modeled: a spread []any)", fn, spreadTy)
+	}
+	args := []any{}
+	if fn == "Sprintf" {
+		fTy := e.goTypeOf(c.Args[0])
+		basic, _ := fTy.Underlying().(*types.Basic)
+		if basic == nil || basic.Info()&types.IsString == 0 {
+			return nil, false, unsup("fmt.Sprintf dynamic format of type %s is outside the modeled subset", fTy)
+		}
+		fNode, err := e.emitExpr(c.Args[0])
+		if err != nil {
+			return nil, false, err
+		}
+		if !types.Identical(fTy, types.Typ[types.String]) {
+			fNode = map[string]any{"expr": "convert",
+				"target": map[string]any{"kind": "string"}, "x": fNode}
+		}
+		args = append(args, fNode)
+	}
+	sNode, err := e.emitExpr(spread)
+	if err != nil {
+		return nil, false, err
+	}
+	args = append(args, sNode)
+	shimObj := e.pkg.Scope().Lookup(shim)
+	shimFn, okShim := shimObj.(*types.Func)
+	if !okShim {
+		return nil, false, unsup("fmt.%s dynamic desugar: shim %s not injected", fn, shim)
+	}
+	return map[string]any{"expr": "call", "func": e.funcWireName(shimFn),
+		"args":        args,
+		"resultTypes": []any{map[string]any{"kind": "string"}}}, true, nil
 }
 
 // fmtShimWireName mints the FuncId of an injected fmt helper in the

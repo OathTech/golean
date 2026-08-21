@@ -303,3 +303,56 @@ PASS + 4 red-by-design exactly. Frontend unit tests green.
 The run confirmed exactly (artifacts/w43/landingB-drift.txt: 39 lines,
 all "NEW id"; the 4 FAILs are the red-by-design set). Baseline
 re-pinned same-commit (2400 cases, 2249/151).
+
+**Landing gate, honestly: the `--diff` gate at `17eb6d5e` came back
+RED** (`artifacts/w43/ci-landingB.txt`) — every differential/baseline
+step green (2400/2400, no regression), but the bug-index cross-check
+caught `empty-sep`'s missing DISPOSITION: a runtime fidelity-stage red
+(the fail-closed shim panic) must be classified in
+`baselines/untriaged-ids`, and I had landed it unclassified. The gate
+doing its job. Fixed in the follow-up commit (`coverage` disposition +
+ceiling 11→12 with the written justification), re-run green:
+`artifacts/w43/ci-landingB-rerun.txt` — RESULT: PASS. Lesson carried
+forward: every red-by-design row at a FIDELITY stage ships with its
+disposition in the same commit (landing C does).
+
+---
+
+## Wave 4 (item 1, landing C) — the dynamic fmt family (cause 9)
+
+Frontend: `Sprintf`/`Sprint`/`Sprintln` with a SPREAD `[]any` argument
+— the DefaultLogger bodies' shape and the replay env's recording
+logger — desugar to runtime-formatter shims (`fmtDynShimKey` bundle):
+the format string parsed at RUNTIME over the same verb set as the
+static desugar (no width/flags), each verb dispatching on the
+argument's DYNAMIC kind — error/Stringer first for the stringable
+verbs (through the injected `goleanShimStringer` interface: every
+String method becomes a reachability candidate through this edge,
+priced in now that the renderers lower — the JC-16 tradeoff
+re-decided for the dynamic tier, recorded as JC-31), then basic kinds
++ `[]byte` + `[]uint64`. Sprint's space rule (a space iff NEITHER
+neighbor is a string) and Sprintln gc-probed. EVERYTHING ELSE PANICS
+FAIL-CLOSED naming the verb — an unmodeled dynamic kind or an arity
+mismatch is a visible machine stop, never a rendered guess.
+Fixed-arity Sprint/Sprintln keep refusing (the JC-17 quarantine
+witnesses depend on it; refusal moves in-hook, same stage).
+
+**Guardrails first**: 9 rows in `fmt/sprintf-dyn`, all witnessed red
+pre-fix — incl. `logger-shape`, the DefaultLogger/recording-logger
+dispatch chain VERBATIM (interface method → variadic body →
+`Sprintf(format, v...)`). Post-fix: 7 PASS + the 2 bound rows red by
+design, dispositioned `coverage` same-commit (ceiling 12→14, justified
+in `baselines/untriaged-count`).
+
+**Predicted flips: exactly 9 NEW ids — 7 PASS + 2
+FAIL/lean-observation by design; zero movement on the 2400
+pre-existing.** Confirmed exactly (artifacts/w43/landingC-drift.txt).
+Baseline re-pinned same-commit (2409 cases, 2256/153).
+
+**Integration first light (the reason this item exists):** with
+landing C built, `tracereplay.py` machine-tier smoke on
+`single_node`, `campaign` and `confchange_v1_add_single`: **all three
+replay BYTE-FOR-BYTE under the machine including the full rendered
+output** — log lines through the dyn formatter, Ready dumps through
+the composite matrix, conf-change end-to-end (the stepLeader
+Unmarshal path live). The full 28-trace machine tier is wave 5.

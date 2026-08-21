@@ -186,6 +186,8 @@ channels/select-select/beside-loop	coverage
 channels/select-select/core	coverage
 floats/to-int-out-of-range/nan	latitude
 floats/to-int-out-of-range/range	latitude
+fmt/sprintf-dyn/arity-mismatch	coverage
+fmt/sprintf-dyn/unmodeled-kind	coverage
 goroutines/spawn-in-init/in-init	coverage
 init/hidden-dep-order	latitude
 pointers/nil-array-ptr-slice-elided-high/deref-elided-high	coverage

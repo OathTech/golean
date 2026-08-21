@@ -1,21 +1,16 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-21 (raft W4.3 wave 3 / landing B — branch raft-w43;
-#   docs/raft-w43-log.md "Wave 3").
-#   re-pin reason: THIRTY-NINE NEW ids, zero movement on any of the
-#   2361 ids the previous record held (verified by the run's drift
-#   report: every drifted line reads "NEW id (not in baseline)").
-#     Landing B's guardrails: bytes/buffer-model 5 PASS (the E5-T
-#     bytes.Buffer shadow model), fmt/fprint-writers 3 PASS + 2
-#     FAIL/frontend-export RED BY DESIGN (multi-operand and non-string
-#     Fprint are outside the modeled subset), strconv/format-parse 6
-#     PASS (Format/Parse shims incl. the expected-panic illegal-base
-#     row), strings/split-conformance 7 PASS + empty-sep
-#     FAIL/lean-observation RED BY DESIGN (the per-rune explode fails
-#     closed on the machine), strings/trimspace-repeat 8 PASS,
-#     slices/sortfunc-cmp 6 PASS + sortfunc-local-type
-#     FAIL/frontend-export RED BY DESIGN (function-local type
-#     arguments keep the standing C6-class refusal).
-# cases: 2400 (2249 PASS / 151 FAIL)
+# recorded: 2026-08-21 (raft W4.3 wave 4 / landing C — branch raft-w43;
+#   docs/raft-w43-log.md "Wave 4").
+#   re-pin reason: NINE NEW ids, zero movement on any of the 2400 ids
+#   the previous record held (verified by the run's drift report:
+#   every drifted line reads "NEW id (not in baseline)").
+#     Landing C's guardrails (the DYNAMIC fmt family — Sprintf/
+#     Sprint/Sprintln over a spread []any, the DefaultLogger and
+#     recording-logger shape): fmt/sprintf-dyn — 7 PASS +
+#     {unmodeled-kind, arity-mismatch} FAIL/lean-observation RED BY
+#     DESIGN (the dyn shims' fail-closed bound pins, dispositioned
+#     `coverage` in baselines/untriaged-ids same-commit).
+# cases: 2409 (2256 PASS / 153 FAIL)
 # frontend: native (tools/nativefrontend)
 result	id	stage
 PASS	arrays/array-bounds	-
@@ -807,6 +802,15 @@ FAIL	fmt/fprint-writers/multi-operand	frontend-export
 FAIL	fmt/fprint-writers/non-string	frontend-export
 PASS	fmt/fprintf-builder/describe-shape	-
 PASS	fmt/fprintf-builder/returns	-
+FAIL	fmt/sprintf-dyn/arity-mismatch	lean-observation
+PASS	fmt/sprintf-dyn/logger-shape	-
+PASS	fmt/sprintf-dyn/sprint-nil	-
+PASS	fmt/sprintf-dyn/sprint-space-rule	-
+PASS	fmt/sprintf-dyn/sprintln	-
+PASS	fmt/sprintf-dyn/stringer-error	-
+PASS	fmt/sprintf-dyn/stringer-panic	-
+FAIL	fmt/sprintf-dyn/unmodeled-kind	lean-observation
+PASS	fmt/sprintf-dyn/verb-kinds	-
 PASS	fmt/sprintf-verbs/d-enum	-
 PASS	fmt/sprintf-verbs/d-int	-
 PASS	fmt/sprintf-verbs/d-uint	-

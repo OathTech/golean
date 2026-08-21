@@ -81,6 +81,13 @@ const errorsNewShimTypeName = "goleanShimErrorString"
 // first helper's name.
 const fmtShimBundleKey = "goleanShimFmtUint"
 
+// fmtDynShimKey: the DYNAMIC fmt bundle (W4.3 item 1 landing C —
+// cause 9): Sprintf/Sprint/Sprintln with a SPREAD []any argument
+// desugar to runtime-formatter shims (fmtdesugar.go's dyn route). The
+// dyn helpers call the static bundle's renderers, so the injection
+// rows below co-inject both bundles.
+const fmtDynShimKey = "goleanShimFmtSprintfDyn"
+
 // The W4.1 item-4 smalls (docs/raft-w41-log.md item 4): strings.Join
 // (H-17) and bytes.Equal (H-13) as ordinary E5 direct-call shims, and
 // binary.LittleEndian.{Uint64,PutUint64} (H-14) as PACKAGE-VARIABLE
@@ -152,9 +159,12 @@ var stdlibGenericDesugarInject = map[string]map[string][]string{
 // fmt.Errorf desugars to goleanShimErrorsNew over the formatted text.
 var stdlibDesugarInject = map[string]map[string][]string{
 	"fmt": {
-		"Sprintf": {fmtShimBundleKey},
-		"Errorf":  {fmtShimBundleKey, errorsNewShimName},
-		"Fprintf": {fmtShimBundleKey},
+		"Sprintf":  {fmtShimBundleKey, fmtDynShimKey},
+		"Errorf":   {fmtShimBundleKey, errorsNewShimName},
+		"Fprintf":  {fmtShimBundleKey},
+		"Fprint":   {fmtShimBundleKey},
+		"Sprint":   {fmtShimBundleKey, fmtDynShimKey},
+		"Sprintln": {fmtShimBundleKey, fmtDynShimKey},
 	},
 }
 
@@ -186,6 +196,9 @@ var stdlibShimDeclNames = map[string][]string{
 		"goleanShimFmtRenderCall", "goleanShimFmtError", "goleanShimFmtErrorCall",
 		"goleanShimFmtPanicValue", "goleanShimFmtIntPad", "goleanShimFmtUintPad",
 		"goleanShimFmtPadLeft"},
+	fmtDynShimKey: {fmtDynShimKey, "goleanShimStringer",
+		"goleanShimFmtDynVerb", "goleanShimFmtDynInt", "goleanShimFmtDynUint",
+		"goleanShimFmtSprintDyn", "goleanShimFmtSprintlnDyn"},
 	stringsJoinShimName:       {stringsJoinShimName},
 	bytesEqualShimName:        {bytesEqualShimName},
 	binaryLEUint64ShimName:    {binaryLEUint64ShimName},
@@ -541,6 +554,203 @@ func goleanShimFmtIntPad(v int64, w int) string {
 
 func goleanShimFmtUintPad(v uint64, w int) string {
 	return goleanShimFmtPadLeft(goleanShimFmtUint(v), w)
+}
+`,
+
+	// The DYNAMIC fmt family (W4.3 item 1 landing C — cause 9): Sprintf/
+	// Sprint/Sprintln with a SPREAD []any argument (the DefaultLogger
+	// bodies; the replay env's recording logger). The format string is
+	// parsed at RUNTIME over the same verb set as the static desugar
+	// (%d %x %s %v %+v %q %t %%; no width/flags — no logger site uses
+	// them), and each verb dispatches on the argument's DYNAMIC kind:
+	// error and Stringer first for the stringable verbs (through the
+	// injected goleanShimStringer interface — every String method
+	// becomes a reachability candidate through this edge, priced in now
+	// that the renderers lower), then a type switch over the basic
+	// kinds + []byte + []uint64. ANYTHING ELSE PANICS FAIL-CLOSED
+	// naming the verb (a named non-Stringer int, a float, a struct at
+	// runtime): a visible machine stop, never a silent wrong answer.
+	// gc probes: artifacts/w43/probe-fmt K1-K3 (Sprint's space rule:
+	// a space iff NEITHER neighbor is a string), artifacts/w43/probe-b
+	// L1-L2 (Sprintln: spaces always, trailing newline), D3
+	// (Sprint(nil) -> "<nil>").
+	fmtDynShimKey: `
+// goleanShimFmtDyn* are the native frontend's dynamic-fmt helpers
+// (W4.3 item 1 landing C). Injected declarations — not user code.
+type goleanShimStringer interface{ String() string }
+
+func goleanShimFmtDynVerb(verb string, a any) string {
+	if verb == "%" {
+		panic("golean fmt shim: unreachable %% arm")
+	}
+	if verb == "s" || verb == "v" || verb == "x" || verb == "q" {
+		if e, ok := a.(error); ok {
+			return goleanShimFmtError(verb, e)
+		}
+		if s, ok := a.(goleanShimStringer); ok {
+			return goleanShimFmtRender(verb, "String", false,
+				func() string { return s.String() })
+		}
+	}
+	switch v := a.(type) {
+	case nil:
+		if verb == "v" {
+			return "<nil>"
+		}
+	case bool:
+		if verb == "v" || verb == "t" {
+			return goleanShimFmtBool(v)
+		}
+	case string:
+		if verb == "s" || verb == "v" {
+			return v
+		}
+		if verb == "q" {
+			return goleanShimFmtQuoteString(v)
+		}
+		if verb == "x" {
+			return goleanShimFmtHexString(v)
+		}
+	case int:
+		return goleanShimFmtDynInt(verb, int64(v))
+	case int8:
+		return goleanShimFmtDynInt(verb, int64(v))
+	case int16:
+		return goleanShimFmtDynInt(verb, int64(v))
+	case int32:
+		return goleanShimFmtDynInt(verb, int64(v))
+	case int64:
+		return goleanShimFmtDynInt(verb, v)
+	case uint:
+		return goleanShimFmtDynUint(verb, uint64(v))
+	case uint8:
+		return goleanShimFmtDynUint(verb, uint64(v))
+	case uint16:
+		return goleanShimFmtDynUint(verb, uint64(v))
+	case uint32:
+		return goleanShimFmtDynUint(verb, uint64(v))
+	case uint64:
+		return goleanShimFmtDynUint(verb, v)
+	case []byte:
+		if verb == "s" {
+			return string(v)
+		}
+		if verb == "q" {
+			return goleanShimFmtQuoteBytes(v)
+		}
+		if verb == "v" || verb == "d" {
+			out := "["
+			for i := 0; i < len(v); i++ {
+				if i > 0 {
+					out += " "
+				}
+				out += goleanShimFmtUint(uint64(v[i]))
+			}
+			return out + "]"
+		}
+	case []uint64:
+		if verb == "v" || verb == "d" {
+			out := "["
+			for i := 0; i < len(v); i++ {
+				if i > 0 {
+					out += " "
+				}
+				out += goleanShimFmtUint(v[i])
+			}
+			return out + "]"
+		}
+	}
+	panic("golean fmt shim: dynamic verb %" + verb + " over an unmodeled dynamic kind (fail closed)")
+}
+
+func goleanShimFmtDynInt(verb string, v int64) string {
+	if verb == "d" || verb == "v" {
+		return goleanShimFmtInt(v)
+	}
+	if verb == "x" && v >= 0 {
+		return goleanShimFmtHex(uint64(v))
+	}
+	panic("golean fmt shim: dynamic verb %" + verb + " over a signed-integer kind (fail closed)")
+}
+
+func goleanShimFmtDynUint(verb string, v uint64) string {
+	if verb == "d" || verb == "v" {
+		return goleanShimFmtUint(v)
+	}
+	if verb == "x" {
+		return goleanShimFmtHex(v)
+	}
+	panic("golean fmt shim: dynamic verb %" + verb + " over an unsigned-integer kind (fail closed)")
+}
+
+func goleanShimFmtSprintfDyn(format string, args []any) string {
+	out := ""
+	ai := 0
+	i := 0
+	for i < len(format) {
+		c := format[i]
+		if c != '%' {
+			out += string(format[i : i+1])
+			i++
+			continue
+		}
+		if i+1 >= len(format) {
+			panic("golean fmt shim: dynamic format string ends in % (fail closed)")
+		}
+		i++
+		verb := format[i : i+1]
+		if verb == "%" {
+			out += "%"
+			i++
+			continue
+		}
+		if verb == "+" {
+			if i+1 < len(format) && format[i+1] == 'v' {
+				verb = "v"
+				i++
+			} else {
+				panic("golean fmt shim: dynamic verb %+" + format[i+1:i+2] + " is outside the modeled subset (fail closed)")
+			}
+		}
+		if verb != "d" && verb != "x" && verb != "s" && verb != "v" && verb != "q" && verb != "t" {
+			panic("golean fmt shim: dynamic verb %" + verb + " is outside the modeled subset (fail closed)")
+		}
+		if ai >= len(args) {
+			panic("golean fmt shim: dynamic format has more verbs than arguments (fmt would render a %! marker; fail closed)")
+		}
+		out += goleanShimFmtDynVerb(verb, args[ai])
+		ai++
+		i++
+	}
+	if ai != len(args) {
+		panic("golean fmt shim: dynamic format has fewer verbs than arguments (fmt would append %! extras; fail closed)")
+	}
+	return out
+}
+
+func goleanShimFmtSprintDyn(args []any) string {
+	out := ""
+	prevString := false
+	for i := 0; i < len(args); i++ {
+		_, isStr := args[i].(string)
+		if i > 0 && !prevString && !isStr {
+			out += " "
+		}
+		out += goleanShimFmtDynVerb("v", args[i])
+		prevString = isStr
+	}
+	return out
+}
+
+func goleanShimFmtSprintlnDyn(args []any) string {
+	out := ""
+	for i := 0; i < len(args); i++ {
+		if i > 0 {
+			out += " "
+		}
+		out += goleanShimFmtDynVerb("v", args[i])
+	}
+	return out + "\n"
 }
 `,
 
