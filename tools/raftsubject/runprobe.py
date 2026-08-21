@@ -42,6 +42,15 @@ def main():
     ap.add_argument("--function", default="probeRawNode")
     ap.add_argument("--main", default="rawnode-probe-main.go")
     ap.add_argument("--fuel", default="200000000")
+    ap.add_argument("--expect-stop", default=None, metavar="SUBSTR",
+                    help="NEGATIVE probe mode (W4.2 logger-teeth): PASS iff "
+                         "go run FAILS (loudly) and the machine's first stop "
+                         "detail contains SUBSTR. Both refusals are printed "
+                         "verbatim — the point is to witness that a "
+                         "fail-closed stub has teeth, so a green run of the "
+                         "same drive WITH the harness logger installed is a "
+                         "meaningful negative (nothing called the stub), not "
+                         "a vacuous one.")
     ap.add_argument("--keep", action="store_true")
     ap.add_argument("--out", default=os.path.join(REPO, "artifacts", "runprobe"))
     ap.add_argument("--frontend", default=os.path.join(REPO, "artifacts", "nativefrontend"))
@@ -71,10 +80,19 @@ def main():
     env["GOPATH"] = gopath
     r = subprocess.run(["go", "run", "main.go"], cwd=prog, env=env,
                        capture_output=True, text=True)
-    if r.returncode != 0:
+    if args.expect_stop is not None:
+        if r.returncode == 0:
+            sys.exit("runprobe.py: expect-stop probe: go run SUCCEEDED, but "
+                     "the probe expects a loud failure on both oracles:\n%s"
+                     % r.stderr)
+        print("runprobe: go run refused loudly, as the probe expects "
+              "(last lines):\n  %s"
+              % "\n  ".join(r.stderr.strip().splitlines()[-3:]))
+    elif r.returncode != 0:
         sys.exit("runprobe.py: go run failed:\n%s%s" % (r.stdout, r.stderr))
     go_verdict = r.stderr.strip()  # builtin println writes to stderr
-    print("runprobe: go run %s -> %s" % (args.function, go_verdict))
+    if args.expect_stop is None:
+        print("runprobe: go run %s -> %s" % (args.function, go_verdict))
 
     wire = os.path.join(out, "wire.json")
     r = subprocess.run([args.frontend, "--dir", prog, "--out", wire],
@@ -91,6 +109,21 @@ def main():
         obs = json.loads(raw.splitlines()[-1])
     except ValueError:
         sys.exit("runprobe.py: unreadable machine observation:\n%s%s" % (r.stdout, r.stderr))
+    if args.expect_stop is not None:
+        if obs.get("status") == "ok":
+            sys.exit("runprobe.py: expect-stop probe: the machine ran CLEAN "
+                     "— the stub the probe aims at was never reached:\n%s" % raw)
+        if args.expect_stop not in raw:
+            sys.exit("runprobe.py: expect-stop probe: the machine stopped, "
+                     "but not at %r (first stop, verbatim):\n%s"
+                     % (args.expect_stop, raw))
+        print("runprobe: machine first stop contains %r, verbatim:\n  %s"
+              % (args.expect_stop, raw))
+        if not args.keep:
+            shutil.rmtree(out, ignore_errors=True)
+        print("runprobe: PASS (expect-stop) — both oracles refuse this drive "
+              "loudly; the fail-closed stub has teeth")
+        return
     if obs.get("status") != "ok":
         sys.exit("runprobe.py: THE MACHINE STOPPED (first stop, verbatim):\n%s" % raw)
     vals = obs.get("values", [])

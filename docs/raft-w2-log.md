@@ -341,6 +341,18 @@ package `raft` (raft.go, log.go, storage.go, node.go, rawnode.go, util.go)
 arrives with W4's stage-wise lowering. The package compiles and lowers as it
 stands, which is what makes the injection checkable now rather than at W4.
 
+> **RETIRED 2026-08-21 (W4.2 item 1, executing the 2026-08-20 Q2 ruling —
+> `docs/raft-w3-log.md` §5, harness design §5).** The no-op overlay is
+> DELETED; `logger.go` is vendored VERBATIM and the HARNESS supplies the
+> `Logger` through BOTH seams (`raft.SetLogger` + `Config.Logger`). H-2's
+> weakening — `Panic`/`Panicf`/`Fatal` doing nothing — is gone with it:
+> the harness logger's four abort methods genuinely panic, so
+> `assertConfStatesEquivalent` keeps its teeth. The surviving delta is
+> D-12 (three code lines: the two package-level initializers and the
+> orphaned `io` import), recorded in `docs/raft-w42-log.md`'s ledger
+> continuation with the re-measured numbers and the dead-DYNAMICALLY
+> census argument the swap re-owed.
+
 ### D-6 import paths
 `go.etcd.io/raft/v3/{quorum,raftpb}` → `{quorum,raftpb}`, two occurrences,
 both in `tracker/tracker.go`. Per `docs/2026-08-18_multipackage-identity.md`

@@ -12,47 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// OVERLAY (tools/raftsubject/overlay/raft/logger.go) — the W2.2 NO-OP LOGGER
-// INJECTION (master plan §W2.2, scoping §7 layer B "Logging"). Upstream
-// raft/logger.go's SHA-256 is pinned in tools/raftsubject/derive.py, so a pin
-// move that changes the Logger interface fails the derivation loud.
-//
-// WHY AN OVERLAY AND NOT A VENDOR. Upstream's file is the Logger INTERFACE
-// (pure declaration, portable) plus DefaultLogger, an implementation over
-// `log`, `os`, `io` and `fmt` — four packages that are never interpreted
-// (impure/runtime-touching, standing library policy). raft calls the logger
-// from its normal paths, so it cannot simply be quarantined: it has to be
-// REPLACED behind a seam the library already provides, which is exactly what
-// the Logger interface is. Injecting a no-op is the seam's intended use, not
-// a workaround.
-//
-// SUBJECT DELTA, itemised (docs/raft-w2-log.md, subject-delta ledger):
-//
-//  1. The `Logger` interface is upstream VERBATIM — twelve methods, same
-//     names, same signatures. Any raft call site type-checks unchanged.
-//  2. `DefaultLogger` (the `*log.Logger`-backed implementation, its
-//     EnableDebug/EnableTimestamps knobs, and the `header` helper) is
-//     REPLACED by `noopLogger`: twelve empty bodies. Imports `fmt`, `io`,
-//     `log`, `os` disappear entirely.
-//  3. `defaultLogger` and `discardLogger` both become the no-op, so
-//     `ResetDefaultLogger()` restores the no-op rather than a stderr logger.
-//  4. `os.Exit(1)` in Fatal/Fatalf is DROPPED, and `Panic`/`Panicf` no
-//     longer panic. This is the one delta with observable weight: upstream
-//     Fatal terminates the process and Panic panics. Rationale and the
-//     honest cost are argued in the log; the short form is that both are
-//     RENDERING-COUPLED aborts (they exist to print a message and die) and
-//     raft reaches them only on states it treats as impossible. Keeping the
-//     abort without the message would be a bare `panic("")`, which the
-//     differential could not distinguish from a genuine one. The abort
-//     behaviour is a recorded handoff item, not a settled question.
-//  5. `raftLoggerMu sync.Mutex` is KEPT: `sync.Mutex` is modeled
-//     (docs/2026-08-09_sync-package-design.md), SetLogger/getLogger race
-//     under the concurrent twin, and dropping it would be a
-//     concurrency-semantics delta smuggled in as a convenience.
-
 package raft
 
-import "sync"
+import (
+	"fmt"
+	"log"
+	"os"
+	"sync"
+)
 
 type Logger interface {
 	Debug(v ...any)
@@ -90,27 +57,91 @@ func getLogger() Logger {
 	return raftLogger
 }
 
+// GOLEAN SUBJECT DELTA D-12 (the Q2 logger ruling — docs/raft-w42-log.md
+// item 1): the two initializers lose their `log.New(...)` calls (a
+// package-level var has no per-declaration quarantine — G-3/H-11 — so an
+// unlowerable initializer refuses the whole export). The harness installs
+// its own Logger through BOTH seams before any node exists; a pre-install
+// Logger call under `go run` nil-derefs loudly instead of printing.
 var (
-	defaultLogger = &noopLogger{}
-	discardLogger = &noopLogger{}
+	defaultLogger = &DefaultLogger{}
+	discardLogger = &DefaultLogger{}
 	raftLoggerMu  sync.Mutex
 	raftLogger    = Logger(defaultLogger)
 )
 
-// noopLogger is the injected no-op implementation of Logger (delta 2): every
-// method is empty, so no rendering path is reachable through the logger seam
-// and no format string is ever evaluated.
-type noopLogger struct{}
+const (
+	calldepth = 2
+)
 
-func (l *noopLogger) Debug(v ...any)                   {}
-func (l *noopLogger) Debugf(format string, v ...any)   {}
-func (l *noopLogger) Info(v ...any)                    {}
-func (l *noopLogger) Infof(format string, v ...any)    {}
-func (l *noopLogger) Error(v ...any)                   {}
-func (l *noopLogger) Errorf(format string, v ...any)   {}
-func (l *noopLogger) Warning(v ...any)                 {}
-func (l *noopLogger) Warningf(format string, v ...any) {}
-func (l *noopLogger) Fatal(v ...any)                   {}
-func (l *noopLogger) Fatalf(format string, v ...any)   {}
-func (l *noopLogger) Panic(v ...any)                   {}
-func (l *noopLogger) Panicf(format string, v ...any)   {}
+// DefaultLogger is a default implementation of the Logger interface.
+type DefaultLogger struct {
+	*log.Logger
+	debug bool
+}
+
+func (l *DefaultLogger) EnableTimestamps() {
+	l.SetFlags(l.Flags() | log.Ldate | log.Ltime)
+}
+
+func (l *DefaultLogger) EnableDebug() {
+	l.debug = true
+}
+
+func (l *DefaultLogger) Debug(v ...any) {
+	if l.debug {
+		l.Output(calldepth, header("DEBUG", fmt.Sprint(v...)))
+	}
+}
+
+func (l *DefaultLogger) Debugf(format string, v ...any) {
+	if l.debug {
+		l.Output(calldepth, header("DEBUG", fmt.Sprintf(format, v...)))
+	}
+}
+
+func (l *DefaultLogger) Info(v ...any) {
+	l.Output(calldepth, header("INFO", fmt.Sprint(v...)))
+}
+
+func (l *DefaultLogger) Infof(format string, v ...any) {
+	l.Output(calldepth, header("INFO", fmt.Sprintf(format, v...)))
+}
+
+func (l *DefaultLogger) Error(v ...any) {
+	l.Output(calldepth, header("ERROR", fmt.Sprint(v...)))
+}
+
+func (l *DefaultLogger) Errorf(format string, v ...any) {
+	l.Output(calldepth, header("ERROR", fmt.Sprintf(format, v...)))
+}
+
+func (l *DefaultLogger) Warning(v ...any) {
+	l.Output(calldepth, header("WARN", fmt.Sprint(v...)))
+}
+
+func (l *DefaultLogger) Warningf(format string, v ...any) {
+	l.Output(calldepth, header("WARN", fmt.Sprintf(format, v...)))
+}
+
+func (l *DefaultLogger) Fatal(v ...any) {
+	l.Output(calldepth, header("FATAL", fmt.Sprint(v...)))
+	os.Exit(1)
+}
+
+func (l *DefaultLogger) Fatalf(format string, v ...any) {
+	l.Output(calldepth, header("FATAL", fmt.Sprintf(format, v...)))
+	os.Exit(1)
+}
+
+func (l *DefaultLogger) Panic(v ...any) {
+	l.Logger.Panic(v...)
+}
+
+func (l *DefaultLogger) Panicf(format string, v ...any) {
+	l.Logger.Panicf(format, v...)
+}
+
+func header(lvl, msg string) string {
+	return fmt.Sprintf("%s: %s", lvl, msg)
+}
