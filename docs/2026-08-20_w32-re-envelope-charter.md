@@ -607,6 +607,32 @@ charter's log as a user ruling rather than as an arc choice.
   panic-identity membership): in this arc if budget survives, or
   explicitly next-queue. *Default: attempt in-arc, drop with a
   recorded reason if budget does not survive — never silently.*
+- **OQ5 — what `nonterm=` MEANS under `engine=dedup`** (added
+  2026-08-21 by the POR slice; surfaced here by audit finding B-F4
+  because it is a CLAIM-STANDARD question, not an implementation
+  detail, and the log entry was the only place it lived). Under the DFS
+  engine `nonterm=N` is a DECLARED PER-BRANCH FUEL: a branch that does
+  not terminate within it is CUT and tallied in the run record's
+  `nonterm=` count — in the envelope by right, never a member, never
+  green-contributing. The dedup engine has no such branch: a spin
+  collapses into a graph CYCLE, explored exhaustively and cut nowhere,
+  so there is nothing for the parameter to bound and nothing for the
+  record to count. Measured on THE WEDGE (`send-then-spin`, which
+  declares `nonterm=200` and whose DFS record tallies `nonterm=216`
+  cut branches): dedup certifies `{42}` EXHAUSTIVELY at 760 nodes —
+  no cut branches, no back-edge cap. The three candidate rulings:
+  (a) `nonterm=` is DFS-only and is dropped from `engine=dedup` rows
+  (the gate stops requiring/parsing it there); (b) it is retained with
+  a documented dedup meaning ("no cut branches — divergence lives in
+  the graph", i.e. always 0 in the record); (c) it keeps its current
+  meaning and dedup rows still declare a fuel that nothing on that
+  path consumes — a number no gate can check.
+  **Riding on this**: the membership singleton-guard exemption for
+  declared-nonterm rows, and whether the wedge row switches to
+  `engine=dedup` at all. *No default stated — this one changes what a
+  green row asserts, so the POR slice deliberately did NOT rule it and
+  left the wedge on the DFS engine.* Reference detail:
+  `docs/w32-log.md`, POR slice entry.
 
 ## DONE (the conjunction)
 

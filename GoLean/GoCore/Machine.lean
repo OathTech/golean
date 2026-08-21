@@ -2749,6 +2749,22 @@ def applySelectCore (s : ExecState)
   let evs ← evalClauses clauses vs
   match ← readyClauses s evs with
   | [] =>
+      -- NO ready clause: neither arm is a registry-op COMPLETION, so
+      -- neither is wrapped in `.opDone` — B1 scopes post-op boundaries
+      -- to select COMMITS (`docs/2026-08-20_w32-boundary-set.md` §B1,
+      -- "select commits (entry path `applySelect`, arrival path
+      -- `commitClause`)"), and a default-take commits nothing.
+      -- ENVELOPE-NEUTRAL, on the passive-partner argument's pattern
+      -- (§B1's fourth bullet: wrapping adds a no-op step and no
+      -- latitude): taking the default changes no channel or sync
+      -- state and wakes nobody, so no other goroutine's futures depend
+      -- on a boundary placed AFTER it — the goroutine continues into
+      -- `d`, whose own next registry op emits its own `.opDone`. The
+      -- latitude that decides WHETHER this select sees a ready clause
+      -- is consumed before this step, at the other goroutines'
+      -- boundaries; a point here would only re-offer the same
+      -- successor set. The park arm needs none either — a park IS a
+      -- boundary shape already (§B1's "NOT wrapped" note).
       match default? with
       | some d => return .done (.exec d env k) s none
       | none => return .done (.blockedSelect evs env k) s none
