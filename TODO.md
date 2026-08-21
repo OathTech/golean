@@ -793,7 +793,7 @@ charter's §Open questions, each with a stated default.
         Q-SYNCVAL slice.
       - **Q-COND** (3 reds; memo §8) — recommended: defer with the
         DOCS-text envelope pre-ruled (no spurious wakeups; Signal =
-        any-waiter; Broadcast forced-all; copy = fatal).
+        any-waiter; Broadcast forced-all; copy = detected panic).
 - [ ] **RULE what `nonterm=` MEANS under `engine=dedup`** (charter
       §Open questions **OQ5**, added 2026-08-21 by the POR slice; row
       booked here by audit finding B-F4 so it is visible outside the
