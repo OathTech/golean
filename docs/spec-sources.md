@@ -40,7 +40,11 @@ Replicate: `scripts/setup-deps --only go,covmap,go101,spectec,esmeta,proposal`
 (covmap needs `--from <checkout-with-deps/covmap>`). NOTE the shallow
 caveat: go101/spectec/esmeta here are depth-50 clones; setup-deps
 `--from` a shallow copy fails closed (by design) — reclone from the
-public URL instead.
+public URL instead. (This command did not work as written between
+2026-08-21's Lake-packages change and its audit fix round the same day:
+the new section ran regardless of `--only` and failed on Lake packages
+nobody had asked for. `--only` now scopes it — add the pseudo-name
+`lake`, or `lake:<pkg>`, when you DO want the Lake checkouts.)
 
 ## Papers (`deps/papers/`, fetched 2026-08-17)
 

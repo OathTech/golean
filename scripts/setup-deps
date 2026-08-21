@@ -18,9 +18,24 @@
 #                  offline and is the ONLY source for repos with no
 #                  public URL. Local clones use --shared=false (full
 #                  object copy: a pruned sibling must not corrupt us).
+#                  BOTH spellings reach BOTH sections: given a repo
+#                  root, deps/ and proofs/.lake/packages/ are found
+#                  under it; given the deps/ dir itself, the root is its
+#                  parent (fixed 2026-08-21, audit fix round — the
+#                  deps-dir spelling used to leave the Lake section with
+#                  no local source, so it silently tried the network for
+#                  a package the caller had just handed it locally).
 #   --only ...     restrict to named repos (default: the GATE set, see
 #                  the table — reading-only comparison checkouts are
-#                  opt-in by name).
+#                  opt-in by name). The Lake section (below) is selected
+#                  by the pseudo-name `lake` for all of it, or
+#                  `lake:<pkg>` for one package; with any --only that
+#                  names neither, the Lake section is SKIPPED. Without
+#                  --only it always runs. (Fixed 2026-08-21, audit fix
+#                  round: it used to run unconditionally, so the
+#                  documented replicate command at docs/spec-sources.md
+#                  — `--only go,covmap,go101,spectec,esmeta,proposal` —
+#                  failed on Lake packages nobody had asked for.)
 #
 # Behavior per repo, fail-closed:
 #   - already present at the pinned rev  -> ok (untouched)
@@ -31,6 +46,11 @@
 #   - absent, public URL known           -> network clone + checkout pin
 #   - absent, no URL and no --from       -> FAIL with the exact command
 #     to run (hand it to the operator; never guess a source)
+#   - present, NOT a checkout, NOT empty -> FAIL and touch NOTHING (a
+#     hand-populated copy is the operator's; this script neither clones
+#     over it nor deletes it — added 2026-08-21, audit fix round). The
+#     `rm -rf` in the clone-failure handlers is reachable only AFTER
+#     that check passes, i.e. only for a partial clone this run made.
 #
 # The pins table is DERIVED from the authoritative sources named in each
 # row's comment — when a pin moves there, move it here in the same
@@ -49,10 +69,53 @@ while [[ $# -gt 0 ]]; do
     *) echo "setup-deps: unknown argument '$1' (fail closed)" >&2; exit 2 ;;
   esac
 done
-# Keep the repo-root form of --from (for proofs/.lake/packages below)
-# before normalizing FROM itself to the deps/ subdir.
+# Resolve BOTH forms of --from into the two things the two sections
+# need: FROM = the sibling's deps/ dir, FROMROOT = the sibling's repo
+# root (for proofs/.lake/packages below). Either spelling gives both.
 FROMROOT="$FROM"
-[[ -n "$FROM" && -d "$FROM/deps" ]] && FROM="$FROM/deps"
+if [[ -n "$FROM" && -d "$FROM/deps" ]]; then
+  # a repo root was given
+  FROM="$FROM/deps"
+elif [[ -n "$FROM" && "$(basename -- "$FROM")" == "deps" ]]; then
+  # the deps/ dir itself was given — the root is its parent, so the
+  # Lake section below still has a LOCAL source instead of falling
+  # through to the network (audit fix round 2026-08-21).
+  FROMROOT="$(dirname -- "$FROM")"
+fi
+
+# --only selection for the Lake section: `lake` (all) or `lake:<pkg>`.
+# No --only at all = run it, same as the deps/ default set.
+lake_selected() { # $1 = package name
+  [[ -z "$ONLY" ]] && return 0
+  [[ ",$ONLY," == *",lake,"* ]] && return 0
+  [[ ",$ONLY," == *",lake:$1,"* ]] && return 0
+  return 1
+}
+lake_section_selected() {
+  [[ -z "$ONLY" ]] && return 0
+  [[ ",$ONLY," == *",lake,"* ]] && return 0
+  [[ ",$ONLY," == *",lake:"* ]] && return 0
+  return 1
+}
+
+# Refuse to clone over a POPULATED non-git directory, and never rm -rf
+# one (audit fix round 2026-08-21). The hazard is concrete and it is
+# exactly the state this script was written to replace: a lane that did
+# the manual `cp -a proofs/.lake/packages` has populated, .git-less
+# directories. Those miss the "already a checkout" test above, git clone
+# then fails on the non-empty destination, and the failure handler's
+# `rm -rf "$dest"` would delete the operator's tree. So: check first,
+# fail closed, and only ever remove a directory THIS RUN created.
+refuse_if_populated() { # $1 = dest, $2 = label
+  local dest="$1" label="$2"
+  if [[ -e "$dest" ]] && [[ -n "$(ls -A "$dest" 2>/dev/null)" ]]; then
+    echo "setup-deps: FAIL — $label: '$dest' already exists and is NOT a git checkout, but is not empty." >&2
+    echo "  refusing to clone over it and refusing to delete it (it may be a hand-populated copy)." >&2
+    echo "  resolve by hand: inspect it, then either remove it yourself or leave it and skip $label." >&2
+    return 1
+  fi
+  return 0
+}
 
 # name | pinned rev | public URL ("-" = none: --from required) | in default set
 # Pins' authoritative homes: goose = scripts/check-imported-goose PINNED_REV;
@@ -127,9 +190,14 @@ while read -r name rev url tier; do
     echo "  hand the operator:  scripts/setup-deps --from <a sibling repo with deps/$name> --only $name" >&2
     fail=1; continue
   fi
+  if ! refuse_if_populated "$dest" "$name"; then
+    fail=1; continue
+  fi
   echo "setup-deps: cloning   $name from $src"
   if ! git clone --quiet --no-hardlinks "$src" "$dest" 2>/dev/null; then
     echo "setup-deps: FAIL — clone of $name from $src failed (no network / bad source); use --from <sibling deps dir> (fail closed)" >&2
+    # Safe: refuse_if_populated above guarantees $dest was empty or
+    # absent before the clone, so this only removes a partial clone.
     rm -rf "$dest"; fail=1; continue
   fi
   if [[ "$rev" != "-" ]]; then
@@ -150,7 +218,9 @@ done <<< "$PINS"
 # own bootstrap). Populate them here instead, same posture as deps/:
 # offline from --from's sibling checkout at the MANIFEST pins, fail
 # closed, rev drift reported and never touched.
-if [[ -f proofs/lake-manifest.json ]]; then
+if ! lake_section_selected; then
+  echo "setup-deps: skipped   Lake packages (--only '$ONLY' names none; pass 'lake' or 'lake:<pkg>' to include them)"
+elif [[ -f proofs/lake-manifest.json ]]; then
   mkdir -p proofs/.lake/packages
   lake_pkgs="$(python3 -c "
 import json
@@ -162,6 +232,7 @@ for p in m['packages']:
 " 2>/dev/null)" || { echo "setup-deps: FAIL — cannot parse proofs/lake-manifest.json (fail closed)" >&2; fail=1; lake_pkgs=""; }
   while read -r name rev url; do
     [[ -z "$name" ]] && continue
+    lake_selected "$name" || continue
     dest="proofs/.lake/packages/$name"
     if [[ -d "$dest/.git" || -f "$dest/.git" ]]; then
       have="$(git -C "$dest" rev-parse HEAD)"
@@ -178,13 +249,25 @@ for p in m['packages']:
       src="$FROMROOT/proofs/.lake/packages/$name"
     elif [[ "$url" != "-" && -n "$url" ]]; then
       src="$url"
+      # A --from that does not carry this package still goes to the
+      # network — but never SILENTLY (audit fix round 2026-08-21):
+      # offline lanes must be able to see that this run left the
+      # sibling, and why.
+      if [[ -n "$FROMROOT" ]]; then
+        echo "setup-deps: note      lake:$name — '$FROMROOT/proofs/.lake/packages/$name' is not a checkout, falling back to the manifest URL (this reaches the NETWORK)" >&2
+      fi
     else
       echo "setup-deps: FAIL — lake package $name has no URL in the manifest and --from did not provide proofs/.lake/packages/$name (fail closed)" >&2
+      fail=1; continue
+    fi
+    if ! refuse_if_populated "$dest" "lake:$name"; then
       fail=1; continue
     fi
     echo "setup-deps: cloning   lake:$name from $src"
     if ! git clone --quiet --no-hardlinks "$src" "$dest" 2>/dev/null; then
       echo "setup-deps: FAIL — clone of lake package $name from $src failed (no network / bad source); use --from <a sibling repo root> (fail closed)" >&2
+      # Safe: refuse_if_populated above guarantees $dest was empty or
+      # absent before the clone.
       rm -rf "$dest"; fail=1; continue
     fi
     if ! git -C "$dest" checkout --quiet "$rev" 2>/dev/null; then
