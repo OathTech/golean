@@ -673,9 +673,14 @@ RESULT: PASS
 **THE CURRENT TIP IS THE RECORD.** Two runs carry it:
 `artifacts/w42/ci-tip-f7777003.txt`, the pre-audit branch tip at
 `f7777003` covering the final state of every item; and
-`artifacts/w42/ci-fixround.txt`, the run at the post-rebase audit-fix tip
-(the branch rebased onto `main` @ `cc7651fc`), which is the one to cite
-for the branch as it now stands. The per-item runs (`ci-item2.txt`,
+`artifacts/w42/ci-fixround-tip.txt`, the audit-fix round's run on the
+branch rebased onto `main` @ `cc7651fc` — **it gates `200235fd`**, and
+the only commit after it is the one that writes these two sentences
+(docs-only, this file alone). Stated by hash rather than as "the tip"
+because a gate record that names itself never terminates otherwise, and
+"the docs commit after the gate is covered by the gate" is an inference,
+not a run. `ci-fixround.txt` is the same round one commit earlier, kept
+rather than overwritten. The per-item runs (`ci-item2.txt`,
 `ci-item3.txt`, `ci-final.txt`) are the landing-time gates and each
 carries the same three lines.
 
