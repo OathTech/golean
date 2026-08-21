@@ -39,8 +39,10 @@ THE THREE DERIVATION MODES
 
   overlay   A hand-written replacement for an upstream file that cannot be
             mechanically stripped (it is hand-written Go that calls into the
-            protobuf runtime, or — for logger.go — is the W2.2 no-op Logger
-            injection).  The upstream file's SHA-256 is PINNED here: when the
+            protobuf runtime).  Two raftpb files use it; logger.go no longer
+            does (W4.2 retired the D-5 no-op overlay — the file is verbatim
+            plus the recorded D-12 initializer patch, per the Q2 ruling).
+            The upstream file's SHA-256 is PINNED here: when the
             pin moves and upstream changes, the derivation FAILS LOUD and the
             overlay must be revisited by hand.  That digest pin is the
             re-derivation contract for the files a script cannot derive.
@@ -131,7 +133,9 @@ VENDOR = [
     ("tracker/progress.go", "tracker/progress.go", "verbatim"),
     ("tracker/state.go", "tracker/state.go", "verbatim"),
     ("tracker/tracker.go", "tracker/tracker.go", "verbatim"),
-    ("logger.go", "raft/logger.go", "overlay"),
+    # W4.2: upstream VERBATIM (the Q2 ruling; D-5's no-op overlay is RETIRED)
+    # modulo the recorded D-12 initializer patch — see SUBJECT_PATCHES.
+    ("logger.go", "raft/logger.go", "verbatim"),
     # W2.2: the raft ROOT package, scoped to what RawNode's decision paths
     # need.  node.go arrives as a declaration subset (mode `select`); the
     # `with_tla` variant of the tracing file is not vendored (the default
@@ -241,11 +245,61 @@ func (r *lockedRand) Intn(n int) int {
 	return v
 }"""
 
+# ---- recorded subject patch D-12 (the Q2 logger ruling, W4.2) ------------
+#
+# W4.2 (docs/raft-w42-log.md item 1; the ruling: docs/raft-w3-log.md §5 Q2,
+# harness design §5): upstream logger.go is vendored VERBATIM — the Logger
+# interface, SetLogger/getLogger, DefaultLogger and `header` are all upstream
+# text, so raft's own assertions (`assertConfStatesEquivalent` via
+# Logger.Panic) keep their teeth through whatever Logger the HARNESS installs
+# (the harness supplies BOTH seams: raft.SetLogger(...) for the six
+# getLogger() sites AND Config.Logger for every r.logger.* call).
+#
+# The one delta the frontend still forces is the two package-level
+# initializers: `log.New(os.Stderr, ...)` / `log.New(io.Discard, ...)` are
+# package-selector calls in PACKAGE-LEVEL var initializers, and a var has no
+# per-declaration quarantine (G-3 / handoff H-11) — an unlowerable
+# initializer refuses the WHOLE export. Until H-11 lands, the initializers
+# become bare `&DefaultLogger{}` composite literals and the orphaned `io`
+# import is dropped (`fmt`, `log`, `os` stay: DefaultLogger's method bodies
+# still name them, and those methods land as per-declaration fail-closed
+# stubs, which is the honest shape).
+#
+# OBSERVABLE WEIGHT, stated: under `go run`, a Logger call BEFORE the
+# harness installs its logger would nil-deref inside DefaultLogger (the
+# embedded *log.Logger is nil) instead of printing to stderr — loud, never
+# silent, and unreachable under the twin, whose first act is SetLogger +
+# Config.Logger (the dead-DYNAMICALLY argument, docs/raft-w42-log.md).
+# Under the machine the same call is a fail-closed quarantined stub.
+LOGGER_VARS_UPSTREAM = """var (
+	defaultLogger = &DefaultLogger{Logger: log.New(os.Stderr, "raft", log.LstdFlags)}
+	discardLogger = &DefaultLogger{Logger: log.New(io.Discard, "", 0)}
+	raftLoggerMu  sync.Mutex
+	raftLogger    = Logger(defaultLogger)
+)"""
+
+LOGGER_VARS_PATCHED = """// GOLEAN SUBJECT DELTA D-12 (the Q2 logger ruling — docs/raft-w42-log.md
+// item 1): the two initializers lose their `log.New(...)` calls (a
+// package-level var has no per-declaration quarantine — G-3/H-11 — so an
+// unlowerable initializer refuses the whole export). The harness installs
+// its own Logger through BOTH seams before any node exists; a pre-install
+// Logger call under `go run` nil-derefs loudly instead of printing.
+var (
+	defaultLogger = &DefaultLogger{}
+	discardLogger = &DefaultLogger{}
+	raftLoggerMu  sync.Mutex
+	raftLogger    = Logger(defaultLogger)
+)"""
+
 # file (by OUT path) -> ordered (exact-once old, new) pairs + imports to drop.
 SUBJECT_PATCHES = {
     "raft/raft.go": {
         "swaps": [(INTN_UPSTREAM, INTN_PATCHED)],
         "drop_imports": ["crypto/rand", "math/big"],
+    },
+    "raft/logger.go": {
+        "swaps": [(LOGGER_VARS_UPSTREAM, LOGGER_VARS_PATCHED)],
+        "drop_imports": ["io"],
     },
 }
 

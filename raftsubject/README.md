@@ -14,7 +14,14 @@ raftsubject/
   raftpb/     plainpb — raft's wire types DECLARED, protobuf runtime stripped
   quorum/     upstream verbatim (import paths rewritten)
   tracker/    upstream verbatim (import paths rewritten)
-  raft/       logger.go only: the W2.2 no-op Logger injection
+  confchange/ upstream verbatim (import paths rewritten)
+  proto/      generated — the subject-local protobuf stand-in (real codec
+              dispatch since W4.1)
+  raft/       the root package (W2.2+): verbatim, plus node_decls.go (a
+              declaration subset of node.go) and the recorded subject
+              patches D-11 (jitter choice site) and D-12 (logger
+              initializers — logger.go is upstream verbatim since W4.2;
+              the harness supplies the Logger through both seams)
 ```
 
 ## Why the packages sit at short paths
@@ -40,9 +47,10 @@ subject-delta ledger and in the header comment of the file itself:
    `CloneMessage`/`EqualMessage` standing in for `proto.Clone`/`proto.Equal`,
    which raft calls on its normal paths. Differentially validated against the
    real protobuf runtime by `tools/raftsubject/difftest.py`.
-3. **`raftpb/confstate.go`, `raftpb/confchange.go`, `raft/logger.go`** —
-   overlays (upstream digests pinned in the derivation, so a pin move fails
-   loud).
+3. **`raftpb/confstate.go`, `raftpb/confchange.go`** — overlays (upstream
+   digests pinned in the derivation, so a pin move fails loud).
+   `raft/logger.go` is NOT an overlay since W4.2: it is upstream verbatim
+   plus the recorded D-12 initializer patch (`docs/raft-w42-log.md`).
 
 Everything else — including the parts the frontend cannot lower yet
 (statement-position `copy`, `panic(fmt.Sprintf(...))`, the `String`/`Describe`
