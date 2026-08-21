@@ -389,6 +389,16 @@ prover definitions; prior art reviewed in
   "lowering checked" instead of "lowering trusted" and targets the
   TCB component where every recent silent-wrong-answer bug lived
   (BUG-057/058/062/063, the hoist family).
+- **Prep artifact (2026-08-21): the desugar-obligation inventory**,
+  `docs/2026-08-21_w7-desugar-inventory.md` — 246 rows censusing every
+  semantic lowering decision the native frontend makes, each with its
+  anchor, spec anchor, correctness-statement shape, guardrail case
+  families and a difficulty guess. It also fixes the vocabulary the
+  route needs (five obligation KINDS, of which the latitude one is a
+  MEMBERSHIP claim, never equality with a gc-pin), proposes an order
+  for the first certificates (if-init hoisting, then comma-ok, then
+  shadow-capture), and lists W7's open design questions (§12) and six
+  suspected holes the census turned up (§10).
 - **Interaction with W3.2 slice 6a (the opsem artifact): 6a HOLDS
   for the prototype** — if the tool lands on its expected timeline,
   spectec becomes the master notation (GoCore proven against it)
