@@ -3134,3 +3134,84 @@ user ruling — a claim-standard change is not the arc's to make);
 (c) THE PRINCIPLED FIX: the reduction/DPOR lane (NPDRF, slice 5) —
 sound schedule reduction re-shrinks exactly these trees, and the
 mover theorem resumes over the widened point set by design.
+
+## BUG-066 — slice expression with an elided high bound evaluates its base TWICE
+
+- Status: open
+- Pinned-by: differential
+- Cases: slices/slice-elided-high-eval-once/call-base, slices/slice-elided-high-eval-once/call-base-low-only, pointers/slice-elided-high-pointer-array-base, strings/slice-eval-order-elided-high
+
+`spec#Slice_expressions` evaluates the sliced operand ONCE; the elided
+high bound "defaults to the length of the sliced operand" — a default
+over the one evaluated operand, not a second evaluation. The frontend's
+`emitSliceExpr` (`tools/nativefrontend/emit.go`) emitted the base at
+the base slot and then, for an elided high, emitted the SAME operand a
+second time as the `builtin-len` argument. Each emission of a
+call-valued operand hoists a fresh `$cN := call` temp, so the call ran
+twice: `expensive()[:]` — gc 1 call, machine 2, status `ok` on both
+sides. The wire shows it directly: two call statements, `$c1` as the
+slice base and `$c2` inside the `builtin-len`.
+
+Both witnessed forms reproduce: the slice base (`expensive()[:]`,
+machine 230 vs go 130 on the pinned encoding; low-only `[1:]` sibling
+220 vs 120) and the pointer-returning array base (`pf().arr[2:]`,
+machine 223 vs go 123 — the census's first-pass value-returning form
+`f().arr[2:]` is not legal Go, an array sliced through a call result is
+unaddressable). The explicit-high control (`expensive()[0:3]`) agrees
+at 1 call on both sides, pinned green. `strings/slice-eval-order` was
+the near miss — it pins base→low→high order with an EXPLICIT high, so
+its elided-high sibling (`strings/slice-eval-order-elided-high`,
+machine 12228 vs go 1328: source, lo, source again) is what an
+eval-once regression would trip.
+
+Every other documented eval-once hazard was guarded
+(`emitReadWriteTarget`; BUG-047's conversion guard) — this one was
+unguarded and unpinned, `ok`-status silent since `a18ebd24`
+(2026-07-18). Found by the W7 desugar census (§10 H-a,
+`docs/2026-08-21_w7-desugar-inventory.md`), reduced to a witness by its
+pre-merge audit — reasoning over the emitter, not any gate.
+
+Fix shape: emit the base once and reuse it — slices/strings reuse the
+single emitted base node as the `builtin-len` operand (its effects were
+hoisted by that one emission); array bases take the STATIC array length
+as the default high (exactly the spec's `len(a)` for an array operand,
+constant even when the operand expression contains calls — the operand
+itself still evaluates once at the base slot, through its address).
+
+## BUG-067 — wire func TYPE nodes drop the variadic bit: `func(...int)` ≡ `func([]int)` to the machine
+
+- Status: open
+- Pinned-by: differential
+- Cases: interfaces/assert-func-variadic/mismatch-variadic-at-slice, interfaces/assert-func-variadic/mismatch-slice-at-variadic
+
+`spec#Type_identity`: two function types are identical only if they
+have "the same number of parameters and result values, corresponding
+parameter and result types are identical, and either both functions
+are variadic or neither is." The emitter's `emitType` Signature arm
+(`tools/nativefrontend/wire.go`) lowered `func(...int) int` and
+`func([]int) int` to the same `{"kind":"func","params":[[]int],
+"results":[int]}` — go/types types the variadic parameter `[]int` and
+the bit lived nowhere else in the node. The contrast was deliberate
+elsewhere: `variadic` IS carried on `Func` declarations and on
+interface-method requirements (pre-merge audit 2026-07-31 finding 0),
+so the METHOD-SET direction answers correctly — the existing
+`interfaces/method-set-variadic-mismatch/*` family (5 rows, finding 0's
+own guardrails) is the standing green control; the TYPE nodes were the
+hole.
+
+Witness (census §10 H-d, `docs/2026-08-21_w7-desugar-inventory.md`,
+verified end to end): box a variadic func in `any`, comma-ok assert at
+`func([]int) int` — gc `false`, machine `true`, status `ok`. Both
+`type-assert` statements carry byte-identical `targetType` and the
+boxed value's dynamic type is that same node, so no semantics the
+machine could give the node answers both assertions correctly — the
+information is gone before Lean sees it. Both directions pinned
+(machine 11 vs go 1 on the int encodings). Silent since `7ce738bc`
+(2026-07-25). The first pass's "not observable in the current refusal
+envelope (reflection is refused)" was refuted by the audit: a comma-ok
+func-type assertion is ordinary supported Go.
+
+Fix shape: the wire func type node carries `variadic`; the decoder
+REQUIRES it (the §9.5 fail-closed discipline, same as func/method/
+interface-requirement decodes) and `Ty.funcType` carries the bit into
+type identity, where `tyEq` compares it.

@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+mismatch-variadic-at-slice	mismatchVariadicAtSlice	-	ok	-	interfaces,type_assertions,comma_ok,variadic,functions
+mismatch-slice-at-variadic	mismatchSliceAtVariadic	-	ok	-	interfaces,type_assertions,comma_ok,variadic,functions
+match-right-types	matchRightTypes	-	ok	-	interfaces,type_assertions,comma_ok,variadic,functions,calls
