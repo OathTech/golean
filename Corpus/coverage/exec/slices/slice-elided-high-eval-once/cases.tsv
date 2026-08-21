@@ -2,3 +2,7 @@
 call-base	callBase	-	ok	-	slices,slicing,evaluation_order,calls
 call-base-low-only	callBaseLowOnly	-	ok	-	slices,slicing,evaluation_order,calls
 explicit-high-control	explicitHighControl	-	ok	-	slices,slicing,evaluation_order,calls
+nested-slice-expr	nestedSliceExpr	-	ok	-	slices,slicing,evaluation_order,calls
+map-index-effectful-key	mapIndexEffectfulKey	-	ok	-	slices,maps,slicing,indexing,evaluation_order,calls
+pointer-array-call-base	pointerArrayCallBase	-	ok	-	slices,pointers,arrays,slicing,evaluation_order,calls
+conversion-base	conversionBase	-	ok	-	slices,strings,conversions,slicing,evaluation_order,calls

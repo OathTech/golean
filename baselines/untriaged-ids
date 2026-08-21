@@ -163,6 +163,30 @@ sync/atomic-frontier/mp-litmus	coverage
 #   fix, whose scope is receiver-position only (the store-order pins
 #   forbid a blanket change at emitAddressOf).
 pointers/nil-array-ptr-slice/slice-expr-nil	coverage
+# pointers/nil-array-ptr-slice-elided-high/{deref-elided-high,
+#   deref-low-only,pointer-form,zero-length-array}: the ELIDED-HIGH half
+#   of the row above's family, entering at the holes-arc audit fix round
+#   (2026-08-21, finding F1). SAME class, SAME message, SAME retirement
+#   condition (the slice-base nil arm) — four base spellings of one hole,
+#   not four holes.
+#   Two of them (deref-elided-high, deref-low-only) were ACCIDENTALLY
+#   CORRECT before BUG-066: the old default-high lowering re-emitted the
+#   whole operand inside a builtin-len, and that second emission
+#   dereferenced the nil pointer and panicked — the right answer produced
+#   by the double evaluation the fix removed. With the base evaluated
+#   once they converge on the documented refusal. Measured (frontend
+#   6146b217 vs 90b12339, one decoder): ok/100 -> stuck for those two;
+#   pointer-form and zero-length-array were ALREADY stuck. So the fix
+#   WIDENED a fail-closed refusal — never turned a right answer wrong,
+#   which is why this is a coverage row and not a BUG entry (recorded on
+#   BUG-066's entry as the widening line).
+#   The dir's two green rows (field-through-nil-{ptr,call}) are the scope
+#   control and are NOT tracked here: a nil pointer reached through a
+#   FIELD selector still panics correctly on both sides.
+pointers/nil-array-ptr-slice-elided-high/deref-elided-high	coverage
+pointers/nil-array-ptr-slice-elided-high/deref-low-only	coverage
+pointers/nil-array-ptr-slice-elided-high/pointer-form	coverage
+pointers/nil-array-ptr-slice-elided-high/zero-length-array	coverage
 # pointers/zero-size-address/escaped-same: LATITUDE deviation record
 #   (inventory R15, audit fix round F1 2026-08-19): "Two distinct
 #   zero-size variables may have the same address" — gc's heap/escaped

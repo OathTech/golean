@@ -1,20 +1,41 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-21 (holes arc, BUG-067 fix — branch holes-arc;
-#   wire func TYPE nodes carry `variadic`, decoder requires it,
-#   Ty.funcType carries it into identity + panic-message render;
-#   census H-d / E-7).
-#   re-pin reason: exactly the two predicted FAIL->PASS flips, zero
-#   other movement on the 2332 ids (--full: no missing):
-#     interfaces/assert-func-variadic/mismatch-variadic-at-slice,
-#     interfaces/assert-func-variadic/mismatch-slice-at-variadic.
-#   Blast radius: swept all 1119 emittable corpus wires pre-run —
-#   only the guardrails and three variadic/* value-storage rows carry
-#   a variadic:true func TYPE node; nothing else consumes the bit.
-#   The tier=slow google-search certified record was re-certified in
-#   the same change (wire-sha staleness alarm, schema widening only —
-#   set and graph reproduced bit-for-bit).
-#   counts: 2332 cases, 2192 PASS / 140 FAIL (was 2190/142)
+# recorded: 2026-08-21 (holes arc AUDIT FIX ROUND — branch holes-arc;
+#   findings F1/F2/F3 of the pre-merge audit of `4490bc24`).
+#   re-pin reason: eleven NEW ids, zero movement on any of the 2332 ids
+#   the previous record held (verified by the run's own drift report:
+#   every drifted line reads "NEW id (not in baseline)").
+#     F1, 4 NEW REDS at lean-observation, all one class —
+#       pointers/nil-array-ptr-slice-elided-high/{deref-elided-high,
+#       deref-low-only,pointer-form,zero-length-array}: the elided-high
+#       spellings of the nil pointer-to-array slice base whose
+#       explicit-high sibling (pointers/nil-array-ptr-slice/
+#       slice-expr-nil) has been red since 2026-08-19. Two of them were
+#       ACCIDENTALLY CORRECT before BUG-066 — the removed second base
+#       emission dereferenced the nil pointer — so this is a WIDENED
+#       fail-closed refusal, never a wrong answer (BUG-066's widening
+#       paragraph; tracked in baselines/untriaged-ids at `coverage`,
+#       ceiling 7 -> 11 in baselines/untriaged-count).
+#     F1 control + F2 + F3, 7 NEW GREENS —
+#       pointers/nil-array-ptr-slice-elided-high/{field-through-nil-ptr,
+#       field-through-nil-call} (the refusal is the slice-base nil arm
+#       and nothing wider); slices/slice-elided-high-eval-once/
+#       {nested-slice-expr,map-index-effectful-key,
+#       pointer-array-call-base,conversion-base} (four base shapes
+#       BUG-066 fixed that nothing pinned — the nested one ran the base
+#       FOUR times pre-fix); interfaces/assert-func-variadic/
+#       assert-variadic-at-slice-panic (BUG-067's panic direction: a
+#       status-`ok` divergence pre-fix, and the byte-exact `...E`
+#       message render).
+#   counts: 2343 cases, 2199 PASS / 144 FAIL (was 2332: 2192/140)
 #   frontend: native (tools/nativefrontend + NativeToIR)
+#   COLLATION (recorded 2026-08-21, audit fix round — it had never been
+#   said): rows are sorted by id under LC_ALL=C. The guardrails commit
+#   `6146b217` regenerated the file under C where every earlier record
+#   had used en_US.UTF-8, which is why that commit's diff moved ~90
+#   unchanged lines. Re-verified at this re-pin: sorted C-side, the
+#   pre-arc record and `6146b217`'s differ by exactly the eight
+#   guardrail rows that commit added — the re-sort hid nothing. Keep
+#   regenerating under LC_ALL=C.
 # columns: result<TAB>id<TAB>stage
 result	id	stage
 PASS	arrays/array-bounds	-
@@ -1217,6 +1238,7 @@ PASS	interfaces/assert-error-satisfaction/classify	-
 PASS	interfaces/assert-error-satisfaction/declared-not-called	-
 PASS	interfaces/assert-error-satisfaction/no-call	-
 PASS	interfaces/assert-error-satisfaction/positive	-
+PASS	interfaces/assert-func-variadic/assert-variadic-at-slice-panic	-
 PASS	interfaces/assert-func-variadic/match-right-types	-
 PASS	interfaces/assert-func-variadic/mismatch-slice-at-variadic	-
 PASS	interfaces/assert-func-variadic/mismatch-variadic-at-slice	-
@@ -1648,6 +1670,12 @@ PASS	pointers/inc-via-call	-
 PASS	pointers/nil-array-elem-store	-
 PASS	pointers/nil-array-elem-store/second-target	-
 PASS	pointers/nil-array-index-panic	-
+FAIL	pointers/nil-array-ptr-slice-elided-high/deref-elided-high	lean-observation
+FAIL	pointers/nil-array-ptr-slice-elided-high/deref-low-only	lean-observation
+PASS	pointers/nil-array-ptr-slice-elided-high/field-through-nil-call	-
+PASS	pointers/nil-array-ptr-slice-elided-high/field-through-nil-ptr	-
+FAIL	pointers/nil-array-ptr-slice-elided-high/pointer-form	lean-observation
+FAIL	pointers/nil-array-ptr-slice-elided-high/zero-length-array	lean-observation
 FAIL	pointers/nil-array-ptr-slice/slice-expr-nil	lean-observation
 PASS	pointers/nil-deref-panic	-
 PASS	pointers/nil-selector-panic	-
@@ -1832,7 +1860,11 @@ PASS	slices/slice-append	-
 PASS	slices/slice-copy	-
 PASS	slices/slice-elided-high-eval-once/call-base	-
 PASS	slices/slice-elided-high-eval-once/call-base-low-only	-
+PASS	slices/slice-elided-high-eval-once/conversion-base	-
 PASS	slices/slice-elided-high-eval-once/explicit-high-control	-
+PASS	slices/slice-elided-high-eval-once/map-index-effectful-key	-
+PASS	slices/slice-elided-high-eval-once/nested-slice-expr	-
+PASS	slices/slice-elided-high-eval-once/pointer-array-call-base	-
 PASS	slices/slice-expr-eval-order	-
 PASS	slices/slice-header-by-value	-
 PASS	slices/slice-literal	-

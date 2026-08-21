@@ -3143,7 +3143,7 @@ mover theorem resumes over the widened point set by design.
   node. All four pinned rows flipped FAIL→PASS; explicit-high control
   and every slice/eval-order relative unmoved; goldens unchanged.)
 - Pinned-by: differential
-- Cases: slices/slice-elided-high-eval-once/call-base, slices/slice-elided-high-eval-once/call-base-low-only, pointers/slice-elided-high-pointer-array-base, strings/slice-eval-order-elided-high
+- Cases: slices/slice-elided-high-eval-once/call-base, slices/slice-elided-high-eval-once/call-base-low-only, pointers/slice-elided-high-pointer-array-base, strings/slice-eval-order-elided-high, slices/slice-elided-high-eval-once/nested-slice-expr, slices/slice-elided-high-eval-once/map-index-effectful-key, slices/slice-elided-high-eval-once/pointer-array-call-base, slices/slice-elided-high-eval-once/conversion-base
 
 `spec#Slice_expressions` evaluates the sliced operand ONCE; the elided
 high bound "defaults to the length of the sliced operand" — a default
@@ -3182,6 +3182,40 @@ as the default high (exactly the spec's `len(a)` for an array operand,
 constant even when the operand expression contains calls — the operand
 itself still evaluates once at the base slot, through its address).
 
+WIDENING (holes-arc audit fix round, 2026-08-21, finding F1 — recorded
+here because it is a movement this fix caused, even though it is not a
+defect). Removing the second emission removed an ACCIDENT that was
+covering a different, pre-existing hole: for a NIL pointer-to-array with
+an elided high, `(*ap)[:]` and `(*ap)[1:]` used to answer gc's recovered
+panic — because the re-emitted operand inside the `builtin-len`
+dereferenced the nil pointer and panicked. With the base evaluated once
+and the array's static length used as the default high, nothing
+dereferences, and the shape converges on the documented refusal of the
+slice-base nil arm (`pointers/nil-array-ptr-slice/slice-expr-nil`, the
+explicit-high sibling, red since 2026-08-19): an honest STUCK,
+"expected array or slice value for slice expression, got GoValue.nil".
+Measured, not argued — the 6146b217 emitter vs the 90b12339 one through
+the same decoder: `(*ap)[:]`/`(*ap)[1:]` ok/100 → stuck, while `ap[:]`
+and the `*[0]int` form were ALREADY stuck before the fix. **Fail-closed
+in both directions: a right answer for the wrong reason became a visible
+refusal, never a wrong answer.** Pinned by
+`pointers/nil-array-ptr-slice-elided-high/*` — four reds tracked in
+`baselines/untriaged-ids` at the sibling's `coverage` disposition (they
+retire together, with that arm), and two greens (`field-through-nil-ptr`,
+`field-through-nil-call`) showing the refusal is the slice-base arm
+specifically: a nil pointer reached through a FIELD selector still
+panics correctly.
+
+Also newly pinned in the same round (finding F2), four base shapes the
+fix corrected that nothing covered — `f()[1:][1:]` (the nested case, the
+sharpest one: the inner slice expression is the outer's base, so the
+call ran FOUR times, gc 133 vs pre-fix machine 433), a map-index base
+with an effectful key (122 vs 222), `pf()[1:]` on the pointer-reuse path
+(128 vs 228), and a conversion base `[]byte(f())[1:]` (131 vs 231, the
+shape BUG-047's conversion guard does not reach). All four green
+post-fix; `slices/slice-elided-high-eval-once/{nested-slice-expr,
+map-index-effectful-key,pointer-array-call-base,conversion-base}`.
+
 ## BUG-067 — wire func TYPE nodes drop the variadic bit: `func(...int)` ≡ `func([]int)` to the machine
 
 - Status: fixed (2026-08-21, holes arc — the wire func type node
@@ -3195,7 +3229,7 @@ itself still evaluates once at the base slot, through its address).
   Muxer/Defer terms extended with the explicit `false` the fresh
   decode now produces; imported-pin and golden gates green.)
 - Pinned-by: differential
-- Cases: interfaces/assert-func-variadic/mismatch-variadic-at-slice, interfaces/assert-func-variadic/mismatch-slice-at-variadic
+- Cases: interfaces/assert-func-variadic/mismatch-variadic-at-slice, interfaces/assert-func-variadic/mismatch-slice-at-variadic, interfaces/assert-func-variadic/assert-variadic-at-slice-panic
 
 `spec#Type_identity`: two function types are identical only if they
 have "the same number of parameters and result values, corresponding
@@ -3227,4 +3261,20 @@ func-type assertion is ordinary supported Go.
 Fix shape: the wire func type node carries `variadic`; the decoder
 REQUIRES it (the §9.5 fail-closed discipline, same as func/method/
 interface-requirement decodes) and `Ty.funcType` carries the bit into
-type identity, where `tyEq` compares it.
+type identity, where `Ty.eqbFuel` compares it.
+
+STATUS-DIVERGENCE CLASS (holes-arc audit fix round, 2026-08-21, finding
+F3). The comma-ok witness above understates the hole: it loses a
+BOOLEAN. The single-result form loses the CONTROL PATH — `_ =
+i.(func([]int) int)` on a boxed `func(...int) int` must panic, and
+pre-fix the machine returned normally, `{"status":"ok","values":[0]}`,
+against gc's `panic: interface conversion: interface {} is
+func(...int) int, not func([]int) int`. A status-direction divergence at
+status `ok` is the worst readout this ledger has a name for: a caller's
+`recover` never runs and the program continues past a point Go stops at.
+The row also pins the RENDER, byte-exact against gc's message, so the
+`...E` spelling `goTypeNameForMessageFuel` emits for a variadic
+signature's last parameter is regression-covered — dropping the bit from
+the message, not just from identity, is red.
+`interfaces/assert-func-variadic/assert-variadic-at-slice-panic`; green
+post-fix.

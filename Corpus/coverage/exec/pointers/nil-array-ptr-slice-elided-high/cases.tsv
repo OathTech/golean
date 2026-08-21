@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+deref-elided-high	nilDerefElidedHigh	-	ok	-	pointers,nil,arrays,slicing,panic,recover
+deref-low-only	nilDerefLowOnly	-	ok	-	pointers,nil,arrays,slicing,panic,recover
+pointer-form	nilPointerFormElidedHigh	-	ok	-	pointers,nil,arrays,slicing,panic,recover
+zero-length-array	nilZeroLengthArrayElidedHigh	-	ok	-	pointers,nil,arrays,slicing,panic,recover
+field-through-nil-ptr	nilFieldArrayElidedHigh	-	ok	-	pointers,nil,arrays,structs,slicing,panic,recover
+field-through-nil-call	nilCallFieldArrayElidedHigh	-	ok	-	pointers,nil,arrays,structs,slicing,panic,recover,calls

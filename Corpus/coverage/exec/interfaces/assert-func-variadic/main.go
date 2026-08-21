@@ -35,6 +35,24 @@ func mismatchSliceAtVariadic() int {
 	return b2i(okVar)*10 + b2i(okSlice)
 }
 
+// The PANIC direction (holes-arc audit fix round 2026-08-21, finding
+// F3): a single-result assertion at the wrong func type must panic. This
+// is the sharper witness of the same hole — pre-fix the machine did not
+// merely answer the wrong BOOLEAN, it took the wrong CONTROL PATH and
+// returned normally with status `ok` where gc panics (measured: pre-fix
+// `{"status":"ok","values":[0]}`; gc `panic: interface conversion: ...`).
+//
+// It also pins the RENDER: the panic message names the dynamic type with
+// the variadic spelling `func(...int) int`, which only exists because
+// `goTypeNameForMessageFuel` prints the last parameter of a variadic
+// signature as `...E`. The row is byte-exact against gc's message, so
+// dropping the bit from the render — not just from identity — is red.
+func assertVariadicAtSlicePanic() int {
+	var i any = variadicFn
+	_ = i.(func([]int) int)
+	return 0
+}
+
 // Green control: asserting at exactly the boxed type answers true, and
 // the asserted value still calls.
 func matchRightTypes() int {

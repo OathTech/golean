@@ -2,3 +2,4 @@
 mismatch-variadic-at-slice	mismatchVariadicAtSlice	-	ok	-	interfaces,type_assertions,comma_ok,variadic,functions
 mismatch-slice-at-variadic	mismatchSliceAtVariadic	-	ok	-	interfaces,type_assertions,comma_ok,variadic,functions
 match-right-types	matchRightTypes	-	ok	-	interfaces,type_assertions,comma_ok,variadic,functions,calls
+assert-variadic-at-slice-panic	assertVariadicAtSlicePanic	-	panic	interface conversion: interface {} is func(...int) int, not func([]int) int	interfaces,type_assertions,panic,variadic,functions

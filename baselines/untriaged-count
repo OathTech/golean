@@ -169,7 +169,7 @@
 #   operand; the frontend now emits the spec's auto-deref), repaired by
 #   its fix and folded into its Cases. The buildout's import of
 #   unittest/embedded.go re-surfaced the class and forced the triage.
-coverage 7
+coverage 11
 latitude 4
 wrong-answer 0
 # 2026-08-09 (spec-parity slice 2, sync guardrails)  16 -> 50, mostly
@@ -259,3 +259,20 @@ wrong-answer 0
 #   address"), gc probed non-single-valued (stack distinct, heap
 #   equal), machine the conforming never-same singleton. Same class as
 #   init/hidden-dep-order; retires only by a W3.2 envelope.
+# 2026-08-21 (holes-arc audit fix round, finding F1)
+#   coverage 7 -> 11: the four
+#   pointers/nil-array-ptr-slice-elided-high/* rows ENTER as the
+#   ELIDED-HIGH spellings of the class the single
+#   nil-array-ptr-slice/slice-expr-nil row (2026-08-19) already tracks —
+#   the unmodeled slice-base nil arm, one honest STUCK with one message,
+#   retiring together when that arm lands. A raise of 4 for zero new
+#   holes, which is the cost of pinning a class by its variants instead
+#   of by one witness; the alternative (leave three spellings unpinned)
+#   is what let BUG-066 hide the accident in the first place.
+#   TWO of the four (deref-elided-high, deref-low-only) were previously
+#   ACCIDENTALLY CORRECT — the pre-BUG-066 double emission panicked on
+#   the nil deref. That accident is what the fix removed; it never made
+#   a right answer wrong, so this is a WIDENED REFUSAL, not a
+#   regression, and the movement is recorded on BUG-066's entry too.
+#   wrong-answer stays 0 — nothing here is a divergence at a forced
+#   point that no entry explains.
