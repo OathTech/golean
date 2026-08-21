@@ -11,4 +11,4 @@
 # re-certification now runs under LEAN_ENUM_SLOW_TIMEOUT_SECONDS
 # (scripts/diff-coverage; investigation record:
 # docs/2026-08-14_ci-runner-death-and-slow-tier-timeout.md).
--	goleanGoogle	-	ok	-	imported_goose,channels,goroutines,nondet	membership	the three worker sends commit into the cap-3 buffer in scheduler order (L1): the arrival-order code ranges over the 6 permutations of {1,2,3} (members=6); width 4 covers the up-to-4-runnable scheduler bound; no append spill (the results slice is pre-capped at 3); sites raised for the 4-thread tree	width=4,sites=48,work=60000000,members=6,tier=slow
+-	goleanGoogle	-	ok	-	imported_goose,channels,goroutines,nondet	membership	the three worker sends commit into the cap-3 buffer in scheduler order (L1): the arrival-order code ranges over the 6 permutations of {1,2,3} (members=6); width 4 covers the up-to-4-runnable scheduler bound; no append spill (the results slice is pre-capped at 3); sites raised for the 4-thread tree	width=4,sites=48,work=60000000,members=6,engine=dedup,tier=slow

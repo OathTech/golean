@@ -24,4 +24,4 @@ chan-mutex	litmusChanMutex	-	ok	-	goroutines,channels,race	confluent	the cap-1 c
 # cardinality, so 00 cannot appear without failing the case. Width 3
 # caps the computed bounds (|runnable| <= 3); measured tree: ~30k
 # leaves, depth 14, ~1.3M steps+probes.
-sb-chan	litmusSBChan	-	ok	-	goroutines,channels,select,default,race,nondet	membership	the two publish/poll goroutines' commit order is L1 latitude: admitted set {1, 10, 11}, 00 SC-forbidden — certified by schedule enumeration with the members=3 cardinality pin; go samples (plain and -race) must be members	width=3,sites=32,work=5000000,members=3
+sb-chan	litmusSBChan	-	ok	-	goroutines,channels,select,default,race,nondet	membership	the two publish/poll goroutines' commit order is L1 latitude: admitted set {1, 10, 11}, 00 SC-forbidden — certified by schedule enumeration with the members=3 cardinality pin; go samples (plain and -race) must be members	width=3,sites=32,work=5000000,members=3,engine=dedup

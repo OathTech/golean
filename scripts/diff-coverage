@@ -549,7 +549,7 @@ run_case_rows() {
   confluent_member=""
   confluent_detail=""
   if [[ "$lane" == "confluent" ]]; then
-    local width sites obs_cap samples work members statuses tier backedge nonterm
+    local width sites obs_cap samples work members statuses tier backedge nonterm engine
     parse_lane_params || return 0
     local conf_dir="$OUT/membership/$id"
     mkdir -p "$conf_dir"
@@ -586,6 +586,9 @@ run_case_rows() {
       --expect-status "$expected_status")
     if [[ -n "$backedge" ]]; then
       conf_args+=(--backedge "$backedge")
+    fi
+    if [[ -n "$engine" ]]; then
+      conf_args+=(--engine "$engine")
     fi
     if [[ "$arg_ints" != "-" ]]; then
       local v2
@@ -694,7 +697,7 @@ run_case_rows() {
   # approximation (the old adversarial-stream loop is subsumed: every
   # stream's path is in the enumerated tree).
   if [[ "$lane" == "racy" ]]; then
-    local width sites obs_cap samples work members statuses tier backedge nonterm
+    local width sites obs_cap samples work members statuses tier backedge nonterm engine
     parse_lane_params || return 0
     local racy_dir="$OUT/membership/$id"
     mkdir -p "$racy_dir"
@@ -703,6 +706,9 @@ run_case_rows() {
       --expect-status race)
     if [[ -n "$backedge" ]]; then
       racy_args+=(--backedge "$backedge")
+    fi
+    if [[ -n "$engine" ]]; then
+      racy_args+=(--engine "$engine")
     fi
     if [[ "$arg_ints" != "-" ]]; then
       local v3
@@ -864,7 +870,7 @@ membership_go_observation() {
 # and since slice 4 the assertion is checked MECHANICALLY per site by the
 # enumerator. Returns nonzero after reporting on a bad shape.
 parse_lane_params() {
-  width="" sites=8 obs_cap=64 samples=5 work=200000 members="" statuses="$expected_status" tier="" backedge="" nonterm=""
+  width="" sites=8 obs_cap=64 samples=5 work=200000 members="" statuses="$expected_status" tier="" backedge="" nonterm="" engine=""
   if [[ "$params" != "-" ]]; then
     local kv key value
     IFS=',' read -r -a kvs <<< "$params"
@@ -961,6 +967,24 @@ parse_lane_params() {
         nonterm="$value"
         continue
       fi
+      if [[ "$key" == "engine" ]]; then
+        # engine=dedup (POR slice, docs/2026-08-21_w32-por-design.md):
+        # certify via the state-graph dedup engine + THE VERIFIED
+        # CHECKER (checkCertM_slowObs) instead of the DFS — the row's
+        # certified set is then theorem-backed equal to SlowObs.
+        # Enumerating lanes only; refused shapes fail loud in the
+        # engine (never a silent DFS fallback).
+        if [[ "$lane" == "strict" ]]; then
+          report_fail "$id" "$features" "manifest" "engine= is an enumerating-lane param: $kv (lane=$lane)"
+          return 1
+        fi
+        if [[ "$value" != "dedup" ]]; then
+          report_fail "$id" "$features" "manifest" "engine= must be 'dedup': $kv"
+          return 1
+        fi
+        engine="$value"
+        continue
+      fi
       if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
         report_fail "$id" "$features" "manifest" "lane param $key must be a positive integer: $kv"
         return 1
@@ -993,7 +1017,7 @@ member_status_allowed() {
 }
 
 run_membership_case_rows() {
-  local width sites obs_cap samples work members statuses tier backedge nonterm
+  local width sites obs_cap samples work members statuses tier backedge nonterm engine
   parse_lane_params || return 0
 
   local mem_dir="$OUT/membership/$id"
@@ -1089,6 +1113,9 @@ run_membership_case_rows() {
       --expect-status "${statuses//+/,}" ${int_flags+"${int_flags[@]}"})
     if [[ -n "$backedge" ]]; then
       enum_args+=(--backedge "$backedge")
+    fi
+    if [[ -n "$engine" ]]; then
+      enum_args+=(--engine "$engine")
     fi
     if [[ -n "$nonterm" ]]; then
       enum_args+=(--allow-nonterm "$nonterm")

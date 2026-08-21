@@ -9,6 +9,6 @@
 # schedule-independence is now a certified claim, not a 3-stream spot
 # check. Params: sites/work raised only where the measured tree needs
 # them (probed at reclassification).
-fifo	bufferedWakeFIFO	-	ok	-	goroutines,channels,make,loops	confluent	buffer FIFO is spec; the producer/consumer loop's interleavings all deliver the same ordered sums	width=4,sites=48,work=160000000,backedge=0,tier=slow
-cap-one	bufferedWakeCapOne	-	ok	-	goroutines,channels,range,close	confluent	the cap-1 buffer serializes the producer/consumer hand-offs; every schedule drains the same sequence	width=4,sites=40,work=40000000,backedge=full,tier=slow
+fifo	bufferedWakeFIFO	-	ok	-	goroutines,channels,make,loops	confluent	buffer FIFO is spec; the producer/consumer loop's interleavings all deliver the same ordered sums	width=4,sites=48,work=2000000,engine=dedup
+cap-one	bufferedWakeCapOne	-	ok	-	goroutines,channels,range,close	confluent	the cap-1 buffer serializes the producer/consumer hand-offs; every schedule drains the same sequence	width=4,sites=40,work=1000000,engine=dedup
 len-after-join	bufferedLenAfterJoin	-	ok	-	goroutines,channels,len,cap,make	confluent	len/cap are read only after the join receive, past which every schedule has the same buffer state	width=4,sites=20

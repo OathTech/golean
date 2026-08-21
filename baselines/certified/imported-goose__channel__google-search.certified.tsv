@@ -4,7 +4,20 @@
 # driver-coupling pin against THIS set and its wire hash; scripts/ci
 # --slow re-enumerates and must reproduce it exactly. Update
 # deliberately, in its own commit, with the reason — never auto-written.
-# certified: 2026-08-10  commit: spec-parity arc-end class-closure round
+# certified: 2026-08-21  commit: w32-por engine=dedup re-certification (atop 4f3036f5)
+# re-certification reason (POR slice, docs/2026-08-21_w32-por-design.md):
+#   the row moves to engine=dedup — the state-graph dedup engine + THE
+#   VERIFIED CHECKER (checkCertM_slowObs), so this set is theorem-backed
+#   EQUAL to SlowObs (the ∃-fuel ∃-stream image of execProgLoop) rather
+#   than accountant/sentinel/ladder-guarded. The set is UNCHANGED: the
+#   same six permutation members, reproduced by the dedup enumeration
+#   (6,193,933 nodes / 6,565,663 edges, ~157 s dev-box wall vs the
+#   pre-B1 DFS's 39.9M steps / 94 s; the post-B1 DFS tree was >900M
+#   steps and INTRACTABLE — BUG-065, resolved for this row here). The
+#   stage-C recorded witness streams for all six members cross-check.
+#   Wire sha unchanged. Params: +engine=dedup (tier=slow retained: the
+#   fast lane stays on this cached record; --slow re-certifies).
+# previously: certified: 2026-08-10  commit: spec-parity arc-end class-closure round
 # re-certification reason (class-closure round, 2026-08-10): the wire
 #   sha moved because EVERY wire now carries the required methodSets
 #   field (BUG-053 class closure,
@@ -26,9 +39,9 @@
 #   enumeration confirms it). Wire sha unchanged. Prior re-cert
 #   (same date): F15 kind-carrying observation shape.
 # case: imported-goose/channel/google-search
-# params: width=4,sites=48,work=60000000,members=6,tier=slow
+# params: width=4,sites=48,work=60000000,members=6,engine=dedup,tier=slow
 # wire-sha256: 4a2ccadf9e2389570786ccb5c4eb5dd171a215f3e68ca4c52cd4eaed6c2a623b
-# enum-stats: observations=6 steps=39976295 probes=161130 sites=53710 leaves=59601 maxdepth=15 width=4
+# enum-stats: observations=6 steps=6565663 probes=0 sites=6193933 leaves=0 maxdepth=0 width=16 engine=dedup nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert
 {"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":123}]}
 {"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":132}]}
 {"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":213}]}
