@@ -1,4 +1,5 @@
 import GoLean.GoCore.EnumDedupCheck
+import GoLean.GoCore.MachineEqb
 
 /-!
 # Dedup-checker soundness (POR slice P3 — the theorem)
@@ -95,6 +96,163 @@ theorem stepThread_l4_run {s : ExecState} {ts : Array Config} {i : Nat}
       rw [hpair]
       rfl
 
+/-- `bind` of a known-`ok` scrutinee, as a rewrite (keeps the REST of
+the pipeline in folded `bind` form — unlike a `dsimp` through
+`Except.bind`, which turns every bind into a match and defeats the
+`bind_pair_stream` unification below). -/
+private theorem except_bind_ok {ε α β : Type} (a : α)
+    (f : α → Except ε β) : (Except.ok a >>= f) = f a := rfl
+
+/-- Stream pass-through of a two-stage `Except` pipeline ending in a
+`(·, choices)` pair — the shape of `applyStmtOp`'s non-spill append
+branch. -/
+private theorem bind_pair_stream {α : Type} (T : Except GoError α)
+    (g : α → Except GoError ExecState) (ch : Choices) :
+    (do let a ← T; let x ← g a;
+        pure ((x, ch) : ExecState × Choices))
+      = (match (do let a ← T; let x ← g a;
+                   pure ((x, ([] : Choices)) : ExecState × Choices)) with
+         | .ok (s', _) => .ok (s', ch)
+         | .error e => .error e) := by
+  cases T with
+  | error e => rfl
+  | ok a =>
+    simp only [Bind.bind, Except.bind]
+    cases g a with
+    | error e => rfl
+    | ok x => rfl
+
+/-- **N-APP determinization**: a NON-SPILLING `appendSlice` apply is
+stream-oblivious — `applyStmtOp` returns the stream verbatim and the
+state result is stream-independent. -/
+theorem applyStmtOp_append_nospill {s : ExecState} {vs : List GoValue}
+    {elem : GoCore.Ty} {nt : Nat}
+    (h : appendApplyNoSpill s vs = true) :
+    ∀ ch : Choices, applyStmtOp s ch (.appendSlice elem) nt vs
+      = (match applyStmtOp s [] (.appendSlice elem) nt vs with
+         | .ok (s', _) => .ok (s', ch)
+         | .error e => .error e) := by
+  intro ch
+  match vs, h with
+  | [], _ => rfl
+  | [_], _ => rfl
+  | [_, _], _ => rfl
+  | _ :: _ :: _ :: _ :: _, _ => rfl
+  | [tv, sliceV, elemsV], h =>
+    unfold applyStmtOp
+    dsimp only
+    cases hsl : valueAsSlice sliceV with
+    | error e => rfl
+    | ok slice =>
+      simp only [except_bind_ok]
+      cases hel : valueAsSlice elemsV with
+      | error e => rfl
+      | ok elems =>
+        simp only [except_bind_ok]
+        cases hv1 : validateSlice slice with
+        | error e => rfl
+        | ok u1 =>
+          simp only [except_bind_ok]
+          cases hv2 : validateSlice elems with
+          | error e => rfl
+          | ok u2 =>
+            simp only [except_bind_ok]
+            cases hvis : sliceVisibleValues s elems with
+            | error e => rfl
+            | ok elemValues =>
+              simp only [except_bind_ok]
+              cases htl : valueAsLoc tv with
+              | error e => rfl
+              | ok tloc =>
+                simp only [except_bind_ok]
+                by_cases hcap : slice.len + elemValues.size ≤ slice.cap
+                · simp only [if_pos hcap]
+                  exact bind_pair_stream _ _ ch
+                · exfalso
+                  unfold appendApplyNoSpill at h
+                  simp only [hsl, hel, hvis, decide_eq_true_eq] at h
+                  exact hcap h
+
+/-- `stepFn` at a non-spilling `appendSlice` apply position is
+stream-oblivious (the N-APP class's `stepFn` half). -/
+theorem stepFn_append_nospill {s : ExecState} {v : GoValue}
+    {elem : GoCore.Ty} {nt : Nat} {done : List GoValue} {env : LocalEnv}
+    {k : Cont}
+    (hns : appendApplyNoSpill s ((v :: done).reverse) = true) :
+    ∀ ch : Choices,
+      stepFn s (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) ch
+        = (match stepFn s
+              (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) [] with
+           | .ok (c', s', _) => .ok (c', s', ch)
+           | .error e => .error e) := by
+  intro ch
+  unfold stepFn
+  dsimp only
+  rw [applyStmtOp_append_nospill hns ch]
+  cases hap : applyStmtOp s [] (.appendSlice elem) nt ((v :: done).reverse) with
+  | error e => cases e <;> rfl
+  | ok p =>
+    obtain ⟨s₂, ch₂⟩ := p
+    dsimp only
+    simp only [Bind.bind, Except.bind]
+    cases hk : contAfterStmtOp s₂ (.appendSlice elem) ((v :: done).reverse) k with
+    | error e => rfl
+    | ok k'' => rfl
+
+/-- N-APP obliviousness at the `stepThread` level: mirrors
+`stepThread_oblivious`'s conclusion for the non-spilling append apply
+shape. -/
+theorem stepThread_append_oblivious {s : ExecState} {ts : Array Config}
+    {i : Nat} {v : GoValue} {elem : GoCore.Ty} {nt : Nat}
+    {done : List GoValue} {env : LocalEnv} {k : Cont}
+    (hti : ts[i]? = some (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)))
+    (hns : appendApplyNoSpill s ((v :: done).reverse) = true)
+    {ch₀ : Choices} {ts' : Array Config} {s' : ExecState} {ch₀' : Choices}
+    {ev : StepEvent}
+    (h : stepThread s ts i ch₀ = .ok (ts', s', ch₀', ev)) :
+    ch₀' = ch₀
+      ∧ ∀ ch : Choices, stepThread s ts i ch = .ok (ts', s', ch, ev) := by
+  have harr : arrivalCases s ts i
+      (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k))
+      = .ok .cellPath := rfl
+  have hsel : selectApplyPlan
+      (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) = none := rfl
+  clear hsel
+  unfold stepThread at h
+  rw [hti] at h
+  simp only [isBlockedConfig, opDoneInner, spawnPlan, Bool.false_eq_true,
+    reduceIte] at h
+  rw [arrivalPlan_of_cellPath (ch := ch₀) harr] at h
+  simp only [except_bind_ok] at h
+  try dsimp only at h
+  simp only [selectApplyPlan] at h
+  try dsimp only at h
+  rw [stepFn_append_nospill hns ch₀] at h
+  cases hbase : stepFn s
+      (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) [] with
+  | error e =>
+    rw [hbase] at h
+    dsimp only at h
+    cases h
+  | ok p =>
+    obtain ⟨cB, sB, chB⟩ := p
+    rw [hbase] at h
+    dsimp only at h
+    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+    refine ⟨rfl, fun ch => ?_⟩
+    unfold stepThread
+    rw [hti]
+    simp only [isBlockedConfig, opDoneInner, spawnPlan, Bool.false_eq_true,
+      reduceIte]
+    rw [arrivalPlan_of_cellPath (ch := ch) harr]
+    simp only [except_bind_ok]
+    try dsimp only
+    simp only [selectApplyPlan]
+    try dsimp only
+    rw [stepFn_append_nospill hns ch, hbase]
+    rfl
+
 /-- Inner total coverage: at a certified target whose explicit
 suffixes ALL step successfully, EVERY stream's goroutine-step succeeds
 and matches one of them (same successor and event; the stream's
@@ -144,7 +302,21 @@ theorem stepThread_total_covered {s : ExecState} {ts : Array Config}
               rw [hnsel] at hiv
               simp only [Bool.false_eq_true, reduceIte] at hiv
               cases hnapp : consumesAppendSlice c with
-              | true => rw [hnapp] at hiv; simp at hiv
+              | true =>
+                rw [hnapp] at hiv
+                simp only [reduceIte] at hiv
+                split at hiv
+                next v elem nt done env k =>
+                  split at hiv
+                  next hns =>
+                    simp only [Option.some.injEq] at hiv
+                    subst hiv
+                    obtain ⟨ts', s', ev, hv⟩ := hedges [] (by simp)
+                    obtain ⟨-, hall⟩ :=
+                      stepThread_append_oblivious hti hns hv
+                    exact ⟨[], by simp, ts', s', ev, ch, hv, hall ch⟩
+                  next => cases hiv
+                next => cases hiv
               | false =>
                 rw [hnapp] at hiv
                 simp only [Bool.false_eq_true, reduceIte] at hiv
@@ -496,7 +668,7 @@ passed `checkStep`. -/
 theorem checkStep_edges {nodeEqb : DedupNode → DedupNode → Bool}
     {mems : Array (Obs × Choices × Nat)} {nodes : Array DedupNode}
     {succs : Array Nat} {nd : DedupNode} {vecs : List (List Nat)}
-    (hv : nodeVecs nd.m = some vecs)
+    (_hv : nodeVecs nd.m = some vecs)
     (hparts : ∀ (j : Nat) (vec : List Nat), vecs[j]? = some vec →
       ∃ kj, succs[j]? = some kj
         ∧ checkEdge nodeEqb mems nodes nd vec kj = true) :
@@ -819,5 +991,16 @@ theorem checkCert_slowObs
       cases hEqb _ _ hroot
       exact checkCert_complete_aux hEqb hsz' hall fuel m₀ r₀
         ⟨0, hnd0⟩ ch o hobs
+
+/-- The instantiated headline: the CONCRETE checker (the sound
+state-tower node equality plugged in) — what the CLI's
+`--engine dedup` path evaluates. A `true` here IS the set-equality
+claim over the slow semantics. -/
+theorem checkCertM_slowObs {resultLocs : List Loc} {m₀ : MultiConfig}
+    {r₀ : RaceState} {cert : DedupCert}
+    (hc : checkCert dedupNodeEqb resultLocs m₀ r₀ cert = true) :
+    ∀ o : Obs, o ∈ cert.obsSet ↔ SlowObs resultLocs m₀ r₀ o :=
+  checkCert_slowObs (nodeEqb := dedupNodeEqb)
+    (fun a b h => dedupNodeEqb_sound a b h) hc
 
 end GoLean.GoCore.Machine

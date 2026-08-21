@@ -1,4 +1,5 @@
 import GoLean.GoCore
+import GoLean.EnumDedup
 import GoLean.NativeToIR
 import GoLean.StrictJson
 import Lean.Data.Json
@@ -31,7 +32,7 @@ private def usage : String :=
   "usage:\n" ++
   "  golean native-json-run --input <file> --function <name> [--arg-int <n> ...] [--fuel <n>] [--choices <n,n,...>]\n" ++
   "  golean observation-eq --left <json> --right <json>\n" ++
-  "  golean coverage-observations --input <file> --function <name> [--arg-int <n> ...] [--fuel <n>]\n" ++
+  "  golean coverage-observations --input <file> --function <name> [--arg-int <n> ...] [--fuel <n>] [--engine dedup]\n" ++
   "      [--max-width <B>] [--max-sites <D>] [--cap <N>] [--work-cap <W>] [--expect-status <ok|panic|ok,panic|race>]
       [--allow-nonterm <per-branch-fuel>] [--backedge <full|k>]\n"
 
@@ -643,6 +644,15 @@ structure EnumArgs where
   per-site enumeration mode; absent = a bound ≥ 2 backEdge consult
   fails loud. -/
   backedgeMode : Option (Option Nat) := none
+  /-- `--engine dedup` (POR slice, design note 2026-08-21): certify via
+  the state-graph dedup engine + the VERIFIED certificate checker
+  (`checkCert_slowObs`) instead of the DFS. The claim standard rises:
+  the printed set provably equals `SlowObs` (the ∃-fuel ∃-stream image
+  of `execProgLoop`); the accountant/sentinel/alias-ladder heuristics
+  do not apply on this path. Refused shapes (a `$pkginit` phase, L2
+  `.multi` arrivals, consuming selects, mapIter, append spills) fail
+  loud — such a row stays on the DFS. -/
+  engine : Option String := none
   deriving Repr
 
 private def parseEnumArgs : List String → EnumArgs → Except String EnumArgs
@@ -670,6 +680,11 @@ private def parseEnumArgs : List String → EnumArgs → Except String EnumArgs
         parseEnumArgs rest { cfg with backedgeMode := some none }
       else
         parseEnumArgs rest { cfg with backedgeMode := some (some (← parseJsonNat "--backedge" value)) }
+  | "--engine" :: value :: rest, cfg =>
+      if value == "dedup" then
+        parseEnumArgs rest { cfg with engine := some value }
+      else
+        .error s!"unknown --engine (only dedup): {value}\n{usage}"
   | "--expect-status" :: value :: rest, cfg =>
       let parts := (value.splitOn ",").filter (· ≠ "")
       if parts.isEmpty then
@@ -1451,6 +1466,69 @@ def explore (ep : EnumProgram) (runFuel width sites cap workCap : Nat)
       throw s!"alias guard: a probe pick ≥ the computed site bound produced an observation OUTSIDE the enumerated set — the bound accountant (or the case's width assertion) is REFUTED; cannot certify. Probe observation: {pobs.compress}"
   return out
 
+/-- The dedup-engine path (POR slice, `docs/2026-08-21_w32-por-design.md`):
+build the state-graph certificate (untrusted engine), run THE VERIFIED
+CHECKER, and only then print the set — the printed lines are backed by
+`checkCert_slowObs` (member set = `SlowObs`, the ∃-fuel ∃-stream image
+of the unmodified `execProgLoop`). The DFS lane's accountant/sentinel/
+alias-ladder heuristics do not apply here; the trust boundary is the
+checker plus the compiled-code trust every differential artifact
+already carries. -/
+def runDedupObservations (ep : EnumProgram) (cfg : EnumArgs) : IO UInt32 := do
+  if ep.initBody?.isSome then
+    IO.eprintln "coverage-observations: --engine dedup does not support a $pkginit phase (refused fail-closed; use the DFS engine)"
+    return 1
+  match GoCore.Machine.bindParams [] ep.σ₀ ep.func.args.toList ep.args.toList with
+  | .error e =>
+      IO.eprintln s!"coverage-observations: subject entry failed: {renderGoError e}"
+      return 1
+  | .ok (env, s₂) =>
+  match GoCore.Machine.allocDecls env s₂ ep.func.results.toList with
+  | .error e =>
+      IO.eprintln s!"coverage-observations: subject entry failed: {renderGoError e}"
+      return 1
+  | .ok (frameEnv, s₃) =>
+  match GoCore.Machine.pinResultLocs frameEnv ep.func.results.toList with
+  | .error e =>
+      IO.eprintln s!"coverage-observations: subject entry failed: {renderGoError e}"
+      return 1
+  | .ok resultLocs =>
+    let m₀ : GoCore.Machine.MultiConfig :=
+      ⟨#[.exec ep.func.body frameEnv (.frame [] [] [] [] .stop)], s₃, 0⟩
+    let r₀ : GoCore.Machine.RaceState := {}
+    match EnumDedup.buildCert resultLocs m₀ r₀ cfg.workCap with
+    | .error err =>
+        IO.eprintln s!"coverage-observations: dedup engine: {err}"
+        return 1
+    | .ok (cert, stats) =>
+      -- THE VERIFIED CHECKER — the certification boundary. A refusal
+      -- here is fail-closed: engine bug, eqb fuel exhaustion, or a
+      -- fragment mismatch; never a silently-narrower set.
+      if !GoCore.Machine.checkCert GoCore.Machine.dedupNodeEqb
+          resultLocs m₀ r₀ cert then
+        IO.eprintln "coverage-observations: dedup certificate REFUSED by the verified checker — cannot certify (engine bug or fragment mismatch)"
+        return 1
+      let statusOf : GoCore.Machine.Obs → String := fun o =>
+        match o with
+        | .ok _ => "ok"
+        | .panic _ => "panic"
+        | .race => "race"
+      let obsJson : GoCore.Machine.Obs → Json := fun o =>
+        match o with
+        | .ok vs => runJson { values := vs.toArray }
+        | .panic msg => errorJson (.panic msg)
+        | .race => errorJson .raceDetected
+      -- status discipline (audit F1/F8), unchanged in meaning
+      for t in cert.members do
+        if cfg.expectStatus.any (fun ss => !ss.contains (statusOf t.1)) then
+          IO.eprintln s!"coverage-observations: machine-side status divergence: certified member has status {statusOf t.1}, outside the case's declared status set {cfg.expectStatus.getD []} — a member Go may never realize is a machine bug. Member: {(obsJson t.1).compress}"
+          return 1
+      let lines := (cert.members.map (fun t => (obsJson t.1).compress)).qsort (· < ·)
+      for line in lines do
+        IO.println line
+      IO.eprintln s!"coverage-observations: observations={cert.members.size} steps={stats.edges} probes=0 sites={stats.nodes} leaves=0 maxdepth=0 width={cfg.maxWidth} engine=dedup nodes={stats.nodes} edges={stats.edges} dedupHits={stats.dedupHits} certified=checkCert"
+      return 0
+
 private def runCoverageObservations (args : List String) : IO UInt32 := do
   let cwd ← IO.currentDir
   match parseEnumArgs args {} with
@@ -1480,6 +1558,9 @@ private def runCoverageObservations (args : List String) : IO UInt32 := do
                       IO.eprintln s!"coverage-observations: setup failed: {renderGoError err}"
                       return 1
                   | .ok ep =>
+                      match cfg.engine with
+                      | some _ => runDedupObservations ep cfg
+                      | none =>
                       match explore ep cfg.fuel
                           cfg.maxWidth cfg.maxSites cfg.cap cfg.workCap
                           cfg.expectStatus cfg.allowNonterm

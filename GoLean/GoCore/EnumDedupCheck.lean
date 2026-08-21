@@ -75,6 +75,22 @@ def Obs.eqb : Obs → Obs → Bool
 def obsMem (mems : Array (Obs × Choices × Nat)) (o : Obs) : Bool :=
   mems.toList.any fun t => Obs.eqb t.1 o
 
+/-- Does this `appendSlice` apply avoid the spill's capacity pick —
+i.e. is the step stream-oblivious? Mirrors `applyStmtOp`'s own spill
+analysis (`valueAsSlice` → `sliceVisibleValues` → `newLen ≤ cap`);
+every ERROR path of the arm is stream-free, so `true` on them is
+still oblivious, and only the genuine spill branch (the one
+`Choices.consumeAt .appendSpill` consult) refuses. -/
+def appendApplyNoSpill (s : ExecState) : List GoValue → Bool
+  | [_, sliceV, elemsV] =>
+      (match valueAsSlice sliceV, valueAsSlice elemsV with
+      | .ok slice, .ok elems =>
+          (match sliceVisibleValues s elems with
+          | .ok elemValues => slice.len + elemValues.size ≤ slice.cap
+          | .error _ => true)
+      | _, _ => true)
+  | _ => true
+
 /-- The INNER branch vectors for stepping goroutine `i`: the pick
 suffix each enumerated branch feeds to the goroutine-step, or `none`
 when the target's consumption shape is outside the certified fragment
@@ -92,7 +108,14 @@ def innerVecs (s : ExecState) (ts : Array Config) (i : Nat) :
       else if (opDoneInner c).isSome then none
       else if (spawnPlan c).isSome then none
       else if consumesSelect c then none
-      else if consumesAppendSlice c then none
+      else if consumesAppendSlice c then
+        -- N-APP: the non-spilling append apply is stream-oblivious
+        -- (`stepFn_append_nospill`); a spilling one refuses.
+        (match c with
+         | .retV v (.stmtOpK (.appendSlice _) _ done [] _ _) =>
+             if appendApplyNoSpill s ((v :: done).reverse) then some [[]]
+             else none
+         | _ => none)
       else if isMapIterNext c then none
       else
         match arrivalCases s ts i c with
