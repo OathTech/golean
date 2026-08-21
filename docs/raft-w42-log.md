@@ -194,10 +194,13 @@ this tip):
 
 1. **The `&`-composite shape.** The whole RHS is an address-of
    expression; the shape allowlist answers `false` for `token.AND` — "a
-   pointer escaping into the cell". This axis does not depend on the
-   arguments at all, and it holds for the *patched* bare
-   `&DefaultLogger{}` too, so no rewriting of `log.New`'s arguments can
-   get past it.
+   pointer escaping into the cell". This axis is independent of what the
+   composite CONTAINS, so no rewriting of `log.New`'s arguments can get
+   past it — it would refuse a bare `&DefaultLogger{}` on the same
+   grounds. (Which never arises: the patched form LOWERS, so the dry run
+   never fails on it and the predicate is never consulted. The point is
+   that the quarantine route is closed at the shape, before the argument
+   question is even reached.)
 2. **`log.New` is not in `pureUnmodeledCallees`**, so the call answers
    `false`. **It must not be casually added.** That allowlist is minimal
    *by charter*, and the charter is a scar: audit F1 (2026-08-20,
@@ -231,8 +234,10 @@ initializer must refuse the whole export, so a future widening of
 `pureUnmodeledCallees` or of the shape allowlist that silently admitted
 it would go red. Listed in the owed-rows table below.
 
-**Gate:** `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci` at the
-item-1 commit — see the exit-state section for the verbatim result lines.
+**Gate:** `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci`. Item
+1's own run has no saved transcript (audit B-F7); the runs that cover
+this item's final state are the tip run and the audit-fix round's — see
+the exit-state section for the verbatim result lines and the artifacts.
 
 ---
 
@@ -420,7 +425,11 @@ proved interpreter-slow):
   replayed trace agrees BYTE-FOR-BYTE with `go run`: 26 across the two
   smaller slices (25 in the main slice incl. lagging_commit 17/17 and
   prevote 16/16 end-to-end; replicate_pause 32/32 end-to-end) plus
-  probe_and_replicate, the last one out.
+  probe_and_replicate, the last one out. The denominator is 27 rather
+  than 28 because `async_storage_writes` stops at its FIRST command
+  (`add-nodes async-storage-writes`), giving an empty supported prefix
+  and so no machine run to compare — a coverage gap, not a missing
+  verdict.
   **probe_and_replicate LANDED** (`artifacts/w42/tracereplay-par.txt`,
   verbatim): `74/74 blocks`, `OK-TIER: 57/57`, `MACHINE: 1/1 replayed
   traces agree byte-for-byte with go run`. It was the one outstanding
@@ -661,11 +670,32 @@ note differential baseline diff NOT RUN (no record; explicitly allowed here)
 RESULT: PASS
 ```
 
-**THE TIP IS THE RECORD**, and the one to cite:
-`artifacts/w42/ci-tip-f7777003.txt`, the run at `f7777003` covering the
-final state of every item. The per-item runs above (`ci-item2.txt`,
+**THE CURRENT TIP IS THE RECORD.** Two runs carry it:
+`artifacts/w42/ci-tip-f7777003.txt`, the pre-audit branch tip at
+`f7777003` covering the final state of every item; and
+`artifacts/w42/ci-fixround.txt`, the run at the post-rebase audit-fix tip
+(the branch rebased onto `main` @ `cc7651fc`), which is the one to cite
+for the branch as it now stands. The per-item runs (`ci-item2.txt`,
 `ci-item3.txt`, `ci-final.txt`) are the landing-time gates and each
 carries the same three lines.
+
+**The `GOLEAN_ALLOW_NO_DIFF=1` hatch is re-verified post-rebase**, not
+carried over: `git diff --name-only main..HEAD` touches `docs/**`,
+`raftsubject/**`, `raftharness/README.md`, `tools/raftsubject/**` and
+`.gitignore` — and no `GoLean/`, `Corpus/`, `baselines/`, `scripts/`,
+`tools/nativefrontend/`, `proofs/` or `Tests/` path. No runtime change,
+so no differential is owed and the hatch is legitimate with its two
+visible notes.
+
+**The census survives `main`'s frontend, re-measured post-rebase**
+(the pre-verification the audit asked for, reproduced at this tree): with
+`artifacts/nativefrontend` rebuilt from `main`'s
+`tools/nativefrontend`, both sweeps reproduce the committed reports
+byte-for-byte apart from the header's absolute frontend path —
+post-swap 24 quarantined / 5 LIVE / 46 stubs (2 LIVE) / 7 residual
+sinks, pre-swap 14 / 0 LIVE / 30 / closed. `derive.py --check` clean;
+`tracefamilies.py` output identical; the twin determinism digest
+`12fe50c5d949c4382ba44f2ad2060471` unchanged.
 
 > **Correction (2026-08-21, pre-merge audit B-F7).** This section
 > originally claimed "all four runs (items 1, 2, 3 and the final
