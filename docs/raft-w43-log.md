@@ -356,3 +356,32 @@ replay BYTE-FOR-BYTE under the machine including the full rendered
 output** — log lines through the dyn formatter, Ready dumps through
 the composite matrix, conf-change end-to-end (the stepLeader
 Unmarshal path live). The full 28-trace machine tier is wave 5.
+
+Landing gate: `scripts/ci --diff` at `840acefd` — **RESULT: PASS**
+(`artifacts/w43/ci-landingC.txt`).
+
+---
+
+## Wave 5a (item 4) — the owed-rows wave
+
+The W4.2 owed-rows table (docs/raft-w42-log.md item 4), cross-checked
+against what exists, row by row:
+
+| owed row | disposition |
+|---|---|
+| the twin as a corpus family | **LANDED**: `multipkg/mini-raft-twin` — a SELF-CONTAINED 3-node mini-raft (`mpb`/`mnode` + a schedule-driven driver: message bag with removal-by-index, S1–S3 per step, S4 at the end). NOT the subject tree (the corpus never vendors 10k lines; the twin instrument drives the real raft) — this pins the language-shape COMPOSITION in the gated corpus. `elect-propose-commit` commits 2 commands on all 3 nodes, viol=0. Deterministic ×3 (md5-identical go runs). Building it found a mini-protocol bug worth recording: the first cut's AppResp carried no commit, so the leader's commit-update ping-ponged to the drain cap — seconds native, MINUTES under the interpreter (how the corpus run surfaced it as a timeout); the fix is the honest protocol (AppResp carries the follower's commit). |
+| the perturbation schedules as corpus rows | **LANDED**: `perturb-rev` (reverse-order drain), `perturb-picks` (explicit picks, commit at quorum {1,3} while 2 lags), `starve-node` (S1–S3 hold, S4=2/3 EXPECTED — conditioned safety), `duel` (two candidates one term, S1's workout). All green strict rows. |
+| the logger-teeth pair | **LANDED**: `interfaces/quarantined-dispatch-teeth` — `installed` green through a modeled impl; `uninstalled` RED BY DESIGN (dispatch through the interface to a concrete method whose body keeps a standing fmt refusal is a per-declaration-quarantined stub — the machine stops the moment the call lands; go run formats). The W4.2 probe pair's mechanism, gate-visible. |
+| the choice-stream membership row | **LANDED**: `mini-raft-twin/choice-order`, lane=membership — the delivery-order draw over a fresh campaign's two vote requests via the map-iteration pick (the D-11 idiom): admitted set {21, 31}, **enumerated=2 exhibited=2**. Kept MINIMAL on purpose (the two-node kernel Campaign→pick→Step): the enumerator re-executes per stream probe, so the full-driver form exceeded its work cap honestly (recorded in the case comment); the driver-level schedules stay strict rows. |
+| ok-tier trace replays as corpus rows | **DISPOSED as instrument-covered (JC-33)**: the trace differential is a standing instrument (`tracereplay.py`, all three channels) whose per-trace machine runs cost interpreter-minutes-to-hours — the same wall-time bound that keeps it out of the gate keeps it out of the corpus (a corpus row would either vendor the subject tree or time out). The instrument, not a corpus duplicate, is the record; gate inclusion re-opens if an interpreter-performance pass lands (the W4.2 open question, unchanged). |
+| the D-12 refusal tripwire | **LANDED**: `init/quarantined-var-writer` — the raftsubject logger.go initializer shape VERBATIM (`&T{F: log.New(os.Stderr, ...)}`), red at frontend-export by design; a future widening that silently admitted the three-axis shape flips it PASS, which is the alarm. (The related F1-widening rows `init/quarantined-var-{impure,syscall,...}` landed in the holes arc and stand — cross-checked; this row adds the WRITER-typed instance H-20's ledger entry names.) |
+
+**JC-32 (item 3's checkquorum question): DEFERRED, with the reason.**
+checkquorum's full replay needs `tick-election` +
+`set-randomized-election-timeout`, i.e. a harness-facing PIN of the
+jitter draw. Per the W4.2 handoff that pin is ENVELOPE work (a
+deliberate narrowing carrying a record) belonging beside W4.5's
+latitude entry for the range — landing it here as a replay convenience
+would be exactly the deterministic-gc-pin scaffolding the doctrine
+warns against. The milestone claim carries checkquorum's stop as a
+named by-design exclusion.

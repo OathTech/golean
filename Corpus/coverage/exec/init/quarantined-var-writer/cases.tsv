@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+# W4.3 item 4: the D-12/H-20 writer-typed-global tripwire — red at
+# frontend-export BY DESIGN (whole-export refusal on the three-axis
+# shape); a silent admission flips it PASS, which is the alarm.
+read	quarWriterRead	-	ok	-	init,globals,structs,pointers,imports

@@ -1,0 +1,17 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# W4.3 item 4 (docs/raft-w43-log.md): the twin as a corpus family —
+# the W4.2 owed rows "the corpus gains its first raft-shaped case" +
+# "the perturbation schedules as corpus rows". A self-contained
+# 3-node mini-raft (mpb/mnode) under a schedule-driven driver: message
+# bag with removal-by-index, drain/reverse/pick/starve schedules,
+# S1-S3 checked per step, S4 at the end. NOT the subject tree (the
+# twin instrument drives the real raft; tools/raftsubject/twin-lib.go)
+# — this family pins the language-shape COMPOSITION in the gated
+# corpus. Deterministic under both oracles (no map ranging on any
+# observable path except choice-order's deliberate pick).
+elect-propose-commit	twinElectProposeCommit	-	ok	-	multipackage,structs,maps,slices,methods,loops
+perturb-rev	twinPerturbRev	-	ok	-	multipackage,structs,maps,slices,methods,loops
+perturb-picks	twinPerturbPicks	-	ok	-	multipackage,structs,maps,slices,methods,loops
+starve-node	twinStarveNode	-	ok	-	multipackage,structs,maps,slices,methods,loops
+duel	twinDuel	-	ok	-	multipackage,structs,maps,slices,methods,loops
+choice-order	twinChoiceOrder	-	ok	-	multipackage,structs,maps,slices,nondet	membership	the delivery-order draw over a fresh campaign's two vote requests realizes the network-reordering envelope on the twin kernel: admitted set {21, 31} (members=2) — either request may be delivered first and its receiver grants; the only consumption site is the map pick-next over the fresh 2-key pick map (the D-11 idiom); the enumerator's mechanical bound at the pick is 32 — width 40 >= 32	width=40,work=1000000

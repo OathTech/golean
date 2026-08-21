@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+# W4.3 item 4 (docs/raft-w43-log.md): the logger-teeth pair — the
+# W4.2 probe pair's mechanism pinned in the gated corpus. installed is
+# green through the modeled impl; uninstalled stays RED BY DESIGN
+# (dispatch to a quarantined concrete method is a visible machine
+# stop; disposition `coverage` in baselines/untriaged-ids).
+installed	teethInstalled	-	ok	-	interfaces,methods,variadic,stdlib
+uninstalled	teethUninstalled	-	ok	-	interfaces,methods,variadic,stdlib,strings

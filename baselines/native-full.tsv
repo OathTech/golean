@@ -1,16 +1,19 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-21 (raft W4.3 wave 4 / landing C — branch raft-w43;
-#   docs/raft-w43-log.md "Wave 4").
-#   re-pin reason: NINE NEW ids, zero movement on any of the 2400 ids
+# recorded: 2026-08-21 (raft W4.3 wave 5a / the owed-rows wave —
+#   branch raft-w43; docs/raft-w43-log.md "Wave 5a").
+#   re-pin reason: NINE NEW ids, zero movement on any of the 2409 ids
 #   the previous record held (verified by the run's drift report:
 #   every drifted line reads "NEW id (not in baseline)").
-#     Landing C's guardrails (the DYNAMIC fmt family — Sprintf/
-#     Sprint/Sprintln over a spread []any, the DefaultLogger and
-#     recording-logger shape): fmt/sprintf-dyn — 7 PASS +
-#     {unmodeled-kind, arity-mismatch} FAIL/lean-observation RED BY
-#     DESIGN (the dyn shims' fail-closed bound pins, dispositioned
-#     `coverage` in baselines/untriaged-ids same-commit).
-# cases: 2409 (2256 PASS / 153 FAIL)
+#     The W4.2 owed corpus rows: multipkg/mini-raft-twin — 5 strict
+#     PASS (the self-contained 3-node twin-shaped family: elect/
+#     propose/commit + the perturbation schedules) + choice-order
+#     PASS at stage=membership (the delivery-order draw, enumerated=2
+#     exhibited=2); interfaces/quarantined-dispatch-teeth — installed
+#     PASS + uninstalled FAIL/frontend-export RED BY DESIGN (dispatch
+#     to a quarantined concrete method is a visible stop);
+#     init/quarantined-var-writer/read FAIL/frontend-export RED BY
+#     DESIGN (the D-12/H-20 writer-typed-global tripwire).
+# cases: 2418 (2263 PASS / 155 FAIL)
 # frontend: native (tools/nativefrontend)
 result	id	stage
 PASS	arrays/array-bounds	-
@@ -1235,6 +1238,7 @@ FAIL	init/quarantined-var-callee/sibling	frontend-export
 FAIL	init/quarantined-var-impure/counter	frontend-export
 FAIL	init/quarantined-var-panicking/sibling	frontend-export
 FAIL	init/quarantined-var-syscall/sibling	frontend-export
+FAIL	init/quarantined-var-writer/read	frontend-export
 FAIL	init/quarantined-var/addr	frontend-export
 FAIL	init/quarantined-var/cascade	frontend-export
 FAIL	init/quarantined-var/multi	frontend-export
@@ -1323,6 +1327,8 @@ PASS	interfaces/mixed-compare/switch-case	-
 PASS	interfaces/nil-interface	-
 PASS	interfaces/promoted-method-assert-ok	-
 PASS	interfaces/quarantined-anonymous-interface	-
+PASS	interfaces/quarantined-dispatch-teeth/installed	-
+FAIL	interfaces/quarantined-dispatch-teeth/uninstalled	frontend-export
 PASS	interfaces/recover-nil-dispatch/nil-interface	-
 PASS	interfaces/recover-nil-dispatch/nil-pointer-box	-
 PASS	interfaces/recover-promoted-wrapper/ctl-chain-join	-
@@ -1613,6 +1619,12 @@ PASS	multipkg/init-order-tiebreak/seq	-
 PASS	multipkg/inittask-escape	-
 PASS	multipkg/inittask-escape-closure	-
 PASS	multipkg/inittask-escape-single	-
+PASS	multipkg/mini-raft-twin/choice-order	membership
+PASS	multipkg/mini-raft-twin/duel	-
+PASS	multipkg/mini-raft-twin/elect-propose-commit	-
+PASS	multipkg/mini-raft-twin/perturb-picks	-
+PASS	multipkg/mini-raft-twin/perturb-rev	-
+PASS	multipkg/mini-raft-twin/starve-node	-
 FAIL	multipkg/same-name-identity-panic	differential
 PASS	multipkg/same-name-identity/func-identity	-
 PASS	multipkg/same-name-identity/type-identity	-
