@@ -32,7 +32,8 @@ private def usage : String :=
   "  golean native-json-run --input <file> --function <name> [--arg-int <n> ...] [--fuel <n>] [--choices <n,n,...>]\n" ++
   "  golean observation-eq --left <json> --right <json>\n" ++
   "  golean coverage-observations --input <file> --function <name> [--arg-int <n> ...] [--fuel <n>]\n" ++
-  "      [--max-width <B>] [--max-sites <D>] [--cap <N>] [--work-cap <W>] [--expect-status <ok|panic|ok,panic|race>]\n"
+  "      [--max-width <B>] [--max-sites <D>] [--cap <N>] [--work-cap <W>] [--expect-status <ok|panic|ok,panic|race>]
+      [--allow-nonterm <per-branch-fuel>] [--backedge <full|k>]\n"
 
 private def absoluteFrom (base : FilePath) (path : FilePath) : FilePath :=
   if path.isRelative then (base / path).normalize else path.normalize
@@ -554,11 +555,15 @@ its `stepNeeds`/`stepNeedsSeq` arm, AND its row here; the sentinel
 alarm is the executable check).
 The semantic core's consume sites and their accountant arms:
 1. `stepMulti`'s boundary scheduling pick (Multi.lean, the slot-menu
-   length at a boundary with ≥ 2 menu entries — the L1 site, and
-   stage C's `postOp` site at an `.opDone` completion marker: same
+   length at a boundary with ≥ 2 menu entries — the L1 site, stage C's
+   `postOp` site at an `.opDone` completion marker, and stage D's
+   `backEdge` site at the loop re-entry shapes: same
    `Choices.consumeAtE c.boundarySite` call, menu from `schedSlots`,
-   issuer-first at postOp) → `stepNeeds`' boundary arm (which mirrors
-   `schedSlots`, never bare `runnableIdxs`).
+   current-first at postOp/backEdge) → `stepNeeds`' boundary arm
+   (which mirrors `schedSlots`, never bare `runnableIdxs`). The DFS
+   additionally applies the per-site ENUMERATION mode at backEdge
+   consults (stage D §5d: `--backedge full|k`, fail-loud when
+   undeclared; capped occurrences counted and printed).
 2. `arrivalPlan`'s L2 arrival pick (Multi.lean, `os.length` at a
    `.multi` analysis) → `stepNeeds`' `.multi` arm.
 3. `stepThread`'s L4 waiter pick (Multi.lean, `cs.length` at a
@@ -631,6 +636,13 @@ structure EnumArgs where
   the declared set is a machine bug). `none` skips the check (bare
   CLI exploration). -/
   expectStatus : Option (List String) := none
+  /-- `--allow-nonterm N` (stage D §5d): per-branch pool fuel N with
+  fuel-exhausted branches counted as `nonterm`, never members. -/
+  allowNonterm : Option Nat := none
+  /-- `--backedge full` or `--backedge <k>` (stage D §5d): the backEdge
+  per-site enumeration mode; absent = a bound ≥ 2 backEdge consult
+  fails loud. -/
+  backedgeMode : Option (Option Nat) := none
   deriving Repr
 
 private def parseEnumArgs : List String → EnumArgs → Except String EnumArgs
@@ -651,6 +663,13 @@ private def parseEnumArgs : List String → EnumArgs → Except String EnumArgs
       parseEnumArgs rest { cfg with cap := (← parseJsonNat "--cap" value) }
   | "--work-cap" :: value :: rest, cfg => do
       parseEnumArgs rest { cfg with workCap := (← parseJsonNat "--work-cap" value) }
+  | "--allow-nonterm" :: value :: rest, cfg => do
+      parseEnumArgs rest { cfg with allowNonterm := some (← parseJsonNat "--allow-nonterm" value) }
+  | "--backedge" :: value :: rest, cfg => do
+      if value == "full" then
+        parseEnumArgs rest { cfg with backedgeMode := some none }
+      else
+        parseEnumArgs rest { cfg with backedgeMode := some (some (← parseJsonNat "--backedge" value)) }
   | "--expect-status" :: value :: rest, cfg =>
       let parts := (value.splitOn ",").filter (· ≠ "")
       if parts.isEmpty then
@@ -871,6 +890,18 @@ structure EnumOutcome where
   leaves : Nat := 0
   /-- Maximum picks consumed along any single path. -/
   maxDepth : Nat := 0
+  /-- Branches that exhausted the per-branch step budget under an
+  explicit `--allow-nonterm` (W3.2 stage D §5d): COUNTED, never an
+  observation member, never green-contributing — membership means
+  "oracle observation ∈ TERMINATING members". Without the flag a
+  fuel-out branch stays a loud failure (fail-closed default). -/
+  nonterm : Nat := 0
+  /-- backEdge scheduling sites explored CAPPED (canonical slot + k
+  anti-progress slots) rather than exhaustively — the per-site
+  enumeration mode (stage D §5d). Nonzero means the certified tree is
+  the capped one; the count prints into the run record so the claim
+  states exactly which tree it certified. -/
+  backedgeCapped : Nat := 0
 
 /-! ## The stepwise pool explorer (channels arc slice 4)
 
@@ -1084,6 +1115,19 @@ structure ExpCtx where
   cap : Nat
   workCap : Nat
   expectStatus : Option (List String)
+  /-- `some N` = `--allow-nonterm N`: per-branch pool fuel N, with
+  fuel-exhausted branches counted into `EnumOutcome.nonterm` instead of
+  failing the enumeration (stage D §5d — the wedge family's honest
+  divergent branches). `none` = the fail-closed default. -/
+  allowNonterm : Option Nat := none
+  /-- backEdge per-site enumeration mode (stage D §5d): `none` =
+  UNDECLARED — a bound ≥ 2 backEdge consult fails loud (a row must say
+  which tree it certifies); `some none` = `--backedge full`
+  (exhaustive); `some (some k)` = `--backedge k` (canonical slot 0
+  plus the first k anti-progress slots per occurrence; the alias
+  ladder is SKIPPED at capped occurrences — a capped site's width is
+  deliberately un-certified, and `backedgeCapped` prints it). -/
+  backedgeMode : Option (Option Nat) := none
 
 /-- Record one terminal leaf: status discipline (audit F1; SET-valued
 since the arc-final audit F8 — see `EnumArgs.expectStatus`), observation
@@ -1126,6 +1170,15 @@ def probeSite (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
   let mut o := out
   for d in [bound, 2 * bound + 1, 4 * bound + 3] do
     match enumRunProgram ctx.ep ctx.runFuel (prefixPicks ++ [d]) with
+    | .error .fuelOut =>
+        if ctx.allowNonterm.isSome then
+          -- The rung aliased onto a divergent branch — the same class
+          -- the DFS counts into `nonterm` under the explicit flag; it
+          -- yields no observation, so it cannot escape the membership
+          -- check either. Counted as a probe run (work accounting).
+          o := { o with probes := o.probes + 1 }
+        else
+          throw s!"alias-guard probe {prefixPicks ++ [d]} failed: the probed member's run errored — {renderGoError GoError.fuelOut}. Under a correct bound this rung aliases onto an in-bound member, so this is a member-class failure (e.g. a deadlocking or fuel-out member, which has no membership handling), NOT evidence against the computed bound {bound} (audit F15; a bound refutation is a probe OBSERVATION outside the enumerated set)"
     | .error err =>
         throw s!"alias-guard probe {prefixPicks ++ [d]} failed: the probed member's run errored — {renderGoError err}. Under a correct bound this rung aliases onto an in-bound member, so this is a member-class failure (e.g. a deadlocking or fuel-out member, which has no membership handling), NOT evidence against the computed bound {bound} (audit F15; a bound refutation is a probe OBSERVATION outside the enumerated set)"
     | .ok (_, obs, _) =>
@@ -1154,6 +1207,11 @@ def branchSite (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
     for b in List.range bound do
       o ← k o b
     return o
+
+/-- A branch that exhausted its per-branch budget under
+`--allow-nonterm`: counted, pruned, never a member (stage D §5d). -/
+def recordNonterm (out : EnumOutcome) : Except String EnumOutcome :=
+  .ok { out with nonterm := out.nonterm + 1 }
 
 mutual
 
@@ -1196,7 +1254,9 @@ partial def poolDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
                 if b == 0 then exitLeaf o (b :: path)
                 else
                   match fuel with
-                  | 0 => .error "per-path fuel exhausted (raise --fuel)"
+                  | 0 =>
+                      if ctx.allowNonterm.isSome then recordNonterm o
+                      else .error "per-path fuel exhausted (raise --fuel)"
                   | fuel' + 1 =>
                       poolStepDFS ctx o (b :: path) resultLocs fuel' m r [])
       | some _ => .error "main terminal outside its barrier frame"
@@ -1205,7 +1265,9 @@ partial def poolDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
           .error s!"deadlock member under pick assignment {path.reverse} — deadlocking members have no membership handling (fail loud, per the design)"
         else
           match fuel with
-          | 0 => .error "per-path fuel exhausted (raise --fuel)"
+          | 0 =>
+              if ctx.allowNonterm.isSome then recordNonterm out
+              else .error "per-path fuel exhausted (raise --fuel)"
           | fuel' + 1 => poolStepDFS ctx out path resultLocs fuel' m r []
 
 /-- Feed picks to the CURRENT pool step until the accountant says the
@@ -1216,10 +1278,55 @@ partial def poolStepDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
     (m : GoCore.Machine.MultiConfig) (r : GoCore.Machine.RaceState)
     (stepPicks : List Nat) : Except String EnumOutcome := do
   let picks := stepPicks.reverse
+  -- Is THIS consumption the boundary scheduling consult of a backEdge
+  -- site? (First consumption of the step at a boundary config whose
+  -- site is backEdge — the reported bound is then the slot-menu
+  -- length; stage D §5d's per-site enumeration mode applies.)
+  let backEdgeSched :=
+    stepPicks.isEmpty &&
+    (match m.threads[m.cur]? with
+     | some c => c.atBoundary && c.boundarySite == .backEdge
+         -- The consult CONSUMES (and the mode applies) only when the
+         -- slot menu has ≥ 2 entries; at a singleton menu the step's
+         -- first consumption is an ordinary data pick (e.g. the
+         -- mapIter pick at a single-goroutine `.mapIterK` re-entry),
+         -- which branches exhaustively as always.
+         && 2 ≤ (GoCore.Machine.schedSlots m.shared m.threads m.cur
+              c.boundarySite).length
+     | none => false)
   match stepNeeds m picks with
   | some bound =>
-      branchSite ctx out path bound path.length fun o b =>
-        poolStepDFS ctx o (b :: path) resultLocs fuel m r (b :: stepPicks)
+      if backEdgeSched then
+        match ctx.backedgeMode with
+        | none =>
+            .error s!"backEdge scheduling site of bound {bound} under pick assignment {path.reverse} — the row must DECLARE its back-edge tree: backedge=<k> (capped: canonical slot + k anti-progress slots per occurrence) or backedge=full (exhaustive; loop-length-exponential) — stage D §5d, never a silent prune"
+        | some none =>
+            branchSite ctx out path bound path.length fun o b =>
+              poolStepDFS ctx o (b :: path) resultLocs fuel m r (b :: stepPicks)
+        | some (some kcap) =>
+            -- Capped: slots [0 .. min kcap (bound-1)]; the alias
+            -- ladder is SKIPPED (a capped occurrence's width is
+            -- deliberately un-certified — `backedgeCapped` records
+            -- it); the width/sites disciplines still apply.
+            if bound > ctx.width then
+              .error s!"site bound {bound} exceeds the case's width {ctx.width} — the width assertion is REFUTED (mechanically, at pick position {path.length}); raise the case's width metadata"
+            else if path.length + 1 > ctx.sites then
+              .error s!"run consumes more than --max-sites {ctx.sites} choice site(s) — raise the case's sites bound (never truncated silently)"
+            else do
+              let explored := min (kcap + 1) bound
+              let out :=
+                { out with
+                  sitesSeen := out.sitesSeen + 1
+                  backedgeCapped :=
+                    out.backedgeCapped + (if explored < bound then 1 else 0) }
+              let mut o := out
+              for b in List.range explored do
+                o ← poolStepDFS ctx o (b :: path) resultLocs fuel m r
+                  (b :: stepPicks)
+              return o
+      else
+        branchSite ctx out path bound path.length fun o b =>
+          poolStepDFS ctx o (b :: path) resultLocs fuel m r (b :: stepPicks)
   | none =>
       -- TWO-SIDED drift alarm (S4 audit): run the step with ONE
       -- SENTINEL pick appended and require the sentinel to survive as
@@ -1321,9 +1428,17 @@ partial def initDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
 present, then the pool subject per branch), then run the certification
 check — every alias-probe observation must be a member. -/
 def explore (ep : EnumProgram) (runFuel width sites cap workCap : Nat)
-    (expectStatus : Option (List String)) : Except String EnumOutcome := do
+    (expectStatus : Option (List String))
+    (allowNonterm : Option Nat := none)
+    (backedgeMode : Option (Option Nat) := none) :
+    Except String EnumOutcome := do
+  -- `--allow-nonterm N` is the PER-BRANCH budget: it replaces the run
+  -- fuel, so divergent branches are pruned-and-counted at N instead of
+  -- burning the default 10M each (stage D §5d).
+  let runFuel := allowNonterm.getD runFuel
   let ctx : ExpCtx :=
-    { ep, runFuel, width, sites, cap, workCap, expectStatus }
+    { ep, runFuel, width, sites, cap, workCap, expectStatus,
+      allowNonterm, backedgeMode }
   let out ←
     match ep.initBody? with
     | none => subjectEntry ctx {} [] ep.σ₀
@@ -1367,7 +1482,8 @@ private def runCoverageObservations (args : List String) : IO UInt32 := do
                   | .ok ep =>
                       match explore ep cfg.fuel
                           cfg.maxWidth cfg.maxSites cfg.cap cfg.workCap
-                          cfg.expectStatus with
+                          cfg.expectStatus cfg.allowNonterm
+                          cfg.backedgeMode with
                       | .error err =>
                           IO.eprintln s!"coverage-observations: {err}"
                           return 1
@@ -1376,7 +1492,19 @@ private def runCoverageObservations (args : List String) : IO UInt32 := do
                             (out.observations.map (·.compress)).qsort (· < ·)
                           for line in lines do
                             IO.println line
-                          IO.eprintln s!"coverage-observations: observations={out.observations.size} steps={out.steps} probes={out.probes} sites={out.sitesSeen} leaves={out.leaves} maxdepth={out.maxDepth} width={cfg.maxWidth}"
+                          -- Stage D §5d: the mode + counters print
+                          -- into the record so a certified-set claim
+                          -- states exactly which tree it certified.
+                          let modeStr :=
+                            match cfg.backedgeMode with
+                            | none => ""
+                            | some none => " backedge=full"
+                            | some (some k) => s!" backedge={k} backedgeCapped={out.backedgeCapped}"
+                          let ntStr :=
+                            match cfg.allowNonterm with
+                            | none => ""
+                            | some n => s!" allow-nonterm={n} nonterm={out.nonterm}"
+                          IO.eprintln s!"coverage-observations: observations={out.observations.size} steps={out.steps} probes={out.probes} sites={out.sitesSeen} leaves={out.leaves} maxdepth={out.maxDepth} width={cfg.maxWidth}{modeStr}{ntStr}"
                           return 0
       | _, _ =>
           IO.eprintln s!"provide --input <file> and --function <name>\n{usage}"

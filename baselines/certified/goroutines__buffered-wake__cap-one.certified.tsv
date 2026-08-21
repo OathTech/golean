@@ -1,0 +1,12 @@
+# Certified observation set — tier=slow row (confluent-lane tier,
+# W3.2 slice 1; this row moved tier=slow at STAGE D: backedge=full
+# keeps the FULL schedule-confluence claim — the B2 back-edge
+# boundaries put its producer/consumer loop iterations in
+# ≥2-runnable windows, growing the exhaustive tree to ~29M work,
+# past the fast-lane wall clock. Confluent singleton.
+# certified: 2026-08-21  commit: w32-re-envelope stage D (B2 back-edge boundaries)
+# case: goroutines/buffered-wake/cap-one
+# params: width=4,sites=40,work=40000000,backedge=full,tier=slow
+# wire-sha256: 24ac0f2388e78caa179490916e21cffc38d8178f1f50069299f5c91a3076b61d
+# enum-stats: observations=1 steps=24248135 probes=4831641 sites=1610547 leaves=1610548 maxdepth=26 width=4 backedge=full (measured 2026-08-21)
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":123}]}

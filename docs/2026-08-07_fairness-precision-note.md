@@ -147,3 +147,46 @@ quantifier.
 future `Fair`-conditioned statement remains ABOVE-SPEC per D5 and must
 carry its caveat. Nothing in this note restates an existing designated
 statement.
+
+## 5. The W3.2 non-preclusion property (stated, 2026-08-21 — stage D)
+
+The boundary widening (B1 `.opDone` post-op points + B2 back-edge
+points; G1 ruling 2026-08-20, boundary-set note §4) lands with the
+following STATED PROPERTY — the note's fairness-non-preclusion
+argument, recorded here as the fairness lane's interface. It is an
+ARGUED property with named mechanical anchors, not a theorem; the note
+commits to no proof obligations for it, and any future
+`Fair`-conditioned theorem must discharge what it needs from these
+anchors rather than assume them.
+
+1. **Canonical streams are conservative.** Slot 0 at every new site is
+   the pre-widening schedule (`ChoiceSite.policy` rows for
+   `postOp`/`backEdge`: issuer/current-continues; the clamped
+   `Config.boundarySite` + `schedSlots`), so the empty/default stream
+   realizes the old machine's schedule modulo fuel-neutral marker
+   strips. Mechanical anchor: the stage-C/D differential — zero
+   strict-lane flips at both landings.
+2. **Every finite stream is eventually-canonical** (§2 of this note's
+   stream-vs-branch analysis, unchanged): `Choices = List Nat`
+   exhausts to pick-0-forever, and pick 0 at every new site is
+   progress-of-the-current-goroutine — no widened site can be forced
+   into unboundedly repeated anti-progress by any finite stream.
+3. **No site requires unfairness.** At every new site every slot menu
+   contains every runnable goroutine (`schedSlots`'s menu-set =
+   runnable-set, proved as `schedSlots_mem`/
+   `mem_schedSlots_of_runnable`, MultiSound.lean), so a round-robin
+   schedule is realizable as an explicit pick sequence and every
+   finite prefix of it is a `Choices` stream. Divergent always-defer
+   branches exist (they did before, at the spawn boundary) and stay in
+   the envelope BY RIGHT (dossier §3.1).
+4. **Fairness is definable and now NON-VACUOUS.** Scheduling picks are
+   structurally identifiable (the Q1 tags: sites
+   {l1Sched, postOp, backEdge, l5ExitWindow}; the Q2 `StepEvent.picks`
+   carry them with bounds), and B2 is what gives a future
+   `Fair : (ℕ → Nat) → Prop` teeth: a registry-free monopolist OFFERS
+   a pick at every back-edge, so "every goroutine runnable at
+   infinitely many scheduling picks is picked at infinitely many"
+   genuinely forces the partner to run — `Fair ⇒ TerminatesNormally`
+   becomes statable for the §1 spinner shapes at the liveness tier
+   (the `ChoiceSite.backEdge` policy docstring carries the same note
+   at the site).

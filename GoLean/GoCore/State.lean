@@ -193,17 +193,23 @@ The sites and their consuming definitions:
                    (`Config.opDone`, Machine.lean — the envelope
                    statement lives at the marker; consumed in
                    `stepMulti` via `schedSlots`).
+* `backEdge`     — the preemption point at a loop back-edge (W3.2
+                   slice 1 stage D, B2 — G1 ruling 2026-08-20): the
+                   loop re-entry shapes `.next/.continuing (.loop …)`
+                   and `.next (.mapIterK …)` are boundaries
+                   (`Config.atBoundary`, Multi.lean — the envelope
+                   statement lives there; consumed in `stepMulti` via
+                   `schedSlots`, issuer-first like postOp).
 
 The scheduling sites — what a future `Fair : Choices → Prop`
-quantifies over — are exactly `{l1Sched, l5ExitWindow, postOp}`
-(slice-1 stage D adds the `backEdge` constructor with the loop
-boundary widening; it is NOT pre-declared here — an enum row
-without a consuming site would be an inert placeholder). -/
+quantifies over — are exactly
+`{l1Sched, l5ExitWindow, postOp, backEdge}`. -/
 inductive ChoiceSite where
   | mapIter | appendSpill
   | l2Entry | l2Arrival | l4Waiter
   | l1Sched | l5ExitWindow
   | postOp
+  | backEdge
   deriving Repr, DecidableEq
 
 /-- Per-site consumption policy — ONE table (audit C-1: the per-site
@@ -246,6 +252,8 @@ def ChoiceSite.policy : ChoiceSite → SitePolicy
       "exit now (0 = teardown at main's terminal; bound is constant 2, so the flag is inert)"⟩
   | .postOp => ⟨false,
       "the ISSUER continues (slot 0 = the goroutine that completed the op — the old machine's schedule, so the empty/default stream reproduces it exactly; slots 1.. = the other runnables in goroutine order; a sole-runnable issuer consults at bound 1 without a pop — sequential conservation's hinge, as at l1Sched)"⟩
+  | .backEdge => ⟨false,
+      "the CURRENT goroutine continues (slot 0 = the looping goroutine — the old machine's schedule; slots 1.. = the other runnables in goroutine order; sole-runnable loops consult at bound 1 without a pop). THE FAIRNESS-EXPRESSIBILITY NOTE (boundary-set note §4, G1): this site is what makes a future Fair : stream → Prop NON-VACUOUS — a registry-free monopolist now OFFERS a scheduling pick at every iteration, so 'every goroutine runnable at infinitely many scheduling picks is picked at infinitely many' genuinely forces the partner to run; without it the liveness tier's fairness hypothesis would be unsatisfiable on exactly the spinner shapes it exists for"⟩
 
 /-- **THE one consumption combinator** (audit Q1): every
 nondeterministic point in the interpreter resolves through this, with

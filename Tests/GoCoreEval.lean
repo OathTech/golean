@@ -2202,12 +2202,19 @@ def main : IO UInt32 := do
     (GoCore.Machine.runProgramPoolM 100000 poolProgram "poolCloseWakeMain_F" #[]) 55)
   passed := passed && (← expectErrorStatus "GoCore pool nil spawn callee is gc's runtime fatal (triage L10; the fatal class, not a refusal)"
     (GoCore.Machine.runProgramPoolM 100000 poolProgram "poolNilSpawn_F" #[]) "fatal")
-  passed := passed && (← expectIntResult "GoCore poller family: shorter stream completes at fuel 166 (min 166 at [2]*16; was 165 pre-B1 — one .opDone strip on the realized path, stage C)"
-    (GoCore.Machine.runProgramPoolM 166 pollerProgram "pollerMain_F" #[]
-      (List.replicate 16 2)) 42)
-  passed := passed && (← expectErrorStatus "GoCore poller family: longer stream exhausts the same fuel (min 310 at [2]*32 — min fuel grows with the stream; no uniform bound)"
-    (GoCore.Machine.runProgramPoolM 166 pollerProgram "pollerMain_F" #[]
-      (List.replicate 32 2)) "fuel-out")
+  -- Stage D re-derivation (B2): the [2]*n family's picks now resolve
+  -- against the backEdge-widened site sequence and no longer realize a
+  -- deferral schedule; the [1]*n family does (slot 1 = the first
+  -- non-current runnable at the postOp/backEdge menus): min fuel
+  -- measured 59/74/90 at n=8/16/32 — still monotone in the stream, so
+  -- the family's POINT (no uniform fuel bound over streams) survives
+  -- the widening with new witnesses.
+  passed := passed && (← expectIntResult "GoCore poller family: shorter stream completes at fuel 74 (min 74 at [1]*16; stage-D re-derivation — the deferral family is [1]*n under the widened sites)"
+    (GoCore.Machine.runProgramPoolM 74 pollerProgram "pollerMain_F" #[]
+      (List.replicate 16 1)) 42)
+  passed := passed && (← expectErrorStatus "GoCore poller family: longer stream exhausts the same fuel (min 90 at [1]*32 — min fuel grows with the stream; no uniform bound)"
+    (GoCore.Machine.runProgramPoolM 74 pollerProgram "pollerMain_F" #[]
+      (List.replicate 32 1)) "fuel-out")
   passed := passed && (← expectIntResult "GoCore pool waiter priority: buffered send hands off to the parked receiver (len 0; gc chansend recvq-first)"
     (GoCore.Machine.runProgramPoolM 100000 prioProgram "prioSendHandoffMain_F" #[] [1, 1]) 100)
   passed := passed && (← expectIntResult "GoCore pool waiter priority: receive refills from the parked sender (len preserved; gc recv same-slot)"

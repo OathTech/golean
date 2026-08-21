@@ -257,6 +257,35 @@ def Config.atBoundary : Config → Bool
   -- nothing (`applySyncOp`'s envelope statement).
   | .retV _ (.syncStK _ _ [] _ _) => true
   | .blockedSync _ _ _ _ => true
+  -- Loop BACK-EDGES (W3.2 stage D, B2 — G1 ruling 2026-08-20; THE
+  -- ENVELOPE STATEMENT of `ChoiceSite.backEdge`): the loop re-entry
+  -- shapes are scheduling points, so a goroutine inside a
+  -- registry-free segment can be descheduled at an iteration edge.
+  -- Spec argument (nondeterminism doctrine requirement 1): the spec is
+  -- SILENT on scheduling — no text distinguishes a boundary-free
+  -- segment from any other program point, so a switch at a back-edge
+  -- is as conforming as one at a registry op (dossier §1.1:
+  -- "The properties of the scheduler were never defined by the
+  -- language"). Realizability: gc itself performs ASYNCHRONOUS
+  -- preemption at arbitrary points, including inside registry-free
+  -- loops, since Go 1.14 (the asyncpreemptoff GODEBUG knob documents
+  -- the mechanism) — back-edge switches are a strict SUBSET of what
+  -- one conforming implementation demonstrably does; mem#badsync's
+  -- registry-free-spinner sentence ("The loop in main is not
+  -- guaranteed to finish") is the normative-adjacent confirmation
+  -- that implementations need not honor a spinner's monopoly, and
+  -- dossier §3.1 (spec allows starvation) keeps the always-spin
+  -- branches in the envelope BY RIGHT. Width bound: still
+  -- goroutine-step-granularity interleavings respecting blocking/HB —
+  -- inside C1's argued-maximal class. The site (`ChoiceSite.backEdge`,
+  -- slot 0 = current-continues via `schedSlots`) is what makes the
+  -- liveness tier's Fair non-vacuous (the site's policy docstring).
+  -- `.next (.mapIterK …)` is the one iteration form with its own
+  -- frame, and it was ALREADY a choice-consuming position (the
+  -- mapIter pick) — making it a boundary aligns the two disciplines.
+  | .next (.loop _ _ _ _) => true
+  | .continuing (.loop _ _ _ _) => true
+  | .next (.mapIterK _ _ _ _ _ _ _ _ _ _) => true
   | _ => false
 
 /-- The completed spawn positions: callee and argument values evaluated
@@ -1069,23 +1098,29 @@ sequential-conservation lemmas quantify over. Stage D adds the
 back-edge shapes with their `backEdge` tag. -/
 def Config.boundarySite : Config → ChoiceSite
   | .opDone .postOp _ => .postOp
+  | .next (.loop _ _ _ _) => .backEdge
+  | .continuing (.loop _ _ _ _) => .backEdge
+  | .next (.mapIterK _ _ _ _ _ _ _ _ _ _) => .backEdge
   | _ => .l1Sched
 
 /-- The slot MENU of a scheduling consultation at a boundary (stage C).
 For `l1Sched` (and every non-postOp site) the menu is `runnableIdxs`
 in goroutine order — slot 0 = lowest-index runnable, today's exact
-behavior. For `postOp` the menu is ISSUER-FIRST: slot 0 = `cur` (the
-goroutine whose op just completed — the old machine's schedule, audit
-C-2's canonical-slot convention, which is what makes the empty/default
-stream reproduce the pre-widening schedule literally), slots 1.. = the
-other runnables in goroutine order. The issuer holds the `.opDone`
-marker, which is neither done nor blocked, so it is always runnable
-and the postOp menu is never empty; the menu's SET equals the runnable
-set either way — the relation's `schedPick` (membership in
-`runnableIdxs`) is unchanged by the slot reordering. -/
+behavior. For `postOp` and (stage D) `backEdge` the menu is
+ISSUER/CURRENT-FIRST: slot 0 = `cur` (the goroutine whose op just
+completed / whose loop is re-entering — the old machine's schedule,
+audit C-2's canonical-slot convention, which is what makes the
+empty/default stream reproduce the pre-widening schedule literally),
+slots 1.. = the other runnables in goroutine order. The current
+goroutine at either site is neither done nor blocked (the marker and
+the loop re-entry shapes), so it is always runnable and the menu is
+never empty; the menu's SET equals the runnable set either way — the
+relation's `schedPick` (membership in `runnableIdxs`) is unchanged by
+the slot reordering. -/
 def schedSlots (s : ExecState) (threads : Array Config) (cur : Nat) :
     ChoiceSite → List Nat
   | .postOp => cur :: (runnableIdxs s threads).filter (· != cur)
+  | .backEdge => cur :: (runnableIdxs s threads).filter (· != cur)
   | _ => runnableIdxs s threads
 
 /-- One pool step (D2a). If the running goroutine is at a registry

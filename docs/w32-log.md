@@ -467,3 +467,85 @@ judgment calls recorded as they are made; checkpoints every ≤5 units.
   baseline); THE WEDGE FLIPS on stream [0,0,1]; U-1 admitted with its
   membership row green. Stage D (B2 back-edges + enumerator modes +
   allow-nonterm + the wedge corpus row) next.
+
+## Slice 1 stage D — B2: the back-edge boundaries + the §5d enumerator modes (2026-08-21)
+
+- Base: `f005588d` (stage C), tree with stage-D work. MECHANISM (the
+  note §2 B2): `Config.atBoundary` gains the loop re-entry shapes
+  (`.next/.continuing (.loop …)`, `.next (.mapIterK …)`) — no new
+  configuration, no new step, no new relation rule; the envelope
+  statement lives at the new `atBoundary` arms (dossier-cited: §1.1
+  spec silence, gc 1.14 async preemption, mem#badsync, §3.1
+  starvation-by-right). `ChoiceSite.backEdge` (consumeAtOne=false,
+  slot 0 = current-continues; THE FAIRNESS-EXPRESSIBILITY NOTE at its
+  policy docstring per the note's stage-D bullet) + `boundarySite` /
+  `schedSlots` arms. Proof cost was ABSORBED by stage C's
+  generalizations: only `boundarySite_postOp_shape`'s split, a new
+  `boundarySite_backEdge_runnable`, and the two menu lemmas' extra
+  case — everything else (singleton conservation, soundness,
+  completeness, wf, streams, NPDRF, Iris layers, mirror) compiled
+  UNCHANGED. Eval: the poller family's deferral witnesses re-derived
+  ([2]*n no longer defers under the widened site sequence; [1]*n
+  does — min fuel 74/90 at n=16/32, still monotone in stream length,
+  the family's point preserved); 136/136 ok.
+- §5d ENUMERATOR (G1 question 6, as ruled): per-site modes —
+  `--backedge full|k` (k may be 0 = canonical slot only), applied
+  exactly at ≥2-menu backEdge consults (a first-attempt shape bug
+  misclassified single-goroutine mapIter picks as backEdge consults —
+  caught by the maps rows going red in the sweep, fixed by requiring
+  menu ≥ 2); fail-loud when a row hits such a consult undeclared;
+  capped occurrences SKIP the alias ladder (a capped site's width is
+  deliberately un-certified) and are counted + printed
+  (`backedgeCapped=`) so the record states the tree. `--allow-nonterm
+  N`: per-branch fuel N with fuel-exhausted branches counted
+  (`nonterm=`), never members, never green-contributing; probe rungs
+  landing on divergent branches tolerated under the flag; the
+  driver-coupling pin tolerates fuel-out coupling streams on declared
+  rows (terminating ones still must be members — noted: driver drift
+  that MISREPORTS a terminating stream as fuel-out on a declared row
+  would hide there; the enumeration's own tree still couples).
+  Params `backedge=`/`nonterm=` wired through
+  diff-coverage/coverage-manifest validation (enumerating-lanes /
+  membership-only respectively); the membership singleton refusal
+  keeps its teeth except on declared-nonterm rows (terminating
+  singleton + counted bucket is the wedge's honest shape).
+- **THE WEDGE ROW LANDS GREEN END-TO-END**:
+  `goroutines/send-then-spin` (membership, width=4, sites=200,
+  members=1, nonterm=200, backedge=1 — exhaustive at this program's
+  bound-2 menus, backedgeCapped=0): certified terminating set {42}
+  with nonterm=216 counted spin branches; oracle 42 ∈ set; the
+  DONE's "exit-0 on an enumerable stream" is the row + the [0,0,1]
+  exhibition. SAME-COMMIT: register #1 rewritten to its DISCHARGED
+  state (+ #5's incompleteness note closed), inventory C2 → (a)
+  ENVELOPED with the cost-prose correction, the known-≠-oracle list
+  drops the wedge, tallies re-counted; the fairness non-preclusion
+  argument recorded as a STATED PROPERTY
+  (docs/2026-08-07_fairness-precision-note.md §5 — argued, anchored,
+  no proof obligations per the note).
+- Stage-D corpus sweep: 4 rows hit genuine ≥2-menu backEdge consults —
+  fork-join/compute, muxer/client, race/negative/map-range-iter
+  (all THREE fit backedge=full: 23k/18k/3.7k work — full claims kept)
+  and buffered-wake/cap-one (full = 29.1M work → tier=slow with a
+  fresh record, claim kept FULL). The tier=slow loopy rows re-measured
+  under stage D: fifo (backedge=0 declared: identical
+  steps/leaves/set, depth 27→37, 623,830 capped occurrences —
+  back-edge anti-progress schedules NOT in its certification,
+  recorded in the record header) and alternate (backedge=0, 98,640
+  occurrences, same singleton); rw-writers and first-come measured
+  ZERO ≥2-menu backEdge consults (identical trees) — no declaration,
+  claims unchanged. BUG-065 filed for the five intractable rows
+  (the honest-red record; sb-chan's Cases-line credit needed the
+  one-line format — check-bugs parses a single line).
+
+### Gates (slice 1 stage D)
+
+- `GOLEAN_MEM_MAX=24G scripts/ci --diff` (artifacts/w32-sD-ci2.log,
+  untracked): every step ok incl. bug-index (BUG-065 credits the three
+  honest reds) and the re-pin guard (3 flips, all on the Cases line);
+  drift = EXACTLY the one new id (send-then-spin PASS/membership).
+  **Baseline re-pin #2** with the reason in the header;
+  coverage-baseline-diff green at the pinned tree. The stage-D `--slow`
+  re-certification is FOLDED into stage E's exit gate (one ~90-min
+  --slow run validates the D-touched records + the E closure together;
+  the C gate ran its own --slow) — recorded here as the deliberate
+  economy.

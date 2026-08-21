@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# MEMBERSHIP lane with the stage-D §5d params (G1-ruled): nonterm=200
+# is the per-branch fuel under which divergent (always-spin) branches
+# are COUNTED (`nonterm=` in the run record), never members;
+# backedge=1 explores the canonical slot + 1 anti-progress slot at
+# every back-edge consult — at this program's bound-2 menus that is
+# EXHAUSTIVE (backedgeCapped=0 in the record). Measured tree:
+# observations=1 steps=11187 probes=14355 sites=4940 leaves=4725
+# maxdepth=137 nonterm=216.
+-	sendThenSpin	-	ok	-	goroutines,channels,loops,nondet	membership	THE WEDGE ROW (register #1 discharge): gc's completing execution (42, exit 0; 60/60 observed) is an enumerated member — pre-B1 it was outside the envelope on every stream (the definitional bug); the always-spin schedules stay in the envelope by right (dossier §3.1/§4.3) and are counted as nonterm branches, never members; membership = oracle ∈ TERMINATING set {42} (members=1 under the declared nonterm accounting)	width=4,sites=200,members=1,nonterm=200,backedge=1
