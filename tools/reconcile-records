@@ -1,0 +1,990 @@
+#!/usr/bin/env python3
+"""reconcile-records — the cross-ledger reconciliation the gate does not do.
+
+READ-ONLY. Fixes nothing, edits nothing, writes nothing. It reports
+DISCREPANCIES between the project's records so a whole-stack audit consumes
+findings instead of discovering them (the launch gate's "the records"
+bullet, docs/2026-08-21_raft-proof-constitution.md).
+
+Deliberately NOT in scripts/: this is an audit instrument, not a gate.
+`scripts/check-bugs.sh` already mechanizes the BUGS.md <-> baseline
+invariants and runs inside `scripts/ci`; this tool covers the invariants
+that live only in prose — ledger cross-references, the language-coverage
+ledger's closing arithmetic, the interpretations index's backing entries,
+the certified record's currency, and the census evidence's reproducibility.
+
+Usage:
+    tools/reconcile-records            # all static checks
+    tools/reconcile-records --heavy    # + re-derive the raftsubject census
+    tools/reconcile-records --json     # machine-readable findings
+
+Exit code is 0 whatever it finds: a discrepancy is dossier material, not a
+build failure. Use --strict to exit 1 when any finding is emitted.
+"""
+
+from __future__ import annotations
+
+import argparse
+import fnmatch
+import json
+import os
+import re
+import subprocess
+import sys
+from collections import Counter, defaultdict
+
+ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+
+
+def p(*parts):
+    return os.path.join(ROOT, *parts)
+
+
+BASELINE = p("baselines", "native-full.tsv")
+NEGATIVE = p("baselines", "negative-full.tsv")
+BUGS = p("docs", "BUGS.md")
+LANGLEDGER = p("docs", "language-coverage-ledger.md")
+COVLEDGER = p("docs", "coverage-ledger.md")
+DIVLEDGER = p("docs", "spec-divergence-ledger.md")
+INTERP = p("docs", "spec-interpretations.md")
+LATITUDE = p("docs", "2026-08-11_latitude-inventory.md")
+TRIAGE = p("docs", "2026-08-19_triage-table.md")
+UNTRIAGED_IDS = p("baselines", "untriaged-ids")
+UNTRIAGED_COUNT = p("baselines", "untriaged-count")
+CERTIFIED_DIR = p("baselines", "certified")
+
+FIDELITY_STAGES = {
+    "lean-observation",
+    "differential",
+    "membership",
+    "confluent",
+    "racy",
+    "nondet",
+}
+
+FINDINGS: list[dict] = []
+
+
+def finding(check, sev, msg, detail=None):
+    FINDINGS.append(
+        {"check": check, "severity": sev, "message": msg, "detail": detail or []}
+    )
+
+
+def read(path):
+    with open(path, encoding="utf-8") as f:
+        return f.read()
+
+
+def lines(path):
+    return read(path).splitlines()
+
+
+# ---------------------------------------------------------------------------
+# Loaders
+# ---------------------------------------------------------------------------
+
+
+def load_baseline(path=BASELINE):
+    """id -> (result, stage). Skips comments and the column header."""
+    out = {}
+    for ln in lines(path):
+        if not ln or ln.startswith("#"):
+            continue
+        f = ln.split("\t")
+        if len(f) < 3:
+            continue
+        if f[0] == "result":  # column header
+            continue
+        out[f[1]] = (f[0], f[2])
+    return out
+
+
+def load_bugs():
+    """[{id,status,pinned,cases,line}]"""
+    out = []
+    cur = None
+    for i, ln in enumerate(lines(BUGS), 1):
+        m = re.match(r"^## (BUG-\d+)\b", ln)
+        if m:
+            if cur:
+                out.append(cur)
+            cur = {"id": m.group(1), "status": "", "pinned": "", "cases": [], "line": i}
+            continue
+        if cur is None:
+            continue
+        m = re.match(r"^- Status:\s*(\S+)", ln)
+        if m:
+            cur["status"] = m.group(1)
+        m = re.match(r"^- Pinned-by:\s*(\S+)", ln)
+        if m:
+            cur["pinned"] = m.group(1)
+        m = re.match(r"^- Cases:\s*(.*)$", ln)
+        if m:
+            cur["cases"] = [c.strip() for c in m.group(1).split(",") if c.strip()]
+    if cur:
+        out.append(cur)
+    return out
+
+
+def load_headings(path, pattern):
+    """[(label, lineno, heading text)] for headings matching pattern."""
+    out = []
+    for i, ln in enumerate(lines(path), 1):
+        m = re.match(pattern, ln)
+        if m:
+            out.append((m.group(1), i, ln.strip()))
+    return out
+
+
+def corpus_ids():
+    """Every case id the corpus manifest emits — the corpus's own id namespace."""
+    try:
+        r = subprocess.run(
+            [p("scripts", "coverage-manifest")],
+            cwd=ROOT, capture_output=True, text=True, timeout=300,
+        )
+    except Exception as e:
+        finding("C3", "medium", f"could not run scripts/coverage-manifest: {e}")
+        return set()
+    if r.returncode != 0:
+        finding("C3", "medium", "scripts/coverage-manifest exited nonzero; corpus<->baseline check skipped")
+        return set()
+    return {ln.split("\t")[0] for ln in r.stdout.splitlines() if ln.strip()}
+
+
+# ---------------------------------------------------------------------------
+# C1 — baseline shape (informational anchor for every count below)
+# ---------------------------------------------------------------------------
+
+
+def check_baseline(bl):
+    by = Counter((r, s) for r, s in bl.values())
+    npass = sum(n for (r, _), n in by.items() if r == "PASS")
+    nfail = sum(n for (r, _), n in by.items() if r == "FAIL")
+    other = len(bl) - npass - nfail
+    info = {
+        "cases": len(bl),
+        "pass": npass,
+        "fail": nfail,
+        "other": other,
+        "by_stage": {f"{r}/{s}": n for (r, s), n in sorted(by.items())},
+    }
+    if other:
+        finding(
+            "C1",
+            "medium",
+            f"{other} baseline row(s) carry a result that is neither PASS nor FAIL",
+        )
+    return info
+
+
+# ---------------------------------------------------------------------------
+# C2 — the gate's own BUGS<->baseline check, run and reported
+# ---------------------------------------------------------------------------
+
+
+def check_check_bugs():
+    try:
+        r = subprocess.run(
+            ["bash", p("scripts", "check-bugs.sh")],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+    except Exception as e:  # pragma: no cover
+        finding("C2", "high", f"could not run scripts/check-bugs.sh: {e}")
+        return {}
+    if r.returncode != 0:
+        finding(
+            "C2",
+            "high",
+            "scripts/check-bugs.sh FAILS at this tip (the gate's own BUGS<->baseline invariant)",
+            (r.stdout + r.stderr).strip().splitlines(),
+        )
+    return {"exit": r.returncode, "out": r.stdout.strip().splitlines()}
+
+
+# ---------------------------------------------------------------------------
+# C3 — every BUGS.md case id exists in the corpus tree, not only the baseline
+# ---------------------------------------------------------------------------
+
+
+def check_bug_cases_exist(bugs, bl, corpus):
+    missing_baseline = []
+    for b in bugs:
+        for c in b["cases"]:
+            if c not in bl:
+                missing_baseline.append(f"{b['id']} (BUGS.md:{b['line']}) case {c}")
+    if missing_baseline:
+        finding(
+            "C3",
+            "high",
+            f"{len(missing_baseline)} BUGS.md case id(s) absent from the baseline",
+            missing_baseline,
+        )
+    # the baseline's id namespace must BE the corpus's — a drifted baseline is a
+    # record of a corpus that no longer exists, and every count derived from it
+    # is derived from a ghost.
+    if corpus:
+        only_bl = sorted(set(bl) - corpus)
+        only_c = sorted(corpus - set(bl))
+        if only_bl:
+            finding("C3", "high",
+                    f"{len(only_bl)} baseline id(s) the corpus manifest does not emit (stale baseline rows)",
+                    only_bl)
+        if only_c:
+            finding("C3", "high",
+                    f"{len(only_c)} corpus manifest id(s) absent from the tracked baseline (unrecorded cases)",
+                    only_c)
+    open_diff = [b for b in bugs if b["status"] == "open" and b["pinned"] == "differential"]
+    open_none = [b for b in bugs if b["status"] == "open" and b["pinned"] != "differential"]
+    return {
+        "bugs": len(bugs),
+        "open": len([b for b in bugs if b["status"] == "open"]),
+        "fixed": len([b for b in bugs if b["status"] == "fixed"]),
+        "open_differential": [b["id"] for b in open_diff],
+        "open_unpinned": [b["id"] for b in open_none],
+    }
+
+
+# ---------------------------------------------------------------------------
+# C4 — the language-coverage ledger's closing arithmetic vs the CURRENT baseline
+# ---------------------------------------------------------------------------
+
+
+def check_lang_ledger_arithmetic(bl, info):
+    txt = read(LANGLEDGER)
+    m = re.search(
+        r"All numbers at the .{0,80}?baseline \((\d+) cases,\s+(\d+) PASS /\s+(\d+) FAIL",
+        txt,
+        re.S,
+    )
+    claimed = None
+    if not m:
+        finding("C4", "medium", "could not parse the §8 baseline-vintage line in " + LANGLEDGER)
+    else:
+        claimed = (int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        cur = (info["cases"], info["pass"], info["fail"])
+        if claimed != cur:
+            finding(
+                "C4",
+                "high",
+                "the language-coverage ledger §8 arithmetic is computed over a STALE baseline: "
+                f"§8 says {claimed[0]} cases / {claimed[1]} PASS / {claimed[2]} FAIL; "
+                f"the tracked baseline at this tip is {cur[0]} / {cur[1]} / {cur[2]} "
+                f"(delta: {cur[0]-claimed[0]} cases, {cur[2]-claimed[2]} reds). §8 claims "
+                "'every one on a named row' — that claim is not re-derivable at this tip.",
+                [f"{LANGLEDGER}:{txt[:m.start()].count(chr(10))+1}"],
+            )
+    # the red-bucket table
+    buckets = {}
+    for name, pat in (
+        ("frontier", r"\|\s*frontier FR-1…FR-15 \(§4\)\s*\|\s*(\d+)\s*\|"),
+        ("design_questions", r"\|\s*design questions Q-\* \(§6\)\s*\|\s*(\d+)\s*\|"),
+        ("c_pins", r"\|\s*\(c\) profound-reason pins[^|]*\|\s*(\d+) \+ (\d+)\s*\|"),
+        ("a_queued", r"\|\s*\(a\)-queued fixes[^|]*\|\s*(\d+)\s*\|"),
+        ("total", r"\|\s*\*\*total\*\*\s*\|\s*\*\*(\d+)\*\*\s*\|"),
+    ):
+        mm = re.search(pat, txt)
+        if mm:
+            buckets[name] = sum(int(g) for g in mm.groups())
+    if buckets:
+        s = sum(v for k, v in buckets.items() if k != "total")
+        if "total" in buckets and s != buckets["total"]:
+            finding(
+                "C4",
+                "high",
+                f"the §8 red-bucket table does not sum: buckets add to {s}, table total is {buckets['total']}",
+            )
+        if claimed and "total" in buckets and buckets["total"] != claimed[2]:
+            finding(
+                "C4",
+                "high",
+                f"§8's bucket total {buckets['total']} != §8's own claimed FAIL count {claimed[2]}",
+            )
+        if "total" in buckets and buckets["total"] != info["fail"]:
+            finding(
+                "C4",
+                "high",
+                f"§8's red buckets account for {buckets['total']} reds; the baseline at this tip has "
+                f"{info['fail']} — {info['fail'] - buckets['total']} red(s) are NOT on a named row "
+                "at the current tip (the §8 invariant 'zero unmapped' does not hold as written)",
+            )
+    return {"claimed": claimed, "buckets": buckets}
+
+
+# ---------------------------------------------------------------------------
+# C5 — the frontier table: every FR row's cited ids are actually red
+# ---------------------------------------------------------------------------
+
+FR_ROW = re.compile(r"^\|\s*(FR-\d+)\s*\|(.*)$")
+
+
+def check_frontier_rows(bl):
+    txt = lines(LANGLEDGER)
+    rows = []
+    for i, ln in enumerate(txt, 1):
+        m = FR_ROW.match(ln)
+        if not m:
+            continue
+        cells = [c.strip() for c in ln.strip().strip("|").split("|")]
+        if len(cells) < 5:
+            continue
+        rid, reds_cell = cells[0], cells[4]
+        cm = re.match(r"^(\d+)", reds_cell)
+        rows.append(
+            {
+                "id": rid,
+                "line": i,
+                "claimed": int(cm.group(1)) if cm else None,
+                "cell": reds_cell,
+            }
+        )
+    total_claimed = sum(r["claimed"] or 0 for r in rows)
+    # cited id tokens inside the reds cell (backticked). The ledger cites
+    # SUFFIXES of baseline ids (`slice-to-array/ok-forms` for
+    # `spec-examples-decl/slice-to-array/ok-forms`), so resolve exact ->
+    # family-prefix -> suffix, and report ambiguity rather than guessing.
+    unresolved, ambiguous, mismatched = [], [], []
+    for r in rows:
+        ids = set()
+        for tok in re.findall(r"`([^`]+)`", r["cell"]):
+            tok = tok.strip()
+            if not tok or tok.startswith("("):
+                continue
+            for c in expand_braces(tok):  # a/{x,y}/z
+                hits = resolve_id(c, bl)
+                if hits is None:
+                    unresolved.append(f"{r['id']} ({LANGLEDGER}:{r['line']}) cites `{c}` — resolves to no baseline id")
+                elif isinstance(hits, str):
+                    ambiguous.append(f"{r['id']} ({LANGLEDGER}:{r['line']}) `{c}` — {hits}")
+                else:
+                    ids.update(hits)
+        r["resolved"] = len(ids)
+        reds = {i for i in ids if bl[i][0] == "FAIL"}
+        r["reds_found"] = len(reds)
+        r["green_cited"] = sorted(ids - reds)
+        # THE precise check: does the row's own red COUNT still hold? A citation
+        # glob may over-reach (`complex/*` catches two green siblings while the
+        # row honestly says 20), so a green id inside a glob is not by itself a
+        # defect — a wrong COUNT is.
+        if r["claimed"] is not None and r["claimed"] != len(reds):
+            mismatched.append(
+                (
+                    len(reds) == 0,
+                    f"{r['id']} ({LANGLEDGER}:{r['line']}) claims {r['claimed']} red(s); its citations "
+                    f"resolve to {len(reds)} red(s) of {len(ids)} case(s)"
+                    + (f" — now-green: {', '.join(r['green_cited'])}" if r["green_cited"] else ""),
+                )
+            )
+    if ambiguous:
+        finding("C5", "low", f"{len(ambiguous)} frontier-table citation(s) are ambiguous suffixes", ambiguous)
+    if unresolved:
+        finding("C5", "medium", f"{len(unresolved)} frontier-table case citation(s) do not resolve against the baseline", unresolved)
+    empty = [m for z, m in mismatched if z]
+    partial = [m for z, m in mismatched if not z]
+    if empty:
+        finding(
+            "C5",
+            "high",
+            f"{len(empty)} frontier row(s) have NO red left: every case they cite now PASSes, so the "
+            "feature appears to have LANDED without its row retiring. §4 is 'the authority for every "
+            "red case in the baseline' and these counts feed §8's 84.",
+            empty,
+        )
+    if partial:
+        finding(
+            "C5",
+            "medium",
+            f"{len(partial)} frontier row(s) claim a red count that is not mechanically re-derivable "
+            "from their citations. Some of this is citation SHORTHAND (a prose family like 'F3 family 7', "
+            "an ellipsis inside a glob, or a '+ adjacency' the count deliberately excludes) rather than "
+            "drift — each needs a read, which is exactly why the count should not be re-derived from prose.",
+            partial,
+        )
+    return {
+        "rows": len(rows),
+        "claimed_reds": total_claimed,
+        "reds_found": sum(r["reds_found"] for r in rows),
+        "per_row": {r["id"]: (r["claimed"], r["reds_found"]) for r in rows},
+    }
+
+
+def resolve_id(tok, bl):
+    """-> [ids] on success, None if nothing resolves, a str complaint if ambiguous."""
+    pat = tok.replace("…", "*")
+    if "*" in pat:
+        hits = [k for k in bl if fnmatch.fnmatch(k, pat) or fnmatch.fnmatch(k, "*/" + pat)
+                or fnmatch.fnmatch(k, pat + "/*") or fnmatch.fnmatch(k, "*/" + pat + "/*")]
+        return hits or None
+    if tok in bl:
+        return [tok]
+    fam = [k for k in bl if k.startswith(tok + "/")]
+    if fam:
+        return fam
+    suf = [k for k in bl if k.endswith("/" + tok)]
+    if len(suf) == 1:
+        return suf
+    if len(suf) > 1:
+        return f"suffix matches {len(suf)} baseline ids ({', '.join(sorted(suf)[:4])}…)"
+    sufam = [k for k in bl if "/" + tok + "/" in k]
+    if sufam:
+        return sufam
+    return None
+
+
+def expand_braces(tok):
+    m = re.search(r"\{([^{}]*)\}", tok)
+    if not m:
+        return [tok]
+    out = []
+    for alt in m.group(1).split(","):
+        out.extend(expand_braces(tok[: m.start()] + alt.strip() + tok[m.end() :]))
+    return out
+
+
+# ---------------------------------------------------------------------------
+# C6 — cross-reference resolution across the ledgers
+# ---------------------------------------------------------------------------
+
+
+def check_cross_refs():
+    defs = {}
+    defs["BUG"] = {b for b, _, _ in load_headings(BUGS, r"^## (BUG-\d+)")}
+    defs["L"] = {l for l, _, _ in load_headings(DIVLEDGER, r"^### (L-\d+)")}
+    defs["I"] = {i for i, _, _ in load_headings(INTERP, r"^### (I-\d+)")}
+    lat = {l for l, _, _ in load_headings(LATITUDE, r"^### ([CER]\d+)\.")}
+    defs["LAT"] = lat
+    # U-n unknowns live in §6 as list items or headings
+    defs["U"] = set(re.findall(r"\bU-(\d+)\b", read(LATITUDE)))
+    langtxt = read(LANGLEDGER)
+    defs["FR"] = set(re.findall(r"^\|\s*(FR-\d+)\s*\|", langtxt, re.M))
+    defs["Q"] = set(re.findall(r"^\|\s*(Q-[A-Z]+)\s*\|", langtxt, re.M))
+    defs["T"] = set(re.findall(r"^\|\s*(T-\d+)\s*\|", langtxt, re.M))
+
+    dangling = defaultdict(list)
+    docs_dir = p("docs")
+    for dirpath, _dirs, files in os.walk(docs_dir):
+        if "/archive" in dirpath:
+            continue
+        for fn in files:
+            # the dossier QUOTES ids and placeholders it reports on; skip itself
+            if not fn.endswith(".md") or "launch-audit-dossier" in fn:
+                continue
+            path = os.path.join(dirpath, fn)
+            rel = os.path.relpath(path, ROOT)
+            try:
+                txt = read(path)
+            except Exception:
+                continue
+            for i, ln in enumerate(txt.splitlines(), 1):
+                if ln.lstrip().startswith(("#", ">")) and "BUG-" not in ln:
+                    pass
+                for ref in re.findall(r"\bBUG-(\d+)\b", ln):
+                    if f"BUG-{ref}" not in defs["BUG"]:
+                        dangling["BUG"].append(f"{rel}:{i} -> BUG-{ref}")
+                for ref in re.findall(r"\bL-(\d{3})\b", ln):
+                    if f"L-{ref}" not in defs["L"]:
+                        dangling["L"].append(f"{rel}:{i} -> L-{ref}")
+                for ref in re.findall(r"\bI-(\d+)\b", ln):
+                    if f"I-{ref}" not in defs["I"]:
+                        dangling["I"].append(f"{rel}:{i} -> I-{ref}")
+                for ref in re.findall(r"\bFR-(\d+)\b", ln):
+                    if f"FR-{ref}" not in defs["FR"]:
+                        dangling["FR"].append(f"{rel}:{i} -> FR-{ref}")
+                for ref in re.findall(r"\bQ-([A-Z]{3,})\b", ln):
+                    if f"Q-{ref}" not in defs["Q"]:
+                        dangling["Q"].append(f"{rel}:{i} -> Q-{ref}")
+            # L:<ref> latitude cross-refs, wherever they appear
+            for i, ln in enumerate(txt.splitlines(), 1):
+                for ref in re.findall(r"L:([A-Z]\d+(?:-[A-Z]\d+)?|U-\d+)", ln):
+                    for one in ref.split("-") if re.match(r"^[A-Z]\d+-[A-Z]\d+$", ref) else [ref]:
+                        if one.startswith("U-"):
+                            if one[2:] not in defs["U"]:
+                                dangling["L:"].append(f"{rel}:{i} -> L:{one}")
+                        elif one not in lat:
+                            dangling["L:"].append(f"{rel}:{i} -> L:{one}")
+    for kind, items in sorted(dangling.items()):
+        uniq = sorted(set(items))
+        finding(
+            "C6",
+            "medium" if kind in ("BUG", "L", "I") else "low",
+            f"{len(uniq)} dangling `{kind}` cross-reference(s) in docs/ (the id has no definition)",
+            uniq[:60] + ([f"... and {len(uniq)-60} more"] if len(uniq) > 60 else []),
+        )
+    return {k: len(v) for k, v in defs.items()}
+
+
+# ---------------------------------------------------------------------------
+# C7 — interpretations <-> divergence ledger backing
+# ---------------------------------------------------------------------------
+
+
+def check_interpretations():
+    rows = load_headings(INTERP, r"^### (I-\d+)\.")
+    ledger = read(DIVLEDGER)
+    ldefs = {l for l, _, _ in load_headings(DIVLEDGER, r"^### (L-\d+)")}
+    unbacked, missing = [], []
+    backed = {}
+    for rid, ln, text in rows:
+        m = re.search(r"backed by (L-\d+)", text)
+        if not m:
+            unbacked.append(f"{INTERP}:{ln} {rid} — heading names no backing ledger entry")
+            continue
+        lid = m.group(1)
+        backed[rid] = lid
+        if lid not in ldefs:
+            missing.append(f"{INTERP}:{ln} {rid} cites {lid}, which has no ### entry in the divergence ledger")
+    if unbacked:
+        finding("C7", "medium", f"{len(unbacked)} interpretations row(s) name no backing ledger entry", unbacked)
+    if missing:
+        finding("C7", "high", f"{len(missing)} interpretations row(s) cite a nonexistent ledger entry", missing)
+    # reverse: ledger entries announcing an ADOPTED READING should be indexed
+    unindexed = []
+    for lid, ln, text in load_headings(DIVLEDGER, r"^### (L-\d+)"):
+        if "ADOPTED READING" in text and lid not in backed.values():
+            unindexed.append(f"{DIVLEDGER}:{ln} {lid} is marked ADOPTED READING but no I-row indexes it")
+    if unindexed:
+        finding(
+            "C7",
+            "medium",
+            f"{len(unindexed)} ledger entry(ies) marked ADOPTED READING are not indexed in spec-interpretations.md",
+            unindexed,
+        )
+    # the ledger's own self-count
+    m = re.search(r"Curated above: \*\*(\d+) entries, L-(\d+)…L-(\d+)\*\*", ledger)
+    if m:
+        n = int(m.group(1))
+        if n != len(ldefs):
+            finding(
+                "C7",
+                "medium",
+                f"the divergence ledger's feed-status line claims {n} curated entries; {len(ldefs)} ### L-entries exist",
+            )
+    return {"interpretations": len(rows), "ledger_entries": len(ldefs), "backed": backed}
+
+
+# ---------------------------------------------------------------------------
+# C8 — untriaged set: subset of baseline reds at a fidelity stage
+# ---------------------------------------------------------------------------
+
+
+def check_untriaged(bl, bugs):
+    tracked = {}
+    for i, ln in enumerate(lines(UNTRIAGED_IDS), 1):
+        if not ln or ln.startswith("#"):
+            continue
+        f = ln.split("\t")
+        if len(f) != 2:
+            finding("C8", "high", f"malformed untriaged row {UNTRIAGED_IDS}:{i}: {ln!r}")
+            continue
+        tracked[f[0]] = f[1]
+    bad = []
+    for cid, disp in tracked.items():
+        if cid not in bl:
+            bad.append(f"{cid}: not in the baseline at all")
+        elif bl[cid][0] != "FAIL":
+            bad.append(f"{cid}: baseline says {bl[cid][0]}/{bl[cid][1]} — a tracked untriaged id that is not red")
+        elif bl[cid][1] not in FIDELITY_STAGES:
+            bad.append(f"{cid}: FAIL at stage {bl[cid][1]}, which is outside the fidelity filter")
+    if bad:
+        finding("C8", "high", f"{len(bad)} tracked untriaged id(s) are not baseline reds at a fidelity stage", bad)
+    # the converse is check-bugs (4b); recompute it here independently as a control
+    named = {c for b in bugs for c in b["cases"]}
+    unexplained = sorted(
+        cid
+        for cid, (res, stage) in bl.items()
+        if res == "FAIL" and stage in FIDELITY_STAGES and cid not in named
+    )
+    extra = sorted(set(unexplained) - set(tracked))
+    stale = sorted(set(tracked) - set(unexplained))
+    if extra:
+        finding("C8", "high", f"{len(extra)} unexplained fidelity red(s) not tracked in untriaged-ids", extra)
+    if stale:
+        finding("C8", "medium", f"{len(stale)} tracked untriaged id(s) no longer unexplained", stale)
+    ceil = {}
+    for ln in lines(UNTRIAGED_COUNT):
+        if not ln or ln.startswith("#"):
+            continue
+        f = ln.split()
+        if len(f) == 2 and f[1].isdigit():
+            ceil[f[0]] = int(f[1])
+    counts = Counter(tracked.values())
+    return {"tracked": len(tracked), "by_disposition": dict(counts), "ceilings": ceil,
+            "unexplained_now": len(unexplained)}
+
+
+# ---------------------------------------------------------------------------
+# C9 — the certified record's currency
+# ---------------------------------------------------------------------------
+
+
+def check_certified(bl):
+    out = {}
+    if not os.path.isdir(CERTIFIED_DIR):
+        finding("C9", "high", f"no certified record directory at {CERTIFIED_DIR}")
+        return out
+    files = sorted(
+        f for f in os.listdir(CERTIFIED_DIR) if f.endswith(".certified.tsv")
+    )
+    out["files"] = files
+    if not files:
+        finding("C9", "high", "the certified-record directory is empty — no tier=slow membership row is pinned")
+    for fn in files:
+        path = os.path.join(CERTIFIED_DIR, fn)
+        txt = read(path)
+        cid = fn[: -len(".certified.tsv")].replace("__", "/")
+        rec = {"case": cid}
+        m = re.search(r"^# certified: (\S+)\s+commit: (.*)$", txt, re.M)
+        if m:
+            rec["certified"] = m.group(1)
+            rec["commit_note"] = m.group(2).strip()
+        else:
+            finding("C9", "medium", f"{path}: no parseable `# certified: <date> commit: <note>` header line")
+        sha = re.search(r"wire[- ]sha[^0-9a-f]*([0-9a-f]{8,64})", txt, re.I)
+        if sha:
+            rec["wire_sha"] = sha.group(1)
+        if cid in bl:
+            rec["baseline"] = "/".join(bl[cid])
+            if bl[cid][0] != "PASS":
+                finding(
+                    "C9",
+                    "high",
+                    f"certified record {fn} pins case {cid}, which is {bl[cid][0]}/{bl[cid][1]} in the baseline",
+                )
+        else:
+            finding(
+                "C9",
+                "high",
+                f"certified record {fn} names case {cid}, which is not in the baseline "
+                "(filename->id demangling may be wrong, or the case is gone)",
+            )
+        # staleness: did the wire schema move after the certification commit?
+        rec.update(wire_staleness(rec.get("certified")))
+        out[fn] = rec
+    return out
+
+
+def wire_staleness(certified_date):
+    """Commits touching the wire schema since the certification date."""
+    if not certified_date:
+        return {}
+    try:
+        r = subprocess.run(
+            [
+                "git",
+                "log",
+                "--since",
+                certified_date,
+                "--oneline",
+                "--",
+                "tools/nativefrontend/wire.go",
+                "GoLean/NativeToIR.lean",
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+    except Exception:
+        return {}
+    commits = [c for c in r.stdout.strip().splitlines() if c]
+    if commits:
+        finding(
+            "C9",
+            "medium",
+            f"the wire schema moved after the certification date {certified_date} "
+            f"({len(commits)} commit(s) to wire.go/NativeToIR.lean) — the certified set's wire sha is "
+            "only current if `scripts/ci --slow` has re-enumerated since",
+            commits,
+        )
+    return {"wire_commits_since_cert": commits}
+
+
+# ---------------------------------------------------------------------------
+# C10 — the latitude inventory's own counts
+# ---------------------------------------------------------------------------
+
+
+def check_latitude_counts():
+    txt = read(LATITUDE)
+    rows = load_headings(LATITUDE, r"^### ([CER]\d+)\.")
+    byclass = Counter()
+    for rid, ln, head in rows:
+        m = re.search(r"—\s*(\(\w[\w-]*\)|REFUSED)", head)
+        byclass[m.group(1) if m else "?"] += 1
+    claims = {}
+    for label, pat in (
+        ("(a)", r"- \(a\) ENVELOPED: (\d+) sites / (\d+) entries"),
+        ("(b)", r"- \(b\) PINNED: \*\*(\d+) entries\*\*"),
+        ("(b-n)", r"- \(b-n\) NARROWED with recorded caveat: (\d+)"),
+        ("(d)", r"- \(d\) UNKNOWN: (\d+)"),
+        ("REFUSED", r"- REFUSED standing in for latitude: (\d+)"),
+    ):
+        m = re.search(pat, txt)
+        if m:
+            claims[label] = int(m.groups()[-1])
+    # §10 does not merely count: it ENUMERATES the row ids per class. Compare
+    # that enumeration against the class tag each ### heading carries — a row
+    # tagged (b) that §10's (b) list never names is a row nobody is counting.
+    tag_of = {}
+    for rid, ln, head in rows:
+        m = re.search(r"—\s*(\(\w[\w-]*\)|REFUSED)", head)
+        tag_of[rid] = m.group(1) if m else None
+    sec10 = txt[txt.find("## 10. Counts") :] if "## 10. Counts" in txt else ""
+    listed = {}
+    for label, pat in (
+        ("(a)", r"- \(a\) ENVELOPED:(.*?)(?=\n- \(b\))"),
+        ("(b)", r"- \(b\) PINNED:(.*?)(?=\n- \(b-n\))"),
+        ("(b-n)", r"- \(b-n\) NARROWED[^:]*:(.*?)(?=\n- \(c\))"),
+    ):
+        m = re.search(pat, sec10, re.S)
+        if m:
+            listed[label] = set(re.findall(r"\b([CER]\d+)\b", m.group(1)))
+    for label, named in listed.items():
+        tagged = {r for r, t in tag_of.items() if t == label}
+        missing = sorted(tagged - named)
+        extra = sorted(named - tagged)
+        if missing:
+            finding(
+                "C10",
+                "medium",
+                f"latitude inventory §10's {label} enumeration omits {len(missing)} row(s) whose own "
+                f"heading carries the {label} tag: {', '.join(missing)} — the §10 count "
+                f"({claims.get(label)}) is therefore not a count of the rows",
+            )
+        if extra:
+            finding(
+                "C10",
+                "low",
+                f"latitude inventory §10's {label} enumeration names {', '.join(extra)}, whose "
+                f"heading does not carry the {label} tag (heading tag is "
+                + ", ".join(f"{e}={tag_of.get(e)}" for e in extra)
+                + ")",
+            )
+    untagged = sorted(r for r, t in tag_of.items() if t is None)
+    if untagged:
+        finding(
+            "C10",
+            "low",
+            f"{len(untagged)} latitude row heading(s) carry no class tag at all "
+            f"({', '.join(untagged)}) — the class is readable only from the body",
+        )
+    return {
+        "rows": len(rows),
+        "by_class_tag": dict(byclass),
+        "section10_claims": claims,
+        "section10_enumerated": {k: sorted(v) for k, v in listed.items()},
+    }
+
+
+# ---------------------------------------------------------------------------
+# C12 — the choice-site census: doc table vs the ChoiceSite datatype
+#
+# The inventory says "THE CHOICE-SITE CENSUS IS CODE ... this table below is a
+# reader's mirror, no longer a hand-synced record". A mirror that has drifted
+# is worse than a hand-synced record, because nobody is watching it.
+# ---------------------------------------------------------------------------
+
+
+def check_choice_sites():
+    state = p("GoLean", "GoCore", "State.lean")
+    out = {}
+    if not os.path.exists(state):
+        finding("C12", "medium", f"{state} not found; choice-site census check skipped")
+        return out
+    txt = read(state)
+    m = re.search(r"inductive ChoiceSite\b.*?\n(.*?)^\s*deriving\b", txt, re.S | re.M)
+    ctors = set()
+    if m:
+        ctors = set(re.findall(r"\|\s*(\w+)", m.group(1)))
+    if not ctors:
+        finding("C12", "medium", "could not parse the ChoiceSite datatype from " + state)
+        return out
+    out["ctors"] = sorted(ctors)
+    inv = read(LATITUDE)
+    sec = re.search(r"\| Site \| Code \|.*?\n\n", inv, re.S)
+    rows = []
+    if sec:
+        rows = [
+            l for l in sec.group(0).splitlines()
+            if l.startswith("|") and not re.match(r"^\|\s*-+", l) and "| Site |" not in l
+        ]
+    out["doc_rows"] = len(rows)
+    if len(rows) != len(ctors):
+        finding(
+            "C12",
+            "high",
+            f"the latitude inventory's choice-site census table has {len(rows)} row(s); the "
+            f"`ChoiceSite` datatype it claims to mirror has {len(ctors)} constructor(s) "
+            f"({', '.join(sorted(ctors))}) — the 'mirror, no longer hand-synced' claim does not hold",
+        )
+    # The table's rows are prose names, not constructor names, so a name-level
+    # match is not available; the row COUNT is the honest signal, and the two
+    # sites added by the W3.2 stages (postOp, backEdge) are the likely delta.
+    return out
+
+
+# ---------------------------------------------------------------------------
+# C13 — the version pin, stated in one place, repeated in many
+# ---------------------------------------------------------------------------
+
+
+def check_version_pin():
+    src = p("docs", "spec-sources.md")
+    if not os.path.exists(src):
+        finding("C13", "medium", "no docs/spec-sources.md — the pin has no single source")
+        return {}
+    pins = sorted(set(re.findall(r"\bgo1\.(\d+)\.(\d+)\b", read(src))))
+    if not pins:
+        finding("C13", "medium", "could not read a go1.X.Y pin out of docs/spec-sources.md")
+        return {}
+    canonical = {f"go1.{a}.{b}" for a, b in pins}
+    off = []
+    for dirpath, _d, files in os.walk(p("docs")):
+        if "/archive" in dirpath or "/spec-archaeology" in dirpath:
+            continue
+        for fn in files:
+            # this dossier QUOTES the off-pin versions it reports; skip itself
+            if not fn.endswith(".md") or "launch-audit-dossier" in fn:
+                continue
+            path = os.path.join(dirpath, fn)
+            rel = os.path.relpath(path, ROOT)
+            for i, ln in enumerate(read(path).splitlines(), 1):
+                for mm in re.finditer(r"\b(?:Go |go)1\.(\d+)\.(\d+)\b", ln):
+                    v = f"go1.{mm.group(1)}.{mm.group(2)}"
+                    if v not in canonical:
+                        off.append(f"{rel}:{i} names {mm.group(0)} (the pin is {'/'.join(sorted(canonical))})")
+    if off:
+        byfile = Counter(o.split(":")[0] for o in off)
+        # a version named beside "toolchain"/"oracle"/"go run"/"probe" is a
+        # CLAIM about what produced a number; the rest are usually history.
+        loud = sorted({o for o in off if re.search(r"(toolchain|oracle|go run|probe|installed)", o, re.I)})
+        finding(
+            "C13",
+            "medium",
+            f"{len(off)} doc site(s) across {len(byfile)} file(s) name a patch-level Go version other than "
+            f"the pin ({'/'.join(sorted(canonical))} per docs/spec-sources.md). Some are legitimately "
+            "historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that "
+            "the spec text and the thing that produced the numbers moved together.",
+            [f"{f}: {n} site(s)" for f, n in byfile.most_common()],
+        )
+    return {"pin": sorted(canonical), "off_pin_sites": len(off)}
+
+
+# ---------------------------------------------------------------------------
+# C11 — the census evidence reproduces (heavy: needs a frontend build)
+# ---------------------------------------------------------------------------
+
+
+def check_census(heavy):
+    ev = p("docs", "evidence", "2026-08-21_w42-census")
+    out = {"dir": ev, "exists": os.path.isdir(ev)}
+    if not out["exists"]:
+        finding("C11", "medium", f"no W4.2 census evidence directory at {ev}")
+        return out
+    sweep = p("tools", "raftsubject", "sweep.py")
+    if not os.path.exists(sweep):
+        finding("C11", "high", f"census evidence cites {sweep}, which does not exist")
+        return out
+    if not heavy:
+        out["skipped"] = "run with --heavy to re-derive"
+        return out
+    binp = p("artifacts", "nativefrontend")
+    env = dict(os.environ, GO111MODULE="off", GOCACHE=p("artifacts", "go-build-cache"))
+    b = subprocess.run(
+        ["go", "build", "-o", binp, "./tools/nativefrontend"],
+        cwd=ROOT, capture_output=True, text=True, env=env, timeout=900,
+    )
+    if b.returncode != 0:
+        finding("C11", "medium", "could not build the native frontend to re-derive the census",
+                (b.stdout + b.stderr).strip().splitlines()[-10:])
+        return out
+    r = subprocess.run([sys.executable, sweep], cwd=ROOT, capture_output=True, text=True, timeout=900)
+    if r.returncode != 0:
+        finding("C11", "high", "tools/raftsubject/sweep.py failed at this tip",
+                (r.stdout + r.stderr).strip().splitlines()[-15:])
+        return out
+    recorded = read(os.path.join(ev, "sweep-post-swap.txt")).splitlines()
+    fresh = r.stdout.splitlines()
+    strip = lambda ls: [l for l in ls if not l.startswith("# sweep.py — frontend")]
+    if strip(recorded) != strip(fresh):
+        d = [l for l in _unified(strip(recorded), strip(fresh))][:40]
+        finding("C11", "high",
+                "the recorded W4.2 post-swap census does NOT reproduce from the tree at this tip", d)
+    else:
+        out["reproduces"] = True
+    return out
+
+
+def _unified(a, b):
+    import difflib
+
+    return list(difflib.unified_diff(a, b, "recorded", "fresh", lineterm=""))
+
+
+# ---------------------------------------------------------------------------
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--json", action="store_true")
+    ap.add_argument("--heavy", action="store_true", help="also re-derive the census evidence")
+    ap.add_argument("--strict", action="store_true", help="exit 1 if any finding is emitted")
+    args = ap.parse_args()
+
+    bl = load_baseline()
+    bugs = load_bugs()
+    corpus = corpus_ids()
+
+    report = {}
+    report["baseline"] = check_baseline(bl)
+    report["check_bugs"] = check_check_bugs()
+    report["bugs"] = check_bug_cases_exist(bugs, bl, corpus)
+    report["lang_ledger"] = check_lang_ledger_arithmetic(bl, report["baseline"])
+    report["frontier"] = check_frontier_rows(bl)
+    report["defs"] = check_cross_refs()
+    report["interpretations"] = check_interpretations()
+    report["untriaged"] = check_untriaged(bl, bugs)
+    report["certified"] = check_certified(bl)
+    report["latitude"] = check_latitude_counts()
+    report["choice_sites"] = check_choice_sites()
+    report["version_pin"] = check_version_pin()
+    report["census"] = check_census(args.heavy)
+    report["findings"] = FINDINGS
+
+    if args.json:
+        print(json.dumps(report, indent=2, sort_keys=True))
+    else:
+        print("=" * 72)
+        print("reconcile-records — cross-ledger reconciliation (READ-ONLY)")
+        print("=" * 72)
+        b = report["baseline"]
+        print(f"baseline            {b['cases']} cases  {b['pass']} PASS  {b['fail']} FAIL")
+        print(f"bugs                {report['bugs']['bugs']} entries  "
+              f"{report['bugs']['open']} open  {report['bugs']['fixed']} fixed")
+        u = report["untriaged"]
+        print(f"untriaged           {u['tracked']} tracked  {u['by_disposition']}  ceilings {u['ceilings']}")
+        print(f"ledgers             {report['defs'].get('L',0)} L-entries  "
+              f"{report['defs'].get('I',0)} I-rows  {report['defs'].get('FR',0)} FR-rows  "
+              f"{report['defs'].get('Q',0)} Q-rows  {report['latitude']['rows']} latitude rows")
+        print()
+        if not FINDINGS:
+            print("NO DISCREPANCIES FOUND.")
+        else:
+            order = {"high": 0, "medium": 1, "low": 2}
+            for i, f in enumerate(sorted(FINDINGS, key=lambda f: (order.get(f["severity"], 9), f["check"])), 1):
+                print(f"[{i:02d}] {f['check']}  {f['severity'].upper():6s}  {f['message']}")
+                for d in f["detail"][:25]:
+                    print(f"        {d}")
+                if len(f["detail"]) > 25:
+                    print(f"        ... and {len(f['detail'])-25} more")
+                print()
+            print(f"{len(FINDINGS)} finding(s).")
+    return 1 if (args.strict and FINDINGS) else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
