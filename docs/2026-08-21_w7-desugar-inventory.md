@@ -13,9 +13,10 @@ GoCore semantics of the emitted wire are in simulation. That only becomes
 tractable if we know, before the tool lands, *what the lowering actually does*.
 This file is that census.
 
-**What this is not.** Not a bug list (though §10 names six holes, **two of them
-now confirmed live silent wrong answers**), not a design proposal, not a work
-plan beyond §11's ordering suggestion. Rows are descriptive: what the code does
+**What this is not.** Not a bug list (though §10 names six holes, **two of
+them confirmed live silent wrong answers — both FIXED by the follow-on holes
+arc, 2026-08-21: BUG-066/BUG-067; H-b hardened the same day**), not a design
+proposal, not a work plan beyond §11's ordering suggestion. Rows are descriptive: what the code does
 today, at commit `4ef05649`, with verified anchors.
 
 **Audit-fix round, 2026-08-21.** A pre-merge adversarial audit of the first
@@ -3258,11 +3259,16 @@ C-34 was tagged L in its own row header but omitted from this enumeration
 (31 → 33 with C-44, corrected 2026-08-21). S/M are not counted; the per-row
 tags carry them.
 
-Holes: 6 (§10) — **2 confirmed live silent wrong answers** (H-a, H-d, both
-predating this branch and both owing a BUG id), 1 refuted-as-divergence (H-e,
-now a latitude-census gap), 1 unwitnessed (H-b), 1 restated as a proposal
-rather than a defect (H-c), 1 unprobed with observability open (H-f).
-Documentation drifts: 2 (§10). Open census questions handed to the latitude
-inventory rather than ruled on here: 1 (C-42's channel-vs-value order, §10).
-Cross-file invariants nothing checks: 3 (`%X` parser↔dispatch,
-`%T`-refusal↔`errors.New` identity, emitter↔decoder `$`-prefix disjointness).
+Holes: 6 (§10) — status after the holes arc (2026-08-21): the **2 confirmed
+live silent wrong answers are FIXED** (H-a = BUG-066, H-d = BUG-067, both
+predated the census branch), the unwitnessed one is **HARDENED** (H-b,
+closed as latent, zero flips), 1 refuted-as-divergence (H-e, now a
+latitude-census gap), 1 restated as a proposal rather than a defect (H-c,
+still owed — W7 tier-0), 1 unprobed with observability open (H-f, still
+owed). Documentation drifts: 2 (§10) — **both fixed** (holes arc). Open
+census questions handed to the latitude inventory rather than ruled on
+here: 1 (C-42's channel-vs-value order, §10). Cross-file invariants
+nothing checks: 3, of which the `%X` parser↔dispatch one is now NAMED at
+both code sites (G-11; still unchecked by a harness) —
+`%T`-refusal↔`errors.New` identity and emitter↔decoder `$`-prefix
+disjointness remain.

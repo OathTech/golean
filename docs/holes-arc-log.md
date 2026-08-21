@@ -1,5 +1,32 @@
 # Holes arc log — the census's confirmed silent-wrong-answer holes
 
+## EXIT STATE (2026-08-21)
+
+All five charter items DONE; branch-complete, awaiting the audit ask.
+
+- Item 1 · BUG-066 (H-a, elided-high slice base double-eval): FIXED.
+  Guardrails wave (both bugs' rows witnessed red) `6146b217`, fix
+  `90b12339`. Landing gate: full `scripts/ci --diff` at `90b12339` —
+  RESULT: PASS, `baseline diff FULL (2332/2332, no regression)`.
+- Item 2 · BUG-067 (H-d, variadic bit dropped from wire func types):
+  FIXED. Commit `1c918155`. Landing gate: full `scripts/ci --slow`
+  (tier=slow record + Ty touched) — RESULT: PASS; google-search
+  re-certified (set/graph bit-for-bit, new wire sha).
+- Item 3 · H-b (decoder's silent `.int` coerce arm): HARDENED as
+  latent, commit `3b38dcd5`, zero flips predicted and confirmed.
+- Item 4 · doc drifts: FIXED, commit `b6fa4b03` (multipackage §6
+  per-unit; %X reconciled by gc probe, invariant named at both sites).
+- Item 5 · setup-deps Lake-packages population: LANDED, commit
+  `2b1c30a8`, scratch-worktree test to a green fast gate, no manual cp.
+- Items 3–5 landing gate: full `scripts/ci --diff` at the branch tip
+  (`2b1c30a8` + this closing docs commit's log/census status updates in
+  the tree) — RESULT: PASS, `baseline diff FULL (2332/2332, no
+  regression)`, eval tests 141 ok, goldens/pins/negative all ok.
+
+NOT in scope, unchanged and honest in the census: H-c (W7 tier-0
+design), H-e (probed non-divergence, latitude-census gap), H-f
+(observability open).
+
 Branch `holes-arc` off main @ `720e02fb`, worktree
 `.claude/worktrees/holes`. Charter: the follow-on arc for
 `docs/2026-08-21_w7-desugar-inventory.md` §10 — fix H-a and H-d (both
