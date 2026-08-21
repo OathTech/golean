@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# setup-deps — populate a worktree's gitignored deps/ at the pinned revs.
+# setup-deps — populate a worktree's gitignored deps/ at the pinned revs,
+# AND its proofs/.lake/packages at the Lake manifest's pins (2026-08-21,
+# holes arc: the missing packages step had bitten five lanes — see the
+# comment at that section).
 #
 # A fresh worktree has no deps/, so the verbatim gate fails CLOSED
 # ("deps/goose is not a git checkout") and takes scripts/ci red — hit on
@@ -46,6 +49,9 @@ while [[ $# -gt 0 ]]; do
     *) echo "setup-deps: unknown argument '$1' (fail closed)" >&2; exit 2 ;;
   esac
 done
+# Keep the repo-root form of --from (for proofs/.lake/packages below)
+# before normalizing FROM itself to the deps/ subdir.
+FROMROOT="$FROM"
 [[ -n "$FROM" && -d "$FROM/deps" ]] && FROM="$FROM/deps"
 
 # name | pinned rev | public URL ("-" = none: --from required) | in default set
@@ -134,6 +140,63 @@ while read -r name rev url tier; do
   fi
   echo "setup-deps: pinned    $name @ $(git -C "$dest" rev-parse --short HEAD)"
 done <<< "$PINS"
+
+# ---- Lake dependency checkouts (proofs/.lake/packages) ------------------
+# The proofs build (scripts/ci's "proofs + Audit gate") needs the Lake
+# dependency checkouts, and the sandbox denies lake's network fetch — so
+# every fresh lane worktree paid a manual `cp -a proofs/.lake/packages`
+# beside this script (recorded: gallery g1.md:861/g4.md:578, w32-log.md
+# bootstrap note, raft-w41-log.md item-1 gate note, and the holes arc's
+# own bootstrap). Populate them here instead, same posture as deps/:
+# offline from --from's sibling checkout at the MANIFEST pins, fail
+# closed, rev drift reported and never touched.
+if [[ -f proofs/lake-manifest.json ]]; then
+  mkdir -p proofs/.lake/packages
+  lake_pkgs="$(python3 -c "
+import json
+m = json.load(open('proofs/lake-manifest.json'))
+for p in m['packages']:
+    if p.get('type') != 'git':
+        continue  # path deps (GoLean itself) have no checkout to populate
+    print(p['name'], p['rev'], p.get('url', '-'))
+" 2>/dev/null)" || { echo "setup-deps: FAIL — cannot parse proofs/lake-manifest.json (fail closed)" >&2; fail=1; lake_pkgs=""; }
+  while read -r name rev url; do
+    [[ -z "$name" ]] && continue
+    dest="proofs/.lake/packages/$name"
+    if [[ -d "$dest/.git" || -f "$dest/.git" ]]; then
+      have="$(git -C "$dest" rev-parse HEAD)"
+      if [[ "$have" == "$rev" ]]; then
+        echo "setup-deps: ok        lake:$name @ ${have:0:9}"
+      else
+        echo "setup-deps: REV DRIFT lake:$name — have ${have:0:9}, manifest pins ${rev:0:9}; NOT touched (a moved manifest pin is resolved by 'lake update' or a human, never here)" >&2
+        fail=1
+      fi
+      continue
+    fi
+    src=""
+    if [[ -n "$FROMROOT" && ( -d "$FROMROOT/proofs/.lake/packages/$name/.git" || -f "$FROMROOT/proofs/.lake/packages/$name/.git" ) ]]; then
+      src="$FROMROOT/proofs/.lake/packages/$name"
+    elif [[ "$url" != "-" && -n "$url" ]]; then
+      src="$url"
+    else
+      echo "setup-deps: FAIL — lake package $name has no URL in the manifest and --from did not provide proofs/.lake/packages/$name (fail closed)" >&2
+      fail=1; continue
+    fi
+    echo "setup-deps: cloning   lake:$name from $src"
+    if ! git clone --quiet --no-hardlinks "$src" "$dest" 2>/dev/null; then
+      echo "setup-deps: FAIL — clone of lake package $name from $src failed (no network / bad source); use --from <a sibling repo root> (fail closed)" >&2
+      rm -rf "$dest"; fail=1; continue
+    fi
+    if ! git -C "$dest" checkout --quiet "$rev" 2>/dev/null; then
+      echo "setup-deps: FAIL — lake package $name clone lacks manifest rev $rev (a stale/pruned source?); removing the partial clone (fail closed)" >&2
+      rm -rf "$dest"; fail=1; continue
+    fi
+    echo "setup-deps: pinned    lake:$name @ $(git -C "$dest" rev-parse --short HEAD)"
+  done <<< "$lake_pkgs"
+else
+  echo "setup-deps: FAIL — no proofs/lake-manifest.json (expected at the repo root's proofs/; fail closed)" >&2
+  fail=1
+fi
 
 if [[ "$fail" -ne 0 ]]; then
   echo "setup-deps: INCOMPLETE — one or more repos failed above (fail closed; gates depending on them stay red)" >&2

@@ -154,10 +154,28 @@ raft-w42 lane runs concurrently and owns `raftsubject/` +
 
 ## Item 5 — setup-deps populates proofs/.lake/packages
 
-- The gap has bitten five lanes (each needed a manual
-  `cp -a proofs/.lake/packages` beside `scripts/setup-deps`): this
-  arc's own bootstrap (the charter's cp landed as `proofs/.lake`
-  itself and needed restructuring — exactly the manual-step fragility
-  the item names), and the worktree-per-lane cohort before it.
-- Test: a scratch worktree bootstraps to a green fast gate with no
-  manual cp.
+- The gap has bitten five lanes, each paying a manual
+  `cp -a proofs/.lake/packages` (or a red first gate) beside
+  `scripts/setup-deps`: gallery g1 (`docs/gallery-campaign-log/
+  g1.md:861` — named it an INFRA gap explicitly), gallery g4
+  (`g4.md:578`), w32 (`docs/w32-log.md:47`, which also records
+  channel-logic and raft-w4 carrying the same pattern), raft-w41
+  (`docs/raft-w41-log.md:115` — 4 unrelated gate FAILs traced to the
+  missing packages), and this arc's own bootstrap (the charter's cp
+  landed as `proofs/.lake` itself and needed restructuring — exactly
+  the manual-step fragility the item names).
+- Implementation: a Lake-packages section in `scripts/setup-deps`,
+  same posture as the deps/ table — pins read from
+  `proofs/lake-manifest.json` (git-type entries only; the path-type
+  GoLean entry skipped), offline clone from `--from`'s sibling
+  `proofs/.lake/packages/<name>` first, manifest URL fallback,
+  rev-drift reported and never touched, every failure loud.
+- TEST, run before this commit: scratch worktree
+  `.claude/worktrees/holes-scratch` detached at `1c918155` + the new
+  script; `setup-deps --from /home/dev/projects/golean` cloned and
+  pinned lake:iris @ 3877dbe, lake:batteries @ fa08db58,
+  lake:Qq @ f463249 (plus the deps/ set); then
+  `GOLEAN_ALLOW_NO_DIFF=1 scripts/ci` (fast gate, docs-only-lane
+  hatch with its visible notes) — RESULT: PASS, including the
+  proofs + Audit gate, with NO manual cp anywhere. Scratch worktree
+  pruned after the test.
