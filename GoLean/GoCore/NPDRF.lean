@@ -66,15 +66,24 @@ starts honest):
    mover statements below therefore carry existing-cell/frame
    premises; the eventual proof should work over an extensional heap
    equivalence.
-3. **BUG-040 (the post-spawn decision point) — DISCHARGED at slice 4.**
+3. **BUG-040 (the post-spawn decision point) — DISCHARGED at slice 4,
+   then GENERALIZED at W3.2 slice 1 (stages C/D, 2026-08-20/21).**
    The coupling "programs outside DRF are exactly those the machine
    refuses" used to FAIL for races reachable only by preempting a
    sync-free post-spawn parent segment (the exit-no-sync class); the
-   `.spawned` marker (a registry op at spawn completion) put the
-   child-first interleavings inside the coarse path set, and the class
-   is detectable (the flipped eval pins + the pool enumerator's
+   completion marker (now `.opDone`, a registry op at EVERY op
+   completion — B1) and the back-edge boundaries (B2) put those
+   interleavings inside the coarse path set, and the class is
+   detectable (the flipped eval pins + the pool enumerator's
    both-leaves pin). The detector-completeness half no longer waits on
-   it; the remaining obstructions stand on their own.
+   it; the remaining obstructions stand on their own. NOTE (stage E):
+   `StepM`/`StepMFine` and this file's statements now range over the
+   WIDENED boundary set automatically — `StepMFine` already relaxed
+   ALL boundaries, so the coarse-vs-fine RESIDUAL this draft measures
+   SHRANK with the widening (more coarse points = closer to fine
+   granularity); the weakening ruling and any proof effort remain
+   slice 5's, over the new point set (the doctrine's "the reduction
+   line resumes AFTER the machine widens").
 4. **Main-exit discard (D6) — and it makes the statement below
    REFUTABLE AS WRITTEN, not merely unproven (S3 audit).** Main's
    terminal ends the program and discards other goroutines mid-flight,
