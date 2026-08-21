@@ -967,3 +967,84 @@ since the only delta was this log's own text.
 Branch state: audit findings fixed, gate green at the tip, tree clean.
 **Merge and the audit sign-off remain Mike's** — this round is a
 response to the audit, not a substitute for the ask.
+
+## Slice 5b — the second PL-nitpicker review (2026-08-21, lane w32-5b)
+
+- Base: main `521f5b57` (the post-merge tip; the surgery — slice 1
+  A-E + the POR slice + its audit-fix round — is all on main), fresh
+  worktree `.claude/worktrees/w32-5b`, branch `w32-5b`, READ-ONLY on
+  the core. `deps/` + `proofs/.lake/packages` bootstrapped offline via
+  `scripts/setup-deps --from /home/dev/projects/golean` (the P5-era
+  five-lane fix covers the Lake section; all pins matched).
+- Inputs read in full at this tip: `GoLean/GoCore/{State,Machine,
+  StepFn,Multi,MultiStreams,Race,EnumSpec,EnumDedupCheck}.lean`
+  complete; `MachineEqb`/`EnumDedupSound` structure + key
+  definitions/headline theorems; `Ops.lean` targeted + its delta
+  since `f78138d7` (unrelated to the surgery — the BUG-067 variadic
+  bit); the first audit + its G0 ruling; the boundary-set note; the
+  POR design note; this log's slice 0-POR entries.
+- Judgment call: slices 2-5 have not run, so queue items G0-routed to
+  them (Q3→4, Q10→5, Q11→4) are graded CARRIED, not failed; the
+  audit's scope is the surgery that exists.
+- Judgment call: claims verified by grep where cheap rather than
+  taken from the log — zero bare `Choices.consume` in interpreter
+  code (Q1's acceptance), 42 `.opDone .postOp` emission sites, 34
+  signal-unwinding relation rules, ≥14 signal-constructor consumer
+  files (the Q6 blast-radius datum), 41 `.panicking [⟨runtimeError…`
+  singleton sites (Q5's panicStep datum).
+- VERDICTS (full text: `docs/2026-08-21_semantics-design-audit-2.md`):
+  Q1 DELIVERED (census-as-code legible as a system; C-1..C-3
+  discharged, C-4 down to a declared two-row residual); Q2 DELIVERED
+  (raceUpdate a genuine event fold, wokenPartner + stream replay +
+  raceUpdate_oblivious dead with honest tombstones; residual: the
+  privateStep arm's ten post-shape `.opDone` probes — new item N-1);
+  B1 ONE MARKER, site-tagged, 42 uniform wraps, no sprawl (the spawn
+  `.l1Sched` tag preserving BUG-040 bit-for-bit is the
+  care-signature; the tag-clamp trade documented and accepted).
+- NEW WINCES: W-1 `Obs` silently excludes the FATAL class from the
+  statement vocabulary (T-5 grown teeth; cheap docstring fix N-3,
+  full fix Q8, priority raised); W-2 detector post-shape probes
+  (N-1); W-3 the eqb tower is a SIXTH full Cont walk and andSplit11
+  is the positional-soup bill arriving (Q3/Q4 evidence); W-4 the
+  select interception's 3-line byte-identity margin; W-5 the
+  fragment ladder ×2 (N-2). EnumSpec/checker pass the cold-read
+  test outright — called the strongest new work in the arc.
+- **Q6 RECOMMENDATION (the deferred ruling's evidence, for the opsem
+  gate):** do NOT unify the signal carriers before 6a. The 34 rules
+  tabulate TODAY as a 5×7 frame×signal matrix with three footnotes —
+  render the matrix as the DOCUMENT's presentation (rule names as
+  cell citations) at docs cost; the surgery GREW the code change's
+  blast radius (eqb tower, dedup chain, widened boundary arms all
+  case on the five carriers) while producing zero evidence the split
+  taxes new work. Falsifiable reopen trigger: a matrix cell that
+  refuses to render during 6a; land Q6 then, bundled with Q4.
+- Output: `docs/2026-08-21_semantics-design-audit-2.md` — per-question
+  verdicts with file:line, the updated queue (11 carried/done items
+  re-graded + 6 new, each marked launch-relevant or post-launch),
+  honest positives, and §8 "for the launch auditors" (the trust chain
+  to read, the four review-only surfaces, the one statement-vocabulary
+  gap, the routing register, the Q6 ruling).
+- CHECKPOINT slice-5b: audit written; gate below; this lane wrote
+  ONLY the audit note + this entry (read-only on the core honored).
+
+### Gate (slice 5b, docs-only)
+
+- `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci` on the fresh
+  lane worktree at the working tree containing exactly the two doc
+  files (audit note + this log entry; zero code changes):
+  **RESULT: PASS** (exit 0) — 19 `ok` steps (escape hatches,
+  meta-layer allowlist, proofs-audit coverage, bug/feature/spec-anchor
+  cross-checks, lane fixtures, goose verbatim, surface purity, TCB
+  closure, import-direction incl. the engine-isolation clause, core
+  build warning-free, proofs + Audit gate, verdi compat, goose
+  fixtures/pins, golden lowering, frontend units, **eval tests 141
+  ok**), 4 report-only `note` lines (build parallelism at the 24G
+  cap, proof-cost trend, storm lint) plus the two
+  `baseline diff NOT RUN (no record; explicitly allowed here)` notes —
+  the docs-only hatch as specified (fresh worktree, no runtime change
+  owes a differential). Log: `artifacts/w32-5b-ci.log` (untracked).
+  Cap 24G honored (three other lanes live; gate staggered).
+- CHECKPOINT slice-5b-exit: branch-complete. This lane's writes:
+  `docs/2026-08-21_semantics-design-audit-2.md` + this log's slice-5b
+  entries, nothing else. The Q6 recommendation and the updated queue
+  await Mike at the opsem gate; merge remains Mike's.
