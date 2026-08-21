@@ -1161,20 +1161,18 @@ Criteria per the doctrine: (i) oracle-visibility risk, (ii)
 concurrency-relevance (the charter: concurrency matters most),
 (iii) cost. The known first item is fixed by the doctrine.
 
-1. **C2+C3 — forced continuation + fused effect boundary** (the
-   doctrine's designated first item). Oracle-visible TODAY (the
-   send-then-spin wedge: gc exit-0 60/60 vs machine fuel-out on every
-   stream — definitional bug; recorded probe at
-   `docs/evidence/2026-08-12_scheduler-wedge-probes/`), maximally
-   concurrency-relevant (it IS the scheduling envelope's missing
-   dimension; register #1/#5), highest cost — which is why it is
-   first: everything else in the concurrency queue (NPDRF's final
-   form, FairStream, enumerator work) reshapes around the boundary
-   set, so this pin's removal should precede them. Scope: this
-   re-envelope fixes the WEDGE shape (a woken runnable partner must
-   be schedulable); registry-free-spinner termination is FairStream's
-   quantifier question, not this item's (widening only ADDS streams —
-   the never-yielding stream survives).
+1. **C2+C3 — forced continuation + fused effect boundary — DONE
+   (W3.2 slice 1 stages C/D, 2026-08-20/21; G1 ruling).** The
+   doctrine's designated first item, landed as designed: B1's
+   `.opDone` post-op boundaries + B2's back-edge boundaries; the
+   send-then-spin wedge FLIPPED (gc's exit-0 is a member at stream
+   [0,0,1]; corpus row `goroutines/send-then-spin`; register #1
+   discharged); the never-yielding streams survive by right and
+   registry-free-spinner termination remains FairStream's question,
+   exactly as this item scoped. See C2/C3's entries for the paid
+   cost and the recorded residuals (B3 abort window deferred at G1;
+   enumeration-tractability fallout under BUG-065, awaiting the
+   §5c-fallback ruling / the reduction lane).
 2. **E9/BUG-005 — live map iteration.** DONE 2026-08-19 (the (L)
    surgery): live-cell candidates, delete-prune, per-pick footprint
    (U1 closed), full literal envelope user-ruled — see E9's entry for
