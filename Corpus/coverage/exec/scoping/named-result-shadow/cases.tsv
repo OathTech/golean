@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+# BUG-068 pins (W4.3): locals shadowing NAMED RESULTS. Green rows =
+# the renamed lowering; range-clause stays RED BY DESIGN (outside the
+# rename set, refuses — never aliases).
+enterjoint-shape	enterJointShape	-	ok	-	scoping,shadowing,named-results,closures,switch
+bare-return	shadowThenBareReturn	-	ok	-	scoping,shadowing,named-results,multi_result
+short-decl	shadowShortDecl	-	ok	-	scoping,shadowing,named-results,short_decl
+deferred-write	shadowWithDeferredWrite	-	ok	-	scoping,shadowing,named-results,defer
+range-clause	shadowInRangeClause	-	ok	-	scoping,shadowing,named-results,range

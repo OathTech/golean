@@ -1,19 +1,16 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-21 (raft W4.3 wave 5b / the §S3(b) forced-half
-#   rows — branch raft-w43; docs/raft-w43-log.md "Wave 5b").
-#   re-pin reason: FOUR NEW ids, zero movement on any of the 2418 ids
+# recorded: 2026-08-21 (raft W4.3 wave 6 / BUG-068 — branch raft-w43;
+#   docs/raft-w43-log.md "Wave 6").
+#   re-pin reason: FIVE NEW ids, zero movement on any of the 2422 ids
 #   the previous record held (verified by the run's drift report:
 #   every drifted line reads "NEW id (not in baseline)").
-#     The R-1 conversion's case-level half: the four ratified (c)
-#     rendering rows' FORCED HALVES proved in-language as green
-#     strict rows — panic-defined-payload-methods/
-#     {error,stringer}-forced-half, repanic-same-value-abort/
-#     forced-half, same-name-identity-panic/forced-half. The four
-#     original rows stay RED at their prior stages (nothing relaxed;
-#     the text-quotient greens await the machine member — the W3.2
-#     lane's semantic-core work; docs/BUGS.md BUG-004/BUG-059 carry
-#     the dated conversion-state blocks).
-# cases: 2422 (2267 PASS / 155 FAIL)
+#     BUG-068's guardrails (a local shadowing a NAMED RESULT aliased
+#     the result slot — found by the trace differential's rendered
+#     tier on the conf-change traces, fixed by object-keyed emit-time
+#     renaming): scoping/named-result-shadow — 4 PASS +
+#     range-clause FAIL/frontend-export RED BY DESIGN (a shadow in a
+#     construct outside the rename set refuses, never aliases).
+# cases: 2427 (2271 PASS / 156 FAIL)
 # frontend: native (tools/nativefrontend)
 result	id	stage
 PASS	arrays/array-bounds	-
@@ -1857,6 +1854,11 @@ PASS	scoping/block-shadow	-
 PASS	scoping/closure-shadow-binding	-
 PASS	scoping/for-body-shadow	-
 PASS	scoping/for-init-scope	-
+PASS	scoping/named-result-shadow/bare-return	-
+PASS	scoping/named-result-shadow/deferred-write	-
+PASS	scoping/named-result-shadow/enterjoint-shape	-
+FAIL	scoping/named-result-shadow/range-clause	frontend-export
+PASS	scoping/named-result-shadow/short-decl	-
 PASS	scoping/select-clause-scope	-
 PASS	scoping/shadowing	-
 PASS	scoping/short-decl-mixing	-

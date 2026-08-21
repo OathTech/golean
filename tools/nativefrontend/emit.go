@@ -1550,6 +1550,10 @@ func (e *emitter) quarantinedMethodStub(d *ast.FuncDecl, u unsupported) (map[str
 func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
 	sig := e.info.Defs[d.Name].Type().(*types.Signature)
 	e.curResults = sig.Results()
+	// Named-result shadow renaming (resultshadow.go): rebuilt per body.
+	if err := e.resultShadowScan(d.Body); err != nil {
+		return nil, err
+	}
 	// Function-scoped receive flag (BUG-023/BUG-026): drives the len/cap
 	// hoist that keeps spec-ordered evaluations lexically ordered against
 	// hoisted receives, in every emission path of this body.
@@ -3040,7 +3044,8 @@ func (e *emitter) emitAssignTarget(l ast.Expr, define bool) (any, error) {
 				if err != nil {
 					return nil, err
 				}
-				return map[string]any{"target": "declare", "id": id.Name, "type": ty}, nil
+				return map[string]any{"target": "declare",
+					"id": e.localRename(obj, id.Name), "type": ty}, nil
 			}
 		}
 		// A package-level variable writes through its statically resolved
@@ -3061,7 +3066,8 @@ func (e *emitter) emitAssignTarget(l ast.Expr, define bool) (any, error) {
 			}
 			return map[string]any{"target": "addr", "expr": ga}, nil
 		}
-		return map[string]any{"target": "var", "id": id.Name}, nil
+		return map[string]any{"target": "var",
+			"id": e.localRename(obj, id.Name)}, nil
 	}
 	// A QUALIFIED package-level variable (`base.Seed = ...` — W1.1)
 	// writes through its seeded cell exactly like a local global; it is
@@ -3164,7 +3170,7 @@ func (e *emitter) emitDeclStmt(st *ast.DeclStmt) (any, error) {
 			if err != nil {
 				return nil, err
 			}
-			d := map[string]any{"id": name.Name, "type": ty}
+			d := map[string]any{"id": e.localRename(obj, name.Name), "type": ty}
 			if i < len(vs.Values) {
 				init, err := e.emitExpr(vs.Values[i])
 				if err != nil {
@@ -5757,7 +5763,8 @@ func (e *emitter) emitAddressOf(x ast.Expr) (any, error) {
 			}
 			return ga, nil
 		}
-		return map[string]any{"expr": "ref", "id": ex.Name}, nil
+		return map[string]any{"expr": "ref",
+			"id": e.localRename(e.info.Uses[ex], ex.Name)}, nil
 	case *ast.SelectorExpr:
 		// &pkg.V on a QUALIFIED package-level variable (W1.1): the
 		// seeded cell address, exactly like &global above — name
@@ -5889,7 +5896,8 @@ func (e *emitter) emitLValue(x ast.Expr) (any, error) {
 			}
 			return map[string]any{"target": "addr", "expr": ga}, nil
 		}
-		return map[string]any{"target": "var", "id": id.Name}, nil
+		return map[string]any{"target": "var",
+			"id": e.localRename(e.info.Uses[id], id.Name)}, nil
 	}
 	// A map element is not addressable — outside the dedicated
 	// single-assign fast path (mapAssign) it has no address to take, and
@@ -6346,11 +6354,21 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 	savedFnRecv := e.fnHasRecv
 	e.fnHasRecv = containsRecv(lit.Body)
 	savedResults := e.curResults
+	savedRenames := e.localRenames
 	savedBranch, savedGoto := e.branchLabels, e.gotoLabels
 	savedSeg, savedPC, savedLoop := e.gotoSeg, e.gotoPC, e.gotoLoop
 	savedForbidden, savedSCHoistOK := e.hoistForbidden, e.scHoistOK
 	e.captureParam, e.hoisted = newCapture, nil
 	e.curResults = sig.Results()
+	// Named-result shadow renaming for the LIT's own body (its frame,
+	// its result slots — resultshadow.go); restored with curResults.
+	if err := e.resultShadowScan(lit.Body); err != nil {
+		e.captureParam, e.hoisted, e.curFuncName = savedCapture, savedHoisted, savedName
+		e.fnHasRecv = savedFnRecv
+		e.curResults, e.localRenames = savedResults, savedRenames
+		e.hoistForbidden, e.scHoistOK = savedForbidden, savedSCHoistOK
+		return nil, err
+	}
 	e.branchLabels, e.gotoLabels = scanLabelUses(lit.Body)
 	e.gotoSeg, e.gotoPC, e.gotoLoop = nil, "", ""
 	e.hoistForbidden, e.scHoistOK = "", false
@@ -6364,6 +6382,7 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 	e.captureParam, e.hoisted, e.curFuncName = savedCapture, savedHoisted, savedName
 	e.fnHasRecv = savedFnRecv
 	e.curResults = savedResults
+	e.localRenames = savedRenames
 	e.branchLabels, e.gotoLabels = savedBranch, savedGoto
 	e.gotoSeg, e.gotoPC, e.gotoLoop = savedSeg, savedPC, savedLoop
 	e.hoistForbidden, e.scHoistOK = savedForbidden, savedSCHoistOK
@@ -6463,6 +6482,8 @@ func (e *emitter) emitIdent(id *ast.Ident) (any, error) {
 			}
 			return map[string]any{"expr": "deref", "ptr": ga, "type": ty}, nil
 		}
+		// Named-result shadow rename (resultshadow.go), object-keyed.
+		return map[string]any{"expr": "ident", "name": e.localRename(obj, id.Name)}, nil
 	}
 	return map[string]any{"expr": "ident", "name": id.Name}, nil
 }

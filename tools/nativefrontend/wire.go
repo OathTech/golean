@@ -25,8 +25,14 @@ type emitter struct {
 	// A-normal form: calls and allocations in expression position are hoisted
 	// into let-bound temp statements accumulated here for the statement being
 	// emitted, so GoCore expressions stay pure (calls are statements).
-	hoisted        []any
-	tmpSeq         int
+	hoisted []any
+	tmpSeq  int
+
+	// localRenames: function-local variables renamed because their name
+	// collides with a NAMED RESULT of the enclosing function (the wire's
+	// name channel would alias them at the return/frame-exit seam —
+	// resultshadow.go). Object-keyed; rebuilt per function/lit body.
+	localRenames map[types.Object]string
 	// hoistForbidden is non-empty exactly where hoisting a call or an
 	// allocation OUT of the expression would change evaluation order.
 	// TODAY THE ONLY SETTER IS THE SHORT-CIRCUIT RHS (emitBinary; the

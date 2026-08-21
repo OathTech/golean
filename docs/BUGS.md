@@ -3250,6 +3250,39 @@ shape BUG-047's conversion guard does not reach). All four green
 post-fix; `slices/slice-elided-high-eval-once/{nested-slice-expr,
 map-index-effectful-key,pointer-array-call-base,conversion-base}`.
 
+## BUG-068 — a local shadowing a NAMED RESULT aliased the result slot at the return/frame-exit seam (silent wrong answer)
+
+- Status: fixed (2026-08-21, raft W4.3 wave 6 — emit-time renaming of
+  shadowing locals, object-keyed: `tools/nativefrontend/resultshadow.go`
+  + the four local-name emission sites; constructs outside the rename
+  set — range clauses, type-switch guards, receive bindings — REFUSE
+  rather than alias, pinned by the red-by-design `range-clause` row)
+- Pinned-by: differential
+- Cases: scoping/named-result-shadow/enterjoint-shape, scoping/named-result-shadow/bare-return, scoping/named-result-shadow/short-decl, scoping/named-result-shadow/deferred-write
+  (the fifth row of the family, `range-clause`, stays RED BY DESIGN —
+  it pins the fail-closed REFUSAL for shadows outside the rename set,
+  not the fix, so it is not listed as a fixed case)
+- Discovered: 2026-08-21 (the trace differential's RENDERED tier — the
+  first tier that could see it: `confchange_v2_add_double_{auto,implicit}`
+  machine-vs-go DISAGREE on `... switched to configuration ... autoleave`)
+
+The wire carries variable NAMES; the machine writes named results at
+`return` and reads them at frame exit BY NAME. A function-local
+variable declared with the same name as a named result — upstream
+raft's `ConfChangeV2.EnterJoint` does exactly this (`(autoLeave bool,
+ok bool)` with an inner `var autoLeave bool`) — aliased the slot: the
+return's write landed on the lexically-nearest (inner) binding while
+the frame exit read the outer result local. go/types resolves the
+source correctly; the wire's name channel could not carry the
+distinction. Minimized to a 40-line probe
+(`artifacts/w43/probe-autoleave`: go 111110, machine-before 111010 —
+the shadowed closure returning false where gc returns true), fixed,
+probe and both traces re-verified agreeing. Found by READING NOTHING:
+the ok tier and the oracle-symmetric byte tier were structurally blind
+to it (the W4.2 tier-strength bound, vindicated in its first campaign
+— the rendered tier is the mirror-falsifying channel, and here it
+falsified the MACHINE).
+
 ## BUG-067 — wire func TYPE nodes drop the variadic bit: `func(...int)` ≡ `func([]int)` to the machine
 
 - Status: fixed (2026-08-21, holes arc — the wire func type node
