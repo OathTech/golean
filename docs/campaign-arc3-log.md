@@ -758,4 +758,25 @@ unit report (lane 29+ commits deep).
   LeaderLogs); `term_was_created`/`in_any_log`
   (RefinementCommonDefinitions.v:20-23 / EveryEntryWasCreatedInterface.v
   1:1) live there with citations.
+- 2026-08-22 Slice 26: `CreationRing.lean` opened —
+  **`every_entry_was_created`** via the `in_any_log` strengthening
+  (EveryEntryWasCreatedProof.v's route 1:1: the ONLY entry-creation
+  step is a leader's client request, certified by
+  leaders_have_leaderLogs; every other handler traces entries back —
+  accepted appends to the in-flight packet, doLeader messages to the
+  sender's log, the RVR win snapshot to the winner's unchanged log —
+  and leaderLogs only grow, `term_was_created_of_update`). Both
+  interface fields delivered. Wired into VerdiCompat.lean.
+- 2026-08-22 Slice 27: the BASE `logs_sorted` conjunction
+  (SortedInterface.v:9-35 1:1, four conjuncts; fourth real base
+  instantiation) + the constructive sorted machinery
+  (sorted_append/sorted_index_term/removeAfterIndex_sorted/_In_le/
+  maxIndex_is_max/findGtIndex_necessary/sorted_findGtIndex/
+  findAtIndex_elim — CommonTheorems.v slices, direct inductions in
+  place of upstream's subseq route) + `handleAppendEntries_log_cases`
+  (SpecLemmas.v:149-175's detailed shape) and
+  `doLeader_messages_sorted` (SortedProof.v:441-466). The accept-splice
+  case is upstream's sorted_append argument verbatim
+  (SortedProof.v:276-309); client_request rides
+  no_entries_past_current_term exactly as upstream's tsi. Build green.
 
