@@ -277,9 +277,14 @@ same as the Arc-3 lanes.
 
 ## A4-U2 slice-1 exit (2026-08-22, tip = this commit)
 
-**CHECKPOINT (recomputed):** A4 lane commits since 03a91c2d: 8 (git
-log — 85acbb0c, 0834aa45, 64c0927d, 21f0cd51, 39f87f88, the
-aggregator append, + 2c396efe coordinator + this one). Unit-end gate
+**CHECKPOINT (recomputed; corrected in the follow-up commit — the
+first count missed two coordinator commits, the drift-prone layer
+doing exactly what the rules warn):** lane commits since 03a91c2d:
+13 by `git log --oneline 03a91c2d..HEAD | wc -l` — 8 of this
+worker's (85acbb0c, 0834aa45, 64c0927d, 21f0cd51, 09c3f703,
+39f87f88, e86bdf34, 16d8d426) + 5 coordinator campaign-log/design
+commits interleaved (1508ce9c, 2c396efe, d042d249, fa0a34e0,
+e37c4267 — all file-disjoint from this unit's tree). Unit-end gate
 `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT:
 PASS, exit 0** (23 ok steps, `artifacts/ci-arc4-u2.log`; no-diff
 notes = the sanctioned hatch, proofs+docs only; the gate ran at the
