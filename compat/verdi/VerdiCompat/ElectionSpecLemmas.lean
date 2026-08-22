@@ -1028,6 +1028,20 @@ theorem handleRequestVote_grant (me : name (P := P))
         exact ⟨hct.symm ▸ rfl, hct, hadv.2.1, hmore⟩
     · simp at h
 
+/-- A non-leader's client request is refused outright — the state is
+untouched (`handleClientRequest_log`'s correlation, equation form). -/
+theorem handleClientRequest_not_leader (me : name (P := P))
+    (st : raft_data (P := P)) (client : R.clientId) (id : Nat) (c : P.input)
+    {out st' l} (h : handleClientRequest me st client id c = (out, st', l))
+    (hnl : st.type ≠ .Leader) : st' = st := by
+  unfold handleClientRequest at h
+  split at h
+  · rename_i hty
+    exact absurd hty hnl
+  · simp only [Prod.mk.injEq] at h
+    obtain ⟨-, rfl, -⟩ := h
+    rfl
+
 /-- `handleRequestVoteReply_spec'`'s leader-transition clause
 (`SpecLemmas.v:467-478`): a non-leader that emerges from
 `handleRequestVoteReply` as leader was a candidate that just won — the

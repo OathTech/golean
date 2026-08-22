@@ -524,4 +524,19 @@ Same conventions; GAP-2 msg-ghost only on first genuine need.
   same gate-catch class as unit 3's eraseOne, recorded not worked
   around). Also: `nomatch h` inside an anonymous-constructor pair
   swallows the following comma — parenthesize.
+- 2026-08-22 Slice 19: the tier-B term-sanity trio —
+  `votedFor_term_sanity` (via a promoted step helper
+  `votedFor_term_sanity_of_update`: term-growth + vote-preserved-or-
+  directly-bounded, collapsing upstream's eleven near-identical Ltac
+  cases; the requestVote case consumes `requestVote_term_sanity` on the
+  in-flight request, exactly VotedForTermSanityProof.v:56-69),
+  `requestVoteReply_term_sanity` (the request_vote case rides
+  `handleRequestVote_grant`: a grant is issued at exactly the request's
+  term) and `requestVote_maxIndex_maxTerm` (the timeout case's stale-
+  packet contradiction via requestVote_term_sanity, upstream's rvtsi
+  argument). Plus `handleClientRequest_not_leader` in the spec lemmas.
+  [AGENT] Gotcha for successors: `subst heq` with `heq : h0 = h`
+  (var = var) eliminates the RIGHT variable, but with
+  `heq : h0 = p.pDst` (var = projection) eliminates the LEFT — the
+  surviving name differs by case; reference accordingly. Build green.
 
