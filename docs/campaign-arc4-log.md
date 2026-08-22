@@ -153,3 +153,53 @@ PROMOTION LEDGER section below, target-specific ones stay local.
   mutex-guarded subject path (lockedRand, MemoryStorage).
 - `sort-slice` stmtOp form (applyStmtOp sortSlice fact) —
   tracker.Visit and quorum CommittedIndex both sort.
+
+## Final entry — A4-U1 complete (2026-08-22, tip = this commit)
+
+**CHECKPOINT (recomputed at this tip, 4 slices):** commits 85acbb0c,
+0834aa45, 64c0927d + this one; unit-end gate
+`GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT:
+PASS, exit 0** (log `artifacts/ci-arc4-u1b.log`, gitignored; 23 ok
+steps; the two no-diff notes are the sanctioned fresh-lane hatch —
+this unit touched `proofs/GoLeanProofs/**` + docs only, no runtime
+code, no Corpus/, no baselines/). An earlier gate run FAILED on the
+import-direction lint and was fixed by the slice-3 move — the gate
+working, recorded, not laundered. Fresh `#print axioms` at this tip
+(capped `lake env lean` probe):
+
+```
+'GoLean.RaftSeam.storeTarget_field' depends on axioms: [propext, Classical.choice, Quot.sound]
+'GoLean.RaftSeam.alt_call_span' depends on axioms: [propext, Classical.choice, Quot.sound]
+'GoLean.RaftSeam.alt_call_span_witness' depends on axioms: [propext, Classical.choice, Quot.sound]
+'GoLean.RaftSeam.alt_witness_projection' depends on axioms: [propext]
+```
+
+`grep -c "sorry\|native_decide"` over the three Specs/Raft modules:
+0/0/0. Module line counts (`wc -l`): AbsState 143, HandlerEq 203,
+BecomeFollowerWitness 138.
+
+**Deliverable state vs the dispatch:**
+1. `absState` v1 — DELIVERED (`Specs/Raft/AbsState.lean`,
+   gaps GAP-V1-1..5 numbered; OQ-A answered in its docstring).
+2. The pilot equation — PARTIALLY delivered, honestly gapped:
+   the equation FORM proved end-to-end at the smallest callee
+   (`alt_call_span` + pinned witness + projection readout); the full
+   `becomeFollower` equation is GAP-U1-E1 (verdict §2), NOT counted.
+3. THE VERDICT — DELIVERED
+   (`docs/2026-08-22_campaign-arc4-pilot-verdict.md`): architecture
+   GO / hand-walk cost NO-GO, with the measured table (3,233 steps,
+   4 choices, per-callee breakdown), the five missing kit ingredient
+   classes, OQ-A..D answers, and re-design recommendations
+   (Sym-fragment extension primary; W7 SpecTec convergent; kit lifts
+   regardless). **Per the seam design §4: re-design at U1 before any
+   A4-U2 dispatch — do not send more hand-walk units.**
+
+**Open gaps carried (none counted):** GAP-V1-1..5 (projection),
+GAP-U1-W1 (witness reachability — closes with Arc-2 checkpoint
+reflection), GAP-U1-E1 (the full becomeFollower equation — closes
+with the re-designed generator).
+
+Nothing merged; branch-complete. Merge/audit-ask are the operator's
+(constitution §4.1); the ci comparator-landmark staleness note (49
+commits at the first run) is flagged for the operator's merge step,
+same as the Arc-3 lanes.
