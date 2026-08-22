@@ -271,6 +271,35 @@ is the §4.4 park-and-report condition, not an emergency.
   lifts regardless — promotion ledger opened). Seam design note to
   be amended with the pilot's answers.
 
+- **Arc 3, unit 5 — LANDED** @ 2d93b2f0: the creation ring's
+  feasible slice (CreationRing.lean, 2511 lines) —
+  every_entry_was_created, base logs_sorted + constructive sorted
+  machinery, votesWithLog_sorted + term_sanity,
+  terms_and_indices_from_one, three new lift_prop consumers; sweep
+  **1528 decls clean**; index 34 rows; GAP-7 recorded WITH
+  import-closure evidence instead of silently attempted (the
+  log-matching heavies block two members — exactly unit 6); GAP-2
+  zero contact (ring is plain rri). Integration-readiness paragraph
+  delivered (compat/verdi self-contained, merge-tip-never-cherry-pick).
+- **Arc 2, unit 2 — LANDED** @ c7b35e8a: **NO-GO for the segment
+  walk, honestly measured** — reflector built and cheap (350k-step
+  checkpoint: 3:47/2.7GB/101MB olean), but mid-run kernel cost is
+  HEAP-LINEAR (2.22 s/step, 157 MB/step at 19k cells; seg-500 OOM at
+  48G) → 440-800 CPU-h projected, no fitting parallelism on the box.
+  Unit 3 re-chartered as fallback (d): the verified fast-twin
+  evaluator, OPENING with a trie kernel microbenchmark before any
+  build; if the microbench misses, the witness reports honestly
+  blocked at kernel scale. Census completed: 243 functions (+8 defer
+  callees resolved).
+- **[AGENT] CONVERGENCE NOTE** (structural, feeds prioritization):
+  the ∀-side (Arc 4's handler equations) and the ∃-witness (Arc 2's
+  last computational fallback pending) now both point at the SAME
+  missing instrument — the handler-fragment Sym extension (A4-U2, in
+  flight). If it lands, the witness's WP-completion route (refuted
+  only on hand-walk cost) reopens with automation. The Sym extension
+  is therefore the campaign's critical path; Arc-2's (d) proceeds in
+  parallel as the cheaper-if-it-works alternative.
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
