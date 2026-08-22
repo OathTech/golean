@@ -1013,4 +1013,23 @@ charter.
   and a direct obligation case needs
   `replace hin : … ∈ (st' h).1.leaderLogs := hin` before `rw [hst h]`
   (the anonymous-constructor `.nwState` is only definitionally `st'`).
+- 2026-08-22 Slice 32: `leader_sublog` (LeaderSublogInterface.v:8-27
+  1:1, BASE — fifth real base instantiation; upstream proof 554 lines).
+  The two `RefinementCommonTheorems.v` lemmas ported 1:1
+  (`candidateEntries_wonElection` :19-52,
+  `wonElection_candidateEntries_rvr` :54-96) and delivered at base level
+  as FOUR `lower_prop` consumers (`candidate_entries_lowered` /`_rvr`/
+  `_nw`/`_nw_rvr`, LeaderSublogProof.v:212-443) — the first base-level
+  consumers of the CandidateEntries chain. Invariant proof: a
+  transport helper `leader_sublog_of_update` (upstream's
+  leader_sublog_invariant_subset, :85-121) covers timeout/AER/RV/dGS;
+  client_request rides `one_leader_per_term_invariant` (two same-term
+  leaders coincide — upstream's exfalso), append_entries rides
+  reject-of-not-follower + the log cases, do_leader's fresh AE packets
+  resolve through the HOST conjunct on the sender's own log
+  (doLeader_messages), and the RVR win case is
+  `handleRequestVoteReply_leader_transition` +
+  `candidate_entries_lowered_rvr`/`_nw_rvr` — upstream's argument
+  without its dedup_not_in_cons split (our transition lemma already
+  yields the src-consed tally). Build green, sweep 1571.
 
