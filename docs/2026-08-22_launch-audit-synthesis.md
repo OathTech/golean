@@ -107,7 +107,32 @@ where corpus-blind classes live.
 - **Twin term-2 schedule**: added in this round (non-vacuity: S1's
   detector must be exercisable before the campaign pins it in Lean).
 
-## 5. Deferred (recorded, not launch-blocking)
+## 5. The ratified launch plan — retrospective record (D9's gap: the
+plan existed only in chat)
+
+Ratified by Mike 2026-08-21 ("Great, let's do it! consider this plan
+ratified"), four parallel lanes staging everything up to the
+whole-stack audit; all four landed before the audit ran:
+
+- **Lane A — the corpus train (W4.3/W4.4)**: the trace differential
+  milestone; landed at `35b18794` (558 blocks, 354 supported, OK
+  206/206, RENDERED 148/148, machine tier 26/27; BUG-068 found by the
+  rendered tier) after its own 4-reviewer audit + fix + delta-review +
+  convergence rounds.
+- **Lane B — slice 5b**: the second PL-nitpicker review of the
+  semantics design; landed `a6f1ae90`.
+- **Lane C — the Q-row memos**: the eight W3.2 design questions
+  memo'd for one-sitting ruling; landed `fe7fd2c1` (implementations
+  explicitly post-launch).
+- **Lane D — the audit-prep dossier**: the claim-chain map, the §3
+  residuals register, `tools/reconcile-records`, and the audit's
+  proposed structure; landed at `42fae106` with the settlement.
+
+The audit itself ran per the dossier's structure + Mike's added
+noodler; this document is its synthesis; the launch gate's exit is
+Mike's sign-off after this fix round.
+
+## 6. Deferred (recorded, not launch-blocking)
 
 - The sortSlice relocation arc (V2's costing: frontend trivial; the
   flagship's one-lemma symbolic-length sort step becomes a verified

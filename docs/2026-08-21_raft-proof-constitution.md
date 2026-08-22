@@ -1,10 +1,13 @@
 # THE PROOF CAMPAIGN CONSTITUTION — raft correctness (2026-08-21)
 
-**Status: DRAFT — awaiting Mike's ratification.** Every hole only Mike
-can fill is marked **[MIKE]** inline and collected in §8, the sign-off
-questions. Until ratified, nothing here charters work; after
-ratification, this document governs the raft proof campaign for its
-whole life, and is amended only per §4.5.
+**Status: RATIFIED (Mike, 2026-08-22 — "approve with defaults", plus
+the scoping principle and Plan A).** This document governs the raft
+proof campaign for its whole life and is amended only per §4.5. The
+rulings are folded IN PLACE at the sections they govern (each marked
+*Ruled 2026-08-22*); §8 is the compact ratification record. (The
+first recording of the ratification was a pure §8.1 append — a §4.5
+violation caught by the launch audit's D9; folded in place by the
+2026-08-22 fix round.)
 
 ---
 
@@ -57,6 +60,18 @@ quantifier, a stronger hypothesis, a weaker conclusion, a smaller
 subject — is an amendment (§4.5), not a judgment call. Changes that
 strengthen (wider envelope tiers, added conclusions, larger n) land as
 strengthenings without amendment, with their envelope arguments.
+
+**THE SCOPING PRINCIPLE (Ruled 2026-08-22, governs every §2 narrowing
+decision):** "aim for a narrow slice which permits widening later — a
+slice that is genuinely hard, without imposing 'lux' constraints, but
+that does not block future expansion to the 'lux' version." Every
+narrowing must be a REFINEMENT POINT, not a fork: per lever — network
+widening is conservative by construction; n is pinned in the statement
+only (the harness is n-generic); the harvest narrowing carries the
+§2.2.2 phase-tolerance discipline; liveness keeps the Fair non-vacuity
+rule. The over-specialization audit dimension polices this: a proof
+structure that works only for the narrow slice when a slice-generic
+one was equally available is a finding.
 
 ### 2.1 The base theorem: conditioned agreement
 
@@ -122,35 +137,66 @@ never in anyone's head. Three are known now:
    `doc.go:101-103`), recorded with its re-envelope obligation
    (machine-twin §2: widen additively via a `harvest` event). At v1
    the theorem is about a subset of conforming drivers and must say
-   so. **[MIKE]** — accept this narrowing as v1 fine print (the
-   recorded obligation discharging at W4.5 or later), or require the
-   widened harvest event before the statement is pinned.
+   so. **Ruled 2026-08-22 (ratification Q4): ACCEPTED at v1, with the
+   phase-tolerance discipline attached as its non-preclusion clause**
+   (ruled after explicit discussion of the refinement-vs-fork
+   distinction): invariants are stated phase-tolerant wherever equally
+   natural; any invariant that genuinely depends on harvest atomicity
+   is FLAGGED at the point of use — so the eventual un-bundling is a
+   re-plumb of the induction over the same lemma library, never a
+   restart.
 3. **The subject-delta ledger.** The theorem is about the vendored
    subject: real etcd-io/raft at the recorded pin, plus the itemised
    deltas (the `plainpb` shim per the §8.6 ruling of the P0 doc, the
    logger seam, every recorded trim). The statement cites the ledger
    (`docs/raft-w2-log.md` subject-delta section and successors); a
    delta not in the ledger is a violation, not a shortcut.
+4. **The applied-entry projection** (added 2026-08-22, launch audit
+   D3-F-4; ruled option (b) under the pre-build looseness directive).
+   S2/S3's executable checker compares applied entries PROJECTED to
+   non-empty `EntryNormal` data — the empty entry a leader appends on
+   winning an election and config-change entries are outside the
+   compared tuple. Why: this matches the harness's checker and the
+   twin evidence exactly, and the excluded entries carry no
+   client-visible data. Widening to the full `(index, term, data)`
+   tuple over ALL applied entries is a STRENGTHENING (no amendment),
+   and per the scoping principle the invariant lattice should not
+   assume the projection where the full tuple is equally natural.
+
+**Evidence status at ratification** (recorded 2026-08-22 from the
+launch audit's D5/V3, so the first proof arc starts from facts, not
+prose): the ∀-choice-stream shape of §2.1 has NO executable instance
+over the subject yet — the twin is schedule-driven by design
+(`twin-lib.go`'s header; the ∀ch form is the membership lane's), and
+the only choice-stream consensus artifact is the 2-node kernel of the
+481-line miniature (`multipkg/mini-raft-twin/choice-order`), not the
+RawNode subject. The schedule battery at audit time never left term 1
+(every schedule one leader claim; S1's disagreement branch dead code)
+— the fix round adds a term-2/step-down schedule so S1's detector is
+exercisable before it is pinned in Lean. The Lean side of the twin
+(the Agreement predicate, S1–S4, a golden pin for the twin program,
+`run = .ok r → Agreement r`) is entirely greenfield; the one
+raft-shaped Lean asset is the quorum pilot.
 
 ### 2.3 The ladder above agreement
 
 Tiers are pinned as statement variants; each tier proved is a
 milestone (§4.2). The conditioned-safety ladder, in the classical
-raft-paper order — **[MIKE]: confirm or reorder the tiers, and rule
-which are IN the campaign's ends vs explicitly stretch:**
+raft-paper order — **Ruled 2026-08-22 (ratification Q2, defaults):
+T1–T2 are the campaign's ends; T3 headline as proved; T4 stretch.**
 
 - **T1 — Agreement at n=3** (§2.1; the base — this one is not
-  optional).
+  optional). **END.**
 - **T2 — quantified `num_parties`** (pool-size induction; P0 §3.3).
+  **END.**
 - **T3 — the deeper safety invariants as named theorems: leader
   completeness, log matching, state-machine safety** — the invariant
   lattice Verdi Raft proved and the natural decomposition any route
-  will build anyway; ruling wanted on which are HEADLINE ends (pinned,
-  designated, comparator-judged) vs proof infrastructure beneath T1.
-  **[MIKE]**
-- **T4 (stretch) — linearizability of a small KV service over the
-  cluster** — requires a client layer; explicitly a stretch tier per
-  P0 §3.2/§8.1. **[MIKE]: confirm stretch status.**
+  will build anyway. **HEADLINE AS PROVED**: each becomes a headline
+  end (pinned, designated, comparator-judged) when and as it is
+  proved; until then it is proof infrastructure beneath T1.
+- **T4 — linearizability of a small KV service over the cluster** —
+  requires a client layer. **STRETCH** (confirmed; P0 §3.2/§8.1).
 
 ### 2.4 The liveness tier (later, and honestly conditional)
 
@@ -166,8 +212,9 @@ allows unbounded scheduling delay (Pratt), while eventual scheduling
 is a strong gc expectation and starvation treated as a bug (Mills,
 issue #65178) — so the fairness hypothesis is an HONEST added
 assumption matching gc practice, never smuggled into the machine.
-**[MIKE]: is the liveness tier inside this campaign's ends, or a named
-successor campaign?**
+**Ruled 2026-08-22 (ratification Q5): a NAMED SUCCESSOR campaign**;
+the non-preclusion requirement stands — nothing in this campaign may
+make the fairness hypothesis undefinable.
 
 ---
 
@@ -244,9 +291,14 @@ advice; a violation is a defect even when the theorem is true.
    honest.)
 8. **The comparator at landmarks.** Any arc that adds or changes a
    designated headline statement runs `scripts/comparator-judge`
-   before merge — the independent kernel-replay judge, landmark
-   cadence, never part of `scripts/ci`. (TCB doctrine, operational
-   enforcement; CLAUDE.md merge protocol step 2.)
+   before merge — and likewise when anything in Challenge's trusted
+   closure moved, or when `scripts/ci` prints a landmark
+   scope/staleness note (the widened trigger, 2026-08-22, after a
+   371-commit-stale landmark passed the narrow form; ci step 1c4 is
+   report-only, the run obligation is this rule). The independent
+   kernel-replay judge, landmark cadence, never part of `scripts/ci`.
+   (TCB doctrine, operational enforcement; CLAUDE.md merge protocol
+   step 2 — kept in sync with this clause.)
 9. **Everything CLAUDE.md already makes inviolable stays so** — fail
    closed always; GoCore purity; proof-facing code total (no
    `partial`, no `sorry`, no `native_decide` in the semantic core);
@@ -270,6 +322,16 @@ list. These are how the constitution governs.
   request is a written block the ruling can be recorded into, in the
   style already proven out (the W3.2 charter's Rulings block; the
   boundary-set decision table with per-strike consequences).
+- **The surgery threshold** (written 2026-08-22 per Mike's
+  decide-only-blockers directive; subject to veto at the fix-round
+  merge). The campaign MAY, under §5's latitude with a logged call,
+  fix an interpreter divergence against the Go oracle — red corpus
+  case pinned FIRST, the change local to the divergent arm, gate +
+  focused differential green. Everything else is semantic-core
+  SURGERY and parks for a ruling: anything touching envelopes, choice
+  sites, granularity/atomicity, new GoCore nodes, or the observation
+  notion. The test is §5's: an oracle-divergence fix changes whether
+  the machine is RIGHT about Go; surgery changes what the machine IS.
 - **Merge and push**: the standing merge protocol unchanged — the
   audit ask unconditional before any merge, sign-off at that moment
   for that merge, push separate (CLAUDE.md). The campaign ends arcs
@@ -291,9 +353,13 @@ must audit the final state, and never skips a dimension because it
 has been passing). The merge-time audit ASK remains unconditional
 regardless of cadence — cadence governs when audits are proposed as
 part of the plan, never whether the ask happens.
-**[MIKE]: ratify the campaign's milestone set** — proposal: each tier
-of §2.3, the M5 statement pin, and any semantic-core surgery the
-campaign needs (which also takes the W3.2-style "strictest bar").
+**Ruled 2026-08-22 (ratification Q6): the milestone set as proposed**
+— each tier of §2.3, the M5 statement pin, and any semantic-core
+surgery the campaign needs (which also takes the W3.2-style
+"strictest bar"). A milestone is CLAIMED only with the gate green at
+the claiming tip and derivation-anchored numbers in the campaign log
+— standing practice (§3.7), restated here so no claim precedes its
+evidence.
 
 ### 4.3 Continuity — artifact-mediated, per the gallery case law
 
@@ -384,6 +450,21 @@ Findings are fixed before launch; the audit's scope/scale proposal is
 posed to Mike like any audit ask, but the ASK is constitutional — the
 campaign may not start without it having run.
 
+**The gate's exit — Ruled 2026-08-22: pause, and Mike signs off.**
+Deliberately unformalized (no severity thresholds, no waiver
+machinery; Mike declined the formalization as gate cruft — guardrails
+will not be perfect, and looseness is wanted).
+
+**Discharge record**: the audit RAN 2026-08-22 at `5f5642eb` — ten
+reviewers (nine dimensions + a broad-brief noodler at Mike's
+direction) plus three refute-default verifiers, structured per the
+audit-prep dossier (`docs/2026-08-21_launch-audit-dossier.md`, whose
+§3 register the reviewers were fed — see its §3-A correction);
+synthesis, verdicts,
+and the fix-round ledger in `docs/2026-08-22_launch-audit-synthesis.md`.
+The fix round is the `launch-fixes` lane; launch on Mike's sign-off
+after it lands.
+
 ## §5 The Latitude — everything else is the campaign's
 
 Inside §2's ends and §3/§4's rails, the campaign decides — without
@@ -392,10 +473,19 @@ instrument (one-line entries in the campaign log; reviewed after, not
 approved before — "comprehension check ≠ sign-off"). Explicitly
 delegated:
 
-- **Proof strategy and route**: direct invariant proofs over the
-  interpreter, a Verdi-refinement bridge or its abandonment, Iris as
-  proof device, ghost/history machinery behind the statement line —
-  any mix, revisable mid-campaign with the reasons logged.
+- **Proof strategy and route** — *Ruled 2026-08-22: PLAN A is porting
+  the Verdi proof STRUCTURE* — the invariant network and proof
+  architecture of verdi-raft — onto our harness vocabulary via the
+  merged compat/verdi layer (the bridgehead: Verdi's system model +
+  raft spec already ported, AxCheck-gated; the port is of structure,
+  not text — statements re-ground in the harness vocabulary per the
+  compat design note's seam, and compat/verdi stays a read-only
+  reference, never an import). A more direct route may be proposed at
+  any time with a recorded comparison (what it saves; what
+  Verdi-alignment it gives up); deviation is a logged judgment call —
+  abandoning the Verdi alignment entirely is a ruling. Iris as proof
+  device, ghost/history machinery behind the statement line — any
+  mix, revisable mid-campaign with the reasons logged.
 - **Invariant ordering and the lemma architecture**: which invariants
   first, how the lattice decomposes, what is general infrastructure
   vs target infrastructure (subject to the layering doctrine's
@@ -545,43 +635,37 @@ it never overrides it. Concretely:
 
 ---
 
-## §8 The sign-off questions — every [MIKE] hole, collected
+## §8 The ratification record (2026-08-22, Mike)
 
-Ratification = answers to these, recorded as dated rulings in §2/§4
-(per §4.5's amendment form). Defaults are stated where the drafting
-has a recommendation; "approve with defaults" is a legitimate single
-answer, per the W3.2 precedent.
+Ratified as **"approve with defaults"** ("all of these seem
+reasonable"), with Q4 resolved by discussion and two additions (the
+scoping principle, Plan A). One copy of each ruling lives at the
+section it governs, per §6(p); this record is the act plus pointers:
 
-1. **The base predicate** (§2.1): Agreement — S1–S3 as the per-step
-   executable invariant, S4 as completion witness — confirmed as the
-   campaign's base end? (P0 §8.1 recommended it; never ruled.)
-   *Default: yes.*
-2. **The tier ladder** (§2.3): confirm T1→T2→T3→T4 and rule which of
-   T3's invariants (leader completeness, log matching, state-machine
-   safety) are HEADLINE ends vs infrastructure; confirm T4
-   linearizability as stretch. (P0 §8.2.) *Default: T1–T2 ends; T3
-   headline as proved; T4 stretch.*
-3. **The network envelope tier** (§2.2.1): reliable-first for the
-   pinned statement, chaos as a strengthening tier. (P0 §8.3.)
-   *Default: yes.*
-4. **The RawNode serialization narrowing** (§2.2.2): accepted as v1
-   fine print with its recorded re-envelope obligation, or must the
-   widened `harvest` event precede the pin? *Default: accept at v1;
-   obligation stands.*
-5. **The liveness tier** (§2.4): inside this campaign's ends, or a
-   named successor? *Default: successor; the non-preclusion
-   requirement keeps it reachable.*
-6. **The milestone set for audit cadence** (§4.2): each §2.3 tier, the
-   statement pin, and any semantic-core surgery. *Default: as
-   proposed.*
-7. **Supervision seam**: does any remaining trust-surface work
-   (semantic-core surgery the proofs demand, statement re-pins) stay
-   under supervised arcs while proof work runs long-cycle, or is the
-   whole campaign one autonomous envelope with §4.1's gates? (The
-   P0 §8.5 question, now campaign-shaped.) *Default: trust-surface
-   work supervised; proof work autonomous.*
-8. **Ratification itself** (§4.5): this document as the campaign's
-   governing instrument, amendment authority as stated.
+| question | answer | folded at |
+|---|---|---|
+| 1 base predicate | YES (S1–S3 per-step + S4 witness) | §2.1 |
+| 2 tier ladder | defaults: T1–T2 ends; T3 headline as proved; T4 stretch | §2.3 |
+| 3 network envelope | reliable-first; chaos as strengthening | §2.2.1 |
+| 4 RawNode/harvest narrowing | accepted at v1 + phase-tolerance discipline | §2.2.2 |
+| 5 liveness | named successor; non-preclusion standing | §2.4 |
+| 6 milestone set | as proposed | §4.2 |
+| 7 supervision seam | trust-surface supervised; proof work autonomous | §8 (below) |
+| 8 this document | ratified; amendment only by Mike, dated in place | header/§4.5 |
+
+Additions: **the scoping principle** → §2 preamble; **Plan A (the
+Verdi structure port)** → §5, proof strategy and route.
+
+Supervision seam (Q7), operative form: semantic-core surgery the
+proofs demand and statement re-pins run as SUPERVISED arcs; proof
+work runs long-cycle autonomous inside §4.1's gates.
+
+Post-ratification rulings folded 2026-08-22 with the launch-audit fix
+round: the launch gate's exit (pause + Mike's sign-off, deliberately
+unformalized) → §4 launch gate; the surgery threshold → §4.1; the
+milestone-claim evidence line → §4.2; the applied-entry projection
+and the evidence-status block → §2.2; §3.8 re-synced to the widened
+comparator trigger.
 
 ---
 
@@ -591,56 +675,5 @@ design, the gallery campaign trip report, the W3.2 re-envelope charter
 and its lane's design-audit/boundary-set/POR notes (branch-state where
 marked), the TCB/layering doctrine, and CLAUDE.md's standing
 contracts. Every provenance pointer above was resolved against the
-tree at drafting time.*
-
----
-
-## §8.1 RATIFICATION (2026-08-22, Mike) — the eight answers, recorded
-
-Mike's ruling: **approve with defaults** ("all of these seem
-reasonable"), with question 4 resolved by discussion and two
-additions. Per-question:
-
-1. The base predicate — **YES** (agreement S1–S3 per-step + the S4
-   completion witness).
-2. The tier ladder — **defaults**: T1–T2 ends; T3 headline as proved;
-   T4 stretch.
-3. The network envelope — **reliable-first, chaos as strengthening**.
-4. The RawNode/harvest narrowing — **ACCEPTED at v1, with the
-   phase-tolerance discipline attached as its non-preclusion clause**
-   (ruled after explicit discussion of the refinement-vs-fork
-   distinction): invariants are stated phase-tolerant wherever
-   equally natural; any invariant that genuinely depends on harvest
-   atomicity is FLAGGED at the point of use — so the eventual
-   un-bundling is a re-plumb of the induction over the same lemma
-   library, never a restart.
-5. Liveness — **named successor**; non-preclusion standing.
-6. Milestone/audit cadence — **as proposed**.
-7. Supervision seam — **trust-surface supervised, proof work
-   autonomous**.
-8. This document — **ratified as the campaign's governing
-   instrument**; amendment only by Mike, dated in place.
-
-**THE SCOPING PRINCIPLE (Mike, 2026-08-22, governs all §2 narrowing
-decisions):** "aim for a narrow slice which permits widening later —
-a slice that is genuinely hard, without imposing 'lux' constraints,
-but that does not block future expansion to the 'lux' version."
-Every narrowing must be a REFINEMENT POINT, not a fork: per lever —
-network widening is conservative by construction; n is pinned in the
-statement only (the harness is n-generic); the harvest narrowing
-carries the question-4 discipline; liveness keeps the Fair
-non-vacuity rule. The over-specialization audit dimension polices
-this: a proof structure that works only for the narrow slice when a
-slice-generic one was equally available is a finding.
-
-**PLAN A (Mike, 2026-08-22, recorded in §5's latitude):** the proof
-route's default is **porting the Verdi proof structure** — the
-invariant network and proof architecture of verdi-raft — onto our
-harness vocabulary via the merged compat/verdi layer (the bridgehead:
-Verdi's system model + raft spec already ported, AxCheck-gated).
-A more direct route may be proposed at any time with a recorded
-comparison (what it saves; what Verdi-alignment it gives up);
-deviation is a logged judgment call — abandoning the Verdi alignment
-entirely would be a ruling. The port is of STRUCTURE, not text: the
-statements re-ground in the harness vocabulary per the compat design
-note's seam.
+tree at drafting time. Ratification recorded 2026-08-22; rulings
+folded in place the same day (launch-audit fix round).*

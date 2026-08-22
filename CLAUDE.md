@@ -9,6 +9,9 @@ worth or its cost — keep it lean; it loads every session.
 Goal: build a fast, careful Go-to-Lean verifier. North star target:
 `etcd-io/raft` (`docs/roadmap.md`). Move aggressively; the practices below
 exist because they let us do that without accumulating debt, not as ceremony.
+The raft proof campaign is governed by
+`docs/2026-08-21_raft-proof-constitution.md` (ratified 2026-08-22) — read it
+before any campaign work; it specializes this file, never overrides it.
 
 ## The two bounds — what we are building (2026-08-11, doctrine)
 
