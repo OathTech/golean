@@ -1173,6 +1173,527 @@ theorem removeIncorrect_new_contiguous {new current : List (entry (P := P))}
     · exact Nat.lt_of_le_of_lt (Nat.zero_le _) (hnew.2 x hx')
     · exact hcur.2 x (removeAfterIndex_in hx')
 
+/-! ## log_matching (BASE) — the T3-named invariant
+
+`LogMatchingProof.v` (1,521 lines). The statement defs are the P1 port's
+(`Properties.lean`: `log_matching_hosts`/`log_matching_nw`/`log_matching`
+and the `LogMatchingStatement` transfer target) — proved here, never
+redefined (the unit-2 name-collision lesson). -/
+
+/-- `LogMatchingProof.v:47-96` (`log_matching_state_same_packet_subset`):
+the whole invariant transports across a step that keeps every log and
+introduces no AppendEntries packet. -/
+theorem log_matching_state_same_packet_subset {net net' : RaftNet}
+    (hP : log_matching net)
+    (hlog : ∀ h, (net'.nwState h).log = (net.nwState h).log)
+    (hpkts : ∀ p, p ∈ net'.nwPackets →
+      (∃ t lid pli plt es ci,
+        p.pBody = msg.AppendEntries (P := P) t lid pli plt es ci) →
+      p ∈ net.nwPackets) :
+    log_matching net' := by
+  obtain ⟨⟨hem, hcontig, hpos⟩, hnw⟩ := hP
+  refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
+  · intro h h'
+    rw [hlog h, hlog h']
+    exact hem h h'
+  · intro h i hi
+    rw [hlog h] at hi ⊢
+    exact hcontig h i hi
+  · intro h e he
+    rw [hlog h] at he
+    exact hpos h e he
+  · intro p t lid pli plt es ci hp hbody
+    have hp0 : p ∈ net.nwPackets :=
+      hpkts p hp ⟨t, lid, pli, plt, es, ci, hbody⟩
+    obtain ⟨h1, h2, h3, h4⟩ := hnw p t lid pli plt es ci hp0 hbody
+    refine ⟨?_, h2, h3, ?_⟩
+    · intro h e1 e2 he1 he2 hidx hterm
+      rw [hlog h] at he2
+      obtain ⟨ha, hb⟩ := h1 h e1 e2 he1 he2 hidx hterm
+      refine ⟨?_, ?_⟩
+      · intro e3 h3le h3in
+        rw [hlog h]
+        exact ha e3 h3le h3in
+      · intro hne
+        obtain ⟨e4, h4a, h4b, h4c⟩ := hb hne
+        rw [hlog h]
+        exact ⟨e4, h4a, h4b, h4c⟩
+    · intro p' t' lid' pli' plt' es' ci' hp' hbody'
+      exact h4 p' t' lid' pli' plt' es' ci'
+        (hpkts p' hp' ⟨t', lid', pli', plt', es', ci', hbody'⟩) hbody'
+
+omit O in
+/-- `doLeader`'s messages in full: each is a replica message over the
+leader's own (unchanged) log — `AppendEntries` at the leader's current
+term whose entries are `findGtIndex log pli` and whose prevLogTerm is
+resolved by `findAtIndex log pli`. -/
+theorem doLeader_messages_full (st : raft_data (P := P)) (me : name (P := P))
+    {os st' ms} (h : doLeader st me = (os, st', ms)) :
+    ∀ q ∈ ms, ∃ pli ci,
+      q.2 = msg.AppendEntries (P := P) st.currentTerm me pli
+        (match findAtIndex st.log pli with
+         | some e => e.eTerm
+         | none => 0)
+        (findGtIndex st.log pli) ci := by
+  unfold doLeader at h
+  simp only [] at h
+  repeat' split at h
+  all_goals simp only [Prod.mk.injEq] at h
+  all_goals obtain ⟨-, -, rfl⟩ := h
+  all_goals intro q hq
+  · simp only [List.mem_map] at hq
+    obtain ⟨node, -, rfl⟩ := hq
+    exact ⟨_, _, rfl⟩
+  · exact nomatch hq
+  · exact nomatch hq
+
+omit O in
+/-- Contiguity of a replica packet's entries (`LogMatchingProof.v`'s
+doLeader nw clause 2, over the sender's contiguous log). -/
+theorem replica_entries_contiguous {L : List (entry (P := P))}
+    {pli : logIndex} (hs : sorted L)
+    (hcontig : ∀ i, 1 ≤ i ∧ i ≤ maxIndex L →
+      ∃ e, entry.eIndex e = i ∧ e ∈ L) :
+    ∀ i, pli < i ∧ i ≤ maxIndex (findGtIndex L pli) →
+      ∃ e, entry.eIndex e = i ∧ e ∈ findGtIndex L pli := by
+  intro i ⟨hgt, hle⟩
+  obtain ⟨e, hei, heL⟩ := hcontig i
+    ⟨Nat.lt_of_le_of_lt (Nat.zero_le pli) hgt,
+     Nat.le_trans hle (findGtIndex_max L pli)⟩
+  exact ⟨e, hei, findGtIndex_sufficient hs heL (hei.symm ▸ hgt)⟩
+
+omit O in
+/-- A nonempty replica packet's nonzero prevLogIndex resolves to an
+actual entry of the sender's log (via contiguity), so its prevLogTerm is
+that entry's term. -/
+theorem replica_prev_resolves {L : List (entry (P := P))} {pli : logIndex}
+    {e1 : entry (P := P)} (hs : sorted L)
+    (hcontig : ∀ i, 1 ≤ i ∧ i ≤ maxIndex L →
+      ∃ e, entry.eIndex e = i ∧ e ∈ L)
+    (he1 : e1 ∈ findGtIndex L pli) (hpli : pli ≠ 0) :
+    ∃ ple, findAtIndex L pli = some ple ∧ ple.eIndex = pli ∧ ple ∈ L := by
+  obtain ⟨he1L, he1gt⟩ := findGtIndex_necessary he1
+  obtain ⟨ple, hplei, hpleL⟩ := hcontig pli
+    ⟨Nat.pos_of_ne_zero hpli,
+     Nat.le_trans (Nat.le_of_lt he1gt) (maxIndex_is_max hs he1L)⟩
+  exact ⟨ple, findAtIndex_intro hs hpleL hplei (sorted_uniqueIndices hs),
+    hplei, hpleL⟩
+
+/-- `LogMatchingProof.v:722-749`
+(`handleClientRequest_log_matching_hosts_entries_match`): the leader's
+log extended by the fresh entry still matches every other host's —
+same-term entries elsewhere are already in the leader's log
+(`leader_sublog`), and the fresh index tops it. -/
+theorem handleClientRequest_entries_match {net : RaftNet}
+    {h h' : name (P := P)} {ne : entry (P := P)}
+    (hlmh : log_matching_hosts net)
+    (hlsh : leader_sublog_host_invariant net)
+    (hsh : logs_sorted_host net)
+    (hty : (net.nwState h).type = .Leader)
+    (hidx : ne.eIndex = maxIndex (net.nwState h).log + 1)
+    (hterm : ne.eTerm = (net.nwState h).currentTerm) :
+    entries_match (ne :: (net.nwState h).log) (net.nwState h').log := by
+  obtain ⟨hem, -, -⟩ := hlmh
+  intro e e' e'' h1 h2 h3 h4 h5
+  constructor
+  · intro hin
+    rcases List.mem_cons.mp h3 with rfl | h3'
+    · -- e is the fresh entry: its twin e' elsewhere would already be in
+      -- the leader's log at an impossible index
+      have he'h : e' ∈ (net.nwState h).log :=
+        hlsh h e' h' hty h4 (h2.symm.trans hterm)
+      exact absurd (h1.symm.trans hidx) (S_maxIndex_not_in (hsh h) he'h)
+    · rcases List.mem_cons.mp hin with rfl | hin'
+      · -- e'' fresh but bounded by an old entry: impossible index
+        have hmax := maxIndex_is_max (hsh h) h3'
+        rw [hidx] at h5
+        exact absurd (Nat.le_trans h5 hmax) (Nat.not_succ_le_self _)
+      · exact (hem h h' e e' e'' h1 h2 h3' h4 h5).mp hin'
+  · intro hin
+    rcases List.mem_cons.mp h3 with rfl | h3'
+    · have he'h : e' ∈ (net.nwState h).log :=
+        hlsh h e' h' hty h4 (h2.symm.trans hterm)
+      exact absurd (h1.symm.trans hidx) (S_maxIndex_not_in (hsh h) he'h)
+    · exact List.mem_cons_of_mem _ ((hem h h' e e' e'' h1 h2 h3' h4 h5).mpr hin)
+
+omit O in
+/-- `handleClientRequest`'s exact log shape (the leader branch's fresh
+entry, literally). -/
+theorem handleClientRequest_log_full (me : name (P := P))
+    (st : raft_data (P := P)) (client : R.clientId) (id : Nat) (c : P.input)
+    {out st' l} (h : handleClientRequest me st client id c = (out, st', l)) :
+    (st.type = .Leader ∧
+      st'.log = (⟨me, client, id, maxIndex st.log + 1, st.currentTerm, c⟩ :
+        entry (P := P)) :: st.log) ∨
+    (st.type ≠ .Leader ∧ st' = st) := by
+  unfold handleClientRequest at h
+  split at h
+  · rename_i hty
+    simp only [Prod.mk.injEq] at h
+    obtain ⟨-, rfl, -⟩ := h
+    exact Or.inl ⟨hty, rfl⟩
+  · rename_i hty
+    simp only [Prod.mk.injEq] at h
+    obtain ⟨-, rfl, -⟩ := h
+    exact Or.inr ⟨hty, rfl⟩
+
+/-- `LogMatchingProof.v:793-893` (`client_request_log_matching`). -/
+theorem client_request_log_matching :
+    raft_net_invariant_client_request (P := P) log_matching := by
+  intro h net st' ps' out d l client id c hcr hP hreach hst hps
+  obtain ⟨-, -, -, -, hl⟩ :=
+    handleClientRequest_spec h (net.nwState h) client id c hcr
+  have hpkts : ∀ p', p' ∈ ps' → p' ∈ net.nwPackets := by
+    intro p' hp'
+    rcases hps p' hp' with h1 | h1
+    · exact h1
+    · rw [hl] at h1
+      simp [send_packets] at h1
+  rcases handleClientRequest_log_full h (net.nwState h) client id c hcr with
+    ⟨hty, hlogd⟩ | ⟨-, heq⟩
+  · -- LEADER: the fresh entry rides leader_sublog + one impossible index
+    obtain ⟨⟨hem, hcontig, hpos⟩, hnw⟩ := hP
+    obtain ⟨hlsh, hlsn⟩ := leader_sublog_invariant_invariant net hreach
+    have hsorted := logs_sorted_invariant net hreach
+    have hlog' : ∀ h0, h0 ≠ h → (st' h0).log = (net.nwState h0).log := by
+      intro h0 hne
+      rw [hst h0, update_neq _ _ hne]
+    have hlogh : (st' h).log =
+        (⟨h, client, id, maxIndex (net.nwState h).log + 1,
+          (net.nwState h).currentTerm, c⟩ : entry (P := P))
+          :: (net.nwState h).log := by
+      rw [hst h, update_same]
+      exact hlogd
+    refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
+    · -- entries_match, pairwise
+      intro h1 h2
+      show entries_match (st' h1).log (st' h2).log
+      by_cases he1 : h1 = h <;> by_cases he2 : h2 = h
+      · rw [he1, he2]
+        exact entries_match_refl _
+      · rw [he1, hlogh, hlog' h2 he2]
+        exact handleClientRequest_entries_match ⟨hem, hcontig, hpos⟩ hlsh
+          hsorted.1 hty rfl rfl
+      · rw [he2, hlogh, hlog' h1 he1]
+        exact entries_match_sym
+          (handleClientRequest_entries_match ⟨hem, hcontig, hpos⟩ hlsh
+            hsorted.1 hty rfl rfl)
+      · rw [hlog' h1 he1, hlog' h2 he2]
+        exact hem h1 h2
+    · -- contiguity
+      intro h0 i hi
+      replace hi : 1 ≤ i ∧ i ≤ maxIndex (st' h0).log := hi
+      show ∃ e, entry.eIndex e = i ∧ e ∈ (st' h0).log
+      by_cases he0 : h0 = h
+      · rw [he0, hlogh] at hi ⊢
+        replace hi : 1 ≤ i ∧ i ≤ maxIndex (net.nwState h).log + 1 := hi
+        rcases Nat.lt_or_ge i (maxIndex (net.nwState h).log + 1) with hlt | hge
+        · obtain ⟨e, hei, heL⟩ := hcontig h i ⟨hi.1, Nat.lt_succ_iff.mp hlt⟩
+          exact ⟨e, hei, List.mem_cons_of_mem _ heL⟩
+        · exact ⟨_, Nat.le_antisymm hge hi.2, List.mem_cons_self ..⟩
+      · rw [hlog' h0 he0] at hi ⊢
+        exact hcontig h0 i hi
+    · -- positivity
+      intro h0 e he
+      replace he : e ∈ (st' h0).log := he
+      by_cases he0 : h0 = h
+      · rw [he0, hlogh] at he
+        rcases List.mem_cons.mp he with rfl | he'
+        · exact Nat.succ_pos _
+        · exact hpos h e he'
+      · rw [hlog' h0 he0] at he
+        exact hpos h0 e he
+    · -- nw: every packet is old; only host h's log grew
+      intro q t lid pli plt es ci hq hbody
+      replace hq : q ∈ ps' := hq
+      have hqold := hpkts q hq
+      obtain ⟨hc1, hc2, hc3, hc4⟩ := hnw q t lid pli plt es ci hqold hbody
+      refine ⟨?_, hc2, hc3, ?_⟩
+      · intro h2 e1 e2 he1 he2 hidx hterm
+        replace he2 : e2 ∈ (st' h2).log := he2
+        by_cases he2h : h2 = h
+        · rw [he2h, hlogh] at he2
+          rcases List.mem_cons.mp he2 with rfl | he2'
+          · -- e2 is the fresh entry: e1 in flight at the leader's term
+            -- would already be in the leader's log at an impossible index
+            exfalso
+            have he1L : e1 ∈ (net.nwState h).log :=
+              hlsn h q t lid pli plt es ci e1 hty hqold hbody he1 hterm
+            exact absurd hidx (S_maxIndex_not_in (hsorted.1 h) he1L)
+          · obtain ⟨ha, hb⟩ := hc1 h e1 e2 he1 he2' hidx hterm
+            refine ⟨?_, ?_⟩
+            · intro e3 h3le h3in
+              show e3 ∈ (st' h2).log
+              rw [he2h, hlogh]
+              exact List.mem_cons_of_mem _ (ha e3 h3le h3in)
+            · intro hne
+              obtain ⟨e4, h4a, h4b, h4c⟩ := hb hne
+              refine ⟨e4, h4a, h4b, ?_⟩
+              show e4 ∈ (st' h2).log
+              rw [he2h, hlogh]
+              exact List.mem_cons_of_mem _ h4c
+        · rw [hlog' h2 he2h] at he2
+          obtain ⟨ha, hb⟩ := hc1 h2 e1 e2 he1 he2 hidx hterm
+          refine ⟨?_, ?_⟩
+          · intro e3 h3le h3in
+            show e3 ∈ (st' h2).log
+            rw [hlog' h2 he2h]
+            exact ha e3 h3le h3in
+          · intro hne
+            obtain ⟨e4, h4a, h4b, h4c⟩ := hb hne
+            refine ⟨e4, h4a, h4b, ?_⟩
+            show e4 ∈ (st' h2).log
+            rw [hlog' h2 he2h]
+            exact h4c
+      · intro q' t' lid' pli' plt' es' ci' hq' hbody'
+        replace hq' : q' ∈ ps' := hq'
+        exact hc4 q' t' lid' pli' plt' es' ci' (hpkts q' hq') hbody'
+  · -- non-leader: state unchanged, no messages
+    refine log_matching_state_same_packet_subset (net' := ⟨ps', st'⟩) hP ?_ ?_
+    · intro h0
+      show (st' h0).log = (net.nwState h0).log
+      rw [hst h0]
+      by_cases he : h0 = h
+      · rw [he, update_same, heq]
+      · rw [update_neq _ _ he]
+    · intro p hp _
+      replace hp : p ∈ ps' := hp
+      exact hpkts p hp
+
+/-- `LogMatchingProof.v:196-499` (`doLeader_log_matching_nw` +
+`do_leader_log_matching`): the leader's replica messages carry slices of
+its own log, so every clause reduces to the host invariants. -/
+theorem do_leader_log_matching :
+    raft_net_invariant_do_leader (P := P) log_matching := by
+  intro net st' ps' d h os d' ms hdl hP hreach hstate hst hps
+  subst hstate
+  obtain ⟨-, -, -, -, hdlog, -⟩ := doLeader_spec _ h hdl
+  have hmsgs := doLeader_messages_full _ h hdl
+  obtain ⟨⟨hem, hcontig, hpos⟩, hnw⟩ := hP
+  have hsorted := logs_sorted_invariant net hreach
+  have hLs : sorted (net.nwState h).log := hsorted.1 h
+  have hLu : uniqueIndices (net.nwState h).log :=
+    (UniqueIndices_invariant net hreach).1 h
+  have hLcontig := hcontig h
+  have hlog' : ∀ h0, (st' h0).log = (net.nwState h0).log := by
+    intro h0
+    rw [hst h0]
+    by_cases he : h0 = h
+    · rw [he, update_same, hdlog]
+    · rw [update_neq _ _ he]
+  -- packet classification: old, or a replica slice of h's log
+  have hclassify : ∀ (q : Packet (raft_base_params (P := P)) raft_multi_params)
+      t lid pli plt es ci,
+      q ∈ ps' → q.pBody = msg.AppendEntries t lid pli plt es ci →
+      q ∈ net.nwPackets ∨
+      (es = findGtIndex (net.nwState h).log pli ∧
+       plt = (match findAtIndex (net.nwState h).log pli with
+              | some e => e.eTerm
+              | none => 0)) := by
+    intro q t lid pli plt es ci hq hbody
+    rcases hps q hq with h1 | h1
+    · exact Or.inl h1
+    · obtain ⟨m0, hm0, rfl⟩ := List.mem_map.mp h1
+      obtain ⟨pli0, ci0, hbody0⟩ := hmsgs m0 hm0
+      replace hbody : m0.2 = msg.AppendEntries t lid pli plt es ci := hbody
+      rw [hbody0] at hbody
+      injection hbody with f1 f2 f3 f4 f5 f6
+      refine Or.inr ⟨?_, ?_⟩
+      · rw [← f5, f3]
+      · rw [← f4, f3]
+  -- clause 1 of a fresh packet, against any host
+  have hfresh1 : ∀ pli (h2 : name (P := P)) (e1 e2 : entry (P := P)),
+      e1 ∈ findGtIndex (net.nwState h).log pli →
+      e2 ∈ (net.nwState h2).log →
+      e1.eIndex = e2.eIndex → e1.eTerm = e2.eTerm →
+      (∀ e3, e3.eIndex ≤ e1.eIndex →
+        e3 ∈ findGtIndex (net.nwState h).log pli →
+        e3 ∈ (net.nwState h2).log) ∧
+      (pli ≠ 0 → ∃ e4, e4.eIndex = pli ∧
+        e4.eTerm = (match findAtIndex (net.nwState h).log pli with
+                    | some e => e.eTerm
+                    | none => 0) ∧
+        e4 ∈ (net.nwState h2).log) := by
+    intro pli h2 e1 e2 he1 he2 hidx hterm
+    have he1L := (findGtIndex_necessary he1).1
+    have hEM := hem h h2
+    constructor
+    · intro e3 h3le h3in
+      exact (hEM e1 e2 e3 hidx hterm he1L he2 h3le).mp
+        (findGtIndex_necessary h3in).1
+    · intro hne
+      obtain ⟨ple, hfind, hplei, hpleL⟩ :=
+        replica_prev_resolves hLs hLcontig he1 hne
+      refine ⟨ple, hplei, by rw [hfind], ?_⟩
+      exact (hEM e1 e2 ple hidx hterm he1L he2
+        (by rw [hplei]
+            exact Nat.le_of_lt (findGtIndex_necessary he1).2)).mp hpleL
+  -- clause 4, old q against a fresh q'
+  have hvs_fresh : ∀ (q : Packet (raft_base_params (P := P)) raft_multi_params)
+      t lid pli plt es ci pli',
+      q ∈ net.nwPackets → q.pBody = msg.AppendEntries t lid pli plt es ci →
+      ∀ e1 e2, e1 ∈ es → e2 ∈ findGtIndex (net.nwState h).log pli' →
+        e1.eIndex = e2.eIndex → e1.eTerm = e2.eTerm →
+        (∀ e3, pli' < e3.eIndex ∧ e3.eIndex ≤ e1.eIndex → e3 ∈ es →
+          e3 ∈ findGtIndex (net.nwState h).log pli') ∧
+        (∀ e3, e3 ∈ es → e3.eIndex = pli' →
+          e3.eTerm = (match findAtIndex (net.nwState h).log pli' with
+                      | some e => e.eTerm
+                      | none => 0)) ∧
+        (pli ≠ 0 → pli = pli' →
+          plt = (match findAtIndex (net.nwState h).log pli' with
+                 | some e => e.eTerm
+                 | none => 0)) := by
+    intro q t lid pli plt es ci pli' hq hbody e1 e2 he1 he2 hidx hterm
+    have he2L := (findGtIndex_necessary he2).1
+    obtain ⟨hc1, -, -, -⟩ := hnw q t lid pli plt es ci hq hbody
+    obtain ⟨ha, hb⟩ := hc1 h e1 e2 he1 he2L hidx hterm
+    refine ⟨?_, ?_, ?_⟩
+    · intro e3 ⟨h3gt, h3le⟩ h3in
+      exact findGtIndex_sufficient hLs (ha e3 h3le h3in) h3gt
+    · intro e3 h3in h3idx
+      have h3le : e3.eIndex ≤ e1.eIndex := by
+        rw [h3idx, hidx]
+        exact Nat.le_of_lt (findGtIndex_necessary he2).2
+      have hfind : findAtIndex (net.nwState h).log pli' = some e3 :=
+        findAtIndex_intro hLs (ha e3 h3le h3in) h3idx hLu
+      rw [hfind]
+    · intro hne hplieq
+      obtain ⟨e4, h4i, h4t, h4L⟩ := hb hne
+      have hfind : findAtIndex (net.nwState h).log pli' = some e4 :=
+        findAtIndex_intro hLs h4L (hplieq ▸ h4i) hLu
+      rw [hfind]
+      exact h4t.symm
+  -- clause 4, fresh q against an old q'
+  have hfresh_vs_old : ∀ pli
+      (q' : Packet (raft_base_params (P := P)) raft_multi_params)
+      t' lid' pli' plt' es' ci',
+      q' ∈ net.nwPackets →
+      q'.pBody = msg.AppendEntries t' lid' pli' plt' es' ci' →
+      ∀ e1 e2, e1 ∈ findGtIndex (net.nwState h).log pli → e2 ∈ es' →
+        e1.eIndex = e2.eIndex → e1.eTerm = e2.eTerm →
+        (∀ e3, pli' < e3.eIndex ∧ e3.eIndex ≤ e1.eIndex →
+          e3 ∈ findGtIndex (net.nwState h).log pli → e3 ∈ es') ∧
+        (∀ e3, e3 ∈ findGtIndex (net.nwState h).log pli →
+          e3.eIndex = pli' → e3.eTerm = plt') ∧
+        (pli ≠ 0 → pli = pli' →
+          (match findAtIndex (net.nwState h).log pli with
+           | some e => e.eTerm
+           | none => 0) = plt') := by
+    intro pli q' t' lid' pli' plt' es' ci' hq' hbody' e1 e2 he1 he2 hidx hterm
+    have he1L := (findGtIndex_necessary he1).1
+    obtain ⟨hc1', hc2', -, -⟩ := hnw q' t' lid' pli' plt' es' ci' hq' hbody'
+    obtain ⟨ha', hb'⟩ := hc1' h e2 e1 he2 he1L hidx.symm hterm.symm
+    have hes' : sorted es' :=
+      hsorted.2.1 q' t' lid' pli' plt' es' ci' hq' hbody'
+    refine ⟨?_, ?_, ?_⟩
+    · intro e3 ⟨h3gt, h3le⟩ h3in
+      have h3L := (findGtIndex_necessary h3in).1
+      obtain ⟨x, hxi, hxes'⟩ := hc2' e3.eIndex
+        ⟨h3gt, by
+          rw [hidx] at h3le
+          exact Nat.le_trans h3le (maxIndex_is_max hes' he2)⟩
+      have hxL : x ∈ (net.nwState h).log := ha' x
+        (by rw [hxi, ← hidx]; exact h3le) hxes'
+      rw [uniqueIndices_elim_eq hLu h3L hxL hxi.symm]
+      exact hxes'
+    · intro e3 h3in h3idx
+      have h3L := (findGtIndex_necessary h3in).1
+      rcases Nat.eq_zero_or_pos pli' with rfl | hposi
+      · exact absurd h3idx (Nat.ne_of_gt (hpos h e3 h3L))
+      · obtain ⟨e4, h4i, h4t, h4L⟩ := hb' (Nat.pos_iff_ne_zero.mp hposi)
+        rw [uniqueIndices_elim_eq hLu h3L h4L (h3idx.trans h4i.symm)]
+        exact h4t
+    · intro hne hplieq
+      obtain ⟨ple, hfind, hplei, hpleL⟩ :=
+        replica_prev_resolves hLs hLcontig he1 hne
+      rw [hfind]
+      obtain ⟨e4, h4i, h4t, h4L⟩ := hb' (by rw [← hplieq]; exact hne)
+      rw [uniqueIndices_elim_eq hLu hpleL h4L
+        (by rw [hplei, h4i, hplieq])]
+      exact h4t
+  refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
+  · intro h1 h2
+    show entries_match (st' h1).log (st' h2).log
+    rw [hlog' h1, hlog' h2]
+    exact hem h1 h2
+  · intro h0 i hi
+    replace hi : 1 ≤ i ∧ i ≤ maxIndex (st' h0).log := hi
+    show ∃ e, entry.eIndex e = i ∧ e ∈ (st' h0).log
+    rw [hlog' h0] at hi ⊢
+    exact hcontig h0 i hi
+  · intro h0 e he
+    replace he : e ∈ (st' h0).log := he
+    rw [hlog' h0] at he
+    exact hpos h0 e he
+  · intro q t lid pli plt es ci hq hbody
+    replace hq : q ∈ ps' := hq
+    rcases hclassify q t lid pli plt es ci hq hbody with hold | ⟨hes, hplt⟩
+    · -- OLD packet
+      obtain ⟨hc1, hc2, hc3, hc4⟩ := hnw q t lid pli plt es ci hold hbody
+      refine ⟨?_, hc2, hc3, ?_⟩
+      · intro h2 e1 e2 he1 he2 hidx hterm
+        replace he2 : e2 ∈ (st' h2).log := he2
+        rw [hlog' h2] at he2
+        obtain ⟨ha, hb⟩ := hc1 h2 e1 e2 he1 he2 hidx hterm
+        refine ⟨?_, ?_⟩
+        · intro e3 h3le h3in
+          show e3 ∈ (st' h2).log
+          rw [hlog' h2]
+          exact ha e3 h3le h3in
+        · intro hne
+          obtain ⟨e4, h4a, h4b, h4c⟩ := hb hne
+          refine ⟨e4, h4a, h4b, ?_⟩
+          show e4 ∈ (st' h2).log
+          rw [hlog' h2]
+          exact h4c
+      · intro q' t' lid' pli' plt' es' ci' hq' hbody'
+        replace hq' : q' ∈ ps' := hq'
+        rcases hclassify q' t' lid' pli' plt' es' ci' hq' hbody' with
+          hold' | ⟨hes', hplt'⟩
+        · exact hc4 q' t' lid' pli' plt' es' ci' hold' hbody'
+        · subst hes'
+          subst hplt'
+          exact hvs_fresh q t lid pli plt es ci pli' hold hbody
+    · -- FRESH packet
+      subst hes
+      subst hplt
+      refine ⟨?_, replica_entries_contiguous hLs hLcontig,
+        fun e he => (findGtIndex_necessary he).2, ?_⟩
+      · intro h2 e1 e2 he1 he2 hidx hterm
+        replace he2 : e2 ∈ (st' h2).log := he2
+        rw [hlog' h2] at he2
+        obtain ⟨ha, hb⟩ := hfresh1 pli h2 e1 e2 he1 he2 hidx hterm
+        refine ⟨?_, ?_⟩
+        · intro e3 h3le h3in
+          show e3 ∈ (st' h2).log
+          rw [hlog' h2]
+          exact ha e3 h3le h3in
+        · intro hne
+          obtain ⟨e4, h4a, h4b, h4c⟩ := hb hne
+          refine ⟨e4, h4a, h4b, ?_⟩
+          show e4 ∈ (st' h2).log
+          rw [hlog' h2]
+          exact h4c
+      · intro q' t' lid' pli' plt' es' ci' hq' hbody'
+        replace hq' : q' ∈ ps' := hq'
+        rcases hclassify q' t' lid' pli' plt' es' ci' hq' hbody' with
+          hold' | ⟨hes', hplt'⟩
+        · exact hfresh_vs_old pli q' t' lid' pli' plt' es' ci' hold' hbody'
+        · subst hes'
+          subst hplt'
+          intro e1 e2 he1 he2 hidx hterm
+          refine ⟨?_, ?_, ?_⟩
+          · intro e3 ⟨h3gt, h3le⟩ h3in
+            exact findGtIndex_sufficient hLs
+              (findGtIndex_necessary h3in).1 h3gt
+          · intro e3 h3in h3idx
+            have hfind : findAtIndex (net.nwState h).log pli' = some e3 :=
+              findAtIndex_intro hLs (findGtIndex_necessary h3in).1 h3idx hLu
+            rw [hfind]
+          · intro hne hplieq
+            rw [hplieq]
+
 end LogMatchingCore
 
 end Raft
