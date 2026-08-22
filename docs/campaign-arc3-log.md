@@ -347,3 +347,34 @@ paragraph — `cronies_term` + `term_sanity` → `candidate_entries`
 same conventions, spec lemmas on demand, primed variants on first
 genuine need (GAP-1's charter).
 
+## Unit 3 — the candidate_entries ring (2026-08-22, coordinator-accepted)
+
+Scope: `cronies_term` + `term_sanity` → `candidate_entries` (the T3
+leader-completeness lattice's entry ring). Coordinator additions:
+running INVARIANT INDEX below (kept current every slice); GAP-2
+msg-ghost ported on first genuine need only; checkpoints recomputed
+from artifacts.
+
+- 2026-08-22 SUCCESSOR RE-VERIFICATION of unit 2 (recomputed): fresh
+  capped `lake build` at 1dbd15a6 green, `AxCheck sweep: 1173
+  declarations ... within [propext, Quot.sound]`; fresh `#print
+  axioms`: `one_leader_per_term_invariant` and
+  `oneLeaderPerTermStatement_holds` both `[propext, Quot.sound]`;
+  hatch grep over ElectionSafety/ElectionSpecLemmas: 2 hits, both
+  docstring prose about the axiom set. Claims hold.
+
+### INVARIANT INDEX (running; status at each update is build-verified)
+
+| invariant | status | verdi source | ours |
+|---|---|---|---|
+| refined_raft_net_invariant (principle) | PROVED | Raft/RaftRefinementInterface.v:522 | RefinedProofStructure.lean:515 |
+| lower_prop / lift_prop (transfer) | PROVED | RaftProofs/RaftRefinementProof.v:498,601 | RefinedProofStructure.lean:919,1155 |
+| votes_le_currentTerm | PROVED | Raft/VotesLeCurrentTermInterface.v:9 | ElectionSafety.lean:36 |
+| votes_correct | PROVED | Raft/VotesCorrectInterface.v:8-28 | ElectionSafety.lean:465 |
+| candidates_vote_for_selves | PROVED (base) | Raft/CandidatesVoteForSelvesInterface.v:8 | ElectionSafety.lean:587 |
+| cronies_correct | PROVED | Raft/CroniesCorrectInterface.v:9-33 | ElectionSafety.lean:720 |
+| one_leader_per_term (ELECTION SAFETY) | PROVED (base, via lower_prop) | Raft/OneLeaderPerTermInterface.v:8 | ElectionSafety.lean:1750 (+ Statement :1759) |
+| cronies_term | OPEN (this unit) | Raft/CroniesTermInterface.v:9 | — |
+| no_entries_past_current_term (term_sanity) | OPEN (this unit, base) | Raft/TermSanityInterface.v:9-24 | — |
+| CandidateEntries | OPEN (this unit) | Raft/CandidateEntriesInterface.v:10-24 | — |
+
