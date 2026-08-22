@@ -585,4 +585,13 @@ Same conventions; GAP-2 msg-ghost only on first genuine need.
   requestVoteReply_moreUpToDate — upstream's rvrmutdi — and the
   timeout candidacy's only supporter is the recorded self-vote). Both
   with candidate-freezing step helpers. Build green.
+- 2026-08-22 Slice 23: `leaderLogs_votesWithLog`
+  (LeaderLogsVotesWithLogInterface.v:10-18 1:1) — every leaderLog backed
+  by a moreUpToDate quorum of recorded votes-with-log. `quorum_preserved`
+  + an unchanged-step helper cover ten obligations; the RVR win case
+  builds the quorum as `dedup (src :: votesReceived)` (upstream's
+  wonElection_dedup_spec route): the replier via
+  requestVoteReply_moreUpToDate on the consumed grant, the tallied via
+  votesReceived_moreUpToDate, glued by
+  handleRequestVoteReply_leader_transition. Build green.
 

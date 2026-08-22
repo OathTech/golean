@@ -3310,6 +3310,272 @@ theorem votesReceived_moreUpToDate_invariant :
       rw [hstate] at hmem
       exact hmem
 
+/-! ## leaderLogs_votesWithLog -/
+
+/-- `LeaderLogsVotesWithLogInterface.v:10-18` (`leaderLogs_votesWithLog`):
+every recorded leaderLog is backed by a quorum of recorded
+votes-with-log it dominates. -/
+def leaderLogs_votesWithLog (net : RefinedNet) : Prop :=
+  ∀ (t : term) (ll : List (entry (P := P))) (leader : name (P := P)),
+    (t, ll) ∈ (net.nwState leader).1.leaderLogs →
+    ∃ quorum : List (name (P := P)),
+      quorum.Nodup ∧
+      quorum.length > div2 (nodes (P := P)).length ∧
+      ∀ h ∈ quorum, ∃ vlog,
+        moreUpToDate (maxTerm ll) (maxIndex ll) (maxTerm vlog)
+          (maxIndex vlog) = true ∧
+        (t, leader, vlog) ∈ (net.nwState h).1.votesWithLog
+
+/-- `OneLeaderLogPerTermProof.v:113-119` (`wonElection_length`). -/
+theorem wonElection_length {l : List (name (P := P))}
+    (h : wonElection l = true) :
+    div2 (nodes (P := P)).length < l.length := by
+  unfold wonElection at h
+  simp only [Nat.ble_eq] at h
+  exact Nat.lt_of_succ_le h
+
+/-- `LeaderLogsVotesWithLogProof.v:18-44` (`quorum_preserved`). -/
+theorem leaderLogs_votesWithLog_quorum_preserved {net net' : RefinedNet}
+    (hpres : ∀ (h : name (P := P)) (t : term) (leader : name (P := P)) vlog,
+       (t, leader, vlog) ∈ (net.nwState h).1.votesWithLog →
+       (t, leader, vlog) ∈ (net'.nwState h).1.votesWithLog)
+    {t : term} {ll : List (entry (P := P))} {leader : name (P := P)}
+    (hq : ∃ quorum : List (name (P := P)),
+      quorum.Nodup ∧
+      quorum.length > div2 (nodes (P := P)).length ∧
+      ∀ h ∈ quorum, ∃ vlog,
+        moreUpToDate (maxTerm ll) (maxIndex ll) (maxTerm vlog)
+          (maxIndex vlog) = true ∧
+        (t, leader, vlog) ∈ (net.nwState h).1.votesWithLog) :
+    ∃ quorum : List (name (P := P)),
+      quorum.Nodup ∧
+      quorum.length > div2 (nodes (P := P)).length ∧
+      ∀ h ∈ quorum, ∃ vlog,
+        moreUpToDate (maxTerm ll) (maxIndex ll) (maxTerm vlog)
+          (maxIndex vlog) = true ∧
+        (t, leader, vlog) ∈ (net'.nwState h).1.votesWithLog := by
+  obtain ⟨q, hnd, hlen, hall⟩ := hq
+  refine ⟨q, hnd, hlen, ?_⟩
+  intro h hh
+  obtain ⟨vlog, hm, hmem⟩ := hall h hh
+  exact ⟨vlog, hm, hpres h t leader vlog hmem⟩
+
+/-- Step helper for `leaderLogs_votesWithLog`: covers every handler that
+adds no leaderLogs and preserves recorded votes-with-log. -/
+theorem leaderLogs_votesWithLog_of_update {net net' : RefinedNet}
+    {u : name (P := P)} {gd : electionsData (P := P)} {d : raft_data (P := P)}
+    (hP : leaderLogs_votesWithLog net)
+    (hst : ∀ h', net'.nwState h' = update net.nwState u (gd, d) h')
+    (hll : ∀ (t : term) (ll : List (entry (P := P))),
+       (t, ll) ∈ gd.leaderLogs → (t, ll) ∈ (net.nwState u).1.leaderLogs)
+    (hvw_old : ∀ (t : term) (hh : name (P := P)) vl,
+       (t, hh, vl) ∈ (net.nwState u).1.votesWithLog →
+       (t, hh, vl) ∈ gd.votesWithLog) :
+    leaderLogs_votesWithLog net' := by
+  intro t ll leader hin
+  rw [hst leader] at hin
+  have hpres : ∀ (h : name (P := P)) (t : term) (ld : name (P := P)) vlog,
+      (t, ld, vlog) ∈ (net.nwState h).1.votesWithLog →
+      (t, ld, vlog) ∈ (net'.nwState h).1.votesWithLog := by
+    intro h t0 ld vlog hmem
+    rw [hst h]
+    by_cases heq : h = u
+    · subst heq
+      rw [update_same]
+      exact hvw_old t0 ld vlog hmem
+    · rw [update_neq _ _ heq]
+      exact hmem
+  refine leaderLogs_votesWithLog_quorum_preserved hpres ?_
+  by_cases heq : leader = u
+  · subst heq
+    rw [update_same] at hin
+    replace hin : (t, ll) ∈ gd.leaderLogs := hin
+    exact hP t ll _ (hll t ll hin)
+  · rw [update_neq _ _ heq] at hin
+    exact hP t ll leader hin
+
+/-- `LeaderLogsVotesWithLogProof.v:295-310`
+(`leaderLogs_votesWithLog_invariant`): the fresh leaderLog's quorum is
+`dedup (src :: votesReceived)` — the replier via
+`requestVoteReply_moreUpToDate`, the tallied via
+`votesReceived_moreUpToDate`. -/
+theorem leaderLogs_votesWithLog_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      leaderLogs_votesWithLog net := by
+  refine refined_raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · -- init
+    intro t ll leader hin
+    exact nomatch hin
+  · -- client_request
+    intro h net st' ps' gd out d l client id c _hcr hgd hP _hreach hst _hps
+    refine leaderLogs_votesWithLog_of_update hP hst ?_ ?_
+    · intro t ll hin
+      subst hgd
+      rw [(update_elections_data_client_request_ghost h (net.nwState h)
+        client id c).2.2.2] at hin
+      exact hin
+    · intro t hh vl hmem
+      subst hgd
+      rw [(update_elections_data_client_request_ghost h (net.nwState h)
+        client id c).2.1]
+      exact hmem
+  · -- timeout
+    intro net h st' ps' gd out d l _hto hgd hP _hreach hst _hps
+    refine leaderLogs_votesWithLog_of_update hP hst ?_ ?_
+    · intro t ll hin
+      subst hgd
+      rw [(update_elections_data_timeout_ghost h (net.nwState h)).1] at hin
+      exact hin
+    · intro t hh vl hmem
+      subst hgd
+      exact update_elections_data_timeout_votesWithLog_old h (net.nwState h)
+        hmem
+  · -- append_entries
+    intro xs p ys net st' ps' gd d m t0 n0 pli plt es ci _hae hgd _hbody hP
+      _hreach _hpkts hst _hps
+    refine leaderLogs_votesWithLog_of_update hP hst ?_ ?_
+    · intro t ll hin
+      subst hgd
+      rw [(update_elections_data_appendEntries_ghost p.pDst
+        (net.nwState p.pDst) t0 n0 pli plt es ci).2.2.2] at hin
+      exact hin
+    · intro t hh vl hmem
+      subst hgd
+      rw [(update_elections_data_appendEntries_ghost p.pDst
+        (net.nwState p.pDst) t0 n0 pli plt es ci).2.1]
+      exact hmem
+  · -- append_entries_reply
+    intro xs p ys net st' ps' gd d m t0 es res _haer hgd _hbody hP _hreach
+      _hpkts hst _hps
+    refine leaderLogs_votesWithLog_of_update hP hst ?_ ?_
+    · intro t ll hin
+      subst hgd
+      exact hin
+    · intro t hh vl hmem
+      subst hgd
+      exact hmem
+  · -- request_vote
+    intro xs p ys net st' ps' gd d m t0 cid lli llt _hrv hgd _hbody hP
+      _hreach _hpkts hst _hps
+    refine leaderLogs_votesWithLog_of_update hP hst ?_ ?_
+    · intro t ll hin
+      subst hgd
+      rw [(update_elections_data_requestVote_cronies p.pDst p.pSrc t0 p.pSrc
+        lli llt (net.nwState p.pDst)).2.1] at hin
+      exact hin
+    · intro t hh vl hmem
+      subst hgd
+      exact update_elections_data_requestVote_votesWithLog_old p.pDst p.pSrc
+        t0 p.pSrc lli llt (net.nwState p.pDst) hmem
+  · -- request_vote_reply: THE case — a fresh win must produce a quorum
+    intro xs p ys net st' ps' gd d t0 v hrvr hgd hbody hP hreach hpkts hst
+      _hps
+    subst hrvr
+    have hpmem : p ∈ net.nwPackets := by
+      rw [hpkts]
+      exact List.mem_append.mpr (Or.inr (List.mem_cons_self ..))
+    have hpres : ∀ (h : name (P := P)) (t : term) (ld : name (P := P)) vlog,
+        (t, ld, vlog) ∈ (net.nwState h).1.votesWithLog →
+        (t, ld, vlog) ∈ (st' h).1.votesWithLog := by
+      intro h t0' ld vlog hmem
+      rw [hst h]
+      by_cases heq : h = p.pDst
+      · subst heq
+        rw [update_same]
+        show (t0', ld, vlog) ∈ gd.votesWithLog
+        subst hgd
+        rw [(update_elections_data_requestVoteReply_votes p.pDst p.pSrc t0 v
+          (net.nwState p.pDst)).2.1]
+        exact hmem
+      · rw [update_neq _ _ heq]
+        exact hmem
+    intro t ll leader hin
+    replace hin : (t, ll) ∈ (st' leader).1.leaderLogs := hin
+    show ∃ quorum : List (name (P := P)),
+      quorum.Nodup ∧
+      quorum.length > div2 (nodes (P := P)).length ∧
+      ∀ h ∈ quorum, ∃ vlog,
+        moreUpToDate (maxTerm ll) (maxIndex ll) (maxTerm vlog)
+          (maxIndex vlog) = true ∧
+        (t, leader, vlog) ∈ (st' h).1.votesWithLog
+    rw [hst leader] at hin
+    by_cases heq : leader = p.pDst
+    · subst heq
+      rw [update_same] at hin
+      replace hin : (t, ll) ∈ gd.leaderLogs := hin
+      subst hgd
+      rcases leaderLogs_update_elections_data_RVR hin
+        with hold | ⟨hty', hcand, rfl, rfl⟩
+      · exact leaderLogs_votesWithLog_quorum_preserved
+          (net' := (⟨ps', st'⟩ : RefinedNet)) hpres (hP t ll p.pDst hold)
+      · -- the fresh win: quorum = dedup (src :: votesReceived)
+        obtain ⟨-, hv, hteq, hctd, hvrd, hlogd, hwon⟩ :=
+          handleRequestVoteReply_leader_transition p.pDst
+            (net.nwState p.pDst).2 p.pSrc t0 v rfl
+            (by rw [hcand]; exact fun heqL => nomatch heqL) hty'
+        subst hv
+        refine ⟨dedup (p.pSrc :: (net.nwState p.pDst).2.votesReceived),
+          nodup_dedup _, wonElection_length hwon, ?_⟩
+        intro h hh
+        have hh' := mem_of_mem_dedup hh
+        have hmutd : ∃ vlog,
+            moreUpToDate (maxTerm (net.nwState p.pDst).2.log)
+              (maxIndex (net.nwState p.pDst).2.log) (maxTerm vlog)
+              (maxIndex vlog) = true ∧
+            ((net.nwState p.pDst).2.currentTerm, p.pDst, vlog)
+              ∈ (net.nwState h).1.votesWithLog := by
+          rcases List.mem_cons.mp hh' with rfl | hvr
+          · -- the replier: the consumed grant
+            exact requestVoteReply_moreUpToDate_invariant net hreach
+              (net.nwState p.pDst).2.currentTerm p.pDst p.pSrc p rfl hcand
+              hpmem (by rw [hbody, hteq]) rfl rfl
+          · -- an already-tallied supporter
+            exact votesReceived_moreUpToDate_invariant net hreach
+              (net.nwState p.pDst).2.currentTerm p.pDst h rfl hcand hvr
+        obtain ⟨vlog, hm, hmem⟩ := hmutd
+        refine ⟨vlog, ?_, ?_⟩
+        · rw [hlogd]
+          exact hm
+        · rw [hctd]
+          exact hpres h _ p.pDst vlog hmem
+    · rw [update_neq _ _ heq] at hin
+      exact leaderLogs_votesWithLog_quorum_preserved
+        (net' := (⟨ps', st'⟩ : RefinedNet)) hpres (hP t ll leader hin)
+  · -- do_leader
+    intro net st' ps' gd d h os d' ms _hdl hP _hreach hstate hst _hps
+    refine leaderLogs_votesWithLog_of_update hP hst ?_ ?_
+    · intro t ll hin
+      rw [hstate]
+      exact hin
+    · intro t hh vl hmem
+      rw [hstate] at hmem
+      exact hmem
+  · -- do_generic_server
+    intro net st' ps' gd d os d' ms h _hgs hP _hreach hstate hst _hps
+    refine leaderLogs_votesWithLog_of_update hP hst ?_ ?_
+    · intro t ll hin
+      rw [hstate]
+      exact hin
+    · intro t hh vl hmem
+      rw [hstate] at hmem
+      exact hmem
+  · -- state_same_packet_subset
+    intro net net' hstates _hpkts hP _hreach t ll leader hin
+    rw [← hstates leader] at hin
+    refine leaderLogs_votesWithLog_quorum_preserved ?_ (hP t ll leader hin)
+    intro h t0 ld vlog hmem
+    rw [← hstates h]
+    exact hmem
+  · -- reboot
+    intro net net' gd d h d' _hrb hP _hreach hstate hst _hpkts
+    refine leaderLogs_votesWithLog_of_update hP hst ?_ ?_
+    · intro t ll hin
+      rw [hstate]
+      exact hin
+    · intro t hh vl hmem
+      rw [hstate] at hmem
+      exact hmem
+
 end LeaderLogsRing
 
 end Raft
