@@ -119,7 +119,12 @@ is the §4.4 park-and-report condition, not an emergency.
   this tip. Note for later: the gate printed "Challenge.lean
   elaborates (0 sorry warnings)" where main's runs printed 56 —
   investigate before any merge ask (possible count-extraction
-  difference in this lane; the step itself is green).
+  difference in this lane; the step itself is green). **RESOLVED
+  (U-c8)**: the counter grepped straight quotes, Lean prints
+  backticks — the count was cosmetic-zero on every gate everywhere
+  (main included, unnoticed); pattern made quote-agnostic, 56
+  verified with it; pass/fail was exit-code-based throughout, never
+  affected.
 - **Arc 3, unit 1 — LANDED on `campaign-arc3`** @ 4bbcf5fc (worker
   report, top claims to be re-verified by its successor per §4.3):
   `RefinedProofStructure.lean` (1341 lines, zero hatches) — the ghost
