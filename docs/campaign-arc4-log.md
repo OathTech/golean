@@ -203,3 +203,33 @@ Nothing merged; branch-complete. Merge/audit-ask are the operator's
 (constitution §4.1); the ci comparator-landmark staleness note (49
 commits at the first run) is flagged for the operator's merge step,
 same as the Arc-3 lanes.
+
+## A4-U2 — the handler-fragment Sym extension (2026-08-22, coordinator-accepted; pilot verdict accepted, seam §4b amended)
+
+- 2026-08-22 Orientation: Sym read at this tip (Domain/Mirror/Drift/
+  DriftOps/DriftApply/Walk/Refine, 8,193 lines), quit catalog + the
+  refinement template + the machine normalizer. KEY contact facts:
+  (a) the mirror already carries the FULL grammar — the five classes
+  are QUIT-SITE lifts, not domain work; (b) struct-store quits are
+  exactly `normalizeValueForTyFuel'`'s `.defined` arm (Q4), whose
+  docstring already names the OQ6 conditioned-facts lever this
+  design implements; (c) sortSlice ALREADY proceeds at concrete
+  elements — class 4 needs nothing for the census path; (d) the
+  channel-logic salvage check is NEGATIVE (its DM layers are
+  channel-op WP, pre-sync-machinery; zero SyncOp forms in its
+  proofs/ — grep over the branch, read-only) — nothing taken.
+- 2026-08-22 [AGENT] Design note
+  `docs/2026-08-22_campaign-arc4-sym-extension-design.md`: per-class
+  representation/refinement-shape/cost, the §4 choice-point story
+  (Q3 stays a window boundary; conservation-invariant composition;
+  latitude-bearing fields stay unprojected — pick-threading REJECTED
+  with the per-order-explosion argument), the address-concreteness
+  caveat (§5), slice ladder + kill-points (§6).
+- 2026-08-22 [AGENT] Slice-1 class choice: class 1 (struct-store
+  normalization via the T-table input) — it is what unblocks the
+  pilot leaf's store window (the dispatch's re-measure target); the
+  pilot-ledger "normality preservation" PLAIN-KIT row is parked as
+  unnecessary-for-transport (design §2 routing note), not built.
+  Additivity plan logged (design §0): trailing default-[] params;
+  new-named T-core for the fueled normalizer with the old name as
+  its []-instance; shipped Sym statements preserved verbatim.
