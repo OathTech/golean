@@ -300,6 +300,16 @@ is the §4.4 park-and-report condition, not an emergency.
   is therefore the campaign's critical path; Arc-2's (d) proceeds in
   parallel as the cheaper-if-it-works alternative.
 
+- **Arc 2, unit 3 — LANDED** @ 885204f8: **microbench GO** — trie
+  heap at 36,376 entries measures 9.4 ms/op / 0.44 MB/op in the
+  kernel (targets ≤25/≤2 pre-stated; >2× headroom; ~240×/~360×
+  better than the naive heap) → (d) projects the witness at 4-60
+  CPU-h over ~14 fast segments. Convergence carry-forward written
+  (§6.6) + the untrusted-method guardrail (§6.7.5). Unit 4
+  dispatched: FastEval build (exemplar arms → the ~50-arm wave →
+  the MID-BUILD gate → staged assembly; the long kernel run may be
+  a staged detached follow-on rather than in-unit).
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
