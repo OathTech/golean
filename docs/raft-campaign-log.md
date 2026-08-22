@@ -251,6 +251,26 @@ is the §4.4 park-and-report condition, not an emergency.
   LawfulBEq drag being the sharpest). Unit 5 dispatched: the
   creation ring (every_entry_was_created → … → leaderLogs_preserved).
 
+- **Arc 4, pilot (A4-U1) — LANDED on `campaign-arc4`** @ 21f0cd51,
+  gate PASS: **architecture GO, hand-walk cost NO-GO** — the
+  equation form PROVED end-to-end at the smallest callee
+  (alt_call_span + witness + live projection readout; absState v1
+  grounded in instrumented heap contact — one 32-field raft struct
+  cell), but becomeFollower measures 3,233 steps / 4 consumed
+  choices / ~9 proof-lines-per-step at leaf granularity, five
+  ingredient classes have no kit form INSIDE the smallest handler,
+  and 20 handlers ≈ 20-60 gallery-units by hand. OQ-A both-layered;
+  OQ-B call-enter covers fid+interface, not closure call-values;
+  **OQ-C REFUTED** (handlers consume choices — jitter + mapIter —
+  equations quantify over consumed prefixes); charter's
+  advanceCurrentTerm doesn't exist in the lowered subject (Verdi
+  name) — becomeFollower substituted, logged. [AGENT] maxim-(a)
+  moment taken as designed: the pilot priced the grind BEFORE
+  scaling; re-design = **A4-U2, the handler-fragment Sym-evaluator
+  extension** (primary; W7 SpecTec convergence the alternative; kit
+  lifts regardless — promotion ledger opened). Seam design note to
+  be amended with the pilot's answers.
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**

@@ -105,6 +105,26 @@ lattice feeding T1 exactly as Verdi's decomposition predicts).
   T1 assembly over whatever invariant subset suffices for S1 (S2/S3
   may land as a second wave with T3's lattice).
 
+## 4b. PILOT AMENDMENT (2026-08-22, from A4-U1's verdict — [AGENT])
+
+The pilot validated layer (B)'s equation FORM and refuted its
+hand-walk COST (verdict doc on the arc4 lane; headline numbers:
+becomeFollower = 3,233 steps / 4 consumed choices; ~9 proof lines
+per step at leaf granularity; five kit-less ingredient classes —
+struct-normalization preservation, closure call-value enter,
+sync-ops, sortSlice, pointer-valued map range — all inside the
+SMALLEST handler). Layer (B) is therefore re-based on **the
+handler-fragment Sym-evaluator extension**: the mirror evaluator
+grows the five ingredient classes (general Go-language machinery,
+proofs-side, refinement-theorem-bridged as Sym already is), so a
+per-handler equation becomes Sym-driven symbolic execution with
+hand proof only at choice points and loop heads. Choice consumption
+INSIDE handlers (OQ-C refuted) shapes the equation form: quantify
+over the consumed choice prefix, with choice-independent projections
+where the pilot's pattern applies. The W7/SpecTec convergence stays
+the recorded alternative. Kit lifts for the five classes proceed
+regardless (promotion ledger, ≥2-consumer rule trivially met).
+
 ## 5. Open questions (logged, none blocking U1)
 
 - OQ-A: `absState` totality vs partiality bookkeeping — Option vs a
