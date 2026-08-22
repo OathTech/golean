@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+# R1-F2 (audit fix round): fmt.Formatter precedence. ALL THREE ROWS
+# RED BY DESIGN at frontend-export — static fmt sites refuse Formatter
+# implementors (gc consults Format for every verb; modeling it would
+# mean modeling fmt.State). Before the fix these were SILENT WRONG
+# ANSWERS (String()/kind-matrix rendering where gc calls Format).
+over-stringer	formatterOverStringer	-	ok	-	stdlib,strings,methods,defined_type
+over-kind-matrix	formatterOverKindMatrix	-	ok	-	stdlib,strings,methods,defined_type
+at-depth	formatterAtDepth	-	ok	-	stdlib,strings,structs,methods,defined_type

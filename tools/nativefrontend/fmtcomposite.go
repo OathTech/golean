@@ -149,6 +149,14 @@ func (e *emitter) fmtRenderValue(fn string, plus bool, t types.Type, val any,
 	errIface := types.Universe.Lookup("error").Type().Underlying().(*types.Interface)
 	if !tainted && !types.IsInterface(t) {
 		if _, isPtr := types.Unalias(t).(*types.Pointer); !isPtr {
+			// fmt.Formatter precedence at depth, exactly as at top
+			// level (audit R1-F2; gc-probed {FMT:v:1} at depth). A
+			// TAINTED leaf is exempt with the rest of the method arm:
+			// gc cannot interface it, so Format is not consulted below
+			// an unexported field (probed {2}).
+			if err := e.refuseFormatter(fn, verbName, t); err != nil {
+				return nil, nil, err
+			}
 			methodName := ""
 			if types.Implements(t, errIface) {
 				methodName = "Error"

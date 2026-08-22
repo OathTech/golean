@@ -1,16 +1,20 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-22 (raft W4.3 audit fix round, R1-F1/R4-C-2 —
-#   branch raft-w43; docs/raft-w43-log.md "Audit fix round").
-#   re-pin reason: THREE NEW ids, zero movement on any of the 2434 ids
-#   the previous record held (all drift lines "NEW id -> PASS").
-#     R1-F1: the composite renderer consulted error/Stringer ACROSS
-#     UNEXPORTED FIELDS — gc's reflection cannot, so gc renders the
-#     subtree raw. Witnessed pre-fix: machine {E<1> E<2>} vs gc
-#     {E<1> 2} (and the subtree/slice forms). Fixed by a tainted flag
-#     through fmtRenderValue/fmtSliceLift:
-#     fmt/v-composites/v-unexported-{stringer-field,subtree-taint,
-#     slice-taint}, all PASS.
-# cases: 2437 (2280 PASS / 157 FAIL)
+# recorded: 2026-08-22 (raft W4.3 audit fix round, R1-F2 — branch
+#   raft-w43; docs/raft-w43-log.md "Audit fix round").
+#   re-pin reason: THREE NEW ids, zero movement on any of the 2437 ids
+#   the previous record held (all drift lines
+#   "NEW id -> FAIL/frontend-export" — RED BY DESIGN).
+#     R1-F2: fmt.Formatter was never checked — gc consults Format for
+#     EVERY verb ahead of error/Stringer and the kind matrix, so a
+#     Formatter implementor rendered through String()/the kind matrix
+#     (witnessed pre-fix: machine "STR|STR"/"4|5"/"{STR}" vs gc's
+#     Format outputs). Static fmt sites now REFUSE Formatter
+#     implementors (types.Implements against the type-checked fmt
+#     import); the dyn shim's blindness to Formatter is a recorded
+#     bound at goleanShimFmtDynVerb:
+#     fmt/formatter-precedence/{over-stringer,over-kind-matrix,
+#     at-depth}, FAIL/frontend-export.
+# cases: 2440 (2280 PASS / 160 FAIL)
 # frontend: native (tools/nativefrontend)
 result	id	stage
 PASS	arrays/array-bounds	-
@@ -795,6 +799,9 @@ PASS	fmt/errorf/fresh	-
 PASS	fmt/errorf/sentinel-classify	-
 PASS	fmt/errorf/text	-
 PASS	fmt/errorf/vs-errors-new	-
+FAIL	fmt/formatter-precedence/at-depth	frontend-export
+FAIL	fmt/formatter-precedence/over-kind-matrix	frontend-export
+FAIL	fmt/formatter-precedence/over-stringer	frontend-export
 PASS	fmt/fprint-writers/buffer-single	-
 PASS	fmt/fprint-writers/builder-single	-
 PASS	fmt/fprint-writers/fprintf-buffer-shape	-

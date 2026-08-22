@@ -282,6 +282,11 @@ func (e *emitter) emitFmtCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool
 			return nil, false, err
 		}
 		argTy := e.goTypeOf(c.Args[1])
+		// A named string-kind operand can implement fmt.Formatter, and
+		// gc's Fprint consults it (verb 'v') — refuse first (R1-F2).
+		if err := e.refuseFormatter(fn, "%v", argTy); err != nil {
+			return nil, false, err
+		}
 		basic, _ := argTy.Underlying().(*types.Basic)
 		if basic == nil || basic.Info()&types.IsString == 0 {
 			return nil, false, unsup("fmt.Fprint operand of type %s is outside the modeled subset (modeled: string kinds)", argTy)
@@ -453,6 +458,45 @@ func (e *emitter) emitFmtCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool
 }
 
 
+// fmtFormatterIface returns fmt.Formatter's interface type from the
+// TYPE-CHECKED fmt package among the current package's imports (audit
+// R1-F2). Unlike Stringer it cannot be synthesized structurally —
+// Format's first parameter is the named interface fmt.State — so it is
+// looked up from the import. Returns nil only if fmt is not imported
+// or the lookup fails; callers at fmt call sites treat nil as a
+// FAIL-CLOSED refusal (a missing check must never silently admit).
+func (e *emitter) fmtFormatterIface() *types.Interface {
+	for _, p := range e.pkg.Imports() {
+		if p.Path() == "fmt" {
+			if o := p.Scope().Lookup("Formatter"); o != nil {
+				if iface, ok := o.Type().Underlying().(*types.Interface); ok {
+					return iface
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// refuseFormatter refuses argTy if it implements fmt.Formatter (audit
+// R1-F2): gc's handleMethods consults Format FIRST, for EVERY verb —
+// ahead of error/Stringer and ahead of the kind matrix (gc-probed
+// .tmp/fixround-probes/f2: a Formatter+Stringer type prints Format's
+// output under %v/%s/%d alike; a Formatter-only named int beats %d).
+// Modeling Format would mean modeling fmt.State; nothing in scope
+// needs it, so static sites fail closed. The DYNAMIC shim cannot see
+// Formatter at runtime — that bound is recorded at goleanShimFmtDynVerb.
+func (e *emitter) refuseFormatter(fn, verbName string, argTy types.Type) error {
+	fi := e.fmtFormatterIface()
+	if fi == nil {
+		return unsup("fmt.%s: cannot resolve fmt.Formatter from the type-checked fmt import (fail closed — the precedence check must run, never be skipped)", fn)
+	}
+	if types.Implements(argTy, fi) {
+		return unsup("fmt.%s verb %s: %s implements fmt.Formatter, which gc consults ahead of error/Stringer and the kind matrix for every verb — outside the modeled subset (fail closed)", fn, verbName, argTy)
+	}
+	return nil
+}
+
 // fmtVerbArg compiles one verb x static-kind pair, or refuses naming
 // it. Every call-site argument expression is emitted EXACTLY ONCE.
 func (e *emitter) fmtVerbArg(fn, format string, v fmtVerb, arg ast.Expr, k int) (*fmtArgPlan, error) {
@@ -464,6 +508,10 @@ func (e *emitter) fmtVerbArg(fn, format string, v fmtVerb, arg ast.Expr, k int) 
 	}
 	if v.width > 0 {
 		verbName = "%" + itoa(v.width) + string(v.verb)
+	}
+	// fmt.Formatter precedence, ahead of EVERYTHING (audit R1-F2).
+	if err := e.refuseFormatter(fn, verbName, argTy); err != nil {
+		return nil, err
 	}
 	pname := "$a" + itoa(k)
 	paramRef := func(ty any) map[string]any {

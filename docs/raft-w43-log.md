@@ -756,3 +756,42 @@ EXPORTED, and the two red-by-design boundary rows) unmoved. Full
 (R1-F1 gate: full `scripts/ci --diff` — drift exactly the three new
 ids `-> PASS`, zero movement on the 2434 prior ids; baseline re-pinned
 2437 cases, 2280/157, in this commit.)
+
+### R1-F2 — fmt.Formatter precedence (never checked; silent wrong answers)
+
+**Defect.** gc's `handleMethods` consults `fmt.Formatter` FIRST — for
+every verb, ahead of error/Stringer and ahead of the kind matrix. The
+frontend had no Formatter check anywhere (the survey found exactly
+four `types.Implements` calls, none against Formatter): a
+Formatter+Stringer type rendered through `String()`, a Formatter-only
+named int rendered through the int matrix — silent wrong answers in
+ordinary Go.
+
+**gc ground truth first** (`.tmp/fixround-probes/f2{,b}`):
+`FMT:v:1|FMT:s:2|FMT:d:3` (Format beats String for v/s AND beats the
+kind matrix for d), `fd:d|fd:v` (Formatter-only named int), and at
+composite depth `{FMT:v:1}` / `{F:FMT:v:1}` — but `{2}` below an
+unexported field (the R1-F1 taint applies to Format too: gc cannot
+interface the value).
+
+**Guardrails witnessed red first**:
+`fmt/formatter-precedence/{over-stringer,over-kind-matrix,at-depth}` —
+machine `STR|STR`, `4|5`, `{STR}` against the gc strings above.
+
+**Fix — REFUSE at static sites.** `refuseFormatter` (fmtdesugar.go):
+`types.Implements(argTy, Formatter)` with Formatter looked up from the
+TYPE-CHECKED fmt import (it cannot be synthesized structurally —
+Format's parameter is the named interface `fmt.State`; a failed lookup
+refuses too, fail closed). Wired ahead of everything in `fmtVerbArg`,
+in the `Fprint` operand arm, and per element/field in the composite
+renderer's method arm (tainted leaves exempt, matching gc). Modeling
+`Format` would mean modeling `fmt.State`; nothing in scope needs it.
+**The dyn shim cannot see Formatter at runtime** — recorded as a bound
+at `goleanShimFmtDynVerb` (stdlibshim.go) with the exact exposure
+stated; verified `deps/raft` + the subject tree declare no `Format`
+methods.
+
+**Flips.** The three rows differential(wrong value) →
+frontend-export(refusal), red by design. Full `scripts/ci --diff`:
+drift exactly the three new ids; zero movement on the 2437 prior ids.
+Baseline re-pinned (2440 cases, 2280/160) in this commit.

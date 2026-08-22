@@ -579,6 +579,18 @@ func goleanShimFmtUintPad(v uint64, w int) string {
 // (W4.3 item 1 landing C). Injected declarations — not user code.
 type goleanShimStringer interface{ String() string }
 
+// RECORDED BOUND (audit R1-F2): fmt.Formatter is INVISIBLE here. gc
+// consults Format ahead of error/Stringer for every verb, but this
+// shim runs inside the model with no reflection — it cannot ask "does
+// the dynamic type implement fmt.Formatter" (fmt.State is unmodeled,
+// so no goleanShim interface can name Format's signature). A dynamic
+// value whose type implements BOTH Formatter and error/Stringer would
+// render through Error/String here where gc calls Format — a wrong
+// answer this shim cannot detect. Static sites refuse Formatter
+// implementors (refuseFormatter, fmtdesugar.go), so the exposure is
+// exactly: a Formatter implementor reaching a dyn site THROUGH an
+// any/variadic boxing the static desugar cannot see. Recorded, not
+// closed; nothing in the subject tree implements fmt.Formatter.
 func goleanShimFmtDynVerb(verb string, a any) string {
 	if verb == "%" {
 		panic("golean fmt shim: unreachable %% arm")
