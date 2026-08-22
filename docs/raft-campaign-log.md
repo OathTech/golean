@@ -222,6 +222,23 @@ is the §4.4 park-and-report condition, not an emergency.
   before scaling. [AGENT] alternatives-considered recorded (direct
   induction refused, segment-rfl scoped to the witness only).
 
+- **U-c10** (2026-08-22): internal integration — campaign-arc3 (tip
+  d07c5382, units 1-3) merged INTO the campaign branch ([AGENT]: lane
+  composition, not a main landing; proofs build green post-merge at
+  466 jobs); lane `campaign-arc4` opened off the integrated tip and
+  **A4-U1 (the pilot) DISPATCHED**: absState v1 grounded in the
+  instrumented heap shape + the smallest handler equation
+  (becomeFollower/advanceCurrentTerm) via the kit + the GO/NO-GO
+  verdict against the gallery-example cost bar. Three workers now in
+  flight: Arc-2 go/no-go, Arc-3 unit 4 (leaderLogs), Arc-4 pilot.
+- **CHECKPOINT 2** (recomputed from `git log --oneline f64d9b21..`
+  on this branch: 12 commits; lanes: arc2 5 commits @18cb0b25, arc3
+  19 @d07c5382 integrated, arc4 opened): Arc 1 branch-complete
+  (statements pinned, gate PASS); Arc 2 route decided by measurement;
+  Arc 3 election safety + candidate_entries PROVED (1244 decls
+  clean); Arc 4 designed + pilot running. The [USER] queue below is
+  the campaign's only external dependency.
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
