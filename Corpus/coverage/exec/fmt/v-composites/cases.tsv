@@ -18,5 +18,19 @@ v-nested-struct	vNestedStruct	-	ok	-	stdlib,strings,structs,nested
 v-unexported-stringer-field	vUnexportedStringerField	-	ok	-	stdlib,strings,structs,methods,defined_type
 v-unexported-subtree-taint	vUnexportedSubtreeTaint	-	ok	-	stdlib,strings,structs,methods,defined_type,nested
 v-unexported-slice-taint	vUnexportedSliceTaint	-	ok	-	stdlib,strings,structs,methods,defined_type,slices
+# DELTA-REVIEW CRITICAL-1 (the flagStickyRO/flagEmbedRO split): an
+# EMBEDDED unexported field suppresses method consultation at its own
+# level only; children inherit only the sticky bit. Nine rows, gc
+# ground truth in main.go's comment block. emb-formatter-below is the
+# refusal leg and stays RED at frontend-export BY DESIGN.
+emb-stringer-field	vEmbedStringerField	-	ok	-	stdlib,strings,structs,methods,defined_type,embedding
+emb-two-level	vEmbedTwoLevel	-	ok	-	stdlib,strings,structs,methods,defined_type,embedding,nested
+emb-sticky-over-embed	vEmbedStickyOverEmbed	-	ok	-	stdlib,strings,structs,methods,defined_type,embedding,nested
+emb-unexported-leaf	vEmbedUnexportedLeaf	-	ok	-	stdlib,strings,structs,methods,defined_type,embedding
+emb-named-slice-type	vEmbedNamedSliceType	-	ok	-	stdlib,strings,structs,slices,methods,defined_type,embedding
+emb-exported-slice	vEmbedExportedSlice	-	ok	-	stdlib,strings,structs,slices,methods,defined_type,embedding
+emb-method-at-level	vEmbedMethodAtLevel	-	ok	-	stdlib,strings,structs,methods,defined_type,embedding
+emb-mid	vEmbedMid	-	ok	-	stdlib,strings,structs,methods,defined_type,embedding,nested
+emb-formatter-below	vEmbedFormatterBelow	-	ok	-	stdlib,strings,structs,methods,defined_type,embedding
 v-map-outside	vMapOutside	-	ok	-	stdlib,strings,maps
 v-ptr-field-outside	vPtrFieldOutside	-	ok	-	stdlib,strings,structs,pointers
