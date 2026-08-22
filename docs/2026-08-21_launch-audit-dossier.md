@@ -1366,18 +1366,30 @@ Also closed in passing: **D-4** (the Go 1.26.4 sites, above).
 ### §3-A · 2026-08-22 CORRECTION (read this before any row below)
 
 The audit found this register **stale at birth** (D5-F2, D7
-CRITICAL-1, verified by V3): it was authored from a coordinating
-checkout's `git worktree list` while three parallel lanes were landing
-— the W4.3/W4.4 milestone (`35b18794`), slice 5b (`a6f1ae90`), and the
-Q-row memos (`fe7fd2c1`) are all ANCESTORS of the dossier commit
-(`42fae106`), with author timestamps 22–36 minutes before the
-dossier's own. Mechanism: parallel-lane observation lag, not a rebase
-artifact. Lesson encoded: a register serving a settled-tip audit is
-derived only AFTER the lanes it describes have landed, at the settled
-tip.
+CRITICAL-1, verified by V3; this paragraph's derivation RE-RUN at the
+fix-round delta-review, DR2 CRITICAL-3 — the first correction
+over-claimed). The honest timeline, from author/committer dates at
+the settled tip: the dossier was AUTHORED 08-21 16:38 from a
+coordinating checkout while lane commits with earlier author stamps
+existed — the Q-row memos (`fe7fd2c1`, 16:02, −36 min), slice 5b
+(`a6f1ae90`, 16:10, −28 min), and the W4.3 KICKOFF (`afad3dbb` et
+al., 16:16, −22 min) — so the "zero commits" worktree rows were
+already false at authoring by parallel-lane observation lag. The
+W4.3/W4.4 MILESTONE itself (`3e7706a0` 08-22 01:54; merge tip
+`35b18794` 08-22 07:19) landed HOURS AFTER authoring; those commits
+are ancestors of the dossier commit only because `42fae106` was
+REBASED onto the landed lanes (committer 08-22 07:50 vs author 08-21
+16:38). Two mechanisms, both real: observation lag at authoring (the
+kickoff-era rows), and rebase-carried staleness for everything the
+lanes landed between authoring and commit (the milestone rows). The
+register was then read by nine auditors as if current at `42fae106`.
+Lesson encoded: a register serving a settled-tip audit is derived
+only AFTER the lanes it describes have landed, at the settled tip.
 
-**Rows verified false at authoring (all SAFE-direction — each
-understates progress; V3 confirmed no row overstates):** W-1 (W4.3
+**Rows verified false by staleness (all SAFE-direction — each
+understates progress; V3's "no row overstates" verdict is scoped to
+THIS staleness set — two non-stale rows, G-9 and K-11 below, DID
+overstate and are corrected separately):** W-1 (W4.3
 "NOT STARTED" — the milestone had landed), W-2 (W4.4 likewise), W-6
 ("0 of 309 rendered blocks render; pure-log-line blocks CANNOT be
 reproduced" — 148 render, 35/58 pure-log-line among them, and the

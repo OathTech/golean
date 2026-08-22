@@ -258,7 +258,7 @@ meta_hatch=""
 while IFS= read -r -d '' mh_f; do
   [ "$mh_f" = "$META_HATCH_ALLOW" ] && continue
   mh_hits="$(strip_lean_comments < "$mh_f" | grep -nE \
-      '(^|[[:space:]])unsafe([[:space:]]+(def|abbrev|instance|structure|inductive|theorem|example)\b|[[:space:]]*$)|(^|[[:space:]])opaque[[:space:]]+[A-Za-z_]|@\[[^]]*implemented_by' \
+      '(^|[[:space:]])unsafe([[:space:]]+(def|abbrev|instance|structure|inductive|theorem|example)\b|[[:space:]]*$)|(^|[[:space:]])opaque([[:space:]]+[A-Za-z_]|[[:space:]]*$)|@\[[^]]*implemented_by' \
       || true)"
   if [ -n "$mh_hits" ]; then
     meta_hatch="${meta_hatch}$(printf '%s\n' "$mh_hits" | sed "s|^|${mh_f}:|")"$'\n'
@@ -622,7 +622,17 @@ else
     echo "  could not parse the designated list from proofs/Audit.lean — failing closed" >&2
     tcb_ok=0
   else
-    ci_audit_names="$(printf '%s\n' "$ci_audit_full" | sed -E 's/.*\.//' | sort -u)"
+    ci_audit_names="$(printf '%s\n' "$ci_audit_full" | sed -E 's/.*\.//' | sort)"
+    # Collision leg mirrors the judge exactly (delta-review DR1
+    # MEDIUM-1): sort -u silently COLLAPSES duplicate short names —
+    # the exact case the judge fails on ("the Judge.* mapping is no
+    # longer injective") — so a collision would have stayed invisible
+    # at gate cadence, defeating D4-F2's purpose.
+    ci_dup="$(printf '%s\n' "$ci_audit_names" | uniq -d)"
+    if [ -n "$ci_dup" ]; then
+      echo "  designated short names COLLIDE ($ci_dup) — the Judge.* mapping is no longer injective; failing closed" >&2
+      tcb_ok=0
+    fi
     if [ "$ci_audit_names" != "$desig_names" ]; then
       echo "  designated list (proofs/Audit.lean) vs judge-config.json OUT OF LOCKSTEP:" >&2
       diff <(printf '%s\n' "$ci_audit_names") <(printf '%s\n' "$desig_names") | sed 's/^/    /' >&2

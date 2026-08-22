@@ -269,7 +269,7 @@ FINAL CHECKPOINT below, which was right.)
   16·distinctCount vals + 344` recorded separately, deletion test RUN
   (4/4 binders load-bearing), gallery entry rendered (52 verbatim
   blocks, exit 0), peak cost 2045 MiB (bar 2.5 GiB), `scripts/ci` PASS.
-  **Five KIT GAPS recorded with exact shapes** (GAP-C1 the counting
+  **Six KIT GAPS recorded with exact shapes (this line said "Five" while enumerating six and while :237 says "all six" — corrected 2026-08-22, launch-fix delta-review DR2)** (GAP-C1 the counting
   layer's name specialization ~600 lines, GAP-R1 the range induction's
   body/binder specialization ~130, GAP-P1 the counting fold ~150,
   GAP-P2 the setup family ~83, GAP-M1 the pick step ~45, GAP-M2

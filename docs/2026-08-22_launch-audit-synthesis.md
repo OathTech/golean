@@ -64,11 +64,11 @@ own later arc; **REC** = record-only.
 | **D6-F6** `LANDMARK-RUN:` marker is hand-pasted prose, not emitted by the judge | — | **FIX**: judge emits it |
 | **D1-F1** min/max-len witnesses | V1: reproductions exact, framing **refuted** — BUG-062's already-pinned shape rewrapped; the genuinely unpinned axis is grossmith F-1's call-*outside* shape (already blocking as G-18/C-9) | **FIX**: the five offered `builtins/min-max-vs-call-order` rows pinned (3 RED + 2 GREEN controls); BUG-062 statement widened per findings-2 §9 F-1 |
 | **D1-F2** assertion-vs-call witness | V1: divergence real, "first witness" **refuted** (E13 already carries two; census-only, "NO PIN MAY BE TAKEN HERE") | none (register correct as-is) |
-| **D1-F4 / N-13** Race.lean:617-622 stale ChanClocks docstring | confirmed unfixed | **FIX** (doc comment) |
+| **D1-F4 / N-13** Race.lean:620-622 stale ChanClocks docstring | confirmed unfixed | **FIX** (doc comment) |
 | **D8-F2** W7 K2 register under-tags B-20/B-21 (refuted by B-19's own spec quote) and C-35 (same E4 axis as K2-tagged C-36); receiver-operand order uncensused | — | **FIX**: retags + a census-only receiver row |
 | **D10-F2/F3** wire decoder: out-of-range int literals two's-complement wrap; duplicate JSON keys last-wins (`Json.parse` dedupes pre-StrictJson) | — | **REC**: added to the H-c decoder-check family (unreachable from the honest frontend; H-c's disposition) |
 | **D2-F5** print-interleaving: a wedge-class candidate inside register #5's residual (soundness condition false at that shape, unpinned) | — | **REC**: routed to slice 5 with the U-1 pattern (directed probe + membership row) |
-| **D3-F-4** ratified S2/S3 prose vs the harness's non-empty-EntryNormal projection | — | **FIX**: option (b) — projection declared in §2.2.2 fine print with the widening obligation and the why |
+| **D3-F-4** ratified S2/S3 prose vs the harness's non-empty-EntryNormal projection | — | **FIX**: option (b) — projection declared in §2.2 fine-print item 4 with the widening obligation and the why |
 | **D5-F5/F6** no executable instance of §2.1's ∀-stream shape over the subject; the twin's Lean side is greenfield | V3: CONFIRMED (an informal single-stream ∃-witness exists) | **REC**: stated in the constitution's evidence-status fine print so the first proof arc starts from facts |
 | **D6-R1/R2** CI on branches never runs the differential (`GOLEAN_ALLOW_NO_DIFF=1` on push/PR); corpus source bytes outside every fingerprint except the slow tier | — | **deferred** (needs design, not launch-blocking; recorded here) |
 | **D7-C2** I-2/E12 interpretation contradiction; D7-M* cite fixes; D2-F1..F4, D3-F-1/2/3/6, D9 items 1-12, D4-F1..F5 | various | **FIX** where mechanical (cites, docstrings, pointers); the D4 gate-scope items land with group C |
@@ -116,7 +116,8 @@ whole-stack audit; all four landed before the audit ran:
 
 - **Lane A — the corpus train (W4.3/W4.4)**: the trace differential
   milestone; landed at `35b18794` (558 blocks, 354 supported, OK
-  206/206, RENDERED 148/148, machine tier 26/27; BUG-068 found by the
+  206/206 (of 249 ok-tier blocks in the supported prefix), RENDERED
+  148/148 (of 309 rendered expectations corpus-wide), machine tier 26/27; BUG-068 found by the
   rendered tier) after its own 4-reviewer audit + fix + delta-review +
   convergence rounds.
 - **Lane B — slice 5b**: the second PL-nitpicker review of the

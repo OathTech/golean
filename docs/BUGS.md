@@ -2796,9 +2796,9 @@ FIRST per the standing rule.
   var declaration with a TRUE ok on the line that matters).
 - EDGE ENUMERATION (bug-fix arc slice 2, 2026-08-19; landed as its
   own commit BEFORE any fix, colors recorded pre-fix). 51 rows in the
-  (this figure said 46 while the family has 51 rows — five were added
-  after the entry was written; re-counted 2026-08-22, launch audit D7)
-  new package `spec-examples-decl/var-comma-ok-matrix/` walk the full
+  new package `spec-examples-decl/var-comma-ok-matrix/` (this figure
+  said 46 while the family has 51 rows — five were added after the
+  entry was written; re-counted 2026-08-22, launch audit D7) walk the full
   matrix — three comma-ok sources (receive, map index, type assertion)
   × untyped/typed declaration × blank in the value position / blank in
   the ok position / neither × function-local vs package-level — plus

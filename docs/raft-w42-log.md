@@ -360,7 +360,7 @@ added here), each a full trace-string comparison, artifacts
 | group | verdict (runprobe, verbatim in the artifact) | machine wall |
 |---|---|---|
 | `probeTwinSingle` | **PASS — both oracles agree: 111035** (the W4.1 THE-MOMENT drive reproduced through the NEW harness, same packing) | ~1.5 min |
-| `probeTwinElect` (elect, elect-propose-commit, follower-propose, dueling-candidates) | **PASS — full multi-line trace agreement** | ~20 min |
+| `probeTwinElect` (elect, elect-propose-commit, follower-propose, dueling-candidates; + stepdown-reelect since 2026-08-22, which raises the group's machine wall to ~40-65 min — the ~20 min here is the 4-schedule vintage) | **PASS — full multi-line trace agreement** | ~20 min (4-schedule vintage) |
 | `probeTwinPerturb` (perturb-rev, perturb-mix, perturb-picks, starve-node) | **PASS — full multi-line trace agreement** | ~24 min |
 | `probeTwinTicks` (heartbeat) | **PASS — full multi-line trace agreement** | ~2 min |
 

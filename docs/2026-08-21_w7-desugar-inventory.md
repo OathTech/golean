@@ -1,11 +1,15 @@
 # The desugar-obligation inventory — W7 prep
 
-**Anchor vintage (2026-08-22, launch audit D8-F6):** the `emit.go:NNNN`
-anchors in this document are exact at commit `cc7651fc` (the census
-round's re-shift) unless a row says otherwise; 12 later commits
-(the W4.3 audit-fix rounds + BUG-069) have drifted `emit.go` by
-roughly 60–130 lines in places. Treat anchors as commit-qualified to
-`cc7651fc`; rows touched after that carry their own re-shift notes.
+**Anchor vintage (2026-08-22, launch audit D8-F6; commit corrected at
+the fix-round delta-review, DR2 CRITICAL-4):** the `emit.go:NNNN`
+anchors in this document are exact at commit **`e3187410`** (the
+inventory's creation commit — verified on three anchors: hoist 6026,
+slice-key refusal 6056, `emitMapLit` 6080; at `cc7651fc`, which this
+note first named, all three sit 21 lines later). Ten commits since
+`e3187410` touch `emit.go` (21 across `tools/nativefrontend/`),
+drifting these anchors by ~+91 lines at the fix-round tip. Treat
+anchors as commit-qualified to `e3187410`; rows touched later carry
+their own re-shift notes.
 
 **Status:** prep artifact for roadmap §W7 (SpecTec-Go: the AST-level spec and
 frontend correctness). Docs-only; nothing here changes code, gates, or pins.

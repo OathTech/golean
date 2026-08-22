@@ -669,7 +669,8 @@ renders 148 of the corpus's 309 rendered expectations (47.9%) and
 passes 206 of 249 ok-tier blocks; the machine tier verifies 26 of 27
 replayable traces and 131 of the 148 rendered blocks byte-for-byte
 (at `95145bc3`; see the run-of-record caveat above). Composed, the
-machine executed 280 of 558 blocks (50.2%) of upstream's own corpus
+machine executed 280 of 558 blocks (50.2%; 280 = 354 supported-prefix
+blocks − probe_and_replicate's 74 in-flight) of upstream's own corpus
 with byte-identical output over the supported prefix, and 131 of 309
 rendered expectations (42.4%) additionally match upstream's recorded
 output — the one oracle in this family external to us. The reach is

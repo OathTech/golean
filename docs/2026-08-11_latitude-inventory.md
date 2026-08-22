@@ -864,8 +864,9 @@ receiver as the leftmost operand of the method value) or leaves
 latitude among receiver-vs-argument sub-events at panic sites is the
 same F2-class question as E12/E13 and is OWED with them. gc agrees
 with the realized point on every probed shape (the W4/W7 fmt work
-rode it); no divergence is known. NO PIN MAY BE TAKEN HERE beyond
-what the frontend already structurally realizes — this is a census
+rode it); no divergence is known. NO PIN MAY BE TAKEN HERE (the
+frontend's structural realization stands as scaffolding, not as a
+pin) — this is a census
 row so the axis stops being invisible, nothing more.
 
 ### R1. `int`/`uint` width — (b) PINNED to 64 bits

@@ -223,6 +223,11 @@ fi
   printf 'filters\t%s\n' "${GOLEAN_COVERAGE_FILTERS:-unknown}"
   printf 'git_commit\t%s\n' "$git_commit"
   printf 'git_dirty\t%s\n' "$git_dirty"
+  # Durable oracle provenance (delta-review DR1 MEDIUM-3): a run under
+  # GOLEAN_ALLOW_GO_DRIFT=1 must not be indistinguishable from an
+  # oracle-of-record run in the artifact a re-pin consumes.
+  printf 'go_toolchain\t%s\n' "$(go version 2>/dev/null | awk '{print $3}' || printf 'unknown')"
+  printf 'go_drift\t%s\n' "${GOLEAN_ALLOW_GO_DRIFT:-0}"
 } > "$META_TMP"
 
 cleanup() {

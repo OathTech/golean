@@ -172,7 +172,8 @@ channel; exact panic-message matching.
 **Ratchet — concrete backlog (STALE NUMBER — 2026-08-22, launch
 audit D7: the live count is 15 untriaged, `coverage 11 / latitude 4 /
 wrong-answer 0` per `baselines/untriaged-count`; the "85" below is the
-2026-08-05-era figure kept for history):** 85 baseline fidelity failures (77
+2026-07-20 recorded figure kept for history — untriaged-count's own
+header dates it; DR2 MEDIUM-6):** 85 baseline fidelity failures (77
 lean-observation + 8 differential) not yet explained by a BUG entry. Inspect the
 exact ids with `scripts/check-bugs.sh --list`; triage into `docs/BUGS.md` over
 time (the check warns until 0). Many are array/struct value-semantics cases that
@@ -766,6 +767,17 @@ the user's two rulings (R-1 rendering split, R-2 opsem route) and
 records campaign 2's outcome; four open questions remain in the
 charter's §Open questions, each with a stated default.
 
+- [ ] **Trace-coverage push — PARKED POST-CAMPAIGN (Mike,
+      2026-08-22)**: the eight cheap replay-env stops (compact,
+      send-snapshot, transfer-leadership, forget-leader x2,
+      report-unreachable, read-only add-nodes, + rendering) would
+      take go-side trace coverage 63% -> ~85-90%, guardrails-first,
+      handler + upstream-format reply rendering per directive; the
+      jitter pair (JC-32, needs the membership-lane form) and
+      async-storage-writes (a different driving loop; W4.5 harvest
+      territory) are the recorded not-cheap remainder. Ruled parked
+      until after the raft v0 proof — the campaign focuses on the
+      proof, not instrument coverage.
 - [ ] **Slice-5 probe: print-interleaving wedge-class candidate**
       (launch audit D2-F5, 2026-08-22). Two goroutines each printing
       multiple lines in a registry-free straight-line segment cannot

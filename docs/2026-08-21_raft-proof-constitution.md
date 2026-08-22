@@ -95,7 +95,9 @@ Over the machine-twin harness (`docs/2026-08-20_machine-twin-harness-design.md`
 > — forgery-by-deadlock, named at P0 §3.1.
 
 Fixed n=3 first; quantified `num_parties` is a tier above, not the
-gate (P0 §3.3).
+gate (P0 §3.3). **Ruled 2026-08-22 (ratification Q1): YES — this
+predicate (S1–S3 per-step + the S4 completion witness) is the
+campaign's base end.**
 
 **Over the slow-obviously-correct semantics.** The statement's
 quantifiers range over the naive executable interpreter — `stepFn`
@@ -122,7 +124,7 @@ Agreement predicate defined from base definitions over the interpreter
 ### 2.2 The fine print IS part of the statement
 
 The scope qualifiers live in the pinned statement's documentation,
-never in anyone's head. Three are known now:
+never in anyone's head. Four are known now:
 
 1. **The envelope tier.** v1 network: reliable-first — no drops, no
    duplication; unbounded reordering and delay (machine-twin §2,
@@ -130,7 +132,9 @@ never in anyone's head. Three are known now:
    point and the docstring says so. `drop`/`dup` are already in the
    event vocabulary; turning them on is a WIDENING and lands as a
    strengthening tier with its latitude entries (C-B), not a
-   re-statement.
+   re-statement. **Ruled 2026-08-22 (ratification Q3):
+   reliable-first for the pinned statement; chaos as a strengthening
+   tier.**
 2. **The RawNode serialization contract.** The v1 twin bundles each
    RawNode call with its full Ready harvest — a DELIBERATE ENVELOPE
    NARROWING relative to what upstream licenses (`stepsOnAdvance`,
@@ -153,13 +157,20 @@ never in anyone's head. Three are known now:
    (`docs/raft-w2-log.md` subject-delta section and successors); a
    delta not in the ledger is a violation, not a shortcut.
 4. **The applied-entry projection** (added 2026-08-22, launch audit
-   D3-F-4; ruled option (b) under the pre-build looseness directive).
-   S2/S3's executable checker compares applied entries PROJECTED to
-   non-empty `EntryNormal` data — the empty entry a leader appends on
-   winning an election and config-change entries are outside the
-   compared tuple. Why: this matches the harness's checker and the
-   twin evidence exactly, and the excluded entries carry no
-   client-visible data. Widening to the full `(index, term, data)`
+   D3-F-4; ruled option (b) under the pre-build looseness directive;
+   wording corrected at the fix-round delta-review, DR2 CRITICAL-1 —
+   the first version misdescribed the checker). What the executable
+   checker (`twin-lib.go`, `apply`) actually does, and what the
+   declared statement therefore says: **S3 monotonicity is NOT
+   projected** — index/term monotonicity is checked on EVERY applied
+   entry; an entry of unmodeled type (v1 proposes no conf changes)
+   raises a loud S3-anomaly VIOLATION, never a silent exclusion; the
+   leader's empty entry advances the applied index and is otherwise
+   skipped. **Only the S2 `(term, data)` agreement comparison and the
+   `committed` exercise counter are projected** to non-empty
+   `EntryNormal` data. Why the S2 projection: it matches the harness's
+   checker and the twin evidence, and the excluded entries carry no
+   client-visible data. Widening S2 to the full `(index, term, data)`
    tuple over ALL applied entries is a STRENGTHENING (no amendment),
    and per the scoping principle the invariant lattice should not
    assume the projection where the full tuple is equally natural.
@@ -173,8 +184,13 @@ the only choice-stream consensus artifact is the 2-node kernel of the
 481-line miniature (`multipkg/mini-raft-twin/choice-order`), not the
 RawNode subject. The schedule battery at audit time never left term 1
 (every schedule one leader claim; S1's disagreement branch dead code)
-— the fix round adds a term-2/step-down schedule so S1's detector is
-exercisable before it is pinned in Lean. The Lean side of the twin
+— the fix round adds a term-2/step-down schedule so term advancement,
+step-down, and a second claim are exercised and the S1 bookkeeping
+runs over a populated multi-term map before the predicate is pinned
+in Lean (S1's disagreement BRANCH remains unreachable on a correct
+subject — it is the violation detector, reachable only when election
+safety actually breaks; DR2 MEDIUM-2 corrected the first version's
+claim that the detector itself became exercisable). The Lean side of the twin
 (the Agreement predicate, S1–S4, a golden pin for the twin program,
 `run = .ok r → Agreement r`) is entirely greenfield; the one
 raft-shaped Lean asset is the quorum pilot.
@@ -470,6 +486,11 @@ after it lands.
 
 ## §5 The Latitude — everything else is the campaign's
 
+**Supervision seam (Ruled 2026-08-22, ratification Q7):**
+trust-surface work — semantic-core surgery the proofs demand,
+statement re-pins — runs as SUPERVISED arcs; proof work runs
+long-cycle autonomous inside §4.1's gates.
+
 Inside §2's ends and §3/§4's rails, the campaign decides — without
 asking, and with judgment-call logging as the accountability
 instrument (one-line entries in the campaign log; reviewed after, not
@@ -531,9 +552,11 @@ the inviolables are §3 — but every one of them was paid for.
 
 - **(a) A long grind against a goal means you're missing a tactic.**
   Stop and lift the pattern; leverage-vs-grind is also performance.
-  *The WP arc's promotion ledger and the brick-wp lesson: closing five
-  kit gaps (the INDEX's count) cut every successor ~25% and made two
-  units one-session jobs — the measurement lives at
+  *The WP arc's promotion ledger and the brick-wp lesson: closing six
+  kit gaps (six CLOSED sections in `docs/gallery-campaign-log/g1.md`;
+  INDEX.md:237 "all six flagship gaps closed" — its line 272's "Five"
+  is the INDEX's own error, now marked there) cut every successor
+  ~25% and made two units one-session jobs — the measurement lives at
   `docs/2026-08-16_gallery-campaign-trip-report.md`, "What carried the
   campaign" lesson 4 ("825→376 lines, 71 s→1.2 s on the worst shard"),
   restated at `docs/2026-08-16_wp-library-design.md:177`; the wave
@@ -671,18 +694,16 @@ section it governs, per §6(p); this record is the act plus pointers:
 | 4 RawNode/harvest narrowing | accepted at v1 + phase-tolerance discipline | §2.2.2 |
 | 5 liveness | named successor; non-preclusion standing | §2.4 |
 | 6 milestone set | as proposed | §4.2 |
-| 7 supervision seam | trust-surface supervised; proof work autonomous | §8 (below) |
+| 7 supervision seam | trust-surface supervised; proof work autonomous | §5 preamble |
 | 8 this document | ratified; amendment only by Mike, dated in place | header/§4.5 |
 
 Additions: **the scoping principle** → §2 preamble; **Plan A (the
 Verdi structure port)** → §5, proof strategy and route.
 
-Supervision seam (Q7), operative form: semantic-core surgery the
-proofs demand and statement re-pins run as SUPERVISED arcs; proof
-work runs long-cycle autonomous inside §4.1's gates.
-
-Post-ratification rulings folded 2026-08-22 with the launch-audit fix
-round: the launch gate's exit (pause + Mike's sign-off, deliberately
+Post-ratification items folded 2026-08-22 with the launch-audit fix
+round (rulings and, where their own text says so, RECOMMENDATIONS
+subject to veto — the surgery threshold — and evidence records — the
+§2.2 evidence-status block; DR2 MEDIUM-1): the launch gate's exit (pause + Mike's sign-off, deliberately
 unformalized) → §4 launch gate; the surgery threshold → §4.1; the
 milestone-claim evidence line → §4.2; the applied-entry projection
 and the evidence-status block → §2.2; §3.8 re-synced to the widened
