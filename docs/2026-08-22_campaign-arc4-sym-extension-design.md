@@ -82,7 +82,31 @@ Sub-table (not table equality) is deliberate: a window emitted at the
 pin's table transports into any run state whose types EXTEND it.
 
 **Cost, estimated then measured**: est. mirror ~80 lines + drift
-~150–250 + threading ~25 sites; measured in the arc log at slice end.
+~150–250 + threading ~25 sites. **MEASURED at slice-1 end**: the
+delegation design ELIMINATED the threading entirely — ZERO edits to
+existing Sym modules; one new module `Sym/TableExt.lean`, 652 lines
+total (defs ~210, conc lemmas ~330, step/window/refinement ~110),
+elaborating in 2.4 s. The re-measure
+(`Specs/Raft/HandlerEqSym.lean`, 157 lines incl. witness +
+projection readouts, 7.3 s): the pilot leaf's 14-step body span —
+ten hand-chained windows with four conditioned facts in
+`HandlerEq.lean` (~105 lines of span proof + the 25-line
+`storeTarget_field` lemma + per-instance `hset`/`hnorm`
+hypotheses) — became ONE transported window: a 3-line step-count
+`rfl` + a 6-line refinement application over a ~55-line reusable
+fixture (embedding + symbolic struct + state/config). The store's
+whole-struct re-normalization, the pilot's measured cost center, is
+COMPUTED by the evaluator. Honest scope delta, per §5: the Sym span
+is address-concrete and fixes the non-scalar fields (γ-quantified
+over the five scalars); the hand span quantified over the whole
+field array and the cell address. Two operational gotchas recorded:
+(i) the kit guide §5 REVERSAL reproduced exactly — with
+`set_option smartUnfolding false` the module DNF'd (>8·10⁶
+heartbeats, 671 s partial); at default options, 7.3 s; (ii) γ-image
+projection equalities at a concrete valuation reduce by
+`decide +kernel` (seconds), while both elaborator-whnf `rfl` and
+plain `decide` fail (the default-transparency instance gets stuck) —
+each `decide +kernel` `#eval`-checked first per the standing rule.
 
 **Routing note**: the pilot ledger's "normality preservation under
 `StructFields.set`" plain-kit lemma becomes unnecessary for

@@ -233,3 +233,44 @@ same as the Arc-3 lanes.
   Additivity plan logged (design §0): trailing default-[] params;
   new-named T-core for the fueled normalizer with the old name as
   its []-instance; shipped Sym statements preserved verbatim.
+- 2026-08-22 [AGENT] Slice-1 implementation call, STRONGER than the
+  design's additivity plan: instead of threading `T` through the
+  existing chain, the extension is ONE new module
+  (`Sym/TableExt.lean`) layering a DELEGATING step `stepFnT` over the
+  untouched `stepFn'` — one overridden arm (storeK → `storeTargetT` →
+  `storeLocT` → `normalizeValueForTyFuelT` with the machine's
+  `.defined`/struct arms mirrored), everything else delegated; its
+  soundness delegates non-store arms to the SHIPPED `stepFn'_conc`.
+  Zero edits to the 8,193 existing Sym lines; conditioned premise =
+  `SubTable T σ.types` (sub-table, not equality — windows transport
+  into any types-extending state; `SubTable.nil` makes the shipped
+  theorems the degenerate instance). Structure debt acknowledged: a
+  second delegating class would stack overrides — flagged for the
+  class-2 slice to decide delegation-vs-refactor there, not silently.
+- 2026-08-22 Slice 4 (A4-U2 slice 1) LANDED: `Sym/TableExt.lean`
+  (652 lines, 2.4 s) — SubTable, the T-normalizer with defined/struct
+  arms, storeLocT/storeTargetT, stepFnT/symEvalWindowT, the conc
+  chain (normalizeFieldsWith_conc / normalizeFuelT_conc /
+  storeLocT_conc / storeTargetT_conc / stepFnT_conc) and
+  **symEvalWindowT_refines/'** (the shipped template + the one
+  premise). Plus `Specs/Raft/HandlerEqSym.lean` (157 lines, 7.3 s):
+  the RE-MEASURE — the pilot leaf's 14-step body span as ONE
+  transported window at the pinned type table, value-symbolic (five
+  SymInt vars) address-concrete, ∀ρ ∀σ-extending-the-pin ∀ch; with
+  the §3.3 witness at a concrete valuation and projection readouts
+  (post = pre = some ⟨7,3,2,1,0,0⟩). Before/after: ~105 span-proof
+  lines + 4 conditioned facts → 3-line window rfl + 6-line
+  refinement application (fixture ~55 lines, embedding reusable).
+  Gotchas measured and recorded in the design note §2: the kit-guide
+  §5 smartUnfolding REVERSAL reproduced (DNF ↔ 7.3 s); γ-image
+  projection equalities need `decide +kernel` (elaborator whnf and
+  plain `decide` both fail) — every `decide +kernel` #eval-checked
+  first (SymWindowProbe: window n=14, quit only at the terminal;
+  both projections computed true). Kill-points (design §6): NONE hit
+  — no shipped Sym statement changed. Full proofs+Audit build green
+  (471 jobs); zero sorry/native_decide in both new files (grep).
+  `#print axioms` (fresh probe): symEvalWindowT_refines/' and
+  stepFnT_conc/storeLocT_conc [propext, Classical.choice,
+  Quot.sound]; normalizeFuelT_conc, alt_sym_window_n,
+  alt_sym_projection [propext, Quot.sound]; alt_call_span_sym +
+  witness [propext, Classical.choice, Quot.sound].
