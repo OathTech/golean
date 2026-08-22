@@ -239,6 +239,18 @@ is the §4.4 park-and-report condition, not an emergency.
   clean); Arc 4 designed + pilot running. The [USER] queue below is
   the campaign's only external dependency.
 
+- **Arc 3, unit 4 — LANDED** @ 84711394 (successor worker;
+  re-verification of unit 3 done first, all held): the leaderLogs
+  ring (LeaderLogs.lean, 3908 lines) — term-sanity trio (first real
+  `lift_prop` consumer), leaders_have_leaderLogs,
+  **one_leaderLog_per_term**, + the votes-with-log closure the chain
+  forced; **`leader_completeness` STATEMENT pinned** (proof = units
+  5-7, dependency list = GAP-6, honest). Sweep 1403 decls in
+  [propext, Quot.sound]; lane gate PASS; index 23 rows. Four new
+  Lean gotchas recorded for successors (the Classical.choice-via-
+  LawfulBEq drag being the sharpest). Unit 5 dispatched: the
+  creation ring (every_entry_was_created → … → leaderLogs_preserved).
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
