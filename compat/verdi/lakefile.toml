@@ -6,12 +6,12 @@ defaultTargets = ["VerdiCompat", "AxCheck", "diffharness"]
 name = "VerdiCompat"
 
 # The axiom audit runs as part of the build (audit-finding F3: an
-# unwired check is decorative). ADVISORY, not enforcing (lane audit
-# note 2026-08-10): `#print axioms` output lands in the build log for a
-# HUMAN to read — an added axiom prints but the build stays green. The
-# doctrine gate is that nothing beyond propext/Quot.sound appears; the
-# merge-window ci wiring should adopt proofs/Audit.lean's enforcing
-# pattern (#guard_msgs pins + a collectAxioms sweep that throwErrors).
+# unwired check is decorative). ENFORCING since the 2026-08-10 merge
+# window (this comment corrected 2026-08-22, campaign unit 5 — the old
+# text still said "advisory"): AxCheck.lean carries curated
+# `#guard_msgs in #print axioms` pins per headline theorem AND an
+# exhaustive collectAxioms sweep that `throwError`s on anything beyond
+# the lane's recorded set {propext, Quot.sound}.
 [[lean_lib]]
 name = "AxCheck"
 globs = ["AxCheck"]

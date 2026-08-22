@@ -822,4 +822,95 @@ unit report (lane 29+ commits deep).
   over CreationRing.lean: 0; CreationRing.lean = 2511 lines,
   LeaderLogs.lean = 3908 (wc). Unit-5 remaining: INDEX rows, gate,
   final entry + INTEGRATION READINESS note.
+- 2026-08-22 [AGENT] Housekeeping fix rode this unit: compat/verdi's
+  lakefile.toml comment still described AxCheck as "advisory" — stale
+  since the 2026-08-10 enforcing upgrade (AxCheck.lean's own header and
+  the throwError sweep are the ground truth). Comment corrected, no
+  behavior change.
+- 2026-08-22 Unit-5 final gate: `GOLEAN_ALLOW_NO_DIFF=1
+  GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT: PASS, exit 0** (log:
+  `artifacts/ci-arc3-unit5.log`, gitignored; no-diff notes are the
+  allowed docs+compat hatch — unit 5 touched only `compat/verdi/**` +
+  this log). Comparator-landmark staleness note remains report-only —
+  same operator-merge-time flag as units 1-4.
+
+## Final entry — unit 5 complete (2026-08-22, tip = this commit)
+
+**Proved at tip** — the creation ring's feasible slice, statements 1:1
+with their Interface files @ a3375e8; zero sorry/native_decide in
+campaign files (grep; sweep-enforced: 1528 declarations within
+[propext, Quot.sound], plus five new curated pins). `#print axioms`
+verbatim (fresh capped `lake env lean` probe):
+
+```
+'VerdiCompat.Raft.every_entry_was_created_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.every_entry_was_created_in_any_log_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.logs_sorted_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.votesWithLog_sorted_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.votesWithLog_term_sanity_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.current_term_gt_zero_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.terms_and_indices_from_one_log_and_nw_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.terms_and_indices_from_one_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.leaderLogs_candidateEntries_invariant' depends on axioms: [propext, Quot.sound]
+```
+
+Inventory: `CreationRing.lean` (2511 lines) — `every_entry_was_created`
+(both interface fields, via the `in_any_log` strengthening), base
+`logs_sorted` (4 conjuncts) with the constructive sorted machinery,
+`votesWithLog_sorted` + `votesWithLog_term_sanity` (shared derivation),
+base `current_term_gt_zero` and `terms_and_indices_from_one_log`/`_nw`,
+ghost `terms_and_indices_from_one` (vwl ∧ ll), and
+`leaderLogs_candidateEntries` (unit 3's transport lemmas re-consumed).
+Three new `lift_prop` consumers (sorted_host_lifted, tai_log_lifted,
+plus unit 4's candidate_term_gt_log lift). The INVARIANT INDEX above is
+current (34 rows incl. the two GAP-7 rows).
+
+**Honestly open (carried + new):**
+- GAP-1 (primed variants): STILL never triggered; carried.
+- GAP-2 (msg-ghost): NOT touched — the creation ring is plain rri
+  (verified against every proof file's imports at unit start); the
+  coordinator's minimal-port-on-first-need clause was never invoked.
+- GAP-4/GAP-5/GAP-6: carried unchanged.
+- GAP-7 (recorded at unit start, scope call): `allEntries_votesWithLog`
+  (needs AllEntriesLog, 1089 lines + its 6-interface subtree) and
+  `leaderLogs_preserved` (needs LogsLeaderLogs, 848 lines + its
+  7-interface subtree) — both sit on the unit-6 log-matching heavies;
+  deferred with the evidence, not attempted.
+
+**INTEGRATION READINESS (coordinator-requested):** compat/verdi is a
+SELF-CONTAINED lake package — zero external lake dependencies
+(lake-manifest packages: []), pinned toolchain `leanprover/lean4:v4.31.0`,
+default targets = VerdiCompat + AxCheck (enforcing) + diffharness. A
+fresh checkout of `campaign-arc3` builds it standalone with
+`cd compat/verdi && <capped> lake build` — no `deps/` checkout needed
+(the verdi/verdi-raft trees are reference-reading only; all reads went
+through the MAIN checkout's pins, verified each unit). The lane touched
+ONLY `compat/verdi/**` + `docs/campaign-arc3*` — no runtime code, no
+`Corpus/`, no `baselines/` — so the eventual merge has no textual or
+semantic overlap with the semantic core and no baseline re-pin;
+`scripts/ci` on a fresh worktree needs `GOLEAN_ALLOW_NO_DIFF=1` until a
+differential is recorded (standing docs+compat-lane hatch). Ordering
+constraints: none within the repo; the single operator obligation at
+merge time is the standing comparator-landmark staleness note
+(report-only in ci; the widened trigger makes the judge run a
+MERGE-STEP obligation, flagged in every unit's gate entry). File-add
+order inside the lane is linear (ElectionSpecLemmas → ElectionSafety →
+CandidateEntries → LeaderLogs → CreationRing, each imported by its
+successor + all wired into VerdiCompat.lean), so cherry-picking partial
+units would break imports — merge the branch tip, not slices.
+
+**Next unit's charter (Arc 3, unit 6 — proposal):** the log-matching
+subtree, in dependency order from the leaves:
+`leaderLogs_sorted`/`leaderLogs_contiguous` (GAP-5; deps: sorted ✓ +
+contiguity vocabulary) → `allEntries_term_sanity` +
+`allEntries_leaderLogs_term` → `appendEntries_request_leaderLogs` →
+`refined_log_matching_lemmas` (the base log-matching bridge — check
+whether base `log_matching` itself must port first) →
+`AllEntriesLog` → `allEntries_votesWithLog` (GAP-7a), and
+`leadersHaveLeaderLogs_strong` + `nextIndex_safety` +
+`leaderLogs_logProperties` → `LogsLeaderLogs` → `leaderLogs_preserved`
+(GAP-7b) — then unit 7: `prefix_within_term` + `leaderLogs_logMatching`
+→ `leader_completeness`'s PROOF (GAP-6). The successor should re-derive
+this order from the import closure before starting (my unit-5 lesson:
+first-level imports understate the tree).
 
