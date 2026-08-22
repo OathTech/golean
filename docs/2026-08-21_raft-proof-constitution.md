@@ -102,8 +102,8 @@ quantifiers range over the naive executable interpreter — `stepFn`
 iterates / the naive multi-step enumeration — never over any
 accelerator, evaluator, or deduplicating enumerator. This is the
 standing exec-slow principle (the W3.2 POR design's form —
-`docs/2026-08-21_w32-por-design.md`, w32 lane, branch-state at
-drafting: claims restate over `SlowObs`, the six-line naive
+`docs/2026-08-21_w32-por-design.md` (on `main` since 2026-08-21;
+the branch-state flag is retired — D9 P-3): claims restate over `SlowObs`, the six-line naive
 definition; the optimized engine earns its use by a proven equality
 to the slow one, and "top-level statements never mention the
 optimized enumerator"). The
@@ -134,7 +134,8 @@ never in anyone's head. Three are known now:
 2. **The RawNode serialization contract.** The v1 twin bundles each
    RawNode call with its full Ready harvest — a DELIBERATE ENVELOPE
    NARROWING relative to what upstream licenses (`stepsOnAdvance`,
-   `doc.go:101-103`), recorded with its re-envelope obligation
+   `deps/raft/doc.go:101-103` — the gitignored reference checkout;
+   resolve after `scripts/setup-deps`, D9 P-4), recorded with its re-envelope obligation
    (machine-twin §2: widen additively via a `harvest` event). At v1
    the theorem is about a subset of conforming drivers and must say
    so. **Ruled 2026-08-22 (ratification Q4): ACCEPTED at v1, with the
@@ -281,7 +282,9 @@ advice; a violation is a defect even when the theorem is true.
    measured form is recorded beside the bound, not as it. A gap
    honestly recorded is a legitimate outcome of an attempt; it never
    counts toward any total, milestone, or tier claim. (CLAUDE.md
-   long-cycle section; gallery trip report §6.)
+   long-cycle section; gallery trip report, "What carried the
+   campaign" lesson 6 — the report's list is numbered, its headings
+   are not.)
 7. **Progress IS machine-checkable theorems with witnesses — never
    activity metrics.** Lines written, lemmas attempted, sessions
    burned, "80% of the invariant lattice sketched" are not progress
@@ -479,8 +482,18 @@ delegated:
   merged compat/verdi layer (the bridgehead: Verdi's system model +
   raft spec already ported, AxCheck-gated; the port is of structure,
   not text — statements re-ground in the harness vocabulary per the
-  compat design note's seam, and compat/verdi stays a read-only
-  reference, never an import). A more direct route may be proposed at
+  compat design note's §4c/§4e regrounding architecture ("Shell
+  node-step DEFINED by interpreter-run equations on the pinned
+  lowered `raft.Step`", `docs/2026-08-09_verdi-compat-layer.md`),
+  conditioned by its §9 translate-don't-certify ruling — pointer
+  corrected 2026-08-22, D9 O-3: the old text said "the seam", which
+  resolves to §8b's worktree-ownership paragraph — and compat/verdi
+  stays a read-only reference, never an import. Known shortfall,
+  stated (D9 O-4): the ported `raft_net_invariant` principle covers
+  ~17 of 90 verdi-raft proof files directly; the ghost-layer twin
+  `refined_raft_net_invariant`, which the other ~73 instantiate, is
+  not yet ported — porting it is early campaign work, not a
+  precondition of ratifying the route). A more direct route may be proposed at
   any time with a recorded comparison (what it saves; what
   Verdi-alignment it gives up); deviation is a logged judgment call —
   abandoning the Verdi alignment entirely is a ruling. Iris as proof
@@ -518,10 +531,17 @@ the inviolables are §3 — but every one of them was paid for.
 
 - **(a) A long grind against a goal means you're missing a tactic.**
   Stop and lift the pattern; leverage-vs-grind is also performance.
-  *The WP arc's promotion ledger and the brick-wp lesson: closing six
-  kit gaps cut every successor ~25% and made two units one-session
-  jobs (`docs/2026-08-15_brick-wp-promotion-wave-mapping.md`; gallery
-  trip report §4).*
+  *The WP arc's promotion ledger and the brick-wp lesson: closing five
+  kit gaps (the INDEX's count) cut every successor ~25% and made two
+  units one-session jobs — the measurement lives at
+  `docs/2026-08-16_gallery-campaign-trip-report.md`, "What carried the
+  campaign" lesson 4 ("825→376 lines, 71 s→1.2 s on the worst shard"),
+  restated at `docs/2026-08-16_wp-library-design.md:177`; the wave
+  mapping `docs/2026-08-15_brick-wp-promotion-wave-mapping.md` is the
+  pre-work table, not the measurement. (Attribution corrected
+  2026-08-22, launch audit D9 P-1/P-2 — the first version cited the
+  mapping table for a number it does not contain, said "six", and
+  cited a "§4" the trip report does not have.)*
 - **(b) A stuck or exploding proof often means a FALSE goal — `#eval`
   before you `decide`.** A decision procedure that must reduce to
   `False` has no reason to terminate politely. *The 60 GB
@@ -533,8 +553,8 @@ the inviolables are §3 — but every one of them was paid for.
   finding about the semantics. *CLAUDE.md's design principle; the
   W3.2 semantics design audit's Cont findings — `contAfterStmtOp`'s
   global continuation walks and the Q4/Q6 refactor queue
-  (`docs/2026-08-20_semantics-design-audit.md`, w32 lane —
-  branch-state at drafting).*
+  (`docs/2026-08-20_semantics-design-audit.md`, on `main` — the
+  branch-state flag is retired, D9 P-3).*
 - **(d) A law without a witness is a scaffold.** Say so in its
   docstring or ship the witness. *`wp_assign` shipped vacuous, was
   caught, and nearly re-shipped as `wp_deref_store` (CLAUDE.md,
@@ -572,9 +592,10 @@ the inviolables are §3 — but every one of them was paid for.
 - **(k) Park with a resume condition, never merge from sunk cost.**
   ~14.5k lines of channel-logic machinery parked awaiting the
   re-envelope; the salvage plan salvages the families, not the tip's
-  refuted claim. *`docs/2026-08-10_channel-logic-arc-charter.md`
-  (tail: ARC PARKED); the W3.2 charter's S6c resume-readiness
-  assessment.*
+  refuted claim. *`docs/2026-08-10_channel-logic-arc-charter.md` —
+  NOTE the "ARC PARKED" tail block exists only on the `channel-logic`
+  BRANCH's copy (:276 there); main's copy has no marker (launch audit
+  D9 P-3); the W3.2 charter's S6c resume-readiness assessment.*
 - **(l) Fresh probes over inherited records.** "The worker reported
   it" is not a source; neither is "it follows from how the machine
   works." *The matmul withdrawal: a shard and gallery entry pinned

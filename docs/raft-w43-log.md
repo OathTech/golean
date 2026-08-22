@@ -2,7 +2,9 @@
 
 Lane: `raft-w43` (worktree `.claude/worktrees/raft-w43`), branch `raft-w43`
 off `main` @ `521f5b57` (the W4.2 tip). Charter (the ratified launch plan,
-lane A): the rendered-tier surface (the 9 named refusal causes,
+lane A — recorded post hoc at
+`docs/2026-08-22_launch-audit-synthesis.md` §5; the plan was chat-only
+when this lane ran, launch audit D9 O-2): the rendered-tier surface (the 9 named refusal causes,
 guardrails-first per cause), conf-change support in the replay env, the
 FULL trace differential as the milestone, the W4.2 owed-rows wave, and the
 w32 charter §S3(b) membership-green conversions (case-level). Sole owner
