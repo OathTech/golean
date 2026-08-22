@@ -632,4 +632,87 @@ Same conventions; GAP-2 msg-ghost only on first genuine need.
   1403 decls; grep sorry/native_decide over LeaderLogs.lean: 0;
   LeaderLogs.lean = 3908 lines (wc). INVARIANT INDEX extended by the
   unit's 13 rows (build-verified at this tip).
+- 2026-08-22 Unit-4 final gate: `GOLEAN_ALLOW_NO_DIFF=1
+  GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT: PASS, exit 0** (log:
+  `artifacts/ci-arc3-unit4.log`, gitignored; the no-diff notes are the
+  allowed docs+compat hatch — unit 4 touched only `compat/verdi/**` +
+  this log). The report-only comparator-landmark note now reads
+  "56 theorems @ 1730567a2d3f, 35 commit(s) ago" — same
+  operator-merge-time flag as units 1-3; nothing in this unit touches a
+  designated statement or Challenge's closure (statement-TCB step ok).
+
+## Final entry — unit 4 complete (2026-08-22, tip = this commit)
+
+**Proved at tip** — the leaderLogs ring, statements 1:1 with their
+Interface files @ a3375e8, proofs re-derived through the ported
+principles; zero sorry/native_decide in campaign files (grep;
+sweep-enforced: 1403 declarations within [propext, Quot.sound], plus
+six new curated pins). `#print axioms` verbatim (fresh capped
+`lake env lean` probe against the built package):
+
+```
+'VerdiCompat.Raft.candidate_term_gt_log_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.leaderLogs_term_sanity_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.leaders_have_leaderLogs_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.leaderLogs_votesWithLog_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.one_leaderLog_per_term_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.votedFor_moreUpToDate_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.votes_votesWithLog_correspond_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.requestVoteReply_moreUpToDate_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.votesReceived_moreUpToDate_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.requestVote_term_sanity_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.votedFor_term_sanity_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.requestVoteReply_term_sanity_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.requestVote_maxIndex_maxTerm_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.leaderLogs_currentTerm_sanity_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.leaderLogs_currentTerm_sanity_candidate_invariant' depends on axioms: [propext, Quot.sound]
+```
+
+Inventory: `LeaderLogs.lean` (3908 lines) — the charter's named chain
+`leaderLogs_term_sanity` (trio) → `leaders_have_leaderLogs` →
+**`one_leaderLog_per_term`** (+ `_log`/`_host`), converging on the
+**`leader_completeness` STATEMENT** (defs 1:1); plus the closure the
+charter's chain forced (logged scope call at unit start):
+`requestVote/votedFor/requestVoteReply_term_sanity`,
+`requestVote_maxIndex_maxTerm`, `votes_votesWithLog_correspond`,
+`candidate_term_gt_log` (BASE), and the moreUpToDate cluster
+(`votedFor/requestVoteReply/votesReceived_moreUpToDate`,
+`leaderLogs_votesWithLog`) — the votes-with-log side the
+leader-completeness lattice consumes next. The INVARIANT INDEX above
+is current (23 rows). First real `lift_prop` consumer landed
+(leaderLogs_term_sanity's RVR case lifting base
+candidate_term_gt_log).
+
+**Honestly open (carried + new):**
+- GAP-1 (primed variants): STILL never triggered — no unit-4 proof
+  needed one; carried.
+- GAP-2 (msg-ghost layer): NOT needed by this ring (as predicted —
+  everything here is plain rri); carried untouched.
+- GAP-4 (classical-list doctrine): carried; unit 4 hit the same class
+  twice more (instBEqOfDecidableEq's LawfulBEq, the `term`-abbrev
+  omega failure) and resolved constructively both times.
+- GAP-5 (new): `leaderLogs_sorted`/`_contiguous`
+  (LeaderLogsSorted/ContiguousInterface.v) were named in the
+  predecessor's proposal but are NOT consumed by this ring and not in
+  the operative charter — deferred to first need (they feed the
+  log-matching side).
+- GAP-6 (new): `leader_completeness` is a STATEMENT port only; its
+  proof (LeaderCompletenessProof.v, 379 lines) additionally needs
+  PrefixWithinTerm, LeaderLogsPreserved, EveryEntryWasCreated,
+  AllEntriesVotesWithLog, VotesWithLogSorted, TermsAndIndicesFromOne,
+  LeaderLogsLogMatching (imports read at a3375e8) — the next two
+  units' lattice.
+
+**Next unit's charter (Arc 3, unit 5 — proposal):** the creation ring
+feeding leader_completeness, per LeaderCompletenessProof.v's import
+closure: `every_entry_was_created` (EveryEntryWasCreatedInterface.v) →
+`allEntries_votesWithLog` (AllEntriesVotesWithLogInterface.v) →
+`votesWithLog_sorted` (VotesWithLogSortedInterface.v) →
+`terms_and_indices_from_one` (TermsAndIndicesFromOneInterface.v) →
+`leaderLogs_preserved` (LeaderLogsPreservedInterface.v), leaving the
+log-matching heavies (PrefixWithinTerm, LeaderLogsLogMatching — which
+will also consume GAP-5's sorted/contiguous) for unit 6 and
+`leader_completeness`'s proof for unit 7. Same conventions; successors
+re-verify this unit's claims fresh (build + sweep count 1403 + the
+probe above + hatch grep over LeaderLogs.lean).
 
