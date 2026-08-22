@@ -795,3 +795,62 @@ methods.
 frontend-export(refusal), red by design. Full `scripts/ci --diff`:
 drift exactly the three new ids; zero movement on the 2437 prior ids.
 Baseline re-pinned (2440 cases, 2280/160) in this commit.
+
+### R4-C-3 — shim refusals become UNRECOVERABLE machine stops
+
+**Defect.** Every golean-bound refusal inside an injected shim body
+was an ordinary Go `panic("golean ...")` — and ordinary panics are
+RECOVERABLE. Ordinary defensive idioms swallowed refusals into silent
+wrong answers, in three shapes (probe r4-p2): recover around a parse
+(`ParseUint("0x2a", 0, 64)` — base 0 is a recorded bound — returned
+v=0 ok=false where gc says v=42 ok=true), recover around an explode
+(`strings.Split(s, "")` → n=0 where gc says 3), and fmt's OWN recover
+around a user `String()` (`goleanShimFmtRenderCall` re-rendered a
+refusal as a plausible `%!v(PANIC=...)` string where gc renders
+normally). The fail-closed doctrine's "visible red beats hidden wrong
+answer" was being undone by the model's own panic machinery.
+
+**Guardrails witnessed red first**:
+`panic-recover/shim-refusal-unrecoverable/{parse,split,render}-recover`
+— all three differential-red with the machine's silently-wrong values
+(`v=0 ok=false`, `n=0`, `%!v(PANIC=String method: golean...)`).
+
+**Fix.** One reserved helper, `goleanShimUnsupported(msg)`, injected
+beside every shim bundle and FORCE-QUARANTINED by the emitter
+(`emitFuncDecl` returns `unsup` for the name, reusing the ordinary
+per-decl quarantine machinery — no new wire shape, no decoder change):
+a CALL to it throws `GoError.unsupported` at the interpreter level,
+which never enters the `.panicking` machinery and no `recover()` can
+touch. All 15 golean-bound panic sites route through it (each followed
+by a dead `panic("unreachable...")` so Go's termination analysis is
+unchanged). UPSTREAM-FAITHFUL panics — strconv illegal-base, strings
+negative-Repeat, the `b[7]` bounds shapes — deliberately STAY ordinary
+panics: gc panics there and recover must keep catching them (the
+`format-illegal-base` row pins that lane green).
+
+**Acceptance verified, not asserted**: the three rows flip
+differential(wrong value) → frontend-export with the quarantine
+message THROUGH the surrounding recover()s — the r4-p2 shapes are now
+visible unsupported stops. The render path's recover question is moot
+by construction (a throw bypasses it), verified by `render-recover`;
+the frame-placement comment in stdlibshim.go updated to say what is
+still load-bearing (genuine user-method panics).
+
+**Predicted stage flips, confirmed exactly**: the three pre-existing
+rows that pinned refusal PANICS — `fmt/sprintf-dyn/{arity-mismatch,
+unmodeled-kind}`, `strings/split-conformance/empty-sep` — move
+FAIL/lean-observation → FAIL/frontend-export (same red, honest new
+mechanism). Nothing else in the 200-case fmt/strings/strconv/
+panic-recover slice moved; `fmt/sprintf-dyn/stringer-panic` (a GENUINE
+user panic under fmt's recover) stays green, pinning that real panics
+still recover.
+
+(R4-C-3 gate: full `scripts/ci --diff` — the only failing steps were
+the two EXPECTED drifts: the native baseline (exactly the six
+predicted lines above) and the wordfreq GOLDEN pin, whose wire now
+carries the quarantined `goleanShimUnsupported` decl — the diff is
+exactly that appended stub. Both re-pinned deliberately in this
+commit; `scripts/check-golden` green on all pins after the re-pin,
+and the wordfreq proof modules (`GoLeanProofs.Examples.WordFreq`,
+`Audit.WordFreq`) rebuilt green against the new term. Baseline
+re-pinned 2443 cases, 2280/163.)

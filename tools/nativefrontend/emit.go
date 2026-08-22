@@ -1548,6 +1548,15 @@ func (e *emitter) quarantinedMethodStub(d *ast.FuncDecl, u unsupported) (map[str
 }
 
 func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
+	// goleanShimUnsupported is FORCE-QUARANTINED (audit R4-C-3): its
+	// wire declaration is an unsupported stub, so calling it throws
+	// GoError.unsupported — the unrecoverable interpreter-level stop
+	// every golean shim RUNTIME refusal routes through. Its Go body
+	// (panic(msg)) exists only to type-check; returning unsup here
+	// hands it to the ordinary per-decl quarantine machinery.
+	if d.Recv == nil && d.Name.Name == shimUnsupportedName {
+		return nil, unsup("golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers")
+	}
 	sig := e.info.Defs[d.Name].Type().(*types.Signature)
 	e.curResults = sig.Results()
 	// Named-result shadow renaming (resultshadow.go): rebuilt per body.

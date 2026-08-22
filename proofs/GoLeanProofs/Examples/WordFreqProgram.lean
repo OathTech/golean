@@ -922,6 +922,15 @@ def wordfreqLowered : Program :=
                                    (GoLean.GoCore.Expr.var "out"),
                                  GoLean.GoCore.Stmt.returnStmt]],
                  variadic := false,
+                 wrapper := false },
+               { id := { key := "goleanShimUnsupported" },
+                 args := #[{ id := "$stub0",
+                             typ := GoLean.GoCore.Ty.unsupported
+                                      "frontend-quarantined: golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers" }],
+                 results := #[],
+                 body := GoLean.GoCore.Stmt.unsupported
+                           "frontend-quarantined: golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers",
+                 variadic := false,
                  wrapper := false }],
     methods := #[],
     globals := #[],

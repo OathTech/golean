@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+# R4-C-3 (audit fix round): shim refusals are UNRECOVERABLE stops.
+# All three rows RED BY DESIGN at frontend-export post-fix; pre-fix
+# they were SILENT WRONG ANSWERS through recover() (see main.go).
+parse-recover	parseRecover	-	ok	-	stdlib,strings,panic,recover,defer
+split-recover	splitRecover	-	ok	-	stdlib,strings,panic,recover,defer
+render-recover	renderRecover	-	ok	-	stdlib,strings,methods,defined_type

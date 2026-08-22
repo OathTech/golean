@@ -115,6 +115,22 @@ const binaryLEPutUint64ShimName = "goleanShimLEPutUint64"
 // guaranteed to be stable"), and cmp.Compare's kind shims (emit-time
 // dispatch by static kind with explicit converts — floats excluded,
 // NaN ordering is cmp.Compare-specific and unneeded).
+
+// shimUnsupportedName (audit R4-C-3): the one helper every golean
+// RUNTIME refusal routes through. Its DECLARATION is force-quarantined
+// by the emitter (emitFuncDecl special-cases the name), so a call to
+// it throws GoError.unsupported — an interpreter-level stop that user
+// recover() CANNOT catch (a StepFn `throw` never enters the
+// .panicking machinery). As plain `panic("golean ...")`s these
+// refusals were RECOVERABLE, and ordinary defensive idioms (recover
+// around a parse; fmt's own recover around a user String()) turned
+// them into silent wrong answers — probe r4-p2, rows
+// panic-recover/shim-refusal-unrecoverable. UPSTREAM-FAITHFUL panics
+// (strconv illegal-base, strings negative-Repeat, the b[7] bounds
+// shapes) stay ordinary panics: gc panics there too, and recover MUST
+// catch them. Injected whenever any shim is (it costs one dead decl).
+const shimUnsupportedName = "goleanShimUnsupported"
+
 const strconvFormatUintShimName = "goleanShimStrconvFormatUint"
 const strconvFormatIntShimName = "goleanShimStrconvFormatInt"
 const strconvParseUintShimName = "goleanShimStrconvParseUint"
@@ -214,6 +230,7 @@ var stdlibShimDeclNames = map[string][]string{
 	cmpCompareUintShimName:   {cmpCompareUintShimName},
 	cmpCompareIntShimName:    {cmpCompareIntShimName},
 	cmpCompareStringShimName: {cmpCompareStringShimName},
+	shimUnsupportedName:      {shimUnsupportedName},
 }
 
 // stdlibShimSources: shim declaration name -> Go source of the
@@ -445,7 +462,8 @@ func goleanShimFmtQuoteString(s string) string {
 		case c < 0x80:
 			out = append(out, '\\', 'x', hexits[c>>4], hexits[c&0xf])
 		default:
-			panic("golean fmt shim: %q over a non-ASCII byte is outside the modeled subset (fail closed; the modeled %q covers ASCII)")
+			goleanShimUnsupported("golean fmt shim: %q over a non-ASCII byte is outside the modeled subset (fail closed; the modeled %q covers ASCII)")
+			panic("unreachable: the machine stopped in goleanShimUnsupported above")
 		}
 	}
 	out = append(out, '"')
@@ -462,6 +480,10 @@ func goleanShimFmtQuoteString(s string) string {
 // below and this call sits OUTSIDE it. If it sat inside, %q's
 // fail-closed non-ASCII panic would be caught and re-rendered as a
 // String-method panic: a silent wrong answer replacing a refusal.
+// [Since audit R4-C-3 the refusal is a goleanShimUnsupported THROW
+// that no recover can catch, so the frame placement is no longer
+// load-bearing for refusals — it remains load-bearing for GENUINE
+// user-method panics, whose render must not verb-process.]
 func goleanShimFmtStringVerb(verb string, s string) string {
 	if verb == "x" {
 		return goleanShimFmtHexString(s)
@@ -535,7 +557,8 @@ func goleanShimFmtPanicValue(r any) string {
 	if e, ok := r.(error); ok {
 		return e.Error()
 	}
-	panic("golean fmt shim: a String/Error method panicked with a value kind outside the modeled subset (fail closed)")
+	goleanShimUnsupported("golean fmt shim: a String/Error method panicked with a value kind outside the modeled subset (fail closed)")
+	panic("unreachable: the machine stopped in goleanShimUnsupported above")
 }
 
 // The %<width>d family (W4.3 item 1): space-pad LEFT to the width, the
@@ -593,7 +616,8 @@ type goleanShimStringer interface{ String() string }
 // closed; nothing in the subject tree implements fmt.Formatter.
 func goleanShimFmtDynVerb(verb string, a any) string {
 	if verb == "%" {
-		panic("golean fmt shim: unreachable %% arm")
+		goleanShimUnsupported("golean fmt shim: unreachable %% arm")
+		panic("unreachable: the machine stopped in goleanShimUnsupported above")
 	}
 	if verb == "s" || verb == "v" || verb == "x" || verb == "q" {
 		if e, ok := a.(error); ok {
@@ -672,7 +696,8 @@ func goleanShimFmtDynVerb(verb string, a any) string {
 			return out + "]"
 		}
 	}
-	panic("golean fmt shim: dynamic verb %" + verb + " over an unmodeled dynamic kind (fail closed)")
+	goleanShimUnsupported("golean fmt shim: dynamic verb %" + verb + " over an unmodeled dynamic kind (fail closed)")
+	panic("unreachable: the machine stopped in goleanShimUnsupported above")
 }
 
 func goleanShimFmtDynInt(verb string, v int64) string {
@@ -682,7 +707,8 @@ func goleanShimFmtDynInt(verb string, v int64) string {
 	if verb == "x" && v >= 0 {
 		return goleanShimFmtHex(uint64(v))
 	}
-	panic("golean fmt shim: dynamic verb %" + verb + " over a signed-integer kind (fail closed)")
+	goleanShimUnsupported("golean fmt shim: dynamic verb %" + verb + " over a signed-integer kind (fail closed)")
+	panic("unreachable: the machine stopped in goleanShimUnsupported above")
 }
 
 func goleanShimFmtDynUint(verb string, v uint64) string {
@@ -692,7 +718,8 @@ func goleanShimFmtDynUint(verb string, v uint64) string {
 	if verb == "x" {
 		return goleanShimFmtHex(v)
 	}
-	panic("golean fmt shim: dynamic verb %" + verb + " over an unsigned-integer kind (fail closed)")
+	goleanShimUnsupported("golean fmt shim: dynamic verb %" + verb + " over an unsigned-integer kind (fail closed)")
+	panic("unreachable: the machine stopped in goleanShimUnsupported above")
 }
 
 func goleanShimFmtSprintfDyn(format string, args []any) string {
@@ -707,7 +734,8 @@ func goleanShimFmtSprintfDyn(format string, args []any) string {
 			continue
 		}
 		if i+1 >= len(format) {
-			panic("golean fmt shim: dynamic format string ends in % (fail closed)")
+			goleanShimUnsupported("golean fmt shim: dynamic format string ends in % (fail closed)")
+			panic("unreachable: the machine stopped in goleanShimUnsupported above")
 		}
 		i++
 		verb := format[i : i+1]
@@ -721,21 +749,25 @@ func goleanShimFmtSprintfDyn(format string, args []any) string {
 				verb = "v"
 				i++
 			} else {
-				panic("golean fmt shim: dynamic verb %+" + format[i+1:i+2] + " is outside the modeled subset (fail closed)")
+				goleanShimUnsupported("golean fmt shim: dynamic verb %+" + format[i+1:i+2] + " is outside the modeled subset (fail closed)")
+				panic("unreachable: the machine stopped in goleanShimUnsupported above")
 			}
 		}
 		if verb != "d" && verb != "x" && verb != "s" && verb != "v" && verb != "q" && verb != "t" {
-			panic("golean fmt shim: dynamic verb %" + verb + " is outside the modeled subset (fail closed)")
+			goleanShimUnsupported("golean fmt shim: dynamic verb %" + verb + " is outside the modeled subset (fail closed)")
+			panic("unreachable: the machine stopped in goleanShimUnsupported above")
 		}
 		if ai >= len(args) {
-			panic("golean fmt shim: dynamic format has more verbs than arguments (fmt would render a %! marker; fail closed)")
+			goleanShimUnsupported("golean fmt shim: dynamic format has more verbs than arguments (fmt would render a %! marker; fail closed)")
+			panic("unreachable: the machine stopped in goleanShimUnsupported above")
 		}
 		out += goleanShimFmtDynVerb(verb, args[ai])
 		ai++
 		i++
 	}
 	if ai != len(args) {
-		panic("golean fmt shim: dynamic format has fewer verbs than arguments (fmt would append %! extras; fail closed)")
+		goleanShimUnsupported("golean fmt shim: dynamic format has fewer verbs than arguments (fmt would append %! extras; fail closed)")
+		panic("unreachable: the machine stopped in goleanShimUnsupported above")
 	}
 	return out
 }
@@ -920,7 +952,8 @@ func goleanShimStrconvQuote(s string) string {
 		case c < 0x80:
 			out = append(out, '\\', 'x', hexits[c>>4], hexits[c&0xf])
 		default:
-			panic("golean strconv shim: quoting a non-ASCII input is outside the modeled subset (fail closed)")
+			goleanShimUnsupported("golean strconv shim: quoting a non-ASCII input is outside the modeled subset (fail closed)")
+			panic("unreachable: the machine stopped in goleanShimUnsupported above")
 		}
 	}
 	out = append(out, '"')
@@ -929,13 +962,15 @@ func goleanShimStrconvQuote(s string) string {
 
 func goleanShimStrconvParseUint(s string, base int, bitSize int) (uint64, error) {
 	if base < 2 || base > 36 {
-		panic("golean strconv shim: ParseUint base outside 2..36 (base-0 prefix detection is outside the modeled subset; fail closed)")
+		goleanShimUnsupported("golean strconv shim: ParseUint base outside 2..36 (base-0 prefix detection is outside the modeled subset; fail closed)")
+		panic("unreachable: the machine stopped in goleanShimUnsupported above")
 	}
 	if bitSize == 0 {
 		bitSize = 64
 	}
 	if bitSize < 0 || bitSize > 64 {
-		panic("golean strconv shim: ParseUint bitSize outside 0..64 (fail closed)")
+		goleanShimUnsupported("golean strconv shim: ParseUint bitSize outside 0..64 (fail closed)")
+		panic("unreachable: the machine stopped in goleanShimUnsupported above")
 	}
 	syntaxErr := func() (uint64, error) {
 		return 0, &goleanShimStrconvError{s: "strconv.ParseUint: parsing " + goleanShimStrconvQuote(s) + ": invalid syntax"}
@@ -988,7 +1023,8 @@ func goleanShimStrconvParseUint(s string, base int, bitSize int) (uint64, error)
 // (W4.3 item 1 landing B). Injected declaration — not user code.
 func goleanShimStringsSplit(s, sep string) []string {
 	if len(sep) == 0 {
-		panic("golean strings shim: Split with an empty separator (per-rune explode) is outside the modeled subset (fail closed)")
+		goleanShimUnsupported("golean strings shim: Split with an empty separator (per-rune explode) is outside the modeled subset (fail closed)")
+		panic("unreachable: the machine stopped in goleanShimUnsupported above")
 	}
 	out := []string{}
 	start := 0
@@ -1121,6 +1157,22 @@ func goleanShimCmpCompareUint(a, b uint64) int {
 		return 1
 	}
 	return 0
+}
+`,
+
+	shimUnsupportedName: `
+// goleanShimUnsupported raises an UNRECOVERABLE machine stop (audit
+// R4-C-3): the emitter force-quarantines this declaration
+// (emitFuncDecl), so a CALL to it throws GoError.unsupported at the
+// interpreter level — user recover() cannot catch it. Every
+// golean-bound runtime refusal in the shim bodies routes through it;
+// as plain panics they were catchable and recover() turned refusals
+// into silent wrong answers. The Go body below exists for
+// type-checking only — it is never lowered. Call sites follow it
+// with panic("unreachable...") so Go's termination analysis is
+// unchanged; that panic is dead (the throw fires first).
+func goleanShimUnsupported(msg string) {
+	panic(msg)
 }
 `,
 
@@ -1282,6 +1334,12 @@ func injectStdlibShims(fset *token.FileSet, files []*ast.File) (*ast.File, error
 	if len(needed) == 0 {
 		return nil, nil
 	}
+	// Every shim bundle may route a runtime refusal through the
+	// unsupported helper (R4-C-3), so it rides along whenever ANY shim
+	// is injected — one dead declaration in the worst case, never a
+	// missing one. Added BEFORE the reserved-name scan so it is
+	// collision-checked like every other injected name.
+	needed[shimUnsupportedName] = true
 	// Reserved-name collision check: fail closed, loudly, BEFORE the
 	// type-checker reports a bare redeclaration. Ranges over EVERY name
 	// a needed shim injects (stdlibShimDeclNames), not just the key

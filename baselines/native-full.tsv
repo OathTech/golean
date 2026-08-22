@@ -1,20 +1,24 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-22 (raft W4.3 audit fix round, R1-F2 — branch
+# recorded: 2026-08-22 (raft W4.3 audit fix round, R4-C-3 — branch
 #   raft-w43; docs/raft-w43-log.md "Audit fix round").
-#   re-pin reason: THREE NEW ids, zero movement on any of the 2437 ids
-#   the previous record held (all drift lines
-#   "NEW id -> FAIL/frontend-export" — RED BY DESIGN).
-#     R1-F2: fmt.Formatter was never checked — gc consults Format for
-#     EVERY verb ahead of error/Stringer and the kind matrix, so a
-#     Formatter implementor rendered through String()/the kind matrix
-#     (witnessed pre-fix: machine "STR|STR"/"4|5"/"{STR}" vs gc's
-#     Format outputs). Static fmt sites now REFUSE Formatter
-#     implementors (types.Implements against the type-checked fmt
-#     import); the dyn shim's blindness to Formatter is a recorded
-#     bound at goleanShimFmtDynVerb:
-#     fmt/formatter-precedence/{over-stringer,over-kind-matrix,
-#     at-depth}, FAIL/frontend-export.
-# cases: 2440 (2280 PASS / 160 FAIL)
+#   re-pin reason: THREE NEW ids + THREE stage moves, zero other
+#   movement on the 2440 ids the previous record held.
+#     R4-C-3: golean shim RUNTIME refusals were ordinary Go panics —
+#     RECOVERABLE, so recover() idioms swallowed them into silent
+#     wrong answers (witnessed pre-fix: v=0 ok=false vs gc v=42
+#     ok=true; n=0 vs 3; %!v(PANIC=...) vs a normal render). All 15
+#     golean-bound panic sites now route through goleanShimUnsupported
+#     (force-quarantined; a call throws GoError.unsupported, which no
+#     recover can catch). Upstream-faithful panics stay panics.
+#     NEW: panic-recover/shim-refusal-unrecoverable/{parse,split,
+#     render}-recover, FAIL/frontend-export RED BY DESIGN.
+#     STAGE MOVES (same red, honest new mechanism):
+#     fmt/sprintf-dyn/{arity-mismatch,unmodeled-kind} and
+#     strings/split-conformance/empty-sep,
+#     FAIL/lean-observation -> FAIL/frontend-export.
+#     (The wordfreq golden pin re-pinned in this commit for the same
+#     change: the wire now carries the quarantined helper decl.)
+# cases: 2443 (2280 PASS / 163 FAIL)
 # frontend: native (tools/nativefrontend)
 result	id	stage
 PASS	arrays/array-bounds	-
@@ -809,14 +813,14 @@ FAIL	fmt/fprint-writers/multi-operand	frontend-export
 FAIL	fmt/fprint-writers/non-string	frontend-export
 PASS	fmt/fprintf-builder/describe-shape	-
 PASS	fmt/fprintf-builder/returns	-
-FAIL	fmt/sprintf-dyn/arity-mismatch	lean-observation
+FAIL	fmt/sprintf-dyn/arity-mismatch	frontend-export
 PASS	fmt/sprintf-dyn/logger-shape	-
 PASS	fmt/sprintf-dyn/sprint-nil	-
 PASS	fmt/sprintf-dyn/sprint-space-rule	-
 PASS	fmt/sprintf-dyn/sprintln	-
 PASS	fmt/sprintf-dyn/stringer-error	-
 PASS	fmt/sprintf-dyn/stringer-panic	-
-FAIL	fmt/sprintf-dyn/unmodeled-kind	lean-observation
+FAIL	fmt/sprintf-dyn/unmodeled-kind	frontend-export
 PASS	fmt/sprintf-dyn/verb-kinds	-
 PASS	fmt/sprintf-verbs/d-enum	-
 PASS	fmt/sprintf-verbs/d-int	-
@@ -1695,6 +1699,9 @@ FAIL	panic-recover/repanic-same-value-abort	lean-observation
 PASS	panic-recover/repanic-same-value-abort/forced-half	-
 PASS	panic-recover/return-expression-panic-recovered	-
 PASS	panic-recover/self-recovered-defer-panic	-
+FAIL	panic-recover/shim-refusal-unrecoverable/parse-recover	frontend-export
+FAIL	panic-recover/shim-refusal-unrecoverable/render-recover	frontend-export
+FAIL	panic-recover/shim-refusal-unrecoverable/split-recover	frontend-export
 PASS	panic-recover/unnamed-recover-zero-return	-
 PASS	pointers/address-array-index	-
 PASS	pointers/address-field	-
@@ -2282,7 +2289,7 @@ PASS	strings/slice-eval-order-elided-high	-
 PASS	strings/split-conformance/basic	-
 PASS	strings/split-conformance/confchange-shape	-
 PASS	strings/split-conformance/empty-input	-
-FAIL	strings/split-conformance/empty-sep	lean-observation
+FAIL	strings/split-conformance/empty-sep	frontend-export
 PASS	strings/split-conformance/multi-byte-sep	-
 PASS	strings/split-conformance/overlap	-
 PASS	strings/split-conformance/single-byte-sep	-
