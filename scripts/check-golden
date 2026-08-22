@@ -201,3 +201,7 @@ if ! cmp -s "$TWIN_BASE" "$WORK/twin.wire.json"; then
   exit 1
 fi
 echo "check-golden: ok [twin-wire] — fresh emit = pinned wire ($(sha256sum "$TWIN_BASE" | cut -c1-12)…)"
+# The EXIT trap uses `rm -f "$WORK"/*` (files only); this section's
+# directory must clean itself or the trap's failure exits the whole
+# script 1 with every entry green (bit us on first gate run).
+rm -rf "$TWIN_PROG"
