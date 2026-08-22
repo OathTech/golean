@@ -1,4 +1,5 @@
 import VerdiCompat.ElectionSpecLemmas
+import VerdiCompat.ProofStructure
 
 /-!
 # The election-safety invariant chain
@@ -548,6 +549,129 @@ theorem votes_correct_invariant :
       (votes_le_currentTerm_invariant net hreach) (fun hok _ => ?_)
     rw [hstate] at hok
     exact votes_ok_preserved rfl rfl hok
+
+/-! ## candidates_vote_for_selves (BASE layer —
+`CandidatesVoteForSelvesInterface.v` / `CandidatesVoteForSelvesProof.v`,
+through the already-ported base `raft_net_invariant`) -/
+
+local notation "RaftNet" => Network (raft_base_params (P := P)) raft_multi_params
+
+/-- `CandidatesVoteForSelvesInterface.v:8-11` (`candidates_vote_for_selves`). -/
+def candidates_vote_for_selves (net : RaftNet) : Prop :=
+  ∀ h : name (P := P), (net.nwState h).type = .Candidate →
+    (net.nwState h).votedFor = some h
+
+/-- One-node update step for `candidates_vote_for_selves` (pointwise
+plumbing, mirroring `votes_correct_of_update` at the base layer). -/
+theorem cvfs_of_update {net net' : RaftNet} {h : name (P := P)}
+    {d : raft_data (P := P)}
+    (hst : ∀ h0, net'.nwState h0 = update net.nwState h d h0)
+    (hP : candidates_vote_for_selves net)
+    (hnode : ((net.nwState h).type = .Candidate →
+        (net.nwState h).votedFor = some h) →
+      (d.type = .Candidate → d.votedFor = some h)) :
+    candidates_vote_for_selves net' := by
+  intro h0
+  rw [hst h0]
+  unfold update
+  split
+  · rename_i heq
+    subst heq
+    exact hnode (hP h0)
+  · exact hP h0
+
+/-- `CandidatesVoteForSelvesProof.v:110-129`
+(`candidates_vote_for_selves_invariant`) — proved through the BASE
+`raft_net_invariant`: a candidate has always voted for itself. -/
+theorem candidates_vote_for_selves_invariant :
+    ∀ net, raft_intermediate_reachable (P := P) net →
+      candidates_vote_for_selves net := by
+  refine raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · -- init: type Follower
+    intro h hty
+    exact nomatch hty
+  · -- client_request
+    intro h net st' ps' out d l client id c hcr hP _hreach hst _hps
+    obtain ⟨hty, -, hvf, -, -⟩ := handleClientRequest_spec h (net.nwState h) client id c hcr
+    refine cvfs_of_update hst hP (fun hn hcand => ?_)
+    rw [hvf]
+    exact hn (hty.symm.trans hcand)
+  · -- timeout
+    intro net h st' ps' out d l hto hP _hreach hst _hps
+    obtain ⟨-, hcases, -⟩ := handleTimeout_spec h (net.nwState h) hto
+    refine cvfs_of_update hst hP (fun hn hcand => ?_)
+    rcases hcases with ⟨-, hty, hvf, -⟩ | ⟨-, -, hvf, -, -⟩
+    · rw [hvf]
+      exact hn (hty.symm.trans hcand)
+    · exact hvf
+  · -- append_entries: candidate ⇒ rejected ⇒ untouched
+    intro xs p ys net st' ps' d m t n pli plt es ci hae _hbody hP _hreach _hpkts
+      hst _hps
+    refine cvfs_of_update hst hP (fun hn hcand => ?_)
+    have heq := handleAppendEntries_reject_of_not_follower p.pDst
+      (net.nwState p.pDst) t n pli plt es ci hae
+      (fun hf => nomatch hcand.symm.trans hf)
+    rw [heq] at hcand ⊢
+    exact hn hcand
+  · -- append_entries_reply
+    intro xs p ys net st' ps' d m t es res haer _hbody hP _hreach _hpkts hst _hps
+    obtain ⟨-, hcases, -⟩ :=
+      handleAppendEntriesReply_spec p.pDst (net.nwState p.pDst) p.pSrc t es res haer
+    refine cvfs_of_update hst hP (fun hn hcand => ?_)
+    rcases hcases with ⟨-, hvf, hty⟩ | ⟨-, -, hty⟩
+    · rw [hvf]
+      exact hn (hty.symm.trans hcand)
+    · exact absurd (hty.symm.trans hcand) (fun hh => nomatch hh)
+  · -- request_vote
+    intro xs p ys net st' ps' d m t cid lli llt hrv _hbody hP _hreach _hpkts
+      hst _hps
+    obtain ⟨-, -, htycase, hvfcase⟩ :=
+      handleRequestVote_spec p.pDst (net.nwState p.pDst) t p.pSrc lli llt hrv
+    refine cvfs_of_update hst hP (fun hn hcand => ?_)
+    rcases htycase with ⟨hcteq, hty⟩ | hty
+    · rcases hvfcase hcteq with hpres | ⟨hnone, -⟩
+      · rw [hpres]
+        exact hn (hty.symm.trans hcand)
+      · exact absurd (hn (hty.symm.trans hcand))
+          (by rw [hnone]; exact fun hh => nomatch hh)
+    · exact absurd (hty.symm.trans hcand) (fun hh => nomatch hh)
+  · -- request_vote_reply
+    intro xs p ys net st' ps' d t v hrvr _hbody hP _hreach _hpkts hst _hps
+    obtain ⟨hvfcase, -, htycand, -⟩ :=
+      handleRequestVoteReply_spec p.pDst (net.nwState p.pDst) p.pSrc t v hrvr
+    refine cvfs_of_update hst hP (fun hn hcand => ?_)
+    obtain ⟨hty, hcteq⟩ := htycand hcand
+    rcases hvfcase with ⟨-, hvf⟩ | ⟨hlt, -⟩
+    · rw [hvf]
+      exact hn hty
+    · exact absurd hcteq (Nat.ne_of_gt hlt)
+  · -- do_leader
+    intro net st' ps' d h os d' ms hdl hP _hreach hstate hst _hps
+    obtain ⟨-, hvf, hty, -, -, -⟩ := doLeader_spec d h hdl
+    refine cvfs_of_update hst hP (fun hn hcand => ?_)
+    rw [hstate] at hn
+    rw [hvf]
+    exact hn (hty.symm.trans hcand)
+  · -- do_generic_server
+    intro net st' ps' d os d' ms h hgs hP _hreach hstate hst _hps
+    obtain ⟨-, hty, -, -, hvf, -⟩ := doGenericServer_spec h d hgs
+    refine cvfs_of_update hst hP (fun hn hcand => ?_)
+    rw [hstate] at hn
+    rw [hvf]
+    exact hn (hty.symm.trans hcand)
+  · -- state_same_packet_subset
+    intro net net' hstates _hpkts hP _hreach h0
+    rw [← hstates h0]
+    exact hP h0
+  · -- reboot: a rebooted node is a follower
+    intro net net' d h d' hrb hP _hreach hstate hst _hpkts h0
+    rw [hst h0]
+    unfold update
+    split
+    · subst hrb
+      intro hcand
+      exact nomatch hcand
+    · exact hP h0
 
 end ElectionSafety
 

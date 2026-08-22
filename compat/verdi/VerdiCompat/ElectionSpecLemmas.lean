@@ -125,6 +125,22 @@ theorem handleAppendEntries_spec (me : name (P := P)) (st : raft_data (P := P))
         · exact Or.inl ⟨h1, h2⟩
         · exact Or.inr ⟨h1, h2⟩
 
+/-- Branch correlation the blanket spec loses: an AppendEntries that
+leaves the receiver a candidate or leader was REJECTED — the state is
+untouched (accept branches always demote to follower). -/
+theorem handleAppendEntries_reject_of_not_follower (me : name (P := P))
+    (st : raft_data (P := P)) (t : term) (lid : name (P := P)) (pli : logIndex)
+    (plt : term) (es : List (entry (P := P))) (ci : logIndex) {st' m}
+    (h : handleAppendEntries me st t lid pli plt es ci = (st', m))
+    (hty : st'.type ≠ .Follower) : st' = st := by
+  unfold handleAppendEntries at h
+  repeat' split at h
+  all_goals simp only [Prod.mk.injEq] at h
+  all_goals obtain ⟨rfl, rfl⟩ := h
+  all_goals first
+    | rfl
+    | exact absurd rfl hty
+
 /-- Subsumes `handleAppendEntriesReply_currentTerm` (`SpecLemmas.v:91`),
 `handleAppendEntriesReply_same_term_votedFor_preserved` (`:60`),
 `handleAppendEntriesReply_term_votedFor` (`:1258`), and the packet fact
