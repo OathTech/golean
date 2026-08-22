@@ -22,10 +22,14 @@ import "reflect"
 // by this fixture's needs — a corpus-scoped refusal inversion (common
 // Go kept refused to keep a witness stable); the lesson is to pick
 // the cause by structural distance from the modeled envelope, not by
-// "currently unmodeled". Reflection is the deep-latitude surface the
-// closed-world frontend does not model by doctrine. No eternal
-// refusal exists: if reflect ever lowers, this row flips LOUDLY in
-// the baseline and must be retargeted again, never let go green.
+// "currently unmodeled". WHY REFLECTION IS FAR: the frontend lowers a
+// CLOSED WORLD of statically instantiated types, and reflect.TypeOf
+// asks about a value's DYNAMIC type — a question the wire's static
+// type channel does not carry. That is a scope statement about this
+// frontend, not a claim that reflection is unmodelable in principle.
+// No eternal refusal exists: if reflect ever lowers, this row flips
+// LOUDLY in the baseline and must be retargeted again, never let go
+// green.
 
 type s6box[T any] struct{ v T }
 

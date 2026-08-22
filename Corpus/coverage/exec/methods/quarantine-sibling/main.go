@@ -10,10 +10,13 @@ import "reflect"
 // `fmt.Sprint` lowered when R4-M-1 modeled the fixed-arity form (this
 // file was the near-miss the audit round CAUGHT mid-slice: the row had
 // already flipped green — the exact lost-witness class this comment
-// warns about). Reflection is the deep-latitude surface the
-// closed-world frontend does not model by doctrine; if it ever lowers,
-// the baseline flags the flip loudly — retarget again, never let it
-// go green.
+// warns about). WHY REFLECTION IS FAR: the frontend lowers a CLOSED
+// WORLD of statically instantiated types, and reflect.TypeOf asks
+// about a value's DYNAMIC type — a question the wire's static type
+// channel does not carry. That is a scope statement about this
+// frontend, not a claim that reflection is unmodelable in principle;
+// if it ever lowers, the baseline flags the flip loudly — retarget
+// again, never let it go green.
 
 type counter struct{ n int }
 

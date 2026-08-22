@@ -19,7 +19,11 @@
 // function-local variable definition whose name collides with a named
 // result of the ENCLOSING function is renamed `<name>$shadow<n>`, and
 // every read/write/declare/address-of of that OBJECT follows the rename
-// (the four local-name emission sites consult e.localRenames). Nested
+// (the local-name emission sites consult e.localRenames — 8 at this
+// writing, enumerated by the delta-review: emit.go 3057, 3079, 3182,
+// 3576, 5783, 5916, 6343, 6506. "Four" was the count when the first
+// three audit rounds patched them one at a time; grep `e.localRename(`
+// for the live set rather than trusting a number here). Nested
 // function literals are pruned from the scan — their frames have their
 // own result slots and their own scan; a lit-local shadowing an OUTER
 // result can only reach the outer frame through the capture machinery,

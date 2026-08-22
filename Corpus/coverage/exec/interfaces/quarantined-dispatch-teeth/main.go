@@ -27,7 +27,8 @@ type quietLog struct{ n int }
 func (l *quietLog) Infof(format string, v ...any) { l.n += len(v) + len(format) }
 
 // uninstalled: the DefaultLogger shape — the body keeps a standing
-// refusal (reflection is outside the modeled subset by doctrine), so
+// refusal (reflect.TypeOf asks a DYNAMIC-type question the frontend's
+// closed static world does not carry), so
 // the method lands as a fail-closed stub.
 type fancyLog struct{ out string }
 

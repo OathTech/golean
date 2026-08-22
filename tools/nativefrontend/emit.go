@@ -791,7 +791,13 @@ func (e *emitter) quarantineUnlowerableGlobals() error {
 			// "lowers here" and "lowers there" are the same question.
 			e.curFuncName = "$pkginit"
 			e.liftSeq = 0
-			e.curResults = nil
+			// localRenames rides WITH curResults (resultshadow.go): the
+			// pkginit body has no result slots, so it must have no
+			// rename table either. Clearing curResults alone would let
+			// the previously-emitted function's table leak in and
+			// rename a same-named initializer local — latent, since
+			// this path never calls resultShadowScan (delta-review LOW).
+			e.curResults, e.localRenames = nil, nil
 			e.fnHasRecv = containsRecv(as)
 			localTypesMark := len(e.localTypeDefs)
 			localIfaceMark := len(e.localIfaceMethods)
@@ -1291,7 +1297,9 @@ func (e *emitter) synthesizePkgInit() (map[string]any, error) {
 	}
 	e.curFuncName = "$pkginit"
 	e.liftSeq = 0
-	e.curResults = nil
+	// localRenames rides WITH curResults — see quarantineUnlowerableGlobals
+	// above for why clearing only one of the pair is a latent alias trap.
+	e.curResults, e.localRenames = nil, nil
 	// One function body, one receive flag (the flag is FUNCTION-scoped
 	// by design — BUG-026): scan every unit's initializers before
 	// emitting any segment.

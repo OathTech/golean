@@ -71,10 +71,14 @@ func (t T) Bad(a int, rest ...string) (int, error) {
 	// previous comment's "the witnesses depend on fmt.Sprint refusing"
 	// was a corpus-scoped refusal inversion — the LESSON is to pick a
 	// cause by structural distance from the modeled envelope, not by
-	// "currently unmodeled"). Reflection is the deep-latitude surface
-	// the closed-world frontend does not model by doctrine; no eternal
-	// refusal exists, but if reflect ever lowers, this test and the
-	// corpus siblings go red/green LOUDLY and retarget again.
+	// "currently unmodeled"). WHY REFLECTION IS FAR: the frontend
+	// lowers a CLOSED WORLD of statically instantiated types, and
+	// reflect.TypeOf asks about a value's DYNAMIC type, which the
+	// wire's static type channel does not carry — a scope statement
+	// about this frontend, not a claim that reflection is unmodelable
+	// in principle. No eternal refusal exists: if reflect ever lowers,
+	// this test and the corpus siblings go red/green LOUDLY and
+	// retarget again.
 	return len(reflect.TypeOf(a).String()), nil
 }
 

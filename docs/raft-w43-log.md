@@ -381,7 +381,7 @@ against what exists, row by row:
 | the twin as a corpus family | **LANDED**: `multipkg/mini-raft-twin` — a SELF-CONTAINED 3-node mini-raft (`mpb`/`mnode` + a schedule-driven driver: message bag with removal-by-index, S1–S3 per step, S4 at the end). NOT the subject tree (the corpus never vendors 10k lines; the twin instrument drives the real raft) — this pins the language-shape COMPOSITION in the gated corpus. `elect-propose-commit` commits 2 commands on all 3 nodes, viol=0. Deterministic ×3 (md5-identical go runs). Building it found a mini-protocol bug worth recording: the first cut's AppResp carried no commit, so the leader's commit-update ping-ponged to the drain cap — seconds native, MINUTES under the interpreter (how the corpus run surfaced it as a timeout); the fix is the honest protocol (AppResp carries the follower's commit). |
 | the perturbation schedules as corpus rows | **LANDED**: `perturb-rev` (reverse-order drain), `perturb-picks` (explicit picks, commit at quorum {1,3} while 2 lags), `starve-node` (S1–S3 hold, S4=2/3 EXPECTED — conditioned safety), `duel` (two candidates one term, S1's workout). All green strict rows. |
 | the logger-teeth pair | **LANDED**: `interfaces/quarantined-dispatch-teeth` — `installed` green through a modeled impl; `uninstalled` RED BY DESIGN (dispatch through the interface to a concrete method whose body keeps a standing fmt refusal is a per-declaration-quarantined stub — the machine stops the moment the call lands; go run formats). The W4.2 probe pair's mechanism, gate-visible. |
-| the choice-stream membership row | **LANDED**: `mini-raft-twin/choice-order`, lane=membership — the delivery-order draw over a fresh campaign's two vote requests via the map-iteration pick (the D-11 idiom): admitted set {21, 31}, **enumerated=2; the recorded sampling exhibited 1 of 2** — all 10 recorded samples returned 21, and 31 sits in the record's `unexhibited.txt`. [Corrected by the audit fix round, R3-F-1: the first version said "exhibited=2", overstating the record — the tracked artifact contradicts it. The DISCHARGE is unaffected and is exactly this: membership means observed ⊆ modeled, so an unexhibited member weakens no row; the row's PASS is the 10 samples' inclusion. The second member is REAL, just rare: a 200-run ad-hoc measurement (2026-08-22, the strict-harness binary in a loop) observed 31 on 23/200 plain runs and 24/200 under `-race` (~12%); the width-2 claim rests on the ENUMERATOR (machine-side, `enum-stats.txt` observations=2) plus that measured tail — stated as exactly that, not as sampling evidence the record does not contain.] Kept MINIMAL on purpose (the two-node kernel Campaign→pick→Step): the enumerator re-executes per stream probe, so the full-driver form exceeded its work cap honestly (recorded in the case comment); the driver-level schedules stay strict rows. |
+| the choice-stream membership row | **LANDED**: `mini-raft-twin/choice-order`, lane=membership — the delivery-order draw over a fresh campaign's two vote requests via the map-iteration pick (the D-11 idiom): admitted set {21, 31}, **width 2 on the ENUMERATOR's evidence** (machine-side `enum-stats.txt`: `observations=2`) — that is the discharge evidence, and it is the only part of this row that is reproducible. EXHIBITION IS SAMPLED PER RUN AND VARIES: the per-run rate for the rarer member (31) measured ~12% (23/200 plain, 24/200 under `-race`; 2026-08-22, the strict-harness binary in a loop), so a 10-sample record may show zero, one, or several — no fixed exhibition count belongs in this document. [Corrected TWICE. v1 said "exhibited=2", overstating the record. The audit fix round's R3-F-1 then OVERCORRECTED, asserting three things that are all false of the artifact it cited: that all 10 samples returned 21 (`samples.txt` under `artifacts/coverage/membership/multipkg/mini-raft-twin/choice-order/` holds 8×21 + 2×31), that 31 "sits in the record's `unexhibited.txt`" (that file is ZERO BYTES), and that this is a "tracked artifact" (it lives under gitignored `artifacts/` — `.gitignore:5:/artifacts` — and is not tracked at all). Delta-review MEDIUM-1 replaced the whole claim with the form above: run-dependent numbers are not stated as fixed. The DISCHARGE never depended on exhibition: membership means observed ⊆ modeled, so the row's PASS is its samples' INCLUSION in the admitted set, and the width-2 claim rests on the enumerator.] Kept MINIMAL on purpose (the two-node kernel Campaign→pick→Step): the enumerator re-executes per stream probe, so the full-driver form exceeded its work cap honestly (recorded in the case comment); the driver-level schedules stay strict rows. |
 | ok-tier trace replays as corpus rows | **DISPOSED as instrument-covered (JC-33)**: the trace differential is a standing instrument (`tracereplay.py`, all three channels) whose per-trace machine runs cost interpreter-minutes-to-hours — the same wall-time bound that keeps it out of the gate keeps it out of the corpus (a corpus row would either vendor the subject tree or time out). The instrument, not a corpus duplicate, is the record; gate inclusion re-opens if an interpreter-performance pass lands (the W4.2 open question, unchanged). |
 | the D-12 refusal tripwire | **LANDED**: `init/quarantined-var-writer` — the raftsubject logger.go initializer shape VERBATIM (`&T{F: log.New(os.Stderr, ...)}`), red at frontend-export by design; a future widening that silently admitted the three-axis shape flips it PASS, which is the alarm. (The related F1-widening rows `init/quarantined-var-{impure,syscall,...}` landed in the holes arc and stand — cross-checked; this row adds the WRITER-typed instance H-20's ledger entry names.) |
 
@@ -1091,7 +1091,18 @@ naming the finding); this entry is the index for the delta-reviewer:
 - **R2-F3** — the inflight PRESENCE fix (2 lines): absent is now -1,
   so an explicit `inflight=0` reaches the config as upstream would
   see it. Spot-verified green on an inflight-carrying trace
-  (lagging_commit 17/17 blocks, go tier).
+  (lagging_commit 17/17 blocks, go tier). **Hygiene acknowledgment
+  (delta-review MEDIUM-2): this was an INSTRUMENT CODE change that
+  rode in a records commit on a spot-check** — the wrong split twice
+  over (code beside records; one trace standing in for the suite it
+  could perturb). Discharged after the fact, not excused: the FULL
+  go-side suite was re-run at the delta-review fix round's tip
+  (`tracereplay.py --no-machine`, all 28 traces, 558 blocks) —
+  **206/206 ok-tier and 148/148 rendered-tier, unchanged**, with the
+  supported-prefix census also unchanged at 354/558 (63.4%)
+  (`.tmp/deltafix-traces-nomachine.log`). The rule this cost us:
+  instrument code lands in its own commit with the instrument's own
+  full suite, however cheap the diff looks.
 - **R2-F5..F7** — the reviewer's one-liner list did not survive to a
   disk record; in its place the instrument's remaining doc claims
   were proofread against code and upstream (peekMsgs's
@@ -1099,10 +1110,18 @@ naming the finding); this entry is the index for the delta-reviewer:
   interaction_env_handler_stabilize.go:79 — correct as written; no
   further false statements found beyond the R2-F1/F2 set). Stated so
   the delta-review knows what was and was not covered.
-- **R3-F-1** — choice-order's "exhibited=2" corrected to the record
-  (exhibited 1 of 2; unexhibited.txt holds 31) at BOTH log sites, the
-  discharge restated as membership inclusion, and the second member's
-  reality measured fresh: 23/200 plain + 24/200 -race (~12%).
+- **R3-F-1** — choice-order's "exhibited=2" corrected at both log
+  sites, the discharge restated as membership inclusion, and the
+  second member's reality measured fresh: 23/200 plain + 24/200
+  -race (~12%). **This correction was ITSELF wrong and is superseded**
+  (delta-review MEDIUM-1): it replaced one fixed exhibition count with
+  another ("exhibited 1 of 2; unexhibited.txt holds 31") and called a
+  gitignored `artifacts/` path a tracked artifact — `samples.txt`
+  holds 8×21 + 2×31 and `unexhibited.txt` is zero bytes. See the
+  wave-5a entry for the honest form: exhibition is sampled per run and
+  varies; the ENUMERATOR (`observations=2`) is the width evidence.
+  The lesson worth keeping: a correction that swaps one unreproducible
+  number for another has not been grounded — open the artifact.
 - **R3-F-2** — the census: 12 partial traces (not 22),
   compact/send-snapshot 3 stops (not 5) — re-counted from the
   go-side report artifact.
@@ -1121,6 +1140,133 @@ naming the finding); this entry is the index for the delta-reviewer:
   39.
 - **R3-F-9** — BUG-068's "40-line probe" corrected to 50
   (`wc -l probe-autoleave/main.go` = 50).
+
+---
+
+## Delta-review micro fix round (2026-08-22) — the convergence round
+
+The audit fix round's own diff got a DELTA-REVIEW (the merge
+protocol's step-3 follow-through for substantive audit-response
+commits). It returned one CRITICAL, two MEDIUMs, four LOWs and an
+INFO. All are dispositioned here; the semantics finding got guardrails
+first, in its own commit, before the fix.
+
+### CRITICAL-1 — the two reflect read-only flags are TWO flags
+
+R1-F1 modeled "crossing an unexported field taints the subtree" with a
+single `tainted` bool. reflect has two bits and `Value.Field` is the
+one descent that tells them apart:
+
+```go
+fl := v.flag&(flagStickyRO|flagIndir|flagAddr) | flag(typ.Kind())
+if !field.name.IsExported() {
+    if field.embedded() { fl |= flagEmbedRO } else { fl |= flagStickyRO }
+}
+```
+
+A field inherits ONLY the sticky bit. `CanInterface()` — what gates
+fmt's `handleMethods` at depth — tests `flagRO = sticky|embed`, so an
+**embedded** unexported field is method-suppressed at its own level
+while its children start clean. Every other descent (`Index`, `Elem`,
+`MapIndex`) runs through `flag.ro()`, which collapses either bit to
+sticky. Conflating the two suppressed whole embedded subtrees: a
+Stringer below an embedded unexported field rendered raw where gc
+renders it — a silent wrong answer, and in the Formatter case
+`{{1}}` where gc says `{{FMT:v:1}}`.
+
+Nine guardrail rows landed FIRST (commit `1f2b23cf`,
+`Corpus/coverage/exec/fmt/v-composites`, ids `emb-*`), six of them red,
+each against a fresh gc probe (`.tmp/deltarev`):
+
+| shape | gc | machine before | after |
+|---|---|---|---|
+| embedded-unexported, exported Stringer field (`%v`/`%+v`) | `{{E<4>}}` / `{embInner:{A:E<4>}}` | `{{4}}` / `{embInner:{A:4}}` | fixed |
+| two-level embedded-unexported | `{{{E<4>}}}` | `{{{4}}}` | fixed |
+| exported-embedded Mid over unexported-embedded deep | `{{E<1> {E<2>}}}` | `{{E<1> {2}}}` | fixed |
+| method at the embedded level, promotion ambiguous | `{{E<4>} {E<5>}}` | `{{4} {5}}` | fixed |
+| EXPORTED slice field under an embed | `{{[E<5> E<6>]}}` | `{{[5 6]}}` | fixed |
+| Formatter below an embed | `{{FMT:v:1}}` | `{{1}}` | REFUSES (red by design) |
+| unexported NON-embedded above an embed (sticky wins) | `{{{4}}}` | same | control, unmoved |
+| unexported non-embedded leaf under an embed | `{{4}}` | same | control, unmoved |
+| named-slice type embedded unexported (`ro()` collapse) | `{[5 6]}` | same | control, unmoved |
+
+The last three are the controls that keep R1-F1's sticky leg honest —
+a fix that widened the method arm back would flip them. The
+`emb-formatter-below` row moves from a differential FAIL (wrong
+answer) to a frontend-export FAIL (fail closed, naming
+`main.embFmt implements fmt.Formatter`): Format is still unmodeled, so
+refusing is the correct answer and the row stays RED BY DESIGN. Its
+going PASS without Format being modeled is the alarm.
+
+Fix in `fmtcomposite.go` (`56a12142`): the recursion carries `sticky`
+and a level-only `embedRO`; the method arm is gated on both; the slice
+lift keeps ONE parameter and is handed `sticky || embedRO`, mirroring
+`flag.ro()`. Baseline re-pinned from the full run in the same commit.
+
+### MEDIUM-1 — a correction that was itself wrong (see wave 5a)
+
+R3-F-1's correction of the choice-order exhibition claim replaced one
+unreproducible number with another and mis-described the artifact's
+tracked status. Corrected at both sites; the honest form states the
+enumerator as the width evidence and says outright that exhibition is
+sampled per run and varies. Full detail at the wave-5a row and in the
+records-commit index entry.
+
+### MEDIUM-2 — instrument code rode in a records commit
+
+R2-F3's inflight-presence fix. Acknowledged in the records-commit
+index and discharged with the FULL go-side suite at this round's tip:
+28 traces, 558 blocks, **206/206 ok-tier + 148/148 rendered-tier**,
+census 354/558 (63.4%) — all unchanged.
+
+### The LOWs
+
+- `resultshadow.go`'s "the four local-name emission sites" was stale;
+  there are **8** (`emit.go` 3057, 3079, 3182, 3576, 5783, 5916, 6343,
+  6506). The comment now names them and tells the reader to grep
+  `e.localRename(` rather than trust a count.
+- **A latent alias trap closed**: `synthesizePkgInit` and
+  `quarantineUnlowerableGlobals` both cleared `e.curResults` without
+  clearing `e.localRenames`. Neither path calls `resultShadowScan`
+  (which is what normally rebuilds the pair), so a previously-emitted
+  function's rename table could leak into the pkginit body and rename
+  a same-named initializer local. Not reachable by any corpus row
+  today — closed as a one-line pairing at both sites, with the reason
+  in the code.
+- The "reflection is the deep-latitude surface the closed-world
+  frontend does not model **by doctrine**" wording in the five
+  quarantine fixtures, `quarantine_test.go`, and
+  `quarantined-dispatch-teeth` overreached: it asserted a doctrinal
+  exclusion where the true statement is a SCOPE one. Reworded to it —
+  the frontend lowers a closed world of statically instantiated types
+  and `reflect.TypeOf` asks a dynamic-type question the wire's static
+  type channel does not carry. The "no eternal refusal / retarget
+  loudly" half is unchanged; it was the load-bearing part.
+
+### INFO — a known refusal recorded, not fixed
+
+`strconv.FormatInt` used ALONE fails frontend export with a
+type-checker error, not a named refusal:
+
+```
+nativefrontend: type-check: golean-stdlib-shims.go:450:16:
+  undefined: goleanShimStrconvFormatUint
+```
+
+Cause: the shim injection set is computed from USER call sites and has
+no closure over shim→shim calls, and `goleanShimStrconvFormatInt`'s
+body is the one shim body that calls another shim
+(`goleanShimStrconvFormatUint`, for the sign split). The reserved-name
+table `stdlibShimDeclNames` (`stdlibshim.go:223`) lists FormatInt as
+depending on itself only. `FormatUint` alone is fine, and any program
+that reaches FormatInt via another route that also pulls FormatUint in
+is fine — which is why no corpus row sees it (probe
+`.tmp/deltarev/u5` vs `u5b`).
+
+**PRE-EXISTING and FAIL-CLOSED** — it refuses, it does not answer
+wrongly — so it is recorded rather than fixed inside a convergence
+round. Fixing it is a one-line closure entry plus a guardrail row
+pinning `FormatInt` alone; carried as a handoff item below.
 
 ---
 
@@ -1165,6 +1311,14 @@ at its wave entry):
   recipients or drops with local messages in the bag, the mirroring is
   load-bearing there with no tier behind it — a place to look first on
   a rendered-tier disagreement.
+- **JC-35 — `strconv.FormatInt` ALONE refuses at the type-checker**
+  (delta-review INFO, unfixed by design): the shim injection set has
+  no closure over shim→shim calls, and FormatInt's body is the only
+  shim body that calls another shim. Fail-closed, so no wrong answer;
+  the fix is `stdlibshim.go:223`'s entry gaining
+  `strconvFormatUintShimName` PLUS a guardrail row that pins FormatInt
+  alone (without one, the next injection-set edit re-opens it
+  invisibly). Probe: `.tmp/deltarev/u5` (refuses) vs `u5b` (green).
 - **Recorded bounds added by the audit fix round** (each pinned by a
   red-by-design row or a shim docstring): fmt.Formatter refused at
   static sites / invisible to the dyn shim (R1-F2); named structs at
@@ -1177,4 +1331,6 @@ at its wave entry):
   boundary pins (ts-guard; the 3 formatter-precedence rows; the 3
   shim-refusal-unrecoverable rows; struct-bound; trailing-plus; the 2
   SortFunc/cmp narrowing rows; unmodeled-member). Landing B's prose said "38 rows"; its own artifact
-  says 39 — corrected at the wave entry.
+  says 39 — corrected at the wave entry. **The delta-review micro fix
+  round adds 9 more (2462 − 2453): 8 PASS + 1 red-by-design
+  (`emb-formatter-below`)**, all in `fmt/v-composites`.
