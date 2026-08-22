@@ -456,3 +456,49 @@ candidate_entries' successors consume, converging on
 `leader_completeness`. Same conventions; msg-ghost (GAP-2) expected to
 stay untouched until the GhostLog* files.
 
+## Unit 4 — the leaderLogs ring (2026-08-22, coordinator-accepted charter)
+
+Scope per the coordinator's charter: `leaderLogs_term_sanity` →
+`leaders_have_leaderLogs` → `one_leaderLog_per_term`, converging on the
+`leader_completeness` STATEMENT (defs 1:1; its proof is a later arc's).
+Same conventions; GAP-2 msg-ghost only on first genuine need.
+
+- 2026-08-22 SUCCESSOR RE-VERIFICATION of unit 3 (recomputed, fresh
+  reader): fresh capped `lake build` at d07c5382 — green ("Build
+  completed successfully (58 jobs)"; fully cached, so the sweep line was
+  re-derived by a fresh capped `lake env lean AxCheck.lean`, which
+  printed verbatim `AxCheck sweep: 1244 declarations across VerdiCompat
+  modules, axiom set within [propext, Quot.sound]`); fresh
+  `#print axioms` (capped `lake env lean` probe):
+  `candidate_entries_invariant`, `one_leader_per_term_invariant`,
+  `lower_prop` all `[propext, Quot.sound]`; hatch grep
+  (`sorry|native_decide|^axiom| axiom `) over RefinedProofStructure/
+  ElectionSafety/CandidateEntries/ElectionSpecLemmas: 3 hits, all
+  docstring prose (RefinedProofStructure.lean:744,
+  ElectionSafety.lean:1521, :1581 — the axiom-set commentary). All
+  claims hold; building on them.
+- 2026-08-22 [AGENT] Unit-4 scope call, from the full upstream
+  dependency map (read at `deps/verdi-raft` @ a3375e8, pin re-verified
+  by `git rev-parse`): upstream's `one_leaderLog_per_term` proof
+  (OneLeaderLogPerTermProof.v:1-258) requires a closure the charter
+  does not name — `leaderLogs_votesWithLog` (its RVR contradiction
+  case), which pulls `votesReceived_moreUpToDate` +
+  `requestVoteReply_moreUpToDate`, which pull
+  `requestVote_maxIndex_maxTerm` + `requestVoteReply_term_sanity` +
+  `votedFor_moreUpToDate`, which pull `requestVote_term_sanity` +
+  `votedFor_term_sanity`; plus `votes_votesWithLog_correspond`, and
+  (for leaderLogs_term_sanity) base `candidate_term_gt_log` lifted via
+  `lift_prop` — first real `lift_prop` consumer. DECISION: port the
+  whole closure 1:1 rather than invent a shortcut route (the
+  moreUpToDate/votesWithLog cluster is exactly the votes-with-log side
+  the leader-completeness lattice consumes next — not throwaway; a
+  bespoke shorter argument would diverge from the ~73-file chain
+  architecture Plan A is porting). `leaderLogs_sorted`/`_contiguous`
+  (named in the predecessor's proposal, not in the operative charter)
+  are NOT consumed by this ring — deferred to first need, recorded
+  as in-scope-later, not a gap.
+- 2026-08-22 [AGENT] File plan: one new file `LeaderLogs.lean`
+  (importing CandidateEntries) for the whole ring + closure;
+  leaderLogs/votesWithLog ghost-update lemmas added to
+  ElectionSpecLemmas.lean beside their votes/cronies siblings.
+
