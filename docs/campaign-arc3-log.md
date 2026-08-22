@@ -1106,3 +1106,89 @@ charter.
   allEntries_indices_gt_0 ✓, refined_log_matching_lemmas ✓ — the full
   scoped prefix. Remaining: gate, final entry + unit-7 charter.
 
+- 2026-08-22 Unit-6 final gate: `GOLEAN_ALLOW_NO_DIFF=1
+  GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT: PASS, exit 0** (log:
+  `artifacts/ci-arc3-unit6.log`, gitignored; the no-diff notes are the
+  allowed docs+compat hatch — unit 6 touched only `compat/verdi/**` +
+  this log). The report-only comparator-landmark note now reads
+  "56 theorems @ 1730567a2d3f, 48 commit(s) ago" — same
+  operator-merge-time flag as units 1-5; nothing in this unit touches a
+  designated statement or Challenge's closure (statement-TCB step ok).
+  Diffharness fixture pin re-verified fresh out-of-build:
+  `diffharness: OK: fixtures/handlers-n3.tsv matches regenerated output
+  (320 cases)`.
+
+## Final entry — unit 6 complete (2026-08-22, tip = this commit)
+
+**Proved at tip** — the LOG-MATCHING CORE, the largest self-contained
+prefix of the honest GAP-7 closure (derivation in the unit-6 opening
+entry): 7 upstream proof files, 2,994 upstream lines, statements 1:1
+with their Interface files @ a3375e8 (log_matching's statement is
+Properties.lean's P1 def, proved not redefined). Zero
+sorry/native_decide in campaign files (grep; sweep-enforced: 1652
+declarations within [propext, Quot.sound], plus eight new curated
+pins). `#print axioms` verbatim (fresh capped `lake env lean` probe):
+
+```
+'VerdiCompat.Raft.leaderLogs_sorted_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.UniqueIndices_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.leader_sublog_invariant_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.log_matching_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.logMatchingStatement_holds' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.leaderLogs_contiguous_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.allEntries_indices_gt_0_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.entries_match_nw_host_invariant' depends on axioms: [propext, Quot.sound]
+```
+
+Inventory: `LogMatching.lean` (2,565 lines) — `leaderLogs_sorted`
+(GAP-5a) and `leaderLogs_contiguous` (GAP-5b, closing GAP-5), base
+`UniqueIndices`, base `leader_sublog` (with the four lowered
+CandidateEntries consumers — the first base-level consumers of the
+ghost chain), **base `log_matching` — LOG MATCHING, a T3-named
+invariant — discharging `LogMatchingStatement` natively**
+(`logMatchingStatement_holds`, the second Properties.lean transfer
+target down, after unit 2's OneLeaderPerTerm), `allEntries_indices_gt_0`,
+and the ten `refined_log_matching_lemmas` fields — the lifted bridge
+both GAP-7 subtrees consume. Support layer: the entries_match engines
+(`entries_match_scratch`/`_append`), contiguity machinery
+(`contiguous_range_exact_lo`, `removeIncorrect_new_contiguous`), and
+findAtIndex/findGtIndex/removeAfterIndex lemmas — all constructive
+(GAP-4 discipline). Two new lift_prop consumers this unit
+(`logs_contiguous`, `tai_nw_lifted`; five total on the lane). The
+INVARIANT INDEX above is current (43 rows).
+
+**Honestly open (carried + new):**
+- GAP-1 (primed variants): STILL never triggered — no unit-6 proof
+  needed one; carried.
+- GAP-2 (msg-ghost): NOT in the honest closure of either GAP-7 target
+  (verified by grep over the closure files at unit start); carried
+  untouched.
+- GAP-4: carried; unit 6 hit the omega-on-abbrev class ~10 times and
+  the sweep's LawfulBEq class 0 times (beq handled via
+  `simp only [beq_iff_eq]`, which stays within the axiom set).
+- GAP-5: **CLOSED** (leaderLogs_sorted + leaderLogs_contiguous).
+- GAP-6 (leader_completeness proof) and GAP-7a/b: carried — the
+  remainder below is their charter.
+
+**Next units' charter (Arc 3, unit 7 — proposal, from the wave table in
+the unit-6 opening entry; re-derive before starting, per standing
+lesson):** the REMAINDER is 16 files / ~6,766 upstream lines — two
+units:
+- **Unit 7 — the AppendEntries feeder chain + leaderLogs assembly**
+  (~3,200 lines): W1 leaves `leadersHaveLeaderLogs_strong` (278),
+  `appendEntries_request_reply_correspondence` (429),
+  `appendEntries_requests_came_from_leaders` (239),
+  `allEntries_term_sanity` (185), `leaderLogs_logProperties` (179);
+  then `leaderLogs_sublog` (398), `appendEntries_leader` (443),
+  `appendEntriesReply_sublog` (79), `nextIndex_safety` (323),
+  `leaderLogs_logMatching` (647 — required by LogsLeaderLogs, my
+  closure's correction to the unit-5 proposal).
+- **Unit 8 — the GAP-7 assembly** (~3,566 lines):
+  `appendEntries_request_leaderLogs` (621), `LogsLeaderLogs` (848) →
+  **`leaderLogs_preserved` (GAP-7b)** (263),
+  `allEntries_leaderLogs_term` (342), `AllEntriesLog` (1,089) →
+  **`allEntries_votesWithLog` (GAP-7a)** (356). Then GAP-6
+  (`prefix_within_term` + `leader_completeness`'s proof) beyond.
+Same conventions; successors re-verify this unit's claims fresh (build
++ sweep count 1652 + the eight-headliner probe above + hatch grep over
+LogMatching.lean).
