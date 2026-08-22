@@ -233,9 +233,13 @@ way an arc reaches `main`).
    exactly this flag, and the nightly CI schedule runs it; tiered-checking
    design 2026-08-08). Must be green before anything else. If the arc added or
    changed a designated headline theorem statement (the statement-TCB
-   gate's list), also run `scripts/comparator-judge` — the independent
-   kernel-replay judge (landmark cadence only, never part of `scripts/ci`;
-   comparator-judge sprint 2026-08-02).
+   gate's list), also run `scripts/comparator-judge` — and likewise when
+   anything in Challenge's trusted closure moved, or when `scripts/ci`
+   prints a landmark scope/staleness note (trigger widened 2026-08-22
+   after a 371-commit-stale landmark passed the narrow trigger; the ci
+   note is step 1c4, report-only). The judge stays the independent
+   kernel-replay landmark (never part of `scripts/ci`; comparator-judge
+   sprint 2026-08-02).
 3. **THE AUDIT CHECK — NEVER, EVER SKIPPED.** Before any merge, explicitly ask
    the user about a pre-merge adversarial audit: propose scope + scale
    (dimensions, agent count, model, cost) and get sign-off on that plan before
