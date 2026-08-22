@@ -310,6 +310,19 @@ is the §4.4 park-and-report condition, not an emergency.
   the MID-BUILD gate → staged assembly; the long kernel run may be
   a staged detached follow-on rather than in-unit).
 
+- **Arc 3, unit 6 — LANDED** @ 86d372c0 (3rd-gen worker;
+  re-verification held; the unit-5 lesson executed — full 23-file/
+  9,760-line closure derived and POSTED before proving, scoped to
+  the self-contained 7-file prefix): **LOG MATCHING PROVED** — base
+  `log_matching` + `logMatchingStatement_holds` (the second T3-named
+  invariant discharged natively), GAP-5 closed
+  (leaderLogs_sorted/contiguous), base leader_sublog with the ghost
+  chain's first base-level payoff, the ten-field lifted bridge both
+  GAP-7 subtrees consume. LogMatching.lean 2565 lines; sweep **1652**
+  clean; index 41 rows (self-correction recorded: was misstated 43);
+  lane gate PASS. Units 7-8 chartered (~6,800 lines remaining to
+  leader_completeness's proof).
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
