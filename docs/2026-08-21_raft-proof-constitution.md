@@ -592,3 +592,55 @@ and its lane's design-audit/boundary-set/POR notes (branch-state where
 marked), the TCB/layering doctrine, and CLAUDE.md's standing
 contracts. Every provenance pointer above was resolved against the
 tree at drafting time.*
+
+---
+
+## §8.1 RATIFICATION (2026-08-22, Mike) — the eight answers, recorded
+
+Mike's ruling: **approve with defaults** ("all of these seem
+reasonable"), with question 4 resolved by discussion and two
+additions. Per-question:
+
+1. The base predicate — **YES** (agreement S1–S3 per-step + the S4
+   completion witness).
+2. The tier ladder — **defaults**: T1–T2 ends; T3 headline as proved;
+   T4 stretch.
+3. The network envelope — **reliable-first, chaos as strengthening**.
+4. The RawNode/harvest narrowing — **ACCEPTED at v1, with the
+   phase-tolerance discipline attached as its non-preclusion clause**
+   (ruled after explicit discussion of the refinement-vs-fork
+   distinction): invariants are stated phase-tolerant wherever
+   equally natural; any invariant that genuinely depends on harvest
+   atomicity is FLAGGED at the point of use — so the eventual
+   un-bundling is a re-plumb of the induction over the same lemma
+   library, never a restart.
+5. Liveness — **named successor**; non-preclusion standing.
+6. Milestone/audit cadence — **as proposed**.
+7. Supervision seam — **trust-surface supervised, proof work
+   autonomous**.
+8. This document — **ratified as the campaign's governing
+   instrument**; amendment only by Mike, dated in place.
+
+**THE SCOPING PRINCIPLE (Mike, 2026-08-22, governs all §2 narrowing
+decisions):** "aim for a narrow slice which permits widening later —
+a slice that is genuinely hard, without imposing 'lux' constraints,
+but that does not block future expansion to the 'lux' version."
+Every narrowing must be a REFINEMENT POINT, not a fork: per lever —
+network widening is conservative by construction; n is pinned in the
+statement only (the harness is n-generic); the harvest narrowing
+carries the question-4 discipline; liveness keeps the Fair
+non-vacuity rule. The over-specialization audit dimension polices
+this: a proof structure that works only for the narrow slice when a
+slice-generic one was equally available is a finding.
+
+**PLAN A (Mike, 2026-08-22, recorded in §5's latitude):** the proof
+route's default is **porting the Verdi proof structure** — the
+invariant network and proof architecture of verdi-raft — onto our
+harness vocabulary via the merged compat/verdi layer (the bridgehead:
+Verdi's system model + raft spec already ported, AxCheck-gated).
+A more direct route may be proposed at any time with a recorded
+comparison (what it saves; what Verdi-alignment it gives up);
+deviation is a logged judgment call — abandoning the Verdi alignment
+entirely would be a ruling. The port is of STRUCTURE, not text: the
+statements re-ground in the harness vocabulary per the compat design
+note's seam.
