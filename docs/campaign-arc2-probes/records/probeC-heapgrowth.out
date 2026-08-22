@@ -1,0 +1,23 @@
+subjSteps=711616 finalHeapLen=36376 finalNextAddr=36376
+samples (subjStep, heapLen, nextAddr):
+  0	103	103
+  50000	3110	3110
+  100000	6052	6052
+  150000	8731	8731
+  200000	11356	11356
+  250000	13995	13995
+  300000	16670	16670
+  350000	19093	19093
+  400000	21585	21585
+  450000	24087	24087
+  500000	26495	26495
+  550000	28996	28996
+  600000	31496	31496
+  650000	33909	33909
+  700000	36062	36062
+	Command being timed: "../scripts/capped lean ../docs/campaign-arc2-probes/probeC-heapgrowth.lean"
+	User time (seconds): 960.62
+	System time (seconds): 0.40
+	Percent of CPU this job got: 99%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 16:01.13
+	Maximum resident set size (kbytes): 1704248
