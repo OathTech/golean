@@ -104,12 +104,17 @@ func (b *Builder) WriteString(s string) (int, error) {
 
 // bytesBufferModelSrc is the pinned shadow model for bytes.Buffer
 // (W4.3 item 1 landing B — the describeMessageWithIndent /
-// DescribeEntries writer). WRITE-side surface only: Write/WriteString/
-// WriteByte/String/Len/Reset; the read-side methods (Read, Next,
-// Bytes, ...) stay declaration-only stubs, so the `off` read cursor is
-// provably 0 through every modeled path — it is KEPT in the struct so
-// String()/Len() carry upstream's unread-portion contract rather than
-// a simplification of it. The field TYPES mirror upstream exactly
+// DescribeEntries writer). THE REAL BOUNDARY IS SIX MEMBERS EXACTLY —
+// Write/WriteString/WriteByte/String/Len/Reset — not "the write
+// side": WriteRune, Truncate and Grow are write-side too and are
+// declaration-only stubs like the read-side methods (Read, Next,
+// Bytes, ...). [Wording corrected by audit R4-M-4 — the first version
+// said "WRITE-side surface only", overclaiming the three unmodeled
+// write-side members; probe r4-p7 exercises exactly those.] Every
+// non-modeled method staying a declaration-only stub is what keeps
+// the `off` read cursor provably 0 through every modeled path — it is
+// KEPT in the struct so String()/Len() carry upstream's
+// unread-portion contract rather than a simplification of it. The field TYPES mirror upstream exactly
 // (incl. the defined `readOp` for lastRead): a user-side composite
 // literal `&bytes.Buffer{}` is emitted from the REAL package's type
 // info, so the shadow TypeDef must declare the same field types or the

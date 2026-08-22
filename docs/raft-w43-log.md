@@ -968,3 +968,55 @@ negatives and multi-word strings included); struct-bound stays red by
 design. Full `scripts/ci --diff`: drift exactly the three new ids;
 zero movement on the 2446 prior ids. Baseline re-pinned (2449 cases,
 2285/164) in this commit.
+
+### R4-M-3 / M-4 / M-5 + L-3 — the smalls: bounds pinned, a crash named, a boundary stated
+
+**M-3 — the two unpinned narrowings, pinned** (probe r4-p5; gc handles
+both): `slices/sortfunc-cmp/named-slice-bound` (SortFunc's `S ~[]E`
+freedom narrowed to `S == []E`; gc sorts `namedIDs` to 123) and
+`slices/sortfunc-cmp/float-compare-bound` (cmp.Compare's float arm
+excluded — the NaN-ordering latitude; SortFunc itself admits
+`[]float64`, so the refusal lands on the comparator; gc returns 2).
+Both witnessed red with their already-named refusal messages —
+the narrowings were honest, just gate-invisible; now they are rows.
+The float/named-slice bounds are hereby LOGGED as the audit asked:
+they retire only by a widening with its own rows, and the
+`slices.Sort`-vs-`SortFunc` asymmetry (Sort takes named slice types
+but only integer elements; SortFunc the reverse) is part of what the
+rows pin.
+
+**M-5 — the `%+`-at-end-of-format CRASH becomes the named refusal.**
+Witnessed live first (`fmt/sprintf-dyn/trailing-plus`): the dyn
+parser's `format[i+1:i+2]` with `i+1 == len(format)` was a Go
+slice-bounds panic — `runtime error: slice bounds out of range [:4]
+with length 3`, status PANIC, i.e. RECOVERABLE and mislabeled, where
+gc renders `x%!(NOVERB)%!(EXTRA int=1)`. The slice is now guarded and
+the arm emits the named `%+<end of format>` refusal through
+`goleanShimUnsupported` (unrecoverable, R4-C-3). Stage flip
+lean-observation → frontend-export, red by design (gc's NOVERB
+rendering stays outside the modeled subset — bound recorded).
+
+**L-3 — refusals at partially-modeled packages name the member and
+the boundary.** `strconv.Atoi` used to refuse as "package \"strconv\"
+surface not modeled" — misdescribing a partially modeled package and
+naming no boundary. The allowlist-miss path now refuses in place:
+"strconv.Atoi is outside the modeled subset (modeled strconv
+direct-call members: FormatInt, FormatUint, ParseUint — widen with a
+differential pin first)" — the member list derived from the allowlist
+itself, so it cannot rot against it. Applies uniformly to the four
+allowlisted packages (strings/errors/bytes/strconv); the 129-case
+slice over all of them showed zero movement beyond the new rows.
+Row: `strconv/format-parse/unmodeled-member`, red by design.
+
+**M-4 — the bytes.Buffer boundary, stated exactly.** The model's
+docstring said "WRITE-side surface only" — overclaiming three
+write-side members (WriteRune, Truncate, Grow — probe r4-p7's exact
+cells) that are declaration-only stubs like the read side. It now
+names the six modeled members exactly (Write/WriteString/WriteByte/
+String/Len/Reset) and why every other method staying a stub is
+load-bearing for the `off == 0` argument. (The resultshadow header —
+the L-2 sibling of this batch — was corrected in the R1-C3 landing.)
+
+**Flips.** Full `scripts/ci --diff`: drift exactly the four new
+red-by-design ids; zero movement on the 2449 prior ids. Baseline
+re-pinned (2453 cases, 2285/168) in this commit.

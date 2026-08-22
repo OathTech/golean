@@ -1,17 +1,28 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-22 (raft W4.3 audit fix round, R4-M-2 — branch
-#   raft-w43; docs/raft-w43-log.md "Audit fix round").
-#   re-pin reason: THREE NEW ids, zero movement on any of the 2446 ids
-#   the previous record held.
-#     R4-M-2: the dyn kind matrix's asymmetry against the static
-#     composite matrix — []int/[]string rendered statically but
-#     stopped at a dyn (logf pass-through) site. Dyn arms added whose
-#     leaves are the same goleanShimFmt* helpers as the static cells:
-#     fmt/sprintf-dyn/{slice-int,slice-string} PASS. Named STRUCTS at
-#     dyn sites stay a RECORDED bound (a runtime type switch in
-#     pre-typecheck injected source cannot name user types):
-#     fmt/sprintf-dyn/struct-bound FAIL/frontend-export RED BY DESIGN.
-# cases: 2449 (2285 PASS / 164 FAIL)
+# recorded: 2026-08-22 (raft W4.3 audit fix round, R4-M-3/M-4/M-5 +
+#   L-3 — branch raft-w43; docs/raft-w43-log.md "Audit fix round").
+#   re-pin reason: FOUR NEW ids, zero movement on any of the 2449 ids
+#   the previous record held. All four RED BY DESIGN at
+#   frontend-export:
+#     R4-M-3: the two unpinned narrowings pinned —
+#     slices/sortfunc-cmp/named-slice-bound (SortFunc's S~[]E
+#     narrowed to S==[]E) and slices/sortfunc-cmp/float-compare-bound
+#     (cmp.Compare's float/NaN arm excluded); gc handles both
+#     (probe r4-p5).
+#     R4-M-5: fmt/sprintf-dyn/trailing-plus — a dynamic format ending
+#     in "%+" was a Go slice-bounds CRASH (witnessed live:
+#     "slice bounds out of range [:4] with length 3", a recoverable
+#     mislabeled panic at lean-observation); now the guarded NAMED
+#     refusal, unrecoverable per R4-C-3.
+#     L-3: strconv/format-parse/unmodeled-member — an unmodeled
+#     member of a partially modeled package now refuses naming the
+#     member AND the modeled list ("strconv.Atoi ... modeled strconv
+#     direct-call members: FormatInt, FormatUint, ParseUint"), not
+#     "package surface not modeled".
+#     (R4-M-4 rode along docs-only: the bytes.Buffer boundary
+#     docstring now names the exact six modeled members instead of
+#     "write-side surface only".)
+# cases: 2453 (2285 PASS / 168 FAIL)
 # frontend: native (tools/nativefrontend)
 result	id	stage
 PASS	arrays/array-bounds	-
@@ -818,6 +829,7 @@ PASS	fmt/sprintf-dyn/sprintln-fixed-arity	-
 PASS	fmt/sprintf-dyn/stringer-error	-
 PASS	fmt/sprintf-dyn/stringer-panic	-
 FAIL	fmt/sprintf-dyn/struct-bound	frontend-export
+FAIL	fmt/sprintf-dyn/trailing-plus	frontend-export
 FAIL	fmt/sprintf-dyn/unmodeled-kind	frontend-export
 PASS	fmt/sprintf-dyn/verb-kinds	-
 PASS	fmt/sprintf-verbs/d-enum	-
@@ -1934,6 +1946,8 @@ FAIL	slices/slices-sort-non-integer-refusal	frontend-export
 PASS	slices/slices-sort/ints	-
 PASS	slices/slices-sort/uint64	-
 PASS	slices/sortfunc-cmp/cmp-compare-kinds	-
+FAIL	slices/sortfunc-cmp/float-compare-bound	frontend-export
+FAIL	slices/sortfunc-cmp/named-slice-bound	frontend-export
 PASS	slices/sortfunc-cmp/sort-ties-projected	-
 PASS	slices/sortfunc-cmp/sortfunc-empty-single	-
 PASS	slices/sortfunc-cmp/sortfunc-ints	-
@@ -2239,6 +2253,7 @@ PASS	strconv/format-parse/parse-uint-bitsize	-
 PASS	strconv/format-parse/parse-uint-errors	-
 PASS	strconv/format-parse/parse-uint-happy	-
 PASS	strconv/format-parse/parse-uint-range-value	-
+FAIL	strconv/format-parse/unmodeled-member	frontend-export
 PASS	strings/builder-model/copy-panics	-
 PASS	strings/builder-model/copy-zero-ok	-
 PASS	strings/builder-model/len-reset	-

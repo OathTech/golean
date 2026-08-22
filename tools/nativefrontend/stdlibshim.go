@@ -783,7 +783,16 @@ func goleanShimFmtSprintfDyn(format string, args []any) string {
 				verb = "v"
 				i++
 			} else {
-				goleanShimUnsupported("golean fmt shim: dynamic verb %+" + format[i+1:i+2] + " is outside the modeled subset (fail closed)")
+				// The trailing-"%+" slice must be GUARDED (audit
+				// R4-M-5): format[i+1:i+2] with i+1 == len was a Go
+				// slice-bounds panic — the intended refusal came out
+				// as a recoverable, mislabeled runtime error (row
+				// fmt/sprintf-dyn/trailing-plus witnessed it live).
+				trail := "<end of format>"
+				if i+1 < len(format) {
+					trail = format[i+1 : i+2]
+				}
+				goleanShimUnsupported("golean fmt shim: dynamic verb %+" + trail + " is outside the modeled subset (fail closed)")
 				panic("unreachable: the machine stopped in goleanShimUnsupported above")
 			}
 		}

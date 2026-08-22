@@ -9,3 +9,4 @@ parse-uint-happy	parseUintHappy	-	ok	-	stdlib,strings,ints,multi_result
 parse-uint-errors	parseUintErrors	-	ok	-	stdlib,strings,ints,range,concat
 parse-uint-range-value	parseUintRangeValue	-	ok	-	stdlib,strings,ints,range,widths
 parse-uint-bitsize	parseUintBitSize	-	ok	-	stdlib,strings,ints,widths
+unmodeled-member	unmodeledMember	-	ok	-	stdlib,strings,ints

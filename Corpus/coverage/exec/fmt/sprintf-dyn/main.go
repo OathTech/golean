@@ -144,10 +144,22 @@ func dynStructBound() string {
 	return dynLogfHelper("%v", dynP{3})
 }
 
+// ---- R4-M-5 (audit fix round): a dynamic format ending in "%+"
+// CRASHED the shim — format[i+1:i+2] with i+1 == len(format) is a Go
+// slice-bounds panic, so the intended fail-closed refusal came out as
+// `runtime error: slice bounds out of range` (recoverable AND
+// mislabeled). Now the NAMED refusal (unrecoverable, R4-C-3).
+// gc renders "x%!(NOVERB)%!(EXTRA int=1)" (probe r4-p6); the machine
+// stops fail-closed — RED BY DESIGN. ----
+func dynTrailingPlus() string {
+	return dynLogfHelper("x%+", 1)
+}
+
 func main() {
 	println(dynLoggerShape(), dynVerbKinds(), dynStringerError(),
 		dynStringerPanic(), dynSprintSpaceRule(), dynSprintln(),
 		dynSprintNil(), dynUnmodeledKind(), dynArityMismatch(),
 		dynSprintFixedArity(), dynSprintlnFixedArity(),
-		dynSliceInt(), dynSliceString(), dynStructBound())
+		dynSliceInt(), dynSliceString(), dynStructBound(),
+		dynTrailingPlus())
 }

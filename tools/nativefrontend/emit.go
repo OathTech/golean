@@ -7247,7 +7247,20 @@ func (e *emitter) emitStdlibShimCall(c *ast.CallExpr, sel *ast.SelectorExpr) (an
 	}
 	shimName, ok := fns[sel.Sel.Name]
 	if !ok {
-		return nil, false, nil
+		// An UNMODELED member of a PARTIALLY modeled package (audit
+		// L-3): falling through used to land on the generic
+		// package-selector refusal ("package \"strconv\" surface not
+		// modeled") — misdescribing the cause and naming no boundary.
+		// Refuse HERE, naming the member and listing the modeled
+		// direct-call members (the E5-T type models — bytes.Buffer,
+		// strings.Builder — are separate surfaces, importedmodel.go).
+		members := make([]string, 0, len(fns))
+		for m := range fns {
+			members = append(members, m)
+		}
+		sort.Strings(members)
+		return nil, false, unsup("%s.%s is outside the modeled subset (modeled %s direct-call members: %s — widen with a differential pin first)",
+			pkgName.Imported().Name(), sel.Sel.Name, pkgName.Imported().Name(), strings.Join(members, ", "))
 	}
 	fn, ok := e.info.Uses[sel.Sel].(*types.Func)
 	if !ok {

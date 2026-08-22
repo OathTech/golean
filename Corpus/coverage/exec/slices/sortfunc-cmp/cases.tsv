@@ -10,3 +10,5 @@ sortfunc-struct-two-key	sortFuncStructTwoKey	-	ok	-	stdlib,sort,slices,structs,c
 sortfunc-empty-single	sortFuncEmptySingle	-	ok	-	stdlib,sort,slices,empty,nil
 sort-ties-projected	sortTiesProjected	-	ok	-	stdlib,sort,slices,structs
 sortfunc-local-type	sortFuncLocalType	-	ok	-	stdlib,sort,slices,structs,generics
+named-slice-bound	sortFuncNamedSlice	-	ok	-	stdlib,sort,slices,defined_type
+float-compare-bound	sortFuncFloatCompare	-	ok	-	stdlib,sort,slices,floats

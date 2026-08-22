@@ -82,8 +82,21 @@ func parseUintBitSize() string {
 	return e1.Error()
 }
 
+// ---- L-3 (audit fix round): an UNMODELED member of a PARTIALLY
+// modeled package used to refuse with "package \"strconv\" surface
+// not modeled" — misdescribing the cause (strconv IS partially
+// modeled) and naming no boundary. The refusal now names the member
+// AND lists the modeled members. RED BY DESIGN. ----
+func unmodeledMember() int {
+	n, err := strconv.Atoi("42")
+	if err != nil {
+		return -1
+	}
+	return n
+}
+
 func main() {
 	println(formatUintBases(), formatIntVals(), parseUintHappy(),
 		parseUintErrors(), parseUintBitSize(), formatIllegalBase(),
-		parseUintRangeValue())
+		parseUintRangeValue(), unmodeledMember())
 }

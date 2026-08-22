@@ -138,8 +138,32 @@ func sortFuncLocalType() string {
 	return renderInts(out)
 }
 
+// ---- R4-M-3 (audit fix round): the two UNPINNED narrowings, pinned
+// as red-by-design refusal rows (probe r4-p5 — gc handles both). ----
+
+type namedIDs []uint64
+
+// RED BY DESIGN: slices.SortFunc's `S ~[]E` freedom is NARROWED to
+// S == []E exactly (genericshim.go names the bound); a NAMED slice
+// type refuses. gc: sorts it fine (123).
+func sortFuncNamedSlice() int {
+	x := namedIDs{3, 1, 2}
+	slices.SortFunc(x, func(a, b uint64) int { return cmp.Compare(a, b) })
+	return int(x[0])*100 + int(x[1])*10 + int(x[2])
+}
+
+// RED BY DESIGN: cmp.Compare's FLOAT arm is excluded (the NaN
+// ordering is cmp.Compare-specific latitude nothing in scope needs);
+// SortFunc itself admits []float64, so the refusal lands on the
+// comparator. gc: 2.
+func sortFuncFloatCompare() int {
+	x := []float64{2.0, 1.0}
+	slices.SortFunc(x, func(a, b float64) int { return cmp.Compare(a, b) })
+	return len(x)
+}
+
 func main() {
 	println(cmpCompareKinds(), sortFuncInts(), sortFuncReverse(),
 		sortFuncStructTwoKey(), sortFuncEmptySingle(), sortTiesProjected(),
-		sortFuncLocalType())
+		sortFuncLocalType(), sortFuncNamedSlice(), sortFuncFloatCompare())
 }

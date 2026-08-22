@@ -19,3 +19,4 @@ sprintln-fixed-arity	dynSprintlnFixedArity	-	ok	-	stdlib,strings,variadic
 slice-int	dynSliceInt	-	ok	-	stdlib,strings,variadic,slices,ints
 slice-string	dynSliceString	-	ok	-	stdlib,strings,variadic,slices
 struct-bound	dynStructBound	-	ok	-	stdlib,strings,variadic,structs
+trailing-plus	dynTrailingPlus	-	ok	-	stdlib,strings,variadic
