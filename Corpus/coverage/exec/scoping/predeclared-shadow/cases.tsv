@@ -1,0 +1,15 @@
+# id	subject	args	expected_status	expected_reason	features
+# BUG-069 guardrails (launch audit D10-F1, widened by V1): shadowed
+# predeclared true/false/nil are ordinary variables (universe scope,
+# spec#Declarations_and_scope). Pre-fix, emitIdent resolved these
+# NAMES to the universe constants ahead of go/types — silent wrong
+# values/branches, a fabricated panic, a wrong len. All rows GREEN
+# with the fix (same arc); ctrl pins the genuine-use direction.
+shadow-true-branch	shadowTrueBranch	-	ok	-	scoping,shadowing,bools
+shadow-false-branch	shadowFalseBranch	-	ok	-	scoping,shadowing,bools
+shadow-param	shadowParam	-	ok	-	scoping,shadowing,bools,calls
+shadow-var-form	shadowVarForm	-	ok	-	scoping,shadowing,bools
+shadow-nil-len	shadowNilLen	-	ok	-	scoping,shadowing,nil,slices,len
+shadow-nil-append	shadowNilAppend	-	ok	-	scoping,shadowing,nil,slices,append
+shadow-nil-int	shadowNilInt	-	ok	-	scoping,shadowing,nil
+genuine-ctrl	ctrl	-	ok	-	scoping,bools,nil

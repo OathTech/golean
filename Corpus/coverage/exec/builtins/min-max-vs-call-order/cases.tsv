@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+# RED PINS (3 of 5): the min/max-vs-call forced-point divergence —
+# grossmith findings-2 §1, promoted by the launch-audit fix round.
+# spec#Order_of_evaluation + built-ins-called-like-any-other-function
+# force min/max operands before a lexically later call; the frontend's
+# ordered-event set omits value-returning built-ins (BUG-062 widened).
+# Flip green at mini-slice A6 (re-scoped to enumerate built-in call
+# sites). The two GREEN controls stop A6 from over-reaching: append is
+# already ordered; calls inside a built-in's args already hoist.
+min-value	probeMinValueOrder	-	ok	-	builtins,min,max,evaluation_order,calls
+max-value	probeMaxValueOrder	-	ok	-	builtins,min,max,evaluation_order,calls
+min-arg-panic	probeBuiltinArgIndex	-	ok	-	builtins,min,max,evaluation_order,calls,panic,recover
+append-arg-panic	probeAppendArgIndex	-	ok	-	builtins,append,evaluation_order,calls,panic,recover
+call-in-builtin-arg	probeCallInsideBuiltinArg	-	ok	-	builtins,min,max,evaluation_order,calls
