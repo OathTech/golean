@@ -285,6 +285,14 @@ def check_lang_ledger_arithmetic(bl, info):
         ("design_questions", r"\|\s*design questions Q-\* \(§6\)\s*\|\s*(\d+)\s*\|"),
         ("c_pins", r"\|\s*\(c\) profound-reason pins[^|]*\|\s*(\d+) \+ (\d+)\s*\|"),
         ("a_queued", r"\|\s*\(a\)-queued fixes[^|]*\|\s*(\d+)\s*\|"),
+        # Added 2026-08-22 (settlement): the §8 re-derivation gave the
+        # post-vintage arc reds their own bucket — guardrails and named
+        # refusals from arcs that landed AFTER the ledger's vintage
+        # baseline, owned by the arc logs rather than by a §4/§6 row.
+        # Without this row the sum check below silently ran over four
+        # buckets while the table had five. Strictly additive: both
+        # equalities (buckets == table total == baseline FAIL) still hold.
+        ("post_vintage", r"\|\s*post-vintage arc reds[^|]*\|\s*(\d+)\s*\|"),
         ("total", r"\|\s*\*\*total\*\*\s*\|\s*\*\*(\d+)\*\*\s*\|"),
     ):
         mm = re.search(pat, txt)

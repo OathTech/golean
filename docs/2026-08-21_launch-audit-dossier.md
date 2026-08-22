@@ -1317,6 +1317,48 @@ footing, and each is left uncorrected.
   if any of its conclusions feed an envelope argument, the argument was
   made on a toolchain the spec pin does not cover.
 
+### Settlement postscript (2026-08-22, branch `settle`)
+
+The hand-checks above were done and R-1…R-9 dispositioned before the
+audit, so the audit inherits the answers rather than re-deriving them.
+`tools/reconcile-records` goes **11 findings → 2**.
+
+**First, a correction to this section's own numbers.** R-2/R-3 were
+written against a baseline of 2343 / 2199 / 144. That was already
+superseded at this dossier's own commit: the tracked baseline at
+`42fae106` is **2462 / 2293 / 169** (re-pinned at `56a12142`, same
+day). So the gap R-3 reports as "15 reds not on a named row" was
+really **40**. The dossier caught the right defect and understated it —
+and did so by exactly the mechanism it was reporting, a number read
+off a record that had moved. Left in place above, corrected here.
+
+| # | disposition |
+|---|---|
+| **R-1** | FIXED. The choice-site census mirror now has 9 rows for 9 constructors (`postOp`, `backEdge` added). Also found and fixed while there: **all seven surviving rows' `file:line` citations were stale** — every site re-verified against the `consumeAt`/`consumeAtE` call sites at this tip. The duplicate 7-item list in `docs/2026-08-04_nondeterminism-doctrine.md` is carried in the same commit. |
+| **R-2** | FIXED. §8 re-derived at the current baseline; the vintage lock is stated, not silent. |
+| **R-3** | FIXED, and the answer is benign but structural. The 40 decompose mechanically (§8b): 5 vintage reds went green, 45 are new. Of the 45, 1 is a frontier row's own new witness; the other **44 → 43 + 1** are landed-arc guardrails and named refusals owned by the raft W4.1–W4.3 logs, the holes-arc log, BUGS.md, `goose-parity-parked.md`, and one latitude row (L:R15). **Nothing was unowned** — the closest call, `fmt/fprint-writers/{multi-operand,non-string}`, is named in prose rather than by id at `docs/raft-w43-log.md:264`. §8 now has a bucket for them and `reconcile-records` C4 sums it. The open QUESTION — whether the fmt/strconv/strings shim boundary deserves FR rows and queue slots — is left for the audit, deliberately. |
+| **R-4** | FIXED, and the two rows dispositioned DIFFERENTLY — which is the finding the mechanical check could not make. **FR-8 genuinely landed and is RETIRED** (BUG-014 closed at `f981f7cd`; all 8 rows of `maps/nil-literal-values/*` PASS). **FR-5 did NOT land — it half-landed and is RE-SCOPED, not retired.** The raft W4.1 record is explicit that expression-position ops and sync method values keep failing closed, and it added `sync/promoted-mutex/trylock-expr` red BY DESIGN as the standing witness; the row now names the expression-position half and cites it. So the queue head is wrong in the *other* direction from the one R-4 suspected: slot 5 survives (smaller, ~½ day), slot 8 is freed. Frontier bucket 84 → 81. |
+| **R-4b** | FIXED. FR-13's "F3 family 7" and FR-14's ellipsis glob are expanded to the literal ids (all 7 and all 4 verified red at this tip); FR-9's excluded adjacency is de-backticked and its real home named (counted inside Q-ATOMIC's 5). All three counts were CORRECT — the citations were the problem. All 15 FR rows now re-derive mechanically. |
+| **R-5** | FIXED. §10's (b) list is 15 → **17**: it had omitted C9 outright and parenthesised R12 as "(+R12 harness-level)", in the list but outside the total. |
+| **R-6** | PARTLY FIXED; residue explained, and it is the one finding where "fix everything" would have been the wrong move. The genuinely FALSE claim is corrected: `docs/coverage-ledger.md`'s three "installed Go 1.26.4" sites are now go1.26.5 — verified against `go version` (go1.26.5) and the pin. The rest are labelled, not rewritten: the 56 scheduling-dossier sites are source-archaeology `file:line` citations at the go1.26.7 tag (with a byte-identity argument for the thirteen files cited), **not** oracle claims — so no envelope argument rests on an off-pin toolchain, answering the hand-check above; the 3 unwinding-arc sites are dated 2026-07-25 probe records; the spec-divergence-ledger site is a deliberate cross-version comparison row. Both bulk files got an explicit version label. Rewriting dated probe records to the current pin would assert probes that never ran. **The check therefore still fires (64 sites) and should**: it is a prompt to read, not a condition to zero. |
+| **R-7** | FIXED. §10 now separates MEMBERSHIP from HISTORY (new §10.1), so a row that LEFT a class can no longer be read as a member of it. C2/C3 out of the (b) list. |
+| **R-8** | FIXED. E9 out of the (b-n) list (history block); R13 tagged `(b-n)` from its own body. |
+| **R-9** | FIXED, with one honest asymmetry. C10 → **REFUSED** and R13 → **(b-n)** are re-derivations of decisions already on record (§5 already listed C10; the (b-n) list already counted R13). **R7 is a FIRST classification** — no tag since the founding commit `b44fb7b0`, in no enumeration — so it is recorded as such in the row itself, with the read taken **(b-n)** and the two rejected readings ((b) and (q)) written down rather than buried. (b-n) count 6 → 7. An auditor overturning it changes nothing downstream. |
+
+**The two findings that remain, and why neither is a defect to fix here:**
+
+1. **C13 / R-6, 64 off-pin version sites** — by design, per above.
+2. **C9, wire-schema staleness.** Three commits touched
+   `wire.go`/`NativeToIR.lean` after the certified set's 2026-08-21
+   date, so its wire sha is current only if `scripts/ci --slow` has
+   re-enumerated since. Settling it requires a `--slow` run, which is
+   a runtime-gate action outside a docs/scripts branch's remit and
+   outside this branch's gate. **Carried forward as an obligation:**
+   run `scripts/ci --slow` before the campaign consumes the certified
+   set, or re-date it. Unchanged in substance from the dossier.
+
+Also closed in passing: **D-4** (the Go 1.26.4 sites, above).
+
 ---
 
 ## §3 THE RESIDUALS REGISTER

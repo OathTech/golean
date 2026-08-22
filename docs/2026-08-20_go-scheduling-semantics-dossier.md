@@ -4,6 +4,19 @@
 
 ## Scope, labels, and version pin
 
+> **Relationship to the repo's version pin (added 2026-08-22,
+> `reconcile-records` C13).** Every `go1.26.7` in this file is a
+> SOURCE-ARCHAEOLOGY citation — a `file:line` into gc's runtime at the
+> go1.26.7 tag — never an oracle or toolchain claim about what
+> produced any number in this repo. The repo's pin is go1.26.5
+> (`docs/spec-sources.md`), and the differential oracle is the
+> installed go1.26.5 toolchain; nothing here was measured off-pin. The
+> byte-identity argument immediately below is what makes the off-pin
+> citations safe: the thirteen runtime/sync files cited are identical
+> across go1.26.6 and go1.26.7. Anything in this file that becomes a
+> BEHAVIORAL claim about our oracle must be re-probed at the pin
+> before it is relied on.
+
 [implementation @go1.26.7] The latest Go 1.26 patch at the cutoff is **go1.26.7**, released 2026-08-19. The official history says: “go1.26.7 (released 2026-08-19) includes fixes to the `net/http` package.” ([release history](https://go.dev/doc/devel/release#go1.26.minor); tag commit [`e3336a22ad3f0a90bd252c95d8b5544e02674205`](https://github.com/golang/go/commit/e3336a22ad3f0a90bd252c95d8b5544e02674205)).
 
 [implementation @go1.26.7] The workspace's Go mirror ends at go1.26.6, commit [`1ea5a71ad8ceb7b9f16b4b6f8ea4739a4327dd6e`](https://github.com/golang/go/commit/1ea5a71ad8ceb7b9f16b4b6f8ea4739a4327dd6e). I compared SHA-256 hashes of `runtime/{preempt.go,proc.go,chan.go,signal_unix.go,os_windows.go,os_wasm.go,os_plan9.go,extern.go,debug.go,panic.go,mgc.go}` and `sync/{rwmutex.go,cond.go}` from that commit with the same files served from the go1.26.7 tag; all thirteen are byte-identical. Source-line citations below therefore use the go1.26.7 commit and were inspected locally in the identical go1.26.6 files.

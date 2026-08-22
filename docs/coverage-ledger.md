@@ -68,7 +68,7 @@ suite grows. Representative cases are examples, not an exhaustive manifest.
 | Map iteration order | deferred-nondet | - | Needs set/permutation observation or relation-style oracle. |
 | Unsafe and layout | deferred-unsafe | - | Needs explicit unsafe policy. |
 | Standard library semantics | deferred-stdlib | - | Track separately from language semantics; reduce only language-relevant parts into active cases. |
-| Go version-specific features | partial | `panic-recover/panic-nil-recover` records Go 1.21+ behavior; `builtins/clear-map`, `builtins/clear-slice`, `builtins/min-max-ints`, and `builtins/min-max-strings` use Go 1.21+ builtins; `range/range-int`, `range/range-int-zero`, `range/range-int-negative`, `range/range-int-typed`, and `range/range-loop-var-capture` record Go 1.22+ range/loop-variable behavior; `range/range-func-basic` and `range/range-func-break` record Go 1.23+ iterator-function range behavior; `generics/type-aliases` records generic type alias behavior supported by the installed Go 1.26.4 toolchain; current active cases otherwise use baseline installed Go 1.26.4 | Add future version notes when syntax or semantics changes across Go releases. |
+| Go version-specific features | partial | `panic-recover/panic-nil-recover` records Go 1.21+ behavior; `builtins/clear-map`, `builtins/clear-slice`, `builtins/min-max-ints`, and `builtins/min-max-strings` use Go 1.21+ builtins; `range/range-int`, `range/range-int-zero`, `range/range-int-negative`, `range/range-int-typed`, and `range/range-loop-var-capture` record Go 1.22+ range/loop-variable behavior; `range/range-func-basic` and `range/range-func-break` record Go 1.23+ iterator-function range behavior; `generics/type-aliases` records generic type alias behavior supported by the installed Go 1.26.5 toolchain; current active cases otherwise use baseline installed Go 1.26.5 | Add future version notes when syntax or semantics changes across Go releases. |
 
 ## Core Coverage Spike Notes
 
@@ -76,7 +76,7 @@ suite grows. Representative cases are examples, not an exhaustive manifest.
   operands, untyped defaulting across scalar kinds, expression evaluation once,
   composite operands, generic operands, and distinct allocations.
 - `negative/compile/builtins/new-nil-expr` records that `new(nil)` is rejected
-  by the installed Go 1.26.4 toolchain.
+  by the installed Go 1.26.5 toolchain.
 - `comparisons/short-circuit` adds paired array, struct, and nested
   array/struct comparison-order cases where early inequality either skips or
   reaches a later interface comparison panic. `negative/compile/comparisons`

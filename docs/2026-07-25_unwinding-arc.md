@@ -101,6 +101,16 @@ fault-identity contract and fresh oracle probes (Go 1.26.4). Three findings
 refine §10's single-value sketch; all are oracle-pinned, none contradict
 the plan's structure.
 
+> **Version label (added 2026-08-22, `reconcile-records` C13).** Every
+> "Go 1.26.4" in this file is a DATED HISTORICAL probe record — the
+> toolchain that was installed when these probes ran on 2026-07-25 —
+> not a claim about the current oracle. The pin has since moved to
+> go1.26.5 (`docs/spec-sources.md`). These records are deliberately
+> left at the version that produced them: rewriting them to the
+> current pin would assert probes that never ran. If any pin here is
+> re-derived, re-probe and add a new dated block rather than editing
+> these numbers in place.
+
 ### A1. Fault identity pins the FIRST panic line — so `panicking` carries a chain
 
 The harness does not recover: an aborting case emits Go's raw runtime

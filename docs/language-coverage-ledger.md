@@ -315,16 +315,16 @@ to an FR/Q row here, a (c)-pin (triage §4), or an (a)-queued fix
 | FR-2 | channel receive in a short-circuit RHS | emit.go:7578 — `unsup("channel receive in %s (would change evaluation order)")` | spec#Order_of_evaluation, spec#Logical_operators | 4 (`recv-short-circuit/{and-rhs,or-rhs,and-rhs-skipped}`, `operator-precedence/mixed-chan`) | frontend-only: extend the E3 conditional normalization to `hoistChanRecv` | seq → queue 2 |
 | FR-3 | derived pointer-receiver method expression (`(*T).Mv` adapter) | emit.go:4919 — `unsup("method expression (*%s).%s over a value-receiver method (deref adapter not modeled)")` | spec#Method_expressions | 2 (`spec-examples-decl/method-expressions`, `…/derived-pointer-receiver-expr`) | frontend: one synthesized deref adapter | seq → queue 3 |
 | FR-4 | method STENCILS lack the per-declaration quarantine (H-3 residual) | mono.go `flushTypeInsts` — whole-export refusal (measured: `native frontend unsupported: selector call Sprintf is not a method value`, exit 1) | spec#Method_declarations, spec#Instantiations | 1 (`generics/stencil-quarantine/sibling`) | frontend: the H-3 stub mechanism × the instantiation rollback; method-set-completeness invariant applies | seq → queue 4 |
-| FR-5 | sync ops in promoted / embedded / expression positions | emit.go:6541 — `unsup("sync.%s.%s outside a direct statement/defer position (promoted, embedded, and expression-position sync ops are unmodeled)")` | sync design note §9 (stdlib surface; spec#Selectors for the shape) | 2 (`sync/escapes/{defer-embedded,promoted}`) | frontend routing to the EXISTING modeled ops (no new envelope) | seq → queue 5 — **raft-path TOP** (`deps/raft/storage.go:108,139,147`) |
+| FR-5 | sync ops in EXPRESSION position (the promoted/embedded half landed) | emit.go:7457 — `unsup("sync.%s.%s outside a statement/defer position (expression-position sync ops and sync method values are unmodeled; direct AND promoted statement/defer ops lower — H-12)")` | sync design note §9 (stdlib surface; spec#Selectors for the shape) | 1 (`sync/promoted-mutex/trylock-expr`) | frontend routing to the EXISTING modeled ops (no new envelope) | seq → queue 5 — raft-path (`deps/raft/storage.go:108,139,147` — the PROMOTED shapes, now lowering) |
 | FR-6 | assignment-form range with non-identifier targets | emit.go:3043 — `unsup("range assignment to non-identifier target (operands evaluate per iteration)")` | spec#For_range, spec#Assignment_statements | 4 (`assign-form-nonident/*`, `assign-tuple-order/range-assign`) | frontend: per-iteration two-phase target evaluation inside the range lowering | seq → queue 6 |
 | FR-7 | implicit boxing of tuple COMPONENTS into interface targets | emit.go:2225/:2529/:2601 — `unsup("implicit interface conversion in multi-value assignment (interfaces campaign, deferred)")` | spec#Assignment_statements, spec#Assignability, spec#Type_assertions | 6 (`…typed-iface` ×3, `tuple-call-iface`, `assert-comma-ok`, `imported-goose/unittest/interfaces`) | frontend: per-component box at the comma-ok/tuple stores (the BUG-057 reroute's guarded edge) | seq → queue 7 |
-| FR-8 | defined-type-aware typed nil (BUG-014) | GoCore nil-literal arm — at use: `unsupported "len for non-array/slice/map value GoLean.GoValue.nil"` | spec#Composite_literals, spec#The_zero_value | 2 (`maps/nil-literal-values/defined-{map,slice}-element`) | GoCore-touching (resolve `.defined` through underlying at the nil arm) — gated class | seq → queue 8 |
-| FR-9 | declarations for imported named types (BUG-008) | GoCore/Ops.lean `tyUncomparable` `none` arm — `unsupported "map key hashability for unknown defined type sort.IntSlice"` | spec#Comparison_operators | 1 (`maps/imported-named-key-unhashable`) + the D5-stub adjacency (`atomic-frontier/value`) | frontend feature (TypeDef emission for imported types; the interface mechanism exists) | seq → queue 9 — raft-path |
+| FR-8 | ~~defined-type-aware typed nil (BUG-014)~~ **RETIRED 2026-08-22 — LANDED** | was: GoCore nil-literal arm — at use: `unsupported "len for non-array/slice/map value GoLean.GoValue.nil"` | spec#Composite_literals, spec#The_zero_value | 0 — all 8 rows of `maps/nil-literal-values/*` PASS; BUG-014 closed at commit f981f7cd, the representation arm landed at raft W4.1 (`maps/named-nil-flows`, 5 guardrails) | — | retired; queue slot 8 freed |
+| FR-9 | declarations for imported named types (BUG-008) | GoCore/Ops.lean `tyUncomparable` `none` arm — `unsupported "map key hashability for unknown defined type sort.IntSlice"` | spec#Comparison_operators | 1 (`maps/imported-named-key-unhashable`) — plus the D5-stub adjacency at sync/atomic-frontier/value, deliberately NOT counted here because it is already counted under Q-ATOMIC's 5 (id left un-backticked so the count stays mechanically re-derivable) | frontend feature (TypeDef emission for imported types; the interface mechanism exists) | seq → queue 9 — raft-path |
 | FR-10 | array-pointer VIEWS over slice storage (L2b) | GoCore conversion arms — succeeding `(*[N]T)(s)` forms refused (`Loc` has no subarray-view constructor) | spec#Conversions_from_slice_to_array_or_array_pointer | 1 (`slice-to-array/ok-forms`) | GoCore: a subarray-view `Loc` constructor + aliasing story | seq → queue 10 |
 | FR-11 | fresh-cell-per-execution `goto` lowering | emit.go:1459/:1474/:1476/:1478 — `unsup("goto function hoists …")` | spec#Goto_statements | 5 (`control-flow/goto-backward-*`) | frontend: per-execution cell identity for hoisted declarations (the jumps are LEGAL; the refusal is our lowering's honesty check) | seq → queue 11 |
 | FR-12 | range-over-func iterators (Go 1.23) | emit.go:3209 — `unsup("range over %s", e.goTypeOf(rs.X))` | spec#For_range | 9 (`range/range-func-*`) | frontend desugar + the yield/loop-exit protocol (break/defer/panic paths — the edge suite already pins them) | seq → queue 12 |
-| FR-13 | structural TypeIds: anonymous non-empty struct types (incl. as type arguments) | wire.go:508 — `unsup("anonymous non-empty struct type %s", ty)`; mono.go:965 — `unsup("anonymous non-empty struct as a type argument (%s)")` | spec#Struct_types, spec#Satisfying_a_type_constraint, spec#Conversions | 8 (F3 family 7 + `generics/anon-struct-type-argument`) | identity design: structural TypeIds beside nominal ones — frontend + GoCore | seq → queue 13 |
-| FR-14 | stdlib package surface (`fmt`, `math`, `strings`, `errors`, `slices`, `math/rand`; + `slices.Sort` beyond integers) | emit.go:6567 — `unsup("selector call %s is not a method value")` (the misattributing string — triage §3 honesty note); emit.go:6909 — `unsup("slices.Sort at non-integer element type %s")` | spec#Qualified_identifiers (construct fine; the gap is extern surface) | 7 (`timezone-stringer`, `qualified-identifier`, `methods/quarantine-*/…-call` ×4, `slices-sort-non-integer-refusal`) | extern-model design (quorum extern policy is the precedent) | seq → queue 14 — raft-path IN AGGREGATE; pull-forward option 14a = minimal `fmt.Sprintf` verb subset |
+| FR-13 | structural TypeIds: anonymous non-empty struct types (incl. as type arguments) | wire.go:508 — `unsup("anonymous non-empty struct type %s", ty)`; mono.go:965 — `unsup("anonymous non-empty struct as a type argument (%s)")` | spec#Struct_types, spec#Satisfying_a_type_constraint, spec#Conversions | 8 — the triage F3 family 7 (`generics/type-aliases/struct-literal`, `spec-examples-decl/struct-tag-conversion`, `spec-examples-decl/type-definitions-distinct`, `spec-examples-stmt/struct-tags`, `spec-examples-stmt/type-unify-struct-array`, `structs/tag-nested-conversion`, `structs/tag-unnamed-conversion`) + the F21 type-argument sub-row (`generics/anon-struct-type-argument`) | identity design: structural TypeIds beside nominal ones — frontend + GoCore | seq → queue 13 |
+| FR-14 | stdlib package surface (`fmt`, `math`, `strings`, `errors`, `slices`, `math/rand`; + `slices.Sort` beyond integers) | emit.go:6567 — `unsup("selector call %s is not a method value")` (the misattributing string — triage §3 honesty note); emit.go:6909 — `unsup("slices.Sort at non-integer element type %s")` | spec#Qualified_identifiers (construct fine; the gap is extern surface) | 7 (`spec-examples-decl/timezone-stringer`, `spec-examples-lexical/qualified-identifier`, `methods/quarantine-embedded/promoted-call`, `methods/quarantine-interface/dispatch-quarantined`, `methods/quarantine-pointer-receiver/pointer-call`, `methods/quarantine-sibling/quarantined-call`, `slices/slices-sort-non-integer-refusal`) | extern-model design (quorum extern policy is the precedent) | seq → queue 14 — raft-path IN AGGREGATE; pull-forward option 14a = minimal `fmt.Sprintf` verb subset |
 | FR-15 | complex numbers (types, literals, constants, `real`/`imag`/`complex`) | wire.go:545 — `unsup("basic type %s", b)` | spec#Numeric_types, spec#Imaginary_literals, spec#Complex_numbers, spec#Constants | 27 (`complex/*` 20 + 7 satellites: `builtins/real-imag`, `constants/{default-types,typed-complex-binary,untyped-complex-context}`, `new/new-expr/untyped-defaults`, `spec-examples-decl/const-complex/untyped`, `spec-examples-lexical/imaginary-literals` — split corrected 21+6 → 20+7 at the audit fix round, total unchanged) | GoCore arithmetic kernel (softfloat pairs) + frontend + constants | seq → queue 15, LAST — the one large arc (user direction), not raft-path (zero `complex` in `deps/raft`) |
 
 ## 5. The build queue (2026-08-19) — ordered sequential-frontier arcs
@@ -349,10 +349,10 @@ user's C4 split, triage §7/L12b)**; the (c)-list ratification —
 | 2 | receive-in-short-circuit (E3 extension) | FR-2 | 4 | ½–1 day |
 | 3 | method-expression deref adapter | FR-3 | 2 | ½–1 day |
 | 4 | method-stencil quarantine | FR-4 | 1 | ½–1 day |
-| 5 | sync promoted/embedded/expression routing — **raft-path top** | FR-5 | 2 | 1–2 days |
+| 5 | sync EXPRESSION-position routing (promoted/embedded landed at raft W4.1) | FR-5 | 1 | ~½ day |
 | 6 | range assignment-form targets | FR-6 | 4 | ~1 day |
 | 7 | tuple-component interface boxing | FR-7 | 6 | 1–2 days |
-| 8 | defined-type typed nil (GoCore-gated class) | FR-8 | 2 | ~1 day |
+| ~~8~~ | ~~defined-type typed nil (GoCore-gated class)~~ **RETIRED — landed** | FR-8 | 0 | — |
 | 9 | imported named TypeDefs — raft-path | FR-9 | 1+ | 1–2 days |
 | 10 | array-pointer views over slice storage | FR-10 | 1 | ~2 days |
 | 11 | fresh-cell goto lowering | FR-11 | 5 | 1–2 days |
@@ -434,8 +434,14 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the slice-6 tranche-B baseline (2219 cases, 2090 PASS /
-129 FAIL; `baselines/native-full.tsv`, recorded 2026-08-19).
+All numbers at the current tracked baseline (2462 cases, 2293 PASS /
+169 FAIL; `baselines/native-full.tsv`, recorded 2026-08-22 at
+`56a12142`). **Re-derived 2026-08-22** on the settlement branch: the
+arithmetic below had been vintage-locked to the slice-6 tranche-B
+baseline (2219 / 2090 / 129, recorded 2026-08-19 at `6f68292c`) while
+seven re-pins moved beneath it, so §8 asserted "every one on a named
+row … zero unmapped" over a red set 40 cases smaller than the real
+one. §8b records the derivation.
 
 **The spec's 158 sections:**
 
@@ -454,28 +460,109 @@ All numbers at the slice-6 tranche-B baseline (2219 cases, 2090 PASS /
 frontier 2 (atomic → Q-ATOMIC, goexit → Q-GOEXIT), latitude 1 (model →
 C10), out-of-language 5. Zero unclassified.
 
-**The 129 baseline reds, every one on a named row (verified
-mechanically at the re-pin — zero unmapped, zero double-mapped):**
+**The 169 baseline reds, every one on a named row (re-derived
+mechanically 2026-08-22 — zero unmapped, zero double-mapped):**
 
 | bucket | reds |
 | --- | --- |
-| frontier FR-1…FR-15 (§4) | 84 |
+| frontier FR-1…FR-15 (§4) | 81 |
 | design questions Q-* (§6) | 21 |
 | (c) profound-reason pins (triage §4 + the unsafe marker) | 9 + 1 |
 | (a)-queued fixes (triage §3.2: A3 5, A4 1, A5 1, A6 4, A7 1 + BUG-062 2) | 14 |
-| **total** | **129** |
+| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) | 43 |
+| **total** | **169** |
 
 *(Two rows re-balanced 2026-08-20 by the ratified C4 split — the (c)
 column went 10+1 → 9+1 and the (a)-queued column 13 → 14 as
 `panic-recover/panic-newline-abort` became mini-slice A7. The total is
 untouched: nothing flipped, one red changed bucket.)*
 
-The only red not in the triage table's original 138 groups or a slice-6
-FR/Q suite is `unsafe/boundary/pointer-roundtrip` — the out-of-language
-boundary marker, argued as a (c)-class justified pin (triage postscript
-3) and put to the user with the (c) list.
+The only red not in the triage table's original 138 groups, a slice-6
+FR/Q suite, or §8b is `unsafe/boundary/pointer-roundtrip` — the
+out-of-language boundary marker, argued as a (c)-class justified pin
+(triage postscript 3) and put to the user with the (c) list.
 
-**Sequential-frontier queue mass:** 15 arcs, 84 reds; the top four
-retire 12 reds in ~2-3 days of small arcs; FR-15 (complex) alone is 27.
-**Design-question mass:** 9 questions, 21 reds, every one with its
-cases in hand.
+**Sequential-frontier queue mass:** 14 live arcs (FR-8 retired), 81
+reds; the top four retire 12 reds in ~2-3 days of small arcs; FR-15
+(complex) alone is 27. **Design-question mass:** 9 questions, 21 reds,
+every one with its cases in hand.
+
+### 8b. The re-derivation, 2026-08-19 vintage → this tip
+
+Method (reproducible, not asserted): take the FAIL id set of the
+vintage baseline `6f68292c` and of the current one, and diff them.
+
+```
+git show 6f68292c:baselines/native-full.tsv | awk -F'\t' '$1=="FAIL"{print $2}' | sort > old
+awk -F'\t' '$1=="FAIL"{print $2}' baselines/native-full.tsv | sort > new
+comm -23 old new   # 5 vintage reds now green
+comm -13 old new   # 45 reds new since the vintage
+```
+
+129 − 5 + 45 = 169. ✓
+
+**The 5 that went green** — all five were frontier-bucket reds, which
+is why that bucket is the only one that moves:
+
+| id | row | disposition |
+| --- | --- | --- |
+| `sync/escapes/promoted` | FR-5 | LANDED at raft W4.1 (promoted/embedded ops in statement/defer position lower). FR-5 re-scoped, not retired — see below. |
+| `sync/escapes/defer-embedded` | FR-5 | same |
+| `maps/nil-literal-values/defined-map-element` | FR-8 | LANDED — BUG-014 closed at `f981f7cd`; all 8 rows of the family PASS. **FR-8 RETIRED.** |
+| `maps/nil-literal-values/defined-slice-element` | FR-8 | same |
+| `spec-examples-decl/compile-only-forms` | FR-13 | went green when H-11 began skipping its blank package-level row (audit F3, 2026-08-20); the row's witness MOVED to `generics/anon-struct-type-argument`, which is red. FR-13's 8 is unchanged — a swap, not a retirement. |
+
+**FR-5 is re-scoped, NOT retired** — the honest reading, and the one
+the reconciler could not make on its own. Its two cited cases went
+green, but the raft W4.1 landing record is explicit that *"expression-
+position ops and sync method values KEEP failing closed"*, and it
+added `sync/promoted-mutex/trylock-expr` **red by design** as the
+standing witness. So the feature is half-landed: FR-5 now names the
+expression-position half and cites that witness (1 red). The sync
+method-value / go-callee half (`sync/escapes/{method-value,go-stmt}`)
+was never FR-5's — it is Q-SYNCVAL's, and both cases are still red
+inside Q-SYNCVAL's 5.
+
+**Frontier bucket: 84 → 81.** −2 FR-8 (retired), −1 FR-5 (2 → 1);
+FR-13 net 0 (the compile-only-forms ↔ anon-struct-type-argument swap);
++1 FR-5's new witness `sync/promoted-mutex/trylock-expr`, which is one
+of the 45. Net: 84 − 2 − 2 − 1 + 1 = 81, and 45 − 1 = **43** remain for
+the new bucket. Q, (c) and (a)-queued are untouched: none of their
+cases moved.
+
+**The 43, by family and owning record.** These are arcs that landed
+AFTER the vintage baseline; their reds are guardrails and named
+refusals, owned by the arc logs rather than by a §4/§6 row. That is
+not a gap — it is where the record lives — but §8 previously had no
+bucket for it, which is exactly how 40 reds became invisible here.
+
+| family | reds | owning record |
+| --- | --- | --- |
+| `init/quarantined-var{,-callee,-impure,-panicking,-syscall,-writer}/*` | 10 | raft W4.1/W4.2 — `docs/raft-w4-log.md`, `docs/raft-w42-log.md` |
+| `interfaces/quarantined-dispatch-teeth/uninstalled` | 1 | raft W4.2 — `docs/raft-w42-log.md` |
+| `fmt/sprintf-dyn/*` | 4 | raft W4.3 — `docs/raft-w43-log.md` |
+| `fmt/formatter-precedence/*` | 3 | raft W4.3 (audit R1-F2) |
+| `fmt/sprintf-verbs/*` | 3 | raft W4.1/W4.3 |
+| `fmt/v-composites/*` | 3 | raft W4.3 (delta-review CRITICAL-1, `56a12142`) |
+| `fmt/fprint-writers/{multi-operand,non-string}` | 2 | raft W4.3 — `docs/raft-w43-log.md:264`, "multi-operand and non-string operands refuse (2 boundary rows)" (named in prose, not by id) |
+| `slices/sortfunc-cmp/*` | 3 | raft W4.3 |
+| `strconv/format-parse/unmodeled-member` | 1 | raft W4.3 |
+| `strings/split-conformance/empty-sep` | 1 | raft W4.3 |
+| `panic-recover/shim-refusal-unrecoverable/*` | 3 | raft W4.3 (audit R4-C-3: shim refusals are unrecoverable machine stops) |
+| `scoping/named-result-shadow/*` | 2 | BUG-068 — `docs/BUGS.md`, raft W4.3 |
+| `pointers/nil-array-ptr-slice-elided-high/*`, `pointers/nil-array-ptr-slice/slice-expr-nil` | 5 | BUG-066 — `docs/holes-arc-log.md`, `docs/BUGS.md` |
+| `pointers/zero-size-address/escaped-same` | 1 | **L:R15** — a latitude-pinned red (inventory R15), version-tracked, W3.2 re-envelope obligation |
+| `goroutines/worker-pool/sum` | 1 | `docs/goose-parity-parked.md`, `docs/w32-log.md` |
+| **total** | **43** | |
+
+**What is still owed here (registered, not fixed).** These 43 are
+mapped to their owning RECORD, which is what makes "zero unmapped"
+true again. They are not mapped to §4/§6 ROWS, because most are not
+frontier features — they are landed-arc guardrails and named refusals.
+Whether some of them (the fmt/strconv/strings shim boundary in
+particular) deserve promotion to FR rows with queue slots is a real
+scoping question and is left to the audit rather than decided here.
+The reconciler (`tools/reconcile-records`, check C4) now re-derives
+this arithmetic on every run, so the next drift surfaces in seconds
+instead of over seven re-pins — the mechanism §8 previously claimed
+("verified mechanically at the re-pin") but never retained.

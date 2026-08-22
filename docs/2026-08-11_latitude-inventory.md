@@ -71,15 +71,30 @@ consume-when column is the `consumeAtOne` policy declaration (the
 L1/L4 singleton non-consumption moved from caller-side special cases
 into the table at stage A, behavior-identical):
 
+**Mirror re-synced 2026-08-22** (settlement branch, `reconcile-records`
+C12). The mirror had DRIFTED and nothing was watching it: it carried 7
+rows against the datatype's 9 constructors — `postOp` (stage C) and
+`backEdge` (stage D) were never added — and all seven surviving rows'
+`file:line` citations were stale. The exhaustiveness check is real but
+it protects the CODE, not this table, and the table is what a reader
+consults; a census two sites short is a census of a different machine.
+Every row's site is now re-verified against the `Choices.consumeAt`/
+`consumeAtE` call sites at this tip. Note `l1Sched`/`postOp`/`backEdge`
+share ONE consumption line (Multi.lean:1153) and are distinguished by
+`Config.boundarySite` — so "one row per constructor" is the honest
+granularity here, not "one row per call site".
+
 | Site | Code | Bound | Consumed when | Empty-stream default |
 |---|---|---|---|---|
-| Map-iteration pick | StepFn.lean:599 | snapshot remainder size | every iteration (even width 1) | first snapshot entry (insertion order) |
-| Append spill capacity | Machine.lean:863 | `appendSpillWidth` (Ops.lean:1857) | every spill | gc growth-formula point |
-| L2 select pick, entry path | Machine.lean:2374 | ready-clause count | only width > 1 | first ready clause (clause order) |
-| L2 select pick, arrival path | Multi.lean:712 | `.multi` outcome count | only `.multi` | first ready clause |
-| L4 waiter pick | Multi.lean:884 | matching-candidate count | only width > 1 | lowest (goroutine order, clause order) |
-| L1 scheduler pick | Multi.lean:926 | \|runnable\| | only width > 1 | lowest runnable goroutine id |
-| L5 main-exit window | Multi.lean:1422 | 2 | main terminal ∧ others runnable | 0 = exit now |
+| Map-iteration pick (`mapIter`) | StepFn.lean:621 | snapshot remainder size | every iteration (even width 1) | first snapshot entry (insertion order) |
+| Append spill capacity (`appendSpill`) | Machine.lean:946 | `appendSpillWidth` (Ops.lean:1857) | every spill | gc growth-formula point |
+| L2 select pick, entry path (`l2Entry`) | Machine.lean:2799 | ready-clause count | only width > 1 | first ready clause (clause order) |
+| L2 select pick, arrival path (`l2Arrival`) | Multi.lean:853 | `.multi` outcome count | only `.multi` | first ready clause |
+| L4 waiter pick (`l4Waiter`) | Multi.lean:1039 | matching-candidate count | only width > 1 | lowest (goroutine order, clause order) |
+| L1 scheduler pick (`l1Sched`) | Multi.lean:1153 (via `Config.boundarySite`, :1099) | \|runnable\| | only width > 1 | lowest runnable goroutine id |
+| L5 main-exit window (`l5ExitWindow`) | Multi.lean:1628 | 2 | main terminal ∧ others runnable | 0 = exit now |
+| Post-op boundary pick (`postOp`, W3.2 stage C) | Multi.lean:1153 (via `Config.boundarySite`, :1100) | \|runnable\| (issuer-first menu, `schedSlots` :1122) | at an `.opDone .postOp` marker, only width > 1 | slot 0 = the ISSUER continues (the pre-widening schedule, literally) |
+| Loop back-edge pick (`backEdge`, W3.2 stage D) | Multi.lean:1153 (via `Config.boundarySite`, :1101–1103) | \|runnable\| (current-first menu, `schedSlots` :1123) | at a loop re-entry shape (`.loop`, `.mapIterK`), only width > 1 | slot 0 = the CURRENT goroutine continues |
 
 The race detector consumes NOTHING and replays nothing (stage B, Q2:
 `raceUpdate` folds the step's emitted `StepEvent` — the old
@@ -371,7 +386,7 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   the message/exit pin is R9's class. Cost of the record: zero (this
   entry).
 
-### C10. Racy programs — refusal by doctrine, and the detector's OWN latitude alignment
+### C10. Racy programs — REFUSED by doctrine (§5), and the detector's OWN latitude alignment
 
 - WHERE: MM — racy programs get essentially undefined behavior
   ("An implementation may always react to a data race by reporting the
@@ -939,7 +954,7 @@ the same call.
   a value envelope {amd64 point, saturation, ...} — only worth it if a
   target program does this deliberately.
 
-### R7. NaN bit patterns produced by the machine — pinned canonical quiet NaN; unobservable in-language
+### R7. NaN bit patterns produced by the machine — (b-n) NARROWED to the canonical quiet NaN; unobservable in-language
 
 - FloatBits.lean:68–72. Go the language cannot observe NaN payloads
   (math.Float64bits is out of scope); becomes latitude-relevant only if
@@ -951,6 +966,27 @@ the same call.
   NaN-adjacent narrowing: a NaN result carries the NaN OPERAND's bits
   (payload unobservable in-language — this entry's own scope
   condition).
+- CLASS, first assigned 2026-08-22 (settlement branch,
+  `reconcile-records` C10): this heading carried NO class tag from the
+  inventory's founding commit `b44fb7b0` until now, and R7 appears in
+  no §10 enumeration — so this is a FIRST classification, not the
+  re-derivation of a prior decision, and it is recorded as such so an
+  auditor can overturn it cheaply. Read taken: **(b-n)**, on the
+  entry's own words — IEEE-754 admits many NaN payloads, the machine
+  resolves to one (a deliberate proper subset) and records a transfer
+  caveat ("this entry's own scope condition"), which is the legend's
+  definition of (b-n); R13 ("declared-unobservable narrowing") is the
+  established precedent for the same shape and is counted (b-n).
+  **The two rejected readings, recorded rather than buried:** plain
+  **(b)** — defensible, since the heading's own verb is "pinned" and
+  (b-n) ⊂ (b), so nothing downstream changes if an auditor prefers it;
+  and **(q)** — the shape genuinely matches (one canonical
+  representative, alternatives unobservable through the modeled
+  surface), but (q) requires a THEOREM discharging the re-envelope
+  obligation and R7 has only a scope ARGUMENT ("math.Float64bits is
+  out of scope"), so claiming (q) would claim a discharge that does
+  not exist. If `math` lands, re-decide: a new observation channel is
+  exactly what (q) is conditional on.
 
 ### R8. WaitGroup counter representation — (b) PINNED to gc's bit layout
 
@@ -1027,7 +1063,7 @@ the differential HARNESS keys on (`expected_status` dispatch,
 scripts/diff-coverage); the spec says nothing about exit codes. Rides
 with R9/R11; no machine content beyond the terminal classes themselves.
 
-### R13. Sort stability in `sortSlice` — declared-unobservable narrowing
+### R13. Sort stability in `sortSlice` — (b-n) NARROWED, declared-unobservable
 
 Syntax.lean:248–253 / Ops.lean:1931–1947: insertion sort, "exact for
 integers, where Go's instability is unobservable" (sort.Slice is
@@ -1318,25 +1354,24 @@ permanent; the deviation is not.)
 
 ## 10. Counts
 
-- (a) ENVELOPED: 9 sites / 9 entries (C1, C2, C3, C4, C5, C6, C8,
-  E9, R2 — C6 owns two sites (L2 entry + arrival), C8 rides C1's
-  site; E9's order axis; C3 owns the postOp site and C2 the backEdge
-  site, W3.2 stages C/D). (Count corrected 2026-08-12; C3 moved
-  (b)→(a) 2026-08-20, C2 2026-08-21.)
-- (b) PINNED: **15 entries** — structural: none remaining (C3 moved
-  to (a) at stage C 2026-08-20, C2 at stage D 2026-08-21); sequential
-  order:
-  E2, E3 (known ≠ gc), E4, E5, E7 (known ≠ gc), E10, E11, E12, E13
-  (known ≠ gc on its assertion axis); representation/runtime: R1, R8,
-  R9, R10, R11, R15 (+R12 harness-level). (Recount 2026-08-20, the
-  docs-gcbugs slice: the old "14" listed neither E12, added at the
-  2026-08-17 P2 retrofit, nor R15, added at the 2026-08-19 audit fix
-  round — this line had not been touched since 2026-08-12. E13 is this
-  slice's addition.)
-- (b-n) NARROWED with recorded caveat: 6 — C7, E8, R3 (known outside),
-  R4, R5, R13 (E9's created-entries sub-point was LIFTED to the full
-  envelope 2026-08-19; its residual is the cross-goroutine delete-prune
-  narrowing recorded in E9).
+**Reading rule (adopted 2026-08-22, settlement branch).** Each bullet
+below is a MEMBERSHIP list and nothing else: every id it names is a
+row whose own `###` heading carries that class tag, and every row
+carrying that tag is named. Corrections, movement between classes, and
+per-row asides live under "Movement and history" beneath the list.
+Why the split: §10 does not merely count, it ENUMERATES, and the
+enumerations had accumulated explanatory parentheses naming rows that
+had LEFT the class — C2/C3 inside the (b) list and E9 inside the
+(b-n) list, all three re-enveloped to (a). A reader (and
+`tools/reconcile-records`' C10 check) cannot tell a member from a
+mention, so the mentions moved out. Keep it that way: put prose in the
+history block, never in a membership line.
+
+- (a) ENVELOPED: 9 sites / 9 entries — C1, C2, C3, C4, C5, C6, C8, E9, R2.
+- (b) PINNED: **17 entries** — concurrency: C9; sequential order: E2,
+  E3, E4, E5, E7, E10, E11, E12, E13; representation/runtime: R1, R8,
+  R9, R10, R11, R12, R15.
+- (b-n) NARROWED with recorded caveat: 7 — C7, E8, R3, R4, R5, R7, R13.
 - (c) FORCED: the §4 list (machine follows; BUG-005's mandated
   point — removed-before-reached never produced — CLOSED 2026-08-19
   by the (L) surgery's delete-prune).
@@ -1347,3 +1382,43 @@ permanent; the deviation is not.)
   R3(escaping path). (E13 added 2026-08-20; the C2+C3 send-then-spin
   wedge LEFT this list 2026-08-21 — W3.2 stages C/D re-enveloped it,
   register #1 discharged.)
+
+### 10.1 Movement and history (NOT membership)
+
+Nothing in this block is a class member by virtue of being named here.
+
+- **(a), the 9 entries.** C6 owns two sites (L2 entry + arrival) and
+  C8 rides C1's site, so 9 sites / 9 entries is not a coincidence of
+  two different quantities — it is checked. E9 contributes its order
+  axis. C3 owns the `postOp` site and C2 the `backEdge` site (W3.2
+  stages C/D). Count corrected 2026-08-12; **C3 moved (b)→(a)
+  2026-08-20 and C2 (b)→(a) 2026-08-21** — both were still named
+  inside the (b) list until 2026-08-22.
+- **(b), 15 → 17.** The "15" was never a count of the rows. It omitted
+  **C9** (global deadlock, heading "(b) PINNED to gc's runtime
+  detector") outright — the line said "structural: none remaining",
+  true of C2/C3 but silently read as if it disposed of the whole
+  C-series — and it parenthesised **R12** as "(+R12 harness-level)",
+  in the list but outside the total. Both are (b) rows by their own
+  headings and both are now counted: 15 + C9 + R12 = 17. Corrected
+  2026-08-22 (`reconcile-records` C10; dossier §2 R-5). Earlier
+  recount 2026-08-20 (the docs-gcbugs slice) had added E12 (2026-08-17
+  P2 retrofit), R15 (2026-08-19 audit fix round) and E13 to a line
+  untouched since 2026-08-12.
+- **(b-n), 6 → 7.** **R7** (NaN bit patterns) is added — a FIRST
+  classification, not a recount: its heading carried no tag from the
+  founding commit `b44fb7b0` and it sat in no enumeration. The reading
+  and the two rejected alternatives are recorded in the R7 row itself.
+  E9's created-entries sub-point was LIFTED to the full envelope
+  2026-08-19; its residual is the cross-goroutine delete-prune
+  narrowing recorded in E9 — E9 is an **(a)** row and was named in the
+  (b-n) list only for that aside.
+- **Heading tags completed 2026-08-22.** Three rows carried no class
+  tag at all, so their class was readable only from the body — which
+  is what let the enumerations drift unnoticed. Assigned from the
+  bodies: **C10 → REFUSED** (its own CLASSIFICATION line: "not an
+  envelope — a doctrine-decided boundary … fail-closed refusal", and
+  §5 already lists "racy programs (C10 — by doctrine)"), **R13 →
+  (b-n)** (body: "declared-unobservable narrowing", already counted in
+  the (b-n) list), **R7 → (b-n)** (see above). C10 was already inside
+  §5's count of 9; adding its heading tag changes no total.

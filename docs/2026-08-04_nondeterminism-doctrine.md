@@ -76,7 +76,21 @@ exhaustiveness; the list below is a READER'S MIRROR of that datatype
 - L4 waiter pick (`stepThread`, `Multi.lean`);
 - L1 scheduler pick (`stepMulti`, `Multi.lean`);
 - L5 main-exit window (`execProgLoop`, `Multi.lean` — BUG-044, audit
-  F2: exit-now vs one-more-runnable-goroutine-step at main's terminal).
+  F2: exit-now vs one-more-runnable-goroutine-step at main's terminal);
+- post-op boundary pick (`postOp`, W3.2 stage C — `stepMulti` via
+  `Config.boundarySite`, `Multi.lean`: the reschedule offered at an
+  `.opDone` completion marker, slot 0 = the issuer continues);
+- loop back-edge pick (`backEdge`, W3.2 stage D — same combinator, at
+  the loop re-entry shapes, slot 0 = the current goroutine continues;
+  this is the site that makes a future `Fair` predicate non-vacuous).
+
+**Mirror re-synced 2026-08-22** (settlement branch,
+`reconcile-records` C12): the last two entries were missing — the
+W3.2 stages C and D added their constructors without updating either
+reader's mirror, and nothing was watching, because the exhaustiveness
+check protects the CODE and not the prose. A census two sites short is
+a census of a different machine. The claim below ("agree exactly") was
+FALSE from stage C until this fix; it is re-verified now.
 
 This list and the executable consume sites agree exactly — verified by
 the inventory's dual sweep (its §0 census table, with per-site bounds,
