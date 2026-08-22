@@ -105,3 +105,19 @@ recomputed at the checkpoint, never restated.
   `grep -n "sorry\|native_decide"` over RefinedProofStructure.lean:
   zero hits. Remaining in-unit work: the discharge witness (GAP-3
   companion), AxCheck curated pins for the new headliners, scripts/ci.
+- 2026-08-22 Slice 6: the discharge witness (constitution §3.3 /
+  CLAUDE.md witness gate) — `VotesShape` (`votes`/`votesWithLog`
+  extended in lockstep by every ghost handler), five per-handler
+  preservation lemmas, and `refined_votes_shape_witness` instantiating
+  the principle with ALL eleven obligations discharged. [AGENT]
+  Witness choice: a real (if small) ghost invariant rather than
+  `fun _ => True`, so the obligation premises (handler equations, `gd`
+  equations, state-update conditions) are all actually consumed;
+  deliberately NOT one of the election-safety chain's invariants, to
+  avoid pre-empting unit 2's 1:1 statements. Plus AxCheck curated pins
+  for refined_raft_net_invariant / simulation_1 / simulation_2 /
+  lift_prop / lower_prop / refined_votes_shape_witness (gate
+  strengthening only; captured from a fresh `#print axioms` run — all
+  [propext, Quot.sound]). Full build green: AxCheck sweep 987 decls,
+  diffharness fixture pin OK (320 cases), zero warnings after
+  `omit O in` on the five lemmas.

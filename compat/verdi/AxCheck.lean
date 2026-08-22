@@ -46,6 +46,22 @@ open VerdiCompat VerdiCompat.Raft
 /-- info: 'VerdiCompat.Examples.raft_linearizable_conclusion_witness' depends on axioms: [propext] -/
 #guard_msgs in #print axioms VerdiCompat.Examples.raft_linearizable_conclusion_witness
 
+-- Ghost-layer port (campaign Arc 3, RefinedProofStructure.lean): the
+-- refined induction principle, the two simulations, the two transfer
+-- directions, and the principle's discharge witness.
+/-- info: 'VerdiCompat.Raft.refined_raft_net_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.refined_raft_net_invariant
+/-- info: 'VerdiCompat.Raft.simulation_1' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.simulation_1
+/-- info: 'VerdiCompat.Raft.simulation_2' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.simulation_2
+/-- info: 'VerdiCompat.Raft.lift_prop' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.lift_prop
+/-- info: 'VerdiCompat.Raft.lower_prop' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.lower_prop
+/-- info: 'VerdiCompat.Raft.refined_votes_shape_witness' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.refined_votes_shape_witness
+
 /-! ## Exhaustive sweep (fails the build on any disallowed axiom) -/
 
 open Lean in

@@ -1159,6 +1159,182 @@ theorem lower_prop (Pr : RaftNet → Prop)
   obtain ⟨rnet, rfl, hR⟩ := simulation_2 net hreach
   exact hghost rnet hR
 
+/-! ## Discharge witness
+
+Non-vacuity for the principle (CLAUDE.md witness gate; constitution
+§3.3): a small but REAL ghost invariant pushed through all eleven
+obligations. The election-safety chain proper starts at the next unit
+(arc log GAP-3); this exists to demonstrate the principle's premises are
+jointly dischargeable on a concrete invariant. -/
+
+/-- The witness invariant's ghost shape: every ghost handler extends
+`votes` and `votesWithLog` in lockstep, so emptiness of the first forces
+emptiness of the second. -/
+def VotesShape (gd : electionsData (P := P)) : Prop :=
+  gd.votes = [] → gd.votesWithLog = []
+
+omit O in
+theorem votesShape_requestVote (me src : name (P := P)) (t : term)
+    (cand : name (P := P)) (lli : logIndex) (llt : term)
+    (st : electionsData (P := P) × raft_data (P := P)) (hyp : VotesShape st.1) :
+    VotesShape (update_elections_data_requestVote me src t cand lli llt st) := by
+  simp only [VotesShape] at hyp ⊢
+  simp only [update_elections_data_requestVote]
+  repeat' split
+  all_goals first
+    | exact hyp
+    | (intro hv; simp at hv)
+
+omit O in
+theorem votesShape_requestVoteReply (me src : name (P := P)) (t : term)
+    (v : Bool) (st : electionsData (P := P) × raft_data (P := P))
+    (hyp : VotesShape st.1) :
+    VotesShape (update_elections_data_requestVoteReply me src t v st) := by
+  simp only [VotesShape] at hyp ⊢
+  simp only [update_elections_data_requestVoteReply]
+  repeat' split
+  all_goals first
+    | exact hyp
+    | (intro hv; simp at hv)
+
+omit O in
+theorem votesShape_appendEntries (me : name (P := P))
+    (st : electionsData (P := P) × raft_data (P := P)) (t : term)
+    (lid : name (P := P)) (pli : logIndex) (plt : term)
+    (es : List (entry (P := P))) (ci : logIndex) (hyp : VotesShape st.1) :
+    VotesShape (update_elections_data_appendEntries me st t lid pli plt es ci) := by
+  simp only [VotesShape] at hyp ⊢
+  simp only [update_elections_data_appendEntries]
+  repeat' split
+  all_goals first
+    | exact hyp
+    | (intro hv; simp at hv)
+
+omit O in
+theorem votesShape_timeout (me : name (P := P))
+    (st : electionsData (P := P) × raft_data (P := P)) (hyp : VotesShape st.1) :
+    VotesShape (update_elections_data_timeout me st) := by
+  simp only [VotesShape] at hyp ⊢
+  simp only [update_elections_data_timeout]
+  repeat' split
+  all_goals first
+    | exact hyp
+    | (intro hv; simp at hv)
+
+omit O in
+theorem votesShape_client_request (me : name (P := P))
+    (st : electionsData (P := P) × raft_data (P := P)) (client : R.clientId)
+    (id : Nat) (c : P.input) (hyp : VotesShape st.1) :
+    VotesShape (update_elections_data_client_request me st client id c) := by
+  simp only [VotesShape] at hyp ⊢
+  simp only [update_elections_data_client_request]
+  repeat' split
+  all_goals first
+    | exact hyp
+    | (intro hv; simp at hv)
+
+/-- The witness theorem: the `VotesShape` ghost invariant holds at every
+ghost-reachable network — proved by instantiating
+`refined_raft_net_invariant` and discharging all eleven obligations. -/
+theorem refined_votes_shape_witness :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      ∀ h : name (P := P), VotesShape (net.nwState h).1 := by
+  refine refined_raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · -- init
+    intro h
+    exact fun _ => rfl
+  · -- client_request
+    intro h net st' ps' gd out d l client id c _hcr hgd hP _hreach hst _hps h0
+    show VotesShape (st' h0).1
+    rw [hst h0]
+    unfold update
+    split
+    · subst hgd
+      exact votesShape_client_request _ _ _ _ _ (hP h)
+    · exact hP h0
+  · -- timeout
+    intro net h st' ps' gd out d l _hto hgd hP _hreach hst _hps h0
+    show VotesShape (st' h0).1
+    rw [hst h0]
+    unfold update
+    split
+    · subst hgd
+      exact votesShape_timeout _ _ (hP h)
+    · exact hP h0
+  · -- append_entries
+    intro xs p ys net st' ps' gd d m t n pli plt es ci _hae hgd _hbody hP _hreach
+      _hpkts hst _hps h0
+    show VotesShape (st' h0).1
+    rw [hst h0]
+    unfold update
+    split
+    · subst hgd
+      exact votesShape_appendEntries _ _ _ _ _ _ _ _ (hP p.pDst)
+    · exact hP h0
+  · -- append_entries_reply (ghost unchanged)
+    intro xs p ys net st' ps' gd d m t es res _haer hgd _hbody hP _hreach _hpkts
+      hst _hps h0
+    show VotesShape (st' h0).1
+    rw [hst h0]
+    unfold update
+    split
+    · subst hgd
+      exact hP p.pDst
+    · exact hP h0
+  · -- request_vote
+    intro xs p ys net st' ps' gd d m t cid lli llt _hrv hgd _hbody hP _hreach
+      _hpkts hst _hps h0
+    show VotesShape (st' h0).1
+    rw [hst h0]
+    unfold update
+    split
+    · subst hgd
+      exact votesShape_requestVote p.pDst p.pSrc t p.pSrc lli llt _ (hP p.pDst)
+    · exact hP h0
+  · -- request_vote_reply
+    intro xs p ys net st' ps' gd d t v _hrvr hgd _hbody hP _hreach _hpkts hst
+      _hps h0
+    show VotesShape (st' h0).1
+    rw [hst h0]
+    unfold update
+    split
+    · subst hgd
+      exact votesShape_requestVoteReply _ _ _ _ _ (hP p.pDst)
+    · exact hP h0
+  · -- do_leader (ghost rides along)
+    intro net st' ps' gd d h os d' ms _hdl hP _hreach hstate hst _hps h0
+    show VotesShape (st' h0).1
+    rw [hst h0]
+    unfold update
+    split
+    · have := hP h
+      rw [hstate] at this
+      exact this
+    · exact hP h0
+  · -- do_generic_server
+    intro net st' ps' gd d os d' ms h _hgs hP _hreach hstate hst _hps h0
+    show VotesShape (st' h0).1
+    rw [hst h0]
+    unfold update
+    split
+    · have := hP h
+      rw [hstate] at this
+      exact this
+    · exact hP h0
+  · -- state_same_packet_subset
+    intro net net' hstates _hpkts hP _hreach h0
+    rw [← hstates h0]
+    exact hP h0
+  · -- reboot (ghost survives the crash)
+    intro net net' gd d h d' _hrb hP _hreach hstate hst _hpkts h0
+    rw [hst h0]
+    unfold update
+    split
+    · have := hP h
+      rw [hstate] at this
+      exact this
+    · exact hP h0
+
 end RefinedProofStructure
 
 end Raft
