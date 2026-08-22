@@ -563,4 +563,16 @@ Same conventions; GAP-2 msg-ghost only on first genuine need.
   Remaining: votedFor/requestVoteReply/votesReceived moreUpToDate,
   leaderLogs_votesWithLog, one_leaderLog_per_term (3 statements),
   leader_completeness defs, pins, INDEX, gate.
+- 2026-08-22 Slice 21: `votedFor_moreUpToDate`
+  (VotedForMoreUpToDateInterface.v:8-18 1:1) — the votesWithLog chain's
+  first moreUpToDate invariant. A candidate-freezing step helper
+  (`votedFor_moreUpToDate_of_update`) covers seven handlers; timeout
+  (self-vote-with-log witness + the votedFor_term_sanity stale-vote
+  contradiction, upstream's vftsi) and request_vote (fresh-grant record
+  as witness; self-grant closed by moreUpToDate_refl; cross-grant by
+  requestVote_maxIndex_maxTerm, upstream's rvmimti) are manual.
+  [AGENT] omega gotcha recorded: omega reports "no usable constraints"
+  on hypotheses typed through the `term` abbrev in this context —
+  `Nat.not_succ_le_self`/`Nat.ne_of_lt` close the same goals; earlier
+  units' omega uses were over plain Nat. Build green.
 
