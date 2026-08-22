@@ -198,6 +198,19 @@ is the §4.4 park-and-report condition, not an emergency.
   leader_completeness) with successor re-verification first — the
   gallery rotation pattern, one writer preserved.
 
+- **Arc 2, unit 1 — LANDED on `campaign-arc2`** @ 18cb0b25 (route
+  study; gate PASS): minimal completing fuel MEASURED = 711,616
+  subject steps + 1,382 init; kernel ladder K∈{0,10,100,1000,10000}
+  — K=10k DNF at 63.4GB/50min, kernel:compiled ≥300×, monolithic rfl
+  refuted at ≥3.1TB extrapolated; heap append-only 103→36,376 cells.
+  ROUTE DECIDED [AGENT]: (c) checkpointed segment walk (states
+  reflected WirePin-style, rfl segments sized by measured retention,
+  kit composition, ~57 CPU-h projected, segment-parallel); fallback
+  (d) verified fast-twin evaluator; WP walk refuted FOR THE WITNESS
+  (stays T1's ∀-side instrument). Unit 2 dispatched: the go/no-go —
+  one reflected MID-RUN checkpoint + measured segments at heap scale,
+  parallelism-costed projection, GO/NO-GO in the memo.
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
