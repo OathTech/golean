@@ -1194,3 +1194,38 @@ units:
 Same conventions; successors re-verify this unit's claims fresh (build
 + sweep count 1652 + the eight-headliner probe above + hatch grep over
 LogMatching.lean).
+
+## Unit 7 — the AppendEntries feeder chain (2026-08-22, coordinator-accepted charter)
+
+Coordinator additions folded in: same conventions in full; context-strain
+stop rule acknowledged (clean-slice-boundary handoff if retrieval
+degrades); unit-8 charter at unit end.
+
+- 2026-08-22 SUCCESSOR-STYLE RE-VERIFICATION of unit 6 (recomputed,
+  same worker continuing under the unit-7 charter): tip 86d372c0, tree
+  clean; capped `lake build` green (cached), sweep re-derived by fresh
+  capped `lake env lean AxCheck.lean` — verbatim `AxCheck sweep: 1652
+  declarations across VerdiCompat modules, axiom set within
+  [propext, Quot.sound]`; fresh capped `#print axioms` probe:
+  `log_matching_invariant`, `logMatchingStatement_holds`,
+  `leaderLogs_contiguous_invariant` all
+  `depends on axioms: [propext, Quot.sound]` verbatim; hatch grep
+  (`sorry|native_decide|^axiom| axiom `) over LogMatching.lean: 1 hit,
+  line 156, docstring prose. All claims hold; building on them.
+- 2026-08-22 [AGENT] UNIT-7 CLOSURE, re-derived fresh from the ten
+  chartered targets (transitive `Require Import` walk @ a3375e8, pin
+  re-verified; diffed against the 37 now-ported proof files): the
+  closure is EXACTLY the ten targets — no new files this time (the
+  unit-6 correction pass already surfaced them all), no msg-ghost
+  anywhere (grep). 3,200 upstream lines, self-contained. In-unit waves:
+  - W1 (deps all ported): LeadersHaveLeaderLogsStrong 278,
+    AERReplyCorrespondence 429, AECameFromLeaders 239,
+    AllEntriesTermSanity 185, LeaderLogsLogProperties 179,
+    LeaderLogsSublog 398;
+  - W2: AppendEntriesLeader 443 [AECameFromLeaders],
+    LeaderLogsLogMatching 647 [LeaderLogsSublog];
+  - W3: AppendEntriesReplySublog 79 [AERRC, AEL];
+  - W4: NextIndexSafety 323 [AEReplySublog].
+  File plan: new `AppendEntriesChain.lean` (imports LogMatching), wired
+  into VerdiCompat.lean from birth; spec lemmas promoted to
+  ElectionSpecLemmas.lean only at a second consumer.
