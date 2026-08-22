@@ -10,3 +10,8 @@ rc=0
 == kprobe1000-su ==
 ( GOLEAN_MEM_MAX=48G ../scripts/capped lean ; )  108.73s user 2.11s system 99% cpu 1:50.87 total
 rc=0
+
+== kprobe0 rerun with RSS poll (U2 gap-close; box under concurrent load) ==
+( GOLEAN_MEM_MAX=48G ../scripts/capped lean ; )  35.38s user 0.78s system 99% cpu 36.175 total
+rc=0
+peak_kb=6021264

@@ -33,6 +33,22 @@ completion machinery, route memo + unit-2 charter).
   verified fast-twin evaluator armed as fallback. Unit-2 charter in
   memo §5.
 
+- **U2** (2026-08-22, coordinator-directed: the go/no-go measurement):
+  `StateWire.lean` (ToExpr derives + `twinCheckpoint%`, fail-loud,
+  table-drift-checked) + `TwinCheckpoints.lean` (ckpt350k) built —
+  3:47 / 2.7 GB / 101 MB olean; both in the aggregator (1b2). Gap
+  closes: K=0 peak RSS 6.0 GB (polled rerun); defer callees resolved
+  (probe A2: 8 distinct, 272 registrations = probe A's defer-site
+  executions exactly; complete census 226+9+8 = 243 functions).
+  Mid-run kernel segments from ckpt350k (heap 19,093 cells):
+  100 → PASS 2:13/16.1 GB; 250 → PASS 7:46/39.7 GB; 500 → OOM(137)
+  under 48G at 11:33. Marginal 2.22 s/step, 157 MB/step.
+  **VERDICT: NO-GO for route (c)** (projected 440–800 CPU-h vs the
+  200 CPU-h trigger; ~10² GB checkpoint storage; the box cannot run
+  the asked 8/16-way parallelism at 48G caps). Unit 3 = fallback (d)
+  charter, memo §6.4. Records: `records/seg350k.out`,
+  `records/probeA2-defercallees.out`.
+
 ## Judgment calls
 
 - **[AGENT]** 2026-08-22: copy mechanism is path-checkout from the
@@ -56,6 +72,22 @@ completion machinery, route memo + unit-2 charter).
   fallback (d)) — memo §5; the leaner-witness-driver observation
   deliberately NOT proposed (it would re-pin the statement; Arc-1
   files immutable on this lane, re-pins supervised).
+- **[AGENT]** 2026-08-22 (U2): seg-2000/8000 NOT run after seg-500's
+  OOM — a longer window OOMs at the identical prefix point (zero
+  information); replaced by 100/250 slope points. The coordinator's
+  sizes were indicative ("e.g."); the slope is what the projection
+  needs. Files kept; the record says why.
+- **[AGENT]** 2026-08-22 (U2): NO-GO called by the charter's own
+  numeric trigger (440–800 CPU-h projected > 200) — not a judgment
+  against the route's soundness (mid-run segments ARE checkable at
+  ≤ 250 steps; the reflector works); a judgment that (d)'s ~500×
+  heap-op improvement is the honest next move. (d) needs no ruling:
+  §3.1's accelerator template, proof-side, statements untouched.
+- **[AGENT]** 2026-08-22 (U2): `TwinCheckpoints` kept in the
+  aggregator (a fresh full build pays 3:47 + a 101 MB olean once) —
+  the checkpoint is unit-3's reusable input and the 1b2 sweep wants
+  proofs modules in the audited closure; revisit if the artifact
+  count grows.
 
 - **U1 GATE** (2026-08-22): `GOLEAN_ALLOW_NO_DIFF=1
   GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT: PASS** (rc 0; the
@@ -76,3 +108,16 @@ jobs). Measurements: 711,616/1,382 steps; kernel ladder
 cells. Deliverables: route memo (complete), probes + records, this
 log. Nothing merged; no GoCore/frontend/scripts edits; Arc-1 files
 unmodified (verbatim-copied only).
+
+## Checkpoint (U2 end, recomputed)
+
+Branch `campaign-arc2` @ (tip after the U2 commits): U1's 5 commits
++ U2 over f64d9b21. New modules: `Specs/StateWire.lean`,
+`Specs/TwinCheckpoints.lean` (both in the aggregator; build green).
+U2 measurements (records in `docs/campaign-arc2-probes/records/`):
+reflector build 3:47/2.7 GB/101 MB olean; mid-run segments
+100 PASS (2:13, 16.1 GB), 250 PASS (7:46, 39.7 GB), 500 OOM(137)@48G;
+marginal 2.22 s/step, 157 MB/step at 19k cells; census complete
+(243 = 226+9+8). VERDICT: NO-GO (c) → unit 3 = fallback (d), memo
+§6.4. Nothing merged; no GoCore/frontend/scripts edits; Arc-1 files
+still verbatim.

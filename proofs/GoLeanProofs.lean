@@ -60,6 +60,11 @@ import GoLeanProofs.Specs.QuorumTargets
 import GoLeanProofs.Specs.WirePin
 import GoLeanProofs.Specs.TwinProgram
 import GoLeanProofs.Specs.RaftAgreement
+-- Arc 2: the checkpoint reflector (route memo §4c) — meta-side
+-- scaffolding + the shared table-carrying base def — and the
+-- reflected mid-run checkpoint (route memo §6.1).
+import GoLeanProofs.Specs.StateWire
+import GoLeanProofs.Specs.TwinCheckpoints
 import GoLeanProofs.Specs.QuorumRefSpec
 import GoLeanProofs.Specs.Statements
 import GoLeanProofs.Specs.GoldenQuorumWP
