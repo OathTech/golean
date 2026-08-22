@@ -590,9 +590,12 @@ func goleanShimFmtUintPad(v uint64, w int) string {
 	// injected goleanShimStringer interface — every String method
 	// becomes a reachability candidate through this edge, priced in now
 	// that the renderers lower), then a type switch over the basic
-	// kinds + []byte + []uint64. ANYTHING ELSE PANICS FAIL-CLOSED
-	// naming the verb (a named non-Stringer int, a float, a struct at
-	// runtime): a visible machine stop, never a silent wrong answer.
+	// kinds + []byte + []uint64 + []int + []string (the last two:
+	// audit R4-M-2). ANYTHING ELSE STOPS FAIL-CLOSED through
+	// goleanShimUnsupported, naming the verb (a named non-Stringer
+	// int, a float, a named STRUCT at runtime — the recorded R4-M-2
+	// bound, row fmt/sprintf-dyn/struct-bound): a visible UNRECOVERABLE
+	// machine stop (R4-C-3), never a silent wrong answer.
 	// gc probes: artifacts/w43/probe-fmt K1-K3 (Sprint's space rule:
 	// a space iff NEITHER neighbor is a string), artifacts/w43/probe-b
 	// L1-L2 (Sprintln: spaces always, trailing newline), D3
@@ -692,6 +695,37 @@ func goleanShimFmtDynVerb(verb string, a any) string {
 					out += " "
 				}
 				out += goleanShimFmtUint(v[i])
+			}
+			return out + "]"
+		}
+	// []int / []string (audit R4-M-2): the dyn arms of two kinds the
+	// STATIC composite matrix already renders — the leaves are the
+	// same goleanShimFmt* helpers as the static cells, so the two
+	// matrices agree by construction. Named STRUCTS stay a RECORDED
+	// bound: a runtime type switch in pre-typecheck injected source
+	// cannot name user types, and the static render path is emit-time
+	// type recursion a runtime dispatch cannot reach (rows
+	// fmt/sprintf-dyn/{slice-int,slice-string} green,
+	// fmt/sprintf-dyn/struct-bound red-by-design).
+	case []int:
+		if verb == "v" || verb == "d" {
+			out := "["
+			for i := 0; i < len(v); i++ {
+				if i > 0 {
+					out += " "
+				}
+				out += goleanShimFmtInt(int64(v[i]))
+			}
+			return out + "]"
+		}
+	case []string:
+		if verb == "v" || verb == "s" {
+			out := "["
+			for i := 0; i < len(v); i++ {
+				if i > 0 {
+					out += " "
+				}
+				out += v[i]
 			}
 			return out + "]"
 		}

@@ -114,9 +114,40 @@ func dynSprintlnFixedArity() string {
 	return fmt.Sprintln("a", 1, true) // gc: "a 1 true\n"
 }
 
+// ---- R4-M-2 (audit fix round): the dyn kind matrix's surprising
+// asymmetry — the STATIC composite matrix renders []int, []string and
+// named structs, but the same values through a `logf(format, v...)`
+// pass-through hit the dyn shim, which knew only []byte/[]uint64
+// (probe r4-p6: dynInts/dynStrings/dynStruct all stopped where gc
+// renders "[1 2]"/"[a]"/"{3}"). []int and []string gain dyn arms
+// whose leaves are the SAME goleanShimFmt* helpers as the static
+// cells; named STRUCTS stay a RECORDED bound (a runtime type switch
+// in a pre-typecheck injected source cannot name user types), pinned
+// by the red-by-design row below. ----
+func dynLogfHelper(format string, args ...any) string {
+	return fmt.Sprintf(format, args...)
+}
+
+func dynSliceInt() string {
+	return dynLogfHelper("%v|%d", []int{1, 2}, []int{-3, 4}) // gc: "[1 2]|[-3 4]"
+}
+
+func dynSliceString() string {
+	return dynLogfHelper("%v|%s", []string{"a", "b c"}, []string{"x"}) // gc: "[a b c]|[x]"
+}
+
+type dynP struct{ X int }
+
+// RED BY DESIGN: the named-struct dyn bound (go renders "{3}", the
+// machine stops at the shim's fail-closed refusal).
+func dynStructBound() string {
+	return dynLogfHelper("%v", dynP{3})
+}
+
 func main() {
 	println(dynLoggerShape(), dynVerbKinds(), dynStringerError(),
 		dynStringerPanic(), dynSprintSpaceRule(), dynSprintln(),
 		dynSprintNil(), dynUnmodeledKind(), dynArityMismatch(),
-		dynSprintFixedArity(), dynSprintlnFixedArity())
+		dynSprintFixedArity(), dynSprintlnFixedArity(),
+		dynSliceInt(), dynSliceString(), dynStructBound())
 }

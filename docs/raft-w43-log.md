@@ -934,3 +934,37 @@ the full run.
 `-> PASS`; ZERO movement on the 2444 prior ids — the six rewired
 witnesses' stages unmoved is itself the no-lost-witness proof.
 Baseline re-pinned (2446 cases, 2283/163) in this commit.
+
+### R4-M-2 — the dyn kind matrix routed to the static cells' helpers
+
+**Defect (an asymmetry, witnessed as stops in ordinary Go).** The
+STATIC composite matrix renders `[]int`, `[]string` and named structs;
+the same values through a `logf(format, v...)` pass-through hit the
+dyn shim, whose composite surface was exactly `[]byte`/`[]uint64` —
+probe r4-p6's dynInts/dynStrings/dynStruct all stopped where gc
+renders `[1 2]` / `[a]` / `{3}`.
+
+**Guardrails witnessed red first**:
+`fmt/sprintf-dyn/{slice-int,slice-string,struct-bound}` — all three
+FAIL/frontend-export (unsupported stops) pre-fix.
+
+**Fix — dyn arms, not the static path, judgment logged.** The
+instruction's "route through the static render path" cannot be taken
+literally: that path is EMIT-TIME type recursion, unreachable from a
+runtime type dispatch. What delivers the same cells is what the
+existing `[]byte`/`[]uint64` arms already do — shim-source arms whose
+LEAVES call the same `goleanShimFmt*` helpers as the static matrix,
+so the two matrices agree by construction. `[]int` (verbs v/d) and
+`[]string` (verbs v/s) added. **Named structs remain a RECORDED
+bound**: a runtime type switch in a pre-typecheck injected source
+cannot name user types, and enumerating the user's struct types into
+generated arms is machinery nothing in scope needs — the bound is
+stated at `goleanShimFmtDynVerb` and PINNED by the red-by-design
+`struct-bound` row (the "surprising cell", exactly as the finding
+asked).
+
+**Flips.** slice-int/slice-string red→green (byte-agreeing with gc,
+negatives and multi-word strings included); struct-bound stays red by
+design. Full `scripts/ci --diff`: drift exactly the three new ids;
+zero movement on the 2446 prior ids. Baseline re-pinned (2449 cases,
+2285/164) in this commit.

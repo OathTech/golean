@@ -1,18 +1,17 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-22 (raft W4.3 audit fix round, R4-M-1 — branch
+# recorded: 2026-08-22 (raft W4.3 audit fix round, R4-M-2 — branch
 #   raft-w43; docs/raft-w43-log.md "Audit fix round").
-#   re-pin reason: TWO NEW ids, zero movement on any of the 2444 ids
-#   the previous record held ("NEW id -> PASS" both).
-#     R4-M-1: fixed-arity fmt.Sprint/Sprintln modeled as the []any
-#     variadic pack + the differentially-pinned dyn shims (the
-#     refusal they replace was justified BY the JC-17 witnesses'
-#     needs — a corpus-scoped refusal inversion). The SIX quarantine
-#     witnesses that used fmt.Sprint as their unlowerable cause were
-#     retargeted to reflect.TypeOf in the same change and held their
-#     exact baseline stages (4 FAIL/frontend-export red-by-design +
-#     greens) through this full run — zero movement:
-#     fmt/sprintf-dyn/{sprint,sprintln}-fixed-arity, PASS.
-# cases: 2446 (2283 PASS / 163 FAIL)
+#   re-pin reason: THREE NEW ids, zero movement on any of the 2446 ids
+#   the previous record held.
+#     R4-M-2: the dyn kind matrix's asymmetry against the static
+#     composite matrix — []int/[]string rendered statically but
+#     stopped at a dyn (logf pass-through) site. Dyn arms added whose
+#     leaves are the same goleanShimFmt* helpers as the static cells:
+#     fmt/sprintf-dyn/{slice-int,slice-string} PASS. Named STRUCTS at
+#     dyn sites stay a RECORDED bound (a runtime type switch in
+#     pre-typecheck injected source cannot name user types):
+#     fmt/sprintf-dyn/struct-bound FAIL/frontend-export RED BY DESIGN.
+# cases: 2449 (2285 PASS / 164 FAIL)
 # frontend: native (tools/nativefrontend)
 result	id	stage
 PASS	arrays/array-bounds	-
@@ -809,6 +808,8 @@ PASS	fmt/fprintf-builder/describe-shape	-
 PASS	fmt/fprintf-builder/returns	-
 FAIL	fmt/sprintf-dyn/arity-mismatch	frontend-export
 PASS	fmt/sprintf-dyn/logger-shape	-
+PASS	fmt/sprintf-dyn/slice-int	-
+PASS	fmt/sprintf-dyn/slice-string	-
 PASS	fmt/sprintf-dyn/sprint-fixed-arity	-
 PASS	fmt/sprintf-dyn/sprint-nil	-
 PASS	fmt/sprintf-dyn/sprint-space-rule	-
@@ -816,6 +817,7 @@ PASS	fmt/sprintf-dyn/sprintln	-
 PASS	fmt/sprintf-dyn/sprintln-fixed-arity	-
 PASS	fmt/sprintf-dyn/stringer-error	-
 PASS	fmt/sprintf-dyn/stringer-panic	-
+FAIL	fmt/sprintf-dyn/struct-bound	frontend-export
 FAIL	fmt/sprintf-dyn/unmodeled-kind	frontend-export
 PASS	fmt/sprintf-dyn/verb-kinds	-
 PASS	fmt/sprintf-verbs/d-enum	-
