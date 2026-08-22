@@ -575,4 +575,14 @@ Same conventions; GAP-2 msg-ghost only on first genuine need.
   on hypotheses typed through the `term` abbrev in this context —
   `Nat.not_succ_le_self`/`Nat.ne_of_lt` close the same goals; earlier
   units' omega uses were over plain Nat. Build green.
+- 2026-08-22 Slice 22: `requestVoteReply_moreUpToDate` (the request_vote
+  case splits on the emitted grant — standing-vote via
+  votedFor_moreUpToDate (upstream's vfmutdi), fresh-record via
+  requestVote_maxIndex_maxTerm; the timeout case's stale-grant
+  contradiction via requestVoteReply_term_sanity, upstream's rvrtsi)
+  and `votesReceived_moreUpToDate` (the RVR case's fresh supporter
+  rides the consumed grant packet through
+  requestVoteReply_moreUpToDate — upstream's rvrmutdi — and the
+  timeout candidacy's only supporter is the recorded self-vote). Both
+  with candidate-freezing step helpers. Build green.
 
