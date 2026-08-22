@@ -998,4 +998,19 @@ charter.
   File plan: new `LogMatching.lean` (imports CreationRing), wired into
   VerdiCompat.lean from birth; spec lemmas beside their siblings in
   ElectionSpecLemmas.lean only where a second consumer exists.
+- 2026-08-22 Slice 31: `LogMatching.lean` opened — `leaderLogs_sorted`
+  (LeaderLogsSortedInterface.v:9-13 1:1, GAP-5a; the only real case is
+  the RVR win snapshotting the winner's own log, sorted via
+  `sorted_host_lifted` + `handleRequestVoteReply_log` — everything else
+  through a ghost-unchanged step helper `leaderLogs_sorted_of_update`)
+  and BASE `UniqueIndices` (UniqueIndicesInterface.v:9-20 1:1, both
+  conjuncts; no induction — a direct corollary of `logs_sorted_invariant`
+  via the constructive `sorted_uniqueIndices`, CommonTheorems.v:761-768,
+  proved by `List.Pairwise` directly per GAP-4 discipline). Wired into
+  VerdiCompat.lean (sweep covers it from birth: 1546 decls within
+  [propext, Quot.sound], build green). [AGENT] The unit-4 `subst`
+  gotcha re-confirmed: `heq : h = p.pDst` eliminates the LEFT variable;
+  and a direct obligation case needs
+  `replace hin : … ∈ (st' h).1.leaderLogs := hin` before `rw [hst h]`
+  (the anonymous-constructor `.nwState` is only definitionally `st'`).
 

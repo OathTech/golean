@@ -13,4 +13,5 @@ import VerdiCompat.ElectionSafety
 import VerdiCompat.CandidateEntries
 import VerdiCompat.LeaderLogs
 import VerdiCompat.CreationRing
+import VerdiCompat.LogMatching
 import VerdiCompat.Examples
