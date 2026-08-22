@@ -192,3 +192,38 @@ rri-only, smallest) → `votes_correct` → `candidates_vote_for_selves`
 `wonElection_one_in_common` (CommonTheorems.v) alongside. Statements
 1:1 from the interface files in the design-doc §3 table; helper
 SpecLemmas ported on demand only.
+
+## Unit 2 — the election-safety chain (2026-08-22, coordinator-accepted charter)
+
+Coordinator ruling folded in: unit 2 now spans the WHOLE chain
+(`votes_le_currentTerm` → `votes_correct` →
+`candidates_vote_for_selves` → `cronies_correct` →
+`one_leader_per_term`, headline via `lower_prop`); GAP-1 primed
+variants ported on first genuine need; any harness/twin-vocabulary
+need is a numbered Arc-4-seam gap, never invented statement-side.
+
+- 2026-08-22 SUCCESSOR RE-VERIFICATION of unit 1's top claims
+  (recomputed, not restated): fresh capped `lake build` at 4bbcf5fc —
+  green, `AxCheck sweep: 987 declarations across VerdiCompat modules,
+  axiom set within [propext, Quot.sound]`; fresh `lake env lean`
+  #print axioms: `refined_raft_net_invariant`, `lower_prop`,
+  `refined_votes_shape_witness` all `[propext, Quot.sound]`;
+  `grep -n "sorry\|native_decide\|^axiom\| axiom "` over
+  RefinedProofStructure.lean: exactly one hit, line 744, docstring
+  prose ("the lane's recorded axiom set") — zero hatches. Claims
+  hold; building on them.
+- 2026-08-22 Slice 7 (unit 2): `ElectionSpecLemmas.lean` — the
+  SpecLemmas.v/RefinementSpecLemmas.v slices the chain uses. [AGENT]
+  Style call (docstring-flagged in the file): ONE comprehensive cases
+  lemma per handler (advanceCurrentTerm, handleClientRequest,
+  handleTimeout, handleAppendEntries[Reply], handleRequestVote[Reply],
+  doLeader, doGenericServer + cacheApplyEntry/applyEntries) subsuming
+  the upstream single-fact lemmas each docstring cites, plus the
+  votes-focused ghost-update lemmas (client_request/appendEntries/
+  requestVoteReply unchanged-fields; requestVote votes elim/old/intro;
+  timeout votes elim/intro). [AGENT] handleTimeout_spec's candidacy
+  branch carries `st.type ≠ .Leader` (the branch trigger) — needed by
+  `update_elections_data_timeout_votes_intro`, where upstream's Ltac
+  gets it implicitly from the shared scrutinee. Build green, AxCheck
+  sweep 1064 decls (was 987).
+

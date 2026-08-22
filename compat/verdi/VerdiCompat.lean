@@ -8,4 +8,5 @@ import VerdiCompat.RaftLinearizable
 import VerdiCompat.Properties
 import VerdiCompat.ProofStructure
 import VerdiCompat.RefinedProofStructure
+import VerdiCompat.ElectionSpecLemmas
 import VerdiCompat.Examples
