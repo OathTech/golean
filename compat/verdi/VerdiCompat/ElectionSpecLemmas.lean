@@ -949,9 +949,18 @@ theorem update_elections_data_requestVoteReply_cronies_cases
 handler facts the leaderLogs ring needs (`RefinementSpecLemmas.v`,
 `SpecLemmas.v` slices; sources cited per lemma). -/
 
-/-- `moreUpToDate_refl` (`CommonTheorems.v:2306`). -/
+/-- `moreUpToDate_refl` (`CommonTheorems.v:2306`). Proved constructively
+(the lane's axiom set is [propext, Quot.sound]; both a bare `simp` and
+`beq_self_eq_true` pull `Classical.choice` here — Nat's `==` in this
+codebase is `instBEqOfDecidableEq`, whose `LawfulBEq` instance is
+classical — and the AxCheck sweep rejected them; `decide_eq_true` over
+`Eq.refl` stays clean). -/
 theorem moreUpToDate_refl (t i : Nat) : moreUpToDate t i t i = true := by
-  simp [moreUpToDate]
+  unfold moreUpToDate
+  have h1 : (t == t) = true := decide_eq_true (Eq.refl t)
+  have h2 : (i >=? i) = true := Nat.ble_self_eq_true i
+  rw [h1, h2]
+  cases Nat.blt t t <;> rfl
 
 /-- `handleTimeout_messages` (`SpecLemmas.v`): every message a timeout
 sends is a RequestVote at the (new) current term carrying the sender's
@@ -1117,6 +1126,29 @@ theorem leaderLogs_update_elections_data_RVR
        · injection heq with h1 h2
          exact Or.inr ⟨hleader, hcand, h1, h2⟩
        · exact Or.inl hin)
+
+/-- The intro direction of the RVR leaderLogs update: a candidate→leader
+transition snapshots (currentTerm, log) into leaderLogs. -/
+theorem update_elections_data_requestVoteReply_leaderLogs_intro
+    (me src : name (P := P)) (t : term) (v : Bool)
+    (st : electionsData (P := P) × raft_data (P := P))
+    (hcand : st.2.type = .Candidate)
+    (hty : (handleRequestVoteReply me st.2 src t v).type = .Leader) :
+    ((handleRequestVoteReply me st.2 src t v).currentTerm,
+     (handleRequestVoteReply me st.2 src t v).log) ∈
+      (update_elections_data_requestVoteReply me src t v st).leaderLogs := by
+  unfold update_elections_data_requestVoteReply
+  simp only []
+  split
+  · rename_i heq
+    rw [hty] at heq
+    exact nomatch heq
+  · rename_i heq
+    rw [hty] at heq
+    exact nomatch heq
+  · simp only []
+    rw [if_pos hcand]
+    exact List.mem_cons_self ..
 
 /-! ### votesWithLog ghost facts -/
 

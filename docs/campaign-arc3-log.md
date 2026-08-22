@@ -501,4 +501,27 @@ Same conventions; GAP-2 msg-ghost only on first genuine need.
   (importing CandidateEntries) for the whole ring + closure;
   leaderLogs/votesWithLog ghost-update lemmas added to
   ElectionSpecLemmas.lean beside their votes/cronies siblings.
+- 2026-08-22 Slice 17 (b10e2cee): unit-4 spec lemmas —
+  handleTimeout_messages, handleRequestVote reply-term/grant (the
+  moreUpToDate guard surfaced), handleRequestVoteReply
+  leader-transition (SpecLemmas.v:467's spec'), leaderLogs ghost
+  elim/old/intro for RVR + timeout-unchanged, votesWithLog
+  old/cases/votedFor-cases (RefinementSpecLemmas.v:599-660), and the
+  votes/votesWithLog lockstep shapes. Build green.
+- 2026-08-22 Slice 18: `LeaderLogs.lean` opened — the ring's leaves:
+  `requestVote_term_sanity` (nw), `votes_votesWithLog_correspond`
+  (via a net'-generic step helper mirroring
+  VotesVotesWithLogCorrespondProof.v:12-36), and
+  `leaders_have_leaderLogs` (rri-only; the RVR case splits standing
+  leader / fresh winner on handleRequestVoteReply_spec's leader
+  clause, the winner witnessed by the new leaderLogs snapshot). Wired
+  into VerdiCompat.lean (sweep covers it from birth: 1300 decls,
+  within [propext, Quot.sound]). [AGENT] Gotcha recorded for
+  successors: `==` on Nat here is `instBEqOfDecidableEq`, and BOTH
+  `simp [moreUpToDate]` and `beq_self_eq_true` drag `Classical.choice`
+  through its LawfulBEq instance — the enforcing sweep caught it
+  twice; the clean form is `decide_eq_true (Eq.refl _)` (this is the
+  same gate-catch class as unit 3's eraseOne, recorded not worked
+  around). Also: `nomatch h` inside an anonymous-constructor pair
+  swallows the following comma — parenthesize.
 
