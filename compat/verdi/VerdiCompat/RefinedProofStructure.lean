@@ -726,6 +726,201 @@ theorem refined_raft_net_invariant {Pr : RefinedNet → Prop}
       exact hreb net _ (net.nwState h).1 (net.nwState h).2 h _ rfl ih hreach rfl
         (fun _ => rfl) rfl
 
+/-! ## Erasure: `deghost` and the ghost→base simulation
+
+`GhostSimulations.v:67-84,166-191` and `RaftRefinementProof.v:429-505`,
+proved directly at the raft instance (design doc D1). -/
+
+/-- Pointwise second-projection of an `update` on pair-valued state —
+the workhorse behind every deghost/reghost state equation. -/
+theorem update_snd {A B C : Type} [DecidableEq A] (st : A → B × C) (h : A)
+    (v : B × C) (x : A) :
+    (update st h v x).2 = update (fun y => (st y).2) h v.2 x := by
+  unfold update
+  split <;> rfl
+
+/-- Component-wise network equality (Coq gets this via
+`FunctionalExtensionality`; `funext` here rests on `Quot.sound`, inside
+the lane's recorded axiom set). -/
+theorem network_eq_mk {P : BaseParams} {M : MultiParams P} {n : Network P M}
+    {ps : List (Packet P M)} {st : M.name → P.data}
+    (hp : n.nwPackets = ps) (hs : ∀ h, n.nwState h = st h) : n = ⟨ps, st⟩ := by
+  cases n
+  cases hp
+  exact congrArg _ (funext hs)
+
+/-- `GhostSimulations.v:67-71` (`deghost_packet`). The refined and base
+packet types are distinct instantiations with identical component types
+(design doc D5); this is the explicit iso (round trips definitional by
+structure eta). -/
+def deghost_packet (q : RefinedPacket) : RaftPacket := ⟨q.pSrc, q.pDst, q.pBody⟩
+
+/-- `GhostSimulations.v:73-84` (`deghost`): erase the ghost component. -/
+def deghost (net : RefinedNet) : RaftNet :=
+  ⟨net.nwPackets.map deghost_packet, fun h => (net.nwState h).2⟩
+
+/-- `RaftRefinementProof.v:611-617` (`deghost_spec`). -/
+theorem deghost_spec (net : RefinedNet) (h : name (P := P)) :
+    (deghost net).nwState h = (net.nwState h).2 := rfl
+
+/-- Deghosting refined `send_packets` output gives base `send_packets`
+output (components identical). -/
+theorem deghost_send_packets (src : name (P := P))
+    (l : List (name (P := P) × msg (P := P))) :
+    (send_packets (P := raft_refined_base_params (P := P))
+        (M := raft_refined_multi_params) src l).map deghost_packet
+      = send_packets (P := raft_base_params (P := P)) (M := raft_multi_params) src l := by
+  induction l with
+  | nil => rfl
+  | cons a l ih =>
+    simp only [send_packets, List.map_cons] at ih ⊢
+    exact congrArg (List.cons _) ih
+
+/-- `GhostSimulations.v:166-191` (`ghost_simulation_1`) at the raft
+instance: every refined `step_failure` projects to a base `step_failure`
+between the deghosted networks, with the same trace and failed set. -/
+theorem ghost_simulation_1 {failed failed' : List (name (P := P))}
+    {net net' : RefinedNet} {out}
+    (h : step_failure _ _ raft_refined_failure_params (failed, net) (failed', net') out) :
+    step_failure _ _ raft_failure_params (failed, deghost net) (failed', deghost net') out := by
+  cases h with
+  | StepFailure_deliver net _ failed p xs ys out0 dfull l hpkts hlive hnh hnet' =>
+    subst hnet'
+    rcases hr : RaftNetHandler p.pDst p.pSrc p.pBody (net.nwState p.pDst).2
+      with ⟨o, st2, ps⟩
+    have hnh' : refined_net_handlers p.pDst p.pSrc p.pBody (net.nwState p.pDst)
+        = (out0, dfull, l) := hnh
+    unfold refined_net_handlers at hnh'
+    rw [hr] at hnh'
+    simp only [Prod.mk.injEq] at hnh'
+    obtain ⟨rfl, rfl, rfl⟩ := hnh'
+    refine .StepFailure_deliver (deghost net) _ failed (deghost_packet p)
+      (xs.map deghost_packet) (ys.map deghost_packet) o st2 ps ?_ hlive hr ?_
+    · show net.nwPackets.map deghost_packet = _
+      rw [hpkts]
+      simp
+    · refine network_eq_mk ?_ (fun h' => update_snd ..)
+      show (send_packets p.pDst ps ++ xs ++ ys).map deghost_packet = _
+      simp [deghost_send_packets, deghost_packet]
+  | StepFailure_input h net _ failed out0 inp dfull l hlive hih hnet' =>
+    subst hnet'
+    rcases hr : RaftInputHandler h inp (net.nwState h).2 with ⟨o, st2, ps⟩
+    have hih' : refined_input_handlers h inp (net.nwState h) = (out0, dfull, l) := hih
+    unfold refined_input_handlers at hih'
+    rw [hr] at hih'
+    simp only [Prod.mk.injEq] at hih'
+    obtain ⟨rfl, rfl, rfl⟩ := hih'
+    refine .StepFailure_input (M := raft_multi_params (P := P)) h (deghost net) _ failed
+      o inp st2 ps hlive hr ?_
+    refine network_eq_mk ?_ (fun h' => update_snd ..)
+    show (send_packets h ps ++ net.nwPackets).map deghost_packet = _
+    simp [deghost_send_packets, deghost]
+  | StepFailure_drop net _ failed p xs ys hpkts hnet' =>
+    subst hnet'
+    refine .StepFailure_drop (deghost net) _ failed (deghost_packet p)
+      (xs.map deghost_packet) (ys.map deghost_packet) ?_ ?_
+    · show net.nwPackets.map deghost_packet = _
+      rw [hpkts]
+      simp
+    · refine network_eq_mk ?_ (fun _ => rfl)
+      show (xs ++ ys).map deghost_packet = _
+      simp
+  | StepFailure_dup net _ failed p xs ys hpkts hnet' =>
+    subst hnet'
+    refine .StepFailure_dup (deghost net) _ failed (deghost_packet p)
+      (xs.map deghost_packet) (ys.map deghost_packet) ?_ ?_
+    · show net.nwPackets.map deghost_packet = _
+      rw [hpkts]
+      simp
+    · refine network_eq_mk ?_ (fun _ => rfl)
+      show (p :: (xs ++ p :: ys)).map deghost_packet = _
+      simp
+  | StepFailure_fail h net failed =>
+    exact .StepFailure_fail (M := raft_multi_params (P := P)) h (deghost net) failed
+  | StepFailure_reboot h net _ failed failed' hmem hfailed' hnet' =>
+    subst hnet'
+    exact .StepFailure_reboot (M := raft_multi_params (P := P)) h (deghost net) _ failed failed' hmem hfailed'
+      (network_eq_mk rfl (fun h' => update_snd ..))
+
+/-- `RaftRefinementProof.v:429-496` (`simulation_1`): every ghost-layer
+reachable network deghosts to a base-layer reachable network. -/
+theorem simulation_1 :
+    ∀ net : RefinedNet, refined_raft_intermediate_reachable (P := P) net →
+      raft_intermediate_reachable (deghost net) := by
+  intro net hreach
+  induction hreach with
+  | RRIR_init => exact .RIR_init
+  | RRIR_step_failure failed net failed' net' out hreach hstep ih =>
+    exact .RIR_step_failure failed (deghost net) failed' (deghost net') _ ih
+      (ghost_simulation_1 hstep)
+  | RRIR_handleInput net h inp out d l ps' st' hreach hi hst hps ih =>
+    show raft_intermediate_reachable ⟨ps'.map deghost_packet, fun h' => (st' h').2⟩
+    refine .RIR_handleInput (deghost net) h inp out d l _ _ ih hi ?_ ?_
+    · intro h'
+      rw [hst h']
+      exact update_snd ..
+    · intro p' hp'
+      rcases List.mem_map.mp hp' with ⟨q, hq, rfl⟩
+      rcases hps q hq with h1 | h1
+      · exact Or.inl (List.mem_map_of_mem h1)
+      · right
+        rw [← deghost_send_packets]
+        exact List.mem_map_of_mem h1
+  | RRIR_handleMessage p net xs ys st' ps' d l hreach hm hpkts hst hps ih =>
+    show raft_intermediate_reachable ⟨ps'.map deghost_packet, fun h' => (st' h').2⟩
+    refine .RIR_handleMessage (deghost_packet p) (deghost net)
+      (xs.map deghost_packet) (ys.map deghost_packet) _ _ d l ih hm ?_ ?_ ?_
+    · show net.nwPackets.map deghost_packet = _
+      rw [hpkts]
+      simp
+    · intro h'
+      rw [hst h']
+      exact update_snd ..
+    · intro p' hp'
+      rcases List.mem_map.mp hp' with ⟨q, hq, rfl⟩
+      rcases hps q hq with h1 | h1
+      · left
+        rw [← List.map_append]
+        exact List.mem_map_of_mem h1
+      · right
+        rw [← deghost_send_packets]
+        exact List.mem_map_of_mem h1
+  | RRIR_doLeader net st' ps' h os d' ms hreach hdo hst hps ih =>
+    show raft_intermediate_reachable ⟨ps'.map deghost_packet, fun h' => (st' h').2⟩
+    refine .RIR_doLeader (deghost net) _ _ h os d' ms ih hdo ?_ ?_
+    · intro h'
+      rw [hst h']
+      exact update_snd ..
+    · intro q hq
+      rcases List.mem_map.mp hq with ⟨q0, hq0, rfl⟩
+      rcases hps q0 hq0 with h1 | h1
+      · exact Or.inl (List.mem_map_of_mem h1)
+      · right
+        rw [← deghost_send_packets]
+        exact List.mem_map_of_mem h1
+  | RRIR_doGenericServer net st' ps' h os d' ms hreach hdo hst hps ih =>
+    show raft_intermediate_reachable ⟨ps'.map deghost_packet, fun h' => (st' h').2⟩
+    refine .RIR_doGenericServer (deghost net) _ _ os d' ms h ih hdo ?_ ?_
+    · intro h'
+      rw [hst h']
+      exact update_snd ..
+    · intro q hq
+      rcases List.mem_map.mp hq with ⟨q0, hq0, rfl⟩
+      rcases hps q0 hq0 with h1 | h1
+      · exact Or.inl (List.mem_map_of_mem h1)
+      · right
+        rw [← deghost_send_packets]
+        exact List.mem_map_of_mem h1
+
+/-- `RaftRefinementProof.v:498-505` (`lift_prop`): any property of all
+base-reachable networks holds of the deghosting of every ghost-reachable
+network — how already-proved base invariants are imported into ghost
+proofs (e.g. `CroniesCorrectProof.v:16-25`). -/
+theorem lift_prop (Pr : RaftNet → Prop)
+    (hbase : ∀ net, raft_intermediate_reachable (P := P) net → Pr net) :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net → Pr (deghost net) :=
+  fun net h => hbase _ (simulation_1 net h)
+
 end RefinedProofStructure
 
 end Raft

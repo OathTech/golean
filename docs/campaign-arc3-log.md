@@ -80,3 +80,13 @@ recomputed at the checkpoint, never restated.
   exactly as upstream's. Dispatcher `gd`s are instantiated with the
   `update_elections_data_net/_input` dispatcher term and the per-case
   equation discharged by `rw [hbody]; rfl` (constructor iota).
+- 2026-08-22 Slice 4: erasure — `deghost_packet`/`deghost`/`deghost_spec`,
+  helpers `update_snd`/`network_eq_mk`/`deghost_send_packets`,
+  `ghost_simulation_1` (refined step_failure projects to base, direct
+  case analysis instead of Coq's TotalMapSimulations route — D1),
+  `simulation_1` (RRIR → RIR of the deghost), `lift_prop`. Build green.
+  [AGENT] Elaboration gotcha recorded for successors: base
+  `step_failure` constructors whose FIRST explicit arg is a node name
+  (`StepFailure_input/_fail/_reboot`) pin the implicit `M` to the
+  refined instance when the name variable comes from a refined
+  context — pass `(M := raft_multi_params (P := P))` explicitly.
