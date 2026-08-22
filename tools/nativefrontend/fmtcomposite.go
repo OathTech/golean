@@ -7,10 +7,14 @@
 //   leaf      := integer kinds | string kinds | bool
 //              | error/Stringer implementor (consulted per
 //                element/field, as gc's printValue does at depth —
-//                probed artifacts/w43/probe-fmt D1-D4 — but NEVER
-//                below an unexported field: crossing one taints the
-//                subtree and it renders RAW, as gc's reflection does;
-//                audit R1-F1, gc-probed .tmp/fixround-probes/f1)
+//                probed artifacts/w43/probe-fmt D1-D4 — but NOT
+//                below an unexported field, mirroring reflect's two
+//                read-only flags: a NON-EMBEDDED unexported field
+//                taints its whole subtree RAW (audit R1-F1, probed
+//                .tmp/fixround-probes/f1), an EMBEDDED one suppresses
+//                methods at its own level only (delta-review
+//                CRITICAL-1, probed .tmp/deltarev) — see
+//                fmtRenderValue's doc comment for the exact rule)
 //              | composite (recursively; cycle-guarded, fail closed)
 //
 // Everything outside — maps, pointers, interfaces at depth, anonymous
@@ -91,7 +95,7 @@ func (e *emitter) fmtCompositeTopLift(fn string, plus bool, t types.Type) (strin
 	e.liftSeq++
 	val := map[string]any{"expr": "ident", "name": "$x", "type": tw}
 	tmp := 0
-	stmts, piece, err := e.fmtRenderValue(fn, plus, t, val, map[string]bool{}, &tmp, false)
+	stmts, piece, err := e.fmtRenderValue(fn, plus, t, val, map[string]bool{}, &tmp, false, false)
 	if err != nil {
 		return "", err
 	}
@@ -111,18 +115,43 @@ func (e *emitter) fmtCompositeTopLift(fn string, plus bool, t types.Type) (strin
 // to right, matching gc's per-operand walk), piece is a PURE expression
 // over those temps.
 //
-// `tainted` (audit R1-F1/R4-C-2): true once the render path has
-// CROSSED AN UNEXPORTED FIELD. gc renders through reflection, and a
-// value reached via an unexported field cannot be interfaced
-// (reflect's CanInterface is false), so fmt SKIPS method consultation
-// for that value AND everything below it — the subtree renders raw
-// (gc-probed .tmp/fixround-probes/f1: `{E<1> 2}`, `{in:{X:3} A:E<4>}`,
-// `{bs:[5 6]}`). A tainted leaf therefore bypasses the error/Stringer
-// arm and renders through the kind matrix; a tainted leaf OUTSIDE the
-// raw matrix refuses exactly like any other unmodeled leaf (fail
-// closed — the refusal names the leaf type).
+// `sticky`/`embedRO` (audit R1-F1/R4-C-2; SPLIT by the delta-review's
+// CRITICAL-1) model reflect's TWO read-only flags, which the first cut
+// conflated into one `tainted` bool. gc renders through reflection and
+// a value whose flagRO is set cannot be interfaced (CanInterface is
+// false), so fmt SKIPS method consultation for it — but WHICH bit is
+// set decides whether the suppression is inherited:
+//
+//	// reflect/value.go, Value.Field:
+//	fl := v.flag&(flagStickyRO|flagIndir|flagAddr) | flag(typ.Kind())
+//	if !field.name.IsExported() {
+//	    if field.embedded() { fl |= flagEmbedRO } else { fl |= flagStickyRO }
+//	}
+//
+//   - `sticky` = flagStickyRO — set by crossing a NON-EMBEDDED
+//     unexported field, and INHERITED by the whole subtree below it
+//     (Field propagates exactly this bit).
+//   - `embedRO` = flagEmbedRO — set by crossing an EMBEDDED unexported
+//     field. CanInterface is false AT THAT LEVEL (so no method arm
+//     there), but Field does NOT propagate it: the embedded struct's
+//     own exported fields start clean and their methods ARE consulted.
+//
+// Every OTHER descent (Index/Elem/MapIndex) goes through `flag.ro()`,
+// which collapses EITHER bit to sticky — so the slice lift below is
+// handed `sticky || embedRO`, never embedRO on its own.
+//
+// gc-probed, .tmp/fixround-probes/f1 (the sticky leg: `{E<1> 2}`,
+// `{in:{X:3} A:E<4>}`, `{bs:[5 6]}`) and .tmp/deltarev/{v1,v6,w3,x1,
+// p1..p7} (the embed leg: `{{E<4>}}`, `{{{E<4>}}}`, `{{{4}}}`, `{{4}}`,
+// `{[5 6]}`, `{{[E<5> E<6>]}}`, `{{E<4>} {E<5>}}`, `{{E<1> {E<2>}}}`),
+// pinned as Corpus/coverage/exec/fmt/v-composites' `emb-*` rows.
+//
+// A read-only leaf therefore bypasses the Formatter/error/Stringer arm
+// and renders through the kind matrix; one OUTSIDE the raw matrix
+// refuses exactly like any other unmodeled leaf (fail closed — the
+// refusal names the leaf type).
 func (e *emitter) fmtRenderValue(fn string, plus bool, t types.Type, val any,
-	visiting map[string]bool, tmp *int, tainted bool) ([]any, any, error) {
+	visiting map[string]bool, tmp *int, sticky bool, embedRO bool) ([]any, any, error) {
 	strTy := map[string]any{"kind": "string"}
 	verbName := "%v"
 	if plus {
@@ -147,13 +176,16 @@ func (e *emitter) fmtRenderValue(fn string, plus bool, t types.Type, val any,
 	// the composite subset (below), and an interface-typed leaf other
 	// than `error` refuses like the scalar matrix does.
 	errIface := types.Universe.Lookup("error").Type().Underlying().(*types.Interface)
-	if !tainted && !types.IsInterface(t) {
+	if !sticky && !embedRO && !types.IsInterface(t) {
 		if _, isPtr := types.Unalias(t).(*types.Pointer); !isPtr {
 			// fmt.Formatter precedence at depth, exactly as at top
 			// level (audit R1-F2; gc-probed {FMT:v:1} at depth). A
-			// TAINTED leaf is exempt with the rest of the method arm:
+			// read-only leaf is exempt with the rest of the method arm:
 			// gc cannot interface it, so Format is not consulted below
-			// an unexported field (probed {2}).
+			// a non-embedded unexported field (probed {2}). Below an
+			// EMBEDDED one it IS consulted one level down, which is why
+			// embedRO must not reach here from the recursion (probed
+			// {{FMT:v:1}}, .tmp/deltarev/x1 — row emb-formatter-below).
 			if err := e.refuseFormatter(fn, verbName, t); err != nil {
 				return nil, nil, err
 			}
@@ -234,7 +266,10 @@ func (e *emitter) fmtRenderValue(fn string, plus bool, t types.Type, val any,
 
 	if sl, ok := t.Underlying().(*types.Slice); ok {
 		visiting[key] = true
-		liftName, err := e.fmtSliceLift(fn, plus, t, sl.Elem(), visiting, tainted)
+		// reflect's flag.ro(): Index() collapses EITHER read-only bit to
+		// sticky, so an embedded-unexported slice DOES taint its
+		// elements (probed `{[5 6]}`, .tmp/deltarev/p1).
+		liftName, err := e.fmtSliceLift(fn, plus, t, sl.Elem(), visiting, sticky || embedRO)
 		delete(visiting, key)
 		if err != nil {
 			return nil, nil, err
@@ -272,9 +307,13 @@ func (e *emitter) fmtRenderValue(fn string, plus bool, t types.Type, val any,
 			}
 			fieldNode := map[string]any{"expr": "field-get", "recv": val,
 				"typeId": typeName, "field": f.Name()}
-			// Crossing an unexported field taints the subtree (R1-F1).
+			// Value.Field verbatim (R1-F1 + delta-review CRITICAL-1):
+			// the child inherits ONLY the sticky bit; an unexported
+			// field adds sticky when non-embedded, embed-RO (level
+			// only) when embedded.
+			unexpEmbed := !f.Exported() && f.Embedded()
 			fstmts, fpiece, err := e.fmtRenderValue(fn, plus, f.Type(), fieldNode, visiting, tmp,
-				tainted || !f.Exported())
+				sticky || (!f.Exported() && !f.Embedded()), unexpEmbed)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -290,10 +329,13 @@ func (e *emitter) fmtRenderValue(fn string, plus bool, t types.Type, val any,
 
 // fmtSliceLift generates `func(<sliceT>) string` rendering `[a b c]`
 // with a counted loop, and returns its name. Nil and empty both render
-// `[]` (the loop body never runs) — gc-probed. `tainted` carries the
-// unexported-crossing flag into the element render (R1-F1).
+// `[]` (the loop body never runs) — gc-probed. `sticky` carries the
+// read-only flag into the element render (R1-F1); it is ALREADY
+// collapsed by the caller, because reflect's Index() maps either
+// read-only bit to flagStickyRO (delta-review CRITICAL-1) — there is
+// deliberately no embedRO parameter here.
 func (e *emitter) fmtSliceLift(fn string, plus bool, sliceT types.Type, elemT types.Type,
-	visiting map[string]bool, tainted bool) (string, error) {
+	visiting map[string]bool, sticky bool) (string, error) {
 	strTy := map[string]any{"kind": "string"}
 	intTy := map[string]any{"kind": "int", "int": "int"}
 	sliceW, err := e.emitType(sliceT)
@@ -325,7 +367,7 @@ func (e *emitter) fmtSliceLift(fn string, plus bool, sliceT types.Type, elemT ty
 	}
 
 	tmp := 0
-	elemStmts, elemPiece, err := e.fmtRenderValue(fn, plus, elemT, eRef, visiting, &tmp, tainted)
+	elemStmts, elemPiece, err := e.fmtRenderValue(fn, plus, elemT, eRef, visiting, &tmp, sticky, false)
 	if err != nil {
 		return "", err
 	}
