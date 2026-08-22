@@ -153,6 +153,25 @@ unmodified (verbatim-copied only).
   (report-only; no designated statement changed on this lane).
   **ARC 2 UNIT 2 BRANCH-COMPLETE** at this tip.
 
+- **U3 GATE** (2026-08-22): `GOLEAN_ALLOW_NO_DIFF=1
+  GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT: PASS** (rc 0) at the U3
+  commit (U3 is docs-only over U2's audited build inputs — the bench
+  lives under `docs/campaign-arc2-probes/`, no proofs/GoLean change).
+  Visible notes unchanged in kind: sanctioned no-diff hatch;
+  report-only comparator-landmark staleness (no designated statement
+  on this lane). **ARC 2 UNIT 3 BRANCH-COMPLETE** at this tip; unit 4
+  opens on the memo §6.7 charter.
+
+## Checkpoint (U3 end, recomputed)
+
+Branch `campaign-arc2` @ (tip after this commit): 9 commits over
+f64d9b21, tree clean. U3 delta: docs-only (microbench probes +
+records + memo §6.5–§6.7 + log). Measurements: trie marginal
+9.4 ms/op / 0.44 MB/op at 36,376 entries (PASS vs pre-stated
+≤25 ms / ≤2 MB); 16G kill points recorded; the (d) route is GO with
+unit 4's mid-build gate armed. Nothing merged; no
+GoCore/frontend/scripts edits; Arc-1 files verbatim.
+
 ## Checkpoint (U2 end, recomputed)
 
 Branch `campaign-arc2` @ (tip after the U2 commits): U1's 5 commits
