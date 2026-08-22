@@ -50,7 +50,7 @@ sibling lake wedged with SIGTERM, recorded as an operational note),
 
 | K | wall | peak RSS | rc |
 |---|---|---|---|
-| 0 | 32.3 s | ≤48G cap (not polled) | 0 PASS |
+| 0 | 32.3 s | 6.0 GB (polled at the U2 rerun: 36.2 s under load, `records/kprobes-small.out`) | 0 PASS |
 | 10 | 32.8 s | 6.1 GB | 0 PASS |
 | 100 | 54.7 s | 8.9 GB | 0 PASS |
 | 1000 | 110.9 s | 15.6 GB | 0 PASS |
@@ -213,8 +213,8 @@ patience. The viable content of (a) survives only inside (c).
 **(b) A symbolic WP/kit completion walk over the twin.** What it
 would need: per-function specs/segment lemmas for the default-stream
 call graph — probe A's census: **226 distinct statically-called
-functions + 9 value-call callees (+ the defer-callee set, unresolved
-by the probe)**, with the hot ones (`raftpb.Message.GetType` 442
+functions + 9 value-call callees + 8 defer callees (probe A2)**, with
+the hot ones (`raftpb.Message.GetType` 442
 executions, `utoa` 415, `raft.unstable.maybeLastIndex` 185,
 `raft.stepLeader` 18 …) needing full symbolic treatment of raft's
 actual control flow. Estimate: at gallery cost discipline this is a
@@ -335,3 +335,108 @@ segment" (one session, parkable):**
    a record file; bounds as bounds; the probe fuel numbers are
    scaffolding — the proof re-derives its fuel by composition; a
    killed probe's kill point is a datum, not a failure to hide.
+
+---
+
+## 6. U2 — the go/no-go measurement (2026-08-22, this unit): **NO-GO
+for (c); pivot to (d)**
+
+Charter items 1–3 executed. Raw records:
+`docs/campaign-arc2-probes/records/seg350k.out`,
+`records/probeA2-defercallees.out`, and the updated
+`records/kprobes-small.out`.
+
+### 6.1 The reflector works, and is cheap
+
+`StateWire.lean` (ToExpr derives for the value/config grammar +
+`twinCheckpoint%`, fail-loud, table-drift-checked) +
+`TwinCheckpoints.lean` (the 350k checkpoint, program-generic spelling
+over `twinBase`): **build 3:47 wall / 2.7 GB peak / 101 MB olean**.
+The compiled prelude+350k-step run dominates; reflection and
+elaboration of the 19,093-cell heap literal are not the bottleneck.
+This artifact is route-independent and carries to (d).
+
+### 6.2 The mid-run kernel segment curve (the decisive datum)
+
+From the 350k checkpoint (heap 19,093 cells), `∃ x, stepFnIter k … =
+.ok x` by `with_unfolding_all exact ⟨_, rfl⟩` under
+`smartUnfolding false` (expected shapes #eval-confirmed first;
+48G cap, timeout 3600, RSS polled at 2 s):
+
+| k | wall | peak RSS | outcome |
+|---|---|---|---|
+| 100 | 2:13 | 16.1 GB | PASS |
+| 250 | 7:46 | 39.7 GB | PASS |
+| 500 | 11:33 | 51.5 GB read at kill | **OOM (137) under 48G** |
+| 2000, 8000 | not run | — | superseded: they OOM at seg-500's identical prefix point; replaced by the 100/250 slope points ([AGENT], logged) |
+
+Marginal rates at 19k cells, from the 100→250 stretch: **2.22 s/step,
+157 MB/step** ((466−133) s and (39.7−16.1) GB over 150 steps). The
+seg-500 kill is consistent: 39.7 + 250 × 0.157 ≈ 79 GB ≫ 48.
+Against the early-run rates (§1.2: ≥ 0.29 s/step, ≥ 4.5 MB/step at
+≤ 700 cells): per-step cost scaled ~7× and retention ~35× for a ~27×
+larger heap — **the kernel's per-step cost and retention are
+heap-size-linear**, as §2.1 feared. A 100-step mid-run segment IS
+kernel-checkable — the route is not impossible, just priced out.
+
+### 6.3 The projection, re-derived at measured mid-run rates
+
+- **Time**: 711,616 × 2.22 s ≈ **439 CPU-h** at the 19k-cell rate;
+  the run's second half runs at up to 36k cells, so the honest band
+  is **~440–800 CPU-h** (heap-linear scaling), versus the ~200 CPU-h
+  NO-GO trigger.
+- **Segments**: at 157 MB/step, a 48G budget holds ~280 steps →
+  **~2,500 segment modules**; even a 110G cap holds ~680 → ~1,050.
+- **Checkpoint storage**: one 19k-cell checkpoint olean is 101 MB →
+  **~100–250 GB** of build artifacts at 1,000–2,500 checkpoints, all
+  needed simultaneously by the composition closure.
+- **Wall**: the box fits at most two 48G segment jobs beside the
+  standing lanes → **weeks of wall-clock**, not the §2 estimate (which
+  §2 flagged as a lower bound pending exactly this measurement). For
+  completeness at the coordinator's asked-for parallelism levels:
+  8-way × 48G = 384G and 16-way = 768G of concurrent cap — **the 125G
+  box cannot run either**; at the 2-way it CAN run, 440–800 CPU-h ≈
+  **9–17 days wall**.
+
+**VERDICT: NO-GO** — the §5 trigger (projected > ~200 CPU-h) fires at
+more than double, before storage (~10² GB) and module count (~10³–10⁴)
+are even charged. [AGENT], per the charter's own numeric gate.
+
+### 6.4 Unit 3 (revised charter): fallback (d), the verified
+fast-twin evaluator
+
+Carrying forward: the reflector + checkpoint module (reused), the
+measured curves (the baseline (d) must beat), and the complete call
+census (probe A + A2: **226 static + 9 value-call + 8 defer callees =
+243 distinct functions**; defer registrations 272, exactly matching
+probe A's defer-site executions — the gap is closed).
+
+Slices, in order:
+1. **The opening measurement (before any evaluator build)**: a
+   kernel-reduction microbenchmark of the candidate heap
+   representation — a Nat-keyed binary trie at 36k entries, 10k
+   set/lookup ops under `with_unfolding_all rfl`, capped + timed +
+   RSS-polled. Validates the two numbers everything rests on:
+   per-op kernel time (target: ms-scale vs the list's ~2 s/step) and
+   per-op retention (target: ~KB-scale vs 157 MB/step). A failed
+   target here parks (d) too and the campaign reports the witness
+   HONESTLY BLOCKED at kernel scale pending a ruling-class
+   conversation (e.g. a `Nat`-packed state encoding exploiting kernel
+   GMP arithmetic — exotic, unscoped).
+2. **The evaluator**: `HeapT` (trie) + abstraction `γ : HeapT → Heap`
+   + WF invariant (nodup keys — `alloc` uniqueness); `stepFast` over
+   the represented state, per-arm; the simulation theorem family
+   `γ`-commuting per arm, composed to
+   `runConfigFast/stepFnIterFast ↔ stepFnIter` — proved ONCE,
+   symbolically, over ALL states (no per-run content). Statements
+   untouched (§3.1: the accelerator never enters the statement
+   closure; the witness transports through the simulation instance).
+3. **The witness assembly**: reflect the seeded state into `HeapT`
+   (reflector reused; `γ`-agreement kernel-checked once at the small
+   post-prelude heap), kernel-evaluate the fast run — monolithic if
+   retention allows (~KB/step × 711k ≈ tens of GB), else 2–5
+   checkpointed fast segments — transport, compose with the prelude
+   equation and readout, discharge `CompletionWitness`.
+4. Non-goals, restated: no GoCore change (the fast evaluator is
+   proof-side); no statement change; no envelope pin. If any slice
+   wants one, it is a ruling request, parked.
