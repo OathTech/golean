@@ -374,9 +374,9 @@ from artifacts.
 | candidates_vote_for_selves | PROVED (base) | Raft/CandidatesVoteForSelvesInterface.v:8 | ElectionSafety.lean:587 |
 | cronies_correct | PROVED | Raft/CroniesCorrectInterface.v:9-33 | ElectionSafety.lean:720 |
 | one_leader_per_term (ELECTION SAFETY) | PROVED (base, via lower_prop) | Raft/OneLeaderPerTermInterface.v:8 | ElectionSafety.lean:1750 (+ Statement :1759) |
-| cronies_term | OPEN (this unit) | Raft/CroniesTermInterface.v:9 | — |
-| no_entries_past_current_term (term_sanity) | OPEN (this unit, base) | Raft/TermSanityInterface.v:9-24 | — |
-| CandidateEntries | OPEN (this unit) | Raft/CandidateEntriesInterface.v:10-24 | — |
+| cronies_term | PROVED | Raft/CroniesTermInterface.v:9 | CandidateEntries.lean:43 |
+| no_entries_past_current_term (term_sanity) | PROVED (base) | Raft/TermSanityInterface.v:9-24 | CandidateEntries.lean:220 |
+| CandidateEntries | PROVED | Raft/CandidateEntriesInterface.v:10-24 | CandidateEntries.lean:808 (def :596) |
 - 2026-08-22 Slice 13 (1cc83c1d): log/message spec lemmas for the ring
   (findGtIndex_in, removeAfterIndex_in, per-handler log facts,
   doLeader_messages, rvr cronies function-level cases).
@@ -390,4 +390,23 @@ from artifacts.
   (CandidateEntries.lean:43), no_entries_past_current_term PROVED
   (CandidateEntries.lean, term-sanity section); mem_of_mem_remove_middle
   un-privated (2nd consumer). Build green.
+- 2026-08-22 Slice 15 (66710572): `candidateEntries` + the per-handler
+  preserves lemmas + `candidate_entries_invariant`. [AGENT] proof-shape
+  notes: (a) the timeout case uses `cronies_term` exactly as upstream —
+  a winner at the fresh term (old+1) would put a crony past the old
+  current term; (b) the RVR case is the one that leans on
+  `cronies_correct` (a standing leader's votesReceived won —
+  RefinementCommonTheorems.v:138's cci dependency); (c) `rcases h : x
+  with ...` substitution BREAKS goals mentioning the scrutinee — the
+  by_cases + `serverType_cases` helper pattern replaces it (recorded
+  for successors). Three AxCheck pins added (sweep 1244).
+- 2026-08-22 CHECKPOINT (recomputed from artifacts per coordinator
+  item 4, at 66710572): `git log f64d9b21..HEAD | wc -l` = 20 commits;
+  capped `lake build` green with `AxCheck sweep: 1244 declarations ...
+  within [propext, Quot.sound]`; diffharness fixture pin OK (320
+  cases); `grep -rc sorry|native_decide` over compat/verdi/VerdiCompat:
+  single hit = Examples.lean:12, prose in a P1-era docstring
+  (pre-campaign file, commit 6fb4caf1), zero in campaign files;
+  CandidateEntries.lean = 1199 lines (wc). Unit-3 remaining:
+  scripts/ci + final entry.
 
