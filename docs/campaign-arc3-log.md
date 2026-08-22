@@ -51,3 +51,19 @@ recomputed at the checkpoint, never restated.
   equation premises), since those are the interfaces ~73 verdi-raft
   proof files instantiate — 1:1 there is what makes chain porting
   mechanical. Recorded as design-doc §5 D2.
+- 2026-08-22 Slice 1 committed (d60a5b40): this log + the port design
+  doc. Baseline `lake build` of compat/verdi (capped, 24G) green
+  before any edit: AxCheck sweep 840 declarations.
+- 2026-08-22 Slice 2: RefinedProofStructure.lean part 1 —
+  `electionsData`, `elections_ghost_init`, the five
+  `update_elections_data_*` ghost handlers + net/input dispatchers,
+  the refined parameter triple, `refined_raft_intermediate_reachable`;
+  wired into `VerdiCompat.lean` so the enforcing AxCheck sweep covers
+  the module from birth (sweep now 918 declarations, build green).
+  [AGENT] Two upstream pattern subtleties preserved and
+  docstring-flagged: `update_elections_data_appendEntries` binds the
+  REPLY's `t`/`entries` (Coq shadows the request's; named `t'`/`es'`
+  here), and the `_net` dispatcher passes `src` for BOTH `src` and
+  `candidateId` at the RequestVote arm (upstream's exact call,
+  `RaftRefinementInterface.v:94-95`), keeping the unused
+  `candidateId` parameter so obligation statements stay 1:1.

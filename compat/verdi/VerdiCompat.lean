@@ -7,4 +7,5 @@ import VerdiCompat.CommonDefinitions
 import VerdiCompat.RaftLinearizable
 import VerdiCompat.Properties
 import VerdiCompat.ProofStructure
+import VerdiCompat.RefinedProofStructure
 import VerdiCompat.Examples
