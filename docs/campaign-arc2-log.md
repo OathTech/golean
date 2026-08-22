@@ -49,6 +49,22 @@ completion machinery, route memo + unit-2 charter).
   charter, memo §6.4. Records: `records/seg350k.out`,
   `records/probeA2-defercallees.out`.
 
+- **U3** (2026-08-22, coordinator-directed: the (d) gate — microbench
+  BEFORE any evaluator build): trie microbench
+  (`trie-bench.lean`, seed 36,376 = probe C's end-of-run heap;
+  structural recursion only; forced final fold; expected values
+  #eval-first; pre-stated PASS targets ≤25 ms/op, ≤2 MB/op).
+  16G points OOM'd — the arithmetic identified the cap as mis-sized
+  for the in-kernel seed build (36,376 inserts ≈ 17 GB), kill points
+  recorded. 48G: nops=0/1000/10000 all PASS (4:25/17.7 GB,
+  4:39/18.1 GB, 6:04/22.1 GB); marginal **9.4 ms/op, 0.44 MB/op** —
+  **GATE PASSES with >2× headroom** (~240×/~360× better than the
+  list heap per op). (d) projection: 4–60 CPU-h, ~14 fast segments.
+  Memo §6.5 (results), §6.6 (Arc-4 Sym convergence carry-forward,
+  per directive), §6.7 (unit-4 evaluator charter with its own
+  mid-build measurement gate). Records:
+  `records/trie-bench.out`.
+
 ## Judgment calls
 
 - **[AGENT]** 2026-08-22: copy mechanism is path-checkout from the
@@ -88,6 +104,20 @@ completion machinery, route memo + unit-2 charter).
   (36k cells exists only at the run's END, outside the range); the
   projection carries the heap-linear 2× band to cover the late run
   instead. Memo §6.2 states this in place.
+- **[AGENT]** 2026-08-22 (U3): microbench targets set BEFORE the
+  kernel runs (≤25 ms/op, ≤2 MB/op — derivation in memo §6.5); the
+  16G kill points read as cap-sizing, not target-miss (nops=0
+  contains the 36k-insert seed build; the real evaluator's seed is a
+  reflected literal, never kernel-built — recorded as a design rule).
+- **[AGENT]** 2026-08-22 (U3): all bench recursion STRUCTURAL — the
+  kernel does not usefully reduce `WellFounded.fix`; recorded as a
+  binding design constraint for the unit-4 evaluator (and for any
+  kernel-checked route, §6.6).
+- **[AGENT]** 2026-08-22 (U3): unit ends at gate-PASS +
+  design/charter, NOT a half-built evaluator — units sized to one
+  session, every unit parkable (gallery case law); unit 4 opens on
+  the §6.7 charter with the mid-build measurement gate as its own
+  go/no-go.
 - **[AGENT]** 2026-08-22 (U2): `TwinCheckpoints` kept in the
   aggregator (a fresh full build pays 3:47 + a 101 MB olean once) —
   the checkpoint is unit-3's reusable input and the 1b2 sweep wants
