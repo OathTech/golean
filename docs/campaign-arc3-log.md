@@ -716,3 +716,46 @@ will also consume GAP-5's sorted/contiguous) for unit 6 and
 re-verify this unit's claims fresh (build + sweep count 1403 + the
 probe above + hatch grep over LeaderLogs.lean).
 
+## Unit 5 — the creation ring (2026-08-22, coordinator-accepted charter)
+
+Coordinator additions folded in: GAP-2 minimal-port-on-first-need if
+the ring touches the msg-ghost layer; INTEGRATION READINESS note in the
+unit report (lane 29+ commits deep).
+
+- 2026-08-22 SUCCESSOR-STYLE RE-VERIFICATION of unit 4 (recomputed):
+  fresh capped `lake env lean AxCheck.lean` printed verbatim `AxCheck
+  sweep: 1403 declarations across VerdiCompat modules, axiom set within
+  [propext, Quot.sound]`; fresh `#print axioms` probe:
+  `one_leaderLog_per_term_invariant` + the term-sanity trio all
+  `[propext, Quot.sound]`; `grep -c "sorry\|native_decide"` over
+  LeaderLogs.lean: 0. Claims hold; building on them.
+- 2026-08-22 [AGENT] Unit-5 scope call, from the actual import closure
+  (read at a3375e8 — my unit-4 proposal was drafted from
+  LeaderCompletenessProof.v's FIRST-level imports only; the
+  second-level ground truth narrows it): (a) NO msg-ghost anywhere in
+  the ring — GAP-2 stays untouched, as chartered "on first need" with
+  no need arising; (b) `allEntries_votesWithLog` requires
+  `AllEntriesLog` (AllEntriesLogProof.v, 1089 lines, itself importing
+  AppendEntriesRequestLeaderLogs, RefinedLogMatchingLemmas,
+  AllEntriesLeaderLogsTerm, LeaderLogsContiguous, LeaderLogsSorted,
+  AllEntriesTermSanity) and `leaderLogs_preserved` requires
+  `LogsLeaderLogs` (848 lines, importing LeaderLogsSorted/Contiguous/
+  LogMatching, RefinedLogMatchingLemmas, LeadersHaveLeaderLogsStrong,
+  NextIndexSafety, LeaderLogsLogProperties) — BOTH sit on exactly the
+  log-matching subtree the charter defers to unit 6. DECISION: port
+  the feasible creation ring now — `every_entry_was_created` (deps:
+  leaders_have_leaderLogs ✓), base `logs_sorted` (SortedInterface.v,
+  4 conjuncts; dep: term_sanity ✓) → `votesWithLog_sorted`,
+  `current_term_gt_zero` → `terms_and_indices_from_one_log` (base) →
+  `terms_and_indices_from_one`, `votesWithLog_term_sanity` (94-line
+  feeder of allEntries_votesWithLog), and `leaderLogs_candidate_entries`
+  (LeaderLogsCandidateEntriesProof.v, 287 lines — ALL its deps are
+  already proved: CandidateEntries/CroniesCorrect/CroniesTerm/
+  LeaderLogsTermSanity ✓; it is leaderLogs_preserved's other input);
+  record `allEntries_votesWithLog` + `leaderLogs_preserved` as GAP-7
+  (blocked on the unit-6 log-matching subtree), not silently attempted.
+- 2026-08-22 [AGENT] File plan: new `CreationRing.lean` (imports
+  LeaderLogs); `term_was_created`/`in_any_log`
+  (RefinementCommonDefinitions.v:20-23 / EveryEntryWasCreatedInterface.v
+  1:1) live there with citations.
+
