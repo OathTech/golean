@@ -84,10 +84,10 @@ PROMOTION LEDGER section below, target-specific ones stay local.
   costs make it feasible in-unit; otherwise the pilot ends at the
   honest gap + NO-GO verdict with the measured numbers (exactly the
   seam design's "anything else → re-design here" branch).
-- 2026-08-22 Slice 1 (85acbb0c): `proofs/GoLeanProofs/Raft/AbsState.lean`
+- 2026-08-22 Slice 1 (85acbb0c): `proofs/GoLeanProofs/Specs/Raft/AbsState.lean`
   (absRaftNode v1 Option reader, gaps GAP-V1-1..5 numbered in the
   docstring; specBecomeFollower re-grounded) +
-  `proofs/GoLeanProofs/Raft/HandlerEq.lean` (`storeTarget_field` —
+  `proofs/GoLeanProofs/Specs/Raft/HandlerEq.lean` (`storeTarget_field` —
   the struct-field store form the kit lacks, closed locally;
   `alt_call_span` — the 15-step span equation for the leaf callee
   `abortLeaderTransfer`, abstract σ, symbolic addresses/fields, ten
@@ -115,6 +115,26 @@ PROMOTION LEDGER section below, target-specific ones stay local.
   alt_call_span / alt_call_span_witness all
   [propext, Classical.choice, Quot.sound]; alt_witness_projection
   [propext].
+
+- 2026-08-22 Slice 3: **the gate caught a layering violation** —
+  `scripts/ci`'s import-direction lint: general-layer proof modules
+  (outside `Specs/`) may not import `GoLeanProofs.Specs.*`, and the
+  witness (then at `proofs/GoLeanProofs/Raft/`) imports the
+  `Specs.TwinProgram` pin. The modules are TARGET-layer
+  infrastructure anyway (they name `raft.raft`), so the fix is the
+  lint's own first remedy: all three moved to
+  `proofs/GoLeanProofs/Specs/Raft/` (aggregator + doc paths updated;
+  slice-1/2 entries above rewritten to the final paths — the
+  original path `GoLeanProofs/Raft/` existed only at 85acbb0c..).
+  This ALSO corrects the seam design's "never imported by statement
+  modules" layering to the repo's mechanized form: the general/target
+  split is the enforced boundary; statement modules simply do not
+  import the seam modules (checked by reading; no lint needed).
+- 2026-08-22 Writer note: commit 2c396efe (coordinator's
+  campaign-level log entry, `docs/raft-campaign-log.md` only — Arc 3
+  unit 4 record) landed on this branch between my slices 1 and 2.
+  File-disjoint from this unit's tree; recorded per the one-writer
+  discipline, no action needed.
 
 ### PROMOTION LEDGER (kit gaps with ≥2 plausible future consumers)
 

@@ -198,9 +198,9 @@ import GoLeanProofs.Sym.SpikeKadane
 -- Campaign Arc 4 (A4-U1 pilot): the interpreter⇄invariant seam's
 -- abstraction reader + per-callee span equations + pinned witness.
 -- Proof infrastructure — never imported by the Specs statement modules.
-import GoLeanProofs.Raft.AbsState
-import GoLeanProofs.Raft.HandlerEq
-import GoLeanProofs.Raft.BecomeFollowerWitness
+import GoLeanProofs.Specs.Raft.AbsState
+import GoLeanProofs.Specs.Raft.HandlerEq
+import GoLeanProofs.Specs.Raft.BecomeFollowerWitness
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)

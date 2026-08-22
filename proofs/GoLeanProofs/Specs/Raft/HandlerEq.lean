@@ -1,6 +1,6 @@
 import GoLeanProofs.StepKit
 import GoLeanProofs.FuelMeasure
-import GoLeanProofs.Raft.AbsState
+import GoLeanProofs.Specs.Raft.AbsState
 
 /-!
 # A4-U1 pilot: per-callee interpreter-run equations (generic layer)
@@ -10,7 +10,7 @@ for the callees of `raft.raft.becomeFollower`, stated over an ABSTRACT
 machine state with the executable facts as hypotheses (StepKit
 conditioned style), program-generic (no pin import here — the pinned
 instantiation and the discharge witness live in
-`Raft/BecomeFollowerWitness.lean`).
+`Specs/Raft/BecomeFollowerWitness.lean`).
 
 Layering: proof infrastructure, never imported by statement modules.
 

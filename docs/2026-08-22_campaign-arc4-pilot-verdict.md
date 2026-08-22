@@ -5,7 +5,7 @@ Campaign lane `campaign-arc4`, [AGENT] throughout. Governing:
 "the pilot equation proves with the kit at ≤ a gallery example's
 effort. Anything else → re-design here before more units").
 Worked record: `docs/campaign-arc4-log.md`; modules under
-`proofs/GoLeanProofs/Raft/`.
+`proofs/GoLeanProofs/Specs/Raft/`.
 
 ## 1. VERDICT: architecture GO, cost model NO-GO
 
@@ -20,7 +20,7 @@ current kit; re-design per §5 below.
 
 ## 2. What the pilot proved (kernel-checked at this tip)
 
-All in `proofs/GoLeanProofs/Raft/` (wired into the GoLeanProofs
+All in `proofs/GoLeanProofs/Specs/Raft/` (wired into the GoLeanProofs
 aggregator; full proofs+Audit build green, 469 jobs). `#print axioms`
 verbatim (capped `lake env lean` probe, this tip):
 

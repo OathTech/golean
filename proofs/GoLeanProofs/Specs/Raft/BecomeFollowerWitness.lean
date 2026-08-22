@@ -1,5 +1,5 @@
 import GoLeanProofs.Specs.TwinProgram
-import GoLeanProofs.Raft.HandlerEq
+import GoLeanProofs.Specs.Raft.HandlerEq
 
 /-!
 # A4-U1: the discharge witness for `alt_call_span` (pinned program)
