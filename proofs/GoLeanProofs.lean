@@ -201,6 +201,10 @@ import GoLeanProofs.Sym.SpikeKadane
 import GoLeanProofs.Specs.Raft.AbsState
 import GoLeanProofs.Specs.Raft.HandlerEq
 import GoLeanProofs.Specs.Raft.BecomeFollowerWitness
+-- A4-U2 slice 1: the handler-fragment Sym extension (class 1, the
+-- type-table input) + the Sym-driven re-measure of the pilot leaf.
+import GoLeanProofs.Sym.TableExt
+import GoLeanProofs.Specs.Raft.HandlerEqSym
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)
