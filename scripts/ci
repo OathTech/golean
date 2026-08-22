@@ -923,7 +923,7 @@ if ( cd proofs && lake build 2>&1 | tail -4 ); then ok "proofs + Audit gate"; el
 # hot). Sorry warnings in Challenge are its design; errors are not.
 step "trusted root elaborates (Challenge.lean + Solution.lean)"
 tr_out="$( cd proofs && lake env lean Challenge.lean 2>&1 )"; tr_rc=$?
-tr_nsorry="$(printf '%s\n' "$tr_out" | grep -c "declaration uses 'sorry'" || true)"
+tr_nsorry="$(printf '%s\n' "$tr_out" | grep -cE "declaration uses .sorry." || true)"
 if [ "$tr_rc" -eq 0 ]; then
   ok "Challenge.lean elaborates ($tr_nsorry sorry warnings — its design)"
 else
