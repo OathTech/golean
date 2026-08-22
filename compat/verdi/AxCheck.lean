@@ -46,6 +46,45 @@ open VerdiCompat VerdiCompat.Raft
 /-- info: 'VerdiCompat.Examples.raft_linearizable_conclusion_witness' depends on axioms: [propext] -/
 #guard_msgs in #print axioms VerdiCompat.Examples.raft_linearizable_conclusion_witness
 
+-- Ghost-layer port (campaign Arc 3, RefinedProofStructure.lean): the
+-- refined induction principle, the two simulations, the two transfer
+-- directions, and the principle's discharge witness.
+/-- info: 'VerdiCompat.Raft.refined_raft_net_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.refined_raft_net_invariant
+/-- info: 'VerdiCompat.Raft.simulation_1' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.simulation_1
+/-- info: 'VerdiCompat.Raft.simulation_2' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.simulation_2
+/-- info: 'VerdiCompat.Raft.lift_prop' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.lift_prop
+/-- info: 'VerdiCompat.Raft.lower_prop' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.lower_prop
+/-- info: 'VerdiCompat.Raft.refined_votes_shape_witness' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.refined_votes_shape_witness
+
+-- Election-safety chain (campaign Arc 3 unit 2, ElectionSafety.lean):
+-- the five chain invariants and the discharged P1 transfer target.
+/-- info: 'VerdiCompat.Raft.votes_le_currentTerm_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.votes_le_currentTerm_invariant
+/-- info: 'VerdiCompat.Raft.votes_correct_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.votes_correct_invariant
+/-- info: 'VerdiCompat.Raft.candidates_vote_for_selves_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.candidates_vote_for_selves_invariant
+/-- info: 'VerdiCompat.Raft.cronies_correct_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.cronies_correct_invariant
+/-- info: 'VerdiCompat.Raft.one_leader_per_term_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.one_leader_per_term_invariant
+/-- info: 'VerdiCompat.Raft.oneLeaderPerTermStatement_holds' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.oneLeaderPerTermStatement_holds
+
+-- The candidate_entries ring (campaign Arc 3 unit 3, CandidateEntries.lean).
+/-- info: 'VerdiCompat.Raft.cronies_term_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.cronies_term_invariant
+/-- info: 'VerdiCompat.Raft.no_entries_past_current_term_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.no_entries_past_current_term_invariant
+/-- info: 'VerdiCompat.Raft.candidate_entries_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.candidate_entries_invariant
+
 /-! ## Exhaustive sweep (fails the build on any disallowed axiom) -/
 
 open Lean in
