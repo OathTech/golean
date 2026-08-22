@@ -1046,4 +1046,24 @@ charter.
   gotcha bit ~10 times (goals/hyps through the term/logIndex abbrevs);
   resolved with explicit Nat.lt/le lemmas throughout, as recorded.
   Build green, sweep 1600.
+- 2026-08-22 Slice 34: **`log_matching_invariant` — LOG MATCHING (T3),
+  BASE** (LogMatchingProof.v:1495-1515; upstream 1,521 lines; statements
+  are Properties.lean's P1 defs, NOT redefined — proved, discharging
+  `LogMatchingStatement` natively as `logMatchingStatement_holds`,
+  exactly like unit 2's OneLeaderPerTerm). Structure: (a) the
+  whole-invariant transport `log_matching_state_same_packet_subset`
+  (:47-96) kills timeout/RV/RVR/AER/dGS/state-same/reboot; (b)
+  client_request via `handleClientRequest_entries_match` (:722-749 —
+  leader_sublog + the impossible maxIndex+1 index) +
+  one_leader_per_term; (c) do_leader via `doLeader_messages_full` (a
+  new exact-shape spec lemma: every replica message is
+  `AE ct me pli (findAtIndex-term) (findGtIndex log pli) ci`), a
+  packet classifier, and per-quadrant clause-4 lemmas
+  (`hvs_fresh`/`hfresh_vs_old`/fresh-fresh — upstream
+  doLeader_log_matching_nw :196-458); (d) `handleAppendEntries_log_matching`
+  (:1152-1493, the subtree's centerpiece): unchanged→transport,
+  pli=0→`entries_match_scratch`, splice→`entries_match_append` +
+  `removeIncorrect_new_contiguous`, with the (pli, plt) PIVOT entry
+  crossing between the incoming entries and the receiver's kept prefix
+  in the nw clauses. Build green, sweep 1623; zero sorry (grep).
 

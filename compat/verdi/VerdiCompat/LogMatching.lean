@@ -1694,6 +1694,447 @@ theorem do_leader_log_matching :
           · intro hne hplieq
             rw [hplieq]
 
+/-- `LogMatchingProof.v:1152-1493` (`handleAppendEntries_log_matching`) —
+the subtree's centerpiece: an accepted append re-establishes every
+clause from the incoming packet's own nw obligations. -/
+theorem handleAppendEntries_log_matching :
+    raft_net_invariant_append_entries (P := P) log_matching := by
+  intro xs p ys net st' ps' d m t n0 pli plt es ci hae hbody hP hreach hpkts
+    hst hps
+  have hp_in : p ∈ net.nwPackets := by
+    rw [hpkts]
+    exact List.mem_append.mpr (Or.inr (List.mem_cons_self ..))
+  obtain ⟨-, -, -, t', es', r', hmshape⟩ :=
+    handleAppendEntries_spec p.pDst (net.nwState p.pDst) t n0 pli plt es ci
+      hae
+  -- every surviving AppendEntries packet is old
+  have hpktsAE : ∀ q, q ∈ ps' →
+      (∃ t2 lid2 pli2 plt2 es2 ci2,
+        q.pBody = msg.AppendEntries (P := P) t2 lid2 pli2 plt2 es2 ci2) →
+      q ∈ net.nwPackets := by
+    intro q hq ⟨t2, lid2, pli2, plt2, es2, ci2, hbody2⟩
+    rcases hps q hq with h1 | h1
+    · rw [hpkts]
+      exact mem_of_mem_remove_middle h1
+    · exfalso
+      rw [h1] at hbody2
+      replace hbody2 : m = msg.AppendEntries t2 lid2 pli2 plt2 es2 ci2 :=
+        hbody2
+      rw [hmshape] at hbody2
+      exact nomatch hbody2
+  obtain ⟨⟨hem, hcontig, hpos⟩, hnw⟩ := hP
+  have hsorted := logs_sorted_invariant net hreach
+  have huniq := (UniqueIndices_invariant net hreach).1
+  have hLs : sorted (net.nwState p.pDst).log := hsorted.1 p.pDst
+  have hLu := huniq p.pDst
+  have hesS : sorted es := hsorted.2.1 p t n0 pli plt es ci hp_in hbody
+  obtain ⟨hpc1, hpc2, hpc3, hpc4⟩ := hnw p t n0 pli plt es ci hp_in hbody
+  rcases handleAppendEntries_log_cases p.pDst (net.nwState p.pDst) t n0 pli
+    plt es ci hae with hold | ⟨hpli0, hlogd⟩ | ⟨e0, he0L, he0idx, he0term, hlogd⟩
+  · -- log unchanged: transport
+    refine log_matching_state_same_packet_subset (net' := ⟨ps', st'⟩)
+      ⟨⟨hem, hcontig, hpos⟩, hnw⟩ ?_ ?_
+    · intro h0
+      show (st' h0).log = (net.nwState h0).log
+      rw [hst h0]
+      by_cases he : h0 = p.pDst
+      · rw [he, update_same, hold]
+      · rw [update_neq _ _ he]
+    · intro q hq hAE
+      replace hq : q ∈ ps' := hq
+      exact hpktsAE q hq hAE
+  · -- pli = 0: wholesale replacement (entries_match_scratch)
+    subst hpli0
+    have hlog' : ∀ h0, h0 ≠ p.pDst → (st' h0).log = (net.nwState h0).log := by
+      intro h0 hne
+      rw [hst h0, update_neq _ _ hne]
+    have hlogr : (st' p.pDst).log = es := by
+      rw [hst p.pDst, update_same, hlogd]
+    have hscratch : ∀ h2, h2 ≠ p.pDst →
+        entries_match es (net.nwState h2).log := by
+      intro h2 _
+      refine entries_match_scratch hesS (huniq h2) ?_ hpc2 (hpos h2)
+      intro e1 e2 hidx hterm he1 he2 e3 h3le h3in
+      exact (hpc1 h2 e1 e2 he1 he2 hidx hterm).1 e3 h3le h3in
+    refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
+    · intro h1 h2
+      show entries_match (st' h1).log (st' h2).log
+      by_cases he1 : h1 = p.pDst <;> by_cases he2 : h2 = p.pDst
+      · rw [he1, he2]
+        exact entries_match_refl _
+      · rw [he1, hlogr, hlog' h2 he2]
+        exact hscratch h2 he2
+      · rw [he2, hlogr, hlog' h1 he1]
+        exact entries_match_sym (hscratch h1 he1)
+      · rw [hlog' h1 he1, hlog' h2 he2]
+        exact hem h1 h2
+    · intro h0 i hi
+      replace hi : 1 ≤ i ∧ i ≤ maxIndex (st' h0).log := hi
+      show ∃ e, entry.eIndex e = i ∧ e ∈ (st' h0).log
+      by_cases he0 : h0 = p.pDst
+      · rw [he0, hlogr] at hi ⊢
+        exact hpc2 i hi
+      · rw [hlog' h0 he0] at hi ⊢
+        exact hcontig h0 i hi
+    · intro h0 e he
+      replace he : e ∈ (st' h0).log := he
+      by_cases he0 : h0 = p.pDst
+      · rw [he0, hlogr] at he
+        exact hpc3 e he
+      · rw [hlog' h0 he0] at he
+        exact hpos h0 e he
+    · intro q t2 lid2 pli2 plt2 es2 ci2 hq hbody2
+      replace hq : q ∈ ps' := hq
+      have hqold : q ∈ net.nwPackets :=
+        hpktsAE q hq ⟨t2, lid2, pli2, plt2, es2, ci2, hbody2⟩
+      obtain ⟨hq1, hq2, hq3, hq4⟩ :=
+        hnw q t2 lid2 pli2 plt2 es2 ci2 hqold hbody2
+      have hq2S : sorted es2 :=
+        hsorted.2.1 q t2 lid2 pli2 plt2 es2 ci2 hqold hbody2
+      refine ⟨?_, hq2, hq3, ?_⟩
+      · intro h2 e1 e2 he1 he2 hidx hterm
+        replace he2 : e2 ∈ (st' h2).log := he2
+        by_cases he2h : h2 = p.pDst
+        · rw [he2h, hlogr] at he2
+          -- q against the freshly-installed es: ride the two clause-4s
+          obtain ⟨hA, -, -⟩ := hq4 p t n0 0 plt es ci hp_in hbody e1 e2 he1
+            he2 hidx hterm
+          obtain ⟨-, hB', -⟩ := hpc4 q t2 lid2 pli2 plt2 es2 ci2 hqold
+            hbody2 e2 e1 he2 he1 hidx.symm hterm.symm
+          refine ⟨?_, ?_⟩
+          · intro e3 h3le h3in
+            show e3 ∈ (st' h2).log
+            rw [he2h, hlogr]
+            exact hA e3
+              ⟨Nat.lt_of_le_of_lt (Nat.zero_le _) (hq3 e3 h3in), h3le⟩ h3in
+          · intro hne2
+            obtain ⟨e4, h4i, h4es⟩ := hpc2 pli2
+              ⟨Nat.pos_of_ne_zero hne2,
+               Nat.le_of_lt (Nat.lt_of_lt_of_le
+                 (hidx ▸ hq3 e1 he1)
+                 (maxIndex_is_max hesS he2))⟩
+            refine ⟨e4, h4i, hB' e4 h4es h4i, ?_⟩
+            show e4 ∈ (st' h2).log
+            rw [he2h, hlogr]
+            exact h4es
+        · rw [hlog' h2 he2h] at he2
+          obtain ⟨ha, hb⟩ := hq1 h2 e1 e2 he1 he2 hidx hterm
+          refine ⟨?_, ?_⟩
+          · intro e3 h3le h3in
+            show e3 ∈ (st' h2).log
+            rw [hlog' h2 he2h]
+            exact ha e3 h3le h3in
+          · intro hne
+            obtain ⟨e4, h4a, h4b, h4c⟩ := hb hne
+            refine ⟨e4, h4a, h4b, ?_⟩
+            show e4 ∈ (st' h2).log
+            rw [hlog' h2 he2h]
+            exact h4c
+      · intro q' t3 lid3 pli3 plt3 es3 ci3 hq' hbody3
+        replace hq' : q' ∈ ps' := hq'
+        exact hq4 q' t3 lid3 pli3 plt3 es3 ci3
+          (hpktsAE q' hq' ⟨t3, lid3, pli3, plt3, es3, ci3, hbody3⟩) hbody3
+  · -- the splice: es ++ removeAfterIndex L pli (entries_match_append)
+    have hpline : pli ≠ 0 :=
+      Nat.pos_iff_ne_zero.mp (he0idx ▸ hpos p.pDst e0 he0L)
+    have hfind0 : findAtIndex (net.nwState p.pDst).log pli = some e0 :=
+      findAtIndex_intro hLs he0L he0idx hLu
+    have hlog' : ∀ h0, h0 ≠ p.pDst → (st' h0).log = (net.nwState h0).log := by
+      intro h0 hne
+      rw [hst h0, update_neq _ _ hne]
+    have hlogr : (st' p.pDst).log =
+        es ++ removeAfterIndex (net.nwState p.pDst).log pli := by
+      rw [hst p.pDst, update_same, hlogd]
+    have happend : ∀ h2,
+        entries_match (es ++ removeAfterIndex (net.nwState p.pDst).log pli)
+          (net.nwState h2).log := by
+      intro h2
+      exact entries_match_append hLs (hsorted.1 h2) hesS (hem p.pDst h2)
+        (fun e1 e2 hidx hterm he1 he2 => hpc1 h2 e1 e2 he1 he2 hidx hterm)
+        hpc2 hpc3 hfind0 he0term hpline
+    have hcontigr :
+        contiguous_range_exact_lo
+          (es ++ removeAfterIndex (net.nwState p.pDst).log pli) 0 :=
+      removeIncorrect_new_contiguous hLs
+        ⟨fun i hi => hcontig p.pDst i hi, hpos p.pDst⟩
+        ⟨hpc2, hpc3⟩ he0L he0idx
+    refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
+    · intro h1 h2
+      show entries_match (st' h1).log (st' h2).log
+      by_cases he1 : h1 = p.pDst <;> by_cases he2 : h2 = p.pDst
+      · rw [he1, he2]
+        exact entries_match_refl _
+      · rw [he1, hlogr, hlog' h2 he2]
+        exact happend h2
+      · rw [he2, hlogr, hlog' h1 he1]
+        exact entries_match_sym (happend h1)
+      · rw [hlog' h1 he1, hlog' h2 he2]
+        exact hem h1 h2
+    · intro h0 i hi
+      replace hi : 1 ≤ i ∧ i ≤ maxIndex (st' h0).log := hi
+      show ∃ e, entry.eIndex e = i ∧ e ∈ (st' h0).log
+      by_cases he0 : h0 = p.pDst
+      · rw [he0, hlogr] at hi ⊢
+        exact hcontigr.1 i hi
+      · rw [hlog' h0 he0] at hi ⊢
+        exact hcontig h0 i hi
+    · intro h0 e he
+      replace he : e ∈ (st' h0).log := he
+      by_cases he0 : h0 = p.pDst
+      · rw [he0, hlogr] at he
+        exact hcontigr.2 e he
+      · rw [hlog' h0 he0] at he
+        exact hpos h0 e he
+    · intro q t2 lid2 pli2 plt2 es2 ci2 hq hbody2
+      replace hq : q ∈ ps' := hq
+      have hqold : q ∈ net.nwPackets :=
+        hpktsAE q hq ⟨t2, lid2, pli2, plt2, es2, ci2, hbody2⟩
+      obtain ⟨hq1, hq2, hq3, hq4⟩ :=
+        hnw q t2 lid2 pli2 plt2 es2 ci2 hqold hbody2
+      have hq2S : sorted es2 :=
+        hsorted.2.1 q t2 lid2 pli2 plt2 es2 ci2 hqold hbody2
+      refine ⟨?_, hq2, hq3, ?_⟩
+      · intro h2 e1 e2 he1 he2 hidx hterm
+        replace he2 : e2 ∈ (st' h2).log := he2
+        by_cases he2h : h2 = p.pDst
+        · -- q against the spliced log
+          rw [he2h, hlogr] at he2
+          have hmemr : ∀ e' : entry (P := P),
+              e' ∈ es ++ removeAfterIndex (net.nwState p.pDst).log pli →
+              e' ∈ (st' h2).log := by
+            intro e' he'
+            rw [he2h, hlogr]
+            exact he'
+          rcases List.mem_append.mp he2 with he2es | he2rm
+          · -- e2 among the incoming entries
+            obtain ⟨hA, hB, hC⟩ := hq4 p t n0 pli plt es ci hp_in hbody e1
+              e2 he1 he2es hidx hterm
+            have hpli_le : pli ≤ maxIndex es2 :=
+              Nat.le_of_lt (Nat.lt_of_lt_of_le (hidx ▸ hpc3 e2 he2es)
+                (maxIndex_is_max hq2S he1))
+            refine ⟨?_, ?_⟩
+            · intro e3 h3le h3in
+              by_cases h3p : e3.eIndex ≤ pli
+              · -- below the splice point: cross to the receiver's kept
+                -- prefix through the (pli, plt) pivot in es2
+                obtain ⟨x, hxi, hxes2⟩ := hq2 pli
+                  ⟨Nat.lt_of_lt_of_le (hq3 e3 h3in) h3p, hpli_le⟩
+                have hxterm : x.eTerm = plt := hB x hxes2 hxi
+                obtain ⟨haq, -⟩ := hq1 p.pDst x e0 hxes2 he0L
+                  (hxi.trans he0idx.symm) (hxterm.trans he0term.symm)
+                have h3L : e3 ∈ (net.nwState p.pDst).log :=
+                  haq e3 (by rw [hxi]; exact h3p) h3in
+                exact hmemr e3 (List.mem_append.mpr
+                  (Or.inr (removeAfterIndex_le_In h3p h3L)))
+              · exact hmemr e3 (List.mem_append.mpr
+                  (Or.inl (hA e3 ⟨Nat.lt_of_not_le h3p, h3le⟩ h3in)))
+            · intro hne2
+              rcases Nat.lt_trichotomy pli2 pli with hlt | heq2 | hgt
+              · -- pli2 below the splice point: resolves in the kept prefix
+                obtain ⟨x, hxi, hxes2⟩ := hq2 pli ⟨hlt, hpli_le⟩
+                have hxterm : x.eTerm = plt := hB x hxes2 hxi
+                obtain ⟨-, hbq⟩ := hq1 p.pDst x e0 hxes2 he0L
+                  (hxi.trans he0idx.symm) (hxterm.trans he0term.symm)
+                obtain ⟨e4, h4i, h4t, h4L⟩ := hbq hne2
+                refine ⟨e4, h4i, h4t, hmemr e4 (List.mem_append.mpr
+                  (Or.inr (removeAfterIndex_le_In ?_ h4L)))⟩
+                rw [h4i]
+                exact Nat.le_of_lt hlt
+              · -- pli2 = pli: the pivot entry e0 itself
+                refine ⟨e0, he0idx.trans heq2.symm,
+                  he0term.trans (hC hne2 heq2).symm,
+                  hmemr e0 (List.mem_append.mpr (Or.inr
+                    (removeAfterIndex_le_In (Nat.le_of_eq he0idx) he0L)))⟩
+              · -- pli < pli2: resolves among the incoming entries
+                obtain ⟨-, hB', -⟩ := hpc4 q t2 lid2 pli2 plt2 es2 ci2
+                  hqold hbody2 e2 e1 he2es he1 hidx.symm hterm.symm
+                obtain ⟨x, hxi, hxes⟩ := hpc2 pli2
+                  ⟨hgt, Nat.le_of_lt (Nat.lt_of_lt_of_le
+                    (hidx ▸ hq3 e1 he1) (maxIndex_is_max hesS he2es))⟩
+                exact ⟨x, hxi, hB' x hxes hxi,
+                  hmemr x (List.mem_append.mpr (Or.inl hxes))⟩
+          · -- e2 in the kept prefix
+            have he2L := removeAfterIndex_in he2rm
+            have he2le : e2.eIndex ≤ pli := removeAfterIndex_In_le hLs he2rm
+            obtain ⟨haq, hbq⟩ := hq1 p.pDst e1 e2 he1 he2L hidx hterm
+            refine ⟨?_, ?_⟩
+            · intro e3 h3le h3in
+              have h3L := haq e3 h3le h3in
+              have h3le' : e3.eIndex ≤ pli :=
+                Nat.le_trans (Nat.le_trans h3le (Nat.le_of_eq hidx)) he2le
+              exact hmemr e3 (List.mem_append.mpr
+                (Or.inr (removeAfterIndex_le_In h3le' h3L)))
+            · intro hne2
+              obtain ⟨e4, h4i, h4t, h4L⟩ := hbq hne2
+              have h4le : e4.eIndex ≤ pli := by
+                rw [h4i]
+                exact Nat.le_trans (Nat.le_of_lt (hq3 e1 he1))
+                  (Nat.le_trans (Nat.le_of_eq hidx) he2le)
+              exact ⟨e4, h4i, h4t, hmemr e4 (List.mem_append.mpr
+                (Or.inr (removeAfterIndex_le_In h4le h4L)))⟩
+        · -- q against an untouched host
+          rw [hlog' h2 he2h] at he2
+          obtain ⟨ha, hb⟩ := hq1 h2 e1 e2 he1 he2 hidx hterm
+          refine ⟨?_, ?_⟩
+          · intro e3 h3le h3in
+            show e3 ∈ (st' h2).log
+            rw [hlog' h2 he2h]
+            exact ha e3 h3le h3in
+          · intro hne
+            obtain ⟨e4, h4a, h4b, h4c⟩ := hb hne
+            refine ⟨e4, h4a, h4b, ?_⟩
+            show e4 ∈ (st' h2).log
+            rw [hlog' h2 he2h]
+            exact h4c
+      · intro q' t3 lid3 pli3 plt3 es3 ci3 hq' hbody3
+        replace hq' : q' ∈ ps' := hq'
+        exact hq4 q' t3 lid3 pli3 plt3 es3 ci3
+          (hpktsAE q' hq' ⟨t3, lid3, pli3, plt3, es3, ci3, hbody3⟩) hbody3
+
+/-- `LogMatchingProof.v:1495-1515` (`log_matching_invariant`) — BASE
+layer: the T3-named LOG MATCHING invariant, proved over the ported spec.
+The statement is `Properties.lean`'s (P1 port), not redefined here. -/
+theorem log_matching_invariant :
+    ∀ net, raft_intermediate_reachable (P := P) net → log_matching net := by
+  refine raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · -- init (`LogMatchingProof.v:954-963`): empty logs, no packets
+    refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
+    · intro h1 h2 e e' e'' _ _ he _ _
+      exact nomatch he
+    · intro h i hi
+      exact absurd (Nat.le_trans hi.1 hi.2) (Nat.not_succ_le_zero 0)
+    · intro h e he
+      exact nomatch he
+    · intro p t lid pli plt es ci hp _
+      exact nomatch hp
+  · exact client_request_log_matching
+  · -- timeout (`:906-921`): log kept; only RequestVote messages
+    intro net h st' ps' out d l hto hP _hreach hst hps
+    obtain ⟨hlog, -, hmsgs⟩ := handleTimeout_spec h (net.nwState h) hto
+    refine log_matching_state_same_packet_subset (net' := ⟨ps', st'⟩) hP ?_ ?_
+    · intro h0
+      show (st' h0).log = (net.nwState h0).log
+      rw [hst h0]
+      by_cases he : h0 = h
+      · rw [he, update_same, hlog]
+      · rw [update_neq _ _ he]
+    · intro q hq ⟨t2, lid2, pli2, plt2, es2, ci2, hbody2⟩
+      replace hq : q ∈ ps' := hq
+      rcases hps q hq with h1 | h1
+      · exact h1
+      · exfalso
+        obtain ⟨m0, hm0, rfl⟩ := List.mem_map.mp h1
+        obtain ⟨t3, cid3, lli3, llt3, hq2⟩ := hmsgs m0 hm0
+        replace hbody2 : m0.2 = msg.AppendEntries t2 lid2 pli2 plt2 es2 ci2 :=
+          hbody2
+        rw [hq2] at hbody2
+        exact nomatch hbody2
+  · exact handleAppendEntries_log_matching
+  · -- append_entries_reply (`:987-1001`): log kept, no messages
+    intro xs p ys net st' ps' d m t es res haer _hbody hP _hreach hpkts hst
+      hps
+    obtain ⟨-, -, hl⟩ := handleAppendEntriesReply_spec p.pDst
+      (net.nwState p.pDst) p.pSrc t es res haer
+    refine log_matching_state_same_packet_subset (net' := ⟨ps', st'⟩) hP ?_ ?_
+    · intro h0
+      show (st' h0).log = (net.nwState h0).log
+      rw [hst h0]
+      by_cases he : h0 = p.pDst
+      · rw [he, update_same, handleAppendEntriesReply_log p.pDst
+          (net.nwState p.pDst) p.pSrc t es res haer]
+      · rw [update_neq _ _ he]
+    · intro q hq _
+      replace hq : q ∈ ps' := hq
+      rcases hps q hq with h1 | h1
+      · rw [hpkts]
+        exact mem_of_mem_remove_middle h1
+      · rw [hl] at h1
+        simp [send_packets] at h1
+  · -- request_vote (`:934-944`): log kept; the reply is a RequestVoteReply
+    intro xs p ys net st' ps' d m t cid lli llt hrv _hbody hP _hreach hpkts
+      hst hps
+    obtain ⟨t'', v'', hmshape⟩ := handleRequestVote_reply_shape p.pDst
+      (net.nwState p.pDst) t p.pSrc lli llt hrv
+    refine log_matching_state_same_packet_subset (net' := ⟨ps', st'⟩) hP ?_ ?_
+    · intro h0
+      show (st' h0).log = (net.nwState h0).log
+      rw [hst h0]
+      by_cases he : h0 = p.pDst
+      · rw [he, update_same, handleRequestVote_log p.pDst
+          (net.nwState p.pDst) t p.pSrc lli llt hrv]
+      · rw [update_neq _ _ he]
+    · intro q hq ⟨t2, lid2, pli2, plt2, es2, ci2, hbody2⟩
+      replace hq : q ∈ ps' := hq
+      rcases hps q hq with h1 | h1
+      · rw [hpkts]
+        exact mem_of_mem_remove_middle h1
+      · exfalso
+        rw [h1] at hbody2
+        replace hbody2 : m = msg.AppendEntries t2 lid2 pli2 plt2 es2 ci2 :=
+          hbody2
+        rw [hmshape] at hbody2
+        exact nomatch hbody2
+  · -- request_vote_reply (`:946-952`): log kept, packets only removed
+    intro xs p ys net st' ps' d t v hrvr _hbody hP _hreach hpkts hst hps
+    refine log_matching_state_same_packet_subset (net' := ⟨ps', st'⟩) hP ?_ ?_
+    · intro h0
+      show (st' h0).log = (net.nwState h0).log
+      rw [hst h0]
+      by_cases he : h0 = p.pDst
+      · rw [he, update_same, ← hrvr]
+        exact handleRequestVoteReply_log p.pDst (net.nwState p.pDst) p.pSrc
+          t v
+      · rw [update_neq _ _ he]
+    · intro q hq _
+      replace hq : q ∈ ps' := hq
+      rw [hpkts]
+      exact mem_of_mem_remove_middle (hps q hq)
+  · exact do_leader_log_matching
+  · -- do_generic_server (`:690-704`): log kept, no messages
+    intro net st' ps' d os d' ms h hgs hP _hreach hstate hst hps
+    obtain ⟨hlog, -, -, -, -, hms⟩ := doGenericServer_spec h d hgs
+    refine log_matching_state_same_packet_subset (net' := ⟨ps', st'⟩) hP ?_ ?_
+    · intro h0
+      show (st' h0).log = (net.nwState h0).log
+      rw [hst h0]
+      by_cases he : h0 = h
+      · rw [he, update_same, hlog, hstate]
+      · rw [update_neq _ _ he]
+    · intro q hq _
+      replace hq : q ∈ ps' := hq
+      rcases hps q hq with h1 | h1
+      · exact h1
+      · rw [hms] at h1
+        simp [send_packets] at h1
+  · -- state_same_packet_subset
+    intro net net' hstates hsub hP _hreach
+    refine log_matching_state_same_packet_subset hP ?_ ?_
+    · intro h0
+      rw [← hstates h0]
+    · intro q hq _
+      exact hsub q hq
+  · -- reboot (`:965-973`): log survives, packets identical
+    intro net net' d h d' hrb hP _hreach hstate hst hpkts
+    refine log_matching_state_same_packet_subset hP ?_ ?_
+    · intro h0
+      rw [hst h0]
+      by_cases he : h0 = h
+      · rw [he, update_same, ← hrb]
+        show (reboot d).log = (net.nwState h).log
+        rw [hstate]
+        rfl
+      · rw [update_neq _ _ he]
+    · intro q hq _
+      rw [← hpkts] at hq
+      exact hq
+
+/-- The P1 arc's declared transfer target for log matching
+(`Properties.lean`, `LogMatchingStatement`) — discharged NATIVELY, per
+the §9 translate-don't-certify route: what Verdi proved, re-proved in
+Lean over the ported spec. -/
+theorem logMatchingStatement_holds : LogMatchingStatement P :=
+  log_matching_invariant
+
 end LogMatchingCore
 
 end Raft
