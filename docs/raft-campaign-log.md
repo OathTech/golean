@@ -186,6 +186,18 @@ is the §4.4 park-and-report condition, not an emergency.
   — verdict in ~1 day; until then the trace family's honest number is
   27-of-27-attempted AGREE, 1 trace unmeasured.
 
+- **Arc 3, unit 3 — LANDED** @ d07c5382: the candidate_entries ring
+  (CandidateEntries.lean, 1199 lines) — cronies_term,
+  no_entries_past_current_term (second BASE-principle instantiation),
+  candidate_entries_invariant (every entry, logged or in flight,
+  created under an election winner of its term). AxCheck 1244 decls
+  clean; lane gate PASS; INVARIANT INDEX opened (10 rows — the Arc-4
+  seam's consumption interface). [AGENT]: worker ROTATED — the
+  original (3 units, ~819k tokens) is fenced complete; a fresh
+  successor took the lane for unit 4 (leaderLogs ring →
+  leader_completeness) with successor re-verification first — the
+  gallery rotation pattern, one writer preserved.
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
