@@ -311,7 +311,7 @@ against the built package):
 'VerdiCompat.Raft.oneLeaderPerTermStatement_holds' depends on axioms: [propext, Quot.sound]
 ```
 
-Inventory (line numbers at this tip): `ElectionSpecLemmas.lean` (761
+Inventory (line numbers at this tip): `ElectionSpecLemmas.lean` (730
 lines — handler cases lemmas + votes/cronies ghost facts, each
 docstring citing the upstream lemmas subsumed);
 `ElectionSafety.lean` (1766 lines): `votes_le_currentTerm_invariant`
