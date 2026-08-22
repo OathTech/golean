@@ -10,4 +10,5 @@ import VerdiCompat.ProofStructure
 import VerdiCompat.RefinedProofStructure
 import VerdiCompat.ElectionSpecLemmas
 import VerdiCompat.ElectionSafety
+import VerdiCompat.CandidateEntries
 import VerdiCompat.Examples

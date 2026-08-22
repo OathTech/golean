@@ -77,6 +77,14 @@ open VerdiCompat VerdiCompat.Raft
 /-- info: 'VerdiCompat.Raft.oneLeaderPerTermStatement_holds' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms VerdiCompat.Raft.oneLeaderPerTermStatement_holds
 
+-- The candidate_entries ring (campaign Arc 3 unit 3, CandidateEntries.lean).
+/-- info: 'VerdiCompat.Raft.cronies_term_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.cronies_term_invariant
+/-- info: 'VerdiCompat.Raft.no_entries_past_current_term_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.no_entries_past_current_term_invariant
+/-- info: 'VerdiCompat.Raft.candidate_entries_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.candidate_entries_invariant
+
 /-! ## Exhaustive sweep (fails the build on any disallowed axiom) -/
 
 open Lean in

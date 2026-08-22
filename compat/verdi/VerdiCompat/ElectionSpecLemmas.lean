@@ -902,6 +902,27 @@ theorem doLeader_messages (st : raft_data (P := P)) (me : name (P := P))
   · exact nomatch hq
   · exact nomatch hq
 
+/-- The cronies function after a timeout, at FUNCTION level: per term,
+unchanged or snapshotted to the fresh candidacy's votesReceived. -/
+theorem update_elections_data_timeout_cronies_cases
+    {me : name (P := P)}
+    {st : electionsData (P := P) × raft_data (P := P)} {out st' l}
+    (h : handleTimeout me st.2 = (out, st', l)) (tm : term) :
+    (update_elections_data_timeout me st).cronies tm = st.1.cronies tm ∨
+    (tm = st'.currentTerm ∧
+     (update_elections_data_timeout me st).cronies tm = st'.votesReceived) := by
+  unfold update_elections_data_timeout
+  rw [h]
+  simp only []
+  repeat' split
+  all_goals first
+    | exact Or.inl rfl
+    | (simp only []
+       split
+       · rename_i heqtm
+         exact Or.inr ⟨heqtm, rfl⟩
+       · exact Or.inl rfl)
+
 /-- The cronies function after a RequestVoteReply, at FUNCTION level:
 per term, unchanged or snapshotted to the new votesReceived. -/
 theorem update_elections_data_requestVoteReply_cronies_cases
@@ -911,7 +932,8 @@ theorem update_elections_data_requestVoteReply_cronies_cases
       = st.1.cronies tm ∨
     (tm = (handleRequestVoteReply me st.2 src t0 v).currentTerm ∧
      (update_elections_data_requestVoteReply me src t0 v st).cronies tm
-       = (handleRequestVoteReply me st.2 src t0 v).votesReceived) := by
+       = (handleRequestVoteReply me st.2 src t0 v).votesReceived ∧
+     (handleRequestVoteReply me st.2 src t0 v).type ≠ .Follower) := by
   unfold update_elections_data_requestVoteReply
   simp only []
   repeat' split
@@ -920,7 +942,7 @@ theorem update_elections_data_requestVoteReply_cronies_cases
     | (simp only []
        split
        · rename_i heqtm
-         exact Or.inr ⟨heqtm, rfl⟩
+         exact Or.inr ⟨heqtm, rfl, by simp_all⟩
        · exact Or.inl rfl)
 
 end ElectionSpecLemmas
