@@ -121,3 +121,74 @@ recomputed at the checkpoint, never restated.
   [propext, Quot.sound]). Full build green: AxCheck sweep 987 decls,
   diffharness fixture pin OK (320 cases), zero warnings after
   `omit O in` on the five lemmas.
+- 2026-08-22 Final gate: `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G
+  scripts/ci` from the worktree root — **RESULT: PASS, exit 0**
+  (log: `artifacts/ci-arc3.log`, gitignored). All steps ok; the two
+  no-diff notes are the explicitly-allowed docs+compat-lane hatch
+  (this arc touched only `compat/verdi/**` + `docs/campaign-arc3*` +
+  `docs/2026-08-22_campaign-arc3-*`; no runtime code, so no
+  differential owed). [AGENT] The ci run printed the report-only
+  comparator-landmark staleness note ("last certified run 56 theorems
+  @ 1730567a2d3f, 10 commit(s) ago"). Per the widened trigger that
+  note obliges a `comparator-judge` run at MERGE time; this unit ends
+  branch-complete without merging (constitution §4.1 — merge is
+  Mike's), nothing here touches a designated headline statement or
+  Challenge's trusted closure (the statement-TCB closure step passed),
+  so the judge run is left to the operator's merge step and flagged
+  here rather than run out-of-band.
+
+## Final entry — unit complete (2026-08-22, tip 58146125 + this log commit)
+
+**Proved at tip**, all in
+`compat/verdi/VerdiCompat/RefinedProofStructure.lean` (1341 lines,
+zero `sorry`/`native_decide` — grep clean; enforced by the in-build
+AxCheck sweep, 987 declarations within [propext, Quot.sound], plus six
+new curated `#guard_msgs` pins). `#print axioms` verbatim (captured
+from a `lake env lean` run of the built package):
+
+```
+'VerdiCompat.Raft.refined_raft_net_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.simulation_1' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.simulation_2' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.lift_prop' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.lower_prop' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.refined_votes_shape_witness' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.deghost_spec' depends on axioms: [propext, Quot.sound]
+```
+
+The inventory (file line numbers at this tip):
+- ghost vocabulary: `electionsData` (:51), the five
+  `update_elections_data_*` handlers + net/input dispatchers, refined
+  parameter triple, `refined_raft_intermediate_reachable` (:252);
+- the eleven obligation shapes (1:1 premise shapes) + dispatchers
+  (:423, :491) + **`refined_raft_net_invariant`** (:515) — THE
+  ghost-layer induction principle;
+- erasure/transfer: `deghost` (:759), `deghost_spec` (:763),
+  `ghost_simulation_1` (:782), `simulation_1` (:847), `lift_prop`
+  (:919), `ghost_simulation_2` (:983), `simulation_2` (:1057),
+  **`lower_prop`** (:1155) — the transfer principle;
+- discharge witness: `VotesShape` (:1173) +
+  `refined_votes_shape_witness` (:1239), all eleven obligations
+  discharged on a concrete invariant.
+
+**Honestly open (numbered gaps; none counted toward any total):**
+- GAP-1: the primed obligation variants
+  (`refined_raft_net_invariant_*'`, `RaftRefinementInterface.v:327-439`)
+  and `refined_raft_net_invariant'` (`RaftRefinementProof.v:196-427`)
+  are NOT ported — they add post-state-reachability premises used by a
+  minority of chain files; known-shape repeat, port on first need.
+- GAP-2: the msg-ghost layer (`RaftMsgRefinementInterface.v`, per-packet
+  ghost for the GhostLog* chain) is not ported — a different
+  construction, later arc (design doc §5 D1).
+- GAP-3: no election-safety chain invariant is instantiated yet — this
+  unit is the principle + transfer machinery only; the witness is a
+  deliberately-off-chain invariant.
+
+**Next unit's charter (Arc 3, unit 2):** port the election-safety chain
+bottom-up per design doc §3/§4 — `votes_le_currentTerm` (ghost,
+rri-only, smallest) → `votes_correct` → `candidates_vote_for_selves`
+(BASE, exercises the already-ported base principle) → then unit 3:
+`cronies_correct` and `one_leader_per_term` via `lower_prop`, porting
+`wonElection_one_in_common` (CommonTheorems.v) alongside. Statements
+1:1 from the interface files in the design-doc §3 table; helper
+SpecLemmas ported on demand only.
