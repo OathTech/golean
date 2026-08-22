@@ -284,4 +284,66 @@ need is a numbered Arc-4-seam gap, never invented statement-side.
   `#print axioms` run — all [propext, Quot.sound]. Build green,
   sweep 1173 decls, diffharness fixture pin OK (320 cases), zero
   sorry/native_decide in both new files (grep).
+- 2026-08-22 Unit-2 final gate: `GOLEAN_ALLOW_NO_DIFF=1
+  GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT: PASS, exit 0** (log:
+  `artifacts/ci-arc3-unit2.log`, gitignored; the no-diff notes are the
+  allowed docs+compat hatch — unit 2 touched only `compat/verdi/**`
+  and this log). The report-only comparator-landmark note now reads
+  12 commits stale — same operator-merge-time flag as unit 1; nothing
+  in this unit touches a designated statement or Challenge's closure
+  (statement-TCB step ok).
+
+## Final entry — unit 2 complete (2026-08-22, tip ddba40b4 + this commit)
+
+**Proved at tip** — the FULL election-safety chain, statements 1:1 with
+their verdi-raft Interface files, proofs re-derived through the ported
+principles, zero sorry/native_decide (grep; enforced by the in-build
+AxCheck sweep: 1173 declarations within [propext, Quot.sound], plus six
+new curated pins). `#print axioms` verbatim (fresh `lake env lean` run
+against the built package):
+
+```
+'VerdiCompat.Raft.votes_le_currentTerm_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.votes_correct_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.candidates_vote_for_selves_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.cronies_correct_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.one_leader_per_term_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.oneLeaderPerTermStatement_holds' depends on axioms: [propext, Quot.sound]
+```
+
+Inventory (line numbers at this tip): `ElectionSpecLemmas.lean` (761
+lines — handler cases lemmas + votes/cronies ghost facts, each
+docstring citing the upstream lemmas subsumed);
+`ElectionSafety.lean` (1766 lines): `votes_le_currentTerm_invariant`
+(:36), `votes_correct_invariant` (:465),
+`candidates_vote_for_selves_invariant` (:587, BASE principle),
+`cronies_correct_invariant` (:720), constructive quorum counting
+(`pigeon` :1649, `wonElection_one_in_common` :1698),
+`one_leader_per_term_ghost` (:1722), **`one_leader_per_term_invariant`
+(:1750)** — election safety at the base layer via `lower_prop` — and
+**`oneLeaderPerTermStatement_holds` (:1759)**, discharging the P1
+arc's declared transfer target natively.
+
+**Coordinator-directed checks, resolved:** GAP-1 (primed obligation
+variants) was NEVER TRIGGERED — no chain proof needed a primed
+variant; it remains an open gap for later chains, not worked around.
+No harness/twin-vocabulary need arose (the chain is entirely
+ghost/base-side), so no new Arc-4-seam gaps.
+
+**Honestly open (carried + new):**
+- GAP-1 (primed variants) and GAP-2 (msg-ghost layer): unchanged.
+- GAP-4 (new): the AxCheck sweep rejected core's classical
+  `List.erase` lemmas; the constructive `eraseOne` replacement lives
+  in ElectionSafety.lean. If a future chain needs heavier classical
+  list machinery, the lane's axiom-set doctrine (propext/Quot.sound
+  only) poses a recorded decision for the operator — flagged, not
+  decided here.
+
+**Next unit's charter (Arc 3, unit 3 — proposal):** the
+leader-completeness approach chain per design doc §3's "beyond"
+paragraph — `cronies_term` + `term_sanity` → `candidate_entries`
+(CandidateEntriesProof.v, ghost `allEntries`/`leaderLogs` vocabulary)
+— the entry ring of the T3 log-matching/leader-completeness lattice;
+same conventions, spec lemmas on demand, primed variants on first
+genuine need (GAP-1's charter).
 
