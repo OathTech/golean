@@ -358,6 +358,11 @@ This artifact is route-independent and carries to (d).
 
 ### 6.2 The mid-run kernel segment curve (the decisive datum)
 
+Checkpoint index: 350,000 — the coordinator's stated 300k–400k range;
+the heap there is 19,093 cells (probe C), roughly half the end-of-run
+36,376, so §6.3's projection carries the heap-linear band up to 2×
+rather than treating 19k as the ceiling ([AGENT], logged).
+
 From the 350k checkpoint (heap 19,093 cells), `∃ x, stepFnIter k … =
 .ok x` by `with_unfolding_all exact ⟨_, rfl⟩` under
 `smartUnfolding false` (expected shapes #eval-confirmed first;
@@ -391,12 +396,18 @@ kernel-checkable — the route is not impossible, just priced out.
   **~100–250 GB** of build artifacts at 1,000–2,500 checkpoints, all
   needed simultaneously by the composition closure.
 - **Wall**: the box fits at most two 48G segment jobs beside the
-  standing lanes → **weeks of wall-clock**, not the §2 estimate (which
-  §2 flagged as a lower bound pending exactly this measurement). For
-  completeness at the coordinator's asked-for parallelism levels:
-  8-way × 48G = 384G and 16-way = 768G of concurrent cap — **the 125G
-  box cannot run either**; at the 2-way it CAN run, 440–800 CPU-h ≈
-  **9–17 days wall**.
+  standing lanes → 440–800 CPU-h ≈ **9–17 days wall at 2-way**. At
+  the asked-for parallelism levels the caps must shrink with the
+  concurrency: 8-way × 48G = 384G and 16-way = 768G **do not fit the
+  125G box**; the fitting variants are 8-way × ~15G (segments of
+  ~70 steps → ~10,000 modules; kernel work /8 ≈ 55–100 h wall, PLUS
+  ~45 s × 10,000 ≈ 125 CPU-h of per-segment fixed cost and ~1 TB of
+  checkpoint oleans) and 16-way × ~7G (segments of ~20 steps —
+  ~36,000 modules; the fixed costs dominate outright). Parallelism
+  does not rescue the route: shrinking per-job memory shrinks the
+  segment, and the per-segment fixed cost (import + checkpoint
+  literal, ~45 s measured at seg-100 net of steps) then eats the
+  gain.
 
 **VERDICT: NO-GO** — the §5 trigger (projected > ~200 CPU-h) fires at
 more than double, before storage (~10² GB) and module count (~10³–10⁴)
