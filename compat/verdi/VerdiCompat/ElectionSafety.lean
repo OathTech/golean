@@ -1,5 +1,6 @@
 import VerdiCompat.ElectionSpecLemmas
 import VerdiCompat.ProofStructure
+import VerdiCompat.Properties
 
 /-!
 # The election-safety invariant chain
@@ -1514,6 +1515,250 @@ theorem cronies_correct_invariant :
       · intro hty'
         exact nomatch hty'
       · exact hvrl h0
+
+/-! ## Quorum counting (`CommonTheorems.v:1376-1404`, StructTact `pigeon`)
+
+Proved constructively — the lane's axiom set is [propext, Quot.sound],
+so no `by_contra`/`Classical`; the pigeonhole argument is a structural
+induction with decidable membership. -/
+
+omit O R in
+/-- Membership survives `dedup` (StructTact `in_dedup_was_in`). -/
+theorem mem_of_mem_dedup {A : Type _} [DecidableEq A] {x : A} :
+    ∀ {l : List A}, x ∈ dedup l → x ∈ l := by
+  intro l
+  induction l with
+  | nil => exact fun h => nomatch h
+  | cons a as ih =>
+    intro h
+    unfold dedup at h
+    simp only [] at h
+    split at h
+    · exact List.mem_cons_of_mem _ (ih h)
+    · rcases List.mem_cons.mp h with rfl | h
+      · exact List.mem_cons_self ..
+      · exact List.mem_cons_of_mem _ (ih h)
+
+omit O R in
+/-- `dedup` loses no members (StructTact `dedup_In`). -/
+theorem mem_dedup_of_mem {A : Type _} [DecidableEq A] {x : A} :
+    ∀ {l : List A}, x ∈ l → x ∈ dedup l := by
+  intro l
+  induction l with
+  | nil => exact fun h => nomatch h
+  | cons a as ih =>
+    intro h
+    unfold dedup
+    simp only []
+    split
+    · rename_i hmem
+      rcases List.mem_cons.mp h with rfl | h
+      · exact ih hmem
+      · exact ih h
+    · rename_i hmem
+      rcases List.mem_cons.mp h with rfl | h
+      · exact List.mem_cons_self ..
+      · exact List.mem_cons_of_mem _ (ih h)
+
+omit O R in
+/-- `dedup` produces no duplicates (StructTact `NoDup_dedup`). -/
+theorem nodup_dedup {A : Type _} [DecidableEq A] :
+    ∀ (l : List A), (dedup l).Nodup := by
+  intro l
+  induction l with
+  | nil => exact List.nodup_nil
+  | cons a as ih =>
+    unfold dedup
+    simp only []
+    split
+    · exact ih
+    · rename_i hmem
+      rw [List.nodup_cons]
+      exact ⟨fun hd => hmem (mem_of_mem_dedup hd), ih⟩
+
+omit O R in
+/-- Constructive one-occurrence erasure (core's `List.erase` lemmas pull
+in `Classical.choice`, outside the lane's axiom set — the AxCheck sweep
+rejected them; this replacement keeps the counting argument inside
+[propext, Quot.sound]). -/
+def eraseOne {A : Type _} [DecidableEq A] : List A → A → List A
+  | [], _ => []
+  | b :: bs, a => if a = b then bs else b :: eraseOne bs a
+
+omit O R in
+theorem eraseOne_length {A : Type _} [DecidableEq A] {a : A} :
+    ∀ {l : List A}, a ∈ l → (eraseOne l a).length + 1 = l.length := by
+  intro l
+  induction l with
+  | nil => exact fun h => nomatch h
+  | cons b bs ih =>
+    intro h
+    unfold eraseOne
+    split
+    · simp
+    · rename_i hne
+      have hab : a ∈ bs := by
+        rcases List.mem_cons.mp h with rfl | h
+        · exact absurd rfl hne
+        · exact h
+      simp only [List.length_cons]
+      rw [← ih hab]
+
+omit O R in
+theorem mem_eraseOne_of_ne {A : Type _} [DecidableEq A] {x a : A} :
+    ∀ {l : List A}, x ≠ a → x ∈ l → x ∈ eraseOne l a := by
+  intro l
+  induction l with
+  | nil => exact fun _ h => nomatch h
+  | cons b bs ih =>
+    intro hne h
+    unfold eraseOne
+    split
+    · rename_i hab
+      rcases List.mem_cons.mp h with rfl | h
+      · exact absurd hab.symm hne
+      · exact h
+    · rcases List.mem_cons.mp h with rfl | h
+      · exact List.mem_cons_self ..
+      · exact List.mem_cons_of_mem _ (ih hne h)
+
+omit O R in
+/-- A duplicate-free list is no longer than any list containing it. -/
+theorem nodup_subset_length {A : Type _} [DecidableEq A] :
+    ∀ {sub l : List A}, sub.Nodup → (∀ a ∈ sub, a ∈ l) →
+      sub.length ≤ l.length := by
+  intro sub
+  induction sub with
+  | nil => exact fun _ _ => Nat.zero_le _
+  | cons a rest ih =>
+    intro l hnd hsub
+    rw [List.nodup_cons] at hnd
+    have hal : a ∈ l := hsub a (List.mem_cons_self ..)
+    have hrest : ∀ b ∈ rest, b ∈ eraseOne l a := by
+      intro b hb
+      exact mem_eraseOne_of_ne (fun he => hnd.1 (by rw [← he]; exact hb))
+        (hsub b (List.mem_cons_of_mem _ hb))
+    have hlen := ih hnd.2 hrest
+    have herase := eraseOne_length hal
+    simp only [List.length_cons]
+    omega
+
+omit O R in
+/-- StructTact `pigeon` (`ListUtil.v:641-649`), constructive form: two
+duplicate-free sublists of `l` jointly longer than `l` intersect. -/
+theorem pigeon {A : Type _} [DecidableEq A] :
+    ∀ (sub1 : List A) (l sub2 : List A),
+      (∀ a ∈ sub1, a ∈ l) → (∀ a ∈ sub2, a ∈ l) →
+      sub1.Nodup → sub2.Nodup →
+      l.length < sub1.length + sub2.length →
+      ∃ a, a ∈ sub1 ∧ a ∈ sub2 := by
+  intro sub1
+  induction sub1 with
+  | nil =>
+    intro l sub2 _ hs2 _ hn2 hlen
+    have := nodup_subset_length hn2 hs2
+    simp only [List.length_nil] at hlen
+    omega
+  | cons a rest ih =>
+    intro l sub2 hs1 hs2 hn1 hn2 hlen
+    by_cases ha2 : a ∈ sub2
+    · exact ⟨a, List.mem_cons_self .., ha2⟩
+    · rw [List.nodup_cons] at hn1
+      have hal : a ∈ l := hs1 a (List.mem_cons_self ..)
+      have hrest : ∀ b ∈ rest, b ∈ eraseOne l a := fun b hb =>
+        mem_eraseOne_of_ne (fun he => hn1.1 (by rw [← he]; exact hb))
+          (hs1 b (List.mem_cons_of_mem _ hb))
+      have hsub2 : ∀ b ∈ sub2, b ∈ eraseOne l a := fun b hb =>
+        mem_eraseOne_of_ne (fun he => ha2 (by rw [← he]; exact hb)) (hs2 b hb)
+      have herase := eraseOne_length hal
+      have hlen' : (eraseOne l a).length < rest.length + sub2.length := by
+        simp only [List.length_cons] at hlen
+        omega
+      obtain ⟨x, hx1, hx2⟩ := ih (eraseOne l a) sub2 hrest hsub2 hn1.2 hn2 hlen'
+      exact ⟨x, List.mem_cons_of_mem _ hx1, hx2⟩
+
+/-- `div2_correct'` (`CommonTheorems.v:1376-1381`). -/
+theorem div2_le' : ∀ n : Nat, n ≤ div2 n + (div2 n + 1)
+  | 0 => by simp [div2]
+  | 1 => by simp [div2]
+  | n + 2 => by
+    have := div2_le' n
+    show n + 2 ≤ div2 n + 1 + (div2 n + 1 + 1)
+    omega
+
+/-- `div2_correct` (`CommonTheorems.v:1383-1392`). -/
+theorem div2_correct {c a b : Nat} (ha : div2 c < a)
+    (hb : div2 c < b) : c < a + b := by
+  have := div2_le' c
+  omega
+
+omit O in
+/-- `wonElection_one_in_common` (`CommonTheorems.v:1394-1404`): two
+election winners share a voter. -/
+theorem wonElection_one_in_common (l l' : List (name (P := P)))
+    (hw : wonElection (dedup l) = true) (hw' : wonElection (dedup l') = true) :
+    ∃ h, h ∈ l ∧ h ∈ l' := by
+  unfold wonElection at hw hw'
+  simp at hw hw'
+  obtain ⟨a, ha1, ha2⟩ := pigeon (dedup l) (nodes (P := P)) (dedup l')
+    (fun a _ => allFin_all a) (fun a _ => allFin_all a)
+    (nodup_dedup l) (nodup_dedup l')
+    (div2_correct (c := (nodes (P := P)).length)
+      (Nat.lt_of_succ_le hw) (Nat.lt_of_succ_le hw'))
+  exact ⟨a, mem_of_mem_dedup ha1, mem_of_mem_dedup ha2⟩
+
+/-! ## The chain's exit: one_leader_per_term
+(`OneLeaderPerTermInterface.v` / `OneLeaderPerTermProof.v`) -/
+
+/- `one_leader_per_term` itself (`OneLeaderPerTermInterface.v:8-13`) was
+already ported by the P1 statement arc — `Properties.lean:27` — together
+with the named transfer target `OneLeaderPerTermStatement`. This chain
+PROVES that statement natively (design note §9's translate-don't-certify
+route). -/
+
+/-- `OneLeaderPerTermProof.v:25-54` (`one_leader_per_term_invariant'`):
+the ghost-level core — two same-term leaders share a voter, who voted
+once per term. -/
+theorem one_leader_per_term_ghost :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      one_leader_per_term (deghost net) := by
+  intro net hreach
+  obtain ⟨hovpt, -, -⟩ := votes_correct_invariant net hreach
+  obtain ⟨hvrc, hcv, -, hvrl⟩ := cronies_correct_invariant net hreach
+  intro h h' hct hty hty'
+  have hw : wonElection (dedup (net.nwState h).2.votesReceived) = true :=
+    hvrl h hty
+  have hw' : wonElection (dedup (net.nwState h').2.votesReceived) = true :=
+    hvrl h' hty'
+  obtain ⟨crony, hc1, hc2⟩ := wonElection_one_in_common _ _ hw hw'
+  have hcr1 : crony ∈ (net.nwState h).1.cronies (net.nwState h).2.currentTerm :=
+    hvrc h crony hc1 (Or.inl hty)
+  have hcr2 : crony ∈ (net.nwState h').1.cronies (net.nwState h').2.currentTerm :=
+    hvrc h' crony hc2 (Or.inl hty')
+  have hv1 : ((net.nwState h).2.currentTerm, h) ∈ (net.nwState crony).1.votes :=
+    hcv _ h crony hcr1
+  have hv2 : ((net.nwState h').2.currentTerm, h') ∈ (net.nwState crony).1.votes :=
+    hcv _ h' crony hcr2
+  have hcteq : (net.nwState h).2.currentTerm = (net.nwState h').2.currentTerm := hct
+  rw [← hcteq] at hv2
+  exact hovpt crony _ h h' hv1 hv2
+
+/-- `OneLeaderPerTermProof.v:56-67` (`one_leader_per_term_invariant`) —
+ELECTION SAFETY, delivered at the BASE layer through `lower_prop`: in
+every reachable network, at most one leader per term. The statement
+mentions no ghost state (constitution §3.2). -/
+theorem one_leader_per_term_invariant :
+    ∀ net, raft_intermediate_reachable (P := P) net →
+      one_leader_per_term net :=
+  lower_prop one_leader_per_term one_leader_per_term_ghost
+
+/-- The P1 arc's declared transfer target for election safety
+(`Properties.lean`, `OneLeaderPerTermStatement`) — discharged NATIVELY,
+as the §9 ruling directs: what Verdi proved, re-proved in Lean over the
+ported spec. -/
+theorem oneLeaderPerTermStatement_holds :
+    OneLeaderPerTermStatement P :=
+  one_leader_per_term_invariant
 
 end ElectionSafety
 
