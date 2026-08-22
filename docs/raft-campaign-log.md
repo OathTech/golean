@@ -167,6 +167,25 @@ is the §4.4 park-and-report condition, not an emergency.
   route memo — T1 and T3 progress in parallel, the seam design is
   mine when the memo lands.
 
+- **Cross-lane record events** (2026-08-22 evening, [AGENT]):
+  (1) The launch-fixes 27-trace machine re-run FINISHED: **27/27
+  traces AGREE byte-for-byte at the fix-round tip** — 280/484
+  supported-prefix blocks executed, every ok-tier and rendered
+  expectation green, zero disagreements
+  (artifacts/launch-fixes-rerun/machine-tier-full.txt). D5-F3's
+  disposition discharged: the machine tier is no longer quoted from
+  a stale tip. (2) The 95145bc3 p2 rescue resolved HONESTLY AS A
+  LOSS: the rescued output shows the 25-hour run CRASHED at its
+  comparison step (FileNotFoundError — its go-trace comparison file
+  died with the pruned worktree), so no machine verdict for
+  probe_and_replicate exists at 95145bc3; the holders worked, the
+  truth they caught is the crash. (3) probe_and_replicate RELAUNCHED
+  at the fix-round-tip frontend from the CAMPAIGN worktree (stable
+  for the campaign's life), durable output
+  (artifacts/launch-fixes-rerun/probe-and-replicate-campaign-tip.txt)
+  — verdict in ~1 day; until then the trace family's honest number is
+  27-of-27-attempted AGREE, 1 trace unmeasured.
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
