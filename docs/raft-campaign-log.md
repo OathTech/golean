@@ -103,12 +103,45 @@ is the §4.4 park-and-report condition, not an emergency.
 - **CHECKPOINT 1** (recomputed): 4 units landed; Arc 1 remaining =
   check-golden wire entry (gate-additive) + arc gate + the
   designation/merge asks. Arc 3 worker in flight.
+- **U-c5** (2026-08-22): check-golden twin-wire entry (frontend↔bytes
+  link; term↔bytes holds by mechanism). Two self-inflicted lessons,
+  both [AGENT]-logged: (i) edited the gate script WHILE a gate run was
+  in flight — the race read as a spurious FAIL (one writer includes
+  not racing your own gate); (ii) the section's scratch DIRECTORY
+  broke the script's files-only EXIT trap — every entry green, exit 1
+  (fixed: the section cleans itself).
+- **U-c6** (2026-08-22): the three Specs modules imported from the
+  GoLeanProofs aggregator (the 1b2 sweep flagged them un-swept —
+  the gate working); full proofs build green incl. Audit.
+  **ARC 1 GATE: RESULT: PASS** (GOLEAN_ALLOW_NO_DIFF=1 — fresh lane,
+  no runtime change, the sanctioned hatch with visible notes;
+  artifacts/campaign-arc1-gate2.log). **ARC 1 BRANCH-COMPLETE** @
+  this tip. Note for later: the gate printed "Challenge.lean
+  elaborates (0 sorry warnings)" where main's runs printed 56 —
+  investigate before any merge ask (possible count-extraction
+  difference in this lane; the step itself is green).
+- **Arc 3, unit 1 — LANDED on `campaign-arc3`** @ 4bbcf5fc (worker
+  report, top claims to be re-verified by its successor per §4.3):
+  `RefinedProofStructure.lean` (1341 lines, zero hatches) — the ghost
+  vocabulary, the 11 obligation shapes, `refined_raft_net_invariant`
+  re-proved, the deghost/simulation/`lower_prop` transfer chain, a
+  discharge witness; AxCheck 987 decls in [propext, Quot.sound];
+  lane gate PASS. Design note + arc log + unit-2 charter on the lane.
+  [AGENT] calls D1–D5 in the arc log.
 
 ## Awaiting [USER] — the queue
 
-- Designation of T1 + the completion-witness statement (constitution
-  §3.2) — posed when Arc 1 is branch-complete.
-- Arc 1 merge (audit ask to be posed at branch-complete).
+- **POSED — designation of `AgreementT1` + `CompletionWitness`**
+  (`proofs/GoLeanProofs/Specs/RaftAgreement.lean`; constitution §3.2 —
+  the walker list is Mike's act; the aboutness sentence is the file's
+  docstring).
+- **POSED — Arc 1 merge + its audit ask** (branch-complete, gate
+  PASS; proposal on Mike's return: a focused statement-adequacy
+  review — the D3-dimension — over the Arc-1 diff, Opus, plus the
+  standing semantics dimension; scale ~2 reviewers).
+- Arc 3 merge (will be posed at its branch-complete; the ci
+  comparator-landmark staleness note on that lane is flagged for the
+  operator's merge step).
 
 ## Judgment calls
 
