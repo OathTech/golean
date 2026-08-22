@@ -110,9 +110,28 @@ func shadowCapturedRead() (x int) {
 	return r*100 + x
 }
 
+// ---- R1-C2 (W4.3 audit fix round): the PER-ITERATION CELL machinery
+// (emitForPerIteration — a for-init variable captured by a closure gets
+// a fresh cell per iteration, Go 1.22 semantics) must follow the rename
+// too: its seed ref and cell declarations used the source name, so a
+// renamed shadow's cells aliased the result slot and the per-iteration
+// freshness was lost (probe .tmp/audit-r1/p4). Go: cells 0,1,2 -> sum
+// 3, +1000 -> 1003. ----
+func shadowLoopVarCaptured() (x int) {
+	var fs []func() int
+	for x := 0; x < 3; x++ {
+		fs = append(fs, func() int { return x })
+	}
+	for _, g := range fs {
+		x += g()
+	}
+	return x + 1000
+}
+
 func main() {
 	n, s := shadowThenBareReturn()
 	println(enterJointShape(), n, s, shadowShortDecl(),
 		shadowWithDeferredWrite(), shadowInRangeClause(),
-		shadowCapturedWrite(), shadowCapturedRead())
+		shadowCapturedWrite(), shadowCapturedRead(),
+		shadowLoopVarCaptured())
 }

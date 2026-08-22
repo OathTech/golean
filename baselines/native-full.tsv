@@ -1,16 +1,17 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-22 (raft W4.3 audit fix round, R1-C1 — branch
+# recorded: 2026-08-22 (raft W4.3 audit fix round, R1-C2 — branch
 #   raft-w43; docs/raft-w43-log.md "Audit fix round").
-#   re-pin reason: TWO NEW ids, zero movement on any of the 2427 ids
-#   the previous record held (drift report: both lines read
+#   re-pin reason: ONE NEW id, zero movement on any of the 2429 ids
+#   the previous record held (drift report: the one line reads
 #   "NEW id (not in baseline) -> PASS").
-#     R1-C1 guardrails (the CAPTURE SEAM did not follow the BUG-068
-#     shadow rename: a closure capturing a renamed shadow was handed
-#     the RESULT slot's address — witnessed pre-fix as machine 106 vs
-#     go 101 / machine 303 vs go 1003; fixed by emitting the capture
-#     ref through e.localRename): scoping/named-result-shadow/
-#     closure-{write,read}, both PASS.
-# cases: 2429 (2273 PASS / 156 FAIL)
+#     R1-C2 guardrail (emitForPerIteration — the per-iteration-cell
+#     machinery for a captured for-init variable — used the SOURCE
+#     name for its seed ref and cell declarations, so a renamed shadow
+#     lost per-iteration freshness AND seeded from the result slot:
+#     machine 1009 vs go 1003 pre-fix; fixed by routing the loopVar
+#     carrier + seed ref through e.localRename):
+#     scoping/named-result-shadow/loopvar-capture, PASS.
+# cases: 2430 (2274 PASS / 156 FAIL)
 # frontend: native (tools/nativefrontend)
 result	id	stage
 PASS	arrays/array-bounds	-
@@ -1859,6 +1860,7 @@ PASS	scoping/named-result-shadow/closure-read	-
 PASS	scoping/named-result-shadow/closure-write	-
 PASS	scoping/named-result-shadow/deferred-write	-
 PASS	scoping/named-result-shadow/enterjoint-shape	-
+PASS	scoping/named-result-shadow/loopvar-capture	-
 FAIL	scoping/named-result-shadow/range-clause	frontend-export
 PASS	scoping/named-result-shadow/short-decl	-
 PASS	scoping/select-clause-scope	-

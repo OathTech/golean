@@ -645,3 +645,31 @@ in one lit's capture set (at any use site exactly one binding named
 **Flips.** Full `scripts/ci --diff`: drift = exactly the two new ids,
 both `-> PASS`; zero movement on the 2427 prior ids; all other gate
 steps ok. Baseline re-pinned (2429 cases, 2273/156) in this commit.
+
+### R1-C2 — the per-iteration cell machinery did not follow the rename
+
+**Defect.** `emitForPerIteration` (the Go 1.22 fresh-cell-per-iteration
+lowering for a captured for-init variable) built its seed ref
+(`{"expr":"ref","id":id.Name}`) and its per-iteration cell
+declarations from the SOURCE name. The init statement itself is
+emitted through the patched rename-following sites, so for a loop
+variable shadowing a named result the machinery split in two: the
+seed pointer took the RESULT slot's address, the fresh cells declared
+under the unrenamed name, and the closures (post-C1) captured the
+renamed seed — per-iteration freshness silently lost.
+
+**Guardrail witnessed red first** (probe r1-p4, row
+`scoping/named-result-shadow/loopvar-capture`): go **1003** (the
+three captured cells hold 0, 1, 2 — sum 3, +1000), machine-before
+**1009** (all three closures saw one shared cell's final value 3 → 9).
+
+**Fix.** The `loopVar` carrier name and the seed ref both go through
+`e.localRename(obj, id.Name)` — one binding site, so declare, deref,
+carrier-update, and capture all agree (`tools/nativefrontend/emit.go`,
+`emitForPerIteration`). Identity for non-shadow loops (empty rename
+map), so the ordinary per-iteration corpus is untouched by
+construction — confirmed by the run.
+
+**Flips.** Full `scripts/ci --diff`: drift = exactly the one new id
+`-> PASS`; zero movement on the 2429 prior ids. Baseline re-pinned
+(2430 cases, 2274/156) in this commit.

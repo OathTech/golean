@@ -3558,12 +3558,19 @@ func (e *emitter) emitForPerIteration(st *ast.ForStmt, vars []*ast.Ident) (any, 
 		}
 		ptrTy := map[string]any{"kind": "pointer", "elem": ty}
 		ptr := "$lvp" + itoa(seq) + "_" + itoa(j)
-		lvs = append(lvs, loopVar{name: id.Name, ptr: ptr, ty: ty, ptrTy: ptrTy})
+		// Through the shadow rename (resultshadow.go, audit R1-C2): the
+		// init statement above declared the variable under its RENAMED
+		// name (emitStmt follows the rename), so the seed ref and every
+		// per-iteration cell must use the same name — the source name
+		// would alias the named result the shadow was renamed away from
+		// (guardrail row scoping/named-result-shadow/loopvar-capture).
+		name := e.localRename(obj, id.Name)
+		lvs = append(lvs, loopVar{name: name, ptr: ptr, ty: ty, ptrTy: ptrTy})
 		outer = append(outer, map[string]any{
 			"stmt":   "assign",
 			"define": true,
 			"lhs":    []any{map[string]any{"target": "declare", "id": ptr, "type": ptrTy}},
-			"rhs":    []any{map[string]any{"expr": "ref", "id": id.Name}},
+			"rhs":    []any{map[string]any{"expr": "ref", "id": name}},
 		})
 	}
 	firstVar := "$lvf" + itoa(seq)

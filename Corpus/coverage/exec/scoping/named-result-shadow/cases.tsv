@@ -9,3 +9,4 @@ deferred-write	shadowWithDeferredWrite	-	ok	-	scoping,shadowing,named-results,de
 range-clause	shadowInRangeClause	-	ok	-	scoping,shadowing,named-results,range
 closure-write	shadowCapturedWrite	-	ok	-	scoping,shadowing,named-results,closures
 closure-read	shadowCapturedRead	-	ok	-	scoping,shadowing,named-results,closures
+loopvar-capture	shadowLoopVarCaptured	-	ok	-	scoping,shadowing,named-results,closures,loops
