@@ -8,11 +8,13 @@ package main
 // modeled implementation through the same seam runs green. This
 // family pins that mechanism in the gated corpus with a miniature of
 // the same shape: the same interface, two concrete impls — one inside
-// the modeled subset, one whose body keeps a standing fmt refusal
-// (fixed-arity Sprint), so its METHOD is per-declaration quarantined
-// and dispatch to it stops the machine the moment it is called.
+// the modeled subset, one whose body keeps a standing refusal
+// (reflect.TypeOf — retargeted by audit R4-M-1 when the fixed-arity
+// fmt.Sprint it used before became MODELED; the JC-17 lost-witness
+// discipline), so its METHOD is per-declaration quarantined and
+// dispatch to it stops the machine the moment it is called.
 
-import "fmt"
+import "reflect"
 
 type miniLog interface {
 	Infof(format string, v ...any)
@@ -25,12 +27,12 @@ type quietLog struct{ n int }
 func (l *quietLog) Infof(format string, v ...any) { l.n += len(v) + len(format) }
 
 // uninstalled: the DefaultLogger shape — the body keeps a standing
-// refusal (fixed-arity fmt.Sprint is outside the modeled subset), so
+// refusal (reflection is outside the modeled subset by doctrine), so
 // the method lands as a fail-closed stub.
 type fancyLog struct{ out string }
 
 func (l *fancyLog) Infof(format string, v ...any) {
-	l.out += fmt.Sprint("x: ", format)
+	l.out += "x: " + reflect.TypeOf(format).String()
 }
 
 func teethInstalled() int {

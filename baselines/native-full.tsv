@@ -1,16 +1,18 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-22 (raft W4.3 audit fix round, R1-F3 — branch
+# recorded: 2026-08-22 (raft W4.3 audit fix round, R4-M-1 — branch
 #   raft-w43; docs/raft-w43-log.md "Audit fix round").
-#   re-pin reason: ONE NEW id, zero movement on any of the 2443 ids
-#   the previous record held ("NEW id -> PASS").
-#     R1-F3: the ParseUint shim returned 0 on a RANGE error; upstream
-#     returns the SATURATED MAX for the bitSize alongside ErrRange.
-#     The existing guardrail was structurally blind (it discarded the
-#     value with `_, err :=`) — strengthened to observe it, witnessed
-#     red (machine "0 0 0 0" vs gc's per-bitSize maxima), shim fixed:
-#     strconv/format-parse/parse-uint-range-value, PASS (and
-#     parse-uint-errors now value-observing, PASS).
-# cases: 2444 (2281 PASS / 163 FAIL)
+#   re-pin reason: TWO NEW ids, zero movement on any of the 2444 ids
+#   the previous record held ("NEW id -> PASS" both).
+#     R4-M-1: fixed-arity fmt.Sprint/Sprintln modeled as the []any
+#     variadic pack + the differentially-pinned dyn shims (the
+#     refusal they replace was justified BY the JC-17 witnesses'
+#     needs — a corpus-scoped refusal inversion). The SIX quarantine
+#     witnesses that used fmt.Sprint as their unlowerable cause were
+#     retargeted to reflect.TypeOf in the same change and held their
+#     exact baseline stages (4 FAIL/frontend-export red-by-design +
+#     greens) through this full run — zero movement:
+#     fmt/sprintf-dyn/{sprint,sprintln}-fixed-arity, PASS.
+# cases: 2446 (2283 PASS / 163 FAIL)
 # frontend: native (tools/nativefrontend)
 result	id	stage
 PASS	arrays/array-bounds	-
@@ -807,9 +809,11 @@ PASS	fmt/fprintf-builder/describe-shape	-
 PASS	fmt/fprintf-builder/returns	-
 FAIL	fmt/sprintf-dyn/arity-mismatch	frontend-export
 PASS	fmt/sprintf-dyn/logger-shape	-
+PASS	fmt/sprintf-dyn/sprint-fixed-arity	-
 PASS	fmt/sprintf-dyn/sprint-nil	-
 PASS	fmt/sprintf-dyn/sprint-space-rule	-
 PASS	fmt/sprintf-dyn/sprintln	-
+PASS	fmt/sprintf-dyn/sprintln-fixed-arity	-
 PASS	fmt/sprintf-dyn/stringer-error	-
 PASS	fmt/sprintf-dyn/stringer-panic	-
 FAIL	fmt/sprintf-dyn/unmodeled-kind	frontend-export

@@ -257,10 +257,62 @@ func (e *emitter) emitFmtCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool
 		return e.emitFmtDynCall(c, fn)
 	}
 	if fn == "Sprint" || fn == "Sprintln" {
-		// Fixed-arity Sprint/Sprintln stay outside the modeled subset
-		// (the JC-17 retargeted quarantine witnesses depend on
-		// fmt.Sprint refusing — the refusal moves in-hook, same stage).
-		return nil, false, unsup("fmt.%s without a spread argument is outside the modeled subset (modeled: the spread []any form)", fn)
+		// FIXED-ARITY Sprint/Sprintln (audit R4-M-1): modeled as
+		// exactly what gc does — variadic packing into a []any, then
+		// the SAME differentially-pinned dyn shims the spread form
+		// uses (space rule and rendering included). The previous
+		// refusal here was justified BY THE CORPUS ("the JC-17
+		// quarantine witnesses depend on fmt.Sprint refusing") rather
+		// than by Go — the corpus-scoped-refusal inversion the audit
+		// named; the witnesses now use a genuinely-unmodeled cause
+		// (reflect) and this arm models the language shape. Each arg
+		// is Formatter-checked like every static fmt operand (R1-F2):
+		// the pack would otherwise smuggle a Formatter implementor
+		// past the static refusal into the Formatter-blind dyn shim.
+		shimName := "goleanShimFmtSprintDyn"
+		if fn == "Sprintln" {
+			shimName = "goleanShimFmtSprintlnDyn"
+		}
+		anyTy := types.Universe.Lookup("any").Type()
+		elemW, err := e.emitType(anyTy)
+		if err != nil {
+			return nil, false, err
+		}
+		var sliceNode any
+		if len(c.Args) == 0 {
+			// Sprint() / Sprintln(): a NIL pack, like a variadic call
+			// with zero values (gc: "" / "\n").
+			sliceNode = map[string]any{"expr": "nil",
+				"type": map[string]any{"kind": "slice", "elem": elemW}}
+		} else {
+			elems := []any{}
+			for i, a := range c.Args {
+				argTy := e.goTypeOf(a)
+				if err := e.refuseFormatter(fn, "%v", argTy); err != nil {
+					return nil, false, err
+				}
+				w, err := e.emitExpr(a)
+				if err != nil {
+					return nil, false, err
+				}
+				w, err = e.wrapInterfaceConversion(anyTy, argTy, w)
+				if err != nil {
+					return nil, false, err
+				}
+				elems = append(elems, map[string]any{"index": int64(i), "value": w})
+			}
+			sliceNode, err = e.hoistSliceLit(elems, elemW, int64(len(c.Args)))
+			if err != nil {
+				return nil, false, err
+			}
+		}
+		shimFn, okShim := e.pkg.Scope().Lookup(shimName).(*types.Func)
+		if !okShim {
+			return nil, false, unsup("fmt.%s fixed-arity desugar: shim %s not injected", fn, shimName)
+		}
+		return map[string]any{"expr": "call", "func": e.funcWireName(shimFn),
+			"args":        []any{sliceNode},
+			"resultTypes": []any{map[string]any{"kind": "string"}}}, true, nil
 	}
 
 	// fmt.Fprint (UNFORMATTED): modeled for exactly ONE operand of

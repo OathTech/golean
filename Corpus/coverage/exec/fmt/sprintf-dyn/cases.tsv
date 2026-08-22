@@ -14,3 +14,5 @@ sprintln	dynSprintln	-	ok	-	stdlib,strings,variadic
 sprint-nil	dynSprintNil	-	ok	-	stdlib,strings,variadic,nil
 unmodeled-kind	dynUnmodeledKind	-	ok	-	stdlib,strings,variadic,floats
 arity-mismatch	dynArityMismatch	-	ok	-	stdlib,strings,variadic
+sprint-fixed-arity	dynSprintFixedArity	-	ok	-	stdlib,strings,variadic
+sprintln-fixed-arity	dynSprintlnFixedArity	-	ok	-	stdlib,strings,variadic

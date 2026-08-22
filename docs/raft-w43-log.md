@@ -887,3 +887,50 @@ ratchet one landing late (check 4b reads the previous differential's
 latest.tsv) — resolved in the preceding follow-through commit, its
 mechanism recorded in the ledger's dated log. Baseline re-pinned
 (2444 cases, 2281/163) in this commit.
+
+### R4-M-1 — fixed-arity Sprint/Sprintln modeled; the corpus-scoped-refusal inversion, fixed and logged
+
+**Defect (an inversion, not a wrong answer).** Fixed-arity
+`fmt.Sprint(a, b, ...)` — the single most common Sprint shape a Go
+programmer writes — was REFUSED, and the refusal's own comment gave
+the reason: "the JC-17 retargeted quarantine witnesses depend on
+fmt.Sprint refusing". That is the over-specialization class inverted:
+not machinery shaped by the target, but COMMON GO turned away to keep
+test fixtures stable. **The lesson, logged as the audit asked**: a
+refusal must be justified by the modeled envelope, never by what the
+corpus's witnesses happen to lean on; and a quarantine witness must
+pick its unlowerable cause by STRUCTURAL DISTANCE from the envelope
+(reflection — the deep-latitude surface the closed-world frontend
+excludes by doctrine), not by "currently unmodeled" (that pick has now
+rotted twice: Sprintf at W4.1, Sprint here). No eternal refusal
+exists; the tracked baseline flags any future flip loudly.
+
+**Guardrails witnessed red first**:
+`fmt/sprintf-dyn/{sprint,sprintln}-fixed-arity` (probe r4-p6 shapes) —
+both FAIL/frontend-export under the old refusal, gc `a=1 b=true` /
+`a 1 true\n`.
+
+**Fix.** The desugar packs the args into a `[]any` (nil pack for zero
+args, exactly variadic-call semantics) and calls the SAME
+differentially-pinned dyn shims the spread form uses — the space rule
+and rendering are the already-validated cells. Each packed arg is
+Formatter-checked (R1-F2): the pack must not smuggle a Formatter
+implementor past the static refusal into the Formatter-blind shim.
+
+**The rewire — SIX witnesses, two caught mid-slice.** The audit named
+four fmt.Sprint-dependent quarantine witnesses (the JC-17 fixture +
+methods/quarantine-{interface,embedded,pointer-receiver},
+generics/stencil-quarantine). The slice run then caught TWO MORE the
+finding missed — `methods/quarantine-sibling` (its quarantined-call
+row had ALREADY flipped green mid-slice: the lost-witness class,
+witnessed live) and `interfaces/quarantined-dispatch-teeth` (the W4.2
+logger-teeth pair, whose uninstalled half leaned on the same refusal).
+All six retargeted to `reflect.TypeOf` in this commit;
+`quarantine_test.go`'s fixture and cause-assertion updated
+("Sprint"→"reflect"); every one holds its exact baseline stage through
+the full run.
+
+**Flips.** Full `scripts/ci --diff`: drift = exactly the two new ids
+`-> PASS`; ZERO movement on the 2444 prior ids — the six rewired
+witnesses' stages unmoved is itself the no-lost-witness proof.
+Baseline re-pinned (2446 cases, 2283/163) in this commit.

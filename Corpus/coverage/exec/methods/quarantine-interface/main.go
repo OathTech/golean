@@ -1,6 +1,6 @@
 package main
 
-import "fmt"
+import "reflect"
 
 // The fail-closed invariant of H-3: a quarantined method is NEVER dropped
 // from its type's method set. Dropping it would change INTERFACE
@@ -9,14 +9,18 @@ import "fmt"
 // `false`. The stub carries the real signature, so satisfaction answers
 // what gc answers and only the dispatched CALL refuses.
 //
-// WHY `fmt.Sprint` AND NOT `fmt.Sprintf` (JC-17, raft W4.1 item 2): the
-// unlowerable construct here is load-bearing — it is what makes `render`
-// quarantined at all. The fixture used `fmt.Sprintf` until the W4.1 fmt
-// desugar modeled Sprintf/Errorf/Fprintf, at which point this row would
-// have flipped green and silently stopped witnessing the quarantine
-// shape (the F3 lost-witness class). `fmt.Sprint` is outside the modeled
-// three. Any future widening that models it must retarget this fixture
-// again, not let the row go green.
+// WHY `reflect.TypeOf` (JC-17, THIRD pick — audit R4-M-1): the
+// unlowerable construct here is load-bearing — it is what makes
+// `render` quarantined at all. `fmt.Sprintf` lowered when the W4.1
+// desugar landed; `fmt.Sprint` lowered when audit R4-M-1 modeled the
+// fixed-arity form. The old text here justified REFUSING fmt.Sprint
+// by this fixture's needs — a corpus-scoped refusal inversion (common
+// Go kept refused to keep a witness stable); the lesson is to pick
+// the cause by structural distance from the modeled envelope, not by
+// "currently unmodeled". Reflection is the deep-latitude surface the
+// closed-world frontend does not model by doctrine. No eternal
+// refusal exists: if reflect ever lowers, this row flips LOUDLY in
+// the baseline and must be retargeted again, never let go green.
 
 type stringer interface {
 	tag() int
@@ -27,7 +31,7 @@ type item struct{ n int }
 
 func (i item) tag() int { return i.n * 2 }
 
-func (i item) render() string { return fmt.Sprint(i.n) }
+func (i item) render() string { return reflect.TypeOf(i.n).String() }
 
 func quarantineIfaceSatisfies() int {
 	var x any = item{n: 3}

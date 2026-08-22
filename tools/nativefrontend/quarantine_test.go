@@ -58,22 +58,27 @@ func findMethod(program map[string]any, recvType, name string) map[string]any {
 
 const quarantineMethodSrc = `package main
 
-import "fmt"
+import "reflect"
 
 type T struct{ n int }
 
 func (t T) Good() int { return t.n + 1 }
 
 func (t T) Bad(a int, rest ...string) (int, error) {
-	// fmt.Sprint is OUTSIDE the modeled fmt desugar (W4.1 item 2 models
-	// Sprintf/Errorf/Fprintf only), so it keeps the package-selector
-	// refusal this fixture needs. (fmt.Sprintf lowered here until the
-	// desugar landed and this fixture stopped refusing — the test went
-	// red and moved to the still-unmodeled sibling.)
-	return len(fmt.Sprint(a)), nil
+	// reflect.TypeOf is the quarantine cause — the THIRD pick (JC-17):
+	// fmt.Sprintf lowered when the W4.1 desugar landed; fmt.Sprint
+	// lowered when audit R4-M-1 modeled the fixed-arity form (the
+	// previous comment's "the witnesses depend on fmt.Sprint refusing"
+	// was a corpus-scoped refusal inversion — the LESSON is to pick a
+	// cause by structural distance from the modeled envelope, not by
+	// "currently unmodeled"). Reflection is the deep-latitude surface
+	// the closed-world frontend does not model by doctrine; no eternal
+	// refusal exists, but if reflect ever lowers, this test and the
+	// corpus siblings go red/green LOUDLY and retarget again.
+	return len(reflect.TypeOf(a).String()), nil
 }
 
-func (t *T) PtrBad() string { return fmt.Sprint(t.n) }
+func (t *T) PtrBad() string { return reflect.TypeOf(t.n).String() }
 
 func main() {}
 `
@@ -118,7 +123,7 @@ func TestQuarantinedMethodNeverDropped(t *testing.T) {
 	if !strings.Contains(reason, "main.T.Bad") {
 		t.Fatalf("refusal does not name package.Type.Method: %q", reason)
 	}
-	if !strings.Contains(reason, "Sprint") {
+	if !strings.Contains(reason, "reflect") {
 		t.Fatalf("refusal drops the underlying cause: %q", reason)
 	}
 	if bad["body"] != nil {

@@ -95,8 +95,28 @@ func dynArityMismatch() string {
 	return f("%d %d", 1)
 }
 
+// ---- R4-M-1 (audit fix round): FIXED-ARITY Sprint/Sprintln — the
+// single most common fmt.Sprint shape a Go programmer writes
+// (probe r4-p6). gc semantics: exactly Sprint(args...) after
+// variadic packing; the space rule and rendering live in the SAME
+// differentially-pinned dyn shims the spread rows above exercise —
+// the desugar packs the args into a []any and calls them. The first
+// version REFUSED these forms, with a comment saying the JC-17
+// quarantine witnesses "depend on fmt.Sprint refusing" — a
+// corpus-scoped refusal inversion (common Go turned away to keep a
+// test fixture stable); the witnesses now use a genuinely-unmodeled
+// cause instead. ----
+func dynSprintFixedArity() string {
+	return fmt.Sprint("a=", 1, " b=", true) // gc: "a=1 b=true"
+}
+
+func dynSprintlnFixedArity() string {
+	return fmt.Sprintln("a", 1, true) // gc: "a 1 true\n"
+}
+
 func main() {
 	println(dynLoggerShape(), dynVerbKinds(), dynStringerError(),
 		dynStringerPanic(), dynSprintSpaceRule(), dynSprintln(),
-		dynSprintNil(), dynUnmodeledKind(), dynArityMismatch())
+		dynSprintNil(), dynUnmodeledKind(), dynArityMismatch(),
+		dynSprintFixedArity(), dynSprintlnFixedArity())
 }
