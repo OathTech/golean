@@ -2135,6 +2135,430 @@ Lean over the ported spec. -/
 theorem logMatchingStatement_holds : LogMatchingStatement P :=
   log_matching_invariant
 
+/-! ## leaderLogs_contiguous (GAP-5b) and the lifted contiguity -/
+
+/-- `LeaderLogsContiguousProof.v:106-121` (`logs_contiguous`) — a
+`lift_prop` consumer: every refined host's log is contiguous from 0,
+by the lifted base log-matching invariant. -/
+theorem logs_contiguous :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      ∀ h : name (P := P),
+        contiguous_range_exact_lo (net.nwState h).2.log 0 := by
+  intro net hreach h
+  obtain ⟨⟨-, hcontig, hpos⟩, -⟩ :=
+    lift_prop _ log_matching_invariant net hreach
+  exact ⟨fun i hi => hcontig h i hi, fun e he => hpos h e he⟩
+
+/-- `LeaderLogsContiguousInterface.v:9-12` (`leaderLogs_contiguous`). -/
+def leaderLogs_contiguous (net : RefinedNet) : Prop :=
+  ∀ (h : name (P := P)) (t : term) (ll : List (entry (P := P))),
+    (t, ll) ∈ (net.nwState h).1.leaderLogs → contiguous_range_exact_lo ll 0
+
+/-- Ghost-unchanged transport for `leaderLogs_contiguous` (the sibling of
+`leaderLogs_sorted_of_update`). -/
+theorem leaderLogs_contiguous_of_update {net net' : RefinedNet}
+    {u : name (P := P)} {gd : electionsData (P := P)} {d : raft_data (P := P)}
+    (hP : leaderLogs_contiguous net)
+    (hst : ∀ h', net'.nwState h' = update net.nwState u (gd, d) h')
+    (hgd : gd.leaderLogs = (net.nwState u).1.leaderLogs) :
+    leaderLogs_contiguous net' := by
+  intro h t ll hin
+  rw [hst h] at hin
+  by_cases heq : h = u
+  · subst heq
+    rw [update_same] at hin
+    replace hin : (t, ll) ∈ gd.leaderLogs := hin
+    rw [hgd] at hin
+    exact hP h t ll hin
+  · rw [update_neq _ _ heq] at hin
+    exact hP h t ll hin
+
+/-- `LeaderLogsContiguousProof.v:215-233`
+(`leaderLogs_contiguous_invariant`, GAP-5b): every leaderLog snapshot is
+contiguous from 0 — the RVR win snapshots the winner's own (lifted-
+contiguous) log. -/
+theorem leaderLogs_contiguous_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      leaderLogs_contiguous net := by
+  refine refined_raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · intro h t ll hin
+    exact nomatch hin
+  · intro h net st' ps' gd out d l client id c _hcr hgd hP _hreach hst _hps
+    refine leaderLogs_contiguous_of_update hP hst ?_
+    subst hgd
+    exact (update_elections_data_client_request_ghost h (net.nwState h)
+      client id c).2.2.2
+  · intro net h st' ps' gd out d l _hto hgd hP _hreach hst _hps
+    refine leaderLogs_contiguous_of_update hP hst ?_
+    subst hgd
+    exact (update_elections_data_timeout_ghost h (net.nwState h)).1
+  · intro xs p ys net st' ps' gd d m t n0 pli plt es ci _hae hgd _hbody hP
+      _hreach _hpkts hst _hps
+    refine leaderLogs_contiguous_of_update hP hst ?_
+    subst hgd
+    exact (update_elections_data_appendEntries_ghost p.pDst
+      (net.nwState p.pDst) t n0 pli plt es ci).2.2.2
+  · intro xs p ys net st' ps' gd d m t es res _haer hgd _hbody hP _hreach
+      _hpkts hst _hps
+    refine leaderLogs_contiguous_of_update hP hst ?_
+    rw [hgd]
+  · intro xs p ys net st' ps' gd d m t cid lli llt _hrv hgd _hbody hP
+      _hreach _hpkts hst _hps
+    refine leaderLogs_contiguous_of_update hP hst ?_
+    subst hgd
+    exact (update_elections_data_requestVote_cronies p.pDst p.pSrc t p.pSrc
+      lli llt (net.nwState p.pDst)).2.1
+  · -- request_vote_reply: the win snapshots the winner's contiguous log
+    intro xs p ys net st' ps' gd d t v _hrvr hgd _hbody hP hreach _hpkts
+      hst _hps
+    intro h t2 ll hin
+    replace hin : (t2, ll) ∈ (st' h).1.leaderLogs := hin
+    rw [hst h] at hin
+    by_cases heq : h = p.pDst
+    · subst heq
+      rw [update_same] at hin
+      replace hin : (t2, ll) ∈ gd.leaderLogs := hin
+      subst hgd
+      rcases leaderLogs_update_elections_data_RVR hin with hold | ⟨-, -, -, hll⟩
+      · exact hP p.pDst t2 ll hold
+      · rw [hll, handleRequestVoteReply_log]
+        exact logs_contiguous net hreach p.pDst
+    · rw [update_neq _ _ heq] at hin
+      exact hP h t2 ll hin
+  · intro net st' ps' gd d h os d' ms _hdl hP _hreach hstate hst _hps
+    refine leaderLogs_contiguous_of_update hP hst ?_
+    rw [hstate]
+  · intro net st' ps' gd d os d' ms h _hgs hP _hreach hstate hst _hps
+    refine leaderLogs_contiguous_of_update hP hst ?_
+    rw [hstate]
+  · intro net net' hstates _hpkts hP _hreach h t ll hin
+    rw [← hstates h] at hin
+    exact hP h t ll hin
+  · intro net net' gd d h d' _hrb hP _hreach hstate hst _hpkts
+    refine leaderLogs_contiguous_of_update hP hst ?_
+    rw [hstate]
+
+/-! ## allEntries_indices_gt_0 -/
+
+omit O in
+/-- Every `handleAppendEntries` reply echoes the request's entries. -/
+theorem handleAppendEntries_reply_entries (me : name (P := P))
+    (st : raft_data (P := P)) (t : term) (lid : name (P := P))
+    (pli : logIndex) (plt : term) (es : List (entry (P := P)))
+    (ci : logIndex) {st' m}
+    (h : handleAppendEntries me st t lid pli plt es ci = (st', m)) :
+    ∃ t' r, m = msg.AppendEntriesReply (P := P) t' es r := by
+  unfold handleAppendEntries at h
+  repeat' split at h
+  all_goals simp only [Prod.mk.injEq] at h
+  all_goals obtain ⟨-, rfl⟩ := h
+  all_goals exact ⟨_, _, rfl⟩
+
+omit O in
+/-- The `allEntries` shape of the client-request ghost update: unchanged,
+or the fresh entry (at the impossible-to-collide index `maxIndex + 1`)
+consed on. -/
+theorem update_elections_data_client_request_allEntries_cases
+    (me : name (P := P)) (st : electionsData (P := P) × raft_data (P := P))
+    (client : R.clientId) (id : Nat) (c : P.input) :
+    (update_elections_data_client_request me st client id c).allEntries
+      = st.1.allEntries ∨
+    ∃ (t0 : term) (e : entry (P := P)),
+      (update_elections_data_client_request me st client id c).allEntries
+        = (t0, e) :: st.1.allEntries ∧ e.eIndex = maxIndex st.2.log + 1 := by
+  unfold update_elections_data_client_request handleClientRequest
+  simp only []
+  split
+  · split
+    · exact Or.inr ⟨_, _, rfl, rfl⟩
+    · exact Or.inl rfl
+  · split
+    · rename_i hlt
+      simp only [Nat.blt_eq] at hlt
+      exact absurd hlt (Nat.lt_irrefl _)
+    · exact Or.inl rfl
+
+omit O in
+/-- The `allEntries` shape of the append-entries ghost update: unchanged,
+or the request's entries recorded at the reply term. -/
+theorem update_elections_data_appendEntries_allEntries_cases
+    (me : name (P := P)) (st : electionsData (P := P) × raft_data (P := P))
+    (t : term) (lid : name (P := P)) (pli : logIndex) (plt : term)
+    (es : List (entry (P := P))) (ci : logIndex) :
+    (update_elections_data_appendEntries me st t lid pli plt es ci).allEntries
+      = st.1.allEntries ∨
+    ∃ t', (update_elections_data_appendEntries me st t lid pli plt es
+        ci).allEntries
+      = (es.map fun e => (t', e)) ++ st.1.allEntries := by
+  rcases hm : handleAppendEntries me st.2 t lid pli plt es ci with ⟨d0, m0⟩
+  obtain ⟨t'', r'', rfl⟩ :=
+    handleAppendEntries_reply_entries me st.2 t lid pli plt es ci hm
+  unfold update_elections_data_appendEntries
+  rw [hm]
+  cases r''
+  · exact Or.inl rfl
+  · exact Or.inr ⟨t'', rfl⟩
+
+/-- The lifted nw half of `terms_and_indices_from_one_log` — in-flight
+entries have positive indices (a `lift_prop` consumer). -/
+theorem tai_nw_lifted :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      ∀ (p : RefinedPacket) (t : term) (lid : name (P := P))
+        (pli : logIndex) (plt : term) (es : List (entry (P := P)))
+        (ci : logIndex),
+        p ∈ net.nwPackets → p.pBody = .AppendEntries t lid pli plt es ci →
+        terms_and_indices_from_one es := by
+  intro net hreach p t lid pli plt es ci hp hbody
+  have h := lift_prop _
+    (fun n hr => (terms_and_indices_from_one_log_and_nw_invariant n hr).2)
+    net hreach
+  exact h (deghost_packet p) t lid pli plt es ci (List.mem_map_of_mem hp)
+    hbody
+
+/-- `AllEntriesIndicesGt0Interface.v:8-11` (`allEntries_indices_gt_0`). -/
+def allEntries_indices_gt_0 (net : RefinedNet) : Prop :=
+  ∀ (h : name (P := P)) (e : entry (P := P)),
+    e ∈ (net.nwState h).1.allEntries.map Prod.snd → e.eIndex > 0
+
+/-- Ghost-unchanged transport for `allEntries_indices_gt_0`. -/
+theorem allEntries_indices_gt_0_of_update {net net' : RefinedNet}
+    {u : name (P := P)} {gd : electionsData (P := P)} {d : raft_data (P := P)}
+    (hP : allEntries_indices_gt_0 net)
+    (hst : ∀ h', net'.nwState h' = update net.nwState u (gd, d) h')
+    (hgd : gd.allEntries = (net.nwState u).1.allEntries) :
+    allEntries_indices_gt_0 net' := by
+  intro h e hin
+  rw [hst h] at hin
+  by_cases heq : h = u
+  · subst heq
+    rw [update_same] at hin
+    replace hin : e ∈ gd.allEntries.map Prod.snd := hin
+    rw [hgd] at hin
+    exact hP h e hin
+  · rw [update_neq _ _ heq] at hin
+    exact hP h e hin
+
+/-- `AllEntriesIndicesGt0Proof.v:170-186`
+(`allEntries_indices_gt_0_invariant`): every recorded entry has a
+positive index — fresh recordings are the leader's `maxIndex + 1` or
+in-flight entries (lifted `terms_and_indices_from_one`). -/
+theorem allEntries_indices_gt_0_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      allEntries_indices_gt_0 net := by
+  refine refined_raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · intro h e hin
+    exact nomatch hin
+  · -- client_request: the fresh entry's index is maxIndex + 1
+    intro h net st' ps' gd out d l client id c _hcr hgd hP _hreach hst _hps
+    intro h0 e hin
+    replace hin : e ∈ (st' h0).1.allEntries.map Prod.snd := hin
+    rw [hst h0] at hin
+    by_cases heq : h0 = h
+    · subst heq
+      rw [update_same] at hin
+      replace hin : e ∈ gd.allEntries.map Prod.snd := hin
+      subst hgd
+      rcases update_elections_data_client_request_allEntries_cases h0
+        (net.nwState h0) client id c with hsame | ⟨t0, e0, hcons, hidx⟩
+      · rw [hsame] at hin
+        exact hP h0 e hin
+      · rw [hcons] at hin
+        rcases List.mem_map.mp hin with ⟨⟨t1, e1⟩, hmem, rfl⟩
+        rcases List.mem_cons.mp hmem with heq1 | hmem'
+        · injection heq1 with h1 h2
+          subst h2
+          show e1.eIndex > 0
+          rw [hidx]
+          exact Nat.succ_pos _
+        · exact hP h0 e1 (List.mem_map_of_mem hmem')
+    · rw [update_neq _ _ heq] at hin
+      exact hP h0 e hin
+  · -- timeout: allEntries untouched
+    intro net h st' ps' gd out d l _hto hgd hP _hreach hst _hps
+    refine allEntries_indices_gt_0_of_update hP hst ?_
+    subst hgd
+    exact (update_elections_data_timeout_ghost h (net.nwState h)).2
+  · -- append_entries: recorded entries are the in-flight ones (lifted)
+    intro xs p ys net st' ps' gd d m t n0 pli plt es ci _hae hgd _hbody hP
+      hreach hpkts hst _hps
+    have hp_in : p ∈ net.nwPackets := by
+      rw [hpkts]
+      exact List.mem_append.mpr (Or.inr (List.mem_cons_self ..))
+    intro h0 e hin
+    replace hin : e ∈ (st' h0).1.allEntries.map Prod.snd := hin
+    rw [hst h0] at hin
+    by_cases heq : h0 = p.pDst
+    · subst heq
+      rw [update_same] at hin
+      replace hin : e ∈ gd.allEntries.map Prod.snd := hin
+      subst hgd
+      rcases update_elections_data_appendEntries_allEntries_cases p.pDst
+        (net.nwState p.pDst) t n0 pli plt es ci with hsame | ⟨t', happ⟩
+      · rw [hsame] at hin
+        exact hP p.pDst e hin
+      · rw [happ] at hin
+        rcases List.mem_map.mp hin with ⟨⟨t1, e1⟩, hmem, rfl⟩
+        rcases List.mem_append.mp hmem with hnew | hold
+        · rcases List.mem_map.mp hnew with ⟨e2, he2, heq2⟩
+          injection heq2 with h1 h2
+          subst h2
+          show e2.eIndex > 0
+          exact (tai_nw_lifted net hreach p t n0 pli plt es ci hp_in
+            _hbody e2 he2).2
+        · exact hP p.pDst e1 (List.mem_map_of_mem hold)
+    · rw [update_neq _ _ heq] at hin
+      exact hP h0 e hin
+  · -- append_entries_reply: ghost untouched
+    intro xs p ys net st' ps' gd d m t es res _haer hgd _hbody hP _hreach
+      _hpkts hst _hps
+    refine allEntries_indices_gt_0_of_update hP hst ?_
+    rw [hgd]
+  · -- request_vote
+    intro xs p ys net st' ps' gd d m t cid lli llt _hrv hgd _hbody hP
+      _hreach _hpkts hst _hps
+    refine allEntries_indices_gt_0_of_update hP hst ?_
+    subst hgd
+    exact (update_elections_data_requestVote_cronies p.pDst p.pSrc t p.pSrc
+      lli llt (net.nwState p.pDst)).2.2
+  · -- request_vote_reply
+    intro xs p ys net st' ps' gd d t v _hrvr hgd _hbody hP _hreach _hpkts
+      hst _hps
+    refine allEntries_indices_gt_0_of_update hP hst ?_
+    subst hgd
+    exact (update_elections_data_requestVoteReply_votes p.pDst p.pSrc t v
+      (net.nwState p.pDst)).2.2
+  · intro net st' ps' gd d h os d' ms _hdl hP _hreach hstate hst _hps
+    refine allEntries_indices_gt_0_of_update hP hst ?_
+    rw [hstate]
+  · intro net st' ps' gd d os d' ms h _hgs hP _hreach hstate hst _hps
+    refine allEntries_indices_gt_0_of_update hP hst ?_
+    rw [hstate]
+  · intro net net' hstates _hpkts hP _hreach h e hin
+    rw [← hstates h] at hin
+    exact hP h e hin
+  · intro net net' gd d h d' _hrb hP _hreach hstate hst _hpkts
+    refine allEntries_indices_gt_0_of_update hP hst ?_
+    rw [hstate]
+
+/-! ## refined_log_matching_lemmas — the lifted bridge
+(`RefinedLogMatchingLemmasInterface.v`, all ten interface fields as
+standalone theorems; D3, the class dissolves) -/
+
+/-- `entries_contiguous_nw_invariant`. -/
+theorem entries_contiguous_nw_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      ∀ (p : RefinedPacket) (t : term) (n : name (P := P)) (pli : logIndex)
+        (plt : term) (es : List (entry (P := P))) (ci : logIndex),
+        p ∈ net.nwPackets → p.pBody = .AppendEntries t n pli plt es ci →
+        contiguous_range_exact_lo es pli := by
+  intro net hreach p t n pli plt es ci hp hbody
+  obtain ⟨-, hnw⟩ := lift_prop _ log_matching_invariant net hreach
+  obtain ⟨-, h2, h3, -⟩ := hnw (deghost_packet p) t n pli plt es ci
+    (List.mem_map_of_mem hp) hbody
+  exact ⟨h2, h3⟩
+
+/-- `entries_gt_0_nw_invariant`. -/
+theorem entries_gt_0_nw_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      ∀ (p : RefinedPacket) (t : term) (n : name (P := P)) (pli : logIndex)
+        (plt : term) (es : List (entry (P := P))) (ci : logIndex)
+        (e : entry (P := P)),
+        p ∈ net.nwPackets → p.pBody = .AppendEntries t n pli plt es ci →
+        e ∈ es → e.eIndex > 0 := by
+  intro net hreach p t n pli plt es ci e hp hbody he
+  exact Nat.lt_of_le_of_lt (Nat.zero_le pli)
+    ((entries_contiguous_nw_invariant net hreach p t n pli plt es ci hp
+      hbody).2 e he)
+
+/-- `entries_sorted_nw_invariant`. -/
+theorem entries_sorted_nw_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      ∀ (p : RefinedPacket) (t : term) (n : name (P := P)) (pli : logIndex)
+        (plt : term) (es : List (entry (P := P))) (ci : logIndex),
+        p ∈ net.nwPackets → p.pBody = .AppendEntries t n pli plt es ci →
+        sorted es := by
+  intro net hreach p t n pli plt es ci hp hbody
+  exact (lift_prop _ logs_sorted_invariant net hreach).2.1
+    (deghost_packet p) t n pli plt es ci (List.mem_map_of_mem hp) hbody
+
+/-- `entries_gt_0_invariant`. -/
+theorem entries_gt_0_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      ∀ (h : name (P := P)) (e : entry (P := P)),
+        e ∈ (net.nwState h).2.log → e.eIndex > 0 := by
+  intro net hreach h e he
+  exact (logs_contiguous net hreach h).2 e he
+
+/-- `entries_contiguous_invariant` (= upstream `logs_contiguous`). -/
+theorem entries_contiguous_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      ∀ h : name (P := P),
+        contiguous_range_exact_lo (net.nwState h).2.log 0 :=
+  logs_contiguous
+
+/-- `entries_sorted_invariant` (= `sorted_host_lifted`). -/
+theorem entries_sorted_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      ∀ h : name (P := P), sorted (net.nwState h).2.log :=
+  sorted_host_lifted
+
+/-- `entries_match_invariant`. -/
+theorem entries_match_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      ∀ h h' : name (P := P),
+        entries_match (net.nwState h).2.log (net.nwState h').2.log := by
+  intro net hreach h h'
+  exact (lift_prop _ log_matching_invariant net hreach).1.1 h h'
+
+/-- `entries_match_nw_1_invariant`. -/
+theorem entries_match_nw_1_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      ∀ (p : RefinedPacket) (t : term) (n : name (P := P)) (pli : logIndex)
+        (plt : term) (es : List (entry (P := P))) (ci : logIndex)
+        (p' : RefinedPacket) (t' : term) (n' : name (P := P))
+        (pli' : logIndex) (plt' : term) (es' : List (entry (P := P)))
+        (ci' : logIndex) (e e' e'' : entry (P := P)),
+        p ∈ net.nwPackets → p' ∈ net.nwPackets →
+        p.pBody = .AppendEntries t n pli plt es ci →
+        p'.pBody = .AppendEntries t' n' pli' plt' es' ci' →
+        e ∈ es → e' ∈ es' → e.eIndex = e'.eIndex → e.eTerm = e'.eTerm →
+        e'' ∈ es → pli' < e''.eIndex ∧ e''.eIndex ≤ e.eIndex →
+        e'' ∈ es' := by
+  intro net hreach p t n pli plt es ci p' t' n' pli' plt' es' ci' e e' e''
+    hp hp' hbody hbody' he he' hidx hterm he'' hrange
+  obtain ⟨-, hnw⟩ := lift_prop _ log_matching_invariant net hreach
+  obtain ⟨-, -, -, h4⟩ := hnw (deghost_packet p) t n pli plt es ci
+    (List.mem_map_of_mem hp) hbody
+  obtain ⟨ha, -, -⟩ := h4 (deghost_packet p') t' n' pli' plt' es' ci'
+    (List.mem_map_of_mem hp') hbody' e e' he he' hidx hterm
+  exact ha e'' hrange he''
+
+/-- `entries_match_nw_host_invariant`. -/
+theorem entries_match_nw_host_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      ∀ (p : RefinedPacket) (t : term) (n : name (P := P)) (pli : logIndex)
+        (plt : term) (es : List (entry (P := P))) (ci : logIndex)
+        (h : name (P := P)) (e e' e'' : entry (P := P)),
+        p ∈ net.nwPackets → p.pBody = .AppendEntries t n pli plt es ci →
+        e ∈ es → e' ∈ (net.nwState h).2.log →
+        e.eIndex = e'.eIndex → e.eTerm = e'.eTerm →
+        e'' ∈ es → e''.eIndex ≤ e.eIndex →
+        e'' ∈ (net.nwState h).2.log := by
+  intro net hreach p t n pli plt es ci h e e' e'' hp hbody he he' hidx
+    hterm he'' hle
+  obtain ⟨-, hnw⟩ := lift_prop _ log_matching_invariant net hreach
+  obtain ⟨h1, -, -, -⟩ := hnw (deghost_packet p) t n pli plt es ci
+    (List.mem_map_of_mem hp) hbody
+  exact (h1 h e e' he he' hidx hterm).1 e'' hle he''
+
+/-- `allEntries_gt_0_invariant` (= `allEntries_indices_gt_0_invariant`,
+in the interface's field form). -/
+theorem allEntries_gt_0_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      ∀ (h : name (P := P)) (e : entry (P := P)),
+        e ∈ (net.nwState h).1.allEntries.map Prod.snd → e.eIndex > 0 :=
+  allEntries_indices_gt_0_invariant
+
 end LogMatchingCore
 
 end Raft
