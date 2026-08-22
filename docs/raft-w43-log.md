@@ -673,3 +673,44 @@ construction — confirmed by the run.
 **Flips.** Full `scripts/ci --diff`: drift = exactly the one new id
 `-> PASS`; zero movement on the 2429 prior ids. Baseline re-pinned
 (2430 cases, 2274/156) in this commit.
+
+### R1-C3 + R1-D1 — the type-switch guard hole, and the false refusal claims
+
+**Defect (C3).** `resultShadowScan` walks `Defs` idents — but a
+type-switch guard (`switch ok := v.(type)`) binds through go/types
+**Implicits** (one object per clause), which the walk cannot see. A
+guard shadowing a named result was therefore neither renamed nor
+refused: `typeSwitchClauseBody` declared the clause binding under the
+source name and it aliased the result slot — BUG-068's exact
+mechanism, alive in a construct the fix's own docstring claimed to
+refuse.
+
+**Guardrail witnessed red first** (probe r1-p7b, row
+`scoping/named-result-shadow/ts-guard`): go **true**, machine-before
+**false** (`return true` inside the clause wrote the clause-scoped
+`ok`; frame exit read the outer result slot's zero value).
+
+**Fix — REFUSE, judgment logged.** Pass 2 now checks every
+`TypeSwitchStmt`'s guard name against the result names and refuses
+with a message naming the construct. Rename-instead-of-refuse was
+considered and NOT taken: it would require the clause-binding
+emission site AND the func-lit Implicits capture path to follow the
+rename map — two more seams of exactly the kind C1/C2 just fixed —
+for a shape no target needs. Refusal is the simplest honest boundary;
+widening moves it with its own rows. The row flips
+differential(wrong-value) → frontend-export(refusal), red by design.
+
+**The false claims (C3+D1).** The wave-6 record claimed "range
+clauses, type-switch guards, receive bindings REFUSE rather than
+alias". Reality: type-switch guards ALIASED (above), and comma-ok
+`:=` targets (map index, type assertion, channel receive) are
+admissible AssignStmt-DEFINE forms — RENAMED, correctly, not refused.
+Both `resultshadow.go`'s header and BUGS.md BUG-068 now state the
+delivered boundary, and the three comma-ok forms are pinned GREEN
+(`commaok-{map,recv,assert}`, verified passing before the docstring
+was allowed to say so).
+
+**Flips.** Full `scripts/ci --diff`: drift = exactly the four new ids
+(ts-guard FAIL/frontend-export by design; three commaok PASS); zero
+movement on the 2430 prior ids. Baseline re-pinned (2434 cases,
+2277/157) in this commit.

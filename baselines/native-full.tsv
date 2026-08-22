@@ -1,17 +1,18 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-22 (raft W4.3 audit fix round, R1-C2 — branch
-#   raft-w43; docs/raft-w43-log.md "Audit fix round").
-#   re-pin reason: ONE NEW id, zero movement on any of the 2429 ids
-#   the previous record held (drift report: the one line reads
-#   "NEW id (not in baseline) -> PASS").
-#     R1-C2 guardrail (emitForPerIteration — the per-iteration-cell
-#     machinery for a captured for-init variable — used the SOURCE
-#     name for its seed ref and cell declarations, so a renamed shadow
-#     lost per-iteration freshness AND seeded from the result slot:
-#     machine 1009 vs go 1003 pre-fix; fixed by routing the loopVar
-#     carrier + seed ref through e.localRename):
-#     scoping/named-result-shadow/loopvar-capture, PASS.
-# cases: 2430 (2274 PASS / 156 FAIL)
+# recorded: 2026-08-22 (raft W4.3 audit fix round, R1-C3 + R1-D1 —
+#   branch raft-w43; docs/raft-w43-log.md "Audit fix round").
+#   re-pin reason: FOUR NEW ids, zero movement on any of the 2430 ids
+#   the previous record held.
+#     R1-C3: a TYPE-SWITCH GUARD shadowing a named result was MISSED
+#     by the shadow scan (the guard's bindings are go/types Implicits,
+#     not Defs) and aliased the result slot — witnessed pre-fix as
+#     machine false vs go true. Now explicitly REFUSED:
+#     scoping/named-result-shadow/ts-guard, FAIL/frontend-export RED
+#     BY DESIGN (like range-clause).
+#     R1-D1: the three comma-ok := forms shadowing named results are
+#     RENAMED (admissible), not refused — pinned green:
+#     scoping/named-result-shadow/commaok-{map,recv,assert}, PASS.
+# cases: 2434 (2277 PASS / 157 FAIL)
 # frontend: native (tools/nativefrontend)
 result	id	stage
 PASS	arrays/array-bounds	-
@@ -1858,11 +1859,15 @@ PASS	scoping/for-init-scope	-
 PASS	scoping/named-result-shadow/bare-return	-
 PASS	scoping/named-result-shadow/closure-read	-
 PASS	scoping/named-result-shadow/closure-write	-
+PASS	scoping/named-result-shadow/commaok-assert	-
+PASS	scoping/named-result-shadow/commaok-map	-
+PASS	scoping/named-result-shadow/commaok-recv	-
 PASS	scoping/named-result-shadow/deferred-write	-
 PASS	scoping/named-result-shadow/enterjoint-shape	-
 PASS	scoping/named-result-shadow/loopvar-capture	-
 FAIL	scoping/named-result-shadow/range-clause	frontend-export
 PASS	scoping/named-result-shadow/short-decl	-
+FAIL	scoping/named-result-shadow/ts-guard	frontend-export
 PASS	scoping/select-clause-scope	-
 PASS	scoping/shadowing	-
 PASS	scoping/short-decl-mixing	-

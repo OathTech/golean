@@ -10,3 +10,7 @@ range-clause	shadowInRangeClause	-	ok	-	scoping,shadowing,named-results,range
 closure-write	shadowCapturedWrite	-	ok	-	scoping,shadowing,named-results,closures
 closure-read	shadowCapturedRead	-	ok	-	scoping,shadowing,named-results,closures
 loopvar-capture	shadowLoopVarCaptured	-	ok	-	scoping,shadowing,named-results,closures,loops
+ts-guard	tsGuardShadow	-	ok	-	scoping,shadowing,named-results,type_switch
+commaok-map	commaOkMapShadow	-	ok	-	scoping,shadowing,named-results,maps
+commaok-recv	commaOkRecvShadow	-	ok	-	scoping,shadowing,named-results,channels
+commaok-assert	commaOkAssertShadow	-	ok	-	scoping,shadowing,named-results,interfaces

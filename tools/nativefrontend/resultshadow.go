@@ -27,12 +27,32 @@
 //
 // FAIL-CLOSED GUARD: the scan REFUSES (never renames) a colliding
 // definition arising from a construct whose emission path is not among
-// the four patched sites (range clauses, type-switch guards, comma-ok
-// receive targets, parameters of the function itself...): a rename such
-// a path did not follow would declare under one name and read under
-// another — a visible decode failure at best, an alias at worst. The
-// refusal names the construct; widening the admissible set moves a
-// shape from refused to renamed with its own guardrail row first.
+// the patched sites: a rename such a path did not follow would declare
+// under one name and read under another — a visible decode failure at
+// best, an alias at worst. The refusal names the construct; widening
+// the admissible set moves a shape from refused to renamed with its
+// own guardrail row first. The exact boundary (audit R1-C3/R1-D1,
+// which corrected this paragraph — its first version claimed shapes
+// it did not deliver):
+//   - RANGE-CLAUSE variables: refused. Their idents are in Defs but
+//     their defining construct is the RangeStmt, outside the
+//     admissible set (row `range-clause`).
+//   - TYPE-SWITCH GUARDS: refused, by the EXPLICIT TypeSwitchStmt
+//     check in pass 2 below. The guard's bindings are per-clause
+//     go/types Implicits objects — invisible to the Defs walk — so
+//     before R1-C3 the scan MISSED them silently and the clause
+//     binding (typeSwitchClauseBody declares it under the source
+//     name) aliased the result slot: probe r1-p7b returned false
+//     where gc returns true. Row `ts-guard`, red by design.
+//     (Rename-instead-of-refuse would need the clause-binding site
+//     AND the func-lit Implicits capture path to follow the map —
+//     two more seams of the exact kind C1/C2 just fixed; refusal is
+//     the simplest honest boundary until a target needs the shape.)
+//   - COMMA-OK `:=` TARGETS (map index, type assertion, channel
+//     receive): ADMISSIBLE — they are plain AssignStmt-DEFINE idents
+//     in Defs, and their emission follows the rename. They are
+//     RENAMED, not refused (rows `commaok-{map,recv,assert}` pin all
+//     three forms green).
 
 package main
 
@@ -91,8 +111,24 @@ func (e *emitter) resultShadowScan(body ast.Node) error {
 	seq := 0
 	var serr error
 	ast.Inspect(body, func(n ast.Node) bool {
+		if serr != nil {
+			return false
+		}
 		if _, isLit := n.(*ast.FuncLit); isLit {
 			return false
+		}
+		// TYPE-SWITCH GUARDS collide through go/types Implicits (one
+		// object PER CLAUSE), which the Defs walk below cannot see —
+		// before audit R1-C3 a guard shadowing a named result was
+		// silently missed and the clause binding aliased the result
+		// slot. Refuse by guard NAME: the clause objects all carry it.
+		if ts, isTS := n.(*ast.TypeSwitchStmt); isTS {
+			if a, isAssign := ts.Assign.(*ast.AssignStmt); isAssign && len(a.Lhs) == 1 {
+				if gid, isIdent := a.Lhs[0].(*ast.Ident); isIdent && resultNames[gid.Name] {
+					serr = unsup("type-switch guard %s shadows the named result %s — outside the rename set (the clause bindings live in Implicits), fail closed; widen with a guardrail row first", gid.Name, gid.Name)
+					return false
+				}
+			}
 		}
 		id, isIdent := n.(*ast.Ident)
 		if !isIdent || !resultNames[id.Name] || serr != nil {
@@ -104,7 +140,7 @@ func (e *emitter) resultShadowScan(body ast.Node) error {
 			return true
 		}
 		if !admissible[obj] {
-			serr = unsup("local %s shadows the named result %s in a construct outside the rename set (range/type-switch/receive binding) — fail closed, widen with a guardrail row first", id.Name, id.Name)
+			serr = unsup("local %s shadows the named result %s in a construct outside the rename set (e.g. a range clause) — fail closed, widen with a guardrail row first", id.Name, id.Name)
 			return false
 		}
 		if e.localRenames == nil {

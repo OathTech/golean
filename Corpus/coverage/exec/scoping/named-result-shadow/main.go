@@ -128,10 +128,77 @@ func shadowLoopVarCaptured() (x int) {
 	return x + 1000
 }
 
+// ---- R1-C3 (W4.3 audit fix round): a TYPE-SWITCH GUARD shadowing a
+// named result. The guard's per-clause binding lives in go/types
+// Implicits, not Defs, so the shadow scan MISSED it entirely: the
+// clause binding aliased the result slot (`return true` inside the
+// clause wrote the clause-scoped `ok`; frame exit read the outer
+// result — go true, machine-before false; probe r1-p7b). Now REFUSED
+// (red by design, like range-clause): the guard's emission path
+// (typeSwitchClauseBody) is outside the rename set. ----
+func tsGuardShadow() (ok bool) {
+	var v any = true
+	switch ok := v.(type) {
+	case bool:
+		_ = ok
+		return true
+	}
+	return false
+}
+
+// ---- R1-D1: the three COMMA-OK `:=` forms shadowing named results
+// are ADMISSIBLE (plain AssignStmt-DEFINE targets, the patched
+// emission sites) — RENAMED, not refused. These rows pin that the
+// rename is correct through each form, and pin the docstring's claim
+// (resultshadow.go used to say receive bindings refuse — false). ----
+func commaOkMapShadow() (v int, ok bool) {
+	m := map[int]int{1: 100}
+	sum := 0
+	{
+		v, ok := m[1]
+		if ok {
+			sum += v
+		}
+	}
+	v, ok = sum+9, true // 109, true
+	return
+}
+
+func commaOkRecvShadow() (v int, ok bool) {
+	ch := make(chan int, 1)
+	ch <- 42
+	inner := 0
+	{
+		v, ok := <-ch
+		if ok {
+			inner = v
+		}
+	}
+	v, ok = inner+3, true // 45, true
+	return
+}
+
+func commaOkAssertShadow() (v int, ok bool) {
+	var a any = 7
+	inner := 0
+	{
+		v, ok := a.(int)
+		if ok {
+			inner = v
+		}
+	}
+	v, ok = inner*2, true // 14, true
+	return
+}
+
 func main() {
 	n, s := shadowThenBareReturn()
+	mv, mo := commaOkMapShadow()
+	rv, ro := commaOkRecvShadow()
+	av, ao := commaOkAssertShadow()
 	println(enterJointShape(), n, s, shadowShortDecl(),
 		shadowWithDeferredWrite(), shadowInRangeClause(),
 		shadowCapturedWrite(), shadowCapturedRead(),
-		shadowLoopVarCaptured())
+		shadowLoopVarCaptured(), tsGuardShadow(),
+		mv, mo, rv, ro, av, ao)
 }

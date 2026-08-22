@@ -3254,14 +3254,24 @@ map-index-effectful-key,pointer-array-call-base,conversion-base}`.
 
 - Status: fixed (2026-08-21, raft W4.3 wave 6 — emit-time renaming of
   shadowing locals, object-keyed: `tools/nativefrontend/resultshadow.go`
-  + the four local-name emission sites; constructs outside the rename
-  set — range clauses, type-switch guards, receive bindings — REFUSE
-  rather than alias, pinned by the red-by-design `range-clause` row)
+  + the local-name emission sites. Boundary CORRECTED by the 2026-08-22
+  audit fix round, which found this entry's first version claiming
+  refusals the scan did not deliver: range clauses refuse (pinned by
+  the red-by-design `range-clause` row); type-switch guards were
+  SILENTLY MISSED — their bindings live in go/types Implicits, not
+  Defs — and aliased exactly as this bug describes (audit R1-C3, probe
+  machine-false-vs-go-true; now explicitly refused, red-by-design
+  `ts-guard` row); comma-ok `:=` receive/map/assert targets are NOT
+  refused — they are admissible AssignStmt-DEFINE forms and are
+  RENAMED correctly (audit R1-D1, green rows `commaok-{map,recv,
+  assert}`). The audit round also fixed two more seams the rename did
+  not reach: the closure-capture ref (R1-C1) and the per-iteration
+  cell machinery (R1-C2), each with its own witnessed-red guardrails.)
 - Pinned-by: differential
 - Cases: scoping/named-result-shadow/enterjoint-shape, scoping/named-result-shadow/bare-return, scoping/named-result-shadow/short-decl, scoping/named-result-shadow/deferred-write
-  (the fifth row of the family, `range-clause`, stays RED BY DESIGN —
-  it pins the fail-closed REFUSAL for shadows outside the rename set,
-  not the fix, so it is not listed as a fixed case)
+  (`range-clause` and `ts-guard` stay RED BY DESIGN —
+  they pin the fail-closed REFUSAL for shadows outside the rename set,
+  not the fix, so they are not listed as fixed cases)
 - Discovered: 2026-08-21 (the trace differential's RENDERED tier — the
   first tier that could see it: `confchange_v2_add_double_{auto,implicit}`
   machine-vs-go DISAGREE on `... switched to configuration ... autoleave`)
