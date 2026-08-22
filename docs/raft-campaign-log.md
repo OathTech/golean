@@ -211,6 +211,17 @@ is the §4.4 park-and-report condition, not an emergency.
   one reflected MID-RUN checkpoint + measured segments at heap scale,
   parallelism-costed projection, GO/NO-GO in the memo.
 
+- **U-c9** (2026-08-22): the Arc-4 seam design of record
+  (`docs/2026-08-22_campaign-arc4-seam-design.md`) — three layers:
+  absState at round boundaries (proof infra, never statement
+  vocabulary), ~20 per-handler interpreter-run equations (WP/kit
+  walks, §4c/§4e's translation-validation shape; W7/SpecTec
+  convergence recorded), the round induction + checker-implication
+  lemmas consuming Arc 3's network. Unit ladder A4-U1..U10; the
+  pilot (smallest handler equation end-to-end) is the go-signal
+  before scaling. [AGENT] alternatives-considered recorded (direct
+  induction refused, segment-rfl scoped to the witness only).
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
