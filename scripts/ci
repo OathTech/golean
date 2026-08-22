@@ -161,6 +161,31 @@ fi
 echo "  $PAR_NOTE"
 RESULTS+=("  note build parallelism: $PAR_NOTE")
 
+# 0c. Oracle toolchain pin (launch audit D10-F4): the box's live go
+# must match baselines/go-oracle-pin — drift here silently moves the
+# oracle under every differential, probe, and re-pin (incident
+# precedent: the '1.26.x' CI float, 2026-08-21). Absent go is a note
+# (the fast gate itself does not run the oracle); mismatch is a FAIL
+# unless GOLEAN_ALLOW_GO_DRIFT=1 says so loudly.
+step "oracle toolchain pin (baselines/go-oracle-pin)"
+if [ -f baselines/go-oracle-pin ]; then
+  go_pin="$(head -1 baselines/go-oracle-pin | tr -d '[:space:]')"
+  if command -v go >/dev/null 2>&1; then
+    go_live="$(go version | awk '{print $3}')"
+    if [ "$go_live" = "$go_pin" ]; then
+      ok "oracle toolchain ($go_live = pin)"
+    elif [ "${GOLEAN_ALLOW_GO_DRIFT:-0}" = 1 ]; then
+      RESULTS+=("  note oracle toolchain DRIFTED ($go_live != pin $go_pin) — GOLEAN_ALLOW_GO_DRIFT=1")
+    else
+      bad "oracle toolchain $go_live != pinned $go_pin (baselines/go-oracle-pin; GOLEAN_ALLOW_GO_DRIFT=1 to override loudly)"
+    fi
+  else
+    RESULTS+=("  note go not on PATH — oracle pin unverified here (differential runs verify it themselves)")
+  fi
+else
+  bad "baselines/go-oracle-pin missing — the oracle pin is unverifiable"
+fi
+
 # 1. Escape-hatch preflight (cheap, no build). The authoritative axiom check is
 #    the in-build Audit gate (step 3); this catches obvious holes at edit time.
 step "escape-hatch preflight (sorry / admit / native_decide / axiom in proof-facing code)"
@@ -179,10 +204,18 @@ step "escape-hatch preflight (sorry / admit / native_decide / axiom in proof-fac
 # sorries ARE the artifact. It is outside the audited import closure (see
 # the standalone allowlist below) and Comparator re-elaborates it itself;
 # nothing else in proofs/ may carry a sorry.
+# Both scan roots must exist — an absent dir made the scan vacuously
+# green (launch audit D6-F2, probed).
+[ -d GoLean ] && [ -d proofs ] || bad "escape-hatch preflight: GoLean/ or proofs/ missing — scan would be vacuous"
+# Complete inline block comments are STRIPPED (like `--` comments)
+# before matching, so `sorry /- TODO -/` is caught; only a line with
+# an UNTERMINATED `/-` is still excluded (the token may sit inside a
+# multiline comment). Launch audit D6-F2 closed the `/-` sibling of
+# the earlier `--` tamper hole.
 hatch="$(find GoLean proofs -name '*.lean' -not -path '*/.lake/*' \
          -not -path 'proofs/Challenge.lean' -print0 2>/dev/null \
          | xargs -0 grep -nE 'sorry|admit|native_decide|ofReduceBool|^[[:space:]]*axiom ' 2>/dev/null \
-         | sed 's/--.*$//' \
+         | sed -E 's/--.*$//; s@/-([^-]|-+[^/-])*-+/@@g' \
          | grep -E 'sorry|\badmit\b|native_decide|ofReduceBool|^[^:]*:[0-9]*:[[:space:]]*axiom ' \
          | grep -vE '/-|`(sorry|sorryAx|admit|native_decide|ofReduceBool|axiom)`|no sorry|without .*sorry|axioms:' \
          || true)"
@@ -215,12 +248,24 @@ step "meta-layer escape hatches (unsafe / opaque / @[implemented_by] outside the
 #   `#print axioms` is the classical trio, no `Lean.ofReduceBool`-class axiom
 #   and no meta name).
 META_HATCH_ALLOW='proofs/GoLeanProofs/EntryEq.lean'
-meta_hatch="$(find GoLean proofs -name '*.lean' -not -path '*/.lake/*' \
-              -not -path 'proofs/Challenge.lean' -print0 2>/dev/null \
-              | xargs -0 grep -nE \
-                  '^[[:space:]]*unsafe[[:space:]]+(def|abbrev|instance|structure|inductive|theorem|example)\b|^[[:space:]]*opaque[[:space:]]+[A-Za-z_][A-Za-z0-9_'"'"'.]*[[:space:]]*[({:]|^[[:space:]]*@\[implemented_by' \
-                  2>/dev/null \
-              | grep -v "^${META_HATCH_ALLOW}:" || true)"
+# Widened + comment-stripped (launch audit D6-F4, probed): the old
+# line-anchored patterns missed `@[simp, implemented_by …]`, split-line
+# `unsafe`⏎`def`, and `opaque` with the signature on the next line —
+# and had no downstream cover (#print axioms is blind to
+# implemented_by). strip_lean_comments preserves line numbers, so the
+# scan now runs on code, not prose, and the patterns can be loose.
+meta_hatch=""
+while IFS= read -r -d '' mh_f; do
+  [ "$mh_f" = "$META_HATCH_ALLOW" ] && continue
+  mh_hits="$(strip_lean_comments < "$mh_f" | grep -nE \
+      '(^|[[:space:]])unsafe([[:space:]]+(def|abbrev|instance|structure|inductive|theorem|example)\b|[[:space:]]*$)|(^|[[:space:]])opaque[[:space:]]+[A-Za-z_]|@\[[^]]*implemented_by' \
+      || true)"
+  if [ -n "$mh_hits" ]; then
+    meta_hatch="${meta_hatch}$(printf '%s\n' "$mh_hits" | sed "s|^|${mh_f}:|")"$'\n'
+  fi
+done < <(find GoLean proofs -name '*.lean' -not -path '*/.lake/*' \
+         -not -path 'proofs/Challenge.lean' -print0 2>/dev/null)
+meta_hatch="${meta_hatch%$'\n'}"
 if [ -n "$meta_hatch" ]; then
   echo "$meta_hatch"
   bad "meta-layer escape hatches outside the allowlist — remove them, or allowlist with a reason"
@@ -565,6 +610,27 @@ if [ -z "$desig_names" ]; then
   echo "  could not read designated names from proofs/judge-config.json — failing closed" >&2
   tcb_ok=0
 else
+  # Audit<->judge-config lockstep at GATE cadence (launch audit
+  # D4-F2): previously this three-way comparison lived only in
+  # scripts/comparator-judge (landmark cadence), so a one-sided edit —
+  # notably a DELETION from Audit's designated list, which the
+  # missing-name guard cannot see — silently narrowed the in-build
+  # walker until the next landmark. Extraction mirrors the judge's.
+  ci_audit_full="$(sed -n '/let designated : List Name := \[/,/\]/p' proofs/Audit.lean \
+    | grep -oE '``[A-Za-z0-9_.]+' | sed -E 's/^``//' || true)"
+  if [ -z "$ci_audit_full" ]; then
+    echo "  could not parse the designated list from proofs/Audit.lean — failing closed" >&2
+    tcb_ok=0
+  else
+    ci_audit_names="$(printf '%s\n' "$ci_audit_full" | sed -E 's/.*\.//' | sort -u)"
+    if [ "$ci_audit_names" != "$desig_names" ]; then
+      echo "  designated list (proofs/Audit.lean) vs judge-config.json OUT OF LOCKSTEP:" >&2
+      diff <(printf '%s\n' "$ci_audit_names") <(printf '%s\n' "$desig_names") | sed 's/^/    /' >&2
+      tcb_ok=0
+    fi
+  fi
+fi
+if [ -z "$desig_names" ]; then :; else
   # Transitive closure of Challenge's imports, files resolved under
   # proofs/ (GoLeanProofs.*) and the repo root (GoLean.*).
   ch_closure=""
@@ -595,7 +661,9 @@ else
       *) continue ;;
     esac
     [ -f "$mf" ] || continue
-    hits="$(strip_lean_comments < "$mf" | grep -nE "^[[:space:]]*(public[[:space:]]+)?(protected[[:space:]]+)?theorem[[:space:]]+($name_re)\b" || true)"
+    # theorem|lemma both matched (launch audit D6-F5: a designated
+    # statement re-declared as `lemma` was invisible to this scan).
+    hits="$(strip_lean_comments < "$mf" | grep -nE "^[[:space:]]*(public[[:space:]]+)?(protected[[:space:]]+)?(theorem|lemma)[[:space:]]+($name_re)\b" || true)"
     if [ -n "$hits" ]; then
       echo "  designated theorem DECLARED in Challenge's closure ($mf):" >&2
       echo "$hits" | sed 's/^/    /' >&2
@@ -673,7 +741,12 @@ else
     # abort the whole script — turning a controlled FAIL that still
     # prints a summary into a crash that prints nothing. A note must
     # never be able to break the gate it is reporting into.
-    lm_files="proofs/Challenge.lean proofs/judge-config.json"
+    # proofs/Audit.lean, Solution.lean, the lakefile, the toolchain
+    # pin, and the judge script join the watched set (launch audit
+    # D4-F2/D6-F6): the judge's own trust statement names the lakefile,
+    # and a one-sided edit to Audit's designated list was invisible
+    # here.
+    lm_files="proofs/Challenge.lean proofs/judge-config.json proofs/Audit.lean proofs/Solution.lean proofs/lakefile.toml proofs/lean-toolchain scripts/comparator-judge"
     for m in ${ch_closure:-}; do
       case "$m" in
         GoLeanProofs*) lm_files="$lm_files proofs/$(echo "$m" | tr '.' '/').lean" ;;
@@ -832,6 +905,29 @@ fi
 step "proofs build incl. Audit gate (axiom allowlist + non-vacuity)"
 if ( cd proofs && lake build 2>&1 | tail -4 ); then ok "proofs + Audit gate"; else bad "proofs + Audit gate"; fi
 
+# 3b. The trusted root elaborates (launch audit D4-F5/K-5, D6-F2's
+# Solution corner): Challenge/Solution are NOT default Lake targets,
+# so a GoCore change breaking a Challenge statement's type — or a
+# hatch in Solution.lean, which the preflight alone watches — stayed
+# green until the next landmark. Cheap after the proofs build (oleans
+# hot). Sorry warnings in Challenge are its design; errors are not.
+step "trusted root elaborates (Challenge.lean + Solution.lean)"
+tr_out="$( cd proofs && lake env lean Challenge.lean 2>&1 )"; tr_rc=$?
+tr_nsorry="$(printf '%s\n' "$tr_out" | grep -c "declaration uses 'sorry'" || true)"
+if [ "$tr_rc" -eq 0 ]; then
+  ok "Challenge.lean elaborates ($tr_nsorry sorry warnings — its design)"
+else
+  printf '%s\n' "$tr_out" | tail -10
+  bad "Challenge.lean does not elaborate (exit $tr_rc)"
+fi
+tr_out="$( cd proofs && lake env lean Solution.lean 2>&1 )"; tr_rc=$?
+if [ "$tr_rc" -eq 0 ]; then
+  ok "Solution.lean elaborates"
+else
+  printf '%s\n' "$tr_out" | tail -10
+  bad "Solution.lean does not elaborate (exit $tr_rc)"
+fi
+
 # 3c. PROOF-COST TREND — REPORT-ONLY SPEEDBUMP (examples phase-2 slice 0,
 #     lever 6, 2026-08-14). Prints per-module wall/peak growth over +25% vs
 #     that module's own previous recording (artifacts/proof-costs.tsv, written
@@ -962,7 +1058,9 @@ evout="$(lake exe gocore-eval-tests 2>&1)"; evrc=$?
 evok="$(printf '%s\n' "$evout" | grep -c '^ok:')"
 evbad="$(printf '%s\n' "$evout" | grep -icE '^(not ok|fail)')"
 echo "  ok:$evok  fail:$evbad  exit:$evrc"
-if [ "$evrc" -eq 0 ] && [ "$evbad" -eq 0 ]; then ok "eval tests ($evok ok)"; else bad "eval tests (exit $evrc, $evbad bad)"; fi
+# House non-empty assertion (launch audit D6-F3): a gutted test exe
+# exiting 0 with no output must not print "ok (0 ok)".
+if [ "$evrc" -eq 0 ] && [ "$evbad" -eq 0 ] && [ "$evok" -gt 0 ]; then ok "eval tests ($evok ok)"; else bad "eval tests (exit $evrc, $evbad bad, $evok ok — zero ok is a degenerate run)"; fi
 
 # 5. Differential baseline diff (the ratchet: PASS<->FAIL flips / stage changes).
 # HONEST SCOPE: a partial run (diff-one / focused slice) can only certify the

@@ -237,6 +237,18 @@ elapsed=$(( $(date +%s) - start ))
 if [ $status -eq 0 ]; then
   if [ "$MODE" = fresh ]; then
     echo "comparator-judge: PASS — $n_theorems theorems certified in ${elapsed}s (fresh clone @ ${headrev:0:12})"
+    # Emit the landmark marker MECHANICALLY (launch audit D6-F6): the
+    # line scripts/ci step 1c4 reads was previously hand-transcribed
+    # prose — the one link in the landmark chain that was not
+    # derivation-anchored. Appended only on an authoritative
+    # fresh-mode PASS; the appended line rides the next commit.
+    landmark_doc="docs/2026-08-02_comparator-judge-sprint.md"
+    if [ -f "$landmark_doc" ]; then
+      printf 'LANDMARK-RUN: %s %s %s %s\n' "${headrev:0:12}" "$(date +%F)" "$n_theorems" "$elapsed" >> "$landmark_doc"
+      echo "comparator-judge: landmark marker appended to $landmark_doc (commit it with the run's change)"
+    else
+      echo "comparator-judge: NOTE — $landmark_doc not found; record by hand: LANDMARK-RUN: ${headrev:0:12} $(date +%F) $n_theorems $elapsed" >&2
+    fi
     rm -rf "$CLONE"
   else
     echo "comparator-judge: PASS (IN-PLACE, iteration-grade — not authoritative) — $n_theorems theorems, ${elapsed}s"

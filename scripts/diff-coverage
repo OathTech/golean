@@ -144,6 +144,31 @@ if ! command -v go >/dev/null 2>&1; then
   exit 2
 fi
 
+# ORACLE VERSION PIN (launch audit D10-F4, 2026-08-22): every fidelity
+# claim is against the pinned oracle. Nothing checked this mechanically
+# — CI enforced it only by environment construction, and the failure
+# mode already happened once (the '1.26.x' float let go1.26.6 move the
+# oracle under the nightly, 2026-08-21). The pin lives in ONE tracked
+# file; docs/spec-sources.md is the prose record. Override loudly with
+# GOLEAN_ALLOW_GO_DRIFT=1 (probing a candidate toolchain is legitimate;
+# recording a run against it as the oracle is not).
+GO_PIN_FILE="$ROOT/baselines/go-oracle-pin"
+if [[ -f "$GO_PIN_FILE" ]]; then
+  go_pin="$(head -1 "$GO_PIN_FILE" | tr -d '[:space:]')"
+  go_live="$(go version | awk '{print $3}')"
+  if [[ "$go_live" != "$go_pin" ]]; then
+    if [[ "${GOLEAN_ALLOW_GO_DRIFT:-0}" = 1 ]]; then
+      echo "WARNING: live toolchain $go_live != pinned oracle $go_pin (GOLEAN_ALLOW_GO_DRIFT=1 — this run is NOT against the oracle of record)" >&2
+    else
+      echo "diff-coverage: live toolchain $go_live != pinned oracle $go_pin (baselines/go-oracle-pin); refusing — set GOLEAN_ALLOW_GO_DRIFT=1 to probe a non-oracle toolchain loudly" >&2
+      exit 2
+    fi
+  fi
+else
+  echo "diff-coverage: baselines/go-oracle-pin missing — the oracle pin is unverifiable; refusing" >&2
+  exit 2
+fi
+
 GENERATED_MANIFEST=""
 if [[ -z "$MANIFEST" ]]; then
   GENERATED_MANIFEST="$(mktemp "${TMPDIR:-/tmp}/golean-coverage-manifest.XXXXXX")"

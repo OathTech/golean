@@ -56,6 +56,13 @@ while IFS='|' read -r id st pb cs; do
   if [ "$st" != open ] && [ "$st" != fixed ]; then
     echo "FAIL (0): $id has unrecognized 'Status: $st' (must be open|fixed)"; fail=1; continue
   fi
+  # Same fail-closed rule for the sibling field (launch audit D6-F1,
+  # 2026-08-22): a typo'd or case-variant Pinned-by silently exempted
+  # the entry from checks (1)-(3) — the exact hole the Status guard
+  # above closed on 2026-07-25.
+  if [ "$pb" != differential ] && [ "$pb" != none ]; then
+    echo "FAIL (0): $id has unrecognized 'Pinned-by: $pb' (must be differential|none)"; fail=1; continue
+  fi
   [ "$pb" = differential ] || continue
   if [ "$st" = open ] && [ -z "$cs" ]; then
     echo "FAIL (2): $id is open+differential but lists no '- Cases:'"; fail=1; continue

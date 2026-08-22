@@ -150,6 +150,12 @@ if [[ -n "$SINGLE_DIR" ]]; then
 fi
 
 fail=0
+# House non-empty assertion (launch audit D6-F3): an emptied PINS
+# table must fail loud, not certify "all pins" over zero pins.
+if [[ "${#PINS[@]}" -eq 0 ]]; then
+  echo "check-imported-pins: PINS table is EMPTY — degenerate run" >&2
+  exit 1
+fi
 for pin in "${PINS[@]}"; do
   IFS='|' read -r src_dir term _mod <<< "$pin"
   check_pin "$src_dir" "$term" || fail=1
