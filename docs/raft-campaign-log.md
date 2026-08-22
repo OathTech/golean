@@ -148,6 +148,25 @@ is the §4.4 park-and-report condition, not an emergency.
   its deliverable. Arc-3 unit 2 (election-safety chain) running in
   parallel on its lane.
 
+- **Arc 3, unit 2 — LANDED on `campaign-arc3`** @ 1dbd15a6 (worker
+  report; successor re-verification of unit 1 done and recorded
+  first): **ELECTION SAFETY PROVED** — the chain
+  votes_le_currentTerm → votes_correct → candidates_vote_for_selves
+  → cronies_correct → constructive quorum pigeonhole →
+  `one_leader_per_term_ghost` → **`one_leader_per_term_invariant`**
+  (base-reachable, ghost-free) + `oneLeaderPerTermStatement_holds`
+  (Properties.lean's P1 transfer target discharged natively).
+  ElectionSpecLemmas.lean 730 lines + ElectionSafety.lean 1766 lines;
+  AxCheck 1173 decls in [propext, Quot.sound]; lane gate PASS.
+  Notable [AGENT] call: the sweep fired on Classical.choice (core
+  List.erase lemmas) — fixed CONSTRUCTIVELY (local eraseOne), never
+  by widening the axiom set (GAP-4 records the doctrine question).
+  [AGENT] next: worker continues the lattice (unit 3:
+  cronies_term/term_sanity → candidate_entries toward T3 leader
+  completeness) while the Arc-4 interpreter seam waits on Arc-2's
+  route memo — T1 and T3 progress in parallel, the seam design is
+  mine when the memo lands.
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
