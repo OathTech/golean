@@ -274,3 +274,25 @@ same as the Arc-3 lanes.
   Quot.sound]; normalizeFuelT_conc, alt_sym_window_n,
   alt_sym_projection [propext, Quot.sound]; alt_call_span_sym +
   witness [propext, Classical.choice, Quot.sound].
+
+## A4-U2 slice-1 exit (2026-08-22, tip = this commit)
+
+**CHECKPOINT (recomputed):** A4 lane commits since 03a91c2d: 8 (git
+log — 85acbb0c, 0834aa45, 64c0927d, 21f0cd51, 39f87f88, the
+aggregator append, + 2c396efe coordinator + this one). Unit-end gate
+`GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT:
+PASS, exit 0** (23 ok steps, `artifacts/ci-arc4-u2.log`; no-diff
+notes = the sanctioned hatch, proofs+docs only; the gate ran at the
+full working tree — an aggregator-file commit followed, content
+identical). Slip recorded: 39f87f88's pathspec missed the sibling
+`proofs/GoLeanProofs.lean`; appended in the next commit, tree
+unchanged.
+
+**A4-U2 state:** design note delivered (five classes vs the quit
+catalog, choice-point story §4, address caveat §5, slice ladder §6;
+channel-logic salvage check NEGATIVE, nothing taken); slice 1 (class
+1) DONE with refinement theorems, witness, and the measured
+re-measure. Remaining per §6: slice 2 sync-ops, slice 3 call entry
+(+ the delegation-vs-refactor decision), slice 4 class-5 kit half +
+first choice-crossing composition. Nothing merged; branch-complete
+for this dispatch; merge/audit-ask remain the operator's.
