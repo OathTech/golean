@@ -1155,7 +1155,9 @@ both GAP-7 subtrees consume. Support layer: the entries_match engines
 findAtIndex/findGtIndex/removeAfterIndex lemmas — all constructive
 (GAP-4 discipline). Two new lift_prop consumers this unit
 (`logs_contiguous`, `tai_nw_lifted`; five total on the lane). The
-INVARIANT INDEX above is current (43 rows).
+INVARIANT INDEX above is current (41 data rows, recomputed by
+`grep -c "^| "` minus the header — correcting this entry's first
+draft, which said 43 unrecomputed).
 
 **Honestly open (carried + new):**
 - GAP-1 (primed variants): STILL never triggered — no unit-6 proof
