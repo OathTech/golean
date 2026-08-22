@@ -1032,4 +1032,18 @@ charter.
   `candidate_entries_lowered_rvr`/`_nw_rvr` — upstream's argument
   without its dedup_not_in_cons split (our transition lemma already
   yields the src-consed tally). Build green, sweep 1571.
+- 2026-08-22 Slice 33: the log-matching SUPPORT LAYER — the
+  CommonTheorems.v slices LogMatchingProof.v rides, constructive
+  inductions per GAP-4: entries_match refl/sym, uniqueIndices_elim_eq
+  (:12-22), rachet (:726), findAtIndex intro/None/uniq_equal
+  (:741/:269/:540), removeAfterIndex_le_In (:168),
+  findGtIndex_sufficient/_max (:334/:532), S_maxIndex_not_in (:74),
+  maxIndex_app (:399), maxIndex_removeAfterIndex (:417),
+  contiguous_range_exact_lo (:349), **entries_match_scratch**
+  (:1133, minus upstream's vacuous 0≠0 conjunct, docstring-noted) and
+  **entries_match_append** (:1196) — the two big entries_match engines —
+  and removeIncorrect_new_contiguous (:447). [AGENT] The unit-4 omega
+  gotcha bit ~10 times (goals/hyps through the term/logIndex abbrevs);
+  resolved with explicit Nat.lt/le lemmas throughout, as recorded.
+  Build green, sweep 1600.
 

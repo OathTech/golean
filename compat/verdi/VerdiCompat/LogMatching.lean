@@ -859,6 +859,320 @@ theorem leader_sublog_invariant_invariant :
       exact hn L q t2 lid2 pli2 plt2 es2 ci2 e htyL0 hq hbody2 he
         (hterm.trans hct0.symm)
 
+/-! ## The log-matching support layer (`CommonTheorems.v` slices)
+
+The `entries_match`/contiguity machinery `LogMatchingProof.v` rides.
+Direct constructive inductions, per the lane's axiom-set discipline
+(GAP-4); sources cited per lemma. -/
+
+omit O in
+/-- `CommonTheorems.v:593-598` (`entries_match_refl`). -/
+theorem entries_match_refl (l : List (entry (P := P))) : entries_match l l :=
+  fun _ _ _ _ _ _ _ _ => Iff.rfl
+
+omit O in
+/-- `CommonTheorems.v:600-612` (`entries_match_sym`). -/
+theorem entries_match_sym {xs ys : List (entry (P := P))}
+    (h : entries_match xs ys) : entries_match ys xs := by
+  intro e e' e'' h1 h2 h3 h4 h5
+  exact (h e' e e'' h1.symm h2.symm h4 h3 (h1 ▸ h5)).symm
+
+omit O in
+/-- `CommonTheorems.v:12-22` (`uniqueIndices_elim_eq`). -/
+theorem uniqueIndices_elim_eq {xs : List (entry (P := P))}
+    {x y : entry (P := P)} (hu : uniqueIndices xs) (hx : x ∈ xs)
+    (hy : y ∈ xs) (heq : x.eIndex = y.eIndex) : x = y := by
+  induction xs with
+  | nil => exact nomatch hx
+  | cons a l ih =>
+    obtain ⟨hhead, htail⟩ := List.pairwise_cons.mp hu
+    rcases List.mem_cons.mp hx with rfl | hx' <;>
+      rcases List.mem_cons.mp hy with h | hy'
+    · rw [h]
+    · exact absurd heq (hhead _ (List.mem_map_of_mem hy'))
+    · rw [h] at heq
+      exact absurd heq.symm (hhead _ (List.mem_map_of_mem hx'))
+    · exact ih htail hx' hy'
+
+omit O in
+/-- `CommonTheorems.v:726-739` (`rachet`). -/
+theorem rachet {x x' : entry (P := P)} {xs ys : List (entry (P := P))}
+    (heq : x.eIndex = x'.eIndex) (hx : x ∈ xs) (hx' : x' ∈ ys)
+    (hx'2 : x' ∈ xs) (hu : uniqueIndices xs) : x ∈ ys := by
+  rw [uniqueIndices_elim_eq hu hx hx'2 heq]
+  exact hx'
+
+omit O in
+/-- `CommonTheorems.v:741-757` (`findAtIndex_intro`). -/
+theorem findAtIndex_intro {l : List (entry (P := P))} {i : logIndex}
+    {e : entry (P := P)} (hs : sorted l) (he : e ∈ l) (hi : e.eIndex = i)
+    (hu : uniqueIndices l) : findAtIndex l i = some e := by
+  induction l with
+  | nil => exact nomatch he
+  | cons a as ih =>
+    obtain ⟨ha, hs'⟩ := hs
+    obtain ⟨hhead, hu'⟩ := List.pairwise_cons.mp hu
+    unfold findAtIndex
+    split
+    · rename_i hcond
+      simp only [beq_iff_eq] at hcond
+      rcases List.mem_cons.mp he with rfl | he'
+      · rfl
+      · exact absurd (hcond.trans hi.symm)
+          (hhead _ (List.mem_map_of_mem he'))
+    · rename_i hne
+      simp only [beq_iff_eq] at hne
+      rcases List.mem_cons.mp he with rfl | he'
+      · exact absurd hi hne
+      · split
+        · rename_i hlt
+          simp only [Nat.blt_eq] at hlt
+          have h1 := (ha e he').1
+          rw [hi] at h1
+          exact absurd hlt (Nat.lt_asymm h1)
+        · exact ih hs' he' hu'
+
+omit O in
+/-- `CommonTheorems.v:269-280` (`findAtIndex_None`). -/
+theorem findAtIndex_None {xs : List (entry (P := P))} {i : logIndex}
+    {x : entry (P := P)} (hs : sorted xs) (hfind : findAtIndex xs i = none)
+    (hx : x ∈ xs) : x.eIndex ≠ i := by
+  induction xs with
+  | nil => exact nomatch hx
+  | cons a as ih =>
+    obtain ⟨ha, hs'⟩ := hs
+    unfold findAtIndex at hfind
+    split at hfind
+    · exact nomatch hfind
+    · rename_i hne
+      simp only [beq_iff_eq] at hne
+      split at hfind
+      · rename_i hlt
+        simp only [Nat.blt_eq] at hlt
+        rcases List.mem_cons.mp hx with rfl | hx'
+        · exact hne
+        · exact Nat.ne_of_lt (Nat.lt_trans (ha x hx').1 hlt)
+      · rcases List.mem_cons.mp hx with rfl | hx'
+        · exact hne
+        · exact ih hs' hfind hx'
+
+omit O in
+/-- `CommonTheorems.v:540-551` (`findAtIndex_uniq_equal`). -/
+theorem findAtIndex_uniq_equal {e e' : entry (P := P)}
+    {es : List (entry (P := P))}
+    (hfind : findAtIndex es e.eIndex = some e') (he : e ∈ es)
+    (hu : uniqueIndices es) : e = e' := by
+  obtain ⟨hmem, hidx⟩ := findAtIndex_elim hfind
+  exact uniqueIndices_elim_eq hu he hmem hidx.symm
+
+omit O in
+/-- `CommonTheorems.v:168-178` (`removeAfterIndex_le_In`). -/
+theorem removeAfterIndex_le_In {xs : List (entry (P := P))} {i : logIndex}
+    {x : entry (P := P)} (hle : x.eIndex ≤ i) (hx : x ∈ xs) :
+    x ∈ removeAfterIndex xs i := by
+  induction xs with
+  | nil => exact nomatch hx
+  | cons a as ih =>
+    unfold removeAfterIndex
+    split
+    · exact hx
+    · rename_i hgt
+      simp only [Nat.ble_eq] at hgt
+      rcases List.mem_cons.mp hx with rfl | hx'
+      · exact absurd hle hgt
+      · exact ih hx'
+
+omit O in
+/-- `CommonTheorems.v:334-347` (`findGtIndex_sufficient`). -/
+theorem findGtIndex_sufficient {es : List (entry (P := P))}
+    {e : entry (P := P)} {x : logIndex} (hs : sorted es) (he : e ∈ es)
+    (hgt : e.eIndex > x) : e ∈ findGtIndex es x := by
+  induction es with
+  | nil => exact nomatch he
+  | cons a as ih =>
+    obtain ⟨ha, hs'⟩ := hs
+    unfold findGtIndex
+    split
+    · rcases List.mem_cons.mp he with rfl | he'
+      · exact List.mem_cons_self ..
+      · exact List.mem_cons_of_mem _ (ih hs' he')
+    · rename_i hng
+      simp only [Nat.blt_eq, Nat.not_lt] at hng
+      rcases List.mem_cons.mp he with rfl | he'
+      · exact absurd hgt (Nat.not_lt.mpr hng)
+      · exact absurd hgt
+          (Nat.lt_asymm (Nat.lt_of_lt_of_le (ha e he').1 hng))
+
+omit O in
+/-- `CommonTheorems.v:532-538` (`findGtIndex_max`). -/
+theorem findGtIndex_max (entries : List (entry (P := P))) (x : logIndex) :
+    maxIndex (findGtIndex entries x) ≤ maxIndex entries := by
+  cases entries with
+  | nil => exact Nat.le_refl _
+  | cons a as =>
+    unfold findGtIndex
+    split
+    · exact Nat.le_refl _
+    · exact Nat.zero_le _
+
+omit O in
+/-- `CommonTheorems.v:74-81` (`S_maxIndex_not_in`). -/
+theorem S_maxIndex_not_in {l : List (entry (P := P))} {e : entry (P := P)}
+    (hs : sorted l) (he : e ∈ l) : e.eIndex ≠ maxIndex l + 1 := by
+  exact Nat.ne_of_lt (Nat.lt_succ_of_le (maxIndex_is_max hs he))
+
+omit O in
+/-- `CommonTheorems.v:399-405` (`maxIndex_app`). -/
+theorem maxIndex_app (l l' : List (entry (P := P))) :
+    maxIndex (l ++ l') = maxIndex l ∨
+    (maxIndex (l ++ l') = maxIndex l' ∧ l = []) := by
+  cases l with
+  | nil => exact Or.inr ⟨rfl, rfl⟩
+  | cons a as => exact Or.inl rfl
+
+omit O in
+/-- `CommonTheorems.v:417-434` (`maxIndex_removeAfterIndex`). -/
+theorem maxIndex_removeAfterIndex {l : List (entry (P := P))} {i : logIndex}
+    {e : entry (P := P)} (hs : sorted l) (he : e ∈ l) (hi : e.eIndex = i) :
+    maxIndex (removeAfterIndex l i) = i := by
+  induction l with
+  | nil => exact nomatch he
+  | cons a as ih =>
+    obtain ⟨ha, hs'⟩ := hs
+    unfold removeAfterIndex
+    split
+    · rename_i hle
+      simp only [Nat.ble_eq] at hle
+      show a.eIndex = i
+      rcases List.mem_cons.mp he with rfl | he'
+      · exact hi
+      · have h2 : a.eIndex ≤ e.eIndex := hi.symm ▸ hle
+        exact absurd h2 (Nat.not_le.mpr (ha e he').1)
+    · rename_i hgt
+      simp only [Nat.ble_eq, Nat.not_le] at hgt
+      rcases List.mem_cons.mp he with rfl | he'
+      · exact absurd hi (Nat.ne_of_gt hgt)
+      · exact ih hs' he'
+
+/-- `CommonTheorems.v:349-357` (`contiguous_range_exact_lo`). -/
+def contiguous_range_exact_lo (xs : List (entry (P := P)))
+    (lo : logIndex) : Prop :=
+  (∀ i, lo < i ∧ i ≤ maxIndex xs → ∃ e, entry.eIndex e = i ∧ e ∈ xs) ∧
+  (∀ e, e ∈ xs → lo < entry.eIndex e)
+
+omit O in
+/-- `CommonTheorems.v:1133-1177` (`entries_match_scratch`) — the
+`pli = 0` wholesale-replacement case. (Upstream's hypothesis carries a
+vacuous `0 ≠ 0 → …` conjunct; dropped here.) -/
+theorem entries_match_scratch {es ys : List (entry (P := P))}
+    (hes : sorted es) (huys : uniqueIndices ys)
+    (hmatch : ∀ e1 e2, e1.eIndex = e2.eIndex → e1.eTerm = e2.eTerm →
+      e1 ∈ es → e2 ∈ ys →
+      ∀ e3, e3.eIndex ≤ e1.eIndex → e3 ∈ es → e3 ∈ ys)
+    (hcontig : ∀ i, 0 < i ∧ i ≤ maxIndex es → ∃ e, entry.eIndex e = i ∧ e ∈ es)
+    (hposy : ∀ y ∈ ys, 0 < y.eIndex) :
+    entries_match es ys := by
+  intro e e' e'' h1 h2 h3 h4 h5
+  constructor
+  · intro hin
+    exact hmatch e e' h1 h2 h3 h4 e'' h5 hin
+  · intro hin
+    obtain ⟨x, hxi, hxes⟩ := hcontig e''.eIndex
+      ⟨hposy e'' hin, Nat.le_trans h5 (maxIndex_is_max hes h3)⟩
+    exact rachet hxi.symm hin hxes
+      (hmatch e e' h1 h2 h3 h4 x (Nat.le_trans (Nat.le_of_eq hxi) h5) hxes)
+      huys
+
+omit O in
+/-- `CommonTheorems.v:1196-1257` (`entries_match_append`) — the
+truncate-and-splice case. -/
+theorem entries_match_append {xs ys es : List (entry (P := P))}
+    {ple : entry (P := P)} {pli : logIndex} {plt : term}
+    (hxs : sorted xs) (hys : sorted ys) (hes : sorted es)
+    (hm : entries_match xs ys)
+    (hmatch : ∀ e1 e2, e1.eIndex = e2.eIndex → e1.eTerm = e2.eTerm →
+      e1 ∈ es → e2 ∈ ys →
+      (∀ e3, e3.eIndex ≤ e1.eIndex → e3 ∈ es → e3 ∈ ys) ∧
+      (pli ≠ 0 → ∃ e4, e4.eIndex = pli ∧ e4.eTerm = plt ∧ e4 ∈ ys))
+    (hcontig : ∀ i, pli < i ∧ i ≤ maxIndex es →
+      ∃ e, entry.eIndex e = i ∧ e ∈ es)
+    (hgt : ∀ e ∈ es, pli < e.eIndex)
+    (hfind : findAtIndex xs pli = some ple)
+    (hplt : ple.eTerm = plt) (hpli : pli ≠ 0) :
+    entries_match (es ++ removeAfterIndex xs pli) ys := by
+  obtain ⟨hplemem, hpleidx⟩ := findAtIndex_elim hfind
+  intro e e' e'' h1 h2 h3 h4 h5
+  constructor
+  · intro hin
+    rcases List.mem_append.mp h3 with h3' | h3'
+    · rcases List.mem_append.mp hin with hin' | hin'
+      · -- e, e'' both incoming
+        exact (hmatch e e' h1 h2 h3' h4).1 e'' h5 hin'
+      · -- e incoming, e'' in the kept prefix: go through the pivot ple
+        obtain ⟨e4, he4i, he4t, he4y⟩ := (hmatch e e' h1 h2 h3' h4).2 hpli
+        have he''xs := removeAfterIndex_in hin'
+        have he''le : e''.eIndex ≤ pli := removeAfterIndex_In_le hxs hin'
+        exact (hm ple e4 e'' (hpleidx.trans he4i.symm)
+          (hplt.trans he4t.symm) hplemem he4y
+          (Nat.le_trans he''le (Nat.le_of_eq hpleidx.symm))).mp he''xs
+    · rcases List.mem_append.mp hin with hin' | hin'
+      · -- e in the kept prefix but e'' incoming: index order contradicts
+        exact absurd
+          (Nat.lt_of_lt_of_le (hgt e'' hin')
+            (Nat.le_trans h5 (removeAfterIndex_In_le hxs h3')))
+          (Nat.lt_irrefl pli)
+      · -- both in the kept prefix
+        exact (hm e e' e'' h1 h2 (removeAfterIndex_in h3') h4 h5).mp
+          (removeAfterIndex_in hin')
+  · intro hin
+    rcases List.mem_append.mp h3 with h3' | h3'
+    · obtain ⟨hall, hex⟩ := hmatch e e' h1 h2 h3' h4
+      obtain ⟨e4, he4i, he4t, he4y⟩ := hex hpli
+      by_cases hle : e''.eIndex ≤ pli
+      · refine List.mem_append.mpr (Or.inr (removeAfterIndex_le_In hle ?_))
+        exact (hm ple e4 e'' (hpleidx.trans he4i.symm)
+          (hplt.trans he4t.symm) hplemem he4y
+          (Nat.le_trans hle (Nat.le_of_eq hpleidx.symm))).mpr hin
+      · refine List.mem_append.mpr (Or.inl ?_)
+        obtain ⟨x, hxi, hxes⟩ := hcontig e''.eIndex
+          ⟨Nat.lt_of_not_le hle,
+           Nat.le_trans h5 (maxIndex_is_max hes h3')⟩
+        exact rachet hxi.symm hin hxes
+          (hall x (Nat.le_trans (Nat.le_of_eq hxi) h5) hxes)
+          (sorted_uniqueIndices hys)
+    · refine List.mem_append.mpr (Or.inr ?_)
+      have hele := removeAfterIndex_In_le hxs h3'
+      refine removeAfterIndex_le_In (Nat.le_trans h5 hele) ?_
+      exact (hm e e' e'' h1 h2 (removeAfterIndex_in h3') h4 h5).mpr hin
+
+omit O in
+/-- `CommonTheorems.v:447-490` (`removeIncorrect_new_contiguous`). -/
+theorem removeIncorrect_new_contiguous {new current : List (entry (P := P))}
+    {prev : logIndex} {e : entry (P := P)}
+    (hs : sorted current)
+    (hcur : contiguous_range_exact_lo current 0)
+    (hnew : contiguous_range_exact_lo new prev)
+    (hecur : e ∈ current) (hei : e.eIndex = prev) :
+    contiguous_range_exact_lo (new ++ removeAfterIndex current prev) 0 := by
+  constructor
+  · intro i ⟨hpos, hle⟩
+    by_cases hip : i ≤ prev
+    · obtain ⟨x, hxi, hxc⟩ := hcur.1 i
+        ⟨hpos, Nat.le_trans hip (hei ▸ maxIndex_is_max hs hecur)⟩
+      exact ⟨x, hxi, List.mem_append.mpr
+        (Or.inr (removeAfterIndex_le_In (hxi.symm ▸ hip) hxc))⟩
+    · rcases maxIndex_app new (removeAfterIndex current prev) with hmax |
+        ⟨hmax, hnil⟩
+      · rw [hmax] at hle
+        obtain ⟨x, hxi, hxn⟩ := hnew.1 i ⟨Nat.lt_of_not_le hip, hle⟩
+        exact ⟨x, hxi, List.mem_append.mpr (Or.inl hxn)⟩
+      · rw [hmax, maxIndex_removeAfterIndex hs hecur hei] at hle
+        exact absurd hle hip
+  · intro x hx
+    rcases List.mem_append.mp hx with hx' | hx'
+    · exact Nat.lt_of_le_of_lt (Nat.zero_le _) (hnew.2 x hx')
+    · exact hcur.2 x (removeAfterIndex_in hx')
+
 end LogMatchingCore
 
 end Raft
