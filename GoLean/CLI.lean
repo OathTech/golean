@@ -1478,6 +1478,13 @@ def runDedupObservations (ep : EnumProgram) (cfg : EnumArgs) : IO UInt32 := do
   if ep.initBody?.isSome then
     IO.eprintln "coverage-observations: --engine dedup does not support a $pkginit phase (refused fail-closed; use the DFS engine)"
     return 1
+  -- Refuse, never ignore: nonterm accounting under dedup is an open
+  -- ruling (M-9) — a certificate is silent about divergent branches,
+  -- so accepting the flag here would answer M-9 silently (launch
+  -- audit D3-F-3; previously the flag was dropped without a word).
+  if cfg.allowNonterm.isSome then
+    IO.eprintln "coverage-observations: --engine dedup does not support --allow-nonterm (refused fail-closed pending the M-9 ruling; use the DFS engine)"
+    return 1
   match GoCore.Machine.bindParams [] ep.σ₀ ep.func.args.toList ep.args.toList with
   | .error e =>
       IO.eprintln s!"coverage-observations: subject entry failed: {renderGoError e}"

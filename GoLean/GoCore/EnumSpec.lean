@@ -30,8 +30,16 @@ namespace GoLean.GoCore.Machine
 vocabulary (`enumPoolRun`'s statuses, as data): main's normal terminal
 with the readout values, an unrecovered panic (any goroutine), or the
 race detector's refusal. Deadlock, fuel exhaustion, stuck/unsupported/
-internal errors are NOT observations (the lane fails loud on them;
-`obsOf?` is `none`). -/
+internal errors, AND `GoError.fatal` are NOT observations (the lane
+fails loud on them; `obsOf?` is `none`). The fatal exclusion is a
+CAPABILITY bound, not just a refusal: `Obs` has no fatal constructor,
+so an envelope containing a fatal member (a `go` of a nil func,
+sync-misuse fatals — modeled machine behaviors) is structurally
+un-statable in this vocabulary. Both lanes refuse fatal loudly, so no
+accepted certificate or DFS record can silently omit a fatal member;
+the widening (`Obs.fatal`, Q8 of the W3.2 Q-rows) is graded
+post-launch. (Sentence owed since audit-2 N-3; landed 2026-08-22,
+launch audit W-1/D3-F-1.) -/
 inductive Obs where
   | ok (values : List GoValue)
   | panic (msg : String)

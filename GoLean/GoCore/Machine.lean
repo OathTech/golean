@@ -2686,8 +2686,11 @@ behavior depends on that structural non-consumption). MULTIPLE ready
 clauses are THE L2 SITE (`ChoiceSite.l2Entry` — the census row; design
 D4, live since slice 4):
 
-The spec's step 3 — "If one or more of the communications can
-proceed, a single one that can proceed is chosen via a uniform
+The spec's step 2 (misnumbered "step 3" here until 2026-08-22; the
+pinned spec's list has the uniform-pseudo-random clause at step 2 —
+launch audit D2-F3, matching inventory C6's P2 correction) — "If one
+or more of the communications can proceed, a single one that can
+proceed is chosen via a uniform
 pseudo-random selection" — is deliberately WEAKENED to the
 possibilistic "ANY entry-ready case may commit" (the nondeterminism
 doctrine: no distributional claims; the membership lane is the oracle,

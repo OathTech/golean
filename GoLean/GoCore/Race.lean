@@ -618,8 +618,14 @@ classification structurally aligned with the `go run -race` oracle:
   because the channel is closed ACQUIREs it — go_mem: "The closing of
   a channel is synchronized before a receive that returns a zero value
   because the channel is closed." (A close-woken SENDER's panic gets
-  NO edge — gc's woken `chansend` path performs no `raceacquire`;
-  TSan-aligned, the fail-closed direction.)
+  NO edge — deliberately STRONGER than gc's realized HB: gc's
+  `closechan` DOES `raceacquireg` the parked sender at the
+  "release all writers" loop, exactly as for receivers (the S3 audit
+  correction at `raceWakeEvent`, Multi.lean — the closer installs the
+  edge; the old justification "gc's woken `chansend` performs no
+  `raceacquire`" was true but irrelevant). Moot on refused programs:
+  the modeled chan-object pair refuses at the CLOSE first. Docstring
+  re-synced 2026-08-22, launch audit N-13.)
 * unbuffered rendezvous is the bidirectional `racesync` (both go_mem
   directions at once: send-before-receive AND "A receive from an
   unbuffered channel is synchronized before the completion of the

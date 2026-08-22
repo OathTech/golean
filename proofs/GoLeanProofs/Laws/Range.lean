@@ -88,7 +88,12 @@ private theorem wp_pure_det' {c₀ c₁ : Config}
 
 /-- **The done step at a NIL map** (base `none`): no cell exists, the
 candidate set is empty by computation for EVERY produced set, and the
-frame pops deterministically. -/
+frame pops deterministically.
+
+SCAFFOLD (launch audit D4-F3, 2026-08-22): no discharge witness ships
+yet — walk-registered but with no consumer outside `Laws/` and no
+`Audit.lean` citation. Do not cite as user-facing applicability until
+a witness instantiates it on a concrete program. -/
 @[go_walk_law]
 theorem wp_map_iter_done_nil {kid : Option String} {vv : Option String}
     {keyTy valTy : Ty} {body : Stmt} {produced start : Array GoValue}
@@ -114,7 +119,13 @@ theorem wp_map_iter_done_nil {kid : Option String} {vv : Option String}
 
 /-- **The done step at an OWNED cell** (BUG-005 (L)): doneness is a
 STATE fact now — the caller supplies the candidates-empty computation
-against the owned cell (`hcands`), the machine loads and agrees. -/
+against the owned cell (`hcands`), the machine loads and agrees.
+
+SCAFFOLD (launch audit D4-F3, 2026-08-22): no discharge witness ships
+yet, and `hcands` is a ∀σ-quantified-over-state premise — CLAUDE.md's
+named vacuity smell. Do not cite as user-facing applicability until a
+witness instantiates it on a concrete program and discharges `hcands`
+there. -/
 theorem wp_map_iter_done {kid : Option String} {vv : Option String}
     {keyTy valTy : Ty} {body : Stmt} {ba : Addr} {cell : HeapCell}
     {produced start : Array GoValue} {env k}

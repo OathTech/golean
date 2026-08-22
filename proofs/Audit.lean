@@ -206,7 +206,22 @@ open Lean in
      -- relation (LangC.lean) — proof infrastructure like its siblings;
      -- it lives in a GoLeanProofs module (module-of-origin cannot flag
      -- it), so it joins the name-based forbidden set.
-     `GoLean.Iris.StepEC, `GoLean.Iris.GoPrimStepC]
+     `GoLean.Iris.StepEC, `GoLean.Iris.GoPrimStepC,
+     -- Launch audit D4-F1 (2026-08-22): the SEQUENTIAL Iris Language
+     -- relations were missing from this set — `StepDC`'s own docstring
+     -- says "proof infrastructure, exactly like Step/StepE/StepM/
+     -- StepEC". Whole-component matching means `GoPrimStepC` above
+     -- never covered `GoPrimStep`.
+     `GoLean.Iris.GoPrimStep, `GoLean.Iris.StepDC,
+     `GoLean.Iris.GoPrimStepD,
+     -- Launch audit D4-F4 (2026-08-22): the dedup CHECKER vocabulary.
+     -- EnumSpec's binding constraint ("no statement mentions the
+     -- optimized machinery") was mechanized at import level for the
+     -- engine (`GoLean/EnumDedup.lean`, ci step 1d) but the checker
+     -- vocabulary lives in GoCore and was walkable. Statements route
+     -- through `checkCert_slowObs` into `SlowObs`; the checker names
+     -- themselves are forbidden statement dependencies.
+     `GoLean.GoCore.Machine.checkCert, `GoLean.GoCore.Machine.DedupNode]
   let isRelation : Name → Bool := fun n =>
     forbiddenRoots.any (fun r => r == n || r.isPrefixOf n)
   -- THE THIRD REFUSAL CLASS (WP arc slice 4, 2026-08-18; design
