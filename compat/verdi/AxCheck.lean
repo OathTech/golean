@@ -99,6 +99,18 @@ open VerdiCompat VerdiCompat.Raft
 /-- info: 'VerdiCompat.Raft.one_leaderLog_per_term_invariant' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms VerdiCompat.Raft.one_leaderLog_per_term_invariant
 
+-- The creation ring (campaign Arc 3 unit 5, CreationRing.lean).
+/-- info: 'VerdiCompat.Raft.every_entry_was_created_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.every_entry_was_created_invariant
+/-- info: 'VerdiCompat.Raft.logs_sorted_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.logs_sorted_invariant
+/-- info: 'VerdiCompat.Raft.votesWithLog_sorted_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.votesWithLog_sorted_invariant
+/-- info: 'VerdiCompat.Raft.terms_and_indices_from_one_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.terms_and_indices_from_one_invariant
+/-- info: 'VerdiCompat.Raft.leaderLogs_candidateEntries_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leaderLogs_candidateEntries_invariant
+
 /-! ## Exhaustive sweep (fails the build on any disallowed axiom) -/
 
 open Lean in

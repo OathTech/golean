@@ -391,6 +391,16 @@ from artifacts.
 | leaderLogs_votesWithLog | PROVED | Raft/LeaderLogsVotesWithLogInterface.v:10-18 | LeaderLogs.lean (invariant) |
 | one_leaderLog_per_term (+_log/_host) | PROVED | Raft/OneLeaderLogPerTermInterface.v:8-44 | LeaderLogs.lean (invariant + two corollaries) |
 | leader_completeness | STATEMENT ONLY (defs 1:1; proof = later unit) | Raft/LeaderCompletenessInterface.v:9-42 | LeaderLogs.lean (directly_committed/committed/leader_completeness defs) |
+| every_entry_was_created (+ in_any_log field) | PROVED | Raft/EveryEntryWasCreatedInterface.v:9-37 | CreationRing.lean (both interface fields) |
+| logs_sorted (4 conjuncts) | PROVED (base) | Raft/SortedInterface.v:9-35 | CreationRing.lean (logs_sorted_invariant) |
+| votesWithLog_sorted | PROVED | Raft/VotesWithLogSortedInterface.v:9-12 | CreationRing.lean (invariant) |
+| votesWithLog_term_sanity | PROVED | Raft/VotesWithLogTermSanityInterface.v:8-12 | CreationRing.lean (invariant) |
+| current_term_gt_zero | PROVED (base) | Raft/CurrentTermGtZeroInterface.v:8-11 | CreationRing.lean (invariant) |
+| terms_and_indices_from_one_log (+_nw) | PROVED (base) | Raft/TermsAndIndicesFromOneLogInterface.v:8-16 | CreationRing.lean (both fields) |
+| terms_and_indices_from_one (vwl ∧ ll) | PROVED | Raft/TermsAndIndicesFromOneInterface.v:10-18 | CreationRing.lean (invariant) |
+| leaderLogs_candidateEntries | PROVED | Raft/LeaderLogsCandidateEntriesInterface.v:9-13 | CreationRing.lean (invariant) |
+| allEntries_votesWithLog | GAP-7 (blocked on AllEntriesLog, unit-6 log-matching subtree) | Raft/AllEntriesVotesWithLogInterface.v | — |
+| leaderLogs_preserved | GAP-7 (blocked on LogsLeaderLogs, unit-6 log-matching subtree) | Raft/LeaderLogsPreservedInterface.v | — |
 - 2026-08-22 Slice 13 (1cc83c1d): log/message spec lemmas for the ring
   (findGtIndex_in, removeAfterIndex_in, per-handler log facts,
   doLeader_messages, rvr cronies function-level cases).
@@ -779,4 +789,37 @@ unit report (lane 29+ commits deep).
   case is upstream's sorted_append argument verbatim
   (SortedProof.v:276-309); client_request rides
   no_entries_past_current_term exactly as upstream's tsi. Build green.
+- 2026-08-22 Slice 28: `votesWithLog_sorted` +
+  `votesWithLog_term_sanity` proved TOGETHER (their per-handler elim
+  facts are identical — one derivation, consumed twice, via
+  `votesWithLog_facts_of_update`); the fresh-record cases ride
+  `sorted_host_lifted` (VotesWithLogSortedProof.v:45-55 — second real
+  `lift_prop` consumer, lifting base logs_sorted). New elim lemmas:
+  requestVote/timeout votesWithLog full elims (record = responder's new
+  term + unchanged log).
+- 2026-08-22 Slice 29: `current_term_gt_zero` (BASE — a non-follower's
+  term passed a candidacy's +1; a strictly-grown term is ≥ 1 outright)
+  + `terms_and_indices_from_one_log`/`_nw` (BASE, both fields together;
+  the creation step's entry is at the leader's ≥ 1 term and a fresh
+  ≥ 1 index — `handleClientRequest_log_index` added) +
+  `terms_and_indices_from_one` (ghost vwl ∧ ll; `tai_log_lifted` is the
+  third `lift_prop` consumer; the vwl/ll fresh records are nodes' own
+  bounded logs).
+- 2026-08-22 Slice 30: `leaderLogs_candidateEntries`
+  (LeaderLogsCandidateEntriesInterface.v:9-13 1:1) — every leaderLog
+  entry is a candidate entry. Unit 3's per-handler
+  `*_preserves_candidateEntries` transport lemmas carry the witness
+  through every step (the promotion-ledger payoff: five lemmas, six new
+  consumers); the RVR fresh-snapshot case is
+  `candidate_entries_invariant`'s host part on the winner's unchanged
+  log, exactly LeaderLogsCandidateEntriesProof.v:166-183.
+- 2026-08-22 CHECKPOINT (recomputed at this tip; the unit-4 final entry
+  at slice 25 served as the last full recompute): `git log
+  f64d9b21..HEAD --oneline | wc -l` = 34 commits; capped full
+  `lake build` green with `AxCheck sweep: 1528 declarations ... within
+  [propext, Quot.sound]` (five new curated pins for the unit-5
+  headliners, captured from a fresh probe); grep sorry/native_decide
+  over CreationRing.lean: 0; CreationRing.lean = 2511 lines,
+  LeaderLogs.lean = 3908 (wc). Unit-5 remaining: INDEX rows, gate,
+  final entry + INTEGRATION READINESS note.
 
