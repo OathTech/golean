@@ -673,6 +673,848 @@ theorem candidates_vote_for_selves_invariant :
       exact nomatch hcand
     · exact hP h0
 
+/-! ## cronies_correct (`CroniesCorrectInterface.v` /
+`CroniesCorrectProof.v`) -/
+
+/-- `CroniesCorrectInterface.v:9-14` (`votes_received_cronies`). -/
+def votes_received_cronies (net : RefinedNet) : Prop :=
+  ∀ (h crony : name (P := P)),
+    crony ∈ (net.nwState h).2.votesReceived →
+    ((net.nwState h).2.type = .Leader ∨ (net.nwState h).2.type = .Candidate) →
+    crony ∈ (net.nwState h).1.cronies ((net.nwState h).2.currentTerm)
+
+/-- `CroniesCorrectInterface.v:16-19` (`cronies_votes`). -/
+def cronies_votes (net : RefinedNet) : Prop :=
+  ∀ (t : term) (cand crony : name (P := P)),
+    crony ∈ (net.nwState cand).1.cronies t →
+    (t, cand) ∈ (net.nwState crony).1.votes
+
+/-- `CroniesCorrectInterface.v:21-25` (`votes_nw`). -/
+def votes_nw (net : RefinedNet) : Prop :=
+  ∀ (p : Packet (raft_refined_base_params (P := P)) raft_refined_multi_params)
+    (t : term),
+    p.pBody = .RequestVoteReply t true →
+    p ∈ net.nwPackets →
+    (t, p.pDst) ∈ (net.nwState p.pSrc).1.votes
+
+/-- `CroniesCorrectInterface.v:27-30` (`votes_received_leaders`). -/
+def votes_received_leaders (net : RefinedNet) : Prop :=
+  ∀ h : name (P := P), (net.nwState h).2.type = .Leader →
+    wonElection (dedup (net.nwState h).2.votesReceived) = true
+
+/-- `CroniesCorrectInterface.v:32-33` (`cronies_correct`). -/
+def cronies_correct (net : RefinedNet) : Prop :=
+  votes_received_cronies net ∧ cronies_votes net ∧ votes_nw net ∧
+  votes_received_leaders net
+
+private theorem mem_of_mem_remove_middle {α : Type _} {p' p : α}
+    {xs ys : List α} (h : p' ∈ xs ++ ys) : p' ∈ xs ++ p :: ys := by
+  rcases List.mem_append.mp h with h1 | h1
+  · exact List.mem_append.mpr (Or.inl h1)
+  · exact List.mem_append.mpr (Or.inr (List.mem_cons_of_mem _ h1))
+
+/-- `CroniesCorrectProof.v:686-703` (`cronies_correct_invariant`): the
+ghost `cronies` are honest supporter lists — backed by recorded votes,
+covering `votesReceived`, and full for every leader. -/
+theorem cronies_correct_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      cronies_correct net := by
+  refine refined_raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · -- init
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · intro h crony hcr _
+      exact nomatch hcr
+    · intro t cand crony hcr
+      exact nomatch hcr
+    · intro p t _ hp
+      exact nomatch hp
+    · intro h hty
+      exact nomatch hty
+  · -- client_request: state and ghost cronies untouched; no packets sent
+    intro h net st' ps' gd out d l client id c hcr0 hgd hP _hreach hst hps
+    obtain ⟨hvrc, hcv, hnw, hvrl⟩ := hP
+    obtain ⟨hty, hct, -, hvr, hl⟩ :=
+      handleClientRequest_spec h (net.nwState h).2 client id c hcr0
+    have hgv : gd.votes = (net.nwState h).1.votes := by
+      rw [hgd]
+      exact (update_elections_data_client_request_ghost h (net.nwState h) client id c).1
+    have hgc : gd.cronies = (net.nwState h).1.cronies := by
+      rw [hgd]
+      exact (update_elections_data_client_request_ghost h (net.nwState h) client id c).2.2.1
+    have hmono : ∀ (h0 : name (P := P)) (t : term) (n : name (P := P)),
+        (t, n) ∈ (net.nwState h0).1.votes →
+        (t, n) ∈ (update net.nwState h (gd, d) h0).1.votes := by
+      intro h0 t n hin
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        show (t, n) ∈ gd.votes
+        rw [hgv]
+        exact hin
+      · exact hin
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · intro h0 crony
+      show crony ∈ (st' h0).2.votesReceived →
+        ((st' h0).2.type = .Leader ∨ (st' h0).2.type = .Candidate) →
+        crony ∈ (st' h0).1.cronies ((st' h0).2.currentTerm)
+      rw [hst h0]
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        intro hc hty'
+        show crony ∈ gd.cronies d.currentTerm
+        rw [hgc, hct]
+        refine hvrc h crony ?_ ?_
+        · rw [← hvr]; exact hc
+        · rw [← hty]; exact hty'
+      · exact hvrc h0 crony
+    · intro t cand crony
+      show crony ∈ (st' cand).1.cronies t → (t, cand) ∈ (st' crony).1.votes
+      rw [hst cand, hst crony]
+      intro hcin
+      refine hmono crony t cand (hcv t cand crony ?_)
+      revert hcin
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        intro hcin
+        rw [← hgc]
+        exact hcin
+      · exact fun x => x
+    · intro p' t hbody' hp'
+      show (t, p'.pDst) ∈ (st' p'.pSrc).1.votes
+      rw [hst p'.pSrc]
+      rcases hps p' hp' with hold | hnew
+      · exact hmono p'.pSrc t p'.pDst (hnw p' t hbody' hold)
+      · rw [hl] at hnew
+        exact nomatch hnew
+    · intro h0
+      show (st' h0).2.type = .Leader → wonElection (dedup (st' h0).2.votesReceived) = true
+      rw [hst h0]
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        intro hld
+        rw [hvr]
+        exact hvrl h (hty.symm.trans hld)
+      · exact hvrl h0
+  · -- timeout: a fresh candidacy snapshots itself; only RequestVote sent
+    intro net h st' ps' gd out d l hto hgd hP _hreach hst hps
+    subst hgd
+    obtain ⟨hvrc, hcv, hnw, hvrl⟩ := hP
+    obtain ⟨-, hcases, hmsg⟩ := handleTimeout_spec h (net.nwState h).2 hto
+    have hmono : ∀ (h0 : name (P := P)) (t : term) (n : name (P := P)),
+        (t, n) ∈ (net.nwState h0).1.votes →
+        (t, n) ∈ (update net.nwState h
+          (update_elections_data_timeout h (net.nwState h), d) h0).1.votes := by
+      intro h0 t n hin
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        exact update_elections_data_timeout_votes_old h (net.nwState h) hin
+      · exact hin
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · intro h0 crony
+      show crony ∈ (st' h0).2.votesReceived →
+        ((st' h0).2.type = .Leader ∨ (st' h0).2.type = .Candidate) →
+        crony ∈ (st' h0).1.cronies ((st' h0).2.currentTerm)
+      rw [hst h0]
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        intro hc hty'
+        by_cases hL : (net.nwState h).2.type = .Leader
+        · show crony ∈ (update_elections_data_timeout h (net.nwState h)).cronies
+            d.currentTerm
+          rw [update_elections_data_timeout_cronies_leader h (net.nwState h) hL]
+          rcases hcases with ⟨hct, hty, -, hvr⟩ | ⟨-, -, -, -, hnl⟩
+          · rw [hct]
+            refine hvrc h crony ?_ ?_
+            · rw [← hvr]; exact hc
+            · rw [← hty]; exact hty'
+          · exact absurd hL hnl
+        · obtain ⟨-, -, -, hvr⟩ := handleTimeout_not_leader h (net.nwState h).2 hto hL
+          show crony ∈ (update_elections_data_timeout h (net.nwState h)).cronies
+            d.currentTerm
+          rw [update_elections_data_timeout_cronies_intro hto hL]
+          exact hc
+      · exact hvrc h0 crony
+    · intro t cand crony
+      show crony ∈ (st' cand).1.cronies t → (t, cand) ∈ (st' crony).1.votes
+      rw [hst cand, hst crony]
+      intro hcin
+      have hcin' : crony ∈ (update net.nwState h
+          (update_elections_data_timeout h (net.nwState h), d) cand).1.cronies t :=
+        hcin
+      revert hcin'
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        intro hcin'
+        rcases update_elections_data_timeout_cronies_elim hto hcin'
+          with hold | ⟨heqt, hcr, hnl⟩
+        · exact hmono crony t h (hcv t h crony hold)
+        · obtain ⟨-, -, hvf, hvr⟩ := handleTimeout_not_leader h (net.nwState h).2 hto hnl
+          rw [hvr] at hcr
+          have hch : crony = h := List.mem_singleton.mp hcr
+          subst hch
+          show (t, crony) ∈ (update net.nwState crony
+            (update_elections_data_timeout crony (net.nwState crony), d) crony).1.votes
+          rw [update_same]
+          exact heqt ▸ update_elections_data_timeout_votes_intro hto
+            (fun tt hh _ hvv =>
+              (votes_correct_invariant net (by assumption)).2.2 crony tt hh
+                (by simp_all) hvv) hvf
+      · intro hcin'
+        exact hmono crony t cand (hcv t cand crony hcin')
+    · intro p' t hbody' hp'
+      show (t, p'.pDst) ∈ (st' p'.pSrc).1.votes
+      rw [hst p'.pSrc]
+      rcases hps p' hp' with hold | hnew
+      · exact hmono p'.pSrc t p'.pDst (hnw p' t hbody' hold)
+      · exfalso
+        rcases List.mem_map.mp hnew with ⟨q, hq, rfl⟩
+        obtain ⟨t', cid, lli, llt, heqm⟩ := hmsg q hq
+        rw [show (⟨h, q.1, q.2⟩ :
+            Packet (raft_refined_base_params (P := P)) raft_refined_multi_params).pBody
+          = q.2 from rfl, heqm] at hbody'
+        exact nomatch hbody'
+    · intro h0
+      show (st' h0).2.type = .Leader → wonElection (dedup (st' h0).2.votesReceived) = true
+      rw [hst h0]
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        intro hld
+        rcases hcases with ⟨hct, hty, -, hvr⟩ | ⟨-, hty, -, -, -⟩
+        · rw [hvr]
+          exact hvrl h (hty.symm.trans hld)
+        · rw [hty] at hld
+          exact nomatch hld
+      · exact hvrl h0
+  · -- append_entries: candidate/leader ⇒ rejected ⇒ untouched
+    intro xs p ys net st' ps' gd d m t0 n0 pli plt es ci hae hgd _hbody hP _hreach
+      hpkts hst hps
+    obtain ⟨hvrc, hcv, hnw, hvrl⟩ := hP
+    have hgv : gd.votes = (net.nwState p.pDst).1.votes := by
+      rw [hgd]
+      exact (update_elections_data_appendEntries_ghost p.pDst (net.nwState p.pDst)
+        t0 n0 pli plt es ci).1
+    have hgc : gd.cronies = (net.nwState p.pDst).1.cronies := by
+      rw [hgd]
+      exact (update_elections_data_appendEntries_ghost p.pDst (net.nwState p.pDst)
+        t0 n0 pli plt es ci).2.2.1
+    obtain ⟨-, -, -, t', es', r', hm⟩ :=
+      handleAppendEntries_spec p.pDst (net.nwState p.pDst).2 t0 n0 pli plt es ci hae
+    have hmono : ∀ (h0 : name (P := P)) (t : term) (n : name (P := P)),
+        (t, n) ∈ (net.nwState h0).1.votes →
+        (t, n) ∈ (update net.nwState p.pDst (gd, d) h0).1.votes := by
+      intro h0 t n hin
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        show (t, n) ∈ gd.votes
+        rw [hgv]
+        exact hin
+      · exact hin
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · intro h0 crony
+      show crony ∈ (st' h0).2.votesReceived →
+        ((st' h0).2.type = .Leader ∨ (st' h0).2.type = .Candidate) →
+        crony ∈ (st' h0).1.cronies ((st' h0).2.currentTerm)
+      rw [hst h0]
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        intro hc hty'
+        have hrej := handleAppendEntries_reject_of_not_follower p.pDst
+          (net.nwState p.pDst).2 t0 n0 pli plt es ci hae
+          (by rcases hty' with hh | hh <;> (rw [hh]; exact fun he => nomatch he))
+        rw [hrej] at hc hty' ⊢
+        show crony ∈ gd.cronies (net.nwState p.pDst).2.currentTerm
+        rw [hgc]
+        exact hvrc p.pDst crony hc hty'
+      · exact hvrc h0 crony
+    · intro t cand crony
+      show crony ∈ (st' cand).1.cronies t → (t, cand) ∈ (st' crony).1.votes
+      rw [hst cand, hst crony]
+      intro hcin
+      refine hmono crony t cand (hcv t cand crony ?_)
+      revert hcin
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        intro hcin
+        rw [← hgc]
+        exact hcin
+      · exact fun x => x
+    · intro p' t hbody' hp'
+      show (t, p'.pDst) ∈ (st' p'.pSrc).1.votes
+      rw [hst p'.pSrc]
+      rcases hps p' hp' with hold | hnew
+      · exact hmono p'.pSrc t p'.pDst
+          (hnw p' t hbody' (hpkts ▸ mem_of_mem_remove_middle hold))
+      · exfalso
+        subst hnew
+        rw [show (⟨p.pDst, p.pSrc, m⟩ :
+            Packet (raft_refined_base_params (P := P)) raft_refined_multi_params).pBody
+          = m from rfl, hm] at hbody'
+        exact nomatch hbody'
+    · intro h0
+      show (st' h0).2.type = .Leader → wonElection (dedup (st' h0).2.votesReceived) = true
+      rw [hst h0]
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        intro hld
+        have hrej := handleAppendEntries_reject_of_not_follower p.pDst
+          (net.nwState p.pDst).2 t0 n0 pli plt es ci hae
+          (by rw [hld]; exact fun he => nomatch he)
+        rw [hrej] at hld ⊢
+        exact hvrl p.pDst hld
+      · exact hvrl h0
+  · -- append_entries_reply: ghost untouched, no packets sent
+    intro xs p ys net st' ps' gd d m t0 es res haer hgd _hbody hP _hreach hpkts
+      hst hps
+    subst hgd
+    obtain ⟨hvrc, hcv, hnw, hvrl⟩ := hP
+    obtain ⟨hvr, hcases, hl⟩ :=
+      handleAppendEntriesReply_spec p.pDst (net.nwState p.pDst).2 p.pSrc t0 es res haer
+    have hmono : ∀ (h0 : name (P := P)) (t : term) (n : name (P := P)),
+        (t, n) ∈ (net.nwState h0).1.votes →
+        (t, n) ∈ (update net.nwState p.pDst ((net.nwState p.pDst).1, d) h0).1.votes := by
+      intro h0 t n hin
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        exact hin
+      · exact hin
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · intro h0 crony
+      show crony ∈ (st' h0).2.votesReceived →
+        ((st' h0).2.type = .Leader ∨ (st' h0).2.type = .Candidate) →
+        crony ∈ (st' h0).1.cronies ((st' h0).2.currentTerm)
+      rw [hst h0]
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        intro hc hty'
+        rcases hcases with ⟨hct, -, hty⟩ | ⟨-, -, hty⟩
+        · show crony ∈ (net.nwState p.pDst).1.cronies d.currentTerm
+          rw [hct]
+          refine hvrc p.pDst crony ?_ ?_
+          · rw [← hvr]; exact hc
+          · rw [← hty]; exact hty'
+        · rcases hty' with hh | hh <;> (rw [hty] at hh; exact nomatch hh)
+      · exact hvrc h0 crony
+    · intro t cand crony
+      show crony ∈ (st' cand).1.cronies t → (t, cand) ∈ (st' crony).1.votes
+      rw [hst cand, hst crony]
+      intro hcin
+      refine hmono crony t cand (hcv t cand crony ?_)
+      revert hcin
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        exact fun x => x
+      · exact fun x => x
+    · intro p' t hbody' hp'
+      show (t, p'.pDst) ∈ (st' p'.pSrc).1.votes
+      rw [hst p'.pSrc]
+      rcases hps p' hp' with hold | hnew
+      · exact hmono p'.pSrc t p'.pDst
+          (hnw p' t hbody' (hpkts ▸ mem_of_mem_remove_middle hold))
+      · rw [hl] at hnew
+        exact nomatch hnew
+    · intro h0
+      show (st' h0).2.type = .Leader → wonElection (dedup (st' h0).2.votesReceived) = true
+      rw [hst h0]
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        intro hld
+        rcases hcases with ⟨-, -, hty⟩ | ⟨-, -, hty⟩
+        · rw [hvr]
+          exact hvrl p.pDst (hty.symm.trans hld)
+        · rw [hty] at hld
+          exact nomatch hld
+      · exact hvrl h0
+  · -- request_vote: the vote-granting reply is backed by the fresh ghost record
+    intro xs p ys net st' ps' gd d m t0 cid lli llt hrv hgd _hbody hP hreach
+      hpkts hst hps
+    subst hgd
+    obtain ⟨hvrc, hcv, hnw, hvrl⟩ := hP
+    obtain ⟨hvr, hle, htycase, hvfcase⟩ :=
+      handleRequestVote_spec p.pDst (net.nwState p.pDst).2 t0 p.pSrc lli llt hrv
+    obtain ⟨hgc, -, -⟩ := update_elections_data_requestVote_cronies p.pDst p.pSrc
+      t0 p.pSrc lli llt (net.nwState p.pDst)
+    have hmono : ∀ (h0 : name (P := P)) (t : term) (n : name (P := P)),
+        (t, n) ∈ (net.nwState h0).1.votes →
+        (t, n) ∈ (update net.nwState p.pDst
+          (update_elections_data_requestVote p.pDst p.pSrc t0 p.pSrc lli llt
+            (net.nwState p.pDst), d) h0).1.votes := by
+      intro h0 t n hin
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        exact update_elections_data_requestVote_votes_old p.pDst p.pSrc t0 p.pSrc
+          lli llt (net.nwState p.pDst) hin
+      · exact hin
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · intro h0 crony
+      show crony ∈ (st' h0).2.votesReceived →
+        ((st' h0).2.type = .Leader ∨ (st' h0).2.type = .Candidate) →
+        crony ∈ (st' h0).1.cronies ((st' h0).2.currentTerm)
+      rw [hst h0]
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        intro hc hty'
+        rcases htycase with ⟨hct, hty⟩ | hty
+        · show crony ∈ (update_elections_data_requestVote p.pDst p.pSrc t0 p.pSrc
+            lli llt (net.nwState p.pDst)).cronies d.currentTerm
+          rw [hgc, hct]
+          refine hvrc p.pDst crony ?_ ?_
+          · rw [← hvr]; exact hc
+          · rw [← hty]; exact hty'
+        · rcases hty' with hh | hh <;> (rw [hty] at hh; exact nomatch hh)
+      · exact hvrc h0 crony
+    · intro t cand crony
+      show crony ∈ (st' cand).1.cronies t → (t, cand) ∈ (st' crony).1.votes
+      rw [hst cand, hst crony]
+      intro hcin
+      refine hmono crony t cand (hcv t cand crony ?_)
+      revert hcin
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        intro hcin
+        rw [← hgc]
+        exact hcin
+      · exact fun x => x
+    · intro p' t hbody' hp'
+      show (t, p'.pDst) ∈ (st' p'.pSrc).1.votes
+      rw [hst p'.pSrc]
+      rcases hps p' hp' with hold | hnew
+      · exact hmono p'.pSrc t p'.pDst
+          (hnw p' t hbody' (hpkts ▸ mem_of_mem_remove_middle hold))
+      · subst hnew
+        replace hbody' : m = msg.RequestVoteReply (P := P) t true := hbody'
+        subst hbody'
+        obtain ⟨hctt, hvft⟩ := handleRequestVote_reply_true p.pDst
+          (net.nwState p.pDst).2 t0 p.pSrc lli llt hrv
+        show (t, p.pSrc) ∈ (update net.nwState p.pDst
+          (update_elections_data_requestVote p.pDst p.pSrc t0 p.pSrc lli llt
+            (net.nwState p.pDst), d) p.pDst).1.votes
+        rw [update_same]
+        show (t, p.pSrc) ∈ (update_elections_data_requestVote p.pDst p.pSrc t0
+          p.pSrc lli llt (net.nwState p.pDst)).votes
+        rcases Nat.lt_or_ge (net.nwState p.pDst).2.currentTerm d.currentTerm
+          with hlt | hge
+        · exact hctt ▸ update_elections_data_requestVote_votes_intro
+            (src := p.pSrc) hrv hvft (Or.inl hlt)
+        · have heq2 : d.currentTerm = (net.nwState p.pDst).2.currentTerm :=
+            Nat.le_antisymm hge hle
+          rcases hvfcase heq2 with hpres | ⟨hnone, -⟩
+          · have hold : ((net.nwState p.pDst).2.currentTerm, p.pSrc) ∈
+                (net.nwState p.pDst).1.votes :=
+              (votes_correct_invariant net hreach).2.2 p.pDst _ p.pSrc rfl
+                (hpres.symm.trans hvft)
+            have := update_elections_data_requestVote_votes_old p.pDst p.pSrc t0
+              p.pSrc lli llt (net.nwState p.pDst) hold
+            rw [show t = (net.nwState p.pDst).2.currentTerm from
+              (hctt.symm.trans heq2)] at *
+            exact this
+          · exact hctt ▸ update_elections_data_requestVote_votes_intro
+              (src := p.pSrc) hrv hvft (Or.inr hnone)
+    · intro h0
+      show (st' h0).2.type = .Leader → wonElection (dedup (st' h0).2.votesReceived) = true
+      rw [hst h0]
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        intro hld
+        rcases htycase with ⟨-, hty⟩ | hty
+        · rw [hvr]
+          exact hvrl p.pDst (hty.symm.trans hld)
+        · rw [hty] at hld
+          exact nomatch hld
+      · exact hvrl h0
+  · -- request_vote_reply: the tally is backed by old votes and the consumed reply
+    intro xs p ys net st' ps' gd d t0 v hrvr hgd _hbody hP hreach hpkts hst hps
+    subst hgd
+    subst hrvr
+    obtain ⟨hvrc, hcv, hnw, hvrl⟩ := hP
+    obtain ⟨hcases, hcrony, htycand, htylead⟩ :=
+      handleRequestVoteReply_spec p.pDst (net.nwState p.pDst).2 p.pSrc t0 v rfl
+    obtain ⟨hgv, -, -⟩ := update_elections_data_requestVoteReply_votes p.pDst p.pSrc
+      t0 v (net.nwState p.pDst)
+    have hmono : ∀ (h0 : name (P := P)) (t : term) (n : name (P := P)),
+        (t, n) ∈ (net.nwState h0).1.votes →
+        (t, n) ∈ (update net.nwState p.pDst
+          (update_elections_data_requestVoteReply p.pDst p.pSrc t0 v
+            (net.nwState p.pDst),
+           handleRequestVoteReply p.pDst (net.nwState p.pDst).2 p.pSrc t0 v)
+          h0).1.votes := by
+      intro h0 t n hin
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        show (t, n) ∈ (update_elections_data_requestVoteReply p.pDst p.pSrc t0 v
+          (net.nwState p.pDst)).votes
+        rw [hgv]
+        exact hin
+      · exact hin
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · intro h0 crony
+      show crony ∈ (st' h0).2.votesReceived →
+        ((st' h0).2.type = .Leader ∨ (st' h0).2.type = .Candidate) →
+        crony ∈ (st' h0).1.cronies ((st' h0).2.currentTerm)
+      rw [hst h0]
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        intro hc hty'
+        show crony ∈ (update_elections_data_requestVoteReply p.pDst p.pSrc t0 v
+          (net.nwState p.pDst)).cronies
+          (handleRequestVoteReply p.pDst (net.nwState p.pDst).2 p.pSrc t0 v).currentTerm
+        rw [update_elections_data_requestVoteReply_cronies_intro
+          (by rcases hty' with hh | hh <;> (rw [hh]; exact fun he => nomatch he))]
+        exact hc
+      · exact hvrc h0 crony
+    · intro t cand crony
+      show crony ∈ (st' cand).1.cronies t → (t, cand) ∈ (st' crony).1.votes
+      rw [hst cand, hst crony]
+      intro hcin
+      have hcin' : crony ∈ (update net.nwState p.pDst
+          (update_elections_data_requestVoteReply p.pDst p.pSrc t0 v
+            (net.nwState p.pDst),
+           handleRequestVoteReply p.pDst (net.nwState p.pDst).2 p.pSrc t0 v)
+          cand).1.cronies t := hcin
+      revert hcin'
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        intro hcin'
+        rcases update_elections_data_requestVoteReply_cronies_elim hcin'
+          with hold | ⟨heqt, hcr, htynf⟩
+        · exact hmono crony t p.pDst (hcv t p.pDst crony hold)
+        · -- the tally: crony is the fresh voter or an old supporter
+          rcases hcrony crony hcr with ⟨rfl, hv, hct⟩ | holdvr
+          · -- fresh voter: the consumed RequestVoteReply packet backs it
+            refine hmono p.pSrc t p.pDst ?_
+            rw [heqt, hct]
+            refine hnw p t0 ?_ ?_
+            · rw [_hbody, hv]
+            · rw [hpkts]
+              exact List.mem_append.mpr (Or.inr (List.mem_cons_self ..))
+          · -- old supporter: the node was already campaigning at this term
+            have htyold : (net.nwState p.pDst).2.type = .Leader ∨
+                (net.nwState p.pDst).2.type = .Candidate := by
+              rcases hcase : (handleRequestVoteReply p.pDst (net.nwState p.pDst).2
+                  p.pSrc t0 v).type with h1 | h1 | h1
+              · exact absurd hcase htynf
+              · exact Or.inr (htycand hcase).1
+              · rcases htylead hcase with heqst | ⟨hcand, -, -⟩
+                · rw [← heqst, hcase]
+                  exact Or.inl rfl
+                · exact Or.inr hcand
+            have hcteq : (handleRequestVoteReply p.pDst (net.nwState p.pDst).2
+                p.pSrc t0 v).currentTerm = (net.nwState p.pDst).2.currentTerm := by
+              rcases hcase : (handleRequestVoteReply p.pDst (net.nwState p.pDst).2
+                  p.pSrc t0 v).type with h1 | h1 | h1
+              · exact absurd hcase htynf
+              · exact (htycand hcase).2
+              · rcases htylead hcase with heqst | ⟨-, -, hct⟩
+                · rw [heqst]
+                · exact hct
+            refine hmono crony t p.pDst
+              (hcv t p.pDst crony ?_)
+            rw [heqt, hcteq]
+            exact hvrc p.pDst crony holdvr htyold
+      · intro hcin'
+        exact hmono crony t cand (hcv t cand crony hcin')
+    · intro p' t hbody' hp'
+      show (t, p'.pDst) ∈ (st' p'.pSrc).1.votes
+      rw [hst p'.pSrc]
+      exact hmono p'.pSrc t p'.pDst
+        (hnw p' t hbody' (hpkts ▸ mem_of_mem_remove_middle (hps p' hp')))
+    · intro h0
+      show (st' h0).2.type = .Leader → wonElection (dedup (st' h0).2.votesReceived) = true
+      rw [hst h0]
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        intro hld
+        rcases htylead hld with heqst | ⟨-, hwon, -⟩
+        · rw [heqst]
+          exact hvrl p.pDst (heqst ▸ hld)
+        · exact hwon
+      · exact hvrl h0
+  · -- do_leader: state facts preserved; only AppendEntries sent
+    intro net st' ps' gd d h os d' ms hdl hP _hreach hstate hst hps
+    obtain ⟨hvrc, hcv, hnw, hvrl⟩ := hP
+    obtain ⟨hct, -, hty, hvr, -, hmsg⟩ := doLeader_spec d h hdl
+    have hmono : ∀ (h0 : name (P := P)) (t : term) (n : name (P := P)),
+        (t, n) ∈ (net.nwState h0).1.votes →
+        (t, n) ∈ (update net.nwState h (gd, d') h0).1.votes := by
+      intro h0 t n hin
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        show (t, n) ∈ gd.votes
+        have : (net.nwState h).1 = gd := by rw [hstate]
+        rw [← this]
+        exact hin
+      · exact hin
+    have hgnode : (net.nwState h).1 = gd := by rw [hstate]
+    have hdnode : (net.nwState h).2 = d := by rw [hstate]
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · intro h0 crony
+      show crony ∈ (st' h0).2.votesReceived →
+        ((st' h0).2.type = .Leader ∨ (st' h0).2.type = .Candidate) →
+        crony ∈ (st' h0).1.cronies ((st' h0).2.currentTerm)
+      rw [hst h0]
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        intro hc hty'
+        show crony ∈ gd.cronies d'.currentTerm
+        rw [← hgnode, hct, ← hdnode]
+        refine hvrc h crony ?_ ?_
+        · rw [hdnode, ← hvr]; exact hc
+        · rw [hdnode, ← hty]; exact hty'
+      · exact hvrc h0 crony
+    · intro t cand crony
+      show crony ∈ (st' cand).1.cronies t → (t, cand) ∈ (st' crony).1.votes
+      rw [hst cand, hst crony]
+      intro hcin
+      refine hmono crony t cand (hcv t cand crony ?_)
+      revert hcin
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        intro hcin
+        rw [hgnode]
+        exact hcin
+      · exact fun x => x
+    · intro p' t hbody' hp'
+      show (t, p'.pDst) ∈ (st' p'.pSrc).1.votes
+      rw [hst p'.pSrc]
+      rcases hps p' hp' with hold | hnew
+      · exact hmono p'.pSrc t p'.pDst (hnw p' t hbody' hold)
+      · exfalso
+        rcases List.mem_map.mp hnew with ⟨q, hq, rfl⟩
+        obtain ⟨t', lid, pli, plt, es, ci, heqm⟩ := hmsg q hq
+        rw [show (⟨h, q.1, q.2⟩ :
+            Packet (raft_refined_base_params (P := P)) raft_refined_multi_params).pBody
+          = q.2 from rfl, heqm] at hbody'
+        exact nomatch hbody'
+    · intro h0
+      show (st' h0).2.type = .Leader → wonElection (dedup (st' h0).2.votesReceived) = true
+      rw [hst h0]
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        intro hld
+        rw [hvr, ← hdnode]
+        exact hvrl h (hdnode.symm ▸ (hty.symm.trans hld))
+      · exact hvrl h0
+  · -- do_generic_server: state facts preserved; nothing sent
+    intro net st' ps' gd d os d' ms h hgs hP _hreach hstate hst hps
+    obtain ⟨hvrc, hcv, hnw, hvrl⟩ := hP
+    obtain ⟨-, hty, hct, hvr, -, hms⟩ := doGenericServer_spec h d hgs
+    have hgnode : (net.nwState h).1 = gd := by rw [hstate]
+    have hdnode : (net.nwState h).2 = d := by rw [hstate]
+    have hmono : ∀ (h0 : name (P := P)) (t : term) (n : name (P := P)),
+        (t, n) ∈ (net.nwState h0).1.votes →
+        (t, n) ∈ (update net.nwState h (gd, d') h0).1.votes := by
+      intro h0 t n hin
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        show (t, n) ∈ gd.votes
+        rw [← hgnode]
+        exact hin
+      · exact hin
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · intro h0 crony
+      show crony ∈ (st' h0).2.votesReceived →
+        ((st' h0).2.type = .Leader ∨ (st' h0).2.type = .Candidate) →
+        crony ∈ (st' h0).1.cronies ((st' h0).2.currentTerm)
+      rw [hst h0]
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        intro hc hty'
+        show crony ∈ gd.cronies d'.currentTerm
+        rw [← hgnode, hct, ← hdnode]
+        refine hvrc h crony ?_ ?_
+        · rw [hdnode, ← hvr]; exact hc
+        · rw [hdnode, ← hty]; exact hty'
+      · exact hvrc h0 crony
+    · intro t cand crony
+      show crony ∈ (st' cand).1.cronies t → (t, cand) ∈ (st' crony).1.votes
+      rw [hst cand, hst crony]
+      intro hcin
+      refine hmono crony t cand (hcv t cand crony ?_)
+      revert hcin
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        intro hcin
+        rw [hgnode]
+        exact hcin
+      · exact fun x => x
+    · intro p' t hbody' hp'
+      show (t, p'.pDst) ∈ (st' p'.pSrc).1.votes
+      rw [hst p'.pSrc]
+      rcases hps p' hp' with hold | hnew
+      · exact hmono p'.pSrc t p'.pDst (hnw p' t hbody' hold)
+      · rw [hms] at hnew
+        exact nomatch hnew
+    · intro h0
+      show (st' h0).2.type = .Leader → wonElection (dedup (st' h0).2.votesReceived) = true
+      rw [hst h0]
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        intro hld
+        rw [hvr, ← hdnode]
+        exact hvrl h (hdnode.symm ▸ (hty.symm.trans hld))
+      · exact hvrl h0
+  · -- state_same_packet_subset
+    intro net net' hstates hpkts hP _hreach
+    obtain ⟨hvrc, hcv, hnw, hvrl⟩ := hP
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · intro h0 crony
+      rw [← hstates h0]
+      exact hvrc h0 crony
+    · intro t cand crony
+      rw [← hstates cand, ← hstates crony]
+      exact hcv t cand crony
+    · intro p' t hbody' hp'
+      rw [← hstates p'.pSrc]
+      exact hnw p' t hbody' (hpkts p' hp')
+    · intro h0
+      rw [← hstates h0]
+      exact hvrl h0
+  · -- reboot: a rebooted node is a follower with no votesReceived; ghost intact
+    intro net net' gd d h d' hrb hP _hreach hstate hst hpkts
+    subst hrb
+    obtain ⟨hvrc, hcv, hnw, hvrl⟩ := hP
+    have hgnode : (net.nwState h).1 = gd := by rw [hstate]
+    have hmono : ∀ (h0 : name (P := P)) (t : term) (n : name (P := P)),
+        (t, n) ∈ (net.nwState h0).1.votes →
+        (t, n) ∈ (net'.nwState h0).1.votes := by
+      intro h0 t n hin
+      rw [hst h0]
+      unfold update
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        show (t, n) ∈ gd.votes
+        rw [← hgnode]
+        exact hin
+      · exact hin
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · intro h0 crony
+      rw [hst h0]
+      unfold update
+      split
+      · intro _ hty'
+        rcases hty' with hh | hh <;> exact nomatch hh
+      · exact hvrc h0 crony
+    · intro t cand crony
+      rw [hst cand]
+      unfold update
+      intro hcin
+      refine hmono crony t cand (hcv t cand crony ?_)
+      revert hcin
+      split
+      · rename_i he'
+        have he := he'.symm
+        subst he
+        intro hcin
+        rw [hgnode]
+        exact hcin
+      · exact fun x => x
+    · intro p' t hbody' hp'
+      rw [← hpkts] at hp'
+      exact hmono p'.pSrc t p'.pDst (hnw p' t hbody' hp')
+    · intro h0
+      rw [hst h0]
+      unfold update
+      split
+      · intro hty'
+        exact nomatch hty'
+      · exact hvrl h0
+
 end ElectionSafety
 
 end Raft

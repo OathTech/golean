@@ -610,6 +610,120 @@ theorem update_elections_data_timeout_votes_intro
       -- st'.votedFor = none) — both closed by congruence
       simp_all
 
+/-! ## Ghost-update facts, cronies-focused (for `CroniesCorrectProof.v`) -/
+
+/-- Old votes survive a timeout's ghost update. -/
+theorem update_elections_data_timeout_votes_old (me : name (P := P))
+    (st : electionsData (P := P) × raft_data (P := P))
+    {t' : term} {h' : name (P := P)} (hin : (t', h') ∈ st.1.votes) :
+    (t', h') ∈ (update_elections_data_timeout me st).votes := by
+  unfold update_elections_data_timeout
+  simp only []
+  repeat' split
+  all_goals first
+    | exact hin
+    | exact List.mem_cons_of_mem _ hin
+
+/-- A crony in the timeout-updated ghost is an old crony, or the snapshot
+of the fresh candidacy (which implies the node was not a leader). -/
+theorem update_elections_data_timeout_cronies_elim
+    {me : name (P := P)}
+    {st : electionsData (P := P) × raft_data (P := P)} {out st' l}
+    (h : handleTimeout me st.2 = (out, st', l))
+    {tm : term} {crony : name (P := P)}
+    (hin : crony ∈ (update_elections_data_timeout me st).cronies tm) :
+    crony ∈ st.1.cronies tm ∨
+    (tm = st'.currentTerm ∧ crony ∈ st'.votesReceived ∧
+     st.2.type ≠ .Leader) := by
+  unfold update_elections_data_timeout at hin
+  rw [h] at hin
+  simp only [] at hin
+  repeat' split at hin
+  all_goals first
+    | exact Or.inl hin
+    | (simp only [] at hin
+       rename_i hnl _
+       split at hin
+       · rename_i heqtm
+         exact Or.inr ⟨heqtm, hin, fun he => hnl he⟩
+       · exact Or.inl hin)
+
+/-- A leader's timeout (heartbeat) leaves the ghost cronies unchanged. -/
+theorem update_elections_data_timeout_cronies_leader (me : name (P := P))
+    (st : electionsData (P := P) × raft_data (P := P))
+    (hl : st.2.type = .Leader) :
+    (update_elections_data_timeout me st).cronies = st.1.cronies := by
+  unfold update_elections_data_timeout
+  simp only []
+  repeat' split
+  all_goals first
+    | rfl
+    | (rename_i _ hnl
+       exact absurd hl hnl)
+    | (rename_i hnl _
+       exact absurd hl hnl)
+
+/-- A non-leader's timeout snapshots the fresh candidacy's votesReceived
+into cronies at the new term. -/
+theorem update_elections_data_timeout_cronies_intro
+    {me : name (P := P)}
+    {st : electionsData (P := P) × raft_data (P := P)} {out st' l}
+    (h : handleTimeout me st.2 = (out, st', l)) (hnl : st.2.type ≠ .Leader) :
+    (update_elections_data_timeout me st).cronies st'.currentTerm
+      = st'.votesReceived := by
+  obtain ⟨-, hty, hvf, -⟩ := handleTimeout_not_leader me st.2 h hnl
+  unfold update_elections_data_timeout
+  rw [h]
+  simp only []
+  repeat' split
+  all_goals first
+    | (rename_i hleader
+       exact absurd hleader hnl)
+    | (rename_i hnone
+       rw [hnone] at hvf
+       cases hvf)
+    | simp
+
+/-- A crony in the RequestVoteReply-updated ghost is an old crony or a
+member of the (possibly updated) votesReceived snapshot at the current
+term. -/
+theorem update_elections_data_requestVoteReply_cronies_elim
+    {me src : name (P := P)} {t0 : term} {v : Bool}
+    {st : electionsData (P := P) × raft_data (P := P)}
+    {tm : term} {crony : name (P := P)}
+    (hin : crony ∈ (update_elections_data_requestVoteReply me src t0 v st).cronies tm) :
+    crony ∈ st.1.cronies tm ∨
+    (tm = (handleRequestVoteReply me st.2 src t0 v).currentTerm ∧
+     crony ∈ (handleRequestVoteReply me st.2 src t0 v).votesReceived ∧
+     (handleRequestVoteReply me st.2 src t0 v).type ≠ .Follower) := by
+  unfold update_elections_data_requestVoteReply at hin
+  simp only [] at hin
+  repeat' split at hin
+  all_goals first
+    | exact Or.inl hin
+    | (simp only [] at hin
+       split at hin
+       · rename_i heqtm
+         exact Or.inr ⟨heqtm, hin, by simp_all⟩
+       · exact Or.inl hin)
+
+/-- A reply that leaves the node a candidate or leader snapshots its
+votesReceived into cronies at its current term. -/
+theorem update_elections_data_requestVoteReply_cronies_intro
+    {me src : name (P := P)} {t0 : term} {v : Bool}
+    {st : electionsData (P := P) × raft_data (P := P)}
+    (hty : (handleRequestVoteReply me st.2 src t0 v).type ≠ .Follower) :
+    (update_elections_data_requestVoteReply me src t0 v st).cronies
+        (handleRequestVoteReply me st.2 src t0 v).currentTerm
+      = (handleRequestVoteReply me st.2 src t0 v).votesReceived := by
+  unfold update_elections_data_requestVoteReply
+  simp only []
+  repeat' split
+  all_goals first
+    | (rename_i hf
+       exact absurd hf hty)
+    | simp
+
 end ElectionSpecLemmas
 
 end Raft
