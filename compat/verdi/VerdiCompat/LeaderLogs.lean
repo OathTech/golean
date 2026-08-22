@@ -3576,6 +3576,332 @@ theorem leaderLogs_votesWithLog_invariant :
       rw [hstate] at hmem
       exact hmem
 
+/-! ## one_leaderLog_per_term — the ring's exit theorem -/
+
+/-- `OneLeaderLogPerTermInterface.v:9-13` (`one_leaderLog_per_term`). -/
+def one_leaderLog_per_term (net : RefinedNet) : Prop :=
+  ∀ (h h' : name (P := P)) (t : term) (ll ll' : List (entry (P := P))),
+    (t, ll) ∈ (net.nwState h).1.leaderLogs →
+    (t, ll') ∈ (net.nwState h').1.leaderLogs →
+    h = h' ∧ ll = ll'
+
+/-- `OneLeaderLogPerTermInterface.v:16-20` (`one_leaderLog_per_term_log`,
+convenience). -/
+def one_leaderLog_per_term_log (net : RefinedNet) : Prop :=
+  ∀ (h h' : name (P := P)) (t : term) (ll ll' : List (entry (P := P))),
+    (t, ll) ∈ (net.nwState h).1.leaderLogs →
+    (t, ll') ∈ (net.nwState h').1.leaderLogs →
+    ll = ll'
+
+/-- `OneLeaderLogPerTermInterface.v:23-27` (`one_leaderLog_per_term_host`,
+convenience). -/
+def one_leaderLog_per_term_host (net : RefinedNet) : Prop :=
+  ∀ (h h' : name (P := P)) (t : term) (ll ll' : List (entry (P := P))),
+    (t, ll) ∈ (net.nwState h).1.leaderLogs →
+    (t, ll') ∈ (net.nwState h').1.leaderLogs →
+    h = h'
+
+/-- `OneLeaderLogPerTermProof.v:42-53` (`one_leaderLog_per_term_unchanged`). -/
+theorem one_leaderLog_per_term_of_update {net net' : RefinedNet}
+    {u : name (P := P)} {gd : electionsData (P := P)} {d : raft_data (P := P)}
+    (hP : one_leaderLog_per_term net)
+    (hst : ∀ h', net'.nwState h' = update net.nwState u (gd, d) h')
+    (hll : gd.leaderLogs = (net.nwState u).1.leaderLogs) :
+    one_leaderLog_per_term net' := by
+  intro hh hh' t ll ll' hin hin'
+  rw [hst hh] at hin
+  rw [hst hh'] at hin'
+  by_cases heq : hh = u
+  · subst heq
+    rw [update_same] at hin
+    replace hin : (t, ll) ∈ gd.leaderLogs := hin
+    rw [hll] at hin
+    by_cases heq' : hh' = hh
+    · subst heq'
+      rw [update_same] at hin'
+      replace hin' : (t, ll') ∈ gd.leaderLogs := hin'
+      rw [hll] at hin'
+      exact hP hh' hh' t ll ll' hin hin'
+    · rw [update_neq _ _ heq'] at hin'
+      exact hP hh hh' t ll ll' hin hin'
+  · rw [update_neq _ _ heq] at hin
+    by_cases heq' : hh' = u
+    · subst heq'
+      rw [update_same] at hin'
+      replace hin' : (t, ll') ∈ gd.leaderLogs := hin'
+      rw [hll] at hin'
+      exact hP hh hh' t ll ll' hin hin'
+    · rw [update_neq _ _ heq'] at hin'
+      exact hP hh hh' t ll ll' hin hin'
+
+/-- `OneLeaderLogPerTermProof.v:140-177` (`contradiction_case`): a
+leaderLog at term `t` on any host, beside a fresh election win at `t`,
+forces the two hosts to coincide — the leaderLog's quorum and the win's
+tally share a voter, who voted once per term. -/
+theorem one_leaderLog_win_host {net : RefinedNet}
+    (hreach : refined_raft_intermediate_reachable (P := P) net)
+    {t : term} {ll' : List (entry (P := P))} {hh' : name (P := P)}
+    (hin' : (t, ll') ∈ (net.nwState hh').1.leaderLogs)
+    {pDst src : name (P := P)}
+    (hq2mem : ∀ h ∈ dedup (src :: (net.nwState pDst).2.votesReceived),
+       (t, pDst) ∈ (net.nwState h).1.votes)
+    (hwon : wonElection (dedup (src :: (net.nwState pDst).2.votesReceived))
+      = true) :
+    hh' = pDst := by
+  obtain ⟨q1, hnd1, hlen1, hall1⟩ :=
+    leaderLogs_votesWithLog_invariant net hreach t ll' hh' hin'
+  obtain ⟨hvv, -⟩ := votes_votesWithLog_correspond_invariant net hreach
+  obtain ⟨hovpt, -, -⟩ := votes_correct_invariant net hreach
+  obtain ⟨c, hc1, hc2⟩ := pigeon q1 (nodes (P := P))
+    (dedup (src :: (net.nwState pDst).2.votesReceived))
+    (fun a _ => allFin_all a) (fun a _ => allFin_all a) hnd1
+    (nodup_dedup _) (div2_correct hlen1 (wonElection_length hwon))
+  obtain ⟨vlog, -, hmem⟩ := hall1 c hc1
+  have hv1 : (t, hh') ∈ (net.nwState c).1.votes := hvv c t hh' vlog hmem
+  have hv2 : (t, pDst) ∈ (net.nwState c).1.votes := hq2mem c hc2
+  exact hovpt c t hh' pDst hv1 hv2
+
+/-- `OneLeaderLogPerTermProof.v:232-250`
+(`one_leaderLog_per_term_invariant`). -/
+theorem one_leaderLog_per_term_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      one_leaderLog_per_term net := by
+  refine refined_raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · -- init
+    intro hh hh' t ll ll' hin _hin'
+    exact nomatch hin
+  · -- client_request
+    intro h net st' ps' gd out d l client id c _hcr hgd hP _hreach hst _hps
+    refine one_leaderLog_per_term_of_update hP hst ?_
+    subst hgd
+    exact (update_elections_data_client_request_ghost h (net.nwState h)
+      client id c).2.2.2
+  · -- timeout
+    intro net h st' ps' gd out d l _hto hgd hP _hreach hst _hps
+    refine one_leaderLog_per_term_of_update hP hst ?_
+    subst hgd
+    exact (update_elections_data_timeout_ghost h (net.nwState h)).1
+  · -- append_entries
+    intro xs p ys net st' ps' gd d m t0 n0 pli plt es ci _hae hgd _hbody hP
+      _hreach _hpkts hst _hps
+    refine one_leaderLog_per_term_of_update hP hst ?_
+    subst hgd
+    exact (update_elections_data_appendEntries_ghost p.pDst
+      (net.nwState p.pDst) t0 n0 pli plt es ci).2.2.2
+  · -- append_entries_reply
+    intro xs p ys net st' ps' gd d m t0 es res _haer hgd _hbody hP _hreach
+      _hpkts hst _hps
+    refine one_leaderLog_per_term_of_update hP hst ?_
+    subst hgd
+    rfl
+  · -- request_vote
+    intro xs p ys net st' ps' gd d m t0 cid lli llt _hrv hgd _hbody hP
+      _hreach _hpkts hst _hps
+    refine one_leaderLog_per_term_of_update hP hst ?_
+    subst hgd
+    exact (update_elections_data_requestVote_cronies p.pDst p.pSrc t0 p.pSrc
+      lli llt (net.nwState p.pDst)).2.1
+  · -- request_vote_reply: at most one host can win a term
+    intro xs p ys net st' ps' gd d t0 v hrvr hgd hbody hP hreach hpkts hst
+      _hps
+    subst hrvr
+    have hpmem : p ∈ net.nwPackets := by
+      rw [hpkts]
+      exact List.mem_append.mpr (Or.inr (List.mem_cons_self ..))
+    -- shared machinery for the fresh-win cases
+    have hwin : ∀ {t2 : term},
+        (handleRequestVoteReply p.pDst (net.nwState p.pDst).2 p.pSrc t0
+          v).type = .Leader →
+        (net.nwState p.pDst).2.type = .Candidate →
+        t2 = (handleRequestVoteReply p.pDst (net.nwState p.pDst).2 p.pSrc t0
+          v).currentTerm →
+        (∀ h ∈ dedup (p.pSrc :: (net.nwState p.pDst).2.votesReceived),
+          (t2, p.pDst) ∈ (net.nwState h).1.votes) ∧
+        wonElection (dedup (p.pSrc :: (net.nwState p.pDst).2.votesReceived))
+          = true := by
+      intro t2 hty' hcand ht2
+      obtain ⟨-, hv, hteq, hctd, -, -, hwon⟩ :=
+        handleRequestVoteReply_leader_transition p.pDst
+          (net.nwState p.pDst).2 p.pSrc t0 v rfl
+          (by rw [hcand]; exact fun heqL => nomatch heqL) hty'
+      subst hv
+      refine ⟨?_, hwon⟩
+      intro h hh
+      have hh2 := mem_of_mem_dedup hh
+      obtain ⟨hvv, -⟩ := votes_votesWithLog_correspond_invariant net hreach
+      have hmutd : ∃ vlog,
+          ((net.nwState p.pDst).2.currentTerm, p.pDst, vlog)
+            ∈ (net.nwState h).1.votesWithLog := by
+        rcases List.mem_cons.mp hh2 with rfl | hvr
+        · obtain ⟨vlog, -, hmem⟩ :=
+            requestVoteReply_moreUpToDate_invariant net hreach
+              (net.nwState p.pDst).2.currentTerm p.pDst p.pSrc p rfl hcand
+              hpmem (by rw [hbody, hteq]) rfl rfl
+          exact ⟨vlog, hmem⟩
+        · obtain ⟨vlog, -, hmem⟩ :=
+            votesReceived_moreUpToDate_invariant net hreach
+              (net.nwState p.pDst).2.currentTerm p.pDst h rfl hcand hvr
+          exact ⟨vlog, hmem⟩
+      obtain ⟨vlog, hmem⟩ := hmutd
+      have := hvv h _ p.pDst vlog hmem
+      rw [ht2, hctd]
+      exact this
+    intro hh hh' t ll ll' hin hin'
+    replace hin : (t, ll) ∈ (st' hh).1.leaderLogs := hin
+    replace hin' : (t, ll') ∈ (st' hh').1.leaderLogs := hin'
+    rw [hst hh] at hin
+    rw [hst hh'] at hin'
+    subst hgd
+    by_cases heq : hh = p.pDst
+    · subst heq
+      rw [update_same] at hin
+      replace hin : (t, ll) ∈
+        (update_elections_data_requestVoteReply p.pDst p.pSrc t0 v
+          (net.nwState p.pDst)).leaderLogs := hin
+      by_cases heq' : hh' = p.pDst
+      · -- both at the winner
+        subst heq'
+        rw [update_same] at hin'
+        replace hin' : (t, ll') ∈
+          (update_elections_data_requestVoteReply p.pDst p.pSrc t0 v
+            (net.nwState p.pDst)).leaderLogs := hin'
+        rcases leaderLogs_update_elections_data_RVR hin
+          with hold | ⟨hty1, hcand1, ht1, hl1⟩
+        · rcases leaderLogs_update_elections_data_RVR hin'
+            with hold' | ⟨hty2, hcand2, ht2, hl2⟩
+          · exact ⟨rfl, (hP p.pDst p.pDst t ll ll' hold hold').2⟩
+          · -- old beside fresh: the old one sits at the candidate's own
+            -- current term — impossible
+            exfalso
+            obtain ⟨-, -, -, hctd, -, -, -⟩ :=
+              handleRequestVoteReply_leader_transition p.pDst
+                (net.nwState p.pDst).2 p.pSrc t0 v rfl
+                (by rw [hcand2]; exact fun heqL => nomatch heqL) hty2
+            have hlt := leaderLogs_currentTerm_sanity_candidate_invariant net
+              hreach p.pDst t ll hold hcand2
+            rw [ht2, hctd] at *
+            exact absurd hlt (Nat.lt_irrefl _)
+          -- (closed both subcases)
+        · rcases leaderLogs_update_elections_data_RVR hin'
+            with hold' | ⟨hty2, hcand2, ht2, hl2⟩
+          · -- fresh beside old: symmetric contradiction
+            exfalso
+            obtain ⟨-, -, -, hctd, -, -, -⟩ :=
+              handleRequestVoteReply_leader_transition p.pDst
+                (net.nwState p.pDst).2 p.pSrc t0 v rfl
+                (by rw [hcand1]; exact fun heqL => nomatch heqL) hty1
+            have hlt := leaderLogs_currentTerm_sanity_candidate_invariant net
+              hreach p.pDst t ll' hold' hcand1
+            rw [ht1, hctd] at *
+            exact absurd hlt (Nat.lt_irrefl _)
+          · -- both fresh: same snapshot
+            exact ⟨rfl, hl1.trans hl2.symm⟩
+      · -- winner beside an untouched host
+        rw [update_neq _ _ heq'] at hin'
+        rcases leaderLogs_update_elections_data_RVR hin
+          with hold | ⟨hty1, hcand1, ht1, hl1⟩
+        · exact hP p.pDst hh' t ll ll' hold hin'
+        · -- fresh win: the other host's leaderLog forces hh' = p.pDst
+          exfalso
+          obtain ⟨hq2, hwon⟩ := hwin hty1 hcand1 ht1
+          exact heq' (one_leaderLog_win_host hreach hin' hq2 hwon)
+    · rw [update_neq _ _ heq] at hin
+      by_cases heq' : hh' = p.pDst
+      · subst heq'
+        rw [update_same] at hin'
+        replace hin' : (t, ll') ∈
+          (update_elections_data_requestVoteReply p.pDst p.pSrc t0 v
+            (net.nwState p.pDst)).leaderLogs := hin'
+        rcases leaderLogs_update_elections_data_RVR hin'
+          with hold' | ⟨hty2, hcand2, ht2, hl2⟩
+        · exact hP hh p.pDst t ll ll' hin hold'
+        · exfalso
+          obtain ⟨hq2, hwon⟩ := hwin hty2 hcand2 ht2
+          exact heq (one_leaderLog_win_host hreach hin hq2 hwon)
+      · rw [update_neq _ _ heq'] at hin'
+        exact hP hh hh' t ll ll' hin hin'
+  · -- do_leader
+    intro net st' ps' gd d h os d' ms _hdl hP _hreach hstate hst _hps
+    refine one_leaderLog_per_term_of_update hP hst ?_
+    rw [hstate]
+  · -- do_generic_server
+    intro net st' ps' gd d os d' ms h _hgs hP _hreach hstate hst _hps
+    refine one_leaderLog_per_term_of_update hP hst ?_
+    rw [hstate]
+  · -- state_same_packet_subset
+    intro net net' hstates _hpkts hP _hreach hh hh' t ll ll' hin hin'
+    rw [← hstates hh] at hin
+    rw [← hstates hh'] at hin'
+    exact hP hh hh' t ll ll' hin hin'
+  · -- reboot
+    intro net net' gd d h d' _hrb hP _hreach hstate hst _hpkts
+    refine one_leaderLog_per_term_of_update hP hst ?_
+    rw [hstate]
+
+/-- `OneLeaderLogPerTermProof.v:252-256` (the `_log` field of the
+interface instance). -/
+theorem one_leaderLog_per_term_log_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      one_leaderLog_per_term_log net :=
+  fun net hreach hh hh' t ll ll' hin hin' =>
+    (one_leaderLog_per_term_invariant net hreach hh hh' t ll ll' hin hin').2
+
+/-- `OneLeaderLogPerTermProof.v:252-256` (the `_host` field of the
+interface instance). -/
+theorem one_leaderLog_per_term_host_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      one_leaderLog_per_term_host net :=
+  fun net hreach hh hh' t ll ll' hin hin' =>
+    (one_leaderLog_per_term_invariant net hreach hh hh' t ll ll' hin hin').1
+
+/-! ## The leader_completeness STATEMENT (defs only)
+
+`LeaderCompletenessInterface.v:9-42`, ported 1:1 as the convergence
+point of this ring. The INVARIANT (`LeaderCompletenessProof.v`) rides
+the log-matching/allEntries side of the lattice and is a later unit's
+work — these are statements, not scaffolded claims. -/
+
+/-- `LeaderCompletenessInterface.v:9-14` (`directly_committed`). -/
+def directly_committed (net : RefinedNet) (e : entry (P := P)) : Prop :=
+  ∃ quorum : List (name (P := P)),
+    quorum.Nodup ∧
+    quorum.length > div2 (nodes (P := P)).length ∧
+    ∀ h ∈ quorum, (e.eTerm, e) ∈ (net.nwState h).1.allEntries
+
+/-- `LeaderCompletenessInterface.v:16-22` (`committed`). -/
+def committed (net : RefinedNet) (e : entry (P := P)) (t : term) : Prop :=
+  ∃ (h : name (P := P)) (e' : entry (P := P)),
+    e'.eTerm ≤ t ∧
+    directly_committed net e' ∧
+    e.eIndex ≤ e'.eIndex ∧
+    e ∈ (net.nwState h).2.log ∧
+    e' ∈ (net.nwState h).2.log
+
+/-- `LeaderCompletenessInterface.v:25-30`
+(`leader_completeness_directly_committed`). -/
+def leader_completeness_directly_committed (net : RefinedNet) : Prop :=
+  ∀ (t : term) (e : entry (P := P)) (log : List (entry (P := P)))
+    (h : name (P := P)),
+    directly_committed net e →
+    t > e.eTerm →
+    (t, log) ∈ (net.nwState h).1.leaderLogs →
+    e ∈ log
+
+/-- `LeaderCompletenessInterface.v:32-37`
+(`leader_completeness_committed`). -/
+def leader_completeness_committed (net : RefinedNet) : Prop :=
+  ∀ (t t' : term) (e : entry (P := P)) (log : List (entry (P := P)))
+    (h : name (P := P)),
+    committed net e t →
+    t' > t →
+    (t', log) ∈ (net.nwState h).1.leaderLogs →
+    e ∈ log
+
+/-- `LeaderCompletenessInterface.v:39-40` (`leader_completeness`). -/
+def leader_completeness (net : RefinedNet) : Prop :=
+  leader_completeness_directly_committed net ∧
+  leader_completeness_committed net
+
 end LeaderLogsRing
 
 end Raft

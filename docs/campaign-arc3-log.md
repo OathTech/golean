@@ -377,6 +377,20 @@ from artifacts.
 | cronies_term | PROVED | Raft/CroniesTermInterface.v:9 | CandidateEntries.lean:43 |
 | no_entries_past_current_term (term_sanity) | PROVED (base) | Raft/TermSanityInterface.v:9-24 | CandidateEntries.lean:220 |
 | CandidateEntries | PROVED | Raft/CandidateEntriesInterface.v:10-24 | CandidateEntries.lean:808 (def :596) |
+| requestVote_term_sanity | PROVED | Raft/RequestVoteTermSanityInterface.v:9 | LeaderLogs.lean:56 (invariant :64) |
+| votes_votesWithLog_correspond | PROVED | Raft/VotesVotesWithLogCorrespondInterface.v:9-21 | LeaderLogs.lean:299 (invariant :366) |
+| leaders_have_leaderLogs | PROVED | Raft/LeadersHaveLeaderLogsInterface.v:8 | LeaderLogs.lean:444 (invariant :451) |
+| votedFor_term_sanity | PROVED | Raft/VotedForTermSanityInterface.v:8 | LeaderLogs.lean:640 (invariant :691) |
+| requestVoteReply_term_sanity | PROVED | Raft/RequestVoteReplyTermSanityInterface.v:10 | LeaderLogs.lean (invariant, requestVoteReply_term_sanity_invariant) |
+| requestVote_maxIndex_maxTerm | PROVED | Raft/RequestVoteMaxIndexMaxTermInterface.v:10 | LeaderLogs.lean (invariant, requestVote_maxIndex_maxTerm_invariant) |
+| candidate_term_gt_log | PROVED (base) | Raft/CandidateTermGtLogInterface.v:8 | LeaderLogs.lean (invariant, candidate_term_gt_log_invariant) |
+| leaderLogs_term_sanity (trio) | PROVED | Raft/LeaderLogsTermSanityInterface.v:9-24 | LeaderLogs.lean (three invariants, first real lift_prop consumer) |
+| votedFor_moreUpToDate | PROVED | Raft/VotedForMoreUpToDateInterface.v:8-18 | LeaderLogs.lean (invariant) |
+| requestVoteReply_moreUpToDate | PROVED | Raft/RequestVoteReplyMoreUpToDateInterface.v:9-21 | LeaderLogs.lean (invariant) |
+| votesReceived_moreUpToDate | PROVED | Raft/VotesReceivedMoreUpToDateInterface.v:9-19 | LeaderLogs.lean (invariant) |
+| leaderLogs_votesWithLog | PROVED | Raft/LeaderLogsVotesWithLogInterface.v:10-18 | LeaderLogs.lean (invariant) |
+| one_leaderLog_per_term (+_log/_host) | PROVED | Raft/OneLeaderLogPerTermInterface.v:8-44 | LeaderLogs.lean (invariant + two corollaries) |
+| leader_completeness | STATEMENT ONLY (defs 1:1; proof = later unit) | Raft/LeaderCompletenessInterface.v:9-42 | LeaderLogs.lean (directly_committed/committed/leader_completeness defs) |
 - 2026-08-22 Slice 13 (1cc83c1d): log/message spec lemmas for the ring
   (findGtIndex_in, removeAfterIndex_in, per-handler log facts,
   doLeader_messages, rvr cronies function-level cases).
@@ -594,4 +608,28 @@ Same conventions; GAP-2 msg-ghost only on first genuine need.
   requestVoteReply_moreUpToDate on the consumed grant, the tallied via
   votesReceived_moreUpToDate, glued by
   handleRequestVoteReply_leader_transition. Build green.
+- 2026-08-22 Slice 24: **`one_leaderLog_per_term`** — the ring's exit
+  theorem (OneLeaderLogPerTermInterface.v:8-44, all three statements
+  1:1; the two convenience variants as projections of the main
+  invariant). The RVR case's fresh-win cross-host contradiction is
+  `one_leaderLog_win_host` (upstream's contradiction_case,
+  OneLeaderLogPerTermProof.v:140-177): the standing leaderLog's quorum
+  (leaderLogs_votesWithLog) and the win's tally share a voter (pigeon
+  over nodes, unit-3's constructive counting layer), who voted once per
+  term (votes_correct) — so the hosts coincide; the old-beside-fresh
+  same-host case dies on leaderLogs_currentTerm_sanity_candidate. Plus
+  the `leader_completeness` STATEMENT defs
+  (LeaderCompletenessInterface.v:9-42 1:1 — directly_committed,
+  committed, both lc conjuncts; defs only, the proof is a later unit's,
+  per the charter's "converging on the statement").
+- 2026-08-22 Slice 25: AxCheck curated pins for the six unit-4
+  headliners (candidate_term_gt_log / leaderLogs_term_sanity /
+  leaders_have_leaderLogs / votedFor_moreUpToDate /
+  leaderLogs_votesWithLog / one_leaderLog_per_term invariants),
+  captured from a fresh `#print axioms` run — all
+  [propext, Quot.sound]; the full 15-theorem probe of the unit
+  likewise all [propext, Quot.sound]. Full build green: AxCheck sweep
+  1403 decls; grep sorry/native_decide over LeaderLogs.lean: 0;
+  LeaderLogs.lean = 3908 lines (wc). INVARIANT INDEX extended by the
+  unit's 13 rows (build-verified at this tip).
 
