@@ -83,6 +83,11 @@ completion machinery, route memo + unit-2 charter).
   ≤ 250 steps; the reflector works); a judgment that (d)'s ~500×
   heap-op improvement is the honest next move. (d) needs no ruling:
   §3.1's accelerator template, proof-side, statements untouched.
+- **[AGENT]** 2026-08-22 (U2): checkpoint index 350,000 — the
+  directive's 300k–400k range wins over its "~36k-cell scale" gloss
+  (36k cells exists only at the run's END, outside the range); the
+  projection carries the heap-linear 2× band to cover the late run
+  instead. Memo §6.2 states this in place.
 - **[AGENT]** 2026-08-22 (U2): `TwinCheckpoints` kept in the
   aggregator (a fresh full build pays 3:47 + a 101 MB olean once) —
   the checkpoint is unit-3's reusable input and the 1b2 sweep wants
@@ -108,6 +113,15 @@ jobs). Measurements: 711,616/1,382 steps; kernel ladder
 cells. Deliverables: route memo (complete), probes + records, this
 log. Nothing merged; no GoCore/frontend/scripts edits; Arc-1 files
 unmodified (verbatim-copied only).
+
+- **U2 GATE** (2026-08-22): `GOLEAN_ALLOW_NO_DIFF=1
+  GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT: PASS** (rc 0) at
+  338a0662 + this docs-only delta (memo §6.2/§6.3 refinements and
+  these log entries; no build input changed after the gate ran —
+  `git diff 338a0662 -- . ':!docs'` is empty). Visible notes: the
+  sanctioned no-diff hatch; comparator-landmark staleness
+  (report-only; no designated statement changed on this lane).
+  **ARC 2 UNIT 2 BRANCH-COMPLETE** at this tip.
 
 ## Checkpoint (U2 end, recomputed)
 
