@@ -535,8 +535,18 @@ environment bound, never a machine stop; recorded in kind. Reports:
   questions. Reproduce/await: `tools/raftsubject/tracereplay.py
   --fuel 40000000000 --traces probe_and_replicate`. Until that
   report exists, no 27/27 machine claim is made — the same reading
-  discipline W4.2 used for the same trace. [If the run lands before
-  branch-complete, the result is recorded below this line.]
+  discipline W4.2 used for the same trace.
+
+  **At branch-complete the run is STILL IN FLIGHT**, past 7.5
+  interpreter-hours (detached; it survives this session and writes
+  `artifacts/w43/trace-final-p2.txt` when it lands — the go-side
+  half of the suite already verified this trace's ok-tier 57/57 and
+  rendered 17/17 against upstream in wave 1, and its W4.2 byte-tier
+  agreement at the ok-observation size stands as the prior record).
+  The wall-time growth is ATTRIBUTABLE: the rendered observation
+  multiplies string work, and interpreter string concatenation is
+  the known perf bound (W4.2's open question, unchanged, now with a
+  sharper number to motivate it).
 - **Zero machine-vs-go divergences at the final tip. One was found
   and FIXED on the way** — BUG-068 (wave 6), surfaced by exactly
   this instrument's rendered channel on the two
