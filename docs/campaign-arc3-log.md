@@ -914,3 +914,88 @@ whether base `log_matching` itself must port first) →
 this order from the import closure before starting (my unit-5 lesson:
 first-level imports understate the tree).
 
+## Unit 6 — the log-matching core (2026-08-22, coordinator-accepted charter)
+
+Charter: the log-matching subtree, leaves-first, toward GAP-7a
+(`allEntries_votesWithLog` via AllEntriesLog) and GAP-7b
+(`leaderLogs_preserved` via LogsLeaderLogs). FIRST ACTION per the
+charter + the unit-5 lesson: the full import closure of both targets
+derived fresh before any proving; if it exceeds one unit, scope to the
+largest self-contained prefix and record the remainder as the unit-7
+charter.
+
+- 2026-08-22 SUCCESSOR RE-VERIFICATION of unit 5 (recomputed, fresh
+  reader): tip `2d93b2f04ea55d968c24ca2a7c5b791fd50c7fb2`, tree clean.
+  Fresh capped `lake build` (24G) green ("Build completed successfully
+  (41 jobs)"); the sweep line in that build was a cache replay, so
+  re-derived by a fresh capped `lake env lean AxCheck.lean`, which
+  printed verbatim `AxCheck sweep: 1528 declarations across VerdiCompat
+  modules, axiom set within [propext, Quot.sound]`. Fresh
+  `#print axioms` probe (capped `lake env lean`, repo-local scratch
+  file — /tmp is write-only under this sandbox profile):
+  `every_entry_was_created_invariant`, `one_leaderLog_per_term_invariant`,
+  `logs_sorted_invariant` all
+  `depends on axioms: [propext, Quot.sound]` verbatim. Hatch grep
+  (`sorry|native_decide|^axiom| axiom `) over the six campaign files:
+  4 hits, all docstring prose (RefinedProofStructure.lean:744,
+  ElectionSpecLemmas.lean:953, ElectionSafety.lean:1521, :1581). All
+  claims hold; building on them.
+- 2026-08-22 [AGENT] FULL IMPORT CLOSURE of the two GAP-7 targets,
+  derived by a transitive walk of `Require Import/Export` edges over
+  `deps/verdi-raft/theories` @ a3375e8 (pin re-verified by
+  `git rev-parse`; each Interface mapped to its Proof file, closure
+  diffed against the INVARIANT INDEX's proved rows). Result: **23
+  unported proof files, ~9,760 upstream lines** — far beyond one unit.
+  Two corrections to the unit-5 proposal (the lesson pays again):
+  (a) `LeaderLogsLogMatching` was slated for unit 7 but is a DIRECT
+  import of `LogsLeaderLogsProof.v`, so it must land before GAP-7b;
+  (b) eight files the proposal never named are in the closure:
+  `UniqueIndices` (30L), `LeaderSublog` (554L), base `LogMatching`
+  itself (1,521L — the proposal's open question, answered YES),
+  `LeaderLogsSublog` (398L), `AllEntriesIndicesGt0` (195L), and the
+  NextIndexSafety feeder chain `AppendEntriesRequestReplyCorrespondence`
+  (429L) + `AppendEntriesRequestsCameFromLeaders` (239L) +
+  `AppendEntriesLeader` (443L) + `AppendEntriesReplySublog` (79L).
+  Msg-ghost check: NOTHING in the closure imports RaftMsgRefinement
+  (grep over the closure's files) — GAP-2 stays untouched again.
+  Dependency waves (leaves-first; [deps] = unported deps only):
+  - W1 (deps all ported): LeaderLogsSorted 227, UniqueIndices 30,
+    LeaderSublog 554, AllEntriesIndicesGt0 195,
+    LeadersHaveLeaderLogsStrong 278, AERReplyCorrespondence 429,
+    AECameFromLeaders 239, AllEntriesTermSanity 185,
+    LeaderLogsLogProperties 179;
+  - W2: LogMatching 1521 [UniqueIndices, LeaderSublog],
+    LeaderLogsSublog 398 [LeaderSublog], AppendEntriesLeader 443
+    [AECameFromLeaders];
+  - W3: LeaderLogsContiguous 237 [LogMatching],
+    RefinedLogMatchingLemmas 230 [LogMatching, AllEntriesIndicesGt0],
+    AEReplySublog 79 [AERReplyCorrespondence, AppendEntriesLeader];
+  - W4: LeaderLogsLogMatching 647 [LogMatching, LeaderLogsSorted,
+    LeaderLogsSublog, LeaderLogsContiguous], NextIndexSafety 323
+    [AEReplySublog];
+  - W5: AERLeaderLogs 621 [LHLLStrong, LogMatching, NextIndexSafety],
+    LogsLeaderLogs 848 [LeaderLogsSorted, Contiguous, LLLogMatching,
+    RefinedLogMatchingLemmas, LHLLStrong, NextIndexSafety,
+    LLLogProperties];
+  - W6: AllEntriesLeaderLogsTerm 342 [AERLeaderLogs],
+    **LeaderLogsPreserved 263 (GAP-7b)** [LogsLeaderLogs];
+  - W7: AllEntriesLog 1089 [LogsLeaderLogs, AERLeaderLogs,
+    RefinedLogMatchingLemmas, AllEntriesLeaderLogsTerm, Contiguous,
+    Sorted, AllEntriesTermSanity];
+  - W8: **AllEntriesVotesWithLog 356 (GAP-7a)** [AllEntriesLog].
+- 2026-08-22 [AGENT] UNIT-6 SCOPE (the largest self-contained prefix
+  honestly one unit, at predecessor scale ~1,300-3,000 upstream
+  lines/unit): the LOG-MATCHING CORE — `leaderLogs_sorted` (227, GAP-5a)
+  → `unique_indices` (30) → `leader_sublog` (554, BASE) →
+  `log_matching` (1,521, BASE — the T3-named log-matching invariant) →
+  `leaderLogs_contiguous` (237, GAP-5b) → `allEntries_indices_gt0`
+  (195) → `refined_log_matching_lemmas` (230 — the refined bridge both
+  GAP-7 subtrees consume). 7 proof files, 2,994 upstream lines; every
+  dep inside the prefix or already proved (verified against the wave
+  table). Closes GAP-5 and answers the base-log_matching question;
+  unblocks W2+ of the remainder. THE REMAINDER (16 files, ~6,766
+  lines) is the unit-7/8 charter, recorded in this unit's final entry.
+  File plan: new `LogMatching.lean` (imports CreationRing), wired into
+  VerdiCompat.lean from birth; spec lemmas beside their siblings in
+  ElectionSpecLemmas.lean only where a second consumer exists.
+
