@@ -1,0 +1,12 @@
+== kprobe0-su-48g ==
+( GOLEAN_MEM_MAX=48G ../scripts/capped lean ; )  31.69s user 0.64s system 99% cpu 32.348 total
+rc=0
+== kprobe10-su ==
+( GOLEAN_MEM_MAX=48G ../scripts/capped lean ; )  31.97s user 0.86s system 99% cpu 32.849 total
+rc=0
+== kprobe100-su ==
+( GOLEAN_MEM_MAX=48G ../scripts/capped lean ; )  53.69s user 1.02s system 99% cpu 54.727 total
+rc=0
+== kprobe1000-su ==
+( GOLEAN_MEM_MAX=48G ../scripts/capped lean ; )  108.73s user 2.11s system 99% cpu 1:50.87 total
+rc=0
