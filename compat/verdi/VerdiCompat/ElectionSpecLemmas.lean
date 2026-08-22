@@ -81,6 +81,21 @@ theorem handleTimeout_spec (me : name (P := P)) (st : raft_data (P := P))
     obtain ⟨node, -, rfl⟩ := hq
     exact ⟨_, _, _, _, rfl⟩
 
+/-- The candidacy branch of `handleTimeout`, forced by the trigger: a
+non-leader that times out becomes a candidate at term+1 voting for
+itself (the correlation `RefinementSpecLemmas.v`'s Ltac extracts from
+the shared scrutinee). -/
+theorem handleTimeout_not_leader (me : name (P := P)) (st : raft_data (P := P))
+    {out st' l} (h : handleTimeout me st = (out, st', l))
+    (hnl : st.type ≠ .Leader) :
+    st'.currentTerm = st.currentTerm + 1 ∧ st'.type = .Candidate ∧
+    st'.votedFor = some me ∧ st'.votesReceived = [me] := by
+  unfold handleTimeout tryToBecomeLeader at h
+  split at h <;> simp only [Prod.mk.injEq] at h <;> obtain ⟨-, rfl, rfl⟩ := h
+  · rename_i heq
+    exact absurd heq hnl
+  · exact ⟨rfl, rfl, rfl, rfl⟩
+
 /-- Subsumes `handleAppendEntries_currentTerm` (`SpecLemmas.v:100`),
 `handleAppendEntries_same_term_votedFor_preserved` (`:48`),
 `handleAppendEntries_term_votedFor` (`:1248`), the type/votesReceived
@@ -531,7 +546,9 @@ theorem update_elections_data_timeout_votes_elim
     (h : handleTimeout me st.2 = (out, st', l))
     {t' : term} {h' : name (P := P)}
     (hin : (t', h') ∈ (update_elections_data_timeout me st).votes) :
-    (t', h') ∈ st.1.votes ∨ (t' = st'.currentTerm ∧ st'.votedFor = some h') := by
+    (t', h') ∈ st.1.votes ∨
+    (t' = st'.currentTerm ∧ t' = st.2.currentTerm + 1 ∧
+     st'.votedFor = some h') := by
   unfold update_elections_data_timeout at hin
   rw [h] at hin
   simp only [] at hin
@@ -542,7 +559,9 @@ theorem update_elections_data_timeout_votes_elim
        · injection heq with h1 h2
          subst h1
          subst h2
-         exact Or.inr ⟨rfl, by assumption⟩
+         rename_i hnl _ _
+         have hcand := handleTimeout_not_leader me st.2 h (fun heq => hnl heq)
+         exact Or.inr ⟨rfl, hcand.1 ▸ rfl, by assumption⟩
        · exact Or.inl hin)
 
 /-- `update_elections_data_timeout_votes_intro_new`
