@@ -1,31 +1,26 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-22 (raft W4.3 delta-review micro fix round,
-#   CRITICAL-1 — branch raft-w43; docs/raft-w43-log.md "Delta-review
-#   micro fix round").
-#   re-pin reason: NINE NEW ids, zero movement on any of the 2453 ids
-#   the previous record held. All nine are the flagStickyRO /
-#   flagEmbedRO split's guardrails (Corpus/coverage/exec/fmt/
-#   v-composites, rows emb-*): reflect's Value.Field inherits ONLY the
-#   sticky bit, so an EMBEDDED unexported field suppresses fmt's method
-#   consultation at its own level while its children start clean; the
-#   renderer conflated the two flags into one `tainted` bool and
-#   over-suppressed whole embedded subtrees. Six of the nine were added
-#   RED at 1f2b23cf (guardrails-first) and flip with the fix; three are
-#   controls that were green throughout (the R1-F1 sticky behavior,
-#   which must not regress).
-#     PASS, flipped by the fix: emb-stringer-field, emb-two-level,
-#     emb-mid, emb-method-at-level, emb-exported-slice.
-#     PASS, controls (unmoved): emb-sticky-over-embed,
-#     emb-unexported-leaf, emb-named-slice-type.
-#     FAIL/frontend-export BY DESIGN: emb-formatter-below — a
-#     fmt.Formatter reached BELOW an embedded unexported field is
-#     consulted by gc ({{FMT:v:1}}); the renderer does not model
-#     Format, so it must refuse there. Before the fix this row was a
-#     SILENT WRONG ANSWER ({{1}}) at the differential stage; the fix
-#     moves it differential-FAIL -> frontend-export-FAIL, i.e. wrong
-#     answer -> fail closed. Its ever going PASS without Format being
-#     modeled means the suppression has re-widened.
-# cases: 2462 (2293 PASS / 169 FAIL)
+# recorded: 2026-08-22 (launch-audit fix round, branch launch-fixes;
+#   docs/2026-08-22_launch-audit-synthesis.md).
+#   re-pin reason: THIRTEEN NEW ids, zero movement on any of the 2462
+#   ids the previous record held (scripts/coverage-baseline-diff:
+#   drift = exactly the 13 entrants). Two new families, both from the
+#   whole-stack launch audit:
+#     scoping/predeclared-shadow (8 rows, ALL PASS) — BUG-069's
+#     guardrails: shadowed predeclared true/false/nil are ordinary
+#     variables; pre-fix colors (7 red: silent wrong values/branches,
+#     a fabricated panic, a wrong len, one honest stuck) recorded in
+#     the guardrails-first commit, flipped green by the emitIdent fix
+#     in the same arc. genuine-ctrl pins the universe-constant
+#     direction and must stay green.
+#     builtins/min-max-vs-call-order (5 rows) — BUG-062 WIDENED (the
+#     ordered-event set omits value-returning built-ins; grossmith
+#     campaign-2 F-1 promoted):
+#     FAIL/differential BY DESIGN (flip at mini-slice A6):
+#     min-value, max-value (machine 5 vs gc 1 — silent wrong value),
+#     min-arg-panic (machine 9 vs gc 0 — wrong panic order).
+#     PASS controls A6 must not regress: append-arg-panic (append IS
+#     ordered), call-in-builtin-arg (arg-list calls already hoist).
+# cases: 2475 (2303 PASS / 172 FAIL)
 # frontend: native (tools/nativefrontend)
 result	id	stage
 PASS	arrays/array-bounds	-
@@ -153,6 +148,11 @@ PASS	builtins/min-max-edge/one-arg	-
 PASS	builtins/min-max-edge/untyped-float-context	-
 PASS	builtins/min-max-ints	-
 PASS	builtins/min-max-strings	-
+PASS	builtins/min-max-vs-call-order/append-arg-panic	-
+PASS	builtins/min-max-vs-call-order/call-in-builtin-arg	-
+FAIL	builtins/min-max-vs-call-order/max-value	differential
+FAIL	builtins/min-max-vs-call-order/min-arg-panic	differential
+FAIL	builtins/min-max-vs-call-order/min-value	differential
 FAIL	builtins/real-imag	frontend-export
 PASS	builtins/recover-outside-defer	-
 PASS	builtins/statement-position/copy-stmt	-
@@ -1905,6 +1905,14 @@ PASS	scoping/named-result-shadow/loopvar-capture	-
 FAIL	scoping/named-result-shadow/range-clause	frontend-export
 PASS	scoping/named-result-shadow/short-decl	-
 FAIL	scoping/named-result-shadow/ts-guard	frontend-export
+PASS	scoping/predeclared-shadow/genuine-ctrl	-
+PASS	scoping/predeclared-shadow/shadow-false-branch	-
+PASS	scoping/predeclared-shadow/shadow-nil-append	-
+PASS	scoping/predeclared-shadow/shadow-nil-int	-
+PASS	scoping/predeclared-shadow/shadow-nil-len	-
+PASS	scoping/predeclared-shadow/shadow-param	-
+PASS	scoping/predeclared-shadow/shadow-true-branch	-
+PASS	scoping/predeclared-shadow/shadow-var-form	-
 PASS	scoping/select-clause-scope	-
 PASS	scoping/shadowing	-
 PASS	scoping/short-decl-mixing	-
