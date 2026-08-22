@@ -40,9 +40,9 @@ number in U-c7 was headroom, not size.
 
 `example : twinRun K [] = .error .fuelOut := by with_unfolding_all rfl`
 (expected value confirmed compiled first for every K —
-`probeB0-expected.lean`; each K runs init to min(K, 1382) init steps
-plus min(K, …) subject steps, i.e. K=10000 covers 1,382 init + 10,000
-subject steps). All runs `scripts/capped lean` (direct `lean` with
+`probeB0-expected.lean`; fuel bounds each phase separately, so a probe at
+K runs min(K, 1382) init steps, then — only if init completed — up to
+K subject steps; K=10000 is the only row that reaches the subject). All runs `scripts/capped lean` (direct `lean` with
 `lake env`'s LEAN_PATH — `lake env lean` under a concurrently running
 sibling lake wedged with SIGTERM, recorded as an operational note),
 `set_option smartUnfolding false` (see 1.3), single-threaded, this
@@ -123,9 +123,10 @@ unchanged (a certificate/checkpoint cannot delete kernel reductions —
   elaboration) → **~240–700 segments** for the run;
 - segments are independent once checkpoints exist → parallel across
   cores under the worktree cap budget (4 × 16 G jobs ≈ 64 G): wall ≈
-  57 h / 4 ≈ **~15 CPU-parallel hours, plus per-segment fixed costs**
+  57 h / 4 ≈ **~15 wall-hours at 4-way parallelism, plus per-segment
+  fixed costs**
   (import ~5–10 s and the checkpoint-literal elaboration, unmeasured —
-  unit 2 slice 1's job);
+  the §5 charter item 2's job);
 - a slow or failing segment is visible EARLY and individually, and a
   re-run after a wire re-pin re-pays only the segments, not a 3 TB
   monolith.
@@ -147,7 +148,7 @@ allocation lives to the end:
 | end (711,616) | **36,376** |
 
 ~1 allocation per 20 steps, linear, no plateau. Two consequences,
-both feeding unit 2 slice 1:
+both feeding unit 2's mid-run-segment slice (§5, charter item 2):
 
 - **The §1.2 subject-phase rate was measured on a ≤ 700-cell heap.**
   Kernel heap ops traverse the concrete heap list, so mid-run
@@ -159,7 +160,7 @@ both feeding unit 2 slice 1:
 - **Checkpoint literals are heap-sized**: a mid-run checkpoint
   reflects ~19k–36k cells of `GoValue` term — megabytes per segment
   module. Real but precedented (the 9.3 MB wire pin elaborates in the
-  standing build); slice 1 measures it.
+  standing build); charter item 2 measures it.
 
 ## 3. What the completion machinery offers (study, deliverable 2)
 
@@ -264,11 +265,11 @@ Projected cost: §2's segmented figures (≥ 57 CPU-h kernel work,
 generation scripted). The unmeasured risks, named: mid-run per-step
 cost growth (heap-size-linear kernel work) and per-segment
 checkpoint-literal elaboration cost. Both are measured by ONE mid-run
-segment before any generation — that is unit 2 slice 1, and it is the
-route's go/no-go gate.
+segment before any generation — the §5 charter's item 2, and it is
+the route's go/no-go gate.
 
 **(d) Found while studying: the verified fast-twin evaluator — the
-FALLBACK.** If slice 1 shows mid-run per-step cost or literal costs
+FALLBACK.** If the mid-run measurement shows per-step or literal costs
 pushing (c) past budget (trigger: projected total > ~200 CPU-hours,
 or any balanced segment > 1 h), the honest next move is not more
 patience but an ACCELERATOR under §3.1's standing template: an
@@ -284,7 +285,7 @@ per-step cost; buildable proof-side without touching GoCore; also
 reusable for every future certified-run need (twin re-pins, richer
 witness drivers, T3-era batteries). It is second, not first, because
 it is weeks of build (a full structural-induction equivalence over
-`stepFn`'s ~50 arms) that slice 1's measurement may prove
+`stepFn`'s ~50 arms) that the mid-run measurement may prove
 unnecessary — though probe C's heap curve (§2.1: kernel heap ops over
 19k–36k cells mid-run vs the ≤ 700 cells the rate was measured on)
 raises the prior that the trigger fires. If it does, (d) REUSES (c)'s
@@ -301,8 +302,8 @@ observation for the campaign lane, not proposed); Sym transport
 
 ## 5. Recommendation and the unit-2 charter
 
-**RECOMMENDED: route (c), with (d) as the armed fallback and slice 1
-as the explicit go/no-go.** [AGENT] — the whole decision; grounds:
+**RECOMMENDED: route (c), with (d) as the armed fallback and the
+mid-run measurement as the explicit go/no-go.** [AGENT] — the whole decision; grounds:
 (a) refuted on memory by measurement, (b) wrong instrument for an
 ∃-witness, (c)'s two open risks are cheap to measure before
 committing, and its artifacts (state reflection, segment generator)
@@ -324,7 +325,7 @@ segment" (one session, parkable):**
    timed + RSS-polled, records committed beside this memo's. This
    yields: mid-run per-step kernel cost, checkpoint-literal
    elaboration cost, and validated segment sizing.
-3. The go/no-go, logged: project the full segmented cost from slice
+3. The go/no-go, logged: project the full segmented cost from item
    2's numbers. GO → unit 3 charters the generator + wave plan
    (segments are file-disjoint units; the composition file is the
    serialization point). NO-GO (> ~200 CPU-h projected) → unit 3
