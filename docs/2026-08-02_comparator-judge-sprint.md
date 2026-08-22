@@ -424,3 +424,71 @@ sem-adequacy arc's unrecorded run showed the precedent was mixed)
   designated name moved), so nothing certified changed underneath the
   run. The record of what the kernel replayed is the hash in the
   verdict, never the commit that files the verdict.
+
+  LANDMARK-RUN: e42020397648 2026-08-14 56 308
+
+- **2026-08-22 — pre-launch-audit landmark (the dossier's link-3
+  action item): PASS, 56/56 theorems certified in 364 s**, fresh clone
+  @ `42fae106`.
+
+  LANDMARK-RUN: 42fae106 2026-08-22 56 364
+
+  *(Provenance: run and reported by the operator; unlike the 2026-08-14
+  entry this record carries no verbatim verdict block, because the
+  judge's stdout was not captured into this file. The numbers above are
+  the reported result — 56 theorems, 364 s, fresh clone @ `42fae106` —
+  not a transcript. Noted so the missing block reads as what it is
+  rather than as an omission.)*
+
+  This discharges no designated-SET change — the set is unchanged at
+  56 since `e42020397648`. It discharges the **scope** gap the
+  launch-audit dossier raised as K-4: the previous landmark was 371
+  commits behind, and in between, three `Expr` constructors were added
+  to `GoLean/GoCore/Syntax.lean`, `GoLean/GoCore/Value.lean` changed,
+  and `proofs/GoLeanProofs/Examples/Targets.lean` — **inside
+  Challenge's trusted closure** — changed. `Expr` is reached by every
+  designated statement's closure, so what the 56 statements MEAN had
+  moved since the last independent certification, with no trigger
+  firing, because the trigger asked only whether a designated
+  statement's TEXT had changed. The certification now covers the
+  moved tree.
+
+  **The trigger is widened in the same change** (`scripts/ci` step
+  1c4): the gate now prints a report-only note when any file in
+  Challenge's trusted closure has changed since the last
+  `LANDMARK-RUN:` marker, and a second when that marker is more than
+  100 commits behind. Report-only is deliberate and permanent —
+  landmark cadence stays user-invoked, the judge takes ~6 minutes and
+  cannot run from a lane worktree, and a gate that blocks on it would
+  turn a cadence into an iteration tax. The notes make an owed run
+  visible; they never decide to run it.
+
+  **One thing deliberately NOT changed, flagged for the user.**
+  `CLAUDE.md`'s merge-protocol step 2 still states the trigger in its
+  narrow form — "if the arc added or changed a designated headline
+  theorem statement … also run `scripts/comparator-judge`". The
+  MECHANISM is now wider than that sentence. The sentence was left
+  alone because CLAUDE.md is the operating contract and a worker
+  branch should not rewrite it unasked; the mismatch is recorded here
+  rather than silently tolerated. Suggested replacement clause, for
+  the user to take or leave: *"…also run `scripts/comparator-judge` —
+  and likewise when anything in Challenge's trusted closure moved, or
+  when `scripts/ci` prints a landmark scope/staleness note."*
+
+### The `LANDMARK-RUN:` marker (convention, 2026-08-22)
+
+Every entry above carries one machine-readable line:
+
+```
+LANDMARK-RUN: <sha> <YYYY-MM-DD> <theorems> <seconds>
+```
+
+`scripts/ci` reads the LAST such line in this file. It restates data
+already in the prose entry — the prose stays the record a human reads,
+the marker is what a script can parse without guessing at prose. Two
+rules: append a marker with every landmark entry (an entry without one
+is invisible to the gate), and never edit an old marker — a landmark
+record is a statement about a tree that was certified at a moment, and
+that does not change afterwards. The 2026-08-08 entry predates the
+convention and is deliberately left without one; the gate only needs
+the most recent.

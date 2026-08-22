@@ -21,6 +21,22 @@
 # (no flag) only checks that the LAST recorded run still matches the baseline;
 # it does not re-run Go. For runtime changes, use --diff (or run
 # scripts/diff-one <ids> for a focused slice) so the baseline reflects reality.
+#
+# COMPARATOR LANDMARK NOTES (added 2026-08-22, step 1c4 — report-only).
+# The gate does NOT run `scripts/comparator-judge`: landmark cadence is
+# user-invoked by charter and the judge cannot even run from a lane
+# worktree. What the gate now does is tell you when one is OWED, because
+# the trigger that was supposed to — "did a designated headline theorem
+# STATEMENT change?" — is too narrow by construction. A designated
+# statement's meaning lives in its definitional closure, so a GoCore
+# change under it moves what the statement SAYS while its text sits
+# still; 371 commits and a statement-TCB move went by unnoticed exactly
+# that way (launch-audit dossier, link 3 / K-4). Step 1c4 therefore
+# prints two notes against the last `LANDMARK-RUN:` marker in
+# docs/2026-08-02_comparator-judge-sprint.md: SCOPE (a file in
+# Challenge's trusted closure changed since it) and STALENESS (more
+# than 100 commits since it). Both are notes. Neither ever fails the
+# gate — see the reasoning at 1c4.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -591,6 +607,92 @@ if [ "$tcb_ok" = 1 ]; then
   ok "statement-TCB closure (designated theorems proved outside the trusted closure)"
 else
   bad "statement-TCB closure violated (a designated proof is inside Challenge's import closure — move the defs to a statement module and the proofs out)"
+fi
+
+# 1c4. Comparator landmark SCOPE + STALENESS notes (REPORT-ONLY; added
+# 2026-08-22, settlement branch, for the launch-audit dossier's link-3
+# finding K-4).
+#
+# THE HOLE THIS CLOSES. CLAUDE.md's landmark trigger fires on a change
+# to a DESIGNATED headline theorem STATEMENT. That is too narrow by
+# construction: a designated statement's MEANING is fixed by its whole
+# definitional closure, so a GoCore change underneath it moves what the
+# statement says without touching the statement's text. Which is what
+# happened: between the last landmark (`e42020397648`) and the dossier,
+# three `Expr` constructors were added to GoCore/Syntax.lean,
+# GoCore/Value.lean changed, and Examples/Targets.lean changed — the
+# last INSIDE Challenge's trusted closure — and 371 commits passed with
+# no landmark run, because none of that was a designated-SET change.
+# `scripts/ci` does not build Challenge/Solution either, so nothing
+# anywhere noticed.
+#
+# THE WIDENING — two notes against the last recorded landmark run:
+#   (a) SCOPE: any file in Challenge's trusted closure (the set the
+#       gate directly above already walks — that is why this lives
+#       here and costs no second walk) changed since that run. This is
+#       the PRECISE signal; staleness is only its backstop.
+#   (b) STALENESS: more than $LANDMARK_STALE_N commits since that run.
+#
+# WHY REPORT-ONLY, ALWAYS, AND NOT NEGOTIABLE. Landmark cadence is
+# user-invoked by charter (comparator-judge sprint: "a landmark gate,
+# not an iteration gate"), and the judge needs ~6 minutes plus a
+# dot-free clone — it cannot run from a lane worktree at all. Blocking
+# on it would convert a deliberate cadence into an iteration tax, and
+# gates are speedbumps, never puzzles. This block therefore never sets
+# `fail` and never exits non-zero. It makes the owed run VISIBLE, which
+# is the one thing the prose trigger could not do.
+#
+# WHY N=100. A smoke alarm, not a policy. Small enough that the
+# 371-commit gap this exists to prevent would have fired at commit 101
+# — about a quarter of the way in, weeks before an audit found it —
+# and large enough that an ordinary arc (tens of commits in this repo's
+# log) never trips it on its own. Deliberately not tuned to a schedule.
+#
+# RECORD FORMAT. The landmark log's machine-readable marker, one line
+# per run, in docs/2026-08-02_comparator-judge-sprint.md:
+#     LANDMARK-RUN: <sha> <YYYY-MM-DD> <theorems> <seconds>
+# The last such line wins. Absent or unparseable -> a visible note
+# saying so, never a failure: a missing RECORD must not be able to
+# break a build, or the next person deletes the check instead of the
+# record.
+LANDMARK_STALE_N=100
+landmark_log="docs/2026-08-02_comparator-judge-sprint.md"
+landmark_rec="$(grep -hoE 'LANDMARK-RUN: [0-9a-f]{7,40} [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]+ [0-9]+' "$landmark_log" 2>/dev/null | tail -n1 || true)"
+if [ -z "$landmark_rec" ]; then
+  RESULTS+=("  note comparator landmark: no parseable LANDMARK-RUN marker in $landmark_log — scope/staleness not computed (report-only)")
+else
+  read -r _ lm_sha lm_date lm_n lm_secs <<<"$landmark_rec"
+  if ! git rev-parse -q --verify "${lm_sha}^{commit}" >/dev/null 2>&1; then
+    RESULTS+=("  note comparator landmark: recorded commit $lm_sha ($lm_date) is not in this repo — scope/staleness not computed (report-only)")
+  else
+    lm_behind="$(git rev-list --count "${lm_sha}..HEAD" 2>/dev/null || echo '?')"
+    # The closure file set, rebuilt from the walk the gate above did.
+    # `${ch_closure:-}` is load-bearing under `set -u`: the gate above
+    # only assigns it on its non-fail-closed path, so when judge-config
+    # is unreadable it is UNSET, and a bare `$ch_closure` here would
+    # abort the whole script — turning a controlled FAIL that still
+    # prints a summary into a crash that prints nothing. A note must
+    # never be able to break the gate it is reporting into.
+    lm_files="proofs/Challenge.lean proofs/judge-config.json"
+    for m in ${ch_closure:-}; do
+      case "$m" in
+        GoLeanProofs*) lm_files="$lm_files proofs/$(echo "$m" | tr '.' '/').lean" ;;
+        GoLean*)       lm_files="$lm_files $(echo "$m" | tr '.' '/').lean" ;;
+      esac
+    done
+    # shellcheck disable=SC2086
+    lm_moved="$(git diff --name-only "${lm_sha}..HEAD" -- $lm_files 2>/dev/null | sort -u || true)"
+    lm_nmoved="$(printf '%s' "$lm_moved" | grep -c . || true)"
+    RESULTS+=("  note comparator landmark: last certified run $lm_n theorems in ${lm_secs}s @ $lm_sha ($lm_date), $lm_behind commit(s) ago")
+    if [ "$lm_nmoved" -gt 0 ] 2>/dev/null; then
+      RESULTS+=("  note comparator landmark OWED (scope): $lm_nmoved file(s) in Challenge's trusted closure changed since that run — a designated statement's MEANING can move without its text moving; run scripts/comparator-judge (report-only, never blocks)")
+      printf '  landmark scope note — trusted-closure files changed since %s:\n' "$lm_sha" >&2
+      printf '%s\n' "$lm_moved" | sed 's/^/    /' >&2
+    fi
+    if [ "$lm_behind" != '?' ] && [ "$lm_behind" -gt "$LANDMARK_STALE_N" ] 2>/dev/null; then
+      RESULTS+=("  note comparator landmark STALE: $lm_behind commits > $LANDMARK_STALE_N since the last certified run (report-only, never blocks)")
+    fi
+  fi
 fi
 
 # 1d. Import-direction lint (layering doctrine,
