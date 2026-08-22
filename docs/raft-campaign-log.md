@@ -80,6 +80,29 @@ is the §4.4 park-and-report condition, not an emergency.
 - **U-c2** (2026-08-22): the Arc-1 design note (above) — the
   statement shape, the aboutness seam stated plainly, the pin route
   (elaboration-time wire decode), the Arc-2 witness route question.
+- **U-c3** (2026-08-22): the wire-pin mechanism —
+  `proofs/GoLeanProofs/Specs/WirePin.lean` (`goldenWire%` term elab:
+  read + `Json.parse` + `NativeToIR.decodeProgram` at elaboration,
+  fail-loud; standalone `ToExpr` derives, GoCore untouched) + the
+  pinned wire `baselines/golden/twin-chdriver.wire.json` (sha256
+  f353c3b2…, 9,310,086 bytes; emission DETERMINISTIC — two frontend
+  runs, one sha) + `TwinProgram.lean`'s `twinLowered`. [AGENT]
+  maxRecDepth 4,000,000 for the pin def only (the elab runs
+  interpreted; parse depth scales with the wire). MEASURED: the pin
+  builds in 65 s / 2.5 GB peak (per clean build; olean-cached after).
+  Machine smoke: the machine executed the choice-driven twin clean —
+  end line `viol=0 claims=1 committed=6 complete=1 floor=1 rounds=30`
+  identical to go-side (`artifacts/campaign-u1-chdriver-machine.txt`,
+  both sections).
+- **U-c4** (2026-08-22): THE STATEMENTS —
+  `proofs/GoLeanProofs/Specs/RaftAgreement.lean`: `twinRun`
+  (runProgramM wiring, exactly native-json-run's), `AgreementT1`
+  (∀ fuel ch, completing ⇒ violations = 0), `CompletionWitness`
+  (∃ stream/fuel completing with floor met), the aboutness sentence
+  in the docstring. Elaborates (778 ms on the cached pin).
+- **CHECKPOINT 1** (recomputed): 4 units landed; Arc 1 remaining =
+  check-golden wire entry (gate-additive) + arc gate + the
+  designation/merge asks. Arc 3 worker in flight.
 
 ## Awaiting [USER] — the queue
 
