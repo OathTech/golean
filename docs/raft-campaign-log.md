@@ -129,6 +129,20 @@ is the §4.4 park-and-report condition, not an emergency.
   lane gate PASS. Design note + arc log + unit-2 charter on the lane.
   [AGENT] calls D1–D5 in the arc log.
 
+- **U-c7** (2026-08-22, Arc 2 opens): THE WITNESS PROBE — the
+  statement's own `twinRun` evaluated compiled (`#eval`, lake env):
+  `twinRun 8000000000 [] = .ok #[int 0, int 1, int 6, int 1, int 1]`
+  — 14:00 wall, 1.7 GB peak. The CompletionWitness is TRUE and
+  executably confirmed at the statement's own definition; the
+  AgreementT1 shape is exercised (violations = 0 at the observable).
+  [AGENT] route consequence: raw kernel evaluation presumed
+  infeasible at compiled:kernel ratios but NOT assumed — the Arc-2
+  route study (worker, lane `campaign-arc2`) measures the kernel cost
+  curve at K ∈ {10,100,1k,10k} and decides among raw-rfl / WP
+  completion walk / certified-run checker, memo + unit-2 charter as
+  its deliverable. Arc-3 unit 2 (election-safety chain) running in
+  parallel on its lane.
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
