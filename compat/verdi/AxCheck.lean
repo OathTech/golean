@@ -111,6 +111,24 @@ open VerdiCompat VerdiCompat.Raft
 /-- info: 'VerdiCompat.Raft.leaderLogs_candidateEntries_invariant' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms VerdiCompat.Raft.leaderLogs_candidateEntries_invariant
 
+-- The log-matching core (campaign Arc 3 unit 6, LogMatching.lean).
+/-- info: 'VerdiCompat.Raft.leaderLogs_sorted_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leaderLogs_sorted_invariant
+/-- info: 'VerdiCompat.Raft.UniqueIndices_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.UniqueIndices_invariant
+/-- info: 'VerdiCompat.Raft.leader_sublog_invariant_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leader_sublog_invariant_invariant
+/-- info: 'VerdiCompat.Raft.log_matching_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.log_matching_invariant
+/-- info: 'VerdiCompat.Raft.logMatchingStatement_holds' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.logMatchingStatement_holds
+/-- info: 'VerdiCompat.Raft.leaderLogs_contiguous_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leaderLogs_contiguous_invariant
+/-- info: 'VerdiCompat.Raft.allEntries_indices_gt_0_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.allEntries_indices_gt_0_invariant
+/-- info: 'VerdiCompat.Raft.entries_match_nw_host_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.entries_match_nw_host_invariant
+
 /-! ## Exhaustive sweep (fails the build on any disallowed axiom) -/
 
 open Lean in

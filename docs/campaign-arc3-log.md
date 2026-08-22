@@ -399,8 +399,15 @@ from artifacts.
 | terms_and_indices_from_one_log (+_nw) | PROVED (base) | Raft/TermsAndIndicesFromOneLogInterface.v:8-16 | CreationRing.lean (both fields) |
 | terms_and_indices_from_one (vwl ∧ ll) | PROVED | Raft/TermsAndIndicesFromOneInterface.v:10-18 | CreationRing.lean (invariant) |
 | leaderLogs_candidateEntries | PROVED | Raft/LeaderLogsCandidateEntriesInterface.v:9-13 | CreationRing.lean (invariant) |
-| allEntries_votesWithLog | GAP-7 (blocked on AllEntriesLog, unit-6 log-matching subtree) | Raft/AllEntriesVotesWithLogInterface.v | — |
-| leaderLogs_preserved | GAP-7 (blocked on LogsLeaderLogs, unit-6 log-matching subtree) | Raft/LeaderLogsPreservedInterface.v | — |
+| allEntries_votesWithLog | GAP-7a (blocked on AllEntriesLog; unit-7/8 charter) | Raft/AllEntriesVotesWithLogInterface.v | — |
+| leaderLogs_preserved | GAP-7b (blocked on LogsLeaderLogs; unit-7 charter) | Raft/LeaderLogsPreservedInterface.v | — |
+| leaderLogs_sorted (GAP-5a) | PROVED | Raft/LeaderLogsSortedInterface.v:9-13 | LogMatching.lean (invariant) |
+| UniqueIndices (2 conjuncts) | PROVED (base) | Raft/UniqueIndicesInterface.v:9-20 | LogMatching.lean (UniqueIndices_invariant) |
+| leader_sublog (2 conjuncts) | PROVED (base) | Raft/LeaderSublogInterface.v:8-27 | LogMatching.lean (leader_sublog_invariant_invariant) |
+| **log_matching (LOG MATCHING, T3)** | PROVED (base) | Raft/LogMatchingInterface.v:9-65 | LogMatching.lean (log_matching_invariant + logMatchingStatement_holds) |
+| leaderLogs_contiguous (GAP-5b) | PROVED | Raft/LeaderLogsContiguousInterface.v:9-12 | LogMatching.lean (invariant) |
+| allEntries_indices_gt_0 | PROVED | Raft/AllEntriesIndicesGt0Interface.v:8-11 | LogMatching.lean (invariant) |
+| refined_log_matching_lemmas (10 fields) | PROVED | Raft/RefinedLogMatchingLemmasInterface.v:9-113 | LogMatching.lean (ten standalone theorems, D3) |
 - 2026-08-22 Slice 13 (1cc83c1d): log/message spec lemmas for the ring
   (findGtIndex_in, removeAfterIndex_in, per-handler log facts,
   doLeader_messages, rvr cronies function-level cases).
@@ -1066,4 +1073,36 @@ charter.
   `removeIncorrect_new_contiguous`, with the (pli, plt) PIVOT entry
   crossing between the incoming entries and the receiver's kept prefix
   in the nw clauses. Build green, sweep 1623; zero sorry (grep).
+- 2026-08-22 Slice 35: the unit's remainder — `leaderLogs_contiguous`
+  (LeaderLogsContiguousInterface.v:9-12 1:1, GAP-5b; RVR win case rides
+  `logs_contiguous`, the lifted base log-matching — 4th real lift_prop
+  consumer), `allEntries_indices_gt_0`
+  (AllEntriesIndicesGt0Interface.v:8-11 1:1; the two allEntries WRITERS
+  characterized by new cases lemmas —
+  `update_elections_data_client_request_allEntries_cases` (fresh entry
+  at maxIndex+1) and `_appendEntries_allEntries_cases` (the request's
+  own entries, via `handleAppendEntries_reply_entries`: every reply
+  echoes the request's list); the AE case rides `tai_nw_lifted` (5th
+  lift_prop consumer)), and the TEN
+  `refined_log_matching_lemmas` interface fields as standalone theorems
+  (RefinedLogMatchingLemmasInterface.v:9-113, D3 class-dissolve):
+  entries contiguous/gt0/sorted × nw/host, entries_match host/nw_1/
+  nw_host, allEntries_gt_0 — the lifted bridge BOTH GAP-7 subtrees
+  consume. Build green, sweep 1652. GAP-5 IS CLOSED.
+- 2026-08-22 AxCheck curated pins added for eight unit-6 headliners
+  (leaderLogs_sorted / UniqueIndices / leader_sublog / log_matching /
+  logMatchingStatement_holds / leaderLogs_contiguous /
+  allEntries_indices_gt_0 / entries_match_nw_host invariants), captured
+  from a fresh capped `#print axioms` probe — all [propext, Quot.sound].
+  Build green with pins.
+- 2026-08-22 CHECKPOINT (recomputed at this tip, 5 slices since the
+  unit-6 opening): `git log f64d9b21..HEAD --oneline | wc -l` = 43
+  commits; fresh capped `lake build` green, `AxCheck sweep: 1652
+  declarations across VerdiCompat modules, axiom set within
+  [propext, Quot.sound]`; `grep -c "sorry\|native_decide"` over
+  LogMatching.lean: 0 (exit 1, no matches); LogMatching.lean = 2565
+  lines (wc). Unit-6 scope state: leaderLogs_sorted ✓, UniqueIndices ✓,
+  leader_sublog ✓, log_matching ✓ (+Statement), leaderLogs_contiguous ✓,
+  allEntries_indices_gt_0 ✓, refined_log_matching_lemmas ✓ — the full
+  scoped prefix. Remaining: gate, final entry + unit-7 charter.
 
