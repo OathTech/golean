@@ -724,6 +724,205 @@ theorem update_elections_data_requestVoteReply_cronies_intro
        exact absurd hf hty)
     | simp
 
+/-! ## Log- and message-shape facts (for `TermSanityProof.v` and
+`CandidateEntriesProof.v`) -/
+
+/-- `findGtIndex_in` (`CommonTheorems.v:326`). -/
+theorem findGtIndex_in {e : entry (P := P)} :
+    ∀ {l : List (entry (P := P))} {i : logIndex}, e ∈ findGtIndex l i → e ∈ l := by
+  intro l
+  induction l with
+  | nil => exact fun h => nomatch h
+  | cons a as ih =>
+    intro i h
+    unfold findGtIndex at h
+    split at h
+    · rcases List.mem_cons.mp h with rfl | h
+      · exact List.mem_cons_self ..
+      · exact List.mem_cons_of_mem _ (ih h)
+    · exact nomatch h
+
+/-- `removeAfterIndex_in` (`CommonTheorems.v:112`). -/
+theorem removeAfterIndex_in {e : entry (P := P)} :
+    ∀ {l : List (entry (P := P))} {i : logIndex},
+      e ∈ removeAfterIndex l i → e ∈ l := by
+  intro l
+  induction l with
+  | nil => exact fun h => nomatch h
+  | cons a as ih =>
+    intro i h
+    unfold removeAfterIndex at h
+    split at h
+    · exact h
+    · exact List.mem_cons_of_mem _ (ih h)
+
+/-- If the term does not go backwards, `advanceCurrentTerm` lands exactly
+on the incoming term. -/
+theorem advanceCurrentTerm_le_eq {st : raft_data (P := P)} {t : term}
+    (hle : st.currentTerm ≤ t) : (advanceCurrentTerm st t).currentTerm = t := by
+  unfold advanceCurrentTerm
+  split
+  · rfl
+  · rename_i hnlt
+    simp at hnlt
+    exact Nat.le_antisymm hle hnlt
+
+/-- `advanceCurrentTerm_same_or_type_follower`
+(`CandidateEntriesProof.v:351`). -/
+theorem advanceCurrentTerm_same_or_follower (st : raft_data (P := P)) (t : term) :
+    advanceCurrentTerm st t = st ∨ (advanceCurrentTerm st t).type = .Follower := by
+  unfold advanceCurrentTerm
+  split
+  · exact Or.inr rfl
+  · exact Or.inl rfl
+
+/-- `handleClientRequest_spec`'s log clause (`CandidateEntriesProof.v:16`,
+`TermSanityProof.v` client_request case): a new entry carries the
+leader's current term. -/
+theorem handleClientRequest_log (me : name (P := P)) (st : raft_data (P := P))
+    (client : R.clientId) (id : Nat) (c : P.input) {out st' l}
+    (h : handleClientRequest me st client id c = (out, st', l)) :
+    ∀ e ∈ st'.log, e ∈ st.log ∨ (e.eTerm = st.currentTerm ∧ st.type = .Leader) := by
+  unfold handleClientRequest at h
+  split at h
+  all_goals simp only [Prod.mk.injEq] at h
+  all_goals obtain ⟨-, rfl, -⟩ := h
+  · rename_i hty
+    intro e he
+    rcases List.mem_cons.mp he with rfl | he
+    · exact Or.inr ⟨rfl, hty⟩
+    · exact Or.inl he
+  · exact fun e he => Or.inl he
+
+/-- `handleAppendEntries_spec`'s log clause (`TermSanityProof.v`,
+`CandidateEntriesProof.v:197`): every entry of the new log is old or
+came in with the (accepted) message's term. -/
+theorem handleAppendEntries_log (me : name (P := P)) (st : raft_data (P := P))
+    (t : term) (lid : name (P := P)) (pli : logIndex) (plt : term)
+    (es : List (entry (P := P))) (ci : logIndex) {st' m}
+    (h : handleAppendEntries me st t lid pli plt es ci = (st', m)) :
+    ∀ e ∈ st'.log, e ∈ st.log ∨ (e ∈ es ∧ st'.currentTerm = t) := by
+  have hadv := advanceCurrentTerm_spec st t
+  unfold handleAppendEntries at h
+  split at h
+  · -- rejected: state unchanged
+    simp only [Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    exact fun e he => Or.inl he
+  · rename_i hnle
+    simp at hnle
+    have hct : (advanceCurrentTerm st t).currentTerm = t :=
+      advanceCurrentTerm_le_eq hnle
+    repeat' split at h
+    all_goals simp only [Prod.mk.injEq] at h
+    all_goals obtain ⟨rfl, rfl⟩ := h
+    all_goals intro e he
+    all_goals first
+      | exact Or.inl he
+      | (left
+         show e ∈ st.log
+         rw [← hadv.2.1]
+         exact he)
+      | exact Or.inr ⟨he, hct⟩
+      | (rcases List.mem_append.mp he with he | he
+         · exact Or.inr ⟨he, hct⟩
+         · exact Or.inl (removeAfterIndex_in he))
+
+/-- Log preservation for the three handlers that never touch it. -/
+theorem handleRequestVote_log (me : name (P := P)) (st : raft_data (P := P))
+    (t : term) (cand : name (P := P)) (lli : logIndex) (llt : term) {st' m}
+    (h : handleRequestVote me st t cand lli llt = (st', m)) :
+    st'.log = st.log := by
+  have hadv := advanceCurrentTerm_spec st t
+  unfold handleRequestVote at h
+  simp only [] at h
+  repeat' split at h
+  all_goals simp only [Prod.mk.injEq] at h
+  all_goals obtain ⟨rfl, -⟩ := h
+  all_goals first
+    | rfl
+    | exact hadv.2.1
+
+theorem handleAppendEntriesReply_log (me : name (P := P))
+    (st : raft_data (P := P)) (src : name (P := P)) (t : term)
+    (es : List (entry (P := P))) (r : Bool) {st' l}
+    (h : handleAppendEntriesReply me st src t es r = (st', l)) :
+    st'.log = st.log := by
+  have hadv := advanceCurrentTerm_spec st t
+  unfold handleAppendEntriesReply at h
+  repeat' split at h
+  all_goals simp only [Prod.mk.injEq] at h
+  all_goals obtain ⟨rfl, -⟩ := h
+  all_goals first
+    | rfl
+    | exact hadv.2.1
+
+theorem handleRequestVoteReply_log (me : name (P := P))
+    (st : raft_data (P := P)) (src : name (P := P)) (t : term) (v : Bool) :
+    (handleRequestVoteReply me st src t v).log = st.log := by
+  have hadv := advanceCurrentTerm_spec st t
+  unfold handleRequestVoteReply
+  simp only []
+  repeat' split
+  all_goals first
+    | rfl
+    | exact hadv.2.1
+
+/-- `handleRequestVote` replies only with `RequestVoteReply`. -/
+theorem handleRequestVote_reply_shape (me : name (P := P))
+    (st : raft_data (P := P)) (t : term) (cand : name (P := P))
+    (lli : logIndex) (llt : term) {st' m}
+    (h : handleRequestVote me st t cand lli llt = (st', m)) :
+    ∃ t' v, m = msg.RequestVoteReply (P := P) t' v := by
+  unfold handleRequestVote at h
+  simp only [] at h
+  repeat' split at h
+  all_goals simp only [Prod.mk.injEq] at h
+  all_goals obtain ⟨-, rfl⟩ := h
+  all_goals exact ⟨_, _, rfl⟩
+
+/-- `doLeader_in_entries`'s content (`CandidateEntriesProof.v:465`) plus
+the term shape needed by `TermSanityProof.v`'s do_leader case: every sent
+AppendEntries carries the sender's current term and entries from its own
+log. -/
+theorem doLeader_messages (st : raft_data (P := P)) (me : name (P := P))
+    {os st' ms} (h : doLeader st me = (os, st', ms)) :
+    ∀ q ∈ ms, ∃ pi pt ci es,
+      q.2 = msg.AppendEntries (P := P) st.currentTerm me pi pt es ci ∧
+      ∀ e ∈ es, e ∈ st.log := by
+  unfold doLeader advanceCommitIndex at h
+  simp only [] at h
+  repeat' split at h
+  all_goals simp only [Prod.mk.injEq] at h
+  all_goals obtain ⟨-, -, rfl⟩ := h
+  all_goals intro q hq
+  · simp only [List.mem_map] at hq
+    obtain ⟨node, -, rfl⟩ := hq
+    refine ⟨_, _, _, _, rfl, fun e he => findGtIndex_in he⟩
+  · exact nomatch hq
+  · exact nomatch hq
+
+/-- The cronies function after a RequestVoteReply, at FUNCTION level:
+per term, unchanged or snapshotted to the new votesReceived. -/
+theorem update_elections_data_requestVoteReply_cronies_cases
+    (me src : name (P := P)) (t0 : term) (v : Bool)
+    (st : electionsData (P := P) × raft_data (P := P)) (tm : term) :
+    (update_elections_data_requestVoteReply me src t0 v st).cronies tm
+      = st.1.cronies tm ∨
+    (tm = (handleRequestVoteReply me st.2 src t0 v).currentTerm ∧
+     (update_elections_data_requestVoteReply me src t0 v st).cronies tm
+       = (handleRequestVoteReply me st.2 src t0 v).votesReceived) := by
+  unfold update_elections_data_requestVoteReply
+  simp only []
+  repeat' split
+  all_goals first
+    | exact Or.inl rfl
+    | (simp only []
+       split
+       · rename_i heqtm
+         exact Or.inr ⟨heqtm, rfl⟩
+       · exact Or.inl rfl)
+
 end ElectionSpecLemmas
 
 end Raft
