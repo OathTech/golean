@@ -377,4 +377,17 @@ from artifacts.
 | cronies_term | OPEN (this unit) | Raft/CroniesTermInterface.v:9 | — |
 | no_entries_past_current_term (term_sanity) | OPEN (this unit, base) | Raft/TermSanityInterface.v:9-24 | — |
 | CandidateEntries | OPEN (this unit) | Raft/CandidateEntriesInterface.v:10-24 | — |
+- 2026-08-22 Slice 13 (1cc83c1d): log/message spec lemmas for the ring
+  (findGtIndex_in, removeAfterIndex_in, per-handler log facts,
+  doLeader_messages, rvr cronies function-level cases).
+- 2026-08-22 Slice 14: `CandidateEntries.lean` opened —
+  `cronies_term_invariant` (CroniesTermProof.v:271-291 shape, ghost)
+  and `no_entries_past_current_term_invariant`
+  (TermSanityProof.v:373-395, BASE — second real instantiation of the
+  base principle; the nw conjunct's do_leader case rides
+  doLeader_messages + the host invariant, exactly upstream's
+  findGtIndex argument). INDEX updates: cronies_term PROVED
+  (CandidateEntries.lean:43), no_entries_past_current_term PROVED
+  (CandidateEntries.lean, term-sanity section); mem_of_mem_remove_middle
+  un-privated (2nd consumer). Build green.
 

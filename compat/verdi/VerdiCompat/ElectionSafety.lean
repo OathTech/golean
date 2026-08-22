@@ -708,7 +708,7 @@ def cronies_correct (net : RefinedNet) : Prop :=
   votes_received_cronies net ∧ cronies_votes net ∧ votes_nw net ∧
   votes_received_leaders net
 
-private theorem mem_of_mem_remove_middle {α : Type _} {p' p : α}
+theorem mem_of_mem_remove_middle {α : Type _} {p' p : α}
     {xs ys : List α} (h : p' ∈ xs ++ ys) : p' ∈ xs ++ p :: ys := by
   rcases List.mem_append.mp h with h1 | h1
   · exact List.mem_append.mpr (Or.inl h1)
