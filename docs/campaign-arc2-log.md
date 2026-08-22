@@ -57,6 +57,16 @@ completion machinery, route memo + unit-2 charter).
   deliberately NOT proposed (it would re-pin the statement; Arc-1
   files immutable on this lane, re-pins supervised).
 
+- **U1 GATE** (2026-08-22): `GOLEAN_ALLOW_NO_DIFF=1
+  GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT: PASS** (rc 0; the
+  no-diff hatch's visible note present — fresh-lane docs+proofs arc,
+  the sanctioned case; comparator-landmark staleness note is
+  report-only and no designated statement changed on this lane;
+  the 1b2 sweep passed with the copied Specs modules in the
+  aggregator). Log: artifacts/arc2-gate.log (untracked artifact;
+  result restated here). **ARC 2 UNIT 1 BRANCH-COMPLETE** at this
+  tip.
+
 ## Checkpoint (U1 end, recomputed)
 
 Branch `campaign-arc2` @ (tip after this commit): 3 commits over
