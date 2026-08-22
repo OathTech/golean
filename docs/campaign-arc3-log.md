@@ -409,4 +409,50 @@ from artifacts.
   (pre-campaign file, commit 6fb4caf1), zero in campaign files;
   CandidateEntries.lean = 1199 lines (wc). Unit-3 remaining:
   scripts/ci + final entry.
+- 2026-08-22 Unit-3 final gate: `GOLEAN_ALLOW_NO_DIFF=1
+  GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT: PASS, exit 0** (log:
+  `artifacts/ci-arc3-unit3.log`, gitignored; no-diff notes are the
+  allowed docs+compat hatch — unit 3 touched only `compat/verdi/**` +
+  this log). Comparator-landmark staleness note still report-only;
+  flagged for the operator's merge step as before.
+
+## Final entry — unit 3 complete (2026-08-22, tip = this commit)
+
+**Proved at tip** — the candidate_entries ring, statements 1:1 with
+their Interface files, zero sorry/native_decide in campaign files
+(grep; sweep-enforced). `#print axioms` verbatim (fresh
+`lake env lean` run):
+
+```
+'VerdiCompat.Raft.cronies_term_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.no_entries_past_current_term_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.candidate_entries_invariant' depends on axioms: [propext, Quot.sound]
+```
+
+Inventory: `CandidateEntries.lean` (1199 lines): `cronies_term` (:37,
+invariant :43), `no_entries_past_current_term` (:214, invariant :220,
+BASE), `candidateEntries`/`CandidateEntries` (:596) with per-handler
+preserves lemmas, `candidate_entries_invariant` (:808). Spec-lemma
+additions in ElectionSpecLemmas.lean (slice 13 + timeout/rvr
+function-level cronies cases). The INVARIANT INDEX above is current.
+
+**Coordinator items resolved:** (1) unit-2 re-verification recorded at
+unit start; (2) INVARIANT INDEX opened and kept current (10 rows, all
+build-verified); (3) GAP-2 (msg-ghost) was NOT needed by this ring —
+still open, untouched; (4) checkpoint recomputed from artifacts at
+66710572.
+
+**Honestly open:** GAP-1 (primed variants — still never triggered),
+GAP-2 (msg-ghost layer), GAP-4 (classical-list doctrine question) all
+carried unchanged.
+
+**Next unit's charter (Arc 3, unit 4 — proposal):** continue the
+leader-completeness lattice per the index: the `leaderLogs` ring —
+`leaderLogs_term_sanity` (LeaderLogsTermSanityInterface.v),
+`leaderLogs_sorted`/`_contiguous`, then `leaders_have_leaderLogs`
+(LeadersHaveLeaderLogsInterface.v) and `one_leaderLog_per_term`
+(OneLeaderLogPerTermInterface.v) — the ghost `leaderLogs` vocabulary
+candidate_entries' successors consume, converging on
+`leader_completeness`. Same conventions; msg-ghost (GAP-2) expected to
+stay untouched until the GhostLog* files.
 
