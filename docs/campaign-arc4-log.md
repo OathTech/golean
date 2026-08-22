@@ -84,3 +84,52 @@ PROMOTION LEDGER section below, target-specific ones stay local.
   costs make it feasible in-unit; otherwise the pilot ends at the
   honest gap + NO-GO verdict with the measured numbers (exactly the
   seam design's "anything else → re-design here" branch).
+- 2026-08-22 Slice 1 (85acbb0c): `proofs/GoLeanProofs/Raft/AbsState.lean`
+  (absRaftNode v1 Option reader, gaps GAP-V1-1..5 numbered in the
+  docstring; specBecomeFollower re-grounded) +
+  `proofs/GoLeanProofs/Raft/HandlerEq.lean` (`storeTarget_field` —
+  the struct-field store form the kit lacks, closed locally;
+  `alt_call_span` — the 15-step span equation for the leaf callee
+  `abortLeaderTransfer`, abstract σ, symbolic addresses/fields, ten
+  windows chained with `stepFnIter_chain`). [AGENT] Spec-side call:
+  `specBecomeFollower` is a RE-GROUNDED mirror citing
+  VerdiCompat/Raft.lean + Raft.v + the subject — NOT an import of
+  compat/verdi (constitution §5 Plan A: compat/verdi is a read-only
+  reference, never an import; the two-line correspondence to
+  `advanceCurrentTerm` + Follower/lead override is stated in the
+  docstring with its `st.term ≤ t` side condition).
+- 2026-08-22 Slice 2: `BecomeFollowerWitness.lean` — the §3.3
+  discharge witness: every `alt_call_span` premise proved on a
+  concrete state over the PINNED tables (twinLowered's
+  funcs/methods/types; raft cell = the machine's own defaultValue at
+  raft.raft with raftLog pointed at a default raftLog cell), plus
+  `alt_witness_projection` (absRaftNode preserved across the call
+  and = some ⟨0,0,0,0,0,0⟩ — live, not vacuous). All rfl discharges
+  #eval-checked first (WitnessProbe). [AGENT] GAP-U1-W1: the witness
+  state is well-formed-by-construction, NOT proved reachable — a
+  reachable-state witness needs Arc-2's checkpoint reflection (raw
+  kernel evaluation to the first call site @ ~22k steps is measured
+  infeasible, Arc-2 route study); recorded, not claimed. Modules
+  wired into the GoLeanProofs aggregator; full proofs+Audit build
+  green (469 jobs). `#print axioms`: storeTarget_field /
+  alt_call_span / alt_call_span_witness all
+  [propext, Classical.choice, Quot.sound]; alt_witness_projection
+  [propext].
+
+### PROMOTION LEDGER (kit gaps with ≥2 plausible future consumers)
+
+- `storeTarget_field` (HandlerEq.lean) — struct-field store through a
+  pointer anchor; every handler field write hits it. Lift to StepKit
+  on the second consumer (kit rule: 2 landed consumers, retrofit in
+  the lifting commit).
+- Normality preservation under `StructFields.set` (isNormalForTy of a
+  struct survives setting a field to a normal value) — needed to turn
+  per-store `hnorm` hypotheses into derived facts in ∀-state
+  equations; `isNormalForTyFuel_sound` is the existing half.
+- Closure CALL-VALUE frame entry (`callValArgsK` analogue of
+  `stepFn_call_enter`) — tracker.Visit's per-node closure calls;
+  any Go program calling a func value needs it. (OQ-B's one gap.)
+- `sync-op` step forms (sequential Lock/Unlock crossing) — every
+  mutex-guarded subject path (lockedRand, MemoryStorage).
+- `sort-slice` stmtOp form (applyStmtOp sortSlice fact) —
+  tracker.Visit and quorum CommittedIndex both sort.

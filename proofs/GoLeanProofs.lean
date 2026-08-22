@@ -195,6 +195,12 @@ import GoLeanProofs.Sym.Walk
 -- driver's induction over the walk at the symbolic interpretation.
 import GoLeanProofs.Sym.Refine
 import GoLeanProofs.Sym.SpikeKadane
+-- Campaign Arc 4 (A4-U1 pilot): the interpreter⇄invariant seam's
+-- abstraction reader + per-callee span equations + pinned witness.
+-- Proof infrastructure — never imported by the Specs statement modules.
+import GoLeanProofs.Raft.AbsState
+import GoLeanProofs.Raft.HandlerEq
+import GoLeanProofs.Raft.BecomeFollowerWitness
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)
