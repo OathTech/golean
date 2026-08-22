@@ -226,4 +226,30 @@ need is a numbered Arc-4-seam gap, never invented statement-side.
   `update_elections_data_timeout_votes_intro`, where upstream's Ltac
   gets it implicitly from the shared scrutinee. Build green, AxCheck
   sweep 1064 decls (was 987).
+- 2026-08-22 Slice 8 (95d2fb0a): `ElectionSafety.lean` —
+  `votes_le_currentTerm` + `votes_correct` (statements 1:1 with
+  VotesLeCurrentTermInterface.v:9-13 / VotesCorrectInterface.v:8-28)
+  proved through `refined_raft_net_invariant`. [AGENT] Plumbing call:
+  all three votes_correct conjuncts are pointwise over nodes, so a
+  node-level bundle (`votes_state_ok`) + one step helper
+  (`votes_correct_of_update`) replaces upstream's per-obligation Ltac
+  (`update_destruct; rewrite_update`); per-handler node cores are
+  private lemmas each citing its VotesCorrectProof.v range. Sweep 1087.
+- 2026-08-22 Slice 9 (b4439001): `candidates_vote_for_selves` (BASE
+  layer, CandidatesVoteForSelvesInterface.v:8-11) — first real
+  instantiation of the base `raft_net_invariant` from
+  ProofStructure.lean. [AGENT] Added
+  `handleAppendEntries_reject_of_not_follower` to the spec lemmas: the
+  blanket handler spec loses the branch correlation (accept ⇒
+  follower), which upstream's `t`-Ltac gets by direct unfolding; the
+  correlation lemma restores it once for both this proof and the
+  coming cronies proof. Sweep 1099.
+- 2026-08-22 CHECKPOINT (4 slices since last; numbers recomputed at
+  b4439001): capped `lake build` green; AxCheck sweep prints 1099
+  declarations, axiom set within [propext, Quot.sound]; grep
+  sorry/native_decide over the three new files
+  (ElectionSpecLemmas/ElectionSafety + RefinedProofStructure): 0 hits.
+  Chain state: votes_le ✓, votes_correct ✓, candidates_vote_for_selves
+  ✓; remaining: cronies_correct, one_leader_per_term (+ quorum
+  counting lemmas), AxCheck pins, scripts/ci.
 
