@@ -478,3 +478,116 @@ our driver — which is how it DID catch it, go-side vs machine-side,
 but only because the rendered output made the divergent bit
 observable at all). One campaign, one forced-point silent wrong
 answer found and fixed — the rendered tier earned its charter.
+
+Landing gate: `scripts/ci --diff` at `95145bc3` — **RESULT: PASS**
+(`artifacts/w43/ci-bug068.txt`).
+
+---
+
+## Wave 7 (item 3) — THE MILESTONE: the full trace differential
+
+**The claim, with its bounds stated before its numbers** (the
+tier-strength bound, as the charter directs): the three channels are
+(1) the ok tier — command acceptance, blind to delivery order; (2)
+the machine/byte tier — our driver under `go run` vs under the
+machine, byte-for-byte over the FULL trace string INCLUDING every
+rendered block: the right instrument for "the machine executes raft
+as Go does", structurally unable to see a mirror bug; (3) the
+RENDERED tier — every supported block's output vs upstream's OWN
+recorded expectations, the one oracle external to us: what anchors
+delivery-order faithfulness and falsifies mirrors (and, this arc,
+falsified the MACHINE — BUG-068). A green suite is a claim about the
+SUPPORTED SUBSET only; the unsupported-command census below is part
+of the claim, not a footnote.
+
+**The run of record**: `tools/raftsubject/tracereplay.py --fuel
+40000000000` at commit `95145bc3` (frontend + golean built at that
+tip; only docs commits follow it on this branch), executed
+setsid-DETACHED per the W4.2 environment lesson — the first attempt
+was killed at ~1 h by the session background-task lifetime, an
+environment bound, never a machine stop; recorded in kind. Reports:
+`artifacts/w43/trace-final-p{1,2,3}.txt`, the report texts tracked at
+`docs/evidence/2026-08-21_w43-rendered-tier/`.
+
+**THE NUMBERS** (28 traces, 558 blocks; supported prefix 354 blocks
+= 63.4%, up from W4.2's 268/48.0% — conf-change unblocked the 11
+"multi-line command input" stoppers):
+
+- **OK-TIER: 206/206** ok-expectation blocks agree (was 178/178 over
+  the narrower prefix; the denominator grew with conf-change).
+- **RENDERED-TIER: 148/148 rendered-expectation blocks agree
+  byte-for-byte with upstream's recorded output — every family
+  100%**: ready dumps 70/70, pure log lines 35/35, raft-state tables
+  14/14, status tables 10/10, raft-log dumps 9/9, message describe
+  lines 8/8, other/mixed 2/2. (Go-side full-suite report:
+  `go-side-rendered-148.txt`; the final run's per-piece reports carry
+  the same per-family rows for the machine-run subsets.)
+- **MACHINE TIER: 26 of the 27 replayable traces verified
+  byte-for-byte AGREE at the final tip** (25/25 in piece 1 + 1/1
+  replicate_pause in piece 3), full rendered output included. The
+  28th, `async_storage_writes`, stops at its FIRST command (empty
+  supported prefix — a coverage gap, not a missing verdict; the W4.2
+  convention). **`probe_and_replicate` (74 blocks, 7 nodes) is the
+  one verdict IN FLIGHT at this writing** — its detached machine run
+  is past 6 interpreter-hours (the ok-tier form took ~1 h in W4.2;
+  full rendering multiplies the string work), an honest WALL-TIME
+  bound of the instrument family, already named in W4.2's open
+  questions. Reproduce/await: `tools/raftsubject/tracereplay.py
+  --fuel 40000000000 --traces probe_and_replicate`. Until that
+  report exists, no 27/27 machine claim is made — the same reading
+  discipline W4.2 used for the same trace. [If the run lands before
+  branch-complete, the result is recorded below this line.]
+- **Zero machine-vs-go divergences at the final tip. One was found
+  and FIXED on the way** — BUG-068 (wave 6), surfaced by exactly
+  this instrument's rendered channel on the two
+  `confchange_v2_add_double_*` traces, minimized, fixed, both traces
+  re-verified agreeing. The milestone's honest headline is not "the
+  suite was always green"; it is "the widened suite CAUGHT a silent
+  forced-point wrong answer the previous tiers could not see, and is
+  green after the fix".
+
+**The unsupported-command census over the 22 partial traces**
+(by-design exclusions, each with its reason in `tracereplay.py`'s
+docstring): compact/send-snapshot 5 stops (the subject never
+compacts; the replay env keeps no History-driven snapshot commands),
+async-storage-writes add-nodes 2, tick-election 1 +
+set-randomized-election-timeout 1 (jitter — JC-32's deferral),
+transfer-leadership 1, forget-leader 2, report-unreachable 1,
+add-nodes read-only 1, process-append/apply-thread stops inside
+async traces. `propose-conf-change` — W4.2's LARGEST stopper class
+(11 traces) — is GONE from the census: supported end-to-end.
+
+**Census at this tip** (`sweep-post-widening.txt`, tracked): **0 LIVE
+quarantined subject declarations out of 6 quarantined** (was 24/5
+LIVE post-swap): the 6 dead are `MajorityConfig.Describe` (the
+function-local-type C6-class residual, off every trace path),
+`DefaultLogger.{Fatal,Fatalf}` (os.Exit — dead under the installed
+logger), and the 3 `MemoryStorage` mutex method-set stubs (by
+design). 3 LIVE imported stubs remain — `log.Logger.{Output,Panic,
+Panicf}`, the embedded `*log.Logger` inside `DefaultLogger` — dead
+DYNAMICALLY under the installed logger by the standing W4.2
+dead-because-the-harness-installs argument (unchanged, both halves
+still probed by the teeth pair, now ALSO gate-visible as corpus
+rows).
+
+**JC-34 (item 2's "twin vocabulary if cheap"): NOT taken, recorded.**
+Adding conf-change to the TWIN's event vocabulary is not cheap (a new
+event kind + apply plumbing + battery re-runs of ~1 h machine time
+each) and buys nothing the milestone needs: the trace tier exercises
+`ProposeConfChange`/`ApplyConfChange`/the stepLeader Unmarshal path
+end-to-end under both oracles across 12 conf-change traces. The twin
+vocabulary widening belongs with W4.5's envelope work if wanted.
+
+**"Executable with confidence", stated as exactly what the evidence
+carries:** the machine executes etcd-io/raft's RawNode surface over
+the supported command subset of upstream's own datadriven corpus —
+election, replication, commit, config changes incl. joint consensus
+and auto-leave, snapshot catch-up of added nodes — byte-for-byte as
+`go run` does, INCLUDING every rendered observation, and the
+rendering pipeline itself reproduces upstream's recorded expectations
+on every supported block. Bounded by: the supported subset (the
+census above), the sequential/reliable-first envelope (the twin's
+standing narrowings, W4.5's obligations unchanged), the wall-time
+bound on the heaviest trace, and the tier-strength structure (the
+rendered tier is what anchors delivery-order faithfulness; it is
+green against upstream's recorded output on all 148 blocks).

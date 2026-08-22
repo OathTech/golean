@@ -1,0 +1,11 @@
+# tracereplay.py v2 — 1 traces, 32 blocks total
+# supported-prefix blocks: 32 (100.0%)
+
+OK-TIER:       22/22 ok-expectation blocks agree (empty handler output where upstream expects ok)
+RENDERED-TIER: 10/10 rendered-expectation blocks agree byte-for-byte with upstream's recorded output
+  family status tables               5/   5
+  family ready dumps                 4/   4
+  family message describe lines      1/   1
+MACHINE:       1/1 replayed traces agree byte-for-byte with go run
+
+replicate_pause                             32/ 32 blocks  ok 22/22  rendered 10/10
