@@ -1397,6 +1397,643 @@ theorem requestVote_maxIndex_maxTerm_invariant :
     · rw [update_neq _ _ heq] at hct hty ⊢
       exact hP t h0 p' n mi mt hct hty hp'' hbody hsrc
 
+/-! ## candidate_term_gt_log (BASE layer) -/
+
+/-- `CandidateTermGtLogInterface.v:8-11` (`candidate_term_gt_log`):
+a candidate's term is strictly above every entry in its log. -/
+def candidate_term_gt_log (net : RaftNet) : Prop :=
+  ∀ h : name (P := P),
+    (net.nwState h).type = .Candidate →
+    ∀ e ∈ (net.nwState h).log, (net.nwState h).currentTerm > e.eTerm
+
+/-- `CandidateTermGtLogProof.v:113-131` (`candidate_term_gt_log_invariant`)
+— BASE-layer, third real instantiation of the base principle; the
+timeout case rides `no_entries_past_current_term_invariant` exactly as
+upstream's `tsi`. -/
+theorem candidate_term_gt_log_invariant :
+    ∀ net, raft_intermediate_reachable (P := P) net →
+      candidate_term_gt_log net := by
+  refine raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · -- init: everyone a follower
+    intro h hty
+    exact nomatch hty
+  · -- client_request: a candidate's request is refused — state untouched
+    intro h net st' ps' out d l client id c hcr hP _hreach hst _hps h0
+    show (st' h0).type = .Candidate →
+      ∀ e ∈ (st' h0).log, (st' h0).currentTerm > e.eTerm
+    rw [hst h0]
+    unfold update
+    split
+    · intro hty
+      obtain ⟨htyd, -, -, -, -⟩ :=
+        handleClientRequest_spec h (net.nwState h) client id c hcr
+      have hd : d = net.nwState h :=
+        handleClientRequest_not_leader h (net.nwState h) client id c hcr
+          (by rw [← htyd, hty]; exact fun heq => nomatch heq)
+      rw [hd]
+      rw [hd] at hty
+      exact hP h hty
+    · exact hP h0
+  · -- timeout: a fresh candidacy's term is above the whole (bounded) log
+    intro net h st' ps' out d l hto hP hreach hst _hps h0
+    show (st' h0).type = .Candidate →
+      ∀ e ∈ (st' h0).log, (st' h0).currentTerm > e.eTerm
+    rw [hst h0]
+    unfold update
+    split
+    · intro hty e he
+      obtain ⟨hlog, hcases, -⟩ := handleTimeout_spec h (net.nwState h) hto
+      rw [hlog] at he
+      rcases hcases with ⟨hc, hcty, -, -⟩ | ⟨hc, -, -, -, -⟩
+      · rw [hc]
+        rw [hcty] at hty
+        exact hP h hty e he
+      · rw [hc]
+        obtain ⟨hhost, -⟩ := no_entries_past_current_term_invariant net hreach
+        exact Nat.lt_succ_of_le (hhost h e he)
+    · exact hP h0
+  · -- append_entries: a candidate must have rejected
+    intro xs p ys net st' ps' d m t0 n0 pli plt es ci hae _hbody hP _hreach
+      _hpkts hst _hps h0
+    show (st' h0).type = .Candidate →
+      ∀ e ∈ (st' h0).log, (st' h0).currentTerm > e.eTerm
+    rw [hst h0]
+    unfold update
+    split
+    · intro hty
+      have hd : d = net.nwState p.pDst :=
+        handleAppendEntries_reject_of_not_follower p.pDst (net.nwState p.pDst)
+          t0 n0 pli plt es ci hae (by rw [hty]; exact fun heq => nomatch heq)
+      rw [hd]
+      rw [hd] at hty
+      exact hP p.pDst hty
+    · exact hP h0
+  · -- append_entries_reply: candidate ⇒ term/type/log unchanged
+    intro xs p ys net st' ps' d m t0 es res haer _hbody hP _hreach _hpkts hst
+      _hps h0
+    show (st' h0).type = .Candidate →
+      ∀ e ∈ (st' h0).log, (st' h0).currentTerm > e.eTerm
+    rw [hst h0]
+    unfold update
+    split
+    · intro hty e he
+      obtain ⟨-, hcases, -⟩ :=
+        handleAppendEntriesReply_spec p.pDst (net.nwState p.pDst) p.pSrc t0 es
+          res haer
+      have hlog := handleAppendEntriesReply_log p.pDst (net.nwState p.pDst)
+        p.pSrc t0 es res haer
+      rw [hlog] at he
+      rcases hcases with ⟨hc, -, hcty⟩ | ⟨-, -, hcty⟩
+      · rw [hc]
+        rw [hcty] at hty
+        exact hP p.pDst hty e he
+      · rw [hcty] at hty
+        exact nomatch hty
+    · exact hP h0
+  · -- request_vote: candidate ⇒ term/type unchanged; log untouched
+    intro xs p ys net st' ps' d m t0 cid lli llt hrv _hbody hP _hreach _hpkts
+      hst _hps h0
+    show (st' h0).type = .Candidate →
+      ∀ e ∈ (st' h0).log, (st' h0).currentTerm > e.eTerm
+    rw [hst h0]
+    unfold update
+    split
+    · intro hty e he
+      obtain ⟨-, -, hcases, -⟩ :=
+        handleRequestVote_spec p.pDst (net.nwState p.pDst) t0 p.pSrc lli llt
+          hrv
+      have hlog := handleRequestVote_log p.pDst (net.nwState p.pDst) t0 p.pSrc
+        lli llt hrv
+      rw [hlog] at he
+      rcases hcases with ⟨hc, hcty⟩ | hcty
+      · rw [hc]
+        rw [hcty] at hty
+        exact hP p.pDst hty e he
+      · rw [hcty] at hty
+        exact nomatch hty
+    · exact hP h0
+  · -- request_vote_reply: candidate ⇒ was candidate at the same term
+    intro xs p ys net st' ps' d t0 v hrvr _hbody hP _hreach _hpkts hst _hps h0
+    show (st' h0).type = .Candidate →
+      ∀ e ∈ (st' h0).log, (st' h0).currentTerm > e.eTerm
+    rw [hst h0]
+    unfold update
+    split
+    · intro hty e he
+      subst hrvr
+      obtain ⟨-, -, hcand, -⟩ :=
+        handleRequestVoteReply_spec p.pDst (net.nwState p.pDst) p.pSrc t0 v rfl
+      have hlog := handleRequestVoteReply_log p.pDst (net.nwState p.pDst)
+        p.pSrc t0 v
+      rw [hlog] at he
+      obtain ⟨hcty, hc⟩ := hcand hty
+      rw [hc]
+      exact hP p.pDst hcty e he
+    · exact hP h0
+  · -- do_leader: term/type/log unchanged
+    intro net st' ps' d h os d' ms hdl hP _hreach hstate hst _hps h0
+    show (st' h0).type = .Candidate →
+      ∀ e ∈ (st' h0).log, (st' h0).currentTerm > e.eTerm
+    rw [hst h0]
+    unfold update
+    split
+    · intro hty e he
+      obtain ⟨hc, -, hcty, -, hlog, -⟩ := doLeader_spec d h hdl
+      rw [hlog] at he
+      rw [hc]
+      rw [hcty] at hty
+      have := hP h
+      rw [hstate] at this
+      exact this hty e he
+    · exact hP h0
+  · -- do_generic_server: term/type/log unchanged
+    intro net st' ps' d os d' ms h hgs hP _hreach hstate hst _hps h0
+    show (st' h0).type = .Candidate →
+      ∀ e ∈ (st' h0).log, (st' h0).currentTerm > e.eTerm
+    rw [hst h0]
+    unfold update
+    split
+    · intro hty e he
+      obtain ⟨hlog, hcty, hc, -, -, -⟩ := doGenericServer_spec h d hgs
+      rw [hlog] at he
+      rw [hc]
+      rw [hcty] at hty
+      have := hP h
+      rw [hstate] at this
+      exact this hty e he
+    · exact hP h0
+  · -- state_same_packet_subset
+    intro net net' hstates _hpkts hP _hreach h0
+    rw [← hstates h0]
+    exact hP h0
+  · -- reboot: a rebooted node is a follower
+    intro net net' d h d' hrb hP _hreach hstate hst _hpkts h0
+    rw [hst h0]
+    unfold update
+    split
+    · intro hty
+      subst hrb
+      exact nomatch hty
+    · exact hP h0
+
+/-! ## The leaderLogs_term_sanity trio -/
+
+/-- `LeaderLogsTermSanityInterface.v:9-13` (`leaderLogs_term_sanity`):
+every entry of a recorded leaderLog is strictly below its term. -/
+def leaderLogs_term_sanity (net : RefinedNet) : Prop :=
+  ∀ (h : name (P := P)) (t : term) (ll : List (entry (P := P)))
+    (e : entry (P := P)),
+    (t, ll) ∈ (net.nwState h).1.leaderLogs → e ∈ ll → e.eTerm < t
+
+/-- `LeaderLogsTermSanityInterface.v:15-18`
+(`leaderLogs_currentTerm_sanity`). -/
+def leaderLogs_currentTerm_sanity (net : RefinedNet) : Prop :=
+  ∀ (h : name (P := P)) (t : term) (ll : List (entry (P := P))),
+    (t, ll) ∈ (net.nwState h).1.leaderLogs →
+    t ≤ (net.nwState h).2.currentTerm
+
+/-- `LeaderLogsTermSanityInterface.v:20-24`
+(`leaderLogs_currentTerm_sanity_candidate`). -/
+def leaderLogs_currentTerm_sanity_candidate (net : RefinedNet) : Prop :=
+  ∀ (h : name (P := P)) (t : term) (ll : List (entry (P := P))),
+    (t, ll) ∈ (net.nwState h).1.leaderLogs →
+    (net.nwState h).2.type = .Candidate →
+    t < (net.nwState h).2.currentTerm
+
+/-- `LeaderLogsTermSanityProof.v:32-41` (`leaderLogs_term_sanity_unchanged`). -/
+theorem leaderLogs_term_sanity_of_update {net net' : RefinedNet}
+    {u : name (P := P)} {gd : electionsData (P := P)} {d : raft_data (P := P)}
+    (hP : leaderLogs_term_sanity net)
+    (hst : ∀ h', net'.nwState h' = update net.nwState u (gd, d) h')
+    (hgd : gd.leaderLogs = (net.nwState u).1.leaderLogs) :
+    leaderLogs_term_sanity net' := by
+  intro h t ll e hin he
+  rw [hst h] at hin
+  by_cases heq : h = u
+  · subst heq
+    rw [update_same] at hin
+    replace hin : (t, ll) ∈ gd.leaderLogs := hin
+    rw [hgd] at hin
+    exact hP _ t ll e hin he
+  · rw [update_neq _ _ heq] at hin
+    exact hP h t ll e hin he
+
+/-- `LeaderLogsTermSanityProof.v:50-62`
+(`leaderLogs_term_sanity_request_vote_reply`) folded into
+`LeaderLogsTermSanityProof.v:73-91` (`leaderLogs_term_sanity_invariant`):
+the only step that grows leaderLogs snapshots a CANDIDATE's log, and a
+candidate's term is above its whole log — the lifted base
+`candidate_term_gt_log`, the first real `lift_prop` consumer. -/
+theorem leaderLogs_term_sanity_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      leaderLogs_term_sanity net := by
+  refine refined_raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · -- init
+    intro h t ll e hin _he
+    exact nomatch hin
+  · -- client_request
+    intro h net st' ps' gd out d l client id c _hcr hgd hP _hreach hst _hps
+    refine leaderLogs_term_sanity_of_update hP hst ?_
+    subst hgd
+    exact (update_elections_data_client_request_ghost h (net.nwState h)
+      client id c).2.2.2
+  · -- timeout
+    intro net h st' ps' gd out d l _hto hgd hP _hreach hst _hps
+    refine leaderLogs_term_sanity_of_update hP hst ?_
+    subst hgd
+    exact (update_elections_data_timeout_ghost h (net.nwState h)).1
+  · -- append_entries
+    intro xs p ys net st' ps' gd d m t0 n0 pli plt es ci _hae hgd _hbody hP
+      _hreach _hpkts hst _hps
+    refine leaderLogs_term_sanity_of_update hP hst ?_
+    subst hgd
+    exact (update_elections_data_appendEntries_ghost p.pDst
+      (net.nwState p.pDst) t0 n0 pli plt es ci).2.2.2
+  · -- append_entries_reply (ghost unchanged)
+    intro xs p ys net st' ps' gd d m t0 es res _haer hgd _hbody hP _hreach
+      _hpkts hst _hps
+    refine leaderLogs_term_sanity_of_update hP hst ?_
+    subst hgd
+    rfl
+  · -- request_vote
+    intro xs p ys net st' ps' gd d m t0 cid lli llt _hrv hgd _hbody hP
+      _hreach _hpkts hst _hps
+    refine leaderLogs_term_sanity_of_update hP hst ?_
+    subst hgd
+    exact (update_elections_data_requestVote_cronies p.pDst p.pSrc t0 p.pSrc
+      lli llt (net.nwState p.pDst)).2.1
+  · -- request_vote_reply: THE case — the win snapshot
+    intro xs p ys net st' ps' gd d t0 v hrvr hgd _hbody hP hreach _hpkts hst
+      _hps
+    intro h t ll e hin he
+    replace hin : (t, ll) ∈ (st' h).1.leaderLogs := hin
+    rw [hst h] at hin
+    by_cases heq : h = p.pDst
+    · subst heq
+      rw [update_same] at hin
+      replace hin : (t, ll) ∈ gd.leaderLogs := hin
+      subst hgd
+      rcases leaderLogs_update_elections_data_RVR hin
+        with hold | ⟨hty', hcand, rfl, rfl⟩
+      · exact hP _ t ll e hold he
+      · -- new snapshot: candidate's log, term unchanged, entries below
+        subst hrvr
+        obtain ⟨-, -, -, hleader⟩ :=
+          handleRequestVoteReply_spec p.pDst (net.nwState p.pDst).2 p.pSrc t0
+            v rfl
+        rcases hleader hty' with heqd | ⟨hcandty, -, hc⟩
+        · -- "unchanged" leader contradicts the candidate premise
+          exfalso
+          rw [← heqd] at hcand
+          rw [hty'] at hcand
+          exact nomatch hcand
+        · have hlog := handleRequestVoteReply_log p.pDst
+            (net.nwState p.pDst).2 p.pSrc t0 v
+          rw [hlog] at he
+          have hctg := lift_prop _ candidate_term_gt_log_invariant net hreach
+          have := hctg p.pDst (by rw [deghost_spec]; exact hcandty) e
+            (by rw [deghost_spec]; exact he)
+          rw [deghost_spec] at this
+          rw [hc]
+          exact this
+    · rw [update_neq _ _ heq] at hin
+      exact hP h t ll e hin he
+  · -- do_leader (ghost rides along)
+    intro net st' ps' gd d h os d' ms _hdl hP _hreach hstate hst _hps
+    refine leaderLogs_term_sanity_of_update hP hst ?_
+    rw [hstate]
+  · -- do_generic_server
+    intro net st' ps' gd d os d' ms h _hgs hP _hreach hstate hst _hps
+    refine leaderLogs_term_sanity_of_update hP hst ?_
+    rw [hstate]
+  · -- state_same_packet_subset
+    intro net net' hstates _hpkts hP _hreach h t ll e hin he
+    rw [← hstates h] at hin
+    exact hP h t ll e hin he
+  · -- reboot (ghost survives)
+    intro net net' gd d h d' _hrb hP _hreach hstate hst _hpkts
+    refine leaderLogs_term_sanity_of_update hP hst ?_
+    rw [hstate]
+
+/-- `LeaderLogsTermSanityProof.v:100-112`
+(`leaderLogs_currentTerm_sanity_unchanged`). -/
+theorem leaderLogs_currentTerm_sanity_of_update {net net' : RefinedNet}
+    {u : name (P := P)} {gd : electionsData (P := P)} {d : raft_data (P := P)}
+    (hP : leaderLogs_currentTerm_sanity net)
+    (hst : ∀ h', net'.nwState h' = update net.nwState u (gd, d) h')
+    (hgd : gd.leaderLogs = (net.nwState u).1.leaderLogs)
+    (hle : (net.nwState u).2.currentTerm ≤ d.currentTerm) :
+    leaderLogs_currentTerm_sanity net' := by
+  intro h t ll hin
+  rw [hst h] at hin
+  rw [hst h]
+  by_cases heq : h = u
+  · subst heq
+    rw [update_same] at hin ⊢
+    replace hin : (t, ll) ∈ gd.leaderLogs := hin
+    rw [hgd] at hin
+    exact Nat.le_trans (hP _ t ll hin) hle
+  · rw [update_neq _ _ heq] at hin ⊢
+    exact hP h t ll hin
+
+/-- `LeaderLogsTermSanityProof.v:215-233`
+(`leaderLogs_currentTerm_sanity_invariant`). -/
+theorem leaderLogs_currentTerm_sanity_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      leaderLogs_currentTerm_sanity net := by
+  refine refined_raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · -- init
+    intro h t ll hin
+    exact nomatch hin
+  · -- client_request
+    intro h net st' ps' gd out d l client id c hcr hgd hP _hreach hst _hps
+    obtain ⟨-, hc, -, -, -⟩ :=
+      handleClientRequest_spec h (net.nwState h).2 client id c hcr
+    refine leaderLogs_currentTerm_sanity_of_update hP hst ?_ (hc ▸ Nat.le_refl _)
+    subst hgd
+    exact (update_elections_data_client_request_ghost h (net.nwState h)
+      client id c).2.2.2
+  · -- timeout
+    intro net h st' ps' gd out d l hto hgd hP _hreach hst _hps
+    obtain ⟨-, hcases, -⟩ := handleTimeout_spec h (net.nwState h).2 hto
+    refine leaderLogs_currentTerm_sanity_of_update hP hst ?_ ?_
+    · subst hgd
+      exact (update_elections_data_timeout_ghost h (net.nwState h)).1
+    · rcases hcases with ⟨hc, -⟩ | ⟨hc, -⟩
+      · exact hc ▸ Nat.le_refl _
+      · rw [hc]
+        exact Nat.le_succ _
+  · -- append_entries
+    intro xs p ys net st' ps' gd d m t0 n0 pli plt es ci hae hgd _hbody hP
+      _hreach _hpkts hst _hps
+    obtain ⟨-, hcases, -, -⟩ :=
+      handleAppendEntries_spec p.pDst (net.nwState p.pDst).2 t0 n0 pli plt es
+        ci hae
+    refine leaderLogs_currentTerm_sanity_of_update hP hst ?_ ?_
+    · subst hgd
+      exact (update_elections_data_appendEntries_ghost p.pDst
+        (net.nwState p.pDst) t0 n0 pli plt es ci).2.2.2
+    · rcases hcases with ⟨hc, -⟩ | ⟨hc, -⟩
+      · exact hc ▸ Nat.le_refl _
+      · exact Nat.le_of_lt hc
+  · -- append_entries_reply
+    intro xs p ys net st' ps' gd d m t0 es res haer hgd _hbody hP _hreach
+      _hpkts hst _hps
+    obtain ⟨-, hcases, -⟩ :=
+      handleAppendEntriesReply_spec p.pDst (net.nwState p.pDst).2 p.pSrc t0 es
+        res haer
+    refine leaderLogs_currentTerm_sanity_of_update hP hst ?_ ?_
+    · subst hgd
+      rfl
+    · rcases hcases with ⟨hc, -, -⟩ | ⟨hc, -, -⟩
+      · exact hc ▸ Nat.le_refl _
+      · exact Nat.le_of_lt hc
+  · -- request_vote
+    intro xs p ys net st' ps' gd d m t0 cid lli llt hrv hgd _hbody hP _hreach
+      _hpkts hst _hps
+    obtain ⟨-, hle, -, -⟩ :=
+      handleRequestVote_spec p.pDst (net.nwState p.pDst).2 t0 p.pSrc lli llt
+        hrv
+    refine leaderLogs_currentTerm_sanity_of_update hP hst ?_ hle
+    subst hgd
+    exact (update_elections_data_requestVote_cronies p.pDst p.pSrc t0 p.pSrc
+      lli llt (net.nwState p.pDst)).2.1
+  · -- request_vote_reply: old bound grows; the fresh snapshot is at the
+    -- winner's own term
+    intro xs p ys net st' ps' gd d t0 v hrvr hgd _hbody hP _hreach _hpkts hst
+      _hps
+    subst hrvr
+    obtain ⟨hcases, -, -, -⟩ :=
+      handleRequestVoteReply_spec p.pDst (net.nwState p.pDst).2 p.pSrc t0 v rfl
+    have hle : (net.nwState p.pDst).2.currentTerm
+        ≤ (handleRequestVoteReply p.pDst (net.nwState p.pDst).2 p.pSrc t0
+            v).currentTerm := by
+      rcases hcases with ⟨hc, -⟩ | ⟨hc, -⟩
+      · exact hc ▸ Nat.le_refl _
+      · exact Nat.le_of_lt hc
+    intro h t ll hin
+    replace hin : (t, ll) ∈ (st' h).1.leaderLogs := hin
+    show t ≤ (st' h).2.currentTerm
+    rw [hst h] at hin
+    rw [hst h]
+    by_cases heq : h = p.pDst
+    · subst heq
+      rw [update_same] at hin ⊢
+      replace hin : (t, ll) ∈ gd.leaderLogs := hin
+      subst hgd
+      rcases leaderLogs_update_elections_data_RVR hin
+        with hold | ⟨-, -, rfl, -⟩
+      · exact Nat.le_trans (hP _ t ll hold) hle
+      · exact Nat.le_refl _
+    · rw [update_neq _ _ heq] at hin ⊢
+      exact hP h t ll hin
+  · -- do_leader
+    intro net st' ps' gd d h os d' ms hdl hP _hreach hstate hst _hps
+    obtain ⟨hc, -, -, -, -, -⟩ := doLeader_spec d h hdl
+    refine leaderLogs_currentTerm_sanity_of_update hP hst ?_ ?_
+    · rw [hstate]
+    · rw [hstate, hc]
+      exact Nat.le_refl _
+  · -- do_generic_server
+    intro net st' ps' gd d os d' ms h hgs hP _hreach hstate hst _hps
+    obtain ⟨-, -, hc, -, -, -⟩ := doGenericServer_spec h d hgs
+    refine leaderLogs_currentTerm_sanity_of_update hP hst ?_ ?_
+    · rw [hstate]
+    · rw [hstate, hc]
+      exact Nat.le_refl _
+  · -- state_same_packet_subset
+    intro net net' hstates _hpkts hP _hreach h t ll hin
+    rw [← hstates h] at hin
+    rw [← hstates h]
+    exact hP h t ll hin
+  · -- reboot (term survives)
+    intro net net' gd d h d' hrb hP _hreach hstate hst _hpkts
+    subst hrb
+    refine leaderLogs_currentTerm_sanity_of_update hP hst ?_ ?_
+    · rw [hstate]
+    · rw [hstate]
+      exact Nat.le_refl _
+
+/-- `LeaderLogsTermSanityProof.v:243-255`
+(`leaderLogs_currentTerm_sanity_candidate_unchanged`). -/
+theorem leaderLogs_currentTerm_sanity_candidate_of_update
+    {net net' : RefinedNet} {u : name (P := P)} {gd : electionsData (P := P)}
+    {d : raft_data (P := P)}
+    (hP : leaderLogs_currentTerm_sanity_candidate net)
+    (hcts : leaderLogs_currentTerm_sanity net)
+    (hst : ∀ h', net'.nwState h' = update net.nwState u (gd, d) h')
+    (hgd : gd.leaderLogs = (net.nwState u).1.leaderLogs)
+    (hty : d.type = .Candidate →
+      ((net.nwState u).2.type = .Candidate ∧
+       d.currentTerm = (net.nwState u).2.currentTerm) ∨
+      (net.nwState u).2.currentTerm < d.currentTerm) :
+    leaderLogs_currentTerm_sanity_candidate net' := by
+  intro h t ll hin htyp
+  rw [hst h] at hin htyp
+  rw [hst h]
+  by_cases heq : h = u
+  · subst heq
+    rw [update_same] at hin htyp ⊢
+    replace hin : (t, ll) ∈ gd.leaderLogs := hin
+    replace htyp : d.type = .Candidate := htyp
+    rw [hgd] at hin
+    rcases hty htyp with ⟨htyo, hc⟩ | hlt
+    · show t < d.currentTerm
+      rw [hc]
+      exact hP _ t ll hin htyo
+    · exact Nat.lt_of_le_of_lt (hcts _ t ll hin) hlt
+  · rw [update_neq _ _ heq] at hin htyp ⊢
+    exact hP h t ll hin htyp
+
+/-- `LeaderLogsTermSanityProof.v:355-372`
+(`leaderLogs_currentTerm_sanity_candidate_invariant`). -/
+theorem leaderLogs_currentTerm_sanity_candidate_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      leaderLogs_currentTerm_sanity_candidate net := by
+  refine refined_raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · -- init
+    intro h t ll hin _hty
+    exact nomatch hin
+  · -- client_request
+    intro h net st' ps' gd out d l client id c hcr hgd hP hreach hst _hps
+    obtain ⟨htyd, hc, -, -, -⟩ :=
+      handleClientRequest_spec h (net.nwState h).2 client id c hcr
+    refine leaderLogs_currentTerm_sanity_candidate_of_update hP
+      (leaderLogs_currentTerm_sanity_invariant net hreach) hst ?_ ?_
+    · subst hgd
+      exact (update_elections_data_client_request_ghost h (net.nwState h)
+        client id c).2.2.2
+    · intro htyp
+      exact Or.inl ⟨htyd ▸ htyp, hc⟩
+  · -- timeout: a fresh candidacy strictly grows the term
+    intro net h st' ps' gd out d l hto hgd hP hreach hst _hps
+    obtain ⟨-, hcases, -⟩ := handleTimeout_spec h (net.nwState h).2 hto
+    refine leaderLogs_currentTerm_sanity_candidate_of_update hP
+      (leaderLogs_currentTerm_sanity_invariant net hreach) hst ?_ ?_
+    · subst hgd
+      exact (update_elections_data_timeout_ghost h (net.nwState h)).1
+    · intro htyp
+      rcases hcases with ⟨hc, hcty, -, -⟩ | ⟨hc, -, -, -, -⟩
+      · exact Or.inl ⟨hcty ▸ htyp, hc⟩
+      · right
+        rw [hc]
+        exact Nat.lt_succ_self _
+  · -- append_entries: candidate ⇒ rejected, state untouched
+    intro xs p ys net st' ps' gd d m t0 n0 pli plt es ci hae hgd _hbody hP
+      hreach _hpkts hst _hps
+    refine leaderLogs_currentTerm_sanity_candidate_of_update hP
+      (leaderLogs_currentTerm_sanity_invariant net hreach) hst ?_ ?_
+    · subst hgd
+      exact (update_elections_data_appendEntries_ghost p.pDst
+        (net.nwState p.pDst) t0 n0 pli plt es ci).2.2.2
+    · intro htyp
+      have hd : d = (net.nwState p.pDst).2 :=
+        handleAppendEntries_reject_of_not_follower p.pDst
+          (net.nwState p.pDst).2 t0 n0 pli plt es ci hae
+          (by rw [htyp]; exact fun heq => nomatch heq)
+      rw [hd] at htyp
+      left
+      refine ⟨htyp, ?_⟩
+      rw [hd]
+  · -- append_entries_reply
+    intro xs p ys net st' ps' gd d m t0 es res haer hgd _hbody hP hreach
+      _hpkts hst _hps
+    obtain ⟨-, hcases, -⟩ :=
+      handleAppendEntriesReply_spec p.pDst (net.nwState p.pDst).2 p.pSrc t0 es
+        res haer
+    refine leaderLogs_currentTerm_sanity_candidate_of_update hP
+      (leaderLogs_currentTerm_sanity_invariant net hreach) hst ?_ ?_
+    · subst hgd
+      rfl
+    · intro htyp
+      rcases hcases with ⟨hc, -, hcty⟩ | ⟨-, -, hcty⟩
+      · rw [hcty] at htyp
+        exact Or.inl ⟨htyp, hc⟩
+      · rw [hcty] at htyp
+        exact nomatch htyp
+  · -- request_vote
+    intro xs p ys net st' ps' gd d m t0 cid lli llt hrv hgd _hbody hP hreach
+      _hpkts hst _hps
+    obtain ⟨-, -, hcases, -⟩ :=
+      handleRequestVote_spec p.pDst (net.nwState p.pDst).2 t0 p.pSrc lli llt
+        hrv
+    refine leaderLogs_currentTerm_sanity_candidate_of_update hP
+      (leaderLogs_currentTerm_sanity_invariant net hreach) hst ?_ ?_
+    · subst hgd
+      exact (update_elections_data_requestVote_cronies p.pDst p.pSrc t0
+        p.pSrc lli llt (net.nwState p.pDst)).2.1
+    · intro htyp
+      rcases hcases with ⟨hc, hcty⟩ | hcty
+      · rw [hcty] at htyp
+        exact Or.inl ⟨htyp, hc⟩
+      · rw [hcty] at htyp
+        exact nomatch htyp
+  · -- request_vote_reply: a candidate did NOT just win — old entries only
+    intro xs p ys net st' ps' gd d t0 v hrvr hgd _hbody hP _hreach _hpkts hst
+      _hps
+    subst hrvr
+    obtain ⟨-, -, hcand, -⟩ :=
+      handleRequestVoteReply_spec p.pDst (net.nwState p.pDst).2 p.pSrc t0 v rfl
+    intro h t ll hin htyp
+    replace hin : (t, ll) ∈ (st' h).1.leaderLogs := hin
+    replace htyp : (st' h).2.type = .Candidate := htyp
+    show t < (st' h).2.currentTerm
+    rw [hst h] at hin htyp
+    rw [hst h]
+    by_cases heq : h = p.pDst
+    · subst heq
+      rw [update_same] at hin htyp ⊢
+      replace hin : (t, ll) ∈ gd.leaderLogs := hin
+      replace htyp : (handleRequestVoteReply p.pDst (net.nwState p.pDst).2
+        p.pSrc t0 v).type = .Candidate := htyp
+      subst hgd
+      obtain ⟨htyo, hc⟩ := hcand htyp
+      rcases leaderLogs_update_elections_data_RVR hin
+        with hold | ⟨hty', -, -, -⟩
+      · show t < (handleRequestVoteReply p.pDst (net.nwState p.pDst).2 p.pSrc
+          t0 v).currentTerm
+        rw [hc]
+        exact hP _ t ll hold htyo
+      · rw [hty'] at htyp
+        exact nomatch htyp
+    · rw [update_neq _ _ heq] at hin htyp ⊢
+      exact hP h t ll hin htyp
+  · -- do_leader
+    intro net st' ps' gd d h os d' ms hdl hP hreach hstate hst _hps
+    obtain ⟨hc, -, hcty, -, -, -⟩ := doLeader_spec d h hdl
+    refine leaderLogs_currentTerm_sanity_candidate_of_update hP
+      (leaderLogs_currentTerm_sanity_invariant net hreach) hst ?_ ?_
+    · rw [hstate]
+    · intro htyp
+      rw [hcty] at htyp
+      left
+      rw [hstate]
+      exact ⟨htyp, hc⟩
+  · -- do_generic_server
+    intro net st' ps' gd d os d' ms h hgs hP hreach hstate hst _hps
+    obtain ⟨-, hcty, hc, -, -, -⟩ := doGenericServer_spec h d hgs
+    refine leaderLogs_currentTerm_sanity_candidate_of_update hP
+      (leaderLogs_currentTerm_sanity_invariant net hreach) hst ?_ ?_
+    · rw [hstate]
+    · intro htyp
+      rw [hcty] at htyp
+      left
+      rw [hstate]
+      exact ⟨htyp, hc⟩
+  · -- state_same_packet_subset
+    intro net net' hstates _hpkts hP _hreach h t ll hin htyp
+    rw [← hstates h] at hin htyp
+    rw [← hstates h]
+    exact hP h t ll hin htyp
+  · -- reboot: a rebooted node is a follower
+    intro net net' gd d h d' hrb hP hreach hstate hst _hpkts
+    subst hrb
+    refine leaderLogs_currentTerm_sanity_candidate_of_update hP
+      (leaderLogs_currentTerm_sanity_invariant net hreach) hst ?_ ?_
+    · rw [hstate]
+    · intro htyp
+      exact nomatch htyp
+
 end LeaderLogsRing
 
 end Raft

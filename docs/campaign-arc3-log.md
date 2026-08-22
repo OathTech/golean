@@ -539,4 +539,28 @@ Same conventions; GAP-2 msg-ghost only on first genuine need.
   (var = var) eliminates the RIGHT variable, but with
   `heq : h0 = p.pDst` (var = projection) eliminates the LEFT — the
   surviving name differs by case; reference accordingly. Build green.
+- 2026-08-22 Slice 20: `candidate_term_gt_log` (BASE — third real base
+  instantiation; timeout case rides no_entries_past_current_term
+  exactly as upstream's tsi) and the `leaderLogs_term_sanity` TRIO
+  (LeaderLogsTermSanityInterface.v:9-24 1:1) — each with its
+  `_of_update` step helper mirroring upstream's `*_unchanged` lemmas;
+  the term-sanity RVR case is the FIRST REAL `lift_prop` CONSUMER
+  (lifting base candidate_term_gt_log into the ghost proof, exactly
+  LeaderLogsTermSanityProof.v:17-23's candidate_term_gt_log_lifted);
+  the candidate variant's timeout case rides invariant 2, upstream's
+  `intuition auto with arith`. Full build green, sweep 1350 decls
+  within [propext, Quot.sound].
+- 2026-08-22 CHECKPOINT (recomputed at this tip, 5 slices since the
+  unit-3 checkpoint): `git log f64d9b21..HEAD --oneline | wc -l` = 26
+  commits including the slice-20 commit; capped full `lake build`
+  green, `AxCheck sweep: 1350 declarations ... within
+  [propext, Quot.sound]`;
+  `grep -n sorry\|native_decide` over LeaderLogs.lean: 0 hits;
+  LeaderLogs.lean = 2040 lines (wc). Ring state: requestVote/votedFor/
+  requestVoteReply term sanity ✓, requestVote_maxIndex_maxTerm ✓,
+  votes_votesWithLog_correspond ✓, leaders_have_leaderLogs ✓,
+  candidate_term_gt_log (base) ✓, leaderLogs_term_sanity trio ✓.
+  Remaining: votedFor/requestVoteReply/votesReceived moreUpToDate,
+  leaderLogs_votesWithLog, one_leaderLog_per_term (3 statements),
+  leader_completeness defs, pins, INDEX, gate.
 
