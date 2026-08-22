@@ -20,12 +20,18 @@
 //     shared-nothing argument; this env is sequential measurement
 //     tooling and makes no reduction claim (recorded as JC-30).
 //   - deliver-msgs takes upstream's ONE ordered recipient list with a
-//     per-recipient Drop flag — RETIRING latent mirror divergence #2
-//     (W4.2 pre-merge audit): output order is observable in this tier,
-//     so deliver-before-drop-by-argument-position must be exact.
+//     per-recipient Drop flag — latent mirror divergence #2 (W4.2
+//     pre-merge audit) closed SOURCE-VERBATIM, UNEXERCISED BY EVERY
+//     TIER (audit R2-F2 relabeled this from "RETIRING": mutation
+//     M4 — drops reordered before delivers — leaves the full go-side
+//     suite green at 206/206 ok + 148/148 rendered, re-verified
+//     2026-08-22, so the mirroring is the whole argument; no trace
+//     mixes drop and deliver recipients in one command).
 //   - splitMsgs carries upstream's `!(drop && isLocalMsg(msg))` guard —
-//     RETIRING latent mirror divergence #1 (same audit): the guard is
-//     mirrored verbatim rather than argued unreachable.
+//     latent mirror divergence #1 (same audit) closed SOURCE-VERBATIM,
+//     UNEXERCISED BY EVERY TIER (same relabeling; mutation M3 —
+//     guard removed — leaves the suite green at the same numbers: no
+//     supported trace has a local message in the bag at a drop).
 //   - conf-change support (propose-conf-change + the apply path's
 //     ApplyConfChange dispatch), unblocking the 11 traces whose stop
 //     was "multi-line command input".
@@ -34,8 +40,13 @@
 //     (withIndent), exactly as upstream.
 //
 // Still outside the subset, fail closed (reasons in tracereplay.py's
-// docstring): snapshots in Ready, compact/send-snapshot (no History
-// bookkeeping — recorded bound), async storage writes,
+// docstring): compact/send-snapshot (the env implements no handlers
+// for the two COMMANDS — audit R2-F1 corrected this line, whose first
+// version said "no History bookkeeping" and listed snapshots-in-Ready
+// as outside: BACKWARDS on both counts, since v2 KEEPS History (the
+// appender state machine above) and APPLIES snapshots from Ready —
+// that is exactly what makes conf-change snapshot catch-up work),
+// async storage writes,
 // tick-election/set-randomized-election-timeout (jitter),
 // transfer-leadership/forget-leader/report-unreachable,
 // add-nodes content=/read-only/async-storage-writes args.
@@ -273,7 +284,10 @@ func (e *renv) projection() string {
 // addNodes mirrors upstream AddNodes + raftConfigStub: n fresh nodes,
 // ids continuing the sequence, snapshot-seeded iff voters/learners/index
 // given (upstream requires index > 1 then, and stamps Metadata.Term=1).
-// No History bookkeeping: compact/send-snapshot are outside the subset.
+// History IS kept (the appender state machine); compact/send-snapshot
+// stay outside because their COMMAND handlers are unimplemented
+// (audit R2-F1 — the first version of this line claimed "no History
+// bookkeeping", contradicting the history field 170 lines up).
 func (e *renv) addNodes(n int, voters []uint64, learners []uint64, index uint64,
 	prevote bool, checkquorum bool, inflight int, maxCommittedSize uint64,
 	stepDownOnRemoval bool, disableCCV bool) error {
@@ -296,9 +310,14 @@ func (e *renv) addNodes(n int, voters []uint64, learners []uint64, index uint64,
 				return err
 			}
 		}
+		// inflight < 0 means the arg was ABSENT (audit R2-F3: the old
+		// encoding used 0 for absent, making an EXPLICIT `inflight=0`
+		// indistinguishable from no arg — upstream would Scan the 0
+		// into MaxInflightMsgs and the config would reject it, where
+		// this mirror silently substituted MaxInt32).
 		mi := inflight
-		if mi == 0 {
-			mi = 1<<31 - 1 // upstream: math.MaxInt32
+		if mi < 0 {
+			mi = 1<<31 - 1 // upstream default: math.MaxInt32
 		}
 		nd := &envNode{st: st, history: []*pb.Snapshot{snap}, applied: index}
 		e.nodes = append(e.nodes, nd)
@@ -444,7 +463,8 @@ func isLocalMsg(m *pb.Message) bool {
 }
 
 // splitMsgs mirrors rafttest's splitMsgs verbatim, including the
-// don't-drop-local guard (divergence #1 retired).
+// don't-drop-local guard (divergence #1: source-verbatim, unexercised
+// by every tier — mutation M3 stays green; see the header note).
 func (e *renv) splitMsgs(to uint64, typ int32, drop bool) []*pb.Message {
 	var mine []*pb.Message
 	var rest []*pb.Message
@@ -479,7 +499,9 @@ type recipient struct {
 }
 
 // deliverMsgs mirrors upstream DeliverMsgs over ONE ordered recipient
-// list (divergence #2 retired): per recipient in argument order, remove
+// list (divergence #2: source-verbatim, unexercised by every tier —
+// mutation M4 stays green; see the header note): per recipient in
+// argument order, remove
 // its bag messages and deliver or drop, rendering each DescribeMessage
 // line ("dropped: " prefix on drops). Returns handled count.
 func (e *renv) deliverMsgs(rs []recipient, typ int32) int {

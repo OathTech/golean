@@ -36,8 +36,13 @@ Unsupported-by-design commands, each with its reason:
       site is), so same-trace-on-both-oracles cannot hold through a
       timeout-driven election; the jitter ENVELOPE is the membership
       lane's (maps/jitter-draw).
-  compact / send-snapshot — the subject tree never compacts (snapshots in
-      Ready fail closed); the replay env keeps no History.
+  compact / send-snapshot — the replay env implements no handlers for
+      these two COMMANDS. [Audit R2-F1: the first version of this line
+      said "the subject tree never compacts (snapshots in Ready fail
+      closed); the replay env keeps no History" — backwards three ways:
+      the subject's MemoryStorage.Compact exists, replayenv v2 APPLIES
+      snapshots from Ready (conf-change catch-up depends on it), and it
+      KEEPS History (the appender state machine).]
   process-append-thread / process-apply-thread — async storage writes,
       §7's named deferral.
   transfer-leadership / forget-leader / report-unreachable — tier-2
@@ -160,7 +165,7 @@ def classify(cmdlines):
         index = kv.get("index", ["0"])[0]
         pv = "true" if kv.get("prevote", ["false"])[0] == "true" else "false"
         cq = "true" if kv.get("checkquorum", ["false"])[0] == "true" else "false"
-        infl = kv.get("inflight", ["0"])[0]
+        infl = kv.get("inflight", ["-1"])[0]  # -1 = absent (R2-F3: 0 is a legal explicit value)
         mcs = kv.get("max-committed-size-per-ready", ["0"])[0]
         sdr = "true" if kv.get("step-down-on-removal", ["false"])[0] == "true" else "false"
         ccv = "true" if kv.get("disable-conf-change-validation", ["false"])[0] == "true" else "false"

@@ -607,7 +607,12 @@ owner should land, with the witness already built here)
 > perturbation schedules (`multipkg/mini-raft-twin`, 5 strict rows), the
 > logger-teeth pair (`interfaces/quarantined-dispatch-teeth`), the
 > choice-stream membership row (`mini-raft-twin/choice-order`,
-> enumerated=2 exhibited=2), the D-12 tripwire
+> enumerated=2; exhibited=1-of-2 — this consumed-note's first version
+> carried W4.3's "exhibited=2" claim; both sites corrected by the
+> 2026-08-22 audit fix round against the tracked record, whose
+> unexhibited.txt holds the second member — see the W4.3 wave-5a row
+> for the honest discharge statement and the measured ~12% tail), the
+> D-12 tripwire
 > (`init/quarantined-var-writer`); the ok-tier-replays-as-corpus-rows
 > row is DISPOSED as instrument-covered (JC-33 there — the wall-time
 > bound that keeps the instrument out of the gate keeps a corpus

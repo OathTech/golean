@@ -137,12 +137,18 @@ appended). Pieces:
   this env is sequential measurement tooling and makes no §6
   shared-nothing claim (the W4.2 handoff's "per-node" alternative is
   moot here; recorded as the JC).
-- **Latent mirror divergences #1 and #2 RETIRED** (both recorded-not-
-  fixed in W4.2; the rendered tier is exactly the "moment the subset
-  grows" their records named): `splitMsgs` now carries upstream's
-  `!(drop && isLocalMsg(msg))` guard verbatim, and `deliver-msgs` walks
-  ONE ordered recipient list with per-recipient Drop flags in
-  argument-position order.
+- **Latent mirror divergences #1 and #2 closed SOURCE-VERBATIM —
+  and that is the WHOLE evidence** (relabeled by the audit fix round,
+  R2-F2; the first version said "RETIRED", reading as
+  tier-established): `splitMsgs` now carries upstream's
+  `!(drop && isLocalMsg(msg))` guard verbatim, and `deliver-msgs`
+  walks ONE ordered recipient list with per-recipient Drop flags in
+  argument-position order — but NO TIER EXERCISES either:
+  mutation-verified (re-run 2026-08-22 on the R2 probes), removing
+  the guard (M3) or reordering drops before delivers (M4) leaves the
+  full go-side suite green at 206/206 ok + 148/148 rendered. The
+  claims rest on the mirroring being verbatim, not on any test that
+  could catch their removal; labeled so at both code sites.
 - **Conf-change support (item 2):** `propose-conf-change` (v1= and
   transition= args, body parsed by the subject's own
   `ConfChangesFromString` — the stepLeader Unmarshal path end-to-end),
@@ -294,7 +300,10 @@ Frontend, six mechanisms:
    shims with explicit converts); floats excluded (the NaN arm),
    refuse.
 
-**Guardrails first**: 38 rows across 6 new packages, ALL witnessed red
+**Guardrails first**: 39 rows across 6 new packages [count corrected
+by the audit fix round, R3-F-7 — the artifact this paragraph itself
+cites says 39 (`landingB-drift.txt`: 39 "NEW id" lines, 35 PASS), and
+the six families sum to 39; "38" was a prose slip], ALL witnessed red
 pre-fix (the focused run before any frontend edit). Post-fix: 35
 PASS + 4 red-by-design exactly. Frontend unit tests green.
 
@@ -372,7 +381,7 @@ against what exists, row by row:
 | the twin as a corpus family | **LANDED**: `multipkg/mini-raft-twin` — a SELF-CONTAINED 3-node mini-raft (`mpb`/`mnode` + a schedule-driven driver: message bag with removal-by-index, S1–S3 per step, S4 at the end). NOT the subject tree (the corpus never vendors 10k lines; the twin instrument drives the real raft) — this pins the language-shape COMPOSITION in the gated corpus. `elect-propose-commit` commits 2 commands on all 3 nodes, viol=0. Deterministic ×3 (md5-identical go runs). Building it found a mini-protocol bug worth recording: the first cut's AppResp carried no commit, so the leader's commit-update ping-ponged to the drain cap — seconds native, MINUTES under the interpreter (how the corpus run surfaced it as a timeout); the fix is the honest protocol (AppResp carries the follower's commit). |
 | the perturbation schedules as corpus rows | **LANDED**: `perturb-rev` (reverse-order drain), `perturb-picks` (explicit picks, commit at quorum {1,3} while 2 lags), `starve-node` (S1–S3 hold, S4=2/3 EXPECTED — conditioned safety), `duel` (two candidates one term, S1's workout). All green strict rows. |
 | the logger-teeth pair | **LANDED**: `interfaces/quarantined-dispatch-teeth` — `installed` green through a modeled impl; `uninstalled` RED BY DESIGN (dispatch through the interface to a concrete method whose body keeps a standing fmt refusal is a per-declaration-quarantined stub — the machine stops the moment the call lands; go run formats). The W4.2 probe pair's mechanism, gate-visible. |
-| the choice-stream membership row | **LANDED**: `mini-raft-twin/choice-order`, lane=membership — the delivery-order draw over a fresh campaign's two vote requests via the map-iteration pick (the D-11 idiom): admitted set {21, 31}, **enumerated=2 exhibited=2**. Kept MINIMAL on purpose (the two-node kernel Campaign→pick→Step): the enumerator re-executes per stream probe, so the full-driver form exceeded its work cap honestly (recorded in the case comment); the driver-level schedules stay strict rows. |
+| the choice-stream membership row | **LANDED**: `mini-raft-twin/choice-order`, lane=membership — the delivery-order draw over a fresh campaign's two vote requests via the map-iteration pick (the D-11 idiom): admitted set {21, 31}, **enumerated=2; the recorded sampling exhibited 1 of 2** — all 10 recorded samples returned 21, and 31 sits in the record's `unexhibited.txt`. [Corrected by the audit fix round, R3-F-1: the first version said "exhibited=2", overstating the record — the tracked artifact contradicts it. The DISCHARGE is unaffected and is exactly this: membership means observed ⊆ modeled, so an unexhibited member weakens no row; the row's PASS is the 10 samples' inclusion. The second member is REAL, just rare: a 200-run ad-hoc measurement (2026-08-22, the strict-harness binary in a loop) observed 31 on 23/200 plain runs and 24/200 under `-race` (~12%); the width-2 claim rests on the ENUMERATOR (machine-side, `enum-stats.txt` observations=2) plus that measured tail — stated as exactly that, not as sampling evidence the record does not contain.] Kept MINIMAL on purpose (the two-node kernel Campaign→pick→Step): the enumerator re-executes per stream probe, so the full-driver form exceeded its work cap honestly (recorded in the case comment); the driver-level schedules stay strict rows. |
 | ok-tier trace replays as corpus rows | **DISPOSED as instrument-covered (JC-33)**: the trace differential is a standing instrument (`tracereplay.py`, all three channels) whose per-trace machine runs cost interpreter-minutes-to-hours — the same wall-time bound that keeps it out of the gate keeps it out of the corpus (a corpus row would either vendor the subject tree or time out). The instrument, not a corpus duplicate, is the record; gate inclusion re-opens if an interpreter-performance pass lands (the W4.2 open question, unchanged). |
 | the D-12 refusal tripwire | **LANDED**: `init/quarantined-var-writer` — the raftsubject logger.go initializer shape VERBATIM (`&T{F: log.New(os.Stderr, ...)}`), red at frontend-export by design; a future widening that silently admitted the three-axis shape flips it PASS, which is the alarm. (The related F1-widening rows `init/quarantined-var-{impure,syscall,...}` landed in the holes arc and stand — cross-checked; this row adds the WRITER-typed instance H-20's ledger entry names.) |
 
@@ -416,9 +425,20 @@ delivered:
   member EXISTS (`interface conversion: interface {} is red/inner.T,
   not blue/inner.T` — confirmed verbatim in this run's detail) but
   the runner's exact comparison cannot quotient it case-level.
-- **Both text members RECORDED per row** in the case files (gc's
-  strings and ours), so the drift-visibility half of R-1 is in place
-  the day the machine member lands.
+- **Text members recorded — for the ONE row that has two** (claim
+  corrected by the audit fix round, R3-F-5; the first version said
+  "both text members recorded per row", which is true of exactly one
+  row): `multipkg/same-name-identity-panic` records gc's member and
+  ours in its case file (both exist — the machine renders the
+  path-qualified form). The three C4-class abort rows
+  (`panic-defined-payload-methods/{error,stringer}`,
+  `repanic-same-value-abort`) have NO machine member to record —
+  their red IS the absence of a member (renderPanicHead refuses),
+  and gc's member lives in each row's differential detail; recording
+  a "member pair" for them would fabricate a machine member that
+  does not exist. The drift-visibility half of R-1 is in place where
+  a pair exists, and the day the machine members land the other
+  three rows record theirs.
 - **BUGS.md cross-refs updated** (BUG-004 and BUG-059 carry dated
   R-1-conversion-state blocks naming the green forced-half rows, the
   blockers, and the no-relaxation guarantee).
@@ -516,15 +536,31 @@ environment bound, never a machine stop; recorded in kind. Reports:
 - **OK-TIER: 206/206** ok-expectation blocks agree (was 178/178 over
   the narrower prefix; the denominator grew with conf-change).
 - **RENDERED-TIER: 148/148 rendered-expectation blocks agree
-  byte-for-byte with upstream's recorded output — every family
-  100%**: ready dumps 70/70, pure log lines 35/35, raft-state tables
-  14/14, status tables 10/10, raft-log dumps 9/9, message describe
-  lines 8/8, other/mixed 2/2. (Go-side full-suite report:
-  `go-side-rendered-148.txt`; the final run's per-piece reports carry
-  the same per-family rows for the machine-run subsets.)
+  byte-for-byte with upstream's recorded output — every REACHED
+  family cell 100%**: ready dumps 70/70, pure log lines 35/35,
+  raft-state tables 14/14, status tables 10/10, raft-log dumps 9/9,
+  message describe lines 8/8, other/mixed 2/2. (Go-side full-suite
+  report: `go-side-rendered-148.txt`; the final run's per-piece
+  reports carry the same per-family rows for the machine-run
+  subsets.) **REACH, stated beside the agreement (audit R3-F-3 — the
+  148 numerator is also this tier's denominator, so "every family
+  100%" without reach reads stronger than it is): the full corpus
+  carries 309 rendered-expectation blocks, so the green tier covers
+  148/309 = 47.9%, and per family the reach is** ready dumps 70/128,
+  pure log lines 35/58, raft-state 14/30, status 10/18, raft-log
+  9/15, message describe 8/40, other/mixed 2/20 (denominators
+  re-derived 2026-08-22 from `parse_blocks` + `tracefamilies` over
+  all 28 traces; the ok tier's reach is 206/249 the same way). The
+  unreached remainder is the supported-prefix boundary — the census
+  below — not disagreement.
 - **MACHINE TIER: 26 of the 27 replayable traces verified
   byte-for-byte AGREE at the final tip** (25/25 in piece 1 + 1/1
-  replicate_pause in piece 3), full rendered output included. The
+  replicate_pause in piece 3), full rendered output included.
+  **Composed across the tiers (audit R3-F-4, stated so nobody has to
+  derive it): of the 148 rendered-agreeing blocks, 131 lie inside
+  machine-verified traces — probe_and_replicate's 17 rendered blocks
+  are go-side-verified only until its machine verdict lands — so
+  "machine-verified rendered blocks" is 131/148 at this writing.** The
   28th, `async_storage_writes`, stops at its FIRST command (empty
   supported prefix — a coverage gap, not a missing verdict; the W4.2
   convention). **`probe_and_replicate` (74 blocks, 7 nodes) is the
@@ -556,16 +592,22 @@ environment bound, never a machine stop; recorded in kind. Reports:
   forced-point wrong answer the previous tiers could not see, and is
   green after the fix".
 
-**The unsupported-command census over the 22 partial traces**
+**The unsupported-command census over the 12 partial traces**
 (by-design exclusions, each with its reason in `tracereplay.py`'s
-docstring): compact/send-snapshot 5 stops (the subject never
-compacts; the replay env keeps no History-driven snapshot commands),
+docstring; counts corrected by the audit fix round, R3-F-2/R2-F1 —
+the first version said "22 partial traces" and "compact/send-snapshot
+5 stops" where the report artifact says 12 and 3, and gave the
+compact reason BACKWARDS — the env DOES keep History and DOES apply
+Ready snapshots; the honest reason is that the two COMMANDS have no
+handlers): compact 2 stops + send-snapshot 1,
 async-storage-writes add-nodes 2, tick-election 1 +
 set-randomized-election-timeout 1 (jitter — JC-32's deferral),
 transfer-leadership 1, forget-leader 2, report-unreachable 1,
-add-nodes read-only 1, process-append/apply-thread stops inside
-async traces. `propose-conf-change` — W4.2's LARGEST stopper class
-(11 traces) — is GONE from the census: supported end-to-end.
+add-nodes read-only 1 — twelve stop points, one per partial trace
+(the process-append/apply-thread commands sit BEHIND the two
+async-storage-writes stops, never reached). `propose-conf-change` —
+W4.2's LARGEST stopper class (11 traces) — is GONE from the census:
+supported end-to-end.
 
 **Census at this tip** (`sweep-post-widening.txt`, tracked): **0 LIVE
 quarantined subject declarations out of 6 quarantined** (was 24/5
@@ -578,7 +620,14 @@ Panicf}`, the embedded `*log.Logger` inside `DefaultLogger` — dead
 DYNAMICALLY under the installed logger by the standing W4.2
 dead-because-the-harness-installs argument (unchanged, both halves
 still probed by the teeth pair, now ALSO gate-visible as corpus
-rows).
+rows). **The count GREW from W4.2's 2 (audit R3-F-6 — the growth and
+its mechanism disclosed, not just the new number): `log.Logger.Output`
+is the entrant, on the sweep's recorded chain `log.Logger.Output <-
+raft.DefaultLogger.Error <- raft.newRaft <- raft.NewRawNode` — this
+arc's dyn-fmt landing made `DefaultLogger.Error`'s body LOWER, so its
+call into the embedded logger's unmodeled `Output` became a live
+static edge where W4.2's whole-body quarantine had hidden it. The
+same dead-dynamically argument now carries one more member.**
 
 **JC-34 (item 2's "twin vocabulary if cheap"): NOT taken, recorded.**
 Adding conf-change to the TWIN's event vocabulary is not cheap (a new
@@ -1020,3 +1069,112 @@ the L-2 sibling of this batch — was corrected in the R1-C3 landing.)
 **Flips.** Full `scripts/ci --diff`: drift exactly the four new
 red-by-design ids; zero movement on the 2449 prior ids. Baseline
 re-pinned (2453 cases, 2285/168) in this commit.
+
+
+### The records commit (R2/R3) — claims re-grounded against artifacts
+
+Every correction sits IN PLACE at the claim it fixes (bracketed, dated,
+naming the finding); this entry is the index for the delta-reviewer:
+
+- **R2-F1** — the three BACKWARDS instrument docstrings: replayenv.go's
+  header ("snapshots in Ready" listed outside the subset; "no History
+  bookkeeping") and its addNodes comment, plus tracereplay.py's
+  compact/send-snapshot reason — all contradicted by the v2 code
+  itself (History kept at `envNode.history`, Ready snapshots APPLIED
+  in processReady; conf-change catch-up depends on both). The census
+  reason line in wave 7 carried the same backwards claim — corrected
+  with the counts.
+- **R2-F2** — "RETIRED" relabeled "source-verbatim, unexercised by
+  every tier" for the two W4.2 mirror divergences, at both code sites
+  and the wave-1 entry, with the mutation evidence RE-RUN (not
+  quoted): M3/M4 green at 206/206 + 148/148, 2026-08-22.
+- **R2-F3** — the inflight PRESENCE fix (2 lines): absent is now -1,
+  so an explicit `inflight=0` reaches the config as upstream would
+  see it. Spot-verified green on an inflight-carrying trace
+  (lagging_commit 17/17 blocks, go tier).
+- **R2-F5..F7** — the reviewer's one-liner list did not survive to a
+  disk record; in its place the instrument's remaining doc claims
+  were proofread against code and upstream (peekMsgs's
+  splitMsgs-purity claim CHECKED against
+  interaction_env_handler_stabilize.go:79 — correct as written; no
+  further false statements found beyond the R2-F1/F2 set). Stated so
+  the delta-review knows what was and was not covered.
+- **R3-F-1** — choice-order's "exhibited=2" corrected to the record
+  (exhibited 1 of 2; unexhibited.txt holds 31) at BOTH log sites, the
+  discharge restated as membership inclusion, and the second member's
+  reality measured fresh: 23/200 plain + 24/200 -race (~12%).
+- **R3-F-2** — the census: 12 partial traces (not 22),
+  compact/send-snapshot 3 stops (not 5) — re-counted from the
+  go-side report artifact.
+- **R3-F-3** — per-family REACH denominators added beside the
+  148/148: 148/309 overall, message-describe 8/40, all re-derived
+  from parse_blocks + tracefamilies over the 28 traces.
+- **R3-F-4** — the composed number stated: machine-verified rendered
+  blocks = 131/148 until probe_and_replicate's verdict lands.
+- **R3-F-5** — "both text members recorded per row" scoped to the one
+  row where it is true; the three C4 rows have no machine member to
+  record (their red IS the absence).
+- **R3-F-6** — the imported-stub count growth 2→3 disclosed with
+  Output's reachability chain and the mechanism (the dyn-fmt landing
+  made DefaultLogger.Error lower — verified at logger.go:119).
+- **R3-F-7** — landing B's "38 rows" corrected to its own artifact's
+  39.
+- **R3-F-9** — BUG-068's "40-line probe" corrected to 50
+  (`wc -l probe-autoleave/main.go` = 50).
+
+---
+
+## Standing handoff items (restored per the W4.1/W4.2 pattern — audit R3-F-8)
+
+The W4.2 log ends in a standing-handoff section; this log's first
+version scattered its open items through the wave entries. Collected
+here so the next arc reads ONE list (each item's full argument stays
+at its wave entry):
+
+- **p2-pending — probe_and_replicate's machine verdict is IN FLIGHT.**
+  The detached run (`--fuel 40000000000 --traces
+  probe_and_replicate,replicate_pause`) is past 9 interpreter-hours at
+  this writing and writes `artifacts/w43/trace-final-p2.txt` when it
+  lands. Until then: machine tier 26/27, machine-verified rendered
+  blocks 131/148 (R3-F-4's composed number), and no 27/27 claim — the
+  W4.2 reading discipline, unchanged. Its scratch
+  (`artifacts/tracereplay/probe_and_replicate/`) must not be touched;
+  a rerun of ANY trace list containing it would delete the running
+  run's directory.
+- **JC-32 — checkquorum's full replay stays deferred**: it needs
+  `tick-election` + `set-randomized-election-timeout`, a harness-facing
+  PIN of the jitter draw — ENVELOPE work belonging beside W4.5's
+  latitude entry for the range, never a replay convenience (the
+  deterministic-gc-pin scaffolding the doctrine warns against).
+- **JC-34 — conf-change stays OUT of the twin's event vocabulary**:
+  not cheap (a new event kind + apply plumbing + ~1 h-machine-time
+  battery re-runs), buys nothing the milestone needs (the trace tier
+  covers the surface end-to-end); re-decide beside W4.5's envelope
+  work if wanted.
+- **C6-residual — `MajorityConfig.Describe` stays quarantined**
+  (function-local type, the C6 class), DEAD on every trace path (the
+  sweep's 0-LIVE headline counts it among the 6 dead quarantines).
+  Retires only with function-local-type support or an upstream-shaped
+  rewrite; nothing in the trace corpus reaches it.
+- **W4.5 obligations unchanged** (inherited through W4.2's handoff):
+  the harvest-atomicity re-envelope, the jitter RANGE latitude entry,
+  the §6 footprint run.
+- **The mirror-fidelity bounds now labeled honestly (R2-F2)**: the two
+  W4.2 divergences are closed source-verbatim and UNEXERCISED by every
+  tier (mutation-verified). If a future trace mixes drop/deliver
+  recipients or drops with local messages in the bag, the mirroring is
+  load-bearing there with no tier behind it — a place to look first on
+  a rendered-tier disagreement.
+- **Recorded bounds added by the audit fix round** (each pinned by a
+  red-by-design row or a shim docstring): fmt.Formatter refused at
+  static sites / invisible to the dyn shim (R1-F2); named structs at
+  dyn fmt sites (R4-M-2); the SortFunc named-slice and cmp.Compare
+  float narrowings (R4-M-3); `%+` at end of a dynamic format (R4-M-5).
+- **Row-count bookkeeping, derivation-anchored (R3-F-7)**: the arc
+  landed 84 new corpus ids to its branch-complete tip (comm of the
+  tracked baselines at `521f5b57` vs `433d0ee3`), and the audit fix
+  round adds 26 more (2453 − 2427): 14 PASS + 12 red-by-design
+  boundary pins (ts-guard; the 3 formatter-precedence rows; the 3
+  shim-refusal-unrecoverable rows; struct-bound; trailing-plus; the 2
+  SortFunc/cmp narrowing rows; unmodeled-member). Landing B's prose said "38 rows"; its own artifact
+  says 39 — corrected at the wave entry.

@@ -3284,7 +3284,7 @@ ok bool)` with an inner `var autoLeave bool`) — aliased the slot: the
 return's write landed on the lexically-nearest (inner) binding while
 the frame exit read the outer result local. go/types resolves the
 source correctly; the wire's name channel could not carry the
-distinction. Minimized to a 40-line probe
+distinction. Minimized to a 50-line probe
 (`artifacts/w43/probe-autoleave`: go 111110, machine-before 111010 —
 the shadowed closure returning false where gc returns true), fixed,
 probe and both traces re-verified agreeing. Found by READING NOTHING:
