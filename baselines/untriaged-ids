@@ -186,8 +186,6 @@ channels/select-select/beside-loop	coverage
 channels/select-select/core	coverage
 floats/to-int-out-of-range/nan	latitude
 floats/to-int-out-of-range/range	latitude
-fmt/sprintf-dyn/arity-mismatch	coverage
-fmt/sprintf-dyn/unmodeled-kind	coverage
 goroutines/spawn-in-init/in-init	coverage
 init/hidden-dep-order	latitude
 pointers/nil-array-ptr-slice-elided-high/deref-elided-high	coverage
@@ -197,6 +195,5 @@ pointers/nil-array-ptr-slice-elided-high/zero-length-array	coverage
 pointers/nil-array-ptr-slice/slice-expr-nil	coverage
 pointers/zero-size-address/escaped-same	latitude
 spec-examples-decl/slice-to-array/ok-forms	coverage
-strings/split-conformance/empty-sep	coverage
 sync/atomic-frontier/mp-litmus	coverage
 sync/atomic-frontier/value	coverage

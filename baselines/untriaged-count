@@ -169,7 +169,7 @@
 #   operand; the frontend now emits the spec's auto-deref), repaired by
 #   its fix and folded into its Cases. The buildout's import of
 #   unittest/embedded.go re-surfaced the class and forced the triage.
-coverage 14
+coverage 11
 latitude 4
 wrong-answer 0
 # 2026-08-09 (spec-parity slice 2, sync guardrails)  16 -> 50, mostly
@@ -290,3 +290,13 @@ wrong-answer 0
 # where go run renders). Landed deliberately with the feature as its
 # boundary guardrails; each retires only if its dynamic arm is ever
 # modeled.
+# 14 -> 11 (2026-08-22, audit fix round R4-C-3): the SAME three rows
+#   depart the ledger without their features landing — because the
+#   ledger tracks MACHINE-gap stages (lean-observation) and R4-C-3
+#   moved every golean shim refusal from a recoverable panic (a
+#   machine observation) to an unrecoverable frontend-quarantined stop
+#   (stage frontend-export, the frontend-gap class this ledger does
+#   not track). Same red rows, same bounds, honest new mechanism; the
+#   4b ratchet fired one gate later than the change (the bug-index
+#   step reads the PREVIOUS differential's latest.tsv) — recorded here
+#   so the delta-reviewer needn't re-derive it.
