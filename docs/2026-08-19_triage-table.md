@@ -114,6 +114,10 @@ Every group carries: the cause, the refusal point as `file:line` plus the
 error string **as it appears in the source**, the spec anchor, the
 category, and (for (b)) the feature name slice 6's ledger will use.
 Line numbers are at `0c21aa21` unless a mini-slice moved them.
+(Provenance note, 2026-08-22 — launch audit D7 MEDIUM-5: `0c21aa21`
+resolves only via `refs/snapshots/bugfix-arc-prerebase`; the snapshot
+refs are provenance-load-bearing for this table's denominators — do
+not prune without re-anchoring.)
 
 ### 2.1 `differential` — 7 reds, 4 groups
 

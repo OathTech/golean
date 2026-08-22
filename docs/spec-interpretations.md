@@ -67,6 +67,14 @@ Rules of the file:
   E2–E5 and E12 (their F2 readings); every future re-envelope of the
   unordered-panic axes; membership-lane risk statements (too-narrow is
   the membership lane's job to catch).
+- SCOPE NOTE (2026-08-22, launch audit D7 CRITICAL-2): for E12
+  specifically, the row-level F2 sentence — whether E12's residue is
+  an either-order or an interleaving claim — is still OWED in the
+  inventory (E12's own words: "the F2 sentence owed alongside E2–E5";
+  E13 concurs). This row adopts the UNSEQ reading as the GOVERNING
+  DIRECTION; a session consuming E12 must not treat its per-row F2
+  sentence as already written. Both readings are recorded and UNSEQ is
+  the wider, doctrine-safe direction.
 
 ### I-3. A "may"-restriction's exhibit is one realization, not a mandate — backed by L-010
 

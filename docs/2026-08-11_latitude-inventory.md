@@ -33,7 +33,7 @@ Citation norms (P2 retrofit, 2026-08-17): spec#/mem# anchor tokens
 resolve against the PINNED documents and are lint-checked
 (`scripts/check-spec-anchors`, fail closed). The JSCert-derived norm:
 every latitude RULE-SITE carries the governing clause text verbatim
-plus its anchor (E2's block at Machine.lean:2587–2626 is the model) —
+plus its anchor (E2's block at Machine.lean:3023–3055 is the model; cite re-anchored 2026-08-22 — launch audit D7 MEDIUM-7 found the exemplar itself pointing at .opDone/postOp code) —
 maintained while writing, not retrofitted. Anchor existence is NOT a
 content-drift signal (`977e23a707` added normative mem#restrictions
 text with no anchor/version-line change); content hashing at re-pin
@@ -86,7 +86,7 @@ granularity here, not "one row per call site".
 
 | Site | Code | Bound | Consumed when | Empty-stream default |
 |---|---|---|---|---|
-| Map-iteration pick (`mapIter`) | StepFn.lean:621 | snapshot remainder size | every iteration (even width 1) | first snapshot entry (insertion order) |
+| Map-iteration pick (`mapIter`) | StepFn.lean:615–621 | live candidates + conditional stop slot | every iteration (even width 1) | first remaining candidate in cell order, stop LAST (columns re-synced 2026-08-22 — the Bound/default cells were still describing the RETIRED snapshot design; launch audit D2-F1) |
 | Append spill capacity (`appendSpill`) | Machine.lean:946 | `appendSpillWidth` (Ops.lean:1857) | every spill | gc growth-formula point |
 | L2 select pick, entry path (`l2Entry`) | Machine.lean:2799 | ready-clause count | only width > 1 | first ready clause (clause order) |
 | L2 select pick, arrival path (`l2Arrival`) | Multi.lean:853 | `.multi` outcome count | only `.multi` | first ready clause |
@@ -119,8 +119,9 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   can proceed") and spec#Receive_operator ("The expression blocks
   until a value is available") — with the memory model's sync-edge
   catalogue (mem#chan, mem#locks, mem#once) as the separate,
-  visibility-side bound. Machine: `runnableIdxs` Multi.lean:206–219 (the
-  envelope statement in situ), consumed in `stepMulti` Multi.lean:926.
+  visibility-side bound. Machine: `runnableIdxs` Multi.lean:220–224 (the
+  envelope statement in situ), consumed at the boundary-site pick
+  Multi.lean:1153. (Cites re-derived 2026-08-22, launch audit D2-F2.)
 - ENVELOPE: any runnable goroutine may run next, at every registry
   boundary; width = |runnable|. Believed MAXIMAL **at registry
   granularity** — the envelope-width review (channels design note,
@@ -254,8 +255,8 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   is conforming. Anchor addendum (P2 retrofit): mem#goexit — the
   explicit NON-edge at goroutine exit is why the others' post-main
   progress is unobservable unless separately synchronized, which
-  bounds what the L5 envelope can ever expose. Machine: `execProgLoop` Multi.lean:1383–1430 (envelope
-  statement in situ; consume-2 at :1422, re-offered at every subsequent
+  bounds what the L5 envelope can ever expose. Machine: `execProgLoop` Multi.lean:1612 (envelope
+  statement in situ; consume-2 at :1628, re-offered at every subsequent
   loop entry until exit picked or nothing runnable).
 - ENVELOPE: {exit now, one more pool step}* — i.e. every finite prefix
   of registry-granularity continuations of the runnable others.
@@ -272,9 +273,10 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   wakeup is one legal point). mem — NONE either (P2 retrofit): mem#chan
   matches a send to "the corresponding receive" with zero text on WHICH
   waiter corresponds; the absence is the anchor. Machine: `chanArrivalPlan` docstring
-  Multi.lean:487–537 (envelope statement), candidate enumeration in
-  goroutine order / clause order within a select (Multi.lean:424–456),
-  pick consumed in `stepThread` Multi.lean:879–889 only at width > 1.
+  Multi.lean:625–676 (envelope statement), candidate enumeration in
+  goroutine order / clause order within a select,
+  pick consumed at the `.l4Waiter` site Multi.lean:1039 only at
+  width > 1. (Cites re-derived 2026-08-22, launch audit D2-F2.)
 - ENVELOPE: any matching waiter, width = #matches (select clauses
   counted individually). Believed MAXIMAL (spec-silent axis; both
   members oracle-exhibited on the directed pin
@@ -296,8 +298,10 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   incidental `select{}` appears in mem#chan's limit-channel example) —
   auditors of C6/C7 should not hunt for a mem# cite;
   spec#Select_statements is the entire normative basis. Machine: the L2 envelope
-  statement at Machine.lean:2279–2314; entry consumption
-  Machine.lean:2374; arrival-path consumption Multi.lean:700–715.
+  statement at Machine.lean:2680–2750; entry consumption
+  Machine.lean:2802; arrival-path consumption (`.l2Arrival`)
+  Multi.lean:853. (Cites re-derived 2026-08-22, launch audit D2-F2 —
+  the old C6 cite landed a reader on the postOp envelope instead.)
 - ENVELOPE: ANY entry-ready clause (readiness waiter-extended on the
   arrival path). "Uniform pseudo-random" is deliberately weakened to
   the possibilistic "any" per the doctrine's no-distributional-claims
@@ -494,8 +498,8 @@ concurrent observer).
 - WHERE: spec#Order_of_evaluation: "the order of those events compared
   to the evaluation and indexing of x and the evaluation of y ... is
   not specified." Machine: the PINNED LATITUDE rule-site block
-  Machine.lean:2587–2626 (spec text verbatim, gc realization probed
-  go1.26.5, version-tracked), frame-exit twin :2750–2767, `callArgsK`
+  Machine.lean:3023–3055 (spec text verbatim, gc realization probed
+  go1.26.5, version-tracked; cite re-anchored 2026-08-22, D7 MEDIUM-7), frame-exit twin :2750–2767, `callArgsK`
   docstring :1543–1550, StepFn.lean:166/554/661. History: BUG-052.
 - PIN: the call evaluates first (args, frame); target operands evaluate
   at frame exit; then stores. gc's realized point. Plausible envelope:
@@ -524,8 +528,9 @@ concurrent observer).
 - WHERE: spec#Order_of_evaluation (only calls/receives/binary-logical
   are ordered — target-vs-target operand order is open). Machine:
   left-to-right inter-target walk (the tgtOpK spine; the rule-site
-  SCOPE clause Machine.lean:2620–2626 records this axis as OPEN and
-  explicitly NOT covered by E2's pin). Record: BUG-032's S1-delta
+  SCOPE clause (Machine.lean:3047, "the pin covers ONLY the
+  call-vs-operand axis"; cite re-anchored 2026-08-22) records this
+  axis as OPEN and explicitly NOT covered by E2's pin). Record: BUG-032's S1-delta
   amendment.
 - THE FACTS (GC-probed, verifier-reproduced): for
   `aa[5][0], b[*pn] = f6()` gc reports the SECOND target's operand
@@ -846,6 +851,23 @@ the same call.
 
 ## 3. Representation, runtime, and library realization
 
+### E14. Method-call RECEIVER operand vs the arguments — (c) census row, nothing more
+
+Added 2026-08-22 (launch audit D8 — "receiver" appeared nowhere in
+this inventory while the frontend realizes a point on the axis). The
+frontend pins the receiver operand's events AHEAD of the argument
+events (`tools/nativefrontend/emit.go`, the method-call path:
+`all := append([]any{recvArg}, args...)` — the receiver joins the
+ordered-event prefix). Whether spec#Order_of_evaluation's
+left-to-right function-call/operand sentence FORCES this (the
+receiver as the leftmost operand of the method value) or leaves
+latitude among receiver-vs-argument sub-events at panic sites is the
+same F2-class question as E12/E13 and is OWED with them. gc agrees
+with the realized point on every probed shape (the W4/W7 fmt work
+rode it); no divergence is known. NO PIN MAY BE TAKEN HERE beyond
+what the frontend already structurally realizes — this is a census
+row so the axis stops being invisible, nothing more.
+
 ### R1. `int`/`uint` width — (b) PINNED to 64 bits
 
 - WHERE: spec §Numeric types: `uint`/`int` are "implementation-specific
@@ -1072,6 +1094,15 @@ indistinguishable). Becomes real latitude the day non-integer sorts
 land; the declared-unobservable argument is scoped to int kinds at the
 site.
 
+**The `slices.SortFunc` shim carries the SAME tie-order latitude**
+(added 2026-08-22, launch audit V2 — previously recorded only in Go
+comments, `tools/nativefrontend/genericshim.go:21-24` and
+`stdlibshim.go:113-117`): the injected insertion sort realizes ONE
+member of the unstable-sort envelope for comparator sorts, where ties
+ARE observable (distinct structs comparing equal). Declared latitude,
+comparator lane; relocating `slices.Sort` onto the shim (the parked
+D8-F1 arc) relabels this row rather than retiring it.
+
 ### R14. Constant arithmetic precision — (d) UNKNOWN (delegated)
 
 Spec §Constants gives minimum implementation requirements (at least 256
@@ -1171,10 +1202,18 @@ achievement.
   arms against it is recorded as owed (TODO; granularity-ledger R4
   re-audit covers the concurrency side of the same arms).
 - **U-5 Wide-op granularity under concurrency**: `appendSlice` spill,
-  `copySlice`, `clearSlice` are single apply steps (Machine.lean:66–69,
-  756–819) — coarse-but-recorded; fine sequentially; the
-  granularity-ledger re-audit before any concurrency claim mentions
-  them is still owed (BUG-002's R4 residue). Sub-registry granularity
+  `copySlice`, `clearSlice`, AND `sortSlice` are single apply steps
+  (Machine.lean:66–69, 756–819; `sortSlice`'s arm — the COARSEST
+  member, a whole sort in one step — was omitted from this row until
+  the 2026-08-22 launch audit, D8-F1/V2) — coarse-but-recorded; fine
+  sequentially; the granularity-ledger re-audit before any concurrency
+  claim mentions them is still owed (BUG-002's R4 residue). The
+  `sortSlice` case additionally carries an internal inconsistency:
+  `slices.Sort([]uint64)` is ONE step while the interchangeable
+  `slices.SortFunc(x, cmp.Compare)` lowers to a per-element shim loop
+  — two granularities for one Go operation, unobservable while racy
+  programs fail closed (C10); resolved by the parked relocation arc
+  (synthesis doc, deferred list). Sub-registry granularity
   generally is C2/C3 + NPDRF territory, but these named arms are the
   known coarse spots INSIDE segments.
 - **U-6 Future atomics**: mem#atomic pins sync/atomic to SC — verbatim:
@@ -1323,15 +1362,15 @@ permanent; the deviation is not.)
 
 ## 9. Records-vs-code flags found by the sweep
 
-1. **Race.lean:588–590 (ChanClocks docstring) is stale**: it still
-   says the close-woken SENDER's missing acquire edge is "TSan-aligned,
-   the fail-closed direction" — the BUG-045 correction (gc's
-   `closechan` DOES raceacquireg parked senders; the deviation is ours-
-   STRONGER, and moot on refused programs via the chan-object rule) is
-   recorded at Multi.lean:1017–1037 and in the nondeterminism doctrine,
-   but this in-file parenthetical predates it. Doc-only fix owed at the
-   next Race.lean-touching slice (not made in this docs-only lane —
-   the file is semantic-core-owned).
+1. **DISCHARGED 2026-08-22 (launch-audit fix round)** — the stale
+   ChanClocks docstring (which sat at Race.lean:620–622, not 588–590
+   as this flag previously said — D7 MEDIUM-8) is re-synced in place:
+   it now states the ours-STRONGER no-edge deviation with the correct
+   attribution (gc's `closechan` DOES raceacquireg parked senders; the
+   old "woken `chansend` performs no raceacquire" was true but
+   irrelevant) and cites `raceWakeEvent`'s S3 correction. The flag had
+   expired silently — Race.lean was touched 5× after "the next
+   Race.lean-touching slice" was named as the trigger.
 2. **The int-width pin has no site-level record** (R1): the policy
    lives in semantics.md prose only; Value.lean:33 carries no
    caveat/envelope statement, although the singleton-narrowing rule

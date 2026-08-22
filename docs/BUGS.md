@@ -2795,7 +2795,9 @@ FIRST per the standing rule.
 - Class: unexercised path (no pre-P3 case used a two-var comma-ok
   var declaration with a TRUE ok on the line that matters).
 - EDGE ENUMERATION (bug-fix arc slice 2, 2026-08-19; landed as its
-  own commit BEFORE any fix, colors recorded pre-fix). 46 rows in the
+  own commit BEFORE any fix, colors recorded pre-fix). 51 rows in the
+  (this figure said 46 while the family has 51 rows — five were added
+  after the entry was written; re-counted 2026-08-22, launch audit D7)
   new package `spec-examples-decl/var-comma-ok-matrix/` walk the full
   matrix — three comma-ok sources (receive, map index, type assertion)
   × untyped/typed declaration × blank in the value position / blank in
@@ -3174,7 +3176,10 @@ five rows' exhaustive certification left tractability entirely
 - sync/rwmutex-order (membership, tier=slow): >~900M (pre-B1 2.2M).
   Same cached-green/slow-alarm structure.
 
-The three Cases rows fail loud at their existing caps on every run
+The Cases row fails loud at its existing cap on every run (the entry
+previously said "the three Cases rows" while the Cases line carries
+ONE id — the POR narrowing shrank the list without this sentence;
+corrected 2026-08-22, launch audit D7)
 (honest reds, seconds each). Fix directions, all recorded in
 `docs/w32-log.md` stage C: (a) the boundary-set note §5c sampled
 fallback (witness-replay machinery drafted and REVERTED pending the

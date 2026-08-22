@@ -257,7 +257,7 @@ rows covering all 158 anchors.
 | An_example_package | covered(B) | the spec's concurrent prime sieve pinned (`spec-examples-stmt/prime-sieve/{five,eight}`). |
 | Program_initialization_and_execution | covered(D) | chapter preamble. |
 | The_zero_value | covered(A) | 3 dispositions + `zero_values` rows in every container/type suite + generics zero-composite; COMPLEX zero values → FR-15 (pinned red: `complex/zero-value`, `complex/generic-type-set/zero-value`; carve-out added at the audit fix round). |
-| Package_initialization | covered(B) | `init/` (19 pkgs) + `multipkg/init-order*`; the section's two spec-open points are the ratification-pending (c)-pins: hidden-dep order C1 (L:E7, 1 red) and staticinit pruning C2 (L-011, 1 red); init-spawned goroutines → Q-INITSPAWN. |
+| Package_initialization | covered(B) | `init/` (19 pkgs) + `multipkg/init-order*`; the section's two spec-open points are the RATIFIED (c)-pins (C1–C8 ratified/discharged 2026-08-20 — §5.1 and the triage table; this cell still said "ratification-pending" until 2026-08-22, launch audit D7 MEDIUM-3; note the C-numbers here are the TRIAGE (c)-pin register, not the latitude inventory's C-rows): hidden-dep order C1 (L:E7, 1 red) and staticinit pruning C2 (L-011, 1 red); init-spawned goroutines → Q-INITSPAWN. |
 | Program_initialization | covered(B) | thin normative text (points at Package_initialization); covered by the same suites. |
 | Program_execution | covered(B) | main-termination semantics + L:C4 (main-exit window ENVELOPED, `goroutines/` exit rows). |
 | Errors | covered(B) | `interfaces/{error-interface,error-idioms,assert-error-satisfaction}` + 2 COMPILE-ONLY pins (universe shadowing; error-last convention). |
@@ -303,7 +303,11 @@ C10 is the doctrine's home.
 
 One row per unsupported feature. `refusal` gives file:line (at triage
 commit `0c21aa21` for pre-existing rows — the triage-table convention —
-or measured at this slice's landing for new rows) + the error string AS
+or measured at this slice's landing for new rows; **provenance note,
+2026-08-22 (launch audit D7 MEDIUM-5): `0c21aa21` resolves ONLY via
+`refs/snapshots/bugfix-arc-prerebase` — the snapshot refs are
+provenance-load-bearing for this convention and for ~15 triage-table
+denominators; do not prune them without re-anchoring these cites**) + the error string AS
 IN THE SOURCE. `class`: seq = sequential (queued, §5) | conc =
 concurrency-entangled (design question, §6). Every baseline red belongs
 to an FR/Q row here, a (c)-pin (triage §4), or an (a)-queued fix

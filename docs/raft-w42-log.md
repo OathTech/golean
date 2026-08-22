@@ -607,11 +607,15 @@ owner should land, with the witness already built here)
 > perturbation schedules (`multipkg/mini-raft-twin`, 5 strict rows), the
 > logger-teeth pair (`interfaces/quarantined-dispatch-teeth`), the
 > choice-stream membership row (`mini-raft-twin/choice-order`,
-> enumerated=2; exhibited=1-of-2 — this consumed-note's first version
-> carried W4.3's "exhibited=2" claim; both sites corrected by the
-> 2026-08-22 audit fix round against the tracked record, whose
-> unexhibited.txt holds the second member — see the W4.3 wave-5a row
-> for the honest discharge statement and the measured ~12% tail), the
+> enumerated=2; BOTH members exhibited go-side, minority at ~12% —
+> this passage was the THIRD site carrying the twice-superseded
+> "exhibited=1-of-2 … unexhibited.txt holds the second member" text:
+> the w43 delta-review's MEDIUM-1 established all three of its
+> assertions false (samples.txt = 8×21 + 2×31; unexhibited.txt zero
+> bytes and gitignored, not a tracked record) and corrected "both
+> sites" while this one survived; corrected 2026-08-22, launch audit
+> D5-F8, and the ~12% figure independently re-measured by D5's 2000×
+> re-sample: 21×1754 / 31×246 = 12.3%), the
 > D-12 tripwire
 > (`init/quarantined-var-writer`); the ok-tier-replays-as-corpus-rows
 > row is DISPOSED as instrument-covered (JC-33 there — the wall-time

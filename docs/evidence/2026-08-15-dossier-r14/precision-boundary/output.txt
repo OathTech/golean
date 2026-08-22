@@ -5,3 +5,12 @@
 .tmp/r14b/s.go:3:13: constant shift overflow
 # command-line-arguments
 .tmp/r14b/m.go:4:19: constant multiplication overflow
+
+# PROVENANCE NOTE (2026-08-22, launch audit D7-evidence-F3): the
+# rejection lines above quote untracked probes (.tmp/r14b/{s,m}.go),
+# which no tracked file can regenerate verbatim — the norm the sibling
+# README states. The tracked main.go beside this file reproduces the
+# in-program half; the rejection half is two one-liners (`1<<512` as
+# a constant; constant multiplication to 2000 bits) retypeable from
+# this description. Content independently re-derived TRUE by the
+# audit's records delegate.

@@ -1363,6 +1363,61 @@ Also closed in passing: **D-4** (the Go 1.26.4 sites, above).
 
 ## §3 THE RESIDUALS REGISTER
 
+### §3-A · 2026-08-22 CORRECTION (read this before any row below)
+
+The audit found this register **stale at birth** (D5-F2, D7
+CRITICAL-1, verified by V3): it was authored from a coordinating
+checkout's `git worktree list` while three parallel lanes were landing
+— the W4.3/W4.4 milestone (`35b18794`), slice 5b (`a6f1ae90`), and the
+Q-row memos (`fe7fd2c1`) are all ANCESTORS of the dossier commit
+(`42fae106`), with author timestamps 22–36 minutes before the
+dossier's own. Mechanism: parallel-lane observation lag, not a rebase
+artifact. Lesson encoded: a register serving a settled-tip audit is
+derived only AFTER the lanes it describes have landed, at the settled
+tip.
+
+**Rows verified false at authoring (all SAFE-direction — each
+understates progress; V3 confirmed no row overstates):** W-1 (W4.3
+"NOT STARTED" — the milestone had landed), W-2 (W4.4 likewise), W-6
+("0 of 309 rendered blocks render; pure-log-line blocks CANNOT be
+reproduced" — 148 render, 35/58 pure-log-line among them, and the
+recording logger exists: `tools/raftsubject/replayenv.go`, JC-30),
+W-7 (conf-change support landed, +11 traces), W-11/H-5
+(`slices.SortFunc` landed, `genericshim.go`), H-20g (the guardrail row
+landed as `init/quarantined-var-writer`), X-1/X-2/X-6 (slices 2 and 5b
+landed), B-2 (the three "awaiting sign-off" arcs all merged), B-7
+(the "zero-commit" worktrees had commits), C-13 (all six owed raft
+corpus rows disposed in W4.3 item 4). Also corrected in place: the
+eight §3.2 BUGS.md cites (D7 MEDIUM-6 — each landed in the preceding
+entry; now entry-anchored, not line-anchored), G-9 (D2-F4: it called
+BUG-021's envelope an open BLOCKING too-narrow item; BUG-021 has been
+`Status: fixed` since 2026-08-06 with the widened envelope live at the
+consumption site — the genuine residual is only the owed spill-path WP
+law), K-11 (overstated — no blanket `interpreterSound` theorem is
+STATED anywhere; only the proven fragment-scoped
+`interpreterSound_frag` exists, so nothing false elaborates), N-13
+(the stale Race.lean docstring sat at `:620-622`, not `:588-590`; now
+FIXED in place — launch-fix round), and C-7's ratchet narrative (one
+arc behind: `coverage` went 7→11→12→14→11; net right by coincidence).
+
+**New residuals the staleness had omitted** (created by the very arcs
+the register missed): (1) `probe_and_replicate`'s machine verdict —
+IN FLIGHT at audit time on a 14h+ detached run whose output inode had
+been deleted with the pruned `raft-w43` worktree; rescued live
+(readers hold the inode, `.tmp/p2-recovery/`); the machine tier's
+number of record stays **26/27 traces, 131/148 rendered blocks** until
+it lands. (2) The machine-tier numbers were measured at `95145bc3`,
+12 frontend commits before the settled tip, and the recorded re-run
+was `--no-machine` — structurally blind to the frontend change class
+(V3 on D5-F3); a full machine-tier re-run at the fix-round tip is the
+disposition. (3) JC-32 (checkquorum replay deferred on a jitter pin)
+and JC-34 (conf-change outside the twin vocabulary) — carried in
+`docs/raft-w43-log.md`, absent here. (4) The twin battery's term-1
+bound (D5-F4, V3-verified by execution): no schedule leaves term 1,
+S1's disagreement branch is dead code in every twin run — recorded in
+the constitution's evidence-status block; a term-2 schedule lands
+with the fix round.
+
 **The standard this table is held to:** zero items known to the dossier
 but absent from it. Where an item is a FAMILY whose members are already
 enumerated in a tracked ledger row-by-row (the 15 FR rows, the 10 Q
@@ -1409,23 +1464,23 @@ and are bucketed as blocking by the parse; treat 77 as an upper reading.
 
 | # | item | where tracked | relevance |
 |---|---|---|---|
-| G-1 | **BUG-062** — inline `len`/`cap` reads reorder against calls: a FORCED-point silent wrong answer (machine 3 vs go 1). Receive-bearing functions are right only by accident | `docs/BUGS.md:2932`; 2 differential reds | **blocking** |
-| G-2 | **BUG-002** — expression-step atomicity wrong for concurrent Go (latent). Structural root fixed; STILL OPEN: goroutine rules + scheduler `Choices`, and the granularity-ledger re-audit of multi-cell apply steps | `docs/BUGS.md:2506`; Q-ATOMICITY; master plan C-D | **blocking** |
-| G-3 | **BUG-008** — imported named types have no wire declaration, so comparability is UNKNOWN | `docs/BUGS.md:2137`; FR-9 | **blocking** (raft imports named types pervasively) |
+| G-1 | **BUG-062** — inline `len`/`cap` reads reorder against calls: a FORCED-point silent wrong answer (machine 3 vs go 1). Receive-bearing functions are right only by accident | `docs/BUGS.md` entry BUG-062; 2 differential reds | **blocking** |
+| G-2 | **BUG-002** — expression-step atomicity wrong for concurrent Go (latent). Structural root fixed; STILL OPEN: goroutine rules + scheduler `Choices`, and the granularity-ledger re-audit of multi-cell apply steps | `docs/BUGS.md` entry BUG-002; Q-ATOMICITY; master plan C-D | **blocking** |
+| G-3 | **BUG-008** — imported named types have no wire declaration, so comparability is UNKNOWN | `docs/BUGS.md` entry BUG-008; FR-9 | **blocking** (raft imports named types pervasively) |
 | G-4 | BUG-061 — the pruning rule under-approximates `staticinit`; 11 of 26 init flavors residual, one un-chaseable | `docs/BUGS.md:33`; ledger L-011 | recorded (area is LATITUDE; gc not single-valued) |
 | G-5 | BUG-059 — panic messages render TypeId qualifiers as the import PATH not the package NAME; structural fix = separate DISPLAY from IDENTITY in GoCore | `docs/BUGS.md:139` | recorded |
-| G-6 | BUG-041 — race-footprint over-approximation: value-path composite reads are whole-cell (over-REFUSAL, never a missed race) | `docs/BUGS.md:920`; Q-RACEPATH | recorded |
-| G-7 | BUG-004 — panic abort rendering: items 1 (eface allocation identity), 3 (multi-line payloads), 4 (`preprintpanics` method call) open | `docs/BUGS.md:2395`; (c)-row C4; A7 | recorded |
-| G-8 | BUG-065 — exhaustive envelope certification tractability, NARROWED to `goroutines/worker-pool/sum` (>9.5M nodes, no closure) | `docs/BUGS.md:3090` | recorded (1 confluent red) |
-| G-9 | BUG-021 residual — the append-spill envelope is known TOO NARROW; no shipped theorem walks the spill path yet, so the hole is latent. Fix = widen to `[newLen, max(32, 2*growthFormula)]` | `docs/BUGS.md:1652` | **blocking** (too-narrow = the soundness direction) |
+| G-6 | BUG-041 — race-footprint over-approximation: value-path composite reads are whole-cell (over-REFUSAL, never a missed race) | `docs/BUGS.md` entry BUG-041; Q-RACEPATH | recorded |
+| G-7 | BUG-004 — panic abort rendering: items 1 (eface allocation identity), 3 (multi-line payloads), 4 (`preprintpanics` method call) open | `docs/BUGS.md` entry BUG-004; (c)-row C4; A7 | recorded |
+| G-8 | BUG-065 — exhaustive envelope certification tractability, NARROWED to `goroutines/worker-pool/sum` (>9.5M nodes, no closure) | `docs/BUGS.md` entry BUG-065 | recorded (1 confluent red) |
+| G-9 | ~~BUG-021 residual — the append-spill envelope is known TOO NARROW~~ **CORRECTED 2026-08-22 (D2-F4, §3-A): BUG-021 is `Status: fixed` (2026-08-06) and the widened envelope `[newLen, max(32, 2*growthFormula)]` is LIVE at the consumption site.** Genuine residual: only the owed spill-path WP law (no shipped theorem walks the spill path) | `docs/BUGS.md` entry BUG-021 | recorded (was mislabeled blocking) |
 | G-10 | BUG-009/008 shared owed sub-slice — emit declarations for imported non-interface named types | `docs/BUGS.md:2135` | **blocking** |
 | G-11 | BUG-009 residual — a method declared in a `_test.go` file is excluded by `nonTestGoFile`, leaving a KNOWN type with an incomplete method set | `docs/BUGS.md:2126` | recorded |
 | G-12 | BUG-007 owed sub-slice — forwarding entries for the promoted method set (detecting promotion soundly is the real fix) | `docs/BUGS.md:2215` | recorded |
-| G-13 | BUG-006 residual — two multi-value-assign tuple interface sites still REFUSE | `docs/BUGS.md:2230` | recorded |
+| G-13 | BUG-006 residual — two multi-value-assign tuple interface sites still REFUSE | `docs/BUGS.md` entry BUG-006 | recorded |
 | G-14 | BUG-005 residual — delete-prune rewrites only same-goroutine frames; the widening is OWED at the first non-racy cross-goroutine shape | `docs/BUGS.md:2274`; latitude E9 | recorded |
 | G-15 | BUG-005 kit obligations — the termination theorem *"body stores no key into the ranged map ⇒ range terminates"* is recorded, not proven; stop-admitting / mutating-range WP laws owed | `docs/BUGS.md:2283` | recorded |
 | G-16 | BUG-057 residual — six shapes STILL RED, all fail-closed | `docs/BUGS.md:2812` | recorded |
-| G-17 | BUG-049 deferred — multi-value assign / var-decl-from-call / plain chan-receive interface forms fail closed with quarantine messages | `docs/BUGS.md:458` | recorded |
+| G-17 | BUG-049 deferred — multi-value assign / var-decl-from-call / plain chan-receive interface forms fail closed with quarantine messages | `docs/BUGS.md` entry BUG-049 | recorded |
 | G-18 | grossmith F-1 — BUG-062's statement is `len`/`cap` only; the `min`/`max` VALUE divergence is unpinned and mini-slice A6's scope is known-incomplete | `TODO.md:818`; `docs/2026-08-20_grossmith-findings-2.md` | **blocking** |
 
 ### §3.3 The latitude / envelope census — 51 rows
@@ -1587,7 +1642,7 @@ the file.
 | K-8 | The readout-corollary mandate, "no kit name in a headline closure", and deletion tests for undesignated theorems are all **unmechanized doctrine** | TCB doctrine `:32`; `docs/kit-guide.md:9` | recorded |
 | K-9 | `EnumDedupCheck.lean:19-27` under-describes the certified fragment (omits N-APP) — a trust-surface docstring understating what it certifies | `GoLean/GoCore/EnumDedupCheck.lean` | recorded |
 | K-10 | The `# params-note` warning in the certified record is deliberately invisible to the record parser's `# params:` extraction | `baselines/certified/*.certified.tsv` | recorded |
-| K-11 | **The blanket `interpreterSound` stays FALSE-AS-STATED** while the interpreter is richer than the relation (e.g. string `add`) | `TODO.md:246` | **blocking** (a false-as-stated theorem inside the trust chain) |
+| K-11 | ~~The blanket `interpreterSound` stays FALSE-AS-STATED~~ **CORRECTED 2026-08-22 (D3, §3-A): no blanket theorem is STATED anywhere in Lean — only the proven fragment-scoped `interpreterSound_frag` exists; the false statement is deliberately unstated.** Residual: the full-fragment statement remains owed (`TODO.md:246`) | `TODO.md:246` | recorded (nothing false elaborates) |
 | K-12 | `go_adequacy` covers only NON-PANICKING runs (`.panicked` has no outgoing `Step`, so it counts as stuck) — and raft code panics | `TODO.md:321` | **blocking** |
 | K-13 | Arc C Rel completion — D1 seqn-splice (the relation cannot run ANY frontend-lowered program with a declaration), D3 panic propagation, D2-proper result locations | `TODO.md:21` | **blocking** |
 | K-14 | D3 correspondence shape (step-indexed / small-step oracle) covering prefixes of nonterminating runs | `TODO.md:281` | **blocking** |

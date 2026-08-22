@@ -47,8 +47,11 @@ read as: *given enough gas, however the machine's nondeterministic choices
 fall, the run finishes normally and returns exactly these values.* The single
 `= .ok …` equation is what carries "no errors": the interpreter reports
 exactly one outcome per run, and `.ok` is the one that is not a panic, not a
-deadlock, not a stuck/unsupported state, not an internal error, and not fuel
-exhaustion.
+deadlock, not a stuck/unsupported state, not an internal error, not fuel
+exhaustion, not a runtime `fatal` (the unrecoverable class — nil-func `go`,
+sync misuse), and not a race-detector refusal. (The last two were missing
+from this enumeration until 2026-08-22 — launch audit D3-F-6; the equation
+always excluded them.)
 
 ## What is being trusted
 

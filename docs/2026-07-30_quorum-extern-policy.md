@@ -49,6 +49,15 @@ A machine STATEMENT op `sortSlice` (the wide-op shape shared with
   over `cmp.Ordered`): drags in generics machinery for zero observable
   difference on integer elements; the pilot's claim is about
   `CommittedIndex`, not about pdqsort.
+  **SUPERSEDED PREMISE (2026-08-22, launch audit D8-F1/V2):** the
+  "drags in generics machinery" ground expired — the generics
+  monomorphization pipeline landed 2026-08-05 (`befe9da6`) and models
+  the harder generic `slices.SortFunc` with ZERO GoCore surface via an
+  injected declaration (`stdlibshim.go`/`genericshim.go`, 2026-08-21
+  `17eb6d5e`). The `sortSlice` node's stated justification is
+  therefore no longer live; the relocation is a parked arc (launch
+  synthesis doc, deferred list) — the node stays until that arc,
+  fail-closed at int kinds as before.
 
 ## Source scoping (decided): single-package vendoring, v1
 

@@ -169,7 +169,10 @@ ratchet (`baselines/untriaged-count`); feature-coverage check.
 big-step totalization. **Deferred hardening (real work items, not plumbing):**
 corpus mutation/tamper testing; sub-feature read/write tags; wider observation
 channel; exact panic-message matching.
-**Ratchet — concrete backlog:** 85 baseline fidelity failures (77
+**Ratchet — concrete backlog (STALE NUMBER — 2026-08-22, launch
+audit D7: the live count is 15 untriaged, `coverage 11 / latitude 4 /
+wrong-answer 0` per `baselines/untriaged-count`; the "85" below is the
+2026-08-05-era figure kept for history):** 85 baseline fidelity failures (77
 lean-observation + 8 differential) not yet explained by a BUG entry. Inspect the
 exact ids with `scripts/check-bugs.sh --list`; triage into `docs/BUGS.md` over
 time (the check warns until 0). Many are array/struct value-semantics cases that
@@ -763,6 +766,18 @@ the user's two rulings (R-1 rendering split, R-2 opsem route) and
 records campaign 2's outcome; four open questions remain in the
 charter's §Open questions, each with a stated default.
 
+- [ ] **Slice-5 probe: print-interleaving wedge-class candidate**
+      (launch audit D2-F5, 2026-08-22). Two goroutines each printing
+      multiple lines in a registry-free straight-line segment cannot
+      interleave outputs in the machine (print is not in `atBoundary`,
+      no boundary between prints), while gc interleaves freely —
+      observable WITHOUT a race, inside register #5's conceded
+      sub-statement granularity, but the register's soundness
+      condition ("scheduling unobservable between points for
+      race-free programs") is false at exactly this shape and nothing
+      pins it. Apply the U-1 pattern: directed probe, pin the trigger
+      baseline (the honest lane outcome is a membership red), route
+      the fix through slice 5's boundary work.
 - [ ] **RULE the eight Q-rows** (charter §Slice 2 — memos WRITTEN
       2026-08-21, `docs/2026-08-21_w32-qrow-memos.md`, one DECISION
       BLOCK per row + the one-page RULING SHEET at the tail;

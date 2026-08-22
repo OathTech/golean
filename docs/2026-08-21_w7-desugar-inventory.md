@@ -1,5 +1,12 @@
 # The desugar-obligation inventory — W7 prep
 
+**Anchor vintage (2026-08-22, launch audit D8-F6):** the `emit.go:NNNN`
+anchors in this document are exact at commit `cc7651fc` (the census
+round's re-shift) unless a row says otherwise; 12 later commits
+(the W4.3 audit-fix rounds + BUG-069) have drifted `emit.go` by
+roughly 60–130 lines in places. Treat anchors as commit-qualified to
+`cc7651fc`; rows touched after that carry their own re-shift notes.
+
 **Status:** prep artifact for roadmap §W7 (SpecTec-Go: the AST-level spec and
 frontend correctness). Docs-only; nothing here changes code, gates, or pins.
 **Scope:** every semantic lowering decision the native frontend makes between
@@ -555,16 +562,24 @@ covered an effectful base, which is how the hole survived).
 - *Guardrails*: `structs/keyed-literal-eval-order`,
   `structs/positional-literal-eval-order`.
 
-**B-20 · slice literal — S/M — K1** · `emit.go:6043`, hoist 6026;
+**B-20 · slice literal — S/M — K1+K2** · `emit.go:6043`, hoist 6026;
 constant-key refusal 6056–6058. Allocates a fresh backing of length
 `max index + 1`; elements boxed; effectful elements hoist ahead of the
-slice-lit statement (unobservable — the allocation has no user-visible effect
-boundary, but the certificate must say so).
+slice-lit statement. RETAGGED K1+K2 2026-08-22 (launch audit D8-F2):
+the old "unobservable" claim is refuted by B-19's own spec quote —
+which is a SLICE-literal example (`x := []int{a, f()}` may be [1,2] or
+[2,2]) — and by B-19's own note that a non-call PANICKING element is
+not hoisted; the latitude is over the resulting VALUE, so a W7
+certificate here states membership, not equality.
 
-**B-21 · map literal — S/M — K1** · `emit.go:6080`; refusals 6081–6083,
+**B-21 · map literal — S/M — K1+K2** · `emit.go:6080`; refusals 6081–6083,
 6098–6100; nil-value typing 6118–6124. Entries insert in source order (last
 duplicate key wins); key and value boxed per map type. BUG-016/BUG-014;
-`maps/literal-eval-order`, `maps/map-literal-duplicate-*`.
+`maps/literal-eval-order`, `maps/map-literal-duplicate-*`. RETAGGED
+K1+K2 2026-08-22 (launch audit D8-F2, same ground as B-20: the
+composite-literal element-order latitude B-19 quotes covers map
+literals' operands too — duplicate-key eval order and key-vs-value
+order are uncensused follow-on axes).
 
 **B-22 · array literal — S — K1** · `emit.go:6139`; constant-key refusal
 6149–6152. A **value**, not an allocation.
@@ -1148,11 +1163,17 @@ which is what makes `a,b = b,a` work.
   So the comment and the code disagree, the census inherited the comment, and a
   certificate must read the routing rather than either prose.
 
-**C-35 · compound assign `x op= e` — M — K1** · `emit.go:2717-2742`;
+**C-35 · compound assign `x op= e` — M — K1+K2** · `emit.go:2717-2742`;
 `emitReadWriteTarget` 3860; `containsCall` test 3861. Pure lvalues emit target
 and read independently (double evaluation is claimed unobservable); an lvalue
 containing a **call** pre-binds its address to a temp so the address is
-evaluated once.
+evaluated once. RETAGGED K1+K2 2026-08-22 (launch audit D8-F2): this
+row realizes the SAME E4 target-vs-RHS axis that made C-36 K1+K2 —
+and here the realized order flips on a syntactic accident:
+`a[i] += g()` (call-free lvalue, nothing hoists, the RHS call's panic
+wins) vs `a[f()][i] += g()` (lvalue contains a call, the whole address
+hoists, the target panic wins). A K1 tag would have licensed a
+certificate to freeze that accident as fidelity.
 - *Must preserve*: the lvalue's address is computed once (spec); read before
   the op, store after; the RHS's effects come last. The purity predicate is
   `containsCall`, i.e. "call-free", **not** effect-free — a panicking pure
@@ -2350,7 +2371,7 @@ per-call distinct — riding entirely on G-24's identity argument.
   independently.** `errors.Is/As/Unwrap` are likewise unmodeled.
   `fmt/errorf/{fresh,text,sentinel-classify,vs-errors-new}`.
 
-**G-21 · `fmt.Fprintf(w, …)` = `w.WriteString(…)`, `w : *strings.Builder` only — M** ·
+**G-21 · `fmt.Fprintf(w, …)` = `w.WriteString(…)`, `w : *strings.Builder` or `*bytes.Buffer` — M** · (title corrected 2026-08-22, launch audit D8-F6: the W4.3 rounds added the `*bytes.Buffer` writer; the row said Builder-only) ·
 `fmtdesugar.go:198-212` (writer type-check + **early emit**, so its hoists land
 first), 319–334, 339–347. Three observables: the bytes appended, the returned
 `(int, error)` = `(len(text), nil)`, and evaluation order (writer before format
@@ -2957,11 +2978,20 @@ obligations. Nothing in §11 was built on them in the meantime.
   confirmed zero. No BUG entry — nothing observable was ever wrong, which
   is exactly what "latent" claimed; the fix removes the arm a future edit
   could have re-armed (J-7's warning).
-- **H-c · two two-line decoder checks that would convert unchecked obligations
-  into free lemmas**: a duplicate-TypeId sweep (J-42) and a
+- **H-c · decoder checks that would convert unchecked obligations
+  into free lemmas** (family widened to four 2026-08-22, launch audit
+  D10-F2/F3): a duplicate-TypeId sweep (J-42); a
   `0 ≤ index < length` bound on literal element indices (J-33, which produces a
-  *spurious panic*, not a stuck). Doing these first shrinks the certificate's
-  surface.
+  *spurious panic*, not a stuck); an **int-literal RANGE check** (the
+  `"int"` decode arm two's-complement-wraps an out-of-range literal —
+  `"9223372036854775808"` runs and yields the wrap, while the STRING
+  arm ten lines below range-checks every byte; unreachable from the
+  honest frontend, go/types rejects the source form); and a
+  **duplicate-JSON-key refusal** (`Json.parse` dedupes last-wins
+  BEFORE StrictJson's exact-key check can see the duplicate — the
+  Strict layer structurally cannot enforce this; needs a pre-parse
+  scan or a parser that surfaces duplicates). Doing these first
+  shrinks the certificate's surface.
 - **H-d · wire func types drop the VARIADIC bit — FIXED 2026-08-21 (holes
   arc, BUG-067; the text below describes the PRE-FIX state and the witness,
   kept for the record; the fix is E-7's updated row)** (E-7). Was: CONFIRMED

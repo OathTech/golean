@@ -522,12 +522,23 @@ of the claim, not a footnote.
 
 **The run of record**: `tools/raftsubject/tracereplay.py --fuel
 40000000000` at commit `95145bc3` (frontend + golean built at that
-tip; only docs commits follow it on this branch), executed
+tip; "only docs commits follow it on this branch" — TRUE WHEN WRITTEN
+at `3e7706a0`, FALSE at the settled tip: 12 later commits touch
+`tools/nativefrontend/`, three of them `fmtcomposite.go` rendering
+semantics, from the audit-fix rounds that followed — launch audit
+D5-F3/V3; the §"delta-review re-run" note below covers only the
+go-side half, which those commits cannot perturb, so the MACHINE-tier
+numbers are `95145bc3` numbers; the fix-round machine re-run at the
+settled tip is the disposition), executed
 setsid-DETACHED per the W4.2 environment lesson — the first attempt
 was killed at ~1 h by the session background-task lifetime, an
 environment bound, never a machine stop; recorded in kind. Reports:
-`artifacts/w43/trace-final-p{1,2,3}.txt`, the report texts tracked at
-`docs/evidence/2026-08-21_w43-rendered-tier/`.
+`artifacts/w43/trace-final-p1.txt` and `trace-final-p3.txt`
+(gitignored; the report TEXTS are tracked at
+`docs/evidence/2026-08-21_w43-rendered-tier/`); `trace-final-p2.txt`
+NEVER EXISTED as a file a reader can find — p2 was the detached
+in-flight run whose output inode died with the pruned worktree
+(D7-evidence-F2, D5-F1; rescued to `.tmp/p2-recovery/` while live).
 
 **THE NUMBERS** (28 traces, 558 blocks; supported prefix 354 blocks
 = 63.4%, up from W4.2's 268/48.0% — conf-change unblocked the 11
@@ -1100,7 +1111,13 @@ naming the finding); this entry is the index for the delta-reviewer:
   (`tracereplay.py --no-machine`, all 28 traces, 558 blocks) —
   **206/206 ok-tier and 148/148 rendered-tier, unchanged**, with the
   supported-prefix census also unchanged at 354/558 (63.4%)
-  (`.tmp/deltafix-traces-nomachine.log`). The rule this cost us:
+  (`.tmp/deltafix-traces-nomachine.log`). CAVEAT (launch audit V3,
+  2026-08-22): `--no-machine` exercises NO frontend code — this re-run
+  covers exactly the half the 12 post-`95145bc3` frontend commits
+  cannot perturb, and leaves the machine tier (26/27, 131/148)
+  measured at `95145bc3` only; a 5-trace machine spot check at the
+  settled tip agreed byte-for-byte (D5), and the full machine re-run
+  is the fix-round disposition. The rule this cost us:
   instrument code lands in its own commit with the instrument's own
   full suite, however cheap the diff looks.
 - **R2-F5..F7** — the reviewer's one-liner list did not survive to a
