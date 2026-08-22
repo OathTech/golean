@@ -167,3 +167,37 @@ if ! diff -q "$DEV_BASE" "$WORK/deviation.obs" > /dev/null; then
   exit 1
 fi
 echo "check-golden: ok [hidden-dep-order] — realized deviation order matches the recorded pin"
+
+# ---- Wire pin: the choice-driven raft twin (campaign Arc 1, U-c5) ----
+# baselines/golden/twin-chdriver.wire.json is the T1 statement's subject:
+# GoLeanProofs.Specs.TwinProgram's `twinLowered` decodes THESE BYTES at
+# elaboration (goldenWire%), so the term<->bytes link holds by mechanism
+# (a decode failure is a build failure, not a drift). What this guards is
+# the frontend<->bytes link: a fresh frontend emit over the CANONICAL
+# ASSEMBLY (the runprobe layout — the derived subject packages beside
+# tools/raftsubject's twin-lib + chdriver + thin main) must reproduce the
+# pinned wire byte-for-byte (emission is deterministic — measured at the
+# pin, two runs one sha). Re-pin deliberately with the reason on any
+# frontend/subject change, in the same commit; the Lean side re-decodes
+# automatically on the next build.
+TWIN_BASE="baselines/golden/twin-chdriver.wire.json"
+[ -f "$TWIN_BASE" ] || { echo "check-golden: FAIL — no wire pin at $TWIN_BASE" >&2; exit 1; }
+TWIN_PROG="$WORK/twin-prog"
+mkdir -p "$TWIN_PROG"
+for pkg in quorum raftpb tracker proto confchange raft; do
+  cp -r "raftsubject/$pkg" "$TWIN_PROG/" \
+    || { echo "check-golden: FAIL [twin-wire] — subject package $pkg missing" >&2; exit 1; }
+done
+for f in twin-lib.go twin-chdriver.go twin-chdriver-main.go; do
+  cp "tools/raftsubject/$f" "$TWIN_PROG/" \
+    || { echo "check-golden: FAIL [twin-wire] — $f missing" >&2; exit 1; }
+done
+GO111MODULE=off go run ./tools/nativefrontend --dir "$TWIN_PROG" --out "$WORK/twin.wire.json" \
+  || { echo "check-golden: FAIL [twin-wire] — frontend emit failed (fail closed)" >&2; exit 1; }
+if ! cmp -s "$TWIN_BASE" "$WORK/twin.wire.json"; then
+  echo "check-golden: FAIL [twin-wire] — fresh frontend emit differs from the pinned wire (frontend or subject drifted; re-pin deliberately with the reason):" >&2
+  echo "  pinned: $(sha256sum "$TWIN_BASE" | cut -d' ' -f1)" >&2
+  echo "  fresh:  $(sha256sum "$WORK/twin.wire.json" | cut -d' ' -f1)" >&2
+  exit 1
+fi
+echo "check-golden: ok [twin-wire] — fresh emit = pinned wire ($(sha256sum "$TWIN_BASE" | cut -c1-12)…)"
