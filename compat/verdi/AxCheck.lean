@@ -62,6 +62,21 @@ open VerdiCompat VerdiCompat.Raft
 /-- info: 'VerdiCompat.Raft.refined_votes_shape_witness' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms VerdiCompat.Raft.refined_votes_shape_witness
 
+-- Election-safety chain (campaign Arc 3 unit 2, ElectionSafety.lean):
+-- the five chain invariants and the discharged P1 transfer target.
+/-- info: 'VerdiCompat.Raft.votes_le_currentTerm_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.votes_le_currentTerm_invariant
+/-- info: 'VerdiCompat.Raft.votes_correct_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.votes_correct_invariant
+/-- info: 'VerdiCompat.Raft.candidates_vote_for_selves_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.candidates_vote_for_selves_invariant
+/-- info: 'VerdiCompat.Raft.cronies_correct_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.cronies_correct_invariant
+/-- info: 'VerdiCompat.Raft.one_leader_per_term_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.one_leader_per_term_invariant
+/-- info: 'VerdiCompat.Raft.oneLeaderPerTermStatement_holds' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.oneLeaderPerTermStatement_holds
+
 /-! ## Exhaustive sweep (fails the build on any disallowed axiom) -/
 
 open Lean in

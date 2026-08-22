@@ -252,4 +252,36 @@ need is a numbered Arc-4-seam gap, never invented statement-side.
   Chain state: votes_le ✓, votes_correct ✓, candidates_vote_for_selves
   ✓; remaining: cronies_correct, one_leader_per_term (+ quorum
   counting lemmas), AxCheck pins, scripts/ci.
+- 2026-08-22 Slice 10 (11c3204e): `cronies_correct_invariant` — the
+  chain's heavyweight (CroniesCorrectInterface.v:9-33 1:1; upstream
+  proof 718 lines). All four conjuncts through the refined principle;
+  `votes_nw`'s tally case rides the consumed RequestVoteReply packet +
+  `votes_correct_invariant`, exactly upstream's argument. [AGENT]
+  cronies-side ghost lemmas added to ElectionSpecLemmas (elim/intro
+  per handler, branch-correlated via `handleTimeout_not_leader` and
+  the rvr type facts).
+- 2026-08-22 Slice 11 (9c127a91): quorum counting + the exit theorem.
+  `one_leader_per_term_ghost` (OneLeaderPerTermProof.v:25-54) and
+  `one_leader_per_term_invariant` via `lower_prop` — ELECTION SAFETY
+  at the base layer; also discharges `OneLeaderPerTermStatement`
+  (Properties.lean's declared transfer target for election safety)
+  natively, per the §9 translate-don't-certify route. [AGENT] TWO
+  calls: (1) the counting layer (dedup lemmas, pigeon, div2_correct,
+  wonElection_one_in_common — CommonTheorems.v:1376-1404, StructTact
+  ListUtil.v:641-649) proved CONSTRUCTIVELY with a local `eraseOne`,
+  because core's `List.erase` lemmas depend on Classical.choice and
+  the lane's enforcing AxCheck sweep rejected them (the gate fired
+  exactly as designed; recorded here as the gate's catch, not worked
+  around by widening the axiom set — widening would be a recorded
+  lane-doctrine decision, not mine). (2) `one_leader_per_term` was
+  NOT redefined: the P1 statement port (Properties.lean:27) already
+  has it 1:1; the chain proves that existing statement (a name
+  collision the build caught).
+- 2026-08-22 AxCheck curated pins added for the six chain headliners
+  (votes_le / votes_correct / candidates_vote_for_selves /
+  cronies_correct / one_leader_per_term invariants +
+  oneLeaderPerTermStatement_holds), captured from a fresh
+  `#print axioms` run — all [propext, Quot.sound]. Build green,
+  sweep 1173 decls, diffharness fixture pin OK (320 cases), zero
+  sorry/native_decide in both new files (grep).
 
