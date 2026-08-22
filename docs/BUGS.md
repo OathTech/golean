@@ -2967,7 +2967,22 @@ FIRST per the standing rule.
 
 - Status: open
 - Pinned-by: differential
-- Cases: builtins/len-vs-call-order/chan, builtins/len-vs-call-order/slice
+- Cases: builtins/len-vs-call-order/chan, builtins/len-vs-call-order/slice, builtins/min-max-vs-call-order/min-value, builtins/min-max-vs-call-order/max-value, builtins/min-max-vs-call-order/min-arg-panic
+
+WIDENED 2026-08-22 (grossmith campaign-2 F-1, promoted by the
+launch-audit fix round): the predicate gap is not `len`/`cap`
+specifically — **the ordered-event set omits the value-returning
+built-ins**. `min`/`max` are calls (`spec#Built-in_functions`: "called
+like any other function") and the machine runs a lexically LATER call
+first, observable both as a silent wrong value
+(`min(n,100) + bump()` → machine 5, gc 1) and as a wrong panic order
+(`min(b, s[i]), wit(7,9)` → machine 9, gc 0 — the operand panic must
+precede the later call). Three new RED pins above; two GREEN controls
+(`append-arg-panic`, `call-in-builtin-arg`) pin that `append` is
+already ordered and calls INSIDE a built-in's argument list already
+hoist lexically — A6 must not regress either. A6's scope is re-stated
+accordingly: enumerate built-in call sites, not just inline `len`/`cap`
+reads.
 
 `spec#Order_of_evaluation` orders "all function calls, method calls,
 receive operations, and binary logical operations" lexically
@@ -3355,3 +3370,44 @@ signature's last parameter is regression-covered — dropping the bit from
 the message, not just from identity, is red.
 `interfaces/assert-func-variadic/assert-variadic-at-slice-panic`; green
 post-fix.
+
+## BUG-069 — shadowed predeclared `true`/`false`/`nil` mis-lowered as the universe constants (silent wrong answer)
+
+- Status: fixed (2026-08-22, launch-audit fix round — `emitIdent`'s
+  name-keyed switch deleted; `nil` recognized by its go/types object
+  (`*types.Nil` in `Uses`), `true`/`false` need no arm at all since
+  genuine uses carry a constant value and fold through
+  `emitConstValue`'s `constant.Bool` arm, which emits the identical
+  wire node)
+- Pinned-by: differential
+- Cases: scoping/predeclared-shadow/shadow-true-branch, scoping/predeclared-shadow/shadow-false-branch, scoping/predeclared-shadow/shadow-param, scoping/predeclared-shadow/shadow-var-form, scoping/predeclared-shadow/shadow-nil-len, scoping/predeclared-shadow/shadow-nil-append, scoping/predeclared-shadow/shadow-nil-int, scoping/predeclared-shadow/genuine-ctrl
+- Discovered: 2026-08-22 (the whole-stack launch audit's broad-brief
+  reviewer D10, probing weird-but-legal programs; blast radius widened
+  by verifier V1)
+
+`emitIdent` opened with `switch id.Name { case "true": ... case
+"false": ... case "nil": ... }` — resolving the three names to the
+universe constants BEFORE consulting `e.info.Uses`. The predeclared
+identifiers live in the universe scope and are shadowable
+(`spec#Declarations_and_scope`); a local `true := false`, a parameter
+named `true`, or `nil := []int{...}` is an ordinary variable, and every
+READ of it was mis-lowered as the literal. Observed outcomes depended
+only on how the literal type-checked downstream: silent wrong values
+(`true := false; return true` → machine true, gc false), a silently
+wrong BRANCH (`false := (1==1); if false {...}` took the wrong arm), a
+silent wrong `len` (`nil := []int{1,2,3}; len(nil)` → machine 0, gc 3),
+a FABRICATED panic (append-then-index through a shadowed `nil` slice:
+machine index-out-of-range, gc 29), and one honest stuck (`nil := 5`).
+The write path was always correct (declarations travel through `Defs`,
+name-preserving) — only reads short-circuited. Shadowed `len`/`cap`
+etc. were never affected: builtins are not in the switch and resolve
+through go/types.
+
+The switch was the oldest untouched line in the frontend (first
+vertical slice, 2026-07-18, `59c20a46`), and no idiomatic program
+shadows these names — the corpus had zero occurrences, so the
+differential was structurally blind (BUG-002's epistemic class: found
+by probing imagination, not by any green gate). Adjacent to BUG-068
+(shadowing a NAMED RESULT) but a different mechanism: 068 was the
+wire's name channel too weak to carry a resolved distinction; 069 was
+the emitter not consulting the resolution at all.

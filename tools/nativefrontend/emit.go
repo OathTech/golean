@@ -6445,12 +6445,13 @@ func (e *emitter) capturedPtr(x ast.Expr) (string, bool) {
 }
 
 func (e *emitter) emitIdent(id *ast.Ident) (any, error) {
-	switch id.Name {
-	case "true":
-		return map[string]any{"expr": "bool", "value": true}, nil
-	case "false":
-		return map[string]any{"expr": "bool", "value": false}, nil
-	case "nil":
+	// The predeclared `nil` is recognized by its go/types OBJECT, never
+	// by name (BUG-069): the universe identifiers are shadowable, and a
+	// local named `nil` (or `true`, or a parameter named `false`) is an
+	// ordinary variable that must lower as one. Predeclared true/false
+	// need no arm at all — genuine uses carry a constant value and fold
+	// below (emitConstValue's constant.Bool arm emits the same node).
+	if _, isNil := e.info.Uses[id].(*types.Nil); isNil {
 		return map[string]any{"expr": "nil"}, nil
 	}
 	// A constant identifier folds to its value.
