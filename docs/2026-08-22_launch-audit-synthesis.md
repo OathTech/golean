@@ -132,6 +132,30 @@ The audit itself ran per the dossier's structure + Mike's added
 noodler; this document is its synthesis; the launch gate's exit is
 Mike's sign-off after this fix round.
 
+## 5b. Fix-round execution record (2026-08-22, lane `launch-fixes`)
+
+Every **FIX** row in §2 landed on this branch; the per-commit map is
+the branch log itself (guardrails-first ordering: pre-fix colors
+committed before the emitIdent fix; baseline re-pinned from the full
+`--diff` run in the same arc — 2475 = 2303 PASS / 172 FAIL, drift =
+exactly the 13 entrants, zero movement on the 2462 prior ids;
+`wrong-answer 0/0` restored honest). Gate state at the tip:
+`scripts/ci` fast PASS; the full `--diff` PASS at the re-pin commit;
+`scripts/comparator-judge` PASS — 56 theorems, 417s, fresh clone @
+`1730567a` (the widened trigger fired on the four trusted-closure
+docstring moves, correctly; the marker was emitted by the judge's new
+mechanical append, its first live run). The twin battery re-verified
+both-oracles PASS including the new `stepdown-reelect` schedule
+(term 2 reached, step-down exercised, claims=2, full trace
+agreement). IN FLIGHT at arc-complete: the full 27-trace machine-tier
+re-run at this tip (detached →
+`artifacts/launch-fixes-rerun/machine-tier-full.txt`; the D5 5-trace
+spot check at the audit tip already agreed byte-for-byte) and the
+`95145bc3` p2 rescue (`.tmp/p2-recovery/`). Consciously NOT done
+here: the campaign's first-week items from D9 (worker-brief template
+collection, the `refined_raft_net_invariant` port) — campaign work,
+not fix-round work.
+
 ## 6. Deferred (recorded, not launch-blocking)
 
 - The sortSlice relocation arc (V2's costing: frontend trivial; the
