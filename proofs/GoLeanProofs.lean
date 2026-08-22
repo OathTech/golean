@@ -54,6 +54,12 @@ import GoLeanProofs.Specs.GoldenRecover
 import GoLeanProofs.Specs.GoldenQuorum
 import GoLeanProofs.Specs.GoldenQuorumPin
 import GoLeanProofs.Specs.QuorumTargets
+-- The raft campaign's statement layer (Arc 1, 2026-08-22): the
+-- wire-pin mechanism, the pinned twin lowering, and the T1/witness
+-- statement Props — in the audited closure from birth.
+import GoLeanProofs.Specs.WirePin
+import GoLeanProofs.Specs.TwinProgram
+import GoLeanProofs.Specs.RaftAgreement
 import GoLeanProofs.Specs.QuorumRefSpec
 import GoLeanProofs.Specs.Statements
 import GoLeanProofs.Specs.GoldenQuorumWP
