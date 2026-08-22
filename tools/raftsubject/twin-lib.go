@@ -636,6 +636,29 @@ func probeTwinElect() string {
 		{kind: opPropose, node: 3}, // forwarded to whoever won
 		{kind: opDrain},
 	}})
+	// stepdown-reelect (launch audit D5-F4, 2026-08-22): before this
+	// schedule NO twin run ever left term 1 — every schedule ended
+	// claims=1, so term advancement, leader step-down on a higher-term
+	// message, and a second claim were all unexercised (while
+	// raftharness demands minClaims=2 on four of six scenarios). A
+	// second campaign after a completed term-1 round is the minimal
+	// widening: node 1 commits at term 1, node 2 campaigns at term 2,
+	// node 1 MUST step down, and the second commit lands at term 2 —
+	// so S2/S3 see multi-term (term, data) history and the exercise
+	// floor is 2 claims. (S1's disagreement branch stays unreachable
+	// on a CORRECT subject — two claims in one term is the violation
+	// it exists to catch — but the claim bookkeeping now runs with a
+	// populated multi-term map.)
+	out += runSched(sched{name: "stepdown-reelect", n: 3, cmds: 2, floor: 2, ops: []op{
+		{kind: opCampaign, node: 1},
+		{kind: opDrain},
+		{kind: opPropose, node: 1},
+		{kind: opDrain},             // commit at term 1
+		{kind: opCampaign, node: 2}, // term 2: node 1 steps down
+		{kind: opDrain},
+		{kind: opPropose, node: 2},
+		{kind: opDrain}, // commit at term 2
+	}})
 	return out
 }
 
@@ -711,4 +734,3 @@ func probeTwinTicks() string {
 	}})
 	return out
 }
-
