@@ -451,3 +451,130 @@ Slices, in order:
 4. Non-goals, restated: no GoCore change (the fast evaluator is
    proof-side); no statement change; no envelope pin. If any slice
    wants one, it is a ruling request, parked.
+
+---
+
+## 6.5 U3 — the (d) gate: the trie microbenchmark (2026-08-22)
+
+Bench: `docs/campaign-arc2-probes/trie-bench.lean` — a binary trie
+keyed by canonical LSB-first address bits (ALL recursion STRUCTURAL —
+the kernel does not usefully reduce `WellFounded.fix`, a design
+constraint recorded here for the evaluator build), values
+`GoLean.HeapCell`; seed 36,376 entries (the twin's end-of-run heap,
+probe C); `nops` alternating LCG-keyed lookup/set;
+`checksum + finalTrie.count` so the full final trie is FORCED (the
+kernel's lazy whnf cannot skip set paths). Expected values
+#eval-confirmed first.
+
+**PASS TARGETS, stated before the kernel runs** ([AGENT]): marginal
+per-op kernel time ≤ 25 ms AND marginal retention ≤ 2 MB/op at 36k
+entries. Miss ⇒ (d) parks and §6.6's convergence clause governs.
+
+First kernel points (16G cap): nops=0 and nops=1000 both OOM(137) at
+~4 min — but the arithmetic is the finding, not the failure: nops=0
+IS 36,376 in-kernel seed inserts + the count fold, so the kill reads
+~6.4 ms/insert CPU and ~0.47 MB/insert retention — the cap was sized
+for the op-marginal, not the seed build. (The real evaluator never
+builds its seed in-kernel — the seed is a reflected literal, §6.1's
+mechanism — so the seed-build points are a worst-case variant kept
+for honesty.) Rerun at 48G:
+
+Measured (48G cap, RSS polled at 1 s; record
+`records/trie-bench.out`):
+
+| nops | wall | peak RSS | outcome |
+|---|---|---|---|
+| 0 (= the 36,376-insert seed build + count, in-kernel) | 4:25 | 17.7 GB | PASS |
+| 1000 | 4:39 | 18.1 GB | PASS |
+| 10000 | 6:04 | 22.1 GB | PASS |
+
+Marginal per op (1000→10000, 9,000 ops): **9.4 ms/op time,
+0.44 MB/op retention**; the 0→1000 stretch reads 14 ms / 0.40 MB —
+consistent. Seed build: 7.3 ms/insert. Against the naive list heap at
+the same 19k–36k-cell scale (§6.2: 2.22 s/step, 157 MB/step): the
+trie is **~240× faster and ~360× lighter per heap op**.
+
+**VERDICT: the (d) gate PASSES** — both pre-stated targets met with
+>2× headroom. [AGENT.]
+
+**The (d) projection, re-derived at bench rates** (bounds as bounds):
+
+- Per-step evaluator cost = (heap ops/step, ~1–3) × 9.4 ms + the
+  NON-heap step work (config/cont matching, value normalization, env
+  ops) which this bench deliberately does not measure — the known
+  unknown. At 2×–10× the heap-op component: **711,616 steps ≈ 4–60
+  CPU-h**, inside budget even at the pessimistic end.
+- Retention ~0.4–1 MB/step → monolithic ≈ 300–700 GB: still
+  segmented, but at 48 GB/segment ≈ 50k steps/segment →
+  **~14 checkpointed fast segments** (vs (c)'s ~2,500) — the
+  reflector and checkpoint machinery carry unchanged.
+- The evaluator build therefore carries its OWN mid-build measurement
+  gate: one `stepFast` segment from the (converted) 350k checkpoint,
+  measured before full assembly — same discipline as §6.2, catching
+  the non-heap-work unknown before it is load-bearing.
+
+## 6.6 Convergence with Arc 4 (coordinator directive, 2026-08-22)
+
+A4-U2 (in flight, `campaign-arc4`) is building the handler-fragment
+Sym extension after the Arc-4 pilot refuted hand-walked handler
+equations on cost. Had this gate MISSED, the witness's remaining
+route was a Sym-automated completion walk; the gate passed, but the
+carry-forward statement stands either way, so nobody re-derives it:
+
+- **The reflector + checkpoint (`StateWire.lean`,
+  `TwinCheckpoints.lean`)** — route-independent: a Sym walk over the
+  twin needs concrete start states per window exactly as (c)/(d) do;
+  `twinCheckpoint%` provides them at any step index, program-generic.
+- **The census (243 functions: 226 static + 9 value-call + 8 defer;
+  hot-path counts in `records/probeA-census.out`)** — the Sym route's
+  handler-fragment coverage checklist: which functions its fragment
+  must cross, weighted by execution count.
+- **The measured curves (§1.2, §6.2, §6.5)** — the baseline any
+  Sym-transported window cost must beat, and the segment-sizing
+  arithmetic (retention → steps per module) transfers to Sym windows
+  unchanged.
+- **The kernel design constraints found here** — structural-only
+  recursion (no `WellFounded.fix` on the reduction path),
+  `smartUnfolding false`, the seed-as-reflected-literal rule, and the
+  forced-fold discipline (a lazily-skippable result under-measures) —
+  apply to ANY kernel-checked route over this machine.
+
+## 6.7 Unit-4 charter — the evaluator build (route (d), GO)
+
+Sliced per §6.4 items 2–3, refined by the gate's findings; each slice
+parkable, measure-first:
+
+1. **Design note + `HeapT` core** (`proofs/GoLeanProofs/FastEval/`
+   namespace, proof-side, aggregator-imported): the binary trie at
+   `HeapCell` values with canonical-bits keying (the bench's shape,
+   STRUCTURAL recursion only); abstraction `γ : HeapT → Heap` (or the
+   relation form `RepHeap`), the WF invariant (key canonicity +
+   nodup — `alloc` uniqueness supplies it), and the op-level
+   simulation lemmas: `lookup`/`set`/`alloc` commute with `γ` under
+   WF. These are ∀-state symbolic lemmas — kit-style, no per-run
+   content.
+2. **`stepFast` + per-arm simulation**: the represented state
+   `ExecStateF` (tables verbatim, heap as `HeapT`); `stepFast`
+   mirroring `stepFn` arm by arm; per-arm lemmas
+   `γ(stepFast σF c ch) = stepFn (γ σF) c ch` (Except-valued — errors
+   included), composed to `stepFnIterFast_sim`. The arm count is
+   `stepFn`'s (~50); mechanical, wave-parallelizable AFTER the shape
+   is fixed on 2–3 exemplar arms.
+3. **The mid-build measurement gate**: convert the 350k checkpoint
+   (`γ⁻¹` at reflection — extend `twinCheckpoint%` with a trie
+   emitter, or convert once compiled and kernel-check `γ` agreement),
+   run ONE `stepFnIterFast` segment (~2,000 steps) under cap +
+   timeout; this prices the non-heap step work (§6.5's known
+   unknown) BEFORE the remaining arms/waves are built. Its own
+   numeric trigger: projected full run ≤ ~60 CPU-h proceeds; a miss
+   pauses for re-planning against §6.6's Sym convergence.
+4. **Assembly**: seed reflection + `γ`-agreement check, ~14 fast
+   segments, transport through `stepFnIterFast_sim`, compose with the
+   prelude equation and readout, discharge `CompletionWitness`.
+5. **Guardrails, restated from the coordinator's directive**: the
+   evaluator is UNTRUSTED METHOD — it never appears in any statement
+   closure, stays out of designated-statement reach exactly as Sym
+   does (§3.1; the statement-TCB walker would flag it, and the
+   docstrings say so); no GoCore/frontend/scripts changes; every
+   public simulation theorem lands with its `#print axioms` pin per
+   kit convention.
