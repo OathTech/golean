@@ -11,7 +11,14 @@ TARGET-SPECIFIC by design (the layering doctrine,
 about `GoldenQuorum.quorumLowered`, the frontend's pinned lowering of
 the real etcd-io/raft `quorum` driver. The GENERAL laws these witnesses
 instantiate live in `Laws/StmtOps.lean` (the wide-op walk), `Laws/Range.lean`
-and `Laws/Call.lean`; nothing in this module is a law.
+and `Laws/Call.lean`. Three declarations here DO carry
+`@[go_walk_law]` (the one-entry quorum forms, registered into the
+general walk table) — the header that said "nothing in this module is
+a law" was false as written (launch audit D8-F5); the design is
+argued and recorded in `docs/2026-08-01_proof-automation-arc.md`
+§OVER-SPECIALIZATION CHECK (general `…_entries` forms shipped, the
+one-entry forms derived from them), so this is disclosed
+target-shaped automation, not an undisclosed statement encoding.
 
 Contents:
 

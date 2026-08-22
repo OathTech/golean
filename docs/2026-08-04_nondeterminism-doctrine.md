@@ -139,7 +139,16 @@ per-lane captions remain below):
   sample must land inside the machine-enumerated set (membership), or
   the set is certified a singleton and the strict differential runs on
   it (confluent). A membership failure is the bug definition firing —
-  always red, never latitude.
+  always red, never latitude. **What confluent-row prose asserts**
+  (added 2026-08-22, launch audit D3-F-2): a "confluent" claim — and
+  any row note phrased "every schedule …" — is a claim about
+  TERMINATING observations only: every terminating observation is the
+  certified singleton. Under the dedup engine the certificate is
+  silent about divergent branches (a cycle in the closed graph
+  observes nothing at any fuel — `EnumSpec.lean` states this), so
+  termination language in row notes is NOT carried by the theorem;
+  the nonterm-accounting question is M-9, on Mike's desk, and
+  `--allow-nonterm` under dedup refuses pending it.
 - **racy = the refusal boundary, unchanged by the rewrite.** Racy
   semantics is undefined by Go (the memory model's escape hatch is a
   refusal license); SC interleaving is claimed only inside DRF, and

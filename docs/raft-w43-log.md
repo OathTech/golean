@@ -662,7 +662,19 @@ census above), the sequential/reliable-first envelope (the twin's
 standing narrowings, W4.5's obligations unchanged), the wall-time
 bound on the heaviest trace, and the tier-strength structure (the
 rendered tier is what anchors delivery-order faithfulness; it is
-green against upstream's recorded output on all 148 blocks).
+green against upstream's recorded output on all 148 blocks). THE
+REACH, stated with the green (launch audit D5-F9 — this paragraph
+used to quote the green without its denominators): the go side
+renders 148 of the corpus's 309 rendered expectations (47.9%) and
+passes 206 of 249 ok-tier blocks; the machine tier verifies 26 of 27
+replayable traces and 131 of the 148 rendered blocks byte-for-byte
+(at `95145bc3`; see the run-of-record caveat above). Composed, the
+machine executed 280 of 558 blocks (50.2%) of upstream's own corpus
+with byte-identical output over the supported prefix, and 131 of 309
+rendered expectations (42.4%) additionally match upstream's recorded
+output — the one oracle in this family external to us. The reach is
+command-anchored (`tracereplay.py`'s BY_COMMAND import is the single
+source, so the census and the instrument cannot drift).
 
 ---
 
