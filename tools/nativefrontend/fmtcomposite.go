@@ -7,7 +7,10 @@
 //   leaf      := integer kinds | string kinds | bool
 //              | error/Stringer implementor (consulted per
 //                element/field, as gc's printValue does at depth —
-//                probed artifacts/w43/probe-fmt D1-D4)
+//                probed artifacts/w43/probe-fmt D1-D4 — but NEVER
+//                below an unexported field: crossing one taints the
+//                subtree and it renders RAW, as gc's reflection does;
+//                audit R1-F1, gc-probed .tmp/fixround-probes/f1)
 //              | composite (recursively; cycle-guarded, fail closed)
 //
 // Everything outside — maps, pointers, interfaces at depth, anonymous
@@ -88,7 +91,7 @@ func (e *emitter) fmtCompositeTopLift(fn string, plus bool, t types.Type) (strin
 	e.liftSeq++
 	val := map[string]any{"expr": "ident", "name": "$x", "type": tw}
 	tmp := 0
-	stmts, piece, err := e.fmtRenderValue(fn, plus, t, val, map[string]bool{}, &tmp)
+	stmts, piece, err := e.fmtRenderValue(fn, plus, t, val, map[string]bool{}, &tmp, false)
 	if err != nil {
 		return "", err
 	}
@@ -107,8 +110,19 @@ func (e *emitter) fmtCompositeTopLift(fn string, plus bool, t types.Type) (strin
 // %v/%+v: stmts bind every call to a temp (in evaluation order — left
 // to right, matching gc's per-operand walk), piece is a PURE expression
 // over those temps.
+//
+// `tainted` (audit R1-F1/R4-C-2): true once the render path has
+// CROSSED AN UNEXPORTED FIELD. gc renders through reflection, and a
+// value reached via an unexported field cannot be interfaced
+// (reflect's CanInterface is false), so fmt SKIPS method consultation
+// for that value AND everything below it — the subtree renders raw
+// (gc-probed .tmp/fixround-probes/f1: `{E<1> 2}`, `{in:{X:3} A:E<4>}`,
+// `{bs:[5 6]}`). A tainted leaf therefore bypasses the error/Stringer
+// arm and renders through the kind matrix; a tainted leaf OUTSIDE the
+// raw matrix refuses exactly like any other unmodeled leaf (fail
+// closed — the refusal names the leaf type).
 func (e *emitter) fmtRenderValue(fn string, plus bool, t types.Type, val any,
-	visiting map[string]bool, tmp *int) ([]any, any, error) {
+	visiting map[string]bool, tmp *int, tainted bool) ([]any, any, error) {
 	strTy := map[string]any{"kind": "string"}
 	verbName := "%v"
 	if plus {
@@ -133,7 +147,7 @@ func (e *emitter) fmtRenderValue(fn string, plus bool, t types.Type, val any,
 	// the composite subset (below), and an interface-typed leaf other
 	// than `error` refuses like the scalar matrix does.
 	errIface := types.Universe.Lookup("error").Type().Underlying().(*types.Interface)
-	if !types.IsInterface(t) {
+	if !tainted && !types.IsInterface(t) {
 		if _, isPtr := types.Unalias(t).(*types.Pointer); !isPtr {
 			methodName := ""
 			if types.Implements(t, errIface) {
@@ -212,7 +226,7 @@ func (e *emitter) fmtRenderValue(fn string, plus bool, t types.Type, val any,
 
 	if sl, ok := t.Underlying().(*types.Slice); ok {
 		visiting[key] = true
-		liftName, err := e.fmtSliceLift(fn, plus, t, sl.Elem(), visiting)
+		liftName, err := e.fmtSliceLift(fn, plus, t, sl.Elem(), visiting, tainted)
 		delete(visiting, key)
 		if err != nil {
 			return nil, nil, err
@@ -250,7 +264,9 @@ func (e *emitter) fmtRenderValue(fn string, plus bool, t types.Type, val any,
 			}
 			fieldNode := map[string]any{"expr": "field-get", "recv": val,
 				"typeId": typeName, "field": f.Name()}
-			fstmts, fpiece, err := e.fmtRenderValue(fn, plus, f.Type(), fieldNode, visiting, tmp)
+			// Crossing an unexported field taints the subtree (R1-F1).
+			fstmts, fpiece, err := e.fmtRenderValue(fn, plus, f.Type(), fieldNode, visiting, tmp,
+				tainted || !f.Exported())
 			if err != nil {
 				return nil, nil, err
 			}
@@ -266,9 +282,10 @@ func (e *emitter) fmtRenderValue(fn string, plus bool, t types.Type, val any,
 
 // fmtSliceLift generates `func(<sliceT>) string` rendering `[a b c]`
 // with a counted loop, and returns its name. Nil and empty both render
-// `[]` (the loop body never runs) — gc-probed.
+// `[]` (the loop body never runs) — gc-probed. `tainted` carries the
+// unexported-crossing flag into the element render (R1-F1).
 func (e *emitter) fmtSliceLift(fn string, plus bool, sliceT types.Type, elemT types.Type,
-	visiting map[string]bool) (string, error) {
+	visiting map[string]bool, tainted bool) (string, error) {
 	strTy := map[string]any{"kind": "string"}
 	intTy := map[string]any{"kind": "int", "int": "int"}
 	sliceW, err := e.emitType(sliceT)
@@ -300,7 +317,7 @@ func (e *emitter) fmtSliceLift(fn string, plus bool, sliceT types.Type, elemT ty
 	}
 
 	tmp := 0
-	elemStmts, elemPiece, err := e.fmtRenderValue(fn, plus, elemT, eRef, visiting, &tmp)
+	elemStmts, elemPiece, err := e.fmtRenderValue(fn, plus, elemT, eRef, visiting, &tmp, tainted)
 	if err != nil {
 		return "", err
 	}

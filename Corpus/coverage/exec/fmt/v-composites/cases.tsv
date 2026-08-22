@@ -15,5 +15,8 @@ v-stringer-elem-panic	vStringerElemPanic	-	ok	-	stdlib,strings,slices,methods,de
 plusv-stringer-field	plusVStringerField	-	ok	-	stdlib,strings,structs,methods,defined_type
 v-named-slice	vNamedSlice	-	ok	-	stdlib,strings,slices,defined_type
 v-nested-struct	vNestedStruct	-	ok	-	stdlib,strings,structs,nested
+v-unexported-stringer-field	vUnexportedStringerField	-	ok	-	stdlib,strings,structs,methods,defined_type
+v-unexported-subtree-taint	vUnexportedSubtreeTaint	-	ok	-	stdlib,strings,structs,methods,defined_type,nested
+v-unexported-slice-taint	vUnexportedSliceTaint	-	ok	-	stdlib,strings,structs,methods,defined_type,slices
 v-map-outside	vMapOutside	-	ok	-	stdlib,strings,maps
 v-ptr-field-outside	vPtrFieldOutside	-	ok	-	stdlib,strings,structs,pointers

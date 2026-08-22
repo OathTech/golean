@@ -714,3 +714,45 @@ was allowed to say so).
 (ts-guard FAIL/frontend-export by design; three commaok PASS); zero
 movement on the 2430 prior ids. Baseline re-pinned (2434 cases,
 2277/157) in this commit.
+
+### R1-F1 / R4-C-2 — unexported fields stop method consultation (render raw)
+
+**Defect.** The composite renderer consulted error/Stringer per
+element/field at every depth — including across UNEXPORTED fields. gc
+renders through reflection, and a value reached via an unexported
+field cannot be interfaced (CanInterface is false), so fmt skips
+handleMethods for that value and its whole subtree: the field renders
+RAW. The machine rendered `{E<1> E<2>}` where gc renders `{E<1> 2}` —
+a silent wrong answer in ordinary Go (probe r4-p1).
+
+**gc ground truth first** (`.tmp/fixround-probes/f1`, three forms):
+`{E<1> 2}`/`{A:E<1> b:2}` (unexported Stringer field renders raw, the
+exported sibling still consults), `{{3} E<4>}`/`{in:{X:3} A:E<4>}`
+(an unexported STRUCT field taints its whole subtree — the exported
+`X` inside renders raw), `{[5 6]}`/`{bs:[5 6]}` (unexported slice
+field: elements raw).
+
+**Guardrails witnessed red first**: `fmt/v-composites/
+v-unexported-{stringer-field,subtree-taint,slice-taint}` — all three
+differential-red with the machine consulting Stringer through the
+unexported crossing (`{E<1> E<2>}` etc. against the gc strings above).
+
+**Fix — RENDER RAW (the refuse fallback not needed).** `fmtRenderValue`
+and `fmtSliceLift` thread a `tainted` flag; crossing a non-exported
+field sets it for the subtree, and a tainted leaf bypasses the
+method-consultation arm into the raw kind matrix. Raw rendering
+composed cleanly — structs/slices/scalars below a taint are exactly
+the already-modeled raw forms — so the instruction's fail-closed
+fallback (refuse the cell) was not needed as a special case: a
+tainted leaf OUTSIDE the raw matrix hits the ordinary named refusal
+(the same `unsup` the untainted path uses), which IS the fail-closed
+fallback, for free. Judgment logged: no new refusal class introduced.
+
+**Flips.** The three new rows red→green in the family slice; the
+existing family (incl. `plusv-stringer-field`, whose Stringer field is
+EXPORTED, and the two red-by-design boundary rows) unmoved. Full
+`scripts/ci --diff` + re-pin recorded below.
+
+(R1-F1 gate: full `scripts/ci --diff` — drift exactly the three new
+ids `-> PASS`, zero movement on the 2434 prior ids; baseline re-pinned
+2437 cases, 2280/157, in this commit.)

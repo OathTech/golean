@@ -99,6 +99,46 @@ type struct2 struct {
 	N uint64
 }
 
+// ---- R1-F1/R4-C-2 (W4.3 audit fix round): UNEXPORTED fields stop
+// method consultation for their whole SUBTREE — gc (via reflect) can
+// not call methods on values reached through an unexported field, so
+// it renders them RAW; the composite renderer consulted Stringer on
+// every field regardless (machine `{E<1> E<2>}` where gc says
+// `{E<1> 2}`). gc-probed: .tmp/fixround-probes/f1 — `{E<1> 2}`,
+// `{A:E<1> b:2}`, `{{3} E<4>}`, `{in:{X:3} A:E<4>}`, `{[5 6]}`. ----
+
+type strE int
+
+func (e strE) String() string { return "E<" + string(rune('0'+int(e))) + ">" }
+
+type mixedExp struct {
+	A strE // exported: Stringer consulted
+	b strE // unexported: RAW (2, not E<2>)
+}
+
+func vUnexportedStringerField() string {
+	return fmt.Sprintf("%v|%+v", mixedExp{1, 2}, mixedExp{1, 2})
+}
+
+type innerX struct{ X strE }
+
+type taintOuter struct {
+	in innerX // unexported STRUCT field: the whole subtree renders raw
+	A  strE   // exported control BESIDE the taint: still E<4>
+}
+
+func vUnexportedSubtreeTaint() string {
+	return fmt.Sprintf("%v|%+v", taintOuter{innerX{3}, 4}, taintOuter{innerX{3}, 4})
+}
+
+type taintSlice struct {
+	bs []strE // unexported SLICE field: elements render raw too
+}
+
+func vUnexportedSliceTaint() string {
+	return fmt.Sprintf("%v|%+v", taintSlice{[]strE{5, 6}}, taintSlice{[]strE{5, 6}})
+}
+
 // ---- fail-closed boundary rows (red at frontend-export BY DESIGN) ----
 
 func vMapOutside() string {
@@ -116,5 +156,7 @@ func main() {
 	println(vSliceUint64(), vConfStateShape(), vStruct(), plusVStruct(),
 		vSliceStructBytes(), plusVSliceStruct(), vStringerElems(),
 		vStringerElemPanic(), plusVStringerField(), vNamedSlice(),
-		vNestedStruct(), vMapOutside(), vPtrFieldOutside())
+		vNestedStruct(), vMapOutside(), vPtrFieldOutside(),
+		vUnexportedStringerField(), vUnexportedSubtreeTaint(),
+		vUnexportedSliceTaint())
 }
