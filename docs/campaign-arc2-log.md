@@ -22,8 +22,47 @@ completion machinery, route memo + unit-2 charter).
   the option K=0 OOMs past 48G. Records:
   `docs/campaign-arc2-probes/records/`.
 
+- **U1 conclusion** (2026-08-22): K=10000 kernel probe DNF — timeout
+  3000 s at 63.4 GB under the 64G cap (the kill point recorded as the
+  measurement). Probe C: heap append-only, 103 → 36,376 cells over
+  the run (heapLen = nextAddr throughout). Route memo COMPLETE
+  (`docs/2026-08-22_campaign-arc2-witness-route.md`): (a) refuted on
+  memory (≥3.1 TB extrapolated), (b) wrong instrument for an
+  ∃-witness (census: 226+9 functions), RECOMMEND (c) checkpointed
+  segment walk with slice-1 mid-run measurement as go/no-go, (d)
+  verified fast-twin evaluator armed as fallback. Unit-2 charter in
+  memo §5.
+
 ## Judgment calls
 
 - **[AGENT]** 2026-08-22: copy mechanism is path-checkout from the
   exact commit rather than file copy — verbatim by construction, no
   hand-transcription risk.
+- **[AGENT]** 2026-08-22: measured the exact step count with a
+  custom counting loop mirroring `runProgramM`'s wiring instead of
+  #eval-bisecting `twinRun` (one 12-min run vs hours of probes);
+  drift risk closed by requiring the probe's verdict to equal the
+  U-c7 record — it does.
+- **[AGENT]** 2026-08-22: kernel probes run as `scripts/capped lean`
+  with `lake env`'s LEAN_PATH sourced once, NOT `capped lake env
+  lean` — a second lake against the same workspace wedged and died
+  SIGTERM with zero output while a sibling lake ran (operational
+  note; no script touched).
+- **[AGENT]** 2026-08-22: `set_option smartUnfolding false` added to
+  the kernel probe files after the optionless K=0 OOM'd at 48G — the
+  kit's L5 rule applied, measured mandatory at this scale (both
+  outcomes recorded, kprobes-small.out).
+- **[AGENT]** 2026-08-22: the route recommendation ((c) with armed
+  fallback (d)) — memo §5; the leaner-witness-driver observation
+  deliberately NOT proposed (it would re-pin the statement; Arc-1
+  files immutable on this lane, re-pins supervised).
+
+## Checkpoint (U1 end, recomputed)
+
+Branch `campaign-arc2` @ (tip after this commit): 3 commits over
+f64d9b21. Proofs build green with the copied statement layer (468
+jobs). Measurements: 711,616/1,382 steps; kernel ladder
+32/33/55/111 s PASS + K=10000 DNF(50 min, 63.4 GB); heap 103→36,376
+cells. Deliverables: route memo (complete), probes + records, this
+log. Nothing merged; no GoCore/frontend/scripts edits; Arc-1 files
+unmodified (verbatim-copied only).
