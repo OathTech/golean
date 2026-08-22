@@ -90,3 +90,18 @@ recomputed at the checkpoint, never restated.
   (`StepFailure_input/_fail/_reboot`) pin the implicit `M` to the
   refined instance when the name variable comes from a refined
   context — pass `(M := raft_multi_params (P := P))` explicitly.
+- 2026-08-22 Slice 5: reghosting — `ghost_packet` (round trips with
+  `deghost_packet` definitional by structure eta), `map_eq_append_cons`
+  (the bag-delivery inversion), `ghost_send_packets`,
+  `ghost_simulation_2` (the constructed direction: the ghost successor
+  is built per step case), `simulation_2` (every base-reachable net IS
+  a deghosted ghost-reachable net), and `lower_prop` — THE transfer
+  principle (`RaftRefinementProof.v:507-609`). Build green, AxCheck
+  sweep 954 decls.
+- 2026-08-22 CHECKPOINT (5 slices, numbers recomputed from this tip's
+  build/git, not restated): commits d60a5b40, 1b6aff9b, c99be3c1,
+  e9e56489 + this slice; `lake build` (capped 24G) green; AxCheck
+  sweep says 954 declarations, axiom set within [propext, Quot.sound];
+  `grep -n "sorry\|native_decide"` over RefinedProofStructure.lean:
+  zero hits. Remaining in-unit work: the discharge witness (GAP-3
+  companion), AxCheck curated pins for the new headliners, scripts/ci.
