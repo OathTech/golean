@@ -854,3 +854,36 @@ commit; `scripts/check-golden` green on all pins after the re-pin,
 and the wordfreq proof modules (`GoLeanProofs.Examples.WordFreq`,
 `Audit.WordFreq`) rebuilt green against the new term. Baseline
 re-pinned 2443 cases, 2280/163.)
+
+### R1-F3 — ParseUint's range-error VALUE (the structurally-blind guardrail)
+
+**Defect.** Upstream `strconv.ParseUint` returns the SATURATED maximum
+for the bitSize alongside `ErrRange` ("the returned value is the
+maximum magnitude integer of the appropriate bitSize"); the shim
+returned 0. The existing guardrail `parse-uint-errors` could not see
+it — it discarded the value with `_, err :=` and compared error TEXTS
+only: a structurally-blind guardrail, exactly the fail-closed-
+classification class the audit dimension list names.
+
+**gc ground truth** (`.tmp/fixround-probes/f3`): 18446744073709551615
+/ 255 / 4294967295 / 18446744073709551615 for the 64/8/32/64-bit range
+shapes, all with non-nil errors.
+
+**Guardrails witnessed red first**: `parse-uint-errors` strengthened
+to OBSERVE the value (the blind guardrail fixed, per the finding) and
+the new `parse-uint-range-value` row across three bitSizes — machine
+`0 ...`/`0 0 0 0` vs gc's saturated maxima.
+
+**Fix.** `rangeErr` returns `max` (already in scope per-bitSize);
+syntax errors keep returning 0, as upstream. Both rows green; the
+strconv family (incl. the upstream-faithful `format-illegal-base`
+panic row) otherwise unmoved.
+
+**Flips.** Full `scripts/ci --diff`: baseline drift exactly the one
+new id `-> PASS` (parse-uint-errors changed VALUE but was red pre-fix
+only in the working tree — it entered the run already green, so no
+stage move). The gate also surfaced the R4-C-3 untriaged-ledger
+ratchet one landing late (check 4b reads the previous differential's
+latest.tsv) — resolved in the preceding follow-through commit, its
+mechanism recorded in the ledger's dated log. Baseline re-pinned
+(2444 cases, 2281/163) in this commit.

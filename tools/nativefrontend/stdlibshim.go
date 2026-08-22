@@ -975,15 +975,22 @@ func goleanShimStrconvParseUint(s string, base int, bitSize int) (uint64, error)
 	syntaxErr := func() (uint64, error) {
 		return 0, &goleanShimStrconvError{s: "strconv.ParseUint: parsing " + goleanShimStrconvQuote(s) + ": invalid syntax"}
 	}
-	rangeErr := func() (uint64, error) {
-		return 0, &goleanShimStrconvError{s: "strconv.ParseUint: parsing " + goleanShimStrconvQuote(s) + ": value out of range"}
-	}
 	if len(s) == 0 {
 		return syntaxErr()
 	}
 	var max uint64 = 1<<uint(bitSize) - 1
 	if bitSize == 64 {
 		max = 18446744073709551615
+	}
+	// On a range error upstream returns THE SATURATED MAX for the
+	// bitSize alongside ErrRange ("the returned value is the maximum
+	// magnitude integer of the appropriate bitSize"), never 0 — the
+	// first version of this shim returned 0, a silent value divergence
+	// on the error path (audit R1-F3; gc-probed
+	// .tmp/fixround-probes/f3; row strconv/format-parse/
+	// parse-uint-range-value). Syntax errors return 0, as upstream.
+	rangeErr := func() (uint64, error) {
+		return max, &goleanShimStrconvError{s: "strconv.ParseUint: parsing " + goleanShimStrconvQuote(s) + ": value out of range"}
 	}
 	var v uint64
 	for i := 0; i < len(s); i++ {

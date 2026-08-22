@@ -41,17 +41,36 @@ func parseUintHappy() uint64 {
 	return a + b%1000 + c
 }
 
+// The VALUE is observed on the error path too (audit R4/R1-F3: the
+// first version discarded it with `_, err :=` — structurally blind to
+// the range-error return value, which upstream documents as the
+// SATURATED maximum for the bitSize, not 0. gc-probed
+// .tmp/fixround-probes/f3: 18446744073709551615 on both range shapes).
 func parseUintErrors() string {
 	out := ""
 	for _, s := range []string{"", "12x", "18446744073709551616", "-5", "1_2"} {
-		_, err := strconv.ParseUint(s, 10, 64)
+		v, err := strconv.ParseUint(s, 10, 64)
 		if err == nil {
 			out += "nil;"
 			continue
 		}
-		out += err.Error() + ";"
+		out += strconv.FormatUint(v, 10) + " " + err.Error() + ";"
 	}
 	return out
+}
+
+// The saturated range value per bitSize, observed directly (R1-F3).
+// gc: 18446744073709551615 / 255 / 4294967295 / 18446744073709551615.
+func parseUintRangeValue() string {
+	v1, e1 := strconv.ParseUint("18446744073709551616", 10, 64)
+	v2, e2 := strconv.ParseUint("300", 10, 8)
+	v3, e3 := strconv.ParseUint("5000000000", 10, 32)
+	v4, e4 := strconv.ParseUint("99999999999999999999999999", 10, 64)
+	if e1 == nil || e2 == nil || e3 == nil || e4 == nil {
+		return "missing-error"
+	}
+	return strconv.FormatUint(v1, 10) + " " + strconv.FormatUint(v2, 10) +
+		" " + strconv.FormatUint(v3, 10) + " " + strconv.FormatUint(v4, 10)
 }
 
 func parseUintBitSize() string {
@@ -65,5 +84,6 @@ func parseUintBitSize() string {
 
 func main() {
 	println(formatUintBases(), formatIntVals(), parseUintHappy(),
-		parseUintErrors(), parseUintBitSize(), formatIllegalBase())
+		parseUintErrors(), parseUintBitSize(), formatIllegalBase(),
+		parseUintRangeValue())
 }

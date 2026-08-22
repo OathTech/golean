@@ -1,24 +1,16 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-22 (raft W4.3 audit fix round, R4-C-3 — branch
+# recorded: 2026-08-22 (raft W4.3 audit fix round, R1-F3 — branch
 #   raft-w43; docs/raft-w43-log.md "Audit fix round").
-#   re-pin reason: THREE NEW ids + THREE stage moves, zero other
-#   movement on the 2440 ids the previous record held.
-#     R4-C-3: golean shim RUNTIME refusals were ordinary Go panics —
-#     RECOVERABLE, so recover() idioms swallowed them into silent
-#     wrong answers (witnessed pre-fix: v=0 ok=false vs gc v=42
-#     ok=true; n=0 vs 3; %!v(PANIC=...) vs a normal render). All 15
-#     golean-bound panic sites now route through goleanShimUnsupported
-#     (force-quarantined; a call throws GoError.unsupported, which no
-#     recover can catch). Upstream-faithful panics stay panics.
-#     NEW: panic-recover/shim-refusal-unrecoverable/{parse,split,
-#     render}-recover, FAIL/frontend-export RED BY DESIGN.
-#     STAGE MOVES (same red, honest new mechanism):
-#     fmt/sprintf-dyn/{arity-mismatch,unmodeled-kind} and
-#     strings/split-conformance/empty-sep,
-#     FAIL/lean-observation -> FAIL/frontend-export.
-#     (The wordfreq golden pin re-pinned in this commit for the same
-#     change: the wire now carries the quarantined helper decl.)
-# cases: 2443 (2280 PASS / 163 FAIL)
+#   re-pin reason: ONE NEW id, zero movement on any of the 2443 ids
+#   the previous record held ("NEW id -> PASS").
+#     R1-F3: the ParseUint shim returned 0 on a RANGE error; upstream
+#     returns the SATURATED MAX for the bitSize alongside ErrRange.
+#     The existing guardrail was structurally blind (it discarded the
+#     value with `_, err :=`) — strengthened to observe it, witnessed
+#     red (machine "0 0 0 0" vs gc's per-bitSize maxima), shim fixed:
+#     strconv/format-parse/parse-uint-range-value, PASS (and
+#     parse-uint-errors now value-observing, PASS).
+# cases: 2444 (2281 PASS / 163 FAIL)
 # frontend: native (tools/nativefrontend)
 result	id	stage
 PASS	arrays/array-bounds	-
@@ -2240,6 +2232,7 @@ PASS	strconv/format-parse/format-uint-bases	-
 PASS	strconv/format-parse/parse-uint-bitsize	-
 PASS	strconv/format-parse/parse-uint-errors	-
 PASS	strconv/format-parse/parse-uint-happy	-
+PASS	strconv/format-parse/parse-uint-range-value	-
 PASS	strings/builder-model/copy-panics	-
 PASS	strings/builder-model/copy-zero-ok	-
 PASS	strings/builder-model/len-reset	-
