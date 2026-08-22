@@ -67,3 +67,16 @@ recomputed at the checkpoint, never restated.
   `candidateId` at the RequestVote arm (upstream's exact call,
   `RaftRefinementInterface.v:94-95`), keeping the unused
   `candidateId` parameter so obligation statements stay 1:1.
+- 2026-08-22 Slice 3: the 11 obligation shapes
+  (`RaftRefinementInterface.v:211-325`, premise shapes 1:1 incl. the
+  `gd`-equations), the two dispatchers, and THE principle
+  `refined_raft_net_invariant` re-proved from scratch
+  (`RaftRefinementProof.v:56-194`). Build green, AxCheck sweep 934
+  decls, zero sorry (grep clean). [AGENT] Proof shape mirrors the
+  sibling's assert-chain (two intermediate RRIR states per
+  step-failure handler case) with the ghost threaded through both
+  updates via `update_same`/`update_update_same`; the ghost handlers
+  needed no lemmas of their own — the principle is ghost-generic
+  exactly as upstream's. Dispatcher `gd`s are instantiated with the
+  `update_elections_data_net/_input` dispatcher term and the per-case
+  equation discharged by `rw [hbody]; rfl` (constructor iota).
