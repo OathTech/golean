@@ -6319,8 +6319,12 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 			capturedArgs = append(capturedArgs,
 				map[string]any{"expr": "ident", "name": outer})
 		} else {
+			// Through the shadow rename (resultshadow.go): a captured
+			// local that was renamed must be captured under its RENAMED
+			// cell, never the result slot it shadows (audit R1-C1;
+			// guardrail rows scoping/named-result-shadow/closure-{write,read}).
 			capturedArgs = append(capturedArgs,
-				map[string]any{"expr": "ref", "id": v.Name()})
+				map[string]any{"expr": "ref", "id": e.localRename(v, v.Name())})
 		}
 		newCapture[v] = pname
 	}

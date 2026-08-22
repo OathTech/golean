@@ -1,16 +1,16 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-21 (raft W4.3 wave 6 / BUG-068 — branch raft-w43;
-#   docs/raft-w43-log.md "Wave 6").
-#   re-pin reason: FIVE NEW ids, zero movement on any of the 2422 ids
-#   the previous record held (verified by the run's drift report:
-#   every drifted line reads "NEW id (not in baseline)").
-#     BUG-068's guardrails (a local shadowing a NAMED RESULT aliased
-#     the result slot — found by the trace differential's rendered
-#     tier on the conf-change traces, fixed by object-keyed emit-time
-#     renaming): scoping/named-result-shadow — 4 PASS +
-#     range-clause FAIL/frontend-export RED BY DESIGN (a shadow in a
-#     construct outside the rename set refuses, never aliases).
-# cases: 2427 (2271 PASS / 156 FAIL)
+# recorded: 2026-08-22 (raft W4.3 audit fix round, R1-C1 — branch
+#   raft-w43; docs/raft-w43-log.md "Audit fix round").
+#   re-pin reason: TWO NEW ids, zero movement on any of the 2427 ids
+#   the previous record held (drift report: both lines read
+#   "NEW id (not in baseline) -> PASS").
+#     R1-C1 guardrails (the CAPTURE SEAM did not follow the BUG-068
+#     shadow rename: a closure capturing a renamed shadow was handed
+#     the RESULT slot's address — witnessed pre-fix as machine 106 vs
+#     go 101 / machine 303 vs go 1003; fixed by emitting the capture
+#     ref through e.localRename): scoping/named-result-shadow/
+#     closure-{write,read}, both PASS.
+# cases: 2429 (2273 PASS / 156 FAIL)
 # frontend: native (tools/nativefrontend)
 result	id	stage
 PASS	arrays/array-bounds	-
@@ -1855,6 +1855,8 @@ PASS	scoping/closure-shadow-binding	-
 PASS	scoping/for-body-shadow	-
 PASS	scoping/for-init-scope	-
 PASS	scoping/named-result-shadow/bare-return	-
+PASS	scoping/named-result-shadow/closure-read	-
+PASS	scoping/named-result-shadow/closure-write	-
 PASS	scoping/named-result-shadow/deferred-write	-
 PASS	scoping/named-result-shadow/enterjoint-shape	-
 FAIL	scoping/named-result-shadow/range-clause	frontend-export

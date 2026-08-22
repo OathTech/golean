@@ -7,3 +7,5 @@ bare-return	shadowThenBareReturn	-	ok	-	scoping,shadowing,named-results,multi_re
 short-decl	shadowShortDecl	-	ok	-	scoping,shadowing,named-results,short_decl
 deferred-write	shadowWithDeferredWrite	-	ok	-	scoping,shadowing,named-results,defer
 range-clause	shadowInRangeClause	-	ok	-	scoping,shadowing,named-results,range
+closure-write	shadowCapturedWrite	-	ok	-	scoping,shadowing,named-results,closures
+closure-read	shadowCapturedRead	-	ok	-	scoping,shadowing,named-results,closures

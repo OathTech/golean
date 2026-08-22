@@ -79,8 +79,40 @@ func shadowInRangeClause() (i int) {
 	return i
 }
 
+// ---- R1-C1 (W4.3 audit fix round): the CAPTURE SEAM must follow the
+// rename. A closure capturing a renamed shadow receives the SHADOW
+// cell's address; before the fix the capture ref was emitted under the
+// source name and grabbed the RESULT slot instead — a silent wrong
+// answer through the closure (probe .tmp/audit-r1/p9b, p9c). ----
+
+// The closure WRITES the shadow: x(result)=1 survives, +100 -> 101.
+func shadowCapturedWrite() (x int) {
+	x = 1
+	{
+		x := 10
+		g := func() { x += 5 }
+		g()
+		_ = x
+	}
+	return x + 100
+}
+
+// The closure READS the shadow: r=10 (the shadow's value, not the
+// result slot's 3), so 10*100 + 3 -> 1003.
+func shadowCapturedRead() (x int) {
+	x = 3
+	r := 0
+	{
+		x := 10
+		g := func() int { return x }
+		r = g()
+	}
+	return r*100 + x
+}
+
 func main() {
 	n, s := shadowThenBareReturn()
 	println(enterJointShape(), n, s, shadowShortDecl(),
-		shadowWithDeferredWrite(), shadowInRangeClause())
+		shadowWithDeferredWrite(), shadowInRangeClause(),
+		shadowCapturedWrite(), shadowCapturedRead())
 }

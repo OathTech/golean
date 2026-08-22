@@ -601,3 +601,47 @@ standing narrowings, W4.5's obligations unchanged), the wall-time
 bound on the heaviest trace, and the tier-strength structure (the
 rendered tier is what anchors delivery-order faithfulness; it is
 green against upstream's recorded output on all 148 blocks).
+
+---
+
+## Audit fix round (2026-08-22) — four reviewers, semantic fixes first
+
+Pre-merge adversarial audit of the branch tip `433d0ee3` (four
+reviewers: R1 scoping/rename seam, R2 replay-env mirror fidelity, R3
+milestone-claim strength, R4 fmt/shim envelope). This section records
+each fix in landing order — guardrails witnessed red FIRST, the fix,
+the flips — one semantic concern per commit, full `scripts/ci --diff`
+per landing. Reviewer probes preserved under `.tmp/audit-r1`,
+`.tmp/audit-r4` (scratch, untracked).
+
+### R1-C1 — the capture seam did not follow the shadow rename
+
+**Defect.** `emitFuncLit`'s capture-argument site emitted the captured
+cell's address as `{"expr":"ref","id":v.Name()}` — the SOURCE name.
+BUG-068's rename (wave 6) renames a local that shadows a named result
+to `<name>$shadowN`, and `resultShadowScan` prunes nested func lits
+(correctly — their frames scan separately), so the one path by which a
+lit reaches an outer renamed shadow is exactly this capture seam: the
+ref resolved to the RESULT slot the shadow was renamed away from. A
+closure over a shadow therefore read/wrote the named result — the same
+silent-wrong-answer class BUG-068 fixed, one seam over.
+
+**Guardrails witnessed red first** (probe r1-p9b/p9c, corpus rows
+`scoping/named-result-shadow/closure-{write,read}`):
+- closure-write: go 101, machine-before **106** (the closure's `x += 5`
+  landed on the result slot: 1+5, +100 at return).
+- closure-read: go 1003, machine-before **303** (the closure returned
+  the result slot's 3, not the shadow's 10).
+
+**Fix.** One line: the capture ref emits
+`e.localRename(v, v.Name())` (`tools/nativefrontend/emit.go`,
+capture-args loop). The enclosing function's rename map is still in
+force at that point (the lit's own scan swaps in only when its body is
+emitted), so the seam now names the renamed cell. The `$cap` parameter
+name keeps `v.Name()`: two same-named captured objects cannot coexist
+in one lit's capture set (at any use site exactly one binding named
+`n` is lexically visible, and the lit body is one lexical region).
+
+**Flips.** Full `scripts/ci --diff`: drift = exactly the two new ids,
+both `-> PASS`; zero movement on the 2427 prior ids; all other gate
+steps ok. Baseline re-pinned (2429 cases, 2273/156) in this commit.
