@@ -945,6 +945,415 @@ theorem update_elections_data_requestVoteReply_cronies_cases
          exact Or.inr ⟨heqtm, rfl, by simp_all⟩
        · exact Or.inl rfl)
 
+/-! ## Unit-4 additions: leaderLogs/votesWithLog ghost facts and the
+handler facts the leaderLogs ring needs (`RefinementSpecLemmas.v`,
+`SpecLemmas.v` slices; sources cited per lemma). -/
+
+/-- `moreUpToDate_refl` (`CommonTheorems.v:2306`). -/
+theorem moreUpToDate_refl (t i : Nat) : moreUpToDate t i t i = true := by
+  simp [moreUpToDate]
+
+/-- `handleTimeout_messages` (`SpecLemmas.v`): every message a timeout
+sends is a RequestVote at the (new) current term carrying the sender's
+own maxIndex/maxTerm — and the sender ends a non-follower. -/
+theorem handleTimeout_messages (me : name (P := P)) (st : raft_data (P := P))
+    {out st' l} (h : handleTimeout me st = (out, st', l)) :
+    ∀ q ∈ l, q.2 = msg.RequestVote (P := P) st'.currentTerm me
+      (maxIndex st'.log) (maxTerm st'.log) := by
+  unfold handleTimeout tryToBecomeLeader at h
+  split at h <;> simp only [Prod.mk.injEq] at h <;> obtain ⟨-, rfl, rfl⟩ := h
+  · exact fun q hq => nomatch hq
+  · intro q hq
+    simp only [List.mem_map] at hq
+    obtain ⟨node, -, rfl⟩ := hq
+    rfl
+
+/-- `handleRequestVote`'s reply always carries the responder's NEW
+current term (all four branches reply at the post-handler term). -/
+theorem handleRequestVote_reply_term (me : name (P := P))
+    (st : raft_data (P := P)) (t : term) (cand : name (P := P))
+    (lli : logIndex) (llt : term) {st' m}
+    (h : handleRequestVote me st t cand lli llt = (st', m)) :
+    ∃ v, m = msg.RequestVoteReply (P := P) st'.currentTerm v := by
+  unfold handleRequestVote at h
+  simp only [] at h
+  repeat' split at h
+  all_goals simp only [Prod.mk.injEq] at h
+  all_goals obtain ⟨rfl, rfl⟩ := h
+  all_goals exact ⟨_, rfl⟩
+
+/-- `handleRequestVote_reply_true'` (`SpecLemmas.v`) + the moreUpToDate
+guard: a `true` reply is granted AT THE REQUEST'S TERM (the reject branch
+kills any request below the responder's term), the responder's log is
+untouched, and the grant passed the up-to-date check against it. -/
+theorem handleRequestVote_grant (me : name (P := P))
+    (st : raft_data (P := P)) (t : term) (cand : name (P := P))
+    (lli : logIndex) (llt : term) {st' t'}
+    (h : handleRequestVote me st t cand lli llt
+          = (st', .RequestVoteReply t' true)) :
+    t' = t ∧ st'.currentTerm = t ∧ st'.log = st.log ∧
+    moreUpToDate llt lli (maxTerm st.log) (maxIndex st.log) = true := by
+  have hadv := advanceCurrentTerm_spec st t
+  unfold handleRequestVote at h
+  split at h
+  · simp at h
+  · rename_i hnle
+    simp only [Nat.blt_eq] at hnle
+    replace hnle : st.currentTerm ≤ t := Nat.le_of_not_lt hnle
+    have hct : (advanceCurrentTerm st t).currentTerm = t :=
+      advanceCurrentTerm_le_eq hnle
+    simp only [] at h
+    split at h
+    · rename_i hguard
+      simp only [Bool.and_eq_true] at hguard
+      have hmore : moreUpToDate llt lli (maxTerm st.log) (maxIndex st.log)
+          = true := by
+        rw [← hadv.2.1]
+        exact hguard.2
+      split at h
+      · simp only [Prod.mk.injEq, msg.RequestVoteReply.injEq] at h
+        obtain ⟨rfl, rfl, -⟩ := h
+        exact ⟨hct.symm ▸ rfl, hct, hadv.2.1, hmore⟩
+      · simp only [Prod.mk.injEq, msg.RequestVoteReply.injEq] at h
+        obtain ⟨rfl, rfl, -⟩ := h
+        exact ⟨hct.symm ▸ rfl, hct, hadv.2.1, hmore⟩
+    · simp at h
+
+/-- `handleRequestVoteReply_spec'`'s leader-transition clause
+(`SpecLemmas.v:467-478`): a non-leader that emerges from
+`handleRequestVoteReply` as leader was a candidate that just won — the
+reply was a grant at exactly its current term, and its votesReceived
+grew by exactly the replier. -/
+theorem handleRequestVoteReply_leader_transition (me : name (P := P))
+    (st : raft_data (P := P)) (src : name (P := P)) (t : term) (v : Bool) {st'}
+    (h : handleRequestVoteReply me st src t v = st')
+    (hnl : st.type ≠ .Leader) (hty' : st'.type = .Leader) :
+    st.type = .Candidate ∧ v = true ∧ st.currentTerm = t ∧
+    st'.currentTerm = st.currentTerm ∧
+    st'.votesReceived = src :: st.votesReceived ∧
+    st'.log = st.log ∧
+    wonElection (dedup (src :: st.votesReceived)) = true := by
+  unfold handleRequestVoteReply at h
+  simp only [] at h
+  split at h
+  · -- t > currentTerm: steps down to follower — not a leader
+    subst h
+    exact nomatch hty'
+  · split at h
+    · -- stale reply: state unchanged — still not a leader
+      subst h
+      exact absurd hty' hnl
+    · rename_i hngt hnlt
+      simp only [Nat.blt_eq] at hngt hnlt
+      have hteq : st.currentTerm = t :=
+        Nat.le_antisymm (Nat.le_of_not_lt hnlt) (Nat.le_of_not_lt hngt)
+      split at h
+      · -- candidate: the tally
+        rename_i hcand
+        subst h
+        replace hty' : (if (v && wonElection (dedup (src :: st.votesReceived)))
+            = true then serverType.Leader else st.type) = .Leader := hty'
+        split at hty'
+        · rename_i hwon
+          simp only [Bool.and_eq_true] at hwon
+          obtain ⟨rfl, hwon⟩ := hwon
+          exact ⟨hcand, rfl, hteq, rfl, by simp, rfl, hwon⟩
+        · exact absurd hty' hnl
+      · -- non-candidate: unchanged — still not a leader
+        subst h
+        exact absurd hty' hnl
+
+/-! ### leaderLogs ghost facts -/
+
+/-- `update_elections_data_timeout_leaderLogs`
+(`RefinementSpecLemmas.v:234`) + the allEntries analogue: a timeout
+touches neither. -/
+theorem update_elections_data_timeout_ghost (me : name (P := P))
+    (st : electionsData (P := P) × raft_data (P := P)) :
+    (update_elections_data_timeout me st).leaderLogs = st.1.leaderLogs ∧
+    (update_elections_data_timeout me st).allEntries = st.1.allEntries := by
+  unfold update_elections_data_timeout
+  simp only []
+  repeat' split
+  all_goals exact ⟨rfl, rfl⟩
+
+/-- `update_elections_data_requestVoteReply_old`
+(`RefinementSpecLemmas.v:278`): old leaderLogs survive an RVR update. -/
+theorem update_elections_data_requestVoteReply_leaderLogs_old
+    (me src : name (P := P)) (t : term) (v : Bool)
+    (st : electionsData (P := P) × raft_data (P := P))
+    {t2 : term} {ll : List (entry (P := P))}
+    (hin : (t2, ll) ∈ st.1.leaderLogs) :
+    (t2, ll) ∈ (update_elections_data_requestVoteReply me src t v st).leaderLogs := by
+  unfold update_elections_data_requestVoteReply
+  simp only []
+  repeat' split
+  all_goals first
+    | exact hin
+    | exact List.mem_cons_of_mem _ hin
+
+/-- `leaderLogs_update_elections_data_RVR`
+(`RefinementSpecLemmas.v:261-276`): a leaderLog after an RVR update is an
+old one, or the snapshot of a candidate→leader transition (new term =
+the winner's current term, new log = the winner's log). -/
+theorem leaderLogs_update_elections_data_RVR
+    {me src : name (P := P)} {t : term} {v : Bool}
+    {st : electionsData (P := P) × raft_data (P := P)}
+    {t2 : term} {ll : List (entry (P := P))}
+    (hin : (t2, ll) ∈
+      (update_elections_data_requestVoteReply me src t v st).leaderLogs) :
+    (t2, ll) ∈ st.1.leaderLogs ∨
+    ((handleRequestVoteReply me st.2 src t v).type = .Leader ∧
+     st.2.type = .Candidate ∧
+     t2 = (handleRequestVoteReply me st.2 src t v).currentTerm ∧
+     ll = (handleRequestVoteReply me st.2 src t v).log) := by
+  unfold update_elections_data_requestVoteReply at hin
+  simp only [] at hin
+  repeat' split at hin
+  all_goals first
+    | exact Or.inl hin
+    | (rename_i hleader hcand
+       rcases List.mem_cons.mp hin with heq | hin
+       · injection heq with h1 h2
+         exact Or.inr ⟨hleader, hcand, h1, h2⟩
+       · exact Or.inl hin)
+
+/-! ### votesWithLog ghost facts -/
+
+/-- `update_elections_data_request_vote_votesWithLog_old`
+(`LeaderLogsVotesWithLogProof.v:77-90`). -/
+theorem update_elections_data_requestVote_votesWithLog_old
+    (me src : name (P := P)) (t : term) (cand : name (P := P))
+    (lli : logIndex) (llt : term)
+    (st : electionsData (P := P) × raft_data (P := P))
+    {t' : term} {h' : name (P := P)} {vl : List (entry (P := P))}
+    (hin : (t', h', vl) ∈ st.1.votesWithLog) :
+    (t', h', vl) ∈
+      (update_elections_data_requestVote me src t cand lli llt st).votesWithLog := by
+  unfold update_elections_data_requestVote
+  simp only []
+  repeat' split
+  all_goals first
+    | exact hin
+    | exact List.mem_cons_of_mem _ hin
+
+/-- `update_elections_data_timeout_votesWithLog_old`
+(`LeaderLogsVotesWithLogProof.v:175-183`). -/
+theorem update_elections_data_timeout_votesWithLog_old (me : name (P := P))
+    (st : electionsData (P := P) × raft_data (P := P))
+    {t' : term} {h' : name (P := P)} {vl : List (entry (P := P))}
+    (hin : (t', h', vl) ∈ st.1.votesWithLog) :
+    (t', h', vl) ∈ (update_elections_data_timeout me st).votesWithLog := by
+  unfold update_elections_data_timeout
+  simp only []
+  repeat' split
+  all_goals first
+    | exact hin
+    | exact List.mem_cons_of_mem _ hin
+
+/-- `update_elections_data_timeout_votesWithLog_votesReceived`
+(`RefinementSpecLemmas.v:599-614`): a timeout is a leader heartbeat
+(votesReceived and ghost votesWithLog unchanged) or a fresh candidacy
+(votesReceived reset to the self-vote and the self-vote-with-log
+recorded at the new term). -/
+theorem update_elections_data_timeout_votesWithLog_votesReceived
+    {me : name (P := P)}
+    {st : electionsData (P := P) × raft_data (P := P)} {out st' l}
+    (h : handleTimeout me st.2 = (out, st', l)) :
+    (st'.votesReceived = st.2.votesReceived ∧
+     (update_elections_data_timeout me st).votesWithLog = st.1.votesWithLog ∧
+     st'.type = .Leader) ∨
+    (st'.votesReceived = [me] ∧
+     (update_elections_data_timeout me st).votesWithLog
+       = (st'.currentTerm, me, st'.log) :: st.1.votesWithLog ∧
+     st'.currentTerm = st.2.currentTerm + 1) := by
+  unfold update_elections_data_timeout
+  rw [h]
+  simp only []
+  unfold handleTimeout tryToBecomeLeader at h
+  split at h <;> simp only [Prod.mk.injEq] at h <;> obtain ⟨-, rfl, rfl⟩ := h
+  · -- leader heartbeat: votedFor may be anything, but the leader branch
+    -- leaves the ghost alone
+    rename_i hleader
+    left
+    refine ⟨rfl, ?_, hleader⟩
+    split
+    · rw [if_pos hleader]
+    · rfl
+  · -- fresh candidacy: votedFor = some me, records at the new term
+    rename_i hnl
+    right
+    refine ⟨rfl, ?_, rfl⟩
+    split
+    · rename_i cid' heq
+      injection heq with heq
+      subst heq
+      rw [if_neg hnl]
+    · rename_i heq
+      exact nomatch heq
+
+/-- `update_elections_data_timeout_votedFor`
+(`RefinementSpecLemmas.v:616-635`). -/
+theorem update_elections_data_timeout_votedFor
+    {me : name (P := P)} {cid : name (P := P)}
+    {st : electionsData (P := P) × raft_data (P := P)} {out st' l}
+    (h : handleTimeout me st.2 = (out, st', l))
+    (hvf : st'.votedFor = some cid) :
+    (st.2.votedFor = some cid ∧ st'.currentTerm = st.2.currentTerm ∧
+     st'.type = st.2.type ∧
+     (update_elections_data_timeout me st).votesWithLog = st.1.votesWithLog) ∨
+    (cid = me ∧ st'.currentTerm = st.2.currentTerm + 1 ∧
+     (update_elections_data_timeout me st).votesWithLog
+       = (st'.currentTerm, cid, st'.log) :: st.1.votesWithLog) := by
+  unfold update_elections_data_timeout
+  rw [h]
+  simp only []
+  unfold handleTimeout tryToBecomeLeader at h
+  split at h <;> simp only [Prod.mk.injEq] at h <;> obtain ⟨-, rfl, rfl⟩ := h
+  · -- heartbeat: st' = {st.2 with shouldSend := true}
+    rename_i hleader
+    left
+    refine ⟨hvf, rfl, rfl, ?_⟩
+    split
+    · rw [if_pos hleader]
+    · rfl
+  · -- candidacy: votedFor = some me
+    rename_i hnl
+    right
+    replace hvf : me = cid := by
+      simpa using hvf
+    subst hvf
+    refine ⟨rfl, rfl, ?_⟩
+    split
+    · rename_i cid' heq
+      injection heq with heq
+      subst heq
+      rw [if_neg hnl]
+    · rename_i heq
+      exact nomatch heq
+
+/-- `update_elections_data_request_vote_votedFor`
+(`RefinementSpecLemmas.v:637-660`): after a RequestVote, a recorded vote
+is the untouched old one (same term), or a fresh grant to the candidate
+at the request's term — recorded in votesWithLog with the voter's log,
+which passed the up-to-date check. Stated with `cand` in both the `src`
+and `candidateId` positions, as at the dispatch site. -/
+theorem update_elections_data_requestVote_votedFor
+    {me : name (P := P)} {cid : name (P := P)}
+    {st : electionsData (P := P) × raft_data (P := P)}
+    {t : term} {cand : name (P := P)} {lli : logIndex} {llt : term} {st' m}
+    (h : handleRequestVote me st.2 t cand lli llt = (st', m))
+    (hvf : st'.votedFor = some cid) :
+    (st.2.votedFor = some cid ∧ st'.currentTerm = st.2.currentTerm) ∨
+    (cid = cand ∧ st'.currentTerm = t ∧
+     (update_elections_data_requestVote me cand t cand lli llt st).votesWithLog
+       = (st'.currentTerm, cid, st'.log) :: st.1.votesWithLog ∧
+     moreUpToDate llt lli (maxTerm st'.log) (maxIndex st'.log) = true) := by
+  have hadv := advanceCurrentTerm_spec st.2 t
+  unfold update_elections_data_requestVote
+  rw [h]
+  simp only []
+  unfold handleRequestVote at h
+  split at h
+  · -- reject: state unchanged
+    simp only [Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    left
+    exact ⟨hvf, rfl⟩
+  · rename_i hnle
+    simp only [Nat.blt_eq] at hnle
+    replace hnle : st.2.currentTerm ≤ t := Nat.le_of_not_lt hnle
+    have hct : (advanceCurrentTerm st.2 t).currentTerm = t :=
+      advanceCurrentTerm_le_eq hnle
+    simp only [] at h
+    split at h
+    · rename_i hguard
+      simp only [Bool.and_eq_true] at hguard
+      split at h
+      · -- fresh grant (advanced votedFor = none)
+        rename_i hnone
+        simp only [Prod.mk.injEq] at h
+        obtain ⟨rfl, -⟩ := h
+        replace hvf : cid = cand := by
+          simpa using hvf.symm
+        subst hvf
+        right
+        have hmore : moreUpToDate llt lli
+            (maxTerm (advanceCurrentTerm st.2 t).log)
+            (maxIndex (advanceCurrentTerm st.2 t).log) = true := hguard.2
+        refine ⟨rfl, hct, ?_, hmore⟩
+        -- the ghost's match: st.2.votedFor vs (some cid)
+        rcases hcase : st.2.votedFor with _ | c
+        · simp only []
+        · -- old vote existed but the advance cleared it: terms differ
+          have hne : ((st.2.currentTerm == (advanceCurrentTerm st.2 t).currentTerm)
+              && decide (c = cid)) = false := by
+            rcases hadv.2.2 with ⟨-, hvfeq, -⟩ | ⟨hlt, -, -⟩
+            · rw [hcase] at hvfeq
+              rw [hvfeq] at hnone
+              cases hnone
+            · simp only [Bool.and_eq_false_iff, beq_eq_false_iff_ne, ne_eq]
+              exact Or.inl (Nat.ne_of_lt hlt)
+          simp only [hne]
+          simp
+      · -- repeat grant: votedFor untouched by the handler
+        rename_i c' hsome
+        simp only [Prod.mk.injEq] at h
+        obtain ⟨rfl, -⟩ := h
+        rw [hsome] at hvf
+        left
+        rcases hadv.2.2 with ⟨hcteq, hvfeq, -⟩ | ⟨-, hvfeq, -⟩
+        · rw [hvfeq] at hsome
+          exact ⟨hsome.symm ▸ hvf, hcteq⟩
+        · rw [hvfeq] at hsome
+          cases hsome
+    · -- refuse: advanced state only
+      simp only [Prod.mk.injEq] at h
+      obtain ⟨rfl, -⟩ := h
+      left
+      rcases hadv.2.2 with ⟨hcteq, hvfeq, -⟩ | ⟨-, hvfeq, -⟩
+      · exact ⟨hvfeq ▸ hvf, hcteq⟩
+      · rw [hvfeq] at hvf
+        cases hvf
+
+/-- The votes/votesWithLog lockstep shape of a RequestVote ghost update
+(for `VotesVotesWithLogCorrespondProof.v`): both unchanged, or both
+extended with matching heads. -/
+theorem update_elections_data_requestVote_lockstep (me src : name (P := P))
+    (t : term) (cand : name (P := P)) (lli : logIndex) (llt : term)
+    (st : electionsData (P := P) × raft_data (P := P)) :
+    ((update_elections_data_requestVote me src t cand lli llt st).votes
+        = st.1.votes ∧
+     (update_elections_data_requestVote me src t cand lli llt st).votesWithLog
+        = st.1.votesWithLog) ∨
+    (∃ t' n vl,
+     (update_elections_data_requestVote me src t cand lli llt st).votes
+        = (t', n) :: st.1.votes ∧
+     (update_elections_data_requestVote me src t cand lli llt st).votesWithLog
+        = (t', n, vl) :: st.1.votesWithLog) := by
+  unfold update_elections_data_requestVote
+  simp only []
+  repeat' split
+  all_goals first
+    | exact Or.inl ⟨rfl, rfl⟩
+    | exact Or.inr ⟨_, _, _, rfl, rfl⟩
+
+/-- The votes/votesWithLog lockstep shape of a timeout ghost update. -/
+theorem update_elections_data_timeout_lockstep (me : name (P := P))
+    (st : electionsData (P := P) × raft_data (P := P)) :
+    ((update_elections_data_timeout me st).votes = st.1.votes ∧
+     (update_elections_data_timeout me st).votesWithLog = st.1.votesWithLog) ∨
+    (∃ t' n vl,
+     (update_elections_data_timeout me st).votes = (t', n) :: st.1.votes ∧
+     (update_elections_data_timeout me st).votesWithLog
+        = (t', n, vl) :: st.1.votesWithLog) := by
+  unfold update_elections_data_timeout
+  simp only []
+  repeat' split
+  all_goals first
+    | exact Or.inl ⟨rfl, rfl⟩
+    | exact Or.inr ⟨_, _, _, rfl, rfl⟩
+
 end ElectionSpecLemmas
 
 end Raft
