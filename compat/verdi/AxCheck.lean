@@ -223,6 +223,29 @@ discharge witness). -/
 /-- info: 'VerdiCompat.Raft.log_properties_hold_on_ghost_logs_invariant' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms VerdiCompat.Raft.log_properties_hold_on_ghost_logs_invariant
 
+/-! Unit-14 headliners: the W-C remainder + W-D (NoAERepliesToSelf,
+NoAEToLeader, MatchIndexLeader, PrevLogLeaderSublog,
+GhostLogAllEntries, GhostLogLogMatching) and the SMS-PRIME statement
+(state_machine_safety' with both halves). -/
+/-- info: 'VerdiCompat.Raft.no_append_entries_replies_to_self_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.no_append_entries_replies_to_self_invariant
+/-- info: 'VerdiCompat.Raft.no_append_entries_to_leader_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.no_append_entries_to_leader_invariant
+/-- info: 'VerdiCompat.Raft.match_index_leader_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.match_index_leader_invariant
+/-- info: 'VerdiCompat.Raft.prevLog_leader_sublog_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.prevLog_leader_sublog_invariant
+/-- info: 'VerdiCompat.Raft.ghost_log_allEntries_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.ghost_log_allEntries_invariant
+/-- info: 'VerdiCompat.Raft.ghost_log_entries_match_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.ghost_log_entries_match_invariant
+/-- info: 'VerdiCompat.Raft.state_machine_safety_host'_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.state_machine_safety_host'_invariant
+/-- info: 'VerdiCompat.Raft.state_machine_safety_nw'_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.state_machine_safety_nw'_invariant
+/-- info: 'VerdiCompat.Raft.state_machine_safety'_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.state_machine_safety'_invariant
+
 /-! ## Exhaustive sweep (fails the build on any disallowed axiom) -/
 
 open Lean in

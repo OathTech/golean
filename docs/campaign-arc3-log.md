@@ -438,6 +438,13 @@ from artifacts.
 | prevLog_candidateEntriesTerm | PROVED | Raft/PrevLogCandidateEntriesTermInterface.v:10-16 | SafetyLeaves.lean (invariant; candidateEntriesTerm twin) |
 | ghost_log_correct | PROVED (msg) | Raft/GhostLogCorrectInterface.v:8-19 | GhostLogs.lean (invariant) |
 | log_properties_hold_on_ghost_logs | PROVED (msg, primed principle) | Raft/GhostLogsLogPropertiesInterface.v:8-16 | GhostLogs.lean (invariant) |
+| no_append_entries_replies_to_self | PROVED (base) | Raft/NoAppendEntriesRepliesToSelfInterface.v:8-13 | SafetyPrime.lean (invariant) |
+| no_append_entries_to_leader | PROVED (base, via lower_prop) | Raft/NoAppendEntriesToLeaderInterface.v:8-15 | SafetyPrime.lean (invariant) |
+| match_index_leader | PROVED (base) | Raft/MatchIndexLeaderInterface.v:8-13 | SafetyPrime.lean (invariant) |
+| prevLog_leader_sublog | PROVED (base) | Raft/PrevLogLeaderSublogInterface.v:8-19 | SafetyPrime.lean (invariant) |
+| ghost_log_allEntries | PROVED (msg, primed principle) | Raft/GhostLogAllEntriesInterface.v:8-14 | GhostLogs.lean (invariant) |
+| ghost_log_entries_match (host ∧ nw) | PROVED (msg, primed principle) | Raft/GhostLogLogMatchingInterface.v:9-13 | GhostLogs.lean (invariant) |
+| **state_machine_safety' (SMS-PRIME, host' ∧ nw')** | PROVED (refined) | Raft/StateMachineSafetyPrimeInterface.v | SafetyPrime.lean (invariant + both halves) |
 - 2026-08-22 Slice 13 (1cc83c1d): log/message spec lemmas for the ring
   (findGtIndex_in, removeAfterIndex_in, per-handler log facts,
   doLeader_messages, rvr cronies function-level cases).
@@ -2953,3 +2960,20 @@ wants it); context stop-rule stands.
   `network_host_entries` (lifted log_matching_nw clause + `rachet`),
   `sorted_app_in_gt`. Two-compile slice (direction fixes only). Build
   green.
+- 2026-08-23 CHECKPOINT (recomputed at this tip; 6 slices since the
+  unit-14 opening: 75, 76, 77, 78, 79, 80 + this pins/INDEX slice):
+  `git log f64d9b21..HEAD --oneline | wc -l` = 108 commits; fresh
+  capped full `lake build` green with `AxCheck sweep: 2439
+  declarations across VerdiCompat modules, axiom set within
+  [propext, Quot.sound]` (nine new curated pins for the unit-14
+  headliners incl. both SMS-prime halves, captured from a fresh capped
+  probe — all [propext, Quot.sound] verbatim);
+  `grep -c "sorry\|native_decide"` over SafetyPrime.lean /
+  GhostLogs.lean / MsgRefinement.lean: 0, 0, 0 (exit 1);
+  SafetyPrime.lean = 1,087 lines, GhostLogs.lean = 1,241 lines (wc).
+  INDEX = 78 data rows (recomputed by table span: `grep -c "^| "` = 79
+  minus the header; 7 new rows). Unit-14 state: ALL SEVEN charter
+  files PROVED — NoAERepliesToSelf ✓, NoAEToLeader ✓,
+  MatchIndexLeader ✓, PrevLogLeaderSublog ✓, GhostLogAllEntries ✓,
+  GhostLogLogMatching ✓, StateMachineSafetyPrime ✓. Remaining: gate,
+  final entry.
