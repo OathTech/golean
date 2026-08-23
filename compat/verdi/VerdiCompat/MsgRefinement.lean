@@ -752,6 +752,382 @@ theorem msg_refined_raft_net_invariant {Pr : MsgNet → Prop}
       exact hreb net _ (net.nwState h).1 (net.nwState h).2 h _ rfl ih hreach
         rfl (fun _ => rfl) rfl
 
+/-! ## Erasure: `mgv_deghost` and the msg→refined simulation
+(`GhostSimulations.v:359-377`, `RaftProofs/RaftMsgRefinementProof.v:566-654,908-917`) -/
+
+/-- `GhostSimulations.v:359-363` (`mgv_deghost_packet`): strip the
+per-packet ghost. -/
+def mgv_deghost_packet (q : MsgPacket) : RefinedPacket :=
+  ⟨q.pSrc, q.pDst, q.pBody.2⟩
+
+/-- `GhostSimulations.v:365-375` (`mgv_deghost`): the state is
+untouched — only the wire loses its ghost. -/
+def mgv_deghost (net : MsgNet) : RefinedNet :=
+  ⟨net.nwPackets.map mgv_deghost_packet, net.nwState⟩
+
+/-- `RaftMsgRefinementProof.v:908-917` (`msg_deghost_spec`). -/
+theorem msg_deghost_spec (net : MsgNet) (h : name (P := P)) :
+    (mgv_deghost net).nwState h = net.nwState h := rfl
+
+/-- Deghosting ghost-attached sends yields plain refined sends. -/
+theorem mgv_deghost_send_packets (src : name (P := P))
+    (st : electionsData (P := P) × raft_data (P := P))
+    (l : List (name (P := P) × msg (P := P))) :
+    (send_packets (P := raft_msg_refined_base_params (P := P))
+        (M := raft_msg_refined_multi_params) src
+        (add_ghost_msg src st l)).map mgv_deghost_packet
+      = send_packets (P := raft_refined_base_params (P := P))
+          (M := raft_refined_multi_params) src l := by
+  induction l with
+  | nil => rfl
+  | cons a l ih =>
+    simp only [send_packets, add_ghost_msg, List.map_cons] at ih ⊢
+    exact congrArg (List.cons _) ih
+
+/-- `GhostSimulations.v` (`mgv_ghost_simulation_1`) at the raft
+instance: every msg-ghost `step_failure` projects to a refined
+`step_failure` between the deghosts (the state components are literally
+shared, so only the packet lists move). -/
+theorem mgv_ghost_simulation_1 {failed failed' : List (name (P := P))}
+    {net net' : MsgNet} {out}
+    (h : step_failure _ _ raft_msg_refined_failure_params (failed, net)
+      (failed', net') out) :
+    step_failure _ _ raft_refined_failure_params (failed, mgv_deghost net)
+      (failed', mgv_deghost net') out := by
+  cases h with
+  | StepFailure_deliver net _ failed p xs ys out0 dfull l hpkts hlive hnh hnet' =>
+    subst hnet'
+    rcases hr : refined_net_handlers p.pDst p.pSrc p.pBody.2 (net.nwState p.pDst)
+      with ⟨o, st2, ps⟩
+    have hnh' : mgv_refined_net_handlers p.pDst p.pSrc p.pBody
+        (net.nwState p.pDst) = (out0, dfull, l) := hnh
+    unfold mgv_refined_net_handlers at hnh'
+    rw [hr] at hnh'
+    simp only [Prod.mk.injEq] at hnh'
+    obtain ⟨rfl, rfl, rfl⟩ := hnh'
+    refine .StepFailure_deliver (mgv_deghost net) _ failed
+      (mgv_deghost_packet p) (xs.map mgv_deghost_packet)
+      (ys.map mgv_deghost_packet) o st2 ps ?_ hlive hr ?_
+    · show net.nwPackets.map mgv_deghost_packet = _
+      rw [hpkts]
+      simp
+    · refine network_eq_mk ?_ (fun h' => rfl)
+      show (send_packets p.pDst (add_ghost_msg p.pDst st2 ps) ++ xs ++ ys).map
+        mgv_deghost_packet = _
+      simp only [List.map_append, mgv_deghost_send_packets]
+      rfl
+  | StepFailure_input h net _ failed out0 inp dfull l hlive hih hnet' =>
+    subst hnet'
+    rcases hr : refined_input_handlers h inp (net.nwState h) with ⟨o, st2, ps⟩
+    have hih' : mgv_refined_input_handlers h inp (net.nwState h)
+        = (out0, dfull, l) := hih
+    unfold mgv_refined_input_handlers at hih'
+    rw [hr] at hih'
+    simp only [Prod.mk.injEq] at hih'
+    obtain ⟨rfl, rfl, rfl⟩ := hih'
+    refine .StepFailure_input (M := raft_refined_multi_params (P := P)) h
+      (mgv_deghost net) _ failed o inp st2 ps hlive hr ?_
+    refine network_eq_mk ?_ (fun h' => rfl)
+    show (send_packets h (add_ghost_msg h st2 ps) ++ net.nwPackets).map
+      mgv_deghost_packet = _
+    simp only [List.map_append, mgv_deghost_send_packets]
+    rfl
+  | StepFailure_drop net _ failed p xs ys hpkts hnet' =>
+    subst hnet'
+    refine .StepFailure_drop (mgv_deghost net) _ failed (mgv_deghost_packet p)
+      (xs.map mgv_deghost_packet) (ys.map mgv_deghost_packet) ?_ ?_
+    · show net.nwPackets.map mgv_deghost_packet = _
+      rw [hpkts]
+      simp
+    · refine network_eq_mk ?_ (fun _ => rfl)
+      show (xs ++ ys).map mgv_deghost_packet = _
+      simp
+  | StepFailure_dup net _ failed p xs ys hpkts hnet' =>
+    subst hnet'
+    refine .StepFailure_dup (mgv_deghost net) _ failed (mgv_deghost_packet p)
+      (xs.map mgv_deghost_packet) (ys.map mgv_deghost_packet) ?_ ?_
+    · show net.nwPackets.map mgv_deghost_packet = _
+      rw [hpkts]
+      simp
+    · refine network_eq_mk ?_ (fun _ => rfl)
+      show (p :: (xs ++ p :: ys)).map mgv_deghost_packet = _
+      simp
+  | StepFailure_fail h net failed =>
+    exact .StepFailure_fail (M := raft_refined_multi_params (P := P)) h
+      (mgv_deghost net) failed
+  | StepFailure_reboot h net _ failed failed' hmem hfailed' hnet' =>
+    subst hnet'
+    exact .StepFailure_reboot (M := raft_refined_multi_params (P := P)) h
+      (mgv_deghost net) _ failed failed' hmem hfailed'
+      (network_eq_mk rfl (fun h' => rfl))
+
+/-- `RaftMsgRefinementProof.v:566-645` (`simulation_1` /
+`msg_simulation_1`): every msg-ghost reachable network deghosts to a
+refined-reachable network. -/
+theorem msg_simulation_1 :
+    ∀ net : MsgNet, msg_refined_raft_intermediate_reachable (P := P) net →
+      refined_raft_intermediate_reachable (mgv_deghost net) := by
+  intro net hreach
+  induction hreach with
+  | MRRIR_init => exact .RRIR_init
+  | MRRIR_step_failure failed net failed' net' out hreach hstep ih =>
+    exact .RRIR_step_failure failed (mgv_deghost net) failed'
+      (mgv_deghost net') _ ih (mgv_ghost_simulation_1 hstep)
+  | MRRIR_handleInput net h inp out d l ps' st' hreach hi hst hps ih =>
+    show refined_raft_intermediate_reachable
+      ⟨ps'.map mgv_deghost_packet, st'⟩
+    refine .RRIR_handleInput (mgv_deghost net) h inp out d l _ _ ih hi
+      (fun h' => hst h') ?_
+    intro p' hp'
+    rcases List.mem_map.mp hp' with ⟨q, hq, rfl⟩
+    rcases hps q hq with h1 | h1
+    · exact Or.inl (List.mem_map_of_mem h1)
+    · right
+      rw [← mgv_deghost_send_packets h
+        (update_elections_data_input h inp (net.nwState h), d) l]
+      exact List.mem_map_of_mem h1
+  | MRRIR_handleMessage p net xs ys st' ps' d l hreach hm hpkts hst hps ih =>
+    show refined_raft_intermediate_reachable
+      ⟨ps'.map mgv_deghost_packet, st'⟩
+    refine .RRIR_handleMessage (mgv_deghost_packet p) (mgv_deghost net)
+      (xs.map mgv_deghost_packet) (ys.map mgv_deghost_packet) _ _ d l ih
+      hm ?_ (fun h' => hst h') ?_
+    · show net.nwPackets.map mgv_deghost_packet = _
+      rw [hpkts]
+      simp
+    · intro p' hp'
+      rcases List.mem_map.mp hp' with ⟨q, hq, rfl⟩
+      rcases hps q hq with h1 | h1
+      · left
+        rw [← List.map_append]
+        exact List.mem_map_of_mem h1
+      · right
+        show mgv_deghost_packet q ∈ send_packets
+          (P := raft_refined_base_params (P := P))
+          (M := raft_refined_multi_params) p.pDst l
+        rw [← mgv_deghost_send_packets p.pDst
+          (update_elections_data_net p.pDst p.pSrc p.pBody.2
+            (net.nwState p.pDst), d) l]
+        exact List.mem_map_of_mem h1
+  | MRRIR_doLeader net st' ps' gd d h os d' ms hreach hdo hstate hst hps ih =>
+    show refined_raft_intermediate_reachable
+      ⟨ps'.map mgv_deghost_packet, st'⟩
+    refine .RRIR_doLeader (mgv_deghost net) _ _ h os d' ms ih ?_ ?_ ?_
+    · show doLeader ((mgv_deghost net).nwState h).2 h = (os, d', ms)
+      rw [msg_deghost_spec, hstate]
+      exact hdo
+    · intro h'
+      rw [hst h']
+      show update net.nwState h (gd, d') h'
+        = update net.nwState h ((net.nwState h).1, d') h'
+      rw [hstate]
+    · intro q hq
+      rcases List.mem_map.mp hq with ⟨q0, hq0, rfl⟩
+      rcases hps q0 hq0 with h1 | h1
+      · exact Or.inl (List.mem_map_of_mem h1)
+      · right
+        rw [← mgv_deghost_send_packets h (gd, d') ms]
+        exact List.mem_map_of_mem h1
+  | MRRIR_doGenericServer net st' ps' gd d h os d' ms hreach hdo hstate hst hps ih =>
+    show refined_raft_intermediate_reachable
+      ⟨ps'.map mgv_deghost_packet, st'⟩
+    refine .RRIR_doGenericServer (mgv_deghost net) _ _ h os d' ms ih ?_ ?_ ?_
+    · show doGenericServer h ((mgv_deghost net).nwState h).2 = (os, d', ms)
+      rw [msg_deghost_spec, hstate]
+      exact hdo
+    · intro h'
+      rw [hst h']
+      show update net.nwState h (gd, d') h'
+        = update net.nwState h ((net.nwState h).1, d') h'
+      rw [hstate]
+    · intro q hq
+      rcases List.mem_map.mp hq with ⟨q0, hq0, rfl⟩
+      rcases hps q0 hq0 with h1 | h1
+      · exact Or.inl (List.mem_map_of_mem h1)
+      · right
+        rw [← mgv_deghost_send_packets h (gd, d') ms]
+        exact List.mem_map_of_mem h1
+
+/-- `RaftMsgRefinementProof.v:646-654` (`msg_lift_prop`): refined-layer
+invariants import into msg-ghost proofs through the deghost. -/
+theorem msg_lift_prop (Pr : RefinedNet → Prop)
+    (href : ∀ net, refined_raft_intermediate_reachable (P := P) net → Pr net) :
+    ∀ net, msg_refined_raft_intermediate_reachable (P := P) net →
+      Pr (mgv_deghost net) :=
+  fun net h => href _ (msg_simulation_1 net h)
+
+/-- `RaftMsgRefinementInterface.v` (`msg_lift_prop_all_the_way`): base
+invariants import through both erasures. -/
+theorem msg_lift_prop_all_the_way (Pr : _ → Prop)
+    (hbase : ∀ net, raft_intermediate_reachable (P := P) net → Pr net) :
+    ∀ net, msg_refined_raft_intermediate_reachable (P := P) net →
+      Pr (deghost (mgv_deghost net)) :=
+  fun net h => lift_prop Pr hbase _ (msg_simulation_1 net h)
+
+/-! ## The §3.3 discharge witness
+
+A real (if small) ghost invariant instantiating THE principle with all
+eleven obligations discharged: every entry of every in-flight ghost log
+has a positive index. Deliberately NOT one of the GhostLog* chain's
+named statements (unit 1's `VotesShape` discipline — no pre-emption);
+it exercises every obligation's packet clause, every handler's log
+shape, and the `msg_simulation_1`/`msg_lift_prop` import path. -/
+
+/-- Every in-flight ghost log's entries have positive indices. -/
+def ghost_entries_gt_0 (net : MsgNet) : Prop :=
+  ∀ p ∈ net.nwPackets, ∀ e ∈ (p.pBody :
+    ghost_log (P := P) × msg (P := P)).1, e.eIndex > 0
+
+/-- The ghost of a freshly sent packet is the writing state's log. -/
+theorem ghost_of_send {src : name (P := P)}
+    {st : electionsData (P := P) × raft_data (P := P)}
+    {l : List (name (P := P) × msg (P := P))} {p : MsgPacket}
+    (hp : p ∈ send_packets src (add_ghost_msg src st l)) :
+    (p.pBody : ghost_log (P := P) × msg (P := P)).1 = st.2.log := by
+  obtain ⟨q, hq, rfl⟩ := List.mem_map.mp hp
+  obtain ⟨m1, hm1, rfl⟩ := List.mem_map.mp hq
+  rfl
+
+/-- Host logs of a msg-reachable net have positive indices — the
+refined `entries_gt_0` imported through `msg_lift_prop`
+(the transfer's first consumer). -/
+theorem ghost_entries_host_gt_0 {net : MsgNet}
+    (hreach : msg_refined_raft_intermediate_reachable (P := P) net)
+    (h : name (P := P)) :
+    ∀ e ∈ (net.nwState h).2.log, e.eIndex > 0 := by
+  intro e he
+  exact entries_gt_0_invariant (mgv_deghost net)
+    (msg_simulation_1 net hreach) h e he
+
+theorem ghost_entries_gt_0_invariant :
+    ∀ net, msg_refined_raft_intermediate_reachable (P := P) net →
+      ghost_entries_gt_0 net := by
+  refine msg_refined_raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · -- init: no packets
+    intro p hp
+    exact nomatch hp
+  · -- client_request: the fresh ghost is the appended log
+    intro h net st' ps' gd out d l client id c hcr hgd hP hreach hst hps
+    intro p hp e he
+    replace hp : p ∈ ps' := hp
+    rcases hps p hp with hold | hnew
+    · exact hP p hold e he
+    · rw [ghost_of_send hnew] at he
+      replace he : e ∈ d.log := he
+      rcases handleClientRequest_log_full h (net.nwState h).2 client id c
+          hcr with ⟨-, hlog⟩ | ⟨-, hdeq⟩
+      · rw [hlog] at he
+        rcases List.mem_cons.mp he with rfl | he
+        · exact Nat.succ_pos _
+        · exact ghost_entries_host_gt_0 hreach h e he
+      · rw [hdeq] at he
+        exact ghost_entries_host_gt_0 hreach h e he
+  · -- timeout: log unchanged
+    intro net h st' ps' gd out d l hto hgd hP hreach hst hps
+    intro p hp e he
+    replace hp : p ∈ ps' := hp
+    rcases hps p hp with hold | hnew
+    · exact hP p hold e he
+    · rw [ghost_of_send hnew] at he
+      replace he : e ∈ d.log := he
+      obtain ⟨hlog, -, -⟩ := handleTimeout_spec h (net.nwState h).2 hto
+      rw [hlog] at he
+      exact ghost_entries_host_gt_0 hreach h e he
+  · -- append_entries: the reply ghost is the (possibly spliced) log
+    intro xs p ys net st' ps' gd d m t n pli plt es ci hae hgd hbody hP
+      hreach hpkts hst hps
+    intro p0 hp0 e he
+    replace hp0 : p0 ∈ ps' := hp0
+    have hes_pos : ∀ e0 ∈ es, e0.eIndex > 0 := by
+      intro e0 he0
+      refine entries_gt_0_nw_invariant (mgv_deghost net)
+        (msg_simulation_1 net hreach) (mgv_deghost_packet p) t n pli plt
+        es ci e0 ?_ hbody he0
+      show mgv_deghost_packet p ∈ net.nwPackets.map mgv_deghost_packet
+      refine List.mem_map_of_mem ?_
+      rw [hpkts]
+      exact List.mem_append.mpr (Or.inr (List.mem_cons_self ..))
+    rcases hps p0 hp0 with hold | rfl
+    · exact hP p0 (by rw [hpkts]; exact mem_of_mem_remove_middle hold) e he
+    · replace he : e ∈ d.log := he
+      rcases handleAppendEntries_log_cases p.pDst (net.nwState p.pDst).2
+          t n pli plt es ci hae with hd | ⟨-, hd⟩ |
+        ⟨e2, -, -, -, hd⟩
+      · rw [hd] at he
+        exact ghost_entries_host_gt_0 hreach p.pDst e he
+      · rw [hd] at he
+        exact hes_pos e he
+      · rw [hd] at he
+        rcases List.mem_append.mp he with he | he
+        · exact hes_pos e he
+        · exact ghost_entries_host_gt_0 hreach p.pDst e
+            (removeAfterIndex_in he)
+  · -- append_entries_reply: log unchanged
+    intro xs p ys net st' ps' gd d m t es res haer hgd hbody hP hreach
+      hpkts hst hps
+    intro p0 hp0 e he
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnew
+    · exact hP p0 (by rw [hpkts]; exact mem_of_mem_remove_middle hold) e he
+    · rw [ghost_of_send hnew] at he
+      replace he : e ∈ d.log := he
+      rw [handleAppendEntriesReply_log p.pDst (net.nwState p.pDst).2
+        p.pSrc t es res haer] at he
+      exact ghost_entries_host_gt_0 hreach p.pDst e he
+  · -- request_vote: log unchanged
+    intro xs p ys net st' ps' gd d m t cid lli llt hrv hgd hbody hP
+      hreach hpkts hst hps
+    intro p0 hp0 e he
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | rfl
+    · exact hP p0 (by rw [hpkts]; exact mem_of_mem_remove_middle hold) e he
+    · replace he : e ∈ d.log := he
+      rw [handleRequestVote_log p.pDst (net.nwState p.pDst).2 t p.pSrc
+        lli llt hrv] at he
+      exact ghost_entries_host_gt_0 hreach p.pDst e he
+  · -- request_vote_reply: no sends
+    intro xs p ys net st' ps' gd d t v hrvr hgd hbody hP hreach hpkts
+      hst hps
+    intro p0 hp0 e he
+    replace hp0 : p0 ∈ ps' := hp0
+    exact hP p0 (by rw [hpkts]; exact mem_of_mem_remove_middle (hps p0 hp0))
+      e he
+  · -- do_leader: log unchanged
+    intro net st' ps' gd d h os d' ms hdl hP hreach hstate hst hps
+    intro p hp e he
+    replace hp : p ∈ ps' := hp
+    rcases hps p hp with hold | hnew
+    · exact hP p hold e he
+    · rw [ghost_of_send hnew] at he
+      replace he : e ∈ d'.log := he
+      obtain ⟨-, -, -, -, hlog, -⟩ := doLeader_spec d h hdl
+      rw [hlog] at he
+      have hd2 : d = (net.nwState h).2 := by rw [hstate]
+      rw [hd2] at he
+      exact ghost_entries_host_gt_0 hreach h e he
+  · -- do_generic_server: log unchanged
+    intro net st' ps' gd d os d' ms h hdgs hP hreach hstate hst hps
+    intro p hp e he
+    replace hp : p ∈ ps' := hp
+    rcases hps p hp with hold | hnew
+    · exact hP p hold e he
+    · rw [ghost_of_send hnew] at he
+      replace he : e ∈ d'.log := he
+      obtain ⟨hlog, -, -, -, -, -⟩ := doGenericServer_spec h d hdgs
+      rw [hlog] at he
+      have hd2 : d = (net.nwState h).2 := by rw [hstate]
+      rw [hd2] at he
+      exact ghost_entries_host_gt_0 hreach h e he
+  · -- state_same_packet_subset
+    intro net net' hstate hpk hP hreach
+    intro p hp e he
+    exact hP p (hpk p hp) e he
+  · -- reboot: packets unchanged
+    intro net net' gd d h d' hrb hP hreach hstate hst hpkts
+    intro p hp e he
+    rw [← hpkts] at hp
+    exact hP p hp e he
+
 end MsgRefinement
 end Raft
 end VerdiCompat

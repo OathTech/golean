@@ -186,6 +186,14 @@ open VerdiCompat VerdiCompat.Raft
 #guard_msgs in #print axioms VerdiCompat.Raft.leader_completeness_committed_invariant
 /-- info: 'VerdiCompat.Raft.leader_completeness_invariant' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms VerdiCompat.Raft.leader_completeness_invariant
+/-- info: 'VerdiCompat.Raft.msg_refined_raft_net_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.msg_refined_raft_net_invariant
+/-- info: 'VerdiCompat.Raft.msg_simulation_1' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.msg_simulation_1
+/-- info: 'VerdiCompat.Raft.msg_lift_prop' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.msg_lift_prop
+/-- info: 'VerdiCompat.Raft.ghost_entries_gt_0_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.ghost_entries_gt_0_invariant
 
 /-! ## Exhaustive sweep (fails the build on any disallowed axiom) -/
 

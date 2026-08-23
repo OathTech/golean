@@ -427,6 +427,7 @@ from artifacts.
 | appendEntriesReply_sublog | PROVED (base) | Raft/AppendEntriesReplySublogInterface.v:8-16 | AppendEntriesChain.lean (invariant) |
 | nextIndex_safety | PROVED (base) | Raft/NextIndexSafetyInterface.v:8-11 | AppendEntriesChain.lean (invariant) |
 | leaderLogs_logMatching (leaderLogs_entries_match) | PROVED | Raft/LeaderLogsLogMatchingInterface.v:9-13 | AppendEntriesChain.lean (conj invariant + interface half) |
+| msg_refined_raft_net_invariant (msg-ghost principle, GAP-2) | PROVED (unprimed + simulation_1/lift/deghost_spec + witness; primed set + reghosting deferred, census logged) | Raft/RaftMsgRefinementInterface.v:34-195 + RaftProofs/RaftMsgRefinementProof.v:12-275,566-654 | MsgRefinement.lean |
 - 2026-08-22 Slice 13 (1cc83c1d): log/message spec lemmas for the ring
   (findGtIndex_in, removeAfterIndex_in, per-handler log facts,
   doLeader_messages, rvr cronies function-level cases).
@@ -2288,3 +2289,46 @@ msg-ghost principle alone is an acceptable unit-11).
   existing refined entries_gt_0/log-shape lemmas), deliberately NOT
   one of the GhostLog* chain's named statements (no pre-emption,
   exactly unit 1's VotesShape discipline).
+- 2026-08-23 Slice 62 (427c9262): `MsgRefinement.lean` opened — the
+  ghost vocabulary (`ghost_log`, `write_ghost_log`, `add_ghost_msg` +
+  app/log_eq lemmas), the mgv params triple (GhostSimulations.v
+  :298-357 inlined at the raft instance, D1 again), and the
+  five-constructor `msg_refined_raft_intermediate_reachable`
+  (Interface :34-79). Wired into VerdiCompat.lean from birth.
+- 2026-08-23 Slice 63: the ELEVEN obligation shapes (:83-195 1:1),
+  the two dispatchers, and **THE principle
+  `msg_refined_raft_net_invariant`** (Proof.v:58-275), re-proved in
+  the sibling layer's assert-chain style. [AGENT] The genuinely new
+  step vs unit 1: GHOST RECONCILIATION — the real handler attaches the
+  FINAL state's log to all sends while the staged constructors attach
+  each stage's; equal because doLeader/doGenericServer never move the
+  log (`add_ghost_msg_log_eq` + doLeader_spec/doGenericServer_spec log
+  equations, applied inside the final packet-coverage step). [AGENT]
+  Gotcha for successors: the sibling's INLINED doLeader/doGenericServer
+  constructor premise style (`(net.nwState h).1` in the sends) breaks
+  at the msg layer — `update_same` is NOT definitional (if-blocked on
+  a variable key), so the ghost argument can't reduce; upstream's
+  explicit `nwState net h = (gd, d)` equation shape is the right port
+  (adopted; the sibling got away with it only because ITS sends carry
+  no state).
+- 2026-08-23 Slice 64: the erasure half — `mgv_deghost_packet`/
+  `mgv_deghost` (state untouched, only the wire loses its ghost — so
+  `msg_deghost_spec` is `rfl` and every state equation in
+  `mgv_ghost_simulation_1` is trivial where unit 1 needed
+  `update_snd`), `mgv_deghost_send_packets` (the ghost-attachment
+  collapse), `mgv_ghost_simulation_1` (all seven step_failure legs),
+  **`msg_simulation_1`** (Proof.v:566-645), `msg_lift_prop` and
+  `msg_lift_prop_all_the_way` (composing with unit 1's `lift_prop`).
+- 2026-08-23 Slice 65: the §3.3 witness —
+  **`ghost_entries_gt_0_invariant`**: every in-flight ghost log's
+  entries have positive indices, through THE principle with ALL ELEVEN
+  obligations discharged (fresh ghosts = the writing state's log via
+  `ghost_of_send`; per-handler log shapes: CR's cons at maxIndex+1,
+  AE's scratch/splice against the packet's entries via the msg-lifted
+  `entries_gt_0_nw`, everything else log-preserving; the host-log
+  positivity imported through `msg_simulation_1` — the transfer's
+  first consumer). Five AxCheck pins (fresh capped probe, all
+  [propext, Quot.sound]; the stale-olean gotcha re-hit at the probe —
+  full `lake build` before `lake env lean`, per the unit-9 record).
+  Build green, sweep 2213; hatch grep over MsgRefinement.lean: 0
+  (exit 1); file = 1,133 lines.

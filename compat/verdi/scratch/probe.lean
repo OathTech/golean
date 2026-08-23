@@ -1,8 +1,0 @@
-import VerdiCompat
-#print axioms VerdiCompat.Raft.log_log_prefix_within_term_invariant
-#print axioms VerdiCompat.Raft.append_entries_append_entries_prefix_within_term_invariant
-#print axioms VerdiCompat.Raft.prefix_within_term_inductive_invariant
-#print axioms VerdiCompat.Raft.allEntries_leaderLogs_prefix_within_term_invariant
-#print axioms VerdiCompat.Raft.leader_completeness_invariant
-#print axioms VerdiCompat.Raft.leader_completeness_directly_committed_invariant
-#print axioms VerdiCompat.Raft.leader_completeness_committed_invariant
