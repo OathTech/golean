@@ -1370,3 +1370,75 @@ degrades); unit-8 charter at unit end.
   halves); do_leader's replica packets resolve their prevLog inside
   the snapshot via `leaderLogs_contiguous` + the host half. Build
   green, sweep 1805. THE UNIT-7 SCOPE IS COMPLETE (10/10 files).
+- 2026-08-23 Unit-7 final gate: `GOLEAN_ALLOW_NO_DIFF=1
+  GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT: PASS, exit 0** (log:
+  `artifacts/ci-arc3-unit7.log`, gitignored; no-diff notes are the
+  allowed docs+compat hatch — unit 7 touched only `compat/verdi/**` +
+  this log). The report-only comparator-landmark note now reads
+  "56 theorems @ 1730567a2d3f, 59 commit(s) ago" — same
+  operator-merge-time flag as units 1-6; nothing here touches a
+  designated statement or Challenge's closure (statement-TCB step ok).
+
+## Final entry — unit 7 complete (2026-08-23, tip = this commit)
+
+**Proved at tip** — the AppendEntries feeder chain, ALL TEN targets of
+the re-derived closure (which was exactly the charter's ten files,
+3,200 upstream lines), statements 1:1 with their Interface files @
+a3375e8; zero sorry/native_decide in campaign files (grep;
+sweep-enforced: 1805 declarations within [propext, Quot.sound], plus
+ten new curated pins). `#print axioms` verbatim (fresh capped
+`lake env lean` probe):
+
+```
+'VerdiCompat.Raft.allEntries_term_sanity_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.log_properties_hold_on_leader_logs_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.leaders_have_leaderLogs_strong_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.append_entries_request_reply_correspondence_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.append_entries_came_from_leaders_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.leaderLogs_sublog_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.append_entries_leader_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.append_entries_reply_sublog_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.nextIndex_safety_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.leaderLogs_entries_match_invariant' depends on axioms: [propext, Quot.sound]
+```
+
+Inventory: `AppendEntriesChain.lean` (3,206 lines, wc). Highlights:
+the higher-order snapshot principle `log_properties_hold_on_leader_logs`;
+`subset_reachable` (Verdi's DupDropReordering re-proved directly) and
+the dup-step correspondence — the campaign's first real use of the
+fault model's dup/drop/reboot legs; `rvr_win_votes` PROMOTED from
+unit 4's inline hwin (2nd consumer); `leaderLogs_sublog` and
+`appendEntries_leader` (the latter via the PRE-STATE
+`one_leaderLog_win_host` route — GAP-1 stays untriggered, logged
+judgment call at slice 39); `nextIndex_safety` with the assoc get/set
+machinery; and the exit theorem `leaderLogs_entries_match` (host ∧ nw)
+riding the unit-6 entries_match engines and RLML bridge. The INVARIANT
+INDEX above is current (51 data rows, recomputed: 52 `^| `-lines minus
+the header). New lift_prop consumers this unit:
+`lifted_one_leader_per_term`, `lifted_leader_sublog_host`,
+`lifted_log_matching_nw_prev` (+ the tai_nw/came-from-leaders uses) —
+eight total on the lane.
+
+**Honestly open (carried):**
+- GAP-1 (primed variants): STILL never triggered — slice 39's judgment
+  call closed upstream's only primed-variant consumer so far in the
+  pre-state; carried as port-on-first-need.
+- GAP-2 (msg-ghost): untouched (absent from this unit's closure, and
+  from unit 8's targets per the unit-6 wave table — RE-VERIFY at unit-8
+  start).
+- GAP-4 (classical-list doctrine question), GAP-6
+  (leader_completeness proof), GAP-7a/b: carried unchanged.
+
+**Next unit's charter (Arc 3, unit 8 — proposal, per the unit-6 wave
+table; RE-DERIVE the closure fresh before proving, as always):** the
+GAP-7 assembly (~3,566 upstream lines):
+`appendEntries_request_leaderLogs` (621) → `allEntries_leaderLogs_term`
+(342), `LogsLeaderLogs` (848) → **`leaderLogs_preserved` (GAP-7b)**
+(263), then `AllEntriesLog` (1,089) → **`allEntries_votesWithLog`
+(GAP-7a)** (356). If the honest closure or session budget forces a
+split, the self-contained prefix is AERLeaderLogs + LogsLeaderLogs +
+leaderLogs_preserved (GAP-7b closed), leaving the AllEntries side for
+unit 9. Beyond: GAP-6 (`prefix_within_term` +
+`leader_completeness`'s proof). Same conventions; successors re-verify
+this unit fresh (build + sweep 1805 + the ten-headliner probe above +
+hatch grep over AppendEntriesChain.lean).
