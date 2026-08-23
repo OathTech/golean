@@ -620,10 +620,10 @@ campaign-arc3 @ c131f278, campaign-arc2 @ 7e120182, campaign-arc4 @
 14f37f20 into `campaign` (internal composition; the arc-4 merge
 resolves the log-file conflict by taking this branch's consolidated
 copy); (2) fast gate on the integrated branch; (3) the witness wave
-STOPPED RESUMABLY (manifest-driven by design; done-segment oleans
-survive in the arc-2 worktree's .lake as long as the box persists —
-if compute changes, segments re-run from the committed
-generator+manifest; resume commands in the arc-2 log); (4) the
+KEEPS RUNNING through the wrap ([USER] 2026-08-24: "not urgent to
+pause, don't kill the long-running shell") — manifest-driven,
+detached, resumable if it ever dies; done-segment oleans in the
+arc-2 worktree's .lake; resume commands in the arc-2 log; (4) the
 probe_and_replicate re-run left running (1 core, ~135MB — kill
 `pgrep -f 'traces probe_and_replicate'` if compute needs it; restart
 command in this log); (5) the milestone audit reviewers run to
