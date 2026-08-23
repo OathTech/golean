@@ -132,6 +132,24 @@ completion machinery, route memo + unit-2 charter).
   generated and stamped; manifest recomputed from oleans, never
   restated.
 
+- **U5 emission + canaries** (2026-08-23): all 45 checkpoint groups
+  emitted (one batched walk, 4-wide @30G; wall ~1h50 incl. ~10 min
+  lost to the mtime-loop bug; late batches ~15–18 min each — the
+  compiled prefix is heap-linear too). **Checkpoint artifacts: 184 MB
+  total** for 712 checkpoints (olean same-module subterm compaction —
+  the ~30–60 GB §6.8 storage projection was ~200× pessimistic).
+  Canary variance (records/u5-manifest.tsv + wave log): S0000 192 s,
+  S0001 215 s, S0700 **97 s** (late ≠ expensive), S0355 **406 s /
+  43.9 GB peak** — a HOT WINDOW ~3× the 350k-boundary probe's
+  retention (the k1000 probe passed at 30.0 GB from 350,000; steps
+  355k–356k retain ~3× more). Mean per-segment wall over the four
+  observed ≈ 227 s ⇒ 712 × 227 s ≈ 45 CPU-h — the pre-launch central
+  holds; the DISTRIBUTION is wide, so the wave is continue-on-failure
+  (failed batches recorded to records/u5-failures.txt, manifest =
+  olean existence) with a solo `wave-retry` pass at 70G for hot
+  windows; split-tooling only if a window busts even that (none
+  expected: 43.9 GB fits solo).
+
 ## THE U4 PER-ARM TEMPLATE (of record, for the authorized wave)
 
 Validated on the landed `FastEval/Ops.lean` (its own header carries
@@ -272,6 +290,32 @@ files verbatim.
   rather than chaining group modules by import — keeps groups
   build-independent and parallel; total compiled cost ~1.5 CPU-h,
   measured negligible against the kernel wave.
+- **[AGENT]** 2026-08-23 (U5, endgame de-risk — measured, not
+  theorized): on the literal-heavy `twinRun` goal, BOTH
+  `simp only [Bind.bind, Except.bind]` AND bare `rfl` were OOM-killed
+  at 8G in ~20 s (records: artifacts probe endgame-shape, kill points
+  kept) — the composition therefore goes through a GENERIC glue lemma
+  over variables (`runProgramM_of_setup` in TwinSegBase, kit style):
+  literals enter the endgame only as rewrite instances
+  (twin_prelude_eq / twin_runConfig_eq / twin_load_eq), never as
+  defeq comparands. Wrinkle appended for successors: the same
+  bind-plumbing simp that is safe on all-variable goals detonates on
+  reflected-literal goals.
+- **[AGENT]** 2026-08-23 (U5): a canary "PASS" was retracted before it
+  could mislead — the first S0355 attempt exited 0 in 5:47 with NO
+  olean because `lake build | tail -2` reports the PIPE's rc, not
+  lake's; caught by listing oleans, re-run unmasked (lake-polled.sh):
+  the truth was OOM@38G, then PASS@44G/406 s. Lesson recorded: never
+  read a wave job's outcome through a pipeline rc; the olean is the
+  outcome.
+- **[AGENT]** 2026-08-23 (U5): regenerating the module tree bumps all
+  source mtimes, which sent the first mtime-based orchestrator loop
+  into an infinite no-op walk on already-built groups (caught live,
+  killed, ~10 min lost) — the orchestrator now walks the FULL ordered
+  list exactly once per run and trusts lake's content-hash skip
+  (~0.2 s per finished batch); the manifest's done criterion is olean
+  EXISTENCE, with validity explicitly lake's domain, re-verified
+  wholesale by the composition build + gate.
 
 - **[AGENT]** 2026-08-23 (U4): helper panic-conversion arms stubbed
   rather than proving error-correspondence — the one-directional

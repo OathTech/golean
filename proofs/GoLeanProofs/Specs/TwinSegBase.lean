@@ -18,4 +18,23 @@ def segState (p : HeapT × Nat × Config × Choices) : ExecStateF :=
     heapT := p.1
     nextAddr := p.2.1 }
 
+/-- Generic glue (kit style, variables only — literals enter as
+rewrite instances, never as defeq comparands): a completed setup +
+run + readout compose to the `runProgramM` equation. -/
+theorem runProgramM_of_setup {fuel : Nat} {program : Program}
+    {name : String} {args : Array GoValue} {ch : Choices}
+    {c₀ : Config} {s₃ : ExecState} {locs : List Loc} {ch₁ : Choices}
+    {sF : ExecState} {chF : Choices} {vs : List GoValue}
+    (hsetup : runProgramSetupM fuel program name args ch = .ok (c₀, s₃, locs, ch₁))
+    (hrun : runConfig fuel s₃ c₀ ch₁ = .ok (sF, chF))
+    (hload : loadMany sF locs = .ok vs) :
+    runProgramM fuel program name args ch = .ok { values := vs.toArray } := by
+  unfold runProgramM
+  rw [hsetup]
+  simp only [Bind.bind, Except.bind]
+  rw [hrun]
+  simp only []
+  rw [hload]
+  rfl
+
 end GoLean.Examples.RaftTwin

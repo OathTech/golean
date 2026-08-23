@@ -18,7 +18,9 @@ LOG=docs/campaign-arc2-probes/records/u5-manifest-log.txt
       [ -e "$f" ] || continue
       b=$(basename "$f" .lean); tot=$((tot+1))
       o="$OL/$kind/$b.olean"
-      if [ -f "$o" ] && [ "$o" -nt "$f" ]; then s=done; done_n=$((done_n+1)); else s=pending; fi
+      # done = olean EXISTS; freshness/validity is lake's domain (content-hash
+      # traces) and is re-verified wholesale by the composition build + gate.
+      if [ -f "$o" ]; then s=done; done_n=$((done_n+1)); else s=pending; fi
       echo -e "$kind\t$b\t$s"
     done
   done
