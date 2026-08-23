@@ -222,6 +222,335 @@ is the §4.4 park-and-report condition, not an emergency.
   before scaling. [AGENT] alternatives-considered recorded (direct
   induction refused, segment-rfl scoped to the witness only).
 
+- **U-c10** (2026-08-22): internal integration — campaign-arc3 (tip
+  d07c5382, units 1-3) merged INTO the campaign branch ([AGENT]: lane
+  composition, not a main landing; proofs build green post-merge at
+  466 jobs); lane `campaign-arc4` opened off the integrated tip and
+  **A4-U1 (the pilot) DISPATCHED**: absState v1 grounded in the
+  instrumented heap shape + the smallest handler equation
+  (becomeFollower/advanceCurrentTerm) via the kit + the GO/NO-GO
+  verdict against the gallery-example cost bar. Three workers now in
+  flight: Arc-2 go/no-go, Arc-3 unit 4 (leaderLogs), Arc-4 pilot.
+- **CHECKPOINT 2** (recomputed from `git log --oneline f64d9b21..`
+  on this branch: 12 commits; lanes: arc2 5 commits @18cb0b25, arc3
+  19 @d07c5382 integrated, arc4 opened): Arc 1 branch-complete
+  (statements pinned, gate PASS); Arc 2 route decided by measurement;
+  Arc 3 election safety + candidate_entries PROVED (1244 decls
+  clean); Arc 4 designed + pilot running. The [USER] queue below is
+  the campaign's only external dependency.
+
+- **Arc 3, unit 4 — LANDED** @ 84711394 (successor worker;
+  re-verification of unit 3 done first, all held): the leaderLogs
+  ring (LeaderLogs.lean, 3908 lines) — term-sanity trio (first real
+  `lift_prop` consumer), leaders_have_leaderLogs,
+  **one_leaderLog_per_term**, + the votes-with-log closure the chain
+  forced; **`leader_completeness` STATEMENT pinned** (proof = units
+  5-7, dependency list = GAP-6, honest). Sweep 1403 decls in
+  [propext, Quot.sound]; lane gate PASS; index 23 rows. Four new
+  Lean gotchas recorded for successors (the Classical.choice-via-
+  LawfulBEq drag being the sharpest). Unit 5 dispatched: the
+  creation ring (every_entry_was_created → … → leaderLogs_preserved).
+
+- **Arc 4, pilot (A4-U1) — LANDED on `campaign-arc4`** @ 21f0cd51,
+  gate PASS: **architecture GO, hand-walk cost NO-GO** — the
+  equation form PROVED end-to-end at the smallest callee
+  (alt_call_span + witness + live projection readout; absState v1
+  grounded in instrumented heap contact — one 32-field raft struct
+  cell), but becomeFollower measures 3,233 steps / 4 consumed
+  choices / ~9 proof-lines-per-step at leaf granularity, five
+  ingredient classes have no kit form INSIDE the smallest handler,
+  and 20 handlers ≈ 20-60 gallery-units by hand. OQ-A both-layered;
+  OQ-B call-enter covers fid+interface, not closure call-values;
+  **OQ-C REFUTED** (handlers consume choices — jitter + mapIter —
+  equations quantify over consumed prefixes); charter's
+  advanceCurrentTerm doesn't exist in the lowered subject (Verdi
+  name) — becomeFollower substituted, logged. [AGENT] maxim-(a)
+  moment taken as designed: the pilot priced the grind BEFORE
+  scaling; re-design = **A4-U2, the handler-fragment Sym-evaluator
+  extension** (primary; W7 SpecTec convergence the alternative; kit
+  lifts regardless — promotion ledger opened). Seam design note to
+  be amended with the pilot's answers.
+
+- **Arc 3, unit 5 — LANDED** @ 2d93b2f0: the creation ring's
+  feasible slice (CreationRing.lean, 2511 lines) —
+  every_entry_was_created, base logs_sorted + constructive sorted
+  machinery, votesWithLog_sorted + term_sanity,
+  terms_and_indices_from_one, three new lift_prop consumers; sweep
+  **1528 decls clean**; index 34 rows; GAP-7 recorded WITH
+  import-closure evidence instead of silently attempted (the
+  log-matching heavies block two members — exactly unit 6); GAP-2
+  zero contact (ring is plain rri). Integration-readiness paragraph
+  delivered (compat/verdi self-contained, merge-tip-never-cherry-pick).
+- **Arc 2, unit 2 — LANDED** @ c7b35e8a: **NO-GO for the segment
+  walk, honestly measured** — reflector built and cheap (350k-step
+  checkpoint: 3:47/2.7GB/101MB olean), but mid-run kernel cost is
+  HEAP-LINEAR (2.22 s/step, 157 MB/step at 19k cells; seg-500 OOM at
+  48G) → 440-800 CPU-h projected, no fitting parallelism on the box.
+  Unit 3 re-chartered as fallback (d): the verified fast-twin
+  evaluator, OPENING with a trie kernel microbenchmark before any
+  build; if the microbench misses, the witness reports honestly
+  blocked at kernel scale. Census completed: 243 functions (+8 defer
+  callees resolved).
+- **[AGENT] CONVERGENCE NOTE** (structural, feeds prioritization):
+  the ∀-side (Arc 4's handler equations) and the ∃-witness (Arc 2's
+  last computational fallback pending) now both point at the SAME
+  missing instrument — the handler-fragment Sym extension (A4-U2, in
+  flight). If it lands, the witness's WP-completion route (refuted
+  only on hand-walk cost) reopens with automation. The Sym extension
+  is therefore the campaign's critical path; Arc-2's (d) proceeds in
+  parallel as the cheaper-if-it-works alternative.
+
+- **Arc 2, unit 3 — LANDED** @ 885204f8: **microbench GO** — trie
+  heap at 36,376 entries measures 9.4 ms/op / 0.44 MB/op in the
+  kernel (targets ≤25/≤2 pre-stated; >2× headroom; ~240×/~360×
+  better than the naive heap) → (d) projects the witness at 4-60
+  CPU-h over ~14 fast segments. Convergence carry-forward written
+  (§6.6) + the untrusted-method guardrail (§6.7.5). Unit 4
+  dispatched: FastEval build (exemplar arms → the ~50-arm wave →
+  the MID-BUILD gate → staged assembly; the long kernel run may be
+  a staged detached follow-on rather than in-unit).
+
+- **Arc 3, unit 6 — LANDED** @ 86d372c0 (3rd-gen worker;
+  re-verification held; the unit-5 lesson executed — full 23-file/
+  9,760-line closure derived and POSTED before proving, scoped to
+  the self-contained 7-file prefix): **LOG MATCHING PROVED** — base
+  `log_matching` + `logMatchingStatement_holds` (the second T3-named
+  invariant discharged natively), GAP-5 closed
+  (leaderLogs_sorted/contiguous), base leader_sublog with the ghost
+  chain's first base-level payoff, the ten-field lifted bridge both
+  GAP-7 subtrees consume. LogMatching.lean 2565 lines; sweep **1652**
+  clean; index 41 rows (self-correction recorded: was misstated 43);
+  lane gate PASS. Units 7-8 chartered (~6,800 lines remaining to
+  leader_completeness's proof).
+
+- **Arc 4, A4-U2 slice 1 — LANDED** @ 8c1f5d9e: the Sym extension's
+  design note (five classes = quit-site lifts, not domain work;
+  sortSlice needs NOTHING; call-entry one lever for fid/closure/
+  interface; choice story = composition-level canonicalization, pick-
+  prefix threading rejected; channel-logic salvage honestly NEGATIVE)
+  + class 1 (struct-store normalization) end-to-end with ZERO edits
+  to the 8,193 existing Sym lines (delegating stepFnT, Sym/TableExt
+  652 lines). **THE RE-MEASURE**: the pilot leaf's ~105 span lines +
+  helper lemma → ONE transported window (3-line rfl + 6-line
+  refinement application), ∀ρ ∀σ-extending ∀ch; two measured gotchas
+  recorded (smartUnfolding reversal 671s↔7.3s; decide +kernel for
+  γ-projections). Gate PASS, 471 jobs green. Slice ladder: 2 =
+  sync-ops, 3 = call entry, 4 = choice-crossing composition.
+
+- **Arc 4, A4-U2 slices 2+3 — LANDED** @ 785a3461: sync-ops
+  census-scoped (Mutex lock/unlock only — no Once on the path,
+  checked; the tabled storeLocT fix caught by an honest probe-quit at
+  step 102) + the one-lever call entry (enterFrameT running the
+  MACHINE'S OWN table helpers — zero re-implementation; Agrees =
+  equality not sub-table, with the soundness reasoning recorded;
+  delegation preserved a THIRD time — layered stepFnTB→stepFnT→
+  stepFn', shipped statements untouched). Interface-receiver dispatch
+  honestly scoped OUT (residual 2b — one logger call on the path).
+  RE-MEASURE: becomeFollower = ONE 189-step window to the designed Q3
+  boundary (51 s build); **projection now INSIDE the gallery bar**
+  (≈600-1,000 lines/handler vs 3,000-6,000 hand). Worker
+  recommendation adopted [AGENT]: slice 4 (choice-crossing
+  composition, smallest instance = Intn's single pick) BEFORE A4-U3
+  — U3 becomes assembly after it. 13 Audit/Kit pins paid (slice-1
+  debt noticed and settled by the worker unprompted).
+
+- **Arc 3, unit 7 — LANDED** @ 44b0794b: the AppendEntries feeder
+  chain, all ten targets (AppendEntriesChain.lean 3206 lines) — incl.
+  append_entries_request_reply_correspondence (the campaign's first
+  real dup/drop fault-model use, subset_reachable machinery),
+  leaderLogs_sublog, leaderLogs_entries_match (the exit). Sweep
+  **1805** clean; index 51 rows; GAP-1 kept untriggered by a
+  pre-state closure ([AGENT] call, promotion-ledger payoff). Two new
+  successor gotchas recorded. [AGENT]: worker ROTATED at 819k tokens
+  (risk asymmetry over its no-strain self-report) — 4th-gen
+  successor dispatched on unit 8, the GAP-7 assembly (~3,566 lines;
+  leader_completeness's last prerequisites; split point permitted).
+  A4 slice 4 (choice-crossing composition, full-span becomeFollower)
+  dispatched to the Arc-4 worker with the stop-at-boundary rule
+  ACTIVE.
+
+- **Arc 4, A4-U2 slice 4 — LANDED** @ dab1163d (clean-boundary stop
+  per the active rule): **THE HANDLER SPINE EXISTS** —
+  `stepFn_pick_generic` (type-generic map-range pick) +
+  `stepFnIter_window_pick_window` (pre-window + quantified pick +
+  post-window), with §4(ii)'s valuation-absorption REALIZED (the
+  picked key symbolic in the fixture: ONE post-window serves every
+  pick; canonicalization as design rule). becomeFollower's 945-step
+  prefix-quantified span at ~130 lines (vs ~8,500 at the pilot's
+  hand rate); pre-window grew 189→642 steps quitting EXACTLY at the
+  designed Q3 pick; two same-lever Q4 lifts found by honest window
+  quits. Full span (3,233) deliberately NOT claimed — the four-item
+  U3 checklist posted. [AGENT]: worker rotated at 820k; fresh
+  successor dispatched on A4-U3 (the first FULL handler equation +
+  the A4 scale verdict re-projecting U4..U9).
+
+- **Arc 2, unit 4 — LANDED** @ 0c462c7c: **THE VERIFIED FAST-TWIN
+  EVALUATOR IS PROVED** — trie heap + γ (range dump; append-only
+  made WF-free), stepFast arm-for-arm (~170 fun_cases + 29 manual),
+  the loop-transport bridge, and the ANCHOR: seed + StateWf + all
+  1,382 init steps kernel-re-run against reflected literals in one
+  8:18/36.7GB equation. Worker ran its own 3-fork wave with a
+  written template + its own re-verification (a census-classifier
+  blind spot caught and mirrored). Mid-build gate MARGINAL GO
+  (fast-500 2:28/21.6GB vs slow OOM; heap-size dependence REMOVED;
+  35-80 CPU-h projected, levers named). Assembly COSTED AND STAGED
+  as unit 5 (charter §6.8) per directive. FLAG for the operator's
+  merge step: `import Audit.FastEval` touches Challenge's trusted
+  closure → the comparator-judge landmark is owed at merge.
+- **Arc 3, unit 8 — LANDED** @ becfe284 (4th-gen; re-verification
+  held; closure recomputed to 3,519 lines catching the charter's
+  stale sum): **GAP-7 CLOSED, BOTH HALVES** —
+  LeaderLogsAssembly.lean 3,965 lines; the allEntries_log summit
+  (upstream's ~500-line Ltac splice re-derived through two
+  containment lemmas, §9 guided re-proof); sweep **1985** decls
+  clean; index 55 rows; GAP-2 still zero contact (re-verified at
+  the closure incl. AllEntriesLog, the predicted first contact).
+  **GAP-6 is now the ONLY named gap on the leader-completeness
+  path** — unit 9 chartered (6 files, ~3,428 lines, split point
+  recorded).
+
+- **Arc 3, unit 9 — LANDED** @ d5efc9e8 (context-rule stop taken at
+  PrefixWithinTerm's edge, exactly as flagged): 4 of 6 GAP-6 feeder
+  files proved (LeaderCompleteness.lean 1,426 lines —
+  allEntries_candidateEntries/leader_sublog/log_matching + the AE
+  term-sanity lift; 1,134/3,428 closure lines); sweep **2029**
+  clean; index 60 rows. **Leader completeness is two files away**:
+  prefix_within_term (1,915L, all deps ported) +
+  LeaderCompletenessProof (379L) = the unit-10 charter. [AGENT]:
+  5th-gen rotation (worker at 816k).
+
+- **Arc 3, unit 10 — LANDED** @ d7e3cfc8 (5th-gen): **LEADER
+  COMPLETENESS PROVED — GAP-6 CLOSED** (PrefixWithinTerm's ~590-line
+  upstream summit collapsed to ~170 Lean lines via one extracted
+  positioning lemma; leader_completeness_invariant +
+  _directly_committed + _committed, ghost-layer landing point exactly
+  as upstream — no base projection exists there, checked). Sweep
+  **2138** decls in [propext, Quot.sound]; 80 commits on the lane;
+  gate PASS. **THE T3 LADDER: election safety ✓ · log matching ✓ ·
+  leader completeness ✓ · state-machine safety = the remaining
+  head** — and GAP-2's msg-ghost contact is CONFIRMED there (unit-11
+  charter posted: SMS 3,199L + SMSPrime 518L + the msg-ghost layer,
+  multiple units expected). Designation of any of these as headline
+  remains [USER] (§3.2), queued with the rest.
+
+- **Arc 3, unit 11 — LANDED** @ 24dbbf97: **THE MSG-GHOST
+  FOUNDATION (GAP-2 consumed)** — MsgRefinement.lean 1,133 lines:
+  the vocabulary, the eleven obligation shapes,
+  msg_refined_raft_net_invariant (the new proof step = ghost-stage
+  reconciliation), the erasure transfer through all seven
+  step_failure legs, msg_lift_prop(_all_the_way), and a real
+  discharged witness. Sweep **2213** clean; SMS closure re-derived
+  fresh (20 files/9,612 lines, waved W-A..W-F; two no-proof-file
+  findings recorded); GAP-8 (reghosting direction, SMS-only) newly
+  censused; the primed msg set deferred with per-site census
+  (GAP-1's msg-side instance). Gate PASS. Unit-12 charter: the W-B
+  plain leaves (~1,695 lines) then W-C as budget allows.
+
+- **Arc 3, unit 12 — LANDED** @ 4a37aebb: six of eight W-B leaves
+  (SafetyLeaves.lean 1,082 lines — the joint log/allEntries movement
+  lemmas, transitive_commit, all_entries_leader_logs,
+  in_log_in_all_entries, log_all_entries, lastApplied_le_commitIndex
+  BASE, no_append_entries_to_self BASE); sweep **2287** clean; index
+  69 rows. **The context rule honestly exercised**: the worker
+  detected its own strain signature mid-draft (guessed signatures,
+  placeholder hatches), REVERTED UNCOMMITTED at the clean boundary,
+  and recorded the recon for the two remainder files — the exact
+  behavior the conventions exist to produce. [AGENT]: 6th-gen
+  rotation; unit 13 = the W-B remainder (match_index_sanity,
+  prevLog_candidateEntriesTerm, recon recorded) then W-C's first
+  msg-ghost consumers.
+
+- **Arc 3, unit 13 — LANDED** @ d14bfd6a (6th-gen): FULL charter —
+  **W-B 8/8 complete** (match_index_sanity BASE,
+  prevLog_candidateEntriesTerm via the term-level twin), **the
+  primed msg obligation set ported on genuine first need** (the
+  pre-state route structurally unavailable at
+  GhostLogsLogProperties — the honest trigger; the primed principle
+  DERIVED from the unprimed at Q := reachable → Pr, ~60 lines vs
+  upstream's 290-line staged induction, §9 call), and **W-C's first
+  two msg-ghost consumers** (GhostLogs.lean; slices 71-74 compiled
+  first-attempt). Sweep **2362**; index 71 rows; 101 lane commits;
+  gate PASS. One consolidation candidate flagged (unit-3
+  entry-level preserves derivable from term-level). NOTE → [USER]
+  queue: the comparator-landmark note CROSSED ITS THRESHOLD (104 >
+  100 commits, report-only) — the judge run is owed at the first
+  lane merge, as flagged every unit.
+
+- **Arc 2, unit 5 — PARKED IN FLIGHT** @ 7e120182: the witness wave
+  is EXECUTING (detached, session-independent; 62/757 at the park;
+  ~44 CPU-h ≈ 15-20h wall remaining; manifest-driven,
+  continue-on-failure + solo-retry, resume commands verbatim in the
+  log). Emission COMPLETE 45/45 groups at 184 MB (the ~30-60 GB
+  projection was ~200× pessimistic — olean compaction); the 48G
+  lever REFUTED by measurement (SEG=1000@36G adopted, central ~53-55
+  CPU-h GO); composition fully GENERATED with the endgame de-risked
+  live (literal-heavy simp/rfl measured-OOM → generic glue lemma);
+  three honest kill points + a masked-OOM lesson recorded.
+  CompletionWitness NOT yet proved — stated plainly; the four-step
+  completion recipe is in the log. [AGENT] next dispatch on this
+  lane = when the wave's manifest reads done: retry pass →
+  composition build → the witness.
+
+- **Arc 3, unit 14 — LANDED** @ 88deb524 (6th-gen, second full
+  charter): W-C remainder + W-D, all seven files —
+  no_AE_replies_to_self, no_AE_to_leader, match_index_leader,
+  prevLog_leader_sublog (unit 13's PLCET paying off), the two
+  ghost-log invariants (the handleAppendEntries_ghost_log engine),
+  and **state_machine_safety' — THE SMS-PRIME STATEMENT** (~250-line
+  upstream nw' soup factored to two shared cores, §9 call); the
+  msg-side primed layer COMPLETE (all ten bridges). Sweep **2439**;
+  index 78 rows; 110 lane commits; gate PASS. Unit 15 = the FINAL
+  STRETCH: MatchIndexAllEntries (last pre-cap file, every dep
+  PROVED) → the W-F cap (GAP-8 reghosting +
+  StateMachineSafetyProof's interior). [AGENT]: 7th-gen rotation.
+
+- **Arc 3, unit 15 — LANDED @ 708773ff: THE T3 SAFETY LATTICE IS
+  CLOSED.** Election safety ✓ (u2) · Log matching ✓ (u6) · Leader
+  completeness ✓ (u10) · **State-machine safety ✓ (u15)** — with all
+  three Properties.lean transfer targets discharged natively, the
+  full fifteen-probe axiom transcript verbatim in the arc log, sweep
+  **2617** declarations within [propext, Quot.sound], zero hatches,
+  gate PASS. En route this unit: GAP-1's state-side primed set on
+  its first genuine trigger (the Q-route again — compiled first
+  attempt), GAP-8 closed (reghosting via the packet-subset
+  constructors, upstream's 200-line detour never entered), and the
+  3,199-line SMS interior (the `everything` induction). **GAPs
+  1/2/5/6/7/8 ALL CLOSED**; GAP-4 never fired in fifteen units. The
+  unit-11 census — 20 files, 9,612 upstream lines — is ENTIRELY
+  PORTED. This is a §4.2 MILESTONE-CLASS claim (a T3 tier's
+  spec-level lattice complete): the milestone AUDIT and any
+  designation are [USER] acts, queued below; the lattice's evidence
+  is the lane itself (110+ commits, per-unit gates, seven
+  generations of successor re-verification, every claim
+  derivation-anchored). Unit-16 wrap chartered (consolidation
+  candidates, the closing design section, end-state
+  re-verification).
+
+- **Arc 4, A4-U3 — LANDED** @ 5e7834a9: **THE FIRST FULL HANDLER
+  EQUATION IS PROVED** — `becomeFollower_handler_eq`: from any
+  γ-extending state with projection `some n`, over EVERY consumed
+  choice prefix, exactly 3,234 steps to `.stop` with projection
+  `specBecomeFollower n 0 lead`; witness at the concrete stream;
+  1,307 target-layer lines / ~50 min builds (the extension's 3-5×
+  win over the NO-GO projection, realized). [AGENT] deviation
+  accepted: class-2b completed properly in enterFrameT instead of
+  hand splits (kills the recurring cost for ~20 handlers; 12→7
+  windows). One summary-layer count correction recorded (14 pins,
+  not 15). Scale verdict: waves 1-3 ≈ 15-25 U3-shaped sessions;
+  binding constraints = state literalization (U4 slice 0) + the
+  absState entries/outboxes extension (the spec-side obligation
+  before message handlers).
+- **Arc 3, unit 16 — THE LANE ENDS BRANCH-COMPLETE, PERMANENTLY** @
+  c131f278: end-state re-verification from a CLEAN build (sweep 2615
+  post-consolidation, fifteen-headliner probe verbatim, hatch grep
+  zero across all sixteen files, index span-verified 84 rows);
+  consolidation done (~220 duplicated lines deleted, statements
+  unchanged; one candidate SKIPPED with reason); GAP-4 closed moot;
+  the design note's closing section + refreshed integration
+  readiness. Sixteen units, ~95 slices, 129 commits. The [USER]
+  queue carries the milestone audit, the merge, and the owed
+  comparator-judge run (133 commits).
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
@@ -232,9 +561,38 @@ is the §4.4 park-and-report condition, not an emergency.
   PASS; proposal on Mike's return: a focused statement-adequacy
   review — the D3-dimension — over the Arc-1 diff, Opus, plus the
   standing semantics dimension; scale ~2 reviewers).
-- Arc 3 merge (will be posed at its branch-complete; the ci
-  comparator-landmark staleness note on that lane is flagged for the
-  operator's merge step).
+- **[USER] 2026-08-24: the milestone audit APPROVED as proposed
+  (RUNNING: 3 Opus reviewers, verifier to follow); the Arc-3 → main
+  merge PRE-AUTHORIZED conditional on the audit coming back green**
+  ("agree, you can land campaign-arc3 on main, once the audit comes
+  back green") — execution order on green: findings fixed if any →
+  the owed comparator-judge run → ff-only merge to main → report.
+  Designation deferred to the statement layer's own main landing
+  ([USER]-acknowledged: no input needed now).
+- **DISCHARGED (was POSED) — the Arc-3 milestone audit ask** (constitution §4.2: a
+  tier's lattice proved = milestone = adversarial audit before the
+  claim is built on): proposal — 3 Opus reviewers (statement fidelity
+  vs verdi-raft 1:1 at the pin; proof-shape/§9-call review of the
+  guided re-proofs; records/index honesty) + 1 verifier, over the
+  campaign-arc3 lane's final state. [USER] may waive/trim; the ask
+  is unconditional.
+- **POSED — Arc 3 merge** (branch-complete after unit-16 wrap; the
+  comparator-judge run is OWED at this merge — the staleness note
+  crossed its threshold at unit 13, now 128 commits).
+
+## Coordinator incident (2026-08-24, [AGENT], recorded before repair)
+
+My shell's working directory drifted to the campaign-arc4 worktree at
+its creation and STAYED there: 16 coordinator log commits (U-c10
+through the T3-milestone entry) landed on `campaign-arc4` instead of
+`campaign` — a one-writer-per-worktree violation by the coordinator,
+file-disjoint (this log file only; both arc-4 workers flagged the
+interleaving and I misread their flags as history-visibility). Repair:
+this commit consolidates the complete log onto `campaign` (the arc-4
+copy was the up-to-date lineage); arc-4's history keeps the
+interleaved commits (rewriting under a worker is worse); at arc-4's
+integration the file contents converge. Rule adopted: coordinator
+commits use absolute -C paths, never cwd.
 
 ## Judgment calls
 
