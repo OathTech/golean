@@ -2551,3 +2551,68 @@ RE-DERIVE closures fresh, as always):**
 Successors re-verify THIS unit fresh: capped full build + sweep 2287 +
 the six-headliner probe above + hatch grep over SafetyLeaves.lean
 (expect 0).
+
+## Unit 13 — the W-B remainder + W-C ghost chain (2026-08-23, coordinator-posted charter)
+
+Charter: (a) `match_index_sanity` (254L, BASE) +
+`prevLog_candidateEntriesTerm` (489L) per the unit-12 recon; then (b)
+W-C's `GhostLogCorrect` (275L) + `GhostLogsLogProperties` (201L), the
+msg-ghost principle's first real consumers — primed-principle uses
+decided per-site, pre-state route first. Split discipline: (a) alone
+is a complete unit if the honest budget says so.
+
+- 2026-08-23 SUCCESSOR RE-VERIFICATION of unit 12 (recomputed, fresh
+  reader): tip 4a37aebb, tree clean, branch `campaign-arc3`;
+  `deps/verdi-raft` pin re-verified
+  `a3375e867326a82225e724cc1a7b4758b029376f` (read from the MAIN
+  checkout, as every unit). Fresh capped `lake build` (24G) green
+  ("Build completed successfully (53 jobs)"); the sweep line there was
+  a cache replay, so re-derived by fresh capped
+  `lake env lean AxCheck.lean` — verbatim `AxCheck sweep: 2287
+  declarations across VerdiCompat modules, axiom set within
+  [propext, Quot.sound]`. Fresh six-headliner `#print axioms` probe
+  (capped, repo-local scratch): `transitive_commit_invariant`,
+  `all_entries_leader_logs_invariant`, `in_log_in_all_entries_invariant`,
+  `log_all_entries_invariant`, `lastApplied_le_commitIndex_invariant`,
+  `no_append_entries_to_self_invariant` all
+  `depends on axioms: [propext, Quot.sound]` verbatim. Hatch grep
+  (`sorry|native_decide|^axiom| axiom `) over SafetyLeaves.lean: 0 hits
+  (exit 1). All claims hold; building on them.
+- 2026-08-23 [AGENT] UNIT-13 CLOSURE, re-derived fresh (imports read @
+  a3375e8, pin re-verified by `git rev-parse`):
+  (a) MatchIndexSanityProof.v imports AEReplySublog ✓ + Sorted ✓ (+
+  CommonTheorems/SpecLemmas slices, lane-ported); PLCETProof.v imports
+  rri ✓, CandidateEntries ✓, CroniesTerm ✓, CroniesCorrect ✓ — all
+  INDEX PROVED rows, NO msg-ghost in (a).
+  (b) GhostLogCorrectProof.v imports rmri ✓ (unit 11), NextIndexSafety
+  ✓ (lifted all-the-way), RLML ✓ (lifted one layer) — and uses the
+  UNPRIMED principle only. GhostLogsLogPropertiesProof.v imports rmri
+  only — and applies **`msg_refined_raft_net_invariant'` (:179), the
+  GAP-1 msg-side PRIMED principle**.
+- 2026-08-23 [AGENT] PRIMED-SITE DECISION (the charter's per-site
+  call, GhostLogsLogProperties): the pre-state route is STRUCTURALLY
+  UNAVAILABLE here — the invariant quantifies over ALL
+  reachability-closed log properties (`msg_log_property P`), and a
+  fresh packet's ghost is the POST-state's log, so concluding
+  `P (log d)` requires the successor net's reachability; no lattice
+  fact about the pre-state can substitute for an abstract `P`. GAP-1's
+  msg-side set therefore gets its MINIMAL first-need port this unit:
+  the eleven primed obligation shapes 1:1 (Interface :197-439), the
+  three `_weak` bridges the consumer uses, and the primed principle.
+  [AGENT] PROOF-SHAPE CALL for the primed principle (§9 guided
+  re-proof; upstream re-runs the whole 290-line induction with
+  reachability asserts): ours DERIVES it from the ported unprimed
+  principle at `Q net := msg_refined_raft_intermediate_reachable net →
+  Pr net` — every unprimed obligation already carries the PRE-state
+  reachability premise, so each Q-obligation discharges by pure logic
+  from the corresponding primed obligation, and the two reachability
+  applications collapse at the end. No induction duplicated; same
+  statement 1:1.
+- 2026-08-23 [AGENT] File plan: (a) extends `SafetyLeaves.lean` (the
+  W-B file, per the unit-12 plan); the primed set lands in
+  `MsgRefinement.lean` beside the unprimed (upstream's own file split);
+  (b) opens `GhostLogs.lean` (imports SafetyLeaves), wired into
+  VerdiCompat.lean from birth. Non-vacuity for the primed principle:
+  its first consumer (`log_properties_hold_on_ghost_logs_invariant`,
+  same unit) is the discharge witness — all eleven obligations
+  instantiated on a real invariant.
