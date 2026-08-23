@@ -1060,6 +1060,207 @@ theorem commit_invariant_client_request {h : name (P := P)}
       rw [hl] at hnew
       simp [send_packets, add_ghost_msg] at hnew
 
+/-! ## The doLeader commit case — the quorum argument
+(`StateMachineSafetyProof.v:2334-2431,2597-2736`): `advanceCommitIndex`
+commits exactly what a matchIndex quorum certifies, and
+`match_index_all_entries` (W-E — its purpose in the lattice) turns the
+quorum into allEntries records. -/
+
+omit O R in
+/-- `StateMachineSafetyProof.v:815-830` (`fold_left_maximum_cases`). -/
+theorem foldl_max_cases : ∀ (l : List Nat) (z : Nat),
+    l.foldl max z = z ∨ l.foldl max z ∈ l := by
+  intro l
+  induction l with
+  | nil => exact fun z => Or.inl rfl
+  | cons a l ih =>
+    intro z
+    rcases ih (max z a) with h | h
+    · rw [List.foldl_cons, h]
+      rcases Nat.le_total z a with hz | hz
+      · exact Or.inr (by rw [Nat.max_eq_right hz]; exact List.mem_cons_self ..)
+      · exact Or.inl (Nat.max_eq_left hz)
+    · exact Or.inr (List.mem_cons_of_mem _ (by rw [List.foldl_cons]; exact h))
+
+/-- `StateMachineSafetyProof.v:2360-2375`
+(`haveQuorum_directly_committed`), at the msg layer: a matchIndex
+quorum at the leader's own term certifies the entry into a quorum of
+allEntries — W-E's `match_index_all_entries` imported through
+`msg_simulation_1`. -/
+theorem haveQuorum_lifted_directly_committed {net : MsgNet}
+    (hreach : msg_refined_raft_intermediate_reachable (P := P) net)
+    {h : name (P := P)} {w : entry (P := P)}
+    (hty : (net.nwState h).2.type = .Leader)
+    (hin : w ∈ (net.nwState h).2.log)
+    (hq : haveQuorum (net.nwState h).2 h w.eIndex = true)
+    (hterm : w.eTerm = (net.nwState h).2.currentTerm) :
+    lifted_directly_committed net w := by
+  have hmia : match_index_all_entries (mgv_deghost net) :=
+    msg_lift_prop _ match_index_all_entries_invariant net hreach
+  unfold haveQuorum at hq
+  rw [Nat.blt_eq] at hq
+  refine ⟨(nodes (P := P)).filter
+    (fun h' => w.eIndex <=? assoc_default (net.nwState h).2.matchIndex h' 0),
+    ?_, hq, ?_⟩
+  · exact (allFin_NoDup _).filter _
+  · intro h' hh'
+    obtain ⟨-, hle⟩ := List.mem_filter.mp hh'
+    rw [Nat.ble_eq] at hle
+    exact hmia w h h' hty hle hin hterm
+
+/-- The `doLeader` commit shape (`StateMachineSafetyProof.v:2334-2358`
+(`doLeader_spec`) + `:2615-2649` (`doLeader_message_lci`/`_term`),
+combined): a no-op, or a leader whose new `commitIndex` is
+`advanceCommitIndex`'s and whose replica messages carry exactly the
+new state's `currentTerm` and `commitIndex`. -/
+theorem doLeader_commit_cases (st : raft_data (P := P))
+    (me : name (P := P)) {os : List (raft_output (P := P))}
+    {d' : raft_data (P := P)}
+    {ms : List (name (P := P) × msg (P := P))}
+    (h : doLeader st me = (os, d', ms)) :
+    (d' = st ∧ ms = []) ∨
+    (st.type = .Leader ∧
+     d'.commitIndex = (advanceCommitIndex st me).commitIndex ∧
+     ∀ m ∈ ms, ∀ (t : term) (lid : name (P := P)) (pli : logIndex)
+       (plt : term) (es : List (entry (P := P))) (lci : logIndex),
+       m.2 = msg.AppendEntries (P := P) t lid pli plt es lci →
+       t = d'.currentTerm ∧ lci = d'.commitIndex ∧
+       ∀ e0 ∈ es, e0 ∈ d'.log) := by
+  unfold doLeader at h
+  simp only [] at h
+  split at h
+  · rename_i hty
+    split at h
+    · simp only [Prod.mk.injEq] at h
+      obtain ⟨-, rfl, rfl⟩ := h
+      refine Or.inr ⟨hty, rfl, ?_⟩
+      intro m hm t lid pli plt es lci hbody
+      obtain ⟨h', -, rfl⟩ := List.mem_map.mp hm
+      unfold replicaMessage at hbody
+      simp only [] at hbody
+      injection hbody with f1 f2 f3 f4 f5 f6
+      refine ⟨f1.symm, f6.symm, ?_⟩
+      intro e he
+      rw [← f5] at he
+      exact findGtIndex_in he
+    · simp only [Prod.mk.injEq] at h
+      obtain ⟨-, rfl, rfl⟩ := h
+      exact Or.inr ⟨hty, rfl, fun m hm => nomatch hm⟩
+  · simp only [Prod.mk.injEq] at h
+    obtain ⟨-, rfl, rfl⟩ := h
+    exact Or.inl ⟨rfl, rfl⟩
+
+/-- `advanceCommitIndex`'s new watermark only covers entries either
+already committed or backed by a same-term matchIndex quorum
+(`StateMachineSafetyProof.v:2377-2404`, `advanceCommitIndex_committed`'s
+combinatorial core). -/
+theorem advanceCommitIndex_le_cases {st : raft_data (P := P)}
+    {me : name (P := P)} {e : entry (P := P)}
+    (hle : e.eIndex ≤ (advanceCommitIndex st me).commitIndex) :
+    e.eIndex ≤ st.commitIndex ∨
+    ∃ w, w ∈ st.log ∧ e.eIndex ≤ w.eIndex ∧
+      w.eTerm = st.currentTerm ∧ haveQuorum st me w.eIndex = true := by
+  replace hle : e.eIndex ≤
+    (((findGtIndex st.log st.commitIndex).filter fun e0 =>
+        (st.currentTerm == e0.eTerm) && (st.commitIndex <? e0.eIndex) &&
+        haveQuorum st me e0.eIndex).map entry.eIndex).foldl max
+      st.commitIndex := hle
+  rcases foldl_max_cases _ st.commitIndex with hcase | hcase
+  · rw [hcase] at hle
+    exact Or.inl hle
+  · obtain ⟨w, hw, hwi⟩ := List.mem_map.mp hcase
+    obtain ⟨hwgt, hcond⟩ := List.mem_filter.mp hw
+    rw [Bool.and_eq_true, Bool.and_eq_true] at hcond
+    obtain ⟨⟨hterm, -⟩, hqrm⟩ := hcond
+    rw [beq_iff_eq] at hterm
+    refine Or.inr ⟨w, findGtIndex_in hwgt, ?_, hterm.symm, hqrm⟩
+    rw [hwi]
+    exact hle
+
+/-- `StateMachineSafetyProof.v:2650-2736` (`commit_invariant_do_leader`):
+the leader's advanced `commitIndex` is honest — every newly-covered
+entry has a quorum witness (`haveQuorum_lifted_directly_committed`),
+and the fresh replica packets' ghost logs are covered by the
+freshly-proved host half at the successor. -/
+theorem commit_invariant_do_leader :
+    msg_refined_raft_net_invariant_do_leader (P := P) commit_invariant := by
+  intro net st' ps' gd d h os d' ms hdl hP hreach hstate hst hps
+  obtain ⟨hP1, hP2⟩ := hP
+  obtain ⟨hct, -, -, -, hlog, -⟩ := doLeader_spec d h hdl
+  have hd2 : (net.nwState h).2 = d := by rw [hstate]
+  have hd1 : (net.nwState h).1 = gd := by rw [hstate]
+  have htrans : ∀ {e : entry (P := P)} {t0 : term},
+      lifted_committed net e t0 →
+      lifted_committed (⟨ps', st'⟩ : MsgNet) e t0 := by
+    intro e t0 hc
+    refine lifted_committed_of_update hst ?_ ?_ hc
+    · intro e' h1
+      rw [hlog, ← hd2]
+      exact h1
+    · intro t' e' h1
+      rw [← hd1]
+      exact h1
+  -- the host half first; the nw half's fresh packets consume it
+  have hhost : commit_invariant_host (⟨ps', st'⟩ : MsgNet) := by
+    intro h0 e hin hle
+    replace hin : e ∈ (st' h0).2.log := hin
+    replace hle : e.eIndex ≤ (st' h0).2.commitIndex := hle
+    show lifted_committed (⟨ps', st'⟩ : MsgNet) e (st' h0).2.currentTerm
+    rw [hst h0] at hin hle ⊢
+    by_cases heq : h0 = h
+    · rw [heq, update_same] at hin hle ⊢
+      replace hin : e ∈ d'.log := hin
+      replace hle : e.eIndex ≤ d'.commitIndex := hle
+      show lifted_committed _ e d'.currentTerm
+      rw [hlog, ← hd2] at hin
+      rw [hct, ← hd2]
+      rcases doLeader_commit_cases d h hdl with ⟨hds, -⟩ | ⟨htyL, hcieq, -⟩
+      · rw [hds, ← hd2] at hle
+        exact htrans (hP1 h e hin hle)
+      · rw [hcieq] at hle
+        rcases advanceCommitIndex_le_cases hle with hold | ⟨w, hw, hew, hwt, hwq⟩
+        · rw [← hd2] at hold
+          exact htrans (hP1 h e hin hold)
+        · -- the fresh quorum witness
+          rw [← hd2] at hw hwt hwq
+          refine htrans ⟨h, w, ?_, ?_, hew, hin, hw⟩
+          · rw [hwt]
+            exact Nat.le_refl _
+          · exact haveQuorum_lifted_directly_committed hreach
+              (by rw [hd2]; exact htyL) hw (by rw [hd2] at hwq ⊢; exact hwq)
+              hwt
+    · rw [update_neq _ _ heq] at hin hle ⊢
+      exact htrans (hP1 h0 e hin hle)
+  refine ⟨hhost, ?_⟩
+  intro p0 t0 lid pli plt es lci e hp0 hbody hgl hle
+  replace hp0 : p0 ∈ ps' := hp0
+  rcases hps p0 hp0 with hold | hnew
+  · exact htrans (hP2 p0 t0 lid pli plt es lci e hold hbody hgl hle)
+  · -- a fresh replica packet: its ghost is the new state's log, its
+    -- lci the new commitIndex — the successor's host half covers it
+    obtain ⟨m1, hm1, rfl⟩ := mem_send_ghost_elim hnew
+    rcases doLeader_commit_cases d h hdl with ⟨-, hms⟩ | ⟨-, -, hmsg⟩
+    · rw [hms] at hm1
+      exact nomatch hm1
+    · replace hbody : m1.2 = msg.AppendEntries t0 lid pli plt es lci :=
+        hbody
+      obtain ⟨rfl, rfl, -⟩ := hmsg m1 hm1 t0 lid pli plt es lci hbody
+      replace hgl : e ∈ write_ghost_log h (gd, d') := hgl
+      replace hgl : e ∈ d'.log := hgl
+      have hres := hhost h e
+        (by show e ∈ (st' h).2.log
+            rw [hst h, update_same]
+            exact hgl)
+        (by show e.eIndex ≤ (st' h).2.commitIndex
+            rw [hst h, update_same]
+            exact hle)
+      have hcteq : ((⟨ps', st'⟩ : MsgNet).nwState h).2.currentTerm
+          = d'.currentTerm := by
+        show (st' h).2.currentTerm = d'.currentTerm
+        rw [hst h, update_same]
+      rw [hcteq] at hres
+      exact hres
+
 end StateMachineSafety
 
 end Raft
