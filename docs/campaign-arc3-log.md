@@ -1343,3 +1343,20 @@ degrades); unit-8 charter at unit end.
   `append_entries_reply_sublog`: the replied entries are in the
   leader's own log, so maxIndex es ≤ maxIndex log via sorted
   maxIndex_is_max. Build green, sweep 1785.
+- 2026-08-23 Slice 41: **`leaderLogs_entries_match`** (host ∧ nw,
+  LeaderLogsLogMatchingProof.v:9-52 defs 1:1; the interface half
+  projected as `leaderLogs_entries_match_invariant`,
+  LeaderLogsLogMatchingInterface.v:9-13) — host logs and in-flight
+  entries match every leaderLog snapshot; upstream 647 lines. New
+  support: `maxTerm_is_max`, `entries_match_nil`/
+  `entries_match_cons_gt_maxTerm`/`entries_match_cons_sublog`
+  (:63-118), `lifted_log_matching_nw_prev` (the prevLog-resolution
+  piece RLML doesn't carry). The cases: client_request stacks the
+  own-term entry via gt-maxTerm (own snapshots, term-sanity pair) or
+  cons-sublog (`leaderLogs_sublog` pays off); append_entries re-runs
+  the unit-6 scratch/splice engines against snapshots with the NW half
+  of the induction supplying the matched-pair clauses; RVR's fresh
+  snapshot IS the winner's log (lifted base log matching, both
+  halves); do_leader's replica packets resolve their prevLog inside
+  the snapshot via `leaderLogs_contiguous` + the host half. Build
+  green, sweep 1805. THE UNIT-7 SCOPE IS COMPLETE (10/10 files).
