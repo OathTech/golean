@@ -157,6 +157,56 @@ the same rules):
      matches; `cases hb :` + `rw at h` for `Except`-valued calls;
    - after `subst hR` the surviving accumulator binder is the FAST
      side's (`b'`).
+7. **Wave-worker additions** (folded from the three reports, each
+   observed in a landed proof):
+   - `split at h` on a VARIABLE scrutinee substitutes and yields NO
+     equation; on an APPLICATION scrutinee it yields one — binder
+     counts differ; use bullets + `rename_i` for the LAST hypotheses
+     only, with non-shadowing names (a shadowed `op` silently breaks
+     later rewrites).
+   - error-headed fast sides (`stuck`/`throw` are defs, not ctors):
+     close via `rfl`-lemmas `stuck_eq_error`/`throw_eq_error` + the
+     `goErrAbsurd`-style closers (Frames.lean; promotion candidates).
+   - the per-call rhythm is strict — `rw [hcall] at h` THEN
+     `simp only [Bind.bind, Except.bind] at h`, one layer at a time;
+     an early simp pre-unfolds lambda-internal binds into matches
+     that later refuse iota.
+   - per-module auxiliary MATCHER constants: a display-identical slow
+     body can be `rw`-opaque because the goal uses Machine.lean's
+     matcher — fix by a defeq `show` onto this module's matchers
+     (Stores.lean sortSlice/append exemplars).
+   - do-mut loops over an `Array` iterate the Array instance — bridge
+     `rw [← Array.forIn_toList]`; MProd accumulators eta-expand.
+   - `fun_cases` on a stepFast-sized def renumbers ALL case tags on
+     any arm change — stash manual case bodies, re-enumerate tags
+     from a sorry-swept build, re-attach (this unit's integration
+     cycle; case-tag drift is mechanical, not semantic).
+   - census classifier blind spot: NULLARY ops never appear under
+     their continuation rows — check the `evalE` rows before
+     stubbing (worker A's defaultValueOf/nilLit catch).
+
+- **U4 GATE** (2026-08-23): `GOLEAN_ALLOW_NO_DIFF=1
+  GOLEAN_MEM_MAX=32G scripts/ci` — **RESULT: PASS** (rc 0; the
+  sanctioned no-diff hatch with visible notes; FastEval + checkpoint
+  modules + Audit/FastEval pins all inside the audited closure —
+  the 1b2 sweep and the in-build Audit gate passed over them; no
+  designated statement changed on this lane). **ARC 2 UNIT 4
+  BRANCH-COMPLETE** at this tip; unit 5 opens on memo §6.8's staged
+  plan.
+
+## Checkpoint (U4 end, recomputed)
+
+Branch `campaign-arc2` @ (tip after the gate commit): 19 commits over
+f64d9b21 at this writing (git log the authority), tree clean at each
+commit. U4 delta: 9 FastEval modules (~5,100 lines incl. the wave's
+2,437), TwinCheckpointsF/TwinPrelude, Audit/FastEval.lean pins,
+aggregator wiring, probes + records, memo §6.8, this log. Proved at
+the tip: stepFast_ok, iterF_ok/iterF_add, list_forIn_sim, the three
+wave towers' sims, twin_prelude_eq — all pinned, zero hatches.
+Measured: fast-500 PASS 2:28/21.6 GB; fast-2000 kill 7:49@40G;
+MARGINAL GO recorded with levers. Unit 5 staged (memo §6.8), not
+executed. Nothing merged; no GoCore/frontend/scripts edits; Arc-1
+files verbatim.
 
 ## Judgment calls
 
