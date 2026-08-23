@@ -2037,3 +2037,15 @@ completed prefix + chartered remainder is branch-complete.
   disjuncts answer directly (e2-in-ll case via positioning +
   sorted_index_term). ~170 Lean lines for the 590. Build green,
   sweep 2047.
+- 2026-08-23 Slice 55: the six conjunct defs + `prefix_within_term_
+  inductive` (:748-786 1:1), the generic transport `pwti_of_update`,
+  and EIGHT obligations: init, timeout, request_vote,
+  append_entries_reply, do_generic_server, state_same_packet_subset,
+  reboot (all via the transport + the no-AE packet arguments), and
+  request_vote_reply written out (leaderLogs growth: the fresh
+  snapshot = the winner's own log via `leaderLogs_update_elections_
+  data_RVR` + `handleRequestVoteReply_log`; conjuncts 1/5 re-route
+  through IH's allEntries_log / append_entries_log, conjunct 2 is
+  T1's first consumer — exactly upstream's :1539-1587 route). Build
+  green, sweep 2067. Remaining obligations: client_request,
+  do_leader, append_entries.
