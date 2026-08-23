@@ -214,6 +214,10 @@ import GoLeanProofs.Specs.Raft.BfSteps
 import GoLeanProofs.Specs.Raft.BfSteps2
 import GoLeanProofs.Specs.Raft.BfEquation
 import GoLeanProofs.Specs.Raft.BpcEquation
+import GoLeanProofs.Specs.Raft.BcLit
+import GoLeanProofs.Specs.Raft.BcFixture
+import GoLeanProofs.Specs.Raft.BcSteps
+import GoLeanProofs.Specs.Raft.BcEquation
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)
