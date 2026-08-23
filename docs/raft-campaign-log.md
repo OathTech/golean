@@ -491,6 +491,19 @@ is the §4.4 park-and-report condition, not an emergency.
   lane = when the wave's manifest reads done: retry pass →
   composition build → the witness.
 
+- **Arc 3, unit 14 — LANDED** @ 88deb524 (6th-gen, second full
+  charter): W-C remainder + W-D, all seven files —
+  no_AE_replies_to_self, no_AE_to_leader, match_index_leader,
+  prevLog_leader_sublog (unit 13's PLCET paying off), the two
+  ghost-log invariants (the handleAppendEntries_ghost_log engine),
+  and **state_machine_safety' — THE SMS-PRIME STATEMENT** (~250-line
+  upstream nw' soup factored to two shared cores, §9 call); the
+  msg-side primed layer COMPLETE (all ten bridges). Sweep **2439**;
+  index 78 rows; 110 lane commits; gate PASS. Unit 15 = the FINAL
+  STRETCH: MatchIndexAllEntries (last pre-cap file, every dep
+  PROVED) → the W-F cap (GAP-8 reghosting +
+  StateMachineSafetyProof's interior). [AGENT]: 7th-gen rotation.
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
