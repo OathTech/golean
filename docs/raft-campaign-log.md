@@ -337,6 +337,23 @@ is the §4.4 park-and-report condition, not an emergency.
   γ-projections). Gate PASS, 471 jobs green. Slice ladder: 2 =
   sync-ops, 3 = call entry, 4 = choice-crossing composition.
 
+- **Arc 4, A4-U2 slices 2+3 — LANDED** @ 785a3461: sync-ops
+  census-scoped (Mutex lock/unlock only — no Once on the path,
+  checked; the tabled storeLocT fix caught by an honest probe-quit at
+  step 102) + the one-lever call entry (enterFrameT running the
+  MACHINE'S OWN table helpers — zero re-implementation; Agrees =
+  equality not sub-table, with the soundness reasoning recorded;
+  delegation preserved a THIRD time — layered stepFnTB→stepFnT→
+  stepFn', shipped statements untouched). Interface-receiver dispatch
+  honestly scoped OUT (residual 2b — one logger call on the path).
+  RE-MEASURE: becomeFollower = ONE 189-step window to the designed Q3
+  boundary (51 s build); **projection now INSIDE the gallery bar**
+  (≈600-1,000 lines/handler vs 3,000-6,000 hand). Worker
+  recommendation adopted [AGENT]: slice 4 (choice-crossing
+  composition, smallest instance = Intn's single pick) BEFORE A4-U3
+  — U3 becomes assembly after it. 13 Audit/Kit pins paid (slice-1
+  debt noticed and settled by the worker unprompted).
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
