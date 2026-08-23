@@ -2895,3 +2895,15 @@ wants it); context stop-rule stands.
   to any same-term claiming leader via base `leader_sublog` (host).
   New transport `prevLog_leader_sublog_of_update` (type demotions +
   growing logs + no fresh AE). Compiled on first attempt. Build green.
+- 2026-08-23 Slice 78: `ghost_log_allEntries_invariant`
+  (GhostLogAllEntriesInterface.v:8-14 / Proof.v:246-268 1:1) — the
+  SECOND primed-principle consumer, upstream's own assembly: old
+  packets ride `glae_transport` (allEntries only grow — the unit-6
+  cases lemmas + the RV/RVR/timeout unchanged facts); every fresh
+  packet's ghost is the post-state's log, recorded by
+  `lifted_in_log_in_all_entries` AT THE SUCCESSOR NET (unit 12's
+  refined invariant through `msg_simulation_1`, definitional
+  `nwState`). [AGENT] The parenthesized-multiline-`by` parse gotcha
+  bit twice more (same class as slice 75) — restructured to named
+  `have`s; recorded: NEVER break a `(by tac; tac)` across lines. Build
+  green.

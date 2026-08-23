@@ -422,6 +422,236 @@ theorem log_properties_hold_on_ghost_logs_invariant :
     rw [← hpkts] at hp0
     exact hP Pr p0 hprop hp0
 
+/-! ## ghost_log_allEntries (`Raft/GhostLogAllEntriesInterface.v` /
+`RaftProofs/GhostLogAllEntriesProof.v`) — every entry of every
+in-flight ghost log is recorded (at some term) in the SENDER's
+allEntries. The second primed-principle consumer: a fresh packet's
+ghost is the post-state's log, whose entries are recorded by the
+lifted `in_log_in_all_entries` AT THE SUCCESSOR NET. -/
+
+/-- `GhostLogAllEntriesProof.v:18-39`
+(`lifted_in_log_in_all_entries_invariant`): unit 12's refined
+invariant imported through `msg_simulation_1` (definitional
+`nwState`). -/
+theorem lifted_in_log_in_all_entries :
+    ∀ net : MsgNet, msg_refined_raft_intermediate_reachable (P := P) net →
+      ∀ (h : name (P := P)) (e : entry (P := P)),
+        e ∈ (net.nwState h).2.log →
+        ∃ t, (t, e) ∈ (net.nwState h).1.allEntries :=
+  fun net hreach =>
+    in_log_in_all_entries_invariant (mgv_deghost net)
+      (msg_simulation_1 net hreach)
+
+/-- `GhostLogAllEntriesInterface.v:8-14` (`ghost_log_allEntries`). -/
+def ghost_log_allEntries (net : MsgNet) : Prop :=
+  ∀ (p : MsgPacket) (e : entry (P := P)),
+    p ∈ net.nwPackets →
+    e ∈ (p.pBody : ghost_log (P := P) × msg (P := P)).1 →
+    ∃ t, (t, e) ∈ (net.nwState p.pSrc).1.allEntries
+
+/-- Sender-side transport: allEntries only grow at the updated node. -/
+theorem glae_transport {net : MsgNet}
+    {st' : name (P := P) → electionsData (P := P) × raft_data (P := P)}
+    {u : name (P := P)} {gd : electionsData (P := P)}
+    {d : raft_data (P := P)}
+    (hst : ∀ h', st' h' = update net.nwState u (gd, d) h')
+    (hgrow : ∀ (t : term) (e : entry (P := P)),
+      (t, e) ∈ (net.nwState u).1.allEntries → (t, e) ∈ gd.allEntries)
+    {src : name (P := P)} {e : entry (P := P)}
+    (hex : ∃ t, (t, e) ∈ (net.nwState src).1.allEntries) :
+    ∃ t, (t, e) ∈ (st' src).1.allEntries := by
+  obtain ⟨t, ht⟩ := hex
+  rw [hst src]
+  by_cases heq : src = u
+  · rw [heq, update_same]
+    rw [heq] at ht
+    exact ⟨t, hgrow t e ht⟩
+  · rw [update_neq _ _ heq]
+    exact ⟨t, ht⟩
+
+/-- `GhostLogAllEntriesProof.v:246-268` (`ghost_log_allEntries_invariant`,
+via the PRIMED principle — upstream's own assembly). -/
+theorem ghost_log_allEntries_invariant :
+    ∀ net, msg_refined_raft_intermediate_reachable (P := P) net →
+      ghost_log_allEntries net := by
+  refine msg_refined_raft_net_invariant' ?_ ?_ ?_ ?_ ?_ ?_
+    (msg_refined_raft_net_invariant_request_vote_reply'_weak ?_) ?_ ?_
+    (msg_refined_raft_net_invariant_subset'_weak ?_)
+    (msg_refined_raft_net_invariant_reboot'_weak ?_)
+  · -- init
+    intro p e hp _
+    exact nomatch hp
+  · -- client_request'
+    intro h net st' ps' gd out d l client id c hcr hgd hP _hreach
+      hreach' hst hps
+    intro p0 e hp0 he
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnew
+    · refine glae_transport hst ?_ (hP p0 e hold he)
+      intro t0 e0 hin
+      rw [hgd]
+      rcases update_elections_data_client_request_allEntries_cases h
+        (net.nwState h) client id c with hsame | ⟨t1, e1, hcons, -⟩
+      · rw [hsame]
+        exact hin
+      · rw [hcons]
+        exact List.mem_cons_of_mem _ hin
+    · obtain ⟨m1, hm1, rfl⟩ := mem_send_ghost_elim hnew
+      have hlog : e ∈ ((⟨ps', st'⟩ : MsgNet).nwState h).2.log := by
+        show e ∈ (st' h).2.log
+        rw [hst h, update_same]
+        exact he
+      exact lifted_in_log_in_all_entries ⟨ps', st'⟩ hreach' h e hlog
+  · -- timeout'
+    intro net h st' ps' gd out d l hto hgd hP _hreach hreach' hst hps
+    intro p0 e hp0 he
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnew
+    · refine glae_transport hst ?_ (hP p0 e hold he)
+      intro t0 e0 hin
+      rw [hgd, (update_elections_data_timeout_ghost h (net.nwState h)).2]
+      exact hin
+    · obtain ⟨m1, hm1, rfl⟩ := mem_send_ghost_elim hnew
+      have hlog : e ∈ ((⟨ps', st'⟩ : MsgNet).nwState h).2.log := by
+        show e ∈ (st' h).2.log
+        rw [hst h, update_same]
+        exact he
+      exact lifted_in_log_in_all_entries ⟨ps', st'⟩ hreach' h e hlog
+  · -- append_entries'
+    intro xs p ys net st' ps' gd d m t n pli plt es ci hae hgd _hbody hP
+      _hreach hreach' hpkts hst hps
+    intro p0 e hp0 he
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnew
+    · have hold2 : p0 ∈ net.nwPackets := by
+        rw [hpkts]
+        exact mem_of_mem_remove_middle hold
+      refine glae_transport hst ?_ (hP p0 e hold2 he)
+      intro t0 e0 hin
+      rw [hgd]
+      rcases update_elections_data_appendEntries_allEntries_cases p.pDst
+        (net.nwState p.pDst) t n pli plt es ci with hsame | ⟨t1, happ⟩
+      · rw [hsame]
+        exact hin
+      · rw [happ]
+        exact List.mem_append.mpr (Or.inr hin)
+    · rw [hnew] at he
+      have hlog : e ∈ ((⟨ps', st'⟩ : MsgNet).nwState p.pDst).2.log := by
+        show e ∈ (st' p.pDst).2.log
+        rw [hst p.pDst, update_same]
+        exact he
+      have hres := lifted_in_log_in_all_entries ⟨ps', st'⟩ hreach' p.pDst
+        e hlog
+      rw [hnew]
+      exact hres
+  · -- append_entries_reply': no sends
+    intro xs p ys net st' ps' gd d m t es res haer hgd _hbody hP _hreach
+      hreach' hpkts hst hps
+    obtain ⟨-, -, hl⟩ := handleAppendEntriesReply_spec p.pDst
+      (net.nwState p.pDst).2 p.pSrc t es res haer
+    intro p0 e hp0 he
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnew
+    · have hold2 : p0 ∈ net.nwPackets := by
+        rw [hpkts]
+        exact mem_of_mem_remove_middle hold
+      refine glae_transport hst ?_ (hP p0 e hold2 he)
+      intro t0 e0 hin
+      rw [hgd]
+      exact hin
+    · rw [hl] at hnew
+      simp [send_packets, add_ghost_msg] at hnew
+  · -- request_vote'
+    intro xs p ys net st' ps' gd d m t cid lli llt hrv hgd _hbody hP
+      _hreach hreach' hpkts hst hps
+    intro p0 e hp0 he
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnew
+    · have hold2 : p0 ∈ net.nwPackets := by
+        rw [hpkts]
+        exact mem_of_mem_remove_middle hold
+      refine glae_transport hst ?_ (hP p0 e hold2 he)
+      intro t0 e0 hin
+      rw [hgd, (update_elections_data_requestVote_cronies p.pDst p.pSrc t
+        p.pSrc lli llt (net.nwState p.pDst)).2.2]
+      exact hin
+    · rw [hnew] at he
+      have hlog : e ∈ ((⟨ps', st'⟩ : MsgNet).nwState p.pDst).2.log := by
+        show e ∈ (st' p.pDst).2.log
+        rw [hst p.pDst, update_same]
+        exact he
+      have hres := lifted_in_log_in_all_entries ⟨ps', st'⟩ hreach' p.pDst
+        e hlog
+      rw [hnew]
+      exact hres
+  · -- request_vote_reply (unprimed): no sends
+    intro xs p ys net st' ps' gd d t v hrvr hgd _hbody hP _hreach hpkts
+      hst hps
+    intro p0 e hp0 he
+    replace hp0 : p0 ∈ ps' := hp0
+    have hold : p0 ∈ net.nwPackets := by
+      rw [hpkts]
+      exact mem_of_mem_remove_middle (hps p0 hp0)
+    refine glae_transport hst ?_ (hP p0 e hold he)
+    intro t0 e0 hin
+    rw [hgd]
+    rw [(update_elections_data_requestVoteReply_votes p.pDst p.pSrc t v
+      (net.nwState p.pDst)).2.2]
+    exact hin
+  · -- do_leader'
+    intro net st' ps' gd d h os d' ms hdl hP _hreach hreach' hstate hst
+      hps
+    intro p0 e hp0 he
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnew
+    · refine glae_transport hst ?_ (hP p0 e hold he)
+      intro t0 e0 hin
+      have hgd : gd = (net.nwState h).1 := by rw [hstate]
+      rw [hgd]
+      exact hin
+    · obtain ⟨m1, hm1, rfl⟩ := mem_send_ghost_elim hnew
+      have hlog : e ∈ ((⟨ps', st'⟩ : MsgNet).nwState h).2.log := by
+        show e ∈ (st' h).2.log
+        rw [hst h, update_same]
+        exact he
+      exact lifted_in_log_in_all_entries ⟨ps', st'⟩ hreach' h e hlog
+  · -- do_generic_server': no messages
+    intro net st' ps' gd d os d' ms h hgs hP _hreach hreach' hstate hst
+      hps
+    obtain ⟨-, -, -, -, -, hms⟩ := doGenericServer_spec h d hgs
+    intro p0 e hp0 he
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnew
+    · refine glae_transport hst ?_ (hP p0 e hold he)
+      intro t0 e0 hin
+      have hgd : gd = (net.nwState h).1 := by rw [hstate]
+      rw [hgd]
+      exact hin
+    · rw [hms] at hnew
+      simp [send_packets, add_ghost_msg] at hnew
+  · -- state_same_packet_subset (unprimed)
+    intro net net' hstates hsub hP _hreach
+    intro p0 e hp0 he
+    obtain ⟨t0, ht0⟩ := hP p0 e (hsub p0 hp0) he
+    refine ⟨t0, ?_⟩
+    rw [← hstates p0.pSrc]
+    exact ht0
+  · -- reboot (unprimed): the ghost survives; packets unchanged
+    intro net net' gd d h d' hrb hP _hreach hstate hst hpkts
+    intro p0 e hp0 he
+    rw [← hpkts] at hp0
+    obtain ⟨t0, ht0⟩ := hP p0 e hp0 he
+    refine ⟨t0, ?_⟩
+    rw [hst p0.pSrc]
+    by_cases heq : p0.pSrc = h
+    · rw [heq, update_same]
+      show (t0, e) ∈ gd.allEntries
+      rw [show gd = (net.nwState h).1 from by rw [hstate]]
+      rw [heq] at ht0
+      exact ht0
+    · rw [update_neq _ _ heq]
+      exact ht0
+
 end GhostLogs
 end Raft
 end VerdiCompat
