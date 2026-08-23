@@ -3071,3 +3071,78 @@ Split discipline as always. Successors re-verify THIS unit fresh:
 capped full build + sweep 2439 + the nine-headliner probe above +
 hatch grep over SafetyPrime.lean AND GhostLogs.lean AND
 MsgRefinement.lean (expect 0 all three).
+
+## Unit 15 — W-E MatchIndexAllEntries + the W-F entry (2026-08-23, coordinator-posted charter)
+
+Charter: (a) W-E `MatchIndexAllEntries` (1,134L — the last pre-cap
+file); then (b) THE W-F CAP: GAP-8 (the msg reghosting —
+`msg_simulation_2`/`msg_lower_prop`, mirroring unit 1's state-ghost
+construction) and `StateMachineSafetyProof.v`'s interior, landing
+`state_machine_safety` (base) and discharging Properties.lean's
+declared `StateMachineSafetyStatement` transfer target natively if it
+reaches. Split discipline fully in force: (a) alone, or (a)+GAP-8, are
+complete units; the remainder chartered honestly.
+
+- 2026-08-23 SUCCESSOR RE-VERIFICATION of unit 14 (recomputed, fresh
+  reader): tip 88deb524, tree clean, branch `campaign-arc3`;
+  `deps/verdi-raft` pin re-verified
+  `a3375e867326a82225e724cc1a7b4758b029376f` (read from the MAIN
+  checkout, as every unit). Fresh capped `lake build` (24G) green
+  ("Build completed successfully (57 jobs)"); the sweep line there was
+  a cache replay, so re-derived by fresh capped
+  `lake env lean AxCheck.lean` — verbatim `AxCheck sweep: 2439
+  declarations across VerdiCompat modules, axiom set within
+  [propext, Quot.sound]`. Fresh capped nine-headliner `#print axioms`
+  probe (repo-local scratch): `no_append_entries_replies_to_self`,
+  `no_append_entries_to_leader`, `match_index_leader`,
+  `prevLog_leader_sublog`, `ghost_log_allEntries`,
+  `ghost_log_entries_match`, `state_machine_safety_host'`,
+  `state_machine_safety_nw'`, `state_machine_safety'` invariants ALL
+  `depends on axioms: [propext, Quot.sound]` verbatim. Hatch grep
+  (`sorry|native_decide|^axiom| axiom `) over SafetyPrime.lean AND
+  GhostLogs.lean AND MsgRefinement.lean: 0 hits (exit 1). All claims
+  hold; building on them.
+- 2026-08-23 [AGENT] UNIT-15 CLOSURE, re-derived fresh (`Require
+  Import` walk @ a3375e8, pin re-verified by `git rev-parse`):
+  (a) MatchIndexAllEntriesProof.v (1,134L, wc at the pin) — every
+  imported Interface is an INDEX PROVED row (NoAEToLeader ✓,
+  NoAEToSelf ✓, TAIFOL ✓, RLML ✓, LogAllEntries ✓, AERLeaderLogs ✓,
+  LeaderSublog ✓, LHLLStrong ✓, OneLeaderLogPerTerm ✓,
+  MatchIndexLeader ✓, MatchIndexSanity ✓, AEReplySublog ✓,
+  CandidateEntries ✓, VotesCorrect ✓, CroniesCorrect ✓); no
+  msg-ghost. (b) SMS's import list checks the same way: everything is
+  a PROVED row except MatchIndexAllEntries (= (a)),
+  CommitRecordedCommitted/MaxIndexSanity (no proof files — proved
+  INSIDE StateMachineSafetyProof.v, per the unit-11 census), GAP-8's
+  reghosting (Proof :655-940: `simulation_2` needs `map_subset`,
+  `mgv_ghost_simulation_2`, and a msg-level dup-drop
+  `subset_reachable` mirroring unit 7's — exactly as the unit-11
+  deferral census predicted), and the SMS interior itself (3,199L).
+- 2026-08-23 [AGENT] GAP-1 STATE-SIDE PRIMED SET — FIRST GENUINE
+  TRIGGER (the per-site decision, mirroring unit 13's msg-side one):
+  `match_index_all_entries_invariant` (Proof :1101-1127) applies
+  **`refined_raft_net_invariant'`** with the append_entries obligation
+  in PRIMED form (:499-608) and all others through `_'_weak` bridges.
+  The AE case's fresh-reply half reads `log_all_entries_invariant` and
+  `entries_match_invariant` AT THE SUCCESSOR NET — the receiver's
+  post-splice log/allEntries are what certify the reply's entries, so
+  the pre-state route is structurally unavailable for named-invariant
+  reasons this time (the facts needed are about the post-state, whose
+  reachability is exactly the primed premise). DECISION: port the
+  state-side primed set now — the ten primed obligation shapes 1:1
+  (RaftRefinementInterface.v:327-439; state_same_packet_subset stays
+  unprimed, exactly upstream's principle statement), the nine `_weak`
+  bridges (:441-521), and `refined_raft_net_invariant'`
+  (RaftRefinementProof.v:244-258 statement 1:1) by the unit-13
+  Q-ROUTE (unprimed principle at `Q net := reachable net → Pr net`;
+  no 230-line induction duplicated). GAP-1 CLOSES with this port
+  (both sides then exist; the msg side landed in unit 13).
+- 2026-08-23 [AGENT] File plan: the primed set lands in
+  `RefinedProofStructure.lean` beside the unprimed (upstream's own
+  file split, mirroring unit 13's MsgRefinement placement);
+  (a)'s invariant in new `MatchIndexAllEntries.lean` (imports
+  SafetyPrime, wired into VerdiCompat.lean from birth); (b)'s
+  reghosting in `MsgRefinement.lean` beside `msg_simulation_1`
+  (upstream's own file); the SMS interior, if reached, in new
+  `StateMachineSafety.lean`. Non-vacuity for the primed principle:
+  its first consumer is (a)'s invariant itself, same unit.
