@@ -468,6 +468,226 @@ theorem in_log_in_all_entries_invariant :
     rw [← hrb, hstate]
     rfl
 
+/-! ## log_all_entries (`Raft/LogAllEntriesInterface.v` /
+`RaftProofs/LogAllEntriesProof.v`) -/
+
+/-- `LogAllEntriesInterface.v` (`log_all_entries`): a current-term log
+entry is recorded at its own term. -/
+def log_all_entries (net : RefinedNet) : Prop :=
+  ∀ (h : name (P := P)) (e : entry (P := P)),
+    e ∈ (net.nwState h).2.log →
+    e.eTerm = (net.nwState h).2.currentTerm →
+    (e.eTerm, e) ∈ (net.nwState h).1.allEntries
+
+/-- `LogAllEntriesProof.v:27-39`
+(`no_entries_past_current_term_host_lifted_invariant`). -/
+theorem nepct_host_lifted :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      ∀ (h : name (P := P)) (e : entry (P := P)),
+        e ∈ (net.nwState h).2.log →
+        e.eTerm ≤ (net.nwState h).2.currentTerm :=
+  fun net hreach h e he =>
+    (lift_prop _ no_entries_past_current_term_invariant net hreach).1 h e he
+
+/-- Transport for `log_all_entries` across steps that keep the log and
+records at the updated node and move its term only UP (a strictly
+higher term empties the premise via the lifted term-sanity). -/
+theorem lae_of_update {net net' : RefinedNet} {u : name (P := P)}
+    {gd : electionsData (P := P)} {d : raft_data (P := P)}
+    (hP : log_all_entries net)
+    (hreach : refined_raft_intermediate_reachable (P := P) net)
+    (hst : ∀ h', net'.nwState h' = update net.nwState u (gd, d) h')
+    (hlog : d.log = (net.nwState u).2.log)
+    (hae : gd.allEntries = (net.nwState u).1.allEntries)
+    (hct : (net.nwState u).2.currentTerm ≤ d.currentTerm) :
+    log_all_entries net' := by
+  intro h0 e he heterm
+  rw [hst h0] at he heterm ⊢
+  by_cases heq : u = h0
+  · subst heq
+    rw [update_same] at he heterm ⊢
+    show (e.eTerm, e) ∈ gd.allEntries
+    rw [hae]
+    replace he : e ∈ d.log := he
+    replace heterm : e.eTerm = d.currentTerm := heterm
+    rw [hlog] at he
+    have hle := nepct_host_lifted net hreach u e he
+    exact hP u e he (Nat.le_antisymm hle (heterm ▸ hct))
+  · rw [update_neq _ _ (Ne.symm heq)] at he heterm ⊢
+    exact hP h0 e he heterm
+
+/-- `LogAllEntriesProof.v:246-266` (`log_all_entries_invariant`). -/
+theorem log_all_entries_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      log_all_entries net := by
+  refine refined_raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · -- init
+    intro h e he
+    exact nomatch he
+  · -- client_request: the fresh entry's record is at its own term
+    intro h net st' ps' gd out d l client id c hcr hgd hP hreach hst _hps
+    intro h0 e he heterm
+    replace he : e ∈ ((st' h0 : electionsData (P := P) ×
+      raft_data (P := P))).2.log := he
+    replace heterm : e.eTerm = ((st' h0 : electionsData (P := P) ×
+      raft_data (P := P))).2.currentTerm := heterm
+    show (e.eTerm, e) ∈ ((st' h0 : electionsData (P := P) ×
+      raft_data (P := P))).1.allEntries
+    rw [hst h0] at he heterm ⊢
+    by_cases heq : h = h0
+    · subst heq
+      rw [update_same] at he heterm ⊢
+      replace he : e ∈ d.log := he
+      replace heterm : e.eTerm = d.currentTerm := heterm
+      show (e.eTerm, e) ∈ gd.allEntries
+      subst hgd
+      obtain ⟨-, hcteq, -, -, -⟩ :=
+        handleClientRequest_spec h (net.nwState h).2 client id c hcr
+      rcases update_elections_data_client_request_log_allEntries h
+          (net.nwState h) client id c hcr with ⟨hane, hlog⟩ |
+        ⟨e0, he0t, hane, hlog⟩
+      · rw [hane]
+        rw [hlog] at he
+        exact hP h e he (by rw [heterm, hcteq])
+      · rw [hane]
+        rw [hlog] at he
+        rcases List.mem_cons.mp he with rfl | he
+        · rw [heterm]
+          exact List.mem_cons_self ..
+        · exact List.mem_cons_of_mem _
+            (hP h e he (by rw [heterm, hcteq]))
+    · rw [update_neq _ _ (Ne.symm heq)] at he heterm ⊢
+      exact hP h0 e he heterm
+  · -- timeout: log/records unchanged, term only grows
+    intro net h st' ps' gd out d l hto hgd hP hreach hst _hps
+    obtain ⟨hlog, hcases, -⟩ := handleTimeout_spec h (net.nwState h).2 hto
+    refine lae_of_update hP hreach hst hlog
+      (by subst hgd
+          exact (update_elections_data_timeout_ghost h (net.nwState h)).2)
+      ?_
+    rcases hcases with ⟨hcteq, -⟩ | ⟨hcteq, -⟩
+    · exact Nat.le_of_eq hcteq.symm
+    · rw [hcteq]
+      exact Nat.le_succ _
+  · -- append_entries: accepted entries recorded at the (new) term
+    intro xs p ys net st' ps' gd d m t n pli plt es ci hae hgd hbody hP
+      hreach hpkts hst _hps
+    intro h0 e he heterm
+    replace he : e ∈ ((st' h0 : electionsData (P := P) ×
+      raft_data (P := P))).2.log := he
+    replace heterm : e.eTerm = ((st' h0 : electionsData (P := P) ×
+      raft_data (P := P))).2.currentTerm := heterm
+    show (e.eTerm, e) ∈ ((st' h0 : electionsData (P := P) ×
+      raft_data (P := P))).1.allEntries
+    rw [hst h0] at he heterm ⊢
+    by_cases heq : h0 = p.pDst
+    · subst heq
+      rw [update_same] at he heterm ⊢
+      replace he : e ∈ d.log := he
+      replace heterm : e.eTerm = d.currentTerm := heterm
+      show (e.eTerm, e) ∈ gd.allEntries
+      subst hgd
+      have hmono : (net.nwState p.pDst).2.currentTerm ≤ d.currentTerm :=
+        (handleAppendEntries_currentTerm_leaderId p.pDst
+          (net.nwState p.pDst).2 t n pli plt es ci hae).1
+      have hold : ∀ e0 ∈ (net.nwState p.pDst).2.log,
+          e0.eTerm = d.currentTerm →
+          (e0.eTerm, e0) ∈ (net.nwState p.pDst).1.allEntries := by
+        intro e0 he0 het0
+        have hle := nepct_host_lifted net hreach p.pDst e0 he0
+        exact hP p.pDst e0 he0 (Nat.le_antisymm hle (het0 ▸ hmono))
+      rcases update_elections_data_appendEntries_log_allEntries p.pDst
+          (net.nwState p.pDst) t n pli plt es ci hae with ⟨hlog, hane⟩ |
+        ⟨hcteq, hane, hlogc⟩
+      · rw [hane]
+        rw [hlog] at he
+        exact hold e he heterm
+      · rw [hane]
+        have hines : ∀ e0 ∈ es, e0.eTerm = d.currentTerm →
+            (e0.eTerm, e0) ∈ ((es.map fun e1 => (t, e1)) ++
+              (net.nwState p.pDst).1.allEntries) := by
+          intro e0 he0 het0
+          refine List.mem_append.mpr (Or.inl
+            (List.mem_map.mpr ⟨e0, he0, ?_⟩))
+          rw [het0, hcteq]
+        rcases hlogc with hd | hd | hd
+        · rw [hd] at he
+          exact List.mem_append.mpr (Or.inr (hold e he heterm))
+        · rw [hd] at he
+          exact hines e he heterm
+        · rw [hd] at he
+          rcases List.mem_append.mp he with he | he
+          · exact hines e he heterm
+          · exact List.mem_append.mpr (Or.inr
+              (hold e (removeAfterIndex_in he) heterm))
+    · rw [update_neq _ _ heq] at he heterm ⊢
+      exact hP h0 e he heterm
+  · -- append_entries_reply
+    intro xs p ys net st' ps' gd d m t es res haer hgd _hbody hP hreach
+      hpkts hst _hps
+    obtain ⟨-, hcases, -⟩ :=
+      handleAppendEntriesReply_spec p.pDst (net.nwState p.pDst).2 p.pSrc
+        t es res haer
+    refine lae_of_update hP hreach hst
+      (handleAppendEntriesReply_log p.pDst (net.nwState p.pDst).2 p.pSrc
+        t es res haer)
+      (by rw [hgd]) ?_
+    rcases hcases with ⟨hcteq, -⟩ | ⟨hlt, -⟩
+    · exact Nat.le_of_eq hcteq.symm
+    · exact Nat.le_of_lt hlt
+  · -- request_vote
+    intro xs p ys net st' ps' gd d m t cid lli llt hrv hgd _hbody hP
+      hreach hpkts hst _hps
+    obtain ⟨-, hle, -, -⟩ :=
+      handleRequestVote_spec p.pDst (net.nwState p.pDst).2 t p.pSrc lli
+        llt hrv
+    exact lae_of_update hP hreach hst
+      (handleRequestVote_log p.pDst (net.nwState p.pDst).2 t p.pSrc lli
+        llt hrv)
+      (by subst hgd
+          exact (update_elections_data_requestVote_cronies p.pDst p.pSrc
+            t p.pSrc lli llt (net.nwState p.pDst)).2.2) hle
+  · -- request_vote_reply
+    intro xs p ys net st' ps' gd d t v hrvr hgd _hbody hP hreach hpkts
+      hst _hps
+    refine lae_of_update hP hreach hst
+      (by rw [← hrvr]
+          exact handleRequestVoteReply_log p.pDst (net.nwState p.pDst).2
+            p.pSrc t v)
+      (by subst hgd
+          exact (update_elections_data_requestVoteReply_votes p.pDst
+            p.pSrc t v (net.nwState p.pDst)).2.2) ?_
+    rcases (handleRequestVoteReply_spec p.pDst (net.nwState p.pDst).2
+        p.pSrc t v hrvr).1 with ⟨hcteq, -⟩ | ⟨hlt, -⟩
+    · exact Nat.le_of_eq hcteq.symm
+    · exact Nat.le_of_lt hlt
+  · -- do_leader
+    intro net st' ps' gd d h os d' ms hdl hP hreach hstate hst _hps
+    obtain ⟨hct, -, -, -, hlog, -⟩ := doLeader_spec d h hdl
+    refine lae_of_update hP hreach hst (by rw [hlog, hstate])
+      (by rw [hstate]) ?_
+    rw [hct, hstate]
+    exact Nat.le_refl _
+  · -- do_generic_server
+    intro net st' ps' gd d os d' ms h hdgs hP hreach hstate hst _hps
+    obtain ⟨hlog, -, hct, -, -, -⟩ := doGenericServer_spec h d hdgs
+    refine lae_of_update hP hreach hst (by rw [hlog, hstate])
+      (by rw [hstate]) ?_
+    rw [hct, hstate]
+    exact Nat.le_refl _
+  · -- state_same_packet_subset
+    intro net net' hstate _hpk hP _hreach
+    intro h0 e he heterm
+    rw [← hstate h0] at he heterm ⊢
+    exact hP h0 e he heterm
+  · -- reboot: log, term, and records all survive
+    intro net net' gd d h d' hrb hP hreach hstate hst _hpkts
+    refine lae_of_update hP hreach hst ?_ (by rw [hstate]) ?_
+    · rw [← hrb, hstate]
+      rfl
+    · rw [← hrb, hstate]
+      exact Nat.le_refl _
+
 end SafetyLeaves
 end Raft
 end VerdiCompat
