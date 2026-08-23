@@ -1,0 +1,4 @@
+import VerdiCompat
+#print axioms VerdiCompat.Raft.leaderLogs_preserved_invariant
+#print axioms VerdiCompat.Raft.allEntries_votesWithLog_invariant
+#print axioms VerdiCompat.Raft.allEntries_log_invariant

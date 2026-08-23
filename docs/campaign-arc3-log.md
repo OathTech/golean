@@ -1725,3 +1725,50 @@ so the minimal-port-on-first-need clause will likely fire). Same
 conventions; successors re-verify this unit fresh (build + sweep 1985
 + the seven-headliner probe above + hatch grep over
 LeaderLogsAssembly.lean).
+
+## Unit 9 — GAP-6: leader_completeness's proof (2026-08-23, coordinator-accepted charter)
+
+Charter per the posted proposal, coordinator additions folded in:
+context rule ACTIVE (stop at a clean slice boundary at first strain —
+PrefixWithinTerm at 1,915L is the flagged point; a mid-unit handoff
+there is a fine outcome); when leader_completeness lands, the report
+states the T3 ladder plainly; GAP-2 minimal-port-on-first-need if
+PrefixWithinTerm surprises.
+
+- 2026-08-23 SUCCESSOR RE-VERIFICATION of unit 8 (recomputed, same
+  worker continuing under the unit-9 charter): tip becfe284, tree
+  clean; `deps/verdi-raft` pin re-verified
+  `a3375e867326a82225e724cc1a7b4758b029376f`. Fresh capped
+  `lake env lean AxCheck.lean` printed verbatim `AxCheck sweep: 1985
+  declarations across VerdiCompat modules, axiom set within
+  [propext, Quot.sound]`; fresh capped `#print axioms` probe:
+  `leaderLogs_preserved_invariant`, `allEntries_votesWithLog_invariant`,
+  `allEntries_log_invariant` all
+  `depends on axioms: [propext, Quot.sound]` verbatim; hatch grep
+  (`sorry|native_decide|^axiom| axiom `) over LeaderLogsAssembly.lean:
+  0 hits. All claims hold; building on them.
+- 2026-08-23 [AGENT] UNIT-9 CLOSURE, re-derived fresh (`Require
+  Import` walk @ a3375e8, pin re-verified; every imported Interface
+  diffed against the INDEX's proved rows): exactly the six charter
+  files, `wc -l` total **3,428** upstream lines; **no msg-ghost**
+  (`grep -l "MsgRefinement\|GhostLog"` over all 12 closure files:
+  empty). In-unit waves ([deps] = unported only):
+  - W1: AllEntriesCandidateEntries 305 [—; CandidateEntries ✓,
+    CroniesCorrect ✓, CroniesTerm ✓, AllEntriesTermSanity ✓] and
+    appendEntriesRequest_term_sanity 48 [—; Sorted ✓];
+  - W2: AllEntriesLeaderSublog 351 [AllEntriesCandidateEntries;
+    VotesCorrect ✓, CroniesCorrect ✓, LeaderSublog ✓,
+    OneLeaderPerTerm ✓];
+  - W3: AllEntriesLogMatching 430 [AllEntriesLeaderSublog;
+    LeaderSublog ✓, RLML ✓];
+  - W4: PrefixWithinTerm 1,915 [AllEntriesLogMatching,
+    AERTermSanity; LogsLeaderLogs ✓, RLML ✓, OneLeaderLogPerTerm ✓,
+    LeaderLogsSorted ✓, LeaderLogsSublog ✓, LeaderSublog ✓,
+    NextIndexSafety ✓, LeaderLogsContiguous ✓];
+  - W5: LeaderCompleteness 379 [PrefixWithinTerm; LLTermSanity ✓,
+    LeaderLogsPreserved ✓, EveryEntryWasCreated ✓,
+    LeaderLogsVotesWithLog ✓, AllEntriesVotesWithLog ✓,
+    VotesWithLogSorted ✓, TermsAndIndicesFromOne ✓,
+    LeaderLogsLogMatching ✓].
+  File plan: new `LeaderCompleteness.lean` (imports
+  LeaderLogsAssembly), wired into VerdiCompat.lean from birth.
