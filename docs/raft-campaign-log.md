@@ -369,6 +369,21 @@ is the §4.4 park-and-report condition, not an emergency.
   dispatched to the Arc-4 worker with the stop-at-boundary rule
   ACTIVE.
 
+- **Arc 4, A4-U2 slice 4 — LANDED** @ dab1163d (clean-boundary stop
+  per the active rule): **THE HANDLER SPINE EXISTS** —
+  `stepFn_pick_generic` (type-generic map-range pick) +
+  `stepFnIter_window_pick_window` (pre-window + quantified pick +
+  post-window), with §4(ii)'s valuation-absorption REALIZED (the
+  picked key symbolic in the fixture: ONE post-window serves every
+  pick; canonicalization as design rule). becomeFollower's 945-step
+  prefix-quantified span at ~130 lines (vs ~8,500 at the pilot's
+  hand rate); pre-window grew 189→642 steps quitting EXACTLY at the
+  designed Q3 pick; two same-lever Q4 lifts found by honest window
+  quits. Full span (3,233) deliberately NOT claimed — the four-item
+  U3 checklist posted. [AGENT]: worker rotated at 820k; fresh
+  successor dispatched on A4-U3 (the first FULL handler equation +
+  the A4 scale verdict re-projecting U4..U9).
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
