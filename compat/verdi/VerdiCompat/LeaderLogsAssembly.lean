@@ -2008,17 +2008,19 @@ theorem update_elections_data_client_request_allEntries_head_term
       = st.1.allEntries ∨
     ∃ e : entry (P := P), e.eTerm = d.currentTerm ∧
       (update_elections_data_client_request me st client id c).allEntries
-        = (d.currentTerm, e) :: st.1.allEntries := by
+        = (d.currentTerm, e) :: st.1.allEntries ∧
+      st.2.type = .Leader := by
   unfold update_elections_data_client_request
   rw [hcr]
   simp only []
   rcases handleClientRequest_log_full me st.2 client id c hcr with
-    ⟨-, hlog⟩ | ⟨-, heq⟩
+    ⟨hty, hlog⟩ | ⟨-, heq⟩
   · rw [hlog, if_pos (by
       simp only [Nat.blt_eq, List.length_cons]
       exact Nat.lt_succ_self _)]
     exact Or.inr ⟨_,
-      ((handleClientRequest_spec me st.2 client id c hcr).2.1).symm, rfl⟩
+      ((handleClientRequest_spec me st.2 client id c hcr).2.1).symm, rfl,
+      hty⟩
   · rw [heq, if_neg (by
       simp only [Nat.blt_eq]
       exact Nat.lt_irrefl _)]
@@ -2081,7 +2083,7 @@ theorem allEntries_leaderLogs_term_invariant :
         client id c).2.2.2]
       exact hin
     rcases update_elections_data_client_request_allEntries_head_term h
-      (net.nwState h) client id c hcr with hsame | ⟨enew, hterm, hcons⟩
+      (net.nwState h) client id c hcr with hsame | ⟨enew, hterm, hcons, -⟩
     · exact allEntries_leaderLogs_term_of_update hP hst hgrow
         (hgd ▸ hsame)
     · intro t e h0 hin
@@ -3673,7 +3675,7 @@ theorem allEntries_votesWithLog_invariant :
       rw [(update_elections_data_client_request_ghost h0 (net.nwState h0)
         client id c).2.1] at hvin
       rcases update_elections_data_client_request_allEntries_head_term
-        h0 (net.nwState h0) client id c hcr with hsame | ⟨enew, -, hcons⟩
+        h0 (net.nwState h0) client id c hcr with hsame | ⟨enew, -, hcons, -⟩
       · rw [hsame] at hin
         rcases hP t0 e t' leader h0 llog hin hvin hlt with hL |
           ⟨t'', leader', log', hmem, h1, h2, h3⟩

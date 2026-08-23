@@ -1772,3 +1772,21 @@ PrefixWithinTerm surprises.
     LeaderLogsLogMatching ✓].
   File plan: new `LeaderCompleteness.lean` (imports
   LeaderLogsAssembly), wired into VerdiCompat.lean from birth.
+- 2026-08-23 Slice 50 (W1): `LeaderCompleteness.lean` opened —
+  `append_entries_request_term_sanity`
+  (AppendEntriesRequestTermSanityInterface.v:8-14 1:1; a one-line lift
+  of base logs_sorted's packets_ge_prevTerm conjunct, exactly
+  upstream's 48-line file) and **`allEntries_candidateEntries`**
+  (AllEntriesCandidateEntriesInterface.v 1:1; upstream 305 lines) —
+  unit 3's `*_preserves_candidateEntries` transports re-consumed for
+  nine cases (the promotion-ledger payoff again); the two allEntries
+  WRITERS: client_request's fresh record rides
+  `won_election_cronies` on the pre-state leader ([AGENT] the
+  head_term ghost lemma sharpened with the `st.2.type = .Leader`
+  conjunct its fresh case always had — two consumer patterns updated),
+  append_entries' fresh records ride the pre-state `CandidateEntries`
+  nw half. [AGENT] Gotcha for successors: after editing a lemma in an
+  IMPORTED module, `lake env lean <file>` type-checks against the
+  STALE olean — the resulting rcases arity errors look like dependent-
+  elimination failures; use `lake build <module>` so deps rebuild
+  first. Build green, sweep 1998 (was 1985).
