@@ -3415,3 +3415,19 @@ capped full build + sweep 2617 + the fifteen-headliner probe above +
 hatch grep over StateMachineSafety.lean AND MatchIndexAllEntries.lean
 AND MsgRefinement.lean AND RefinedProofStructure.lean (expect 0 all
 four).
+
+## Unit 16 — THE WRAP (2026-08-23, coordinator-posted charter)
+
+Charter: (1) end-state re-verification as a single act — the milestone
+audit's record; (2) the consolidation slice where genuinely cheap
+(per-item calls logged; a skip-with-reason is a fine outcome); (3)
+GAP-4 closed as moot; (4) the design note's closing section; (5)
+INTEGRATION READINESS refreshed. Gate green; the lane then ends
+BRANCH-COMPLETE, permanently. Nothing merged, nothing designated.
+
+- 2026-08-23 [AGENT] Ordering call (logged): the end-state
+  re-verification runs AFTER the consolidation slice and doc edits,
+  at the SETTLED tip — the coordinator's stated purpose is that the
+  record be what the milestone audit consumes, and a record taken
+  before subsequent edits would not be. (Unit-15's own claims were
+  re-verified fresh at its final entry; the same worker continues.)

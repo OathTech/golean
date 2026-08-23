@@ -137,14 +137,9 @@ theorem mia_allEntries_grow {net : RefinedNet}
       (t, e) ∈ (net.nwState u).1.allEntries → (t, e) ∈ gd.allEntries)
     {h0 : name (P := P)} {t : term} {e : entry (P := P)}
     (hin : (t, e) ∈ (net.nwState h0).1.allEntries) :
-    (t, e) ∈ (st' h0).1.allEntries := by
-  rw [hst h0]
-  by_cases heq : h0 = u
-  · subst heq
-    rw [update_same]
-    exact hgrow t e hin
-  · rw [update_neq _ _ heq]
-    exact hin
+    (t, e) ∈ (st' h0).1.allEntries :=
+  update_proj_mem hst (fun s => s.1.allEntries)
+    (fun x hx => hgrow x.1 x.2 hx) hin
 
 omit O in
 /-- The client-request ghost update in the leader-append case records

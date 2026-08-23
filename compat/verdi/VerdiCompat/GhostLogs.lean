@@ -461,13 +461,8 @@ theorem glae_transport {net : MsgNet}
     (hex : ∃ t, (t, e) ∈ (net.nwState src).1.allEntries) :
     ∃ t, (t, e) ∈ (st' src).1.allEntries := by
   obtain ⟨t, ht⟩ := hex
-  rw [hst src]
-  by_cases heq : src = u
-  · rw [heq, update_same]
-    rw [heq] at ht
-    exact ⟨t, hgrow t e ht⟩
-  · rw [update_neq _ _ heq]
-    exact ⟨t, ht⟩
+  exact ⟨t, update_proj_mem hst (fun s => s.1.allEntries)
+    (fun x hx => hgrow x.1 x.2 hx) ht⟩
 
 /-- `GhostLogAllEntriesProof.v:246-268` (`ghost_log_allEntries_invariant`,
 via the PRIMED principle — upstream's own assembly). -/

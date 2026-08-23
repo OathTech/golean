@@ -1120,13 +1120,8 @@ theorem came_from_leaders_transport {net net' : RefinedNet}
     (hex : ∃ ll, (t, ll) ∈ (net.nwState src).1.leaderLogs) :
     ∃ ll, (t, ll) ∈ (net'.nwState src).1.leaderLogs := by
   obtain ⟨ll, hll⟩ := hex
-  rw [hst src]
-  by_cases heq : src = u
-  · rw [heq, update_same]
-    rw [heq] at hll
-    exact ⟨ll, hgrow t ll hll⟩
-  · rw [update_neq _ _ heq]
-    exact ⟨ll, hll⟩
+  exact ⟨ll, update_proj_mem hst (fun s => s.1.leaderLogs)
+    (fun x hx => hgrow x.1 x.2 hx) hll⟩
 
 /-- `AppendEntriesRequestsCameFromLeadersProof.v:24-160`
 (`append_entries_came_from_leaders_invariant`): a fresh AppendEntries

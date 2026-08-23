@@ -669,23 +669,10 @@ theorem lifted_committed_of_update {net : MsgNet}
     lifted_committed (⟨ps', st'⟩ : MsgNet) e t := by
   refine lifted_committed_log_allEntries_preserved hc ?_ ?_
   · intro h e' h1
-    show e' ∈ (st' h).2.log
-    rw [hst h]
-    by_cases heq : h = u
-    · rw [heq, update_same]
-      rw [heq] at h1
-      exact hlog e' h1
-    · rw [update_neq _ _ heq]
-      exact h1
+    exact update_proj_mem hst (fun s => s.2.log) hlog h1
   · intro h t' e' h1
-    show (t', e') ∈ (st' h).1.allEntries
-    rw [hst h]
-    by_cases heq : h = u
-    · rw [heq, update_same]
-      rw [heq] at h1
-      exact hgae t' e' h1
-    · rw [update_neq _ _ heq]
-      exact h1
+    exact update_proj_mem hst (fun s => s.1.allEntries)
+      (fun x hx => hgae x.1 x.2 hx) h1
 
 /-! ## The `commit_invariant` obligations — the routine eight
 (`StateMachineSafetyProof.v:1408-1470,2158-2305,2737-2835`) -/
