@@ -445,6 +445,8 @@ from artifacts.
 | ghost_log_allEntries | PROVED (msg, primed principle) | Raft/GhostLogAllEntriesInterface.v:8-14 | GhostLogs.lean (invariant) |
 | ghost_log_entries_match (host ∧ nw) | PROVED (msg, primed principle) | Raft/GhostLogLogMatchingInterface.v:9-13 | GhostLogs.lean (invariant) |
 | **state_machine_safety' (SMS-PRIME, host' ∧ nw')** | PROVED (refined) | Raft/StateMachineSafetyPrimeInterface.v | SafetyPrime.lean (invariant + both halves) |
+| refined_raft_net_invariant' (STATE-side primed principle, GAP-1) | PROVED (unit 15, Q-route) | Raft/RaftRefinementInterface.v:327-521 + RaftProofs/RaftRefinementProof.v:244-427 | RefinedProofStructure.lean (primed section, 9 shapes + 9 weak bridges) |
+| match_index_all_entries | PROVED (primed-principle consumer) | Raft/MatchIndexAllEntriesInterface.v:8-22 | MatchIndexAllEntries.lean (inv + interface field) |
 - 2026-08-22 Slice 13 (1cc83c1d): log/message spec lemmas for the ring
   (findGtIndex_in, removeAfterIndex_in, per-handler log facts,
   doLeader_messages, rvr cronies function-level cases).
@@ -3146,3 +3148,41 @@ complete units; the remainder chartered honestly.
   (upstream's own file); the SMS interior, if reached, in new
   `StateMachineSafety.lean`. Non-vacuity for the primed principle:
   its first consumer is (a)'s invariant itself, same unit.
+- 2026-08-23 Slice 81 (627c90f6): the state-side PRIMED set in
+  `RefinedProofStructure.lean` — nine primed obligation shapes 1:1
+  (Interface :327-439; no primed subset shape exists upstream), nine
+  `_weak` bridges (:441-521), and **`refined_raft_net_invariant'`**
+  (Proof.v:244-258 statement 1:1; subset obligation UNPRIMED, exactly
+  upstream) by the unit-13 Q-route. Compiled on first attempt (the
+  msg-side precedent made it mechanical). GAP-1 both sides now ported.
+- 2026-08-23 Slices 82-84: **`MatchIndexAllEntries.lean`**
+  (1,076 lines; wired into VerdiCompat.lean from birth) — defs 1:1,
+  the lifted trio (match_index_leader/sanity, AER-sublog), the
+  grow-transport, all ELEVEN obligations, and the invariant assembled
+  through **THE PRIMED PRINCIPLE** exactly as upstream (:1101-1127; AE
+  primed, everything else `_'_weak`). [AGENT] Route calls (logged,
+  §9 — statements 1:1, three upstream support lemmas dissolved into
+  existing lane invariants): (a) upstream's `appendEntries_sublog` IS
+  unit 7's `append_entries_leader_invariant`; (b) upstream's 68-line
+  `handleAppendEntries_success_allEntries` haveNewEntries analysis
+  dissolves into `handleAppendEntries_true_reply_log` +
+  `appendEntries_haveNewEntries_false`; (c) upstream's
+  post_leader_nop/leader_was_leader + `no_AE_to_leader` detour
+  dissolves into unit 9's
+  `update_elections_data_appendEntries_log_allEntries_leader` (a true
+  reply forces Follower, so a still-leader receiver was a rejection).
+  The AE' fresh-reply case consumes the successor-reachability premise
+  twice — `entries_match_invariant ⟨ps', st'⟩ hreach'` glues the
+  reply's max entry from the receiver's post-splice log to the
+  leader's log, `log_all_entries_invariant ⟨ps', st'⟩ hreach'` reads
+  the record off the post-state — the primed port's §3.3 discharge
+  witness. Gotchas re-hit, resolved per the lane record: the
+  literal-net rw class (replace-shows before `rw [hst ...]`, ×12
+  sites), the RV obligation's forgotten `hbody` premise slot (a
+  dependent-elimination error at `obtain`), `rcases ... with rfl` on
+  e = ⟨literal⟩ before a `have` referencing `e` (reordered rws), and
+  `handleRequestVoteReply_log`'s hypothesis-free signature. Three
+  AxCheck pins added (fresh capped probe, all [propext, Quot.sound]).
+  Full build green, sweep 2506 (was 2439); hatch grep over
+  MatchIndexAllEntries.lean: 0 (exit 1). **W-E COMPLETE — every SMS
+  dependency is now an INDEX PROVED row.**

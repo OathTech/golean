@@ -880,6 +880,196 @@ private theorem mia_request_vote_reply :
     · rw [update_neq _ _ heq] at hct hin hty
       exact hP2 p0 t0 es0 e hold hbody0 hct hin hterm hle hty
 
+/-- `MatchIndexAllEntriesProof.v:499-608`
+(`match_index_all_entries_append_entries`) — THE PRIMED OBLIGATION,
+the whole port's reason to trigger GAP-1: the fresh true reply's
+entries are certified against the RECEIVER's post-splice log and
+allEntries by `entries_match_invariant` and `log_all_entries_invariant`
+applied AT THE SUCCESSOR NET (`hreach'`). The still-leader receiver
+branches ride unit 9's leaves-leader nop instead of upstream's
+`no_AE_to_leader` detour (route note in the file header). -/
+private theorem mia_append_entries :
+    refined_raft_net_invariant_append_entries' (P := P)
+      match_index_all_entries_inv := by
+  intro xs p ys net st' ps' gd d m t n pli plt es ci hae hgd hbody hP hreach
+    hreach' hpkts hst hps
+  obtain ⟨hP1, hP2⟩ := hP
+  obtain ⟨t'', r'', rfl⟩ := handleAppendEntries_reply_entries p.pDst
+    (net.nwState p.pDst).2 t n pli plt es ci hae
+  have hp_in : p ∈ net.nwPackets := by
+    rw [hpkts]
+    exact List.mem_append.mpr (Or.inr (List.mem_cons_self ..))
+  have hgrow : ∀ (t0 : term) (e0 : entry (P := P)),
+      (t0, e0) ∈ (net.nwState p.pDst).1.allEntries →
+      (t0, e0) ∈ gd.allEntries := by
+    intro t0 e0 hin
+    rw [hgd]
+    rcases update_elections_data_appendEntries_allEntries_cases p.pDst
+      (net.nwState p.pDst) t n pli plt es ci with hsame | ⟨t1, happ⟩
+    · rw [hsame]
+      exact hin
+    · rw [happ]
+      exact List.mem_append.mpr (Or.inr hin)
+  constructor
+  · -- host half: a post-state leader was untouched (leaves-leader nop)
+    intro e leader h0 hty hle hin hterm
+    replace hty : (st' leader).2.type = .Leader := hty
+    replace hle : e.eIndex ≤ assoc_default (st' leader).2.matchIndex h0 0 := hle
+    replace hin : e ∈ (st' leader).2.log := hin
+    replace hterm : e.eTerm = (st' leader).2.currentTerm := hterm
+    rw [hst leader] at hty hle hin hterm
+    show (e.eTerm, e) ∈ (st' h0).1.allEntries
+    refine mia_allEntries_grow hst hgrow ?_
+    by_cases heq : leader = p.pDst
+    · rw [heq, update_same] at hty hle hin hterm
+      replace hty : d.type = .Leader := hty
+      replace hle : e.eIndex ≤ assoc_default d.matchIndex h0 0 := hle
+      replace hin : e ∈ d.log := hin
+      replace hterm : e.eTerm = d.currentTerm := hterm
+      obtain ⟨hds, -⟩ := update_elections_data_appendEntries_log_allEntries_leader
+        p.pDst (net.nwState p.pDst) t n pli plt es ci hae hty
+      rw [hds] at hty hle hin hterm
+      exact hP1 e p.pDst h0 hty hle hin hterm
+    · rw [update_neq _ _ heq] at hty hle hin hterm
+      exact hP1 e leader h0 hty hle hin hterm
+  · -- nw half
+    intro p0 t0 es0 e hp0 hbody0 hct hin hterm hle hty
+    replace hp0 : p0 ∈ ps' := hp0
+    replace hct : (st' p0.pDst).2.currentTerm = t0 := hct
+    replace hin : e ∈ (st' p0.pDst).2.log := hin
+    replace hty : (st' p0.pDst).2.type = .Leader := hty
+    show (t0, e) ∈ (st' p0.pSrc).1.allEntries
+    rcases hps p0 hp0 with hold | hnew
+    · -- an old reply: leaves-leader nop at the receiver, transport
+      have hold2 : p0 ∈ net.nwPackets := by
+        rw [hpkts]
+        exact mem_of_mem_remove_middle hold
+      rw [hst p0.pDst] at hct hin hty
+      refine mia_allEntries_grow hst hgrow ?_
+      by_cases heq : p0.pDst = p.pDst
+      · rw [heq, update_same] at hct hin hty
+        replace hct : d.currentTerm = t0 := hct
+        replace hin : e ∈ d.log := hin
+        replace hty : d.type = .Leader := hty
+        obtain ⟨hds, -⟩ :=
+          update_elections_data_appendEntries_log_allEntries_leader
+            p.pDst (net.nwState p.pDst) t n pli plt es ci hae hty
+        rw [hds] at hct hin hty
+        have hct' : (net.nwState p0.pDst).2.currentTerm = t0 := by
+          rw [heq]; exact hct
+        have hin' : e ∈ (net.nwState p0.pDst).2.log := by
+          rw [heq]; exact hin
+        have hty' : (net.nwState p0.pDst).2.type = .Leader := by
+          rw [heq]; exact hty
+        exact hP2 p0 t0 es0 e hold2 hbody0 hct' hin' hterm hle hty'
+      · rw [update_neq _ _ heq] at hct hin hty
+        exact hP2 p0 t0 es0 e hold2 hbody0 hct hin hterm hle hty
+    · -- THE fresh true reply — the primed premise's payoff
+      rw [hnew] at hct hin hty hbody0 ⊢
+      replace hbody0 : msg.AppendEntriesReply (P := P) t'' es r''
+          = .AppendEntriesReply t0 es0 true := hbody0
+      injection hbody0 with h1 h2 h3
+      subst h1
+      subst h2
+      subst h3
+      replace hct : (st' p.pSrc).2.currentTerm = t'' := hct
+      replace hin : e ∈ (st' p.pSrc).2.log := hin
+      replace hty : (st' p.pSrc).2.type = .Leader := hty
+      show (t'', e) ∈ (st' p.pDst).1.allEntries
+      by_cases hsrc : p.pSrc = p.pDst
+      · -- an AppendEntries to self is impossible
+        exact absurd hsrc.symm
+          (fun hc => no_append_entries_to_self_refined net hreach p t n pli
+            plt es ci hp_in hbody hc)
+      · -- the leader is untouched; certify through the successor net
+        rw [hst p.pSrc, update_neq _ _ hsrc] at hct hin hty
+        obtain ⟨hteq, -⟩ := handleAppendEntries_reply_true p.pDst
+          (net.nwState p.pDst).2 t n pli plt es ci hae
+        have hctd : d.currentTerm = t := handleAppendEntries_true_reply_currentTerm
+          p.pDst (net.nwState p.pDst).2 t n pli plt es ci hae
+        -- the leader's term IS the request's term
+        have hctL : (net.nwState p.pSrc).2.currentTerm = t := by
+          rw [← hteq]; exact hct
+        -- es is non-empty: e sits at a positive index at or below its max
+        have hgt := entries_gt_0_invariant net hreach p.pSrc e hin
+        have hesne : es ≠ [] := by
+          intro hnil
+          rw [hnil] at hle
+          replace hle : e.eIndex ≤ 0 := hle
+          exact Nat.not_succ_le_zero _ (Nat.le_trans hgt hle)
+        obtain ⟨x, hx, hxi, -⟩ := maxIndex_non_empty hesne
+        -- the max entry of es is in the receiver's NEW log
+        have hxd : x ∈ d.log := by
+          rcases handleAppendEntries_true_reply_log p.pDst
+              (net.nwState p.pDst).2 t n pli plt es ci hae with hall | ⟨hfalse, hdlog⟩
+          · exact hall x hx
+          · rw [hdlog]
+            exact appendEntries_haveNewEntries_false net hreach p t n pli
+              plt es ci p.pDst x hp_in hbody hfalse hx
+        -- ... and in the leader's log (the in-flight request's entries)
+        have hxL : x ∈ (net.nwState p.pSrc).2.log :=
+          append_entries_leader_invariant net hreach p t n pli plt es ci
+            p.pSrc x hp_in hbody hx hctL hty
+        -- entries_match at the SUCCESSOR net glues e across
+        have hmatch := entries_match_invariant ⟨ps', st'⟩ hreach' p.pDst p.pSrc
+        replace hmatch : entries_match (st' p.pDst).2.log
+            (st' p.pSrc).2.log := hmatch
+        rw [hst p.pDst, update_same, hst p.pSrc, update_neq _ _ hsrc]
+          at hmatch
+        replace hmatch : entries_match d.log (net.nwState p.pSrc).2.log :=
+          hmatch
+        have hle' : e.eIndex ≤ x.eIndex := by
+          rw [hxi]
+          exact hle
+        have he_d : e ∈ d.log :=
+          (hmatch x x e rfl rfl hxd hxL hle').mpr hin
+        -- log_all_entries at the SUCCESSOR net reads off the record
+        have hlae := log_all_entries_invariant ⟨ps', st'⟩ hreach' p.pDst e
+          (by show e ∈ (st' p.pDst).2.log
+              rw [hst p.pDst, update_same]
+              exact he_d)
+          (by show e.eTerm = (st' p.pDst).2.currentTerm
+              rw [hst p.pDst, update_same]
+              show e.eTerm = d.currentTerm
+              rw [hctd, ← hteq]
+              exact hterm)
+        replace hlae : (e.eTerm, e) ∈ (st' p.pDst).1.allEntries := hlae
+        rw [hterm] at hlae
+        exact hlae
+
+/-- `MatchIndexAllEntriesProof.v:1101-1127`
+(`match_index_all_entries_invariant`'s inductive form) — assembled
+through THE PRIMED PRINCIPLE `refined_raft_net_invariant'`, exactly
+upstream: the append_entries obligation primed, every other handler
+through its `_'_weak` bridge. This is the state-side primed set's
+discharge witness (constitution §3.3): all eleven obligations
+instantiated on a real invariant, the successor-reachability premise
+consumed in the AE case. -/
+theorem match_index_all_entries_inv_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      match_index_all_entries_inv net :=
+  refined_raft_net_invariant' mia_init
+    (refined_raft_net_invariant_client_request'_weak mia_client_request)
+    (refined_raft_net_invariant_timeout'_weak mia_timeout)
+    mia_append_entries
+    (refined_raft_net_invariant_append_entries_reply'_weak
+      mia_append_entries_reply)
+    (refined_raft_net_invariant_request_vote'_weak mia_request_vote)
+    (refined_raft_net_invariant_request_vote_reply'_weak
+      mia_request_vote_reply)
+    (refined_raft_net_invariant_do_leader'_weak mia_do_leader)
+    (refined_raft_net_invariant_do_generic_server'_weak
+      mia_do_generic_server)
+    mia_state_same
+    (refined_raft_net_invariant_reboot'_weak mia_reboot)
+
+/-- `MatchIndexAllEntriesInterface.v:17-22`
+(`match_index_all_entries_invariant`, the interface field). -/
+theorem match_index_all_entries_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      match_index_all_entries net :=
+  fun net hreach => (match_index_all_entries_inv_invariant net hreach).1
+
 end MatchIndexAllEntries
 
 end Raft

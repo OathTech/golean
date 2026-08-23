@@ -246,6 +246,19 @@ GhostLogAllEntries, GhostLogLogMatching) and the SMS-PRIME statement
 /-- info: 'VerdiCompat.Raft.state_machine_safety'_invariant' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms VerdiCompat.Raft.state_machine_safety'_invariant
 
+/-! Unit-15 headliners (captured from a fresh capped probe): the
+state-side PRIMED principle (GAP-1's first-need port) and its first
+consumer, `match_index_all_entries`. -/
+
+/-- info: 'VerdiCompat.Raft.refined_raft_net_invariant'' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.refined_raft_net_invariant'
+
+/-- info: 'VerdiCompat.Raft.match_index_all_entries_inv_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.match_index_all_entries_inv_invariant
+
+/-- info: 'VerdiCompat.Raft.match_index_all_entries_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.match_index_all_entries_invariant
+
 /-! ## Exhaustive sweep (fails the build on any disallowed axiom) -/
 
 open Lean in
