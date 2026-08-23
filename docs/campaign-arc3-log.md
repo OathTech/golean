@@ -1442,3 +1442,63 @@ unit 9. Beyond: GAP-6 (`prefix_within_term` +
 `leader_completeness`'s proof). Same conventions; successors re-verify
 this unit fresh (build + sweep 1805 + the ten-headliner probe above +
 hatch grep over AppendEntriesChain.lean).
+
+## Unit 8 — the GAP-7 assembly (2026-08-23, coordinator-accepted charter)
+
+Charter per the predecessor's posted proposal: the GAP-7 assembly —
+`appendEntries_request_leaderLogs` → `allEntries_leaderLogs_term`,
+`LogsLeaderLogs` → **`leaderLogs_preserved` (GAP-7b)**, `AllEntriesLog`
+→ **`allEntries_votesWithLog` (GAP-7a)** — with the recorded split
+point (AERLeaderLogs + LogsLeaderLogs + leaderLogs_preserved = a
+branch-complete prefix) if the honest budget forces one. GAP-2
+re-verified at THIS unit's closure derivation, not inherited.
+
+- 2026-08-23 SUCCESSOR RE-VERIFICATION of unit 7 (recomputed, fresh
+  reader): tip 44b0794b, tree clean, branch `campaign-arc3`;
+  `deps/verdi-raft` pin re-verified `a3375e867326a82225e724cc1a7b4758b029376f`
+  (read from the MAIN checkout as before). Fresh capped `lake build`
+  (24G) green ("Build completed successfully (45 jobs)"); the sweep
+  line in that build was a cache replay, so re-derived by a fresh
+  capped `lake env lean AxCheck.lean`, which printed verbatim
+  `AxCheck sweep: 1805 declarations across VerdiCompat modules, axiom
+  set within [propext, Quot.sound]`. Fresh `#print axioms` probe
+  (capped `lake env lean`, repo-local scratch):
+  `leaderLogs_entries_match_invariant`,
+  `append_entries_request_reply_correspondence_invariant`,
+  `leaderLogs_sublog_invariant` all
+  `depends on axioms: [propext, Quot.sound]` verbatim. Hatch grep
+  (`sorry|native_decide|^axiom| axiom `) over AppendEntriesChain.lean:
+  0 hits. All claims hold; building on them.
+- 2026-08-23 [AGENT] UNIT-8 CLOSURE, re-derived fresh from the six
+  chartered targets (`Require Import` walk @ a3375e8, pin re-verified
+  by `git rev-parse`; every imported Interface diffed against the
+  INVARIANT INDEX's proved rows): the closure is EXACTLY the six
+  target files — no new files (the unit-6 correction pass holds), and
+  **no msg-ghost**: `grep -l "MsgRefinement\|GhostLog"` over all 12
+  closure files (6 Proof + 6 Interface) returns nothing, so GAP-2
+  stays untouched at the very unit the charter flagged as likeliest
+  first contact (AllEntriesLog is clean). Honest line count RECOMPUTED
+  from `wc -l` at the pin: 621+848+263+342+1089+356 = **3,519**
+  upstream lines (the charter's ~3,566 was the wave table's sum,
+  not re-derived). In-unit dependency order (all other deps ported):
+  - W1: AERLeaderLogs 621 [LHLLStrong ✓, Sorted ✓, LogMatching ✓,
+    NextIndexSafety ✓] and LogsLeaderLogs 848 [LeaderLogsSorted ✓,
+    Contiguous ✓, LLLogMatching ✓, RLML ✓, LHLLStrong ✓,
+    NextIndexSafety ✓, Sorted ✓, LLLogProperties ✓] — mutually
+    independent (LogsLeaderLogs does NOT import AERLeaderLogs);
+  - W2: LeaderLogsPreserved 263 (GAP-7b) [LogsLeaderLogs;
+    LLTermSanity ✓, LLCandidateEntries ✓, OneLeaderLogPerTerm ✓,
+    VotesCorrect ✓, CroniesCorrect ✓] and AllEntriesLeaderLogsTerm
+    342 [AERLeaderLogs];
+  - W3: AllEntriesLog 1089 [LogsLeaderLogs, AERLeaderLogs,
+    AllEntriesLeaderLogsTerm; RLML ✓, Contiguous ✓,
+    OneLeaderLogPerTerm ✓, LeaderLogsSorted ✓, TermSanity ✓,
+    AllEntriesTermSanity ✓];
+  - W4: AllEntriesVotesWithLog 356 (GAP-7a) [AllEntriesLog;
+    VotesWithLogTermSanity ✓, VotesCorrect ✓,
+    VotesVotesWithLogCorrespond ✓].
+- 2026-08-23 [AGENT] File plan: new `LeaderLogsAssembly.lean`
+  (imports AppendEntriesChain), wired into VerdiCompat.lean from
+  birth; spec lemmas promoted to ElectionSpecLemmas.lean only at a
+  second consumer, as before. Port order = the wave order above,
+  AERLeaderLogs first.
