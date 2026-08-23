@@ -1329,3 +1329,17 @@ degrades); unit-8 charter at unit end.
   appendEntries_leader ✓, appendEntriesReply_sublog ✓. Remaining:
   nextIndex_safety (323L), leaderLogs_logMatching (647L), pins, INDEX,
   gate, final entry + unit-8 charter.
+- 2026-08-23 Slice 40: `nextIndex_safety`
+  (NextIndexSafetyInterface.v:8-11 1:1, BASE) — a leader's nextIndex
+  estimates never point past its log. New StructTact machinery:
+  `assoc_assoc_set_same/_diff` + `assoc_set_same/diff_default`
+  (get_set_* analogues), per-handler nextIndex-preservation lemmas
+  (incl. `applyEntries_nextIndex` by induction), the case lemma
+  `handleAppendEntriesReply_nextIndex` (:118-139 — untouched, or
+  assoc_set to max(getNextIndex, maxIndex es + 1) on success / pred on
+  failure) and `handleRequestVoteReply_nextIndex` (:199-210 — kept, or
+  reset to [] at a win, where the default getNextIndex = maxIndex log
+  is safe outright). The success case rides
+  `append_entries_reply_sublog`: the replied entries are in the
+  leader's own log, so maxIndex es ≤ maxIndex log via sorted
+  maxIndex_is_max. Build green, sweep 1785.

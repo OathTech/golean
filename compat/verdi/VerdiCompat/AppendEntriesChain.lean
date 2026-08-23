@@ -2135,6 +2135,473 @@ theorem append_entries_reply_sublog_invariant :
   rw [hstates] at hres
   exact hres
 
+/-! ## nextIndex_safety (BASE) -/
+
+omit O in
+/-- StructTact `get_set_same` at the `assoc` level. -/
+theorem assoc_assoc_set_same {K V : Type} [DecidableEq K]
+    (l : List (K × V)) (k : K) (v : V) :
+    assoc (assoc_set l k v) k = some v := by
+  induction l with
+  | nil =>
+    unfold assoc_set assoc
+    rw [if_pos rfl]
+  | cons kv l' ih =>
+    unfold assoc_set
+    split
+    · unfold assoc
+      rw [if_pos rfl]
+    · rename_i hne
+      unfold assoc
+      rw [if_neg hne]
+      exact ih
+
+omit O in
+/-- StructTact `get_set_same_default`. -/
+theorem assoc_set_same_default {K V : Type} [DecidableEq K]
+    (l : List (K × V)) (k : K) (v d : V) :
+    assoc_default (assoc_set l k v) k d = v := by
+  unfold assoc_default
+  rw [assoc_assoc_set_same]
+
+omit O in
+/-- StructTact `get_set_diff` at the `assoc` level. -/
+theorem assoc_assoc_set_diff {K V : Type} [DecidableEq K]
+    (l : List (K × V)) (k k' : K) (v : V) (hne : k' ≠ k) :
+    assoc (assoc_set l k v) k' = assoc l k' := by
+  induction l with
+  | nil =>
+    unfold assoc_set assoc
+    rw [if_neg hne]
+    rfl
+  | cons kv l' ih =>
+    unfold assoc_set
+    split
+    · rename_i heq
+      unfold assoc
+      rw [if_neg hne, if_neg]
+      rw [← heq]
+      exact hne
+    · unfold assoc
+      split
+      · rfl
+      · exact ih
+
+omit O in
+/-- StructTact `get_set_diff_default`. -/
+theorem assoc_set_diff_default {K V : Type} [DecidableEq K]
+    (l : List (K × V)) (k k' : K) (v d : V) (hne : k' ≠ k) :
+    assoc_default (assoc_set l k v) k' d = assoc_default l k' d := by
+  unfold assoc_default
+  rw [assoc_assoc_set_diff l k k' v hne]
+
+/-- `cacheApplyEntry` and `applyEntries` never touch `nextIndex`. -/
+theorem cacheApplyEntry_nextIndex (st : raft_data (P := P))
+    (e : entry (P := P)) {o st'} (h : cacheApplyEntry st e = (o, st')) :
+    st'.nextIndex = st.nextIndex := by
+  unfold cacheApplyEntry applyEntry at h
+  repeat' split at h
+  all_goals simp only [Prod.mk.injEq] at h
+  all_goals obtain ⟨-, rfl⟩ := h
+  all_goals rfl
+
+theorem applyEntries_nextIndex (me : name (P := P)) :
+    ∀ (es : List (entry (P := P))) (st : raft_data (P := P)) {o st'},
+    applyEntries me st es = (o, st') → st'.nextIndex = st.nextIndex := by
+  intro es
+  induction es with
+  | nil =>
+    intro st o st' h
+    unfold applyEntries at h
+    simp only [Prod.mk.injEq] at h
+    obtain ⟨-, rfl⟩ := h
+    rfl
+  | cons e es ih =>
+    intro st o st' h
+    unfold applyEntries at h
+    rcases hce : cacheApplyEntry st e with ⟨o1, st1⟩
+    rw [hce] at h
+    simp only [] at h
+    rcases hae : applyEntries me st1 es with ⟨o2, st2⟩
+    rw [hae] at h
+    simp only [Prod.mk.injEq] at h
+    obtain ⟨-, rfl⟩ := h
+    exact (ih st1 hae).trans (cacheApplyEntry_nextIndex st e hce)
+
+theorem doGenericServer_nextIndex (me : name (P := P))
+    (st : raft_data (P := P)) {os st' ms}
+    (h : doGenericServer me st = (os, st', ms)) :
+    st'.nextIndex = st.nextIndex := by
+  unfold doGenericServer at h
+  rcases hae : applyEntries me st
+      ((findGtIndex st.log st.lastApplied).filter
+        (fun x => (st.lastApplied <? x.eIndex) && (x.eIndex <=? st.commitIndex))).reverse
+    with ⟨o1, st1⟩
+  rw [hae] at h
+  simp only [Prod.mk.injEq] at h
+  obtain ⟨-, rfl, -⟩ := h
+  show st1.nextIndex = st.nextIndex
+  exact applyEntries_nextIndex me _ st hae
+
+omit O in
+/-- `doLeader` never touches `nextIndex` (nor the log). -/
+theorem doLeader_nextIndex (st : raft_data (P := P)) (me : name (P := P))
+    {os st' ms} (h : doLeader st me = (os, st', ms)) :
+    st'.nextIndex = st.nextIndex := by
+  unfold doLeader advanceCommitIndex at h
+  simp only [] at h
+  repeat' split at h
+  all_goals simp only [Prod.mk.injEq] at h
+  all_goals obtain ⟨-, rfl, -⟩ := h
+  all_goals rfl
+
+omit O in
+/-- The other log-preserving handlers never touch `nextIndex` either. -/
+theorem handleClientRequest_nextIndex (me : name (P := P))
+    (st : raft_data (P := P)) (client : R.clientId) (id : Nat)
+    (c : P.input) {out st' l}
+    (h : handleClientRequest me st client id c = (out, st', l)) :
+    st'.nextIndex = st.nextIndex := by
+  unfold handleClientRequest at h
+  split at h
+  all_goals simp only [Prod.mk.injEq] at h
+  all_goals obtain ⟨-, rfl, -⟩ := h
+  all_goals rfl
+
+omit O in
+theorem handleTimeout_nextIndex (me : name (P := P))
+    (st : raft_data (P := P)) {out st' l}
+    (h : handleTimeout me st = (out, st', l)) :
+    st'.nextIndex = st.nextIndex := by
+  unfold handleTimeout tryToBecomeLeader at h
+  split at h
+  all_goals simp only [Prod.mk.injEq] at h
+  all_goals obtain ⟨-, rfl, -⟩ := h
+  all_goals rfl
+
+omit O in
+theorem handleRequestVote_nextIndex (me : name (P := P))
+    (st : raft_data (P := P)) (t : term) (cand : name (P := P))
+    (lli : logIndex) (llt : term) {st' m}
+    (h : handleRequestVote me st t cand lli llt = (st', m)) :
+    st'.nextIndex = st.nextIndex := by
+  have hadv : (advanceCurrentTerm st t).nextIndex = st.nextIndex := by
+    unfold advanceCurrentTerm
+    split
+    · rfl
+    · rfl
+  unfold handleRequestVote at h
+  simp only [] at h
+  repeat' split at h
+  all_goals simp only [Prod.mk.injEq] at h
+  all_goals obtain ⟨rfl, -⟩ := h
+  all_goals first
+    | rfl
+    | exact hadv
+
+omit O in
+/-- `NextIndexSafetyProof.v:118-139` (`handleAppendEntriesReply_nextIndex`). -/
+theorem handleAppendEntriesReply_nextIndex (me : name (P := P))
+    (st : raft_data (P := P)) (src : name (P := P)) (t : term)
+    (es : List (entry (P := P))) (res : Bool) {st' l}
+    (h : handleAppendEntriesReply me st src t es res = (st', l))
+    (hty : st'.type = .Leader) :
+    st.type = st'.type ∧ st'.log = st.log ∧
+    (st'.nextIndex = st.nextIndex ∨
+     (res = true ∧ st.currentTerm = t ∧
+      st'.nextIndex = assoc_set st.nextIndex src
+        (max (getNextIndex st src) (maxIndex es + 1))) ∨
+     (res = false ∧
+      st'.nextIndex = assoc_set st.nextIndex src
+        (Nat.pred (getNextIndex st src)))) := by
+  have hadv : (advanceCurrentTerm st t).nextIndex = st.nextIndex := by
+    unfold advanceCurrentTerm
+    split
+    · rfl
+    · rfl
+  unfold handleAppendEntriesReply advanceCurrentTerm at h
+  repeat' split at h
+  all_goals simp only [Prod.mk.injEq] at h
+  all_goals obtain ⟨rfl, -⟩ := h
+  · rename_i heq hres
+    simp only [beq_iff_eq] at heq
+    exact ⟨rfl, rfl, Or.inr (Or.inl ⟨hres, heq, rfl⟩)⟩
+  · rename_i heq hres
+    simp only [Bool.not_eq_true] at hres
+    exact ⟨rfl, rfl, Or.inr (Or.inr ⟨hres, rfl⟩)⟩
+  all_goals first
+    | (rename_i hc1 hc2
+       exact absurd hc1 hc2)
+    | exact serverType.noConfusion hty
+    | exact ⟨rfl, rfl, Or.inl rfl⟩
+
+omit O in
+/-- `NextIndexSafetyProof.v:199-210` (`handleRequestVoteReply_matchIndex`'s
+nextIndex face): a leader after a RequestVoteReply keeps its nextIndex,
+or has just won and reset it to `[]`. -/
+theorem handleRequestVoteReply_nextIndex (me : name (P := P))
+    (st : raft_data (P := P)) (src : name (P := P)) (t : term) (v : Bool)
+    {st'} (h : handleRequestVoteReply me st src t v = st')
+    (hty : st'.type = .Leader) :
+    (st.type = .Leader ∧ st'.nextIndex = st.nextIndex) ∨
+    st'.nextIndex = [] := by
+  unfold handleRequestVoteReply advanceCurrentTerm at h
+  simp only [] at h
+  repeat' split at h
+  all_goals subst h
+  all_goals first
+    | (rename_i hc1 hc2
+       exact absurd hc1 hc2)
+    | exact Or.inr rfl
+    | exact Or.inl ⟨hty, rfl⟩
+    | exact serverType.noConfusion hty
+
+/-- `NextIndexSafetyInterface.v:8-11` (`nextIndex_safety`). -/
+def nextIndex_safety (net : RaftNet) : Prop :=
+  ∀ h h' : name (P := P),
+    (net.nwState h).type = .Leader →
+    Nat.pred (getNextIndex (net.nwState h) h') ≤ maxIndex (net.nwState h).log
+
+/-- `NextIndexSafetyProof.v:29-59` (`nextIndex_safety_preserved`). -/
+theorem nextIndex_safety_of_update {net : RaftNet}
+    {ps' : List (Packet (raft_base_params (P := P)) raft_multi_params)}
+    {st' : name (P := P) → raft_data (P := P)} {u : name (P := P)}
+    {d : raft_data (P := P)}
+    (hP : nextIndex_safety net)
+    (hst : ∀ h', st' h' = update net.nwState u d h')
+    (hd : d.type = .Leader →
+      (net.nwState u).type = .Leader ∧
+      maxIndex (net.nwState u).log ≤ maxIndex d.log ∧
+      d.nextIndex = (net.nwState u).nextIndex) :
+    nextIndex_safety (⟨ps', st'⟩ : RaftNet) := by
+  intro h h' hty
+  replace hty : (st' h).type = .Leader := hty
+  show Nat.pred (getNextIndex (st' h) h') ≤ maxIndex (st' h).log
+  rw [hst h] at hty ⊢
+  by_cases heq : h = u
+  · rw [heq, update_same] at hty ⊢
+    obtain ⟨hty0, hmax, hni⟩ := hd hty
+    show Nat.pred (getNextIndex d h') ≤ maxIndex d.log
+    unfold getNextIndex assoc_default
+    rw [hni]
+    cases hfind : assoc (net.nwState u).nextIndex h' with
+    | some x =>
+      have hold := hP u h' hty0
+      unfold getNextIndex assoc_default at hold
+      rw [hfind] at hold
+      exact Nat.le_trans hold hmax
+    | none =>
+      exact Nat.pred_le _
+  · rw [update_neq _ _ heq] at hty ⊢
+    exact hP h h' hty
+
+/-- `NextIndexSafetyProof.v:296-320` (`nextIndex_safety_invariant`) —
+BASE layer: a leader's nextIndex estimates never point past its log.
+The append-entries-reply case rides `append_entries_reply_sublog`: a
+true reply's entries are in the leader's own log. -/
+theorem nextIndex_safety_invariant :
+    ∀ net, raft_intermediate_reachable (P := P) net →
+      nextIndex_safety net := by
+  refine raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · intro h h' hty
+    exact nomatch hty
+  · -- client_request: the log only grows; nextIndex untouched
+    intro h net st' ps' out d l client id c hcr hP _hreach hst _hps
+    obtain ⟨htyd, -, -, -, -⟩ :=
+      handleClientRequest_spec h (net.nwState h) client id c hcr
+    refine nextIndex_safety_of_update hP hst ?_
+    intro htyl
+    refine ⟨by rw [← htyd]; exact htyl, ?_,
+      handleClientRequest_nextIndex h (net.nwState h) client id c hcr⟩
+    rcases handleClientRequest_log_full h (net.nwState h) client id c hcr
+      with ⟨-, hlogd⟩ | ⟨-, heqd⟩
+    · rw [hlogd]
+      exact Nat.le_succ _
+    · rw [heqd]
+      exact Nat.le_refl _
+  · -- timeout
+    intro net h st' ps' out d l hto hP _hreach hst _hps
+    obtain ⟨hlog, hbr, -⟩ := handleTimeout_spec h (net.nwState h) hto
+    refine nextIndex_safety_of_update hP hst ?_
+    intro htyl
+    rcases hbr with ⟨-, hty, -, -⟩ | ⟨-, hty, -, -, -⟩
+    · rw [hty] at htyl
+      exact ⟨htyl, by rw [hlog]; exact Nat.le_refl _,
+        handleTimeout_nextIndex h (net.nwState h) hto⟩
+    · rw [hty] at htyl
+      exact nomatch htyl
+  · -- append_entries: a standing leader rejected
+    intro xs p ys net st' ps' d m t n0 pli plt es ci hae _hbody hP _hreach
+      _hpkts hst _hps
+    refine nextIndex_safety_of_update hP hst ?_
+    intro htyl
+    have hd : d = net.nwState p.pDst :=
+      handleAppendEntries_reject_of_not_follower p.pDst (net.nwState p.pDst)
+        t n0 pli plt es ci hae (by rw [htyl]; exact fun heq => nomatch heq)
+    rw [hd]
+    exact ⟨by rw [← hd]; exact htyl, Nat.le_refl _, rfl⟩
+  · -- append_entries_reply: THE case
+    intro xs p ys net st' ps' d m t es res haer hbody hP hreach hpkts hst
+      _hps
+    have hp_in : p ∈ net.nwPackets := by
+      rw [hpkts]
+      exact List.mem_append.mpr (Or.inr (List.mem_cons_self ..))
+    have hsorted := (logs_sorted_invariant net hreach).1
+    intro h h' hty
+    replace hty : (st' h).type = .Leader := hty
+    show Nat.pred (getNextIndex (st' h) h') ≤ maxIndex (st' h).log
+    rw [hst h] at hty ⊢
+    by_cases heq : h = p.pDst
+    · rw [heq, update_same] at hty ⊢
+      replace hty : d.type = .Leader := hty
+      obtain ⟨htyeq, hlogd, hcases⟩ := handleAppendEntriesReply_nextIndex
+        p.pDst (net.nwState p.pDst) p.pSrc t es res haer hty
+      have hty0 : (net.nwState p.pDst).type = .Leader := by
+        rw [htyeq]
+        exact hty
+      show Nat.pred (getNextIndex d h') ≤ maxIndex d.log
+      unfold getNextIndex assoc_default
+      rw [hlogd]
+      rcases hcases with hsame | ⟨hres, hct, hset⟩ | ⟨hres, hset⟩
+      · rw [hsame]
+        have hold := hP p.pDst h' hty0
+        unfold getNextIndex assoc_default at hold
+        exact hold
+      · rw [hset]
+        by_cases hsrc : h' = p.pSrc
+        · rw [hsrc]
+          have := assoc_set_same_default (net.nwState p.pDst).nextIndex
+            p.pSrc (max (getNextIndex (net.nwState p.pDst) p.pSrc)
+              (maxIndex es + 1)) (maxIndex (net.nwState p.pDst).log)
+          unfold assoc_default at this
+          rw [this]
+          rcases Nat.le_total (getNextIndex (net.nwState p.pDst) p.pSrc)
+            (maxIndex es + 1) with hle | hge
+          · rw [Nat.max_eq_right hle, Nat.pred_succ]
+            cases hes : es with
+            | nil => exact Nat.zero_le _
+            | cons e0 es' =>
+              have he0 : e0 ∈ (net.nwState p.pDst).log := by
+                refine append_entries_reply_sublog_invariant net hreach p t
+                  es p.pDst e0 hp_in ?_ hct hty0 ?_
+                · rw [hbody, hres]
+                · rw [hes]
+                  exact List.mem_cons_self ..
+              show e0.eIndex ≤ maxIndex (net.nwState p.pDst).log
+              exact maxIndex_is_max (hsorted p.pDst) he0
+          · rw [Nat.max_eq_left hge]
+            have hold := hP p.pDst p.pSrc hty0
+            unfold getNextIndex at hold ⊢
+            exact hold
+        · have := assoc_set_diff_default (net.nwState p.pDst).nextIndex
+            p.pSrc h' (max (getNextIndex (net.nwState p.pDst) p.pSrc)
+              (maxIndex es + 1)) (maxIndex (net.nwState p.pDst).log) hsrc
+          unfold assoc_default at this
+          rw [this]
+          have hold := hP p.pDst h' hty0
+          unfold getNextIndex assoc_default at hold
+          exact hold
+      · rw [hset]
+        by_cases hsrc : h' = p.pSrc
+        · rw [hsrc]
+          have := assoc_set_same_default (net.nwState p.pDst).nextIndex
+            p.pSrc (Nat.pred (getNextIndex (net.nwState p.pDst) p.pSrc))
+            (maxIndex (net.nwState p.pDst).log)
+          unfold assoc_default at this
+          rw [this]
+          have hold := hP p.pDst p.pSrc hty0
+          exact Nat.le_trans (Nat.pred_le _) hold
+        · have := assoc_set_diff_default (net.nwState p.pDst).nextIndex
+            p.pSrc h' (Nat.pred (getNextIndex (net.nwState p.pDst) p.pSrc))
+            (maxIndex (net.nwState p.pDst).log) hsrc
+          unfold assoc_default at this
+          rw [this]
+          have hold := hP p.pDst h' hty0
+          unfold getNextIndex assoc_default at hold
+          exact hold
+    · rw [update_neq _ _ heq] at hty ⊢
+      exact hP h h' hty
+  · -- request_vote
+    intro xs p ys net st' ps' d m t cid lli llt hrv _hbody hP _hreach
+      _hpkts hst _hps
+    obtain ⟨-, -, hbr, -⟩ :=
+      handleRequestVote_spec p.pDst (net.nwState p.pDst) t p.pSrc lli llt
+        hrv
+    refine nextIndex_safety_of_update hP hst ?_
+    intro htyl
+    rcases hbr with ⟨-, hty⟩ | hty
+    · rw [hty] at htyl
+      exact ⟨htyl, by
+        rw [handleRequestVote_log p.pDst (net.nwState p.pDst) t p.pSrc lli
+          llt hrv]
+        exact Nat.le_refl _,
+        handleRequestVote_nextIndex p.pDst (net.nwState p.pDst) t p.pSrc
+          lli llt hrv⟩
+    · have : serverType.Follower = .Leader := hty.symm.trans htyl
+      exact nomatch this
+  · -- request_vote_reply: a fresh win resets nextIndex to []
+    intro xs p ys net st' ps' d t v hrvr _hbody hP _hreach _hpkts hst _hps
+    have hlogd : d.log = (net.nwState p.pDst).log := by
+      rw [← hrvr]
+      exact handleRequestVoteReply_log p.pDst (net.nwState p.pDst) p.pSrc
+        t v
+    intro h h' hty
+    replace hty : (st' h).type = .Leader := hty
+    show Nat.pred (getNextIndex (st' h) h') ≤ maxIndex (st' h).log
+    rw [hst h] at hty ⊢
+    by_cases heq : h = p.pDst
+    · rw [heq, update_same] at hty ⊢
+      replace hty : d.type = .Leader := hty
+      show Nat.pred (getNextIndex d h') ≤ maxIndex d.log
+      rcases handleRequestVoteReply_nextIndex p.pDst (net.nwState p.pDst)
+        p.pSrc t v hrvr hty with ⟨hty0, hni⟩ | hni
+      · unfold getNextIndex assoc_default
+        rw [hni, hlogd]
+        have hold := hP p.pDst h' hty0
+        unfold getNextIndex assoc_default at hold
+        exact hold
+      · unfold getNextIndex assoc_default
+        rw [hni]
+        show Nat.pred (match (none : Option logIndex) with
+          | some x => x
+          | none => maxIndex d.log) ≤ maxIndex d.log
+        exact Nat.pred_le _
+    · rw [update_neq _ _ heq] at hty ⊢
+      exact hP h h' hty
+  · -- do_leader
+    intro net st' ps' d h os d' ms hdl hP _hreach hstate hst _hps
+    obtain ⟨-, -, hty, -, hlog, -⟩ := doLeader_spec d h hdl
+    refine nextIndex_safety_of_update hP hst ?_
+    intro htyl
+    rw [hty] at htyl
+    refine ⟨by rw [hstate]; exact htyl, ?_, ?_⟩
+    · rw [hlog, hstate]
+      exact Nat.le_refl _
+    · rw [doLeader_nextIndex d h hdl, hstate]
+  · -- do_generic_server
+    intro net st' ps' d os d' ms h hgs hP _hreach hstate hst _hps
+    obtain ⟨hlog, hty, -, -, -, -⟩ := doGenericServer_spec h d hgs
+    refine nextIndex_safety_of_update hP hst ?_
+    intro htyl
+    rw [hty] at htyl
+    refine ⟨by rw [hstate]; exact htyl, ?_, ?_⟩
+    · rw [hlog, hstate]
+      exact Nat.le_refl _
+    · rw [doGenericServer_nextIndex h d hgs, hstate]
+  · -- state_same_packet_subset
+    intro net net' hstates _hpkts hP _hreach h h' hty
+    replace hty : (net'.nwState h).type = .Leader := hty
+    show Nat.pred (getNextIndex (net'.nwState h) h') ≤
+      maxIndex (net'.nwState h).log
+    rw [← hstates h] at hty ⊢
+    exact hP h h' hty
+  · -- reboot: a rebooted node is a follower
+    intro net net' d h d' hrb hP _hreach hstate hst _hpkts
+    refine nextIndex_safety_of_update hP hst ?_
+    intro htyl
+    rw [← hrb] at htyl
+    exact nomatch htyl
+
 end AppendEntriesChain
 
 end Raft
