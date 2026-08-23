@@ -409,6 +409,16 @@ is the §4.4 park-and-report condition, not an emergency.
   path** — unit 9 chartered (6 files, ~3,428 lines, split point
   recorded).
 
+- **Arc 3, unit 9 — LANDED** @ d5efc9e8 (context-rule stop taken at
+  PrefixWithinTerm's edge, exactly as flagged): 4 of 6 GAP-6 feeder
+  files proved (LeaderCompleteness.lean 1,426 lines —
+  allEntries_candidateEntries/leader_sublog/log_matching + the AE
+  term-sanity lift; 1,134/3,428 closure lines); sweep **2029**
+  clean; index 60 rows. **Leader completeness is two files away**:
+  prefix_within_term (1,915L, all deps ported) +
+  LeaderCompletenessProof (379L) = the unit-10 charter. [AGENT]:
+  5th-gen rotation (worker at 816k).
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
