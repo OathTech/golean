@@ -476,6 +476,21 @@ is the §4.4 park-and-report condition, not an emergency.
   100 commits, report-only) — the judge run is owed at the first
   lane merge, as flagged every unit.
 
+- **Arc 2, unit 5 — PARKED IN FLIGHT** @ 7e120182: the witness wave
+  is EXECUTING (detached, session-independent; 62/757 at the park;
+  ~44 CPU-h ≈ 15-20h wall remaining; manifest-driven,
+  continue-on-failure + solo-retry, resume commands verbatim in the
+  log). Emission COMPLETE 45/45 groups at 184 MB (the ~30-60 GB
+  projection was ~200× pessimistic — olean compaction); the 48G
+  lever REFUTED by measurement (SEG=1000@36G adopted, central ~53-55
+  CPU-h GO); composition fully GENERATED with the endgame de-risked
+  live (literal-heavy simp/rfl measured-OOM → generic glue lemma);
+  three honest kill points + a masked-OOM lesson recorded.
+  CompletionWitness NOT yet proved — stated plainly; the four-step
+  completion recipe is in the log. [AGENT] next dispatch on this
+  lane = when the wave's manifest reads done: retry pass →
+  composition build → the witness.
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
