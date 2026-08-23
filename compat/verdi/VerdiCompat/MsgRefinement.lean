@@ -948,6 +948,52 @@ theorem msg_refined_raft_net_invariant_reboot'_weak {Pr : MsgNet → Prop}
   intro net net' gd d h0 d' hrb hP hreach _hreach' hstate hst hpkts
   exact h net net' gd d h0 d' hrb hP hreach hstate hst hpkts
 
+/-- `RaftMsgRefinementInterface.v:317-325`
+(`msg_refined_raft_net_invariant_client_request'_weak`). -/
+theorem msg_refined_raft_net_invariant_client_request'_weak
+    {Pr : MsgNet → Prop}
+    (h : msg_refined_raft_net_invariant_client_request Pr) :
+    msg_refined_raft_net_invariant_client_request' Pr := by
+  intro h0 net st' ps' gd out d l client id c hcr hgd hP hreach _hreach'
+    hst hps
+  exact h h0 net st' ps' gd out d l client id c hcr hgd hP hreach hst hps
+
+/-- `RaftMsgRefinementInterface.v:326-334`
+(`msg_refined_raft_net_invariant_timeout'_weak`). -/
+theorem msg_refined_raft_net_invariant_timeout'_weak {Pr : MsgNet → Prop}
+    (h : msg_refined_raft_net_invariant_timeout Pr) :
+    msg_refined_raft_net_invariant_timeout' Pr := by
+  intro net h0 st' ps' gd out d l hto hgd hP hreach _hreach' hst hps
+  exact h net h0 st' ps' gd out d l hto hgd hP hreach hst hps
+
+/-- `RaftMsgRefinementInterface.v:344-352`
+(`msg_refined_raft_net_invariant_append_entries_reply'_weak`). -/
+theorem msg_refined_raft_net_invariant_append_entries_reply'_weak
+    {Pr : MsgNet → Prop}
+    (h : msg_refined_raft_net_invariant_append_entries_reply Pr) :
+    msg_refined_raft_net_invariant_append_entries_reply' Pr := by
+  intro xs p ys net st' ps' gd d m t es res haer hgd hbody hP hreach
+    _hreach' hpkts hst hps
+  exact h xs p ys net st' ps' gd d m t es res haer hgd hbody hP hreach
+    hpkts hst hps
+
+/-- `RaftMsgRefinementInterface.v:371-379`
+(`msg_refined_raft_net_invariant_do_leader'_weak`). -/
+theorem msg_refined_raft_net_invariant_do_leader'_weak {Pr : MsgNet → Prop}
+    (h : msg_refined_raft_net_invariant_do_leader Pr) :
+    msg_refined_raft_net_invariant_do_leader' Pr := by
+  intro net st' ps' gd d h0 os d' ms hdl hP hreach _hreach' hstate hst hps
+  exact h net st' ps' gd d h0 os d' ms hdl hP hreach hstate hst hps
+
+/-- `RaftMsgRefinementInterface.v:380-388`
+(`msg_refined_raft_net_invariant_do_generic_server'_weak`). -/
+theorem msg_refined_raft_net_invariant_do_generic_server'_weak
+    {Pr : MsgNet → Prop}
+    (h : msg_refined_raft_net_invariant_do_generic_server Pr) :
+    msg_refined_raft_net_invariant_do_generic_server' Pr := by
+  intro net st' ps' gd d os d' ms h0 hgs hP hreach _hreach' hstate hst hps
+  exact h net st' ps' gd d os d' ms h0 hgs hP hreach hstate hst hps
+
 /-- `RaftProofs/RaftMsgRefinementProof.v:276-565`
 (`msg_refined_raft_net_invariant'`) — THE primed principle: the
 obligations additionally receive the SUCCESSOR net's reachability.

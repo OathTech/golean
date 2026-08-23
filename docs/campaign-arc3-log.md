@@ -2907,3 +2907,26 @@ wants it); context stop-rule stands.
   bit twice more (same class as slice 75) — restructured to named
   `have`s; recorded: NEVER break a `(by tac; tac)` across lines. Build
   green.
+- 2026-08-23 Slice 79: **`ghost_log_entries_match_invariant`**
+  (GhostLogLogMatchingInterface.v:9-13 / Proof.v:509-534 1:1; upstream
+  564 lines) — host logs and in-flight GHOST logs pairwise
+  entries_match; the whole unit-13/14 msg chain pays off at once. The
+  engine `handleAppendEntries_ghost_log` (:180-208): an accepted AE
+  leaves the log equal to the old log or the consumed packet's ghost —
+  `ghost_log_correct` contextualizes the payload, the splice case is
+  unit 8's `thing` verbatim (ghost sortedness/contiguity via
+  `log_properties_hold_on_ghost_logs`'s first payoffs
+  `ghost_log_sorted`/`ghost_log_contiguous`), the degenerate pli=0
+  corners die on host/ghost positivity. The client-request cons is
+  bounded by `ghost_log_allEntries` + msg-lifted
+  `allEntries_leader_sublog` through the ported
+  `sorted_entries_match_cons` (:352-368). Assembly exactly upstream:
+  AE + RV primed (fresh reply ghosts read off the SUCCESSOR net via
+  `mgv_lifted_entries_match`), everything else `_weak` — the FIVE
+  remaining weak bridges ported on this first need
+  (Interface :317-388, MsgRefinement.lean). Seven msg-lifted defeq
+  one-liners added (upstream's `lifted_*` block :46-177). [AGENT]
+  Gotcha recorded: after `rw [heq, update_same]` the by_cases variable
+  is ALREADY rewritten in the whole goal — a following `rw [heq]`
+  finds nothing and `show`s must name the substituted variable (bit
+  seven times in one slice, all mechanical). Build green.
