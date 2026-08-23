@@ -1564,3 +1564,15 @@ re-verified at THIS unit's closure derivation, not inherited.
   (`rfl`-pattern on `e = enew` keeps e; `subst hll` on `ll' = ll`
   keeps ll' — rw at the hypothesis instead). Build green, sweep 1902
   (was 1853).
+- 2026-08-23 Slice 45: **`leaderLogs_preserved` — GAP-7b CLOSED**
+  (LeaderLogsPreservedInterface.v:9-15 1:1; upstream proof 263 lines).
+  Ten obligations are one ghost-unchanged transport
+  (`leaderLogs_preserved_of_update`); the RVR case's four sub-cases:
+  old/old → IH; fresh `ll'` → the entry resolves through
+  `logs_leaderLogs_invariant` (slice 44's payoff, immediately) and
+  `one_leaderLog_per_term_log` identifies the snapshots; fresh `ll` →
+  the `wonElection_candidateEntries_rvr` contradiction (unit-6's
+  lemma; [AGENT] upstream's separate same-host term-sanity bullet
+  (:106-114) is subsumed — the candidate-entries route needs no host
+  split, docstring-noted); fresh/fresh → same log, direct. Build
+  green, sweep 1907.

@@ -1793,6 +1793,194 @@ theorem logs_leaderLogs_nw_invariant :
       logs_leaderLogs_nw net :=
   fun net hreach => (logs_leaderLogs_inductive_invariant net hreach).2
 
+/-! ## leaderLogs_preserved (GAP-7b) -/
+
+/-- `LeaderLogsPreservedInterface.v:9-15` (`leaderLogs_preserved`):
+snapshots only ever extend — an entry of a later snapshot that shares a
+snapshot with an entry `e` pulls every co-member of `e`'s snapshot in
+with it. -/
+def leaderLogs_preserved (net : RefinedNet) : Prop :=
+  ∀ (h : name (P := P)) (ll : List (entry (P := P))) (t' : term)
+    (h' : name (P := P)) (ll' : List (entry (P := P)))
+    (e e' : entry (P := P)),
+    (e.eTerm, ll) ∈ (net.nwState h).1.leaderLogs →
+    (t', ll') ∈ (net.nwState h').1.leaderLogs →
+    e ∈ ll' → e' ∈ ll → e' ∈ ll'
+
+/-- Ghost-unchanged transport for `leaderLogs_preserved`. -/
+theorem leaderLogs_preserved_of_update {net net' : RefinedNet}
+    {u : name (P := P)} {gd : electionsData (P := P)} {d : raft_data (P := P)}
+    (hP : leaderLogs_preserved net)
+    (hst : ∀ h', net'.nwState h' = update net.nwState u (gd, d) h')
+    (hgd : gd.leaderLogs = (net.nwState u).1.leaderLogs) :
+    leaderLogs_preserved net' := by
+  intro h ll t' h' ll' e e' h1 h2 he he'
+  have hred : ∀ (hh : name (P := P)) (tt : term)
+      (lll : List (entry (P := P))),
+      (tt, lll) ∈ (net'.nwState hh).1.leaderLogs →
+      (tt, lll) ∈ (net.nwState hh).1.leaderLogs := by
+    intro hh tt lll hin
+    rw [hst hh] at hin
+    by_cases heq : hh = u
+    · subst heq
+      rw [update_same] at hin
+      replace hin : (tt, lll) ∈ gd.leaderLogs := hin
+      rw [hgd] at hin
+      exact hin
+    · rw [update_neq _ _ heq] at hin
+      exact hin
+  exact hP h ll t' h' ll' e e' (hred h _ _ h1) (hred h' _ _ h2) he he'
+
+/-- `LeaderLogsPreservedProof.v:98-257` (`leaderLogs_preserved_invariant`,
+GAP-7b). Ten cases are pure ghost transport; the RVR case's fresh
+snapshot resolves through `logs_leaderLogs` + `one_leaderLog_per_term`
+(fresh on the `ll'` side) or dies on
+`wonElection_candidateEntries_rvr` (fresh on the `ll` side — upstream's
+same-host term-sanity bullet is subsumed by the candidate-entries
+contradiction, which needs no host split; docstring-noted
+simplification). -/
+theorem leaderLogs_preserved_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      leaderLogs_preserved net := by
+  refine refined_raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · -- init
+    intro h ll t' h' ll' e e' h1 _ _ _
+    exact nomatch h1
+  · -- client_request
+    intro h net st' ps' gd out d l client id c hcr hgd hP _hreach hst hps
+    refine leaderLogs_preserved_of_update hP hst ?_
+    subst hgd
+    exact (update_elections_data_client_request_ghost h (net.nwState h)
+      client id c).2.2.2
+  · -- timeout
+    intro net h st' ps' gd out d l hto hgd hP _hreach hst hps
+    refine leaderLogs_preserved_of_update hP hst ?_
+    subst hgd
+    exact (update_elections_data_timeout_ghost h (net.nwState h)).1
+  · -- append_entries
+    intro xs p ys net st' ps' gd d m t n0 pli plt es ci hae hgd _hbody hP
+      _hreach hpkts hst hps
+    refine leaderLogs_preserved_of_update hP hst ?_
+    subst hgd
+    exact (update_elections_data_appendEntries_ghost p.pDst
+      (net.nwState p.pDst) t n0 pli plt es ci).2.2.2
+  · -- append_entries_reply
+    intro xs p ys net st' ps' gd d m t es res haer hgd _hbody hP _hreach
+      hpkts hst hps
+    refine leaderLogs_preserved_of_update hP hst ?_
+    rw [hgd]
+  · -- request_vote
+    intro xs p ys net st' ps' gd d m t cid lli llt hrv hgd _hbody hP
+      _hreach hpkts hst hps
+    refine leaderLogs_preserved_of_update hP hst ?_
+    subst hgd
+    exact (update_elections_data_requestVote_cronies p.pDst p.pSrc t
+      p.pSrc lli llt (net.nwState p.pDst)).2.1
+  · -- request_vote_reply: THE case
+    intro xs p ys net st' ps' gd d t v hrvr hgd hbody hP hreach hpkts hst
+      hps
+    intro h ll t' h' ll' e e' h1 h2 he he'
+    replace h1 : (e.eTerm, ll) ∈ (st' h).1.leaderLogs := h1
+    replace h2 : (t', ll') ∈ (st' h').1.leaderLogs := h2
+    have helim : ∀ (hh : name (P := P)) (tt : term)
+        (lll : List (entry (P := P))),
+        (tt, lll) ∈ (st' hh).1.leaderLogs →
+        (tt, lll) ∈ (net.nwState hh).1.leaderLogs ∨
+        (hh = p.pDst ∧
+         (handleRequestVoteReply p.pDst (net.nwState p.pDst).2 p.pSrc t
+           v).type = .Leader ∧
+         (net.nwState p.pDst).2.type = .Candidate ∧
+         tt = (handleRequestVoteReply p.pDst (net.nwState p.pDst).2 p.pSrc
+           t v).currentTerm ∧
+         lll = (handleRequestVoteReply p.pDst (net.nwState p.pDst).2 p.pSrc
+           t v).log) := by
+      intro hh tt lll hin
+      rw [hst hh] at hin
+      by_cases heq : hh = p.pDst
+      · subst heq
+        rw [update_same] at hin
+        replace hin : (tt, lll) ∈ gd.leaderLogs := hin
+        subst hgd
+        rcases leaderLogs_update_elections_data_RVR hin with hold | hnew
+        · exact Or.inl hold
+        · exact Or.inr ⟨rfl, hnew⟩
+      · rw [update_neq _ _ heq] at hin
+        exact Or.inl hin
+    have hq : p ∈ net.nwPackets := by
+      rw [hpkts]
+      exact List.mem_append.mpr (Or.inr (List.mem_cons_self ..))
+    rcases helim h _ _ h1 with h1old | ⟨heqh, hty1, hcand1, hterm1, hll1⟩
+    · rcases helim h' _ _ h2 with h2old | ⟨heqh', hty2, hcand2, hterm2, hll2⟩
+      · -- both old
+        exact hP h ll t' h' ll' e e' h1old h2old he he'
+      · -- ll' is the fresh snapshot: resolve e through logs_leaderLogs
+        -- and identify ll with e's snapshot there via one_leaderLog
+        subst heqh'
+        have hnl : (net.nwState p.pDst).2.type ≠ .Leader := by
+          rw [hcand2]
+          exact fun hc => nomatch hc
+        obtain ⟨-, -, -, -, -, hlogEq, -⟩ :=
+          handleRequestVoteReply_leader_transition p.pDst
+            (net.nwState p.pDst).2 p.pSrc t v rfl hnl hty2
+        rw [hll2, hlogEq] at he ⊢
+        obtain ⟨leader, llx, esx, hmemx, hrmx, -⟩ :=
+          logs_leaderLogs_invariant net hreach p.pDst e he
+        have hllx : ll = llx :=
+          one_leaderLog_per_term_log_invariant net hreach h leader e.eTerm
+            ll llx h1old hmemx
+        rw [hllx] at he'
+        have hin2 : e' ∈ esx ++ llx := List.mem_append.mpr (Or.inr he')
+        rw [← hrmx] at hin2
+        exact removeAfterIndex_in hin2
+    · -- ll is the fresh snapshot
+      subst heqh
+      rcases helim h' _ _ h2 with h2old | ⟨-, -, -, -, hll2⟩
+      · -- e bears the winner's current term inside an OLD snapshot —
+        -- the candidate-entries contradiction
+        exfalso
+        have hnl : (net.nwState p.pDst).2.type ≠ .Leader := by
+          rw [hcand1]
+          exact fun hc => nomatch hc
+        obtain ⟨-, hv, hctt, hctEq, -, -, hwon⟩ :=
+          handleRequestVoteReply_leader_transition p.pDst
+            (net.nwState p.pDst).2 p.pSrc t v rfl hnl hty1
+        have hteq : e.eTerm = t := by
+          rw [hterm1, hctEq, hctt]
+        have hce : candidateEntries e net.nwState :=
+          leaderLogs_candidateEntries_invariant net hreach h' e t' ll'
+            h2old he
+        have hbody' : p.pBody = .RequestVoteReply e.eTerm true := by
+          rw [hbody, hteq, hv]
+        have hct : (net.nwState p.pDst).2.currentTerm = e.eTerm := by
+          rw [hteq]
+          exact hctt
+        exact wonElection_candidateEntries_rvr
+          (votes_correct_invariant net hreach)
+          (cronies_correct_invariant net hreach) hce hq hbody' hct hwon
+          hcand1
+      · -- both fresh: the two snapshots are the same log
+        rw [hll2, ← hll1]
+        exact he'
+  · -- do_leader: ghost untouched
+    intro net st' ps' gd d h os d' ms hdl hP _hreach hstate hst hps
+    refine leaderLogs_preserved_of_update hP hst ?_
+    rw [hstate]
+  · -- do_generic_server: ghost untouched
+    intro net st' ps' gd d os d' ms h hgs hP _hreach hstate hst hps
+    refine leaderLogs_preserved_of_update hP hst ?_
+    rw [hstate]
+  · -- state_same_packet_subset
+    intro net net' hstates hsub hP _hreach h ll t' h' ll' e e' h1 h2 he he'
+    replace h1 : (e.eTerm, ll) ∈ (net'.nwState h).1.leaderLogs := h1
+    replace h2 : (t', ll') ∈ (net'.nwState h').1.leaderLogs := h2
+    rw [← hstates h] at h1
+    rw [← hstates h'] at h2
+    exact hP h ll t' h' ll' e e' h1 h2 he he'
+  · -- reboot: ghost preserved
+    intro net net' gd d h d' _hrb hP _hreach hstate hst hpkts
+    refine leaderLogs_preserved_of_update hP hst ?_
+    rw [hstate]
+
 end LeaderLogsAssembly
 end Raft
 end VerdiCompat
