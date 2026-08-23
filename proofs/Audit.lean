@@ -2,6 +2,7 @@ import Lean
 import GoLeanProofs
 import GoLean
 import Audit.Kit
+import Audit.FastEval
 import Audit.Reverse
 import Audit.Gcd
 import Audit.MinMax

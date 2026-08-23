@@ -578,3 +578,70 @@ parkable, measure-first:
    docstrings say so); no GoCore/frontend/scripts changes; every
    public simulation theorem lands with its `#print axioms` pin per
    kit convention.
+
+---
+
+## 6.8 U4 — the evaluator built and proved; the mid-build gate:
+MARGINAL GO; the assembly staged as unit 5 (2026-08-23)
+
+**The machinery is PROVED** (all kernel-checked, zero hatches, pins in
+`proofs/Audit/FastEval.lean`, everything in the aggregator/1b2 sweep):
+
+- `FastEval/{Heap,Ops,Loops,Shared,Values,Stores,Frames,Iter,Step}`:
+  the trie heap + γ-abstraction; the three primitives; the generic
+  loop transport; the wave's three helper towers (one authorized
+  wave, three forked workers, all green, re-verified, reports folded);
+  `stepFast` (the full arm-for-arm mirror, census-unexercised
+  machinery fail-closed) and **`stepFast_ok`** — the per-step
+  one-directional refinement — plus `iterF`/`iterF_ok`/`iterF_add`.
+- `Specs/TwinCheckpointsF` (seed + 350k trie checkpoints, reflected)
+  and `Specs/TwinPrelude`: **`twin_prelude_eq`** — the kernel re-ran
+  the seed + `StateWf` + all 1,382 init steps against the reflected
+  literals AND checked `γF twinSeedF` = the post-prelude state in one
+  equation (8:18 / 36.7 GB, `artifacts` measured; this is the single
+  equality that replaces any carried trie invariant).
+
+**The mid-build gate, measured** (`records/fastseg.out`): from the
+350k checkpoint — fast 500 steps: kernel **PASS 2:28 / 21.6 GB**
+(the same slow segment: OOM(137)@48G at 11:33); fast 2000: OOM(137)
+@40G at 7:49 — the kill point. Bounds: ≤0.30 s/step (ceiling incl.
+fixed), ≥0.21 s/step on the 500→kill stretch; retention
+≥14.5 MB/step. Reading: **the trie removed the heap-size dependence**
+(slow was 2.22 s / 157 MB per step here); the residual is the
+machine's INTRINSIC kernel step cost, consistent with the slow
+small-heap rates (§1.2: 0.06–0.29 s/step) — ~10–15× time and ~8–11×
+memory better than slow at this heap, uniform in run position.
+
+**Projection** (bounds as bounds): 711,616 × 0.10–0.30 s ≈ 20–59
+CPU-h kernel + per-segment fixed (≈1,200 steps/segment at 24G →
+~590 segments; ≈2,900 at 48G → ~245; fixed ≈1.5–2 min each → 6–20 h)
+≈ **~35–80 CPU-h total, ~30–60 GB of checkpoint/segment artifacts,
+~1.5–2.5 days wall at 2–3 concurrent capped jobs**. Against the §6.7
+trigger (≤ ~60 CPU-h): **MARGINAL GO** — inside under the central
+estimates, over under the pessimistic bound. Two cheap levers before
+the long run, both unit-5-internal: 48G segments (fixed-cost −60%),
+and batch checkpoint emission (ONE compiled pass, ~12 min, vs
+per-index reruns). A miss after the levers re-poses §6.6.
+
+**Findings recorded**: (i) the γF lazy view is kernel-lazy but
+INTERPRETER-STRICT — compiled fast-segment runs materialize the dump
+per pure-helper call (the 20+ min pre-check kill); kernel checks are
+unaffected and double as the stub detector (500 steps stub-free by
+PASS; stub-absence beyond is closed mechanically by each unit-5
+segment check — a stub fires as a fast elaboration-failure with a
+visible `.error`, never an OOM). (ii) Worker A's census-classifier
+blind spot (nullary strict ops) — found, mirrored, recorded.
+
+**UNIT 5 (staged, not executed — the charter):**
+1. Batch trie-checkpoint emitter (multi-index command elaborator in
+   `StateWire`, one compiled pass) at the segment boundaries chosen
+   from this gate's measured retention;
+2. scripted segment-module generation
+   (`iterF stepFast nᵢ ⟨ckptFᵢ⟩ Cᵢ chᵢ = .ok ⟨ckptFᵢ₊₁⟩` —
+   equality-to-next-literal for chaining), waved 2–3 concurrent
+   capped kernel jobs;
+3. composition: `iterF_add` folds the segments → ONE `iterF`
+   equation → `iterF_ok` → `stepFnIter 711616 …` → the kit's
+   `runConfig` glue + `twin_prelude_eq` →
+   `twinRun 711616 [] = .ok r` → **`CompletionWitness`** discharged;
+   fuel re-derived by the chain arithmetic.

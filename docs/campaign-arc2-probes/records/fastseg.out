@@ -1,0 +1,14 @@
+== U4 mid-build gate: kernel fast segments from ckpt350k (trie form) ==
+-- fastseg-k500 (24G cap, timeout 3600) --
+( GOLEAN_MEM_MAX=24G timeout 3600 ../scripts/capped lean ; )  144.80s user 2.96s system 99% cpu 2:27.78 total
+rc=0
+peak_kb=21570440
+-- fastseg-k2000 (40G cap, timeout 3600) --
+( GOLEAN_MEM_MAX=40G timeout 3600 ../scripts/capped lean ; )  460.82s user 8.06s system 99% cpu 7:48.93 total
+rc=137
+peak_kb=43297324
+
+comparison at the same checkpoint, slow list-heap (records/seg350k.out): 500 steps OOM(137)@48G at 11:33; fast: 500 PASS 2:28/21.6GB, 2000 OOM(137)@40G at 7:49 (kill point recorded).
+marginals (bounds): time ceiling 148/500 = 0.30 s/step incl. fixed; 500->kill stretch >= 0.21 s/step; retention >= (43.3-21.6)GB/<=1500 >= 14.5 MB/step.
+
+-- compiled pre-check (fastseg-expected.lean): KILLED at 20+ min with no output — the gammaF lazy view is kernel-lazy but INTERPRETER-STRICT (call-by-value materializes the dump per pure-helper call). Recorded as a design finding; the kernel run supersedes it as the stub detector (500 steps stub-free by kernel PASS).
