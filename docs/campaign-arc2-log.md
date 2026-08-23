@@ -190,9 +190,16 @@ the same rules):
   sanctioned no-diff hatch with visible notes; FastEval + checkpoint
   modules + Audit/FastEval pins all inside the audited closure —
   the 1b2 sweep and the in-build Audit gate passed over them; no
-  designated statement changed on this lane). **ARC 2 UNIT 4
-  BRANCH-COMPLETE** at this tip; unit 5 opens on memo §6.8's staged
-  plan.
+  designated statement changed on this lane). ONE note carried
+  forward per the Arc-3 precedent: **comparator landmark OWED
+  (scope)** — `proofs/Audit.lean` (my one-line `import
+  Audit.FastEval` addition) is in Challenge's trusted closure, so ci
+  step 1c4 flags the §3.8 judge obligation; the judge is a MERGE-time
+  landmark (constitution §3.8/§4.1) and this lane ends
+  branch-complete without merging — **flagged for the operator's
+  merge step**, exactly as the campaign log already flags Arc 3's.
+  **ARC 2 UNIT 4 BRANCH-COMPLETE** at this tip; unit 5 opens on memo
+  §6.8's staged plan.
 
 ## Checkpoint (U4 end, recomputed)
 
