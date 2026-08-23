@@ -1444,6 +1444,333 @@ theorem handleAppendEntries_preserves_commit {net : MsgNet}
   exact ⟨host, e', hle, hdc', hidx, hsurv e hin hidx,
     hsurv e' hin' (Nat.le_refl _)⟩
 
+omit O in
+/-- Membership survives `removeAfterIndex`. -/
+theorem removeAfterIndex_mem {l : List (entry (P := P))} {i : logIndex}
+    {e : entry (P := P)} (he : e ∈ removeAfterIndex l i) : e ∈ l := by
+  induction l with
+  | nil => exact nomatch he
+  | cons a as ih =>
+    unfold removeAfterIndex at he
+    split at he
+    · exact he
+    · exact List.mem_cons_of_mem _ (ih he)
+
+omit O in
+/-- The CORRELATED commitIndex/log shape of an AppendEntries step
+(upstream reads this off `handleAppendEntries_log_detailed`,
+`StateMachineSafetyProof.v:1805-1844`): a full no-op, or an acceptance
+whose new `commitIndex` is the `max`/`min` form over the spliced log. -/
+theorem handleAppendEntries_ci_log (me : name (P := P))
+    (st : raft_data (P := P)) (t : term) (lid : name (P := P))
+    (pli : logIndex) (plt : term) (es : List (entry (P := P)))
+    (ci : logIndex) {d m}
+    (h : handleAppendEntries me st t lid pli plt es ci = (d, m)) :
+    (d.commitIndex = st.commitIndex ∧ d.log = st.log) ∨
+    (d.commitIndex = max st.commitIndex (min ci (maxIndex d.log)) ∧
+     haveNewEntries st es = true ∧
+     ((pli = 0 ∧ d.log = es) ∨
+      (∃ e0, e0 ∈ st.log ∧ e0.eIndex = pli ∧ e0.eTerm = plt ∧
+        d.log = es ++ removeAfterIndex st.log pli))) := by
+  have hadv := advanceCurrentTerm_la_ci st t
+  have hadvlog := (advanceCurrentTerm_spec st t).2.1
+  unfold handleAppendEntries at h
+  repeat' split at h
+  all_goals simp only [Prod.mk.injEq] at h
+  all_goals obtain ⟨rfl, -⟩ := h
+  · exact Or.inl ⟨rfl, rfl⟩
+  · rename_i hpli0 hnew
+    simp only [beq_iff_eq] at hpli0
+    exact Or.inr ⟨rfl, hnew, Or.inl ⟨hpli0, rfl⟩⟩
+  · exact Or.inl ⟨hadv.2, hadvlog⟩
+  · exact Or.inl ⟨rfl, rfl⟩
+  · exact Or.inl ⟨rfl, rfl⟩
+  · rename_i e0 hfind hterm hnew
+    obtain ⟨he0, he0i⟩ := findAtIndex_elim hfind
+    have hplt : e0.eTerm = plt := by
+      rcases hb : (plt == e0.eTerm) with _ | _
+      · exact absurd (by rw [hb]; rfl) hterm
+      · simp only [beq_iff_eq] at hb
+        exact hb.symm
+    exact Or.inr ⟨rfl, hnew, Or.inr ⟨e0, he0, he0i, hplt, rfl⟩⟩
+  · exact Or.inl ⟨hadv.2, hadvlog⟩
+
+/-- `StateMachineSafetyProof.v:1887-2158`
+(`commit_invariant_append_entries`) — the custom-premise form
+(`lifted_maxIndex_sanity` rides along, exactly upstream). The
+newly-covered entries certify through the request's GHOST log: the
+`commit_invariant_nw` IH covers the ghost, `ghost_log_correct` (unit
+13) contextualizes the payload inside it, and
+`ghost_log_entries_match` (unit 14) glues surviving old entries to
+their ghost twins. -/
+theorem commit_invariant_append_entries {xs : List (MsgPacket)}
+    {p : MsgPacket} {ys : List (MsgPacket)} {net : MsgNet}
+    {st' : name (P := P) → electionsData (P := P) × raft_data (P := P)}
+    {ps' : List (MsgPacket)} {gd : electionsData (P := P)}
+    {d : raft_data (P := P)} {m : msg (P := P)} {t : term}
+    {n : name (P := P)} {pli : logIndex} {plt : term}
+    {es : List (entry (P := P))} {ci : logIndex}
+    (hae : handleAppendEntries p.pDst (net.nwState p.pDst).2 t n pli plt
+      es ci = (d, m))
+    (hgd : gd = update_elections_data_appendEntries p.pDst
+      (net.nwState p.pDst) t n pli plt es ci)
+    (hbody : p.pBody.2 = .AppendEntries t n pli plt es ci)
+    (hP : commit_invariant net)
+    (hreach : msg_refined_raft_intermediate_reachable (P := P) net)
+    (hmis : lifted_maxIndex_sanity net)
+    (hpkts : net.nwPackets = xs ++ p :: ys)
+    (hst : ∀ h, st' h = update net.nwState p.pDst (gd, d) h)
+    (hps : ∀ p' ∈ ps', p' ∈ (xs ++ ys) ∨
+      p' = (⟨p.pDst, p.pSrc, (write_ghost_log p.pDst (gd, d), m)⟩ :
+        MsgPacket)) :
+    commit_invariant (⟨ps', st'⟩ : MsgNet) := by
+  obtain ⟨hP1, hP2⟩ := hP
+  have hp_in : p ∈ net.nwPackets := by
+    rw [hpkts]
+    exact List.mem_append.mpr (Or.inr (List.mem_cons_self ..))
+  have hst2 : ∀ h', st' h' = update net.nwState p.pDst
+      (update_elections_data_appendEntries p.pDst (net.nwState p.pDst)
+        t n pli plt es ci, d) h' := by
+    intro h'
+    rw [hst h', hgd]
+  have htrans : ∀ {e : entry (P := P)} {t0 : term},
+      lifted_committed net e t0 →
+      lifted_committed (⟨ps', st'⟩ : MsgNet) e t0 :=
+    fun hc => handleAppendEntries_preserves_commit hreach hp_in hbody hae
+      hst2 hc
+  have hct_le : (net.nwState p.pDst).2.currentTerm ≤ d.currentTerm := by
+    obtain ⟨-, hcts, -, -⟩ := handleAppendEntries_spec p.pDst
+      (net.nwState p.pDst).2 t n pli plt es ci hae
+    rcases hcts with ⟨hcteq, -⟩ | ⟨hlt, -⟩
+    · rw [hcteq]
+      exact Nat.le_refl _
+    · exact Nat.le_of_lt hlt
+  have hsorted := mgv_lifted_entries_sorted net hreach p.pDst
+  have hcont := mgv_lifted_entries_contiguous net hreach p.pDst
+  have hcontes := mgv_lifted_entries_contiguous_nw net hreach p t n pli
+    plt es ci hp_in hbody
+  have hsortedes : sorted es :=
+    entries_sorted_nw_invariant (mgv_deghost net)
+      (msg_simulation_1 net hreach) (mgv_deghost_packet p) t n pli plt
+      es ci (List.mem_map_of_mem hp_in) hbody
+  -- an entry of es below the OLD commitIndex is already committed:
+  -- its pre-state twin at the same index is, and SMS-prime + unique
+  -- indices identify the two (upstream's "beginning/middle of time"
+  -- new-entry sub-cases)
+  have hnewold : (net.nwState p.pDst).2.currentTerm ≤ t → ∀ e ∈ es,
+      e.eIndex ≤ (net.nwState p.pDst).2.commitIndex →
+      lifted_committed net e (net.nwState p.pDst).2.currentTerm := by
+    intro hctt e he hle
+    have hpos : 0 < e.eIndex :=
+      Nat.lt_of_le_of_lt (Nat.zero_le pli) (hcontes.2 e he)
+    obtain ⟨e', he'i, he'⟩ := hcont.1 e.eIndex
+      ⟨hpos, Nat.le_trans hle (hmis.2 p.pDst)⟩
+    have he'c : lifted_committed net e'
+        (net.nwState p.pDst).2.currentTerm :=
+      hP1 p.pDst e' he' (by rw [he'i]; exact hle)
+    rcases msg_lifted_sms_nw' hreach hp_in hbody he'c hctt
+        with h1 | ⟨h2, -⟩ | h3 | h4
+    · exfalso
+      rw [he'i] at h1
+      exact Nat.lt_irrefl _ (Nat.lt_trans (hcontes.2 e he) h1)
+    · exfalso
+      rw [he'i] at h2
+      have hlt := hcontes.2 e he
+      rw [h2] at hlt
+      exact Nat.lt_irrefl _ hlt
+    · exfalso
+      rw [he'i] at h3
+      exact Nat.lt_irrefl _
+        (Nat.lt_of_le_of_lt (maxIndex_is_max hsortedes he) h3)
+    · have : e = e' := uniqueIndices_elim_eq
+        (sorted_uniqueIndices hsortedes) he h4 he'i.symm
+      rw [this]
+      exact he'c
+  -- host half
+  have hhost : commit_invariant_host (⟨ps', st'⟩ : MsgNet) := by
+    intro h0 e hin hle
+    replace hin : e ∈ (st' h0).2.log := hin
+    replace hle : e.eIndex ≤ (st' h0).2.commitIndex := hle
+    show lifted_committed (⟨ps', st'⟩ : MsgNet) e (st' h0).2.currentTerm
+    rw [hst h0] at hin hle ⊢
+    by_cases heq : h0 = p.pDst
+    · rw [heq, update_same] at hin hle ⊢
+      replace hin : e ∈ d.log := hin
+      replace hle : e.eIndex ≤ d.commitIndex := hle
+      show lifted_committed _ e d.currentTerm
+      rcases handleAppendEntries_ci_log p.pDst (net.nwState p.pDst).2 t
+          n pli plt es ci hae with ⟨hcieq, hlogeq⟩ | ⟨hcieq, hnew, hshape⟩
+      · rw [hcieq] at hle
+        rw [hlogeq] at hin
+        exact lifted_committed_monotonic (htrans (hP1 p.pDst e hin hle))
+          hct_le
+      · -- acceptance: the handler pins its term to the request's
+        have hctd : d.currentTerm = t := by
+          rcases handleAppendEntries_accept_detail p.pDst
+              (net.nwState p.pDst).2 t n pli plt es ci hae
+            with hsame | ⟨-, hctd, -, -⟩
+          · -- log changed (hshape) contradicts a same-log arm only if
+            -- es ≠ [] etc.; read the term off the true reply instead
+            obtain ⟨t'', r'', hm⟩ := handleAppendEntries_reply_entries
+              p.pDst (net.nwState p.pDst).2 t n pli plt es ci hae
+            cases r''
+            · exfalso
+              have hds := handleAppendEntries_false_reply_state p.pDst
+                (net.nwState p.pDst).2 t n pli plt es ci (hm ▸ hae)
+              -- a rejection keeps the state; but hnew says the log
+              -- accepted — refute via the ci form? use haveNewEntries:
+              -- a full no-op has d = st, contradicting hcieq only if
+              -- ci-form ≠ old ci... instead: the reject keeps the log,
+              -- so hshape's arms both change it — refute there
+              rcases hshape with ⟨-, hlog⟩ | ⟨e0, -, -, -, hlog⟩
+              · obtain ⟨hesne, -⟩ := haveNewEntries_true hnew
+                rw [hds] at hlog
+                -- st.log = es together with haveNewEntries st es = true
+                -- is impossible: es's max entry would be its own new
+                -- entry
+                obtain ⟨x, hx, hxi, hxt⟩ := maxIndex_non_empty hesne
+                obtain ⟨-, hfind⟩ := haveNewEntries_true hnew
+                rcases hfind with hnone | ⟨em, hsome, hemt⟩
+                · exact (findAtIndex_None hsorted hnone
+                    (by rw [hlog]; exact hx)) hxi
+                · obtain ⟨hem_in, hemi⟩ := findAtIndex_elim hsome
+                  rw [hlog] at hem_in
+                  exact hemt (by
+                    have : em = x := uniqueIndices_elim_eq
+                      (sorted_uniqueIndices hsortedes) hem_in hx
+                      (hemi.trans hxi.symm)
+                    rw [this, hxt])
+              · obtain ⟨hesne, -⟩ := haveNewEntries_true hnew
+                rw [hds] at hlog
+                -- st.log = es ++ removeAfterIndex st.log pli — the
+                -- left part is inside st.log, and every es entry is
+                -- above pli while remove reproduces the ≤-pli part;
+                -- take es's max entry: it is in st.log (rw hlog,
+                -- mem_append left) and the haveNewEntries findAtIndex
+                -- analysis refutes as above
+                obtain ⟨x, hx, hxi, hxt⟩ := maxIndex_non_empty hesne
+                obtain ⟨-, hfind⟩ := haveNewEntries_true hnew
+                rcases hfind with hnone | ⟨em, hsome, hemt⟩
+                · exact (findAtIndex_None hsorted hnone
+                    (by rw [hlog]; exact List.mem_append.mpr (Or.inl hx)))
+                    hxi
+                · obtain ⟨hem_in, hemi⟩ := findAtIndex_elim hsome
+                  rw [hlog] at hem_in
+                  rcases List.mem_append.mp hem_in with hem1 | hem2
+                  · exact hemt (by
+                      have : em = x := uniqueIndices_elim_eq
+                        (sorted_uniqueIndices hsortedes) hem1 hx
+                        (hemi.trans hxi.symm)
+                      rw [this, hxt])
+                  · have hle0 : em.eIndex ≤ pli :=
+                      removeAfterIndex_In_le hsorted hem2
+                    have hlt : pli < x.eIndex := hcontes.2 x hx
+                    rw [hemi] at hle0
+                    rw [hxi] at hlt
+                    exact Nat.lt_irrefl _ (Nat.lt_of_le_of_lt hle0 hlt)
+            · exact handleAppendEntries_true_reply_currentTerm p.pDst
+                (net.nwState p.pDst).2 t n pli plt es ci (hm ▸ hae)
+          · exact hctd
+        rw [hcieq] at hle
+        rw [hctd]
+        rcases le_max_elim hle with hle1 | hle2
+        · -- covered by the OLD commitIndex
+          have hctt : (net.nwState p.pDst).2.currentTerm ≤ t := by
+            rw [← hctd]
+            exact hct_le
+          have hres : lifted_committed net e
+              (net.nwState p.pDst).2.currentTerm := by
+            rcases hshape with ⟨-, hlog⟩ | ⟨e0, he0, he0i, he0t, hlog⟩
+            · rw [hlog] at hin
+              exact hnewold hctt e hin hle1
+            · rw [hlog] at hin
+              rcases List.mem_append.mp hin with hines | hinrem
+              · exact hnewold hctt e hines hle1
+              · exact hP1 p.pDst e (removeAfterIndex_mem hinrem) hle1
+          exact lifted_committed_monotonic (htrans hres)
+            (by rw [← hctd]; exact hct_le)
+        · -- covered by the request's leaderCommit: go through the ghost
+          have hleci : e.eIndex ≤ ci :=
+            Nat.le_trans hle2 (Nat.min_le_left ..)
+          have hghost : e ∈ (p.pBody :
+              ghost_log (P := P) × msg (P := P)).1 := by
+            rcases ghost_log_correct_invariant net hreach p p.pBody.1 t
+                n pli plt es ci hp_in hbody rfl
+              with ⟨hpli0, -, hgeq⟩ | ⟨⟨gple, hgi, hgt, hgin⟩, hesq⟩
+            · -- scratch ghost: the payload IS the ghost log
+              rcases hshape with ⟨-, hlog⟩ | ⟨e0, -, -, -, hlog⟩
+              · rw [hlog] at hin
+                rw [← hgeq]
+                exact hin
+              · rw [hlog] at hin
+                rcases List.mem_append.mp hin with hines | hinrem
+                · rw [← hgeq]
+                  exact hines
+                · exfalso
+                  have hle0 : e.eIndex ≤ pli :=
+                    removeAfterIndex_In_le hsorted hinrem
+                  rw [hpli0] at hle0
+                  have : 0 < e.eIndex := hcont.2 e
+                    (removeAfterIndex_mem hinrem)
+                  exact Nat.lt_irrefl _ (Nat.lt_of_le_of_lt
+                    (Nat.le_trans this hle0) (Nat.lt_succ_self 0)) |>.elim
+            · -- pivot ghost: es is the findGtIndex tail; old entries
+              -- glue to their ghost twins by ghost log matching
+              rcases hshape with ⟨hpli0, hlog⟩ | ⟨e0, he0, he0i, he0t, hlog⟩
+              · rw [hlog] at hin
+                rw [hesq] at hin
+                exact findGtIndex_in hin
+              · rw [hlog] at hin
+                rcases List.mem_append.mp hin with hines | hinrem
+                · rw [hesq] at hines
+                  exact findGtIndex_in hines
+                · have hle0 : e.eIndex ≤ pli :=
+                    removeAfterIndex_In_le hsorted hinrem
+                  have hinst : e ∈ (net.nwState p.pDst).2.log :=
+                    removeAfterIndex_mem hinrem
+                  have hgsorted := ghost_log_sorted hreach hp_in
+                  have hgcont := ghost_log_contiguous hreach hp_in
+                  obtain ⟨e', he'i, he'⟩ := hgcont.1 e.eIndex
+                    ⟨hcont.2 e hinst, by
+                      have hle0' := hle0
+                      rw [← hgi] at hle0'
+                      exact Nat.le_trans hle0'
+                        (maxIndex_is_max hgsorted hgin)⟩
+                  have hmatch := (ghost_log_entries_match_invariant net
+                    hreach).1 p.pDst p hp_in
+                  have he'host : e' ∈ (net.nwState p.pDst).2.log := by
+                    refine (hmatch e0 gple e' ?_ ?_ he0 hgin ?_).mpr he'
+                    · rw [he0i, hgi]
+                    · rw [he0t, hgt]
+                    · rw [he'i, he0i]
+                      exact hle0
+                  have : e = e' := uniqueIndices_elim_eq
+                    (sorted_uniqueIndices hsorted) hinst he'host
+                    he'i.symm
+                  rw [this]
+                  exact he'
+          have hres := hP2 p t n pli plt es ci e hp_in hbody hghost hleci
+          exact htrans hres
+    · rw [update_neq _ _ heq] at hin hle ⊢
+      exact htrans (hP1 h0 e hin hle)
+  refine ⟨hhost, ?_⟩
+  -- nw half: the only fresh packet is a reply, never an AppendEntries
+  intro p0 t0 lid pli0 plt0 es0 lci e hp0 hbody0 hgl hle
+  replace hp0 : p0 ∈ ps' := hp0
+  rcases hps p0 hp0 with hold | hnew
+  · have hold2 : p0 ∈ net.nwPackets := by
+      rw [hpkts]
+      exact mem_of_mem_remove_middle hold
+    exact htrans (hP2 p0 t0 lid pli0 plt0 es0 lci e hold2 hbody0 hgl hle)
+  · exfalso
+    obtain ⟨t'', r'', hm⟩ := handleAppendEntries_reply_entries p.pDst
+      (net.nwState p.pDst).2 t n pli plt es ci hae
+    rw [hnew] at hbody0
+    replace hbody0 : m = msg.AppendEntries t0 lid pli0 plt0 es0 lci :=
+      hbody0
+    rw [hm] at hbody0
+    exact nomatch hbody0
+
 end StateMachineSafety
 
 end Raft
