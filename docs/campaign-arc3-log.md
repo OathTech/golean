@@ -1790,3 +1790,21 @@ PrefixWithinTerm surprises.
   STALE olean — the resulting rcases arity errors look like dependent-
   elimination failures; use `lake build <module>` so deps rebuild
   first. Build green, sweep 1998 (was 1985).
+- 2026-08-23 Slice 51 (W2): `allEntries_leader_sublog`
+  (AllEntriesLeaderSublogInterface.v:8-13 1:1; upstream 351 lines) —
+  a leader's current-term record is in its log. New:
+  `lifted_leader_sublog_nw` (9th lift_prop consumer),
+  `handleAppendEntries_true_reply_type`/`_false_reply_state` (a true
+  reply leaves a Follower; a false reply is a no-op — together giving
+  upstream's `update_elections_data_appendEntries_log_allEntries_leader`:
+  an AE that leaves you Leader was a rejection), head_term sharpened
+  again with `e ∈ d.log`. The cases: CR's fresh record forces
+  recorder = leader via `lifted_one_leader_per_term`; AE fresh records
+  ride the lifted nw `leader_sublog`; an RVR that MINTS the leader dies
+  on `wonElection_candidateEntries_rvr` against W1's
+  `allEntries_candidateEntries` (its first payoff); all still-leader
+  handlers are ct/log-preserving by their specs. [AGENT] subst-direction
+  bookkeeping (three more instances — `leader = p.pDst` eliminates
+  leader; `leader = h` kept leader here) resolved per-site by compile
+  probe; recorded again: NEVER assume the direction, check the errors.
+  Build green, sweep 2014.
