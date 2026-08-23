@@ -91,6 +91,22 @@ completion machinery, route memo + unit-2 charter).
   kernel-checked + the γ-agreement folded into its statement) in
   flight.
 
+- **U4 wave + integration + mid-build gate** (2026-08-23): the
+  authorized wave returned — A (Values, 700 l), B (Stores, 1,096 l),
+  C (Frames, 641 l), all green, all re-verified by my own capped
+  builds and spot-checked (axioms, API shapes); committed with
+  attribution. Integration: all WIRE arms flipped; `stepFast_ok`
+  re-proved over the complete evaluator (29 manual cases over 8
+  hoisted conditioned arm equations); helper panic-conversion arms
+  stubbed fail-closed (no error transport in a one-directional
+  refinement; census shows no panics). `twin_prelude_eq`
+  kernel-checked (8:18/36.7 GB). Mid-build gate: fast-500 kernel
+  PASS 2:28/21.6 GB (slow: OOM@48G 11:33); fast-2000 OOM@40G 7:49
+  (kill point). VERDICT: **MARGINAL GO** — memo §6.8; unit 5 staged
+  (batch emitter + segment wave + composition), not executed. Full
+  proofs build green (480 jobs); Audit/FastEval.lean pins; aggregator
+  wired. Records: `records/fastseg.out`.
+
 ## THE U4 PER-ARM TEMPLATE (of record, for the authorized wave)
 
 Validated on the landed `FastEval/Ops.lean` (its own header carries
@@ -143,6 +159,21 @@ the same rules):
      side's (`b'`).
 
 ## Judgment calls
+
+- **[AGENT]** 2026-08-23 (U4): helper panic-conversion arms stubbed
+  rather than proving error-correspondence — the one-directional
+  refinement deliberately has no error transport, the census shows
+  the run never panics, and a wrongly-stubbed panic would surface as
+  an honest fast-run elaboration failure, never a false theorem.
+- **[AGENT]** 2026-08-23 (U4): the interpreted pre-check KILLED at
+  20+ min (γF is interpreter-strict) and its stub-detection role
+  reassigned to the kernel segment checks themselves — recorded in
+  the memo; the 2000-point OOM is a memory kill, not a stub
+  signature (stubs fail elaboration fast with a visible .error).
+- **[AGENT]** 2026-08-23 (U4): MARGINAL GO called at the trigger
+  boundary with the two unit-5-internal levers named (48G segments,
+  batch emission) — a post-lever miss re-poses the §6.6 Sym
+  convergence rather than pushing through.
 
 - **[AGENT]** 2026-08-22: copy mechanism is path-checkout from the
   exact commit rather than file copy — verbatim by construction, no

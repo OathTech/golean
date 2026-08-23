@@ -65,6 +65,20 @@ import GoLeanProofs.Specs.RaftAgreement
 -- reflected mid-run checkpoint (route memo §6.1).
 import GoLeanProofs.Specs.StateWire
 import GoLeanProofs.Specs.TwinCheckpoints
+-- Arc 2 U4: the trie-form checkpoints, the kernel-pinned prelude, and
+-- the verified fast-twin evaluator (route (d) — untrusted method,
+-- never in any statement closure).
+import GoLeanProofs.Specs.TwinCheckpointsF
+import GoLeanProofs.Specs.TwinPrelude
+import GoLeanProofs.FastEval.Heap
+import GoLeanProofs.FastEval.Ops
+import GoLeanProofs.FastEval.Loops
+import GoLeanProofs.FastEval.Shared
+import GoLeanProofs.FastEval.Values
+import GoLeanProofs.FastEval.Stores
+import GoLeanProofs.FastEval.Frames
+import GoLeanProofs.FastEval.Iter
+import GoLeanProofs.FastEval.Step
 import GoLeanProofs.Specs.QuorumRefSpec
 import GoLeanProofs.Specs.Statements
 import GoLeanProofs.Specs.GoldenQuorumWP
