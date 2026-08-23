@@ -2922,6 +2922,435 @@ theorem allEntries_leaderLogs_prefix_within_term_invariant :
       allEntries_leaderLogs_prefix_within_term net :=
   fun net hreach => (prefix_within_term_inductive_invariant net hreach).1
 
+/-! ## leader_completeness — the GAP-6 close
+(`RaftProofs/LeaderCompletenessProof.v` @ a3375e8; discharges the
+unit-4 statement, `LeaderLogs.lean`'s `leader_completeness`) -/
+
+omit O R in
+/-- `CommonTheorems.v:958-965` (`argmin_None`). -/
+theorem argmin_None {A : Type _} (f : A → Nat) (l : List A)
+    (h : argmin f l = none) : l = [] := by
+  cases l with
+  | nil => rfl
+  | cons a l' =>
+    exfalso
+    cases harg : argmin f l' with
+    | none =>
+      simp only [argmin, harg] at h
+      exact nomatch h
+    | some a' =>
+      simp only [argmin, harg] at h
+      split at h <;> exact nomatch h
+
+omit O R in
+/-- `CommonTheorems.v:967-986` (`argmin_elim`). -/
+theorem argmin_elim {A : Type _} (f : A → Nat) :
+    ∀ (l : List A) (a : A), argmin f l = some a →
+      a ∈ l ∧ ∀ x ∈ l, f a ≤ f x := by
+  intro l
+  induction l with
+  | nil => exact fun a h => nomatch h
+  | cons b l' ih =>
+    intro a h
+    cases harg : argmin f l' with
+    | none =>
+      have hl' : l' = [] := argmin_None f l' harg
+      simp only [argmin, harg] at h
+      injection h with h
+      subst h hl'
+      refine ⟨List.mem_cons_self .., ?_⟩
+      intro x hx
+      rcases List.mem_cons.mp hx with rfl | hx
+      · exact Nat.le_refl _
+      · exact nomatch hx
+    | some a' =>
+      simp only [argmin, harg] at h
+      obtain ⟨ha'mem, ha'min⟩ := ih a' harg
+      split at h
+      · rename_i hle
+        injection h with h
+        subst h
+        refine ⟨List.mem_cons_self .., ?_⟩
+        intro x hx
+        rcases List.mem_cons.mp hx with rfl | hx
+        · exact Nat.le_refl _
+        · exact Nat.le_trans (Nat.ble_eq.mp hle) (ha'min x hx)
+      · rename_i hnle
+        injection h with h
+        subst h
+        refine ⟨List.mem_cons_of_mem _ ha'mem, ?_⟩
+        intro x hx
+        rcases List.mem_cons.mp hx with rfl | hx
+        · exact Nat.le_of_lt (Nat.lt_of_not_le
+            (fun hc => hnle (Nat.ble_eq.mpr hc)))
+        · exact ha'min x hx
+
+omit O in
+/-- `LeaderCompletenessProof.v:33-43`
+(`contradicting_leader_logs_on_leader`): the snapshots of one node at
+terms above `t` that omit `e`. -/
+def contradicting_leader_logs_on_leader :
+    List (term × List (entry (P := P))) → term → entry (P := P) →
+    List (term × List (entry (P := P)))
+  | [], _, _ => []
+  | (t', log') :: l', t, e =>
+    if t < t' ∧ e ∉ log' then
+      (t', log') :: contradicting_leader_logs_on_leader l' t e
+    else contradicting_leader_logs_on_leader l' t e
+
+/-- `LeaderCompletenessProof.v:45-51` (`contradicting_leader_logs`). -/
+def contradicting_leader_logs (net : RefinedNet) :
+    List (name (P := P)) → term → entry (P := P) →
+    List (term × name (P := P) × List (entry (P := P)))
+  | [], _, _ => []
+  | h :: ns, t, e =>
+    ((contradicting_leader_logs_on_leader
+        (net.nwState h).1.leaderLogs t e).map fun l => (l.1, h, l.2)) ++
+      contradicting_leader_logs net ns t e
+
+/-- `LeaderCompletenessProof.v:53-54`
+(`minimal_contradicting_leader_log`). -/
+def minimal_contradicting_leader_log (net : RefinedNet) (t : term)
+    (e : entry (P := P)) :
+    Option (term × name (P := P) × List (entry (P := P))) :=
+  argmin (fun l => l.1)
+    (contradicting_leader_logs net (nodes (P := P)) t e)
+
+omit O in
+/-- `LeaderCompletenessProof.v:56-66`
+(`contradicting_leader_logs_on_leader_empty`). -/
+theorem contradicting_leader_logs_on_leader_empty
+    {l : List (term × List (entry (P := P)))} {t : term}
+    {e : entry (P := P)}
+    (h : contradicting_leader_logs_on_leader l t e = []) :
+    ∀ t' log', (t', log') ∈ l → t < t' → e ∈ log' := by
+  induction l with
+  | nil => exact fun t' log' hin _ => nomatch hin
+  | cons a l' ih =>
+    rcases a with ⟨t0, log0⟩
+    simp only [contradicting_leader_logs_on_leader] at h
+    split at h
+    · exact nomatch h
+    · rename_i hneg
+      intro t' log' hin hlt
+      rcases List.mem_cons.mp hin with heq | hin
+      · injection heq with h1 h2
+        subst h1 h2
+        by_cases hmem : e ∈ log'
+        · exact hmem
+        · exact absurd ⟨hlt, hmem⟩ hneg
+      · exact ih h t' log' hin hlt
+
+/-- `LeaderCompletenessProof.v:68-79` (`contradicting_leader_logs_empty`). -/
+theorem contradicting_leader_logs_empty {net : RefinedNet}
+    {ns : List (name (P := P))} {t : term} {e : entry (P := P)}
+    (h : contradicting_leader_logs net ns t e = []) :
+    ∀ h0 ∈ ns, contradicting_leader_logs_on_leader
+      (net.nwState h0).1.leaderLogs t e = [] := by
+  induction ns with
+  | nil => exact fun h0 hin => nomatch hin
+  | cons a ns' ih =>
+    simp only [contradicting_leader_logs] at h
+    obtain ⟨h1, h2⟩ := List.append_eq_nil_iff.mp h
+    intro h0 hin
+    rcases List.mem_cons.mp hin with rfl | hin
+    · exact List.map_eq_nil_iff.mp h1
+    · exact ih h2 h0 hin
+
+/-- `LeaderCompletenessProof.v:81-93`
+(`minimal_contradicting_leader_log_None`). -/
+theorem minimal_contradicting_leader_log_None {net : RefinedNet}
+    {t : term} {e : entry (P := P)}
+    (h : minimal_contradicting_leader_log net t e = none) :
+    ∀ (t' : term) (log' : List (entry (P := P))) (h0 : name (P := P)),
+      (t', log') ∈ (net.nwState h0).1.leaderLogs → t' > t →
+      e ∈ log' := by
+  intro t' log' h0 hin hgt
+  have hnil := argmin_None _ _ h
+  exact contradicting_leader_logs_on_leader_empty
+    (contradicting_leader_logs_empty hnil h0 (allFin_all h0)) t' log'
+    hin hgt
+
+/-- `LeaderCompletenessProof.v:110-119` (`in_contradicting_leader_logs`). -/
+theorem in_contradicting_leader_logs {net : RefinedNet}
+    {ns : List (name (P := P))} {t t' : term} {e : entry (P := P)}
+    {h0 : name (P := P)} {l : List (entry (P := P))}
+    (h : (t', h0, l) ∈ contradicting_leader_logs net ns t e) :
+    (t', l) ∈ contradicting_leader_logs_on_leader
+      (net.nwState h0).1.leaderLogs t e := by
+  induction ns with
+  | nil => exact nomatch h
+  | cons a ns' ih =>
+    simp only [contradicting_leader_logs] at h
+    rcases List.mem_append.mp h with hin | hin
+    · obtain ⟨pair, hmem, heq⟩ := List.mem_map.mp hin
+      injection heq with h1 h2
+      injection h2 with h2a h2b
+      subst h1 h2a h2b
+      exact hmem
+    · exact ih hin
+
+omit O in
+/-- `LeaderCompletenessProof.v:121-142` (the three per-element facts of
+`contradicting_leader_logs_on_leader`, one pass). -/
+theorem contradicting_leader_logs_on_leader_elim
+    {ll : List (term × List (entry (P := P)))} {t t' : term}
+    {e : entry (P := P)} {l : List (entry (P := P))}
+    (h : (t', l) ∈ contradicting_leader_logs_on_leader ll t e) :
+    (t', l) ∈ ll ∧ t < t' ∧ e ∉ l := by
+  induction ll with
+  | nil => exact nomatch h
+  | cons a ll' ih =>
+    rcases a with ⟨t0, log0⟩
+    simp only [contradicting_leader_logs_on_leader] at h
+    split at h
+    · rename_i hpos
+      rcases List.mem_cons.mp h with heq | hin
+      · injection heq with h1 h2
+        subst h1 h2
+        exact ⟨List.mem_cons_self .., hpos⟩
+      · obtain ⟨hmem, hrest⟩ := ih hin
+        exact ⟨List.mem_cons_of_mem _ hmem, hrest⟩
+    · obtain ⟨hmem, hrest⟩ := ih h
+      exact ⟨List.mem_cons_of_mem _ hmem, hrest⟩
+
+omit O in
+/-- `LeaderCompletenessProof.v:144-156`
+(`contradicting_leader_logs_on_leader_complete`). -/
+theorem contradicting_leader_logs_on_leader_complete
+    {ll : List (term × List (entry (P := P)))} {t t' : term}
+    {e : entry (P := P)} {l : List (entry (P := P))}
+    (hin : (t', l) ∈ ll) (hlt : t < t') (hnot : e ∉ l) :
+    (t', l) ∈ contradicting_leader_logs_on_leader ll t e := by
+  induction ll with
+  | nil => exact nomatch hin
+  | cons a ll' ih =>
+    rcases a with ⟨t0, log0⟩
+    simp only [contradicting_leader_logs_on_leader]
+    rcases List.mem_cons.mp hin with heq | hin'
+    · injection heq with h1 h2
+      subst h1 h2
+      rw [if_pos ⟨hlt, hnot⟩]
+      exact List.mem_cons_self ..
+    · split
+      · exact List.mem_cons_of_mem _ (ih hin')
+      · exact ih hin'
+
+/-- `LeaderCompletenessProof.v:158-169` (`contradicting_leader_logs_complete`). -/
+theorem contradicting_leader_logs_complete {net : RefinedNet}
+    {ns : List (name (P := P))} {t t' : term} {e : entry (P := P)}
+    {h0 : name (P := P)} {l : List (entry (P := P))}
+    (hns : h0 ∈ ns)
+    (h : (t', l) ∈ contradicting_leader_logs_on_leader
+      (net.nwState h0).1.leaderLogs t e) :
+    (t', h0, l) ∈ contradicting_leader_logs net ns t e := by
+  induction ns with
+  | nil => exact nomatch hns
+  | cons a ns' ih =>
+    simp only [contradicting_leader_logs]
+    rcases List.mem_cons.mp hns with rfl | hns'
+    · exact List.mem_append.mpr (Or.inl
+        (List.mem_map.mpr ⟨(t', l), h, rfl⟩))
+    · exact List.mem_append.mpr (Or.inr (ih hns'))
+
+/-- `LeaderCompletenessProof.v:171-196`
+(`minimal_contradicting_leader_log_elim`). -/
+theorem minimal_contradicting_leader_log_elim {net : RefinedNet}
+    {t t' : term} {e : entry (P := P)} {h0 : name (P := P)}
+    {l : List (entry (P := P))}
+    (h : minimal_contradicting_leader_log net t e = some (t', h0, l)) :
+    t < t' ∧ (t', l) ∈ (net.nwState h0).1.leaderLogs ∧ e ∉ l ∧
+    (∀ (h' : name (P := P)) (t'' : term) (l'' : List (entry (P := P))),
+      (t'', l'') ∈ (net.nwState h').1.leaderLogs →
+      t'' ≤ t ∨ t'' ≥ t' ∨ e ∈ l'') := by
+  obtain ⟨hmem, hmin⟩ := argmin_elim _ _ _ h
+  obtain ⟨hll, hlt, hnot⟩ :=
+    contradicting_leader_logs_on_leader_elim
+      (in_contradicting_leader_logs hmem)
+  refine ⟨hlt, hll, hnot, ?_⟩
+  intro h' t'' l'' hin
+  by_cases hle : t'' ≤ t
+  · exact Or.inl hle
+  · by_cases hge : t' ≤ t''
+    · exact Or.inr (Or.inl hge)
+    · by_cases hmem'' : e ∈ l''
+      · exact Or.inr (Or.inr hmem'')
+      · exfalso
+        have hcll := contradicting_leader_logs_complete
+          (allFin_all h')
+          (contradicting_leader_logs_on_leader_complete hin
+            (Nat.lt_of_not_le hle) hmem'')
+        have := hmin (t'', h', l'') hcll
+        exact hge this
+
+omit O R in
+/-- The Prop form of a true `moreUpToDate` (constructive — `beq_iff_eq`
+and `Nat.ble_eq`, never the LawfulBEq route the lane's sweep rejects). -/
+theorem moreUpToDate_elim {t1 i1 t2 i2 : Nat}
+    (h : moreUpToDate t1 i1 t2 i2 = true) :
+    t2 < t1 ∨ (t1 = t2 ∧ i2 ≤ i1) := by
+  unfold moreUpToDate at h
+  rcases Bool.or_eq_true_iff.mp h with h1 | h2
+  · exact Or.inl (Nat.blt_eq.mp h1)
+  · obtain ⟨hbe, hble⟩ := Bool.and_eq_true_iff.mp h2
+    exact Or.inr ⟨beq_iff_eq.mp hbe, Nat.ble_eq.mp hble⟩
+
+/-- `LeaderCompletenessProof.v:212-337`
+(`leader_completeness_directly_committed_invariant`): the minimal
+contradicting snapshot cannot exist — every entry of it is
+term-then-index below `e` (the prefix-within-term interface kills the
+same-term escape; every_entry_was_created + minimality +
+leaderLogs_preserved kill the higher-term escape), yet its backing
+quorum (`leaderLogs_votesWithLog`) pigeon-intersects `e`'s
+directly-committed quorum, and the common voter's recorded log both
+contains `e` (`allEntries_votesWithLog` + minimality) and is dominated
+by the snapshot (`moreUpToDate`) — impossible for a sorted vote log. -/
+theorem leader_completeness_directly_committed_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      leader_completeness_directly_committed net := by
+  intro net hreach t e log h hdc hgt hin
+  rcases hmc : minimal_contradicting_leader_log net e.eTerm e with
+    _ | ⟨n, h0, l⟩
+  · exact minimal_contradicting_leader_log_None hmc t log h hin hgt
+  · obtain ⟨hlt_n, hll, hnot, hmin⟩ :=
+      minimal_contradicting_leader_log_elim hmc
+    by_cases hcmp : n ≤ t
+    · exfalso
+      obtain ⟨quorum, hnd, hlen, hquorum⟩ := hdc
+      -- every snapshot entry is (term, index)-below e
+      have hbelow : ∀ e' ∈ l, e'.eTerm < e.eTerm ∨
+          (e'.eTerm = e.eTerm ∧ e'.eIndex < e.eIndex) := by
+        intro e' he'
+        rcases Nat.lt_trichotomy e'.eTerm e.eTerm with hlt | heq | hgt'
+        · exact Or.inl hlt
+        · right
+          refine ⟨heq, ?_⟩
+          rcases Nat.lt_or_ge e'.eIndex e.eIndex with hidx | hidx
+          · exact hidx
+          · exfalso
+            -- a same-term record at/below e' would land e in l
+            have hx : ∃ x, x ∈ quorum := by
+              cases quorum with
+              | nil => exact absurd hlen (Nat.not_lt_zero _)
+              | cons x q => exact ⟨x, List.mem_cons_self ..⟩
+            obtain ⟨x, hxq⟩ := hx
+            have hrec : e ∈ (net.nwState x).1.allEntries.map Prod.snd :=
+              List.mem_map.mpr ⟨(e.eTerm, e), hquorum x hxq, rfl⟩
+            exact hnot
+              (allEntries_leaderLogs_prefix_within_term_invariant net
+                hreach x n l h0 hll e e' heq.symm hidx hrec he')
+        · exfalso
+          -- higher-term snapshot entries contradict minimality
+          have hsan : e'.eTerm < n :=
+            leaderLogs_term_sanity_invariant net hreach h0 n l e' hll he'
+          obtain ⟨h2, ll2, hll2⟩ :=
+            every_entry_was_created_invariant net hreach e' n h0 l hll he'
+          rcases hmin h2 e'.eTerm ll2 hll2 with hle2 | hge2 | hmem2
+          · exact absurd (Nat.lt_of_le_of_lt hle2 hgt')
+              (Nat.lt_irrefl _)
+          · exact absurd (Nat.lt_of_le_of_lt hge2 hsan) (Nat.lt_irrefl _)
+          · exact hnot (leaderLogs_preserved_invariant net hreach h2 ll2
+              n h0 l e' e hll2 hll he' hmem2)
+      -- the snapshot's backing quorum
+      obtain ⟨quorum', hnd', hlen', hquorum'⟩ :=
+        leaderLogs_votesWithLog_invariant net hreach n l h0 hll
+      -- a common voter
+      obtain ⟨a, haq, haq'⟩ := pigeon quorum (nodes (P := P)) quorum'
+        (fun x _ => allFin_all x) (fun x _ => allFin_all x) hnd hnd'
+        (div2_correct hlen hlen')
+      have harec : (e.eTerm, e) ∈ (net.nwState a).1.allEntries :=
+        hquorum a haq
+      obtain ⟨vlog, hmutd, hvote⟩ := hquorum' a haq'
+      -- e is in the recorded vote log
+      have hevlog : e ∈ vlog := by
+        rcases allEntries_votesWithLog_invariant net hreach e.eTerm e n
+            h0 a vlog harec hvote hlt_n with hin' | ⟨t'', l', log', hll',
+              hlt'', hltn, hnot'⟩
+        · exact hin'
+        · exfalso
+          rcases hmin l' t'' log' hll' with hle2 | hge2 | hmem2
+          · exact absurd (Nat.lt_of_le_of_lt hle2 hlt'')
+              (Nat.lt_irrefl _)
+          · exact absurd (Nat.lt_of_le_of_lt hge2 hltn) (Nat.lt_irrefl _)
+          · exact hnot' hmem2
+      have hsvlog : sorted vlog :=
+        votesWithLog_sorted_invariant net hreach a n h0 vlog hvote
+      have hmaxt : e.eTerm ≤ maxTerm vlog := maxTerm_is_max hsvlog hevlog
+      have hmaxi : e.eIndex ≤ maxIndex vlog := maxIndex_is_max hsvlog hevlog
+      -- the snapshot is nonempty, with its head realizing max term/index
+      obtain ⟨hpos, -⟩ :=
+        (terms_and_indices_from_one_invariant net hreach).1 a n h0 vlog
+          hvote e hevlog
+      rcases moreUpToDate_elim hmutd with hcase | ⟨hteq, hile⟩
+      · -- maxTerm l > maxTerm vlog ≥ e.eTerm — but every l-entry is
+        -- term-below e, so maxTerm l ≤ e.eTerm unless l = []
+        cases hl : l with
+        | nil =>
+          rw [hl] at hcase
+          -- maxTerm [] = 0: nothing exceeds it
+          exact absurd hcase (Nat.not_lt_zero _)
+        | cons e'' l' =>
+          subst hl
+          have he''mem : e'' ∈ e'' :: l' := List.mem_cons_self ..
+          rcases hbelow e'' he''mem with hltterm | ⟨heqterm, -⟩
+          · -- maxTerm (e'' :: l') = e''.eTerm < e.eTerm ≤ maxTerm vlog
+            have : maxTerm vlog < e''.eTerm := hcase
+            exact absurd (Nat.lt_of_le_of_lt hmaxt this)
+              (Nat.not_lt_of_le (Nat.le_of_lt hltterm))
+          · have : maxTerm vlog < e''.eTerm := hcase
+            rw [heqterm] at this
+            exact absurd hmaxt (Nat.not_le_of_lt this)
+      · -- maxTerm l = maxTerm vlog and maxIndex vlog ≤ maxIndex l
+        cases hl : l with
+        | nil =>
+          rw [hl] at hteq
+          -- maxTerm [] = 0 = maxTerm vlog ≥ e.eTerm ≥ 1
+          have h0eq : (0 : Nat) = maxTerm vlog := hteq
+          rw [← h0eq] at hmaxt
+          exact absurd (Nat.le_trans hpos hmaxt) (Nat.not_succ_le_zero 0)
+        | cons e'' l' =>
+          subst hl
+          have he''mem : e'' ∈ e'' :: l' := List.mem_cons_self ..
+          have hteq' : e''.eTerm = maxTerm vlog := hteq
+          have hile' : maxIndex vlog ≤ e''.eIndex := hile
+          rcases hbelow e'' he''mem with hltterm | ⟨heqterm, hltidx⟩
+          · -- e''.eTerm < e.eTerm ≤ maxTerm vlog = e''.eTerm
+            rw [hteq'] at hltterm
+            exact absurd hmaxt (Nat.not_le_of_lt hltterm)
+          · -- e''.eIndex < e.eIndex ≤ maxIndex vlog ≤ e''.eIndex
+            exact absurd (Nat.lt_of_lt_of_le hltidx
+              (Nat.le_trans hmaxi hile')) (Nat.lt_irrefl _)
+    · -- t < n: minimality answers directly
+      rcases hmin h t log hin with hle | hge | hmem
+      · exact absurd (Nat.lt_of_le_of_lt hle hgt) (Nat.lt_irrefl _)
+      · exact absurd (Nat.lt_of_lt_of_le (Nat.lt_of_not_le hcmp) hge)
+          (Nat.lt_irrefl _)
+      · exact hmem
+
+/-- `LeaderCompletenessProof.v:339-364`
+(`leader_completeness_committed_invariant`). -/
+theorem leader_completeness_committed_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      leader_completeness_committed net := by
+  intro net hreach t t' e log h hcom hgt hin
+  obtain ⟨x, e', hle, hdc, hidx, heL, he'L⟩ := hcom
+  have he'log : e' ∈ log :=
+    leader_completeness_directly_committed_invariant net hreach t' e'
+      log h hdc (Nat.lt_of_le_of_lt hle hgt) hin
+  have hmatch : entries_match (net.nwState x).2.log log :=
+    leaderLogs_entries_match_invariant net hreach x h t' log hin
+  exact (hmatch e' e' e rfl rfl he'L he'log hidx).mp heL
+
+/-- `LeaderCompletenessProof.v:366-373` (`leader_completeness_invariant`)
+— **LEADER COMPLETENESS**, discharging the unit-4 statement
+(`LeaderLogs.lean`, `leader_completeness`). -/
+theorem leader_completeness_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      leader_completeness net :=
+  fun net hreach =>
+    ⟨leader_completeness_directly_committed_invariant net hreach,
+     leader_completeness_committed_invariant net hreach⟩
+
 end LeaderCompleteness
 end Raft
 end VerdiCompat

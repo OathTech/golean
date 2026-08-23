@@ -390,7 +390,7 @@ from artifacts.
 | votesReceived_moreUpToDate | PROVED | Raft/VotesReceivedMoreUpToDateInterface.v:9-19 | LeaderLogs.lean (invariant) |
 | leaderLogs_votesWithLog | PROVED | Raft/LeaderLogsVotesWithLogInterface.v:10-18 | LeaderLogs.lean (invariant) |
 | one_leaderLog_per_term (+_log/_host) | PROVED | Raft/OneLeaderLogPerTermInterface.v:8-44 | LeaderLogs.lean (invariant + two corollaries) |
-| leader_completeness | STATEMENT ONLY (defs 1:1; proof = later unit) | Raft/LeaderCompletenessInterface.v:9-42 | LeaderLogs.lean (directly_committed/committed/leader_completeness defs) |
+| **leader_completeness (LEADER COMPLETENESS, T3)** | PROVED | Raft/LeaderCompletenessInterface.v:9-42 | LeaderLogs.lean (defs) + LeaderCompleteness.lean (leader_completeness_invariant + both conjunct invariants) |
 | every_entry_was_created (+ in_any_log field) | PROVED | Raft/EveryEntryWasCreatedInterface.v:9-37 | CreationRing.lean (both interface fields) |
 | logs_sorted (4 conjuncts) | PROVED (base) | Raft/SortedInterface.v:9-35 | CreationRing.lean (logs_sorted_invariant) |
 | votesWithLog_sorted | PROVED | Raft/VotesWithLogSortedInterface.v:9-12 | CreationRing.lean (invariant) |
@@ -2093,3 +2093,33 @@ completed prefix + chartered remainder is branch-complete.
   from a fresh capped probe — all [propext, Quot.sound]). Full build
   green, sweep 2081; hatch grep over LeaderCompleteness.lean: 0
   (exit 1); file now 2,927 lines. INDEX row updated.
+- 2026-08-23 Slice 59: the LC scaffolding — `argmin_None`/`argmin_elim`
+  (CommonTheorems.v:958-986; the argmin def was already ported),
+  the `contradicting_leader_logs_on_leader`/`contradicting_leader_logs`
+  fixpoints + `minimal_contradicting_leader_log` (:33-54) and the
+  seven elim/complete lemmas (:56-196; the three per-element facts
+  merged into one `_elim` pass), and `moreUpToDate_elim` — the Prop
+  form via `Bool.or/and_eq_true` + `beq_iff_eq` + `Nat.ble_eq`,
+  constructively (the LawfulBEq trap avoided per the lane record).
+  [AGENT] Gotchas: `simp only [defname, hscrut] at h` is the reliable
+  way to reduce an equation-compiled fixpoint under a known scrutinee
+  (`rw [defname]` has no equation of that name; a bare rcases-then-rw
+  leaves an unreduced match that `split at` mis-cases); and the
+  injection-pair subst eliminated the RHS names again (log0 → log').
+- 2026-08-23 Slice 60: **`leader_completeness_directly_committed_
+  invariant`** (:212-337 — the minimal-contradicting-log descent,
+  exactly upstream's route: the `hbelow` claim via pwt-conjunct-1 /
+  every_entry_was_created + minimality + leaderLogs_preserved; then
+  leaderLogs_votesWithLog's quorum pigeon-intersected with the
+  directly-committed quorum via unit-3's constructive pigeon +
+  div2_correct; the common voter's record forced into the vote log by
+  allEntries_votesWithLog + minimality; moreUpToDate against the
+  sorted vote log's maxTerm/maxIndex closes both branches, with
+  terms_and_indices_from_one ruling out the empty snapshot),
+  **`leader_completeness_committed_invariant`** (:339-364, via
+  leaderLogs_entries_match), and **`leader_completeness_invariant`**
+  (:366-373) — **GAP-6 CLOSED**: the unit-4 statement
+  (LeaderLogs.lean `leader_completeness`) is discharged. Three AxCheck
+  pins (fresh capped probe, all [propext, Quot.sound]). Full build
+  green, sweep 2138; hatch grep 0 (exit 1); LeaderCompleteness.lean =
+  3,356 lines. INDEX row: leader_completeness PROVED (T3).

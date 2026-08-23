@@ -180,6 +180,12 @@ open VerdiCompat VerdiCompat.Raft
 #guard_msgs in #print axioms VerdiCompat.Raft.prefix_within_term_inductive_invariant
 /-- info: 'VerdiCompat.Raft.allEntries_leaderLogs_prefix_within_term_invariant' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms VerdiCompat.Raft.allEntries_leaderLogs_prefix_within_term_invariant
+/-- info: 'VerdiCompat.Raft.leader_completeness_directly_committed_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leader_completeness_directly_committed_invariant
+/-- info: 'VerdiCompat.Raft.leader_completeness_committed_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leader_completeness_committed_invariant
+/-- info: 'VerdiCompat.Raft.leader_completeness_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leader_completeness_invariant
 
 /-! ## Exhaustive sweep (fails the build on any disallowed axiom) -/
 
