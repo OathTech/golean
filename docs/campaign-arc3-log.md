@@ -1229,3 +1229,21 @@ degrades); unit-8 charter at unit end.
   File plan: new `AppendEntriesChain.lean` (imports LogMatching), wired
   into VerdiCompat.lean from birth; spec lemmas promoted to
   ElectionSpecLemmas.lean only at a second consumer.
+- 2026-08-23 Slice 36: `AppendEntriesChain.lean` opened — the W1 ghost
+  leaves: `allEntries_term_sanity` (AllEntriesTermSanityInterface.v:8-12
+  1:1; new term-aware allEntries cases lemmas keyed to the handler
+  result — `update_elections_data_client_request/appendEntries_
+  allEntries_term_cases` — plus `handleAppendEntries_reply_true`: a
+  true reply carries the request's term, which the responder's new term
+  dominates via `advanceCurrentTerm_ge`), `log_properties_hold_on_
+  leader_logs` (LeaderLogsLogPropertiesInterface.v:9-17 1:1 — the
+  HIGHER-ORDER snapshot principle: any reachability-closed log property
+  holds of every leaderLog, since the RVR snapshot is the reachable
+  pre-state's own log), and `leaders_have_leaderLogs_strong`
+  (LeadersHaveLeaderLogsStrongInterface.v:8-16 1:1; client_request
+  stacks one own-term entry on es, the fresh win takes es = []).
+  [AGENT] Gotchas re-hit and resolved: refined-state spec calls need
+  `.2` (seven sites); `nomatch` on a `true = true` hypothesis LEAKS its
+  error through `try` — `cases hmr` closes impossible Bool equations
+  and passes trivial ones cleanly (recorded for successors). Build
+  green, sweep 1689 (was 1652).
