@@ -750,23 +750,28 @@ theorem twin_runConfig_eq :
     runConfig 711616 (γF twinSeedF) twinPre.1 twinPre.2.2.2.2
       = .ok (γF (segState ckptF_711616), ckptF_711616.2.2.2) := by
   have h := runConfig_of_stepFnIter twin_slow_iter 0
-  rw [runConfig_next_stop] at h
-  simpa using h
+  rw [runConfig_next_stop, Nat.add_zero] at h
+  exact h
 
-/-- The expected verdict literal (kernel-checked below - a wrong literal
-fails `twin_run_eq`, never lies). -/
-def twinVerdict : Result :=
-  { values := #[.int 0 .int, .int 1 .int, .int 6 .int, .int 1 .int, .int 1 .int] }
+/-- The expected verdict values (kernel-checked by `twin_load_eq` — a
+wrong literal fails the `rfl`, never lies). -/
+def twinVerdictVals : List GoValue :=
+  [.int 0 .int, .int 1 .int, .int 6 .int, .int 1 .int, .int 1 .int]
+
+/-- The verdict Result, spelled exactly as `runProgramM_of_setup` yields it. -/
+def twinVerdict : Result := { values := twinVerdictVals.toArray }
+
+/-- The final readout, kernel-evaluated at the end state (the only
+literal-heavy kernel fact in this module). -/
+theorem twin_load_eq :
+    loadMany (γF (segState ckptF_711616)) twinPre.2.2.2.1 = .ok twinVerdictVals := by
+  with_unfolding_all rfl
 
 /-- **The full-run equation over the interpreter**: statement closure is
 `twinRun`/`runProgramM`/GoCore only (FastEval appears in the proof term,
 exactly as §3.1 licenses). -/
-theorem twin_run_eq : twinRun 711616 [] = .ok twinVerdict := by
-  unfold twinRun runProgramM
-  rw [twin_prelude_eq]
-  simp only [Bind.bind, Except.bind]
-  rw [twin_runConfig_eq]
-  with_unfolding_all rfl
+theorem twin_run_eq : twinRun 711616 [] = .ok twinVerdict :=
+  runProgramM_of_setup twin_prelude_eq twin_runConfig_eq twin_load_eq
 
 /-- **T1's non-vacuity twin, discharged** (constitution §2.1). -/
 theorem twinCompletionWitness : CompletionWitness :=

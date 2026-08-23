@@ -1,47 +1,56 @@
 #!/usr/bin/env bash
 # u5-orchestrate.sh emit|wave — the U5 staged assembly driver (memo §6.8).
 # This Lake (5.0.0) has no jobs flag, so concurrency = BATCHING: each capped
-# lake invocation gets exactly BATCH pending targets (lake parallelizes
-# within the batch; deps like checkpoint groups build first inside it).
-#   emit: TwinSegBase + all checkpoint groups. EMIT_BATCH (4), EMIT_CAP (28G).
+# lake invocation gets exactly BATCH targets (lake parallelizes within the
+# batch and SKIPS up-to-date modules by content hash — a finished batch
+# no-ops in ~0.2 s, so the walk is resume-safe and cannot spin: it visits
+# the FULL ordered list exactly once per run).
+#   emit: TwinSegBase + all checkpoint groups. EMIT_BATCH (4), EMIT_CAP (30G).
 #   wave: all kernel segments. WAVE_BATCH (2), WAVE_CAP (74G).
 # One lake at a time (the U1 wedge rule); manifest recomputed after every
-# batch — that IS the per-wave checkpoint. Resumable: rerun; fresh oleans
-# are skipped when selecting pending targets.
+# batch (= the per-wave checkpoint). A failing batch stops the walk with an
+# honest rc — the manifest shows exactly what survived.
 set -u
 cd "$(dirname "$0")/../../proofs" || exit 9
 MANI=../docs/campaign-arc2-probes/u5-manifest.sh
 SRC=GoLeanProofs/Specs
-OL=.lake/build/lib/lean/GoLeanProofs/Specs
-pending() { # $1 = subdir
+all_mods() { # $1 = subdir
   for f in "$SRC/$1"/*.lean; do
-    b=$(basename "$f" .lean)
-    o="$OL/$1/$b.olean"
-    if ! { [ -f "$o" ] && [ "$o" -nt "$f" ]; }; then echo "GoLeanProofs.Specs.$1.$b"; fi
-  done
+    basename "$f" .lean
+  done | sort | sed "s/^/GoLeanProofs.Specs.$1./"
 }
 run_batches() { # $1 subdir, $2 batch, $3 cap
-  while :; do
-    mapfile -t todo < <(pending "$1")
-    [ ${#todo[@]} -eq 0 ] && { echo "$1: all done"; break; }
-    batch=("${todo[@]:0:$2}")
-    echo "== batch (${#batch[@]} of ${#todo[@]} pending, cap $3): ${batch[*]}"
-    GOLEAN_MEM_MAX="$3" ../scripts/capped lake build "${batch[@]}"
+  mapfile -t mods < <(all_mods "$1")
+  local n=${#mods[@]} i=0
+  while [ $i -lt $n ]; do
+    batch=("${mods[@]:$i:$2}")
+    echo "== batch [$i..$((i+${#batch[@]}-1))]/$n (cap $3): ${batch[*]}"
+    GOLEAN_MEM_MAX="$3" ../scripts/capped lake build "${batch[@]}" >/dev/null 2>&1
     rc=$?
     "$MANI"
     if [ $rc -ne 0 ]; then
-      echo "batch rc=$rc — kill point recorded in manifest; continuing with next batch" >&2
-      # a failing batch would repeat forever if its targets stay pending; stop
-      # instead and let the operator/agent inspect (honest stop, not a skip)
-      return $rc
+      # continue-on-failure: a hot window that OOMs a shared batch scope is
+      # retried by the solo pass (wave-retry); the manifest (olean existence)
+      # is the honest record of what survived. Never a silent skip: the
+      # failure is logged here and the walk's exit code stays nonzero.
+      echo "batch rc=$rc at [$i]: ${batch[*]} — recorded, continuing" >&2
+      echo "$(date -u +%FT%TZ) rc=$rc ${batch[*]}" >> ../docs/campaign-arc2-probes/records/u5-failures.txt
+      anyfail=1
     fi
+    i=$((i+$2))
   done
+  echo "$1: walk complete (anyfail=${anyfail:-0})"
+  [ "${anyfail:-0}" = "0" ]
 }
 case "${1:-}" in
   emit)
-    GOLEAN_MEM_MAX="${EMIT_CAP:-28G}" ../scripts/capped lake build GoLeanProofs.Specs.TwinSegBase || exit $?
-    run_batches TwinCkpts "${EMIT_BATCH:-4}" "${EMIT_CAP:-28G}" ;;
+    GOLEAN_MEM_MAX="${EMIT_CAP:-30G}" ../scripts/capped lake build GoLeanProofs.Specs.TwinSegBase || exit $?
+    run_batches TwinCkpts "${EMIT_BATCH:-4}" "${EMIT_CAP:-30G}" ;;
   wave)
     run_batches TwinSegs "${WAVE_BATCH:-2}" "${WAVE_CAP:-74G}" ;;
-  *) echo "usage: u5-orchestrate.sh emit|wave" >&2; exit 2 ;;
+  wave-retry)
+    # solo pass at high cap: only missing oleans actually build (lake
+    # no-ops finished modules in ~0.2 s)
+    run_batches TwinSegs 1 "${RETRY_CAP:-70G}" ;;
+  *) echo "usage: u5-orchestrate.sh emit|wave|wave-retry" >&2; exit 2 ;;
 esac
