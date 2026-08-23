@@ -434,8 +434,8 @@ from artifacts.
 | log_all_entries | PROVED | Raft/LogAllEntriesInterface.v | SafetyLeaves.lean (invariant) |
 | lastApplied_le_commitIndex | PROVED (base) | Raft/LastAppliedLeCommitIndexInterface.v | SafetyLeaves.lean (invariant) |
 | no_append_entries_to_self | PROVED (base) | Raft/NoAppendEntriesToSelfInterface.v | SafetyLeaves.lean (invariant) |
-| match_index_sanity | UNIT-13 CHARTER (W-B remainder) | Raft/MatchIndexSanityInterface.v | — |
-| prevLog_candidateEntriesTerm | UNIT-13 CHARTER (W-B remainder) | Raft/PrevLogCandidateEntriesTermInterface.v | — |
+| match_index_sanity | PROVED (base) | Raft/MatchIndexSanityInterface.v:9-13 | SafetyLeaves.lean (invariant) |
+| prevLog_candidateEntriesTerm | PROVED | Raft/PrevLogCandidateEntriesTermInterface.v:10-16 | SafetyLeaves.lean (invariant; candidateEntriesTerm twin) |
 - 2026-08-22 Slice 13 (1cc83c1d): log/message spec lemmas for the ring
   (findGtIndex_in, removeAfterIndex_in, per-handler log facts,
   doLeader_messages, rvr cronies function-level cases).
@@ -2643,3 +2643,16 @@ is a complete unit if the honest budget says so.
   these term-level ones; left per the slice-39 precedent, promotion on
   a cleanup slice. The omit-O-with-RefinedNet gotcha bit three times
   (same class as slice 69's). Build green.
+- 2026-08-23 Slice 71: **`prevLog_candidateEntriesTerm_invariant`**
+  (PLCETProof.v:428-449 1:1) — THE W-B REMAINDER IS COMPLETE (8/8
+  files). Old packets transport through the slice-70 preserves lemmas
+  (obligation threading mirrors unit 7's came_from_leaders); the
+  doLeader creation case classifies the fresh AE's positive
+  prevLogTerm as the `findAtIndex` pivot's term via
+  `doLeader_messages_full`, certified by
+  `candidate_entries_invariant`'s host half through the
+  `candidateEntries_term` bridge — exactly upstream's route, with
+  `simp only [hfind] at f4` reducing the inline match (the lane's
+  fixpoint-reduction gotcha applied preemptively). Compiled on first
+  attempt. INDEX rows updated (both UNIT-13 CHARTER rows → PROVED).
+  Build green.

@@ -1741,6 +1741,224 @@ theorem handleRequestVoteReply_preserves_candidateEntriesTerm
     · rw [update_neq _ _ hxh]
       exact himp
 
+/-- `PrevLogCandidateEntriesTermInterface.v:10-16`
+(`prevLog_candidateEntriesTerm`): every in-flight AppendEntries with a
+positive prevLogTerm has an election-winner witness for that term. -/
+def prevLog_candidateEntriesTerm (net : RefinedNet) : Prop :=
+  ∀ (p : RefinedPacket) (t : term) (lid : name (P := P)) (pli : logIndex)
+    (plt : term) (es : List (entry (P := P))) (ci : logIndex),
+    p ∈ net.nwPackets → p.pBody = .AppendEntries t lid pli plt es ci →
+    0 < plt → candidateEntriesTerm plt net.nwState
+
+/-- `PrevLogCandidateEntriesTermProof.v:428-449`
+(`prevLog_candidateEntriesTerm_invariant`): old packets transport
+through the per-handler preserves lemmas; the ONLY creation case is
+`doLeader`, where the positive prevLogTerm is the term of the
+`findAtIndex` pivot entry in the sender's own log, certified by
+`candidate_entries_invariant` (host) through the definitional
+`candidateEntries_term` bridge — exactly upstream's route. -/
+theorem prevLog_candidateEntriesTerm_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      prevLog_candidateEntriesTerm net := by
+  refine refined_raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · -- init
+    intro p t lid pli plt es ci hp _ _
+    exact nomatch hp
+  · -- client_request: no packets sent
+    intro h net st' ps' gd out d l client id c hcr hgd hP _hreach hst hps
+    obtain ⟨hty, hct, -, -, hl⟩ :=
+      handleClientRequest_spec h (net.nwState h).2 client id c hcr
+    have hgc : gd.cronies = (net.nwState h).1.cronies := by
+      rw [hgd]
+      exact (update_elections_data_client_request_ghost h (net.nwState h)
+        client id c).2.2.1
+    intro p0 t0 lid pli plt es ci hp0 hbody0 hplt
+    replace hp0 : p0 ∈ ps' := hp0
+    have hold : p0 ∈ net.nwPackets := by
+      rcases hps p0 hp0 with h1 | h1
+      · exact h1
+      · rw [hl] at h1
+        simp [send_packets] at h1
+    exact candidateEntriesTerm_ext hst
+      (candidateEntriesTerm_update_same hgc hct hty
+        (hP p0 t0 lid pli plt es ci hold hbody0 hplt))
+  · -- timeout: only RequestVotes sent
+    intro net h st' ps' gd out d l hto hgd hP hreach hst hps
+    obtain ⟨-, -, hmsgs⟩ := handleTimeout_spec h (net.nwState h).2 hto
+    intro p0 t0 lid pli plt es ci hp0 hbody0 hplt
+    replace hp0 : p0 ∈ ps' := hp0
+    have hold : p0 ∈ net.nwPackets := by
+      rcases hps p0 hp0 with h1 | h1
+      · exact h1
+      · exfalso
+        obtain ⟨m0, hm0, rfl⟩ := List.mem_map.mp h1
+        obtain ⟨t3, c3, l3, l4, hq2⟩ := hmsgs m0 hm0
+        replace hbody0 : m0.2 = msg.AppendEntries t0 lid pli plt es ci :=
+          hbody0
+        rw [hq2] at hbody0
+        exact nomatch hbody0
+    subst hgd
+    exact candidateEntriesTerm_ext hst
+      (handleTimeout_preserves_candidateEntriesTerm hreach hto
+        (hP p0 t0 lid pli plt es ci hold hbody0 hplt))
+  · -- append_entries: the reply is an AppendEntriesReply
+    intro xs p ys net st' ps' gd d m t n0 pli plt es ci hae hgd _hbody hP
+      _hreach hpkts hst hps
+    obtain ⟨-, -, -, t', es', r', hmshape⟩ :=
+      handleAppendEntries_spec p.pDst (net.nwState p.pDst).2 t n0 pli plt
+        es ci hae
+    intro p0 t0 lid pli2 plt2 es2 ci2 hp0 hbody0 hplt
+    replace hp0 : p0 ∈ ps' := hp0
+    have hold : p0 ∈ net.nwPackets := by
+      rcases hps p0 hp0 with h1 | h1
+      · rw [hpkts]
+        exact mem_of_mem_remove_middle h1
+      · exfalso
+        rw [h1] at hbody0
+        replace hbody0 : m = msg.AppendEntries t0 lid pli2 plt2 es2 ci2 :=
+          hbody0
+        rw [hmshape] at hbody0
+        exact nomatch hbody0
+    subst hgd
+    exact candidateEntriesTerm_ext hst
+      (handleAppendEntries_preserves_candidateEntriesTerm hae
+        (hP p0 t0 lid pli2 plt2 es2 ci2 hold hbody0 hplt))
+  · -- append_entries_reply: no messages
+    intro xs p ys net st' ps' gd d m t es res haer hgd _hbody hP _hreach
+      hpkts hst hps
+    obtain ⟨-, -, hl⟩ := handleAppendEntriesReply_spec p.pDst
+      (net.nwState p.pDst).2 p.pSrc t es res haer
+    intro p0 t0 lid pli2 plt2 es2 ci2 hp0 hbody0 hplt
+    replace hp0 : p0 ∈ ps' := hp0
+    have hold : p0 ∈ net.nwPackets := by
+      rcases hps p0 hp0 with h1 | h1
+      · rw [hpkts]
+        exact mem_of_mem_remove_middle h1
+      · rw [hl] at h1
+        simp [send_packets] at h1
+    subst hgd
+    exact candidateEntriesTerm_ext hst
+      (handleAppendEntriesReply_preserves_candidateEntriesTerm haer
+        (hP p0 t0 lid pli2 plt2 es2 ci2 hold hbody0 hplt))
+  · -- request_vote: the reply is a RequestVoteReply
+    intro xs p ys net st' ps' gd d m t cid lli llt hrv hgd _hbody hP
+      _hreach hpkts hst hps
+    obtain ⟨t'', v'', hmshape⟩ := handleRequestVote_reply_shape p.pDst
+      (net.nwState p.pDst).2 t p.pSrc lli llt hrv
+    intro p0 t0 lid pli2 plt2 es2 ci2 hp0 hbody0 hplt
+    replace hp0 : p0 ∈ ps' := hp0
+    have hold : p0 ∈ net.nwPackets := by
+      rcases hps p0 hp0 with h1 | h1
+      · rw [hpkts]
+        exact mem_of_mem_remove_middle h1
+      · exfalso
+        rw [h1] at hbody0
+        replace hbody0 : m = msg.AppendEntries t0 lid pli2 plt2 es2 ci2 :=
+          hbody0
+        rw [hmshape] at hbody0
+        exact nomatch hbody0
+    subst hgd
+    exact candidateEntriesTerm_ext hst
+      (handleRequestVote_preserves_candidateEntriesTerm hrv
+        (hP p0 t0 lid pli2 plt2 es2 ci2 hold hbody0 hplt))
+  · -- request_vote_reply: no sends
+    intro xs p ys net st' ps' gd d t v hrvr hgd _hbody hP hreach hpkts
+      hst hps
+    intro p0 t0 lid pli2 plt2 es2 ci2 hp0 hbody0 hplt
+    replace hp0 : p0 ∈ ps' := hp0
+    have hold : p0 ∈ net.nwPackets := by
+      rw [hpkts]
+      exact mem_of_mem_remove_middle (hps p0 hp0)
+    subst hgd
+    subst hrvr
+    exact candidateEntriesTerm_ext hst
+      (handleRequestVoteReply_preserves_candidateEntriesTerm hreach
+        (hP p0 t0 lid pli2 plt2 es2 ci2 hold hbody0 hplt))
+  · -- do_leader: THE creation case
+    intro net st' ps' gd d h os d' ms hdl hP hreach hstate hst hps
+    obtain ⟨hctd, -, htyd, -, -, -⟩ := doLeader_spec d h hdl
+    have hgc : gd.cronies = (net.nwState h).1.cronies := by rw [hstate]
+    have hctn : d'.currentTerm = (net.nwState h).2.currentTerm := by
+      rw [hctd, hstate]
+    have htyn : d'.type = (net.nwState h).2.type := by
+      rw [htyd, hstate]
+    intro p0 t0 lid pli2 plt2 es2 ci2 hp0 hbody0 hplt
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnew
+    · exact candidateEntriesTerm_ext hst
+        (candidateEntriesTerm_update_same hgc hctn htyn
+          (hP p0 t0 lid pli2 plt2 es2 ci2 hold hbody0 hplt))
+    · -- fresh AE: plt2 is the findAtIndex pivot's term in the sender's log
+      obtain ⟨m0, hm0, rfl⟩ := List.mem_map.mp hnew
+      obtain ⟨pli3, ci3, hq2⟩ := doLeader_messages_full d h hdl m0 hm0
+      replace hbody0 : m0.2 = msg.AppendEntries t0 lid pli2 plt2 es2 ci2 :=
+        hbody0
+      rw [hq2] at hbody0
+      injection hbody0 with f1 f2 f3 f4 f5 f6
+      cases hfind : findAtIndex d.log pli3 with
+      | none =>
+        simp only [hfind] at f4
+        rw [← f4] at hplt
+        exact absurd hplt (Nat.lt_irrefl 0)
+      | some e =>
+        simp only [hfind] at f4
+        obtain ⟨he_in, -⟩ := findAtIndex_elim hfind
+        have he' : e ∈ (net.nwState h).2.log := by
+          rw [hstate]
+          exact he_in
+        have hcet : candidateEntriesTerm plt2 net.nwState := by
+          rw [← f4]
+          exact candidateEntries_term
+            ((candidate_entries_invariant net hreach).1 h e he')
+        exact candidateEntriesTerm_ext hst
+          (candidateEntriesTerm_update_same hgc hctn htyn hcet)
+  · -- do_generic_server: no messages
+    intro net st' ps' gd d os d' ms h hgs hP _hreach hstate hst hps
+    obtain ⟨-, hty, hct, -, -, hms⟩ := doGenericServer_spec h d hgs
+    have hgc : gd.cronies = (net.nwState h).1.cronies := by rw [hstate]
+    have hctn : d'.currentTerm = (net.nwState h).2.currentTerm := by
+      rw [hct, hstate]
+    have htyn : d'.type = (net.nwState h).2.type := by
+      rw [hty, hstate]
+    intro p0 t0 lid pli2 plt2 es2 ci2 hp0 hbody0 hplt
+    replace hp0 : p0 ∈ ps' := hp0
+    have hold : p0 ∈ net.nwPackets := by
+      rcases hps p0 hp0 with h1 | h1
+      · exact h1
+      · rw [hms] at h1
+        simp [send_packets] at h1
+    exact candidateEntriesTerm_ext hst
+      (candidateEntriesTerm_update_same hgc hctn htyn
+        (hP p0 t0 lid pli2 plt2 es2 ci2 hold hbody0 hplt))
+  · -- state_same_packet_subset
+    intro net net' hstates hpkts hP _hreach
+    intro p0 t0 lid pli2 plt2 es2 ci2 hp0 hbody0 hplt
+    exact candidateEntriesTerm_ext (fun h => (hstates h).symm)
+      (hP p0 t0 lid pli2 plt2 es2 ci2 (hpkts p0 hp0) hbody0 hplt)
+  · -- reboot: a rebooted node is a follower with its ghost intact
+    intro net net' gd d h d' hrb hP _hreach hstate hst hpkts
+    subst hrb
+    intro p0 t0 lid pli2 plt2 es2 ci2 hp0 hbody0 hplt
+    rw [← hpkts] at hp0
+    refine candidateEntriesTerm_ext hst ?_
+    obtain ⟨x, hw, himp⟩ := hP p0 t0 lid pli2 plt2 es2 ci2 hp0 hbody0 hplt
+    by_cases hxh : x = h
+    · subst hxh
+      refine ⟨x, ?_, ?_⟩
+      · rw [update_same]
+        show wonElection (dedup (gd.cronies plt2)) = true
+        rw [show gd.cronies = (net.nwState x).1.cronies from by rw [hstate]]
+        exact hw
+      · rw [update_same]
+        show (reboot d).currentTerm = plt2 →
+          (reboot d).type ≠ serverType.Candidate
+        exact fun _ hcand => nomatch hcand
+    · refine ⟨x, ?_, ?_⟩
+      · rw [update_neq _ _ hxh]
+        exact hw
+      · rw [update_neq _ _ hxh]
+        exact himp
+
 end SafetyLeaves
 end Raft
 end VerdiCompat
