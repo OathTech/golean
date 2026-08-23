@@ -752,6 +752,272 @@ theorem msg_refined_raft_net_invariant {Pr : MsgNet → Prop}
       exact hreb net _ (net.nwState h).1 (net.nwState h).2 h _ rfl ih hreach
         rfl (fun _ => rfl) rfl
 
+/-! ## The PRIMED obligation set and principle
+(`RaftMsgRefinementInterface.v:195-406`,
+`RaftProofs/RaftMsgRefinementProof.v:276-565`) — GAP-1's msg-side
+instance, ported on FIRST GENUINE NEED (unit 13:
+`log_properties_hold_on_ghost_logs` quantifies over all
+reachability-closed log properties, and a fresh packet's ghost is the
+POST-state's log — no pre-state route exists; decision logged in the
+arc log's unit-13 opening).
+
+Each primed obligation = its unprimed twin + the SUCCESSOR net's
+reachability premise (upstream :195-315; `state_same_packet_subset'`
+is upstream-identical to the unprimed shape and kept as its own def
+for 1:1 citation). The principle `msg_refined_raft_net_invariant'` is
+upstream's :276-565 statement; its proof here is a logged §9
+re-derivation — instead of re-running the 290-line staged induction
+with reachability asserts, it instantiates the ported UNPRIMED
+principle at `Q net := msg_refined_raft_intermediate_reachable net →
+Pr net`: every unprimed obligation carries the pre-state reachability
+premise, so each Q-obligation discharges by pure logic from the
+corresponding primed obligation, and the two reachability applications
+collapse at the end. Of the ten `_weak` bridges (:317-406) the three
+the first consumer uses are ported; the rest are one-line drops,
+port-on-need. -/
+
+/-- `RaftMsgRefinementInterface.v:195-205` -/
+def msg_refined_raft_net_invariant_client_request' (Pr : MsgNet → Prop) : Prop :=
+  ∀ (h : name (P := P)) (net : MsgNet) st' ps' gd out d l client id c,
+    handleClientRequest h (net.nwState h).2 client id c = (out, d, l) →
+    gd = update_elections_data_client_request h (net.nwState h) client id c →
+    Pr net →
+    msg_refined_raft_intermediate_reachable net →
+    msg_refined_raft_intermediate_reachable ⟨ps', st'⟩ →
+    (∀ h', st' h' = update net.nwState h (gd, d) h') →
+    (∀ p', p' ∈ ps' → p' ∈ net.nwPackets ∨
+      p' ∈ send_packets h (add_ghost_msg h (gd, d) l)) →
+    Pr ⟨ps', st'⟩
+
+/-- `RaftMsgRefinementInterface.v:207-217` -/
+def msg_refined_raft_net_invariant_timeout' (Pr : MsgNet → Prop) : Prop :=
+  ∀ (net : MsgNet) (h : name (P := P)) st' ps' gd out d l,
+    handleTimeout h (net.nwState h).2 = (out, d, l) →
+    gd = update_elections_data_timeout h (net.nwState h) →
+    Pr net →
+    msg_refined_raft_intermediate_reachable net →
+    msg_refined_raft_intermediate_reachable ⟨ps', st'⟩ →
+    (∀ h', st' h' = update net.nwState h (gd, d) h') →
+    (∀ p', p' ∈ ps' → p' ∈ net.nwPackets ∨
+      p' ∈ send_packets h (add_ghost_msg h (gd, d) l)) →
+    Pr ⟨ps', st'⟩
+
+/-- `RaftMsgRefinementInterface.v:219-232` -/
+def msg_refined_raft_net_invariant_append_entries' (Pr : MsgNet → Prop) : Prop :=
+  ∀ xs (p : MsgPacket) ys (net : MsgNet) st' ps' gd d m t n pli plt es ci,
+    handleAppendEntries p.pDst (net.nwState p.pDst).2 t n pli plt es ci
+      = (d, m) →
+    gd = update_elections_data_appendEntries p.pDst (net.nwState p.pDst)
+      t n pli plt es ci →
+    p.pBody.2 = .AppendEntries t n pli plt es ci →
+    Pr net →
+    msg_refined_raft_intermediate_reachable net →
+    msg_refined_raft_intermediate_reachable ⟨ps', st'⟩ →
+    net.nwPackets = xs ++ p :: ys →
+    (∀ h, st' h = update net.nwState p.pDst (gd, d) h) →
+    (∀ p', p' ∈ ps' → p' ∈ (xs ++ ys) ∨
+      p' = (⟨p.pDst, p.pSrc, (write_ghost_log p.pDst (gd, d), m)⟩ :
+        MsgPacket)) →
+    Pr ⟨ps', st'⟩
+
+/-- `RaftMsgRefinementInterface.v:233-246` -/
+def msg_refined_raft_net_invariant_append_entries_reply'
+    (Pr : MsgNet → Prop) : Prop :=
+  ∀ xs (p : MsgPacket) ys (net : MsgNet) st' ps' gd d m t es res,
+    handleAppendEntriesReply p.pDst (net.nwState p.pDst).2 p.pSrc t es res
+      = (d, m) →
+    gd = (net.nwState p.pDst).1 →
+    p.pBody.2 = .AppendEntriesReply t es res →
+    Pr net →
+    msg_refined_raft_intermediate_reachable net →
+    msg_refined_raft_intermediate_reachable ⟨ps', st'⟩ →
+    net.nwPackets = xs ++ p :: ys →
+    (∀ h, st' h = update net.nwState p.pDst (gd, d) h) →
+    (∀ p', p' ∈ ps' → p' ∈ (xs ++ ys) ∨
+      p' ∈ send_packets p.pDst (add_ghost_msg p.pDst (gd, d) m)) →
+    Pr ⟨ps', st'⟩
+
+/-- `RaftMsgRefinementInterface.v:247-260` -/
+def msg_refined_raft_net_invariant_request_vote' (Pr : MsgNet → Prop) : Prop :=
+  ∀ xs (p : MsgPacket) ys (net : MsgNet) st' ps' gd d m t cid lli llt,
+    handleRequestVote p.pDst (net.nwState p.pDst).2 t p.pSrc lli llt
+      = (d, m) →
+    gd = update_elections_data_requestVote p.pDst p.pSrc t p.pSrc lli llt
+      (net.nwState p.pDst) →
+    p.pBody.2 = .RequestVote t cid lli llt →
+    Pr net →
+    msg_refined_raft_intermediate_reachable net →
+    msg_refined_raft_intermediate_reachable ⟨ps', st'⟩ →
+    net.nwPackets = xs ++ p :: ys →
+    (∀ h, st' h = update net.nwState p.pDst (gd, d) h) →
+    (∀ p', p' ∈ ps' → p' ∈ (xs ++ ys) ∨
+      p' = (⟨p.pDst, p.pSrc, (write_ghost_log p.pDst (gd, d), m)⟩ :
+        MsgPacket)) →
+    Pr ⟨ps', st'⟩
+
+/-- `RaftMsgRefinementInterface.v:261-273` -/
+def msg_refined_raft_net_invariant_request_vote_reply'
+    (Pr : MsgNet → Prop) : Prop :=
+  ∀ xs (p : MsgPacket) ys (net : MsgNet) st' ps' gd d t v,
+    handleRequestVoteReply p.pDst (net.nwState p.pDst).2 p.pSrc t v = d →
+    gd = update_elections_data_requestVoteReply p.pDst p.pSrc t v
+      (net.nwState p.pDst) →
+    p.pBody.2 = .RequestVoteReply t v →
+    Pr net →
+    msg_refined_raft_intermediate_reachable net →
+    msg_refined_raft_intermediate_reachable ⟨ps', st'⟩ →
+    net.nwPackets = xs ++ p :: ys →
+    (∀ h, st' h = update net.nwState p.pDst (gd, d) h) →
+    (∀ p', p' ∈ ps' → p' ∈ (xs ++ ys)) →
+    Pr ⟨ps', st'⟩
+
+/-- `RaftMsgRefinementInterface.v:274-285` -/
+def msg_refined_raft_net_invariant_do_leader' (Pr : MsgNet → Prop) : Prop :=
+  ∀ (net : MsgNet) st' ps' gd d (h : name (P := P)) os d' ms,
+    doLeader d h = (os, d', ms) →
+    Pr net →
+    msg_refined_raft_intermediate_reachable net →
+    msg_refined_raft_intermediate_reachable ⟨ps', st'⟩ →
+    net.nwState h = (gd, d) →
+    (∀ h', st' h' = update net.nwState h (gd, d') h') →
+    (∀ q, q ∈ ps' → q ∈ net.nwPackets ∨
+      q ∈ send_packets h (add_ghost_msg h (gd, d') ms)) →
+    Pr ⟨ps', st'⟩
+
+/-- `RaftMsgRefinementInterface.v:286-297` -/
+def msg_refined_raft_net_invariant_do_generic_server'
+    (Pr : MsgNet → Prop) : Prop :=
+  ∀ (net : MsgNet) st' ps' gd d os d' ms (h : name (P := P)),
+    doGenericServer h d = (os, d', ms) →
+    Pr net →
+    msg_refined_raft_intermediate_reachable net →
+    msg_refined_raft_intermediate_reachable ⟨ps', st'⟩ →
+    net.nwState h = (gd, d) →
+    (∀ h', st' h' = update net.nwState h (gd, d') h') →
+    (∀ q, q ∈ ps' → q ∈ net.nwPackets ∨
+      q ∈ send_packets h (add_ghost_msg h (gd, d') ms)) →
+    Pr ⟨ps', st'⟩
+
+/-- `RaftMsgRefinementInterface.v:298-304` — upstream-identical to the
+unprimed shape (no successor-reachability premise); kept as its own
+def so chain files cite it 1:1. -/
+def msg_refined_raft_net_invariant_state_same_packet_subset'
+    (Pr : MsgNet → Prop) : Prop :=
+  ∀ net net' : MsgNet,
+    (∀ h, net.nwState h = net'.nwState h) →
+    (∀ q, q ∈ net'.nwPackets → q ∈ net.nwPackets) →
+    Pr net →
+    msg_refined_raft_intermediate_reachable net →
+    Pr net'
+
+/-- `RaftMsgRefinementInterface.v:306-315` -/
+def msg_refined_raft_net_invariant_reboot' (Pr : MsgNet → Prop) : Prop :=
+  ∀ (net net' : MsgNet) gd d (h : name (P := P)) d',
+    reboot d = d' →
+    Pr net →
+    msg_refined_raft_intermediate_reachable net →
+    msg_refined_raft_intermediate_reachable net' →
+    net.nwState h = (gd, d) →
+    (∀ h', net'.nwState h' = update net.nwState h (gd, d') h') →
+    net.nwPackets = net'.nwPackets →
+    Pr net'
+
+/-- `RaftMsgRefinementInterface.v:362-370`
+(`msg_refined_raft_net_invariant_request_vote_reply'_weak`). -/
+theorem msg_refined_raft_net_invariant_request_vote_reply'_weak
+    {Pr : MsgNet → Prop}
+    (h : msg_refined_raft_net_invariant_request_vote_reply Pr) :
+    msg_refined_raft_net_invariant_request_vote_reply' Pr := by
+  intro xs p ys net st' ps' gd d t v hrvr hgd hbody hP hreach _hreach'
+    hpkts hst hps
+  exact h xs p ys net st' ps' gd d t v hrvr hgd hbody hP hreach hpkts hst
+    hps
+
+/-- `RaftMsgRefinementInterface.v:398-406`
+(`msg_refined_raft_net_invariant_subset'_weak`) — the two shapes
+coincide upstream, so this is the identity. -/
+theorem msg_refined_raft_net_invariant_subset'_weak {Pr : MsgNet → Prop}
+    (h : msg_refined_raft_net_invariant_state_same_packet_subset Pr) :
+    msg_refined_raft_net_invariant_state_same_packet_subset' Pr := h
+
+/-- `RaftMsgRefinementInterface.v:389-397`
+(`msg_refined_raft_net_invariant_reboot'_weak`). -/
+theorem msg_refined_raft_net_invariant_reboot'_weak {Pr : MsgNet → Prop}
+    (h : msg_refined_raft_net_invariant_reboot Pr) :
+    msg_refined_raft_net_invariant_reboot' Pr := by
+  intro net net' gd d h0 d' hrb hP hreach _hreach' hstate hst hpkts
+  exact h net net' gd d h0 d' hrb hP hreach hstate hst hpkts
+
+/-- `RaftProofs/RaftMsgRefinementProof.v:276-565`
+(`msg_refined_raft_net_invariant'`) — THE primed principle: the
+obligations additionally receive the SUCCESSOR net's reachability.
+Proof by the logged Q-route (see the section header): instantiate the
+unprimed principle at `Q net := reachable net → Pr net`. -/
+theorem msg_refined_raft_net_invariant' {Pr : MsgNet → Prop}
+    (hinit : msg_refined_raft_net_invariant_init Pr)
+    (hcr : msg_refined_raft_net_invariant_client_request' Pr)
+    (hto : msg_refined_raft_net_invariant_timeout' Pr)
+    (hae : msg_refined_raft_net_invariant_append_entries' Pr)
+    (haer : msg_refined_raft_net_invariant_append_entries_reply' Pr)
+    (hrv : msg_refined_raft_net_invariant_request_vote' Pr)
+    (hrvr : msg_refined_raft_net_invariant_request_vote_reply' Pr)
+    (hdl : msg_refined_raft_net_invariant_do_leader' Pr)
+    (hgs : msg_refined_raft_net_invariant_do_generic_server' Pr)
+    (hsub : msg_refined_raft_net_invariant_state_same_packet_subset' Pr)
+    (hreb : msg_refined_raft_net_invariant_reboot' Pr) :
+    ∀ net, msg_refined_raft_intermediate_reachable (P := P) net → Pr net := by
+  refine fun net hreach => msg_refined_raft_net_invariant
+    (Pr := fun n => msg_refined_raft_intermediate_reachable (P := P) n → Pr n)
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ net hreach hreach
+  · -- init
+    exact fun _ => hinit
+  · -- client_request
+    intro h net0 st' ps' gd out d l client id c hcr0 hgd hQ hreach0 hst hps
+      hreach'
+    exact hcr h net0 st' ps' gd out d l client id c hcr0 hgd (hQ hreach0)
+      hreach0 hreach' hst hps
+  · -- timeout
+    intro net0 h st' ps' gd out d l hto0 hgd hQ hreach0 hst hps hreach'
+    exact hto net0 h st' ps' gd out d l hto0 hgd (hQ hreach0) hreach0
+      hreach' hst hps
+  · -- append_entries
+    intro xs p ys net0 st' ps' gd d m t n pli plt es ci hae0 hgd hbody hQ
+      hreach0 hpkts hst hps hreach'
+    exact hae xs p ys net0 st' ps' gd d m t n pli plt es ci hae0 hgd hbody
+      (hQ hreach0) hreach0 hreach' hpkts hst hps
+  · -- append_entries_reply
+    intro xs p ys net0 st' ps' gd d m t es res haer0 hgd hbody hQ hreach0
+      hpkts hst hps hreach'
+    exact haer xs p ys net0 st' ps' gd d m t es res haer0 hgd hbody
+      (hQ hreach0) hreach0 hreach' hpkts hst hps
+  · -- request_vote
+    intro xs p ys net0 st' ps' gd d m t cid lli llt hrv0 hgd hbody hQ
+      hreach0 hpkts hst hps hreach'
+    exact hrv xs p ys net0 st' ps' gd d m t cid lli llt hrv0 hgd hbody
+      (hQ hreach0) hreach0 hreach' hpkts hst hps
+  · -- request_vote_reply
+    intro xs p ys net0 st' ps' gd d t v hrvr0 hgd hbody hQ hreach0 hpkts
+      hst hps hreach'
+    exact hrvr xs p ys net0 st' ps' gd d t v hrvr0 hgd hbody (hQ hreach0)
+      hreach0 hreach' hpkts hst hps
+  · -- do_leader
+    intro net0 st' ps' gd d h os d' ms hdl0 hQ hreach0 hstate hst hps
+      hreach'
+    exact hdl net0 st' ps' gd d h os d' ms hdl0 (hQ hreach0) hreach0
+      hreach' hstate hst hps
+  · -- do_generic_server
+    intro net0 st' ps' gd d os d' ms h hgs0 hQ hreach0 hstate hst hps
+      hreach'
+    exact hgs net0 st' ps' gd d os d' ms h hgs0 (hQ hreach0) hreach0
+      hreach' hstate hst hps
+  · -- state_same_packet_subset
+    intro net0 net1 hstates hsubp hQ hreach0 _hreach'
+    exact hsub net0 net1 hstates hsubp (hQ hreach0) hreach0
+  · -- reboot
+    intro net0 net1 gd d h d' hrb hQ hreach0 hstate hst hpkts hreach'
+    exact hreb net0 net1 gd d h d' hrb (hQ hreach0) hreach0 hreach' hstate
+      hst hpkts
+
 /-! ## Erasure: `mgv_deghost` and the msg→refined simulation
 (`GhostSimulations.v:359-377`, `RaftProofs/RaftMsgRefinementProof.v:566-654,908-917`) -/
 

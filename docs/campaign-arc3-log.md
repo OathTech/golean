@@ -2656,3 +2656,16 @@ is a complete unit if the honest budget says so.
   fixpoint-reduction gotcha applied preemptively). Compiled on first
   attempt. INDEX rows updated (both UNIT-13 CHARTER rows → PROVED).
   Build green.
+- 2026-08-23 Slice 72: the PRIMED msg obligation set — GAP-1's
+  msg-side FIRST-NEED PORT (the unit-opening decision): the ten primed
+  obligation shapes 1:1 (RaftMsgRefinementInterface.v:195-315;
+  `state_same_packet_subset'` is upstream-identical to the unprimed
+  shape, kept as its own def for citation), the three `_weak` bridges
+  the first consumer uses (:362-370, :389-406; the other seven are
+  one-line drops, port-on-need), and **`msg_refined_raft_net_invariant'`**
+  (Proof.v:276-565 statement 1:1) by the logged Q-route: instantiate
+  the ported UNPRIMED principle at `Q net := reachable net → Pr net` —
+  each Q-obligation discharges by pure logic from its primed
+  obligation (every unprimed obligation already carries pre-state
+  reachability), no 290-line staged induction duplicated. Compiled on
+  first attempt; full package rebuild green, sweep 2343 (was 2287).
