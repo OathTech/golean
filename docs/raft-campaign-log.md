@@ -446,6 +446,20 @@ is the §4.4 park-and-report condition, not an emergency.
   (GAP-1's msg-side instance). Gate PASS. Unit-12 charter: the W-B
   plain leaves (~1,695 lines) then W-C as budget allows.
 
+- **Arc 3, unit 12 — LANDED** @ 4a37aebb: six of eight W-B leaves
+  (SafetyLeaves.lean 1,082 lines — the joint log/allEntries movement
+  lemmas, transitive_commit, all_entries_leader_logs,
+  in_log_in_all_entries, log_all_entries, lastApplied_le_commitIndex
+  BASE, no_append_entries_to_self BASE); sweep **2287** clean; index
+  69 rows. **The context rule honestly exercised**: the worker
+  detected its own strain signature mid-draft (guessed signatures,
+  placeholder hatches), REVERTED UNCOMMITTED at the clean boundary,
+  and recorded the recon for the two remainder files — the exact
+  behavior the conventions exist to produce. [AGENT]: 6th-gen
+  rotation; unit 13 = the W-B remainder (match_index_sanity,
+  prevLog_candidateEntriesTerm, recon recorded) then W-C's first
+  msg-ghost consumers.
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
