@@ -2332,3 +2332,73 @@ msg-ghost principle alone is an acceptable unit-11).
   full `lake build` before `lake env lean`, per the unit-9 record).
   Build green, sweep 2213; hatch grep over MsgRefinement.lean: 0
   (exit 1); file = 1,133 lines.
+- 2026-08-23 Unit-11 final gate: `GOLEAN_ALLOW_NO_DIFF=1
+  GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT: PASS, exit 0** (log:
+  `artifacts/ci-arc3-unit11.log`, gitignored; no-diff notes are the
+  allowed docs+compat hatch — unit 11 touched only `compat/verdi/**` +
+  this log). The report-only comparator-landmark note now reads
+  "56 theorems @ 1730567a2d3f, 89 commit(s) ago" — same
+  operator-merge-time flag as units 1-10; nothing here touches a
+  designated statement or Challenge's closure (statement-TCB step ok).
+
+## Final entry — unit 11 complete (2026-08-23, tip 470c50f7 + this commit)
+
+**Proved at tip — GAP-2's msg-ghost FOUNDATION.** The coordinator's
+sanctioned minimal unit: the RaftMsgRefinement layer's vocabulary,
+params, reachable, all eleven obligation shapes, THE principle, the
+erasure half of the transfer, and the §3.3 discharge witness — 1:1
+against `RaftMsgRefinementInterface.v` /
+`RaftProofs/RaftMsgRefinementProof.v:12-275,566-654` @ a3375e8. Zero
+sorry/native_decide (grep; sweep-enforced: 2213 declarations within
+[propext, Quot.sound], plus five new curated pins). `#print axioms`
+verbatim (fresh capped probe after full build — the stale-olean rule):
+
+```
+'VerdiCompat.Raft.msg_refined_raft_net_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.msg_simulation_1' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.msg_lift_prop' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.msg_lift_prop_all_the_way' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.msg_deghost_spec' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.ghost_entries_gt_0_invariant' depends on axioms: [propext, Quot.sound]
+```
+
+Inventory: `MsgRefinement.lean` (1,133 lines) — ghost vocabulary +
+`add_ghost_msg_app`/`_log_eq`; the mgv params triple; the
+five-constructor MRRIR; eleven obligations; dispatchers; **THE
+principle** (with the ghost-stage reconciliation);
+`mgv_deghost`/`mgv_ghost_simulation_1`/**`msg_simulation_1`**/
+`msg_lift_prop`(+`_all_the_way`)/`msg_deghost_spec`; witness
+**`ghost_entries_gt_0_invariant`** (all eleven obligations
+discharged). The INVARIANT INDEX is current (61 data rows, recomputed
+by line span :370-:430; `grep -c "^| "` = 63 counts additionally the
+header and one wrapped prose line in the unit-10 final entry —
+verified, not hand-waved). 85 commits on the lane (recomputed at
+470c50f7).
+
+**Honestly open (carried + new; none counted):**
+- GAP-1 (primed variants): now has a MSG-side instance too — the
+  primed msg obligation set + `msg_refined_raft_net_invariant'`
+  (Interface :197-439, Proof :276-565) deferred with its census
+  (ONE use each in GhostLogsLogProperties/GhostLogAllEntries/
+  GhostLogLogMatching/SMS; each a slice-39-style pre-state candidate,
+  decided at consumption).
+- GAP-8 (new): the reghosting direction — `simulation_2`/
+  `msg_lower_prop`/`msg_lower_prop_all_the_way` (Proof :655-940;
+  needs a msg-level `subset_reachable` mirroring unit 7's) — deferred
+  to the W-F cap unit, its only consumer (SMS: 3× msg_lower_prop).
+- GAP-2 is CLOSED as chartered (the principle + erasure transfer are
+  what the GhostLog* chain consumes); GAP-4 discipline held (no new
+  classical dependencies).
+
+**Next unit's charter (Arc 3, unit 12 — proposal; RE-DERIVE the
+closure fresh, as always):** the W-B plain leaves + the first ghost
+chain files, by the unit-11 wave table: `AllEntriesLeaderLogs` (106),
+`InLogInAllEntries` (175), `LogAllEntries` (269),
+`LastAppliedLeCommitIndex` (223), `MatchIndexSanity` (254),
+`NoAppendEntriesToSelf` (148), `TransitiveCommit` (31),
+`PrevLogCandidateEntriesTerm` (489) — then as budget allows W-C's
+`GhostLogCorrect` (275) + `GhostLogsLogProperties` (201) (msg layer's
+first real consumers; their single primed-principle uses decided
+per-site). Successors re-verify THIS unit fresh: capped full build +
+sweep 2213 + the six-headliner probe above + hatch grep over
+MsgRefinement.lean (expect 0).
