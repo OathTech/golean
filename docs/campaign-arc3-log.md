@@ -1587,3 +1587,14 @@ re-verified at THIS unit's closure derivation, not inherited.
   **leaderLogs_preserved ✓ (GAP-7b CLOSED)** (W2). Remaining:
   allEntries_leaderLogs_term (342L, W2), AllEntriesLog (1,089L, W3),
   allEntries_votesWithLog (356L, GAP-7a, W4), pins, INDEX, gate.
+- 2026-08-23 Slice 46 (76cc6cda): `allEntries_leaderLogs_term`
+  (AllEntriesLeaderLogsTermInterface.v:9-15 1:1; upstream 342 lines) —
+  slice 42's `append_entries_leaderLogs` pays off immediately: a
+  freshly recorded (term, entry) classifies through the packet's
+  `es' ++ ll'` split (own-term block ⇒ left disjunct; prefix block ⇒
+  the snapshot witness via Prefix_In). [AGENT] The lane's
+  `..._allEntries_term_cases` didn't tie the client-request record to
+  the fresh entry's term; a sharper local lemma
+  (`update_elections_data_client_request_allEntries_head_term`) reads
+  it off handleClientRequest_log_full — kept local (single consumer).
+  Build green, sweep 1915.

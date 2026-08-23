@@ -2249,6 +2249,371 @@ theorem allEntries_leaderLogs_term_invariant :
       exact hin
     · rw [hstate]
 
+/-! ## AllEntriesLog support layer (`AllEntriesLogProof.v:36-265`,
+`SpecLemmas.v` handler details) -/
+
+omit O in
+/-- A nonempty sorted-shape list realizes its `maxIndex`/`maxTerm` at
+its head (`CommonTheorems.v` `maxIndex_non_empty`). -/
+theorem maxIndex_non_empty {l : List (entry (P := P))} (h : l ≠ []) :
+    ∃ e ∈ l, e.eIndex = maxIndex l ∧ e.eTerm = maxTerm l := by
+  cases l with
+  | nil => exact absurd rfl h
+  | cons a as => exact ⟨a, List.mem_cons_self .., rfl, rfl⟩
+
+omit O in
+/-- `AllEntriesLogProof.v:130-144` (`maxIndex_le'`). -/
+theorem maxIndex_le' {l1 l2 : List (entry (P := P))} {i : logIndex}
+    (hs1 : sorted l1) (hc1 : contiguous_range_exact_lo l1 0)
+    (hne : l2 ≠ []) (hc2 : contiguous_range_exact_lo l2 i)
+    (hf : findAtIndex l1 (maxIndex l2) = none) :
+    maxIndex l1 ≤ maxIndex l2 := by
+  rcases Nat.lt_or_ge (maxIndex l2) (maxIndex l1) with hlt | hge
+  · exfalso
+    have hpos : 0 < maxIndex l2 := by
+      obtain ⟨e2, he2, hidx2, -⟩ := maxIndex_non_empty hne
+      rw [← hidx2]
+      exact Nat.lt_of_le_of_lt (Nat.zero_le i) (hc2.2 e2 he2)
+    obtain ⟨e1, hidx1, he1⟩ := hc1.1 (maxIndex l2) ⟨hpos, Nat.le_of_lt hlt⟩
+    exact findAtIndex_None hs1 hf he1 hidx1
+  · exact hge
+
+omit O in
+/-- `AllEntriesLogProof.v:242-251` (`Prefix_maxIndex_eq`). -/
+theorem Prefix_maxIndex_eq {l l' : List (entry (P := P))}
+    (hp : Prefix l l') (hne : l ≠ []) : maxIndex l = maxIndex l' := by
+  cases l with
+  | nil => exact absurd rfl hne
+  | cons a l0 =>
+    cases l' with
+    | nil => exact absurd hp not_false
+    | cons b l1 =>
+      obtain ⟨rfl, -⟩ := hp
+      rfl
+
+omit O in
+/-- `CommonTheorems.v:1554-1573` (`prefix_contiguous`): a member of the
+whole list above the cut lands in any nonempty contiguous prefix. -/
+theorem prefix_contiguous {l l' : List (entry (P := P))}
+    {e : entry (P := P)} {i : logIndex} (hne : l' ≠ [])
+    (hp : Prefix l' l) (hs : sorted l) (he : e ∈ l)
+    (hgt : e.eIndex > i) (hc : contiguous_range_exact_lo l' i) :
+    e ∈ l' := by
+  induction l generalizing l' with
+  | nil => exact nomatch he
+  | cons a l0 ih =>
+    cases l' with
+    | nil => exact absurd rfl hne
+    | cons b l1 =>
+      obtain ⟨rfl, hp'⟩ := hp
+      rcases List.mem_cons.mp he with rfl | he'
+      · exact List.mem_cons_self ..
+      · cases hl1 : l1 with
+        | nil =>
+          -- singleton prefix: its head index is i+1; anything above i
+          -- in the tail of l contradicts sortedness
+          exfalso
+          subst hl1
+          have hbi : b.eIndex = i + 1 := contiguous_index_singleton hc
+          have hlt : e.eIndex < b.eIndex := (hs.1 e he').1
+          rw [hbi] at hlt
+          exact absurd hgt (Nat.not_lt.mpr (Nat.le_of_lt_succ hlt))
+        | cons c l2 =>
+          subst hl1
+          refine List.mem_cons_of_mem _ (ih ?_ hp' hs.2 he' ?_)
+          · exact List.cons_ne_nil c l2
+          · exact cons_contiguous_sorted
+              (prefix_sorted hs ⟨rfl, hp'⟩) hc
+
+omit O in
+/-- `haveNewEntries` elimination (`SpecLemmas.v` `haveNewEntries_true`). -/
+theorem haveNewEntries_true {st : raft_data (P := P)}
+    {es : List (entry (P := P))} (h : haveNewEntries st es = true) :
+    es ≠ [] ∧
+    (findAtIndex st.log (maxIndex es) = none ∨
+     ∃ em, findAtIndex st.log (maxIndex es) = some em ∧
+       em.eTerm ≠ maxTerm es) := by
+  unfold haveNewEntries at h
+  rw [Bool.and_eq_true] at h
+  obtain ⟨h1, h2⟩ := h
+  constructor
+  · intro heq
+    subst heq
+    exact nomatch h1
+  · rcases hf : findAtIndex st.log (maxIndex es) with _ | em
+    · exact Or.inl rfl
+    · rw [hf] at h2
+      refine Or.inr ⟨em, rfl, ?_⟩
+      intro heq
+      rw [Bool.not_eq_eq_eq_not, Bool.not_true, beq_eq_false_iff_ne] at h2
+      exact h2 heq.symm
+
+/-- `AllEntriesLogProof.v:79-102` (`appendEntries_haveNewEntries_false`):
+if a packet's entries are not news to a host, they are all in its log
+(via the shared max entry and log matching). -/
+theorem appendEntries_haveNewEntries_false :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      ∀ (p : RefinedPacket) (t : term) (n : name (P := P))
+        (pli : logIndex) (plt : term) (es : List (entry (P := P)))
+        (ci : logIndex) (h : name (P := P)) (e : entry (P := P)),
+        p ∈ net.nwPackets → p.pBody = .AppendEntries t n pli plt es ci →
+        haveNewEntries (net.nwState h).2 es = false →
+        e ∈ es → e ∈ (net.nwState h).2.log := by
+  intro net hreach p t n pli plt es ci h e hp hbody hfalse he
+  cases es with
+  | nil => exact nomatch he
+  | cons e1 es1 =>
+    unfold haveNewEntries not_empty at hfalse
+    simp only [Bool.true_and] at hfalse
+    rcases hf : findAtIndex (net.nwState h).2.log (maxIndex (e1 :: es1))
+      with _ | em
+    · rw [hf] at hfalse
+      exact nomatch hfalse
+    · rw [hf] at hfalse
+      simp only [] at hfalse
+      have hbeq : maxTerm (e1 :: es1) = em.eTerm := by
+        rcases hb : (maxTerm (e1 :: es1) == em.eTerm) with _ | _
+        · rw [hb] at hfalse
+          exact nomatch hfalse
+        · exact beq_iff_eq.mp hb
+      obtain ⟨hemL, hemidx⟩ := findAtIndex_elim hf
+      have hsortes : sorted (e1 :: es1) :=
+        entries_sorted_nw_invariant net hreach p t n pli plt (e1 :: es1)
+          ci hp hbody
+      refine entries_match_nw_host_invariant net hreach p t n pli plt
+        (e1 :: es1) ci h e1 em e hp hbody (List.mem_cons_self ..) hemL
+        hemidx.symm hbeq he ?_
+      exact maxIndex_is_max hsortes he
+
+omit O in
+/-- `SpecLemmas.v:236-280` (`handleAppendEntries_log_detailed`), in the
+shape the AllEntriesLog induction consumes: unchanged log, or an ACCEPT
+with the leaderId set, the current term at the request's, the entries
+genuinely new, and the log wholesale or spliced at a real pivot. -/
+theorem handleAppendEntries_accept_detail (me : name (P := P))
+    (st : raft_data (P := P)) (t : term) (lid : name (P := P))
+    (pli : logIndex) (plt : term) (es : List (entry (P := P)))
+    (ci : logIndex) {st' m}
+    (h : handleAppendEntries me st t lid pli plt es ci = (st', m)) :
+    st'.log = st.log ∨
+    (st'.leaderId ≠ none ∧ st'.currentTerm = t ∧
+     haveNewEntries st es = true ∧
+     ((pli = 0 ∧ st'.log = es) ∨
+      (∃ e0, e0 ∈ st.log ∧ e0.eIndex = pli ∧ e0.eTerm = plt ∧
+        st'.log = es ++ removeAfterIndex st.log pli))) := by
+  have hadv := advanceCurrentTerm_spec st t
+  unfold handleAppendEntries at h
+  split at h
+  · simp only [Prod.mk.injEq] at h
+    obtain ⟨rfl, -⟩ := h
+    exact Or.inl rfl
+  · rename_i hng
+    have hle : st.currentTerm ≤ t :=
+      Nat.not_lt.mp (fun hlt => hng (by simpa [Nat.blt_eq] using hlt))
+    split at h
+    · rename_i hpli0
+      simp only [beq_iff_eq] at hpli0
+      split at h
+      · rename_i hnew
+        simp only [Prod.mk.injEq] at h
+        obtain ⟨rfl, -⟩ := h
+        refine Or.inr ⟨?_, ?_, ?_, Or.inl ⟨hpli0, ?_⟩⟩
+        · exact fun hc => nomatch hc
+        · exact advanceCurrentTerm_le_eq hle
+        · exact hnew
+        · rfl
+      · simp only [Prod.mk.injEq] at h
+        obtain ⟨rfl, -⟩ := h
+        exact Or.inl hadv.2.1
+    · split at h
+      · simp only [Prod.mk.injEq] at h
+        obtain ⟨rfl, -⟩ := h
+        exact Or.inl rfl
+      · rename_i e0 hfind
+        split at h
+        · simp only [Prod.mk.injEq] at h
+          obtain ⟨rfl, -⟩ := h
+          exact Or.inl rfl
+        · rename_i hterm0
+          have hplt : plt = e0.eTerm := by
+            rcases hb : (plt == e0.eTerm) with _ | _
+            · rw [hb] at hterm0
+              exact absurd rfl hterm0
+            · exact beq_iff_eq.mp hb
+          obtain ⟨he0L, he0idx⟩ := findAtIndex_elim hfind
+          split at h
+          · rename_i hnew
+            simp only [Prod.mk.injEq] at h
+            obtain ⟨rfl, -⟩ := h
+            refine Or.inr ⟨?_, ?_, ?_, Or.inr ⟨e0, he0L, he0idx, hplt.symm, ?_⟩⟩
+            · exact fun hc => nomatch hc
+            · exact advanceCurrentTerm_le_eq hle
+            · exact hnew
+            · rfl
+          · simp only [Prod.mk.injEq] at h
+            obtain ⟨rfl, -⟩ := h
+            exact Or.inl hadv.2.1
+
+omit O in
+/-- `advanceCurrentTerm` on term/leaderId (`SpecLemmas.v:335-344`). -/
+theorem advanceCurrentTerm_currentTerm_leaderId (st : raft_data (P := P))
+    (t : term) :
+    st.currentTerm < (advanceCurrentTerm st t).currentTerm ∨
+    ((advanceCurrentTerm st t).currentTerm = st.currentTerm ∧
+     (advanceCurrentTerm st t).leaderId = st.leaderId) := by
+  unfold advanceCurrentTerm
+  split
+  · rename_i hgt
+    exact Or.inl (by simpa [Nat.blt_eq] using hgt)
+  · exact Or.inr ⟨rfl, rfl⟩
+
+omit O in
+/-- `AllEntriesLogProof.v:822-830`
+(`handleAppendEntriesReply_currentTerm_leaderId`). -/
+theorem handleAppendEntriesReply_currentTerm_leaderId
+    (me : name (P := P)) (st : raft_data (P := P)) (src : name (P := P))
+    (t : term) (es : List (entry (P := P))) (r : Bool) {st' l}
+    (h : handleAppendEntriesReply me st src t es r = (st', l)) :
+    st.currentTerm < st'.currentTerm ∨
+    (st'.currentTerm = st.currentTerm ∧ st'.leaderId = st.leaderId) := by
+  have hadv := advanceCurrentTerm_currentTerm_leaderId st t
+  unfold handleAppendEntriesReply at h
+  repeat' split at h
+  all_goals simp only [Prod.mk.injEq] at h
+  all_goals obtain ⟨rfl, -⟩ := h
+  all_goals first
+    | exact Or.inr ⟨rfl, rfl⟩
+    | exact hadv
+
+omit O in
+/-- `SpecLemmas.v` (`handleRequestVote_currentTerm_leaderId`). -/
+theorem handleRequestVote_currentTerm_leaderId (me : name (P := P))
+    (st : raft_data (P := P)) (t : term) (cand : name (P := P))
+    (lli : logIndex) (llt : term) {st' m}
+    (h : handleRequestVote me st t cand lli llt = (st', m)) :
+    st.currentTerm < st'.currentTerm ∨
+    (st'.currentTerm = st.currentTerm ∧ st'.leaderId = st.leaderId) := by
+  have hadv := advanceCurrentTerm_currentTerm_leaderId st t
+  unfold handleRequestVote at h
+  simp only [] at h
+  repeat' split at h
+  all_goals simp only [Prod.mk.injEq] at h
+  all_goals obtain ⟨rfl, -⟩ := h
+  all_goals first
+    | exact Or.inr ⟨rfl, rfl⟩
+    | exact hadv
+    | (rcases hadv with hlt | ⟨heq, hlid⟩
+       · exact Or.inl hlt
+       · exact Or.inr ⟨heq, hlid⟩)
+
+omit O in
+/-- (`handleRequestVoteReply_currentTerm_leaderId`). -/
+theorem handleRequestVoteReply_currentTerm_leaderId (me : name (P := P))
+    (st : raft_data (P := P)) (src : name (P := P)) (t : term) (v : Bool) :
+    st.currentTerm <
+      (handleRequestVoteReply me st src t v).currentTerm ∨
+    ((handleRequestVoteReply me st src t v).currentTerm = st.currentTerm ∧
+     (handleRequestVoteReply me st src t v).leaderId = st.leaderId) := by
+  have hadv := advanceCurrentTerm_currentTerm_leaderId st t
+  unfold handleRequestVoteReply
+  simp only []
+  repeat' split
+  all_goals first
+    | exact Or.inr ⟨rfl, rfl⟩
+    | exact hadv
+
+omit O in
+/-- (`handleClientRequest_currentTerm_leaderId`). -/
+theorem handleClientRequest_currentTerm_leaderId (me : name (P := P))
+    (st : raft_data (P := P)) (client : R.clientId) (id : Nat)
+    (c : P.input) {out st' l}
+    (h : handleClientRequest me st client id c = (out, st', l)) :
+    st'.currentTerm = st.currentTerm ∧ st'.leaderId = st.leaderId := by
+  unfold handleClientRequest at h
+  split at h
+  all_goals simp only [Prod.mk.injEq] at h
+  all_goals obtain ⟨-, rfl, -⟩ := h
+  all_goals exact ⟨rfl, rfl⟩
+
+omit O in
+/-- (`handleTimeout_currentTerm_leaderId`). -/
+theorem handleTimeout_currentTerm_leaderId (me : name (P := P))
+    (st : raft_data (P := P)) {out st' l}
+    (h : handleTimeout me st = (out, st', l)) :
+    st.currentTerm < st'.currentTerm ∨
+    (st'.currentTerm = st.currentTerm ∧ st'.leaderId = st.leaderId) := by
+  unfold handleTimeout tryToBecomeLeader at h
+  split at h
+  all_goals simp only [Prod.mk.injEq] at h
+  all_goals obtain ⟨-, rfl, -⟩ := h
+  · exact Or.inr ⟨rfl, rfl⟩
+  · exact Or.inl (Nat.lt_succ_self _)
+
+omit O in
+/-- (`doLeader_currentTerm_leaderId`). -/
+theorem doLeader_currentTerm_leaderId (st : raft_data (P := P))
+    (me : name (P := P)) {os st' ms} (h : doLeader st me = (os, st', ms)) :
+    st'.currentTerm = st.currentTerm ∧ st'.leaderId = st.leaderId := by
+  unfold doLeader advanceCommitIndex at h
+  simp only [] at h
+  repeat' split at h
+  all_goals simp only [Prod.mk.injEq] at h
+  all_goals obtain ⟨-, rfl, -⟩ := h
+  all_goals exact ⟨rfl, rfl⟩
+
+/-- `cacheApplyEntry` never touches `leaderId`. -/
+theorem cacheApplyEntry_leaderId (st : raft_data (P := P))
+    (e : entry (P := P)) {o st'} (h : cacheApplyEntry st e = (o, st')) :
+    st'.leaderId = st.leaderId := by
+  unfold cacheApplyEntry applyEntry at h
+  repeat' split at h
+  all_goals simp only [Prod.mk.injEq] at h
+  all_goals obtain ⟨-, rfl⟩ := h
+  all_goals rfl
+
+/-- `applyEntries` never touches `leaderId`. -/
+theorem applyEntries_leaderId (me : name (P := P)) :
+    ∀ (es : List (entry (P := P))) (st : raft_data (P := P)) {o st'},
+    applyEntries me st es = (o, st') → st'.leaderId = st.leaderId := by
+  intro es
+  induction es with
+  | nil =>
+    intro st o st' h
+    unfold applyEntries at h
+    simp only [Prod.mk.injEq] at h
+    obtain ⟨-, rfl⟩ := h
+    rfl
+  | cons e es ih =>
+    intro st o st' h
+    unfold applyEntries at h
+    rcases hc : cacheApplyEntry st e with ⟨o1, st1⟩
+    rw [hc] at h
+    simp only [] at h
+    rcases ha : applyEntries me st1 es with ⟨o2, st2⟩
+    rw [ha] at h
+    simp only [Prod.mk.injEq] at h
+    obtain ⟨-, rfl⟩ := h
+    rw [ih st1 ha, cacheApplyEntry_leaderId st e hc]
+
+/-- (`doGenericServer_currentTerm_leaderId`). -/
+theorem doGenericServer_currentTerm_leaderId (me : name (P := P))
+    (st : raft_data (P := P)) {os st' ms}
+    (h : doGenericServer me st = (os, st', ms)) :
+    st'.currentTerm = st.currentTerm ∧ st'.leaderId = st.leaderId := by
+  unfold doGenericServer at h
+  rcases hae : applyEntries me st
+      ((findGtIndex st.log st.lastApplied).filter
+        (fun x => (st.lastApplied <? x.eIndex) &&
+          (x.eIndex <=? st.commitIndex))).reverse
+    with ⟨o1, st1⟩
+  rw [hae] at h
+  simp only [Prod.mk.injEq] at h
+  obtain ⟨-, rfl, -⟩ := h
+  obtain ⟨-, -, hct, -, -, -, -⟩ := applyEntries_spec me _ st hae
+  have hlid : st1.leaderId = st.leaderId :=
+    applyEntries_leaderId me _ st hae
+  exact ⟨hct, hlid⟩
+
 end LeaderLogsAssembly
 end Raft
 end VerdiCompat
