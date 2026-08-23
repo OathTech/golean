@@ -970,3 +970,105 @@ operator's (constitution §4.1).
   loudly); `MemoryStorage.Entries` scoped OUT of this slice
   (`limitSize`/`entryEncodingSize` needs its own spec-side
   re-grounding — refused to model it loosely).
+- 2026-08-23 **msFirstIndex_handler_eq + msTerm_handler_eq PROVED**
+  (commit 6961a5ae; `MsEquation.lean` — the FOURTH and FIFTH handler
+  equations, the first RESULT-returning ones). Form: run completes
+  (178/246 steps, zero choices, `ch` rides), result cells =
+  spec-of-pre-abstraction, error nil, abstraction PRESERVED. Kernel
+  lesson recorded the hard way (two failed builds): (a) a module
+  using `kernel_rfl` on window-sized facts needs the
+  `maxHeartbeats` bump — the KERNEL respects the heartbeat budget
+  ("deterministic timeout" at addDecl); (b) per-conjunct facts must
+  be their OWN declarations — four `kernel_rfl` conjuncts bundled
+  into one `addDecl` blow past even the raised budget (no reduction
+  sharing across one declaration's conjuncts), while the same facts
+  as five small decls check in seconds each. Module 348 s. Axioms:
+  all four eq/witness [propext, Classical.choice, Quot.sound].
+- 2026-08-23 [AGENT] **becomeLeader SCOPED OUT of wave 1, with
+  measured grounds** (probe `BlProbe.lean`, machine run from
+  state=1): completes in **6,466 steps consuming SIX choices** — the
+  reset span's 4 picks (steps 659/843/872/901) plus TWO more (5171/
+  6352) on the `appendEntry` path = the appendSlice/spill choice
+  site, exactly the U3 verdict's wave-2 residual (3) (needs the
+  appendSpill analogue of `stepFn_pick_transport`), plus `send` into
+  `msgsAfterAppend` (GAP-V1-3 territory). The v1 PROJECTION is
+  compatible (post = ⟨term, vote, id, 2, ..⟩ — term-equal reset
+  branch, vote preserved), so only MACHINERY blocks it — it moves to
+  wave 2 beside the message handlers, not silently dropped.
+
+### Updated wave projection (recomputed at this unit's evidence)
+
+Wave 1 outcome: 4 NEW handler equations proved (5 total on the
+branch), each witness-carrying, U3's exact form: becomePreCandidate
+(1 window, 0 choices), becomeCandidate (7 windows + 6 crossings, the
+reset-span spine reused with zero new transport machinery),
+MemoryStorage.FirstIndex/Term (result-returning form established).
+Per-handler cost measured THIS unit: BPC ~160 lines/110 s; BC ~790
+lines + generated literals/~110 s of builds; Ms pair ~230 lines/348 s
+— i.e. the U3 scale verdict's "1–2 sessions once literalization
+lands" for wave 1 came in at ONE session for 4 of its 5–7 handlers
+(becomeLeader moved to wave 2 on measured grounds; Entries scoped
+out pending its spec design). Remaining wave-2/3 rows unchanged from
+the U3 verdict, with the appendSpill transport now DOUBLY motivated
+(handleAppendEntries AND becomeLeader) and the absState extension
+half-done (GAP-V1-1a closed; 1b + outboxes open).
+
+### PROMOTION LEDGER updates (A4-U4)
+
+- **`kernel_rfl`** (`Sym/KernelRfl.lean`) — LANDED, general: every
+  machine-side fixture fact in every handler (already 5 consumer
+  modules). The measured basis: elaborator whnf was ~100% of
+  machine-side `rfl` cost, kernel ≈ 0.
+- **The literal-generation printer** (`BfLitGen`/`BcLitGen` probes) —
+  pattern established, 2 consumers (Bf, Bc); candidate for a shared
+  probe library or in-repo tool at the next consolidation slice
+  (currently probe-side duplication, acceptable per scratch
+  conventions but noted).
+- `stepFn_pick_transport` — second consumer LANDED (BcSteps reuses it
+  verbatim); the promotion condition ("second consumer = any
+  handler's range loop") is now met → lift to TableExt/kit at the
+  next consolidation slice.
+- The U3 "reset-span composite" row: realized as the
+  literalize→link→transport→crossing-facts PATTERN (fixture-generic
+  factoring is not possible at closed-evaluation windows — the
+  continuation is baked into each chain — but the per-handler
+  instantiation cost measured at ~one session per reset-family
+  handler makes the pattern the composite); row retired in favor of
+  the two rows above.
+
+## A4-U4 exit (2026-08-23, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since the dispatch-time
+tip 6c18dfad: 4 (deae0f08 slice 0, 5a8d6251 BPC, 8cb8b423 BC,
+6961a5ae Ms) + this log commit; no coordinator commits interleaved
+this unit (checked: `git log 6c18dfad..HEAD` = the 4 above).
+
+Unit-end gate `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci`
+at 6961a5ae's tree + this log — **RESULT: PASS, exit 0**
+(`artifacts/ci-arc4-u4.log`, gitignored; all ok steps; the two
+no-diff notes are the sanctioned proofs+docs hatch — this unit
+touched `proofs/GoLeanProofs/{Sym,Specs/Raft}/**` + the aggregator +
+arc-4 docs only, no runtime code, no Corpus/, no baselines/). The
+comparator-landmark staleness note (86 commits at this run) stays
+flagged for the operator's merge step, as in every prior arc-4 exit.
+
+**Handler equations proved on the branch after this unit (each with
+its §3.3 witness; fresh `#print axioms`, all recorded verbatim at
+their slice entries above):** becomeFollower (U3),
+becomePreCandidate, becomeCandidate, MemoryStorage.FirstIndex,
+MemoryStorage.Term — **5 total, 4 new this unit.**
+
+**Open gaps carried (none counted):** GAP-V1-2..5 and GAP-U1-W1
+unchanged; GAP-V1-1 split — 1a (storage ents) CLOSED, 1b (unstable
+half) open; U3's residuals unchanged (becomeFollower term-change
+branch; needsDeref dispatch quit); U4 adds: becomeLeader → wave 2
+(measured: 6 choices — the appendSpill site ×2 — plus GAP-V1-3
+outbox territory); MemoryStorage.Entries (limitSize spec design);
+the Term/FirstIndex ERROR branches (static error-var addresses
+absent from the leaf fixture); MsEquation's per-fact window
+re-evaluation (literalize msFiS1/msTmS1 if the 348 s module ever
+bothers anyone — the one-window-handler pattern note in BpcEquation
+applies).
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1).
