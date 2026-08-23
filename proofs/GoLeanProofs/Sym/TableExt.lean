@@ -195,6 +195,125 @@ def storeTargetT (T : TypeEnv) (s : State D) (r : TargetRef D)
       storeLocT T s loc v
   | .mapElem b k kt vt => mapAssignValue' s kt vt b k v
 
+/-! ## Slice 2 — sequential sync-ops (design §3, class 3)
+
+The pilot census (arc log): the handler fragment consumes exactly
+`SyncStmtOp.lock`/`unlock` on plain `sync.Mutex` cells (lockedRand,
+MemoryStorage) — no Once, no RWMutex on the path; the deferred-Unlock
+DISCHARGE at frame exit additionally needs class 2 (a deferred call is
+a frame entry). Only the consumed ops proceed; the rest of the family
+stays Q7 (wider coverage is a later strengthening). The sync apply
+consumes no choices (StepFn's arm), so the `ch`-unchanged theorem form
+is untouched. Blocked acquisitions mirror the machine's
+`.blockedSync` configuration faithfully (a dead end for a window, but
+sound). -/
+
+/-- Mirror of `syncCell`. -/
+def syncCell' (s : State D) (loc : Loc) : M SyncPrim := do
+  match ← loadLoc' s loc with
+  | .syncData p => .ok p
+  | .atom _ => quit .q10Atom
+  | _ => quit .q11Internal
+
+/-- Mirror of `applySyncOp`, the census subset: `lock`/`unlock` on a
+mutex. Failure paths (unlock of unlocked = the machine's `.fatal`)
+quit Q6; every other op quits Q7 as before. -/
+def applySyncOp' (s : State D) (op : SyncOp) (vs : List (Value D))
+    (env : LocalEnv) (k : Cont D) : M (Config D × State D) := do
+  match op, vs with
+  | .lock, [av] => do
+      let loc ← av.asLoc
+      match ← syncCell' s loc with
+      | .mutex locked =>
+          if locked then .ok (.blockedSync .lock loc env k, s)
+          else do
+            let s' ← storeLoc' s loc (.syncData (.mutex true))
+            .ok (.opDone .postOp (.next k), s')
+      | _ => quit .q11Internal
+  | .unlock, [av] => do
+      let loc ← av.asLoc
+      match ← syncCell' s loc with
+      | .mutex locked =>
+          if locked then do
+            let s' ← storeLoc' s loc (.syncData (.mutex false))
+            .ok (.opDone .postOp (.next k), s')
+          else quit .q6Panic
+      | _ => quit .q11Internal
+  | _, _ => quit .q7Concurrency
+
+set_option linter.unusedSimpArgs false in
+/-- `applySyncOp'` transports (census subset; `storeLoc_conc` carries
+the flag store — sync cells normalize at the concrete `.sync` arm, no
+table needed). -/
+theorem applySyncOp_conc (hI : I.Sound) (σ : ExecState) {s : State D}
+    {op : SyncOp} {vs : List (Value D)} {env : LocalEnv} {k : Cont D}
+    {c' : Config D} {s' : State D}
+    (h : applySyncOp' s op vs env k = .ok (c', s')) :
+    applySyncOp (concS I σ s) op (vs.map (concV I)) env (concK I k)
+      = .ok (concC I c', concS I σ s') := by
+  cases op <;> simp only [applySyncOp', quit] at h <;> try (cases h; done)
+  case lock =>
+      match vs, h with
+      | [av], h =>
+        obtain ⟨loc, hloc, h2⟩ := bind_eq_ok.mp h
+        obtain ⟨p, hp, h3⟩ := bind_eq_ok.mp h2
+        simp only [List.map_cons, List.map_nil, applySyncOp]
+        refine bind_eq_ok.mpr ⟨loc, asLoc_conc hloc, ?_⟩
+        simp only [syncCell'] at hp
+        obtain ⟨pv, hpv, hp2⟩ := bind_eq_ok.mp hp
+        have hload := loadLoc_conc (I := I) σ hpv
+        cases pv <;> simp only [quit] at hp2 <;> try (cases hp2; done)
+        case syncData prim =>
+          cases hp2
+          refine bind_eq_ok.mpr ⟨p, ?_, ?_⟩
+          · simp only [syncCell, hload, concV_syncData, Bind.bind,
+              Except.bind, pure, Except.pure]
+          · cases p <;> simp only [quit] at h3 <;> try (cases h3; done)
+            case mutex locked =>
+              by_cases hl : locked = true
+              · subst hl
+                rw [if_pos rfl] at h3
+                cases h3
+                simp [concC, concK]
+              · rw [if_neg hl] at h3
+                obtain ⟨s2, hst, h4⟩ := bind_eq_ok.mp h3
+                cases h4
+                simp only [Bool.not_eq_true] at hl
+                subst hl
+                have hstc := storeLoc_conc hI σ hst
+                simp only [concV_syncData] at hstc
+                simp [hstc, concC, concK, Bind.bind, Except.bind, pure,
+                  Except.pure]
+  case unlock =>
+      match vs, h with
+      | [av], h =>
+        obtain ⟨loc, hloc, h2⟩ := bind_eq_ok.mp h
+        obtain ⟨p, hp, h3⟩ := bind_eq_ok.mp h2
+        simp only [List.map_cons, List.map_nil, applySyncOp]
+        refine bind_eq_ok.mpr ⟨loc, asLoc_conc hloc, ?_⟩
+        simp only [syncCell'] at hp
+        obtain ⟨pv, hpv, hp2⟩ := bind_eq_ok.mp hp
+        have hload := loadLoc_conc (I := I) σ hpv
+        cases pv <;> simp only [quit] at hp2 <;> try (cases hp2; done)
+        case syncData prim =>
+          cases hp2
+          refine bind_eq_ok.mpr ⟨p, ?_, ?_⟩
+          · simp only [syncCell, hload, concV_syncData, Bind.bind,
+              Except.bind, pure, Except.pure]
+          · cases p <;> simp only [quit] at h3 <;> try (cases h3; done)
+            case mutex locked =>
+              by_cases hl : locked = true
+              · subst hl
+                rw [if_pos rfl] at h3
+                obtain ⟨s2, hst, h4⟩ := bind_eq_ok.mp h3
+                cases h4
+                have hstc := storeLoc_conc hI σ hst
+                simp only [concV_syncData] at hstc
+                simp [hstc, concC, concK, Bind.bind, Except.bind, pure,
+                  Except.pure]
+              · rw [if_neg hl] at h3
+                cases h3
+
 /-! ## The extended step and window driver -/
 
 /-- The extended mirror step: the store arm through the table-aware
@@ -210,6 +329,21 @@ def stepFnT (T : TypeEnv) (s : State D) (c : Config D) :
           .ok (.next (.storeK rs vrest body env k'), s')
        | [], [] => .ok (.exec body env k', s)
        | _, _ => quit .q11Internal)
+  -- slice 2: sync-statement entry (the machine's operand-plan arm)
+  | .exec (.syncStmt op args targets) env k =>
+      (match syncPlan (.syncStmt op args targets) with
+       | some (sop, e :: rest) =>
+           .ok (.evalE e env (.syncStK sop [] rest env k), s)
+       | some (_, []) => quit .q11Internal
+       | none => quit .q11Internal)
+  -- slice 2: sync operand collection + the apply
+  | .retV v (.syncStK op done pending env k') =>
+      (match pending with
+       | e :: rest =>
+           .ok (.evalE e env (.syncStK op (v :: done) rest env k'), s)
+       | [] => applySyncOp' s op (v :: done).reverse env k')
+  -- slice 2: the sequential completion-marker strip
+  | .opDone _ inner => .ok (inner, s)
   | c => stepFn' s c
 
 /-- The extended step at the symbolic domain. -/
@@ -591,6 +725,44 @@ theorem stepFnT_conc (hI : I.Sound) (σ : ExecState) (ch : Choices)
                   rw [storeTargetT_conc hI σ hsub hstore]
                   rfl
       | _ => exact stepFn'_conc hI σ ch h
+  | exec stmt env k =>
+      cases stmt with
+      | syncStmt op args targets =>
+          simp only [stepFnT] at h
+          revert h
+          rcases hplan : syncPlan (.syncStmt op args targets) with _ | ⟨sop, es⟩
+          · intro h
+            simp [quit] at h
+          · cases es with
+            | nil =>
+                intro h
+                simp [quit] at h
+            | cons e rest =>
+                intro h
+                cases h
+                simp only [concC, concK, stepFn]
+                split
+                all_goals simp_all
+      | _ => exact stepFn'_conc hI σ ch h
+  | retV v k =>
+      cases k with
+      | syncStK op done pending env k' =>
+          simp only [stepFnT] at h
+          cases pending with
+          | cons e rest =>
+              cases h
+              rfl
+          | nil =>
+              have happ := applySyncOp_conc (I := I) hI σ h
+              rw [List.map_reverse] at happ
+              simp only [concC, concK, stepFn]
+              rw [show (concV I v :: List.map (concV I) done)
+                    = List.map (concV I) (v :: done) from rfl, happ]
+              rfl
+      | _ => exact stepFn'_conc hI σ ch h
+  | opDone sched inner =>
+      cases h
+      rfl
   | _ => exact stepFn'_conc hI σ ch h
 
 /-- The symbolic instance of the extended step (the refinement
@@ -648,5 +820,38 @@ theorem symEvalWindowT_refines' {T : TypeEnv} {budget n : Nat}
       = .ok (γC ρ (symEvalWindowT T budget S C).2.2,
           γS ρ σ (symEvalWindowT T budget S C).2.1, ch) :=
   symEvalWindowT_refines (by rw [← hn]) ρ σ ch hsub
+
+/-! ## Slice-2 discharge witness (constitution §3.3): a lock/unlock
+pair crossed IN-window — the sync arms exercised end to end on a
+concrete mutex cell (the `#eval` check ran first: 12 steps, final
+state unlocked — the standing rule). No table needed (`SubTable.nil`),
+so this also witnesses the degenerate-instance claim. -/
+
+def syncWitS : SymState :=
+  { heap := [(.base ⟨0⟩, .mk (some (.sync .mutex)) (.syncData (.mutex false)))],
+    nextAddr := 1 }
+
+def syncWitC : SymConfig :=
+  .exec (.seqn #[.syncStmt .lock #[.locLit (.base ⟨0⟩)] #[],
+                 .syncStmt .unlock #[.locLit (.base ⟨0⟩)] #[]])
+    [] (.seq [] [] .stop)
+
+theorem syncWit_window_n : (symEvalWindowT [] 12 syncWitS syncWitC).1 = 12 := by
+  rfl
+
+/-- The transported lock/unlock window, ∀ρ ∀σ ∀ch — and the witness
+that the sync arms' claims are not vacuous. -/
+theorem syncWit_refines (ρ : Valuation) (σ : ExecState) (ch : Choices) :
+    stepFnIter 12 (γS ρ σ syncWitS) (γC ρ syncWitC) ch
+      = .ok (γC ρ (symEvalWindowT [] 12 syncWitS syncWitC).2.2,
+          γS ρ σ (symEvalWindowT [] 12 syncWitS syncWitC).2.1, ch) :=
+  symEvalWindowT_refines' syncWit_window_n ρ σ ch (SubTable.nil _)
+
+/-- The window's post-heap: the mutex ends UNLOCKED (both ops ran). -/
+theorem syncWit_final :
+    (symEvalWindowT [] 12 syncWitS syncWitC).2.1.heap
+      = [(.base ⟨0⟩, .mk (some (.sync .mutex)) (.syncData (.mutex false)))] := by
+  rfl
+
 
 end GoLean.Sym

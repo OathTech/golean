@@ -1,5 +1,6 @@
 import Lean
 import GoLeanProofs.StepKit
+import GoLeanProofs.Sym.TableExt
 import GoLeanProofs.SliceMem
 import GoLeanProofs.StringMem
 import GoLeanProofs.MapMem
@@ -635,5 +636,31 @@ unit S4.11). -/
 #guard_msgs in #print axioms GoLean.Sym.symEvalWindow_refines' 
 /-- info: 'GoLean.Sym.Spike.kd_su_A0_via_sym' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Sym.Spike.kd_su_A0_via_sym
+
+/-! ### Campaign Arc 4, A4-U2 (the handler-fragment extension,
+`Sym/TableExt.lean`): the table-conditioned surface — the extended
+step's transport (`stepFnT_conc`, delegating to the shipped master
+walk on every non-overridden arm), its symbolic instance, the
+table-conditioned refinement pair (the shipped template + the ONE
+`SubTable` premise), the store-chain drift heads, and the slice-2
+sync apply. Witnesses: `HandlerEqSym` (store window at the pinned
+tables) and `syncWit_refines` (lock/unlock window, in-module). -/
+
+/-- info: 'GoLean.Sym.stepFnT_conc' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.stepFnT_conc
+/-- info: 'GoLean.Sym.stepFnST_sound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.stepFnST_sound
+/-- info: 'GoLean.Sym.symEvalWindowT_refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.symEvalWindowT_refines
+/-- info: 'GoLean.Sym.symEvalWindowT_refines'' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.symEvalWindowT_refines'
+/-- info: 'GoLean.Sym.normalizeFuelT_conc' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.normalizeFuelT_conc
+/-- info: 'GoLean.Sym.storeTargetT_conc' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.storeTargetT_conc
+/-- info: 'GoLean.Sym.applySyncOp_conc' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.applySyncOp_conc
+/-- info: 'GoLean.Sym.syncWit_refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.syncWit_refines
 
 end GoLean.Iris.Audit
