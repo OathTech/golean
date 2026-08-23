@@ -223,6 +223,12 @@ honesty classes, each marked at its site:
 - *Ported* (the default): the same lemma DAG as upstream, re-proved —
   Ltac does not port, the argument does.
 - *Re-derived routes* (the logged §9 calls — same lattice inputs,
+  — NOTE 2026-08-24, milestone audit R2: this list is the MAJORS; a
+  plain `grep "§9"` over the arc log undercounts proof-shape
+  deviations (several live as bare [AGENT] notes: slices 45/46/53),
+  and the slices 82-84 MIA route calls (a)(b)(c) belong here — R2
+  verified all three equivalent-or-stronger, (c) dissolving three
+  upstream lemmas incl. the no_AE_to_leader dependency —
   smaller arguments), the majors: unit 10's `aeae_e_in_ll` positioning
   lemma (~170 Lean lines for upstream's ~590-line 3×3 grid); unit 8's
   two containment lemmas replacing AllEntriesLog's ~500-line AE Ltac;

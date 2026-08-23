@@ -166,7 +166,7 @@ The inventory (file line numbers at this tip):
 - erasure/transfer: `deghost` (:759), `deghost_spec` (:763),
   `ghost_simulation_1` (:782), `simulation_1` (:847), `lift_prop`
   (:919), `ghost_simulation_2` (:983), `simulation_2` (:1057),
-  **`lower_prop`** (:1155) — the transfer principle;
+  **`lower_prop`** (:1448; cite refreshed 2026-08-24, R3 S3) — the transfer principle;
 - discharge witness: `VotesShape` (:1173) +
   `refined_votes_shape_witness` (:1239), all eleven obligations
   discharged on a concrete invariant.
@@ -228,7 +228,7 @@ need is a numbered Arc-4-seam gap, never invented statement-side.
   sweep 1064 decls (was 987).
 - 2026-08-22 Slice 8 (95d2fb0a): `ElectionSafety.lean` —
   `votes_le_currentTerm` + `votes_correct` (statements 1:1 with
-  VotesLeCurrentTermInterface.v:9-13 / VotesCorrectInterface.v:8-28)
+  VotesLeCurrentTermInterface.v:8-13 / VotesCorrectInterface.v:8-28)
   proved through `refined_raft_net_invariant`. [AGENT] Plumbing call:
   all three votes_correct conjuncts are pointwise over nodes, so a
   node-level bundle (`votes_state_ok`) + one step helper
@@ -288,7 +288,14 @@ need is a numbered Arc-4-seam gap, never invented statement-side.
   GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT: PASS, exit 0** (log:
   `artifacts/ci-arc3-unit2.log`, gitignored; the no-diff notes are the
   allowed docs+compat hatch — unit 2 touched only `compat/verdi/**`
-  and this log). The report-only comparator-landmark note now reads
+  and this log). **[CORRECTED 2026-08-24, milestone audit R3 S1: the
+  surviving artifact was produced in the CAMPAIGN worktree on a tree
+  WITHOUT this lane's files (its go-test path and landmark distance
+  match the campaign branch; ls-tree there shows no arc-3 files) — so
+  this recorded PASS does not attest this unit's code. First genuine
+  in-lane gate covering it: unit 4's, at 5c6edafa; the audit also
+  re-ran the compat build + enforcing AxCheck at the final tip:
+  green.]** The report-only comparator-landmark note now reads
   12 commits stale — same operator-merge-time flag as unit 1; nothing
   in this unit touches a designated statement or Challenge's closure
   (statement-TCB step ok).
@@ -368,27 +375,27 @@ from artifacts.
 | invariant | status | verdi source | ours |
 |---|---|---|---|
 | refined_raft_net_invariant (principle) | PROVED | Raft/RaftRefinementInterface.v:522 | RefinedProofStructure.lean:515 |
-| lower_prop / lift_prop (transfer) | PROVED | RaftProofs/RaftRefinementProof.v:498,601 | RefinedProofStructure.lean:919,1155 |
-| votes_le_currentTerm | PROVED | Raft/VotesLeCurrentTermInterface.v:9 | ElectionSafety.lean:36 |
+| lower_prop / lift_prop (transfer) | PROVED | RaftProofs/RaftRefinementProof.v:498,601 | RefinedProofStructure.lean:1212,1155 |
+| votes_le_currentTerm | PROVED | Raft/VotesLeCurrentTermInterface.v:8 | ElectionSafety.lean:36 |
 | votes_correct | PROVED | Raft/VotesCorrectInterface.v:8-28 | ElectionSafety.lean:465 |
 | candidates_vote_for_selves | PROVED (base) | Raft/CandidatesVoteForSelvesInterface.v:8 | ElectionSafety.lean:587 |
 | cronies_correct | PROVED | Raft/CroniesCorrectInterface.v:9-33 | ElectionSafety.lean:720 |
 | one_leader_per_term (ELECTION SAFETY) | PROVED (base, via lower_prop) | Raft/OneLeaderPerTermInterface.v:8 | ElectionSafety.lean:1750 (+ Statement :1759) |
-| cronies_term | PROVED | Raft/CroniesTermInterface.v:9 | CandidateEntries.lean:43 |
+| cronies_term | PROVED | Raft/CroniesTermInterface.v:8 | CandidateEntries.lean:43 |
 | no_entries_past_current_term (term_sanity) | PROVED (base) | Raft/TermSanityInterface.v:9-24 | CandidateEntries.lean:220 |
-| CandidateEntries | PROVED | Raft/CandidateEntriesInterface.v:10-24 | CandidateEntries.lean:808 (def :596) |
+| CandidateEntries | PROVED | Raft/CandidateEntriesInterface.v:10-24 | CandidateEntries.lean:945 (def :501; refreshed 2026-08-24, R3 S3) |
 | requestVote_term_sanity | PROVED | Raft/RequestVoteTermSanityInterface.v:9 | LeaderLogs.lean:56 (invariant :64) |
 | votes_votesWithLog_correspond | PROVED | Raft/VotesVotesWithLogCorrespondInterface.v:9-21 | LeaderLogs.lean:299 (invariant :366) |
 | leaders_have_leaderLogs | PROVED | Raft/LeadersHaveLeaderLogsInterface.v:8 | LeaderLogs.lean:444 (invariant :451) |
-| votedFor_term_sanity | PROVED | Raft/VotedForTermSanityInterface.v:8 | LeaderLogs.lean:640 (invariant :691) |
+| votedFor_term_sanity | PROVED | Raft/VotedForTermSanityInterface.v:8 | LeaderLogs.lean:640 (invariant :687; corrected 2026-08-24, R3 S3) |
 | requestVoteReply_term_sanity | PROVED | Raft/RequestVoteReplyTermSanityInterface.v:10 | LeaderLogs.lean (invariant, requestVoteReply_term_sanity_invariant) |
-| requestVote_maxIndex_maxTerm | PROVED | Raft/RequestVoteMaxIndexMaxTermInterface.v:10 | LeaderLogs.lean (invariant, requestVote_maxIndex_maxTerm_invariant) |
+| requestVote_maxIndex_maxTerm | PROVED | Raft/RequestVoteMaxIndexMaxTermInterface.v:9 | LeaderLogs.lean (invariant, requestVote_maxIndex_maxTerm_invariant) |
 | candidate_term_gt_log | PROVED (base) | Raft/CandidateTermGtLogInterface.v:8 | LeaderLogs.lean (invariant, candidate_term_gt_log_invariant) |
 | leaderLogs_term_sanity (trio) | PROVED | Raft/LeaderLogsTermSanityInterface.v:9-24 | LeaderLogs.lean (three invariants, first real lift_prop consumer) |
 | votedFor_moreUpToDate | PROVED | Raft/VotedForMoreUpToDateInterface.v:8-18 | LeaderLogs.lean (invariant) |
 | requestVoteReply_moreUpToDate | PROVED | Raft/RequestVoteReplyMoreUpToDateInterface.v:9-21 | LeaderLogs.lean (invariant) |
 | votesReceived_moreUpToDate | PROVED | Raft/VotesReceivedMoreUpToDateInterface.v:9-19 | LeaderLogs.lean (invariant) |
-| leaderLogs_votesWithLog | PROVED | Raft/LeaderLogsVotesWithLogInterface.v:10-18 | LeaderLogs.lean (invariant) |
+| leaderLogs_votesWithLog | PROVED | Raft/LeaderLogsVotesWithLogInterface.v:9-18 | LeaderLogs.lean (invariant) |
 | one_leaderLog_per_term (+_log/_host) | PROVED | Raft/OneLeaderLogPerTermInterface.v:8-44 | LeaderLogs.lean (invariant + two corollaries) |
 | **leader_completeness (LEADER COMPLETENESS, T3)** | PROVED | Raft/LeaderCompletenessInterface.v:9-42 | LeaderLogs.lean (defs) + LeaderCompleteness.lean (leader_completeness_invariant + both conjunct invariants) |
 | every_entry_was_created (+ in_any_log field) | PROVED | Raft/EveryEntryWasCreatedInterface.v:9-37 | CreationRing.lean (both interface fields) |
@@ -399,12 +406,12 @@ from artifacts.
 | terms_and_indices_from_one_log (+_nw) | PROVED (base) | Raft/TermsAndIndicesFromOneLogInterface.v:8-16 | CreationRing.lean (both fields) |
 | terms_and_indices_from_one (vwl ∧ ll) | PROVED | Raft/TermsAndIndicesFromOneInterface.v:10-18 | CreationRing.lean (invariant) |
 | leaderLogs_candidateEntries | PROVED | Raft/LeaderLogsCandidateEntriesInterface.v:9-13 | CreationRing.lean (invariant) |
-| allEntries_votesWithLog (**GAP-7a**) | PROVED | Raft/AllEntriesVotesWithLogInterface.v:10-19 | LeaderLogsAssembly.lean (invariant) |
-| leaderLogs_preserved (**GAP-7b**) | PROVED | Raft/LeaderLogsPreservedInterface.v:9-15 | LeaderLogsAssembly.lean (invariant) |
-| append_entries_leaderLogs | PROVED | Raft/AppendEntriesRequestLeaderLogsInterface.v:12-22 | LeaderLogsAssembly.lean (invariant) |
+| allEntries_votesWithLog (**GAP-7a**) | PROVED | Raft/AllEntriesVotesWithLogInterface.v:9-19 | LeaderLogsAssembly.lean (invariant) |
+| leaderLogs_preserved (**GAP-7b**) | PROVED | Raft/LeaderLogsPreservedInterface.v:8-15 | LeaderLogsAssembly.lean (invariant) |
+| append_entries_leaderLogs | PROVED | Raft/AppendEntriesRequestLeaderLogsInterface.v:11-22 | LeaderLogsAssembly.lean (invariant) |
 | logs_leaderLogs (+ _nw) | PROVED | Raft/LogsLeaderLogsInterface.v:9-30 | LeaderLogsAssembly.lean (both invariants) |
-| allEntries_leaderLogs_term | PROVED | Raft/AllEntriesLeaderLogsTermInterface.v:9-15 | LeaderLogsAssembly.lean (invariant) |
-| allEntries_log | PROVED | Raft/AllEntriesLogInterface.v:10-19 | LeaderLogsAssembly.lean (invariant) |
+| allEntries_leaderLogs_term | PROVED | Raft/AllEntriesLeaderLogsTermInterface.v:8-15 | LeaderLogsAssembly.lean (invariant) |
+| allEntries_log | PROVED | Raft/AllEntriesLogInterface.v:9-18 | LeaderLogsAssembly.lean (invariant) |
 | appendEntriesRequest_term_sanity | PROVED | Raft/AppendEntriesRequestTermSanityInterface.v:8-14 | LeaderCompleteness.lean:53 (invariant :63) |
 | allEntries_candidateEntries | PROVED | Raft/AllEntriesCandidateEntriesInterface.v | LeaderCompleteness.lean:74 (invariant :85) |
 | allEntries_leader_sublog | PROVED | Raft/AllEntriesLeaderSublogInterface.v:8-13 | LeaderCompleteness.lean:357 (invariant :453) |
@@ -434,8 +441,8 @@ from artifacts.
 | log_all_entries | PROVED | Raft/LogAllEntriesInterface.v | SafetyLeaves.lean (invariant) |
 | lastApplied_le_commitIndex | PROVED (base) | Raft/LastAppliedLeCommitIndexInterface.v | SafetyLeaves.lean (invariant) |
 | no_append_entries_to_self | PROVED (base) | Raft/NoAppendEntriesToSelfInterface.v | SafetyLeaves.lean (invariant) |
-| match_index_sanity | PROVED (base) | Raft/MatchIndexSanityInterface.v:9-13 | SafetyLeaves.lean (invariant) |
-| prevLog_candidateEntriesTerm | PROVED | Raft/PrevLogCandidateEntriesTermInterface.v:10-16 | SafetyLeaves.lean (invariant; candidateEntriesTerm twin) |
+| match_index_sanity | PROVED (base) | Raft/MatchIndexSanityInterface.v:8-12 | SafetyLeaves.lean (invariant) |
+| prevLog_candidateEntriesTerm | PROVED | Raft/PrevLogCandidateEntriesTermInterface.v:9-16 | SafetyLeaves.lean (invariant; candidateEntriesTerm twin) |
 | ghost_log_correct | PROVED (msg) | Raft/GhostLogCorrectInterface.v:8-19 | GhostLogs.lean (invariant) |
 | log_properties_hold_on_ghost_logs | PROVED (msg, primed principle) | Raft/GhostLogsLogPropertiesInterface.v:8-16 | GhostLogs.lean (invariant) |
 | no_append_entries_replies_to_self | PROVED (base) | Raft/NoAppendEntriesRepliesToSelfInterface.v:8-13 | SafetyPrime.lean (invariant) |
@@ -489,6 +496,7 @@ from artifacts.
   allowed docs+compat hatch — unit 3 touched only `compat/verdi/**` +
   this log). Comparator-landmark staleness note still report-only;
   flagged for the operator's merge step as before.
+  **[CORRECTED 2026-08-24, R3 S1: same wrong-worktree artifact class as unit 2 — see that entry; first genuine in-lane gate covering unit 3's code: unit 4's.]**
 
 ## Final entry — unit 3 complete (2026-08-22, tip = this commit)
 
@@ -660,7 +668,7 @@ Same conventions; GAP-2 msg-ghost only on first genuine need.
   timeout candidacy's only supporter is the recorded self-vote). Both
   with candidate-freezing step helpers. Build green.
 - 2026-08-22 Slice 23: `leaderLogs_votesWithLog`
-  (LeaderLogsVotesWithLogInterface.v:10-18 1:1) — every leaderLog backed
+  (LeaderLogsVotesWithLogInterface.v:9-18 1:1) — every leaderLog backed
   by a moreUpToDate quorum of recorded votes-with-log. `quorum_preserved`
   + an unchanged-step helper cover ten obligations; the RVR win case
   builds the quorum as `dedup (src :: votesReceived)` (upstream's
@@ -1598,7 +1606,7 @@ re-verified at THIS unit's closure derivation, not inherited.
   keeps ll' — rw at the hypothesis instead). Build green, sweep 1902
   (was 1853).
 - 2026-08-23 Slice 45: **`leaderLogs_preserved` — GAP-7b CLOSED**
-  (LeaderLogsPreservedInterface.v:9-15 1:1; upstream proof 263 lines).
+  (LeaderLogsPreservedInterface.v:8-15 1:1; upstream proof 263 lines).
   Ten obligations are one ghost-unchanged transport
   (`leaderLogs_preserved_of_update`); the RVR case's four sub-cases:
   old/old → IH; fresh `ll'` → the entry resolves through
@@ -1621,7 +1629,7 @@ re-verified at THIS unit's closure derivation, not inherited.
   allEntries_leaderLogs_term (342L, W2), AllEntriesLog (1,089L, W3),
   allEntries_votesWithLog (356L, GAP-7a, W4), pins, INDEX, gate.
 - 2026-08-23 Slice 46 (76cc6cda): `allEntries_leaderLogs_term`
-  (AllEntriesLeaderLogsTermInterface.v:9-15 1:1; upstream 342 lines) —
+  (AllEntriesLeaderLogsTermInterface.v:8-15 1:1; upstream 342 lines) —
   slice 42's `append_entries_leaderLogs` pays off immediately: a
   freshly recorded (term, entry) classifies through the packet's
   `es' ++ ll'` split (own-term block ⇒ left disjunct; prefix block ⇒
@@ -1632,7 +1640,7 @@ re-verified at THIS unit's closure derivation, not inherited.
   it off handleClientRequest_log_full — kept local (single consumer).
   Build green, sweep 1915.
 - 2026-08-23 Slices 47-48 (a700a7c9, f7efa59e): **`allEntries_log`**
-  (AllEntriesLogInterface.v:10-19 1:1; upstream 1,089 lines — the
+  (AllEntriesLogInterface.v:9-18 1:1; upstream 1,089 lines — the
   unit's summit). Support: maxIndex_non_empty/maxIndex_le'/
   Prefix_maxIndex_eq/prefix_contiguous, haveNewEntries elims,
   appendEntries_haveNewEntries_false,
@@ -1656,7 +1664,7 @@ re-verified at THIS unit's closure derivation, not inherited.
   new log or nothing was new. Both containment lemmas compiled on
   first attempt. Build green, sweep 1970.
 - 2026-08-23 Slice 49: **`allEntries_votesWithLog` — GAP-7a CLOSED**
-  (AllEntriesVotesWithLogInterface.v:10-19 1:1; upstream 356 lines) —
+  (AllEntriesVotesWithLogInterface.v:9-19 1:1; upstream 356 lines) —
   slice 48's payoff: a fresh vote (RV grant / timeout candidacy)
   snapshots the voter's unchanged log, so `allEntries_log` classifies
   every earlier record against it; the vote's term dominates the
@@ -2632,7 +2640,7 @@ is a complete unit if the honest budget says so.
   same unit) is the discharge witness — all eleven obligations
   instantiated on a real invariant.
 - 2026-08-23 Slice 69: `match_index_sanity`
-  (MatchIndexSanityInterface.v:9-13 1:1, BASE) — per the unit-12 recon,
+  (MatchIndexSanityInterface.v:8-12 1:1, BASE) — per the unit-12 recon,
   mirroring the lane's `nextIndex_safety` almost obligation-for-
   obligation: the matchIndex movement trio (cacheApplyEntry/
   applyEntries/doGenericServer, the `applyEntries_nextIndex` induction
@@ -2961,9 +2969,9 @@ wants it); context stop-rule stands.
   above-cut side is `prefix_contiguous` + `contiguous_app`, the
   `Prefix_sane` escape closed by `maxIndex_is_max`) and an inline
   `hcore` (own-term transfer: the contiguity pivot at `eIndex e` +
-  `network_host_entries`, whose prefix-side alternative dies on
+  `network_host_entries` (upstream StateMachineSafetyPrimeProof.v:183-215, ported — not a lane invention; R2 INFO), whose prefix-side alternative dies on
   `sorted_app_in_gt` over the removeAfterIndex split). New:
-  `network_host_entries` (lifted log_matching_nw clause + `rachet`),
+  `network_host_entries` (upstream StateMachineSafetyPrimeProof.v:183-215, ported — not a lane invention; R2 INFO) (lifted log_matching_nw clause + `rachet`),
   `sorted_app_in_gt`. Two-compile slice (direction fixes only). Build
   green.
 - 2026-08-23 CHECKPOINT (recomputed at this tip; 6 slices since the
@@ -3027,7 +3035,7 @@ Inventory:
   doLeader pivot moves via base leader_sublog), and
   **`state_machine_safety'` — the SMS-PRIME statement (host' ∧ nw')**
   with the two shared cores (`smsp_e_in_ll_cases` + the own-term
-  transfer via `network_host_entries`).
+  transfer via `network_host_entries` (upstream StateMachineSafetyPrimeProof.v:183-215, ported — not a lane invention; R2 INFO)).
 - `GhostLogs.lean` (now 1,241 lines): `ghost_log_allEntries` (second
   primed consumer; fresh ghosts recorded via
   `lifted_in_log_in_all_entries` at the successor net) and
@@ -3446,7 +3454,7 @@ BRANCH-COMPLETE, permanently. Nothing merged, nothing designated.
     point), and unit 3's five entry-level
     `*_preserves_candidateEntries` proofs replaced by one-line
     derivations through the definitional `candidateEntries_term`
-    bridge (~190 duplicated proof lines deleted; statements
+    bridge (~190 GROSS-deleted lines — R3 S5: net −142, 272 of 347 gross were the relocation, ~65 true deleted proof body; statements
     unchanged, downstream consumers untouched; names resolve via the
     import chain). CandidateEntries.lean 1,336 lines,
     SafetyLeaves.lean 1,685.
@@ -3454,7 +3462,7 @@ BRANCH-COMPLETE, permanently. Nothing merged, nothing designated.
     AppendEntriesChain.lean to LeaderLogs.lean (before its original
     inline site; deps all earlier in the same file), and unit 4's
     inline `hwin` reduced to a thin t2-conversion wrapper (~28
-    duplicated lines deleted; AppendEntriesChain's consumer resolves
+    gross-deleted lines (R3 S5: net −14); AppendEntriesChain's consumer resolves
     via import).
   - **(d) SKIPPED, with reason**: the
     `handleAppendEntries_accept_detail`/`_ci_log`/`_log` overlap. The
@@ -3465,8 +3473,8 @@ BRANCH-COMPLETE, permanently. Nothing merged, nothing designated.
     would be consumed by projection everywhere, adding indirection
     while deleting little (the three proofs share the `repeat' split`
     skeleton, not content). Left as-is.
-  Sweep after the slice: 2615 (was 2617 — the deleted duplicate
-  helpers net out against the new generic lemma), still within
+  Sweep after the slice: 2615 (was 2617 — CORRECTED 2026-08-24, R3 S2: the original text blamed the deleted duplicate
+  helpers, but the decl-set diff shows ZERO deletions and +1 net (update_proj_mem); the −2 is a compiler-auxiliary artifact of shorter proofs — the count itself re-derives exactly), still within
   [propext, Quot.sound].
 - 2026-08-23 **GAP-4 CLOSED AS MOOT** (charter item 3): the
   classical-list doctrine question — whether the lane would ever need
@@ -3539,11 +3547,11 @@ every number below recomputed fresh, none restated):**
   ElectionSafety:1521 and :1581, LogMatching:156) — zero hatches.
 - **INVARIANT INDEX span-verified**: `grep -c "^| "` over the table
   span = 85 = header + **84 data rows**. Every row's Lean home is one
-  of the sixteen files above; every headliner named in a row is
+  of the sixteen files above; every headliner named in a row is (CORRECTED 2026-08-24, R3 S4: ten row-named invariants had neither a curated pin nor a probe slot — the audit ran #print axioms on all ten, all clean, and this fix round ADDS their curated pins — so the sentence is now true by construction)
   covered by a curated `#guard_msgs` pin or the fifteen-probe, and
   the enforcing sweep enumerates all 2615 declarations — a
   nonexistent or hatched name cannot survive the build.
-- **129 commits on the lane** (`git log f64d9b21..HEAD --oneline |
+- **130 commits (R3 S6: 129 was the pre-final-entry count) on the lane** (`git log f64d9b21..HEAD --oneline |
   wc -l`, recomputed after the gate), tree clean.
 
 **INTEGRATION READINESS (charter item 5, superseding the unit-5
@@ -3572,14 +3580,14 @@ the **comparator-judge run** (the landmark is 133 commits stale,
 threshold-crossed — flagged every unit since 13).
 
 **THE LANE'S RECORD, stated once, plainly:** sixteen units, ~95
-slices, 129 commits. The Verdi STRUCTURE port (constitution §5 Plan A)
+slices, 130 commits (R3 S6: 129 was the pre-final-entry count). The Verdi STRUCTURE port (constitution §5 Plan A)
 delivered the COMPLETE T3 SAFETY LATTICE — **election safety ✓ (unit
 2), log matching ✓ (unit 6), leader completeness ✓ (unit 10),
 state-machine safety ✓ (unit 15)** — all statements 1:1 with their
 verdi-raft Interface files @ a3375e8, all three Properties.lean
 transfer targets discharged natively, every theorem kernel-checked
 within [propext, Quot.sound], zero sorry, zero native_decide, zero
-axioms added, at every one of sixteen green gates. All named gaps
+axioms added, at every one of sixteen recorded gates — of which FOURTEEN verify in-lane (milestone audit R3, S1: units 2-3's gate artifacts were produced in the campaign worktree on trees WITHOUT this lane's files — a wrong-cwd incident on the early worker's side; their code was first genuinely gated in-lane at unit 4's tip, and the audit re-ran the compat build + enforcing AxCheck at the final tip: green, sweep 2615). The record here is corrected rather than re-staged. All named gaps
 closed (GAP-1/2/5/6/7/8) or moot (GAP-4). Designation is Mike's;
 merge and push are the operator's; the audit ask travels with the
 merge. **This lane is BRANCH-COMPLETE, permanently.**
