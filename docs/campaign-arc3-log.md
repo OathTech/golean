@@ -2123,3 +2123,96 @@ completed prefix + chartered remainder is branch-complete.
   pins (fresh capped probe, all [propext, Quot.sound]). Full build
   green, sweep 2138; hatch grep 0 (exit 1); LeaderCompleteness.lean =
   3,356 lines. INDEX row: leader_completeness PROVED (T3).
+- 2026-08-23 Unit-10 final gate: `GOLEAN_ALLOW_NO_DIFF=1
+  GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT: PASS, exit 0** (log:
+  `artifacts/ci-arc3-unit10.log`, gitignored; the no-diff notes are the
+  allowed docs+compat hatch — unit 10 touched only `compat/verdi/**` +
+  this log). The report-only comparator-landmark note now reads
+  "56 theorems @ 1730567a2d3f, 83 commit(s) ago" — same
+  operator-merge-time flag as units 1-9; nothing in this unit touches a
+  designated statement or Challenge's closure (statement-TCB step ok).
+
+## Final entry — unit 10 complete (2026-08-23, tip 5632bbbd + this commit)
+
+**Proved at tip — GAP-6 CLOSED: `leader_completeness`, and the whole
+unit-9/10 closure with it.** Both charter files ported (2,294 upstream
+lines: PrefixWithinTermProof.v 1,915 + LeaderCompletenessProof.v 379),
+statements 1:1 with their Interface files @ a3375e8; zero
+sorry/native_decide in campaign files (grep; sweep-enforced: 2138
+declarations within [propext, Quot.sound], plus seven new curated
+pins). `#print axioms` verbatim (fresh capped `lake env lean` probes
+against the built package):
+
+```
+'VerdiCompat.Raft.log_log_prefix_within_term_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.append_entries_append_entries_prefix_within_term_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.prefix_within_term_inductive_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.allEntries_leaderLogs_prefix_within_term_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.leader_completeness_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.leader_completeness_directly_committed_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.leader_completeness_committed_invariant' depends on axioms: [propext, Quot.sound]
+```
+
+**THE T3 LADDER (constitution §2.3), stated plainly:**
+- **Election safety ✓** (unit 2: `one_leader_per_term_invariant` +
+  `oneLeaderPerTermStatement_holds`, base layer via lower_prop);
+- **Log matching ✓** (unit 6: `log_matching_invariant` +
+  `logMatchingStatement_holds`, base layer);
+- **Leader completeness ✓** (THIS UNIT:
+  `leader_completeness_invariant`, refined/ghost layer — upstream has
+  no base-layer projection of it and Properties.lean declares no
+  LeaderCompleteness transfer target (checked; only
+  StateMachineSafety/OneLeaderPerTerm/LogMatching), so the ghost-layer
+  theorem IS the landing point, exactly as in verdi-raft);
+- remaining T3 head: **state-machine safety** (unit 11's charter
+  below). Per §2.3 these are HEADLINE-AS-PROVED candidates —
+  designation is Mike's act, not the campaign's; nothing was
+  designated here.
+
+Inventory: `LeaderCompleteness.lean` (3,356 lines; the unit-9 feeders
+at its head). Unit-10 additions: the pwt vocabulary + T2 support layer
+(sorted_app_1/_2, Prefix_maxIndex, app_contiguous_maxIndex_le_eq,
+contiguous_app_prefix_contiguous/_2, pwt union/subset/findGtIndex);
+**T1 `log_log_prefix_within_term_invariant`**; **T2 (the AE×AE
+cross-packet fact)** via the extracted positioning lemma
+`aeae_e_in_ll` (~170 lines for upstream's ~590); the six-conjunct
+`prefix_within_term_inductive` + all eleven obligations
+(`pwti_of_update` transport; CR/DL/AE as aux-over-abstract-net lemmas;
+AE's two cores `hold_newlog`/`hnw_newlog`);
+`prefix_within_term_inductive_invariant` + both interface fields; the
+argmin/contradicting-leader-logs layer + `moreUpToDate_elim`
+(constructive, LawfulBEq-free); and the three leader_completeness
+theorems. `prefix_within_term` def added to CommonDefinitions.lean
+(:108-114, closing its header's recorded gap). The INVARIANT INDEX
+above is current (60 data rows, recomputed: `grep -c "^| "` = 61 minus
+the header). 79 commits on the lane (`git log f64d9b21..HEAD --oneline
+| wc -l`, recomputed at 5632bbbd).
+
+**Honestly open (carried; none counted toward any total):**
+- GAP-1 (primed variants): STILL never triggered — no unit-10 proof
+  needed one; carried as port-on-first-need.
+- GAP-2 (msg-ghost): NOT in unit 10's closure (grep at unit start:
+  empty) — but CONFIRMED at the state-machine-safety cap:
+  `StateMachineSafetyProof.v` imports `RaftMsgRefinementInterface` +
+  the three GhostLog* interfaces (read at a3375e8, unit-11 preview).
+  The minimal-port-on-first-need clause WILL fire next unit.
+- GAP-4 (classical-list doctrine): carried; unit 10 resolved every
+  instance constructively (moreUpToDate_elim, the eraseOne-style
+  pigeon reuse).
+
+**Next unit's charter (Arc 3, unit 11 — proposal; RE-DERIVE the
+closure fresh before proving, as always):** the STATE-MACHINE-SAFETY
+cap — the last T3 head. Preview at a3375e8 (verify fresh):
+`StateMachineSafetyProof.v` (3,199 lines) +
+`StateMachineSafetyPrimeProof.v` (518) sit on the msg-ghost layer
+(GAP-2: `RaftMsgRefinementInterface`, GhostLogCorrect,
+GhostLogsLogProperties, GhostLogLogMatching) plus a ring of unported
+plain interfaces (CommitRecordedCommitted, MaxIndexSanity,
+PrevLogLeaderSublog, LastAppliedLeCommitIndex, MatchIndexAllEntries,
+TransitiveCommit, TermsAndIndicesFromOneLog(✓ base already),
+plus ✓-rows). Expect multiple units; scope to the largest
+self-contained prefix per the standing discipline, msg-ghost
+minimal-port-on-first-need (design-doc §5 D1's generic-lift decision
+point arrives here: the second ghost instance). Successors re-verify
+THIS unit fresh: capped build + sweep 2138 + the seven-headliner probe
+above + hatch grep over LeaderCompleteness.lean (expect 0).
