@@ -645,3 +645,33 @@ blind spot (nullary strict ops) — found, mirrored, recorded.
    `runConfig` glue + `twin_prelude_eq` →
    `twinRun 711616 [] = .ok r` → **`CompletionWitness`** discharged;
    fuel re-derived by the chain arithmetic.
+
+---
+
+## 6.9 U5 — the staged assembly: successor re-projection and GO
+(2026-08-23)
+
+Successor re-verification at 0c462c7c passed (build 480 jobs rc 0;
+axioms = pins verbatim; hatch grep clean). The §6.8 levers were then
+MEASURED before launch (records/fastseg2.out):
+
+- **The 48G-segment lever is REFUTED**: fastseg-k2000@48G OOM(137) at
+  507 s — fast-segment retention past 500 steps is ~16.7–20 MB/step
+  (fastseg-k1000@36G PASS 3:59 / 30.0 GB pins the slope), not the
+  14.5 MB/step §6.8 extrapolated; 48G holds ~1,500 steps, not ~2,900.
+- **The batch-emission lever WORKS and is validated**:
+  `twin_ckpt_groupF%` (one incremental compiled pass per group,
+  `addDecl` without compiled code) gate-checked — the batch literal at
+  350k is kernel-EQUAL to the from-0 `ckptF350k`, and the exact
+  segment shape (equality-to-next-literal) kernel-checks; both in
+  3:49 under 24G.
+
+**Re-projection** (decomposition: marginal 0.182 s/step + 16.7 MB/step;
+fixed ~57 s + 13.3 GB/segment): at SEG=1000 (712 segments, last 616;
+36G cap; 2-wide batched waves in a 74G scope) — kernel marginal
+36.0 CPU-h + per-segment fixed 11.3–13.8 + emission ~5.4 + composition
+<1 ⇒ **central ~53–55 CPU-h (band ~45–67) ≤ the ~60 CPU-h pause
+trigger: GO.** Execution record, manifest, and judgment calls:
+`docs/campaign-arc2-log.md` (U5) and
+`docs/campaign-arc2-probes/records/u5-manifest.tsv` (recomputed from
+oleans, never restated).

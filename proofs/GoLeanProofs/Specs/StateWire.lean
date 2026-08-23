@@ -139,4 +139,63 @@ elab "twinPreludeF%" : term => do
   | .error e => throwError "twinPreludeF%: run failed: {reprStr e}"
   | .ok r => return Lean.toExpr r
 
+/-! ## The BATCH emitter (campaign Arc 2, U5 — the one-compiled-pass
+lever, memo §6.8 item 1) -/
+
+/-- One compiled pass over the subject phase, reflecting the trie-form
+tuple at each ascending index — the U5 batch lever: per-index reruns of
+the prelude + prefix are replaced by incremental continuation from the
+previous index. Fail-loud and table-drift-checked at EVERY checkpoint,
+exactly as `checkpointAt`. -/
+def checkpointsAt (ns : List Nat) :
+    Except GoError
+      (List (Nat × (GoLean.FastEval.HeapT × Nat × Config × Choices))) := do
+  let (c₀, s₃, _resultLocs, ch₁) ←
+    runProgramSetupM 10000000 GoLean.Examples.RaftTwin.twinLowered
+      "twinChoiceVerdict" #[]
+  let mut cur : Nat := 0
+  let mut σ := s₃
+  let mut c := c₀
+  let mut ch := ch₁
+  let mut acc :
+      Array (Nat × (GoLean.FastEval.HeapT × Nat × Config × Choices)) := #[]
+  for n in ns do
+    if n < cur then
+      throw (.internal
+        s!"checkpointsAt: indices must be ascending ({n} after {cur})")
+    let (c', σ', ch') ← stepFnIter (n - cur) σ c ch
+    let stripped : ExecState :=
+      { σ' with heap := twinBase.heap, nextAddr := twinBase.nextAddr }
+    if (stripped == twinBase) = false then
+      throw (.internal
+        s!"checkpointsAt: tables drifted from twinBase at index {n}; reflect refused")
+    acc := acc.push (n, (trieOfHeap σ'.heap, σ'.nextAddr, c', ch'))
+    cur := n; σ := σ'; c := c'; ch := ch'
+  return acc.toList
+
+open Lean Lean.Elab Lean.Elab.Command in
+/-- `twin_ckpt_groupF% ckptF [n₁, n₂, …]` — defines
+`ckptF_<nᵢ> : HeapT × Nat × Config × Choices` (current namespace) for
+each ascending subject-step index, all from ONE compiled incremental
+pass. Fail-loud: interpreter error, table drift, or non-ascending
+indices fail elaboration; no defaults. The emitted literals are
+scaffolding with `twinCheckpointF%`'s exact trust story — every
+downstream segment equation is kernel-checked against them, so a
+drifted literal fails a proof, never lies. Declarations are added
+WITHOUT compiled code (their only consumers are kernel checks). -/
+elab "twin_ckpt_groupF% " pre:ident " [" ns:num,* "]" : command => do
+  let idxs := (ns.getElems.map (fun n => n.getNat)).toList
+  match checkpointsAt idxs with
+  | .error e => throwError "twin_ckpt_groupF%: run failed: {reprStr e}"
+  | .ok rs =>
+      liftTermElabM do
+        let nsCur ← getCurrNamespace
+        for (n, r) in rs do
+          let nm := nsCur ++ pre.getId.appendAfter s!"_{n}"
+          let val := Lean.toExpr r
+          let typ ← Lean.Meta.inferType val
+          Lean.addDecl (.defnDecl {
+            name := nm, levelParams := [], type := typ, value := val,
+            hints := .abbrev, safety := .safe })
+
 end GoLean.StateWire
