@@ -504,6 +504,28 @@ is the §4.4 park-and-report condition, not an emergency.
   PROVED) → the W-F cap (GAP-8 reghosting +
   StateMachineSafetyProof's interior). [AGENT]: 7th-gen rotation.
 
+- **Arc 3, unit 15 — LANDED @ 708773ff: THE T3 SAFETY LATTICE IS
+  CLOSED.** Election safety ✓ (u2) · Log matching ✓ (u6) · Leader
+  completeness ✓ (u10) · **State-machine safety ✓ (u15)** — with all
+  three Properties.lean transfer targets discharged natively, the
+  full fifteen-probe axiom transcript verbatim in the arc log, sweep
+  **2617** declarations within [propext, Quot.sound], zero hatches,
+  gate PASS. En route this unit: GAP-1's state-side primed set on
+  its first genuine trigger (the Q-route again — compiled first
+  attempt), GAP-8 closed (reghosting via the packet-subset
+  constructors, upstream's 200-line detour never entered), and the
+  3,199-line SMS interior (the `everything` induction). **GAPs
+  1/2/5/6/7/8 ALL CLOSED**; GAP-4 never fired in fifteen units. The
+  unit-11 census — 20 files, 9,612 upstream lines — is ENTIRELY
+  PORTED. This is a §4.2 MILESTONE-CLASS claim (a T3 tier's
+  spec-level lattice complete): the milestone AUDIT and any
+  designation are [USER] acts, queued below; the lattice's evidence
+  is the lane itself (110+ commits, per-unit gates, seven
+  generations of successor re-verification, every claim
+  derivation-anchored). Unit-16 wrap chartered (consolidation
+  candidates, the closing design section, end-state
+  re-verification).
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
@@ -514,9 +536,16 @@ is the §4.4 park-and-report condition, not an emergency.
   PASS; proposal on Mike's return: a focused statement-adequacy
   review — the D3-dimension — over the Arc-1 diff, Opus, plus the
   standing semantics dimension; scale ~2 reviewers).
-- Arc 3 merge (will be posed at its branch-complete; the ci
-  comparator-landmark staleness note on that lane is flagged for the
-  operator's merge step).
+- **POSED — the Arc-3 milestone audit ask** (constitution §4.2: a
+  tier's lattice proved = milestone = adversarial audit before the
+  claim is built on): proposal — 3 Opus reviewers (statement fidelity
+  vs verdi-raft 1:1 at the pin; proof-shape/§9-call review of the
+  guided re-proofs; records/index honesty) + 1 verifier, over the
+  campaign-arc3 lane's final state. [USER] may waive/trim; the ask
+  is unconditional.
+- **POSED — Arc 3 merge** (branch-complete after unit-16 wrap; the
+  comparator-judge run is OWED at this merge — the staleness note
+  crossed its threshold at unit 13, now 128 commits).
 
 ## Judgment calls
 
