@@ -6,7 +6,7 @@ launch sign-off given as the autonomous-goal charter pointing at the
 constitution ("complete the WHOLE remainder... don't stop to solicit
 feedback... log every call [AGENT]/[USER]; do not merge to main until
 the user signs off"). Base: `main` @ `f64d9b21` (the launch-audit fix
-round, merged on [USER] sign-off). Lane: `campaign` branch, worktree
+round, merged on [USER] sign-off). Lane: `raft-proof-campaign` branch (RENAMED from `campaign` 2026-08-24, [USER] request; the worktree DIR stays `.claude/worktrees/campaign` — it is the live probe run's cwd, deliberately not moved), worktree
 `.claude/worktrees/campaign`; sub-branches per arc as needed.
 
 Conventions (constitution §4.3, binding): one writer per worktree;
