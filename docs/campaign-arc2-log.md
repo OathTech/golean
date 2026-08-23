@@ -150,6 +150,56 @@ completion machinery, route memo + unit-2 charter).
   windows; split-tooling only if a window busts even that (none
   expected: 43.9 GB fits solo).
 
+- **U5 GATE + PARK** (2026-08-23): `GOLEAN_ALLOW_NO_DIFF=1
+  GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT: PASS** (rc 0) at
+  adcb821a (log: artifacts/arc2-gate-u5.log, untracked; result
+  restated here). Visible notes unchanged in kind from U4: the
+  sanctioned no-diff hatch; the **comparator landmark OWED (scope)**
+  note (Audit.lean's `import Audit.FastEval` in Challenge's trusted
+  closure — flagged for the operator's MERGE step, the Arc-3/U4
+  precedent; no designated statement changed on this lane). The
+  1b2 discipline drove the park shape: the generated segment tree
+  cannot be green mid-wave (unwired modules are exactly what the
+  sweep catches), so it left the branch at adcb821a and lands in the
+  SAME commit as its aggregator wiring at composition; during the
+  park it exists as untracked, deterministically regenerable working
+  files (byte-identical regeneration + lake content-hash no-op both
+  verified live: a built segment re-checks in 0.18 s).
+
+  **PARKED STATE (the wave, in flight):** manifest
+  `records/u5-manifest.tsv` — 59/757 at this writing (45/45
+  checkpoint groups + 14/712 segments; the committed 0/0 snapshot at
+  adcb821a reflects the sources-absent gate tree, annotated here) —
+  recomputed from oleans, never restated. The wave runs detached
+  (setsid; survives session end) as 3-wide batched capped lake
+  builds, continue-on-failure, failures logged to
+  `records/u5-failures.txt` (none so far). Observed per-segment
+  walls 97–406 s (mean ≈ 227 s over early observations); remaining
+  ~700 segments ≈ 44 CPU-h ≈ 15–20 h wall at 3-wide.
+
+  **RESUME (verbatim, from the worktree root — each step idempotent):**
+  1. `python3 docs/campaign-arc2-probes/gen-u5-modules.py 1000 16`
+     (only if the untracked tree is missing)
+  2. `setsid nohup env WAVE_BATCH=3 WAVE_CAP=74G
+     docs/campaign-arc2-probes/u5-orchestrate.sh wave >
+     artifacts/arc2-scratch/u5-wave.log 2>&1 < /dev/null &`
+  3. after the walk: `env RETRY_CAP=70G
+     docs/campaign-arc2-probes/u5-orchestrate.sh wave-retry`
+     (solo pass; only missing oleans build — hot windows like S0355
+     need ~44 GB solo)
+  4. composition: build `GoLeanProofs.Specs.TwinWitness` (48G cap;
+     its endgame is the generated glue-lemma route — iterate its
+     tactics if a spelling wrinkle surfaces; all heavy inputs are
+     cached oleans), then in ONE commit: the generated tree + the
+     aggregator import (`GoLeanProofs.Specs.TwinWitness` in
+     `proofs/GoLeanProofs.lean`) + `Audit/FastEval.lean` pins for
+     `twin_run_eq` / `twinCompletionWitness` (+ chain lemmas) with
+     verbatim `#print axioms`, then the gate (now with the tree in
+     the audited closure) + fresh axiom probe + hatch grep + this
+     log's completion entry with manifest-derived numbers.
+  **ARC 2 UNIT 5: STAGED ASSEMBLY IN FLIGHT — branch-complete park**
+  at this tip; the witness spans dispatches by design.
+
 ## THE U4 PER-ARM TEMPLATE (of record, for the authorized wave)
 
 Validated on the landed `FastEval/Ops.lean` (its own header carries
@@ -243,6 +293,26 @@ the same rules):
   merge step**, exactly as the campaign log already flags Arc 3's.
   **ARC 2 UNIT 4 BRANCH-COMPLETE** at this tip; unit 5 opens on memo
   §6.8's staged plan.
+
+## Checkpoint (U5 park, recomputed)
+
+Branch `campaign-arc2` @ (tip after the park commit): 23 commits over
+f64d9b21 (git log the authority), tree clean at each commit; the
+working tree additionally carries the untracked regenerable module
+tree + wave artifacts (documented above). U5 delta on the branch:
+StateWire batch emitter (+its gate-check probe), TwinSegBase glue
+(landed with the tree at composition — currently in the generator
+only), gen-u5-modules.py + u5-orchestrate.sh + u5-manifest.sh,
+probes fastseg-k1000/emitter-gatecheck, records fastseg2.out +
+u5-manifest*.{tsv,txt}, memo §6.9, this log. Proved at the park
+(beyond U4's pins, all re-verified this dispatch): 14 segment
+theorems kernel-checked as build artifacts (their sources land at
+composition). Measured: the §6.8 48G-lever refuted; marginal
+0.182 s/step + 16.7 MB/step at the 350k boundary; per-window
+variance 97–406 s / up to 43.9 GB. Central projection ~53–55 CPU-h
+(GO, under the ~60 trigger). Nothing merged; no
+GoCore/frontend/scripts edits; Arc-1 files verbatim; gate PASS at
+the park tip.
 
 ## Checkpoint (U4 end, recomputed)
 
