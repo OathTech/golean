@@ -1293,3 +1293,39 @@ degrades); unit-8 charter at unit end.
   `leaderLogs_candidateEntries` + `wonElection_candidateEntries_rvr`
   over the consumed grant; the fresh snapshot IS the log. Build green,
   sweep 1728.
+- 2026-08-23 Slice 39: `appendEntries_leader`
+  (AppendEntriesLeaderInterface.v:8-16 1:1, ghost; upstream 443 lines)
+  and **`append_entries_reply_sublog`**
+  (AppendEntriesReplySublogInterface.v:8-16 1:1, BASE) — every
+  in-flight AE entry (resp. every true-reply entry) bearing a leader's
+  current term is in that leader's log. New: `lifted_one_leader_per_term`
+  (7th lift consumer), `lowered_appendEntries_leader` (a lower_prop
+  consumer), and **`rvr_win_votes`** — PROMOTED from
+  one_leaderLog_per_term's inline `hwin` per the promotion-ledger rule
+  (2nd consumer; unit-4's inline copy left as-is — consolidation
+  candidate for a cleanup slice). [AGENT] JUDGMENT CALL (logged, not a
+  deviation from the lattice): upstream's RVR case is the FIRST
+  genuine consumer of the GAP-1 primed obligations
+  (`refined_raft_net_invariant_request_vote_reply'` + post-state
+  one_leaderLog_per_term_host). Instead of porting the primed layer,
+  the same lattice facts close the case in the PRE-state:
+  `append_entries_came_from_leaders` gives the AE-sender's standing
+  snapshot, `one_leaderLog_win_host` + `rvr_win_votes` force
+  sender = winner, and `leaderLogs_currentTerm_sanity_candidate` kills
+  the candidate-with-own-term-snapshot. GAP-1 REMAINS UNTRIGGERED; the
+  primed layer stays port-on-first-need. `append_entries_reply_sublog`
+  is the correspondence's payoff: resurrect the request, read the
+  entries off the leader's log. Build green, sweep 1745.
+- 2026-08-23 CHECKPOINT (recomputed at this tip; 5 slice-units since
+  the unit-7 opening: 36, 37, 38a, 38b, 39): `git log f64d9b21..HEAD
+  --oneline | wc -l` = 51 commits + this one; capped `lake build`
+  green, `AxCheck sweep: 1745 declarations across VerdiCompat modules,
+  axiom set within [propext, Quot.sound]`; `grep -c
+  "sorry\|native_decide"` over AppendEntriesChain.lean: 0 (exit 1);
+  AppendEntriesChain.lean = 2,141 lines (wc). Unit-7 state:
+  allEntries_term_sanity ✓, log_properties_hold_on_leader_logs ✓,
+  leaders_have_leaderLogs_strong ✓, AERReplyCorrespondence ✓ (+
+  subset_reachable machinery), AECameFromLeaders ✓, leaderLogs_sublog ✓,
+  appendEntries_leader ✓, appendEntriesReply_sublog ✓. Remaining:
+  nextIndex_safety (323L), leaderLogs_logMatching (647L), pins, INDEX,
+  gate, final entry + unit-8 charter.
