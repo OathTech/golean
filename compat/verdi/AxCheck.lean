@@ -129,6 +129,28 @@ open VerdiCompat VerdiCompat.Raft
 /-- info: 'VerdiCompat.Raft.entries_match_nw_host_invariant' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms VerdiCompat.Raft.entries_match_nw_host_invariant
 
+-- The AppendEntries feeder chain (campaign Arc 3 unit 7, AppendEntriesChain.lean).
+/-- info: 'VerdiCompat.Raft.allEntries_term_sanity_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.allEntries_term_sanity_invariant
+/-- info: 'VerdiCompat.Raft.log_properties_hold_on_leader_logs_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.log_properties_hold_on_leader_logs_invariant
+/-- info: 'VerdiCompat.Raft.leaders_have_leaderLogs_strong_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leaders_have_leaderLogs_strong_invariant
+/-- info: 'VerdiCompat.Raft.append_entries_request_reply_correspondence_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.append_entries_request_reply_correspondence_invariant
+/-- info: 'VerdiCompat.Raft.append_entries_came_from_leaders_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.append_entries_came_from_leaders_invariant
+/-- info: 'VerdiCompat.Raft.leaderLogs_sublog_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leaderLogs_sublog_invariant
+/-- info: 'VerdiCompat.Raft.append_entries_leader_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.append_entries_leader_invariant
+/-- info: 'VerdiCompat.Raft.append_entries_reply_sublog_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.append_entries_reply_sublog_invariant
+/-- info: 'VerdiCompat.Raft.nextIndex_safety_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.nextIndex_safety_invariant
+/-- info: 'VerdiCompat.Raft.leaderLogs_entries_match_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leaderLogs_entries_match_invariant
+
 /-! ## Exhaustive sweep (fails the build on any disallowed axiom) -/
 
 open Lean in

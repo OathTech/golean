@@ -408,6 +408,16 @@ from artifacts.
 | leaderLogs_contiguous (GAP-5b) | PROVED | Raft/LeaderLogsContiguousInterface.v:9-12 | LogMatching.lean (invariant) |
 | allEntries_indices_gt_0 | PROVED | Raft/AllEntriesIndicesGt0Interface.v:8-11 | LogMatching.lean (invariant) |
 | refined_log_matching_lemmas (10 fields) | PROVED | Raft/RefinedLogMatchingLemmasInterface.v:9-113 | LogMatching.lean (ten standalone theorems, D3) |
+| allEntries_term_sanity | PROVED | Raft/AllEntriesTermSanityInterface.v:8-12 | AppendEntriesChain.lean (invariant) |
+| log_properties_hold_on_leader_logs | PROVED | Raft/LeaderLogsLogPropertiesInterface.v:9-17 | AppendEntriesChain.lean (invariant, higher-order) |
+| leaders_have_leaderLogs_strong | PROVED | Raft/LeadersHaveLeaderLogsStrongInterface.v:8-16 | AppendEntriesChain.lean (invariant) |
+| appendEntries_request_reply_correspondence | PROVED (base) | Raft/AppendEntriesRequestReplyCorrespondenceInterface.v:9-20 | AppendEntriesChain.lean (invariant + subset_reachable) |
+| appendEntries_requests_came_from_leaders | PROVED | Raft/AppendEntriesRequestsCameFromLeadersInterface.v:8-15 | AppendEntriesChain.lean (invariant) |
+| leaderLogs_sublog | PROVED | Raft/LeaderLogsSublogInterface.v:8-14 | AppendEntriesChain.lean (invariant) |
+| appendEntries_leader | PROVED | Raft/AppendEntriesLeaderInterface.v:8-16 | AppendEntriesChain.lean (invariant; pre-state win_host route) |
+| appendEntriesReply_sublog | PROVED (base) | Raft/AppendEntriesReplySublogInterface.v:8-16 | AppendEntriesChain.lean (invariant) |
+| nextIndex_safety | PROVED (base) | Raft/NextIndexSafetyInterface.v:8-11 | AppendEntriesChain.lean (invariant) |
+| leaderLogs_logMatching (leaderLogs_entries_match) | PROVED | Raft/LeaderLogsLogMatchingInterface.v:9-13 | AppendEntriesChain.lean (conj invariant + interface half) |
 - 2026-08-22 Slice 13 (1cc83c1d): log/message spec lemmas for the ring
   (findGtIndex_in, removeAfterIndex_in, per-handler log facts,
   doLeader_messages, rvr cronies function-level cases).
