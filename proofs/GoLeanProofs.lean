@@ -213,6 +213,7 @@ import GoLeanProofs.Specs.Raft.BfFixture
 import GoLeanProofs.Specs.Raft.BfSteps
 import GoLeanProofs.Specs.Raft.BfSteps2
 import GoLeanProofs.Specs.Raft.BfEquation
+import GoLeanProofs.Specs.Raft.BpcEquation
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)

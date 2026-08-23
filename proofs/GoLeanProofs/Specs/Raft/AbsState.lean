@@ -140,4 +140,39 @@ def specBecomeFollower (st : AbsRaftState) (t lead : Int) : AbsRaftState :=
       lead := lead
       state := 0 }
 
+/-! ## Wave-1 spec handlers (A4-U4; re-grounded from the SUBJECT,
+compat/verdi cited but never imported — constitution §5 Plan A) -/
+
+/-- **becomeCandidate spec** (`raftsubject/raft/raft.go:921-934`,
+with `reset(r.Term+1)`'s term/vote clause `:800-804`): the term
+increments (always ≠ the old term, so reset clears the vote), then
+the node votes for ITSELF (`r.Vote = r.id`, after reset), the lead is
+cleared by reset (`r.lead = None`), and the state becomes
+`StateCandidate` (numeral 1, `:46-53`). The log summary is untouched.
+The `r.state == StateLeader` panic guard is a PRECONDITION of the
+handler equation's fixture (state concrete ≠ 2), not of this spec
+function. Verdi correspondence (read-only cite): this is the
+state-transition core of verdi-raft's `tryToBecomeLeader`
+(`Raft.v`, candidate step: `currentTerm + 1`, `votedFor := Some me`,
+`type := Candidate` — `VerdiCompat/Raft.lean`); vote-collection
+bookkeeping lives in the tracker, unprojected at v1 (GAP-V1-2). -/
+def specBecomeCandidate (st : AbsRaftState) (id : Int) : AbsRaftState :=
+  { st with
+      term := st.term + 1
+      vote := id
+      lead := 0
+      state := 1 }
+
+/-- **becomePreCandidate spec** (`raftsubject/raft/raft.go:936-951`):
+NO reset — the term and vote are deliberately unchanged (the
+function's own comment); `ResetVotes` touches only the tracker
+(unprojected, GAP-V1-2); the lead clears and the state becomes
+`StatePreCandidate` (numeral 3). Same panic-guard precondition note
+as `specBecomeCandidate`. PreVote is an etcd extension with no Verdi
+counterpart — grounded in the subject alone. -/
+def specBecomePreCandidate (st : AbsRaftState) : AbsRaftState :=
+  { st with
+      lead := 0
+      state := 3 }
+
 end GoLean.RaftSeam
