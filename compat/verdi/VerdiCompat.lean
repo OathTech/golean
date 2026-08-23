@@ -17,4 +17,5 @@ import VerdiCompat.LogMatching
 import VerdiCompat.AppendEntriesChain
 import VerdiCompat.LeaderLogsAssembly
 import VerdiCompat.LeaderCompleteness
+import VerdiCompat.MsgRefinement
 import VerdiCompat.Examples
