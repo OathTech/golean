@@ -392,3 +392,15 @@ the structLit-at-defined residual (mechanical, same lever). U3
 attempted first would stall on both; slice 4 builds the composition
 pattern once at the smallest instance, and U3 then becomes assembly
 (becomeFollower end-to-end, projected inside the bar above).
+
+## A4-U2 slices-2+3 exit (2026-08-23, tip = this commit)
+
+**CHECKPOINT (recomputed):** slices-2+3 commits: bedc4756, 9719786f
+(+ this log commit). Unit gate `GOLEAN_ALLOW_NO_DIFF=1
+GOLEAN_MEM_MAX=24G scripts/ci` at 9719786f's tree — **RESULT: PASS,
+exit 0** (23 ok steps, `artifacts/ci-arc4-u2b.log`; no-diff notes =
+the sanctioned proofs+docs hatch). Zero sorry/native_decide in both
+extension modules (grep); full proofs+Audit 471 jobs green; Kit pins
+green (13 extension pins total). Branch-complete for this dispatch;
+nothing merged; the comparator-landmark staleness note stays flagged
+for the operator's merge step.
