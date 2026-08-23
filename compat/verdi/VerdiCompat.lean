@@ -20,4 +20,5 @@ import VerdiCompat.LeaderCompleteness
 import VerdiCompat.MsgRefinement
 import VerdiCompat.SafetyLeaves
 import VerdiCompat.GhostLogs
+import VerdiCompat.SafetyPrime
 import VerdiCompat.Examples

@@ -2857,3 +2857,18 @@ wants it); context stop-rule stands.
   (the chain's home, vocabulary already open); the five refined/base
   files go in new `SafetyPrime.lean` (imports GhostLogs, wired into
   VerdiCompat.lean from birth) — the lane's linear-import convention.
+- 2026-08-23 Slice 75: `SafetyPrime.lean` opened —
+  `no_append_entries_replies_to_self_invariant`
+  (NoAERepliesToSelfProof.v:140-155 1:1, BASE; the AE case rides unit
+  12's `no_append_entries_to_self` on the consumed request, every other
+  handler by send-shape) and `no_append_entries_to_leader_invariant`
+  (NoAEToLeaderProof.v:66-80 1:1, BASE via `lower_prop`; the refined
+  argument collides the receiver's `leaders_have_leaderLogs` snapshot
+  with the sender's `came_from_leaders` snapshot through
+  `one_leaderLog_per_term_host`, then kills the to-self packet via the
+  lifted base fact — `no_append_entries_to_self_refined` is upstream's
+  `no_append_entries_to_self'`). [AGENT] Gotchas: a parenthesized
+  multi-line `by` swallowed its continuation (the recorded
+  indentation class — restructured to `refine ?_`); the base AER/RV/RVR
+  obligations carry an `hbody` premise the AE-only drafts of units past
+  always had explicit — intro lists corrected. Build green.
