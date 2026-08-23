@@ -15,4 +15,5 @@ import VerdiCompat.LeaderLogs
 import VerdiCompat.CreationRing
 import VerdiCompat.LogMatching
 import VerdiCompat.AppendEntriesChain
+import VerdiCompat.LeaderLogsAssembly
 import VerdiCompat.Examples

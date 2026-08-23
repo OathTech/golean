@@ -1502,3 +1502,24 @@ re-verified at THIS unit's closure derivation, not inherited.
   birth; spec lemmas promoted to ElectionSpecLemmas.lean only at a
   second consumer, as before. Port order = the wave order above,
   AERLeaderLogs first.
+- 2026-08-23 Slice 42: `LeaderLogsAssembly.lean` opened —
+  **`append_entries_leaderLogs`**
+  (AppendEntriesRequestLeaderLogsInterface.v:9-22 1:1; upstream proof
+  621 lines): every in-flight AE's entries split as own-term entries
+  atop a prefix of a recorded leaderLog at the packet's term. New:
+  StructTact `Prefix` (fixpoint form 1:1) + refl/nil/In, the
+  findGtIndex-over-append machinery (sorted_findGtIndex_0,
+  findGtIndex_Prefix, findGtIndex_app_in_1/_in_2/_app_eq,
+  sorted_app_in_1 — AERLeaderLogsProof.v:374-478),
+  `doLeader_messages_nextIndex` (doLeader_spec :304-335 in the
+  exact-shape style of doLeader_messages_full but RETAINING pli =
+  pred (getNextIndex st host)), `nextIndex_sanity` (:346-372; lifted
+  nextIndex_safety + logs_contiguous + findAtIndex_intro), and the
+  witness transport `aell_transport` (leaderLogs only grow). The ten
+  transport obligations mirror unit 7's came_from_leaders pattern;
+  the doLeader CREATION case splits the sender's log over its
+  leaders_have_leaderLogs_strong snapshot and classifies the
+  findGtIndex cut (top ⇒ disjunct 1 via sorted_app_in_1; snapshot ⇒
+  disjunct 2 with Prefix_sane by findGtIndex_app_eq; unresolved ⇒
+  origin or nextIndex_sanity contradiction). Build green, sweep 1853
+  (was 1805).
