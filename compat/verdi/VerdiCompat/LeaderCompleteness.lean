@@ -1421,6 +1421,208 @@ theorem allEntries_log_matching_invariant :
   fun net hreach =>
     (allEntries_log_matching_inductive_invariant net hreach).1
 
+/-! ## prefix_within_term — interface defs, support layer, and T1
+(`Raft/PrefixWithinTermInterface.v` / `RaftProofs/PrefixWithinTermProof.v`
+@ a3375e8; the internal lemma DAG is posted in the arc log's unit-10
+opening entry) -/
+
+/-- `PrefixWithinTermInterface.v:10-13`
+(`allEntries_leaderLogs_prefix_within_term`). -/
+def allEntries_leaderLogs_prefix_within_term (net : RefinedNet) : Prop :=
+  ∀ (h : name (P := P)) (t : term) (l : List (entry (P := P)))
+    (h' : name (P := P)),
+    (t, l) ∈ (net.nwState h').1.leaderLogs →
+    prefix_within_term ((net.nwState h).1.allEntries.map Prod.snd) l
+
+/-- `PrefixWithinTermInterface.v:15-17` (`log_log_prefix_within_term`). -/
+def log_log_prefix_within_term (net : RefinedNet) : Prop :=
+  ∀ h h' : name (P := P),
+    prefix_within_term (net.nwState h).2.log (net.nwState h').2.log
+
+omit O in
+/-- `CommonTheorems.v:2049-2056` (`sorted_app_1`). -/
+theorem sorted_app_1 {l1 l2 : List (entry (P := P))}
+    (hs : sorted (l1 ++ l2)) : sorted l1 := by
+  induction l1 with
+  | nil => trivial
+  | cons a l1 ih =>
+    exact ⟨fun e' he' => hs.1 e' (List.mem_append.mpr (Or.inl he')), ih hs.2⟩
+
+omit O in
+/-- The right-half twin of `sorted_app_1` (upstream reaches it through
+`sorted_subseq`; direct induction here). -/
+theorem sorted_app_2 {l1 l2 : List (entry (P := P))}
+    (hs : sorted (l1 ++ l2)) : sorted l2 := by
+  induction l1 with
+  | nil => exact hs
+  | cons a l1 ih => exact ih hs.2
+
+omit O in
+/-- `CommonTheorems.v:2058-2080` (`Prefix_maxIndex`): a member of a
+prefix is bounded by the whole (sorted) list's `maxIndex`. -/
+theorem Prefix_maxIndex {l l' : List (entry (P := P))}
+    {e : entry (P := P)} (hs' : sorted l') (hp : Prefix l l')
+    (he : e ∈ l) : e.eIndex ≤ maxIndex l' :=
+  maxIndex_is_max hs' (Prefix_In hp e he)
+
+omit O in
+/-- `CommonTheorems.v:2032-2047` (`app_contiguous_maxIndex_le_eq`), in
+the sharper `l2 = []` form (upstream concludes `l1 ++ l2 = l1`): a
+split contiguous above `i` whose tail prefixes a list capped at `i`
+has an empty tail. -/
+theorem app_contiguous_maxIndex_le_eq {l1 l2 l2' : List (entry (P := P))}
+    {i : logIndex} (hp : Prefix l2 l2')
+    (hc : contiguous_range_exact_lo (l1 ++ l2) i)
+    (hle : maxIndex l2' ≤ i) : l2 = [] := by
+  cases l2 with
+  | nil => rfl
+  | cons b rest =>
+    exfalso
+    cases l2' with
+    | nil => exact absurd hp not_false
+    | cons b' rest' =>
+      obtain ⟨rfl, -⟩ := hp
+      have hble : b.eIndex ≤ i := hle
+      have hbin : b ∈ l1 ++ b :: rest :=
+        List.mem_append.mpr (Or.inr (List.mem_cons_self ..))
+      exact absurd (Nat.lt_of_lt_of_le (hc.2 b hbin) hble)
+        (Nat.lt_irrefl _)
+
+omit O in
+/-- `CommonTheorems.v:2096-2110` (`contiguous_app_prefix_contiguous`):
+chopping a contiguous sorted list at a prefix-of-`l2'` tail leaves the
+head contiguous down to `maxIndex l2'`. -/
+theorem contiguous_app_prefix_contiguous {l1 l2 l2' : List (entry (P := P))}
+    {i : logIndex} (hp : Prefix l2 l2') (hs : sorted (l1 ++ l2))
+    (hc : contiguous_range_exact_lo (l1 ++ l2) i)
+    (hne : l2 ≠ [] ∨ i = maxIndex l2') :
+    contiguous_range_exact_lo l1 (maxIndex l2') := by
+  cases l2 with
+  | nil =>
+    rcases hne with hne | rfl
+    · exact absurd rfl hne
+    · rw [List.append_nil] at hc
+      exact hc
+  | cons b rest =>
+    cases l2' with
+    | nil => exact absurd hp not_false
+    | cons b' rest' =>
+      obtain ⟨rfl, -⟩ := hp
+      have hib : i < b.eIndex :=
+        hc.2 b (List.mem_append.mpr (Or.inr (List.mem_cons_self ..)))
+      constructor
+      · intro j ⟨hjlo, hjhi⟩
+        have hjlo' : b.eIndex < j := hjlo
+        cases l1 with
+        | nil =>
+          exfalso
+          have hj0 : j ≤ 0 := hjhi
+          exact absurd (Nat.lt_of_lt_of_le hjlo' hj0) (Nat.not_lt_zero _)
+        | cons a l1' =>
+          have hjapp : j ≤ maxIndex ((a :: l1') ++ b :: rest) := hjhi
+          obtain ⟨x, hxidx, hxmem⟩ :=
+            hc.1 j ⟨Nat.lt_trans hib hjlo', hjapp⟩
+          refine ⟨x, hxidx, ?_⟩
+          rcases List.mem_append.mp hxmem with hx1 | hx2
+          · exact hx1
+          · exfalso
+            have hxle : x.eIndex ≤ b.eIndex :=
+              maxIndex_is_max (sorted_app_2 hs) hx2
+            rw [hxidx] at hxle
+            exact absurd (Nat.lt_of_lt_of_le hjlo' hxle)
+              (Nat.lt_irrefl _)
+      · intro x hx
+        have hpos : x.eIndex > 0 :=
+          Nat.lt_of_le_of_lt (Nat.zero_le i)
+            (hc.2 x (List.mem_append.mpr (Or.inl hx)))
+        have hgt : x.eIndex > maxIndex (b :: rest) :=
+          sorted_app_in_1 hs hpos hx
+        exact hgt
+
+omit O in
+/-- `CommonTheorems.v:2125-2138` (`contiguous_app_prefix_2`). -/
+theorem contiguous_app_prefix_2 {l l' l'' : List (entry (P := P))}
+    {i : logIndex} (hs : sorted (l ++ l'))
+    (hc : contiguous_range_exact_lo (l ++ l') 0)
+    (hp : Prefix l' l'') (hlo : maxIndex l'' < i) (hhi : i ≤ maxIndex l) :
+    ∃ e, e.eIndex = i ∧ e ∈ l := by
+  cases l' with
+  | nil =>
+    rw [List.append_nil] at hc
+    exact hc.1 i ⟨Nat.lt_of_le_of_lt (Nat.zero_le _) hlo, hhi⟩
+  | cons b rest =>
+    exact (contiguous_app_prefix_contiguous hp hs hc
+      (Or.inl (by simp))).1 i ⟨hlo, hhi⟩
+
+omit O in
+/-- `PrefixWithinTermProof.v:902-913` (`prefix_within_term_union`). -/
+theorem prefix_within_term_union {l1 l1' l1'' l2 : List (entry (P := P))}
+    (h' : prefix_within_term l1' l2) (h'' : prefix_within_term l1'' l2)
+    (hsplit : ∀ e ∈ l1, e ∈ l1' ∨ e ∈ l1'') :
+    prefix_within_term l1 l2 := fun e e' ht hi he he' =>
+  (hsplit e he).elim (fun h => h' e e' ht hi h he')
+    (fun h => h'' e e' ht hi h he')
+
+omit O in
+/-- `PrefixWithinTermProof.v:1385-1393` (`prefix_within_term_subset`). -/
+theorem prefix_within_term_subset {l1 l1' l2 : List (entry (P := P))}
+    (h' : prefix_within_term l1' l2) (hsub : ∀ e ∈ l1, e ∈ l1') :
+    prefix_within_term l1 l2 := fun e e' ht hi he he' =>
+  h' e e' ht hi (hsub e he) he'
+
+omit O in
+/-- `PrefixWithinTermProof.v:788-796` (`findGtIndex_prefix_within_term`). -/
+theorem findGtIndex_prefix_within_term {l1 l2 : List (entry (P := P))}
+    {i : logIndex} (h : prefix_within_term l1 l2) :
+    prefix_within_term (findGtIndex l1 i) l2 :=
+  prefix_within_term_subset h (fun _ he => findGtIndex_in he)
+
+/-- `PrefixWithinTermProof.v:107-149`
+(`log_log_prefix_within_term_invariant`, standalone — T1 of the posted
+DAG): any two host logs are prefixes-within-term of each other. Both
+entries resolve through `logs_leaderLogs`; `one_leaderLog_per_term_log`
+identifies the snapshots; contiguity produces an index-matched witness
+in the second log, which either shares `e`'s term (entries_match
+transfers `e`) or IS `e` (uniqueIndices on the first log). -/
+theorem log_log_prefix_within_term_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      log_log_prefix_within_term net := by
+  intro net hreach h h' e e' hterm hidx he he'
+  obtain ⟨leader, ll, es, hll, hsplit, -⟩ :=
+    logs_leaderLogs_invariant net hreach h e he
+  obtain ⟨leader', ll', es', hll', hsplit', hesterm'⟩ :=
+    logs_leaderLogs_invariant net hreach h' e' he'
+  rw [hterm] at hll
+  have hlleq : ll = ll' :=
+    one_leaderLog_per_term_log_invariant net hreach leader leader'
+      e'.eTerm ll ll' hll hll'
+  subst hlleq
+  have hgt0 : 0 < e.eIndex := entries_gt_0_invariant net hreach h e he
+  have hmax : e.eIndex ≤ maxIndex (net.nwState h').2.log :=
+    Nat.le_trans hidx
+      (maxIndex_is_max (entries_sorted_invariant net hreach h') he')
+  obtain ⟨x, hxidx, hxmem⟩ :=
+    (entries_contiguous_invariant net hreach h').1 e.eIndex ⟨hgt0, hmax⟩
+  have hxrem : x ∈ removeAfterIndex (net.nwState h').2.log e'.eIndex :=
+    removeAfterIndex_le_In (by rw [hxidx]; exact hidx) hxmem
+  rw [hsplit'] at hxrem
+  rcases List.mem_append.mp hxrem with hxes | hxll
+  · have hxterm : e.eTerm = x.eTerm := by
+      rw [hesterm' x hxes, hterm]
+    exact (entries_match_invariant net hreach h h' e x e hxidx.symm
+      hxterm he hxmem (Nat.le_refl _)).mp he
+  · have hxinh : x ∈ (net.nwState h).2.log := by
+      refine removeAfterIndex_in (l := (net.nwState h).2.log)
+        (i := e.eIndex) ?_
+      rw [hsplit]
+      exact List.mem_append.mpr (Or.inr hxll)
+    have hex : e = x :=
+      uniqueIndices_elim_eq
+        (sorted_uniqueIndices (entries_sorted_invariant net hreach h))
+        he hxinh hxidx.symm
+    rw [hex]
+    exact hxmem
+
 end LeaderCompleteness
 end Raft
 end VerdiCompat
