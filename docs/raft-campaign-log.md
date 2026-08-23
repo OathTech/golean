@@ -460,6 +460,22 @@ is the §4.4 park-and-report condition, not an emergency.
   prevLog_candidateEntriesTerm, recon recorded) then W-C's first
   msg-ghost consumers.
 
+- **Arc 3, unit 13 — LANDED** @ d14bfd6a (6th-gen): FULL charter —
+  **W-B 8/8 complete** (match_index_sanity BASE,
+  prevLog_candidateEntriesTerm via the term-level twin), **the
+  primed msg obligation set ported on genuine first need** (the
+  pre-state route structurally unavailable at
+  GhostLogsLogProperties — the honest trigger; the primed principle
+  DERIVED from the unprimed at Q := reachable → Pr, ~60 lines vs
+  upstream's 290-line staged induction, §9 call), and **W-C's first
+  two msg-ghost consumers** (GhostLogs.lean; slices 71-74 compiled
+  first-attempt). Sweep **2362**; index 71 rows; 101 lane commits;
+  gate PASS. One consolidation candidate flagged (unit-3
+  entry-level preserves derivable from term-level). NOTE → [USER]
+  queue: the comparator-landmark note CROSSED ITS THRESHOLD (104 >
+  100 commits, report-only) — the judge run is owed at the first
+  lane merge, as flagged every unit.
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
