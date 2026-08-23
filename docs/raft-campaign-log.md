@@ -354,6 +354,21 @@ is the §4.4 park-and-report condition, not an emergency.
   — U3 becomes assembly after it. 13 Audit/Kit pins paid (slice-1
   debt noticed and settled by the worker unprompted).
 
+- **Arc 3, unit 7 — LANDED** @ 44b0794b: the AppendEntries feeder
+  chain, all ten targets (AppendEntriesChain.lean 3206 lines) — incl.
+  append_entries_request_reply_correspondence (the campaign's first
+  real dup/drop fault-model use, subset_reachable machinery),
+  leaderLogs_sublog, leaderLogs_entries_match (the exit). Sweep
+  **1805** clean; index 51 rows; GAP-1 kept untriggered by a
+  pre-state closure ([AGENT] call, promotion-ledger payoff). Two new
+  successor gotchas recorded. [AGENT]: worker ROTATED at 819k tokens
+  (risk asymmetry over its no-strain self-report) — 4th-gen
+  successor dispatched on unit 8, the GAP-7 assembly (~3,566 lines;
+  leader_completeness's last prerequisites; split point permitted).
+  A4 slice 4 (choice-crossing composition, full-span becomeFollower)
+  dispatched to the Arc-4 worker with the stop-at-boundary rule
+  ACTIVE.
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
