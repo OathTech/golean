@@ -2523,8 +2523,9 @@ sorry/native_decide; sweep-enforced: 2287 declarations within
 'VerdiCompat.Raft.no_append_entries_to_self_invariant' depends on axioms: [propext, Quot.sound]
 ```
 
-The INVARIANT INDEX is current (70 data rows, recomputed by table span
-:370-:439; the two UNIT-13 CHARTER rows included). 90 commits on the
+The INVARIANT INDEX is current (69 data rows, recomputed by table span
+:370-:438 — this entry's first draft said 70, corrected against the
+span; the two UNIT-13 CHARTER rows included). 90 commits on the
 lane (`git log f64d9b21..HEAD --oneline | wc -l`, recomputed at
 0e62ce46).
 
