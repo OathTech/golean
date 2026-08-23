@@ -2616,3 +2616,19 @@ is a complete unit if the honest budget says so.
   its first consumer (`log_properties_hold_on_ghost_logs_invariant`,
   same unit) is the discharge witness — all eleven obligations
   instantiated on a real invariant.
+- 2026-08-23 Slice 69: `match_index_sanity`
+  (MatchIndexSanityInterface.v:9-13 1:1, BASE) — per the unit-12 recon,
+  mirroring the lane's `nextIndex_safety` almost obligation-for-
+  obligation: the matchIndex movement trio (cacheApplyEntry/
+  applyEntries/doGenericServer, the `applyEntries_nextIndex` induction
+  pattern), `doLeader/handleTimeout/handleRequestVote_matchIndex`
+  (unconditional preservation), `handleClientRequest_matchIndex`
+  (SpecLemmas.v:938-951 1:1), the two recon'd case lemmas
+  `handleAppendEntriesReply_matchIndex` (:88-105) /
+  `handleRequestVoteReply_matchIndex` (:148-161), the
+  `match_index_sanity_of_update` transport (:46-62), and the invariant:
+  the AER max-slot case rides `append_entries_reply_sublog` +
+  `maxIndex_is_max` on the reply's head entry, exactly upstream. The
+  recorded rw-auto-rfl-on-`≤` gotcha bit twice (explicit `Nat.le_refl`),
+  and `RaftNet`-typed transports cannot `omit O` (raft_base_params
+  references it). Build green.
