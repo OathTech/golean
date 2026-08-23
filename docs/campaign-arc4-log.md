@@ -772,3 +772,46 @@ parentheses; the seam design §2(B) unit list):
   mostly assembly, inside the gallery bar. The binding constraints
   are now (a) kernel-evaluation wall time (fix: literalization),
   (b) the spec-side absState extension (design work, wave-2 gate).
+
+## A4-U3 exit (2026-08-23, tip = this commit)
+
+**CHECKPOINT (recomputed):** commits since the dispatch tip dab1163d:
+12 by `git log --oneline dab1163d..HEAD | wc -l` — 3 of this worker's
+(082a45cf slice A, 2c71ed83 slice B, + this log commit) + 9
+coordinator campaign-log commits interleaved (638b683b, c6dac547,
+44d579ab, 1415a96d, 5ec7b0f7, 665f821e, 698d17e6, d59841b8, 7c119bfb
+— all `docs/raft-campaign-log.md` only, file-disjoint from this
+unit's tree; recorded per the one-writer discipline).
+
+Unit-end gate `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci`
+at 2c71ed83's tree — **RESULT: PASS, exit 0** (tail recorded at
+`artifacts/ci-arc4-u3.log`, gitignored — capture was `| tail -25`,
+so the record holds the final 18 ok steps + both sanctioned no-diff
+notes + RESULT; the full-run PASS is the exit code). The comparator
+landmark note (80 commits stale at this run) stays flagged for the
+operator's merge step, as in every prior arc-4 exit.
+
+**Checklist disposition (the dispatch's four items):**
+1. Populated fixture — DONE (slice A; probe-validated at machine AND
+   mirror level, γ-image == machine heap end-to-end).
+2. Visit's 3-pick crossing — DONE (the spine ×3 via
+   `stepFn_pick_transport`; sort-collapse realized as the 6-leaf
+   dispatcher; ONE shared post-sort chain).
+3. Interface-dispatch splits — DONE BY COMPLETION OF CLASS-2B instead
+   of hand splits ([AGENT] deviation logged above: same lever, kills
+   the recurring per-handler cost; zero splits remain in the proof).
+4. ∀ρ pick-fact discharge — DONE (`stepFn_pick_transport` =
+   `stepFn_pick_generic` ∘ `alloc_conc`, prop-level).
+THEN the equation itself — DONE (`becomeFollower_handler_eq` +
+witness, axioms probed verbatim above).
+
+**Open gaps carried (none counted):** GAP-V1-1..5 and GAP-U1-W1
+unchanged; U3 adds: the term-change branch (second fixture family),
+the appendSpill pick transport (wave 2), the needsDeref dispatch
+quit, and the state-literalization performance lift (U4 slice 0
+recommendation). PROMOTION LEDGER additions: `stepFn_pick_transport`
+(raft-independent; second consumer = any handler's range loop) and
+the reset-span composite (consumer = every become* handler).
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1).
