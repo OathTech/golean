@@ -603,6 +603,463 @@ theorem lifted_maxIndex_sanity_reboot :
     · rw [update_neq _ _ heq]
       exact hP.2 h0
 
+/-! ## The `commit_invariant` induction — transport layer
+(`StateMachineSafetyProof.v:989-1060,1113-1233,1425-1434,1471-1498`) -/
+
+/-- `StateMachineSafetyProof.v:989-997` (`commit_invariant_init`). -/
+theorem commit_invariant_init :
+    msg_refined_raft_net_invariant_init (P := P) commit_invariant := by
+  refine ⟨?_, ?_⟩
+  · intro h e hin _
+    exact nomatch hin
+  · intro p t lid pli plt es lci e hp _ _ _
+    exact nomatch hp
+
+/-- `StateMachineSafetyProof.v:1194-1231`
+(`lifted_committed_log_allEntries_preserved`): `lifted_committed`
+transports along entrywise growth of every log and every allEntries. -/
+theorem lifted_committed_log_allEntries_preserved {net net' : MsgNet}
+    {e : entry (P := P)} {t : term}
+    (hc : lifted_committed net e t)
+    (hlog : ∀ (h : name (P := P)) (e' : entry (P := P)),
+      e' ∈ (net.nwState h).2.log → e' ∈ (net'.nwState h).2.log)
+    (hae : ∀ (h : name (P := P)) (t' : term) (e' : entry (P := P)),
+      (t', e') ∈ (net.nwState h).1.allEntries →
+      (t', e') ∈ (net'.nwState h).1.allEntries) :
+    lifted_committed net' e t := by
+  obtain ⟨host, e', hle, ⟨q, hnd, hlen, hq⟩, hidx, hin, hin'⟩ := hc
+  exact ⟨host, e', hle, ⟨q, hnd, hlen,
+    fun h hh => hae h e'.eTerm e' (hq h hh)⟩, hidx,
+    hlog host e hin, hlog host e' hin'⟩
+
+/-- `StateMachineSafetyProof.v:1486-1497` (`lifted_committed_ext`):
+`lifted_committed` reads only the state. -/
+theorem lifted_committed_ext {net net' : MsgNet} {e : entry (P := P)}
+    {t : term} (hstates : ∀ h, net'.nwState h = net.nwState h)
+    (hc : lifted_committed net e t) : lifted_committed net' e t := by
+  refine lifted_committed_log_allEntries_preserved hc ?_ ?_
+  · intro h e' h1
+    rw [hstates h]
+    exact h1
+  · intro h t' e' h1
+    rw [hstates h]
+    exact h1
+
+/-- `StateMachineSafetyProof.v:1425-1434` (`lifted_committed_monotonic`). -/
+theorem lifted_committed_monotonic {net : MsgNet} {e : entry (P := P)}
+    {t t' : term} (hc : lifted_committed net e t) (hle : t ≤ t') :
+    lifted_committed net e t' := by
+  obtain ⟨host, e', hle', hdc, hidx, hin, hin'⟩ := hc
+  exact ⟨host, e', Nat.le_trans hle' hle, hdc, hidx, hin, hin'⟩
+
+/-- The uniform preserves-committed transport for handlers that keep
+every log entry and every allEntries record at the updated node
+(subsumes upstream's per-handler `*_preserves_committed` family,
+`StateMachineSafetyProof.v:1265-1279,1408-1424,2158-2172,2206-2222,
+2257-2275,2597-2614,2737-2749,2802-2813`). -/
+theorem lifted_committed_of_update {net : MsgNet}
+    {st' : name (P := P) → electionsData (P := P) × raft_data (P := P)}
+    {ps' : List (MsgPacket)} {u : name (P := P)}
+    {gd : electionsData (P := P)} {d : raft_data (P := P)}
+    (hst : ∀ h, st' h = update net.nwState u (gd, d) h)
+    (hlog : ∀ e' ∈ (net.nwState u).2.log, e' ∈ d.log)
+    (hgae : ∀ (t' : term) (e' : entry (P := P)),
+      (t', e') ∈ (net.nwState u).1.allEntries → (t', e') ∈ gd.allEntries)
+    {e : entry (P := P)} {t : term} (hc : lifted_committed net e t) :
+    lifted_committed (⟨ps', st'⟩ : MsgNet) e t := by
+  refine lifted_committed_log_allEntries_preserved hc ?_ ?_
+  · intro h e' h1
+    show e' ∈ (st' h).2.log
+    rw [hst h]
+    by_cases heq : h = u
+    · rw [heq, update_same]
+      rw [heq] at h1
+      exact hlog e' h1
+    · rw [update_neq _ _ heq]
+      exact h1
+  · intro h t' e' h1
+    show (t', e') ∈ (st' h).1.allEntries
+    rw [hst h]
+    by_cases heq : h = u
+    · rw [heq, update_same]
+      rw [heq] at h1
+      exact hgae t' e' h1
+    · rw [update_neq _ _ heq]
+      exact h1
+
+/-! ## The `commit_invariant` obligations — the routine eight
+(`StateMachineSafetyProof.v:1408-1470,2158-2305,2737-2835`) -/
+
+/-- `StateMachineSafetyProof.v:1436-1470` (`commit_invariant_timeout`). -/
+theorem commit_invariant_timeout :
+    msg_refined_raft_net_invariant_timeout (P := P) commit_invariant := by
+  intro net h st' ps' gd out d l hto hgd hP _hreach hst hps
+  obtain ⟨hP1, hP2⟩ := hP
+  obtain ⟨hlog, hcases, hmsgs⟩ := handleTimeout_spec h (net.nwState h).2 hto
+  obtain ⟨hla, hci⟩ := handleTimeout_la_ci h (net.nwState h).2 hto
+  have hct_le : (net.nwState h).2.currentTerm ≤ d.currentTerm := by
+    rcases hcases with ⟨hct, -⟩ | ⟨hct, -⟩
+    · rw [hct]
+      exact Nat.le_refl _
+    · rw [hct]
+      exact Nat.le_succ _
+  have htrans : ∀ {e : entry (P := P)} {t0 : term},
+      lifted_committed net e t0 →
+      lifted_committed (⟨ps', st'⟩ : MsgNet) e t0 := by
+    intro e t0 hc
+    refine lifted_committed_of_update hst ?_ ?_ hc
+    · intro e' h1
+      rw [hlog]
+      exact h1
+    · intro t' e' h1
+      rw [hgd, (update_elections_data_timeout_ghost h (net.nwState h)).2]
+      exact h1
+  constructor
+  · intro h0 e hin hle
+    replace hin : e ∈ (st' h0).2.log := hin
+    replace hle : e.eIndex ≤ (st' h0).2.commitIndex := hle
+    show lifted_committed (⟨ps', st'⟩ : MsgNet) e (st' h0).2.currentTerm
+    rw [hst h0] at hin hle ⊢
+    by_cases heq : h0 = h
+    · rw [heq, update_same] at hin hle ⊢
+      replace hin : e ∈ d.log := hin
+      replace hle : e.eIndex ≤ d.commitIndex := hle
+      show lifted_committed _ e d.currentTerm
+      rw [hlog] at hin
+      rw [hci] at hle
+      exact lifted_committed_monotonic
+        (htrans (hP1 h e hin hle)) hct_le
+    · rw [update_neq _ _ heq] at hin hle ⊢
+      exact htrans (hP1 h0 e hin hle)
+  · intro p0 t0 lid pli plt es lci e hp0 hbody hgl hle
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnew
+    · exact htrans (hP2 p0 t0 lid pli plt es lci e hold hbody hgl hle)
+    · exfalso
+      obtain ⟨m1, hm1, rfl⟩ := mem_send_ghost_elim hnew
+      obtain ⟨t', cid, lli, llt, hq⟩ := hmsgs m1 hm1
+      replace hbody : m1.2 = msg.AppendEntries t0 lid pli plt es lci :=
+        hbody
+      rw [hq] at hbody
+      exact nomatch hbody
+
+/-- The shared shape of the four remaining no-log-change message
+obligations (AER/RV/RVR + doGenericServer below): log and ghost
+allEntries fixed at the updated node, term only grows, commitIndex
+fixed, no AppendEntries sent. -/
+private theorem ci_routine {net : MsgNet}
+    {st' : name (P := P) → electionsData (P := P) × raft_data (P := P)}
+    {ps' : List (MsgPacket)} {u : name (P := P)}
+    {gd : electionsData (P := P)} {d : raft_data (P := P)}
+    (hP : commit_invariant net)
+    (hst : ∀ h, st' h = update net.nwState u (gd, d) h)
+    (hps : ∀ p' ∈ ps', p' ∈ net.nwPackets ∨
+      ∀ (t0 : term) (lid : name (P := P)) (pli : logIndex) (plt : term)
+        (es : List (entry (P := P))) (lci : logIndex),
+        (p'.pBody : ghost_log (P := P) × msg (P := P)).2
+          ≠ .AppendEntries t0 lid pli plt es lci)
+    (hlog : d.log = (net.nwState u).2.log)
+    (hgae : gd.allEntries = (net.nwState u).1.allEntries)
+    (hci : d.commitIndex = (net.nwState u).2.commitIndex)
+    (hct : (net.nwState u).2.currentTerm ≤ d.currentTerm) :
+    commit_invariant (⟨ps', st'⟩ : MsgNet) := by
+  obtain ⟨hP1, hP2⟩ := hP
+  have htrans : ∀ {e : entry (P := P)} {t0 : term},
+      lifted_committed net e t0 →
+      lifted_committed (⟨ps', st'⟩ : MsgNet) e t0 := by
+    intro e t0 hc
+    refine lifted_committed_of_update hst ?_ ?_ hc
+    · intro e' h1
+      rw [hlog]
+      exact h1
+    · intro t' e' h1
+      rw [hgae]
+      exact h1
+  constructor
+  · intro h0 e hin hle
+    replace hin : e ∈ (st' h0).2.log := hin
+    replace hle : e.eIndex ≤ (st' h0).2.commitIndex := hle
+    show lifted_committed (⟨ps', st'⟩ : MsgNet) e (st' h0).2.currentTerm
+    rw [hst h0] at hin hle ⊢
+    by_cases heq : h0 = u
+    · rw [heq, update_same] at hin hle ⊢
+      replace hin : e ∈ d.log := hin
+      replace hle : e.eIndex ≤ d.commitIndex := hle
+      show lifted_committed _ e d.currentTerm
+      rw [hlog] at hin
+      rw [hci] at hle
+      exact lifted_committed_monotonic (htrans (hP1 u e hin hle)) hct
+    · rw [update_neq _ _ heq] at hin hle ⊢
+      exact htrans (hP1 h0 e hin hle)
+  · intro p0 t0 lid pli plt es lci e hp0 hbody hgl hle
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnoae
+    · exact htrans (hP2 p0 t0 lid pli plt es lci e hold hbody hgl hle)
+    · exact absurd hbody (hnoae t0 lid pli plt es lci)
+
+/-- `StateMachineSafetyProof.v:2173-2205`
+(`commit_invariant_append_entries_reply`). -/
+theorem commit_invariant_append_entries_reply :
+    msg_refined_raft_net_invariant_append_entries_reply (P := P)
+      commit_invariant := by
+  intro xs p ys net st' ps' gd d m t es res haer hgd _hbody hP _hreach
+    hpkts hst hps
+  obtain ⟨-, harms, hl⟩ := handleAppendEntriesReply_spec p.pDst
+    (net.nwState p.pDst).2 p.pSrc t es res haer
+  refine ci_routine hP hst ?_
+    (handleAppendEntriesReply_log p.pDst (net.nwState p.pDst).2 p.pSrc t
+      es res haer)
+    (by rw [hgd])
+    (handleAppendEntriesReply_la_ci p.pDst (net.nwState p.pDst).2 p.pSrc
+      t es res haer).2 ?_
+  · intro p0 hp0
+    rcases hps p0 hp0 with hold | hnew
+    · left
+      rw [hpkts]
+      exact mem_of_mem_remove_middle hold
+    · exfalso
+      rw [hl] at hnew
+      simp [send_packets, add_ghost_msg] at hnew
+  · rcases harms with ⟨hct, -, -⟩ | ⟨hct, -, -⟩
+    · rw [hct]
+      exact Nat.le_refl _
+    · exact Nat.le_of_lt hct
+
+/-- `StateMachineSafetyProof.v:2223-2256` (`commit_invariant_request_vote`). -/
+theorem commit_invariant_request_vote :
+    msg_refined_raft_net_invariant_request_vote (P := P)
+      commit_invariant := by
+  intro xs p ys net st' ps' gd d m t cid lli llt hrv hgd _hbody hP _hreach
+    hpkts hst hps
+  obtain ⟨-, hctle, -, -⟩ := handleRequestVote_spec p.pDst
+    (net.nwState p.pDst).2 t p.pSrc lli llt hrv
+  refine ci_routine hP hst ?_
+    (handleRequestVote_log p.pDst (net.nwState p.pDst).2 t p.pSrc lli llt
+      hrv)
+    (by rw [hgd, (update_elections_data_requestVote_cronies p.pDst p.pSrc
+      t p.pSrc lli llt (net.nwState p.pDst)).2.2])
+    (handleRequestVote_la_ci p.pDst (net.nwState p.pDst).2 t p.pSrc lli
+      llt hrv).2 hctle
+  intro p0 hp0
+  rcases hps p0 hp0 with hold | hnew
+  · left
+    rw [hpkts]
+    exact mem_of_mem_remove_middle hold
+  · right
+    obtain ⟨t', v, hm⟩ := handleRequestVote_reply_shape p.pDst
+      (net.nwState p.pDst).2 t p.pSrc lli llt hrv
+    intro t0 lid pli plt es lci hbody0
+    rw [hnew] at hbody0
+    replace hbody0 : (write_ghost_log p.pDst (gd, d), m).2
+        = msg.AppendEntries t0 lid pli plt es lci := hbody0
+    rw [hm] at hbody0
+    exact nomatch hbody0
+
+/-- `StateMachineSafetyProof.v:2276-2305`
+(`commit_invariant_request_vote_reply`). -/
+theorem commit_invariant_request_vote_reply :
+    msg_refined_raft_net_invariant_request_vote_reply (P := P)
+      commit_invariant := by
+  intro xs p ys net st' ps' gd d t v hrvr hgd _hbody hP _hreach hpkts hst
+    hps
+  obtain ⟨hctvf, -, -, -⟩ := handleRequestVoteReply_spec p.pDst
+    (net.nwState p.pDst).2 p.pSrc t v hrvr
+  have hlog : d.log = (net.nwState p.pDst).2.log := by
+    rw [← hrvr]
+    exact handleRequestVoteReply_log p.pDst (net.nwState p.pDst).2 p.pSrc
+      t v
+  have hci : d.commitIndex = (net.nwState p.pDst).2.commitIndex := by
+    rw [← hrvr]
+    exact (handleRequestVoteReply_la_ci p.pDst (net.nwState p.pDst).2
+      p.pSrc t v).2
+  refine ci_routine hP hst ?_ hlog
+    (by rw [hgd, (update_elections_data_requestVoteReply_votes p.pDst
+      p.pSrc t v (net.nwState p.pDst)).2.2]) hci ?_
+  · intro p0 hp0
+    left
+    rw [hpkts]
+    exact mem_of_mem_remove_middle (hps p0 hp0)
+  · rcases hctvf with ⟨hct, -⟩ | ⟨hct, -⟩
+    · rw [hct]
+      exact Nat.le_refl _
+    · exact Nat.le_of_lt hct
+
+/-- `StateMachineSafetyProof.v:2750-2786`
+(`commit_invariant_do_generic_server`). -/
+theorem commit_invariant_do_generic_server :
+    msg_refined_raft_net_invariant_do_generic_server (P := P)
+      commit_invariant := by
+  intro net st' ps' gd d os d' ms h hgs hP _hreach hstate hst hps
+  obtain ⟨hlog, -, hct, -, -, hms⟩ := doGenericServer_spec h d hgs
+  obtain ⟨hci, -⟩ := doGenericServer_la_ci h d hgs
+  have hd2 : (net.nwState h).2 = d := by rw [hstate]
+  have hd1 : (net.nwState h).1 = gd := by rw [hstate]
+  refine ci_routine hP hst ?_ (by rw [hlog, hd2]) (by rw [hd1])
+    (by rw [hci, hd2]) (by rw [hct, hd2]; exact Nat.le_refl _)
+  intro p0 hp0
+  rcases hps p0 hp0 with hold | hnew
+  · exact Or.inl hold
+  · exfalso
+    rw [hms] at hnew
+    simp [send_packets, add_ghost_msg] at hnew
+
+/-- `StateMachineSafetyProof.v:2787-2801`
+(`commit_invariant_state_same_packet_subset`). -/
+theorem commit_invariant_state_same_packet_subset :
+    msg_refined_raft_net_invariant_state_same_packet_subset (P := P)
+      commit_invariant := by
+  intro net net' hstates hsubp hP _hreach
+  obtain ⟨hP1, hP2⟩ := hP
+  constructor
+  · intro h0 e hin hle
+    rw [← hstates h0] at hin hle ⊢
+    exact lifted_committed_ext (fun h => (hstates h).symm)
+      (hP1 h0 e hin hle)
+  · intro p0 t0 lid pli plt es lci e hp0 hbody hgl hle
+    exact lifted_committed_ext (fun h => (hstates h).symm)
+      (hP2 p0 t0 lid pli plt es lci e (hsubp p0 hp0) hbody hgl hle)
+
+/-- `StateMachineSafetyProof.v:2814-2835` (`commit_invariant_reboot`). -/
+theorem commit_invariant_reboot :
+    msg_refined_raft_net_invariant_reboot (P := P) commit_invariant := by
+  intro net net' gd d h d' hrb hP _hreach hstate hst hpkts
+  obtain ⟨hP1, hP2⟩ := hP
+  have hd2 : (net.nwState h).2 = d := by rw [hstate]
+  have hd1 : (net.nwState h).1 = gd := by rw [hstate]
+  have htrans : ∀ {e : entry (P := P)} {t0 : term},
+      lifted_committed net e t0 → lifted_committed net' e t0 := by
+    intro e t0 hc
+    refine lifted_committed_log_allEntries_preserved hc ?_ ?_
+    · intro h0 e' h1
+      rw [hst h0]
+      by_cases heq : h0 = h
+      · rw [heq, update_same]
+        show e' ∈ d'.log
+        rw [← hrb]
+        show e' ∈ d.log
+        rw [← hd2]
+        rw [heq] at h1
+        exact h1
+      · rw [update_neq _ _ heq]
+        exact h1
+    · intro h0 t' e' h1
+      rw [hst h0]
+      by_cases heq : h0 = h
+      · rw [heq, update_same]
+        show (t', e') ∈ gd.allEntries
+        rw [← hd1]
+        rw [heq] at h1
+        exact h1
+      · rw [update_neq _ _ heq]
+        exact h1
+  constructor
+  · intro h0 e hin hle
+    rw [hst h0] at hin hle ⊢
+    by_cases heq : h0 = h
+    · rw [heq, update_same] at hin hle ⊢
+      replace hin : e ∈ d'.log := hin
+      replace hle : e.eIndex ≤ d'.commitIndex := hle
+      show lifted_committed _ e d'.currentTerm
+      rw [← hrb] at hin hle ⊢
+      replace hin : e ∈ d.log := hin
+      replace hle : e.eIndex ≤ d.commitIndex := hle
+      show lifted_committed _ e d.currentTerm
+      rw [← hd2] at hin hle ⊢
+      exact htrans (hP1 h e hin hle)
+    · rw [update_neq _ _ heq] at hin hle ⊢
+      exact htrans (hP1 h0 e hin hle)
+  · intro p0 t0 lid pli plt es lci e hp0 hbody hgl hle
+    rw [← hpkts] at hp0
+    exact htrans (hP2 p0 t0 lid pli plt es lci e hp0 hbody hgl hle)
+
+/-- `StateMachineSafetyProof.v:1335-1407`
+(`commit_invariant_client_request`) — the custom-premise form
+(`maxIndex_sanity` of the double deghost rides along, exactly
+upstream). -/
+theorem commit_invariant_client_request {h : name (P := P)}
+    {net : MsgNet}
+    {st' : name (P := P) → electionsData (P := P) × raft_data (P := P)}
+    {ps' : List (MsgPacket)} {gd : electionsData (P := P)}
+    {out : List (raft_output (P := P))} {d : raft_data (P := P)}
+    {l : List (name (P := P) × msg (P := P))} {client : R.clientId}
+    {id : Nat} {c : P.input}
+    (hcr : handleClientRequest h (net.nwState h).2 client id c
+      = (out, d, l))
+    (hgd : gd = update_elections_data_client_request h (net.nwState h)
+      client id c)
+    (hP : commit_invariant net)
+    (hmis : maxIndex_sanity (deghost (mgv_deghost net)))
+    (hst : ∀ h', st' h' = update net.nwState h (gd, d) h')
+    (hps : ∀ p' ∈ ps', p' ∈ net.nwPackets ∨
+      p' ∈ send_packets h (add_ghost_msg h (gd, d) l)) :
+    commit_invariant (⟨ps', st'⟩ : MsgNet) := by
+  obtain ⟨hP1, hP2⟩ := hP
+  obtain ⟨-, hct, -, -, hl⟩ := handleClientRequest_spec h
+    (net.nwState h).2 client id c hcr
+  obtain ⟨-, hci⟩ := handleClientRequest_la_ci h (net.nwState h).2 client
+    id c hcr
+  have hgrow : ∀ (t' : term) (e' : entry (P := P)),
+      (t', e') ∈ (net.nwState h).1.allEntries →
+      (t', e') ∈ gd.allEntries := by
+    intro t' e' h1
+    rw [hgd]
+    rcases update_elections_data_client_request_allEntries_cases h
+      (net.nwState h) client id c with hsame | ⟨t1, e1, hcons, -⟩
+    · rw [hsame]
+      exact h1
+    · rw [hcons]
+      exact List.mem_cons_of_mem _ h1
+  have hlogsub : ∀ e' ∈ (net.nwState h).2.log, e' ∈ d.log := by
+    intro e' h1
+    rcases handleClientRequest_log_full h (net.nwState h).2 client id c
+        hcr with ⟨-, hlog⟩ | ⟨-, hds⟩
+    · rw [hlog]
+      exact List.mem_cons_of_mem _ h1
+    · rw [hds]
+      exact h1
+  have htrans : ∀ {e : entry (P := P)} {t0 : term},
+      lifted_committed net e t0 →
+      lifted_committed (⟨ps', st'⟩ : MsgNet) e t0 :=
+    fun hc => lifted_committed_of_update hst hlogsub hgrow hc
+  constructor
+  · intro h0 e hin hle
+    replace hin : e ∈ (st' h0).2.log := hin
+    replace hle : e.eIndex ≤ (st' h0).2.commitIndex := hle
+    show lifted_committed (⟨ps', st'⟩ : MsgNet) e (st' h0).2.currentTerm
+    rw [hst h0] at hin hle ⊢
+    by_cases heq : h0 = h
+    · rw [heq, update_same] at hin hle ⊢
+      replace hin : e ∈ d.log := hin
+      replace hle : e.eIndex ≤ d.commitIndex := hle
+      show lifted_committed _ e d.currentTerm
+      rw [hci] at hle
+      rw [hct]
+      refine htrans (hP1 h e ?_ hle)
+      rcases handleClientRequest_log_full h (net.nwState h).2 client id c
+          hcr with ⟨-, hlog⟩ | ⟨-, hds⟩
+      · rw [hlog] at hin
+        rcases List.mem_cons.mp hin with heqe | hin0
+        · -- the fresh entry sits above commitIndex (maxIndex sanity)
+          exfalso
+          have hcis : (net.nwState h).2.commitIndex ≤
+              maxIndex (net.nwState h).2.log := hmis.2 h
+          rw [heqe] at hle
+          replace hle : maxIndex (net.nwState h).2.log + 1 ≤
+              (net.nwState h).2.commitIndex := hle
+          exact Nat.not_succ_le_self _ (Nat.le_trans hle hcis)
+        · exact hin0
+      · rw [hds] at hin
+        exact hin
+    · rw [update_neq _ _ heq] at hin hle ⊢
+      exact htrans (hP1 h0 e hin hle)
+  · intro p0 t0 lid pli plt es lci e hp0 hbody hgl hle
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnew
+    · exact htrans (hP2 p0 t0 lid pli plt es lci e hold hbody hgl hle)
+    · exfalso
+      rw [hl] at hnew
+      simp [send_packets, add_ghost_msg] at hnew
+
 end StateMachineSafety
 
 end Raft
