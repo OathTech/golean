@@ -2716,3 +2716,97 @@ is a complete unit if the honest budget says so.
   prevLog_candidateEntriesTerm ✓ (a), primed msg set + principle ✓,
   ghost_log_correct ✓ (b), log_properties_hold_on_ghost_logs ✓ (b) —
   the FULL charter, both halves. Remaining: gate, final entry.
+- 2026-08-23 Unit-13 final gate: `GOLEAN_ALLOW_NO_DIFF=1
+  GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT: PASS, exit 0** (log:
+  `artifacts/ci-arc3-unit13.log`, gitignored; the no-diff notes are the
+  allowed docs+compat hatch — unit 13 touched only `compat/verdi/**` +
+  this log). **The comparator-landmark note CROSSED ITS THRESHOLD this
+  unit**: "last certified run 56 theorems @ 1730567a2d3f, 104
+  commit(s) ago" now prints an explicit "STALE: 104 commits > 100"
+  line (still report-only) — the operator's merge-step
+  comparator-judge obligation, flagged every unit, is now
+  threshold-crossed, not merely accumulating. Nothing in this unit
+  touches a designated statement or Challenge's closure (statement-TCB
+  step ok).
+
+## Final entry — unit 13 complete (2026-08-23, tip = this commit)
+
+**Proved at tip — THE FULL UNIT-13 CHARTER, both halves: the W-B
+remainder AND the W-C ghost chain, with GAP-1's msg-side primed set
+ported on its first genuine need.** Statements 1:1 with their
+Interface files @ a3375e8; zero sorry/native_decide in campaign files
+(grep; sweep-enforced: 2362 declarations within [propext, Quot.sound],
+plus five new curated pins). `#print axioms` verbatim (fresh capped
+`lake env lean` probe against the built package):
+
+```
+'VerdiCompat.Raft.match_index_sanity_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.prevLog_candidateEntriesTerm_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.msg_refined_raft_net_invariant'' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.ghost_log_correct_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.log_properties_hold_on_ghost_logs_invariant' depends on axioms: [propext, Quot.sound]
+```
+
+Inventory:
+- `SafetyLeaves.lean` (1,964 lines, was 1,082): **`match_index_sanity`**
+  (BASE — the matchIndex movement lemmas, the two recon'd case lemmas,
+  the `_of_update` transport, the invariant with the AER max-slot case
+  via `append_entries_reply_sublog` + `maxIndex_is_max`);
+  **`candidateEntriesTerm`** (the term-level twin, with the
+  `candidateEntries_term` definitional bridge and five handler
+  preserves lemmas) and **`prevLog_candidateEntriesTerm`** (the
+  doLeader creation case via `doLeader_messages_full` +
+  `candidate_entries_invariant` on the findAtIndex pivot). W-B is
+  8/8 COMPLETE (units 12+13).
+- `MsgRefinement.lean` (+~250 lines): the TEN primed obligation
+  shapes 1:1 (Interface :195-315), three `_weak` bridges
+  (:362-370, :389-406), and **`msg_refined_raft_net_invariant'`**
+  (Proof.v:276-565 statement) by the logged Q-route (unprimed
+  principle at `Q net := reachable net → Pr net`; no induction
+  duplicated).
+- `GhostLogs.lean` (NEW, 427 lines, wired into VerdiCompat.lean from
+  birth): **`ghost_log_correct`** (packet-only invariant; the
+  doLeader case extracted as `doLeader_message_ghost_log_correct`,
+  riding `nextIndex_sanity`/host facts lifted through
+  `msg_simulation_1` — `mgv_deghost` preserves `nwState`
+  definitionally, so upstream's three `lifted_*` re-statements were
+  unnecessary) and **`log_properties_hold_on_ghost_logs`** — the
+  primed principle's FIRST CONSUMER and its §3.3 discharge witness
+  (all eleven obligations on a real invariant; the fresh-ghost cases
+  consume the successor-reachability premise exactly as designed).
+
+The INVARIANT INDEX is current (71 data rows, recomputed:
+`grep -c "^| "` over the table span = 72 minus the header). 100
+commits on the lane before this one (`git log f64d9b21..HEAD --oneline
+| wc -l`, recomputed at the checkpoint tip 48788650; this final-entry
+commit makes 101).
+
+**Honestly open (carried; none counted toward any total):**
+- GAP-1: the msg-side primed set is now PORTED (this unit); the
+  STATE-ghost primed set (`refined_raft_net_invariant_*'`,
+  RaftRefinementInterface.v:327-439) remains never-triggered and
+  port-on-first-need. Remaining primed-census consumers
+  (GhostLogAllEntries, GhostLogLogMatching, SMS — one use each) can
+  now consume the ported msg-side set directly; no further first-need
+  decision required there.
+- GAP-4 (constructive discipline): held — no new classical
+  dependencies this unit.
+- GAP-8 (msg reghosting: `simulation_2`/`msg_lower_prop`/
+  `_all_the_way`, Proof :655-940): carried — W-F's first work, its
+  only consumer.
+
+**Next unit's charter (Arc 3, unit 14 — proposal, from the unit-11
+wave table; RE-DERIVE the closure fresh before proving, as always):**
+the W-C remainder + W-D (~2,154 upstream lines):
+`NoAppendEntriesRepliesToSelf` (155) + `NoAppendEntriesToLeader` (111)
+[NoAEToSelf ✓] → `MatchIndexLeader` (146) [NoAERepliesToSelf];
+`PrevLogLeaderSublog` (378) [PLCET ✓ this unit];
+`GhostLogAllEntries` (282) [RaftMsgRef ✓, InLogInAllEntries ✓] →
+`GhostLogLogMatching` (564) [the ghost chain];
+`StateMachineSafetyPrime` (518) [AllEntriesLeaderLogs ✓] as budget
+allows. The primed msg uses in GhostLogAllEntries/GhostLogLogMatching
+consume this unit's ported set directly. Beyond: W-E
+`MatchIndexAllEntries` (1,134), then the W-F cap (SMS 3,199 + GAP-8
+reghosting). Successors re-verify THIS unit fresh: capped full build +
+sweep 2362 + the five-headliner probe above + hatch grep over
+GhostLogs.lean AND SafetyLeaves.lean (expect 0 both).
