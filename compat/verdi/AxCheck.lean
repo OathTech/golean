@@ -259,6 +259,17 @@ consumer, `match_index_all_entries`. -/
 /-- info: 'VerdiCompat.Raft.match_index_all_entries_invariant' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms VerdiCompat.Raft.match_index_all_entries_invariant
 
+/-! GAP-8 closed (unit 15): the msg reghosting direction. -/
+
+/-- info: 'VerdiCompat.Raft.msg_simulation_2' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.msg_simulation_2
+
+/-- info: 'VerdiCompat.Raft.msg_lower_prop' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.msg_lower_prop
+
+/-- info: 'VerdiCompat.Raft.msg_lower_prop_all_the_way' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.msg_lower_prop_all_the_way
+
 /-! ## Exhaustive sweep (fails the build on any disallowed axiom) -/
 
 open Lean in

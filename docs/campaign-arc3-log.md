@@ -3186,3 +3186,27 @@ complete units; the remainder chartered honestly.
   Full build green, sweep 2506 (was 2439); hatch grep over
   MatchIndexAllEntries.lean: 0 (exit 1). **W-E COMPLETE — every SMS
   dependency is now an INDEX PROVED row.**
+- 2026-08-23 Slice 85: **GAP-8 CLOSED — the msg reghosting**
+  (`RaftMsgRefinementProof.v:655-940` 1:1), in `MsgRefinement.lean`
+  beside `msg_simulation_1`: `exists_preimage_list` (upstream's
+  `map_subset` in constructive preimage form),
+  `mgv_ghost_simulation_2` (all seven step_failure legs; the state is
+  literally shared, so only the packet lists move —
+  `map_eq_append_cons` re-consumed from unit 1),
+  **`msg_simulation_2`** (every refined-reachable net IS a deghosted
+  msg-ghost-reachable net), **`msg_lower_prop`** and
+  `msg_lower_prop_all_the_way`. [AGENT] ROUTE CALL (logged, §9 —
+  statements 1:1): upstream reaches the chosen packet subset by
+  asserting the FULL-pool successor and dup-drop-reordering down via
+  `step_failure_star` (`dup_drop_reorder`); unnecessary here — BOTH
+  layers' reachability constructors already quantify over any
+  `ps' ⊆ pool ∪ sends`, so the preimage list feeds the MRRIR
+  constructor directly (~200 upstream lines of step-star machinery
+  never enter). The predicted "msg-level subset_reachable" was an
+  artifact of upstream's route, not of the statement. Gotchas: two
+  un-annotated `send_packets` in `show` lines elaborated at the
+  refined layer (annotate under cross-layer `show`), and a bare
+  `RaftNet` notation not in scope in this file silently became an
+  auto-bound implicit (explicit Network type instead). Three AxCheck
+  pins (fresh capped probe, all [propext, Quot.sound]). Build green,
+  sweep 2511; hatch grep over MsgRefinement.lean: 0 (exit 1).
