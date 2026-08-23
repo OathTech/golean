@@ -419,6 +419,20 @@ is the §4.4 park-and-report condition, not an emergency.
   LeaderCompletenessProof (379L) = the unit-10 charter. [AGENT]:
   5th-gen rotation (worker at 816k).
 
+- **Arc 3, unit 10 — LANDED** @ d7e3cfc8 (5th-gen): **LEADER
+  COMPLETENESS PROVED — GAP-6 CLOSED** (PrefixWithinTerm's ~590-line
+  upstream summit collapsed to ~170 Lean lines via one extracted
+  positioning lemma; leader_completeness_invariant +
+  _directly_committed + _committed, ghost-layer landing point exactly
+  as upstream — no base projection exists there, checked). Sweep
+  **2138** decls in [propext, Quot.sound]; 80 commits on the lane;
+  gate PASS. **THE T3 LADDER: election safety ✓ · log matching ✓ ·
+  leader completeness ✓ · state-machine safety = the remaining
+  head** — and GAP-2's msg-ghost contact is CONFIRMED there (unit-11
+  charter posted: SMS 3,199L + SMSPrime 518L + the msg-ghost layer,
+  multiple units expected). Designation of any of these as headline
+  remains [USER] (§3.2), queued with the rest.
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
