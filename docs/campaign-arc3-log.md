@@ -2402,3 +2402,28 @@ first real consumers; their single primed-principle uses decided
 per-site). Successors re-verify THIS unit fresh: capped full build +
 sweep 2213 + the six-headliner probe above + hatch grep over
 MsgRefinement.lean (expect 0).
+
+## Unit 12 — the W-B plain leaves (2026-08-23, coordinator-accepted charter)
+
+Charter: the eight W-B files (~1,695 lines), then W-C's
+GhostLogCorrect + GhostLogsLogProperties as the honest budget allows;
+context rule ACTIVE — W-B alone is a complete unit.
+
+- 2026-08-23 SUCCESSOR RE-VERIFICATION of unit 11 (recomputed, same
+  worker continuing): tip 24dbbf97, tree clean; pin re-verified
+  `a3375e867326a82225e724cc1a7b4758b029376f`; fresh capped
+  `lake env lean AxCheck.lean` verbatim `AxCheck sweep: 2213
+  declarations across VerdiCompat modules, axiom set within
+  [propext, Quot.sound]`; fresh six-headliner probe (principle,
+  simulation_1, lift, lift_all_the_way, deghost_spec, witness) all
+  `[propext, Quot.sound]` verbatim; hatch grep over
+  MsgRefinement.lean: 0 (exit 1). All claims hold.
+- 2026-08-23 [AGENT] W-B CLOSURE re-checked fresh (imports of all 8
+  proof files @ a3375e8): every imported Interface is an INDEX PROVED
+  row — AERLeaderLogs/OneLeaderLogPerTerm/LeaderLogsSorted/RLML/
+  AECameFromLeaders/AllEntriesLog/LeaderSublog/LHLLStrong (AELL);
+  TermSanity (LogAllEntries); AEReplySublog+Sorted (MatchIndexSanity);
+  LeaderCompleteness+RLML (TransitiveCommit — unit 10's theorem is
+  its dep); CroniesTerm/CroniesCorrect/CandidateEntries (PLCET). NO
+  hidden edges, NO msg-ghost. File plan: one new `SafetyLeaves.lean`
+  (imports MsgRefinement), wired from birth.
