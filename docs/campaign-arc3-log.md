@@ -2490,3 +2490,63 @@ context rule ACTIVE — W-B alone is a complete unit.
   (captured from a fresh capped probe — all [propext, Quot.sound]).
   Build green, sweep 2287 + pins; hatch grep over SafetyLeaves.lean: 0
   (exit 1); file = 1,082 lines.
+- 2026-08-23 Unit-12 final gate: `GOLEAN_ALLOW_NO_DIFF=1
+  GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT: PASS, exit 0** (log:
+  `artifacts/ci-arc3-unit12.log`, gitignored; no-diff notes are the
+  allowed docs+compat hatch — unit 12 touched only `compat/verdi/**` +
+  this log). Comparator-landmark note now "56 theorems @ 1730567a2d3f,
+  94 commit(s) ago" — same operator-merge-time flag as units 1-11;
+  nothing touches a designated statement or Challenge's closure
+  (statement-TCB step ok).
+
+## Final entry — unit 12 SPLIT at the clean boundary (2026-08-23, tip 0e62ce46 + this commit)
+
+**Context-rule stop, per the coordinator's activation**: SIX of the
+eight W-B files are COMPLETE and gate-green (1,175 of the wave's
+~1,695 upstream lines); `match_index_sanity` (254L) and
+`prevLog_candidateEntriesTerm` (489L) are the chartered remainder —
+the draft of the former was REVERTED uncommitted when the error rate
+rose (the split discipline: a completed prefix + a chartered
+remainder is branch-complete; no hatch ever committed).
+
+**Proved at tip** — `SafetyLeaves.lean` (1,082 lines, zero
+sorry/native_decide; sweep-enforced: 2287 declarations within
+[propext, Quot.sound], six new curated pins). `#print axioms` verbatim
+(fresh capped probe):
+
+```
+'VerdiCompat.Raft.transitive_commit_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.all_entries_leader_logs_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.in_log_in_all_entries_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.log_all_entries_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.lastApplied_le_commitIndex_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.no_append_entries_to_self_invariant' depends on axioms: [propext, Quot.sound]
+```
+
+The INVARIANT INDEX is current (70 data rows, recomputed by table span
+:370-:439; the two UNIT-13 CHARTER rows included). 90 commits on the
+lane (`git log f64d9b21..HEAD --oneline | wc -l`, recomputed at
+0e62ce46).
+
+**Honestly open (carried):** GAP-1 (incl. the msg-side primed set with
+its census), GAP-4 (constructive discipline holding), GAP-8
+(msg reghosting — W-F's first work); the unit-13 remainder below.
+
+**Next unit's charter (Arc 3, unit 13 — the unit-12 remainder + W-C;
+RE-DERIVE closures fresh, as always):**
+1. **`match_index_sanity`** (MatchIndexSanityProof.v, 254L, BASE) —
+   the slice-69 recon is recorded in the split entry above (case
+   lemmas :88-105/:148-161, applyEntries_matchIndex induction, the
+   AER max-slot case via append_entries_reply_sublog).
+2. **`prevLog_candidateEntriesTerm`** (PLCETProof.v, 489L) —
+   `candidateEntriesTerm` (the term-level candidateEntries twin) +
+   eight preserves lemmas (mirror unit 3's entry-level proofs) + the
+   doLeader creation case via `candidate_entries_invariant` on the
+   findAtIndex pivot entry.
+3. Then W-C as budget allows: `GhostLogCorrect` (275L) +
+   `GhostLogsLogProperties` (201L) — the msg-ghost principle's first
+   real consumers (their single primed-principle uses decided per-site,
+   slice-39 pre-state route first).
+Successors re-verify THIS unit fresh: capped full build + sweep 2287 +
+the six-headliner probe above + hatch grep over SafetyLeaves.lean
+(expect 0).
