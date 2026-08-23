@@ -2977,3 +2977,97 @@ wants it); context stop-rule stands.
   MatchIndexLeader ✓, PrevLogLeaderSublog ✓, GhostLogAllEntries ✓,
   GhostLogLogMatching ✓, StateMachineSafetyPrime ✓. Remaining: gate,
   final entry.
+- 2026-08-23 Unit-14 final gate: `GOLEAN_ALLOW_NO_DIFF=1
+  GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT: PASS, exit 0** (log:
+  `artifacts/ci-arc3-unit14.log`, gitignored; the no-diff notes are the
+  allowed docs+compat hatch — unit 14 touched only `compat/verdi/**` +
+  this log). Comparator-landmark note: "56 theorems @ 1730567a2d3f,
+  113 commit(s) ago" + the explicit "STALE: 113 commits > 100" line
+  (report-only) — the threshold-crossed operator merge-step obligation
+  flagged since unit 13. Nothing in this unit touches a designated
+  statement or Challenge's closure (statement-TCB step ok).
+
+## Final entry — unit 14 complete (2026-08-23, tip = this commit)
+
+**Proved at tip — THE FULL UNIT-14 CHARTER: the W-C remainder AND all
+of W-D, seven upstream files (2,154 lines recomputed at the pin),
+statements 1:1 with their Interface files @ a3375e8.** Zero
+sorry/native_decide in campaign files (grep; sweep-enforced: 2439
+declarations within [propext, Quot.sound], plus nine new curated
+pins). `#print axioms` verbatim (fresh capped `lake env lean` probe
+against the built package):
+
+```
+'VerdiCompat.Raft.no_append_entries_replies_to_self_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.no_append_entries_to_leader_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.match_index_leader_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.prevLog_leader_sublog_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.ghost_log_allEntries_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.ghost_log_entries_match_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.state_machine_safety_host'_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.state_machine_safety_nw'_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.state_machine_safety'_invariant' depends on axioms: [propext, Quot.sound]
+```
+
+Inventory:
+- `SafetyPrime.lean` (NEW, 1,087 lines, wired into VerdiCompat.lean
+  from birth): `no_append_entries_replies_to_self` (BASE),
+  `no_append_entries_to_leader` (BASE via lower_prop; the
+  one_leaderLog_per_term_host collision route),
+  `match_index_leader` (BASE; slice-69 lemmas re-consumed, the AER
+  slot never the leader's own via NoAERepliesToSelf),
+  `prevLog_leader_sublog` (BASE; unit 13's PLCET lowered through
+  `wonElection_candidateEntriesTerm_rvr` kills the RVR fresh win; the
+  doLeader pivot moves via base leader_sublog), and
+  **`state_machine_safety'` — the SMS-PRIME statement (host' ∧ nw')**
+  with the two shared cores (`smsp_e_in_ll_cases` + the own-term
+  transfer via `network_host_entries`).
+- `GhostLogs.lean` (now 1,241 lines): `ghost_log_allEntries` (second
+  primed consumer; fresh ghosts recorded via
+  `lifted_in_log_in_all_entries` at the successor net) and
+  **`ghost_log_entries_match`** (host ∧ nw; the
+  `handleAppendEntries_ghost_log` engine — ghost_log_correct + unit
+  8's `thing`; the CR cons bounded by ghost_log_allEntries +
+  msg-lifted allEntries_leader_sublog through
+  `sorted_entries_match_cons`), plus seven msg-lifted defeq
+  one-liners.
+- `MsgRefinement.lean`: the FIVE remaining `_weak` bridges
+  (Interface :317-388) — all ten now ported.
+
+The INVARIANT INDEX is current (78 data rows, recomputed: table span
+`grep -c "^| "` = 79 minus the header; 7 new rows). 109 commits on the
+lane before this one (`git log f64d9b21..HEAD --oneline | wc -l` = 108
+recomputed at the checkpoint tip 034c5106, plus the checkpoint commit;
+this final-entry commit makes 110).
+
+**The SMS cap's remaining closure (recomputed from the unit-11 wave
+table minus everything now proved):** W-E `MatchIndexAllEntries`
+(1,134L; deps NoAEToLeader ✓, NoAEToSelf ✓, LogAllEntries ✓,
+MatchIndexLeader ✓, MatchIndexSanity ✓ — ALL ported as of this unit),
+then the W-F cap: `StateMachineSafetyProof.v` (3,199L) + GAP-8 (the
+msg reghosting: `simulation_2`/`msg_lower_prop`/`_all_the_way`,
+Proof :655-940) + the remaining primed-census site (SMS's one use —
+the ported primed set serves it directly).
+
+**Honestly open (carried; none counted toward any total):**
+- GAP-1: the STATE-ghost primed set (RaftRefinementInterface.v:327-439)
+  remains never-triggered, port-on-first-need. The msg-side primed set
+  is fully ported (all ten weak bridges now included).
+- GAP-4 (constructive discipline): held — no new classical
+  dependencies.
+- GAP-8 (msg reghosting): carried — the W-F cap's first work, its only
+  consumer.
+
+**Next unit's charter (Arc 3, unit 15 — proposal; RE-DERIVE the
+closure fresh before proving, as always):** W-E
+`MatchIndexAllEntries` (1,134L — the last pre-cap file; every dep is
+an INDEX PROVED row as of this unit), then BEGIN the W-F cap as the
+honest budget allows: GAP-8's reghosting half
+(`mgv_ghost_simulation_2`/`msg_lower_prop`/`_all_the_way`, needing a
+msg-level `subset_reachable` mirroring unit 7's) is the cap's entry
+ticket, then `StateMachineSafetyProof.v`'s interior (its
+CommitRecordedCommitted/MaxIndexSanity lifted deliverables included).
+Split discipline as always. Successors re-verify THIS unit fresh:
+capped full build + sweep 2439 + the nine-headliner probe above +
+hatch grep over SafetyPrime.lean AND GhostLogs.lean AND
+MsgRefinement.lean (expect 0 all three).
