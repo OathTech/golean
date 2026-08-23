@@ -427,7 +427,7 @@ from artifacts.
 | appendEntriesReply_sublog | PROVED (base) | Raft/AppendEntriesReplySublogInterface.v:8-16 | AppendEntriesChain.lean (invariant) |
 | nextIndex_safety | PROVED (base) | Raft/NextIndexSafetyInterface.v:8-11 | AppendEntriesChain.lean (invariant) |
 | leaderLogs_logMatching (leaderLogs_entries_match) | PROVED | Raft/LeaderLogsLogMatchingInterface.v:9-13 | AppendEntriesChain.lean (conj invariant + interface half) |
-| msg_refined_raft_net_invariant (msg-ghost principle, GAP-2) | PROVED (unprimed + simulation_1/lift/deghost_spec + witness; primed set + reghosting deferred, census logged) | Raft/RaftMsgRefinementInterface.v:34-195 + RaftProofs/RaftMsgRefinementProof.v:12-275,566-654 | MsgRefinement.lean |
+| msg_refined_raft_net_invariant (msg-ghost principle, GAP-2) | PROVED (unprimed + PRIMED set (unit 13) + simulation_1/lift/deghost_spec + witness; reghosting = GAP-8, deferred) | Raft/RaftMsgRefinementInterface.v:34-406 + RaftProofs/RaftMsgRefinementProof.v:12-275,276-565,566-654 | MsgRefinement.lean |
 | transitive_commit | PROVED | Raft/TransitiveCommitInterface.v:9-15 | SafetyLeaves.lean (invariant) |
 | all_entries_leader_logs (4 conjuncts) | PROVED | Raft/AllEntriesLeaderLogsInterface.v | SafetyLeaves.lean (assembly over ported invariants) |
 | in_log_in_all_entries | PROVED | Raft/InLogInAllEntriesInterface.v | SafetyLeaves.lean (invariant) |
@@ -436,6 +436,8 @@ from artifacts.
 | no_append_entries_to_self | PROVED (base) | Raft/NoAppendEntriesToSelfInterface.v | SafetyLeaves.lean (invariant) |
 | match_index_sanity | PROVED (base) | Raft/MatchIndexSanityInterface.v:9-13 | SafetyLeaves.lean (invariant) |
 | prevLog_candidateEntriesTerm | PROVED | Raft/PrevLogCandidateEntriesTermInterface.v:10-16 | SafetyLeaves.lean (invariant; candidateEntriesTerm twin) |
+| ghost_log_correct | PROVED (msg) | Raft/GhostLogCorrectInterface.v:8-19 | GhostLogs.lean (invariant) |
+| log_properties_hold_on_ghost_logs | PROVED (msg, primed principle) | Raft/GhostLogsLogPropertiesInterface.v:8-16 | GhostLogs.lean (invariant) |
 - 2026-08-22 Slice 13 (1cc83c1d): log/message spec lemmas for the ring
   (findGtIndex_in, removeAfterIndex_in, per-handler log facts,
   doLeader_messages, rvr cronies function-level cases).
@@ -2697,3 +2699,20 @@ is a complete unit if the honest budget says so.
   written state, `ghost_of_send`/the named reply packet equate the
   ghost. Compiled on first attempt. W-C's two chartered files are both
   PROVED.
+- 2026-08-23 CHECKPOINT (recomputed at this tip; 6 slices since the
+  unit-13 opening: 69, 70, 71, 72, 73, 74 + this pins/INDEX slice):
+  `git log f64d9b21..HEAD --oneline | wc -l` = 99 commits (before this
+  one); fresh capped full `lake build` green with `AxCheck sweep: 2362
+  declarations across VerdiCompat modules, axiom set within
+  [propext, Quot.sound]` (five new curated pins for the unit-13
+  headliners, captured from a fresh capped probe — all
+  [propext, Quot.sound] verbatim, incl. the primed principle);
+  `grep -c "sorry\|native_decide"` over GhostLogs.lean and
+  SafetyLeaves.lean: 0 and 0 (exit 1); GhostLogs.lean = 427 lines,
+  SafetyLeaves.lean = 1,964 lines (wc). INDEX = 71 data rows
+  (recomputed by `grep -c "^| "` over the table span = 72 minus the
+  header; the two former UNIT-13 CHARTER rows now PROVED plus two new
+  GhostLog* rows). Unit-13 state: match_index_sanity ✓ (a),
+  prevLog_candidateEntriesTerm ✓ (a), primed msg set + principle ✓,
+  ghost_log_correct ✓ (b), log_properties_hold_on_ghost_logs ✓ (b) —
+  the FULL charter, both halves. Remaining: gate, final entry.

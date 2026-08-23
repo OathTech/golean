@@ -207,6 +207,22 @@ open VerdiCompat VerdiCompat.Raft
 /-- info: 'VerdiCompat.Raft.no_append_entries_to_self_invariant' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms VerdiCompat.Raft.no_append_entries_to_self_invariant
 
+/-! Unit-13 headliners: the W-B remainder (match_index_sanity,
+prevLog_candidateEntriesTerm), the primed msg principle (GAP-1
+msg-side), and the W-C ghost chain (GhostLogCorrect +
+GhostLogsLogProperties — the latter is the primed principle's
+discharge witness). -/
+/-- info: 'VerdiCompat.Raft.match_index_sanity_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.match_index_sanity_invariant
+/-- info: 'VerdiCompat.Raft.prevLog_candidateEntriesTerm_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.prevLog_candidateEntriesTerm_invariant
+/-- info: 'VerdiCompat.Raft.msg_refined_raft_net_invariant'' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.msg_refined_raft_net_invariant'
+/-- info: 'VerdiCompat.Raft.ghost_log_correct_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.ghost_log_correct_invariant
+/-- info: 'VerdiCompat.Raft.log_properties_hold_on_ghost_logs_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.log_properties_hold_on_ghost_logs_invariant
+
 /-! ## Exhaustive sweep (fails the build on any disallowed axiom) -/
 
 open Lean in
