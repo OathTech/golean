@@ -1523,3 +1523,19 @@ re-verified at THIS unit's closure derivation, not inherited.
   disjunct 2 with Prefix_sane by findGtIndex_app_eq; unresolved ⇒
   origin or nextIndex_sanity contradiction). Build green, sweep 1853
   (was 1805).
+- 2026-08-23 Slice 43: the LogsLeaderLogs support layer
+  (CommonTheorems.v slices, constructive per GAP-4): four cons-step
+  guard-rewrite lemmas (findGtIndex/removeAfterIndex × pos/neg — the
+  `unfold`-both-sides trap made explicit), contiguity machinery
+  (contiguous_index_singleton, cons_contiguous_sorted, contiguous_app,
+  removeAfterIndex_contiguous), **`sorted_mem_eq`** (sorted logs with
+  equal member sets coincide — the constructive replacement for
+  upstream's sorted_Permutation_eq/NoDup_Permutation route under
+  `removeAfterIndex_same_sufficient` :1624), prefix_sorted, upstream's
+  `thing2`/`thing`/`thing3` (names kept 1:1 for citation mapping),
+  findGtIndex_removeAfterIndex_commute, findGtIndex_app_1/_2,
+  findGtIndex_non_empty, removeAfterIndex_in_app/_in_app_l'/
+  _maxIndex_sorted/_le/_eq. [AGENT] Gotchas re-hit, resolved per the
+  lane record: omega-on-abbrev (×2, explicit Nat lemmas), continuation
+  lines indented below the tactic column silently start a new command
+  (the sorted_mem_eq parse break).
