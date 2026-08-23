@@ -1,5 +1,0 @@
-import VerdiCompat
-#print axioms VerdiCompat.Raft.leader_completeness_invariant
-#print axioms VerdiCompat.Raft.leader_completeness_directly_committed_invariant
-#print axioms VerdiCompat.Raft.leader_completeness_committed_invariant
-#check @VerdiCompat.Raft.leader_completeness_invariant
