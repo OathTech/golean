@@ -2669,3 +2669,20 @@ is a complete unit if the honest budget says so.
   obligation (every unprimed obligation already carries pre-state
   reachability), no 290-line staged induction duplicated. Compiled on
   first attempt; full package rebuild green, sweep 2343 (was 2287).
+- 2026-08-23 Slice 73: `GhostLogs.lean` opened —
+  **`ghost_log_correct_invariant`** (GhostLogCorrectInterface.v:8-19 /
+  Proof.v:243-275 1:1; the msg-ghost layer's first real consumer, via
+  the UNPRIMED principle): every in-flight AE's ghost log
+  contextualizes its payload (scratch send, or the prevLog pivot in
+  the ghost log with entries = its findGtIndex tail). The invariant is
+  PACKET-ONLY, so every non-creating obligation is pure membership
+  plumbing; the doLeader case is the extracted
+  `doLeader_message_ghost_log_correct`: `doLeader_messages_nextIndex`
+  pins the message shape over the PRE-state (no upstream
+  doLeader_getNextIndex conversion needed), the `pli = 0` side rides
+  host positivity + `sorted_findGtIndex_0`, the positive side is
+  `nextIndex_sanity` — all lifted through `msg_simulation_1`
+  (`mgv_deghost` keeps `nwState` definitionally, so upstream's three
+  `lifted_*` re-statements are unnecessary; noted as a route
+  simplification, statements unchanged). New helper
+  `mem_send_ghost_elim` (the send-batch eliminator). Build green.
