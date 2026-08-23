@@ -164,6 +164,14 @@ open VerdiCompat VerdiCompat.Raft
 #guard_msgs in #print axioms VerdiCompat.Raft.allEntries_log_invariant
 /-- info: 'VerdiCompat.Raft.allEntries_votesWithLog_invariant' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms VerdiCompat.Raft.allEntries_votesWithLog_invariant
+/-- info: 'VerdiCompat.Raft.append_entries_request_term_sanity_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.append_entries_request_term_sanity_invariant
+/-- info: 'VerdiCompat.Raft.allEntries_candidateEntries_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.allEntries_candidateEntries_invariant
+/-- info: 'VerdiCompat.Raft.allEntries_leader_sublog_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.allEntries_leader_sublog_invariant
+/-- info: 'VerdiCompat.Raft.allEntries_log_matching_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.allEntries_log_matching_invariant
 
 /-! ## Exhaustive sweep (fails the build on any disallowed axiom) -/
 
