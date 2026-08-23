@@ -323,6 +323,20 @@ is the §4.4 park-and-report condition, not an emergency.
   lane gate PASS. Units 7-8 chartered (~6,800 lines remaining to
   leader_completeness's proof).
 
+- **Arc 4, A4-U2 slice 1 — LANDED** @ 8c1f5d9e: the Sym extension's
+  design note (five classes = quit-site lifts, not domain work;
+  sortSlice needs NOTHING; call-entry one lever for fid/closure/
+  interface; choice story = composition-level canonicalization, pick-
+  prefix threading rejected; channel-logic salvage honestly NEGATIVE)
+  + class 1 (struct-store normalization) end-to-end with ZERO edits
+  to the 8,193 existing Sym lines (delegating stepFnT, Sym/TableExt
+  652 lines). **THE RE-MEASURE**: the pilot leaf's ~105 span lines +
+  helper lemma → ONE transported window (3-line rfl + 6-line
+  refinement application), ∀ρ ∀σ-extending ∀ch; two measured gotchas
+  recorded (smartUnfolding reversal 671s↔7.3s; decide +kernel for
+  γ-projections). Gate PASS, 471 jobs green. Slice ladder: 2 =
+  sync-ops, 3 = call entry, 4 = choice-crossing composition.
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
