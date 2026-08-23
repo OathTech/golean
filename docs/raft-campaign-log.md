@@ -384,6 +384,31 @@ is the §4.4 park-and-report condition, not an emergency.
   successor dispatched on A4-U3 (the first FULL handler equation +
   the A4 scale verdict re-projecting U4..U9).
 
+- **Arc 2, unit 4 — LANDED** @ 0c462c7c: **THE VERIFIED FAST-TWIN
+  EVALUATOR IS PROVED** — trie heap + γ (range dump; append-only
+  made WF-free), stepFast arm-for-arm (~170 fun_cases + 29 manual),
+  the loop-transport bridge, and the ANCHOR: seed + StateWf + all
+  1,382 init steps kernel-re-run against reflected literals in one
+  8:18/36.7GB equation. Worker ran its own 3-fork wave with a
+  written template + its own re-verification (a census-classifier
+  blind spot caught and mirrored). Mid-build gate MARGINAL GO
+  (fast-500 2:28/21.6GB vs slow OOM; heap-size dependence REMOVED;
+  35-80 CPU-h projected, levers named). Assembly COSTED AND STAGED
+  as unit 5 (charter §6.8) per directive. FLAG for the operator's
+  merge step: `import Audit.FastEval` touches Challenge's trusted
+  closure → the comparator-judge landmark is owed at merge.
+- **Arc 3, unit 8 — LANDED** @ becfe284 (4th-gen; re-verification
+  held; closure recomputed to 3,519 lines catching the charter's
+  stale sum): **GAP-7 CLOSED, BOTH HALVES** —
+  LeaderLogsAssembly.lean 3,965 lines; the allEntries_log summit
+  (upstream's ~500-line Ltac splice re-derived through two
+  containment lemmas, §9 guided re-proof); sweep **1985** decls
+  clean; index 55 rows; GAP-2 still zero contact (re-verified at
+  the closure incl. AllEntriesLog, the predicted first contact).
+  **GAP-6 is now the ONLY named gap on the leader-completeness
+  path** — unit 9 chartered (6 files, ~3,428 lines, split point
+  recorded).
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
