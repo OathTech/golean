@@ -2216,3 +2216,75 @@ minimal-port-on-first-need (design-doc §5 D1's generic-lift decision
 point arrives here: the second ghost instance). Successors re-verify
 THIS unit fresh: capped build + sweep 2138 + the seven-headliner probe
 above + hatch grep over LeaderCompleteness.lean (expect 0).
+
+## Unit 11 — the msg-ghost foundation (2026-08-23, coordinator-accepted charter)
+
+Charter: the state-machine-safety cap, GAP-2 firing first — port the
+minimal msg-ghost principle 1:1 (vocabulary, obligation shapes,
+principle, transfer, §3.3 discharge witness) as its own gated slice
+before any SMS invariant consumes it; context rule ACTIVE (the
+msg-ghost principle alone is an acceptable unit-11).
+
+- 2026-08-23 SUCCESSOR RE-VERIFICATION of unit 10 (recomputed, same
+  worker continuing under the unit-11 charter): tip d7e3cfc8, tree
+  clean; `deps/verdi-raft` pin re-verified
+  `a3375e867326a82225e724cc1a7b4758b029376f`. Fresh capped
+  `lake build` green; fresh capped `lake env lean AxCheck.lean`
+  verbatim `AxCheck sweep: 2138 declarations across VerdiCompat
+  modules, axiom set within [propext, Quot.sound]`; fresh
+  seven-headliner `#print axioms` probe (log_log / T2 / inductive /
+  allEntries_leaderLogs pwt + the three leader_completeness theorems):
+  all `[propext, Quot.sound]` verbatim; hatch grep over
+  LeaderCompleteness.lean: 0 (exit 1). All claims hold.
+- 2026-08-23 [AGENT] UNIT-11+ CLOSURE, re-derived fresh (scripted
+  transitive `Require Import` walk @ a3375e8, pin re-verified; diffed
+  against the INDEX's proved rows): **20 unported proof files, 9,612
+  upstream lines** (wc at the pin). Two charter names have NO proof
+  files: CommitRecordedCommitted and MaxIndexSanity are proved INSIDE
+  StateMachineSafetyProof.v (lifted forms) — deliverables of the cap,
+  not separate units. Waves ([deps] = unported only):
+  - W-A (GAP-2): RaftMsgRefinement 954 [—];
+  - W-B (plain leaves, deps all ported): AllEntriesLeaderLogs 106,
+    InLogInAllEntries 175, LogAllEntries 269, LastAppliedLeCommitIndex
+    223, MatchIndexSanity 254, NoAppendEntriesToSelf 148,
+    PrevLogCandidateEntriesTerm 489, TransitiveCommit 31;
+  - W-C: NoAppendEntriesRepliesToSelf 155 + NoAppendEntriesToLeader
+    111 [NoAEToSelf], PrevLogLeaderSublog 378 [PLCET],
+    GhostLogCorrect 275 + GhostLogsLogProperties 201 [RaftMsgRef],
+    GhostLogAllEntries 282 [RaftMsgRef, InLogInAllEntries],
+    StateMachineSafetyPrime 518 [AllEntriesLeaderLogs];
+  - W-D: MatchIndexLeader 146 [NoAERepliesToSelf],
+    GhostLogLogMatching 564 [the ghost chain];
+  - W-E: MatchIndexAllEntries 1,134 [NoAEToLeader, NoAEToSelf,
+    LogAllEntries, MatchIndexLeader, MatchIndexSanity];
+  - W-F: StateMachineSafety 3,199 [everything above].
+- 2026-08-23 [AGENT] UNIT-11 SCOPE (minimal-port-on-first-need, the
+  coordinator's sanctioned minimum): the msg-ghost FOUNDATION —
+  `RaftMsgRefinementInterface.v` vocabulary (ghost_log,
+  write_ghost_log, add_ghost_msg, the msg-refined params triple,
+  `msg_refined_raft_intermediate_reachable`), the ELEVEN obligation
+  shapes 1:1 (:83-195), the dispatchers, **THE principle
+  `msg_refined_raft_net_invariant`** (Proof.v:58-275), the erasure
+  half of the transfer (`mgv_deghost`, `msg_simulation_1`
+  (Proof.v:566-645), `msg_lift_prop`, `msg_deghost_spec`), and a §3.3
+  discharge witness. DEFERRED with consumer census (logged, not
+  silent): (a) the PRIMED obligation set + `msg_refined_raft_net_
+  invariant'` (Interface :197-439, Proof :276-565) — GAP-1's msg-side
+  instance; consumers: exactly ONE use each in GhostLogsLogProperties/
+  GhostLogAllEntries/GhostLogLogMatching/SMS (grep at the pin), each a
+  candidate for the slice-39 pre-state route, decided at consumption;
+  (b) `simulation_2`/`msg_lower_prop`(+`_all_the_way`) (Proof
+  :655-940) — reghosting via msg-level dup-drop (needs a msg-level
+  `subset_reachable` mirroring unit 7's); consumers: SMS only
+  (3× msg_lower_prop, 1× lift_all_the_way). Both are the W-F unit's
+  first work. Design note §5 D1's generic-lift decision: the msg-ghost
+  is a DIFFERENT construction from the state-ghost (per-packet vs
+  per-node), so the generic GhostSimulations lift still has one
+  consumer per shape — inlined at the raft instance again, D1 stands.
+- 2026-08-23 [AGENT] Witness choice (§3.3): `ghost_entries_gt_0` —
+  every entry of every in-flight ghost log has a positive index. Real
+  content (consumes every obligation's packet clause and handler log
+  shape; rides msg_simulation_1 + the deghost-state equality into the
+  existing refined entries_gt_0/log-shape lemmas), deliberately NOT
+  one of the GhostLog* chain's named statements (no pre-emption,
+  exactly unit 1's VotesShape discipline).
