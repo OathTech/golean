@@ -3304,3 +3304,114 @@ complete units; the remainder chartered honestly.
   Build green, sweep 2617; hatch grep over StateMachineSafety.lean: 0
   (exit 1); file 1,975 lines. **THE UNIT-15 CHARTER IS COMPLETE IN
   FULL: (a) + (b) + (c).**
+- 2026-08-23 Unit-15 final gate: `GOLEAN_ALLOW_NO_DIFF=1
+  GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT: PASS, exit 0** (log:
+  `artifacts/ci-arc3-unit15.log`, gitignored; the no-diff notes are the
+  allowed docs+compat hatch — unit 15 touched only `compat/verdi/**` +
+  this log). Comparator-landmark note: "56 theorems @ 1730567a2d3f,
+  128 commit(s) ago" + the explicit "STALE: 128 commits > 100" line
+  (report-only) — the threshold-crossed operator merge-step obligation,
+  flagged since unit 13. Nothing in this unit touches a designated
+  statement or Challenge's closure (statement-TCB step ok — the
+  verdi-compat gate line reads
+  `ok   verdi compat gate (build + AxCheck + fixture pin)`).
+
+## Final entry — unit 15 complete: THE T3 SAFETY LATTICE IS CLOSED (2026-08-23, tip = this commit)
+
+**Proved at tip — the FULL unit-15 charter: (a) W-E
+`MatchIndexAllEntries` with GAP-1's state-side primed set on its first
+genuine trigger; (b) GAP-8, the msg reghosting; (c) THE W-F CAP —
+`StateMachineSafetyProof.v`'s interior (3,199 upstream lines), landing
+`state_machine_safety` at BASE level and discharging Properties.lean's
+declared `StateMachineSafetyStatement` natively.** With it, the
+unit-11 census's ENTIRE SMS closure (20 proof files, 9,612 upstream
+lines, waves W-A through W-F) is ported; upstream's `smsi`/`misi`/
+`crci` instances all have lane equivalents. Zero sorry/native_decide
+in campaign files (grep; sweep-enforced: 2617 declarations within
+[propext, Quot.sound], plus eleven new curated pins this unit).
+
+**THE COMPLETE T3 LADDER (constitution §2.3), stated plainly:**
+- **Election safety ✓** (unit 2: `one_leader_per_term_invariant`,
+  base layer via `lower_prop`);
+- **Log matching ✓** (unit 6: `log_matching_invariant`, base layer);
+- **Leader completeness ✓** (unit 10: `leader_completeness_invariant`,
+  refined layer — upstream's own landing point);
+- **State-machine safety ✓** (THIS UNIT:
+  `state_machine_safety_invariant`, BASE layer — committed entries
+  agree, `commit_recorded` through the double erasure).
+All three Properties.lean transfer targets
+(OneLeaderPerTerm/LogMatching/StateMachineSafety) are discharged
+natively. Per §2.3 these are HEADLINE-AS-PROVED candidates —
+designation is Mike's act, not the campaign's; nothing was designated
+here.
+
+`#print axioms` verbatim (fresh capped `lake env lean` probe against
+the built package at this tip):
+
+```
+'VerdiCompat.Raft.one_leader_per_term_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.oneLeaderPerTermStatement_holds' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.log_matching_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.logMatchingStatement_holds' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.leader_completeness_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.state_machine_safety'_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.state_machine_safety_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.stateMachineSafetyStatement_holds' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.everything_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.maxIndex_sanity_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.commit_recorded_committed_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.match_index_all_entries_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.refined_raft_net_invariant'' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.msg_simulation_2' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.msg_lower_prop' depends on axioms: [propext, Quot.sound]
+```
+
+Inventory (this unit): `RefinedProofStructure.lean` grew to 1,634
+lines (the state-side primed set); `MatchIndexAllEntries.lean` (NEW,
+1,076); `MsgRefinement.lean` grew to 1,682 (the reghosting);
+`StateMachineSafety.lean` (NEW, 1,975). The INVARIANT INDEX is current
+(84 data rows, recomputed over the table span: `grep -c "^| "` = 85
+minus the header). 124 commits on the lane before the final-entry
+commits (`git log f64d9b21..HEAD --oneline | wc -l`, recomputed at
+74854d77).
+
+**Honestly open (carried; none counted toward any total):**
+- GAP-1: **CLOSED** — the state-side primed set is ported (this unit,
+  first genuine trigger: MatchIndexAllEntries' AE case) beside unit
+  13's msg side; the primed-state-ghost set is no longer a
+  port-on-first-need placeholder anywhere.
+- GAP-2/5/6/7/8: all closed in units 6-15.
+- GAP-4 (classical-list doctrine question): carried — the whole cap
+  resolved constructively again (no new classical dependencies); the
+  doctrine question (whether the lane would ever widen the axiom set
+  for classical list machinery) never fired across fifteen units and
+  can close as MOOT at wrap unless the operator prefers to keep it.
+
+**Consolidation candidates (promotion ledger, for the wrap unit):**
+- the cross-layer ghost-transport family (`mia_allEntries_grow`,
+  `glae_transport`, `came_from_leaders_transport`,
+  `lifted_committed_of_update` — one shape, four instances);
+- unit 4's inline `hwin` vs the promoted `rvr_win_votes` (flagged at
+  slice 39, still unconsumed);
+- unit 13's flag: entry-level `*_preserves_candidateEntries` derivable
+  from the term-level set;
+- `handleAppendEntries_accept_detail` / `_ci_log` / `_log` overlap
+  (three cuts of one case analysis).
+
+**Next unit's charter (Arc 3, unit 16 — the wrap; proposal):**
+(1) the consolidation slice above (promotion-ledger rule: every listed
+shape has ≥2 consumers); (2) lane wrap — a closing section in the
+design doc recording the Plan-A port's final extent (the T3 lattice
+complete; T4 linearizability (`Linearizability.lean`/
+`RaftLinearizable.lean` P1 statement ports) explicitly NOT attempted —
+constitution §2.3 marks T4 stretch, and its client-layer proof chain
+(`RaftLinearizableProofs.v` + the GhostLogsUsed cluster) is unported);
+(3) end-state re-verification (fresh build + sweep 2617 + the
+fifteen-probe ladder above + hatch greps). The lane then ends
+branch-complete; the operator's merge step carries the
+threshold-crossed comparator-judge obligation (128 commits stale,
+flagged every unit since 13). Successors re-verify THIS unit fresh:
+capped full build + sweep 2617 + the fifteen-headliner probe above +
+hatch grep over StateMachineSafety.lean AND MatchIndexAllEntries.lean
+AND MsgRefinement.lean AND RefinedProofStructure.lean (expect 0 all
+four).
