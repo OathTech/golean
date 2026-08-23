@@ -1644,3 +1644,84 @@ re-verified at THIS unit's closure derivation, not inherited.
   `h0 = p.pDst` eliminates h0 (LEFT, projection right) — post-subst
   scripts must reference p.pDst; and the unit-7 nomatch-through-`first`
   leak (put the benign alternative first).
+- 2026-08-23 Unit-8 final gate: `GOLEAN_ALLOW_NO_DIFF=1
+  GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT: PASS, exit 0** (log:
+  `artifacts/ci-arc3-unit8.log`, gitignored; the no-diff notes are the
+  allowed docs+compat hatch — unit 8 touched only `compat/verdi/**` +
+  this log). The report-only comparator-landmark note now reads
+  "56 theorems @ 1730567a2d3f, 70 commit(s) ago" — same
+  operator-merge-time flag as units 1-7; nothing in this unit touches
+  a designated statement or Challenge's closure (statement-TCB step
+  ok).
+
+## Final entry — unit 8 complete (2026-08-23, tip 5fb63040 + this commit)
+
+**Proved at tip — THE GAP-7 ASSEMBLY, BOTH GAPS CLOSED.** All six files
+of the re-derived closure (exactly the charter's six, 3,519 upstream
+lines recomputed at the pin), statements 1:1 with their Interface files
+@ a3375e8; zero sorry/native_decide in campaign files (grep;
+sweep-enforced: 1985 declarations within [propext, Quot.sound], plus
+seven new curated pins). `#print axioms` verbatim (fresh capped
+`lake env lean` probe):
+
+```
+'VerdiCompat.Raft.append_entries_leaderLogs_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.logs_leaderLogs_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.logs_leaderLogs_nw_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.leaderLogs_preserved_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.allEntries_leaderLogs_term_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.allEntries_log_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.allEntries_votesWithLog_invariant' depends on axioms: [propext, Quot.sound]
+```
+
+Inventory: `LeaderLogsAssembly.lean` (3,965 lines, wc; line numbers at
+this tip) — StructTact `Prefix` (:50) + `Prefix_sane` (:82);
+**`append_entries_leaderLogs`** (:90, invariant :332) with
+`nextIndex_sanity` (:308) and the findGtIndex-over-append machinery;
+the constructive LogsLeaderLogs support layer (`sorted_mem_eq` :699 —
+the Permutation-free `removeAfterIndex_same_sufficient` spine —
+upstream's `thing2`/`thing`/`thing3` :775/:817/:839, names kept 1:1);
+**`logs_leaderLogs`/`_nw`** (:1023/:1033, inductive invariant :1605,
+interface fields :1785/:1791); **`leaderLogs_preserved` (GAP-7b)**
+(:1802, invariant :1842); **`allEntries_leaderLogs_term`** (:1991,
+invariant :2066); **`allEntries_log`** (:2623, invariant :3210) with
+the two containment lemmas `ae_snapshot_in_newlog` (:2837) /
+`ae_own_term_in_newlog` (:2913) and the handler-detail layer;
+**`allEntries_votesWithLog` (GAP-7a)** (:3407, invariant :3621). The
+INVARIANT INDEX above is current (55 data rows, recomputed:
+`grep -c "^| "` = 56 minus the header). 66 commits on the lane
+(`git log f64d9b21..HEAD --oneline | wc -l`, recomputed at 5fb63040).
+
+**Honestly open (carried; none counted toward any total):**
+- GAP-1 (primed variants): STILL never triggered — no unit-8 proof
+  needed one; carried as port-on-first-need.
+- GAP-2 (msg-ghost): NOT in unit 8's closure (grep over all 12 closure
+  files at unit start — AllEntriesLog, the predicted first contact,
+  is clean); carried untouched.
+- GAP-4 (classical-list doctrine): carried; unit 8 resolved every
+  instance constructively (sorted_mem_eq replacing the
+  NoDup_Permutation route is the biggest).
+- GAP-5: closed in unit 6. GAP-7a/b: **CLOSED THIS UNIT.**
+- GAP-6 (leader_completeness proof): now the ONLY named gap on the
+  leader-completeness path; its remaining closure is unit 9's charter
+  below.
+
+**Next unit's charter (Arc 3, unit 9 — proposal; RE-DERIVE the closure
+fresh before proving, as always):** GAP-6 — `leader_completeness`'s
+PROOF. Fresh closure walk @ a3375e8 (this unit's exit derivation):
+six unported files, ~3,428 upstream lines, every other dep already
+ported: `AllEntriesCandidateEntries` (305; deps all ✓) and
+`appendEntriesRequest_term_sanity` (48; Sorted ✓) →
+`AllEntriesLeaderSublog` (351) → `AllEntriesLogMatching` (430) →
+`PrefixWithinTerm` (1,915 — the heavy one) →
+**`leader_completeness`'s proof** (LeaderCompletenessProof.v, 379;
+discharges the statement ported in unit 4). If the honest budget
+forces a split, the self-contained prefix is the four feeder files
+(through AllEntriesLogMatching), leaving PrefixWithinTerm +
+LeaderCompleteness for unit 10. Beyond unit 9: the
+state-machine-safety cap (StateMachineSafetyProof.v and its closure —
+re-derive; GAP-2 msg-ghost is EXPECTED there via the GhostLog* chain,
+so the minimal-port-on-first-need clause will likely fire). Same
+conventions; successors re-verify this unit fresh (build + sweep 1985
++ the seven-headliner probe above + hatch grep over
+LeaderLogsAssembly.lean).
