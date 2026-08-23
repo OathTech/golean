@@ -2148,6 +2148,444 @@ theorem prefix_within_term_inductive_reboot :
     rw [← hpkts] at hp'
     exact hp'
 
+/-- `PrefixWithinTermProof.v:1158-1331`
+(`prefix_within_term_inductive_client_request`): the fresh entry/record
+sits at `maxIndex + 1` of the leader's log, so every cross term-mate is
+forced INTO that log by a leader-sublog invariant
+(`leaderLogs_sublog` / lifted host/nw `leader_sublog` /
+`allEntries_leader_sublog`) and then dies on `maxIndex_is_max` — or the
+fresh object itself is the required member. -/
+theorem pwti_client_request_aux {net net' : RefinedNet}
+    {h : name (P := P)} {gd : electionsData (P := P)}
+    {out : List (raft_output (P := P))} {d : raft_data (P := P)}
+    {l : List (name (P := P) × msg (P := P))} {client : R.clientId}
+    {id : Nat} {c : P.input}
+    (hcr : handleClientRequest h (net.nwState h).2 client id c
+      = (out, d, l))
+    (hgd : gd = update_elections_data_client_request h (net.nwState h)
+      client id c)
+    (hP : prefix_within_term_inductive net)
+    (hreach : refined_raft_intermediate_reachable net)
+    (hst : ∀ h', net'.nwState h' = update net.nwState h (gd, d) h')
+    (hpk : ∀ p' ∈ net'.nwPackets, p' ∈ net.nwPackets) :
+    prefix_within_term_inductive net' := by
+  obtain ⟨h1, h2, h3, h4, h5, h6⟩ := hP
+  obtain ⟨-, hct, -, -, -⟩ :=
+    handleClientRequest_spec h (net.nwState h).2 client id c hcr
+  have hred_same : net'.nwState h = (gd, d) := by
+    rw [hst h, update_same]
+  have hred_other : ∀ h0 : name (P := P), h0 ≠ h →
+      net'.nwState h0 = net.nwState h0 := by
+    intro h0 hne
+    rw [hst h0, update_neq _ _ hne]
+  have hllgd : gd.leaderLogs = (net.nwState h).1.leaderLogs := by
+    subst hgd
+    exact (update_elections_data_client_request_ghost h (net.nwState h)
+      client id c).2.2.2
+  -- leaderLogs at any node of the post-state are the pre-state's
+  have hllred : ∀ h0 : name (P := P),
+      (net'.nwState h0).1.leaderLogs
+      = (net.nwState h0).1.leaderLogs := by
+    intro h0
+    by_cases heq : h = h0
+    · subst heq
+      rw [hred_same]
+      exact hllgd
+    · rw [hred_other h0 (Ne.symm heq)]
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  · -- allEntries_leaderLogs
+    intro h0 t2 ll h0' hin
+    rw [hllred h0'] at hin
+    by_cases heq : h = h0
+    · subst heq
+      rw [hred_same]
+      show prefix_within_term (gd.allEntries.map Prod.snd) ll
+      subst hgd
+      rcases update_elections_data_client_request_allEntries_head_term
+          h (net.nwState h) client id c hcr with
+        haeq | ⟨e0, he0t, hcons, hty, he0log, he0idx⟩
+      · rw [haeq]
+        exact h1 h t2 ll h0' hin
+      · rw [hcons]
+        intro e e' hterm hidx he he'
+        simp only [List.map_cons, List.mem_cons] at he
+        rcases he with rfl | he
+        · -- the fresh record: term-mate in a snapshot dies on the ceiling
+          exfalso
+          have he'log : e' ∈ (net.nwState h).2.log :=
+            leaderLogs_sublog_invariant net hreach h t2 ll e' h0' hty hin
+              he' (by rw [← hterm, he0t, hct])
+          have hle' : e'.eIndex ≤ maxIndex (net.nwState h).2.log :=
+            maxIndex_is_max (entries_sorted_invariant net hreach h) he'log
+          rw [he0idx] at hidx
+          exact absurd (Nat.le_trans hidx hle') (Nat.not_succ_le_self _)
+        · exact h1 h t2 ll h0' hin e e' hterm hidx he he'
+    · rw [hred_other h0 (Ne.symm heq)]
+      exact h1 h0 t2 ll h0' hin
+  · -- log_leaderLogs
+    intro h0 t2 ll leader hin
+    rw [hllred leader] at hin
+    by_cases heq : h = h0
+    · subst heq
+      rw [hred_same]
+      show prefix_within_term d.log ll
+      rcases handleClientRequest_log_full h (net.nwState h).2 client id c
+          hcr with ⟨hty, hlog⟩ | ⟨-, hdeq⟩
+      · rw [hlog]
+        intro e e' hterm hidx he he'
+        rcases List.mem_cons.mp he with rfl | he
+        · exfalso
+          have he'log : e' ∈ (net.nwState h).2.log :=
+            leaderLogs_sublog_invariant net hreach h t2 ll e' leader hty
+              hin he' (by rw [← hterm])
+          have hle' : e'.eIndex ≤ maxIndex (net.nwState h).2.log :=
+            maxIndex_is_max (entries_sorted_invariant net hreach h) he'log
+          exact absurd (Nat.le_trans hidx hle') (Nat.not_succ_le_self _)
+        · exact h2 h t2 ll leader hin e e' hterm hidx he he'
+      · rw [hdeq]
+        exact h2 h t2 ll leader hin
+    · rw [hred_other h0 (Ne.symm heq)]
+      exact h2 h0 t2 ll leader hin
+  · -- allEntries_log
+    intro h0 h0'
+    -- the target log: grown at h, unchanged elsewhere
+    by_cases heq' : h = h0'
+    · subst heq'
+      rcases handleClientRequest_log_full h (net.nwState h).2 client id c
+          hcr with ⟨hty, hlog⟩ | ⟨-, hdeq⟩
+      · -- leader appended: cross records land in the log via
+        -- allEntries_leader_sublog; the fresh record IS in the log
+        by_cases heq : h = h0
+        · subst heq
+          rw [hred_same]
+          show prefix_within_term (gd.allEntries.map Prod.snd) d.log
+          subst hgd
+          rcases update_elections_data_client_request_allEntries_head_term
+              h (net.nwState h) client id c hcr with
+            haeq | ⟨e0, he0t, hcons, -, he0log, -⟩
+          · rw [haeq, hlog]
+            intro e e' hterm hidx he he'
+            rcases List.mem_cons.mp he' with rfl | he'
+            · exact List.mem_cons_of_mem _
+                (allEntries_leader_sublog_invariant net hreach h e h hty
+                  he (by rw [hterm]))
+            · exact List.mem_cons_of_mem _
+                (h3 h h e e' hterm hidx he he')
+          · rw [hcons, hlog]
+            intro e e' hterm hidx he he'
+            simp only [List.map_cons, List.mem_cons] at he
+            rcases he with rfl | he
+            · rw [← hlog]
+              exact he0log
+            · rcases List.mem_cons.mp he' with rfl | he'
+              · exact List.mem_cons_of_mem _
+                  (allEntries_leader_sublog_invariant net hreach h e h hty
+                    he (by rw [hterm]))
+              · exact List.mem_cons_of_mem _
+                  (h3 h h e e' hterm hidx he he')
+        · rw [hred_other h0 (Ne.symm heq), hred_same]
+          show prefix_within_term
+            ((net.nwState h0).1.allEntries.map Prod.snd) d.log
+          rw [hlog]
+          intro e e' hterm hidx he he'
+          rcases List.mem_cons.mp he' with rfl | he'
+          · exact List.mem_cons_of_mem _
+              (allEntries_leader_sublog_invariant net hreach h e h0 hty
+                he (by rw [hterm]))
+          · exact List.mem_cons_of_mem _ (h3 h0 h e e' hterm hidx he he')
+      · -- not a leader: log unchanged; records may still be unchanged too
+        have hlred : (net'.nwState h).2.log = (net.nwState h).2.log := by
+          rw [hred_same]
+          show d.log = _
+          rw [hdeq]
+        rw [hlred]
+        by_cases heq : h = h0
+        · subst heq
+          rw [hred_same]
+          show prefix_within_term (gd.allEntries.map Prod.snd) _
+          subst hgd
+          rcases update_elections_data_client_request_allEntries_head_term
+              h (net.nwState h) client id c hcr with
+            haeq | ⟨e0, -, -, hty, -, -⟩
+          · rw [haeq]
+            exact h3 h h
+          · -- fresh record forces Leader, contradicting the
+            -- unchanged-state branch
+            exfalso
+            rcases handleClientRequest_log_full h (net.nwState h).2 client
+                id c hcr with ⟨-, hlog2⟩ | ⟨htyn, -⟩
+            · rw [hdeq] at hlog2
+              have hlen := congrArg List.length hlog2
+              simp only [List.length_cons] at hlen
+              omega
+            · exact absurd hty htyn
+        · rw [hred_other h0 (Ne.symm heq)]
+          exact h3 h0 h
+    · rw [hred_other h0' (Ne.symm heq')]
+      by_cases heq : h = h0
+      · subst heq
+        rw [hred_same]
+        show prefix_within_term (gd.allEntries.map Prod.snd)
+          (net.nwState h0').2.log
+        subst hgd
+        rcases update_elections_data_client_request_allEntries_head_term
+            h (net.nwState h) client id c hcr with
+          haeq | ⟨e0, he0t, hcons, hty, -, he0idx⟩
+        · rw [haeq]
+          exact h3 h h0'
+        · rw [hcons]
+          intro e e' hterm hidx he he'
+          simp only [List.map_cons, List.mem_cons] at he
+          rcases he with rfl | he
+          · exfalso
+            have he'log : e' ∈ (net.nwState h).2.log :=
+              lifted_leader_sublog_host net hreach h h0' e' hty he'
+                (by rw [← hterm, he0t, hct])
+            have hle' : e'.eIndex ≤ maxIndex (net.nwState h).2.log :=
+              maxIndex_is_max (entries_sorted_invariant net hreach h)
+                he'log
+            rw [he0idx] at hidx
+            exact absurd (Nat.le_trans hidx hle') (Nat.not_succ_le_self _)
+          · exact h3 h h0' e e' hterm hidx he he'
+      · rw [hred_other h0 (Ne.symm heq)]
+        exact h3 h0 h0'
+  · -- allEntries_AE_nw: no packets added; the fresh record's term-mates
+    -- among in-flight entries die on the nw leader-sublog ceiling
+    intro p t2 n pli plt es ci h0 e e' hp hbody hterm hidx he he'
+    replace hp := hpk p hp
+    by_cases heq : h = h0
+    · subst heq
+      rw [hred_same] at he
+      replace he : e ∈ gd.allEntries.map Prod.snd := he
+      subst hgd
+      rcases update_elections_data_client_request_allEntries_head_term
+          h (net.nwState h) client id c hcr with
+        haeq | ⟨e0, he0t, hcons, hty, -, he0idx⟩
+      · rw [haeq] at he
+        exact h4 p t2 n pli plt es ci h e e' hp hbody hterm hidx he he'
+      · rw [hcons] at he
+        simp only [List.map_cons, List.mem_cons] at he
+        rcases he with rfl | he
+        · exfalso
+          have he'log : e' ∈ (net.nwState h).2.log :=
+            lifted_leader_sublog_nw net hreach p t2 n pli plt es ci h e'
+              hp hbody hty (by exact he') (by rw [← hterm, he0t, hct])
+          have hle' : e'.eIndex ≤ maxIndex (net.nwState h).2.log :=
+            maxIndex_is_max (entries_sorted_invariant net hreach h) he'log
+          rw [he0idx] at hidx
+          exact absurd (Nat.le_trans hidx hle') (Nat.not_succ_le_self _)
+        · exact h4 p t2 n pli plt es ci h e e' hp hbody hterm hidx he he'
+    · rw [hred_other h0 (Ne.symm heq)] at he
+      exact h4 p t2 n pli plt es ci h0 e e' hp hbody hterm hidx he he'
+  · -- AE_leaderLogs: transport
+    intro p t2 n pli plt es ci h0 t' ll hp hbody hin
+    rw [hllred h0] at hin
+    exact h5 p t2 n pli plt es ci h0 t' ll (hpk p hp) hbody hin
+  · -- AE_log: in-flight term-mates of the fresh entry are in the old log
+    intro p t2 n pli plt es ci h0 hp hbody
+    replace hp := hpk p hp
+    by_cases heq : h = h0
+    · subst heq
+      rw [hred_same]
+      show prefix_within_term es d.log
+      rcases handleClientRequest_log_full h (net.nwState h).2 client id c
+          hcr with ⟨hty, hlog⟩ | ⟨-, hdeq⟩
+      · rw [hlog]
+        intro e e' hterm hidx he he'
+        rcases List.mem_cons.mp he' with rfl | he'
+        · exact List.mem_cons_of_mem _
+            (lifted_leader_sublog_nw net hreach p t2 n pli plt es ci h e
+              hp hbody hty he (by rw [hterm]))
+        · exact List.mem_cons_of_mem _
+            (h6 p t2 n pli plt es ci h hp hbody e e' hterm hidx he he')
+      · rw [hdeq]
+        exact h6 p t2 n pli plt es ci h hp hbody
+    · rw [hred_other h0 (Ne.symm heq)]
+      exact h6 p t2 n pli plt es ci h0 hp hbody
+
+/-- `refined_raft_net_invariant_client_request` for the conjunction —
+the aux over the literal successor network. -/
+theorem prefix_within_term_inductive_client_request :
+    refined_raft_net_invariant_client_request (P := P)
+      prefix_within_term_inductive := by
+  intro h net st' ps' gd out d l client id c hcr hgd hP hreach hst hps
+  obtain ⟨-, -, -, -, hl⟩ :=
+    handleClientRequest_spec h (net.nwState h).2 client id c hcr
+  refine pwti_client_request_aux hcr hgd hP hreach hst ?_
+  intro p' hp'
+  rcases hps p' hp' with hold | hnew
+  · exact hold
+  · rw [hl] at hnew
+    simp [send_packets] at hnew
+
+/-- `PrefixWithinTermProof.v:1394-1516`
+(`prefix_within_term_inductive_do_leader`): state and ghost unchanged;
+the fresh replica packets carry `findGtIndex log pli` with `plt` read
+off `findAtIndex` — the nw conjunct classifies a record's index against
+`pli` (above ⇒ `findGtIndex_sufficient`; at ⇒ uniqueIndices against the
+`findAtIndex` witness; below ⇒ `sorted_index_term`), and the
+`findAtIndex = none, pli ≠ 0` corner dies on `nextIndex_sanity`. -/
+theorem pwti_do_leader_aux {net net' : RefinedNet}
+    {gd : electionsData (P := P)} {d : raft_data (P := P)}
+    {h : name (P := P)} {os : List (raft_output (P := P))}
+    {d' : raft_data (P := P)}
+    {ms : List (name (P := P) × msg (P := P))}
+    (hdl : doLeader d h = (os, d', ms))
+    (hP : prefix_within_term_inductive net)
+    (hreach : refined_raft_intermediate_reachable net)
+    (hstate : net.nwState h = (gd, d))
+    (hst : ∀ h', net'.nwState h' = update net.nwState h (gd, d') h')
+    (hps : ∀ q ∈ net'.nwPackets,
+      q ∈ net.nwPackets ∨ q ∈ send_packets h ms) :
+    prefix_within_term_inductive net' := by
+  obtain ⟨h1, h2, h3, h4, h5, h6⟩ := hP
+  obtain ⟨-, -, -, -, hlog, -⟩ := doLeader_spec d h hdl
+  have hgd1 : gd = (net.nwState h).1 := by rw [hstate]
+  have hd2 : d = (net.nwState h).2 := by rw [hstate]
+  have hlogred : ∀ h0, (net'.nwState h0).2.log
+      = (net.nwState h0).2.log := by
+    intro h0
+    rw [hst h0]
+    by_cases heq : h0 = h
+    · subst heq
+      rw [update_same]
+      show d'.log = _
+      rw [hlog, hd2]
+    · rw [update_neq _ _ heq]
+  have hgred : ∀ h0, (net'.nwState h0).1 = (net.nwState h0).1 := by
+    intro h0
+    rw [hst h0]
+    by_cases heq : h0 = h
+    · subst heq
+      rw [update_same]
+      exact hgd1
+    · rw [update_neq _ _ heq]
+  -- classify a fresh replica packet's body
+  have hfresh : ∀ (p' : RefinedPacket), p' ∈ send_packets h ms →
+      ∀ (t2 : term) (n : name (P := P)) (pli : logIndex) (plt : term)
+        (es : List (entry (P := P))) (ci : logIndex),
+      p'.pBody = .AppendEntries t2 n pli plt es ci →
+      ∃ host, (net.nwState h).2.type = .Leader ∧
+        pli = Nat.pred (getNextIndex (net.nwState h).2 host) ∧
+        plt = (match findAtIndex (net.nwState h).2.log pli with
+               | some e => e.eTerm
+               | none => 0) ∧
+        es = findGtIndex (net.nwState h).2.log pli := by
+    intro p' hnew t2 n pli plt es ci hbody
+    obtain ⟨m0, hm0, rfl⟩ := List.mem_map.mp hnew
+    obtain ⟨host, hq⟩ := doLeader_messages_nextIndex d h hdl m0 hm0
+    have hty : d.type = .Leader := doLeader_messages_leader d h hdl hm0
+    replace hbody : m0.2 = msg.AppendEntries t2 n pli plt es ci := hbody
+    rw [hq] at hbody
+    injection hbody with hb1 hb2 hb3 hb4 hb5 hb6
+    subst hb3
+    rw [← hd2]
+    exact ⟨host, hty, rfl, hb4.symm, hb5.symm⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro h0 t2 l h0' hin
+    rw [hgred h0'] at hin
+    rw [hgred h0]
+    exact h1 h0 t2 l h0' hin
+  · intro h0 t2 ll leader hin
+    rw [hgred leader] at hin
+    rw [hlogred h0]
+    exact h2 h0 t2 ll leader hin
+  · intro h0 h0'
+    rw [hgred h0, hlogred h0']
+    exact h3 h0 h0'
+  · -- the nw conjunct: fresh replica packets classified against pli
+    intro p t2 n pli plt es ci h0 e e' hp hbody hterm hidx he he'
+    rw [hgred h0] at he
+    rcases hps p hp with hold | hnew
+    · exact h4 p t2 n pli plt es ci h0 e e' hold hbody hterm hidx he he'
+    · obtain ⟨host, hty, hpli, hplt, hes⟩ :=
+        hfresh p hnew t2 n pli plt es ci hbody
+      have hs_log : sorted (net.nwState h).2.log :=
+        entries_sorted_invariant net hreach h
+      -- the record lands in the sender's log via the IH
+      have he_log : e ∈ (net.nwState h).2.log := by
+        refine h3 h0 h e e' hterm hidx he ?_
+        rw [hes] at he'
+        exact (findGtIndex_necessary he').1
+      rcases Nat.lt_trichotomy pli e.eIndex with hgt | heq | hlt
+      · left
+        rw [hes]
+        exact findGtIndex_sufficient hs_log he_log hgt
+      · -- e sits exactly at pli: findAtIndex must have found it
+        cases hfa : findAtIndex (net.nwState h).2.log pli with
+        | some e2 =>
+          obtain ⟨he2log, he2idx⟩ := findAtIndex_elim hfa
+          have hee2 : e = e2 :=
+            uniqueIndices_elim_eq (sorted_uniqueIndices hs_log) he_log
+              he2log (by rw [he2idx, heq])
+          refine Or.inr (Or.inl ⟨heq.symm, ?_⟩)
+          rw [hplt, hfa, hee2]
+        | none =>
+          exfalso
+          have hgt0 : e.eIndex > 0 :=
+            allEntries_gt_0_invariant net hreach h0 e he
+          have hne : Nat.pred (getNextIndex (net.nwState h).2 host) ≠ 0 := by
+            rw [← hpli]
+            intro hz
+            rw [hz] at heq
+            rw [← heq] at hgt0
+            exact Nat.lt_irrefl _ hgt0
+          obtain ⟨e3, hfa3⟩ := nextIndex_sanity net hreach h host hty hne
+          rw [hpli] at hfa
+          rw [hfa] at hfa3
+          exact nomatch hfa3
+      · -- e sits below pli
+        cases hfa : findAtIndex (net.nwState h).2.log pli with
+        | some e2 =>
+          obtain ⟨he2log, he2idx⟩ := findAtIndex_elim hfa
+          refine Or.inr (Or.inr ⟨hlt, ?_⟩)
+          have : e.eTerm ≤ e2.eTerm :=
+            sorted_index_term (by rw [he2idx]; exact Nat.le_of_lt hlt)
+              hs_log he_log he2log
+          rw [hplt, hfa]
+          exact this
+        | none =>
+          exfalso
+          have hne : Nat.pred (getNextIndex (net.nwState h).2 host) ≠ 0 := by
+            rw [← hpli]
+            intro hz
+            rw [hz] at hlt
+            exact Nat.not_lt_zero _ hlt
+          obtain ⟨e3, hfa3⟩ := nextIndex_sanity net hreach h host hty hne
+          rw [hpli] at hfa
+          rw [hfa] at hfa3
+          exact nomatch hfa3
+  · -- AE_leaderLogs: fresh packets' entries come from the sender's log
+    intro p t2 n pli plt es ci h0 t' ll hp hbody hin
+    rw [hgred h0] at hin
+    rcases hps p hp with hold | hnew
+    · exact h5 p t2 n pli plt es ci h0 t' ll hold hbody hin
+    · obtain ⟨host, -, -, -, hes⟩ :=
+        hfresh p hnew t2 n pli plt es ci hbody
+      refine prefix_within_term_subset (h2 h t' ll h0 hin) ?_
+      intro e0 he0
+      rw [hes] at he0
+      exact (findGtIndex_necessary he0).1
+  · -- AE_log: same, against any host log via T1
+    intro p t2 n pli plt es ci h0 hp hbody
+    rw [hlogred h0]
+    rcases hps p hp with hold | hnew
+    · exact h6 p t2 n pli plt es ci h0 hold hbody
+    · obtain ⟨host, -, -, -, hes⟩ :=
+        hfresh p hnew t2 n pli plt es ci hbody
+      refine prefix_within_term_subset
+        (log_log_prefix_within_term_invariant net hreach h h0) ?_
+      intro e0 he0
+      rw [hes] at he0
+      exact (findGtIndex_necessary he0).1
+
+/-- `refined_raft_net_invariant_do_leader` for the conjunction. -/
+theorem prefix_within_term_inductive_do_leader :
+    refined_raft_net_invariant_do_leader (P := P)
+      prefix_within_term_inductive := by
+  intro net st' ps' gd d h os d' ms hdl hP hreach hstate hst hps
+  exact pwti_do_leader_aux hdl hP hreach hstate hst hps
+
 end LeaderCompleteness
 end Raft
 end VerdiCompat

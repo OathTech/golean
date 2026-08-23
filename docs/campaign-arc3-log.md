@@ -2049,3 +2049,25 @@ completed prefix + chartered remainder is branch-complete.
   T1's first consumer — exactly upstream's :1539-1587 route). Build
   green, sweep 2067. Remaining obligations: client_request,
   do_leader, append_entries.
+- 2026-08-23 Slice 56: the client_request + do_leader obligations
+  (upstream :1158-1331, :1394-1516), each as an aux lemma over an
+  ABSTRACT successor net + a thin wrapper. [AGENT] Gotcha recorded for
+  successors: an obligation proved directly against the literal
+  `⟨ps', st'⟩` net leaves goals with `{nwPackets := …}.nwState h0`
+  projections that `rw` cannot match against `st' h0`-shaped equations
+  (application/`exact` see through by defeq; `rw` is syntactic) — the
+  aux-lemma-over-abstract-`net'` shape avoids the whole class; ALSO the
+  var=var subst direction bit again exactly as recorded (by_cases
+  `h0 = h` + subst eliminates `h`; flipped to `h = h0`), the
+  omega-on-abbrev class twice (explicit Nat lemmas), and rw-on-a-
+  literal-entry's projection (`⟨…⟩.eTerm` is defeq to its field — end
+  the rw at the defeq point). CR route: fresh record/entry at
+  maxIndex+1 forces term-mates into the leader's own log
+  (leaderLogs_sublog / allEntries_leader_sublog / lifted host+nw
+  leader_sublog) then dies on maxIndex_is_max — or the fresh object
+  itself is the goal member. DL route: findGtIndex trichotomy against
+  pli with findAtIndex witness (uniqueIndices / sorted_index_term) and
+  the none∧pli≠0 corner dead on nextIndex_sanity; conjuncts 5/6 are
+  prefix_within_term_subset over IH log_leaderLogs / T1. Build green,
+  sweep 2075. Remaining: append_entries (:928-1142) — the last
+  obligation.
