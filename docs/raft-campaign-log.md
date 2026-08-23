@@ -526,6 +526,31 @@ is the §4.4 park-and-report condition, not an emergency.
   candidates, the closing design section, end-state
   re-verification).
 
+- **Arc 4, A4-U3 — LANDED** @ 5e7834a9: **THE FIRST FULL HANDLER
+  EQUATION IS PROVED** — `becomeFollower_handler_eq`: from any
+  γ-extending state with projection `some n`, over EVERY consumed
+  choice prefix, exactly 3,234 steps to `.stop` with projection
+  `specBecomeFollower n 0 lead`; witness at the concrete stream;
+  1,307 target-layer lines / ~50 min builds (the extension's 3-5×
+  win over the NO-GO projection, realized). [AGENT] deviation
+  accepted: class-2b completed properly in enterFrameT instead of
+  hand splits (kills the recurring cost for ~20 handlers; 12→7
+  windows). One summary-layer count correction recorded (14 pins,
+  not 15). Scale verdict: waves 1-3 ≈ 15-25 U3-shaped sessions;
+  binding constraints = state literalization (U4 slice 0) + the
+  absState entries/outboxes extension (the spec-side obligation
+  before message handlers).
+- **Arc 3, unit 16 — THE LANE ENDS BRANCH-COMPLETE, PERMANENTLY** @
+  c131f278: end-state re-verification from a CLEAN build (sweep 2615
+  post-consolidation, fifteen-headliner probe verbatim, hatch grep
+  zero across all sixteen files, index span-verified 84 rows);
+  consolidation done (~220 duplicated lines deleted, statements
+  unchanged; one candidate SKIPPED with reason); GAP-4 closed moot;
+  the design note's closing section + refreshed integration
+  readiness. Sixteen units, ~95 slices, 129 commits. The [USER]
+  queue carries the milestone audit, the merge, and the owed
+  comparator-judge run (133 commits).
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
