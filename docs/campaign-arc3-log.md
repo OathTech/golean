@@ -405,6 +405,11 @@ from artifacts.
 | logs_leaderLogs (+ _nw) | PROVED | Raft/LogsLeaderLogsInterface.v:9-30 | LeaderLogsAssembly.lean (both invariants) |
 | allEntries_leaderLogs_term | PROVED | Raft/AllEntriesLeaderLogsTermInterface.v:9-15 | LeaderLogsAssembly.lean (invariant) |
 | allEntries_log | PROVED | Raft/AllEntriesLogInterface.v:10-19 | LeaderLogsAssembly.lean (invariant) |
+| appendEntriesRequest_term_sanity | PROVED | Raft/AppendEntriesRequestTermSanityInterface.v:8-14 | LeaderCompleteness.lean:53 (invariant :63) |
+| allEntries_candidateEntries | PROVED | Raft/AllEntriesCandidateEntriesInterface.v | LeaderCompleteness.lean:74 (invariant :85) |
+| allEntries_leader_sublog | PROVED | Raft/AllEntriesLeaderSublogInterface.v:8-13 | LeaderCompleteness.lean:357 (invariant :453) |
+| allEntries_log_matching | PROVED | Raft/AllEntriesLogMatchingInterface.v:8-14 | LeaderCompleteness.lean:902 (invariant :1418) |
+| prefix_within_term | UNIT-10 CHARTER (blocked: PrefixWithinTermProof.v 1,915L) | Raft/PrefixWithinTermInterface.v | — |
 | leaderLogs_sorted (GAP-5a) | PROVED | Raft/LeaderLogsSortedInterface.v:9-13 | LogMatching.lean (invariant) |
 | UniqueIndices (2 conjuncts) | PROVED (base) | Raft/UniqueIndicesInterface.v:9-20 | LogMatching.lean (UniqueIndices_invariant) |
 | leader_sublog (2 conjuncts) | PROVED (base) | Raft/LeaderSublogInterface.v:8-27 | LogMatching.lean (leader_sublog_invariant_invariant) |
@@ -1808,3 +1813,75 @@ PrefixWithinTerm surprises.
   leader; `leader = h` kept leader here) resolved per-site by compile
   probe; recorded again: NEVER assume the direction, check the errors.
   Build green, sweep 2014.
+- 2026-08-23 Slice 52 (W3, c4dc53e4): `allEntries_log_matching`
+  (AllEntriesLogMatchingInterface.v:8-14 1:1; upstream 430 lines) —
+  the host∧nw simultaneous induction
+  (`allEntries_log_matching_inductive`): a generic transport
+  (`almi_of_update`, parameterized by "sends no AppendEntries") covers
+  six handlers; CR's fresh head-record quadrants close by the
+  host/nw/allEntries `leader_sublog` lifts against the maxIndex+1
+  index ([AGENT] head_term sharpened a third time, with the index
+  conjunct — its fresh witness is the log head literal, so `rfl`);
+  AE's quadrants ride `entries_match_nw_host` + uniqueIndices and the
+  nw-IH; two-packet gluing is `almi_packets_entries_eq`
+  (entries_match_nw_1 + contiguity); doLeader's fresh replicas reduce
+  to the host IH via doLeader_messages. Also [AGENT]: the CR
+  leader-append-without-record branch is refuted by a length argument
+  on the ghost equation (the guard fires exactly on log growth) —
+  upstream's combined log_allEntries lemma exposes this jointly;
+  ours splits it. Four unit-9 AxCheck pins (fresh probe, all
+  [propext, Quot.sound]). Build green, sweep 2029.
+- 2026-08-23 Unit-9 gate (mid-unit, at the chartered split point):
+  `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci` —
+  **RESULT: PASS, exit 0** (log: `artifacts/ci-arc3-unit9.log`,
+  gitignored; no-diff notes are the allowed docs+compat hatch).
+  Comparator-landmark note now "56 theorems @ 1730567a2d3f, 75
+  commit(s) ago" — same operator-merge-time flag as before; nothing
+  touches a designated statement or Challenge's closure.
+
+## Final entry — unit 9 SPLIT at the chartered point (2026-08-23, tip c4dc53e4 + this commit)
+
+**Context-rule stop, per the coordinator's activation**: the four
+feeder files (W1-W3) are COMPLETE and gate-green; PrefixWithinTerm
+(1,915 upstream lines — the flagged strain point) and
+LeaderCompleteness are the chartered remainder. A completed prefix +
+chartered remainder is branch-complete.
+
+**Proved at tip** — `LeaderCompleteness.lean` (1,426 lines, zero
+sorry/native_decide; sweep-enforced: 2029 declarations within
+[propext, Quot.sound], four new curated pins). `#print axioms`
+verbatim (fresh capped probe):
+
+```
+'VerdiCompat.Raft.append_entries_request_term_sanity_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.allEntries_candidateEntries_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.allEntries_leader_sublog_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.allEntries_log_matching_invariant' depends on axioms: [propext, Quot.sound]
+```
+
+1,134 of the closure's 3,428 upstream lines ported (4 of 6 files);
+71 commits on the lane (recomputed at c4dc53e4). The INVARIANT INDEX
+above is current (60 data rows, recomputed: `grep -c "^| "` = 61
+minus the header — verify at consumption).
+
+**Honestly open (carried):** GAP-1 (never triggered), GAP-2
+(msg-ghost; absent from this unit's closure — expected at the
+state-machine-safety cap), GAP-4 (constructive discipline holding),
+GAP-6 (leader_completeness proof — the remainder below).
+
+**Next unit's charter (Arc 3, unit 10 — the unit-9 remainder;
+RE-DERIVE the closure fresh, as always):**
+- **`prefix_within_term`** (PrefixWithinTermInterface.v /
+  PrefixWithinTermProof.v, 1,915 lines — the heavy one). Its deps are
+  now ALL PORTED (verified at the unit-9 opening): LogsLeaderLogs,
+  RLML, OneLeaderLogPerTerm, LeaderLogsSorted, LeaderLogsSublog,
+  LeaderSublog, NextIndexSafety, LeaderLogsContiguous,
+  AllEntriesLogMatching ✓, AERTermSanity ✓, AllEntriesLeaderSublog ✓.
+- **`leader_completeness`'s PROOF** (LeaderCompletenessProof.v, 379
+  lines), discharging the unit-4 statement — THE GAP-6 CLOSE. After
+  it: the T3 ladder reads election safety ✓ (unit 2), log matching ✓
+  (unit 6), leader completeness ✓; the remaining T3 head is
+  state-machine safety (StateMachineSafetyProof.v + its closure —
+  re-derive; msg-ghost EXPECTED there, minimal-port-on-first-need).
+Successors re-verify this unit fresh: build + sweep 2029 + the
+four-headliner probe above + hatch grep over LeaderCompleteness.lean.
