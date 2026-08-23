@@ -284,6 +284,144 @@ theorem ghost_log_correct_invariant :
     rw [← hpkts] at hp0
     exact hP p0 l t0 lid pli2 plt2 es2 ci2 hp0 hbody0 hgl0
 
+/-! ## log_properties_hold_on_ghost_logs
+(`Raft/GhostLogsLogPropertiesInterface.v` /
+`RaftProofs/GhostLogsLogPropertiesProof.v`) — the higher-order snapshot
+principle for ghost logs, and THE PRIMED PRINCIPLE'S FIRST CONSUMER
+(its §3.3 discharge witness: all eleven obligations instantiated on a
+real invariant). A fresh packet's ghost is the POST-state's log; the
+successor net's reachability premise is what lets an abstract
+reachability-closed property apply to it. -/
+
+/-- `GhostLogsLogPropertiesInterface.v:8-11` (`msg_log_property`): a
+log property that holds of every node's log in every msg-reachable
+net. -/
+def msg_log_property (Pr : List (entry (P := P)) → Prop) : Prop :=
+  ∀ (net : MsgNet) (h : name (P := P)),
+    msg_refined_raft_intermediate_reachable net →
+    Pr (net.nwState h).2.log
+
+/-- `GhostLogsLogPropertiesInterface.v:13-16`
+(`log_properties_hold_on_ghost_logs`). -/
+def log_properties_hold_on_ghost_logs (net : MsgNet) : Prop :=
+  ∀ (Pr : List (entry (P := P)) → Prop) (p : MsgPacket),
+    msg_log_property Pr → p ∈ net.nwPackets →
+    Pr (p.pBody : ghost_log (P := P) × msg (P := P)).1
+
+/-- `GhostLogsLogPropertiesProof.v:174-196`
+(`log_properties_hold_on_ghost_logs_invariant`), via
+**`msg_refined_raft_net_invariant'`** — upstream's own assembly: the
+packet-creating obligations primed, `request_vote_reply`/`subset`/
+`reboot` through their `_weak` bridges. -/
+theorem log_properties_hold_on_ghost_logs_invariant :
+    ∀ net, msg_refined_raft_intermediate_reachable (P := P) net →
+      log_properties_hold_on_ghost_logs net := by
+  refine msg_refined_raft_net_invariant' ?_ ?_ ?_ ?_ ?_ ?_
+    (msg_refined_raft_net_invariant_request_vote_reply'_weak ?_) ?_ ?_
+    (msg_refined_raft_net_invariant_subset'_weak ?_)
+    (msg_refined_raft_net_invariant_reboot'_weak ?_)
+  · -- init
+    intro Pr p _hprop hp
+    exact nomatch hp
+  · -- client_request'
+    intro h net st' ps' gd out d l client id c _hcr _hgd hP _hreach
+      hreach' hst hps
+    intro Pr p0 hprop hp0
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnew
+    · exact hP Pr p0 hprop hold
+    · have h2 : Pr ((st' h).2.log) := hprop ⟨ps', st'⟩ h hreach'
+      rw [hst h, update_same] at h2
+      rw [ghost_of_send hnew]
+      exact h2
+  · -- timeout'
+    intro net h st' ps' gd out d l _hto _hgd hP _hreach hreach' hst hps
+    intro Pr p0 hprop hp0
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnew
+    · exact hP Pr p0 hprop hold
+    · have h2 : Pr ((st' h).2.log) := hprop ⟨ps', st'⟩ h hreach'
+      rw [hst h, update_same] at h2
+      rw [ghost_of_send hnew]
+      exact h2
+  · -- append_entries': the fresh reply carries the post-state's log
+    intro xs p ys net st' ps' gd d m t n pli plt es ci _hae _hgd _hbody
+      hP _hreach hreach' hpkts hst hps
+    intro Pr p0 hprop hp0
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnew
+    · refine hP Pr p0 hprop ?_
+      rw [hpkts]
+      exact mem_of_mem_remove_middle hold
+    · have h2 : Pr ((st' p.pDst).2.log) := hprop ⟨ps', st'⟩ p.pDst hreach'
+      rw [hst p.pDst, update_same] at h2
+      rw [hnew]
+      exact h2
+  · -- append_entries_reply'
+    intro xs p ys net st' ps' gd d m t es res _haer _hgd _hbody hP _hreach
+      hreach' hpkts hst hps
+    intro Pr p0 hprop hp0
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnew
+    · refine hP Pr p0 hprop ?_
+      rw [hpkts]
+      exact mem_of_mem_remove_middle hold
+    · have h2 : Pr ((st' p.pDst).2.log) := hprop ⟨ps', st'⟩ p.pDst hreach'
+      rw [hst p.pDst, update_same] at h2
+      rw [ghost_of_send hnew]
+      exact h2
+  · -- request_vote'
+    intro xs p ys net st' ps' gd d m t cid lli llt _hrv _hgd _hbody hP
+      _hreach hreach' hpkts hst hps
+    intro Pr p0 hprop hp0
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnew
+    · refine hP Pr p0 hprop ?_
+      rw [hpkts]
+      exact mem_of_mem_remove_middle hold
+    · have h2 : Pr ((st' p.pDst).2.log) := hprop ⟨ps', st'⟩ p.pDst hreach'
+      rw [hst p.pDst, update_same] at h2
+      rw [hnew]
+      exact h2
+  · -- request_vote_reply (unprimed, via the weak bridge): no sends
+    intro xs p ys net st' ps' gd d t v _hrvr _hgd _hbody hP _hreach hpkts
+      hst hps
+    intro Pr p0 hprop hp0
+    refine hP Pr p0 hprop ?_
+    rw [hpkts]
+    exact mem_of_mem_remove_middle (hps p0 hp0)
+  · -- do_leader'
+    intro net st' ps' gd d h os d' ms _hdl hP _hreach hreach' _hstate hst
+      hps
+    intro Pr p0 hprop hp0
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnew
+    · exact hP Pr p0 hprop hold
+    · have h2 : Pr ((st' h).2.log) := hprop ⟨ps', st'⟩ h hreach'
+      rw [hst h, update_same] at h2
+      rw [ghost_of_send hnew]
+      exact h2
+  · -- do_generic_server'
+    intro net st' ps' gd d os d' ms h _hgs hP _hreach hreach' _hstate hst
+      hps
+    intro Pr p0 hprop hp0
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnew
+    · exact hP Pr p0 hprop hold
+    · have h2 : Pr ((st' h).2.log) := hprop ⟨ps', st'⟩ h hreach'
+      rw [hst h, update_same] at h2
+      rw [ghost_of_send hnew]
+      exact h2
+  · -- state_same_packet_subset (unprimed)
+    intro net net' _hstates hsub hP _hreach
+    intro Pr p0 hprop hp0
+    exact hP Pr p0 hprop (hsub p0 hp0)
+  · -- reboot (unprimed): packets unchanged
+    intro net net' gd d h d' _hrb hP _hreach _hstate _hst hpkts
+    intro Pr p0 hprop hp0
+    rw [← hpkts] at hp0
+    exact hP Pr p0 hprop hp0
+
 end GhostLogs
 end Raft
 end VerdiCompat

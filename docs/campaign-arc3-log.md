@@ -2686,3 +2686,14 @@ is a complete unit if the honest budget says so.
   `lifted_*` re-statements are unnecessary; noted as a route
   simplification, statements unchanged). New helper
   `mem_send_ghost_elim` (the send-batch eliminator). Build green.
+- 2026-08-23 Slice 74: **`log_properties_hold_on_ghost_logs_invariant`**
+  (GhostLogsLogPropertiesInterface.v:8-16 / Proof.v:174-196 1:1) — THE
+  PRIMED PRINCIPLE'S FIRST CONSUMER and its §3.3 discharge witness:
+  assembled exactly as upstream (packet-creating obligations primed;
+  request_vote_reply/subset/reboot through the `_weak` bridges). Every
+  fresh-packet case is the same three-line move: `hprop ⟨ps', st'⟩ h
+  hreach'` reads the abstract property off the SUCCESSOR net (the
+  primed premise's whole purpose), `hst`/`update_same` land it on the
+  written state, `ghost_of_send`/the named reply packet equate the
+  ghost. Compiled on first attempt. W-C's two chartered files are both
+  PROVED.
