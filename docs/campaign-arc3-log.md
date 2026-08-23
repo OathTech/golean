@@ -409,7 +409,7 @@ from artifacts.
 | allEntries_candidateEntries | PROVED | Raft/AllEntriesCandidateEntriesInterface.v | LeaderCompleteness.lean:74 (invariant :85) |
 | allEntries_leader_sublog | PROVED | Raft/AllEntriesLeaderSublogInterface.v:8-13 | LeaderCompleteness.lean:357 (invariant :453) |
 | allEntries_log_matching | PROVED | Raft/AllEntriesLogMatchingInterface.v:8-14 | LeaderCompleteness.lean:902 (invariant :1418) |
-| prefix_within_term | UNIT-10 CHARTER (blocked: PrefixWithinTermProof.v 1,915L) | Raft/PrefixWithinTermInterface.v | — |
+| prefix_within_term (both fields) | PROVED | Raft/PrefixWithinTermInterface.v:21-28 | LeaderCompleteness.lean (allEntries_leaderLogs + log_log invariants; T2 nw fact + inductive) |
 | leaderLogs_sorted (GAP-5a) | PROVED | Raft/LeaderLogsSortedInterface.v:9-13 | LogMatching.lean (invariant) |
 | UniqueIndices (2 conjuncts) | PROVED (base) | Raft/UniqueIndicesInterface.v:9-20 | LogMatching.lean (UniqueIndices_invariant) |
 | leader_sublog (2 conjuncts) | PROVED (base) | Raft/LeaderSublogInterface.v:8-27 | LogMatching.lean (leader_sublog_invariant_invariant) |
@@ -2071,3 +2071,25 @@ completed prefix + chartered remainder is branch-complete.
   prefix_within_term_subset over IH log_leaderLogs / T1. Build green,
   sweep 2075. Remaining: append_entries (:928-1142) — the last
   obligation.
+- 2026-08-23 Slice 57: the append_entries obligation (:928-1142, the
+  inductive centerpiece) as `pwti_append_entries_aux` + wrapper.
+  [AGENT] The upstream case soup factors into TWO reusable cores:
+  `hold_newlog` (an old RECORD against the spliced log — conj-4 IH
+  classifies against the packet; the (pli,plt) case collapses through
+  `allEntries_log_matching` onto the pivot; the below-pli case
+  trichotomizes on the term with `append_entries_request_term_sanity`
+  killing the low side) and `hnw_newlog` (an in-flight ENTRY against
+  the spliced log — same shape with T2 in place of the conj-4 IH and
+  `entries_match_nw_host` in place of allEntries_log_matching). Fresh
+  records ARE the packet's entries, so their goals are membership in
+  the freshly spliced log (or conj-6 IH when the log rejected). Conj 4
+  fresh-record × other-packet is T2 verbatim — the standalone theorem's
+  purpose. Reply is never an AE (`handleAppendEntries_reply_entries`).
+- 2026-08-23 Slice 58: **`prefix_within_term_inductive_invariant`**
+  (:1890) through the ported `refined_raft_net_invariant`, and the
+  interface field `allEntries_leaderLogs_prefix_within_term_invariant`
+  (:21-24; the other field is T1) — **prefix_within_term COMPLETE**,
+  the 1,915-line file fully ported. Four AxCheck pins added (captured
+  from a fresh capped probe — all [propext, Quot.sound]). Full build
+  green, sweep 2081; hatch grep over LeaderCompleteness.lean: 0
+  (exit 1); file now 2,927 lines. INDEX row updated.

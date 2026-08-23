@@ -2586,6 +2586,342 @@ theorem prefix_within_term_inductive_do_leader :
   intro net st' ps' gd d h os d' ms hdl hP hreach hstate hst hps
   exact pwti_do_leader_aux hdl hP hreach hstate hst hps
 
+/-- `PrefixWithinTermProof.v:928-1142`
+(`prefix_within_term_inductive_append_entries`) — the inductive
+centerpiece. The accepted entries are simultaneously recorded
+(allEntries) and spliced (log), so both the record and the log
+conjuncts re-classify against the packet via the conj-4 IH / T2, with
+the prevLog pivot resolved by `allEntries_log_matching` /
+`entries_match_nw_host` and the low-term escape killed by
+`append_entries_request_term_sanity`. -/
+theorem pwti_append_entries_aux {net net' : RefinedNet}
+    {p : RefinedPacket} {gd : electionsData (P := P)}
+    {d : raft_data (P := P)} {m : msg (P := P)} {t : term}
+    {n : name (P := P)} {pli : logIndex} {plt : term}
+    {es : List (entry (P := P))} {ci : logIndex}
+    (hae : handleAppendEntries p.pDst (net.nwState p.pDst).2 t n pli plt
+      es ci = (d, m))
+    (hgd : gd = update_elections_data_appendEntries p.pDst
+      (net.nwState p.pDst) t n pli plt es ci)
+    (hbody : p.pBody = .AppendEntries t n pli plt es ci)
+    (hP : prefix_within_term_inductive net)
+    (hreach : refined_raft_intermediate_reachable net)
+    (hpin : p ∈ net.nwPackets)
+    (hst : ∀ h', net'.nwState h' = update net.nwState p.pDst (gd, d) h')
+    (hpk : ∀ q ∈ net'.nwPackets, q ∈ net.nwPackets ∨
+      q = (⟨p.pDst, p.pSrc, m⟩ : RefinedPacket)) :
+    prefix_within_term_inductive net' := by
+  obtain ⟨h1, h2, h3, h4, h5, h6⟩ := hP
+  -- the reply is never an AppendEntries
+  obtain ⟨tr, r, hm⟩ :=
+    handleAppendEntries_reply_entries p.pDst (net.nwState p.pDst).2 t n
+      pli plt es ci hae
+  have hpkAE : ∀ (q : RefinedPacket) (t2 : term) (n2 : name (P := P))
+      (pli2 : logIndex) (plt2 : term) (es2 : List (entry (P := P)))
+      (ci2 : logIndex), q ∈ net'.nwPackets →
+      q.pBody = .AppendEntries t2 n2 pli2 plt2 es2 ci2 →
+      q ∈ net.nwPackets := by
+    intro q t2 n2 pli2 plt2 es2 ci2 hq hqbody
+    rcases hpk q hq with hold | rfl
+    · exact hold
+    · exfalso
+      replace hqbody :
+          m = msg.AppendEntries t2 n2 pli2 plt2 es2 ci2 := hqbody
+      rw [hm] at hqbody
+      exact nomatch hqbody
+  have hred_same : net'.nwState p.pDst = (gd, d) := by
+    rw [hst p.pDst, update_same]
+  have hred_other : ∀ h0 : name (P := P), h0 ≠ p.pDst →
+      net'.nwState h0 = net.nwState h0 := by
+    intro h0 hne
+    rw [hst h0, update_neq _ _ hne]
+  have hllred : ∀ h0 : name (P := P),
+      (net'.nwState h0).1.leaderLogs
+      = (net.nwState h0).1.leaderLogs := by
+    intro h0
+    by_cases heq : h0 = p.pDst
+    · subst heq
+      rw [hred_same]
+      show gd.leaderLogs = _
+      subst hgd
+      exact (update_elections_data_appendEntries_ghost p.pDst
+        (net.nwState p.pDst) t n pli plt es ci).2.2.2
+    · rw [hred_other h0 heq]
+  -- record membership after the ghost update
+  have hrec : ∀ e : entry (P := P), e ∈ gd.allEntries.map Prod.snd →
+      e ∈ (net.nwState p.pDst).1.allEntries.map Prod.snd ∨ e ∈ es := by
+    intro e he
+    subst hgd
+    rcases update_elections_data_appendEntries_allEntries_cases p.pDst
+        (net.nwState p.pDst) t n pli plt es ci with haeq | ⟨t', hcons⟩
+    · rw [haeq] at he
+      exact Or.inl he
+    · rw [hcons] at he
+      simp only [List.map_append, List.map_map, List.mem_append] at he
+      rcases he with he | he
+      · right
+        simpa using he
+      · exact Or.inl he
+  have hs_u : sorted (net.nwState p.pDst).2.log :=
+    entries_sorted_invariant net hreach p.pDst
+  have hlogcases := handleAppendEntries_log_cases p.pDst
+    (net.nwState p.pDst).2 t n pli plt es ci hae
+  -- CORE 1: an old record against the new log at the updated node
+  have hold_newlog : ∀ (h0 : name (P := P)) (e e' : entry (P := P)),
+      e ∈ (net.nwState h0).1.allEntries.map Prod.snd → e' ∈ d.log →
+      e.eTerm = e'.eTerm → e.eIndex ≤ e'.eIndex → e ∈ d.log := by
+    intro h0 e e' he he' hterm hidx
+    rcases hlogcases with hd | ⟨hpli0, hd⟩ | ⟨e2, he2, he2i, he2t, hd⟩
+    · rw [hd] at he' ⊢
+      exact h3 h0 p.pDst e e' hterm hidx he he'
+    · rw [hd] at he' ⊢
+      rcases h4 p t n pli plt es ci h0 e e' hpin hbody hterm hidx he he'
+        with hin | ⟨hei, -⟩ | ⟨hlt, -⟩
+      · exact hin
+      · rw [hpli0] at hei
+        exact absurd hei (Nat.ne_of_gt
+          (allEntries_gt_0_invariant net hreach h0 e he))
+      · rw [hpli0] at hlt
+        exact absurd hlt (Nat.not_lt_zero _)
+    · rw [hd] at he' ⊢
+      rcases List.mem_append.mp he' with hes | hrem
+      · rcases h4 p t n pli plt es ci h0 e e' hpin hbody hterm hidx he
+          hes with hin | ⟨hei, het⟩ | ⟨hlt, hle⟩
+        · exact List.mem_append.mpr (Or.inl hin)
+        · have healm : e2 = e :=
+            allEntries_log_matching_invariant net hreach e2 e p.pDst h0
+              he2 he (by rw [he2t, het]) (by rw [he2i, hei])
+          refine List.mem_append.mpr (Or.inr ?_)
+          rw [← healm] at hei ⊢
+          exact removeAfterIndex_le_In (Nat.le_of_eq hei) he2
+        · rcases Nat.lt_trichotomy e.eTerm plt with hlt' | heqt | hgt'
+          · exfalso
+            have := append_entries_request_term_sanity_invariant net
+              hreach p t n pli plt es ci e' hpin hbody hes
+            rw [← hterm] at this
+            exact absurd (Nat.lt_of_le_of_lt this hlt')
+              (Nat.lt_irrefl _)
+          · have hein : e ∈ (net.nwState p.pDst).2.log :=
+              h3 h0 p.pDst e e2 (by rw [heqt, he2t])
+                (by rw [he2i]; exact Nat.le_of_lt hlt) he he2
+            exact List.mem_append.mpr (Or.inr
+              (removeAfterIndex_le_In (Nat.le_of_lt hlt) hein))
+          · exact absurd (Nat.lt_of_le_of_lt hle hgt') (Nat.lt_irrefl _)
+      · have he'log : e' ∈ (net.nwState p.pDst).2.log :=
+          removeAfterIndex_in hrem
+        have hein : e ∈ (net.nwState p.pDst).2.log :=
+          h3 h0 p.pDst e e' hterm hidx he he'log
+        have he'le : e'.eIndex ≤ pli := removeAfterIndex_In_le hs_u hrem
+        exact List.mem_append.mpr (Or.inr
+          (removeAfterIndex_le_In (Nat.le_trans hidx he'le) hein))
+  -- CORE 2: an in-flight entry against the new log at the updated node
+  have hnw_newlog : ∀ (p' : RefinedPacket) (t2 : term) (n2 : name (P := P))
+      (pli2 : logIndex) (plt2 : term) (es2 : List (entry (P := P)))
+      (ci2 : logIndex), p' ∈ net.nwPackets →
+      p'.pBody = .AppendEntries t2 n2 pli2 plt2 es2 ci2 →
+      ∀ e0 e' : entry (P := P), e0 ∈ es2 → e' ∈ d.log →
+      e0.eTerm = e'.eTerm → e0.eIndex ≤ e'.eIndex → e0 ∈ d.log := by
+    intro p' t2 n2 pli2 plt2 es2 ci2 hp' hb' e0 e' he0 he' hterm hidx
+    rcases hlogcases with hd | ⟨hpli0, hd⟩ | ⟨e2, he2, he2i, he2t, hd⟩
+    · rw [hd] at he' ⊢
+      exact h6 p' t2 n2 pli2 plt2 es2 ci2 p.pDst hp' hb' e0 e' hterm
+        hidx he0 he'
+    · rw [hd] at he' ⊢
+      rcases append_entries_append_entries_prefix_within_term_invariant
+          net hreach p' t2 n2 pli2 plt2 es2 ci2 p t n pli plt es ci e0
+          e' hp' hb' hpin hbody hterm hidx he0 he' with
+        hin | ⟨hei, -⟩ | ⟨hlt, -⟩
+      · exact hin
+      · rw [hpli0] at hei
+        exact absurd hei (Nat.ne_of_gt
+          (entries_gt_0_nw_invariant net hreach p' t2 n2 pli2 plt2 es2
+            ci2 e0 hp' hb' he0))
+      · rw [hpli0] at hlt
+        exact absurd hlt (Nat.not_lt_zero _)
+    · rw [hd] at he' ⊢
+      rcases List.mem_append.mp he' with hes | hrem
+      · rcases append_entries_append_entries_prefix_within_term_invariant
+            net hreach p' t2 n2 pli2 plt2 es2 ci2 p t n pli plt es ci e0
+            e' hp' hb' hpin hbody hterm hidx he0 hes with
+          hin | ⟨hei, het⟩ | ⟨hlt, hle⟩
+        · exact List.mem_append.mpr (Or.inl hin)
+        · have he0log : e0 ∈ (net.nwState p.pDst).2.log :=
+            entries_match_nw_host_invariant net hreach p' t2 n2 pli2
+              plt2 es2 ci2 p.pDst e0 e2 e0 hp' hb' he0 he2
+              (by rw [hei, he2i]) (by rw [het, he2t]) he0
+              (Nat.le_refl _)
+          exact List.mem_append.mpr (Or.inr
+            (removeAfterIndex_le_In (Nat.le_of_eq hei) he0log))
+        · rcases Nat.lt_trichotomy e0.eTerm plt with hlt' | heqt | hgt'
+          · exfalso
+            have := append_entries_request_term_sanity_invariant net
+              hreach p t n pli plt es ci e' hpin hbody hes
+            rw [← hterm] at this
+            exact absurd (Nat.lt_of_le_of_lt this hlt')
+              (Nat.lt_irrefl _)
+          · have he0log : e0 ∈ (net.nwState p.pDst).2.log :=
+              h6 p' t2 n2 pli2 plt2 es2 ci2 p.pDst hp' hb' e0 e2
+                (by rw [heqt, he2t])
+                (by rw [he2i]; exact Nat.le_of_lt hlt) he0 he2
+            exact List.mem_append.mpr (Or.inr
+              (removeAfterIndex_le_In (Nat.le_of_lt hlt) he0log))
+          · exact absurd (Nat.lt_of_le_of_lt hle hgt') (Nat.lt_irrefl _)
+      · have he'log : e' ∈ (net.nwState p.pDst).2.log :=
+          removeAfterIndex_in hrem
+        have he0log : e0 ∈ (net.nwState p.pDst).2.log :=
+          h6 p' t2 n2 pli2 plt2 es2 ci2 p.pDst hp' hb' e0 e' hterm hidx
+            he0 he'log
+        have he'le : e'.eIndex ≤ pli := removeAfterIndex_In_le hs_u hrem
+        exact List.mem_append.mpr (Or.inr
+          (removeAfterIndex_le_In (Nat.le_trans hidx he'le) he0log))
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  · -- allEntries_leaderLogs: union of the old records and the packet
+    intro h0 t2 ll h0' hin
+    rw [hllred h0'] at hin
+    by_cases heq : h0 = p.pDst
+    · subst heq
+      rw [hred_same]
+      exact prefix_within_term_union (h1 p.pDst t2 ll h0' hin)
+        (h5 p t n pli plt es ci h0' t2 ll hpin hbody hin) hrec
+    · rw [hred_other h0 heq]
+      exact h1 h0 t2 ll h0' hin
+  · -- log_leaderLogs
+    intro h0 t2 ll leader hin
+    rw [hllred leader] at hin
+    by_cases heq : h0 = p.pDst
+    · subst heq
+      rw [hred_same]
+      show prefix_within_term d.log ll
+      rcases hlogcases with hd | ⟨-, hd⟩ | ⟨e2, -, -, -, hd⟩
+      · rw [hd]
+        exact h2 p.pDst t2 ll leader hin
+      · rw [hd]
+        exact h5 p t n pli plt es ci leader t2 ll hpin hbody hin
+      · rw [hd]
+        refine prefix_within_term_union (l1' := es)
+          (l1'' := removeAfterIndex (net.nwState p.pDst).2.log pli)
+          (h5 p t n pli plt es ci leader t2 ll hpin hbody hin)
+          (prefix_within_term_subset (h2 p.pDst t2 ll leader hin)
+            (fun e0 he0 => removeAfterIndex_in he0)) ?_
+        intro e0 he0
+        exact List.mem_append.mp he0
+    · rw [hred_other h0 heq]
+      exact h2 h0 t2 ll leader hin
+  · -- allEntries_log
+    intro h0 h0'
+    by_cases heq' : h0' = p.pDst
+    · subst heq'
+      -- target is the (possibly grown) log at the updated node
+      intro e e' hterm hidx he he'
+      rw [hred_same] at he'
+      replace he' : e' ∈ d.log := he'
+      show e ∈ (net'.nwState p.pDst).2.log
+      rw [hred_same]
+      show e ∈ d.log
+      by_cases heq : h0 = p.pDst
+      · subst heq
+        rw [hred_same] at he
+        rcases hrec e he with hold | hfresh
+        · exact hold_newlog p.pDst e e' hold he' hterm hidx
+        · -- fresh record: the packet's entries are (in) the new log
+          rcases hlogcases with hd | ⟨-, hd⟩ | ⟨e2, -, -, -, hd⟩
+          · rw [hd] at he' ⊢
+            exact h6 p t n pli plt es ci p.pDst hpin hbody e e' hterm
+              hidx hfresh he'
+          · rw [hd]
+            exact hfresh
+          · rw [hd]
+            exact List.mem_append.mpr (Or.inl hfresh)
+      · rw [hred_other h0 heq] at he
+        exact hold_newlog h0 e e' he he' hterm hidx
+    · -- unchanged target log
+      intro e e' hterm hidx he he'
+      rw [hred_other h0' heq'] at he' ⊢
+      by_cases heq : h0 = p.pDst
+      · subst heq
+        rw [hred_same] at he
+        rcases hrec e he with hold | hfresh
+        · exact h3 p.pDst h0' e e' hterm hidx hold he'
+        · exact h6 p t n pli plt es ci h0' hpin hbody e e' hterm hidx
+            hfresh he'
+      · rw [hred_other h0 heq] at he
+        exact h3 h0 h0' e e' hterm hidx he he'
+  · -- allEntries_AE_nw
+    intro p' t2 n2 pli2 plt2 es2 ci2 h0 e e' hp' hb' hterm hidx he he'
+    replace hp' := hpkAE p' t2 n2 pli2 plt2 es2 ci2 hp' hb'
+    by_cases heq : h0 = p.pDst
+    · subst heq
+      rw [hred_same] at he
+      rcases hrec e he with hold | hfresh
+      · exact h4 p' t2 n2 pli2 plt2 es2 ci2 p.pDst e e' hp' hb' hterm
+          hidx hold he'
+      · -- fresh record vs another packet: T2 verbatim
+        exact append_entries_append_entries_prefix_within_term_invariant
+          net hreach p t n pli plt es ci p' t2 n2 pli2 plt2 es2 ci2 e e'
+          hpin hbody hp' hb' hterm hidx hfresh he'
+    · rw [hred_other h0 heq] at he
+      exact h4 p' t2 n2 pli2 plt2 es2 ci2 h0 e e' hp' hb' hterm hidx he
+        he'
+  · -- AE_leaderLogs: transport
+    intro p' t2 n2 pli2 plt2 es2 ci2 h0 t' ll hp' hb' hin
+    rw [hllred h0] at hin
+    exact h5 p' t2 n2 pli2 plt2 es2 ci2 h0 t' ll
+      (hpkAE p' t2 n2 pli2 plt2 es2 ci2 hp' hb') hb' hin
+  · -- AE_log
+    intro p' t2 n2 pli2 plt2 es2 ci2 h0 hp' hb'
+    replace hp' := hpkAE p' t2 n2 pli2 plt2 es2 ci2 hp' hb'
+    by_cases heq : h0 = p.pDst
+    · subst heq
+      intro e0 e' hterm hidx he0 he'
+      rw [hred_same] at he' ⊢
+      exact hnw_newlog p' t2 n2 pli2 plt2 es2 ci2 hp' hb' e0 e' he0 he'
+        hterm hidx
+    · rw [hred_other h0 heq]
+      exact h6 p' t2 n2 pli2 plt2 es2 ci2 h0 hp' hb'
+
+/-- `refined_raft_net_invariant_append_entries` for the conjunction. -/
+theorem prefix_within_term_inductive_append_entries :
+    refined_raft_net_invariant_append_entries (P := P)
+      prefix_within_term_inductive := by
+  intro xs p ys net st' ps' gd d m t n pli plt es ci hae hgd hbody hP
+    hreach hpkts hst hps
+  refine pwti_append_entries_aux hae hgd hbody hP hreach ?_ hst ?_
+  · rw [hpkts]
+    exact List.mem_append.mpr (Or.inr (List.mem_cons_self ..))
+  · intro q hq
+    rcases hps q hq with hold | rfl
+    · left
+      rw [hpkts]
+      exact mem_of_mem_remove_middle hold
+    · exact Or.inr rfl
+
+/-- `PrefixWithinTermProof.v:1890-1907`
+(`prefix_within_term_inductive_invariant`). -/
+theorem prefix_within_term_inductive_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      prefix_within_term_inductive net :=
+  refined_raft_net_invariant
+    prefix_within_term_inductive_init
+    prefix_within_term_inductive_client_request
+    prefix_within_term_inductive_timeout
+    prefix_within_term_inductive_append_entries
+    prefix_within_term_inductive_append_entries_reply
+    prefix_within_term_inductive_request_vote
+    prefix_within_term_inductive_request_vote_reply
+    prefix_within_term_inductive_do_leader
+    prefix_within_term_inductive_do_generic_server
+    prefix_within_term_inductive_state_same_packet_subset
+    prefix_within_term_inductive_reboot
+
+/-- `PrefixWithinTermInterface.v:21-24`
+(`allEntries_leaderLogs_prefix_within_term_invariant`) — the first
+interface field; the second is `log_log_prefix_within_term_invariant`
+above (upstream instance `pwti`, `PrefixWithinTermProof.v:1909-1913`). -/
+theorem allEntries_leaderLogs_prefix_within_term_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      allEntries_leaderLogs_prefix_within_term net :=
+  fun net hreach => (prefix_within_term_inductive_invariant net hreach).1
+
 end LeaderCompleteness
 end Raft
 end VerdiCompat

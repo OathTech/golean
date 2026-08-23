@@ -172,6 +172,14 @@ open VerdiCompat VerdiCompat.Raft
 #guard_msgs in #print axioms VerdiCompat.Raft.allEntries_leader_sublog_invariant
 /-- info: 'VerdiCompat.Raft.allEntries_log_matching_invariant' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms VerdiCompat.Raft.allEntries_log_matching_invariant
+/-- info: 'VerdiCompat.Raft.log_log_prefix_within_term_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.log_log_prefix_within_term_invariant
+/-- info: 'VerdiCompat.Raft.append_entries_append_entries_prefix_within_term_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.append_entries_append_entries_prefix_within_term_invariant
+/-- info: 'VerdiCompat.Raft.prefix_within_term_inductive_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.prefix_within_term_inductive_invariant
+/-- info: 'VerdiCompat.Raft.allEntries_leaderLogs_prefix_within_term_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.allEntries_leaderLogs_prefix_within_term_invariant
 
 /-! ## Exhaustive sweep (fails the build on any disallowed axiom) -/
 
