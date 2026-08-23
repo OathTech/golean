@@ -2007,3 +2007,33 @@ completed prefix + chartered remainder is branch-complete.
   final entry. Split point if the honest budget forces one: after 58
   (PWT complete = a branch-complete prefix; LC alone is a small
   successor unit).
+- 2026-08-23 Slice 53 (added0b1): `prefix_within_term` def added to
+  CommonDefinitions.lean (:108-114 1:1, closing that header's "still
+  not ported" note), the two interface defs, the T2 support layer
+  (sorted_app_1/_2, Prefix_maxIndex, app_contiguous_maxIndex_le_eq —
+  in the sharper `l2 = []` form — contiguous_app_prefix_contiguous,
+  contiguous_app_prefix_2, pwt union/subset/findGtIndex), and **T1
+  `log_log_prefix_within_term_invariant`** (:107-149 1:1 route:
+  logs_leaderLogs both sides, one_leaderLog_per_term_log identifies,
+  contiguity witness, entries_match or uniqueIndices). [AGENT]
+  `contiguous_0_app` NOT ported: the lane's `sorted_app_in_1` is the
+  same fact modulo the positivity premise (supplied by contiguity at
+  call sites). The omega-on-abbrev gotcha re-hit once (logIndex);
+  explicit Nat lemmas per the record. Build green, sweep 2043.
+- 2026-08-23 Slice 54: **T2
+  `append_entries_append_entries_prefix_within_term_invariant`**
+  (:154-747, the file's summit — upstream ~590 lines). [AGENT]
+  PROOF-SHAPE CALL (logged; §9 guided re-proof — same lattice inputs,
+  re-derived route): upstream's eight ~70-line bullets (3×3 disjunction
+  grid, locked_or contortions) collapse to ONE extracted positioning
+  lemma `aeae_e_in_ll` — under `e`'s logs_leaderLogs_nw decomposition,
+  ANY witness `y ∈ ll` with `e.eIndex ≤ y.eIndex` forces `e ∈ ll`
+  (own-term block sits above maxIndex ll via sorted_app_in_1 +
+  Prefix_maxIndex_eq when the prefix is nonempty; the empty-prefix
+  branches die on the packet's own prevLog disjunction) — plus a clean
+  two-sided split on `pli' < e.eIndex`: transfer side = contiguity
+  witness in es' → entries_match_nw_1 (same-term block) or
+  uniqueIndices-in-ll (snapshot block); prevLog side = the three
+  disjuncts answer directly (e2-in-ll case via positioning +
+  sorted_index_term). ~170 Lean lines for the 590. Build green,
+  sweep 2047.

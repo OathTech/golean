@@ -1623,6 +1623,173 @@ theorem log_log_prefix_within_term_invariant :
     rw [hex]
     exact hxmem
 
+/-! ## T2 — the AE×AE cross-packet prefix fact
+(`PrefixWithinTermProof.v:95-747`) -/
+
+/-- `PrefixWithinTermProof.v:95-105`
+(`append_entries_append_entries_prefix_within_term_nw`). -/
+def append_entries_append_entries_prefix_within_term_nw
+    (net : RefinedNet) : Prop :=
+  ∀ (p : RefinedPacket) (t : term) (n : name (P := P)) (pli : logIndex)
+    (plt : term) (es : List (entry (P := P))) (ci : logIndex)
+    (p' : RefinedPacket) (t' : term) (n' : name (P := P))
+    (pli' : logIndex) (plt' : term) (es' : List (entry (P := P)))
+    (ci' : logIndex) (e e' : entry (P := P)),
+    p ∈ net.nwPackets → p.pBody = .AppendEntries t n pli plt es ci →
+    p' ∈ net.nwPackets → p'.pBody = .AppendEntries t' n' pli' plt' es' ci' →
+    e.eTerm = e'.eTerm → e.eIndex ≤ e'.eIndex →
+    e ∈ es → e' ∈ es' →
+    (e ∈ es' ∨ (e.eIndex = pli' ∧ e.eTerm = plt') ∨
+      (e.eIndex < pli' ∧ e.eTerm ≤ plt'))
+
+omit O in
+/-- The positioning core shared by T2's cases (extracted from the
+repeated `Prefix`/`locked_or` battles of
+`PrefixWithinTermProof.v:154-747`): under `e`'s
+`logs_leaderLogs_nw` decomposition, any witness `y ∈ ll` with
+`e.eIndex ≤ y.eIndex` forces `e` itself into the snapshot `ll` — the
+own-term block `es₁` sits strictly above `maxIndex ll`, which the
+witness caps from below. -/
+theorem aeae_e_in_ll {es es₁ ll₁ ll : List (entry (P := P))}
+    {e y : entry (P := P)} {pli plt : term}
+    (hs_es : sorted es) (hc_es : contiguous_range_exact_lo es pli)
+    (hsplit : removeAfterIndex es e.eIndex = es₁ ++ ll₁)
+    (hpre : Prefix ll₁ ll) (hsll : sorted ll)
+    (hdisj : (plt = e.eTerm ∧ pli > maxIndex ll) ∨
+      (∃ e2, e2 ∈ ll ∧ e2.eIndex = pli ∧ e2.eTerm = plt ∧
+        (ll₁ ≠ [] ∨ pli = maxIndex ll)) ∨
+      (plt = 0 ∧ pli = 0 ∧ ll₁ = ll))
+    (he : e ∈ es) (hy : y ∈ ll) (hyge : e.eIndex ≤ y.eIndex) :
+    e ∈ ll := by
+  have hgt_pli : pli < e.eIndex := hc_es.2 e he
+  have hymax : y.eIndex ≤ maxIndex ll := maxIndex_is_max hsll hy
+  have hemax : e.eIndex ≤ maxIndex ll := Nat.le_trans hyge hymax
+  have herem : e ∈ es₁ ++ ll₁ := by
+    rw [← hsplit]
+    exact removeAfterIndex_le_In (Nat.le_refl _) he
+  rcases List.mem_append.mp herem with hees | hell
+  · exfalso
+    cases hll₁ : ll₁ with
+    | cons b rest =>
+      -- nonempty prefix shares ll's head: es₁ sits strictly above it
+      subst hll₁
+      have hsrem : sorted (es₁ ++ b :: rest) := by
+        rw [← hsplit]
+        exact removeAfterIndex_sorted hs_es
+      have habove : e.eIndex > maxIndex (b :: rest) :=
+        sorted_app_in_1 hsrem
+          (Nat.lt_of_le_of_lt (Nat.zero_le _) hgt_pli) hees
+      rw [Prefix_maxIndex_eq hpre (by simp)] at habove
+      exact absurd (Nat.lt_of_le_of_lt hemax habove) (Nat.lt_irrefl _)
+    | nil =>
+      subst hll₁
+      rcases hdisj with ⟨-, hpligt⟩ | ⟨e2, -, -, -, hor⟩ | ⟨-, -, hlleq⟩
+      · -- pli > maxIndex ll ≥ e.eIndex, yet pli < e.eIndex
+        exact absurd (Nat.lt_trans hgt_pli (Nat.lt_of_le_of_lt hemax hpligt))
+          (Nat.lt_irrefl _)
+      · rcases hor with hne | hplieq
+        · exact hne rfl
+        · rw [hplieq] at hgt_pli
+          exact absurd (Nat.lt_of_le_of_lt hemax hgt_pli) (Nat.lt_irrefl _)
+      · -- ll = ll₁ = [], but y ∈ ll
+        rw [← hlleq] at hy
+        exact nomatch hy
+  · exact Prefix_In hpre e hell
+
+/-- `PrefixWithinTermProof.v:154-747`
+(`append_entries_append_entries_prefix_within_term_invariant`,
+standalone — T2 of the posted DAG). Route re-derived (logged judgment
+call): both entries' `logs_leaderLogs_nw` decompositions share one
+snapshot (`one_leaderLog_per_term_log`); above `pli'` the entry
+transfers into `es'` through its index-matched contiguity witness
+(same-term block ⇒ `entries_match_nw_1`; snapshot block ⇒
+`aeae_e_in_ll` + uniqueIndices); at/below `pli'` the packet's prevLog
+disjunction answers directly, with `aeae_e_in_ll` + `sorted_index_term`
+supplying the term bound in the snapshot case. -/
+theorem append_entries_append_entries_prefix_within_term_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      append_entries_append_entries_prefix_within_term_nw net := by
+  intro net hreach p t n pli plt es ci p' t' n' pli' plt' es' ci' e e'
+    hp hbody hp' hbody' hterm hle he he'
+  obtain ⟨leader, ll, es₁, ll₁, hll, hpre₁, hsplit₁, hterm₁, hdisj₁⟩ :=
+    logs_leaderLogs_nw_invariant net hreach p t n pli plt es ci e
+      hp hbody he
+  obtain ⟨leader', ll', es₂, ll₂, hll', hpre₂, hsplit₂, hterm₂, hdisj₂⟩ :=
+    logs_leaderLogs_nw_invariant net hreach p' t' n' pli' plt' es' ci' e'
+      hp' hbody' he'
+  rw [hterm] at hll
+  have hlleq : ll = ll' :=
+    one_leaderLog_per_term_log_invariant net hreach leader leader'
+      e'.eTerm ll ll' hll hll'
+  subst hlleq
+  have hsll : sorted ll := leaderLogs_sorted_invariant net hreach leader'
+    e'.eTerm ll hll'
+  have hs_es : sorted es :=
+    entries_sorted_nw_invariant net hreach p t n pli plt es ci hp hbody
+  have hs_es' : sorted es' :=
+    entries_sorted_nw_invariant net hreach p' t' n' pli' plt' es' ci'
+      hp' hbody'
+  have hc_es : contiguous_range_exact_lo es pli :=
+    entries_contiguous_nw_invariant net hreach p t n pli plt es ci
+      hp hbody
+  have hc_es' : contiguous_range_exact_lo es' pli' :=
+    entries_contiguous_nw_invariant net hreach p' t' n' pli' plt' es' ci'
+      hp' hbody'
+  -- the ll₁-side positioning lemma, partially applied
+  have position := fun (y : entry (P := P)) (hy : y ∈ ll)
+      (hyge : e.eIndex ≤ y.eIndex) =>
+    aeae_e_in_ll hs_es hc_es hsplit₁ hpre₁ hsll hdisj₁ he hy hyge
+  by_cases hcmp : pli' < e.eIndex
+  · -- transfer side: e ∈ es'
+    left
+    have hmax : e.eIndex ≤ maxIndex es' :=
+      Nat.le_trans hle (maxIndex_is_max hs_es' he')
+    obtain ⟨x, hxidx, hxmem⟩ := hc_es'.1 e.eIndex ⟨hcmp, hmax⟩
+    have hxrem : x ∈ removeAfterIndex es' e'.eIndex :=
+      removeAfterIndex_le_In (by rw [hxidx]; exact hle) hxmem
+    rw [hsplit₂] at hxrem
+    rcases List.mem_append.mp hxrem with hxes | hxll
+    · -- same-term block: entries_match_nw_1 transfers e
+      have hxterm : e.eTerm = x.eTerm := by
+        rw [hterm₂ x hxes, hterm]
+      exact entries_match_nw_1_invariant net hreach p t n pli plt es ci
+        p' t' n' pli' plt' es' ci' e x e hp hp' hbody hbody' he hxmem
+        hxidx.symm hxterm he ⟨hcmp, Nat.le_refl _⟩
+    · -- snapshot block: e is IN the snapshot and equals x
+      have hxinll : x ∈ ll := Prefix_In hpre₂ x hxll
+      have hell : e ∈ ll := position x hxinll (Nat.le_of_eq hxidx.symm)
+      have hex : e = x :=
+        uniqueIndices_elim_eq (sorted_uniqueIndices hsll) hell hxinll
+          hxidx.symm
+      rw [hex]
+      exact hxmem
+  · -- prevLog side: e.eIndex ≤ pli'
+    have hle' : e.eIndex ≤ pli' := Nat.le_of_not_lt hcmp
+    rcases hdisj₂ with ⟨hplt', -⟩ | ⟨e2, he2ll, he2idx, he2term, -⟩ |
+      ⟨-, hpli'0, -⟩
+    · -- plt' = e'.eTerm: answer directly
+      rcases Nat.eq_or_lt_of_le hle' with heq | hlt
+      · exact Or.inr (Or.inl ⟨heq, hterm.trans hplt'.symm⟩)
+      · exact Or.inr (Or.inr ⟨hlt, Nat.le_of_eq (hterm.trans hplt'.symm)⟩)
+    · -- prevLog entry e2 ∈ ll at pli'
+      have hell : e ∈ ll := position e2 he2ll (by rw [he2idx]; exact hle')
+      rcases Nat.eq_or_lt_of_le hle' with heq | hlt
+      · -- same index: e = e2, terms coincide
+        have hex : e = e2 :=
+          uniqueIndices_elim_eq (sorted_uniqueIndices hsll) hell he2ll
+            (by rw [he2idx]; exact heq)
+        exact Or.inr (Or.inl ⟨heq, by rw [hex, he2term]⟩)
+      · -- below: sorted snapshot bounds the term
+        have hterm_le : e.eTerm ≤ e2.eTerm :=
+          sorted_index_term (by rw [he2idx]; exact Nat.le_of_lt hlt)
+            hsll hell he2ll
+        exact Or.inr (Or.inr ⟨hlt, by rw [← he2term]; exact hterm_le⟩)
+    · -- pli' = 0 yet e.eIndex ≤ pli' and e.eIndex > pli ≥ 0
+      exfalso
+      rw [hpli'0] at hle'
+      exact absurd (Nat.lt_of_le_of_lt (Nat.zero_le pli) (hc_es.2 e he))
+        (Nat.not_lt_of_le hle')
+
 end LeaderCompleteness
 end Raft
 end VerdiCompat
