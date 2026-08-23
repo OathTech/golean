@@ -107,6 +107,31 @@ completion machinery, route memo + unit-2 charter).
   proofs build green (480 jobs); Audit/FastEval.lean pins; aggregator
   wired. Records: `records/fastseg.out`.
 
+- **U5 opens** (2026-08-23, SUCCESSOR worker; predecessor's transcript
+  rotated — artifacts re-verified, not trusted): re-verification at
+  0c462c7c — fresh capped build PASS (480 jobs, rc 0); `#print axioms`
+  fresh on stepFast_ok / iterF_ok / iterF_add / twin_prelude_eq =
+  the Audit/FastEval pins verbatim; hatch grep over FastEval/ + the
+  new Specs modules clean (docstring mentions only). Lever
+  measurements (records/fastseg2.out): fastseg-k2000@48G **OOM(137)
+  at 507 s** — §6.8's "~2,900 steps at 48G" extrapolation REFUTED
+  (retention past 500 steps is ~16.7–20 MB/step, not 14.5);
+  fastseg-k1000@36G **PASS 3:59 / 30.0 GB**. Decomposition over the
+  three 350k points: marginal 0.182 s/step + 16.7 MB/step, fixed
+  ~57 s + 13.3 GB/segment. **Re-projection at SEG=1000: central
+  ~53–55 CPU-h (band ~45–67) < the ~60 CPU-h pause trigger ⇒ GO.**
+  Batch emitter landed (`twin_ckpt_groupF%` in StateWire: ONE
+  incremental compiled pass per group, `addDecl` without compiled
+  code) and gate-checked (emitter-gatecheck.lean, 3:49 under 24G):
+  the batch-incremental literal at 350k is KERNEL-EQUAL to the
+  from-0 `ckptF350k`, and the exact U5 segment shape
+  (equality-to-next-literal, 100 steps) kernel-checks. Generator +
+  orchestrator + manifest landed (gen-u5-modules.py,
+  u5-orchestrate.sh, u5-manifest.sh): 712 segments × 1000 steps
+  (last 616), 45 checkpoint groups × 16, rollup + composition
+  generated and stamped; manifest recomputed from oleans, never
+  restated.
+
 ## THE U4 PER-ARM TEMPLATE (of record, for the authorized wave)
 
 Validated on the landed `FastEval/Ops.lean` (its own header carries
@@ -216,6 +241,37 @@ executed. Nothing merged; no GoCore/frontend/scripts edits; Arc-1
 files verbatim.
 
 ## Judgment calls
+
+- **[AGENT]** 2026-08-23 (U5): the RSS poll harness's first version took
+  max over ALL lean pids and was polluted by a sibling lane's build —
+  fixed to walk only the launched job's descendants; the two affected
+  runs' peaks are reported as CAP-BOUNDED (rc-0-under-cap / killed-at-
+  cap), never as polled numbers (records/fastseg2.out states this).
+- **[AGENT]** 2026-08-23 (U5): segment size 1000 @ 36G cap, NOT the
+  charter's 48G-segments lever — the lever's ~2,900-steps-at-48G
+  assumption failed measurement (k2000@48G OOM); at the measured
+  16.7 MB/step + 13.3 GB fixed, 1000 steps @ 36G is the projection's
+  optimum that still fits a 2-wide wave beside the sibling lanes
+  (2×36G + slack = 74G on the 125G box). Post-lever central estimate
+  ~53–55 CPU-h ≤ the ~60 CPU-h pause trigger ⇒ GO, logged with the
+  full derivation in records/fastseg2.out.
+- **[AGENT]** 2026-08-23 (U5): this Lake (5.0.0) has no jobs flag, so
+  the directive's "2–3 concurrent detached capped jobs" is realized as
+  BATCHED lake invocations — exactly 2 pending segment targets per
+  capped call (lake parallelizes within the batch), one lake at a time
+  (the U1 wedge rule), manifest recomputed from oleans after every
+  batch (= the per-wave checkpoint), resume = rerun (fresh oleans
+  skipped at selection).
+- **[AGENT]** 2026-08-23 (U5): aggregator wiring DEFERRED to the
+  composition step — importing the rollup mid-run would make any gate
+  build try to finish the wave at the gate's 24G cap; the aggregator
+  gets TwinWitness (and transitively everything) only once the wave
+  is complete.
+- **[AGENT]** 2026-08-23 (U5): checkpoint-group emission is from-0 per
+  group (each group's one compiled pass re-runs the prelude + prefix)
+  rather than chaining group modules by import — keeps groups
+  build-independent and parallel; total compiled cost ~1.5 CPU-h,
+  measured negligible against the kernel wave.
 
 - **[AGENT]** 2026-08-23 (U4): helper panic-conversion arms stubbed
   rather than proving error-correspondence — the one-directional
