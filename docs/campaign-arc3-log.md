@@ -3431,3 +3431,53 @@ BRANCH-COMPLETE, permanently. Nothing merged, nothing designated.
   record be what the milestone audit consumes, and a record taken
   before subsequent edits would not be. (Unit-15's own claims were
   re-verified fresh at its final entry; the same worker continues.)
+- 2026-08-23 CONSOLIDATION SLICE (slices 92-94; per-item calls):
+  - **(a) DONE** (627c90f6→92, commit
+    "Arc3 slice 92"): `update_proj_mem` in StructTactPrelude.lean —
+    the one shape behind the four per-node component transports; all
+    four bodies (`came_from_leaders_transport`, `glae_transport`,
+    `mia_allEntries_grow`, `lifted_committed_of_update`) rewritten
+    over it. Full rebuild green first try.
+  - **(b) DONE** (slice 93): the `candidateEntriesTerm` cluster
+    (def + bridge + ext/update_same + five preserves, 281 lines)
+    relocated from SafetyLeaves.lean to CandidateEntries.lean (its
+    deps — cronies_term_invariant, wonElection_exists_voter, the
+    ElectionSpecLemmas ghost facts — all live at or before that
+    point), and unit 3's five entry-level
+    `*_preserves_candidateEntries` proofs replaced by one-line
+    derivations through the definitional `candidateEntries_term`
+    bridge (~190 duplicated proof lines deleted; statements
+    unchanged, downstream consumers untouched; names resolve via the
+    import chain). CandidateEntries.lean 1,336 lines,
+    SafetyLeaves.lean 1,685.
+  - **(c) DONE** (slice 94): `rvr_win_votes` relocated from
+    AppendEntriesChain.lean to LeaderLogs.lean (before its original
+    inline site; deps all earlier in the same file), and unit 4's
+    inline `hwin` reduced to a thin t2-conversion wrapper (~28
+    duplicated lines deleted; AppendEntriesChain's consumer resolves
+    via import).
+  - **(d) SKIPPED, with reason**: the
+    `handleAppendEntries_accept_detail`/`_ci_log`/`_log` overlap. The
+    three lemmas are three GRANULARITIES of one case analysis, each
+    citing a distinct upstream lemma (SpecLemmas.v:236-280,
+    log_detailed :1805-1844, the TermSanity log clause), and each
+    consumer wants exactly its granularity — a master conjunction
+    would be consumed by projection everywhere, adding indirection
+    while deleting little (the three proofs share the `repeat' split`
+    skeleton, not content). Left as-is.
+  Sweep after the slice: 2615 (was 2617 — the deleted duplicate
+  helpers net out against the new generic lemma), still within
+  [propext, Quot.sound].
+- 2026-08-23 **GAP-4 CLOSED AS MOOT** (charter item 3): the
+  classical-list doctrine question — whether the lane would ever need
+  to widen its axiom set for classical list machinery — never fired
+  across sixteen units. Evidence: the enforcing sweep held
+  [propext, Quot.sound] at every one of the ~95 slices; every
+  potential classical dependency was resolved constructively at the
+  point of use (unit 2's `eraseOne` replacing core's classical
+  `List.erase` lemmas; unit 4's `decide_eq_true` replacing the
+  LawfulBEq route; unit 8's `sorted_mem_eq` replacing the
+  NoDup_Permutation route; unit 10's `moreUpToDate_elim`; the
+  omega-on-abbrev class resolved with explicit Nat lemmas ~20 times).
+  No operator decision is owed; the lane's axiom-set doctrine stands
+  exactly as ratified.
