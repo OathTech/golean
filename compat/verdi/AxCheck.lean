@@ -150,6 +150,20 @@ open VerdiCompat VerdiCompat.Raft
 #guard_msgs in #print axioms VerdiCompat.Raft.nextIndex_safety_invariant
 /-- info: 'VerdiCompat.Raft.leaderLogs_entries_match_invariant' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms VerdiCompat.Raft.leaderLogs_entries_match_invariant
+/-- info: 'VerdiCompat.Raft.append_entries_leaderLogs_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.append_entries_leaderLogs_invariant
+/-- info: 'VerdiCompat.Raft.logs_leaderLogs_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.logs_leaderLogs_invariant
+/-- info: 'VerdiCompat.Raft.logs_leaderLogs_nw_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.logs_leaderLogs_nw_invariant
+/-- info: 'VerdiCompat.Raft.leaderLogs_preserved_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leaderLogs_preserved_invariant
+/-- info: 'VerdiCompat.Raft.allEntries_leaderLogs_term_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.allEntries_leaderLogs_term_invariant
+/-- info: 'VerdiCompat.Raft.allEntries_log_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.allEntries_log_invariant
+/-- info: 'VerdiCompat.Raft.allEntries_votesWithLog_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.allEntries_votesWithLog_invariant
 
 /-! ## Exhaustive sweep (fails the build on any disallowed axiom) -/
 

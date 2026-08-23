@@ -399,8 +399,12 @@ from artifacts.
 | terms_and_indices_from_one_log (+_nw) | PROVED (base) | Raft/TermsAndIndicesFromOneLogInterface.v:8-16 | CreationRing.lean (both fields) |
 | terms_and_indices_from_one (vwl ∧ ll) | PROVED | Raft/TermsAndIndicesFromOneInterface.v:10-18 | CreationRing.lean (invariant) |
 | leaderLogs_candidateEntries | PROVED | Raft/LeaderLogsCandidateEntriesInterface.v:9-13 | CreationRing.lean (invariant) |
-| allEntries_votesWithLog | GAP-7a (blocked on AllEntriesLog; unit-7/8 charter) | Raft/AllEntriesVotesWithLogInterface.v | — |
-| leaderLogs_preserved | GAP-7b (blocked on LogsLeaderLogs; unit-7 charter) | Raft/LeaderLogsPreservedInterface.v | — |
+| allEntries_votesWithLog (**GAP-7a**) | PROVED | Raft/AllEntriesVotesWithLogInterface.v:10-19 | LeaderLogsAssembly.lean (invariant) |
+| leaderLogs_preserved (**GAP-7b**) | PROVED | Raft/LeaderLogsPreservedInterface.v:9-15 | LeaderLogsAssembly.lean (invariant) |
+| append_entries_leaderLogs | PROVED | Raft/AppendEntriesRequestLeaderLogsInterface.v:12-22 | LeaderLogsAssembly.lean (invariant) |
+| logs_leaderLogs (+ _nw) | PROVED | Raft/LogsLeaderLogsInterface.v:9-30 | LeaderLogsAssembly.lean (both invariants) |
+| allEntries_leaderLogs_term | PROVED | Raft/AllEntriesLeaderLogsTermInterface.v:9-15 | LeaderLogsAssembly.lean (invariant) |
+| allEntries_log | PROVED | Raft/AllEntriesLogInterface.v:10-19 | LeaderLogsAssembly.lean (invariant) |
 | leaderLogs_sorted (GAP-5a) | PROVED | Raft/LeaderLogsSortedInterface.v:9-13 | LogMatching.lean (invariant) |
 | UniqueIndices (2 conjuncts) | PROVED (base) | Raft/UniqueIndicesInterface.v:9-20 | LogMatching.lean (UniqueIndices_invariant) |
 | leader_sublog (2 conjuncts) | PROVED (base) | Raft/LeaderSublogInterface.v:8-27 | LogMatching.lean (leader_sublog_invariant_invariant) |
@@ -1598,3 +1602,45 @@ re-verified at THIS unit's closure derivation, not inherited.
   (`update_elections_data_client_request_allEntries_head_term`) reads
   it off handleClientRequest_log_full — kept local (single consumer).
   Build green, sweep 1915.
+- 2026-08-23 Slices 47-48 (a700a7c9, f7efa59e): **`allEntries_log`**
+  (AllEntriesLogInterface.v:10-19 1:1; upstream 1,089 lines — the
+  unit's summit). Support: maxIndex_non_empty/maxIndex_le'/
+  Prefix_maxIndex_eq/prefix_contiguous, haveNewEntries elims,
+  appendEntries_haveNewEntries_false,
+  `handleAppendEntries_accept_detail` (SpecLemmas.v:236-280's shape
+  with haveNewEntries retained), and seven per-handler
+  currentTerm/leaderId movement lemmas (incl. an applyEntries_leaderId
+  induction — applyEntries_spec doesn't carry leaderId). [AGENT]
+  PROOF-SHAPE CALL (logged; §9 guided re-proof — same invariant
+  lattice, re-derived route): upstream's ~500-line append_entries Ltac
+  (four bullets of interleaved exfalso battles,
+  sorted_app_sorted_app_in1_in2 family, term_ne_in_l2) is replaced by
+  TWO containment lemmas — `ae_snapshot_in_newlog` (a host-log member
+  of the packet's term-t snapshot is in the new log; per accept-shape
+  × prevLog-disjunct analysis) and `ae_own_term_in_newlog` (a host
+  entry AT term t reappears inside `es` via the haveNewEntries
+  maxIndex bound + log matching + uniqueIndices, or sits below the
+  splice) — after which the AE case is: old log-witness destroyed ⇒
+  the packet snapshot is the new witness (t0 < t) or the containments
+  refute the destruction (t0 = t, via allEntries_leaderLogs_term);
+  old snapshot-witness ⇒ ct/leaderId transport; new records ⇒ in the
+  new log or nothing was new. Both containment lemmas compiled on
+  first attempt. Build green, sweep 1970.
+- 2026-08-23 Slice 49: **`allEntries_votesWithLog` — GAP-7a CLOSED**
+  (AllEntriesVotesWithLogInterface.v:10-19 1:1; upstream 356 lines) —
+  slice 48's payoff: a fresh vote (RV grant / timeout candidacy)
+  snapshots the voter's unchanged log, so `allEntries_log` classifies
+  every earlier record against it; the vote's term dominates the
+  intermediate snapshot's via the grant fine print
+  (`update_elections_data_requestVote_votesWithLog_elim_fine`, whose
+  fine print comes from `handleRequestVote_vote_change` — the isNone
+  guard or an advanced term — upstream's
+  handleRequestVote_currentTerm_leaderId'); fresh allEntries records
+  sit at/above the recorder's current term, above every recorded vote
+  by votesWithLog term sanity. AxCheck pins for the seven unit-8
+  headliners (fresh probe, all [propext, Quot.sound]). Build green,
+  sweep 1985. INDEX updated: GAP-7a/b rows PROVED + four new rows.
+  [AGENT] Gotcha re-confirmed twice more: `subst` on
+  `h0 = p.pDst` eliminates h0 (LEFT, projection right) — post-subst
+  scripts must reference p.pDst; and the unit-7 nomatch-through-`first`
+  leak (put the benign alternative first).
