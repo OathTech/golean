@@ -3210,3 +3210,19 @@ complete units; the remainder chartered honestly.
   auto-bound implicit (explicit Network type instead). Three AxCheck
   pins (fresh capped probe, all [propext, Quot.sound]). Build green,
   sweep 2511; hatch grep over MsgRefinement.lean: 0 (exit 1).
+- 2026-08-23 CHECKPOINT (recomputed at a096ba65; 6 units since the
+  unit-15 opening: re-verification+closure, slices 81, 82, 83, 84,
+  85): `git log f64d9b21..HEAD --oneline | wc -l` = 116 commits; fresh
+  capped full `lake build` green with `AxCheck sweep: 2511
+  declarations across VerdiCompat modules, axiom set within
+  [propext, Quot.sound]`; `grep -c "sorry\|native_decide"` over
+  MatchIndexAllEntries.lean / MsgRefinement.lean /
+  RefinedProofStructure.lean: 0, 0, 0 (exit 1);
+  MatchIndexAllEntries.lean = 1,076 lines, MsgRefinement.lean = 1,682,
+  RefinedProofStructure.lean = 1,634 (wc). INDEX = 80 data rows
+  (recomputed: `grep -c "^| "` = 83 minus the header minus the two
+  wrapped prose lines counted at units 10/12 — verified against the
+  table span). Unit-15 state: (a) W-E ✓ (primed set + MIA), (b) GAP-8
+  ✓. Remaining charter: (c) the SMS interior
+  (StateMachineSafetyProof.v, 3,199L) — DAG derivation next, split
+  discipline in force.
