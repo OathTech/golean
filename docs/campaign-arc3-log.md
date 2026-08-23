@@ -2810,3 +2810,50 @@ consume this unit's ported set directly. Beyond: W-E
 reghosting). Successors re-verify THIS unit fresh: capped full build +
 sweep 2362 + the five-headliner probe above + hatch grep over
 GhostLogs.lean AND SafetyLeaves.lean (expect 0 both).
+
+## Unit 14 — the W-C remainder + W-D (2026-08-23, coordinator-accepted charter)
+
+Charter per the posted proposal, coordinator additions folded in: the
+unit-3-preserves consolidation candidate goes on the promotion ledger
+for a future consolidation slice (not consumed here unless a W-D proof
+wants it); context stop-rule stands.
+
+- 2026-08-23 SUCCESSOR RE-VERIFICATION of unit 13 (recomputed, same
+  worker continuing under the unit-14 charter): tip d14bfd6a, tree
+  clean; `deps/verdi-raft` pin re-verified
+  `a3375e867326a82225e724cc1a7b4758b029376f`. Fresh capped
+  `lake env lean AxCheck.lean` printed verbatim `AxCheck sweep: 2362
+  declarations across VerdiCompat modules, axiom set within
+  [propext, Quot.sound]`; fresh capped five-headliner probe
+  (match_index_sanity / prevLog_candidateEntriesTerm /
+  msg_refined_raft_net_invariant' / ghost_log_correct /
+  log_properties_hold_on_ghost_logs invariants): all
+  `depends on axioms: [propext, Quot.sound]` verbatim; hatch grep
+  (`sorry|native_decide|^axiom| axiom `) over GhostLogs.lean AND
+  MsgRefinement.lean: 0 hits (exit 1). All claims hold; building on
+  them.
+- 2026-08-23 [AGENT] UNIT-14 CLOSURE, re-derived fresh (`Require
+  Import` walk over all 7 proof files @ a3375e8, pin re-verified;
+  every imported Interface diffed against the INDEX's 71 proved
+  rows): the closure is EXACTLY the seven charter files, `wc -l`
+  recomputed at the pin: 155+111+146+378+282+564+518 = **2,154**
+  upstream lines. All deps ported or in-unit: NoAERepliesToSelf
+  [NoAEToSelf ✓]; NoAEToLeader [NoAEToSelf ✓, OneLeaderLogPerTerm ✓,
+  AECameFromLeaders ✓, LeadersHaveLeaderLogs ✓]; MatchIndexLeader
+  [NoAERepliesToSelf, in-unit]; PrevLogLeaderSublog [PLCET ✓ (unit
+  13), VotesCorrect ✓, CroniesCorrect ✓, LeaderSublog ✓];
+  GhostLogAllEntries [rri ✓, rmri ✓, InLogInAllEntries ✓];
+  GhostLogLogMatching [RLML ✓, GhostLogCorrect ✓, GhostLogsLogProps ✓,
+  TermSanity ✓, AllEntriesLeaderSublog ✓, GhostLogAllEntries in-unit];
+  SMSPrime [LeaderCompleteness ✓, LLContiguous/Sorted ✓,
+  AllEntriesLeaderLogs ✓, LogMatching ✓, UniqueIndices ✓,
+  AERLeaderLogs ✓, LLLogMatching ✓, LogsLeaderLogs ✓,
+  OneLeaderLogPerTerm ✓, RLML ✓, Sorted ✓]. In-unit waves:
+  W1 = NoAERepliesToSelf, NoAEToLeader, PrevLogLeaderSublog,
+  GhostLogAllEntries, SMSPrime; W2 = MatchIndexLeader,
+  GhostLogLogMatching.
+- 2026-08-23 [AGENT] File plan: the two msg-chain files
+  (GhostLogAllEntries, GhostLogLogMatching) EXTEND `GhostLogs.lean`
+  (the chain's home, vocabulary already open); the five refined/base
+  files go in new `SafetyPrime.lean` (imports GhostLogs, wired into
+  VerdiCompat.lean from birth) — the lane's linear-import convention.
