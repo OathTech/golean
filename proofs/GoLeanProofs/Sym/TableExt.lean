@@ -218,7 +218,7 @@ def syncCell' (s : State D) (loc : Loc) : M SyncPrim := do
 /-- Mirror of `applySyncOp`, the census subset: `lock`/`unlock` on a
 mutex. Failure paths (unlock of unlocked = the machine's `.fatal`)
 quit Q6; every other op quits Q7 as before. -/
-def applySyncOp' (s : State D) (op : SyncOp) (vs : List (Value D))
+def applySyncOp' (T : TypeEnv) (s : State D) (op : SyncOp) (vs : List (Value D))
     (env : LocalEnv) (k : Cont D) : M (Config D × State D) := do
   match op, vs with
   | .lock, [av] => do
@@ -227,7 +227,7 @@ def applySyncOp' (s : State D) (op : SyncOp) (vs : List (Value D))
       | .mutex locked =>
           if locked then .ok (.blockedSync .lock loc env k, s)
           else do
-            let s' ← storeLoc' s loc (.syncData (.mutex true))
+            let s' ← storeLocT T s loc (.syncData (.mutex true))
             .ok (.opDone .postOp (.next k), s')
       | _ => quit .q11Internal
   | .unlock, [av] => do
@@ -235,84 +235,11 @@ def applySyncOp' (s : State D) (op : SyncOp) (vs : List (Value D))
       match ← syncCell' s loc with
       | .mutex locked =>
           if locked then do
-            let s' ← storeLoc' s loc (.syncData (.mutex false))
+            let s' ← storeLocT T s loc (.syncData (.mutex false))
             .ok (.opDone .postOp (.next k), s')
           else quit .q6Panic
       | _ => quit .q11Internal
   | _, _ => quit .q7Concurrency
-
-set_option linter.unusedSimpArgs false in
-/-- `applySyncOp'` transports (census subset; `storeLoc_conc` carries
-the flag store — sync cells normalize at the concrete `.sync` arm, no
-table needed). -/
-theorem applySyncOp_conc (hI : I.Sound) (σ : ExecState) {s : State D}
-    {op : SyncOp} {vs : List (Value D)} {env : LocalEnv} {k : Cont D}
-    {c' : Config D} {s' : State D}
-    (h : applySyncOp' s op vs env k = .ok (c', s')) :
-    applySyncOp (concS I σ s) op (vs.map (concV I)) env (concK I k)
-      = .ok (concC I c', concS I σ s') := by
-  cases op <;> simp only [applySyncOp', quit] at h <;> try (cases h; done)
-  case lock =>
-      match vs, h with
-      | [av], h =>
-        obtain ⟨loc, hloc, h2⟩ := bind_eq_ok.mp h
-        obtain ⟨p, hp, h3⟩ := bind_eq_ok.mp h2
-        simp only [List.map_cons, List.map_nil, applySyncOp]
-        refine bind_eq_ok.mpr ⟨loc, asLoc_conc hloc, ?_⟩
-        simp only [syncCell'] at hp
-        obtain ⟨pv, hpv, hp2⟩ := bind_eq_ok.mp hp
-        have hload := loadLoc_conc (I := I) σ hpv
-        cases pv <;> simp only [quit] at hp2 <;> try (cases hp2; done)
-        case syncData prim =>
-          cases hp2
-          refine bind_eq_ok.mpr ⟨p, ?_, ?_⟩
-          · simp only [syncCell, hload, concV_syncData, Bind.bind,
-              Except.bind, pure, Except.pure]
-          · cases p <;> simp only [quit] at h3 <;> try (cases h3; done)
-            case mutex locked =>
-              by_cases hl : locked = true
-              · subst hl
-                rw [if_pos rfl] at h3
-                cases h3
-                simp [concC, concK]
-              · rw [if_neg hl] at h3
-                obtain ⟨s2, hst, h4⟩ := bind_eq_ok.mp h3
-                cases h4
-                simp only [Bool.not_eq_true] at hl
-                subst hl
-                have hstc := storeLoc_conc hI σ hst
-                simp only [concV_syncData] at hstc
-                simp [hstc, concC, concK, Bind.bind, Except.bind, pure,
-                  Except.pure]
-  case unlock =>
-      match vs, h with
-      | [av], h =>
-        obtain ⟨loc, hloc, h2⟩ := bind_eq_ok.mp h
-        obtain ⟨p, hp, h3⟩ := bind_eq_ok.mp h2
-        simp only [List.map_cons, List.map_nil, applySyncOp]
-        refine bind_eq_ok.mpr ⟨loc, asLoc_conc hloc, ?_⟩
-        simp only [syncCell'] at hp
-        obtain ⟨pv, hpv, hp2⟩ := bind_eq_ok.mp hp
-        have hload := loadLoc_conc (I := I) σ hpv
-        cases pv <;> simp only [quit] at hp2 <;> try (cases hp2; done)
-        case syncData prim =>
-          cases hp2
-          refine bind_eq_ok.mpr ⟨p, ?_, ?_⟩
-          · simp only [syncCell, hload, concV_syncData, Bind.bind,
-              Except.bind, pure, Except.pure]
-          · cases p <;> simp only [quit] at h3 <;> try (cases h3; done)
-            case mutex locked =>
-              by_cases hl : locked = true
-              · subst hl
-                rw [if_pos rfl] at h3
-                obtain ⟨s2, hst, h4⟩ := bind_eq_ok.mp h3
-                cases h4
-                have hstc := storeLoc_conc hI σ hst
-                simp only [concV_syncData] at hstc
-                simp [hstc, concC, concK, Bind.bind, Except.bind, pure,
-                  Except.pure]
-              · rw [if_neg hl] at h3
-                cases h3
 
 /-! ## The extended step and window driver -/
 
@@ -341,7 +268,7 @@ def stepFnT (T : TypeEnv) (s : State D) (c : Config D) :
       (match pending with
        | e :: rest =>
            .ok (.evalE e env (.syncStK op (v :: done) rest env k'), s)
-       | [] => applySyncOp' s op (v :: done).reverse env k')
+       | [] => applySyncOp' T s op (v :: done).reverse env k')
   -- slice 2: the sequential completion-marker strip
   | .opDone _ inner => .ok (inner, s)
   | c => stepFn' s c
@@ -689,6 +616,81 @@ theorem storeTargetT_conc (hI : I.Sound) (σ : ExecState) {T : TypeEnv}
       simp only [storeTargetT] at h
       simpa [storeTarget, concRef] using mapAssignValue_conc hI σ h
 
+set_option linter.unusedSimpArgs false in
+/-- `applySyncOp'` transports (census subset; `storeLoc_conc` carries
+the flag store — sync cells normalize at the concrete `.sync` arm, no
+table needed). -/
+theorem applySyncOp_conc (hI : I.Sound) (σ : ExecState) {T : TypeEnv}
+    (hsub : SubTable T σ.types) {s : State D}
+    {op : SyncOp} {vs : List (Value D)} {env : LocalEnv} {k : Cont D}
+    {c' : Config D} {s' : State D}
+    (h : applySyncOp' T s op vs env k = .ok (c', s')) :
+    applySyncOp (concS I σ s) op (vs.map (concV I)) env (concK I k)
+      = .ok (concC I c', concS I σ s') := by
+  cases op <;> simp only [applySyncOp', quit] at h <;> try (cases h; done)
+  case lock =>
+      match vs, h with
+      | [av], h =>
+        obtain ⟨loc, hloc, h2⟩ := bind_eq_ok.mp h
+        obtain ⟨p, hp, h3⟩ := bind_eq_ok.mp h2
+        simp only [List.map_cons, List.map_nil, applySyncOp]
+        refine bind_eq_ok.mpr ⟨loc, asLoc_conc hloc, ?_⟩
+        simp only [syncCell'] at hp
+        obtain ⟨pv, hpv, hp2⟩ := bind_eq_ok.mp hp
+        have hload := loadLoc_conc (I := I) σ hpv
+        cases pv <;> simp only [quit] at hp2 <;> try (cases hp2; done)
+        case syncData prim =>
+          cases hp2
+          refine bind_eq_ok.mpr ⟨p, ?_, ?_⟩
+          · simp only [syncCell, hload, concV_syncData, Bind.bind,
+              Except.bind, pure, Except.pure]
+          · cases p <;> simp only [quit] at h3 <;> try (cases h3; done)
+            case mutex locked =>
+              by_cases hl : locked = true
+              · subst hl
+                rw [if_pos rfl] at h3
+                cases h3
+                simp [concC, concK]
+              · rw [if_neg hl] at h3
+                obtain ⟨s2, hst, h4⟩ := bind_eq_ok.mp h3
+                cases h4
+                simp only [Bool.not_eq_true] at hl
+                subst hl
+                have hstc := storeLocT_conc hI σ hsub hst
+                simp only [concV_syncData] at hstc
+                simp [hstc, concC, concK, Bind.bind, Except.bind, pure,
+                  Except.pure]
+  case unlock =>
+      match vs, h with
+      | [av], h =>
+        obtain ⟨loc, hloc, h2⟩ := bind_eq_ok.mp h
+        obtain ⟨p, hp, h3⟩ := bind_eq_ok.mp h2
+        simp only [List.map_cons, List.map_nil, applySyncOp]
+        refine bind_eq_ok.mpr ⟨loc, asLoc_conc hloc, ?_⟩
+        simp only [syncCell'] at hp
+        obtain ⟨pv, hpv, hp2⟩ := bind_eq_ok.mp hp
+        have hload := loadLoc_conc (I := I) σ hpv
+        cases pv <;> simp only [quit] at hp2 <;> try (cases hp2; done)
+        case syncData prim =>
+          cases hp2
+          refine bind_eq_ok.mpr ⟨p, ?_, ?_⟩
+          · simp only [syncCell, hload, concV_syncData, Bind.bind,
+              Except.bind, pure, Except.pure]
+          · cases p <;> simp only [quit] at h3 <;> try (cases h3; done)
+            case mutex locked =>
+              by_cases hl : locked = true
+              · subst hl
+                rw [if_pos rfl] at h3
+                obtain ⟨s2, hst, h4⟩ := bind_eq_ok.mp h3
+                cases h4
+                have hstc := storeLocT_conc hI σ hsub hst
+                simp only [concV_syncData] at hstc
+                simp [hstc, concC, concK, Bind.bind, Except.bind, pure,
+                  Except.pure]
+              · rw [if_neg hl] at h3
+                cases h3
+
+
 /-! ## The extended master step + window, sound -/
 
 /-- The extended step transports: the overridden arm via
@@ -753,7 +755,7 @@ theorem stepFnT_conc (hI : I.Sound) (σ : ExecState) (ch : Choices)
               cases h
               rfl
           | nil =>
-              have happ := applySyncOp_conc (I := I) hI σ h
+              have happ := applySyncOp_conc (I := I) hI σ hsub h
               rw [List.map_reverse] at happ
               simp only [concC, concK, stepFn]
               rw [show (concV I v :: List.map (concV I) done)
@@ -853,5 +855,449 @@ theorem syncWit_final :
       = [(.base ⟨0⟩, .mk (some (.sync .mutex)) (.syncData (.mutex false)))] := by
   rfl
 
+
+/-! ## Slice 3 — call entry (design §3, class 2): ONE lever for fid
+calls, closure call-values, deferred-call drains, and interface
+dispatch, all through a mirrored `enterFrame` at an input TABLE PACK.
+
+The delegation-vs-refactor decision (deferred at slice 1, decided
+here from contact): DELEGATION AGAIN, LAYERED — `stepFnTB` overrides
+the four call/drain configuration shapes and delegates everything
+else to `stepFnT` (which delegates to the shipped `stepFn'`). The
+override sets are disjoint config shapes, so the layers never
+interleave; slice-1's theorems (and their weaker `SubTable`-only
+premise, which store-only windows keep) survive verbatim. A refactor
+into one step function is re-posed only if a future class needs to
+interleave with an existing override.
+
+The premise strengthens for THIS layer: `SymTables.Agrees` demands
+table EQUALITY, not sub-table — alias-resolution walks
+(`canonicalTy`, `resolveDefinedAliases`) return partial answers on a
+MISS rather than failing, so a sub-table's miss is indistinguishable
+from a genuine absence and equality is the honest condition
+(recorded; the store layer keeps sub-table). -/
+
+/-- The call-entry input pack. -/
+structure SymTables where
+  types : TypeEnv := []
+  functions : Array Func := #[]
+  methods : Array MethodInfo := #[]
+  methodSets : Array MethodSetRecord := #[]
+
+/-- The pack as a heapless machine state — the carrier the MACHINE'S
+OWN table helpers run against inside the mirror (zero
+re-implementation of the dispatch walks). -/
+def SymTables.toState (TB : SymTables) : ExecState :=
+  { types := TB.types, functions := TB.functions,
+    methods := TB.methods, methodSets := TB.methodSets }
+
+/-- Table agreement (equality on all four components — see the module
+docstring for why not sub-table here). -/
+def SymTables.Agrees (TB : SymTables) (σ : ExecState) : Prop :=
+  σ.types = TB.types ∧ σ.functions = TB.functions
+    ∧ σ.methods = TB.methods ∧ σ.methodSets = TB.methodSets
+
+/-! ### Table-only congruence for the machine's dispatch helpers -/
+
+theorem resolveDefinedAliasesFuel_types {σ₁ σ₂ : ExecState}
+    (h : σ₁.types = σ₂.types) :
+    ∀ (fuel : Nat) (ty : Ty),
+      resolveDefinedAliasesFuel fuel σ₁ ty
+        = resolveDefinedAliasesFuel fuel σ₂ ty := by
+  intro fuel
+  induction fuel with
+  | zero => intro ty; rfl
+  | succ fuel ih =>
+      intro ty
+      cases ty <;> simp only [resolveDefinedAliasesFuel]
+      next name =>
+        rw [h]
+        cases TypeEnv.lookup σ₂.types name with
+        | none => rfl
+        | some td => cases td <;> simp [ih]
+
+theorem methodInfoByFuncId_tables {σ₁ σ₂ : ExecState}
+    (h : σ₁.methods = σ₂.methods) (fid : FuncId) :
+    methodInfoByFuncId? σ₁ fid = methodInfoByFuncId? σ₂ fid := by
+  simp only [methodInfoByFuncId?, h]
+
+theorem methodRecvInterfaceName_tables {σ₁ σ₂ : ExecState}
+    (h : σ₁.types = σ₂.types) (m : MethodInfo) :
+    methodRecvInterfaceName? σ₁ m = methodRecvInterfaceName? σ₂ m := by
+  simp only [methodRecvInterfaceName?, resolveDefinedAliases,
+    resolveDefinedAliasesFuel_types h]
+
+/-! ### The mirrored frame entry -/
+
+/-- Mirror of `bindParams` at the pack's type table. -/
+def bindParamsT (T : TypeEnv) :
+    LocalEnv → State D → List Param → List (Value D) → M (LocalEnv × State D)
+  | env, s, [], [] => .ok (env, s)
+  | env, s, p :: ps, v :: vs => do
+      let v' ← normalizeValueForTyT T p.typ v
+      match s.alloc v' (some p.typ) with
+      | (loc, s₁) => bindParamsT T (env.declare p.id loc) s₁ ps vs
+  | _, _, [], _ :: _ => quit .q11Internal
+  | _, _, _ :: _, [] => quit .q11Internal
+
+/-- `pinResultLocs` is env-only; the machine's own function serves,
+error-converted. -/
+def pinResultLocs' (env : LocalEnv) (ps : List Param) : M (List Loc) :=
+  match pinResultLocs env ps with
+  | .ok locs => .ok locs
+  | .error _ => quit .q11Internal
+
+/-- Mirror of `dynamicDispatch?`, the census subset: the NON-dispatch
+paths (a plain function, or a method with a concrete receiver — the
+overwhelming bulk of the census: every raft/tracker/log method).
+INTERFACE-receiver methods quit Q4 for now — the census path's single
+interface call is the harness logger's empty `Infof`, one window
+split per logging handler; the dispatch-walk congruence
+(`canonicalTy` and the method-set fold under table agreement) is
+where the cost lives, and it is recorded as the residual class 2b
+rather than paid for one empty body (arc log). -/
+def dynamicDispatchT (TB : SymTables) (func : Func) :
+    M Unit :=
+  match methodInfoByFuncId? TB.toState func.id with
+  | none => .ok ()
+  | some method =>
+      match methodRecvInterfaceName? TB.toState method with
+      | none => .ok ()
+      | some _ => quit .q4Program
+
+/-- Mirror of `enterFrame` at the pack (census subset — see
+`dynamicDispatchT`). -/
+def enterFrameT (TB : SymTables) (s : State D) (fid : FuncId)
+    (args : List (Value D)) : M (Func × LocalEnv × List Loc × State D) := do
+  let func ←
+    match findFunctionIn? TB.functions fid with
+    | some f => .ok f
+    | none => quit .q4Program
+  if func.args.size != args.length then quit .q11Internal
+  else do
+    let _ ← dynamicDispatchT TB func
+    let (argsEnv, s₁) ← bindParamsT TB.types [] s func.args.toList args
+    let (frameEnv, s₂) ← allocDecls' argsEnv s₁ func.results.toList
+    let resultLocs ← pinResultLocs' frameEnv func.results.toList
+    .ok (func, frameEnv, resultLocs, s₂)
+
+/-! ### Call-entry soundness -/
+
+theorem bindParamsT_conc (hI : I.Sound) (σ : ExecState) {T : TypeEnv}
+    (hsub : SubTable T σ.types) :
+    ∀ (ps : List Param) (vs : List (Value D)) (env : LocalEnv) {s : State D}
+      {env' : LocalEnv} {s' : State D},
+      bindParamsT T env s ps vs = .ok (env', s') →
+      bindParams env (concS I σ s) ps (vs.map (concV I))
+        = .ok (env', concS I σ s') := by
+  intro ps
+  induction ps with
+  | nil =>
+      intro vs env s env' s' h
+      cases vs with
+      | nil =>
+          simp only [bindParamsT] at h
+          cases h
+          simp [bindParams, pure, Except.pure]
+      | cons a rest =>
+          simp only [bindParamsT, quit] at h
+          cases h
+  | cons p ps ih =>
+      intro vs env s env' s' h
+      cases vs with
+      | nil =>
+          simp only [bindParamsT, quit] at h
+          cases h
+      | cons v vrest =>
+          simp only [bindParamsT] at h
+          obtain ⟨nv, hnv, h2⟩ := bind_eq_ok.mp h
+          rcases halloc : s.alloc nv (some p.typ) with ⟨loc, s₁⟩
+          rw [halloc] at h2
+          simp only [List.map_cons, bindParams, bind_eq_ok]
+          refine ⟨concV I nv, normalizeT_conc hI (concS I σ s) hsub hnv, ?_⟩
+          rw [alloc_conc, halloc]
+          exact ih _ _ h2
+
+theorem dynamicDispatchT_conc (σ : ExecState)
+    {TB : SymTables} (hag : TB.Agrees σ) {s : State D}
+    {func : Func} (args : Array GoValue)
+    (h : dynamicDispatchT TB func = Except.ok ()) :
+    dynamicDispatch? (concS I σ s) func args = .ok none := by
+  obtain ⟨ht, hf, hm, hms⟩ := hag
+  have hmi := methodInfoByFuncId_tables (σ₁ := concS I σ s)
+    (σ₂ := TB.toState) (by simp [concS, hm, SymTables.toState]) func.id
+  simp only [dynamicDispatchT] at h
+  revert h
+  rcases hinfo : methodInfoByFuncId? TB.toState func.id with _ | method
+  · intro _
+    simp only [dynamicDispatch?, hmi, hinfo]
+    rfl
+  · have hri := methodRecvInterfaceName_tables (σ₁ := concS I σ s)
+      (σ₂ := TB.toState) (by simp [concS, ht, SymTables.toState]) method
+    rcases hrecv : methodRecvInterfaceName? TB.toState method with _ | iname
+    · intro _
+      simp only [dynamicDispatch?, hmi, hinfo, hri, hrecv]
+      rfl
+    · intro h
+      simp only [hrecv] at h
+      simp [quit] at h
+
+/-- Frame entry transports (census subset), composing the table
+congruences with the mirrored binding chain. -/
+theorem enterFrameT_conc (hI : I.Sound) (σ : ExecState) {TB : SymTables}
+    (hag : TB.Agrees σ) {s : State D} {fid : FuncId} {args : List (Value D)}
+    {func : Func} {env : LocalEnv} {locs : List Loc} {s' : State D}
+    (h : enterFrameT TB s fid args = .ok (func, env, locs, s')) :
+    enterFrame (concS I σ s) fid (args.map (concV I))
+      = .ok (func, env, locs, concS I σ s') := by
+  have hf : (concS I σ s).functions = TB.functions := by
+    simp [concS, hag.2.1]
+  simp only [enterFrameT] at h
+  revert h
+  rcases hfind : findFunctionIn? TB.functions fid with _ | f0
+  · intro h
+    simp [quit, Bind.bind, Except.bind] at h
+  · intro h
+    simp only [Bind.bind, Except.bind, pure, Except.pure] at h
+    by_cases harity : (f0.args.size != args.length) = true
+    · rw [if_pos harity] at h
+      simp [quit] at h
+    · rw [if_neg harity] at h
+      obtain ⟨u, hdisp, h2⟩ := bind_eq_ok.mp h
+      obtain ⟨⟨argsEnv, s₁⟩, hbind, h3⟩ := bind_eq_ok.mp h2
+      obtain ⟨⟨frameEnv, s₂⟩, halloc, h4⟩ := bind_eq_ok.mp h3
+      obtain ⟨rlocs, hpin, h5⟩ := bind_eq_ok.mp h4
+      cases h5
+      have harityF : (func.args.size != args.length) = false := by
+        simpa using harity
+      have hdc := dynamicDispatchT_conc (I := I) σ hag (s := s)
+        ((args.map (concV I)).toArray) hdisp
+      have hb := bindParamsT_conc (I := I) hI σ (SubTable.of_eq hag.1)
+        func.args.toList args [] hbind
+      have hal := allocDecls_conc (I := I) hI σ _ _ halloc
+      have hpinM : pinResultLocs frameEnv func.results.toList
+          = .ok locs := by
+        revert hpin
+        simp only [pinResultLocs']
+        rcases pinResultLocs frameEnv func.results.toList with e | ls
+        · intro hpin
+          simp [quit] at hpin
+        · intro hpin
+          cases hpin
+          rfl
+      simp only [enterFrame, hf, hfind, Bind.bind, Except.bind, pure,
+        Except.pure, List.length_map, harityF, hdc, hb, hal, hpinM,
+        Bool.false_eq_true, if_false]
+
+/-- The class-2 layered step: the four call/drain configuration
+shapes through `enterFrameT`; EVERYTHING else delegates to the
+slice-1/2 `stepFnT` (which delegates to the shipped `stepFn'`). The
+layers never interleave — the override sets are disjoint config
+shapes (the deferred delegation-vs-refactor decision, resolved:
+delegation again; see the slice-3 docstring above). -/
+def stepFnTB (TB : SymTables) (s : State D) (c : Config D) :
+    M (Config D × State D) :=
+  match c with
+  | .retV v (.callArgsK fid plans vals pending env k') =>
+      (match pending with
+       | a :: rest =>
+           .ok (.evalE a env
+             (.callArgsK fid plans (vals ++ [v]) rest env k'), s)
+       | [] => do
+           let (func, frameEnv, resultLocs, s') ←
+             enterFrameT TB s fid (vals ++ [v])
+           .ok (.exec func.body frameEnv
+             (.frame plans env resultLocs [] k' func.wrapper), s'))
+  | .retV v (.callValArgsK cv plans vals pending env k') =>
+      (match pending with
+       | a :: rest =>
+           .ok (.evalE a env
+             (.callValArgsK cv plans (vals ++ [v]) rest env k'), s)
+       | [] =>
+           match cv with
+           | .funcVal fid captured => do
+               let (func, frameEnv, resultLocs, s') ←
+                 enterFrameT TB s fid (captured ++ vals ++ [v])
+               .ok (.exec func.body frameEnv
+                 (.frame plans env resultLocs [] k' func.wrapper), s')
+           | .nil => quit .q6Panic
+           | .atom _ => quit .q10Atom
+           | _ => quit .q11Internal)
+  | .next (.frame targets tenv results ((cv, dargs) :: ds) k' w) =>
+      (match cv with
+       | .funcVal fid captured => do
+           let (func, frameEnv, _, s') ←
+             enterFrameT TB s fid (captured ++ dargs)
+           .ok (.exec func.body frameEnv
+             (.frame [] [] [] []
+               (.frame targets tenv results ds k' w) func.wrapper), s')
+       | .nil => quit .q6Panic
+       | .atom _ => quit .q10Atom
+       | _ => quit .q11Internal)
+  | .returning (.frame targets tenv results ((cv, dargs) :: ds) k' w) =>
+      (match cv with
+       | .funcVal fid captured => do
+           let (func, frameEnv, _, s') ←
+             enterFrameT TB s fid (captured ++ dargs)
+           .ok (.exec func.body frameEnv
+             (.frame [] [] [] []
+               (.frame targets tenv results ds k' w) func.wrapper), s')
+       | .nil => quit .q6Panic
+       | .atom _ => quit .q10Atom
+       | _ => quit .q11Internal)
+  | c => stepFnT TB.types s c
+
+/-- The layered step transports (the class-2 arms via
+`enterFrameT_conc`; the pending-cons operand steps structurally;
+everything else via the slice-1/2 `stepFnT_conc`). -/
+theorem stepFnTB_conc (hI : I.Sound) (σ : ExecState) (ch : Choices)
+    {TB : SymTables} (hag : TB.Agrees σ)
+    {s : State D} {c : Config D} {c₁ : Config D} {s₁ : State D}
+    (h : stepFnTB TB s c = .ok (c₁, s₁)) :
+    stepFn (concS I σ s) (concC I c) ch
+      = .ok (concC I c₁, concS I σ s₁, ch) := by
+  have hsub : SubTable TB.types σ.types := SubTable.of_eq hag.1
+  cases c with
+  | retV v k =>
+      cases k with
+      | callArgsK fid plans vals pending env k' =>
+          simp only [stepFnTB] at h
+          cases pending with
+          | cons a rest =>
+              cases h
+              simp [concC, concK, stepFn, List.map_append]
+          | nil =>
+              obtain ⟨⟨func, frameEnv, resultLocs, s'⟩, hent, h2⟩ :=
+                bind_eq_ok.mp h
+              cases h2
+              have hef := enterFrameT_conc (I := I) hI σ hag hent
+              simp only [concC, concK, stepFn, enterFrameStep,
+                List.map_append, List.map_cons, List.map_nil] at hef ⊢
+              rw [hef]
+      | callValArgsK cv plans vals pending env k' =>
+          simp only [stepFnTB] at h
+          cases pending with
+          | cons a rest =>
+              cases h
+              simp [concC, concK, stepFn, List.map_append]
+          | nil =>
+              cases cv <;> simp only [quit] at h <;> try (cases h; done)
+              case funcVal fid captured =>
+                obtain ⟨⟨func, frameEnv, resultLocs, s'⟩, hent, h2⟩ :=
+                  bind_eq_ok.mp h
+                cases h2
+                have hef := enterFrameT_conc (I := I) hI σ hag hent
+                simp only [concC, concK, concV_funcVal, stepFn,
+                  enterFrameStep, List.map_append, List.map_cons,
+                  List.map_nil] at hef ⊢
+                rw [hef]
+      | _ => exact stepFnT_conc hI σ ch hsub h
+  | next k =>
+      cases k with
+      | frame targets tenv results defers k' w =>
+          cases defers with
+          | nil => exact stepFnT_conc hI σ ch hsub h
+          | cons d ds =>
+              obtain ⟨cv, dargs⟩ := d
+              simp only [stepFnTB] at h
+              cases cv <;> simp only [quit] at h <;> try (cases h; done)
+              case funcVal fid captured =>
+                obtain ⟨⟨func, frameEnv, resultLocs, s'⟩, hent, h2⟩ :=
+                  bind_eq_ok.mp h
+                cases h2
+                have hef := enterFrameT_conc (I := I) hI σ hag hent
+                simp only [concC, concK, concV_funcVal, stepFn,
+                  enterFrameStep, List.map_append, List.map_cons,
+                  List.map_nil] at hef ⊢
+                rw [hef]
+      | _ => exact stepFnT_conc hI σ ch hsub h
+  | returning k =>
+      cases k with
+      | frame targets tenv results defers k' w =>
+          cases defers with
+          | nil => exact stepFnT_conc hI σ ch hsub h
+          | cons d ds =>
+              obtain ⟨cv, dargs⟩ := d
+              simp only [stepFnTB] at h
+              cases cv <;> simp only [quit] at h <;> try (cases h; done)
+              case funcVal fid captured =>
+                obtain ⟨⟨func, frameEnv, resultLocs, s'⟩, hent, h2⟩ :=
+                  bind_eq_ok.mp h
+                cases h2
+                have hef := enterFrameT_conc (I := I) hI σ hag hent
+                simp only [concC, concK, concV_funcVal, stepFn,
+                  enterFrameStep, List.map_append, List.map_cons,
+                  List.map_nil] at hef ⊢
+                rw [hef]
+      | _ => exact stepFnT_conc hI σ ch hsub h
+  | _ => exact stepFnT_conc hI σ ch hsub h
+
+/-- The layered step at the symbolic domain. -/
+def stepFnSTB (TB : SymTables) (S : SymState) (C : SymConfig) :
+    M (SymConfig × SymState) :=
+  stepFnTB TB S C
+
+theorem stepFnSTB_sound (ρ : Valuation) (σ : ExecState) (ch : Choices)
+    {TB : SymTables} (hag : TB.Agrees σ)
+    {S : SymState} {C C₁ : SymConfig} {S₁ : SymState}
+    (h : stepFnSTB TB S C = .ok (C₁, S₁)) :
+    stepFn (γS ρ σ S) (γC ρ C) ch = .ok (γC ρ C₁, γS ρ σ S₁, ch) :=
+  stepFnTB_conc (symInterp_sound ρ) σ ch hag h
+
+/-- The class-2 window driver. -/
+def symEvalWindowTB (TB : SymTables) :
+    Nat → SymState → SymConfig → Nat × SymState × SymConfig
+  | 0, S, C => (0, S, C)
+  | budget + 1, S, C =>
+      match stepFnSTB TB S C with
+      | .error _ => (0, S, C)
+      | .ok (C', S') =>
+          let (n, S'', C'') := symEvalWindowTB TB budget S' C'
+          (n + 1, S'', C'')
+
+/-- **THE PACK-CONDITIONED REFINEMENT THEOREM** — the shipped
+template + the `SymTables.Agrees` premise (equality on the four
+tables; see the slice-3 docstring for why not sub-table). -/
+theorem symEvalWindowTB_refines :
+    ∀ {TB : SymTables} {budget : Nat} {S : SymState} {C : SymConfig}
+      {n : Nat} {S' : SymState} {C' : SymConfig},
+      symEvalWindowTB TB budget S C = (n, S', C') →
+      ∀ (ρ : Valuation) (σ : ExecState) (ch : Choices),
+        TB.Agrees σ →
+        stepFnIter n (γS ρ σ S) (γC ρ C) ch
+          = .ok (γC ρ C', γS ρ σ S', ch) := by
+  intro TB budget
+  induction budget with
+  | zero =>
+      intro S C n S' C' h ρ σ ch hag
+      simp only [symEvalWindowTB, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      rfl
+  | succ budget ih =>
+      intro S C n S' C' h ρ σ ch hag
+      simp only [symEvalWindowTB] at h
+      rcases hstep : stepFnSTB TB S C with q | ⟨C₁, S₁⟩ <;> rw [hstep] at h
+      · simp only [Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl, rfl⟩ := h
+        rfl
+      · simp only [] at h
+        rcases hrec : symEvalWindowTB TB budget S₁ C₁ with ⟨m, S₂, C₂⟩
+        rw [hrec] at h
+        simp only [Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl, rfl⟩ := h
+        have h1 := stepFnSTB_sound ρ σ ch hag hstep
+        simp only [stepFnIter, h1, Bind.bind, Except.bind]
+        exact ih hrec ρ σ ch hag
+
+/-- The projection-form corollary at the pack. -/
+theorem symEvalWindowTB_refines' {TB : SymTables} {budget n : Nat}
+    {S : SymState} {C : SymConfig}
+    (hn : (symEvalWindowTB TB budget S C).1 = n)
+    (ρ : Valuation) (σ : ExecState) (ch : Choices)
+    (hag : TB.Agrees σ) :
+    stepFnIter n (γS ρ σ S) (γC ρ C) ch
+      = .ok (γC ρ (symEvalWindowTB TB budget S C).2.2,
+          γS ρ σ (symEvalWindowTB TB budget S C).2.1, ch) :=
+  symEvalWindowTB_refines (by rw [← hn]) ρ σ ch hag
 
 end GoLean.Sym

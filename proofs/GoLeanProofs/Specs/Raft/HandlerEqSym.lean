@@ -154,4 +154,82 @@ theorem alt_sym_projection :
   -- route DNFs on the γ-image of the window output (recorded).
   exact ⟨by decide +kernel, by decide +kernel⟩
 
+/-! ## A4-U2 slice-3 RE-MEASURE: the `becomeFollower` prefix window
+
+With classes 1–3 landed, the pilot handler's run from its call
+configuration transports as ONE window until the first uncovered
+consult — measured at **189 steps**: frame entry (becomeFollower),
+the `step`/`tick` funcVal stores and `lead`/`state` field stores,
+`reset`'s frame entry, its term/vote branch and four field stores,
+`resetRandomizedElectionTimeout`'s and `Intn`'s frame entries, the
+mutex LOCK (sync apply + marker strip), and the map-build prologue —
+quitting at `Intn`'s `struct{}{}` literal (`buildStructValue` at a
+defined type: the Q4-normalize family's next member, the recorded
+slice-3 residual; the map-range pick two constructs later is the
+DESIGNED Q3 boundary regardless — design §4(ii)). Pre-extension this
+prefix costs ~35 hand windows with ~15 conditioned facts at the
+pilot's measured 9 lines/step; post-extension it is one `rfl` + one
+refinement application over this fixture.
+
+Branch-relevant scalars are concrete (`Term`/`term` 0,
+`electionTimeout` 10 — a symbolic branch scalar would Q1-quit at the
+`reset` if, the per-branch-window design); non-branched scalars stay
+symbolic (`Vote`, `lead`, `leadTransferee` = x₁/x₂/x₄), ∀ρ. -/
+
+def bfRaftVal : SymValue :=
+  setSymField (setSymField (setSymField
+    (setSymField (embedGo wRaftVal) "Vote" (.int (.var 1) .uint64))
+    "lead" (.int (.var 2) .uint64))
+    "leadTransferee" (.int (.var 4) .uint64))
+    "electionTimeout" (.int (.lit 10) .int)
+
+/-- The pinned-table pack (all four tables = the twin's). -/
+def bfTB : SymTables :=
+  { types := twinTypes
+    functions := GoLean.Examples.RaftTwin.twinLowered.funcs
+    methods := GoLean.Examples.RaftTwin.twinLowered.methods
+    methodSets := GoLean.Examples.RaftTwin.twinLowered.methodSets }
+
+/-- The fixture: raft cell at 0 (raftLog → 1), the pin's `globalRand`
+cell at its static address 18 → a lockedRand struct at 19 with an
+unlocked mutex. -/
+def bfS₀ : SymState :=
+  { heap := [(.base ⟨0⟩, .mk (some tyRaft) bfRaftVal),
+             (.base ⟨1⟩, .mk (some tyRaftLog) (embedGo wLogVal)),
+             (.base ⟨18⟩, .mk (some (.pointer (.defined ⟨"raft.lockedRand"⟩)))
+                (.addr (.base ⟨19⟩))),
+             (.base ⟨19⟩, .mk (some (.defined ⟨"raft.lockedRand"⟩))
+                (.struct ⟨"raft.lockedRand"⟩ #[("mu", .syncData (.mutex false))]))],
+    nextAddr := 20 }
+
+/-- The drained call configuration of `becomeFollower(0, x₂→)` — the
+handler-equation entry shape, at the fixture. -/
+def bfC₀ : SymConfig :=
+  .retV (.int (.lit 0) .uint64)
+    (.callArgsK ⟨"raft.raft.becomeFollower"⟩ []
+      [.addr (.base ⟨0⟩), .int (.lit 0) .uint64] [] [] .stop)
+
+/-- 189 completed steps (`#eval`-checked first: 189, quit q4Program
+at the `struct{}` literal). -/
+theorem bf_window_n : (symEvalWindowTB bfTB 189 bfS₀ bfC₀).1 = 189 := by
+  with_unfolding_all rfl
+
+/-- **THE RE-MEASURED HANDLER PREFIX**: 189 steps of `becomeFollower`
+from its call configuration, one transported window, ∀ρ ∀σ agreeing
+with the pinned tables ∀ch. -/
+theorem bf_prefix_span (ρ : Valuation) (σ : ExecState) (ch : Choices)
+    (hag : bfTB.Agrees σ) :
+    stepFnIter 189 (γS ρ σ bfS₀) (γC ρ bfC₀) ch
+      = .ok (γC ρ (symEvalWindowTB bfTB 189 bfS₀ bfC₀).2.2,
+          γS ρ σ (symEvalWindowTB bfTB 189 bfS₀ bfC₀).2.1, ch) :=
+  symEvalWindowTB_refines' bf_window_n ρ σ ch hag
+
+/-- Discharge witness: the premises hold at the pinned base state and
+a concrete valuation. -/
+theorem bf_prefix_span_witness :
+    stepFnIter 189 (γS ρ₀ wBase bfS₀) (γC ρ₀ bfC₀) []
+      = .ok (γC ρ₀ (symEvalWindowTB bfTB 189 bfS₀ bfC₀).2.2,
+          γS ρ₀ wBase (symEvalWindowTB bfTB 189 bfS₀ bfC₀).2.1, []) :=
+  bf_prefix_span ρ₀ wBase [] ⟨rfl, rfl, rfl, rfl⟩
+
 end GoLean.RaftSeam

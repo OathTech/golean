@@ -662,5 +662,13 @@ tables) and `syncWit_refines` (lock/unlock window, in-module). -/
 #guard_msgs in #print axioms GoLean.Sym.applySyncOp_conc
 /-- info: 'GoLean.Sym.syncWit_refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Sym.syncWit_refines
+/-- info: 'GoLean.Sym.enterFrameT_conc' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.enterFrameT_conc
+/-- info: 'GoLean.Sym.stepFnTB_conc' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.stepFnTB_conc
+/-- info: 'GoLean.Sym.symEvalWindowTB_refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.symEvalWindowTB_refines
+/-- info: 'GoLean.Sym.symEvalWindowTB_refines'' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.symEvalWindowTB_refines'
 
 end GoLean.Iris.Audit

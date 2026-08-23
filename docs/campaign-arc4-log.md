@@ -301,3 +301,94 @@ re-measure. Remaining per §6: slice 2 sync-ops, slice 3 call entry
 (+ the delegation-vs-refactor decision), slice 4 class-5 kit half +
 first choice-crossing composition. Nothing merged; branch-complete
 for this dispatch; merge/audit-ask remain the operator's.
+
+## A4-U2 slices 2+3 (2026-08-23, coordinator-dispatched)
+
+- 2026-08-23 [AGENT] Slice-2 census CORRECTION to the dispatch: the
+  handler fragment consumes exactly `SyncStmtOp.lock`/`unlock` on
+  plain `sync.Mutex` (10 opDones = 5 pairs in the pilot trace:
+  lockedRand ×1, MemoryStorage ×4 via lastIndex) — **no Once** on the
+  path (the coordinator's guess, checked and not found); the deferred
+  Unlock's DISCHARGE at frame exit is a deferred CALL — class 2's
+  drain arms, not a sync op. Covered: lock/unlock apply + the
+  `.opDone` sequential strip; the rest of the family stays Q7.
+- 2026-08-23 Slice 2 (bedc4756): sync arms in the delegating step +
+  `applySyncOp_conc` + an in-module lock/unlock window witness
+  (`syncWit_refines`, #eval-checked 12 steps first) + the OWED
+  Audit/Kit pins for the extension's public surface (slice-1 debt
+  noticed and paid: the kit-pin convention covers Sym additions).
+- 2026-08-23 [AGENT] Slice-2 fix during slice 3 (contact-driven): the
+  sync apply's flag store initially used the UNTABLED `storeLoc'` —
+  correct for a standalone mutex cell (the witness) but the twin's
+  mutexes live INSIDE structs (lockedRand.mu), where the write-back
+  re-normalizes the whole struct at its defined type → Q4. `T`
+  threaded through `applySyncOp'`/its conc lemma; caught by the
+  becomeFollower window probe quitting at step 102.
+- 2026-08-23 Slice 3: call entry, the one-lever design — `SymTables`
+  pack + `Agrees` (table EQUALITY, not sub-table: alias-resolution
+  walks return partial answers on a miss, so a sub-table miss is
+  indistinguishable from genuine absence; recorded in the module),
+  table-only congruence lemmas (resolveDefinedAliasesFuel /
+  methodInfoByFuncId? / methodRecvInterfaceName?), `bindParamsT`,
+  `enterFrameT` (the machine's OWN table helpers run at `TB.toState`
+  — zero re-implementation of the dispatch walks), and the layered
+  `stepFnTB` covering: callArgsK completion, callValArgsK completion
+  (closures), and BOTH defer-drain frame arms; `symEvalWindowTB` +
+  the pack-conditioned refinement pair. [AGENT] The deferred
+  delegation-vs-refactor decision, DECIDED: delegation again, layered
+  (stepFnTB → stepFnT → stepFn'; override sets are disjoint config
+  shapes, so layers never interleave; shipped statements + slice-1's
+  weaker SubTable-only premise for store-only windows both survive
+  verbatim). [AGENT] Scope kill-point exercised: INTERFACE-receiver
+  dispatch (class 2b) is OUT — the census path's single interface
+  call is the harness logger's empty `Infof` (14 steps), and the
+  dispatch-walk congruence (`canonicalTy` + the method-set fold) is
+  where the cost lives; `dynamicDispatchT` quits Q4 on interface
+  receivers, one window split per logging handler, recorded residual.
+- 2026-08-23 **THE RE-MEASURE** (`HandlerEqSym.lean` §slice-3): the
+  becomeFollower run from its call configuration transports as ONE
+  window of **189 steps** (`bf_window_n`/`bf_prefix_span` + witness;
+  #eval-checked first: 189, quit q4Program): frame entry → funcVal +
+  field stores → reset entry → branch → four stores → RRT + Intn
+  entries → mutex lock + marker strip → map-build prologue, quitting
+  at Intn's `struct{}{}` literal (`buildStructValue` at a defined
+  type — the Q4-normalize family's next member, SAME lever, recorded
+  residual; the map-range pick two constructs later is the designed
+  Q3 boundary regardless). Elaboration: the 189-step window rfl = 51 s
+  module build. Numbers: TableExt now 1,303 lines (all three
+  classes + witnesses + pins), HandlerEqSym 235; zero
+  sorry/native_decide (grep); full proofs+Audit green (471 jobs);
+  fresh `#print axioms`: bf_prefix_span/witness + stepFnTB_conc +
+  symEvalWindowTB_refines' [propext, Classical.choice, Quot.sound];
+  enterFrameT_conc + bf_window_n [propext, Quot.sound].
+
+### Updated per-handler cost projection (vs the gallery bar)
+
+Derivation: the pilot measured ~9 hand lines/step; the extension
+makes straight-line segments a fixture + one `rfl` + one refinement
+application (~15–30 lines per WINDOW, step-count-independent).
+Windows per handler = choice points + symbolic branches + residual
+consults + 1. becomeFollower: 4 choice points (1 jitter + 3 Visit
+picks, sort-canonicalized per design §4(ii)) + ~4 branch/residual
+splits ≈ 8–10 windows ≈ 200–300 fixture/window lines + composition
+glue (pick lemma + conservation, est. 50–150 lines per choice point,
+built ONCE in slice 4) + the absState projection argument
+(~100 lines) → **≈ 600–1,000 lines for the full becomeFollower
+equation vs the pilot's 3,000–6,000 hand projection — inside the
+gallery bar (fib = 1,890)**. Elaboration cost scales ~linearly
+(51 s / 189 steps with 4 table scans); `decide +kernel` is the
+measured fallback. Residual Q4-family members (structLit /
+defaultValue / convert at defined types) are each the same
+conditioned-table lever, consumed on demand guided by window quits —
+exactly how the slice-2 storeLoc fix was found.
+
+### RECOMMENDATION (posted per the dispatch)
+
+**Slice 4 BEFORE A4-U3.** A real handler equation (U3) needs exactly
+two missing pieces to compose its windows: the choice-crossing
+composition (Q3: the value-generic pick step + the §4(ii)
+conservation pattern, smallest instance = Intn's single pick) and
+the structLit-at-defined residual (mechanical, same lever). U3
+attempted first would stall on both; slice 4 builds the composition
+pattern once at the smallest instance, and U3 then becomes assembly
+(becomeFollower end-to-end, projected inside the bar above).
