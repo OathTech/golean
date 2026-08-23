@@ -1,7 +1,9 @@
 import GoLeanProofs.Specs.Raft.HandlerEqSym
+import GoLeanProofs.Specs.Raft.BfLit
+import GoLeanProofs.Sym.KernelRfl
 
 /-!
-# A4-U3: the POPULATED becomeFollower fixture and its 12-window chain
+# A4-U3/U4: the POPULATED becomeFollower fixture and its 7-window chain
 
 The populated-tracker fixture (checklist item 1) — recipe = the A4-U1
 instrumentation probe's cell dump (`artifacts/probe/probe2.out`, arc
@@ -27,10 +29,12 @@ was machine-checked first by `artifacts/probe/BfU3Probe.lean`:
 phase 1 (machine, concrete valuation) runs the drained call
 end-to-end in 3,234 steps consuming exactly 4 choices and lands
 `absRaftNode post = specBecomeFollower n 0 leadArg`; phase 2 (mirror)
-reproduces it as the 12 windows below + 11 hand crossings, and the
-γ-image of the final mirror state EQUALS the machine's final heap
-(nextAddr 188 both). The window-count theorems at the bottom are the
-transcription re-check: a drifted fixture fails them loudly.
+reproduces it as the 7 windows below + 6 hand crossings (the class-2b
+completion merged the five dispatch splits into the final window), and
+the γ-image of the final mirror state EQUALS the machine's final heap
+(nextAddr 188 both). The window LINK theorems at the bottom are the
+transcription re-check: a drifted fixture OR a drifted `BfLit` literal
+fails them loudly.
 -/
 
 namespace GoLean.RaftSeam
@@ -214,72 +218,130 @@ def uCrossSort (S : SymState) (C : SymConfig) : SymState × SymConfig :=
 
 /-! ## The chain: 7 windows, 6 crossings (probe-validated counts;
 interface dispatch crosses IN-window since the class-2b completion —
-the five former dispatch splits merged into the final window) -/
+the five former dispatch splits merged into the final window)
 
-def uP1 : SymState × SymConfig := ((symEvalWindowTB bfTB 642 uS0 uC0).2.1, (symEvalWindowTB bfTB 642 uS0 uC0).2.2)
-def uS1 : SymState := uP1.1
-def uC1 : SymConfig := uP1.2
+A4-U4 slice 0 (STATE LITERALIZATION — the U3 scale verdict's named
+fix): the window-output states/configs (`uS1/3/5/7/9/11/13`,
+`uC1/3/5/7/9/11/13`) are now SOURCE LITERALS in the generated
+`BfLit.lean` instead of chain definitions, so downstream facts reduce
+against literals instead of re-evaluating window chains in the
+kernel. The crossing outputs (even indices) stay DEFINED by the
+crossing constructions applied to the literals — they reduce in one
+step. The window LINK theorems below (`uW*_out`, kernel `rfl`
+against the evaluator at literal inputs AND outputs) are what makes
+the literals trustworthy: each window is re-evaluated exactly ONCE,
+here, and never again downstream. A fixture change fails them loudly;
+regenerate with `artifacts/probe/BfLitGen.lean`. -/
+
 def uP2 : SymState × SymConfig := uCrossPick 5 .int uS1 uC1
 def uS2 : SymState := uP2.1
 def uC2 : SymConfig := uP2.2
-def uP3 : SymState × SymConfig := ((symEvalWindowTB bfTB 183 uS2 uC2).2.1, (symEvalWindowTB bfTB 183 uS2 uC2).2.2)
-def uS3 : SymState := uP3.1
-def uC3 : SymConfig := uP3.2
 def uP4 : SymState × SymConfig := uCrossPick 6 .uint64 uS3 uC3
 def uS4 : SymState := uP4.1
 def uC4 : SymConfig := uP4.2
-def uP5 : SymState × SymConfig := ((symEvalWindowTB bfTB 28 uS4 uC4).2.1, (symEvalWindowTB bfTB 28 uS4 uC4).2.2)
-def uS5 : SymState := uP5.1
-def uC5 : SymConfig := uP5.2
 def uP6 : SymState × SymConfig := uCrossPick 7 .uint64 uS5 uC5
 def uS6 : SymState := uP6.1
 def uC6 : SymConfig := uP6.2
-def uP7 : SymState × SymConfig := ((symEvalWindowTB bfTB 28 uS6 uC6).2.1, (symEvalWindowTB bfTB 28 uS6 uC6).2.2)
-def uS7 : SymState := uP7.1
-def uC7 : SymConfig := uP7.2
 def uP8 : SymState × SymConfig := uCrossPick 8 .uint64 uS7 uC7
 def uS8 : SymState := uP8.1
 def uC8 : SymConfig := uP8.2
-def uP9 : SymState × SymConfig := ((symEvalWindowTB bfTB 28 uS8 uC8).2.1, (symEvalWindowTB bfTB 28 uS8 uC8).2.2)
-def uS9 : SymState := uP9.1
-def uC9 : SymConfig := uP9.2
 def uP10 : SymState × SymConfig := uCrossStop uS9 uC9
 def uS10 : SymState := uP10.1
 def uC10 : SymConfig := uP10.2
-def uP11 : SymState × SymConfig := ((symEvalWindowTB bfTB 3 uS10 uC10).2.1, (symEvalWindowTB bfTB 3 uS10 uC10).2.2)
-def uS11 : SymState := uP11.1
-def uC11 : SymConfig := uP11.2
 def uP12 : SymState × SymConfig := uCrossSort uS11 uC11
 def uS12 : SymState := uP12.1
 def uC12 : SymConfig := uP12.2
-def uP13 : SymState × SymConfig := ((symEvalWindowTB bfTB 2316 uS12 uC12).2.1, (symEvalWindowTB bfTB 2316 uS12 uC12).2.2)
-def uS13 : SymState := uP13.1
-def uC13 : SymConfig := uP13.2
 
 set_option maxRecDepth 4000000
 set_option maxHeartbeats 16000000
 set_option smartUnfolding false
 
-/-! ## The window-count theorems (each `#eval`-checked by the probe
-before elaboration; a fixture-transcription drift fails here). -/
+/-! ## The window LINK theorems (full-output form; each `#eval`-checked
+by the probe before elaboration; a fixture-transcription OR literal
+drift fails here — these are the literals' correctness proofs). -/
+
+theorem uW1_out : symEvalWindowTB bfTB 642 uS0 uC0 = (642, uS1, uC1) := by
+  kernel_rfl
+theorem uW2_out : symEvalWindowTB bfTB 183 uS2 uC2 = (183, uS3, uC3) := by
+  kernel_rfl
+theorem uW3_out : symEvalWindowTB bfTB 28 uS4 uC4 = (28, uS5, uC5) := by
+  kernel_rfl
+theorem uW4_out : symEvalWindowTB bfTB 28 uS6 uC6 = (28, uS7, uC7) := by
+  kernel_rfl
+theorem uW5_out : symEvalWindowTB bfTB 28 uS8 uC8 = (28, uS9, uC9) := by
+  kernel_rfl
+theorem uW6_out : symEvalWindowTB bfTB 3 uS10 uC10 = (3, uS11, uC11) := by
+  kernel_rfl
+theorem uW7_out : symEvalWindowTB bfTB 2316 uS12 uC12 = (2316, uS13, uC13) := by
+  kernel_rfl
+
+/-! The original window-count statements, derived (kept verbatim —
+they are the U3 record's cited form). -/
 
 theorem uW1_n : (symEvalWindowTB bfTB 642 uS0 uC0).1 = 642 := by
-  with_unfolding_all rfl
+  rw [uW1_out]
 theorem uW2_n : (symEvalWindowTB bfTB 183 uS2 uC2).1 = 183 := by
-  with_unfolding_all rfl
+  rw [uW2_out]
 theorem uW3_n : (symEvalWindowTB bfTB 28 uS4 uC4).1 = 28 := by
-  with_unfolding_all rfl
+  rw [uW3_out]
 theorem uW4_n : (symEvalWindowTB bfTB 28 uS6 uC6).1 = 28 := by
-  with_unfolding_all rfl
+  rw [uW4_out]
 theorem uW5_n : (symEvalWindowTB bfTB 28 uS8 uC8).1 = 28 := by
-  with_unfolding_all rfl
+  rw [uW5_out]
 theorem uW6_n : (symEvalWindowTB bfTB 3 uS10 uC10).1 = 3 := by
-  with_unfolding_all rfl
+  rw [uW6_out]
 theorem uW7_n : (symEvalWindowTB bfTB 2316 uS12 uC12).1 = 2316 := by
-  with_unfolding_all rfl
+  rw [uW7_out]
 
 /-- The chain lands at the function's return: `.next .stop`. -/
 theorem uC13_stop : uC13 = .next .stop := by
-  with_unfolding_all rfl
+  kernel_rfl
+
+/-! ## The transported windows (γ-level, literal endpoints — the form
+`bf_full_span` chains; each is `symEvalWindowTB_refines` at the link
+theorem, so the literals appear SYNTACTICALLY in the conclusions and
+composition needs no definitional re-evaluation). -/
+
+theorem uWin1 (ρ : Valuation) (σ : ExecState) (ch : Choices)
+    (hag : bfTB.Agrees σ) :
+    stepFnIter 642 (γS ρ σ uS0) (γC ρ uC0) ch
+      = .ok (γC ρ uC1, γS ρ σ uS1, ch) :=
+  symEvalWindowTB_refines uW1_out ρ σ ch hag
+
+theorem uWin2 (ρ : Valuation) (σ : ExecState) (ch : Choices)
+    (hag : bfTB.Agrees σ) :
+    stepFnIter 183 (γS ρ σ uS2) (γC ρ uC2) ch
+      = .ok (γC ρ uC3, γS ρ σ uS3, ch) :=
+  symEvalWindowTB_refines uW2_out ρ σ ch hag
+
+theorem uWin3 (ρ : Valuation) (σ : ExecState) (ch : Choices)
+    (hag : bfTB.Agrees σ) :
+    stepFnIter 28 (γS ρ σ uS4) (γC ρ uC4) ch
+      = .ok (γC ρ uC5, γS ρ σ uS5, ch) :=
+  symEvalWindowTB_refines uW3_out ρ σ ch hag
+
+theorem uWin4 (ρ : Valuation) (σ : ExecState) (ch : Choices)
+    (hag : bfTB.Agrees σ) :
+    stepFnIter 28 (γS ρ σ uS6) (γC ρ uC6) ch
+      = .ok (γC ρ uC7, γS ρ σ uS7, ch) :=
+  symEvalWindowTB_refines uW4_out ρ σ ch hag
+
+theorem uWin5 (ρ : Valuation) (σ : ExecState) (ch : Choices)
+    (hag : bfTB.Agrees σ) :
+    stepFnIter 28 (γS ρ σ uS8) (γC ρ uC8) ch
+      = .ok (γC ρ uC9, γS ρ σ uS9, ch) :=
+  symEvalWindowTB_refines uW5_out ρ σ ch hag
+
+theorem uWin6 (ρ : Valuation) (σ : ExecState) (ch : Choices)
+    (hag : bfTB.Agrees σ) :
+    stepFnIter 3 (γS ρ σ uS10) (γC ρ uC10) ch
+      = .ok (γC ρ uC11, γS ρ σ uS11, ch) :=
+  symEvalWindowTB_refines uW6_out ρ σ ch hag
+
+theorem uWin7 (ρ : Valuation) (σ : ExecState) (ch : Choices)
+    (hag : bfTB.Agrees σ) :
+    stepFnIter 2316 (γS ρ σ uS12) (γC ρ uC12) ch
+      = .ok (γC ρ uC13, γS ρ σ uS13, ch) :=
+  symEvalWindowTB_refines uW7_out ρ σ ch hag
 
 end GoLean.RaftSeam

@@ -1,4 +1,5 @@
 import GoLeanProofs.Specs.Raft.BfSortStep
+import GoLeanProofs.Sym.KernelRfl
 
 /-!
 # A4-U3: THE FIRST FULL HANDLER EQUATION — `becomeFollower`
@@ -60,13 +61,17 @@ theorem bf_full_span (ρ : Valuation) (σ : ExecState) (hag : bfTB.Agrees σ)
     stepFnIter 3234 (γS (uρ' ρ c₁ c₂ c₃) σ uS0) (γC (uρ' ρ c₁ c₂ c₃) uC0)
       (c₁ :: c₂ :: c₃ :: c₄ :: ch)
       = .ok (.next .stop, γS (uρ' ρ c₁ c₂ c₃) σ uS13, ch) := by
-  have w1 := fun chx => symEvalWindowTB_refines' uW1_n (uρ' ρ c₁ c₂ c₃) σ chx hag
-  have w2 := fun chx => symEvalWindowTB_refines' uW2_n (uρ' ρ c₁ c₂ c₃) σ chx hag
-  have w3 := fun chx => symEvalWindowTB_refines' uW3_n (uρ' ρ c₁ c₂ c₃) σ chx hag
-  have w4 := fun chx => symEvalWindowTB_refines' uW4_n (uρ' ρ c₁ c₂ c₃) σ chx hag
-  have w5 := fun chx => symEvalWindowTB_refines' uW5_n (uρ' ρ c₁ c₂ c₃) σ chx hag
-  have w6 := fun chx => symEvalWindowTB_refines' uW6_n (uρ' ρ c₁ c₂ c₃) σ chx hag
-  have w7 := fun chx => symEvalWindowTB_refines' uW7_n (uρ' ρ c₁ c₂ c₃) σ chx hag
+  -- A4-U4 slice 0: the transported windows are consumed through the
+  -- `uWin*` lemmas (BfFixture link theorems at the BfLit literals), so
+  -- every chain composition below unifies SYNTACTICALLY at literal
+  -- endpoints — no definitional window re-evaluation in this module.
+  have w1 := fun chx => uWin1 (uρ' ρ c₁ c₂ c₃) σ chx hag
+  have w2 := fun chx => uWin2 (uρ' ρ c₁ c₂ c₃) σ chx hag
+  have w3 := fun chx => uWin3 (uρ' ρ c₁ c₂ c₃) σ chx hag
+  have w4 := fun chx => uWin4 (uρ' ρ c₁ c₂ c₃) σ chx hag
+  have w5 := fun chx => uWin5 (uρ' ρ c₁ c₂ c₃) σ chx hag
+  have w6 := fun chx => uWin6 (uρ' ρ c₁ c₂ c₃) σ chx hag
+  have w7 := fun chx => uWin7 (uρ' ρ c₁ c₂ c₃) σ chx hag
   have p1 := uPick1_step ρ σ hag (uKey1 c₂) (uKey2 c₂ c₃) (uKey3 c₂ c₃)
     c₁ (c₂ :: c₃ :: c₄ :: ch)
   have p2 := uPick2_step ρ σ ((c₁ % 10 : Nat) : Int) (uKey2 c₂ c₃)
@@ -128,16 +133,16 @@ theorem becomeFollower_handler_eq (ρ : Valuation) (σ : ExecState)
           = some (specBecomeFollower
               ⟨0, ρ.ints 1, ρ.ints 2, ρ.ints 3, 1, 1⟩ 0 (ρ.ints 9)) := by
   have hpre : γS ρ σ uS0 = γS (uρ' ρ c₁ c₂ c₃) σ uS0 := by
-    with_unfolding_all rfl
+    kernel_rfl
   have hpreC : γC ρ uC0 = γC (uρ' ρ c₁ c₂ c₃) uC0 := by
-    with_unfolding_all rfl
+    kernel_rfl
   refine ⟨γS (uρ' ρ c₁ c₂ c₃) σ uS13, ?_, ?_, ?_⟩
   · rw [hpre, hpreC]
     exact bf_full_span ρ σ hag c₁ c₂ c₃ c₄ ch
-  · with_unfolding_all rfl
+  · kernel_rfl
   · have hproj : absRaftNode (γS (uρ' ρ c₁ c₂ c₃) σ uS13) ⟨0⟩
         = some ⟨0, unrm 13 (ρ.ints 1), unrm 3 (ρ.ints 9), 0, 1, 1⟩ := by
-      with_unfolding_all rfl
+      kernel_rfl
     rw [hproj, unrm_id hvote 13, unrm_id hlead 3]
     with_unfolding_all rfl
 

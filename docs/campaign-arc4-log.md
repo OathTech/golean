@@ -815,3 +815,97 @@ the reset-span composite (consumer = every become* handler).
 
 Nothing merged; branch-complete. Merge/audit-ask remain the
 operator's (constitution §4.1).
+
+## A4-U4 — state literalization + wave 1 (2026-08-23, successor worker)
+
+- 2026-08-23 SUCCESSOR RE-VERIFICATION at the actual tip 6c18dfad
+  (the dispatch named 5e7834a9; the one extra commit is the
+  coordinator's `docs/raft-campaign-log.md`-only append, file-disjoint
+  — recorded per the one-writer discipline, tree clean). All fresh
+  probes, all PASS:
+  - capped core build green (58 jobs); capped proofs+Audit green
+    (482 jobs — matching U3's recorded count).
+  - `#print axioms` (capped `lake env lean`, verbatim):
+    `becomeFollower_handler_eq` and `_witness`
+    [propext, Classical.choice, Quot.sound]; `stepFn_pick_transport`
+    [propext, Quot.sound] — matching U3's record.
+  - **Kit pin recount (the dispatch's 14-vs-15 drift question): the
+    true number is 18 extension pins** — 24 total `GoLean.Sym`
+    `#guard_msgs` pins in `proofs/Audit/Kit.lean` minus 6 pre-existing
+    (lines 628–638); the U2 block holds 14 (650–676) + 4 U3 residual
+    lifts (685–691). The logged 13 and 15 were both restatement drift
+    (lesson (i)); U3's "14+4=18 by recount" is CONFIRMED.
+  - hatch grep over `Sym/TableExt.lean` + `Specs/Raft/*.lean`: zero
+    `sorry|native_decide|axiom `.
+- 2026-08-23 [AGENT] Slice-0 design (the verdict's named fix, read at
+  the sort-leaf cost anatomy): the leaves' `rfl`s re-evaluated the
+  whole `uS0→uS11` chain in the kernel per fact. Implementation:
+  window-output states/configs dumped as SOURCE LITERALS —
+  `Sym`-family types have no `Repr`, so a fail-closed custom printer
+  (`artifacts/probe/BfLitGen.lean`) prints `Value/Cont/Config/State`
+  at `symDom`, reusing the machine's derived `Repr` for concrete
+  payloads (round-trip verified by `ReprSmoke.lean` first: derived
+  Repr emits fully-qualified, parenthesized source). Generated
+  `Specs/Raft/BfLit.lean` (508 KB, elaborates in 2.6 s). Crossing
+  outputs (even indices) stay DEFINED via the crossing constructions
+  on the literals. Trust story unchanged: the window LINK theorems
+  `uW*_out : symEvalWindowTB bfTB n uSi uCi = (n, uS(i+1), uC(i+1))`
+  (kernel `rfl`, full-output form) re-check every literal against the
+  evaluator — each window evaluated exactly ONCE, and the links are
+  the drift alarms on any fixture change. `uW*_n` kept verbatim,
+  derived by `rw`. NEW `uWin1..uWin7`: γ-level transported windows at
+  literal endpoints (via `symEvalWindowTB_refines` at the link), so
+  `bf_full_span`'s composition unifies syntactically.
+- 2026-08-23 Slice-0 measurements (before → after, same machine,
+  capped):
+  - BfFixture 327 s → **132 s** (lake-reported; links only).
+  - BfSteps 604 s → **218 s** (zero text changes — the heavy facts
+    now reduce against literals).
+  - BfSteps2 ~510 s → **1.1 s** (zero text changes).
+  - Isolated sort leaf 504 s → **352 s** — the chain re-eval is gone
+    (~150 s) but an intrinsic cost remained; the split measurement
+    (below) located it exactly.
+- 2026-08-23 **THE ELABORATOR-VS-KERNEL SPLIT (measured, decisive):**
+  the literalized leaf under `debug.skipKernelTC true` (probe
+  `LeafSplit.lean`) costs **359 s** vs 352 s normal — i.e. the
+  ELABORATOR's `with_unfolding_all rfl` defeq is ~100% of the cost
+  and the kernel's check of the SAME conversion is ≈ 0 (the
+  elaborator's whnf takes a slow path through the machine's
+  `do`/`Std.Range.forIn`/`Except`-bind spines; the kernel's
+  evaluator does not). This also explains the U2 gotcha ("γ-image
+  projections need `decide +kernel`; elaborator whnf fails") — same
+  pathology, now measured.
+- 2026-08-23 [AGENT] **`kernel_rfl` landed**
+  (`proofs/GoLeanProofs/Sym/KernelRfl.lean`, wired into the
+  aggregator): for a syntactic `lhs = rhs` goal, assigns
+  `Eq.refl lhs` directly so the conversion is checked ONCE, by the
+  KERNEL at `addDecl`. Trust story unchanged — the kernel still
+  typechecks the whole theorem exactly as it checks every `rfl`; no
+  new axiom, no native evaluation; fail-closed BOTH ways (non-Eq or
+  metavariable-bearing goals are refused by the tactic — the mvar
+  refusal matters: inline premise discharges that need unification to
+  determine implicits correctly stay `with_unfolding_all rfl` — and a
+  FALSE goal dies loudly at `addDecl` with a kernel type mismatch,
+  verified on `2+2=5`, probe `KRflFalse.lean`). Judgment call under
+  §5 tooling latitude; PROMOTION-LEDGER row below (consumers: every
+  machine-side fixture fact in every handler).
+- 2026-08-23 Slice-0 FINAL numbers (both levers: literals +
+  `kernel_rfl`; lake-reported, full proofs+Audit green at 478 jobs =
+  482 − 6 retired leaf modules + BfLit + KernelRfl):
+  | module | U3 | after |
+  |---|---|---|
+  | BfLit (new, generated) | — | 2.3 s |
+  | BfFixture (links) | 327 s | 99 s |
+  | BfSteps | 604 s | 1.2 s |
+  | BfSteps2 | ~510 s | 1.2 s |
+  | sort leaves + dispatcher | 6×~504 s + dispatch ≈ 3,050 s | **1.0 s** (one module again; the per-leaf process isolation is retired) |
+  | BfEquation | ~350 s | 10 s |
+  | **whole Bf family** | **~50 min** | **≈ 115 s** |
+  The verdict's "order of magnitude" projection is met with ~25×
+  (family) / ~3,000× (the sort-leaf path). Axioms re-probed after the
+  conversion: `becomeFollower_handler_eq`/`_witness`/`bf_full_span`
+  [propext, Classical.choice, Quot.sound]; `uSort_leaf_00`,
+  `uSort_step`, `uW1_out` [propext, Quot.sound] — unchanged.
+  `uW*_n` statements kept verbatim (derived from the `uW*_out`
+  links); `uSort_step`/`becomeFollower_handler_eq` statements
+  byte-identical to U3.

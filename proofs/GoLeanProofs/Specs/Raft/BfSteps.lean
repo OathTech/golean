@@ -1,4 +1,5 @@
 import GoLeanProofs.Specs.Raft.BfFixture
+import GoLeanProofs.Sym.KernelRfl
 
 /-!
 # A4-U3: the hand crossing facts — checklist items (2) and (4)
@@ -146,7 +147,7 @@ set_option smartUnfolding false
 
 theorem uC1_shape : uC1 = .next (.mapIterK (some "k") none uTyU uTySt
     uB1 (some (.base ⟨32⟩)) #[] uStart1 uE1 uK1) := by
-  with_unfolding_all rfl
+  kernel_rfl
 
 theorem uS2_eq : uS2 = (uS1.alloc uKeyV1 (some uTyU)).2 := by
   unfold uS2 uP2
@@ -167,7 +168,7 @@ literal-level). -/
 theorem uEntries1 (ρ : Valuation) (σ : ExecState) :
     mapIterLiveEntries (γS ρ σ uS1) (some (.base ⟨32⟩))
       = .ok uCands1 := by
-  with_unfolding_all rfl
+  kernel_rfl
 
 theorem uCands1_fact (ρ : Valuation) (σ : ExecState)
     (hag : bfTB.Agrees σ) :
@@ -229,7 +230,7 @@ def uCands3 : Array (GoValue × GoValue) :=
 
 theorem uC3_shape : uC3 = .next (.mapIterK (some "id") none uTyK uTyProg
     uB3 (some (.base ⟨2⟩)) #[] uStart3 uE3 uK3) := by
-  with_unfolding_all rfl
+  kernel_rfl
 
 theorem uS4_eq : uS4 = (uS3.alloc uKeyV2 (some uTyK)).2 := by
   unfold uS4 uP4
@@ -247,13 +248,13 @@ theorem uC4_eq : uC4 = .exec uB3
 theorem uEntries3 (ρ : Valuation) (σ : ExecState) :
     mapIterLiveEntries (γS ρ σ uS3) (some (.base ⟨2⟩))
       = .ok uCands3 := by
-  with_unfolding_all rfl
+  kernel_rfl
 
 theorem uCands3_fact (ρ : Valuation) (σ : ExecState) :
     mapIterCandidates (γS ρ σ uS3) uTyK uTyProg (some (.base ⟨2⟩))
       (Array.map (concV (symInterp ρ)) #[]) = .ok uCands3 := by
   simp only [mapIterCandidates, uEntries3 ρ σ, Bind.bind, Except.bind]
-  with_unfolding_all rfl
+  kernel_rfl
 
 theorem uCands3_get (i : Nat) (h : i < 3) :
     uCands3[i]? = some (.int ((i : Int) + 1) .uint64,

@@ -89,6 +89,7 @@ import GoLeanProofs.Specs.ImportedGooseConst
 import GoLeanProofs.Specs.ImportedGooseRune
 import GoLeanProofs.NegativeSpecs
 import GoLeanProofs.FuelMeasure
+import GoLeanProofs.Sym.KernelRfl
 import GoLeanProofs.StepKit
 import GoLeanProofs.Examples.FibProgram
 import GoLeanProofs.Examples.Fib
@@ -207,6 +208,7 @@ import GoLeanProofs.Sym.TableExt
 import GoLeanProofs.Specs.Raft.HandlerEqSym
 -- A4-U3: the populated becomeFollower fixture, the crossing facts,
 -- and THE FIRST FULL HANDLER EQUATION.
+import GoLeanProofs.Specs.Raft.BfLit
 import GoLeanProofs.Specs.Raft.BfFixture
 import GoLeanProofs.Specs.Raft.BfSteps
 import GoLeanProofs.Specs.Raft.BfSteps2
