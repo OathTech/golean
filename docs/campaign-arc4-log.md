@@ -476,3 +476,114 @@ proofs+docs hatch). Full proofs+Audit 471 jobs green; Kit pins 15
 Branch-complete for this dispatch; nothing merged; the
 comparator-landmark staleness note stays flagged for the operator's
 merge step.
+
+## A4-U3 — the first full handler equation (2026-08-23, successor worker)
+
+- 2026-08-23 SUCCESSOR RE-VERIFICATION (convention: predecessor top
+  claims re-proved before building on them), at dispatch tip
+  dab1163d; during verification the coordinator's dispatch-log commit
+  638b683b (`docs/raft-campaign-log.md` only, file-disjoint) landed —
+  recorded per the one-writer discipline, tree clean at 638b683b.
+  Results, all fresh probes:
+  - capped core `lake build`: green (58 jobs); capped proofs+Audit
+    `lake build`: green (471 jobs) — every `#guard_msgs` Kit pin is
+    build-enforced, so pins GREEN by construction of this run.
+  - `#print axioms` (capped `lake env lean`, verbatim):
+    `stepFnIter_window_pick_window` [propext, Quot.sound];
+    `bf_intn_span` + `bf_intn_span_witness` and
+    `symEvalWindowTB_refines`/`'` all [propext, Classical.choice,
+    Quot.sound] — matching the predecessor's recorded values.
+  - hatch grep `sorry|native_decide|axiom ` over
+    `Sym/TableExt.lean` + `Specs/Raft/*.lean`: zero matches.
+  - **Count correction (summary-layer drift, lesson (i)):** the
+    TableExt pin block in `proofs/Audit/Kit.lean` holds **14**
+    extension pins (`stepFnT_conc`..`stepFnIter_window_pick_window`,
+    lines 650–676), not 15: the slices-2+3 exit's "13" was itself 12
+    (recount at 9719786f: 18 GoLean.Sym pins − 6 pre-existing), and
+    the slice-4 exit restated 13+2 instead of recounting. All 14 are
+    green (build-enforced); no pin is missing — the claim's COUNT was
+    wrong, not its content.
+- 2026-08-23 U3 contact round (probes `FixtureProbe`/`FixtureProbe2`,
+  outputs `artifacts/probe/fixture.out` + inline): full untruncated
+  entry-state cell dump + the lowered bodies of Visit / reset$lit0 /
+  raftLog.lastIndex / unstable.maybeLastIndex /
+  MemoryStorage.{LastIndex,lastIndex,LastIndex$deferSync0} /
+  newReadOnly / ResetVotes / NewInflights / becomeFollower /
+  Entry.GetIndex + the fixture-relevant typedefs. Checklist-shaping
+  facts found:
+  - **The deferred Unlock is a PLAIN funcVal** — the frontend
+    synthesizes `LastIndex$deferSync0` and the deferCall's callee expr
+    is `Expr.funcVal` (no method-value formation); the landed TB drain
+    arms cover it. No new machinery.
+  - **The interface calls are lowered as INTERFACE-METHOD FIDs**
+    (`raft.Storage.LastIndex`, `raft.Logger.Infof` with body
+    `$interface-method-unreachable`) — the 2b hand split is the
+    drained-callArgsK enterFrame step with dispatch resolved at the
+    concrete receiver interface value, exactly the checklist's shape.
+  - **Census correction to the dispatch's "3× storage.LastIndex": it
+    is 4 on the real shape** — the subject's closure calls
+    `raftLog.lastIndex` per node for `Next` (3×) plus once more in the
+    `id == r.id` branch (real `r.id` = 1 ∈ ids); the predecessor's
+    count matched a fixture with default id=0 where the Match branch
+    never fires. U3's fixture sets id=1 (the real trace's value), so
+    4 dispatch splits for LastIndex + 1 for Infof.
+  - **One more same-lever Q4-family member is REQUIRED**:
+    `Expr.defaultValue` at a DEFINED type (`tracker.StateType` inside
+    reset$lit0's Progress literal) — the design's named residual list
+    ("structLit / defaultValue / convert"), consumed on demand as
+    prescribed; goes into TableExt as `defaultValueT` beside
+    buildStructValueT. Not new machinery.
+  - **Visit's sort is the `Stmt.sortSlice` stmtOp** (frontend-lowered),
+    and the ids fill is `ids[n] = id` with n counting DOWN — pre-sort
+    ids = [k₃,k₂,k₁]; post-sort [1,2,3] for every order: the §4(ii)
+    collapse point is the ONE sortSlice apply step.
+- 2026-08-23 [AGENT] U3 proof-shape plan (logged before building):
+  ONE shared symbolic window chain (picked keys enter as vars
+  x₅..x₈ = Intn key + 3 Visit keys; vars 1,2,3,4 = Vote/lead/state/
+  leadTransferee; x₉ = the lead argument; Term CONCRETE 0 so reset's
+  term-equal branch is decided — the term-change branch is a recorded
+  residual, not attempted in U3), hand conditioned steps at: the 4
+  picks (spine applications), the Visit range-STOP step, the ONE
+  sortSlice apply (the collapse), and the 5 interface-dispatch
+  enters. Choice-prefix quantification: keys derived uniformly where
+  candidate lists are consecutive (Intn: key = c₁%10; Visit pick 1:
+  key = c₂%3+1); the 6-leaf case analysis (pick-2 candidates depend
+  on pick 1) is confined to the pick2..sort segment; everything after
+  the sort apply is ONE shared window chain (dead key cells stay
+  symbolic — `absRaftNode` never reads them). This realizes checklist
+  items (2) and (4) without per-order window re-elaboration.
+- 2026-08-23 U3 slice A LANDED — checklist item (1), the populated
+  fixture, VALIDATED at both levels (probe `BfU3Probe.lean`, outputs
+  inline; every number below is from these two runs):
+  - Phase 1 (machine, concrete): the 21-cell populated fixture
+    (recipe = probe2's dump: trk.Progress mapData + 3 Progress + 3
+    Inflights cells, raftLog→MemoryStorage chain with a 1-entry
+    plainpb ents array, readOnly/acks, harnessLogger, static
+    globalRand at 18/19, r.id=1) runs the drained
+    `becomeFollower(0, lead)` call END TO END: **3,234 machine steps,
+    exactly 4 choices consumed** (steps 642/826/855/884), dispatch
+    sites at 1151/1639/2060/2616 (Storage.LastIndex ×4) + 3221
+    (Logger.Infof), final config `.next .stop`, and
+    `absRaftNode post = specBecomeFollower n 0 leadArg` EXACTLY
+    (pre ⟨0,7,2,1,1,1⟩ → post ⟨0,7,4,0,1,1⟩ at the probe scalars).
+  - Phase 2 (mirror, symbolic vars 1-4 + 9): the SAME span as **12
+    transported windows [642,183,28,28,28,3,233,487,420,555,604,12] +
+    11 hand crossings** (4 picks, range-stop, sortSlice apply, 5
+    dispatch enters); mirror total 3,234 = machine total, and the
+    **γ-image of the final mirror state == the machine's final heap**
+    (nextAddr 188 = 188) — every crossing construction validated
+    end-to-end before any theorem is stated.
+  - TableExt grew the TWO same-lever residuals the walk exposed
+    (beyond the predicted defaultValue): `defaultValueFuelT` +
+    `valueEqBFuelT`/`valueEqRT'` (interface-nil + defined-resolution
+    compares — `err != nil`) at the SubTable layer, and `toInterface`
+    at the TB layer (canonicalTy returns partial answers on a miss,
+    so it demands table EQUALITY — recorded in the arm's docstring).
+    Conc lemmas defaultValueFuelT_conc / valueEqBFuelT_conc /
+    valueEqRT_conc / canonicalTyFuel_types all
+    [propext, Quot.sound] (fresh probe); 4 new Kit pins (extension
+    pin count now 14+4 = 18 by recount). HandlerEqSym rebuilt green
+    (134 s) — the landed 642/945-step windows are UNCHANGED by the
+    new arms (the overrides agree with the shipped step on every
+    non-quit config; the green `with_unfolding_all rfl` re-checks are
+    the proof).

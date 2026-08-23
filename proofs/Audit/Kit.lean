@@ -675,4 +675,19 @@ tables) and `syncWit_refines` (lock/unlock window, in-module). -/
 /-- info: 'GoLean.Sym.stepFnIter_window_pick_window' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Sym.stepFnIter_window_pick_window
 
+/-! A4-U3 residual lifts (same lever, found by the becomeFollower
+populated-fixture probe): defaultValue/equality at the input table
+(`stepFnT` layer) and `toInterface` at the pack layer (canonicalTy
+needs table equality). Exercised in-window by the U3 becomeFollower
+spans in `HandlerEqSym`/`BfEquation`. -/
+
+/-- info: 'GoLean.Sym.defaultValueFuelT_conc' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.defaultValueFuelT_conc
+/-- info: 'GoLean.Sym.valueEqBFuelT_conc' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.valueEqBFuelT_conc
+/-- info: 'GoLean.Sym.valueEqRT_conc' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.valueEqRT_conc
+/-- info: 'GoLean.Sym.canonicalTyFuel_types' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.canonicalTyFuel_types
+
 end GoLean.Iris.Audit

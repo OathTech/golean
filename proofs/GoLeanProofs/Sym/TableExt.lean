@@ -245,6 +245,72 @@ def mapAssignValueT (T : TypeEnv) (s : State D) (keyTy valueTy : Ty)
       storeLocT T s baseLoc (.mapData entries)
 
 
+/-! ### A4-U3 residuals (same lever, consumed on demand exactly as the
+design's §"Residual Q4-family members" prescribes; both found by the
+becomeFollower populated-fixture window probe):
+
+- `Expr.defaultValue` at a DEFINED type — hit by `reset$lit0`'s
+  Progress literal (`defaultValue tracker.StateType`).
+- `eqCmp`/`neqCmp` at INTERFACE (nil arms) and at DEFINED types
+  (alias/defined resolution) — hit by `raftLog.lastIndex`'s
+  `err != nil`. Box-vs-box interface equality and struct equality at
+  defined types stay quits (no census consumer; recorded scope line). -/
+
+def defaultFieldsWithT (f : Ty → M (Value D)) :
+    List FieldDef → M (Array (String × Value D))
+  | field :: rest => do
+      let head ← f field.typ
+      let tail ← defaultFieldsWithT f rest
+      .ok (#[(field.name, head)] ++ tail)
+  | [] => .ok #[]
+
+/-- The mirror default-value former WITH the defined-type arm at the
+input table (struct defaults fieldwise, alias/defined re-target);
+every non-defined type delegates to the shipped `defaultValueFuel'`. -/
+def defaultValueFuelT (T : TypeEnv) : Nat → Ty → M (Value D)
+  | 0, _ => quit .q11Internal
+  | fuel + 1, .defined name =>
+      (match TypeEnv.lookup T name with
+       | some (.struct fields) =>
+           Value.struct name <$>
+             defaultFieldsWithT (defaultValueFuelT T fuel) fields.toList
+       | some (.alias target) => defaultValueFuelT T fuel target
+       | some (.defined target) => defaultValueFuelT T fuel target
+       | some (.unsupported _) => quit .q11Internal
+       | some (.interfaceDef _) => quit .q11Internal
+       | none => quit .q4Program)
+  | fuel + 1, ty => defaultValueFuel' (fuel + 1) ty
+
+def defaultValueT (T : TypeEnv) (ty : Ty) : M (Value D) :=
+  defaultValueFuelT T typeResolutionFuel ty
+
+/-- The mirror decided equality WITH the interface NIL arms and the
+defined-type resolution arm at the input table. Box-vs-box interface
+equality (needs `tyUncomparable`) and struct equality at defined types
+stay quits — no census consumer. Non-defined, non-interface types
+delegate to the shipped `valueEqBFuel'`. -/
+def valueEqBFuelT (T : TypeEnv) : Nat → Ty → Value D → Value D → M Bool
+  | 0, _, _, _ => quit .q11Internal
+  | _ + 1, .interface _, .nil, .nil => .ok true
+  | _ + 1, .interface _, .nil, .interface _ _ => .ok false
+  | _ + 1, .interface _, .interface _ _, .nil => .ok false
+  | _ + 1, .interface _, _, _ => quit .q4Program
+  | fuel + 1, .defined name, l, r =>
+      (match TypeEnv.lookup T name with
+       | some (.alias target) => valueEqBFuelT T fuel target l r
+       | some (.defined target) => valueEqBFuelT T fuel target l r
+       | some _ => quit .q4Program
+       | none => quit .q4Program)
+  | fuel + 1, ty, l, r => valueEqBFuel' (fuel + 1) ty l r
+
+/-- `valueEqR'` over the table-conditioned decided family. -/
+def valueEqRT' (T : TypeEnv) (ty : Ty) (l r : Value D) : M D.BoolR :=
+  match ty, l, r with
+  | .int _, .int lv _, .int rv _ => .ok (D.eqI lv rv)
+  | ty, l, r => do
+      let b ← valueEqBFuelT T typeResolutionFuel ty l r
+      .ok (D.litB b)
+
 /-! ## Slice 2 — sequential sync-ops (design §3, class 3)
 
 The pilot census (arc log): the handler fragment consumes exactly
@@ -339,6 +405,25 @@ def stepFnT (T : TypeEnv) (s : State D) (c : Config D) :
        | [baseV, keyV, valueV] => do
           let s' ← mapAssignValueT T s kt vt baseV keyV valueV
           .ok (.next k', s')
+       | _ => quit .q11Internal)
+  -- U3-a: `Expr.defaultValue` at the input table (nullary strict op —
+  -- the machine's `strictPlan` sends it straight to the apply)
+  | .evalE (.defaultValue ty) env k => do
+      let v ← defaultValueT T ty
+      .ok (.retV v k, s)
+  -- U3-a: eqCmp/neqCmp completions at the input table (interface-nil
+  -- + defined-resolution compares)
+  | .retV v (.strictK (.eqCmp ty) done [] env k') =>
+      (match (v :: done).reverse with
+       | [l, r] => do
+          let b ← valueEqRT' T ty l r
+          .ok (.retV (.bool b) k', s)
+       | _ => quit .q11Internal)
+  | .retV v (.strictK (.neqCmp ty) done [] env k') =>
+      (match (v :: done).reverse with
+       | [l, r] => do
+          let b ← valueEqRT' T ty l r
+          .ok (.retV (.bool (D.notB b)) k', s)
        | _ => quit .q11Internal)
   | c => stepFn' s c
 
@@ -817,6 +902,134 @@ theorem mapAssignValueT_conc (hI : I.Sound) (σ : ExecState)
       using this
 
 
+/-! ### U3-a transports -/
+
+theorem defaultFieldsWithT_conc {f : Ty → M (Value D)}
+    {g : Ty → Except GoError GoValue}
+    (hfg : ∀ ty out, f ty = .ok out → g ty = .ok (concV I out)) :
+    ∀ {fds : List FieldDef} {out : Array (String × Value D)},
+      defaultFieldsWithT f fds = .ok out →
+      defaultFieldsWith g fds = .ok (out.map (fun p => (p.1, concV I p.2))) := by
+  intro fds
+  induction fds with
+  | nil =>
+      intro out h
+      simp only [defaultFieldsWithT] at h
+      cases h
+      simp [defaultFieldsWith]
+  | cons fd rest ih =>
+      intro out h
+      simp only [defaultFieldsWithT] at h
+      obtain ⟨head, hhead, h2⟩ := bind_eq_ok.mp h
+      obtain ⟨tail, htail, h3⟩ := bind_eq_ok.mp h2
+      cases h3
+      simp only [defaultFieldsWith, Bind.bind, Except.bind]
+      rw [hfg _ _ hhead, ih htail]
+      simp [pure, Except.pure, Array.map_append]
+
+/-- Default-value commutation at the input table. -/
+theorem defaultValueFuelT_conc (hI : I.Sound) (σ : ExecState) {T : TypeEnv}
+    (hsub : SubTable T σ.types) :
+    ∀ (fuel : Nat) (ty : Ty) {v : Value D},
+      defaultValueFuelT T fuel ty = .ok v →
+      defaultValueFuel fuel σ ty = .ok (concV I v) := by
+  intro fuel
+  induction fuel with
+  | zero =>
+      intro ty v h
+      simp only [defaultValueFuelT, quit] at h
+      cases h
+  | succ fuel ih =>
+      intro ty v h
+      cases ty <;>
+        simp only [defaultValueFuelT] at h <;>
+        try (exact defaultFuel_conc hI σ _ _ _ h)
+      case defined name =>
+        revert h
+        rcases hlk : TypeEnv.lookup T name with _ | td
+        · intro h
+          simp [quit] at h
+        · intro h
+          have hσlk := hsub name td hlk
+          cases td <;> simp only [quit] at h <;> try (cases h; done)
+          case struct fields =>
+            rcases hf : defaultFieldsWithT (defaultValueFuelT T fuel)
+                fields.toList with e | out2
+            · rw [hf] at h
+              exact absurd h (by simp [Functor.map, Except.map])
+            · rw [hf] at h
+              simp only [Functor.map, Except.map] at h
+              cases h
+              have hg := defaultFieldsWithT_conc (I := I)
+                (g := defaultValueFuel fuel σ) (fun ty out hv => ih ty hv) hf
+              simp only [defaultValueFuel, hσlk, hg, Functor.map,
+                Except.map, concV_struct]
+          case alias target =>
+            simp only [defaultValueFuel, hσlk]
+            exact ih _ h
+          case defined target =>
+            simp only [defaultValueFuel, hσlk]
+            exact ih _ h
+
+/-- Decided-equality commutation at the input table (interface nil
+arms + defined-type resolution; delegated arms via the shipped
+`valueEqBFuel_conc`). -/
+theorem valueEqBFuelT_conc (hI : I.Sound) (σ : ExecState) {T : TypeEnv}
+    (hsub : SubTable T σ.types) :
+    ∀ (fuel : Nat) (ty : Ty) (l r : Value D) {b : Bool},
+      valueEqBFuelT T fuel ty l r = .ok b →
+      valueEqFuel fuel σ ty (concV I l) (concV I r) = .ok b := by
+  intro fuel
+  induction fuel with
+  | zero =>
+      intro ty l r b h
+      simp [valueEqBFuelT, quit] at h
+  | succ fuel ih =>
+      intro ty l r b h
+      cases ty
+      case interface iname =>
+        cases l <;> cases r <;>
+          simp only [valueEqBFuelT] at h <;>
+          first
+            | (simp [quit] at h; done)
+            | (cases h; rfl)
+            | (cases h; simp [valueEqFuel])
+      case defined name =>
+        simp only [valueEqBFuelT] at h
+        revert h
+        rcases hlk : TypeEnv.lookup T name with _ | td
+        · intro h
+          simp [quit] at h
+        · intro h
+          have hσlk := hsub name td hlk
+          cases td <;> try (simp only [quit] at h; cases h; done)
+          case alias target =>
+            simp only [valueEqFuel, hσlk]
+            exact ih _ _ _ h
+          case defined target =>
+            simp only [valueEqFuel, hσlk]
+            exact ih _ _ _ h
+      all_goals
+        simp only [valueEqBFuelT] at h
+        exact valueEqBFuel_conc hI σ _ _ _ _ h
+
+/-- The value-producing equality at the input table. -/
+theorem valueEqRT_conc (hI : I.Sound) (σ : ExecState) {T : TypeEnv}
+    (hsub : SubTable T σ.types) {ty : Ty}
+    {l r : Value D} {b : D.BoolR} (h : valueEqRT' T ty l r = .ok b) :
+    valueEq σ ty (concV I l) (concV I r) = .ok (I.boolV b) := by
+  unfold valueEqRT' at h
+  split at h
+  · cases h
+    simp only [concV_int, valueEq]
+    rw [show typeResolutionFuel = 1023 + 1 from rfl]
+    simp [valueEqFuel, hI.eqI, pure, Except.pure]
+  · simp only [bind_eq_ok] at h
+    obtain ⟨b0, hb0, h2⟩ := h
+    cases h2
+    simp only [valueEq]
+    rw [valueEqBFuelT_conc hI σ hsub _ _ _ _ hb0, hI.litB]
+
 set_option linter.unusedSimpArgs false in
 /-- `applySyncOp'` transports (census subset; `storeLoc_conc` carries
 the flag store — sync cells normalize at the concrete `.sync` arm, no
@@ -988,6 +1201,48 @@ theorem stepFnT_conc (hI : I.Sound) (σ : ExecState) (ch : Choices)
                 · simp [quit] at h
       | strictK op done pending env k' =>
           cases op <;> try exact stepFn'_conc hI σ ch h
+          case eqCmp ty =>
+            cases pending with
+            | cons e rest => exact stepFn'_conc hI σ ch h
+            | nil =>
+                simp only [stepFnT] at h
+                revert h
+                rcases hrev : (v :: done).reverse with _ | ⟨l, _ | ⟨r, rest2⟩⟩ <;>
+                  intro h <;> try (simp [quit] at h; done)
+                rcases rest2 with _ | ⟨x, rest3⟩
+                · obtain ⟨b, hb, h2⟩ := bind_eq_ok.mp h
+                  cases h2
+                  have hsub' : SubTable T (concS I σ s).types := hsub
+                  have hv := valueEqRT_conc (I := I) hI (concS I σ s) hsub' hb
+                  simp only [concC, concK, stepFn]
+                  rw [show ((concV I v :: List.map (concV I) done)).reverse
+                        = List.map (concV I) ((v :: done).reverse) from by
+                    simp [List.map_reverse]]
+                  rw [hrev]
+                  simp [applyStrictOp, hv, Bind.bind, Except.bind, pure,
+                    Except.pure, concV_bool]
+                · simp [quit] at h
+          case neqCmp ty =>
+            cases pending with
+            | cons e rest => exact stepFn'_conc hI σ ch h
+            | nil =>
+                simp only [stepFnT] at h
+                revert h
+                rcases hrev : (v :: done).reverse with _ | ⟨l, _ | ⟨r, rest2⟩⟩ <;>
+                  intro h <;> try (simp [quit] at h; done)
+                rcases rest2 with _ | ⟨x, rest3⟩
+                · obtain ⟨b, hb, h2⟩ := bind_eq_ok.mp h
+                  cases h2
+                  have hsub' : SubTable T (concS I σ s).types := hsub
+                  have hv := valueEqRT_conc (I := I) hI (concS I σ s) hsub' hb
+                  simp only [concC, concK, stepFn]
+                  rw [show ((concV I v :: List.map (concV I) done)).reverse
+                        = List.map (concV I) ((v :: done).reverse) from by
+                    simp [List.map_reverse]]
+                  rw [hrev]
+                  simp [applyStrictOp, hv, hI.notB, Bind.bind, Except.bind,
+                    pure, Except.pure, concV_bool]
+                · simp [quit] at h
           case structLit ty =>
             cases pending with
             | cons e rest => exact stepFn'_conc hI σ ch h
@@ -1027,6 +1282,16 @@ theorem stepFnT_conc (hI : I.Sound) (σ : ExecState) (ch : Choices)
           · intro h
             cases h
             simp [concC, concK, stepFn, strictPlan, helems]
+      | defaultValue ty =>
+          simp only [stepFnT] at h
+          obtain ⟨v2, hdv, h2⟩ := bind_eq_ok.mp h
+          cases h2
+          have hsub' : SubTable T (concS I σ s).types := hsub
+          have hd : defaultValue (concS I σ s) ty = .ok (concV I v2) := by
+            simp only [defaultValue]
+            exact defaultValueFuelT_conc hI (concS I σ s) hsub' _ _ hdv
+          simp [concC, concK, stepFn, strictPlan, applyStrictOp, hd,
+            Bind.bind, Except.bind, pure, Except.pure]
       | _ => exact stepFn'_conc hI σ ch h
   | opDone sched inner =>
       cases h
@@ -1181,6 +1446,19 @@ theorem resolveDefinedAliasesFuel_types {σ₁ σ₂ : ExecState}
         cases TypeEnv.lookup σ₂.types name with
         | none => rfl
         | some td => cases td <;> simp [ih]
+
+theorem canonicalTyFuel_types {σ₁ σ₂ : ExecState}
+    (h : σ₁.types = σ₂.types) :
+    ∀ (fuel : Nat) (ty : Ty),
+      canonicalTyFuel fuel σ₁ ty = canonicalTyFuel fuel σ₂ ty := by
+  intro fuel
+  induction fuel with
+  | zero => intro ty; cases ty <;> rfl
+  | succ fuel ih =>
+      intro ty
+      have hfun : canonicalTyFuel fuel σ₁ = canonicalTyFuel fuel σ₂ :=
+        funext ih
+      cases ty <;> simp only [canonicalTyFuel, ih, hfun] <;> (try rw [h])
 
 theorem methodInfoByFuncId_tables {σ₁ σ₂ : ExecState}
     (h : σ₁.methods = σ₂.methods) (fid : FuncId) :
@@ -1411,6 +1689,21 @@ def stepFnTB (TB : SymTables) (s : State D) (c : Config D) :
        | .nil => quit .q6Panic
        | .atom _ => quit .q10Atom
        | _ => quit .q11Internal)
+  -- U3-a: `toInterface` boxing. Lives in THIS layer (not stepFnT)
+  -- because `canonicalTy` returns partial answers on a lookup miss —
+  -- only table EQUALITY (the Agrees premise) makes it transportable
+  -- (the same reason the pack demands equality; slice-3 docstring).
+  | .retV v (.strictK (.toInterface target dynamic) done [] env k') =>
+      (match (v :: done).reverse with
+       | [x] => do
+           let dynTy ←
+             match canonicalDynamicTy TB.toState dynamic with
+             | .ok t => .ok t
+             | .error _ => quit .q4Program
+           match dynTy with
+           | .interface _ => .ok (.retV x k', s)
+           | _ => .ok (.retV (.interface dynTy x) k', s)
+       | _ => quit .q11Internal)
   | c => stepFnT TB.types s c
 
 /-- The layered step transports (the class-2 arms via
@@ -1457,6 +1750,36 @@ theorem stepFnTB_conc (hI : I.Sound) (σ : ExecState) (ch : Choices)
                   enterFrameStep, List.map_append, List.map_cons,
                   List.map_nil] at hef ⊢
                 rw [hef]
+      | strictK op done pending env k' =>
+          cases op <;> try (exact stepFnT_conc hI σ ch hsub h)
+          case toInterface target dynamic =>
+            cases pending with
+            | cons e rest => exact stepFnT_conc hI σ ch hsub h
+            | nil =>
+                simp only [stepFnTB] at h
+                have hcanon : canonicalDynamicTy (concS I σ s) dynamic
+                    = canonicalDynamicTy TB.toState dynamic := by
+                  simp only [canonicalDynamicTy, canonicalTy]
+                  rw [canonicalTyFuel_types
+                    (show (concS I σ s).types = TB.toState.types by
+                      simp [concS, SymTables.toState, hag.1])]
+                revert h
+                rcases hrev : (v :: done).reverse with _ | ⟨x, _ | ⟨y, rest2⟩⟩ <;>
+                  intro h <;> try (simp [quit] at h; done)
+                revert h
+                rcases hcd : canonicalDynamicTy TB.toState dynamic with e | t
+                · intro h
+                  simp [quit, Bind.bind, Except.bind] at h
+                · intro h
+                  simp only [Bind.bind, Except.bind, pure, Except.pure] at h
+                  cases t <;> cases h <;>
+                    · simp only [concC, concK, stepFn]
+                      rw [show ((concV I v :: List.map (concV I) done)).reverse
+                            = List.map (concV I) ((v :: done).reverse) from by
+                        simp [List.map_reverse]]
+                      rw [hrev]
+                      simp [applyStrictOp, hcanon, hcd, Bind.bind,
+                        Except.bind, pure, Except.pure]
       | _ => exact stepFnT_conc hI σ ch hsub h
   | next k =>
       cases k with
