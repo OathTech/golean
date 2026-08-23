@@ -428,6 +428,14 @@ from artifacts.
 | nextIndex_safety | PROVED (base) | Raft/NextIndexSafetyInterface.v:8-11 | AppendEntriesChain.lean (invariant) |
 | leaderLogs_logMatching (leaderLogs_entries_match) | PROVED | Raft/LeaderLogsLogMatchingInterface.v:9-13 | AppendEntriesChain.lean (conj invariant + interface half) |
 | msg_refined_raft_net_invariant (msg-ghost principle, GAP-2) | PROVED (unprimed + simulation_1/lift/deghost_spec + witness; primed set + reghosting deferred, census logged) | Raft/RaftMsgRefinementInterface.v:34-195 + RaftProofs/RaftMsgRefinementProof.v:12-275,566-654 | MsgRefinement.lean |
+| transitive_commit | PROVED | Raft/TransitiveCommitInterface.v:9-15 | SafetyLeaves.lean (invariant) |
+| all_entries_leader_logs (4 conjuncts) | PROVED | Raft/AllEntriesLeaderLogsInterface.v | SafetyLeaves.lean (assembly over ported invariants) |
+| in_log_in_all_entries | PROVED | Raft/InLogInAllEntriesInterface.v | SafetyLeaves.lean (invariant) |
+| log_all_entries | PROVED | Raft/LogAllEntriesInterface.v | SafetyLeaves.lean (invariant) |
+| lastApplied_le_commitIndex | PROVED (base) | Raft/LastAppliedLeCommitIndexInterface.v | SafetyLeaves.lean (invariant) |
+| no_append_entries_to_self | PROVED (base) | Raft/NoAppendEntriesToSelfInterface.v | SafetyLeaves.lean (invariant) |
+| match_index_sanity | UNIT-13 CHARTER (W-B remainder) | Raft/MatchIndexSanityInterface.v | — |
+| prevLog_candidateEntriesTerm | UNIT-13 CHARTER (W-B remainder) | Raft/PrevLogCandidateEntriesTermInterface.v | — |
 - 2026-08-22 Slice 13 (1cc83c1d): log/message spec lemmas for the ring
   (findGtIndex_in, removeAfterIndex_in, per-handler log facts,
   doLeader_messages, rvr cronies function-level cases).
@@ -2427,3 +2435,58 @@ context rule ACTIVE — W-B alone is a complete unit.
   its dep); CroniesTerm/CroniesCorrect/CandidateEntries (PLCET). NO
   hidden edges, NO msg-ghost. File plan: one new `SafetyLeaves.lean`
   (imports MsgRefinement), wired from birth.
+- 2026-08-23 Slice 66 (8399c908): `SafetyLeaves.lean` opened — the two
+  JOINT log/allEntries movement lemmas ported on first need
+  (`update_elections_data_client_request_log_allEntries`
+  (RefinementSpecLemmas.v:312-360, compact form) and
+  `..._appendEntries_log_allEntries` (:404-441) with the new
+  `handleAppendEntries_true_reply_currentTerm` — the correlation the
+  lane's SEPARATE cases lemmas lose, exactly the split unit 9
+  flagged); `transitive_commit_invariant` (committed is downward
+  closed along entries_match — unit 10's `committed` def consumed);
+  the FOUR-conjunct `all_entries_leader_logs` assembly (lwme =
+  allEntries_log projection; exists_leaderLog = came_from_leaders;
+  leaderLog_not_in via AERLeaderLogs' split + prefix_contiguous +
+  one_leaderLog_per_term; leaderLogs_leader = LHLLStrong's weak face);
+  and `in_log_in_all_entries_invariant` (the joint lemmas' first
+  payoff). [AGENT] The full recorded gotcha set re-hit in ONE slice:
+  nomatch-on-Bool-eq (cases + try-cases-with-done shape), subst
+  direction ×2, literal-net rw (replace/show defeq bridging), rw
+  auto-rfl not closing `≤` (explicit Nat.le_refl).
+- 2026-08-23 Slice 67 (40c8e90d): `log_all_entries_invariant` — the
+  term-aware twin: fresh CR/AE records land at their own terms (the
+  joint lemmas' term components), old current-term entries ride
+  `nepct_host_lifted` (lift_prop of base term-sanity) + Nat.le_antisymm
+  against the handlers' monotone terms (`lae_of_update` transport
+  with a term-only-grows premise; the strictly-grown case is vacuous
+  by term sanity).
+- 2026-08-23 Slice 68 (66b21957): the BASE pair —
+  `lastApplied_le_commitIndex_invariant` (new watermark movement
+  lemmas: advanceCurrentTerm/handlers keep la and never lower ci;
+  `le_foldl_max` for advanceCommitIndex; doGenericServer's la jumps
+  at most to ci) and `no_append_entries_to_self_invariant`
+  (`doLeader_messages_not_self` reads the fan-out filter; every other
+  send is a non-AE reply or nothing). [AGENT] doLeader unfolding needs
+  the exact `unfold doLeader advanceCommitIndex; simp only []` 
+  incantation before `repeat' split` (the `have`-bindings block bare
+  split) — recorded; it is the lane's own doLeader_messages shape.
+- 2026-08-23 [AGENT] SPLIT AT THE CLEAN BOUNDARY (context rule,
+  coordinator-activated): a first draft of `match_index_sanity`
+  surfaced rising error rate (guessed signatures, placeholder hatches
+  that the sweep would rightly reject) — the draft was REVERTED
+  uncommitted, per the split discipline; six of eight W-B files are
+  landed and gate-green; `match_index_sanity` + 
+  `prevLog_candidateEntriesTerm` are the chartered unit-13 remainder
+  (with the partial recon recorded here: handleAppendEntriesReply/
+  handleRequestVoteReply matchIndex case lemmas 1:1 from
+  MatchIndexSanityProof.v:88-105/:148-161; applyEntries_matchIndex by
+  the applyEntries_nextIndex induction pattern; the AER max-slot case
+  rides append_entries_reply_sublog + maxIndex_is_max exactly as
+  upstream; PLCET = candidateEntriesTerm (the term-level twin of
+  candidateEntries, same shape modulo e.eTerm ↦ t) + eight preserves
+  lemmas mirroring unit 3's + the doLeader creation case via
+  candidate_entries_invariant on the findAtIndex pivot).
+- 2026-08-23 Six AxCheck pins added for the unit-12 headliners
+  (captured from a fresh capped probe — all [propext, Quot.sound]).
+  Build green, sweep 2287 + pins; hatch grep over SafetyLeaves.lean: 0
+  (exit 1); file = 1,082 lines.

@@ -194,6 +194,18 @@ open VerdiCompat VerdiCompat.Raft
 #guard_msgs in #print axioms VerdiCompat.Raft.msg_lift_prop
 /-- info: 'VerdiCompat.Raft.ghost_entries_gt_0_invariant' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms VerdiCompat.Raft.ghost_entries_gt_0_invariant
+/-- info: 'VerdiCompat.Raft.transitive_commit_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.transitive_commit_invariant
+/-- info: 'VerdiCompat.Raft.all_entries_leader_logs_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.all_entries_leader_logs_invariant
+/-- info: 'VerdiCompat.Raft.in_log_in_all_entries_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.in_log_in_all_entries_invariant
+/-- info: 'VerdiCompat.Raft.log_all_entries_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.log_all_entries_invariant
+/-- info: 'VerdiCompat.Raft.lastApplied_le_commitIndex_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.lastApplied_le_commitIndex_invariant
+/-- info: 'VerdiCompat.Raft.no_append_entries_to_self_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.no_append_entries_to_self_invariant
 
 /-! ## Exhaustive sweep (fails the build on any disallowed axiom) -/
 
