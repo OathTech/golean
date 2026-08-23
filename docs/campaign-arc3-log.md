@@ -3481,3 +3481,105 @@ BRANCH-COMPLETE, permanently. Nothing merged, nothing designated.
   omega-on-abbrev class resolved with explicit Nat lemmas ~20 times).
   No operator decision is owed; the lane's axiom-set doctrine stands
   exactly as ratified.
+- 2026-08-23 Design-note CLOSING SECTION written
+  (`docs/2026-08-22_campaign-arc3-refined-port-design.md` §6, charter
+  item 4): the port's final extent, the ported/re-derived/newly-shaped
+  classification with the §9 route calls indexed, T4 explicitly not
+  attempted (constitution stretch tier), and the Arc-4 handoff
+  surface — THE INDEX IS THE INTERFACE.
+- 2026-08-23 Unit-16 final gate: `GOLEAN_ALLOW_NO_DIFF=1
+  GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT: PASS, exit 0** (log:
+  `artifacts/ci-arc3-unit16.log`, gitignored; no-diff notes are the
+  allowed docs+compat hatch). Comparator-landmark note: "56 theorems
+  @ 1730567a2d3f, 133 commit(s) ago" + the explicit "STALE: 133
+  commits > 100" line (report-only) — the operator's merge-step
+  comparator-judge obligation, threshold-crossed since unit 13.
+
+## FINAL ENTRY — unit 16 complete: THE LANE ENDS BRANCH-COMPLETE, PERMANENTLY (2026-08-23, tip = this commit)
+
+**END-STATE RE-VERIFICATION (charter item 1 — the milestone audit's
+record; taken at the settled tip a4f737c5 + the gate, tree clean,
+every number below recomputed fresh, none restated):**
+
+- **Capped CLEAN build** (`lake clean` then capped `lake build` —
+  full elaboration of all 61 jobs from source): **green**, exit 0.
+  Sweep line in the clean build AND re-derived by a fresh capped
+  `lake env lean AxCheck.lean`, both verbatim:
+  `AxCheck sweep: 2615 declarations across VerdiCompat modules, axiom
+  set within [propext, Quot.sound]`.
+- **The fifteen-headliner probe**, re-run fresh (capped
+  `lake env lean`, repo-local scratch), all verbatim:
+
+```
+'VerdiCompat.Raft.one_leader_per_term_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.oneLeaderPerTermStatement_holds' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.log_matching_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.logMatchingStatement_holds' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.leader_completeness_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.state_machine_safety'_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.state_machine_safety_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.stateMachineSafetyStatement_holds' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.everything_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.maxIndex_sanity_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.commit_recorded_committed_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.match_index_all_entries_invariant' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.refined_raft_net_invariant'' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.msg_simulation_2' depends on axioms: [propext, Quot.sound]
+'VerdiCompat.Raft.msg_lower_prop' depends on axioms: [propext, Quot.sound]
+```
+
+- **Hatch grep** (`sorry|native_decide|^axiom | axiom `) over ALL
+  SIXTEEN campaign files (RefinedProofStructure, ElectionSpecLemmas,
+  ElectionSafety, CandidateEntries, LeaderLogs, CreationRing,
+  LogMatching, AppendEntriesChain, LeaderLogsAssembly,
+  LeaderCompleteness, MsgRefinement, SafetyLeaves, GhostLogs,
+  SafetyPrime, MatchIndexAllEntries, StateMachineSafety): five hits
+  total, EVERY one docstring prose about the axiom set
+  (ElectionSpecLemmas:953, RefinedProofStructure:1037,
+  ElectionSafety:1521 and :1581, LogMatching:156) — zero hatches.
+- **INVARIANT INDEX span-verified**: `grep -c "^| "` over the table
+  span = 85 = header + **84 data rows**. Every row's Lean home is one
+  of the sixteen files above; every headliner named in a row is
+  covered by a curated `#guard_msgs` pin or the fifteen-probe, and
+  the enforcing sweep enumerates all 2615 declarations — a
+  nonexistent or hatched name cannot survive the build.
+- **129 commits on the lane** (`git log f64d9b21..HEAD --oneline |
+  wc -l`, recomputed after the gate), tree clean.
+
+**INTEGRATION READINESS (charter item 5, superseding the unit-5
+paragraph):** `compat/verdi` remains a SELF-CONTAINED lake package —
+zero external lake dependencies, pinned toolchain
+`leanprover/lean4:v4.31.0`, default targets VerdiCompat + AxCheck
+(enforcing) + diffharness. A fresh checkout of `campaign-arc3` builds
+it standalone with `cd compat/verdi && scripts/capped lake build` (no
+`deps/` checkout needed — the verdi/verdi-raft trees are
+reference-reading only; every read went through the MAIN checkout's
+pins, re-verified at every unit). The lane touched ONLY
+`compat/verdi/**` + `docs/campaign-arc3*` +
+`docs/2026-08-22_campaign-arc3-*` — no runtime code, no `Corpus/`, no
+`baselines/` — so the merge has no textual or semantic overlap with
+the semantic core and no baseline re-pin; `scripts/ci` on a fresh
+worktree needs `GOLEAN_ALLOW_NO_DIFF=1` until a differential is
+recorded (standing hatch). File-add order is linear
+(ElectionSpecLemmas → ElectionSafety → CandidateEntries → LeaderLogs →
+CreationRing → LogMatching → AppendEntriesChain → LeaderLogsAssembly →
+LeaderCompleteness → MsgRefinement → SafetyLeaves → GhostLogs →
+SafetyPrime → MatchIndexAllEntries → StateMachineSafety, plus the
+RefinedProofStructure/StructTactPrelude roots), each imported by its
+successor — **MERGE THE BRANCH TIP, NEVER CHERRY-PICK slices** (partial
+units break imports). The single operator obligation at merge time:
+the **comparator-judge run** (the landmark is 133 commits stale,
+threshold-crossed — flagged every unit since 13).
+
+**THE LANE'S RECORD, stated once, plainly:** sixteen units, ~95
+slices, 129 commits. The Verdi STRUCTURE port (constitution §5 Plan A)
+delivered the COMPLETE T3 SAFETY LATTICE — **election safety ✓ (unit
+2), log matching ✓ (unit 6), leader completeness ✓ (unit 10),
+state-machine safety ✓ (unit 15)** — all statements 1:1 with their
+verdi-raft Interface files @ a3375e8, all three Properties.lean
+transfer targets discharged natively, every theorem kernel-checked
+within [propext, Quot.sound], zero sorry, zero native_decide, zero
+axioms added, at every one of sixteen green gates. All named gaps
+closed (GAP-1/2/5/6/7/8) or moot (GAP-4). Designation is Mike's;
+merge and push are the operator's; the audit ask travels with the
+merge. **This lane is BRANCH-COMPLETE, permanently.**
