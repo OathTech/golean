@@ -688,6 +688,395 @@ theorem log_all_entries_invariant :
     · rw [← hrb, hstate]
       exact Nat.le_refl _
 
+/-! ## lastApplied_le_commitIndex (`Raft/LastAppliedLeCommitIndexInterface.v`
+/ `RaftProofs/LastAppliedLeCommitIndexProof.v`, BASE layer) -/
+
+/-- `LastAppliedLeCommitIndexInterface.v` (`lastApplied_le_commitIndex`). -/
+def lastApplied_le_commitIndex (net : RaftNet) : Prop :=
+  ∀ h : name (P := P),
+    (net.nwState h).lastApplied ≤ (net.nwState h).commitIndex
+
+omit O in
+/-- `advanceCurrentTerm` never touches the watermarks. -/
+theorem advanceCurrentTerm_la_ci (st : raft_data (P := P)) (t : term) :
+    (advanceCurrentTerm st t).lastApplied = st.lastApplied ∧
+    (advanceCurrentTerm st t).commitIndex = st.commitIndex := by
+  unfold advanceCurrentTerm
+  split <;> exact ⟨rfl, rfl⟩
+
+omit O in
+/-- `LastAppliedLeCommitIndexProof.v` (the per-message movement, one
+pass): every message handler keeps `lastApplied` and never lowers
+`commitIndex`. -/
+theorem handleAppendEntries_la_ci (me : name (P := P))
+    (st : raft_data (P := P)) (t : term) (lid : name (P := P))
+    (pli : logIndex) (plt : term) (es : List (entry (P := P)))
+    (ci : logIndex) {d m}
+    (h : handleAppendEntries me st t lid pli plt es ci = (d, m)) :
+    d.lastApplied = st.lastApplied ∧ st.commitIndex ≤ d.commitIndex := by
+  have hadv := advanceCurrentTerm_la_ci st t
+  unfold handleAppendEntries at h
+  repeat' split at h
+  all_goals injection h with h1 h2
+  all_goals rw [← h1]
+  all_goals first
+    | exact ⟨rfl, Nat.le_refl _⟩
+    | exact ⟨hadv.1, Nat.le_of_eq hadv.2.symm⟩
+    | exact ⟨hadv.1, Nat.le_max_left ..⟩
+
+omit O in
+theorem handleAppendEntriesReply_la_ci (me : name (P := P))
+    (st : raft_data (P := P)) (src : name (P := P)) (t : term)
+    (es : List (entry (P := P))) (r : Bool) {d l}
+    (h : handleAppendEntriesReply me st src t es r = (d, l)) :
+    d.lastApplied = st.lastApplied ∧ d.commitIndex = st.commitIndex := by
+  have hadv := advanceCurrentTerm_la_ci st t
+  unfold handleAppendEntriesReply at h
+  repeat' split at h
+  all_goals injection h with h1 h2
+  all_goals rw [← h1]
+  all_goals first
+    | exact ⟨rfl, rfl⟩
+    | exact hadv
+
+omit O in
+theorem handleRequestVote_la_ci (me : name (P := P))
+    (st : raft_data (P := P)) (t : term) (cand : name (P := P))
+    (lli : logIndex) (llt : term) {d m}
+    (h : handleRequestVote me st t cand lli llt = (d, m)) :
+    d.lastApplied = st.lastApplied ∧ d.commitIndex = st.commitIndex := by
+  have hadv := advanceCurrentTerm_la_ci st t
+  unfold handleRequestVote at h
+  simp only [] at h
+  repeat' split at h
+  all_goals injection h with h1 h2
+  all_goals rw [← h1]
+  all_goals first
+    | exact ⟨rfl, rfl⟩
+    | exact hadv
+
+omit O in
+theorem handleRequestVoteReply_la_ci (me : name (P := P))
+    (st : raft_data (P := P)) (src : name (P := P)) (t : term)
+    (v : Bool) :
+    (handleRequestVoteReply me st src t v).lastApplied = st.lastApplied ∧
+    (handleRequestVoteReply me st src t v).commitIndex = st.commitIndex := by
+  have hadv := advanceCurrentTerm_la_ci st t
+  unfold handleRequestVoteReply
+  simp only []
+  repeat' split
+  all_goals first
+    | exact ⟨rfl, rfl⟩
+    | exact hadv
+
+omit O in
+theorem handleTimeout_la_ci (me : name (P := P))
+    (st : raft_data (P := P)) {out d l}
+    (h : handleTimeout me st = (out, d, l)) :
+    d.lastApplied = st.lastApplied ∧ d.commitIndex = st.commitIndex := by
+  unfold handleTimeout tryToBecomeLeader at h
+  split at h <;> (simp only [Prod.mk.injEq] at h; obtain ⟨-, rfl, -⟩ := h)
+  · exact ⟨rfl, rfl⟩
+  · exact ⟨rfl, rfl⟩
+
+omit O in
+theorem handleClientRequest_la_ci (me : name (P := P))
+    (st : raft_data (P := P)) (client : R.clientId) (id : Nat)
+    (c : P.input) {out d l}
+    (h : handleClientRequest me st client id c = (out, d, l)) :
+    d.lastApplied = st.lastApplied ∧ d.commitIndex = st.commitIndex := by
+  unfold handleClientRequest at h
+  split at h <;> (simp only [Prod.mk.injEq] at h; obtain ⟨-, rfl, -⟩ := h)
+  · exact ⟨rfl, rfl⟩
+  · exact ⟨rfl, rfl⟩
+
+omit O R in
+/-- `LastAppliedLeCommitIndexProof.v:71-84` (`fold_left_max`),
+specialized. -/
+theorem le_foldl_max : ∀ (l : List Nat) (z z' : Nat), z ≤ z' →
+    z ≤ l.foldl max z' := by
+  intro l
+  induction l with
+  | nil => exact fun z z' h => h
+  | cons a l ih =>
+    intro z z' h
+    exact ih z (max z' a) (Nat.le_trans h (Nat.le_max_left ..))
+
+omit O in
+/-- `LastAppliedLeCommitIndexProof.v:60-120` (`doLeader` watermark
+movement): `lastApplied` fixed, `commitIndex` only advances
+(`advanceCommitIndex` folds `max`). -/
+theorem doLeader_la_ci (st : raft_data (P := P)) (me : name (P := P))
+    {os d' ms} (h : doLeader st me = (os, d', ms)) :
+    d'.lastApplied = st.lastApplied ∧ st.commitIndex ≤ d'.commitIndex := by
+  unfold doLeader advanceCommitIndex at h
+  simp only [] at h
+  repeat' split at h
+  all_goals simp only [Prod.mk.injEq] at h
+  all_goals obtain ⟨-, rfl, -⟩ := h
+  all_goals first
+    | exact ⟨rfl, Nat.le_refl _⟩
+    | exact ⟨rfl, le_foldl_max _ _ _ (Nat.le_refl _)⟩
+
+/-- `LastAppliedLeCommitIndexProof.v:122-137` (`doGenericServer`
+watermark movement): `commitIndex` fixed; `lastApplied` either stays or
+jumps exactly to `commitIndex`. -/
+theorem doGenericServer_la_ci (h : name (P := P))
+    (st : raft_data (P := P)) {os d' ms}
+    (hdgs : doGenericServer h st = (os, d', ms)) :
+    d'.commitIndex = st.commitIndex ∧
+    (d'.lastApplied = st.lastApplied ∨ d'.lastApplied = st.commitIndex) := by
+  unfold doGenericServer at hdgs
+  rcases hae : applyEntries h st
+      ((findGtIndex st.log st.lastApplied).filter
+        (fun x => (st.lastApplied <? x.eIndex) && (x.eIndex <=? st.commitIndex))).reverse
+    with ⟨o1, st1⟩
+  rw [hae] at hdgs
+  simp only [Prod.mk.injEq] at hdgs
+  obtain ⟨-, rfl, -⟩ := hdgs
+  obtain ⟨-, -, -, -, -, hci, hla⟩ := applyEntries_spec h _ st hae
+  refine ⟨hci, ?_⟩
+  split
+  · exact Or.inr (by rw [hci])
+  · exact Or.inl (by rw [hla])
+
+/-- Per-node transport for `lastApplied_le_commitIndex`. -/
+theorem lalci_of_update {net : RaftNet}
+    {st' : name (P := P) → raft_data (P := P)} {ps'} {u : name (P := P)}
+    {d : raft_data (P := P)}
+    (hP : lastApplied_le_commitIndex net)
+    (hst : ∀ h', st' h' = update net.nwState u d h')
+    (himp : (net.nwState u).lastApplied ≤ (net.nwState u).commitIndex →
+      d.lastApplied ≤ d.commitIndex) :
+    lastApplied_le_commitIndex ⟨ps', st'⟩ := by
+  intro h0
+  show (st' h0).lastApplied ≤ (st' h0).commitIndex
+  rw [hst h0]
+  by_cases heq : u = h0
+  · subst heq
+    rw [update_same]
+    exact himp (hP u)
+  · rw [update_neq _ _ (Ne.symm heq)]
+    exact hP h0
+
+/-- `LastAppliedLeCommitIndexProof.v:200-223`
+(`lastApplied_le_commitIndex_invariant`, BASE). -/
+theorem lastApplied_le_commitIndex_invariant :
+    ∀ net, raft_intermediate_reachable (P := P) net →
+      lastApplied_le_commitIndex net := by
+  refine raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · -- init: both watermarks 0
+    intro h
+    exact Nat.le_refl _
+  · -- client_request
+    intro h net st' ps' out d l client id c hcr hP _hreach hst _hps
+    obtain ⟨hla, hci⟩ :=
+      handleClientRequest_la_ci h (net.nwState h) client id c hcr
+    exact lalci_of_update hP hst (fun hle => by rw [hla, hci]; exact hle)
+  · -- timeout
+    intro net h st' ps' out d l hto hP _hreach hst _hps
+    obtain ⟨hla, hci⟩ := handleTimeout_la_ci h (net.nwState h) hto
+    exact lalci_of_update hP hst (fun hle => by rw [hla, hci]; exact hle)
+  · -- append_entries
+    intro xs p ys net st' ps' d m t n pli plt es ci hae hbody hP _hreach
+      hpkts hst _hps
+    obtain ⟨hla, hci⟩ :=
+      handleAppendEntries_la_ci p.pDst (net.nwState p.pDst) t n pli plt
+        es ci hae
+    exact lalci_of_update hP hst
+      (fun hle => by rw [hla]; exact Nat.le_trans hle hci)
+  · -- append_entries_reply
+    intro xs p ys net st' ps' d m t es res haer hbody hP _hreach hpkts
+      hst _hps
+    obtain ⟨hla, hci⟩ :=
+      handleAppendEntriesReply_la_ci p.pDst (net.nwState p.pDst) p.pSrc
+        t es res haer
+    exact lalci_of_update hP hst (fun hle => by rw [hla, hci]; exact hle)
+  · -- request_vote
+    intro xs p ys net st' ps' d m t cid lli llt hrv hbody hP _hreach
+      hpkts hst _hps
+    obtain ⟨hla, hci⟩ :=
+      handleRequestVote_la_ci p.pDst (net.nwState p.pDst) t p.pSrc lli
+        llt hrv
+    exact lalci_of_update hP hst (fun hle => by rw [hla, hci]; exact hle)
+  · -- request_vote_reply
+    intro xs p ys net st' ps' d t v hrvr hbody hP _hreach hpkts hst _hps
+    obtain ⟨hla, hci⟩ :=
+      handleRequestVoteReply_la_ci p.pDst (net.nwState p.pDst) p.pSrc t v
+    exact lalci_of_update hP hst
+      (fun hle => by rw [← hrvr] at *; rw [hla, hci]; exact hle)
+  · -- do_leader
+    intro net st' ps' d h os d' ms hdl hP _hreach hstate hst _hps
+    obtain ⟨hla, hci⟩ := doLeader_la_ci d h hdl
+    refine lalci_of_update hP hst (fun hle => ?_)
+    rw [hstate] at hle
+    rw [hla]
+    exact Nat.le_trans hle hci
+  · -- do_generic_server
+    intro net st' ps' d os d' ms h hdgs hP _hreach hstate hst _hps
+    obtain ⟨hci, hla⟩ := doGenericServer_la_ci h d hdgs
+    refine lalci_of_update hP hst (fun hle => ?_)
+    rw [hstate] at hle
+    rw [hci]
+    rcases hla with hla | hla
+    · rw [hla]
+      exact hle
+    · rw [hla]
+      exact Nat.le_refl _
+  · -- state_same_packet_subset
+    intro net net' hstate _hpk hP _hreach
+    intro h0
+    rw [← hstate h0]
+    exact hP h0
+  · -- reboot: watermarks survive
+    intro net net' d h d' hrb hP _hreach hstate hst hpkts
+    intro h0
+    rw [hst h0]
+    by_cases heq : h = h0
+    · subst heq
+      rw [update_same, ← hrb]
+      show (reboot d).lastApplied ≤ (reboot d).commitIndex
+      have hh := hP h
+      rw [hstate] at hh
+      exact hh
+    · rw [update_neq _ _ (Ne.symm heq)]
+      exact hP h0
+
+/-! ## no_append_entries_to_self (`Raft/NoAppendEntriesToSelfInterface.v`
+/ `RaftProofs/NoAppendEntriesToSelfProof.v`, BASE layer) -/
+
+/-- `NoAppendEntriesToSelfInterface.v` (`no_append_entries_to_self`). -/
+def no_append_entries_to_self (net : RaftNet) : Prop :=
+  ∀ (p : RaftPacket) (t : term) (n : name (P := P)) (pli : logIndex)
+    (plt : term) (es : List (entry (P := P))) (ci : logIndex),
+    p ∈ net.nwPackets → p.pBody = .AppendEntries t n pli plt es ci →
+    p.pDst = p.pSrc → False
+
+omit O in
+/-- `NoAppendEntriesToSelfProof.v:9-24` (`doLeader_no_messages_to_self`):
+the replica fan-out filters the sender out. -/
+theorem doLeader_messages_not_self (st : raft_data (P := P))
+    (me : name (P := P)) {os d' ms}
+    (h : doLeader st me = (os, d', ms)) :
+    ∀ q ∈ ms, q.1 ≠ me := by
+  unfold doLeader advanceCommitIndex at h
+  simp only [] at h
+  repeat' split at h
+  all_goals simp only [Prod.mk.injEq] at h
+  all_goals obtain ⟨-, -, rfl⟩ := h
+  all_goals intro q hq
+  · obtain ⟨node, hnode, rfl⟩ := List.mem_map.mp hq
+    obtain ⟨-, hfilter⟩ := List.mem_filter.mp hnode
+    intro heq
+    replace heq : node = me := heq
+    rw [heq] at hfilter
+    simp at hfilter
+  · exact nomatch hq
+  · exact nomatch hq
+
+/-- `NoAppendEntriesToSelfProof.v:124-142`
+(`no_append_entries_to_self_invariant`, BASE): only `doLeader` mints
+AppendEntries, and its recipients exclude the sender. -/
+theorem no_append_entries_to_self_invariant :
+    ∀ net, raft_intermediate_reachable (P := P) net →
+      no_append_entries_to_self net := by
+  refine raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · -- init
+    intro p t n pli plt es ci hp _ _
+    exact nomatch hp
+  · -- client_request: sends nothing
+    intro h net st' ps' out d l client id c hcr hP _hreach hst hps
+    intro p t n pli plt es ci hp hbody hdst
+    rcases hps p hp with hold | hnew
+    · exact hP p t n pli plt es ci hold hbody hdst
+    · obtain ⟨-, -, -, -, hl⟩ :=
+        handleClientRequest_spec h (net.nwState h) client id c hcr
+      rw [hl] at hnew
+      simp [send_packets] at hnew
+  · -- timeout: RequestVotes only
+    intro net h st' ps' out d l hto hP _hreach hst hps
+    intro p t n pli plt es ci hp hbody hdst
+    rcases hps p hp with hold | hnew
+    · exact hP p t n pli plt es ci hold hbody hdst
+    · obtain ⟨m0, hm0, rfl⟩ := List.mem_map.mp hnew
+      obtain ⟨t3, c3, l3, l4, hq⟩ :=
+        (handleTimeout_spec h (net.nwState h) hto).2.2 m0 hm0
+      replace hbody : m0.2 = msg.AppendEntries t n pli plt es ci := hbody
+      rw [hq] at hbody
+      exact nomatch hbody
+  · -- append_entries: the reply is an AppendEntriesReply
+    intro xs p ys net st' ps' d m t n pli plt es ci hae hbody hP _hreach
+      hpkts hst hps
+    intro p0 t0 n0 pli0 plt0 es0 ci0 hp0 hbody0 hdst0
+    rcases hps p0 hp0 with hold | rfl
+    · exact hP p0 t0 n0 pli0 plt0 es0 ci0
+        (by rw [hpkts]; exact mem_of_mem_remove_middle hold) hbody0 hdst0
+    · obtain ⟨t', r, hm⟩ :=
+        handleAppendEntries_reply_entries p.pDst (net.nwState p.pDst) t
+          n pli plt es ci hae
+      replace hbody0 : m = msg.AppendEntries t0 n0 pli0 plt0 es0 ci0 :=
+        hbody0
+      rw [hm] at hbody0
+      exact nomatch hbody0
+  · -- append_entries_reply: sends nothing
+    intro xs p ys net st' ps' d m t es res haer hbody hP _hreach hpkts
+      hst hps
+    intro p0 t0 n0 pli0 plt0 es0 ci0 hp0 hbody0 hdst0
+    rcases hps p0 hp0 with hold | hnew
+    · exact hP p0 t0 n0 pli0 plt0 es0 ci0
+        (by rw [hpkts]; exact mem_of_mem_remove_middle hold) hbody0 hdst0
+    · obtain ⟨-, -, hm⟩ :=
+        handleAppendEntriesReply_spec p.pDst (net.nwState p.pDst) p.pSrc
+          t es res haer
+      rw [hm] at hnew
+      simp [send_packets] at hnew
+  · -- request_vote: the reply is a RequestVoteReply
+    intro xs p ys net st' ps' d m t cid lli llt hrv hbody hP _hreach
+      hpkts hst hps
+    intro p0 t0 n0 pli0 plt0 es0 ci0 hp0 hbody0 hdst0
+    rcases hps p0 hp0 with hold | rfl
+    · exact hP p0 t0 n0 pli0 plt0 es0 ci0
+        (by rw [hpkts]; exact mem_of_mem_remove_middle hold) hbody0 hdst0
+    · obtain ⟨t', v, hm⟩ :=
+        handleRequestVote_reply_shape p.pDst (net.nwState p.pDst) t
+          p.pSrc lli llt hrv
+      replace hbody0 : m = msg.AppendEntries t0 n0 pli0 plt0 es0 ci0 :=
+        hbody0
+      rw [hm] at hbody0
+      exact nomatch hbody0
+  · -- request_vote_reply: sends nothing
+    intro xs p ys net st' ps' d t v hrvr hbody hP _hreach hpkts hst hps
+    intro p0 t0 n0 pli0 plt0 es0 ci0 hp0 hbody0 hdst0
+    exact hP p0 t0 n0 pli0 plt0 es0 ci0
+      (by rw [hpkts]; exact mem_of_mem_remove_middle (hps p0 hp0))
+      hbody0 hdst0
+  · -- do_leader: recipients exclude the sender
+    intro net st' ps' d h os d' ms hdl hP _hreach hstate hst hps
+    intro p0 t0 n0 pli0 plt0 es0 ci0 hp0 hbody0 hdst0
+    rcases hps p0 hp0 with hold | hnew
+    · exact hP p0 t0 n0 pli0 plt0 es0 ci0 hold hbody0 hdst0
+    · obtain ⟨m0, hm0, rfl⟩ := List.mem_map.mp hnew
+      have hne := doLeader_messages_not_self d h hdl m0 hm0
+      replace hdst0 : m0.1 = h := hdst0
+      exact hne hdst0
+  · -- do_generic_server: sends nothing
+    intro net st' ps' d os d' ms h hdgs hP _hreach hstate hst hps
+    intro p0 t0 n0 pli0 plt0 es0 ci0 hp0 hbody0 hdst0
+    rcases hps p0 hp0 with hold | hnew
+    · exact hP p0 t0 n0 pli0 plt0 es0 ci0 hold hbody0 hdst0
+    · obtain ⟨-, -, -, -, -, hms⟩ := doGenericServer_spec h d hdgs
+      rw [hms] at hnew
+      simp [send_packets] at hnew
+  · -- state_same_packet_subset
+    intro net net' _hstate hpk hP _hreach
+    intro p0 t0 n0 pli0 plt0 es0 ci0 hp0 hbody0 hdst0
+    exact hP p0 t0 n0 pli0 plt0 es0 ci0 (hpk p0 hp0) hbody0 hdst0
+  · -- reboot: packets unchanged
+    intro net net' d h d' hrb hP _hreach hstate hst hpkts
+    intro p0 t0 n0 pli0 plt0 es0 ci0 hp0 hbody0 hdst0
+    rw [← hpkts] at hp0
+    exact hP p0 t0 n0 pli0 plt0 es0 ci0 hp0 hbody0 hdst0
+
 end SafetyLeaves
 end Raft
 end VerdiCompat
