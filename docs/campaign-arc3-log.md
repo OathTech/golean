@@ -1576,3 +1576,14 @@ re-verified at THIS unit's closure derivation, not inherited.
   (:106-114) is subsumed — the candidate-entries route needs no host
   split, docstring-noted); fresh/fresh → same log, direct. Build
   green, sweep 1907.
+- 2026-08-23 CHECKPOINT (recomputed at 90e1cd28; 5 units since the
+  unit-8 opening: re-verification+closure, slices 42-45):
+  `git log f64d9b21..HEAD --oneline | wc -l` = 61 commits; fresh capped
+  `lake build` green with `AxCheck sweep: 1907 declarations across
+  VerdiCompat modules, axiom set within [propext, Quot.sound]`;
+  `grep -c "sorry\|native_decide"` over LeaderLogsAssembly.lean: 0
+  (exit 1); LeaderLogsAssembly.lean = 1,986 lines (wc). Unit-8 state:
+  append_entries_leaderLogs ✓ (W1), logs_leaderLogs + nw ✓ (W1),
+  **leaderLogs_preserved ✓ (GAP-7b CLOSED)** (W2). Remaining:
+  allEntries_leaderLogs_term (342L, W2), AllEntriesLog (1,089L, W3),
+  allEntries_votesWithLog (356L, GAP-7a, W4), pins, INDEX, gate.
