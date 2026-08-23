@@ -726,6 +726,299 @@ theorem refined_raft_net_invariant {Pr : RefinedNet → Prop}
       exact hreb net _ (net.nwState h).1 (net.nwState h).2 h _ rfl ih hreach rfl
         (fun _ => rfl) rfl
 
+/-! ## The PRIMED obligation set and `refined_raft_net_invariant'`
+
+`RaftRefinementInterface.v:327-521` / `RaftProofs/RaftRefinementProof.v:244-427`.
+GAP-1's STATE-side set, ported on its FIRST GENUINE NEED (Arc 3 unit 15;
+decision in the arc log's unit-15 opening entry): the consumer is
+`MatchIndexAllEntries`, whose append_entries case certifies a fresh
+reply's entries against the RECEIVER's post-splice log/allEntries via
+`log_all_entries_invariant`/`entries_match_invariant` AT THE SUCCESSOR
+NET — the successor-reachability premise is load-bearing, so the
+slice-39 pre-state route is structurally unavailable.
+
+Each primed obligation = its unprimed twin + the SUCCESSOR net's
+reachability premise (upstream :327-439; there is no primed
+`state_same_packet_subset` — upstream's primed principle takes the
+UNPRIMED subset obligation, `RaftRefinementProof.v:255`). The principle
+`refined_raft_net_invariant'` is upstream's :244-258 statement; its
+proof here is the unit-13 Q-ROUTE (a logged §9 re-derivation, exactly
+the msg-side precedent in `MsgRefinement.lean`): instantiate the ported
+UNPRIMED principle at `Q net := refined_raft_intermediate_reachable net
+→ Pr net` — every unprimed obligation carries the pre-state
+reachability premise, so each Q-obligation discharges by pure logic
+from the corresponding primed obligation, no 180-line staged induction
+duplicated. -/
+
+/-- `RaftRefinementInterface.v:327-337` -/
+def refined_raft_net_invariant_client_request' (Pr : RefinedNet → Prop) : Prop :=
+  ∀ (h : name (P := P)) (net : RefinedNet) st' ps' gd out d l client id c,
+    handleClientRequest h (net.nwState h).2 client id c = (out, d, l) →
+    gd = update_elections_data_client_request h (net.nwState h) client id c →
+    Pr net →
+    refined_raft_intermediate_reachable net →
+    refined_raft_intermediate_reachable ⟨ps', st'⟩ →
+    (∀ h', st' h' = update net.nwState h (gd, d) h') →
+    (∀ p', p' ∈ ps' → p' ∈ net.nwPackets ∨ p' ∈ send_packets h l) →
+    Pr ⟨ps', st'⟩
+
+/-- `RaftRefinementInterface.v:339-349` -/
+def refined_raft_net_invariant_timeout' (Pr : RefinedNet → Prop) : Prop :=
+  ∀ (net : RefinedNet) (h : name (P := P)) st' ps' gd out d l,
+    handleTimeout h (net.nwState h).2 = (out, d, l) →
+    gd = update_elections_data_timeout h (net.nwState h) →
+    Pr net →
+    refined_raft_intermediate_reachable net →
+    refined_raft_intermediate_reachable ⟨ps', st'⟩ →
+    (∀ h', st' h' = update net.nwState h (gd, d) h') →
+    (∀ p', p' ∈ ps' → p' ∈ net.nwPackets ∨ p' ∈ send_packets h l) →
+    Pr ⟨ps', st'⟩
+
+/-- `RaftRefinementInterface.v:351-364` -/
+def refined_raft_net_invariant_append_entries' (Pr : RefinedNet → Prop) : Prop :=
+  ∀ xs (p : RefinedPacket) ys (net : RefinedNet) st' ps' gd d m t n pli plt es ci,
+    handleAppendEntries p.pDst (net.nwState p.pDst).2 t n pli plt es ci = (d, m) →
+    gd = update_elections_data_appendEntries p.pDst (net.nwState p.pDst) t n pli plt es ci →
+    p.pBody = .AppendEntries t n pli plt es ci →
+    Pr net →
+    refined_raft_intermediate_reachable net →
+    refined_raft_intermediate_reachable ⟨ps', st'⟩ →
+    net.nwPackets = xs ++ p :: ys →
+    (∀ h, st' h = update net.nwState p.pDst (gd, d) h) →
+    (∀ p', p' ∈ ps' → p' ∈ (xs ++ ys) ∨ p' = (⟨p.pDst, p.pSrc, m⟩ : RefinedPacket)) →
+    Pr ⟨ps', st'⟩
+
+/-- `RaftRefinementInterface.v:366-378` -/
+def refined_raft_net_invariant_append_entries_reply' (Pr : RefinedNet → Prop) : Prop :=
+  ∀ xs (p : RefinedPacket) ys (net : RefinedNet) st' ps' gd d m t es res,
+    handleAppendEntriesReply p.pDst (net.nwState p.pDst).2 p.pSrc t es res = (d, m) →
+    gd = (net.nwState p.pDst).1 →
+    p.pBody = .AppendEntriesReply t es res →
+    Pr net →
+    refined_raft_intermediate_reachable net →
+    refined_raft_intermediate_reachable ⟨ps', st'⟩ →
+    net.nwPackets = xs ++ p :: ys →
+    (∀ h, st' h = update net.nwState p.pDst (gd, d) h) →
+    (∀ p', p' ∈ ps' → p' ∈ (xs ++ ys) ∨ p' ∈ send_packets p.pDst m) →
+    Pr ⟨ps', st'⟩
+
+/-- `RaftRefinementInterface.v:380-392` -/
+def refined_raft_net_invariant_request_vote' (Pr : RefinedNet → Prop) : Prop :=
+  ∀ xs (p : RefinedPacket) ys (net : RefinedNet) st' ps' gd d m t cid lli llt,
+    handleRequestVote p.pDst (net.nwState p.pDst).2 t p.pSrc lli llt = (d, m) →
+    gd = update_elections_data_requestVote p.pDst p.pSrc t p.pSrc lli llt
+      (net.nwState p.pDst) →
+    p.pBody = .RequestVote t cid lli llt →
+    Pr net →
+    refined_raft_intermediate_reachable net →
+    refined_raft_intermediate_reachable ⟨ps', st'⟩ →
+    net.nwPackets = xs ++ p :: ys →
+    (∀ h, st' h = update net.nwState p.pDst (gd, d) h) →
+    (∀ p', p' ∈ ps' → p' ∈ (xs ++ ys) ∨ p' = (⟨p.pDst, p.pSrc, m⟩ : RefinedPacket)) →
+    Pr ⟨ps', st'⟩
+
+/-- `RaftRefinementInterface.v:394-405` -/
+def refined_raft_net_invariant_request_vote_reply' (Pr : RefinedNet → Prop) : Prop :=
+  ∀ xs (p : RefinedPacket) ys (net : RefinedNet) st' ps' gd d t v,
+    handleRequestVoteReply p.pDst (net.nwState p.pDst).2 p.pSrc t v = d →
+    gd = update_elections_data_requestVoteReply p.pDst p.pSrc t v (net.nwState p.pDst) →
+    p.pBody = .RequestVoteReply t v →
+    Pr net →
+    refined_raft_intermediate_reachable net →
+    refined_raft_intermediate_reachable ⟨ps', st'⟩ →
+    net.nwPackets = xs ++ p :: ys →
+    (∀ h, st' h = update net.nwState p.pDst (gd, d) h) →
+    (∀ p', p' ∈ ps' → p' ∈ (xs ++ ys)) →
+    Pr ⟨ps', st'⟩
+
+/-- `RaftRefinementInterface.v:407-417` -/
+def refined_raft_net_invariant_do_leader' (Pr : RefinedNet → Prop) : Prop :=
+  ∀ (net : RefinedNet) st' ps' gd d (h : name (P := P)) os d' ms,
+    doLeader d h = (os, d', ms) →
+    Pr net →
+    refined_raft_intermediate_reachable net →
+    refined_raft_intermediate_reachable ⟨ps', st'⟩ →
+    net.nwState h = (gd, d) →
+    (∀ h', st' h' = update net.nwState h (gd, d') h') →
+    (∀ q, q ∈ ps' → q ∈ net.nwPackets ∨ q ∈ send_packets h ms) →
+    Pr ⟨ps', st'⟩
+
+/-- `RaftRefinementInterface.v:419-429` -/
+def refined_raft_net_invariant_do_generic_server' (Pr : RefinedNet → Prop) : Prop :=
+  ∀ (net : RefinedNet) st' ps' gd d os d' ms (h : name (P := P)),
+    doGenericServer h d = (os, d', ms) →
+    Pr net →
+    refined_raft_intermediate_reachable net →
+    refined_raft_intermediate_reachable ⟨ps', st'⟩ →
+    net.nwState h = (gd, d) →
+    (∀ h', st' h' = update net.nwState h (gd, d') h') →
+    (∀ q, q ∈ ps' → q ∈ net.nwPackets ∨ q ∈ send_packets h ms) →
+    Pr ⟨ps', st'⟩
+
+/-- `RaftRefinementInterface.v:431-439` -/
+def refined_raft_net_invariant_reboot' (Pr : RefinedNet → Prop) : Prop :=
+  ∀ (net net' : RefinedNet) gd d (h : name (P := P)) d',
+    reboot d = d' →
+    Pr net →
+    refined_raft_intermediate_reachable net →
+    refined_raft_intermediate_reachable net' →
+    net.nwState h = (gd, d) →
+    (∀ h', net'.nwState h' = update net.nwState h (gd, d') h') →
+    net.nwPackets = net'.nwPackets →
+    Pr net'
+
+/-- `RaftRefinementInterface.v:441-448`
+(`refined_raft_net_invariant_client_request'_weak`). -/
+theorem refined_raft_net_invariant_client_request'_weak {Pr : RefinedNet → Prop}
+    (h : refined_raft_net_invariant_client_request Pr) :
+    refined_raft_net_invariant_client_request' Pr := by
+  intro h0 net st' ps' gd out d l client id c hcr hgd hP hreach _hreach' hst hps
+  exact h h0 net st' ps' gd out d l client id c hcr hgd hP hreach hst hps
+
+/-- `RaftRefinementInterface.v:450-457`
+(`refined_raft_net_invariant_timeout'_weak`). -/
+theorem refined_raft_net_invariant_timeout'_weak {Pr : RefinedNet → Prop}
+    (h : refined_raft_net_invariant_timeout Pr) :
+    refined_raft_net_invariant_timeout' Pr := by
+  intro net h0 st' ps' gd out d l hto hgd hP hreach _hreach' hst hps
+  exact h net h0 st' ps' gd out d l hto hgd hP hreach hst hps
+
+/-- `RaftRefinementInterface.v:459-466`
+(`refined_raft_net_invariant_append_entries'_weak`). -/
+theorem refined_raft_net_invariant_append_entries'_weak {Pr : RefinedNet → Prop}
+    (h : refined_raft_net_invariant_append_entries Pr) :
+    refined_raft_net_invariant_append_entries' Pr := by
+  intro xs p ys net st' ps' gd d m t n pli plt es ci hae hgd hbody hP hreach
+    _hreach' hpkts hst hps
+  exact h xs p ys net st' ps' gd d m t n pli plt es ci hae hgd hbody hP hreach
+    hpkts hst hps
+
+/-- `RaftRefinementInterface.v:468-475`
+(`refined_raft_net_invariant_append_entries_reply'_weak`). -/
+theorem refined_raft_net_invariant_append_entries_reply'_weak
+    {Pr : RefinedNet → Prop}
+    (h : refined_raft_net_invariant_append_entries_reply Pr) :
+    refined_raft_net_invariant_append_entries_reply' Pr := by
+  intro xs p ys net st' ps' gd d m t es res haer hgd hbody hP hreach _hreach'
+    hpkts hst hps
+  exact h xs p ys net st' ps' gd d m t es res haer hgd hbody hP hreach hpkts
+    hst hps
+
+/-- `RaftRefinementInterface.v:477-484`
+(`refined_raft_net_invariant_request_vote'_weak`). -/
+theorem refined_raft_net_invariant_request_vote'_weak {Pr : RefinedNet → Prop}
+    (h : refined_raft_net_invariant_request_vote Pr) :
+    refined_raft_net_invariant_request_vote' Pr := by
+  intro xs p ys net st' ps' gd d m t cid lli llt hrv hgd hbody hP hreach
+    _hreach' hpkts hst hps
+  exact h xs p ys net st' ps' gd d m t cid lli llt hrv hgd hbody hP hreach
+    hpkts hst hps
+
+/-- `RaftRefinementInterface.v:486-493`
+(`refined_raft_net_invariant_request_vote_reply'_weak`). -/
+theorem refined_raft_net_invariant_request_vote_reply'_weak
+    {Pr : RefinedNet → Prop}
+    (h : refined_raft_net_invariant_request_vote_reply Pr) :
+    refined_raft_net_invariant_request_vote_reply' Pr := by
+  intro xs p ys net st' ps' gd d t v hrvr hgd hbody hP hreach _hreach' hpkts
+    hst hps
+  exact h xs p ys net st' ps' gd d t v hrvr hgd hbody hP hreach hpkts hst hps
+
+/-- `RaftRefinementInterface.v:495-502`
+(`refined_raft_net_invariant_do_leader'_weak`). -/
+theorem refined_raft_net_invariant_do_leader'_weak {Pr : RefinedNet → Prop}
+    (h : refined_raft_net_invariant_do_leader Pr) :
+    refined_raft_net_invariant_do_leader' Pr := by
+  intro net st' ps' gd d h0 os d' ms hdl hP hreach _hreach' hstate hst hps
+  exact h net st' ps' gd d h0 os d' ms hdl hP hreach hstate hst hps
+
+/-- `RaftRefinementInterface.v:504-511`
+(`refined_raft_net_invariant_do_generic_server'_weak`). -/
+theorem refined_raft_net_invariant_do_generic_server'_weak
+    {Pr : RefinedNet → Prop}
+    (h : refined_raft_net_invariant_do_generic_server Pr) :
+    refined_raft_net_invariant_do_generic_server' Pr := by
+  intro net st' ps' gd d os d' ms h0 hgs hP hreach _hreach' hstate hst hps
+  exact h net st' ps' gd d os d' ms h0 hgs hP hreach hstate hst hps
+
+/-- `RaftRefinementInterface.v:513-520`
+(`refined_raft_net_invariant_reboot'_weak`). -/
+theorem refined_raft_net_invariant_reboot'_weak {Pr : RefinedNet → Prop}
+    (h : refined_raft_net_invariant_reboot Pr) :
+    refined_raft_net_invariant_reboot' Pr := by
+  intro net net' gd d h0 d' hrb hP hreach _hreach' hstate hst hpkts
+  exact h net net' gd d h0 d' hrb hP hreach hstate hst hpkts
+
+/-- `RaftProofs/RaftRefinementProof.v:244-258`
+(`refined_raft_net_invariant'`) — THE primed principle: the obligations
+additionally receive the SUCCESSOR net's reachability (the subset
+obligation stays UNPRIMED, exactly upstream's statement). Proof by the
+logged Q-route (see the section header). -/
+theorem refined_raft_net_invariant' {Pr : RefinedNet → Prop}
+    (hinit : refined_raft_net_invariant_init Pr)
+    (hcr : refined_raft_net_invariant_client_request' Pr)
+    (hto : refined_raft_net_invariant_timeout' Pr)
+    (hae : refined_raft_net_invariant_append_entries' Pr)
+    (haer : refined_raft_net_invariant_append_entries_reply' Pr)
+    (hrv : refined_raft_net_invariant_request_vote' Pr)
+    (hrvr : refined_raft_net_invariant_request_vote_reply' Pr)
+    (hdl : refined_raft_net_invariant_do_leader' Pr)
+    (hgs : refined_raft_net_invariant_do_generic_server' Pr)
+    (hsub : refined_raft_net_invariant_state_same_packet_subset Pr)
+    (hreb : refined_raft_net_invariant_reboot' Pr) :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net → Pr net := by
+  refine fun net hreach => refined_raft_net_invariant
+    (Pr := fun n => refined_raft_intermediate_reachable (P := P) n → Pr n)
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ net hreach hreach
+  · -- init
+    exact fun _ => hinit
+  · -- client_request
+    intro h net0 st' ps' gd out d l client id c hcr0 hgd hQ hreach0 hst hps
+      hreach'
+    exact hcr h net0 st' ps' gd out d l client id c hcr0 hgd (hQ hreach0)
+      hreach0 hreach' hst hps
+  · -- timeout
+    intro net0 h st' ps' gd out d l hto0 hgd hQ hreach0 hst hps hreach'
+    exact hto net0 h st' ps' gd out d l hto0 hgd (hQ hreach0) hreach0
+      hreach' hst hps
+  · -- append_entries
+    intro xs p ys net0 st' ps' gd d m t n pli plt es ci hae0 hgd hbody hQ
+      hreach0 hpkts hst hps hreach'
+    exact hae xs p ys net0 st' ps' gd d m t n pli plt es ci hae0 hgd hbody
+      (hQ hreach0) hreach0 hreach' hpkts hst hps
+  · -- append_entries_reply
+    intro xs p ys net0 st' ps' gd d m t es res haer0 hgd hbody hQ hreach0
+      hpkts hst hps hreach'
+    exact haer xs p ys net0 st' ps' gd d m t es res haer0 hgd hbody
+      (hQ hreach0) hreach0 hreach' hpkts hst hps
+  · -- request_vote
+    intro xs p ys net0 st' ps' gd d m t cid lli llt hrv0 hgd hbody hQ
+      hreach0 hpkts hst hps hreach'
+    exact hrv xs p ys net0 st' ps' gd d m t cid lli llt hrv0 hgd hbody
+      (hQ hreach0) hreach0 hreach' hpkts hst hps
+  · -- request_vote_reply
+    intro xs p ys net0 st' ps' gd d t v hrvr0 hgd hbody hQ hreach0 hpkts
+      hst hps hreach'
+    exact hrvr xs p ys net0 st' ps' gd d t v hrvr0 hgd hbody (hQ hreach0)
+      hreach0 hreach' hpkts hst hps
+  · -- do_leader
+    intro net0 st' ps' gd d h os d' ms hdl0 hQ hreach0 hstate hst hps
+      hreach'
+    exact hdl net0 st' ps' gd d h os d' ms hdl0 (hQ hreach0) hreach0
+      hreach' hstate hst hps
+  · -- do_generic_server
+    intro net0 st' ps' gd d os d' ms h hgs0 hQ hreach0 hstate hst hps
+      hreach'
+    exact hgs net0 st' ps' gd d os d' ms h hgs0 (hQ hreach0) hreach0
+      hreach' hstate hst hps
+  · -- state_same_packet_subset
+    intro net0 net1 hstates hsubp hQ hreach0 _hreach'
+    exact hsub net0 net1 hstates hsubp (hQ hreach0) hreach0
+  · -- reboot
+    intro net0 net1 gd d h d' hrb hQ hreach0 hstate hst hpkts hreach'
+    exact hreb net0 net1 gd d h d' hrb (hQ hreach0) hreach0 hreach' hstate
+      hst hpkts
+
 /-! ## Erasure: `deghost` and the ghost→base simulation
 
 `GhostSimulations.v:67-84,166-191` and `RaftRefinementProof.v:429-505`,
