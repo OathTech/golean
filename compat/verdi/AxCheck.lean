@@ -85,6 +85,209 @@ open VerdiCompat VerdiCompat.Raft
 /-- info: 'VerdiCompat.Raft.candidate_entries_invariant' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms VerdiCompat.Raft.candidate_entries_invariant
 
+-- The leaderLogs ring (campaign Arc 3 unit 4, LeaderLogs.lean).
+/-- info: 'VerdiCompat.Raft.candidate_term_gt_log_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.candidate_term_gt_log_invariant
+/-- info: 'VerdiCompat.Raft.leaderLogs_term_sanity_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leaderLogs_term_sanity_invariant
+/-- info: 'VerdiCompat.Raft.leaders_have_leaderLogs_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leaders_have_leaderLogs_invariant
+/-- info: 'VerdiCompat.Raft.votedFor_moreUpToDate_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.votedFor_moreUpToDate_invariant
+/-- info: 'VerdiCompat.Raft.leaderLogs_votesWithLog_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leaderLogs_votesWithLog_invariant
+/-- info: 'VerdiCompat.Raft.one_leaderLog_per_term_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.one_leaderLog_per_term_invariant
+
+-- The creation ring (campaign Arc 3 unit 5, CreationRing.lean).
+/-- info: 'VerdiCompat.Raft.every_entry_was_created_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.every_entry_was_created_invariant
+/-- info: 'VerdiCompat.Raft.logs_sorted_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.logs_sorted_invariant
+/-- info: 'VerdiCompat.Raft.votesWithLog_sorted_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.votesWithLog_sorted_invariant
+/-- info: 'VerdiCompat.Raft.terms_and_indices_from_one_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.terms_and_indices_from_one_invariant
+/-- info: 'VerdiCompat.Raft.leaderLogs_candidateEntries_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leaderLogs_candidateEntries_invariant
+
+-- The log-matching core (campaign Arc 3 unit 6, LogMatching.lean).
+/-- info: 'VerdiCompat.Raft.leaderLogs_sorted_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leaderLogs_sorted_invariant
+/-- info: 'VerdiCompat.Raft.UniqueIndices_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.UniqueIndices_invariant
+/-- info: 'VerdiCompat.Raft.leader_sublog_invariant_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leader_sublog_invariant_invariant
+/-- info: 'VerdiCompat.Raft.log_matching_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.log_matching_invariant
+/-- info: 'VerdiCompat.Raft.logMatchingStatement_holds' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.logMatchingStatement_holds
+/-- info: 'VerdiCompat.Raft.leaderLogs_contiguous_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leaderLogs_contiguous_invariant
+/-- info: 'VerdiCompat.Raft.allEntries_indices_gt_0_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.allEntries_indices_gt_0_invariant
+/-- info: 'VerdiCompat.Raft.entries_match_nw_host_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.entries_match_nw_host_invariant
+
+-- The AppendEntries feeder chain (campaign Arc 3 unit 7, AppendEntriesChain.lean).
+/-- info: 'VerdiCompat.Raft.allEntries_term_sanity_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.allEntries_term_sanity_invariant
+/-- info: 'VerdiCompat.Raft.log_properties_hold_on_leader_logs_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.log_properties_hold_on_leader_logs_invariant
+/-- info: 'VerdiCompat.Raft.leaders_have_leaderLogs_strong_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leaders_have_leaderLogs_strong_invariant
+/-- info: 'VerdiCompat.Raft.append_entries_request_reply_correspondence_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.append_entries_request_reply_correspondence_invariant
+/-- info: 'VerdiCompat.Raft.append_entries_came_from_leaders_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.append_entries_came_from_leaders_invariant
+/-- info: 'VerdiCompat.Raft.leaderLogs_sublog_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leaderLogs_sublog_invariant
+/-- info: 'VerdiCompat.Raft.append_entries_leader_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.append_entries_leader_invariant
+/-- info: 'VerdiCompat.Raft.append_entries_reply_sublog_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.append_entries_reply_sublog_invariant
+/-- info: 'VerdiCompat.Raft.nextIndex_safety_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.nextIndex_safety_invariant
+/-- info: 'VerdiCompat.Raft.leaderLogs_entries_match_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leaderLogs_entries_match_invariant
+/-- info: 'VerdiCompat.Raft.append_entries_leaderLogs_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.append_entries_leaderLogs_invariant
+/-- info: 'VerdiCompat.Raft.logs_leaderLogs_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.logs_leaderLogs_invariant
+/-- info: 'VerdiCompat.Raft.logs_leaderLogs_nw_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.logs_leaderLogs_nw_invariant
+/-- info: 'VerdiCompat.Raft.leaderLogs_preserved_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leaderLogs_preserved_invariant
+/-- info: 'VerdiCompat.Raft.allEntries_leaderLogs_term_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.allEntries_leaderLogs_term_invariant
+/-- info: 'VerdiCompat.Raft.allEntries_log_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.allEntries_log_invariant
+/-- info: 'VerdiCompat.Raft.allEntries_votesWithLog_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.allEntries_votesWithLog_invariant
+/-- info: 'VerdiCompat.Raft.append_entries_request_term_sanity_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.append_entries_request_term_sanity_invariant
+/-- info: 'VerdiCompat.Raft.allEntries_candidateEntries_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.allEntries_candidateEntries_invariant
+/-- info: 'VerdiCompat.Raft.allEntries_leader_sublog_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.allEntries_leader_sublog_invariant
+/-- info: 'VerdiCompat.Raft.allEntries_log_matching_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.allEntries_log_matching_invariant
+/-- info: 'VerdiCompat.Raft.log_log_prefix_within_term_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.log_log_prefix_within_term_invariant
+/-- info: 'VerdiCompat.Raft.append_entries_append_entries_prefix_within_term_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.append_entries_append_entries_prefix_within_term_invariant
+/-- info: 'VerdiCompat.Raft.prefix_within_term_inductive_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.prefix_within_term_inductive_invariant
+/-- info: 'VerdiCompat.Raft.allEntries_leaderLogs_prefix_within_term_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.allEntries_leaderLogs_prefix_within_term_invariant
+/-- info: 'VerdiCompat.Raft.leader_completeness_directly_committed_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leader_completeness_directly_committed_invariant
+/-- info: 'VerdiCompat.Raft.leader_completeness_committed_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leader_completeness_committed_invariant
+/-- info: 'VerdiCompat.Raft.leader_completeness_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.leader_completeness_invariant
+/-- info: 'VerdiCompat.Raft.msg_refined_raft_net_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.msg_refined_raft_net_invariant
+/-- info: 'VerdiCompat.Raft.msg_simulation_1' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.msg_simulation_1
+/-- info: 'VerdiCompat.Raft.msg_lift_prop' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.msg_lift_prop
+/-- info: 'VerdiCompat.Raft.ghost_entries_gt_0_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.ghost_entries_gt_0_invariant
+/-- info: 'VerdiCompat.Raft.transitive_commit_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.transitive_commit_invariant
+/-- info: 'VerdiCompat.Raft.all_entries_leader_logs_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.all_entries_leader_logs_invariant
+/-- info: 'VerdiCompat.Raft.in_log_in_all_entries_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.in_log_in_all_entries_invariant
+/-- info: 'VerdiCompat.Raft.log_all_entries_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.log_all_entries_invariant
+/-- info: 'VerdiCompat.Raft.lastApplied_le_commitIndex_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.lastApplied_le_commitIndex_invariant
+/-- info: 'VerdiCompat.Raft.no_append_entries_to_self_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.no_append_entries_to_self_invariant
+
+/-! Unit-13 headliners: the W-B remainder (match_index_sanity,
+prevLog_candidateEntriesTerm), the primed msg principle (GAP-1
+msg-side), and the W-C ghost chain (GhostLogCorrect +
+GhostLogsLogProperties — the latter is the primed principle's
+discharge witness). -/
+/-- info: 'VerdiCompat.Raft.match_index_sanity_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.match_index_sanity_invariant
+/-- info: 'VerdiCompat.Raft.prevLog_candidateEntriesTerm_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.prevLog_candidateEntriesTerm_invariant
+/-- info: 'VerdiCompat.Raft.msg_refined_raft_net_invariant'' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.msg_refined_raft_net_invariant'
+/-- info: 'VerdiCompat.Raft.ghost_log_correct_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.ghost_log_correct_invariant
+/-- info: 'VerdiCompat.Raft.log_properties_hold_on_ghost_logs_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.log_properties_hold_on_ghost_logs_invariant
+
+/-! Unit-14 headliners: the W-C remainder + W-D (NoAERepliesToSelf,
+NoAEToLeader, MatchIndexLeader, PrevLogLeaderSublog,
+GhostLogAllEntries, GhostLogLogMatching) and the SMS-PRIME statement
+(state_machine_safety' with both halves). -/
+/-- info: 'VerdiCompat.Raft.no_append_entries_replies_to_self_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.no_append_entries_replies_to_self_invariant
+/-- info: 'VerdiCompat.Raft.no_append_entries_to_leader_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.no_append_entries_to_leader_invariant
+/-- info: 'VerdiCompat.Raft.match_index_leader_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.match_index_leader_invariant
+/-- info: 'VerdiCompat.Raft.prevLog_leader_sublog_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.prevLog_leader_sublog_invariant
+/-- info: 'VerdiCompat.Raft.ghost_log_allEntries_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.ghost_log_allEntries_invariant
+/-- info: 'VerdiCompat.Raft.ghost_log_entries_match_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.ghost_log_entries_match_invariant
+/-- info: 'VerdiCompat.Raft.state_machine_safety_host'_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.state_machine_safety_host'_invariant
+/-- info: 'VerdiCompat.Raft.state_machine_safety_nw'_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.state_machine_safety_nw'_invariant
+/-- info: 'VerdiCompat.Raft.state_machine_safety'_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.state_machine_safety'_invariant
+
+/-! Unit-15 headliners (captured from a fresh capped probe): the
+state-side PRIMED principle (GAP-1's first-need port) and its first
+consumer, `match_index_all_entries`. -/
+
+/-- info: 'VerdiCompat.Raft.refined_raft_net_invariant'' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.refined_raft_net_invariant'
+
+/-- info: 'VerdiCompat.Raft.match_index_all_entries_inv_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.match_index_all_entries_inv_invariant
+
+/-- info: 'VerdiCompat.Raft.match_index_all_entries_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.match_index_all_entries_invariant
+
+/-! GAP-8 closed (unit 15): the msg reghosting direction. -/
+
+/-- info: 'VerdiCompat.Raft.msg_simulation_2' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.msg_simulation_2
+
+/-- info: 'VerdiCompat.Raft.msg_lower_prop' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.msg_lower_prop
+
+/-- info: 'VerdiCompat.Raft.msg_lower_prop_all_the_way' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.msg_lower_prop_all_the_way
+
+/-! THE W-F CAP (unit 15): state-machine safety at base level — the
+last T3 head — plus the two in-file interface deliverables. -/
+
+/-- info: 'VerdiCompat.Raft.everything_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.everything_invariant
+
+/-- info: 'VerdiCompat.Raft.state_machine_safety_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.state_machine_safety_invariant
+
+/-- info: 'VerdiCompat.Raft.stateMachineSafetyStatement_holds' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.stateMachineSafetyStatement_holds
+
+/-- info: 'VerdiCompat.Raft.maxIndex_sanity_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.maxIndex_sanity_invariant
+
+/-- info: 'VerdiCompat.Raft.commit_recorded_committed_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.commit_recorded_committed_invariant
+
 /-! ## Exhaustive sweep (fails the build on any disallowed axiom) -/
 
 open Lean in

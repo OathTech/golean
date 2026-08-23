@@ -1,0 +1,5 @@
+import VerdiCompat
+#print axioms VerdiCompat.Raft.append_entries_request_term_sanity_invariant
+#print axioms VerdiCompat.Raft.allEntries_candidateEntries_invariant
+#print axioms VerdiCompat.Raft.allEntries_leader_sublog_invariant
+#print axioms VerdiCompat.Raft.allEntries_log_matching_invariant

@@ -8,9 +8,10 @@ needed to STATE the headline safety properties (`commit_recorded` and the
 predicates the log-matching statement uses) plus — P1 — the execute/dedup
 slice the linearizability statement's witness vocabulary lives in
 (`applied_entries`, `execute_log`, `key`, `deduplicate_log`,
-`output_correct`; `CommonDefinitions.v:27-122`). Still not ported:
-`prefix_within_term` (invariant-DAG vocabulary, recorded gap in the lane
-log).
+`output_correct`; `CommonDefinitions.v:27-122`), and — Arc 3 unit 10 —
+`prefix_within_term` (`CommonDefinitions.v:108-114`, the
+PrefixWithinTerm vocabulary; closes this header's old "still not
+ported" note).
 -/
 
 namespace VerdiCompat
@@ -50,6 +51,17 @@ def commit_recorded (net : Network (raft_base_params (P := P)) raft_multi_params
 /-- `CommonDefinitions.v:124-127` -/
 def terms_and_indices_from_one (l : List (entry (P := P))) : Prop :=
   ∀ e, e ∈ l → e.eTerm ≥ 1 ∧ e.eIndex ≥ 1
+
+/-- `CommonDefinitions.v:108-114` (`prefix_within_term`): within one
+term, `l1`'s entries at or below an `l2` entry of that term are in
+`l2`. -/
+def prefix_within_term (l1 l2 : List (entry (P := P))) : Prop :=
+  ∀ e e',
+    e.eTerm = e'.eTerm →
+    e.eIndex ≤ e'.eIndex →
+    e ∈ l1 →
+    e' ∈ l2 →
+    e ∈ l2
 
 /-! ## The execute/dedup slice (P1) -/
 
