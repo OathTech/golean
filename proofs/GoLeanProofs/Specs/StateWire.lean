@@ -1,4 +1,5 @@
 import GoLeanProofs.Specs.TwinProgram
+import GoLeanProofs.FastEval.Heap
 import GoLean.GoCore.StepFn
 
 /-!
@@ -89,6 +90,53 @@ elab "twinCheckpoint% " n:num : term => do
   match checkpointAt n.getNat with
   | .error e =>
       throwError "twinCheckpoint%: run failed: {reprStr e}"
+  | .ok r => return Lean.toExpr r
+
+/-! ## The TRIE-form emitter (campaign Arc 2 U4, route (d)) -/
+
+deriving instance Lean.ToExpr for GoLean.FastEval.HeapT
+
+/-- Compiled list→trie conversion for reflection (scaffolding only —
+a wrong conversion fails the downstream kernel checks, never lies:
+the segment sims and the `γF σF₀ = s₃` equality are checked over the
+emitted literal). -/
+def trieOfHeap (h : Heap) : GoLean.FastEval.HeapT :=
+  h.foldl
+    (fun t e =>
+      match e with
+      | (.base a, cell) => t.set a.id cell
+      | _ => t)
+    .leaf
+
+/-- `twinCheckpointF% n` — the trie-form checkpoint: elaborates to the
+literal `(heapT, nextAddr, config, choices)` reached after `n`
+subject-phase steps, with the heap converted to the FastEval trie at
+reflection time. Fail-loud as `twinCheckpoint%`. -/
+elab "twinCheckpointF% " n:num : term => do
+  match checkpointAt n.getNat with
+  | .error e =>
+      throwError "twinCheckpointF%: run failed: {reprStr e}"
+  | .ok (h, na, c, ch) =>
+      return Lean.toExpr (trieOfHeap h, na, c, ch)
+
+/-- The full post-prelude tuple, trie form: `(c₀, heapT, nextAddr,
+resultLocs, ch₁)` from `runProgramSetupM`'s own wiring (zero drift —
+it IS that call). Table-drift-checked like `checkpointAt`. -/
+def preludeF :
+    Except GoError (Config × GoLean.FastEval.HeapT × Nat × List Loc × Choices) := do
+  let (c₀, s₃, resultLocs, ch₁) ←
+    runProgramSetupM 10000000 GoLean.Examples.RaftTwin.twinLowered
+      "twinChoiceVerdict" #[]
+  let stripped : ExecState :=
+    { s₃ with heap := twinBase.heap, nextAddr := twinBase.nextAddr }
+  if (stripped == twinBase) = false then
+    throw (.internal "preludeF: tables drifted from twinBase; reflect refused")
+  return (c₀, trieOfHeap s₃.heap, s₃.nextAddr, resultLocs, ch₁)
+
+/-- `twinPreludeF%` — the reflected post-prelude tuple. Fail-loud. -/
+elab "twinPreludeF%" : term => do
+  match preludeF with
+  | .error e => throwError "twinPreludeF%: run failed: {reprStr e}"
   | .ok r => return Lean.toExpr r
 
 end GoLean.StateWire

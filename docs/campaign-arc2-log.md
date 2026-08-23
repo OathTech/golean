@@ -77,6 +77,20 @@ completion machinery, route memo + unit-2 charter).
   primitive commute lemmas) and `FastEval/Ops.lean` (ExecStateF, γF,
   loadLocF/storeLocF/allocF + one-directional sims) BUILD GREEN.
 
+- **U4 progress** (2026-08-23, mid-unit): FastEval core committed
+  (c5716245). The authorized wave LAUNCHED — three forked workers on
+  strictly disjoint files (Values.lean = applyStrictOpF;
+  Stores.lean = store/stmtOp tower; Frames.lean = frames/sync/mapIter
+  tower), each briefed with the template + wrinkle register + the
+  probe-D census as the stub law; I integrate and re-verify.
+  Parallel (my files, disjoint from the wave): `StateWire.lean`
+  extended with the trie emitters (`twinCheckpointF%`,
+  `twinPreludeF%`); `TwinCheckpointsF.lean` (seed + 350k trie
+  checkpoints) built 2:38/2.1 GB; `TwinPrelude.lean` (the prelude
+  equation `runProgramSetupM 711616 … = .ok (…, γF twinSeedF, …)`
+  kernel-checked + the γ-agreement folded into its statement) in
+  flight.
+
 ## THE U4 PER-ARM TEMPLATE (of record, for the authorized wave)
 
 Validated on the landed `FastEval/Ops.lean` (its own header carries
