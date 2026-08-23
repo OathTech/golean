@@ -3634,6 +3634,49 @@ theorem one_leaderLog_per_term_of_update {net net' : RefinedNet}
     · rw [update_neq _ _ heq'] at hin'
       exact hP hh hh' t ll ll' hin hin'
 
+/-- The winning tally's recorded votes (promoted from
+`one_leaderLog_per_term`'s inline `hwin` — second consumer, per the
+promotion-ledger rule): at a candidate→leader transition every counted
+crony has voted for the winner at its current term. -/
+theorem rvr_win_votes {net : RefinedNet}
+    (hreach : refined_raft_intermediate_reachable (P := P) net)
+    {p : RefinedPacket} {t0 : term} {v : Bool}
+    (hpmem : p ∈ net.nwPackets)
+    (hbody : p.pBody = .RequestVoteReply t0 v)
+    (hty' : (handleRequestVoteReply p.pDst (net.nwState p.pDst).2 p.pSrc t0
+      v).type = .Leader)
+    (hcand : (net.nwState p.pDst).2.type = .Candidate) :
+    (∀ h ∈ dedup (p.pSrc :: (net.nwState p.pDst).2.votesReceived),
+      ((net.nwState p.pDst).2.currentTerm, p.pDst)
+        ∈ (net.nwState h).1.votes) ∧
+    wonElection (dedup (p.pSrc :: (net.nwState p.pDst).2.votesReceived))
+      = true := by
+  obtain ⟨-, hv, hteq, hctd, -, -, hwon⟩ :=
+    handleRequestVoteReply_leader_transition p.pDst
+      (net.nwState p.pDst).2 p.pSrc t0 v rfl
+      (by rw [hcand]; exact fun heqL => nomatch heqL) hty'
+  subst hv
+  refine ⟨?_, hwon⟩
+  intro h hh
+  have hh2 := mem_of_mem_dedup hh
+  obtain ⟨hvv, -⟩ := votes_votesWithLog_correspond_invariant net hreach
+  have hmutd : ∃ vlog,
+      ((net.nwState p.pDst).2.currentTerm, p.pDst, vlog)
+        ∈ (net.nwState h).1.votesWithLog := by
+    rcases List.mem_cons.mp hh2 with rfl | hvr
+    · obtain ⟨vlog, -, hmem⟩ :=
+        requestVoteReply_moreUpToDate_invariant net hreach
+          (net.nwState p.pDst).2.currentTerm p.pDst p.pSrc p rfl hcand
+          hpmem (by rw [hbody, hteq]) rfl rfl
+      exact ⟨vlog, hmem⟩
+    · obtain ⟨vlog, -, hmem⟩ :=
+        votesReceived_moreUpToDate_invariant net hreach
+          (net.nwState p.pDst).2.currentTerm p.pDst h rfl hcand hvr
+      exact ⟨vlog, hmem⟩
+  obtain ⟨vlog, hmem⟩ := hmutd
+  exact hvv h _ p.pDst vlog hmem
+
+
 /-- `OneLeaderLogPerTermProof.v:140-177` (`contradiction_case`): a
 leaderLog at term `t` on any host, beside a fresh election win at `t`,
 forces the two hosts to coincide — the leaderLog's quorum and the win's
@@ -3719,33 +3762,18 @@ theorem one_leaderLog_per_term_invariant :
           (t2, p.pDst) ∈ (net.nwState h).1.votes) ∧
         wonElection (dedup (p.pSrc :: (net.nwState p.pDst).2.votesReceived))
           = true := by
+      -- thin wrapper over the promoted `rvr_win_votes` (unit-16
+      -- consolidation): only the t2-conversion remains inline
       intro t2 hty' hcand ht2
-      obtain ⟨-, hv, hteq, hctd, -, -, hwon⟩ :=
+      obtain ⟨-, -, -, hctd, -, -, -⟩ :=
         handleRequestVoteReply_leader_transition p.pDst
           (net.nwState p.pDst).2 p.pSrc t0 v rfl
           (by rw [hcand]; exact fun heqL => nomatch heqL) hty'
-      subst hv
+      obtain ⟨hq, hwon⟩ := rvr_win_votes hreach hpmem hbody hty' hcand
       refine ⟨?_, hwon⟩
       intro h hh
-      have hh2 := mem_of_mem_dedup hh
-      obtain ⟨hvv, -⟩ := votes_votesWithLog_correspond_invariant net hreach
-      have hmutd : ∃ vlog,
-          ((net.nwState p.pDst).2.currentTerm, p.pDst, vlog)
-            ∈ (net.nwState h).1.votesWithLog := by
-        rcases List.mem_cons.mp hh2 with rfl | hvr
-        · obtain ⟨vlog, -, hmem⟩ :=
-            requestVoteReply_moreUpToDate_invariant net hreach
-              (net.nwState p.pDst).2.currentTerm p.pDst p.pSrc p rfl hcand
-              hpmem (by rw [hbody, hteq]) rfl rfl
-          exact ⟨vlog, hmem⟩
-        · obtain ⟨vlog, -, hmem⟩ :=
-            votesReceived_moreUpToDate_invariant net hreach
-              (net.nwState p.pDst).2.currentTerm p.pDst h rfl hcand hvr
-          exact ⟨vlog, hmem⟩
-      obtain ⟨vlog, hmem⟩ := hmutd
-      have := hvv h _ p.pDst vlog hmem
       rw [ht2, hctd]
-      exact this
+      exact hq h hh
     intro hh hh' t ll ll' hin hin'
     replace hin : (t, ll) ∈ (st' hh).1.leaderLogs := hin
     replace hin' : (t, ll') ∈ (st' hh').1.leaderLogs := hin'
