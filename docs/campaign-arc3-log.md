@@ -1277,3 +1277,19 @@ degrades); unit-8 charter at unit end.
   the sender-side transport `came_from_leaders_transport` (leaderLogs
   only grow — the RVR case rides the `_leaderLogs_old` lemma).
   Build green, sweep 1713.
+- 2026-08-23 Slice 38b: `leaderLogs_sublog`
+  (LeaderLogsSublogInterface.v:8-14 1:1, ghost; upstream 398 lines) —
+  any snapshot entry bearing a leader's current term is in that
+  leader's log. New: `handleRequestVoteReply_RVR_spec` (the three-way
+  outcome; [AGENT] gotcha for successors: `repeat' split at h` on
+  handleRequestVoteReply×advanceCurrentTerm yields SEVEN branches —
+  the shared `t >? ct` guard does NOT re-split (no contradiction
+  branch), the `if voteGranted`/`if won` record fields DO, and the
+  match's non-candidate arms COLLAPSE to one default with
+  `st.type = Candidate → False`; enumerate with lean_goal before
+  writing bullets) and `lifted_leader_sublog_host` (6th lift_prop
+  consumer). The RVR win case: own old snapshot at the win term dies
+  on the leaderLogs term-sanity pair; someone else's dies on
+  `leaderLogs_candidateEntries` + `wonElection_candidateEntries_rvr`
+  over the consumed grant; the fresh snapshot IS the log. Build green,
+  sweep 1728.
