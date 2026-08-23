@@ -1086,6 +1086,245 @@ theorem append_entries_request_reply_correspondence_invariant :
     · show net₀.nwPackets = net''.nwPackets ++ _
       rw [hpk₀, hpkts]
 
+/-! ## appendEntries_requests_came_from_leaders -/
+
+omit O in
+/-- Only a leader's `doLeader` sends anything. -/
+theorem doLeader_messages_leader (st : raft_data (P := P))
+    (me : name (P := P)) {os st' ms} {q : name (P := P) × msg (P := P)}
+    (h : doLeader st me = (os, st', ms)) (hq : q ∈ ms) :
+    st.type = .Leader := by
+  unfold doLeader at h
+  split at h
+  · rename_i htype
+    exact htype
+  · simp only [Prod.mk.injEq] at h
+    obtain ⟨-, -, rfl⟩ := h
+    exact nomatch hq
+
+/-- `AppendEntriesRequestsCameFromLeadersInterface.v:8-15`
+(`append_entries_came_from_leaders`). -/
+def append_entries_came_from_leaders (net : RefinedNet) : Prop :=
+  ∀ (p : RefinedPacket) (t : term) (n : name (P := P)) (pli : logIndex)
+    (plt : term) (es : List (entry (P := P))) (ci : logIndex),
+    p ∈ net.nwPackets → p.pBody = .AppendEntries t n pli plt es ci →
+    ∃ ll, (t, ll) ∈ (net.nwState p.pSrc).1.leaderLogs
+
+/-- Sender-side transport: leaderLogs only grow at the updated node. -/
+theorem came_from_leaders_transport {net net' : RefinedNet}
+    {u : name (P := P)} {gd : electionsData (P := P)} {d : raft_data (P := P)}
+    (hst : ∀ h', net'.nwState h' = update net.nwState u (gd, d) h')
+    (hgrow : ∀ (t : term) (ll : List (entry (P := P))),
+      (t, ll) ∈ (net.nwState u).1.leaderLogs → (t, ll) ∈ gd.leaderLogs)
+    {src : name (P := P)} {t : term}
+    (hex : ∃ ll, (t, ll) ∈ (net.nwState src).1.leaderLogs) :
+    ∃ ll, (t, ll) ∈ (net'.nwState src).1.leaderLogs := by
+  obtain ⟨ll, hll⟩ := hex
+  rw [hst src]
+  by_cases heq : src = u
+  · rw [heq, update_same]
+    rw [heq] at hll
+    exact ⟨ll, hgrow t ll hll⟩
+  · rw [update_neq _ _ heq]
+    exact ⟨ll, hll⟩
+
+/-- `AppendEntriesRequestsCameFromLeadersProof.v:24-160`
+(`append_entries_came_from_leaders_invariant`): a fresh AppendEntries
+is sent by `doLeader` at the sender's own term, and
+`leaders_have_leaderLogs` supplies the snapshot; leaderLogs only
+grow. -/
+theorem append_entries_came_from_leaders_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      append_entries_came_from_leaders net := by
+  refine refined_raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · intro p0 t0 n1 pli plt es ci hp0 _
+    exact nomatch hp0
+  · -- client_request: no packets sent
+    intro h net st' ps' gd out d l client id c hcr hgd hP _hreach hst hps
+    obtain ⟨-, -, -, -, hl⟩ :=
+      handleClientRequest_spec h (net.nwState h).2 client id c hcr
+    intro p0 t0 n1 pli plt es ci hp0 hbody0
+    replace hp0 : p0 ∈ ps' := hp0
+    have hold : p0 ∈ net.nwPackets := by
+      rcases hps p0 hp0 with h1 | h1
+      · exact h1
+      · rw [hl] at h1
+        simp [send_packets] at h1
+    refine came_from_leaders_transport hst ?_
+      (hP p0 t0 n1 pli plt es ci hold hbody0)
+    intro t2 ll hll
+    subst hgd
+    rw [(update_elections_data_client_request_ghost h (net.nwState h)
+      client id c).2.2.2]
+    exact hll
+  · -- timeout: only RequestVotes
+    intro net h st' ps' gd out d l hto hgd hP _hreach hst hps
+    obtain ⟨-, -, hmsgs⟩ := handleTimeout_spec h (net.nwState h).2 hto
+    intro p0 t0 n1 pli plt es ci hp0 hbody0
+    replace hp0 : p0 ∈ ps' := hp0
+    have hold : p0 ∈ net.nwPackets := by
+      rcases hps p0 hp0 with h1 | h1
+      · exact h1
+      · exfalso
+        obtain ⟨m0, hm0, rfl⟩ := List.mem_map.mp h1
+        obtain ⟨t3, c3, l3, l4, hq2⟩ := hmsgs m0 hm0
+        replace hbody0 : m0.2 = msg.AppendEntries t0 n1 pli plt es ci :=
+          hbody0
+        rw [hq2] at hbody0
+        exact nomatch hbody0
+    refine came_from_leaders_transport hst ?_
+      (hP p0 t0 n1 pli plt es ci hold hbody0)
+    intro t2 ll hll
+    subst hgd
+    rw [(update_elections_data_timeout_ghost h (net.nwState h)).1]
+    exact hll
+  · -- append_entries: the reply is an AppendEntriesReply
+    intro xs p ys net st' ps' gd d m t n0 pli plt es ci hae hgd _hbody hP
+      _hreach hpkts hst hps
+    obtain ⟨-, -, -, t', es', r', hmshape⟩ :=
+      handleAppendEntries_spec p.pDst (net.nwState p.pDst).2 t n0 pli plt
+        es ci hae
+    intro p0 t0 n1 pli2 plt2 es2 ci2 hp0 hbody0
+    replace hp0 : p0 ∈ ps' := hp0
+    have hold : p0 ∈ net.nwPackets := by
+      rcases hps p0 hp0 with h1 | h1
+      · rw [hpkts]
+        exact mem_of_mem_remove_middle h1
+      · exfalso
+        rw [h1] at hbody0
+        replace hbody0 : m = msg.AppendEntries t0 n1 pli2 plt2 es2 ci2 :=
+          hbody0
+        rw [hmshape] at hbody0
+        exact nomatch hbody0
+    refine came_from_leaders_transport hst ?_
+      (hP p0 t0 n1 pli2 plt2 es2 ci2 hold hbody0)
+    intro t2 ll hll
+    subst hgd
+    rw [(update_elections_data_appendEntries_ghost p.pDst
+      (net.nwState p.pDst) t n0 pli plt es ci).2.2.2]
+    exact hll
+  · -- append_entries_reply: no messages
+    intro xs p ys net st' ps' gd d m t es res haer hgd _hbody hP _hreach
+      hpkts hst hps
+    obtain ⟨-, -, hl⟩ := handleAppendEntriesReply_spec p.pDst
+      (net.nwState p.pDst).2 p.pSrc t es res haer
+    intro p0 t0 n1 pli2 plt2 es2 ci2 hp0 hbody0
+    replace hp0 : p0 ∈ ps' := hp0
+    have hold : p0 ∈ net.nwPackets := by
+      rcases hps p0 hp0 with h1 | h1
+      · rw [hpkts]
+        exact mem_of_mem_remove_middle h1
+      · rw [hl] at h1
+        simp [send_packets] at h1
+    refine came_from_leaders_transport hst ?_
+      (hP p0 t0 n1 pli2 plt2 es2 ci2 hold hbody0)
+    intro t2 ll hll
+    rw [hgd]
+    exact hll
+  · -- request_vote: the reply is a RequestVoteReply
+    intro xs p ys net st' ps' gd d m t cid lli llt hrv hgd _hbody hP
+      _hreach hpkts hst hps
+    obtain ⟨t'', v'', hmshape⟩ := handleRequestVote_reply_shape p.pDst
+      (net.nwState p.pDst).2 t p.pSrc lli llt hrv
+    intro p0 t0 n1 pli2 plt2 es2 ci2 hp0 hbody0
+    replace hp0 : p0 ∈ ps' := hp0
+    have hold : p0 ∈ net.nwPackets := by
+      rcases hps p0 hp0 with h1 | h1
+      · rw [hpkts]
+        exact mem_of_mem_remove_middle h1
+      · exfalso
+        rw [h1] at hbody0
+        replace hbody0 : m = msg.AppendEntries t0 n1 pli2 plt2 es2 ci2 :=
+          hbody0
+        rw [hmshape] at hbody0
+        exact nomatch hbody0
+    refine came_from_leaders_transport hst ?_
+      (hP p0 t0 n1 pli2 plt2 es2 ci2 hold hbody0)
+    intro t2 ll hll
+    subst hgd
+    rw [(update_elections_data_requestVote_cronies p.pDst p.pSrc t p.pSrc
+      lli llt (net.nwState p.pDst)).2.1]
+    exact hll
+  · -- request_vote_reply: no sends; old snapshots survive the cons
+    intro xs p ys net st' ps' gd d t v hrvr hgd _hbody hP _hreach hpkts
+      hst hps
+    intro p0 t0 n1 pli2 plt2 es2 ci2 hp0 hbody0
+    replace hp0 : p0 ∈ ps' := hp0
+    have hold : p0 ∈ net.nwPackets := by
+      rw [hpkts]
+      exact mem_of_mem_remove_middle (hps p0 hp0)
+    refine came_from_leaders_transport hst ?_
+      (hP p0 t0 n1 pli2 plt2 es2 ci2 hold hbody0)
+    intro t2 ll hll
+    subst hgd
+    exact update_elections_data_requestVoteReply_leaderLogs_old p.pDst
+      p.pSrc t v (net.nwState p.pDst) hll
+  · -- do_leader: THE creation case — the sender is a leader, and
+    -- leaders_have_leaderLogs supplies the snapshot at its own term
+    intro net st' ps' gd d h os d' ms hdl hP hreach hstate hst hps
+    intro p0 t0 n1 pli2 plt2 es2 ci2 hp0 hbody0
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnew
+    · refine came_from_leaders_transport hst ?_
+        (hP p0 t0 n1 pli2 plt2 es2 ci2 hold hbody0)
+      intro t2 ll hll
+      rw [hstate] at hll
+      exact hll
+    · obtain ⟨m0, hm0, rfl⟩ := List.mem_map.mp hnew
+      obtain ⟨pi3, pt3, ci3, es3, hq2, -⟩ := doLeader_messages d h hdl m0 hm0
+      replace hbody0 : m0.2 = msg.AppendEntries t0 n1 pli2 plt2 es2 ci2 :=
+        hbody0
+      rw [hq2] at hbody0
+      injection hbody0 with f1 f2 f3 f4 f5 f6
+      have htype : d.type = .Leader := doLeader_messages_leader d h hdl hm0
+      obtain ⟨ll, hll⟩ := leaders_have_leaderLogs_invariant net hreach h
+        (by rw [hstate]; exact htype)
+      refine ⟨ll, ?_⟩
+      show (t0, ll) ∈ (st' h).1.leaderLogs
+      rw [hst h, update_same]
+      show (t0, ll) ∈ gd.leaderLogs
+      have hgd : gd = (net.nwState h).1 := by
+        rw [hstate]
+      rw [hgd]
+      rw [hstate] at hll
+      show (t0, ll) ∈ (net.nwState h).1.leaderLogs
+      have hteq : (net.nwState h).2.currentTerm = t0 := by
+        rw [hstate]
+        exact f1
+      rw [← hteq]
+      rw [hstate]
+      exact hll
+  · -- do_generic_server: no messages
+    intro net st' ps' gd d os d' ms h hgs hP _hreach hstate hst hps
+    obtain ⟨-, -, -, -, -, hms⟩ := doGenericServer_spec h d hgs
+    intro p0 t0 n1 pli2 plt2 es2 ci2 hp0 hbody0
+    replace hp0 : p0 ∈ ps' := hp0
+    have hold : p0 ∈ net.nwPackets := by
+      rcases hps p0 hp0 with h1 | h1
+      · exact h1
+      · rw [hms] at h1
+        simp [send_packets] at h1
+    refine came_from_leaders_transport hst ?_
+      (hP p0 t0 n1 pli2 plt2 es2 ci2 hold hbody0)
+    intro t2 ll hll
+    rw [hstate] at hll
+    exact hll
+  · -- state_same_packet_subset
+    intro net net' hstates hsub hP _hreach p0 t0 n1 pli2 plt2 es2 ci2 hp0
+      hbody0
+    obtain ⟨ll, hll⟩ := hP p0 t0 n1 pli2 plt2 es2 ci2 (hsub p0 hp0) hbody0
+    rw [hstates p0.pSrc] at hll
+    exact ⟨ll, hll⟩
+  · -- reboot: ghost and packets survive
+    intro net net' gd d h d' _hrb hP _hreach hstate hst hpkts
+    intro p0 t0 n1 pli2 plt2 es2 ci2 hp0 hbody0
+    rw [← hpkts] at hp0
+    refine came_from_leaders_transport hst ?_
+      (hP p0 t0 n1 pli2 plt2 es2 ci2 hp0 hbody0)
+    intro t2 ll hll
+    rw [hstate] at hll
+    exact hll
+
 end AppendEntriesChain
 
 end Raft

@@ -1268,3 +1268,12 @@ degrades); unit-8 charter at unit end.
   induction is smaller than the module's step-star plumbing; lift
   later per the promotion-ledger rule if the msg-ghost arcs need it.
   Build green, sweep 1700.
+- 2026-08-23 Slice 38a: `appendEntries_requests_came_from_leaders`
+  (AECameFromLeadersInterface.v:8-15 1:1, ghost) — every in-flight
+  AppendEntries' sender holds a leaderLog at the packet's term. The
+  do_leader creation case: `doLeader_messages_leader` (only a leader
+  sends) + `leaders_have_leaderLogs_invariant` at the sender's own term
+  (doLeader_messages pins the body's term to it); every other case is
+  the sender-side transport `came_from_leaders_transport` (leaderLogs
+  only grow — the RVR case rides the `_leaderLogs_old` lemma).
+  Build green, sweep 1713.
