@@ -2882,3 +2882,16 @@ wants it); context stop-rule stands.
   reply — upstream's `matchIndex_preserved_except_at_host` dissolves
   into `assoc_set_diff_default`), the RVR fresh win records its own
   maxIndex. Build green.
+- 2026-08-23 Slice 77: **`prevLog_leader_sublog_invariant`**
+  (PrevLogLeaderSublogInterface.v:8-19 / Proof.v:340-360 1:1, BASE;
+  upstream 378 lines) — unit 13's PLCET pays off immediately:
+  `wonElection_candidateEntriesTerm_rvr` (the term twin of
+  LogMatching's entry-level lemma, same proof with `t'`) +
+  `prevLog_candidateEntriesTerm_lowered` (lower_prop; upstream's
+  `candidateEntriesTerm_lowered` wrapper def flattened into the
+  implication chain, the lane's candidate_entries_lowered_rvr
+  presentation) kill the RVR fresh-win case; the doLeader creation
+  case reads the `findAtIndex` pivot off the sender's log and moves it
+  to any same-term claiming leader via base `leader_sublog` (host).
+  New transport `prevLog_leader_sublog_of_update` (type demotions +
+  growing logs + no fresh AE). Compiled on first attempt. Build green.

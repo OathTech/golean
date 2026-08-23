@@ -414,6 +414,398 @@ theorem match_index_leader_invariant :
     rw [← hrb] at htyl
     exact nomatch htyl
 
+/-! ## prevLog_leader_sublog (`Raft/PrevLogLeaderSublogInterface.v`,
+BASE) — unit 13's `prevLog_candidateEntriesTerm` pays off: the RVR
+fresh-win case dies on the lowered candidateEntriesTerm witness. -/
+
+/-- `RefinementCommonTheorems.v`-style term twin of
+`wonElection_candidateEntries_rvr` (LogMatching.lean): a node that
+wins via a consumed grant at a `candidateEntriesTerm`-witnessed term
+is not a candidate. Same proof with `t'` for `e.eTerm`. -/
+theorem wonElection_candidateEntriesTerm_rvr {net : RefinedNet}
+    (hvc : votes_correct net) (hcc : cronies_correct net)
+    {t' : term} (hce : candidateEntriesTerm t' net.nwState)
+    {q : RefinedPacket} (hq : q ∈ net.nwPackets)
+    (hbody : q.pBody = .RequestVoteReply t' true)
+    (hct : (net.nwState q.pDst).2.currentTerm = t')
+    (hwon : wonElection
+      (dedup (q.pSrc :: (net.nwState q.pDst).2.votesReceived)) = true) :
+    (net.nwState q.pDst).2.type ≠ .Candidate := by
+  obtain ⟨hovpt, -, -⟩ := hvc
+  obtain ⟨hvrc, hcv, hvnw, -⟩ := hcc
+  obtain ⟨x, hwx, himp⟩ := hce
+  intro hcand
+  have hvsrc : (t', q.pDst) ∈ (net.nwState q.pSrc).1.votes :=
+    hvnw q t' hbody hq
+  obtain ⟨c, hcx, hch⟩ := wonElection_one_in_common _ _ hwx hwon
+  have hv1 : (t', x) ∈ (net.nwState c).1.votes := hcv t' x c hcx
+  have hxd : x = q.pDst := by
+    rcases List.mem_cons.mp hch with rfl | hch'
+    · exact hovpt q.pSrc t' x q.pDst hv1 hvsrc
+    · have hcc2 : c ∈ (net.nwState q.pDst).1.cronies
+          (net.nwState q.pDst).2.currentTerm :=
+        hvrc q.pDst c hch' (Or.inr hcand)
+      rw [hct] at hcc2
+      have hv2 : (t', q.pDst) ∈ (net.nwState c).1.votes :=
+        hcv t' q.pDst c hcc2
+      exact hovpt c t' x q.pDst hv1 hv2
+  rw [hxd] at himp
+  exact himp hct hcand
+
+/-- `PrevLogLeaderSublogProof.v:167-230`
+(`prevLog_candidateEntriesTerm_lowered`, with upstream's
+`candidateEntriesTerm_lowered` wrapper def flattened into the
+implication chain — the lane's `candidate_entries_lowered_rvr`
+presentation): at BASE level, a node that wins via a consumed grant at
+the prevLogTerm of some in-flight positive-prevLog AppendEntries is
+not a candidate. -/
+theorem prevLog_candidateEntriesTerm_lowered :
+    ∀ net, raft_intermediate_reachable (P := P) net →
+      ∀ (p p' : RaftPacket) (t : term) (lid : name (P := P))
+        (pli : logIndex) (plt : term) (es : List (entry (P := P)))
+        (ci : logIndex),
+        p ∈ net.nwPackets → p.pBody = .AppendEntries t lid pli plt es ci →
+        0 < plt →
+        p' ∈ net.nwPackets → p'.pBody = .RequestVoteReply plt true →
+        (net.nwState p'.pDst).currentTerm = plt →
+        wonElection
+          (dedup (p'.pSrc :: (net.nwState p'.pDst).votesReceived)) = true →
+        (net.nwState p'.pDst).type ≠ .Candidate := by
+  refine lower_prop _ ?_
+  intro rnet hR p p' t lid pli plt es ci hp hbody hplt hp' hbody' hct hwon
+  have hvc := votes_correct_invariant rnet hR
+  have hcc := cronies_correct_invariant rnet hR
+  replace hp : p ∈ rnet.nwPackets.map deghost_packet := hp
+  obtain ⟨q, hq, rfl⟩ := List.mem_map.mp hp
+  replace hp' : p' ∈ rnet.nwPackets.map deghost_packet := hp'
+  obtain ⟨q', hq', rfl⟩ := List.mem_map.mp hp'
+  exact wonElection_candidateEntriesTerm_rvr hvc hcc
+    (prevLog_candidateEntriesTerm_invariant rnet hR q t lid pli plt es ci
+      hq hbody hplt)
+    hq' hbody' hct hwon
+
+/-- `PrevLogLeaderSublogInterface.v:8-19` (`prevLog_leader_sublog`). -/
+def prevLog_leader_sublog (net : RaftNet) : Prop :=
+  ∀ (leader : name (P := P)) (p : RaftPacket) (t : term)
+    (lid : name (P := P)) (pli : logIndex) (plt : term)
+    (es : List (entry (P := P))) (ci : logIndex),
+    (net.nwState leader).type = .Leader →
+    p ∈ net.nwPackets → p.pBody = .AppendEntries t lid pli plt es ci →
+    (net.nwState leader).currentTerm = plt →
+    0 < pli → 0 < plt →
+    ∃ ple : entry (P := P), ple.eIndex = pli ∧ ple.eTerm = plt ∧
+      ple ∈ (net.nwState leader).log
+
+/-- The transport: type demotions, same-term leaders, growing logs,
+and no fresh AppendEntries. -/
+theorem prevLog_leader_sublog_of_update {net : RaftNet}
+    {ps' : List (Packet (raft_base_params (P := P)) raft_multi_params)}
+    {st' : name (P := P) → raft_data (P := P)} {u : name (P := P)}
+    {d : raft_data (P := P)}
+    (hP : prevLog_leader_sublog net)
+    (hst : ∀ h', st' h' = update net.nwState u d h')
+    (hpk : ∀ p' : Packet (raft_base_params (P := P)) raft_multi_params,
+      p' ∈ ps' →
+      (∃ t lid pli plt es ci,
+        p'.pBody = msg.AppendEntries (P := P) t lid pli plt es ci) →
+      p' ∈ net.nwPackets)
+    (hd : d.type = .Leader →
+      (net.nwState u).type = .Leader ∧
+      d.currentTerm = (net.nwState u).currentTerm ∧
+      (∀ e ∈ (net.nwState u).log, e ∈ d.log)) :
+    prevLog_leader_sublog (⟨ps', st'⟩ : RaftNet) := by
+  intro leader p t lid pli plt es ci hty hp hbody hct hpli hplt
+  replace hty : (st' leader).type = .Leader := hty
+  replace hct : (st' leader).currentTerm = plt := hct
+  replace hp : p ∈ ps' := hp
+  have hpold : p ∈ net.nwPackets :=
+    hpk p hp ⟨t, lid, pli, plt, es, ci, hbody⟩
+  show ∃ ple : entry (P := P), ple.eIndex = pli ∧ ple.eTerm = plt ∧
+    ple ∈ (st' leader).log
+  rw [hst leader] at hty hct ⊢
+  by_cases heq : leader = u
+  · rw [heq, update_same] at hty hct ⊢
+    obtain ⟨hty0, hctd, hsub⟩ := hd hty
+    rw [hctd] at hct
+    obtain ⟨ple, h1, h2, h3⟩ := hP u p t lid pli plt es ci hty0 hpold
+      hbody hct hpli hplt
+    exact ⟨ple, h1, h2, hsub ple h3⟩
+  · rw [update_neq _ _ heq] at hty hct ⊢
+    exact hP leader p t lid pli plt es ci hty hpold hbody hct hpli hplt
+
+/-- `PrevLogLeaderSublogProof.v:340-360`
+(`prevLog_leader_sublog_invariant`, BASE): a same-term leader resolves
+every in-flight positive prevLog position in its own log. The RVR
+fresh-win case is the `prevLog_candidateEntriesTerm` payoff; the
+doLeader creation case reads the pivot off the sender's log and moves
+it to the claiming leader via `leader_sublog` (host). -/
+theorem prevLog_leader_sublog_invariant :
+    ∀ net, raft_intermediate_reachable (P := P) net →
+      prevLog_leader_sublog net := by
+  refine raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · -- init
+    intro leader p t lid pli plt es ci hty hp _ _ _ _
+    exact nomatch hp
+  · -- client_request: the leader's log grows; no packets
+    intro h net st' ps' out d l client id c hcr hP _hreach hst hps
+    obtain ⟨htyd, hctd, -, -, hl⟩ :=
+      handleClientRequest_spec h (net.nwState h) client id c hcr
+    refine prevLog_leader_sublog_of_update hP hst ?_ ?_
+    · intro p' hp' _
+      rcases hps p' hp' with hold | hnew
+      · exact hold
+      · rw [hl] at hnew
+        simp [send_packets] at hnew
+    · intro htyl
+      refine ⟨by rw [← htyd]; exact htyl, hctd, ?_⟩
+      intro e he
+      rcases handleClientRequest_log_full h (net.nwState h) client id c
+        hcr with ⟨-, hlog⟩ | ⟨-, heqd⟩
+      · rw [hlog]
+        exact List.mem_cons_of_mem _ he
+      · rw [heqd]
+        exact he
+  · -- timeout
+    intro net h st' ps' out d l hto hP _hreach hst hps
+    obtain ⟨hlog, hbr, hmsgs⟩ := handleTimeout_spec h (net.nwState h) hto
+    refine prevLog_leader_sublog_of_update hP hst ?_ ?_
+    · intro p' hp' hAE
+      rcases hps p' hp' with hold | hnew
+      · exact hold
+      · exfalso
+        obtain ⟨m1, hm1, rfl⟩ := List.mem_map.mp hnew
+        obtain ⟨t3, c3, l3, l4, hq2⟩ := hmsgs m1 hm1
+        obtain ⟨t0, lid, pli, plt, es, ci, hbody⟩ := hAE
+        replace hbody : m1.2 = msg.AppendEntries t0 lid pli plt es ci :=
+          hbody
+        rw [hq2] at hbody
+        exact nomatch hbody
+    · intro htyl
+      rcases hbr with ⟨hct, hty, -, -⟩ | ⟨-, hty, -, -, -⟩
+      · rw [hty] at htyl
+        exact ⟨htyl, hct, fun e he => by rw [hlog]; exact he⟩
+      · rw [hty] at htyl
+        exact nomatch htyl
+  · -- append_entries: a standing leader rejected
+    intro xs p ys net st' ps' d m t n0 pli plt es ci hae _hbody hP _hreach
+      hpkts hst hps
+    obtain ⟨-, -, -, t', es', r', hmshape⟩ :=
+      handleAppendEntries_spec p.pDst (net.nwState p.pDst) t n0 pli plt es
+        ci hae
+    refine prevLog_leader_sublog_of_update hP hst ?_ ?_
+    · intro p' hp' hAE
+      rcases hps p' hp' with hold | hnew
+      · rw [hpkts]
+        exact mem_of_mem_remove_middle hold
+      · exfalso
+        obtain ⟨t0, lid, pli2, plt2, es2, ci2, hbody⟩ := hAE
+        rw [hnew] at hbody
+        replace hbody : m = msg.AppendEntries t0 lid pli2 plt2 es2 ci2 :=
+          hbody
+        rw [hmshape] at hbody
+        exact nomatch hbody
+    · intro htyl
+      have hd : d = net.nwState p.pDst :=
+        handleAppendEntries_reject_of_not_follower p.pDst
+          (net.nwState p.pDst) t n0 pli plt es ci hae
+          (by rw [htyl]; exact fun heq => nomatch heq)
+      rw [hd]
+      exact ⟨by rw [← hd]; exact htyl, rfl, fun e he => he⟩
+  · -- append_entries_reply
+    intro xs p ys net st' ps' d m t es res haer _hbody hP _hreach hpkts
+      hst hps
+    obtain ⟨-, hcases, hl⟩ := handleAppendEntriesReply_spec p.pDst
+      (net.nwState p.pDst) p.pSrc t es res haer
+    have hlogd := handleAppendEntriesReply_log p.pDst (net.nwState p.pDst)
+      p.pSrc t es res haer
+    refine prevLog_leader_sublog_of_update hP hst ?_ ?_
+    · intro p' hp' _
+      rcases hps p' hp' with hold | hnew
+      · rw [hpkts]
+        exact mem_of_mem_remove_middle hold
+      · rw [hl] at hnew
+        simp [send_packets] at hnew
+    · intro htyl
+      rcases hcases with ⟨hct, -, hty⟩ | ⟨-, -, hty⟩
+      · rw [hty] at htyl
+        exact ⟨htyl, hct, fun e he => by rw [hlogd]; exact he⟩
+      · rw [hty] at htyl
+        exact nomatch htyl
+  · -- request_vote
+    intro xs p ys net st' ps' d m t cid lli llt hrv _hbody hP _hreach
+      hpkts hst hps
+    obtain ⟨t'', v'', hmshape⟩ := handleRequestVote_reply_shape p.pDst
+      (net.nwState p.pDst) t p.pSrc lli llt hrv
+    obtain ⟨-, -, hbr, -⟩ :=
+      handleRequestVote_spec p.pDst (net.nwState p.pDst) t p.pSrc lli llt
+        hrv
+    have hlogd := handleRequestVote_log p.pDst (net.nwState p.pDst) t
+      p.pSrc lli llt hrv
+    refine prevLog_leader_sublog_of_update hP hst ?_ ?_
+    · intro p' hp' hAE
+      rcases hps p' hp' with hold | hnew
+      · rw [hpkts]
+        exact mem_of_mem_remove_middle hold
+      · exfalso
+        obtain ⟨t0, lid, pli2, plt2, es2, ci2, hbody⟩ := hAE
+        rw [hnew] at hbody
+        replace hbody : m = msg.AppendEntries t0 lid pli2 plt2 es2 ci2 :=
+          hbody
+        rw [hmshape] at hbody
+        exact nomatch hbody
+    · intro htyl
+      rcases hbr with ⟨hct, hty⟩ | hty
+      · rw [hty] at htyl
+        exact ⟨htyl, hct, fun e he => by rw [hlogd]; exact he⟩
+      · have : serverType.Follower = .Leader := hty.symm.trans htyl
+        exact nomatch this
+  · -- request_vote_reply: the fresh-win case dies on the lowered witness
+    intro xs p ys net st' ps' d t v hrvr hbody hP hreach hpkts hst hps
+    have hp_in : p ∈ net.nwPackets := by
+      rw [hpkts]
+      exact List.mem_append.mpr (Or.inr (List.mem_cons_self ..))
+    intro leader p0 t0 lid pli plt es ci hty hp0 hbody0 hct hpli hplt
+    replace hty : (st' leader).type = .Leader := hty
+    replace hct : (st' leader).currentTerm = plt := hct
+    replace hp0 : p0 ∈ ps' := hp0
+    have hp0old : p0 ∈ net.nwPackets := by
+      rw [hpkts]
+      exact mem_of_mem_remove_middle (hps p0 hp0)
+    show ∃ ple : entry (P := P), ple.eIndex = pli ∧ ple.eTerm = plt ∧
+      ple ∈ (st' leader).log
+    rw [hst leader] at hty hct ⊢
+    by_cases heq : leader = p.pDst
+    · rw [heq, update_same] at hty hct ⊢
+      rcases handleRequestVoteReply_RVR_spec p.pDst (net.nwState p.pDst)
+        p.pSrc t v hrvr with hsame | ⟨htyF, -, -⟩ |
+        ⟨hctd, hlogd, hwon | htyd⟩
+      · rw [hsame] at hty hct ⊢
+        exact hP p.pDst p0 t0 lid pli plt es ci hty hp0old hbody0 hct
+          hpli hplt
+      · rw [htyF] at hty
+        exact nomatch hty
+      · -- fresh win at plt: the candidateEntriesTerm witness forbids it
+        obtain ⟨htyC, -, hv, hcteq, hwon'⟩ := hwon
+        exfalso
+        have ht_plt : t = plt := by
+          rw [← hcteq, ← hctd]
+          exact hct
+        refine prevLog_candidateEntriesTerm_lowered net hreach p0 p t0
+          lid pli plt es ci hp0old hbody0 hplt hp_in ?_ ?_ hwon' htyC
+        · rw [hbody, hv, ht_plt]
+        · rw [hcteq, ht_plt]
+      · rw [htyd] at hty
+        rw [hlogd]
+        rw [hctd] at hct
+        exact hP p.pDst p0 t0 lid pli plt es ci hty hp0old hbody0 hct
+          hpli hplt
+    · rw [update_neq _ _ heq] at hty hct ⊢
+      exact hP leader p0 t0 lid pli plt es ci hty hp0old hbody0 hct hpli
+        hplt
+  · -- do_leader: the creation case — the pivot moves via leader_sublog
+    intro net st' ps' d h os d' ms hdl hP hreach hstate hst hps
+    obtain ⟨hctd, -, htyd, -, hlogd, -⟩ := doLeader_spec d h hdl
+    intro leader p0 t0 lid pli plt es ci hty hp0 hbody0 hct hpli hplt
+    replace hty : (st' leader).type = .Leader := hty
+    replace hct : (st' leader).currentTerm = plt := hct
+    replace hp0 : p0 ∈ ps' := hp0
+    show ∃ ple : entry (P := P), ple.eIndex = pli ∧ ple.eTerm = plt ∧
+      ple ∈ (st' leader).log
+    rcases hps p0 hp0 with hold | hnew
+    · -- old packet: transport (type/ct/log all preserved at h)
+      rw [hst leader] at hty hct ⊢
+      by_cases heq : leader = h
+      · rw [heq, update_same] at hty hct ⊢
+        rw [htyd] at hty
+        rw [hctd] at hct
+        have hty0 : (net.nwState h).type = .Leader := by
+          rw [hstate]
+          exact hty
+        have hct0 : (net.nwState h).currentTerm = plt := by
+          rw [hstate]
+          exact hct
+        obtain ⟨ple, h1, h2, h3⟩ := hP h p0 t0 lid pli plt es ci hty0
+          hold hbody0 hct0 hpli hplt
+        refine ⟨ple, h1, h2, ?_⟩
+        rw [hlogd]
+        show ple ∈ d.log
+        rw [← hstate]
+        exact h3
+      · rw [update_neq _ _ heq] at hty hct ⊢
+        exact hP leader p0 t0 lid pli plt es ci hty hold hbody0 hct hpli
+          hplt
+    · -- fresh replica: the findAtIndex pivot, moved by leader_sublog
+      obtain ⟨m1, hm1, rfl⟩ := List.mem_map.mp hnew
+      obtain ⟨pli3, ci3, hq2⟩ := doLeader_messages_full d h hdl m1 hm1
+      replace hbody0 : m1.2 = msg.AppendEntries t0 lid pli plt es ci :=
+        hbody0
+      rw [hq2] at hbody0
+      injection hbody0 with f1 f2 f3 f4 f5 f6
+      cases hfind : findAtIndex d.log pli3 with
+      | none =>
+        simp only [hfind] at f4
+        rw [← f4] at hplt
+        exact absurd hplt (Nat.lt_irrefl 0)
+      | some e =>
+        simp only [hfind] at f4
+        obtain ⟨hemem, hei⟩ := findAtIndex_elim hfind
+        have he' : e ∈ (net.nwState h).log := by
+          rw [hstate]
+          exact hemem
+        have hlsub := (leader_sublog_invariant_invariant net hreach).1
+        rw [hst leader] at hty hct ⊢
+        by_cases heq : leader = h
+        · rw [heq, update_same] at hty hct ⊢
+          refine ⟨e, by rw [hei]; exact f3, f4, ?_⟩
+          rw [hlogd]
+          exact hemem
+        · rw [update_neq _ _ heq] at hty hct ⊢
+          refine ⟨e, by rw [hei]; exact f3, f4, ?_⟩
+          exact hlsub leader e h hty he' (by rw [hct, ← f4])
+  · -- do_generic_server
+    intro net st' ps' d os d' ms h hgs hP _hreach hstate hst hps
+    obtain ⟨hlog, hty, hct, -, -, hms⟩ := doGenericServer_spec h d hgs
+    refine prevLog_leader_sublog_of_update hP hst ?_ ?_
+    · intro p' hp' _
+      rcases hps p' hp' with hold | hnew
+      · exact hold
+      · rw [hms] at hnew
+        simp [send_packets] at hnew
+    · intro htyl
+      rw [hty] at htyl
+      refine ⟨by rw [hstate]; exact htyl, ?_, ?_⟩
+      · rw [hct, hstate]
+      · intro e he
+        rw [hlog]
+        rw [hstate] at he
+        exact he
+  · -- state_same_packet_subset
+    intro net net' hstates hpkts hP _hreach
+    intro leader p0 t0 lid pli plt es ci hty hp0 hbody0 hct hpli hplt
+    replace hty : (net'.nwState leader).type = .Leader := hty
+    replace hct : (net'.nwState leader).currentTerm = plt := hct
+    show ∃ ple : entry (P := P), ple.eIndex = pli ∧ ple.eTerm = plt ∧
+      ple ∈ (net'.nwState leader).log
+    rw [← hstates leader] at hty hct ⊢
+    exact hP leader p0 t0 lid pli plt es ci hty (hpkts p0 hp0) hbody0 hct
+      hpli hplt
+  · -- reboot: a rebooted node is a follower
+    intro net net' d h d' hrb hP _hreach hstate hst hpkts
+    intro leader p0 t0 lid pli plt es ci hty hp0 hbody0 hct hpli hplt
+    replace hty : (net'.nwState leader).type = .Leader := hty
+    replace hct : (net'.nwState leader).currentTerm = plt := hct
+    rw [← hpkts] at hp0
+    show ∃ ple : entry (P := P), ple.eIndex = pli ∧ ple.eTerm = plt ∧
+      ple ∈ (net'.nwState leader).log
+    rw [hst leader] at hty hct ⊢
+    by_cases heq : leader = h
+    · rw [heq, update_same] at hty
+      rw [← hrb] at hty
+      exact nomatch hty
+    · rw [update_neq _ _ heq] at hty hct ⊢
+      exact hP leader p0 t0 lid pli plt es ci hty hp0 hbody0 hct hpli
+        hplt
+
 end SafetyPrime
 end Raft
 end VerdiCompat
