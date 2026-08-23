@@ -909,3 +909,64 @@ operator's (constitution §4.1).
   `uW*_n` statements kept verbatim (derived from the `uW*_out`
   links); `uSort_step`/`becomeFollower_handler_eq` statements
   byte-identical to U3.
+- 2026-08-23 Slice 0 committed (deae0f08). WAVE 1 begins; spec-side
+  functions re-grounded in `AbsState.lean` (`specBecomeCandidate`,
+  `specBecomePreCandidate` — subject lines cited; Verdi correspondence
+  in docstrings, compat/verdi never imported).
+- 2026-08-23 **becomePreCandidate_handler_eq PROVED** (commit
+  5a8d6251; `BpcEquation.lean`, the SECOND full handler equation).
+  Probe `BpcProbe.lean` first: machine 152 steps, ZERO choices,
+  projection == spec, γ-image == machine heap; wrap depths probed
+  (Vote symbolic at depth 5 → the one `hvote` side condition). ONE
+  transported window; `ch` rides through unchanged (the equation
+  form's strongest case); state CONCRETE 0 (the `state == StateLeader`
+  panic guard branches on it — fixture-family precondition, the U3
+  fine-print pattern). §3.3 witness at Vote 7/lead 2/ldT 5. Module
+  110 s; no literals needed at one window (kernel_rfl suffices — the
+  slice-0 pattern note: literalization pays from the second window
+  on). Axioms: eq/witness/span [propext, Classical.choice, Quot.sound].
+- 2026-08-23 **becomeCandidate_handler_eq PROVED** (commit 8cb8b423;
+  `Bc{Lit,Fixture,Steps,Equation}.lean`, the THIRD full handler — the
+  reset-span REUSE instantiated, term-change branch = the U3 exit's
+  named second fixture family). Probe `BcProbe.lean` first: machine
+  3,282 steps / 4 choices (steps 686/870/899/928), projection ==
+  specBecomeCandidate pre 1; mirror 7 windows [686,183,28,28,28,3,
+  2320] + 6 crossings, γ-image == machine heap (nextAddr 186). NO
+  side conditions (every pre-symbolic scalar overwritten; post
+  scalars are norm-wraps over LITERALS — probed depths 16/15/12,
+  reduce closed). Reused verbatim: `uρ`/`uKey1/2/3`/`uCands1/3`+gets/
+  `uKeyV*`/`stepFn_pick_transport`/the crossing constructions.
+  [AGENT] simplification found while replicating: at literal states
+  the STOP and SORT crossings are WHOLE-STEP `kernel_rfl` facts per
+  key-order leaf (six one-liners + dispatcher each) — no transport,
+  no shape/heavy-fact ceremony; the pick crossings keep the transport
+  (the choice index is free, so the step cannot reduce closed).
+  Handler cost, measured: ~790 hand lines + 527 KB generated
+  literals; builds BcLit 2.4 s + BcFixture 96 s + BcSteps 1.5 s +
+  BcEquation 10 s ≈ 110 s. Axioms: eq/witness/span [propext,
+  Classical.choice, Quot.sound].
+- 2026-08-23 [AGENT] Storage leaves (wave table's LastIndex-shaped
+  rows): per the dispatch's per-handler verification, `FirstIndex`/
+  `Term` DO need absState beyond v1 — the entries. ADDITIVE extension
+  landed in `AbsState.lean`: `absStorageEnts` (the MemoryStorage
+  `ents` reader through the plainpb pointer-scalar cells, fail
+  closed; `callStats` deliberately unread) + `specFirstIndex`/
+  `specTermAt` re-grounded from `storage.go`. **GAP-V1-1 renumbered:
+  GAP-V1-1a (storage half) CLOSES here; GAP-V1-1b (unstable half +
+  offset arithmetic — the raftLog view) stays open for wave 2.**
+  Probes first (`MsProbe2.lean`, `AbsStorProbe.lean`): caller-shaped
+  `Stmt.call` with two var targets (the machine is stuck on a
+  target-less drained call of a 2-result function — "extra GoCore
+  assignment value" — so the CALLER SHAPE is part of the fixture);
+  FirstIndex 178 steps → fi=2/er=nil; Term(1) 246 steps → fi=1/
+  er=nil; both mirrors γ-image == machine heap; absStorageEnts =
+  some [(1,1)] #eval-checked (after re-learning the rule the hard
+  way: a first MsEquation build was declared slow before realizing
+  the 10-min wall was the AbsState-edit REBUILD CONE, not the new
+  module — the new facts each check in seconds). RESIDUALS recorded:
+  the Term ERROR branches (the lowered error path loads package-level
+  error vars at static twin addresses the leaf fixture does not
+  carry — the probe's Term(0) run exposed the address collision
+  loudly); `MemoryStorage.Entries` scoped OUT of this slice
+  (`limitSize`/`entryEncodingSize` needs its own spec-side
+  re-grounding — refused to model it loosely).

@@ -175,4 +175,90 @@ def specBecomePreCandidate (st : AbsRaftState) : AbsRaftState :=
       lead := 0
       state := 3 }
 
+/-! ## The storage projection (A4-U4 wave 1 — an ADDITIVE AbsState
+extension; the charter's per-handler verification found the storage
+leaves need the ENTRIES, which v1 deliberately did not project).
+
+**GAP-V1-1 status update (renumbered as instructed):** the
+MemoryStorage half of the entry projection closes here
+(**GAP-V1-1a**: the stable `ents` array behind the storage interface,
+read by `absStorageEnts` below). The UNSTABLE half (**GAP-V1-1b**:
+`unstable.entries` + the offset arithmetic, needed for the raftLog
+view the message handlers read) remains open — wave-2 work, exactly
+where the U3 verdict placed the absState extension. -/
+
+/-- Dereference one plainpb pointer-scalar (`*uint64`): `.addr` →
+the target cell's `uint64`; `.nil` → 0 (the shim's nil-getter
+semantics, `GetIndex`/`GetTerm` on a nil field). Fail closed
+otherwise. -/
+def derefU64 (σ : ExecState) : GoValue → Option Int
+  | .nil => some 0
+  | .addr l => (Heap.lookup σ.heap l).bind (fun c => asU64 c.value)
+  | _ => none
+
+/-- One `raftpb.Entry` cell → its `(index, term)` pair (plainpb
+shape: `Index`/`Term` are pointer scalars). Fail closed on any shape
+mismatch. -/
+def absEntry (σ : ExecState) : GoValue → Option (Int × Int)
+  | .addr l => do
+      let cell ← Heap.lookup σ.heap l
+      match cell.value with
+      | .struct ⟨"raftpb.Entry"⟩ fs => do
+          let idx ← (StructFields.lookup fs "Index").bind (derefU64 σ)
+          let term ← (StructFields.lookup fs "Term").bind (derefU64 σ)
+          pure (idx, term)
+      | _ => none
+  | _ => none
+
+/-- **THE STORAGE READER** (total, first-order, fail-closed): the
+`(index, term)` list of the `MemoryStorage` at `Loc.base a` — the
+`ents` slice walked through its backing array, each element's Entry
+cell dereferenced. `none` on any shape mismatch. `callStats` is
+deliberately unread (the instrumented counters are real heap effects
+of storage "reads" but carry no raft state). -/
+def absEntsFrom (σ : ExecState) (vs : Array GoValue) :
+    Nat → Nat → Option (List (Int × Int))
+  | _, 0 => some []
+  | i, n + 1 => do
+      let v ← vs[i]?
+      let p ← absEntry σ v
+      let rest ← absEntsFrom σ vs (i + 1) n
+      pure (p :: rest)
+
+def absStorageEnts (σ : ExecState) (a : Addr) : Option (List (Int × Int)) := do
+  let cell ← Heap.lookup σ.heap (.base a)
+  match cell.value with
+  | .struct ⟨"raft.MemoryStorage"⟩ fs =>
+      match StructFields.lookup fs "ents" with
+      | some (.slice sv) => do
+          let base ← sv.base
+          let arrCell ← Heap.lookup σ.heap base
+          match arrCell.value with
+          | .array vs => absEntsFrom σ vs sv.offset sv.len
+          | _ => none
+      | _ => none
+  | _ => none
+
+/-- **`MemoryStorage.firstIndex` spec** (`raftsubject/raft/storage.go`:
+`ms.ents[0].GetIndex() + 1` — the dummy-entry convention). `none` on
+an empty list (the subject indexes unconditionally; an empty `ents`
+never occurs — the dummy entry is an invariant). -/
+def specFirstIndex (es : List (Int × Int)) : Option Int :=
+  es.head?.map (fun p => p.1 + 1)
+
+/-- **`MemoryStorage.Term` spec, the NON-ERROR branch**
+(`storage.go`: `offset = ents[0].GetIndex()`; requires
+`offset ≤ i < offset + len`, else the subject returns
+`ErrCompacted`/`ErrUnavailable` — the error branches are OUTSIDE this
+spec (`none` here), and their equations are a recorded residual: the
+lowered error path loads package-level error vars at STATIC twin
+addresses the leaf fixture does not carry. -/
+def specTermAt (es : List (Int × Int)) (i : Int) : Option Int := do
+  let hd ← es.head?
+  let offset := hd.1
+  if i < offset then none
+  else match es[(i - offset).toNat]? with
+    | some p => some p.2
+    | none => none
+
 end GoLean.RaftSeam
