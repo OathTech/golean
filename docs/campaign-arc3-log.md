@@ -2930,3 +2930,26 @@ wants it); context stop-rule stands.
   is ALREADY rewritten in the whole goal — a following `rw [heq]`
   finds nothing and `show`s must name the substituted variable (bit
   seven times in one slice, all mechanical). Build green.
+- 2026-08-23 Slice 80: **`state_machine_safety'` — the SMS-PRIME
+  STATEMENT PROVED** (StateMachineSafetyPrimeInterface.v /
+  Proof.v:101-518 1:1; upstream 518 lines): host' (committed entries
+  agree by index — the two directly-committed quorums pigeon-intersect
+  per unit 10's pattern, the common recorder holds both chains via
+  unit 12's `leader_without_missing_entry` with its escape refuted by
+  `leader_completeness_directly_committed`, `entries_match` +
+  `uniqueIndices` finish) and nw' (an in-flight AE against a committed
+  entry): the `eTerm < t` side puts the chain in the sender's aell
+  snapshot via `leader_completeness` + `leaderLogs_entries_match`; the
+  `eTerm = t` side splits the committed host's log by
+  `logs_leaderLogs` over the SAME snapshot
+  (`one_leaderLog_per_term_log`). [AGENT] Proof-shape call (§9): the
+  upstream ~250-line nw' case soup factors into TWO shared cores —
+  `smsp_e_in_ll_cases` (snapshot-side classification; disjunct 2's
+  above-cut side is `prefix_contiguous` + `contiguous_app`, the
+  `Prefix_sane` escape closed by `maxIndex_is_max`) and an inline
+  `hcore` (own-term transfer: the contiguity pivot at `eIndex e` +
+  `network_host_entries`, whose prefix-side alternative dies on
+  `sorted_app_in_gt` over the removeAfterIndex split). New:
+  `network_host_entries` (lifted log_matching_nw clause + `rachet`),
+  `sorted_app_in_gt`. Two-compile slice (direction fixes only). Build
+  green.

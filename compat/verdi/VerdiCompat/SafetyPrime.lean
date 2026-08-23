@@ -806,6 +806,282 @@ theorem prevLog_leader_sublog_invariant :
       exact hP leader p0 t0 lid pli plt es ci hty hp0 hbody0 hct hpli
         hplt
 
+/-! ## state_machine_safety' (`Raft/StateMachineSafetyPrimeInterface.v` /
+`RaftProofs/StateMachineSafetyPrimeProof.v`) — the ghost-layer
+statement of STATE MACHINE SAFETY: committed entries agree by index
+(host'), and every in-flight AppendEntries is position-compatible with
+every committed entry (nw'). Sits on `leader_completeness` (unit 10),
+`all_entries_leader_logs` (unit 12), `append_entries_leaderLogs` +
+`logs_leaderLogs` (unit 8), and the log-matching lattice. -/
+
+/-- `StateMachineSafetyPrimeInterface.v` (`state_machine_safety_host'`). -/
+def state_machine_safety_host' (net : RefinedNet) : Prop :=
+  ∀ (e e' : entry (P := P)) (t t' : term),
+    committed net e t → committed net e' t' → e.eIndex = e'.eIndex →
+    e = e'
+
+/-- `StateMachineSafetyPrimeInterface.v` (`state_machine_safety_nw'`). -/
+def state_machine_safety_nw' (net : RefinedNet) : Prop :=
+  ∀ (p : RefinedPacket) (t : term) (lid : name (P := P))
+    (pli : logIndex) (plt : term) (es : List (entry (P := P)))
+    (ci : logIndex) (e : entry (P := P)) (t' : term),
+    p ∈ net.nwPackets → p.pBody = .AppendEntries t lid pli plt es ci →
+    committed net e t' → t ≥ t' →
+    (pli > e.eIndex ∨ (pli = e.eIndex ∧ plt = e.eTerm) ∨
+     e.eIndex > maxIndex es ∨ e ∈ es)
+
+/-- `StateMachineSafetyPrimeInterface.v` (`state_machine_safety'`). -/
+def state_machine_safety' (net : RefinedNet) : Prop :=
+  state_machine_safety_host' net ∧ state_machine_safety_nw' net
+
+omit O in
+/-- `StateMachineSafetyPrimeProof.v:219-231` (`sorted_app_in_gt`). -/
+theorem sorted_app_in_gt {l1 l2 : List (entry (P := P))}
+    {e e' : entry (P := P)} (hs : sorted (l1 ++ l2)) (he : e ∈ l1)
+    (he' : e' ∈ l2) : e'.eIndex < e.eIndex := by
+  induction l1 with
+  | nil => exact nomatch he
+  | cons a l0 ih =>
+    obtain ⟨hhead, htail⟩ := hs
+    rcases List.mem_cons.mp he with rfl | he0
+    · exact (hhead e' (List.mem_append.mpr (Or.inr he'))).1
+    · exact ih htail he0
+
+/-- `StateMachineSafetyPrimeProof.v:186-217` (`network_host_entries`):
+a host entry matching a packet entry by (index, term) is in the packet
+— the lifted `log_matching_nw` clause plus `rachet`. -/
+theorem network_host_entries :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      ∀ (p : RefinedPacket) (t : term) (n : name (P := P))
+        (pli : logIndex) (plt : term) (es : List (entry (P := P)))
+        (ci : logIndex) (h : name (P := P)) (e e' : entry (P := P)),
+        p ∈ net.nwPackets → p.pBody = .AppendEntries t n pli plt es ci →
+        e ∈ (net.nwState h).2.log → e' ∈ es →
+        e.eIndex = e'.eIndex → e.eTerm = e'.eTerm →
+        e ∈ es := by
+  intro net hreach p t n pli plt es ci h e e' hp hbody hel he' hidx hterm
+  obtain ⟨-, hnw⟩ := lift_prop _ log_matching_invariant net hreach
+  obtain ⟨h1, -, -, -⟩ := hnw (deghost_packet p) t n pli plt es ci
+    (List.mem_map_of_mem hp) hbody
+  have he'log : e' ∈ (net.nwState h).2.log :=
+    (h1 h e' e he' hel hidx.symm hterm.symm).1 e' (Nat.le_refl _) he'
+  exact rachet hidx hel he' he'log
+    (sorted_uniqueIndices (entries_sorted_invariant net hreach h))
+
+/-- `StateMachineSafetyPrimeProof.v:101-150`
+(`state_machine_safety_host'_invariant`): the two directly-committed
+quorums pigeon-intersect; the common recorder's log holds both chains
+via `leader_without_missing_entry` (its escape leaderLog refuted by
+`leader_completeness_directly_committed`) and `entries_match`;
+`uniqueIndices` finishes. -/
+theorem state_machine_safety_host'_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      state_machine_safety_host' net := by
+  intro net hreach e e' t t' hc hc' hidx
+  obtain ⟨hlcd, -⟩ := leader_completeness_invariant net hreach
+  obtain ⟨h1, x, hxt, hxdc, hex, hel, hxl⟩ := hc
+  obtain ⟨h2, x', hxt', hxdc', hex', hel', hxl'⟩ := hc'
+  obtain ⟨q1, hnd1, hlen1, hq1⟩ := hxdc
+  obtain ⟨q2, hnd2, hlen2, hq2⟩ := hxdc'
+  obtain ⟨c, hcq1, hcq2⟩ := pigeon q1 (nodes (P := P)) q2
+    (fun a _ => allFin_all a) (fun a _ => allFin_all a) hnd1 hnd2
+    (div2_correct hlen1 hlen2)
+  have hxlog : x ∈ (net.nwState c).2.log := by
+    rcases leader_without_missing_entry_invariant net hreach x.eTerm x c
+      (hq1 c hcq1) with hin | ⟨t2, ll, leader, hgt2, hll2, hnot2⟩
+    · exact hin
+    · exact absurd (hlcd t2 x ll leader ⟨q1, hnd1, hlen1, hq1⟩ hgt2 hll2)
+        hnot2
+  have hxlog' : x' ∈ (net.nwState c).2.log := by
+    rcases leader_without_missing_entry_invariant net hreach x'.eTerm x' c
+      (hq2 c hcq2) with hin | ⟨t2, ll, leader, hgt2, hll2, hnot2⟩
+    · exact hin
+    · exact absurd (hlcd t2 x' ll leader ⟨q2, hnd2, hlen2, hq2⟩ hgt2 hll2)
+        hnot2
+  have he_c : e ∈ (net.nwState c).2.log :=
+    (entries_match_invariant net hreach h1 c x x e rfl rfl hxl hxlog
+      hex).mp hel
+  have he'_c : e' ∈ (net.nwState c).2.log :=
+    (entries_match_invariant net hreach h2 c x' x' e' rfl rfl hxl' hxlog'
+      hex').mp hel'
+  exact uniqueIndices_elim_eq
+    (sorted_uniqueIndices (entries_sorted_invariant net hreach c)) he_c
+    he'_c hidx
+
+/-- The snapshot-side core of the nw' argument: an entry of the aell
+witness snapshot classifies against the packet's prevLog disjunction
+(disjunct 2's below-cut side rides `prefix_contiguous`). Shared by the
+`eTerm < t` case and the `eTerm = t` case's old-prefix side. -/
+theorem smsp_e_in_ll_cases {net : RefinedNet}
+    (hreach : refined_raft_intermediate_reachable (P := P) net)
+    {p : RefinedPacket} {t : term} {lid : name (P := P)} {pli : logIndex}
+    {plt : term} {es : List (entry (P := P))} {ci : logIndex}
+    (hp : p ∈ net.nwPackets)
+    (hbody : p.pBody = .AppendEntries t lid pli plt es ci)
+    {sender : name (P := P)} {ll es' ll' : List (entry (P := P))}
+    (hsplit : es = es' ++ ll')
+    (hll : (t, ll) ∈ (net.nwState sender).1.leaderLogs)
+    (hpre : Prefix ll' ll)
+    (hdisj : (plt = t ∧ pli > maxIndex ll) ∨
+      (∃ e2, e2 ∈ ll ∧ e2.eIndex = pli ∧ e2.eTerm = plt ∧
+        Prefix_sane ll' ll pli) ∨
+      (plt = 0 ∧ pli = 0 ∧ ll' = ll))
+    {e : entry (P := P)} (he_ll : e ∈ ll) :
+    pli > e.eIndex ∨ (pli = e.eIndex ∧ plt = e.eTerm) ∨
+    e.eIndex > maxIndex es ∨ e ∈ es := by
+  have hllsorted : sorted ll :=
+    leaderLogs_sorted_invariant net hreach sender t ll hll
+  rcases hdisj with ⟨-, hpligt⟩ | ⟨e2, he2ll, he2i, he2t, hsane⟩ |
+    ⟨-, -, hlleq⟩
+  · -- prevLog past the snapshot: everything in it is strictly below
+    exact Or.inl (Nat.lt_of_le_of_lt (maxIndex_is_max hllsorted he_ll)
+      hpligt)
+  · -- a pivot inside the snapshot
+    rcases Nat.lt_trichotomy pli e.eIndex with hlt | heq | hgt
+    · -- e sits above the cut: it is in the transmitted prefix
+      refine Or.inr (Or.inr (Or.inr ?_))
+      rw [hsplit]
+      refine List.mem_append.mpr (Or.inr ?_)
+      have hne : ll' ≠ [] := by
+        rcases hsane with hne | hmax
+        · exact hne
+        · intro _
+          rw [hmax] at hlt
+          exact absurd (maxIndex_is_max hllsorted he_ll)
+            (Nat.not_le.mpr hlt)
+      have hcont : contiguous_range_exact_lo ll' pli := by
+        have hces : contiguous_range_exact_lo es pli :=
+          entries_contiguous_nw_invariant net hreach p t lid pli plt es
+            ci hp hbody
+        have hses : sorted es :=
+          entries_sorted_nw_invariant net hreach p t lid pli plt es ci hp
+            hbody
+        rw [hsplit] at hces hses
+        exact contiguous_app hses hces
+      exact prefix_contiguous hne hpre hllsorted he_ll hlt hcont
+    · -- e at the cut: (pli, plt) is exactly e's coordinates
+      refine Or.inr (Or.inl ⟨heq, ?_⟩)
+      have : e2 = e := by
+        refine uniqueIndices_elim_eq (sorted_uniqueIndices hllsorted)
+          he2ll he_ll ?_
+        rw [he2i, heq]
+      rw [← he2t, this]
+    · exact Or.inl hgt
+  · -- from-scratch send: the whole snapshot is transmitted
+    refine Or.inr (Or.inr (Or.inr ?_))
+    rw [hsplit]
+    refine List.mem_append.mpr (Or.inr ?_)
+    rw [hlleq]
+    exact he_ll
+
+/-- `StateMachineSafetyPrimeProof.v:258-518`
+(`state_machine_safety_nw'_invariant`): a committed entry against an
+in-flight AppendEntries. `eTerm < t`: `leader_completeness` puts the
+directly-committed chain into the sender's snapshot, and
+`leaderLogs_entries_match` pulls `e` in; the snapshot side classifies.
+`eTerm = t`: `logs_leaderLogs` splits the committed host's log over the
+same snapshot (`one_leaderLog_per_term_log`), the own-term part
+transfers by the contiguity pivot + `network_host_entries`, the
+snapshot part classifies as before. -/
+theorem state_machine_safety_nw'_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      state_machine_safety_nw' net := by
+  intro net hreach p t lid pli plt es ci e t' hp hbody hc hge
+  obtain ⟨h, x, hxt, hxdc, hex, hel, hxl⟩ := hc
+  obtain ⟨sender, ll, es', ll', hsplit, hterm', hll, hpre, hdisj⟩ :=
+    append_entries_leaderLogs_invariant net hreach p t lid pli plt es ci
+      hp hbody
+  rcases Nat.lt_trichotomy x.eTerm t with hlt | heqt | hgt
+  · -- x.eTerm < t: the sender's snapshot holds the whole chain
+    obtain ⟨hlcd, -⟩ := leader_completeness_invariant net hreach
+    have hx_ll : x ∈ ll := hlcd t x ll sender hxdc hlt hll
+    have he_ll : e ∈ ll :=
+      (leaderLogs_entries_match_invariant net hreach h sender t ll hll x
+        x e rfl rfl hxl hx_ll hex).mp hel
+    exact smsp_e_in_ll_cases hreach hp hbody hsplit hll hpre hdisj he_ll
+  · -- x.eTerm = t: split the committed host's log over the snapshot
+    obtain ⟨leader1, ll1, esA, hll1, hremove, htermA⟩ :=
+      logs_leaderLogs_invariant net hreach h x hxl
+    rw [heqt] at hll1
+    have hlleq : ll = ll1 :=
+      one_leaderLog_per_term_log_invariant net hreach sender leader1 t ll
+        ll1 hll hll1
+    rw [← hlleq] at hremove
+    have he_split : e ∈ esA ++ ll := by
+      rw [← hremove]
+      exact removeAfterIndex_le_In hex hel
+    have hs_app : sorted (esA ++ ll) := by
+      rw [← hremove]
+      exact removeAfterIndex_sorted (entries_sorted_invariant net hreach h)
+    rcases List.mem_append.mp he_split with he_esA | he_ll
+    · -- e in the own-term part of the host's log
+      have hete : e.eTerm = t := by
+        rw [htermA e he_esA]
+        exact heqt
+      have hces : contiguous_range_exact_lo es pli :=
+        entries_contiguous_nw_invariant net hreach p t lid pli plt es ci
+          hp hbody
+      -- the shared transfer: pli < e.eIndex ≤ maxIndex es lands e in es
+      have hcore : pli < e.eIndex → e.eIndex ≤ maxIndex es → e ∈ es := by
+        intro hlo hhi
+        obtain ⟨e0, he0i, he0es⟩ := hces.1 e.eIndex ⟨hlo, hhi⟩
+        have he0t : e0.eTerm = e.eTerm := by
+          rw [hsplit] at he0es
+          rcases List.mem_append.mp he0es with h0 | h0
+          · rw [hterm' e0 h0, hete]
+          · exfalso
+            have h0ll : e0 ∈ ll := Prefix_In hpre _ h0
+            have := sorted_app_in_gt hs_app he_esA h0ll
+            rw [he0i] at this
+            exact absurd this (Nat.lt_irrefl _)
+        exact network_host_entries net hreach p t lid pli plt es ci h e
+          e0 hp hbody hel he0es he0i.symm he0t.symm
+      rcases hdisj with ⟨hplt_t, -⟩ | ⟨e2, he2ll, he2i, -, -⟩ |
+        ⟨-, hpli0, -⟩
+      · -- prevLog past the snapshot: position e against it
+        rcases Nat.lt_trichotomy pli e.eIndex with hlo | heqi | hhi
+        · rcases Nat.le_total e.eIndex (maxIndex es) with hle | hgt2
+          · exact Or.inr (Or.inr (Or.inr (hcore hlo hle)))
+          · rcases Nat.lt_or_ge (maxIndex es) e.eIndex with hgt3 | hge3
+            · exact Or.inr (Or.inr (Or.inl hgt3))
+            · exact Or.inr (Or.inr (Or.inr (hcore hlo hge3)))
+        · refine Or.inr (Or.inl ⟨heqi, ?_⟩)
+          rw [hplt_t, hete]
+        · exact Or.inl hhi
+      · -- pivot inside the snapshot: e is strictly above the cut
+        have hlo : pli < e.eIndex := by
+          rw [← he2i]
+          exact sorted_app_in_gt hs_app he_esA he2ll
+        rcases Nat.le_total e.eIndex (maxIndex es) with hle | hgt2
+        · exact Or.inr (Or.inr (Or.inr (hcore hlo hle)))
+        · rcases Nat.lt_or_ge (maxIndex es) e.eIndex with hgt3 | hge3
+          · exact Or.inr (Or.inr (Or.inl hgt3))
+          · exact Or.inr (Or.inr (Or.inr (hcore hlo hge3)))
+      · -- from-scratch: positivity is the cut
+        have hlo : pli < e.eIndex := by
+          rw [hpli0]
+          refine entries_gt_0_invariant net hreach h e ?_
+          rw [← hremove] at he_split
+          exact removeAfterIndex_in he_split
+        rcases Nat.le_total e.eIndex (maxIndex es) with hle | hgt2
+        · exact Or.inr (Or.inr (Or.inr (hcore hlo hle)))
+        · rcases Nat.lt_or_ge (maxIndex es) e.eIndex with hgt3 | hge3
+          · exact Or.inr (Or.inr (Or.inl hgt3))
+          · exact Or.inr (Or.inr (Or.inr (hcore hlo hge3)))
+    · -- e in the snapshot part: the shared classifier
+      exact smsp_e_in_ll_cases hreach hp hbody hsplit hll hpre hdisj he_ll
+  · -- x.eTerm > t contradicts x.eTerm ≤ t' ≤ t
+    exact absurd (Nat.le_trans hxt hge) (Nat.not_le.mpr hgt)
+
+/-- `StateMachineSafetyPrimeProof.v:509-518` (`state_machine_safety'`,
+the interface conjunction). -/
+theorem state_machine_safety'_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      state_machine_safety' net :=
+  fun net hreach =>
+    ⟨state_machine_safety_host'_invariant net hreach,
+     state_machine_safety_nw'_invariant net hreach⟩
+
 end SafetyPrime
 end Raft
 end VerdiCompat
