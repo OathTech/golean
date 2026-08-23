@@ -1885,3 +1885,125 @@ RE-DERIVE the closure fresh, as always):**
   re-derive; msg-ghost EXPECTED there, minimal-port-on-first-need).
 Successors re-verify this unit fresh: build + sweep 2029 + the
 four-headliner probe above + hatch grep over LeaderCompleteness.lean.
+
+## Unit 10 — LEADER COMPLETENESS (2026-08-23, coordinator-posted charter)
+
+Charter: the unit-9 remainder — `prefix_within_term`
+(PrefixWithinTermProof.v, 1,915 lines, the largest single file any
+worker has taken; DAG derived and posted first, slice by the DAG) and
+`leader_completeness`'s PROOF (LeaderCompletenessProof.v, 379 lines),
+discharging the unit-4 statement. Split discipline available: a
+completed prefix + chartered remainder is branch-complete.
+
+- 2026-08-23 SUCCESSOR RE-VERIFICATION of unit 9 (recomputed, fresh
+  reader): tip d5efc9e8, tree clean, branch `campaign-arc3`;
+  `deps/verdi-raft` pin re-verified
+  `a3375e867326a82225e724cc1a7b4758b029376f` (read from the MAIN
+  checkout, as every unit). Fresh capped `lake build` (24G) green
+  ("Build completed successfully (49 jobs)"); the sweep line there was
+  a cache replay, so re-derived by fresh capped
+  `lake env lean AxCheck.lean` — verbatim `AxCheck sweep: 2029
+  declarations across VerdiCompat modules, axiom set within
+  [propext, Quot.sound]`. Fresh capped `#print axioms` probe
+  (repo-local scratch): `allEntries_log_matching_invariant`,
+  `allEntries_leader_sublog_invariant`,
+  `allEntries_candidateEntries_invariant` all
+  `depends on axioms: [propext, Quot.sound]` verbatim. Hatch grep
+  (`sorry|native_decide|^axiom| axiom `) over LeaderCompleteness.lean:
+  0 hits (exit 1). All claims hold; building on them.
+- 2026-08-23 [AGENT] UNIT-10 CLOSURE, re-derived fresh (`Require
+  Import` walk @ a3375e8, pin re-verified by `git rev-parse`): exactly
+  the two charter files, `wc -l` = 1,915 + 379 = **2,294** upstream
+  lines. Every imported Interface diffed against the INVARIANT INDEX's
+  proved rows — ALL ported (PWT needs: LogsLeaderLogs ✓, RLML ✓,
+  OneLeaderLogPerTerm ✓, LeaderLogsSorted ✓, LeaderLogsSublog ✓,
+  LeaderSublog ✓, NextIndexSafety ✓, LeaderLogsContiguous ✓,
+  AllEntriesLogMatching ✓, AERTermSanity ✓, AllEntriesLeaderSublog ✓;
+  LC needs: PWT (this unit), LLTermSanity ✓, LeaderLogsPreserved ✓,
+  EveryEntryWasCreated ✓, LeaderLogsVotesWithLog ✓,
+  AllEntriesVotesWithLog ✓, VotesWithLogSorted ✓,
+  TermsAndIndicesFromOne ✓, LeaderLogsLogMatching ✓). **No msg-ghost**
+  (`grep -l "MsgRefinement\|GhostLog"` over all 4 files: empty) —
+  GAP-2 stays untouched.
+- 2026-08-23 [AGENT] PWT INTERNAL LEMMA DAG (posted per charter,
+  upstream lines @ a3375e8). The file has TWO STANDALONE summit
+  theorems proved directly from ported invariants (not part of the
+  induction), then a six-conjunct inductive invariant:
+  - **T1 `log_log_prefix_within_term_invariant`** (:107-149,
+    standalone): both hosts' entries resolve through
+    `logs_leaderLogs_invariant`; `one_leaderLog_per_term_log`
+    identifies the two snapshots; entries_contiguous + maxIndex_is_max
+    produce an index-matched witness; `entries_match_invariant`
+    transfers. Deps all ported.
+  - **T2 `append_entries_append_entries_prefix_within_term_invariant`**
+    (:154-747, standalone, the summit — ~590 lines): apply
+    `logs_leaderLogs_nw_invariant` to BOTH packets,
+    `one_leaderLog_per_term_log` identifies the snapshot, then a 3×3
+    case grid over the two packets' prevLog disjunction pairs; entries
+    cross via `entries_match_nw_1_invariant` or die on
+    `Prefix_maxIndex` (✓ ported) / contiguity bounds. NEW support
+    needed (CommonTheorems.v): `app_contiguous_maxIndex_le_eq` (:2032),
+    `sorted_app_1` (:2049), `contiguous_app_prefix_contiguous` (:2096),
+    `sorted_term_index_lt` (:2112), `contiguous_app_prefix_2` (:2125),
+    `contiguous_0_app` (:2140).
+  - **D** the conjunct defs: `append_entries_append_entries..._nw`
+    (:95), the five others + `prefix_within_term_inductive` (:748-786;
+    conjuncts: allEntries_leaderLogs, log_leaderLogs, allEntries_log,
+    allEntries_AE_nw, AE_leaderLogs, AE_log).
+  - **H** helpers: mostly ported under lane names (ghost
+    leaderLogs/allEntries update lemmas, `handleAppendEntries_reply_
+    entries`, `handleClientRequest_log_full`, doLeader message specs,
+    `nextIndex_sanity` = LeaderLogsAssembly:308,
+    `lifted_leader_sublog_host`/`_nw`). NEW:
+    `findGtIndex_prefix_within_term` (:788),
+    `prefix_within_term_union` (:902) / `_subset` (:1385);
+    `removeAfterIndex_maxTerm_in` (:915) appears consumer-less
+    downstream — port only on need.
+  - **P1-P11** the eleven obligations: `_append_entries` (:928, the
+    inductive centerpiece — T2 + `allEntries_log_matching_invariant` +
+    `append_entries_request_term_sanity_invariant` +
+    `entries_match_nw_host_invariant`); `_client_request` (:1158 —
+    `leaderLogs_sublog_invariant`, `allEntries_leader_sublog_invariant`,
+    lifted leader_sublog host+nw against maxIndex+1); `_do_leader`
+    (:1394 — doLeader spec trichotomy, `nextIndex_sanity`,
+    `sorted_term_index_lt`, T1 via `prefix_within_term_subset`);
+    `_request_vote_reply` (:1539 — fresh snapshot = winner's log, T1
+    closes the new leaderLog conjuncts); `_append_entries_reply`
+    (:1588), `_timeout` (:1644), `_request_vote` (:1720),
+    `_do_generic_server` (:1789): pure transports (no log/leaderLogs/
+    allEntries/AE-packet changes); `_init` (:1844),
+    `_state_same_packet_subset` (:1854), `_reboot` (:1863) boilerplate.
+  - **A** `prefix_within_term_inductive_invariant` (:1890) via the
+    ported `refined_raft_net_invariant`; interface fields =
+    conjunct 1 + T1 (pwti instance :1909).
+- 2026-08-23 [AGENT] LC DAG (LeaderCompletenessProof.v): `argmin` def
+  already ported (CommonDefinitions.lean:65); NEW `argmin_None`/
+  `argmin_elim` (CommonTheorems.v:958-997); the local
+  `contradicting_leader_logs_on_leader`/`contradicting_leader_logs`
+  fixpoints + `minimal_contradicting_leader_log` + ten small
+  elim/complete lemmas (:33-196; entry DecidableEq ✓, nodes/allFin_all/
+  allFin_NoDup ✓); `maxTerm/maxIndex_zero_or_entry` (:198-210);
+  **`leader_completeness_directly_committed_invariant`** (:212-337 —
+  minimal-contradicting-log descent: pwt conjunct 1 kills the
+  same-term-lower-index escape, every_entry_was_created +
+  leaderLogs_preserved kill the lower-term escape, then
+  leaderLogs_votesWithLog's quorum × the directly-committed quorum
+  pigeon-intersect and moreUpToDate + votesWithLog_sorted +
+  terms_and_indices_from_one force the contradiction);
+  **`leader_completeness_committed_invariant`** (:339-364 — directly
+  committed + `leaderLogs_entries_match_invariant`);
+  **`leader_completeness_invariant`** (:366-373) — THE GAP-6 CLOSE,
+  discharging LeaderLogs.lean:3901's unit-4 statement. NOTE (checked):
+  Properties.lean has NO LeaderCompleteness transfer target
+  (StateMachineSafety/OneLeaderPerTerm/LogMatching only) — leader
+  completeness is a ghost-layer (leaderLogs) statement with no base
+  projection upstream either; nothing further owed there.
+- 2026-08-23 [AGENT] Slice plan by the DAG (file: LeaderCompleteness
+  .lean, continuing unit 9's): 53 = T2 support layer + T1;
+  54 = T2; 55 = D defs + the eight transport obligations; 56 = CR +
+  DL obligations; 57 = AE obligation; 58 = assembly + interface
+  theorems + pins; 59 = LC scaffolding (argmin lemmas +
+  contradicting layer); 60 = LC invariants + pins + INDEX + gate +
+  final entry. Split point if the honest budget forces one: after 58
+  (PWT complete = a branch-complete prefix; LC alone is a small
+  successor unit).
