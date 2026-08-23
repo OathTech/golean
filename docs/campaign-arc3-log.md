@@ -1247,3 +1247,24 @@ degrades); unit-8 charter at unit end.
   error through `try` — `cases hmr` closes impossible Bool equations
   and passes trivial ones cleanly (recorded for successors). Build
   green, sweep 1689 (was 1652).
+- 2026-08-23 Slice 37: **`append_entries_request_reply_correspondence`**
+  (AERRCorrespondenceInterface.v:9-20 1:1, BASE; upstream 429 lines) —
+  every true AppendEntriesReply corresponds to an equivalent REACHABLE
+  network still carrying a matching request. New reachability
+  machinery: `reachable_dup` / `reachable_drop_suffix` /
+  **`subset_reachable`** (Verdi's DupDropReordering `dup_drop_reorder`
+  re-proved directly: dup the members in, drop the original pool) —
+  the first campaign use of `RIR_step_failure` with the fault model's
+  dup/drop/reboot steps. Proof: each obligation RE-PLAYS its step from
+  the IH's equivalent network (RIR constructors applied directly, the
+  handler equation transported along `net₀.nwState = net.nwState`);
+  the CREATION case (an accepted AppendEntries) first DUPLICATES the
+  consumed request via `StepFailure_dup`, then delivers one copy —
+  upstream's exact construction; state-same rides `subset_reachable`,
+  reboot rides `StepFailure_reboot` + funext (the def's
+  state-function equality). [AGENT] Judgment call: `subset_reachable`
+  is proved from scratch (~50 lines) instead of porting Verdi's
+  generic DupDropReordering module — single consumer, and the direct
+  induction is smaller than the module's step-star plumbing; lift
+  later per the promotion-ledger rule if the msg-ghost arcs need it.
+  Build green, sweep 1700.

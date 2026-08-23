@@ -623,6 +623,469 @@ theorem leaders_have_leaderLogs_strong_invariant :
     rw [← hrb] at htyl
     exact nomatch htyl
 
+/-! ## append_entries_request_reply_correspondence (BASE)
+
+`AppendEntriesRequestReplyCorrespondenceProof.v` (429 lines): every
+true AppendEntriesReply in flight corresponds to an equivalent
+REACHABLE network carrying a matching request — the fault model's dup
+step keeps the consumed request alive. The subset machinery is Verdi's
+`DupDropReordering.v` `dup_drop_reorder`, re-proved here directly as
+`subset_reachable` (dup members in, drop the rest). -/
+
+/-- Duplicate one in-flight packet (a `StepFailure_dup` re-step). -/
+theorem reachable_dup {net : RaftNet}
+    (hreach : raft_intermediate_reachable (P := P) net)
+    {p : Packet (raft_base_params (P := P)) raft_multi_params}
+    (hp : p ∈ net.nwPackets) :
+    raft_intermediate_reachable (P := P) ⟨p :: net.nwPackets, net.nwState⟩ := by
+  obtain ⟨xs, ys, hsplit⟩ := List.append_of_mem hp
+  refine raft_intermediate_reachable.RIR_step_failure [] net [] _ [] hreach
+    (step_failure.StepFailure_dup net _ [] p xs ys hsplit ?_)
+  rw [hsplit]
+  rfl
+
+/-- Drop a packet-list suffix, one head-of-suffix at a time. -/
+theorem reachable_drop_suffix {S : name (P := P) → raft_data (P := P)}
+    (build l : List (Packet (raft_base_params (P := P)) raft_multi_params))
+    (hreach : raft_intermediate_reachable (P := P) ⟨build ++ l, S⟩) :
+    raft_intermediate_reachable (P := P) ⟨build, S⟩ := by
+  induction l with
+  | nil =>
+    rw [List.append_nil] at hreach
+    exact hreach
+  | cons q l₂ ih =>
+    refine ih ?_
+    exact raft_intermediate_reachable.RIR_step_failure [] ⟨build ++ q :: l₂, S⟩
+      [] _ [] hreach
+      (step_failure.StepFailure_drop _ _ [] q build l₂ rfl rfl)
+
+/-- `AppendEntriesRequestReplyCorrespondenceProof.v:178-195`
+(`subset_reachable`, via Verdi's `dup_drop_reorder`): a network with the
+same states and any member-subset of the packets is reachable. -/
+theorem subset_reachable {net : RaftNet}
+    (l' : List (Packet (raft_base_params (P := P)) raft_multi_params))
+    (hsub : ∀ p ∈ l', p ∈ net.nwPackets)
+    (hreach : raft_intermediate_reachable (P := P) net) :
+    raft_intermediate_reachable (P := P) ⟨l', net.nwState⟩ := by
+  have hbuild : ∀ (b : List (Packet (raft_base_params (P := P))
+      raft_multi_params)), (∀ p ∈ b, p ∈ net.nwPackets) →
+      raft_intermediate_reachable (P := P)
+        ⟨b ++ net.nwPackets, net.nwState⟩ := by
+    intro b hb
+    induction b with
+    | nil =>
+      show raft_intermediate_reachable (⟨net.nwPackets, net.nwState⟩ : RaftNet)
+      cases net
+      exact hreach
+    | cons p rest ih =>
+      have hmem : p ∈ (⟨rest ++ net.nwPackets, net.nwState⟩ : RaftNet).nwPackets :=
+        List.mem_append.mpr (Or.inr (hb p (List.mem_cons_self ..)))
+      exact reachable_dup
+        (ih (fun q hq => hb q (List.mem_cons_of_mem _ hq))) hmem
+  exact reachable_drop_suffix l' net.nwPackets (hbuild l' hsub)
+
+/-- `AppendEntriesRequestReplyCorrespondenceInterface.v:9-14`
+(`exists_equivalent_network_with_aer`). -/
+def exists_equivalent_network_with_aer (net : RaftNet)
+    (src dst : name (P := P)) (t : term) (es : List (entry (P := P))) :
+    Prop :=
+  ∃ (net' : RaftNet) (pli : logIndex) (plt : term) (ci : logIndex)
+    (n : name (P := P)),
+    raft_intermediate_reachable net' ∧
+    net'.nwState = net.nwState ∧
+    net'.nwPackets = net.nwPackets ++
+      [⟨src, dst, .AppendEntries t n pli plt es ci⟩]
+
+/-- `AppendEntriesRequestReplyCorrespondenceInterface.v:16-20`
+(`append_entries_request_reply_correspondence`). -/
+def append_entries_request_reply_correspondence (net : RaftNet) : Prop :=
+  ∀ (p : Packet (raft_base_params (P := P)) raft_multi_params)
+    (t : term) (es : List (entry (P := P))),
+    p ∈ net.nwPackets → p.pBody = .AppendEntriesReply t es true →
+    exists_equivalent_network_with_aer net p.pDst p.pSrc t es
+
+omit O in
+/-- Membership embeds under a snoc on the right list. -/
+theorem mem_app_snoc {α : Type _} {q r : α} {xs ys : List α}
+    (h : q ∈ xs ++ ys) : q ∈ xs ++ (ys ++ [r]) := by
+  rcases List.mem_append.mp h with h1 | h1
+  · exact List.mem_append.mpr (Or.inl h1)
+  · exact List.mem_append.mpr (Or.inr (List.mem_append.mpr (Or.inl h1)))
+
+/-- `AppendEntriesRequestReplyCorrespondenceProof.v:198-443`
+(`append_entries_request_reply_correspondence_invariant`): each
+obligation re-plays the step from the equivalent network; the creation
+case (an accepted AppendEntries) first DUPLICATES the request being
+consumed, so one copy survives beside the fresh reply. -/
+theorem append_entries_request_reply_correspondence_invariant :
+    ∀ net, raft_intermediate_reachable (P := P) net →
+      append_entries_request_reply_correspondence net := by
+  refine raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · -- init: no packets
+    intro p0 t0 es0 hp0 _
+    exact nomatch hp0
+  · -- client_request: re-play; sends nothing
+    intro h net st' ps' out d l client id c hcr hP _hreach hst hps
+    intro p0 t0 es0 hp0 hbody0
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnew
+    · obtain ⟨net₀, pli', plt', ci', n', hreach₀, hst₀, hpk₀⟩ :=
+        hP p0 t0 es0 hold hbody0
+      refine ⟨⟨ps' ++ [⟨p0.pDst, p0.pSrc,
+        .AppendEntries t0 n' pli' plt' es0 ci'⟩], st'⟩,
+        pli', plt', ci', n', ?_, rfl, rfl⟩
+      refine raft_intermediate_reachable.RIR_handleInput net₀ h
+        (.ClientRequest client id c) out d l _ st' hreach₀ ?_ ?_ ?_
+      · show handleInput h (.ClientRequest client id c)
+          (net₀.nwState h) = (out, d, l)
+        rw [hst₀]
+        exact hcr
+      · intro h'
+        rw [hst₀]
+        exact hst h'
+      · intro q hq
+        rcases List.mem_append.mp hq with hq' | hq'
+        · rcases hps q hq' with h1 | h1
+          · exact Or.inl (by rw [hpk₀]; exact List.mem_append.mpr (Or.inl h1))
+          · exact Or.inr h1
+        · exact Or.inl (by
+            rw [hpk₀]
+            exact List.mem_append.mpr (Or.inr hq'))
+    · exfalso
+      obtain ⟨-, -, -, -, hl⟩ :=
+        handleClientRequest_spec h (net.nwState h) client id c hcr
+      rw [hl] at hnew
+      simp [send_packets] at hnew
+  · -- timeout: re-play; sends only RequestVotes
+    intro net h st' ps' out d l hto hP _hreach hst hps
+    intro p0 t0 es0 hp0 hbody0
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnew
+    · obtain ⟨net₀, pli', plt', ci', n', hreach₀, hst₀, hpk₀⟩ :=
+        hP p0 t0 es0 hold hbody0
+      refine ⟨⟨ps' ++ [⟨p0.pDst, p0.pSrc,
+        .AppendEntries t0 n' pli' plt' es0 ci'⟩], st'⟩,
+        pli', plt', ci', n', ?_, rfl, rfl⟩
+      refine raft_intermediate_reachable.RIR_handleInput net₀ h
+        .Timeout out d l _ st' hreach₀ ?_ ?_ ?_
+      · show handleInput h .Timeout (net₀.nwState h) = (out, d, l)
+        rw [hst₀]
+        exact hto
+      · intro h'
+        rw [hst₀]
+        exact hst h'
+      · intro q hq
+        rcases List.mem_append.mp hq with hq' | hq'
+        · rcases hps q hq' with h1 | h1
+          · exact Or.inl (by rw [hpk₀]; exact List.mem_append.mpr (Or.inl h1))
+          · exact Or.inr h1
+        · exact Or.inl (by
+            rw [hpk₀]
+            exact List.mem_append.mpr (Or.inr hq'))
+    · exfalso
+      obtain ⟨-, -, hmsgs⟩ := handleTimeout_spec h (net.nwState h) hto
+      obtain ⟨m0, hm0, rfl⟩ := List.mem_map.mp hnew
+      obtain ⟨t3, c3, l3, l4, hq2⟩ := hmsgs m0 hm0
+      replace hbody0 : m0.2 = msg.AppendEntriesReply t0 es0 true := hbody0
+      rw [hq2] at hbody0
+      exact nomatch hbody0
+  · -- append_entries: the CREATION case — dup the consumed request
+    intro xs p ys net st' ps' d m t n0 pli plt es ci hae hbody hP hreach
+      hpkts hst hps
+    intro p0 t0 es0 hp0 hbody0
+    replace hp0 : p0 ∈ ps' := hp0
+    have hp_in : p ∈ net.nwPackets := by
+      rw [hpkts]
+      exact List.mem_append.mpr (Or.inr (List.mem_cons_self ..))
+    have hm2 : ∀ (S : name (P := P) → raft_data (P := P)),
+        S p.pDst = net.nwState p.pDst →
+        handleMessage p.pSrc p.pDst p.pBody (S p.pDst)
+          = (d, [(p.pSrc, m)]) := by
+      intro S hS
+      rw [hS]
+      unfold handleMessage
+      rw [hbody]
+      simp only []
+      rw [hae]
+    rcases hps p0 hp0 with hold | hnew
+    · -- old reply: re-play the delivery from the equivalent network
+      obtain ⟨net₀, pli', plt', ci', n', hreach₀, hst₀, hpk₀⟩ :=
+        hP p0 t0 es0 (by rw [hpkts]; exact mem_of_mem_remove_middle hold)
+          hbody0
+      refine ⟨⟨ps' ++ [⟨p0.pDst, p0.pSrc,
+        .AppendEntries t0 n' pli' plt' es0 ci'⟩], st'⟩,
+        pli', plt', ci', n', ?_, rfl, rfl⟩
+      refine raft_intermediate_reachable.RIR_handleMessage p net₀ xs
+        (ys ++ [⟨p0.pDst, p0.pSrc,
+          .AppendEntries t0 n' pli' plt' es0 ci'⟩]) st' _ d
+        [(p.pSrc, m)] hreach₀ (hm2 net₀.nwState (by rw [hst₀])) ?_ ?_ ?_
+      · rw [hpk₀, hpkts, List.append_assoc, List.cons_append]
+      · intro h'
+        rw [hst₀]
+        exact hst h'
+      · intro q hq
+        rcases List.mem_append.mp hq with hq' | hq'
+        · rcases hps q hq' with h1 | h1
+          · exact Or.inl (mem_app_snoc h1)
+          · right
+            show q ∈ [(⟨p.pDst, p.pSrc, m⟩ :
+              Packet (raft_base_params (P := P)) raft_multi_params)]
+            rw [h1]
+            exact List.mem_cons_self ..
+        · exact Or.inl (List.mem_append.mpr (Or.inr (List.mem_append.mpr
+            (Or.inr hq'))))
+    · -- the fresh reply: dup the request, then deliver one copy
+      subst hnew
+      replace hbody0 : m = msg.AppendEntriesReply t0 es0 true := hbody0
+      subst hbody0
+      obtain ⟨t'', r'', hml⟩ := handleAppendEntries_reply_entries p.pDst
+        (net.nwState p.pDst) t n0 pli plt es ci hae
+      injection hml with hml1 hml2 hml3
+      obtain ⟨ht0, -⟩ := handleAppendEntries_reply_true p.pDst
+        (net.nwState p.pDst) t n0 pli plt es ci hae
+      have hdup : raft_intermediate_reachable (P := P)
+          ⟨p :: net.nwPackets, net.nwState⟩ := reachable_dup hreach hp_in
+      refine ⟨⟨ps' ++ [p], st'⟩, pli, plt, ci, n0, ?_, rfl, ?_⟩
+      · refine raft_intermediate_reachable.RIR_handleMessage p
+          ⟨p :: net.nwPackets, net.nwState⟩ (p :: xs) ys st' _ d
+          [(p.pSrc, msg.AppendEntriesReply t0 es0 true)] hdup
+          (hm2 net.nwState rfl) ?_ ?_ ?_
+        · show p :: net.nwPackets = (p :: xs) ++ p :: ys
+          rw [hpkts]
+          rfl
+        · intro h'
+          exact hst h'
+        · intro q hq
+          rcases List.mem_append.mp hq with hq' | hq'
+          · rcases hps q hq' with h1 | h1
+            · left
+              rcases List.mem_append.mp h1 with h2 | h2
+              · exact List.mem_append.mpr
+                  (Or.inl (List.mem_cons_of_mem _ h2))
+              · exact List.mem_append.mpr (Or.inr h2)
+            · right
+              show q ∈ [(⟨p.pDst, p.pSrc,
+                msg.AppendEntriesReply t0 es0 true⟩ :
+                Packet (raft_base_params (P := P)) raft_multi_params)]
+              rw [h1]
+              exact List.mem_cons_self ..
+          · obtain rfl := List.mem_singleton.mp hq'
+            exact Or.inl (List.mem_append.mpr
+              (Or.inl (List.mem_cons_self ..)))
+      · show ps' ++ [p] = ps' ++ [⟨p.pSrc, p.pDst,
+          msg.AppendEntries t0 n0 pli plt es0 ci⟩]
+        rw [ht0, hml2, ← hbody]
+  · -- append_entries_reply: re-play; replies carry no AppendEntries
+    intro xs p ys net st' ps' d m t es res haer hbody hP _hreach hpkts hst
+      hps
+    intro p0 t0 es0 hp0 hbody0
+    replace hp0 : p0 ∈ ps' := hp0
+    obtain ⟨-, -, hl⟩ := handleAppendEntriesReply_spec p.pDst
+      (net.nwState p.pDst) p.pSrc t es res haer
+    rcases hps p0 hp0 with hold | hnew
+    · obtain ⟨net₀, pli', plt', ci', n', hreach₀, hst₀, hpk₀⟩ :=
+        hP p0 t0 es0 (by rw [hpkts]; exact mem_of_mem_remove_middle hold)
+          hbody0
+      refine ⟨⟨ps' ++ [⟨p0.pDst, p0.pSrc,
+        .AppendEntries t0 n' pli' plt' es0 ci'⟩], st'⟩,
+        pli', plt', ci', n', ?_, rfl, rfl⟩
+      refine raft_intermediate_reachable.RIR_handleMessage p net₀ xs
+        (ys ++ [⟨p0.pDst, p0.pSrc,
+          .AppendEntries t0 n' pli' plt' es0 ci'⟩]) st' _ d m hreach₀
+        ?_ ?_ ?_ ?_
+      · show handleMessage p.pSrc p.pDst p.pBody (net₀.nwState p.pDst)
+          = (d, m)
+        rw [hst₀]
+        unfold handleMessage
+        rw [hbody]
+        simp only []
+        exact haer
+      · rw [hpk₀, hpkts, List.append_assoc, List.cons_append]
+      · intro h'
+        rw [hst₀]
+        exact hst h'
+      · intro q hq
+        rcases List.mem_append.mp hq with hq' | hq'
+        · rcases hps q hq' with h1 | h1
+          · exact Or.inl (mem_app_snoc h1)
+          · exact Or.inr h1
+        · exact Or.inl (List.mem_append.mpr (Or.inr (List.mem_append.mpr
+            (Or.inr hq'))))
+    · exfalso
+      rw [hl] at hnew
+      simp [send_packets] at hnew
+  · -- request_vote: re-play; the reply is a RequestVoteReply
+    intro xs p ys net st' ps' d m t cid lli llt hrv hbody hP _hreach hpkts
+      hst hps
+    intro p0 t0 es0 hp0 hbody0
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnew
+    · obtain ⟨net₀, pli', plt', ci', n', hreach₀, hst₀, hpk₀⟩ :=
+        hP p0 t0 es0 (by rw [hpkts]; exact mem_of_mem_remove_middle hold)
+          hbody0
+      refine ⟨⟨ps' ++ [⟨p0.pDst, p0.pSrc,
+        .AppendEntries t0 n' pli' plt' es0 ci'⟩], st'⟩,
+        pli', plt', ci', n', ?_, rfl, rfl⟩
+      refine raft_intermediate_reachable.RIR_handleMessage p net₀ xs
+        (ys ++ [⟨p0.pDst, p0.pSrc,
+          .AppendEntries t0 n' pli' plt' es0 ci'⟩]) st' _ d
+        [(p.pSrc, m)] hreach₀ ?_ ?_ ?_ ?_
+      · show handleMessage p.pSrc p.pDst p.pBody (net₀.nwState p.pDst)
+          = (d, [(p.pSrc, m)])
+        rw [hst₀]
+        unfold handleMessage
+        rw [hbody]
+        simp only []
+        rw [hrv]
+      · rw [hpk₀, hpkts, List.append_assoc, List.cons_append]
+      · intro h'
+        rw [hst₀]
+        exact hst h'
+      · intro q hq
+        rcases List.mem_append.mp hq with hq' | hq'
+        · rcases hps q hq' with h1 | h1
+          · exact Or.inl (mem_app_snoc h1)
+          · right
+            show q ∈ [(⟨p.pDst, p.pSrc, m⟩ :
+              Packet (raft_base_params (P := P)) raft_multi_params)]
+            rw [h1]
+            exact List.mem_cons_self ..
+        · exact Or.inl (List.mem_append.mpr (Or.inr (List.mem_append.mpr
+            (Or.inr hq'))))
+    · exfalso
+      obtain ⟨t'', v'', hmshape⟩ := handleRequestVote_reply_shape p.pDst
+        (net.nwState p.pDst) t p.pSrc lli llt hrv
+      rw [hnew] at hbody0
+      replace hbody0 : m = msg.AppendEntriesReply t0 es0 true := hbody0
+      rw [hmshape] at hbody0
+      exact nomatch hbody0
+  · -- request_vote_reply: re-play; nothing is sent
+    intro xs p ys net st' ps' d t v hrvr hbody hP _hreach hpkts hst hps
+    intro p0 t0 es0 hp0 hbody0
+    replace hp0 : p0 ∈ ps' := hp0
+    obtain ⟨net₀, pli', plt', ci', n', hreach₀, hst₀, hpk₀⟩ :=
+      hP p0 t0 es0
+        (by rw [hpkts]; exact mem_of_mem_remove_middle (hps p0 hp0)) hbody0
+    refine ⟨⟨ps' ++ [⟨p0.pDst, p0.pSrc,
+      .AppendEntries t0 n' pli' plt' es0 ci'⟩], st'⟩,
+      pli', plt', ci', n', ?_, rfl, rfl⟩
+    refine raft_intermediate_reachable.RIR_handleMessage p net₀ xs
+      (ys ++ [⟨p0.pDst, p0.pSrc,
+        .AppendEntries t0 n' pli' plt' es0 ci'⟩]) st' _ d [] hreach₀
+      ?_ ?_ ?_ ?_
+    · show handleMessage p.pSrc p.pDst p.pBody (net₀.nwState p.pDst)
+        = (d, [])
+      rw [hst₀]
+      unfold handleMessage
+      rw [hbody]
+      simp only []
+      rw [hrvr]
+    · rw [hpk₀, hpkts, List.append_assoc, List.cons_append]
+    · intro h'
+      rw [hst₀]
+      exact hst h'
+    · intro q hq
+      rcases List.mem_append.mp hq with hq' | hq'
+      · exact Or.inl (mem_app_snoc (hps q hq'))
+      · exact Or.inl (List.mem_append.mpr (Or.inr (List.mem_append.mpr
+          (Or.inr hq'))))
+  · -- do_leader: re-play; fresh messages are AppendEntries, not replies
+    intro net st' ps' d h os d' ms hdl hP _hreach hstate hst hps
+    intro p0 t0 es0 hp0 hbody0
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnew
+    · obtain ⟨net₀, pli', plt', ci', n', hreach₀, hst₀, hpk₀⟩ :=
+        hP p0 t0 es0 hold hbody0
+      refine ⟨⟨ps' ++ [⟨p0.pDst, p0.pSrc,
+        .AppendEntries t0 n' pli' plt' es0 ci'⟩], st'⟩,
+        pli', plt', ci', n', ?_, rfl, rfl⟩
+      refine raft_intermediate_reachable.RIR_doLeader net₀ st' _ h os d' ms
+        hreach₀ ?_ ?_ ?_
+      · show doLeader (net₀.nwState h) h = (os, d', ms)
+        rw [hst₀, hstate]
+        exact hdl
+      · intro h'
+        rw [hst₀]
+        exact hst h'
+      · intro q hq
+        rcases List.mem_append.mp hq with hq' | hq'
+        · rcases hps q hq' with h1 | h1
+          · exact Or.inl (by rw [hpk₀]; exact List.mem_append.mpr (Or.inl h1))
+          · exact Or.inr h1
+        · exact Or.inl (by
+            rw [hpk₀]
+            exact List.mem_append.mpr (Or.inr hq'))
+    · exfalso
+      obtain ⟨m0, hm0, rfl⟩ := List.mem_map.mp hnew
+      obtain ⟨t3, l3, p3, p4, e3, c3, hq2⟩ := (doLeader_spec d h hdl).2.2.2.2.2
+        m0 hm0
+      replace hbody0 : m0.2 = msg.AppendEntriesReply t0 es0 true := hbody0
+      rw [hq2] at hbody0
+      exact nomatch hbody0
+  · -- do_generic_server: re-play; nothing is sent
+    intro net st' ps' d os d' ms h hgs hP _hreach hstate hst hps
+    intro p0 t0 es0 hp0 hbody0
+    replace hp0 : p0 ∈ ps' := hp0
+    obtain ⟨-, -, -, -, -, hms⟩ := doGenericServer_spec h d hgs
+    rcases hps p0 hp0 with hold | hnew
+    · obtain ⟨net₀, pli', plt', ci', n', hreach₀, hst₀, hpk₀⟩ :=
+        hP p0 t0 es0 hold hbody0
+      refine ⟨⟨ps' ++ [⟨p0.pDst, p0.pSrc,
+        .AppendEntries t0 n' pli' plt' es0 ci'⟩], st'⟩,
+        pli', plt', ci', n', ?_, rfl, rfl⟩
+      refine raft_intermediate_reachable.RIR_doGenericServer net₀ st' _ os
+        d' ms h hreach₀ ?_ ?_ ?_
+      · show doGenericServer h (net₀.nwState h) = (os, d', ms)
+        rw [hst₀, hstate]
+        exact hgs
+      · intro h'
+        rw [hst₀]
+        exact hst h'
+      · intro q hq
+        rcases List.mem_append.mp hq with hq' | hq'
+        · rcases hps q hq' with h1 | h1
+          · exact Or.inl (by rw [hpk₀]; exact List.mem_append.mpr (Or.inl h1))
+          · exact Or.inr h1
+        · exact Or.inl (by
+            rw [hpk₀]
+            exact List.mem_append.mpr (Or.inr hq'))
+    · exfalso
+      rw [hms] at hnew
+      simp [send_packets] at hnew
+  · -- state_same_packet_subset: dup/drop to the survivor set
+    intro net net'' hstates hsub hP _hreach
+    intro p0 t0 es0 hp0 hbody0
+    obtain ⟨net₀, pli', plt', ci', n', hreach₀, hst₀, hpk₀⟩ :=
+      hP p0 t0 es0 (hsub p0 hp0) hbody0
+    refine ⟨⟨net''.nwPackets ++ [⟨p0.pDst, p0.pSrc,
+      .AppendEntries t0 n' pli' plt' es0 ci'⟩], net₀.nwState⟩,
+      pli', plt', ci', n', ?_, ?_, rfl⟩
+    · refine subset_reachable _ ?_ hreach₀
+      intro q hq
+      rw [hpk₀]
+      rcases List.mem_append.mp hq with h1 | h1
+      · exact List.mem_append.mpr (Or.inl (hsub q h1))
+      · exact List.mem_append.mpr (Or.inr h1)
+    · rw [hst₀]
+      exact funext hstates
+  · -- reboot: the crash-and-return re-step
+    intro net net'' d h d' hrb hP _hreach hstate hst hpkts
+    intro p0 t0 es0 hp0 hbody0
+    obtain ⟨net₀, pli', plt', ci', n', hreach₀, hst₀, hpk₀⟩ :=
+      hP p0 t0 es0 (by rw [hpkts]; exact hp0) hbody0
+    refine ⟨⟨net₀.nwPackets,
+      update net₀.nwState h (reboot (net₀.nwState h))⟩,
+      pli', plt', ci', n', ?_, ?_, ?_⟩
+    · exact raft_intermediate_reachable.RIR_step_failure [h] net₀
+        (removeAll h [h]) _ [] hreach₀
+        (step_failure.StepFailure_reboot h net₀ _ [h] _
+          (List.mem_cons_self ..) rfl rfl)
+    · show update net₀.nwState h (reboot (net₀.nwState h)) = net''.nwState
+      rw [hst₀, hstate, hrb]
+      exact (funext hst).symm
+    · show net₀.nwPackets = net''.nwPackets ++ _
+      rw [hpk₀, hpkts]
+
 end AppendEntriesChain
 
 end Raft
