@@ -530,6 +530,356 @@ private theorem mia_reboot :
     · rw [update_neq _ _ heq] at hct hin hty
       exact htransport p.pSrc t e (hP2 p t es e hp hbody hct hin hterm hle hty)
 
+/-- `MatchIndexAllEntriesProof.v:133-210`
+(`match_index_all_entries_client_request`). -/
+private theorem mia_client_request :
+    refined_raft_net_invariant_client_request (P := P)
+      match_index_all_entries_inv := by
+  intro h net st' ps' gd out d l client id c hcr hgd hP hreach hst hps
+  obtain ⟨hP1, hP2⟩ := hP
+  obtain ⟨htyeq, hcteq, -, -, hl⟩ :=
+    handleClientRequest_spec h (net.nwState h).2 client id c hcr
+  have hmi := handleClientRequest_matchIndex h (net.nwState h).2 client id
+    c hcr
+  have hlogf := handleClientRequest_log_full h (net.nwState h).2 client id
+    c hcr
+  have hgrow : ∀ (t0 : term) (e0 : entry (P := P)),
+      (t0, e0) ∈ (net.nwState h).1.allEntries → (t0, e0) ∈ gd.allEntries := by
+    intro t0 e0 hin
+    rw [hgd]
+    rcases update_elections_data_client_request_allEntries_cases h
+      (net.nwState h) client id c with hsame | ⟨t1, e1, hcons, -⟩
+    · rw [hsame]
+      exact hin
+    · rw [hcons]
+      exact List.mem_cons_of_mem _ hin
+  constructor
+  · -- host half
+    intro e leader h0 hty hle hin hterm
+    replace hty : (st' leader).2.type = .Leader := hty
+    replace hle : e.eIndex ≤ assoc_default (st' leader).2.matchIndex h0 0 := hle
+    replace hin : e ∈ (st' leader).2.log := hin
+    replace hterm : e.eTerm = (st' leader).2.currentTerm := hterm
+    rw [hst leader] at hty hle hin hterm
+    show (e.eTerm, e) ∈ (st' h0).1.allEntries
+    by_cases heq : leader = h
+    · rw [heq, update_same] at hty hle hin hterm
+      replace hty : d.type = .Leader := hty
+      replace hle : e.eIndex ≤ assoc_default d.matchIndex h0 0 := hle
+      replace hin : e ∈ d.log := hin
+      replace hterm : e.eTerm = d.currentTerm := hterm
+      rcases hlogf with ⟨htyL, hlog⟩ | ⟨htyN, -⟩
+      · -- the leader appends its fresh entry
+        rcases hmi with ⟨hmax, -⟩ | ⟨hmiset, -⟩
+        · -- maxIndex-unchanged arm is impossible beside the append
+          exfalso
+          rw [hlog] at hmax
+          replace hmax : maxIndex (net.nwState h).2.log + 1
+              = maxIndex (net.nwState h).2.log := hmax
+          exact Nat.succ_ne_self _ hmax
+        · rw [hmiset] at hle
+          rw [hlog] at hin
+          by_cases hh0 : h0 = h
+          · rw [hh0, assoc_set_same_default] at hle
+            rcases List.mem_cons.mp hin with heqe | hin0
+            · -- the fresh entry's own record
+              rw [hst h0, hh0, update_same]
+              show (e.eTerm, e) ∈ gd.allEntries
+              rw [hgd, update_elections_data_client_request_allEntries_append
+                h (net.nwState h) client id c hcr hlog]
+              rw [hterm, heqe]
+              exact List.mem_cons_self ..
+            · -- an old entry below the leader's own maxIndex slot
+              refine mia_allEntries_grow hst hgrow ?_
+              have hsorted := entries_sorted_invariant net hreach h
+              have hle0 : e.eIndex ≤
+                  assoc_default (net.nwState h).2.matchIndex h 0 := by
+                rw [lifted_match_index_leader hreach h htyL]
+                exact maxIndex_is_max hsorted hin0
+              rw [hh0]
+              exact hP1 e h h htyL hle0 hin0 (hcteq ▸ hterm)
+          · rw [assoc_set_diff_default _ _ _ _ _ hh0] at hle
+            rcases List.mem_cons.mp hin with rfl | hin0
+            · -- the fresh entry sits above every other slot's estimate
+              exfalso
+              have hsan := lifted_match_index_sanity hreach h h0 htyL
+              replace hle : maxIndex (net.nwState h).2.log + 1 ≤
+                  assoc_default (net.nwState h).2.matchIndex h0 0 := hle
+              exact Nat.not_succ_le_self _ (Nat.le_trans hle hsan)
+            · refine mia_allEntries_grow hst hgrow ?_
+              exact hP1 e h h0 htyL hle hin0 (hcteq ▸ hterm)
+      · -- not a leader: no append, but then the post-type is not Leader
+        exfalso
+        rw [htyeq] at hty
+        exact htyN hty
+    · rw [update_neq _ _ heq] at hty hle hin hterm
+      exact mia_allEntries_grow hst hgrow (hP1 e leader h0 hty hle hin hterm)
+  · -- nw half: no packets are sent
+    intro p0 t0 es e hp0 hbody hct hin hterm hle hty
+    replace hp0 : p0 ∈ ps' := hp0
+    replace hct : (st' p0.pDst).2.currentTerm = t0 := hct
+    replace hin : e ∈ (st' p0.pDst).2.log := hin
+    replace hty : (st' p0.pDst).2.type = .Leader := hty
+    rw [hst p0.pDst] at hct hin hty
+    show (t0, e) ∈ (st' p0.pSrc).1.allEntries
+    have hold : p0 ∈ net.nwPackets := by
+      rcases hps p0 hp0 with h1 | h1
+      · exact h1
+      · exfalso
+        rw [hl] at h1
+        simp [send_packets] at h1
+    refine mia_allEntries_grow hst hgrow ?_
+    by_cases heq : p0.pDst = h
+    · rw [heq, update_same] at hct hin hty
+      replace hct : d.currentTerm = t0 := hct
+      replace hin : e ∈ d.log := hin
+      replace hty : d.type = .Leader := hty
+      have hct' : (net.nwState p0.pDst).2.currentTerm = t0 := by
+        rw [heq, ← hcteq]; exact hct
+      have hty' : (net.nwState p0.pDst).2.type = .Leader := by
+        rw [heq, ← htyeq]; exact hty
+      rcases hlogf with ⟨htyL, hlog⟩ | ⟨-, hds⟩
+      · rw [hlog] at hin
+        rcases List.mem_cons.mp hin with rfl | hin0
+        · -- the fresh head cannot sit below an in-flight true reply's max
+          exfalso
+          have hesne : es ≠ [] := by
+            intro hnil
+            rw [hnil] at hle
+            replace hle : maxIndex (net.nwState h).2.log + 1 ≤ 0 := hle
+            exact Nat.not_succ_le_zero _ hle
+          obtain ⟨x, hx, hxi, -⟩ := maxIndex_non_empty hesne
+          have hxlog : x ∈ (net.nwState h).2.log := by
+            have := lifted_append_entries_reply_sublog hreach hold hbody
+              hct' hty' hx
+            rw [heq] at this
+            exact this
+          have hxle : x.eIndex ≤ maxIndex (net.nwState h).2.log :=
+            maxIndex_is_max (entries_sorted_invariant net hreach h) hxlog
+          rw [hxi] at hxle
+          replace hle : maxIndex (net.nwState h).2.log + 1 ≤ maxIndex es := hle
+          exact Nat.not_succ_le_self _ (Nat.le_trans hle hxle)
+        · have hin' : e ∈ (net.nwState p0.pDst).2.log := by
+            rw [heq]; exact hin0
+          exact hP2 p0 t0 es e hold hbody hct' hin' hterm hle hty'
+      · rw [hds] at hin
+        have hin' : e ∈ (net.nwState p0.pDst).2.log := by
+          rw [heq]; exact hin
+        exact hP2 p0 t0 es e hold hbody hct' hin' hterm hle hty'
+    · rw [update_neq _ _ heq] at hct hin hty
+      exact hP2 p0 t0 es e hold hbody hct hin hterm hle hty
+
+/-- `MatchIndexAllEntriesProof.v:640-699`
+(`match_index_all_entries_append_entries_reply`). -/
+private theorem mia_append_entries_reply :
+    refined_raft_net_invariant_append_entries_reply (P := P)
+      match_index_all_entries_inv := by
+  intro xs p ys net st' ps' gd d m t es res haer hgd hbody hP hreach
+    hpkts hst hps
+  obtain ⟨hP1, hP2⟩ := hP
+  obtain ⟨-, harms, hl⟩ := handleAppendEntriesReply_spec p.pDst
+    (net.nwState p.pDst).2 p.pSrc t es res haer
+  have hlogeq := handleAppendEntriesReply_log p.pDst
+    (net.nwState p.pDst).2 p.pSrc t es res haer
+  have hp_in : p ∈ net.nwPackets := by
+    rw [hpkts]
+    exact List.mem_append.mpr (Or.inr (List.mem_cons_self ..))
+  have hgrow : ∀ (t0 : term) (e0 : entry (P := P)),
+      (t0, e0) ∈ (net.nwState p.pDst).1.allEntries →
+      (t0, e0) ∈ gd.allEntries := by
+    intro t0 e0 hin
+    rw [hgd]
+    exact hin
+  constructor
+  · -- host half
+    intro e leader h0 hty hle hin hterm
+    replace hty : (st' leader).2.type = .Leader := hty
+    replace hle : e.eIndex ≤ assoc_default (st' leader).2.matchIndex h0 0 := hle
+    replace hin : e ∈ (st' leader).2.log := hin
+    replace hterm : e.eTerm = (st' leader).2.currentTerm := hterm
+    rw [hst leader] at hty hle hin hterm
+    show (e.eTerm, e) ∈ (st' h0).1.allEntries
+    refine mia_allEntries_grow hst hgrow ?_
+    by_cases heq : leader = p.pDst
+    · rw [heq, update_same] at hty hle hin hterm
+      replace hty : d.type = .Leader := hty
+      replace hle : e.eIndex ≤ assoc_default d.matchIndex h0 0 := hle
+      replace hin : e ∈ d.log := hin
+      replace hterm : e.eTerm = d.currentTerm := hterm
+      rcases harms with ⟨hcteq, -, htyeq⟩ | ⟨-, -, htyf⟩
+      · obtain ⟨htyeq', -, hmi⟩ := handleAppendEntriesReply_matchIndex
+          p.pDst (net.nwState p.pDst).2 p.pSrc t es res haer hty
+        have htyL : (net.nwState p.pDst).2.type = .Leader := by
+          rw [htyeq']; exact hty
+        rw [hlogeq] at hin
+        rw [hcteq] at hterm
+        rcases hmi with hmieq | ⟨hres, hctt, hmiset⟩
+        · rw [hmieq] at hle
+          exact hP1 e p.pDst h0 htyL hle hin hterm
+        · rw [hmiset] at hle
+          by_cases hh0 : h0 = p.pSrc
+          · rw [hh0, assoc_set_same_default] at hle
+            rcases le_max_elim hle with hle1 | hle2
+            · rw [hh0]
+              exact hP1 e p.pDst p.pSrc htyL hle1 hin hterm
+            · -- the bumped slot: the consumed true reply certifies e
+              subst hres
+              have hres' := hP2 p t es e hp_in hbody hctt hin
+                (by rw [hterm]; exact hctt) hle2 htyL
+              rw [hh0, hterm, hctt]
+              exact hres'
+          · rw [assoc_set_diff_default _ _ _ _ _ hh0] at hle
+            exact hP1 e p.pDst h0 htyL hle hin hterm
+      · rw [htyf] at hty
+        exact nomatch hty
+    · rw [update_neq _ _ heq] at hty hle hin hterm
+      exact hP1 e leader h0 hty hle hin hterm
+  · -- nw half: no sends
+    intro p0 t0 es0 e hp0 hbody0 hct hin hterm hle hty
+    replace hp0 : p0 ∈ ps' := hp0
+    replace hct : (st' p0.pDst).2.currentTerm = t0 := hct
+    replace hin : e ∈ (st' p0.pDst).2.log := hin
+    replace hty : (st' p0.pDst).2.type = .Leader := hty
+    rw [hst p0.pDst] at hct hin hty
+    show (t0, e) ∈ (st' p0.pSrc).1.allEntries
+    have hold : p0 ∈ net.nwPackets := by
+      rcases hps p0 hp0 with h1 | h1
+      · rw [hpkts]
+        exact mem_of_mem_remove_middle h1
+      · exfalso
+        rw [hl] at h1
+        simp [send_packets] at h1
+    refine mia_allEntries_grow hst hgrow ?_
+    by_cases heq : p0.pDst = p.pDst
+    · rw [heq, update_same] at hct hin hty
+      replace hct : d.currentTerm = t0 := hct
+      replace hin : e ∈ d.log := hin
+      replace hty : d.type = .Leader := hty
+      rcases harms with ⟨hcteq, -, htyeq⟩ | ⟨-, -, htyf⟩
+      · have hct' : (net.nwState p0.pDst).2.currentTerm = t0 := by
+          rw [heq, ← hcteq]; exact hct
+        have hin' : e ∈ (net.nwState p0.pDst).2.log := by
+          rw [heq, ← hlogeq]; exact hin
+        have hty' : (net.nwState p0.pDst).2.type = .Leader := by
+          rw [heq, ← htyeq]; exact hty
+        exact hP2 p0 t0 es0 e hold hbody0 hct' hin' hterm hle hty'
+      · rw [htyf] at hty
+        exact nomatch hty
+    · rw [update_neq _ _ heq] at hct hin hty
+      exact hP2 p0 t0 es0 e hold hbody0 hct hin hterm hle hty
+
+/-- `MatchIndexAllEntriesProof.v:823-913`
+(`match_index_all_entries_request_vote_reply`). -/
+private theorem mia_request_vote_reply :
+    refined_raft_net_invariant_request_vote_reply (P := P)
+      match_index_all_entries_inv := by
+  intro xs p ys net st' ps' gd d t v hrvr hgd hbody hP hreach hpkts hst hps
+  obtain ⟨hP1, hP2⟩ := hP
+  obtain ⟨-, -, -, hleader⟩ := handleRequestVoteReply_spec p.pDst
+    (net.nwState p.pDst).2 p.pSrc t v hrvr
+  have hlogeq : d.log = (net.nwState p.pDst).2.log := by
+    rw [← hrvr]
+    exact handleRequestVoteReply_log p.pDst (net.nwState p.pDst).2 p.pSrc t v
+  have hp_in : p ∈ net.nwPackets := by
+    rw [hpkts]
+    exact List.mem_append.mpr (Or.inr (List.mem_cons_self ..))
+  have hgrow : ∀ (t0 : term) (e0 : entry (P := P)),
+      (t0, e0) ∈ (net.nwState p.pDst).1.allEntries →
+      (t0, e0) ∈ gd.allEntries := by
+    intro t0 e0 hin
+    rw [hgd, (update_elections_data_requestVoteReply_votes p.pDst p.pSrc t
+      v (net.nwState p.pDst)).2.2]
+    exact hin
+  constructor
+  · -- host half
+    intro e leader h0 hty hle hin hterm
+    replace hty : (st' leader).2.type = .Leader := hty
+    replace hle : e.eIndex ≤ assoc_default (st' leader).2.matchIndex h0 0 := hle
+    replace hin : e ∈ (st' leader).2.log := hin
+    replace hterm : e.eTerm = (st' leader).2.currentTerm := hterm
+    rw [hst leader] at hty hle hin hterm
+    show (e.eTerm, e) ∈ (st' h0).1.allEntries
+    by_cases heq : leader = p.pDst
+    · rw [heq, update_same] at hty hle hin hterm
+      replace hty : d.type = .Leader := hty
+      replace hle : e.eIndex ≤ assoc_default d.matchIndex h0 0 := hle
+      replace hin : e ∈ d.log := hin
+      replace hterm : e.eTerm = d.currentTerm := hterm
+      rcases hleader hty with hds | ⟨htyC, -, hcteq⟩
+      · rw [hds] at hty hle hin hterm
+        exact mia_allEntries_grow hst hgrow
+          (hP1 e p.pDst h0 hty hle hin hterm)
+      · -- fresh win: matchIndex reset to the leader's own maxIndex slot
+        rcases handleRequestVoteReply_matchIndex p.pDst
+            (net.nwState p.pDst).2 p.pSrc t v hrvr hty with ⟨htyL, -⟩ | hmiset
+        · rw [htyL] at htyC
+          exact nomatch htyC
+        · rw [hmiset] at hle
+          rw [hlogeq] at hin
+          rw [hcteq] at hterm
+          by_cases hh0 : h0 = p.pDst
+          · -- the leader's own slot: log_all_entries at the pre-state
+            refine mia_allEntries_grow hst hgrow ?_
+            rw [hh0]
+            exact log_all_entries_invariant net hreach p.pDst e hin hterm
+          · -- any other slot's estimate is the empty map's default 0
+            exfalso
+            rw [assoc_set_diff_default _ _ _ _ _ hh0] at hle
+            replace hle : e.eIndex ≤ 0 := hle
+            have hgt := entries_gt_0_invariant net hreach p.pDst e hin
+            exact Nat.not_succ_le_zero _ (Nat.le_trans hgt hle)
+    · rw [update_neq _ _ heq] at hty hle hin hterm
+      exact mia_allEntries_grow hst hgrow (hP1 e leader h0 hty hle hin hterm)
+  · -- nw half: no sends
+    intro p0 t0 es0 e hp0 hbody0 hct hin hterm hle hty
+    replace hp0 : p0 ∈ ps' := hp0
+    replace hct : (st' p0.pDst).2.currentTerm = t0 := hct
+    replace hin : e ∈ (st' p0.pDst).2.log := hin
+    replace hty : (st' p0.pDst).2.type = .Leader := hty
+    rw [hst p0.pDst] at hct hin hty
+    show (t0, e) ∈ (st' p0.pSrc).1.allEntries
+    have hold : p0 ∈ net.nwPackets := by
+      rw [hpkts]
+      exact mem_of_mem_remove_middle (hps p0 hp0)
+    refine mia_allEntries_grow hst hgrow ?_
+    by_cases heq : p0.pDst = p.pDst
+    · rw [heq, update_same] at hct hin hty
+      replace hct : d.currentTerm = t0 := hct
+      replace hin : e ∈ d.log := hin
+      replace hty : d.type = .Leader := hty
+      rcases hleader hty with hds | ⟨htyC, -, hcteq⟩
+      · rw [hds] at hct hin hty
+        have hct' : (net.nwState p0.pDst).2.currentTerm = t0 := by
+          rw [heq]; exact hct
+        have hin' : e ∈ (net.nwState p0.pDst).2.log := by
+          rw [heq]; exact hin
+        have hty' : (net.nwState p0.pDst).2.type = .Leader := by
+          rw [heq]; exact hty
+        exact hP2 p0 t0 es0 e hold hbody0 hct' hin' hterm hle hty'
+      · -- a candidate winning the election with a same-term true
+        -- AppendEntriesReply in flight against its own log is refuted by
+        -- the candidate-entries lattice (upstream :880-897)
+        exfalso
+        obtain ⟨-, hv, hteq, -, hvr, -, hwon⟩ :=
+          handleRequestVoteReply_leader_transition p.pDst
+            (net.nwState p.pDst).2 p.pSrc t v hrvr
+            (by rw [htyC]; intro hc; exact nomatch hc) hty
+        rw [hlogeq] at hin
+        have hce : candidateEntries e net.nwState :=
+          (candidate_entries_invariant net hreach).1 p.pDst e hin
+        have hterm_ct : (net.nwState p.pDst).2.currentTerm = e.eTerm := by
+          rw [hterm, ← hct, hcteq]
+        refine wonElection_candidateEntries_rvr
+          (votes_correct_invariant net hreach)
+          (cronies_correct_invariant net hreach) hce hp_in ?_ hterm_ct ?_
+          htyC
+        · rw [hbody, hv]
+          show msg.RequestVoteReply t true = _
+          rw [← hteq, hterm_ct]
+        · exact hwon
+    · rw [update_neq _ _ heq] at hct hin hty
+      exact hP2 p0 t0 es0 e hold hbody0 hct hin hterm hle hty
+
 end MatchIndexAllEntries
 
 end Raft
