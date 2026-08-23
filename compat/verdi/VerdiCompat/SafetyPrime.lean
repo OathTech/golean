@@ -217,6 +217,203 @@ theorem no_append_entries_to_leader_invariant :
   exact no_append_entries_to_leader_refined rnet hR q t n pli plt es ci
     hq hbody hty hct
 
+/-! ## match_index_leader (`Raft/MatchIndexLeaderInterface.v`, BASE) -/
+
+/-- `MatchIndexLeaderInterface.v:8-13` (`match_index_leader`): a
+leader's own matchIndex slot is exactly its maxIndex. -/
+def match_index_leader (net : RaftNet) : Prop :=
+  ∀ leader : name (P := P),
+    (net.nwState leader).type = .Leader →
+    assoc_default (net.nwState leader).matchIndex leader 0 =
+      maxIndex (net.nwState leader).log
+
+/-- The transport (upstream's per-case `matchIndex_preserved`
+rewriting, factored as in slice 69). -/
+theorem match_index_leader_of_update {net : RaftNet}
+    {ps' : List (Packet (raft_base_params (P := P)) raft_multi_params)}
+    {st' : name (P := P) → raft_data (P := P)} {u : name (P := P)}
+    {d : raft_data (P := P)}
+    (hP : match_index_leader net)
+    (hst : ∀ h', st' h' = update net.nwState u d h')
+    (hd : d.type = .Leader →
+      (net.nwState u).type = .Leader ∧
+      d.matchIndex = (net.nwState u).matchIndex ∧
+      d.log = (net.nwState u).log) :
+    match_index_leader (⟨ps', st'⟩ : RaftNet) := by
+  intro leader hty
+  replace hty : (st' leader).type = .Leader := hty
+  show assoc_default (st' leader).matchIndex leader 0 =
+    maxIndex (st' leader).log
+  rw [hst leader]
+  rw [hst leader] at hty
+  by_cases heq : leader = u
+  · rw [heq, update_same] at hty ⊢
+    obtain ⟨hty0, hmi, hlog⟩ := hd hty
+    rw [hmi, hlog]
+    exact hP u hty0
+  · rw [update_neq _ _ heq] at hty ⊢
+    exact hP leader hty
+
+/-- `MatchIndexLeaderProof.v:120-146` (`match_index_leader_invariant`,
+BASE): the client-request and election cases re-establish the equality
+outright; the append-entries-reply case rides
+`no_append_entries_replies_to_self` — the reply's sender slot is never
+the leader's own. -/
+theorem match_index_leader_invariant :
+    ∀ net, raft_intermediate_reachable (P := P) net →
+      match_index_leader net := by
+  refine raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · -- init
+    intro leader hty
+    exact nomatch hty
+  · -- client_request: the fresh entry's index is recorded at the own slot
+    intro h net st' ps' out d l client id c hcr hP _hreach hst _hps
+    obtain ⟨htyd, -, -, -, -⟩ :=
+      handleClientRequest_spec h (net.nwState h) client id c hcr
+    intro leader hty
+    replace hty : (st' leader).type = .Leader := hty
+    show assoc_default (st' leader).matchIndex leader 0 =
+      maxIndex (st' leader).log
+    rw [hst leader]
+    rw [hst leader] at hty
+    by_cases heq : leader = h
+    · rw [heq, update_same] at hty ⊢
+      replace hty : d.type = .Leader := hty
+      have hty0 : (net.nwState h).type = .Leader := by
+        rw [← htyd]
+        exact hty
+      rcases handleClientRequest_matchIndex h (net.nwState h) client id c
+        hcr with ⟨hmax, hmi⟩ | ⟨hmi, -⟩
+      · rw [hmi, hmax]
+        exact hP h hty0
+      · rw [hmi, assoc_set_same_default]
+    · rw [update_neq _ _ heq] at hty ⊢
+      exact hP leader hty
+  · -- timeout
+    intro net h st' ps' out d l hto hP _hreach hst _hps
+    obtain ⟨hlog, hbr, -⟩ := handleTimeout_spec h (net.nwState h) hto
+    refine match_index_leader_of_update hP hst ?_
+    intro htyl
+    rcases hbr with ⟨-, hty, -, -⟩ | ⟨-, hty, -, -, -⟩
+    · rw [hty] at htyl
+      exact ⟨htyl, handleTimeout_matchIndex h (net.nwState h) hto, hlog⟩
+    · rw [hty] at htyl
+      exact nomatch htyl
+  · -- append_entries: a standing leader rejected
+    intro xs p ys net st' ps' d m t n0 pli plt es ci hae _hbody hP _hreach
+      _hpkts hst _hps
+    refine match_index_leader_of_update hP hst ?_
+    intro htyl
+    have hd : d = net.nwState p.pDst :=
+      handleAppendEntries_reject_of_not_follower p.pDst (net.nwState p.pDst)
+        t n0 pli plt es ci hae (by rw [htyl]; exact fun heq => nomatch heq)
+    rw [hd]
+    exact ⟨by rw [← hd]; exact htyl, rfl, rfl⟩
+  · -- append_entries_reply: the bumped slot is never the leader's own
+    intro xs p ys net st' ps' d m t es res haer hbody hP hreach hpkts hst
+      _hps
+    have hp_in : p ∈ net.nwPackets := by
+      rw [hpkts]
+      exact List.mem_append.mpr (Or.inr (List.mem_cons_self ..))
+    intro leader hty
+    replace hty : (st' leader).type = .Leader := hty
+    show assoc_default (st' leader).matchIndex leader 0 =
+      maxIndex (st' leader).log
+    rw [hst leader]
+    rw [hst leader] at hty
+    by_cases heq : leader = p.pDst
+    · rw [heq, update_same] at hty ⊢
+      replace hty : d.type = .Leader := hty
+      obtain ⟨htyeq, hlogd, hcases⟩ := handleAppendEntriesReply_matchIndex
+        p.pDst (net.nwState p.pDst) p.pSrc t es res haer hty
+      have hty0 : (net.nwState p.pDst).type = .Leader := by
+        rw [htyeq]
+        exact hty
+      rw [hlogd]
+      rcases hcases with hsame | ⟨-, -, hset⟩
+      · rw [hsame]
+        exact hP p.pDst hty0
+      · rw [hset]
+        by_cases hsrc : p.pDst = p.pSrc
+        · exact absurd hsrc (fun hss =>
+            no_append_entries_replies_to_self_invariant net hreach p t es
+              res hp_in hbody hss)
+        · rw [assoc_set_diff_default _ _ _ _ _ hsrc]
+          exact hP p.pDst hty0
+    · rw [update_neq _ _ heq] at hty ⊢
+      exact hP leader hty
+  · -- request_vote
+    intro xs p ys net st' ps' d m t cid lli llt hrv _hbody hP _hreach
+      _hpkts hst _hps
+    obtain ⟨-, -, hbr, -⟩ :=
+      handleRequestVote_spec p.pDst (net.nwState p.pDst) t p.pSrc lli llt
+        hrv
+    refine match_index_leader_of_update hP hst ?_
+    intro htyl
+    rcases hbr with ⟨-, hty⟩ | hty
+    · rw [hty] at htyl
+      exact ⟨htyl,
+        handleRequestVote_matchIndex p.pDst (net.nwState p.pDst) t p.pSrc
+          lli llt hrv,
+        handleRequestVote_log p.pDst (net.nwState p.pDst) t p.pSrc lli llt
+          hrv⟩
+    · have : serverType.Follower = .Leader := hty.symm.trans htyl
+      exact nomatch this
+  · -- request_vote_reply: a fresh win records its own maxIndex
+    intro xs p ys net st' ps' d t v hrvr _hbody hP _hreach _hpkts hst _hps
+    have hlogd : d.log = (net.nwState p.pDst).log := by
+      rw [← hrvr]
+      exact handleRequestVoteReply_log p.pDst (net.nwState p.pDst) p.pSrc
+        t v
+    intro leader hty
+    replace hty : (st' leader).type = .Leader := hty
+    show assoc_default (st' leader).matchIndex leader 0 =
+      maxIndex (st' leader).log
+    rw [hst leader]
+    rw [hst leader] at hty
+    by_cases heq : leader = p.pDst
+    · rw [heq, update_same] at hty ⊢
+      replace hty : d.type = .Leader := hty
+      rcases handleRequestVoteReply_matchIndex p.pDst (net.nwState p.pDst)
+        p.pSrc t v hrvr hty with ⟨hty0, hmi⟩ | hmi
+      · rw [hmi, hlogd]
+        exact hP p.pDst hty0
+      · rw [hmi, hlogd, assoc_set_same_default]
+    · rw [update_neq _ _ heq] at hty ⊢
+      exact hP leader hty
+  · -- do_leader
+    intro net st' ps' d h os d' ms hdl hP _hreach hstate hst _hps
+    obtain ⟨-, -, hty, -, hlog, -⟩ := doLeader_spec d h hdl
+    refine match_index_leader_of_update hP hst ?_
+    intro htyl
+    rw [hty] at htyl
+    refine ⟨by rw [hstate]; exact htyl, ?_, ?_⟩
+    · rw [doLeader_matchIndex d h hdl, hstate]
+    · rw [hlog, hstate]
+  · -- do_generic_server
+    intro net st' ps' d os d' ms h hgs hP _hreach hstate hst _hps
+    obtain ⟨hlog, hty, -, -, -, -⟩ := doGenericServer_spec h d hgs
+    refine match_index_leader_of_update hP hst ?_
+    intro htyl
+    rw [hty] at htyl
+    refine ⟨by rw [hstate]; exact htyl, ?_, ?_⟩
+    · rw [doGenericServer_matchIndex h d hgs, hstate]
+    · rw [hlog, hstate]
+  · -- state_same_packet_subset
+    intro net net' hstates _hpkts hP _hreach
+    intro leader hty
+    replace hty : (net'.nwState leader).type = .Leader := hty
+    show assoc_default (net'.nwState leader).matchIndex leader 0 =
+      maxIndex (net'.nwState leader).log
+    rw [← hstates leader] at hty ⊢
+    exact hP leader hty
+  · -- reboot: a rebooted node is a follower
+    intro net net' d h d' hrb hP _hreach hstate hst _hpkts
+    refine match_index_leader_of_update hP hst ?_
+    intro htyl
+    rw [← hrb] at htyl
+    exact nomatch htyl
+
 end SafetyPrime
 end Raft
 end VerdiCompat

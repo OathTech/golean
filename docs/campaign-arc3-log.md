@@ -2872,3 +2872,13 @@ wants it); context stop-rule stands.
   indentation class — restructured to `refine ?_`); the base AER/RV/RVR
   obligations carry an `hbody` premise the AE-only drafts of units past
   always had explicit — intro lists corrected. Build green.
+- 2026-08-23 Slice 76: `match_index_leader_invariant`
+  (MatchIndexLeaderInterface.v:8-13 / Proof.v:120-146 1:1, BASE) — a
+  leader's own matchIndex slot equals its maxIndex. Slice 69's
+  matchIndex case lemmas re-consumed wholesale (the promotion payoff):
+  client_request re-establishes via `assoc_set_same_default`, the AER
+  bumped slot is never the leader's own (`p.pDst = p.pSrc` dies on
+  slice 75's `no_append_entries_replies_to_self` over the consumed
+  reply — upstream's `matchIndex_preserved_except_at_host` dissolves
+  into `assoc_set_diff_default`), the RVR fresh win records its own
+  maxIndex. Build green.
