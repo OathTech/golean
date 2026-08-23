@@ -316,3 +316,28 @@ open Lean in
     throwError "AxCheck sweep FAILED — declarations with disallowed axioms \
       (sorryAx = a sorry; ofReduceBool = native_decide): \
       {bad.toList.map fun (n, ax) => s!"{n} ← {ax}"}"
+
+-- Milestone-audit fix round (2026-08-24, R3 S4): the ten INDEX-named
+-- invariants that had neither a curated pin nor a fifteen-probe slot
+-- join the curated set — the final-entry coverage sentence is now
+-- true by construction.
+/-- info: 'VerdiCompat.Raft.current_term_gt_zero_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Raft.current_term_gt_zero_invariant
+/-- info: 'VerdiCompat.Raft.requestVote_maxIndex_maxTerm_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Raft.requestVote_maxIndex_maxTerm_invariant
+/-- info: 'VerdiCompat.Raft.requestVoteReply_moreUpToDate_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Raft.requestVoteReply_moreUpToDate_invariant
+/-- info: 'VerdiCompat.Raft.requestVoteReply_term_sanity_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Raft.requestVoteReply_term_sanity_invariant
+/-- info: 'VerdiCompat.Raft.requestVote_term_sanity_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Raft.requestVote_term_sanity_invariant
+/-- info: 'VerdiCompat.Raft.terms_and_indices_from_one_log_and_nw_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Raft.terms_and_indices_from_one_log_and_nw_invariant
+/-- info: 'VerdiCompat.Raft.votedFor_term_sanity_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Raft.votedFor_term_sanity_invariant
+/-- info: 'VerdiCompat.Raft.votesReceived_moreUpToDate_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Raft.votesReceived_moreUpToDate_invariant
+/-- info: 'VerdiCompat.Raft.votes_votesWithLog_correspond_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Raft.votes_votesWithLog_correspond_invariant
+/-- info: 'VerdiCompat.Raft.votesWithLog_term_sanity_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Raft.votesWithLog_term_sanity_invariant

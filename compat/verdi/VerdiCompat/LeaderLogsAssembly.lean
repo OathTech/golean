@@ -46,7 +46,7 @@ local notation "RaftNet" => Network (raft_base_params (P := P)) raft_multi_param
 
 /-! ## Prefix (StructTact) and the interface statement -/
 
-/-- StructTact `ListUtil.v` (`Prefix`), the fixpoint form 1:1. -/
+/-- StructTact `Prefix.v:9-14` (`Prefix`; source cite corrected 2026-08-24, audit R1), the fixpoint form 1:1. -/
 def Prefix {α : Type _} : List α → List α → Prop
   | [], _ => True
   | _ :: _, [] => False
