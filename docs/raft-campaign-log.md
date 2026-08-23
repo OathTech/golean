@@ -433,6 +433,19 @@ is the §4.4 park-and-report condition, not an emergency.
   multiple units expected). Designation of any of these as headline
   remains [USER] (§3.2), queued with the rest.
 
+- **Arc 3, unit 11 — LANDED** @ 24dbbf97: **THE MSG-GHOST
+  FOUNDATION (GAP-2 consumed)** — MsgRefinement.lean 1,133 lines:
+  the vocabulary, the eleven obligation shapes,
+  msg_refined_raft_net_invariant (the new proof step = ghost-stage
+  reconciliation), the erasure transfer through all seven
+  step_failure legs, msg_lift_prop(_all_the_way), and a real
+  discharged witness. Sweep **2213** clean; SMS closure re-derived
+  fresh (20 files/9,612 lines, waved W-A..W-F; two no-proof-file
+  findings recorded); GAP-8 (reghosting direction, SMS-only) newly
+  censused; the primed msg set deferred with per-site census
+  (GAP-1's msg-side instance). Gate PASS. Unit-12 charter: the W-B
+  plain leaves (~1,695 lines) then W-C as budget allows.
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
