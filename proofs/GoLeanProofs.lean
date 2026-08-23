@@ -205,6 +205,12 @@ import GoLeanProofs.Specs.Raft.BecomeFollowerWitness
 -- type-table input) + the Sym-driven re-measure of the pilot leaf.
 import GoLeanProofs.Sym.TableExt
 import GoLeanProofs.Specs.Raft.HandlerEqSym
+-- A4-U3: the populated becomeFollower fixture, the crossing facts,
+-- and THE FIRST FULL HANDLER EQUATION.
+import GoLeanProofs.Specs.Raft.BfFixture
+import GoLeanProofs.Specs.Raft.BfSteps
+import GoLeanProofs.Specs.Raft.BfSteps2
+import GoLeanProofs.Specs.Raft.BfEquation
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)

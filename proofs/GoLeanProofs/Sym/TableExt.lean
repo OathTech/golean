@@ -1491,26 +1491,39 @@ def pinResultLocs' (env : LocalEnv) (ps : List Param) : M (List Loc) :=
   | .ok locs => .ok locs
   | .error _ => quit .q11Internal
 
-/-- Mirror of `dynamicDispatch?`, the census subset: the NON-dispatch
-paths (a plain function, or a method with a concrete receiver — the
-overwhelming bulk of the census: every raft/tracker/log method).
-INTERFACE-receiver methods quit Q4 for now — the census path's single
-interface call is the harness logger's empty `Infof`, one window
-split per logging handler; the dispatch-walk congruence
-(`canonicalTy` and the method-set fold under table agreement) is
-where the cost lives, and it is recorded as the residual class 2b
-rather than paid for one empty body (arc log). -/
-def dynamicDispatchT (TB : SymTables) (func : Func) :
-    M Unit :=
+/-- Mirror of `dynamicDispatch?` at the pack (A4-U3 completes the
+design §3 "ONE lever, not three" scope — class 2b): plain functions
+and concrete-receiver methods dispatch to `none`; INTERFACE-receiver
+methods resolve through the machine's OWN walks at `TB.toState`
+(`concreteMethodForDynamic?` — the method-set fold over
+`canonicalTy`), on the NO-DEREF path only (a pointer box dispatching
+to a value-receiver method reads the heap — `needsDeref` stays a
+quit; so do a nil receiver — the machine's nil-deref panic — and an
+unrecorded method set). -/
+def dynamicDispatchT (TB : SymTables) (func : Func) (args : List (Value D)) :
+    M (Option (Func × List (Value D))) :=
   match methodInfoByFuncId? TB.toState func.id with
-  | none => .ok ()
+  | none => .ok none
   | some method =>
       match methodRecvInterfaceName? TB.toState method with
-      | none => .ok ()
-      | some _ => quit .q4Program
+      | none => .ok none
+      | some _ =>
+          match args with
+          | .interface dynTy inner :: rest =>
+              (match concreteMethodForDynamic? TB.toState dynTy method.name with
+               | some (concrete, needsDeref) =>
+                   if needsDeref then quit .q4Program
+                   else
+                     match findFunctionIn? TB.functions concrete.funcId with
+                     | some targetFunc => .ok (some (targetFunc, inner :: rest))
+                     | none => quit .q4Program
+               | none => quit .q4Program)
+          | .nil :: _ => quit .q6Panic
+          | .atom _ :: _ => quit .q10Atom
+          | _ => quit .q11Internal
 
-/-- Mirror of `enterFrame` at the pack (census subset — see
-`dynamicDispatchT`). -/
+/-- Mirror of `enterFrame` at the pack (the machine's structure
+verbatim, including the post-dispatch arity re-check). -/
 def enterFrameT (TB : SymTables) (s : State D) (fid : FuncId)
     (args : List (Value D)) : M (Func × LocalEnv × List Loc × State D) := do
   let func ←
@@ -1519,11 +1532,16 @@ def enterFrameT (TB : SymTables) (s : State D) (fid : FuncId)
     | none => quit .q4Program
   if func.args.size != args.length then quit .q11Internal
   else do
-    let _ ← dynamicDispatchT TB func
-    let (argsEnv, s₁) ← bindParamsT TB.types [] s func.args.toList args
-    let (frameEnv, s₂) ← allocDecls' argsEnv s₁ func.results.toList
-    let resultLocs ← pinResultLocs' frameEnv func.results.toList
-    .ok (func, frameEnv, resultLocs, s₂)
+    let (func, args) ←
+      match ← dynamicDispatchT TB func args with
+      | some (targetFunc, targetArgs) => .ok (targetFunc, targetArgs)
+      | none => .ok (func, args)
+    if func.args.size != args.length then quit .q11Internal
+    else do
+      let (argsEnv, s₁) ← bindParamsT TB.types [] s func.args.toList args
+      let (frameEnv, s₂) ← allocDecls' argsEnv s₁ func.results.toList
+      let resultLocs ← pinResultLocs' frameEnv func.results.toList
+      .ok (func, frameEnv, resultLocs, s₂)
 
 /-! ### Call-entry soundness -/
 
@@ -1562,29 +1580,77 @@ theorem bindParamsT_conc (hI : I.Sound) (σ : ExecState) {T : TypeEnv}
           rw [alloc_conc, halloc]
           exact ih _ _ h2
 
+theorem methodRecvDynamicTy_tables {σ₁ σ₂ : ExecState}
+    (h : σ₁.types = σ₂.types) (m : MethodInfo) :
+    methodRecvDynamicTy? σ₁ m = methodRecvDynamicTy? σ₂ m := by
+  simp only [methodRecvDynamicTy?, canonicalTy, canonicalTyFuel_types h]
+
+theorem concreteMethodForDynamic_tables {σ₁ σ₂ : ExecState}
+    (ht : σ₁.types = σ₂.types) (hm : σ₁.methods = σ₂.methods)
+    (dynTy : Ty) (name : String) :
+    concreteMethodForDynamic? σ₁ dynTy name
+      = concreteMethodForDynamic? σ₂ dynTy name := by
+  have hr : ∀ m, methodRecvDynamicTy? σ₁ m = methodRecvDynamicTy? σ₂ m :=
+    methodRecvDynamicTy_tables ht
+  simp only [concreteMethodForDynamic?, hm, hr]
+
 theorem dynamicDispatchT_conc (σ : ExecState)
     {TB : SymTables} (hag : TB.Agrees σ) {s : State D}
-    {func : Func} (args : Array GoValue)
-    (h : dynamicDispatchT TB func = Except.ok ()) :
-    dynamicDispatch? (concS I σ s) func args = .ok none := by
+    {func : Func} {args : List (Value D)}
+    {result : Option (Func × List (Value D))}
+    (h : dynamicDispatchT TB func args = .ok result) :
+    dynamicDispatch? (concS I σ s) func ((args.map (concV I)).toArray)
+      = .ok (result.map (fun p => (p.1, (p.2.map (concV I)).toArray))) := by
   obtain ⟨ht, hf, hm, hms⟩ := hag
+  have htc : (concS I σ s).types = TB.toState.types := by
+    simp [concS, ht, SymTables.toState]
+  have hmc : (concS I σ s).methods = TB.toState.methods := by
+    simp [concS, hm, SymTables.toState]
+  have hfc : (concS I σ s).functions = TB.functions := by
+    simp [concS, hf]
   have hmi := methodInfoByFuncId_tables (σ₁ := concS I σ s)
-    (σ₂ := TB.toState) (by simp [concS, hm, SymTables.toState]) func.id
+    (σ₂ := TB.toState) hmc func.id
+  have hric : ∀ m, methodRecvInterfaceName? (concS I σ s) m
+      = methodRecvInterfaceName? TB.toState m :=
+    fun m => methodRecvInterfaceName_tables htc m
+  have hcmc : ∀ d n, concreteMethodForDynamic? (concS I σ s) d n
+      = concreteMethodForDynamic? TB.toState d n :=
+    fun d n => concreteMethodForDynamic_tables htc hmc d n
   simp only [dynamicDispatchT] at h
-  revert h
-  rcases hinfo : methodInfoByFuncId? TB.toState func.id with _ | method
-  · intro _
-    simp only [dynamicDispatch?, hmi, hinfo]
-    rfl
-  · have hri := methodRecvInterfaceName_tables (σ₁ := concS I σ s)
-      (σ₂ := TB.toState) (by simp [concS, ht, SymTables.toState]) method
-    rcases hrecv : methodRecvInterfaceName? TB.toState method with _ | iname
-    · intro _
-      simp only [dynamicDispatch?, hmi, hinfo, hri, hrecv]
-      rfl
-    · intro h
-      simp only [hrecv] at h
-      simp [quit] at h
+  split at h
+  next hinfo =>
+    cases h
+    simp [dynamicDispatch?, hmi, hinfo]
+  next method hinfo =>
+    split at h
+    next hrecv =>
+      cases h
+      simp [dynamicDispatch?, hmi, hinfo, hric, hrecv]
+    next iname hrecv =>
+      split at h
+      next dynTy inner rest =>
+        split at h
+        next concrete needsDeref hcm =>
+          split at h
+          next hnd =>
+            simp [quit] at h
+          next hnd =>
+            split at h
+            next targetFunc hfind =>
+              cases h
+              simp only [Bool.not_eq_true] at hnd
+              subst hnd
+              simp only [dynamicDispatch?, hmi, hinfo, hric, hrecv,
+                List.map_cons, concV_interface]
+              simp [hcmc, hcm, hfc, hfind, Bind.bind, Except.bind, pure,
+                Except.pure, Array.set!, List.getElem?_toArray]
+            next hfind =>
+              simp [quit] at h
+        next hcm =>
+          simp [quit] at h
+      next => simp [quit] at h
+      next => simp [quit] at h
+      next => simp [quit] at h
 
 /-- Frame entry transports (census subset), composing the table
 congruences with the mirrored binding chain. -/
@@ -1607,31 +1673,71 @@ theorem enterFrameT_conc (hI : I.Sound) (σ : ExecState) {TB : SymTables}
     · rw [if_pos harity] at h
       simp [quit] at h
     · rw [if_neg harity] at h
-      obtain ⟨u, hdisp, h2⟩ := bind_eq_ok.mp h
-      obtain ⟨⟨argsEnv, s₁⟩, hbind, h3⟩ := bind_eq_ok.mp h2
-      obtain ⟨⟨frameEnv, s₂⟩, halloc, h4⟩ := bind_eq_ok.mp h3
-      obtain ⟨rlocs, hpin, h5⟩ := bind_eq_ok.mp h4
-      cases h5
-      have harityF : (func.args.size != args.length) = false := by
-        simpa using harity
-      have hdc := dynamicDispatchT_conc (I := I) σ hag (s := s)
-        ((args.map (concV I)).toArray) hdisp
-      have hb := bindParamsT_conc (I := I) hI σ (SubTable.of_eq hag.1)
-        func.args.toList args [] hbind
-      have hal := allocDecls_conc (I := I) hI σ _ _ halloc
-      have hpinM : pinResultLocs frameEnv func.results.toList
-          = .ok locs := by
-        revert hpin
+      obtain ⟨disp, hdisp, h2⟩ := bind_eq_ok.mp h
+      have hdc := dynamicDispatchT_conc (I := I) σ hag (s := s) hdisp
+      have hpinM : ∀ (fe : LocalEnv) (f' : Func) (ls : List Loc),
+          pinResultLocs' fe f'.results.toList = (.ok ls : M (List Loc)) →
+          pinResultLocs fe f'.results.toList = .ok ls := by
+        intro fe f' ls hp
+        revert hp
         simp only [pinResultLocs']
-        rcases pinResultLocs frameEnv func.results.toList with e | ls
-        · intro hpin
-          simp [quit] at hpin
-        · intro hpin
-          cases hpin
+        rcases pinResultLocs fe f'.results.toList with e | ls2
+        · intro hp
+          simp [quit] at hp
+        · intro hp
+          cases hp
           rfl
-      simp only [enterFrame, hf, hfind, Bind.bind, Except.bind, pure,
-        Except.pure, List.length_map, harityF, hdc, hb, hal, hpinM,
-        Bool.false_eq_true, if_false]
+      rcases disp with _ | ⟨tf, ta⟩
+      · -- no dispatch: the tail runs at (f0, args)
+        simp only [] at h2
+        rw [if_neg harity] at h2
+        rcases hbind : bindParamsT TB.types [] s f0.args.toList args
+          with e | ⟨argsEnv, s₁⟩ <;> simp only [hbind] at h2
+        · cases h2
+        rcases halloc : allocDecls' argsEnv s₁ f0.results.toList
+          with e | ⟨frameEnv, s₂⟩ <;> simp only [halloc] at h2
+        · cases h2
+        rcases hpin : pinResultLocs' frameEnv f0.results.toList
+          with e | rlocs <;> simp only [hpin] at h2
+        · cases h2
+        cases h2
+        have harityF : (func.args.size != args.length) = false := by
+          simpa using harity
+        have hb := bindParamsT_conc (I := I) hI σ (SubTable.of_eq hag.1)
+          func.args.toList args [] hbind
+        have hal := allocDecls_conc (I := I) hI σ _ _ halloc
+        simp only [enterFrame, hf, hfind, Bind.bind, Except.bind, pure,
+          Except.pure, List.length_map, harityF, hdc, Option.map_none,
+          Bool.false_eq_true, if_false, hb, hal, hpinM _ _ _ hpin]
+      · -- dispatch redirect: the tail runs at (tf, ta)
+        simp only [] at h2
+        by_cases harity2 : (tf.args.size != ta.length) = true
+        · rw [if_pos harity2] at h2
+          simp [quit] at h2
+        · rw [if_neg harity2] at h2
+          rcases hbind : bindParamsT TB.types [] s tf.args.toList ta
+            with e | ⟨argsEnv, s₁⟩ <;> simp only [hbind] at h2
+          · cases h2
+          rcases halloc : allocDecls' argsEnv s₁ tf.results.toList
+            with e | ⟨frameEnv, s₂⟩ <;> simp only [halloc] at h2
+          · cases h2
+          rcases hpin : pinResultLocs' frameEnv tf.results.toList
+            with e | rlocs <;> simp only [hpin] at h2
+          · cases h2
+          cases h2
+          have harityF : (f0.args.size != args.length) = false := by
+            simpa using harity
+          have harity2F : (func.args.size != (ta.map (concV I)).length)
+              = false := by
+            simpa using harity2
+          have hb := bindParamsT_conc (I := I) hI σ (SubTable.of_eq hag.1)
+            func.args.toList ta [] hbind
+          have hal := allocDecls_conc (I := I) hI σ _ _ halloc
+          simp only [enterFrame, hf, hfind, Bind.bind, Except.bind, pure,
+            Except.pure, List.length_map, harityF, hdc, Option.map_some,
+            Bool.false_eq_true, if_false, List.toList_toArray,
+            harity2F, hb, hal, hpinM _ _ _ hpin]
+          rw [if_neg harity2]
 
 /-- The class-2 layered step: the four call/drain configuration
 shapes through `enterFrameT`; EVERYTHING else delegates to the

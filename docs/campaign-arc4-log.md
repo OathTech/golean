@@ -587,3 +587,188 @@ merge step.
     new arms (the overrides agree with the shipped step on every
     non-quit config; the green `with_unfolding_all rfl` re-checks are
     the proof).
+- 2026-08-23 [AGENT] Class-2b COMPLETED in TableExt instead of the
+  dispatch's per-site hand splits (deviation from checklist item 3's
+  letter, logged): with 5 dispatch sites in THIS handler and ~20
+  handlers ahead, the per-split route re-pays the same dispatch-walk
+  congruence every time; the lift is the design §3 "ONE lever, not
+  three" scope completed with the module's own pattern — machine
+  helpers at `TB.toState` (`concreteMethodForDynamic?` +
+  `canonicalTyFuel_types`/`methodRecvDynamicTy_tables` congruences),
+  NO-DEREF path only (pointer-box-to-value-receiver deref reads the
+  heap and stays a quit, as do nil receivers). Not new machinery —
+  the same conditioned-table lever as every other arm. Consequence:
+  the chain simplifies to **7 windows [642,183,28,28,28,3,2316] + 6
+  crossings** (probe re-run: γ-image == machine heap, totals 3,234
+  both). `dynamicDispatchT` gained args and a redirect result;
+  `enterFrameT` mirrors the machine's structure verbatim (incl. the
+  post-dispatch arity re-check); `enterFrameT_conc`/`stepFnTB_conc`
+  updated; HandlerEqSym re-elaborates green (153 s), landed window
+  counts unchanged.
+- 2026-08-23 CHECKPOINT (recomputed; slice B in flight): lane commits
+  since the dispatch tip 638b683b: 1 (082a45cf, slice A). New modules
+  building toward the equation: `BfFixture.lean` (the populated
+  fixture + the 7-window chain, 12→7 window-count rfls + `uC13_stop`;
+  lake-built GREEN in 327 s), `BfSteps.lean` (uρ/uKeys +
+  `normalize_small` + `stepFn_pick_transport` — item 4's lemma:
+  `stepFn_pick_generic` ∘ `alloc_conc`, prop-level, no heavy
+  reduction — + `stepFn_stop_transport` + sites 1–2 pick facts,
+  case-free, elaborated GREEN), `BfSteps2.lean` (sites 3–6 with the
+  6-leaf analysis; elaborating), `BfEquation.lean` (composed
+  3,234-step span + THE EQUATION + §3.3 witness; drafted, blocked on
+  BfSteps2). Judgment call logged: `stepFn_pick_transport` is
+  raft-independent — PROMOTION-LEDGER row (move to TableExt/kit at a
+  consolidation slice; second consumer = any handler's range loop).
+- 2026-08-23 [AGENT] Slice-B performance findings (measured, each on
+  this lane's capped builds):
+  - BfSteps (transport + sites 1–2, case-free): 604 s module build.
+  - Sites 3–4 (6-leaf candidate analysis, cheap post-walk leaves):
+    green inside BfSteps2's first pass (~25 min for the whole file's
+    heavy shape/entry facts).
+  - The SORT-collapse leaves are the cost outlier: ONE leaf's
+    whole-step kernel rfl = **8 min 24 s, several GB** (isolated
+    measurement, `artifacts/probe/sortleaf.lean`); six in one lean
+    process accumulated past the 24G cap and were killed — the
+    #eval-said-true/kernel-grinds-anyway shape is NOT a false goal
+    here (the isolated leaf proves), it is cumulative memory across
+    goals. Fix: ONE MODULE PER LEAF (`BfSortLeaf{00..21}.lean`,
+    process-isolated memory) + a cheap dispatcher (`BfSortStep`).
+  - Projected same-lever performance lift for U4+ (logged for the
+    verdict): STATE LITERALIZATION — dump intermediate SymStates as
+    source literals with one bridge `rfl` each, so downstream facts
+    reduce against literals instead of re-evaluating window chains;
+    would collapse the sort-leaf and projection costs by an order of
+    magnitude. Not built in U3 (time-boxed); the honest cost numbers
+    above are the argument for building it in the first U4 slice.
+
+## A4-U3 slice B complete — THE FIRST FULL HANDLER EQUATION (2026-08-23)
+
+**`becomeFollower_handler_eq` (BfEquation.lean) IS PROVED**, in the
+charter's exact form: from the drained `becomeFollower(0, lead)` call
+configuration at ANY state γ-extending the populated fixture
+(∀ valuation ρ, ∀ σ with `bfTB.Agrees σ`) whose abstract projection is
+`some n = some ⟨0, vote, lead₀, state, 1, 1⟩`, over EVERY consumed
+choice prefix `c₁ c₂ c₃ c₄` (∀ streams `c₁::c₂::c₃::c₄::ch`), the run
+reaches the function's return (`.next .stop`) in exactly **3,234
+steps of `stepFnIter`** with the four choices consumed, and the final
+state's projection equals **`specBecomeFollower n 0 lead`**. Two
+side conditions, both genuinely external (the kit's conditioned
+style, discharged concretely in the witness): `hvote`/`hlead` — the
+Vote heap value and the lead argument are in `uint64` range (their
+normalize is the identity).
+
+- The §3.3 discharge witness `becomeFollower_handler_eq_witness`:
+  every premise at concrete values (`wBase` tables, live valuation
+  Vote 7 / lead 2 / state 1 / leadTransferee 5 / lead-arg 4, the
+  probe's stream `[3,1,0,0]`) — projection
+  `some ⟨0,7,2,1,1,1⟩ → some (specBecomeFollower ⟨0,7,2,1,1,1⟩ 0 4)`.
+- Fresh `#print axioms` (capped probe, verbatim):
+  `becomeFollower_handler_eq`, `becomeFollower_handler_eq_witness`,
+  `bf_full_span` all [propext, Classical.choice, Quot.sound];
+  `stepFn_pick_transport`, `uSort_step`, `uPick1_step`
+  [propext, Quot.sound]. Hatch grep over all `Bf*.lean`: zero
+  sorry/native_decide/axiom.
+- Composition (the spine at scale): 7 transported windows
+  [642,183,28,28,28,3,2316] ⧺ 4 pick steps (`stepFn_pick_transport` —
+  item 4's ∀ρ discharge, prop-level via `stepFn_pick_generic` ∘
+  `alloc_conc`; keys enter as `x₅=↑(c₁%10)`, `x₆=uKey1 c₂`,
+  `x₇=uKey2 c₂ c₃`, `x₈=uKey3`) ⧺ the range-STOP ⧺ the ONE sortSlice
+  apply — §4(ii)'s COLLAPSE, realized as six per-leaf lemmas (every
+  pick order lands in one leaf; every leaf's post state is `uS12`
+  with ids=[1,2,3]) behind one dispatcher. The projection conclusion
+  is choice-independent; the final state is prefix-dependent (∃σfin).
+- A probe finding recorded as fixture-shape knowledge: store-time
+  whole-struct re-normalization norm-WRAPS the symbolic scalars
+  (Vote 13-deep, lead 3-deep by handler exit — `ProjProbe`); the
+  `unrm`/`unrm_id` helper discharges the wrapping under the range
+  hypotheses. This is why value-symbolic handler equations carry
+  uint64-range side conditions for every SURVIVING symbolic scalar.
+- Interface dispatch (checklist item 3) crossed IN-WINDOW via the
+  completed class-2b — zero hand splits in the final proof; the
+  5 dispatch sites (4× Storage.LastIndex + Logger.Infof) sit inside
+  window 7.
+- Module inventory (wc -l, recomputed): BfFixture 285, BfSteps 295,
+  BfSteps2 377, BfSortLeaf00..21 6×22=132, BfSortStep 53, BfEquation
+  165 — **1,307 lines total**, all wired into the GoLeanProofs
+  aggregator; full proofs+Audit build GREEN, **482 jobs**. Measured
+  build costs: BfFixture 327 s; BfSteps 604 s; BfSteps2 ~510 s; each
+  sort leaf ~490–515 s (six, process-isolated); BfEquation ~350 s.
+  1,307 lines vs the pilot's 3,000–6,000 hand-walk projection for the
+  same span; the U2 600–1,000 estimate exceeded by ~30% — the excess
+  is exactly the sort-leaf/module-split scaffolding and the 6-leaf
+  candidate analysis, both of which the state-literalization lift
+  would shrink.
+
+## A4-U3 DELIVERABLE 2 — THE A4 SCALE VERDICT (re-projection of U4..U9)
+
+Derivation anchors: every number here is from this unit's builds/probes
+(above), the pilot verdict's measured table, or the Arc-2 census
+(`docs/campaign-arc2-probes/records/probeA-census.out` on the arc2
+lane, read-only: the 711,616-step completing run's per-fid call
+counts).
+
+**What one full handler equation now costs, measured end-to-end
+(becomeFollower, the smallest handler with EVERY hard feature):**
+3,234 steps, 4 choice sites (2 map-range loops), 1 sort
+canonicalization, 5 interface dispatches, defer/mutex pairs →
+1,307 lines / ~50 min of capped builds / zero new axioms beyond
+[propext, Classical.choice, Quot.sound]. The one-time general
+machinery paid across U2+U3 (TableExt: all five design classes +
+class-2b dispatch + the U3-a residual lifts + congruences) now stands
+at 2,052 lines and is HANDLER-INDEPENDENT.
+
+**Cost anatomy (what scales with what):**
+- Windows: step-count-independent to write (~2 lines each), build
+  cost ~linear in steps (~40 ms/step kernel; 8,250 cumulative
+  step-evals ≈ 327 s in BfFixture).
+- Choice crossings: ~50–90 lines each via `stepFn_pick_transport`;
+  case analysis only where CANDIDATE SETS depend on earlier picks
+  (Visit's 6 leaves), and the §4(ii) collapse holds: after the sort,
+  ONE shared chain regardless of order.
+- The cost OUTLIER is kernel re-evaluation of window chains inside
+  per-leaf facts (sort leaves ~8.4 min each). This is a PERFORMANCE
+  problem, not a proof-shape problem — the state-literalization lift
+  (bridge-rfl'd SymState literals) removes it and should be U4's
+  slice 0.
+
+**Re-projection of the remaining ~19 handlers** (census call counts in
+parentheses; the seam design §2(B) unit list):
+
+- **Wave 1 — the reset family + storage leaves (batchable, ~zero new
+  machinery):** becomeCandidate/becomePreCandidate/becomeLeader (1–2
+  calls each) REUSE the reset crossing verbatim — the 6-crossing
+  block should be factored ONCE as a `reset`-span lemma (promotion
+  row) and each become* becomes a ~200–400-line assembly.
+  MemoryStorage.{FirstIndex,Term,Entries} (66–122 calls) are
+  LastIndex-shaped: window-only, no choice sites — ~100–200 lines
+  each. Est. 5–7 handler equations in 1–2 sessions once
+  literalization lands.
+- **Wave 2 — the message handlers:** handleAppendEntries (12),
+  handleHeartbeat, the RequestVote pair. New same-lever residuals
+  expected: the `appendSlice` choice site (appendSpill — needs an
+  appendSpill analogue of `stepFn_pick_transport`, same shape),
+  log-slice ops in-window, message construction via landed
+  structLit/toInterface. THE REAL NEW OBLIGATION IS SPEC-SIDE, not
+  machinery: these handlers' equations need `absRaftNode` EXTENDED to
+  log entries and the outboxes (GAP-V1-1/-3) — the abstraction-layer
+  work, one design slice before wave 2 starts.
+- **Wave 3 — dispatch + plumbing:** raft.Step (53) / stepLeader (18)
+  / stepFollower (12) / stepCandidate (2) branch per MESSAGE TYPE —
+  the fixture-family dimension is per-branch (NOT per pick order —
+  that collapses); expect one window chain per (handler, msg-type)
+  pair, sharing tails. RawNode Ready/Advance plumbing (22–53) is
+  window-heavy but choice-light.
+- **Residual classes carried into U4+ (none counted as done):**
+  (1) the term-change branch of becomeFollower (second fixture
+  family, same machinery); (2) `needsDeref` interface dispatch
+  (pointer box → value-receiver method) stays a quit until a
+  consumer appears; (3) the appendSpill pick transport; (4)
+  GAP-U1-W1 (witness reachability) unchanged; (5) the absState
+  extension for wave 2 (the seam's layer-(A) growth).
+- **Aggregate estimate:** with literalization + the reset-span lift,
+  waves 1–3 ≈ 15–25 sessions of U3-shaped work — the per-handler
+  equation cost has moved from the pilot's NO-GO (~9 lines/step,
+  3,000–6,000 lines/handler hand-walked) to ~400–1,300 lines of
+  mostly assembly, inside the gallery bar. The binding constraints
+  are now (a) kernel-evaluation wall time (fix: literalization),
+  (b) the spec-side absState extension (design work, wave-2 gate).
