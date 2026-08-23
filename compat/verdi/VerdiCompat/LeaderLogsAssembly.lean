@@ -1016,6 +1016,783 @@ theorem removeAfterIndex_le {l : List (entry (P := P))} {i j : logIndex}
       rw [removeAfterIndex_cons_neg hlej, removeAfterIndex_cons_neg hlei,
         ih]
 
+/-! ## logs_leaderLogs (`LogsLeaderLogsInterface.v:9-30`) -/
+
+/-- `LogsLeaderLogsInterface.v:9-16` (`logs_leaderLogs`): every host log
+entry sits atop a leaderLog snapshot at its own term. -/
+def logs_leaderLogs (net : RefinedNet) : Prop :=
+  ∀ (h : name (P := P)) (e : entry (P := P)),
+    e ∈ (net.nwState h).2.log →
+    ∃ (leader : name (P := P)) (ll es : List (entry (P := P))),
+      (e.eTerm, ll) ∈ (net.nwState leader).1.leaderLogs ∧
+      removeAfterIndex (net.nwState h).2.log e.eIndex = es ++ ll ∧
+      (∀ e' ∈ es, e'.eTerm = e.eTerm)
+
+/-- `LogsLeaderLogsInterface.v:18-30` (`logs_leaderLogs_nw`): the
+in-flight strengthening the induction carries. -/
+def logs_leaderLogs_nw (net : RefinedNet) : Prop :=
+  ∀ (p : RefinedPacket) (t : term) (n : name (P := P)) (pli : logIndex)
+    (plt : term) (es : List (entry (P := P))) (ci : logIndex)
+    (e : entry (P := P)),
+    p ∈ net.nwPackets → p.pBody = .AppendEntries t n pli plt es ci →
+    e ∈ es →
+    ∃ (leader : name (P := P)) (ll es' ll' : List (entry (P := P))),
+      (e.eTerm, ll) ∈ (net.nwState leader).1.leaderLogs ∧
+      Prefix ll' ll ∧
+      removeAfterIndex es e.eIndex = es' ++ ll' ∧
+      (∀ e' ∈ es', e'.eTerm = e.eTerm) ∧
+      ((plt = e.eTerm ∧ pli > maxIndex ll) ∨
+       (∃ e2, e2 ∈ ll ∧ e2.eIndex = pli ∧ e2.eTerm = plt ∧
+         (ll' ≠ [] ∨ pli = maxIndex ll)) ∨
+       (plt = 0 ∧ pli = 0 ∧ ll' = ll))
+
+/-- `LogsLeaderLogsProof.v:59-61` (`logs_leaderLogs_inductive`). -/
+def logs_leaderLogs_inductive (net : RefinedNet) : Prop :=
+  logs_leaderLogs net ∧ logs_leaderLogs_nw net
+
+/-- Host-side transport: leaderLogs grow at the updated node and its
+log is unchanged. -/
+theorem logs_leaderLogs_of_update {net net' : RefinedNet}
+    {u : name (P := P)} {gd : electionsData (P := P)} {d : raft_data (P := P)}
+    (hP : logs_leaderLogs net)
+    (hst : ∀ h', net'.nwState h' = update net.nwState u (gd, d) h')
+    (hgrow : ∀ (t : term) (ll : List (entry (P := P))),
+      (t, ll) ∈ (net.nwState u).1.leaderLogs → (t, ll) ∈ gd.leaderLogs)
+    (hlog : d.log = (net.nwState u).2.log) :
+    logs_leaderLogs net' := by
+  intro h e he
+  have hlog' : (net'.nwState h).2.log = (net.nwState h).2.log := by
+    rw [hst h]
+    by_cases heq : h = u
+    · subst heq
+      rw [update_same]
+      exact hlog
+    · rw [update_neq _ _ heq]
+  rw [hlog'] at he ⊢
+  obtain ⟨leader, ll, es, hmem, heq2, hterm⟩ := hP h e he
+  refine ⟨leader, ll, es, ?_, heq2, hterm⟩
+  rw [hst leader]
+  by_cases heql : leader = u
+  · subst heql
+    rw [update_same]
+    exact hgrow _ _ hmem
+  · rw [update_neq _ _ heql]
+    exact hmem
+
+/-- nw-side witness transport (the witness mentions the network only
+through the leaderLog membership). -/
+theorem lll_nw_transport {net net' : RefinedNet} {u : name (P := P)}
+    {gd : electionsData (P := P)} {d : raft_data (P := P)}
+    (hst : ∀ h', net'.nwState h' = update net.nwState u (gd, d) h')
+    (hgrow : ∀ (t : term) (ll : List (entry (P := P))),
+      (t, ll) ∈ (net.nwState u).1.leaderLogs → (t, ll) ∈ gd.leaderLogs)
+    {pli : logIndex} {plt : term} {es : List (entry (P := P))}
+    {e : entry (P := P)}
+    (hw : ∃ (leader : name (P := P)) (ll es' ll' : List (entry (P := P))),
+      (e.eTerm, ll) ∈ (net.nwState leader).1.leaderLogs ∧
+      Prefix ll' ll ∧
+      removeAfterIndex es e.eIndex = es' ++ ll' ∧
+      (∀ e' ∈ es', e'.eTerm = e.eTerm) ∧
+      ((plt = e.eTerm ∧ pli > maxIndex ll) ∨
+       (∃ e2, e2 ∈ ll ∧ e2.eIndex = pli ∧ e2.eTerm = plt ∧
+         (ll' ≠ [] ∨ pli = maxIndex ll)) ∨
+       (plt = 0 ∧ pli = 0 ∧ ll' = ll))) :
+    ∃ (leader : name (P := P)) (ll es' ll' : List (entry (P := P))),
+      (e.eTerm, ll) ∈ (net'.nwState leader).1.leaderLogs ∧
+      Prefix ll' ll ∧
+      removeAfterIndex es e.eIndex = es' ++ ll' ∧
+      (∀ e' ∈ es', e'.eTerm = e.eTerm) ∧
+      ((plt = e.eTerm ∧ pli > maxIndex ll) ∨
+       (∃ e2, e2 ∈ ll ∧ e2.eIndex = pli ∧ e2.eTerm = plt ∧
+         (ll' ≠ [] ∨ pli = maxIndex ll)) ∨
+       (plt = 0 ∧ pli = 0 ∧ ll' = ll)) := by
+  obtain ⟨leader, ll, es', ll', h1, h2, h3, h4, h5⟩ := hw
+  refine ⟨leader, ll, es', ll', ?_, h2, h3, h4, h5⟩
+  rw [hst leader]
+  by_cases heq : leader = u
+  · subst heq
+    rw [update_same]
+    exact hgrow _ _ h1
+  · rw [update_neq _ _ heq]
+    exact h1
+
+/-- `LogsLeaderLogsProof.v:479-520`
+(`logs_leaderLogs_inductive_clientRequest`): a leader's fresh entry
+stacks on the split `leaders_have_leaderLogs_strong` provides; old
+entries sit below the fresh maxIndex+1 head. -/
+theorem logs_leaderLogs_inductive_clientRequest :
+    refined_raft_net_invariant_client_request (P := P)
+      logs_leaderLogs_inductive := by
+  intro h net st' ps' gd out d l client id c hcr hgd hP hreach hst hps
+  obtain ⟨hPh, hPn⟩ := hP
+  obtain ⟨-, -, -, -, hl⟩ := handleClientRequest_spec h (net.nwState h).2
+    client id c hcr
+  have hgrow : ∀ (t2 : term) (ll : List (entry (P := P))),
+      (t2, ll) ∈ (net.nwState h).1.leaderLogs → (t2, ll) ∈ gd.leaderLogs := by
+    intro t2 ll hin
+    subst hgd
+    rw [(update_elections_data_client_request_ghost h (net.nwState h)
+      client id c).2.2.2]
+    exact hin
+  have hreloc : ∀ (t2 : term) (ll : List (entry (P := P)))
+      (leader : name (P := P)),
+      (t2, ll) ∈ (net.nwState leader).1.leaderLogs →
+      (t2, ll) ∈ (st' leader).1.leaderLogs := by
+    intro t2 ll leader hin
+    rw [hst leader]
+    by_cases heq : leader = h
+    · subst heq
+      rw [update_same]
+      exact hgrow _ _ hin
+    · rw [update_neq _ _ heq]
+      exact hin
+  constructor
+  · -- HOST
+    rcases handleClientRequest_log_full h (net.nwState h).2 client id c hcr
+      with ⟨hty, hlogd⟩ | ⟨-, heqd⟩
+    · -- leader: log = enew :: L
+      intro h0 e he
+      replace he : e ∈ (st' h0).2.log := he
+      by_cases heq0 : h0 = h
+      case neg =>
+        have hlog0 : (st' h0).2.log = (net.nwState h0).2.log := by
+          rw [hst h0, update_neq _ _ heq0]
+        rw [hlog0] at he
+        obtain ⟨leader, ll, es2, hmem, hrm, hterm⟩ := hPh h0 e he
+        refine ⟨leader, ll, es2, hreloc _ _ _ hmem, ?_, hterm⟩
+        show removeAfterIndex (st' h0).2.log e.eIndex = es2 ++ ll
+        rw [hlog0]
+        exact hrm
+      case pos =>
+        subst heq0
+        have hdst : (st' h0).2 = d := by
+          rw [hst h0, update_same]
+        rw [hdst] at he
+        show ∃ (leader : name (P := P)) (ll es2 : List (entry (P := P))),
+          (e.eTerm, ll) ∈ (st' leader).1.leaderLogs ∧
+          removeAfterIndex (st' h0).2.log e.eIndex = es2 ++ ll ∧
+          (∀ e' ∈ es2, e'.eTerm = e.eTerm)
+        rw [hdst, hlogd]
+        rw [hlogd] at he
+        generalize henew : (⟨h0, client, id,
+          maxIndex (net.nwState h0).2.log + 1,
+          (net.nwState h0).2.currentTerm, c⟩ : entry (P := P)) = enew
+        rw [henew] at he
+        have hterm_enew : enew.eTerm = (net.nwState h0).2.currentTerm := by
+          rw [← henew]
+        have hidx_enew :
+            enew.eIndex = maxIndex (net.nwState h0).2.log + 1 := by
+          rw [← henew]
+        have hsortL : sorted (net.nwState h0).2.log :=
+          sorted_host_lifted net hreach h0
+        rcases List.mem_cons.mp he with rfl | heL
+        · -- the fresh entry rides the strong leader split
+          obtain ⟨ll, es0, hmem, hsplit, hterm0⟩ :=
+            leaders_have_leaderLogs_strong_invariant net hreach h0 hty
+          refine ⟨h0, ll, e :: es0, ?_, ?_, ?_⟩
+          · rw [hterm_enew]
+            exact hreloc _ _ _ hmem
+          · rw [removeAfterIndex_cons_pos (by simp [Nat.ble_eq]), hsplit]
+            rfl
+          · intro x hx
+            rcases List.mem_cons.mp hx with rfl | hx0
+            · rfl
+            · rw [hterm_enew]
+              exact hterm0 x hx0
+        · -- an old entry: the fresh head sits above its index
+          obtain ⟨leader, ll, es2, hmem, hrm, hterm⟩ := hPh h0 e heL
+          refine ⟨leader, ll, es2, hreloc _ _ _ hmem, ?_, hterm⟩
+          have hne : ¬ ((enew.eIndex <=? e.eIndex) = true) := by
+            intro hle
+            simp only [Nat.ble_eq] at hle
+            rw [hidx_enew] at hle
+            exact absurd (maxIndex_is_max hsortL heL)
+              (Nat.not_le.mpr (Nat.lt_of_succ_le hle))
+          rw [removeAfterIndex_cons_neg hne]
+          exact hrm
+    · -- not leader: state unchanged
+      refine logs_leaderLogs_of_update hPh hst hgrow ?_
+      rw [heqd]
+  · -- NW: no packets sent
+    intro p0 t0 n1 pli2 plt2 es2 ci2 e0 hp0 hbody0 he0
+    replace hp0 : p0 ∈ ps' := hp0
+    have hold : p0 ∈ net.nwPackets := by
+      rcases hps p0 hp0 with h1 | h1
+      · exact h1
+      · rw [hl] at h1
+        simp [send_packets] at h1
+    exact lll_nw_transport hst hgrow
+      (hPn p0 t0 n1 pli2 plt2 es2 ci2 e0 hold hbody0 he0)
+
+/-- `LogsLeaderLogsProof.v:204-406`
+(`logs_leaderLogs_inductive_appendEntries`) — the splice case: a new
+entry's witness comes from the nw invariant, glued to the host witness
+at the pivot via `thing`/`removeAfterIndex_same_sufficient`; an old
+entry's witness survives below the prevLog cut. The upstream
+`weak_sanity`/`logs_leaderLogs_nw_weaken` detour is not needed: with
+the strong nw disjunction, `pli = 0` forces its third disjunct
+outright (disjunct 1 dies on `0 > maxIndex`, disjunct 2 on
+`leaderLogs_contiguous`). -/
+theorem logs_leaderLogs_inductive_appendEntries :
+    refined_raft_net_invariant_append_entries (P := P)
+      logs_leaderLogs_inductive := by
+  intro xs p ys net st' ps' gd d m t n0 pli plt es ci hae hgd hbody hP
+    hreach hpkts hst hps
+  obtain ⟨hPh, hPn⟩ := hP
+  have hpin : p ∈ net.nwPackets := by
+    rw [hpkts]
+    exact List.mem_append.mpr (Or.inr (List.mem_cons_self ..))
+  have hgrow : ∀ (t2 : term) (ll : List (entry (P := P))),
+      (t2, ll) ∈ (net.nwState p.pDst).1.leaderLogs →
+      (t2, ll) ∈ gd.leaderLogs := by
+    intro t2 ll hin
+    subst hgd
+    rw [(update_elections_data_appendEntries_ghost p.pDst
+      (net.nwState p.pDst) t n0 pli plt es ci).2.2.2]
+    exact hin
+  have hreloc : ∀ (t2 : term) (ll : List (entry (P := P)))
+      (leader : name (P := P)),
+      (t2, ll) ∈ (net.nwState leader).1.leaderLogs →
+      (t2, ll) ∈ (st' leader).1.leaderLogs := by
+    intro t2 ll leader hin
+    rw [hst leader]
+    by_cases heq : leader = p.pDst
+    · subst heq
+      rw [update_same]
+      exact hgrow _ _ hin
+    · rw [update_neq _ _ heq]
+      exact hin
+  have hsortL : sorted (net.nwState p.pDst).2.log :=
+    sorted_host_lifted net hreach p.pDst
+  have hsortes : sorted es :=
+    entries_sorted_nw_invariant net hreach p t n0 pli plt es ci hpin hbody
+  have hcontig_es : contiguous_range_exact_lo es pli :=
+    entries_contiguous_nw_invariant net hreach p t n0 pli plt es ci hpin
+      hbody
+  constructor
+  · -- HOST
+    intro h0 e he
+    replace he : e ∈ (st' h0).2.log := he
+    by_cases heq0 : h0 = p.pDst
+    case neg =>
+      have hlog0 : (st' h0).2.log = (net.nwState h0).2.log := by
+        rw [hst h0, update_neq _ _ heq0]
+      rw [hlog0] at he
+      obtain ⟨leader, ll, es2, hmem, hrm, hterm⟩ := hPh h0 e he
+      refine ⟨leader, ll, es2, hreloc _ _ _ hmem, ?_, hterm⟩
+      show removeAfterIndex (st' h0).2.log e.eIndex = es2 ++ ll
+      rw [hlog0]
+      exact hrm
+    case pos =>
+      subst heq0
+      have hdst : (st' p.pDst).2 = d := by
+        rw [hst p.pDst, update_same]
+      rw [hdst] at he
+      show ∃ (leader : name (P := P)) (ll es2 : List (entry (P := P))),
+        (e.eTerm, ll) ∈ (st' leader).1.leaderLogs ∧
+        removeAfterIndex (st' p.pDst).2.log e.eIndex = es2 ++ ll ∧
+        (∀ e' ∈ es2, e'.eTerm = e.eTerm)
+      rw [hdst]
+      rcases handleAppendEntries_log_cases p.pDst (net.nwState p.pDst).2 t n0
+        pli plt es ci hae with hsame | ⟨hpli0, hlog⟩ |
+        ⟨e0, he0L, he0idx, he0term, hlog⟩
+      · -- log unchanged
+        rw [hsame] at he ⊢
+        obtain ⟨leader, ll, es2, hmem, hrm, hterm⟩ := hPh p.pDst e he
+        exact ⟨leader, ll, es2, hreloc _ _ _ hmem, hrm, hterm⟩
+      · -- wholesale (pli = 0): the nw disjunction collapses to ll' = ll
+        rw [hlog] at he ⊢
+        obtain ⟨leader, ll, es', ll', hmem, hpref, hrm, hterm, hdisj⟩ :=
+          hPn p t n0 pli plt es ci e hpin hbody he
+        rcases hdisj with ⟨-, hgt⟩ | ⟨e2, he2ll, he2idx, -, -⟩ | ⟨-, -, hll⟩
+        · rw [hpli0] at hgt
+          exact absurd hgt (Nat.not_lt.mpr (Nat.zero_le _))
+        · exfalso
+          have hpos := (leaderLogs_contiguous_invariant net hreach leader
+            e.eTerm ll hmem).2 e2 he2ll
+          rw [he2idx, hpli0] at hpos
+          exact Nat.lt_irrefl 0 hpos
+        · rw [hll] at hrm
+          exact ⟨leader, ll, es', hreloc _ _ _ hmem, hrm, hterm⟩
+      · -- splice at the pivot e0
+        rw [hlog] at he ⊢
+        rcases List.mem_append.mp he with hees | heold
+        · -- NEW entry
+          obtain ⟨leader, ll, es', ll', hmem, hpref, hrm, hterm, hdisj⟩ :=
+            hPn p t n0 pli plt es ci e hpin hbody hees
+          have hsortrm : sorted (removeAfterIndex es e.eIndex) :=
+            removeAfterIndex_sorted hsortes
+          have hcontigrm : contiguous_range_exact_lo
+              (removeAfterIndex es e.eIndex) pli :=
+            removeAfterIndex_contiguous hsortes hcontig_es
+          have hsortll : sorted ll :=
+            leaderLogs_sorted_invariant net hreach leader e.eTerm ll hmem
+          have hcontig_ll' : contiguous_range_exact_lo ll' pli := by
+            rw [hrm] at hsortrm hcontigrm
+            exact contiguous_app hsortrm hcontigrm
+          rcases hdisj with ⟨hplt, hpligt⟩ |
+            ⟨e2, he2ll, he2idx, he2term, hsane⟩ | ⟨-, hpli0, -⟩
+          · -- prevLog past the snapshot: cut is all fresh; glue to the
+            -- pivot's host witness
+            have hll'nil : ll' = [] := by
+              cases hll' : ll' with
+              | nil => rfl
+              | cons x xs =>
+                exfalso
+                have hx : x ∈ ll' := by
+                  rw [hll']
+                  exact List.mem_cons_self ..
+                have h1 : pli < x.eIndex := hcontig_ll'.2 x hx
+                have h2 : x.eIndex ≤ maxIndex ll :=
+                  maxIndex_is_max hsortll (Prefix_In hpref x hx)
+                exact absurd (Nat.lt_of_lt_of_le h1
+                  (Nat.le_trans h2 (Nat.le_of_lt hpligt)))
+                  (Nat.lt_irrefl pli)
+            rw [hll'nil, List.append_nil] at hrm
+            obtain ⟨leader2, ll2, es2, hmem2, hrm2, hterm2⟩ :=
+              hPh p.pDst e0 he0L
+            have hterm_eq : e0.eTerm = e.eTerm := by
+              rw [he0term, hplt]
+            rw [hterm_eq] at hmem2
+            refine ⟨leader2, ll2, removeAfterIndex es e.eIndex ++ es2,
+              hreloc _ _ _ hmem2, ?_, ?_⟩
+            · rw [removeAfterIndex_in_app hees, ← he0idx, hrm2]
+              exact (List.append_assoc _ _ _).symm
+            · intro x hx
+              rcases List.mem_append.mp hx with hx1 | hx2
+              · exact hterm x (hrm ▸ hx1)
+              · rw [hterm2 x hx2]
+                exact hterm_eq
+          · -- prevLog inside the snapshot
+            have hmatch : entries_match (net.nwState p.pDst).2.log ll :=
+              leaderLogs_entries_match_invariant net hreach p.pDst leader
+                e.eTerm ll hmem
+            have hcontigll : contiguous_range_exact_lo ll 0 :=
+              leaderLogs_contiguous_invariant net hreach leader e.eTerm ll
+                hmem
+            have hidx02 : e0.eIndex = e2.eIndex := by
+              rw [he0idx, he2idx]
+            have hterm02 : e0.eTerm = e2.eTerm := by
+              rw [he0term, he2term]
+            rcases hsane with hll'ne | hplimax
+            · -- shared entry: `thing` extends the cut to the snapshot
+              have hthing : ll' ++ removeAfterIndex (net.nwState p.pDst).2.log
+                  e0.eIndex = ll := by
+                refine thing hsortL hsortll hcontigll hmatch hll'ne hpref
+                  ?_ he0L he2ll hidx02 hterm02
+                rw [he0idx]
+                exact hcontig_ll'
+              refine ⟨leader, ll, es', hreloc _ _ _ hmem, ?_, hterm⟩
+              rw [removeAfterIndex_in_app hees, hrm, List.append_assoc,
+                ← he0idx, hthing]
+            · -- prevLog at the snapshot's max: the cut below the pivot
+              -- IS the snapshot
+              have hll'nil : ll' = [] := by
+                cases hll' : ll' with
+                | nil => rfl
+                | cons x xs =>
+                  exfalso
+                  have hx : x ∈ ll' := by
+                    rw [hll']
+                    exact List.mem_cons_self ..
+                  have h1 : pli < x.eIndex := hcontig_ll'.2 x hx
+                  have h2 : x.eIndex ≤ maxIndex ll :=
+                    maxIndex_is_max hsortll (Prefix_In hpref x hx)
+                  rw [hplimax] at h1
+                  exact absurd h1 (Nat.not_lt.mpr h2)
+              rw [hll'nil, List.append_nil] at hrm
+              have hRll : removeAfterIndex (net.nwState p.pDst).2.log pli
+                  = ll := by
+                have h1 : removeAfterIndex ll pli
+                    = removeAfterIndex (net.nwState p.pDst).2.log pli := by
+                  refine removeAfterIndex_same_sufficient hsortL hsortll
+                    ?_ ?_
+                  · intro x hle hx
+                    exact (hmatch e0 e2 x hidx02 hterm02 he0L he2ll
+                      (by rw [he0idx]; exact hle)).mp hx
+                  · intro x hle hx
+                    exact (hmatch e0 e2 x hidx02 hterm02 he0L he2ll
+                      (by rw [he0idx]; exact hle)).mpr hx
+                rw [← h1, hplimax,
+                  ← removeAfterIndex_maxIndex_sorted hsortll]
+              refine ⟨leader, ll, es', hreloc _ _ _ hmem, ?_, hterm⟩
+              rw [removeAfterIndex_in_app hees, hrm, hRll]
+          · -- pli = 0 with a real pivot in the log: impossible
+            exfalso
+            have hpos := entries_gt_0_invariant net hreach p.pDst e0 he0L
+            rw [he0idx, hpli0] at hpos
+            exact Nat.lt_irrefl 0 hpos
+        · -- OLD entry: it survives below the cut
+          have heL : e ∈ (net.nwState p.pDst).2.log := removeAfterIndex_in heold
+          have hele : e.eIndex ≤ pli := removeAfterIndex_In_le hsortL heold
+          obtain ⟨leader, ll, es2, hmem, hrm2, hterm2⟩ := hPh p.pDst e heL
+          refine ⟨leader, ll, es2, hreloc _ _ _ hmem, ?_, hterm2⟩
+          have hgtes : ∀ e' ∈ es, e'.eIndex > e.eIndex := fun e' he' =>
+            Nat.lt_of_le_of_lt hele (hcontig_es.2 e' he')
+          rw [removeAfterIndex_in_app_l' hgtes heold,
+            ← removeAfterIndex_le hele]
+          exact hrm2
+  · -- NW
+    intro p0 t0 n1 pli2 plt2 es2 ci2 e0 hp0 hbody0 he0
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with h1 | h1
+    · have hold : p0 ∈ net.nwPackets := by
+        rw [hpkts]
+        exact mem_of_mem_remove_middle h1
+      exact lll_nw_transport hst hgrow
+        (hPn p0 t0 n1 pli2 plt2 es2 ci2 e0 hold hbody0 he0)
+    · exfalso
+      obtain ⟨-, -, -, t', es', r', hmshape⟩ :=
+        handleAppendEntries_spec p.pDst (net.nwState p.pDst).2 t n0 pli plt
+          es ci hae
+      rw [h1] at hbody0
+      replace hbody0 : m = msg.AppendEntries t0 n1 pli2 plt2 es2 ci2 :=
+        hbody0
+      rw [hmshape] at hbody0
+      exact nomatch hbody0
+
+/-- `LogsLeaderLogsProof.v:607-756`
+(`logs_leaderLogs_inductive_doLeader`) — the packet-creation case:
+a replica message's entries are `findGtIndex log pli`, classified by
+the trichotomy of `pli` against the witness snapshot's max. -/
+theorem logs_leaderLogs_inductive_doLeader :
+    refined_raft_net_invariant_do_leader (P := P)
+      logs_leaderLogs_inductive := by
+  intro net st' ps' gd d h os d' ms hdl hP hreach hstate hst hps
+  obtain ⟨hPh, hPn⟩ := hP
+  obtain ⟨-, -, -, -, hdlog, -⟩ := doLeader_spec d h hdl
+  have hgrow : ∀ (t2 : term) (ll : List (entry (P := P))),
+      (t2, ll) ∈ (net.nwState h).1.leaderLogs → (t2, ll) ∈ gd.leaderLogs := by
+    intro t2 ll hin
+    rw [hstate] at hin
+    exact hin
+  have hreloc : ∀ (t2 : term) (ll : List (entry (P := P)))
+      (leader : name (P := P)),
+      (t2, ll) ∈ (net.nwState leader).1.leaderLogs →
+      (t2, ll) ∈ (st' leader).1.leaderLogs := by
+    intro t2 ll leader hin
+    rw [hst leader]
+    by_cases heq : leader = h
+    · subst heq
+      rw [update_same]
+      exact hgrow _ _ hin
+    · rw [update_neq _ _ heq]
+      exact hin
+  constructor
+  · refine logs_leaderLogs_of_update hPh hst hgrow ?_
+    rw [hdlog, hstate]
+  · intro p0 t0 n1 pli2 plt2 es2 ci2 e0 hp0 hbody0 he0
+    replace hp0 : p0 ∈ ps' := hp0
+    rcases hps p0 hp0 with hold | hnew
+    · exact lll_nw_transport hst hgrow
+        (hPn p0 t0 n1 pli2 plt2 es2 ci2 e0 hold hbody0 he0)
+    · obtain ⟨m0, hm0, rfl⟩ := List.mem_map.mp hnew
+      have htype : d.type = .Leader := doLeader_messages_leader d h hdl hm0
+      obtain ⟨host, hq2⟩ := doLeader_messages_nextIndex d h hdl m0 hm0
+      replace hbody0 : m0.2 = msg.AppendEntries t0 n1 pli2 plt2 es2 ci2 :=
+        hbody0
+      rw [hq2] at hbody0
+      injection hbody0 with f1 f2 f3 f4 f5 f6
+      subst f1 f2 f3 f5 f6
+      obtain ⟨he0d, he0gt⟩ := findGtIndex_necessary he0
+      have hsortd : sorted d.log := by
+        have hsl := sorted_host_lifted net hreach h
+        rw [hstate] at hsl
+        exact hsl
+      have hgt0 : ∀ x ∈ d.log, x.eIndex > 0 := by
+        intro x hx
+        refine entries_gt_0_invariant net hreach h x ?_
+        rw [hstate]
+        exact hx
+      have hPh' : ∀ x, x ∈ d.log →
+          ∃ (leader : name (P := P)) (ll es3 : List (entry (P := P))),
+            (x.eTerm, ll) ∈ (net.nwState leader).1.leaderLogs ∧
+            removeAfterIndex d.log x.eIndex = es3 ++ ll ∧
+            (∀ e' ∈ es3, e'.eTerm = x.eTerm) := by
+        intro x hx
+        have hx' : x ∈ (net.nwState h).2.log := by
+          rw [hstate]
+          exact hx
+        obtain ⟨leader, ll, es3, hmem, hrm, hterm⟩ := hPh h x hx'
+        rw [hstate] at hrm
+        exact ⟨leader, ll, es3, hmem, hrm, hterm⟩
+      rcases hfaeq : findAtIndex d.log (Nat.pred (getNextIndex d host))
+        with _ | e1
+      · rw [hfaeq] at f4
+        simp only [] at f4
+        by_cases hz : Nat.pred (getNextIndex d host) = 0
+        · -- origin packet: the whole log rides the host witness
+          obtain ⟨leader, ll, es3, hmem, hrm, hterm⟩ := hPh' e0 he0d
+          refine ⟨leader, ll, es3, ll, hreloc _ _ _ hmem, Prefix_refl ll,
+            ?_, hterm, Or.inr (Or.inr ⟨f4.symm, hz, rfl⟩)⟩
+          rw [hz, sorted_findGtIndex_0 hgt0 hsortd]
+          exact hrm
+        · exfalso
+          have hty_net : (net.nwState h).2.type = .Leader := by
+            rw [hstate]
+            exact htype
+          obtain ⟨e, hfae⟩ := nextIndex_sanity net hreach h host hty_net
+            (by rw [hstate]; exact hz)
+          rw [hstate] at hfae
+          replace hfae :
+              findAtIndex d.log (Nat.pred (getNextIndex d host)) = some e :=
+            hfae
+          rw [hfaeq] at hfae
+          exact nomatch hfae
+      · rw [hfaeq] at f4
+        simp only [] at f4
+        obtain ⟨he1d, he1idx⟩ := findAtIndex_elim hfaeq
+        obtain ⟨leader, ll, es3, hmem, hrm, hterm⟩ := hPh' e0 he0d
+        have hsortll : sorted ll :=
+          leaderLogs_sorted_invariant net hreach leader e0.eTerm ll hmem
+        have hsortrm : sorted (es3 ++ ll) := by
+          rw [← hrm]
+          exact removeAfterIndex_sorted hsortd
+        have hposrm : ∀ x ∈ es3 ++ ll, x.eIndex > 0 := by
+          intro x hx
+          rw [← hrm] at hx
+          exact hgt0 x (removeAfterIndex_in hx)
+        have he1cut : e1 ∈ es3 ++ ll := by
+          rw [← hrm]
+          exact removeAfterIndex_le_In
+            (by rw [he1idx]; exact Nat.le_of_lt he0gt) he1d
+        rcases Nat.lt_trichotomy (maxIndex ll)
+          (Nat.pred (getNextIndex d host)) with hlt | heqm | hgtm
+        · -- snapshot entirely below prevLog: the cut stays in es3
+          refine ⟨leader, ll,
+            findGtIndex es3 (Nat.pred (getNextIndex d host)), [],
+            hreloc _ _ _ hmem, Prefix_nil ll, ?_, ?_, ?_⟩
+          · rw [List.append_nil,
+              findGtIndex_removeAfterIndex_commute hsortd, hrm,
+              findGtIndex_app_1 (Nat.le_of_lt hlt)]
+          · intro x hx
+            exact hterm x (findGtIndex_in hx)
+          · refine Or.inl ⟨?_, hlt⟩
+            rw [← f4]
+            rcases List.mem_append.mp he1cut with h1 | h1
+            · exact hterm e1 h1
+            · exfalso
+              have hle := maxIndex_is_max hsortll h1
+              rw [he1idx] at hle
+              exact absurd hlt (Nat.not_lt.mpr hle)
+        · -- prevLog exactly at the snapshot's max
+          refine ⟨leader, ll,
+            findGtIndex es3 (Nat.pred (getNextIndex d host)), [],
+            hreloc _ _ _ hmem, Prefix_nil ll, ?_, ?_, ?_⟩
+          · rw [List.append_nil,
+              findGtIndex_removeAfterIndex_commute hsortd, hrm,
+              findGtIndex_app_1 (Nat.le_of_eq heqm)]
+          · intro x hx
+            exact hterm x (findGtIndex_in hx)
+          · refine Or.inr (Or.inl ⟨e1, ?_, he1idx, f4, Or.inr heqm.symm⟩)
+            refine thing3 hsortrm hposrm he1cut ?_
+            rw [he1idx]
+            exact Nat.le_of_eq heqm.symm
+        · -- prevLog inside the snapshot
+          refine ⟨leader, ll, es3,
+            findGtIndex ll (Nat.pred (getNextIndex d host)),
+            hreloc _ _ _ hmem, findGtIndex_Prefix ll _, ?_, hterm, ?_⟩
+          · rw [findGtIndex_removeAfterIndex_commute hsortd, hrm,
+              findGtIndex_app_2 hsortrm hgtm]
+          · refine Or.inr (Or.inl ⟨e1, ?_, he1idx, f4,
+              Or.inl (findGtIndex_non_empty hgtm)⟩)
+            refine thing3 hsortrm hposrm he1cut ?_
+            rw [he1idx]
+            exact Nat.le_of_lt hgtm
+
+/-- `LogsLeaderLogsProof.v:807-825`
+(`logs_leaderLogs_inductive_invariant`). -/
+theorem logs_leaderLogs_inductive_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      logs_leaderLogs_inductive net := by
+  refine refined_raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · -- init
+    constructor
+    · intro h e he
+      exact nomatch he
+    · intro p0 t0 n1 pli2 plt2 es2 ci2 e0 hp0 _ _
+      exact nomatch hp0
+  · exact logs_leaderLogs_inductive_clientRequest
+  · -- timeout
+    intro net h st' ps' gd out d l hto hgd hP _hreach hst hps
+    obtain ⟨hPh, hPn⟩ := hP
+    obtain ⟨hlog, -, hmsgs⟩ := handleTimeout_spec h (net.nwState h).2 hto
+    have hgrow : ∀ (t2 : term) (ll : List (entry (P := P))),
+        (t2, ll) ∈ (net.nwState h).1.leaderLogs →
+        (t2, ll) ∈ gd.leaderLogs := by
+      intro t2 ll hin
+      subst hgd
+      rw [(update_elections_data_timeout_ghost h (net.nwState h)).1]
+      exact hin
+    constructor
+    · exact logs_leaderLogs_of_update hPh hst hgrow hlog
+    · intro p0 t0 n1 pli2 plt2 es2 ci2 e0 hp0 hbody0 he0
+      replace hp0 : p0 ∈ ps' := hp0
+      have hold : p0 ∈ net.nwPackets := by
+        rcases hps p0 hp0 with h1 | h1
+        · exact h1
+        · exfalso
+          obtain ⟨m0, hm0, rfl⟩ := List.mem_map.mp h1
+          obtain ⟨t3, c3, l3, l4, hq2⟩ := hmsgs m0 hm0
+          replace hbody0 :
+              m0.2 = msg.AppendEntries t0 n1 pli2 plt2 es2 ci2 := hbody0
+          rw [hq2] at hbody0
+          exact nomatch hbody0
+      exact lll_nw_transport hst hgrow
+        (hPn p0 t0 n1 pli2 plt2 es2 ci2 e0 hold hbody0 he0)
+  · exact logs_leaderLogs_inductive_appendEntries
+  · -- append_entries_reply
+    intro xs p ys net st' ps' gd d m t es res haer hgd _hbody hP _hreach
+      hpkts hst hps
+    obtain ⟨hPh, hPn⟩ := hP
+    obtain ⟨-, -, hl⟩ := handleAppendEntriesReply_spec p.pDst
+      (net.nwState p.pDst).2 p.pSrc t es res haer
+    have hgrow : ∀ (t2 : term) (ll : List (entry (P := P))),
+        (t2, ll) ∈ (net.nwState p.pDst).1.leaderLogs →
+        (t2, ll) ∈ gd.leaderLogs := by
+      intro t2 ll hin
+      rw [hgd]
+      exact hin
+    constructor
+    · refine logs_leaderLogs_of_update hPh hst hgrow ?_
+      exact handleAppendEntriesReply_log p.pDst (net.nwState p.pDst).2
+        p.pSrc t es res haer
+    · intro p0 t0 n1 pli2 plt2 es2 ci2 e0 hp0 hbody0 he0
+      replace hp0 : p0 ∈ ps' := hp0
+      have hold : p0 ∈ net.nwPackets := by
+        rcases hps p0 hp0 with h1 | h1
+        · rw [hpkts]
+          exact mem_of_mem_remove_middle h1
+        · rw [hl] at h1
+          simp [send_packets] at h1
+      exact lll_nw_transport hst hgrow
+        (hPn p0 t0 n1 pli2 plt2 es2 ci2 e0 hold hbody0 he0)
+  · -- request_vote
+    intro xs p ys net st' ps' gd d m t cid lli llt hrv hgd _hbody hP
+      _hreach hpkts hst hps
+    obtain ⟨hPh, hPn⟩ := hP
+    obtain ⟨t'', v'', hmshape⟩ := handleRequestVote_reply_shape p.pDst
+      (net.nwState p.pDst).2 t p.pSrc lli llt hrv
+    have hgrow : ∀ (t2 : term) (ll : List (entry (P := P))),
+        (t2, ll) ∈ (net.nwState p.pDst).1.leaderLogs →
+        (t2, ll) ∈ gd.leaderLogs := by
+      intro t2 ll hin
+      subst hgd
+      rw [(update_elections_data_requestVote_cronies p.pDst p.pSrc t
+        p.pSrc lli llt (net.nwState p.pDst)).2.1]
+      exact hin
+    constructor
+    · refine logs_leaderLogs_of_update hPh hst hgrow ?_
+      exact handleRequestVote_log p.pDst (net.nwState p.pDst).2 t p.pSrc
+        lli llt hrv
+    · intro p0 t0 n1 pli2 plt2 es2 ci2 e0 hp0 hbody0 he0
+      replace hp0 : p0 ∈ ps' := hp0
+      rcases hps p0 hp0 with h1 | h1
+      · have hold : p0 ∈ net.nwPackets := by
+          rw [hpkts]
+          exact mem_of_mem_remove_middle h1
+        exact lll_nw_transport hst hgrow
+          (hPn p0 t0 n1 pli2 plt2 es2 ci2 e0 hold hbody0 he0)
+      · exfalso
+        rw [h1] at hbody0
+        replace hbody0 : m = msg.AppendEntries t0 n1 pli2 plt2 es2 ci2 :=
+          hbody0
+        rw [hmshape] at hbody0
+        exact nomatch hbody0
+  · -- request_vote_reply
+    intro xs p ys net st' ps' gd d t v hrvr hgd _hbody hP _hreach hpkts
+      hst hps
+    obtain ⟨hPh, hPn⟩ := hP
+    have hgrow : ∀ (t2 : term) (ll : List (entry (P := P))),
+        (t2, ll) ∈ (net.nwState p.pDst).1.leaderLogs →
+        (t2, ll) ∈ gd.leaderLogs := by
+      intro t2 ll hin
+      subst hgd
+      exact update_elections_data_requestVoteReply_leaderLogs_old p.pDst
+        p.pSrc t v (net.nwState p.pDst) hin
+    constructor
+    · refine logs_leaderLogs_of_update hPh hst hgrow ?_
+      rw [← hrvr]
+      exact handleRequestVoteReply_log p.pDst (net.nwState p.pDst).2
+        p.pSrc t v
+    · intro p0 t0 n1 pli2 plt2 es2 ci2 e0 hp0 hbody0 he0
+      replace hp0 : p0 ∈ ps' := hp0
+      have hold : p0 ∈ net.nwPackets := by
+        rw [hpkts]
+        exact mem_of_mem_remove_middle (hps p0 hp0)
+      exact lll_nw_transport hst hgrow
+        (hPn p0 t0 n1 pli2 plt2 es2 ci2 e0 hold hbody0 he0)
+  · exact logs_leaderLogs_inductive_doLeader
+  · -- do_generic_server
+    intro net st' ps' gd d os d' ms h hgs hP _hreach hstate hst hps
+    obtain ⟨hPh, hPn⟩ := hP
+    obtain ⟨hlog, -, -, -, -, hms⟩ := doGenericServer_spec h d hgs
+    have hgrow : ∀ (t2 : term) (ll : List (entry (P := P))),
+        (t2, ll) ∈ (net.nwState h).1.leaderLogs →
+        (t2, ll) ∈ gd.leaderLogs := by
+      intro t2 ll hin
+      rw [hstate] at hin
+      exact hin
+    constructor
+    · refine logs_leaderLogs_of_update hPh hst hgrow ?_
+      rw [hlog, hstate]
+    · intro p0 t0 n1 pli2 plt2 es2 ci2 e0 hp0 hbody0 he0
+      replace hp0 : p0 ∈ ps' := hp0
+      have hold : p0 ∈ net.nwPackets := by
+        rcases hps p0 hp0 with h1 | h1
+        · exact h1
+        · rw [hms] at h1
+          simp [send_packets] at h1
+      exact lll_nw_transport hst hgrow
+        (hPn p0 t0 n1 pli2 plt2 es2 ci2 e0 hold hbody0 he0)
+  · -- state_same_packet_subset
+    intro net net' hstates hsub hP _hreach
+    obtain ⟨hPh, hPn⟩ := hP
+    constructor
+    · intro h e he
+      replace he : e ∈ (net'.nwState h).2.log := he
+      rw [← hstates h] at he
+      obtain ⟨leader, ll, es2, hmem, hrm, hterm⟩ := hPh h e he
+      rw [hstates leader] at hmem
+      refine ⟨leader, ll, es2, hmem, ?_, hterm⟩
+      show removeAfterIndex (net'.nwState h).2.log e.eIndex = es2 ++ ll
+      rw [← hstates h]
+      exact hrm
+    · intro p0 t0 n1 pli2 plt2 es2 ci2 e0 hp0 hbody0 he0
+      obtain ⟨leader, ll, es', ll', h1, h2, h3, h4, h5⟩ :=
+        hPn p0 t0 n1 pli2 plt2 es2 ci2 e0 (hsub p0 hp0) hbody0 he0
+      rw [hstates leader] at h1
+      exact ⟨leader, ll, es', ll', h1, h2, h3, h4, h5⟩
+  · -- reboot
+    intro net net' gd d h d' hrb hP _hreach hstate hst hpkts
+    obtain ⟨hPh, hPn⟩ := hP
+    have hgrow : ∀ (t2 : term) (ll : List (entry (P := P))),
+        (t2, ll) ∈ (net.nwState h).1.leaderLogs →
+        (t2, ll) ∈ gd.leaderLogs := by
+      intro t2 ll hin
+      rw [hstate] at hin
+      exact hin
+    constructor
+    · refine logs_leaderLogs_of_update hPh hst hgrow ?_
+      rw [← hrb, hstate]
+      rfl
+    · intro p0 t0 n1 pli2 plt2 es2 ci2 e0 hp0 hbody0 he0
+      rw [← hpkts] at hp0
+      exact lll_nw_transport hst hgrow
+        (hPn p0 t0 n1 pli2 plt2 es2 ci2 e0 hp0 hbody0 he0)
+
+/-- `LogsLeaderLogsProof.v:827-833` (`logs_leaderLogs_invariant`). -/
+theorem logs_leaderLogs_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      logs_leaderLogs net :=
+  fun net hreach => (logs_leaderLogs_inductive_invariant net hreach).1
+
+/-- `LogsLeaderLogsProof.v:835-841` (`logs_leaderLogs_nw_invariant`). -/
+theorem logs_leaderLogs_nw_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      logs_leaderLogs_nw net :=
+  fun net hreach => (logs_leaderLogs_inductive_invariant net hreach).2
+
 end LeaderLogsAssembly
 end Raft
 end VerdiCompat

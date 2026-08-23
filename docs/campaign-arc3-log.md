@@ -1539,3 +1539,28 @@ re-verified at THIS unit's closure derivation, not inherited.
   lane record: omega-on-abbrev (×2, explicit Nat lemmas), continuation
   lines indented below the tactic column silently start a new command
   (the sorted_mem_eq parse break).
+- 2026-08-23 Slice 44: **`logs_leaderLogs` + `logs_leaderLogs_nw`**
+  (LogsLeaderLogsInterface.v:9-30 1:1; upstream proof 848 lines) — the
+  host∧nw simultaneous induction (`logs_leaderLogs_inductive`), both
+  interface fields delivered. Proof shape: transports
+  (`logs_leaderLogs_of_update` + `lll_nw_transport`) cover eight
+  handlers; client_request stacks the fresh entry on the
+  leaders_have_leaderLogs_strong split; append_entries is the
+  centerpiece — a NEW entry's nw witness glues to the pivot's host
+  witness (`thing` when a snapshot entry is shared;
+  `removeAfterIndex_same_sufficient` + maxIndex when the prevLog sits
+  at the snapshot's max; the fresh-cut case re-anchors at the pivot's
+  own leader), an OLD entry survives below the cut
+  (removeAfterIndex_in_app_l' + removeAfterIndex_le); doLeader
+  classifies `findGtIndex log pli` by trichotomy against the witness
+  snapshot's max (commute + app_1/app_2 + thing3). [AGENT] Upstream's
+  `weak_sanity`/`logs_leaderLogs_nw_weaken` detour is NOT ported
+  (docstring-flagged): with the strong nw disjunction, `pli = 0`
+  forces the third disjunct outright — disjunct 1 dies on
+  `0 > maxIndex`, disjunct 2 on `leaderLogs_contiguous`. Gotchas for
+  successors: `set` is a Mathlib tactic — UNAVAILABLE here; use
+  `generalize h : lit = x` + `rw [h] at hyp` + pre-derived projection
+  equations. And the var=var subst direction bit twice more
+  (`rfl`-pattern on `e = enew` keeps e; `subst hll` on `ll' = ll`
+  keeps ll' — rw at the hypothesis instead). Build green, sweep 1902
+  (was 1853).
