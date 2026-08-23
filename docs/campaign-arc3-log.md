@@ -2632,3 +2632,14 @@ is a complete unit if the honest budget says so.
   recorded rw-auto-rfl-on-`≤` gotcha bit twice (explicit `Nat.le_refl`),
   and `RaftNet`-typed transports cannot `omit O` (raft_base_params
   references it). Build green.
+- 2026-08-23 Slice 70: `candidateEntriesTerm` (the term-level
+  `candidateEntries` twin, RefinementCommonDefinitions.v:14-18 1:1) +
+  its ext/update_same helpers and the FIVE handler preserves lemmas
+  (PLCETProof.v:83-296), proofs mirroring unit 3's entry-level set with
+  `t'` for `e.eTerm`; `candidateEntries_term` is the definitional
+  bridge (`candidateEntries e σ` IS `candidateEntriesTerm e.eTerm σ` —
+  proof `id`). [AGENT] Consolidation candidate flagged (docstring +
+  here): unit 3's entry-level preserves lemmas are derivable from
+  these term-level ones; left per the slice-39 precedent, promotion on
+  a cleanup slice. The omit-O-with-RefinedNet gotcha bit three times
+  (same class as slice 69's). Build green.

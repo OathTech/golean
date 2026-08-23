@@ -1460,6 +1460,287 @@ theorem match_index_sanity_invariant :
     rw [← hrb] at htyl
     exact nomatch htyl
 
+/-! ## candidateEntriesTerm — the term-level twin of `candidateEntries`
+(`RefinementCommonDefinitions.v:14-18`), and its preserves set
+(`RaftProofs/PrevLogCandidateEntriesTermProof.v`). Proofs mirror unit
+3's entry-level `*_preserves_candidateEntries` (CandidateEntries.lean)
+with `t'` in place of `e.eTerm`; `candidateEntries e σ` is
+definitionally `candidateEntriesTerm e.eTerm σ` (the `candidateEntries_term`
+bridge). Consolidation candidate flagged in the arc log: the entry-level
+lemmas are derivable from these term-level ones — left as-is per the
+slice-39 precedent, promotion on a cleanup slice. -/
+
+/-- `RefinementCommonDefinitions.v:14-18` (`candidateEntriesTerm`):
+the TERM had an election winner who is no longer campaigning at it. -/
+def candidateEntriesTerm (t : term)
+    (sigma : name (P := P) → electionsData (P := P) × raft_data (P := P)) :
+    Prop :=
+  ∃ h : name (P := P),
+    wonElection (dedup ((sigma h).1.cronies t)) = true ∧
+    ((sigma h).2.currentTerm = t → (sigma h).2.type ≠ .Candidate)
+
+omit O in
+/-- The definitional bridge: an entry's `candidateEntries` witness IS a
+`candidateEntriesTerm` witness for its term. -/
+theorem candidateEntries_term {e : entry (P := P)}
+    {sigma : name (P := P) → electionsData (P := P) × raft_data (P := P)}
+    (h : candidateEntries e sigma) : candidateEntriesTerm e.eTerm sigma := h
+
+omit O in
+/-- `PrevLogCandidateEntriesTermProof.v:29-37` (`candidateEntriesTerm_ext`). -/
+theorem candidateEntriesTerm_ext {t' : term}
+    {sigma sigma' : name (P := P) → electionsData (P := P) × raft_data (P := P)}
+    (hext : ∀ h, sigma' h = sigma h) (hce : candidateEntriesTerm t' sigma) :
+    candidateEntriesTerm t' sigma' := by
+  obtain ⟨x, hw, himp⟩ := hce
+  refine ⟨x, ?_, ?_⟩
+  · rw [hext x]
+    exact hw
+  · rw [hext x]
+    exact himp
+
+omit O in
+/-- `PrevLogCandidateEntriesTermProof.v:39-51` (`candidateEntriesTerm_same`),
+specialized to the one-node updates (unit 3's `_update_same` shape). -/
+theorem candidateEntriesTerm_update_same {t' : term}
+    {sigma : name (P := P) → electionsData (P := P) × raft_data (P := P)}
+    {h : name (P := P)} {gd : electionsData (P := P)} {d : raft_data (P := P)}
+    (hcr : gd.cronies = (sigma h).1.cronies)
+    (hct : d.currentTerm = (sigma h).2.currentTerm)
+    (hty : d.type = (sigma h).2.type)
+    (hce : candidateEntriesTerm t' sigma) :
+    candidateEntriesTerm t' (update sigma h (gd, d)) := by
+  obtain ⟨x, hw, himp⟩ := hce
+  by_cases hxh : x = h
+  · subst hxh
+    refine ⟨x, ?_, ?_⟩
+    · rw [update_same]
+      show wonElection (dedup (gd.cronies t')) = true
+      rw [hcr]
+      exact hw
+    · rw [update_same]
+      show d.currentTerm = t' → d.type ≠ serverType.Candidate
+      rw [hct, hty]
+      exact himp
+  · refine ⟨x, ?_, ?_⟩
+    · rw [update_neq _ _ hxh]
+      exact hw
+    · rw [update_neq _ _ hxh]
+      exact himp
+
+/-- `PrevLogCandidateEntriesTermProof.v:83-118` (upstream's misnamed
+`handleClientRequest_preserves_candidateEntriesTerm` — it is the
+TIMEOUT preservation): a heartbeat changes nothing; a fresh candidacy
+only touches the NEW term, where `cronies_term` says no winner can yet
+exist. -/
+theorem handleTimeout_preserves_candidateEntriesTerm {net : RefinedNet}
+    (hreach : refined_raft_intermediate_reachable (P := P) net)
+    {h : name (P := P)} {out d l} {t' : term}
+    (hto : handleTimeout h (net.nwState h).2 = (out, d, l))
+    (hce : candidateEntriesTerm t' net.nwState) :
+    candidateEntriesTerm t' (update net.nwState h
+      (update_elections_data_timeout h (net.nwState h), d)) := by
+  by_cases hL : (net.nwState h).2.type = .Leader
+  · obtain ⟨-, hcases, -⟩ := handleTimeout_spec h (net.nwState h).2 hto
+    rcases hcases with ⟨hct, hty, -, -⟩ | ⟨-, -, -, -, hnl⟩
+    · exact candidateEntriesTerm_update_same
+        (update_elections_data_timeout_cronies_leader h (net.nwState h) hL)
+        hct hty hce
+    · exact absurd hL hnl
+  · obtain ⟨hct, hty, -, -⟩ := handleTimeout_not_leader h (net.nwState h).2
+      hto hL
+    obtain ⟨x, hw, himp⟩ := hce
+    by_cases hxh : x = h
+    · subst hxh
+      have hnonew : t' ≠ d.currentTerm := by
+        intro heq
+        obtain ⟨voter, hv⟩ := wonElection_exists_voter hw
+        have hb := cronies_term_invariant net hreach voter x t'
+          (mem_of_mem_dedup hv)
+        rw [heq, hct] at hb
+        exact Nat.not_succ_le_self _ hb
+      refine ⟨x, ?_, ?_⟩
+      · rw [update_same]
+        show wonElection (dedup
+          ((update_elections_data_timeout x (net.nwState x)).cronies t'))
+          = true
+        rcases update_elections_data_timeout_cronies_cases hto t'
+          with hsame | ⟨heq, -⟩
+        · rw [hsame]
+          exact hw
+        · exact absurd heq hnonew
+      · rw [update_same]
+        show d.currentTerm = t' → d.type ≠ serverType.Candidate
+        intro hprem
+        exact absurd hprem.symm hnonew
+    · refine ⟨x, ?_, ?_⟩
+      · rw [update_neq _ _ hxh]
+        exact hw
+      · rw [update_neq _ _ hxh]
+        exact himp
+
+/-- `PrevLogCandidateEntriesTermProof.v:134-155`
+(`handleAppendEntries_preserves_candidateEntriesTerm`). -/
+theorem handleAppendEntries_preserves_candidateEntriesTerm {net : RefinedNet}
+    {h : name (P := P)} {t0 : term} {n0 : name (P := P)} {pli : logIndex}
+    {plt : term} {es : List (entry (P := P))} {ci : logIndex} {d m}
+    {t' : term}
+    (hae : handleAppendEntries h (net.nwState h).2 t0 n0 pli plt es ci
+      = (d, m))
+    (hce : candidateEntriesTerm t' net.nwState) :
+    candidateEntriesTerm t' (update net.nwState h
+      (update_elections_data_appendEntries h (net.nwState h) t0 n0 pli plt
+        es ci, d)) := by
+  obtain ⟨x, hw, himp⟩ := hce
+  have hgc := (update_elections_data_appendEntries_ghost h (net.nwState h)
+    t0 n0 pli plt es ci).2.2.1
+  by_cases hxh : x = h
+  · subst hxh
+    refine ⟨x, ?_, ?_⟩
+    · rw [update_same]
+      show wonElection (dedup
+        ((update_elections_data_appendEntries x (net.nwState x) t0 n0 pli
+          plt es ci).cronies t')) = true
+      rw [hgc]
+      exact hw
+    · rw [update_same]
+      show d.currentTerm = t' → d.type ≠ serverType.Candidate
+      by_cases hf : d.type = .Follower
+      · intro _ hcand
+        rw [hf] at hcand
+        exact nomatch hcand
+      · have hrej := handleAppendEntries_reject_of_not_follower x
+          (net.nwState x).2 t0 n0 pli plt es ci hae hf
+        rw [hrej]
+        exact himp
+  · refine ⟨x, ?_, ?_⟩
+    · rw [update_neq _ _ hxh]
+      exact hw
+    · rw [update_neq _ _ hxh]
+      exact himp
+
+/-- `PrevLogCandidateEntriesTermProof.v:165-180`
+(`handleAppendEntriesReply_preserves_candidateEntriesTerm`). -/
+theorem handleAppendEntriesReply_preserves_candidateEntriesTerm
+    {net : RefinedNet}
+    {h src : name (P := P)} {t0 : term} {es : List (entry (P := P))}
+    {r : Bool} {d ms} {t' : term}
+    (haer : handleAppendEntriesReply h (net.nwState h).2 src t0 es r
+      = (d, ms))
+    (hce : candidateEntriesTerm t' net.nwState) :
+    candidateEntriesTerm t' (update net.nwState h ((net.nwState h).1, d)) := by
+  obtain ⟨x, hw, himp⟩ := hce
+  obtain ⟨-, hcases, -⟩ := handleAppendEntriesReply_spec h (net.nwState h).2
+    src t0 es r haer
+  by_cases hxh : x = h
+  · subst hxh
+    refine ⟨x, ?_, ?_⟩
+    · rw [update_same]
+      exact hw
+    · rw [update_same]
+      show d.currentTerm = t' → d.type ≠ serverType.Candidate
+      rcases hcases with ⟨hct, -, hty⟩ | ⟨-, -, hty⟩
+      · rw [hct, hty]
+        exact himp
+      · rw [hty]
+        exact fun _ hcand => nomatch hcand
+  · refine ⟨x, ?_, ?_⟩
+    · rw [update_neq _ _ hxh]
+      exact hw
+    · rw [update_neq _ _ hxh]
+      exact himp
+
+/-- `PrevLogCandidateEntriesTermProof.v:210-255`
+(`handleRequestVote_preserves_candidateEntriesTerm`, via the
+`advanceCurrentTerm_same_or_type_follower` argument folded into the
+lane's `handleRequestVote_spec`). -/
+theorem handleRequestVote_preserves_candidateEntriesTerm {net : RefinedNet}
+    {h src : name (P := P)} {t0 : term} {lli : logIndex} {llt : term} {d m}
+    {t' : term}
+    (hrv : handleRequestVote h (net.nwState h).2 t0 src lli llt = (d, m))
+    (hce : candidateEntriesTerm t' net.nwState) :
+    candidateEntriesTerm t' (update net.nwState h
+      (update_elections_data_requestVote h src t0 src lli llt
+        (net.nwState h), d)) := by
+  obtain ⟨x, hw, himp⟩ := hce
+  obtain ⟨-, -, htycase, -⟩ := handleRequestVote_spec h (net.nwState h).2
+    t0 src lli llt hrv
+  have hgc := (update_elections_data_requestVote_cronies h src t0 src lli
+    llt (net.nwState h)).1
+  by_cases hxh : x = h
+  · subst hxh
+    refine ⟨x, ?_, ?_⟩
+    · rw [update_same]
+      show wonElection (dedup
+        ((update_elections_data_requestVote x src t0 src lli llt
+          (net.nwState x)).cronies t')) = true
+      rw [hgc]
+      exact hw
+    · rw [update_same]
+      show d.currentTerm = t' → d.type ≠ serverType.Candidate
+      rcases htycase with ⟨hct, hty⟩ | hty
+      · rw [hct, hty]
+        exact himp
+      · rw [hty]
+        exact fun _ hcand => nomatch hcand
+  · refine ⟨x, ?_, ?_⟩
+    · rw [update_neq _ _ hxh]
+      exact hw
+    · rw [update_neq _ _ hxh]
+      exact himp
+
+/-- `PrevLogCandidateEntriesTermProof.v:257-296`
+(`handleRequestVoteReply_preserves_candidateEntriesTerm`) — the one
+case that leans on `cronies_correct`, exactly unit 3's entry-level
+argument. -/
+theorem handleRequestVoteReply_preserves_candidateEntriesTerm
+    {net : RefinedNet}
+    (hreach : refined_raft_intermediate_reachable (P := P) net)
+    {h src : name (P := P)} {t0 : term} {v : Bool} {t' : term}
+    (hce : candidateEntriesTerm t' net.nwState) :
+    candidateEntriesTerm t' (update net.nwState h
+      (update_elections_data_requestVoteReply h src t0 v (net.nwState h),
+       handleRequestVoteReply h (net.nwState h).2 src t0 v)) := by
+  obtain ⟨x, hw, himp⟩ := hce
+  obtain ⟨-, -, htycand, htylead⟩ :=
+    handleRequestVoteReply_spec h (net.nwState h).2 src t0 v rfl
+  by_cases hxh : x = h
+  · subst hxh
+    refine ⟨x, ?_, ?_⟩
+    · rw [update_same]
+      show wonElection (dedup
+        ((update_elections_data_requestVoteReply x src t0 v
+          (net.nwState x)).cronies t')) = true
+      rcases update_elections_data_requestVoteReply_cronies_cases x src t0 v
+        (net.nwState x) t' with hsame | ⟨heqt, hnewc, htynf⟩
+      · rw [hsame]
+        exact hw
+      · rw [hnewc]
+        by_cases hc : (handleRequestVoteReply x (net.nwState x).2 src t0
+            v).type = .Candidate
+        · obtain ⟨hstc, hcteq⟩ := htycand hc
+          exact absurd hstc (himp (hcteq.symm.trans heqt.symm))
+        · have hl := serverType_cases htynf hc
+          rcases htylead hl with heqst | ⟨-, hwon, -⟩
+          · have hvrl := (cronies_correct_invariant net hreach).2.2.2 x
+              (by rw [← heqst]; exact hl)
+            rw [heqst]
+            exact hvrl
+          · exact hwon
+    · rw [update_same]
+      show (handleRequestVoteReply x (net.nwState x).2 src t0 v).currentTerm
+          = t' →
+        (handleRequestVoteReply x (net.nwState x).2 src t0 v).type
+          ≠ serverType.Candidate
+      intro hprem hcand
+      obtain ⟨hstc, hcteq⟩ := htycand hcand
+      exact absurd hstc (himp (hcteq.symm.trans hprem))
+  · refine ⟨x, ?_, ?_⟩
+    · rw [update_neq _ _ hxh]
+      exact hw
+    · rw [update_neq _ _ hxh]
+      exact himp
+
 end SafetyLeaves
 end Raft
 end VerdiCompat
