@@ -108,6 +108,7 @@ import GoLeanProofs.Specs.ImportedGooseConst
 import GoLeanProofs.Specs.ImportedGooseRune
 import GoLeanProofs.NegativeSpecs
 import GoLeanProofs.FuelMeasure
+import GoLeanProofs.Sym.KernelRfl
 import GoLeanProofs.StepKit
 import GoLeanProofs.Examples.FibProgram
 import GoLeanProofs.Examples.Fib
@@ -214,6 +215,29 @@ import GoLeanProofs.Sym.Walk
 -- driver's induction over the walk at the symbolic interpretation.
 import GoLeanProofs.Sym.Refine
 import GoLeanProofs.Sym.SpikeKadane
+-- Campaign Arc 4 (A4-U1 pilot): the interpreter⇄invariant seam's
+-- abstraction reader + per-callee span equations + pinned witness.
+-- Proof infrastructure — never imported by the Specs statement modules.
+import GoLeanProofs.Specs.Raft.AbsState
+import GoLeanProofs.Specs.Raft.HandlerEq
+import GoLeanProofs.Specs.Raft.BecomeFollowerWitness
+-- A4-U2 slice 1: the handler-fragment Sym extension (class 1, the
+-- type-table input) + the Sym-driven re-measure of the pilot leaf.
+import GoLeanProofs.Sym.TableExt
+import GoLeanProofs.Specs.Raft.HandlerEqSym
+-- A4-U3: the populated becomeFollower fixture, the crossing facts,
+-- and THE FIRST FULL HANDLER EQUATION.
+import GoLeanProofs.Specs.Raft.BfLit
+import GoLeanProofs.Specs.Raft.BfFixture
+import GoLeanProofs.Specs.Raft.BfSteps
+import GoLeanProofs.Specs.Raft.BfSteps2
+import GoLeanProofs.Specs.Raft.BfEquation
+import GoLeanProofs.Specs.Raft.BpcEquation
+import GoLeanProofs.Specs.Raft.BcLit
+import GoLeanProofs.Specs.Raft.BcFixture
+import GoLeanProofs.Specs.Raft.BcSteps
+import GoLeanProofs.Specs.Raft.BcEquation
+import GoLeanProofs.Specs.Raft.MsEquation
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)
