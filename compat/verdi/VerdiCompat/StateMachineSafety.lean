@@ -1261,6 +1261,189 @@ theorem commit_invariant_do_leader :
       rw [hcteq] at hres
       exact hres
 
+/-! ## The append_entries commit case
+(`StateMachineSafetyProof.v:1499-1560,1579-1794,1887-2158`) -/
+
+/-- `StateMachineSafetyProof.v:1499-1529`
+(`lifted_state_machine_safety_nw'_invariant`): unit 14's SMS-prime nw
+half over msg-committed entries. -/
+theorem msg_lifted_sms_nw' {net : MsgNet}
+    (hreach : msg_refined_raft_intermediate_reachable (P := P) net)
+    {p : MsgPacket} {t : term} {lid : name (P := P)} {pli : logIndex}
+    {plt : term} {es : List (entry (P := P))} {ci : logIndex}
+    {e : entry (P := P)} {t' : term}
+    (hp : p ∈ net.nwPackets)
+    (hbody : p.pBody.2 = .AppendEntries t lid pli plt es ci)
+    (hc : lifted_committed net e t') (hge : t' ≤ t) :
+    pli > e.eIndex ∨ (pli = e.eIndex ∧ plt = e.eTerm) ∨
+    e.eIndex > maxIndex es ∨ e ∈ es :=
+  (state_machine_safety'_invariant (mgv_deghost net)
+      (msg_simulation_1 net hreach)).2 (mgv_deghost_packet p) t lid pli
+    plt es ci e t' (List.mem_map_of_mem hp) hbody
+    (lifted_committed_committed hc) hge
+
+/-- The survival core (`StateMachineSafetyProof.v:1579-1794`'s repeated
+sub-argument, factored): an accepted AppendEntries never evicts an
+entry committed below a directly-committed witness on the same host —
+SMS-prime forces the payload to cover it. -/
+theorem committed_entry_survives_AE {net : MsgNet}
+    (hreach : msg_refined_raft_intermediate_reachable (P := P) net)
+    {p : MsgPacket} {t : term} {n : name (P := P)} {pli : logIndex}
+    {plt : term} {es : List (entry (P := P))} {ci : logIndex}
+    {h : name (P := P)} {d : raft_data (P := P)} {m : msg (P := P)}
+    (hp_in : p ∈ net.nwPackets)
+    (hbody : p.pBody.2 = .AppendEntries t n pli plt es ci)
+    (hae : handleAppendEntries h (net.nwState h).2 t n pli plt es ci
+      = (d, m))
+    {e e' : entry (P := P)}
+    (he : e ∈ (net.nwState h).2.log) (he' : e' ∈ (net.nwState h).2.log)
+    (hee' : e.eIndex ≤ e'.eIndex)
+    (hdc : lifted_directly_committed net e') :
+    e ∈ d.log := by
+  rcases handleAppendEntries_accept_detail h (net.nwState h).2 t n pli
+      plt es ci hae with hsame | ⟨-, hctd, hnew, hshape⟩
+  · rw [hsame]
+    exact he
+  · have hsorted := mgv_lifted_entries_sorted net hreach h
+    have hcont := mgv_lifted_entries_contiguous net hreach h
+    have hcontes := mgv_lifted_entries_contiguous_nw net hreach p t n pli
+      plt es ci hp_in hbody
+    have hsortedes : sorted es :=
+      entries_sorted_nw_invariant (mgv_deghost net)
+        (msg_simulation_1 net hreach) (mgv_deghost_packet p) t n pli plt
+        es ci (List.mem_map_of_mem hp_in) hbody
+    obtain ⟨hesne, hfind⟩ := haveNewEntries_true hnew
+    obtain ⟨x, hx, hxi, hxt⟩ := maxIndex_non_empty hesne
+    have hplimax : pli < maxIndex es := hxi ▸ hcontes.2 x hx
+    have hct_le : (net.nwState h).2.currentTerm ≤ t := by
+      obtain ⟨-, hcts, -, -⟩ := handleAppendEntries_spec h
+        (net.nwState h).2 t n pli plt es ci hae
+      rcases hcts with ⟨hcteq, -⟩ | ⟨hlt, -⟩
+      · rw [← hcteq, hctd]
+        exact Nat.le_refl _
+      · rw [hctd] at hlt
+        exact Nat.le_of_lt hlt
+    have hnepct := mgv_lifted_nepct_host net hreach
+    -- committed-at-current-term packaging for any log entry below e'
+    have hpack : ∀ e0 ∈ (net.nwState h).2.log, e0.eIndex ≤ e'.eIndex →
+        lifted_committed net e0 (net.nwState h).2.currentTerm := by
+      intro e0 h0 hle0
+      exact ⟨h, e', hnepct h e' he', hdc, hle0, h0, he'⟩
+    -- SMS-prime on any such entry
+    have hsms := fun e0 (h0 : e0 ∈ (net.nwState h).2.log)
+        (hle0 : e0.eIndex ≤ e'.eIndex) =>
+      msg_lifted_sms_nw' hreach hp_in hbody (hpack e0 h0 hle0) hct_le
+    -- the payload-too-short escape, refuted once
+    have hshort : ∀ e0, e0 ∈ (net.nwState h).2.log →
+        e0.eIndex ≤ e'.eIndex → e0.eIndex > maxIndex es → False := by
+      intro e0 h0 hle0 hgt
+      have hpos : 0 < maxIndex es :=
+        Nat.lt_of_le_of_lt (Nat.zero_le pli) hplimax
+      have hlemax : maxIndex es ≤ maxIndex (net.nwState h).2.log :=
+        Nat.le_trans (Nat.le_of_lt hgt) (maxIndex_is_max hsorted h0)
+      obtain ⟨y, hyi, hy⟩ := hcont.1 (maxIndex es) ⟨hpos, hlemax⟩
+      rcases hfind with hnone | ⟨em, hsome, hemt⟩
+      · exact (findAtIndex_None hsorted hnone hy) hyi
+      · obtain ⟨hem_in, hemi⟩ := findAtIndex_elim hsome
+        have hemle : em.eIndex ≤ e'.eIndex := by
+          rw [hemi]
+          exact Nat.le_trans (Nat.le_of_lt hgt) hle0
+        rcases hsms em hem_in hemle with h1 | ⟨h2, -⟩ | h3 | h4
+        · rw [hemi] at h1
+          exact Nat.lt_irrefl _ (Nat.lt_trans h1 hplimax)
+        · rw [hemi] at h2
+          rw [h2] at hplimax
+          exact Nat.lt_irrefl _ hplimax
+        · rw [hemi] at h3
+          exact Nat.lt_irrefl _ h3
+        · have hemx : em = x := uniqueIndices_elim_eq
+            (sorted_uniqueIndices hsortedes) h4 hx (hemi.trans hxi.symm)
+          rw [hemx] at hemt
+          exact hemt hxt
+    rcases hsms e he hee' with h1 | ⟨h2, -⟩ | h3 | h4
+    · -- e sits at or below the prevLog cut
+      rcases hshape with ⟨hpli0, -⟩ | ⟨e0, -, -, -, hlog⟩
+      · exfalso
+        rw [hpli0] at h1
+        have := (hcont.2 e he)
+        exact Nat.lt_irrefl _ (Nat.lt_trans this h1)
+      · rw [hlog]
+        exact List.mem_append.mpr (Or.inr
+          (removeAfterIndex_le_In (Nat.le_of_lt h1) he))
+    · rcases hshape with ⟨hpli0, -⟩ | ⟨e0, -, -, -, hlog⟩
+      · exfalso
+        rw [hpli0] at h2
+        have := (hcont.2 e he)
+        rw [← h2] at this
+        exact Nat.lt_irrefl _ this
+      · rw [hlog]
+        exact List.mem_append.mpr (Or.inr
+          (removeAfterIndex_le_In (Nat.le_of_eq h2.symm) he))
+    · exact absurd h3 (fun hgt => hshort e he hee' hgt)
+    · rcases hshape with ⟨-, hlog⟩ | ⟨e0, -, -, -, hlog⟩
+      · rw [hlog]
+        exact h4
+      · rw [hlog]
+        exact List.mem_append.mpr (Or.inl h4)
+
+/-- `StateMachineSafetyProof.v:1579-1794`
+(`handleAppendEntries_preserves_commit`): `lifted_committed` transports
+through an AppendEntries step — both the entry and its
+directly-committed witness survive the splice. -/
+theorem handleAppendEntries_preserves_commit {net : MsgNet}
+    {st' : name (P := P) → electionsData (P := P) × raft_data (P := P)}
+    {ps' : List (MsgPacket)}
+    (hreach : msg_refined_raft_intermediate_reachable (P := P) net)
+    {p : MsgPacket} {t : term} {n : name (P := P)} {pli : logIndex}
+    {plt : term} {es : List (entry (P := P))} {ci : logIndex}
+    {d : raft_data (P := P)} {m : msg (P := P)}
+    (hp_in : p ∈ net.nwPackets)
+    (hbody : p.pBody.2 = .AppendEntries t n pli plt es ci)
+    (hae : handleAppendEntries p.pDst (net.nwState p.pDst).2 t n pli plt
+      es ci = (d, m))
+    (hst : ∀ h', st' h' = update net.nwState p.pDst
+      (update_elections_data_appendEntries p.pDst (net.nwState p.pDst)
+        t n pli plt es ci, d) h')
+    {e : entry (P := P)} {t' : term}
+    (hc : lifted_committed net e t') :
+    lifted_committed (⟨ps', st'⟩ : MsgNet) e t' := by
+  obtain ⟨host, e', hle, hdc, hidx, hin, hin'⟩ := hc
+  have hgrow : ∀ (t0 : term) (e0 : entry (P := P)),
+      (t0, e0) ∈ (net.nwState p.pDst).1.allEntries →
+      (t0, e0) ∈ (update_elections_data_appendEntries p.pDst
+        (net.nwState p.pDst) t n pli plt es ci).allEntries := by
+    intro t0 e0 h1
+    rcases update_elections_data_appendEntries_allEntries_cases p.pDst
+      (net.nwState p.pDst) t n pli plt es ci with hsame | ⟨t1, happ⟩
+    · rw [hsame]
+      exact h1
+    · rw [happ]
+      exact List.mem_append.mpr (Or.inr h1)
+  have hdc' : lifted_directly_committed (⟨ps', st'⟩ : MsgNet) e' := by
+    obtain ⟨q, hnd, hlen, hq⟩ := hdc
+    refine ⟨q, hnd, hlen, ?_⟩
+    intro h0 hh0
+    show (e'.eTerm, e') ∈ (st' h0).1.allEntries
+    rw [hst h0]
+    by_cases heq : h0 = p.pDst
+    · rw [heq, update_same]
+      exact hgrow e'.eTerm e' (heq ▸ hq h0 hh0)
+    · rw [update_neq _ _ heq]
+      exact hq h0 hh0
+  have hsurv : ∀ e0 ∈ (net.nwState host).2.log, e0.eIndex ≤ e'.eIndex →
+      e0 ∈ (st' host).2.log := by
+    intro e0 h0 hle0
+    rw [hst host]
+    by_cases heq : host = p.pDst
+    · rw [heq, update_same]
+      rw [heq] at h0
+      exact committed_entry_survives_AE hreach hp_in hbody hae h0
+        (heq ▸ hin') hle0 hdc
+    · rw [update_neq _ _ heq]
+      exact h0
+  exact ⟨host, e', hle, hdc', hidx, hsurv e hin hidx,
+    hsurv e' hin' (Nat.le_refl _)⟩
+
 end StateMachineSafety
 
 end Raft
