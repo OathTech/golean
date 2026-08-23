@@ -1,0 +1,4 @@
+( GOLEAN_MEM_MAX=64G timeout 3000 ../scripts/capped lean ; )  2993.89s user 6.25s system 99% cpu 50:00.62 total
+rc=124
+peak_kb=63408796
+outcome: DNF — timeout(3000s) fired at 50:00 wall, peak RSS 63.4 GB (poll cadence 5s) under the 64G cap; rc=124. K=10000 = 1,382 init steps (completed) + up to 10,000 subject steps (not completed within budget).
