@@ -1771,6 +1771,204 @@ theorem commit_invariant_append_entries {xs : List (MsgPacket)}
     rw [hm] at hbody0
     exact nomatch hbody0
 
+/-! ## `everything` — the combined induction and the exits
+(`StateMachineSafetyProof.v:2864-3190`) -/
+
+/-- `StateMachineSafetyProof.v:2864-2867` (`everything`): the three
+invariants ride one induction — base SMS of the double deghost is
+RE-ESTABLISHED at every successor from the freshly-proved commit
+invariant + SMS-prime, which is exactly what the PRIMED msg principle's
+successor-reachability premise licenses. -/
+def everything (net : MsgNet) : Prop :=
+  lifted_maxIndex_sanity net ∧ commit_invariant net ∧
+  state_machine_safety (deghost (mgv_deghost net))
+
+/-- The successor's SMS conjunct, from its freshly-proved commit
+invariant (`StateMachineSafetyProof.v`'s per-case
+`state_machine_safety_deghost` reassembly). -/
+theorem everything_sms_piece {net : MsgNet}
+    (hreach : msg_refined_raft_intermediate_reachable (P := P) net)
+    (hci : commit_invariant net) :
+    state_machine_safety (deghost (mgv_deghost net)) :=
+  state_machine_safety_deghost
+    (commit_invariant_lower_commit_recorded_committed hreach hci)
+    (state_machine_safety'_invariant _ (msg_simulation_1 _ hreach))
+
+/-- `StateMachineSafetyProof.v:3114-3132` (`everything_invariant`),
+assembled through the PRIMED msg principle exactly as upstream
+(:2869-3113's per-case lemmas are inlined at their single use). -/
+theorem everything_invariant :
+    ∀ net, msg_refined_raft_intermediate_reachable (P := P) net →
+      everything net := by
+  refine msg_refined_raft_net_invariant' (Pr := everything)
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · -- init
+    refine ⟨lifted_maxIndex_sanity_init, commit_invariant_init, ?_⟩
+    exact everything_sms_piece .MRRIR_init commit_invariant_init
+  · -- client_request'
+    intro h net st' ps' gd out d l client id c hcr hgd hP hreach hreach'
+      hst hps
+    obtain ⟨hmax, hci, -⟩ := hP
+    have hci' : commit_invariant (⟨ps', st'⟩ : MsgNet) :=
+      commit_invariant_client_request hcr hgd hci
+        (maxIndex_sanity_lower hmax) hst hps
+    exact ⟨lifted_maxIndex_sanity_client_request h net st' ps' gd out d l
+        client id c hcr hgd hmax hreach hst hps,
+      hci', everything_sms_piece hreach' hci'⟩
+  · -- timeout'
+    intro net h st' ps' gd out d l hto hgd hP hreach hreach' hst hps
+    obtain ⟨hmax, hci, -⟩ := hP
+    have hci' : commit_invariant (⟨ps', st'⟩ : MsgNet) :=
+      commit_invariant_timeout net h st' ps' gd out d l hto hgd hci
+        hreach hst hps
+    exact ⟨lifted_maxIndex_sanity_timeout net h st' ps' gd out d l hto
+        hgd hmax hreach hst hps,
+      hci', everything_sms_piece hreach' hci'⟩
+  · -- append_entries' — THE case the priming exists for
+    intro xs p ys net st' ps' gd d m t n pli plt es ci hae hgd hbody hP
+      hreach hreach' hpkts hst hps
+    obtain ⟨hmax, hci, hsms⟩ := hP
+    have hci' : commit_invariant (⟨ps', st'⟩ : MsgNet) :=
+      commit_invariant_append_entries hae hgd hbody hci hreach hmax
+        hpkts hst hps
+    exact ⟨lifted_maxIndex_sanity_append_entries hae hbody hmax hsms
+        hreach hpkts hst,
+      hci', everything_sms_piece hreach' hci'⟩
+  · -- append_entries_reply'
+    intro xs p ys net st' ps' gd d m t es res haer hgd hbody hP hreach
+      hreach' hpkts hst hps
+    obtain ⟨hmax, hci, -⟩ := hP
+    have hci' : commit_invariant (⟨ps', st'⟩ : MsgNet) :=
+      commit_invariant_append_entries_reply xs p ys net st' ps' gd d m t
+        es res haer hgd hbody hci hreach hpkts hst hps
+    exact ⟨lifted_maxIndex_sanity_append_entries_reply xs p ys net st'
+        ps' gd d m t es res haer hgd hbody hmax hreach hpkts hst hps,
+      hci', everything_sms_piece hreach' hci'⟩
+  · -- request_vote'
+    intro xs p ys net st' ps' gd d m t cid lli llt hrv hgd hbody hP
+      hreach hreach' hpkts hst hps
+    obtain ⟨hmax, hci, -⟩ := hP
+    have hci' : commit_invariant (⟨ps', st'⟩ : MsgNet) :=
+      commit_invariant_request_vote xs p ys net st' ps' gd d m t cid lli
+        llt hrv hgd hbody hci hreach hpkts hst hps
+    exact ⟨lifted_maxIndex_sanity_request_vote xs p ys net st' ps' gd d
+        m t cid lli llt hrv hgd hbody hmax hreach hpkts hst hps,
+      hci', everything_sms_piece hreach' hci'⟩
+  · -- request_vote_reply'
+    intro xs p ys net st' ps' gd d t v hrvr hgd hbody hP hreach hreach'
+      hpkts hst hps
+    obtain ⟨hmax, hci, -⟩ := hP
+    have hci' : commit_invariant (⟨ps', st'⟩ : MsgNet) :=
+      commit_invariant_request_vote_reply xs p ys net st' ps' gd d t v
+        hrvr hgd hbody hci hreach hpkts hst hps
+    exact ⟨lifted_maxIndex_sanity_request_vote_reply xs p ys net st' ps'
+        gd d t v hrvr hgd hbody hmax hreach hpkts hst hps,
+      hci', everything_sms_piece hreach' hci'⟩
+  · -- do_leader'
+    intro net st' ps' gd d h os d' ms hdl hP hreach hreach' hstate hst
+      hps
+    obtain ⟨hmax, hci, -⟩ := hP
+    have hci' : commit_invariant (⟨ps', st'⟩ : MsgNet) :=
+      commit_invariant_do_leader net st' ps' gd d h os d' ms hdl hci
+        hreach hstate hst hps
+    exact ⟨lifted_maxIndex_sanity_do_leader net st' ps' gd d h os d' ms
+        hdl hmax hreach hstate hst hps,
+      hci', everything_sms_piece hreach' hci'⟩
+  · -- do_generic_server'
+    intro net st' ps' gd d os d' ms h hgs hP hreach hreach' hstate hst
+      hps
+    obtain ⟨hmax, hci, -⟩ := hP
+    have hci' : commit_invariant (⟨ps', st'⟩ : MsgNet) :=
+      commit_invariant_do_generic_server net st' ps' gd d os d' ms h hgs
+        hci hreach hstate hst hps
+    exact ⟨lifted_maxIndex_sanity_do_generic_server net st' ps' gd d os
+        d' ms h hgs hmax hreach hstate hst hps,
+      hci', everything_sms_piece hreach' hci'⟩
+  · -- state_same_packet_subset (unprimed — the SMS conjunct TRANSPORTS
+    -- under state equality + packet subset, `:2995-3100`)
+    intro net net' hstates hsubp hP hreach
+    obtain ⟨hmax, hci, hsms⟩ := hP
+    refine ⟨lifted_maxIndex_sanity_state_same_packet_subset net net'
+        hstates hsubp hmax hreach,
+      commit_invariant_state_same_packet_subset net net' hstates hsubp
+        hci hreach, ?_⟩
+    obtain ⟨hsh, hsn⟩ := hsms
+    have hcr_transport : ∀ (h : name (P := P)) (e : entry (P := P)),
+        commit_recorded (deghost (mgv_deghost net')) h e →
+        commit_recorded (deghost (mgv_deghost net)) h e := by
+      intro h e ⟨hin, hwm⟩
+      replace hin : e ∈ (net'.nwState h).2.log := hin
+      replace hwm : e.eIndex ≤ (net'.nwState h).2.lastApplied ∨
+        e.eIndex ≤ (net'.nwState h).2.commitIndex := hwm
+      rw [← hstates h] at hin hwm
+      exact ⟨hin, hwm⟩
+    constructor
+    · intro h h' e e' hcr hcr' hidx
+      exact hsh h h' e e' (hcr_transport h e hcr)
+        (hcr_transport h' e' hcr') hidx
+    · intro h p t lid pli plt es ci e hp hbody hge hcr
+      replace hp : p ∈ (net'.nwPackets.map mgv_deghost_packet).map
+        deghost_packet := hp
+      obtain ⟨q1, hq1, rfl⟩ := List.mem_map.mp hp
+      obtain ⟨q2, hq2, rfl⟩ := List.mem_map.mp hq1
+      replace hge : t ≥ (net'.nwState h).2.currentTerm := hge
+      rw [← hstates h] at hge
+      exact hsn h (deghost_packet (mgv_deghost_packet q2)) t lid pli plt
+        es ci e
+        (List.mem_map_of_mem (List.mem_map_of_mem (hsubp q2 hq2)))
+        hbody hge (hcr_transport h e hcr)
+  · -- reboot'
+    intro net net' gd d h d' hrb hP hreach hreach' hstate hst hpkts
+    obtain ⟨hmax, hci, -⟩ := hP
+    have hci' : commit_invariant net' :=
+      commit_invariant_reboot net net' gd d h d' hrb hci hreach hstate
+        hst hpkts
+    exact ⟨lifted_maxIndex_sanity_reboot net net' gd d h d' hrb hmax
+        hreach hstate hst hpkts,
+      hci', everything_sms_piece hreach' hci'⟩
+
+/-- `StateMachineSafetyProof.v:3134-3144`
+(`state_machine_safety_invariant`) — **STATE-MACHINE SAFETY AT BASE
+LEVEL, the last T3 head**: descends from the msg-layer `everything`
+through BOTH reghosting transfers (unit 15's `msg_lower_prop` /
+GAP-8, then unit 1's `lower_prop`). -/
+theorem state_machine_safety_invariant :
+    ∀ net, raft_intermediate_reachable (P := P) net →
+      state_machine_safety net := by
+  refine lower_prop _ ?_
+  refine msg_lower_prop
+    (fun n => state_machine_safety (P := P) (deghost n)) ?_
+  intro net hreach
+  exact (everything_invariant net hreach).2.2
+
+/-- `StateMachineSafetyInterface.v:30-36` — Properties.lean's declared
+transfer target, discharged natively (the third and last of the P1
+arc's transfer targets, after OneLeaderPerTerm (unit 2) and LogMatching
+(unit 6)). -/
+theorem stateMachineSafetyStatement_holds :
+    StateMachineSafetyStatement P :=
+  state_machine_safety_invariant
+
+/-- `StateMachineSafetyProof.v:3146-3157` (`maxIndex_sanity_invariant`),
+the `MaxIndexSanityInterface.v` deliverable. -/
+theorem maxIndex_sanity_invariant :
+    ∀ net, raft_intermediate_reachable (P := P) net →
+      maxIndex_sanity net := by
+  refine lower_prop _ ?_
+  refine msg_lower_prop (fun n => maxIndex_sanity (P := P) (deghost n)) ?_
+  intro net hreach
+  exact maxIndex_sanity_lower (everything_invariant net hreach).1
+
+/-- `StateMachineSafetyProof.v:3159-3170`
+(`commit_recorded_committed_invariant`), the
+`CommitRecordedCommittedInterface.v` deliverable. -/
+theorem commit_recorded_committed_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      commit_recorded_committed net :=
+  msg_lower_prop _ (fun net hreach =>
+    commit_invariant_lower_commit_recorded_committed hreach
+      (everything_invariant net hreach).2.1)
+
 end StateMachineSafety
 
 end Raft

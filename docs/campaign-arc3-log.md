@@ -447,6 +447,10 @@ from artifacts.
 | **state_machine_safety' (SMS-PRIME, host' ∧ nw')** | PROVED (refined) | Raft/StateMachineSafetyPrimeInterface.v | SafetyPrime.lean (invariant + both halves) |
 | refined_raft_net_invariant' (STATE-side primed principle, GAP-1) | PROVED (unit 15, Q-route) | Raft/RaftRefinementInterface.v:327-521 + RaftProofs/RaftRefinementProof.v:244-427 | RefinedProofStructure.lean (primed section, 9 shapes + 9 weak bridges) |
 | match_index_all_entries | PROVED (primed-principle consumer) | Raft/MatchIndexAllEntriesInterface.v:8-22 | MatchIndexAllEntries.lean (inv + interface field) |
+| msg_simulation_2 / msg_lower_prop (+_all_the_way) (GAP-8, msg reghosting) | PROVED (unit 15, direct MRRIR route) | RaftProofs/RaftMsgRefinementProof.v:655-940 | MsgRefinement.lean (reghosting section) |
+| maxIndex_sanity | PROVED (base, via everything) | Raft/MaxIndexSanityInterface.v:8-25 | StateMachineSafety.lean (maxIndex_sanity_invariant) |
+| commit_recorded_committed | PROVED (refined, via everything) | Raft/CommitRecordedCommittedInterface.v:12-24 | StateMachineSafety.lean (commit_recorded_committed_invariant) |
+| **state_machine_safety (STATE-MACHINE SAFETY, T3)** | PROVED (base; statement = Properties.lean's P1 def) | Raft/StateMachineSafetyInterface.v:8-36 + RaftProofs/StateMachineSafetyProof.v (3,199L) | StateMachineSafety.lean (everything_invariant → state_machine_safety_invariant + stateMachineSafetyStatement_holds) |
 - 2026-08-22 Slice 13 (1cc83c1d): log/message spec lemmas for the ring
   (findGtIndex_in, removeAfterIndex_in, per-handler log facts,
   doLeader_messages, rvr cronies function-level cases).
@@ -3226,3 +3230,77 @@ complete units; the remainder chartered honestly.
   ✓. Remaining charter: (c) the SMS interior
   (StateMachineSafetyProof.v, 3,199L) — DAG derivation next, split
   discipline in force.
+- 2026-08-23 Slice 86 (71ee1504): `StateMachineSafety.lean` opened
+  (wired from birth) — the two in-file interfaces' statements
+  (maxIndex_sanity, commit_recorded_committed — upstream proves both
+  INSIDE StateMachineSafetyProof.v, no proof files), the msg-layer
+  invariant defs (lifted_maxIndex_sanity, lifted_directly_committed/
+  lifted_committed — DEFINITIONALLY directly_committed/committed of
+  mgv_deghost, so upstream's four transfer lemmas :1017-1065 are
+  identity-shaped here, kept as named theorems for citation —
+  commit_invariant host∧nw), and the transfer bridges (CRC-lowering,
+  `state_machine_safety_deghost`, maxIndex lift/lower).
+- 2026-08-23 Slice 87 (a926421a): **`lifted_maxIndex_sanity` — all
+  eleven obligations.** [AGENT] Proof-shape call (§9): upstream's
+  duplicated ~120-line lastApplied/commitIndex AE bullets factor into
+  ONE watermark core `lifted_maxIndex_AE_core` (the SMS-coupled
+  escape refutation: the host entry AT the payload's maxIndex is
+  commit-recorded, so `state_machine_safety_nw` of the double deghost
+  forces the payload to cover it — the term mismatch `haveNewEntries`
+  certifies kills the fourth disjunct via uniqueIndices). New:
+  `foldl_max_le`, `doLeader_commitIndex_bound` (advanceCommitIndex
+  folds max over the leader's own indices),
+  `handleAppendEntries_commitIndex` (the max/min form). The slice-69
+  la_ci watermark family re-consumed wholesale.
+- 2026-08-23 Slices 88-90 (4408c9e5, f34c4f52, dfb75488, 29d46113):
+  **the `commit_invariant` induction, all eleven obligations.**
+  - transport layer: `lifted_committed_log_allEntries_preserved` /
+    `_ext` / `_monotonic` / `_of_update` (subsuming upstream's
+    per-handler `*_preserves_committed` family), `ci_routine` (the
+    shared no-log-change shape) — timeout/AER/RV/RVR/DGS/subset/reboot
+    each a few lines over it; the CR custom form couples
+    `maxIndex_sanity` (the fresh head sits above commitIndex).
+  - do_leader (slice 89): the quorum argument — `foldl_max_cases`,
+    `advanceCommitIndex_le_cases`,
+    **`haveQuorum_lifted_directly_committed`** (W-E's
+    `match_index_all_entries` msg-lifted turns the matchIndex quorum
+    into allEntries records — its purpose in the lattice), and the
+    fresh replica packets' ghost logs covered by the freshly-proved
+    successor host half (upstream's and_imp_2 coupling).
+  - append_entries (slice 90, the cap's centerpiece; upstream ~580
+    lines across preserves_commit + the case): [AGENT] §9 factoring —
+    `committed_entry_survives_AE` (ONE survival core for upstream's
+    four duplicated ~90-line sub-arguments: SMS-prime + the
+    haveNewEntries findAtIndex analysis force an accepted payload to
+    cover every entry committed below a directly-committed witness),
+    `handleAppendEntries_preserves_commit` (witness pair transported
+    whole), `handleAppendEntries_ci_log` (the CORRELATED ci/log shape
+    upstream reads off log_detailed), and the obligation: new entries
+    below the old commitIndex identify with their pre-state twins
+    (host contiguity + SMS-prime + uniqueIndices); entries below the
+    request's leaderCommit certify THROUGH THE GHOST LOG — the
+    `commit_invariant_nw` IH covers the ghost, unit 13's
+    `ghost_log_correct` contextualizes the payload inside it, unit
+    14's `ghost_log_entries_match` glues surviving old entries to
+    their ghost twins. The msg-ghost layer's whole reason to exist
+    pays off in one case.
+- 2026-08-23 Slice 91: **`everything` + THE EXITS.** The three-way
+  conjunction (maxIndex ∧ commit ∧ base-SMS-of-double-deghost)
+  through the PRIMED msg principle (unit 13) — the SMS conjunct
+  RE-ESTABLISHED at every successor from the freshly-proved commit
+  invariant + unit 14's `state_machine_safety'` via `msg_simulation_1`
+  (the subset case transports it directly instead — no successor
+  reachability there, exactly upstream :2995-3100). Exits descend by
+  GAP-8's `msg_lower_prop` then unit 1's `lower_prop`:
+  **`state_machine_safety_invariant` (BASE — the last T3 head)**,
+  `stateMachineSafetyStatement_holds` (Properties.lean's declared
+  transfer target, discharged natively — the third and last),
+  `maxIndex_sanity_invariant` (base),
+  `commit_recorded_committed_invariant` (refined). [AGENT] Gotchas:
+  the primed principle's `Pr` must be pinned explicitly
+  (`(Pr := everything)` — the init bullet otherwise mis-unifies the
+  conjunction), and the primed client_request's `client id c` args.
+  Five AxCheck pins (fresh capped probe, all [propext, Quot.sound]).
+  Build green, sweep 2617; hatch grep over StateMachineSafety.lean: 0
+  (exit 1); file 1,975 lines. **THE UNIT-15 CHARTER IS COMPLETE IN
+  FULL: (a) + (b) + (c).**

@@ -270,6 +270,24 @@ consumer, `match_index_all_entries`. -/
 /-- info: 'VerdiCompat.Raft.msg_lower_prop_all_the_way' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms VerdiCompat.Raft.msg_lower_prop_all_the_way
 
+/-! THE W-F CAP (unit 15): state-machine safety at base level — the
+last T3 head — plus the two in-file interface deliverables. -/
+
+/-- info: 'VerdiCompat.Raft.everything_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.everything_invariant
+
+/-- info: 'VerdiCompat.Raft.state_machine_safety_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.state_machine_safety_invariant
+
+/-- info: 'VerdiCompat.Raft.stateMachineSafetyStatement_holds' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.stateMachineSafetyStatement_holds
+
+/-- info: 'VerdiCompat.Raft.maxIndex_sanity_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.maxIndex_sanity_invariant
+
+/-- info: 'VerdiCompat.Raft.commit_recorded_committed_invariant' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms VerdiCompat.Raft.commit_recorded_committed_invariant
+
 /-! ## Exhaustive sweep (fails the build on any disallowed axiom) -/
 
 open Lean in
