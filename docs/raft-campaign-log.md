@@ -594,6 +594,44 @@ interleaved commits (rewriting under a worker is worse); at arc-4's
 integration the file contents converge. Rule adopted: coordinator
 commits use absolute -C paths, never cwd.
 
+## CALIBRATION — timeline predictions (logged at [USER] request)
+
+**P-2026-08-24 (the standing prediction, made with T3 closed, 5
+handler equations proved, the witness wave ~1/3 through):** to the
+constitution's ends (T1+T2) — CompletionWitness ~1-2 days from the
+wave's resume; T1 ∀-side ~2-4 weeks (remaining ~15 handler equations
+at 15-25 sessions with wave-1 velocity favoring the low end; the
+round-induction/checker-implication assembly is the no-precedent
+soft spot); T2 ~1-2 weeks after T1 (lattice already node-set-generic).
+**Total: ~4-7 weeks of campaign time at current velocity**, tracking
+~2× ahead of the launch-era "months" framing. Assumptions: box and
+worker cadence hold; audit/merge cycles add calendar time not
+counted here. Score this against actuals as the experiment proceeds.
+(For the record, the launch-era implicit estimate had the Verdi
+lattice as the long middle; it took ~2 days — the two structural
+bets, the lattice port and the Sym extension, both beat projection.)
+
+## PAUSE (2026-08-24, [USER]): compute re-planning
+
+Mike is pausing the campaign to figure out compute; the goal will be
+unset; instruction: wrap coherently, land everything on ONE campaign
+branch, prepare for a remote push. Wrap plan [AGENT]: (1) integrate
+campaign-arc3 @ c131f278, campaign-arc2 @ 7e120182, campaign-arc4 @
+14f37f20 into `campaign` (internal composition; the arc-4 merge
+resolves the log-file conflict by taking this branch's consolidated
+copy); (2) fast gate on the integrated branch; (3) the witness wave
+STOPPED RESUMABLY (manifest-driven by design; done-segment oleans
+survive in the arc-2 worktree's .lake as long as the box persists —
+if compute changes, segments re-run from the committed
+generator+manifest; resume commands in the arc-2 log); (4) the
+probe_and_replicate re-run left running (1 core, ~135MB — kill
+`pgrep -f 'traces probe_and_replicate'` if compute needs it; restart
+command in this log); (5) the milestone audit reviewers run to
+completion (they read the frozen arc-3 tip; reports inform the
+post-pause main landing under the standing [USER] conditional
+authorization). Push: prepared, offered, not executed (sign-off at
+the moment per protocol).
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
