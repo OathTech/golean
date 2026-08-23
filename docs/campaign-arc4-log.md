@@ -468,8 +468,11 @@ is the pilot's validated form at the span's endpoints.
 
 ## A4-U2 slice-4 exit (2026-08-23, tip = this commit)
 
-Gate `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci` at this
-tree — result recorded below after the run; full proofs+Audit 471
-jobs green; Kit pins 15 (two new, at the CLEANER-than-expected
-[propext, Quot.sound]). Branch-complete for this dispatch; nothing
-merged.
+Gate `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci` at
+ca53e587's tree — **RESULT: PASS, exit 0** (23 ok steps,
+`artifacts/ci-arc4-u2c.log`; no-diff notes = the sanctioned
+proofs+docs hatch). Full proofs+Audit 471 jobs green; Kit pins 15
+(two new, at the CLEANER-than-expected [propext, Quot.sound]).
+Branch-complete for this dispatch; nothing merged; the
+comparator-landmark staleness note stays flagged for the operator's
+merge step.
