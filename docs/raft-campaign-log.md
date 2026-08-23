@@ -551,6 +551,30 @@ is the §4.4 park-and-report condition, not an emergency.
   queue carries the milestone audit, the merge, and the owed
   comparator-judge run (133 commits).
 
+- **THE MILESTONE AUDIT — COMPLETE, AND THE LANDING IS DONE**
+  (2026-08-24): R1 statement fidelity = **FAITHFUL everywhere** (the
+  whole spec base diffed — zero drift; refutability witnesses
+  compiled; 24 fresh axiom probes; "statement laundering was
+  structurally impossible on this lane"). R2 proof shapes = **every
+  §9 call EQUIVALENT or strictly stronger** (six majors + the three
+  route calls verified against Coq primary source; re-verification
+  chain spot-checked EXACT). R3 records = quantitative record
+  re-derives exactly (84/84 index rows exist and elaborate; the
+  9,612-line census exact; sweep 2615 fresh-derived twice) with ONE
+  HIGH: **S1 — units 2-3's gate artifacts came from the wrong
+  worktree** (a record defect, not code — mitigations verified:
+  unit 4's in-lane gate + the audit's own fresh tip build; corrected
+  in place, not re-staged) + S2-S6 causal/cite/arithmetic items.
+  FIX ROUND applied on the lane (e88b153c: the record corrections,
+  ten new curated pins making the coverage sentence true by
+  construction, R1's eleven cite fixes, R2's provenance notes);
+  re-gate PASS; **comparator-judge PASS (56 theorems, 393s) at the
+  audited tip**; [AGENT] verifier-step call: replaced by coordinator
+  spot-verification of S1 (three independent probes confirmed) under
+  the wrap directive. **LANDED ON MAIN ff-only @ df8a9141** per the
+  [USER] conditional authorization — the T3 safety lattice is on the
+  mainline.
+
 ## Awaiting [USER] — the queue
 
 - **POSED — designation of `AgreementT1` + `CompletionWitness`**
@@ -576,9 +600,8 @@ is the §4.4 park-and-report condition, not an emergency.
   guided re-proofs; records/index honesty) + 1 verifier, over the
   campaign-arc3 lane's final state. [USER] may waive/trim; the ask
   is unconditional.
-- **POSED — Arc 3 merge** (branch-complete after unit-16 wrap; the
-  comparator-judge run is OWED at this merge — the staleness note
-  crossed its threshold at unit 13, now 128 commits).
+- **DISCHARGED — Arc 3 merge**: landed on main @ df8a9141 with the
+  judge run (56 theorems PASS at e88b153c).
 
 ## Coordinator incident (2026-08-24, [AGENT], recorded before repair)
 
