@@ -65,6 +65,69 @@ completion machinery, route memo + unit-2 charter).
   mid-build measurement gate). Records:
   `records/trie-bench.out`.
 
+- **U4 opens** (2026-08-23, coordinator-directed): design note
+  `docs/2026-08-22_fasteval-design.md` (the three measured discoveries:
+  the 3-function heap funnel, address-ascending append-only heap,
+  structural-only kernel recursion; the two surface-collapsing moves:
+  one-directional refinement with fail-closed stubs, lazy γF view for
+  pure helpers — the latter discovered to also DELETE the WF-invariant
+  threading: γH is total via dummy-dump and the single `γF σF₀ = s₃`
+  kernel equality forces exact representation). Probe D (exercised-arm
+  census) written + running. `FastEval/Heap.lean` (trie + γH + the
+  primitive commute lemmas) and `FastEval/Ops.lean` (ExecStateF, γF,
+  loadLocF/storeLocF/allocF + one-directional sims) BUILD GREEN.
+
+## THE U4 PER-ARM TEMPLATE (of record, for the authorized wave)
+
+Validated on the landed `FastEval/Ops.lean` (its own header carries
+the same rules):
+
+1. **Mirror**: copy the def; suffix `F`; `ExecState` → `ExecStateF`;
+   the three heap primitives → `loadLocF`/`storeLocF`/`allocF`; every
+   PURE helper call keeps its exact shape but at state `γF σF` (the
+   lazy view — never materializes); arms not in probe D's census →
+   `stuck "fastEval-stub: <def>.<arm>"`. No `partial`, no `sorry`.
+2. **Slow-side arm equations** (only where the sim needs to step the
+   ORIGINAL under known scrutinees): hypothesis-conditioned lemmas in
+   the StepKit style, proof `simp only [<def>, <scrutinee eqs>]; rfl`
+   (this both unfolds and iota-reduces the matches; `rfl` closes the
+   join-point/bind plumbing).
+3. **Sim** `<f>F_ok : <f>F σF … = .ok r → <f> (γF σF) … = .ok (γ-image r)`:
+   `unfold <f>F at h`; `split at h` down the def's own match/if tree
+   (each split names its scrutinee equation); at an Except-valued
+   call: `cases hn : <call> with | error e => rw [hn] at h; simp
+   [Bind.bind, Except.bind] at h | ok x => rw [hn] at h; …` — NOTE
+   `cases hn :` substitutes the GOAL only, so `rw [hn] at h` (never
+   `at h ⊢`); slow side stepped by the arm equations; state images
+   close by `γF_store_image`/`allocF_state`; recursion via the def's
+   own structural IH; STUB arms close vacuously (`simp at h`).
+4. Every public theorem `#print axioms`-pinned (assembly collects the
+   pins); docstrings carry the never-in-a-statement-closure line.
+5. **LOOPS** (added after `Loops.lean`/`Shared.lean` landed): the
+   core's `for i in [:n]` loops are `Std.Legacy.Range.forIn` over a
+   PRIVATE well-founded loop — unnameable and kernel-hostile. Fast
+   mirrors write loops as `forIn (List.range' 0 n 1) init body`
+   (structural, kernel-reduces); sims use `list_forIn_sim`
+   (`FastEval/Loops.lean`, the one-directional relational transport)
+   plus the core bridge `Std.Legacy.Range.forIn_eq_forIn_range'`
+   (simp with `Std.Legacy.Range.size, Nat.sub_zero, Nat.add_sub_cancel,
+   Nat.div_one` to normalize the size). Worked exemplar with every
+   wrinkle: `sliceVisibleValuesF_ok` (`FastEval/Shared.lean`).
+6. **The elaboration wrinkles that cost this session time — read
+   before writing a sim** (each observed, not theorized):
+   - a slow-side `let mut`/`for` body elaborates with an extra
+     `pure PUnit.unit` statement — spell your `body :=` in the sim to
+     MATCH the original's elaborated shape or `rw` will not fire;
+   - `rw [<eq>]` on a goal whose lambda-internal binds were already
+     simp-rewritten will not match a bind-spelled equation — rewrite
+     FIRST, simp after;
+   - `cases hn : <call>` substitutes the GOAL only, never hypotheses —
+     `rw [hn] at h`, never `at h ⊢`;
+   - `split at h` names each branch's scrutinee equation — use it for
+     matches; `cases hb :` + `rw at h` for `Except`-valued calls;
+   - after `subst hR` the surviving accumulator binder is the FAST
+     side's (`b'`).
+
 ## Judgment calls
 
 - **[AGENT]** 2026-08-22: copy mechanism is path-checkout from the
