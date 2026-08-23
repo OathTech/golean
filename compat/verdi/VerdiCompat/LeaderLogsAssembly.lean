@@ -1981,6 +1981,274 @@ theorem leaderLogs_preserved_invariant :
     refine leaderLogs_preserved_of_update hP hst ?_
     rw [hstate]
 
+/-! ## allEntries_leaderLogs_term
+(`AllEntriesLeaderLogsTermInterface.v:9-15`) -/
+
+/-- `AllEntriesLeaderLogsTermInterface.v:9-15`
+(`allEntries_leaderLogs_term`): every recorded (term, entry) pair is at
+the entry's own term, or the entry sits in a leaderLog snapshot at the
+recorded term. -/
+def allEntries_leaderLogs_term (net : RefinedNet) : Prop :=
+  ∀ (t : term) (e : entry (P := P)) (h : name (P := P)),
+    (t, e) ∈ (net.nwState h).1.allEntries →
+    t = e.eTerm ∨
+    ∃ (ll : List (entry (P := P))) (leader : name (P := P)),
+      (t, ll) ∈ (net.nwState leader).1.leaderLogs ∧ e ∈ ll
+
+omit O in
+/-- The client-request ghost record's pair carries the leader's current
+term, which is also the fresh entry's term (sharpens the lane's
+`update_elections_data_client_request_allEntries_term_cases` by the
+head's term, read off `handleClientRequest_log_full`). -/
+theorem update_elections_data_client_request_allEntries_head_term
+    (me : name (P := P)) (st : electionsData (P := P) × raft_data (P := P))
+    (client : R.clientId) (id : Nat) (c : P.input) {out d l}
+    (hcr : handleClientRequest me st.2 client id c = (out, d, l)) :
+    (update_elections_data_client_request me st client id c).allEntries
+      = st.1.allEntries ∨
+    ∃ e : entry (P := P), e.eTerm = d.currentTerm ∧
+      (update_elections_data_client_request me st client id c).allEntries
+        = (d.currentTerm, e) :: st.1.allEntries := by
+  unfold update_elections_data_client_request
+  rw [hcr]
+  simp only []
+  rcases handleClientRequest_log_full me st.2 client id c hcr with
+    ⟨-, hlog⟩ | ⟨-, heq⟩
+  · rw [hlog, if_pos (by
+      simp only [Nat.blt_eq, List.length_cons]
+      exact Nat.lt_succ_self _)]
+    exact Or.inr ⟨_,
+      ((handleClientRequest_spec me st.2 client id c hcr).2.1).symm, rfl⟩
+  · rw [heq, if_neg (by
+      simp only [Nat.blt_eq]
+      exact Nat.lt_irrefl _)]
+    exact Or.inl rfl
+
+/-- Transport for `allEntries_leaderLogs_term` across steps that keep
+`allEntries` at the updated node and only grow its leaderLogs. -/
+theorem allEntries_leaderLogs_term_of_update {net net' : RefinedNet}
+    {u : name (P := P)} {gd : electionsData (P := P)} {d : raft_data (P := P)}
+    (hP : allEntries_leaderLogs_term net)
+    (hst : ∀ h', net'.nwState h' = update net.nwState u (gd, d) h')
+    (hgrow : ∀ (t : term) (ll : List (entry (P := P))),
+      (t, ll) ∈ (net.nwState u).1.leaderLogs → (t, ll) ∈ gd.leaderLogs)
+    (hae : gd.allEntries = (net.nwState u).1.allEntries) :
+    allEntries_leaderLogs_term net' := by
+  intro t e h hin
+  replace hin : (t, e) ∈ (net'.nwState h).1.allEntries := hin
+  have hin' : (t, e) ∈ (net.nwState h).1.allEntries := by
+    rw [hst h] at hin
+    by_cases heq : h = u
+    · subst heq
+      rw [update_same] at hin
+      replace hin : (t, e) ∈ gd.allEntries := hin
+      rw [hae] at hin
+      exact hin
+    · rw [update_neq _ _ heq] at hin
+      exact hin
+  rcases hP t e h hin' with h1 | ⟨ll, leader, hmem, hell⟩
+  · exact Or.inl h1
+  · refine Or.inr ⟨ll, leader, ?_, hell⟩
+    rw [hst leader]
+    by_cases heql : leader = u
+    · subst heql
+      rw [update_same]
+      exact hgrow _ _ hmem
+    · rw [update_neq _ _ heql]
+      exact hmem
+
+/-- `AllEntriesLeaderLogsTermProof.v:322-340`
+(`allEntries_leaderLogs_term_invariant`): the append-entries case is
+`append_entries_leaderLogs`' payoff — a freshly recorded entry either
+came in the request's own-term block or inside the prefix of a
+leaderLog snapshot at the request's term; a leader's fresh record is at
+its own term. -/
+theorem allEntries_leaderLogs_term_invariant :
+    ∀ net, refined_raft_intermediate_reachable (P := P) net →
+      allEntries_leaderLogs_term net := by
+  refine refined_raft_net_invariant ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · -- init
+    intro t e h hin
+    exact nomatch hin
+  · -- client_request
+    intro h net st' ps' gd out d l client id c hcr hgd hP _hreach hst hps
+    have hgrow : ∀ (t2 : term) (ll : List (entry (P := P))),
+        (t2, ll) ∈ (net.nwState h).1.leaderLogs →
+        (t2, ll) ∈ gd.leaderLogs := by
+      intro t2 ll hin
+      subst hgd
+      rw [(update_elections_data_client_request_ghost h (net.nwState h)
+        client id c).2.2.2]
+      exact hin
+    rcases update_elections_data_client_request_allEntries_head_term h
+      (net.nwState h) client id c hcr with hsame | ⟨enew, hterm, hcons⟩
+    · exact allEntries_leaderLogs_term_of_update hP hst hgrow
+        (hgd ▸ hsame)
+    · intro t e h0 hin
+      replace hin : (t, e) ∈ (st' h0).1.allEntries := hin
+      have hred : (t, e) ∈ (net.nwState h0).1.allEntries ∨
+          (t = d.currentTerm ∧ e = enew) := by
+        rw [hst h0] at hin
+        by_cases heq : h0 = h
+        · subst heq
+          rw [update_same] at hin
+          replace hin : (t, e) ∈ gd.allEntries := hin
+          rw [hgd, hcons] at hin
+          rcases List.mem_cons.mp hin with heq2 | hin
+          · injection heq2 with h1 h2
+            exact Or.inr ⟨h1, h2⟩
+          · exact Or.inl hin
+        · rw [update_neq _ _ heq] at hin
+          exact Or.inl hin
+      rcases hred with hin' | ⟨rfl, rfl⟩
+      · rcases hP t e h0 hin' with h1 | ⟨ll, leader, hmem, hell⟩
+        · exact Or.inl h1
+        · refine Or.inr ⟨ll, leader, ?_, hell⟩
+          show (t, ll) ∈ (st' leader).1.leaderLogs
+          rw [hst leader]
+          by_cases heql : leader = h
+          · subst heql
+            rw [update_same]
+            exact hgrow _ _ hmem
+          · rw [update_neq _ _ heql]
+            exact hmem
+      · exact Or.inl hterm.symm
+  · -- timeout
+    intro net h st' ps' gd out d l hto hgd hP _hreach hst hps
+    refine allEntries_leaderLogs_term_of_update hP hst ?_ ?_
+    · intro t2 ll hin
+      subst hgd
+      rw [(update_elections_data_timeout_ghost h (net.nwState h)).1]
+      exact hin
+    · subst hgd
+      exact (update_elections_data_timeout_ghost h (net.nwState h)).2
+  · -- append_entries: append_entries_leaderLogs pays off
+    intro xs p ys net st' ps' gd d m t n0 pli plt es ci hae hgd hbody hP
+      hreach hpkts hst hps
+    have hpin : p ∈ net.nwPackets := by
+      rw [hpkts]
+      exact List.mem_append.mpr (Or.inr (List.mem_cons_self ..))
+    have hgrow : ∀ (t2 : term) (ll : List (entry (P := P))),
+        (t2, ll) ∈ (net.nwState p.pDst).1.leaderLogs →
+        (t2, ll) ∈ gd.leaderLogs := by
+      intro t2 ll hin
+      subst hgd
+      rw [(update_elections_data_appendEntries_ghost p.pDst
+        (net.nwState p.pDst) t n0 pli plt es ci).2.2.2]
+      exact hin
+    have hreloc : ∀ (t2 : term) (ll : List (entry (P := P)))
+        (leader : name (P := P)),
+        (t2, ll) ∈ (net.nwState leader).1.leaderLogs →
+        (t2, ll) ∈ (st' leader).1.leaderLogs := by
+      intro t2 ll leader hin
+      rw [hst leader]
+      by_cases heq : leader = p.pDst
+      · subst heq
+        rw [update_same]
+        exact hgrow _ _ hin
+      · rw [update_neq _ _ heq]
+        exact hin
+    rcases update_elections_data_appendEntries_allEntries_term_cases
+      p.pDst (net.nwState p.pDst) t n0 pli plt es ci hae with hsame |
+      ⟨t', hm, hcons⟩
+    · exact allEntries_leaderLogs_term_of_update hP hst hgrow
+        (hgd ▸ hsame)
+    · have ht' : t' = t :=
+        (handleAppendEntries_reply_true p.pDst (net.nwState p.pDst).2 t n0
+          pli plt es ci (hm ▸ hae)).1
+      intro t0 e h0 hin
+      replace hin : (t0, e) ∈ (st' h0).1.allEntries := hin
+      have hred : (t0, e) ∈ (net.nwState h0).1.allEntries ∨
+          (t0 = t' ∧ e ∈ es) := by
+        rw [hst h0] at hin
+        by_cases heq : h0 = p.pDst
+        · subst heq
+          rw [update_same] at hin
+          replace hin : (t0, e) ∈ gd.allEntries := hin
+          rw [hgd, hcons] at hin
+          rcases List.mem_append.mp hin with hmap | hold
+          · obtain ⟨e2, he2, heq2⟩ := List.mem_map.mp hmap
+            injection heq2 with h1 h2
+            exact Or.inr ⟨h1.symm, h2 ▸ he2⟩
+          · exact Or.inl hold
+        · rw [update_neq _ _ heq] at hin
+          exact Or.inl hin
+      rcases hred with hin' | ⟨rfl, hees⟩
+      · rcases hP t0 e h0 hin' with h1 | ⟨ll, leader, hmem, hell⟩
+        · exact Or.inl h1
+        · exact Or.inr ⟨ll, leader, hreloc _ _ _ hmem, hell⟩
+      · -- the fresh record: classify e inside the request via the
+        -- packet invariant
+        obtain ⟨h1, ll, es', ll', hsplit, hterm, hmem, hpref, -⟩ :=
+          append_entries_leaderLogs_invariant net hreach p t n0 pli plt es
+            ci hpin hbody
+        rw [hsplit] at hees
+        rcases List.mem_append.mp hees with hes' | hll'
+        · exact Or.inl (ht'.trans (hterm e hes').symm)
+        · refine Or.inr ⟨ll, h1, ?_, Prefix_In hpref e hll'⟩
+          rw [ht']
+          exact hreloc _ _ _ hmem
+  · -- append_entries_reply: ghost untouched
+    intro xs p ys net st' ps' gd d m t es res haer hgd _hbody hP _hreach
+      hpkts hst hps
+    refine allEntries_leaderLogs_term_of_update hP hst ?_ ?_
+    · intro t2 ll hin
+      rw [hgd]
+      exact hin
+    · rw [hgd]
+  · -- request_vote
+    intro xs p ys net st' ps' gd d m t cid lli llt hrv hgd _hbody hP
+      _hreach hpkts hst hps
+    refine allEntries_leaderLogs_term_of_update hP hst ?_ ?_
+    · intro t2 ll hin
+      subst hgd
+      rw [(update_elections_data_requestVote_cronies p.pDst p.pSrc t
+        p.pSrc lli llt (net.nwState p.pDst)).2.1]
+      exact hin
+    · subst hgd
+      exact (update_elections_data_requestVote_cronies p.pDst p.pSrc t
+        p.pSrc lli llt (net.nwState p.pDst)).2.2
+  · -- request_vote_reply: leaderLogs grow, allEntries untouched
+    intro xs p ys net st' ps' gd d t v hrvr hgd _hbody hP _hreach hpkts
+      hst hps
+    refine allEntries_leaderLogs_term_of_update hP hst ?_ ?_
+    · intro t2 ll hin
+      subst hgd
+      exact update_elections_data_requestVoteReply_leaderLogs_old p.pDst
+        p.pSrc t v (net.nwState p.pDst) hin
+    · subst hgd
+      exact (update_elections_data_requestVoteReply_votes p.pDst p.pSrc t
+        v (net.nwState p.pDst)).2.2
+  · -- do_leader
+    intro net st' ps' gd d h os d' ms hdl hP _hreach hstate hst hps
+    refine allEntries_leaderLogs_term_of_update hP hst ?_ ?_
+    · intro t2 ll hin
+      rw [hstate] at hin
+      exact hin
+    · rw [hstate]
+  · -- do_generic_server
+    intro net st' ps' gd d os d' ms h hgs hP _hreach hstate hst hps
+    refine allEntries_leaderLogs_term_of_update hP hst ?_ ?_
+    · intro t2 ll hin
+      rw [hstate] at hin
+      exact hin
+    · rw [hstate]
+  · -- state_same_packet_subset
+    intro net net' hstates hsub hP _hreach t e h hin
+    replace hin : (t, e) ∈ (net'.nwState h).1.allEntries := hin
+    rw [← hstates h] at hin
+    rcases hP t e h hin with h1 | ⟨ll, leader, hmem, hell⟩
+    · exact Or.inl h1
+    · rw [hstates leader] at hmem
+      exact Or.inr ⟨ll, leader, hmem, hell⟩
+  · -- reboot
+    intro net net' gd d h d' _hrb hP _hreach hstate hst hpkts
+    refine allEntries_leaderLogs_term_of_update hP hst ?_ ?_
+    · intro t2 ll hin
+      rw [hstate] at hin
+      exact hin
+    · rw [hstate]
+
 end LeaderLogsAssembly
 end Raft
 end VerdiCompat
