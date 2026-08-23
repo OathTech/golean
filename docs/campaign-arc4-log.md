@@ -404,3 +404,72 @@ extension modules (grep); full proofs+Audit 471 jobs green; Kit pins
 green (13 extension pins total). Branch-complete for this dispatch;
 nothing merged; the comparator-landmark staleness note stays flagged
 for the operator's merge step.
+
+## A4-U2 slice 4 (2026-08-23, coordinator-dispatched; recommendation adopted)
+
+- 2026-08-23 Slice 4 landed IN TWO PARTS, stop-rule honored at a
+  clean boundary:
+  **(a) The residual Q4-family lifts the crossing needed** (same
+  lever, consumed on demand exactly as designed): `buildStructValueT`
+  (+ fields walk, conc lemmas) and `mapAssignValueT` (defined
+  key/value types), each with a delegating step arm — the
+  becomeFollower pre-window grew 189 → **642 steps, quitting exactly
+  at the Q3 pick** (#eval: 642, q3Choice — the designed boundary).
+  **(b) THE CHOICE-CROSSING COMPOSITION** (design §4(ii) realized):
+  `stepFn_pick_generic` — the TYPE-GENERIC map-range pick step
+  (class-5's kit half delivered; `MapMem.stepFn_pick_bind` stays the
+  uint64 instance) — and `stepFnIter_window_pick_window`, THE HANDLER
+  SPINE (pre-window ∀ch + one pick step + post-window ∀ch, composed
+  over the quantified prefix). Both [propext, Quot.sound].
+- 2026-08-23 **The becomeFollower CROSSING** (HandlerEqSym): pre 642
+  + pick + post 302 = **`bf_intn_span`, 945 steps as ONE
+  prefix-quantified span**. The picked key is SYMBOLIC (x₅) in the
+  post fixture — the valuation absorbs the pick, ONE post-window
+  serves every pick (§4(ii)'s collapse; the key lands only in spots
+  `absRaftNode` never reads). The pick step enters CONDITIONED (kit
+  style); `bf_intn_span_witness` discharges it at the concrete
+  stream `[3]` by closed evaluation (#eval-checked first: config and
+  state images both equal; probe `BfWindowProbe`). Post-window ends
+  at this fixture's nil-logger call (Q6) — the empty-fixture
+  analogue of the 2b residual. Module builds 136 s; zero
+  sorry/native_decide; axioms as probed (arc log commit).
+- 2026-08-23 [AGENT] **The FULL 3,233-step span did NOT land** — the
+  3,233 trace is the POPULATED-tracker run; honestly enumerated
+  remainder (the successor's list, in order): (1) the populated
+  fixture (trk.Progress mapData + three Progress cells + the
+  raftLog/unstable/MemoryStorage chain — recipe = probe2's cell
+  dump); (2) Visit's 3-pick crossing = the SAME spine applied three
+  times + the sort-collapse at the canonicalization point (§4(ii));
+  (3) the 2b interface-dispatch splits (logger Infof + 3×
+  storage.LastIndex — hand `stepFn_call_enter` conditioned steps at
+  the pinned tables, ~30-50 lines each); (4) the ∀ρ pick-fact
+  discharge (deriving `bf_intn_span`'s hpick from
+  `stepFn_pick_generic`'s facts computed over the γ-image — the one
+  genuinely new proof obligation left).
+
+### Re-measure update (slice 4)
+
+The 945-step crossing costs ~130 lines of fixture + 5 theorems in
+HandlerEqSym vs ~8,500 at the pilot's measured 9 hand-lines/step.
+Cumulative: TableExt 1,623 lines (ALL FOUR general classes +
+witnesses; one-time), HandlerEqSym 289 (every becomeFollower
+instance). Elaboration: 136 s for the 945-step module. The 600–1,000
+line full-handler projection STANDS, now evidence-backed at
+945/3,233 of the real handler.
+
+### A4-U3 ASSESSMENT (posted per the dispatch)
+
+**Assembly as projected, YES** — with the four-item remainder above
+as U3's opening checklist. The spine + pick lemma + windows make
+each remaining piece a repetition of a landed pattern except item
+(4), which is bounded (one lemma over a fixed γ-image heap). The
+absState-correspondence layer on top (the actual handler EQUATION)
+is the pilot's validated form at the span's endpoints.
+
+## A4-U2 slice-4 exit (2026-08-23, tip = this commit)
+
+Gate `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci` at this
+tree — result recorded below after the run; full proofs+Audit 471
+jobs green; Kit pins 15 (two new, at the CLEANER-than-expected
+[propext, Quot.sound]). Branch-complete for this dispatch; nothing
+merged.

@@ -154,27 +154,37 @@ theorem alt_sym_projection :
   -- route DNFs on the γ-image of the window output (recorded).
   exact ⟨by decide +kernel, by decide +kernel⟩
 
-/-! ## A4-U2 slice-3 RE-MEASURE: the `becomeFollower` prefix window
+/-! ## A4-U2 slices 3+4: the becomeFollower CROSSING — two windows
+and the quantified pick, composed
 
-With classes 1–3 landed, the pilot handler's run from its call
-configuration transports as ONE window until the first uncovered
-consult — measured at **189 steps**: frame entry (becomeFollower),
-the `step`/`tick` funcVal stores and `lead`/`state` field stores,
-`reset`'s frame entry, its term/vote branch and four field stores,
-`resetRandomizedElectionTimeout`'s and `Intn`'s frame entries, the
-mutex LOCK (sync apply + marker strip), and the map-build prologue —
-quitting at `Intn`'s `struct{}{}` literal (`buildStructValue` at a
-defined type: the Q4-normalize family's next member, the recorded
-slice-3 residual; the map-range pick two constructs later is the
-DESIGNED Q3 boundary regardless — design §4(ii)). Pre-extension this
-prefix costs ~35 hand windows with ~15 conditioned facts at the
-pilot's measured 9 lines/step; post-extension it is one `rfl` + one
-refinement application over this fixture.
+The handler's run from its call configuration, on this fixture:
 
-Branch-relevant scalars are concrete (`Term`/`term` 0,
-`electionTimeout` 10 — a symbolic branch scalar would Q1-quit at the
-`reset` if, the per-branch-window design); non-branched scalars stay
-symbolic (`Vote`, `lead`, `leadTransferee` = x₁/x₂/x₄), ∀ρ. -/
+- **pre-window, 642 steps** (`bf_window_n`): frame entry → funcVal +
+  field stores → `reset` entry → term/vote branch → four stores →
+  RRT + `Intn` entries → mutex LOCK + marker strip → the D-11 map
+  build (10 iterations of `struct{}{}` map-assigns — slice 4's
+  buildStructValue/mapAssign table arms) → quitting exactly at the
+  map-range pick (Q3, the DESIGNED boundary; #eval: 642, q3Choice).
+- **the pick** (`stepFn_pick_generic`'s site): consumes the stream
+  head; the picked key cell is SYMBOLIC (`x₅`) in the post fixture —
+  the valuation absorbs the pick (design §4(ii): one post-window
+  serves every pick; the key lands only in latitude-bearing spots
+  `absRaftNode` never reads).
+- **post-window, 302 steps** (`bf2_window_n`): pick → `v = k` →
+  break → mutex UNLOCK → `Intn`/RRT returns → the
+  `randomizedElectionTimeout := 10 + x₅` symbolic store →
+  `abortLeaderTransfer` → `ResetVotes` → `Visit` (trivial on this
+  fixture's empty tracker) → `newReadOnly` → tick/lead/state stores
+  → quitting at the nil-logger call (Q6 on this fixture; on the
+  populated fixture this is the 2b interface-dispatch residual).
+
+`bf_intn_span` composes all three through the spine
+(`stepFnIter_window_pick_window`): **945 steps, one span, the
+consumed prefix quantified** — the pick step enters as the
+conditioned hypothesis (its ∀ρ discharge from `stepFn_pick_generic`'s
+facts over the γ-image is the recorded handoff item), and the
+concrete-stream witness discharges it at `p = 3` by kernel
+evaluation (#eval-checked first: cfg-eq and state-eq both true). -/
 
 def bfRaftVal : SymValue :=
   setSymField (setSymField (setSymField
@@ -202,34 +212,78 @@ def bfS₀ : SymState :=
                 (.struct ⟨"raft.lockedRand"⟩ #[("mu", .syncData (.mutex false))]))],
     nextAddr := 20 }
 
-/-- The drained call configuration of `becomeFollower(0, x₂→)` — the
-handler-equation entry shape, at the fixture. -/
+/-- The drained call configuration of `becomeFollower(0, x₂)`. -/
 def bfC₀ : SymConfig :=
   .retV (.int (.lit 0) .uint64)
     (.callArgsK ⟨"raft.raft.becomeFollower"⟩ []
       [.addr (.base ⟨0⟩), .int (.lit 0) .uint64] [] [] .stop)
 
-/-- 189 completed steps (`#eval`-checked first: 189, quit q4Program
-at the `struct{}` literal). -/
-theorem bf_window_n : (symEvalWindowTB bfTB 189 bfS₀ bfC₀).1 = 189 := by
+/-- 642 completed pre-window steps (#eval-checked: 642, q3Choice). -/
+theorem bf_window_n : (symEvalWindowTB bfTB 642 bfS₀ bfC₀).1 = 642 := by
   with_unfolding_all rfl
 
-/-- **THE RE-MEASURED HANDLER PREFIX**: 189 steps of `becomeFollower`
-from its call configuration, one transported window, ∀ρ ∀σ agreeing
-with the pinned tables ∀ch. -/
-theorem bf_prefix_span (ρ : Valuation) (σ : ExecState) (ch : Choices)
-    (hag : bfTB.Agrees σ) :
-    stepFnIter 189 (γS ρ σ bfS₀) (γC ρ bfC₀) ch
-      = .ok (γC ρ (symEvalWindowTB bfTB 189 bfS₀ bfC₀).2.2,
-          γS ρ σ (symEvalWindowTB bfTB 189 bfS₀ bfC₀).2.1, ch) :=
-  symEvalWindowTB_refines' bf_window_n ρ σ ch hag
+def bfS₁ : SymState := (symEvalWindowTB bfTB 642 bfS₀ bfC₀).2.1
+def bfC₁ : SymConfig := (symEvalWindowTB bfTB 642 bfS₀ bfC₀).2.2
 
-/-- Discharge witness: the premises hold at the pinned base state and
-a concrete valuation. -/
-theorem bf_prefix_span_witness :
-    stepFnIter 189 (γS ρ₀ wBase bfS₀) (γC ρ₀ bfC₀) []
-      = .ok (γC ρ₀ (symEvalWindowTB bfTB 189 bfS₀ bfC₀).2.2,
-          γS ρ₀ wBase (symEvalWindowTB bfTB 189 bfS₀ bfC₀).2.1, []) :=
-  bf_prefix_span ρ₀ wBase [] ⟨rfl, rfl, rfl, rfl⟩
+/-- The symbolic picked key (`x₅` — the valuation absorbs the pick). -/
+def bfKeyV : SymValue := .int (.var 5) .int
+
+/-- The post-pick state/config, mirroring the machine's pick effect
+(`bindIterVars`: one fresh key cell, scope push, body entry, the key
+appended to `produced`). Fail-closed on shape drift. -/
+def bfS₂ : SymState :=
+  match bfC₁ with
+  | .next (.mapIterK _ _ kt _ _ _ _ _ _ _) =>
+      (bfS₁.alloc bfKeyV (some kt)).2
+  | _ => bfS₁
+
+def bfC₂ : SymConfig :=
+  match bfC₁ with
+  | .next (.mapIterK ko vo kt vt body base produced start env k) =>
+      .exec body
+        ((env.pushScope).declare (ko.getD "?")
+          (bfS₁.alloc bfKeyV (some kt)).1)
+        (.mapIterK ko vo kt vt body base (produced.push bfKeyV) start env k)
+  | _ => .panicked "bfC₂: pre-window shape drift"
+
+/-- 302 completed post-window steps (#eval-checked: 302, q6Panic at
+this fixture's nil-logger call). -/
+theorem bf2_window_n : (symEvalWindowTB bfTB 302 bfS₂ bfC₂).1 = 302 := by
+  with_unfolding_all rfl
+
+/-- **THE CROSSING** (the spine's first real instance): 945 steps of
+`becomeFollower` — pre-window, the quantified pick, post-window — as
+ONE span over the consumed choice prefix. The pick step enters
+conditioned (kit style); the witness below discharges it at a
+concrete stream. -/
+theorem bf_intn_span (ρ : Valuation) (σ : ExecState) (p : Nat)
+    (ch : Choices) (hag : bfTB.Agrees σ)
+    (hpick : stepFn (γS ρ σ bfS₁) (γC ρ bfC₁) (p :: ch)
+      = .ok (γC ρ bfC₂, γS ρ σ bfS₂, ch)) :
+    stepFnIter 945 (γS ρ σ bfS₀) (γC ρ bfC₀) (p :: ch)
+      = .ok (γC ρ (symEvalWindowTB bfTB 302 bfS₂ bfC₂).2.2,
+          γS ρ σ (symEvalWindowTB bfTB 302 bfS₂ bfC₂).2.1, ch) :=
+  stepFnIter_window_pick_window
+    (fun ch' => symEvalWindowTB_refines' bf_window_n ρ σ ch' hag)
+    hpick
+    (fun ch' => symEvalWindowTB_refines' bf2_window_n ρ σ ch' hag)
+
+/-- The witness valuation family: `x₅ := the picked key`, the other
+scalars as `ρ₀`. -/
+def ρw (kp : Nat) : Valuation :=
+  { ints := fun i => if i == 5 then ((kp : Nat) : Int)
+      else [7, 3, 2, 1, 5].getD i 0
+    bools := fun _ => false
+    vals := fun _ => .nil
+    cells := fun _ => ⟨none, .nil⟩ }
+
+/-- Discharge witness at the concrete stream `[3]`: the pick step is
+a closed one-step machine computation (#eval-checked first — config
+and state images both equal), kernel-evaluated. -/
+theorem bf_intn_span_witness :
+    stepFnIter 945 (γS (ρw 3) wBase bfS₀) (γC (ρw 3) bfC₀) [3]
+      = .ok (γC (ρw 3) (symEvalWindowTB bfTB 302 bfS₂ bfC₂).2.2,
+          γS (ρw 3) wBase (symEvalWindowTB bfTB 302 bfS₂ bfC₂).2.1, []) :=
+  bf_intn_span (ρw 3) wBase 3 [] ⟨rfl, rfl, rfl, rfl⟩ (by with_unfolding_all rfl)
 
 end GoLean.RaftSeam

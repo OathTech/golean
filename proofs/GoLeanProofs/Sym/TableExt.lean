@@ -1,4 +1,6 @@
 import GoLeanProofs.Sym.Refine
+import GoLeanProofs.StepKit
+import GoLeanProofs.FuelMeasure
 
 /-!
 # The handler-fragment extension, class 1: TYPE-TABLE INPUT
@@ -150,6 +152,37 @@ def normalizeValueForTyT (T : TypeEnv) (ty : Ty) (value : Value D) :
     M (Value D) :=
   normalizeValueForTyFuelT T typeResolutionFuel ty value
 
+/-! ### Struct literals at the input table (slice 4: the Q4-normalize
+family's `buildStructValue` member — hit by `struct{}{}` in `Intn`'s
+map build and the `Progress{...}` literal in `reset$lit0`). -/
+
+def buildStructFieldsT (T : TypeEnv) :
+    List FieldDef → List (Value D) → M (Array (String × Value D))
+  | field :: fieldRest, value :: valueRest => do
+      let head ← normalizeValueForTyT T field.typ value
+      let tail ← buildStructFieldsT T fieldRest valueRest
+      .ok (#[(field.name, head)] ++ tail)
+  | _, _ => .ok #[]
+
+def buildStructValueFuelT (T : TypeEnv) :
+    Nat → Ty → Array (Value D) → M (Value D)
+  | fuel + 1, .defined name, args =>
+      (match TypeEnv.lookup T name with
+       | some (.struct fields) =>
+           if fields.size != args.size then quit .q11Internal
+           else do
+             let fs ← buildStructFieldsT T fields.toList args.toList
+             .ok (.struct name fs)
+       | some (.alias target) => buildStructValueFuelT T fuel target args
+       | some _ => quit .q11Internal
+       | none => quit .q4Program)
+  | 0, .defined _, _ => quit .q11Internal
+  | _, _, _ => quit .q11Internal
+
+def buildStructValueT (T : TypeEnv) (ty : Ty) (args : Array (Value D)) :
+    M (Value D) :=
+  buildStructValueFuelT T typeResolutionFuel ty args
+
 /-! ## The store chain over it -/
 
 /-- `storeLoc'` with the table-aware normalizer (untyped cells still
@@ -194,6 +227,23 @@ def storeTargetT (T : TypeEnv) (s : State D) (r : TargetRef D)
       let loc ← resolved.asLoc
       storeLocT T s loc v
   | .mapElem b k kt vt => mapAssignValue' s kt vt b k v
+
+/-- `mapAssignValue'` at the input table (slice 4: map assigns whose
+KEY/VALUE types are defined — `map[int]struct{}` in `Intn`). -/
+def mapAssignValueT (T : TypeEnv) (s : State D) (keyTy valueTy : Ty)
+    (baseV keyV valueV : Value D) : M (State D) := do
+  let map ← baseV.asMap
+  let key ← normalizeValueForTyT T keyTy keyV
+  let value ← normalizeValueForTyT T valueTy valueV
+  match ← mapEntries' s map with
+  | none => quit .q6Panic
+  | some (baseLoc, entries) =>
+      let entries ←
+        match ← mapEntryIndex?' keyTy entries key with
+        | some i => pure (entries.set! i (key, value))
+        | none => pure (entries.push (key, value))
+      storeLocT T s baseLoc (.mapData entries)
+
 
 /-! ## Slice 2 — sequential sync-ops (design §3, class 3)
 
@@ -271,6 +321,25 @@ def stepFnT (T : TypeEnv) (s : State D) (c : Config D) :
        | [] => applySyncOp' T s op (v :: done).reverse env k')
   -- slice 2: the sequential completion-marker strip
   | .opDone _ inner => .ok (inner, s)
+  -- slice 4: struct literals at the input table (the Q4-normalize
+  -- family's buildStructValue member; nullary entry + drained apply)
+  | .evalE (.structLit ty elems) env k =>
+      (match elems.toList with
+       | e₁ :: rest =>
+           .ok (.evalE e₁ env (.strictK (.structLit ty) [] rest env k), s)
+       | [] => do
+           let v ← buildStructValueT T ty #[]
+           .ok (.retV v k, s))
+  | .retV v (.strictK (.structLit ty) done [] env k') => do
+      let out ← buildStructValueT T ty ((v :: done).reverse.toArray)
+      .ok (.retV out k', s)
+  -- slice 4: map assign at the input table (defined key/value types)
+  | .retV v (.stmtOpK (.mapAssign kt vt) nt done [] env k') =>
+      (match (v :: done).reverse with
+       | [baseV, keyV, valueV] => do
+          let s' ← mapAssignValueT T s kt vt baseV keyV valueV
+          .ok (.next k', s')
+       | _ => quit .q11Internal)
   | c => stepFn' s c
 
 /-- The extended step at the symbolic domain. -/
@@ -505,6 +574,92 @@ theorem normalizeT_conc (hI : I.Sound) (σ : ExecState) {T : TypeEnv}
   simp only [normalizeValueForTy]
   exact normalizeFuelT_conc hI σ hsub _ ty v out h
 
+theorem buildStructFieldsT_conc (hI : I.Sound) (σ : ExecState)
+    {T : TypeEnv} (hsub : SubTable T σ.types) :
+    ∀ {fds : List FieldDef} {vs : List (Value D)}
+      {out : Array (String × Value D)},
+      buildStructFieldsT T fds vs = .ok out →
+      buildStructFields σ fds (vs.map (concV I))
+        = .ok (out.map (fun p => (p.1, concV I p.2))) := by
+  intro fds
+  induction fds with
+  | nil =>
+      intro vs out h
+      cases vs with
+      | nil =>
+          simp only [buildStructFieldsT] at h
+          cases h
+          simp [buildStructFields]
+      | cons a rest =>
+          simp only [buildStructFieldsT] at h
+          cases h
+          simp [buildStructFields]
+  | cons fd fdRest ih =>
+      intro vs out h
+      cases vs with
+      | nil =>
+          simp only [buildStructFieldsT] at h
+          cases h
+          simp [buildStructFields]
+      | cons v rest =>
+          simp only [buildStructFieldsT] at h
+          obtain ⟨head, hhead, h2⟩ := bind_eq_ok.mp h
+          obtain ⟨tail, htail, h3⟩ := bind_eq_ok.mp h2
+          cases h3
+          simp only [List.map_cons, buildStructFields, Bind.bind,
+            Except.bind]
+          rw [normalizeT_conc hI σ hsub hhead, ih htail]
+          simp [pure, Except.pure, Array.map_append]
+
+theorem buildStructValueFuelT_conc (hI : I.Sound) (σ : ExecState)
+    {T : TypeEnv} (hsub : SubTable T σ.types) :
+    ∀ (fuel : Nat) (ty : Ty) (args : Array (Value D)) {out : Value D},
+      buildStructValueFuelT T fuel ty args = .ok out →
+      buildStructValueFuel fuel σ ty (args.map (concV I))
+        = .ok (concV I out) := by
+  intro fuel
+  induction fuel with
+  | zero =>
+      intro ty args out h
+      cases ty <;> simp only [buildStructValueFuelT, quit] at h <;> cases h
+  | succ fuel ih =>
+      intro ty args out h
+      cases ty <;> simp only [buildStructValueFuelT, quit] at h <;>
+        try (cases h; done)
+      case defined name =>
+        revert h
+        rcases hlk : TypeEnv.lookup T name with _ | td
+        · intro h
+          simp only [quit] at h
+          cases h
+        · intro h
+          have hσlk := hsub name td hlk
+          cases td <;> simp only [quit] at h <;> try (cases h; done)
+          case struct fields =>
+            by_cases hsz : (fields.size != args.size) = true
+            · rw [if_pos hsz] at h
+              simp [quit] at h
+            · rw [if_neg hsz] at h
+              obtain ⟨fs, hfs, h2⟩ := bind_eq_ok.mp h
+              cases h2
+              simp only [buildStructValueFuel, hσlk]
+              rw [if_neg (by simpa [Array.size_map] using hsz)]
+              have hf := buildStructFieldsT_conc (I := I) hI σ hsub hfs
+              simp only [Array.toList_map] at hf ⊢
+              rw [hf]
+              simp [Functor.map, Except.map, concV_struct]
+          case alias target =>
+            simp only [buildStructValueFuel, hσlk]
+            exact ih _ _ h
+
+theorem buildStructValueT_conc (hI : I.Sound) (σ : ExecState)
+    {T : TypeEnv} (hsub : SubTable T σ.types) {ty : Ty}
+    {args : Array (Value D)} {out : Value D}
+    (h : buildStructValueT T ty args = .ok out) :
+    buildStructValue σ ty (args.map (concV I)) = .ok (concV I out) := by
+  simp only [buildStructValue]
+  exact buildStructValueFuelT_conc hI σ hsub _ ty args h
+
 set_option linter.unusedSimpArgs false in
 /-- `storeLoc_conc`, table-conditioned (proof = the shipped one with
 `normalizeT_conc` at the typed-cell arm). -/
@@ -615,6 +770,52 @@ theorem storeTargetT_conc (hI : I.Sound) (σ : ExecState) {T : TypeEnv}
   | mapElem b k kt vt =>
       simp only [storeTargetT] at h
       simpa [storeTarget, concRef] using mapAssignValue_conc hI σ h
+
+theorem mapAssignValueT_conc (hI : I.Sound) (σ : ExecState)
+    {T : TypeEnv} (hsub : SubTable T σ.types) {s : State D}
+    {keyTy valueTy : Ty} {baseV keyV valueV : Value D} {s' : State D}
+    (h : mapAssignValueT T s keyTy valueTy baseV keyV valueV = .ok s') :
+    mapAssignValue (concS I σ s) keyTy valueTy (concV I baseV)
+      (concV I keyV) (concV I valueV) = .ok (concS I σ s') := by
+  unfold mapAssignValueT at h
+  unfold mapAssignValue
+  obtain ⟨map, hmap, h⟩ := bind_eq_ok.mp h
+  refine bind_eq_ok.mpr ⟨map, asMap_conc hmap, ?_⟩
+  obtain ⟨key, hkey, h⟩ := bind_eq_ok.mp h
+  refine bind_eq_ok.mpr ⟨concV I key,
+    normalizeT_conc hI (concS I σ s) hsub hkey, ?_⟩
+  obtain ⟨value, hvalue, h⟩ := bind_eq_ok.mp h
+  refine bind_eq_ok.mpr ⟨concV I value,
+    normalizeT_conc hI (concS I σ s) hsub hvalue, ?_⟩
+  obtain ⟨me, hme, h⟩ := bind_eq_ok.mp h
+  refine bind_eq_ok.mpr
+    ⟨me.map (fun p => (p.1, concEntries I p.2)), mapEntries_conc σ hme, ?_⟩
+  rcases me with _ | ⟨baseLoc, entries⟩
+  · cases h
+  simp only [Option.map_some] at *
+  obtain ⟨idx, hidx, h⟩ := bind_eq_ok.mp h
+  refine bind_eq_ok.mpr ⟨idx, mapEntryIndex_conc hI (concS I σ s) hidx _, ?_⟩
+  rcases idx with _ | i <;> simp only [] at h ⊢
+  · obtain ⟨es, hes, h⟩ := bind_eq_ok.mp h
+    have hesv : es = entries.push (key, value) := by
+      simpa [pure, Except.pure, eq_comm] using hes
+    subst hesv
+    refine bind_eq_ok.mpr
+      ⟨(concEntries I entries).push (concV I key, concV I value), rfl, ?_⟩
+    have := storeLocT_conc hI σ hsub (loc := baseLoc)
+      (v := .mapData (entries.push (key, value))) (s' := s') h
+    simpa [concV_mapData, concEntries, Array.map_push] using this
+  · obtain ⟨es, hes, h⟩ := bind_eq_ok.mp h
+    have hesv : es = entries.set! i (key, value) := by
+      simpa [pure, Except.pure, eq_comm] using hes
+    subst hesv
+    refine bind_eq_ok.mpr
+      ⟨(concEntries I entries).set! i (concV I key, concV I value), rfl, ?_⟩
+    have := storeLocT_conc hI σ hsub (loc := baseLoc)
+      (v := .mapData (entries.set! i (key, value))) (s' := s') h
+    simpa [concV_mapData, concEntries, Array.set!, map_setIfInBounds]
+      using this
+
 
 set_option linter.unusedSimpArgs false in
 /-- `applySyncOp'` transports (census subset; `storeLoc_conc` carries
@@ -761,6 +962,71 @@ theorem stepFnT_conc (hI : I.Sound) (σ : ExecState) (ch : Choices)
               rw [show (concV I v :: List.map (concV I) done)
                     = List.map (concV I) (v :: done) from rfl, happ]
               rfl
+      | stmtOpK op nt done pending env k' =>
+          cases op <;> try exact stepFn'_conc hI σ ch h
+          case mapAssign kt vt =>
+            cases pending with
+            | cons e rest => exact stepFn'_conc hI σ ch h
+            | nil =>
+                simp only [stepFnT] at h
+                revert h
+                rcases hrev : (v :: done).reverse with _ | ⟨b1, _ | ⟨b2, _ | ⟨b3, brest⟩⟩⟩ <;>
+                  intro h <;> try (simp [quit] at h; done)
+                rcases brest with _ | ⟨b4, brest2⟩
+                · obtain ⟨s2, hma, h2⟩ := bind_eq_ok.mp h
+                  cases h2
+                  have hmc := mapAssignValueT_conc (I := I) hI σ hsub hma
+                  simp only [concC, concK, stepFn, applyStmtOp,
+                    applyStmtOpCore]
+                  rw [show ((concV I v :: List.map (concV I) done)).reverse
+                        = List.map (concV I) ((v :: done).reverse) from by
+                    simp [List.map_reverse]]
+                  rw [hrev]
+                  simp only [List.map_cons, List.map_nil]
+                  rw [hmc]
+                  rfl
+                · simp [quit] at h
+      | strictK op done pending env k' =>
+          cases op <;> try exact stepFn'_conc hI σ ch h
+          case structLit ty =>
+            cases pending with
+            | cons e rest => exact stepFn'_conc hI σ ch h
+            | nil =>
+                simp only [stepFnT] at h
+                obtain ⟨out, hbuild, h2⟩ := bind_eq_ok.mp h
+                cases h2
+                have hb := buildStructValueT_conc (I := I) hI
+                  (concS I σ s) hsub hbuild
+                have hb2 : buildStructValue (concS I σ s) ty
+                    (((List.map (concV I) done).reverse
+                      ++ [concV I v]).toArray) = .ok (concV I out) := by
+                  simpa [List.map_toArray, List.map_reverse,
+                    List.reverse_cons] using hb
+                simp [concC, concK, stepFn, applyStrictOp,
+                  List.reverse_cons, List.map_append, List.map_reverse,
+                  List.map_cons, List.map_nil, hb2, Bind.bind,
+                  Except.bind, pure, Except.pure]
+      | _ => exact stepFn'_conc hI σ ch h
+  | evalE e env k =>
+      cases e with
+      | structLit ty elems =>
+          simp only [stepFnT] at h
+          revert h
+          rcases helems : elems.toList with _ | ⟨e₁, rest⟩
+          · intro h
+            obtain ⟨out, hbuild, h2⟩ := bind_eq_ok.mp h
+            cases h2
+            have hb := buildStructValueT_conc (I := I) hI
+              (concS I σ s) hsub hbuild
+            have hb2 : buildStructValue (concS I σ s) ty
+                (#[] : Array GoValue) = .ok (concV I out) := by
+              simpa using hb
+            simp [concC, concK, stepFn, strictPlan, helems,
+              applyStrictOp, hb2, Bind.bind, Except.bind, pure,
+              Except.pure]
+          · intro h
+            cases h
+            simp [concC, concK, stepFn, strictPlan, helems]
       | _ => exact stepFn'_conc hI σ ch h
   | opDone sched inner =>
       cases h
@@ -1299,5 +1565,59 @@ theorem symEvalWindowTB_refines' {TB : SymTables} {budget n : Nat}
       = .ok (γC ρ (symEvalWindowTB TB budget S C).2.2,
           γS ρ σ (symEvalWindowTB TB budget S C).2.1, ch) :=
   symEvalWindowTB_refines (by rw [← hn]) ρ σ ch hag
+
+/-! ## Slice 4 — the choice-crossing composition (design §4(ii))
+
+Q3 stays a WINDOW BOUNDARY: windows transport the segments between
+consumption points; each pick is crossed by ONE machine step
+(`stepFn_pick_generic` below — the class-5 kit half, type-generic
+where `MapMem.stepFn_pick_bind` is uint64-shaped), and the spine
+`stepFnIter_window_pick_window` chains window–pick–window over a
+stream with the consumed prefix quantified. Latitude-bearing fields
+stay unprojected (the pick's landing spots — `randomizedElectionTimeout`,
+the iteration key cell — are never read by `absRaftNode`), so
+handler-level spans stay choice-prefix-quantified with
+choice-independent projections. -/
+
+/-- The TYPE-GENERIC map-range pick step (any key/value types, any
+binder shape), conditioned on the candidate set, the mandatory check,
+the consume, the indexed candidate, and the binder allocation. -/
+theorem stepFn_pick_generic {σ σ' : ExecState} {base : Option Loc}
+    {produced start : Array GoValue} {cands : Array (GoValue × GoValue)}
+    {mand : Bool} {idx : Nat} {ch ch' : Choices} {ko vo : Option String}
+    {kt vt : Ty} {body : Stmt} {env env' : LocalEnv}
+    {k : Machine.Cont} {kv vv : GoValue}
+    (hcands : mapIterCandidates σ kt vt base produced = .ok cands)
+    (hne : cands.isEmpty = false)
+    (hmand : mapIterMandatoryRemains σ kt cands start = .ok mand)
+    (hconsume : Choices.consume ch
+      (cands.size + (if mand then 0 else 1)) = (idx, ch'))
+    (hget : cands[idx]? = some (kv, vv))
+    (hbind : bindIterVars env.pushScope σ ko vo kt vt kv vv
+      = .ok (env', σ')) :
+    stepFn σ
+      (.next (.mapIterK ko vo kt vt body base produced start env k)) ch
+      = .ok (.exec body env'
+          (.mapIterK ko vo kt vt body base (produced.push kv) start env k),
+        σ', ch') := by
+  simp only [stepFn, Choices.consumeAt_mapIter, hcands, Bind.bind,
+    Except.bind, hne, Bool.false_eq_true, if_false, hmand, hconsume,
+    hget, hbind, pure, Except.pure]
+
+/-- **THE HANDLER SPINE**: pre-window (stream-invariant), one pick
+step (consumes the prefix head), post-window (stream-invariant) —
+composed over the quantified prefix. Every handler-level span is an
+iteration of this shape (one application per consumption point). -/
+theorem stepFnIter_window_pick_window {n₁ n₂ : Nat}
+    {σ₀ σ₁ σ₂ σ₃ : ExecState} {c₀ c₁ c₂ c₃ : Machine.Config}
+    {ch ch' : Choices}
+    (hw1 : ∀ ch, stepFnIter n₁ σ₀ c₀ ch = .ok (c₁, σ₁, ch))
+    (hpick : stepFn σ₁ c₁ ch = .ok (c₂, σ₂, ch'))
+    (hw2 : ∀ ch, stepFnIter n₂ σ₂ c₂ ch = .ok (c₃, σ₃, ch)) :
+    stepFnIter (n₁ + 1 + n₂) σ₀ c₀ ch = .ok (c₃, σ₃, ch') :=
+  GoLean.Surface.stepFnIter_chain
+    (GoLean.Surface.stepFnIter_chain (hw1 ch)
+      (GoLean.Surface.stepFnIter_one hpick))
+    (hw2 ch')
 
 end GoLean.Sym
