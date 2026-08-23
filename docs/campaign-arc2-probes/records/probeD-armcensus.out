@@ -1,0 +1,154 @@
+subjSteps=711616
+verdict=#[GoLean.GoValue.int 0 (GoLean.GoCore.IntKind.int), GoLean.GoValue.int 1 (GoLean.GoCore.IntKind.int),
+  GoLean.GoValue.int 6 (GoLean.GoCore.IntKind.int), GoLean.GoValue.int 1 (GoLean.GoCore.IntKind.int),
+  GoLean.GoValue.int 1 (GoLean.GoCore.IntKind.int)]
+distinctArms=139
+110231	next seq
+61408	exec seqn
+59441	next storeK
+58951	evalE var
+30743	retV tgtOpK
+30158	evalE ref
+22723	retV rhsK
+22362	exec assign
+20393	exec block
+17544	exec initialization
+17027	retV ifK
+17027	exec ifThenElse
+14950	evalE deref
+14936	retV strictK deref
+14170	retV strictK fieldGet
+14170	evalE fieldGet
+12456	evalE intLit
+9876	returning seq
+9546	retV strictK neqCmp
+9356	retV strictK add
+9132	retV callArgsK
+7560	retV strictK eqCmp
+7197	exec call
+6691	returning frameK
+6691	exec returnStmt
+6683	evalE nilE
+6167	evalE boolLit
+6007	evalE neqCmp
+4678	evalE add
+4490	retV strictK indexGet
+4208	retV strictK atLeastCmp
+3831	evalE eqCmp
+3520	retV boolK
+2973	exec while
+2973	retV whileK
+2874	retV strictK greaterCmp
+2549	retV strictK structLit
+2468	retV strictK neqCmp
+
+2376	retV andK
+2376	evalE and
+2245	evalE indexGet
+2104	evalE atLeastCmp
+1997	next loopK
+1950	breaking
+1768	retV stmtOpK newValue
+1742	evalE length
+1629	retV strictK convert
+1629	evalE convert
+1437	evalE greaterCmp
+1400	retV strictK lessCmp
+1318	retV strictK sub
+1309	evalE or
+1309	retV orK
+1273	evalE defaultValueE
+1206	retV strictK lengthOf
+
+1192	next frameK
+1139	evalE stringLit
+1089	evalE not
+1089	retV strictK not
+1061	evalE fieldAddr
+1061	retV strictK fieldAddr
+974	exec breakStmt
+884	exec newValue
+870	retV strictK div
+848	retV strictK mod
+700	evalE lessCmp
+659	evalE sub
+626	evalE structLit
+542	retV syncStK
+542	configOther
+536	retV strictK lengthOf
+509	evalE exprOther
+501	retV stmtOpK makeSlice
+
+489	retV strictK sliceExpr
+457	next mapIterK
+444	retV stmtOpK mapAssign
+
+435	evalE div
+424	evalE mod
+424	retV strictK stringFromRune
+416	retV stmtOpK makeSlice
+396	retV stmtOpK mapAssign
+369	exec breakable
+351	retV stmtOpK appendSlice
+
+320	evalE funcValE
+311	exec makeSlice
+303	retV stmtOpK appendSlice
+280	exec mapAssign
+272	retV deferCalleeK
+272	exec deferCall
+272	retV deferArgsK
+271	exec syncStmt GoLean.GoCore.SyncStmtOp.unlock
+271	exec syncStmt GoLean.GoCore.SyncStmtOp.lock
+247	exec mapRange
+247	retV mapRangeK
+219	next breakableK
+218	exec appendSlice
+211	retV callValArgsK
+204	retV strictK mapGet
+
+200	evalE locLit
+174	retV strictK atMostCmp
+171	evalE toInterface
+168	retV strictK toInterface
+
+156	evalE sliceE
+150	returning breakableK
+142	continuing
+140	retV callValCalleeK
+140	exec callValue
+117	retV stmtOpK makeMap
+117	exec makeMap
+117	evalE mapGet
+105	exec mapLookup
+102	retV strictK eqCmp
+
+90	retV strictK maxOf
+88	retV strictK arrayLit
+87	evalE atMostCmp
+62	exec sortSlice
+62	retV stmtOpK sortSlice
+53	exec assignMany
+45	exec typeAssert
+42	retV strictK minOf
+39	retV stmtOpK copySlice
+37	exec continueStmt
+35	evalE arrayLit
+30	retV strictK mapGet
+29	retV strictK funcValOf
+18	retV strictK shiftRight
+18	retV strictK bitAnd
+15	retV strictK stringFromByteSlice
+14	retV strictK deref
+
+13	exec copySlice
+9	evalE shiftRight
+9	evalE bitAnd
+6	evalE typeAssertE
+6	retV strictK typeAssert
+
+6	returning loopK
+4	retV strictK bytesFromString
+4	retV strictK mul
+3	retV strictK toInterface
+2	evalE mul
