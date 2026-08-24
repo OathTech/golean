@@ -1257,3 +1257,141 @@ four sibling equations awaiting the prescribed re-base).
 
 Nothing merged; branch-complete. Merge/audit-ask remain the
 operator's (constitution §4.1).
+
+## A4-U6 — the four re-bases + the relocation lift (2026-08-24, same worker, coordinator-dispatched)
+
+- 2026-08-24 SUCCESSOR RE-VERIFICATION (own U5 outputs, fresh probes,
+  all PASS): tip f4d0a10e clean; full proofs+Audit green (485 jobs);
+  U5 axiom probe re-run verbatim-matching (alloc/of_alloc/witness
+  [propext, Classical.choice, Quot.sound]; absRaftNode_ren /
+  renameStmt_ρT_zero / bpcCallAt_ren [propext, Quot.sound]); hatch
+  grep over AllocEq: 0.
+- 2026-08-24 **THE U6 FINDING (probe LocSupProbe2, decisive):** the
+  twin's function bodies contain `locLit`s at EVERY static address
+  0..30 (`funcListSup wBase.functions.toList = 31`; per-address bump
+  probe: all of 0..30 referenced), and the U1–U4 fixtures sit at
+  bases 0..23 ON that range. Since `Agrees` pins σ.functions to the
+  twin table and `FrameSim.bodies_inv` forces `r` to fix every
+  body-referenced address, **at the 0-based fixtures the
+  allocation-symbolic `r`-quantifier is provably identity-only, and
+  no `FrameSim` can carry a 0-based fixture equation to the twin's
+  real layout (base 389+)** — the U5 verdict's layer-(C) bridge
+  argument does not go through from THESE fixtures. The U5 theorems
+  stand (never vacuous — identity+frame instances); their placement
+  GENERALITY at 0-based fixtures is what collapses. Fix demonstrated
+  this unit (BpcResite); charter consequence below.
+- 2026-08-24 [AGENT] Plan adjusted WITHIN the dispatch: deliverable
+  (1) proceeds at the current fixtures (the transfer machinery —
+  absStorageEnts_ren etc. — is fixture-independent and survives any
+  re-siting verbatim; the _alloc statements keep the quantified FORM
+  so re-siting changes only the fixture constant); deliverable (2)'s
+  non-identity witness is built at a RE-SITED BPC fixture (+31, off
+  the static range) — at 0-based fixtures it is impossible, not
+  merely unbuilt.
+- 2026-08-24 Slice 1 (3e3adc38): **`Frame/Relocate.lean`** (81
+  lines, 0.2 s) — the U5 promotion row taken (boundary extended to
+  Frame/ for this lemma alone, coordinator-authorized, additive-only):
+  `renameHeap`/`renameState`, the injective lookup transport
+  (`renameHeap_lookup`, via the existing `renameLoc_beq`), and
+  **`frameSim_relocate`** — ShiftSpec + allocator position + body
+  invariance ⇒ `FrameSim` to the rename-image at the empty frame.
+  Lineage: the SL renaming lemma (Yang–O'Hearn). Plus the survey's
+  Frame-name disambiguation note (GoLean.Frame ≠ Iris ProofMode
+  `Frame` class ≠ kit `wp_frame_*` call-frame laws).
+- 2026-08-24 Slice 2 (21979995): **`AllocEqWave1.lean`** (536 lines,
+  20 s) — the four re-bases, U5 pattern: `becomeFollower/
+  becomeCandidate/msFirstIndex/msTerm_handler_eq_alloc` (placement-
+  quantified; Bf/Bc over the choice prefix c₁..c₄ with the spine's
+  post-states named; Ms in the result-returning form with result
+  cells and storage abstraction read AT the placement r 21/r 22/r 6),
+  each with `_of_alloc` (statement-identical identity corollary — the
+  shipped four equations UNTOUCHED in their modules) and `_alloc_witness`.
+  New one-time machinery: **`absStorageEnts_ren`** (recursive
+  rename-invariance: slice base → backing array → entry cells →
+  pointer-scalar derefs; helpers derefU64_ren/absEntry_ren/
+  absEntsFrom_ren) and **`lookup_value_ren`** (loc-free result-cell
+  transfer, [propext] only). [AGENT] simplification vs U5 logged:
+  the alloc forms consume the shipped spans/projection lemmas
+  directly — no per-handler CallAt defs (the statements carry
+  `renameConfig r (γC ρ C0)`, collapsed by rfl at identity).
+- 2026-08-24 Slice 3 (290ae7b3): **`BpcResite.lean`** (233 lines,
+  ~125 s) — the re-sited fixture: every cell +31 (built by
+  `Frame.renameValue` at the GoValue layer before `embedGo` — no
+  Sym-side renamer needed), allocator 52. Probe first (`Bpc31Probe`):
+  152 steps (unchanged), projections exact, γ-image == machine heap —
+  re-siting is placement-transparent to the run. Landed:
+  `bpc31_span` (one transported window), the LIVE
+  `becomePreCandidate_handler_eq_alloc31`, its identity corollary,
+  `wBase_funcSup = 31` (kernel fact, ZERO axioms) + `wBase_bodies_inv`
+  (any r fixing [0,31) leaves every twin body invariant — the generic
+  discharge for re-sited fixtures), and **THE NON-IDENTITY WITNESS**
+  `becomePreCandidate_handler_eq_alloc31_witness_shifted`: the
+  handler run at the `swap31_32` relocation — the raft cell
+  genuinely at base 32, the `FrameSim` premise discharged concretely
+  by `frameSim_relocate`. U5's honest-gap item (c) CLOSED.
+- 2026-08-24 [USER] mid-unit survey directive received
+  (`docs/2026-08-24_campaign-iris-reuse-map.md` §5d + shortlist,
+  read): U6's relocation re-base confirmed no-analog-correct;
+  the wave-2 charter below takes the survey's lens finding; the
+  Frame-name disambiguation landed in Relocate's docstring (slice 1).
+
+### A4-U6 numbers (measured this unit)
+
+Full proofs+Audit green: **488 jobs** (485 + Relocate + AllocEqWave1
++ BpcResite). Hatch grep over all three new modules: 0. Fresh
+`#print axioms` (capped probe, verbatim at the slice commits): all
+12 handler `_alloc`/`_of_alloc`/`_alloc_witness` theorems +
+`frameSim_relocate` + the three alloc31 theorems
+[propext, Classical.choice, Quot.sound]; `absStorageEnts_ren`
+[propext, Quot.sound]; `lookup_value_ren` [propext]; `wBase_funcSup`
+**axiom-free**. Per-handler re-base marginal cost (measured): Bf ~75
+lines, Bc ~70, Ms pair ~150 (incl. the result-cell form) — inside
+the U5 projection; the four cost ONE module build of 20 s (the
+shipped spans are consumed as opaque facts — zero window
+re-evaluation).
+
+### WAVE-2 CHARTER UPDATE (deliverable 3; binding on the message-handler waves)
+
+1. **Symbolic from birth**: every wave-2+ handler equation is stated
+   in the `_alloc` placement-quantified form from its first commit —
+   the concrete form exists only as the identity corollary. No new
+   0-based-pattern equations, ever.
+2. **Fixtures born re-sited**: every new fixture's first cell sits at
+   ≥ the static loc support (`funcListSup` = 31 at the current pin;
+   recompute per pin move — `wBase_funcSup` is the tracked fact), so
+   the placement quantifier is LIVE from birth. The generic
+   `wBase_bodies_inv` is the bodies discharge; `frameSim_relocate`
+   the witness seed. The U1–U4 0-based fixtures (Bf/Bc/Ms + the U5
+   BPC) carry a RESIDUAL: re-site at a consolidation slice (regenerate
+   literals at +31-shifted addresses; the `_alloc` statements change
+   only in the fixture constant) — required before layer-(C) can
+   consume their equations at the twin's real layout.
+3. **The absState entries/outboxes extension (GAP-V1-1b/-3) is
+   lens-shaped from birth** (survey §5d, adopted): field access in
+   the extension (and in wave-2 equation conclusions) goes through a
+   `StructAccess`-style focusing pattern — per-field access lemmas
+   generated from the pinned lowering's struct table, instance/lemma
+   search as the footprint search — instead of whole-struct
+   offset-concrete reads. LINEAGE: Perennial's `Access`/`AccessStrict`
+   field lenses (`deps/perennial new/golang/theory/mem.v:78-84`) +
+   goose proofgen's generated per-field instances
+   (`deps/goose/proofgen/tmpl/types.tmpl:65-77`; 76 instances for
+   raftpb alone) — the ecosystem's answer to the 33-field `raft.raft`
+   struct, no Iris dependency. Design slice owed at wave-2 kickoff
+   (the seam's layer-(A) growth), sized S–M per the survey.
+4. Choice-prefix and side-condition conventions unchanged (U3 form);
+   the appendSpill transport and becomeLeader remain wave-2's opening
+   machinery items (U4 exit list).
+
+### PROMOTION LEDGER updates (A4-U6)
+
+- `frameSim_relocate` — **TAKEN** (Frame/Relocate.lean; both named
+  consumers now real: the shifted witness landed, layer-(C)
+  instantiation pending fixture re-siting).
+- `asU64_ren`/`fieldU64_ren`/`lookup_value_ren`/`absStorageEnts_ren`
+  helpers — target-side rows unchanged (lift beside
+  `structFieldsLookup_ren` at a consolidation slice; now 2 consumer
+  modules).
+- NEW: the 0-based fixture re-siting consolidation (charter item 2's
+  residual) — consumers: every landed equation's layer-(C) use.
+- `stepFn_pick_transport` lift (U4 row) — unchanged, still owed.
