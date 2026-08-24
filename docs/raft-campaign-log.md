@@ -780,6 +780,22 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   absState extension lens-shaped from birth (Perennial Access
   lineage). 488 jobs green; gate PASS.
 
+- **Arc 4, A4-U7 — LANDED** @ c649061b (docs-only): THE LENS DESIGN
+  SLICE (docs/2026-08-24_campaign-arc4-lens-design.md) — Perennial
+  Access lineage read at primary source; simp-set-searched law
+  instances (search-failure preserves the footprint-error property;
+  typeclasses rejected with the reason); L1-L4 law families with L2
+  (store-miss framing) named as the cost center and kill-point;
+  generated instances costed (instrument, not proof code); absState
+  v2 lens-consuming from birth so placement transport is free by
+  construction. Contact-probed: raftLog.unstable embedded-value hop;
+  raftpb.Message = 14 fields with a RECURSIVE Responses slice
+  (GAP-V2-1, designated-if-unread). Deliverables 2-3 split forward
+  honestly under the stop rule. [AGENT]: worker rotated (~910k);
+  5th-gen dispatched on the lens build (slices A-D) + the fixture
+  re-siting. Wave retry pass grinding (~S0077, solo ~6-10 min/seg,
+  ~180 remaining ≈ up to a day).
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
