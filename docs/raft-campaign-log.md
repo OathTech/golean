@@ -1034,6 +1034,15 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   branch-complete segment — AUDIT ASK POSED for its landing on main
   (see the operator report), comparator-judge owed at that step.
 
+- **[USER] 2026-08-24 — audit APPROVED as proposed** for the
+  campaign-arc2 landing (P2R+P2R-2 delta): 3 Opus reviewers
+  (semantics/correspondence mandatory; claim-strength/vacuity;
+  gate-honesty) + verification passes + comparator-judge run.
+  [AGENT]: judge launched (capped, background) from the arc-2
+  worktree @ 76361232; audit workflow launched same-hour.
+  Coordinator reclaims arc-2 lane writership (worker retired at the
+  park). Merge sign-off remains a separate [USER] moment.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
