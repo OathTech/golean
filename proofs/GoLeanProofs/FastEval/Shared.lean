@@ -44,15 +44,15 @@ def mapLookupValueF (σF : ExecStateF) (map : MapValue) (key : GoValue)
     (keyTy valueTy : Ty) : Except GoError (GoValue × Bool) := do
   match ← mapEntriesF σF map with
   | none => do
-      checkKeyHashable (γF σF) key (isInsert := false) (nonEmpty := false)
-      return (← defaultValue (γF σF) valueTy, false)
+      checkKeyHashable (ctxF σF) key (isInsert := false) (nonEmpty := false)
+      return (← defaultValue (ctxF σF) valueTy, false)
   | some (_, entries) =>
-      match ← mapEntryIndex? (γF σF) keyTy entries key with
+      match ← mapEntryIndex? (ctxF σF) keyTy entries key with
       | some i =>
           match entries[i]? with
           | some (_, value) => return (value, true)
           | none => stuck s!"missing map entry at index {i}"
-      | none => return (← defaultValue (γF σF) valueTy, false)
+      | none => return (← defaultValue (ctxF σF) valueTy, false)
 
 /-- `sliceVisibleValues`, fast — the loop exemplar. -/
 def sliceVisibleValuesF (σF : ExecStateF) (slice : SliceValue) :
@@ -63,6 +63,21 @@ def sliceVisibleValuesF (σF : ExecStateF) (slice : SliceValue) :
       let v ← loadLocF σF (← sliceIndexLoc slice (Int.ofNat i))
       pure (ForInStep.yield (values.push v)))
   return values
+
+/-- `indexTargetLoc`, fast. -/
+def indexTargetLocF (σF : ExecStateF) (b i : GoValue) : Except GoError Loc := do
+  let indexValue ← valueAsInt i
+  match b with
+  | .slice slice => sliceIndexLoc slice indexValue
+  | .nil => GoCore.panic "runtime error: invalid memory address or nil pointer dereference"
+  | .addr baseLoc =>
+      match ← loadLocF σF baseLoc with
+      | .array values => do
+          let _ ← arrayIndexNat values indexValue
+          return .index baseLoc indexValue
+      | .slice slice => sliceIndexLoc slice indexValue
+      | other => stuck s!"expected array or slice base for index address, got {repr other}"
+  | other => stuck s!"expected array or slice base for index address, got {repr other}"
 
 /-! ## Sims -/
 
@@ -140,6 +155,7 @@ theorem mapLookupValueF_ok {σF : ExecStateF} {map : MapValue} {key : GoValue}
     mapLookupValue (γF σF) map key keyTy valueTy = .ok r := by
   intro h
   unfold mapLookupValueF at h
+  simp only [checkKeyHashable_ctx, defaultValue_ctx, mapEntryIndex?_ctx] at h
   unfold mapLookupValue
   cases hm : mapEntriesF σF map with
   | error e => rw [hm] at h; simp [Bind.bind, Except.bind] at h
@@ -202,5 +218,32 @@ theorem sliceVisibleValuesF_ok {σF : ExecStateF} {slice : SliceValue}
           simp only [Bind.bind, Except.bind, pure, Except.pure,
             Except.ok.injEq]
           rw [← hrel, h]
+
+theorem indexTargetLocF_ok {σF : ExecStateF} {b i : GoValue} {loc : Loc}
+    (h : indexTargetLocF σF b i = .ok loc) :
+    indexTargetLoc (γF σF) b i = .ok loc := by
+  unfold indexTargetLocF at h
+  cases hv : valueAsInt i with
+  | error e =>
+      rw [hv] at h; simp [Bind.bind, Except.bind] at h
+  | ok indexValue =>
+      rw [hv] at h
+      simp only [Bind.bind, Except.bind] at h
+      split at h
+      · simp only [indexTargetLoc, hv, Bind.bind, Except.bind]
+        exact h
+      · simp only [indexTargetLoc, hv, Bind.bind, Except.bind]
+        exact h
+      · rename_i baseLoc
+        simp only [indexTargetLoc, hv, Bind.bind, Except.bind]
+        cases hl : loadLocF σF baseLoc with
+        | error e => rw [hl] at h; simp [Bind.bind, Except.bind] at h
+        | ok bv =>
+            rw [hl] at h
+            rw [loadLocF_ok hl]
+            simp only [Bind.bind, Except.bind] at h ⊢
+            exact h
+      · simp only [indexTargetLoc, hv, Bind.bind, Except.bind]
+        exact h
 
 end GoLean.FastEval

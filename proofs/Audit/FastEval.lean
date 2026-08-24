@@ -1,6 +1,7 @@
 import Lean
 import GoLeanProofs.FastEval.Step
 import GoLeanProofs.FastEval.Transfer
+import GoLeanProofs.FastEval.TransferWitness
 import GoLeanProofs.Specs.TwinPrelude
 
 /-!
@@ -53,3 +54,5 @@ theorems the `fastreplay` driver's verdict rests on. The
 #guard_msgs in #print axioms GoLean.FastEval.fastRun_transfer
 /-- info: 'GoLean.FastEval.fastRun_transfer_eqb' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.FastEval.fastRun_transfer_eqb
+/-- info: 'GoLean.FastEval.Witness.fastRun_transfer_witness' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.FastEval.Witness.fastRun_transfer_witness
