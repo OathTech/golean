@@ -864,6 +864,30 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   P-2026-08-24: this removes ~21 h of grind and one interim artifact,
   adds no new proof obligation that layer C did not already carry.
 
+- **[USER] 2026-08-24 — THE ONE-HOUR DOCTRINE:** prioritize methods
+  that SCALE; never grind out results. Anything taking more than ~1 h
+  to build is a candidate for killing — such a runtime demands
+  extraordinary justification; it can be worthy, but it is inherently
+  suspicious and THE BIAS IS AGAINST IT. Campaign-operational from
+  this entry forward; goes into every worker brief. Candidate
+  CLAUDE.md amendment queued for user sign-off (main edit).
+  Applications, [AGENT]-executed under the doctrine:
+  - The witness wave: already parked (previous entry) — the doctrine
+    retroactively confirms the park.
+  - **p2 KILLED** (~21 h into an opaque machine stage): no progress
+    signal, no checkpoints, remainder unboundable, fuel 40e9 a guess.
+    This SUPERSEDES the earlier [USER] "don't kill the long-running
+    shell" (which was scoped to the pause discussion); supersession
+    flagged to the user for reversal. Sunk: the machine stage (go-side
+    record durable, reused on any resume). Replacement plan (follow-up
+    task, doctrine-shaped): right-size fuel FROM the go-side record's
+    step count, add progress emission + periodic machine-state
+    checkpoints to the replay path, run as bounded chunks — the
+    fidelity evidence per hour goes UP under this shape.
+  - Forward rule for arc units: proof mechanisms are designed so no
+    single build exceeds ~1 h; a unit that finds itself needing one
+    STOPS and redesigns (that is a clean boundary, not a failure).
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
