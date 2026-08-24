@@ -1775,3 +1775,91 @@ operator's (constitution §4.1).
   `frameSim_relocate`-seeded placements.** The 0-based statements
   remain untouched (shipped history; their identity-only quantifier
   limitation stays documented in the U6 finding).
+
+### PROMOTION LEDGER updates (A4-U8)
+
+- **The lens law families (L1–L4)** — LANDED as general kit surface
+  (`GoLeanProofs/Lens.lean`, 7 Audit/Kit pins); consumers: absState
+  v2 (landed), every wave-2 equation conclusion (charter).
+- **The literal-generation printer** (U4 row) — now FOUR probe-side
+  consumers (BfLitGen/BcLitGen/Bc31Gen/Bf31Gen). Still probe-side
+  per the scratch conventions; the U7 design's "fold into one
+  instrument" future remains open — but note slice C's finding cuts
+  against a proof-code generator generally: the `fdsOf` projection
+  trick delivered generated-trust with zero instrument code. Row
+  kept, priority lowered ([AGENT]).
+- `stepFn_pick_transport` lift (U4 row) — STILL OWED, with the
+  reason recorded: the lift edits shipped `BfSteps.lean`/`TableExt`
+  consumers, and this unit's binding conventions were zero-edits to
+  shipped modules; needs a coordinator-authorized boundary touch like
+  U6's Relocate lift. Now FOUR consumer modules (BfSteps, BcSteps,
+  Bc31, Bf31 — the latter two via the same shared lemma).
+- Retired as consumers land: the U6 "0-based fixture re-siting
+  consolidation" row — DONE this unit.
+
+## A4-U8 exit (2026-08-24, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since the dispatch tip
+c649061b: 6 (3a5215ab slices A+B, 0b361e5c slice C, 28882054 slice D,
+3a68d6b6 parts 2a+2b, a4a1a824 part 2c, + this log/exit commit); no
+coordinator commits interleaved (checked at recount:
+`git log c649061b..HEAD` = the above).
+
+**Deliverable state vs the U8 dispatch:**
+1. THE LENS BUILD (design slices A–D) — **DELIVERED IN FULL**:
+   - Slice A: `Lens.lean` combinators + L1 + L4 (general layer,
+     lineage-lined, Kit-pinned).
+   - Slice B: **L2/L3 PROVED — the kill-point did NOT fire**:
+     normalization is field-pointwise BY PROOF
+     (`normalizeFieldsWith_lookup`), store-miss/store-hit
+     characterized against the real `storeLoc` path, stability FREE
+     for non-scalar fields, witnesses on a real store.
+   - Slice C: `LensInst.lean` — 40 per-field + 7 per-type kernel
+     facts via the `fdsOf` projection trick; generator NOT built
+     (hand-write-first call, measured grounds + revisit condition
+     logged); no custom simp attr (deviation logged).
+   - Slice D: `AbsStateV2.lean` — absRaftLog (GAP-V1-1b CLOSED),
+     absMessage (GAP-V2-1 census-RESOLVED: no fuel needed, Responses
+     deliberately unread; GAP-V2-2 designated for Snapshot),
+     absOutbox (feeds GAP-V1-3); L4 transports BY COMPOSITION
+     (zero hand heap-walk `_ren` derivations); witnesses on the
+     populated fixture.
+2. THE FIXTURE RE-SITING consolidation — **DELIVERED IN FULL**
+   (parts 2a–2c: MsResite, Bc31(+Lit), Bf31(+Lit); every re-site
+   probe-validated end-to-end BEFORE theorems; alloc31 forms PRIMARY
+   with identity corollaries and witnesses; the Bf31 shifted
+   non-identity witness; shipped 0-based statements untouched;
+   builds staggered behind the free-memory guard throughout, caps
+   20–24G).
+
+**Handler-equation state after this unit:** every proved handler
+family (BPC, Bf, Bc, MsFirstIndex, MsTerm) has BOTH its shipped
+0-based record AND a placement-LIVE re-sited `_alloc31` form —
+layer-(C)-consumable. absState now spans v1 scalars + storage ents +
+the log view + messages + outboxes.
+
+**Open gaps carried (none counted):** GAP-V1-2 (tracker), -4
+(AbstractNet), -5 (by design) unchanged; GAP-U1-W1 unchanged;
+GAP-V2-1 wave-3 fueled-Responses extension owed only if rawnode
+plumbing needs it; GAP-V2-2 (Snapshot unprojected) new-designated;
+U4 residuals unchanged (becomeLeader → wave 2 with the appendSpill
+transport; MemoryStorage.Entries spec design; Term/FirstIndex error
+branches — now cleanly separable at re-sited fixtures, noted in
+MsResite); the lens design's slice E (handleHeartbeat) is A4-U9.
+
+**A4-U9 CHARTER (proposed, per the dispatch):** the first
+MESSAGE-HANDLER equation on the new machinery — handleHeartbeat,
+symbolic-from-birth (design slice E): fixture BORN re-sited (≥31,
+`wBase_funcSup` recomputed at any pin move), the `_alloc` form
+PRIMARY from the first commit, conclusions stated through absState
+v2 (`absRaftLog`/`absOutbox` readouts + the L2 store-miss laws for
+"the handler did not touch X" without window re-evaluation — slice
+E's measurable payoff target vs the MsEquation baseline), the
+message argument projected by `absMessage`. Opening machinery items
+(U4 exit list, unchanged): the appendSpill pick transport is NOT
+needed for handleHeartbeat (commitTo + send only — no appendSlice
+on this path; verify by probe first) but IS for handleAppendEntries
+and becomeLeader next.
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1).
