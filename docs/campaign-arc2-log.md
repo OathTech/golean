@@ -778,3 +778,37 @@ mirrored).
   `maxRecDepth 100000` in TransferWitness.lean is a representation
   accommodation (kernel rfl over a 150-step run), tolerated-scaffold
   class, 0.68 s build.
+
+- **P2R GATE** (2026-08-24): `GOLEAN_ALLOW_NO_DIFF=1
+  GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT: PASS** (rc 0; log
+  artifacts/p2r-gate2.log, untracked; result restated here). Visible
+  notes unchanged in kind from U5: the sanctioned no-diff hatch (this
+  lane has no recorded differential; no runtime change owes one —
+  GoLean/frontend/interpreter untouched, tracereplay.py is outside
+  every differential script's path); the **comparator landmark OWED
+  (scope)** note (files in Challenge's trusted closure changed —
+  `Audit/FastEval.lean` gained the three P2R pins; flagged for the
+  operator's MERGE step exactly as U5 flagged it; no designated
+  statement changed on this lane).
+- **[AGENT]** 2026-08-24 (P2R): the FIRST gate attempt FAILED on the
+  1b2 sweep — the PARKED wave's untracked generated `TwinSegs`/
+  `TwinCkpts`/`TwinSegBase/SegsAll/Witness` sources are exactly what
+  the sweep catches (the park record predicted this; the U5 gate ran
+  sources-absent). Handled per the park's own discipline: the
+  generated tree MOVED (not deleted) to `artifacts/p2r-parked-wave/`
+  — byte-identical regeneration via `gen-u5-modules.py` is the
+  recorded resume path, and the ctx refactor had already invalidated
+  the parked oleans' input hashes (noted above). Resume recipe step 1
+  regenerates from scratch; nothing lost.
+
+**UNIT P2R: BRANCH-COMPLETE at this tip.** All five charter items
+done: measured (slice 1), extended arm-for-arm (slices 3-4), transfer
+theorem + witness pinned (slices 2+5), wired in with progress +
+durable records (slice 5), acceptance beaten ~100× (26.6 s vs the
+~1 h ceiling; p2's >20 h DNF explained by the measured slow-engine
+curve at the now-known true step count 11,995,825). Proposed next
+charter (coordinator's call): run the WHOLE `deps/raft/testdata`
+trace corpus through `--engine fast` — the full machine-tier
+differential sweep p2 was a single point of is now an ~hour-scale
+job; stub hits (if any) are enumerable arms under the same
+fail-closed loop.
