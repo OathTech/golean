@@ -1966,3 +1966,11 @@ next entry (same-commit convention).
 Nothing merged; branch-complete. Merge/audit-ask remain the
 operator's (constitution §4.1); the comparator-landmark STALE flag
 (106+ commits) stands escalated from U8.
+
+- 2026-08-24 A4-U9 gate follow-up (same-commit convention): unit-end
+  gate `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci` at the
+  exit tree — **RESULT: PASS, exit 0** (23 ok steps,
+  `artifacts/ci-arc4-u9.log`, gitignored; the two no-diff notes are
+  the sanctioned proofs+docs hatch). Gate staggered behind the
+  `free -g` guard (56G free ≥ 24G cap). The comparator-landmark
+  STALE flag stands escalated for the operator's merge step.
