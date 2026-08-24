@@ -125,6 +125,47 @@ where the pilot's pattern applies. The W7/SpecTec convergence stays
 the recorded alternative. Kit lifts for the five classes proceed
 regardless (promotion ledger, ≥2-consumer rule trivially met).
 
+## 4c. FORWARD-SIMULATION RESTATEMENT + LINEAGE (2026-08-24, per the
+clever-tricks doctrine and the Iris reuse map's shortlist — [AGENT])
+
+The three layers, restated in the classic's vocabulary so the design
+is auditable against the literature and a later Iris carry is a
+restatement, not a re-derivation:
+
+> **The seam is a FORWARD SIMULATION** (refinement mapping; Abadi &
+> Lamport; the ASM refinement playbook). `R σ N := absState σ = some
+> N` is the refinement mapping; layer (B)'s per-handler equations are
+> the SIMULATION SQUARES — `R σ N → interpreterStep* σ σ' → ∃ N',
+> specStep N N' ∧ R σ' N'` — established by TRANSLATION VALIDATION
+> (Pnueli) over the lowered bodies via symbolic execution; layer
+> (C)'s round induction is the simulation induction, with the
+> checker-implication lemmas as the property-transfer step (the
+> abstract invariants of Arc 3's lattice pulled back through R).
+
+LINEAGE LINES (per mechanism, per the doctrine):
+- absState / layer C — refinement mapping + forward simulation
+  (classic). Iris analog: excl-auth ghost coupling + invariant
+  (dsp_ghost_theory.v pattern, reuse map §3) — REBASE-COMPATIBLE,
+  post-T1, becomes high-priority if T1 acquires real concurrency.
+- Layer (B) equations — translation validation (classic); Iris
+  convergence: perennial's wp-implies-spec-step idiom (dsp.v:226),
+  with our exact-step form STRONGER than a WP (needs TotalWeakestPre
+  to preserve — delta-scan row R14).
+- Sym/TableExt — symbolic execution via conservative extension
+  (classic); NO Iris import analog (perennial's two attempts are
+  both dead code — reuse map §1); our soundness theorem is the part
+  they lack. Export convergence noted (SubTable ≈ the types pin).
+- FastEval — data refinement / certified computation (classic);
+  no-analog for the accelerator role, and the axiomatize-the-
+  data-layer alternative is structurally unavailable to a
+  differentially-validated interpreter (reuse map §2).
+- The frame layer — Yang-O'Hearn operational locality (classic),
+  deliberately UPSTREAM of Iris (the executable frame theorem has no
+  Iris analog and should not); NAME COLLISION note: `GoLean.Frame`
+  vs Iris ProofMode's `Frame` class — unrelated, disambiguate in
+  docstrings at contact points. The field-access layer adopts
+  Perennial's Access-lens shape (wave-2 charter).
+
 ## 5. Open questions (logged, none blocking U1)
 
 - OQ-A: `absState` totality vs partiality bookkeeping — Option vs a
