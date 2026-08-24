@@ -831,6 +831,27 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   appendSpill transport + THE handleHeartbeat equation with the lens
   payoff measured.
 
+- **[USER] 2026-08-24 — giant-builds-as-smell guidance:** Mike flags
+  that giant builds over huge terms (the witness wave) are a mildly
+  suspicious signal of a missing abstraction — e.g. a 'verified
+  verifier' layer doing symbolic execution over such terms with a
+  simpler cert plus a once-proved convergence theorem. [AGENT]
+  response, logged: the wave already HAS the verified-verifier layer
+  (FastEval = certified computation; the wave = certificate replay),
+  but the CERT IS AT THE WRONG GRANULARITY — it re-materializes full
+  heap-state literals per checkpoint; the 712-segmentation is memory
+  scaffolding, a tolerated scaffold per the clever-tricks doctrine,
+  now carrying an EXPLICIT RETIREMENT CONDITION: when Arc 4's round
+  induction (layer C) lands, prove a ROUND-REPLAY COROLLARY — the
+  ∃-witness as ~100 applications of the round lemma at the recorded
+  choice stream (cert = choices, granularity = rounds) — and DELETE
+  the segment wave rather than maintain two mechanisms. [AGENT]: the
+  in-flight wave runs to completion (T1's ∃-side does not idle weeks
+  on layer C); delta-encoded checkpoints NOT built (fallback only,
+  recorded, if the retirement path slips). Same smell noted at the
+  goldenWire% 9.3 MB literal pin — tolerated generated-literal
+  scaffold, retirement only via a principled pin route (SpecTec).
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
