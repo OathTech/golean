@@ -1734,3 +1734,44 @@ operator's (constitution §4.1).
   **Elaborated GREEN on the FIRST full check — 112 s** (vs the
   0-based family's ~110 s; re-siting is placement-transparent to
   build cost too). Shipped BC statements untouched.
+- 2026-08-24 Part 2c — **Bf31.lean + Bf31Lit.lean LANDED** (the U3
+  FLAGSHIP re-sited). Probe FIRST (`Bf31Gen`): schedule identical
+  ([642,183,28,28,28,3,2316]; Intn map at 63 at this placement,
+  Progress at 33), machine END-TO-END 3,234 steps / [3,1,0,0]
+  consumed / γ-image == machine heap / projections == spec. `Bf31Lit`
+  (508 KB) generated + link-checked. [AGENT] structure call, logged:
+  Bf31 uses the SIMPLER slice-4 BC module pattern (one module,
+  whole-step kernel_rfl STOP/SORT leaves) instead of the U3-era
+  BfSteps/BfSteps2/BfSortStep ceremony — same theorem shapes, fewer
+  moving parts; the 0-based Bf modules stay as landed history.
+  `bc31Cands3` shared from Bc31 (same Progress placement). Landed:
+  the chain + **`becomeFollower_handler_eq_alloc31`** (PRIMARY, with
+  the hvote/hlead side conditions and the unrm-13/3 wrap collapse —
+  depths PLACEMENT-INVARIANT, confirmed at elaboration) +
+  `becomeFollower_handler_eq31` (identity corollary) + witness +
+  **`becomeFollower_handler_eq_alloc31_witness_shifted`** (the
+  flagship non-identity demonstration: raft cell genuinely at 32 via
+  swap31_32/frameSim_relocate, NO closed re-evaluation — the span
+  consumed as a proved fact). Elaboration 104 s (one fix round: a
+  name-protection slip in the mechanical rename left `bc31Cands3_fact`
+  colliding — renamed to `bf31Cands3_fact`; caught by the compiler,
+  as designed). [AGENT] Shifted witnesses for Ms31/Bc31 NOT
+  duplicated (logged): quantifier liveness at re-sited fixtures is
+  demonstrated by the BPC31 (U6) and Bf31 (this unit) shifted
+  witnesses through the same fixture-independent seed
+  (`wBase_bodies_inv` + `frameSim_relocate`); repeating the ceremony
+  per handler adds no information.
+- 2026-08-24 Part 2 CLOSE-OUT numbers: full proofs+Audit green
+  **496 jobs** (491 + MsResite + Bc31Lit + Bc31 + Bf31Lit + Bf31).
+  Fresh `#print axioms` (probe `AxResite`, verbatim): ALL NINE of
+  msFirstIndex/msTerm/becomeCandidate/becomeFollower
+  `_handler_eq_alloc31` + their witnesses + the Bf31 shifted witness
+  = [propext, Classical.choice, Quot.sound]. Hatch grep over all
+  five new modules: 0/0/0/0/0. **The U6 charter's re-siting
+  consolidation residual is CLOSED: every landed handler equation
+  family (BPC at U6; Ms/BC/Bf this unit) now has a placement-LIVE
+  `_alloc` form at a fixture off the static locLit range — layer-(C)
+  can consume them at the twin's real layout (base 389+) via
+  `frameSim_relocate`-seeded placements.** The 0-based statements
+  remain untouched (shipped history; their identity-only quantifier
+  limitation stays documented in the U6 finding).

@@ -241,6 +241,8 @@ import GoLeanProofs.Specs.Raft.AbsStateV2
 import GoLeanProofs.Specs.Raft.MsResite
 import GoLeanProofs.Specs.Raft.Bc31Lit
 import GoLeanProofs.Specs.Raft.Bc31
+import GoLeanProofs.Specs.Raft.Bf31Lit
+import GoLeanProofs.Specs.Raft.Bf31
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)
