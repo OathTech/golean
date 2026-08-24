@@ -1863,3 +1863,19 @@ and becomeLeader next.
 
 Nothing merged; branch-complete. Merge/audit-ask remain the
 operator's (constitution §4.1).
+
+- 2026-08-24 A4-U8 gate follow-up (same-commit convention): unit-end
+  gate `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci` at the
+  exit tree — **RESULT: PASS, exit 0** (23 ok steps,
+  `artifacts/ci-arc4-u8.log`, gitignored; the two no-diff notes are
+  the sanctioned proofs+docs hatch — this unit touched
+  `proofs/GoLeanProofs/{Lens.lean,Specs/Raft/**}` + the aggregator +
+  `proofs/Audit/Kit.lean` (additive pins) + arc-4 docs only; no
+  runtime code, no Corpus/, no baselines/, zero edits to shipped
+  Sym/Frame/Specs modules). Gate staggered behind the `free -g`
+  guard (67G free ≥ 24G cap). **The comparator landmark note is now
+  STALE-flagged by ci itself (106 commits > the 100 threshold since
+  the last certified run @ 1730567a; report-only)** — escalated
+  VISIBLY for the operator's merge step per the CLAUDE.md step-2
+  widened trigger: a comparator-judge run belongs in the merge
+  protocol for this branch.
