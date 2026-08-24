@@ -888,6 +888,33 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
     single build exceeds ~1 h; a unit that finds itself needing one
     STOPS and redesigns (that is a clean boundary, not a failure).
 
+- **[USER] 2026-08-24 — p2 kill confirmed; roadmap reassessed under
+  the grinding ban.** User's framing, recorded: "your main skill is
+  iteration. Such campaigns are poison to iteration" — long grinds
+  lock the box, defer feedback, and hide failure until the end.
+  [AGENT] reassessment of everything remaining to T1+T2:
+  - **Arc 4 layer B (per-handler equations): PASSES** — the Sym-driven
+    loop is probe → equation → minutes-scale build → next; per-unit
+    full-proofs builds are minutes (U8: 496 jobs). Watch item: a big
+    handler whose single kernel_rfl approaches the hour mark triggers
+    the forward rule (stop, decompose into lemma-level composition).
+  - **Layer C (round induction, checker-implication, T1 assembly):
+    PASSES** — proof-shaped, small builds.
+  - **CompletionWitness via round-replay corollary: PASSES** — the
+    grind route (segment wave) is parked; cert-replay at round
+    granularity is kernel-cheap.
+  - **T2: PASSES** — statement generalization + lattice reuse.
+  - **Dead grinds:** the wave (parked) and p2 (killed) were the only
+    two >1 h jobs; nothing else on the roadmap is grind-shaped. The
+    gate (~minutes) and judge (393 s) are within doctrine.
+  - **Queued small task (not critical-path):** p2's replacement —
+    instrument the replay path (progress emission, periodic machine
+    checkpoints, fuel right-sized from the go-side record), run as
+    bounded chunks. Fidelity evidence per hour goes up; scheduled
+    after the current arc-4 units, own small branch.
+  - **Calibration:** P-2026-08-24 (~4-7 weeks) unchanged, if anything
+    improved — no day-scale waits remain on the critical path.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
