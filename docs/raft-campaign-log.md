@@ -963,6 +963,31 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   iterations may not. Campaign proceeds: U10 (handleHeartbeat
   equation) and P2R (verified fast replay) in flight in parallel.
 
+- **Arc 4, A4-U10 — LANDED** @ 91b7dc04, gate PASS (22 ok), 500
+  jobs green: THE APPEND-SPILL TRANSPORT (SpillTransport.lean,
+  lineage-lined, pinned, witnessed) + **THE FIRST MESSAGE-HANDLER
+  EQUATION** — handleHeartbeat, symbolic-from-birth, two windows
+  [1299,25] + one spill crossing (U9's census exact), the choice
+  absorbed into valuation atoms so ONE literal serves all 32
+  capacities; nine absState-v2 conclusions incl. absOutbox =
+  [specHeartbeatResp]. **THE MEASURE: ~70× (41 s vs ~49 min
+  projected per-conjunct baseline)** — the lens design's payoff
+  formula met. WHAT THIS TAUGHT US: (1) the cell-atom mechanism
+  collapses choice-dependence exactly as designed (zero per-choice
+  splits); (2) From-symbolism is blocked by the subject's
+  self-addressed panic guard — real side condition m.From ≠ r.id
+  recorded; (3) L2 store-miss was NOT needed on this handler (spill
+  targets a temp cell) — the lens's L2 case awaits a field-writing
+  handler; (4) handleAppendEntries census: 2,828 steps/one choice,
+  mirror runs clean — ITS EQUATION IS PURE ASSEMBLY. Comparator
+  landmark STALE at 112 commits — [USER]-queue: judge owed at this
+  branch's merge. [AGENT]: U11 dispatched to the same worker
+  (~500k, assembly-shaped unit): the handleAppendEntries equation
+  (success/empty family) + stale family; third slot = the
+  NON-EMPTY-ENTRIES LOG-APPEND family over becomeLeader (insight
+  test: it probes GAP-V1-1b's unstable overlay — the open risk —
+  while becomeLeader is settled machinery).
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
