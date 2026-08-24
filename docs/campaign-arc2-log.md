@@ -519,3 +519,27 @@ marginal 2.22 s/step, 157 MB/step at 19k cells; census complete
 (243 = 226+9+8). VERDICT: NO-GO (c) → unit 3 = fallback (d), memo
 §6.4. Nothing merged; no GoCore/frontend/scripts edits; Arc-1 files
 still verbatim.
+
+## Wave PARKED at user direction (2026-08-24)
+
+[USER] 2026-08-24: 21 h of remaining solo-retry grind is too long to
+block on for a job whose value is in question — combined with the
+same-day [USER] giant-builds-smell guidance (campaign log), the wave
+is PARKED, not completed. [AGENT] execution of the park:
+
+- Orchestrator + in-flight S0124 build killed cleanly; p2 untouched.
+- State kept: **549 of 712 segment oleans** built
+  (`proofs/.lake/build/lib/lean/GoLeanProofs/Specs/TwinSegs/`,
+  count from `ls ... | wc -l`); manifest + failure lists unchanged
+  under `docs/campaign-arc2-probes/records/`. Nothing deleted.
+- Resume recipe unchanged (this log, "resume recipe" section): the
+  orchestrator is clobber-free (lake skips built oleans) — restarting
+  `u5-orchestrate.sh` resumes exactly where parked, if ever wanted.
+- **The primary route to CompletionWitness is now the Arc-4
+  ROUND-REPLAY COROLLARY** (campaign log, retirement-condition entry
+  2026-08-24): once layer C's round induction lands, the ∃-witness =
+  ~100 applications of the round lemma at the recorded choice stream;
+  the segment wave would then be deleted anyway. Parking merely moves
+  the deletion earlier and skips the interim artifact. Fallback if
+  the round-replay route hits a wall: resume this wave (reversible,
+  above).
