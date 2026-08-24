@@ -1054,6 +1054,31 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   arc-2; arc-4 still owes a judge run at ITS merge. Delta-audit
   workflow still in flight.
 
+- **P2R delta-audit RETURNED** (2026-08-24; 24 agents, 3 Opus
+  reviewers + default-refute verification; 20 findings → 13
+  CONFIRMED, 4 DOWNGRADED-but-real, 3 REFUTED). The two substantive
+  survivors, both TRUST-SURFACE CLAIM defects (no reachable wrong
+  answer — stepFast fail-closes every divergence construct — but the
+  records overstate): (1) HIGH→MEDIUM: the transfer theorem certifies
+  runProgramM (SEQUENTIAL entry) while the replaced slow engine
+  computed runProgramPoolIntsM (POOL entry) — no bridge lemma, the
+  "trust class IDENTICAL" docstring and tracereplay comment literally
+  false, the semantics swap unrecorded; (2) MEDIUM→LOW: premise 3 of
+  fastRun_transfer_eqb is never evaluated by the driver (runLoop ≠
+  iterF, no connecting lemma) — "every premise was checked" literally
+  false. Confirmed MEDIUMs: the landmark-OWED note misattribution
+  (real trigger = proofs/lakefile.toml's new fastreplay exe, NOT
+  Audit/FastEval.lean); a self-contradictory slice-1 extrapolation.
+  Plus 8 confirmed LOW record corrections. WHAT THIS TAUGHT US: the
+  audit dimension that fires is always claims-vs-artifacts — the
+  proofs were sound, the PROSE around them drifted; and the reviewers
+  caught a watched-set subtlety (lakefile in the judge's trust
+  statement) that the lane worker glossed. [AGENT]: fix-round worker
+  dispatched on campaign-arc2 (F1 claim corrections + bridge-argument
+  record + queued bridge lemma; F2 premise-3 honest check; F3-F5
+  record corrections); delta-review of the fix diff to follow (it
+  touches trust-surface claims — user policy 2026-08-01).
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
