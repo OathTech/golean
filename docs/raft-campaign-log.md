@@ -955,6 +955,14 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
     universal test, not just a proof-unit habit.
   - Goes into every worker brief alongside the anti-grinding rule.
 
+- **[USER] 2026-08-24 — cost-model calibration on the waste
+  accounting:** box compute waste is FINE (cheap resource); worker
+  attention is THE scarce resource, and its waste (~10% of units)
+  "seems minimized." Forward: [AGENT] applies the insight test to
+  ATTENTION allocation first — compute may be spent speculatively;
+  iterations may not. Campaign proceeds: U10 (handleHeartbeat
+  equation) and P2R (verified fast replay) in flight in parallel.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
