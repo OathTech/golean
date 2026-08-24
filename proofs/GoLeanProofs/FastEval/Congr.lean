@@ -239,6 +239,27 @@ theorem mapIterMandatoryRemains_congr :
   funext keyTy candidates start
   rw [mapIterMandatoryRemains, mapIterMandatoryRemains, mandatoryInList_congr htypes]
 
+theorem removeKeyList_congr :
+    removeKeyList σ' = removeKeyList σ := by
+  funext keyTy key l
+  induction l with
+  | nil => rfl
+  | cons p rest ih =>
+      simp only [removeKeyList, valueEq_congr htypes, ih]
+
+theorem pruneIterFramesKey_congr :
+    pruneIterFramesKey σ' = pruneIterFramesKey σ := by
+  funext delBase key k
+  induction k <;>
+    simp_all [pruneIterFramesKey, removeKeyList_congr htypes]
+
+theorem contAfterStmtOp_congr :
+    contAfterStmtOp σ' = contAfterStmtOp σ := by
+  funext op vs k
+  cases op <;>
+    simp only [contAfterStmtOp, normalizeValueForTy_congr htypes,
+      pruneIterFramesKey_congr htypes]
+
 end Types2
 
 end GoLean.FastEval

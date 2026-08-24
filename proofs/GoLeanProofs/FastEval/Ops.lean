@@ -104,6 +104,9 @@ theorem filterCandidateList_ctx (σF : ExecStateF) :
 theorem mapIterMandatoryRemains_ctx (σF : ExecStateF) :
     mapIterMandatoryRemains (ctxF σF) = mapIterMandatoryRemains (γF σF) :=
   mapIterMandatoryRemains_congr rfl
+theorem contAfterStmtOp_ctx (σF : ExecStateF) :
+    contAfterStmtOp (ctxF σF) = contAfterStmtOp (γF σF) :=
+  contAfterStmtOp_congr rfl
 theorem canonicalDynamicTy_ctx (σF : ExecStateF) :
     canonicalDynamicTy (ctxF σF) = canonicalDynamicTy (γF σF) :=
   funext fun ty => GoLean.Frame.canonicalDynamicTy_congr (σF := ctxF σF) (σ := γF σF) rfl ty
