@@ -852,6 +852,18 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   goldenWire% 9.3 MB literal pin — tolerated generated-literal
   scaffold, retirement only via a principled pin route (SpecTec).
 
+- **[USER] 2026-08-24 — witness wave PARKED:** Mike: 21 h of
+  remaining retry grind is too long to block on if it's not providing
+  value. Wave stopped same-hour; 549/712 segment oleans kept, resume
+  reversible (arc-2 log, park entry). Consequence, [AGENT]-executed:
+  the RETIREMENT PATH IS PROMOTED TO PRIMARY — CompletionWitness will
+  be proved as the Arc-4 round-replay corollary (cert = the recorded
+  choice stream, granularity = rounds), not by segment replay. The
+  ∃-side now DEPENDS ON layer C; sequencing unchanged (layer C was
+  already on the critical path for the ∀-side). Calibration note for
+  P-2026-08-24: this removes ~21 h of grind and one interim artifact,
+  adds no new proof obligation that layer C did not already carry.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
