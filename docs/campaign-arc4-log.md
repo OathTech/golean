@@ -2029,3 +2029,147 @@ operator's (constitution §4.1); the comparator-landmark STALE flag
   enters the post fixture as ONE cell atom, so ONE post-window
   literal serves every consumed choice — the §4(ii) collapse at the
   spill site).
+- 2026-08-24 U10 probe round (probes `HhU10Probe{,2,3,4}.lean`,
+  BEFORE any theorem — the U6 standard; every number below from
+  these runs):
+  - **The spill's exact shape** (machine, U9 fixture): spill at step
+    index **1299** of 1,325; config `.retV (.slice ⟨some 124,0,1,1⟩)
+    (.stmtOpK (.appendSlice *raftpb.Message) 1 [.slice ⟨none,0,0,0⟩,
+    .addr 125] [])` — the append TARGET is the TEMP cell 125 (`$c1220`),
+    NOT the raft field: the `r.msgs` field write-back is a plain
+    assign inside the 25-step POST-window (so the whole-struct
+    re-normalization sits IN-WINDOW — the L2 store-miss law is not
+    needed on this handler's crossing; honest finding below). Width
+    32 confirmed (nil outbox: envelope [1,32]); realized caps probed
+    at c=0/5/31 → 4/9/3 = `appendRealizedCap 0 1 (c%32)` exactly;
+    backing = [msgPtr(74)] ++ nil-padding at declared type
+    `.array nc *Message` — the extra-dependent declared type, the
+    `Valuation.cells` design case verbatim.
+  - **Two same-lever TableExt residuals exposed by the window walk**
+    (the designed consume-on-demand process, U3 precedent — [AGENT]:
+    def growth turns quits into steps, never changes stepping
+    behavior; the full downstream rebuild re-checking every landed
+    window kernel_rfl is the built-in guard, and it came back green):
+    (1) `Stmt.initialization` at a DEFINED type (the `raftpb.Message`
+    temp `$c1191` in `send`) — new `stepFnT` arm over the landed
+    `defaultValueT` + conc case; (2) result-cell allocation at a
+    DEFINED result type (`raftpb.MessageType` on the
+    `Message.GetType` entry) — `allocDeclsT` + conc lemma, threaded
+    through `enterFrameT` (bisect probe: findFunctionIn?/dispatch/
+    bindParams all OK individually; the quit was `allocDecls'`'s
+    shipped default-former). After both: **the mirror pre-window runs
+    1299 steps and quits `.q3Choice` at exactly the spill config**;
+    γ-heap/na/config vs machine at 1299: all equal.
+  - **The atom-carried crossing validated end-to-end** (probe 4): S2
+    := S1 + cell 125 ↦ value-atom 0 + fresh cell 126 ↦ CELL-atom 0
+    (na 127); post-window from (S2, .next k') = **25 steps to
+    `.next .stop` on ONE literal**; γ-image == machine final heap AND
+    na at c=0/3/31, exactly one choice consumed; projections at the
+    γ-image: absOutbox = [⟨9,2,1,0,…,false,[],[]⟩], committed 1,
+    Vote 7, absMessage(arg) = ⟨0,0,2,0,0,0,1,…⟩ — U9's census record
+    reproduced at the symbolic level.
+  - [AGENT] **From-symbolism REFUTED at zero crossings** (generator
+    probe finding): with `m.From` symbolic (var 5) the pre-window
+    quits `.q1Branch` at step 1259 on `eqI(norm²(x₅), 1)` — the
+    subject's own SELF-ADDRESSED panic guard (`send`,
+    raft.go:601-ish: the response's To = m.From's value compared to
+    r.id). A symbolic From therefore needs one branch crossing with
+    side condition `m.From ≠ r.id` (the subject's real precondition)
+    — recorded as the follow-on refinement; THIS unit pins m.From = 2
+    concrete (the U9 recipe, the charter's fixture family). Raft
+    scalars Vote/lead/state/leadTransferee STAY symbolic (vars 1–4,
+    the bf31 pattern) — the symbolic pre-window then runs 1299 clean.
+- 2026-08-24 Slice 1 LANDED (a9f7a4a2): **THE APPEND-SPILL
+  TRANSPORT** — `Sym/SpillTransport.lean` (184 lines):
+  `applyStmtOp_append1_spill_at` (the SliceMem Group-4 walk at the
+  SINGLE realized capacity, Option-base old handle — the nil outbox;
+  `nt` free), **`stepFn_appendSpill_transport`** (the γ-level spill
+  step: mirror config in, machine conclusion, post state = a given
+  mirror image carrying the choice-dependent artifacts as valuation
+  atoms; LINEAGE: choice-point transport in the
+  symbolic-execution-by-conservative-extension frame, same classic as
+  `stepFn_pick_transport`, realized over the SliceMem machinery), and
+  the §3.3 in-module witness (nil []uint64 grown by one element,
+  every premise discharged concretely; #eval-checked first in probe
+  3). Kit-pinned (3 new pins, build-enforced): transport + `_at` +
+  witness all **[propext, Quot.sound]**. Plus the two TableExt arms
+  above. Full proofs+Audit green **498 jobs**.
+- 2026-08-24 Slice 2 LANDED — **THE handleHeartbeat EQUATION, the
+  first message-handler equation** (`Specs/Raft/HhLit.lean` generated
+  1,096 lines / 118 KB by probe `HhGen.lean` — the printer's 5th
+  consumer, atom arms added — + `Specs/Raft/HhEquation.lean` 430
+  lines):
+  - Chain: fixture BORN RE-SITED symbolic-from-birth (bf31 heap,
+    vars 1–4 + the Message argument cells; charter items 1–2), TWO
+    windows [1299, 25] + ONE spill crossing = **1,325 steps, one
+    choice consumed** — U9's census exactly. Link theorems
+    `hhW1_out`/`hhW2_out` (kernel rfl) re-check the literals — the
+    drift alarms; `hhρ'` absorbs the choice (value-atom 0 = the
+    spilled handle, cell-atom 0 = the backing cell — ONE post-window
+    literal for all 32 capacities, zero per-choice case splits).
+  - The crossing `hh_spill_step` = `stepFn_appendSpill_transport`
+    with: hvisE/hvisO/htgt by `kernel_rfl` at free ρ/c₁ (the target
+    is the plain temp cell 125 — no struct re-normalization on the
+    crossing), hcons by `Choices.consume` reduction, hbuild by the
+    LANDED `buildAppendBackingValue_of_norm` + `appendRealizedCap_lower`
+    (choice-GENERIC — no leaf enumeration).
+  - Conclusions through absState v2 + the Lens readers, NINE
+    conjuncts: absMessage(argument) pre; absRaftLog pre = post =
+    `hhAbsLog` (the NO-OP commitTo branch — the log view PRESERVED);
+    **absOutbox post = [specHeartbeatResp 1 2 0]** (typ 9, dst =
+    m.From, src = r.id, term = r.Term — re-grounded from
+    raft.go:1854-1857 + send); fieldReadU64 Vote/lead = ρ.ints 1/2
+    (the untouched symbolic scalars, hvote/hlead range side
+    conditions collapsing the store-time norm-wrap, depth 1 probed)
+    + Term = 0. The outbox readout is proved by LEMMA COMPOSITION
+    over the lens combinators (`sliceElems` is array-index-bounded,
+    so the choice-generic backing cannot close by reduction —
+    `hhBackingVal_head` + bind-of-some; the anti-grinding doctrine's
+    preferred shape).
+  - **`handleHeartbeat_handler_eq_alloc` PRIMARY**
+    (placement-quantified via `stepFnIter_sim`; all nine conclusions
+    transported by the L4 `_ren` lemmas — one line each, zero heap
+    re-derivation) + `handleHeartbeat_handler_eq` (identity
+    corollary) + the §3.3 witness (Vote 7/lead 2/state 0/ldT 5,
+    stream [3] — realized capacity 7). Fresh `#print axioms`
+    (verbatim, probe `AxHh`): eq_alloc / eq / witness / hh_full_span
+    / hh_spill_step all [propext, Classical.choice, Quot.sound];
+    hh_post_absOutbox / hhW1_out [propext, Quot.sound].
+  - Full proofs+Audit green **500 jobs**; hatch grep over
+    SpillTransport/HhLit/HhEquation: 0/0/0. HhEquation module
+    elaborates in **41 s** (lake-reported).
+
+### THE LENS-PAYOFF MEASURE (deliverable 3 — the dispatch's named metric)
+
+Derivation anchors: MsEquation's recorded 348 s for a 246-step
+handler whose per-conjunct facts each re-evaluate the window in the
+kernel (U4 log entry; ≈5 window-evaluating decls ⇒ ~70 s/conjunct ⇒
+~0.28 s/step per FACT); this unit's HhEquation 41 s lake-reported
+with window step-counts pinned by the link theorems (1299 + 25).
+
+- **Baseline (the MsEquation per-conjunct pattern) projected at this
+  handler**: 8 projection/readout conjuncts × ~0.28 s/step × 1,325
+  steps ≈ **49 min** of kernel work, O(k · window).
+- **Measured (absState v2 + literals + lens laws)**: **41 s** for the
+  WHOLE module — the two window links evaluated ONCE (~35 s of it)
+  plus sub-second per-conjunct reductions against the `hhS3` literal
+  and the lemma-composed outbox readout — O(window + k), the lens
+  design §2's payoff formula, met at ≈ **70×** on the conclusion
+  layer.
+- Attribution, honest: the O(window+k) shape is literalization (U4's
+  lever) + the lens together. The lens's specific contributions
+  here: (a) the v2 READERS are what make all nine conclusions
+  stateable; (b) the choice-generic outbox readout NEEDS the
+  lemma-composition route (a reduction-only route would be 32 leaf
+  facts per conclusion); (c) the L4 `_ren` family gave the alloc
+  form's placement transport of every conclusion in one line each.
+  **The L2 store-miss law was NOT needed on this handler** (honest
+  finding): the spill writes a temp cell and the `r.msgs` field
+  write-back sits in-window, so untouched-field facts reduce against
+  the literal; L2's designed consumer materializes only where no
+  post-literal exists (∀-state equations, future fixture-free forms).
+- Per-handler cost, cumulative: ~430 hand lines + 118 KB generated +
+  ~2 min of builds (HhLit 1.5 s + HhEquation 41 s + probes) — vs
+  bf31's 847 lines/104 s for the 4-choice reset family. The
+  ONE-TIME general machinery this unit: SpillTransport 184 lines +
+  two TableExt arms (~90 lines incl. conc cases).
