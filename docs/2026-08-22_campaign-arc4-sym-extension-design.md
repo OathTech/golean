@@ -217,3 +217,158 @@ part of the WF pack; `absRaftNode`'s address argument absorbs it.
   NON-additive change to a shipped Sym statement stops and reports;
   class 2 stops if `enterFrame'` mirroring demands table shapes the
   sub-table premises cannot express.
+
+## 7. A4-U5 — the allocation-symbolic re-base (2026-08-24, [AGENT]; the campaign watch-list's top classic-ward item)
+
+**LINEAGE: separation-logic locality — the frame rule and the
+renaming/relocation lemma of O'Hearn–Reynolds–Yang local reasoning
+(O'Hearn–Reynolds–Yang, "Local Reasoning about Programs that Alter
+Data Structures", CSL 2001; the frame property / safety monotonicity
+semantics of Yang–O'Hearn, "A Semantic Basis for Local Reasoning",
+FoSSaCS 2002; support/equivariance in the nominal reading).** In this
+repo the classic is already mechanized as the EXECUTABLE FRAME
+THEOREM layer (`proofs/GoLeanProofs/Frame/`: `FrameSim`, `stepFn_sim`,
+`stepFnIter_sim`, `execStmtLoop_ren`, `frameSim_seed`/`rebaseSimT`;
+design of record `docs/2026-08-13_executable-frame-theorem.md`), whose
+own recorded lineage is the allocator-independence quotient
+(`Frame/AllocIndep.lean` — user direction 2026-08-13). Secondary
+lineage, unchanged: the windows feeding the equations remain symbolic
+execution via conservative extension (§0–§4 above). Nothing in this
+section is a new trick — it is the composition of two landed classics.
+
+### 7.1 The problem being retired (the stupid-trick risk, named)
+
+Every handler equation shipped through U4 is stated at the γ-image of
+a PINNED fixture: footprint cells at `Loc.base 0..k` in one arbitrary
+construction order. The real twin's becomeFollower raft cell sits at
+base 389 (probe2, U1) — the pinned layout is not even the run's. The
+addresses are an ACCIDENTAL feature of the proof: nothing in Go, the
+machine, or the handler assigns base 0 to the raft cell, and Go
+promises NO address determinism at all (AllocIndep's charter). Scaling
+waves 2–3 on the concrete-address pattern would bake the accident into
+~20 more theorems and every layer-(C) consumer — the campaign log's
+flagged "stupid trick" risk, verbatim.
+
+### 7.2 The re-based equation form
+
+The equation quantifies over the handler's FOOTPRINT PLACEMENT: an
+arbitrary conforming relocation `r` of the fixture's cells plus an
+arbitrary disjoint framed remainder `fr`, both carried by ONE premise
+— `FrameSim r na₀ na fr (γS ρ σ S0) σF` ("σF owns the fixture's
+ownership shape at addresses `r(0..k)`, with `fr` untouched beside
+it"). Conclusion: the run from the call configuration AT `r 0`
+returns in the same step count with the SAME choice-stream behavior,
+the final state again `FrameSim`-related to the fixture's post-image
+(the footprint transformed, the frame preserved — the frame rule's
+conclusion shape), and the `absRaftNode` projection AT `r 0` stepping
+by the spec function. The concrete-fixture theorem is re-derived as
+the corollary at the identity seed (`frameSim_seed`, `ρT T 0` = the
+zero shift) — which is the machine-checked proof that the symbolic
+form STRICTLY generalizes the shipped one.
+
+### 7.3 The composition answer (the dispatch's contact question)
+
+Does the kit's frame machinery compose with the TableExt window
+transport, or does the transport need a frame-aware variant? **IT
+COMPOSES — at the machine level, POST-transport, with ZERO Sym
+changes.** The transported span (`bpc_span` etc.) is already a
+machine-level `stepFnIter` fact at the pinned placement, ∀σ over the
+table-carrier; `stepFnIter_sim` (Frame/Transfer.lean) is stated at
+exactly that level, so the relocation+frame lift is one `ExSim.ok_inv`
+application on the span's conclusion. The mirror's concrete-keyed
+heaps (Q2) never enter: Sym emits the window at the canonical
+placement, the frame theorem transports the RESULT. Consequences:
+
+- **No frame-aware `symEvalWindowT` variant is needed.** The §5
+  D-relative-addressing v2 lever stays parked — it is the deeper fix
+  for layout-SHAPE symbolism (per-layout window emission), not needed
+  for allocation-symbolism.
+- The zero-edits property holds a FIFTH time: no existing Sym or
+  Frame line changes; the lift is one new target-layer module.
+- The one genuinely new obligation is PROJECTION RENAME-INVARIANCE:
+  `absRaftNode` (a chain of heap lookups + scalar field reads) commutes
+  with `renameCell`/`renameLoc` under `FrameSim` — `absRaftNode_ren`,
+  proved once, serving every handler equation's pre/post readout.
+- **Naming-collision flag (from contact, for the reuse survey):** the
+  kit's `wp_frame_*` family (`Laws/Call.lean`, `Laws/Unwind.lean`) is
+  Go CALL-frame machinery (function frame entry/return/defer laws) —
+  NOT the separation-logic frame rule. The SL-frame content of this
+  repo lives in `Frame/` (`FrameSim` + the `_sim`/`_ren` theorems).
+  The dispatch's "wp_frame family" question resolves to: call-frame
+  laws are orthogonal to allocation-symbolism; the Frame/ layer is
+  the machinery that composes.
+
+### 7.3b The Iris-preference ladder applied ([USER] directive, mid-unit)
+
+Priority order per the directive — (1) iris-lean as-is, (2)
+Iris-compatible extension, (3) reused Iris-literature ideas, (4) new
+machinery with an explicit no-analog note. Applied from contact with
+the pinned `deps/iris-lean` checkout:
+
+1. **iris-lean as-is — checked, does not fit THIS layer.** iris-lean
+   carries the genuine frame rule (`wp_frame_l`/`wp_frame_r`,
+   `Iris/ProgramLogic/WeakestPre.lean:492-504`; the ProofMode `Frame`
+   class, `ProofMode/Classes.lean:189`) — but over `IProp GF` WP for
+   a `Language`-instance (HeapLang is the worked instance); GoCore is
+   not one. Two structural mismatches, not taste: (a) the handler
+   equations are EXACT-FUEL, EXACT-CHOICE-STREAM `stepFnIter`
+   equalities — step-indexed Iris WP does not express "returns in
+   exactly 152 steps consuming exactly this prefix" without
+   time-credit-style bookkeeping; (b) constitution §3.2 keeps Iris
+   out of statement-adjacent closures, and the layer-(B) equations
+   feed layer-(C)'s first-order round induction directly.
+2. **Iris-compatible extension — the recorded convergence (not
+   re-based now):** a GoCore state interpretation in iris-lean's
+   ProgramLogic would make the `FrameSim` premise the model-level
+   satisfaction of `([∗] i, (r i) ↦ cᵢ) ∗ R` — the footprint as an
+   iterated points-to at symbolic addresses, `fr` as the framed `R`.
+   The alloc equation is then the adequacy-level shadow of an Iris
+   triple; re-basing becomes mechanical when the iris-lean refresh
+   arc lands a GoCore instance. This is the route the ladder prefers
+   long-term; it is gated on the pin-refresh + reuse-survey backlog,
+   not on anything in this unit.
+3. **Reused ideas — what this slice actually is:** operational
+   locality — the renaming lemma + frame property of Yang–O'Hearn's
+   "Semantic Basis for Local Reasoning" — which is ALSO exactly the
+   physical-heap locality that Iris's own heap adequacy rests on.
+   The exact-step form's Iris-literature analog is time
+   credits/receipts (Mével–Jourdan–Pottier); the choice-prefix
+   quantification's nearest Iris concept is prophecy-style oracle
+   reasoning. Both noted for the survey.
+4. **New machinery — none.** No new logic, no new trick:
+   `absRaftNode_ren` is a congruence lemma over landed machinery.
+
+**Convergence notes for the parallel reuse survey** (per the
+directive, even though no re-base happens here): (i) `FrameSim` ≈
+big-sep points-to + frame at the model level (item 2 above); (ii)
+`fr_avoid`/`frame_pres` = the frame `R` surviving the run — the frame
+rule's conclusion; (iii) the equations' conditioned side conditions
+(`hvote` range facts) = pure `⌜φ⌝` embeddings; (iv) the kit
+`wp_frame_*` naming collision (§7.3 flag) should not be counted as
+Iris-frame coverage in the survey.
+
+### 7.4 What stays concrete (the honest boundary, stated not hidden)
+
+1. **Footprint layout SHAPE**: ownership is expressed as
+   `FrameSim`-relatedness to the pinned-layout γ-image — `r` relocates
+   cells, it never reshapes the footprint (which cells exist, their
+   field structure, their inter-pointer wiring are the fixture's).
+   Genuine shape-symbolism is the §5 v2 lever, not this slice.
+2. **The fresh region is canonical-sequential from `na`**
+   (`ShiftSpec`): the machine has ONE allocator; arbitrariness of the
+   handler's OWN allocations is exactly AllocIndep's quotient (apply
+   the theorem again at the exit state if a consumer needs a shifted
+   continuation).
+3. **Tables** stay `Agrees`-pinned (unchanged from U2).
+4. **The §3.3 witness discharges at the identity seed** (every premise
+   concretely instantiated, `FrameSim` included). A NON-identity
+   concrete instance at the raft fixture needs a generic relocation
+   seed builder (`frameSim_relocate : ShiftSpec r na₀ na → … →
+   FrameSim r na₀ na [] σ (rename-image of σ)`), which the Frame layer
+   does not yet provide (its non-identity instances are built
+   incrementally by `rebaseSimT` in the sort examples). PROMOTION
+   LEDGER row — two named consumers: shifted witnesses for every
+   handler's alloc equation, and the layer-(C) composition that must
+   transport leaf-fixture equations to the twin's REAL layout
+   (base 389 et al.). Non-identity liveness of `FrameSim` itself is
+   already kit-witnessed (`swapShift_spec`, the rebase chains).
