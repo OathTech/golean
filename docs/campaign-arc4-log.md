@@ -2285,3 +2285,16 @@ applies to any window that balloons.
 Nothing merged; branch-complete. Merge/audit-ask remain the
 operator's (constitution §4.1); the comparator-landmark STALE flag
 stands escalated from U8/U9.
+
+- 2026-08-24 A4-U10 gate follow-up (same-commit convention): unit-end
+  gate `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci` at the
+  exit tree — **RESULT: PASS, exit 0** (22 ok steps,
+  `artifacts/ci-arc4-u10.log`, gitignored; the two no-diff notes are
+  the sanctioned proofs+docs hatch — this unit touched
+  `proofs/GoLeanProofs/{Sym/{TableExt,SpillTransport}.lean,Specs/Raft/{HhLit,HhEquation}.lean}`
+  + the aggregator + `proofs/Audit/Kit.lean` (additive pins) + arc-4
+  docs + gitignored probes only; no runtime code, no Corpus/, no
+  baselines/). Gate staggered behind the `free -g` guard (105G free ≥
+  24G cap). The comparator-landmark note now reads **STALE at 112
+  commits** (> the 100 threshold; report-only) — stands escalated for
+  the operator's merge step, as at U8/U9.
