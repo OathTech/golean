@@ -1402,7 +1402,9 @@ re-evaluation).
 f4d0a10e: 4 (3e3adc38 Relocate, 21979995 AllocEqWave1, 290ae7b3
 BpcResite+aggregator, fc3eca45 log) + this exit commit; no
 coordinator commits interleaved (checked at recount). Cumulative
-U5+U6 on the branch since 14f37f20: 9 + this.
+U5+U6 on the branch since 14f37f20: 8 + this exit commit = 9
+(count corrected in the follow-up commit: the first statement wrote
+"9 + this" — restatement drift, lesson (i) again, caught at recount).
 
 Unit-end gate `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci`
 at fc3eca45's tree — **RESULT: PASS, exit 0** (23 ok steps,
