@@ -1072,3 +1072,144 @@ applies).
 
 Nothing merged; branch-complete. Merge/audit-ask remain the
 operator's (constitution §4.1).
+
+## A4-U5 — the allocation-symbolic refactor (2026-08-24, successor worker; the clever-tricks watch-list's top classic-ward item)
+
+- 2026-08-24 SUCCESSOR RE-VERIFICATION at the dispatch tip 14f37f20
+  (tree clean, no interleaved commits). All fresh probes, all PASS:
+  - capped core build green (58 jobs); capped proofs+Audit green
+    (484 jobs = U4's recorded 478 + the 6 wave-1 modules — the U4
+    log's "478" was the slice-0 count, before the wave-1 modules
+    landed; consistent, recorded).
+  - `#print axioms` (capped probe, verbatim in
+    `artifacts/probe/AxProbeU5.lean` run): ALL TEN of
+    becomeFollower/becomePreCandidate/becomeCandidate/msFirstIndex/
+    msTerm `_handler_eq` + `_witness` =
+    [propext, Classical.choice, Quot.sound] — matching U4's record.
+  - Kit pin recount: 24 total `GoLean.Sym` `#guard_msgs` pins in
+    `proofs/Audit/Kit.lean` − 6 pre-existing = **18 extension pins**
+    — the log's true number CONFIRMED.
+  - hatch grep over `Sym/TableExt.lean` + `Sym/KernelRfl.lean` +
+    `Specs/Raft/*.lean`: zero `sorry|native_decide|axiom `.
+- 2026-08-24 Contact round (read, not guessed): the kit ALREADY
+  carries the classic — `Frame/` is the executable frame theorem
+  (`FrameSim` = renaming injection + disjoint frame + pointwise heap
+  characterization; `stepFn_sim`/`stepFnIter_sim`/`execStmtLoop_ren`;
+  `frameSim_seed`/`rebaseSimT` builders; AllocIndep = the quotient
+  corollary). KEY FACT: `stepFnIter_sim` (Frame/Transfer.lean:29) is
+  stated at EXACTLY the handler equations' level (`stepFnIter`, same
+  fuel, same stream, `TripSim` payload). Naming collision found and
+  flagged: the kit's `wp_frame_*` family (Laws/Call, Laws/Unwind) is
+  Go CALL-frame machinery, not the SL frame rule.
+- 2026-08-24 [AGENT] Route decision (design note §7, LINEAGE-lined
+  per the new doctrine): the frame machinery composes with the
+  TableExt transport AT THE MACHINE LEVEL, POST-transport — the
+  transported span is already a machine-level `stepFnIter` fact at
+  the pinned placement; `stepFnIter_sim` + `ExSim.ok_inv` lift it to
+  every placement. **No frame-aware Sym variant needed; zero Sym
+  edits — the zero-edits property holds a FIFTH time.** The §5
+  D-relative-addressing v2 lever stays parked (it buys layout-SHAPE
+  symbolism, not needed for allocation-symbolism). The one new
+  obligation: projection rename-invariance (`absRaftNode_ren`).
+- 2026-08-24 [USER] mid-unit directive received (Iris-preference
+  ladder): answered from contact in design note §7.3b — iris-lean's
+  `wp_frame_l/r` are real but bind to `IProp` WP over a
+  `Language` instance (GoCore is not one; exact-fuel/exact-stream
+  equations need time-credit-style bookkeeping Iris WP doesn't give
+  us today); the Iris-compatible convergence (`FrameSim` ≈ big-sep
+  points-to at symbolic addresses ∗ frame R, at the model level) is
+  RECORDED for the reuse survey; this slice reuses the
+  Yang–O'Hearn operational-locality idea (ladder rung 3); no new
+  machinery (rung 4 vacuous).
+- 2026-08-24 Slice landed (5c75dcc9 design, 82d0b72c code):
+  `Specs/Raft/AllocEq.lean` (258 lines, 28 s module build) — the
+  ALLOCATION-SYMBOLIC equation at becomePreCandidate:
+  **`becomePreCandidate_handler_eq_alloc`**: from the drained call at
+  ANY placement σF of the fixture footprint (arbitrary conforming
+  relocation `r` + arbitrary disjoint frame `fr`, one `FrameSim`
+  premise), the run returns in 152 steps, stream untouched, final
+  state FrameSim-related to the fixture's post-image (footprint
+  transformed AT the placement, frame preserved), and
+  `absRaftNode σF ⟨r 0⟩` steps by `specBecomePreCandidate`. Plus:
+  `absRaftNode_ren` (projection rename-invariance, one-time, serves
+  every handler), `bpcCallAt`/`bpcCallAt_ren` (the call config at a
+  symbolic receiver address), `renameStmt_ρT_zero` (generic identity
+  seed discharge), and **`becomePreCandidate_handler_eq_of_alloc` —
+  the shipped concrete statement re-derived from the symbolic form
+  at the identity seed (statement form identical to
+  `becomePreCandidate_handler_eq`, which stays untouched in
+  BpcEquation.lean): the machine-checked proof of STRICT
+  generalization.** §3.3 witness
+  (`becomePreCandidate_handler_eq_alloc_witness`) discharges every
+  premise concretely, FrameSim included. Full proofs+Audit green
+  (485 jobs); hatch grep over AllocEq: 0. Fresh `#print axioms`
+  (verbatim): becomePreCandidate_handler_eq_alloc / _of_alloc /
+  _alloc_witness [propext, Classical.choice, Quot.sound];
+  absRaftNode_ren, renameStmt_ρT_zero, bpcCallAt_ren
+  [propext, Quot.sound].
+
+### A4-U5 COST DELTA (measured, this unit's builds)
+
+| | concrete form (BpcEquation, U4) | alloc layer (AllocEq, U5) |
+|---|---|---|
+| lines | 125 | 258 total: ~85 ONE-TIME (absRaftNode_ren + helpers + seed discharge), ~125 per-handler wrapper (equation + call-at + 2 projection lemmas + corollary + witness), ~48 docstring |
+| module build | 110 s | 28 s |
+| new axioms | — | none (same closure) |
+| edits to existing modules | — | ZERO (aggregator import only) |
+
+The wrapper's build cost is dominated by re-proving the two
+projection kernel_rfl facts at the pinned placement (they were
+inline in the concrete proof; now exposed as lemmas the transfer
+consumes) — a future consolidation could re-derive the concrete
+module FROM these lemmas and retire the duplication; not done here
+(additive-only discipline, the concrete statements stay verbatim).
+
+### A4-U5 VERDICT: **GO** — re-base the remaining four equations and all future waves on the allocation-symbolic form
+
+Grounds (each measured or machine-checked above): (1) strict
+generalization is PROVED, not argued — the concrete statement is a
+corollary; (2) the marginal per-handler cost is ~125 wrapper lines +
+~30 s, a fraction of any handler's own cost, and the one-time layer
+is already paid; (3) zero new axioms, zero edits, no new trust
+surface — a composition of two landed classics; (4) the layer-(C)
+composition NEEDS this form anyway: the leaf fixtures sit at bases
+0..k while the real twin's cells sit at base 389+ — the relocation
+quantifier is the bridge, so re-basing is not decoration but the
+path to consuming the equations at all. Prescription for the
+re-base slices (successor's checklist): per handler, expose the two
+projection facts as lemmas, state the `_alloc` form via
+`stepFnIter_sim` + `absRaftNode_ren` (result-returning Ms handlers
+additionally need result-CELL rename facts — same `lookup_some`
+pattern), derive the `_of_alloc` corollary + witness; the
+multi-window handlers (Bf, Bc) transfer their COMPOSED span exactly
+as BPC's single window (the spine's output is one machine-level
+span — the frame lift is span-shape-independent).
+
+Honest boundary (none counted): (a) footprint layout SHAPE stays
+concrete — `r` relocates, never reshapes (the §5 D-relative lever is
+the shape fix; lineage recorded); (b) the fresh region is
+canonical-sequential from `na` (`ShiftSpec`; further allocator
+latitude is AllocIndep's quotient); (c) the witness instantiates at
+the IDENTITY placement — a non-identity concrete instance needs a
+generic `frameSim_relocate` builder the Frame layer lacks (its
+non-identity instances today are rebaseSimT chains); non-identity
+liveness of FrameSim itself is kit-witnessed (swapShift_spec, the
+sort examples). (d) the four sibling equations are NOT re-based this
+unit — verdict prescribes, does not execute.
+
+### PROMOTION LEDGER updates (A4-U5)
+
+- **`frameSim_relocate`** (ShiftSpec → FrameSim of the rename-image;
+  Frame/-layer) — NEW row, two named consumers: non-identity
+  witnesses for every handler's alloc equation; the layer-(C)
+  instantiation of leaf-fixture equations at the twin's real layout
+  (base 389+). Outside this unit's file boundary; not built.
+- **`asU64_ren`/`fieldU64_ren`** — general-shaped, parked in
+  AllocEq per the file boundary; lift beside `structFieldsLookup_ren`
+  (Frame/HeapOps) at a consolidation slice.
+- **`renameStmt_ρT_zero`** — generic identity-seed body discharge;
+  belongs beside `renameStmt_id` (Frame/RenameId); kills the
+  per-example `bodies_*` lemmas (ssort's `bodies_ρ16` pattern) on
+  lift.
+- `stepFn_pick_transport` lift (U4 row) — unchanged, still owed at
+  the next consolidation slice.
