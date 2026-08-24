@@ -543,3 +543,33 @@ is PARKED, not completed. [AGENT] execution of the park:
   the deletion earlier and skips the interim artifact. Fallback if
   the round-replay route hits a wall: resume this wave (reversible,
   above).
+
+## Unit P2R chartered: the verified fast replay engine (2026-08-24)
+
+[USER] 2026-08-24: p2 is another case for the verified-verifier
+pattern — "It shouldn't take 30 hours to replay something in Lean.
+Build a more performant abstraction then prove the theorem."
+[AGENT] charter (worker dispatched to this lane):
+
+1. **Measure FIRST** (clever-tricks: measurement referees): where do
+   the hours go — compiled stepFn steps/sec on the replay workload,
+   the TRUE step count (derive from the go-side record, never guess
+   fuel), any pathological cost (heap behavior, harness re-scans).
+2. **Extend FastEval to the replay path**: census which stepFn arms
+   the probe_and_replicate replay exercises beyond the twin's;
+   stepFast is arm-for-arm, so gaps should be enumerable and small.
+3. **The transfer theorem**: a fast-run verdict transfers to the
+   model via the γ-simulation composition (lineage: data refinement /
+   certified computation — FastEval's existing story, widened).
+4. **Wire it in**: tracereplay's machine stage runs the verified fast
+   engine, with progress emission + periodic checkpoints (subsumes
+   the earlier queued p2-replacement task) — no opaque runs, ever.
+5. **Acceptance**: probe_and_replicate replays in minutes (hard
+   ceiling ~1 h per the anti-grinding doctrine), verdict recorded
+   durably, transfer theorem pinned in Audit.
+
+If measurement shows the true step count makes even the fast engine
+exceed the ceiling, STOP at that boundary and report — the next
+abstraction rung (e.g. verified batched/big-step replay of whole
+handler invocations, converging with arc-4's equation layer) is a
+design decision, not a grind decision.
