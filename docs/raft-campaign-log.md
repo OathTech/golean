@@ -1043,6 +1043,17 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   Coordinator reclaims arc-2 lane writership (worker retired at the
   park). Merge sign-off remains a separate [USER] moment.
 
+- **comparator-judge PASS at the arc-2 tip** (2026-08-24): 56
+  theorems kernel-certified, 815 s, fresh clone @ 76361232; landmark
+  marker committed on the branch @ 48e35a5b. First attempt failed
+  CLOSED on the worktree's missing deps/comparator (as designed);
+  deps seeded offline from the primary checkout (the sanctioned
+  --from pattern; the judge verifies pin fd2e25de + pristine state
+  itself). The parked-wave dirty manifest files remain untouched as
+  found. The staleness debt both lanes flagged is now cleared for
+  arc-2; arc-4 still owes a judge run at ITS merge. Delta-audit
+  workflow still in flight.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
