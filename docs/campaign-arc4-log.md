@@ -1213,3 +1213,47 @@ unit — verdict prescribes, does not execute.
   lift.
 - `stepFn_pick_transport` lift (U4 row) — unchanged, still owed at
   the next consolidation slice.
+
+## A4-U5 exit (2026-08-24, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since the dispatch tip
+14f37f20: 3 (5c75dcc9 design slice, 82d0b72c AllocEq module,
+2e11a5c9 log/verdict) + this exit commit; no coordinator commits
+interleaved (checked: `git log 14f37f20..HEAD` = the 3 above at
+recount time).
+
+Unit-end gate `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci`
+at 2e11a5c9's tree — **RESULT: PASS, exit 0** (23 ok steps,
+`artifacts/ci-arc4-u5.log`, gitignored; the two no-diff notes are
+the sanctioned proofs+docs hatch — this unit touched
+`proofs/GoLeanProofs/Specs/Raft/**` + the aggregator + arc-4 docs
+only; no runtime code, no Corpus/, no baselines/, no Sym edits, no
+Frame edits). Gate staggered behind a `free -g` guard per the
+dispatch (witness wave sharing the box; 57G free at launch, cap
+24G). The comparator-landmark staleness note (90 commits at this
+run) stays flagged for the operator's merge step, as in every prior
+arc-4 exit.
+
+**Deliverable state vs the dispatch:**
+1. Design slice — DELIVERED (design note §7, lineage-lined;
+   composition answer: composes machine-level post-transport, no
+   frame-aware Sym variant needed; §7.3b the Iris-preference ladder
+   per the mid-unit [USER] directive, convergence notes recorded).
+2. The refactor at ONE handler — DELIVERED
+   (`becomePreCandidate_handler_eq_alloc` + `absRaftNode_ren` +
+   `_of_alloc` corollary with binders/conclusion identical to the
+   shipped concrete statement + §3.3 witness; cost delta measured:
+   ~85 one-time + ~125 wrapper lines, 28 s vs the concrete module's
+   110 s; axioms [propext, Classical.choice, Quot.sound], helpers
+   [propext, Quot.sound]).
+3. THE VERDICT — DELIVERED: **GO** (grounds + re-base prescription +
+   honest boundary in the verdict section above).
+
+**Open gaps carried (none counted):** all U4 gaps unchanged; U5 adds
+the honest boundary items (layout-shape concreteness — the §5
+D-relative lever; `frameSim_relocate` promotion row for non-identity
+witnesses + layer-(C) instantiation at the twin's real layout; the
+four sibling equations awaiting the prescribed re-base).
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1).
