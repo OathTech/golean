@@ -7,6 +7,7 @@ import GoLeanProofs.MapMem
 import GoLeanProofs.MapLoops
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.Frame.Threshold
+import GoLeanProofs.Lens
 import GoLeanProofs.Examples.Fib
 import GoLeanProofs.Examples.Gcd
 import GoLeanProofs.Examples.MinMax
@@ -689,5 +690,26 @@ spans in `HandlerEqSym`/`BfEquation`. -/
 #guard_msgs in #print axioms GoLean.Sym.valueEqRT_conc
 /-- info: 'GoLean.Sym.canonicalTyFuel_types' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Sym.canonicalTyFuel_types
+
+/-! A4-U8: the field-lens layer (`GoLeanProofs/Lens.lean`, general
+half — Perennial Access lineage). The four law families' public
+surface: L4 rename transport, the L2/L3 store-path laws with their
+decomposition, and the field-pointwise normalization characterization
+(the L2 kill-point, discharged by proof). -/
+
+/-- info: 'GoLean.Lens.fieldRead_ren' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Lens.fieldRead_ren
+/-- info: 'GoLean.Lens.fieldReadU64_ren' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Lens.fieldReadU64_ren
+/-- info: 'GoLean.Lens.sliceRead_ren' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Lens.sliceRead_ren
+/-- info: 'GoLean.Lens.store_field_decomp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Lens.store_field_decomp
+/-- info: 'GoLean.Lens.fieldRead_store_miss' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Lens.fieldRead_store_miss
+/-- info: 'GoLean.Lens.fieldRead_store_hit' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Lens.fieldRead_store_hit
+/-- info: 'GoLean.Lens.normalizeFieldsWith_lookup' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Lens.normalizeFieldsWith_lookup
 
 end GoLean.Iris.Audit

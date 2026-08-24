@@ -1524,3 +1524,107 @@ operator's (constitution §4.1).
   Gate staggered behind the `free -g` guard (78G free ≥ 24G cap; the
   solo retry pass respected). The comparator-landmark staleness note
   stays flagged for the operator's merge step.
+
+## A4-U8 — the lens build (design slices A–D) + the fixture re-siting consolidation (2026-08-24, successor worker)
+
+- 2026-08-24 SUCCESSOR RE-VERIFICATION at the dispatch tip c649061b
+  (tree clean, no interleaved commits). All fresh probes, all PASS:
+  - capped core build green (58 jobs); capped proofs+Audit green
+    (488 jobs — matching U6/U7's recorded count).
+  - `#print axioms` (capped probe `artifacts/probe/AxProbeU8.lean`,
+    verbatim): all five `_handler_eq_alloc` theorems
+    (becomePreCandidate/becomeFollower/becomeCandidate/msFirstIndex/
+    msTerm) AND `becomePreCandidate_handler_eq_alloc31_witness_shifted`
+    = [propext, Classical.choice, Quot.sound] — matching U5/U6's
+    records.
+  - Kit pin recount: 24 total `GoLean.Sym` `#guard_msgs` pins in
+    `proofs/Audit/Kit.lean` − 6 pre-existing = **18 extension pins**
+    CONFIRMED (grep count 24 verified fresh).
+  - hatch grep over `Sym/TableExt.lean` + `Sym/KernelRfl.lean` +
+    `Frame/Relocate.lean` + `Specs/Raft/*.lean`: zero
+    `sorry|native_decide|axiom ` (every file 0).
+- 2026-08-24 U8 contact round BEFORE any code (probe `LensU8Probe`,
+  U6 probe-first standard) — the pinned struct tables for every
+  wave-2-relevant type, feeding the instance plan:
+  - `raft.raft` (32 fields): Term/Vote/lead/id/leadTransferee/
+    pendingConfIndex are DIRECT `.int .uint64` (no defined-type hop);
+    `state` is `.defined raft.StateType` (→ `.int .uint64`, one
+    resolution step); electionElapsed/heartbeatElapsed `.int .int`;
+    `raftLog` `.pointer (.defined raft.raftLog)`; msgs/
+    msgsAfterAppend/pendingReadIndexMessages
+    `.slice (.pointer (.defined raftpb.Message))`.
+  - `raft.raftLog`: committed/applying/applied direct `.int .uint64`;
+    `unstable` EMBEDDED `.defined raft.unstable` (U7 contact
+    confirmed); `storage` `.interface raft.Storage`.
+  - `raft.unstable`: entries `.slice (.pointer raftpb.Entry)`,
+    offset/offsetInProgress `.int .uint64`.
+  - `raftpb.Entry`: Term/Index `.pointer (.int .uint64)` (plainpb),
+    Type `.pointer (.defined raftpb.EntryType)`, Data
+    `.slice (.int .uint8)`.
+  - `raftpb.Message`: the 14 fields as U7 probed; `raftpb.MessageType`
+    resolves to `.int .int32`; Reject `.pointer .bool`.
+  - **THE L2 KILL-POINT PRE-CHECK, decisive from Ops.lean reading
+    (not probed — the definition IS the fact): normalization at a
+    defined struct type IS field-pointwise** (`normalizeStructValueWith`
+    → `normalizeFieldsWith` walks (FieldDef, field) pairs
+    independently, alignment-checked), and pointer/slice/bool/
+    interface-typed fields normalize by the CATCH-ALL identity arm —
+    so store-miss preservation decomposes exactly as the design
+    predicted: `StructFields.set`-vs-lookup commutation +
+    per-field normalization stability, with stability FREE for every
+    non-scalar field. The kill-point is not expected to fire; slice B
+    will confirm at the proofs.
+- 2026-08-24 Slices A+B LANDED (`proofs/GoLeanProofs/Lens.lean`, one
+  module, general layer — LINEAGE in the module docstring: Perennial
+  `Access`/`AccessStrict` + goose proofgen per-field instances,
+  first-order port; imports GoCore + Frame only, no Sym, no Specs):
+  - **Combinators**: `readU64`/`readIntK`/`readBool` decoders,
+    `fieldOfValue` (embedded-struct value reads), `fieldRead`,
+    `fieldReadU64`, `sliceElems`/`sliceRead` (generalizes
+    `absEntsFrom`), `fieldTy?`/`structFieldTy` (the instance layer's
+    search key). [AGENT] nil-slice call logged in the docstring: a nil
+    slice of len 0 reads as `some []` (Go's nil slice IS the empty
+    slice; `r.msgs` at init) — nil with nonzero len stays `none`.
+  - **L1** focus: `fieldOfValue_struct`/`fieldRead_of_cell`/
+    `fieldRead_of_struct`.
+  - **L4** rename transport: `fieldRead_ren` (value renamed),
+    `fieldReadU64_ren` + `sliceRead_ren` (loc-free outputs transport
+    VERBATIM) — the per-reader hand `_ren` pattern retired for
+    lens-stated readers.
+  - **L2/L3 (THE KILL-POINT DID NOT FIRE)**: `store_field_decomp`
+    (the machine's field-store path — loadLoc → `StructFields.set` →
+    base-store re-normalization at the declared type, fuel 1024→1023 —
+    decomposed), `fieldRead_store_miss` (L2: f ≠ g preserved given
+    per-field normalization stability), `fieldRead_store_hit` (L3:
+    readback = normalization of the stored value).
+    **`normalizeFieldsWith_lookup` IS the field-pointwise fact** —
+    proved by induction over the FieldDef walk, so L2 covers ALL
+    field shapes, not a scalar fragment. Supporting characterizations:
+    `structFieldsLookup_eq`/`structFieldsSet_eq` (the Array
+    fold/forIn loops re-expressed at the list level: `lookupL`/
+    `setL`/`hasName`), `lookupL_setL_ne`/`_hit`.
+  - **Per-field-TYPE shape lemmas** (what instances discharge
+    stability with): `norm_pointer_id`/`norm_slice_id`/`norm_bool_id`/
+    `norm_string_id`/`norm_interface_id` (identity arms — free),
+    `norm_int_stable` (in-range = the hvote-style side condition)/
+    `norm_int_hit`, `norm_defined_step`/`norm_alias_step` (one
+    resolution step, for `raft.StateType`-shaped fields).
+  - **Witnesses (§3.3)**: L1/slice/nil-slice/L4 on a concrete
+    two-cell state (L4's FrameSim premise discharged live at
+    `frameSim_seed`); L2+L3 on a REAL `storeLoc` at a typed cell
+    (`lens_witness_store_ok` — with_unfolding_all rfl, #eval-checked
+    first — + `lens_witness_L2L3`, every law premise discharged
+    concretely, `rfl`/`decide` only).
+  - Gotcha recorded: core ships NO `Except` ok/error-bind simp
+    lemmas (the Frame layer's ExSim.bind sidesteps them) — landed as
+    `rfl`-lemmas `ok_bind`/`error_bind`/`map_ok`/`map_error` in Lens;
+    the do-block extractions use defeq `replace` + these.
+  - Wired into the aggregator + `Audit/Kit.lean` (7 new Lens pins,
+    build-enforced; Kit imports Lens). Full proofs+Audit green:
+    **489 jobs** (488 + Lens). Fresh `#print axioms` (probe `AxLens`,
+    verbatim): fieldRead_ren / fieldReadU64_ren / sliceRead_ren /
+    normalizeFieldsWith_lookup / structFieldsSet_eq / lens_witness_L4
+    [propext, Quot.sound]; store_field_decomp / fieldRead_store_miss /
+    fieldRead_store_hit / lens_witness_L2L3
+    [propext, Classical.choice, Quot.sound]. Hatch grep over
+    Lens.lean: 0.

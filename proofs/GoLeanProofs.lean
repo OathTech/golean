@@ -27,6 +27,9 @@ import GoLeanProofs.Frame.RenameId
 import GoLeanProofs.Frame.AllocIndep
 -- A4-U6: the relocation seed (promotion lift from the A4-U5 ledger).
 import GoLeanProofs.Frame.Relocate
+-- A4-U8: the field-lens layer (Perennial Access lineage; general half —
+-- combinators + L1-L4 laws; per-field instances live in Specs/Raft).
+import GoLeanProofs.Lens
 import GoLeanProofs.Lang
 import GoLeanProofs.LangC
 import GoLeanProofs.LangD
