@@ -725,6 +725,24 @@ checker-implication shapes) against iris-lean + the ported lit review
 no-Iris-analog items; feeds the standing iris-lean refresh backlog
 (pin update pre-approved [USER] 2026-08-20, match-not-latest).
 
+- **Arc 4, A4-U5 — LANDED** @ f4d0a10e: **THE ALLOCATION-SYMBOLIC
+  REFACTOR, GO** — becomePreCandidate re-proved at ANY injective
+  placement + disjoint frame (one FrameSim premise), with the shipped
+  concrete theorem RE-DERIVED AS A COROLLARY at the identity seed
+  (strict generalization machine-checked); projection
+  rename-invariance one-time; witness discharges everything. Cost
+  DOWN (28s vs 110s); zero Sym/Frame edits (fifth time); composition
+  via the kit's stepFnIter_sim at machine level. Iris-ladder answer
+  honest: rung 3 (Yang-O'Hearn operational locality) — iris-lean's
+  wp_frame binds to an IProp Language instance GoCore lacks, and
+  exact-fuel equations need credit-style bookkeeping; the FrameSim ≈
+  big-sep convergence recorded for the reuse survey. Key strategic
+  ground: layer (C) NEEDS the relocation quantifier anyway (leaf
+  fixtures vs the twin's real base-389 layout). [USER] left the
+  campaign to run autonomously (2026-08-24, "Have fun"). A4-U6
+  dispatched: re-base the remaining four equations + the
+  frameSim_relocate promotion.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
