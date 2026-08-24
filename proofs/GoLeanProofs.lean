@@ -235,6 +235,12 @@ import GoLeanProofs.Specs.Raft.BpcResite
 -- absState v2 (slice D — lens-consuming readers + L4 transports).
 import GoLeanProofs.Specs.Raft.LensInst
 import GoLeanProofs.Specs.Raft.AbsStateV2
+-- A4-U8 part 2: the fixture re-siting consolidation (the U6 charter
+-- residual): Ms / BC / Bf re-sited off the static locLit range with
+-- placement-LIVE alloc equations.
+import GoLeanProofs.Specs.Raft.MsResite
+import GoLeanProofs.Specs.Raft.Bc31Lit
+import GoLeanProofs.Specs.Raft.Bc31
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)
