@@ -1655,3 +1655,40 @@ operator's (constitution §4.1).
   premise from the instance table; probe `LensInstProbe` #eval'd
   first). Module elaborates in 6.4 s. Full proofs+Audit green:
   **490 jobs**. Hatch grep: 0.
+- 2026-08-24 **GAP-V2-1 RESOLVED BY CENSUS** (recorded, not guessed):
+  `grep -n Responses raftsubject/raft/*.go` — Responses is read ONLY
+  by `util.go`'s printer and `rawnode.go`'s Ready/Advance plumbing
+  (wave 3), NEVER by the wave-2 message handlers. So `absMessage`
+  deliberately does not project it and needs NO fuel/structural
+  bound; a wave-3 extension owes the fueled recursive form. NEW
+  GAP-V2-2 designated alongside: `Snapshot : *raftpb.Snapshot`
+  likewise unprojected (wave-2 handlers do not read it;
+  handleSnapshot out of wave-2 scope). Handler read census also
+  recorded: handleAppendEntries reads From/Index/LogTerm/Commit (+
+  Entries via maybeAppend), handleHeartbeat From/Commit/Context.
+- 2026-08-24 Slice D LANDED (`Specs/Raft/AbsStateV2.lean` — absState
+  v2, lens-consuming from birth; v1 UNTOUCHED):
+  - Readers: `absRaftLog` (**GAP-V1-1b CLOSED**: absStorageEnts (U4)
+    through the storage interface via `ifaceBaseAddr` + the EMBEDDED
+    unstable overlay via `fieldOfValue`/`sliceRead` + the three
+    scalars; derived views `AbsLog.lastIndex`/`AbsLog.view`
+    re-grounded from log_unstable.go/log.go with the snapshot branch
+    recorded unprojected), `absMessage` (12 abstract fields; plainpb
+    deref shims `derefBool`/`derefI32` beside U4's derefU64),
+    `absOutbox` (**feeds GAP-V1-3**: msgs/msgsAfterAppend via
+    sliceRead ∘ absMessage; nil outbox = empty list, the lens
+    nil-slice arm).
+  - **L4 transports BY COMPOSITION** — `absRaftLog_ren` /
+    `absMessage_ren` / `absOutbox_ren` (+ derefBool/derefI32/
+    ifaceBaseAddr/absUnstableV _ren): zero heap-walk re-derivation,
+    only lens laws + the landed U6 `_ren` lemmas compose — the
+    charter's symbolic-from-birth holds by construction. All three
+    [propext, Quot.sound] (fresh probe `AxV2`, verbatim).
+  - §3.3 witnesses (#eval-checked first, probe `AbsV2Probe`):
+    absRaftLog on the U3 populated fixture `uσ` = some
+    ⟨[(1,1)],[],2,1,1,1⟩ (lastIndex some 1); absOutbox "msgs" =
+    some [] (nil-slice arm live); absMessage on the machine's default
+    Message + one real Term cell = zeros/9/false/[]/[] (plainpb nil
+    getters live); `absV2_witness_L4` consumes absRaftLog_ren at the
+    zero-shift seed. Witness axioms [propext] / [propext, Quot.sound].
+  - Full proofs+Audit green: **491 jobs**. Hatch grep: 0.
