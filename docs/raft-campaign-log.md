@@ -762,6 +762,24 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   lineage lines + the Frame-name disambiguation note. Honest limits
   recorded (shallow perennial clone; no local RefinedC/Diaframe).
 
+- **Arc 4, A4-U6 — LANDED** @ b1135520: all four remaining handler
+  equations re-based allocation-symbolic (AllocEqWave1.lean, 536
+  lines/20s; shipped modules UNTOUCHED — identity corollaries
+  statement-identical; zero-edits held a SIXTH time) +
+  frameSim_relocate taken (Frame/Relocate.lean, additive, lineage +
+  the Frame-name disambiguation). **THE U6 FINDING (probe-decisive):
+  the 0-based fixtures collide with the static locLit range
+  (funcListSup=31) — bodies_inv + Agrees provably FORCE r=identity
+  there, so no FrameSim could carry U1-U5's fixtures to the twin's
+  real base-389 layout; the U5 layer-C bridge did not go through as
+  claimed.** Fix demonstrated, not asserted: BPC re-sited +31 above
+  the static range, the LIVE _alloc31 equation, and a witness with
+  the raft cell genuinely moved (31↦32). Wave-2 charter binding:
+  symbolic-from-birth, fixtures born re-sited (0-based re-siting
+  owed at a consolidation slice before layer-C consumption),
+  absState extension lens-shaped from birth (Perennial Access
+  lineage). 488 jobs green; gate PASS.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
