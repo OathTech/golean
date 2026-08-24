@@ -1395,3 +1395,48 @@ re-evaluation).
 - NEW: the 0-based fixture re-siting consolidation (charter item 2's
   residual) — consumers: every landed equation's layer-(C) use.
 - `stepFn_pick_transport` lift (U4 row) — unchanged, still owed.
+
+## A4-U6 exit (2026-08-24, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since the U6 dispatch tip
+f4d0a10e: 4 (3e3adc38 Relocate, 21979995 AllocEqWave1, 290ae7b3
+BpcResite+aggregator, fc3eca45 log) + this exit commit; no
+coordinator commits interleaved (checked at recount). Cumulative
+U5+U6 on the branch since 14f37f20: 9 + this.
+
+Unit-end gate `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci`
+at fc3eca45's tree — **RESULT: PASS, exit 0** (23 ok steps,
+`artifacts/ci-arc4-u6.log`, gitignored; the two no-diff notes are
+the sanctioned proofs+docs hatch — this unit touched
+`proofs/GoLeanProofs/{Frame/Relocate.lean,Specs/Raft/**}` + the
+aggregator + arc-4 docs only; the Frame/ touch is the
+coordinator-authorized promotion lift, additive-only, insertions-only
+by diff stat). Gate staggered behind the `free -g` guard (41G free
+at launch ≥ 24G cap). The comparator-landmark staleness note stays
+flagged for the operator's merge step, as in every prior exit.
+
+**Deliverable state vs the U6 dispatch:**
+1. Four re-bases — DELIVERED (AllocEqWave1: the four `_alloc` forms,
+   identity corollaries statement-identical to the shipped equations
+   — which are untouched, diff-verified insertions-only — and
+   witnesses; axioms probed verbatim at the slice entry).
+2. `frameSim_relocate` — TAKEN (Frame/Relocate.lean, lineage-lined,
+   additive-only) and the NON-identity witness LANDED
+   (`becomePreCandidate_handler_eq_alloc31_witness_shifted`, raft
+   cell at base 32 via swap31_32) — U5's honest gap closed, at the
+   re-sited fixture the finding required.
+3. Wave-2 charter — UPDATED (symbolic-from-birth; fixtures born
+   re-sited above the static loc support; the absState
+   entries/outboxes extension lens-shaped from birth with the
+   Perennial Access/goose-proofgen lineage per survey §5d; the
+   0-based-fixture re-siting consolidation residual named).
+
+**Open gaps carried (none counted):** all U5 gaps as updated —
+(a) layout-SHAPE concreteness unchanged (the lens charter item is
+its wave-2 answer); (b) the non-identity witness gap CLOSED (this
+unit); NEW: the U1–U5 0-based fixtures' re-siting consolidation
+(required before layer-(C) consumption; the U6 finding's residual);
+prior U4 residuals unchanged.
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1).
