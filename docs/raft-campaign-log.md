@@ -796,6 +796,26 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   re-siting. Wave retry pass grinding (~S0077, solo ~6-10 min/seg,
   ~180 remaining ≈ up to a day).
 
+- **Arc 4, A4-U8 — LANDED** @ 4880a22b: THE LENS BUILD COMPLETE
+  (slices A-D) — **L2's named kill-point did NOT fire**
+  (normalizeFieldsWith_lookup proves normalization field-pointwise →
+  store-miss general across all field shapes); the instance
+  GENERATOR DISSOLVED by the fdsOf projection trick (every instance
+  a one-line kernel fact re-checked per build — generated-trust,
+  zero instrument code, [AGENT] call of the unit); absState v2
+  (absRaftLog closes GAP-V1-1b; absMessage; absOutbox) lens-consuming
+  from birth, transports BY COMPOSITION; GAP-V2-1 resolved by read
+  census (Responses deliberately unprojected). **AND the fixture
+  re-siting CLOSED**: all five handler families re-sited above the
+  static range, probe-validated placement-transparent, the Bf
+  flagship's NON-IDENTITY witness at the real layout (cell at base
+  32 via frameSim_relocate, no re-evaluation). 496 jobs green; gate
+  PASS; 7 new pins. Every handler family is now
+  layer-(C)-consumable. Promotion note: stepFn_pick_transport lift
+  awaits a coordinator-authorized Sym touch (the U6 Relocate
+  precedent). A4-U9 dispatched: handleHeartbeat — THE FIRST MESSAGE
+  HANDLER, symbolic-from-birth on the full new machinery.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
