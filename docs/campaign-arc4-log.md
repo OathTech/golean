@@ -1628,3 +1628,30 @@ operator's (constitution §4.1).
     fieldRead_store_hit / lens_witness_L2L3
     [propext, Classical.choice, Quot.sound]. Hatch grep over
     Lens.lean: 0.
+- 2026-08-24 Slice C LANDED (`Specs/Raft/LensInst.lean` — the target
+  half; LINEAGE: goose proofgen generated per-field instances):
+  **40 per-field declared-type facts + 7 per-type table facts + the
+  one defined-scalar stability chain** (`raft.StateType` — every
+  other wave-2 field is a direct int kind or an identity shape), each
+  ONE kernel-checked line. Two [AGENT] calls logged in the module:
+  - **Hand-written, generator NOT built** (the dispatch's
+    "hand-write first"): the `fdsOf` PROJECTION trick (field-def
+    arrays extracted from the pinned table, never literal copies)
+    collapses each instance to a one-line kernel fact recomputed
+    against the pin on every build — the generator's drift-alarm
+    trust story with zero instrument code. At 40+7+2 the hand form is
+    smaller than the generator. Revisit condition recorded (full 75+
+    or per-field store forms).
+  - **No custom simp attribute** (design §3 deviation): named-fact
+    table serves the fail-loud footprint-search role at this count;
+    revisit at wave-2 proof buildout.
+  Scope: raft.raft message-handler fields (11), raftLog (5),
+  unstable (3), MemoryStorage (3, callStats deliberately absent),
+  raftpb.Entry (4), raftpb.Message (all 14 incl. the recursive
+  Responses). tracker.Progress deliberately wave-3-absent.
+  §3.3 witness `lensInst_witness` + `_store_ok`: the L2/L3 laws
+  applied on the REAL pinned 32-field `raft.raft` default cell (a
+  real `storeLoc` to Term; hit reads 5, miss preserves Vote; every
+  premise from the instance table; probe `LensInstProbe` #eval'd
+  first). Module elaborates in 6.4 s. Full proofs+Audit green:
+  **490 jobs**. Hatch grep: 0.

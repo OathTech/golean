@@ -231,6 +231,8 @@ import GoLeanProofs.Specs.Raft.AllocEq
 -- non-identity placement witness.
 import GoLeanProofs.Specs.Raft.AllocEqWave1
 import GoLeanProofs.Specs.Raft.BpcResite
+-- A4-U8: the lens instance table at the pinned tables (slice C).
+import GoLeanProofs.Specs.Raft.LensInst
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)
