@@ -988,6 +988,29 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   test: it probes GAP-V1-1b's unstable overlay — the open risk —
   while becomeLeader is settled machinery).
 
+- **Arc 2, unit P2R — LANDED** @ 4701915d, gate PASS: the verified
+  fast replay engine. **True step count 11,995,825 (exact); slow
+  engine wall ≈ F^2.5 — p2's >20 h DNF fully explained; fast engine:
+  full replay 26.6 s, trace == go trace BYTE-FOR-BYTE (20,924 B),
+  74/74 blocks, MACHINE 1/1 AGREE.** Transfer theorems pinned
+  (fastRun_transfer + _eqb + non-vacuity witness; classical trio, no
+  new axiom). WHAT THIS TAUGHT US (the unit's core discovery): the
+  "lazy γF view" was kernel-lazy but COMPILED-STRICT — every pure-
+  helper call materialized an O(cells) heap dump, giving the fast
+  engine slow asymptotics when compiled; fixed by ctxF (O(1) context
+  image) + a types-only Congr library, ~45 sites; `implemented_by`
+  REJECTED as a fail-open trust hole. The 20 h grind was not just
+  slow — its opacity was HIDING an asymptotic defect the 26 s
+  instrument found in one iteration. Consequences recorded: the ctx
+  refactor INVALIDATES the parked wave's 549 oleans (round-replay
+  route unaffected — the park's sunk value drops to ~zero, consistent
+  with its scheduled deletion); the parked untracked TwinSegs tree
+  moved (not deleted) to artifacts/p2r-parked-wave/. Comparator
+  landmark now owed by BOTH lanes at merge ([USER] queue). [AGENT]:
+  P2R-2 dispatched to the same worker — the full deps/raft/testdata
+  machine-tier differential sweep on the fast engine (hour-scale
+  now), stubs surfacing as enumerable fail-closed arms.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
