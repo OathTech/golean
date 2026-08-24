@@ -936,6 +936,25 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   stop with numbers — next rung (batched/big-step replay converging
   with arc-4's equation layer) is a design decision.
 
+- **[USER] 2026-08-24 — THE GENERAL FORM (insight doctrine):** "your
+  main resource is iteration, and work should generate insight.
+  'Generalized grind' is work without insight." This subsumes the
+  kernel-grinding ban: the test is not build time but INSIGHT PER
+  ITERATION, and it applies to every work-shape — proofs, agent
+  units, measurement, audits. [AGENT] operational reading, in force:
+  - Every unit log entry carries an explicit WHAT-THIS-TAUGHT-US
+    line; a unit that can't fill it honestly was grind.
+  - Two consecutive insight-free units on a track = stop and redesign
+    the track, even if the units are "succeeding."
+  - Retrospective, owned: the witness wave stopped generating insight
+    after its first few segments validated the composition — segments
+    ~4..712 were generalized grind, and the redesign signal was
+    available WEEKS before the [USER] park. The probe-first
+    convention exists precisely because probes are the highest
+    insight-per-iteration work-shape; this doctrine makes that the
+    universal test, not just a proof-unit habit.
+  - Goes into every worker brief alongside the anti-grinding rule.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
