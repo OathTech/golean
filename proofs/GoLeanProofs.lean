@@ -219,6 +219,9 @@ import GoLeanProofs.Specs.Raft.BcFixture
 import GoLeanProofs.Specs.Raft.BcSteps
 import GoLeanProofs.Specs.Raft.BcEquation
 import GoLeanProofs.Specs.Raft.MsEquation
+-- A4-U5: the allocation-symbolic handler-equation layer (the frame-rule
+-- re-base of the fixture-pinned equations; BPC proved end-to-end).
+import GoLeanProofs.Specs.Raft.AllocEq
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)
