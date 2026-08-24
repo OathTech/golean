@@ -79,6 +79,8 @@ import GoLeanProofs.FastEval.Stores
 import GoLeanProofs.FastEval.Frames
 import GoLeanProofs.FastEval.Iter
 import GoLeanProofs.FastEval.Step
+import GoLeanProofs.FastEval.Transfer
+import GoLeanProofs.FastReplay
 import GoLeanProofs.Specs.QuorumRefSpec
 import GoLeanProofs.Specs.Statements
 import GoLeanProofs.Specs.GoldenQuorumWP

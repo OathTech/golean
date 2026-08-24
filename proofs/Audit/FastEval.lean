@@ -1,5 +1,6 @@
 import Lean
 import GoLeanProofs.FastEval.Step
+import GoLeanProofs.FastEval.Transfer
 import GoLeanProofs.Specs.TwinPrelude
 
 /-!
@@ -42,3 +43,13 @@ visible diff. Re-baseline only with the reason, in the same commit.
 #guard_msgs in #print axioms GoLean.FastEval.applySyncOpF_ok
 /-- info: 'GoLean.Examples.RaftTwin.twin_prelude_eq' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.RaftTwin.twin_prelude_eq
+
+/-! Unit P2R (the verified fast replay engine): the run-level transfer
+theorems the `fastreplay` driver's verdict rests on. The
+`Classical.choice` in the footprint is inherited from `stepFast_ok`
+(pinned above) — no new axiom enters here. -/
+
+/-- info: 'GoLean.FastEval.fastRun_transfer' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.FastEval.fastRun_transfer
+/-- info: 'GoLean.FastEval.fastRun_transfer_eqb' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.FastEval.fastRun_transfer_eqb

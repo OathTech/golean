@@ -28,6 +28,15 @@ name = "GoLeanProofs"
 [[lean_lib]]
 name = "Audit"
 
+# The verified fast replay driver (campaign Arc 2, unit P2R): compiled
+# `stepFast` execution of a wire program with the pinned transfer theorem
+# (`FastEval/Transfer.lean`) carrying the verdict to `runProgramM`. NOT a
+# default target — built on demand (`lake build fastreplay`); its module
+# is in the GoLeanProofs aggregator, so the proofs gate still checks it.
+[[lean_exe]]
+name = "fastreplay"
+root = "GoLeanProofs.FastReplay"
+
 # The Comparator judge pair (comparator-judge sprint, 2026-08-02; invoked by
 # scripts/comparator-judge, config in judge-config.json — NOT default
 # targets, so `lake build` here never touches them):
