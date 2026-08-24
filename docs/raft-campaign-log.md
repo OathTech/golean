@@ -922,6 +922,20 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   - **Calibration:** P-2026-08-24 (~4-7 weeks) unchanged, if anything
     improved — no day-scale waits remain on the critical path.
 
+- **[USER] 2026-08-24 — p2 → verified-verifier pattern:** "It
+  shouldn't take 30 hours to replay something in Lean. Build a more
+  performant abstraction then prove the theorem." [AGENT]: unit
+  **P2R** chartered on the arc-2 lane (charter text in
+  campaign-arc2-log): measure first (true step count from the go-side
+  record, never guessed fuel) → extend FastEval arm-coverage to the
+  replay path → transfer theorem via the γ-simulation composition →
+  wire the verified fast engine into tracereplay's machine stage with
+  progress + checkpoints → acceptance: minutes-scale replay, ≤1 h
+  ceiling. Worker dispatched to campaign-arc2 (lane writer handed
+  over). Escape clause: if even the fast engine misses the ceiling,
+  stop with numbers — next rung (batched/big-step replay converging
+  with arc-4's equation layer) is a design decision.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
