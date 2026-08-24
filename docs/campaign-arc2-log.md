@@ -881,3 +881,16 @@ verdict transferable to `runProgramM` by the pinned theorem.
   engine gaps — widening it (tick-election jitter, compact,
   async-storage) is membership-lane / replayenv work, out of this
   unit's scope; noted for the coordinator's frontier ledger.
+
+- **P2R-2 GATE** (2026-08-24): `GOLEAN_ALLOW_NO_DIFF=1
+  GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT: PASS** (rc 0; log
+  artifacts/p2r2-gate.log, untracked; result restated here). Visible
+  notes unchanged in kind: sanctioned no-diff hatch (proofs+docs+
+  campaign-harness only; GoLean runtime untouched); comparator
+  landmark OWED (scope) note stands for the operator's merge step.
+  **UNIT P2R-2: BRANCH-COMPLETE at this tip.** Proposed next charter
+  (coordinator's call): either (a) the replay-vocabulary frontier —
+  widen tracereplay's supported commands (compact/snapshot rows first;
+  the fast engine makes their cost trivial), or (b) the value-
+  representation measurement unit from the 30× rate-variance
+  observation, if corpus scale grows.
