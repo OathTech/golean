@@ -30,6 +30,7 @@ import GoLeanProofs.Frame.Relocate
 -- A4-U9: the pick-transport lift (U4 promotion row, coordinator-
 -- authorized additive touch; BfSteps keeps its copy as history).
 import GoLeanProofs.Sym.PickTransport
+import GoLeanProofs.Sym.SpillTransport
 -- A4-U8: the field-lens layer (Perennial Access lineage; general half —
 -- combinators + L1-L4 laws; per-field instances live in Specs/Raft).
 import GoLeanProofs.Lens

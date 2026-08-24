@@ -379,6 +379,22 @@ def stepFnT (T : TypeEnv) (s : State D) (c : Config D) :
            .ok (.evalE e env (.syncStK sop [] rest env k), s)
        | some (_, []) => quit .q11Internal
        | none => quit .q11Internal)
+  -- U10: `Stmt.initialization` at the input table (the machine's
+  -- `defaultValue` call resolved through `defaultValueT` — the
+  -- Q4-default family's STATEMENT member; first exercised instance:
+  -- the `raftpb.Message` temp in `send` on the handleHeartbeat path.
+  -- Non-defined types take the same route `defaultValueFuelT`
+  -- delegates for, so this arm agrees with the shipped `stepFn'`
+  -- wherever that one stepped).
+  | .exec (.initialization p) env k =>
+      (match k with
+       | .seq rest kenv k' =>
+          if kenv = env then do
+            let v ← defaultValueT T p.typ
+            let (loc, s') := s.alloc v (some p.typ)
+            .ok (.next (.seq rest (env.declare p.id loc) k'), s')
+          else quit .q11Internal
+       | _ => quit .q11Internal)
   -- slice 2: sync operand collection + the apply
   | .retV v (.syncStK op done pending env k') =>
       (match pending with
@@ -1159,6 +1175,32 @@ theorem stepFnT_conc (hI : I.Sound) (σ : ExecState) (ch : Choices)
                 simp only [concC, concK, stepFn]
                 split
                 all_goals simp_all
+      | initialization p =>
+          simp only [stepFnT] at h
+          revert h
+          cases k
+          case seq rest kenv k' =>
+            intro h
+            dsimp only at h
+            by_cases hkenv : kenv = env
+            · rw [if_pos hkenv] at h
+              obtain ⟨v2, hdv, h2⟩ := bind_eq_ok.mp h
+              have hd : defaultValue (concS I σ s) p.typ
+                  = .ok (concV I v2) := by
+                simp only [defaultValue]
+                exact defaultValueFuelT_conc hI (concS I σ s) hsub _ _ hdv
+              have hout : c₁ = .next (.seq rest
+                    (env.declare p.id (s.alloc v2 (some p.typ)).1) k')
+                  ∧ s₁ = (s.alloc v2 (some p.typ)).2 := by
+                simpa [pure, Except.pure, eq_comm, and_comm] using h2
+              rw [hout.1, hout.2]
+              simp only [concC, concK, stepFn]
+              rw [if_pos hkenv]
+              simp [hd, Bind.bind, Except.bind, alloc_conc (I := I),
+                pure, Except.pure, concC, concK]
+            · rw [if_neg hkenv] at h
+              simp [quit] at h
+          all_goals (intro h; simp [quit] at h)
       | _ => exact stepFn'_conc hI σ ch h
   | retV v k =>
       cases k with
@@ -1484,6 +1526,44 @@ def bindParamsT (T : TypeEnv) :
   | _, _, [], _ :: _ => quit .q11Internal
   | _, _, _ :: _, [] => quit .q11Internal
 
+/-- `allocDecls'` WITH the defined-type default former at the input
+table (U10: result cells of a DEFINED result type — `raftpb.MessageType`
+on the `GetType` entry is the first exercised instance; the shipped
+`allocDecls'` quits exactly there, so this agrees with it wherever it
+stepped). -/
+def allocDeclsT (T : TypeEnv) :
+    LocalEnv → State D → List Param → M (LocalEnv × State D)
+  | env, s, [] => .ok (env, s)
+  | env, s, p :: rest => do
+      let v ← defaultValueT T p.typ
+      let (loc, s₁) := s.alloc v (some p.typ)
+      allocDeclsT T (env.declare p.id loc) s₁ rest
+
+theorem allocDeclsT_conc (hI : I.Sound) (σ : ExecState) {T : TypeEnv}
+    (hsub : SubTable T σ.types) :
+    ∀ (ps : List Param) (env : LocalEnv) {s : State D}
+      {env' : LocalEnv} {s' : State D},
+      allocDeclsT T env s ps = .ok (env', s') →
+      allocDecls env (concS I σ s) ps = .ok (env', concS I σ s') := by
+  intro ps
+  induction ps with
+  | nil =>
+      intro env s env' s' h
+      cases h
+      simp [allocDecls, pure, Except.pure]
+  | cons p rest ih =>
+      intro env s env' s' h
+      simp only [allocDeclsT] at h
+      obtain ⟨v, hv, h2⟩ := bind_eq_ok.mp h
+      rcases halloc : s.alloc v (some p.typ) with ⟨loc, s₁⟩
+      rw [halloc] at h2
+      have hd : defaultValue (concS I σ s) p.typ = .ok (concV I v) := by
+        simp only [defaultValue]
+        exact defaultValueFuelT_conc hI (concS I σ s) hsub _ _ hv
+      simp only [allocDecls, hd, Bind.bind, Except.bind]
+      rw [alloc_conc, halloc]
+      exact ih _ h2
+
 /-- `pinResultLocs` is env-only; the machine's own function serves,
 error-converted. -/
 def pinResultLocs' (env : LocalEnv) (ps : List Param) : M (List Loc) :=
@@ -1539,7 +1619,7 @@ def enterFrameT (TB : SymTables) (s : State D) (fid : FuncId)
     if func.args.size != args.length then quit .q11Internal
     else do
       let (argsEnv, s₁) ← bindParamsT TB.types [] s func.args.toList args
-      let (frameEnv, s₂) ← allocDecls' argsEnv s₁ func.results.toList
+      let (frameEnv, s₂) ← allocDeclsT TB.types argsEnv s₁ func.results.toList
       let resultLocs ← pinResultLocs' frameEnv func.results.toList
       .ok (func, frameEnv, resultLocs, s₂)
 
@@ -1694,7 +1774,7 @@ theorem enterFrameT_conc (hI : I.Sound) (σ : ExecState) {TB : SymTables}
         rcases hbind : bindParamsT TB.types [] s f0.args.toList args
           with e | ⟨argsEnv, s₁⟩ <;> simp only [hbind] at h2
         · cases h2
-        rcases halloc : allocDecls' argsEnv s₁ f0.results.toList
+        rcases halloc : allocDeclsT TB.types argsEnv s₁ f0.results.toList
           with e | ⟨frameEnv, s₂⟩ <;> simp only [halloc] at h2
         · cases h2
         rcases hpin : pinResultLocs' frameEnv f0.results.toList
@@ -1705,7 +1785,8 @@ theorem enterFrameT_conc (hI : I.Sound) (σ : ExecState) {TB : SymTables}
           simpa using harity
         have hb := bindParamsT_conc (I := I) hI σ (SubTable.of_eq hag.1)
           func.args.toList args [] hbind
-        have hal := allocDecls_conc (I := I) hI σ _ _ halloc
+        have hal := allocDeclsT_conc (I := I) hI σ (SubTable.of_eq hag.1)
+          _ _ halloc
         simp only [enterFrame, hf, hfind, Bind.bind, Except.bind, pure,
           Except.pure, List.length_map, harityF, hdc, Option.map_none,
           Bool.false_eq_true, if_false, hb, hal, hpinM _ _ _ hpin]
@@ -1718,7 +1799,7 @@ theorem enterFrameT_conc (hI : I.Sound) (σ : ExecState) {TB : SymTables}
           rcases hbind : bindParamsT TB.types [] s tf.args.toList ta
             with e | ⟨argsEnv, s₁⟩ <;> simp only [hbind] at h2
           · cases h2
-          rcases halloc : allocDecls' argsEnv s₁ tf.results.toList
+          rcases halloc : allocDeclsT TB.types argsEnv s₁ tf.results.toList
             with e | ⟨frameEnv, s₂⟩ <;> simp only [halloc] at h2
           · cases h2
           rcases hpin : pinResultLocs' frameEnv tf.results.toList
@@ -1732,7 +1813,8 @@ theorem enterFrameT_conc (hI : I.Sound) (σ : ExecState) {TB : SymTables}
             simpa using harity2
           have hb := bindParamsT_conc (I := I) hI σ (SubTable.of_eq hag.1)
             func.args.toList ta [] hbind
-          have hal := allocDecls_conc (I := I) hI σ _ _ halloc
+          have hal := allocDeclsT_conc (I := I) hI σ (SubTable.of_eq hag.1)
+            _ _ halloc
           simp only [enterFrame, hf, hfind, Bind.bind, Except.bind, pure,
             Except.pure, List.length_map, harityF, hdc, Option.map_some,
             Bool.false_eq_true, if_false, List.toList_toArray,

@@ -9,6 +9,7 @@ import GoLeanProofs.FuelMeasure
 import GoLeanProofs.Frame.Threshold
 import GoLeanProofs.Lens
 import GoLeanProofs.Sym.PickTransport
+import GoLeanProofs.Sym.SpillTransport
 import GoLeanProofs.Examples.Fib
 import GoLeanProofs.Examples.Gcd
 import GoLeanProofs.Examples.MinMax
@@ -719,5 +720,20 @@ handler's range loop). -/
 
 /-- info: 'GoLean.Sym.stepFn_pick_transport' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Sym.stepFn_pick_transport
+
+/-! A4-U10: the append-spill transport (`Sym/SpillTransport.lean` —
+the machine's SECOND choice site crossed at γ-images; general,
+raft-independent; consumers: handleHeartbeat, handleAppendEntries,
+becomeLeader — every one-element append that spills). The witness is
+in-module (`stepFn_appendSpill_transport_witness`, same closure). -/
+
+/-- info: 'GoLean.Sym.applyStmtOp_append1_spill_at' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.applyStmtOp_append1_spill_at
+
+/-- info: 'GoLean.Sym.stepFn_appendSpill_transport' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.stepFn_appendSpill_transport
+
+/-- info: 'GoLean.Sym.stepFn_appendSpill_transport_witness' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.stepFn_appendSpill_transport_witness
 
 end GoLean.Iris.Audit

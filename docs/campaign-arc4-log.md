@@ -1974,3 +1974,58 @@ operator's (constitution §4.1); the comparator-landmark STALE flag
   the sanctioned proofs+docs hatch). Gate staggered behind the
   `free -g` guard (56G free ≥ 24G cap). The comparator-landmark
   STALE flag stands escalated for the operator's merge step.
+
+## A4-U10 — the appendSpill transport + THE handleHeartbeat equation (2026-08-24, successor worker, coordinator-dispatched)
+
+- 2026-08-24 SUCCESSOR RE-VERIFICATION (U9's top claims, fresh
+  probes, all PASS):
+  - tip clean: `git status` = "nothing to commit, working tree
+    clean" on branch `campaign-arc4`; `git rev-parse HEAD` =
+    `55be64c6378cd38822a13de02722de46ecdccd10` (the dispatch tip).
+  - full capped proofs+Audit build (`GOLEAN_MEM_MAX=48G
+    scripts/capped lake build` in `proofs/`): "Build completed
+    successfully (497 jobs)." — exit 0, matching U9's recorded 497.
+  - `Sym/PickTransport.lean` present (72 lines, the lifted
+    `stepFn_pick_transport`); its Kit pin at `proofs/Audit/Kit.lean:720`
+    reads `[propext, Quot.sound]` and is `#guard_msgs`-build-enforced —
+    verbatim-verified by the green build above.
+  - hatch grep (`sorry|native_decide|axiom ` filtered of docstring
+    "axioms" mentions) over PickTransport/TableExt/KernelRfl/Lens +
+    `Specs/Raft/*.lean`: **0**.
+  - free-memory guard at build launch: 100G available ≥ 40G floor.
+- 2026-08-24 [USER] Mid-unit doctrine update (coordinator-relayed,
+  campaign-operational immediately): **the anti-grinding doctrine** —
+  brute kernel reduction of giant terms as a substitute for
+  abstraction is banned; any single build approaching ~1 hour is a
+  smell whose default response is STOP AND DECOMPOSE (lemma-level
+  composition over monolithic kernel_rfl; the stop is a clean unit
+  boundary). Long build-out of many small well-abstracted units stays
+  fine. Also relayed: the arc-2 segment wave is PARKED under this
+  doctrine; CompletionWitness becomes a ROUND-REPLAY corollary of
+  layer C (cert = the recorded choice stream at round granularity) —
+  layer C carries T1's ∃-side too; nothing changes inside U10, but
+  the round-induction interfaces should keep that corollary in mind.
+  U10 compliance note: the plan is two Sym-transported windows +
+  one one-step crossing + lens-law conclusions, all minutes-scale;
+  literalization (the U4 lever) keeps every downstream fact off the
+  re-evaluation path.
+- 2026-08-24 Orientation reading for the unit (recorded): U9 census
+  entry + charter; seam design §4b/§4c; lens design (esp. §2 L-laws,
+  §5 slice E); `Sym/PickTransport.lean` (the pattern to match);
+  `SliceMem.lean` Group 4 (**the append-spill machinery ALREADY
+  LANDED at machine level**: `applyStmtOp_append1_spill` — spill
+  apply at a `some`-base old slice, capacity-generic premises —
+  plus `buildAppendBackingValue_of_norm` and the
+  `appendRealizedCap` envelope algebra; WP-arc lift, sealed API);
+  the machine's spill arm (`Machine.lean` `applyStmtOp`
+  `.appendSlice`, `Choices.consumeAt .appendSpill`, width =
+  `appendSpillWidth`); the mirror's quit (`Mirror.lean`
+  `applyStmtOp'` → `quit .q3Choice` on the spill branch — the
+  designed Q3 window boundary, so the pre-window ends AT the spill
+  apply config); `Bf31.lean` end-to-end (the module pattern);
+  `Valuation.cells` (Domain.lean — whole-CELL atoms, whose docstring
+  names the append-backing declared type `.array n …` as the DESIGN
+  CASE for cell-level valuation: the extra-dependent backing cell
+  enters the post fixture as ONE cell atom, so ONE post-window
+  literal serves every consumed choice — the §4(ii) collapse at the
+  spill site).
