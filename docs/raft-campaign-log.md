@@ -888,6 +888,13 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
     single build exceeds ~1 h; a unit that finds itself needing one
     STOPS and redesigns (that is a clean boundary, not a failure).
 
+- **[USER] 2026-08-24 — doctrine CLARIFIED:** the ban on grinding is
+  NOT a ban on long build-out — it is a ban on "dumbly throwing a
+  bazillion terms at the kernel." Long campaigns of many small,
+  well-abstracted units are fine; brute kernel reduction of giant
+  terms as a SUBSTITUTE for abstraction is what is banned ("pointless
+  and stupid"). The ~1 h line is the smell threshold for that failure
+  mode, not a schedule constraint on total work.
 - **[USER] 2026-08-24 — p2 kill confirmed; roadmap reassessed under
   the grinding ban.** User's framing, recorded: "your main skill is
   iteration. Such campaigns are poison to iteration" — long grinds
