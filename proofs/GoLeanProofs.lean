@@ -25,6 +25,8 @@ import GoLeanProofs.Frame.StepSim
 import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Frame.RenameId
 import GoLeanProofs.Frame.AllocIndep
+-- A4-U6: the relocation seed (promotion lift from the A4-U5 ledger).
+import GoLeanProofs.Frame.Relocate
 import GoLeanProofs.Lang
 import GoLeanProofs.LangC
 import GoLeanProofs.LangD
@@ -222,6 +224,10 @@ import GoLeanProofs.Specs.Raft.MsEquation
 -- A4-U5: the allocation-symbolic handler-equation layer (the frame-rule
 -- re-base of the fixture-pinned equations; BPC proved end-to-end).
 import GoLeanProofs.Specs.Raft.AllocEq
+-- A4-U6: the remaining four re-bases + the re-sited fixture with the
+-- non-identity placement witness.
+import GoLeanProofs.Specs.Raft.AllocEqWave1
+import GoLeanProofs.Specs.Raft.BpcResite
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)
