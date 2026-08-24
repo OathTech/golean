@@ -1442,3 +1442,76 @@ prior U4 residuals unchanged.
 
 Nothing merged; branch-complete. Merge/audit-ask remain the
 operator's (constitution §4.1).
+
+## A4-U7 — wave-2 kickoff: the lens design slice (2026-08-24, same worker, coordinator-dispatched)
+
+- 2026-08-24 SUCCESSOR RE-VERIFICATION (own U6 outputs, fresh, all
+  PASS): tip b1135520 clean; full proofs+Audit green (488 jobs); U6
+  axiom probe re-run verbatim-matching (frameSim_relocate + the
+  alloc31 trio [propext, Classical.choice, Quot.sound]); hatch grep
+  over Relocate/AllocEqWave1/BpcResite: 0/0/0.
+- 2026-08-24 [AGENT] SCOPE CALL under the active stop-at-clean-
+  boundary rule: U7 delivers the DESIGN SLICE alone (dispatch item 1
+  — sanctioned as a complete unit); item 2 (the 0-based fixture
+  re-siting consolidation: Bf/Bc literal regeneration + Ms kernel
+  facts — a heavy-build unit of its own) and item 3 (handleHeartbeat)
+  are dispatched-forward as the design's slices C–E prerequisites and
+  NOT attempted here. Honest boundary, not a completion claim.
+- 2026-08-24 THE DESIGN SLICE landed
+  (`docs/2026-08-24_campaign-arc4-lens-design.md`, commit above):
+  the field-lens layer, LINEAGE-lined to Perennial's
+  `Access`/`AccessStrict` (mem.v:78-130 read directly, the
+  tac_wp_load/store consumption pattern included) + goose proofgen's
+  generated per-field instances (types.tmpl:65-77 read directly).
+  Core calls, each [AGENT]-logged in the note: first-order port as
+  ONE reader-combinator set (fieldRead/fieldReadU64/fieldOfValue/
+  sliceRead) + per-field LAW instances found by simp-set search (the
+  search-failure-is-footprint-error behavior preserved; typeclasses
+  rejected as unneeded synthesis); L1–L4 law families with L2
+  (store-miss/frame half) named as the cost center and kill-point —
+  its lever is the pilot ledger's parked normality-preservation row,
+  now with its real consumer; GENERATED instances recommended
+  (~150-line printer instrument probe-side, ~75 kernel-checked
+  instances; hand route costed and rejected; folds the U4
+  literal-printer promotion row's future); absState v2 plan
+  (absRaftLog/absMessage/absOutbox) lens-consuming from birth so L4
+  gives every new reader's placement transport for free.
+- 2026-08-24 Contact probes BEFORE the plan froze (probe
+  `LensContactProbe`, the U6 probe-first standard): `raftLog.unstable`
+  is an EMBEDDED value field (one hop + `fieldOfValue`, not two
+  cells); `unstable.entries : slice (*Entry)` + `offset : uint64`
+  confirm the sliceRead plan; `raftpb.Message` = 14 fields, plainpb
+  pointer-scalars + `Reject : *bool` + a RECURSIVE
+  `Responses : slice (*Message)` — fuel/bound needed, wave-2 read
+  census item, GAP-V2-1 designated if unread.
+- Boundaries restated in the note §6: lens is proof infrastructure
+  (general module imports machine vocabulary only); every shipped
+  statement stays verbatim; the generator is an instrument whose
+  deletion loses convenience, never soundness; fixture re-siting
+  stays a separate unit.
+
+## A4-U7 exit (2026-08-24, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since the U7 dispatch tip
+b1135520: 1 (the design-note commit) + this exit commit = 2; no
+coordinator commits interleaved (checked at recount). This unit
+touched arc-4 docs + gitignored probes ONLY — zero proof-code
+changes (the U6-landed 488-job build re-verified green at entry).
+
+Unit-end gate `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci`
+— result recorded below in this entry's follow-up line per the
+same-commit gate convention used at U5/U6 (gate runs at this tree).
+
+**Deliverable state vs the U7 dispatch:** (1) DELIVERED (the design
+note, contact-probed, lineage-lined, costed, kill-pointed);
+(2) NOT ATTEMPTED (scope call above — the named heavy consolidation
+unit); (3) NOT ATTEMPTED (blocked behind the design's slices A–D by
+its own charter). Honest gaps, none counted.
+
+**Open gaps carried (none counted):** all U6 gaps unchanged
+(re-siting consolidation, layout-shape/lens as its wave-2 answer,
+U4 residuals); U7 adds GAP-V2-1 (Responses projection) as a
+DESIGNATED-if-unread census item.
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1).
