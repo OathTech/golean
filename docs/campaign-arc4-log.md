@@ -1879,3 +1879,90 @@ operator's (constitution §4.1).
   VISIBLY for the operator's merge step per the CLAUDE.md step-2
   widened trigger: a comparator-judge run belongs in the merge
   protocol for this branch.
+
+## A4-U9 — handleHeartbeat: the probe census + the pick-transport lift (2026-08-24, same worker, coordinator-dispatched; STOP-AT-BOUNDARY rule active — census + lift is the sanctioned complete unit)
+
+- 2026-08-24 SUCCESSOR RE-VERIFICATION (own U8 outputs, fresh, all
+  PASS): tip 4880a22b clean; full proofs+Audit green (496 jobs);
+  AxResite probe re-run verbatim-matching (all nine re-site theorems
+  [propext, Classical.choice, Quot.sound]); hatch grep over
+  Lens/AbsStateV2/Bf31: 0/0/0.
+- 2026-08-24 **THE U9 CENSUS (probe `HhProbe`, static + dynamic,
+  BEFORE any equation code — the U6 standard):**
+  - STATIC (`raftsubject/raft/raft.go:1854-1857`, `log.go:commitTo`,
+    `raft.go:send`): handleHeartbeat(m *pb.Message) =
+    `commitTo(m.GetCommit())` (TWO branches: no-op when
+    `committed ≥ tocommit`; commit-advance calls `lastIndex()` —
+    the Bf-style dispatch/mutex/callStats chain — and panics past
+    lastIndex) + `send(&Message{To: m.From, MsgHeartbeatResp.Enum(),
+    Context})` which allocates `From := new(r.id)`,
+    `Term := new(r.Term)` (HeartbeatResp is in neither the vote group
+    nor Prop/ReadIndex), then — NOT being
+    MsgAppResp/MsgVoteResp/MsgPreVoteResp — takes
+    **`r.msgs = append(r.msgs, m)`: an appendSlice site**.
+  - DYNAMIC (born-re-sited fixture: the bf31-pattern heap at
+    scalars 7/2/0/5 + a Message argument cell at 52 with Commit→1,
+    From→2, nil Context; drained caller shape
+    `retV (.addr 52) (callArgsK handleHeartbeat [] [.addr 31])`):
+    **completes in 1,325 steps consuming EXACTLY ONE choice** —
+    na 55→129 (74 fresh cells). **THE APPENDSPILL QUESTION IS
+    ANSWERED AGAINST THE DISPATCH'S EXPECTATION: the append on the
+    NIL outbox still consumes one spill choice — the appendSpill
+    transport (U3-verdict residual 3) is REQUIRED for handleHeartbeat
+    itself**, not deferrable to handleAppendEntries; now TRIPLY
+    motivated (handleHeartbeat + handleAppendEntries + becomeLeader).
+  - **absState v2 projects the handler END-TO-END on its first real
+    contact**: post `absOutbox σ' ⟨31⟩ "msgs" = some [⟨9(=MsgHeartbeatResp),
+    2(=m.From), 1(=r.id), 0(=r.Term), …, reject false, [], []⟩]`;
+    `absRaftLog` committed 1 (the NO-OP commitTo branch at this
+    fixture — m.Commit = committed = 1; the ADVANCE branch needs a
+    fixture with lastIndex > committed: a SECOND fixture family,
+    U3's term-branch pattern); `absMessage` reads the argument
+    exactly.
+  - Footprint field-set (the lens instances this equation consumes):
+    raft.raft id/Term/raftLog/msgs (+ L2 store-miss for the untouched
+    fields at the msgs write-back); raftLog committed (no-op branch);
+    Message Commit/From/Context/To/Type/Term.
+- 2026-08-24 **THE PICK-TRANSPORT LIFT TAKEN**
+  (`Sym/PickTransport.lean`, the U4 promotion row, coordinator-
+  authorized additive touch — the U6 Relocate precedent): the
+  raft-independent `stepFn_pick_transport` lifted VERBATIM into
+  `GoLean.Sym` (lineage-lined: choice-site path splitting =
+  stepFn_pick_generic ∘ alloc_conc), Kit-pinned
+  ([propext, Quot.sound], build-enforced — pin count now 19 + the
+  7 Lens pins). `BfSteps.lean` keeps its copy as shipped history —
+  ZERO edits to shipped modules; four consumer modules at lift time.
+- 2026-08-24 [AGENT] STOP-AT-BOUNDARY call: the equation itself is
+  dispatched forward — its ONE missing prerequisite is now precisely
+  known (the appendSpill analogue of `stepFn_pick_transport`: the
+  spill-choice step form at `Stmt`-level append, same lever shape),
+  and building it mid-unit past the context boundary would violate
+  the active stop rule. The A4-U10 charter below is the census's
+  direct product.
+
+**A4-U10 CHARTER (proposed):** (1) the appendSpill transport in
+`Sym/PickTransport.lean`'s pattern (general, kit-pinned; probe the
+spill site's exact step/choice shape first — the U4 becomeLeader
+trace at steps 5171/6352 and this unit's 1,325-step trace are the
+two witnesses); (2) THE handleHeartbeat EQUATION, symbolic-from-birth
+per the U8 exit charter: born-re-sited fixture (this unit's probe
+fixture IS the recipe), `_alloc` primary, conclusions through
+absState v2 (`absOutbox`/`absRaftLog`/`absMessage`) + the L2
+store-miss laws — and MEASURE the lens payoff vs the MsEquation
+per-conjunct baseline (the dispatch's named metric); the no-op
+commitTo branch first, the advance branch as the second fixture
+family; (3) then handleAppendEntries opens on the same transport.
+
+## A4-U9 exit (2026-08-24, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since the U9 dispatch
+(= the U8 exit tip 4880a22b): 1 (the census+lift commit) + this log
+commit; no coordinator commits interleaved (checked at recount).
+Unit tree: `Sym/PickTransport.lean` (additive) + aggregator + Kit
+(additive pin) + probes + this log — zero edits to shipped modules.
+Full proofs+Audit green: **497 jobs**. Gate record follows in the
+next entry (same-commit convention).
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1); the comparator-landmark STALE flag
+(106+ commits) stands escalated from U8.

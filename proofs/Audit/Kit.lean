@@ -8,6 +8,7 @@ import GoLeanProofs.MapLoops
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.Frame.Threshold
 import GoLeanProofs.Lens
+import GoLeanProofs.Sym.PickTransport
 import GoLeanProofs.Examples.Fib
 import GoLeanProofs.Examples.Gcd
 import GoLeanProofs.Examples.MinMax
@@ -711,5 +712,12 @@ decomposition, and the field-pointwise normalization characterization
 #guard_msgs in #print axioms GoLean.Lens.fieldRead_store_hit
 /-- info: 'GoLean.Lens.normalizeFieldsWith_lookup' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Lens.normalizeFieldsWith_lookup
+
+/-! A4-U9: the pick-transport lift (`Sym/PickTransport.lean`, the U4
+promotion row taken — general, raft-independent; consumers: every
+handler's range loop). -/
+
+/-- info: 'GoLean.Sym.stepFn_pick_transport' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.stepFn_pick_transport
 
 end GoLean.Iris.Audit
