@@ -1011,6 +1011,29 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   machine-tier differential sweep on the fast engine (hour-scale
   now), stubs surfacing as enumerable fail-closed arms.
 
+- **Arc 2, unit P2R-2 — LANDED** @ 76361232, gate PASS: the
+  full-corpus fast machine-tier sweep. **27/27 traces AGREE
+  byte-for-byte with go run across the entire deps/raft/testdata
+  corpus** (558 blocks, 354 supported-prefix; 37.7M fast steps in
+  237 s, peak 216 MB); zero divergences; the 8 first-sweep failures
+  were ONE fail-closed arm (mapDelete), closed with the U-discipline
+  + a types-only cont delegation; verdicts transfer by the pinned
+  fastRun_transfer_eqb. WHAT THIS TAUGHT US: (1) zero divergences IS
+  the finding — the whole upstream corpus replays byte-identically
+  on the model; (2) fail-closed classification worked exactly as
+  designed (8 failures → 1 enumerable arm, no silent laundering);
+  (3) the next perf constant lives in value representation (30×
+  per-trace rate variance recorded, not chased — no ceiling
+  threatened). [AGENT] ALLOCATION CALL: the arc-2 lane PARKS at this
+  clean boundary — its two proposed follow-ons (replay-vocabulary
+  frontier; value-rep measurement) are insight-positive but OFF the
+  T1 critical path, and attention is the scarce resource ([USER]
+  calibration): all worker attention now goes to the arc-4 seam.
+  Both queued in the arc-2 log for post-T1. [USER] queue: the
+  campaign-arc2 branch (P2R + P2R-2) is a coherent, gate-green,
+  branch-complete segment — AUDIT ASK POSED for its landing on main
+  (see the operator report), comparator-judge owed at that step.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
