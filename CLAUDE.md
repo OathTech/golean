@@ -183,6 +183,27 @@ turns a case red (removing junk it depended on), record it: case id, old→new
 stage, the bad assumption removed, the clean fix. Do not weaken the oracle,
 skip a case, or edit canonical Go to make something pass.
 
+## Clever tricks, not stupid tricks (2026-08-24, doctrine)
+
+Proof machinery must be CLEVER TRICKS — the PL community's classics
+(separation logic/Iris, symbolic execution, process calculi,
+refinement/simulation, and their optimizers: clever IRs, certificate
+replay, computational reflection) — never STUPID TRICKS: grinding on
+representation-level properties we cannot control, or specialized
+tactics against ACCIDENTAL features of a proof. Rules: (1) classics
+FIRST; measurement referees BETWEEN classics; wilderness only with a
+named reason. (2) Every new proof mechanism's design note carries a
+LINEAGE line naming its classic ancestor; one that cannot be mapped
+is SUSPICIOUS and takes extra scrutiny before shipping. Why: a
+classic arrives with obligation shapes the community has
+stress-tested for decades — the evolutionary process that found all
+the dumb problems has already run; a novel trick must repeat that
+evolution on our own time, at campaign scale, with failure modes
+discovered late. Representation-level accommodations (recursion
+depths, unfolding switches, generated literals) are tolerated
+scaffolds only: measured, localized, retired when a principled
+mechanism lands — never load-bearing cleverness.
+
 ## Proof-facing code is total; keep it that way
 
 New relational/proof-facing definitions (the relation in `Machine.lean`, the surface layer) are
