@@ -816,6 +816,21 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   precedent). A4-U9 dispatched: handleHeartbeat — THE FIRST MESSAGE
   HANDLER, symbolic-from-birth on the full new machinery.
 
+- **Arc 4, A4-U9 — LANDED** @ 55be64c6 (clean-boundary stop):
+  handleHeartbeat's probe census — **appendSpill answered AGAINST
+  expectation** (1,325 steps, exactly ONE choice: `r.msgs = append`
+  fires the spill choice even on the NIL outbox — the transport is
+  required, not deferrable; now triply motivated); the footprint
+  field census; commitTo's two branches mapped (no-op branch this
+  fixture; commit-advance = second family); **absState v2 exact
+  end-to-end on its first real handler contact** (the post-state
+  MsgHeartbeatResp record exact); the fixture recipe born re-sited.
+  The authorized stepFn_pick_transport lift taken
+  (Sym/PickTransport.lean, additive, pinned; 497 jobs green).
+  [AGENT]: 6th-gen rotation (~1.02M); A4-U10 dispatched = the
+  appendSpill transport + THE handleHeartbeat equation with the lens
+  payoff measured.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
