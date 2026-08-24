@@ -692,6 +692,21 @@ when they fail.
   separation-logic framing BEFORE the message-handler waves scale on
   the concrete-address pattern.
 
+## RELAUNCH (2026-08-24, [USER]): the campaign resumes
+
+Same goal charter, same constitution. State at relaunch: main @
+66d62eac (T3 lattice + clever-tricks doctrine); this branch synced;
+wave first-pass at ~batch 663/712 (531/757 done, 97 failure-file
+lines awaiting the solo retry); p2 machine run ~18h in with the
+go-side stage durably recorded. [AGENT] resume plan: (1) wave
+first-pass → retry pass → composition → CompletionWitness; (2)
+A4-U5 dispatched NOW: the ALLOCATION-SYMBOLIC refactor (the
+clever-tricks watch-list's top classic-ward item — handler equations
+re-based on the kit's separation-logic framing, replacing the
+address-concrete fixtures) + the seam design restated in
+forward-simulation vocabulary with lineage lines; (3) then the
+message-handler waves on the symbolic pattern.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
