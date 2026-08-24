@@ -1,4 +1,5 @@
 import GoLeanProofs.FastEval.Heap
+import GoLeanProofs.FastEval.Congr
 
 /-!
 # FastEval — the fast state and the three heap primitives, with their
@@ -19,7 +20,7 @@ The two structural rules every mirror below follows (the design's §2):
 
 namespace GoLean.FastEval
 
-open GoLean GoLean.GoCore
+open GoLean GoLean.GoCore GoLean.GoCore.Machine
 
 /-- The fast machine state: `ExecState` with the heap re-represented.
 Field-for-field otherwise. -/
@@ -37,6 +38,87 @@ def γF (σF : ExecStateF) : ExecState :=
     methodSets := σF.methodSets, heap := γH σF.heapT σF.nextAddr
     nextAddr := σF.nextAddr }
 
+/-! ## The O(1) context image (P2R ctx refactor, slice 3)
+
+`γF`'s COMPILED construction strictly materializes the `γH` heap dump —
+O(cells) per call (the P2R strictness discovery). Every def-side call
+of a static-table-only helper therefore runs at `ctxF σF` instead: the
+same tables and frontier, EMPTY heap, O(1) to construct. The `_ctx`
+lemmas rewrite those calls back to the `γF` spelling inside the sims
+(`FastEval/Congr.lean` supplies the congruences; the table fields of
+`ctxF σF` and `γF σF` are definitionally equal, so every hypothesis is
+`rfl`). UNTRUSTED METHOD — never in any statement closure. -/
+
+def ctxF (σF : ExecStateF) : ExecState :=
+  { types := σF.types, functions := σF.functions, methods := σF.methods
+    methodSets := σF.methodSets, heap := [], nextAddr := σF.nextAddr }
+
+theorem ctxF_types (σF : ExecStateF) : (ctxF σF).types = (γF σF).types := rfl
+theorem ctxF_functions (σF : ExecStateF) :
+    (ctxF σF).functions = (γF σF).functions := rfl
+
+theorem structTagCompatible_ctx (σF : ExecStateF) :
+    structTagCompatible (ctxF σF) = structTagCompatible (γF σF) :=
+  structTagCompatible_congr rfl
+theorem normalizeValueForTy_ctx (σF : ExecStateF) :
+    normalizeValueForTy (ctxF σF) = normalizeValueForTy (γF σF) :=
+  normalizeValueForTy_congr rfl
+theorem defaultValue_ctx (σF : ExecStateF) :
+    defaultValue (ctxF σF) = defaultValue (γF σF) :=
+  funext fun ty => GoLean.Frame.defaultValue_congr (σF := ctxF σF) (σ := γF σF) rfl ty
+theorem valueEq_ctx (σF : ExecStateF) :
+    valueEq (ctxF σF) = valueEq (γF σF) :=
+  valueEq_congr rfl
+theorem checkKeyHashable_ctx (σF : ExecStateF) :
+    checkKeyHashable (ctxF σF) = checkKeyHashable (γF σF) :=
+  checkKeyHashable_congr rfl
+theorem mapEntryIndex?_ctx (σF : ExecStateF) (keyTy : Ty)
+    (entries : Array (GoValue × GoValue)) (key : GoValue) (isInsert : Bool) :
+    mapEntryIndex? (ctxF σF) keyTy entries key isInsert
+      = mapEntryIndex? (γF σF) keyTy entries key isInsert :=
+  mapEntryIndex?_congr (σ' := ctxF σF) (σ := γF σF) rfl keyTy entries key isInsert
+theorem convertValueToTy_ctx (σF : ExecStateF) :
+    convertValueToTy (ctxF σF) = convertValueToTy (γF σF) :=
+  convertValueToTy_congr rfl
+theorem typeAssertValue_ctx (σF : ExecStateF) :
+    typeAssertValue (ctxF σF) = typeAssertValue (γF σF) :=
+  typeAssertValue_congr rfl rfl rfl rfl
+theorem buildStructValue_ctx (σF : ExecStateF) :
+    buildStructValue (ctxF σF) = buildStructValue (γF σF) :=
+  buildStructValue_congr rfl
+theorem buildArrayValue_ctx (σF : ExecStateF) :
+    buildArrayValue (ctxF σF) = buildArrayValue (γF σF) :=
+  buildArrayValue_congr rfl
+theorem buildDefaultArrayValue_ctx (σF : ExecStateF) :
+    buildDefaultArrayValue (ctxF σF) = buildDefaultArrayValue (γF σF) :=
+  buildDefaultArrayValue_congr rfl
+theorem buildAppendBackingValue_ctx (σF : ExecStateF) :
+    buildAppendBackingValue (ctxF σF) = buildAppendBackingValue (γF σF) :=
+  buildAppendBackingValue_congr rfl
+theorem keyInKeys_ctx (σF : ExecStateF) :
+    keyInKeys (ctxF σF) = keyInKeys (γF σF) :=
+  keyInKeys_congr rfl
+theorem filterCandidateList_ctx (σF : ExecStateF) :
+    filterCandidateList (ctxF σF) = filterCandidateList (γF σF) :=
+  filterCandidateList_congr rfl
+theorem mapIterMandatoryRemains_ctx (σF : ExecStateF) :
+    mapIterMandatoryRemains (ctxF σF) = mapIterMandatoryRemains (γF σF) :=
+  mapIterMandatoryRemains_congr rfl
+theorem canonicalDynamicTy_ctx (σF : ExecStateF) :
+    canonicalDynamicTy (ctxF σF) = canonicalDynamicTy (γF σF) :=
+  funext fun ty => GoLean.Frame.canonicalDynamicTy_congr (σF := ctxF σF) (σ := γF σF) rfl ty
+theorem methodInfoByFuncId?_ctx (σF : ExecStateF) :
+    methodInfoByFuncId? (ctxF σF) = methodInfoByFuncId? (γF σF) :=
+  funext fun fid => GoLean.Frame.methodInfoByFuncId?_congr (σF := ctxF σF) (σ := γF σF) rfl fid
+theorem methodRecvInterfaceName?_ctx (σF : ExecStateF) :
+    methodRecvInterfaceName? (ctxF σF) = methodRecvInterfaceName? (γF σF) :=
+  funext fun m => GoLean.Frame.methodRecvInterfaceName?_congr (σF := ctxF σF) (σ := γF σF) rfl m
+theorem concreteMethodForDynamic?_ctx (σF : ExecStateF) :
+    concreteMethodForDynamic? (ctxF σF) = concreteMethodForDynamic? (γF σF) :=
+  funext fun dynTy => funext fun name =>
+    GoLean.Frame.concreteMethodForDynamic?_congr (σF := ctxF σF) (σ := γF σF)
+      rfl rfl dynTy name
+
 /-! ## The three primitives, mirrored -/
 
 /-- `loadLoc`, fast. The frontier guard (`a.id < nextAddr`) is what
@@ -53,7 +135,7 @@ def loadLocF (σF : ExecStateF) : Loc → Except GoError GoValue
   | .field base typeId fieldName => do
       match ← loadLocF σF base with
       | .struct actualType fields =>
-          if actualType != typeId && !structTagCompatible (γF σF) actualType typeId then
+          if actualType != typeId && !structTagCompatible (ctxF σF) actualType typeId then
             stuck s!"expected struct {typeId.key}, got struct {actualType.key}"
           match StructFields.lookup fields fieldName with
           | some value => return value
@@ -74,7 +156,7 @@ def storeLocF (σF : ExecStateF) : Loc → GoValue → Except GoError ExecStateF
         | some cell => do
             let value ←
               match cell.declaredTy with
-              | some ty => normalizeValueForTy (γF σF) ty value
+              | some ty => normalizeValueForTy (ctxF σF) ty value
               | none => coerceStoredValue cell.value value
             return { σF with heapT := σF.heapT.set a.id { cell with value } }
         | none => stuck "fastEval-stub: hole store below frontier"
@@ -82,7 +164,7 @@ def storeLocF (σF : ExecStateF) : Loc → GoValue → Except GoError ExecStateF
   | .field base typeId fieldName, value => do
       match ← loadLocF σF base with
       | .struct actualType fields =>
-          if actualType != typeId && !structTagCompatible (γF σF) actualType typeId then
+          if actualType != typeId && !structTagCompatible (ctxF σF) actualType typeId then
             stuck s!"expected struct {typeId.key}, got struct {actualType.key}"
           let updated ← StructFields.set fields fieldName value
           storeLocF σF base (.struct actualType updated)
@@ -157,6 +239,7 @@ theorem loadLocF_ok {σF : ExecStateF} :
   | field base typeId fieldName ih =>
       intro v h
       unfold loadLocF at h
+      try simp only [structTagCompatible_ctx] at h
       unfold loadLoc
       cases hb : loadLocF σF base with
       | error e => rw [hb] at h; simp [Bind.bind, Except.bind] at h
@@ -168,6 +251,7 @@ theorem loadLocF_ok {σF : ExecStateF} :
   | index base index ih =>
       intro v h
       unfold loadLocF at h
+      try simp only [structTagCompatible_ctx] at h
       unfold loadLoc
       cases hb : loadLocF σF base with
       | error e => rw [hb] at h; simp [Bind.bind, Except.bind] at h
@@ -196,6 +280,7 @@ theorem storeLocF_ok {σF : ExecStateF} :
   | base a =>
       intro v σF' h
       unfold storeLocF at h
+      simp only [normalizeValueForTy_ctx] at h
       split at h
       case isTrue hlt =>
         split at h
@@ -224,6 +309,7 @@ theorem storeLocF_ok {σF : ExecStateF} :
   | field base typeId fieldName ih =>
       intro v σF' h
       unfold storeLocF at h
+      try simp only [structTagCompatible_ctx] at h
       unfold storeLoc
       cases hb : loadLocF σF base with
       | error e => rw [hb] at h; simp [Bind.bind, Except.bind] at h
@@ -247,6 +333,7 @@ theorem storeLocF_ok {σF : ExecStateF} :
   | index base index ih =>
       intro v σF' h
       unfold storeLocF at h
+      try simp only [structTagCompatible_ctx] at h
       unfold storeLoc
       cases hb : loadLocF σF base with
       | error e => rw [hb] at h; simp [Bind.bind, Except.bind] at h

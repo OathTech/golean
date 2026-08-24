@@ -40,9 +40,143 @@ def applySliceF (σF : ExecStateF) (b : GoValue) (lowValue highValue : Int)
       unsupported s!"slice expression over non-addressable array value of length {values.size}"
   | other => stuck s!"expected array or slice value for slice expression, got {repr other}"
 
+/-! ## P2R arm helpers (unit P2R, slice 4): each closes a former
+`fastEval-stub` arm the probe_and_replicate replay exercises. Each is a
+SEPARATE def called from its top-level alternative so
+`applyStrictOpF_ok`'s split structure stays stable (one alternative =
+one bullet), with its own `_ok` transport below. Mirrors are verbatim
+from `applyStrictOp`'s arms (state-free helpers unchanged; `s.alloc` →
+`allocF`, `loadLoc` → `loadLocF`, pure helpers at `ctxF`). -/
+
+def mulArmF (σF : ExecStateF) : List GoValue → Except GoError (GoValue × ExecStateF)
+  | [l, r] =>
+      match l, r with
+      | .float .., .float .. => do
+          return ((← floatBinaryResult "*" FloatBits.fmul64 FloatBits.fmul32 l r), σF)
+      | _, _ => do return ((← intBinaryResult "*" (· * ·) l r), σF)
+  | _ => stuck "malformed strict-operator application: mul"
+
+def shiftLeftArmF (σF : ExecStateF) : List GoValue → Except GoError (GoValue × ExecStateF)
+  | [l, r] => do return ((← intShiftLeftResult l r), σF)
+  | _ => stuck "malformed strict-operator application: shiftLeft"
+
+def bitOrArmF (σF : ExecStateF) : List GoValue → Except GoError (GoValue × ExecStateF)
+  | [l, r] => do return ((← intBitwiseBinaryResult "|" Nat.lor l r), σF)
+  | _ => stuck "malformed strict-operator application: bitOr"
+
+def bitXorArmF (σF : ExecStateF) : List GoValue → Except GoError (GoValue × ExecStateF)
+  | [l, r] => do return ((← intBitwiseBinaryResult "^" Nat.xor l r), σF)
+  | _ => stuck "malformed strict-operator application: bitXor"
+
+def bitClearArmF (σF : ExecStateF) : List GoValue → Except GoError (GoValue × ExecStateF)
+  | [l, r] => do return ((← intBitClearResult l r), σF)
+  | _ => stuck "malformed strict-operator application: bitClear"
+
+def bitNegArmF (σF : ExecStateF) : List GoValue → Except GoError (GoValue × ExecStateF)
+  | [v] => do return ((← intBitNegResult v), σF)
+  | _ => stuck "malformed strict-operator application: bitNeg"
+
+def negArmF (σF : ExecStateF) : List GoValue → Except GoError (GoValue × ExecStateF)
+  | [v] =>
+      match v with
+      | .int value kind => return (.int (kind.normalize (0 - value)) kind, σF)
+      | .float bits kind => return (.float (kind.normalizeBits (kind.negBits bits)) kind, σF)
+      | other => stuck s!"mismatched unary - operand: {repr other}"
+  | _ => stuck "malformed strict-operator application: neg"
+
+def floatLitArmF (σF : ExecStateF) (num : Int) (den : Nat) (kind : FloatKind) :
+    List GoValue → Except GoError (GoValue × ExecStateF)
+  | [] =>
+      if den == 0 then stuck "malformed float literal: zero denominator"
+      else return (.float (kind.normalizeBits (kind.ratToBits num den)) kind, σF)
+  | _ => stuck "malformed strict-operator application: floatLit"
+
+def bytesFromStringArmF (σF : ExecStateF) : List GoValue → Except GoError (GoValue × ExecStateF)
+  | [v] =>
+      match v with
+      | .string value =>
+          let bytes := value.bytes.map (fun b => GoValue.int (Int.ofNat b.toNat) .uint8)
+          let (base, σF') := allocF σF (.array bytes) (some (.array bytes.size (.int .uint8)))
+          .ok (.slice { base := some base, offset := 0, len := bytes.size, cap := bytes.size }, σF')
+      | other => stuck s!"expected string operand for []byte conversion, got {repr other}"
+  | _ => stuck "malformed strict-operator application: bytesFromString"
+
+def addrOfDerefArmF (σF : ExecStateF) : List GoValue → Except GoError (GoValue × ExecStateF)
+  | [v] => do return (.addr (← valueAsLoc v), σF)
+  | _ => stuck "malformed strict-operator application: addrOfDeref"
+
+def indexAddrArmF (σF : ExecStateF) : List GoValue → Except GoError (GoValue × ExecStateF)
+  | [b, i] => do return (.addr (← indexTargetLocF σF b i), σF)
+  | _ => stuck "malformed strict-operator application: indexAddr"
+
+def capacityOfArmF (σF : ExecStateF) (typ : Option Ty) :
+    List GoValue → Except GoError (GoValue × ExecStateF)
+  | [v] => do
+      match typ with
+      | some (.pointer (.array n _)) => return (.int n, σF)
+      | _ =>
+          match v with
+          | .array values => return (.int values.size, σF)
+          | .addr baseLoc =>
+              match ← loadLocF σF baseLoc with
+              | .array values => return (.int values.size, σF)
+              | other => unsupported s!"cap for non-array pointer value {repr other}"
+          | .slice slice =>
+              validateSlice slice *> return (.int slice.cap, σF)
+          | .chan _ => stuck "fastEval-stub: applyStrictOp.capacityOf.chan"
+          | other => unsupported s!"cap for non-array/slice value {repr other}"
+  | _ => stuck "malformed strict-operator application: capacityOf"
+
+def runeAtArmF (σF : ExecStateF) : List GoValue → Except GoError (GoValue × ExecStateF)
+  | [sv, ov] => do
+      match sv with
+      | .string str => do
+          let off ← valueAsInt ov
+          if off < 0 then
+            stuck s!"negative rune-decode offset {off}"
+          return (.int (decodeRuneAt str off.toNat).1 .int32, σF)
+      | other => stuck s!"expected string operand for rune decode, got {repr other}"
+  | _ => stuck "malformed strict-operator application: runeAt"
+
+def runeSizeAtArmF (σF : ExecStateF) : List GoValue → Except GoError (GoValue × ExecStateF)
+  | [sv, ov] => do
+      match sv with
+      | .string str => do
+          let off ← valueAsInt ov
+          if off < 0 then
+            stuck s!"negative rune-decode offset {off}"
+          return (.int (Int.ofNat (decodeRuneAt str off.toNat).2) .int, σF)
+      | other => stuck s!"expected string operand for rune decode, got {repr other}"
+  | _ => stuck "malformed strict-operator application: runeSizeAt"
+
+def runesFromStringArmF (σF : ExecStateF) : List GoValue → Except GoError (GoValue × ExecStateF)
+  | [v] =>
+      match v with
+      | .string value =>
+          let runes := (runesOfString value).map
+            (fun r => GoValue.int r .int32)
+          let (base, σF') := allocF σF (.array runes)
+            (some (.array runes.size (.int .int32)))
+          .ok (.slice { base := some base, offset := 0,
+                        len := runes.size, cap := runes.size }, σF')
+      | other => stuck s!"expected string operand for []rune conversion, got {repr other}"
+  | _ => stuck "malformed strict-operator application: runesFromString"
+
+def stringFromRuneSliceArmF (σF : ExecStateF) : List GoValue → Except GoError (GoValue × ExecStateF)
+  | [v] => do
+      let slice ← valueAsSlice v
+      let values ← sliceVisibleValuesF σF slice
+      let mut str := GoString.empty
+      for value in values.toList do
+        match value with
+        | .int r .int32 => str := str.append (GoString.fromCodePoint r)
+        | other => stuck s!"expected rune element in string conversion, got {repr other}"
+      return (.string str, σF)
+  | _ => stuck "malformed strict-operator application: stringFromRuneSlice"
+
 /-- The mirror. Arm-for-arm with `applyStrictOp`; census-stubbed arms
-refuse (`fastEval-stub`), pure helpers run at the lazy view `γF σF`,
-heap reads go through `loadLocF`. -/
+refuse (`fastEval-stub`), pure helpers run at the O(1) `ctxF σF`
+context image, heap reads go through `loadLocF`. -/
 def applyStrictOpF (σF : ExecStateF) : StrictOp → List GoValue →
     Except GoError (GoValue × ExecStateF)
   | .add, [l, r] =>
@@ -57,7 +191,7 @@ def applyStrictOpF (σF : ExecStateF) : StrictOp → List GoValue →
       | .float .., .float .. => do
           return ((← floatBinaryResult "-" FloatBits.fsub64 FloatBits.fsub32 l r), σF)
       | _, _ => do return ((← intBinaryResult "-" (· - ·) l r), σF)
-  | .mul, _ => stuck "fastEval-stub: applyStrictOp.mul"
+  | .mul, args => mulArmF σF args
   | .div, [l, r] =>
       match l, r with
       | .float .., .float .. => do
@@ -72,24 +206,24 @@ def applyStrictOpF (σF : ExecStateF) : StrictOp → List GoValue →
       if divisor == 0 then
         GoCore.panic "runtime error: integer divide by zero"
       return ((← intBinaryResult "%" Int.tmod l r), σF)
-  | .shiftLeft, _ => stuck "fastEval-stub: applyStrictOp.shiftLeft"
+  | .shiftLeft, args => shiftLeftArmF σF args
   | .shiftRight, [l, r] => do return ((← intShiftRightResult l r), σF)
   | .bitAnd, [l, r] => do return ((← intBitwiseBinaryResult "&" Nat.land l r), σF)
-  | .bitOr, _ => stuck "fastEval-stub: applyStrictOp.bitOr"
-  | .bitXor, _ => stuck "fastEval-stub: applyStrictOp.bitXor"
-  | .bitClear, _ => stuck "fastEval-stub: applyStrictOp.bitClear"
-  | .bitNeg, _ => stuck "fastEval-stub: applyStrictOp.bitNeg"
-  | .neg, _ => stuck "fastEval-stub: applyStrictOp.neg"
-  | .floatLit .., _ => stuck "fastEval-stub: applyStrictOp.floatLit"
+  | .bitOr, args => bitOrArmF σF args
+  | .bitXor, args => bitXorArmF σF args
+  | .bitClear, args => bitClearArmF σF args
+  | .bitNeg, args => bitNegArmF σF args
+  | .neg, args => negArmF σF args
+  | .floatLit num den kind, args => floatLitArmF σF num den kind args
   | .not, [v] => do return (.bool (!(← valueAsBool v)), σF)
-  | .eqCmp ty, [l, r] => do return (.bool (← valueEq (γF σF) ty l r), σF)
-  | .neqCmp ty, [l, r] => do return (.bool (!(← valueEq (γF σF) ty l r)), σF)
+  | .eqCmp ty, [l, r] => do return (.bool (← valueEq (ctxF σF) ty l r), σF)
+  | .neqCmp ty, [l, r] => do return (.bool (!(← valueEq (ctxF σF) ty l r)), σF)
   | .atMostCmp, [l, r] => do return (.bool (← valueAtMost l r), σF)
   | .atLeastCmp, [l, r] => do return (.bool (← valueAtLeast l r), σF)
   | .lessCmp, [l, r] => do return (.bool (← valueLess l r), σF)
   | .greaterCmp, [l, r] => do return (.bool (← valueGreater l r), σF)
-  | .convert ty, [v] => do return ((← convertValueToTy (γF σF) ty v), σF)
-  | .bytesFromString, _ => stuck "fastEval-stub: applyStrictOp.bytesFromString"
+  | .convert ty, [v] => do return ((← convertValueToTy (ctxF σF) ty v), σF)
+  | .bytesFromString, args => bytesFromStringArmF σF args
   | .stringFromByteSlice, [v] => do
       let slice ← valueAsSlice v
       let values ← sliceVisibleValuesF σF slice
@@ -104,11 +238,11 @@ def applyStrictOpF (σF : ExecStateF) : StrictOp → List GoValue →
   | .stringFromRune, [v] => do
       return (.string (GoString.fromCodePoint (← valueAsInt v)), σF)
   | .deref _, [v] => do return ((← loadLocF σF (← valueAsLoc v)), σF)
-  | .addrOfDeref, _ => stuck "fastEval-stub: applyStrictOp.addrOfDeref"
+  | .addrOfDeref, args => addrOfDerefArmF σF args
   | .fieldGet typeId fieldName, [v] => do
       match v with
       | .struct actualType fields =>
-          if actualType != typeId && !structTagCompatible (γF σF) actualType typeId then
+          if actualType != typeId && !structTagCompatible (ctxF σF) actualType typeId then
             stuck s!"expected struct {typeId.key}, got struct {actualType.key}"
           match StructFields.lookup fields fieldName with
           | some value => return (value, σF)
@@ -116,18 +250,18 @@ def applyStrictOpF (σF : ExecStateF) : StrictOp → List GoValue →
       | other => stuck s!"expected struct value for field access, got {repr other}"
   | .fieldAddr typeId fieldName, [v] => do
       return (.addr (.field (← valueAsLoc v) typeId fieldName), σF)
-  | .structLit ty, vs => do return ((← buildStructValue (γF σF) ty vs.toArray), σF)
+  | .structLit ty, vs => do return ((← buildStructValue (ctxF σF) ty vs.toArray), σF)
   | .arrayLit n elem keys, vs => do
       if keys.length != vs.length then
         stuck s!"array literal expected {keys.length} element value(s), got {vs.length}"
-      return ((← buildArrayValue (γF σF) n elem (keys.zip vs).toArray), σF)
+      return ((← buildArrayValue (ctxF σF) n elem (keys.zip vs).toArray), σF)
   | .toInterface _ dynamic, [v] => do
-      let dynTy ← canonicalDynamicTy (γF σF) dynamic
+      let dynTy ← canonicalDynamicTy (ctxF σF) dynamic
       match dynTy with
       | .interface _ => return (v, σF)
       | _ => return (.interface dynTy v, σF)
   | .typeAssert targetTy sourceTy, [v] => do
-      let result ← typeAssertValue (γF σF) v targetTy
+      let result ← typeAssertValue (ctxF σF) v targetTy
       if result.2 then
         return (result.1, σF)
       else
@@ -148,23 +282,23 @@ def applyStrictOpF (σF : ExecStateF) : StrictOp → List GoValue →
           | other => stuck s!"expected array pointee for index access, got {repr other}"
       | .nil => GoCore.panic "runtime error: invalid memory address or nil pointer dereference"
       | other => stuck s!"expected array, slice, or string value for index access, got {repr other}"
-  | .indexAddr, _ => stuck "fastEval-stub: applyStrictOp.indexAddr"
+  | .indexAddr, args => indexAddrArmF σF args
   | .mapGet keyTy valueTy, [b, i] => do
       let map ← valueAsMap b
-      let key ← normalizeValueForTy (γF σF) keyTy i
+      let key ← normalizeValueForTy (ctxF σF) keyTy i
       match map.base with
       | none => do
-          checkKeyHashable (γF σF) key (isInsert := false) (nonEmpty := false)
-          return ((← defaultValue (γF σF) valueTy), σF)
+          checkKeyHashable (ctxF σF) key (isInsert := false) (nonEmpty := false)
+          return ((← defaultValue (ctxF σF) valueTy), σF)
       | some baseLoc =>
           match ← loadLocF σF baseLoc with
           | .mapData entries =>
-              match ← mapEntryIndex? (γF σF) keyTy entries key with
+              match ← mapEntryIndex? (ctxF σF) keyTy entries key with
               | some idx =>
                   match entries[idx]? with
                   | some (_, value) => return (value, σF)
                   | none => stuck s!"missing map entry at index {idx}"
-              | none => return ((← defaultValue (γF σF) valueTy), σF)
+              | none => return ((← defaultValue (ctxF σF) valueTy), σF)
           | other => stuck s!"expected map data, got {repr other}"
   | .sliceExpr false, [b, lo, hi] => do
       applySliceF σF b (← valueAsInt lo) (← valueAsInt hi) none
@@ -192,7 +326,7 @@ def applyStrictOpF (σF : ExecStateF) : StrictOp → List GoValue →
                   | other => stuck s!"expected map data, got {repr other}"
           | .chan _ => stuck "fastEval-stub: applyStrictOp.lengthOf.chan"
           | other => unsupported s!"len for non-array/slice/map value {repr other}"
-  | .capacityOf .., _ => stuck "fastEval-stub: applyStrictOp.capacityOf"
+  | .capacityOf typ, args => capacityOfArmF σF typ args
   | .funcValOf fid, vs => return (.funcVal fid vs, σF)
   | .minOf, v :: vs =>
       if anyFloatOperand (v :: vs) then do
@@ -218,22 +352,22 @@ def applyStrictOpF (σF : ExecStateF) : StrictOp → List GoValue →
           if ← valueLess best w then
             best := w
         return (best, σF)
-  | .runeAt, _ => stuck "fastEval-stub: applyStrictOp.runeAt"
-  | .runeSizeAt, _ => stuck "fastEval-stub: applyStrictOp.runeSizeAt"
-  | .defaultValueOf ty, [] => do return ((← defaultValue (γF σF) ty), σF)
+  | .runeAt, args => runeAtArmF σF args
+  | .runeSizeAt, args => runeSizeAtArmF σF args
+  | .defaultValueOf ty, [] => do return ((← defaultValue (ctxF σF) ty), σF)
   | .nilLit typ, [] =>
       match typ with
       | none => return (.nil, σF)
       | some ty =>
           match ty with
-          | .slice _ => do return ((← defaultValue (γF σF) ty), σF)
-          | .map _ _ => do return ((← defaultValue (γF σF) ty), σF)
-          | .chan _ _ => do return ((← defaultValue (γF σF) ty), σF)
+          | .slice _ => do return ((← defaultValue (ctxF σF) ty), σF)
+          | .map _ _ => do return ((← defaultValue (ctxF σF) ty), σF)
+          | .chan _ _ => do return ((← defaultValue (ctxF σF) ty), σF)
           | .pointer _ => return (.nil, σF)
           | .unsupported feature => unsupported s!"nil literal for {feature}"
           | other => stuck s!"nil literal for non-nilable type {repr other}"
-  | .runesFromString, _ => stuck "fastEval-stub: applyStrictOp.runesFromString"
-  | .stringFromRuneSlice, _ => stuck "fastEval-stub: applyStrictOp.stringFromRuneSlice"
+  | .runesFromString, args => runesFromStringArmF σF args
+  | .stringFromRuneSlice, args => stringFromRuneSliceArmF σF args
   | op, vs => stuck s!"malformed strict-operator application: {repr op} on {vs.length} operand(s)"
 
 /-! ## The sims -/
@@ -306,12 +440,256 @@ macro "absurd_h" h:ident : tactic =>
           MonadExceptOf.throw, Bind.bind, Except.bind, pure,
           Except.pure] at $h:ident)
 
+
+/-! ### P2R arm transports (one per helper; bullets stay 1:1) -/
+
+theorem mulArmF_ok {σF σF' : ExecStateF} {args : List GoValue} {v : GoValue}
+    (h : mulArmF σF args = .ok (v, σF')) :
+    applyStrictOp (γF σF) .mul args = .ok (v, γF σF') := by
+  unfold mulArmF at h
+  split at h
+  · rename_i l r
+    simp only [applyStrictOp]
+    split at h
+    · exact pureArm_sim h
+    · split
+      · simp [intBinaryResult, valueAsIntValue, stuck, Bind.bind,
+          Except.bind] at h
+      · exact pureArm_sim h
+  · simp [stuck] at h
+
+theorem shiftLeftArmF_ok {σF σF' : ExecStateF} {args : List GoValue} {v : GoValue}
+    (h : shiftLeftArmF σF args = .ok (v, σF')) :
+    applyStrictOp (γF σF) .shiftLeft args = .ok (v, γF σF') := by
+  unfold shiftLeftArmF at h
+  split at h
+  · simp only [applyStrictOp]; exact pureArm_sim h
+  · simp [stuck] at h
+
+theorem bitOrArmF_ok {σF σF' : ExecStateF} {args : List GoValue} {v : GoValue}
+    (h : bitOrArmF σF args = .ok (v, σF')) :
+    applyStrictOp (γF σF) .bitOr args = .ok (v, γF σF') := by
+  unfold bitOrArmF at h
+  split at h
+  · simp only [applyStrictOp]; exact pureArm_sim h
+  · simp [stuck] at h
+
+theorem bitXorArmF_ok {σF σF' : ExecStateF} {args : List GoValue} {v : GoValue}
+    (h : bitXorArmF σF args = .ok (v, σF')) :
+    applyStrictOp (γF σF) .bitXor args = .ok (v, γF σF') := by
+  unfold bitXorArmF at h
+  split at h
+  · simp only [applyStrictOp]; exact pureArm_sim h
+  · simp [stuck] at h
+
+theorem bitClearArmF_ok {σF σF' : ExecStateF} {args : List GoValue} {v : GoValue}
+    (h : bitClearArmF σF args = .ok (v, σF')) :
+    applyStrictOp (γF σF) .bitClear args = .ok (v, γF σF') := by
+  unfold bitClearArmF at h
+  split at h
+  · simp only [applyStrictOp]; exact pureArm_sim h
+  · simp [stuck] at h
+
+theorem bitNegArmF_ok {σF σF' : ExecStateF} {args : List GoValue} {v : GoValue}
+    (h : bitNegArmF σF args = .ok (v, σF')) :
+    applyStrictOp (γF σF) .bitNeg args = .ok (v, γF σF') := by
+  unfold bitNegArmF at h
+  split at h
+  · simp only [applyStrictOp]; exact pureArm_sim h
+  · simp [stuck] at h
+
+theorem negArmF_ok {σF σF' : ExecStateF} {args : List GoValue} {v : GoValue}
+    (h : negArmF σF args = .ok (v, σF')) :
+    applyStrictOp (γF σF) .neg args = .ok (v, γF σF') := by
+  unfold negArmF at h
+  split at h
+  · split at h
+    · simp only [applyStrictOp]; tuple_close h
+    · simp only [applyStrictOp]; tuple_close h
+    · absurd_h h
+  · simp [stuck] at h
+
+theorem floatLitArmF_ok {σF σF' : ExecStateF} {num : Int} {den : Nat}
+    {kind : FloatKind} {args : List GoValue} {v : GoValue}
+    (h : floatLitArmF σF num den kind args = .ok (v, σF')) :
+    applyStrictOp (γF σF) (.floatLit num den kind) args = .ok (v, γF σF') := by
+  unfold floatLitArmF at h
+  split at h
+  · simp only [applyStrictOp]
+    split at h
+    · absurd_h h
+    · rename_i hden
+      rw [if_neg hden]
+      tuple_close h
+  · simp [stuck] at h
+
+theorem bytesFromStringArmF_ok {σF σF' : ExecStateF} {args : List GoValue} {v : GoValue}
+    (h : bytesFromStringArmF σF args = .ok (v, σF')) :
+    applyStrictOp (γF σF) .bytesFromString args = .ok (v, γF σF') := by
+  unfold bytesFromStringArmF at h
+  split at h
+  · split at h
+    · rename_i value
+      simp only [applyStrictOp]
+      rw [← allocF_loc, ← allocF_state]
+      injection h with h1
+      injection h1 with hv hs
+      subst hv
+      subst hs
+      rfl
+    · absurd_h h
+  · simp [stuck] at h
+
+theorem addrOfDerefArmF_ok {σF σF' : ExecStateF} {args : List GoValue} {v : GoValue}
+    (h : addrOfDerefArmF σF args = .ok (v, σF')) :
+    applyStrictOp (γF σF) .addrOfDeref args = .ok (v, γF σF') := by
+  unfold addrOfDerefArmF at h
+  split at h
+  · simp only [applyStrictOp]; exact pureArm_sim h
+  · simp [stuck] at h
+
+theorem indexAddrArmF_ok {σF σF' : ExecStateF} {args : List GoValue} {v : GoValue}
+    (h : indexAddrArmF σF args = .ok (v, σF')) :
+    applyStrictOp (γF σF) .indexAddr args = .ok (v, γF σF') := by
+  unfold indexAddrArmF at h
+  split at h
+  · rename_i b i
+    simp only [applyStrictOp]
+    cases hl : indexTargetLocF σF b i with
+    | error e => rw [hl] at h; simp [Bind.bind, Except.bind] at h
+    | ok loc =>
+        rw [hl] at h
+        simp only [indexTargetLocF_ok hl]
+        tuple_close h
+  · simp [stuck] at h
+
+theorem capacityOfArmF_ok {σF σF' : ExecStateF} {typ : Option Ty}
+    {args : List GoValue} {v : GoValue}
+    (h : capacityOfArmF σF typ args = .ok (v, σF')) :
+    applyStrictOp (γF σF) (.capacityOf typ) args = .ok (v, γF σF') := by
+  unfold capacityOfArmF at h
+  split at h
+  · simp only [applyStrictOp]
+    split at h
+    · tuple_close h
+    · split at h
+      · tuple_close h
+      · rename_i baseLoc
+        cases hl : loadLocF σF baseLoc with
+        | error e => rw [hl] at h; simp [Bind.bind, Except.bind] at h
+        | ok bv =>
+            rw [hl] at h
+            simp only [loadLocF_ok hl]
+            simp only [Bind.bind, Except.bind] at h ⊢
+            cases bv <;> try (simp [unsupported] at h)
+            case array values => tuple_close h
+      · rename_i slice
+        cases hv : validateSlice slice with
+        | error e =>
+            rw [hv] at h
+            simp [Bind.bind, Except.bind, SeqRight.seqRight, Except.map] at h
+        | ok u =>
+            rw [hv] at h
+            simp only [Bind.bind, Except.bind, SeqRight.seqRight, pure,
+              Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+            obtain ⟨h1, h2⟩ := h
+            subst h2
+            simp [hv, h1]
+            rfl
+      · simp [stuck] at h
+      · simp [unsupported] at h
+  · simp [stuck] at h
+
+theorem runeAtArmF_ok {σF σF' : ExecStateF} {args : List GoValue} {v : GoValue}
+    (h : runeAtArmF σF args = .ok (v, σF')) :
+    applyStrictOp (γF σF) .runeAt args = .ok (v, γF σF') := by
+  unfold runeAtArmF at h
+  split at h
+  · split at h
+    · rename_i str
+      simp only [applyStrictOp]
+      cases ho : valueAsInt _ with
+      | error e => rw [ho] at h; simp [Bind.bind, Except.bind] at h
+      | ok off =>
+          rw [ho] at h
+          simp only [Bind.bind, Except.bind] at h ⊢
+          split at h <;> rename_i hneg
+          · simp [stuck, Bind.bind, Except.bind, throw, throwThe,
+              MonadExceptOf.throw] at h
+          · rw [if_neg hneg]
+            tuple_close h
+    · absurd_h h
+  · simp [stuck] at h
+
+theorem runeSizeAtArmF_ok {σF σF' : ExecStateF} {args : List GoValue} {v : GoValue}
+    (h : runeSizeAtArmF σF args = .ok (v, σF')) :
+    applyStrictOp (γF σF) .runeSizeAt args = .ok (v, γF σF') := by
+  unfold runeSizeAtArmF at h
+  split at h
+  · split at h
+    · rename_i str
+      simp only [applyStrictOp]
+      cases ho : valueAsInt _ with
+      | error e => rw [ho] at h; simp [Bind.bind, Except.bind] at h
+      | ok off =>
+          rw [ho] at h
+          simp only [Bind.bind, Except.bind] at h ⊢
+          split at h <;> rename_i hneg
+          · simp [stuck, Bind.bind, Except.bind, throw, throwThe,
+              MonadExceptOf.throw] at h
+          · rw [if_neg hneg]
+            tuple_close h
+    · absurd_h h
+  · simp [stuck] at h
+
+theorem runesFromStringArmF_ok {σF σF' : ExecStateF} {args : List GoValue} {v : GoValue}
+    (h : runesFromStringArmF σF args = .ok (v, σF')) :
+    applyStrictOp (γF σF) .runesFromString args = .ok (v, γF σF') := by
+  unfold runesFromStringArmF at h
+  split at h
+  · split at h
+    · rename_i value
+      simp only [applyStrictOp]
+      rw [← allocF_loc, ← allocF_state]
+      injection h with h1
+      injection h1 with hv hs
+      subst hv
+      subst hs
+      rfl
+    · absurd_h h
+  · simp [stuck] at h
+
+theorem stringFromRuneSliceArmF_ok {σF σF' : ExecStateF} {args : List GoValue} {v : GoValue}
+    (h : stringFromRuneSliceArmF σF args = .ok (v, σF')) :
+    applyStrictOp (γF σF) .stringFromRuneSlice args = .ok (v, γF σF') := by
+  unfold stringFromRuneSliceArmF at h
+  split at h
+  · rename_i v0
+    simp only [applyStrictOp]
+    cases hsl : valueAsSlice v0 with
+    | error e => rw [hsl] at h; simp [Bind.bind, Except.bind] at h
+    | ok slice =>
+        rw [hsl] at h
+        simp only [Bind.bind, Except.bind] at h ⊢
+        cases hsv : sliceVisibleValuesF σF slice with
+        | error e => rw [hsv] at h; simp at h
+        | ok values =>
+            rw [hsv] at h
+            simp only [sliceVisibleValuesF_ok hsv]
+            rw [← Array.forIn_toList]
+            exact pureArm_sim h
+  · simp [stuck] at h
+
 theorem applyStrictOpF_ok {σF : ExecStateF} {op : StrictOp}
     {args : List GoValue} {v : GoValue} {σF' : ExecStateF} :
     applyStrictOpF σF op args = .ok (v, σF') →
     applyStrictOp (γF σF) op args = .ok (v, γF σF') := by
   intro h
   unfold applyStrictOpF at h
+  simp only [valueEq_ctx, convertValueToTy_ctx, structTagCompatible_ctx,
+    buildStructValue_ctx, buildArrayValue_ctx, canonicalDynamicTy_ctx,
+    typeAssertValue_ctx, normalizeValueForTy_ctx, checkKeyHashable_ctx,
+    defaultValue_ctx, mapEntryIndex?_ctx] at h
   split at h
   -- .add
   · rename_i l r
@@ -338,8 +716,8 @@ theorem applyStrictOpF_ok {σF : ExecStateF} {op : StrictOp}
         simp [intBinaryResult, valueAsIntValue, stuck, Bind.bind,
           Except.bind] at h
       · exact pureArm_sim h
-  -- .mul stub
-  · simp [stuck] at h
+  -- .mul (P2R)
+  · exact mulArmF_ok h
   -- .div
   · rename_i l r
     simp only [applyStrictOp]
@@ -375,19 +753,19 @@ theorem applyStrictOpF_ok {σF : ExecStateF} {op : StrictOp}
           split at h <;> rename_i hx
           · injection h
           · tuple_close h
-  -- .shiftLeft stub
-  · simp [stuck] at h
+  -- .shiftLeft (P2R)
+  · exact shiftLeftArmF_ok h
   -- .shiftRight
   · simp only [applyStrictOp]; exact pureArm_sim h
   -- .bitAnd
   · simp only [applyStrictOp]; exact pureArm_sim h
-  -- stubs: bitOr bitXor bitClear bitNeg neg floatLit
-  · simp [stuck] at h
-  · simp [stuck] at h
-  · simp [stuck] at h
-  · simp [stuck] at h
-  · simp [stuck] at h
-  · simp [stuck] at h
+  -- bitOr bitXor bitClear bitNeg neg floatLit (P2R)
+  · exact bitOrArmF_ok h
+  · exact bitXorArmF_ok h
+  · exact bitClearArmF_ok h
+  · exact bitNegArmF_ok h
+  · exact negArmF_ok h
+  · exact floatLitArmF_ok h
   -- .not
   · simp only [applyStrictOp]; exact pureArm_sim h
   -- .eqCmp
@@ -404,8 +782,8 @@ theorem applyStrictOpF_ok {σF : ExecStateF} {op : StrictOp}
   · simp only [applyStrictOp]; exact pureArm_sim h
   -- .convert
   · simp only [applyStrictOp]; exact pureArm_sim h
-  -- .bytesFromString stub
-  · simp [stuck] at h
+  -- .bytesFromString (P2R)
+  · exact bytesFromStringArmF_ok h
   -- .stringFromByteSlice
   · rename_i v0
     simp only [applyStrictOp]
@@ -437,8 +815,8 @@ theorem applyStrictOpF_ok {σF : ExecStateF} {op : StrictOp}
             rw [hl] at h
             simp only [loadLocF_ok hl]
             tuple_close h
-  -- .addrOfDeref stub
-  · simp [stuck] at h
+  -- .addrOfDeref (P2R)
+  · exact addrOfDerefArmF_ok h
   -- .fieldGet
   · rename_i typeId fieldName v0
     simp only [applyStrictOp]
@@ -526,8 +904,8 @@ theorem applyStrictOpF_ok {σF : ExecStateF} {op : StrictOp}
               simp only [Bind.bind, Except.bind] at h ⊢
               cases bv <;> try (simp [stuck] at h)
               case array values => exact pureArm_sim h
-  -- .indexAddr stub
-  · simp [stuck] at h
+  -- .indexAddr (P2R)
+  · exact indexAddrArmF_ok h
   -- .mapGet
   · rename_i keyTy valueTy b i
     simp only [applyStrictOp]
@@ -657,8 +1035,8 @@ theorem applyStrictOpF_ok {σF : ExecStateF} {op : StrictOp}
                 simp [hbase, loadLocF_ok hl, h1, Bind.bind, Except.bind]
       · simp [stuck] at h
       · simp [unsupported] at h
-  -- .capacityOf stub
-  · simp [stuck] at h
+  -- .capacityOf (P2R)
+  · exact capacityOfArmF_ok h
   -- .funcValOf
   · simp only [applyStrictOp]; tuple_close h
   -- .minOf
@@ -673,9 +1051,9 @@ theorem applyStrictOpF_ok {σF : ExecStateF} {op : StrictOp}
     split at h <;> rename_i hfl
     · rw [if_pos hfl]; exact pureArm_sim h
     · rw [if_neg hfl]; exact pureArm_sim h
-  -- .runeAt / .runeSizeAt stubs
-  · simp [stuck] at h
-  · simp [stuck] at h
+  -- .runeAt / .runeSizeAt (P2R)
+  · exact runeAtArmF_ok h
+  · exact runeSizeAtArmF_ok h
   -- .defaultValueOf
   · simp only [applyStrictOp]; exact pureArm_sim h
   -- .nilLit
@@ -691,9 +1069,9 @@ theorem applyStrictOpF_ok {σF : ExecStateF} {op : StrictOp}
       · tuple_close h
       · simp [unsupported] at h
       · simp [stuck] at h
-  -- .runesFromString / .stringFromRuneSlice stubs
-  · simp [stuck] at h
-  · simp [stuck] at h
+  -- .runesFromString / .stringFromRuneSlice (P2R)
+  · exact runesFromStringArmF_ok h
+  · exact stringFromRuneSliceArmF_ok h
   -- catch-all
   · simp [stuck] at h
 

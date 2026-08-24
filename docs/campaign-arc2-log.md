@@ -661,7 +661,7 @@ O(cells) per call, in compiled code. The kernel walk never paid this
 (projection laziness); the compiled path pays it per step — the fast
 engine currently has the SLOW asymptotics when compiled.
 
-**Design decision [AGENT]: the ctx refactor** (slice 3). Introduce
+**Design decision [AGENT]: the ctx refactor** (slice 3, decided). Introduce
 `ctxF : ExecStateF → ExecState` := the γF image with `heap := []` —
 O(1) to construct compiled (field copies) — and flip every def-side
 `γF σF` helper argument to `ctxF σF`; sims patched via per-helper
@@ -678,3 +678,103 @@ Alternatives rejected: `@[implemented_by]` on `γF` (silent compiled/
 proved divergence — a fail-open trust hole, never); memoization
 (state changes every step); leaving it (measured: unusable).
 LINEAGE: context/state splitting in data refinement.
+
+## P2R slices 3-5: ctx refactor DONE; arm gaps closed; ACCEPTANCE MET
+(2026-08-24)
+
+**Slice 3 (the ctx refactor), landed.** `FastEval/Congr.lean` (new):
+function-level static-table congruence for every def-side helper —
+`structTagCompatible/normalizeValueForTy(Fuel)/valueEq(Fuel)/
+valueHashability/checkKeyHashable/mapEntryIndex?/convertValueToTy(Fuel)/
+typeAssertValue/buildStruct*/buildArray*/buildAppendBackingValue/
+keyInKey*/filterCandidateList/mandatoryInList/mapIterMandatoryRemains`
+— reusing the Frame library's layer (`defaultValue_congr`, TypeCongr's
+method family) where it existed. `ctxF` + `_ctx` rewrite block in
+`FastEval/Ops.lean`; ~45 def-side `γF σF` call sites flipped to
+`ctxF σF` across Ops/Shared/Step/Values/Stores/Frames; sims patched by
+one `rw`/`simp only [_ctx …] at h` after each affected `unfold` — the
+existing proof scripts otherwise untouched. `indexTargetLocF`(+`_ok`)
+moved Stores→Shared (Values needs it; import DAG). MEASURED EFFECT:
+first 1e6-chunk DNF >10 min → 401,688 steps in 0.31 s on first retry
+(>1M steps/s; the strictness diagnosis confirmed by the decisive
+differential instrument).
+
+**Slice 4 (arm gaps), landed.** First fast run fail-closed at
+`applyStrictOp.bytesFromString` (step 401,688). Closed SIXTEEN
+formerly-stubbed strict-op arms as per-arm helper defs + `_ok`
+transports (`mul, shiftLeft, bitOr, bitXor, bitClear, bitNeg, neg,
+floatLit, bytesFromString, addrOfDeref, indexAddr, capacityOf, runeAt,
+runeSizeAt, runesFromString, stringFromRuneSlice`) — the helper-call
+shape keeps `applyStrictOpF_ok`'s positional split stable (one
+alternative = one bullet swap). Mirrors verbatim from `applyStrictOp`;
+alloc arms transport by `allocF_loc/allocF_state` + injection; loop
+arms follow the LOOPS rule (List spelling). No other gap surfaced —
+in particular NO panic/recover machinery, no mapDelete/clearMap, no
+channel ops execute on this trace (the panicking-head stub class stays
+untouched). The wire's sync-ops are lock/unlock only (already
+mirrored).
+
+**Slice 5 (witness + wiring + acceptance).**
+- `FastEval/TransferWitness.lean`: the non-vacuity witness —
+  `fastRun_transfer_eqb` instantiated end-to-end on `gcdLowered`
+  (projection-defined components, zero literal transcription; anchor
+  eqb `#eval`-true first; exact 150-step body measured first; kernel
+  `rfl` premises; builds in 0.68 s). Conclusion reads over
+  `runProgramM` alone: `gcd(21,14) = 7`. Pinned in `Audit/FastEval.lean`
+  beside `fastRun_transfer`/`_eqb` (all
+  `[propext, Classical.choice, Quot.sound]` — Classical.choice
+  inherited from the already-pinned `stepFast_ok`; NO new axiom).
+- `tools/raftsubject/tracereplay.py`: ported the campaign worktree's
+  durable-record/resume delta VERBATIM (the coordinator's reconcile
+  point: this lane's copy previously lacked it; diff recorded here —
+  base = campaign@records-era copy) and added `--engine fast`
+  (default stays `slow`): the machine stage runs the `fastreplay` exe
+  with a per-chunk durable record; the resume key now includes the
+  engine so records never mix engines.
+
+**ACCEPTANCE (charter item 5) — MET, measured:**
+- Full probe_and_replicate fast replay: **11,995,825 steps,
+  status ok, 26.6 s** (fastreplay direct; record
+  `artifacts/p2r/rec-full-try3.jsonl`). TRUE STEP COUNT is therefore
+  11,995,825 — the slow-engine curve extrapolates wall(1.2e7) ≈ 24 h,
+  exactly explaining p2's >20 h DNF.
+- Machine trace == go trace **byte-for-byte** (20,924 bytes; python
+  diff of the decoded observation vs `go-trace.txt`).
+- End-to-end `tracereplay.py --traces probe_and_replicate --engine
+  fast --fuel 200000000 --keep --record
+  artifacts/tracereplay/records-p2r.jsonl`: **74/74 blocks, OK-TIER
+  57/57, RENDERED-TIER 17/17, MACHINE 1/1 AGREE, wall 24.62 s** — vs
+  the killed >20 h p2 run. Ceiling (~1 h) beaten by ~100×.
+- What the verdict rests on: compiled evaluation of `stepFast` etc.
+  (same trust class as compiled `stepFn` — nothing weakened) + the
+  PINNED `fastRun_transfer_eqb` carrying it to the
+  `runProgramM`-equation. Full proofs build green (484 jobs incl. the
+  in-build Audit gate); hatch grep over the new/changed FastEval
+  files clean (zero sorry / native_decide / new axiom / partial in
+  proof-facing code — the driver loop is total, fuel-measured).
+
+- **[AGENT]** 2026-08-24 (P2R): `@[implemented_by]` on `γF` REJECTED
+  as the performance fix (silent compiled/proved divergence = fail-open
+  trust hole); the ctx refactor chosen — congruence-proved, visible.
+- **[AGENT]** 2026-08-24 (P2R): the K=5 fuel bisection STOPPED
+  mid-run (anti-grinding: minutes-per-probe for a number the fast
+  engine's step counter delivers exactly and free — it did:
+  11,995,825).
+- **[AGENT]** 2026-08-24 (P2R): tracereplay.py edits judged NOT to
+  owe `--diff`: the file is the raft-campaign harness, invoked by no
+  differential script (`scripts/diff-coverage` grep: no tracereplay
+  reference); the corpus differential cannot observe it. GoLean/
+  frontend/interpreter untouched this unit (git status verified). The
+  sanctioned fresh-lane `GOLEAN_ALLOW_NO_DIFF=1` hatch therefore
+  still applies at the gate.
+- **[AGENT]** 2026-08-24 (P2R): the ctx refactor invalidates the
+  PARKED U5 segment oleans' input hashes (they rebuild against the new
+  `stepFast` if the wave ever resumes — regeneration is the recorded
+  resume path anyway; the round-replay corollary remains the primary
+  route). Parked-wave working files left untouched and uncommitted,
+  exactly as parked.
+- **[AGENT]** 2026-08-24 (P2R): witness fuel/count (400/150) measured
+  by `#eval` BEFORE any kernel ask (the #eval-before-decide rule);
+  `maxRecDepth 100000` in TransferWitness.lean is a representation
+  accommodation (kernel rfl over a 150-step run), tolerated-scaffold
+  class, 0.68 s build.

@@ -25,21 +25,6 @@ open GoLean GoLean.GoCore GoLean.GoCore.Machine
 
 /-! ## Mirrors -/
 
-/-- `indexTargetLoc`, fast. -/
-def indexTargetLocF (σF : ExecStateF) (b i : GoValue) : Except GoError Loc := do
-  let indexValue ← valueAsInt i
-  match b with
-  | .slice slice => sliceIndexLoc slice indexValue
-  | .nil => GoCore.panic "runtime error: invalid memory address or nil pointer dereference"
-  | .addr baseLoc =>
-      match ← loadLocF σF baseLoc with
-      | .array values => do
-          let _ ← arrayIndexNat values indexValue
-          return .index baseLoc indexValue
-      | .slice slice => sliceIndexLoc slice indexValue
-      | other => stuck s!"expected array or slice base for index address, got {repr other}"
-  | other => stuck s!"expected array or slice base for index address, got {repr other}"
-
 /-- `resolveChain`, fast (structural on the step list, like the
 original). -/
 def resolveChainF (σF : ExecStateF) : GoValue → List TargetStep → List GoValue →
@@ -55,13 +40,13 @@ def resolveChainF (σF : ExecStateF) : GoValue → List TargetStep → List GoVa
 def mapAssignValueF (σF : ExecStateF) (keyTy valueTy : Ty)
     (baseV keyV valueV : GoValue) : Except GoError ExecStateF := do
   let map ← valueAsMap baseV
-  let key ← normalizeValueForTy (γF σF) keyTy keyV
-  let value ← normalizeValueForTy (γF σF) valueTy valueV
+  let key ← normalizeValueForTy (ctxF σF) keyTy keyV
+  let value ← normalizeValueForTy (ctxF σF) valueTy valueV
   match ← mapEntriesF σF map with
   | none => GoCore.panic "assignment to entry in nil map"
   | some (baseLoc, entries) =>
       let entries ←
-        match ← mapEntryIndex? (γF σF) keyTy entries key (isInsert := true) with
+        match ← mapEntryIndex? (ctxF σF) keyTy entries key (isInsert := true) with
         | some i => pure (entries.set! i (key, value))
         | none => pure (entries.push (key, value))
       storeLocF σF baseLoc (.mapData entries)
@@ -80,11 +65,11 @@ def applyRhsOpF (σF : ExecStateF) : RhsOp → List GoValue → Except GoError (
   | .vals, vs => return vs
   | .mapLookup keyTy valueTy, [baseV, keyV] => do
       let map ← valueAsMap baseV
-      let key ← normalizeValueForTy (γF σF) keyTy keyV
+      let key ← normalizeValueForTy (ctxF σF) keyTy keyV
       let pair ← mapLookupValueF σF map key keyTy valueTy
       return [pair.1, .bool pair.2]
   | .typeAssert targetTy, [value] => do
-      let result ← typeAssertValue (γF σF) value targetTy
+      let result ← typeAssertValue (ctxF σF) value targetTy
       return [result.1, .bool result.2]
   | _, _ => stuck "malformed comma-ok source operands"
 
@@ -116,7 +101,7 @@ def applyStmtOpCoreF (σF : ExecStateF) (op : StmtOp) (_nt : Nat)
       let cap ← natFromNonnegativeInt "runtime error: makeslice: cap out of range" capValue
       if cap < len then
         GoCore.panic "runtime error: makeslice: cap out of range"
-      let backing ← buildDefaultArrayValue (γF σF) cap elem
+      let backing ← buildDefaultArrayValue (ctxF σF) cap elem
       let (base, σ₁) := allocF σF backing (some (.array cap elem))
       let loc ← valueAsLoc tv
       storeLocF σ₁ loc (.slice { base := some base, offset := 0, len, cap })
@@ -215,7 +200,7 @@ def applyStmtOpF (σF : ExecStateF) (choices : Choices) (op : StmtOp) (nt : Nat)
             let (extra, choices) := Choices.consumeAt .appendSpill width choices
             let newCap := newLen +
               ((appendGrowthCap slice.cap newLen - newLen + extra) % width)
-            let backing ← buildAppendBackingValue (γF σF) elem oldValues elemValues newCap
+            let backing ← buildAppendBackingValue (ctxF σF) elem oldValues elemValues newCap
             let (base, current) := allocF σF backing (some (.array newCap elem))
             return ((← storeLocF current tloc
               (.slice { base := some base, offset := 0, len := newLen, cap := newCap })), choices)
@@ -234,32 +219,6 @@ def contAfterStmtOpF (_σF : ExecStateF) (op : StmtOp) (_vs : List GoValue)
 
 /-! ## Sims -/
 
-theorem indexTargetLocF_ok {σF : ExecStateF} {b i : GoValue} {loc : Loc}
-    (h : indexTargetLocF σF b i = .ok loc) :
-    indexTargetLoc (γF σF) b i = .ok loc := by
-  unfold indexTargetLocF at h
-  cases hv : valueAsInt i with
-  | error e =>
-      rw [hv] at h; simp [Bind.bind, Except.bind] at h
-  | ok indexValue =>
-      rw [hv] at h
-      simp only [Bind.bind, Except.bind] at h
-      split at h
-      · simp only [indexTargetLoc, hv, Bind.bind, Except.bind]
-        exact h
-      · simp only [indexTargetLoc, hv, Bind.bind, Except.bind]
-        exact h
-      · rename_i baseLoc
-        simp only [indexTargetLoc, hv, Bind.bind, Except.bind]
-        cases hl : loadLocF σF baseLoc with
-        | error e => rw [hl] at h; simp [Bind.bind, Except.bind] at h
-        | ok bv =>
-            rw [hl] at h
-            rw [loadLocF_ok hl]
-            simp only [Bind.bind, Except.bind] at h ⊢
-            exact h
-      · simp only [indexTargetLoc, hv, Bind.bind, Except.bind]
-        exact h
 
 theorem resolveChainF_ok {σF : ExecStateF} :
     ∀ {steps : List TargetStep} {cur : GoValue} {idxs : List GoValue} {v : GoValue},
@@ -303,6 +262,7 @@ theorem mapAssignValueF_ok {σF : ExecStateF} {keyTy valueTy : Ty}
     (h : mapAssignValueF σF keyTy valueTy baseV keyV valueV = .ok σF') :
     mapAssignValue (γF σF) keyTy valueTy baseV keyV valueV = .ok (γF σF') := by
   unfold mapAssignValueF at h
+  simp only [normalizeValueForTy_ctx, mapEntryIndex?_ctx] at h
   unfold mapAssignValue
   cases hm : valueAsMap baseV with
   | error e => rw [hm] at h; simp [Bind.bind, Except.bind] at h
@@ -362,6 +322,7 @@ theorem applyRhsOpF_ok {σF : ExecStateF} {op : RhsOp} {vs r : List GoValue}
     (h : applyRhsOpF σF op vs = .ok r) :
     applyRhsOp (γF σF) op vs = .ok r := by
   unfold applyRhsOpF at h
+  simp only [normalizeValueForTy_ctx, typeAssertValue_ctx] at h
   split at h
   · simp only [applyRhsOp]
     exact h
@@ -434,7 +395,7 @@ private theorem core_makeMap_false_ok {σF : ExecStateF} {nt : Nat}
     {tv : GoValue} {σF' : ExecStateF}
     (h : applyStmtOpCoreF σF (.makeMap false) nt [tv] = .ok σF') :
     applyStmtOpCore (γF σF) (.makeMap false) nt [tv] = .ok (γF σF') := by
-  simp only [applyStmtOpCoreF, Bind.bind, Except.bind, pure, Except.pure] at h
+  simp only [applyStmtOpCoreF, buildDefaultArrayValue_ctx, Bind.bind, Except.bind, pure, Except.pure] at h
   cases hloc : valueAsLoc tv with
   | error e => rw [hloc] at h; simp [Bind.bind, Except.bind] at h
   | ok loc =>
@@ -449,7 +410,7 @@ private theorem core_makeMap_true_ok {σF : ExecStateF} {nt : Nat}
     {tv spaceV : GoValue} {σF' : ExecStateF}
     (h : applyStmtOpCoreF σF (.makeMap true) nt [tv, spaceV] = .ok σF') :
     applyStmtOpCore (γF σF) (.makeMap true) nt [tv, spaceV] = .ok (γF σF') := by
-  simp only [applyStmtOpCoreF, Bind.bind, Except.bind, pure, Except.pure] at h
+  simp only [applyStmtOpCoreF, buildDefaultArrayValue_ctx, Bind.bind, Except.bind, pure, Except.pure] at h
   cases hsz : valueAsInt spaceV with
   | error e => rw [hsz] at h; simp [Bind.bind, Except.bind] at h
   | ok size =>
@@ -486,7 +447,7 @@ private theorem core_makeSlice_ok {σF : ExecStateF} {elem : Ty} {nt : Nat}
       cases hasCap with
       | true => exact absurd hshape (by simp)
       | false =>
-        simp only [applyStmtOpCoreF, Bind.bind, Except.bind, pure,
+        simp only [applyStmtOpCoreF, buildDefaultArrayValue_ctx, Bind.bind, Except.bind, pure,
           Except.pure] at h
         cases hlv : valueAsInt lenV with
         | error e => rw [hlv] at h; simp [Bind.bind, Except.bind] at h
@@ -528,7 +489,7 @@ private theorem core_makeSlice_ok {σF : ExecStateF} {elem : Ty} {nt : Nat}
       cases hasCap with
       | false => exact absurd hshape (by simp)
       | true =>
-        simp only [applyStmtOpCoreF, Bind.bind, Except.bind, pure,
+        simp only [applyStmtOpCoreF, buildDefaultArrayValue_ctx, Bind.bind, Except.bind, pure,
           Except.pure] at h
         cases hlv : valueAsInt lenV with
         | error e => rw [hlv] at h; simp [Bind.bind, Except.bind] at h
@@ -924,6 +885,7 @@ theorem applyStmtOpF_ok {σF : ExecStateF} {choices : Choices} {op : StmtOp}
     (h : applyStmtOpF σF choices op nt vs = .ok (σF', ch')) :
     applyStmtOp (γF σF) choices op nt vs = .ok (γF σF', ch') := by
   unfold applyStmtOpF at h
+  try simp only [buildAppendBackingValue_ctx] at h
   split at h
   case h_2 =>
     rename_i oparm hne

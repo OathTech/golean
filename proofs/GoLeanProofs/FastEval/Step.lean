@@ -54,7 +54,7 @@ def stepFast (σF : ExecStateF) (c : Config) (choices : Choices) :
           match k with
           | .seq rest kenv k' =>
               if kenv = env then do
-                let v ← defaultValue (γF σF) p.typ
+                let v ← defaultValue (ctxF σF) p.typ
                 let (loc, σF') := allocF σF v (some p.typ)
                 return (.next (.seq rest (env.declare p.id loc) k'), σF', choices)
               else throw (.internal "initialization under foreign-scope sequence")
@@ -377,7 +377,7 @@ def stepFast (σF : ExecStateF) (c : Config) (choices : Choices) :
           if cands.isEmpty then
             return (.next k', σF, choices)
           else do
-            let mandatory ← mapIterMandatoryRemains (γF σF) keyTy cands start
+            let mandatory ← mapIterMandatoryRemains (ctxF σF) keyTy cands start
             let width := cands.size + (if mandatory then 0 else 1)
             let (idx, choices') := Choices.consumeAt .mapIter width choices
             match cands[idx]? with
@@ -633,6 +633,7 @@ theorem stepFast_ok {σF : ExecStateF} {c : Config} {ch : Choices}
   case case5 =>
     rename_i p rest kenv k'
     simp_all only [stepFast, stepFn]
+    rw [defaultValue_ctx] at h
     cases hd : defaultValue (γF σF) p.typ with
     | error e => rw [hd] at h; simp [Bind.bind, Except.bind] at h
     | ok v =>
@@ -822,6 +823,7 @@ theorem stepFast_ok {σF : ExecStateF} {c : Config} {ch : Choices}
   case case140 =>
     rename_i keyVar valVar keyTy valTy body base produced start env k'
     simp_all only [stepFast, stepFn]
+    rw [mapIterMandatoryRemains_ctx] at h
     cases hc : mapIterCandidatesF σF keyTy valTy base produced with
     | error e => rw [hc] at h; simp [Bind.bind, Except.bind] at h
     | ok cands =>

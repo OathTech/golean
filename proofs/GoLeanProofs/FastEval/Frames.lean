@@ -44,7 +44,7 @@ def allocDeclsF : LocalEnv → ExecStateF → List Param →
     Except GoError (LocalEnv × ExecStateF)
   | env, σF, [] => return (env, σF)
   | env, σF, p :: rest => do
-      let v ← defaultValue (γF σF) p.typ
+      let v ← defaultValue (ctxF σF) p.typ
       let (loc, σF₁) := allocF σF v (some p.typ)
       allocDeclsF (env.declare p.id loc) σF₁ rest
 
@@ -53,7 +53,7 @@ def bindParamsF : LocalEnv → ExecStateF → List Param → List GoValue →
     Except GoError (LocalEnv × ExecStateF)
   | env, σF, [], [] => return (env, σF)
   | env, σF, p :: ps, v :: vs => do
-      let v' ← normalizeValueForTy (γF σF) p.typ v
+      let v' ← normalizeValueForTy (ctxF σF) p.typ v
       let (loc, σF₁) := allocF σF v' (some p.typ)
       bindParamsF (env.declare p.id loc) σF₁ ps vs
   | _, _, [], _ :: _ => stuck "extra argument value"
@@ -64,18 +64,18 @@ except the pointer-box receiver auto-deref, which is the one heap
 read. -/
 def dynamicDispatchF? (σF : ExecStateF) (func : Func) (argValues : Array GoValue) :
     Except GoError (Option (Func × Array GoValue)) := do
-  match methodInfoByFuncId? (γF σF) func.id with
+  match methodInfoByFuncId? (ctxF σF) func.id with
   | none => return none
   | some method =>
-      match methodRecvInterfaceName? (γF σF) method with
+      match methodRecvInterfaceName? (ctxF σF) method with
       | none => return none
       | some _ =>
           match argValues[0]? with
           | some (GoValue.interface dynTy inner) =>
-              match concreteMethodForDynamic? (γF σF) dynTy method.name with
+              match concreteMethodForDynamic? (ctxF σF) dynTy method.name with
               | some (concrete, needsDeref) =>
                   let targetFunc ←
-                    match findFunctionIn? (γF σF).functions concrete.funcId with
+                    match findFunctionIn? (ctxF σF).functions concrete.funcId with
                     | some func => pure func
                     | none => stuck s!"GoCore dynamic method target not found: {concrete.funcId.key}"
                   let recvValue ←
@@ -96,7 +96,7 @@ def dynamicDispatchF? (σF : ExecStateF) (func : Func) (argValues : Array GoValu
 def enterFrameF (σF : ExecStateF) (fid : FuncId) (argVals : List GoValue) :
     Except GoError (Func × LocalEnv × List Loc × ExecStateF) := do
   let func ←
-    match findFunctionIn? (γF σF).functions fid with
+    match findFunctionIn? (ctxF σF).functions fid with
     | some func => pure func
     | none => stuck s!"GoCore function not found: {fid.key}"
   if func.args.size != argVals.length then
@@ -172,8 +172,8 @@ def mapIterCandidatesF (σF : ExecStateF) (keyTy valTy : Ty)
     (base : Option Loc) (produced : Array GoValue) :
     Except GoError (Array (GoValue × GoValue)) := do
   let entries ← mapIterLiveEntriesF σF base
-  let out := (← filterCandidateList (γF σF) keyTy produced entries.toList).toArray
-  if snapshotEntriesSelfNormalized (γF σF).types keyTy valTy out then
+  let out := (← filterCandidateList (ctxF σF) keyTy produced entries.toList).toArray
+  if snapshotEntriesSelfNormalized (ctxF σF).types keyTy valTy out then
     return out
   else
     throw (.stuck s!"map range live entry not self-normalized at range \
@@ -186,13 +186,13 @@ def bindIterVarsF (env : LocalEnv) (σF : ExecStateF) (keyVar valVar : Option St
   let (env, σF) ←
     match keyVar with
     | some name => do
-        let kv ← normalizeValueForTy (γF σF) keyTy key
+        let kv ← normalizeValueForTy (ctxF σF) keyTy key
         let (loc, σF') := allocF σF kv (some keyTy)
         pure (env.declare name loc, σF')
     | none => pure (env, σF)
   match valVar with
   | some name => do
-      let vv ← normalizeValueForTy (γF σF) valTy value
+      let vv ← normalizeValueForTy (ctxF σF) valTy value
       let (loc, σF') := allocF σF vv (some valTy)
       pure (env.declare name loc, σF')
   | none => pure (env, σF)
@@ -253,6 +253,7 @@ theorem allocDeclsF_ok :
   | cons p rest ih =>
       intro env σF env' σF' h
       unfold allocDeclsF at h
+      simp only [defaultValue_ctx] at h
       cases hd : defaultValue (γF σF) p.typ with
       | error e => rw [hd] at h; simp [Bind.bind, Except.bind] at h
       | ok v =>
@@ -283,6 +284,7 @@ theorem bindParamsF_ok :
       | nil => simp [bindParamsF] at h
       | cons v vs =>
           unfold bindParamsF at h
+          simp only [normalizeValueForTy_ctx] at h
           cases hd : normalizeValueForTy (γF σF) p.typ v with
           | error e => rw [hd] at h; simp [Bind.bind, Except.bind] at h
           | ok v' =>
@@ -298,6 +300,8 @@ theorem dynamicDispatchF?_ok {σF : ExecStateF} {func : Func}
     dynamicDispatch? (γF σF) func argValues = .ok r := by
   intro h
   unfold dynamicDispatchF? at h
+  rw [methodInfoByFuncId?_ctx, methodRecvInterfaceName?_ctx,
+    concreteMethodForDynamic?_ctx, ctxF_functions] at h
   unfold dynamicDispatch?
   split at h
   case h_1 hm => simp only [hm]; exact h
@@ -355,6 +359,7 @@ theorem enterFrameF_ok {σF : ExecStateF} {fid : FuncId} {argVals : List GoValue
     enterFrame (γF σF) fid argVals = .ok (func, env, locs, γF σF') := by
   intro h
   unfold enterFrameF at h
+  try simp only [ctxF_functions] at h
   unfold enterFrame
   split at h
   case h_2 hfind => simp [Bind.bind, Except.bind] at h
@@ -573,6 +578,7 @@ theorem mapIterCandidatesF_ok {σF : ExecStateF} {keyTy valTy : Ty}
     mapIterCandidates (γF σF) keyTy valTy base produced = .ok r := by
   intro h
   unfold mapIterCandidatesF at h
+  simp only [filterCandidateList_ctx, ctxF_types] at h
   unfold mapIterCandidates
   cases he : mapIterLiveEntriesF σF base with
   | error e => rw [he] at h; goErrAbsurd h
@@ -590,6 +596,7 @@ theorem bindIterVarsF_ok {env : LocalEnv} {σF : ExecStateF}
       = .ok (env', γF σF') := by
   intro h
   unfold bindIterVarsF at h
+  simp only [normalizeValueForTy_ctx] at h
   unfold bindIterVars
   cases keyVar with
   | none =>
