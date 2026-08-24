@@ -2173,3 +2173,115 @@ with window step-counts pinned by the link theorems (1299 + 25).
   bf31's 847 lines/104 s for the 4-choice reset family. The
   ONE-TIME general machinery this unit: SpillTransport 184 lines +
   two TableExt arms (~90 lines incl. conc cases).
+
+- 2026-08-24 Deliverable 4 — **handleAppendEntries PROBE CENSUS**
+  (probe `HaeProbe.lean`, U9 style, census ONLY — no equation; every
+  number from the run):
+  - STATIC (raft.go:1810-1854): three branches — (1) STALE
+    (`a.prev.index < committed` → resp Index = committed), (2)
+    SUCCESS (`maybeAppend ok` → resp Index = mlastIndex), (3) REJECT
+    (`findConflictByTerm` hint + Reject/RejectHint/LogTerm resp).
+    `send` routes MsgAppResp (typ 4) to **`msgsAfterAppend`** (the
+    async-storage group), NOT `msgs`.
+  - DYNAMIC (SUCCESS branch, EMPTY entries, matching prev: the Hh
+    fixture + LogTerm→cell 55 = 1, Index→cell 56 = 1; drained call at
+    the born-re-sited heap): completes in **2,828 steps consuming
+    EXACTLY ONE choice** (step index 2798 — the `msgsAfterAppend`
+    appendSlice SPILL on the nil outbox, operand shape IDENTICAL to
+    Hh's: temp target cell, nil old handle, one-element elems slice;
+    width 32); post-window **29 steps**; na 57→229. Projections:
+    msgsAfterAppend = [⟨4, 2(=m.From), 1(=r.id), 0, 0, 1(=mlastIndex),
+    0, …, reject false, [], []⟩], msgs = [], committed = 1 (m.Commit
+    = committed — no advance).
+  - **THE MIRROR RUNS 2,798 STEPS CLEAN TO THE SPILL QUIT with the
+    slice-1 arms — ZERO new machinery for this family's equation**:
+    the whole maybeAppend chain (logSliceFromMsgApp construction,
+    term-matching through the Storage dispatch + mutex + callStats,
+    commitTo) is in-window on landed classes. The equation is Hh's
+    exact shape (pre-window + the SAME spill transport + post-window)
+    at a different fixture — assembly, est. ≤ half a session.
+  - Remaining fixture families recorded (none attempted): the STALE
+    branch (cheapest), NON-EMPTY entries (the real log append — a
+    SECOND spill family into the raftLog entries + GAP-V1-1b's
+    unstable overlay actually exercised), the REJECT branch
+    (findConflictByTerm loop — choice-free but window-heavy), and
+    commit-ADVANCE (shared with Hh's second family).
+
+### PROMOTION LEDGER updates (A4-U10)
+
+- **The append-spill transport** (`Sym/SpillTransport.lean`) —
+  LANDED as general kit surface (3 Kit pins, [propext, Quot.sound]);
+  consumers: handleHeartbeat (landed), handleAppendEntries (census:
+  identical shape), becomeLeader (U4's measured 2-spill path). A
+  MULTI-ELEMENT append variant is future work on its first consumer.
+- **The literal-generation printer** — FIFTH consumer (`HhGen`), and
+  the printer grew the ATOM arms (`Value.atom`/`HeapCell.atom` with
+  `Nat` ascriptions). Row unchanged (probe-side per scratch
+  conventions; the U8 priority-lowering stands).
+- TableExt same-lever residual arms consumed on demand this unit:
+  `Stmt.initialization`-at-defined + `allocDeclsT` (the U3 process —
+  window quits guide, conc lemmas ship in the same edit, downstream
+  kernel_rfl re-checks are the guard).
+
+## A4-U10 exit (2026-08-24, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since the dispatch tip
+55be64c6: 3 (a9f7a4a2 slice 1, c8bd4053 slice 2, + this log/exit
+commit); no coordinator commits interleaved (checked at recount:
+`git log 55be64c6..HEAD --oneline` = the above). Full proofs+Audit
+green: **500 jobs** (497 at entry + SpillTransport + HhLit +
+HhEquation). Hatch grep over SpillTransport/HhLit/HhEquation:
+0/0/0. Kit pins: +3 (the spill-transport trio, build-enforced).
+
+**Deliverable state vs the U10 charter:**
+1. THE APPEND-SPILL TRANSPORT — **DELIVERED** (slice 1: probe-first
+   shape extraction from both witnesses; `stepFn_appendSpill_transport`
+   + `applyStmtOp_append1_spill_at` + in-module §3.3 witness, general
+   Go-language machinery over the landed SliceMem Group-4 walk,
+   lineage-lined, Kit-pinned [propext, Quot.sound]; zero edits to
+   shipped Sym STATEMENTS — the two TableExt def-growth arms follow
+   the U3 consume-on-demand precedent with conc cases and green
+   downstream re-checks).
+2. THE handleHeartbeat EQUATION — **DELIVERED** (slice 2:
+   `handleHeartbeat_handler_eq_alloc` PRIMARY, symbolic-from-birth at
+   a born-re-sited fixture, the ONE consumed choice quantified (∀
+   streams `c₁ :: ch`) and absorbed by valuation atoms, conclusions
+   through absState v2 + the lens readers, identity corollary +
+   witness; the no-op commitTo branch as chartered — the
+   commit-advance family recorded as the follow-on, PLUS the new
+   probe-found follow-on: message-field symbolism needs one branch
+   crossing with the subject's own `m.From ≠ r.id` precondition).
+3. THE MEASURE — **DELIVERED** (the lens-payoff section above:
+   41 s measured vs ~49 min projected on the MsEquation per-conjunct
+   baseline, ≈70×, O(window+k) vs O(k·window), with honest
+   attribution: literalization+lens jointly; L2 NOT needed on this
+   handler — finding recorded).
+4. handleAppendEntries — **CENSUS DELIVERED** (probe-only as
+   chartered: 2,828 steps / ONE choice / the SAME spill shape /
+   mirror clean to the quit with zero new machinery; equation =
+   assembly at a new fixture).
+
+**Open gaps carried (none counted):** all U9 gaps unchanged
+(GAP-V1-2/-4/-5, GAP-U1-W1, GAP-V2-1 wave-3 condition, GAP-V2-2,
+Ms error branches, MemoryStorage.Entries spec design); U10 adds:
+the handleHeartbeat commit-ADVANCE fixture family; the
+message-field-symbolism branch crossing (`m.From ≠ r.id` side
+condition); the multi-element spill-transport variant; the four
+handleAppendEntries fixture families above; becomeLeader (now
+unblocked — the spill transport was its last named machinery item).
+
+**A4-U11 CHARTER (proposed):** (1) THE handleAppendEntries EQUATION,
+success/empty-entries family — assembly on the landed transport at
+the census fixture (born re-sited, `_alloc` primary, absState-v2
+conclusions incl. the `msgsAfterAppend` outbox; ≤ half a session
+projected); then (2) the STALE-branch family (cheapest second
+family, exercises the branch-crossing pattern at concrete values);
+then (3) EITHER becomeLeader (6 choices: the reset spine + 2 spills
+— all transports now landed) OR the non-empty-entries append family
+(the log-write path, exercises GAP-V1-1b's unstable overlay) —
+coordinator's pick; the anti-grinding doctrine's stop-and-decompose
+applies to any window that balloons.
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1); the comparator-landmark STALE flag
+stands escalated from U8/U9.
