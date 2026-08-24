@@ -707,6 +707,24 @@ address-concrete fixtures) + the seam design restated in
 forward-simulation vocabulary with lineage lines; (3) then the
 message-handler waves on the symbolic pattern.
 
+**[USER] addendum (2026-08-24), the Iris sharpening of
+clever-tricks:** much of the needed machinery is embodied in
+iris-lean or built by other Iris projects (the ported lit review +
+papers). Therefore: (1) USE that machinery where it exists; (2) build
+Iris-COMPATIBLE machinery where it's missing; (3) reuse ideas freely
+where they solve our problem; (4) NOTICE where our custom solutions
+converge on Iris ideas and map them into reusable proof infra.
+Innovation stays permitted — the rule is against duplication where
+reuse exists. **[AGENT] adoption:** (a) the A4-U5 frame-refactor
+directive extended: prefer iris-lean's own frame/ghost forms over
+kit-local reinventions, log convergences; (b) an IRIS REUSE SURVEY
+dispatched (Opus, read-only): map the campaign's custom machinery
+(TableExt transport, FastEval γ-simulation, the seam's layer C,
+checker-implication shapes) against iris-lean + the ported lit review
+— naming duplications, Iris-compatible re-basings, and honest
+no-Iris-analog items; feeds the standing iris-lean refresh backlog
+(pin update pre-approved [USER] 2026-08-20, match-not-latest).
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
