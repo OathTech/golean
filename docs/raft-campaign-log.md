@@ -743,6 +743,25 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   dispatched: re-base the remaining four equations + the
   frameSim_relocate promotion.
 
+- **The Iris reuse survey — LANDED** @ d97d9f40
+  (docs/2026-08-24_campaign-iris-reuse-map.md): the strategic
+  finding — the campaign's zero-Iris proof wing is DELIBERATE AND
+  CORRECT for a sequential seam (Iris's leverage is
+  concurrency-mediated resource sharing; the bridge back is proved,
+  so rebasing is a cost question never feasibility). Verdicts:
+  Sym/TableExt NO-ANALOG-import (perennial's two attempts are dead
+  code missing exactly our soundness theorem); FastEval no-analog
+  for the role; layer C REBASE-COMPATIBLE post-T1 (the
+  dsp_ghost_theory pattern, flips high-priority under real
+  concurrency); handler equations = the wp-implies-spec-step idiom
+  with our exact-step form STRONGER (R14: TotalWeakestPre); frame
+  layer correctly UPSTREAM of Iris. Highest-value actionable:
+  **Perennial's Access-lens field pattern for the layout-shape gap**
+  — routed to the wave-2 charter (U6 worker briefed). XS items done
+  by coordinator: seam design §4c forward-simulation restatement +
+  lineage lines + the Frame-name disambiguation note. Honest limits
+  recorded (shallow perennial clone; no local RefinedC/Diaframe).
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
