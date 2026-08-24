@@ -655,6 +655,43 @@ post-pause main landing under the standing [USER] conditional
 authorization). Push: prepared, offered, not executed (sign-off at
 the moment per protocol).
 
+## [USER] guidance (2026-08-24 mid-campaign checkin): clever tricks, not stupid tricks
+
+Mike's principle, recorded verbatim-in-substance: agents drift toward
+'stupid tricks' — grinding on representation-level properties we
+cannot control, or specialized tactics against ACCIDENTAL features of
+a proof. What this proof needs is 'clever tricks': the PL community's
+classics — separation logic / Iris, symbolic execution, process
+calculi, refinement / simulation, plus the optimizing tricks around
+them (clever IRs, certificate replay). New tricks are permitted (and
+may be genuinely new), but any trick that does NOT map to a classic
+concept is SUSPICIOUS and takes extra scrutiny. When a scalability or
+proof problem appears: reach for the classics FIRST; wilderness only
+when they fail.
+
+**[AGENT] adoption + classification audit (same date):**
+- Convention adopted: every new proof mechanism's design note carries
+  a LINEAGE line naming its classic ancestor; unmappable ⇒ flagged
+  for scrutiny before shipping. Operating rule: classics first,
+  measurement as the referee BETWEEN classics, wilderness only with a
+  named reason and a lineage note.
+- Audit of standing machinery: Arc 3 = Verdi ghost-refinement
+  (classic); the Arc-4 seam = refinement mapping + translation
+  validation (classics; the design note to be restated explicitly in
+  forward-simulation vocabulary); Sym extension = symbolic execution
+  via conservative extension (classic); Arc-2 evaluator + segments =
+  data refinement + certificate replay (classics); kernel_rfl =
+  computational reflection, no trust change (classic, scrutinized,
+  passes); exec-slow = the de Bruijn criterion (classic).
+- WATCH-LIST (the honest 'stupid trick' risk): (1) representation-
+  level accommodations (maxRecDepth, smartUnfolding, decide +kernel,
+  generated literals) — tolerated scaffolds, one already retired by
+  kernel_rfl; must not accrete; (2) **the address-concrete handler
+  fixtures — the top classic-ward refactor candidate**: make the
+  handler equations allocation-symbolic via the kit's own
+  separation-logic framing BEFORE the message-handler waves scale on
+  the concrete-address pattern.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
