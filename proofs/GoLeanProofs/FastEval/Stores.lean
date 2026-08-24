@@ -124,7 +124,21 @@ def applyStmtOpCoreF (σF : ExecStateF) (op : StmtOp) (_nt : Nat)
       match vs with
       | [baseV, keyV, valueV] => mapAssignValueF σF keyTy valueTy baseV keyV valueV
       | _ => stuck "malformed mapAssign operands"
-  | .mapDelete _ => stuck "fastEval-stub: applyStmtOpCore.mapDelete"
+  | .mapDelete keyTy =>
+      match vs with
+      | [baseV, keyV] => do
+          let map ← valueAsMap baseV
+          let key ← normalizeValueForTy (ctxF σF) keyTy keyV
+          match ← mapEntriesF σF map with
+          | none => do
+              checkKeyHashable (ctxF σF) key (isInsert := false) (nonEmpty := false)
+              return (σF)
+          | some (baseLoc, entries) =>
+              match ← mapEntryIndex? (ctxF σF) keyTy entries key with
+              | some i =>
+                  return ((← storeLocF σF baseLoc (.mapData (entries.eraseIdx! i))))
+              | none => return (σF)
+      | _ => stuck "malformed mapDelete operands"
   | .clearMap => stuck "fastEval-stub: applyStmtOpCore.clearMap"
   | .clearSlice _ => stuck "fastEval-stub: applyStmtOpCore.clearSlice"
   | .sortSlice _ =>
@@ -207,15 +221,13 @@ def applyStmtOpF (σF : ExecStateF) (choices : Choices) (op : StmtOp) (nt : Nat)
       | _ => stuck "malformed appendSlice operands"
   | op => do return ((← applyStmtOpCoreF σF op nt vs), choices)
 
-/-- `contAfterStmtOp`, fast: the exercised statement ops all take the
-catch-all identity arm; the `mapDelete`/`clearMap` prune paths are
-unexercised (their ops are stubbed above) and stub here too. -/
-def contAfterStmtOpF (_σF : ExecStateF) (op : StmtOp) (_vs : List GoValue)
+/-- `contAfterStmtOp`, fast: FULL delegation at the O(1) context image
+(P2R-2, closes the mapDelete/clearMap cont stubs) — the original reads
+only `types` (key comparison; the prune walks are heap-free), so it
+runs verbatim at `ctxF σF`. -/
+def contAfterStmtOpF (σF : ExecStateF) (op : StmtOp) (vs : List GoValue)
     (k : Cont) : Except GoError Cont :=
-  match op with
-  | .mapDelete _ => stuck "fastEval-stub: contAfterStmtOp.mapDelete"
-  | .clearMap => stuck "fastEval-stub: contAfterStmtOp.clearMap"
-  | _ => return k
+  contAfterStmtOp (ctxF σF) op vs k
 
 /-! ## Sims -/
 
@@ -355,8 +367,8 @@ theorem contAfterStmtOpF_ok {σF : ExecStateF} {op : StmtOp} {vs : List GoValue}
     {k k' : Cont} (h : contAfterStmtOpF σF op vs k = .ok k') :
     contAfterStmtOp (γF σF) op vs k = .ok k' := by
   unfold contAfterStmtOpF at h
-  cases op <;>
-    simp_all [contAfterStmtOp, pure, Except.pure, stuck]
+  rw [contAfterStmtOp_ctx] at h
+  exact h
 
 /-- The alloc pair, bridged (private plumbing for the arm proofs). -/
 private theorem alloc_pair_eq {σF : ExecStateF} {v : GoValue} {ty : Option Ty}
@@ -815,13 +827,75 @@ private theorem core_copySlice_ok {σF : ExecStateF} {nt : Nat}
                               rw [storeLocF_ok h]
                               rfl
 
+private theorem core_mapDelete_ok {σF : ExecStateF} {keyTy : Ty} {nt : Nat}
+    {baseV keyV : GoValue} {σF' : ExecStateF}
+    (h : applyStmtOpCoreF σF (.mapDelete keyTy) nt [baseV, keyV] = .ok σF') :
+    applyStmtOpCore (γF σF) (.mapDelete keyTy) nt [baseV, keyV] = .ok (γF σF') := by
+  simp only [applyStmtOpCoreF, normalizeValueForTy_ctx, checkKeyHashable_ctx,
+    mapEntryIndex?_ctx, Bind.bind, Except.bind] at h
+  simp only [applyStmtOpCore, Bind.bind, Except.bind]
+  cases hm : valueAsMap baseV with
+  | error e => rw [hm] at h; simp at h
+  | ok map =>
+      rw [hm] at h
+      simp only [Bind.bind, Except.bind] at h ⊢
+      cases hk : normalizeValueForTy (γF σF) keyTy keyV with
+      | error e => rw [hk] at h; simp at h
+      | ok key =>
+          rw [hk] at h
+          simp only [Bind.bind, Except.bind] at h ⊢
+          cases he : mapEntriesF σF map with
+          | error e => rw [he] at h; simp at h
+          | ok ents =>
+              rw [he] at h
+              rw [mapEntriesF_ok he]
+              simp only [Bind.bind, Except.bind] at h ⊢
+              cases ents with
+              | none =>
+                  simp only [] at h ⊢
+                  cases hh : checkKeyHashable (γF σF) key false false with
+                  | error e => rw [hh] at h; simp at h
+                  | ok u =>
+                      rw [hh] at h
+                      simp only [Bind.bind, Except.bind, pure, Except.pure,
+                        Except.ok.injEq] at h ⊢
+                      rw [← h]
+              | some p =>
+                  obtain ⟨baseLoc, entries⟩ := p
+                  simp only [] at h ⊢
+                  cases hidx : mapEntryIndex? (γF σF) keyTy entries key with
+                  | error e => rw [hidx] at h; simp at h
+                  | ok io =>
+                      rw [hidx] at h
+                      simp only [Bind.bind, Except.bind] at h ⊢
+                      cases io with
+                      | none =>
+                          simp only [pure, Except.pure, Except.ok.injEq] at h ⊢
+                          rw [← h]
+                      | some i =>
+                          simp only [] at h ⊢
+                          cases hs : storeLocF σF baseLoc
+                              (.mapData (entries.eraseIdx! i)) with
+                          | error e => rw [hs] at h; simp at h
+                          | ok σF₁ =>
+                              rw [hs] at h
+                              rw [storeLocF_ok hs]
+                              simp only [pure, Except.pure,
+                                Except.ok.injEq] at h ⊢
+                              rw [← h]
+
 theorem applyStmtOpCoreF_ok {σF : ExecStateF} {op : StmtOp} {nt : Nat}
     {vs : List GoValue} {σF' : ExecStateF}
     (h : applyStmtOpCoreF σF op nt vs = .ok σF') :
     applyStmtOpCore (γF σF) op nt vs = .ok (γF σF') := by
   cases op with
   | makeChan _ => simp [applyStmtOpCoreF, stuck, bind_error_eq, throw, throwThe, MonadExceptOf.throw] at h
-  | mapDelete _ => simp [applyStmtOpCoreF, stuck, bind_error_eq, throw, throwThe, MonadExceptOf.throw] at h
+  | mapDelete keyTy =>
+      rcases vs with _ | ⟨b1, _ | ⟨b2, _ | ⟨b3, rest⟩⟩⟩
+      · simp [applyStmtOpCoreF, stuck, bind_error_eq, throw, throwThe, MonadExceptOf.throw] at h
+      · simp [applyStmtOpCoreF, stuck, bind_error_eq, throw, throwThe, MonadExceptOf.throw] at h
+      · exact core_mapDelete_ok h
+      · simp [applyStmtOpCoreF, stuck, bind_error_eq, throw, throwThe, MonadExceptOf.throw] at h
   | clearMap => simp [applyStmtOpCoreF, stuck, bind_error_eq, throw, throwThe, MonadExceptOf.throw] at h
   | clearSlice _ => simp [applyStmtOpCoreF, stuck, bind_error_eq, throw, throwThe, MonadExceptOf.throw] at h
   | appendSlice _ => simp [applyStmtOpCoreF] at h

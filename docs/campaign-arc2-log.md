@@ -812,3 +812,72 @@ trace corpus through `--engine fast` — the full machine-tier
 differential sweep p2 was a single point of is now an ~hour-scale
 job; stub hits (if any) are enumerable arms under the same
 fail-closed loop.
+
+## Unit P2R-2: the full-corpus fast machine-tier sweep (2026-08-24)
+
+[USER via coordinator]: proceed per the proposed charter — sweep
+`deps/raft/testdata` through `--engine fast`, triage
+AGREE/stub-hit/divergence, close cheap arms, divergences first.
+
+**Inventory.** deps/raft @ 56e3200: 28 traces, 558 datadriven blocks;
+supported prefix 354 (63.4%; stops are the DESIGNED unsupported
+commands — tick-election/compact/send-snapshot/async-storage/
+transfer-leadership/forget-leader/report-unreachable/read-only —
+tracereplay's documented vocabulary, not machine gaps). One trace
+(async_storage_writes) has prefix 0 → go-side only by design.
+
+**Sweep 1** (`tracereplay.py --engine fast --fuel 2e8 --keep --record
+artifacts/tracereplay/records-p2r2.jsonl`): **wall 149.3 s, peak
+217 MB** for the whole corpus. Result: 19/27 machine AGREE, **zero
+divergences**, and ALL 8 failures the SAME fail-closed stub —
+`applyStmtOpCore.mapDelete` (every confchange trace + the learner
+trace: removing a peer deletes from the Progress/votes maps). OK-tier
+206/206, rendered-tier 148/148 (go-vs-upstream channels — all green).
+
+**Arm closure (the one gap), U-discipline.**
+- `applyStmtOpCoreF` mapDelete arm mirrored verbatim (mapEntriesF +
+  storeLocF + ctx helpers) + private `core_mapDelete_ok`; the
+  `cases op` dispatch (named arm, no positional fragility here).
+- `contAfterStmtOpF` re-defined as FULL DELEGATION:
+  `contAfterStmtOp (ctxF σF)` — the original is types-only (key
+  comparison; prune walks are heap-free), so the slow implementation
+  runs verbatim at the O(1) context image. Sim collapses to one
+  `contAfterStmtOp_ctx` rewrite. This closes BOTH cont stubs
+  (mapDelete + clearMap) and deletes the stub class from that def.
+- Congr additions: `removeKeyList_congr`, `pruneIterFramesKey_congr`
+  (plain Cont induction + simp_all), `contAfterStmtOp_congr`;
+  `contAfterStmtOp_ctx` in the Ops block. Zero sorry; full proofs
+  build green (484 jobs) + fastreplay rebuilt.
+
+**Sweep 2 (definitive, fresh record
+`artifacts/tracereplay/records-p2r2-final.jsonl`): MACHINE 27/27
+AGREE byte-for-byte; OK-tier 206/206; rendered 148/148; wall 237.2 s,
+peak 216 MB.** Total fast steps across the corpus: **37,703,350**
+(per-trace table derivable from the record file's machine-raw stages;
+largest probe_and_replicate 11,995,825). The machine tier that p2
+could not finish ONE trace of in >20 h now covers the ENTIRE corpus
+in under 4 minutes.
+
+**Triage summary: divergences 0; stub-hits 1 arm (closed); AGREE
+27/27.** No BUG entry, no corpus case owed — the sweep's value is the
+COVERAGE claim: every supported-prefix block of every upstream trace
+replays byte-identically through the verified fast engine, with the
+verdict transferable to `runProgramM` by the pinned theorem.
+
+- **[AGENT]** 2026-08-24 (P2R-2): resume NOT used for the 8 retries
+  (a resumed record would have replayed the recorded FAILURE finals);
+  fresh record files per phase, engine now part of the resume key.
+- **[AGENT]** 2026-08-24 (P2R-2): residual performance observation,
+  recorded not investigated (anti-grinding; no ceiling threatened):
+  per-trace fast-step rate varies ~30× (replicate_pause 1.9M steps in
+  0.8 s vs confchange_v2_add_double_auto 2.7M in 27 s) — plausibly
+  value-copy-dominated arms (large struct/array copies per store) or
+  box contention with the concurrent arc-4 worker; a follow-on
+  measurement unit could profile per-arm if corpus growth makes it
+  matter. WHAT THIS TAUGHT US: the trie fixed the heap-op asymptote;
+  the next constant lives in VALUE representation, not the heap.
+- **[AGENT]** 2026-08-24 (P2R-2): the unsupported-command prefix
+  boundary (63.4%) is the harness's DESIGNED vocabulary, not fast-
+  engine gaps — widening it (tick-election jitter, compact,
+  async-storage) is membership-lane / replayenv work, out of this
+  unit's scope; noted for the coordinator's frontier ledger.
