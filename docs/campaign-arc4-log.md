@@ -1515,3 +1515,12 @@ DESIGNATED-if-unread census item.
 
 Nothing merged; branch-complete. Merge/audit-ask remain the
 operator's (constitution §4.1).
+
+- 2026-08-24 A4-U7 gate follow-up (as promised in the exit entry):
+  `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci` at the exit
+  tree — **RESULT: PASS, exit 0** (23 ok steps,
+  `artifacts/ci-arc4-u7.log`, gitignored; the two no-diff notes are
+  the sanctioned docs-only hatch — this unit changed no proof code).
+  Gate staggered behind the `free -g` guard (78G free ≥ 24G cap; the
+  solo retry pass respected). The comparator-landmark staleness note
+  stays flagged for the operator's merge step.
