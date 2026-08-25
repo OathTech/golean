@@ -1313,6 +1313,30 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   the design slice per the route policy, sC×MsgHeartbeat as a
   walked chain, the drop-arm equation, stepLeader census.
 
+- **Arc 4, A4-U16 — LANDED** @ 5f731c17, gate PASS, 524 jobs, both
+  new equations first-check green: the seam-note §4c design slice +
+  the FrameSim probe (honest borderline-over verdict → STAY LITERAL;
+  the C1-insufficiency finding — needs a second, insertion-point
+  clause — reported against the worker's OWN earlier sketch) + the
+  DROP-ARM equation (choice-free; the extension's first proved
+  consumer) + **THE DEPTH-2 EQUATION sC×MsgHeartbeat — the round
+  lemma's dress rehearsal: PURE ASSEMBLY, ~linear cost** + the
+  stepLeader census (Beat completes 3,362/4 zero statics; Prop =
+  the subject's own empty-Entries panic, non-empty fixture needed;
+  leader-side fixture pack = named ledger row). WHAT THIS TAUGHT
+  US: (1) the depth-2 verdict de-risks A2's outer ring — the round
+  lemma is one more ring of a measured shape; (2) the R-FORM FLAG:
+  the literal route's honest premise is fixture-family membership
+  with absState as readout — folded into the layer-C note §2 as the
+  binding C1 form (simulation over an inductive invariant, still
+  the classic); (3) the go/no-go pattern produced an honest
+  self-refutation (the probe found the worker's own route sketch
+  insufficient). Ledger: 4 arm equations over 15 handler families.
+  [AGENT]: U17 to a FRESH 10th-gen worker (U16's at ~560k):
+  sL×Beat equation (closes the heartbeat arm triple across all
+  three roles → C1 opens), the leader-side fixture pack, budget:
+  Step() top-level census. Landmark staleness 139 — stands.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.

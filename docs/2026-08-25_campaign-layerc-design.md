@@ -33,12 +33,23 @@ Target form, in the simulation vocabulary (§4c):
 > checker predicate's delta at (N, π).
 
 Composed per the U14 map: a round = driver glue + one dispatch arm =
-glue + (dispatch glue + landed handler equation(s)). U15 is proving
-the two inner composition depths NOW (sF×Hh, then sC×bF+Hh); layer C
-adds exactly one more ring (driver glue + checker span). The checker's
-own span is subject code — it gets equations in the same pattern
-(further-consumers: the checker is one more customer of the
-machinery, not a special case).
+glue + (dispatch glue + landed handler equation(s)). DEPTH-2 VERDICT
+IN (U16's sC×MsgHeartbeat dress rehearsal): pure assembly, ~linear
+cost, census-exact — layer C adds exactly one more ring of the same
+shape. The checker's own span is subject code — it gets equations in
+the same pattern (further-consumers: the checker is one more customer
+of the machinery, not a special case).
+
+**R-FORM REFINEMENT (U16 flag, folded in — binding for C1):** under
+the literal route the round lemma's honest premise is
+**fixture-family membership with absState as readout**:
+`R σ N := σ ∈ Fam ∧ absRead σ = N`, where `Fam` is the twin-shaped
+state family and each round lemma's conclusion carries `σ' ∈ Fam`
+(closure). This is simulation over an inductive invariant — still
+the classic refinement-mapping shape, with membership seeded by the
+start link-pin and preserved by every round kind. C1's statement
+work is exactly: pin `Fam`'s definition (the fixture-pack vocabulary
+already shipping in every equation) and prove the seed.
 
 ## 3. The induction and the invariant carry
 
@@ -82,9 +93,11 @@ mapping — the classic; no new mechanism).
   repair — **completeness-strengthened FrameSim** (footprint/
   locality completeness; Yang–O'Hearn lineage; U15's route (a)) —
   is commissioned as a probe-first design slice with a measured
-  go/no-go: if strengthening costs > ~2 units across the Frame/
-  FastEval surface, stay literal until the MsgApp-arm cost trigger
-  (U15's ledger row) fires. Handler equations stay load-bearing
+  go/no-go: PROBE ANSWERED (U16): completeness alone is
+  insufficient — the payoff needs a C1 completeness clause PLUS a C2
+  insertion-point shape clause; ≈2 units nominal, 3 at risk =
+  borderline-over → **STAY LITERAL**, commission C1+C2 together only
+  if/when the MsgApp-arm cost trigger (U15's ledger row) fires. Handler equations stay load-bearing
   either way: they are the semantic content, the composition map's
   vocabulary, and the validation set for the literal chains.
 - **A2**: the driver's per-round span outside dispatch (loop head,
