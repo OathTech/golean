@@ -1593,6 +1593,32 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   model bugs make us slow and interim-hollow, never wrong — the
   witness attacks both.
 
+- **C4 (arc4b lane) — LANDED @ 76e63bba; THE LANE'S PROGRAM IS
+  COMPLETE** (SC1 → C3 → C4, ~3 sessions vs ~5-7 units sized;
+  2026-08-27): the S2/S3 ghost-history chain (HStep with SC1's
+  commit-axis obligations as VERBATIM constructor premises —
+  grep-checkable scoping), H1-H4 with H4 in its strongest T1 form,
+  **s2_of_histInv / s3_of_histInv / s23_leaf**, the final-net
+  checker interface with its justification lemma, six-step
+  same-slice witness end-to-end. Gate: exactly the one known
+  structural red (eight un-swept lane modules); compensating checks
+  verbatim-clean; Classical.choice bisect-traced to stdlib list
+  lemmas and accepted with derivation ([AGENT] — purging would be
+  representation grinding). WHAT THIS TAUGHT US: (1) two
+  statement-side findings pre-empted by SC1's census discipline
+  (SNet cannot carry apply data → HNet; the two-net comparability
+  form is falsifiable — along-one-trace is what is true); (2) the
+  worker's own caution logged: do NOT discount the family-SMS 4-8u
+  estimate by this velocity (T1-scoped structure admits
+  equation-strength invariants; the family case does not). LANDING
+  MANIFEST recorded (eight import lines + optional cleanups +
+  judge-at-merge). [AGENT]: the landing belongs to the arc-4 lane
+  at C2b's boundary (the aggregator is arc-4-owned; one-writer);
+  queued for that boundary; the arc4b worktree retires after the
+  merge. SPEC SIDE OF T1: DONE pending the seam — remaining T1 work
+  is interpreter-side only (C2b in flight; reachable round arms;
+  the two checker-interface I2 proofs; the seed pin; assembly).
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
