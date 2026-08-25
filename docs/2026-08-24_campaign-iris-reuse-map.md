@@ -780,3 +780,38 @@ survey agents whose top-line file:line claims (`Transitions.v:282`,
 `Makefile:4`, and the "`interpret` has no consumers" negative) I
 re-verified myself by direct read. No file outside this one was
 modified; no build was run.
+
+
+## Addendum (2026-08-27, [USER] challenge + resolution): why Iris does
+not apply at the T1 seam — the atomicity-degeneracy argument
+
+[USER] pressed: the seam is a refinement proof; isn't that Iris's home
+ground (logical atomicity)? And the TCB point is irrelevant — prove in
+Iris, map down via adequacy. Resolution, recorded:
+- **TCB: conceded.** Adequacy + first-order readout corollaries make
+  the statement-TCB doctrine a non-blocker; it constrains placement,
+  not use.
+- **The operative reason: atomicity is DEGENERATE at T1.** Logical
+  atomicity / linearization-point machinery exists to place the
+  abstract commit inside an execution OTHER threads can observe
+  mid-operation; prophecy/step-indexing handle future-dependent or
+  circular placement. The T1 twin is closed and sequential: rounds
+  run to completion deterministically modulo the explicit quantified
+  choice stream; no observer of mid-round states exists; the commit
+  point is trivially the round boundary. What remains is a plain
+  forward simulation of a sequential transition system — direct
+  induction proves it; the Iris route re-derives the same
+  first-order statement through ghost coupling + mask bookkeeping +
+  adequacy. Two-axis test: fails (cost up, zero additional
+  consumers), independent of NIH.
+- **Practical asymmetry:** the Iris refinement superstructure
+  (Trillium/ReLoC/Perennial simulation-transfer) is Rocq-side;
+  iris-lean provides base logic + ProofMode. Porting it is triggered
+  by the problem that needs it, per the middle path.
+- **The flip condition (standing, explicit):** real concurrency
+  (channel-logic resume, goroutine interleaving, the full node
+  pipeline) makes mid-operation states observable → linearization
+  points become real → Iris becomes the right frame. absState's
+  coupling stays rebase-compatible with excl-auth (§3); tripwires:
+  the sequential kit sprouting invariant-opening patterns; the
+  exact-step equations needing TotalWeakestPre on any carry.
