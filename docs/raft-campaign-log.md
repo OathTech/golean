@@ -1577,6 +1577,22 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   ghost-history leaf (SC1's 1.5-2 units, likely low end), witness-
   in-same-slice discipline explicit. C2b still in flight.
 
+- **[USER] 2026-08-27 — trust-story clarification (the ghost-vote
+  bug):** confirmed on discussion: the bug class CANNOT produce a
+  false T1 — the statement never mentions the model, and the
+  simulation direction (concrete ⇒ abstract) turns model
+  under-approximation into UNPROVABILITY at the round lemma, never
+  a wrong theorem. The witness discipline therefore protects two
+  things, not soundness: (1) SCHEDULE — same-slice pointed failure
+  vs a stuck goal deep in layer-C assembly weeks later plus
+  invalidated intermediate work; (2) INTERIM CLAIM HONESTY —
+  spec-side theorems (e.g. etcd_one_leader_per_term) are about the
+  MODEL until the seam closes; an unsimulable model leaves them
+  kernel-true but about nothing real, so the witness is what keeps
+  pre-seam results meaningful. Doctrine line: in this architecture
+  model bugs make us slow and interim-hollow, never wrong — the
+  witness attacks both.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
