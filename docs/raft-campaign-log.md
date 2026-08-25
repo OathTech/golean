@@ -1168,6 +1168,29 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   (lattice on main + stable absState interface, file-disjoint from
   handler equations). Original prediction retained beside this one.
 
+- **[USER] 2026-08-25 — the hard tail as FURTHER CONSUMERS:** the
+  difficult customers ahead (the hard handlers, layer C) are treated
+  as further consumers of the machinery — classics first, innovate
+  only if need be; "we aren't anywhere near where we run out of road
+  doing clever tricks to scale more." [AGENT] operational reading,
+  into every brief from U11 on:
+  - When a hard customer resists, the FIRST move is a machinery
+    extension in the established general patterns (a new TableExt
+    arm, a transport, a lens law — Go-general, lineage-lined,
+    witnessed), NEVER a handler-specific workaround. The U3
+    consume-on-demand process is the template.
+  - Layer C consumes the classics by construction: simulation
+    induction over the landed equations; checker-implication as
+    property transfer through the refinement mapping. Any genuinely
+    new mechanism there gets its lineage line and extra scrutiny.
+  - The named risk window: T1-assembly milestone pressure is when
+    bespoke hacks look cheapest — that is the over-specialization
+    audit dimension's home ground; the closing audits weight it
+    accordingly.
+  - Scaling pressure ⇒ the next classic (IR, certificate replay,
+    reflection), never grind and never wilderness without a named
+    reason.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
