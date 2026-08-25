@@ -1619,6 +1619,35 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   is interpreter-side only (C2b in flight; reachable round arms;
   the two checker-interface I2 proofs; the seed pin; assembly).
 
+- **Arc 4, A4-U20 = C2b — LANDED** @ f94c225a, gate PASS, 541 jobs:
+  the SliceWalk loop-invariant schema (Floyd/Hoare lineage) +
+  DriverNet instances symbolic in net length/payload/placement +
+  witnesses + 9 pins, with kernel shape pins tying the proved
+  statements verbatim to the pinned lowering. **THE COMPOSITIONAL
+  MODE'S FIRST NUMBERS: ≥200× on the span class** (≈22 s elaborated
+  once vs ≈70-85 min mirror kernel per replay, re-paid each
+  re-derivation) — and the deeper win is KIND, not degree: the
+  spans are symbolic where literal chains were an unbounded family
+  under the ∀-stream; composed per-iteration bounds and witness
+  runs land on census predictions EXACTLY. Mode price honestly
+  stated: ~one unit for schema + 2 instances; marginal instance
+  ≈ body facts only. Deliverable 2 redirected honestly: the
+  heartbeat fixture never reaches the storage arms — the MsgApp
+  round fixture is the shared C2c/C2d prerequisite. WHAT THIS
+  TAUGHT US: (1) the mode shift is vindicated by measurement on its
+  first real span class; (2) **the masked-kill convention** —
+  piping compiler output through grep|head swallows cgroup
+  SIGTERMs (several mid-unit "greens" were 48G kills); judge by
+  captured exit codes, never absence of grepped errors — briefed
+  verbatim into all future units; (3) `decide` on a TRUE Bool over
+  the pinned program is still a 50 GB runaway — kernel_rfl remains
+  the rule. LANDMARK NOW DUAL-TRIGGER (stale 151 + owed-on-scope:
+  the Audit.lean import) — judge owed at the arc-4 merge, standing.
+  [AGENT]: C2c to a fresh 13th-gen worker, opening with THE ARC4B
+  LANDING (the boundary is now): merge 76e63bba + the eight import
+  lines + gate expected fully green, then the MsgApp fixture,
+  sub-ring census, and the payload-parametric storage statements.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
