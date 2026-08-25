@@ -398,19 +398,20 @@ def run_one(name, blocks, prefix, args, report, rec=None, resumed=None):
             else:
                 # Engine choice (P2R, campaign arc-2): "fast" runs the
                 # VERIFIED fast evaluator (proofs exe `fastreplay`:
-                # compiled `stepFast` + the pinned transfer theorem
-                # `GoLean.FastEval.fastRun_transfer_eqb`, which carries
-                # its ok-verdict to the SEQUENTIAL whole-program entry
-                # `runProgramM`) with progress emission and a durable
-                # per-chunk record. ENTRY-POINT NOTE (audit fix round,
-                # 2026-08-25): the "slow" engine below computes the
-                # THREAD-POOL entry `runProgramPoolIntsM` — a DIFFERENT
-                # function, with no bridge lemma; stepFast refuses all
-                # spawn/chan/select constructs fail-closed, so accepted
-                # fast runs are spawn-free (argument, not theorem —
-                # recorded in the campaign arc-2 log, bridge lemma
-                # queued there). Measured ~27 s on probe_and_replicate
-                # vs the slow engine's >20 h DNF.
+                # compiled `stepFast` + the pinned transfer theorems)
+                # with progress emission and a durable per-chunk
+                # record. ENTRY-POINT NOTE (audit fix round 2,
+                # 2026-08-25): an ok verdict certifies BOTH
+                # whole-program entries — `runProgramM` (sequential,
+                # via `GoLean.FastEval.fastRun_transfer_eqb`) AND
+                # `runProgramPoolIntsM`'s underlying `runProgramPoolM`
+                # (the thread-pool entry the "slow" engine below
+                # computes, via `fastRun_transfer_pool_eqb`); their
+                # agreement on accepted runs is itself the pinned
+                # theorem `runProgram_pool_seq_bridge` (singleton-pool
+                # conservation, `execProgLoop_single`). Measured
+                # 44.3 s on probe_and_replicate with the direct
+                # premise-3 check vs the slow engine's >20 h DNF.
                 # "slow" is the original compiled-interpreter path.
                 if args.engine == "fast":
                     cmd = [args.fastreplay, "--input", wire,
