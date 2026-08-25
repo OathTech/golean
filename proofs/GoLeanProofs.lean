@@ -76,6 +76,16 @@ import GoLeanProofs.Specs.Raft.ShapeWitness
 import GoLeanProofs.SliceWalk
 import GoLeanProofs.Specs.Raft.DriverNet
 import GoLeanProofs.Specs.Raft.DriverNetWitness
+-- arc4b landing (C2c slice 0, per the lane's landing manifest): the native
+-- S1/S2/S3 chain over the obligation signature (SC1 + C3 + C4)
+import GoLeanProofs.Specs.Raft.NativeObligations
+import GoLeanProofs.Specs.Raft.NativeS23Route
+import GoLeanProofs.Specs.Raft.NativeS1Chain
+import GoLeanProofs.Specs.Raft.NativeEtcdDischarge
+import GoLeanProofs.Specs.Raft.NativeS1CheckerLeaf
+import GoLeanProofs.Specs.Raft.NativeS1Witness
+import GoLeanProofs.Specs.Raft.NativeS23Chain
+import GoLeanProofs.Specs.Raft.NativeS23Witness
 -- A4-U8: the field-lens layer (Perennial Access lineage; general half —
 -- combinators + L1-L4 laws; per-field instances live in Specs/Raft).
 import GoLeanProofs.Lens

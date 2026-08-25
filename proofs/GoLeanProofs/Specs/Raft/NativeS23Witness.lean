@@ -80,21 +80,25 @@ def wM6 : HNet :=
             (3 - (wM5.node 2).applied)) }
     wM5.hist
 
-theorem wStep1 : HStep 1 2 wCert wM0 wM1 := .propose wM0 0
-theorem wStep2 : HStep 1 2 wCert wM1 wM2 := .propose wM1 7
-theorem wStep3 : HStep 1 2 wCert wM2 wM3 :=
+-- Landing rename (C2c slice 0): `wStep1`–`wStep4` collided with
+-- `NativeS1Witness`'s same-namespace theorems under JOINT import into the
+-- aggregator (each lane module was verified green STANDALONE only); the
+-- H-chain steps are `wHStep*` since the landing. Statements unchanged.
+theorem wHStep1 : HStep 1 2 wCert wM0 wM1 := .propose wM0 0
+theorem wHStep2 : HStep 1 2 wCert wM1 wM2 := .propose wM1 7
+theorem wHStep3 : HStep 1 2 wCert wM2 wM3 :=
   .leaderCommit wM2 3 ⟨by decide, by decide⟩ ⟨by decide, Or.inr trivial⟩
-theorem wStep4 : HStep 1 2 wCert wM3 wM4 :=
+theorem wHStep4 : HStep 1 2 wCert wM3 wM4 :=
   .deliverAppend wM3 2 3 3 3 (by decide) ⟨by decide, by decide⟩
-theorem wStep5 : HStep 1 2 wCert wM4 wM5 :=
+theorem wHStep5 : HStep 1 2 wCert wM4 wM5 :=
   .applyStep wM4 1 3 ⟨by decide, by decide⟩
-theorem wStep6 : HStep 1 2 wCert wM5 wM6 :=
+theorem wHStep6 : HStep 1 2 wCert wM5 wM6 :=
   .applyStep wM5 2 3 ⟨by decide, by decide⟩
 
 /-- The whole run. -/
 theorem wRun : Star (HStep 1 2 wCert) wM0 wM6 :=
-  .tail (.tail (.tail (.tail (.tail (.tail (.refl _) wStep1)
-    wStep2) wStep3) wStep4) wStep5) wStep6
+  .tail (.tail (.tail (.tail (.tail (.tail (.refl _) wHStep1)
+    wHStep2) wHStep3) wHStep4) wHStep5) wHStep6
 
 /-- The seed satisfies the chain invariant (every field computed on
 the boot data). -/

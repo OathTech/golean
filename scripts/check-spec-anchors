@@ -78,8 +78,17 @@ git ls-files -z '*.md' '*.lean' '*.go' > "$tmp/files"
 # would silently vanish from the scan). Known residual gap, recorded:
 # a tracked file containing NUL bytes is treated as binary by grep and
 # its citations are skipped with only an stderr note (N6).
+# BATCHING FIX (2026-08-28, arc4b landing): once the NUL-separated file
+# list exceeds xargs's ~128 KiB per-invocation budget (first crossed at
+# 131,087 bytes when the arc4b lane's nine files landed), grep runs in
+# MULTIPLE batches, and any batch with zero matches exits 1 — which
+# xargs reports as 123, indistinguishable at the top level from a real
+# scan death. So map grep's legitimate no-match exit (1) to 0 INSIDE
+# each batch; a real grep error (>=2) makes the wrapper exit nonzero,
+# xargs returns 123, and the rc>1 death check below still fires —
+# fail-closed behavior for genuine errors is unchanged.
 set +e
-xargs -0 grep --null -nHoE '(^|[^A-Za-z0-9_])(spec|mem)#[A-Za-z0-9_][A-Za-z0-9_.-]*' -- < "$tmp/files" > "$tmp/hits"
+xargs -0 sh -c 'grep --null -nHoE "(^|[^A-Za-z0-9_])(spec|mem)#[A-Za-z0-9_][A-Za-z0-9_.-]*" -- "$@" || [ "$?" -eq 1 ]' scan < "$tmp/files" > "$tmp/hits"
 rc=$?
 set -e
 if [[ "$rc" -gt 1 ]]; then
