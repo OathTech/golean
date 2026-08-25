@@ -160,8 +160,32 @@ Budget guard adopted ladder-wide: no naive kernel replay past
 300-step chunks; mirror route or an explicit chunk-cost quote in any
 round-lemma plan.
 
-**D2 (A4 kill → the adapter becomes native re-derivation, route (b)
-for S1).** Three mismatch axes are theorem-grounded: commit-advance
+**D2 — REVISED 2026-08-26 ([USER]-endorsed direction): THE FAMILY
+ROUTE (b′).** The invariant layer is lifted to an explicit
+OBLIGATION SIGNATURE — the per-transition obligations already
+implicit in T3's RefinedProofStructure (terms monotone; one vote per
+term; leader-only append in own term; commit only at
+quorum-certified indexes; truncation only on conflict; …) become the
+family interface: the invariant superstructure is proved FROM the
+signature, and each dialect discharges the obligations (Verdi
+trivially; etcd's specRound by its own guards — the noop entry is an
+instance of leader-append, commit-via-heartbeat satisfies
+quorum-certified commit). This is "generalizing Verdi along all the
+degrees of freedom available" ([USER]) — the protocol-level analog
+of the two-bounds doctrine, and it amortizes over S2/S3, T2's
+num_parties, and future dialect variations (prevote, learners).
+Vacuity discipline: every obligation must be dischargeable by BOTH
+dialects with visibly different implementations. Empirical gate
+(SC1, running): whether arc-3's ported proofs factor through the
+obligations or unfold concrete handlers — PORTS/ADAPTS/NEW decides
+b′'s real cost. NAMED FALLBACK if the signature refuses to factor:
+the patched-subject stepping stone ([USER]-proposed) — a
+Verdi-dialect twin variant proved end-to-end first; recorded with
+its honest cost caveat: layer-B/C artifacts are SUBJECT-EXACT
+(literal chains), so the equation ladder forks rather than
+transfers; only the generic kit carries. Original D2 text (plain
+native re-derivation for S1) is subsumed by b′ as its degenerate
+single-dialect case. Three mismatch axes are theorem-grounded: commit-advance
 without new entries has NO Verdi-lattice image (and is reachable and
 essential); the election noop entry exits Verdi's reachable set at
 the first election; the package seam. Decision: the S1 leaf's

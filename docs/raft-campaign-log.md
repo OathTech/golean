@@ -1419,6 +1419,24 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   pre-stated: commit-axis derivation at arc-3 scale moves the T1
   estimate materially and is surfaced the moment measured.
 
+- **[USER] 2026-08-26 — the A4 route discussion (mid-pause):**
+  Mike's reading confirmed (Verdi and etcd are legitimately
+  different Raft dialects — theorem-grounded, not a porting error).
+  Two [USER] contributions: (1) the FAMILY GENERALIZATION — prove
+  the Verdi result for a family of algorithms, "generalizing Verdi
+  along all the degrees of freedom that are available" — ENDORSED
+  as the primary route (design note v2 §8 D2 revised: the
+  obligation-signature route b′, converging with the
+  reuse-T3-structure recommendation stated theorem-side; amortizes
+  over S2/S3, T2, prevote/learners); (2) the PATCHED-SUBJECT
+  stepping stone (bank current state; prove T1 for a Verdi-dialect
+  etcd variant) — recorded as the NAMED FALLBACK with the
+  subject-exactness caveat ([AGENT]): literal-chain artifacts fork
+  under a patched subject, so it is a fallback on signature-factor
+  failure, not a parallel track. SC1's probe re-targeted to
+  organize its skeleton around the obligation signature; its
+  measurements (does the lattice factor?) unchanged.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
