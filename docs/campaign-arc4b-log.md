@@ -944,3 +944,304 @@ as-is; `EStep` extension with the append/commit fragment
 natural first slice, WITH its witness run in the same slice (lesson
 (a)). The I4 pattern replays for the S2/S3 checker interfaces
 (apply-order abstraction in place of ClaimTrace).
+
+# C4 — the T1-scoped S2/S3 ghost-history leaf (worker 2, continued)
+
+Unit C4, branch `campaign-arc4b` @ C3's tip 33a0b423, same worker,
+same hard rules (Native* new files + this log only). Charter (from
+the coordinator's acceptance message, recorded): H1→H4 over
+O-C1/2/3 + appliedWindow, building on `s2_agree_of_hist` /
+`s3_term_of_hist`; binding disciplines (1) witness-in-same-slice
+(now a lane convention), (2) §7 T1-scoped — the leaf consumes
+exactly SC1's three commit-axis members; the heartbeat
+match-soundness member STAYS OUT per D3 unless a witness run
+demonstrates need (finding-to-log-first if so), (3) same gate
+expectation. Landing manifest owed at exit.
+
+## C4 entry — 2026-08-27
+
+- Slice 0 — design read-back before code: SC1's §5 chain
+  (NativeS23Route.lean), the commit-obligation Props (O-C1/2/3 +
+  appliedWindow — consumed BY NAME as step premises below), the C3
+  assets that transfer as-is (ReachRel/invariance, the I4 interface
+  pattern, the witness discipline). Two statement-side findings, on
+  the record before building:
+  1. **SC1's S23 skeleton Props are typed over `SNet`, which cannot
+     carry the apply data** (`ENode` has no applied record;
+     `appliedOf : SNet → Nat → ...` has nothing to project from).
+     The C4 chain therefore lives on an extended carrier `HNet`
+     with the SAME logical shape per link; the SNet-typed sketches
+     stand superseded (statement-only, zero consumers — no code
+     change to SC1's file, per the no-edit rule).
+  2. **`Skel_singleWriterHistory` as literally stated is falsifiable
+     at its intended instantiation**: it quantifies TWO
+     independently-reachable nets and claims prefix-comparability,
+     but two traces diverging on different proposals produce
+     incomparable histories. The chain needs (and C4 proves) the
+     along-one-trace form (`hist_prefix_star`: N' reachable FROM N
+     ⇒ hist N' extends hist N). Recorded as a statement bug in the
+     SC1 sketch, found by attempting the instantiation — the
+     third statement-side catch of this lane (checker cross-time,
+     self-vote ghost, this).
+
+### Slice 1 — the fragment + chain (charter items H1-H4)
+
+`proofs/GoLeanProofs/Specs/Raft/NativeS23Chain.lean` (594 lines, 17
+theorems):
+
+- `Star`/`star_invariance` — the C3 induction principle in its
+  polymorphic form (the SNet-typed `ReachRel` could not be reused:
+  C3's modules are now existing tracked files under the no-edit
+  rule; the general form subsumes both — a landing-time unification
+  candidate, in the manifest below).
+- `HNode`/`HNet` — the extended carrier (log as a Hist prefix,
+  oldest-first; commit/apply cursors; the applied record). The
+  ENode↔HNode log-convention projection is I2's absTwinRead
+  concern, documented.
+- **`HStep ldr tm certified`** — the T1 post-election fragment:
+  `propose` (the ONLY history writer — H1's shape, structural),
+  `leaderCommit` (premises: `commitInWindow` + `leaderCommitOk`,
+  VERBATIM), `deliverAppend` (premises: payload-is-a-history-slice
+  + `followerCommitOk` VERBATIM; duplicate-tolerant via
+  `take (max len k)`), `applyStep` (premise: `appliedWindow`
+  VERBATIM; the `nextCommittedEnts` slice shape). The obligation
+  consumption is SYNTACTIC — the charter's "H4 via O-C1/2/3 +
+  appliedWindow" is visible in the constructor types. `certified`
+  is consumed by name and never inspected (the O-C2 seam for the
+  S2-wave's match-evidence member, per SC1's note).
+- **`HistInv`** — H2 (histIdx/histTermMono + the fixed-term
+  auxiliary), H3 (`logsPrefix`, take-form; `leaderLog`: the
+  leader's log IS the history), the O-C1/appliedWindow windows
+  carried, and H4 in its strongest T1 form: `appliedTake` — the
+  applied record IS `hist.take applied`. `HistInv.step` +
+  `histInv_reachable` prove the whole bundle preserved (the list
+  core is `take_append_window`: prefix + next log window = longer
+  prefix).
+- **H1 starred**: `hist_prefix_star` (the along-one-trace form —
+  the slice-0 finding about SC1's two-net statement stands) and
+  `appliedLog_prefix_star` (applied records are cumulative — the
+  I2-side justification for the final-net interface shape below).
+
+### Slice 2 — the leaves + the I4 interface (charter's leaf)
+
+Same module:
+
+- `mem_hist_histAt` — membership pins the `histAt` lookup (the
+  bridge into SC1's proved assemblies).
+- **`s2_of_histInv`** — two applied records at one index agree,
+  across ANY two nodes, THROUGH `s2_agree_of_hist` (SC1's proved
+  leaf, consumed as promised).
+- **`s3_of_histInv`** — a node's applied sequence is strictly
+  index-increasing and term-monotone positionally (H4 take-form +
+  H2; the term half is `histTermMono` — `s3_term_of_hist`'s
+  content at the positional level).
+- **`S23CheckerInterface`** — I4, S2/S3-scoped, FINAL-NET form: a
+  deliberate simplification vs C3's `ClaimTrace`, justified and
+  recorded: S1's claims are observations of TRANSIENT state
+  (leaders vanish — the trace matters), while applied records are
+  CUMULATIVE (`appliedLog_prefix_star`), so the final net carries
+  every apply the checker saw; the interface premise ties the
+  violation branches to final-net deltas. The anomaly sub-check
+  (EntryNormal typing) is the recorded I2-side scope note — not
+  representable in the abstract vocabulary; every abstract entry is
+  a proposal or the noop by construction.
+- **`s23_leaf`** — chain invariants at the start ⇒ both checks'
+  false-delta on every reachable final net (quoted verbatim in the
+  exit block).
+
+### Slice 3 — the witness (same-slice convention, binding)
+
+`proofs/GoLeanProofs/Specs/Raft/NativeS23Witness.lean` (159 lines,
+12 theorems): a six-step T1-shaped run at `ldr = 1, tm = 2` (the S1
+chain's output instantiated), `certified := fun _ => True` (the
+O-C2 seam's SHAPE exercised, content deferred to the S2 wave):
+noop propose → command propose → leaderCommit 3 → follower 2
+accepts the slice with commit advance → both nodes apply. Every
+constructor premise discharged by computation on the closed data;
+`wApplied` shows both nodes really applied the full 3-entry history
+(non-vacuity over the final net); `wFinalInv` computes the
+preservation induction on the run; **`wNoViol`** drives `s23_leaf`
+end-to-end at the minimal (delta-Prop) interface instance. The
+heartbeat member was NOT needed by any witness run (no tick is ever
+driven — D3 stands; nothing to report to the log beyond this line).
+
+### [AGENT] calls this unit (tagged)
+
+1. [AGENT] The obligation members consumed as VERBATIM constructor
+   premises rather than re-derived facts: makes the charter's
+   commit-axis scoping mechanically checkable (grep the constructor
+   types) and keeps the chain honest to SC1's envelope statements —
+   the same guard-shape pattern as C3's TallyOK, without needing a
+   redundancy proof (the premises here are the RULE, not a
+   reachability fact).
+2. [AGENT] `appliedTake` stated in its STRONGEST T1 form (the
+   applied record equals the history prefix) rather than the weaker
+   membership form: §7's two-axis test — the strong form is CHEAPER
+   (one equation, one list lemma) and makes both leaves one-step
+   corollaries; T1-scoped means taking the T1 structure's gifts.
+3. [AGENT] The final-net interface shape (vs C3's trace-carrying
+   `ClaimTrace`): chosen on the cumulative-vs-transient distinction
+   and recorded with its justification lemma
+   (`appliedLog_prefix_star`); the checker-side proof obligation it
+   leaves to I2 is correspondingly simpler (no trace bookkeeping).
+4. [AGENT] `Classical.choice` ACCEPTED this unit (C3 eliminated it
+   for parity): the bisect (probe `AxTryC4.lean`) shows it enters
+   through core stdlib lemmas `List.drop_take` and `List.take_add`
+   themselves, not through our proof choices — re-proving stdlib
+   internals to purge a standard axiom is representation-level
+   grinding with zero consumers. Derivation on record; the envelope
+   is the standard trio, as everywhere else in the tree.
+5. [AGENT] Polymorphic `Star` defined fresh instead of reusing
+   C3's SNet-typed `ReachRel` (no-edit rule on my own C3 files);
+   the unification (ReachRel := Star on SNet) is a one-line-per-use
+   landing-time cleanup, listed in the manifest — NOT done here to
+   keep the lane conflict-free.
+6. [AGENT] Memory discipline: 119G at C4 launch, 107G before the
+   gate (sibling active but light); all builds 48G-capped warm,
+   gate at 24G. The witness's `decide`s are all on closed ≤/min/max
+   Nat facts over 3-entry lists — evaluated shapes, no
+   unevaluated-proposition kernel risk (the #eval-first rule's
+   class does not arise).
+
+### What-this-taught-us
+
+- (a) The witness discipline paid AGAIN, differently: no bug this
+  time, but constructing the run forced the `deliverAppend` rule
+  through the duplicate-delivery question (k ≤ len) and settled it
+  fidelity-first (`take (max len k)`, etcd's stale-append
+  tolerance) BEFORE the invariant proof calcified the wrong rule.
+  The witness is design pressure, not just a bug net.
+- (b) Statement-side risk again outran proof-side risk, as C3
+  predicted: the unit's real decisions were the carrier correction
+  (SNet cannot hold apply data), the H1 statement fix (two-net
+  comparability is false), and the final-net interface shape — all
+  found by attempting statements, none by proving. The proofs
+  themselves ran at the measured b′ discount.
+- (c) The strongest-invariant instinct (appliedTake as an equation)
+  is the T1-scoping dividend in miniature: scoped structure makes
+  strong invariants CHEAP, and strong invariants make leaves
+  trivial. The family SMS superstructure will not have this gift —
+  its 4-8-unit estimate should not be discounted by this unit's
+  velocity.
+
+## C4 exit (2026-08-27, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since C3's 33a0b423:
+this single commit (two tracked modules + this log's C4 section;
+probes `AxNativeC4.lean`/`AxTryC4.lean` gitignored). Deliverables
+vs the C4 charter: H1 (`hist_prefix_star`, corrected form) — H2/H3/
+H4 (`HistInv` + `histInv_reachable`) — the commit axis entering
+EXACTLY through the three SC1 members + appliedWindow as verbatim
+constructor premises — the S2/S3 leaves through SC1's proved
+assemblies — the I4-scoped checker interface + `s23_leaf` — the
+same-slice witness (`wNoViol` end-to-end). Volume: 753 new lines,
+29 theorems (594/17 + 159/12). Zero sorry / native_decide / new
+axiom declarations; hatch grep over both modules: ZERO hits (prose
+included).
+
+**Cost vs SC1's 1.5-2-unit sizing:** the unit landed in well under
+one worker session-equivalent — below even the low end, for the
+reasons lesson (c) names: the T1 structure admits equation-strength
+invariants, and the statement work (where C3 showed the cost
+lives) had already been paid down by SC1's checker census and this
+unit's slice-0 findings. The residual un-discounted work is real
+but OUT of this unit by charter: the I2 checker-side proofs and
+the S1↔S23 assembly composition (T1 wave), and the family SMS
+superstructure (post-T1, do NOT discount its 4-8 units by this
+velocity — lesson (c)).
+
+**The S2/S3 leaf statements, quoted verbatim
+(`NativeS23Chain.lean`):**
+
+```lean
+theorem s2_of_histInv {ldr tm : Nat} {N : HNet}
+    (hI : HistInv ldr tm N) {i j : Nat} {e e' : Nat × Nat × Nat}
+    (he : e ∈ (N.node i).appliedLog) (he' : e' ∈ (N.node j).appliedLog)
+    (hidx : e.1 = e'.1) : e = e'
+
+theorem s3_of_histInv {ldr tm : Nat} {N : HNet}
+    (hI : HistInv ldr tm N) {i : Nat} {p q : Nat}
+    {ep eq : Nat × Nat × Nat} (hpq : p < q)
+    (hp : (N.node i).appliedLog[p]? = some ep)
+    (hq : (N.node i).appliedLog[q]? = some eq) :
+    ep.1 < eq.1 ∧ ep.2.1 ≤ eq.2.1
+
+theorem s23_leaf {ldr tm : Nat} {certified : Nat → Prop}
+    {N₀ Nf : HNet} (h0 : HistInv ldr tm N₀)
+    (hr : Star (HStep ldr tm certified) N₀ Nf)
+    {violS2 violS3 : Prop}
+    (hIface : S23CheckerInterface Nf violS2 violS3) :
+    ¬ violS2 ∧ ¬ violS3
+```
+
+- 2026-08-27 C4 gate record (same-commit convention):
+  `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci` at the
+  exit tree — **RESULT: FAIL, exit 1 — 21 ok steps, 7 notes (incl.
+  the two sanctioned no-diff notes), EXACTLY the ONE known
+  structural red** (`artifacts/ci-arc4b-c4.log`, gitignored):
+
+  ```
+  FAIL proofs-file audit coverage (un-swept proof file — import it from Audit.lean or allowlist with a reason)
+  ```
+
+  now naming precisely the EIGHT lane modules (SC1's two + C3's
+  four + C4's two). Same fail-closed resolution as SC1/C3; the
+  landing action is the manifest below. Comparator landmark note:
+  STALE at 149 commits (report-only) — stands escalated for the
+  operator's merge step, as since U8. No other delta.
+- 2026-08-27 C4 compensating kernel checks (verbatim):
+  - explicit capped build (warm, 48G): `Build completed
+    successfully (5 jobs.)` — final line `✔ [5/5] Built
+    GoLeanProofs.Specs.Raft.NativeS23Witness`.
+  - fresh `AxNativeC4` readout over 15 named C4 theorems: every
+    line within [propext, Classical.choice, Quot.sound]
+    (`star_invariance`/`wRun`/`wApplied` axiom-free;
+    `hist_prefix_star`/`appliedLog_prefix_star`/`wSeedInv`
+    propext-only; the choice-bearing lines inherit it from stdlib
+    `List.drop_take`/`List.take_add` — [AGENT] call 4's bisect).
+  - hatch grep both modules: 0 hits.
+
+## THE LANE'S LANDING MANIFEST (for the operator at the wave
+boundary — what the merge needs beyond `git merge --ff-only`)
+
+1. **The one edit that turns the known red green:** add the EIGHT
+   import lines to `proofs/GoLeanProofs.lean` (or allowlist with
+   reason in `scripts/ci`'s `STANDALONE_PROOFS` — importing is the
+   right call; these are ordinary proof modules):
+   `GoLeanProofs.Specs.Raft.NativeObligations`, `.NativeS23Route`
+   (SC1), `.NativeS1Chain`, `.NativeEtcdDischarge`,
+   `.NativeS1CheckerLeaf`, `.NativeS1Witness` (C3),
+   `.NativeS23Chain`, `.NativeS23Witness` (C4). Then re-run
+   `scripts/ci` — expect fully green (all eight kernel-check green
+   standalone at this tip; the Audit sweep will then cover them).
+2. **Optional same-landing cleanups (small, listed not demanded):**
+   (a) unify C3's `ReachRel`/`invariance` onto C4's polymorphic
+   `Star`/`star_invariance` (one-line-per-use); (b) SC1's
+   `Skel_singleWriterHistory` and the SNet-typed S23 skeleton Props
+   in `NativeS23Route.lean`/`NativeObligations.lean` stand
+   superseded by the HNet chain — either delete the S23 skeletons
+   or docstring-mark them superseded (C4's slice-0 findings 1-2
+   give the reasons verbatim).
+3. **Standing items unchanged by this unit:** the comparator
+   landmark STALE note (≥148 commits, escalated since U8 — the
+   operator's judge run at the merge); the two sanctioned no-diff
+   notes (fresh-lane worktree, docs+specs-only arcs — no runtime
+   change in this lane, ever).
+4. **What the lane hands the arc-4/I2 side** (interface premises
+   stated here, proofs theirs): `S1CheckerInterface` (C3),
+   `S23CheckerInterface` + the anomaly scope note + the
+   ENode↔HNode log-convention projection (C4), with
+   `appliedLog_prefix_star` provided as the cumulative-record
+   justification their premise proof will want.
+5. **Assembly seams for the T1 wave:** `EStep` (election) and
+   `HStep` (post-election) compose via the S1 output (`ldr`, `tm` =
+   the unique leader and its O5b-stable term); `certified` awaits
+   the S2-wave match-evidence member (SC1's leaderCommitOk note).
+
+**PROPOSED NEXT CHARTER for this lane:** none — the lane's scoped
+program (SC1 probes → C3 native S1 → C4 S2/S3 leaf) is COMPLETE at
+this tip; the natural next units (I2 checker-side proofs, the T1
+assembly composition, the Verdi family instance) belong to the
+arc-4 lane or T1-wave planning per the design of record's phase
+structure. Recommend the lane land at the wave boundary and retire
+this worktree.
