@@ -2793,3 +2793,72 @@ stands escalated from U8–U11.
   The comparator-landmark note now reads **STALE at 120 commits**
   (> the 100 threshold; report-only) — stands escalated for the
   operator's merge step, as at U8–U11.
+
+## A4-U13 — becomeLeader (census-first) + the commit-advance family (2026-08-25, same worker, coordinator-dispatched; the U12 watch-item is the census's entire point)
+
+- 2026-08-25 SUCCESSOR RE-VERIFICATION (own U12 outputs, fresh, all
+  PASS): tip 96723532 clean; full capped proofs+Audit build green
+  (507 jobs); AxLa probe verbatim-matching (equation family
+  classical-trio; la_len_step [propext, Quot.sound]); hatch grep over
+  StaleEquation/StaleLit/StaticCells/LaEquation/LaLit: 0. 99G free at
+  launch.
+- 2026-08-25 **THE becomeLeader CENSUS (probes `BlProbe2/3.lean`,
+  machine + an AUTOMATED mirror walker that classifies every window
+  quit — anything outside {pick, range-stop, sort, spill,
+  lengthOf-atom} reported loudly as the watch-item trigger):**
+  - MACHINE (born-re-sited fixture: bf31 heap at state = 1 candidate,
+    na₀ = 52, NO static complement): completes in **6,466 steps
+    consuming SIX choices** at [659, 843, 872, 901, 5171, 6352] —
+    U4's numbers reproduced exactly at the re-sited placement.
+    Projections: absRaftLog post = ⟨[(1,1)], [(2,0)], 2, 1, 1, 1⟩
+    (the overlay grown by the EMPTY entry — index 2, TERM 0);
+    absOutbox msgsAfterAppend = [⟨4, dst=1(=r.id), src=1, index=2,…⟩]
+    — the SELF-ack; msgs = []; absRaftNode post lead=1 state=2
+    (leader), Vote 7 preserved (term-equal reset). The path reads NO
+    [20,31) static (completes without the complement — recorded).
+  - MIRROR, first walk: the Bf31 reset spine mirrors clean (PICK
+    ×4, RANGE-STOP, SORT at [659,183,28,28,28,3]), then the window
+    quits at **`Stmt.typeAssert` at `*raftpb.Entry`** —
+    `proto.Clone(es[i]).(*pb.Entry)` in appendEntry's clone loop: a
+    MISSING TableExt arm (the U3/U10 consume-on-demand class, a
+    CONCRETE-operand def-growth residual — NOT the watch-item).
+- 2026-08-25 **THREE TableExt arm families CONSUMED ON DEMAND** (the
+  U3 process: window quits guide; conc lemmas ship in the same edit;
+  the full downstream rebuild re-checking every landed window
+  kernel_rfl is the built-in guard — run after EACH growth, green
+  all three times at 507 jobs):
+  1. `Stmt.typeAssert` (comma-ok statement spine) + the `rhsK`
+     finish over new `typeAssertValueT` (mirrors the machine's
+     `typeAssertValue` — concrete-target identity via new
+     `canonicalTyFuelT`/`resolveDefinedAliasesFuelT` table mirrors;
+     interface-TARGET asserts quit, fail closed: needs method sets,
+     no census consumer).
+  2. The single-value type-assert EXPRESSION (`x.(T)`, strictK arm;
+     a FAILED assert panics = stays a quit).
+  3. `StrictOp.convert` at a DEFINED type (`raft.entryPayloadSize`
+     — increaseUncommittedSize's conversions): alias/defined
+     re-target only; struct value-conversion has NO census consumer
+     and quits, fail closed ([AGENT] scoping call, recorded in the
+     module docstring).
+  All with conc lemmas (`typeAssertValueT_conc` /
+  `canonicalTyFuelT_conc` / `resolveDefinedAliasesFuelT_conc` /
+  `convertValueToTyFuelT_conc` — delegated arms via the shipped
+  `convertFuel_conc`) and `stepFnT_conc` cases.
+- 2026-08-25 **THE CENSUS COMPLETES — THE WATCH-ITEM ANSWER IS
+  CLEAN** (walker, final): full mirror schedule
+  **[659, 183, 28, 28, 28, 3, 4236, 83, 1096, 113]** + 9 crossings
+  (4 picks, range-stop, sort, SPILL atom 0 at tgt 328/backing 329,
+  **LEN(atom 0) := 1** — the ONE atom read between the spills, the
+  same choice-independent la_len class — SPILL atom 1 at tgt
+  395/backing 396) = **6,466 exactly**, `.next .stop`. **NO
+  cap-consuming re-read exists on the becomeLeader path**: the
+  equation is sanctioned (the coordinator's if-clean branch), shape =
+  the Bf31 reset spine + the La tail, ZERO new transport machinery.
+  - What-this-taught-us (census): the automated quit-classifying
+    walker turned a three-round arm hunt into three cheap probe
+    runs — the census instrument for every remaining handler; and
+    the "same lever" TableExt families keep arriving exactly as the
+    U3 process predicts (typeAssert/convert were latent in EVERY
+    clone-carrying path, not becomeLeader specialties — Go-general
+    machinery, consumed once, guarded by the full-rebuild
+    kernel_rfl re-check).

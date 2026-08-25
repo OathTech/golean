@@ -359,6 +359,90 @@ def applySyncOp' (T : TypeEnv) (s : State D) (op : SyncOp) (vs : List (Value D))
 
 /-! ## The extended step and window driver -/
 
+/-! ## U13: the comma-ok type assertion at the input table (the
+becomeLeader census's `proto.Clone(es[i]).(*pb.Entry)` — the U3
+consume-on-demand class: the `Stmt.typeAssert` spine entry + the
+`rhsK` finish, mirrored over `typeAssertValueT`). Scoping (fail
+closed, no census consumer): interface-TARGET asserts quit
+(`dynamicImplementsInterface` needs method sets, unmirrored);
+`map`/`chan`/`funcType` canonicalization arms quit. -/
+
+/-- Mirror of `resolveDefinedAliasesFuel` at the input table: a failed
+lookup QUITS (the machine's answer is unknowable from `T`); a
+non-alias hit keeps the name (SubTable transfers the same def to the
+run state). Fuel exhaustion mirrors the machine's safe fixed point. -/
+def resolveDefinedAliasesFuelT (T : TypeEnv) : Nat → Ty → M Ty
+  | fuel + 1, .defined name =>
+      (match TypeEnv.lookup T name with
+       | some (.alias target) => resolveDefinedAliasesFuelT T fuel target
+       | some _ => .ok (.defined name)
+       | none => quit .q4Program)
+  | _ + 1, other => .ok other
+  | 0, ty => .ok ty
+
+/-- Mirror of `canonicalTyFuel` at the input table (defined/pointer/
+slice/array + the base identity arms; `map`/`chan`/`funcType` quit —
+fail closed until a consumer arrives). Exhaustion mirrors the
+machine's `.unsupported` markers verbatim. -/
+def canonicalTyFuelT (T : TypeEnv) : Nat → Ty → M Ty
+  | fuel + 1, .defined name =>
+      (match TypeEnv.lookup T name with
+       | some (.alias target) => canonicalTyFuelT T fuel target
+       | some _ => .ok (.defined name)
+       | none => quit .q4Program)
+  | fuel + 1, .pointer elem => do
+      .ok (.pointer (← canonicalTyFuelT T fuel elem))
+  | fuel + 1, .slice elem => do
+      .ok (.slice (← canonicalTyFuelT T fuel elem))
+  | fuel + 1, .array n elem => do
+      .ok (.array n (← canonicalTyFuelT T fuel elem))
+  | _ + 1, .map _ _ => quit .q4Program
+  | _ + 1, .chan _ _ => quit .q4Program
+  | _ + 1, .funcType _ _ _ => quit .q4Program
+  | 0, .defined _ => .ok (.unsupported "canonical type: type nesting too deep")
+  | 0, .pointer _ => .ok (.unsupported "canonical type: type nesting too deep")
+  | 0, .slice _ => .ok (.unsupported "canonical type: type nesting too deep")
+  | 0, .array _ _ => .ok (.unsupported "canonical type: type nesting too deep")
+  | 0, .map _ _ => .ok (.unsupported "canonical type: type nesting too deep")
+  | 0, .chan _ _ => .ok (.unsupported "canonical type: type nesting too deep")
+  | 0, .funcType _ _ _ => .ok (.unsupported "canonical type: type nesting too deep")
+  | _, other => .ok other
+
+/-- Mirror of `typeAssertValue` (the comma-ok outcome: value + a
+CONCRETE Bool — the assert decision is control-flow). Interface
+targets and non-interface operands quit; atoms quit `q10Atom`. -/
+def typeAssertValueT (T : TypeEnv) (value : Value D) (targetTy : Ty) :
+    M (Value D × Bool) := do
+  let failed ← defaultValueT T targetTy
+  match value with
+  | .nil => .ok (failed, false)
+  | .interface dynTy inner => do
+      match ← resolveDefinedAliasesFuelT T typeResolutionFuel targetTy with
+      | .interface _ => quit .q4Program
+      | _ =>
+          if dynTy == (← canonicalTyFuelT T typeResolutionFuel targetTy) then
+            .ok (inner, true)
+          else
+            .ok (failed, false)
+  | .atom _ => quit .q10Atom
+  | _ => quit .q4Program
+
+/-- Mirror of `convertValueToTyFuel`'s `.defined` arm at the input
+table (alias/defined re-target ONLY — struct value-conversion has no
+census consumer and quits, fail closed); every other target type
+delegates to the shipped `convertValueToTyFuel'`. Diagnosed
+conversions quit where the machine diagnoses. -/
+def convertValueToTyFuelT (T : TypeEnv) : Nat → Ty → Value D → M (Value D)
+  | fuel + 1, .defined name, value =>
+      (match TypeEnv.lookup T name with
+       | some (.alias target) => convertValueToTyFuelT T fuel target value
+       | some (.defined target) => convertValueToTyFuelT T fuel target value
+       | some (.struct _) => quit .q4Program
+       | some (.unsupported _) => quit .q4Program
+       | some (.interfaceDef _) => quit .q4Program
+       | none => quit .q4Program)
+  | fuel, ty, value => convertValueToTyFuel' fuel ty value
+
 /-- The extended mirror step: the store arm through the table-aware
 chain, every other configuration DELEGATED verbatim to the shipped
 `stepFn'`. At `T = []` this is behaviorally the shipped step. -/
@@ -386,6 +470,34 @@ def stepFnT (T : TypeEnv) (s : State D) (c : Config D) :
   -- Non-defined types take the same route `defaultValueFuelT`
   -- delegates for, so this arm agrees with the shipped `stepFn'`
   -- wherever that one stepped).
+  -- U13: the comma-ok type assertion, statement spine (the machine's
+  -- `targetsPlan` arm mirrored verbatim; internal/unsupported plan
+  -- outcomes quit where the machine diagnoses).
+  | .exec (.typeAssert t okT expr targetTy) env k =>
+      (match targetsPlan [t, okT] with
+       | some ((sh, e :: ops) :: rest) =>
+           .ok (.evalE e env
+             (.tgtOpK sh [] ops [] rest (.typeAssert targetTy)
+               [expr] [] (.seqn #[]) env k), s)
+       | some _ => quit .q11Internal
+       | none => quit .q4Program)
+  -- U13: the comma-ok type assertion, rhsK finish (`done = []` always:
+  -- the assert carries exactly one RHS expression).
+  | .retV v (.rhsK (.typeAssert tty) refs [] [] body env k') => do
+      let r ← typeAssertValueT T v tty
+      .ok (.next (.storeK refs [r.1, .bool (D.litB r.2)] body env k'), s)
+  -- U13: the single-value type-assert EXPRESSION (`x.(T)` — the
+  -- machine's strict-op arm; a FAILED assert panics, which stays a
+  -- quit: no census consumer asserts falsely).
+  | .retV v (.strictK (.typeAssert tty sty) [] [] env k') => do
+      let r ← typeAssertValueT T v tty
+      if r.2 then .ok (.retV r.1 k', s)
+      else quit .q6Panic
+  -- U13: conversion to a DEFINED type (`raft.entryPayloadSize` on the
+  -- becomeLeader path — the Q4-defined convert member).
+  | .retV v (.strictK (.convert (.defined name)) [] [] env k') => do
+      let out ← convertValueToTyFuelT T typeResolutionFuel (.defined name) v
+      .ok (.retV out k', s)
   | .exec (.initialization p) env k =>
       (match k with
        | .seq rest kenv k' =>
@@ -1046,6 +1158,153 @@ theorem valueEqRT_conc (hI : I.Sound) (σ : ExecState) {T : TypeEnv}
     simp only [valueEq]
     rw [valueEqBFuelT_conc hI σ hsub _ _ _ _ hb0, hI.litB]
 
+/-- Alias-resolution commutation at the input table. -/
+theorem resolveDefinedAliasesFuelT_conc (σ : ExecState) {T : TypeEnv}
+    (hsub : SubTable T σ.types) :
+    ∀ (fuel : Nat) (ty : Ty) {t' : Ty},
+      resolveDefinedAliasesFuelT T fuel ty = .ok t' →
+      resolveDefinedAliasesFuel fuel σ ty = t' := by
+  intro fuel
+  induction fuel with
+  | zero =>
+      intro ty t' h
+      cases ty <;> (cases h; rfl)
+  | succ fuel ih =>
+      intro ty t' h
+      cases ty <;> try (cases h; rfl)
+      case defined name =>
+        revert h
+        simp only [resolveDefinedAliasesFuelT]
+        rcases hl : TypeEnv.lookup T name with _ | d
+        · intro h
+          simp [quit] at h
+        · have hσ := hsub _ _ hl
+          cases d <;> intro h <;>
+            simp only [resolveDefinedAliasesFuel, hσ] <;>
+            first
+            | (cases h; rfl)
+            | exact ih _ h
+
+/-- Canonicalization commutation at the input table (the mirrored
+arms; quits assert nothing). -/
+theorem canonicalTyFuelT_conc (σ : ExecState) {T : TypeEnv}
+    (hsub : SubTable T σ.types) :
+    ∀ (fuel : Nat) (ty : Ty) {t' : Ty},
+      canonicalTyFuelT T fuel ty = .ok t' →
+      canonicalTyFuel fuel σ ty = t' := by
+  intro fuel
+  induction fuel with
+  | zero =>
+      intro ty t' h
+      cases ty <;> (cases h; rfl)
+  | succ fuel ih =>
+      intro ty t' h
+      cases ty <;> try (cases h; rfl)
+      case defined name =>
+        revert h
+        simp only [canonicalTyFuelT]
+        rcases hl : TypeEnv.lookup T name with _ | d
+        · intro h
+          simp [quit] at h
+        · have hσ := hsub _ _ hl
+          cases d <;> intro h <;>
+            simp only [canonicalTyFuel, hσ] <;>
+            first
+            | (cases h; rfl)
+            | exact ih _ h
+      case pointer elem =>
+        simp only [canonicalTyFuelT, bind_eq_ok] at h
+        obtain ⟨t2, ht2, h2⟩ := h
+        cases h2
+        simp only [canonicalTyFuel, ih _ ht2]
+      case slice elem =>
+        simp only [canonicalTyFuelT, bind_eq_ok] at h
+        obtain ⟨t2, ht2, h2⟩ := h
+        cases h2
+        simp only [canonicalTyFuel, ih _ ht2]
+      case array n elem =>
+        simp only [canonicalTyFuelT, bind_eq_ok] at h
+        obtain ⟨t2, ht2, h2⟩ := h
+        cases h2
+        simp only [canonicalTyFuel, ih _ ht2]
+      all_goals simp [canonicalTyFuelT, quit] at h
+
+/-- Type-assert commutation at the input table (comma-ok outcome; the
+assert decision is a concrete Bool on both sides). -/
+theorem typeAssertValueT_conc (hI : I.Sound) (σ : ExecState) {T : TypeEnv}
+    (hsub : SubTable T σ.types) {v : Value D} {ty : Ty}
+    {r : Value D} {b : Bool}
+    (h : typeAssertValueT T v ty = .ok (r, b)) :
+    typeAssertValue σ (concV I v) ty = .ok (concV I r, b) := by
+  unfold typeAssertValueT at h
+  obtain ⟨failed, hfd, h2⟩ := bind_eq_ok.mp h
+  have hfail : defaultValue σ ty = .ok (concV I failed) := by
+    unfold defaultValue
+    exact defaultValueFuelT_conc hI σ hsub _ _
+      (by simpa [defaultValueT] using hfd)
+  unfold typeAssertValue
+  simp only [hfail, Bind.bind, Except.bind]
+  cases v with
+  | nil =>
+      simp only [pure, Except.pure] at h2
+      cases h2
+      simp [concV, pure, Except.pure]
+  | interface dynTy inner =>
+      obtain ⟨rt, hrt, h3⟩ := bind_eq_ok.mp h2
+      have hrtm : resolveDefinedAliases σ ty = rt := by
+        unfold resolveDefinedAliases
+        exact resolveDefinedAliasesFuelT_conc σ hsub _ _ hrt
+      simp only [concV_interface, hrtm]
+      cases rt <;> simp only [quit] at h3 <;>
+        try (cases h3; done)
+      all_goals
+        obtain ⟨ct, hct, h4⟩ := bind_eq_ok.mp h3
+        have hctm : canonicalTy σ ty = ct := by
+          unfold canonicalTy
+          exact canonicalTyFuelT_conc σ hsub _ _ hct
+        rw [hctm] at *
+        by_cases hde : dynTy == ct
+        · rw [if_pos hde] at h4
+          cases h4
+          simp [hde]
+        · rw [if_neg hde] at h4
+          cases h4
+          simp [hde]
+  | atom a =>
+      simp [quit] at h2
+  | _ =>
+      simp [quit] at h2
+
+/-- Conversion commutation at the input table (the `.defined` arm;
+delegated targets via the shipped `convertFuel_conc`). -/
+theorem convertValueToTyFuelT_conc (hI : I.Sound) (σ : ExecState) {T : TypeEnv}
+    (hsub : SubTable T σ.types) :
+    ∀ (fuel : Nat) (ty : Ty) (v : Value D) {out : Value D},
+      convertValueToTyFuelT T fuel ty v = .ok out →
+      convertValueToTyFuel fuel σ ty (concV I v) = .ok (concV I out) := by
+  intro fuel
+  induction fuel with
+  | zero =>
+      intro ty v out h
+      exact convertFuel_conc hI σ _ _ _ _ h
+  | succ fuel ih =>
+      intro ty v out h
+      cases ty <;> try exact convertFuel_conc hI σ _ _ _ _ h
+      case defined name =>
+        revert h
+        simp only [convertValueToTyFuelT]
+        rcases hl : TypeEnv.lookup T name with _ | d
+        · intro h
+          simp [quit] at h
+        · have hσ := hsub _ _ hl
+          cases d <;> intro h <;>
+            simp only [convertValueToTyFuel, hσ]
+          case alias target => exact ih _ _ h
+          case defined target => exact ih _ _ h
+          case unsupported f => simp [quit] at h
+          case interfaceDef ms => simp [quit] at h
+          case struct targetFields => simp [quit] at h
+
 set_option linter.unusedSimpArgs false in
 /-- `applySyncOp'` transports (census subset; `storeLoc_conc` carries
 the flag store — sync cells normalize at the concrete `.sync` arm, no
@@ -1175,6 +1434,23 @@ theorem stepFnT_conc (hI : I.Sound) (σ : ExecState) (ch : Choices)
                 simp only [concC, concK, stepFn]
                 split
                 all_goals simp_all
+      | typeAssert t okT expr targetTy =>
+          simp only [stepFnT] at h
+          revert h
+          rcases hplan : targetsPlan [t, okT] with _ | plan
+          · intro h
+            simp [quit] at h
+          · rcases plan with _ | ⟨⟨sh, es⟩, rest⟩
+            · intro h
+              simp [quit] at h
+            · rcases es with _ | ⟨e, ops⟩
+              · intro h
+                simp [quit] at h
+              · intro h
+                cases h
+                simp only [concC, concK, stepFn, List.map_nil]
+                rw [hplan]
+                rfl
       | initialization p =>
           simp only [stepFnT] at h
           revert h
@@ -1243,6 +1519,48 @@ theorem stepFnT_conc (hI : I.Sound) (σ : ExecState) (ch : Choices)
                 · simp [quit] at h
       | strictK op done pending env k' =>
           cases op <;> try exact stepFn'_conc hI σ ch h
+          case convert cty =>
+            cases cty <;> try exact stepFn'_conc hI σ ch h
+            case defined name =>
+              cases done with
+              | cons a b => exact stepFn'_conc hI σ ch h
+              | nil =>
+                cases pending with
+                | cons e rest => exact stepFn'_conc hI σ ch h
+                | nil =>
+                    simp only [stepFnT] at h
+                    obtain ⟨out, hcv, h2⟩ := bind_eq_ok.mp h
+                    cases h2
+                    have hcvm := convertValueToTyFuelT_conc (I := I) hI
+                      (concS I σ s) hsub _ _ _ hcv
+                    simp only [concC, concK, stepFn, List.map_nil,
+                      List.reverse_cons, List.reverse_nil, List.nil_append]
+                    simp [applyStrictOp, convertValueToTy, hcvm, Bind.bind,
+                      Except.bind, pure, Except.pure]
+          case typeAssert tty sty =>
+            cases done with
+            | cons a b => exact stepFn'_conc hI σ ch h
+            | nil =>
+              cases pending with
+              | cons e rest => exact stepFn'_conc hI σ ch h
+              | nil =>
+                  simp only [stepFnT] at h
+                  obtain ⟨⟨rv, rb⟩, hta, h2⟩ := bind_eq_ok.mp h
+                  have htam := typeAssertValueT_conc (I := I) hI
+                    (concS I σ s) hsub hta
+                  revert h2
+                  by_cases hrb : rb = true
+                  · subst hrb
+                    rw [if_pos rfl]
+                    intro h2
+                    cases h2
+                    simp only [concC, concK, stepFn, List.map_nil,
+                      List.reverse_cons, List.reverse_nil, List.nil_append]
+                    simp [applyStrictOp, htam, Bind.bind, Except.bind,
+                      pure, Except.pure]
+                  · rw [if_neg hrb]
+                    intro h2
+                    simp [quit] at h2
           case eqCmp ty =>
             cases pending with
             | cons e rest => exact stepFn'_conc hI σ ch h
@@ -1303,6 +1621,24 @@ theorem stepFnT_conc (hI : I.Sound) (σ : ExecState) (ch : Choices)
                   List.reverse_cons, List.map_append, List.map_reverse,
                   List.map_cons, List.map_nil, hb2, Bind.bind,
                   Except.bind, pure, Except.pure]
+      | rhsK rop refs done pending body env k' =>
+          cases rop <;> try exact stepFn'_conc hI σ ch h
+          case typeAssert tty =>
+            cases done with
+            | cons a b => exact stepFn'_conc hI σ ch h
+            | nil =>
+              cases pending with
+              | cons e rest => exact stepFn'_conc hI σ ch h
+              | nil =>
+                  simp only [stepFnT] at h
+                  obtain ⟨⟨rv, rb⟩, hta, h2⟩ := bind_eq_ok.mp h
+                  cases h2
+                  have htam := typeAssertValueT_conc (I := I) hI
+                    (concS I σ s) hsub hta
+                  simp only [concC, concK, stepFn, List.map_nil,
+                    List.reverse_cons, List.reverse_nil, List.nil_append]
+                  simp [applyRhsOp, htam, Bind.bind, Except.bind, pure,
+                    Except.pure, hI.litB, concC, concK]
       | _ => exact stepFn'_conc hI σ ch h
   | evalE e env k =>
       cases e with
