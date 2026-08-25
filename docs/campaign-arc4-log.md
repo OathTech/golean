@@ -2538,3 +2538,71 @@ stands escalated.
     (135/93) caught by the generator's own validation print. The
     per-family marginal cost of a censused branch on a landed spill
     shape is now: one probe + one generator run + a rename pass.
+- 2026-08-25 Slice 2 — **THE STATIC-CELL COMPLEMENT LANDED**
+  (`Specs/Raft/StaticCells.lean`, 228 lines; contact probe
+  `StaticsProbe.lean` FIRST — all numbers from its runs):
+  - Contact (the $pkginit dump): the twin seeds **31 globals at
+    cells [0,31), nextAddr 31**; init runs **1,382 machine steps,
+    consumes ZERO choices**, ends at heap = 98 cells, nextAddr 98.
+    The [20,31) roots decode as: 20 errBreak, 21 ErrStepLocalMsg,
+    22 ErrStepPeerNotFound, 23 ErrCompacted, 24 ErrSnapOutOfDate,
+    **25 ErrUnavailable — the U11 stuck cell** (`term(i > lastIndex)`
+    returns it; `zeroTermOnOutOfBounds` compares 23 and 25),
+    26 ErrSnapshotTemporarilyUnavailable, 27/28 two 23-entry
+    message-type bool tables, 29 the harness-logger pointer, 30 a
+    package bool. Error payloads (`raft.goleanShimErrorString`) at
+    71/75/79/83/87/91/95 + harnessLogger at 97 — closure-complete
+    (roots reference ONLY these eight; payloads reference nothing;
+    probe phase B2/D).
+  - [AGENT] Placement decision, recorded in the module: **ZERO
+    renaming** — the payload addresses (all ≥ 71) sit ABOVE the
+    born-re-sited leaf range [31,~60], so the block ships at
+    $pkginit's exact addresses and consumers set nextAddr₀ = 98
+    (`staticComplementNa`). The rejected alternative (re-siting
+    payloads into [0,18)) would alias OTHER real statics (enum-name
+    maps, loggers, ErrStopped/ErrProposalDropped at 16/17) for any
+    future printer/step-path consumer; the true-address block is
+    collision-free for EVERY consumer and meets the real twin state
+    address-for-address at the layer-C connection.
+  - Trust story (the fdsOf projection trick at heap level, kernel
+    grade): `staticComplement` is a generated literal, and
+    **`staticComplement_link` (kernel_rfl) recomputes the whole
+    extraction — seed + the 1,382-step init run + the 19 lookups —
+    against the PIN on every build**; `staticComplementNa_link` pins
+    the post-init allocator (98) the same way. Module builds in
+    **213 s** (two links, each replaying init in the kernel —
+    anti-grinding pre-checked by probe `StaticLinkT` before landing:
+    the link is one window-link's cost class, measured). Fail-closed:
+    extraction is `none` on init failure or any missing cell; block
+    insufficiency for a path stucks the machine and fails the
+    consumer's own window links. Reachability stays GAP-U1-W1,
+    recorded not claimed.
+- 2026-08-25 Slice 2b — **THE LOG-APPEND RE-CENSUS: THE STUCK CLEARS
+  AND THE OVERLAY DOES NOT BITE** (probe `LaProbe3.lean`; the U11
+  fixture + the block, nextAddr 98 — THE UNIT'S HEADLINE ANSWER):
+  - The machine run **COMPLETES: 4,828 steps, TWO choices** (step
+    3573 = the `unstable.entries` append spill — the log write;
+    step 4798 = the `msgsAfterAppend` response spill), na 98→393,
+    `.next .stop`. U11's stuck at step 2689/cell 25 is GONE — the
+    static-cell complement was the whole debt, as diagnosed.
+  - **GAP-V1-1b's overlay reader is LIVE and EXACT on its first
+    real exercise**: absRaftLog post = ⟨stable [(1,1)], unstableEnts
+    [(2,1)], offset 2, committed 1, applying 1, applied 1⟩;
+    `AbsLog.view` = [(1,1),(2,1)], lastIndex = some 2. The open seam
+    question is ANSWERED: the unstable overlay projects cleanly —
+    no reader change, no new machinery. Response =
+    ⟨4,2,1,0,0,index=2(=mlastIndex),…⟩ into msgsAfterAppend;
+    msgs = []; committed unchanged (m.Commit = 1 = committed).
+  - The mirror runs **3,573 steps CLEAN to the first spill quit**
+    (q3Choice at appendSlice-of-*Entry — the same one-element
+    nil-base spill shape the landed transport covers; the whole
+    error-branch walk INCLUDING the static-cell derefs is on landed
+    TableExt classes). The equation is a THREE-window/TWO-crossing
+    assembly on the landed spine — in scope for slice 3.
+  - What-this-taught-us (slice 2): the wave-2 fixture debt really
+    was COMPLETENESS, not machinery — with the true init images in
+    place, the "hard" log-append path is the same assembly as every
+    landed family, and the overlay reader built at U8 was right the
+    first time. Also: $pkginit's placement geometry (payloads above
+    the leaf range) made the zero-rename block possible — worth
+    checking BEFORE designing a rename layer, not after.

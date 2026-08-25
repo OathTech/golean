@@ -35,6 +35,7 @@ import GoLeanProofs.Specs.Raft.HhLit
 import GoLeanProofs.Specs.Raft.HhEquation
 import GoLeanProofs.Specs.Raft.HaeLit
 import GoLeanProofs.Specs.Raft.HaeEquation
+import GoLeanProofs.Specs.Raft.StaticCells
 import GoLeanProofs.Specs.Raft.StaleLit
 import GoLeanProofs.Specs.Raft.StaleEquation
 -- A4-U8: the field-lens layer (Perennial Access lineage; general half —
