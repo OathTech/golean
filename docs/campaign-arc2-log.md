@@ -1182,3 +1182,17 @@ carries "[corrected in fix round 2]" markers at each affected site.
   header's "exact step index" sentence is now true of every failure
   path). Smoke after the changes: full probe_and_replicate ok,
   11,995,825 steps, 42.9 s internal.
+
+- **FIX-ROUND-2 GATE** (2026-08-25): `GOLEAN_ALLOW_NO_DIFF=1
+  GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT: PASS** (rc 0; log
+  artifacts/fixround2-gate.log, untracked; result restated here).
+  Hatch scope verified before running (round-2 delta = proofs/ +
+  docs/ + tools/raftsubject/ only; no GoLean/, no nativefrontend).
+  No landmark OWED scope note: the judge's landmark now sits at
+  76361232 and no watched file moved since (the gate's landmark note
+  is staleness-informational, "6 commit(s) ago"). The four new
+  Audit pins (pool transfer + bridge) passed inside the in-build
+  Audit gate (proofs build, 525 jobs). FIX ROUND 2 COMPLETE at this
+  tip: F-A proved+pinned (deferral judgment corrected), F-B/F-C/F-D/
+  F-E/F-F done; the only remaining queued item from either round is
+  the MACHINE-denominator close (next tracereplay unit).
