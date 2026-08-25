@@ -1135,6 +1135,16 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   re-gate running, judge re-run at the rebased tip to follow, then
   the merge ask.
 
+- **ARC-2 MERGE PACKAGE COMPLETE** (2026-08-25): campaign-arc2 @
+  118d31aa — rebased onto main (66d62eac), gate PASS at the rebased
+  tip, **comparator-judge PASS at the rebased tip (56 theorems,
+  742 s, fresh clone @ 5d6395df)**, landmark committed, tree clean.
+  Full audit trail: delta-audit (24 agents) → fix round 1 → Opus
+  delta-review → fix round 2 (bridge PROVED) → coordinator
+  spot-check. MERGE SIGN-OFF ASK POSED to the user; merge is exactly
+  `git checkout main && git merge --ff-only campaign-arc2` on
+  approval, given at that moment. Nothing merged until then.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
