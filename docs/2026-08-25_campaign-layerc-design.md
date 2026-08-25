@@ -65,9 +65,28 @@ mapping — the classic; no new mechanism).
 
 ## 5. Falsifiable cost assumptions (each with its kill-point)
 
-- **A1 (being tested by U15)**: landed equation statements compose
-  across dispatch glue at ≤ glue-window cost. KILL: statement-form
-  redesign of layer B's conclusions BEFORE any layer-C unit starts.
+- **A1 — VERDICT IN (U15, 2026-08-25): statement forms COMPOSE
+  cleanly** (seam configs/heaps line up measured; window links are
+  continuation-bottom parametric; no statement redesign needed). The
+  refuted half is the INSTRUMENT: a mid-run relocated sub-span
+  yields its post-state only relationally (`stepFnIter_sim` carries
+  lossy `FrameSim`, no heap-completeness clause), so a landed
+  equation cannot be consumed as a sub-proof mid-walk. ROUTE POLICY
+  ([AGENT], from the verdict): (i) wave 3 and the C-ladder's round
+  lemmas proceed on **literal per-arm/per-round window chains** —
+  each round-kind's span is FIXED CODE, so the lemma is proved once
+  over symbolic state by a bounded literal walk (~50-110 s at
+  measured rates; the induction composes LEMMAS at absState level,
+  which is exactly what the relational statements give — no mid-walk
+  resume ever needed on this route); (ii) the principled instrument
+  repair — **completeness-strengthened FrameSim** (footprint/
+  locality completeness; Yang–O'Hearn lineage; U15's route (a)) —
+  is commissioned as a probe-first design slice with a measured
+  go/no-go: if strengthening costs > ~2 units across the Frame/
+  FastEval surface, stay literal until the MsgApp-arm cost trigger
+  (U15's ledger row) fires. Handler equations stay load-bearing
+  either way: they are the semantic content, the composition map's
+  vocabulary, and the validation set for the literal chains.
 - **A2**: the driver's per-round span outside dispatch (loop head,
   action choice, harvest, checker) is walkable in the census pattern
   — expect one census unit; the mapIter choice quantifies per §4b.

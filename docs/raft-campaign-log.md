@@ -1290,6 +1290,29 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   the U1 lesson). Landmark staleness 130 — stands for the merge
   step.
 
+- **Arc 4, A4-U15 — LANDED** @ d6f0286e, gate PASS, 520 jobs: the
+  dispatch-complement extension (cells 16/17 + payloads, kernel-
+  linked; drop arm completes, fail-closed control verified) + THE
+  FIRST DISPATCH-ARM EQUATION (sF×MsgHeartbeat, eleven conclusions)
+  + **THE COMPOSITION-MECHANICS VERDICT** — the layer-C design's A1
+  contact test: statement forms COMPOSE (all dimensions measured
+  clean; window links continuation-bottom parametric); the wall is
+  the INSTRUMENT (FrameSim is lossy — no heap-completeness — so a
+  relational sub-span cannot hand back a literal window; three
+  repair routes named). WHAT THIS TAUGHT US: the pilot lesson
+  repeats one level down — designs survive contact at the statement
+  layer and get refuted in the instrument layer; U15 stopped at the
+  measured wall instead of forcing a fake composition (the boundary
+  rule working). [AGENT] ROUTE POLICY (folded into the layer-C note
+  §5-A1): wave 3 + round lemmas proceed on literal bounded chains
+  (round spans are fixed code; the induction composes lemmas at
+  absState level — no mid-walk resume needed); the FrameSim
+  completeness strengthening (Yang-O'Hearn lineage) commissioned as
+  a probe-first slice with a measured ≤2-unit go/no-go. Ledger: 16
+  families + first dispatch arm. U16 to the same worker (~340k):
+  the design slice per the route policy, sC×MsgHeartbeat as a
+  walked chain, the drop-arm equation, stepLeader census.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
