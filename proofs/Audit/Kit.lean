@@ -7,6 +7,7 @@ import GoLeanProofs.MapMem
 import GoLeanProofs.MapLoops
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.Frame.Threshold
+import GoLeanProofs.Frame.Relocate
 import GoLeanProofs.Lens
 import GoLeanProofs.Sym.PickTransport
 import GoLeanProofs.Sym.SpillTransport
@@ -735,5 +736,13 @@ in-module (`stepFn_appendSpill_transport_witness`, same closure). -/
 
 /-- info: 'GoLean.Sym.stepFn_appendSpill_transport_witness' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Sym.stepFn_appendSpill_transport_witness
+
+/-! A4-U12: the span-relocate lift (`Frame/Relocate.lean`, the U11
+promotion row taken — general Frame-level plumbing, raft-independent;
+consumers: every handler equation's alloc form; discharge witnesses
+are the landed consumers' concrete instantiations). -/
+
+/-- info: 'GoLean.Frame.span_relocate' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Frame.span_relocate
 
 end GoLean.Iris.Audit

@@ -2457,3 +2457,33 @@ stands escalated.
   staggered behind the `free -g` guard (119G available ≥ 24G cap).
   The comparator-landmark STALE flag stands escalated for the
   operator's merge step.
+
+## A4-U12 — the stale-family equation + THE STATIC-CELL COMPLEMENT (2026-08-25, successor worker, coordinator-dispatched)
+
+- 2026-08-25 SUCCESSOR RE-VERIFICATION (U11's top claims, fresh
+  probes, all PASS):
+  - tip clean: `git status` = "nothing to commit, working tree clean"
+    on branch `campaign-arc4`; tip = eeceef6f (the dispatch tip),
+    93G free at launch (≥ 40G floor).
+  - fresh capped proofs+Audit build (`GOLEAN_MEM_MAX=48G
+    scripts/capped lake build` in `proofs/`): "Build completed
+    successfully (502 jobs)." exit 0 — matching U11's recorded 502.
+  - `#print axioms` fresh probe (`AxHae`, capped, verbatim): all of
+    handleAppendEntries_handler_eq_alloc / _eq / _witness /
+    hae_full_span / hae_spill_step / span_relocate =
+    [propext, Classical.choice, Quot.sound]; haeW1_out
+    [propext, Quot.sound] — matching U11's record.
+  - hatch grep over HaeEquation/HaeLit: 0/0.
+- 2026-08-25 Slice 0 — **THE `span_relocate` LIFT TAKEN**
+  (`Frame/Relocate.lean`, the U11 promotion row, coordinator-
+  authorized additive touch — the U6/U9 precedent): lifted VERBATIM
+  into `GoLean.Frame` beside `frameSim_relocate` (LINEAGE: the
+  Yang–O'Hearn SL frame-lift plumbing, packaged; the U11
+  elaborator-pathology guard — `n` shared by construction — restated
+  in the docstring), Kit-pinned
+  ([propext, Classical.choice, Quot.sound], build-enforced;
+  `Audit/Kit.lean` additive import + pin). `HaeEquation.lean` keeps
+  its RaftSeam copy as shipped history — ZERO edits to shipped
+  modules. Consumers at lift time: HaeEquation (landed copy) + the
+  stale-family equation (this unit, slice 1). Full proofs+Audit
+  green: 502 jobs.
