@@ -10,8 +10,9 @@ carries the verdict to the interpreter-level equation by the pinned
 transfer theorem (`FastEval/Transfer.lean`, `fastRun_transfer_eqb`).
 Built for the p2 differential replay (`tools/raftsubject/tracereplay.py
 --engine fast`), where `stepFn`'s list heap makes the compiled
-interpreter superlinear per step (measured wall ≈ fuel^2.5 on
-`probe_and_replicate`; unit P2R log entry).
+interpreter superlinear per step (measured local exponent rising
+F^2.0 → F^3.2 across the fuel ladder on `probe_and_replicate`; unit
+P2R log entry as corrected in the audit fix round).
 
 What a `status: ok` line from this driver MEANS, exactly: every premise
 of `fastRun_transfer_eqb` was checked by compiled evaluation —
