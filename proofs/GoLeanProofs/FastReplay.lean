@@ -20,13 +20,35 @@ of `fastRun_transfer_eqb` was checked by compiled evaluation —
    1,373 steps on the p2 workload);
 2. `ExecState.eqb (γF (absState s₃)) s₃ = true` (the γ-anchor — the
    untrusted `absState` conversion is never trusted, only checked);
-3. `iterF stepFast n σF₀ c₀ ch₁ = .ok (.next .stop, σF', ch')` with
-   `n ≤ fuel` (chunked; chunks compose to one `iterF` by `iterF_add`);
+3. `iterF stepFast steps σF₀ c₀ ch₁ = .ok (.next .stop, σF', ch')`
+   with `steps ≤ fuel` — evaluated DIRECTLY, as one whole-run `iterF`
+   call at the step count discovered by the chunked loop (audit fix
+   round, 2026-08-25: the chunked `runLoop`/`stepUpTo` discovery pass
+   is UNTRUSTED machinery for progress emission, the durable record,
+   and finding `steps`; nothing downstream reads its final state —
+   premise 4's `σF'`/`ch'` come from this direct evaluation, which is
+   literally the theorem's premise expression);
 4. `loadManyF σF' locs = .ok vs`.
 So `runProgramM fuel program name #[] [] = .ok { values := vs }` — the
-model verdict — holds by the theorem, whose axioms Audit pins. The
-compiled-evaluation trust class is IDENTICAL to trusting `golean
-native-json-run` itself; nothing is weakened, only made fast.
+model verdict — holds by the theorem, whose axioms Audit pins.
+
+WHICH whole-program semantics an ok verdict certifies (audit fix
+round, 2026-08-25 — the original claim here was wrong):
+`runProgramM` is the SEQUENTIAL entry (`runProgramSetupM` then
+`runConfig`). The machine tier this driver replaced (`golean
+native-json-run`, still reachable as `tracereplay.py --engine slow`)
+computes `runProgramPoolIntsM` — the THREAD-POOL entry
+(`runProgramSetupM` then `execProgLoop`). These are DIFFERENT
+functions and no bridge lemma between them exists in the repo. Why no
+divergence is reachable on the accepted class: every construct on
+which the entries could differ — goroutine spawn (`.goStmt` /
+`.goCalleeK` / `.goArgsK`), channel ops, select — is refused
+fail-closed by `stepFast` (`FastEval/Step.lean`), so any run this
+driver accepts is spawn-free and single-threaded under either entry.
+That is an ARGUMENT, not a theorem; the bridge lemma (`runProgramM =
+runProgramPoolIntsM` on the spawn-free accepted class) is queued in
+the campaign arc-2 log as a named follow-on. Until it lands, an ok
+verdict certifies the sequential entry, exactly.
 
 Fail-closed: any stub arm of `stepFast` (`fastEval-stub:` /
 `fastEval-WIRE:`), anchor mismatch, or non-`.ok` outcome prints an
@@ -120,9 +142,12 @@ private def stepUpTo : Nat → Nat → ExecStateF → Config → Choices → Run
           | .ok (c', σF', ch') => stepUpTo n (used + 1) σF' c' ch'
           | .error e => .failed used e
 
-/-- The chunked driver loop. `budget` is the REMAINING fuel; chunks are
-whole-`iterF` calls so the completed run is literally an `iterF_add`
-composition of the recorded chunks. Total: `budget` strictly decreases
+/-- The chunked DISCOVERY loop — UNTRUSTED machinery (audit fix round,
+2026-08-25): it finds the terminal step count, emits progress, and
+writes the durable record. Its final state feeds NOTHING downstream;
+`main` re-establishes premise 3 by one direct whole-run `iterF` at the
+discovered count (so no lemma about this loop is load-bearing).
+`budget` is the REMAINING fuel. Total: `budget` strictly decreases
 (each chunk is ≥ 1 step). -/
 private def runLoop (recOut : Option IO.FS.Handle) (t0 : Nat) (chunk : Nat) :
     Nat → Nat → ExecStateF → Config → Choices → IO RunOutcome
@@ -180,32 +205,58 @@ def main (argv : List String) : IO UInt32 := do
             let σF₀ := absState s₃
             if h : ExecState.eqb (γF σF₀) s₃ = true then do
               emitRecord recOut [("stage", Json.str "anchor-ok")]
-              -- Premise 3: the chunked fast body run.
+              -- Step-count discovery (untrusted; premise 3 is checked
+              -- directly below at the discovered count).
               match ← runLoop recOut t0 args.chunk args.fuel 0 σF₀ c₀ ch₁ with
-              | .done steps σF' ch' => do
-                  -- Premise 4: the fast readout.
-                  match loadManyF σF' locs with
-                  | .error err =>
-                      IO.println (errorJson err [("stage", Json.str "readout")]).compress
-                      return 1
-                  | .ok vs =>
-                    match vs.mapM valueJson with
-                    | .error msg => IO.println (cliErrorJson msg).compress; return 1
-                    | .ok vjsons => do
+              | .done steps _ _ => do
+                if steps ≤ args.fuel then
+                  -- Premise 3, checked DIRECTLY (audit fix round,
+                  -- 2026-08-25): one whole-run `iterF` at the discovered
+                  -- step count — literally the theorem's premise
+                  -- expression. The chunked discovery pass above
+                  -- contributes nothing but `steps` and the progress
+                  -- record; the verdict's `σF'`/`ch'` come from HERE.
+                  match iterF stepFast steps σF₀ c₀ ch₁ with
+                  | .ok (.next .stop, σF', ch') => do
                       let now ← IO.monoMsNow
-                      let obs := Json.mkObj [
-                        ("schema", Json.str schema),
-                        ("status", Json.str "ok"),
-                        ("values", Json.arr vjsons.toArray),
-                        ("engine", Json.str "fastreplay"),
-                        ("steps", Lean.toJson steps),
-                        ("fuel", Lean.toJson args.fuel),
-                        ("elapsedMs", Lean.toJson (now - t0)),
-                        ("transfer", Json.str "GoLean.FastEval.fastRun_transfer_eqb"),
-                        ("choicesLeft", Lean.toJson ch'.length)]
+                      emitRecord recOut [("stage", Json.str "premise3-ok"),
+                                         ("steps", Lean.toJson steps),
+                                         ("elapsedMs", Lean.toJson (now - t0))]
+                      -- Premise 4: the fast readout.
+                      match loadManyF σF' locs with
+                      | .error err =>
+                          IO.println (errorJson err [("stage", Json.str "readout")]).compress
+                          return 1
+                      | .ok vs =>
+                        match vs.mapM valueJson with
+                        | .error msg => IO.println (cliErrorJson msg).compress; return 1
+                        | .ok vjsons => do
+                          let now ← IO.monoMsNow
+                          let obs := Json.mkObj [
+                            ("schema", Json.str schema),
+                            ("status", Json.str "ok"),
+                            ("values", Json.arr vjsons.toArray),
+                            ("engine", Json.str "fastreplay"),
+                            ("steps", Lean.toJson steps),
+                            ("fuel", Lean.toJson args.fuel),
+                            ("elapsedMs", Lean.toJson (now - t0)),
+                            ("transfer", Json.str "GoLean.FastEval.fastRun_transfer_eqb"),
+                            ("choicesLeft", Lean.toJson ch'.length)]
+                          emitRecord recOut [("stage", Json.str "final"), ("obs", obs)]
+                          IO.println obs.compress
+                          return 0
+                  | _ => do
+                      let obs := cliErrorJson
+                        "fastreplay: premise-3 direct check failed (whole-run `iterF` at the discovered step count did not reach `.next .stop`) — fail closed"
                       emitRecord recOut [("stage", Json.str "final"), ("obs", obs)]
                       IO.println obs.compress
-                      return 0
+                      return 1
+                else do
+                  let obs := cliErrorJson
+                    "fastreplay: discovered step count exceeds --fuel — fail closed"
+                  emitRecord recOut [("stage", Json.str "final"), ("obs", obs)]
+                  IO.println obs.compress
+                  return 1
               | .failed atStep err => do
                   let obs := errorJson err [("stage", Json.str "fast-step"),
                                             ("step", Lean.toJson atStep)]
