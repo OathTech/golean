@@ -400,10 +400,17 @@ def run_one(name, blocks, prefix, args, report, rec=None, resumed=None):
                 # VERIFIED fast evaluator (proofs exe `fastreplay`:
                 # compiled `stepFast` + the pinned transfer theorem
                 # `GoLean.FastEval.fastRun_transfer_eqb`, which carries
-                # its ok-verdict to the same `runProgramM` equation the
-                # interpreter computes) with progress emission and a
-                # durable per-chunk record — measured ~27 s on
-                # probe_and_replicate vs the slow engine's >20 h DNF.
+                # its ok-verdict to the SEQUENTIAL whole-program entry
+                # `runProgramM`) with progress emission and a durable
+                # per-chunk record. ENTRY-POINT NOTE (audit fix round,
+                # 2026-08-25): the "slow" engine below computes the
+                # THREAD-POOL entry `runProgramPoolIntsM` — a DIFFERENT
+                # function, with no bridge lemma; stepFast refuses all
+                # spawn/chan/select constructs fail-closed, so accepted
+                # fast runs are spawn-free (argument, not theorem —
+                # recorded in the campaign arc-2 log, bridge lemma
+                # queued there). Measured ~27 s on probe_and_replicate
+                # vs the slow engine's >20 h DNF.
                 # "slow" is the original compiled-interpreter path.
                 if args.engine == "fast":
                     cmd = [args.fastreplay, "--input", wire,

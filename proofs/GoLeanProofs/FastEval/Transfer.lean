@@ -17,11 +17,15 @@ The intended discharge mode is COMPILED evaluation (the `fastreplay`
 driver, `GoLeanProofs/FastReplay.lean`): the driver runs each premise's
 computation natively and the pinned theorem carries the verdict to the
 interpreter-level equation. The trust class of a verdict so obtained is
-exactly the trust class of running the interpreter itself compiled
-(what `golean native-json-run` does), because every premise is a closed
-Boolean-checkable computation — nothing here weakens the model; the
-theorem only moves WHICH compiled program one must trust from `stepFn`'s
-iteration to `stepFast`'s (whose per-step agreement is `stepFast_ok`).
+that of trusting a compiled interpreter entry, because every premise is
+a closed Boolean-checkable computation; the theorem moves WHICH
+compiled program one must trust from `stepFn`'s iteration to
+`stepFast`'s (whose per-step agreement is `stepFast_ok`). NOTE WHICH
+ENTRY (audit fix round, 2026-08-25): the conclusion is `runProgramM`,
+the SEQUENTIAL entry — NOT `runProgramPoolIntsM`, the thread-pool
+entry that `golean native-json-run` computes; no bridge lemma between
+the two exists. See `FastReplay.lean`'s header for the entry-choice
+record and the fail-closed spawn-free argument.
 
 `absState` (slow state → fast state) is UNTRUSTED METHOD like all of
 FastEval — never in any statement closure; the driver never trusts it:
