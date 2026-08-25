@@ -3082,3 +3082,276 @@ stands escalated from U8–U12.
   free ≥ 24G cap). The comparator-landmark note now reads **STALE at
   126 commits** (report-only) — stands escalated for the operator's
   merge step, as at U8–U12.
+
+## A4-U14 — the Hae REJECT family + the From-transport + the wave-3 dispatch opening (2026-08-25, successor worker, coordinator-dispatched)
+
+- 2026-08-25 SUCCESSOR RE-VERIFICATION (U13's top claims, fresh
+  probes, all PASS):
+  - tip clean: `git status` = "nothing to commit, working tree clean"
+    on branch `campaign-arc4`; `git rev-parse HEAD` =
+    `b143c56d7a45a415d09de94447f11460fdff8e7a` (the dispatch tip).
+    93G free at launch (≥ 40G floor); every build this unit
+    `GOLEAN_MEM_MAX=48G scripts/capped`.
+  - fresh capped proofs+Audit build: "Build completed successfully
+    (512 jobs)." exit 0 — matching U13's recorded 512.
+  - `#print axioms` fresh probes (AxBl/AxHhAdv/AxMsErr, capped,
+    verbatim): becomeLeader/handleHeartbeat_advance/msTerm-error
+    equation families all [propext, Classical.choice, Quot.sound];
+    **`bl_log_grew` and `hha_committed_advanced` axiom-FREE** —
+    matching U13's record exactly.
+  - hatch grep (`sorry|native_decide|axiom `) over BlEquation/
+    HhAdvEquation/MsErrEquation/TableExt/SpillTransport/
+    PickTransport/KernelRfl/Lens: **0 in every file**.
+- 2026-08-25 **THE REJECT CENSUS — CLEAN, AND THE ANTI-GRINDING
+  CHECK DID NOT TRIGGER** (probes `HaeRejProbe.lean` +
+  `HaeRejGen.lean`, census FIRST per the charter; every number from
+  these runs):
+  - Fixture: born re-sited, the two-entry TERM-DIVERGENT log —
+    storage ents (1,1),(2,**2**), committed = 1 (< prev.index 2: NOT
+    stale; consistent: committed ≤ lastIndex, entry terms
+    nondecreasing), unstable empty at offset 3; message LogTerm 1 /
+    Index 2 → matchTerm fails (term(2) = 2 ≠ 1) → REJECT
+    (raft.go:1824-1853). `findConflictByTerm(2, 1)` runs TWO live
+    iterations (term(2) = 2 > 1 → decrement; term(1) = 1 ≤ 1 →
+    return (1,1)) — both loop arms exercised.
+  - Machine: **6,951 steps, ONE choice at 6925** (the
+    msgsAfterAppend spill), na 60→493, `.next .stop`. **ZERO static
+    [20,31) derefs** (single-pass walker scan): every `term()` on
+    this path returns err = nil BEFORE any sentinel compare — the
+    static-cell complement is NOT needed for this family.
+  - Mirror: **6,925 steps CLEAN to the q3Choice spill quit — ZERO
+    new TableExt machinery** (the whole reject walk: matchTerm,
+    Debugf args via zeroTermOnOutOfBounds's err=nil arm, min,
+    the findConflictByTerm loop — all on landed classes);
+    post-window 25. The 6,925-step pre-window is **the largest
+    single window yet** (vs La's 3,573); checked against the ~1h
+    anti-grinding smell: the kernel link replays once at the landed
+    ~linear cost class (measured: the whole equation module = 107 s)
+    — far below the stop threshold, so the charter's loop-boundary
+    split contingency was NOT triggered, by measurement not by hope.
+- 2026-08-25 Slice 1 (879a81b4) — **THE handleAppendEntries
+  REJECT-FAMILY EQUATION LANDED: handleAppendEntries is the FIRST
+  FULLY-COMPLETE message handler** (success/empty U11, stale U12,
+  log-append U12, REJECT here — all four censused families proved).
+  `HaeRejEquation.lean` (494 lines) + generated `HaeRejLit.lean`
+  (8,571 lines, the printer's 11th consumer):
+  - **The U13 printer improvement TAKEN** (the ledger row): the
+    generator now EMITS the window step counts and crossing
+    addresses as defs (`haeRejW1n`/`haeRejW2n`/`haeRejMsgPtr`/
+    `haeRejTgt`/`haeRejBacking`), and the link theorems consume the
+    defs — the U11 numeric-mismatch class (sed-carried RHS values,
+    the U13 slice-3 slip) is now unrepresentable at template time.
+  - The Stale template exactly: windows [6925, 25] + one spill
+    crossing; alloc PRIMARY (`Frame.span_relocate`, 8th consumer) +
+    identity corollary + §3.3 witness; TEN conclusions through
+    absState v2 + the lens readers — **the first Reject = true
+    record**: `absOutbox "msgsAfterAppend" = [specAppRejResp 1 2 0 2
+    1 1]` (Index = m.Index = 2, RejectHint/LogTerm =
+    findConflictByTerm's (1,1)), msgs = [], log view PRESERVED
+    (`haeRejAbsLog`, the reject branch writes nothing), Vote/lead/
+    Term readouts. γ==machine validated at c = 0/3/31 BEFORE any
+    theorem.
+  - **GREEN ON THE FIRST FULL CHECK**: 514 jobs; module 107 s
+    (lake env re-measure); axioms classical trio
+    (haeRejW1_out/haeRej_post_absOutbox [propext, Quot.sound];
+    fresh probe `AxHaeRej`, verbatim); hatch grep 0/0.
+- 2026-08-25 Slice 2 (c41f330e) — **THE BRANCH-CROSSING TRANSPORT +
+  THE From-SYMBOLIC handleHeartbeat EQUATION (the U10 residual
+  CLOSED)**:
+  - **`Sym/BranchTransport.lean`** (79 lines): `stepFn_branch_transport`
+    — the mirror's q1Branch quit (`retV v (ifK …)` at a symbolic
+    bool) crossed at the γ-image, the arm selected by
+    `hb : concV (symInterp ρ) v = .bool b`; state, allocator, and
+    stream RIDE (the machine ifK arm touches none of them).
+    LINEAGE: path-condition splitting (King 1976) — the founding
+    symbolic-execution move, realized in the established transport
+    pattern (Pick/Spill's third member). In-module §3.3 witness LIVE
+    at a genuinely symbolic condition (`x₀ == 1` at x₀ = 5; a
+    different valuation flips it). Fail-closed scope: ifK only (the
+    censused consumer); whileK/andK/orK/boolK on first consumer.
+    **2 Kit pins, both [propext, Quot.sound]** (build-enforced).
+  - Probe first (`HhFromProbe`/`HhFromGen`): the Hh no-op fixture
+    with cell 54 (m.From) = var 5 quits q1Branch at step 1259 —
+    the condition is EXACTLY U10's recorded
+    `eqI(norm²(x₅), lit 1)` (send's self-addressed panic guard;
+    γB false at x₅=2, TRUE at x₅=1 — live both ways); the else-arm
+    is the empty `seqn #[]`; the spill cells are Hh's VERBATIM
+    (elems 124, tgt 125, backing 126, msgPtr 74 — the branch detour
+    does not change the allocation schedule); windows
+    **[1259, 39, 25]** + branch + spill = **1,325 = the concrete Hh
+    span**; γ==machine at c = 0/3/31.
+  - **`handleHeartbeat_fromSym_eq_alloc`** (HhFromEquation.lean, 434
+    lines + HhFromLit 1,572 generated): the shipped no-op statement
+    with m.From SYMBOLIC under the subject's own precondition as
+    side conditions (`hfrom` range + `hfrom_ne : ρ.ints 5 ≠ 1`,
+    discharging the path condition via `beq_eq_false_iff_ne`) —
+    **the outbox conclusion is `[specHeartbeatResp 1 (ρ.ints 5) 0]`:
+    the response destination proved for EVERY non-self-addressed
+    sender at once** (the To field aliases the argument's From cell
+    — plainpb pointer copy — holding RAW var 5, so dst is
+    unwrapped). Identity corollary + witness at From = 9 (a value NO
+    shipped fixture used — genuine From-generality). The shipped
+    concrete equation is this statement's ints₅ := 2 instance.
+    Module 41 s; 517 jobs green; axioms classical trio (transport
+    consumers), hhFromCond_form [propext]; hatch 0/0/0.
+  - What-this-taught-us (slice 2): the transport itself is ~10 lines
+    of proof — the entire cost of message-field symbolism is the
+    LITERAL REGENERATION at the new window boundaries (the branch
+    splits one window into two), and the crossing state is SHARED
+    (the branch is pure control: S unchanged). Message-field
+    upgrades of other landed equations are now template work:
+    generator + rename + two extra side conditions.
+- 2026-08-25 Slice 3 (probe-only, as chartered) — **THE WAVE-3
+  DISPATCH CENSUSES** (probe `StepDispatchProbe.lean`, single-pass
+  walker + static-[16,31) scan; drained caller shape
+  `.call #[er] fid #[r, m]`, born-re-sited Hh heap + a Message with
+  a REAL Type cell):
+  - **stepFollower × MsgHeartbeat (Type 8): 1,710 steps, ONE choice
+    at 1581**, er = nil, msgs = [HeartbeatResp 9], lead := m.From =
+    2, log view preserved — the arm IS the landed Hh no-op span
+    (1,325) + ~385 dispatch-glue steps (GetType deref chain, the
+    switch compare ladder, electionElapsed := 0, lead store).
+    CONSUMES: handleHeartbeat no-op (+ commit-advance at the other
+    fixture family).
+  - **stepFollower × MsgProp forward (Type 2, lead = 2 ≠ 0): 1,272
+    steps, ONE choice at 1119**, msgs = [the forwarded Prop record,
+    typ 2], er = nil — a send-only arm consuming NO handler
+    equation (its own small family; the landed spill transport
+    covers its choice).
+  - **stepFollower × MsgProp drop (lead = 0): STUCK at step 235 —
+    `unbound heap location: base 17` (ErrProposalDropped), WITH OR
+    WITHOUT the [20,31) complement. THE FINDING: the dispatch layer
+    needs a complement EXTENSION — cells 16/17 (ErrStopped/
+    ErrProposalDropped) + their payload cells are OUTSIDE the U12
+    block's [20,31) range** (exactly the U13 charter's predicted
+    "remaining roots"; 27/28 — the message-type bool tables — ARE
+    already in the block). Extension recipe = the StaticCells
+    pattern verbatim (same $pkginit dump, two more roots + payload
+    closure); goes to U15.
+  - **stepCandidate × MsgHeartbeat (state = 1): 4,969 steps, FIVE
+    choices at [983, 1167, 1196, 1225, 4879]** — THE COMPOSITION
+    DATUM: the arm literally composes the landed becomeFollower
+    reset spine (4 picks: Intn + 3 Visit) with the landed Hh tail
+    (the spill), plus glue; state 1→0, lead := m.From, er = nil,
+    msgs = [HeartbeatResp], log view preserved; the only static
+    read is globalRand 18 (in-fixture). Wave-3 arm equations are
+    window-chain ASSEMBLIES of landed handler spans — the layer-C
+    composition shape confirmed at first contact.
+  - **THE COMPOSITION MAP (layer C's input; static reading of
+    raft.go:1692-1799 + the dynamic runs above):**
+    | dispatch arm | consumes (landed) | missing |
+    |---|---|---|
+    | sF×MsgApp | handleAppendEntries: success/stale/log-append/REJECT (all landed) | — |
+    | sF×MsgHeartbeat | Hh no-op + commit-advance | — (probed end-to-end) |
+    | sF×MsgSnap | — | handleSnapshot (out of wave-2 scope, GAP-V2-2) |
+    | sF×MsgProp/TransferLeader/ReadIndex (fwd) | — (send-only) | the 16/17 complement ext for the drop arms |
+    | sF×MsgTimeoutNow | — | hup/campaign chain |
+    | sF×MsgForgetLeader | — (lead store only) | — |
+    | sF×MsgReadIndexResp | — | readStates spill family |
+    | sC×MsgApp | becomeFollower + Hae families | — |
+    | sC×MsgHeartbeat | becomeFollower + Hh | — (probed end-to-end, 5 choices) |
+    | sC×MsgSnap | becomeFollower | handleSnapshot |
+    | sC×myVoteResp | becomeLeader (won, candidate) / becomeFollower (lost) | poll/quorum tally (GAP-V1-2), campaign, bcastAppend |
+    | sC×MsgTimeoutNow | — (Debugf no-op) | — |
+  - Probe-side note (recorded for the instrument): a struct-update
+    `{ x with a := _, b := _ }` whose fields are comma-separated on
+    ONE line hit a parse error inside this probe (recovered
+    silently into a poisoned fixture — na wrong, nonsense sticks);
+    newline-separated fields parse clean. The poisoned-run signature
+    (na far below the fixture's base) is worth recognizing: the
+    FIRST run's "stuck" messages were fixture corruption, not
+    machine findings — only the static-17 stuck survived the fix,
+    and it is the real finding.
+
+### PROMOTION LEDGER updates (A4-U14)
+
+- **`stepFn_branch_transport`** (`Sym/BranchTransport.lean`) —
+  LANDED as general kit surface (2 Kit pins, [propext, Quot.sound]);
+  consumers: the From-symbolic Hh equation (landed); every
+  message-field-symbolic upgrade and every dispatch-arm equation
+  that branches on symbolic state. whileK/andK/orK/boolK arms on
+  first consumer.
+- The literal printer — 11th/12th consumers (HaeRejGen, HhFromGen);
+  **the U13 RHS-emission improvement row TAKEN** (both new
+  generators emit counts/addresses as defs; the sed-carried-RHS
+  class is unrepresentable in the new modules). Remaining older
+  generators keep sed-carried values as shipped history.
+- NEW ROW: **the dispatch-layer static complement extension** (cells
+  16/17 + payload closure, the StaticCells pattern verbatim) —
+  consumers: every stepFollower/stepCandidate/stepLeader drop-arm
+  equation (ErrProposalDropped), any Stop path (ErrStopped). Blocks
+  wave-3 drop arms only; the probed heartbeat/forward arms do not
+  need it.
+- The `stepFn_atomRead_transport` wrapper row (U12/U13): unchanged —
+  still two instances, third instance takes the lift.
+
+## A4-U14 exit (2026-08-25, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since the dispatch tip
+b143c56d: 2 (879a81b4 slice 1, c41f330e slice 2) + this log/exit
+commit; no coordinator commits interleaved (checked at recount:
+`git log b143c56d..HEAD --oneline` = the above). Full proofs+Audit
+green: **517 jobs** (512 at entry + HaeRejLit + HaeRejEquation +
+BranchTransport + HhFromLit + HhFromEquation). Kit pins: +2 (the
+branch-transport pair, build-enforced). Hatch grep over every new
+module: 0. Gate record follows in the next entry (same-commit
+convention).
+
+**Deliverable state vs the U14 charter:**
+1. THE Hae REJECT FAMILY — **DELIVERED, census first**: the census's
+   anti-grinding question answered by measurement (largest window
+   yet, 6,925 steps, but 107 s module — no split needed; the
+   loop-boundary contingency stood down); zero new machinery; zero
+   static reads; **handleAppendEntries is the FIRST FULLY-COMPLETE
+   message handler** (all four censused families proved).
+2. THE `m.From ≠ r.id` BRANCH-CROSSING TRANSPORT — **DELIVERED as
+   general machinery + demonstrated**: `stepFn_branch_transport`
+   (lineage-lined, witnessed, Kit-pinned) + the From-symbolic
+   handleHeartbeat equation as its discharge witness (the cheapest
+   upgrade: 1,325-step span, the shipped statement's ints₅ := 2
+   instance re-derived; dst = ρ.ints 5 proved for every
+   non-self-addressed sender).
+3. WAVE-3 OPENING — **DELIVERED, probe-only as chartered**: the
+   stepFollower/stepCandidate censuses with the full composition
+   map (which landed equations each arm consumes), the two
+   end-to-end dynamic runs (sF×Heartbeat 1,710/1 choice;
+   sC×Heartbeat 4,969/5 choices — the two-equation composition
+   observed), and the dispatch-complement finding (cells 16/17
+   outside the U12 block — the drop arms' named debt).
+
+**Open gaps carried (none counted):** GAP-V1-2/-4/-5, GAP-U1-W1,
+GAP-V2-1 wave-3 condition, GAP-V2-2, MemoryStorage.Entries spec
+design — unchanged; the multi-element spill variant unchanged; the
+U10 message-field-symbolism residual CLOSED this unit (From; other
+fields — LogTerm/Index/Commit symbolism — are the same
+transport+regeneration template, on demand); the atom-re-read
+watch-item stays open for cap-consuming reads (none seen — checked
+this unit's censuses: the reject and dispatch paths have no
+inter-spill atom reads); U14 adds: the dispatch-layer static
+complement extension (cells 16/17 + payloads, ledger row); the Hae
+family-record note — the four Hae families' response records are
+pairwise distinguishable except stale-vs-log-append (the U12 note
+stands; REJECT's record is distinguishable from all three by
+Reject = true).
+
+**A4-U15 CHARTER (proposed):** (1) THE DISPATCH-COMPLEMENT EXTENSION
+(cells 16/17 + payload closure — the StaticCells pattern verbatim,
+its third consumer class), then THE FIRST DISPATCH-ARM EQUATION:
+stepFollower × MsgHeartbeat (censused end-to-end this unit: 1,710
+steps / ONE choice / zero statics — pure assembly on the landed Hh
+machinery; its equation makes the dispatch-composes-handlers shape
+REAL at layer C's door). (2) stepCandidate × MsgHeartbeat as the
+first TWO-EQUATION composition arm (5 choices, the bf spine + Hh
+tail — reuses everything; the 4,969-step census is the recipe).
+(3) Budget permitting: EITHER the stepLeader census (the largest
+dispatch, 18 call sites — census-only, the walker instrument is
+ready) OR the sF×MsgProp forward-arm equation (send-only family,
+1,272 steps — cheap, exercises the no-handler dispatch shape).
+Rotation note: this worker is at ~410k tokens at exit-entry time —
+within budget for U15 to continue on this context if the
+coordinator prefers, but the split discipline default (fresh worker
+per unit) stands.
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1); the comparator-landmark STALE flag
+stands escalated from U8–U13.
