@@ -1337,6 +1337,34 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   three roles → C1 opens), the leader-side fixture pack, budget:
   Step() top-level census. Landmark staleness 139 — stands.
 
+- **Arc 4, A4-U17 — LANDED** @ 5d3e70ae, gate PASS, 526 jobs:
+  **THE HEARTBEAT ARM TRIPLE CLOSED** (sL×MsgBeat: census-exact to
+  the step, four raft scalars symbolic, the first choice-VALUE side
+  condition; sF/sC/sL = the complete arm set for the first round
+  lemma) + the in-place append transport (the U12 atom-re-read
+  watch-item FIRED and was closed as general machinery, stronger
+  than the ledgered wrapper) + the leader-side fixture pack (ALL
+  FOUR remaining leader arms census to STOP — Prop's first
+  non-empty msgsAfterAppend; both pack pieces provably needed) +
+  **THE Step() ROUTING MAP**: on every local default route the glue
+  is a CONSTANT 453 steps / zero choices / role-independent, and
+  each landed arm equation is consumed EXACTLY (pops offset +420) —
+  verified arithmetically on four arms. Non-default routes mapped
+  (term-bump, term-down ignore, nil-panic fail-closed, MsgHup
+  10,709/12 = the campaign spine, C4 territory). WHAT THIS TAUGHT
+  US: (1) the dispatch layer is as compositional as the design
+  hoped — constant glue means the round lemma's outer ring is
+  arithmetic, not discovery; (2) the watch-item lifecycle worked
+  end-to-end (censused open → fired → closed as a transport);
+  (3) anti-grinding fired once (a 28-min whnf divergence killed and
+  bisected; lesson: unification-determining premises must be
+  pre-stated haves). Ledger: 5 arm equations + 15 handler families;
+  C1's inputs COMPLETE. [AGENT]: U18 = C1 dispatched to a fresh
+  11th-gen worker — the layer-C design gate (driver-span census /
+  R-form round-lemma statement witnessed on heartbeat / the A4
+  adapter probe). Landmark staleness 144 — stands for the merge
+  step.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
