@@ -1471,6 +1471,15 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   D1-D4 stand, absorbed as interface instances; its ladder is
   superseded.
 
+- **[USER] 2026-08-26 (closing the redesign pause):** "building
+  general clean machinery isn't just an aesthetic, it's actually
+  the only thing that will scale to other examples." Appended to
+  the redesign note's rationale: generality IS the scaling
+  mechanism — the inventory's general rows survive the next target;
+  the subject-exact rows die with this one. Reconvene when the α
+  gates (SC1, C2a) report; the T1 meeting-point decision is HELD
+  for that reconvene ([USER] present for it; goal remains unset).
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
