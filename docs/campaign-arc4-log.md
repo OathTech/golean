@@ -2487,3 +2487,54 @@ stands escalated.
   modules. Consumers at lift time: HaeEquation (landed copy) + the
   stale-family equation (this unit, slice 1). Full proofs+Audit
   green: 502 jobs.
+- 2026-08-25 Slice 1 — **THE handleAppendEntries STALE-FAMILY
+  EQUATION LANDED** (`StaleEquation.lean` 466 lines + generated
+  `StaleLit.lean` 1,740 lines; probes `StaleProbe3.lean` census +
+  `StaleGen.lean` generator — the printer's 7th consumer — BOTH
+  before any theorem):
+  - [AGENT] Fixture call, the U11 fixture-value note taken with a
+    CONSISTENCY upgrade: not a bare committed bump but a TWO-ENTRY
+    log (storage ents (1,1),(2,1); committed = lastIndex = 2;
+    applied = applying = 2; unstable empty at offset 3) — a
+    consistent raft state, audit-proof against the
+    "fixture violates committed ≤ lastIndex" objection a naive
+    committed=2-over-a-1-entry-log fixture would draw. The message
+    cells are the Hae SUCCESS fixture's VERBATIM (From 2, LogTerm 1,
+    Index 1, Commit 1): `prev.index = 1 < committed = 2` → STALE.
+    The family pair now exhibits the handler branching on STATE with
+    observably distinct records: **stale resp Index = committed = 2
+    vs the landed success record's Index = mlastIndex = 1**.
+  - Census at the new fixture (StaleProbe3): **1,336 steps, ONE
+    choice at step 1307** (same counts as U11's census at the
+    one-entry fixture — the step schedule is fixture-value-invariant
+    on this branch), mirror clean to the `q3Choice` spill quit,
+    post-window 28; spill operands: elems cell 134 (element = the
+    response message at cell 93), temp target 135, backing born at
+    136 (na 136→137 at the crossing).
+  - Generator validated end-to-end before emission: γ==machine at
+    c=0/3/31 (heapEq/naEq true), pre-quit γ-agreement, projections
+    exact (msgsAfterAppend = [⟨4,2,1,0,0,2,…⟩], msgs = [],
+    absRaftLog pre = post = ⟨[(1,1),(2,1)],[],3,2,2,2⟩). One
+    generator fix round: the first run exposed my temp-cell/message-
+    cell conflation (135 vs 93) via the built-in elems-cell check —
+    the validation working as designed.
+  - The equation: `handleAppendEntries_stale_eq_alloc` PRIMARY +
+    identity corollary + §3.3 witness, TEN conclusions through
+    absState v2 + the lens readers (absMessage the Hae record
+    verbatim; absRaftLog pre = post = `staleAbsLog` — the stale
+    branch touches NOTHING, `maybeAppend` never runs;
+    **`absOutbox "msgsAfterAppend"` = `[specAppResp 1 2 0 2]`** —
+    Index = committed; msgs = []; Vote/lead/Term readouts).
+    **Consumes the LIFTED `Frame.span_relocate` — its second
+    consumer, as the promotion row predicted.** Module elaborates in
+    **47 s** (windows [1307, 28] kernel-linked once). Fresh
+    `#print axioms` (probe `AxStale`, verbatim): all five theorems +
+    Frame.span_relocate [propext, Classical.choice, Quot.sound];
+    staleW1_out [propext, Quot.sound]. Full proofs+Audit green:
+    **504 jobs** (502 + StaleLit + StaleEquation); hatch grep 0/0.
+  - What-this-taught-us (slice 1): the "pure assembly" projection
+    held exactly — zero new machinery, one session-hour of work, and
+    the only defect the pipeline caught was a transcription slip
+    (135/93) caught by the generator's own validation print. The
+    per-family marginal cost of a censused branch on a landed spill
+    shape is now: one probe + one generator run + a rename pass.
