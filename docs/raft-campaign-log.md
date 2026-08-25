@@ -1117,6 +1117,24 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   corrections (stale 27 s; 1.76× like-for-like; premise3-ok record
   citation; step-index docstring).
 
+- **Fix round 2 LANDED @ 7ae40db7 — THE BRIDGE IS PROVED** (2026-08-25):
+  `fastRun_transfer_pool(+_eqb)` and `runProgram_pool_seq_bridge(+_eqb)`
+  typechecked on the reviewer's sketch at first attempt, all four
+  Audit-pinned [propext, Classical.choice, Quot.sound]; the fast
+  engine's ok verdict now certifies BOTH whole-program entries BY
+  THEOREM (the audit's HIGH-class concern fully retired, not
+  documented); claim sites rewritten to lead with the conservation
+  argument; mechanical corrections (stale 27 s, 1.76×, premise3-ok
+  citation, step-index in error paths) all in; gate PASS. Coordinator
+  spot-check of the pinned statements: premises are exactly the
+  driver's five evaluated checks — no quantifier slack. [AGENT]
+  merge-prep executed per protocol's refusal path: park-state manifest
+  files committed (the flagged operator obligation), snapshot ref
+  taken, campaign-arc2 REBASED onto main @ 66d62eac (one conflict —
+  dual landmark markers, resolved chronologically), tip 5d6395df;
+  re-gate running, judge re-run at the rebased tip to follow, then
+  the merge ask.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
