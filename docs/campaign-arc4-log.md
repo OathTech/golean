@@ -4760,3 +4760,17 @@ re-targeting, D2/D3 execution) are untouched by this unit.
 Nothing merged; branch-complete. Merge/audit-ask remain the
 operator's (constitution §4.1); the comparator-landmark STALE flag
 stands escalated from U8–U18.
+
+- 2026-08-25 A4-U19 gate follow-up (same-commit convention): unit-end
+  gate `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci` at the
+  exit tree — **RESULT: PASS, exit 0** (`artifacts/ci-arc4-u19.log`,
+  gitignored; 23 ok steps + the two sanctioned no-diff notes — this
+  unit touched `proofs/GoLeanProofs/Frame/Shape*.lean`,
+  `Specs/Raft/ShapeWitness.lean`, `Audit/FrameShape.lean`, the two
+  aggregators, arc-4 docs + gitignored probes only; no runtime code,
+  no Corpus/, no baselines/; the Audit surface GREW by the 8
+  FrameShape pins — additive, in-build-verified). Gate staggered
+  behind the `free -g` guard (89G free ≥ 24G cap). The
+  comparator-landmark note now reads **STALE at 148 commits** (> the
+  100 threshold; report-only) — stands escalated for the operator's
+  merge step, as at U8–U18.
