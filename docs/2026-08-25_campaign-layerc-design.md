@@ -1,4 +1,4 @@
-# Layer C — the round induction, checker implication, and T1 assembly (design v1)
+# Layer C — the round induction, checker implication, and T1 assembly (design v2)
 
 Campaign coordinator note, 2026-08-25, [AGENT] (drafted at the wave-2→3
 boundary; to be CONTACT-TESTED by the layer-C unit per the U1 lesson —
@@ -138,3 +138,73 @@ corollary is certificate replay at round granularity (the [USER]
 retirement condition's named mechanism). No new mechanism class is
 proposed by this design; anything C1 discovers that cannot be mapped
 gets the extra-scrutiny treatment before shipping.
+
+
+## 8. C1 GATE OUTCOME — v2 REVISION (2026-08-26, [AGENT]; verdict block
+in the arc-4 log's U18 entry, evidence-anchored there)
+
+The gate fired as designed. Verdicts: A1 PASS-with-trigger, A2 REFINE,
+A3 PASS (absTwinRead v0 shipped), A4 KILL (precisely characterized),
+plus a census headline outside the assumption set. The three
+coordinator decisions, made now and binding for the C-ladder:
+
+**D1 (A1 trigger fired → the instrument is commissioned).** Real
+rounds are 7.7k–34k steps; naive kernel replay is measured-dead past
+~1,400-step chunks (41 GB, term growth); 12 of 28 deliver rounds are
+MsgApp-family re-walking Hae-scale spans. The FrameSim C1+C2
+completeness instrument (U16 probe: ≈2 units nominal, 3 at risk;
+Yang–O'Hearn locality lineage) is COMMISSIONED as the first C-ladder
+unit — it converts round lemmas from 5–15-min mirror chains into
+modular compositions that consume the landed handler equations.
+Budget guard adopted ladder-wide: no naive kernel replay past
+300-step chunks; mirror route or an explicit chunk-cost quote in any
+round-lemma plan.
+
+**D2 (A4 kill → the adapter becomes native re-derivation, route (b)
+for S1).** Three mismatch axes are theorem-grounded: commit-advance
+without new entries has NO Verdi-lattice image (and is reachable and
+essential); the election noop entry exits Verdi's reachable set at
+the first election; the package seam. Decision: the S1 leaf's
+invariant (one-leader-per-term at the etcd-abstract level) is
+RE-DERIVED NATIVELY over specRound, reusing T3's proof STRUCTURE as
+the template (the lattice stays landed as the spec-level result and
+the structural guide — reuse of proof structure is the classic; no
+VerdiCompat build-wiring is needed on this route, mooting axis
+(iii)). The (a)-vs-(b) decision for S2/S3 is deferred to their wave,
+per the gate's own recommendation.
+
+**D3 (the reachability headline → the arm ladder re-targets).** The
+heartbeat round-kind and the Prop forward/drop arms are unreachable
+under every stream (the driver never ticks; node 1 is leader when
+quiescent). The four landed dispatch-arm equations are T1-VACUOUS —
+they retain machinery/validation value (their vacuity is stated in
+their docstrings; nothing is silently re-labeled), and the wave-3
+lesson is recorded: REACHABILITY IS PART OF THE CENSUS from now on —
+every future arm/round unit states its target's reachability
+evidence before building. The reachable set C2+ must cover: MsgVote,
+MsgVoteResp, MsgApp families, MsgAppResp families, the storage-resp
+arms, campaign, propose-accept.
+
+**The re-targeted ladder (replaces §6):**
+- **C2a**: the FrameSim completeness instrument (D1) — C1+C2 clauses,
+  probe-first execution per U16's sizing, hard stop at 3 units.
+- **C2b**: the driver-loop SYMBOLIC-NET lemmas (the |net|-dependent
+  glue: slice-walk loop invariants — classic, Go-general kit
+  material) + the storage-resp arm equations.
+- **C2c**: the harvest-ring (Ready-cycle) equations — 9–14k
+  steps/round, no equations today, larger than the delivered arm in
+  every round.
+- **C2d**: the first REACHABLE round lemma (no-op arm round or
+  MsgVote round) as the instrument's first full consumer.
+- **C3**: induction skeleton + the NATIVE S1 leaf (D2) + the seed
+  link-pin via Arc-2-style reflection (the 81k-step/171-choice init
+  is not naively replayable — the census priced it).
+- **C4**: remaining reachable round kinds (the MsgApp/MsgAppResp
+  families dominate — 18 of 28 rounds).
+- **C5**: T1 assembly + readout + the round-replay corollary (A5
+  re-priced only after C2a lands). Judge + milestone audit here.
+- **C6**: T2.
+
+**Calibration note**: the refutations consume the optimism margin —
+P-2026-08-25's T1 ~1.5–2 weeks moves toward its upper bound; the
+2.5–4-week T1+T2 window stands.
