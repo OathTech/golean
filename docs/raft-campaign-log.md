@@ -1145,6 +1145,16 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   `git checkout main && git merge --ff-only campaign-arc2` on
   approval, given at that moment. Nothing merged until then.
 
+- **[USER] 2026-08-25 — MERGE APPROVED AND EXECUTED**: "go ahead and
+  merge as proposed". main fast-forwarded to 118d31aa (the arc-2
+  package: verified fast replay engine + pool/sequential bridge
+  theorems + corpus differential record + tracereplay fast engine +
+  park state + audit corrections). ff-only, tree clean, primary
+  checkout back parked on main. Push NOT executed (separate
+  sign-off, unrequested). The arc-4 lane now owes a rebase onto the
+  new main at its own merge step; its U11 work is unaffected
+  meanwhile (disjoint trees).
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
