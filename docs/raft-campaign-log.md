@@ -1214,6 +1214,31 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   dispatched = stale equation + THE static-cell complement as shared
   machinery + third slot by censused cost.
 
+- **Arc 4, A4-U12 — LANDED** @ 96723532, gate PASS, 507 jobs: the
+  span_relocate lift (promotion row taken) + THE STALE-FAMILY
+  EQUATION + **THE STATIC-CELL COMPLEMENT as shared machinery**
+  (payloads at $pkginit's true addresses, zero renaming; trust via
+  staticComplement_link kernel-replaying the 1,382-step init against
+  the pin every build) + **THE LOG-APPEND EQUATION** — landed same
+  unit, not just censused. THE SEAM VERDICT, plainly: **GAP-V1-1b's
+  overlay does NOT bite at the projection layer** — absRaftLog
+  projects the grown overlay exactly on first exercise; what bit
+  instead was an atom-absorption assumption on the in-window
+  re-read of the spilled handle, discharged with ZERO new machinery
+  (choice-independence via existing lemmas). handleAppendEntries now
+  has THREE proved families — every branch but REJECT. WHAT THIS
+  TAUGHT US: (1) the overlay risk retires at projection granularity;
+  the residual watch-item is a cap-consuming re-read BETWEEN spills
+  (would not be choice-independent — becomeLeader's census must
+  check); (2) the further-consumers pattern held under pressure —
+  the complement shipped general (link-pinned) and the overlay
+  surprise was absorbed by existing lemmas, no bespoke anything.
+  Equation ledger: 5 handler families proved (bF pilot, Hh no-op,
+  Hae success/stale/log-append). [AGENT]: U13 dispatched to the same
+  worker (~403k): becomeLeader census-first (the watch-item is the
+  point), Hh commit-advance, third slot by censused cost. Landmark
+  staleness 120 commits — stands for the arc-4 merge step.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
