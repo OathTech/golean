@@ -1155,6 +1155,19 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   new main at its own merge step; its U11 work is unaffected
   meanwhile (disjoint trees).
 
+- **P-2026-08-25 (calibration revision, [USER]-prompted challenge,
+  [AGENT] numbers):** P-2026-08-24's ~4-7 weeks to T1+T2 is revised
+  to **~2.5-4 weeks (T1 in ~1.5-2)**. Basis: the original predated
+  the anti-grinding doctrine, the verified fast engine, and the
+  measured ~70× lens payoff; layer B's marginal handler cost has
+  collapsed (handleHeartbeat = half a unit; handleAppendEntries
+  censused as assembly). Variance now concentrates in layer C's
+  first contact (the U1 precedent: pilots refute cost models) and
+  the hard handler tail. Named accelerator, decision at U11's
+  boundary: a parallel lane for the checker-implication lemmas
+  (lattice on main + stable absState interface, file-disjoint from
+  handler equations). Original prediction retained beside this one.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
