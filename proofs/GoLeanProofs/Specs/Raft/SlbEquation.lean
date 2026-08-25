@@ -35,8 +35,8 @@ FIXTURE-FAMILY preconditions (the U3 fine-print pattern):
   readout carries its uint64-range side condition (wrap depth 2 —
   the two msgs field stores; generator-probed per §4c);
 - **`2 ≤ hhCap c₄` — THE FIRST CHOICE-VALUE side condition** (the
-  §4c watch-item, fired): the spill's realized capacity must admit
-  the second peer's in-place append. The complement (`c₄ % 32 = 29`,
+  §4c watch-item, fired): the spill's realized capacity must leave
+  room for the second peer's in-place append. The complement (`c₄ % 32 = 29`,
   realized cap 1) is the RE-SPILL family — a different, longer chain
   (5 choices; machine-witnessed by the generator's divergence probe),
   logged as a named residual family, NOT covered here.
@@ -980,7 +980,8 @@ side's first arm — the heartbeat round-kind's arm set is now sF/sC/sL
 COMPLETE): from the drained `er := stepLeader(r, m)` call at ANY
 placement (FrameSim premise), over every consumed 4-choice prefix
 (`c₁ c₂ c₃ c₄ :: ch` — three Visit picks and the msgs appendSpill)
-whose spill choice admits the second peer's in-place append
+whose spill choice leaves room for the second peer's in-place
+append
 (**`2 ≤ hhCap c₄`, the first choice-VALUE side condition**; the
 `c₄ % 32 = 29` complement is the separately-censused RE-SPILL
 residual family), the run returns in exactly **3,362 steps** with
