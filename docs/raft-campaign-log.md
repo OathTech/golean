@@ -1263,6 +1263,33 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   censuses. Landmark staleness 126 commits — stands for the arc-4
   merge step.
 
+- **Arc 4, A4-U14 — LANDED** @ 24458fdd, gate PASS, 517 jobs:
+  **handleAppendEntries CLOSED — the first fully-complete message
+  handler** (REJECT family: 6,951 steps, largest window yet, the
+  anti-grinding contingency checked by measurement and NOT triggered
+  — 107 s, first-check green) + `stepFn_branch_transport`
+  (path-condition splitting, King 1976 lineage; the transport
+  family's third member) demonstrated by the From-symbolic Hh
+  equation (dst proved for EVERY non-self-addressed sender — the U10
+  residual closed) + **THE DISPATCH COMPOSITION MAP** (probe-only):
+  sF/sC arms consume the landed equations exactly as layer C needs;
+  sC×MsgHeartbeat measured as the first two-equation composition
+  (4,969 steps = bf spine + Hh span + glue). WHAT THIS TAUGHT US:
+  (1) the drop arms stick at static cells 16/17 (ErrProposalDropped)
+  — OUTSIDE the U12 complement's [20,31): the dispatch-layer
+  complement extension is a named debt with a verbatim recipe;
+  (2) wave-2 pricing held to the end — the largest window was still
+  assembly; (3) the U13 printer improvement makes the
+  numeric-mismatch class unrepresentable in new generators.
+  Equation ledger: **15 families + the first From-symbolic form.**
+  [AGENT]: U15 to a fresh 9th-gen worker (dispatch complement
+  extension → first dispatch-arm equations, sF then the sC
+  composition arm); COORDINATOR OPENS THE LAYER-C DESIGN in
+  parallel (the composition map is its input; note drafted on the
+  campaign worktree, to be contact-tested by the layer-C unit per
+  the U1 lesson). Landmark staleness 130 — stands for the merge
+  step.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
