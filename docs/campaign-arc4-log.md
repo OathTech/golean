@@ -2444,3 +2444,16 @@ slice.
 Nothing merged; branch-complete. Merge/audit-ask remain the
 operator's (constitution §4.1); the comparator-landmark STALE flag
 stands escalated.
+
+- 2026-08-25 A4-U11 gate follow-up (same-commit convention): unit-end
+  gate `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci` at the
+  exit tree — **RESULT: PASS, exit 0** (`artifacts/ci-arc4-u11.log`,
+  gitignored, tail-12 capture: the final ok steps + the two
+  sanctioned no-diff notes + RESULT; the full-run PASS is the exit
+  code — this unit touched
+  `proofs/GoLeanProofs/Specs/Raft/{HaeLit,HaeEquation}.lean` + the
+  aggregator + arc-4 docs + gitignored probes only; no runtime code,
+  no Corpus/, no baselines/, no edits to shipped modules). Gate
+  staggered behind the `free -g` guard (119G available ≥ 24G cap).
+  The comparator-landmark STALE flag stands escalated for the
+  operator's merge step.
