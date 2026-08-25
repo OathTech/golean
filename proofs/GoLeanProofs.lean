@@ -33,6 +33,8 @@ import GoLeanProofs.Sym.PickTransport
 import GoLeanProofs.Sym.SpillTransport
 import GoLeanProofs.Specs.Raft.HhLit
 import GoLeanProofs.Specs.Raft.HhEquation
+import GoLeanProofs.Specs.Raft.HaeLit
+import GoLeanProofs.Specs.Raft.HaeEquation
 -- A4-U8: the field-lens layer (Perennial Access lineage; general half —
 -- combinators + L1-L4 laws; per-field instances live in Specs/Raft).
 import GoLeanProofs.Lens

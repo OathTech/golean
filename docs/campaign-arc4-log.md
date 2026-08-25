@@ -2298,3 +2298,149 @@ stands escalated from U8/U9.
   24G cap). The comparator-landmark note now reads **STALE at 112
   commits** (> the 100 threshold; report-only) — stands escalated for
   the operator's merge step, as at U8/U9.
+
+## A4-U11 — the handleAppendEntries equation + the stale/log-append censuses (2026-08-25, same worker, coordinator-dispatched; third slot decided by the coordinator: the log-append family over becomeLeader)
+
+- 2026-08-25 SUCCESSOR RE-VERIFICATION (own U10 outputs, fresh, all
+  PASS): tip 91b7dc04 clean; full capped proofs+Audit fresh build
+  green (**500 jobs**); the three SpillTransport Kit pins verbatim
+  `[propext, Quot.sound]` (grep of the `#guard_msgs` block,
+  build-enforced by the green build); hatch grep over
+  SpillTransport/HhEquation/HhLit: 0/0/0; free-memory guard at
+  launch: 120G available.
+- 2026-08-25 Deliverable 1, slice A — generator `HaeGen.lean` (the
+  printer's 6th consumer): the born-re-sited SUCCESS/EMPTY-ENTRIES
+  fixture (bf31 heap vars 1–4 + Message cells 52–56; LogTerm/Index
+  = 1 = matching prev; From = 2 concrete per the U10 finding).
+  Validated before any theorem: pre-window **2798** clean to the
+  spill quit, post-window **29** to `.next .stop` on ONE atom-carried
+  literal, γ==machine at c=0/3/31, response-message cell probed at
+  **183** (the one placement-specific constant vs Hh), outbox
+  records exact (`msgsAfterAppend` = [⟨4,2,1,0,0,1,…⟩]; `msgs` = []).
+  `HaeLit.lean` generated (3,789 lines; atom printers now emit
+  `(… : Nat)` ascriptions — the U10 gotcha folded back).
+- 2026-08-25 Deliverable 1, slice B — **THE handleAppendEntries
+  EQUATION LANDED** (`HaeEquation.lean`, 438 lines):
+  `handleAppendEntries_handler_eq_alloc` PRIMARY + identity
+  corollary + §3.3 witness, TEN conclusions through absState v2 +
+  the lens readers (argument `absMessage` incl. LogTerm/Index;
+  `absRaftLog` pre = post = `hhAbsLog` — the log view preserved,
+  EMPTY-entries family; **`absOutbox "msgsAfterAppend"` =
+  `[specAppResp 1 2 0 1]`** — typ 4, dst m.From, src r.id, term 0,
+  Index = mlastIndex; **`absOutbox "msgs"` = []** — the async-group
+  routing made a CONCLUSION; Vote/lead/Term readouts). Module
+  elaborates in **66 s**; axioms the classical trio
+  (helpers/`haeW1_out` [propext, Quot.sound]; fresh probe `AxHae`,
+  verbatim). Plus **`span_relocate`** — the `stepFnIter_sim`/`ok_inv`
+  plumbing packaged ONCE at opaque states (0.8 s; every future
+  handler's alloc form applies it instead of inlining the sim
+  elimination; promotion row below).
+- 2026-08-25 [AGENT] **THE ELABORATOR-MISMATCH PATHOLOGY (found the
+  hard way, ~2 h of bisection; what-this-taught-us):** the first
+  HaeEquation draft hung >37 min at 14.5 GB. Bisection (T1..T20
+  probes; three of my sliced probe files were themselves malformed —
+  a second lesson: python-sliced probe files must be diffed before
+  their timings are believed) isolated the true cause: a STALE STEP
+  COUNT — `stepFnIter_sim … 1325` (copied from Hh) against `hrun` at
+  2828. The elaborator, failing unification of
+  `stepFnIter 1325 σ …` vs `stepFnIter 2828 σ …`, fell into
+  WHNF-UNFOLDING BOTH machine spines (thousands of steps) instead of
+  failing fast — `debug.skipKernelTC` proved it elaborator-side; the
+  fix was one number. LESSONS, now conventions: (a) an
+  argument-count mismatch between two large-reduction terms produces
+  a HANG, not an error — on any unexplained elaboration hang, check
+  the NUMERIC ARGUMENTS of sim/window applications FIRST; (b) the
+  per-handler sim plumbing is now `span_relocate` (n shared by
+  construction, so this class cannot recur); (c) window links and
+  crossings were all individually fast (T1 47 s, T2 64 s) — the
+  scale itself was never the problem.
+- 2026-08-25 Deliverable 2 — **STALE-branch census DELIVERED**
+  (probe `StaleProbe.lean`; equation NOT attempted, boundary call
+  below): m.Index = 0 < committed: **1,336 steps, ONE choice** (the
+  same msgsAfterAppend spill at step 1307, post-window 28), mirror
+  clean to the quit — zero new machinery; resp = ⟨4,2,1,0,0,
+  index=committed=1,…⟩ (numerically identical to the success
+  record AT THIS FIXTURE since mlastIndex = committed = 1 — a
+  successor picking distinct fixture values would make the two
+  families' responses observably different; noted).
+- 2026-08-25 Deliverable 3 — **LOG-APPEND census DELIVERED WITH THE
+  RISK FINDING** (probes `LaProbe{,2}.lean`; fixture: one entry
+  (index 2, term 1) after matching prev): the machine goes **STUCK at
+  step 2689 — `unbound GoCore heap location: base 25`**: the entry
+  walk (`findConflict`/`term(2)` past lastIndex) takes the ERROR
+  branch, which dereferences a package-level error variable
+  (`deref (locLit 25) : interface error`) — body-table census: static
+  25 is referenced by `$pkginit`, `raftLog.{term,slice,
+  zeroTermOnOutOfBounds}` and `MemoryStorage.{Entries,Term}` (=
+  the `ErrCompacted` comparison family). **The U4 Ms-census
+  error-var residual, first bite on a wave-2 path**: the leaf
+  fixtures carry no static [20,31) cells (only globalRand 18/19),
+  so ANY log-append equation needs a fixture extended with the true
+  static error cells (`$pkginit`'s images — reconstructible by
+  running the twin's init and dumping [20,31), the MsResite note's
+  predicted shape). The unstable overlay itself (GAP-V1-1b) was NOT
+  reached — the wobble is BEFORE it, at fixture completeness; the
+  mirror quit q11Internal mirrors the machine's stuck (fail-closed,
+  correct). What-this-taught-us: wave-2's REAL fixture debt is the
+  static-cell complement, not the overlay machinery.
+- 2026-08-25 [AGENT] BOUNDARY CALL (the dispatch's own rotation
+  guidance): deliverable 2's EQUATION (pure assembly, censused,
+  zero new machinery) and 3's equation (blocked on the static-cell
+  fixture extension) are handed to the successor; landing (1) solid
+  + both censuses + the two findings beats a rushed (2). Token
+  position at the call: ~730k of the 600–900k line.
+
+### PROMOTION LEDGER updates (A4-U11)
+
+- **`span_relocate`** (currently `HaeEquation.lean`, target layer) —
+  general Frame-level plumbing, ONE consumer landed; second consumer
+  = every next handler's alloc form (stale-family equation is the
+  immediate one); lift to `Frame/Relocate.lean` beside
+  `frameSim_relocate` at the next consolidation slice
+  (coordinator-authorized boundary, U6 precedent). Retrofit option
+  recorded: Hh/Bf31/Bc31 alloc proofs could consume it, shipped
+  statements untouched.
+- The literal printer — 6th consumer; the atom-ascription fix now
+  lives in `HhGen`/`HaeGen` both.
+
+## A4-U11 exit (2026-08-25, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since the dispatch tip
+91b7dc04: this unit's slice commit + this log commit (recount at
+commit time); no coordinator commits interleaved. Full proofs+Audit
+green: **502 jobs** (500 + HaeLit + HaeEquation). Hatch grep over
+HaeLit/HaeEquation: 0/0. No new Kit pins owed (target-layer modules;
+the spill-transport pins stand).
+
+**Deliverable state vs the U11 dispatch:**
+1. THE handleAppendEntries EQUATION (success/empty family) —
+   **DELIVERED** (alloc PRIMARY + corollary + witness, ten
+   absState-v2/lens conclusions incl. the msgsAfterAppend routing;
+   66 s module; classical-trio axioms; `span_relocate` packaged).
+2. STALE-branch family — **CENSUS DELIVERED**, equation handed
+   forward (pure assembly; the fixture-value note above).
+3. LOG-APPEND family — **CENSUS DELIVERED WITH THE RISK FINDING**
+   (the static error-cell fixture debt at base 25; the overlay
+   not reached; probe-first honored — no equation attempted).
+
+**Open gaps carried (none counted):** all U10 gaps unchanged; U11
+adds: the static-cell fixture complement for error-branch families
+(cells [20,31) from `$pkginit` — blocks log-append AND the U4 Ms
+error branches, same debt); the stale-family equation (assembly);
+the U11 fixture-value note (pick distinct committed/mlastIndex for
+observably-different family records).
+
+**A4-U12 CHARTER (proposed):** (1) the STALE-family equation
+(assembly on the landed pipeline; consider committed = 2 fixtures so
+stale/success records differ observably); (2) THE STATIC-CELL
+COMPLEMENT: reconstruct `$pkginit`'s [20,31) images (run the twin
+init, dump, add to the born-re-sited fixture recipe as a shared
+`hhStatics` block), then re-census the log-append family — if clean,
+its equation (the unstable overlay's first real exercise, GAP-V1-1b);
+(3) then becomeLeader (all transports landed) or the commit-advance
+family. `span_relocate` lift to Frame/ at the first consolidation
+slice.
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1); the comparator-landmark STALE flag
+stands escalated.
