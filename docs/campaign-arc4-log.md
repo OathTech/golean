@@ -2934,3 +2934,39 @@ stands escalated from U8–U11.
     generator-emitted link RHS values (rather than sed-carried ones)
     would make the class unrepresentable — noted as a printer
     improvement for the next consumer.
+- 2026-08-25 Slice 4 — **THE MemoryStorage.Term ERROR-BRANCH
+  EQUATIONS LANDED — the U4 residual closed, and THE STATIC-CELL
+  COMPLEMENT'S SECOND CONSUMER** (`MsErrEquation.lean` 359 lines;
+  census probe `MsErrProbe` first; the coordinator's insight-test
+  pick):
+  - Census: **both branches choice-free, single-window, mirror clean
+    end-to-end** — Term(0) → ErrCompacted (cell 23, payload 83) in
+    159 steps; Term(5) → ErrUnavailable (cell 25 — THE U11 stuck
+    cell — payload 91) in 180 steps. The fixture =
+    `ms31SymHeap ++ staticComplementSym` at na₀ = 98 — **the
+    complement composed with a landed fixture by APPEND ALONE**, on
+    a path disjoint from log-append: the generality claim validated
+    by its design test.
+  - Conclusion shape (recorded honestly): the spec side answers
+    **`specTermAt … = none`** at both indexes (the out-of-range arm
+    — the spec does not distinguish WHICH error), and the
+    machine-level identity conclusions carry the distinction: the
+    er result cell and the static ROOT cell hold the SAME interface
+    value (two lookups; both rename together under relocation via
+    new local `lookup_value_renV` — `lookup_value_ren` without the
+    loc-free premise, concluding the RENAMED value; promotion note:
+    a second consumer lifts it beside the original in AllocEqWave1).
+  - Both families: alloc PRIMARY (`Frame.span_relocate` 6th/7th
+    consumers) + identity corollaries + §3.3 witnesses. Module
+    **378 s** (the per-conjunct one-window cost class — no literals,
+    the BpcEquation pattern note: literalization pays from the
+    second window on; ~14 window-evaluating kernel facts at
+    159/180 steps each). Axioms: equation families classical trio;
+    `mse*_spec_none`/`lookup_value_renV` [propext]. Full
+    proofs+Audit green **512 jobs**; hatch 0.
+  - What-this-taught-us (slice 4): the complement really is a
+    fixture LIBRARY BLOCK — append + na₀, nothing else — and the
+    error-identity conclusion shape ("the returned err IS the
+    package-level var, stated as two renaming-covariant lookups")
+    is the honest form for Go's sentinel-error pattern: the spec's
+    none-arm plus machine identity, neither blurred into the other.
