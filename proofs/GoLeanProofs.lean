@@ -45,6 +45,8 @@ import GoLeanProofs.Specs.Raft.BlEquation
 import GoLeanProofs.Specs.Raft.HhAdvLit
 import GoLeanProofs.Specs.Raft.HhAdvEquation
 import GoLeanProofs.Specs.Raft.MsErrEquation
+import GoLeanProofs.Specs.Raft.HaeRejLit
+import GoLeanProofs.Specs.Raft.HaeRejEquation
 -- A4-U8: the field-lens layer (Perennial Access lineage; general half —
 -- combinators + L1-L4 laws; per-field instances live in Specs/Raft).
 import GoLeanProofs.Lens
