@@ -1437,6 +1437,23 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   organize its skeleton around the obligation signature; its
   measurements (does the lattice factor?) unchanged.
 
+- **[USER] 2026-08-26 — the second grind-smell (mid-pause):**
+  subject-exact equations flagged — "there must be opportunities to
+  generalize surely?" [AGENT] concurrence + D4 added to the design
+  note: the literal-chain mode is a tolerated scaffold; post-C2a the
+  equation layer shifts to STRUCTURAL COMPOSITION (size-scaled
+  symbolic execution on the existing pieces; symbolic preconditions;
+  bounded-completion statements), with the landed literal equations
+  re-roled as the compositional prover's validation corpus. Timing
+  note: the reachability re-target means the big wave is unbuilt —
+  the mode shifts BEFORE it. Calibration honesty: this is the second
+  [USER] grind-smell that located a real abstraction gap (wave →
+  round-replay; literal chains → compositional prover); the
+  coordinator's own insight-test missed both while unit-level
+  insight stayed high — pattern logged: LOCAL insight per iteration
+  does not certify the METHOD's shape; method-level review belongs
+  at every wave boundary.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.

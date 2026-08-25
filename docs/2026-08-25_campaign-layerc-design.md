@@ -209,6 +209,29 @@ evidence before building. The reachable set C2+ must cover: MsgVote,
 MsgVoteResp, MsgApp families, MsgAppResp families, the storage-resp
 arms, campaign, propose-accept.
 
+**D4 — THE MODE SHIFT ([USER]-prompted, 2026-08-26): the equation
+layer generalizes.** The literal-chain mode (step-exact statements,
+generated fixture literals) is reclassified as what the doctrine
+already calls it: a tolerated scaffold. Once C2a's instrument lands
+(mid-derivation relational consumption — the missing joint), the
+sanctioned mode for ALL NEW equations becomes STRUCTURAL COMPOSITION:
+symbolic execution composed over code structure (per-statement /
+per-call, cost scaling with program SIZE not step count; TableExt +
+the transport family + the lens + the C2b loop-invariant lemmas are
+the existing pieces), fixtures as symbolic preconditions, conclusions
+as completion-with-bound rather than exact fuel counts. The timing is
+the reachability finding's gift: the reachable equation set (MsgApp/
+MsgAppResp ×18 rounds, storage arms, the harvest ring) is mostly
+UNBUILT — the mode shifts before the big wave, not after. The landed
+literal equations are RE-ROLED as the compositional prover's
+validation corpus (known-true instances), not load-bearing inputs.
+Inherent-anchoring note: T1 is about the pinned wire — the pin stays;
+the method and statement forms generalize. This also collapses the
+patched-subject fallback's fork cost (structural artifacts transfer
+across subject edits that preserve code shape). Lineage: this IS the
+classics' own trajectory — compositional program logic over
+per-instruction reasoning.
+
 **The re-targeted ladder (replaces §6):**
 - **C2a**: the FrameSim completeness instrument (D1) — C1+C2 clauses,
   probe-first execution per U16's sizing, hard stop at 3 units.
