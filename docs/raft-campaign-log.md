@@ -1480,6 +1480,42 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   gates (SC1, C2a) report; the T1 meeting-point decision is HELD
   for that reconvene ([USER] present for it; goal remains unset).
 
+- **SC1 (scoping lane) — LANDED** @ 740c719e on campaign-arc4b
+  (2026-08-26). GATE: honest FAIL (exit 1) — the un-swept-proof-file
+  tamper check fired on the lane's own no-edit rule (the two new
+  modules can't import into the aggregator without touching a
+  tracked file); compensating verification on the record (both
+  modules kernel-checked green as explicit capped targets, AxNative
+  [propext, Quot.sound] on all eight proved lemmas, hatch 0);
+  LANDING ACTION = two import lines in GoLeanProofs.lean at the
+  wave boundary. THE THREE VERDICTS: (1) **I1 FACTORS, measured
+  strongly**: zero handler-unfold residue in 5,005 chain lines;
+  **the A4 kill DISSOLVES at obligation level — both discharge
+  halves PROVED** (etcd_emptyAccept_discharges /
+  verdi_frozen_discharges inhabit one followerCommitOk envelope);
+  S2/S3 consume commit only through three obligation members
+  (statement-verified). (2) Native S1 ≈ 2.5-3 units, calibrated by
+  three end-to-end links (minutes each, axiom-clean); measured
+  ADAPTS driver: etcd's becomeLeader clears the tally ⇒
+  transition-scoped + victory-ghost-carried leader-quorum. T1's
+  S2/S3 leaf ≈ 1.5-2 units (ghost-history chain); family SMS
+  superstructure 4-8 units post-T1. (3) Harvest ring:
+  choice-consuming but value-deterministic (345 draws fully
+  classified; third step-exact replication of the pinned run) →
+  per-arm sub-ring equations, no new choice machinery. **RECORD
+  CORRECTION, owned by the coordinator**: T3's proved core is the
+  election-safety ring up to one_leaderLog_per_term; log-matching/
+  leader-completeness/SMS are ported STATEMENTS (the arc-3 modules'
+  own docstrings say so — LeaderLogs.lean:31-33); prior campaign-log
+  summaries calling the lattice "complete" across all four
+  properties overstated — route (a) is DEAD for the upper
+  properties because there is nothing to transfer, and the family
+  route builds them over the signature. Patched-subject fallback:
+  LESS attractive (its hedged risk measured small). Ops note:
+  cold worktree full builds need 64G (silent OOM in the Raft tail
+  at 48G). C2a still running; the meeting-point decision remains
+  HELD for the [USER] reconvene.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
