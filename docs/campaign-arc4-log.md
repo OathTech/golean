@@ -2607,8 +2607,8 @@ stands escalated.
     the leaf range) made the zero-rename block possible — worth
     checking BEFORE designing a rename layer, not after.
 - 2026-08-25 Slice 3 — **THE handleAppendEntries LOG-APPEND EQUATION
-  LANDED** (`LaEquation.lean` 500 lines + generated `LaLit.lean`
-  ~10,900 lines / 931 KB by probe `LaGen.lean` — the printer's 8th
+  LANDED** (`LaEquation.lean` 593 lines + generated `LaLit.lean`
+  12,765 lines / 931 KB by probe `LaGen.lean` — the printer's 8th
   consumer): the first equation through the REAL log-write path, the
   first TWO-choice message-handler equation, GAP-V1-1b's overlay
   exercised, and the static-cell complement's first consumer.
@@ -2693,3 +2693,89 @@ stands escalated.
   packaged `stepFn_atomRead_transport` in Sym/ (same terms as the
   pick/spill transports). Not built now — two instances of the
   COMPOSITION do not yet justify a wrapper.
+
+## A4-U12 exit (2026-08-25, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since the dispatch tip
+eeceef6f: 4 (521fd94c slice 0, 53f55fbc slice 1, 60969eee slice 2,
+441fe48c slice 3) + this log/exit commit; no coordinator commits
+interleaved (checked at recount: `git log eeceef6f..HEAD --oneline` =
+the above). Full proofs+Audit green: **507 jobs** (502 at entry +
+StaleLit + StaleEquation + StaticCells + LaLit + LaEquation). Kit
+pins: +1 (`Frame.span_relocate`, build-enforced). Hatch grep over
+every new module (StaleEquation/StaleLit/StaticCells/LaEquation/
+LaLit + the Relocate addition): 0.
+
+**Deliverable state vs the U12 charter:**
+1. THE STALE-FAMILY EQUATION — **DELIVERED** (slice 1:
+   `handleAppendEntries_stale_eq_alloc` PRIMARY + corollary +
+   witness; the U11 fixture-value note taken as a CONSISTENT
+   two-entry log, committed = lastIndex = 2; the family pair now
+   branches on STATE with observably distinct records — stale resp
+   Index = committed = 2 vs success Index = 1; 47 s module;
+   second consumer of the lifted span_relocate).
+2. THE STATIC-CELL COMPLEMENT — **DELIVERED AS SHARED MACHINERY**
+   (slice 2: `StaticCells.lean`; $pkginit's [20,31) images + payload
+   referents at TRUE addresses, zero renaming, nextAddr₀ = 98;
+   kernel-linked to the pin on every build — the 1,382-step init
+   replayed inside `staticComplement_link`; general to every
+   error-branch consumer: log-append landed, the U4 Ms error
+   branches owed).
+3. THE LOG-APPEND RE-CENSUS + EQUATION — **DELIVERED, BOTH** (the
+   charter's conditional both ways: census CLEAN → equation landed):
+   the stuck cleared; **THE VERDICT: the unstable overlay does NOT
+   bite at the projection layer** (absRaftLog/view exact on first
+   exercise) **and the mirror-level atom-absorption limit it DID
+   expose** (`len(u.entries)` re-read → q10Atom) **was discharged by
+   landed-kit composition with zero new machinery**
+   (`handleAppendEntries_logAppend_eq_alloc`: 4,828 steps, TWO
+   choices, ten conclusions incl. the overlay-grown log view and
+   the axiom-free `la_log_grew`; 113 s module, green first check).
+4. Third slot (commit-advance / becomeLeader) — NOT attempted
+   ([AGENT] boundary call: the unit landed charter items 1–3 in
+   full including the conditional equation; stopping at the clean
+   branch-complete boundary beats opening a fourth census at
+   ~430k tokens — split discipline).
+Plus slice 0: the `span_relocate` lift (the U11 promotion row,
+coordinator-authorized; Kit-pinned; U11's elaborator-pathology guard
+restated at the lifted site).
+
+**Handler-equation state after this unit:** handleAppendEntries now
+has THREE proved families (success/empty at U11, stale + log-append
+this unit) — every branch of the handler except REJECT; the overlay,
+the static error cells, the two-choice span shape, and the
+atom-re-read crossing are all exercised and recorded.
+
+**Open gaps carried (none counted):** GAP-V1-2/-4/-5, GAP-U1-W1,
+GAP-V2-1 wave-3 condition, GAP-V2-2, MemoryStorage.Entries spec
+design — all unchanged; the U4 Ms ERROR branches now UNBLOCKED (the
+complement is their named debt; owed consumer); U10's residuals
+unchanged (Hh commit-advance family; message-field symbolism branch
+crossing; multi-element spill variant); U12 adds: the REJECT branch
+(findConflictByTerm loop — choice-free but window-heavy, the last
+handleAppendEntries family); the atom-re-read WATCH-ITEM (a
+cap-consuming re-read between spills would NOT be choice-independent
+— check becomeLeader's census for it before assuming the shape); the
+stale/log-append responses are numerically equal records at these
+fixtures (Index 2 both, different provenance — distinguished by the
+log conclusions; a fixture with committed ≠ mlastIndex + non-empty
+entries would separate them, noted for any future record-level
+argument).
+
+**A4-U13 CHARTER (proposed):** (1) becomeLeader — census FIRST (the
+U4 trace: 6,466 steps / 6 choices — the reset spine's 4 picks + 2
+appendSpills; check the inter-spill segments for cap-consuming
+atom re-reads, the U12 watch-item; all transports landed if reads
+are len-shaped or absent); its equation closes the last wave-2
+becomeX handler. (2) The handleHeartbeat commit-advance family
+(cheap second: the Hh fixture with lastIndex > committed — shared
+machinery all landed; closes handleHeartbeat completely). (3) If
+budget remains: EITHER the handleAppendEntries REJECT family
+(closing that handler completely) OR the U4 Ms error branches on
+the complement (its second consumer; also cheap) — censused cost
+decides. The `stepFn_atomRead_transport` wrapper only on a third
+composition instance (ledger row).
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1); the comparator-landmark STALE flag
+stands escalated from U8–U11.
