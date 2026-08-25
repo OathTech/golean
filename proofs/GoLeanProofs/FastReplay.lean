@@ -34,22 +34,24 @@ So `runProgramM fuel program name #[] [] = .ok { values := vs }` — the
 model verdict — holds by the theorem, whose axioms Audit pins.
 
 WHICH whole-program semantics an ok verdict certifies (audit fix
-round, 2026-08-25 — the original claim here was wrong):
-`runProgramM` is the SEQUENTIAL entry (`runProgramSetupM` then
-`runConfig`). The machine tier this driver replaced (`golean
-native-json-run`, still reachable as `tracereplay.py --engine slow`)
-computes `runProgramPoolIntsM` — the THREAD-POOL entry
-(`runProgramSetupM` then `execProgLoop`). These are DIFFERENT
-functions and no bridge lemma between them exists in the repo. Why no
-divergence is reachable on the accepted class: every construct on
-which the entries could differ — goroutine spawn (`.goStmt` /
-`.goCalleeK` / `.goArgsK`), channel ops, select — is refused
-fail-closed by `stepFast` (`FastEval/Step.lean`), so any run this
-driver accepts is spawn-free and single-threaded under either entry.
-That is an ARGUMENT, not a theorem; the bridge lemma (`runProgramM =
-runProgramPoolIntsM` on the spawn-free accepted class) is queued in
-the campaign arc-2 log as a named follow-on. Until it lands, an ok
-verdict certifies the sequential entry, exactly.
+rounds 1+2, 2026-08-25): BOTH entries. `fastRun_transfer(_eqb)`
+carries the premises to `runProgramM`, the SEQUENTIAL entry
+(`runProgramSetupM` then `runConfig`); `fastRun_transfer_pool(_eqb)`
+carries the SAME premises to `runProgramPoolM`, the THREAD-POOL entry
+(`runProgramSetupM` then `execProgLoop`) that the replaced slow tier
+(`golean native-json-run`, `--engine slow`) computes via its
+`runProgramPoolIntsM` wrapper; `runProgram_pool_seq_bridge(_eqb)`
+states the agreement itself. All Audit-pinned; no new axiom. The
+operative fact is CONSERVATION, not stub enumeration: an accepted run
+COMPLETED sequentially at `.next .stop` — no spawn ever executed and
+nothing ended blocked — so its `.ok` result is in `transferable`'s
+`.ok` class, where the sequential loop and the singleton pool
+provably coincide (`execProgLoop_single`, MultiSound). (An
+enumeration argument alone would be wrong in one corner: mutex
+`.lock`/`.unlock` IS supported by `applySyncOpF`, and BLOCKED-sync is
+exactly where the two drivers differ per `transferable`'s docstring —
+but a run that ends blocked never produces an ok verdict, and the
+theorem, not the enumeration, is what carries the conclusion.)
 
 Fail-closed: any stub arm of `stepFast` (`fastEval-stub:` /
 `fastEval-WIRE:`), anchor mismatch, or non-`.ok` outcome prints an
@@ -84,9 +86,9 @@ private def errorJson (error : GoError) (extra : List (String × Json) := []) : 
                ("status", Json.str error.status),
                ("message", Json.str error.message)] ++ extra)
 
-private def cliErrorJson (message : String) : Json :=
-  Json.mkObj [("schema", Json.str schema), ("status", Json.str "error"),
-              ("message", Json.str message)]
+private def cliErrorJson (message : String) (extra : List (String × Json) := []) : Json :=
+  Json.mkObj ([("schema", Json.str schema), ("status", Json.str "error"),
+               ("message", Json.str message)] ++ extra)
 
 structure Args where
   input : Option String := none
@@ -249,12 +251,14 @@ def main (argv : List String) : IO UInt32 := do
                   | _ => do
                       let obs := cliErrorJson
                         "fastreplay: premise-3 direct check failed (whole-run `iterF` at the discovered step count did not reach `.next .stop`) — fail closed"
+                        [("stage", Json.str "premise3"), ("step", Lean.toJson steps)]
                       emitRecord recOut [("stage", Json.str "final"), ("obs", obs)]
                       IO.println obs.compress
                       return 1
                 else do
                   let obs := cliErrorJson
                     "fastreplay: discovered step count exceeds --fuel — fail closed"
+                    [("stage", Json.str "premise3"), ("step", Lean.toJson steps)]
                   emitRecord recOut [("stage", Json.str "final"), ("obs", obs)]
                   IO.println obs.compress
                   return 1

@@ -1,6 +1,7 @@
 import GoLeanProofs.FastEval.Step
 import GoLeanProofs.FuelMeasure
 import GoLean.GoCore.MachineEqb
+import GoLean.GoCore.MultiSound
 
 /-!
 # FastEval — the run-level transfer theorem (campaign Arc 2, unit P2R)
@@ -20,12 +21,16 @@ interpreter-level equation. The trust class of a verdict so obtained is
 that of trusting a compiled interpreter entry, because every premise is
 a closed Boolean-checkable computation; the theorem moves WHICH
 compiled program one must trust from `stepFn`'s iteration to
-`stepFast`'s (whose per-step agreement is `stepFast_ok`). NOTE WHICH
-ENTRY (audit fix round, 2026-08-25): the conclusion is `runProgramM`,
-the SEQUENTIAL entry — NOT `runProgramPoolIntsM`, the thread-pool
-entry that `golean native-json-run` computes; no bridge lemma between
-the two exists. See `FastReplay.lean`'s header for the entry-choice
-record and the fail-closed spawn-free argument.
+`stepFast`'s (whose per-step agreement is `stepFast_ok`). ENTRIES
+(audit fix round 2, 2026-08-25): `fastRun_transfer` concludes about
+`runProgramM`, the SEQUENTIAL entry; `fastRun_transfer_pool` concludes
+about `runProgramPoolM`, the THREAD-POOL entry that `golean
+native-json-run` computes (via its `runProgramPoolIntsM` wrapper); and
+`runProgram_pool_seq_bridge` makes the agreement itself a theorem on
+the accepted class — an ok verdict certifies BOTH entries. All four
+pool/bridge theorems are Audit-pinned; the load-bearing conservation
+step is `execProgLoop_single` (MultiSound), itself pinned via
+`execProg_single_eq_execStmt`.
 
 `absState` (slow state → fast state) is UNTRUSTED METHOD like all of
 FastEval — never in any statement closure; the driver never trusts it:
@@ -99,5 +104,97 @@ theorem fastRun_transfer_eqb {fuel n : Nat} {program : Program} {name : String}
     (hload : loadManyF σF' locs = .ok vs) :
     runProgramM fuel program name args ch = .ok { values := vs.toArray } :=
   fastRun_transfer hsetup (ExecState.eqb_sound _ _ hanchor) hn hrun hload
+
+/-- **The pool-side run-level transfer** (audit fix round 2,
+2026-08-25): the SAME premises the driver checks also certify the
+THREAD-POOL whole-program entry `runProgramPoolM` (of which
+`runProgramPoolIntsM`, the `native-json-run` entry, is a thin
+`args.map GoValue.int` wrapper). Composition: the completed fast run
+is a `stepFnIter` prefix (`iterF_ok`), which folds into the sequential
+outcome loop (`execStmtLoop_of_stepFnIter` + `execStmtLoop_next_stop`);
+a completed `.ok` sequential result is `transferable`, so the
+singleton-pool conservation theorem `execProgLoop_single` (MultiSound)
+makes it the pool driver's result verbatim. Note this rests on
+conservation, NOT on stub enumeration: the operative fact is that an
+accepted run COMPLETED sequentially (no spawn ever executed, nothing
+blocked), which puts its result in `transferable`'s `.ok` class —
+where the sequential and pool drivers provably coincide. -/
+theorem fastRun_transfer_pool {fuel n : Nat} {program : Program} {name : String}
+    {args : Array GoValue} {ch : Choices} {c₀ : Config} {s₃ : ExecState}
+    {locs : List Loc} {ch₁ : Choices} {σF₀ σF' : ExecStateF} {ch' : Choices}
+    {vs : List GoValue}
+    (hsetup : runProgramSetupM fuel program name args ch = .ok (c₀, s₃, locs, ch₁))
+    (hanchor : γF σF₀ = s₃)
+    (hn : n ≤ fuel)
+    (hrun : iterF stepFast n σF₀ c₀ ch₁ = .ok (.next .stop, σF', ch'))
+    (hload : loadManyF σF' locs = .ok vs) :
+    runProgramPoolM fuel program name args ch = .ok { values := vs.toArray } := by
+  have hiter : stepFnIter n (γF σF₀) c₀ ch₁ = .ok (.next .stop, γF σF', ch') :=
+    iterF_ok (fun _ _ _ _ _ _ h => stepFast_ok h) hrun
+  rw [hanchor] at hiter
+  have hfe : n + (fuel - n) = fuel := by omega
+  have hseq : execStmtLoop fuel s₃ c₀ ch₁ = .ok (.normal (γF σF'), ch') := by
+    have h := execStmtLoop_of_stepFnIter hiter (fuel - n)
+    rw [hfe] at h
+    rw [h, execStmtLoop_next_stop]
+  have hpool : execProgLoop fuel ⟨#[c₀], s₃, 0⟩ {} ch₁ =
+      .ok (.normal (γF σF'), ch') :=
+    execProgLoop_single hseq (by simp [transferable])
+  have hloadS : loadMany (γF σF') locs = .ok vs := loadManyF_ok hload
+  unfold runProgramPoolM
+  rw [hsetup]
+  simp only [Bind.bind, Except.bind]
+  rw [hpool]
+  simp only []
+  rw [hloadS]
+  rfl
+
+/-- The driver-facing corollary of the pool transfer (`ExecState.eqb`
+anchor, as the driver actually checks it). -/
+theorem fastRun_transfer_pool_eqb {fuel n : Nat} {program : Program} {name : String}
+    {args : Array GoValue} {ch : Choices} {c₀ : Config} {s₃ : ExecState}
+    {locs : List Loc} {ch₁ : Choices} {σF₀ σF' : ExecStateF} {ch' : Choices}
+    {vs : List GoValue}
+    (hsetup : runProgramSetupM fuel program name args ch = .ok (c₀, s₃, locs, ch₁))
+    (hanchor : ExecState.eqb (γF σF₀) s₃ = true)
+    (hn : n ≤ fuel)
+    (hrun : iterF stepFast n σF₀ c₀ ch₁ = .ok (.next .stop, σF', ch'))
+    (hload : loadManyF σF' locs = .ok vs) :
+    runProgramPoolM fuel program name args ch = .ok { values := vs.toArray } :=
+  fastRun_transfer_pool hsetup (ExecState.eqb_sound _ _ hanchor) hn hrun hload
+
+/-- **`runProgram_pool_seq_bridge`** (audit fix round 2, 2026-08-25 —
+resolving the round-1 queued follow-on): on the class the driver
+accepts (the checked premises), the SEQUENTIAL and THREAD-POOL
+whole-program entries AGREE — both are the same `.ok` verdict, by the
+two transfer theorems. An ok verdict from the `fastreplay` driver
+therefore certifies BOTH entries. -/
+theorem runProgram_pool_seq_bridge {fuel n : Nat} {program : Program} {name : String}
+    {args : Array GoValue} {ch : Choices} {c₀ : Config} {s₃ : ExecState}
+    {locs : List Loc} {ch₁ : Choices} {σF₀ σF' : ExecStateF} {ch' : Choices}
+    {vs : List GoValue}
+    (hsetup : runProgramSetupM fuel program name args ch = .ok (c₀, s₃, locs, ch₁))
+    (hanchor : γF σF₀ = s₃)
+    (hn : n ≤ fuel)
+    (hrun : iterF stepFast n σF₀ c₀ ch₁ = .ok (.next .stop, σF', ch'))
+    (hload : loadManyF σF' locs = .ok vs) :
+    runProgramM fuel program name args ch =
+      runProgramPoolM fuel program name args ch :=
+  (fastRun_transfer hsetup hanchor hn hrun hload).trans
+    (fastRun_transfer_pool hsetup hanchor hn hrun hload).symm
+
+/-- The driver-facing bridge corollary (`ExecState.eqb` anchor). -/
+theorem runProgram_pool_seq_bridge_eqb {fuel n : Nat} {program : Program} {name : String}
+    {args : Array GoValue} {ch : Choices} {c₀ : Config} {s₃ : ExecState}
+    {locs : List Loc} {ch₁ : Choices} {σF₀ σF' : ExecStateF} {ch' : Choices}
+    {vs : List GoValue}
+    (hsetup : runProgramSetupM fuel program name args ch = .ok (c₀, s₃, locs, ch₁))
+    (hanchor : ExecState.eqb (γF σF₀) s₃ = true)
+    (hn : n ≤ fuel)
+    (hrun : iterF stepFast n σF₀ c₀ ch₁ = .ok (.next .stop, σF', ch'))
+    (hload : loadManyF σF' locs = .ok vs) :
+    runProgramM fuel program name args ch =
+      runProgramPoolM fuel program name args ch :=
+  runProgram_pool_seq_bridge hsetup (ExecState.eqb_sound _ _ hanchor) hn hrun hload
 
 end GoLean.FastEval

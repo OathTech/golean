@@ -54,5 +54,20 @@ theorems the `fastreplay` driver's verdict rests on. The
 #guard_msgs in #print axioms GoLean.FastEval.fastRun_transfer
 /-- info: 'GoLean.FastEval.fastRun_transfer_eqb' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.FastEval.fastRun_transfer_eqb
+
+/-! Audit fix round 2 (2026-08-25): the pool-side transfer and the
+sequential↔pool entry bridge (`runProgram_pool_seq_bridge`, the
+round-1 queued follow-on, resolved) — an ok verdict from the
+`fastreplay` driver certifies BOTH whole-program entries. Same
+inherited footprint; no new axiom. -/
+
+/-- info: 'GoLean.FastEval.fastRun_transfer_pool' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.FastEval.fastRun_transfer_pool
+/-- info: 'GoLean.FastEval.fastRun_transfer_pool_eqb' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.FastEval.fastRun_transfer_pool_eqb
+/-- info: 'GoLean.FastEval.runProgram_pool_seq_bridge' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.FastEval.runProgram_pool_seq_bridge
+/-- info: 'GoLean.FastEval.runProgram_pool_seq_bridge_eqb' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.FastEval.runProgram_pool_seq_bridge_eqb
 /-- info: 'GoLean.FastEval.Witness.fastRun_transfer_witness' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.FastEval.Witness.fastRun_transfer_witness
