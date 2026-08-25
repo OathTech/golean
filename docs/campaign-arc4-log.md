@@ -2899,3 +2899,38 @@ stands escalated from U8–U11.
     far was one census, three same-lever TableExt arms, and a day's
     assembly — the U3 scale verdict's curve, still holding. wave-2's
     becomeX family is now COMPLETE (BPC, BF, BC, BL).
+- 2026-08-25 Slice 3 — **THE handleHeartbeat COMMIT-ADVANCE EQUATION
+  LANDED — handleHeartbeat is COMPLETE** (`HhAdvEquation.lean` 434
+  lines + generated `HhAdvLit.lean`; probes `HhAdvProbe` census +
+  `HhAdvGen` — the printer's 10th consumer — both before any theorem):
+  - Census: **1,681 steps, ONE choice at 1655** (windows [1655, 25]);
+    the pre-window = Hh's + commitTo's ADVANCE branch (`committed <
+    tocommit` true, `lastIndex()` through the full Bf dispatch chain,
+    `committed := 2`); zero new machinery — pure assembly on the
+    Stale template. Fixture: the two-entry stable log at committed =
+    1 (lastIndex 2, headroom), m.Commit = 2; crossing cells elems
+    150 → response 100, tgt 151, backing 152. Generator γ==machine
+    at c=0/3/31.
+  - Conclusions: **`hha_committed_advanced` (axiom-free): committed
+    1 → 2 = m.Commit with the log VIEW untouched** — the first
+    equation whose post-state ADVANCES the commit index; absOutbox
+    "msgs" = [specHeartbeatResp 1 2 0] (the SAME record as the no-op
+    family — the two families differ only in the log, the U12
+    branch-on-STATE pattern again); msgsAfterAppend = [];
+    Vote/lead/Term readouts. `Frame.span_relocate` 5th consumer.
+    Module **55 s**; axioms classical trio, hhaW1_out [propext,
+    Quot.sound]. Full proofs+Audit green **511 jobs**; hatch 0/0.
+  - [AGENT] The template slip and the convention working: the first
+    build attempt hung past 10 min — the U11 numeric-mismatch class
+    EXACTLY (the sed-templated module kept the Stale RHS tuples
+    `(1307, …)`/`(28, …)` against the new 1655/25 windows; the wrong
+    RHS sent elaboration into spine-unfolding). Caught in ONE sliced
+    probe run by the U11 convention (check numeric args first, diff
+    sliced probes); fix was two numbers, then green in 55 s. The
+    convention's third confirmed save.
+  - What-this-taught-us (slice 3): family-2 equations off a landed
+    template are now ~2-hour work INCLUDING the census — but the
+    template's numeric constants are the whole risk surface;
+    generator-emitted link RHS values (rather than sed-carried ones)
+    would make the class unrepresentable — noted as a printer
+    improvement for the next consumer.
