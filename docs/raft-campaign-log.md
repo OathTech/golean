@@ -1663,6 +1663,29 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   wire family) — touches what the theorem says, so it is the user's
   call, not the coordinator's.
 
+- **[USER] 2026-08-27 — the CHOICE-INVARIANCE LEMMA (design
+  contribution):** "for this abstraction, and these operations,
+  choices don't matter... the literal heap is isomorphic to all
+  other heaps constructed via these commands" — a lemma, not an
+  axiom. [AGENT] analysis, adopted: self-simulation up to
+  ~ := relocation × capacity-slack (both components EXIST — the
+  ρ/FrameSimS layer and the valuation atoms), with absRead/Fam
+  ~-invariant; lineage: bisimulation up-to / data independence /
+  the project's own quotient-theorem note. THE FACTORING: choices
+  split into latitude draws (quotiented by the lemma — spill
+  capacities, canonicalized mapIter) vs semantic draws (the 28
+  delivery picks — the nondeterminism T1 is ABOUT); the two-bounds
+  doctrine's latitude-vs-semantics distinction surfacing as proof
+  structure. FIRST CONSUMER: the seed pin (named risk #1) — SC1
+  classified all 171 init draws as absorbed-class, so invariance +
+  ONE literal init run replaces the ∀-over-choices 81k-step
+  reflection; the undemonstrated reflection route may be
+  unnecessary. Middle-path: built INSIDE the seed-pin unit (≥4
+  prior ad hoc instances + a waiting consumer = demonstrated
+  demand); charter caution: probe the operation census against ~
+  first — a draw-dependent LAYOUT the atoms don't capture is the
+  hidden-wall candidate.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
