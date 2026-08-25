@@ -1454,6 +1454,23 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   does not certify the METHOD's shape; method-level review belongs
   at every wave boundary.
 
+- **[USER] 2026-08-26 — goal unset; exec redesign pass directed**
+  ("build the most flexible pieces and then there's the best chance
+  they fit together — implementation, proof, automation"; goal
+  over-focus named as the propensity). [AGENT]: the flexibility
+  redesign written as the design of record
+  (docs/2026-08-26_campaign-flexibility-redesign.md): interfaces
+  not chains — I1 obligation signature (SC1 = gate), I2
+  compositional prover (C2a = gate; literal-mode manufacture STOPS
+  effective now), I3 configuration-parameterized statements (T1/T2
+  as instances; reachability becomes computed), I4 abstract checker
+  interface; probe-gated α/β/γ sequencing with estimates SUSPENDED
+  until the α gates' numbers land (both prior estimates broke on
+  unmeasured assumptions); §6 makes the method review a standing
+  coordinator function at every wave boundary. The layer-C note's
+  D1-D4 stand, absorbed as interface instances; its ladder is
+  superseded.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
