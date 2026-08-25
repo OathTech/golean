@@ -3661,3 +3661,213 @@ stands escalated from U8–U14.
   comparator-landmark note now reads **STALE at 134 commits** (> the
   100 threshold; report-only) — stands escalated for the operator's
   merge step, as at U8–U14.
+
+## A4-U16 — the layer-C design slice + the FrameSim probe + the depth-2 and drop arms + the stepLeader census (2026-08-25, same worker, coordinator-dispatched; the U15 verdict accepted, route policy set in docs/2026-08-25_campaign-layerc-design.md §5-A1)
+
+- 2026-08-25 SELF-RE-VERIFICATION (U15's top claims, fresh probes,
+  all PASS — same-worker continuation per the coordinator's dispatch):
+  - tip clean: `git status` clean on `campaign-arc4`; `git rev-parse
+    HEAD` = `d6f0286ec691d156feaf82614dde8b3795c143b4` (the U15 gate
+    tip). 89G free at launch; every build `GOLEAN_MEM_MAX=48G
+    scripts/capped`.
+  - fresh capped proofs+Audit build: "Build completed successfully
+    (520 jobs)." exit 0 — matching U15's record.
+  - `#print axioms` fresh probe (`AxSfHb` re-run, verbatim): the
+    stepFollower_heartbeat family [propext, Classical.choice,
+    Quot.sound]; sfhbW1_out / sfhb_post_absOutbox [propext,
+    Quot.sound] — matching U15's record exactly.
+- 2026-08-25 Slice 1 (501c38f0) — **THE SEAM-NOTE §4c AMENDMENT +
+  THE FrameSim-STRENGTHENING PROBE** (design; the layer-C note is
+  cited as the design of record, never duplicated):
+  - §4c records the BINDING wave-3 arm conventions (literal-chain
+    route; statement form; Type-cell + off-{61,65} fixture rules;
+    the mandatory er readout; the norm-wrap read-the-literal rule;
+    counts-as-defs) and the round-shape consequence.
+  - **FLAG raised to the layer-C C1 design gate (refinement, not
+    divergence): the round lemma's honest premise under the literal
+    route is FIXTURE-FAMILY MEMBERSHIP** (canonical symbolic state +
+    valuation + placement), with `absState σ = some N` as the
+    projected READOUT — the layer-C §3 carried relation `R` must be
+    the stronger form; the round-lemma statement should be R-form
+    from day one.
+  - **THE PROBE** (charter-commissioned, probe-only): surface =
+    12,661 lines / 22 Frame files, ~43 producing FrameSim sites but
+    only ~6 field-by-field constructors (everything else threads
+    packaged relations). Trial `FrameSimC` (+C1 completeness) with
+    `setBaseC` + zero-seed: clean, 14 proof lines, sub-second warm.
+    **DESIGN FINDING: C1 alone is lookup-determination only; the
+    literal re-entry payoff needs C1 + C2, the INSERTION-POINT shape
+    clause** (`σF.heap = ren(take n₀) ++ fr ++ ren(drop n₀)` —
+    preserved by both machine mutation kinds: base-keyed set is
+    position-preserving, alloc appends, nothing deletes). Estimate:
+    **≈2 units nominal, 3 at risk** (risk in StepSim's induction +
+    StrictOps) = borderline-OVER the ≤2-unit line → **STAY LITERAL
+    until the MsgApp-arm trigger; commission with the C1+C2 design
+    then** (U15's route (a) as sketched, C1-only, would NOT have
+    sufficed — the probe's contribution).
+- 2026-08-25 Slice 2 (5136b95a) — **THE stepFollower × MsgProp
+  DROP-ARM EQUATION** (`SfPdEquation.lean` + generated `SfPdLit.lean`,
+  the printer's 14th consumer; census-first per U15 slice 1):
+  - **The CHOICE-FREE arm** (254 steps; the first arm equation whose
+    ∀-stream premise has NO consumed prefix) and **the
+    dispatch-complement extension's FIRST PROVED CONSUMER**: the
+    fixture carries `staticComplementFull` live (the walk derefs
+    cell 17 at step 232; the U15 control run without the block
+    sticks — fail-closed), and the shipped er conclusion IS the
+    ErrProposalDropped box over payload 65 (renameCell-fixed: 65
+    below every consumer na₀).
+  - Fixture family: `r.lead = 0` CONCRETE (the branching
+    precondition — bf31's x₂ forced to `lit 0`), typ 2; **Vote
+    survives RAW `var 1` (wrap depth ZERO — no raft-struct store on
+    the drop path, generator-probed per §4c), so the readout carries
+    NO range side condition** — the first wrap-free scalar readout.
+  - Generator γ==machine at Vote 7/9/1023; ELEVEN conclusions
+    (message typ 2 record; er = the drop box; both outboxes EMPTY;
+    log/lead/Vote/Term preserved); alloc PRIMARY + identity +
+    witness (EMPTY stream). **GREEN ON THE FIRST FULL CHECK: 27 s
+    module, 522 jobs**; axioms classical trio (probe `AxSfPd`,
+    verbatim); hatch 0/0.
+- 2026-08-25 Slice 3 (8b401f11) — **THE stepCandidate × MsgHeartbeat
+  DISPATCH-ARM EQUATION: THE FIRST DEPTH-2 ARM** (`SCHbEquation.lean`
+  ~850 lines + generated `SCHbLit.lean` 904 KB — the printer's 15th
+  consumer and second-largest literal; generator `SCHbGen.lean` with
+  a staged crossing-classification walk):
+  - **The Bf31 chain machinery reused VERBATIM at the dispatch
+    fixture** — `uρ`/`uρ'`, `uKey1/2/3`, `uKeyV1-4`,
+    `uCrossPick/Stop/Sort`, `stepFn_pick_transport`, `uCands1` (the
+    born Intn map at base 96 holds bf31's exact candidate data) and
+    `bc31Cands3` (the prs map at the SHARED fixture cell 33) — plus
+    the SfHb spill template: **8 windows [983, 183, 28, 28, 28, 3,
+    3620, 89] + 7 crossings (4 picks, range-stop, sort collapse,
+    spill) = 4,969 steps / FIVE choices, the U14/U15 census to the
+    step.**
+  - Census-first fixture finding: `stepCandidate` computes
+    `myVoteRespType(r.state)` UP FRONT — symbolic x₃ quits q1Branch
+    at step 20, so **the candidate family is state-CONCRETE (= 1)**
+    by the same forcing pattern as the drop arm's lead.
+  - Generator validated γ==machine at THREE full 5-choice tuples
+    ((0,0,0,0,0)/(3,1,1,0,5)/(9,2,1,1,31)) BEFORE any theorem; wrap
+    depth probed exactly (`SCDepth`): Vote = **norm¹⁴(var 1)**
+    (becomeFollower's store-heavy spine), collapsed by
+    `unrm_id hvote 14` (the BfEquation helper — reused, not
+    re-derived).
+  - TWELVE conclusions incl. **THE DEPTH-2 HEADLINES: state 1 → 0
+    (the candidate falls back to follower) and lead := m.From = 2**
+    — the dispatch-visible transitions of a heartbeat received
+    mid-candidacy — plus the SAME `specHeartbeatResp 1 2 0` record
+    as the sF arm (the response is role-independent, now a THEOREM
+    pair), er = nil, log preserved, Vote/Term unchanged.
+  - **GREEN ON THE FIRST FULL CHECK: 138 s module, 524 jobs**
+    (SCHbLit 4.9 s); axioms classical trio; the pick/window links
+    [propext, Quot.sound] (probe `AxSCHb`, verbatim); hatch 0/0.
+  - What-this-taught-us (slice 3): the depth-2 arm was pure
+    ASSEMBLY — zero new machinery, every crossing class landed, and
+    the only two findings were fixture-family forcings discovered by
+    probe in minutes (state-concrete; wrap depth 14). The walked
+    route's cost honestly scales: 4,969 steps → 138 s (vs 1,710 →
+    50 s; ~linear). The round lemma (driver glue + one arm) is one
+    more ring of exactly this shape — the dress rehearsal PASSED.
+- 2026-08-25 Slice 4 (probe-only, as chartered) — **THE stepLeader
+  CENSUS** (probe `StepLeaderProbe.lean`; leader fixture state = 2,
+  FULL static block, caller cells [66,69); every number from runs):
+  - **sL×MsgBeat (typ 1): COMPLETES — 3,362 steps, FOUR choices at
+    [288, 317, 346, 1854]**, na 98→291, er = nil, msgs =
+    [Heartbeat(s) to the peers], maa = [], lead = 1 (self), state 2
+    preserved, log preserved, ZERO static reads. The bcastHeartbeat
+    arm is the next cheap equation candidate (3 Visit picks + 1 more
+    crossing; all landed classes by shape).
+  - **sL×MsgProp (typ 2): the machine PANICS at step 311** — the
+    SUBJECT's own `Panicf` on an empty-Entries MsgProp
+    (raft.go stepLeader's first check) — CORRECT subject behavior at
+    this fixture, not a machine defect: the sL×Prop family needs a
+    non-empty-Entries message fixture (the La entry-cell pattern).
+  - **sL×MsgAppResp (typ 4): panics at 4,043** (3 choices consumed
+    at [1097, 1215, 1333]; static 23/ErrCompacted read LIVE at
+    2715); **sL×MsgHeartbeatResp (typ 9): panics at 2,876** (static
+    23 at 1551); **sL×MsgTransferLeader (typ 13): panics at 3,167**
+    (static 23 at 1842). All three walk deep into the
+    sendAppend/storage path before panicking — the leader-side
+    families need a Match/Next-consistent tracker + storage fixture
+    (a named fixture-design task, NOT a machinery gap; the
+    ErrCompacted reads confirm the U12 complement is live on the
+    leader path too).
+  - Census honesty note: the walker reports these as "step on
+    terminal panicked configuration" — the machine reached
+    `.panicked` earlier and the walker kept stepping; the recorded
+    step counts are the walker's terminal contact, the panic sites
+    are earlier. A future walker improvement (stop at `.panicked`
+    with the panic step index) is a probe-side nicety, recorded
+    here.
+
+### PROMOTION LEDGER updates (A4-U16)
+
+- **The literal-chain reuse instrument row (U15)** — REFINED by the
+  probe: the viable design is C1 (completeness) + C2 (insertion-point
+  shape); estimate ≈2 units nominal / 3 at risk; trigger unchanged
+  (MsgApp arms × the Hae REJECT window). The trial artifacts live in
+  `artifacts/probe/FrameSimStrengthProbe.lean`.
+- The Bf31 chain machinery (uρ/uKey/uCross/pick-transport/candidate
+  packs) — **first cross-fixture consumers** (SCHbEquation): the
+  helpers were fixture-independent by construction, as the U4-U6
+  design intended; zero adaptation needed.
+- The literal printer — 14th/15th consumers (SfPdGen, SCHbGen; the
+  staged crossing-classification walk in SCHbGen is the new
+  multi-crossing generator template for round-lemma spans).
+- NEW ROW: **the leader-side fixture pack** (Match/Next-consistent
+  tracker + storage with retrievable entries) — consumers: the
+  sL×AppResp/HbResp/Transfer families (censused panics), the
+  sL×Prop family (+ non-empty Entries message). Blocks leader-side
+  arm equations only; sL×Beat needs none of it.
+- The `stepFn_atomRead_transport` wrapper row: unchanged.
+
+## A4-U16 exit (2026-08-25, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since the U15 gate tip
+d6f0286e: 4 (501c38f0 slice 1, 5136b95a slice 2, 8b401f11 slice 3) +
+this log/exit commit; no coordinator commits interleaved (checked:
+`git log d6f0286e..HEAD --oneline` = the above). Full proofs+Audit
+green: **524 jobs** (520 + SfPdLit + SfPdEquation + SCHbLit +
+SCHbEquation). Kit pins: +0. Hatch grep over every new module: 0.
+
+**Deliverable state vs the U16 charter (coordinator-adjusted):**
+1. THE DESIGN SLICE — **DELIVERED** (§4c conventions binding; the
+   R-form FLAG raised to the C1 design gate; the FrameSim probe
+   sized with a design refinement — C1+C2 — and a go/no-go verdict:
+   borderline-over, STAY LITERAL, trigger unchanged).
+2. sC×MsgHeartbeat — **DELIVERED, green on the first full check**:
+   the first depth-2 arm, 4,969 steps / 5 choices / 8 windows / 7
+   crossings, the Bf31 machinery's first cross-fixture reuse, the
+   round lemma's dress rehearsal (verdict: pure assembly, ~linear
+   cost).
+3. THE DROP-ARM EQUATION — **DELIVERED, green on the first full
+   check**: choice-free, the extension's first proved consumer, the
+   first wrap-free scalar readout.
+4. THE stepLeader CENSUS — **DELIVERED, probe-only**: one completing
+   arm (Beat 3,362/4 — the next cheap equation), the subject's own
+   empty-Prop panic correctly exhibited, and the leader-side fixture
+   pack named as the debt for the other three arms.
+
+**Open gaps carried (none counted):** GAP-V1-2/-4/-5, GAP-U1-W1,
+GAP-V2-1 wave-3 condition, GAP-V2-2, MemoryStorage.Entries spec
+design, the multi-element spill variant, the atom-re-read watch-item
+(checked: no inter-spill atom reads in this unit's censuses),
+message-field symbolism on demand — all unchanged; U16 adds: the
+leader-side fixture pack (ledger row); the walker's panicked-config
+reporting nicety (probe-side).
+
+**A4-U17 CHARTER (proposed):** (1) the sL×MsgBeat equation (censused
+3,362/4, zero statics, all landed classes — the leader side's first
+arm, completing a full follower/candidate/leader arm triple for the
+heartbeat round-kind); (2) the leader-side fixture pack design +
+re-census of sL×AppResp/HbResp (the fixture-design task from the
+ledger; census decides whether their equations are wave-3 or
+deferred); (3) budget permitting: the sF×MsgProp FORWARD arm
+(1,272/1, the send-only shape) — closing stepFollower's censused
+arms — or the Step() top-level dispatch census (the last ring before
+the round lemma). Rotation note: this worker is at ~560k tokens at
+exit-entry time — U17 should start FRESH (split discipline; the
+census numbers + §4c conventions are the handoff).
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1); the comparator-landmark STALE flag
+stands escalated from U8–U15.
