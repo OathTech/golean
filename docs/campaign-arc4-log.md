@@ -3369,3 +3369,282 @@ stands escalated from U8–U13.
   The comparator-landmark note now reads **STALE at 130 commits**
   (> the 100 threshold; report-only) — stands escalated for the
   operator's merge step, as at U8–U13.
+
+## A4-U15 — the dispatch-complement extension + THE COMPOSITION-MECHANICS VERDICT + the first dispatch-arm equation (2026-08-25, successor worker, coordinator-dispatched)
+
+- 2026-08-25 SUCCESSOR RE-VERIFICATION (U14's top claims, fresh
+  probes, all PASS):
+  - tip clean: `git status` = "nothing to commit, working tree clean"
+    on branch `campaign-arc4`; `git rev-parse HEAD` =
+    `24458fdd1ef2c53bc9c9ae413a6e8d9499c3a083` (the U14 gate tip).
+    93G free at launch (≥ 40G floor); every build this unit
+    `GOLEAN_MEM_MAX=48G scripts/capped`.
+  - fresh capped proofs+Audit build: "Build completed successfully
+    (517 jobs)." exit 0 — matching U14's recorded 517.
+  - `#print axioms` fresh probe (`AxU15Reverify`, capped, verbatim):
+    handleAppendEntries_reject_eq_alloc /
+    handleHeartbeat_fromSym_eq_alloc
+    [propext, Classical.choice, Quot.sound]; haeRejW1_out /
+    haeRej_post_absOutbox / **stepFn_branch_transport**
+    [propext, Quot.sound] — matching U14's record exactly.
+  - hatch grep over HaeRejEquation/HaeRejLit/BranchTransport/
+    HhFromEquation/HhFromLit: **0** (single grep, all five files).
+- 2026-08-25 Slice 1 (9cfe59ba) — **THE DISPATCH-COMPLEMENT
+  EXTENSION LANDED** (`StaticCellsExt.lean`, 96 lines; contact probe
+  `StaticsExtProbe.lean` FIRST — all numbers from its runs):
+  - Contact: cells 16 (`ErrStopped`) / 17 (`ErrProposalDropped`) are
+    `error`-interface boxes over `raft.goleanShimErrorString`
+    payloads at **61** ("raft: stopped") and **65** ("raft proposal
+    dropped") — closure-complete (roots reference ONLY these two;
+    payloads reference nothing).
+  - **THE PLACEMENT FINDING (the slice's headline): the payload
+    geometry DIFFERS from the U12 block's.** 61/65 sit INSIDE the
+    leaf fixture range [31,71), unlike the [20,31) payloads (all
+    ≥ 71). Zero renaming STILL (true addresses; the U12
+    address-for-address layer-C argument stands; the kernel link
+    pins the true cells) — but the consequence lands on CONSUMERS:
+    **leaf/caller cells must stay OFF {61, 65}**. The U14 dispatch
+    probe itself used cell 61 as a caller var — that placement
+    collides here; the re-census moved caller cells to [66,69).
+    `staticComplementNa` (98) unchanged. Recorded in the module.
+  - The StaticCells recipe VERBATIM otherwise: fail-closed
+    `staticComplementExtOf` extraction, generated literal,
+    **`staticComplementExt_link` (kernel_rfl) replaying the full
+    1,382-step init + 4 lookups on every build — 104 s, one
+    init-replay cost class as predicted**; `staticComplementFull` =
+    the U12 block ++ the extension (disjoint id sets);
+    `staticComplementExtSym` mirror form.
+  - **VALIDATION (probe `StepDispatchProbe2`, the U14 census probe at
+    the new caller placement): the sF×MsgProp DROP arm COMPLETES —
+    254 steps, ZERO choices, `.next .stop`, er = the
+    ErrProposalDropped interface (payload 65 verbatim), msgs = maa =
+    [], log view preserved, lead stays 0.** The U14 stuck (step 235,
+    cell 17) is GONE; the control WITHOUT the block still sticks at
+    cell 17 step 235 (fail-closed, the extension is the exact debt).
+    The static read on the drop path: exactly [(232, 17)]. The other
+    censused arms re-pinned UNCHANGED at the new placement:
+    sF×Heartbeat 1,710/1 @1581; sF×Prop-fwd 1,272/1 @1119;
+    sC×Heartbeat 4,969/5 @[983,1167,1196,1225,4879].
+- 2026-08-25 Slice 2 (probes only, gitignored) — **THE COMPOSITION
+  MECHANICS, MEASURED TO THE BOTTOM** (the charter's most important
+  deliverable; probes `SeamCompProbe`/`SeamE1Probe` (E1),
+  `ContParam5`/`ContParamN` (E2); every claim from a run):
+  - **E1a — the seam config**: at glue step 282 of the sF×Heartbeat
+    arm (282 = 1581 − 1299, the census arithmetic), the machine
+    config IS `retV (.addr 52) (callArgsK "raft.raft.handleHeartbeat"
+    [] [.addr 31] [] E_sf K_sf)` — the landed hhC0's drained-call
+    shape VERBATIM with the dispatch glue's (env, cont) in the two
+    tail slots (E_sf = stepFollower's scope stack over glue cells
+    69-80; K_sf = the switch-ladder seq chain down to the
+    stepFollower frame, er store, `.stop`). na at the seam: 81.
+  - **E1b — the seam heap**: vs γ(hhS0) at the census valuation,
+    EXACTLY one shared-cell difference — msg 52's Type field
+    (`.addr 55` vs `.nil`) — plus seam-only frameable cells
+    {55, 66-68, 69-80}; **the raft cell matches EXACTLY** (the
+    glue's ee := 0 / lead := 2 writes produced zero normalization
+    drift at concrete valuations). No hh-only cells.
+  - **E2 — CONT-BOTTOM PARAMETRICITY HOLDS AND IS CHEAP**: the
+    mirror evaluator never destructs the continuation bottom, so the
+    window link `symEvalWindowTB bfTB 1299 hhS0 (hhC0k k) = (1299,
+    S', plugC k C')` kernel-checks **with k a FREE variable** —
+    measured at budgets 50/300/1299: 17.3/21.0/25.1 s file times
+    (≈8 s marginal at full window vs the concrete link). The spill
+    transport is ALREADY cont-generic (`{k : Cont symDom}` in
+    `stepFn_appendSpill_transport`). Placement: `frameSim_relocate`
+    (the U6 lift) + a small frame-extension constructor +
+    `renameBodies_id` at the LANDED `wBase_funcSup = 31`
+    (BpcResite.lean) discharge every FrameSim obligation; the seam
+    heap is literally canonical ++ frame (ρT 56 25 is identity on
+    every canonical id and content).
+  - **THE WALL (one level deeper than the charter's anticipated
+    dimensions, and the reason no composed equation shipped):**
+    applying the relocated handler span MID-RUN yields its
+    post-state only RELATIONALLY — `∃σFfin` + `FrameSim` via
+    `stepFnIter_sim`, whose carried relation is exactly the lossy
+    `FrameSim` (verified: NO heap-completeness clause — locs outside
+    rename-image ∪ frame are unconstrained, and list order is
+    unconstrained everywhere). A literal mirror window cannot resume
+    from a relational state, and the arm's SUFFIX glue (103 steps)
+    writes FRAME cells (er 68, $res0 71) so it can neither ride
+    inside an (env,cont)-generic sub-span (evaluation would have to
+    step INTO the free cont past the frame pop) nor precede it.
+    Attempted dodges, each checked and refuted in-session: frame
+    re-partitioning (blocked by the same completeness gap),
+    suffix-in-canonical (makes the sub-span arm-specific),
+    whole-seam-as-fixture (per-arm regeneration = walking).
+  - **THE VERDICT, precise**: within the current instrument,
+    **literal windows compose with literal windows, and ONE trailing
+    relational relocation is free (span_relocate at the end of a
+    span); relational states cannot re-enter literal evaluation.**
+    Statement forms do NOT resist composition — config, heap, atoms,
+    choice streams, and cont/env genericity all line up, measured —
+    the gap is in the PROOF INSTRUMENT. Handler-proof reuse inside
+    longer literal chains needs ONE of: (i) completeness-strengthened
+    FrameSim (add totality + canonical order to the relation,
+    re-prove the stepFn_sim induction — the honest instrument fix,
+    also the costliest single proof in the kit); (ii) stepFn
+    heap-extensionality (lookup-equal states step lookup-equally —
+    the heap-quotient classic; general, big); (iii) statement
+    redesign (arm equations ending at handler-return compose TODAY —
+    the sub-span in suffix position is absorbed by the equation's
+    own ∃σfin — but the shell's return plumbing then faces the same
+    wall one level up). **Consequence for wave 3: per-arm literal
+    window chains (linear kernel cost, measured cheap at these
+    sizes — 50 s for the 1,710-step arm) are the SANCTIONED proof
+    mode; the reuse instrument is a consume-on-demand ledger row
+    that becomes worth building when kernel time actually hurts
+    (first candidate: the MsgApp arms × the 6,925-step Hae REJECT
+    window).** Arm-equation STATEMENTS are route-independent — layer
+    C consumes them identically under any future instrument.
+  - Consequence for layer C's round induction (the design datum the
+    charter asked for): after the FIRST relational join in a run,
+    everything downstream must stay relational/projective — the
+    round induction should be stated over absState projections and
+    FrameSim-transported readouts (which is §2C's shape already),
+    never re-entering literal windows mid-round. The per-round
+    re-grounding question goes to the layer-C design gate.
+- 2026-08-25 Slice 3 (d8359ade) — **THE FIRST DISPATCH-ARM EQUATION
+  LANDED: stepFollower × MsgHeartbeat** (`SfHbEquation.lean` 434
+  lines + generated `SfHbLit.lean` 2,022 lines — the printer's 13th
+  consumer; generator `SfHbGen.lean` validated γ==machine at
+  c = 0/3/31 BEFORE any theorem; proof route = the sanctioned
+  literal window chain, the verdict documented in-module):
+  - The HhEquation template exactly: windows **[1581, 128]** + ONE
+    spill crossing (elems 150, tgt 151, backing born 152, response
+    message 100 — all generator-emitted defs, the U13 convention) =
+    **1,710 steps, ONE choice** — the U14 census to the step.
+    Fixture: bf31 heap + the FIRST Message with a REAL Type cell
+    (55 ↦ 8 — the switch ladder's branching datum) + caller cells at
+    [66,69) per the slice-1 consumer rule; na₀ 69.
+  - **ELEVEN conclusions** through absState v2 + the lens readers —
+    the arm-level (dispatch-visible) records: absMessage pre with
+    **typ = 8** (the first record showing a real Type); **er = nil**
+    (the shell's no-error conclusion, read raw and
+    FrameSim.lookup_some-transported); msgs outbox =
+    [specHeartbeatResp 1 2 0] (the lemma-composition readout,
+    HhEquation's pattern verbatim); msgsAfterAppend = [] (the two
+    outboxes distinguished at arm level); log view preserved
+    (pre = post = hhAbsLog); **lead := m.From = 2** (the arm's
+    dispatch-visible state change — pre-lead x₂ is dead on this path
+    and overwritten, so the readout is CONCRETE, no side condition);
+    Vote rides; Term 0. Alloc PRIMARY (span_relocate) + identity
+    corollary + §3.3 witness (stream [3], capacity 7).
+  - One fix round, kernel-caught, probe-diagnosed (`VoteWrap`):
+    Vote survives **norm³** (the glue's two extra raft-struct stores
+    each re-wrap — arm depth vs Hh's single wrap; state/ldT norm³,
+    lead norm⁴-but-concrete); the projection fact states the triple
+    wrap and `simp only [hvote]` collapses it in the equation. The
+    wrap DEPTH is store-count-dependent — recorded for every future
+    arm equation (count the glue's struct stores, or read the
+    generated literal, before stating the readout).
+  - **50 s module; 520 jobs green** (517 + StaticCellsExt + SfHbLit
+    + SfHbEquation); fresh `#print axioms` (probe `AxSfHb`,
+    verbatim): equation family + span + spill [propext,
+    Classical.choice, Quot.sound]; sfhbW1_out / sfhb_post_absOutbox
+    [propext, Quot.sound]; hatch grep 0/0.
+  - What-this-taught-us (slice 3): a dispatch-arm equation at a
+    censused pure-assembly arm is the SAME one-session template as a
+    handler family — the dispatch layer adds only the Type cell, the
+    er readout, and deeper norm-wraps; nothing else was new. The
+    walked route's cost scales with the arm's own span, not with the
+    handlers it contains — which is exactly why the reuse instrument
+    is deferrable until the big-handler arms.
+
+### PROMOTION LEDGER updates (A4-U15)
+
+- **`StaticCellsExt`** (`Specs/Raft/StaticCellsExt.lean`) — LANDED as
+  shared fixture surface (the StaticCells pattern's second module);
+  consumers: every drop-arm equation (ErrProposalDropped), any Stop
+  path (ErrStopped); the kernel link is the drift alarm. **Consumer
+  rule recorded in-module: leaf/caller cells OFF {61, 65}.** The U14
+  ledger row (the extension) is TAKEN.
+- **NEW ROW: the literal-chain reuse instrument** (the U15 verdict) —
+  completeness-strengthened FrameSim OR stepFn heap-extensionality;
+  consume when per-arm kernel re-walking of big handler spans
+  actually hurts (first candidate: MsgApp arms × the 6,925-step Hae
+  REJECT window; not before). The measured facts that de-risk it
+  when taken: cont-bottom parametricity is FREE (E2), the seam heap
+  is canonical-++-frame on the nose (E1b), and bodies_inv
+  discharges at the landed `wBase_funcSup = 31`.
+- **Cont-bottom parametricity** — recorded as a MEASURED FACT, not
+  built as machinery (no consumer yet under the walked route): window
+  links kernel-check with a free continuation bottom at full window
+  size (+≈8 s at 1,299 steps). Becomes load-bearing the day the
+  reuse instrument lands; until then it lives in the probes
+  (`ContParam5`/`ContParamN`) and this entry.
+- The literal printer — 13th consumer (SfHbGen); the U13
+  counts-as-defs convention held (the numeric-mismatch class stays
+  unrepresentable).
+- The `stepFn_atomRead_transport` wrapper row (U12/U13): unchanged.
+
+## A4-U15 exit (2026-08-25, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since the U14 gate tip
+24458fdd: 2 (9cfe59ba slice 1, d8359ade slices 2+3) + this log/exit
+commit; no coordinator commits interleaved (checked at recount:
+`git log 24458fdd..HEAD --oneline` = the above). Full proofs+Audit
+green: **520 jobs**. Kit pins: +0 (no new Sym/Frame machinery — the
+verdict's whole point). Hatch grep over every new module
+(StaticCellsExt/SfHbLit/SfHbEquation): 0.
+
+**Deliverable state vs the U15 charter:**
+1. THE DISPATCH-COMPLEMENT EXTENSION — **DELIVERED, recipe verbatim,
+   with a placement finding** (payloads 61/65 INSIDE the leaf range —
+   consumer rule recorded); validated exactly as chartered (the
+   MsgProp drop arm completes, 254/0, er = ErrProposalDropped;
+   fail-closed control still sticks).
+2. THE FIRST DISPATCH-ARM EQUATION (sF×MsgHeartbeat) — **DELIVERED**
+   (1,710 steps / ONE choice, eleven arm-level conclusions incl.
+   er = nil and lead := m.From, 50 s module, green on the second
+   check — one probe-diagnosed norm-wrap fix). **The composition
+   mechanics — the unit's most important deliverable — MEASURED TO
+   THE BOTTOM with a precise verdict**: statement forms line up in
+   every anticipated dimension (config/heap/atoms/cont — E1/E2
+   numbers above); the block is the INSTRUMENT (FrameSim's
+   lossiness at mid-run re-entry + frame-writing suffixes), named
+   with three repair routes and a consume-on-demand trigger. The
+   walked literal chain is the sanctioned wave-3 proof mode;
+   statements are route-independent.
+3. sC×MsgHeartbeat — **NOT attempted ([AGENT] boundary call, the
+   charter's own STOP rule)**: the verdict answers the depth-2
+   composition question analytically (the wall is POSITIONAL, not
+   depth-al — a bf-spine sub-span would be mid-position too), so a
+   walked sC chain would demonstrate nothing new about composition
+   while consuming a full slice; the coordinator should see the
+   verdict before more arms embed the route decision. The 4,969-step
+   census + the U14 composition map remain its recipe.
+4. Item 4 (sF×MsgProp fwd / stepLeader census) — not attempted, same
+   boundary call.
+
+**Open gaps carried (none counted):** GAP-V1-2/-4/-5, GAP-U1-W1,
+GAP-V2-1 wave-3 condition, GAP-V2-2, MemoryStorage.Entries spec
+design — unchanged; the multi-element spill variant unchanged; the
+atom-re-read watch-item stays open (checked this unit's censuses:
+the drop arm and the sF heartbeat/fwd arms have no inter-spill atom
+reads); message-field symbolism (LogTerm/Index/Commit) remains the
+U14 template on demand; U15 adds: **the literal-chain reuse
+instrument row** (ledger, consume-on-demand) and **the norm-wrap
+depth note** (store-count-dependent — read the generated literal
+before stating scalar readouts).
+
+**A4-U16 CHARTER (proposed, pending the coordinator's read of the
+composition verdict):** (1) IF the verdict redirects layer-C design:
+a design slice amending the seam note (§2C) with the
+relational-after-first-join round-induction shape and the arm
+statement conventions (er readout, Type-cell fixture rule, norm-wrap
+depths) — cheap, high-value, unblocks everything downstream. (2) The
+sC×MsgHeartbeat equation as a walked 6-window/5-crossing chain (the
+census is the recipe; all transports landed) — the first
+multi-handler arm, closing the two censused heartbeat arms. (3) By
+censused cost: the sF×MsgProp forward arm (1,272/1, send-only) and/or
+the sF×MsgProp DROP-arm equation (254/0, choice-FREE — the cheapest
+possible arm equation, the extension's first proved consumer, and the
+first arm with a non-nil er conclusion). (4) Census-only: stepLeader
+(18 call sites, the walker is ready). Rotation note: this worker is
+at ~330k tokens at exit-entry time — within budget for U16 on this
+context if the coordinator prefers, but the split-discipline default
+stands.
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1); the comparator-landmark STALE flag
+stands escalated from U8–U14.
