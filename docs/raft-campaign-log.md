@@ -1686,6 +1686,25 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   first — a draw-dependent LAYOUT the atoms don't capture is the
   hidden-wall candidate.
 
+- **[USER] 2026-08-27 — the representation-engineering principle:**
+  "sometimes we can trade proof effort for representation
+  engineering. If we know that a representation has nice laws over
+  it, we can compute over this representation and scale... really
+  just Cousot-Cousot abstract interpretation in core insight."
+  [AGENT] mapping, recorded: the campaign's four instances of the
+  trade (FastEval+transfer; lens/absState; atoms+the ~ quotient;
+  reflection/pins) are one pattern — proof budget buys LAWS once,
+  instances become evaluation. Precise AI reading: absRead = α,
+  specRound = the abstract transfer functions, round lemmas = their
+  soundness, Fam = domain well-formedness; deliberately at the
+  EXACT end of the Galois spectrum (the theorem needs equalities).
+  Community-stress-tested form: certified abstract interpretation
+  (Pichardie/Verasco lineage) with per-program soundness via
+  translation validation. FORWARD HEURISTIC, adopted into unit
+  chartering: when a new obligation family appears, first ask
+  "what representation makes these evaluable," not "how do we
+  prove these."
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
