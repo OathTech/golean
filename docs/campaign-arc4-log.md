@@ -3884,3 +3884,268 @@ stands escalated from U8–U15.
   24G cap). The comparator-landmark note now reads **STALE at 139
   commits** (> the 100 threshold; report-only) — stands escalated for
   the operator's merge step, as at U8–U15.
+
+## A4-U17 — THE sL×MsgBeat EQUATION (the heartbeat triple CLOSES) + the leader-side fixture pack + THE Step() TOP-LEVEL CENSUS (2026-08-25, successor worker, coordinator-dispatched)
+
+- 2026-08-25 SELF-RE-VERIFICATION (U16's top claims, fresh probes,
+  all PASS — fresh worker per the U16 rotation note):
+  - tip clean: `git status` clean on `campaign-arc4`; `git rev-parse
+    HEAD` = `5f731c171a07347bd43c2efb220dfa8617816f60` (the U16 gate
+    tip). 91G free at launch; every build `GOLEAN_MEM_MAX=48G
+    scripts/capped`.
+  - fresh capped proofs+Audit build: "Build completed successfully
+    (524 jobs)." exit 0 — matching U16's record.
+  - `#print axioms` fresh probes (`AxSCHb`/`AxSfPd` re-run,
+    verbatim): stepCandidate_heartbeat family and
+    stepFollower_propDrop family [propext, Classical.choice,
+    Quot.sound]; scPick3_step/scW1_out/sc_post_absOutbox and
+    sfpdW1_out/sfpd_post_er [propext, Quot.sound] — matching U16.
+  - hatch grep (`sorry|native_decide|^axiom`) over
+    `proofs/GoLeanProofs/Specs/Raft/`: **0**.
+- 2026-08-25 Slice 1 (9fb5deb8) — **THE IN-PLACE APPEND TRANSPORT**
+  (`Sym/SpillTransport.lean`, additive; the U12 atom-re-read
+  watch-item FIRES for the first time):
+  - The sL×Beat census's 4-choice count concealed a NEW crossing
+    class the machine walker cannot show: the second `r.send`'s
+    append re-reads the FIRST send's spilled `msgs` handle, which
+    rides as valuation atom 0 — the mirror quits at `asSlice` on the
+    atom. The machine step is deterministic (capacity-sufficient
+    in-place append: one backing write at index `off+len`, one
+    handle write, NO choice, NO alloc) — but whether that branch is
+    TAKEN depends on the earlier spill's realized capacity, exactly
+    as the watch-item predicted ("a cap-consuming re-read between
+    spills is NOT choice-independent").
+  - Landed: `applyStmtOp_append1_inplace_at` (the apply at the
+    in-place branch; the one-element `forIn` reduced via
+    `Array.forIn_toList`), **`stepFn_appendInPlace_transport`** (the
+    γ-image step; the old handle enters as a general mirror value
+    pinned by a `hold` premise — an ATOM at the motivating fixture),
+    `storeLoc_spilled_backing_index1` (the symbolic-capacity backing
+    write: peel one replicate pad under `2 ≤ n`, pointer-typed
+    renormalization is the catch-all identity —
+    `normalizeListWith_ok_id`), and the §3.3 witness on concrete
+    cells. All [propext, Quot.sound]. LINEAGE: the same
+    symbolic-execution crossing classic as the pick/spill transports.
+    Further consumers: every multi-send arm (the MsgApp broadcast
+    arms append once per peer — the k-th-index generalization is
+    named consume-on-demand).
+- 2026-08-25 Slice 2 (800e260e) — **THE stepLeader × MsgBeat
+  DISPATCH-ARM EQUATION** (`SlbEquation.lean` + generated
+  `SlbLit.lean` 1.8 MB — the printer's 16th consumer):
+  - **THE HEARTBEAT ROUND-KIND'S ARM TRIPLE IS COMPLETE: sF
+    (U15) / sC (U16) / sL (this unit)** — the full arm set for
+    layer C's first round lemma (C2's heartbeat round, both roles +
+    the leader's beat).
+  - The chain: 8 windows **[288, 28, 28, 28, 3, 1474, 1393, 113]**
+    + 7 crossings (3 Visit picks over the prs map at 33 —
+    `bc31Cands3`/`uKey1-3`/`uKeyV2-4` REUSED VERBATIM — range-stop,
+    sort collapse, the msgs spill, THE IN-PLACE SECOND APPEND) =
+    **3,362 steps / FOUR choices — the U16 census to the step**.
+    Generator `SlbGen.lean` (adaptive staged crossing
+    classification); γ==machine at FOUR 4-tuples incl. the cap-2
+    boundary c₄ = 30 BEFORE any theorem; the c₄ = 29 RE-SPILL
+    divergence machine-witnessed (5 choices consumed — the residual
+    family's evidence).
+  - Fixture-family firsts: **ALL FOUR raft scalars ride SYMBOLIC**
+    (the path reads none of them — readouts for state/lead/Vote
+    carry range side conditions at wrap depth 2, generator-probed
+    per §4c); **the first choice-VALUE side condition**
+    (`2 ≤ hhCap c₄`): the in-place branch needs the spill's realized
+    capacity ≥ 2. The complement (`c₄ % 32 = 29`, cap 1) is **the
+    RE-SPILL residual family** — a different 5-choice chain, NOT
+    covered, logged as a named debt (below).
+  - Conclusions (12): pre absMessage typ 1; **msgs gains EXACTLY
+    [specHeartbeat 1 2 0, specHeartbeat 1 3 0]** (both Type-8
+    heartbeats in sort-collapsed peer order — send order is
+    pick-order-INDEPENDENT); maa empty; er nil; log preserved;
+    state/lead/Vote/Term unchanged — **the leader stays the
+    leader**, as a theorem over symbolic state.
+  - **GREEN: 125 s module, full proofs+Audit "Build completed
+    successfully (526 jobs)."**; axioms classical trio on the
+    equations, [propext, Quot.sound] on links/picks/in-place (probe
+    `AxSlb`, verbatim); hatch grep over the three touched modules 0.
+  - What-this-taught-us (slice 2, elaboration): **a transport
+    premise that DETERMINES unification variables must be a
+    pre-stated `have`, never an inline `(by with_unfolding_all
+    rfl)`** — the inline `hold` elaborated against unassigned metas
+    and diverged at `whnf` (28 min grinding; ANTI-GRINDING fired,
+    killed, section-bisected in ~110 s increments, pinned to the
+    exact token by a 2M-heartbeat cap). With the explicit `have` the
+    same proof is free. Everything else was assembly; the walked
+    route's cost stays ~linear (3,362 steps → 125 s).
+- 2026-08-25 Slice 3 (probe-only, as chartered) — **THE Step()
+  TOP-LEVEL CENSUS** (`StepTopProbe.lean`; the outermost dispatch,
+  raftsubject/raft/raft.go:1108; fixture = the census geometry with
+  the raft's `step` FIELD set per-state to its funcVal — the
+  become-assignment — and an optional real Term cell 56):
+  - **The routing map**: Step = nil-check → TERM switch (m.Term = 0
+    local / > r.Term step-down / < r.Term ignore-or-respond) → TYPE
+    switch (MsgHup / storage resps / MsgVote+PreVote / default →
+    `r.step(r, m)` — the callVal dispatch through the func field).
+  - **THE COMPOSITION HEADLINE: on every local default route the
+    Step glue is a CONSTANT 420-step prefix + 33-step suffix (453
+    total), zero choices, zero statics, role-independent** — each
+    landed arm equation is consumed EXACTLY (steps and choice-pop
+    positions match to the step, offset +420):
+    - Step/L/Beat: 3,815 = 453 + **3,362**, pops [708,737,766,2274]
+      = the slb pops + 420; the two heartbeats verbatim → consumes
+      **stepLeader_beat_eq** (this unit).
+    - Step/F/Hb: 2,163 = 453 + **1,710**, pop 2001 = 1581 + 420 →
+      consumes **stepFollower_heartbeat_eq**; response record
+      verbatim (specHeartbeatResp 1 2 0).
+    - Step/C/Hb: 5,422 = 453 + **4,969**, pops = SCHb's + 420 →
+      consumes **stepCandidate_heartbeat_eq**.
+    - Step/F/Prop: 1,725 = 453 + **1,272** (the censused forward
+      arm), forwarded typ-2 record to lead 2.
+  - The non-default paths, censused:
+    - **step-field NIL (the born state): PANICS** at the callVal on
+      nil — fail-closed; Step()'s fixture family REQUIRES the
+      become-assignment (walker-terminal 433; panic-site earlier).
+    - **term-BUMP** (m.Term 2 > r.Term 0, typ 8): 6,468 / 5 choices
+      — becomeFollower(2, From) INSIDE Step, then the sF×Hb span at
+      the Term-2 family (post: Term 2, Vote reset 0, response term
+      2); composes bf-spine + SfHb machinery at a NEW fixture
+      family (not a landed-equation instance — the Term-2 variants
+      are new fixture families of landed shapes).
+    - **term-DOWN ignore** (r.Term 5, m.Term 1, checkQuorum false):
+      791 / 0 choices, er nil, NO sends, state untouched — a cheap
+      CHOICE-FREE Step-only family (returns inside Step, no arm).
+    - **MsgHup** (typ 0): 10,709 / **12 choices** — the
+      hup→campaign election spine (msgs = two MsgVote t1, maa =
+      the self MsgVoteResp); the campaign round-kind's span, NOT
+      yet equation-covered (layer C's C4 item).
+  - **This completes the composition map to the top of the call
+    tree**: driver → Step (453 glue) → {stepLeader, stepFollower,
+    stepCandidate} → landed arm equations. C1's remaining input
+    delivered.
+- 2026-08-25 Slice 4 (probe-only, as chartered) — **THE LEADER-SIDE
+  FIXTURE PACK** (`SLFixPackProbe.lean`; the U16 ledger row; ONE
+  general pack, two orthogonal pieces per the further-consumers
+  rule):
+  - **The pack**: (i) `trkPatch` — Progress cells get Match := 1,
+    Next := 2 (consistent with the fixture log: lastIndex 1,
+    committed 1 — sendAppend from Next 2 reads term(1) and an empty
+    entries(2..), no ErrCompacted, no snapshot path); (ii) message
+    entries cells 57/58 (one fresh *raftpb.Entry, Term/Index zero —
+    appendEntry assigns them) + optional real Index cell 59;
+    (iii) **ldT = 0** for the Prop accept path (found by census:
+    the standing fixture's leadTransferee = 5 makes the subject
+    return ErrProposalDropped — transfer-in-progress, static 17 =
+    the box — CORRECT behavior and its own choice-free drop family,
+    394/0).
+  - **Re-censuses — ALL FOUR remaining leader arms COMPLETE on the
+    pack** (every number from runs; zero statics on every
+    completing run):
+    - **sL×Prop FULL (ents + trk + ldT0): 12,831 / 6 choices at
+      [2113, 3294, 3423, 3452, 3481, 7712]** — the complete
+      proposal pipeline: er nil, unstable gains (2,0), msgs =
+      MsgApp(s) (typ 3, logTerm 1 index 1 commit 1), **maa =
+      [MsgAppResp typ 4 to SELF, index 2] — the first arm with a
+      non-empty msgsAfterAppend**. Both pack pieces provably
+      needed: ents-only (ldT 0, no trk) still panics in
+      sendAppend (static 23/ErrCompacted at 4362 → the nil-snapshot
+      path — Next 1 vs storage firstIndex 2).
+    - **sL×AppResp accept (trk + Index 1): 7,677 / 4 at
+      [1111, 1229, 1347, 5074]** — MaybeUpdate + sendAppend, msgs =
+      [MsgApp to 2]; **sL×AppResp no-op (Index nil): 795 / 0** —
+      choice-free.
+    - **sL×HbResp (trk): 4,381 / 1 at 3915** — msgs = [MsgApp to 2].
+    - **sL×Transfer (trk): 2,512 / 1 at 2390** — msgs =
+      [MsgTimeoutNow typ 14 to 2].
+    - Control: **sL×Beat on the patched tracker = 3,362 / 4 at THE
+      SAME pops** — chain shape is pack-invariant; only the record's
+      commit changes (0 → 1 = min(Match, committed)); the landed
+      equation's fixture (unpatched) is untouched.
+  - Ledger row RESOLVED into census facts: the leader arms are
+    fixture-design-unblocked; their equations are wave-3 assembly
+    (all crossing classes landed — picks/spill/in-place; the Prop
+    arm adds an unstable-entries append spill, the La shape).
+
+### PROMOTION LEDGER updates (A4-U17)
+
+- **The transport family — NEW MEMBER `stepFn_appendInPlace_transport`**
+  (+ `storeLoc_spilled_backing_index1`): the atom-re-read row's
+  wrapper threshold RESOLVED differently than predicted — the third
+  instance was not a len strict-op composition but a full crossing
+  class; the k-th-index backing-write generalization is
+  consume-on-demand (first candidate: the MsgApp broadcast arms).
+- The literal printer — 16th consumer (SlbGen; the ADAPTIVE staged
+  crossing-classification walk — classify-by-shape instead of a
+  hardcoded stage list — is the new generator template; supersedes
+  SCHbGen's fixed stages for multi-class chains).
+- **NEW ROW: the RE-SPILL residual family** (`c₄ % 32 = 29` at any
+  two-append arm): a 5-choice chain (machine-witnessed divergence in
+  SlbGen). Consumers: sL×Beat completeness (if layer C ever needs
+  the full choice envelope of the heartbeat round rather than the
+  ∀-prefix-with-side-condition form), and every future multi-send
+  arm. Cheap when needed: one more literal chain at cap 1.
+- The leader-side fixture pack row (U16) — **RESOLVED to censuses**
+  (slice 4); the remaining debt is per-arm EQUATIONS, not fixtures.
+- The `stepFn_atomRead_transport` wrapper row — CLOSED: superseded by
+  the in-place transport landing (the third instance took a
+  different, stronger lift).
+
+## A4-U17 exit (2026-08-25, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since the U16 gate tip
+5f731c17: 2 (9fb5deb8 slice 1, 800e260e slice 2) + this log/exit
+commit; no coordinator commits interleaved (checked: `git log
+5f731c17..HEAD --oneline` = the above). Full proofs+Audit green:
+**526 jobs** (524 + SlbLit + SlbEquation). Kit pins: +0. Hatch grep
+over every new/touched module: 0. Probes (gitignored): SlbGen,
+StepTopProbe, SLFixPackProbe, AxSlb, InPlaceDev/2, SlbBisect*.
+
+**Deliverable state vs the U17 charter:**
+1. THE sL×MsgBeat EQUATION — **DELIVERED, the heartbeat round-kind's
+   arm triple (sF/sC/sL) IS COMPLETE** — said so per the charter:
+   layer C's first round lemma has its full arm set. One new
+   crossing class landed en route (the in-place append transport —
+   the atom watch-item's first live instance, now closed INTO the
+   transport family).
+2. THE LEADER-SIDE FIXTURE PACK — **DELIVERED with completion**: all
+   four remaining leader arms census to STOP on the pack (Prop
+   12,831/6 with the first non-empty maa; AppResp 7,677/4 + 795/0;
+   HbResp 4,381/1; Transfer 2,512/1); the ldT-drop family found and
+   recorded; no next debt beyond per-arm equations (named ledger
+   rows).
+3. THE Step() TOP-LEVEL CENSUS — **DELIVERED**: the routing map with
+   the constant-glue decomposition (453 = 420 prefix + 33 suffix,
+   role-independent, choice-free) and EXACT consumption of all four
+   landed arm equations; the nil-step panic, term-bump, term-down,
+   and MsgHup spans censused. The composition map now reaches the
+   top of the call tree — C1's remaining input.
+4. Budget item (sF×MsgProp forward / sL×AppResp equation): NOT
+   attempted — the unit closed at the census boundary (rotation
+   discipline).
+
+**Open gaps carried (none counted):** GAP-V1-2/-4/-5, GAP-U1-W1,
+GAP-V2-1 wave-3 condition, GAP-V2-2, MemoryStorage.Entries spec
+design, the multi-element spill variant, message-field symbolism on
+demand — all unchanged; the atom-re-read watch-item is CLOSED (fired,
+landed as machinery); U17 adds: the RE-SPILL residual family (ledger
+row); the walker panicked-config nicety unchanged (probe-side).
+
+**A4-U18 CHARTER (proposed) — C1, the layer-C opening unit** (the
+expected successor per the ladder; its inputs are now complete:
+§4c conventions, the R-form flag, the U14 dispatch map, and this
+unit's Step() census/decomposition). C1 per the design of record
+(campaign worktree, `docs/2026-08-25_campaign-layerc-design.md` §6):
+(1) the driver-span census (A2's kill-point: loop head, action
+choice, harvest, checker — one census unit in the StepTopProbe
+pattern, now with the Step glue known constant); (2) the round-lemma
+STATEMENT in R-form (fixture-family membership + absState readout —
+the §4c flag, binding), witnessed on the heartbeat round; (3) the A4
+adapter probe (specRound ↔ T3 lattice net-step decomposition — the
+one assumption whose failure reshapes the design). C1 is a DESIGN
+GATE: its verdict on A1-A4 revises the layer-C note before C2. What
+C1 still lacks from below: nothing structural — the heartbeat round's
+arms are proved (this unit), the glue is censused constant, and the
+checker span awaits its own census inside the driver-span item.
+Budget permitting after the gate: the sF×MsgProp FORWARD-arm equation
+(1,272/1, censused; closes stepFollower's censused arms) as C2 prep.
+Rotation note: this worker is at ~420k tokens at exit-entry — healthy
+margin; U18 may continue here or rotate per the coordinator.
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1); the comparator-landmark STALE flag
+stands escalated from U8–U16.
