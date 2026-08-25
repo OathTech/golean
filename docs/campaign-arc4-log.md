@@ -2970,3 +2970,101 @@ stands escalated from U8–U11.
     package-level var, stated as two renaming-covariant lookups")
     is the honest form for Go's sentinel-error pattern: the spec's
     none-arm plus machine identity, neither blurred into the other.
+
+### PROMOTION LEDGER updates (A4-U13)
+
+- **Three TableExt arm families** (typeAssert stmt+expr over
+  `typeAssertValueT`/`canonicalTyFuelT`/`resolveDefinedAliasesFuelT`;
+  convert-at-defined via `convertValueToTyFuelT`) — LANDED as the
+  consume-on-demand process prescribes (conc lemmas in the same
+  edit, full-rebuild guard green); Go-general (every clone/assert/
+  defined-conversion path), not becomeLeader specialties.
+- The literal printer — 9th and 10th consumers (BlGen, HhAdvGen).
+  NEW improvement note (the U13 slice-3 slip): emit the link-theorem
+  RHS step counts FROM the generator instead of sed-carrying them —
+  would make the U11 numeric-mismatch class unrepresentable at
+  template time. Take at the next generator touch.
+- **`lookup_value_renV`** (MsErrEquation, local) — the renamed-value
+  sibling of `lookup_value_ren`; second consumer lifts it beside the
+  original in `AllocEqWave1`.
+- The `stepFn_atomRead_transport` wrapper row (U12): now TWO landed
+  instances of the composition (la_len_step, bl_len_step) — still
+  below the wrapper threshold by the letter (both are 10-line
+  compositions); third instance takes the lift.
+- `Frame.span_relocate` — consumers now SEVEN (Hae shipped copy;
+  Stale, La, Bl, HhAdv, MsErr ×2 via the lifted form). Row closed at
+  U12; count updated for the record.
+
+## A4-U13 exit (2026-08-25, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since the dispatch tip
+96723532: 5 (aaa9b03d census+arms, 21c19279 becomeLeader, f429eb92
+commit-advance, 067bd58c Ms error branches, + this log/exit commit);
+no coordinator commits interleaved (checked at recount:
+`git log 96723532..HEAD --oneline` = the above). Full proofs+Audit
+green: **512 jobs** (507 at entry + BlLit + BlEquation + HhAdvLit +
+HhAdvEquation + MsErrEquation). Kit pins: none owed this unit
+(target-layer modules; the TableExt growths carry conc lemmas, not
+pins — the U3/U10 precedent). Hatch grep over every new/touched
+module: 0.
+
+**Deliverable state vs the U13 charter (coordinator-confirmed
+priorities):**
+1. becomeLeader, census FIRST — **DELIVERED, BOTH HALVES**: the
+   census's entire point (the cap-re-read watch-item) answered CLEAN
+   (the one inter-spill atom read is the choice-independent len
+   class; walker-validated schedule = 6,466 exactly), three
+   same-lever TableExt arm families consumed on demand en route;
+   then **THE EQUATION** (the if-clean branch): six choices, 10
+   windows/9 crossings, green on the first full check (190 s) —
+   wave-2's becomeX family is COMPLETE (BPC/BF/BC/BL).
+2. handleHeartbeat commit-advance — **DELIVERED**: handleHeartbeat
+   COMPLETE (committed 1 → 2 = m.Commit, view untouched,
+   `hha_committed_advanced` axiom-free; 55 s module).
+3. Budget slot (the coordinator's insight-test pick) — **DELIVERED**:
+   the Ms Term ERROR-BRANCH equations = the U4 residual closed AND
+   the static-cell complement's SECOND consumer (append-only
+   composition with a landed fixture on a disjoint path — the
+   generality claim validated); the spec-none + error-identity
+   conclusion shape recorded for Go's sentinel-error pattern.
+
+**Handler-equation state after this unit:** 13 equation families on
+the branch — becomeFollower, becomePreCandidate, becomeCandidate,
+**becomeLeader** (new), MemoryStorage.FirstIndex, MemoryStorage.Term
+(ok + **two error branches**, new), handleHeartbeat (no-op +
+**commit-advance**, new — COMPLETE), handleAppendEntries
+(success/stale/log-append). Every wave-2 handler except the Hae
+REJECT family now has all its censused families proved.
+
+**Open gaps carried (none counted):** GAP-V1-2/-4/-5, GAP-U1-W1,
+GAP-V2-1 wave-3 condition, GAP-V2-2, MemoryStorage.Entries spec
+design — unchanged; U10's residuals now REDUCED (commit-advance
+DONE; message-field symbolism branch crossing and the multi-element
+spill variant remain); the Hae REJECT family (the last
+handleAppendEntries branch — findConflictByTerm loop, choice-free
+but window-heavy); the atom-re-read watch-item is RETIRED for
+len-shaped reads (two clean instances) but stays open for
+cap-consuming reads (no instance yet — re-check per census); U13
+adds: the interface-TARGET typeAssert arm and struct value-conversion
+retag remain scoped-out TableExt quits (fail closed, consume on
+demand); the generator RHS-emission improvement (ledger).
+
+**A4-U14 CHARTER (proposed):** (1) the handleAppendEntries REJECT
+family — census first (choice-free expected; findConflictByTerm's
+loop may make the window the largest yet — if a single window
+balloons past the anti-grinding smell, split at loop boundaries and
+STOP at the design question rather than grinding); closing it makes
+handleAppendEntries the first COMPLETE message handler with all four
+censused families. (2) The message-field symbolism branch crossing
+(the U10 finding: `m.From ≠ r.id` as a side-condition branch
+crossing — one general q1Branch transport in the established
+patterns; unlocks From-symbolic statements of every landed
+message-handler equation). (3) Budget permitting: stepFollower/
+stepCandidate dispatch censuses (the wave-3 opening — the Step
+dispatch chain reads cells 16/17/27/28, the complement's remaining
+roots). Rotation note: this worker is at ~630k tokens; U14 should
+open with a fresh worker per the split discipline.
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1); the comparator-landmark STALE flag
+stands escalated from U8–U12.
