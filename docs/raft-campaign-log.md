@@ -1191,6 +1191,29 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
     reflection), never grind and never wilderness without a named
     reason.
 
+- **Arc 4, A4-U11 — LANDED** @ eeceef6f, gate PASS, 502 jobs: THE
+  handleAppendEntries EQUATION (success/empty family; the spill
+  transport's SECOND consumer exactly as censused; ten absState-v2
+  conclusions incl. the msgsAfterAppend routing; 66 s module) +
+  span_relocate (sim plumbing packaged once, promotion row) + two
+  censuses. WHAT THIS TAUGHT US: (1) THE RISK FINDING — log-append
+  goes stuck at static cell 25: the blocker is the STATIC-CELL
+  COMPLEMENT ([20,31) from $pkginit — the ErrCompacted-family error
+  vars the leaf fixtures don't carry), NOT GAP-V1-1b's overlay,
+  which was never reached; same debt blocks U4's Ms error branches —
+  one shared fixture block retires it for every error-path consumer
+  (the further-consumers doctrine's exact shape). (2) THE
+  ELABORATOR-MISMATCH PATHOLOGY: a single stale numeric arg in a sim
+  application sent Lean into 37 min/14.5 GB of WHNF spine-unfolding
+  instead of a unification error — convention: on any hang, check
+  numeric args of sim/window applications FIRST; span_relocate
+  shares n by construction so the class can't recur. (3) stale
+  family = pure assembly (fixture values distinct so records differ
+  observably). [AGENT]: honest boundary call endorsed (solid 1 +
+  censuses over a rushed 2); 7th-gen rotation at ~750k; U12
+  dispatched = stale equation + THE static-cell complement as shared
+  machinery + third slot by censused cost.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
