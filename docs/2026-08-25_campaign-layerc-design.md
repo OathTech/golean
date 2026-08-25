@@ -1,5 +1,18 @@
 # Layer C — the round induction, checker implication, and T1 assembly (design v2)
 
+> **STATUS BANNER (2026-08-27): PARTIALLY SUPERSEDED.** The design
+> of record is `docs/2026-08-26_campaign-flexibility-redesign.md`
+> (+ its §7 middle-path calibration). This note's §8 decisions
+> D1–D4 STAND as interface instances; its LADDERS (§6 and §8's
+> re-target) are superseded by the redesign's probe-gated
+> sequencing. Route updates since v2: the S1/S2/S3 chain went
+> NATIVE over the obligation signature (b′, complete — see the
+> arc4b lane log); **the seed pin's route is now the
+> CHOICE-INVARIANCE LEMMA** (latitude-draw erasure + one literal
+> anchor; campaign log 2026-08-27), NOT the Arc-2-style reflection
+> §8/C3 mentions. Read this note for the layer-C problem analysis
+> and the C1 gate history; read the redesign for the current plan.
+
 Campaign coordinator note, 2026-08-25, [AGENT] (drafted at the wave-2→3
 boundary; to be CONTACT-TESTED by the layer-C unit per the U1 lesson —
 §5's assumptions are falsifiable on purpose and each names its

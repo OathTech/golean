@@ -154,3 +154,44 @@ Applications to the standing plan:
   directions (grind creep AND speculative generality).
 - The second-target validation probe is a post-T1 [USER] decision,
   not part of DONE.
+
+
+## 8. DOC-OF-RECORD HIERARCHY + POST-α ADDITIONS (2026-08-27
+consistency pass, [USER]-directed)
+
+**Hierarchy (one design of record per layer):** THIS NOTE = the plan
+of record (interfaces, sequencing, §7 calibration). The layer-C note
+= problem analysis + C1 gate history (banner added; ladders
+superseded). The seam note (arc-4 lane, §4c) = arm/statement
+conventions — RECONCILIATION QUEUED to the lane's next boundary (it
+must cite this note; worker-owned until then). The iris reuse map (+2
+addenda) = the Iris/lineage record. Lane logs = history, not plans.
+The constitution = the ends, unchanged.
+
+**Design contributions adopted since α (all [USER], full analyses in
+the campaign log 2026-08-27):**
+- The CHOICE-INVARIANCE LEMMA — latitude/semantics draw factoring;
+  first consumer = the seed pin (replaces the reflection route);
+  built inside the seed-pin unit, forward-compatible with:
+- The SYMBOLIC SEMANTICS (choice-erasure layer; CompCert-memory-
+  model lineage) — the POST-T1 consolidation centerpiece; not
+  mid-endgame; ~/canonical forms built now AS its future state
+  space.
+- The REPRESENTATION-ENGINEERING heuristic (certified-AI lineage) —
+  chartering question: "what representation makes these evaluable."
+- The SMALL-AXIOMS correspondence (reuse map addendum 2) — I2's
+  full lineage.
+
+**Backlog item (2026-08-27, [USER]): THE COHERENCE AUDIT** — an
+overall design-audit pass against the half-built-mechanisms risk.
+Vehicle: a dedicated DESIGN-COHERENCE DIMENSION of the T1 milestone
+audit (the constitution owes that audit anyway; this rides it).
+Deliverable: ONE mechanism registry — every mechanism, its
+completion state, scaffold tags, retirement conditions, its single
+design-of-record pointer, and orphan/duplicate detection — replacing
+today's scattered docstring tags. Scope includes the known scaffold
+census: the copy-threaded S-induction (retirement condition
+recorded), atom threading (retires into the symbolic semantics),
+generated literal fixtures (validation-corpus role), goldenWire
+maxRecDepth, the parked TwinSegs tree, the ∃-split extraction
+residual, the Star/ReachRel duplication from the arc4b landing.
