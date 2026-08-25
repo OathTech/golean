@@ -1095,6 +1095,28 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   itself) rather than weaken the claim to fit. Delta-review of the
   fix diff dispatched (trust-surface touch, user policy 2026-08-01).
 
+- **Fix-round delta-review RETURNED** (2026-08-25): the F2 premise-3
+  mechanism SURVIVED all attack dimensions (verbatim premise match;
+  fail-closed both directions; the untrusted loop cannot flip a
+  verdict); all re-derived numbers reproduce. Six findings, one
+  substantive: **F-A (MEDIUM) — "no bridge lemma exists" is FALSE as
+  stated**: the loop-level pool↔sequential conservation
+  execProgLoop_single ALREADY EXISTS Audit-pinned, and the entry
+  bridge is likely ~5 lines of glue mirroring fastRun_transfer's own
+  proof — the fix round's "NOT small" deferral judgment was wrong.
+  Also F-C: the recorded stub enumeration was incomplete (mutex ops
+  ARE supported, not stubbed) — the operative bridge argument is "no
+  spawn ⇒ singleton pool ⇒ conservation via transferable", exactly
+  what the existing lemma formalizes. WHAT THIS TAUGHT US: the
+  reviewer knew the repo's own theorem inventory better than the
+  fix-round worker — deferral-effort judgments need a search of
+  existing correspondence lemmas, not just a look at the gap. [AGENT]:
+  round 2 dispatched to the same worker — attempt the entry bridge
+  TIMEBOXED (pin it and upgrade the claims if it typechecks; record
+  the obstruction and correct claims if not), plus the 4 mechanical
+  corrections (stale 27 s; 1.76× like-for-like; premise3-ok record
+  citation; step-index docstring).
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
