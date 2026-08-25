@@ -1516,6 +1516,29 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   at 48G). C2a still running; the meeting-point decision remains
   HELD for the [USER] reconvene.
 
+- **Arc 4, A4-U19 = C2a — LANDED, THE INSTRUMENT EXISTS** @
+  33e07325, gate PASS, 537 jobs: FrameSimS (the insertion-point
+  shape clause; C1 completeness derivable), the full S-transport
+  stack, **span_consume — the mid-walk consumption theorem** (a
+  landed equation consumed at any placement hands back a LITERAL
+  framed post-state), and the discharge witness performing exactly
+  the operation U15's wall blocked (nine-step literal resume
+  writing a frame cell after a relational sub-span, non-identity
+  placement, abstract readout intact). Audit-pinned, lineage-lined
+  (Yang-O'Hearn completeness half). WHAT THIS TAUGHT US: (1) the
+  U16 sizing was corrected by measurement — in-place strengthening
+  is BLOCKED at rebaseSimT (∃-split vs set-append freedom;
+  attempts exhausted, not asserted), so the instrument landed
+  ADDITIVE with copy-threaded S-induction; copies = scaffold with
+  a retirement condition; (2) two probe ceilings rerouted to a
+  generated mechanical mirror that elaborated first-pass green —
+  boundary-stop-and-reroute working; (3) named residual: ∃-split
+  extraction (cheap follow-up). The U15/U16/U18 reuse-instrument
+  ledger row is CONSUMED. **BOTH α GATES NOW REPORTED (SC1 + C2a,
+  both positive). The meeting-point decision is presented at the
+  [USER] reconvene — nothing dispatched beyond this log until
+  then.**
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
