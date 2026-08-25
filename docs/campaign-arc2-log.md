@@ -998,26 +998,39 @@ audit fix round, 2026-08-25]"; items with no in-place site follow.
   (`golean native-json-run`, `--engine slow`) computes
   `runProgramPoolIntsM`, the THREAD-POOL entry (`runProgramSetupM` →
   `execProgLoop`, Multi.lean). These are DIFFERENT functions and no
-  bridge lemma between them exists in the repo — P2R silently changed
-  WHICH whole-program semantics the machine tier certifies, and the
-  original FastReplay.lean:26-29 ("trust class IDENTICAL to
+  ENTRY-level bridge lemma between them existed — P2R silently
+  changed WHICH whole-program semantics the machine tier certifies,
+  and the original FastReplay.lean:26-29 ("trust class IDENTICAL to
   native-json-run") and tracereplay.py comment ("the same
   `runProgramM` equation the interpreter computes") were literally
   false. Both corrected in the F1+F2 commit (plus Transfer.lean's
-  header). THE BRIDGE ARGUMENT, now explicit: on the accepted class,
-  every construct where the two entries could diverge — goroutine
-  spawn (`.goStmt`/`.goCalleeK`/`.goArgsK`), channel send/recv/close,
-  select (FastEval/Step.lean stub refusals) — is refused fail-closed
-  by `stepFast`, so any run the driver ACCEPTS is spawn-free and
-  single-threaded under either entry; no reachable divergence. This
-  is an ARGUMENT from the current stub set, not a theorem.
-  **QUEUED FOLLOW-ON (named): `runProgram_pool_seq_bridge`** — prove
-  `runProgramM fuel p n args ch = runProgramPoolIntsM fuel p n args
-  ch` on the spawn-free class (a single-thread-pool `execProgLoop` ↔
-  `runConfig` simulation; judged NOT small this round — the pool loop
-  carries scheduling/`transferable` structure with no existing
-  `runConfig` correspondence). Until it lands, an ok verdict
-  certifies the sequential entry, exactly.
+  header). [CORRECTED in fix round 2, 2026-08-25: this entry's
+  original "no bridge lemma between them exists in the repo" was
+  FALSE as stated — the LOOP-level pool↔sequential conservation
+  already existed and was Audit-pinned: `execProgLoop_single`
+  (MultiSound.lean, `execStmtLoop = r → transferable r →
+  execProgLoop ⟨#[c], σ, 0⟩ rs ch = r`, with `transferable (.ok _) =
+  True`), pinned via `execProg_single_eq_execStmt`; only the
+  entry-level glue was missing. The round-1 stub-enumeration
+  argument ("every construct where the entries could diverge is
+  refused") was also wrong in one corner: mutex `.lock`/`.unlock` IS
+  supported by `applySyncOpF`, and blocked-sync is exactly where the
+  drivers differ — the operative argument is "accepted run COMPLETED
+  sequentially ⇒ `.ok` ∈ `transferable` ⇒ singleton-pool
+  conservation", which needs no enumeration.]
+  **`runProgram_pool_seq_bridge` — RESOLVED in fix round 2** (the
+  round-1 "judged NOT small" deferral was WRONG; the delta-review's
+  composition sketch typechecked first try): `fastRun_transfer_pool`
+  (+`_eqb`) carries the driver's premises to `runProgramPoolM` via
+  `iterF_ok` → `execStmtLoop_of_stepFnIter` + `execStmtLoop_next_
+  stop` → `execProgLoop_single`; `runProgram_pool_seq_bridge`
+  (+`_eqb`) then states `runProgramM = runProgramPoolM` on the
+  accepted class (both = the same `.ok`, by the two transfers;
+  `runProgramPoolIntsM` is a thin `args.map GoValue.int` wrapper over
+  `runProgramPoolM`, so the general statement covers it). All four
+  pinned in Audit/FastEval.lean — footprint `[propext,
+  Classical.choice, Quot.sound]`, NO new axiom. An ok verdict now
+  certifies BOTH entries, by theorem.
 - **[AGENT] F2 — premise 3 now CHECKED, directly (mechanism (i)):**
   the driver previously ran only the bespoke `runLoop`/`stepUpTo`
   chunk loop and asserted the `iterF` composition in prose
@@ -1029,21 +1042,31 @@ audit fix round, 2026-08-25]"; items with no in-place site follow.
   check, and feeds THAT `σF'`/`ch'` to premise 4; the discovery
   loop's final state feeds nothing (it is untrusted machinery for
   progress + the durable record; new `premise3-ok` record stage).
-  Measured cost of honesty: probe_and_replicate 26.6 s → 44.3 s
-  (record `artifacts/p2r/rec-full-fixround.jsonl`: premise3-ok at
-  43.9 s / 11,995,825 steps), still ~80× under the ~1 h ceiling.
+  Measured cost of honesty (like-for-like, corrected in fix round 2:
+  both figures are the driver's own final-obs elapsedMs):
+  probe_and_replicate 26.57 s → 44.16 s (rec-full-try3 vs
+  `artifacts/p2r/rec-full-fixround.jsonl`; premise3-ok at 43.9 s /
+  11,995,825 steps; the round-1 "44.3 s" was the EXTERNAL
+  /usr/bin/time wall of the second run — mixed anchors), still ~80×
+  under the ~1 h ceiling.
   Sweep entry-point re-run with the fixed driver: MACHINE 1/1 AGREE,
   74/74 blocks, ok 57/57, rendered 17/17 (record
   `artifacts/tracereplay/records-fixround.jsonl`). And since the
   27/27 sweep-2 record predates the driver change, the WHOLE corpus
   was re-swept under the fixed driver after the gate: **MACHINE 27/27
   AGREE, OK-tier 206/206, rendered 148/148, total fast steps
-  37,703,350** (identical to sweep 2), machine-tier wall 388.7 s
-  (sum of per-trace elapsedMs; ~1.6× sweep 2's 237 s — the direct
-  premise-3 pass is the difference), all 27 per-trace fast-records
-  carrying a `premise3-ok` stage (records
+  37,703,350** (identical to sweep 2), machine-tier elapsedMs sum
+  388.67 s vs sweep 2's like-for-like 221.19 s = 1.76× — the direct
+  premise-3 pass is the difference [corrected in fix round 2: the
+  round-1 "~1.6× sweep 2's 237 s" compared against the whole-harness
+  wall, not the machine tier], all 27 per-trace fast-records carrying
+  a `premise3-ok` stage (the premise3-ok stages live in the per-trace
+  `artifacts/tracereplay/<name>/fast-record.jsonl` files — the
+  driver's own durable records; the harness master record is
   `artifacts/tracereplay/records-fixround-full.jsonl`, report
-  `artifacts/fixround-sweep.out`). The strengthened verdict basis is
+  `artifacts/fixround-sweep.out`) [citation corrected in fix round 2:
+  round 1 pointed the premise3-ok claim at the master record, which
+  does not carry those stages]. The strengthened verdict basis is
   corpus-wide; no scope caveat remains.
 - **[AGENT] Commit-message errata (immutable subjects, corrected on
   the record):** (a) cb8e0811 ">500× measured" — the pre-refactor
@@ -1107,3 +1130,55 @@ audit fix round, 2026-08-25]"; items with no in-place site follow.
   tip: F1-F5 all addressed as specified; no residuals beyond the
   queued `runProgram_pool_seq_bridge` follow-on (F1c, by design) and
   the queued denominator-hole close (next tracereplay unit).
+
+## AUDIT FIX ROUND 2 (2026-08-25, this worker; delta-review findings F-A..F-F)
+
+The coordinator's delta-review of fix round 1: the F2 mechanism
+SURVIVED every attack (premise-3 check verbatim-matched to the
+theorem, fail-closed both directions, discovery loop unable to flip a
+verdict); six findings drew this second round. Round-1 text above now
+carries "[corrected in fix round 2]" markers at each affected site.
+
+- **[AGENT] F-A — `runProgram_pool_seq_bridge` PROVED AND PINNED (the
+  round-1 deferral judgment was WRONG, and is corrected on the
+  record):** round 1 wrote "no bridge lemma between them exists in
+  the repo" and judged the bridge NOT small. Both wrong: the
+  loop-level pool↔sequential conservation ALREADY EXISTED —
+  `execProgLoop_single` (MultiSound.lean; `transferable (.ok _) =
+  True`), Audit-pinned via `execProg_single_eq_execStmt` — and the
+  entry-level glue mirrors `fastRun_transfer`'s own proof shape. The
+  reviewer's composition sketch typechecked FIRST TRY:
+  `fastRun_transfer_pool(_eqb)` (driver premises ⇒ `runProgramPoolM`
+  ok, via `iterF_ok` → `execStmtLoop_of_stepFnIter` +
+  `execStmtLoop_next_stop` → `execProgLoop_single`) and
+  `runProgram_pool_seq_bridge(_eqb)` (`runProgramM = runProgramPoolM`
+  on the accepted class — the two transfers composed;
+  `runProgramPoolIntsM` is a thin `args.map GoValue.int` wrapper, so
+  the general statement covers the `native-json-run` entry). All four
+  pinned in `Audit/FastEval.lean`, footprint `[propext,
+  Classical.choice, Quot.sound]`, NO new axiom. An ok fastreplay
+  verdict now certifies BOTH whole-program entries BY THEOREM; the
+  three claim sites (FastReplay header, Transfer header, tracereplay
+  engine comment) rewritten accordingly.
+- **[AGENT] F-C — the recorded argument now leads with CONSERVATION,
+  not enumeration:** round 1's stub enumeration was incomplete as an
+  argument — mutex `.lock`/`.unlock` IS supported (`applySyncOpF`,
+  FastEval/Frames.lean), and MultiSound's `transferable` docstring
+  names blocked-sync as exactly where the drivers differ. The
+  operative argument (now in every claim site): an accepted run
+  COMPLETED sequentially at `.next .stop` — nothing spawned, nothing
+  ended blocked — so its `.ok` result lies in `transferable`'s `.ok`
+  class, where `execProgLoop_single` makes the singleton pool's
+  result identical. The bridge lemma formalizes precisely this.
+- **F-B/F-D/F-E/F-F (mechanical), done:** stale "~27 s" in
+  tracereplay.py → 44.3 s; like-for-like ratios corrected in the
+  round-1 bullets (machine elapsedMs sums 221,191 → 388,672 ms =
+  1.76×, not "1.6× of 237 s"; internal-internal probe pair 26.57 →
+  44.16 s, re-derived from the two record files this round);
+  premise3-ok citation corrected to the per-trace
+  `artifacts/tracereplay/<name>/fast-record.jsonl` files; F-F by the
+  print-it option — `cliErrorJson` gained an extras param and both
+  new error paths emit `stage:"premise3"` + the step index (so the
+  header's "exact step index" sentence is now true of every failure
+  path). Smoke after the changes: full probe_and_replicate ok,
+  11,995,825 steps, 42.9 s internal.
