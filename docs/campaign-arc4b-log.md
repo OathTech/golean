@@ -547,3 +547,400 @@ wave-boundary handling.
   (report-only) — stands escalated for the operator's merge step, as
   at U8–U18. First gate run additionally caught the docstring prose
   token (fixed, [AGENT] call 4); no other delta between runs.
+
+# C3 — the native S1 chain over the obligation signature (worker 2)
+
+Unit C3, branch `campaign-arc4b` @ base 740c719e (SC1's exit tip),
+one writer, NEW FILES ONLY (unchanged hard rule). Charter: (1) the
+signature + obligation-parametric induction, (2) the S1
+superstructure port (re-plumbing per SC1's zero-residue census, the
+ADAPTS victory-ghost reshape), (3) the etcd discharge layer complete
+for S1, (4) the S1 checker leaf through the I4 interface premise.
+Design of record: the campaign worktree's
+`docs/2026-08-26_campaign-flexibility-redesign.md` (§3 I1/I4; §7
+middle-path calibration BINDING — no speculative signature members).
+
+## C3 entry — 2026-08-27
+
+- Slice 0 — SUCCESSOR RE-VERIFICATION of SC1's top claims, all four
+  re-run at launch, VERIFIED:
+  1. tip 740c719e, `git status` clean — verified verbatim ("nothing
+     to commit, working tree clean").
+  2. Both Native modules green as explicit capped build targets
+     (warm, `GOLEAN_MEM_MAX=48G scripts/capped lake build
+     GoLeanProofs.Specs.Raft.NativeObligations
+     GoLeanProofs.Specs.Raft.NativeS23Route` from `proofs/`):
+     "Build completed successfully (3 jobs)". [Note for successors:
+     the target names resolve only from `proofs/` — the root
+     lakefile is the GoLean package and rejects them.]
+  3. Fresh `AxNative` readout (capped `lake env lean`), all eight
+     lemmas within [propext, Quot.sound] — precisely: 3 report
+     [propext, Quot.sound] (majority_quorums_intersect,
+     oneLeaderPerTerm_of_chainInv, specRecvVote_votePersist), 5
+     report [propext] alone (a subset — SC1's "within" claim holds
+     member-by-member).
+  4. Hatch grep over both modules: zero `sorry`/`native_decide`/
+     axiom declarations; the single textual hit is the prose
+     substring "axiomatization" in NativeObligations.lean:52's
+     LINEAGE docstring (the U17/SC1 prose-token class; SC1's gate
+     preflight already accepted it).
+  Launch state: 119G available (well above the 40G floor); builds
+  this unit at GOLEAN_MEM_MAX=48G warm per SC1's ops note (e).
+- [AGENT] read-first per charter: SC1's full log, both Native
+  modules, the flexibility-redesign note (§3 I1/I4, §7 binding), the
+  twin checker's S1 span re-read at source (twin-lib.go harvest:
+  claims from Ready SoftState == StateLeader; `leaderOf : term ↦
+  node`, violation on a DIFFERENT later claimant — note the check is
+  CROSS-TIME, claims accumulate across harvests), T3's
+  `votes_correct` block (ElectionSafety.lean:180-265) for the
+  conjunct census before re-plumbing.
+
+### Slice 1 — the signature + the obligation-parametric induction
+(charter part 1)
+
+Shipped in `proofs/GoLeanProofs/Specs/Raft/NativeS1Chain.lean` (316
+lines, 15 theorems, imports NativeObligations only):
+
+- `ReachRel` (RTC of an abstract dialect step) + `invariance` — THE
+  obligation-parametric induction principle, the b′ replacement for
+  T3's `refined_raft_net_invariant`: preservation premises consume
+  signature members only, never handler equations (exactly the
+  ~1-file reshape SC1's zero-residue census predicted). LINEAGE:
+  standard RTC invariance / Abadi–Lamport ghost refinement.
+- `Seed` (deliberately MINIMAL: empty ghost votes + no leaders —
+  victory-emptiness is NOT needed, `leaderVictory` is vacuous
+  through `noLeaders`) and `GoodReach step N₀ N := Seed N₀ ∧
+  ReachRel step N₀ N` — the exact instantiation of SC1's abstract
+  `Reach` ("closed under step, containing the seed").
+- The signature was NOT extended: no new members, no
+  prevote/learner axes (§7 binding, and the demand never
+  materialized — see the cross-time note below). n-generic holds by
+  construction: `voters : List Nat` is the only configuration
+  parameter; no party-count literal appears in any theory module
+  (the witness's `voters3 = [1,2,3]` is an instance).
+
+### Slice 2 — the S1 superstructure port (charter part 2)
+
+Same module; "re-plumbing, not re-reasoning" held to the letter:
+
+- `FullInv` = votesLe (PORTS, T3 ElectionSafety.lean:36) + oneVote/
+  coherent (PORTS, T3:465 — T3's SIX `votes_ok_*` step lemmas
+  became ONE obligation-parametric preservation lemma
+  `FullInv.step`) + nonzero (plumbing auxiliary: the Nat-encoded
+  vocabulary carries what T3 gets from `Option name`'s `some`) +
+  leaderVictory (the ADAPTS reshape: victory-ghost form, consumes
+  O4+O5a/b+O3a). A recorded b′ SIMPLIFICATION: T3's third
+  `votes_correct` conjunct (the converse,
+  `currentTerm_votedFor_votes_correct`, T3:201) is NOT carried —
+  its only consumer was T3's votes_nw/cronies plumbing, which the
+  victory ghost absorbs.
+- **The native `one_leader_per_term`** (quoted verbatim in the exit
+  block below): dialect-parametric, proved from `ElectObligations`
+  alone via `fullInv_reachable` + SC1's link-2 assembly.
+- **`native_one_leader_per_term_cross_time`** — NOT in the plan,
+  demanded by the checker re-read (slice 0): the twin's S1 check is
+  CROSS-TIME (`leaderOf` accumulates claims across harvests), and
+  per-net election safety does not imply it. No new signature
+  member was needed: O3a starred (`ghostVotes_mono_star`) carries
+  the earlier observation's quorum votes to the later net, where
+  `oneVote` closes — the victory-ghost device paying for exactly
+  what SC1 promoted it for.
+- All four SC1 skeleton Props discharged at the `GoodReach`
+  instantiation (`skel_*_proved`), obligation-parametrically — for
+  every discharging dialect at once.
+
+### Slice 3 — the etcd discharge layer, complete (charter part 3)
+
+`proofs/GoLeanProofs/Specs/Raft/NativeEtcdDischarge.lean` (671
+lines, 23 theorems):
+
+- `EStep voters` — the etcd election-fragment step over `SNet`:
+  one specRound function per constructor, frame by function update,
+  ghost rules exactly per the signature docstrings. Constructor
+  premises, each recorded in the module header: `hgen` (response
+  genuineness = T3's `votes_nw` absorbed as a receive premise, per
+  the SNet docstring's stated design), `htally : TallyOK` (nodup
+  keys ⊆ voters + ghost-faithful grants), `hfrom ∈ voters`,
+  `hc/hi ≠ 0` (etcd ids nonzero, 0 = None sentinel).
+- **`etcd_discharges : ElectObligations voters (EStep voters)`** —
+  every S1 member discharged (O1/O2 riding SC1's link-3 specimens;
+  O4 from the winning branch's quorum guard + TallyOK + genuineness;
+  O3b from the grant/campaign ghost shapes; O5b from the branch
+  lemmas' term stability).
+- **The `TallyOK` premise is proved REDUNDANT on the reachable set**
+  (`tallyOK_step`/`tallyOK_reachable`): it is an inductive invariant
+  of `EStep` from empty-tally starts, so the guard prunes no
+  reachable behavior — the honesty capstone for stating it as a
+  premise (obligation members quantify over ALL nets, where a tally
+  is garbage).
+- Headline: `etcd_one_leader_per_term` (native chain × etcd
+  discharge).
+
+### Slice 4 — the S1 checker leaf (charter part 4, I4-scoped)
+
+`proofs/GoLeanProofs/Specs/Raft/NativeS1CheckerLeaf.lean` (162
+lines, 4 theorems):
+
+- `ClaimTrace` — the observation-trace abstraction of the harvest
+  loop (claims in order, each on a net reachable from the previous
+  observation point; truncation allowed anywhere); `S1Delta` — one
+  term claimed by two distinct nodes (the `leaderOf` branch's
+  condition, order-abstracted).
+- **`S1CheckerInterface`** — the I4 interface premise, stated and
+  scoped EXACTLY to S1 (§7: no general checker theory): claims come
+  from the trace; violation implies delta (soundness direction
+  only — the leaf needs nothing more; completeness is not
+  demanded of I2). Its proof against the checker's real span
+  through absTwinRead is the arc-4 lane's I2 work, per charter.
+- **`s1_leaf`**: signature invariants ⇒ ¬violation, dialect-
+  parametric; `etcd_s1_leaf` = the etcd instance. The spine is
+  `claimTrace_agree` (pairwise agreement by trace induction:
+  head/head refl, head/tail = the cross-time theorem, tail/tail =
+  IH with the base advanced).
+
+### Slice 5 — the non-vacuity witness (doctrine, not in the sized
+plan; the discipline that caught a real bug)
+
+`proofs/GoLeanProofs/Specs/Raft/NativeS1Witness.lean` (127 lines,
+11 theorems): a concrete 4-step election on `voters3 = [1,2,3]`
+(campaign → self-response → grant from node 2 → victory at 2-of-3,
+noop appended, tally cleared — the ADAPTS driver live in the data),
+discharging EVERY chain premise by computation: `witness_leader`
+(the final net really has a leader — the headline is not vacuous
+over it), `witness_oneLeaderPerTerm`, `witness_s1_leaf` (end-to-end
+through a concrete ClaimTrace + interface instance with the delta
+Prop as the minimal violation instantiation), `witness_tallyOK`
+(the redundancy corollary computed on the run).
+
+**The bug the witness caught (fixed before commit, recorded):** the
+first `EStep.campaign` pushed NO self ghost-vote, so a genuine
+self-directed MsgVoteResp (etcd's `msgsAfterAppend` self-response,
+raft.go:1066-1075) could never satisfy `hgen` — the subject's
+actual 3-node election shape (self-vote + one grant = 2 of 3) was
+UNSIMULABLE, i.e. the abstract dialect under-approximated the
+subject and the safety theorem would not have covered real twin
+traces. Fix: `campaign` pushes `(term+1, i)` for the candidate
+itself — exactly where verdi-raft's `electionsData` records the
+own-vote. The simulation direction (abstract ⊇ subject) is the
+fidelity obligation here; the witness construction is what made
+the gap visible.
+
+### The optional Verdi-instance validation: NOT attempted, with the
+reason on record
+
+SC1 priced it +0.5–1 unit (mapping T3's RefinedNet step into `SNet`
++ re-deriving the members from ~50 spec lemmas). Attempting it in
+this unit's tail would have been a rushed half-instance. The
+vacuity discipline's second-dialect evidence stands as: SC1's dual
+discharge CITES per member, the proved two-dialect O-C3 envelope
+demonstrators, and this unit's complete etcd instance. The full
+Verdi discharge (making T3's lattice literally an instance) is
+family-validation work — natural at T2 planning or as a small
+dedicated slice.
+
+### [AGENT] calls this unit (tagged)
+
+1. [AGENT] The cross-time theorem added WITHOUT a signature
+   extension: the checker re-read showed per-net S1 is not what the
+   check tests; the first design sketch reached for a
+   `victoriesNew` member (victory-record soundness) before the
+   vote-monotonicity route made it unnecessary. §7's
+   no-speculative-members rule decided it: the weaker signature
+   carries the leaf, so the member was not added.
+2. [AGENT] The `TallyOK`/`hgen` premises absorbed as step-relation
+   guards rather than proved as a separate dialect-side invariant
+   layer: obligation members quantify over all nets, so SOME
+   reachability-scoped fact must enter somewhere; the guard form
+   keeps `etcd_discharges` unconditional, and the redundancy proof
+   (`tallyOK_reachable`) discharges the honesty debt the guard
+   creates. `hgen` remains a genuine modeling premise (the votes_nw
+   absorption the SNet docstring already commits to) — it is the
+   recorded seam where the packet-level correspondence will attach
+   when the fragment grows packets.
+3. [AGENT] The self-vote ghost fix (slice 5) applied to `EStep`
+   mid-unit rather than logged as a gap: the four modules are this
+   unit's own new files (no landed consumer existed), the fix is
+   two lines + two proof cases, and shipping a knowingly
+   under-approximating dialect against the fidelity doctrine to
+   preserve a slice boundary would have been process over
+   substance.
+4. [AGENT] `Classical.choice` eliminated rather than tolerated: the
+   first axiom readout showed it entering through one `simp [hpv]`
+   (the Nat `==` self-test) in `recordVote_keys_nodup`; replaced
+   with `beq_self_eq_true'` (axiom-free), restoring SC1's
+   [propext, Quot.sound] envelope across all 20 C3 theorems. Not
+   required by any gate — done for parity with the lane's recorded
+   readout discipline and the statement-TCB story's cleanliness.
+5. [AGENT] Hatch hygiene, SC1's precedent applied preemptively: the
+   prose token "admit no S1 delta" in the leaf's docstring (the
+   U17/SC1 admit-token class) reworded to "carry no S1 delta"
+   BEFORE the gate run; the remaining prose substring "axiom-clean"
+   (NativeS1Witness.lean:6) is the same class as SC1's accepted
+   "axiomatization" and passed the preflight (ok line in the gate
+   record).
+6. [AGENT] The new modules stay DELIBERATELY UNIMPORTED (SC1's
+   [AGENT] call 6 extended): wiring them needs the aggregator or
+   the `STANDALONE_PROOFS` allowlist — both existing tracked files
+   the lane's hard no-edit rule forbids. The wave-boundary landing
+   action is now SIX import lines (SC1's two + C3's four:
+   NativeS1Chain, NativeEtcdDischarge, NativeS1CheckerLeaf,
+   NativeS1Witness) in `proofs/GoLeanProofs.lean` — the landing
+   coordinator's edit.
+7. [AGENT] Memory discipline: 119G available at launch and at the
+   gate run (sibling idle at both checks); all builds
+   `GOLEAN_MEM_MAX=48G scripts/capped` warm (largest observed
+   incremental build: 6 jobs, seconds), gate at 24G per the warm
+   convention. No cold build was needed this unit (SC1's .lake
+   state was warm).
+
+### What-this-taught-us
+
+- (a) THE WITNESS IS A FIDELITY INSTRUMENT, not ceremony: the only
+  substantive bug this unit (the missing self-vote ghost, which
+  silently under-approximated the subject and would have voided
+  the safety theorem's coverage of real twin traces) was caught by
+  CONSTRUCTING the concrete run, after all obligation discharges
+  were already green. Axiom-clean, kernel-checked, and wrong-side —
+  exactly the class the non-vacuity doctrine names. Corollary for
+  the lane: dialect step relations get their witness IN THE SAME
+  UNIT, always.
+- (b) The re-plumbing estimate held because the reasoning really
+  was dialect-free: `FullInv.step` re-derives T3's votes chain in
+  one lemma with ZERO handler mentions — the b′ census metric
+  (unfold-target counting) predicted the port cost correctly.
+  The one thing the census could NOT see was the checker's
+  cross-time shape — a STATEMENT-side fact found only by reading
+  the checker again with the leaf in hand.
+- (c) Guard-shaped absorption of network invariants (TallyOK/hgen)
+  plus a redundancy proof is a reusable pattern for fragment
+  dialects: unconditional obligations + reachability-scoped guards
+  + "the guard is invariant-implied" keeps the interface clean
+  without smuggling reachability into the signature. It is also
+  exactly where the S2-wave's match-evidence member will attach
+  (SC1's leaderCommitOk `certified` note).
+- (d) Toolchain notes for successors, measured this unit: `cases`
+  alternatives must NOT name the inductive's INDEX arguments (the
+  relation's `N` — "too many variable names" otherwise); `split`
+  cannot see through zeta-binders (`simp only [defName] at h` first,
+  then `split at h`); `subst h` with `h : a = b` eliminates the
+  RHS variable (reference the LHS afterwards); a bare Nat `==` in
+  this tree resolves to `instBEqOfDecidableEq`, so
+  `beq_self_eq_true'` is the axiom-free self-test lemma, and
+  `simp` on the same goal pulls Classical.choice.
+
+## C3 exit (2026-08-27, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since SC1's tip
+740c719e: this single commit (four tracked modules + this log's C3
+section; probes `AxNativeC3.lean`/`AxBisect.lean`/`AxTry*.lean` are
+gitignored artifacts). Deliverable state vs the C3 charter:
+
+1. Signature + obligation-parametric induction — **DELIVERED**
+   (`NativeS1Chain.lean`: `invariance`, `Seed`/`GoodReach`,
+   n-generic by construction, signature NOT extended).
+2. The S1 superstructure port — **DELIVERED** (same module:
+   `FullInv` + `FullInv.step` + `fullInv_reachable` +
+   `native_one_leader_per_term` + the cross-time form + all four
+   SC1 skeletons discharged at `GoodReach`).
+3. The etcd discharge layer — **DELIVERED**
+   (`NativeEtcdDischarge.lean`: `EStep`, `etcd_discharges` over all
+   seven members, `etcd_one_leader_per_term`,
+   `tallyOK_step`/`tallyOK_reachable` redundancy capstone).
+4. The S1 checker leaf — **DELIVERED** (`NativeS1CheckerLeaf.lean`:
+   `ClaimTrace`/`S1Delta`/`S1CheckerInterface` (I4-scoped),
+   `s1_leaf`/`etcd_s1_leaf`).
+   PLUS the non-vacuity witness module (`NativeS1Witness.lean`),
+   doctrine-mandated, which caught and fixed the self-vote-ghost
+   under-approximation. The optional Verdi instance: not attempted,
+   reason recorded above.
+
+Volume (derivation: `wc -l` / `grep -c ^theorem` at this tip):
+1,276 new lines, 53 theorems across the four modules (316/15 +
+671/23 + 162/4 + 127/11). Zero sorry / native_decide / new axioms;
+hatch grep over all four: prose-substring hits only
+("axiom-clean", the SC1-accepted class); preflight ok in the gate
+record.
+
+**Cost vs SC1's 2.5–3-unit estimate:** the mandatory parts landed
+in ONE worker session ≈ one unit of wall-clock at high proof
+velocity — materially UNDER the family estimate. Where the
+estimate was fat, derivation-anchored: (i) the superstructure port
+priced T3's six-step-kind plumbing at ~1 unit, but the
+obligation-parametric form needed ONE preservation lemma (the b′
+dividend compounding — SC1's links already showed 40-vs-170-line
+ratios); (ii) the discharge layer priced ~12–18 lemmas at
+specimen cost, and the actual layer is 23 theorems but most are
+two-line branch/frame facts; the only genuinely new content was
+the TallyOK/hgen design (measured in decisions, not lines). What
+the estimate did NOT contain and this unit paid anyway: the
+cross-time re-statement and the witness-driven fidelity fix —
+both absorbed. Sizing lesson for the lane: b′-frame ports of
+census-verified-zero-residue chains run ~2–3x under the
+port-anchored estimates; the un-estimable residue is
+statement-side fidelity (checker shape, simulation direction),
+which is where the actual risk lived.
+
+**The native `one_leader_per_term`, quoted verbatim
+(`NativeS1Chain.lean`):**
+
+```lean
+theorem native_one_leader_per_term {voters : List Nat}
+    {step : SNet → SNet → Prop} (ob : ElectObligations voters step)
+    {N₀ N : SNet} (hseed : Seed N₀) (hreach : ReachRel step N₀ N) :
+    oneLeaderPerTerm N
+```
+
+with `oneLeaderPerTerm N = ∀ i j, (N.node i).state = 2 →
+(N.node j).state = 2 → (N.node i).term = (N.node j).term → i = j`
+(SC1's statement, unchanged), and the etcd instance
+`etcd_one_leader_per_term voters : (empty-ghost, no-leader start) →
+ReachRel (EStep voters) N₀ N → oneLeaderPerTerm N`.
+
+- 2026-08-27 C3 gate record (same-commit convention): unit-end gate
+  `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci` at the
+  exit tree — **RESULT: FAIL, exit 1 — 21 ok steps, 7 notes (incl.
+  the two sanctioned no-diff notes), and EXACTLY the ONE known
+  structural red** (`artifacts/ci-arc4b-c3.log`, gitignored):
+
+  ```
+  FAIL proofs-file audit coverage (un-swept proof file — import it from Audit.lean or allowlist with a reason)
+  ```
+
+  now naming precisely the SIX lane modules (SC1's two + C3's
+  four), each "not in the audited import closure nor on the
+  standalone allowlist" — the same rule conflict SC1 recorded,
+  resolved the same fail-closed way: both wiring points are
+  existing tracked files the lane's hard no-edit rule forbids; the
+  red is recorded verbatim, the landing action (six import lines in
+  `proofs/GoLeanProofs.lean`) is the coordinator's wave-boundary
+  edit. Every other step ok; the comparator landmark note reads
+  STALE at 148 commits (report-only) — stands escalated for the
+  operator's merge step, as at U8–SC1. No other delta.
+- 2026-08-27 C3 compensating kernel checks (verbatim):
+  - explicit capped build of all four new modules + SC1's two
+    (warm, 48G): `Build completed successfully (6 jobs.)` — final
+    line `✔ [6/6] Built GoLeanProofs.Specs.Raft.NativeS1Witness`.
+  - fresh `AxNativeC3` readout over all 20 named C3 theorems
+    (chain 9, discharge 4, leaf 4, witnesses 3): every line
+    `[propext, Quot.sound]` or a subset (`invariance` axiom-free;
+    `claim_reachable` propext-only) — after the [AGENT]-call-4
+    Classical.choice elimination; the SC1 eight re-verified
+    unchanged at slice 0.
+  - hatch grep over the four modules: 0 code hits (prose
+    substrings only, recorded above).
+
+**PROPOSED NEXT CHARTER for this lane** (the expected one, now
+re-anchored): **the T1-scoped S2/S3 ghost-history leaf** over the
+signature's commit obligations — SC1's route (b′ T1-scoped): chain
+H1 (single-writer, driver-shaped) → H2 (hist well-formed) → H3
+(logs-are-prefixes) → H4 (applied-from-hist; the ONLY
+commit-axis-consuming link, via O-C1/2/3 + appliedWindow) → the
+proved S2/S3 leaf assemblies (`s2_agree_of_hist`,
+`s3_term_of_hist`, already on the branch). SC1's estimate 1.5–2
+units; this unit's measured b′ discount suggests the low end.
+Available assets: the induction principle and `GoodReach` transfer
+as-is; `EStep` extension with the append/commit fragment
+(handleAppendEntries/commit arms + their ghost history) is the
+natural first slice, WITH its witness run in the same slice (lesson
+(a)). The I4 pattern replays for the S2/S3 checker interfaces
+(apply-order abstraction in place of ClaimTrace).
