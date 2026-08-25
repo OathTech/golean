@@ -26,6 +26,7 @@ import Audit.WordFreq
 import Audit.SliceStack
 import Audit.SliceQueue
 import Audit.MatMul
+import Audit.FrameShape
 
 /-!
 # In-build epistemic gate for the Iris proof layer

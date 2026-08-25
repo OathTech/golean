@@ -63,6 +63,16 @@ import GoLeanProofs.Specs.Raft.SlbLit
 import GoLeanProofs.Specs.Raft.SlbEquation
 import GoLeanProofs.Specs.Raft.RoundHbLit
 import GoLeanProofs.Specs.Raft.RoundStatement
+-- C2a: the completeness-strengthened frame simulation (FrameSimS) —
+-- the mid-walk consumption instrument (layer-C design v2 §8 D1)
+import GoLeanProofs.Frame.ShapeSim
+import GoLeanProofs.Frame.ShapeOps
+import GoLeanProofs.Frame.ShapeOps2
+import GoLeanProofs.Frame.ShapeOps3
+import GoLeanProofs.Frame.ShapeStrict
+import GoLeanProofs.Frame.ShapeStep
+import GoLeanProofs.Frame.ShapeSpan
+import GoLeanProofs.Specs.Raft.ShapeWitness
 -- A4-U8: the field-lens layer (Perennial Access lineage; general half —
 -- combinators + L1-L4 laws; per-field instances live in Specs/Raft).
 import GoLeanProofs.Lens

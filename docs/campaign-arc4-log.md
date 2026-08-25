@@ -4567,3 +4567,196 @@ stands escalated from U8–U17.
   now reads **STALE at 146 commits** (> the 100 threshold;
   report-only) — stands escalated for the operator's merge step, as
   at U8–U17.
+
+## A4-U19 — C2a, THE INSTRUMENT: FrameSimS (the completeness-strengthened frame simulation), THE MID-WALK CONSUMPTION THEOREM, and the discharge witness (2026-08-25, same worker as U18, coordinator-dispatched per layer-C design v2 §8 D1; hard stop 3 units, probe-first)
+
+- 2026-08-25 SELF-RE-VERIFICATION (U18's top claims, fresh probes,
+  all PASS — same-worker continuation per the C2a dispatch):
+  - tip clean: `git status` clean on `campaign-arc4`; `git rev-parse
+    HEAD` = `3bbb0f1059a2c750d75df1502ec54b3f1024cabd` (the U18 gate
+    tip). 91G free at launch; every build `GOLEAN_MEM_MAX=48G
+    scripts/capped`.
+  - fresh capped proofs+Audit build: "Build completed successfully
+    (528 jobs)." exit 0 — matching U18's record.
+  - `#print axioms` fresh probe (`AxRound` re-run, verbatim):
+    rhb_glue100/300/rhb_glue and RoundFam.self [propext, Quot.sound];
+    the four readouts [propext] — matching U18 exactly.
+  - hatch grep over RoundStatement/RoundHbLit: **0**.
+- 2026-08-25 Slice 1 (probe-first, as commissioned) — **THE SHAPE
+  CLAUSE VALIDATED + THE IN-PLACE ROUTE REFUTED**
+  (`artifacts/probe/FrameSimShapeProbe.lean`, green):
+  - The C2 insertion-point clause (`∃ pre post, σ.heap = pre ++ post
+    ∧ σF.heap = ren pre ++ fr ++ ren post`) PRESERVED by the one
+    mutation primitive in all three key cases — in-prefix in-place,
+    in-suffix in-place, and MISSING-KEY APPEND (both sides append at
+    the tail, so even canonical set-appends — the pruned-fixture
+    write class U18 exercised — keep the split); seeds/relocations
+    carry it trivially. The supporting heap algebra
+    (set-over-append, set-of-missing, renameHeap/set commutation)
+    proved clean.
+  - **THE U16-SIZING CORRECTION (design finding): the in-place
+    strengthening is BLOCKED at `rebaseSimT`** — the gallery's
+    between-pass frame-growth constructor cannot discharge the
+    clause: its lookup-level premises cannot pin the ∃-split against
+    the retired segment (the retired cells re-partition the heap
+    non-contiguously mid-chain), and every pinning reformulation
+    fails against set-append freedom (key-class discrimination,
+    na₀-keyed splits, length arithmetic — each exhausted in
+    session). U16's probe missed this because its trial covered the
+    C1 clause only. DECISION [AGENT]: **ADDITIVE `FrameSimS` + a
+    copy-threaded S-induction** — zero changes to the shipped
+    `FrameSim` (no statement-meaning drift anywhere), the gallery
+    untouched; the copies are a RECORDED SCAFFOLD (retirement
+    condition in `ShapeSim.lean`'s docstring: fold the clause
+    in-place if the gallery rebase chain is ever retired or re-based
+    on pinned splits).
+- 2026-08-25 Slice 2 (bd? this commit) — **THE INSTRUMENT LANDS**
+  (7 new `Frame/` modules + the witness + Audit pins; 5,608 new
+  lines; full proofs+Audit green: **537 jobs**; hatch grep over
+  every new module: 0; LINEAGE throughout: Yang–O'Hearn locality,
+  the COMPLETENESS half of the semantic frame property):
+  - `Frame/ShapeSim.lean` (283) — the heap algebra, **`FrameSimS`**
+    (= FrameSim + the shape clause), the strengthened primitives
+    (`FrameSimS.setBase`, `FrameSimS.alloc_snd`), and the seeds
+    (`frameSimS_seed`, `frameSimS_relocate`).
+  - `Frame/ShapeOps.lean` (405) / `ShapeOps2` (766) / `ShapeOps3`
+    (818) — the mutating operation layer at S: storeLoc/storeMany/
+    allocDecls/bindParams/enterFrame/frame-entry steps/bindIterVars,
+    the stmt-op arms (appendSlice spill + core), the chan/sync/
+    select applies (+ `TripSimS`/`CfgSimS`); each proof mirrors its
+    weak sibling verbatim with the S-primitives; read-only lemmas
+    consumed weak via `toFrameSim` (the packaged-relation seam the
+    U16 probe predicted — it held everywhere).
+  - `Frame/ShapeStrict.lean` (2,013) — the WHOLE-FILE mechanical
+    mirror of StrictOps (108 declarations, `_SS`-suffixed,
+    python-generated; the generation script's substitution table in
+    this entry's history). [AGENT]: the cheaper DERIVATION route
+    (state passthrough — `applyStrictOp` allocates in exactly TWO
+    arms, bytesFromString/runesFromString; the C2a measurement that
+    corrected slice-plan's grep, which had missed dot-spelled
+    `.alloc`) was MEASURED OUT: the ~90-arm passthrough case-bash
+    hit the 3.2M-heartbeat ceiling twice (backtracking-chain and
+    linear-pipeline forms both); the copy elaborates at StrictOps'
+    own cost and is the budget-honest route.
+  - `Frame/ShapeStep.lean` (860) — **`stepFn_simS`**: the 795-line
+    per-step induction copy-threaded at S (the `ren_simp` macro
+    pair duplicated at S; the strict cases through ShapeStrict),
+    plus utilities: `bbind_eq_ok` (the `Bind.bind`-spelled bind
+    inversion — the `>>=`/HBind spelling silently misses zeta-
+    unfolded join-point bodies, a recorded lesson), `except_match_ok`
+    (the do-desugared Except match-bind inversion),
+    `applySlice_state`.
+  - `Frame/ShapeSpan.lean` (225) — `stepFnIter_simS`,
+    **`span_consume` — THE MID-WALK CONSUMPTION THEOREM**: a landed
+    canonical span (`*_full_span` — every handler equation ships
+    one) consumed at ANY `FrameSimS` placement returns the framed
+    run's equality AND the post-state LITERALLY:
+    `σF' = { σfin with heap := ren pre ++ fr ++ ren post,
+    nextAddr := ρ σfin.nextAddr }` — every table equal, nothing
+    relational surviving the hand-back; `span_relocateS` (the
+    `.stop` corollary in `span_relocate`'s shape); and
+    **`frameSimS_extend`** — the frame-extension constructor the
+    U15 probe predicted (growth-free placements: seeds/relocations;
+    extensions at placement-construction time).
+  - `Specs/Raft/ShapeWitness.lean` (211) — **THE DISCHARGE
+    WITNESS**, the U15 wall's blocked operation EXECUTED end to end
+    on the landed `handleHeartbeat` equation (the sF-side heartbeat
+    chain's handler, per the dispatch; its T1-vacuity is restated
+    in the docstring — the witness validates the INSTRUMENT, not
+    the arm): `swPlacement` (a CONCRETE non-identity placement,
+    `ρT 55 8` + a frame cell at 57 in the gap, via
+    relocate+extend); `sw_consume` (`hh_full_span` consumed at the
+    placement — the framed 1,325-step run's equality with the
+    spliced-literal post-state, NO kernel replay of the span);
+    `sw_resume` (**the literal resume: nine machine steps executing
+    `*(&57) = 9` — a WRITE TO THE FRAME CELL** — five state-generic
+    `rfl` steps + the store discharged on `frame_pres` + three
+    `rfl` steps, chained by `stepFnIter_chain`/`stepFnIter_one`);
+    `sw_consume_and_resume` (the composition); `sw_readout`
+    (`absOutbox = [specHeartbeatResp 1 2 0]` at the placement via
+    the inherited rename transport).
+  - `Audit/FrameShape.lean` (37) — 8 `#guard_msgs` axiom pins on
+    the headline theorems (the commissioning terms' "Audit-pinned").
+  - Axioms (probe `artifacts/probe/AxShape.lean`, verbatim):
+    stepFn_simS / stepFnIter_simS / span_consume / span_relocateS /
+    sw_consume / sw_consume_and_resume [propext, Classical.choice,
+    Quot.sound]; frameSimS_extend [propext]; frameSimS_seed /
+    sw_resume / sw_readout [propext, Quot.sound].
+- **RESIDUAL, recorded (promotion ledger)**: the hand-back's split
+  point is EXISTENTIAL (`∃ pre post`). Readouts, frame reads, and
+  frame writes are split-independent — the witness demonstrates all
+  three — so every current consumer shape works; the full split
+  EXTRACTION (separator uniqueness: at `fr ≠ []` the frame segment's
+  position is pinned by `fr_avoid`'s key-class discrimination) is
+  the named cheap follow-up for a consumer that needs the ONE
+  literal list (e.g. a mirror-window generator resuming with a
+  concrete heap). Estimated ≤ half a slice when first needed.
+- What-this-taught-us (C2a): (a) probe-first paid again — the
+  in-place plan U16 sized would have stalled mid-edit against
+  rebaseSimT with the Frame surface torn open; the additive route
+  cost the same copies WITHOUT the risk; (b) whole-file mechanical
+  proof transforms (python substitution tables over
+  relation/callee names) are a real velocity instrument: 2,013
+  lines of StrictOps mirrored GREEN ON FIRST ELABORATION — when the
+  seams are packaged relations, textual copy-threading is cheap and
+  safe; (c) two tactic-engineering lessons for the record:
+  fun_cases-scale backtracking `first` chains are heartbeat sinks
+  (prefer linear pipelines, and prefer scoped copies over clever
+  meta-proofs when the case count is ~90); inversion lemmas must
+  match the TERM'S spelling (`Bind.bind` vs `>>=`/HBind — invisible
+  in display, fatal to `rw`).
+
+### PROMOTION LEDGER updates (A4-U19)
+
+- **The literal-chain reuse instrument row (U15/U16/U18) — CONSUMED.
+  THE INSTRUMENT IS LANDED** (this unit): `FrameSimS` +
+  `span_consume` + `frameSimS_extend` + the S-transport stack. The
+  row closes; its successor rows: (i) **the ∃-split extraction**
+  (above; consume-on-demand), (ii) **the scaffold retirement
+  condition** (`ShapeSim.lean` docstring), (iii) **first big-span
+  consumers**: the MsgApp arms × the 6,925-step Hae REJECT window
+  (the row's original trigger case — now buildable as consumption
+  instead of re-walking), and C2b+'s round lemmas.
+- The doctor+prune fixture template (U18): unchanged; now pairs with
+  `frameSimS_extend` for placement construction at round fixtures.
+- The U18 rows (mirror driver-glue coverage, RoundLemmaShape
+  scaffold): unchanged, C2b's inputs.
+
+## A4-U19 exit (2026-08-25, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since the U18 gate tip
+3bbb0f10: this instrument+log commit (the C2a build); no coordinator
+commits interleaved on the lane. Full proofs+Audit green: **537
+jobs** (528 + ShapeSim/ShapeOps/ShapeOps2/ShapeOps3/ShapeStrict/
+ShapeStep/ShapeSpan/ShapeWitness + Audit.FrameShape). Kit pins: the
+8 FrameShape guard blocks (additive Audit surface). Hatch grep over
+every new module: 0. Probes (gitignored): FrameSimShapeProbe,
+A4AdapterProbe (U18), sufprobe, statene_iso*, splitprobe*, AxShape.
+
+**Deliverable state vs the C2a dispatch:**
+1. THE STRENGTHENED SIM — **DELIVERED** (FrameSimS; C1 completeness
+   DERIVABLE from the shape clause rather than carried — one clause,
+   less breakage; the U16 probe's seed design honored, its sizing
+   corrected by measurement: in-place is blocked at rebaseSimT, the
+   additive route is the honest shape of the same cost).
+2. THE MID-WALK CONSUMPTION THEOREM — **DELIVERED** (`span_consume`:
+   a relational sub-span hands back a literal-resumable state — the
+   thing U15's wall blocked; ∃-split caveat recorded with its
+   split-independence demonstration and extraction row).
+3. THE DISCHARGE WITNESS — **DELIVERED** (one landed handler
+   equation consumed inside a longer chain at a concrete
+   non-identity placement, with a frame-writing literal resume and
+   the abstract readout; Audit-pinned; lineage-lined).
+4. Hard-stop accounting: probe slice + one heavy build slice +
+   witness ≈ within the 3-unit ceiling; the one blast-radius excess
+   vs U16's sizing (rebaseSimT) was stopped at the measured
+   boundary and REROUTED, not ground through.
+
+**Open gaps carried (none counted):** all U18 rows unchanged; U19
+adds: the ∃-split extraction row and the scaffold retirement row
+(both above). The U18 C1-verdict items for the COORDINATOR (C2b-d
+re-targeting, D2/D3 execution) are untouched by this unit.
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1); the comparator-landmark STALE flag
+stands escalated from U8–U18.
