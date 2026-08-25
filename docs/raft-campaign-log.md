@@ -1539,6 +1539,19 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   [USER] reconvene — nothing dispatched beyond this log until
   then.**
 
+- **[USER] 2026-08-26 — the middle path (binding calibration):**
+  slices have value; fragile expensive one-offs don't; don't build
+  generality we won't need. Encoded as redesign note §7: the
+  two-axis test (cost × consumer count), generality only against
+  demonstrated demand, I3/I4 scoped down, family SMS deferred
+  post-T1, consolidation demand-driven. [AGENT]: cadence resumed
+  under these criteria — C2b dispatched (arc-4 lane, fresh worker:
+  driver-loop symbolic-net lemmas + storage-resp arms,
+  instrument-consuming) and C3 dispatched in parallel (arc4b lane,
+  fresh worker: native S1 over NativeObligations, 2.5-3 units
+  sized); lanes stay file-disjoint, arc4b lands as one merge at its
+  completion boundary.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.

@@ -129,3 +129,28 @@ more locked this wave, what interface would unlock it, what did a
 [USER] smell catch that the process should have. The exec function
 this pass performed is that review; it does not wait for the next
 smell.
+
+
+## 7. MIDDLE-PATH CALIBRATION ([USER], 2026-08-26 — binding)
+
+"There's some value in building slices, but what isn't reasonable is
+building fragile and expensive one-offs. So we don't want to build
+generality that we won't need." The operative test for every build
+decision is TWO-AXIS: **cost × consumer count**. Cheap + disposable →
+a concrete slice is correct. Expensive OR repeatedly consumed → the
+general form is mandatory. Generality is built only against
+DEMONSTRATED demand — an existing second consumer (the promotion
+ledger's ≥2 rule, unchanged) or a MEASURED fragility/cost (the
+literal chains at round scale were exactly this). Never speculative.
+Applications to the standing plan:
+- I3 scopes to the (num_parties, vocabulary) axes T1/T2 consume; no
+  prevote/learner parameterization now.
+- I4 scopes to the three checks that exist; no general checker theory.
+- The family SMS superstructure (4-8 units) is DEFERRED post-T1,
+  built when a second example demands it; T1 uses the 1.5-2-unit
+  scoped ghost-history leaf.
+- Consolidation is demand-driven via the ledger, not a flat budget;
+  the wave-boundary method review checks calibration in BOTH
+  directions (grind creep AND speculative generality).
+- The second-target validation probe is a post-T1 [USER] decision,
+  not part of DONE.
