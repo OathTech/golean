@@ -1396,6 +1396,29 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   moves toward the upper bound of ~2 weeks; the 2.5-4-week T1+T2
   window stands. C2a dispatched to the C1 worker.
 
+- **[USER] 2026-08-26 — sequencing review prompted** ("Do we need to
+  pull back and redesign? ... consider sequencing"). [AGENT]
+  assessment + call: NO full pull-back (v2 absorbed C1's forced
+  redesign; C2a is route-independent and bounded) but ONE real
+  correction — the v2 ladder deferred the two scope unknowns whose
+  answers could move the timeline by weeks: (1) the S2/S3 route
+  question sits ON the A4 commit-axis mismatch and is NON-OPTIONAL
+  for T1 (all three checks must never fire) — deferring its route
+  decision "to their wave" was backwards; (2) D2's native-S1 sizing
+  was asserted, not measured; plus the harvest-granularity question
+  (choice-free storage sub-rounds may want one batched per-cycle
+  lemma, not per-arm equations). EXECUTED: scoping lane
+  campaign-arc4b opened (worktree off the arc-4 tip, NEW-FILES-ONLY
+  discipline so it lands conflict-free at a wave boundary), worker
+  SC1 dispatched on the three probes (S2/S3 checker census → needed
+  invariants → mismatch-axis check → sized route skeleton; native-S1
+  proof skeleton with PORTS/ADAPTS/NEW classification + calibrated
+  cheap links; harvest-ring choice-freedom census + batched-vs-
+  per-arm pricing). DECISION POINT: C2a's boundary — C2b-C4
+  re-sequenced with both lanes' results in hand. Worst case
+  pre-stated: commit-axis derivation at arc-3 scale moves the T1
+  estimate materially and is surfaced the moment measured.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
