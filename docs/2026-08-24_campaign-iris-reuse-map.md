@@ -815,3 +815,23 @@ Iris, map down via adequacy. Resolution, recorded:
   coupling stays rebase-compatible with excl-auth (§3); tripwires:
   the sequential kit sprouting invariant-opening patterns; the
   exact-step equations needing TotalWeakestPre on any carry.
+
+
+## Addendum 2 (2026-08-27, [USER]): the small-axioms correspondence
+
+[USER] identified the choice-invariance/symbolic-equation machinery
+as separation logic's SMALL AXIOMS in operational form — "a single
+points-to says: for any heap which contains this heaplet." The
+mapping, recorded as the I2 mode's lineage in full:
+- footprint census ↔ the small-axiom discipline (spec over exactly
+  the touched cells);
+- span_consume ↔ the frame rule (any frame, any placement; soundness
+  = Yang-O'Hearn locality, as the frame layer's lineage line already
+  named); the FrameSimS shape clause ↔ the frame-property direction;
+- relocation ρ ↔ SL's free address abstraction via logical
+  variables, paid explicitly over the executable trie;
+- the choice quotient ~ ↔ abstract-predicate layout abstraction.
+Consequence for the concurrency day: the sequential small axioms map
+structurally onto Iris's ∗/frame — the "Iris-compatible where
+missing" promise is discharged by construction, not by future
+rework. (Convergence-tripwire count: four, all mapped.)
