@@ -11,6 +11,7 @@ import GoLeanProofs.Frame.Relocate
 import GoLeanProofs.Lens
 import GoLeanProofs.Sym.PickTransport
 import GoLeanProofs.Sym.SpillTransport
+import GoLeanProofs.Sym.BranchTransport
 import GoLeanProofs.Examples.Fib
 import GoLeanProofs.Examples.Gcd
 import GoLeanProofs.Examples.MinMax
@@ -744,5 +745,19 @@ are the landed consumers' concrete instantiations). -/
 
 /-- info: 'GoLean.Frame.span_relocate' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Frame.span_relocate
+
+/-! A4-U14: the branch-crossing transport (`Sym/BranchTransport.lean` —
+path-condition splitting at a symbolic `if`, King 1976; the third
+member of the Pick/Spill transport family). Consumers: the
+From-symbolic handleHeartbeat equation (landed); every future
+message-field-symbolic equation's guard crossing. The witness is
+in-module (`stepFn_branch_transport_witness`, live at a genuinely
+symbolic condition). -/
+
+/-- info: 'GoLean.Sym.stepFn_branch_transport' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.stepFn_branch_transport
+
+/-- info: 'GoLean.Sym.stepFn_branch_transport_witness' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.stepFn_branch_transport_witness
 
 end GoLean.Iris.Audit

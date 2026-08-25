@@ -47,6 +47,11 @@ import GoLeanProofs.Specs.Raft.HhAdvEquation
 import GoLeanProofs.Specs.Raft.MsErrEquation
 import GoLeanProofs.Specs.Raft.HaeRejLit
 import GoLeanProofs.Specs.Raft.HaeRejEquation
+-- A4-U14: the branch-crossing transport (path-condition splitting) +
+-- the From-symbolic handleHeartbeat equation (its discharge witness).
+import GoLeanProofs.Sym.BranchTransport
+import GoLeanProofs.Specs.Raft.HhFromLit
+import GoLeanProofs.Specs.Raft.HhFromEquation
 -- A4-U8: the field-lens layer (Perennial Access lineage; general half —
 -- combinators + L1-L4 laws; per-field instances live in Specs/Raft).
 import GoLeanProofs.Lens
