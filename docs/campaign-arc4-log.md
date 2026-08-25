@@ -2606,3 +2606,90 @@ stands escalated.
     first time. Also: $pkginit's placement geometry (payloads above
     the leaf range) made the zero-rename block possible — worth
     checking BEFORE designing a rename layer, not after.
+- 2026-08-25 Slice 3 — **THE handleAppendEntries LOG-APPEND EQUATION
+  LANDED** (`LaEquation.lean` 500 lines + generated `LaLit.lean`
+  ~10,900 lines / 931 KB by probe `LaGen.lean` — the printer's 8th
+  consumer): the first equation through the REAL log-write path, the
+  first TWO-choice message-handler equation, GAP-V1-1b's overlay
+  exercised, and the static-cell complement's first consumer.
+  - **THE MIRROR-LEVEL FINDING FIRST (the honest sequence):** the
+    naive Hae-shaped chain (two windows, two spill crossings) FAILED
+    at the mirror — window 2 quit **q10Atom after 83 steps**:
+    `StrictOp.lengthOf` applied to the atom-carried spilled handle,
+    i.e. `len(u.entries)` re-read INSIDE the window. This is the
+    first contact of the U10 atom-absorption pattern with an
+    in-window RE-READ of the absorbed value — the pattern's implicit
+    assumption (spilled handle never re-read before the span ends),
+    which held for Hh/Hae's outbox appends, does NOT hold for a
+    log write. Diagnosis by probe (crossAtoms walker): EXACTLY ONE
+    atom read on the whole path, then 1,140 clean steps to spill 2.
+  - **THE RESOLUTION IS LANDED-KIT COMPOSITION, zero new machinery**
+    (the FURTHER-CONSUMERS doctrine's best case): the read's result
+    is choice-INDEPENDENT (the spilled slice has len 1 at EVERY
+    realized capacity — only cap varies), so the crossing is
+    `stepFn_strict_apply` (StepKit) ∘ `applyStrictOp_len_slice`
+    (SliceMem) with the cap bound from `appendRealizedCap_lower` —
+    all three lemmas landed long before this unit. `la_len_step`
+    axioms: [propext, Quot.sound].
+  - The chain: windows **[3573, 83, 1140, 29]** + spill crossing 1
+    (atoms 0: the `unstable.entries` append — elems = the message's
+    OWN Entries array cell 57, element = entry cell 58, backing born
+    at 324) + the length crossing + spill crossing 2 (atoms 1: the
+    response — msg cell 347, backing at 390) = **4,828 steps, TWO
+    choices** (∀ streams `c₁ :: c₂ :: ch`), composed by
+    `stepFnIter_window_pick_window` + `stepFnIter_chain`/`_one`.
+    Generator validated BEFORE any theorem: γ==machine at
+    (c₁,c₂) = (0,0)/(3,5)/(31,31), schedule totals exact.
+  - Conclusions (TEN, absState v2 + lens): absMessage pre WITH the
+    entry (`entries = [(2,1)]` — the absMessage Entries reader's
+    first live use); **absRaftLog pre = hhAbsLog, post =
+    `laAbsLogPost` = ⟨[(1,1)], [(2,1)], 2, 1, 1, 1⟩ — the unstable
+    overlay GROWN by exactly the appended entry**; the axiom-FREE
+    spec-side `la_log_grew` (view post = view pre ++ [(2,1)],
+    lastIndex 1→2, stable/committed untouched); absOutbox
+    msgsAfterAppend = [specAppResp 1 2 0 2] (Index = mlastIndex =
+    2; numerically equal to the stale record's — different
+    PROVENANCE, distinguished by the log conclusions: overlay grown
+    here vs untouched there — noted for honesty); msgs = [];
+    Vote/lead/Term readouts. Alloc PRIMARY consumes the lifted
+    `Frame.span_relocate` (third consumer) + identity corollary at
+    `ρT 98` + §3.3 witness (stream [3, 5] — capacities 7/9).
+  - **GREEN ON THE FIRST FULL CHECK: 113 s module** (LaLit 5.9 s);
+    fresh `#print axioms` (probe `AxLa`, verbatim): the equation
+    family + spans + spill crossings [propext, Classical.choice,
+    Quot.sound]; la_len_step/laW1_out/staticComplement_link
+    [propext, Quot.sound]; la_log_grew NO axioms. Full proofs+Audit
+    green **507 jobs** (505 + LaLit + LaEquation); hatch grep over
+    LaEquation/LaLit/StaticCells: 0.
+  - What-this-taught-us (slice 3, the unit's second headline): the
+    atom-absorption pattern has a NAMED limit — in-window re-reads
+    of the absorbed value — and its first instance was dischargeable
+    by pure kit composition because the re-read's RESULT was
+    choice-independent. The next instance may not be (a re-read of
+    the CAP, e.g. a subsequent append into the spilled slice, IS
+    choice-dependent): that is the recorded watch-item for
+    becomeLeader's 2-spill path and any multi-append handler —
+    check the census for cap-consuming reads between spills before
+    assuming the Hae shape.
+
+### PROMOTION LEDGER updates (A4-U12)
+
+- **`span_relocate`** — LIFTED to `Frame/Relocate.lean` (slice 0,
+  the U11 row taken; Kit pin [propext, Classical.choice,
+  Quot.sound]); consumers: HaeEquation (shipped copy, history),
+  StaleEquation + LaEquation (the lifted form). Row CLOSED.
+- **THE STATIC-CELL COMPLEMENT** (`Specs/Raft/StaticCells.lean`) —
+  new shared fixture surface (target layer): consumers landed:
+  LaEquation (first); owed consumers: the U4 Ms error-branch
+  families, every future error-path fixture. The kernel link is the
+  drift alarm on any wire-pin move.
+- The literal printer — 7th and 8th consumers (StaleGen, LaGen);
+  row otherwise unchanged (probe-side per scratch conventions).
+- NEW ROW: **atom-read crossings** — the `la_len_step` shape (a
+  strict-op step over an atom-carried operand whose γ-image makes
+  the result choice-independent) is two landed lemmas composed; if
+  a THIRD instance appears (first candidates: becomeLeader's
+  inter-spill segment, the commit-advance family), consider a
+  packaged `stepFn_atomRead_transport` in Sym/ (same terms as the
+  pick/spill transports). Not built now — two instances of the
+  COMPOSITION do not yet justify a wrapper.
