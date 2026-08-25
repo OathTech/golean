@@ -4774,3 +4774,274 @@ stands escalated from U8–U18.
   comparator-landmark note now reads **STALE at 148 commits** (> the
   100 threshold; report-only) — stands escalated for the operator's
   merge step, as at U8–U18.
+
+## A4-U20 — C2b: THE DRIVER-LOOP SYMBOLIC-NET LEMMAS (the compositional mode's first from-scratch statements) + the storage-resp sub-ring anchor census (2026-08-25, fresh worker, coordinator-dispatched per the flexibility redesign §3 I2/§7 and the U18 A2 refinement)
+
+- 2026-08-25 SUCCESSOR RE-VERIFICATION (U19's top claims, fresh
+  probes, all PASS — fresh worker per rotation):
+  - tip clean: `git status` clean on `campaign-arc4`; `git rev-parse
+    HEAD` = `33e073252fc223f22e0e6c80d41529b84f4abd0c` (the U19 gate
+    tip). 87G free at launch (≥ 40G floor); builds capped
+    `GOLEAN_MEM_MAX=48G scripts/capped` throughout (one deliberate
+    24G probe run).
+  - fresh capped proofs+Audit build: "Build completed successfully
+    (537 jobs)." exit 0 — matching U19's record.
+  - `#print axioms` fresh probe (`AxShape` re-run, verbatim): all 14
+    pins match U19's record exactly (FrameSimS.setBase/alloc_snd,
+    frameSimS_seed/relocate/extend, stepFn_simS, stepFnIter_simS,
+    span_consume, span_relocateS, swPlacement, sw_consume, sw_resume,
+    sw_consume_and_resume, sw_readout).
+  - hatch grep over `Specs/Raft/`: **0**.
+
+- 2026-08-25 Slice 1 (probe-first) — **THE SLICE-WALK LOOP CENSUS**
+  (`artifacts/probe/{C2bDump,C2bLoopCensus,C2bLoopCensus2}.lean`,
+  outputs gitignored): the frontend's range-desugar shape extracted
+  from the pinned lowering (ONE fixed shape — `$rcoll/$rlen/$ridx/
+  $rfirst` temps, first-flag while, per-iteration index cell; the
+  driver's live-map rebuild and `main.twin.liveCount` carry it
+  verbatim, differing only in index-var name and guarded action);
+  iteration boundaries measured at doctored U18-fixture nets of
+  length 0–3 with mixed liveness flags. THE EXACT ANATOMY: rebuild
+  iterations 63 (first, guard true) / 67 (subsequent, true) / 54/58
+  (guard false), exit 29/33; liveCount 68/72 and 54/58; ONE fresh
+  cell per iteration (the frontend's per-iteration variable — the
+  machine does not prune it; the family threads a growing dead
+  region, the MapLoops pattern). Segment decomposition: head glue
+  17/21, bound check 9 (continue) / 10 (break→`.next k`), index
+  bind 11, back edge 2 — all census-exact.
+
+- 2026-08-25 Slice 2 (33e07325..2b277168, tracked) — **THE
+  DELIVERABLE: the symbolic-net loop lemmas, landed in the
+  compositional mode (I2)**. Full proofs+Audit green: **541 jobs**
+  (537 + the four new modules); every compile verified by EXIT CODE
+  (see the masked-kill lesson below); hatch grep over all new
+  modules 0.
+  - `GoLeanProofs/SliceWalk.lean` (~950 lines, kit, Go-general —
+    elaborates in **0.6 s**): the range-desugar statement vocabulary
+    (`rbody`/`rwhile`, parameterized by the four temp names + index
+    var + body); the conditioned glue segments (`glue_first`/
+    `glue_next`/`bound_lt`/`bound_ge`/`bind_seg`/`back_edge`, StepKit
+    rules 1–5 shapes: abstract σ, cell lookups as hypotheses); the
+    composed per-iteration walks (`iter_head_to_body`,
+    `exit_from_head`); and **`sliceWalk_loop` — THE SCHEMA**: state
+    family S indexed by iteration, control cells at scheduled values
+    + fresh frontier as the invariant interface, the BODY fact as the
+    one per-instance obligation, conclusion BOUNDED-COMPLETION
+    (`∃ m ≤ (43 + bB)·(n−i) + 31`) delivering `.next k` + the exit
+    state + `S n`. No exact fuel counts in any consumer-facing
+    conclusion. LINEAGE: Floyd/Hoare loop invariant, in
+    `stepFnIter_iterate_bail_rel`/`mapCountLoop_generic`'s exact
+    style, specialized to the frontend's shape so instances prove
+    ONLY their body. The prologue above the while is fixed-cost and
+    deliberately NOT schematized (middle-path §7: no |net|
+    dependence, no demonstrated demand — fixed spans ride the
+    mirror); the map-range pick loop is already
+    `MapLoops.mapPickLoop_generic`'s.
+  - `Specs/Raft/DriverNet.lean` (~1330 lines, 20 s incl. the kernel
+    shape pins): the twin instances. THE SHAPE PINS
+    (`drvRebuild_pinned`/`lc_pinned` + `_prop` forms): the proved
+    while statements occur VERBATIM in the pinned lowering's
+    `runTwinChoice` and `main.twin.liveCount` — whiles collected
+    recursively (fuel-structural, `let rec`-free — see lesson (b)),
+    compared by the sound `Stmt.eqbF`, kernel-checked; a frontend
+    re-lowering that reshapes either loop turns them red (the window
+    links' drift-alarm role, one ring up). The guarded-body segments
+    (`guard_seg` 13 steps — deref/fieldGet/indexGet over the twin
+    route; `act_rebuild` 11 — the fresh-key map insert, mirroring
+    `MapMem.mapAssignValue_toEntries` at `int → bool`; `act_inc` 16;
+    `act_skip` 2). The invariants (`RebuildInv`/`LiveCountInv`) and
+    body facts (bB = 24 / 29). **THE HEADLINES**: `rebuildLoop_span`
+    and `liveCountLoop_span` — from any loop head satisfying the
+    invariant at 0, completion within `67·n + 31` / `72·n + 31`
+    steps, `n = bs.length` and the liveness payload `bs` FULLY
+    SYMBOLIC, with the live map = exactly `liveIdx bs n` (the live
+    indices) / the counter = exactly `countTrue bs n`. The composed
+    per-iteration bounds 67/72 REPRODUCE the census's measured
+    67/72-step iterations exactly.
+  - `Specs/Raft/DriverNetWitness.lean` (1.05 s): the non-vacuity
+    witnesses — every premise of both spans discharged on a concrete
+    9-cell state at `bs = [true, false]` (no premise left open) —
+    plus THE CENSUS CROSS-LINKS: the compiled walks' exact counts
+    (152 = 63+58+31 rebuild; 157 = 68+58+31 liveCount —
+    `#eval`-verified first) kernel-replayed via total fail-closed
+    readouts (`rebuild_census_link`/`liveCount_census_link`: map
+    holds `bEntries (liveIdx wBs 2)`, counter `countTrue wBs 2`,
+    allocator 11). The schema's composed costs land on states it was
+    never fitted to, step-exact.
+  - `Audit/DriverNet.lean`: 9 `#guard_msgs` axiom pins (additive
+    Audit surface, in-build-verified). Axioms: the classical trio on
+    the spans/witnesses/schema; [propext, Quot.sound] on the census
+    links.
+
+- **THE MODE SHIFT'S FIRST REAL NUMBERS (compositional vs literal,
+  measured this unit — the dispatch's named report item):**
+  - **Coverage**: ONE statement per loop now covers EVERY net length,
+    liveness payload, and address placement — the literal mode's
+    equivalent is one chain per net shape per round, and the driver
+    glue is |net|-dependent (U18: 3,578 → 7,250 steps/round across
+    the run), so the literal family is UNBOUNDED over the choice-
+    stream quantifier. This is the difference in kind, not degree.
+  - **Kernel volume, like-for-like**: the C-ladder's driver-glue
+    obligation across the pinned run's 28 deliver rounds ≈ 155k
+    literal steps at mirror rate (~30–40 steps/s) ≈ **70–85 min of
+    kernel per full-run replay, re-paid at every re-derivation**;
+    the schema + instances + witnesses elaborate ONCE in **≈ 22 s**
+    (0.6 s kit + 20 s instances incl. two whole-program kernel
+    shape pins + 1 s witnesses) — a ≥ 200× reduction on this span
+    class, paid once instead of per-round.
+  - **Fidelity**: the composed bounds equal the census-measured
+    per-iteration costs exactly (67/72), and the witness kernel runs
+    land on the composed predictions exactly (152/157) — the
+    compositional statements lose nothing the literal mode measured.
+  - **Statement cost** (the mode's price): the schema's invariant
+    interface (control cells + frontier) and the instances'
+    distinctness/lookup hypothesis packs are statement work the
+    literal mode never paid; measured here at roughly one unit for
+    schema + two instances + witnesses. The per-instance marginal
+    cost after the schema: the BODY facts only (the liveCount
+    instance was ~1/3 of the rebuild's build effort).
+
+- 2026-08-25 Slice 3 (probe-only) — **THE STORAGE-RESP SUB-RING
+  ANCHOR CENSUS** (deliverable-2 groundwork;
+  `artifacts/probe/C2bRingCensus.lean` → `ringcensus.out`,
+  gitignored): the U18 heartbeat-round fixture's full harvest ring
+  walked with every Ready-cycle callee boundary recorded (step
+  index, `nextAddr`, choices left). THE ANCHORS (fixture-relative):
+  deliverIdx 1065 (prologue 133 — U18-exact), RawNode.Step 1198
+  (shell 383 — U18-exact), raft.Step 1581, handleHeartbeat 2283,
+  harvest 3775; ring 1: HasReady 3831 (span ~180), Ready 4011 →
+  readyWithoutAccept 4024 → applyUnstableEntries 4170 (assembly
+  span ~1,836), acceptReady 5847 (span ~1,196, consumes BOTH of the
+  ring's 2 appendSpill draws — SC1's classification re-verified at
+  the fixture), Advance 7043 (span ~142); ring 2: HasReady 7185
+  (false exit, incl. the 8721 applyUnstableEntries, span ~1,832);
+  driver suffix: projection 9017, **liveCount 10412 — the landed
+  `liveCountLoop_span`'s real consumption site in every round**.
+  - **THE FINDING (redirects deliverable 2)**: the heartbeat round's
+    ring NEVER REACHES the storage-resp arms — no entries appended ⇒
+    no MsgStorageAppendResp/ApplyResp nested `raft.raft.Step`, and
+    `Advance` is a 142-step no-op shell here (vs U18's ~2,000 at the
+    MsgApp round). The 5–6 payload-parametric sub-ring statements
+    (SC1's harvest verdict) need a **MsgApp-family round fixture** —
+    the U18 doctor+prune template re-instantiated at kind MsgApp —
+    BEFORE any storage-resp arm equation can be stated with a real
+    anchor. That fixture is also C2d's first-reachable-round need,
+    so the two shares one generator run. [AGENT]: deliverable 2
+    delivered AS the anchor census + this finding + the redirect —
+    the equations themselves are the successor's, with their
+    prerequisite now precise (anti-grinding: starting mirror-window
+    equation work at a fixture that cannot reach the arms would have
+    been motion, not progress).
+
+- [AGENT] calls, tagged:
+  1. The schema parameterizes the four `$r*` temp names and the index
+     variable (cheap strings) but NOT the prologue or the pick loop
+     (middle-path §7 both ways: names have a demonstrated second
+     consumer — nested range loops must rename; the prologue has no
+     |net| dependence and no demand).
+  2. The shape pins land as MEMBERSHIP among recursively-collected
+     whiles (sound `Stmt.eqbF`, kernel-checked) rather than
+     index-path navigation — robust to statement-list shifts around
+     the loop, still a drift alarm on the loop itself.
+  3. Deliverable-2 scope call: anchor census + prerequisite finding
+     this unit; the sub-ring equations to the successor (rotation
+     budget + the MsgApp-fixture prerequisite; recorded above).
+  4. The witnesses are synthetic-minimal (9 cells) rather than
+     round-fixture-anchored: the spans' premises are exactly
+     discharged, the census links pin the exact-run behavior, and
+     the ROUND-fixture consumption belongs to C2d's round lemma
+     (where the anchors from slice 3 place both loops).
+- What-this-taught-us (each a recorded convention candidate):
+  - (a) **THE MASKED-KILL LESSON (process, sharp)**: piping compiler
+    output through `grep | head` swallows a cgroup kill — the
+    pipeline exits 0 with empty output, indistinguishable from a
+    clean compile. Several mid-unit "greens" were 48G-cap SIGTERMs
+    (~24 s in, the cap doing its blast-radius job); caught only by a
+    later missing `.olean`. Rule now followed and recommended for
+    the conventions: **capture to a file, echo `exit=$?`, judge by
+    the exit code — never by absence of grepped errors.** (The
+    async-results doctrine's sibling for foreground pipes.)
+  - (b) **#eval-before-decide, new vector**: `with_unfolding_all
+    decide` on a TRUE Bool over the pinned program (the shape pins)
+    is an elaborator-side runaway — ~50 GB in 22 s, linear climb, no
+    false goal anywhere (the documented decide lesson's cost class,
+    but representation-level: the elaborator's evaluator has no
+    sharing). The kernel route (`kernel_rfl`) checks the same fact
+    in seconds — but only after removing a `let rec` from the
+    collector (the lifted auxiliary blocks kernel reduction; fuel
+    recursion written flat reduces fine).
+  - (c) A structure-update field value that SPILLS to a continuation
+    line fails to parse when another field follows (`unexpected
+    token; expected '}'`) — parenthesize the value; bit six times.
+  - (d) The storm discipline's payoff is now measured at kit scale:
+    the whole schema module elaborates in 0.6 s BECAUSE every
+    segment is abstract-σ + conditioned lookups; nothing here
+    whnf's a concrete front, ever.
+
+### PROMOTION LEDGER updates (A4-U20)
+
+- **NEW ROW: the SliceWalk range-loop schema** (kit). Landed
+  consumers: the rebuild and liveCount instances. Latent consumers:
+  `pickFor` (same guard shape + early return — needs a bail-form
+  body fact, the schema's `bound_ge` machinery suffices),
+  `complete()`'s nested range loops, any future subject's
+  range-by-index loop. Consume-on-need.
+- **NEW ROW: the storage-resp anchor set** (slice 3's census) + the
+  MsgApp-round-fixture prerequisite. Consumer: the successor's
+  sub-ring equations + C2d's round lemma (one generator run serves
+  both).
+- **The U18 mirror-driver-glue-coverage row — PARTIALLY CONSUMED**:
+  the |net|-dependent glue no longer needs the mirror at all (the
+  loop lemmas replace that route); the row narrows to the FIXED
+  driver-glue spans (prologue, trace itoa, pick crossing) for C2d's
+  mirror chain.
+- The doctor+prune fixture template (U18): now owes its second
+  instantiation (MsgApp round kind) — the prerequisite above.
+- The ∃-split extraction and scaffold-retirement rows (U19):
+  untouched.
+
+## A4-U20 exit (2026-08-25, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since the U19 gate tip
+33e07325: 2b277168 (the deliverable-1 build) + this log/census
+commit. Full proofs+Audit green: **541 jobs** (537 + SliceWalk +
+DriverNet + DriverNetWitness + Audit.DriverNet). Kit pins: +9
+(Audit/DriverNet.lean, additive, in-build-verified). Hatch grep over
+every new module: 0. Probes (gitignored): C2bDump/2/3,
+C2bLoopCensus/2, C2bWitnessGen, C2bPinEval, C2bRingCensus,
+PinKernelProbe, ParseTest, NameProbe/2, dn/sw logs.
+
+**Deliverable state vs the C2b charter:**
+1. THE DRIVER-LOOP SYMBOLIC-NET LEMMAS — **DELIVERED** (schema +
+   both instances + witnesses + shape pins + census cross-links +
+   Audit pins; loop-invariant form, Go-general at the demonstrated
+   scope, lineage-lined, bounded-completion conclusions — the
+   compositional mode's first from-scratch statements, with the
+   mode-cost numbers above).
+2. THE STORAGE-RESP ARM EQUATIONS — **DELIVERED AS THE ANCHOR CENSUS
+   + THE PREREQUISITE FINDING** (honest split): the sub-ring
+   boundaries are pinned at the fixture and SC1's draw
+   classification re-verified, but the heartbeat fixture cannot
+   reach the storage-resp arms — the MsgApp-round fixture
+   (doctor+prune template, second instantiation) is the successor's
+   first step, then the 5–6 payload-parametric statements against
+   these anchors.
+3. Budget item (first reachable round-kind dispatch arm) — **NOT
+   REACHED** (rotation); its fixture prerequisite is the same
+   MsgApp-round generator run as item 2's.
+
+**PROPOSED NEXT CHARTER (C2c, successor)**: (1) the MsgApp-round
+fixture via the U18 doctor+prune template (also C2d's need); (2) the
+storage-resp sub-ring census at THAT fixture (the 2,000-step
+Advance+nested-Step span U18 measured); (3) the 5–6
+payload-parametric sub-ring statements in the compositional mode,
+composed via `span_consume` where landed spans apply; (4) budget
+permitting, the first reachable round-kind arm census. The masked-
+kill rule (lesson (a)) briefed into the dispatch verbatim.
+
+**Open gaps carried (none counted):** all U18/U19 rows unchanged;
+U20 adds none beyond the ledger rows above.
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1); the comparator-landmark STALE flag
+stands escalated from U8–U19.
