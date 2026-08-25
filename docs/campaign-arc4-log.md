@@ -4167,3 +4167,390 @@ stands escalated from U8–U16.
   comparator-landmark note now reads **STALE at 144 commits** (> the
   100 threshold; report-only) — stands escalated for the operator's
   merge step, as at U8–U16.
+
+## A4-U18 — C1, THE LAYER-C DESIGN GATE: the driver-span census + the R-form round statement & heartbeat-round witness + the A4 adapter probe (2026-08-25, successor worker, coordinator-dispatched; the design of record contact-tested per its own charter)
+
+- 2026-08-25 SUCCESSOR RE-VERIFICATION (U17's top claims, fresh
+  probes, all PASS — fresh worker per the U17 rotation note):
+  - tip clean: `git status` clean on `campaign-arc4`; `git rev-parse
+    HEAD` = `5d3e70ae707e7b4c61dc3cf1694da975c3c45e31` (the U17 gate
+    tip). 89G free at launch (≥ 40G floor); every build this unit
+    `GOLEAN_MEM_MAX=48G scripts/capped`.
+  - fresh capped proofs+Audit build: "Build completed successfully
+    (526 jobs)." exit 0 — matching U17's record.
+  - `#print axioms` fresh probe (`AxSlb` re-run, verbatim):
+    stepLeader_beat_eq_alloc / stepLeader_beat_eq / _witness /
+    slb_full_span / slbSpill_step [propext, Classical.choice,
+    Quot.sound]; slbInplace_step / slbPick3_step / slbW1_out /
+    slb_post_absOutbox and stepFn_appendInPlace_transport (+ witness)
+    / storeLoc_spilled_backing_index1 [propext, Quot.sound] —
+    matching U17's record exactly.
+  - hatch grep (`sorry|native_decide|^axiom`) over
+    `proofs/GoLeanProofs/Specs/Raft/`: **0**.
+- 2026-08-25 Slice 1 (probe-only) — **THE DRIVER-SPAN CENSUS**
+  (charter item 1 = A2's test; probe `DrvSpanProbe.lean`, event TSV
+  `artifacts/drvspan-events.tsv` (gitignored); an instrumented
+  compiled walk of the PINNED twin (`twinLowered`, entry
+  `twinChoiceVerdict`) from the seeded start on the canonical
+  all-zero stream; every number below from the walk):
+  - **THE FULL COMPLETING RUN, REPLICATED TO THE STEP**: 711,616
+    subject steps (+ the 1,382-step `$pkginit`), 345 choices
+    consumed of 25,000, final na = heap = 36,376, observable
+    values = (viol 0, claims 1, committed 6, complete 1, floor 1) —
+    **Arc 2's recorded minimal completing fuel and heap growth
+    reproduced exactly** (raft-campaign-log Arc-2 unit 1: 711,616 +
+    1,382; 103→36,376) — an independent cross-verification of the
+    Arc-2 measurement AND the identification of its stream (all
+    zeros).
+  - **Structure**: pre-loop driver init (newTwin + 3×NewRawNode) =
+    81,261 steps / 171 choices / na 103→4,965 (heap at the first
+    loop head: ~6,073 cells, na 6,073 after the campaign);
+    campaign = 20,424 steps / 22 choices; then **31 rounds**:
+    28 deliver + 2 propose (29,408 / 29,642 steps) + the campaign.
+    Deliver-round kinds (arms observed in-span): 2 MsgVote
+    (becomeFollower+vote; 19,611 / 19,973), 1 MsgVoteResp-win
+    (poll→becomeLeader→appendEntry→bcastAppend; 33,893), 12 MsgApp
+    (handleAppendEntries; 18.6k–24.3k), 6 MsgAppResp
+    (maybeCommit/sendAppend; 13.4k–33.9k), 7 no-op arms
+    (7.7k–17.9k). Round spans 7,720–33,903 steps — **3–15× the
+    453+arm arithmetic the design's §2 sketch implied**.
+  - **Phase decomposition** (representative MsgApp round @182,882,
+    span 18,591): deliverIdx prologue 133 → RawNode.Step shell 383 →
+    raft.raft.Step glue+arm 5,826 (handleAppendEntries at +1,320) →
+    **HARVEST 9,691** (HasReady 800; Ready/readyWithoutAccept/
+    applyUnstableEntries ~1,500; acceptReady ~2,900; Advance with a
+    NESTED `raft.raft.Step` — the MsgStorageAppendResp local arm —
+    ~2,000; second Ready round 1,290) → driver suffix+glue 4,558
+    (projection ~1,900 incl. liveCount, says, loop-head rebuild +
+    pick + trace itoas). **The harvest ring is the largest
+    un-equationed span in every round.**
+  - **THE DRIVER GLUE GROWS**: last-projection→next-deliverIdx =
+    3,578 steps at net=2 → 7,250 at net=28 (**+141 steps/net entry**,
+    fit over 26 entries) — the live-map REBUILD and `liveCount` walk
+    the FULL net slice (dead entries included) every round, and net
+    is never compacted. The per-round driver span is therefore
+    |net|-DEPENDENT, not fixed code.
+  - **THE CHECKER IS NOT THE BALLOON** (the charter's load-bearing
+    question): `apply` (S3 monotonicity + S2 byIndex/got map ops) =
+    324–463 steps ×9 occurrences; S1 (leaderOf) rides inline in
+    harvest; `complete()` = 803–2,127; `projection` ≈ 1,900–2,300.
+    All small, all walkable.
+  - **REACHABILITY REFUTATION (the census headline)**: ZERO
+    heartbeat events in the entire run — and structurally, the
+    driver NEVER calls `Tick` (twin-chdriver.go: ticks not driven),
+    `tickHeartbeat` is the only MsgBeat source and `bcastHeartbeat`
+    the only MsgHeartbeat source, so **the heartbeat round-kind is
+    unreachable under EVERY choice stream**. Likewise sF×MsgProp
+    forward/drop: only node 1 ever proposes, and it is leader
+    whenever quiescent (campaign(1) precedes every propose; no
+    ticks ⇒ no elections past term 1). **The landed dispatch-arm
+    equations (sF×Hb U15, sC×Hb U16, sL×Beat U17, sF×PropDrop U16)
+    are all T1-VACUOUS** — valid machinery and statement-form
+    vehicles, but none is on T1's load-bearing path. T1's reachable
+    arm set: MsgHup/campaign spine, MsgProp leader-accept, MsgApp
+    (Hae families), MsgAppResp (maybeCommit/sendAppend), MsgVote,
+    MsgVoteResp (poll/becomeLeader), MsgStorageAppendResp/ApplyResp
+    (harvest-internal) — none arm-equationed yet (handler-level
+    Hae/become/La equations are landed; the Step 453-glue census
+    covers the shell).
+- 2026-08-25 Slice 2 (probe-only) — **THE A4 ADAPTER PROBE** (charter
+  item 3; `artifacts/probe/A4AdapterProbe.lean`, ALL LEMMAS GREEN;
+  the verdi side mirrored monomorphically with per-def citations to
+  `compat/verdi/VerdiCompat/Raft.lean` because VerdiCompat is a
+  SEPARATE Lake package golean-proofs does not require — the package
+  seam is itself a C1 finding):
+  - **`adapter_hb_noAdvance` (~25 lines incl. helpers): the
+    heartbeat NO-ADVANCE family squares on the nose** with verdi's
+    empty-entries-AppendEntries net-step (pli=0 shoehorn, same-term):
+    lead:=m.From ↔ leaderId:=some lid, type Follower ↔ state 0,
+    term/vote/log/commit all fixed — "small", exactly as §3 hoped.
+  - **`adapter_hb_advance_mismatch` — A4's KILL-POINT, a THEOREM**:
+    a concrete commit-ADVANCING heartbeat (the HhAdv family) whose
+    projected commitIndex differs from EVERY empty-entries-AE image
+    under EVERY shoehorn parameterization (t, lid, pli, plt, c) —
+    via `verdi_emptyAE_commit_frozen`: verdi advances follower
+    commitIndex ONLY in `haveNewEntries` branches
+    (VerdiCompat/Raft.lean:169-201). **And the axis is NOT
+    heartbeat-only**: etcd followers advance commit on ANY accepted
+    MsgApp including duplicates/empties
+    (raftsubject/raft/log.go:129 `commitTo(min(committed,
+    lastnewi))`) — the census's 12 MsgApp + 6 MsgAppResp rounds
+    carry exactly such commit propagation, REACHABLE and essential
+    to S4 completion.
+  - **`verdi_rvr_log_frozen` — the election-noop axis**: verdi's
+    handleRequestVoteReply never touches the log (all branches), and
+    no lattice stage appends at election — while etcd's becomeLeader
+    appends the empty entry (raftsubject/raft/raft.go:980-981; the
+    census's claims round). The projected log exits verdi's
+    reachable set at the FIRST election.
+  - Election-safety scoping check (grep evidence): `commitIndex`
+    appears 0 times in CandidateEntries.lean and only in
+    state-unchanged packaging lemmas in ElectionSpecLemmas — the S1
+    chain's CONTENT never consumes the mismatched axis.
+- 2026-08-25 Slice 3 (5d3e70ae..this commit, tracked) — **THE R-FORM
+  ROUND STATEMENT + THE HEARTBEAT-ROUND WITNESS**
+  (`Specs/Raft/RoundStatement.lean` 305 lines + generated
+  `RoundHbLit.lean` 7,032 lines / 429 KB — the repr-dump generator
+  `artifacts/probe/RoundFixDump.lean`; fixture probes
+  `DrvHeadProbe/DrvHead2Probe/TwinRoundFixProbe`):
+  - **The loop-head anchor**: the driver for-loop's
+    `if round < 400 …` config — machine-verified to recur
+    IDENTICALLY (repr-equal, env stable) at consecutive loop heads:
+    **the round lemma is SELF-RETURNING** (same config both sides),
+    the cleanest possible statement shape.
+  - **THE WITNESS FIXTURE, built by doctor+prune** (the new
+    fixture-generator template): take the real run's first loop-head
+    state (100,553 steps from the seeded start, by computation),
+    DOCTOR net/live to one live MsgHeartbeat (typ 8, 1→2, Term 0
+    local family, Commit 0 = the Hh no-advance family — the adapter
+    square's case), then PRUNE to the round's read-before-write set
+    by fail-closed iteration (missing cell ⇒ "unbound GoCore heap
+    location" ⇒ add; writes recreate pruned cells soundly):
+    **26 cells, found in 19 iterations** — the round fixture is
+    ARM-FIXTURE-SCALE, not twin-scale (the frame absorbs the other
+    ~6,050 cells; Fam membership never required reachability).
+  - **The round WALKS, compiled-verified**: 10,964 steps / 4 choices
+    / na 6,079→6,669 / post-heap 617 cells; pruned and unpruned
+    walks step-count-identical; abstract delta read through the
+    twin lens chain: node 2's raft `lead` 0→1, net gains the LIVE
+    MsgHeartbeatResp (typ 9, 2→1) with the heartbeat marked dead,
+    checker counters unchanged.
+  - **THE SECOND KERNEL WALL, MEASURED** (the unit's route finding):
+    the naive kernel replay (`stepFnIter` chunks over the literal)
+    EXPLODES — one 1,400-step chunk at the 26-cell fixture reached
+    41.2 GB RSS in 90 s and was cgroup-killed at 48 GB — Arc 2 unit
+    2's heap-linear kernel NO-GO (2.22 s/step, 157 MB/step at 19k
+    cells) reproduced at a TINY heap: the wall is per-step TERM
+    growth, not heap width. At ≤300-step chunks the same route is
+    fine (~15-20 steps/s, modest memory). **Round-lemma kernel
+    replays must ride the MIRROR (symEvalWindow chains — the landed
+    equations' instrument, ~30-40 steps/s, no blowup) or ~37-chunk
+    naive slicing (~12 min/round, 5 MB literals) — C2's first
+    slice; the mirror already supports the driver-glue op classes
+    probed (stringFromRune at Mirror.lean:1469, string concat, map
+    ops).**
+  - **What SHIPS kernel-checked** (full proofs+Audit green: **528
+    jobs**; axioms probe `AxRound` verbatim: rhb_glue100/300/
+    rhb_glue and RoundFam.self [propext, Quot.sound]; all four
+    readouts [propext]; hatch grep over both new modules 0):
+    - `RoundFam` (Fam membership = FrameSim placement — the design
+      §2 pin: no new relation class; membership is the equations'
+      alloc-primary form one ring up) + `RoundFam.self` (identity
+      placement via ρT-zero + renameStmt_ρT_zero);
+    - `AbsTwinV0`/`absTwinRead` (A3's round-boundary reader v0:
+      checker counters + per-node harness shells + the net multiset
+      via absMessage) + `absTwinNodeRaft` (the deep
+      nodes[i]→rn→raft chain);
+    - `RoundLemmaShape` — the R-form statement FORMER
+      (placement-quantified pre, self-returning config, choice
+      prefix, closure-as-membership conclusion), marked SCAFFOLD
+      in-docstring (no proved instance; C2's charter);
+    - `rhb_glue100`/`rhb_glue300`/`rhb_glue` — the round's first
+      300 steps kernel-replayed (the DRIVER-GLUE head: loop-head
+      cond, live-map rebuild, INTO the pick — rhbCh1=[0,0,0,0] →
+      rhbCh2=[0,0,0]: **the round's mapIter pick crossing is inside
+      the kernel-checked sliver**), composed by stepFnIter_chain;
+    - `roundHb_pre_read`/`roundHb_post_read`/`roundHb_pre_lead`/
+      `roundHb_post_lead` — the abstract round delta as
+      kernel-evaluated readouts over the endpoint literals
+      (violations 0→0, net [(true,8,1,2)] → [(false,8,1,2),
+      (true,9,2,1)], node-2 lead 0→1), with the docstrings stating
+      EXACTLY which links are generator-verified pending C2's
+      mirror chain (steps 300–10,964).
+  - [AGENT] calls, tagged: (1) census stream = canonical all-zeros
+    (matched Arc 2 exactly — cross-verification for free); (2) the
+    witness round-kind KEPT heartbeat per charter despite the
+    reachability refutation — the form validation is
+    round-kind-independent and no reachable arm is equationed yet;
+    vacuity stated in the module docstring; (3) the adapter probe
+    MIRRORS VerdiCompat locally rather than touching lakefiles (no
+    build-wiring change without a coordinator decision); (4) the
+    doctor+prune fixture construction adopted as the round
+    fixture-generator template (recorded in the ledger); (5) the
+    full-round kernel replay STOPPED at the measured wall per
+    ANTI-GRINDING — the measurement is the deliverable, the sliver
+    ships, the mirror route is C2's (no grinding past the second
+    43G kill).
+  - What-this-taught-us: (a) a census BEFORE a design commits is
+    worth more than the design — three of the six census findings
+    (reachability, harvest ring, |net|-growth) invalidate silent
+    premises of §2/§6; (b) the read-before-write set of a 10,964-step
+    span over a 6,000-cell heap is 26 CELLS — locality is extreme,
+    and fail-closed error-driven pruning finds it in minutes (the
+    fixture-scale fear that shaped the witness plan was wrong in the
+    GOOD direction); (c) the kernel's term-growth wall is
+    chunk-length-superlinear — 300 steps cheap, 1,400 fatal — so
+    "kernel-replay cost" must always be quoted WITH its chunking.
+
+### THE C1 VERDICT BLOCK (A4-U18 — the design gate's output; the coordinator revises the layer-C note §5/§6 from exactly this block)
+
+- **A1 (statement forms compose; literal route)** — **PASS, and the
+  MsgApp cost trigger now FIRES for the C-ladder**: nothing
+  contradicts the U15/U16 verdicts. New cost data: real rounds are
+  7,720–33,903 steps; the naive kernel replay of round spans is
+  measured-dead past ~1,400-step chunks (41.2 GB kill at a 26-cell
+  fixture — Arc 2's heap-linear wall, now known to be term-growth,
+  not heap width); the mirror route prices a round lemma at ~5-15
+  min kernel each at current rates. **Recommendation: commission the
+  FrameSim C1+C2 completeness instrument (U16 probe: ≈2 units
+  nominal, 3 at risk) BEFORE the general round lemmas, per the
+  ledger row's own trigger** — 12 of 28 deliver rounds are
+  MsgApp-family, and every one re-walks Hae-scale spans without it.
+- **A2 (driver span walkable in the census pattern)** — **REFINE;
+  the kill-point consequence fires in a specific form.** The CHECKER
+  is small and walkable (apply 324–463; S1 inline; complete
+  803–2,127; projection ~1,900–2,300) — never the balloon. The
+  balloon is elsewhere: (i) the driver glue is |net|-dependent
+  (+141 steps/net entry, measured 3,578→7,250) because the live-map
+  rebuild and liveCount walk the full net slice every round — the
+  GENERAL round lemma therefore needs SYMBOLIC-NET driver-loop
+  lemmas (slice-walk loop invariant — the classic; Go-general kit
+  material), not one literal chain per net shape; (ii) the HARVEST
+  ring (Ready cycle + nested MsgStorageAppendResp/ApplyResp local
+  Step arms) is 9–14k steps/round with NO landed equations — larger
+  than the delivered arm in every round; (iii) the pre-loop driver
+  init is 81,261 steps / 171 choices — the C3 seed link-pin cannot
+  be a naive kernel replay (nor can it be 300-step-chunked cheaply:
+  ~271 chunks); it needs the mirror or Arc-2-style reflection.
+  **The decomposition ladder that must precede the round lemma:
+  (1) the driver-loop symbolic-net lemmas, (2) the storage-resp arm
+  equations, (3) the harvest-ring (Ready-cycle) equations, (4) the
+  RawNode-shell glue census/equations.**
+- **A3 (absState lens-cheap at round boundaries)** — **PASS**:
+  direct struct-field reads at all 31 round boundaries during the
+  census; `absTwinRead` v0 SHIPPED (this unit) and kernel-evaluates
+  over 26- and 617-cell literals inside a 23-s module; the deep
+  node chain reads the delivered node's raft through
+  nodes[i]→rn→raft. No reader-consolidation unit needed.
+- **A4 (specRound ↔ lattice adapter small)** — **KILL-POINT FIRES,
+  precisely characterized, with a reachability twist.** Where the
+  decompositions align, the adapter IS small (the no-advance square:
+  ~25 lines). But three mismatch axes are now theorems/grounded
+  facts: (i) **commit-advance-without-new-entries has NO lattice
+  image under any parameterization** (adapter_hb_advance_mismatch /
+  verdi_emptyAE_commit_frozen; VerdiCompat/Raft.lean:169-201 vs
+  raftsubject/raft/log.go:129, raft.go:1854-55) — and it is
+  REACHABLE and essential (commit propagation in the 12 MsgApp + 6
+  MsgAppResp rounds), not just the (unreachable) heartbeat; (ii)
+  **the election noop entry** (raft.go:980-81 vs
+  verdi_rvr_log_frozen) exits verdi's reachable set at the first
+  election; (iii) **the package seam**: VerdiCompat is a separate
+  Lake package golean-proofs does not require — adapter work needs
+  a build-wiring decision. **Consequence (the design's own named
+  KILL outcome): the adapter layer becomes its own design task.**
+  Three routes, priced qualitatively: (a) projection redesign
+  (erase noops + keep the commit axis outside the lattice; pays an
+  index-remapping tax on every log-matching transfer); (b) NATIVE
+  re-derivation of the needed invariant subset over specRound at
+  the etcd-abstract level, reusing T3's proof STRUCTURE (for S1
+  the chain provably never consumes commitIndex — grep evidence —
+  and Arc 3's port machinery makes structure-replay cheap);
+  (c) an etcd-faithful spec variant + lattice re-proof (heaviest).
+  **Recommendation: (b) for the S1 leaf first; decide (a) vs (b)
+  for S2/S3 only when their wave opens.**
+- **REACHABILITY (outside A1–A4 — the census headline that
+  re-targets the ladder)**: the heartbeat round-kind and the
+  sF×Prop forward/drop arms are unreachable under EVERY stream (no
+  ticks ⇒ no MsgBeat/MsgHeartbeat/MsgHeartbeatResp; only node 1
+  proposes and it is leader whenever quiescent). All four landed
+  dispatch-arm equations are T1-vacuous (machinery + validation
+  value only). **C2+ must build the REACHABLE arm set** — MsgVote,
+  MsgVoteResp, MsgApp families, MsgAppResp families, the storage
+  resps, campaign, propose-accept — none of which has an arm
+  equation today.
+- **A5 (round-replay corollary ~100 applications)** — structurally
+  unchanged, cost re-priced: 31 rounds × mirror-rate round lemmas
+  ≈ hours of kernel, and the seed pin is 82,643 steps of init.
+  Arc 2's FastEval/segment instruments remain the witness route of
+  record; the round-replay corollary should NOT be re-costed until
+  the reuse instrument decision (A1) lands.
+
+### PROPOSED C2 CHARTER (the redesign need, per the verdict; the coordinator's call)
+
+1. **Design amendment first** (coordinator, from this block): §6's
+   ladder re-targeted — C2's round lemma moves OFF heartbeat to a
+   REACHABLE kind; the recommended first target is the NO-OP arm
+   round (stale MsgAppResp/MsgVoteResp: 7.7–9.2k steps, no handler
+   state change — the cheapest real round) or the MsgVote round;
+   the FrameSim C1+C2 instrument commissioning decision (A1) and
+   the adapter-route decision (A4: recommend (b) for S1) get made
+   at the same revision.
+2. **The decomposition ladder** (A2's list, as C2's build order):
+   driver-loop symbolic-net lemmas (loop-invariant classic — also
+   the first consumers of the mirror's slice-walk forms);
+   storage-resp arm equations (censused ~1.3–2k nested spans);
+   the harvest-ring equations; then the first reachable-round
+   lemma as a mirror chain over the doctor+prune fixture template
+   (this unit's 26-cell construction, re-run at the target round
+   kind).
+3. **Budget guard**: no naive kernel replay past 300-step chunks
+   anywhere in the C-ladder (the measured wall); mirror route or
+   explicit chunk-cost quote required in any round-lemma plan.
+
+### PROMOTION LEDGER updates (A4-U18)
+
+- **NEW ROW: the doctor+prune round-fixture generator** (the
+  TwinRoundFixProbe/RoundFixDump template): real-state anchor by
+  computation + doctored injection + fail-closed read-set pruning
+  (26 cells / 19 iterations / minutes). Consumers: every C2+ round
+  fixture (any round kind, any loop-head anchor); also the C3 seed
+  link's state-capture. The anchor pattern (`isAnchor` on the
+  loop-head config) generalizes to any recurring driver config.
+- **The literal-chain reuse instrument row (U15/U16)** — trigger
+  condition now MET at C-ladder scale (this unit's A1 verdict);
+  awaiting the coordinator's commissioning decision at the design
+  revision.
+- **NEW ROW: mirror coverage of the driver-glue op classes** — the
+  round chains need the mirror to walk strings
+  (stringFromRune/concat/itoa loops), map-lit, and slice-range
+  rebuild loops; stringFromRune confirmed present
+  (Sym/Mirror.lean:1469); the first mirror walk of the round
+  fixture (C2) is the honest coverage test. Consume-on-first-need.
+- The literal printer — 17th consumer (RoundFixDump; the first
+  repr-dump generator: machine-domain literals, no Sym domain —
+  the right form for CONCRETE fixtures).
+- The leader-side fixture pack / RE-SPILL residual rows: unchanged.
+
+## A4-U18 exit (2026-08-25, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since the U17 gate tip
+5d3e70ae: this log/code commit (single commit — census and adapter
+probes are gitignored artifacts; the tracked delta is
+RoundHbLit + RoundStatement + the aggregator + this log). Full
+proofs+Audit green: **528 jobs** (526 + RoundHbLit + RoundStatement).
+Kit pins: +0. Hatch grep over both new modules: 0. Probes
+(gitignored): DrvSpanProbe, DrvHeadProbe, DrvHead2Probe,
+TwinRoundFixProbe, RoundFixDump, A4AdapterProbe, AxRound, bltprobe.
+
+**Deliverable state vs the U18 charter (C1, the design gate):**
+1. THE DRIVER-SPAN CENSUS — **DELIVERED** (the full completing run
+   replicated to the step; 31 rounds decomposed; the checker cleared;
+   the glue growth, harvest ring, and reachability refutation are
+   the A2 verdict's substance).
+2. THE R-FORM ROUND STATEMENT + WITNESS — **DELIVERED WITH AN HONEST
+   SPLIT**: RoundFam/absTwinRead/RoundLemmaShape shipped (R-form
+   pinned; SCAFFOLD marked); the witness fixture built (doctor+prune,
+   26 cells), the full round compiled-verified self-returning
+   (10,964/4), the driver-glue sliver + pick crossing and all
+   endpoint readouts KERNEL-checked; the full-round kernel replay
+   measured-blocked (the second kernel wall — a route finding, not a
+   failure to try) and routed to C2's mirror chain.
+3. THE A4 ADAPTER PROBE — **DELIVERED, kill-point characterized as
+   theorems** (no-advance square small; commit-advance and noop axes
+   have no lattice image; package seam named; route (b) recommended
+   for S1).
+4. THE C1 VERDICT BLOCK — above, with the proposed C2 charter.
+
+**Open gaps carried (none counted):** GAP-V1-2/-4/-5, GAP-U1-W1,
+GAP-V2-1 wave-3 condition, GAP-V2-2, MemoryStorage.Entries spec
+design, the multi-element spill variant, the RE-SPILL residual
+family, message-field symbolism on demand — all unchanged; U18 adds:
+the RoundLemmaShape scaffold (no proved instance — C2's first
+obligation), the generator-verified-only links of the round replay
+(steps 300–10,964, pending C2's mirror chain; stated in the module
+docstring), and the T1-vacuity of the four landed arm equations
+(recorded, not a defect — they were proof-shape pilots).
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1); the comparator-landmark STALE flag
+stands escalated from U8–U17.
