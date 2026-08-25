@@ -5045,3 +5045,22 @@ U20 adds none beyond the ledger rows above.
 Nothing merged; branch-complete. Merge/audit-ask remain the
 operator's (constitution §4.1); the comparator-landmark STALE flag
 stands escalated from U8–U19.
+
+- 2026-08-25 A4-U20 gate follow-up (same-commit convention): unit-end
+  gate `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci` at the
+  exit tree — **RESULT: PASS, exit 0** (`artifacts/ci-arc4-u20.log`,
+  gitignored, with `GATE_EXIT=0` recorded IN the log per lesson (a);
+  23 ok steps + the two sanctioned no-diff notes — this unit touched
+  `proofs/GoLeanProofs/SliceWalk.lean`,
+  `proofs/GoLeanProofs/Specs/Raft/DriverNet{,Witness}.lean`,
+  `proofs/Audit/DriverNet.lean`, the two aggregators, this log +
+  gitignored probes only; no runtime code, no Corpus/, no baselines/;
+  the Audit surface GREW by the 9 DriverNet pins — additive,
+  in-build-verified). Gate staggered behind the `free -g` guard
+  (119G available ≥ 24G cap). The comparator-landmark notes now read
+  **STALE at 151 commits** AND **OWED (scope): 1 file** — the scope
+  trigger is this unit's one-line `proofs/Audit.lean` import
+  addition (Audit.lean is an explicitly listed landmark file in
+  `scripts/ci`'s `lm_files`); both report-only. The operator's
+  merge-step judge run — already escalated since U8 — is now owed on
+  BOTH the staleness and scope triggers.
