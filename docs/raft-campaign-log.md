@@ -1365,6 +1365,37 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   adapter probe). Landmark staleness 144 — stands for the merge
   step.
 
+- **Arc 4, A4-U18 = C1 — LANDED, THE DESIGN GATE FIRED** @ 3bbb0f10,
+  gate PASS, 528 jobs: the driver-span census, the A4 adapter probe
+  (mismatch theorems), the R-form statement + witness, absTwinRead
+  v0. VERDICTS: A1 PASS + cost trigger FIRED (41 GB naive-replay
+  wall measured; anti-grinding stopped the replay and shipped the
+  measurement); A2 REFINE (checker fine; the balloons are the
+  |net|-dependent driver glue, the un-equationed 9-14k-step harvest
+  ring, and the 81k-step init seed); A3 PASS; **A4 KILL — the
+  Verdi-lattice adapter has theorem-grounded mismatches on real
+  etcd behavior** (commit-advance sans entries has no lattice
+  image; election noop exits Verdi's reachable set). **CENSUS
+  HEADLINE: the wave-3 heartbeat/Prop arms are UNREACHABLE in the
+  twin — all four dispatch-arm equations are T1-vacuous** (machinery
+  and validation value retained, honestly docstringed). WHAT THIS
+  TAUGHT US: (1) the gate design worked — every refutation arrived
+  pre-C2 with evidence anchors instead of mid-assembly; (2) the
+  wave-3 mis-target is a process lesson now encoded: REACHABILITY
+  IS PART OF THE CENSUS — arm/round units state reachability
+  evidence before building (the composition map priced cost but
+  nobody checked the driver's actual message vocabulary); (3) the
+  U1 pattern at layer scale: designs survive at the statement layer
+  and get refuted in instruments and reachability. [AGENT]
+  DECISIONS (design note v2, §8): D1 the FrameSim completeness
+  instrument COMMISSIONED (trigger fired; ≤3-unit stop); D2 the S1
+  leaf goes NATIVE re-derivation over specRound with T3's structure
+  as template (route (b); moots the package seam); D3 the arm
+  ladder re-targets to the reachable set (votes/appends/storage/
+  campaign/propose). Ladder replaced (C2a-C6). Calibration: T1
+  moves toward the upper bound of ~2 weeks; the 2.5-4-week T1+T2
+  window stands. C2a dispatched to the C1 worker.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
