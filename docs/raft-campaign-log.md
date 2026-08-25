@@ -1552,6 +1552,31 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   sized); lanes stay file-disjoint, arc4b lands as one merge at its
   completion boundary.
 
+- **C3 (arc4b lane) — LANDED** @ 33a0b423 (2026-08-27), one session
+  vs the 2.5-3-unit sizing: **native one_leader_per_term PROVED over
+  the obligation signature** (n-generic — `voters` a parameter;
+  `invariance` axiom-free; the FullInv.step preservation lemma
+  replaces T3's six votes_ok_*), the COMPLETE etcd discharge (all
+  seven members; two guards proved redundant on the reachable set),
+  the I4-scoped S1 leaf, and the cross-time theorem (the twin's
+  leaderOf check is cross-harvest — covered by starred vote
+  monotonicity, NO signature extension per §7). Gate: the same
+  single known structural red (un-swept lane modules; landing = six
+  import lines), compensating kernel checks verbatim-clean. WHAT
+  THIS TAUGHT US — the unit's crown find: **the non-vacuity WITNESS
+  RUN caught a real fidelity bug** — the ghost `campaign` pushed no
+  self-vote, making etcd's self-response-counting elections
+  unsimulable (a silent under-approximation that would have VOIDED
+  theorem transfer); fixed in-unit with the verdi own-vote rule.
+  Lesson now standing: the witness is a FIDELITY INSTRUMENT, not
+  paperwork — every spec-side fragment ships its witness run in the
+  SAME slice. Cost note: b′-frame porting of a zero-residue chain
+  ran 2-3× under port-anchored pricing; the residual risk lives in
+  statement-side fidelity, exactly where the witness looks. [AGENT]:
+  same worker (~277k) continues onto the T1-scoped S2/S3
+  ghost-history leaf (SC1's 1.5-2 units, likely low end), witness-
+  in-same-slice discipline explicit. C2b still in flight.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
