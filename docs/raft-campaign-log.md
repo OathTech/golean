@@ -1079,6 +1079,22 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   record corrections); delta-review of the fix diff to follow (it
   touches trust-surface claims — user policy 2026-08-01).
 
+- **P2R audit fix round LANDED** @ 352b1276, gate PASS (2026-08-25):
+  F1 claim corrections + the entry-point-swap [AGENT] record + queued
+  runProgram_pool_seq_bridge lemma (judged not-small, correctly not
+  attempted); **F2 by direct re-evaluation — the driver now evaluates
+  the theorem's literal premise-3 expression and feeds ITS result
+  state to premise 4, demoting the discovery loop to untrusted
+  machinery** (26.6 s → 44.3 s, ~80× under ceiling); F3-F5 record
+  corrections all applied with re-derived numbers. The worker closed
+  an honesty gap the fix order missed: the 27/27 record predated the
+  driver change, so it RE-SWEPT the corpus under the fixed driver —
+  27/27 AGREE, steps identical, premise3-ok in all records (388.7 s).
+  WHAT THIS TAUGHT US: the right fix for a claims-vs-machinery gap is
+  usually to move the MACHINERY under the claim (evaluate the premise
+  itself) rather than weaken the claim to fit. Delta-review of the
+  fix diff dispatched (trust-surface touch, user policy 2026-08-01).
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
