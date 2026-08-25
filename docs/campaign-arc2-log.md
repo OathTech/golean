@@ -1034,7 +1034,17 @@ audit fix round, 2026-08-25]"; items with no in-place site follow.
   43.9 s / 11,995,825 steps), still ~80× under the ~1 h ceiling.
   Sweep entry-point re-run with the fixed driver: MACHINE 1/1 AGREE,
   74/74 blocks, ok 57/57, rendered 17/17 (record
-  `artifacts/tracereplay/records-fixround.jsonl`).
+  `artifacts/tracereplay/records-fixround.jsonl`). And since the
+  27/27 sweep-2 record predates the driver change, the WHOLE corpus
+  was re-swept under the fixed driver after the gate: **MACHINE 27/27
+  AGREE, OK-tier 206/206, rendered 148/148, total fast steps
+  37,703,350** (identical to sweep 2), machine-tier wall 388.7 s
+  (sum of per-trace elapsedMs; ~1.6× sweep 2's 237 s — the direct
+  premise-3 pass is the difference), all 27 per-trace fast-records
+  carrying a `premise3-ok` stage (records
+  `artifacts/tracereplay/records-fixround-full.jsonl`, report
+  `artifacts/fixround-sweep.out`). The strengthened verdict basis is
+  corpus-wide; no scope caveat remains.
 - **[AGENT] Commit-message errata (immutable subjects, corrected on
   the record):** (a) cb8e0811 ">500× measured" — the pre-refactor
   side is a DNF (>600 s without completing a 1e6-step chunk ⇒ <1,667
@@ -1080,3 +1090,20 @@ audit fix round, 2026-08-25]"; items with no in-place site follow.
   diff — every hunk is the engine addition). A textual conflict at
   the next campaign sync is guaranteed; resolve by taking arc2's
   copy wholesale.
+
+- **AUDIT-FIX-ROUND GATE** (2026-08-25): `GOLEAN_ALLOW_NO_DIFF=1
+  GOLEAN_MEM_MAX=24G scripts/ci` — **RESULT: PASS** (rc 0; log
+  artifacts/fixround-gate.log, untracked; result restated here).
+  Hatch scope verified before running: the fix-round delta is
+  proofs/ + docs/ + tools/raftsubject/ only (git diff --name-only
+  48e35a5b..HEAD — no GoLean/, no tools/nativefrontend/), so no
+  runtime change owes a differential; the sanctioned no-diff hatch
+  applies. NO comparator-landmark scope note this round: neither
+  proofs/Audit.lean nor proofs/lakefile.toml (nor any watched file)
+  changed since the judged tip 76361232; the gate's landmark note is
+  staleness-informational only (last certified run 3 commits ago).
+  The corpus-wide fixed-driver re-sweep above ran after the gate
+  (harness invocation, not a gate step). FIX ROUND COMPLETE at this
+  tip: F1-F5 all addressed as specified; no residuals beyond the
+  queued `runProgram_pool_seq_bridge` follow-on (F1c, by design) and
+  the queued denominator-hole close (next tracereplay unit).
