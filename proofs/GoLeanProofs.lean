@@ -36,6 +36,7 @@ import GoLeanProofs.Specs.Raft.HhEquation
 import GoLeanProofs.Specs.Raft.HaeLit
 import GoLeanProofs.Specs.Raft.HaeEquation
 import GoLeanProofs.Specs.Raft.StaticCells
+import GoLeanProofs.Specs.Raft.StaticCellsExt
 import GoLeanProofs.Specs.Raft.StaleLit
 import GoLeanProofs.Specs.Raft.StaleEquation
 import GoLeanProofs.Specs.Raft.LaLit
