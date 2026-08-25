@@ -2862,3 +2862,40 @@ stands escalated from U8–U11.
     clone-carrying path, not becomeLeader specialties — Go-general
     machinery, consumed once, guarded by the full-rebuild
     kernel_rfl re-check).
+- 2026-08-25 Slice 2 — **THE becomeLeader EQUATION LANDED**
+  (`BlEquation.lean` 1,210 lines + generated `BlLit.lean` 1.7 MB /
+  10 window literals by probe `BlGen.lean` — the printer's 9th
+  consumer; γ-validated at (c₅,c₆) = (0,0)/(3,5)/(31,31) before any
+  theorem): **the last wave-2 becomeX handler, the SIX-choice span,
+  the largest chain yet — 10 windows / 9 crossings — GREEN ON THE
+  FIRST FULL CHECK, 190 s module** (BlLit 8.2 s).
+  - Shape: the Bf31 reset spine (Intn pick at map 61 + three Visit
+    picks at map 33 + range-stop + sortSlice collapse — uCands1/
+    bc31Cands3/uρ'/uKeys/normalize_small/stepFn_pick_transport ALL
+    reused verbatim; six-leaf stop/sort dispatchers at the bl
+    literals) + the La tail (spill atoms 0 → len := 1 → spill atoms
+    1). Fixture: state = CONCRETE 1 (the follower panic guard — the
+    BPC precondition pattern), Vote/lead/ldT symbolic vars 1/2/4,
+    term-equal reset (Vote SURVIVES, norm-wrap depth 16 probed from
+    the literal — `unrm 16` + `unrm_id hvote`).
+  - Conclusions (ELEVEN): absRaftLog pre = hhAbsLog, post =
+    `blAbsLogPost` = ⟨[(1,1)], [(2,0)], 2, 1, 1, 1⟩ — **the log
+    grown by the leader's EMPTY entry (index 2, TERM 0)**, axiom-free
+    `bl_log_grew`; **absOutbox msgsAfterAppend = [specAppResp 1 1 0
+    2] — the SELF-ack (To = From = r.id)**; msgs = []; Vote = ρ.ints
+    1; lead = 1; **state = 2 (StateLeader — the transition
+    readout)**; pendingConfIndex = 1; Term = 0. Alloc PRIMARY
+    consumes `Frame.span_relocate` (4th consumer) + identity
+    corollary at ρT 52 + §3.3 witness (stream [3,1,0,0,3,5]).
+  - Fresh `#print axioms` (probe `AxBl`, verbatim): the equation
+    family + spans + spill crossings [propext, Classical.choice,
+    Quot.sound]; bl_len_step / blPick1_step / blW1_out [propext,
+    Quot.sound]; bl_log_grew NO axioms. Full proofs+Audit green
+    **509 jobs** (507 + BlLit + BlEquation); hatch grep 0/0.
+  - What-this-taught-us (slice 2): the pipeline is MATURE — a
+    six-choice, ten-window handler assembled first-try from existing
+    pieces (spine machinery reused verbatim, tail pattern copied,
+    literals generated); the marginal cost of the LARGEST handler so
+    far was one census, three same-lever TableExt arms, and a day's
+    assembly — the U3 scale verdict's curve, still holding. wave-2's
+    becomeX family is now COMPLETE (BPC, BF, BC, BL).
