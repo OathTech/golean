@@ -4554,3 +4554,16 @@ docstring), and the T1-vacuity of the four landed arm equations
 Nothing merged; branch-complete. Merge/audit-ask remain the
 operator's (constitution §4.1); the comparator-landmark STALE flag
 stands escalated from U8–U17.
+
+- 2026-08-25 A4-U18 gate follow-up (same-commit convention): unit-end
+  gate `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci` at the
+  exit tree — **RESULT: PASS, exit 0** (`artifacts/ci-arc4-u18.log`,
+  gitignored; 23 ok steps + the two sanctioned no-diff notes — this
+  unit touched `proofs/GoLeanProofs/Specs/Raft/{RoundHbLit,
+  RoundStatement}.lean` + the aggregator + this log + gitignored
+  probes only; no runtime code, no Corpus/, no baselines/, zero Kit
+  pins, zero edits to previously-shipped module STATEMENTS). Gate
+  staggered behind the `free -g` guard. The comparator-landmark note
+  now reads **STALE at 146 commits** (> the 100 threshold;
+  report-only) — stands escalated for the operator's merge step, as
+  at U8–U17.
