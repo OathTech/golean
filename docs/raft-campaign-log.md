@@ -1648,6 +1648,21 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   lines + gate expected fully green, then the MsgApp fixture,
   sub-ring census, and the payload-parametric storage statements.
 
+- **P-2026-08-27 (calibration, third in series):** T1 ≈ 1-1.5 weeks
+  from today (6-8 units remaining at measured 2-3 units/day + the
+  milestone ceremony: mega-branch merge, dual-trigger judge,
+  milestone audit); T2 ≈ +1 week; **T1+T2 ≈ 2-2.5 weeks** — inside
+  the 2.5-4 window, trending under the revised P-2026-08-25. Basis:
+  spec side DONE at 2-3× under sizing; compositional mode measured
+  ≥200×; every remaining item has measured precedent EXCEPT two
+  named risks (the seed pin — undemonstrated reflection route; the
+  assembly — treated as a probe per the walls-below-clean-designs
+  pattern). T2 design caveat, flagged for a [USER] gate: what
+  "quantified num_parties" requires at the HARNESS level (abstract
+  quantification with the n=3 harness as instance vs a parameterized
+  wire family) — touches what the theorem says, so it is the user's
+  call, not the coordinator's.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
