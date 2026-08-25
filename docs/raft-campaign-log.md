@@ -1239,6 +1239,30 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   point), Hh commit-advance, third slot by censused cost. Landmark
   staleness 120 commits — stands for the arc-4 merge step.
 
+- **Arc 4, A4-U13 — LANDED** @ b143c56d, gate PASS, 512 jobs: THE
+  becomeLeader CENSUS + EQUATION (the largest chain yet — 10
+  windows/9 crossings/6 choices, green on the FIRST full check at
+  190 s; three Go-general TableExt arms consumed on demand en route)
+  + THE handleHeartbeat COMMIT-ADVANCE EQUATION (that handler now
+  COMPLETE) + THE Ms ERROR-BRANCH EQUATIONS (the static-cell
+  complement's second consumer — generality validated by its design
+  test: append-only composition on a disjoint path). WHAT THIS
+  TAUGHT US: (1) the census verdict, plainly — NO cap-consuming
+  re-read exists on the becomeLeader path; the watch-item is RETIRED
+  for len-shaped reads (two clean instances) and stays open per
+  census for cap-consuming ones (no instance yet); (2) the largest
+  chain landing first-check green at 190 s says the machinery has
+  reached its scaling regime — the marginal equation is now
+  assembly even at 10-window size; (3) the numeric-mismatch
+  pathology recurred once and the U11 convention caught it in ONE
+  probe run (printer improvement noted). Equation ledger: **13
+  families; every censused wave-2 family proved except Hae REJECT.**
+  [AGENT]: U14 to a FRESH 8th-gen worker (U13's at ~667k): REJECT
+  census-first (split at loop boundaries — largest window risk),
+  the m.From ≠ r.id branch-crossing transport, then wave-3 dispatch
+  censuses. Landmark staleness 126 commits — stands for the arc-4
+  merge step.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
