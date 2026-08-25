@@ -27,6 +27,7 @@ import Audit.SliceStack
 import Audit.SliceQueue
 import Audit.MatMul
 import Audit.FrameShape
+import Audit.DriverNet
 
 /-!
 # In-build epistemic gate for the Iris proof layer

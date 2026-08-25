@@ -73,6 +73,9 @@ import GoLeanProofs.Frame.ShapeStrict
 import GoLeanProofs.Frame.ShapeStep
 import GoLeanProofs.Frame.ShapeSpan
 import GoLeanProofs.Specs.Raft.ShapeWitness
+import GoLeanProofs.SliceWalk
+import GoLeanProofs.Specs.Raft.DriverNet
+import GoLeanProofs.Specs.Raft.DriverNetWitness
 -- A4-U8: the field-lens layer (Perennial Access lineage; general half —
 -- combinators + L1-L4 laws; per-field instances live in Specs/Raft).
 import GoLeanProofs.Lens
