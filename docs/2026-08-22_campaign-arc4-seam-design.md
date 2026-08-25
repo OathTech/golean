@@ -141,3 +141,102 @@ regardless (promotion ledger, ≥2-consumer rule trivially met).
 - OQ-D: how much of the S2/S3 checker-implication needs
   `candidate_entries`+log-matching vs what S1 alone needs — scopes
   the first T1 assembly.
+
+## 4c. WAVE-3 ARM CONVENTIONS + THE ROUND SHAPE (2026-08-25, A4-U16 — [AGENT], post-verdict)
+
+The layer-C design of record is
+`docs/2026-08-25_campaign-layerc-design.md` (campaign worktree; §5-A1
+records the U15 composition verdict and the ROUTE POLICY). This
+section holds only the LANE-side conventions that implement it —
+one design of record per layer, cited not duplicated.
+
+### Arm-statement conventions (binding for every wave-3 equation)
+
+1. **Route**: literal bounded window chains, one per censused arm
+   family (§5-A1 route (i)); the walked route's cost scales with the
+   arm's own span (measured: 50 s / 1,710 steps). Landed handler
+   equations stay the semantic vocabulary and the validation set —
+   never consumed as mid-walk sub-proofs (the U15 instrument wall).
+2. **Statement form** (route-independent, the SfHbEquation template):
+   drained caller shape `er := <dispatch>(r, m)`; alloc PRIMARY with
+   the FrameSim placement quantifier + identity corollary + §3.3
+   witness; ∀-stream with the censused choice prefix; conclusions
+   ONLY via absState v2 / lens readers / raw renameCell-fixed
+   lookups (er) — never literal heaps.
+3. **Fixture rules**: a REAL Type cell (the switch driver;
+   `absMessage` then reports the true typ — arm records are
+   Type-distinguished); caller cells OFF {61, 65} (the
+   StaticCellsExt payload rule — [66,69) is the standing placement);
+   drop/Stop arms take `staticComplementFull` + nextAddr₀ 98.
+4. **The er readout is mandatory** (the shell's own conclusion:
+   `Heap.lookup … (.base ⟨r 68⟩) = some ⟨error-iface, v⟩`, transported
+   by `FrameSim.lookup_some`; renameCell-fixed for nil and for
+   static-cell interface boxes — ErrProposalDropped's box points at
+   payload 65 < any na₀, so it rides renaming unchanged).
+5. **Norm-wrap depths are store-count-dependent** (U15: Vote norm³ at
+   sF arm depth vs norm¹ at handler depth): read the generated
+   literal (probe the field) BEFORE stating scalar readouts; collapse
+   with `simp only [hvote]`-style side conditions.
+6. Counts/addresses as generator-emitted defs (U13 rule, unchanged).
+
+### The round shape (consequence of the verdict, feeding layer C §2-3)
+
+After the FIRST relational join in any composed run, everything
+downstream must stay relational/projective; no literal window resumes
+mid-walk. Under route (i) this is moot WITHIN a lemma (each round
+kind is one literal walk), and binding BETWEEN lemmas: the round
+induction composes round LEMMAS at absState level.
+
+**FLAG (refinement to layer-C §2, not a silent divergence):** the
+round-lemma form "from any σ at the loop head with `absState σ =
+some N`" is not what literal walks deliver — they prove the lemma
+from any PLACEMENT (γ-image + FrameSim relocation) of the round's
+canonical fixture family. The induction's carried relation `R σ N`
+(layer-C §3) must therefore be fixture-family membership (canonical
+symbolic state + valuation + placement), with `absState σ = some N`
+as its projected READOUT — strictly stronger than the projection
+equality alone. This is the same distinction as the handler
+equations' fixture-family preconditions, one level up; it costs
+nothing on the literal route (the seeded start IS a placement of the
+round-0 fixture) but the round-lemma statement should be written in
+the R-form from day one. Raised to the layer-C ladder's C1 design
+gate.
+
+### The FrameSim-strengthening PROBE (commissioned §5-A1 route (ii); probe-only, nothing ships)
+
+Probe `artifacts/probe/FrameSimStrengthProbe.lean` + greps at tip
+d6f0286e; all numbers from runs:
+
+- **Surface**: `GoLeanProofs/Frame/` = 12,661 lines / 22 files;
+  FrameSim appears in 15. Conclusion-position (producing)
+  occurrences: ~43 — but field-by-field CONSTRUCTION happens in only
+  ~6 primitive sites (`setBase`, `alloc_fst`/`alloc_snd`,
+  `frameSim_seed`, `frameSim_relocate`, `rebaseSimT`); every other
+  producer threads the input pack through packaged relations
+  (`ExSim (TripSim …)`, value-pair conjunctions with state riding —
+  verified pattern in StrictOps, the heaviest file at 65 mentions).
+- **Trial elaboration**: `FrameSimC` (= FrameSim + C1, the domain-
+  completeness clause) with `setBaseC` (the canonical in-place-write
+  preservation, 14 proof lines) and the zero-seed — clean on first
+  full elaboration (one lemma-arity fix), sub-second on warm oleans.
+  C1 is CHEAP at the primitive level.
+- **THE PROBE'S DESIGN FINDING — C1 alone does not buy the payoff.**
+  Completeness makes the relational post-state LOOKUP-determined;
+  resuming a literal window needs it LIST-determined. The sufficient
+  design is C1 + **C2, the insertion-point shape clause**:
+  `σF.heap = renameHeap ρ (take n₀ σ.heap) ++ fr ++ renameHeap ρ
+  (drop n₀ σ.heap)` (n₀ = canonical heap length at seed) — preserved
+  by BOTH machine mutation kinds (base-keyed `Heap.set` is
+  position-preserving; allocation appends to the last segment on
+  both sides; the machine never deletes cells), and it pins the
+  true state literally, giving the payoff lemma
+  `σFfin = γ(S_suffix)` for a generator-emitted suffix literal.
+- **Cost vs the ≤2-unit line**: primitives + C2 list algebra +
+  payoff lemma ≈ 1 unit; re-elaborating/threading the 12.6k-line
+  Frame surface with the extended pack ≈ 0.5–1 unit IF the packaging
+  holds everywhere, with risk concentrated in `StepSim`'s induction
+  and `StrictOps` — **≈ 2 units nominal, 3 at risk. Verdict:
+  BORDERLINE-OVER → per the go/no-go, STAY LITERAL until the
+  MsgApp-arm cost trigger fires**; when it does, commission with the
+  C1+C2 design (this probe's contribution — U15's route (a) as
+  sketched, C1-only, would NOT have sufficed).
