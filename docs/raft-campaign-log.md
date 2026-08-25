@@ -1725,6 +1725,23 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   time (scaffold retirement; the W3.2 opsem write-up; W7/SpecTec
   adjacency) vs zero that T1 needs early.
 
+- **[USER] 2026-08-27 — doc consistency + the coherence audit:**
+  directed: keep planning docs consistent; backlog an overall
+  design-audit coherence pass (the half-built-mechanisms risk from
+  heavy semantics engineering). [AGENT] executed same-hour: the
+  layer-C note gained its supersession banner + the seed-pin route
+  correction (choice-invariance, not reflection); the flexibility
+  redesign gained §8 — the doc-of-record HIERARCHY (one design of
+  record per layer; seam-note reconciliation queued to the arc-4
+  lane boundary), the four post-α design contributions
+  cross-referenced, and **the COHERENCE AUDIT chartered as a
+  backlog item**: a dedicated design-coherence dimension of the T1
+  milestone audit, deliverable = ONE mechanism registry (completion
+  state, scaffold tags, retirement conditions, design-of-record
+  pointer, orphan/duplicate detection) replacing scattered
+  docstring tags — seven known scaffolds already enumerated in its
+  scope.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
