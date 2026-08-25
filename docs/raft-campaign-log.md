@@ -1705,6 +1705,26 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   "what representation makes these evaluable," not "how do we
   prove these."
 
+- **[USER] 2026-08-27 — the SYMBOLIC SEMANTICS proposal:** a third
+  layer between the relational semantics and future Iris reasoning —
+  `opsem ↔ relational ← symbolic-with-choice-erasure` — erasing
+  choices without easily-observable effects (allocation etc.).
+  [AGENT] analysis, adopted with sequencing: flagship precedent =
+  CompCert's memory model (block IDs = allocation-choice erasure);
+  ours adds capacity slack + canonicalized iteration draws; the
+  correspondence needed is bisimulation-up-to-~ (concrete projects
+  down for invariant transfer; erased choices realizable for
+  ∃-transfer) — the choice-invariance lemma is its erased half.
+  Payoffs: invariance proved ONCE as the refinement; statement
+  hygiene (no atom/ρ threading); the natural Iris seat for the
+  concurrency era. SEQUENCING ([AGENT], middle-path): NOT
+  mid-endgame — T1 finishes on the lemma form, with the seed-pin
+  unit building ~/canonical forms FORWARD-COMPATIBLE as the future
+  semantics' state space; the symbolic semantics is the POST-T1
+  consolidation centerpiece — three consumers waiting at the right
+  time (scaffold retirement; the W3.2 opsem write-up; W7/SpecTec
+  adjacency) vs zero that T1 needs early.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
