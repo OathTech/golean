@@ -90,6 +90,33 @@ proofs (this is precisely how SP1's probe found the timeout field).
   (T1-replay — the round induction + pairing + leaves at canonical
   latitude) gives the canonical verdict = 0.
 
+## 3b. SUB-PROGRAM MODE-SWITCHING ([USER] refinement, 2026-08-27)
+
+The erased semantics applies at the SUB-PROGRAM level: derivations
+may switch freely between the choice-sensitive and choice-erased
+semantics per span, localizing the most complex reasoning. This
+adds to §3:
+- **Mixed-chain composition lemmas** (CE4's real deliverable, not
+  whole-run-only): switch-IN (a concrete state enters an erased
+  segment as its own class representative — free) and switch-OUT
+  (an erased segment's conclusion holds for every representative;
+  a following concrete segment picks any one, carrying ~ into its
+  premise). Boundaries compose at any cut point — the same
+  compositional role along the CHOICE axis that span_consume gives
+  along the HEAP axis; the two localizations are orthogonal and
+  stack (an erased span may be frame-placed; a framed span may run
+  erased).
+- **Statement hygiene**: a mixed chain's conclusion is exact on
+  concrete segments and up-to-~ on erased segments; the statement
+  formers carry the mode so nothing silently strengthens a ~ into
+  an =.
+- **The practical payoff** ([USER]): spill-heavy spans (the harvest
+  ring) run erased — one derivation for all capacities — while
+  delivery picks and any unclassified site stay concrete; the
+  round wave's per-instance cost drops accordingly, and the most
+  complex reasoning (the canonicalized grade's diverge-reconverge)
+  is PAID ONCE per span class, not per round.
+
 ## 4. What this arc is NOT
 
 - NOT statement-layer: nothing here is designated, enters
