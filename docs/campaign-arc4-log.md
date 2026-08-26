@@ -6684,6 +6684,16 @@ layer's role in the induction detaches THIS unit; it remains the
   **`seeded_round_induction`** (the layer-C §3 seeded carry:
   `Seed` discharged by the landed `seed_N₀` — nothing premised on the
   abstract side but the dialect's obligation discharge).
+  **[CORRECTED at the landing fix round, 2026-08-26 — see the
+  fix-round entry below: the paragraph above overclaims. The
+  abstract side is UNCOUPLED witness data (`RoundLink.N/N'` have no
+  tie to `absTwinRead` of the link's canons); `FamTrace.reach` only
+  re-packages the caller-supplied `habs` segments, so "the absState
+  trace = the specRound trace" holds of the SUPPLIED nets, not of
+  the Go run; and `seeded_round_induction`'s `habs` argument IS an
+  abstract-side premise, carrying all the abstract content. The
+  per-boundary pairing is open obligation O5b. The module texts were
+  rewritten to the true claim at the fix round.]**
 - **Witness-in-same-slice** (`RoundInductionWitness.lean`, corpus):
   - the shared-C0 kernel pins (slice 1's surviving deliverable);
   - **a GENUINE `EStep` abstract chain from the discharged seed**:
@@ -6769,6 +6779,14 @@ explicit hypotheses, the composition lands — the whole-run
 (`s1_leaf` fires against any `S1CheckerInterface` instance at the end
 net). THE OPEN-OBLIGATION CENSUS (the probe's hypothesis list — what
 stands between the landed tree and AgreementT1):
+
+**[CORRECTED at the landing fix round, 2026-08-26: this census is
+INCOMPLETE — it omits the harness violation guards (T1-V), the whole
+S2/S3 assembly (S23-A), the restored O3 (silently folded into O1's
+second sentence), the I1 second-dialect vacuity debt (I1-V), and the
+C2a consumer status. The COMPLETE census is the fix-round entry's
+"THE T1 OPEN-OBLIGATION CENSUS, REWRITTEN" below — read that one;
+this list remains as the historical record.]**
 
 - **O1 THE ENTRY ADAPTER** (probe shape finding): the campaign span
   `seedσ` → first loop head is NOT self-returning (seed anchor config
@@ -6973,3 +6991,496 @@ U25 runbook note) both apply.
   standing escalated for the operator's merge step, as since U8; the
   landmark run must pair `scripts/capped lake build AuditCorpus` per
   the U25 runbook note.
+
+## A4-FIX — THE LANDING-AUDIT FIX ROUND (2026-08-26, fix-round worker, coordinator-dispatched off the landing audit wf_6456a0e5: 21 CONFIRMED + 7 DOWNGRADED, 0 refuted; work order = artifacts/landing-audit-findings.md F1–F7)
+
+Charter: fix what a fix round can honestly fix; record precisely what
+it cannot. NOT in scope (recorded as next-charter, not attempted): the
+abs-pairing (O5b), the Verdi instance discharge (I1-V), the
+literal-mode/emitter mode decision for the ~28 replay instances.
+
+### F1 — claim honesty on the round induction (FIXED, prose only; the
+### theorem untouched)
+
+The audit's HIGH pair + technical MEDIUM: `round_induction` is
+correctly proved, but its abstract side (`RoundLink.N/N'`) is
+UNCOUPLED witness data — no constructor ties a link's concrete states
+to its nets, `FamTrace.reach/safety/fullInv` derive from the `habs`
+premises alone — while the module header, `RoundStatement`'s
+carried-relation paragraph, the seeded corollary's docstring and the
+U26 log all asserted the PAIRED form ("absState trace = specRound
+trace"; "nothing left premised on the abstract side"). Every claim
+site rewritten to the truth:
+- `RoundInduction.lean` header: now states the two INDEPENDENT chains
+  (concrete Fam chain + supplied abstract chain), the no-coupling
+  honesty note, and that only the Fam-membership HALF of the layer-C
+  §3 carry is mechanized; the per-boundary abs-pairing is **O5b**
+  (census below). LINEAGE line downgraded from "refinement mapping"
+  to "the CONCRETE half of a simulation induction" — a refinement
+  mapping whose abstraction function is never applied is not one.
+- `seeded_round_induction` docstring: `habs` named as the
+  abstract-side premise carrying all the abstract content; the false
+  "nothing left premised on the abstract side" sentence replaced,
+  with the correction noted in-docstring.
+- `RoundStatement.lean` `RoundFam` docstring: the carried-relation
+  paragraph now states the landed induction carries membership ONLY,
+  citing O5b.
+- U26 log entry: inline [CORRECTED …] markers at both claim sites
+  (append-only correction convention; the historical text stands
+  above the markers).
+[AGENT]: the theorem itself was NOT weakened or "fixed" — the pairing
+is the next unit's charter (O5b), and shipping a hasty coupling in a
+fix round would be exactly the overclaim class this round exists to
+close.
+
+### F2 — the fail-closed bugs (FIXED, with the dropped case witnessed)
+
+**(a) `collectFix` (ChoiceCanon).** The stability test compared
+view-list LENGTHS while `VSt.bumpView` widens an existing key in
+place (filter-and-recons, length unchanged) — the phase-1 fixpoint
+could stop with an untraversed widened window and phase 2 then
+silently trimmed content reachable only through it. CONFIRMED BY
+PROBE against the pre-fix build (`tools/campaign/FixCollectFixProbe.
+lean`): two 4-cell heaps whose only difference is a zero-array's
+LENGTH (3 vs 5) canonicalized to IDENTICAL, CLEAN forms (the victim
+cell emitted `.arr []`, no flag) — the exact "silently equate two
+states" outcome the module docstring rules out. Fix: stability =
+equality of `VSt.measure` (key count + total view width + direct
+count; all three monotone along a pass, so measure equality ⇔ the
+pass changed nothing). The dropped case is now a tracked regression
+witness (`Frame/ChoiceCanonWitness.lean`): under the fixed code the
+same pair canonicalizes DIFFERENT ([some 2, some 2, some **3**,
+some 1] vs [… some **5** …], both flags clean) and
+`viewfix_not_equiv : ¬ CEquiv …` is kernel-proved; pinned in the new
+`Audit/ChoiceInv.lean`.
+**SP1 census re-verification**: the SP1 numbers were produced through
+this code — `seed_cform_pin` (the full masked form literal),
+`seed_clean`, `seed_cform_cells` (207 cells / 4,965 heap) and the
+SeedWitness equivalence pins all recompute IN THE KERNEL on this
+round's build; the build result below is the re-verification. (A
+moved number would fail the literal pin loudly — see the gate record
+for the outcome.)
+**(b) `absTwinRead`'s helpers (RoundStatement).** `readIntField`'s
+`.nil ↦ 0` clause DELETED (the twin's shell fields are non-pointer
+scalars whose machine zero is `.int 0 _`, never `.nil` — a `.nil`
+can only be a mis-read; the nil→0 convention stays where it is
+documented against pointer fields, `AbsStateV2.derefI32`), and the
+twin/shell/RawNode struct TypeIds are now CHECKED
+(`twinTid`/`twinNodeTid`/`rawNodeTid` — probed from the seeded heap:
+"main.twin"/"main.twinNode"/"raft.RawNode") in `readShell`,
+`absTwinRead`, `absTwinNodeRaft`. All affected kernel readout pins
+(roundHb_* in-module, seed_absRead/seed_nodes_zero in SeedPin, the
+four round-kind lemmas' readouts) re-run on this round's build.
+
+### F3 — the witness-placement correction (FIXED; the split's
+### criterion amended)
+
+The U25 split had moved 78 non-vacuity Audit pins — including EVERY
+witness of the LIVE `round_induction` and of the LIVE `span_consume`
+— out of the per-gate closure: a live law's witness could be deleted
+without failing `scripts/ci`, gutting the non-vacuity gate's
+mechanism for exactly the laws that matter. Fix, per the
+witness-ships-with-law rule:
+- RETURNED TO LIVE (GoLeanProofs + Audit defaults): RingLit1-4 +
+  RingEquation + RingWitness (span_consume's chain); the FOUR proved
+  round-kind instances in full (RoundMa 11 modules, RoundVote 11,
+  RoundMar 13, RoundVr 20); RoundInductionWitness; pin modules
+  Audit/{Ring,RoundMa,RoundVote,RoundMar,RoundVr,RoundIndWitness}.
+- CORPUS KEEPS: the 24 handler-equation chain modules
+  (Hae/Stale/La/Bl/HhAdv/MsErr+MsResite/HaeRej/HhFrom/SfHb/SfPd/
+  SCHb/Slb) — laws AND witnesses corpus-internal. The corpus
+  criterion is AMENDED in GoLeanProofsCorpus.lean's header: the
+  "no importer outside the corpus set" test is subordinate to the
+  witness-with-law rule. tools/campaign/corpus-census.sh updated to
+  the corrected membership: CENSUS CLEAN, 24 modules importer-closed.
+- The U26-era 49,822 generated lines in the default target
+  (SeedLit/SeedLitVar/SeedCFormLit): JUSTIFIED line-by-line in the
+  aggregator comment (SeedLit/SeedCFormLit = literals of the live
+  SeedPin laws; SeedLitVar+SeedWitness = the live ~ₘ equivalence's
+  occupation witnesses — live BY the corrected rule, resolving the
+  audit's "satisfies the corpus criterion" observation the right way
+  round). The manifest undercount ("the three proved round-kind
+  instances" written in the commit that landed the fourth) corrected
+  at both aggregator sites; the count is FOUR.
+- COST, measured honestly (gate-wall of the return): see the gate
+  record at the end of this entry — the per-commit gate now carries
+  the Round*/Ring kernel mass that U25 had deferred to landmarks;
+  the U25 cold-vs-live numbers (927 s → 230 s) no longer describe
+  the live target. This is the price of the non-vacuity gate
+  actually gating live laws; the U25 split kept the OOM fix only
+  where it was honest (the corpus now = self-validating chains).
+
+### F4 — THE T1 OPEN-OBLIGATION CENSUS, REWRITTEN (complete; each
+### item priced or explicitly unpriced)
+
+Supersedes U26's O1–O7 list (marked incomplete in place). What stands
+between the landed tree and `AgreementT1`:
+
+- **O1 THE ENTRY ADAPTER** (unchanged): the campaign span `seedσ` →
+  first loop head is not self-returning; needs a C_in/C_out R-form
+  sibling + its abstract segment. Priced: one emitter product + one
+  statement variant (~0.5 unit).
+- **O2 THE REAL-ROUND INSTANCES** (unchanged): ~28 deliver rounds of
+  the A5 replay at U25's measured rates (window kernel 10–22
+  min/round). PENDING COORDINATOR DECISION (recorded, not made here):
+  whether these run in literal/emitter mode — which the flexibility
+  redesign's sanctioned stop FORBIDS without an explicit
+  justification entry — or wait for the I2 compositional prover. The
+  fix round also records the standing violation: U23/U24/U25 landed
+  834k literal-mode lines AFTER the stop with no exemption entry in
+  this log (the audit's finding; nothing here launders it).
+- **O2b THE PRUNE-SEAM** (unchanged): unified prune convention vs
+  FrameSim composition (~1 slice). Coordinator decision; blocks O2.
+- **O3 THE EXIT ADAPTER** (RESTORED — U26's census dropped the label,
+  folding it into O1's second sentence; the probe tags it [O3]): last
+  loop head → the completion/verdict configuration, non-self-
+  returning. Priced with O1 (same statement variant, second
+  consumer).
+- **O4 THE FULL ABSTRACT DIALECT** (unchanged): commit/append EStep
+  members for Ma/Mar rounds + the S23 ride-along. Priced: ~1 unit
+  (signature owner).
+- **O5a THE CHECKER-INTERFACE INSTANCE** (was O5's first clause): the
+  `S1CheckerInterface` instance at the end net; `violationImpliesDelta`
+  real-about-bytes = the span-computes-model residual, IN FLIGHT on
+  arc4d (SM1).
+- **O5b THE PER-BOUNDARY ABS-PAIRING** (named and numbered — the F1
+  corrections cite it): `absTwinRead σᵢ = projection of Nᵢ` at every
+  round boundary, turning the induction's independent abstract chain
+  into a coupled refinement. THE keystone; proposed next charter item
+  (U26 exit's item 2, now with the honest claim-strength framing).
+  Priced: per-boundary kernel pins exist as the template (roundVr's
+  claims 0→1 readout); the definition + transport is ~1 unit.
+- **O6 THE ∀-STREAM LIFTS** (unchanged): `SeedChoiceInvariance` +
+  per-round latitude factoring — post-T1 symbolic semantics, or a
+  [USER] statement-scoping call.
+- **O7** the init-span canonical-stream kernel completion (≈35–60 min
+  one-time, separable) + the setup span's draw-freeness check (cheap
+  probe).
+- **T1-V THE VIOLATION-SITE CENSUS** (NEW — the audit's HIGH: the old
+  census covered none of this). `AgreementT1` reads
+  `values[0] = t.violations`, incremented at TWELVE sites
+  (tools/raftsubject/twin-lib.go), classified with evidence:
+  - CHECKER-IMPLICATION (5 sites; discharged by the abstract chains +
+    transfer): :274 S1 election safety (→ the S1 chain via O5a/O5b);
+    :304 + :308 S3 apply monotonicity (→ HistInv H2/H4 +
+    `appliedWindow`, via S23-A); :328 S2 agreement (→
+    `s2_agree_of_hist` + H4, via S23-A); :316 S3 anomaly
+    (EntryNormal) — NOT representable in the abstract vocabulary
+    (NativeS23Chain scope note): needs the interpreter-level
+    Type-field argument riding the I2 premise. UNPRICED separately;
+    part of S23-A.
+  - UNREACHABLE (1 site, dead guard): :245 "SetHardState failed" —
+    `MemoryStorage.SetHardState` returns nil UNCONDITIONALLY
+    (raftsubject/raft/storage.go:137-142). Falls out of any run
+    replay; a standalone never-fires lemma is trivial.
+  - HARNESS-ERROR GUARDS (2 sites, structurally silent, proof owed):
+    :254 "Append failed" — `MemoryStorage.Append` errors only on a
+    compaction gap (storage.go:293-322, the "missing log entry"
+    arm); the twin never compacts, so the guard is silent on every
+    Ready-contract append — the ∀-stream proof is the log-contiguity
+    invariant (with S23-A). :262 "unexpected snapshot" — fires iff a
+    Ready carries a snapshot; the twin has no compaction/snapshot
+    source. Structural never-fires argument owed; small, UNPRICED.
+  - HARNESS-LIVENESS GUARDS (4 sites, bounds): :236 harvest 64-round
+    quiescence; :455/:472/:489 drain 10,000-delivery quiescence
+    (drain/drainRev/drainSkip). A completing run that trips one
+    still returns `.ok` with `violations ≥ 1`, so T1 NEEDS these
+    never to fire on completing runs. Canonical stream: each is
+    discharged by the replay's kernel run equations (the replayed
+    rounds literally quiesce — the equation is the evidence).
+    ∀-stream: a Ready-cycle/net-population termination bound —
+    UNPRICED; rides O6's route (or the [USER] scoping call).
+  Count reconciliation vs the audit: the audit said "six
+  harness-liveness/error guards"; the source census is 5 checker + 7
+  harness (1 unreachable + 2 error + 4 liveness) = 12. The
+  T1 statement module's aboutness sentence now states the 5+7 split
+  (RaftAgreement.lean, corrected — it read "a completing run's
+  checker recorded nothing", which silently absorbed the seven
+  guards).
+- **S23-A THE S2/S3 ASSEMBLY** (NEW — the audit's HIGH: entirely
+  absent from the old census). The landed S2/S3 chain lives on the
+  extended carrier `HNet`, not `SNet`; assembling it into T1 needs:
+  (i) the HNet↔SNet carrier bridge — relating BOTH abstract state
+  spaces to one concrete run (UNPRICED — design work first; the
+  fragment parameters `ldr`/`tm` come from the S1 output per the
+  module's §7 note); (ii) a `HistInv` seed/instance at the assembly
+  net (UNPRICED); (iii) an `S23CheckerInterface` instance — the
+  S2/S3 analog of O5a (UNPRICED; the S1 bridge is the template);
+  (iv) the S3 anomaly sub-check (see T1-V :316 — interpreter-level).
+- **I1-V THE SECOND-DIALECT VACUITY DEBT** (NEW as a census item):
+  `ElectObligations` has exactly ONE construction site
+  (`etcd_discharges`); the redesign's own vacuity check ("every
+  obligation dischargeable by ≥2 dialects") is unmet — the Verdi
+  instance was deliberately not attempted (arc4b log). The live
+  docstrings that asserted the two-dialect property AS FACT are
+  corrected (NativeObligations.lean, both sites) to intent + open
+  debt. UNPRICED here (the arc4b record declined the attempt;
+  pricing = reading T3's ElectionSpecLemmas consumption against the
+  signature, SC1's census gives the shape). NEXT-CHARTER item, not
+  attempted this round.
+- **C2a CONSUMER STATUS: PARTIAL** (NEW as a census item — the α-gate
+  verdict re-reported in light of what landed): the ~6,000-line
+  FrameSimS/span_consume instrument has ONE consumer
+  (`RingWitness.lean`, its own discharge witness — LIVE again since
+  F3); its one chartered real use (sub-span reuse inside the round
+  assembly) found it structurally inapplicable and all four round
+  lemmas transport via the weak `stepFnIter_sim`
+  (RoundMaLemma.lean:49-64, on the record). The instrument is
+  VALIDATED, not CONSUMED. Re-evaluation trigger: the O2b prune-seam
+  decision (FrameSim-composition route would make FrameSimS or the
+  ~ quotient load-bearing); until then it is a tolerated scaffold
+  with its retirement condition = the ShapeSim ledger note.
+
+### F5 — coherence cleanups (FIXED)
+
+- (a) The five superseded SC1 `Skel_*` Props DELETED
+  (NativeS23Route.lean: Skel_singleWriterHistory — the FALSIFIED one
+  — + Skel_histWellFormed/Skel_logsArePrefixes/Skel_appliedFromHist;
+  NativeObligations.lean: Skel_onlyNodeOneClaims). Deletion test RUN:
+  whole-tree identifier scan (each occurred only at its declaration)
+  + this round's build. Tombstones at both sites keep the chain-link
+  map and the decision prose.
+- (b) `Sym/PickTransport.lean` DELETED (the A4-U9 lift): byte-
+  identical duplicate with zero term-level consumers; its four named
+  consumers all use the RaftSeam original. Deletion chosen over
+  rewiring as the cheap direction ([AGENT]: rewiring re-heads
+  BfSteps and invalidates the fixture-chain downstream for zero
+  semantic change). SpillTransport re-headed to TableExt (what it
+  actually uses); Audit/Kit pin replaced with the closure tombstone;
+  U4 promotion-ledger row CLOSED-UNCONSUMED with the re-promotion
+  condition recorded (a real non-RaftSeam consumer; move, don't
+  copy).
+- (c) Stale SCAFFOLD tags corrected: `RoundLemmaShape`'s docstring
+  (both audit dimensions' finding — "no proved instance yet" beside
+  four proved instances) now records the discharge;
+  `RoundMarLemma`'s "reachable fixture" wording corrected to
+  doctored+pruned (the U26 probe: pruned fixtures are open terms).
+- (d) Star/ReachRel UNIFIED onto one closure (the landing-time
+  candidate, done): polymorphic `Star`+`Star.trans`+`star_invariance`
+  live ONCE in NativeS1Chain; `ReachRel` is the SNet `abbrev` with
+  @[match_pattern] constructor aliases + a `trans` alias, so every
+  consumer/pattern/dot-call is source-compatible; NativeS23Chain's
+  duplicate block deleted, its stale tag replaced with the
+  unification record.
+- (e) ChoiceCanon/ChoiceInv renamespaced `GoLean.ChoiceErase` →
+  `GoLean.Frame.ChoiceErase` (the Frame/ directory now means one
+  thing); SeedCFormLit's 1,258 namespace references updated by
+  mechanical sed ([AGENT]: regeneration-equivalent edit to a
+  generated file, recorded here). NEW `Audit/ChoiceInv.lean`: curated
+  pins for the SP1 layer (carrier laws, the F2a regression witness,
+  the statement layer's two consumer-facing theorems, the seed
+  discharge surface, the occupation witnesses) — closing "4 of
+  ChoiceInv's 7 declarations unpinned/unconsumed" the honest way:
+  `choiceInvariant_instance` is now pin-referenced;
+  `ChoiceInvariantTo` (strict form) and `anchorRunProg` remain
+  zero-consumer BY DESIGN (the masked form is the used one; the
+  closed-form runner awaits its kernel-link consumer) — recorded
+  here rather than deleted, since the ∀-stream statement layer is
+  the named O6 seam.
+- (f) The seam note carries its LINEAGE line + the §8-mandated
+  reconciliation banner (subordinate to the flexibility redesign,
+  now tracked in-branch).
+
+### F6 — the evidentiary base TRACKED
+
+- `tools/campaign/` (33 files, ~500 KB): every generator cited by a
+  tracked docstring (RoundMa/Vote/Mar/VrGen, MsgAppRingGen, the 12
+  handler-Lit generators, Bf/Bc/31 generators, SeedLitGen +
+  SeedCFormGen — recovered from the arc4c worktree's gitignored
+  artifacts, where they were stranded — C2bWitnessGen), the two
+  Python Eq emitters, the doctor+prune fixture tooling
+  (TwinRound/TwinVote/TwinMar/TwinVrFixProbe, RoundFixDump), the
+  F2a probe, and the corrected corpus-census.sh. README maps
+  script → generated modules → consuming chain, with the invocation
+  convention. Probe OUTPUTS stay gitignored by design. [AGENT]
+  deviation, recorded: per-module in-file provenance headers were
+  NOT rewritten from `artifacts/probe/` to `tools/campaign/` paths —
+  a comment-only edit to ~90 generated modules forces a multi-hour
+  re-elaboration of the generated corpus for zero semantic change;
+  the README carries the per-module provenance table and the
+  resolve rule instead, and the provenance rule going forward
+  (generator lands tracked, same commit, cited by the generated
+  header) is in the README.
+- Doc-of-record chain FIXED: `docs/2026-08-26_campaign-flexibility-
+  redesign.md` (THE plan of record — cited by name from landed proof
+  modules, absent from the branch) and
+  `docs/2026-08-26_mechanism-registry.md` (the audit's coherence
+  deliverable) copied into this branch's tracked docs/ with
+  commit-qualified snapshot banners (the registry banner lists the
+  rows this fix round changed); `docs/raft-campaign-log.md`
+  refreshed from the 582-line/2026-08-22-stale snapshot to the
+  campaign lane's live 2,078-line state @ ae6504a6.
+
+### F7 — the AuditCorpus landmark record
+
+`docs/corpus-landmark-record.md` created: `CORPUS-LANDMARK-RUN:
+<sha> <date> <jobs> <declarations> <cold|warm>` markers mirroring the
+judge's convention, with the 203-vs-204 job-count discrepancy
+RECONCILED (different trees: 204 @ the pre-merge U26 tip 772a295b,
+203 @ the post-main-merge landing tip f40f67f9 — the merge's
+lakefile/aggregator changes shift the invocation's job graph; the
+content-certifying declaration count agreed exactly, 23,278; neither
+log had pinned sha↔count, the marker format now does). Both
+pre-record runs transcribed as retroactive markers; this round's
+landmark run appends its own.
+
+### Ops (this round)
+
+- STALE LOCK CLEARED, evidence-based ([AGENT]): the box-wide build
+  lock was held by owner file "coordinator-landing" (no pid, no
+  timestamp — pre-owner-file-format), lock dir created 13:02:42,
+  owner written 13:18:52 — the coordinator's landing builds finished
+  13:18 per the landing logs — with ZERO build processes on the box
+  at 14:44. Cleared at 14:44; this round's acquisitions write the
+  full owner line (lane + pid + timestamp). This is the SECOND
+  stale-lock incident (U25 recorded the inverse: removed while
+  held); the owner-file protocol earned its keep both ways.
+- First full-build attempt ended after ~85 s at [111/186] with the
+  exit status masked by a tail pipe (worker error, recorded: never
+  pipe a gate build's exit through tail); re-run with direct
+  redirection + LEAN_NUM_THREADS=6 at 96G under the lock.
+
+### F2 re-verification result (derivation: fixround-build5.log, the
+### sequential warm)
+
+**NO NUMBER MOVED.** `SeedPin` rebuilt green through the FIXED
+`collectFix` (rc=0, 15:35:16→15:38:57 wall incl. deps): the
+kernel-literal pin `seed_cform_pin` recomputed EQUAL to the pinned
+`seedCForm`, `seed_clean` and the 207-cell shape held, and
+`SeedWitness`'s equivalence pins (`seedVar_equiv`/`seedVar_clean`/
+`seedVar_rand_differs`) recomputed green (rc=0, 39 s). So the seed
+state's traversal never entered the early-stop path the bug left
+open — SP1's census numbers stand as recorded, now through honest
+code. (Had the form changed, the literal pin would have failed
+loudly; the check is the build itself, not a re-derivation.)
+The four round-kind lemmas' readout pins and the roundHb/seed
+readouts likewise rebuilt green through the fail-closed readers
+(F2b): the TypeId guards pass on every landed state, i.e. the
+hardening excluded only the mis-read space, no landed theorem's
+content.
+
+### Ops addendum — the OOM diagnosis for this round's builds
+### (masked-kill convention followed)
+
+The first two full-build attempts died in ~85 s/3 min;
+`systemctl --user show <scope> -p Result` = **oom-kill** at the 96G
+cgroup, both times — and the same query shows SIX oom-kills from a
+prior session this morning (05:16–06:41) on `lake build
+RoundVrEqA..EqE` alone. Cause: Lake's job concurrency (=
+LEAN_NUM_THREADS under the ci scaling rule) elaborating several
+Round*Eq window modules at once; the per-module peak is modest (box
+≤19 G observed during the sequential warm) but 6–8 concurrent
+window modules breach 96G. Remedy that worked: SEQUENTIAL WARM of
+the heavy chains at LEAN_NUM_THREADS=2 (the "sequential warm after
+interface-hot edits" convention, exercised for real), then the full
+build at 8. Warm walls, measured: RoundMaEquation 4m52s,
+RoundVoteEquation 4m47s, RoundMarEquation 7m26s, RoundVrEqA–E
+3–5 min each (19m38s for the five), RoundVrEquation 1 s (aggregation),
+SeedPin 3m41s, SeedWitness 39 s, RoundInductionWitness 9 s.
+
+## A4-FIX exit (2026-08-26, tip = this commit)
+
+**CHECKPOINT:** commits since the landing tip b4977d05: `4471095f`
+(K1 — F2 fail-closed fixes + F5a/b/d/e deletions/unification/SP1
+pins), `5f34519a` (K2 — F1 claim honesty + F3 witness return),
+`7cfffdca` (K3 — F5f/F6/F7 records + tooling), + this log commit
+(K4). ONE WRITER held throughout; nothing merged; never touched main.
+
+**GATE (verbatim): `RESULT: PASS` / `GATE_EXIT=0 wall=256s`**
+(`GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=96G scripts/ci` under the
+build lock, warm, 23 ok steps; log `artifacts/fixround-ci.log`; the
+no-diff hatch is in-scope — this round touched no runtime code, no
+Corpus/, no baselines/). Gate-wall delta of the F3 witness return,
+measured warm: 256 s vs the landing's 241 s; default target now 627
+jobs (vs 536). The corpus deferred-sweep note dropped 98 → 26 files.
+Gate re-run at the COMMITTED tip (same content + the log commit):
+**PASS, GATE_EXIT=0 wall=255s** (`artifacts/fixround-ci-tip.log`),
+now printing the landmark notes computed against the commits:
+staleness (5 commits since f40f67f9) AND **OWED (scope): 1
+trusted-closure file changed — `proofs/Audit.lean`** (this round's
+pin-module import additions; ci's trigger list counts Audit.lean).
+Report-only; the judge re-run decision at the merge step is the
+operator's. For that decision: Challenge.lean's Lean IMPORT closure
+was verified DISJOINT from every touched file (import-graph
+computation, closure size 18, intersection NONE) and the lakefile is
+untouched — the Audit.lean delta is import lines + the PickTransport
+pin tombstone, no designated statement moved.
+
+**Landmark corpus build at this content: PASS** — 112 jobs exit 0,
+sweep verbatim "corpus audit sweep: 21124 declarations across the
+corpus closure, all axiom-clean", 381 s (handler chains COLD after
+the SpillTransport re-head), recorded as the first tracked
+`CORPUS-LANDMARK-RUN:` marker in `docs/corpus-landmark-record.md`.
+
+**Hatch state:** zero sorry / native_decide / new axioms anywhere in
+this round's changes (the gate's preflight + both in-build sweeps are
+the check); every new theorem within [propext, Classical.choice,
+Quot.sound], the new pin module's footprints pinned exactly.
+
+**PER-FINDING DISPOSITIONS (against the 29-finding pack, tracked at
+`docs/2026-08-26_landing-audit-findings.md`):**
+- FIXED (22): the round-induction claim pair (prose at every site,
+  theorem untouched) · the census omissions (rewritten complete,
+  above) · collectFix (+ kernel witness; SP1 numbers re-verified
+  UNMOVED) · absTwinRead fail-closed (+ TypeId pins) · the corpus
+  witness placement (chains returned; criterion amended) · the
+  49,822-line re-entry (justified line-by-line under the corrected
+  rule) · the five Skel props DELETED (deletion test run) ·
+  PickTransport DELETED (ledger row closed-unconsumed) ·
+  Star/ReachRel UNIFIED · both stale SCAFFOLD sites · the RoundMar
+  "reachable" wording · the manifest undercount · O3 restored · the
+  AuditCorpus landmark record (+ job-count reconciliation) · the
+  mask citation re-anchor · the evidentiary base tracked
+  (tools/campaign + README) · the doc-of-record chain (redesign +
+  registry copies, log refresh, seam-note reconciliation banner +
+  LINEAGE) · ChoiceCanon/ChoiceInv namespace · the SP1 Audit pins ·
+  the I1 vacuity DOCSTRINGS (the debt itself stays open, below) ·
+  the T1 aboutness sentence · the U26 log overclaims (inline
+  corrections).
+- RECORDED-OPEN (4): I1-V the second-dialect discharge (census item;
+  un-attempted by charter) · C2a consumer status PARTIAL (census
+  item; re-evaluation trigger = O2b) · the literal-mode overrun
+  (standing violation named in O2; nothing laundered) ·
+  mechanism/instance non-separation (registry row stands; a fix
+  round does not restructure the import DAG).
+- NEXT-CHARTER (3, per the fix order's NOT-IN-SCOPE): O5b the
+  abs-pairing · the Verdi instance discharge · the literal/emitter
+  mode decision for the ~28 replay instances (coordinator).
+
+**[AGENT] calls, tagged:** (1) stale build lock cleared on evidence
+(zero build processes, 1.5 h old, pre-format owner file) — ops
+section above; (2) per-module generated-header provenance rewrites
+skipped for the tracked-README table (multi-hour re-elaboration for
+zero semantic change); (3) PickTransport deleted rather than rewired
+(the cheap direction, reasons in the tombstone); (4) commit
+granularity: three concern-cluster commits validated at the tip by
+the full gate rather than per-commit builds (arc-2 fix-round
+precedent; intermediate commits of a fix round do not each earn a
+multi-hour build); (5) the findings pack copied into tracked docs as
+the disposition anchor.
+
+**What-this-taught-us:** (a) a witness that ships in a NON-DEFAULT
+target is not shipping WITH its law — the non-vacuity gate's whole
+mechanism is the per-commit build, and a split that optimizes build
+cost can silently trade away exactly that; the amended criterion
+(placement follows the LAW) keeps the split honest. (b) A fail-open
+in a fail-closed module's plumbing (the length-vs-measure test) is
+found by READING the monotonicity argument against the data
+structure, and the #eval-first probe turned the reconstruction into
+a two-minute confirmed reproduction — same lesson as the 60 GB
+decide incident, at the opposite scale. (c) Job-concurrency is the
+real memory knob for window-kernel modules: per-module peaks are
+modest, 6–8 concurrent ones breach 96 G; sequential-warm-then-full
+is now a measured, repeatable pattern (ops above).
+
+**PROPOSED NEXT CHARTER (successor / coordinator):** (1) O5b — the
+abs-pairing definition + per-boundary pins, turning the induction's
+independent abstract chain into the coupled carry (the fix round's
+corrected docstrings point every reader at it); (2) the O2b
+prune-seam decision + the O2 mode decision (literal/emitter vs the
+I2 prover — a coordinator call the redesign's stop makes mandatory
+BEFORE any new generated chain); (3) I1-V the Verdi
+`ElectObligations` instance (the flexibility gate's own vacuity
+check); (4) S23-A design pass (HNet↔SNet bridge + the S2/S3
+checker-interface instance shape). The census above holds the full
+list with prices.

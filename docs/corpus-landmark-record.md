@@ -52,3 +52,10 @@ it. Note the fix round REDREW the corpus boundary — the Ring/Round*
 witness chains returned to the live target, so job/declaration counts
 drop sharply from these two entries onward; see
 `proofs/GoLeanProofsCorpus.lean`'s amended criterion.)
+
+CORPUS-LANDMARK-RUN: 7cfffdca 2026-08-26 112 21124 cold
+(fix-round landmark: the corpus boundary redrawn — 24 handler-equation
+chain modules + live deps; the handler chains rebuilt COLD after the
+SpillTransport re-head, 381 s wall at LEAN_NUM_THREADS=4/96G; sweep
+line verbatim: "corpus audit sweep: 21124 declarations across the
+corpus closure, all axiom-clean"; log artifacts/fixround-corpus.log)
