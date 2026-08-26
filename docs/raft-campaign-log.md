@@ -2176,6 +2176,27 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   trust-neutral pre-build pattern. Merge sign-off is the user's, at
   this moment, for this merge; push separate as always.
 
+- **[USER] 2026-08-26 — MERGE APPROVED AND EXECUTED: main @
+  c4986b29** (ff-only, clean; the arc-4 stack — 150+ commits of
+  equation machinery, signature + native chains, seed/choice
+  carrier, round lemmas + induction, checker bridges, corpus
+  split, tracked tooling — is on the trunk). Push not executed
+  (separate sign-off, unrequested). BASECAMP REACHED. **THE
+  MID-EXECUTION DESIGN REVIEW is chartered with the [USER]
+  four-goal frame**: (1) a proof that achieves the goal; (2)
+  reusable machinery solid for further proofs; (3) machinery
+  LEGIBLY understandable — not a ball of mud; (4) reuse of
+  tried-and-true design from BRiCk / RefinedC / anywhere.
+  Explicit mandates: pay down debt; coherent design; identify
+  KILLS (retired mechanisms). [AGENT] structure: phase 1 = three
+  parallel readers (BRiCk architecture+agent-conventions;
+  RefinedC/Lithium type-rule-vs-automation separation; brick-wp
+  retrospective) + the coordinator's own frame from the registry/
+  census/design docs; phase 2 = the synthesis — per-layer
+  keep/recast/kill verdicts, the debt list, the legibility plan,
+  the summit plan reshaped; phase 3 = [USER] reviews the proposal
+  before anything builds.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
