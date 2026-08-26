@@ -28,11 +28,12 @@ import Audit.SliceQueue
 import Audit.MatMul
 import Audit.FrameShape
 import Audit.DriverNet
-import Audit.Ring
-import Audit.RoundMa
-import Audit.RoundVote
 import Audit.CheckerBridge
-import Audit.RoundMar
+-- The corpus pin modules (Audit.Ring / Audit.RoundMa / Audit.RoundVote /
+-- Audit.RoundMar) moved to the AuditCorpus root with the A4-U25
+-- validation-corpus split: their subjects are no longer in this build's
+-- closure, so their pins run at landmark corpus builds
+-- (`scripts/capped lake build AuditCorpus`) — see GoLeanProofsCorpus.lean.
 
 /-!
 # In-build epistemic gate for the Iris proof layer

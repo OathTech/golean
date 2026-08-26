@@ -33,34 +33,23 @@ import GoLeanProofs.Sym.PickTransport
 import GoLeanProofs.Sym.SpillTransport
 import GoLeanProofs.Specs.Raft.HhLit
 import GoLeanProofs.Specs.Raft.HhEquation
-import GoLeanProofs.Specs.Raft.HaeLit
-import GoLeanProofs.Specs.Raft.HaeEquation
 import GoLeanProofs.Specs.Raft.StaticCells
 import GoLeanProofs.Specs.Raft.StaticCellsExt
-import GoLeanProofs.Specs.Raft.StaleLit
-import GoLeanProofs.Specs.Raft.StaleEquation
-import GoLeanProofs.Specs.Raft.LaLit
-import GoLeanProofs.Specs.Raft.LaEquation
-import GoLeanProofs.Specs.Raft.BlLit
-import GoLeanProofs.Specs.Raft.BlEquation
-import GoLeanProofs.Specs.Raft.HhAdvLit
-import GoLeanProofs.Specs.Raft.HhAdvEquation
-import GoLeanProofs.Specs.Raft.MsErrEquation
-import GoLeanProofs.Specs.Raft.HaeRejLit
-import GoLeanProofs.Specs.Raft.HaeRejEquation
--- A4-U14: the branch-crossing transport (path-condition splitting) +
--- the From-symbolic handleHeartbeat equation (its discharge witness).
+-- THE VALIDATION-CORPUS SPLIT (A4-U25 slice 0, 2026-08-26; the OOM
+-- incident's correction (a)): the literal-mode corpus — the generated
+-- `*Lit`/`*Eq` handler-equation chains (Hae/Stale/La/Bl/HhAdv/MsErr+
+-- MsResite/HaeRej/HhFrom/SfHb/SfPd/SCHb/Slb), the Ring span chain, and
+-- the three proved round-kind instances (RoundMa/RoundVote/RoundMar) —
+-- moved to the NON-DEFAULT `GoLeanProofsCorpus` target, built at
+-- landmarks via `scripts/capped lake build AuditCorpus` (see
+-- GoLeanProofsCorpus.lean's header for the census + discipline).
+-- What stays here is exactly the live closure: HhLit/HhEquation (a
+-- ShapeWitness dependency), RoundHbLit (a RoundStatement dependency),
+-- StaticCells(+Ext) (link-pin pattern machinery), the Bf/Bc fixture
+-- chains (AllocEq/AbsStateV2 dependencies), and RoundStatement itself.
+-- A4-U14: the branch-crossing transport (path-condition splitting);
+-- its From-symbolic equation witness chain is in the corpus target.
 import GoLeanProofs.Sym.BranchTransport
-import GoLeanProofs.Specs.Raft.HhFromLit
-import GoLeanProofs.Specs.Raft.HhFromEquation
-import GoLeanProofs.Specs.Raft.SfHbLit
-import GoLeanProofs.Specs.Raft.SfHbEquation
-import GoLeanProofs.Specs.Raft.SfPdLit
-import GoLeanProofs.Specs.Raft.SfPdEquation
-import GoLeanProofs.Specs.Raft.SCHbLit
-import GoLeanProofs.Specs.Raft.SCHbEquation
-import GoLeanProofs.Specs.Raft.SlbLit
-import GoLeanProofs.Specs.Raft.SlbEquation
 import GoLeanProofs.Specs.Raft.RoundHbLit
 import GoLeanProofs.Specs.Raft.RoundStatement
 -- C2a: the completeness-strengthened frame simulation (FrameSimS) —
@@ -76,57 +65,12 @@ import GoLeanProofs.Specs.Raft.ShapeWitness
 import GoLeanProofs.SliceWalk
 import GoLeanProofs.Specs.Raft.DriverNet
 import GoLeanProofs.Specs.Raft.DriverNetWitness
--- C2c: the storage-resp sub-ring spans at the MsgApp append-family round
--- fixture (mirror-chain form; generated literals + equations + witness)
-import GoLeanProofs.Specs.Raft.RingLit1
-import GoLeanProofs.Specs.Raft.RingLit2
-import GoLeanProofs.Specs.Raft.RingLit3
-import GoLeanProofs.Specs.Raft.RingLit4
-import GoLeanProofs.Specs.Raft.RingEquation
-import GoLeanProofs.Specs.Raft.RingWitness
--- C2d: the MsgApp round lemma — the R-form's first proved instance
--- (full-round literals + segment spans + the canonical run + the lemma)
-import GoLeanProofs.Specs.Raft.RoundMaLit1
-import GoLeanProofs.Specs.Raft.RoundMaLit2
-import GoLeanProofs.Specs.Raft.RoundMaLit3
-import GoLeanProofs.Specs.Raft.RoundMaLit4
-import GoLeanProofs.Specs.Raft.RoundMaLit5
-import GoLeanProofs.Specs.Raft.RoundMaLit6
-import GoLeanProofs.Specs.Raft.RoundMaEqA
-import GoLeanProofs.Specs.Raft.RoundMaEqB
-import GoLeanProofs.Specs.Raft.RoundMaEqC
-import GoLeanProofs.Specs.Raft.RoundMaEquation
-import GoLeanProofs.Specs.Raft.RoundMaLemma
--- A4-U23: the MsgVote round-kind instance (the R-form's second proved
--- instance; auto-discovered boundary schedule) + the checker-interface
--- I2 bridges (fold models + violation→delta + guard shape-pins)
-import GoLeanProofs.Specs.Raft.RoundVoteLit1
-import GoLeanProofs.Specs.Raft.RoundVoteLit2
-import GoLeanProofs.Specs.Raft.RoundVoteLit3
-import GoLeanProofs.Specs.Raft.RoundVoteLit4
-import GoLeanProofs.Specs.Raft.RoundVoteLit5
-import GoLeanProofs.Specs.Raft.RoundVoteLit6
-import GoLeanProofs.Specs.Raft.RoundVoteEqA
-import GoLeanProofs.Specs.Raft.RoundVoteEqB
-import GoLeanProofs.Specs.Raft.RoundVoteEqC
-import GoLeanProofs.Specs.Raft.RoundVoteEquation
-import GoLeanProofs.Specs.Raft.RoundVoteLemma
--- A4-U24: the MsgAppResp maybeCommit round-kind instance (the R-form's
--- third proved instance; commit-without-append — the matrix's untested
--- row, the etcd-dialect commit story at the interpreter level)
-import GoLeanProofs.Specs.Raft.RoundMarLit1
-import GoLeanProofs.Specs.Raft.RoundMarLit2
-import GoLeanProofs.Specs.Raft.RoundMarLit3
-import GoLeanProofs.Specs.Raft.RoundMarLit4
-import GoLeanProofs.Specs.Raft.RoundMarLit5
-import GoLeanProofs.Specs.Raft.RoundMarLit6
-import GoLeanProofs.Specs.Raft.RoundMarLit7
-import GoLeanProofs.Specs.Raft.RoundMarEqA
-import GoLeanProofs.Specs.Raft.RoundMarEqB
-import GoLeanProofs.Specs.Raft.RoundMarEqC
-import GoLeanProofs.Specs.Raft.RoundMarEqD
-import GoLeanProofs.Specs.Raft.RoundMarEquation
-import GoLeanProofs.Specs.Raft.RoundMarLemma
+-- The C2c Ring span chain and the three proved round-kind instances
+-- (C2d RoundMa, A4-U23 RoundVote, A4-U24 RoundMar) live in the
+-- validation-corpus target (GoLeanProofsCorpus.lean — the A4-U25
+-- split; see the comment at the HhEquation block above). The
+-- checker-interface I2 bridges (A4-U23 slice 2) are LIVE and stay
+-- below (NativeCheckerBridge).
 -- arc4b landing (C2c slice 0, per the lane's landing manifest): the native
 -- S1/S2/S3 chain over the obligation signature (SC1 + C3 + C4)
 import GoLeanProofs.Specs.Raft.NativeObligations
@@ -347,9 +291,9 @@ import GoLeanProofs.Specs.Raft.BpcResite
 import GoLeanProofs.Specs.Raft.LensInst
 import GoLeanProofs.Specs.Raft.AbsStateV2
 -- A4-U8 part 2: the fixture re-siting consolidation (the U6 charter
--- residual): Ms / BC / Bf re-sited off the static locLit range with
--- placement-LIVE alloc equations.
-import GoLeanProofs.Specs.Raft.MsResite
+-- residual): BC / Bf re-sited off the static locLit range with
+-- placement-LIVE alloc equations. (MsResite — consumed only by
+-- MsErrEquation — is in the corpus target with the A4-U25 split.)
 import GoLeanProofs.Specs.Raft.Bc31Lit
 import GoLeanProofs.Specs.Raft.Bc31
 import GoLeanProofs.Specs.Raft.Bf31Lit
