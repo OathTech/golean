@@ -2158,6 +2158,24 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   milestone merge takes no shortcuts) + the policy delta-review of
   the fix diff, in parallel; the ff ask follows both.
 
+- **THE LANDING CEREMONY — COMPLETE; FF SIGN-OFF POSED** (2026-08-26):
+  tip c4986b29, tree clean, main verified ancestor (ff-only will
+  succeed). The chain, end to end: the 146-commit lane + the main
+  merge (two union conflicts) + the milestone audit (29 findings,
+  registry delivered) + the fix round (22 fixed, no numbers moved)
+  + the delta-review (8 residuals, operator-applied same-day, one
+  deferral reasoned) + judge PASS at-tip (56 theorems, 118 s replay
+  — after the wrapper's Solution pre-build fixed the cold-clone
+  breach the delta-review predicted; runs 1-2 documented, the
+  wrapper edit delta-flagged for the basecamp review) + the tracked
+  corpus landmark + final gate PASS. WHAT THIS CEREMONY TAUGHT US:
+  (1) the delta-review's cold-build finding was vindicated against
+  the JUDGE within hours — reviews that predict failures are the
+  cheap kind; (2) the witness-with-its-law rule and the judge's
+  cold clone interact — now handled in the wrapper's own
+  trust-neutral pre-build pattern. Merge sign-off is the user's, at
+  this moment, for this merge; push separate as always.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
