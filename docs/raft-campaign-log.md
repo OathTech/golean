@@ -2133,6 +2133,31 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   machine-checkable acceptance, honest failure surfacing,
   budget-awareness — not annotation ergonomics.
 
+- **THE LANDING FIX ROUND — COMPLETE** @ 07d06139, gate PASS 255 s
+  (2026-08-26): 22/29 FIXED (collectFix fail-open closed with a
+  kernel regression witness; absTwinRead fail-closed with TypeId
+  checks; the falsified Skel props DELETED with deletion tests; the
+  PickTransport duplicate deleted, ledger closed-unconsumed;
+  Star/ReachRel unified; every induction overclaim rewritten to the
+  truth with O5b as the named open pairing; the witness-return
+  corrects the non-vacuity weakening — corpus criterion amended:
+  A WITNESS SHIPS WITH ITS LAW; 33 generator/census tools TRACKED
+  under tools/campaign/ with provenance; the design of record +
+  registry + findings pack now ON THE BRANCH; the complete T1
+  census committed; the first tracked CORPUS-LANDMARK-RUN marker),
+  4 RECORDED-OPEN (un-laundered), 3 NEXT-CHARTER (O5b; the Verdi
+  instance; the O2 mode decision — now folded into the basecamp
+  review). F2 re-verification: NO pinned number moved — the bug
+  was real (probe-reproduced) but the seed never entered its path;
+  the deliberate deltas measured and explained (627 jobs, 256 s
+  gate — the witness-return price). Ops: this round's kills =
+  cgroup oom from window-module CONCURRENCY (per-module peaks
+  modest); measured remedy recorded (warm at 2 threads, full at 8).
+  [AGENT]: judge re-run launched (Audit.lean is watched — the
+  trigger applies; Challenge closure verified disjoint but the
+  milestone merge takes no shortcuts) + the policy delta-review of
+  the fix diff, in parallel; the ff ask follows both.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
