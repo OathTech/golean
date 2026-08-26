@@ -5974,3 +5974,226 @@ again — Audit.RoundVote, Audit.CheckerBridge).
   commits** AND **OWED (scope)** (Audit.lean lines again — both
   report-only) — both stand escalated for the operator's merge step,
   as since U8.
+
+## A4-U24 — the MAYBECOMMIT ROUND-KIND INSTANCE (the R-form's third proved instance; commit-without-append) + THE SPAN-MODEL SLICE'S MEASURED BOUNDARY-STOP + the γS_pin promotion (2026-08-26, same worker as U23, coordinator-dispatched per the U23 exit charter; U23 accepted with all [AGENT] calls endorsed)
+
+- SAME-WORKER CONTINUATION (no fresh re-verification owed; the U23
+  exit state confirmed: tip 5778bcb3 clean, three U23 commits in
+  place). Coordinator notes held live: no Seed*/Choice*/Quot* names
+  (none created; the sibling's own SeedPin/ChoiceInv work observed
+  running, untouched); no round induction; boundary-stop authority
+  on the span-model kit lemma.
+
+### Charter item 1 — the span-computes-model slice: MEASURED, then
+### BOUNDARY-STOPPED (the chartered stop condition fired)
+
+The kit lemma (the unit's one unpriced piece) was measured FIRST,
+by construction rather than estimate:
+
+- **The anatomy, banked** (probes `UtoaCensus`/`UtoaTrace*.lean` →
+  `utoacensus.out`/`utoatrace*.out`): a utoa call is 28 steps
+  (zero branch) / 151 + 67·(digits−1) (loop path; first iteration
+  74, subsequent 67, entry 37, exit 36 — census totals reproduced
+  exactly); full config dumps at every segment boundary; the frame
+  env shape ([$forFirst]/[s]/[$res0, v] scopes) mapped.
+- **The kit inventory, surveyed**: `stepFnIter_call_span` (the P-H
+  call combinator), `stepFnIter_iterate_bail_rel` (config-generic —
+  the loop schema is NOT the gap), the conditioned singles
+  (call_enter/var/ref/strict_apply/store_step/block/splice/drain/
+  return_frame...). What is MISSING: (a) the PLAIN-for desugar has
+  no head schema — `SliceWalk` covers only the RANGE desugar
+  ($rcoll/$rlen/$ridx); utoa's `for v > 0` head glue needs its own
+  micro-lemma family; (b) the act_inc idiom's cost at call-frame
+  depth: ~50 lines of spelled continuation tower per micro-lemma,
+  ~10 micro-lemmas for utoa alone.
+- **The re-price (the deliverable of this slot)**: utoa kit ≈ 0.5
+  unit; + the viol span and the S1-record span ≈ +0.5; + the apply
+  span (4 pb-getter call spans × the same idiom + 12 branch
+  combinations) ≈ +0.7–1. THE SLICE IS A FOCUSED 1.5–2-UNIT
+  SUCCESSOR ARC, not the ~1 unit U23 priced — the miss was exactly
+  the plain-for schema gap and the frame-depth spelling cost,
+  neither visible until the trace mapping. The WEAK-FORM statement
+  design is recorded for the successor: the span lemmas need only
+  ∃-string conclusions (bounded completion + frame-respect; NO
+  decimal-correctness modeling — the checker's counters never
+  depend on the message text), which halves the utoa lemma's
+  obligations.
+- [AGENT] The boundary-stop was taken AT THE MEASUREMENT, not after
+  sinking the budget: the coordinator's stop clause named this
+  exact trigger, and pushing on would have burned the rotation on
+  a half-landed kit with item 2 lost. The U23 model bridges + guard
+  pins stand as the checker story's current honest frontier;
+  `s1_leaf`/`s23_leaf` REAL-about-the-bytes remains OPEN, now with
+  a measured price and a mapped route.
+
+### Charter item 2 — THE MAYBECOMMIT ROUND LEMMA (delivered end to end)
+
+- **The anchor-scan template extension** (probe `AnchorScan.lean` →
+  `anchorscan.out`): the doctor+prune template at a NON-INITIAL
+  anchor for the first time. The scan (30 anchors, node-1 shell +
+  log + livelen per loop head) decoded the run's own macro
+  structure: anchors 0–2 CANDIDATE (the election in flight — the
+  first fixture attempt at anchor 0 hit the stepCandidate drop path
+  and was discarded, 6,087 steps, recorded); anchor 3 = the first
+  LEADER anchor (state=2, lead=1, becomeLeader noop entry 2 stable
+  and pending quorum, committed=1); the real run's own commits land
+  at anchors 7/16/25 — the family is reachable and load-bearing.
+- **The fixture** (`TwinMarFixProbe.lean` → `marfix.out`): doctor
+  at anchor 3 = the single live MsgAppResp {Type 4, From 2, To 1,
+  Term 1, Index 2}; prune 49 cells; round **26,224 steps / 10
+  draws, self-returning**; POST: node 1 committed/applying/applied
+  1→2 — THE COMMIT MOVED, with NO append.
+- **The auto-discovery generator** (`RoundMarGen.lean` →
+  `roundmargen.out`): 33 boundaries + 12 crossings, ALL γ-valid
+  first try — including **TWO choice-free Visit exhaustion-exits**
+  (maybeCommit's quorum walk `trk.Committed()` after its three
+  mapIter draws; bcastAppend's peer walk after its three) — a THIRD
+  round kind confirming U23 lesson (a): the choice census
+  structurally cannot place these crossings; the mirror's own quit
+  sites can. Draw census: pick @207 + 6 Visit mapIters + 3
+  appendSpills = 10; the 12,816-step B22–B27 stretch (apply +
+  SetHardState + nested MsgStorageApplyResp Step) is CROSSING-FREE
+  — SC1's draw-free storage-resp classification at the COMMIT ring.
+- **The modules** (7 Lit files, 12.5 MB; `RoundMarEqA–D` from the
+  manifest via the emitter script `emit_mar_eq.py` — the Eq layer
+  is now MECHANICALLY GENERATED from the generator's manifest, a
+  template hardening this unit contributes; `RoundMarEquation`;
+  `RoundMarLemma`): **`roundMar_lemma` : RoundLemmaShape canonMar
+  canonMar' roundMarC0 26224 πMar — PROVED**, witnessed
+  (identity placement + closure), readouts #eval'd first then
+  kernel-pinned: committed 1→2 AND applied 1→2 through the deep
+  reader, net resp-dead + ONE post-commit MsgApp (1→2) live (node
+  3's paused probe-state flow sends nothing — read off the fixture),
+  claims 1→1 (node 1's leadership claim, recorded at its
+  becomeLeader harvest, PRE-dates the round), violations 0→0.
+- **THE ETCD-DIALECT COMMIT STORY, CONNECTED** (the coordinator's
+  charter note, recorded): commit-advance without new entries is
+  the exact behavior the A4 dialect mismatch lived on. The spec
+  side carves it out as the obligation signature's commit members
+  (`leaderCommitOk`'s quorum evidence; `followerCommitOk`'s
+  `min lc matched` envelope — the etcd discharge). THIS lemma is
+  the interpreter-level half: the twin's leader really performs
+  quorum-commit-without-append, kernel-checked at a reachable
+  fixture. The two halves meet at the T1 assembly.
+- **THE ROUND-KIND MATRIX now reads** (all at lemma level):
+  heartbeat = no ring work (T1-vacuous, U18); MsgVote =
+  hardstate-only ring (U23); MsgApp-append = the full storage-resp
+  ring (U22); **MsgAppResp-maybeCommit = the commit ring (apply +
+  hardstate-commit + ApplyResp arm, NO append) — this unit**.
+- Audit: 14 pins (`Audit/RoundMar.lean`, incl. the promoted
+  `concS_eq`), verified in place (`#guard_msgs` all matched, lean
+  exit 0). Axioms (probe `AxU24.lean`, verbatim, 19 lines): all
+  within [propext, Classical.choice, Quot.sound]; crossings/
+  readouts/pin [propext, Quot.sound]. Hatch grep over all 14 new
+  tracked modules: **0**.
+
+### The γS_pin PROMOTION (the U23 ledger row's trigger fired)
+
+`RoundMarEqA`'s six Visit crossings iterate the tracker map
+(defined value type) — the U23 table-footprint class, predicted
+BEFORE building and patched preemptively (all six passed first
+try). That made RoundMarEqA the second consumer:
+**`SymTables.Agrees.concS_eq`** now lives in `Sym/TableExt.lean`
+(generic over the pack; kit dot-naming), with `RoundVoteEqA.γS_pin`
+re-proved as a thin wrapper (statement unchanged, consumers
+untouched). Promotion timing note for the operator: a TableExt
+addition invalidates every downstream kernel module — the full
+rebuild is folded into this unit's gate; future promotions into
+deep Sym modules should batch at unit boundaries exactly like this.
+
+### Shared-box interference (ops, escalating U22's report)
+
+The reaper is BACK, worse: ~15 `lake build` invocations SIGTERM'd
+across this unit (exit 143; kills at ~52s/pass marks in waves with
+lulls; the arc2 sibling's TwinSegs builds seen dying the same way;
+`systemctl --user` shows dozens of failed scopes across BOTH
+lanes). The sharp new datum: **`lake env lean` invocations are
+NEVER killed** (the 20-min generator, every probe, every
+verification — zero kills across the unit), only `lake build`.
+Mitigations used, all recorded with captured exit codes: the
+`build143.sh` retry runner (EqA landed in a lull, 152 s); then the
+LEAN-CHANNEL pipeline — `lake env lean -o` producing oleans
+directly, through which EqB/C/D + Equation + Lemma + the Audit
+pins + all probes were verified (every FINAL exit 0, zero errors).
+One self-inflicted casualty recorded honestly: a `pkill -f` whose
+pattern matched its own invoking shell (killed my own regen task
+once; pattern narrowed). NO repo or global change made for any of
+this; the operator item from U22 stands, escalated with the
+lake-build-only selectivity as the fingerprint.
+
+- What-this-taught-us:
+  - (a) Measure the unpriced piece by BUILDING ITS MAP, not its
+    first artifact: the trace-driven anatomy (2 probes, ~30 min)
+    priced the kit lemma more accurately than U23's estimate and
+    cost ~5% of what a failed build-out would have.
+  - (b) The auto-discovery template + manifest-driven Eq emission
+    turns a round-kind instance into: one doctor, one anchor
+    choice, two machine-time runs, one script — the third instance
+    shipped with ZERO hand-written window theorems.
+  - (c) Fixture families have MACRO-anchors: the anchor scan is the
+    cheap instrument for placing a family at the right point of the
+    run's own history (candidate/leader/commit phases decoded in
+    one pass).
+  - (d) Under external kill pressure, the failure-mode split is the
+    instrument: which channels die and which survive IS the
+    fingerprint (lake build vs lake env lean), and it hands you the
+    workaround for free.
+
+### PROMOTION LEDGER updates (A4-U24)
+
+- **The round-kind instance row — THIRD INSTANCE DELIVERED**
+  (maybeCommit; matrix complete for the reachable ring-shapes).
+  Remaining reachable kinds: MsgProp leader-accept, MsgVoteResp/
+  becomeLeader (the election-completion round), no-op arms — each
+  now one doctor + one anchor + the emitter.
+- **The auto-discovery template row — HARDENED (v4)**: + the anchor
+  scan (macro-anchor placement) + the manifest-driven Eq emitter
+  (`emit_mar_eq.py`, reusable as-is for future kinds).
+- **The γS_pin row — CONSUMED/PROMOTED** (`SymTables.Agrees
+  .concS_eq`, TableExt; both consumers retrofitted in this unit).
+- **The span-computes-model row — RE-PRICED** (1.5–2 units,
+  measured; the anatomy + weak-form design + kit-gap list banked
+  above; the plain-for head schema is the one NEW kit piece
+  required — a `SliceWalk` sibling, promotable on landing).
+- The choice-invariance seam row: EXTENDED — πMar positions 1–6
+  (Visit mapIters) + 7–9 (spills) latitude, position 0 the pick.
+
+## A4-U24 exit (2026-08-26, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since the U23 gate tip
+5778bcb3: the U24 build commit + this log commit (+ the gate record
+to follow when the box permits — see the gate note below). New
+tracked modules: 7 RoundMarLit + RoundMarEqA–D + RoundMarEquation +
+RoundMarLemma + Audit/RoundMar + the TableExt promotion + the
+RoundVoteEqA wrapper + the two aggregators. **Content verification
+(the lean channel, every exit code captured): RoundMarEqA built
+green under lake (152 s, in a reaper lull); EqB/C/D + Equation +
+Lemma + Audit pins verified `lake env lean` exit 0, zero errors;
+AxU24 all-trio; hatch 0.** Probes (gitignored): UtoaCensus,
+UtoaTrace/2, CheckerBodyDump3, AnchorScan, TwinMarFixProbe,
+RoundMarGen, RoundMarReadoutProbe, AxU24, emit_mar_eq.py,
+build143.sh, and their logs/.out files.
+
+**Deliverable state vs the U24 charter:**
+1. THE SPAN-COMPUTES-MODEL SLICE — **BOUNDARY-STOPPED AT THE
+   MEASUREMENT** (the chartered trigger; anatomy + kit inventory +
+   weak-form design + re-price banked; nothing half-built shipped).
+2. THE MSGAPPRESP MAYBECOMMIT ROUND — **DELIVERED** (the R-form's
+   third instance, end to end, witnessed; the matrix's
+   commit-without-append row; the etcd commit story connected).
+3. No-op/local censuses — **NOT REACHED** (the reaper war consumed
+   the margin; unchanged one-doctor recipes).
+
+**PROPOSED NEXT CHARTER (successor):** (1) the span-computes-model
+slice as its own 1.5–2-unit arc from the banked map (plain-for head
+schema → utoa weak span → viol span → S1-record span → s1
+end-to-end; apply span last); (2) the election-completion round
+kind (MsgVoteResp × becomeLeader at anchor 2→3 — the LAST
+structural ring shape, completing every reachable kind the
+induction will quantify over); (3) the operator items: the reaper
+fingerprint (lake-build-selective kills), and the U24 full-build +
+gate re-run if this unit's gate had to record the interference.
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1); the comparator-landmark STALE +
+OWED-on-scope escalation stands (Audit.lean lines again).

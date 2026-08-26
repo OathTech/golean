@@ -1806,6 +1806,26 @@ def SymTables.Agrees (TB : SymTables) (σ : ExecState) : Prop :=
   σ.types = TB.types ∧ σ.functions = TB.functions
     ∧ σ.methods = TB.methods ∧ σ.methodSets = TB.methodSets
 
+/-- **The table pin at concretization** (A4-U24, promoted from
+`RoundVoteEqA.γS_pin` at its second consumer per the U23 ledger row):
+under `Agrees`, concretization over ANY table carrier equals
+concretization over the pack's own heapless state — `concS` overrides
+`heap`/`nextAddr`, and `Agrees` pins the remaining four `ExecState`
+fields, which is the whole record. The consumer family: ∀σ crossing
+statements whose single step has a nonempty TABLE footprint (mapIter
+over a defined-value-type map consults `s.types` via
+`snapshotEntriesSelfNormalized` — the U23 bisect finding), which
+rewrite through this and close by kernel_rfl at the pinned carrier
+(`RoundVoteEqA`'s four Visit resets; `RoundMarEqA`'s six). -/
+theorem SymTables.Agrees.concS_eq {D : ScalarDom} {I : Interp D}
+    {TB : SymTables} {σ : ExecState} (hag : TB.Agrees σ)
+    (s : State D) : concS I σ s = concS I TB.toState s := by
+  obtain ⟨h1, h2, h3, h4⟩ := hag
+  cases σ
+  simp only [concS, SymTables.toState] at *
+  subst h1 h2 h3 h4
+  rfl
+
 /-! ### Table-only congruence for the machine's dispatch helpers -/
 
 theorem resolveDefinedAliasesFuel_types {σ₁ σ₂ : ExecState}

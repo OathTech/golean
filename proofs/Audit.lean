@@ -32,6 +32,7 @@ import Audit.Ring
 import Audit.RoundMa
 import Audit.RoundVote
 import Audit.CheckerBridge
+import Audit.RoundMar
 
 /-!
 # In-build epistemic gate for the Iris proof layer

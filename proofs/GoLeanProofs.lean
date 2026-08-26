@@ -111,6 +111,22 @@ import GoLeanProofs.Specs.Raft.RoundVoteEqB
 import GoLeanProofs.Specs.Raft.RoundVoteEqC
 import GoLeanProofs.Specs.Raft.RoundVoteEquation
 import GoLeanProofs.Specs.Raft.RoundVoteLemma
+-- A4-U24: the MsgAppResp maybeCommit round-kind instance (the R-form's
+-- third proved instance; commit-without-append — the matrix's untested
+-- row, the etcd-dialect commit story at the interpreter level)
+import GoLeanProofs.Specs.Raft.RoundMarLit1
+import GoLeanProofs.Specs.Raft.RoundMarLit2
+import GoLeanProofs.Specs.Raft.RoundMarLit3
+import GoLeanProofs.Specs.Raft.RoundMarLit4
+import GoLeanProofs.Specs.Raft.RoundMarLit5
+import GoLeanProofs.Specs.Raft.RoundMarLit6
+import GoLeanProofs.Specs.Raft.RoundMarLit7
+import GoLeanProofs.Specs.Raft.RoundMarEqA
+import GoLeanProofs.Specs.Raft.RoundMarEqB
+import GoLeanProofs.Specs.Raft.RoundMarEqC
+import GoLeanProofs.Specs.Raft.RoundMarEqD
+import GoLeanProofs.Specs.Raft.RoundMarEquation
+import GoLeanProofs.Specs.Raft.RoundMarLemma
 -- arc4b landing (C2c slice 0, per the lane's landing manifest): the native
 -- S1/S2/S3 chain over the obligation signature (SC1 + C3 + C4)
 import GoLeanProofs.Specs.Raft.NativeObligations

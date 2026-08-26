@@ -39,20 +39,14 @@ open GoLean.RaftSeam
 set_option maxRecDepth 8000000
 set_option maxHeartbeats 400000000
 
-/-- Table pin: under `Agrees`, the γ-image over ANY table carrier
-equals the γ-image over the pack's own heapless state (`concS`
-overrides heap/nextAddr; `Agrees` pins the other four fields — the
-whole `ExecState`). Local to this module per the two-axis test (one
-consumer family today: the defined-value-type mapIter crossings);
-promote beside `symEvalWindowTB_refines` on a second consumer. -/
+/-- Table pin at the twin pack — now a thin wrapper over the
+PROMOTED generic `SymTables.Agrees.concS_eq` (TableExt; promotion
+executed A4-U24 when `RoundMarEqA` became the second consumer, per
+the U23 ledger row). Statement unchanged. -/
 theorem γS_pin {σ : ExecState} (hag : bfTB.Agrees σ)
     (ρ : Valuation) (S : SymState) :
-    γS ρ σ S = γS ρ bfTB.toState S := by
-  obtain ⟨h1, h2, h3, h4⟩ := hag
-  cases σ
-  simp only [γS, concS, SymTables.toState] at *
-  subst h1 h2 h3 h4
-  rfl
+    γS ρ σ S = γS ρ bfTB.toState S :=
+  hag.concS_eq S
 
 /-- Window: anchor → the delivery pick (207 steps). -/
 theorem mvWA1_out : symEvalWindowTB bfTB 207 mvSB0 mvCB0
