@@ -2322,6 +2322,31 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   record. In-flight work verified compliant (CE1, wave α, the
   re-targeted pilot).
 
+- **[USER] 2026-08-27 — THE END-STATE STATEMENT SHAPE (doctrine,
+  supersedes the three-class taxonomy):** the designated layer =
+  (1) THE REFLECTION PAIR — wire pin + shape pins certifying that
+  `harness_function` is what the interpreter derives from the
+  program on disk — and (2) ONE TOTAL-CORRECTNESS STATEMENT per
+  harness: `∀ ch, ∃ fuel r, gosemantics(harness) fuel ch = some r ∧
+  spec r = true` — completion ASSERTED, not assumed. This absorbs
+  the conditional AgreementT1 + CompletionWitness + the never-faults
+  draft as decompositions of one sentence, and removes the vacuity
+  motivation structurally (a total statement cannot be vacuous; its
+  proof exhibits everything). Provable because the harness is
+  finite-round by construction (bounded loop + total round specs).
+  WITNESSES AND THE VALIDATION CORPUS LOSE DOCTRINAL STATUS
+  ([USER]: "no value, provide nothing" — to the theorem, correct):
+  reclassified as optional dev-time tooling outside the reasoning
+  layer — never cited by proofs, deletable at will, corpus
+  retirement-scheduled at prover maturity; their honest residual
+  value (early model-bug detection à la the ghost-vote catch;
+  prover regression) is engineering signal, not proof content.
+  Per-law witness ceremony ENDS; the non-vacuity gate's mechanism
+  is now the top-level totality. The seed-pin dissolution stands
+  (init = a function spec like any other; O7 canceled). Statement
+  drafting: the total form replaces the never-faults draft;
+  designation remains [USER]'s at the landing.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
