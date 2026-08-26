@@ -1772,6 +1772,36 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   with the symbolic semantics per the standing decisions. Landmark
   dual-trigger at 159 — stands.
 
+- **Arc 4, A4-U22 = C2d — LANDED** @ dcbffa0c, gate PASS, 571 jobs:
+  **`roundMa_lemma` — THE R-FORM'S FIRST PROVED INSTANCE**, end to
+  end at the reachable MsgApp append round: any weak-placement of
+  the canonical loop-head state runs the full round (arm + harvest
+  ring + both storage-resp arms + driver suffix), consumes exactly
+  the censused 8-draw prefix, re-establishes family membership
+  (roundMa_closure); the delivery pick is the named semantic
+  crossing (roundMa_pick), positions 1-7 identified latitude — the
+  factoring's input prepared, ∀-latitude one rewrite when ~ lands.
+  Marginal round-kind cost measured: the lemma layer elaborates in
+  2.2 s — the next kind costs its windows only. WHAT THIS TAUGHT
+  US: (1) the coordination stop-condition did NOT fire — R-form
+  states cleanly pre-~; (2) **DESIGN FINDING (read-first, not
+  shimmed): single-splice FrameSimS cannot place a pruned
+  sub-fixture into an interleaved outer frame — sub-span reuse
+  inside bigger walks needs multi-splice OR the heap-permutation
+  quotient, i.e. THE ~ CLASS, state edition. The ~ quotient now has
+  THREE demanded consumers** (seed pin; sub-span multi-splice; the
+  successor-canon question the round INDUCTION needs answered) —
+  the symbolic-semantics trajectory re-derived from below, again;
+  (3) self-return proved at the γ level closed — the third-wall
+  lesson applied at design time; (4) ops note: four lake-build
+  SIGTERMs under sibling scope churn (lake env lean untouched;
+  quiet-box retries clean) — logged for the wave-boundary
+  build-stagger review. [AGENT]: U23 to a fresh 14th-gen worker
+  (the MsgVote round instance — template-stamping on U21's ready
+  fixture — + the two checker-interface I2 proofs); THE ROUND
+  INDUCTION HOLDS for SP1's ~ landing (its canon question is ~'s to
+  answer). Landmark dual-trigger at 163 — stands.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
