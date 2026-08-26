@@ -145,7 +145,11 @@ adds to §3:
 - **Statement hygiene**: a mixed chain's conclusion is exact on
   concrete segments and up-to-~ on erased segments; the statement
   formers carry the mode so nothing silently strengthens a ~ into
-  an =.
+  an =. CROSS-LINK: the prover arc's judgment format carries the
+  MODE SLOT (sensitive/erased) FROM BIRTH — RefinedC's
+  modality-retrofit lesson ("the hard-to-retrofit part is the
+  modality position in the judgment format") applied here; the
+  slot is instantiated trivially until CE4 lands.
 - **The practical payoff** ([USER]): spill-heavy spans (the harvest
   ring) run erased — one derivation for all capacities — while
   delivery picks and any unclassified site stay concrete; the

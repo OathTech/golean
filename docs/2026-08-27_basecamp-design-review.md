@@ -47,7 +47,15 @@ hours-to-a-unit, each prevents a five-module migration)
 
 ## 2. THE TWO DESIGN DECISIONS ([USER] gates — recommendations below)
 
-- **B1: T1's ∀-stream story — the professor's stop-the-presses item.**
+- **B1 — SUPERSEDED BY THE [USER] TCB CORRECTION (2026-08-27, campaign
+  log): the designation-split proposal below was WRONG** — the
+  designated layer is the harness contract only (AgreementT1 as
+  pinned + the never-faults statement, drafted for [USER]
+  designation); T1-replay is an INTERNAL lemma, never designated;
+  the lift is untrusted machinery, now chartered as its own arc
+  (`docs/2026-08-27_choice-erasure-arc-plan.md`, v2,
+  professor-reviewed). Original text retained below for the record:
+- ~~B1: T1's ∀-stream story — the professor's stop-the-presses item.~~
   The ∀-stream burden (O6) currently ends in "post-T1 symbolic
   semantics or a [USER] statement-scoping call" — a proof plan with a
   hole where the hard part goes. RECOMMENDATION: **split the
