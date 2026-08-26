@@ -2347,6 +2347,27 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   drafting: the total form replaces the never-faults draft;
   designation remains [USER]'s at the landing.
 
+- **[USER] 2026-08-27 — no finite-round execution; both statement
+  shapes reasonable:** (1) proving by executing/composing a finite
+  number of rounds is NON-SCALABLE — the method is the LOOP RULE:
+  invariant (partial) + variant (total), quantifying over all
+  iteration counts structurally, N never appearing as unroll count.
+  [AGENT] correction owned: the earlier "provable because
+  finite-round by construction" phrasing implied unrolling —
+  corrected: termination = the loop rule's measure (driver counter +
+  drain bounds), discharged once. CONSEQUENCE NAMED: the landed
+  `round_induction` composes explicit link LISTS — the unrolling
+  shape — and is reclassified as validation-tier; its scalable
+  successor is the LOOP-RULE INSTANCE at the driver's main loop
+  (one body spec with kinds as internal cases; I = Fam ∧ R ∧
+  abstract invariants; variant for the total form; SliceWalk is
+  the engine). (2) Both statement shapes recorded as designation
+  candidates: PARTIAL `∀ ch fuel r, run = some r → spec r` (the
+  current pinned form; invariant-only proof) and TOTAL `∀ ch,
+  ∃ fuel r, run = some r ∧ spec r` (adds the variant; absorbs
+  never-faults/completion). Designation = [USER]'s at the landing;
+  the proof plan is invariant-first either way.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
