@@ -1857,6 +1857,22 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   units left for the operator (reset-failed is machine-global
   hygiene — Mike's call). U24 gate re-running at 64G now.
 
+- **OPS INCIDENT (2026-08-26, [AGENT] fault, owned): the box OOM'd
+  the session** — the coordinator launched the U24 gate at a 96G
+  cap while the SP1 sibling held standing 64G-build instructions;
+  the gate started at 70G available (SP1 mid-build); the OOM killer
+  took the multiplexer (the documented badness-score failure mode).
+  Casualties: the session (recovered), the gate attempt (no
+  result), SP1's worker (stopped; its partial work SAFE — five
+  untracked modules + log in arc4c, no commits lost, transcript on
+  disk). **THE SERIALIZATION RULE, now standing: FULL builds/gates
+  are EXCLUSIVE box-wide — one at a time, enforced by coordinator
+  dispatch ordering, never by per-worker free-memory guesswork**
+  (the guard checks a snapshot; two ramping builds pass it
+  simultaneously). Recovery: gate re-running SOLO at 96G/6-threads;
+  SP1 resumes after it lands. [USER] flagged the OOM risk on
+  reconnect — correct call.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
