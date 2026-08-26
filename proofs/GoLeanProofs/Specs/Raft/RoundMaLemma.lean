@@ -157,9 +157,10 @@ theorem roundMa_witness_identity :
 is a `RoundFam` member of the successor canon — the induction's
 carried membership, re-established (the R-form's whole point). -/
 theorem roundMa_closure :
-    ∃ σF', RoundFam canonMa' σF' := by
+    ∃ σF', RoundFam (· = canonMa') σF' := by
   obtain ⟨σF', _, na', fr', hfs⟩ := roundMa_witness_identity
-  exact ⟨σF', ρT canonMa.nextAddr 0, canonMa.nextAddr, na', fr', hfs⟩
+  exact ⟨σF', canonMa', rfl, ρT canonMa.nextAddr 0, canonMa.nextAddr,
+    na', fr', hfs⟩
 
 /-! ## The abstract round delta (readouts at the concrete anchors;
 every value #eval-checked before being stated) -/

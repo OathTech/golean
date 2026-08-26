@@ -197,7 +197,7 @@ theorem seed_nodes_zero :
 /-- **The seed family**: the R-form family anchored at the
 representative (`RoundFam` = FrameSim placement — the arm equations'
 placement premise, one ring up; RoundStatement.lean §1). -/
-def SeedFam (σF : ExecState) : Prop := RoundFam seedσ σF
+def SeedFam (σF : ExecState) : Prop := RoundFam (· = seedσ) σF
 
 /-- The representative is a member at the identity placement. -/
 theorem seed_inFam : SeedFam seedσ := RoundFam.self seedσ

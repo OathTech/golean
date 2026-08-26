@@ -260,7 +260,7 @@ theorem FamTrace.fullInv {voters : List Nat} {step : SNet → SNet → Prop}
 /-! ## 5. The seeded base (the arc4c landing consumed)
 
 `seedσ`/`seedN₀` are the C-ladder's base case (SP1): `SeedFam` is
-`RoundFam seedσ` and `seed_N₀ : Seed seedN₀` is the discharged
+`RoundFam (· = seedσ)` and `seed_N₀ : Seed seedN₀` is the discharged
 hypothesis. A chain from the seed starts at ANY `SeedFam` member —
 the placement is the member's own. -/
 

@@ -130,9 +130,10 @@ theorem roundMar_witness_identity :
 /-- Family closure: the successor state is a `RoundFam` member of
 the successor canon. -/
 theorem roundMar_closure :
-    ∃ σF', RoundFam canonMar' σF' := by
+    ∃ σF', RoundFam (· = canonMar') σF' := by
   obtain ⟨σF', _, na', fr', hfs⟩ := roundMar_witness_identity
-  exact ⟨σF', ρT canonMar.nextAddr 0, canonMar.nextAddr, na', fr', hfs⟩
+  exact ⟨σF', canonMar', rfl, ρT canonMar.nextAddr 0, canonMar.nextAddr,
+    na', fr', hfs⟩
 
 /-! ## The abstract round delta (readouts; every value #eval'd first
 — `artifacts/probe/RoundMarReadoutProbe.lean` → `roundmarreadout.out`) -/

@@ -116,9 +116,10 @@ theorem roundVr_witness_identity :
 /-- Family closure: the successor state is a `RoundFam` member of
 the successor canon. -/
 theorem roundVr_closure :
-    ∃ σF', RoundFam canonVr' σF' := by
+    ∃ σF', RoundFam (· = canonVr') σF' := by
   obtain ⟨σF', _, na', fr', hfs⟩ := roundVr_witness_identity
-  exact ⟨σF', ρT canonVr.nextAddr 0, canonVr.nextAddr, na', fr', hfs⟩
+  exact ⟨σF', canonVr', rfl, ρT canonVr.nextAddr 0, canonVr.nextAddr,
+    na', fr', hfs⟩
 
 /-! ## The abstract round delta (readouts; every value #eval'd first
 — `artifacts/probe/RoundVrReadoutProbe.lean` → `roundvrreadout.out`) -/

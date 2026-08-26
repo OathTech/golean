@@ -141,9 +141,10 @@ theorem roundVote_witness_identity :
 is a `RoundFam` member of the successor canon — the induction's
 carried membership, re-established. -/
 theorem roundVote_closure :
-    ∃ σF', RoundFam canonVote' σF' := by
+    ∃ σF', RoundFam (· = canonVote') σF' := by
   obtain ⟨σF', _, na', fr', hfs⟩ := roundVote_witness_identity
-  exact ⟨σF', ρT canonVote.nextAddr 0, canonVote.nextAddr, na', fr', hfs⟩
+  exact ⟨σF', canonVote', rfl, ρT canonVote.nextAddr 0, canonVote.nextAddr,
+    na', fr', hfs⟩
 
 /-! ## The abstract round delta (readouts at the concrete anchors;
 every value #eval-checked first — `artifacts/probe/

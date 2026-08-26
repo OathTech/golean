@@ -72,29 +72,36 @@ open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.Frame GoLean.Surface
 
 /-! ## 1. Fam membership (the R-form's carried family) -/
 
-/-- Fixture-family membership, pinned (design §2 / seam §4c flag):
-`σF` is a member of round-family `canon` iff it is a FrameSim
-placement of it. What the LANDED round induction
-(`RoundInduction.lean`, A4-U26) carries per boundary is EXACTLY this
-membership (`FamTrace.cons`'s `hfam` conjunct) — NOT the layer-C §3
-paired form `RoundFam canon σF ∧ absTwinRead … = some N`. The
-per-boundary abs-pairing (absTwinRead ↔ SNet projection) is an OPEN
-obligation — census item O5b of the T1 open-obligation census
-(`docs/campaign-arc4-log.md`, landing fix-round entry); until it
-lands, the induction's abstract nets are witness DATA. (This
-paragraph previously asserted the paired form as the carried
-relation — corrected at the landing fix round, 2026-08-26.) -/
-def RoundFam (canon : ExecState) (σF : ExecState) : Prop :=
-  ∃ (r : Nat → Nat) (na₀ na : Nat) (fr : GoCore.Heap),
-    FrameSim r na₀ na fr canon σF
+/-- Fixture-family membership with the FAMILY-FORMER slot (basecamp
+design review S2, wave α): `σF` is a member of the family formed by
+`F : ExecState → Prop` iff some canonical state satisfying `F` has
+`σF` as a FrameSim placement. Every landed instance uses the LITERAL
+former `F := (· = canon)` — one pinned canonical state per family,
+exactly the pre-S2 meaning; the I2/prover route swaps in SYMBOLIC
+families (a predicate over canonical states) without restating the
+instances. What the LANDED round induction (`RoundInduction.lean`,
+A4-U26) carries per boundary is the placement conjunct of this
+membership (`FamTrace.cons`'s `hfam`) — NOT the layer-C §3 paired
+form `RoundFam F σF ∧ absTwinRead … = some N`. The per-boundary
+abs-pairing (absTwinRead ↔ SNet projection) is an OPEN obligation —
+census item O5b of the T1 open-obligation census
+(`docs/campaign-arc4-log.md`, landing fix-round entry), now landing
+by instantiating `FamTrace`'s `R` parameter (S1); until it lands,
+the induction's abstract nets are witness DATA. (An earlier version
+asserted the paired form as the carried relation — corrected at the
+landing fix round, 2026-08-26.) -/
+def RoundFam (F : ExecState → Prop) (σF : ExecState) : Prop :=
+  ∃ canon, F canon ∧
+    ∃ (r : Nat → Nat) (na₀ na : Nat) (fr : GoCore.Heap),
+      FrameSim r na₀ na fr canon σF
 
-/-- Every twin-program state is a member of its own family at the
-identity placement (`ρT nextAddr 0` — the shift-0 renaming, pointwise
-identity; the equations' identity-corollary construction, packaged
-for the round vocabulary). The bodies premise is discharged by
-`renameStmt_ρT_zero` — shift-0 renames every body to itself. -/
-theorem RoundFam.self (σ : ExecState) : RoundFam σ σ :=
-  ⟨ρT σ.nextAddr 0, σ.nextAddr, σ.nextAddr, [],
+/-- Every twin-program state is a member of its own literal family at
+the identity placement (`ρT nextAddr 0` — the shift-0 renaming,
+pointwise identity; the equations' identity-corollary construction,
+packaged for the round vocabulary). The bodies premise is discharged
+by `renameStmt_ρT_zero` — shift-0 renames every body to itself. -/
+theorem RoundFam.self (σ : ExecState) : RoundFam (· = σ) σ :=
+  ⟨σ, rfl, ρT σ.nextAddr 0, σ.nextAddr, σ.nextAddr, [],
    frameSim_seed rfl (fun f _ => renameStmt_ρT_zero σ.nextAddr f.body)⟩
 
 /-! ## 2. The round-boundary reader (A3, v0) -/
