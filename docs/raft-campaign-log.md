@@ -2418,6 +2418,19 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   technique) by catching the drift at planning time (which is where
   it lived).
 
+- **[USER] 2026-08-27 — worker disposition re-derived under the new
+  doctrine (the re-asked question):** CE1 KEPT unconditionally —
+  it builds the discharging rule for ∀ch's latitude half (SpanIso +
+  congruence foundation; rule-shaped, ∀-state). Wave α KEPT with
+  TWO ITEMS CUT by amendment: S1 (FamTrace R-param) and S2
+  (RoundFam family slot) — both retrofits of artifacts since
+  reclassified validation-tier; polishing scaffolding advances no
+  quantifier by any rule. Alive remainder: the kills (debt
+  paydown), legibility, S4 (LIVE-rule hygiene), the total-statement
+  draft — none enumerative, none claiming quantifier progress
+  (and saying so plainly per the audit line). First full
+  application of the quantifier audit to in-flight work.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
