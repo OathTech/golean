@@ -66,10 +66,15 @@ theorem seedVar_cform_pin :
 /-- **THE EQUIVALENCE WITNESS**: the two init runs' states are
 `~ₘ`-equal at the declared one-field mask — different capacities,
 different iteration order, different rand draw; same choice-erased
-state. Composed from the two pins over the shared literal. -/
+state. Composed from the two pins over the shared literal via
+`CEquivM.of_pins` (S3: the repaired relation also demands the shared
+literal's CLEANLINESS, discharged from `seed_clean` through the pin —
+the witness pair is clean, so the strengthened relation still holds;
+CE1 census re-verification point). -/
 theorem seedVar_equiv :
     CEquivM twinLatMask seedVarσ seedRoots seedσ seedRoots :=
-  seedVar_cform_pin.trans seed_cform_pin.symm
+  CEquivM.of_pins seedVar_cform_pin seed_cform_pin
+    (seed_cform_pin ▸ seed_clean)
 
 /-- The variant's canonicalization is clean (no fail-closed flags). -/
 theorem seedVar_clean :

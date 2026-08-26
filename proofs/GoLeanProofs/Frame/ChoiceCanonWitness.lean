@@ -87,12 +87,108 @@ theorem viewfix_flags_clean :
       = ([], []) := by kernel_rfl
 
 /-- **The regression theorem**: the two states the pre-fix code
-silently equated are NOT latitude-equivalent. -/
+silently equated are NOT latitude-equivalent. Under the S3-repaired
+relation (cleanliness-in-relation) the pair is distinguished by the
+relation's CONTENT half — both forms are clean
+(`viewfix_flags_clean`), so the refusal is on the forms differing,
+exactly as before S3 (verified at CE1: this proof consumes `h.eq`
+and nothing else). -/
 theorem viewfix_not_equiv : ¬ CEquiv (wσ 3) wroots (wσ 5) wroots := by
   intro h
-  have h' : canonState (wσ 3) wroots = canonState (wσ 5) wroots := h
+  have h' : canonState (wσ 3) wroots = canonState (wσ 5) wroots := h.eq
   have h2 := congrArg (fun f => f.cells.map cellArrLen) h'
   rw [viewfix_d3_read, viewfix_d5_read] at h2
   exact absurd h2 (by decide)
 
 end GoLean.Frame.ChoiceErase.ViewFixWitness
+
+namespace GoLean.Frame.ChoiceErase.PinholeWitness
+
+open GoLean GoLean.GoCore
+
+/-! ## The flagged-flagged pinhole witness (shape fix S3, CE1
+2026-08-27 — the basecamp review's scoff 3b, closed structurally)
+
+**What this witnesses.** Before S3, `CEquiv` was BARE form equality;
+flags lived inside the form, so two canonicalizations that failed
+IDENTICALLY compared equal — the flagged-flagged pinhole
+(fail-open-by-forgetting). The pair below realizes it: two states
+whose heaps OBSERVABLY DIFFER (a struct field holds `1` vs `2`, and
+the machine can read that field through the root loc), rooted at a
+NON-BASE loc the canonicalizer refuses (`NONBASE-LOC`). Both
+canonicalizations refuse before ever reaching the differing cell, so
+the two FORMS are equal — and flagged (`pinhole_forms_equal`,
+`pinhole_flagged`). The pre-S3 relation equated the pair
+(`pinhole_forms_equal` IS that statement); the repaired relation
+REFUSES it structurally: `flags = []` is in the relation
+(`pinhole_not_equiv`, discharged from the cleanliness conjunct alone,
+no content comparison needed). -/
+
+/-- The pinhole states: one struct cell whose field `x` differs
+observably (`1` vs `2`). -/
+def pσ (n : Int) : ExecState :=
+  { heap := [ (.base ⟨0⟩,
+        { value := .struct ⟨"main.T"⟩ #[("x", .int n .int)] }) ],
+    nextAddr := 1 }
+
+/-- The root: a NON-BASE loc (a field projection) — the shape the
+canonicalizer refuses with `NONBASE-LOC`. -/
+def proots : List GoValue :=
+  [.addr (.field (.base ⟨0⟩) ⟨"main.T"⟩ "x")]
+
+/-- The shared refused form, as a literal (the computed-vs-literal
+standing rule, SP1: NEVER compare two computed forms head-on — the
+kernel's lazy defeq on `canonState a ≡ canonState b` with differing
+states walks the fueled unfolding pairwise and diverges; measured
+here: the head-on statement timed out at default heartbeats and hung
+past 100 s at 4M, while each pin below is instant). -/
+def pinholeForm : CForm :=
+  { roots := [.badLoc], cells := [],
+    flags := ["NONBASE-LOC", "NONBASE-LOC"] }
+
+theorem pinhole_pin1 : canonState (pσ 1) proots = pinholeForm := by
+  kernel_rfl
+
+theorem pinhole_pin2 : canonState (pσ 2) proots = pinholeForm := by
+  kernel_rfl
+
+/-- Both canonicalizations refuse IDENTICALLY: equal forms. This
+equality is exactly what the PRE-S3 relation consumed — the pinhole. -/
+theorem pinhole_forms_equal :
+    canonState (pσ 1) proots = canonState (pσ 2) proots :=
+  pinhole_pin1.trans pinhole_pin2.symm
+
+/-- The shared form is FLAGGED (the refusal from phase 1's collection
+and phase 2's serialization, one flag entry each): the pair is a
+flagged-flagged coincidence, not a clean equivalence. -/
+theorem pinhole_flagged :
+    (canonState (pσ 1) proots).flags = ["NONBASE-LOC", "NONBASE-LOC"] := by
+  rw [pinhole_pin1]; rfl
+
+/-- The states differ OBSERVABLY: the field the root loc names holds
+`1` vs `2` (read out through the heap, no canonicalizer involved). -/
+def pinholeRead (σ : ExecState) : Option Int :=
+  match Heap.lookup σ.heap (.base ⟨0⟩) with
+  | some cell =>
+      match cell.value with
+      | .struct _ fs =>
+          match fs[0]? with
+          | some (_, GoValue.int v _) => some v
+          | _ => none
+      | _ => none
+  | none => none
+
+theorem pinhole_observably_different :
+    pinholeRead (pσ 1) = some 1 ∧ pinholeRead (pσ 2) = some 2 :=
+  ⟨rfl, rfl⟩
+
+/-- **The pinhole is CLOSED**: the S3-repaired relation refuses the
+pair — from the cleanliness conjunct ALONE (the forms are equal; only
+`flags = []` fails). -/
+theorem pinhole_not_equiv : ¬ CEquiv (pσ 1) proots (pσ 2) proots := by
+  intro h
+  have hclean : (canonState (pσ 1) proots).flags = [] := h.clean
+  rw [pinhole_flagged] at hclean
+  exact absurd hclean (by decide)
+
+end GoLean.Frame.ChoiceErase.PinholeWitness

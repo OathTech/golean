@@ -28,9 +28,12 @@ order (fail-closed: non-scalar keys keep entry order and raise a
 flag).
 
 Two states are **latitude-equivalent** (`CEquiv`, the unit's `~`)
-when their canonical forms at corresponding roots are EQUAL. By
-construction `~` is an equivalence, and any reader that factors
-through the canonical form is `~`-invariant definitionally (the
+when their canonical forms at corresponding roots are EQUAL **and the
+canonicalization is CLEAN** (`flags = []` is IN the relation — shape
+fix S3, choice-erasure arc CE1 2026-08-27: the flagged-flagged
+pinhole closed structurally, so `~` is a PARTIAL equivalence,
+reflexive exactly on clean states). Any reader that factors through
+the canonical form is `~`-invariant definitionally (the
 representation-engineering heuristic, campaign log [USER] 2026-08-27:
 invariance is bought at the representation, not proved per reader).
 
@@ -53,8 +56,9 @@ serialization — a standard heap-isomorphism canonical labeling
 **Totality:** fully total, kernel-reducible code. All recursions are fueled
 (the `GoValue.eqb` de-WF recipe); fuel exhaustion raises a fail-closed
 flag in the output form (`CForm.flags`), so an exhausted
-canonicalization can never silently equate two states: flags are part
-of the form, and clean witnesses check `flags = []`.
+canonicalization can never silently equate two states: `flags = []`
+is conjoined INTO the relation (S3), so a flagged form equates
+nothing — not even itself.
 
 **Placement (arc-4 landing fix round, 2026-08-26):** this module and
 `ChoiceInv` live under `Frame/` as the choice-erasure layer of the
@@ -542,50 +546,90 @@ def canonStateM (m : Mask) (σ : ExecState) (roots : List GoValue) : CForm :=
 def canonState (σ : ExecState) (roots : List GoValue) : CForm :=
   canonStateM [] σ roots
 
+/-- A clean canonicalization (no fail-closed refusals). Witnesses
+check this computationally; the relation below carries it
+STRUCTURALLY. -/
+def CleanFormM (m : Mask) (σ : ExecState) (roots : List GoValue) : Prop :=
+  (canonStateM m σ roots).flags = []
+
+def CleanForm (σ : ExecState) (roots : List GoValue) : Prop :=
+  CleanFormM [] σ roots
+
 /-- **THE LATITUDE EQUIVALENCE `~`** (choice-invariance's carrier):
 states are equivalent at corresponding root sets when their canonical
-forms coincide. The two erased axes are exactly the sequential
-machine's two draw sites' state effects (relocation from
-order-perturbed allocation, capacity slack from spill draws); flags
-live inside the form, so a fail-closed canonicalization can only
-REFUSE equivalence, never fake it. -/
-def CEquivM (m : Mask) (σ : ExecState) (roots : List GoValue)
-    (σ' : ExecState) (roots' : List GoValue) : Prop :=
-  canonStateM m σ roots = canonStateM m σ' roots'
+forms coincide AND the canonicalization is CLEAN. The two erased axes
+are exactly the sequential machine's two draw sites' state effects
+(relocation from order-perturbed allocation, capacity slack from
+spill draws).
+
+**Cleanliness-in-relation (shape fix S3, choice-erasure arc CE1,
+2026-08-27 — the basecamp review's scoff 3b).** The pre-S3 relation
+was bare form equality; flags lived inside the form, so a fail-closed
+canonicalization REFUSED most equivalences — but two canonicalizations
+that failed IDENTICALLY (same flags, same truncated form) still
+compared equal: the flagged-flagged pinhole, fail-open-by-forgetting
+(counterexample pair: `PinholeWitness` in `ChoiceCanonWitness.lean` —
+two observably different non-base root locs, equal flagged forms).
+S3 conjoins `flags = []` into the relation itself: a refused
+canonicalization now equates NOTHING, not even itself. `CEquivM` is
+therefore a PARTIAL equivalence relation — symmetric and transitive
+always, reflexive exactly on clean states (`CEquivM.refl` takes the
+cleanliness premise). Right-side cleanliness is derived
+(`clean_right`), not stored. -/
+structure CEquivM (m : Mask) (σ : ExecState) (roots : List GoValue)
+    (σ' : ExecState) (roots' : List GoValue) : Prop where
+  eq : canonStateM m σ roots = canonStateM m σ' roots'
+  clean : (canonStateM m σ roots).flags = []
 
 /-- The STRICT latitude equivalence (empty mask). -/
 def CEquiv (σ : ExecState) (roots : List GoValue)
     (σ' : ExecState) (roots' : List GoValue) : Prop :=
   CEquivM [] σ roots σ' roots'
 
-theorem CEquivM.refl (m : Mask) (σ : ExecState) (roots : List GoValue) :
-    CEquivM m σ roots σ roots := rfl
+/-- Right-side cleanliness is a consequence, not a stored conjunct. -/
+theorem CEquivM.clean_right {m σ roots σ' roots'}
+    (h : CEquivM m σ roots σ' roots') :
+    (canonStateM m σ' roots').flags = [] := h.eq ▸ h.clean
+
+/-- Left-side cleanliness, `CleanFormM`-phrased. -/
+theorem CEquivM.cleanFormM_left {m σ roots σ' roots'}
+    (h : CEquivM m σ roots σ' roots') : CleanFormM m σ roots := h.clean
+
+theorem CEquivM.cleanFormM_right {m σ roots σ' roots'}
+    (h : CEquivM m σ roots σ' roots') : CleanFormM m σ' roots' :=
+  h.clean_right
+
+/-- The pin-composition constructor (the shared-literal route every
+witness uses): two canonical-form pins against ONE literal plus the
+literal's cleanliness give the equivalence. -/
+theorem CEquivM.of_pins {m σ roots σ' roots'} {L : CForm}
+    (h : canonStateM m σ roots = L) (h' : canonStateM m σ' roots' = L)
+    (hclean : L.flags = []) : CEquivM m σ roots σ' roots' :=
+  ⟨h.trans h'.symm, h ▸ hclean⟩
+
+/-- Reflexivity holds exactly on CLEAN states (the PER shape — S3). -/
+theorem CEquivM.refl (m : Mask) (σ : ExecState) (roots : List GoValue)
+    (hclean : CleanFormM m σ roots) : CEquivM m σ roots σ roots :=
+  ⟨rfl, hclean⟩
 
 theorem CEquivM.symm {m σ roots σ' roots'}
     (h : CEquivM m σ roots σ' roots') : CEquivM m σ' roots' σ roots :=
-  Eq.symm h
+  ⟨h.eq.symm, h.clean_right⟩
 
 theorem CEquivM.trans {m σ₁ r₁ σ₂ r₂ σ₃ r₃}
     (h₁ : CEquivM m σ₁ r₁ σ₂ r₂) (h₂ : CEquivM m σ₂ r₂ σ₃ r₃) :
-    CEquivM m σ₁ r₁ σ₃ r₃ := Eq.trans h₁ h₂
+    CEquivM m σ₁ r₁ σ₃ r₃ := ⟨h₁.eq.trans h₂.eq, h₁.clean⟩
 
-theorem CEquiv.refl (σ : ExecState) (roots : List GoValue) :
-    CEquiv σ roots σ roots := rfl
+theorem CEquiv.refl (σ : ExecState) (roots : List GoValue)
+    (hclean : CleanForm σ roots) : CEquiv σ roots σ roots :=
+  CEquivM.refl [] σ roots hclean
 
 theorem CEquiv.symm {σ roots σ' roots'} (h : CEquiv σ roots σ' roots') :
-    CEquiv σ' roots' σ roots := Eq.symm h
+    CEquiv σ' roots' σ roots := CEquivM.symm h
 
 theorem CEquiv.trans {σ₁ r₁ σ₂ r₂ σ₃ r₃}
     (h₁ : CEquiv σ₁ r₁ σ₂ r₂) (h₂ : CEquiv σ₂ r₂ σ₃ r₃) :
-    CEquiv σ₁ r₁ σ₃ r₃ := Eq.trans h₁ h₂
-
-/-- A clean canonicalization (no fail-closed refusals). Witnesses
-check this computationally; consumers may require it as a premise. -/
-def CleanFormM (m : Mask) (σ : ExecState) (roots : List GoValue) : Prop :=
-  (canonStateM m σ roots).flags = []
-
-def CleanForm (σ : ExecState) (roots : List GoValue) : Prop :=
-  CleanFormM [] σ roots
+    CEquiv σ₁ r₁ σ₃ r₃ := CEquivM.trans h₁ h₂
 
 /-- **Reader invariance by construction** (the representation-
 engineering form): any reader defined over the canonical form is
@@ -595,13 +639,13 @@ the invariance proof. -/
 theorem read_invariant {α : Type} (read : CForm → α)
     {σ roots σ' roots'} (h : CEquiv σ roots σ' roots') :
     read (canonState σ roots) = read (canonState σ' roots') := by
-  unfold CEquiv CEquivM at h; unfold canonState; rw [h]
+  unfold canonState; rw [h.eq]
 
 /-- Masked reader invariance: any reader over the MASKED form is
 `~ₘ`-invariant. -/
 theorem readM_invariant {α : Type} (m : Mask) (read : CForm → α)
     {σ roots σ' roots'} (h : CEquivM m σ roots σ' roots') :
     read (canonStateM m σ roots) = read (canonStateM m σ' roots') := by
-  unfold CEquivM at h; rw [h]
+  rw [h.eq]
 
 end GoLean.Frame.ChoiceErase

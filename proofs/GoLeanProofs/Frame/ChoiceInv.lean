@@ -79,7 +79,11 @@ root set is a fixed shape — statics + the subject cell).
 
 The conjuncts: the run EXISTS (fail-closed runner succeeded), the
 anchor configuration is the representative's, and the state is
-latitude-equivalent to the representative. -/
+latitude-equivalent to the representative. Since S3 (CE1,
+2026-08-27) the equivalence carries cleanliness IN the relation, so
+this Prop now also demands every landed state's canonicalization be
+flag-free — a FUEL/refusal-flagged landing can no longer count as
+invariant (the pinhole closing, inherited here). -/
 def ChoiceInvariantToM (m : Mask) (fuel : Nat) (σ₀ : ExecState)
     (C₀ : Config) (anchor : Config → Bool)
     (roots : ExecState → List GoValue) (σR : ExecState) (CR : Config) :
