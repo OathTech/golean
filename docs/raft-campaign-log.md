@@ -1985,6 +1985,27 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   the O6 scoping recommendation go to the user together. Lane
   building pauses for the ceremony; SM1 continues (separate lane).
 
+- **SM1 (arc4d lane) — LANDED @ 365f4502** (2026-08-26): the
+  CondFor plain-for head schema (the one missing kit piece,
+  Floyd/Hoare lineage, witnessed) + the utoa weak span (∃-string
+  form as banked) + **`s1_span_computes` — THE S1 BRIDGE
+  BYTE-CLOSED** (three branches, the violations counter literally
+  `wN + if s1Fires then 1 else 0` in the machine readout;
+  fire/clean witnesses; composed count matches the compiled walk
+  exactly) + the four pb-getters; the apply walk BOUNDARY-STOPPED
+  at measurement (two unbanked map fragments ≥2× banked price —
+  the stop clause taken before sinking budget; S23 residue ≈1-1.5
+  units, route mapped). Gate: the known new-files-only red +
+  compensating checks verbatim (30 pins in place, 7 byte-pins
+  axiom-free). O5's first half is DONE. WHAT THIS TAUGHT US: the
+  banked-anatomy pattern priced three of four items within budget
+  and caught the fourth's mispricing at measurement — banking
+  beats re-discovery. [AGENT]: SM2 dispatched (fresh worker,
+  arc4d — s23_span_computes from the banked route; new-files-only,
+  does not move the frozen audit target); arc-4 lane and the
+  ceremony HOLD for the user's three calls (landing shape, audit
+  scope, O6 route).
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
