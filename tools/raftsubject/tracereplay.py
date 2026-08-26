@@ -301,7 +301,13 @@ def family_of(cmd):
     return BY_COMMAND.get(cmd, "other/mixed") if cmd != "log-level" else None
 
 
-def run_one(name, blocks, prefix, args, report):
+def run_one(name, blocks, prefix, args, report, rec=None, resumed=None):
+    # Mid-job-failure principle (2026-08-24, [USER]-directed after two
+    # reboot/crash losses): every expensive stage's raw product is
+    # written to the durable record IMMEDIATELY on capture, BEFORE any
+    # analysis; --resume reuses recorded stages so a crash never costs
+    # more than the stage in flight.
+    resumed = resumed or {}
     scratch = os.path.join(REPO, "artifacts", "tracereplay", name)
     shutil.rmtree(scratch, ignore_errors=True)
     prog = os.path.join(scratch, "prog")
@@ -320,12 +326,23 @@ def run_one(name, blocks, prefix, args, report):
     env["GOCACHE"] = os.path.join(REPO, "artifacts", "go-build-cache")
     env["GO111MODULE"] = "off"
     env["GOPATH"] = gopath
-    r = subprocess.run(["go", "run", "."], cwd=prog, env=env,
-                       capture_output=True, text=True)
-    if r.returncode != 0:
-        report[name] = {"error": "go run failed: %s" % r.stderr.strip()[-400:]}
-        return
-    go_trace = r.stderr.rstrip("\n")
+    if "go-side" in resumed:
+        go_trace = resumed["go-side"]["go_trace"]
+        print("  [%s] go-side reused from record" % name)
+    else:
+        r = subprocess.run(["go", "run", "."], cwd=prog, env=env,
+                           capture_output=True, text=True)
+        if r.returncode != 0:
+            report[name] = {"error": "go run failed: %s" % r.stderr.strip()[-400:]}
+            if rec:
+                rec({"name": name, "stage": "final", "rep": report[name]})
+            return
+        go_trace = r.stderr.rstrip("\n")
+        if rec:
+            rec({"name": name, "stage": "go-side", "go_trace": go_trace})
+    # durable early write (was end-of-function — the original p2 loss)
+    with open(os.path.join(scratch, "go-trace.txt"), "w") as f:
+        f.write(go_trace + "\n")
     outs = parse_trace(go_trace)
 
     # Channel 1 (ok-tier) + channel 3 (rendered) off the go-run trace.
@@ -374,16 +391,47 @@ def run_one(name, blocks, prefix, args, report):
         if r.returncode != 0:
             rep["machine"] = "export refused: %s" % r.stderr.strip()[-300:]
         else:
-            r = subprocess.run([args.golean, "native-json-run", "--input", wire,
-                                "--function", "runTrace", "--fuel", args.fuel],
-                               capture_output=True, text=True)
-            raw = r.stdout.strip()
+            if "machine-raw" in resumed:
+                raw = resumed["machine-raw"]["stdout"]
+                mach_stderr = resumed["machine-raw"].get("stderr", "")
+                print("  [%s] machine run reused from record" % name)
+            else:
+                # Engine choice (P2R, campaign arc-2): "fast" runs the
+                # VERIFIED fast evaluator (proofs exe `fastreplay`:
+                # compiled `stepFast` + the pinned transfer theorems)
+                # with progress emission and a durable per-chunk
+                # record. ENTRY-POINT NOTE (audit fix round 2,
+                # 2026-08-25): an ok verdict certifies BOTH
+                # whole-program entries — `runProgramM` (sequential,
+                # via `GoLean.FastEval.fastRun_transfer_eqb`) AND
+                # `runProgramPoolIntsM`'s underlying `runProgramPoolM`
+                # (the thread-pool entry the "slow" engine below
+                # computes, via `fastRun_transfer_pool_eqb`); their
+                # agreement on accepted runs is itself the pinned
+                # theorem `runProgram_pool_seq_bridge` (singleton-pool
+                # conservation, `execProgLoop_single`). Measured
+                # 44.3 s on probe_and_replicate with the direct
+                # premise-3 check vs the slow engine's >20 h DNF.
+                # "slow" is the original compiled-interpreter path.
+                if args.engine == "fast":
+                    cmd = [args.fastreplay, "--input", wire,
+                           "--function", "runTrace", "--fuel", args.fuel,
+                           "--record", os.path.join(scratch, "fast-record.jsonl")]
+                else:
+                    cmd = [args.golean, "native-json-run", "--input", wire,
+                           "--function", "runTrace", "--fuel", args.fuel]
+                r = subprocess.run(cmd, capture_output=True, text=True)
+                raw = r.stdout.strip()
+                mach_stderr = r.stderr.strip()
+                if rec:
+                    rec({"name": name, "stage": "machine-raw",
+                         "stdout": raw, "stderr": mach_stderr[-2000:]})
             try:
                 obs = json.loads(raw.splitlines()[-1])
             except (ValueError, IndexError):
                 obs = None
             if obs is None:
-                rep["machine"] = "no observation: %s" % (r.stderr.strip()[-300:])
+                rep["machine"] = "no observation: %s" % (mach_stderr[-300:])
             elif obs.get("status") != "ok":
                 rep["machine"] = "machine stop: %s" % raw[:300]
             else:
@@ -404,8 +452,8 @@ def run_one(name, blocks, prefix, args, report):
                                       % (d + 1, gl[d] if d < len(gl) else "<eof>",
                                          ml[d] if d < len(ml) else "<eof>"))
     report[name] = rep
-    with open(os.path.join(scratch, "go-trace.txt"), "w") as f:
-        f.write(go_trace + "\n")
+    if rec:
+        rec({"name": name, "stage": "final", "rep": rep})
     if not args.keep and report[name].get("machine") in ("AGREE", None):
         shutil.rmtree(scratch, ignore_errors=True)
 
@@ -419,7 +467,35 @@ def main():
     ap.add_argument("--keep", action="store_true")
     ap.add_argument("--frontend", default=os.path.join(REPO, "artifacts", "nativefrontend"))
     ap.add_argument("--golean", default=os.path.join(REPO, ".lake", "build", "bin", "golean"))
+    ap.add_argument("--engine", choices=["slow", "fast"], default="slow",
+                    help="machine engine: slow = compiled interpreter (native-json-run); "
+                         "fast = verified fast evaluator (fastreplay exe + pinned transfer theorem)")
+    ap.add_argument("--fastreplay", default=os.path.join(REPO, "proofs", ".lake", "build", "bin", "fastreplay"))
+    ap.add_argument("--record", default=os.path.join(REPO, "artifacts", "tracereplay", "records.jsonl"),
+                    help="durable per-stage JSONL record (fsync'd; the mid-job-failure principle)")
+    ap.add_argument("--resume", action="store_true",
+                    help="reuse recorded stages (matching fuel+mode) instead of re-running them")
     args = ap.parse_args()
+    sys.stdout.reconfigure(line_buffering=True)
+
+    os.makedirs(os.path.dirname(args.record), exist_ok=True)
+    _cfg = {"fuel": args.fuel, "machine": not args.no_machine,
+            "engine": args.engine}
+    _recf = open(args.record, "a")
+    def rec(obj):
+        obj = dict(obj); obj.update(_cfg)
+        _recf.write(json.dumps(obj) + "\n"); _recf.flush(); os.fsync(_recf.fileno())
+    resumed_all = {}
+    if args.resume and os.path.exists(args.record):
+        with open(args.record) as f:
+            for line in f:
+                try: o = json.loads(line)
+                except ValueError: continue
+                if (o.get("fuel") == _cfg["fuel"] and o.get("machine") == _cfg["machine"]
+                        and o.get("engine", "slow") == _cfg["engine"]):
+                    resumed_all.setdefault(o["name"], {})[o["stage"]] = o
+        print("# resume: %d trace(s) have recorded stages in %s"
+              % (len(resumed_all), args.record))
     MSG_TYPES = message_type_values()
 
     names = sorted(f[:-4] for f in os.listdir(TESTDATA) if f.endswith(".txt"))
@@ -445,8 +521,15 @@ def main():
             report[name] = {"blocks": len(blocks), "prefix": 0,
                             "stopped-by": stop_reason}
             continue
-        run_one(name, blocks, prefix, args, report)
+        rz = resumed_all.get(name, {})
+        if "final" in rz:
+            report[name] = rz["final"]["rep"]
+            print("  [%s] final result reused from record" % name)
+        else:
+            run_one(name, blocks, prefix, args, report, rec=rec, resumed=rz)
         report[name]["stopped-by"] = stop_reason
+        print("  done %-40s %s" % (name, report[name].get("machine",
+              report[name].get("error", "go-side only"))))
 
     ok_tot = sum(r.get("ok_blocks", 0) for r in report.values())
     ok_agr = sum(r.get("ok_agree", 0) for r in report.values())

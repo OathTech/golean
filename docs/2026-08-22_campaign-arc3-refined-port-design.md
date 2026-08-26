@@ -201,3 +201,70 @@ AxCheck-clean:
   mirrors Coq's `deghost_packet`/`ghost_packet` rather than trying to
   make the types coincide — keeping the two layers visibly distinct is
   what keeps "ghost never in a statement" checkable.
+
+## 6. CLOSING SECTION — the port's final extent (2026-08-23, unit 16)
+
+The arc ran sixteen units on the `campaign-arc3` lane and CLOSED THE
+FULL T3 SAFETY LATTICE: **election safety** (unit 2, base),
+**log matching** (unit 6, base), **leader completeness** (unit 10,
+refined — upstream's own landing point), **state-machine safety**
+(unit 15, base). All three `Properties.lean` transfer targets
+(`OneLeaderPerTermStatement`, `LogMatchingStatement`,
+`StateMachineSafetyStatement`) are discharged natively, per this
+note's §2 translate-don't-certify conditioning. ~80 upstream proof
+files (~30k upstream lines) are ported across sixteen campaign
+modules; the running INVARIANT INDEX in `docs/campaign-arc3-log.md`
+maps every row to its Interface file and its Lean home.
+
+**Ported vs re-derived vs newly-shaped.** Statements are 1:1 against
+their Interface files at the pin, always. Proofs divide into three
+honesty classes, each marked at its site:
+
+- *Ported* (the default): the same lemma DAG as upstream, re-proved —
+  Ltac does not port, the argument does.
+- *Re-derived routes* (the logged §9 calls — same lattice inputs,
+  — NOTE 2026-08-24, milestone audit R2: this list is the MAJORS; a
+  plain `grep "§9"` over the arc log undercounts proof-shape
+  deviations (several live as bare [AGENT] notes: slices 45/46/53),
+  and the slices 82-84 MIA route calls (a)(b)(c) belong here — R2
+  verified all three equivalent-or-stronger, (c) dissolving three
+  upstream lemmas incl. the no_AE_to_leader dependency —
+  smaller arguments), the majors: unit 10's `aeae_e_in_ll` positioning
+  lemma (~170 Lean lines for upstream's ~590-line 3×3 grid); unit 8's
+  two containment lemmas replacing AllEntriesLog's ~500-line AE Ltac;
+  unit 13's Q-ROUTE for the primed principles (derive from the
+  unprimed principle at `Q net := reachable net → Pr net` — twice, msg
+  then state side, no staged induction duplicated); unit 14's two
+  SMS-prime cores; unit 15's GAP-8 reghosting DIRECTLY through the
+  packet-subset reachability constructors (upstream's dup-drop
+  step-star detour never enters); unit 15's watermark and survival
+  cores factoring upstream's four duplicated ~90-120-line AE bullets
+  each into one lemma; slice 39's pre-state route through
+  `one_leaderLog_win_host` (which deferred GAP-1 by five units until
+  MatchIndexAllEntries genuinely needed the primed premise).
+- *Newly-shaped* (no upstream counterpart): the constructive
+  replacements the enforcing axiom sweep forced (`eraseOne`, the
+  pigeon layer, `sorted_mem_eq`, `moreUpToDate_elim`), the
+  `_of_update` transport-lemma idiom replacing upstream's
+  `update_destruct; rewrite_update` Ltac, and the unit-16
+  consolidation (`update_proj_mem`; term-level→entry-level
+  candidateEntries derivation).
+
+**T4 (linearizability) was explicitly NOT attempted.** The
+constitution (§2.3) marks it a stretch tier; `Linearizability.lean` /
+`RaftLinearizable.lean` remain P1 STATEMENT ports, and their proof
+chain (`RaftLinearizableProofs.v` and the client/output cluster) is
+unported. Nothing in the lattice pre-commits against it — the ghost
+layers and both transfer principles it would ride are proved.
+
+**The handoff surface for the Arc-4 seam: THE INDEX IS THE
+INTERFACE.** The INVARIANT INDEX (84 rows, span-verified each unit) is
+the complete map of what exists: a consumer names a row, cites the
+Interface file for the statement, and imports the Lean home. Per §2 of
+this note, `compat/verdi` remains a read-only structure reference for
+the harness-side campaign — the T1 statements never import it; what
+crosses the seam is the architecture (the invariant decomposition, the
+obligation shapes, the ghost technique, the lift/lower discipline),
+re-instantiated over the interpreter's step relation. The lane ends
+BRANCH-COMPLETE; merge, designation, and the comparator-judge run
+belong to the operator's queue.

@@ -24,6 +24,24 @@ theorem update_neq {A B : Type} [DecidableEq A] (st : A → B) {x h : A} (v : B)
     (hne : x ≠ h) : update st h v x = st x := by
   simp [update, hne]
 
+/-- Membership in a projected list component transports through an
+`update` whose written value only GROWS that component — the shape
+behind every per-node ghost/log transport on the lane (unit-16
+consolidation; instances: allEntries, leaderLogs, logs, at all three
+network layers). -/
+theorem update_proj_mem {A V X : Type} [DecidableEq A]
+    {st st' : A → V} {u : A} {v : V}
+    (hst : ∀ h, st' h = update st u v h) (proj : V → List X)
+    (hgrow : ∀ x ∈ proj (st u), x ∈ proj v)
+    {h : A} {x : X} (hx : x ∈ proj (st h)) : x ∈ proj (st' h) := by
+  rw [hst h]
+  by_cases heq : h = u
+  · subst heq
+    rw [update_same]
+    exact hgrow x hx
+  · rw [update_neq _ _ heq]
+    exact hx
+
 /-- StructTact `update_overwrite`-style collapse: two writes at the same key
 keep only the second. -/
 @[simp] theorem update_update_same {A B : Type} [DecidableEq A] (st : A → B) (h : A)
