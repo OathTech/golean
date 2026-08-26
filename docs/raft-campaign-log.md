@@ -2034,6 +2034,40 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   state). Ceremony order: gate (running) → judge + AuditCorpus
   landmark → audit → fix round → [USER] ff sign-off.
 
+- **THE LANDING AUDIT RETURNED** (2026-08-26; 33 agents, 3 Opus
+  reviewers per the [USER] shape, default-refute verify): 29
+  findings — **21 CONFIRMED, 7 DOWNGRADED, 0 REFUTED** (one verify
+  pass lost to an API error; treated confirmed-unverified). THE
+  REGISTRY delivered (docs/2026-08-26_mechanism-registry.md).
+  Coherence verdict: "much closer to one design than an accretion"
+  — lineage lines everywhere, the Go-general/raft boundary holds,
+  the corpus split fail-closed — with the failures AT THE SEAMS
+  (unconsumed duplicate, five superseded Props one FALSIFIED,
+  stale scaffold tags, the gitignored evidentiary base, the broken
+  doc-of-record chain). Direction verdict — the big one:
+  **round_induction couples NOTHING between concrete and abstract
+  chains** (correctly proved, but the pairing = O5's open half
+  while docstrings/log claim the paired form); the O-census
+  incomplete (12 viol sites, the S2/S3 assembly, the I1 vacuity
+  debt unlisted); the C2a instrument consumer-less after its one
+  real use bypassed it; the literal-mode stop overrun (3 chains +
+  ~28 planned — the mode decision for the replay wave is now a
+  PENDING COORDINATOR DECISION); reuse mass 0.9% of branch lines
+  (though the mechanism:instance structure itself audited clean).
+  Technical verdict: the induction/R-form/census arithmetic all
+  CHECK (hypothesis-by-hypothesis); one REAL fail-open found
+  (collectFix's length-stability vs in-place widening) + the
+  absTwinRead fail-closed gap + the witness-placement weakening of
+  the non-vacuity gate. WHAT THIS TAUGHT US: (1) the summary-layer
+  drift pattern (P2R's lesson) recurred at arc scale — proofs
+  sound, prose overclaiming, now twice; the fix-round rewrites and
+  the census completion are the response; (2) the [USER] coherence
+  priority found what neither prior audit shape would have (the
+  consumer-less instrument, the evidentiary-base hole). [AGENT]:
+  fix round dispatched (F1-F7; the abs-pairing, the Verdi
+  instance, and the replay-mode decision recorded as next-charter,
+  not fix-round, items); delta-review after; then the ff ask.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
