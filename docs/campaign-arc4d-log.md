@@ -470,3 +470,102 @@ above; the standing comparator STALE+OWED escalation.
 
 Nothing merged; branch-complete. Merge/audit-ask remain the
 operator's (constitution §4.1).
+
+# ── SM2 (fresh worker, 2026-08-26): `s23_span_computes` from the banked route ──
+
+## SM2 successor re-verification (2026-08-26)
+
+- Tip clean at 365f4502 (SM1's exit commit), branch `campaign-arc4d`. PASS.
+- SM1's modules re-built green as explicit targets from this worktree's
+  cache: `lake build +GoLeanProofs.Specs.Raft.SpanS1Witness
+  +GoLeanProofs.Specs.Raft.SpanApplyGetters +Audit.Span` — "Build
+  completed successfully (57 jobs)", exit 0. The one warning stream in
+  the transitive build is `GoLeanProofs/SliceMem.lean` (a PRE-EXISTING
+  tracked file, replayed — not SM1's); SM1's zero-warnings claim was
+  about its new modules and stands. PASS.
+- `Audit/Span.lean`: 30 `#guard_msgs` pins counted in place. PASS.
+- Hatch grep (`sorry|native_decide|hatch`) over SM1's 8 modules: 0. PASS.
+- SM1's gate record re-read (`artifacts/ci-arc4d-sm1-2.log` tail:
+  RESULT: FAIL / GATE_EXIT=1 — the known new-files-only red, as
+  recorded). PASS.
+
+## SM2 probes (`#eval`-first; all gitignored `artifacts/probe/`)
+
+`ApplyProbe.lean` → `applyprobe.out`: type-decl dumps (`main.slot` =
+term u64/data string/node u64; `raft.StateType` = defined uint64;
+`raftpb.EntryType` = defined int32), normalization probes (slot + node
+struct normalization = IDENTITY at in-range payloads; `defaultValue`
+main.slot = the zero slot; `buildStructValue` = the named fields;
+string keys hashable), and WHOLE-CALL walks of `main.twin.apply` at
+concrete states for all seven branch classes — every class runs to
+`.next .stop` with the s23Step-predicted readout:
+- A clean-insert 428 steps (committed++, cursors set, got+{data},
+  byIndex append, viol 0)
+- B S2-fire 1339 (viol 1, byIndex UNCHANGED on hit)
+- C hit-agree 427 (viol 0, byIndex unchanged)
+- D S3-idx-fire 990 / E S3-term-fire 990 (viol 1, cursors still set)
+- F anomaly 622 (viol 1, committed/got/byIndex untouched, early return)
+- G empty-data 289 (viol 0, cursors set, committed/got/byIndex
+  untouched, early return)
+Verbose config chains for A/G/F/B/D dumped for segment transcription.
+
+## SM2 slice 1 — `SpanS23Maps.lean` + `SpanS23Cells.lean` (items 1-2:
+the two map fragments + the cell/op layer; DELIVERED)
+
+`Specs/Raft/SpanS23Maps.lean`:
+- **`encGS`** — the injective GoString→Nat data code (base-257,
+  digits 1..256): `encB_inj`/`encGS_inj`, `encGS_eq_zero_iff` (empty ↔
+  0 — the machine's `len(data)==0` branch IS the model's `data = 0`),
+  `gsBeq_iff_eq` (the derived GoString BEq decides equality),
+  `gsBeq_encGS` (machine string `==` IS model code `==` — the S2
+  data-comparison transport). [AGENT] The model's `AEv.data : Nat` is
+  bridged by a CONCRETE injection rather than an abstract premise: the
+  walk theorem then states `s23Step` literally, and the T1 assembly
+  renames data through `encGS_inj` (assembly-seam note; recorded here
+  because the banked route had left the data-vocabulary mismatch
+  unpriced — it cost one design decision, no new theory).
+- **The string-keyed MapMem sibling** (`nd.got`'s fragment, MapMem
+  reuse pattern — one scan engine + one op lemma): `sIdxOf?`/`setks`/
+  `toEntriesS`, `valueEq_string`, `checkKeyHashable_string`,
+  `scanS_generic`, `mapEntryIndex?_toEntriesS`,
+  `mapAssignValue_toEntriesS` (update-or-append = `setks`; string
+  keys/bool values normalize as identities). PROMOTABLE (wordfreq-class
+  latent consumers); promotion target `GoLeanProofs/StrMapMem.lean`
+  recorded in the module docstring; located here per the lane's
+  location rule + §7 one-consumer test.
+- **The slot-valued fragment** (`t.byIndex`): `slotFs` +
+  `slotDecl_pinned` (kernel) + `normalize_slotFs` +
+  `defaultValue_slot` + `buildStructValue_slot` (the twinFs pattern,
+  3 fields; table-footprint normalizations conditioned on
+  `σ.types = twinTypes`); `bIdxOf?`/`bget?`/`toEntriesB`,
+  `scanB_generic`, `mapEntryIndex?_toEntriesB`,
+  `applyRhsOp_mapLookup_toEntriesB` (comma-ok: first-match slot or
+  the ZERO slot + flag), `mapAssignValue_toEntriesB_insert` (the
+  miss-arm append — the only assignment the checker performs; the hit
+  arm never assigns, so it is deliberately not built — §7).
+
+`Specs/Raft/SpanS23Cells.lean`:
+- **`nodeFs`** (9 fields, `rn`/`st`/`got` opaque) + `nodeDecl_pinned`
+  + `stateTypeDecl_pinned` + `entryTypeResolve_pinned` (kernel pins) +
+  field lookups + `normalize_nodeFs` (identity at in-range payloads —
+  `state` resolves through `raft.StateType` to uint64, measured in
+  the probe first).
+- **Cursor stores** `storeTarget_node_applied`/`_lastTrm` +
+  `storeTarget_twin_committed` (the SpanCells store-single pattern at
+  the two new cells).
+- **Comparison singles**: `applyStrictOp_eqCmp_int`, `_neqCmp_u64`,
+  `_neqCmp_string`, `_neqCmp_entryType` (htypes-conditioned — the
+  defined chain resolves through the pinned table),
+  `_atMostCmp_int`, `_lessCmp_int'` (kind-blind int payloads),
+  `_length_slice`.
+- **`applyStrictOp_stringFromByteSlice`** — the byte fold
+  (`byteFold_generic`, scan-engine pattern; `UInt8.ofNat_toNat`
+  round-trip); the `sliceVisibleValues` fact enters as a HYPOTHESIS —
+  [AGENT] the SliceMem append-family precedent, chosen so the span
+  stays shape-generic in the Data slice's offset/backing (fixing
+  offset 0/cap=len would have been target-shaped over-specialization;
+  witnesses discharge the fact by kernel evaluation).
+
+Verification: both modules `lake env lean` exit 0, ZERO warnings
+(`SpanS23Maps` carries MapMem's documented `unusedSimpArgs`
+suppression for the same `letFun` false-flag, comment carried over).
