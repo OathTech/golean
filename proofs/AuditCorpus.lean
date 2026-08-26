@@ -5,6 +5,7 @@ import Audit.RoundMa
 import Audit.RoundVote
 import Audit.RoundMar
 import Audit.RoundVr
+import Audit.RoundIndWitness
 
 /-!
 # In-build epistemic gate for the VALIDATION CORPUS

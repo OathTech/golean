@@ -94,6 +94,10 @@ import GoLeanProofs.Specs.Raft.SeedLitVar
 import GoLeanProofs.Specs.Raft.SeedCFormLit
 import GoLeanProofs.Specs.Raft.SeedPin
 import GoLeanProofs.Specs.Raft.SeedWitness
+-- A4-U26 slice 2: THE ROUND INDUCTION (generic simulation induction
+-- over round chains; consumes the R-form + the native chain + the seed
+-- pin). Witnesses live in the corpus target (RoundInductionWitness).
+import GoLeanProofs.Specs.Raft.RoundInduction
 -- A4-U8: the field-lens layer (Perennial Access lineage; general half —
 -- combinators + L1-L4 laws; per-field instances live in Specs/Raft).
 import GoLeanProofs.Lens

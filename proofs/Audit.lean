@@ -29,6 +29,7 @@ import Audit.MatMul
 import Audit.FrameShape
 import Audit.DriverNet
 import Audit.CheckerBridge
+import Audit.RoundInduction
 -- The corpus pin modules (Audit.Ring / Audit.RoundMa / Audit.RoundVote /
 -- Audit.RoundMar) moved to the AuditCorpus root with the A4-U25
 -- validation-corpus split: their subjects are no longer in this build's

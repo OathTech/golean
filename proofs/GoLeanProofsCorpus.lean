@@ -108,6 +108,12 @@ import GoLeanProofs.Specs.Raft.RoundVrEqD
 import GoLeanProofs.Specs.Raft.RoundVrEqE
 import GoLeanProofs.Specs.Raft.RoundVrEquation
 import GoLeanProofs.Specs.Raft.RoundVrLemma
+-- A4-U26 slice 2: the round induction's witnesses over the four proved
+-- kinds (shared-C0 kernel pins, the abstract EStep witness chain from
+-- the seed, the 1-link and 2-link induction discharges, the seeded
+-- non-vacuity witness). The generic induction itself is LIVE
+-- (GoLeanProofs.Specs.Raft.RoundInduction, default target).
+import GoLeanProofs.Specs.Raft.RoundInductionWitness
 -- The handler-equation validation chains (A4-U10..U17; the "20 literal
 -- equations" of the redesign's asset inventory §2). Interdependencies
 -- (e.g. HaeEquation ← Stale/HaeRej/La; SfHbLit ← SCHb/Slb) are internal
