@@ -628,3 +628,117 @@ prelude (DELIVERED)
 
 Verification: `lake env lean` exit 0, zero warnings; olean via
 explicit target; hatch grep 0.
+
+## SM2 slice 4-6 — THE APPLY WALK + `s23_span_computes` + witnesses
++ pins (items 3-4; DELIVERED — **S23 IS BYTE-CLOSED**)
+
+Files: `SpanS23Walk1-5.lean` (the walk, split for iteration speed —
+the SM1 convention, plus one forced split: a single byIdx decl blew
+the PER-DECL heartbeat budget, so the hit path became its own
+theorem), `SpanS23.lean` (abs step + headline),
+`SpanS23Witness.lean`, `Audit/SpanS23.lean`.
+
+### The walk (SpanS23Walk1-5)
+- **Walk1**: `sliceVisibleValues_of_array` (first-order Data-window
+  premises — no ∀σ premise), **`utoaUnit_walk`** (ONE generic
+  `$c := utoa(arg)` unit for the THIRTEEN call sites; ka + 1572
+  bound each), the named body views + `s23_getters_seg` (117 exact,
+  probe-verified, the `gettersSt` 11-set state).
+- **Walk2**: `BrCells` (the branch cell pack + `thread`/`threadF`
+  transports), `concat6_eval` (21), **`s3Branch_walk`** — ONE engine
+  for BOTH S3 fire branches (3 units + concat + `viol_call_span`,
+  `∃ ≤ k1+k2+k3+4800`), and the two guard segments
+  (`s3idx_seg`/`s3term_seg`) with **the guard readout EXACT**:
+  `violations + (if ixN ≤ apl then 1 else 0)` — the model predicate
+  literally in the machine readout, the fire branch's trace
+  existential.
+- **Walk3**: `s23_cursors_seg` (22; whole-node re-normalizing
+  stores), `getterUnit_prelude` + `lookup_declare_self/_ne`,
+  `s23_type_seg` (66; the EntryNormal skip), `s23_len_seg` (54,
+  fall-through) and **`s23_len_ret` (58, the EMPTY-PAYLOAD EARLY
+  RETURN through the targetless frame — the `.returning` cascade)**,
+  `s23_tail_seg` (87: `string(bytes)` via the window premises,
+  `got[data] = true` = `setks`, `committed++`).
+- **Walk4**: `bget?_mem`, the 26-step comma-ok slot lookup (zero
+  slot on miss, store normalization by cases on the scan),
+  `fieldOnVar_seg`, the miss/insert subcase (30, `.next Kc`), **the
+  generic left-spine concat evaluator** (`spineE/nestK/spineSteps/
+  spine_desc/spine_consume/spine_eval` — structural induction over a
+  leaf-descriptor list; replaces a hand-rolled 14-leaf walk;
+  [AGENT]: promotion note — `concat6_eval` is this engine's
+  hand-rolled instance, fold it in at the next consolidation slice),
+  and **`s2Branch_walk`** (5 `utoaUnit` rides + the 14-leaf spine +
+  `viol_call_span`, `S2Cells` threading).
+- **Walk5**: `s23_byidx_hit_seg` (own decl: the short-circuit S2
+  guard, agree-skip and fire paths exit-unified) +
+  **`s23_byidx_seg`** — the block's three subcases with
+  `s2HitB`/`bInsertIfAbsent` readouts EXACT.
+
+### The headline (`SpanS23.lean`)
+- **`s23_abs_step`** — the data-refinement commutation: the machine
+  readouts ARE `s23Step`'s fields at the `projBy`/`encGS`
+  projection — byIndex lookup-extensional (machine APPEND vs model
+  CONS via `lookupIdx_projBy_append`), cursors/counters EQUAL;
+  composable through folds by `s23Fold_congr`.
+- **`s23_span_computes`** — from ANY symbolic checker state
+  (EntryNormal entry — the model's own scope, per the U23/C4 note,
+  RECORDED in the docstring; the anomaly branch stays covered by the
+  U23 guard pin + this walk's guard evaluation showing it is NOT
+  taken at EntryNormal): the whole `main.twin.apply` CALL
+  (`∃ m ≤ 18400`) ends `.next Kc` with
+  - cursors `= (ixN, tmN)` EXACT,
+  - `violations + (iteS3idx + iteS3trm + (if encGS data = 0 then 0
+    else s2HitB))` — `s23Step`'s deltas literally,
+  - `committed`/`got`/`byIndex` per the empty-payload branch
+    (`encGS = 0 ↔` empty, `encGS_eq_zero_iff`),
+  - trace ∃, frame respect, frontier `+9..+130`, freshness,
+    `Agrees`.
+  Axioms: [propext, Classical.choice, Quot.sound]; `s23_abs_step`
+  [propext, Quot.sound].
+
+### Witnesses (`SpanS23Witness.lean`) — at the U23 bridge's OWN events
+- `s23w_span` (the parameterized fixture discharge, every premise
+  concrete), **`s23w_span_s2fire`** at the bridge's
+  `⟨1,2,2,7⟩/⟨2,2,2,8⟩` pair — the data bytes `[6]`/`[7]` code to
+  EXACTLY the bridge's `7`/`8` (`s23w_data_codes`, axiom-free);
+  violations 0→1, committed 1→2. **`s23w_span_s3fire`**
+  (re-applied index), **`s23w_span_clean`** (zero violations, the
+  slot appended). `s23w_s2hit_model` : the machine readout IS
+  `s2Hit` at the projection — `rfl`, axiom-free.
+
+### Audit (`Audit/SpanS23.lean`)
+31 `#guard_msgs` pins verified in place (`lake env lean` exit 0,
+zero output), readouts verbatim from `artifacts/probe/axs23.out`;
+all within [propext, Classical.choice, Quot.sound]; the five
+declaration/Func pins + the two model ties axiom-FREE.
+
+- [AGENT] calls, tagged:
+  1. **The `encGS` data code** (base-257, digits 1..256, injective,
+     0 ↔ empty): the model's `AEv.data : Nat` vs the machine's
+     `GoString` was an unpriced vocabulary mismatch in the banked
+     route; resolved by a CONCRETE injection so the span states
+     `s23Step` literally. The T1 assembly renames data through any
+     injection; `encGS_inj` makes the transport sound (the
+     assembly-seam note; same class as S1's `ClaimTrace` seam).
+  2. **EntryNormal scope**: `s23_span_computes` takes the type value
+     0 as a premise — the MODEL's own scope (the C4 note: v1
+     proposes no conf changes); the anomaly branch's walk was
+     deliberately not built (≈400 lines computing no model
+     predicate). Recorded as scope, not a gap: the walk PROVES the
+     branch untaken at EntryNormal.
+  3. **`sliceVisibleValues` premises are first-order** (the
+     array-cell + pointwise window facts) — the SliceMem
+     hypothesis-style was rejected at the span level because it
+     would smell of the ∀σ vacuity class; the walk transports the
+     cell facts itself.
+  4. **Per-decl heartbeat wall** (byIdx): four timeouts inside ONE
+     giant decl (heartbeats are per-declaration) — split the hit
+     path into `s23_byidx_hit_seg`. The debugging drill that found
+     it: the whnf-grind-on-false-unification smell twice traced to
+     WRONG sub-chain literals (11-not-13, 17-not-15) — the
+     eval-before-decide lesson in unification form; counts now
+     always spelled in the chain's own association.
+  5. The s3term_seg statement had its icell payload silently
+     clobbered (tmN for ixN) by a text transformation — caught
+     IMMEDIATELY at the headline composition (the assembly is the
+     checker of the segments). Fixed at the statement.
