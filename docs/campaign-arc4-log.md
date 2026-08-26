@@ -5438,3 +5438,40 @@ landing to the scope trigger's motivation.
   **STALE at 159 commits** AND **OWED (scope)** (Audit.lean import
   lines; report-only) — both stand escalated for the operator's
   merge step, as since U8.
+
+- 2026-08-26 A4-U21 budget item, delivered post-gate (probe-only —
+  `artifacts/probe/TwinVoteFixProbe.lean` / `VoteRingCensus.lean`,
+  outputs gitignored; no tracked-code change, the gate record above
+  stands): **THE MSGVOTE ROUND FIXTURE + CENSUS** (the first
+  election-kind arm census, per U18's reachable set — one
+  doctor-swap on the delivered template, as the charter priced):
+  - **The real vote family** (Type 5, 1→2, Term 1 REAL — node 2 at
+    Term 0 takes the m.Term > r.Term branch → becomeFollower(1,
+    None) → the vote grant on the up-to-date check against the
+    decoded boot log): round **19,291 steps / 9 choices /
+    self-returning** (U18's real MsgVote rounds: 19,611/19,973 —
+    in range); POST Term 0→1, Vote 0→1, lead 0, log untouched; net
+    +MsgVoteResp (typ 6, 2→1, term 1). Read set 44 cells / 30
+    iterations.
+  - **THE CENSUS FINDING (sharpens U20's)**: the vote round WRITES
+    the hard state (SetHardState at ring 14701 — Term/Vote
+    persistence) **but produces NO storage-resp arms** — no
+    MemoryStorage.Append, no newStorage*RespMsg, no nested
+    `raft.raft.Step` in Advance (Advance span ~134, the no-op
+    shell): the storage-resp arms need ENTRIES/COMMIT movement, not
+    merely a hardstate write. The round-kind matrix so far:
+    heartbeat = no ring work (U20); MsgVote = hardstate-only ring
+    (~6,091 ring steps, 4 in-ring appendSpill: assembly, accept,
+    and the two harness sends); MsgApp-append = the full
+    storage-resp ring (13,870; this unit's spans).
+  - **SC1's classification holds at the vote round too**: 6 mapIter
+    + 4 appendSpill + 0 OTHER; the 4 in-ARM mapIter draws are
+    becomeFollower's reset (tracker Visit — SC1's bucket table row,
+    now confirmed at instance level); in-RING draws are all
+    appendSpill, and the vote ring's shells are the SAME callees as
+    the MsgApp ring's (HasReady/Ready/assembly/accept/Advance/
+    second-HasReady) — the cross-kind shell identity SC1's per-arm
+    pricing rides on, now measured at two round kinds.
+  - Deliverable-5 status upgraded: **DELIVERED at census level**
+    (the fixture + anatomy + draw classification; the vote round's
+    own arm/ring spans are C2d+ instantiations of the same shells).
