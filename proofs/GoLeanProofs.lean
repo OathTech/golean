@@ -82,6 +82,18 @@ import GoLeanProofs.Specs.Raft.NativeS1Witness
 import GoLeanProofs.Specs.Raft.NativeS23Chain
 import GoLeanProofs.Specs.Raft.NativeS23Witness
 import GoLeanProofs.Specs.Raft.NativeCheckerBridge
+-- SP1 landing (arc4c lane, per its landing manifest — A4-U26 slice 0):
+-- the choice-invariance carrier (~/~ₘ, CForm) + the seed pin. LIVE, not
+-- corpus: SeedFam is the round induction's base family; seed_N₀
+-- discharges the native chain's Seed hypothesis. Kernel cost joining the
+-- default build (measured at SP1): SeedPin ≈262 s + SeedWitness ≈41 s.
+import GoLeanProofs.Frame.ChoiceCanon
+import GoLeanProofs.Frame.ChoiceInv
+import GoLeanProofs.Specs.Raft.SeedLit
+import GoLeanProofs.Specs.Raft.SeedLitVar
+import GoLeanProofs.Specs.Raft.SeedCFormLit
+import GoLeanProofs.Specs.Raft.SeedPin
+import GoLeanProofs.Specs.Raft.SeedWitness
 -- A4-U8: the field-lens layer (Perennial Access lineage; general half —
 -- combinators + L1-L4 laws; per-field instances live in Specs/Raft).
 import GoLeanProofs.Lens
