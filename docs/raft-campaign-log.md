@@ -1802,6 +1802,31 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   INDUCTION HOLDS for SP1's ~ landing (its canon question is ~'s to
   answer). Landmark dual-trigger at 163 — stands.
 
+- **Arc 4, A4-U23 — LANDED** @ 5778bcb3, gate PASS, 585 jobs:
+  **`roundVote_lemma` — the R-form's SECOND instance** (first
+  election-kind round; Term/Vote persistence + net delta +
+  violations 0→0 read out) — **U22's "windows only" marginal-cost
+  claim CONFIRMED at a second kind**: 578 s window kernel + 3.3 s
+  lemma layer; two one-time template payments bisect-measured and
+  folded (auto-discovery of choice-free mirror quit sites; the
+  γS_pin table-footprint premise on defined-type mapIter
+  crossings). Checker interfaces: **delivered as model bridges,
+  honestly NOT claimed closed** — s1_viol_delta proved,
+  S23's both sound fields proved given the projection premise, the
+  composed corollaries run the arc4b leaves end-to-end, four
+  violation guards pinned VERBATIM against the lowering; the
+  priced residual = the span-computes-model theorem (≈1 unit,
+  utoa digit-loop kit + two span lemmas). WHAT THIS TAUGHT US:
+  (1) the template holds across round-kind families — the
+  induction's per-kind cost is now a measured constant; (2) the
+  honest-residual pattern beats in-budget overreach (the worker
+  priced the byte-level closure instead of rushing it). Zero
+  SIGTERM interference this session. [AGENT]: U24 to the same
+  worker (~412k): the span-computes-model slice (closing the
+  bridges to the bytes) + the MsgAppResp maybeCommit round kind
+  (the matrix's untested commit-without-append row). Landmark
+  dual-trigger at 166 — stands. SP1 (~) still in flight.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
