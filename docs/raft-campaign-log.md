@@ -2197,6 +2197,24 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   the summit plan reshaped; phase 3 = [USER] reviews the proposal
   before anything builds.
 
+- **[USER] 2026-08-26 — the compositionality test (review
+  calibration):** separation logic is not the final word; the
+  principle is COMPOSITIONALITY — "check something is true in the
+  local environment, then establish it can operate in a set of
+  contexts without disturbing them." Adopted for the synthesis as
+  the replacement for BRiCk's Rule 0: every spec form names its
+  FRAME STORY (context set + non-disturbance promise) in its
+  layer's native vocabulary; a spec usable only with global
+  knowledge is the suspicious object regardless of logic. Noted:
+  our frame layer is already this position implemented (semantic
+  locality upstream of any BI); rely-guarantee is the interference
+  version for the concurrency era. Honest self-application: the
+  equations/round lemmas/quotient PASS; the seed pin is
+  legitimately global (a base case); the two FAILURES are already
+  named debts — the missing abs-pairing (under-coupled = also
+  non-compositional) and Fam-as-global-well-formedness (a typing
+  context's job, likely the professor's call).
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
