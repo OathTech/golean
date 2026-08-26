@@ -13,6 +13,25 @@ The raft proof campaign is governed by
 `docs/2026-08-21_raft-proof-constitution.md` (ratified 2026-08-22) — read it
 before any campaign work; it specializes this file, never overrides it.
 
+## Bounded techniques are not proof (2026-08-27, doctrine — [USER], top billing deliberate)
+
+**Bounded techniques, enumeration, 'fixed vectors', unrolling, and
+anything similar, is totally forbidden as a proof technique. This is
+not proof, it does not generalize.** A theorem whose statement or
+proof depends on a concrete step count, round count, iteration
+bound, fixture identity, or enumerated case list over states is not
+a result — at best it is scaffolding (a stepping stone, dev-time
+evidence, a test), and it must be labeled as such at birth and must
+never be cited by, or compose into, a real proof. Real proofs are
+invariant-and-rule-shaped: loop rules with invariants (variants for
+totality), function specs, congruences, simulations — quantified
+over all states, all iteration counts, all streams, with the
+subject's identity entering only through the reflection certificates
+(the wire/shape pins). The campaign's fixed-trajectory era
+(2026-08) is the recorded cautionary instance: months of
+kernel-checked trajectory facts, all stepping-stone tier, none of
+them part of the proof.
+
 ## The two bounds — what we are building (2026-08-11, doctrine)
 
 **A trustworthy, PORTABLE Go semantics** — the weakest machine Go can
