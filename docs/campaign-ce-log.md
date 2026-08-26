@@ -83,6 +83,84 @@ the CE-never-designated rule holds vacuously and must stay so).
   pair is re-verified DISTINGUISHED under the repaired relation
   (its states are clean; the relation refuses them on content).
 
+### The iff's proof architecture ([AGENT], recorded before building
+— the decisions, so a successor can resume without re-deriving)
+
+Statement (the pre-adjusted gate form): on `KeysWF` states,
+`CEquivM m σ r σ' r' ↔ CleanFormM m σ r ∧ CleanFormM m σ' r' ∧
+SpanIso m σ r σ' r'` — LHS-Clean is inside post-S3 `CEquivM`;
+RHS-Clean is the checker's own cleanliness beside the (relational,
+internally-`RelClean`-carrying) `SpanIso`, matching the plan's
+`Clean ∧ CEquivM ↔ Clean ∧ SpanIso` literally.
+
+Key analysis findings (each checked against the code, not guessed):
+1. **Backward CANNOT pair the two phase-1 runs step-by-step**: the
+   mapIter entry orders differ between the sides, phase-1 traversal
+   is order-sensitive MID-pass (views grow during a pass), so only
+   the FIXPOINT is order-insensitive. Both directions therefore go
+   through **fixpoint adequacy** per side: at a clean stable state,
+   computed `viewOf` = the relational `MaxView` sup and computed
+   `direct` = relational `DirectRef` — the checker computes the
+   relational spec. This is also exactly the lemma the old
+   `collectFix` fail-open (landing audit F2a) falsified — the iff is
+   the theorem that makes that bug class unshippable.
+2. **Stability is LITERAL**: every phase-1 op is id-or-strict-
+   measure-increase (flags excluded from measure — handled by the
+   cleanliness premise + flags-monotonicity), so measure-stability
+   forces the stable pass to be the literal identity, which kills
+   the mid-pass-bound problem: at stability the walk happens at
+   FINAL bounds everywhere.
+3. **Completeness route**: pass-identity ⇒ per-value local imprints
+   (`ValOk`, value-deep/cell-shallow — cycles handled by the visited
+   set, so the RVal-induction motive is local-imprint + leaves ∈
+   passVisited, never value-transitive across cells).
+4. **Soundness invariant**: computed `viewOf a` is always ITSELF a
+   reachable handle's window (bumpView writes exact windows), which
+   is what makes mid-pass slice-walk elements RVal-derivable.
+5. **Phase 2 pairs across sides** (backward) — sorted map entries
+   restore order alignment (keys equal + `KeysWF` unique) — and
+   decodes (forward): equal emitted `CVal`s + final-ids alignment ⇒
+   `VCorr`; `badLoc` collisions excluded by cleanliness. Mismatched
+   fuels handled by paired induction on the left fuel generalizing
+   the right (cleanliness kills exhaustion branches) — NO
+   fuel-irrelevance lemma family needed.
+6. **Zero-like bridge is one-directional and depth-free**:
+   `isZeroLike f v = true → ZeroLike v` (forward only; backward
+   never evaluates the checker's zero test — cleanliness already
+   decided the trim). No depth-bound WF premise needed.
+
+Module plan (all new files, this lane's tree): `SpanIsoAdequacy`
+(phase-1: ops, mono, literal-stability, soundness, completeness),
+`SpanIsoSort` (insertion-sort alignment under KeysWF),
+`SpanIsoBack`, `SpanIsoFwd`, `SpanIsoIff` (assembly + witness).
+Self-checkpoint ([AGENT]): if the adequacy module stalls
+architecturally or the total burn passes ~1/3 of the session budget
+before backward closes, STOP and report the gate honestly (the
+resistance found so far is VOLUME, not statement-expressibility —
+no relational-inexpressibility wall has appeared; that distinction
+goes in the report either way).
+
+### [USER] doctrine update received mid-unit (2026-08-27, relayed
+by the coordinator): witness ceremony ENDED
+
+Per-law witness obligations lost doctrinal status — witnesses are
+now optional dev-time tooling, never proof-cited, never Audit-pinned
+deliverables. Charter items 1-4 (S3, SpanIso, the adjusted iff,
+verdict invariance) UNCHANGED; item 5's witnesses optional. Also:
+the seed pin's literal-replay role is dissolving (init becomes a
+function spec; O7 debt canceled) — SpanIso's consumers are specs and
+the erased semantics, not pin-replays. [AGENT] response: (a) the
+already-committed pinhole/viewfix/SpanIso witnesses are KEPT as
+dev-check tooling — the SpanIso occupation/refutation pair already
+caught definitional friction while building (the ghost-vote
+precedent playing out) — but they are tooling, not deliverables, and
+get no NEW Audit pins; (b) the planned iff-instantiation on the
+seedVar pair (which would have needed a kernel WF-check over the
+25k-line literal) is DROPPED from the plan — the gate is the
+theorem; a small-pair dev check may stand in if useful; (c) Audit
+pins remain for the real theorems (S3 relation laws, the iff,
+verdict invariance).
+
 ### Status blocks (updated as units land — commit hashes recorded
 at commit time, never before)
 
