@@ -982,7 +982,7 @@ theorem s3term_seg
     (hBr : BrCells na₀ tw nw
       (twCell nodesV netV liveV lm byV cc cm w pendV drvV sq tr hlV)
       (ndCellN idvN rnV stV tmvN cmvN stvN apl ltm gm)
-      ⟨some (.int .uint64), .int (tmN : Int) .uint64⟩
+      ⟨some (.int .uint64), .int (ixN : Int) .uint64⟩
       ⟨some (.int .uint64), .int (tmN : Int) .uint64⟩ σ)
     (hidv : idvN < 2 ^ 64) (htmr : tmN < 2 ^ 64)
     (hltm : ltm < 2 ^ 64)
