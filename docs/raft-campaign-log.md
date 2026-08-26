@@ -1,3 +1,4 @@
+<!-- SNAPSHOT of the campaign coordination log @ ae6504a6 (raft-proof-campaign), taken 2026-08-26 at the landing fix round; the LIVE log is the campaign worktree's — this copy goes stale by design and is refreshed at landings (delta-review F-6) -->
 # THE RAFT PROOF CAMPAIGN — log
 
 Governing instrument: `docs/2026-08-21_raft-proof-constitution.md`

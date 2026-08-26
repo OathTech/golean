@@ -1,4 +1,8 @@
 #!/bin/zsh
+# KNOWN LIMITATION (delta-review F-8): CORPUS= below is a literal list,
+# not derived from GoLeanProofsCorpus.lean — it can drift from the
+# aggregator. The authoritative fail-closed gate is scripts/ci's
+# two-closure coverage step; this script is a convenience census only.
 # Importer-closure census for the validation-corpus split (A4-U25;
 # membership corrected at the arc-4 landing fix round, 2026-08-26).
 #

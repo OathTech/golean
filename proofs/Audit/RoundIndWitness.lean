@@ -2,7 +2,7 @@ import GoLeanProofs.Specs.Raft.RoundInductionWitness
 
 /-!
 # Audit pins: the round induction's WITNESSES (A4-U26 slice 2,
-corpus layer)
+live layer — title corrected, delta-review F-4)
 
 The shared loop-head configuration (the four proved kinds' `C0`s
 kernel-pinned equal — cross-kind chaining is config-compatible), the

@@ -190,6 +190,15 @@ import GoLeanProofs.Specs.Raft.SeedLitVar
 import GoLeanProofs.Specs.Raft.SeedCFormLit
 import GoLeanProofs.Specs.Raft.SeedPin
 import GoLeanProofs.Specs.Raft.SeedWitness
+-- BUILD DISCIPLINE (landing delta-review F-2, 2026-08-26): the round
+-- window-kernel modules returned to this default target by the
+-- witness-with-its-law rule are CONCURRENCY-OOM-PRONE on cold builds
+-- (measured: 6-8 concurrent window modules breach 96G; per-module
+-- peaks are modest). A COLD build of this target MUST warm
+-- sequentially first (per-Audit-root explicit targets at
+-- LEAN_NUM_THREADS=2, then the full build at scaled threads) — the
+-- warm-landing.log pattern. Warm gates measure 255-256 s; no cold
+-- gate wall is on record yet (operator measurement owed).
 -- A4-U26 slice 2: THE ROUND INDUCTION (generic simulation induction
 -- over round chains; consumes the R-form + the native chain + the seed
 -- pin). Its witnesses are LIVE beside it since the landing fix round

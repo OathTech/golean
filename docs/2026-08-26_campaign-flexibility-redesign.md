@@ -1,3 +1,4 @@
+<!-- SNAPSHOT of the campaign worktree's design of record @ raft-proof-campaign, refreshed 2026-08-26 at the landing fix round; the LIVE copy is the campaign worktree's (delta-review F-6: commit-qualify on each refresh) -->
 # The flexibility redesign — exec-level pass (2026-08-26)
 
 > **TRACKED COPY (arc-4 landing fix round, F6).** Source: the campaign

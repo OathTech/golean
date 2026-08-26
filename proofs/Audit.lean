@@ -43,10 +43,10 @@ import Audit.RoundMar
 import Audit.RoundVr
 import Audit.RoundIndWitness
 import Audit.ChoiceInv
--- The corpus pin modules (Audit.Ring / Audit.RoundMa / Audit.RoundVote /
--- Audit.RoundMar) moved to the AuditCorpus root with the A4-U25
--- validation-corpus split: their subjects are no longer in this build's
--- closure, so their pins run at landmark corpus builds
+-- [Comment corrected, landing delta-review F-4: the four round-kind pin
+-- modules RETURNED to this root with the fix round's witness-with-its-law
+-- rule — the imports above are current; only the handler-equation corpus
+-- chains' pins remain at the AuditCorpus root.]
 -- (`scripts/capped lake build AuditCorpus`) — see GoLeanProofsCorpus.lean.
 
 /-!

@@ -73,3 +73,13 @@ roundvrgen.out`. `corpus-census.sh` takes no arguments.
 Provenance rule going forward: a new generator lands HERE (tracked) in
 the same commit as its first generated module, and the generated
 module's header cites `tools/campaign/<Gen>.lean` + the invocation.
+
+
+## probes/ (added at the landing delta-review, F-3)
+
+Every probe/generator `.lean` file CITED from a tracked proofs docstring
+(81 files — the load-bearing provenance set; uncited probes remain
+gitignored). These are inert (no lake target; hatch-clean). CAVEAT
+(F-3/1a): `FixCollectFixProbe.lean` reproduces the pre-fix collectFix
+bug and uses the PRE-FIX namespace — run it at commit b4977d05, not at
+the tip.
