@@ -1,4 +1,4 @@
-import GoLeanProofs.Sym.UtoaSpan
+import GoLeanProofs.Specs.Raft.UtoaSpan
 import GoLeanProofs.MapMem
 import GoLeanProofs.Specs.Raft.DriverNet
 

@@ -274,3 +274,199 @@ Verification: every module `lake env lean` exit 0, zero warnings;
 oleans via explicit targets (≤48G, lock-exempt); `#eval`-first via
 the probes (`s1block.out` config chains transcribed
 segment-for-segment before proving).
+
+## SM1 slice 4 — the pb-getter call spans (item 4's banked piece;
+DELIVERED) + THE APPLY-WALK BOUNDARY-STOP (measured)
+
+`Specs/Raft/SpanApplyGetters.lean`:
+
+- **Four whole-`Func` pins, axiom-FREE** (`getIndex/getTerm/getType/
+  getData_pinned` + `entryTypeDecl_pinned`): the getters' verbatim
+  lowered bodies (`getterdump.out`) — nil-checked pointer-field reads
+  (`Index`/`Term`/`Type` are `*uint64`/`*EntryType` protobuf-optional
+  fields; `Data` a direct `[]byte`).
+- **`ptrGetter_body_span`** — ONE generic 43-step body walk over
+  (field, payload type, result type, store-normalization fact),
+  serving Index/Term/Type; **`getData_body_span`** (29 steps, single
+  nil check, no second deref). New singles:
+  `applyStrictOp_neq_addr_nil` (pointer-type `!=` against nil, any
+  address, any state), `normalize_slice` (slice normalization is the
+  identity — no arm matches, measured off the definition),
+  `normalize_entryType` (the alias resolves to `int32` at the pinned
+  table).
+- **Four call spans** (`getIndex/getTerm/getType/getData_call_span`;
+  49/49/49/35 steps, all EXACT, probe-verified `getterprobe.out`
+  51-step end-to-end at a concrete state = 49 + the probe's 2
+  continuation steps): from the delivered receiver to the caller's
+  resumption, the target cell holding EXACTLY the entry's field
+  value, explicit `twinSt` final states, dead frame cells between
+  the frontiers.
+- Audit/Span extended to **30 pins** (8 getter rows; readouts
+  verbatim from `axgetters.out`), all `#guard_msgs` verified in
+  place. Warnings zero; hatch grep over the module: 0.
+
+### THE BOUNDARY-STOP (the chartered clause, fired at the measurement)
+
+The FULL `apply` walk (`s23_span_computes` — S23's interpreter half)
+was measured against the bank before building, off the verbatim body
+(`harvestdump.out`, 560 dump lines vs `s1Block`'s 170):
+
+- The banked price ("+0.7–1: the 4 pb-getter call spans × the same
+  idiom + 12 branch combinations") covers the getters (delivered
+  above) and the branch combinatorics — but the walk needs TWO map
+  fragments the bank did NOT price and `MapMem` does not cover:
+  1. `nd.got` — a `map[string]bool` write (`got[data] = true`):
+     string-keyed; `MapMem`'s whole model (`idxOf?/cnt/setk/
+     toEntries` + every operation lemma) is `Int`-keyed uint64 — a
+     parallel model + `mapEntryIndex?` scan lemmas at string
+     `valueEq` is a fresh MapMem-scale build.
+  2. `t.byIndex` — a `map[uint64]main.slot` comma-ok lookup + insert:
+     STRUCT-VALUED, so `mapAssignValue` normalizes the slot value at
+     the DEFINED type (the U23 table-footprint class) and the model
+     needs a slot-struct encoding + its normalization identity —
+     a second fresh fragment.
+  Plus: the anomaly and empty-data branches EARLY-RETURN through the
+  frame (`.returning` mid-span), so the span theorem needs
+  per-branch-class conclusion shapes (unlike `s1Block`'s single
+  `.next K` exit), × the S3-idx × S3-term × type × data × byIndex
+  branch product.
+- Measured against the S1 span (the like-for-like anchor: `s1Block`
+  with ONE `MapMem`-covered map and one exit shape consumed the
+  `+0.5`-unit slot), the apply walk with two fresh map models and
+  the exit-shape split prices at ≥ 2× its banked "+0.7–1" residue
+  after the getters. **That is the chartered stop condition**;
+  stopping AT the measurement, with the route mapped:
+  1. a string-keyed `MapMem` sibling (promotable — `wordfreq`-class
+     examples are latent second consumers);
+  2. a `slotFs` cell vocabulary + `normalize_slotFs` (the `twinFs`
+     pattern verbatim, 3 fields);
+  3. the walk itself is `SpanS1Walk`'s pattern with per-branch-class
+     endpoints — no new machine machinery beyond 1–2.
+  Everything below the two map models is already on the shelf: the
+  getters (this slice), `utoa_call_span`, `viol_call_span`,
+  `storeTarget_twin_*` (committed++ reuses the claims-store single's
+  pattern at the `committed` field), `read_field_seg`,
+  `stringFromByteSlice` being the one further single.
+
+- [AGENT] The stop is taken at the measurement, not after sinking
+  the budget (the U24 discipline verbatim): items 1–3 + the banked
+  getter piece stand delivered and witnessed; the S23 byte-closure's
+  remaining distance is exactly the two map fragments + the
+  branch-shape split, priced above for the successor.
+
+## SM1 layering fix (gate finding, fixed on the branch)
+
+The first gate run (`artifacts/ci-arc4d-sm1.log`, GATE_EXIT=1) found
+TWO reds: the anticipated un-swept-files red AND a REAL layering
+finding — `import-direction violated`: `Sym/UtoaSpan.lean` (general
+layer) imported target-layer Specs modules (`Specs.TwinProgram`,
+`Specs.Raft.HandlerEqSym`). The charter's location list allowed
+`Sym/Utoa*`, but the repo's import-direction lint (the TCB/layering
+doctrine's mechanization) is right: the utoa span PINS THE TWIN'S
+BYTES — target-specific, Specs-layer content. Fixed by `git mv` to
+`Specs/Raft/UtoaSpan.lean` (namespace unchanged;
+the only importers are this arc's own new files — no existing file
+touched). `Sym/UtoaForKit.lean` STAYS in Sym/: it imports only kit
+modules and passes the lint — the schema is genuinely general.
+[AGENT] The lint finding was taken as correct over the charter's
+location hint; gates are speedbumps, and this one caught a real
+layering drift before landing.
+
+## SM1 unit-end gate record (2026-08-26)
+
+`GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=96G scripts/ci` under the
+box-wide build lock (`artifacts/lockgate.sh`), second run after the
+layering fix: `artifacts/ci-arc4d-sm1-2.log`, **GATE_EXIT=1 — the
+KNOWN NEW-FILES-ONLY RED, exactly as chartered**:
+
+- **21 `ok` steps** (oracle toolchain, escape hatches, bug-index,
+  feature-coverage, spec anchors, lane validation, imported-goose
+  verbatim + R2 pins, surface purity, statement-TCB closure, core
+  build warning-free, **proofs + Audit gate ok**, Challenge/Solution
+  elaborate, verdi compat, frontend unit tests, eval tests 141 ok,
+  …) + the two sanctioned no-diff notes (docs/proofs-only arc, hatch
+  set explicitly, notes printed).
+- **The ONE red, verbatim**: `FAIL proofs-file audit coverage
+  (un-swept proof file — import it from Audit.lean or
+  AuditCorpus.lean, or allowlist with a reason)`, listing exactly
+  this arc's 8 new files (UtoaForKit, UtoaSpan, SpanCells, SpanS1,
+  SpanS1Walk, SpanS1Witness, SpanApplyGetters, Audit/Span) — the
+  NEW-FILES-ONLY consequence: the aggregators are untouched by
+  charter, so the sweep cannot see the new modules until the
+  operator adds the imports at landing.
+- **Compensating checks (all run, exit codes captured)**: every new
+  module `lake env lean` exit 0, zero warnings; every module built
+  to olean via explicit `lake build +<module>` (56/57 jobs, exit 0);
+  `Audit/Span.lean` — 30 `#guard_msgs` axiom pins — verified IN
+  PLACE (`lake env lean` exit 0, empty output), axiom readouts
+  verbatim from `axspan.out`/`axgetters.out`, all within
+  [propext, Classical.choice, Quot.sound], the seven byte-pins
+  axiom-free; hatch grep (`sorry|native_decide|hatch`) over all 8
+  new files: **0**.
+- Standing report-only notes, unchanged and re-escalated for the
+  operator: comparator landmark STALE (174 commits) + OWED (scope,
+  2 Challenge-closure files) — standing since U8; NOT this arc's
+  surface (no designated statement touched).
+
+## LANDING MANIFEST (the operator's one-commit import additions)
+
+At landing (after merge-protocol steps), add exactly these lines:
+
+1. `proofs/Audit.lean`: `import Audit.Span`
+2. `proofs/GoLeanProofs.lean` (the aggregator, alphabetical spot):
+   `import GoLeanProofs.Specs.Raft.SpanApplyGetters` and
+   `import GoLeanProofs.Specs.Raft.SpanS1Witness`
+   (their closures pull UtoaForKit, UtoaSpan, SpanCells, SpanS1,
+   SpanS1Walk — nothing else is needed).
+
+Then `scripts/ci` goes green with no other change (the un-swept red
+is exactly these 8 files; all 30 pins already verify in-build via
+Audit.Span).
+
+## SM1 EXIT (branch-complete; nothing merged)
+
+**CHECKPOINT (recomputed):** worker commits on `campaign-arc4d` since
+base eee6b43b: e215c670 (slices 1–2), deb6f8c9 (slice 3), + the
+slice-4/move/gate-record commit (this one). New tracked files: 8
+modules + this log. Cost vs the banked 1.5–2 units: items 1–3 + the
+banked item-4 piece delivered in ONE session ≈ 1 unit of work at the
+banked rates (the utoa kit came in UNDER the 0.5-unit bank — the
+CondFor schema + weak form landed without the feared act_inc
+grinding); the apply-walk REMAINDER is boundary-stopped at the
+measurement with the two unbanked map fragments priced.
+
+**Deliverable state vs the SM1 charter:**
+1. The plain-for head schema — **DELIVERED** (`CondFor`, witnessed).
+2. The utoa weak span — **DELIVERED** (∃-string as banked; pin,
+   loop/body/call spans).
+3. The viol/S1-record spans — **DELIVERED**: `s1_span_computes` +
+   `s1_abs_step` + the `LookupEq` fold congruences close the U23
+   bridge's S1 half TO THE BYTES at symbolic checker state (the I4
+   interpreter half for S1); fire/clean witnesses at the bridge's
+   own event.
+4. The apply spans — **the banked getter piece DELIVERED** (4
+   pins + 4 exact call spans); the full `s23_span_computes` walk
+   **BOUNDARY-STOPPED at the measurement** (two unbanked
+   map-fragment models + per-branch exit shapes ≥ 2× the banked
+   residue; route mapped above for the successor).
+
+**Which bridges are byte-closed:** S1 — YES (span-computes-model
+proved end-to-end; the remaining S1 distance to T1 is the
+`ClaimTrace` run-correspondence seam, which was ALWAYS the assembly's
+by design). S23 — NOT YET (getters + all shared machinery on the
+shelf; the two map fragments + branch shapes are the exact residue,
+priced).
+
+**PROPOSED NEXT CHARTER (successor):** (1) `s23_span_computes` from
+the banked route: the string-keyed MapMem sibling (promotable;
+wordfreq-class latent consumers), the `slotFs` vocabulary +
+`normalize_slotFs` (twinFs pattern, 3 fields), then the apply walk
+in the `SpanS1Walk` pattern with per-branch-class endpoints
+(`.next K` / `.returning` early exits); ≈ 1–1.5 units by the
+measured S1 rate. (2) The harvest-loop prep-parameterized `CondFor`
+generalization only if the T1 assembly demands the Ready-loop span
+(recorded latent consumer). (3) Operator items: the landing manifest
+above; the standing comparator STALE+OWED escalation.
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1).

@@ -1,4 +1,5 @@
 import GoLeanProofs.Specs.Raft.SpanS1Witness
+import GoLeanProofs.Specs.Raft.SpanApplyGetters
 
 /-!
 # Audit pins: the span-computes-model arc (A4d-SM1)
@@ -82,3 +83,29 @@ the landing manifest names the one-line import the operator adds.
 
 /-- info: 'GoLean.RaftSeam.SpanS1.s1w_span_fire_fires' does not depend on any axioms -/
 #guard_msgs in #print axioms GoLean.RaftSeam.SpanS1.s1w_span_fire_fires
+
+/-! The pb-getter spans (A4d-SM1 item 4's banked piece). -/
+
+/-- info: 'GoLean.RaftSeam.SpanApplyGetters.getIndex_pinned' does not depend on any axioms -/
+#guard_msgs in #print axioms GoLean.RaftSeam.SpanApplyGetters.getIndex_pinned
+
+/-- info: 'GoLean.RaftSeam.SpanApplyGetters.getTerm_pinned' does not depend on any axioms -/
+#guard_msgs in #print axioms GoLean.RaftSeam.SpanApplyGetters.getTerm_pinned
+
+/-- info: 'GoLean.RaftSeam.SpanApplyGetters.getType_pinned' does not depend on any axioms -/
+#guard_msgs in #print axioms GoLean.RaftSeam.SpanApplyGetters.getType_pinned
+
+/-- info: 'GoLean.RaftSeam.SpanApplyGetters.getData_pinned' does not depend on any axioms -/
+#guard_msgs in #print axioms GoLean.RaftSeam.SpanApplyGetters.getData_pinned
+
+/-- info: 'GoLean.RaftSeam.SpanApplyGetters.getIndex_call_span' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.RaftSeam.SpanApplyGetters.getIndex_call_span
+
+/-- info: 'GoLean.RaftSeam.SpanApplyGetters.getTerm_call_span' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.RaftSeam.SpanApplyGetters.getTerm_call_span
+
+/-- info: 'GoLean.RaftSeam.SpanApplyGetters.getType_call_span' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.RaftSeam.SpanApplyGetters.getType_call_span
+
+/-- info: 'GoLean.RaftSeam.SpanApplyGetters.getData_call_span' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.RaftSeam.SpanApplyGetters.getData_call_span
