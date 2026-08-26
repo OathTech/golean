@@ -5957,3 +5957,20 @@ Nothing merged; branch-complete. Merge/audit-ask remain the
 operator's (constitution §4.1); the comparator-landmark STALE +
 OWED-on-scope escalation stands (this unit adds Audit.lean lines
 again — Audit.RoundVote, Audit.CheckerBridge).
+
+- 2026-08-26 A4-U23 gate follow-up (same-commit convention): unit-end
+  gate `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci` at the
+  exit tree — **RESULT: PASS, exit 0** (`artifacts/ci-arc4-u23.log`,
+  gitignored, `GATE_EXIT=0` recorded IN the log; the ok-step set is
+  DIFF-IDENTICAL to the U22 gate log's — 22 `ok` gate steps + the
+  frontend go-test ok + the two sanctioned no-diff notes; the
+  U21/U22 records' "23 ok steps" counted the go-test line — noted
+  for derivation-anchoring, same set both units). This unit touched
+  the eleven RoundVote modules + NativeCheckerBridge + the two Audit
+  modules + the two aggregators + this log + gitignored
+  probes/artifacts; no runtime code, no Corpus/, no baselines/; the
+  Audit surface GREW by 25 pins (12 RoundVote + 13 CheckerBridge) —
+  additive, in-build-verified. Comparator landmark: **STALE at 166
+  commits** AND **OWED (scope)** (Audit.lean lines again — both
+  report-only) — both stand escalated for the operator's merge step,
+  as since U8.
