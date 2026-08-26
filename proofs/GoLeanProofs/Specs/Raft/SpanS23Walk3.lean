@@ -52,7 +52,7 @@ theorem s23_cursors_seg
     (hidv : idvN < 2 ^ 64) (htmv : tmvN < 2 ^ 64)
     (hcmv : cmvN < 2 ^ 64) (hstv : stvN < 2 ^ 64)
     (hix : ixN < 2 ^ 64) (htm : tmN < 2 ^ 64)
-    (hapl : apl < 2 ^ 64) (hltm : ltm < 2 ^ 64) :
+    (_hapl : apl < 2 ^ 64) (hltm : ltm < 2 ^ 64) :
     stepFnIter 22 σ
         (.exec appliedAsn env0
           (.seq (lastTrmAsn :: nxt :: rest4) env0 KK)) ch
@@ -550,6 +550,1008 @@ theorem s23_type_seg
   exact hall
 
 end TypeSeg
+
+section LenSeg
+
+variable {env0 : LocalEnv} {KK : Cont} {nxt : Stmt}
+  {rest6 : List Stmt} {na₀ ew da : Nat}
+  {dtyEw dtyD : Option Ty} {fsE : Array (String × GoValue)}
+  {doff dlen dcap : Nat}
+
+/-- The nil-slice default. -/
+theorem defaultValue_sliceU8 {σ : ExecState} :
+    defaultValue σ (.slice (.int .uint8))
+      = .ok (.slice ⟨none, 0, 0, 0⟩) := by
+  with_unfolding_all rfl
+
+/-- **The GetData unit + the `len` guard, fall-through** (54 steps):
+the payload is nonempty, so the guard reads a nonzero length and the
+walk continues. -/
+theorem s23_len_seg
+    (henvE : LocalEnv.lookup env0 "e" = some (.base ⟨na₀ + 2⟩))
+    (σ : ExecState) (ch : Choices)
+    (hag : bfTB.Agrees σ)
+    (hfr : ∀ x, σ.nextAddr ≤ x →
+      Heap.lookup σ.heap (.base ⟨x⟩) = none)
+    (heP : Heap.lookup σ.heap (.base ⟨na₀ + 2⟩) = some (eParA ew))
+    (hEw : Heap.lookup σ.heap (.base ⟨ew⟩)
+      = some ⟨dtyEw, .struct tidE fsE⟩)
+    (hfD : StructFields.lookup fsE "Data"
+      = some (.slice ⟨some (.base ⟨da⟩), doff, dlen, dcap⟩))
+    (hdc : dlen ≤ dcap) (hnz : dlen ≠ 0) :
+    stepFnIter 54 σ
+        (.exec (getterUnit "$c2307" (.slice (.int .uint8))
+          "raftpb.Entry.GetData") env0
+          (.seq (lenIfS :: nxt :: rest6) env0 KK)) ch
+      = .ok (.exec nxt
+          (env0.declare "$c2307" (.base ⟨σ.nextAddr⟩))
+          (.seq rest6
+            (env0.declare "$c2307" (.base ⟨σ.nextAddr⟩)) KK),
+        twinSt (Heap.set (Heap.set (Heap.set (Heap.set σ.heap
+            (.base ⟨σ.nextAddr⟩)
+              ⟨some (.slice (.int .uint8)), .slice ⟨none, 0, 0, 0⟩⟩)
+            (.base ⟨σ.nextAddr + 1⟩) (xCell ew))
+            (.base ⟨σ.nextAddr + 2⟩)
+              ⟨some (.slice (.int .uint8)),
+                .slice ⟨some (.base ⟨da⟩), doff, dlen, dcap⟩⟩)
+            (.base ⟨σ.nextAddr⟩)
+              ⟨some (.slice (.int .uint8)),
+                .slice ⟨some (.base ⟨da⟩), doff, dlen, dcap⟩⟩)
+          (σ.nextAddr + 3), ch) := by
+  -- prelude (6)
+  have hP := getterUnit_prelude (env0 := env0) (KK := KK)
+    (rest := lenIfS :: nxt :: rest6) (na₀ := na₀) (ew := ew)
+    "$c2307" (.slice (.int .uint8)) "raftpb.Entry.GetData"
+    (dv := .slice ⟨none, 0, 0, 0⟩) (by decide) henvE σ ch
+    defaultValue_sliceU8 hfr heP
+  let env4 : LocalEnv := env0.declare "$c2307" (.base ⟨σ.nextAddr⟩)
+  let σF : ExecState := { σ with heap := Heap.set σ.heap (.base ⟨σ.nextAddr⟩) ⟨some (.slice (.int .uint8)), .slice ⟨none, 0, 0, 0⟩⟩, nextAddr := σ.nextAddr + 1 }
+  have hewna : ew < σ.nextAddr := by
+    rcases Nat.lt_or_ge ew σ.nextAddr with h | h
+    · exact h
+    · rw [hfr ew h] at hEw; cases hEw
+  have hEwF : Heap.lookup σF.heap (.base ⟨ew⟩)
+      = some ⟨dtyEw, .struct tidE fsE⟩ := by
+    show Heap.lookup (Heap.set σ.heap (.base ⟨σ.nextAddr⟩) _)
+      (.base ⟨ew⟩) = _
+    rw [lookup_set_other (by omega : σ.nextAddr ≠ ew)]
+    exact hEw
+  have hfrF : ∀ x, σF.nextAddr ≤ x →
+      Heap.lookup σF.heap (.base ⟨x⟩) = none := by
+    intro x hx
+    have hx1 : σ.nextAddr + 1 ≤ x := hx
+    show Heap.lookup (Heap.set σ.heap (.base ⟨σ.nextAddr⟩) _)
+      (.base ⟨x⟩) = none
+    rw [lookup_set_other (by omega : σ.nextAddr ≠ x)]
+    exact hfr x (by omega)
+  -- the GetData span (35)
+  have hSpan := getData_call_span (envC := env4) (tgt := "$c2307")
+    (ltc := σ.nextAddr)
+    (Kc := .seq (lenIfS :: nxt :: rest6) env4 KK) (lw := ew)
+    (lookup_declare_self env0 "$c2307" (.base ⟨σ.nextAddr⟩))
+    (sv := .slice ⟨some (.base ⟨da⟩), doff, dlen, dcap⟩)
+    σF ch hag hEwF hfD lookup_set_self hfrF (by omega)
+  let σD : ExecState := twinSt (Heap.set (Heap.set (Heap.set
+    σF.heap (.base ⟨σF.nextAddr⟩) (xCell ew))
+    (.base ⟨σF.nextAddr + 1⟩)
+      ⟨some (.slice (.int .uint8)),
+        .slice ⟨some (.base ⟨da⟩), doff, dlen, dcap⟩⟩)
+    (.base ⟨σ.nextAddr⟩)
+      ⟨some (.slice (.int .uint8)),
+        .slice ⟨some (.base ⟨da⟩), doff, dlen, dcap⟩⟩)
+    (σF.nextAddr + 2)
+  -- drain (2)
+  have hDr : stepFnIter 2 σD
+      (.exec (.seqn #[]) env4 (.seq (lenIfS :: nxt :: rest6) env4 KK))
+      ch
+      = .ok (.exec lenIfS env4 (.seq (nxt :: rest6) env4 KK),
+        σD, ch) :=
+    stepFnIter_splice_pop (ss := #[]) rfl
+  -- the len guard (11)
+  have htcD : Heap.lookup σD.heap (.base ⟨σ.nextAddr⟩)
+      = some ⟨some (.slice (.int .uint8)),
+          .slice ⟨some (.base ⟨da⟩), doff, dlen, dcap⟩⟩ :=
+    lookup_set_self
+  have hG1 : stepFnIter 3 σD
+      (.exec lenIfS env4 (.seq (nxt :: rest6) env4 KK)) ch
+      = .ok (.evalE (.var "$c2307") env4
+          (.strictK (.lengthOf (some (.slice (.int .uint8)))) []
+            [] env4
+            (.strictK (.eqCmp (.int .int)) [] [.intLit 0 .int] env4
+              (.ifK (.block #[] #[.returnStmt]) (.seqn #[]) env4
+                (.seq (nxt :: rest6) env4 KK)))), σD, ch) := by
+    with_unfolding_all rfl
+  have hG2 : stepFnIter 1 σD (.evalE (.var "$c2307") env4
+      (.strictK (.lengthOf (some (.slice (.int .uint8)))) [] [] env4
+        (.strictK (.eqCmp (.int .int)) [] [.intLit 0 .int] env4
+          (.ifK (.block #[] #[.returnStmt]) (.seqn #[]) env4
+            (.seq (nxt :: rest6) env4 KK))))) ch
+      = .ok (.retV (.slice ⟨some (.base ⟨da⟩), doff, dlen, dcap⟩)
+          (.strictK (.lengthOf (some (.slice (.int .uint8)))) [] []
+            env4
+            (.strictK (.eqCmp (.int .int)) [] [.intLit 0 .int] env4
+              (.ifK (.block #[] #[.returnStmt]) (.seqn #[]) env4
+                (.seq (nxt :: rest6) env4 KK)))), σD, ch) :=
+    stepFnIter_one (stepFn_var
+      (henv := lookup_declare_self env0 "$c2307" (.base ⟨σ.nextAddr⟩))
+      (hlook := htcD))
+  have hG3 : stepFnIter 1 σD
+      (.retV (.slice ⟨some (.base ⟨da⟩), doff, dlen, dcap⟩)
+        (.strictK (.lengthOf (some (.slice (.int .uint8)))) [] []
+          env4
+          (.strictK (.eqCmp (.int .int)) [] [.intLit 0 .int] env4
+            (.ifK (.block #[] #[.returnStmt]) (.seqn #[]) env4
+              (.seq (nxt :: rest6) env4 KK))))) ch
+      = .ok (.retV (.int (dlen : Int) .int)
+          (.strictK (.eqCmp (.int .int)) [] [.intLit 0 .int] env4
+            (.ifK (.block #[] #[.returnStmt]) (.seqn #[]) env4
+              (.seq (nxt :: rest6) env4 KK))), σD, ch) := by
+    refine stepFnIter_one (stepFn_strict_apply (h := ?_))
+    rw [show (List.reverse [GoValue.slice
+        ⟨some (.base ⟨da⟩), doff, dlen, dcap⟩])
+      = [GoValue.slice ⟨some (.base ⟨da⟩), doff, dlen, dcap⟩]
+      from rfl]
+    exact applyStrictOp_length_slice hdc
+  have hG4 : stepFnIter 2 σD (.retV (.int (dlen : Int) .int)
+      (.strictK (.eqCmp (.int .int)) [] [.intLit 0 .int] env4
+        (.ifK (.block #[] #[.returnStmt]) (.seqn #[]) env4
+          (.seq (nxt :: rest6) env4 KK)))) ch
+      = .ok (.retV (.int 0 .int)
+          (.strictK (.eqCmp (.int .int)) [.int (dlen : Int) .int] []
+            env4
+            (.ifK (.block #[] #[.returnStmt]) (.seqn #[]) env4
+              (.seq (nxt :: rest6) env4 KK))), σD, ch) := by
+    with_unfolding_all rfl
+  have hG5 : stepFnIter 1 σD (.retV (.int 0 .int)
+      (.strictK (.eqCmp (.int .int)) [.int (dlen : Int) .int] []
+        env4
+        (.ifK (.block #[] #[.returnStmt]) (.seqn #[]) env4
+          (.seq (nxt :: rest6) env4 KK)))) ch
+      = .ok (.retV (.bool false)
+          (.ifK (.block #[] #[.returnStmt]) (.seqn #[]) env4
+            (.seq (nxt :: rest6) env4 KK)), σD, ch) := by
+    refine stepFnIter_one (stepFn_strict_apply (h := ?_))
+    rw [show (List.reverse [GoValue.int 0 .int,
+        GoValue.int (dlen : Int) .int])
+      = [GoValue.int (dlen : Int) .int, GoValue.int 0 .int]
+      from rfl]
+    have h0 := applyStrictOp_eqCmp_int (σ := σD) (a := (dlen : Int))
+      (b := 0)
+    rw [show (((dlen : Int)) == (0 : Int)) = false from by
+      rw [beq_eq_false_iff_ne]
+      omega] at h0
+    exact h0
+  have hG6 : stepFnIter 3 σD (.retV (.bool false)
+      (.ifK (.block #[] #[.returnStmt]) (.seqn #[]) env4
+        (.seq (nxt :: rest6) env4 KK))) ch
+      = .ok (.exec nxt env4 (.seq rest6 env4 KK), σD, ch) := by
+    have d1 : stepFnIter 1 σD (.retV (.bool false)
+        (.ifK (.block #[] #[.returnStmt]) (.seqn #[]) env4
+          (.seq (nxt :: rest6) env4 KK))) ch
+        = .ok (.exec (.seqn #[]) env4 (.seq (nxt :: rest6) env4 KK),
+          σD, ch) := by
+      with_unfolding_all rfl
+    exact stepFnIter_chain d1 (stepFnIter_splice_pop (ss := #[]) rfl)
+  exact stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+    (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+      (stepFnIter_chain (stepFnIter_chain hP hSpan) hDr) hG1) hG2)
+      hG3) hG4) hG5) hG6
+
+/-- **The GetData unit + the `len` guard, EMPTY payload** (58 steps):
+the guard reads length zero and the span EARLY-RETURNS through the
+targetless frame — the machine's `.returning` cascade to the
+caller's resumption. -/
+theorem s23_len_ret {env0 : LocalEnv} {envC : LocalEnv} {Kc : Cont}
+    {nxt : Stmt} {rest6 : List Stmt} {na₀ ew da : Nat}
+    {dtyEw : Option Ty} {fsE : Array (String × GoValue)}
+    {doff dcap : Nat}
+    (henvE : LocalEnv.lookup env0 "e" = some (.base ⟨na₀ + 2⟩))
+    (σ : ExecState) (ch : Choices)
+    (hag : bfTB.Agrees σ)
+    (hfr : ∀ x, σ.nextAddr ≤ x →
+      Heap.lookup σ.heap (.base ⟨x⟩) = none)
+    (heP : Heap.lookup σ.heap (.base ⟨na₀ + 2⟩) = some (eParA ew))
+    (hEw : Heap.lookup σ.heap (.base ⟨ew⟩)
+      = some ⟨dtyEw, .struct tidE fsE⟩)
+    (hfD : StructFields.lookup fsE "Data"
+      = some (.slice ⟨some (.base ⟨da⟩), doff, 0, dcap⟩)) :
+    stepFnIter 58 σ
+        (.exec (getterUnit "$c2307" (.slice (.int .uint8))
+          "raftpb.Entry.GetData") env0
+          (.seq (lenIfS :: nxt :: rest6) env0 (FKa envC Kc))) ch
+      = .ok (.next Kc,
+        twinSt (Heap.set (Heap.set (Heap.set (Heap.set σ.heap
+            (.base ⟨σ.nextAddr⟩)
+              ⟨some (.slice (.int .uint8)), .slice ⟨none, 0, 0, 0⟩⟩)
+            (.base ⟨σ.nextAddr + 1⟩) (xCell ew))
+            (.base ⟨σ.nextAddr + 2⟩)
+              ⟨some (.slice (.int .uint8)),
+                .slice ⟨some (.base ⟨da⟩), doff, 0, dcap⟩⟩)
+            (.base ⟨σ.nextAddr⟩)
+              ⟨some (.slice (.int .uint8)),
+                .slice ⟨some (.base ⟨da⟩), doff, 0, dcap⟩⟩)
+          (σ.nextAddr + 3), ch) := by
+  have hP := getterUnit_prelude (env0 := env0)
+    (KK := FKa envC Kc) (rest := lenIfS :: nxt :: rest6)
+    (na₀ := na₀) (ew := ew)
+    "$c2307" (.slice (.int .uint8)) "raftpb.Entry.GetData"
+    (dv := .slice ⟨none, 0, 0, 0⟩) (by decide) henvE σ ch
+    defaultValue_sliceU8 hfr heP
+  let env4 : LocalEnv := env0.declare "$c2307" (.base ⟨σ.nextAddr⟩)
+  let σF : ExecState := { σ with heap := Heap.set σ.heap (.base ⟨σ.nextAddr⟩) ⟨some (.slice (.int .uint8)), .slice ⟨none, 0, 0, 0⟩⟩, nextAddr := σ.nextAddr + 1 }
+  have hewna : ew < σ.nextAddr := by
+    rcases Nat.lt_or_ge ew σ.nextAddr with h | h
+    · exact h
+    · rw [hfr ew h] at hEw; cases hEw
+  have hEwF : Heap.lookup σF.heap (.base ⟨ew⟩)
+      = some ⟨dtyEw, .struct tidE fsE⟩ := by
+    show Heap.lookup (Heap.set σ.heap (.base ⟨σ.nextAddr⟩) _)
+      (.base ⟨ew⟩) = _
+    rw [lookup_set_other (by omega : σ.nextAddr ≠ ew)]
+    exact hEw
+  have hfrF : ∀ x, σF.nextAddr ≤ x →
+      Heap.lookup σF.heap (.base ⟨x⟩) = none := by
+    intro x hx
+    have hx1 : σ.nextAddr + 1 ≤ x := hx
+    show Heap.lookup (Heap.set σ.heap (.base ⟨σ.nextAddr⟩) _)
+      (.base ⟨x⟩) = none
+    rw [lookup_set_other (by omega : σ.nextAddr ≠ x)]
+    exact hfr x (by omega)
+  have hSpan := getData_call_span (envC := env4) (tgt := "$c2307")
+    (ltc := σ.nextAddr)
+    (Kc := .seq (lenIfS :: nxt :: rest6) env4 (FKa envC Kc))
+    (lw := ew)
+    (lookup_declare_self env0 "$c2307" (.base ⟨σ.nextAddr⟩))
+    (sv := .slice ⟨some (.base ⟨da⟩), doff, 0, dcap⟩)
+    σF ch hag hEwF hfD lookup_set_self hfrF (by omega)
+  let σD : ExecState := twinSt (Heap.set (Heap.set (Heap.set
+    σF.heap (.base ⟨σF.nextAddr⟩) (xCell ew))
+    (.base ⟨σF.nextAddr + 1⟩)
+      ⟨some (.slice (.int .uint8)),
+        .slice ⟨some (.base ⟨da⟩), doff, 0, dcap⟩⟩)
+    (.base ⟨σ.nextAddr⟩)
+      ⟨some (.slice (.int .uint8)),
+        .slice ⟨some (.base ⟨da⟩), doff, 0, dcap⟩⟩)
+    (σF.nextAddr + 2)
+  have hDr : stepFnIter 2 σD
+      (.exec (.seqn #[]) env4
+        (.seq (lenIfS :: nxt :: rest6) env4 (FKa envC Kc))) ch
+      = .ok (.exec lenIfS env4
+          (.seq (nxt :: rest6) env4 (FKa envC Kc)), σD, ch) :=
+    stepFnIter_splice_pop (ss := #[]) rfl
+  have htcD : Heap.lookup σD.heap (.base ⟨σ.nextAddr⟩)
+      = some ⟨some (.slice (.int .uint8)),
+          .slice ⟨some (.base ⟨da⟩), doff, 0, dcap⟩⟩ :=
+    lookup_set_self
+  -- the guard (8 steps to the bool)
+  have hG1 : stepFnIter 3 σD
+      (.exec lenIfS env4 (.seq (nxt :: rest6) env4 (FKa envC Kc))) ch
+      = .ok (.evalE (.var "$c2307") env4
+          (.strictK (.lengthOf (some (.slice (.int .uint8)))) []
+            [] env4
+            (.strictK (.eqCmp (.int .int)) [] [.intLit 0 .int] env4
+              (.ifK (.block #[] #[.returnStmt]) (.seqn #[]) env4
+                (.seq (nxt :: rest6) env4 (FKa envC Kc))))),
+        σD, ch) := by
+    with_unfolding_all rfl
+  have hG2 : stepFnIter 1 σD (.evalE (.var "$c2307") env4
+      (.strictK (.lengthOf (some (.slice (.int .uint8)))) [] [] env4
+        (.strictK (.eqCmp (.int .int)) [] [.intLit 0 .int] env4
+          (.ifK (.block #[] #[.returnStmt]) (.seqn #[]) env4
+            (.seq (nxt :: rest6) env4 (FKa envC Kc)))))) ch
+      = .ok (.retV (.slice ⟨some (.base ⟨da⟩), doff, 0, dcap⟩)
+          (.strictK (.lengthOf (some (.slice (.int .uint8)))) [] []
+            env4
+            (.strictK (.eqCmp (.int .int)) [] [.intLit 0 .int] env4
+              (.ifK (.block #[] #[.returnStmt]) (.seqn #[]) env4
+                (.seq (nxt :: rest6) env4 (FKa envC Kc))))),
+        σD, ch) :=
+    stepFnIter_one (stepFn_var
+      (henv := lookup_declare_self env0 "$c2307" (.base ⟨σ.nextAddr⟩))
+      (hlook := htcD))
+  have hG3 : stepFnIter 1 σD
+      (.retV (.slice ⟨some (.base ⟨da⟩), doff, 0, dcap⟩)
+        (.strictK (.lengthOf (some (.slice (.int .uint8)))) [] []
+          env4
+          (.strictK (.eqCmp (.int .int)) [] [.intLit 0 .int] env4
+            (.ifK (.block #[] #[.returnStmt]) (.seqn #[]) env4
+              (.seq (nxt :: rest6) env4 (FKa envC Kc)))))) ch
+      = .ok (.retV (.int 0 .int)
+          (.strictK (.eqCmp (.int .int)) [] [.intLit 0 .int] env4
+            (.ifK (.block #[] #[.returnStmt]) (.seqn #[]) env4
+              (.seq (nxt :: rest6) env4 (FKa envC Kc)))), σD, ch) := by
+    refine stepFnIter_one (stepFn_strict_apply (h := ?_))
+    rw [show (List.reverse [GoValue.slice
+        ⟨some (.base ⟨da⟩), doff, 0, dcap⟩])
+      = [GoValue.slice ⟨some (.base ⟨da⟩), doff, 0, dcap⟩] from rfl]
+    exact applyStrictOp_length_slice (by omega)
+  have hG4 : stepFnIter 2 σD (.retV (.int 0 .int)
+      (.strictK (.eqCmp (.int .int)) [] [.intLit 0 .int] env4
+        (.ifK (.block #[] #[.returnStmt]) (.seqn #[]) env4
+          (.seq (nxt :: rest6) env4 (FKa envC Kc))))) ch
+      = .ok (.retV (.int 0 .int)
+          (.strictK (.eqCmp (.int .int)) [.int 0 .int] [] env4
+            (.ifK (.block #[] #[.returnStmt]) (.seqn #[]) env4
+              (.seq (nxt :: rest6) env4 (FKa envC Kc)))), σD, ch) := by
+    with_unfolding_all rfl
+  have hG5 : stepFnIter 1 σD (.retV (.int 0 .int)
+      (.strictK (.eqCmp (.int .int)) [.int 0 .int] [] env4
+        (.ifK (.block #[] #[.returnStmt]) (.seqn #[]) env4
+          (.seq (nxt :: rest6) env4 (FKa envC Kc))))) ch
+      = .ok (.retV (.bool true)
+          (.ifK (.block #[] #[.returnStmt]) (.seqn #[]) env4
+            (.seq (nxt :: rest6) env4 (FKa envC Kc))), σD, ch) := by
+    refine stepFnIter_one (stepFn_strict_apply (h := ?_))
+    rw [show (List.reverse [GoValue.int 0 .int, GoValue.int 0 .int])
+      = [GoValue.int 0 .int, GoValue.int 0 .int] from rfl]
+    have h0 := applyStrictOp_eqCmp_int (σ := σD) (a := (0 : Int))
+      (b := 0)
+    rw [show (((0 : Int)) == (0 : Int)) = true from rfl] at h0
+    exact h0
+  -- the return path (7)
+  have hR : stepFnIter 7 σD (.retV (.bool true)
+      (.ifK (.block #[] #[.returnStmt]) (.seqn #[]) env4
+        (.seq (nxt :: rest6) env4 (FKa envC Kc)))) ch
+      = .ok (.next Kc, σD, ch) := by
+    with_unfolding_all rfl
+  exact stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+    (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+      (stepFnIter_chain (stepFnIter_chain hP hSpan) hDr) hG1) hG2)
+      hG3) hG4) hG5) hR
+
+end LenSeg
+
+section TailSeg
+
+variable {env4 : LocalEnv} {KK : Cont} {na₀ ew da tw nw gm : Nat}
+  {dtyEw dtyD : Option Ty} {fsE : Array (String × GoValue)}
+  {doff dcap : Nat} {dbs : List UInt8} {darr : Array GoValue}
+  {rnV stV : GoValue}
+  {idvN tmvN cmvN stvN apl ltm : Nat}
+  {nodesV netV liveV byV pendV drvV hlV : GoValue} {lm : Nat}
+  {cc cm w sq : Int} {tr : GoString}
+  {gkvs : List (GoString × Bool)}
+
+/-- `committed` on the spelled twin fields. -/
+theorem twinFs_committed {nodesV netV liveV byV pendV drvV hlV :
+    GoValue} {lm : Nat} {c cm w sq : Int} {tr : GoString} :
+    StructFields.lookup (twinFs nodesV netV liveV lm byV c cm w pendV
+      drvV sq tr hlV) "committed" = some (.int cm .int) := rfl
+
+/-- **The data/got/committed tail** (87 steps): the second `GetData`,
+`data := string(bytes)` (the window premises feed the conversion),
+`got[data] = true`, `committed++` — landing on the byIndex block. -/
+theorem s23_tail_seg
+    (henvE : LocalEnv.lookup env4 "e" = some (.base ⟨na₀ + 2⟩))
+    (henvN : LocalEnv.lookup env4 "nd" = some (.base ⟨na₀ + 1⟩))
+    (henvT : LocalEnv.lookup env4 "t" = some (.base ⟨na₀⟩))
+    (σ : ExecState) (ch : Choices)
+    (hag : bfTB.Agrees σ)
+    (hfr : ∀ x, σ.nextAddr ≤ x →
+      Heap.lookup σ.heap (.base ⟨x⟩) = none)
+    (heP : Heap.lookup σ.heap (.base ⟨na₀ + 2⟩) = some (eParA ew))
+    (hnP : Heap.lookup σ.heap (.base ⟨na₀ + 1⟩) = some (ndParA nw))
+    (htP : Heap.lookup σ.heap (.base ⟨na₀⟩) = some (tParA tw))
+    (hEw : Heap.lookup σ.heap (.base ⟨ew⟩)
+      = some ⟨dtyEw, .struct tidE fsE⟩)
+    (hfD : StructFields.lookup fsE "Data"
+      = some (.slice ⟨some (.base ⟨da⟩), doff, dbs.length, dcap⟩))
+    (harr : Heap.lookup σ.heap (.base ⟨da⟩)
+      = some ⟨dtyD, .array darr⟩)
+    (hwin : ∀ i, (hi : i < dbs.length) →
+      darr[doff + i]? = some (.int ((dbs[i].toNat : Int)) .uint8))
+    (hdc : dbs.length ≤ dcap)
+    (hNd : Heap.lookup σ.heap (.base ⟨nw⟩)
+      = some (ndCellN idvN rnV stV tmvN cmvN stvN apl ltm gm))
+    (hGm : Heap.lookup σ.heap (.base ⟨gm⟩)
+      = some ⟨none, .mapData (toEntriesS gkvs)⟩)
+    (hTw : Heap.lookup σ.heap (.base ⟨tw⟩)
+      = some (twCell nodesV netV liveV lm byV cc cm w pendV drvV sq
+          tr hlV))
+    (hd1 : tw ≠ gm) (_hd2 : nw ≠ gm) (_hd3 : tw ≠ nw)
+    (_hd4 : da ≠ gm) (_hd5 : da ≠ tw)
+    (hc0 : -(2 ^ 63) ≤ cc) (hc1 : cc < 2 ^ 63)
+    (hm0 : -(2 ^ 63) ≤ cm) (hm1 : cm + 1 < 2 ^ 63)
+    (hw0 : -(2 ^ 63) ≤ w) (hw1 : w < 2 ^ 63)
+    (hq0 : -(2 ^ 63) ≤ sq) (hq1 : sq < 2 ^ 63) :
+    ∃ σ' : ExecState,
+      stepFnIter 87 σ
+          (.exec (getterUnit "$c2308" (.slice (.int .uint8))
+            "raftpb.Entry.GetData") env4
+            (.seq [dataAsn, gotAsn, commitAsn, byIdxBlock] env4 KK))
+          ch
+        = .ok (.exec byIdxBlock
+            ((env4.declare "$c2308"
+              (.base ⟨σ.nextAddr⟩)).declare "data"
+              (.base ⟨σ.nextAddr + 3⟩))
+            (.seq []
+              ((env4.declare "$c2308"
+                (.base ⟨σ.nextAddr⟩)).declare "data"
+                (.base ⟨σ.nextAddr + 3⟩)) KK), σ', ch)
+      ∧ Heap.lookup σ'.heap (.base ⟨gm⟩)
+          = some ⟨none, .mapData (toEntriesS (setks gkvs ⟨⟨dbs⟩⟩
+              true))⟩
+      ∧ Heap.lookup σ'.heap (.base ⟨tw⟩)
+          = some (twCell nodesV netV liveV lm byV cc (cm + 1) w
+              pendV drvV sq tr hlV)
+      ∧ Heap.lookup σ'.heap (.base ⟨σ.nextAddr + 3⟩)
+          = some (sCell ⟨⟨dbs⟩⟩)
+      ∧ (∀ x, x < σ.nextAddr → x ≠ gm → x ≠ tw →
+          Heap.lookup σ'.heap (.base ⟨x⟩)
+            = Heap.lookup σ.heap (.base ⟨x⟩))
+      ∧ σ'.nextAddr = σ.nextAddr + 4
+      ∧ (∀ x, σ'.nextAddr ≤ x →
+          Heap.lookup σ'.heap (.base ⟨x⟩) = none)
+      ∧ bfTB.Agrees σ' := by
+  have htypes : σ.types = twinTypes := hag.1
+  -- bounds
+  have hewna : ew < σ.nextAddr := by
+    rcases Nat.lt_or_ge ew σ.nextAddr with h | h
+    · exact h
+    · rw [hfr ew h] at hEw; cases hEw
+  have hdana : da < σ.nextAddr := by
+    rcases Nat.lt_or_ge da σ.nextAddr with h | h
+    · exact h
+    · rw [hfr da h] at harr; cases harr
+  have hnwna : nw < σ.nextAddr := by
+    rcases Nat.lt_or_ge nw σ.nextAddr with h | h
+    · exact h
+    · rw [hfr nw h] at hNd; cases hNd
+  have hgmna : gm < σ.nextAddr := by
+    rcases Nat.lt_or_ge gm σ.nextAddr with h | h
+    · exact h
+    · rw [hfr gm h] at hGm; cases hGm
+  have htwna : tw < σ.nextAddr := by
+    rcases Nat.lt_or_ge tw σ.nextAddr with h | h
+    · exact h
+    · rw [hfr tw h] at hTw; cases hTw
+  have hnPna : na₀ + 1 < σ.nextAddr := by
+    rcases Nat.lt_or_ge (na₀ + 1) σ.nextAddr with h | h
+    · exact h
+    · rw [hfr (na₀ + 1) h] at hnP; cases hnP
+  have htPna : na₀ < σ.nextAddr := by
+    rcases Nat.lt_or_ge na₀ σ.nextAddr with h | h
+    · exact h
+    · rw [hfr na₀ h] at htP; cases htP
+  -- ===== getData2 unit (6 + 35 + 2) =====
+  have hP := getterUnit_prelude (env0 := env4) (KK := KK)
+    (rest := [dataAsn, gotAsn, commitAsn, byIdxBlock])
+    (na₀ := na₀) (ew := ew)
+    "$c2308" (.slice (.int .uint8)) "raftpb.Entry.GetData"
+    (dv := .slice ⟨none, 0, 0, 0⟩) (by decide) henvE σ ch
+    defaultValue_sliceU8 hfr heP
+  let env5 : LocalEnv := env4.declare "$c2308" (.base ⟨σ.nextAddr⟩)
+  let σF : ExecState := { σ with heap := Heap.set σ.heap (.base ⟨σ.nextAddr⟩) ⟨some (.slice (.int .uint8)), .slice ⟨none, 0, 0, 0⟩⟩, nextAddr := σ.nextAddr + 1 }
+  have hEwF : Heap.lookup σF.heap (.base ⟨ew⟩)
+      = some ⟨dtyEw, .struct tidE fsE⟩ := by
+    show Heap.lookup (Heap.set σ.heap (.base ⟨σ.nextAddr⟩) _)
+      (.base ⟨ew⟩) = _
+    rw [lookup_set_other (by omega : σ.nextAddr ≠ ew)]
+    exact hEw
+  have hfrF : ∀ x, σF.nextAddr ≤ x →
+      Heap.lookup σF.heap (.base ⟨x⟩) = none := by
+    intro x hx
+    have hx1 : σ.nextAddr + 1 ≤ x := hx
+    show Heap.lookup (Heap.set σ.heap (.base ⟨σ.nextAddr⟩) _)
+      (.base ⟨x⟩) = none
+    rw [lookup_set_other (by omega : σ.nextAddr ≠ x)]
+    exact hfr x (by omega)
+  have hSpan := getData_call_span (envC := env5) (tgt := "$c2308")
+    (ltc := σ.nextAddr)
+    (Kc := .seq [dataAsn, gotAsn, commitAsn, byIdxBlock] env5 KK)
+    (lw := ew)
+    (lookup_declare_self env4 "$c2308" (.base ⟨σ.nextAddr⟩))
+    (sv := .slice ⟨some (.base ⟨da⟩), doff, dbs.length, dcap⟩)
+    σF ch hag hEwF hfD lookup_set_self hfrF (by omega)
+  let σD : ExecState := twinSt (Heap.set (Heap.set (Heap.set
+    σF.heap (.base ⟨σF.nextAddr⟩) (xCell ew))
+    (.base ⟨σF.nextAddr + 1⟩)
+      ⟨some (.slice (.int .uint8)),
+        .slice ⟨some (.base ⟨da⟩), doff, dbs.length, dcap⟩⟩)
+    (.base ⟨σ.nextAddr⟩)
+      ⟨some (.slice (.int .uint8)),
+        .slice ⟨some (.base ⟨da⟩), doff, dbs.length, dcap⟩⟩)
+    (σF.nextAddr + 2)
+  have hDr : stepFnIter 2 σD
+      (.exec (.seqn #[]) env5
+        (.seq [dataAsn, gotAsn, commitAsn, byIdxBlock] env5 KK)) ch
+      = .ok (.exec dataAsn env5
+          (.seq [gotAsn, commitAsn, byIdxBlock] env5 KK), σD, ch) :=
+    stepFnIter_splice_pop (ss := #[]) rfl
+  -- σD cell chases
+  have hlkD : ∀ x : Nat, x < σ.nextAddr →
+      Heap.lookup σD.heap (.base ⟨x⟩)
+        = Heap.lookup σ.heap (.base ⟨x⟩) := by
+    intro x hx
+    show Heap.lookup (Heap.set (Heap.set (Heap.set (Heap.set σ.heap
+      (.base ⟨σ.nextAddr⟩) _) (.base ⟨σ.nextAddr + 1⟩) _)
+      (.base ⟨σ.nextAddr + 2⟩) _) (.base ⟨σ.nextAddr⟩) _)
+      (.base ⟨x⟩) = _
+    rw [lookup_set_other (by omega : σ.nextAddr ≠ x),
+      lookup_set_other (by omega : σ.nextAddr + 2 ≠ x),
+      lookup_set_other (by omega : σ.nextAddr + 1 ≠ x),
+      lookup_set_other (by omega : σ.nextAddr ≠ x)]
+  -- ===== dataAsn (15) =====
+  have hA1 : stepFnIter 4 σD
+      (.exec dataAsn env5
+        (.seq [gotAsn, commitAsn, byIdxBlock] env5 KK)) ch
+      = .ok (.exec (.assign (.var "data")
+            (.stringFromByteSlice (.var "$c2308")))
+          (env5.declare "data" (.base ⟨σD.nextAddr⟩))
+          (.seq [gotAsn, commitAsn, byIdxBlock]
+            (env5.declare "data" (.base ⟨σD.nextAddr⟩)) KK),
+        { σD with heap := Heap.set σD.heap (.base ⟨σD.nextAddr⟩) (sCell (gs [])), nextAddr := σD.nextAddr + 1 }, ch) := by
+    have a1 : stepFnIter 2 σD
+        (.exec dataAsn env5
+          (.seq [gotAsn, commitAsn, byIdxBlock] env5 KK)) ch
+        = .ok (.exec (.initialization { id := "data", typ := .string })
+            env5
+            (.seq (.assign (.var "data")
+                (.stringFromByteSlice (.var "$c2308"))
+              :: gotAsn :: commitAsn :: [byIdxBlock]) env5 KK),
+          σD, ch) :=
+      stepFnIter_splice_pop
+        (ss := #[.initialization { id := "data", typ := .string },
+          .assign (.var "data")
+            (.stringFromByteSlice (.var "$c2308"))]) rfl
+    have a2 : stepFnIter 1 σD
+        (.exec (.initialization { id := "data", typ := .string }) env5
+          (.seq (.assign (.var "data")
+              (.stringFromByteSlice (.var "$c2308"))
+            :: gotAsn :: commitAsn :: [byIdxBlock]) env5 KK)) ch
+        = .ok (.next (.seq (.assign (.var "data")
+              (.stringFromByteSlice (.var "$c2308"))
+            :: gotAsn :: commitAsn :: [byIdxBlock])
+            (env5.declare "data" (.base ⟨σD.nextAddr⟩)) KK),
+          { σD with heap := Heap.set σD.heap (.base ⟨σD.nextAddr⟩) (sCell (gs [])), nextAddr := σD.nextAddr + 1 }, ch) :=
+      stepFnIter_one (stepFn_init_seq (hdef := defaultValue_string))
+    have a3 : stepFnIter 1
+        { σD with heap := Heap.set σD.heap (.base ⟨σD.nextAddr⟩) (sCell (gs [])), nextAddr := σD.nextAddr + 1 }
+        (.next (.seq (.assign (.var "data")
+            (.stringFromByteSlice (.var "$c2308"))
+          :: gotAsn :: commitAsn :: [byIdxBlock])
+          (env5.declare "data" (.base ⟨σD.nextAddr⟩)) KK)) ch
+        = .ok (.exec (.assign (.var "data")
+              (.stringFromByteSlice (.var "$c2308")))
+            (env5.declare "data" (.base ⟨σD.nextAddr⟩))
+            (.seq [gotAsn, commitAsn, byIdxBlock]
+              (env5.declare "data" (.base ⟨σD.nextAddr⟩)) KK),
+          { σD with heap := Heap.set σD.heap (.base ⟨σD.nextAddr⟩) (sCell (gs [])), nextAddr := σD.nextAddr + 1 }, ch) :=
+      stepFnIter_one stepFn_seq_pop
+    exact stepFnIter_chain (stepFnIter_chain a1 a2) a3
+  let env6 : LocalEnv := env5.declare "data" (.base ⟨σD.nextAddr⟩)
+  let σE : ExecState := { σD with heap := Heap.set σD.heap (.base ⟨σD.nextAddr⟩) (sCell (gs [])), nextAddr := σD.nextAddr + 1 }
+  have hσDna : σD.nextAddr = σ.nextAddr + 3 := rfl
+  -- the c2308 slice cell at σE
+  have hslE : Heap.lookup σE.heap (.base ⟨σ.nextAddr⟩)
+      = some ⟨some (.slice (.int .uint8)),
+          .slice ⟨some (.base ⟨da⟩), doff, dbs.length, dcap⟩⟩ := by
+    show Heap.lookup (Heap.set σD.heap (.base ⟨σD.nextAddr⟩) _)
+      (.base ⟨σ.nextAddr⟩) = _
+    rw [lookup_set_other (by rw [hσDna]; omega)]
+    exact lookup_set_self
+  have harrE : Heap.lookup σE.heap (.base ⟨da⟩)
+      = some ⟨dtyD, .array darr⟩ := by
+    show Heap.lookup (Heap.set σD.heap (.base ⟨σD.nextAddr⟩) _)
+      (.base ⟨da⟩) = _
+    rw [lookup_set_other (by rw [hσDna]; omega),
+      hlkD da (by omega)]
+    exact harr
+  have hdataE : Heap.lookup σE.heap (.base ⟨σD.nextAddr⟩)
+      = some (sCell (gs [])) := lookup_set_self
+  -- the assign body (9)
+  have hB1 : stepFnIter 1 σE
+      (.exec (.assign (.var "data")
+        (.stringFromByteSlice (.var "$c2308"))) env6
+        (.seq [gotAsn, commitAsn, byIdxBlock] env6 KK)) ch
+      = .ok (.evalE (.ref "data") env6
+          (.tgtOpK (.chain []) [] [] [] [] .vals
+            [.stringFromByteSlice (.var "$c2308")] [] (.seqn #[])
+            env6 (.seq [gotAsn, commitAsn, byIdxBlock] env6 KK)),
+        σE, ch) := by
+    with_unfolding_all rfl
+  have hB2 : stepFnIter 1 σE (.evalE (.ref "data") env6
+      (.tgtOpK (.chain []) [] [] [] [] .vals
+        [.stringFromByteSlice (.var "$c2308")] [] (.seqn #[]) env6
+        (.seq [gotAsn, commitAsn, byIdxBlock] env6 KK))) ch
+      = .ok (.retV (.addr (.base ⟨σD.nextAddr⟩))
+          (.tgtOpK (.chain []) [] [] [] [] .vals
+            [.stringFromByteSlice (.var "$c2308")] [] (.seqn #[])
+            env6 (.seq [gotAsn, commitAsn, byIdxBlock] env6 KK)),
+        σE, ch) :=
+    stepFnIter_one (GoLean.SliceWalk.stepFn_ref
+      (lookup_declare_self env5 "data" (.base ⟨σD.nextAddr⟩)))
+  have hB3 : stepFnIter 1 σE (.retV (.addr (.base ⟨σD.nextAddr⟩))
+      (.tgtOpK (.chain []) [] [] [] [] .vals
+        [.stringFromByteSlice (.var "$c2308")] [] (.seqn #[]) env6
+        (.seq [gotAsn, commitAsn, byIdxBlock] env6 KK))) ch
+      = .ok (.evalE (.stringFromByteSlice (.var "$c2308")) env6
+          (.rhsK .vals [.chain (.addr (.base ⟨σD.nextAddr⟩)) [] []]
+            [] [] (.seqn #[]) env6
+            (.seq [gotAsn, commitAsn, byIdxBlock] env6 KK)),
+        σE, ch) := by
+    with_unfolding_all rfl
+  have hB4 : stepFnIter 1 σE
+      (.evalE (.stringFromByteSlice (.var "$c2308")) env6
+        (.rhsK .vals [.chain (.addr (.base ⟨σD.nextAddr⟩)) [] []]
+          [] [] (.seqn #[]) env6
+          (.seq [gotAsn, commitAsn, byIdxBlock] env6 KK))) ch
+      = .ok (.evalE (.var "$c2308") env6
+          (.strictK .stringFromByteSlice [] [] env6
+            (.rhsK .vals [.chain (.addr (.base ⟨σD.nextAddr⟩)) [] []]
+              [] [] (.seqn #[]) env6
+              (.seq [gotAsn, commitAsn, byIdxBlock] env6 KK))),
+        σE, ch) := by
+    with_unfolding_all rfl
+  have henv2308 : LocalEnv.lookup env6 "$c2308"
+      = some (.base ⟨σ.nextAddr⟩) := by
+    rw [lookup_declare_ne (by decide) env5 (.base ⟨σD.nextAddr⟩)]
+    exact lookup_declare_self env4 "$c2308" (.base ⟨σ.nextAddr⟩)
+  have hB5 : stepFnIter 1 σE (.evalE (.var "$c2308") env6
+      (.strictK .stringFromByteSlice [] [] env6
+        (.rhsK .vals [.chain (.addr (.base ⟨σD.nextAddr⟩)) [] []]
+          [] [] (.seqn #[]) env6
+          (.seq [gotAsn, commitAsn, byIdxBlock] env6 KK)))) ch
+      = .ok (.retV (.slice ⟨some (.base ⟨da⟩), doff, dbs.length,
+            dcap⟩)
+          (.strictK .stringFromByteSlice [] [] env6
+            (.rhsK .vals [.chain (.addr (.base ⟨σD.nextAddr⟩)) [] []]
+              [] [] (.seqn #[]) env6
+              (.seq [gotAsn, commitAsn, byIdxBlock] env6 KK))),
+        σE, ch) :=
+    stepFnIter_one (stepFn_var (henv := henv2308) (hlook := hslE))
+  have hvisE : sliceVisibleValues σE
+      ⟨some (.base ⟨da⟩), doff, dbs.length, dcap⟩
+      = .ok (bytesArr dbs) :=
+    sliceVisibleValues_of_array harrE hwin hdc
+  have hB6 : stepFnIter 1 σE
+      (.retV (.slice ⟨some (.base ⟨da⟩), doff, dbs.length, dcap⟩)
+        (.strictK .stringFromByteSlice [] [] env6
+          (.rhsK .vals [.chain (.addr (.base ⟨σD.nextAddr⟩)) [] []]
+            [] [] (.seqn #[]) env6
+            (.seq [gotAsn, commitAsn, byIdxBlock] env6 KK)))) ch
+      = .ok (.retV (.string ⟨⟨dbs⟩⟩)
+          (.rhsK .vals [.chain (.addr (.base ⟨σD.nextAddr⟩)) [] []]
+            [] [] (.seqn #[]) env6
+            (.seq [gotAsn, commitAsn, byIdxBlock] env6 KK)),
+        σE, ch) := by
+    refine stepFnIter_one (stepFn_strict_apply (h := ?_))
+    rw [show (List.reverse [GoValue.slice
+        ⟨some (.base ⟨da⟩), doff, dbs.length, dcap⟩])
+      = [GoValue.slice ⟨some (.base ⟨da⟩), doff, dbs.length, dcap⟩]
+      from rfl]
+    exact applyStrictOp_stringFromByteSlice hvisE
+  have hB7 : stepFnIter 1 σE (.retV (.string ⟨⟨dbs⟩⟩)
+      (.rhsK .vals [.chain (.addr (.base ⟨σD.nextAddr⟩)) [] []]
+        [] [] (.seqn #[]) env6
+        (.seq [gotAsn, commitAsn, byIdxBlock] env6 KK))) ch
+      = .ok (.next (.storeK
+          [.chain (.addr (.base ⟨σD.nextAddr⟩)) [] []]
+          [.string ⟨⟨dbs⟩⟩] (.seqn #[]) env6
+          (.seq [gotAsn, commitAsn, byIdxBlock] env6 KK)), σE, ch) := by
+    with_unfolding_all rfl
+  let σG : ExecState := { σE with heap := Heap.set σE.heap (.base ⟨σD.nextAddr⟩) (sCell ⟨⟨dbs⟩⟩) }
+  have hB8 : stepFnIter 1 σE (.next (.storeK
+      [.chain (.addr (.base ⟨σD.nextAddr⟩)) [] []]
+      [.string ⟨⟨dbs⟩⟩] (.seqn #[]) env6
+      (.seq [gotAsn, commitAsn, byIdxBlock] env6 KK))) ch
+      = .ok (.next (.storeK [] [] (.seqn #[]) env6
+          (.seq [gotAsn, commitAsn, byIdxBlock] env6 KK)), σG, ch) :=
+    stepFnIter_one (stepFn_store_step
+      (storeTarget_addr (ty := .string) (old := .string (gs []))
+        (hlook := hdataE) (hnorm := normalize_string)))
+  have hB9 : stepFnIter 3 σG (.next (.storeK [] [] (.seqn #[]) env6
+      (.seq [gotAsn, commitAsn, byIdxBlock] env6 KK))) ch
+      = .ok (.exec gotAsn env6
+          (.seq [commitAsn, byIdxBlock] env6 KK), σG, ch) := by
+    have s1 : stepFnIter 1 σG (.next (.storeK [] [] (.seqn #[]) env6
+        (.seq [gotAsn, commitAsn, byIdxBlock] env6 KK))) ch
+        = .ok (.exec (.seqn #[]) env6
+            (.seq [gotAsn, commitAsn, byIdxBlock] env6 KK), σG, ch) :=
+      stepFnIter_one stepFn_storeK_nil
+    exact stepFnIter_chain s1 (stepFnIter_splice_pop (ss := #[]) rfl)
+  -- σG chases (every new cell sits at ≥ σ.nextAddr)
+  have hlkG : ∀ x : Nat, x < σ.nextAddr →
+      Heap.lookup σG.heap (.base ⟨x⟩)
+        = Heap.lookup σ.heap (.base ⟨x⟩) := by
+    intro x hx
+    show Heap.lookup (Heap.set (Heap.set σD.heap
+      (.base ⟨σD.nextAddr⟩) _) (.base ⟨σD.nextAddr⟩) _)
+      (.base ⟨x⟩) = _
+    rw [lookup_set_other (by rw [hσDna]; omega),
+      lookup_set_other (by rw [hσDna]; omega),
+      hlkD x (by omega)]
+  have hnPG : Heap.lookup σG.heap (.base ⟨na₀ + 1⟩)
+      = some (ndParA nw) := by
+    rw [hlkG (na₀ + 1) (by omega)]; exact hnP
+  have hNdG : Heap.lookup σG.heap (.base ⟨nw⟩)
+      = some (ndCellN idvN rnV stV tmvN cmvN stvN apl ltm gm) := by
+    rw [hlkG nw (by omega)]; exact hNd
+  have hGmG : Heap.lookup σG.heap (.base ⟨gm⟩)
+      = some ⟨none, .mapData (toEntriesS gkvs)⟩ := by
+    rw [hlkG gm (by omega)]; exact hGm
+  have hdataG : Heap.lookup σG.heap (.base ⟨σD.nextAddr⟩)
+      = some (sCell ⟨⟨dbs⟩⟩) := lookup_set_self
+  have henvN6 : LocalEnv.lookup env6 "nd"
+      = some (.base ⟨na₀ + 1⟩) := by
+    rw [lookup_declare_ne (by decide) env5 (.base ⟨σD.nextAddr⟩),
+      lookup_declare_ne (by decide) env4 (.base ⟨σ.nextAddr⟩)]
+    exact henvN
+  have henvD6 : LocalEnv.lookup env6 "data"
+      = some (.base ⟨σD.nextAddr⟩) :=
+    lookup_declare_self env5 "data" (.base ⟨σD.nextAddr⟩)
+  have henvT6 : LocalEnv.lookup env6 "t" = some (.base ⟨na₀⟩) := by
+    rw [lookup_declare_ne (by decide) env5 (.base ⟨σD.nextAddr⟩),
+      lookup_declare_ne (by decide) env4 (.base ⟨σ.nextAddr⟩)]
+    exact henvT
+  -- ===== gotAsn (12) =====
+  have hC1 : stepFnIter 1 σG
+      (.exec gotAsn env6 (.seq [commitAsn, byIdxBlock] env6 KK)) ch
+      = .ok (.evalE gotE env6
+          (.stmtOpK (.mapAssign .string .bool) 0 []
+            [.var "data", .boolLit true] env6
+            (.seq [commitAsn, byIdxBlock] env6 KK)), σG, ch) := by
+    with_unfolding_all rfl
+  have hC2 : stepFnIter 5 σG (.evalE gotE env6
+      (.stmtOpK (.mapAssign .string .bool) 0 []
+        [.var "data", .boolLit true] env6
+        (.seq [commitAsn, byIdxBlock] env6 KK))) ch
+      = .ok (.retV (.map ⟨some (.base ⟨gm⟩)⟩)
+          (.stmtOpK (.mapAssign .string .bool) 0 []
+            [.var "data", .boolLit true] env6
+            (.seq [commitAsn, byIdxBlock] env6 KK)), σG, ch) :=
+    read_field_seg (henv := henvN6) (hp := hnPG) (hw := hNdG)
+      (hf := nodeFs_got)
+  have hC3 : stepFnIter 1 σG (.retV (.map ⟨some (.base ⟨gm⟩)⟩)
+      (.stmtOpK (.mapAssign .string .bool) 0 []
+        [.var "data", .boolLit true] env6
+        (.seq [commitAsn, byIdxBlock] env6 KK))) ch
+      = .ok (.evalE (.var "data") env6
+          (.stmtOpK (.mapAssign .string .bool) 0
+            [.map ⟨some (.base ⟨gm⟩)⟩] [.boolLit true] env6
+            (.seq [commitAsn, byIdxBlock] env6 KK)), σG, ch) := by
+    with_unfolding_all rfl
+  have hC4 : stepFnIter 1 σG (.evalE (.var "data") env6
+      (.stmtOpK (.mapAssign .string .bool) 0
+        [.map ⟨some (.base ⟨gm⟩)⟩] [.boolLit true] env6
+        (.seq [commitAsn, byIdxBlock] env6 KK))) ch
+      = .ok (.retV (.string ⟨⟨dbs⟩⟩)
+          (.stmtOpK (.mapAssign .string .bool) 0
+            [.map ⟨some (.base ⟨gm⟩)⟩] [.boolLit true] env6
+            (.seq [commitAsn, byIdxBlock] env6 KK)), σG, ch) :=
+    stepFnIter_one (stepFn_var (henv := henvD6) (hlook := hdataG))
+  have hC5 : stepFnIter 2 σG (.retV (.string ⟨⟨dbs⟩⟩)
+      (.stmtOpK (.mapAssign .string .bool) 0
+        [.map ⟨some (.base ⟨gm⟩)⟩] [.boolLit true] env6
+        (.seq [commitAsn, byIdxBlock] env6 KK))) ch
+      = .ok (.retV (.bool true)
+          (.stmtOpK (.mapAssign .string .bool) 0
+            [.string ⟨⟨dbs⟩⟩, .map ⟨some (.base ⟨gm⟩)⟩] [] env6
+            (.seq [commitAsn, byIdxBlock] env6 KK)), σG, ch) := by
+    with_unfolding_all rfl
+  let σH : ExecState := { σG with heap := Heap.set σG.heap (.base ⟨gm⟩) ⟨none, .mapData (toEntriesS (setks gkvs ⟨⟨dbs⟩⟩ true))⟩ }
+  have hC6 : stepFnIter 1 σG (.retV (.bool true)
+      (.stmtOpK (.mapAssign .string .bool) 0
+        [.string ⟨⟨dbs⟩⟩, .map ⟨some (.base ⟨gm⟩)⟩] [] env6
+        (.seq [commitAsn, byIdxBlock] env6 KK))) ch
+      = .ok (.next (.seq [commitAsn, byIdxBlock] env6 KK),
+        σH, ch) := by
+    refine stepFnIter_one (stepFn_stmtOp_apply (h := ?_))
+    show applyStmtOp σG ch (.mapAssign .string .bool) 0
+      [GoValue.map ⟨some (.base ⟨gm⟩)⟩, .string ⟨⟨dbs⟩⟩, .bool true]
+      = _
+    simp only [applyStmtOp, applyStmtOpCore, Bind.bind, Except.bind,
+      pure, Except.pure]
+    rw [mapAssignValue_toEntriesS (hlook := hGmG)]
+  have hC7 : stepFnIter 1 σH
+      (.next (.seq [commitAsn, byIdxBlock] env6 KK)) ch
+      = .ok (.exec commitAsn env6 (.seq [byIdxBlock] env6 KK),
+        σH, ch) :=
+    stepFnIter_one stepFn_seq_pop
+  -- ===== commitAsn (17) =====
+  have htPH : Heap.lookup σH.heap (.base ⟨na₀⟩)
+      = some (tParA tw) := by
+    show Heap.lookup (Heap.set σG.heap (.base ⟨gm⟩) _)
+      (.base ⟨na₀⟩) = _
+    by_cases h : gm = na₀
+    · rw [h] at hGm
+      rw [htP] at hGm
+      cases hGm
+    · rw [lookup_set_other h, hlkG na₀ (by omega)]
+      exact htP
+  have hTwH : Heap.lookup σH.heap (.base ⟨tw⟩)
+      = some (twCell nodesV netV liveV lm byV cc cm w pendV drvV sq
+          tr hlV) := by
+    show Heap.lookup (Heap.set σG.heap (.base ⟨gm⟩) _)
+      (.base ⟨tw⟩) = _
+    rw [lookup_set_other (fun he => hd1 he.symm),
+      hlkG tw (by omega)]
+    exact hTw
+  have hD1 : stepFnIter 1 σH
+      (.exec commitAsn env6 (.seq [byIdxBlock] env6 KK)) ch
+      = .ok (.evalE (.var "t") env6
+          (.tgtOpK (.chain [.field tidT "committed"]) [] [] [] []
+            .vals [.add committedE (.intLit 1 .int)] [] (.seqn #[])
+            env6 (.seq [byIdxBlock] env6 KK)), σH, ch) := by
+    with_unfolding_all rfl
+  have hD2 : stepFnIter 1 σH (.evalE (.var "t") env6
+      (.tgtOpK (.chain [.field tidT "committed"]) [] [] [] [] .vals
+        [.add committedE (.intLit 1 .int)] [] (.seqn #[]) env6
+        (.seq [byIdxBlock] env6 KK))) ch
+      = .ok (.retV (.addr (.base ⟨tw⟩))
+          (.tgtOpK (.chain [.field tidT "committed"]) [] [] [] []
+            .vals [.add committedE (.intLit 1 .int)] [] (.seqn #[])
+            env6 (.seq [byIdxBlock] env6 KK)), σH, ch) :=
+    stepFnIter_one (stepFn_var (henv := henvT6) (hlook := htPH))
+  have hD3 : stepFnIter 2 σH (.retV (.addr (.base ⟨tw⟩))
+      (.tgtOpK (.chain [.field tidT "committed"]) [] [] [] [] .vals
+        [.add committedE (.intLit 1 .int)] [] (.seqn #[]) env6
+        (.seq [byIdxBlock] env6 KK))) ch
+      = .ok (.evalE committedE env6
+          (.strictK .add [] [.intLit 1 .int] env6
+            (.rhsK .vals
+              [.chain (.addr (.base ⟨tw⟩)) []
+                [.field tidT "committed"]] [] [] (.seqn #[]) env6
+              (.seq [byIdxBlock] env6 KK))), σH, ch) := by
+    with_unfolding_all rfl
+  have hD4 : stepFnIter 5 σH (.evalE committedE env6
+      (.strictK .add [] [.intLit 1 .int] env6
+        (.rhsK .vals
+          [.chain (.addr (.base ⟨tw⟩)) [] [.field tidT "committed"]]
+          [] [] (.seqn #[]) env6
+          (.seq [byIdxBlock] env6 KK)))) ch
+      = .ok (.retV (.int cm .int)
+          (.strictK .add [] [.intLit 1 .int] env6
+            (.rhsK .vals
+              [.chain (.addr (.base ⟨tw⟩)) []
+                [.field tidT "committed"]] [] [] (.seqn #[]) env6
+              (.seq [byIdxBlock] env6 KK))), σH, ch) :=
+    read_field_seg (henv := henvT6) (hp := htPH) (hw := hTwH)
+      (hf := twinFs_committed)
+  have hD5 : stepFnIter 2 σH (.retV (.int cm .int)
+      (.strictK .add [] [.intLit 1 .int] env6
+        (.rhsK .vals
+          [.chain (.addr (.base ⟨tw⟩)) [] [.field tidT "committed"]]
+          [] [] (.seqn #[]) env6 (.seq [byIdxBlock] env6 KK)))) ch
+      = .ok (.retV (.int 1 .int)
+          (.strictK .add [.int cm .int] [] env6
+            (.rhsK .vals
+              [.chain (.addr (.base ⟨tw⟩)) []
+                [.field tidT "committed"]] [] [] (.seqn #[]) env6
+              (.seq [byIdxBlock] env6 KK))), σH, ch) := by
+    with_unfolding_all rfl
+  have hD6 : stepFnIter 1 σH (.retV (.int 1 .int)
+      (.strictK .add [.int cm .int] [] env6
+        (.rhsK .vals
+          [.chain (.addr (.base ⟨tw⟩)) [] [.field tidT "committed"]]
+          [] [] (.seqn #[]) env6 (.seq [byIdxBlock] env6 KK)))) ch
+      = .ok (.retV (.int (cm + 1) .int)
+          (.rhsK .vals
+            [.chain (.addr (.base ⟨tw⟩)) [] [.field tidT "committed"]]
+            [] [] (.seqn #[]) env6 (.seq [byIdxBlock] env6 KK)),
+        σH, ch) := by
+    refine stepFnIter_one (stepFn_strict_apply (h := ?_))
+    rw [show (List.reverse [GoValue.int 1 .int, GoValue.int cm .int])
+      = [GoValue.int cm .int, GoValue.int 1 .int] from rfl]
+    exact GoLean.SliceWalk.applyStrictOp_add_int (by omega) (by omega)
+  have hD7 : stepFnIter 1 σH (.retV (.int (cm + 1) .int)
+      (.rhsK .vals
+        [.chain (.addr (.base ⟨tw⟩)) [] [.field tidT "committed"]]
+        [] [] (.seqn #[]) env6 (.seq [byIdxBlock] env6 KK))) ch
+      = .ok (.next (.storeK
+          [.chain (.addr (.base ⟨tw⟩)) [] [.field tidT "committed"]]
+          [.int (cm + 1) .int] (.seqn #[]) env6
+          (.seq [byIdxBlock] env6 KK)), σH, ch) := by
+    with_unfolding_all rfl
+  let σI : ExecState := { σH with heap := Heap.set σH.heap (.base ⟨tw⟩) (twCell nodesV netV liveV lm byV cc (cm + 1) w pendV drvV sq tr hlV) }
+  have hD8 : stepFnIter 1 σH (.next (.storeK
+      [.chain (.addr (.base ⟨tw⟩)) [] [.field tidT "committed"]]
+      [.int (cm + 1) .int] (.seqn #[]) env6
+      (.seq [byIdxBlock] env6 KK))) ch
+      = .ok (.next (.storeK [] [] (.seqn #[]) env6
+          (.seq [byIdxBlock] env6 KK)), σI, ch) :=
+    stepFnIter_one (stepFn_store_step
+      (storeTarget_twin_committed (σ := σH) rfl hTwH
+        hc0 hc1 (by omega) hm1 hw0 hw1 hq0 hq1))
+  have hD9 : stepFnIter 3 σI (.next (.storeK [] [] (.seqn #[]) env6
+      (.seq [byIdxBlock] env6 KK))) ch
+      = .ok (.exec byIdxBlock env6 (.seq [] env6 KK), σI, ch) := by
+    have s1 : stepFnIter 1 σI (.next (.storeK [] [] (.seqn #[]) env6
+        (.seq [byIdxBlock] env6 KK))) ch
+        = .ok (.exec (.seqn #[]) env6 (.seq [byIdxBlock] env6 KK),
+          σI, ch) :=
+      stepFnIter_one stepFn_storeK_nil
+    exact stepFnIter_chain s1 (stepFnIter_splice_pop (ss := #[]) rfl)
+  -- assemble (6+35+2 + 4 + 9 + 3 + 12 + 17 = 87, staged)
+  have hS1 : stepFnIter 43 σ
+      (.exec (getterUnit "$c2308" (.slice (.int .uint8))
+        "raftpb.Entry.GetData") env4
+        (.seq [dataAsn, gotAsn, commitAsn, byIdxBlock] env4 KK)) ch
+      = .ok (.exec dataAsn env5
+          (.seq [gotAsn, commitAsn, byIdxBlock] env5 KK), σD, ch) :=
+    stepFnIter_chain (stepFnIter_chain hP hSpan) hDr
+  have hS2 : stepFnIter 11 σD
+      (.exec dataAsn env5
+        (.seq [gotAsn, commitAsn, byIdxBlock] env5 KK)) ch
+      = .ok (.next (.storeK
+          [.chain (.addr (.base ⟨σD.nextAddr⟩)) [] []]
+          [.string ⟨⟨dbs⟩⟩] (.seqn #[]) env6
+          (.seq [gotAsn, commitAsn, byIdxBlock] env6 KK)), σE, ch) :=
+    stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+      (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+        (stepFnIter_chain hA1 hB1) hB2) hB3) hB4) hB5) hB6) hB7
+  have hS3 : stepFnIter 4 σE (.next (.storeK
+      [.chain (.addr (.base ⟨σD.nextAddr⟩)) [] []]
+      [.string ⟨⟨dbs⟩⟩] (.seqn #[]) env6
+      (.seq [gotAsn, commitAsn, byIdxBlock] env6 KK))) ch
+      = .ok (.exec gotAsn env6
+          (.seq [commitAsn, byIdxBlock] env6 KK), σG, ch) :=
+    stepFnIter_chain hB8 hB9
+  have hS4 : stepFnIter 12 σG
+      (.exec gotAsn env6 (.seq [commitAsn, byIdxBlock] env6 KK)) ch
+      = .ok (.exec commitAsn env6 (.seq [byIdxBlock] env6 KK),
+        σH, ch) :=
+    stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+      (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+        hC1 hC2) hC3) hC4) hC5) hC6) hC7
+  have hS5 : stepFnIter 17 σH
+      (.exec commitAsn env6 (.seq [byIdxBlock] env6 KK)) ch
+      = .ok (.exec byIdxBlock env6 (.seq [] env6 KK), σI, ch) :=
+    stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+      (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+        (stepFnIter_chain (stepFnIter_chain hD1 hD2) hD3) hD4) hD5)
+        hD6) hD7) hD8) hD9
+  refine ⟨σI, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ⟨rfl, rfl, rfl, rfl⟩⟩
+  · exact stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+      (stepFnIter_chain hS1 hS2) hS3) hS4) hS5
+  · show Heap.lookup (Heap.set σH.heap (.base ⟨tw⟩) _)
+      (.base ⟨gm⟩) = _
+    rw [lookup_set_other hd1]
+    exact lookup_set_self
+  · exact lookup_set_self
+  · show Heap.lookup (Heap.set σH.heap (.base ⟨tw⟩) _)
+      (.base ⟨σ.nextAddr + 3⟩) = _
+    rw [lookup_set_other (by omega : tw ≠ σ.nextAddr + 3)]
+    show Heap.lookup (Heap.set σG.heap (.base ⟨gm⟩) _)
+      (.base ⟨σ.nextAddr + 3⟩) = _
+    rw [lookup_set_other (by omega : gm ≠ σ.nextAddr + 3)]
+    exact hdataG
+  · intro x hx hxgm hxtw
+    show Heap.lookup (Heap.set σH.heap (.base ⟨tw⟩) _)
+      (.base ⟨x⟩) = _
+    rw [lookup_set_other (fun he => hxtw he.symm)]
+    show Heap.lookup (Heap.set σG.heap (.base ⟨gm⟩) _)
+      (.base ⟨x⟩) = _
+    rw [lookup_set_other (fun he => hxgm he.symm),
+      hlkG x (by omega)]
+  · show σ.nextAddr + 1 + 2 + 1 = σ.nextAddr + 4
+    omega
+  · intro x hx
+    have hx4 : σ.nextAddr + 4 ≤ x := by
+      have : σ.nextAddr + 1 + 2 + 1 ≤ x := hx
+      omega
+    show Heap.lookup (Heap.set σH.heap (.base ⟨tw⟩) _)
+      (.base ⟨x⟩) = none
+    rw [lookup_set_other (by omega : tw ≠ x)]
+    show Heap.lookup (Heap.set σG.heap (.base ⟨gm⟩) _)
+      (.base ⟨x⟩) = none
+    rw [lookup_set_other (by omega : gm ≠ x)]
+    show Heap.lookup (Heap.set (Heap.set σD.heap
+      (.base ⟨σD.nextAddr⟩) _) (.base ⟨σD.nextAddr⟩) _)
+      (.base ⟨x⟩) = none
+    rw [lookup_set_other (by rw [hσDna]; omega),
+      lookup_set_other (by rw [hσDna]; omega)]
+    show Heap.lookup (Heap.set (Heap.set (Heap.set (Heap.set σ.heap
+      (.base ⟨σ.nextAddr⟩) _) (.base ⟨σ.nextAddr + 1⟩) _)
+      (.base ⟨σ.nextAddr + 2⟩) _) (.base ⟨σ.nextAddr⟩) _)
+      (.base ⟨x⟩) = none
+    rw [lookup_set_other (by omega : σ.nextAddr ≠ x),
+      lookup_set_other (by omega : σ.nextAddr + 2 ≠ x),
+      lookup_set_other (by omega : σ.nextAddr + 1 ≠ x),
+      lookup_set_other (by omega : σ.nextAddr ≠ x)]
+    exact hfr x (by omega)
+
+end TailSeg
 
 end MainPath
 
