@@ -5064,3 +5064,360 @@ stands escalated from U8–U19.
   `scripts/ci`'s `lm_files`); both report-only. The operator's
   merge-step judge run — already escalated since U8 — is now owed on
   BOTH the staleness and scope triggers.
+
+## A4-U21 — C2c: THE ARC4B LANDING (slice 0) + THE MSGAPP-ROUND FIXTURE + THE SUB-RING CENSUS + THE STORAGE-RESP SUB-RING SPANS (2026-08-25/26, fresh worker, coordinator-dispatched per U20's proposed charter; masked-kill rule briefed verbatim)
+
+- 2026-08-25 SUCCESSOR RE-VERIFICATION (U20's top claims, fresh
+  probes, all PASS — fresh worker per rotation):
+  - tip clean: `git status` clean on `campaign-arc4`; `git rev-parse
+    HEAD` = `f94c225a4e7d86de06ed02fb3732375ebe6799fc` (the U20 gate
+    tip). 86G free at launch (≥ 40G floor); builds capped
+    `GOLEAN_MEM_MAX=48G scripts/capped` throughout; every compile
+    judged by CAPTURED EXIT CODE per the masked-kill rule.
+  - fresh capped proofs+Audit build: "Build completed successfully
+    (541 jobs)." exit=0 — matching U20's record.
+  - SliceWalk/DriverNet/DriverNetWitness/Audit.DriverNet present; 9
+    `#guard_msgs` pins counted in Audit/DriverNet.lean.
+  - hatch grep over `Specs/Raft/`: **0**.
+
+### Slice 0 — THE ARC4B LANDING (25810585 + 80e6f812)
+
+- `git merge campaign-arc4b` (76e63bba): **clean auto-merge, zero
+  conflicts** — the lane's no-edit claim verified structurally first
+  (`git diff --name-status` vs the merge base 3bbb0f10: nine pure
+  adds, zero modifications).
+- The eight manifest imports added to `proofs/GoLeanProofs.lean`.
+  **Two landing findings, both fixed on the spot:**
+  1. **The joint-import name collision** (falsifies the manifest's
+     "expect fully green" in one narrow respect): `wStep1`–`wStep4`
+     are defined in BOTH `NativeS1Witness` (C3, EStep steps) and
+     `NativeS23Witness` (C4, HStep steps) in the same namespace —
+     each lane module was verified green STANDALONE; joint import
+     into one environment was exactly the deferred step, and it
+     fails (`environment already contains …wStep2`). Fix: the C4
+     witness steps renamed `wHStep1`–`wHStep6` (rename note in the
+     module; STATEMENTS unchanged; zero external references — grep
+     verified). A lane convention candidate for the operator: lane
+     modules sharing a namespace should carry joint-import smoke
+     checks, or unit-prefixed witness names.
+  2. **The check-spec-anchors xargs-batching false death**: the gate
+     died `grep/xargs exit 123` — root-caused (not papered): the
+     tracked file list crossed xargs's 128 KiB single-invocation
+     budget FOR THE FIRST TIME at this landing (131,087 bytes; the
+     nine arc4b paths added ~470), so grep ran in two batches for
+     the first time, and a batch with zero citation matches exits 1,
+     which xargs reports as 123 — indistinguishable from a scan
+     death at the top level. Fix in `scripts/check-spec-anchors`:
+     per-batch wrapper maps grep's legitimate no-match exit 1 to 0;
+     a real grep error (≥ 2) still propagates as 123 and the rc>1
+     death check still fires — **fail-closed on genuine errors
+     preserved and re-tested in BOTH directions** (death path rc=123
+     on a nonexistent file; no-match path rc=0), 626 citations still
+     found (511 spec# + 115 mem#, count unchanged).
+- Manifest optional cleanups (Star unification, S23-skeleton
+  deletion/marking): **SKIPPED — not trivial** (they edit three lane
+  modules' content); left for a landing-cleanup slice with the
+  operator's blessing, per the charter's "skip unless trivial".
+- **THE SLICE-0 LANDING GATE — RESULT: PASS, exit 0** (verbatim:
+  `RESULT: PASS` / `GATE_EXIT=0`; `artifacts/ci-arc4-u21-slice0b.log`,
+  gitignored): 23 ok steps + the two sanctioned no-diff notes;
+  549 jobs (541 + the eight lane modules); the landing
+  retro-validates the lane's compensating checks. Comparator
+  landmark: STALE at 156 commits AND OWED-on-scope (report-only;
+  standing escalation since U8 — unchanged).
+
+### Slice 1 (probe-only) — THE MSGAPP-ROUND FIXTURE (the doctor+prune template's second instantiation; `artifacts/probe/TwinMsgAppFixProbe.lean`)
+
+- **First probe hit the STALE branch, and the miss decoded the boot
+  log**: a `Index 0/LogTerm 0/entry(1,1)/Commit 1` doctor
+  early-returns at `m.Index < committed` (11,249-step round ≈ the
+  heartbeat's 10,964 — no append, no storage-resp arms) because node
+  2's log at the first loop head is NOT empty: `AnchorLogProbe` +
+  `AnchorStorProbe` decoded it — **node 2 boots from a snapshot at
+  (index 1, term 1)**: MemoryStorage ents = [dummy (1,1)],
+  committed = applying = applied = 1, unstable.offset = 2. (The
+  census's na-6073 heap decoded at the cell level for the first
+  time.)
+- **THE APPEND-AND-COMMIT FAMILY FIRES** (the corrected doctor:
+  Type 3, 1→2, Term nil = the U18 local-family convention, Index 1 /
+  LogTerm 1 = the match at the real last entry, ONE entry (Index 2,
+  Term 1, empty Data), Commit 2):
+  - **Round: 23,488 steps / 8 choices / na 6086→7382,
+    self-returning config** — squarely inside U18's real MsgApp
+    round range (18.6k–24.3k), vs the heartbeat fixture's 10,964/4.
+  - POST: committed 1→2, applying/applied 1→2 (the apply path RAN),
+    lead 0→1, net gains MsgAppResp (typ 4, 2→1, Index 2).
+  - **Pruned read set: 39 cells** (26-cell heartbeat pattern + the
+    log/storage cells 1779/1886/1895/1898/1900 + cell 25 + the two
+    extra doctor cells), found in 25 fail-closed iterations.
+- The same generator run is C2d's (one anchor walk, shared) — the
+  charter's build-once note honored.
+
+### Slice 2 (probe-only) — THE SUB-RING CENSUS AT THE MSGAPP FIXTURE (`artifacts/probe/MsgAppRingCensus.lean` → `msgappring.out`)
+
+- **THE RING ANATOMY** (fixture-relative; glue boundaries
+  deliverIdx 1065 / RawNode.Step 1198 / raft.Step 1581 all
+  U20-heartbeat-EXACT — the shells are the same code, measured):
+  handleAppendEntries ENTER 2264; maybeAppend 2664; commitTo 6035;
+  arm span raft.Step→harvest = 5,844 (U18's census said 5,826 at the
+  real round — matched); **harvest 7425**; HasReady 7481; Ready 7661
+  → readyWithoutAccept 7674 → applyUnstableEntries 7835; acceptReady
+  10752; newStorageAppendRespMsg 11654; newStorageApplyRespMsg
+  12699; SetHardState 14574; MemoryStorage.Append 14809; twin.apply
+  15937 (324 steps — U18's checker range); **Advance 16261 with BOTH
+  nested `raft.raft.Step` storage-resp arms** (16391
+  MsgStorageAppendResp → stableTo 16973; 17584 MsgStorageApplyResp →
+  appliedTo 18851) — **span 3,202 vs the heartbeat fixture's 142
+  no-op** (U18's ~2,000 estimate was the real-round mid-harvest
+  slice; the fixture's full Advance-to-HasReady₂ span is 3,202);
+  HasReady₂ 19463 (false exit, 1,832 — U20-heartbeat-EXACT);
+  projection 21295; liveCount 22936 (the landed
+  `liveCountLoop_span`'s consumption site, again). Ring total
+  (harvest→projection) = **13,870 steps**.
+- **SC1's DRAW CLASSIFICATION RE-VERIFIED AT MSGAPP SCALE**: 2
+  mapIter + 7 appendSpill + **0 OTHER** in the walk (SC1's verbatim
+  classifier); the 2 mapIter are BOTH driver round-picks (one per
+  round, outside the ring); in-round: 1 mapIter + 7 appendSpill; the
+  ring's 5 draws all appendSpill (X1 assembly `[]*Message`, X2 the
+  storage-resp `Responses` build, X3 the MemoryStorage.Append ents
+  spill, X4/X5 the harness net/live sends); **the storage-resp
+  nested-Step spans are draw-free** — SC1's "storage-resp sub-rounds
+  choice-free" CONFIRMED as a measured span property.
+- REACHABILITY EVIDENCE (D3's standing rule): the arms are reached
+  by an APPEND-family MsgApp — exactly the kind the pinned run's 12
+  MsgApp rounds carry (U18 census); the heartbeat fixture provably
+  cannot reach them (U20's finding, now double-confirmed by the
+  142-vs-3,202 Advance spans at the two fixtures).
+
+### Slice 3 (7634f3a3) — THE FIVE STORAGE-RESP SUB-RING SPANS (deliverable 3; 559 jobs green, exit 0)
+
+- **The construction**: the ring segment RE-PRUNED from the harvest
+  call — **the ring's own read-before-write footprint is 27 CELLS**
+  (the I2 footprint-for-preconditions census, §4's re-aim,
+  delivered as a by-product); generator
+  `artifacts/probe/MsgAppRingGen.lean` (BfLitGen printer reused
+  verbatim) walks the ring concretely, propagates the MIRROR in
+  lock-step, γ-verifies every boundary against the machine, and
+  prints 16 boundary/crossing literals →
+  `RingLit1`–`RingLit4` (4.4 MB generated, four files for parallel
+  elaboration, 4–8 s each).
+- **THE MIRROR COVERAGE TEST — PASSED AT RING SCALE** (the U18/U20
+  ledger row's owed honest test): symEvalWindowTB walks ALL 13,870
+  ring steps (storage writes, message builds, interface calls, the
+  nested Steps) γ-exactly, quitting only at the five spill draws
+  (all `.q3Choice`).
+- **The statements** (`RingEqW1`/`RingEqW2`/`RingEqW345`/
+  `RingEquation`, mirror-chain form — HhEquation's spine one ring
+  up; ∀ρ ∀σ(tables) ∀stream-tail; the I2 mode justification +
+  fixture-family preconditions in the module docstring): W1
+  Ready-assembly 3,327/1 draw; W2 acceptReady+storage-writes+sends
+  5,185/4; W3 checker-apply 324/0; **W4 THE STORAGE-RESP SPAN
+  (Advance + both nested Steps) 3,202/0 — choice-free as a theorem
+  shape**; W5 second-Ready 1,832/0; `ring_full_span` 13,870/5;
+  bounded-completion corollaries (`ring_w4_completes`,
+  `ring_completes` — the I2 consumer forms); kernel readouts:
+  applied 1→2 (committed 2 on BOTH ends — the ARM commits, the RING
+  stabilizes+applies: a decomposition fact the census alone could
+  not state), storage ents [(dummy)] → +the appended (Index 2, Term
+  1) entry, HardState nil → {Term 0, Vote 0, Commit 2} persisted,
+  unstable emptied at offset 3, net +MsgAppResp ptr / live
+  [false, true] (structural — the message-CONTENT cells are provably
+  outside the ring's 27-cell footprint, so content readouts belong
+  to the round scope; recorded, not fudged).
+- **The witness** (`RingWitness`, witness-in-same-slice — the arc4b
+  convention, adopted): `ring_witness_run` (the concrete 13,870-step
+  instantiation at the zero valuation over the pinned tables — the
+  census cross-link); **the span_consume COMPOSITION witness**:
+  `ring_w4_span` consumed at a concrete non-identity placement
+  (ρT 7034 8, frame cell at 7036 via relocate+extend;
+  funcListSup = 31 kernel-computed), the walk RESUMED with a
+  nine-step frame-cell WRITE, and the placement readout
+  (applied = 2 through `fieldReadU64_ren`, address preserved below
+  the shift) — the C2a instrument doing on a sub-ring span exactly
+  what ShapeWitness did on a handler span; this is C2d's composition
+  seam, demonstrated.
+- Audit: 12 `#guard_msgs` pins (`Audit/Ring.lean`, additive,
+  in-build-verified). Axioms (probe `artifacts/probe/AxRing.lean`,
+  verbatim): all five spans + full span + corollaries + witness_run
+  + rw_consume/rw_consume_and_resume [propext, Classical.choice,
+  Quot.sound]; rw_readout + all eight payload readouts [propext,
+  Quot.sound]. Hatch grep over all nine new tracked modules +
+  Audit/Ring.lean: **0**.
+- **THE TWO KERNEL-ROUTE FINDINGS (measured, the unit's route
+  lesson — the third kernel wall, and its fix):**
+  1. **Open-term tree-vs-literal γ-evaluation is the wall.** The
+    crossings' first form (post-state = reflect of the machine, a
+    LITERAL) forces the kernel to γ-evaluate every mirror-propagated
+    SymInt tree in a ~500-cell state under FREE ρ/σ to compare
+    against the literal: one such crossing ran >46 min (module),
+    >4 min standalone, and the storeLoc-shaped probe >3 min —
+    while the SAME comparison content at Sym level or with shared
+    terms is subsecond-to-a-minute. (Bisect trail:
+    `W2Bisect1`–`8` — window links 43–58 s each, visibility
+    premises subsecond, the full-state store comparison the
+    isolated pit. A closed Sym-level "bridge" is definitionally
+    FALSE — SymInt trees are CONSTRUCTORS, a tree never equals a
+    lit — refuted fast by the kernel, which is what killed the
+    bridge route and pointed at the real fix.)
+  2. **THE TREE-PROPAGATION ROUTE** (the fix, now the template):
+    crossing posts are SET/APPEND VALUES OVER THE PRE-STATES
+    (machine op order: alloc-append the backing, then store the
+    target), so a crossing's untouched cells are the SAME terms on
+    both sides and its kernel check compares them SYNTACTICALLY —
+    no γ-evaluation of any tree, ever. Result: every crossing
+    subsecond; `RingEqW2` (5 windows + 4 crossings + the span)
+    builds in **135 s**, the whole ring statement stack in ~6 min
+    of parallel module builds (W1 54 s, W2 135 s, W345 160 s,
+    RingEquation 1.2 s, RingWitness 7.2 s). The serial one-module
+    first attempt was killed at 63 min incomplete — split into
+    parallel window modules AND tree-propagated, the same content
+    is ~25× faster.
+- [AGENT] calls, tagged:
+  1. The landing collision fixed by renaming C4's witness steps
+     (wHStep*) — the minimal edit; statements untouched; recorded as
+     a manifest erratum above.
+  2. The check-spec-anchors fix is a GATE BUG FIX in the
+     false-positive direction with fail-closed behavior preserved
+     and both directions re-tested — not a gate weakening (the U17
+     admit-token precedent's class).
+  3. The MsgApp doctor keeps the U18 Term-0 local-family convention
+     (avoids becomeFollower noise; the append+commit+storage-resp
+     path is identical); the append family targets Index 2 against
+     the DECODED boot log rather than an assumed empty log.
+  4. The five statements land at the SEGMENT boundaries the census
+     measured (W1 merges SC1's HasReady+assembly rows; W3 the apply
+     glue) — 5 statements covering SC1's five named arms, mapping
+     recorded in the module docstring.
+  5. Choice-symbolism inside the ring REFUTED at this fixture (the
+     spilled artifacts are consumed downstream — ents by the second
+     Ready, responses by the nested Steps — so the hh atom trick
+     would quit the mirror at the first re-read); the spans are
+     stated at the canonical zero draws with the ∀-stream envelope
+     left to the RE-SPILL residual family (SC1's caveat, unchanged).
+     Payload-field symbolism likewise refuted where the ring
+     branches (HasReady's hardstate comparison, commitTo/appliedTo
+     guards, stableTo arithmetic) — the hh From-symbolism
+     refutation's class, recorded in the docstring.
+  6. The >46-min first crossing was STOPPED and bisected rather than
+     waited out (anti-grinding); the bisect found the route fix in
+     eight cheap probes.
+- What-this-taught-us:
+  - (a) **The kernel's cost cliff is REPRESENTATION ASYMMETRY, not
+    size**: 4.4 MB of literals elaborate in seconds and 13,870
+    mirror steps kernel-check in minutes, but ONE open-term
+    comparison between γ-images of the same state in two
+    REPRESENTATIONS (tree vs literal) is effectively unbounded.
+    Design rule for mirror chains: one representation per chain;
+    crossings must hand successor states SHARING the predecessor's
+    terms; reflect-resets belong only at chain STARTS.
+  - (b) A fixture miss can be a measurement: the stale-branch first
+    probe decoded the twin's snapshot-boot log (committed=1 at the
+    anchor), which no census had read at the cell level.
+  - (c) The per-module parallelism of window links is free velocity:
+    kernel work across independent window modules uses the box's
+    cores; a single module serializes it.
+  - (d) Slice 0's two landing findings are both instances of
+    "green-in-isolation, red-in-composition" (standalone modules vs
+    joint import; single-batch vs two-batch xargs) — wave-boundary
+    landings are exactly where such latent seams fire, which is why
+    the landing gate must be run fully rather than inferred from
+    the lanes' own greens.
+
+### PROMOTION LEDGER updates (A4-U21)
+
+- **The doctor+prune round-fixture generator (U18) — SECOND
+  INSTANTIATION DELIVERED** (MsgApp append-and-commit family; the
+  row's owed item). The template now carries the boot-log decode
+  step (fit the doctored payload to the ANCHOR's real log, not an
+  assumed one).
+- **The mirror driver-glue/ring coverage row (U18/U20) — CONSUMED**:
+  the honest coverage test ran at ring scale and PASSED (13,870
+  steps, all op classes, γ-exact, five clean q3Choice quits).
+- **NEW ROW: the tree-propagation crossing template** (lesson (a)):
+  set/append-over-pre crossing posts + parallel window modules —
+  the template for every future mirror chain with spill crossings
+  (C2d's round chain is the next consumer; the Hae-family windows
+  are latent consumers).
+- **NEW ROW: the ring footprint census** (27 cells, fail-closed) —
+  the I2 footprint-for-preconditions instrument's first output;
+  consumer: C2d's round-lemma preconditions and any future sub-ring
+  family fixture.
+- The storage-resp anchor set row (U20) — CONSUMED (this unit's
+  census + spans).
+- The ∃-split extraction and scaffold-retirement rows (U19):
+  untouched.
+
+## A4-U21 exit (2026-08-26, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since the U20 gate tip
+f94c225a: 25810585 (the arc4b merge), 80e6f812 (the landing fixes),
+7634f3a3 (the C2c build), + this log commit. Full proofs+Audit
+green: **559 jobs, exit 0** (541 + 8 arc4b modules + 4 RingLit + 3
+RingEqW + RingEquation + RingWitness + Audit.Ring; the count also
+reflects the aggregator units). Kit pins: +12 (Audit/Ring.lean,
+additive, in-build-verified). Hatch grep over every new module: 0.
+Probes (gitignored): TwinMsgAppFixProbe, AnchorLogProbe,
+AnchorStorProbe, MsgAppRingCensus, MsgAppRingGen (+ printer parts),
+RingEqProto, RingReadoutProbe/4, CrossDiffProbe, W2Bisect1–8,
+W2Bridge3, W2Prefix2, AxRing, and their .out files.
+
+**Deliverable state vs the U21 charter (C2c):**
+1. THE ARC4B LANDING — **DELIVERED** (clean auto-merge verified
+   structurally; eight imports; two landing findings fixed and
+   recorded — the wStep collision rename and the spec-anchor
+   batching gate bug; landing gate PASS exit 0, fully green;
+   optional cleanups skipped as non-trivial, noted).
+2. THE MSGAPP-ROUND FIXTURE — **DELIVERED** (append-and-commit
+   family at the decoded snapshot-boot log; 23,488/8 self-returning;
+   39-cell read set; the generator run shared with C2d).
+3. THE SUB-RING CENSUS — **DELIVERED** (full anatomy above; SC1's
+   draw classification re-verified at MsgApp scale, 0 OTHER;
+   storage-resp spans draw-free; reachability evidence recorded).
+4. THE 5–6 PAYLOAD-PARAMETRIC STATEMENTS — **DELIVERED AS FIVE**
+   (the census's segment map; ∀ρ/∀σ/∀stream-tail mirror-chain
+   spans + composed ring + bounded-completion corollaries + payload
+   readouts + the same-slice witness incl. the span_consume
+   composition at a non-identity placement; payload-parametricity's
+   honest boundary — branch-consumed fields stay concrete with the
+   family recorded — stated in the module docstring).
+5. Budget item (first reachable round-kind arm census: MsgVote or
+   no-op) — **NOT REACHED** (the kernel-route detour consumed the
+   margin; the MsgApp ARM anatomy in slice 2 — a reachable kind's
+   arm census — partially covers the intent; the MsgVote/no-op
+   fixture is one doctor-swap on the delivered template).
+
+**Cost tracking vs SC1's sizing** (the charter's named report item):
+SC1 priced the five statements at "≈ 8.5k steps walked once ≈ 4–5
+min mirror total". Measured: the WINDOW KERNEL alone ≈ 6 min
+(parallel wall ≈ 3 min) — the estimate's right order; the true cost
+was the ROUTE: the crossing representation asymmetry burned ~5
+worker-hours of measure-kill-bisect before the tree-propagation fix
+landed it. SC1's "plus C2a-dependent composition lemmas" resolved to
+ZERO new lemmas — `span_consume` consumed a sub-ring span unchanged.
+Unit total ≈ one long worker session for slices 0–3 vs the implicit
+one-unit sizing: on budget in units, over in wall-clock, with the
+route lesson now a ledger template so successors do not repay it.
+
+**Open gaps carried (none counted):** all U18–U20 rows as updated
+above; U21 adds: the manifest-erratum convention question (joint-
+import smoke checks for shared-namespace lanes — the operator's
+call), the deferred arc4b optional cleanups, and the net-content
+readouts at round scope (deliberately out of the ring's footprint).
+
+**PROPOSED NEXT CHARTER (C2d, successor):** (1) the first reachable
+ROUND-KIND LEMMA at the MsgApp append-family fixture — the round
+chain composed from the landed pieces: the arm windows (new; the
+tree-propagation template), the five ring spans (consumed via
+span_consume at the round's placement — the demonstrated seam), and
+the driver-glue loop spans (`rebuildLoop_span`/`liveCountLoop_span`
+at their slice-2-measured sites); RoundFam membership as the
+conclusion form (the R-form's first proved instance, retiring the
+RoundLemmaShape scaffold's C2 obligation). (2) Budget permitting:
+the MsgVote or no-op round-kind census (one doctor-swap). (3) The
+masked-kill rule + the tree-propagation template briefed verbatim.
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1); the comparator-landmark STALE
+(156+) AND OWED-on-scope flags stand escalated from U8–U20 — this
+unit adds Audit.lean import lines (Audit.Ring) and the arc4b
+landing to the scope trigger's motivation.
