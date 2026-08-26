@@ -1,4 +1,4 @@
-# The choice-erasure arc — plan of record (v1, 2026-08-27)
+# The choice-erasure arc — plan of record (v2, 2026-08-27; professor-reviewed)
 
 [AGENT] write-up of the [USER] design discussion (2026-08-27, the
 basecamp review's B1/B2 resolution + the lifting-machinery
@@ -49,11 +49,19 @@ INSENSITIVITY, at three grades matching the SP1/C-census:
   readable by real code (tick), structurally dead in this harness.
   Erasure conditional on the reachability argument; the VISIBLE
   mask is the honest encoding.
+- **Promoted-to-pick (the FOURTH grade, professor-named):** the
+  SAME operation class can be a semantic pick at one occurrence and
+  latitude at another — mapIter IS the delivery-pick site at the
+  driver loop and a canonicalized draw in the ring spans.
+  Classification is PER-OCCURRENCE (per span), not per opcode; the
+  occurrence-status decision procedure is part of the (picks,
+  draws) split machinery and is named in CE4, never implicit.
 
-Duality, adopted as a working tool: a FAILED congruence lemma is a
-constructive proof that the program observes that draw at that span
-— the per-class lemmas double as an observability census with
-proofs (this is precisely how SP1's probe found the timeout field).
+Duality, adopted with the professor's standard: a failed PROOF
+ATTEMPT is evidence; the census entry is a PROOF only when it
+carries the counterexample pair (two resolutions, distinguishable
+readout) — SP1's timeout finding met that bar; future entries must
+too.
 
 ## 3. The construction
 
@@ -71,24 +79,52 @@ proofs (this is precisely how SP1's probe found the timeout field).
   `pick` lands `SpanIso`-equal to σ'. Naming note (recorded): NOT
   "twin semantics" (collides with the subject) and NOT `EStep`
   (taken by the abstract dialect); `ErasedStep`/`⇝E`.
-- **The congruence (the arc's centerpiece):** per operation class
-  C ∈ {spill, mapIter-canonicalized, masked-write, draw-free}:
-  `σ₁ ~ σ₂ → stepClass C σ₁ d₁ ⇓ σ₁' → ∃ d₂ σ₂', stepClass C σ₂ d₂
-  ⇓ σ₂' ∧ σ₁' ~ σ₂'` (span-level for the mapIter grade), composed
-  over runs by bisimulation-up-to. Fail-closed clause: a draw site
-  matching no class yields a named `UnclassifiedDraw` side
-  condition — the theorem refuses rather than assumes.
-- **Verdict invariance:** the harness readout (`values[i]` — or the
-  `TwinVerdict.ofResult` decoder once S4 lands) is `SpanIso`-
-  invariant. Small, but it is the theorem that makes erased
-  verdicts mean concrete verdicts.
-- **The composition (full T1's proof plan, none of it designated):**
-  `AgreementT1` = for any stream: split it into (semantic picks,
-  latitude draws); the congruence + seed-side invariance give
-  run(stream) ~ run(canonical latitude, same picks); verdict
-  invariance transfers the readout; the internal replay lemma
-  (T1-replay — the round induction + pairing + leaves at canonical
-  latitude) gives the canonical verdict = 0.
+- **The congruence (the arc's centerpiece — SIGNATURE CORRECTED
+  per professor review):** per SITE (not per opcode), HETEROGENEOUS
+  in taken path and draw count: cap slack means one class member
+  spills (consuming draws) where another appends in place
+  (consuming none), so `d₁ d₂ : List Draw` of possibly different
+  lengths, and the matched steps may take different paths:
+  `σ₁ ~ σ₂ → siteStep s σ₁ d₁ ⇓ σ₁' → ∃ d₂ σ₂', siteStep s σ₂ d₂
+  ⇓ σ₂' ∧ σ₁' ~ σ₂'` (span-level for the canonicalized grade).
+  Proved for ARBITRARY class members (not canonical-vs-other) — the
+  symmetric form the fault-transfer corollary needs. Composed by
+  bisimulation-up-to whose SOUNDNESS IS A DISCHARGED LEMMA
+  (Pous–Sangiorgi compatibility for up-to-expansion — the
+  span/stuttering matching demands it; lineage cited AND proved).
+  Fail-closed: `UnclassifiedDraw` refusal + the SPAN-COVERAGE
+  decomposition lemma (every step of the subject's trajectory lies
+  in exactly one classified span, or the theorem refuses) — a real
+  CE4 deliverable, not free.
+- **FUEL IS NOT PRESERVED across the class (recorded):** spill
+  resolutions change downstream control, so step counts and draw
+  schedules diverge; a run may complete at fuel N under one
+  resolution and exhaust under another. The lift promises
+  EXISTENTIAL fuel on the canonical side, absorbed because replay
+  is ∀-fuel; T1's conditioning on `.ok` keeps this benign. Never
+  state the lift with equal fuel on both sides.
+- **Verdict invariance (form corrected):** completion AND Result
+  transfer, not terminal-state ~ alone:
+  `run₁ = .ok r → ∃ fuel' ch' r', run₂ = .ok r' ∧ r'.values[0]? =
+  r.values[0]?`. MOVED to CE1/CE2 (the professor's reorder): it is
+  SpanIso's first consumer and the cheap smoke test of whether the
+  relation's shape fights its clients.
+- **The composition (full T1's proof plan — THE PICK-ALIGNMENT
+  SEAM now owned, per professor Q3):** "same picks" is not
+  well-formed positionally — pick-hood is a function of the
+  TRAJECTORY, and the two runs consume different draw schedules.
+  Therefore: (a) the bisimulation relation itself carries
+  pick-alignment (`SpanIso ∧ equal consumed-pick cursors`) — a
+  component of the relation, established in CE4, with the
+  stream-split DEFINED as a function of the run; (b) the
+  REIFICATION lemma (named CE4 line item): the lifted canonical run
+  reifies into an actual `Choices` stream (canonical draws
+  interleaved with the aligned picks — constructive from the
+  per-step ∃) because the replay lemma consumes a concrete
+  `twinRun`; (c) verdict invariance (above) transfers the readout.
+  Then AgreementT1 = lift ∘ reify ∘ replay. Without (a) it does
+  not compose at all — the professor's words, adopted as the CE4
+  gate.
 
 ## 3b. SUB-PROGRAM MODE-SWITCHING ([USER] refinement, 2026-08-27)
 
@@ -135,11 +171,18 @@ adds to §3:
 
 ## 5. Unit ladder (probe-gated per standing practice)
 
-- **CE1 — the relational face:** S3's shape fix + `SpanIso` +
-  `cequiv_iff_spanIso` + the pinhole regression witness. GATE: the
-  iff proves without weakening either side; the SP1 census numbers
-  reproduce through the repaired relation. (If the iff resists —
-  e.g. the canonicalizer computes something SpanIso cannot state —
+- **CE1 — the relational face (GATE PRE-ADJUSTED per professor
+  Q4):** S3's shape fix + `SpanIso` + the iff IN ITS PROVABLE FORM:
+  `Clean ∧ CEquivM ↔ Clean ∧ SpanIso` on well-formed states —
+  cleanliness does quantifier work (deep-value caps, zero-like
+  trimmed tails) and is EXPLICIT on both sides; sortability/
+  no-duplicate-keys enter as well-formedness premises (reachable
+  states satisfy them). HARD CONSTRAINT: SpanIso must NOT quote the
+  canonicalizer (no collectFix reference — the cap-slack window
+  characterized relationally, ∃-quantified over reachable handles);
+  if it does, the relational specification is the checker restated
+  and scoff 3 reinstates. Plus verdict invariance (moved here) +
+  the pinhole regression witness. (If even the adjusted iff resists —
   that finding reshapes the arc before anything builds on it.)
 - **CE2 — the per-class congruence, easiest grade first:** the
   draw-free and spill classes (step-adjacent congruence), witnessed
@@ -150,13 +193,20 @@ adds to §3:
   the hardest single piece; probe the reconvergence-point
   characterization before building. The masked grade rides the
   reachability argument (already on the record from SP1).
-- **CE4 — composition + verdict invariance:** `ErasedStep`,
-  bisimulation-up-to over runs, verdict invariance, and the
-  init-span instance (discharging `SeedChoiceInvariance` — the
-  named premise becomes a theorem here).
-- **CE5 — the T1 composition dry run:** the full-T1 skeleton
-  through replay ∘ lift, open obligations enumerated (expected:
-  only the replay side's remaining rounds/pairing).
+- **CE4 — composition (the arc's load-bearing unit, scope per the
+  review):** `ErasedStep`; the up-to SOUNDNESS lemma; the
+  SPAN-COVERAGE decomposition; the pick-alignment component in the
+  bisimulation relation + the occurrence-status decision procedure
+  (the fourth grade); the STREAM-SPLIT + REIFICATION lemma; the
+  FAULT-TRANSFER corollary (σ₁ ~ σ₂ → faults-under-some-resolution
+  transfers — nearly free given the arbitrary-members congruence;
+  shipped here so never-faults' proof never reopens the
+  bisimulation); the init-span instance (SeedChoiceInvariance
+  becomes a theorem).
+- **CE5 — the T1 composition UPDATE (half a unit, per the review):**
+  `agreementT1_skeleton` already typechecks — rewrite the O6
+  obligation into the lift's actual interface and re-enumerate;
+  no new build.
 
 Each unit: witness-in-same-slice; [AGENT] + what-this-taught-us;
 the observability-census duality logged whenever a congruence
