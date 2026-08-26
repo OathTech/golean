@@ -178,3 +178,99 @@ None so far this session: zero SIGTERM kills, all builds/probes exit
 0 (the U24 reaper fingerprint has not fired). Build-lock used for the
 one full build; everything else explicit-target/`lake env lean`
 under 32–48G caps with captured exit codes.
+
+## SM1 slice 3 — the viol/S1-record spans: `s1_span_computes`
+(items 3a+3b; DELIVERED — the S1 checker bridge is now REAL ABOUT THE
+BYTES at symbolic checker state)
+
+Files: `Specs/Raft/SpanCells.lean` (the cell machinery + `viol`),
+`Specs/Raft/SpanS1.lean` (vocabulary, pins, projection bridge),
+`Specs/Raft/SpanS1Walk.lean` (the walk; split so the kernel pins
+compile once — an 11-min full-file elaboration became a 3-min
+iteration), `Specs/Raft/SpanS1Witness.lean`, `Audit/Span.lean`.
+
+### 3a — `SpanCells`
+- **`twinFs`** — the twin struct at the pinned declaration's field
+  order (probe `twintypes.out`), symbolic in every payload;
+  **measured off the machine's own definition**: `normalizeValueForTy`
+  is the IDENTITY at slice/map/string/bool field types (no arm
+  matches; the catch-all returns the value), so the whole-struct
+  re-normalization every `declaredTy = main.twin` field store routes
+  through only touches the four int fields. `twinDecl_pinned`
+  (kernel, axiom-FREE) pins the declaration.
+- `normalize_twinFs` (the normalization identity at in-range
+  counters; `kernel_rfl` raw + `inorm` discharge), the three
+  field-store singles (claims/violations/trace) through the
+  `fieldAddr` chain, `read_field_seg` (the 5-step
+  `p.f`-through-pointer read — the arc's workhorse single).
+- **`viol_pinned`** (whole-`Func`, axiom-free) + **`viol_call_span`**
+  (42 steps, probe-verified `violprobe.out`): `violations`
+  incremented EXACTLY, `trace` appended, targetless-frame exit
+  (`.next k` directly — the machine's `[] [] []` frame arm).
+
+### 3b — `SpanS1` + the walk
+- **`s1Block_pinned`**: the WHOLE S1 record span (claims++, comma-ok
+  lookup, the fire branch with its three `utoa` calls + `viol` call
+  + the five string concats byte-for-byte, the overwrite-insert)
+  occurs verbatim among `main.twin.harvest`'s sub-statements —
+  statement-granular, strictly stronger than U23's per-guard pins.
+- **The projection bridge**: `projLOf` (MapMem's `List (Int × Nat)`
+  model → the U23 model's assoc list); `lookupTerm_projLOf`
+  (first-match agreement — NO key-distinctness needed: both sides
+  are first-match), `lookupTerm_projLOf_setk` (machine
+  overwrite-insert ≈ model cons, lookup-extensionally),
+  `s1Fires_projLOf` (the machine's `ok && prev != id` value IS
+  `s1Fires` at the projection), `LookupEq` + `s1Step`/fold
+  congruences (counters EXACT through folds — the bridge's
+  `0 < viols` predicate transfers on the nose), `s1_abs_step`.
+- **`s1_span_computes`** (5200-step bound, three branches:
+  short-circuit skip / same-claimant / FIRE): from ANY symbolic
+  checker state (t/nd pointers, twin struct, node struct, map cell,
+  freshness, `Agrees`, ranges, five disjointness facts), the span
+  ends `.next K` with claims `= cN+1`, violations
+  `= wN + (if s1Fires ⟨projLOf kvs,…⟩ (tm,idv) then 1 else 0)` —
+  THE MODEL PREDICATE LITERALLY IN THE MACHINE READOUT — the map
+  cell at `toEntries (setk kvs tm idv)`, trace ∃, frame respect,
+  frontier/freshness/`Agrees` threaded. The fire branch runs the
+  three `utoa` call spans + the concat + the `viol` span
+  compositionally (the frame clauses carry every checker cell across
+  the calls).
+- **Witnesses (same slice)**: `s1w_span_fire` (the U23 bridge
+  witness's event — `(5,2)` after `(5,1)` — through the SPAN;
+  `s1w_span_fire_fires : s1Fires … = true` axiom-free) +
+  `s1w_span_clean`, every premise discharged on a concrete five-cell
+  state. Compiled cross-checks (`s1block.out`): clean = **74 steps**,
+  = the composed 47+4+3+20 EXACTLY; fire = 646 (one-digit args),
+  under the bound.
+- **Audit/Span.lean**: 22 pins, readouts verbatim from `axspan.out`
+  (all within [propext, Classical.choice, Quot.sound]; the three
+  byte pins + the fire-readout axiom-FREE), `#guard_msgs` verified
+  in place (`lake env lean` exit 0). Hatch grep over all 7 new
+  modules: **0**.
+
+- [AGENT] calls, tagged:
+  1. The map bridge rides `MapMem` (Group-2/5 public API:
+     `idxOf?/cnt/setk/toEntries`, `mapEntryIndex?_toEntries`,
+     `mapAssignValue_toEntries`) — the leaderOf map is
+     `map[uint64]uint64`, exactly MapMem's fragment. One new
+     machine-op lemma (`applyRhsOp_mapLookup_toEntries`, the comma-ok
+     read) + one new step single (`stepFn_rhs_apply`) were the whole
+     gap; the anti-grinding survey before building saved a
+     re-derivation of the entire map theory.
+  2. The struct-store cost was resolved by MEASURING the
+     normalization function first (the identity-at-untyped-arms
+     observation) instead of fighting a general struct-normalization
+     theory — the twinFs shape encodes exactly what the machine
+     checks.
+  3. `s1_span_computes`' conclusions are the WEAK FORM as banked:
+     counters exact, map by `setk` + lookup-equality transport, trace
+     existential, and an abstract frontier (`+2 ≤`, not exact — the
+     fire branch's allocation count depends on the arguments' digit
+     counts, which the consumer never needs).
+  4. The file split (pins vs walk) is an ITERATION-SPEED move, not
+     architecture; recorded in both docstrings.
+
+Verification: every module `lake env lean` exit 0, zero warnings;
+oleans via explicit targets (≤48G, lock-exempt); `#eval`-first via
+the probes (`s1block.out` config chains transcribed
+segment-for-segment before proving).
