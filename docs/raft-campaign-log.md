@@ -2257,6 +2257,33 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   Corpus/ dir, Sym note, ledger rows) + the never-faults statement
   draft for [USER] designation.
 
+- **THE POST-BASECAMP EXECUTION OPENS (2026-08-27):** the CE arc
+  plan reached v2 under the professor's light pass — verdict
+  "execute, with fixes": the congruence signature corrected
+  (per-SITE, heterogeneous paths, draw LISTS — cap slack means
+  class members take different paths), three missing theorems named
+  (span-coverage decomposition; up-to soundness à la
+  Pous–Sangiorgi; stream-split + REIFICATION), the FOURTH
+  observability grade (promoted-to-pick — mapIter is pick at the
+  driver loop and latitude in the rings; classification is
+  per-OCCURRENCE), fuel non-preservation recorded, the CE1 gate
+  pre-adjusted (Clean∧CEquivM ↔ Clean∧SpanIso on well-formed
+  states; SpanIso must never quote the canonicalizer — else scoff 3
+  reinstates), verdict invariance moved to CE1 as SpanIso's smoke
+  test, the fault-transfer corollary into CE4 (serving the future
+  never-faults proof), CE5 rescoped to half a unit. The [USER]
+  doc-consistency check caught 5 staleness points — all fixed
+  (synthesis B1 struck-through in place; sequencing updated; the
+  shared sealed-refusal mechanism; the mode slot in the judgment
+  format FROM BIRTH — RefinedC's retrofit lesson applied to §3b).
+  §3b's own review (switch-OUT vs specific representatives;
+  ρ×SpanIso orthogonality) arrived after the professor closed —
+  RE-ASKED as part of CE2's probe obligations. [AGENT]: wave-α
+  worker dispatched (S1/S2/S4, the kills, legibility, the
+  never-faults draft — S3 excluded, it belongs to CE1) and the CE1
+  worker dispatched in parallel (S3 + SpanIso + the adjusted iff +
+  verdict invariance) on disjoint trees.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
