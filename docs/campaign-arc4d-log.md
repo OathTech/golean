@@ -569,3 +569,33 @@ the two map fragments + the cell/op layer; DELIVERED)
 Verification: both modules `lake env lean` exit 0, ZERO warnings
 (`SpanS23Maps` carries MapMem's documented `unusedSimpArgs`
 suppression for the same `letFun` false-flag, comment carried over).
+
+## SM2 slice 2 — `SpanS23Apply.lean`: the spelled `main.twin.apply`
++ PIN + the projection bridge (DELIVERED)
+
+- **`apply_pinned`** — the WHOLE lowered `main.twin.apply` `Func`
+  (every branch a named def: `s3IdxBranch`/`s3TermBranch`/
+  `anomalyBranch`/`s2Branch`/`byIdxBlock`, the five viol concat
+  chains byte-for-byte) equals
+  `findFunctionIn? twinLowered.funcs ⟨"main.twin.apply"⟩` by
+  `kernel_rfl` — `utoa_pinned`'s whole-Func pattern at the arc's
+  biggest body. **#eval'd FIRST** (`applypin.out`: `Stmt.eqbF` true +
+  args/results/id/wrapper equal — the eval-before-decide drill; the
+  pin was kernel-checked only after the eval said true; 37 s
+  whole-file elaboration).
+- **`apply_enterFrame`** — three pointer-argument cells at the
+  frontier, targetless frame, `kernel_rfl` at symbolic heap/frontier
+  (the frame env `[[e, nd, t]]` shape eval-verified in the probe).
+- **The projection bridge**: `projBy` (machine slot list → model
+  byIndex rows, `encGS` on data), `KeysWfB`, `lookupIdx_projBy`
+  (first-match agreement), `lookupIdx_projBy_append` (machine
+  append-if-absent ≈ model cons, lookup-extensionally — the
+  `s23Step` byIndex transport), `s2guard_proj` (the machine's
+  short-circuit `s.term != trm || s.data != data` Bool IS the
+  model's disagreement decision at the projection), `LookupEqB` +
+  `s2Hit_congr`/`s23Step_congr`/`s23Fold_congr` (counters and
+  cursors EXACT through folds — SpanS1's `LookupEq` pattern at the
+  S23 state).
+
+Verification: `lake env lean` exit 0, ZERO warnings; olean via
+explicit target.
