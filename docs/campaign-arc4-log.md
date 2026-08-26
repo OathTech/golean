@@ -5655,3 +5655,16 @@ Nothing merged; branch-complete. Merge/audit-ask remain the
 operator's (constitution §4.1); the comparator-landmark STALE +
 OWED-on-scope escalation stands (this unit adds Audit.lean lines
 again). The arc4c landing expectation noted for a later boundary.
+
+- 2026-08-26 A4-U22 gate follow-up (same-commit convention): unit-end
+  gate `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci` at the
+  exit tree — **RESULT: PASS, exit 0** (`artifacts/ci-arc4-u22.log`,
+  gitignored, `GATE_EXIT=0` in the log; 23 ok steps + the two
+  sanctioned no-diff notes — this unit touched the eleven RoundMa
+  modules + Audit/RoundMa.lean + the two aggregators + the
+  RoundStatement docstring truth-maintenance edit + this log +
+  gitignored probes; no runtime code, no Corpus/, no baselines/; the
+  Audit surface GREW by the 10 RoundMa pins — additive,
+  in-build-verified). Comparator landmark: **STALE at 163 commits**
+  AND **OWED (scope)** — both report-only, standing escalated for
+  the operator's merge step, as since U8.
