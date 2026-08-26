@@ -2068,6 +2068,26 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   instance, and the replay-mode decision recorded as next-charter,
   not fix-round, items); delta-review after; then the ff ask.
 
+- **SM2 (arc4d lane) — LANDED @ 7fa0e04d; THE LANE COMPLETES —
+  S23 BYTE-CLOSED** (2026-08-26): `s23_span_computes` (the whole
+  apply call from symbolic checker state; cursors exact, the
+  violations arithmetic literal in the readout) + `s23_abs_step`
+  (projection commutation; injective data coding closes the
+  model-Nat/machine-string gap the banked route left unpriced) +
+  fire/clean witnesses at the bridge's own events; 11 modules, 31
+  pins, zero warnings; ≈1.2 units vs the 1-1.5 price (two lifted
+  engines absorbed the overrun risk). O5's interpreter half is
+  FULLY DONE; the residue is assembly-time seams by design
+  (ClaimTrace-class). WHAT THIS TAUGHT US: the anomaly branch was
+  deliberately NOT walked (it computes no model predicate — the
+  walk proves it untaken): scoping by what the model consumes, not
+  by what the code contains. [AGENT] LANDING DISCIPLINE: arc4d's
+  19 modules were NOT in the landing audit's scope — the lane does
+  NOT land before the ff; the audited merge covers b4977d05 + the
+  fix round only, and arc4d lands as the next lane merge with its
+  own (small) ceremony. Promotion targets (StrMapMem, the spine
+  evaluator) recorded for a consolidation slice.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
