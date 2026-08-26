@@ -1895,6 +1895,37 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   lean verification produces NO artifacts — never treat it as
   having warmed anything.
 
+- **SP1 (arc4c lane) — LANDED @ 8e23af6e; the lane's program
+  complete** (2026-08-26): THE PROBE VERDICT — strict ~ REFUTED at
+  exactly 3/171 init draws (randomizedElectionTimeout: a PERSISTED
+  value draw through mapIter — the charter's named hidden-wall
+  class realized as a scalar, not a layout) and held at 168;
+  answered by the VISIBLE one-field mask ~ₘ (sole reader =
+  tick-path, structurally unreachable; the strict refusal
+  kernel-pinned). Landed: ChoiceCanon/ChoiceInv + the seed pin —
+  Seed N₀ DISCHARGED (C3's hypothesis), SeedFam (the induction
+  base), absRead pinned at the all-zeros abstract seed, the
+  ~ₘ-witness (a genuinely different init run landing equal), the
+  closed 120 s setup link, computed-vs-literal adopted as standing
+  rule (measured 10 min → 40-120 s). Gate: the known structural
+  red + compensating checks verbatim (7× EXIT=0, 559 jobs, AxSeed
+  clean). **THE HONEST OPEN ITEM, [AGENT]-flagged by the worker
+  and now on T1's critical path: `SeedChoiceInvariance` is a NAMED
+  PREMISE, not a theorem** — the ∀-init-stream discharge was
+  deferred (§7 call: the general transports belong to the symbolic
+  semantics). T1 CANNOT ship conditional on it; [AGENT] decision:
+  the discharge lands in the C-wave as mirror windows over the
+  init span at ~ₘ (the U22 template at ~3-4 rounds' one-time cost;
+  the 168/3 census + mask make every window's draw-site treatment
+  known in advance) — chartered into the round-induction unit.
+  WHAT THIS TAUGHT US: the probe-first pattern caught a REAL
+  narrow refutation that a bulk proof attempt would have hit as an
+  unexplained failure deep in a 81k-step derivation; and the mask
+  is the honest form of "choices don't matter" — they mostly
+  don't, and where they do, the form SAYS SO. Landing manifest
+  (seven imports) queued to the next arc-4 boundary; arc4c retires
+  after. U25 still in flight.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
