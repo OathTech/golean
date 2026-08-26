@@ -2392,6 +2392,15 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   step count, round count, or fixture identity is stepping-stone
   tier BY DEFINITION and must be labeled so at birth.
 
+- **[USER] 2026-08-27 — the bounded-techniques doctrine LIFTED TO
+  CLAUDE.md, top billing, [USER]-authorized direct-to-main commit**
+  (main @ d0e0d2e8): the verbatim ban + the operational form
+  (grep-able banned properties; stepping-stone labeling at birth;
+  never-composes rule; the positive definition of proof; the
+  fixed-trajectory era as the recorded cautionary instance).
+  In-flight worker charters verified compliant; their worktree
+  CLAUDE.md copies pick it up at their rebases.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
