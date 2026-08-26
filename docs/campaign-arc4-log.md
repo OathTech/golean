@@ -5421,3 +5421,20 @@ operator's (constitution §4.1); the comparator-landmark STALE
 (156+) AND OWED-on-scope flags stand escalated from U8–U20 — this
 unit adds Audit.lean import lines (Audit.Ring) and the arc4b
 landing to the scope trigger's motivation.
+
+- 2026-08-26 A4-U21 gate follow-up (same-commit convention): unit-end
+  gate `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci` at the
+  exit tree — **RESULT: PASS, exit 0** (`artifacts/ci-arc4-u21.log`,
+  gitignored, `GATE_EXIT=0` recorded IN the log; 23 ok steps + the
+  two sanctioned no-diff notes — this unit touched the arc4b merge
+  (nine files), `proofs/GoLeanProofs.lean`, `proofs/Audit.lean`,
+  `proofs/GoLeanProofs/Specs/Raft/{NativeS23Witness,RingLit1-4,
+  RingEqW1,RingEqW2,RingEqW345,RingEquation,RingWitness}.lean`,
+  `proofs/Audit/Ring.lean`, `scripts/check-spec-anchors` (the
+  batching gate bug fix, both directions re-tested), this log +
+  gitignored probes; no runtime code, no Corpus/, no baselines/; the
+  Audit surface GREW by the 12 Ring pins — additive,
+  in-build-verified). The comparator-landmark notes now read
+  **STALE at 159 commits** AND **OWED (scope)** (Audit.lean import
+  lines; report-only) — both stand escalated for the operator's
+  merge step, as since U8.
