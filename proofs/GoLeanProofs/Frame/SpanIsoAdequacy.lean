@@ -561,3 +561,316 @@ theorem collectPass_step (h : Heap) (m : Mask) (fuel : Nat) (st : VSt)
       (roots.foldl (fun acc v => collectV h m fuel acc v)
         ((st, []) : VSt × List Nat)) :=
   PhaseStep.foldl _ (fun acc v => collectV_step h m fuel acc v) roots (st, [])
+
+/-! ## The fixpoint: flag-free termination is LITERAL stability -/
+
+/-- Convenience: the pass as the checker runs it. -/
+theorem collectPass_eq (h : Heap) (m : Mask) (fuel : Nat) (st : VSt)
+    (roots : List GoValue) :
+    collectPass h m fuel st roots
+      = (roots.foldl (fun acc v => collectV h m fuel acc v)
+          ((st, []) : VSt × List Nat)).1 := rfl
+
+/-- A flag-free `collectFix` result is `Wf`, is reached from the
+start by a `PhaseStep`, and is a LITERAL fixpoint of the pass. -/
+theorem collectFix_stable (h : Heap) (m : Mask) (fuel : Nat)
+    (roots : List GoValue) :
+    ∀ (n : Nat) (st : VSt), st.Wf →
+      (collectFix h m fuel roots n st).flags = [] →
+      st.Le (collectFix h m fuel roots n st) ∧
+      VSt.Wf (collectFix h m fuel roots n st) ∧
+      collectPass h m fuel (collectFix h m fuel roots n st) roots
+        = collectFix h m fuel roots n st
+  | 0, st, hwf, hfl => by
+      simp only [collectFix] at hfl ⊢
+      exact absurd hfl (flag_ne_empty st "VIEWFIX-UNSTABLE")
+  | n + 1, st, hwf, hfl => by
+      simp only [collectFix] at hfl ⊢
+      have hstep := collectPass_step h m fuel st roots
+      obtain ⟨hle, -, hwtrans⟩ := hstep
+      obtain ⟨hwf', hm, hrigid⟩ := hwtrans hwf
+      by_cases hmeq : (collectPass h m fuel st roots).measure == st.measure
+      · rw [if_pos hmeq] at hfl ⊢
+        have hmeq' : st.measure
+            = (roots.foldl (fun acc v => collectV h m fuel acc v)
+                ((st, []) : VSt × List Nat)).1.measure := by
+          have hb := (beq_iff_eq.mp hmeq)
+          rw [collectPass_eq] at hb
+          omega
+        have hfl' : (roots.foldl (fun acc v => collectV h m fuel acc v)
+            ((st, []) : VSt × List Nat)).1.flags = [] := by
+          rw [← collectPass_eq]; exact hfl
+        have hid : collectPass h m fuel st roots = st := by
+          rw [collectPass_eq]
+          exact hrigid hfl' hmeq'
+        rw [hid]
+        exact ⟨VSt.Le.rfl st, hwf, hid⟩
+      · rw [if_neg hmeq] at hfl ⊢
+        obtain ⟨hle₂, hwf₂, hfix⟩ :=
+          collectFix_stable h m fuel roots n (collectPass h m fuel st roots)
+            (by rw [collectPass_eq]; exact hwf') hfl
+        refine ⟨?_, hwf₂, hfix⟩
+        have hle' : st.Le (collectPass h m fuel st roots) := by
+          rw [collectPass_eq]; exact hle
+        exact hle'.trans hle₂
+
+/-! ## Soundness: computed marks are relationally justified -/
+
+/-- The soundness invariant: every positive computed view is ITSELF
+some reachable handle's window (bumpView only ever writes exact
+windows), and every direct mark is a reachable whole-reference. -/
+structure Sound (h : Heap) (m : Mask) (roots : List GoValue) (st : VSt) : Prop where
+  sview : ∀ a, 0 < st.viewOf a → ViewedAt h m roots a (st.viewOf a)
+  sdirect : ∀ a, a ∈ st.direct → DirectRef h m roots a
+
+/-- The justification a `collectCell` call site carries. -/
+def CellJust (h : Heap) (m : Mask) (roots : List GoValue) (a : Nat) : Prop :=
+  DirectRef h m roots a ∨
+    ∃ off len cap, RVal h m roots (.slice ⟨some (.base ⟨a⟩), off, len, cap⟩)
+
+theorem Sound.flag {h m roots st} (hs : Sound h m roots st) (f : String) :
+    Sound h m roots (st.flag f) := by
+  refine ⟨fun a hv => ?_, fun a hd => ?_⟩
+  · rw [viewOf_flag] at hv ⊢; exact hs.sview a hv
+  · rw [flag_direct] at hd; exact hs.sdirect a hd
+
+theorem Sound.markDirect {h m roots st} (hs : Sound h m roots st) {a : Nat}
+    (hj : DirectRef h m roots a) : Sound h m roots (st.markDirect a) := by
+  refine ⟨fun b hv => ?_, fun b hd => ?_⟩
+  · rw [viewOf_markDirect] at hv ⊢; exact hs.sview b hv
+  · rcases (mem_markDirect st a b).mp hd with rfl | hb
+    · exact hj
+    · exact hs.sdirect b hb
+
+theorem Sound.bumpView {h m roots st} (hs : Sound h m roots st) {a w : Nat}
+    (hj : ViewedAt h m roots a w) : Sound h m roots (st.bumpView a w) := by
+  refine ⟨fun b hv => ?_, fun b hd => ?_⟩
+  · rw [viewOf_bumpView] at hv ⊢
+    by_cases hba : b = a
+    · subst hba
+      simp only [if_pos rfl] at hv ⊢
+      rcases Nat.le_total (st.viewOf b) w with hle | hle
+      · rw [Nat.max_eq_right hle] at hv ⊢
+        exact hj
+      · rw [Nat.max_eq_left hle] at hv ⊢
+        exact hs.sview b hv
+    · simp only [if_neg hba] at hv ⊢
+      exact hs.sview b hv
+  · rw [bumpView_direct] at hd
+    exact hs.sdirect b hd
+
+/-- Fold preservation with per-element membership hypotheses. -/
+private theorem foldl_pres {γ} (g : (VSt × List Nat) → γ → (VSt × List Nat))
+    (P : VSt × List Nat → Prop) (l : List γ)
+    (hg : ∀ acc x, x ∈ l → P acc → P (g acc x)) :
+    ∀ acc, P acc → P (l.foldl g acc) := by
+  induction l with
+  | nil => intro acc h; exact h
+  | cons x rest ih =>
+      intro acc h
+      exact ih (fun acc y hy hacc => hg acc y (List.mem_cons_of_mem x hy) hacc)
+        (g acc x) (hg acc x List.mem_cons_self h)
+
+private theorem foldlArray_pres {γ} (g : (VSt × List Nat) → γ → (VSt × List Nat))
+    (P : VSt × List Nat → Prop) (l : Array γ)
+    (hg : ∀ acc x, x ∈ l.toList → P acc → P (g acc x)) :
+    ∀ acc, P acc → P (l.foldl g acc) := by
+  intro acc h
+  rw [← Array.foldl_toList]
+  exact foldl_pres g P l.toList hg acc h
+
+private theorem baseAddr_some {l : Loc} {a : Nat} (h : baseAddr l = some a) :
+    l = .base ⟨a⟩ := by
+  cases l with
+  | base ad =>
+      cases ad with
+      | mk i =>
+          simp [baseAddr] at h
+          rw [h]
+  | field b t f => simp [baseAddr] at h
+  | index b i => simp [baseAddr] at h
+
+private theorem mem_toList_getElem {γ} {l : Array γ} {x : γ}
+    (h : x ∈ l.toList) : ∃ i, ∃ hi : i < l.size, l[i]'hi = x := by
+  rw [List.mem_iff_getElem] at h
+  obtain ⟨i, hi, hx⟩ := h
+  exact ⟨i, by simpa using hi, by simpa using hx⟩
+
+private theorem mem_take_getElem {γ} {vs : Array γ} {bound : Nat} {x : γ}
+    (h : x ∈ vs.toList.take bound) :
+    ∃ i, i < bound ∧ ∃ hi : i < vs.size, vs[i]'hi = x := by
+  rw [List.mem_iff_getElem] at h
+  obtain ⟨i, hi, hx⟩ := h
+  have hlen := hi
+  rw [List.length_take, Array.length_toList] at hlen
+  refine ⟨i, by omega, by omega, ?_⟩
+  rw [List.getElem_take] at hx
+  simpa using hx
+
+/-! The mutual soundness walk: the traversal started on reachable
+values only ever records justified marks. -/
+
+mutual
+
+theorem collectV_sound (h : Heap) (m : Mask) (roots : List GoValue) :
+    ∀ (fuel : Nat) (acc : VSt × List Nat) (v : GoValue),
+      Sound h m roots acc.1 → RVal h m roots v →
+      Sound h m roots (collectV h m fuel acc v).1
+  | 0, acc, v => fun hs _ => by
+      simp only [collectV]
+      exact hs.flag "FUEL"
+  | fuel + 1, acc, .unit => fun hs _ => by simp only [collectV]; exact hs
+  | fuel + 1, acc, .bool _ => fun hs _ => by simp only [collectV]; exact hs
+  | fuel + 1, acc, .int _ _ => fun hs _ => by simp only [collectV]; exact hs
+  | fuel + 1, acc, .float _ _ => fun hs _ => by simp only [collectV]; exact hs
+  | fuel + 1, acc, .string _ => fun hs _ => by simp only [collectV]; exact hs
+  | fuel + 1, acc, .nil => fun hs _ => by simp only [collectV]; exact hs
+  | fuel + 1, acc, .syncData _ => fun hs _ => by simp only [collectV]; exact hs
+  | fuel + 1, acc, .addr (.base ⟨a⟩) => fun hs hv => by
+      simp only [collectV, baseAddr]
+      exact collectCell_sound h m roots fuel _ a
+        (hs.markDirect (Or.inl hv)) (Or.inl (Or.inl hv))
+  | fuel + 1, acc, .addr (.field b t f) => fun hs _ => by
+      simp only [collectV, baseAddr]
+      exact hs.flag "NONBASE-LOC"
+  | fuel + 1, acc, .addr (.index b i) => fun hs _ => by
+      simp only [collectV, baseAddr]
+      exact hs.flag "NONBASE-LOC"
+  | fuel + 1, acc, .slice ⟨none, soff, slen, scap⟩ => fun hs _ => by
+      simp only [collectV]
+      exact hs
+  | fuel + 1, acc, .slice ⟨some (.base ⟨a⟩), soff, slen, scap⟩ => fun hs hv => by
+      simp only [collectV, baseAddr]
+      exact collectCell_sound h m roots fuel _ a
+        (hs.bumpView ⟨soff, slen, scap, hv, rfl⟩)
+        (Or.inr ⟨soff, slen, scap, hv⟩)
+  | fuel + 1, acc, .slice ⟨some (.field b t f), soff, slen, scap⟩ => fun hs _ => by
+      simp only [collectV, baseAddr]
+      exact hs.flag "NONBASE-LOC"
+  | fuel + 1, acc, .slice ⟨some (.index b i), soff, slen, scap⟩ => fun hs _ => by
+      simp only [collectV, baseAddr]
+      exact hs.flag "NONBASE-LOC"
+  | fuel + 1, acc, .map ⟨none⟩ => fun hs _ => by
+      simp only [collectV]; exact hs
+  | fuel + 1, acc, .map ⟨some (.base ⟨a⟩)⟩ => fun hs hv => by
+      simp only [collectV, baseAddr]
+      exact collectCell_sound h m roots fuel _ a
+        (hs.markDirect (Or.inr (Or.inl hv))) (Or.inl (Or.inr (Or.inl hv)))
+  | fuel + 1, acc, .map ⟨some (.field b t f)⟩ => fun hs _ => by
+      simp only [collectV, baseAddr]
+      exact hs.flag "NONBASE-LOC"
+  | fuel + 1, acc, .map ⟨some (.index b i)⟩ => fun hs _ => by
+      simp only [collectV, baseAddr]
+      exact hs.flag "NONBASE-LOC"
+  | fuel + 1, acc, .chan ⟨none⟩ => fun hs _ => by
+      simp only [collectV]; exact hs
+  | fuel + 1, acc, .chan ⟨some (.base ⟨a⟩)⟩ => fun hs hv => by
+      simp only [collectV, baseAddr]
+      exact collectCell_sound h m roots fuel _ a
+        (hs.markDirect (Or.inr (Or.inr hv))) (Or.inl (Or.inr (Or.inr hv)))
+  | fuel + 1, acc, .chan ⟨some (.field b t f)⟩ => fun hs _ => by
+      simp only [collectV, baseAddr]
+      exact hs.flag "NONBASE-LOC"
+  | fuel + 1, acc, .chan ⟨some (.index b i)⟩ => fun hs _ => by
+      simp only [collectV, baseAddr]
+      exact hs.flag "NONBASE-LOC"
+  | fuel + 1, acc, .interface _ x => fun hs hv => by
+      simp only [collectV]
+      exact collectV_sound h m roots fuel acc x hs (RVal.ifaceVal hv)
+  | fuel + 1, acc, .struct tid fs => fun hs hv => by
+      simp only [collectV]
+      refine foldlArray_pres _ (fun acc => Sound h m roots acc.1) fs
+        (fun acc p hp hacc => ?_) acc hs
+      by_cases hm : m.hits tid p.1
+      · simp only [hm, if_pos]
+        exact hacc
+      · simp only [hm, Bool.false_eq_true, if_false]
+        obtain ⟨i, hi, hfs⟩ := mem_toList_getElem hp
+        have hrv : RVal h m roots (fs[i]'hi).2 :=
+          RVal.structField hv hi (by rw [hfs]; exact Bool.not_eq_true _ ▸ hm)
+        rw [hfs] at hrv
+        exact collectV_sound h m roots fuel acc p.2 hacc hrv
+  | fuel + 1, acc, .array vs => fun hs hv => by
+      simp only [collectV]
+      refine foldlArray_pres _ (fun acc => Sound h m roots acc.1) vs
+        (fun acc x hx hacc => ?_) acc hs
+      obtain ⟨i, hi, hvs⟩ := mem_toList_getElem hx
+      have hrv := RVal.arrayElem hv hi
+      rw [hvs] at hrv
+      exact collectV_sound h m roots fuel acc x hacc hrv
+  | fuel + 1, acc, .funcVal fid cap => fun hs hv => by
+      simp only [collectV]
+      refine foldl_pres _ (fun acc => Sound h m roots acc.1) cap
+        (fun acc x hx hacc => ?_) acc hs
+      exact collectV_sound h m roots fuel acc x hacc (RVal.funcCap hv hx)
+  | fuel + 1, acc, .mapData es => fun hs hv => by
+      simp only [collectV]
+      refine foldlArray_pres _ (fun acc => Sound h m roots acc.1) es
+        (fun acc p hp hacc => ?_) acc hs
+      obtain ⟨i, hi, hes⟩ := mem_toList_getElem hp
+      have hrk := RVal.mapKey hv hi
+      have hrw := RVal.mapVal hv hi
+      rw [hes] at hrk hrw
+      exact collectV_sound h m roots fuel _ p.2
+        (collectV_sound h m roots fuel acc p.1 hacc hrk) hrw
+  | fuel + 1, acc, .chanData buf c cl => fun hs hv => by
+      simp only [collectV]
+      refine foldlArray_pres _ (fun acc => Sound h m roots acc.1) buf
+        (fun acc x hx hacc => ?_) acc hs
+      obtain ⟨i, hi, hbuf⟩ := mem_toList_getElem hx
+      have hrv := RVal.chanElem hv hi
+      rw [hbuf] at hrv
+      exact collectV_sound h m roots fuel acc x hacc hrv
+
+theorem collectCell_sound (h : Heap) (m : Mask) (roots : List GoValue) :
+    ∀ (fuel : Nat) (acc : VSt × List Nat) (a : Nat),
+      Sound h m roots acc.1 → CellJust h m roots a →
+      Sound h m roots (collectCell h m fuel acc a).1
+  | 0, acc, a => fun hs _ => by
+      simp only [collectCell]
+      exact hs.flag "FUEL"
+  | fuel + 1, acc, a => fun hs hj => by
+      simp only [collectCell]
+      by_cases hc : acc.2.contains a
+      · rw [if_pos hc]
+        exact hs
+      · rw [if_neg hc]
+        split
+        · exact hs
+        · rename_i cell hl
+          split
+          · -- the backing-array walk, bounded by direct/view status
+            rename_i vs hcv
+            refine foldl_pres _ (fun acc' => Sound h m roots acc'.1) _
+              (fun acc' x hx hacc' => ?_) _ hs
+            obtain ⟨i, hib, hi, hvs⟩ := mem_take_getElem hx
+            by_cases hd : acc.1.direct.contains a
+            · have hdr : DirectRef h m roots a :=
+                hs.sdirect a (List.contains_iff_mem.mp hd)
+              have hcv' : RVal h m roots (.array vs) := by
+                rw [← hcv]
+                rcases hdr with hda | hdm | hdc
+                · exact RVal.derefAddr hda hl
+                · exact RVal.derefMap hdm hl
+                · exact RVal.derefChan hdc hl
+              have hrv := RVal.arrayElem hcv' hi
+              rw [hvs] at hrv
+              exact collectV_sound h m roots fuel acc' x hacc' hrv
+            · rw [if_neg hd] at hib
+              have hipos : 0 < acc.1.viewOf a := by omega
+              obtain ⟨off, len, cap, hhandle, hw⟩ := hs.sview a hipos
+              have hrv : RVal h m roots (vs[i]'hi) :=
+                RVal.sliceElem hhandle hl hcv (by omega) hi
+              rw [hvs] at hrv
+              exact collectV_sound h m roots fuel acc' x hacc' hrv
+          · -- non-array contents: whole-value walk
+            rename_i hnv
+            refine collectV_sound h m roots fuel _ _ hs ?_
+            rcases hj with hdr | ⟨off, len, cap, hh⟩
+            · rcases hdr with hda | hdm | hdc
+              · exact RVal.derefAddr hda hl
+              · exact RVal.derefMap hdm hl
+              · exact RVal.derefChan hdc hl
+            · exact RVal.sliceWhole hh hl (fun vs hvs => hnv vs hvs)
+
+end
