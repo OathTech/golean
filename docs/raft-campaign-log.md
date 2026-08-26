@@ -1742,6 +1742,36 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   docstring tags — seven known scaffolds already enumerated in its
   scope.
 
+- **Arc 4, A4-U21 = C2c — LANDED** @ 4a158041, both gates PASS, 559
+  jobs: THE ARC4B LANDING fully green (two green-in-isolation/
+  red-in-composition findings fixed honestly: the witness-module
+  joint-import collision; the spec-anchors xargs 128KiB false-death
+  — a real gate bug fixed fail-closed, both directions re-tested) +
+  THE MsgApp ROUND FIXTURE (23,488 steps/8 choices; first probe
+  decoded the twin's snapshot-boot log) + the sub-ring census
+  (SC1's classification re-verified at MsgApp scale; ring footprint
+  27 cells) + **FIVE payload-parametric storage-resp spans incl.
+  the choice-free storage-resp span W4, with the span_consume
+  composition demonstrated at a non-identity placement** + the
+  MsgVote census (vote rounds write hard state but produce NO
+  storage arms — the round-kind matrix now spans three ring
+  depths). WHAT THIS TAUGHT US — **THE THIRD KERNEL WALL:
+  representation ASYMMETRY, not size** — open-term comparison of
+  γ-images across two representations is effectively unbounded
+  (>46 min/crossing) while the same content with SHARED terms is
+  subsecond; fix = tree-propagation crossings + parallel window
+  modules (RingEqW2: >46 min → 135 s); now a ledger template. Also:
+  the >46-min crossing was STOPPED AND BISECTED, not waited out —
+  the doctrine functioning as reflex. Cost: SC1's sizing held
+  (~6 min window kernel vs 4-5 predicted); the overrun was the
+  route detour, amortized as the template. [AGENT]: C2d to the same
+  worker (the first reachable ROUND-KIND LEMMA at the MsgApp
+  fixture — the R-form's first proved instance); the SEED-PIN unit
+  dispatched in parallel on a fresh new-files-only scoping lane
+  (arc4c) carrying the choice-invariance lemma, forward-compatible
+  with the symbolic semantics per the standing decisions. Landmark
+  dual-trigger at 159 — stands.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
