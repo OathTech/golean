@@ -1873,6 +1873,28 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   SP1 resumes after it lands. [USER] flagged the OOM risk on
   reconnect — correct call.
 
+- **[USER] 2026-08-26 — grind classification challenge on the warm
+  loop:** [AGENT] split verdict, adopted: the warm loop = allowed
+  (one-time bounded cache repair); the EXPOSED PATTERN = a
+  structural tax failing the doctrine — (1) interface-hot edits
+  (which further-consumers ENCOURAGES) invalidate the heavy tail
+  for hours; (2) the dominant cost is the retired literal-mode
+  corpus (8-27G elaboration per generated module) still sitting in
+  the DEFAULT build target; (3) the promotion rule lacked a
+  build-cost dimension (statement-additive in-place edits are
+  build-explosive). THREE CORRECTIONS, each with this incident as
+  its demonstrated consumer: (a) SPLIT THE VALIDATION CORPUS into a
+  separate non-default lake target built at landmarks only —
+  chartered as the next arc-4 unit's opening slice; (b) promotion
+  convention amended: interface-adjacent lemmas land in NEW
+  downstream-invisible modules unless in-place is semantically
+  forced; (c) the coherence audit gains a build-cost-topology
+  dimension (import-hot files + invalidation footprints). Also
+  standing from this incident: interface-touching edits owe a
+  cache-producing sequential warm before any full gate; lake env
+  lean verification produces NO artifacts — never treat it as
+  having warmed anything.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
