@@ -1953,6 +1953,38 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   from U24's banked map). Landmark STALE(170)+OWED — stands, the
   merge approaches.
 
+- **Arc 4, A4-U26 — LANDED, THE ROUND INDUCTION IS PROVED** @
+  772a295b, both gates PASS (241 s): arc4c landed (SP1's red
+  closed); **`round_induction` + FamTrace + the safety/fullInv/
+  flat/seeded corollaries, LIVE in the default target, witnessed by
+  a genuine seedN₀ election chain ending in a non-vacuous leader**;
+  corpus sweep 23,278 decls axiom-clean. THE DESIGN VERDICTS:
+  (1) the coordinator's successor-canon design REFUTED at both
+  stop points (fixtures resist canonicalization; ~ₘ cannot
+  transport RoundFam through FrameSim's vocabulary) — the probe
+  found the simpler truth: the kinds' loop-head configs are
+  LITERALLY EQUAL, so the induction chains literal canon steps
+  with zero frame algebra; (2) the ∀-stream discharge
+  boundary-stopped with the mispricing NAMED: the mirror-window
+  estimate priced the canonical init completion (O7, ≈35-60 min,
+  separable), not the ∀-stream lift, which requires the per-class
+  ~ₘ transports — the symbolic semantics' erased half; enumeration
+  impossible in principle. The induction lands UNCONDITIONAL at
+  censused canonical prefixes; SeedChoiceInvariance stays a
+  visible named premise at exactly one consumer (T1's ∀-stream
+  form). THE ASSEMBLY PROBE: agreementT1_skeleton typechecks;
+  open obligations O1-O7 enumerated (adapters, ~28 replay
+  instances, the prune seam, the abstract dialect's commit/append
+  members, the checker seam [SM1 in flight], the ∀-stream lift
+  [the scoping item], init completion). WHAT THIS TAUGHT US: the
+  probe discipline caught the coordinator's own design twice in
+  one unit — the summit push behaved exactly as chartered.
+  [AGENT]: MERGE PREP OPENS (the bank point is now — ~26 units,
+  landmark dual-trigger at 176): snapshot, rebase onto main,
+  warm+gate, judge + AuditCorpus landmark, then THE AUDIT ASK +
+  the O6 scoping recommendation go to the user together. Lane
+  building pauses for the ceremony; SM1 continues (separate lane).
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
