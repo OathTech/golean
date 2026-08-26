@@ -2300,6 +2300,28 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   handler function spec WP-style, measured. Synthesis §3 amended
   in place.
 
+- **[USER] 2026-08-27 — THE REASONING-LAYER CONSTITUTION
+  (doctrine):** "a Hoare/O'Hearn style proof over the program
+  syntax... we are reasoning, not concretely walking. We should NOT
+  be doing trashy tricks like executing at literal values or
+  hacking over the AST." [AGENT] operational form, adopted:
+  (1) syntax-DIRECTED rules (Hoare rules over constructors — the
+  judgment layer) are the method; syntax-MANIPULATION (generators
+  emitting per-instance theorem text) is banned from proof
+  production — emitters demoted to validation-corpus maintenance
+  only; (2) literal-value execution survives at exactly three
+  DECLARED site classes — witnesses, anchors, validation corpus —
+  and a LINTABLE rule is drafted (kernel evaluation of program
+  states in reasoning modules outside *Witness*/*Anchor*/Corpus =
+  gate violation; doctrine line prepared for [USER] sign-off at
+  next landing); (3) when an obligation resists, the answer is a
+  new RULE or better abstraction, never a drop to concrete
+  walking (the escape ladder is reasoning-level at every rung);
+  (4) shape pins remain as subject-certification (reflection about
+  WHICH program, once), distinguished from AST-hacking on the
+  record. In-flight work verified compliant (CE1, wave α, the
+  re-targeted pilot).
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
