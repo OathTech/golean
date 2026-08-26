@@ -1,5 +1,25 @@
 # Campaign Arc 4 — the interpreter⇄invariant seam: design of record (v1)
 
+> **RECONCILIATION (arc-4 landing fix round, 2026-08-26 — the §8
+> reconciliation the flexibility redesign queued to "the lane's next
+> boundary"; the landing was that boundary and the audit found it
+> undone).** This note is SUBORDINATE to
+> `docs/2026-08-26_campaign-flexibility-redesign.md` (THE plan of
+> record, tracked in this repo since the fix round): the redesign's
+> interface stack (I1–I4), its literal-mode stop (§3 I2/§4), and its
+> vacuity checks govern; this note remains the record for the
+> arm/statement conventions (§4c's R-form flag and the layer
+> architecture) as REFINED by the redesign.
+>
+> **LINEAGE** (added at the fix round per the clever-tricks doctrine,
+> which postdates this note by two days): the seam architecture is a
+> refinement mapping / forward simulation between the interpreter's
+> configurations and abstract network states (Abadi–Lamport), with
+> the invariant network carried by inductive invariance — the
+> TLA+/IOA refinement-family classics; the certificate-replay layer
+> (per-round kernel equations) is standard proof-certificate replay.
+> No new mechanism class.
+
 Campaign lane, 2026-08-22, [AGENT] throughout (the architecture is a
 judgment call inside §5's delegated proof strategy; anything here that
 would change what T1 MEANS is nothing — the statement is pinned and
