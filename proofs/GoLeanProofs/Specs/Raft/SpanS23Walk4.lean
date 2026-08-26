@@ -22,7 +22,7 @@ open GoLean.Examples.RaftTwin (twinLowered)
 open GoLean.StringMem (gs)
 
 set_option maxRecDepth 1000000
-set_option maxHeartbeats 4000000
+set_option maxHeartbeats 16000000
 
 /-! ## 1. Small model helpers -/
 
@@ -423,11 +423,11 @@ theorem s23_byidx_miss_seg
     (henvD : LocalEnv.lookup env6 "data" = some (.base ⟨dc⟩))
     (σ : ExecState) (ch : Choices)
     (hag : bfTB.Agrees σ)
-    (hfr : ∀ x, σ.nextAddr ≤ x →
+    (_hfr : ∀ x, σ.nextAddr ≤ x →
       Heap.lookup σ.heap (.base ⟨x⟩) = none)
     (hokC : Heap.lookup σ.heap (.base ⟨σ.nextAddr - 1⟩)
       = some ⟨some .bool, .bool false⟩)
-    (hna2 : 2 ≤ σ.nextAddr)
+    (_hna2 : 2 ≤ σ.nextAddr)
     (htP : Heap.lookup σ.heap (.base ⟨na₀⟩) = some (tParA tw))
     (hnP : Heap.lookup σ.heap (.base ⟨na₀ + 1⟩) = some (ndParA nw))
     (hIc : Heap.lookup σ.heap (.base ⟨na₀ + 3⟩)
