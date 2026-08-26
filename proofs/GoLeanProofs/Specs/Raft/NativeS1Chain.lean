@@ -54,18 +54,48 @@ at once. -/
 
 namespace GoLean.RaftSeam.NativeSpec
 
-/-- Reflexive-transitive closure of a dialect's abstract step. -/
-inductive ReachRel (step : SNet → SNet → Prop) : SNet → SNet → Prop where
-  | refl (N : SNet) : ReachRel step N N
-  | tail {N₀ N N' : SNet} :
-      ReachRel step N₀ N → step N N' → ReachRel step N₀ N'
+/-- **THE reflexive-transitive closure** (polymorphic). Unified at the
+arc-4 landing fix round (2026-08-26): this inductive and its rules
+were previously declared TWICE in this namespace — SNet-typed
+`ReachRel` here and polymorphic `Star` in `NativeS23Chain.lean`,
+tagged there as "a landing-time unification candidate". This is the
+landing; `Star` is the one closure and `ReachRel` its SNet instance. -/
+inductive Star {α : Sort _} (r : α → α → Prop) : α → α → Prop where
+  | refl (a : α) : Star r a a
+  | tail {a b c : α} : Star r a b → r b c → Star r a c
 
-theorem ReachRel.trans {step : SNet → SNet → Prop} {A B C : SNet}
-    (hab : ReachRel step A B) (hbc : ReachRel step B C) :
-    ReachRel step A C := by
+theorem Star.trans {α : Sort _} {r : α → α → Prop} {a b c : α}
+    (hab : Star r a b) (hbc : Star r b c) : Star r a c := by
   induction hbc with
   | refl => exact hab
   | tail _ hs ih => exact .tail ih hs
+
+/-- The generic RT-closure invariance rule (polymorphic; the HNet
+chain consumes it as-is). -/
+theorem star_invariance {α : Sort _} {r : α → α → Prop} {P : α → Prop}
+    (hstep : ∀ {a b}, P a → r a b → P b) {a b : α}
+    (h0 : P a) (hr : Star r a b) : P b := by
+  induction hr with
+  | refl => exact h0
+  | tail _ hs ih => exact hstep ih hs
+
+/-- Reflexive-transitive closure of a dialect's abstract step — the
+SNet instance of `Star` (the unification's compatibility name; every
+existing consumer, constructor pattern and dot-notation call keeps
+working through the reducible abbreviation + the aliases below). -/
+abbrev ReachRel (step : SNet → SNet → Prop) : SNet → SNet → Prop :=
+  Star step
+
+@[match_pattern] abbrev ReachRel.refl {step : SNet → SNet → Prop}
+    (N : SNet) : ReachRel step N N := Star.refl N
+
+@[match_pattern] abbrev ReachRel.tail {step : SNet → SNet → Prop}
+    {N₀ N N' : SNet} (h : ReachRel step N₀ N) (hs : step N N') :
+    ReachRel step N₀ N' := Star.tail h hs
+
+theorem ReachRel.trans {step : SNet → SNet → Prop} {A B C : SNet}
+    (hab : ReachRel step A B) (hbc : ReachRel step B C) :
+    ReachRel step A C := Star.trans hab hbc
 
 /-- **The obligation-parametric induction principle** (charter part
 1): any predicate preserved by the dialect's step holds on the whole

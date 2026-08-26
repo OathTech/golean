@@ -9,7 +9,6 @@ import GoLeanProofs.FuelMeasure
 import GoLeanProofs.Frame.Threshold
 import GoLeanProofs.Frame.Relocate
 import GoLeanProofs.Lens
-import GoLeanProofs.Sym.PickTransport
 import GoLeanProofs.Sym.SpillTransport
 import GoLeanProofs.Sym.BranchTransport
 import GoLeanProofs.Examples.Fib
@@ -716,12 +715,18 @@ decomposition, and the field-pointwise normalization characterization
 /-- info: 'GoLean.Lens.normalizeFieldsWith_lookup' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Lens.normalizeFieldsWith_lookup
 
-/-! A4-U9: the pick-transport lift (`Sym/PickTransport.lean`, the U4
-promotion row taken — general, raft-independent; consumers: every
-handler's range loop). -/
-
-/-- info: 'GoLean.Sym.stepFn_pick_transport' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Sym.stepFn_pick_transport
+/-! A4-U9's pick-transport lift (`Sym/PickTransport.lean`) — DELETED
+at the arc-4 landing fix round (2026-08-26): the lifted copy was a
+byte-identical duplicate of `GoLean.RaftSeam.stepFn_pick_transport`
+(BfSteps.lean) with ZERO term-level consumers — its four named
+consumers (BfSteps/BcSteps/Bc31/Bf31) all consume the RaftSeam
+original — none had the lift in its import closure. Deletion chosen
+over rewiring as the cheap direction (rewiring re-heads BfSteps and
+invalidates its whole fixture-chain downstream for zero semantic
+change). The U4 promotion-ledger row is CLOSED-UNCONSUMED; a re-lift
+is warranted only when a NON-RaftSeam consumer actually appears
+(re-promotion condition), and then by moving the original, not by
+copying it. -/
 
 /-! A4-U10: the append-spill transport (`Sym/SpillTransport.lean` —
 the machine's SECOND choice site crossed at γ-images; general,

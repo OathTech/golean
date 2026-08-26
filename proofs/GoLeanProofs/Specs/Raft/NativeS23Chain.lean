@@ -1,4 +1,5 @@
 import GoLeanProofs.Specs.Raft.NativeS23Route
+import GoLeanProofs.Specs.Raft.NativeS1Chain
 
 /-! # C4 — the T1-scoped S2/S3 ghost-history chain (H1→H4)
 (scoping lane `campaign-arc4b`, unit C4, 2026-08-27; SC1's leading
@@ -55,25 +56,12 @@ LINEAGE, unchanged. -/
 
 namespace GoLean.RaftSeam.NativeSpec
 
-/-! ## The generic closure (polymorphic; the C3 `ReachRel` shape —
-a landing-time unification candidate, noted in the log) -/
-
-inductive Star {α : Sort _} (r : α → α → Prop) : α → α → Prop where
-  | refl (a : α) : Star r a a
-  | tail {a b c : α} : Star r a b → r b c → Star r a c
-
-theorem Star.trans {α : Sort _} {r : α → α → Prop} {a b c : α}
-    (hab : Star r a b) (hbc : Star r b c) : Star r a c := by
-  induction hbc with
-  | refl => exact hab
-  | tail _ hs ih => exact .tail ih hs
-
-theorem star_invariance {α : Sort _} {r : α → α → Prop} {P : α → Prop}
-    (hstep : ∀ {a b}, P a → r a b → P b) {a b : α}
-    (h0 : P a) (hr : Star r a b) : P b := by
-  induction hr with
-  | refl => exact h0
-  | tail _ hs ih => exact hstep ih hs
+/-! ## The generic closure — UNIFIED (arc-4 landing fix round,
+2026-08-26): the polymorphic `Star` + `Star.trans` + `star_invariance`
+formerly declared here (duplicating C3's SNet-typed `ReachRel` rule
+for rule, under a "landing-time unification candidate" tag) now live
+ONCE in `NativeS1Chain.lean`, with `ReachRel` as the SNet
+abbreviation. This module consumes them via the import above. -/
 
 /-! ## The S2/S3 carrier -/
 

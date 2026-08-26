@@ -54,9 +54,15 @@ serialization — a standard heap-isomorphism canonical labeling
 (the `GoValue.eqb` de-WF recipe); fuel exhaustion raises a fail-closed
 flag in the output form (`CForm.flags`), so an exhausted
 canonicalization can never silently equate two states: flags are part
-of the form, and clean witnesses check `flags = []`. -/
+of the form, and clean witnesses check `flags = []`.
 
-namespace GoLean.ChoiceErase
+**Placement (arc-4 landing fix round, 2026-08-26):** this module and
+`ChoiceInv` live under `Frame/` as the choice-erasure layer of the
+frame/placement story; their namespace is `GoLean.Frame.ChoiceErase`
+(was the directory-inconsistent `GoLean.ChoiceErase` — a landing-audit
+coherence finding). Curated Audit pins: `Audit/ChoiceInv.lean`. -/
+
+namespace GoLean.Frame.ChoiceErase
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine
 
@@ -320,15 +326,31 @@ def collectPass (h : GoCore.Heap) (m : Mask) (fuel : Nat) (st : VSt)
     (roots : List GoValue) : VSt :=
   (roots.foldl (fun acc v => collectV h m fuel acc v) (st, [])).1
 
-/-- Fixpoint of the collection pass: views/direct grow monotonically;
-`n` bounds iterations, exhaustion flags `VIEWFIX-UNSTABLE`. -/
+/-- The pass-stability measure: view-key count + total view width +
+direct count. Along a pass all three components are MONOTONE
+(`bumpView` only adds a key or strictly widens an existing key's
+value — the filter-and-recons keeps the length unchanged on a widen;
+`markDirect` only adds), so measure equality ⇔ the pass changed
+nothing. The previous stability test compared the two LIST LENGTHS
+only, which a widen leaves unchanged — the fixpoint could stop with
+an untraversed widened window and silently drop content (arc-4
+landing-audit fail-open finding, 2026-08-26; the dropped case is
+witnessed in `Frame/ChoiceCanonWitness.lean`). -/
+def VSt.measure (st : VSt) : Nat :=
+  st.views.length + st.views.foldl (fun s p => s + p.2) 0 +
+    st.direct.length
+
+/-- Fixpoint of the collection pass: views/direct grow monotonically
+(keys, view widths, and direct marks — the `VSt.measure` components);
+`n` bounds iterations, exhaustion flags `VIEWFIX-UNSTABLE`. Stability
+is measure equality, NOT list-length equality (see `VSt.measure`'s
+docstring for the fail-open this replaces). -/
 def collectFix (h : GoCore.Heap) (m : Mask) (fuel : Nat) (roots : List GoValue) :
     Nat → VSt → VSt
   | 0, st => st.flag "VIEWFIX-UNSTABLE"
   | n + 1, st =>
       let st' := collectPass h m fuel st roots
-      if st'.views.length == st.views.length &&
-         st'.direct.length == st.direct.length then st'
+      if st'.measure == st.measure then st'
       else collectFix h m fuel roots n st'
 
 /-! ## Phase 2 — canonical emission -/
@@ -582,4 +604,4 @@ theorem readM_invariant {α : Type} (m : Mask) (read : CForm → α)
     read (canonStateM m σ roots) = read (canonStateM m σ' roots') := by
   unfold CEquivM at h; rw [h]
 
-end GoLean.ChoiceErase
+end GoLean.Frame.ChoiceErase

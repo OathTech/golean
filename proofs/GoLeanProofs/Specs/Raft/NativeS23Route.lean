@@ -178,50 +178,27 @@ abbrev Hist := List (Nat × Nat × Nat)
 def histAt (H : Hist) (idx : Nat) : Option (Nat × Nat × Nat) :=
   if idx = 0 then none else H[idx - 1]?
 
-/-- CHAIN LINK H1 (NEW, driver-shaped; consumes O4/leaderEntry + the
-single-campaign driver fact): at most one election happens, its
-winner is node 1, and `H` is written only by node 1's propose/noop
-appends — `H` is append-only along every trace. -/
-def Skel_singleWriterHistory (_step Reach : SNet → SNet → Prop)
-    (histOf : SNet → Hist) : Prop :=
-  ∀ N₀ N N', Reach N₀ N → Reach N₀ N' →
-    (∃ H'' : Hist, histOf N' = histOf N ++ H'') ∨
-    (∃ H'' : Hist, histOf N = histOf N' ++ H'')
+/-! ### The SNet-typed H1–H4 skeleton Props — DELETED (arc-4 landing
+fix round, 2026-08-26)
 
-/-- CHAIN LINK H2 (NEW, family-shaped; consumes leader-only-append at
-own term — the signature's append obligation, with the noop entry as
-an instance): `H` is index-consecutive and term-monotone. -/
-def Skel_histWellFormed (Reach : SNet → SNet → Prop)
-    (histOf : SNet → Hist) (N₀ : SNet) : Prop :=
-  ∀ N, Reach N₀ N →
-    (∀ (k : Nat) (e : Nat × Nat × Nat),
-      (histOf N)[k]? = some e → e.1 = k + 1) ∧
-    (∀ (k k' : Nat) (e e' : Nat × Nat × Nat), k ≤ k' →
-      (histOf N)[k]? = some e → (histOf N)[k']? = some e' →
-      e.2.1 ≤ e'.2.1)
-
-/-- CHAIN LINK H3 (NEW, family-shaped; consumes the append/truncation
-obligations — truncation-on-conflict never fires on the single-leader
-reachable set, but the LINK's statement doesn't assume that; its
-PROOF consumes H1): every node's log is a prefix of `H`, and every
-in-flight append payload is an `H`-slice anchored at its certified
-previous entry. -/
-def Skel_logsArePrefixes (Reach : SNet → SNet → Prop)
-    (histOf : SNet → Hist) (logOf : SNet → Nat → Hist) (N₀ : SNet) :
-    Prop :=
-  ∀ N, Reach N₀ N → ∀ i,
-    ∃ rest : Hist, histOf N = logOf N i ++ rest
-
-/-- CHAIN LINK H4 (NEW, family-shaped; consumes O-C1/O-C2/O-C3 +
-`appliedWindow`): every APPLIED entry of every node equals the
-`H`-entry at its index. (The commit axis enters the chain here and
-ONLY here — the §3 verification.) -/
-def Skel_appliedFromHist (Reach : SNet → SNet → Prop)
-    (histOf : SNet → Hist)
-    (appliedOf : SNet → Nat → List (Nat × Nat × Nat)) (N₀ : SNet) :
-    Prop :=
-  ∀ N, Reach N₀ N → ∀ i e, e ∈ appliedOf N i →
-    histAt (histOf N) e.1 = some e
+Four statement-only sketches (`Skel_singleWriterHistory`,
+`Skel_histWellFormed`, `Skel_logsArePrefixes`, `Skel_appliedFromHist`)
+lived here. They stood SUPERSEDED by the HNet chain
+(`NativeS23Chain.lean` — same logical shape, link for link, on the
+carrier that actually has an applied record), had ZERO consumers
+anywhere in the tree, and one of them — `Skel_singleWriterHistory`,
+which quantified two INDEPENDENTLY-reachable nets as
+prefix-comparable — is FALSIFIED by traces diverging on different
+proposals (the chain proves the corrected along-one-trace form,
+`hist_prefix_star`). Flagged for deletion at the arc4b landing,
+skipped twice; deleted here with the deletion test run (whole-tree
+identifier scan + build). The chain-link map (what each link
+consumes) lives on in `NativeS23Chain`'s constructor docstrings:
+H1 = single-writer/append-only (O4/leaderEntry + the driver fact),
+H2 = index-consecutive + term-monotone (leader-only-append),
+H3 = logs-are-prefixes (append/truncation obligations, proof
+consumes H1), H4 = applied-from-history (O-C1/O-C2/O-C3 +
+`appliedWindow` — the commit axis's single entry point). -/
 
 /-! ### PROVED (the S2 leaf assembly): H4 implies the S2 checker's
 false-delta — two applied records at one index agree, because both

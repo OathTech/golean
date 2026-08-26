@@ -39,7 +39,7 @@ LINEAGE: data independence / bisimulation up-to (the statement
 shape); the anchored runner is the U18 `isAnchor` loop-head pattern
 made total and predicate-parametric. -/
 
-namespace GoLean.ChoiceErase
+namespace GoLean.Frame.ChoiceErase
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine
 
@@ -124,4 +124,4 @@ theorem choiceInvariant_read {α : Type} {m : Mask} (read : CForm → α)
   obtain ⟨n, σ, chR, hrun, hequiv⟩ := h ch
   exact ⟨n, σ, chR, hrun, readM_invariant m read hequiv⟩
 
-end GoLean.ChoiceErase
+end GoLean.Frame.ChoiceErase

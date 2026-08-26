@@ -74,9 +74,16 @@ open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.Frame GoLean.Surface
 
 /-- Fixture-family membership, pinned (design §2 / seam §4c flag):
 `σF` is a member of round-family `canon` iff it is a FrameSim
-placement of it. The round induction's carried relation is
-`RoundFam canon σF ∧ absTwinRead … = some N` — membership plus
-projected readout, strictly stronger than the readout equality alone. -/
+placement of it. What the LANDED round induction
+(`RoundInduction.lean`, A4-U26) carries per boundary is EXACTLY this
+membership (`FamTrace.cons`'s `hfam` conjunct) — NOT the layer-C §3
+paired form `RoundFam canon σF ∧ absTwinRead … = some N`. The
+per-boundary abs-pairing (absTwinRead ↔ SNet projection) is an OPEN
+obligation — census item O5b of the T1 open-obligation census
+(`docs/campaign-arc4-log.md`, landing fix-round entry); until it
+lands, the induction's abstract nets are witness DATA. (This
+paragraph previously asserted the paired form as the carried
+relation — corrected at the landing fix round, 2026-08-26.) -/
 def RoundFam (canon : ExecState) (σF : ExecState) : Prop :=
   ∃ (r : Nat → Nat) (na₀ na : Nat) (fr : GoCore.Heap),
     FrameSim r na₀ na fr canon σF
@@ -104,12 +111,26 @@ structure AbsTwinV0 where
   net : List (Bool × AbsMessage)
   deriving Repr, DecidableEq
 
+/-- Read a plain integer field, fail closed: anything but an `.int`
+value — including `.nil` — is `none`. (The landing fix round removed a
+`.nil ↦ 0` clause: the twin's shell fields are non-pointer scalars
+(`uint64`/`StateType`/`int`, twin-lib.go), whose machine zero value is
+`.int 0 _`, never `.nil` (Ops.lean `defaultValue`) — so a `.nil` here
+can only be a mis-located or mis-shaped read and must refuse. The
+protobuf pointer-scalar nil→0 convention belongs to `AbsStateV2.derefI32`
+ONLY, where it is documented against pointer fields.) -/
 private def readIntField (fs : Array (String × GoValue)) (n : String) :
     Option Int :=
   match StructFields.lookup fs n with
   | some (.int v _) => some v
-  | some .nil => some 0
   | _ => none
+
+/-- The twin struct's TypeId and the shell node's — pinned so the
+readers below refuse mis-located cells (landing fix round; previously
+`.struct _ fs` matched ANY struct). -/
+def twinTid : TypeId := ⟨"main.twin"⟩
+def twinNodeTid : TypeId := ⟨"main.twinNode"⟩
+def rawNodeTid : TypeId := ⟨"raft.RawNode"⟩
 
 /-- One twinNode shell (harness-observed fields only — the deep raft
 state is `absTwinNodeRaft`'s). -/
@@ -117,7 +138,8 @@ private def readShell (σ : ExecState) : GoValue → Option (Int × Int × Int �
   | .addr l => do
       let c ← Heap.lookup σ.heap l
       match c.value with
-      | .struct _ fs => do
+      | .struct tid fs => do
+          guard (tid == twinNodeTid)
           let st ← readIntField fs "state"
           let tm ← readIntField fs "term"
           let cm ← readIntField fs "commit"
@@ -144,13 +166,18 @@ private def readBool : GoValue → Option Bool
   | _ => none
 
 /-- **THE ROUND-BOUNDARY READER, v0** (total, fail-closed; every
-access through value-level lens reads — A3's deliverable). `tl` is
-the twin struct's location (located once by shape; an invariant of
-the seeded run, carried not re-derived). -/
+access through value-level lens reads — A3's deliverable; the landing
+fix round hardened the fail-closed claim: the twin and shell struct
+TypeIds are now CHECKED (`twinTid`/`twinNodeTid`) and the integer
+reader refuses `.nil`, so a mis-located or mis-shaped cell reads back
+`none`, never a well-formed abstract state). `tl` is the twin
+struct's location (located once by shape; an invariant of the seeded
+run, carried not re-derived). -/
 def absTwinRead (σ : ExecState) (tl : Loc) : Option AbsTwinV0 := do
   let tc ← Heap.lookup σ.heap tl
   match tc.value with
-  | .struct _ fs => do
+  | .struct tid fs => do
+      guard (tid == twinTid)
       let violations ← readIntField fs "violations"
       let claims ← readIntField fs "claims"
       let committed ← readIntField fs "committed"
@@ -171,19 +198,22 @@ delivered node's raft cell address (then read with the lens). -/
 def absTwinNodeRaft (σ : ExecState) (tl : Loc) (i : Nat) : Option Addr := do
   let tc ← Heap.lookup σ.heap tl
   match tc.value with
-  | .struct _ fs => do
+  | .struct tid fs => do
+      guard (tid == twinTid)
       let ndPtrs ← (StructFields.lookup fs "nodes").bind (sliceElems σ)
       let ndv ← ndPtrs[i]?
       match ndv with
       | .addr ndl => do
           let nc ← Heap.lookup σ.heap ndl
           match nc.value with
-          | .struct _ nfs =>
+          | .struct ntid nfs => do
+              guard (ntid == twinNodeTid)
               match StructFields.lookup nfs "rn" with
               | some (.addr rnl) => do
                   let rc ← Heap.lookup σ.heap rnl
                   match rc.value with
-                  | .struct _ rfs =>
+                  | .struct rtid rfs => do
+                      guard (rtid == rawNodeTid)
                       match StructFields.lookup rfs "raft" with
                       | some (.addr (.base a)) => some a
                       | _ => none
@@ -195,8 +225,11 @@ def absTwinNodeRaft (σ : ExecState) (tl : Loc) (i : Nat) : Option Addr := do
 
 /-! ## 3. The round-lemma statement form (R-form) -/
 
-/-- **THE ROUND-LEMMA STATEMENT FORMER** (SCAFFOLD — no proved
-instance yet; C2's charter is its first instance). An instance for a
+/-- **THE ROUND-LEMMA STATEMENT FORMER** (SCAFFOLD marker DISCHARGED,
+A4-U22/C2d — four proved instances have landed: `roundMa_lemma`,
+`roundVote_lemma`, `roundMar_lemma`, `roundVr_lemma`; this docstring
+previously still read "no proved instance yet", contradicting the
+module header — corrected at the landing fix round). An instance for a
 round kind supplies: the canonical loop-head state `canon`, the
 successor canonical state `canon'`, the (shared, census-verified
 self-returning) loop-head config `C0`, the round span `Δ`, and the

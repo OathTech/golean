@@ -1,4 +1,4 @@
-import GoLeanProofs.Sym.PickTransport
+import GoLeanProofs.Sym.TableExt
 import GoLeanProofs.SliceMem
 
 /-!

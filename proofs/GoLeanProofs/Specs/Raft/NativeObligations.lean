@@ -42,9 +42,18 @@ census grounding this shape (SC1 slice 1, derivation in
   intact. The signature therefore states the leader-quorum fact at
   the TRANSITION (obligation `leaderEntry` below) and carries it in a
   victory GHOST — exactly verdi-raft's `electoralVictories` device,
-  now promoted to the family interface. Verdi discharges from state
-  or ghost; etcd only from ghost. Both discharge, differently — the
-  vacuity discipline's requirement.
+  now promoted to the family interface. The INTENT: Verdi would
+  discharge from state or ghost; etcd only from ghost — visibly
+  different implementations, the vacuity discipline's requirement.
+  STATUS (corrected at the landing fix round, 2026-08-26): that
+  requirement is NOT YET MET by landed artifacts — `ElectObligations`
+  has exactly ONE construction site in the whole tree
+  (`etcd_discharges`, NativeEtcdDischarge.lean); the Verdi instance
+  was deliberately not built (arc4b log, on the record) and is an
+  open vacuity debt, census item I1-V of the T1 open-obligation
+  census (landing fix-round log entry). The per-member "Verdi: …"
+  notes below are design CITATIONS to T3's proofs, not landed
+  discharges.
 
 LINEAGE (per the doctrine): parametric invariance over an abstract
 transition-system signature — the TLA+/IOA refinement-family classic
@@ -176,9 +185,14 @@ structure SNet where
 Each member is a per-transition fact. The measured origin of each:
 what T3's chain proofs actually consume from `ElectionSpecLemmas`
 (the census in `docs/campaign-arc4b-log.md`, SC1 slice 1). The
-vacuity discipline (design §8 D2): each obligation is dischargeable
-by BOTH dialects with visibly different implementations — noted per
-member. -/
+vacuity discipline (design §8 D2) REQUIRES each obligation
+dischargeable by BOTH dialects with visibly different
+implementations; the per-member dialect notes record the intended
+routes. LANDED STATUS: only the etcd instance exists
+(`etcd_discharges`) — the second-dialect discharge is the open
+I1-V debt (see the module-header status note; corrected at the
+landing fix round from text that asserted the two-dialect property
+as fact). -/
 
 structure ElectObligations (voters : List Nat)
     (step : SNet → SNet → Prop) : Prop where
@@ -460,9 +474,14 @@ over THIS driver's streams — and survives T2's num_parties, which
 keeps the single pre-loop campaign) but buys nothing for the family.
 Priced in the log as the ~0.5-unit floor; the signature route above
 is the ~2.5–3-unit family investment. The coordinator's re-sequencing
-call. -/
+call.
 
-def Skel_onlyNodeOneClaims (_step Reach : SNet → SNet → Prop) : Prop :=
-  ∀ N₀ N, Reach N₀ N → ∀ i, (N.node i).state ≠ 0 → i = 1
+DELETED at the arc-4 landing fix round (2026-08-26):
+`Skel_onlyNodeOneClaims`, the statement-only sketch of that floor
+route — zero consumers anywhere in the tree, superseded by the
+signature route (flagged for deletion at the arc4b landing, skipped
+twice; the deletion test — whole-tree identifier scan + build — was
+run at the fix round). The prose above remains as the decision
+record. -/
 
 end GoLean.RaftSeam.NativeSpec

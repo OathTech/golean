@@ -42,7 +42,7 @@ same route of record as the canonical run's (SeedPin docstring). -/
 
 namespace GoLean.RaftSeam
 
-open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.ChoiceErase
+open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.Frame.ChoiceErase
 
 set_option maxRecDepth 8000000
 set_option maxHeartbeats 64000000

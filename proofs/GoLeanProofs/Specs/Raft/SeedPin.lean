@@ -19,7 +19,7 @@ reached from the seeded start in **81,261 steps consuming 171
 choices** (canonical all-zero stream; U18's init census, replicated
 independently by this unit's probe to the step). The representative
 literal is `seedσ` (`SeedLit.lean`, generator
-`artifacts/probe/SeedLitGen.lean`); the abstract side is `seedN₀ :
+`tools/campaign/SeedLitGen.lean`, tracked since the fix round); the abstract side is `seedN₀ :
 SNet` — three followers at term 0, no votes, empty ghost — which
 DISCHARGES the native chain's `Seed` hypothesis (`seed_N₀` below),
 the hypothesis `native_one_leader_per_term` consumes.
@@ -62,10 +62,17 @@ uses the MASKED equivalence at the ONE-FIELD mask
 `twinLatMask = [(raft.raft, randomizedElectionTimeout)]`. The mask's
 justification, each part on the record:
 1. the field's ONLY subject reader is `pastElectionTimeout`
-   (deps/raft/raft.go:2050), consumed exclusively on tick paths;
-2. the driver NEVER ticks (twin-chdriver.go's stated design; U18's
-   structural reachability refutation — no `Tick` calls, so no
-   election-timeout reads on ANY stream);
+   (`raftsubject/raft/raft.go:2068-2069` — the SUBJECT copy, the one
+   `check-golden`'s twin-wire block actually lowers into
+   `twinLowered`; its sole call site is `tickElection`,
+   raft.go:869-872, whose sole entry is `rawnode.go:65` `Tick`;
+   citation re-anchored at the landing fix round — the old cite
+   pointed at the gitignored `deps/raft` reference checkout, whose
+   line numbers differ by 18), consumed exclusively on tick paths;
+2. the driver NEVER ticks (twin-chdriver.go's stated design — it
+   emits only `opCampaign`/`opPropose`-family ops, never `opTick`;
+   U18's structural reachability refutation — so no election-timeout
+   reads on ANY stream);
 3. the landed equation layer already classifies exactly this field
    as a latitude-bearing spot no abstract reader consumes
    (BfEquation.lean:22 — the pick-quantified becomeFollower span).
@@ -94,7 +101,7 @@ lift statement; CompCert-block-naming for the `~` carrier. -/
 
 namespace GoLean.RaftSeam
 
-open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.ChoiceErase
+open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.Frame.ChoiceErase
 open GoLean.RaftSeam.NativeSpec
 
 set_option maxRecDepth 8000000
