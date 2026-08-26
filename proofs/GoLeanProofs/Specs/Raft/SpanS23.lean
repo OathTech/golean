@@ -693,7 +693,252 @@ theorem s23_span_computes
         lookup_set_other (by omega : σ4.nextAddr ≠ x)]
       exact hfrs4 x (by omega)
   | cons b0 brest =>
-    sorry
+    -- NONEMPTY: the full path
+    subst hdbs
+    have hnz0 : encGS ⟨⟨b0 :: brest⟩⟩ ≠ 0 := by
+      intro h
+      have := (encGS_eq_zero_iff ⟨⟨b0 :: brest⟩⟩).mp h
+      cases this
+    -- SEC6: GetData + len fall-through (54)
+    have hLen := s23_len_seg (env0 := env3) (KK := FKa envC Kc)
+      (na₀ := na₀) (ew := ew) (da := da) (doff := doff)
+      (dcap := dcap) (dlen := (b0 :: brest).length)
+      (nxt := getterUnit "$c2308" (.slice (.int .uint8))
+        "raftpb.Entry.GetData")
+      (rest6 := [dataAsn, gotAsn, commitAsn, byIdxBlock])
+      henvE3 σ4 ch hagσ4 hfrs4 heP4 hEw4 hfD hdcp (by simp)
+    let env4 : LocalEnv := env3.declare "$c2307"
+      (.base ⟨σ4.nextAddr⟩)
+    let σ5 : ExecState := twinSt (Heap.set (Heap.set (Heap.set
+      (Heap.set σ4.heap
+        (.base ⟨σ4.nextAddr⟩)
+          ⟨some (.slice (.int .uint8)), .slice ⟨none, 0, 0, 0⟩⟩)
+        (.base ⟨σ4.nextAddr + 1⟩) (xCell ew))
+        (.base ⟨σ4.nextAddr + 2⟩)
+          ⟨some (.slice (.int .uint8)),
+            .slice ⟨some (.base ⟨da⟩), doff, (b0 :: brest).length,
+              dcap⟩⟩)
+        (.base ⟨σ4.nextAddr⟩)
+          ⟨some (.slice (.int .uint8)),
+            .slice ⟨some (.base ⟨da⟩), doff, (b0 :: brest).length,
+              dcap⟩⟩)
+      (σ4.nextAddr + 3)
+    have hσ5na : σ5.nextAddr = σ4.nextAddr + 3 := rfl
+    have hlk5 : ∀ x : Nat, x < σ4.nextAddr →
+        Heap.lookup σ5.heap (.base ⟨x⟩)
+          = Heap.lookup σ4.heap (.base ⟨x⟩) := by
+      intro x hx
+      show Heap.lookup (Heap.set (Heap.set (Heap.set (Heap.set
+        σ4.heap (.base ⟨σ4.nextAddr⟩) _)
+        (.base ⟨σ4.nextAddr + 1⟩) _) (.base ⟨σ4.nextAddr + 2⟩) _)
+        (.base ⟨σ4.nextAddr⟩) _) (.base ⟨x⟩) = _
+      rw [lookup_set_other (by omega : σ4.nextAddr ≠ x),
+        lookup_set_other (by omega : σ4.nextAddr + 2 ≠ x),
+        lookup_set_other (by omega : σ4.nextAddr + 1 ≠ x),
+        lookup_set_other (by omega : σ4.nextAddr ≠ x)]
+    have hfrs5 : ∀ x, σ5.nextAddr ≤ x →
+        Heap.lookup σ5.heap (.base ⟨x⟩) = none := by
+      intro x hx
+      have hx3 : σ4.nextAddr + 3 ≤ x := hx
+      show Heap.lookup (Heap.set (Heap.set (Heap.set (Heap.set
+        σ4.heap (.base ⟨σ4.nextAddr⟩) _)
+        (.base ⟨σ4.nextAddr + 1⟩) _) (.base ⟨σ4.nextAddr + 2⟩) _)
+        (.base ⟨σ4.nextAddr⟩) _) (.base ⟨x⟩) = none
+      rw [lookup_set_other (by omega : σ4.nextAddr ≠ x),
+        lookup_set_other (by omega : σ4.nextAddr + 2 ≠ x),
+        lookup_set_other (by omega : σ4.nextAddr + 1 ≠ x),
+        lookup_set_other (by omega : σ4.nextAddr ≠ x)]
+      exact hfrs4 x (by omega)
+    have hlk54 : ∀ x : Nat, x < na₀ → x ≠ tw → x ≠ nw →
+        Heap.lookup σ5.heap (.base ⟨x⟩)
+          = Heap.lookup σ.heap (.base ⟨x⟩) := by
+      intro x hx hxtw hxnw
+      rw [hlk5 x (by omega), hlk4 x (by omega),
+        hlk3 x (by omega) hxtw hxnw]
+    -- SEC7: the data/got/committed tail (87)
+    have henvE4 : LocalEnv.lookup env4 "e"
+        = some (.base ⟨na₀ + 2⟩) := by
+      rw [lookup_declare_ne (by decide) env3 (.base ⟨σ4.nextAddr⟩)]
+      exact henvE3
+    have henvN4 : LocalEnv.lookup env4 "nd"
+        = some (.base ⟨na₀ + 1⟩) := by
+      rw [lookup_declare_ne (by decide) env3 (.base ⟨σ4.nextAddr⟩),
+        lookup_declare_ne (by decide) (envG2 na₀)
+          (.base ⟨σ3.nextAddr⟩)]
+      rfl
+    have henvT4 : LocalEnv.lookup env4 "t" = some (.base ⟨na₀⟩) := by
+      rw [lookup_declare_ne (by decide) env3 (.base ⟨σ4.nextAddr⟩),
+        lookup_declare_ne (by decide) (envG2 na₀)
+          (.base ⟨σ3.nextAddr⟩)]
+      rfl
+    have hnP5 : Heap.lookup σ5.heap (.base ⟨na₀ + 1⟩)
+        = some (ndParA nw) := by
+      rw [hlk5 (na₀ + 1) (by omega), hlk4 (na₀ + 1) (by omega)]
+      show Heap.lookup (Heap.set (Heap.set σ2.heap (.base ⟨nw⟩) _)
+        (.base ⟨nw⟩) _) (.base ⟨na₀ + 1⟩) = _
+      rw [lookup_set_other (by omega : nw ≠ na₀ + 1),
+        lookup_set_other (by omega : nw ≠ na₀ + 1)]
+      exact hnP2
+    have htP5 : Heap.lookup σ5.heap (.base ⟨na₀⟩)
+        = some (tParA tw) := by
+      rw [hlk5 na₀ (by omega), hlk4 na₀ (by omega)]
+      show Heap.lookup (Heap.set (Heap.set σ2.heap (.base ⟨nw⟩) _)
+        (.base ⟨nw⟩) _) (.base ⟨na₀⟩) = _
+      rw [lookup_set_other (by omega : nw ≠ na₀),
+        lookup_set_other (by omega : nw ≠ na₀)]
+      exact htP2
+    have hNd5 : Heap.lookup σ5.heap (.base ⟨nw⟩)
+        = some (ndCellN idvN rnV stV tmvN cmvN stvN ixN tmN gm) := by
+      rw [hlk5 nw (by omega), hlk4 nw (by omega)]
+      exact lookup_set_self
+    have hGm5 : Heap.lookup σ5.heap (.base ⟨gm⟩)
+        = some ⟨none, .mapData (toEntriesS gkvs)⟩ := by
+      rw [hlk54 gm (by omega) (Ne.symm hd2) (Ne.symm hd4)]
+      exact hGm
+    have hTw5 : Heap.lookup σ5.heap (.base ⟨tw⟩)
+        = some (twCell nodesV netV liveV lm
+            (.map ⟨some (.base ⟨bm⟩)⟩) cc cm
+            ((w + (if ixN ≤ apl then 1 else 0))
+              + (if tmN < ltm then 1 else 0)) pendV drvV sq tr2
+            hlV) := by
+      rw [hlk5 tw (by omega), hlk4 tw (by omega)]
+      show Heap.lookup (Heap.set (Heap.set σ2.heap (.base ⟨nw⟩) _)
+        (.base ⟨nw⟩) _) (.base ⟨tw⟩) = _
+      rw [lookup_set_other (Ne.symm hd1),
+        lookup_set_other (Ne.symm hd1)]
+      exact hTw2
+    have hTail := s23_tail_seg (env4 := env4) (KK := FKa envC Kc)
+      (na₀ := na₀) (ew := ew) (da := da) (tw := tw) (nw := nw)
+      (gm := gm) (doff := doff) (dcap := dcap) (dbs := b0 :: brest)
+      (darr := darr)
+      henvE4 henvN4 henvT4 σ5 ch
+      (⟨rfl, rfl, rfl, rfl⟩ : bfTB.Agrees σ5) hfrs5
+      (by rw [hlk5 (na₀ + 2) (by omega)]; exact heP4)
+      hnP5 htP5
+      (by rw [hlk5 ew (by omega)]; exact hEw4)
+      hfD
+      (by rw [hlk54 da (by omega) hd17 hd18]; exact harr)
+      hwin hdcp hNd5 hGm5 hTw5
+      hd2 hd4 hd1 hd19 hd17
+      hc0 hc1 hm0 hm1 (by split <;> split <;> omega)
+      (by split <;> split <;> omega) hq0 hq1
+    obtain ⟨σ6, hrun6, hGm6, hTw6, hDc6, hfrm6, hσ6na, hfrs6,
+      hag6⟩ := hTail
+    -- SEC8: the byIndex block
+    let env6 : LocalEnv := (env4.declare "$c2308"
+      (.base ⟨σ5.nextAddr⟩)).declare "data"
+      (.base ⟨σ5.nextAddr + 3⟩)
+    have henvT6 : LocalEnv.lookup env6 "t" = some (.base ⟨na₀⟩) := by
+      rw [lookup_declare_ne (by decide) _ (.base ⟨σ5.nextAddr + 3⟩),
+        lookup_declare_ne (by decide) env4 (.base ⟨σ5.nextAddr⟩)]
+      exact henvT4
+    have henvN6 : LocalEnv.lookup env6 "nd"
+        = some (.base ⟨na₀ + 1⟩) := by
+      rw [lookup_declare_ne (by decide) _ (.base ⟨σ5.nextAddr + 3⟩),
+        lookup_declare_ne (by decide) env4 (.base ⟨σ5.nextAddr⟩)]
+      exact henvN4
+    have henvI6 : LocalEnv.lookup env6 "idx"
+        = some (.base ⟨na₀ + 3⟩) := by
+      rw [lookup_declare_ne (by decide) _ (.base ⟨σ5.nextAddr + 3⟩),
+        lookup_declare_ne (by decide) env4 (.base ⟨σ5.nextAddr⟩),
+        lookup_declare_ne (by decide) env3 (.base ⟨σ4.nextAddr⟩),
+        lookup_declare_ne (by decide) (envG2 na₀)
+          (.base ⟨σ3.nextAddr⟩)]
+      rfl
+    have henvR6 : LocalEnv.lookup env6 "trm"
+        = some (.base ⟨na₀ + 6⟩) := by
+      rw [lookup_declare_ne (by decide) _ (.base ⟨σ5.nextAddr + 3⟩),
+        lookup_declare_ne (by decide) env4 (.base ⟨σ5.nextAddr⟩),
+        lookup_declare_ne (by decide) env3 (.base ⟨σ4.nextAddr⟩),
+        lookup_declare_ne (by decide) (envG2 na₀)
+          (.base ⟨σ3.nextAddr⟩)]
+      rfl
+    have henvD6 : LocalEnv.lookup env6 "data"
+        = some (.base ⟨σ5.nextAddr + 3⟩) :=
+      lookup_declare_self _ "data" _
+    -- cells at σ6
+    have hIc5 : Heap.lookup σ5.heap (.base ⟨na₀ + 3⟩)
+        = some ⟨some (.int .uint64), .int (ixN : Int) .uint64⟩ := by
+      rw [hlk5 (na₀ + 3) (by omega), hlk4 (na₀ + 3) (by omega)]
+      show Heap.lookup (Heap.set (Heap.set σ2.heap (.base ⟨nw⟩) _)
+        (.base ⟨nw⟩) _) (.base ⟨na₀ + 3⟩) = _
+      rw [lookup_set_other (by omega : nw ≠ na₀ + 3),
+        lookup_set_other (by omega : nw ≠ na₀ + 3)]
+      exact hIc2
+    have hTc5 : Heap.lookup σ5.heap (.base ⟨na₀ + 6⟩)
+        = some ⟨some (.int .uint64), .int (tmN : Int) .uint64⟩ := by
+      rw [hlk5 (na₀ + 6) (by omega), hlk4 (na₀ + 6) (by omega)]
+      show Heap.lookup (Heap.set (Heap.set σ2.heap (.base ⟨nw⟩) _)
+        (.base ⟨nw⟩) _) (.base ⟨na₀ + 6⟩) = _
+      rw [lookup_set_other (by omega : nw ≠ na₀ + 6),
+        lookup_set_other (by omega : nw ≠ na₀ + 6)]
+      exact hTc2
+    have hBm5 : Heap.lookup σ5.heap (.base ⟨bm⟩)
+        = some ⟨none, .mapData (toEntriesB bkvs)⟩ := by
+      rw [hlk54 bm (by omega) (Ne.symm hd3) (Ne.symm hd5)]
+      exact hBm
+    have hByIdx := s23_byidx_seg (env6 := env6) (envC := envC)
+      (Kc := Kc) (na₀ := na₀) (tw := tw) (nw := nw) (bm := bm)
+      (dc := σ5.nextAddr + 3) (gm := gm)
+      henvT6 henvN6 henvI6 henvR6 henvD6 σ6 ch hag6 hfrs6
+      (by rw [hfrm6 na₀ (by omega) (by omega) (by omega)]
+          exact htP5)
+      (by rw [hfrm6 (na₀ + 1) (by omega) (by omega) (by omega)]
+          exact hnP5)
+      (by rw [hfrm6 (na₀ + 3) (by omega) (by omega) (by omega)]
+          exact hIc5)
+      (by rw [hfrm6 (na₀ + 6) (by omega) (by omega) (by omega)]
+          exact hTc5)
+      hDc6
+      (by rw [hfrm6 nw (by omega) hd4 (Ne.symm hd1)]
+          exact hNd5)
+      hTw6
+      (by rw [hfrm6 bm (by omega) (Ne.symm hd6) (Ne.symm hd3)]
+          exact hBm5)
+      hd3 hd5 (by omega) (by omega)
+      hix htm hidv hsl hc0 hc1 (by omega) hm1
+      (by split <;> split <;> omega) (by split <;> split <;> omega)
+      hq0 hq1
+    obtain ⟨mB, hmBb, σ7, tr3, hrunB, hTw7, hBm7, hfrm7, hlo7,
+      hhi7, hfrs7, hag7⟩ := hByIdx
+    -- the final pack
+    refine ⟨117 + m2 + m3 + 22 + 66 + 54 + 87 + mB, by omega, σ7,
+      tr3, ?_, ?_, ?_, ?_, ?_, ?_, by omega, by omega, hfrs7, hag7⟩
+    · exact stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+        (stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+          (stepFnIter_chain hSec1 hrun2) hrun3) hCur) hTyp) hLen)
+        hrun6) hrunB
+    · -- the node cell
+      rw [hfrm7 nw (by omega) (Ne.symm hd1) hd5,
+        hfrm6 nw (by omega) hd4 (Ne.symm hd1)]
+      exact hNd5
+    · -- the twin cell
+      rw [hTw7]
+      rw [show ((cm + 1 : Int))
+        = cm + (if encGS ⟨⟨b0 :: brest⟩⟩ = 0 then 0 else 1) from by
+          rw [if_neg hnz0]]
+      rw [show ((((w + (if ixN ≤ apl then 1 else 0) : Int)
+            + (if tmN < ltm then 1 else 0))
+            + ((s2HitB bkvs ixN tmN ⟨⟨b0 :: brest⟩⟩ : Nat) : Int)))
+        = w + (((if ixN ≤ apl then 1 else 0)
+            + (if tmN < ltm then 1 else 0)
+            + (if encGS ⟨⟨b0 :: brest⟩⟩ = 0 then 0
+                else s2HitB bkvs ixN tmN ⟨⟨b0 :: brest⟩⟩) : Nat)
+            : Int) from by
+          rw [if_neg hnz0]
+          split <;> split <;> omega]
+    · -- the got cell
+      rw [if_neg hnz0,
+        hfrm7 gm (by omega) (Ne.symm hd2) hd6]
+      exact hGm6
+    · -- the byIndex cell
+      rw [if_neg hnz0]
+      exact hBm7
+    · -- frame respect
+      intro x hx hxtw hxnw hxgm hxbm
+      rw [hfrm7 x (by omega) hxtw hxbm,
+        hfrm6 x (by omega) hxgm hxtw,
+        hlk54 x (by omega) hxtw hxnw]
 
 end Headline
 
