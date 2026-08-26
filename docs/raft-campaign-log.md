@@ -2284,6 +2284,22 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   worker dispatched in parallel (S3 + SpanIso + the adjusted iff +
   verdict invariance) on disjoint trees.
 
+- **[USER] 2026-08-27 — the WP-style sharpening (adopted):**
+  code-path reasoning as statement organization is non-scalable;
+  the Iris-standard shape is explicit invariant + WP. [AGENT]
+  concession + fix: the round-kind-lemma inventory was a
+  literal-mode artifact (statements tracked the case tree because
+  kernel walks priced them); the prover arc's unit of statement is
+  RE-TARGETED to the FUNCTION SPEC (one judgment per handler +
+  driver body + checker; Fam ∧ R as the loop invariant; SliceWalk
+  as the loop rule; kinds become internal case branches at the
+  type switch). Function-linear, n-independent, Perennial-aligned.
+  What every style pays (visiting each function's text once) is
+  distinguished on the record from what ours wrongly added
+  (surfacing the case tree as API). The pilot re-targeted: one
+  handler function spec WP-style, measured. Synthesis §3 amended
+  in place.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.

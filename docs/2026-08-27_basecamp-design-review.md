@@ -78,6 +78,24 @@ hours-to-a-unit, each prevents a five-module migration)
 ## 3. THE PROVER ARC (the reasoning layer's target architecture —
 RefinedC-shaped, BRiCk-instrumented, on our Sym substrate)
 
+**SHARPENED 2026-08-27 ([USER]: "the Iris-standard style is an
+explicit invariant + WP over executions; code-path reasoning is
+inherently non-scalable"): THE UNIT OF STATEMENT IS THE FUNCTION
+SPEC, not the round-kind lemma.** One CPS judgment per handler
+(~15) + the driver loop body + the checker, with the explicit
+invariant (Fam ∧ the pairing R) as the loop invariant and SliceWalk
+as the loop rule; the round-kind case structure dissolves into case
+branches INSIDE the Step spec's proof, walked by the deterministic
+driver at the type switch — internal structure, never API. Statement
+inventory: function-linear, n-independent — the same statements
+Perennial would write for this library. The kind-lemma organization
+is recognized as a literal-mode artifact (statements multiplied to
+keep kernel walks small); landed kind-lemmas keep the
+validation-corpus role; the landed machinery becomes the rule set.
+THE PILOT IS RE-TARGETED accordingly: prove one handler's function
+spec against the invariant WP-style and measure — not re-derive a
+kind lemma.
+
 Adopted from the briefs, each with its source:
 - **CPS judgments** (`equation args (T : result → Prop)`), rules as
   plain lemmas auto-lifted to a REGISTERED rule database (attribute +
