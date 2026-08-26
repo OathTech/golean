@@ -1926,6 +1926,33 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   (seven imports) queued to the next arc-4 boundary; arc4c retires
   after. U25 still in flight.
 
+- **Arc 4, A4-U25 — LANDED** @ eee6b43b, gate PASS 230.44 s (was
+  927 s — the corpus split's −75%; durable form: 96 modules off the
+  gate path, corpus swept at landmarks — 22,538 declarations
+  axiom-clean; coverage check now fail-closed TWO-closure) +
+  **`roundVr_lemma` — the FOURTH R-form instance, the first fully
+  HANDS-OFF** (emitter v5; 30 crossings γ-valid first try; the S1
+  leadership claim born in the readouts). **THE STRUCTURAL
+  ROUND-KIND MATRIX IS COMPLETE** (heartbeat/hardstate/
+  storage-append/commit/election rings; no-op row censused: zero
+  state movement). Honest ops: this unit's kills systemctl-PROVEN
+  plain OOM (unscaled threads at 48G; the U22/U24 signature left
+  open as possibly different — decoy experiment run); a generator
+  fail-open panic! fixed fail-noisy; the ci diff flagged for
+  delta-review at the audit (gate-adjacent — correct per policy);
+  build-lock removed externally once while held (owner-file
+  proposal logged). WHAT THIS TAUGHT US: the emitter pipeline has
+  crossed the hands-off threshold — round instances are now
+  generator products, which is what makes the remaining shape-reuse
+  rows (MsgProp etc.) near-free. [AGENT]: U26 dispatched — THE
+  SUMMIT-PUSH UNIT (arc4c landing + the successor-canon slice on
+  the coordinator's design: round-post ~ₘ-canonical pins composing
+  via the shared-pin rule + THE ROUND INDUCTION with SeedFam base
+  and the init-span ∀-stream discharge); SM1 dispatched in
+  parallel (arc4d, new-files-only: the span-computes-model arc
+  from U24's banked map). Landmark STALE(170)+OWED — stands, the
+  merge approaches.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
