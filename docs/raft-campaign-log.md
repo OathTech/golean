@@ -1827,6 +1827,36 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   (the matrix's untested commit-without-append row). Landmark
   dual-trigger at 166 — stands. SP1 (~) still in flight.
 
+- **Arc 4, A4-U24 — LANDED (gate re-run in flight)** @ e11b6a19:
+  **`roundMar_lemma` — the R-form's THIRD instance, the
+  commit-without-append row**: committed AND applied advance 1→2
+  on the leader with NO append — the interpreter-level half of the
+  etcd commit dialect, meeting the followerCommitOk discharge at
+  assembly; shipped with ZERO hand-written window theorems (the
+  manifest-driven Eq emitter — the template is now a generator).
+  Span-computes-model: BOUNDARY-STOPPED at the measurement (the
+  chartered trigger fired — plain-for has no head schema; anatomy
+  banked; re-priced 1.5-2-unit arc; nothing half-built shipped).
+  The γS_pin promotion's ≥2-consumer trigger fired and was taken
+  (SymTables.Agrees.concS_eq). The unit could NOT gate in-session
+  (GATE_EXIT=143) — recorded, not skipped, with exit-code-captured
+  compensating verification. **OPS DIAGNOSIS ([AGENT], correcting
+  two worker theories): there is NO reaper.** The arc-2 "dying
+  builds" were STALE failed-unit entries from the parked wave
+  (Aug 23, Result=oom-kill); the live kills are CGROUP OOM AT OUR
+  OWN CAPS — the coordinator's own charter briefs propagated
+  GOLEAN_MEM_MAX=24G for gates while the tree grew past 585 jobs;
+  kernel SIGKILLs a lean worker, systemd SIGTERMs the scope
+  (exit 143 mimicking an external kill); lulls = incremental
+  retries shrinking the job set under the cap. WHAT THIS TAUGHT
+  US: a wrong-but-vivid theory (the reaper) survived two units
+  because the mundane check (scope Result= + timestamps) was never
+  run — the async-diagnosis rule (judge by artifacts) applies to
+  INFRASTRUCTURE too. FIX (lane-local, no global change): gates at
+  GOLEAN_MEM_MAX=64G henceforth (all future briefs); stale failed
+  units left for the operator (reset-failed is machine-global
+  hygiene — Mike's call). U24 gate re-running at 64G now.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
