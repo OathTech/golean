@@ -599,3 +599,32 @@ suppression for the same `letFun` false-flag, comment carried over).
 
 Verification: `lake env lean` exit 0, ZERO warnings; olean via
 explicit target.
+
+## SM2 slice 3 — `SpanS23Walk1.lean`: shared units + the getters
+prelude (DELIVERED)
+
+- **`sliceVisibleValues_of_array`** — the Data slice's visible bytes
+  from first-order premises (the backing-array cell + the pointwise
+  window fact): the walk's `string(bytes)` premises never quantify
+  over states (the ∀σ-premise smell deliberately avoided); Std.Range
+  `forIn` handled via the SliceMem `range'` route with a local
+  push-fold engine.
+- **`utoaUnit_walk`** — ONE generic `$c := utoa(arg)` unit walk
+  (splice/init/call-plan glue + `utoa_call_span`), parameterized by
+  the argument-delivery fact at the post-init state. [AGENT] the
+  lift-repeated-patterns rule applied UP FRONT: SpanS1Walk paid this
+  shape inline three times; the apply walk has THIRTEEN utoa call
+  sites across its four violation branches — the unit lemma turns
+  each into a ~15-line delivery-fact derivation.
+- **Named body views** (`s3IdxIfS`/`s3TermIfS`/`appliedAsn`/
+  `lastTrmAsn`/`anomalyIfS`/`lenIfS`/`dataAsn`/`gotAsn`/`commitAsn` +
+  `restAfterGetters`, `applyBody_view` rfl-pin) and
+  **`s23_getters_seg`** — the deterministic 117-step prelude: frame
+  entry (`apply_enterFrame`), `idx`/`trm` delivered by the two pinned
+  getter call spans (`getIndex/getTerm_call_span`, 49 each), landing
+  on the S3-index guard at the explicit 11-set `gettersSt` state,
+  frontier +9. Step count matches the probe chain ([0]→[117] in
+  `applyprobe.out` V-A) exactly.
+
+Verification: `lake env lean` exit 0, zero warnings; olean via
+explicit target; hatch grep 0.
