@@ -742,3 +742,22 @@ declaration/Func pins + the two model ties axiom-FREE.
      clobbered (tmN for ixN) by a text transformation — caught
      IMMEDIATELY at the headline composition (the assembly is the
      checker of the segments). Fixed at the statement.
+
+## LANDING MANIFEST (updated for SM1 + SM2 — the operator's
+one-commit import additions)
+
+At landing (after merge-protocol steps), add exactly these lines:
+
+1. `proofs/Audit.lean`:
+   `import Audit.Span` and `import Audit.SpanS23`
+2. `proofs/GoLeanProofs.lean` (the aggregator, alphabetical spot):
+   `import GoLeanProofs.Specs.Raft.SpanApplyGetters`,
+   `import GoLeanProofs.Specs.Raft.SpanS1Witness`, and
+   `import GoLeanProofs.Specs.Raft.SpanS23Witness`
+   (the closures pull UtoaForKit, UtoaSpan, SpanCells, SpanS1,
+   SpanS1Walk, SpanS23Maps, SpanS23Cells, SpanS23Apply,
+   SpanS23Walk1-5, SpanS23 — nothing else is needed).
+
+Then `scripts/ci` goes green with no other change (the un-swept red
+is exactly SM1's 8 + SM2's 11 files; all 30 + 31 pins already verify
+in-build via Audit.Span / Audit.SpanS23).
