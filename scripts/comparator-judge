@@ -215,6 +215,26 @@ if [ "$MODE" = fresh ]; then
     || fail "pre-build of the GoLean core lib in the fresh clone failed"
 fi
 
+# Pre-build the SOLUTION side's proofs closure in the clone, sequentially
+# warmed then thread-scaled (added 2026-08-26 at the arc-4 landing: the
+# fix round's witness-with-its-law rule returned the concurrency-OOM-prone
+# window-kernel modules to the default proofs target, and the confined
+# unit's cold parallel Solution build then breached the box — 122.8G peak,
+# judge-final2.log. Same trust class as the Challenge/core pre-builds
+# above: warming oleans on the trusted side changes NOTHING the confined
+# unit checks — it still exports and kernel-replays every declaration; a
+# poisoned olean cannot survive the kernel replay. The warm is sequential
+# per-Audit-root at LEAN_NUM_THREADS=2 — the measured anti-concurrency
+# remedy — then the full proofs build at scaled threads.)
+echo "comparator-judge: pre-building the Solution proofs closure (sequential warm)"
+for _m in "$CLONE"/proofs/Audit/*.lean; do
+  _mod="Audit.$(basename "$_m" .lean)"
+  (cd "$CLONE/proofs" && LEAN_NUM_THREADS=2 lake build "$_mod") \
+    || fail "sequential warm of $_mod in the fresh clone failed"
+done
+(cd "$CLONE/proofs" && LEAN_NUM_THREADS=8 lake build) \
+  || fail "pre-build of the proofs lib in the fresh clone failed"
+
 # ── 5. The run — exactly the README's guarded invocation ────────────────
 # systemd-run confines the judge with RestrictAddressFamilies=~AF_UNIX (the
 # landrun-escape guard the comparator README prescribes). Comparator then:
