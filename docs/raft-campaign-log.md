@@ -2110,6 +2110,29 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   delta-review → [USER] ff → THE REVIEW → the summit waves under
   whatever shape it chooses.
 
+- **[USER] 2026-08-26 — basecamp review calibrated + sources
+  landed:** deps/ now holds the FULL BRiCk clone (@ eee838e7 — note
+  ltac2-llm + AGENTS.md in its tree: agent-integrated automation in
+  an industrial Iris stack), deps/refinedc (with Lithium), and
+  deps/brick-wp (our own earlier library). Calibration ([USER]): do
+  NOT clone RefinedC's approach — our toolkit's consumer is an
+  AGENT OPERATOR, not a human annotator; steal DESIGN, and aim for
+  coherent abstractions precisely because BRiCk/RefinedC already
+  paid the design-debugging cost we should not replicate. [AGENT]
+  steal-candidate list for the review: (1) Lithium's
+  NO-BACKTRACKING deterministic proof search — predictable
+  automation is agent-debuggable automation (our emitter/prover
+  should have its determinism discipline, stated); (2) RefinedC's
+  separation of the type-RULE layer from the automation layer +
+  escape hatches that do not poison composition (our manual-lemma
+  seams need that discipline named); (3) BRiCk's industrial
+  layering + its agent-facing conventions (ltac2-llm, AGENTS.md —
+  read for how they charter automation for agents); (4) brick-wp's
+  own retrospective (what we already learned once). The review
+  evaluates each against the agent-operator axis: chartable units,
+  machine-checkable acceptance, honest failure surfacing,
+  budget-awareness — not annotation ergonomics.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
