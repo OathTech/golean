@@ -2401,6 +2401,23 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   In-flight worker charters verified compliant; their worktree
   CLAUDE.md copies pick it up at their rebases.
 
+- **[USER] 2026-08-27 — the mistake named plainly, owned:** the
+  technique amounted to "enumerate the executions of the concrete
+  harness" against a theorem quantifying over infinitely many of
+  them — obviously non-viable, while the Verdi-shaped abstract
+  result sat in the correct ∀-trace form awaiting an
+  invariant-shaped consumer. ROOT CAUSE ([AGENT], on the record):
+  unit-level provability stood in for progress toward the
+  QUANTIFIER — no check ever asked "which rule discharges ∀-stream";
+  local insight and green gates pointed sideways for weeks. THE
+  GUARD, standing from now: **THE QUANTIFIER AUDIT** — every unit
+  charter states which quantifier of the end theorem it advances
+  and BY WHAT RULE (loop rule / congruence / spec — never "by
+  instances"); no nameable rule ⇒ stepping-stone tier before the
+  unit starts. Complements the CLAUDE.md doctrine (which bans the
+  technique) by catching the drift at planning time (which is where
+  it lived).
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
