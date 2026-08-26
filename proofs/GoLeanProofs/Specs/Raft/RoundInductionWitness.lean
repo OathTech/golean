@@ -179,7 +179,7 @@ def idPlace (σ : ExecState) :
 /-- The Vr 1-link witness: the induction discharged end to end at the
 identity placement, with the genuine abstract step riding along. -/
 theorem vr_chain_witness :
-    ∃ σE NE, FamTrace (EStep voters3) (ρT RoundVr.canonVr.nextAddr 0)
+    ∃ σE NE, FamTrace (EStep voters3) (fun _ _ => True) (ρT RoundVr.canonVr.nextAddr 0)
       RoundVr.canonVr.nextAddr
       (renameConfig (ρT RoundVr.canonVr.nextAddr 0) RoundVr.roundVrC0)
       RoundVr.canonVr absN3 [vrLink] (chainπ [vrLink] ++ []) σE NE [] :=
@@ -192,7 +192,7 @@ theorem vr_chain_witness :
 
 /-- The Vote 1-link witness (genuine grant step). -/
 theorem vote_chain_witness :
-    ∃ σE NE, FamTrace (EStep voters3) (ρT RoundVote.canonVote.nextAddr 0)
+    ∃ σE NE, FamTrace (EStep voters3) (fun _ _ => True) (ρT RoundVote.canonVote.nextAddr 0)
       RoundVote.canonVote.nextAddr
       (renameConfig (ρT RoundVote.canonVote.nextAddr 0)
         RoundVote.roundVoteC0)
@@ -207,7 +207,7 @@ theorem vote_chain_witness :
 
 /-- The Mar 1-link witness (election-fragment-silent pairing). -/
 theorem mar_chain_witness :
-    ∃ σE NE, FamTrace (EStep voters3) (ρT RoundMar.canonMar.nextAddr 0)
+    ∃ σE NE, FamTrace (EStep voters3) (fun _ _ => True) (ρT RoundMar.canonMar.nextAddr 0)
       RoundMar.canonMar.nextAddr
       (renameConfig (ρT RoundMar.canonMar.nextAddr 0) RoundMar.roundMarC0)
       RoundMar.canonMar absN4 [marLink] (chainπ [marLink] ++ []) σE NE [] :=
@@ -226,7 +226,7 @@ def ma0Link : RoundLink := RoundLink.trivial RoundMa.canonMa absN4
 the per-link lemmas (`RoundLemmaShape.refl` + `roundMa_lemma`), and
 the trace's `cons`/`cons`/`nil` mechanics all exercised concretely. -/
 theorem ma_chain2_witness :
-    ∃ σE NE, FamTrace (EStep voters3) (ρT RoundMa.canonMa.nextAddr 0)
+    ∃ σE NE, FamTrace (EStep voters3) (fun _ _ => True) (ρT RoundMa.canonMa.nextAddr 0)
       RoundMa.canonMa.nextAddr
       (renameConfig (ρT RoundMa.canonMa.nextAddr 0) RoundMa.roundC0)
       RoundMa.canonMa absN4 [ma0Link, maLink]
@@ -251,7 +251,7 @@ The REAL seeded chain (campaign span → round ladder) is the T1
 assembly's named open obligation — this witness claims only that the
 seeded statement is non-vacuous and its `Seed` discharge fires. -/
 theorem seeded_witness :
-    ∃ σE NE, FamTrace (EStep voters3) (ρT seedσ.nextAddr 0) seedσ.nextAddr
+    ∃ σE NE, FamTrace (EStep voters3) (fun _ _ => True) (ρT seedσ.nextAddr 0) seedσ.nextAddr
         (renameConfig (ρT seedσ.nextAddr 0) RoundMa.roundC0) seedσ seedN₀
         [RoundLink.trivial seedσ seedN₀]
         (chainπ [RoundLink.trivial seedσ seedN₀] ++ []) σE NE []

@@ -24,18 +24,24 @@ relation — the induction delivers TWO chains at once:
 2. **an INDEPENDENT abstract chain**: the link-supplied boundary nets
    compose into a `ReachRel` trace of the dialect.
 
-**What it does NOT deliver (the honesty note):** the two chains are
-NOT coupled. `RoundLink.N`/`N'` are witness DATA with no tie to
-`absTwinRead` of the link's `canon`/`canon'` — no constructor of
-`FamTrace` mentions a concrete and an abstract component in one
-clause, and `FamTrace.reach`/`safety`/`fullInv` are derivable from
-the `habs` premises alone. The per-boundary abs-pairing
-(`absTwinRead σᵢ = projection of Nᵢ`) is the OPEN obligation **O5b**
-of the T1 open-obligation census (`docs/campaign-arc4-log.md`,
-landing fix-round entry) and the proposed next charter's item. Until
-O5b lands, this module mechanizes only the Fam-membership HALF of
-the layer-C design §3 carry (`R σ N := σ ∈ Fam ∧ absRead σ = N`) —
-the `absRead σ = N` conjunct is exactly what is not yet asserted.
+**What it does NOT deliver (the honesty note, amended at wave α):**
+`FamTrace` now carries a PAIRING PARAMETER `R : ExecState → SNet →
+Prop` with an `hpair : R σF' l.N'` clause in `cons` (the basecamp
+design review's S1 — the one-parameter Abadi–Lamport form), but
+every landed instance instantiates `R := fun _ _ => True`, so the
+two chains remain UNCOUPLED today: `RoundLink.N`/`N'` are witness
+DATA with no tie to `absTwinRead` of the link's `canon`/`canon'`,
+and `FamTrace.reach`/`safety`/`fullInv` are derivable from the
+`habs` premises alone (they are parametric in `R`). The
+per-boundary abs-pairing (`absTwinRead σᵢ = projection of Nᵢ`) is
+the OPEN obligation **O5b** of the T1 open-obligation census
+(`docs/campaign-arc4-log.md`, landing fix-round entry) — and it now
+lands BY INSTANTIATION (supply `R σ N := absTwinRead-pairing` plus
+the per-link discharge in a strengthened induction), not by
+migrating the five consuming modules. Until then, this module
+mechanizes only the Fam-membership HALF of the layer-C design §3
+carry (`R σ N := σ ∈ Fam ∧ absRead σ = N`) — the `absRead σ = N`
+conjunct is exactly what `R := True` does not yet assert.
 With the arc4c seed pin the seeded corollary discharges `Seed` and
 hands every obligation-discharging dialect `oneLeaderPerTerm` at the
 trace's end net — a fact about the SUPPLIED abstract chain, carried
@@ -136,22 +142,25 @@ Each `cons` CARRIES the boundary facts: the round's run equation (the
 loop-head config `Cr` recurs), the re-established family membership
 (`FrameSim` at the SAME placement `r, na₀` — the R-form's conclusion
 shape is what makes literal chaining compose without a `FrameSim`
-transitivity lemma), and the abstract segment. Consumers read
-per-boundary facts by destructuring — the tail of a `FamTrace` is a
-`FamTrace`. -/
-inductive FamTrace (step : SNet → SNet → Prop) (r : Nat → Nat) (na₀ : Nat)
-    (Cr : Config) :
+transitivity lemma), the concrete↔abstract PAIRING at the boundary
+(`hpair : R σF' l.N'` — the S1 parameter; `R := fun _ _ => True` in
+every landed instance, the O5b pairing by instantiation later), and
+the abstract segment. Consumers read per-boundary facts by
+destructuring — the tail of a `FamTrace` is a `FamTrace`. -/
+inductive FamTrace (step : SNet → SNet → Prop) (R : ExecState → SNet → Prop)
+    (r : Nat → Nat) (na₀ : Nat) (Cr : Config) :
     ExecState → SNet → List RoundLink → Choices → ExecState → SNet →
     Choices → Prop where
   | nil (σ : ExecState) (N : SNet) (ch : Choices) :
-      FamTrace step r na₀ Cr σ N [] ch σ N ch
+      FamTrace step R r na₀ Cr σ N [] ch σ N ch
   | cons {l : RoundLink} {rest : List RoundLink} {σF σF' σE : ExecState}
       {NE : SNet} {ch chE : Choices}
       (hrun : stepFnIter l.Δ σF Cr (l.π ++ ch) = .ok (Cr, σF', ch))
       (hfam : ∃ na' fr', FrameSim r na₀ na' fr' l.canon' σF')
+      (hpair : R σF' l.N')
       (habs : ReachRel step l.N l.N')
-      (tail : FamTrace step r na₀ Cr σF' l.N' rest ch σE NE chE) :
-      FamTrace step r na₀ Cr σF l.N (l :: rest) (l.π ++ ch) σE NE chE
+      (tail : FamTrace step R r na₀ Cr σF' l.N' rest ch σE NE chE) :
+      FamTrace step R r na₀ Cr σF l.N (l :: rest) (l.π ++ ch) σE NE chE
 
 /-! ## 3. THE ROUND INDUCTION -/
 
@@ -161,7 +170,10 @@ segment in hand, the whole chain runs: the trace exists with
 family membership re-established at every boundary and the abstract
 nets stepping by the dialect. The placement `r, na₀` is FIXED along
 the whole trace (the R-form conclusion preserves it), which is
-exactly why literal canon chaining needs no `FrameSim` composition. -/
+exactly why literal canon chaining needs no `FrameSim` composition.
+The pairing parameter is instantiated `R := fun _ _ => True` (S1):
+this induction supplies no pairing facts; a strengthened induction
+carrying per-link pairing premises instantiates a real `R` (O5b). -/
 theorem round_induction {step : SNet → SNet → Prop} {C0 : Config} :
     ∀ (links : List RoundLink) {c₀ : ExecState} {N₀ : SNet},
       ChainedFrom c₀ N₀ links →
@@ -169,8 +181,8 @@ theorem round_induction {step : SNet → SNet → Prop} {C0 : Config} :
       (∀ l ∈ links, ReachRel step l.N l.N') →
       ∀ {r : Nat → Nat} {na₀ na : Nat} {fr : GoCore.Heap} {σF : ExecState},
       FrameSim r na₀ na fr c₀ σF → ∀ ch : Choices,
-      ∃ σE NE, FamTrace step r na₀ (renameConfig r C0) σF N₀ links
-        (chainπ links ++ ch) σE NE ch := by
+      ∃ σE NE, FamTrace step (fun _ _ => True) r na₀ (renameConfig r C0)
+        σF N₀ links (chainπ links ++ ch) σE NE ch := by
   intro links
   induction links with
   | nil =>
@@ -189,42 +201,47 @@ theorem round_induction {step : SNet → SNet → Prop} {C0 : Config} :
       have hstream : chainπ (l :: rest) ++ ch = l.π ++ (chainπ rest ++ ch) := by
         simp [chainπ]
       rw [hstream]
-      exact FamTrace.cons hrun ⟨na', fr', hfs'⟩
+      exact FamTrace.cons hrun ⟨na', fr', hfs'⟩ trivial
         (habs l (List.mem_cons_self ..)) htail
 
 /-! ## 4. Trace corollaries (what the trace yields) -/
 
-/-- The abstract boundary nets form a `ReachRel` trace end to end. -/
-theorem FamTrace.reach {step : SNet → SNet → Prop} {r na₀ Cr}
+/-- The abstract boundary nets form a `ReachRel` trace end to end.
+(Parametric in the pairing `R` — no corollary in this section reads
+`hpair`; they hold for every instantiation.) -/
+theorem FamTrace.reach {step : SNet → SNet → Prop}
+    {R : ExecState → SNet → Prop} {r na₀ Cr}
     {σ : ExecState} {N : SNet} {links : List RoundLink} {st : Choices}
     {σE : ExecState} {NE : SNet} {chE : Choices}
-    (h : FamTrace step r na₀ Cr σ N links st σE NE chE) :
+    (h : FamTrace step R r na₀ Cr σ N links st σE NE chE) :
     ReachRel step N NE := by
   induction h with
   | nil => exact .refl _
-  | cons _ _ habs _ ih => exact habs.trans ih
+  | cons _ _ _ habs _ ih => exact habs.trans ih
 
 /-- The flat composed run: the whole chain is ONE `stepFnIter`
 equation at the summed span (certificate-replay shape; the per-round
 equations compose by `stepFnIter_chain`). -/
-theorem FamTrace.flat {step : SNet → SNet → Prop} {r na₀ Cr}
+theorem FamTrace.flat {step : SNet → SNet → Prop}
+    {R : ExecState → SNet → Prop} {r na₀ Cr}
     {σ : ExecState} {N : SNet} {links : List RoundLink} {st : Choices}
     {σE : ExecState} {NE : SNet} {chE : Choices}
-    (h : FamTrace step r na₀ Cr σ N links st σE NE chE) :
+    (h : FamTrace step R r na₀ Cr σ N links st σE NE chE) :
     stepFnIter (chainΔ links) σ Cr st = .ok (Cr, σE, chE) := by
   induction h with
   | nil => simp [chainΔ, stepFnIter]
-  | cons hrun _ _ _ ih =>
+  | cons hrun _ _ _ _ ih =>
       exact GoLean.Surface.stepFnIter_chain hrun ih
 
 /-- Safety at the trace's end: every obligation-discharging dialect
 carries `one_leader_per_term` to the end net of any trace from a
 seeded start (the native chain consumed wholesale). -/
 theorem FamTrace.safety {voters : List Nat} {step : SNet → SNet → Prop}
+    {R : ExecState → SNet → Prop}
     {r na₀ Cr} {σ : ExecState} {N : SNet} {links : List RoundLink}
     {st : Choices} {σE : ExecState} {NE : SNet} {chE : Choices}
     (ob : ElectObligations voters step) (hseed : Seed N)
-    (h : FamTrace step r na₀ Cr σ N links st σE NE chE) :
+    (h : FamTrace step R r na₀ Cr σ N links st σE NE chE) :
     oneLeaderPerTerm NE :=
   native_one_leader_per_term ob hseed h.reach
 
@@ -232,10 +249,11 @@ theorem FamTrace.safety {voters : List Nat} {step : SNet → SNet → Prop}
 bundle at INTERIOR boundaries follows by destructuring the trace —
 each tail is a `FamTrace` from a net `ReachRel`-below the end). -/
 theorem FamTrace.fullInv {voters : List Nat} {step : SNet → SNet → Prop}
+    {R : ExecState → SNet → Prop}
     {r na₀ Cr} {σ : ExecState} {N : SNet} {links : List RoundLink}
     {st : Choices} {σE : ExecState} {NE : SNet} {chE : Choices}
     (ob : ElectObligations voters step) (hseed : Seed N)
-    (h : FamTrace step r na₀ Cr σ N links st σE NE chE) :
+    (h : FamTrace step R r na₀ Cr σ N links st σE NE chE) :
     FullInv voters NE :=
   fullInv_reachable ob hseed h.reach
 
@@ -265,8 +283,8 @@ theorem seeded_round_induction {step : SNet → SNet → Prop} {C0 : Config}
     (habs : ∀ l ∈ links, ReachRel step l.N l.N')
     {r : Nat → Nat} {na₀ na : Nat} {fr : GoCore.Heap} {σF : ExecState}
     (hF : FrameSim r na₀ na fr seedσ σF) (ch : Choices) :
-    ∃ σE NE, FamTrace step r na₀ (renameConfig r C0) σF seedN₀ links
-        (chainπ links ++ ch) σE NE ch
+    ∃ σE NE, FamTrace step (fun _ _ => True) r na₀ (renameConfig r C0)
+        σF seedN₀ links (chainπ links ++ ch) σE NE ch
       ∧ (∀ {voters : List Nat}, ElectObligations voters step →
           oneLeaderPerTerm NE) := by
   obtain ⟨σE, NE, htr⟩ := round_induction links hch hlem habs hF ch
