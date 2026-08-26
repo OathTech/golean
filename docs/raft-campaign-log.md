@@ -2088,6 +2088,28 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   own (small) ceremony. Promotion targets (StrMapMem, the spine
   evaluator) recorded for a consolidation slice.
 
+- **[USER] 2026-08-26 — THE BASECAMP DESIGN REVIEW (directed):**
+  reach a reasonable point, then a design review — "can we steal
+  ideas from RefinedC / Brick and turn our proof into sensible
+  abstractions rather than ad-hoc grind-output"; "value in a
+  'basecamp' before we climb the summit." [AGENT] plan, adopted:
+  BASECAMP = main at the landed arc-4 merge (audited, judged,
+  registry in hand). THE REVIEW runs there, BEFORE any summit
+  unit: inputs = the mechanism registry + the honest O-census +
+  RefinedC (spec-as-refinement-type, verification-as-typing,
+  automation-as-subsumption, manual lemmas as escape hatch) +
+  Brick (the promotion-ledger lineage; the framework-vs-parts-bin
+  test). THE SHARP QUESTION: recast the equation/arm/round layers
+  as a TYPING JUDGMENT — do the ~28 replay instances become typing
+  derivations (dissolving the pending replay-mode decision), and
+  are the O1/O2b adapters subsumption rules? Output = a per-layer
+  recast proposal under the two-axis test — recast ONLY where it
+  changes summit cost or second-target reuse; explicitly NOT a
+  rewrite of landed proofs. The symbolic-semantics design folds in
+  as the type layer's semantic companion. Sequencing: fix round →
+  delta-review → [USER] ff → THE REVIEW → the summit waves under
+  whatever shape it chooses.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
