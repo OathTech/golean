@@ -6556,3 +6556,420 @@ operator's (constitution §4.1); the comparator-landmark STALE (170)
 runbook note (Audit.lean lines changed again this unit — the
 scripts/ci diff also owes the audit's delta-review attention as
 gate-adjacent).
+
+## A4-U26 — THE SUMMIT-PUSH UNIT: the arc4c LANDING (slice 0) + the SUCCESSOR-CANON PROBE VERDICT (slice 1) + THE ROUND INDUCTION (slice 2) + the T1-ASSEMBLY PROBE (slice 3) (2026-08-26, fresh worker, coordinator-dispatched per the U25 exit charter + the SP1 landing manifest; build-lock protocol with owner file used)
+
+- 2026-08-26 SUCCESSOR RE-VERIFICATION (U25's top claims, fresh
+  probes, all PASS — fresh worker per rotation):
+  - tip clean: `git status` clean on `campaign-arc4`; HEAD =
+    `eee6b43b` (the U25 log tip).
+  - the U25 gate record re-read verbatim: `artifacts/ci-arc4-u25.log`
+    `GATE wall=230.44s` + `GATE_EXIT=0`. Reproducibility verified by
+    THIS unit's own slice-0 gate (below): PASS at ≈242 s wall at the
+    arc4c-landed tree, warm cache — the 230 s claim holds with the
+    aggregator relink and seven new modules added.
+  - `roundVr_lemma` present (RoundVrLemma.lean:91); `axu25.out`
+    re-read verbatim: 21 lines, all within [propext,
+    Classical.choice, Quot.sound], crossings/readouts propext+Quot.
+  - corpus target green at the tip: "Build completed successfully
+    (193 jobs)." EXIT=0, sweep line verbatim: "corpus audit sweep:
+    22538 declarations across the corpus closure, all axiom-clean".
+  - hatch grep over the U25 modules: 0 code hits (AuditCorpus.lean
+    documentation prose only, exactly as U25 recorded).
+
+### Slice 0 — THE ARC4C LANDING (257f1758 merge + 19f57971 imports)
+
+- `git merge campaign-arc4c` (8e23af6e): clean auto-merge, 8 files,
+  51,487 insertions, ALL new files (the lane's no-edit discipline
+  paid off exactly as designed — zero textual conflict).
+- The seven manifest imports added to `proofs/GoLeanProofs.lean`
+  (ChoiceCanon, ChoiceInv, SeedLit, SeedLitVar, SeedCFormLit,
+  SeedPin, SeedWitness). Targeted build of the seven: EXIT=0,
+  SeedPin 223 s + SeedWitness 40 s — SP1's measured costs confirmed
+  in-tree.
+- **Gate at the slice-0 tree (under the build lock, owner file
+  written): RESULT: PASS, GATE_EXIT=0** (`artifacts/ci-arc4-u26-s0.log`;
+  log birth 07:13:34 → PASS 07:17:36 ≈ 242 s wall, warm). SP1's known
+  structural red (proofs-file audit coverage naming the seven
+  modules) is CLOSED — the landing manifest's one edit did exactly
+  what it said. The landmark STALE (175) + OWED (scope: 2 files) notes
+  print as expected — standing escalated, the merge approaches.
+
+### Slice 1 — THE SUCCESSOR-CANON PROBE VERDICT (probe
+`artifacts/probe/U26CanonProbe.lean` → `u26canon.out`; PROBE FIRST,
+before any build — the charter's stop-condition discipline)
+
+The coordinator's design: per round kind, pin the round-post
+~ₘ-canonical form and prove the round conclusion lands ~ₘ-equal to
+it, so the next round's premise consumes the canonical form. The
+probe's three answers, decisive:
+
+1. **Q1 — the four kinds' loop-head configs are LITERALLY EQUAL**
+   (repr-identical; then kernel-pinned in
+   `RoundInductionWitness.c0_{vote,mar,vr}_shared`, each subsecond —
+   the whole witness module elaborates in 776 ms). The U18 census
+   claim ("the anchor config recurs IDENTICALLY") is now a kernel
+   fact ACROSS kinds: cross-kind chaining is config-compatible at one
+   shared C0.
+2. **Q2 — THE LANDED FIXTURES RESIST CANONICALIZATION** (the
+   chartered stop-condition class fired): all eight canon states
+   (pre/post × 4 kinds) produce MISSING flags (11–17 each; the pre
+   states also DRAIN-FUEL) at twin-rooted masked forms. Root cause,
+   structural: the doctored+pruned fixtures are OPEN TERMS — pruning
+   to the round's read-before-write set drops cells that remain
+   REACHABLE from the twin cell, so `canonStateM` fails closed on the
+   dangling references. No roots choice fixes it (the danglers are
+   referenced from kept cells). Only FULL states canonicalize
+   cleanly — `seedσ`'s 207-cell clean form (SP1) worked precisely
+   because the seed pin canonicalizes the full 4,965-cell heap.
+   [AGENT]: the unclean pins were NOT shipped (a "representative"
+   carrying MISSING flags fails the clean-form contract and the §7
+   two-axis test — no consumer today; the symbolic semantics would
+   redo them at full states).
+3. **Q3 — no cross-kind adjacency exists among the landed fixtures**
+   (Vr'→Mar, Vote'→Vr, Ma'→Mar all ~ₘ-unequal) — expected: the
+   fixtures were doctored to exercise KINDS, not to chain.
+
+**THE DESIGN VERDICT (the charter's slice-1 question, answered
+precisely):** the successor-canon design mis-states at BOTH
+anticipated points. (a) Round-post states (as landed) resist
+canonicalization — Q2. (b) ~ₘ-invariance of Fam has the gap: `CEquivM`
+equates canonical FORMS, quotienting capacity slack, dropped garbage,
+and the mask — all outside `FrameSim`'s vocabulary — so no landed (or
+cheaply buildable) lemma turns "conclusion ~ₘ canonical form" into
+the next round's `RoundFam` premise; the bridge (canonicalizer
+congruence under placement + per-class preservation transports) is
+exactly the machinery the standing [USER] decision schedules with the
+symbolic semantics (post-T1; SP1 [AGENT] call 3). **The induction
+therefore chains LITERAL canon steps** — which the R-form's
+conclusion supports DIRECTLY (it re-establishes `FrameSim` at the
+SAME placement `r, na₀`, so literal chaining needs no FrameSim
+composition lemma), and which is what the T1 replay needs anyway
+(really-successive loop-head states are successive literals). The ~ₘ
+layer's role in the induction detaches THIS unit; it remains the
+∀-stream lift's carrier (slice-2 discharge item below).
+
+### Slice 2 — THE ROUND INDUCTION (de2252ac;
+`Specs/Raft/RoundInduction.lean` LIVE/default +
+`Specs/Raft/RoundInductionWitness.lean` corpus + `Audit/RoundInduction`
++ `Audit/RoundIndWitness`)
+
+- **The statement, quoted** (proved, `RoundInduction.lean`):
+
+  ```
+  theorem round_induction {step : SNet → SNet → Prop} {C0 : Config} :
+      ∀ (links : List RoundLink) {c₀ : ExecState} {N₀ : SNet},
+        ChainedFrom c₀ N₀ links →
+        (∀ l ∈ links, RoundLemmaShape l.canon l.canon' C0 l.Δ l.π) →
+        (∀ l ∈ links, ReachRel step l.N l.N') →
+        ∀ {r na₀ na fr σF}, FrameSim r na₀ na fr c₀ σF → ∀ ch,
+        ∃ σE NE, FamTrace step r na₀ (renameConfig r C0) σF N₀ links
+          (chainπ links ++ ch) σE NE ch
+  ```
+
+  where `RoundLink` packs (canon, canon', Δ, π, N, N'), `ChainedFrom`
+  is literal chaining (first link at (c₀, N₀); consecutive links meet
+  on canon AND net), and `FamTrace`'s `cons` constructors CARRY the
+  per-boundary facts — the run equation returning to the shared
+  loop-head config, the re-established `FrameSim` membership
+  (trace-long Fam membership), and the abstract `ReachRel` segment
+  (ReachRel-valued so one round may be abstractly silent (refl) or
+  compound). Corollaries: `FamTrace.reach` (the absState trace IS a
+  `ReachRel` trace — "the absState trace = the specRound trace" at
+  the granularity the R-form provides), `FamTrace.flat` (the whole
+  chain as ONE `stepFnIter` equation — the certificate-replay shape),
+  `FamTrace.safety`/`FamTrace.fullInv` (the native chain consumed
+  wholesale: `one_leader_per_term`/`FullInv` at the trace end for
+  every obligation-discharging dialect from a seeded start), and
+  **`seeded_round_induction`** (the layer-C §3 seeded carry:
+  `Seed` discharged by the landed `seed_N₀` — nothing premised on the
+  abstract side but the dialect's obligation discharge).
+- **Witness-in-same-slice** (`RoundInductionWitness.lean`, corpus):
+  - the shared-C0 kernel pins (slice 1's surviving deliverable);
+  - **a GENUINE `EStep` abstract chain from the discharged seed**:
+    `seedN₀ →campaign(1)→ →recvVote(2 grants)→ →selfPoll→
+    →winning recvVoteResp→ absN4` — every spec computation
+    #eval-pinned first (`U26AbsChainProbe.lean`), every step a real
+    constructor instance (TallyOK/ghost-faithfulness premises
+    discharged by decide on the concrete nets);
+    `abs_safety : oneLeaderPerTerm absN4` lands via
+    `etcd_discharges + seed_N₀ + abs_reach04`, and
+    `absN4_leader : (absN4.node 1).state = 2` (axiom-free) pins that
+    the safety statement bites at a net with a REAL leader —
+    non-vacuous end to end;
+  - the induction discharged at the identity placement on: the Vr
+    1-link chain (paired with its genuine winning-resp step — the
+    round where the S1 claim is born), the Vote 1-link (genuine grant
+    step), the Mar 1-link (election-fragment-SILENT pairing, refl —
+    honesty note in the docstring: commit/append have no EStep
+    constructor, a named T1 obligation), and the trivial++Ma 2-LINK
+    chain (the chaining mechanics — `ChainedFrom`/cons/cons/nil —
+    exercised concretely);
+  - `seeded_witness`: `seeded_round_induction`'s premises concretely
+    satisfied at the trivial chain from `seedσ` (non-vacuity; the
+    REAL seeded chain awaits the campaign-span lemma, named in
+    slice 3).
+- Builds: default target **536 jobs, exit 0** (the arc4c seven +
+  RoundInduction + Audit.RoundInduction join the gate path); corpus
+  target **204 jobs, exit 0**, sweep line verbatim: "corpus audit
+  sweep: 23278 declarations across the corpus closure, all
+  axiom-clean". Axioms (`AxU26.lean` → `axu26.out`, 22 lines,
+  verbatim): every line within [propext, Classical.choice,
+  Quot.sound]; the generic induction layer and the abstract chain are
+  [propext, Quot.sound] or axiom-FREE (abs_step01/abs_step12/
+  absN4_leader); Classical.choice enters only through the four round
+  lemmas' windows, as recorded for those instances. Hatch grep over
+  all four new modules: **0**. Kit pins: +7 (Audit/RoundInduction,
+  default) +15 (Audit/RoundIndWitness, corpus), additive.
+
+### Slice 2's chartered discharge — THE INIT-SPAN ∀-STREAM DISCHARGE:
+### BOUNDARY-STOPPED at the analysis, with the wall stated precisely
+
+The charter priced the `SeedChoiceInvariance` discharge as "mirror
+windows over the 81k-step init span at ~ₘ, ≈3–4 rounds' kernel". The
+analysis (against the landed machinery, not run): **that estimate
+prices a DIFFERENT obligation.** Mirror windows prove ONE literal
+walk ∀-stream-TAIL (draws pinned by the censused prefix at each
+crossing) — applied to the init span they buy the CANONICAL-stream
+kernel completion of steps 300–81,261 (SP1's recorded owed-forward
+item, ≈35–60 min one-time kernel; real, separable, still owed). The
+∀-STREAM discharge is a different animal: at each width-w mapIter
+draw site the machine FORKS w ways and the continuations differ
+LITERALLY (iteration order changes downstream states), so window
+chains cannot be shared across branches — enumerating is ~3^(width≥2
+sites) compounded, and the 33 appendSpill sites have UNBOUNDED value
+domains (any capacity), so enumeration is impossible even in
+principle. The only proof routes are (a) per-class ~ₘ-preservation
+transports + bisimulation-up-to-~ (the symbolic semantics' erased
+half — exactly what SP1's docstring said, standing post-T1 [USER]
+decision), or (b) symbolic-atom threading of capacities through the
+windows + finite mapIter branch enumeration with ~ₘ-reconvergence
+lemmas at each join — which still needs the per-op congruence at
+every join. The 168/3 census + mask make the treatment KNOWN, not
+PROVED — knowledge of a draw site's class is the transport lemma's
+specification, not its proof. **[AGENT] boundary-stop per the
+charter's own clause**: the discharge is separable — the landed
+induction does not consume `SeedChoiceInvariance` (it runs at the
+censused canonical prefixes); the premise's consumer is T1's
+∀-stream form, where it stays NAMED and VISIBLE (SeedPin docstring +
+the slice-3 obligation list). What a successor CAN buy at the
+3–4-round price: the canonical-stream init-span kernel completion
+(closes the generator-verified gap; does not touch the ∀-stream
+premise) — chartered separately, honestly labeled.
+
+### Slice 3 — THE T1-ASSEMBLY PROBE (probe
+`artifacts/probe/T1AssemblyProbe.lean` → `t1assembly.out`)
+
+**`agreementT1_skeleton` TYPE-CHECKS, [propext, Quot.sound]**: from
+the seed anchor (`seedσ` at `seedC`), given the open obligations as
+explicit hypotheses, the composition lands — the whole-run
+`stepFnIter` equation (entry ++ ladder via `stepFnIter_chain` +
+`FamTrace.flat`), `ReachRel step seedN₀ NE`, `oneLeaderPerTerm NE`
+(native chain + `seed_N₀`), and S1 silence through the leaf
+(`s1_leaf` fires against any `S1CheckerInterface` instance at the end
+net). THE OPEN-OBLIGATION CENSUS (the probe's hypothesis list — what
+stands between the landed tree and AgreementT1):
+
+- **O1 THE ENTRY ADAPTER** (probe shape finding): the campaign span
+  `seedσ` → first loop head is NOT self-returning (seed anchor config
+  ≠ C0), so it needs a prefix span lemma OUTSIDE the R-form (one
+  emitter product with a C_in/C_out statement variant) + its abstract
+  segment + the landing-at-first-canon fact. Similarly an EXIT
+  adapter (last loop head → verdict/completion readout).
+- **O2 THE REAL-ROUND INSTANCES**: per-round R-form lemmas at the
+  REAL successive round states (~28 deliver rounds; the A5 replay).
+  Hands-off emitter products at U25's measured rates (window kernel
+  10–22 min/round, corpus-target parallelizable); the four landed
+  kind-lemmas are the template evidence.
+- **O2b THE PRUNE-SEAM** (probe finding, coordinator decision
+  wanted): really-successive fixtures chain literally ONLY under a
+  unified prune convention (union prune or no prune — a generator
+  convention change, window cost impact to measure), OR FrameSim
+  COMPOSITION (placement transitivity — a general Frame-layer
+  theorem, ~1 slice) + per-boundary placement pins. `ChainedFrom`'s
+  literal equality encodes convention (a).
+- **O4 THE FULL ABSTRACT DIALECT**: `EStep` is the election fragment;
+  commit/append members (the obligation signature's
+  leaderCommitOk/followerCommitOk story, U24) are needed for the
+  Ma/Mar rounds' abstract steps and the S23 ride-along.
+- **O5 THE CHECKER-INTERFACE SEAM**: the `S1CheckerInterface`
+  instance at the end net — `claimsFromTrace` needs the abs pairing
+  (absTwinRead ↔ SNet projection, per-boundary pins) + the
+  claim-birth correspondence (roundVr's claims 0→1 readout is the
+  per-round instance); `violationImpliesDelta` real-about-bytes is
+  the span-computes-model residual — IN FLIGHT on the arc4d sibling
+  (SM1) as chartered.
+- **O6 THE ∀-STREAM LIFTS**: `SeedChoiceInvariance` + per-round
+  latitude factoring (the πX tails) — the ~ₘ transport machinery
+  (post-T1 standing decision), OR a [USER] statement-scoping call on
+  T1's stream quantifier. The canonical-stream T1 does not need them;
+  the constitution's `run = .ok r → Agreement r` form does.
+- **O7** the init-span canonical-stream kernel completion (separable,
+  priced above) + the setup span's draw-freeness check (cheap probe).
+
+Nothing UNEXPECTED surfaced: the census matches the charter's
+expectation (span-model closure = O5's second half, on the sibling;
+ClaimTrace seam = O5's first half) plus the three shape findings
+this unit's probes are for (O1 entry/exit adapters, O2b prune-seam,
+O4 dialect fragment).
+
+### Ops (build-lock protocol, this unit)
+
+- Lock taken with owner file (`campaign-arc4-U26` written into
+  `build-lock.d/owner` — U25's proposal, adopted unilaterally as
+  cheap and reversible) for the two gates; released promptly both
+  times (trap-protected). One early lock acquisition before a
+  spot-build was recognized as unnecessary (explicit-target ≤48G is
+  exempt) and released unused — noted for protocol hygiene.
+- All heavy builds thread-scaled per the ci rule (48G → 6 threads);
+  zero kills, zero OOM events this unit. Explicit-target builds
+  24–48G; probes via `lake env lean` (no cache claims made).
+
+### [AGENT] calls, tagged
+
+1. The unclean canonical-form pins NOT shipped after the Q2 probe
+   refusal (§7 two-axis + clean-form contract); the shared-C0 pins
+   shipped instead as slice 1's surviving deliverable (three
+   consumers: the induction witnesses today, cross-kind chains and
+   the T1 ladder next).
+2. The induction's canon step pinned to LITERAL equality
+   (`ChainedFrom`) per the probe verdict — with the ~ₘ route's gap
+   stated in the module docstring rather than a weaker-but-fancier
+   statement shipped; `ReachRel`-valued abstract segments chosen so
+   silent/compound rounds are honest.
+3. The ∀-stream discharge BOUNDARY-STOPPED at the analysis (the
+   charter's own clause), with the mispricing named: the 3–4-round
+   estimate buys the canonical-stream completion, not the ∀-stream
+   premise. Nothing half-built shipped; the premise stays named and
+   visible at its consumers.
+4. The Ma/Mar links' abstract pairing shipped as election-fragment
+   REFL with the honesty note in-docstring (no fake commit
+   constructors, no silent overclaim); the Vr/Vote links carry
+   genuine steps.
+5. The T1 skeleton left as a PROBE (gitignored, quoted here), not a
+   tracked module: a tracked theorem whose premises are seven named
+   unproved obligation groups would be scaffold-shaped; the log +
+   probe record is the honest form until the obligations start
+   landing.
+6. Lock owner file written without waiting for the coordinator's
+   ruling on U25's proposal ([AGENT]: additive, costs nothing,
+   evidence-based cleanup is strictly better; flagged here for
+   ratification).
+
+### What-this-taught-us
+
+- (a) **Probe-first turned a design mis-statement into a cheap
+  verdict**: the successor-canon design's two failure points (both
+  ANTICIPATED by the charter as stop conditions) cost one #eval probe
+  to establish, and the correct chaining discipline (literal, at the
+  R-form's own placement-preserving conclusion) fell out of READING
+  the statement former — the U22 lesson (read the former before
+  building) again, one level up.
+- (b) **The R-form's same-placement conclusion is load-bearing for
+  composition**: because `RoundLemmaShape` concludes at the SAME
+  `r, na₀`, a literal chain composes with ZERO frame-algebra — no
+  FrameSim transitivity, no renaming composition. The induction
+  proof is 20 lines. Statement design done right two units ago is
+  what made this unit's headline theorem small.
+- (c) **ReachRel-valued link segments are the honest fragment
+  adapter**: rounds silent in a spec fragment compose as refl instead
+  of forcing fake constructors or blocking on the full dialect.
+- (d) **An estimate that names a mechanism can still price the wrong
+  obligation**: "mirror windows at ~ₘ" is a real job (canonical
+  completion) that shares a sentence with an impossible one
+  (∀-stream by enumeration). Boundary-stopping on the ANALYSIS —
+  before any kernel time — cost nothing and kept both items honestly
+  priced.
+
+### PROMOTION LEDGER updates (A4-U26)
+
+- **The round-induction row (U22's successor row (ii)) —
+  DELIVERED**: `round_induction` + corollaries + seeded form landed
+  LIVE; the successor-canon question ANSWERED (literal chaining; ~ₘ
+  detached to the ∀-stream lift). Successor rows: the T1 obligation
+  census O1–O7 above (owners: O2/O2b generator+coordinator; O4
+  signature owner; O5 arc4d + the pairing; O6 symbolic semantics or
+  [USER] scoping; O7 a C-wave successor).
+- **NEW ROW: the prune-seam decision** (O2b) — coordinator; blocks
+  the real-round replay chain's start.
+- **NEW ROW: the entry/exit span statement variant** (O1) — a
+  C_in/C_out R-form sibling; one consumer today (the campaign span),
+  second at the exit span; build at first consumer.
+- The choice-invariance seam row: UNCHANGED (the ∀-stream lift's
+  price corrected above; the canonical-completion sub-item split out
+  as separately buildable).
+- The shared-C0 fact: kernel-pinned (three pins, corpus) — consumers:
+  cross-kind chains, the T1 ladder's single-C0 form.
+
+## A4-U26 exit (2026-08-26, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since the U25 tip
+eee6b43b: `257f1758` (the arc4c merge, 8 files/51,487 insertions,
+new-files-only), `19f57971` (slice 0: the seven manifest imports),
+`de2252ac` (slices 1+2: RoundInduction + RoundInductionWitness +
+Audit/RoundInduction + Audit/RoundIndWitness + the four aggregator
+edits), + this log commit. Builds at the exit tree: default **536
+jobs exit 0**; corpus **204 jobs exit 0**, sweep 23,278 declarations
+axiom-clean. Kit pins: +22 (7 default + 15 corpus, additive,
+in-build-verified). Hatch grep over every new tracked module: 0.
+Probes (gitignored): U26CanonProbe/u26canon.out,
+U26AbsChainProbe, U26C0PinProbe, AxU26/axu26.out,
+T1AssemblyProbe/t1assembly.out, u26-seed-build.log,
+ci-arc4-u26-s0.log.
+
+**Deliverable state vs the U26 charter:**
+1. SLICE 0, THE ARC4C LANDING — **DELIVERED** (clean merge, seven
+   imports, gate PASS with SP1's red closed).
+2. SLICE 1, THE SUCCESSOR-CANON SLICE — **DELIVERED AS THE PROBE
+   VERDICT + the surviving pins** (the design mis-states at both
+   chartered stop-condition points; reported precisely; the
+   shared-C0 kernel pins shipped; the unclean cform pins honestly
+   not).
+3. SLICE 2, THE ROUND INDUCTION — **DELIVERED AND PROVED** (the
+   statement quoted above; trace-long Fam membership + the ReachRel
+   absState trace + safety corollaries + the seeded form; witnessed
+   at all four kinds incl. a genuine EStep chain and a 2-link
+   mechanics chain). The init-span ∀-stream discharge —
+   **BOUNDARY-STOPPED AT THE ANALYSIS** with the wall stated
+   precisely and the price of each sub-item corrected (the charter's
+   own separability clause; the induction lands unconditional, the
+   premise stays visible at its consumers).
+4. SLICE 3, THE T1-ASSEMBLY PROBE — **DELIVERED** (the skeleton
+   type-checks over the landed pieces; the open-obligation census
+   O1–O7 recorded with owners; nothing unexpected beyond the three
+   shape findings the probe exists to surface).
+
+**PROPOSED NEXT CHARTER (successor / coordinator):** (1) the
+PRUNE-SEAM decision (O2b) then the real-round replay opening: the
+campaign-span entry adapter (O1) + the first 2–3 REAL round instances
+on the hands-off pipeline, chained through `round_induction` — the
+first multi-round FamTrace over real history; (2) the abs-pairing
+definition + per-boundary pins (O5's first half) so the trace pairs
+stop being witness data; (3) separately chartered, honestly labeled:
+the canonical-stream init-span kernel completion (O7, ≈35–60 min
+one-time). The span-model arc (O5's second half) continues on arc4d.
+Do NOT re-attempt the ∀-stream discharge outside the symbolic
+semantics or a [USER] scoping decision (O6).
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1); the comparator-landmark STALE (175+)
++ OWED-on-scope escalation stands — THIS unit changed Audit.lean and
+the default import closure again, and the arc4c landing folded seven
+lane modules into the default target; the operator's merge-step judge
+run + `scripts/capped lake build AuditCorpus` landmark pairing (the
+U25 runbook note) both apply.
+
+- 2026-08-26 A4-U26 gate follow-up (same-commit convention): unit-end
+  gate `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=96G scripts/ci` at the
+  exit tree, UNDER the build lock (owner file written, trap-released)
+  — **RESULT: PASS, exit 0, GATE wall=241.01s**
+  (`artifacts/ci-arc4-u26.log`, `GATE_EXIT=0` recorded IN the log; 23
+  ok steps — the U22–U25 ok-set — + the sanctioned no-diff notes +
+  the corpus deferred-sweep note now at 98 corpus-only files). This
+  unit touched no runtime code, no Corpus/, no baselines/; the Audit
+  surface GREW by 22 pins (7 default + 15 corpus) — additive,
+  in-build-verified. Comparator landmark: **STALE at 176 commits**
+  AND **OWED (scope: 2 trusted-closure files)** — both report-only,
+  standing escalated for the operator's merge step, as since U8; the
+  landmark run must pair `scripts/capped lake build AuditCorpus` per
+  the U25 runbook note.
