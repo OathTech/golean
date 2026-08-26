@@ -2215,6 +2215,27 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   non-compositional) and Fam-as-global-well-formedness (a typing
   context's job, likely the professor's call).
 
+- **[USER] 2026-08-27 — B1 CORRECTED (a coordinator error fixed):**
+  the synthesis proposed designating T1-replay as a milestone
+  theorem — [USER]: "it emphatically IS NOT in the TCB. The TCB
+  claim quantifies over all choices on the concrete interpreter.
+  The lift is untrusted machinery for making our reasoning nicer."
+  ADOPTED: the designated layer stays the harness contract ONLY —
+  (1) always-emits-correct-value (AgreementT1 as pinned, untouched)
+  and (2) **NEVER-FAULTS** (∀ fuel ch: no error/stuck/panic outcome;
+  fuel-out excluded) — the second is the [USER]-described end-state
+  statement, currently missing; draft to be prepared for [USER]
+  designation (it absorbs much of the T1-V guard census into one
+  theorem). T1-replay is DEMOTED to an internal stepping-stone
+  lemma (proof-side, log-tracked, never designated, never in
+  Challenge); the lift arc unchanged (cequiv_iff_spanIso →
+  per-class transports → bisim-up-to → verdict invariance), now
+  correctly classed as untrusted machinery end to end — no
+  designation ceremony anywhere in it. B2 confirmed [USER] same
+  session: untrusted abstractions verified w.r.t. the trusted
+  semantics, useful-not-complete. The synthesis doc's §2-B1 is
+  superseded by this entry.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
