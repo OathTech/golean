@@ -761,3 +761,94 @@ At landing (after merge-protocol steps), add exactly these lines:
 Then `scripts/ci` goes green with no other change (the un-swept red
 is exactly SM1's 8 + SM2's 11 files; all 30 + 31 pins already verify
 in-build via Audit.Span / Audit.SpanS23).
+
+## SM2 unit-end gate record (2026-08-26)
+
+`GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=96G LEAN_NUM_THREADS=16
+scripts/ci` under the box-wide build lock
+(`artifacts/lockgate-sm2.sh`, mkdir-lock + owner file + trap
+release; WAITED through two other lock holders —
+`coordinator-landing`, then `campaign-arc4-fixround` — exactly the
+protocol's serialization): `artifacts/ci-arc4d-sm2.log`,
+**GATE_EXIT=1 — the KNOWN NEW-FILES-ONLY RED, exactly as
+chartered**:
+
+- All other steps `ok` (oracle toolchain, escape hatches,
+  bug-index, feature-coverage, spec anchors, lane validation,
+  imported-goose verbatim + R2 pins, surface purity, statement-TCB
+  closure, import-direction, core build warning-free, **proofs +
+  Audit gate ok**, Challenge/Solution elaborate, verdi compat,
+  golden lowering, frontend unit tests, eval tests 141 ok) + the
+  two sanctioned no-diff notes (docs/proofs-only arc, hatch set
+  explicitly, notes printed).
+- **The ONE red, verbatim**: `FAIL proofs-file audit coverage
+  (un-swept proof file — import it from Audit.lean or
+  AuditCorpus.lean, or allowlist with a reason)`, listing EXACTLY
+  the lane's 19 new files (SM1's 8: UtoaForKit, UtoaSpan, SpanCells,
+  SpanS1, SpanS1Walk, SpanS1Witness, SpanApplyGetters, Audit/Span;
+  SM2's 11: SpanS23Maps, SpanS23Cells, SpanS23Apply, SpanS23Walk1-5,
+  SpanS23, SpanS23Witness, Audit/SpanS23) — the NEW-FILES-ONLY
+  consequence; the landing manifest above makes it green in one
+  commit.
+- **Compensating checks (all run, exit codes captured)**: every SM2
+  module `lake env lean` exit 0, ZERO warnings; every module built
+  to olean via explicit `lake build +<module>` (up to 65 jobs,
+  exit 0); `Audit/SpanS23.lean` — 31 `#guard_msgs` axiom pins —
+  verified IN PLACE (`lake env lean` exit 0, empty output), axiom
+  readouts verbatim from `artifacts/probe/axs23.out`, all within
+  [propext, Classical.choice, Quot.sound], the five
+  declaration/Func pins + two model ties axiom-FREE; hatch grep
+  (`sorry|native_decide|GOLEAN_ESCAPE`) over all 11 SM2 files: **0**.
+- Standing report-only notes, unchanged and re-escalated for the
+  operator: comparator landmark STALE (now 188 commits) + OWED
+  (scope, 2 Challenge-closure files) — standing since U8; NOT this
+  arc's surface (no designated statement touched).
+
+## SM2 EXIT (branch-complete; nothing merged)
+
+**CHECKPOINT (recomputed):** worker commits on `campaign-arc4d`
+since SM1's exit 365f4502: bb030366 (maps+cells), 3e0d40b2
+(apply pin + bridge), 298987ff (walk 1), 3030c713 (walk 2 + walk 3
+start), f7d4e0e9 (walk 3), 2a703c37 (lookup seg), e98d1d82 (spine +
+S2 engine + miss), 67403811 (walk 5 + abs step), 9dc765ec (the
+headline), 95e4d0be (witnesses + pins), bf720267 + faaa3745 + this
+one (log/manifest/gate). New tracked files: 11 modules + log
+appends.
+
+**Deliverable state vs the SM2 charter:**
+1. The string-keyed MapMem sibling — **DELIVERED** (promotable;
+   promotion target recorded).
+2. `slotFs` + `normalize_slotFs` — **DELIVERED** (+ the full
+   slot-valued byIndex fragment).
+3. The apply walk + **`s23_span_computes`** — **DELIVERED**: the
+   whole `main.twin.apply` call at symbolic checker state computes
+   `s23Step`'s fields literally; `s23_abs_step` is the projection
+   commutation; fire (S2 at the bridge's own 7/8-coded events, S3)
+   AND clean witnesses, every premise discharged.
+4. The landing manifest — **UPDATED** (SM1+SM2).
+
+**Which bridges are byte-closed:** S1 — YES (SM1). **S23 — YES**:
+`s23_span_computes` + `s23_abs_step` close the U23
+`S23CheckerInterface`'s interpreter half TO THE BYTES at symbolic
+checker state, scoped to EntryNormal entries (the model's own
+scope, C4 note) — the remaining S23 distance to T1 is the
+`appliedLog` projection (`hlog`) + the event-data renaming through
+`encGS_inj`, both assembly-time seams by design (S1's `ClaimTrace`
+class). **O5's last piece is done.**
+
+**Cost vs the 1-1.5-unit price:** ONE session ≈ 1.2 units at the
+banked rates — within price. The two map fragments (SM1's measured
+"≥2× the banked residue" trigger) came in at ≈0.25 units thanks to
+the MapMem reuse pattern; the walk's overrun risk was absorbed by
+the two lifted engines (`utoaUnit_walk`, the spine evaluator) —
+leverage, not grind.
+
+**PROPOSED NEXT CHARTER: none — the lane completes with this unit**
+(as expected by the SM2 charter). Operator items: (1) the landing
+manifest above (one green-making commit at landing); (2) the
+standing comparator STALE+OWED escalation; (3) the recorded
+promotion targets (`StrMapMem`, the spine evaluator absorbing
+`concat6_eval`) for a future consolidation slice.
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1).
