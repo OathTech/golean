@@ -5668,3 +5668,292 @@ again). The arc4c landing expectation noted for a later boundary.
   in-build-verified). Comparator landmark: **STALE at 163 commits**
   AND **OWED (scope)** — both report-only, standing escalated for
   the operator's merge step, as since U8.
+
+## A4-U23 — the MsgVote ROUND-KIND INSTANCE (the R-form's second proved instance) + THE CHECKER-INTERFACE I2 BRIDGES (2026-08-26, fresh worker, coordinator-dispatched per the U22 exit's successor rows; masked-kill rule + tree-propagation template briefed verbatim)
+
+- 2026-08-26 SUCCESSOR RE-VERIFICATION (U22's top claims, fresh
+  probes, all PASS — fresh worker per rotation):
+  - tip clean: `git status` clean on `campaign-arc4`; HEAD =
+    `dcbffa0c` (the U22 gate tip). 82G free at launch (≥ 40G floor);
+    every build capped (`GOLEAN_MEM_MAX=48G` warm / 24–32G probes)
+    with CAPTURED EXIT CODES throughout — zero SIGTERM interference
+    this session (the U22 ops flag did not fire).
+  - fresh capped proofs+Audit build: "Build completed successfully
+    (571 jobs)." exit=0 — matching U22's record
+    (`artifacts/u23-reverify-build.log`).
+  - `roundMa_lemma`/`roundMa_closure`/`roundMa_pick` present; the
+    full 14-line `AxRoundMa` probe re-run verbatim — every axiom
+    readout identical to U22's record
+    (`artifacts/u23-axroundma-reverify.out`).
+  - hatch grep over `Specs/Raft/`: **0**.
+  - U21's vote fixture re-confirmed from its probe artifact:
+    19,291/9 self-returning, 44-cell read set (`votefix.out`).
+- Sandbox note (recorded for the operator): the nono profile grants
+  `/tmp` WRITE but not READ (`nono why` verbatim: "Path is covered
+  by '/tmp', which grants write access ... but read was requested").
+  No profile change made or needed — all logs moved to the
+  repo-local gitignored `artifacts/` per project convention.
+
+### Slice 1 — THE MSGVOTE ROUND LEMMA (the R-form's second instance; U22's marginal-cost claim TESTED)
+
+- **The generator** (`artifacts/probe/RoundVoteGen2.lean`, BfLitGen
+  printer verbatim; U21's vote doctor + 44-cell prune): the U22
+  template stamped — with ONE GENERALIZATION, forced by a measured
+  finding:
+  - **TEMPLATE FINDING 1 (the choice-free quit site).** The
+    fixed-schedule first stamp (`RoundVoteGen.lean`, kept for the
+    record) failed its own γ-check at round step 3793 — the mirror
+    quits (`q3Choice`) at becomeFollower's Visit-loop **mapIterK
+    exhaustion-EXIT**, a step that consumes NO machine choice, so
+    the CHOICE CENSUS structurally cannot see it (votering.out lists
+    9 draws; the round has 10 mirror-quit sites). The MsgApp round
+    never met one (no becomeFollower in the local family). Fix, now
+    the template proper: **AUTO-DISCOVERY** — the boundary schedule
+    is driven by the mirror's own quit sites (walk until quit, cross
+    on the machine, diff, γ-check, continue; windows chunked ≤2,500
+    for module parallelism), not by the census. The census remains
+    the anatomy instrument; the generator no longer trusts it for
+    crossing placement.
+  - Result: 26 boundaries + 10 crossings (the pick @207; four Visit
+    mapIters @3522/3706/3735/3764; the choice-free Visit exit
+    @3793; four appendSpills @10764/13408/15193/15243), ALL γ-valid
+    at every boundary and crossing post; end state na 7141 / heap
+    1,100 / 9 draws consumed — the U21 fixture probe reproduced
+    exactly. Six literal files (10.2 MB, `RoundVoteLit1–6`,
+    ≤15 s elaboration each).
+- **TEMPLATE FINDING 2 (the table-consulting crossing).** The four
+  Visit-reset crossing theorems failed kernel_rfl at FREE σ while
+  the pick passed — bisected (probes `Reset1Bisect*.lean`: concrete
+  PASS, free-ρ PASS, free-σ FAIL, all four components stuck):
+  `mapIterCandidates` runs `snapshotEntriesSelfNormalized s.types …`
+  — a mapIter over a map with a DEFINED value type
+  (`map[uint64]*tracker.Progress`) consults the σ-carrier TYPE
+  TABLE; the pick's `map[int]bool` and the exhaustion-exit (empty
+  candidate list) never touch it. Fix: the resets carry the windows'
+  own `bfTB.Agrees σ` premise and rewrite through **`γS_pin`**
+  (Agrees pins all four non-heap `ExecState` fields, so the γ-image
+  over any agreeing carrier IS the γ-image over `bfTB.toState`;
+  local to `RoundVoteEqA` per §7 — promote on a second consumer).
+  The pick, the exit, and all spills stay premise-free (stronger
+  statements, kept).
+- **The modules** (`RoundVoteEqA/B/C`, `RoundVoteEquation`,
+  `RoundVoteLemma`): 16 windows + 10 crossings → three spans
+  (arm 3,794/5 draws incl. the pick and the ∀-stream choice-free
+  exit; mid 6,971/1; ring+suffix 8,526/3) → `roundVote_run`
+  (∀ρ/∀σ-tables/∀stream-tail, πVote = 9 zeros) → self-return at the
+  γ level (#eval'd true FIRST, then kernel_rfl) →
+  **`roundVote_lemma` : RoundLemmaShape canonVote canonVote'
+  roundVoteC0 19291 πVote — PROVED**, the R-form's SECOND instance,
+  at the first ELECTION-kind round. Witness-in-same-slice: identity
+  placement, `roundVote_closure` (RoundFam membership
+  re-established), readouts all #eval'd first
+  (`roundvotereadout.out`): net (true,5,1,2) → [(false,5,1,2),
+  (true,6,2,1)]; node 2 Term 0→1, Vote 0→1, lead 0 (granting names
+  no leader); violations 0→0. The U21 round-kind matrix now PROVED
+  at lemma level: the vote round is the hardstate-only ring.
+- **THE MEASURED MARGINAL COST (the charter's headline number,
+  derivation-anchored):** windows EqA 93 s + EqB 174 s + EqC 311 s
+  = **578 s module kernel** (`u23-eq-build.log`,
+  `u23-eqa-build2.log`; ≈33 steps/s — U22's MsgApp rate was
+  637 s/23,488 ≈ 37/s, same order); literals 18 jobs ≤15 s
+  (`u23-lit-build.log`); **lemma layer 3.3 s** (Equation 701 ms +
+  Lemma 2.6 s, `u23-lemma-build.log` — vs U22's 2.2 s). U22's claim
+  "adding the NEXT round kind costs its windows only" —
+  **CONFIRMED, with the two one-time template payments above**, each
+  found by bisect, fixed once, and folded into the template for
+  every future kind.
+
+### Slice 2 — THE CHECKER-INTERFACE I2 BRIDGES (`NativeCheckerBridge.lean`, 668 lines; Audit/CheckerBridge.lean)
+
+What the arc4b lane left as premises, and what this slice closes —
+stated precisely, so nothing overclaims:
+
+- **The checker FOLD MODELS**: `s1Step/s1Run` (twin-lib.go:266-280 —
+  claims++, leaderOf lookup, viol on `ok && prev != nd.id`,
+  overwrite-insert) and `s23Step/s23Run` (twin-lib.go:298-335 — the
+  two S3 cursor guards COUNTED SEPARATELY as the code counts, cursor
+  update, noop early-return, byIndex first-insert + disagreement).
+  The S3 ANOMALY sub-check (EntryNormal) stays OUT per the C4 scope
+  note, recorded in the docstring.
+- **The BRIDGES (the predicate halves, CLOSED)**:
+  `s1_viol_delta` — fold fires ⇒ `S1Delta` of the claims
+  ([propext] ONLY); `s23_viol_delta` — fold fires ⇒ the interface's
+  exact S2/S3 delta shapes (cross-node applied disagreement;
+  positional monotonicity break via the cursor-is-last-apply
+  invariant).
+- **The INTERFACE INSTANTIATIONS**:
+  `s1_interface_of_trace : ClaimTrace step N₁ events →
+  S1CheckerInterface step N₁ events (0 < (s1Run events).viols)` —
+  the `violationImpliesDelta` field is PROVED; `claimsFromTrace`
+  remains the input premise (the run-correspondence half — the T1
+  assembly's seam, named in C3's docstring as such).
+  `s23_interface_of_run : (∀ i, (Nf.node i).appliedLog = nodeEvents
+  i events) → (∀ e ∈ events, 1 ≤ e.idx) → S23CheckerInterface Nf …`
+  — BOTH sound fields proved; the appliedLog projection (`hlog`,
+  the ENode↔HNode convention seam C4 names as I2's absTwinRead
+  concern) is the remaining premise, and positivity is DERIVED from
+  the chain in:
+- **The COMPOSED COROLLARIES (the arc4b leaves run end-to-end)**:
+  `s1_model_silent` — for ANY dialect discharging the signature,
+  the model checker's S1 counter is ZERO on every claim trace;
+  `s23_model_silent` — on every reachable T1-fragment final net,
+  both S2/S3 counters are ZERO (hpos derived via
+  histIdx/appliedTake; `appliedLog_prefix_star`'s cumulative-record
+  justification is what makes the final-net `hlog` premise the
+  right shape, per C4).
+- **The SHAPE PINS (the code-side anchor)**: the four violation
+  guards occur VERBATIM among the lowered checker's if-guards —
+  `s1Guard` (`ok && prev != nd.id`) in `main.twin.harvest`,
+  `s3IdxGuard`/`s3TermGuard`/`s2Guard` in `main.twin.apply` —
+  collected recursively, compared by the sound `Expr.eqbF`
+  (the DriverNet pin pattern at guard granularity; every `.any`
+  #eval'd true first, `bridgeeval.out`). A re-lowering that
+  reshapes a guard turns the pins red.
+- **Witnesses (same-slice)**: S1 fire (two claimants of term 5 →
+  viols = 1) + clean (re-claims + fresh term → 0) + the REAL delta
+  extracted through the bridge; S23 clean at the C4-witness-shaped
+  schedule (violS2 = violS3 = 0, axiom-FREE), S2 fire (data
+  disagreement → 1), S3 fire (re-applied index → 1), and the full
+  interface instance at a concrete final net with every premise
+  discharged (`s23w_iface`).
+- **THE HONEST RESIDUAL (priced, not shipped)**: the
+  span-computes-model theorem — the interpreter walking the
+  apply/record spans performs exactly `s1Step`/`s23Step` on the
+  absState projection at SYMBOLIC checker state. Its cost driver is
+  the viol branches' `utoa` string-building (a data-dependent
+  digit LOOP with no kit lemma); DriverNet-grade span lemmas for
+  the two spans ≈ 1 unit at U20's measured rate. Until it lands,
+  the code connection is: the guards pinned verbatim (above) + the
+  proved round runs kernel-checking the checker's CLEAN path at
+  real fixtures (violations 0→0 in `roundMa_post_read` /
+  `roundVote_post_read`). **So: the spec-side leaves are now real
+  about the twin's checker MODEL with its guard vocabulary pinned
+  to the twin's bytes — not yet about the spans' full step
+  behavior; that distance is exactly the named residual (+ the S1
+  trace correspondence and the S23 appliedLog projection, both
+  assembly-time seams by design.)**
+- Audit: 12 pins `Audit/RoundVote.lean` + 13 pins
+  `Audit/CheckerBridge.lean` (additive, in-build-verified). Axioms
+  (probe `AxU23.lean`, verbatim, 31 lines): every RoundVote line
+  within [propext, Classical.choice, Quot.sound] (pick/visitExit/
+  γS_pin/selfReturn/readouts [propext, Quot.sound]);
+  `s1_viol_delta`/`s1_interface_of_trace`/`s1w_delta` [propext];
+  `s23w_clean` axiom-free. Hatch grep over all 14 new tracked
+  modules: **0**. Full build: **585 jobs, exit 0**
+  (`u23-full-build.log`).
+
+- [AGENT] calls, tagged:
+  1. The generator's fixed-schedule failure handled by GENERALIZING
+     the template (auto-discovery from mirror quit sites) rather
+     than hand-patching the schedule — the census-blind choice-free
+     quit class would recur at every becomeFollower/Visit-shaped
+     kind.
+  2. The reset crossings' free-σ wall bisected (concrete/free-ρ/
+     free-σ, then componentwise) BEFORE any fix attempt
+     (anti-grinding; the probes cost seconds each); the fix is the
+     minimal statement change (the windows' existing Agrees premise
+     + a 9-line pin lemma), not a weaker concrete-only statement.
+  3. `γS_pin` kept LOCAL to RoundVoteEqA per the §7 two-axis test
+     (one consumer family today); promotion target recorded beside
+     `symEvalWindowTB_refines`.
+  4. The checker bridges shipped at the MODEL level with verbatim
+     guard pins + priced residual, rather than attempting the
+     symbolic span walk inside this unit's budget — the §7 call:
+     the span lemma is expensive AND currently single-consumer; the
+     interface decomposition (assume-guarantee) keeps the leaf
+     chain compositional either way. The log states exactly what is
+     and is not closed (no "interfaces closed" claim).
+  5. The bridge witnesses' `by decide` uses are closed tiny-list
+     props, each #eval'd first (`bridgeeval.out`) — C4's
+     evaluated-shapes class, not the kernel-replay convention's.
+  6. Budget item 3 (no-op/local round censuses) NOT attempted — the
+     two template walls consumed the margin; the doctor-swap recipe
+     stands unchanged for a successor.
+- What-this-taught-us:
+  - (a) **The choice census under-approximates the mirror's
+    crossing set**: draws are where the MACHINE branches on the
+    stream; quits are where the MIRROR abstains — exhaustion-exits
+    consume nothing yet still split windows. Auto-discovery makes
+    the generator self-honest: its boundary set is BY CONSTRUCTION
+    the mirror's own competence boundary.
+  - (b) **∀σ-statements have a TABLE footprint**: any single step
+    that consults `s.types` (defined-type map iteration; likely
+    also method dispatch) is not kernel-reducible at a free
+    carrier. The windows always knew this (their Agrees premise);
+    crossings now inherit it exactly where the step's table
+    footprint is nonempty — a per-crossing property, measured by
+    the free-σ probe in seconds.
+  - (c) The interface-decomposition pattern (C3/C4's) composes
+    cleanly with fold-model abstraction: the leaves consume
+    interface INSTANCES, so closing the predicate halves at the
+    model level immediately yields end-to-end model-silence
+    corollaries — while leaving byte-level closure as an
+    independent, priced obligation instead of a blocking one.
+
+### PROMOTION LEDGER updates (A4-U23)
+
+- **The round-kind instance row (U22 successor row) — SECOND
+  INSTANCE DELIVERED** (MsgVote; each further kind = fixture
+  doctor-swap + auto-discovery run + windows). Remaining reachable
+  kinds: MsgAppResp families, no-op arms.
+- **The tree-propagation template row — SUPERSEDED by v3
+  (auto-discovery)**: crossings are the mirror's quit sites
+  (choice-consuming or not); windows chunked ≤2,500; the census is
+  anatomy, not schedule. Consumer: every future round kind.
+- **NEW ROW: `γS_pin` + the table-footprint crossing premise** —
+  local in RoundVoteEqA; promote beside `symEvalWindowTB_refines`
+  on a second consumer.
+- **NEW ROW: the span-computes-model residual** (the checker
+  bridges' byte-level closure): needs a utoa digit-loop kit lemma +
+  two DriverNet-grade span instances; ≈1 unit priced; consumer: the
+  I4 story's final step.
+- The choice-invariance seam row (U22): EXTENDED — πVote's latitude
+  tail is positions 1–8 (four Visit mapIters + four spills), the
+  pick position 0; identified per-crossing in the RoundVoteEq*
+  docstrings.
+
+## A4-U23 exit (2026-08-26, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since the U22 gate tip
+dcbffa0c: the U23 build commit + this log commit + the gate record
+to follow. Full proofs+Audit green: **585 jobs, exit 0** (571 + 6
+RoundVoteLit + 3 RoundVoteEq + RoundVoteEquation + RoundVoteLemma +
+NativeCheckerBridge + Audit.RoundVote + Audit.CheckerBridge). Kit
+pins: +25 (12 RoundVote + 13 CheckerBridge, additive,
+in-build-verified). Hatch grep over every new module: 0. Probes
+(gitignored): RoundVoteGen (fixed-schedule, kept as the finding's
+record), RoundVoteGen2 (auto-discovery), TwinVoteFixProbe/
+VoteRingCensus (U21's, consumed), VoteWall, Reset1Diff,
+Reset1Bisect/2, Reset1Fix, RoundVoteReadoutProbe, CheckerBodyDump,
+BridgeEvalProbe, AxU23, and their .out files.
+
+**Deliverable state vs the U23 charter:**
+1. THE MSGVOTE ROUND-KIND INSTANCE — **DELIVERED** (the R-form's
+   second proved instance, end to end, witnessed; marginal cost
+   measured and reported: 578 s windows + 3.3 s lemma layer; U22's
+   windows-only claim CONFIRMED with two one-time template payments,
+   both now template).
+2. THE TWO CHECKER-INTERFACE I2 PROOFS — **DELIVERED AS THE MODEL
+   BRIDGES + VERBATIM GUARD PINS + END-TO-END COROLLARIES**, with
+   the precise closure statement in slice 2 (predicate halves
+   closed; trace/projection premises = the assembly seams by
+   design; span-computes-model = the priced residual). NOT claimed:
+   full byte-level interface closure.
+3. Budget item (no-op/local round censuses) — **NOT REACHED**
+   (recorded; one doctor-swap each on the delivered template).
+
+**PROPOSED NEXT CHARTER (successor):** (1) the span-computes-model
+slice — the utoa digit-loop kit lemma + the apply/S1-record span
+lemmas in the DriverNet compositional mode, closing the checker
+bridges to the bytes (≈1 unit priced above); its witnesses can
+reuse this unit's fire/clean event lists as span inputs. (2) The
+remaining reachable round kinds (MsgAppResp maybeCommit family
+first — it moves commit without append, completing the round-kind
+matrix's untested row) via the auto-discovery template. (3) Budget
+permitting: the no-op/local round censuses. Do NOT attempt the
+round induction (arc4c's ~; coordinator decision, unchanged).
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1); the comparator-landmark STALE +
+OWED-on-scope escalation stands (this unit adds Audit.lean lines
+again — Audit.RoundVote, Audit.CheckerBridge).
