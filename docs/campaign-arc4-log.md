@@ -6219,3 +6219,340 @@ OWED-on-scope escalation stands (Audit.lean lines again).
   OWED-on-scope escalation. The full-build retry runner was left
   running (12 attempts, 5-min backoff); its final state is in
   `u24-full-build.log`.
+
+## A4-U25 — SLICE 0: THE VALIDATION-CORPUS BUILD SPLIT (the OOM incident's correction (a)) + THE ELECTION-COMPLETION ROUND-KIND INSTANCE (the R-form's fourth proved instance; the structural ring-shape matrix COMPLETES) (2026-08-26, fresh worker, coordinator-dispatched per the U24 exit charter; build-lock protocol briefed and used)
+
+- 2026-08-26 SUCCESSOR RE-VERIFICATION (U24's top claims, fresh
+  probes, all PASS — fresh worker per rotation):
+  - tip clean: `git status` clean on `campaign-arc4`; HEAD =
+    `31370e33` (the U24 gate-record tip).
+  - the warm cache green: spot-build of three heavy targets
+    (RoundMarEqC, RoundVoteEqC, RoundMaEqB) — "Build completed
+    successfully (49 jobs)", wall 0.17 s, EXIT=0 (instant cache
+    hits, as claimed).
+  - RoundMar modules present (7 Lit + EqA–D + Equation + Lemma +
+    Audit/RoundMar with 14 pins); `axu24.out` re-read verbatim —
+    every readout within the classical trio, exactly as recorded.
+  - hatch grep over the U24 modules: **0**.
+- Sibling (campaign-arc4c) untouched; no Seed*/Choice*/Quot* names
+  created (the new names are GoLeanProofsCorpus/AuditCorpus/RoundVr*).
+
+### Slice 0 — THE VALIDATION-CORPUS BUILD SPLIT (delivered)
+
+- **The census** (mechanical, not name-pattern:
+  `artifacts/probe/corpus-census.sh`, exit 0 = every corpus module's
+  importers are inside the corpus set + aggregators): 68 modules at
+  the split (89 after this unit's Vr chain joined) — the Ring span
+  chain (9), the RoundMa/RoundVote/RoundMar instance chains (11+11+13),
+  and the handler-equation validation chains
+  (Hae/Stale/La/Bl/HhAdv/MsErr+MsResite/HaeRej/HhFrom/SfHb/SfPd/
+  SCHb/Slb — 24). **Kept in the default target by the criterion**
+  (live importers, verified): RoundHbLit (RoundStatement imports it),
+  HhLit/HhEquation (ShapeWitness — FrameSimS's discharge witness),
+  the Bf/Bc fixture chains + AllocEq/AllocEqWave1/BpcResite/Bf31/Bc31/
+  MsEquation (RoundStatement/AbsStateV2 closure), StaticCells(+Ext)
+  (link-pin pattern machinery, small). [AGENT] the criterion decided
+  every membership; two borderline calls tagged below.
+- **The mechanism**: two new NON-DEFAULT lake libs in
+  `proofs/lakefile.toml` — `GoLeanProofsCorpus` (the corpus
+  aggregator, census + discipline in its header) and `AuditCorpus`
+  (the corpus's Audit.lean: hosts Audit/Ring+RoundMa+RoundVote+
+  RoundMar+RoundVr and re-runs the exhaustive axiom sweep verbatim
+  over the corpus closure). Landmark invocation, documented in the
+  lakefile comment and here: **`scripts/capped lake build
+  AuditCorpus`** (under the build-lock at full cap when cold).
+  `scripts/ci`'s proofs-file coverage step is now a TWO-CLOSURE
+  check: default (Audit+GoLeanProofs) ∪ corpus (AuditCorpus+
+  GoLeanProofsCorpus) ∪ standalone allowlist; corpus-only files are
+  counted and reported as a visible note ("swept at landmark corpus
+  builds"), and a file in NEITHER closure still FAILS — fail-closed
+  preserved, honesty visible (this gate does NOT sweep the corpus).
+  Verified by simulation before landing
+  (`artifacts/probe/pfcheck-sim.sh`: 96 corpus-only files, 0
+  uncovered) and by the live gate (note printed, step ok).
+- **MEASURED PAYOFF (derivation-anchored):**
+  - default proofs build: **599 jobs → 527 jobs** (72 = 68 corpus
+    modules + 4 Audit pin modules off the gate path; before-count
+    from `proofsbuild-u24.log`, after from `u25-default-build.log`).
+  - full-gate wall: **927 s → 230 s (−75 %)** — before = the U24
+    operator gate (`ci-arc4-u24-final.log`, file birth 05:52:42 →
+    mtime 06:08:09, warm cache, 96G/12 threads); after =
+    `ci-arc4-u25.log` (GATE_START 06:54:34 → GATE_END 06:58:24,
+    wall=230.44 s by /usr/bin/time, warm cache, same cap/threads).
+    Honest caveat: both are warm-cache walls — the delta bundles the
+    gate-scope shrink (every multi-MB literal and 100–400 s Eq
+    kernel module out of the gate's trace-check/build set) with
+    run-to-run variance; the durable structural claim is the job-set
+    reduction and that interface-hot invalidations of the corpus
+    tail no longer owe the GATE anything (the U24 incident's
+    2084 s sequential warm — `warm-u24.log` birth 05:17:58 → mtime
+    05:52:42 — was paid to re-elaborate exactly the tail this split
+    moves out of the default build).
+  - corpus build at warm cache: 2.2 s ("Build completed successfully
+    (192 jobs)"; corpus sweep **22,538 declarations, all
+    axiom-clean**); default sweep after the split: 38,034
+    declarations; statement-TCB gate 56 designated, green.
+- **Where new corpus content lands**: imports into
+  GoLeanProofsCorpus.lean, pins into a module imported by
+  AuditCorpus.lean — never GoLeanProofs.lean/Audit.lean. This unit's
+  Vr chain is the discipline's first consumer.
+
+### The ELECTION-COMPLETION round (charter item 2 — delivered end to end)
+
+- **The fixture** (`TwinVrFixProbe.lean` → `vrfix.out`): doctor at
+  **anchor 2** (cum step 139,898 — the last CANDIDATE loop head:
+  node 1 state=1, Term=1, Vote=1, self-vote polled) = the single
+  live **MsgVoteResp {Type 6, From 2, To 1, Term 1, Reject nil =
+  GRANTED}**; prune 49 cells. Round: **33,274 steps / 25 draws,
+  self-returning**. POST: node 1 **state 1→2, lead 0→1** (the
+  anchor 2→3 transition of the real pinned run, replayed at the
+  doctored fixture), committed/applied 1→1 (the noop is APPENDED,
+  its quorum-commit is the Mar family's round — the matrix's rows
+  compose), net: resp dead + TWO MsgApp (1→2, 1→3, the noop
+  broadcast) live.
+- **The generator** (`RoundVrGen.lean` → `roundvrgen.out`,
+  auto-discovery v4): 69 boundaries — 39 windows + 30 crossings
+  (the pick @207; 16 tracker/map Visit mapIters in four clusters;
+  8 appendSpills; **FIVE choice-free Visit exhaustion-exits**, the
+  FOURTH round kind confirming U23 lesson (a)) — **ALL γ-valid
+  first try**; 14 Lit files (32 MB, the largest round yet — landing
+  directly in the corpus target, which is the split's point).
+- **TEMPLATE FINDING (fixed, now template): the printer's fail-open
+  panic.** `pC`'s catch-all `panic!` in pure String context returns
+  the Inhabited default `""` — the first generation emitted an
+  EMPTY def body (`vrCB3`: a ≤2500-step chunk boundary landed on a
+  `.returning` config, a shape the printer never met in three prior
+  rounds). Caught by the Lit build's loud syntax error, diagnosed
+  from the single PANIC line in the .out. Fix in the generator: all
+  sequential `Sym.Config` constructors covered
+  (breaking/continuing/returning/labeled/panicking/panicked) + the
+  catch-all now emits a `!!UNPRINTABLE_CONFIG!!` sentinel that
+  cannot elaborate — fail-noisy even if the panic line is missed.
+- **Emitter hardening (v5, `emit_vr_eq.py`)**: the U23/U24
+  table-footprint pattern is BAKED IN — every non-pick 1-draw
+  reflect crossing carries the windows' `bfTB.Agrees σ` premise and
+  rewrites through `RoundVote.γS_pin` (`SymTables.Agrees.concS_eq`).
+  Result: **zero hand-written window theorems AND zero
+  post-emission hand edits** (U24 still hand-patched its six Visit
+  crossings); all five Eq modules passed first try. [AGENT] the
+  uniform premise slightly weakens crossings that would hold
+  premise-free (e.g. votes-map iterations) — accepted per §7: the
+  hag form composes identically in the span and buys a
+  fully-mechanical pipeline.
+- **The modules** (RoundVrLit1–14, RoundVrEqA–E, RoundVrEquation,
+  RoundVrLemma; all in the CORPUS target):
+  **`roundVr_lemma` : RoundLemmaShape canonVr canonVr' roundVrC0
+  33274 πVr — PROVED**, witnessed (identity placement +
+  `roundVr_closure`), self-return at the γ level (#eval'd true
+  first). Readouts #eval'd first (`roundvrreadout.out`) then
+  kernel-pinned: pre (0 violations, **0 claims**, [(true,6,2,1)]) →
+  post (0 violations, **1 claim — THE S1 LEADERSHIP CLAIM IS BORN
+  in this round**, the exact event the NativeS1Chain/CheckerBridge
+  fold consumes), state 1→2, lead 0→1, committed 1→1.
+- **MEASURED MARGINAL COST**: literals ≤30 s each; window kernel
+  EqA 211 + EqB 268 + EqC 297 + EqD 382 + EqE 176 = **1334 s module
+  kernel** (33,274 steps ≈ 25 steps/s — U22 37/s, U23 33/s: same
+  order, the trend tracks per-window literal size); wall 382.6 s at
+  12 threads/96G; **lemma layer 5.0 s** (Equation 744 ms + Lemma
+  4.3 s). The windows-only marginal-cost claim holds at the fourth
+  instance, now with zero hand-theorem overhead.
+- Audit: **16 pins** (`Audit/RoundVr.lean`), swept by the corpus
+  target (`u25-corpus-gate.log`: 192 jobs, exit 0 — a #guard_msgs
+  mismatch would have failed it). Axioms (`AxU25.lean` →
+  `axu25.out`, verbatim, 21 lines): all within [propext,
+  Classical.choice, Quot.sound]; crossings/selfReturn/readouts
+  [propext, Quot.sound]. Hatch grep over all 23 new tracked
+  modules: **0** (the only matches are AuditCorpus.lean's
+  documentation/error-message prose, same as Audit.lean's own).
+
+### Budget item — the no-op row, CENSUSED
+
+`TwinNoopFixProbe.lean` → `noopfix.out`: the STALE MsgAppResp
+{Index 1, below the pending noop at 2} at leader anchor 4 →
+**20,984 steps / 7 draws, self-returning, ZERO node-state movement**
+(state/lead/Term/committed/applying/applied all unchanged; the net
+emits one probe MsgApp 1→2 — a state-no-op, not net-silent; recorded
+as such). The matrix's trivial row is one emitter run away if the
+induction needs it as a lemma. The "local" row was NOT attempted
+(what "local" means in the quiet single-proposer config needs a
+coordinator definition before a census can claim it).
+
+### THE ROUND-KIND MATRIX — STRUCTURAL RING SHAPES COMPLETE
+
+All at lemma level: heartbeat = no ring work (T1-vacuous, U18);
+MsgVote = hardstate-only ring (U23); MsgApp-append = the full
+storage-append ring (U22); MsgAppResp-maybeCommit = the commit ring
+(U24); **MsgVoteResp-becomeLeader = the election ring (state
+transition + local noop append + broadcast) — this unit**. No ring
+shape remains unexercised. What remains between the matrix and the
+ROUND INDUCTION, stated precisely:
+  1. the arc4c ~ (the sibling's latitude/state quotient — the
+     coordinator's standing decision: do NOT attempt here);
+  2. the successor-canon question (U22 ledger row: canon' is THE
+     literal end state, not yet a canonicalized family
+     representative — the induction's carried relation needs the
+     representative choice designed);
+  3. IF the induction quantifies over all reachable kinds (not just
+     shapes): the shape-REUSE instances — MsgProp leader-accept
+     (the leader-side append ring) and the no-op/local rows — each
+     one doctor + one emitter run on the delivered pipeline.
+
+### Ops (recorded for the operator, correcting the record)
+
+- **THE "REAPER" KILLS THIS UNIT WERE SELF-INFLICTED OOM — hard
+  evidence.** The five parallel Vr Eq modules under the default
+  (unscaled) LEAN_NUM_THREADS breach a 48G cap at ~25 s;
+  `systemctl --user show <scope>` says **`Result=oom-kill`**, and
+  systemd's `OOMPolicy=stop` then SIGTERMs the scope — surfacing as
+  the familiar exit-143 "reaper" fingerprint. A decoy experiment
+  (four long-lived processes with argv "lake build …", "foo build
+  …", "lake env lean …" — all survived 100 s) REFUTES the
+  argv-pattern-pkill theory for THIS unit's kills. The fix that
+  worked immediately: LEAN_NUM_THREADS=12 at 96G under the held
+  lock (ci's cap/8G scaling rule — it belongs on every heavy ad hoc
+  build, not just inside scripts/ci). NOT claimed: that U22/U24's
+  kills share this cause — U24 recorded stable memory and
+  lake-build-only selectivity, a different signature; that item
+  stands open, but every future 143 should check
+  `systemctl --user show <scope> -p Result` FIRST (seconds, and it
+  is dispositive).
+- **Build-lock protocol, exercised**: waited 06:15→06:36 for a
+  sibling's lock (two 120 s retry cycles + work-while-waiting),
+  acquired 06:36:35, ran the Eq build + the gate under it. FLAG:
+  at release (07:00) the lock dir was ALREADY GONE — removed
+  externally while held. The bare-mkdir protocol cannot distinguish
+  a stale lock from a held one; proposal for the coordinator: the
+  holder writes an owner file (lane + pid + timestamp) into the
+  lock dir so cleanup can be evidence-based.
+- The comparator landmark: **STALE at 170 commits** AND **OWED
+  (scope)** — both report-only, standing escalated for the
+  operator's merge step, as since U8. This unit's gate ALSO prints
+  the landmark scope note (trusted-closure files changed) — the
+  step-2 comparator-judge trigger at the merge boundary stands.
+  NOTE for the landmark runbook: the judge builds Solution against
+  the DEFAULT tree, which no longer contains the corpus — a
+  landmark run should ALSO run `scripts/capped lake build
+  AuditCorpus` so the corpus sweep is fresh at the same commit
+  (this is the "corpus builds at landmarks" discipline's first
+  standing consumer).
+
+- [AGENT] calls, tagged:
+  1. Census memberships decided by the importer-closure criterion
+     mechanically; StaticCells/StaticCellsExt kept DEFAULT despite
+     all current importers being corpus (pattern machinery, small,
+     future live consumers plausible) — the conservative direction;
+     MsResite moved (single corpus importer).
+  2. AuditCorpus duplicates Audit.lean's sweep #eval VERBATIM
+     (sync note in both headers) instead of refactoring the sweep
+     into a shared def — minimal churn on the trust surface; the
+     coherence audit's mechanism registry can revisit.
+  3. The ci coverage step's two-closure form validated by offline
+     simulation BEFORE landing; the corpus-only count is a note,
+     not an ok-line suffix, so summaries can't silently absorb it.
+  4. The Vr Eq build run at 96G/12-threads under the HELD lock
+     after the oom-kill diagnosis (the lock's exact purpose), not
+     retried blind at 48G.
+  5. The emitter's uniform table-pin premise (over per-crossing
+     minimality) — §7 two-axis: repeated consumer (every future
+     kind) buys the general form; the premise-free strengthening
+     is a one-line edit per crossing if ever needed.
+  6. The gate ran on the exit TREE before the build commit (content
+     identical; the log commit follows the same-commit convention
+     as U22–U24).
+  7. Slice-0-first ordering held even though the lock wait stalled
+     the gate: the split landed and was validated by explicit-target
+     builds before any Vr content existed, so the Vr chain could
+     land straight into the corpus target (no interim default-build
+     bloat).
+- What-this-taught-us:
+  - (a) **Check `Result=` before naming a villain**: one systemctl
+    line distinguishes oom-kill from external SIGTERM; this unit
+    nearly filed its kills under U24's reaper narrative. The
+    fingerprint library grows: exit 143 + ~constant time-to-kill +
+    parallel heavy modules ⇒ suspect the cap, not the box.
+  - (b) **Pure-context `panic!` is fail-OPEN in generators**: it
+    returns the Inhabited default and the pipeline keeps going. Any
+    printer's catch-all must emit a syntactically-invalid sentinel
+    so the failure surfaces at the artifact, not three steps later
+    (or never).
+  - (c) The build split's leverage is exactly where the incident
+    said: the gate now costs O(live tree) regardless of how much
+    validation-corpus weight the campaign banks — the fourth round
+    kind added 32 MB of literals and the gate wall went DOWN.
+  - (d) A round kind is now: one anchor choice + one doctor + two
+    machine runs + one emitter run — with the printer and
+    table-pin fixes, the FIRST fully hands-off instance (zero
+    hand-written or hand-edited theorems end to end).
+
+### PROMOTION LEDGER updates (A4-U25)
+
+- **The round-kind instance row — FOURTH INSTANCE DELIVERED**
+  (election-completion; the structural ring-shape matrix COMPLETE).
+  Remaining reachable kinds are shape-reuses (MsgProp
+  leader-accept; the no-op row censused this unit; the "local" row
+  needs a coordinator definition).
+- **The auto-discovery template row — HARDENED (v5)**: printer
+  totality + fail-noisy sentinel; the table-pin premise baked into
+  the emitter; consumer: every future kind, now hands-off.
+- **NEW ROW: the corpus-target discipline** — new validation
+  artifacts import into GoLeanProofsCorpus/AuditCorpus, never the
+  default aggregators; the landmark build
+  (`scripts/capped lake build AuditCorpus`) joins the
+  comparator-landmark runbook. Consumer: every corpus-touching
+  unit; owner: this file's conventions + the lakefile comment.
+- **NEW ROW: the build-lock owner-file proposal** (ops) — the bare
+  mkdir cannot prove ownership; coordinator decision wanted.
+- The choice-invariance seam row: EXTENDED — πVr position 0 the
+  pick, positions 1–24 latitude (16 Visit mapIters + 8 spills),
+  identified per-crossing in the RoundVrEq* docstrings; the five
+  choice-free exits hold ∀-stream already.
+
+## A4-U25 exit (2026-08-26, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since the U24 tip
+31370e33: `94b5a04c` (the build: the split + the Vr round) + this
+log commit. New tracked modules: GoLeanProofsCorpus + AuditCorpus +
+14 RoundVrLit + RoundVrEqA–E + RoundVrEquation + RoundVrLemma +
+Audit/RoundVr (+ edits: GoLeanProofs.lean, Audit.lean,
+lakefile.toml, scripts/ci). Gate at the exit tree: **RESULT: PASS,
+exit 0, wall 230.44 s** (`artifacts/ci-arc4-u25.log`, GATE_EXIT=0
+in the log; 23 ok steps — same ok-set as U22–U24 — + the sanctioned
+no-diff notes + the NEW corpus deferred-sweep note; this unit
+touched no runtime code, no Corpus/, no baselines/). Corpus target
+green at the same tree: 192 jobs exit 0, sweep 22,538
+declarations. Kit pins: +16 (RoundVr, additive, corpus-swept).
+Hatch grep over every new tracked module: 0. Probes (gitignored):
+TwinVrFixProbe/vrfix.out, RoundVrGen/roundvrgen.out (+gen/),
+emit_vr_eq.py, RoundVrReadoutProbe/roundvrreadout.out, AxU25/
+axu25.out, TwinNoopFixProbe/noopfix.out, corpus-census.sh,
+pfcheck-sim.sh, u25-*.log.
+
+**Deliverable state vs the U25 charter:**
+1. SLICE 0, THE VALIDATION-CORPUS SPLIT — **DELIVERED** (censused
+   mechanically, fail-closed coverage preserved with the visible
+   deferred-sweep note, payoff measured: 599→527 jobs, gate wall
+   927→230 s with the caveat recorded).
+2. THE ELECTION-COMPLETION ROUND — **DELIVERED** (the R-form's
+   fourth proved instance, end to end, witnessed, hands-off
+   pipeline; the structural ring-shape matrix COMPLETE, with the
+   matrix→induction gap stated precisely).
+3. Budget item — **the no-op row CENSUSED** (state-no-op verified;
+   the "local" row explicitly returned to the coordinator for
+   definition).
+
+**PROPOSED NEXT CHARTER (successor):** (1) the span-computes-model
+1.5–2-unit arc from U24's banked map (unchanged priority — the
+checker story's byte-level closure; plain-for head schema → utoa
+weak span → viol span → S1-record span → s1 end-to-end); (2) the
+successor-canon representative design (the matrix→induction gap's
+item 2 — a design slice, likely coordinator-gated); (3) budget
+permitting: the MsgProp leader-accept shape-reuse instance on the
+hands-off pipeline (one doctor + one emitter run). Do NOT attempt
+the round induction (arc4c's ~; coordinator decision, unchanged).
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1); the comparator-landmark STALE (170)
++ OWED-on-scope escalation stands, now with the corpus-at-landmarks
+runbook note (Audit.lean lines changed again this unit — the
+scripts/ci diff also owes the audit's delta-review attention as
+gate-adjacent).
