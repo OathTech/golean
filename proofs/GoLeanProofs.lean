@@ -185,6 +185,12 @@ import GoLeanProofs.Specs.Raft.NativeCheckerBridge
 import GoLeanProofs.Frame.ChoiceCanon
 import GoLeanProofs.Frame.ChoiceCanonWitness
 import GoLeanProofs.Frame.ChoiceInv
+-- Choice-erasure arc CE1 (2026-08-27): the relational face of ~ₘ —
+-- SpanIso (the ∃-bijection-on-reachable-spans specification, no
+-- canonicalizer references by hard constraint) + its direct
+-- occupation/refutation witnesses (witness-with-its-law).
+import GoLeanProofs.Frame.SpanIso
+import GoLeanProofs.Frame.SpanIsoWitness
 import GoLeanProofs.Specs.Raft.SeedLit
 import GoLeanProofs.Specs.Raft.SeedLitVar
 import GoLeanProofs.Specs.Raft.SeedCFormLit
