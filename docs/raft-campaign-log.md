@@ -2368,6 +2368,30 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   never-faults/completion). Designation = [USER]'s at the landing;
   the proof plan is invariant-first either way.
 
+- **[USER] 2026-08-27 — BOUNDED THEOREMS FORBIDDEN (doctrine) +
+  the honest census:** "Bounded theorems are completely forbidden,
+  except as a stepping stone. Finite unrollings don't generalize."
+  [AGENT] honest answer to the direct question, on the record: YES
+  — the landed round-level artifacts are FIXED-TRAJECTORY theorems
+  (single execution paths from fixture orbits, exact step counts,
+  censused prefixes; ∀-content = placements + window capacities +
+  stream TAILS only; round_induction is list-general in form but
+  literal-canon chaining makes its instances concrete
+  trajectories). What is genuinely general: the abstract layer
+  (∀-state ∀-n invariance), the machinery (frames, transports,
+  lens, SliceWalk = a real loop rule), the checker span specs, the
+  statement layer. CLASSIFICATION: the fixed-trajectory middle =
+  STEPPING STONES (permitted as such, now spent) — no role in the
+  proof; the proof = loop rule + invariant (+ variant) + function
+  specs + init spec + the erasure lift. WORKER DISPOSITION: both
+  in-flight lanes KEPT (wave α = kills/legibility/statement-former
+  generalizations; CE1 = ∀-state congruence theory — both on the
+  right side of the line); the replan lands in the summit work
+  list, not in killing compliant work. Standing rule for all
+  future charters: any theorem whose statement contains a concrete
+  step count, round count, or fixture identity is stepping-stone
+  tier BY DEFINITION and must be labeled so at birth.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
