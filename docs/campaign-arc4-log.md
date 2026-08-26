@@ -5475,3 +5475,183 @@ landing to the scope trigger's motivation.
   - Deliverable-5 status upgraded: **DELIVERED at census level**
     (the fixture + anatomy + draw classification; the vote round's
     own arm/ring spans are C2d+ instantiations of the same shells).
+
+## A4-U22 — C2d: THE R-FORM'S FIRST PROVED INSTANCE — the MsgApp append-family ROUND LEMMA (2026-08-26, same worker as U21, coordinator-dispatched per the C2c report's proposed charter; C2c accepted with all [AGENT] calls endorsed)
+
+- SAME-WORKER CONTINUATION (no fresh re-verification owed; the U21
+  exit state re-confirmed: tip 4a158041 clean, 559 jobs green — the
+  C2d base). Coordinator notes held live: (1) the arc4c sibling lane
+  (no Seed*/Choice*/Quot* file names — none created; arc4c's worktree
+  verified untouched by this session); (2) the choice-invariance
+  stop-condition (did NOT fire — see the seam note below); (3)
+  conventions unchanged.
+
+### The route decision (read-first, then build)
+
+`RoundStatement.lean` re-read closely BEFORE building: the R-form's
+conclusion is an EXISTENTIAL WEAK-FrameSim placement (`∃ σF', … ∧
+∃ na' fr', FrameSim …`) — NOT a literal splice — so the instance
+decomposes as **one canonical run + one wholesale transport**
+(`stepFnIter_sim`, Frame/Transfer.lean — the weak iteration theorem,
+found present with fixed-index `TripSim`), and neither `span_consume`
+nor the arc4c ~ is needed for the lemma to STATE. Two consequences,
+both recorded:
+- **The stop-condition did not fire**: πMa stays the concrete
+  censused prefix; position 0 is THE SEMANTIC DELIVERY PICK (which
+  live message is delivered), positions 1–7 latitude appendSpills —
+  the factoring's INPUT identified per-crossing, the factored form
+  (latitude absorbed under ~) awaiting arc4c, as the coordinator's
+  note anticipated.
+- **DESIGN FINDING (reported, not shimmed)**: the charter's "five
+  ring spans consumed via span_consume" clause is structurally
+  unavailable — `FrameSimS`'s shape clause hands back ONE contiguous
+  frame splice, but a PRUNED sub-fixture (the ring's 27 cells) sits
+  INTERLEAVED in the outer round state's heap list, so no FrameSimS
+  placement of the ring fixture into the round state exists (the
+  extend constructor also requires the frame off-image — impossible
+  at identity). Sub-span reuse inside a bigger walk needs a
+  multi-splice FrameSimS or a heap-permutation/finmap quotient (the
+  arc4c ~ CLASS, state edition) — the coordinator's design queue.
+  The instance RE-WALKS the ring at the round fixture (~11 min of
+  one-time parallel kernel); the C2c spans stand as the per-arm
+  interface statements + the composition-witness demonstration.
+
+### The canonical run (93940c41; generator `artifacts/probe/RoundMaGen.lean`)
+
+- **The full-round literals**: the C2c fixture walk extended anchor
+  → anchor (23,488 steps), 12 mirror windows + 8 crossings, ALL
+  γ-valid at every boundary AND crossing post (the generator's
+  builtin fidelity check); GENERALIZED DIFF-CROSSINGS (the machine
+  post positionally diffed against pre; the diff applied to the
+  mirror state — works uniformly for the 7 spills and the PICK,
+  whose post is one appended iteration cell); the pick's post-config
+  reflected + γ-checked. `RoundMaLit1–6` (8.2 MB, six files, 4–11 s
+  elaboration each).
+- **The segment spans** (`RoundMaEqA/B/C`, parallel window modules):
+  arm 7,213/3 draws (incl. `roundMa_pick` — THE SEMANTIC CROSSING,
+  subsecond at shared terms), ring-head 8,171/3, send+suffix
+  8,104/2; module kernel times 139 s / 225 s / 273 s (the round's
+  23,488 steps ≈ 10.6 min one-time).
+- **`roundMa_run`** (`RoundMaEquation`): the composed
+  ∀ρ/∀σ-tables/∀stream-tail canonical run; **self-return at the γ
+  LEVEL** (`roundMa_selfReturn_conc`, closed kernel_rfl — the Sym
+  literals differ representationally (reflected vs propagated), the
+  MACHINE configs are identical: the census's config-identity as a
+  definitional fact; the Sym-level equality would have been FALSE,
+  caught at design time by the U21 lesson, not by a failed build).
+- **`roundMa_lemma`** (`RoundMaLemma`): **RoundLemmaShape canonMa
+  canonMa' roundC0 23488 πMa — PROVED** (elaborates in 2.2 s: the
+  transport glue is ~10 lines over `stepFnIter_sim` + `ExSim.ok_inv`
+  — the R-form's ∀-placement quantifier discharged by the C1
+  instrument wholesale, per its Abadi–Lamport docstring pin). The
+  U18 SCAFFOLD marker updated in `RoundStatement.lean` (truth
+  maintenance; original caveat kept for the record).
+- **Witness-in-same-slice**: `roundMa_witness_identity` (the lemma
+  discharged at the concrete identity placement — every premise
+  concrete), `roundMa_closure` (RoundFam membership of the successor
+  canon re-established — the induction's carried relation),
+  round-delta readouts #eval-checked first then kernel-pinned:
+  net [(true,3,1,2)] → [(false,3,1,2),(true,4,2,1)] (the MsgApp
+  delivered-and-dead, the MsgAppResp live), applied 1→2 through the
+  deep reader, violations 0→0 (the checker held).
+- Audit: 10 pins (`Audit/RoundMa.lean`). Axioms (probe `AxRoundMa`,
+  verbatim): spans/run/lemma/witness/closure [propext,
+  Classical.choice, Quot.sound]; roundMa_pick / selfReturn_conc /
+  all four readouts [propext, Quot.sound]. Hatch grep over all
+  eleven new tracked modules + Audit/RoundMa.lean: **0**. Full
+  build: **571 jobs, exit 0**.
+
+### Shared-box interference (process note, recorded for the operator)
+
+Four consecutive `lake build` invocations were SIGTERM'd mid-run
+(exit 143; setsid-detached AND harness-managed both) during a window
+when the arc-2 sibling session was churning ~160 systemd user scopes
+of its own capped builds; `lake env lean` probes were never touched.
+No cgroup/OOM evidence (memory stable, SIGTERM not SIGKILL); the
+one-module-at-a-time retry on a quiet box went straight through.
+Worth an operator look at wave-boundary cleanup patterns on the
+shared box (a `pkill`-style reaper that matches other lanes' builds
+would explain it); no repo change made for it.
+
+- [AGENT] calls, tagged:
+  1. Route: canonical-run + weak-transport instead of span_consume
+     composition — decided from the R-form's ACTUAL pinned statement
+     (read-first), with the span_consume structural limitation
+     reported as the design finding above rather than shimmed
+     (coordinator note (2)'s instruction followed at the
+     state-equivalence analogue).
+  2. The self-return equality placed at the γ level closed, not the
+     Sym level (representation-honesty; would otherwise be a false
+     goal — the U21 third-wall lesson applied at design time).
+  3. The pick crossing shipped via the generalized diff template
+     with a reflected+γ-checked config (the analyzed tree-risk paths
+     documented in the generator; measured subsecond).
+  4. The RoundStatement docstring edit is truth maintenance on a
+     shipped module's PROSE (statement untouched), recorded here.
+- What-this-taught-us:
+  - (a) **Read the statement former before building the instance**:
+    the charter's composition plan (span_consume) and the R-form's
+    actual needs (weak transport) diverged; an hour of reading
+    replaced a structurally impossible build path with a 10-line
+    proof.
+  - (b) The tree-propagation template GENERALIZES: the diff-crossing
+    form handles ANY machine step (spills, picks — and by
+    construction any future crossing kind) with the same
+    cheap-comparison guarantee; it is now the round-chain template
+    proper, not a spill special-case.
+  - (c) At a 23,488-step chain the mirror kernel's cost splits ~10.6
+    min windows + ~3 s lemma — the statement layer is now O(reading
+    the transport), exactly what the compositional mode promised:
+    adding the NEXT round kind costs its windows only.
+
+### PROMOTION LEDGER updates (A4-U22)
+
+- **The RoundLemmaShape scaffold row (U18) — CONSUMED/DISCHARGED**:
+  first proved instance landed. Successor rows: (i) the remaining
+  REACHABLE round kinds (MsgVote — its census landed in U21;
+  MsgAppResp families; no-op arms) as further instances — each costs
+  its fixture + windows only (the U21 doctor-swap + this unit's
+  generator template); (ii) the ROUND-INDUCTION assembly over
+  RoundFam (the C-ladder's next rung — needs the successor-canon
+  question answered: canon' here is THE literal end state, not yet a
+  canonicalized family representative).
+- **NEW ROW: the span_consume multi-splice/permutation gap** (the
+  design finding) — consumer: any sub-span reuse inside a bigger
+  walk; unblock: arc4c's ~ (state edition) or a multi-splice
+  FrameSimS; owner: the coordinator's design queue.
+- **NEW ROW: the choice-invariance factoring seam** — πMa's
+  latitude tail (positions 1–7) identified per-crossing in the
+  RoundMaEq* docstrings; the factored ∀-latitude form is one rewrite
+  of `roundMa_run`'s prefix when the arc4c ~ lands.
+- The tree-propagation template row (U21) — generalized (lesson (b)).
+
+## A4-U22 exit (2026-08-26, tip = this commit)
+
+**CHECKPOINT (recomputed):** worker commits since the U21 exit
+4a158041: 93940c41 (the C2d build) + this log commit + the gate
+record to follow. Full proofs+Audit green: **571 jobs, exit 0**
+(559 + 6 RoundMaLit + 3 RoundMaEq + RoundMaEquation + RoundMaLemma
++ Audit.RoundMa). Kit pins: +10 (additive). Hatch grep over every
+new module: 0. Probes (gitignored): RoundMaGen (+ its .out rounds),
+RoundMaReadoutProbe, AxRoundMa.
+
+**Deliverable state vs the C2d charter:**
+1. THE FIRST REACHABLE ROUND-KIND LEMMA — **DELIVERED** (the R-form's
+   first proved instance, end to end, witnessed, with the semantic
+   pick explicit and the factoring seam prepared).
+2. Arm windows in the tree-propagation template — **DELIVERED**
+   (generalized to ALL crossing kinds).
+3. The five ring spans via span_consume — **DELIVERED AS THE DESIGN
+   FINDING + the re-walk** (structurally unavailable at a pruned
+   sub-fixture; reported for the coordinator's design queue; the
+   R-form instance did not need it).
+4. The landed U20 driver-loop spans — consumed IMPLICITLY (the
+   round's rebuild/liveCount segments ride inside the windows; the
+   |net|-symbolic forms remain the multi-net-shape generalization's
+   tool, not this single-fixture instance's).
+5. MsgVote/no-op round census — already landed in U21's budget item.
+
+Nothing merged; branch-complete. Merge/audit-ask remain the
+operator's (constitution §4.1); the comparator-landmark STALE +
+OWED-on-scope escalation stands (this unit adds Audit.lean lines
+again). The arc4c landing expectation noted for a later boundary.
