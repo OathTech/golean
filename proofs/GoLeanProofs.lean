@@ -97,6 +97,20 @@ import GoLeanProofs.Specs.Raft.RoundMaEqB
 import GoLeanProofs.Specs.Raft.RoundMaEqC
 import GoLeanProofs.Specs.Raft.RoundMaEquation
 import GoLeanProofs.Specs.Raft.RoundMaLemma
+-- A4-U23: the MsgVote round-kind instance (the R-form's second proved
+-- instance; auto-discovered boundary schedule) + the checker-interface
+-- I2 bridges (fold models + violation→delta + guard shape-pins)
+import GoLeanProofs.Specs.Raft.RoundVoteLit1
+import GoLeanProofs.Specs.Raft.RoundVoteLit2
+import GoLeanProofs.Specs.Raft.RoundVoteLit3
+import GoLeanProofs.Specs.Raft.RoundVoteLit4
+import GoLeanProofs.Specs.Raft.RoundVoteLit5
+import GoLeanProofs.Specs.Raft.RoundVoteLit6
+import GoLeanProofs.Specs.Raft.RoundVoteEqA
+import GoLeanProofs.Specs.Raft.RoundVoteEqB
+import GoLeanProofs.Specs.Raft.RoundVoteEqC
+import GoLeanProofs.Specs.Raft.RoundVoteEquation
+import GoLeanProofs.Specs.Raft.RoundVoteLemma
 -- arc4b landing (C2c slice 0, per the lane's landing manifest): the native
 -- S1/S2/S3 chain over the obligation signature (SC1 + C3 + C4)
 import GoLeanProofs.Specs.Raft.NativeObligations
@@ -107,6 +121,7 @@ import GoLeanProofs.Specs.Raft.NativeS1CheckerLeaf
 import GoLeanProofs.Specs.Raft.NativeS1Witness
 import GoLeanProofs.Specs.Raft.NativeS23Chain
 import GoLeanProofs.Specs.Raft.NativeS23Witness
+import GoLeanProofs.Specs.Raft.NativeCheckerBridge
 -- A4-U8: the field-lens layer (Perennial Access lineage; general half —
 -- combinators + L1-L4 laws; per-field instances live in Specs/Raft).
 import GoLeanProofs.Lens

@@ -1,0 +1,10599 @@
+import GoLeanProofs.Sym.Mirror
+
+/-! GENERATED (A4-U23; `artifacts/probe/RoundVoteGen2.lean` — DO NOT
+EDIT BY HAND). The MsgVote real-vote-family FULL-ROUND literals
+(anchor to anchor, 19,291 steps, 9 draws + choice-free mapIter-exit
+crossings), boundary schedule AUTO-DISCOVERED from the mirror's own
+quit sites (the U23 template generalization); crossing posts are
+diff-applications over their pre-states (the U22 template). The
+window LINK theorems in `RoundVoteEq*.lean` re-check every literal
+against the mirror. -/
+
+namespace GoLean.RaftSeam.RoundVote
+
+open GoLean GoLean.GoCore GoLean.Sym
+
+set_option maxRecDepth 8000000
+
+def mvSB0 : SymState :=
+  (GoLean.Sym.State.mk
+  [((GoLean.Loc.base { id := 15 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.HardState" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 57 })))),
+  ((GoLean.Loc.base { id := 18 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raft.lockedRand" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 67 })))),
+  ((GoLean.Loc.base { id := 27 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 23 (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true))]))),
+  ((GoLean.Loc.base { id := 28 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 23 (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true))]))),
+  ((GoLean.Loc.base { id := 57 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.HardState" })) (GoLean.Sym.Value.struct ({ key := "raftpb.HardState" }) #[(("Term"), (GoLean.Sym.Value.nil)),
+  (("Vote"), (GoLean.Sym.Value.nil)),
+  (("Commit"), (GoLean.Sym.Value.nil))]))),
+  ((GoLean.Loc.base { id := 67 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.lockedRand" })) (GoLean.Sym.Value.struct ({ key := "raft.lockedRand" }) #[(("mu"), (GoLean.Sym.Value.syncData (GoLean.SyncPrim.mutex false)))]))),
+  ((GoLean.Loc.base { id := 110 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.twin" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 121 })))),
+  ((GoLean.Loc.base { id := 121 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "main.twin" })) (GoLean.Sym.Value.struct ({ key := "main.twin" }) #[(("nodes"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 1764 }), offset := 0, len := 3, cap := 4 }))),
+  (("net"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 6077 }), offset := 0, len := 1, cap := 1 }))),
+  (("live"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 6078 }), offset := 0, len := 1, cap := 1 }))),
+  (("leaderOf"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 115 }) }))),
+  (("byIndex"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 118 }) }))),
+  (("claims"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("committed"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("violations"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("pending"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 136 }), offset := 0, len := 2, cap := 4 }))),
+  (("driven"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("seq"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.int))),
+  (("trace"), (GoLean.Sym.Value.string ({ bytes := #[91, 99, 104, 111, 105, 99, 101, 45, 100, 114, 105, 118, 101, 110, 93, 10, 99, 97, 109, 112, 97, 105, 103,
+             110, 49] }))),
+  (("halt"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 170 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "main.twinNode" })) (GoLean.Sym.Value.struct ({ key := "main.twinNode" }) #[(("id"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("rn"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1742 }))),
+  (("st"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 179 }))),
+  (("term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("commit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("state"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("applied"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("lastTrm"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("got"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 167 }) })))]))),
+  ((GoLean.Loc.base { id := 1764 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 4 (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.twinNode" })))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 170 })),
+  (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1770 })),
+  (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3369 })),
+  (GoLean.Sym.Value.nil)]))),
+  ((GoLean.Loc.base { id := 1770 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "main.twinNode" })) (GoLean.Sym.Value.struct ({ key := "main.twinNode" }) #[(("id"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("rn"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3342 }))),
+  (("st"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1779 }))),
+  (("term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("commit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("state"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("applied"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("lastTrm"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("got"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 1767 }) })))]))),
+  ((GoLean.Loc.base { id := 1779 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.MemoryStorage" })) (GoLean.Sym.Value.struct ({ key := "raft.MemoryStorage" }) #[(("Mutex"), (GoLean.Sym.Value.syncData (GoLean.SyncPrim.mutex false))),
+  (("hardState"), (GoLean.Sym.Value.nil)),
+  (("snapshot"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1858 }))),
+  (("ents"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 1900 }), offset := 0, len := 1, cap := 1 }))),
+  (("callStats"), (GoLean.Sym.Value.struct ({ key := "raft.inMemStorageCallStats" }) #[(("initialState"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.int))),
+  (("firstIndex"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.int))),
+  (("lastIndex"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 7) (GoLean.GoCore.IntKind.int))),
+  (("entries"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.int))),
+  (("snapshot"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int)))]))]))),
+  ((GoLean.Loc.base { id := 1886 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 1895 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 1898 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })) (GoLean.Sym.Value.struct ({ key := "raftpb.Entry" }) #[(("Term"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1886 }))),
+  (("Index"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1895 }))),
+  (("Type"), (GoLean.Sym.Value.nil)),
+  (("Data"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))]))),
+  ((GoLean.Loc.base { id := 1900 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 1 (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1898 }))]))),
+  ((GoLean.Loc.base { id := 1949 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.raftLog" })) (GoLean.Sym.Value.struct ({ key := "raft.raftLog" }) #[(("storage"), (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raft.MemoryStorage" })) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1779 })))),
+  (("unstable"), (GoLean.Sym.Value.struct ({ key := "raft.unstable" }) #[(("snapshot"), (GoLean.Sym.Value.nil)),
+  (("entries"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("offset"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("snapshotInProgress"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("offsetInProgress"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("logger"), (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.harnessLogger" })) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 97 }))))])),
+  (("committed"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("applying"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("applied"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("logger"), (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.harnessLogger" })) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 97 })))),
+  (("maxApplyingEntsSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1048576) (GoLean.GoCore.IntKind.uint64))),
+  (("applyingEntsSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("applyingEntsPaused"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 1989 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.raft" })) (GoLean.Sym.Value.struct ({ key := "raft.raft" }) #[(("id"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("Term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("Vote"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("readStates"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("raftLog"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1949 }))),
+  (("maxMsgSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1048576) (GoLean.GoCore.IntKind.uint64))),
+  (("maxUncommittedSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 18446744073709551615) (GoLean.GoCore.IntKind.uint64))),
+  (("trk"), (GoLean.Sym.Value.struct ({ key := "tracker.ProgressTracker" }) #[(("Config"), (GoLean.Sym.Value.struct ({ key := "tracker.Config" }) #[(("Voters"), (GoLean.Sym.Value.array #[(GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 2686 }) })),
+  (GoLean.Sym.Value.map ({ base := none }))])),
+  (("AutoLeave"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("Learners"), (GoLean.Sym.Value.map ({ base := none }))),
+  (("LearnersNext"), (GoLean.Sym.Value.map ({ base := none })))])),
+  (("Progress"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 2703 }) }))),
+  (("Votes"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 3059 }) }))),
+  (("MaxInflight"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 256) (GoLean.GoCore.IntKind.int))),
+  (("MaxInflightBytes"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 18446744073709551615) (GoLean.GoCore.IntKind.uint64)))])),
+  (("state"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("isLearner"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("msgs"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("msgsAfterAppend"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("lead"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("leadTransferee"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("pendingConfIndex"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("disableConfChangeValidation"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("uncommittedSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("readOnly"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3199 }))),
+  (("electionElapsed"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("heartbeatElapsed"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("checkQuorum"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("preVote"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("heartbeatTimeout"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.int))),
+  (("electionTimeout"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 10) (GoLean.GoCore.IntKind.int))),
+  (("randomizedElectionTimeout"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 10) (GoLean.GoCore.IntKind.int))),
+  (("disableProposalForwarding"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("stepDownOnRemoval"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("tick"), (GoLean.Sym.Value.funcVal ({ key := "raft.raft.tickElection" }) [(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1989 }))])),
+  (("step"), (GoLean.Sym.Value.funcVal ({ key := "raft.stepFollower" }) [])),
+  (("logger"), (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.harnessLogger" })) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 97 })))),
+  (("pendingReadIndexMessages"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("traceLogger"), (GoLean.Sym.Value.nil))]))),
+  ((GoLean.Loc.base { id := 2703 }), (GoLean.Sym.HeapCell.mk (none) (GoLean.Sym.Value.mapData #[((GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 2707 }))),
+  ((GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64)), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 2710 }))),
+  ((GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 3) (GoLean.GoCore.IntKind.uint64)), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 2812 })))]))),
+  ((GoLean.Loc.base { id := 2707 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "tracker.Progress" })) (GoLean.Sym.Value.struct ({ key := "tracker.Progress" }) #[(("Match"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("Next"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("sentCommit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("State"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("PendingSnapshot"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("RecentActive"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("MsgAppFlowPaused"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("Inflights"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3103 }))),
+  (("IsLearner"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 2710 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "tracker.Progress" })) (GoLean.Sym.Value.struct ({ key := "tracker.Progress" }) #[(("Match"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("Next"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("sentCommit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("State"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("PendingSnapshot"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("RecentActive"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("MsgAppFlowPaused"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("Inflights"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3136 }))),
+  (("IsLearner"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 2812 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "tracker.Progress" })) (GoLean.Sym.Value.struct ({ key := "tracker.Progress" }) #[(("Match"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("Next"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("sentCommit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("State"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("PendingSnapshot"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("RecentActive"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("MsgAppFlowPaused"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("Inflights"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3190 }))),
+  (("IsLearner"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 3199 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.readOnly" })) (GoLean.Sym.Value.struct ({ key := "raft.readOnly" }) #[(("option"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("acks"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 3196 }) }))),
+  (("unconfirmedReads"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("confirmedReads"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64)))]))),
+  ((GoLean.Loc.base { id := 3342 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.RawNode" })) (GoLean.Sym.Value.struct ({ key := "raft.RawNode" }) #[(("raft"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1989 }))),
+  (("asyncStorageWrites"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("prevSoftSt"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3344 }))),
+  (("prevHardSt"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3360 }))),
+  (("stepsOnAdvance"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))]))),
+  ((GoLean.Loc.base { id := 3344 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.SoftState" })) (GoLean.Sym.Value.struct ({ key := "raft.SoftState" }) #[(("Lead"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("RaftState"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64)))]))),
+  ((GoLean.Loc.base { id := 3351 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 3354 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 3360 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.HardState" })) (GoLean.Sym.Value.struct ({ key := "raftpb.HardState" }) #[(("Term"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3351 }))),
+  (("Vote"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3354 }))),
+  (("Commit"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3357 })))]))),
+  ((GoLean.Loc.base { id := 3369 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "main.twinNode" })) (GoLean.Sym.Value.struct ({ key := "main.twinNode" }) #[(("id"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 3) (GoLean.GoCore.IntKind.uint64))),
+  (("rn"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 4941 }))),
+  (("st"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3378 }))),
+  (("term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("commit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("state"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("applied"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("lastTrm"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("got"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 3366 }) })))]))),
+  ((GoLean.Loc.base { id := 6070 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6072 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6073 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int32))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 5) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6074 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6075 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6076 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })) (GoLean.Sym.Value.struct ({ key := "raftpb.Message" }) #[(("Type"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6073 }))),
+  (("To"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6074 }))),
+  (("From"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6075 }))),
+  (("Term"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6079 }))),
+  (("LogTerm"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6084 }))),
+  (("Index"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6085 }))),
+  (("Entries"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("Commit"), (GoLean.Sym.Value.nil)),
+  (("Vote"), (GoLean.Sym.Value.nil)),
+  (("Snapshot"), (GoLean.Sym.Value.nil)),
+  (("Reject"), (GoLean.Sym.Value.nil)),
+  (("RejectHint"), (GoLean.Sym.Value.nil)),
+  (("Context"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("Responses"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))]))),
+  ((GoLean.Loc.base { id := 6077 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 1 (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 }))]))),
+  ((GoLean.Loc.base { id := 6078 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 1 (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true))]))),
+  ((GoLean.Loc.base { id := 6079 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6080 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6081 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6082 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })) (GoLean.Sym.Value.struct ({ key := "raftpb.Entry" }) #[(("Term"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6080 }))),
+  (("Index"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6081 }))),
+  (("Type"), (GoLean.Sym.Value.nil)),
+  (("Data"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))]))),
+  ((GoLean.Loc.base { id := 6083 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 1 (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6082 }))]))),
+  ((GoLean.Loc.base { id := 6084 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6085 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))))]
+  6086)
+
+def mvCB0 : SymConfig :=
+  (GoLean.Sym.Config.exec (GoLean.GoCore.Stmt.ifThenElse
+  (GoLean.GoCore.Expr.lessCmp
+    (GoLean.GoCore.Expr.var "round")
+    (GoLean.GoCore.Expr.intLit 400 (GoLean.GoCore.IntKind.int)))
+  (GoLean.GoCore.Stmt.seqn #[])
+  (GoLean.GoCore.Stmt.breakStmt)) ([[],
+ [("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.block
+   #[]
+   #[GoLean.GoCore.Stmt.seqn
+       #[GoLean.GoCore.Stmt.initialization
+           { id := "$c2235",
+             typ := GoLean.GoCore.Ty.map (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)) (GoLean.GoCore.Ty.bool) },
+         GoLean.GoCore.Stmt.makeMap
+           (GoLean.GoCore.Assignee.var "$c2235")
+           (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+           (GoLean.GoCore.Ty.bool)
+           none],
+     GoLean.GoCore.Stmt.seqn
+       #[GoLean.GoCore.Stmt.initialization
+           { id := "live",
+             typ := GoLean.GoCore.Ty.map (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)) (GoLean.GoCore.Ty.bool) },
+         GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "live") (GoLean.GoCore.Expr.var "$c2235")],
+     GoLean.GoCore.Stmt.block
+       #[]
+       #[GoLean.GoCore.Stmt.initialization
+           { id := "$rcoll",
+             typ := GoLean.GoCore.Ty.slice
+                      (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })) },
+         GoLean.GoCore.Stmt.assign
+           (GoLean.GoCore.Assignee.var "$rcoll")
+           (GoLean.GoCore.Expr.fieldGet
+             (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+             { key := "main.twin" }
+             "net"),
+         GoLean.GoCore.Stmt.initialization { id := "$rlen", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+         GoLean.GoCore.Stmt.assign
+           (GoLean.GoCore.Assignee.var "$rlen")
+           (GoLean.GoCore.Expr.length (GoLean.GoCore.Expr.var "$rcoll") none),
+         GoLean.GoCore.Stmt.initialization { id := "$ridx", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+         GoLean.GoCore.Stmt.assign
+           (GoLean.GoCore.Assignee.var "$ridx")
+           (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int)),
+         GoLean.GoCore.Stmt.initialization { id := "$rfirst", typ := GoLean.GoCore.Ty.bool },
+         GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$rfirst") (GoLean.GoCore.Expr.boolLit true),
+         GoLean.GoCore.Stmt.while
+           (GoLean.GoCore.Expr.boolLit true)
+           (GoLean.GoCore.Stmt.block
+             #[]
+             #[GoLean.GoCore.Stmt.ifThenElse
+                 (GoLean.GoCore.Expr.var "$rfirst")
+                 (GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$rfirst") (GoLean.GoCore.Expr.boolLit false))
+                 (GoLean.GoCore.Stmt.assign
+                   (GoLean.GoCore.Assignee.var "$ridx")
+                   (GoLean.GoCore.Expr.add
+                     (GoLean.GoCore.Expr.var "$ridx")
+                     (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int)))),
+               GoLean.GoCore.Stmt.ifThenElse
+                 (GoLean.GoCore.Expr.atLeastCmp (GoLean.GoCore.Expr.var "$ridx") (GoLean.GoCore.Expr.var "$rlen"))
+                 (GoLean.GoCore.Stmt.breakStmt)
+                 (GoLean.GoCore.Stmt.seqn #[]),
+               GoLean.GoCore.Stmt.initialization { id := "j", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+               GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "j") (GoLean.GoCore.Expr.var "$ridx"),
+               GoLean.GoCore.Stmt.block
+                 #[]
+                 #[GoLean.GoCore.Stmt.ifThenElse
+                     (GoLean.GoCore.Expr.indexGet
+                       (GoLean.GoCore.Expr.fieldGet
+                         (GoLean.GoCore.Expr.deref
+                           (GoLean.GoCore.Expr.var "t")
+                           (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                         { key := "main.twin" }
+                         "live")
+                       (GoLean.GoCore.Expr.var "j"))
+                     (GoLean.GoCore.Stmt.block
+                       #[]
+                       #[GoLean.GoCore.Stmt.mapAssign
+                           (GoLean.GoCore.Expr.var "live")
+                           (GoLean.GoCore.Expr.var "j")
+                           (GoLean.GoCore.Expr.boolLit true)
+                           (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                           (GoLean.GoCore.Ty.bool)])
+                     (GoLean.GoCore.Stmt.seqn #[])]])],
+     GoLean.GoCore.Stmt.ifThenElse
+       (GoLean.GoCore.Expr.greaterCmp
+         (GoLean.GoCore.Expr.length
+           (GoLean.GoCore.Expr.var "live")
+           (some (GoLean.GoCore.Ty.map (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)) (GoLean.GoCore.Ty.bool))))
+         (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int)))
+       (GoLean.GoCore.Stmt.block
+         #[]
+         #[GoLean.GoCore.Stmt.seqn
+             #[GoLean.GoCore.Stmt.initialization
+                 { id := "picked", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+               GoLean.GoCore.Stmt.assign
+                 (GoLean.GoCore.Assignee.var "picked")
+                 (GoLean.GoCore.Expr.intLit (-1) (GoLean.GoCore.IntKind.int))],
+           GoLean.GoCore.Stmt.mapRange
+             (some "j")
+             none
+             (GoLean.GoCore.Expr.var "live")
+             (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+             (GoLean.GoCore.Ty.bool)
+             (GoLean.GoCore.Stmt.block
+               #[]
+               #[GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "picked") (GoLean.GoCore.Expr.var "j")],
+                 GoLean.GoCore.Stmt.breakStmt]),
+           GoLean.GoCore.Stmt.seqn
+             #[GoLean.GoCore.Stmt.initialization
+                 { id := "m", typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }) },
+               GoLean.GoCore.Stmt.assign
+                 (GoLean.GoCore.Assignee.var "m")
+                 (GoLean.GoCore.Expr.indexGet
+                   (GoLean.GoCore.Expr.fieldGet
+                     (GoLean.GoCore.Expr.deref
+                       (GoLean.GoCore.Expr.var "t")
+                       (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                     { key := "main.twin" }
+                     "net")
+                   (GoLean.GoCore.Expr.var "picked"))],
+           GoLean.GoCore.Stmt.seqn
+             #[GoLean.GoCore.Stmt.initialization { id := "$c2236", typ := GoLean.GoCore.Ty.string },
+               GoLean.GoCore.Stmt.call
+                 #[GoLean.GoCore.Assignee.var "$c2236"]
+                 { key := "itoa" }
+                 #[GoLean.GoCore.Expr.add
+                     (GoLean.GoCore.Expr.var "round")
+                     (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))]],
+           GoLean.GoCore.Stmt.seqn
+             #[GoLean.GoCore.Stmt.initialization { id := "$c2237", typ := GoLean.GoCore.Ty.string },
+               GoLean.GoCore.Stmt.call
+                 #[GoLean.GoCore.Assignee.var "$c2237"]
+                 { key := "itoa" }
+                 #[GoLean.GoCore.Expr.var "picked"]],
+           GoLean.GoCore.Stmt.seqn
+             #[GoLean.GoCore.Stmt.initialization
+                 { id := "$c2238", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+               GoLean.GoCore.Stmt.call
+                 #[GoLean.GoCore.Assignee.var "$c2238"]
+                 { key := "raftpb.Message.GetType" }
+                 #[GoLean.GoCore.Expr.var "m"]],
+           GoLean.GoCore.Stmt.seqn
+             #[GoLean.GoCore.Stmt.initialization { id := "$c2239", typ := GoLean.GoCore.Ty.string },
+               GoLean.GoCore.Stmt.call
+                 #[GoLean.GoCore.Assignee.var "$c2239"]
+                 { key := "itoa" }
+                 #[GoLean.GoCore.Expr.convert
+                     (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                     (GoLean.GoCore.Expr.var "$c2238")]],
+           GoLean.GoCore.Stmt.seqn
+             #[GoLean.GoCore.Stmt.initialization
+                 { id := "$c2240", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+               GoLean.GoCore.Stmt.call
+                 #[GoLean.GoCore.Assignee.var "$c2240"]
+                 { key := "raftpb.Message.GetTo" }
+                 #[GoLean.GoCore.Expr.var "m"]],
+           GoLean.GoCore.Stmt.seqn
+             #[GoLean.GoCore.Stmt.initialization { id := "$c2241", typ := GoLean.GoCore.Ty.string },
+               GoLean.GoCore.Stmt.call
+                 #[GoLean.GoCore.Assignee.var "$c2241"]
+                 { key := "utoa" }
+                 #[GoLean.GoCore.Expr.var "$c2240"]],
+           GoLean.GoCore.Stmt.call
+             #[]
+             { key := "main.twin.say" }
+             #[GoLean.GoCore.Expr.var "t",
+               GoLean.GoCore.Expr.add
+                 (GoLean.GoCore.Expr.add
+                   (GoLean.GoCore.Expr.add
+                     (GoLean.GoCore.Expr.add
+                       (GoLean.GoCore.Expr.add
+                         (GoLean.GoCore.Expr.add
+                           (GoLean.GoCore.Expr.add
+                             (GoLean.GoCore.Expr.stringLit { bytes := #[114] })
+                             (GoLean.GoCore.Expr.var "$c2236"))
+                           (GoLean.GoCore.Expr.stringLit { bytes := #[32, 112, 105, 99, 107, 35] }))
+                         (GoLean.GoCore.Expr.var "$c2237"))
+                       (GoLean.GoCore.Expr.stringLit { bytes := #[32, 116, 121, 112, 101] }))
+                     (GoLean.GoCore.Expr.var "$c2239"))
+                   (GoLean.GoCore.Expr.stringLit { bytes := #[45, 62] }))
+                 (GoLean.GoCore.Expr.var "$c2241")],
+           GoLean.GoCore.Stmt.call
+             #[]
+             { key := "main.twin.deliverIdx" }
+             #[GoLean.GoCore.Expr.var "t", GoLean.GoCore.Expr.var "picked"],
+           GoLean.GoCore.Stmt.seqn
+             #[GoLean.GoCore.Stmt.initialization { id := "$c2242", typ := GoLean.GoCore.Ty.string },
+               GoLean.GoCore.Stmt.call
+                 #[GoLean.GoCore.Assignee.var "$c2242"]
+                 { key := "main.twin.projection" }
+                 #[GoLean.GoCore.Expr.var "t"]],
+           GoLean.GoCore.Stmt.call
+             #[]
+             { key := "main.twin.say" }
+             #[GoLean.GoCore.Expr.var "t",
+               GoLean.GoCore.Expr.add
+                 (GoLean.GoCore.Expr.add
+                   (GoLean.GoCore.Expr.stringLit { bytes := #[32] })
+                   (GoLean.GoCore.Expr.var "$c2242"))
+                 (GoLean.GoCore.Expr.stringLit { bytes := #[10] })],
+           GoLean.GoCore.Stmt.seqn
+             #[GoLean.GoCore.Stmt.assign
+                 (GoLean.GoCore.Assignee.var "stuckPropose")
+                 (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))],
+           GoLean.GoCore.Stmt.continueStmt])
+       (GoLean.GoCore.Stmt.seqn #[]),
+     GoLean.GoCore.Stmt.seqn
+       #[GoLean.GoCore.Stmt.initialization { id := "$c2243", typ := GoLean.GoCore.Ty.bool },
+         GoLean.GoCore.Stmt.call
+           #[GoLean.GoCore.Assignee.var "$c2243"]
+           { key := "main.twin.complete" }
+           #[GoLean.GoCore.Expr.var "t"]],
+     GoLean.GoCore.Stmt.ifThenElse
+       (GoLean.GoCore.Expr.and
+         (GoLean.GoCore.Expr.var "$c2243")
+         (GoLean.GoCore.Expr.eqCmp
+           (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+           (GoLean.GoCore.Expr.length
+             (GoLean.GoCore.Expr.fieldGet
+               (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+               { key := "main.twin" }
+               "pending")
+             (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+           (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+       (GoLean.GoCore.Stmt.block #[] #[GoLean.GoCore.Stmt.breakStmt])
+       (GoLean.GoCore.Stmt.seqn #[]),
+     GoLean.GoCore.Stmt.ifThenElse
+       (GoLean.GoCore.Expr.greaterCmp
+         (GoLean.GoCore.Expr.length
+           (GoLean.GoCore.Expr.fieldGet
+             (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+             { key := "main.twin" }
+             "pending")
+           (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+         (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int)))
+       (GoLean.GoCore.Stmt.block
+         #[]
+         #[GoLean.GoCore.Stmt.seqn
+             #[GoLean.GoCore.Stmt.initialization { id := "$c2244", typ := GoLean.GoCore.Ty.string },
+               GoLean.GoCore.Stmt.call
+                 #[GoLean.GoCore.Assignee.var "$c2244"]
+                 { key := "itoa" }
+                 #[GoLean.GoCore.Expr.add
+                     (GoLean.GoCore.Expr.var "round")
+                     (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))]],
+           GoLean.GoCore.Stmt.call
+             #[]
+             { key := "main.twin.say" }
+             #[GoLean.GoCore.Expr.var "t",
+               GoLean.GoCore.Expr.add
+                 (GoLean.GoCore.Expr.add
+                   (GoLean.GoCore.Expr.stringLit { bytes := #[114] })
+                   (GoLean.GoCore.Expr.var "$c2244"))
+                 (GoLean.GoCore.Expr.stringLit { bytes := #[32] })],
+           GoLean.GoCore.Stmt.call
+             #[]
+             { key := "main.twin.step" }
+             #[GoLean.GoCore.Expr.var "t",
+               GoLean.GoCore.Expr.structLit
+                 (GoLean.GoCore.Ty.defined { key := "main.op" })
+                 #[GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int),
+                   GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int),
+                   GoLean.GoCore.Expr.defaultValue (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))]],
+           GoLean.GoCore.Stmt.call
+             #[]
+             { key := "main.twin.say" }
+             #[GoLean.GoCore.Expr.var "t", GoLean.GoCore.Expr.stringLit { bytes := #[10] }],
+           GoLean.GoCore.Stmt.assign
+             (GoLean.GoCore.Assignee.var "stuckPropose")
+             (GoLean.GoCore.Expr.add
+               (GoLean.GoCore.Expr.var "stuckPropose")
+               (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))),
+           GoLean.GoCore.Stmt.ifThenElse
+             (GoLean.GoCore.Expr.greaterCmp
+               (GoLean.GoCore.Expr.var "stuckPropose")
+               (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int)))
+             (GoLean.GoCore.Stmt.block
+               #[]
+               #[GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.assign
+                       (GoLean.GoCore.Assignee.addr
+                         (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "t") { key := "main.twin" } "halt"))
+                       (GoLean.GoCore.Expr.boolLit true)],
+                 GoLean.GoCore.Stmt.call
+                   #[]
+                   { key := "main.twin.say" }
+                   #[GoLean.GoCore.Expr.var "t",
+                     GoLean.GoCore.Expr.stringLit
+                       { bytes := #[33, 100, 114, 105, 118, 101, 114, 58, 32, 112, 114, 111, 112, 111, 115, 101, 32,
+                                    115, 116, 117, 99, 107, 32, 97, 116, 32, 113, 117, 105, 101, 115, 99, 101, 110, 99,
+                                    101, 10] }],
+                 GoLean.GoCore.Stmt.breakStmt])
+             (GoLean.GoCore.Stmt.seqn #[]),
+           GoLean.GoCore.Stmt.continueStmt])
+       (GoLean.GoCore.Stmt.seqn #[]),
+     GoLean.GoCore.Stmt.seqn
+       #[GoLean.GoCore.Stmt.assign
+           (GoLean.GoCore.Assignee.addr
+             (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "t") { key := "main.twin" } "halt"))
+           (GoLean.GoCore.Expr.boolLit true)],
+     GoLean.GoCore.Stmt.call
+       #[]
+       { key := "main.twin.say" }
+       #[GoLean.GoCore.Expr.var "t",
+         GoLean.GoCore.Expr.stringLit
+           { bytes := #[33, 100, 114, 105, 118, 101, 114, 58, 32, 113, 117, 105, 101, 115, 99, 101, 110, 116, 32, 119,
+                        105, 116, 104, 111, 117, 116, 32, 83, 52, 10] }],
+     GoLean.GoCore.Stmt.breakStmt]]) ([[],
+ [("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.loop (GoLean.GoCore.Expr.boolLit true) (GoLean.GoCore.Stmt.block
+  #[]
+  #[GoLean.GoCore.Stmt.ifThenElse
+      (GoLean.GoCore.Expr.var "$forFirst")
+      (GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$forFirst") (GoLean.GoCore.Expr.boolLit false))
+      (GoLean.GoCore.Stmt.assign
+        (GoLean.GoCore.Assignee.var "round")
+        (GoLean.GoCore.Expr.add
+          (GoLean.GoCore.Expr.var "round")
+          (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int)))),
+    GoLean.GoCore.Stmt.seqn #[],
+    GoLean.GoCore.Stmt.ifThenElse
+      (GoLean.GoCore.Expr.lessCmp
+        (GoLean.GoCore.Expr.var "round")
+        (GoLean.GoCore.Expr.intLit 400 (GoLean.GoCore.IntKind.int)))
+      (GoLean.GoCore.Stmt.seqn #[])
+      (GoLean.GoCore.Stmt.breakStmt),
+    GoLean.GoCore.Stmt.block
+      #[]
+      #[GoLean.GoCore.Stmt.seqn
+          #[GoLean.GoCore.Stmt.initialization
+              { id := "$c2235",
+                typ := GoLean.GoCore.Ty.map
+                         (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                         (GoLean.GoCore.Ty.bool) },
+            GoLean.GoCore.Stmt.makeMap
+              (GoLean.GoCore.Assignee.var "$c2235")
+              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+              (GoLean.GoCore.Ty.bool)
+              none],
+        GoLean.GoCore.Stmt.seqn
+          #[GoLean.GoCore.Stmt.initialization
+              { id := "live",
+                typ := GoLean.GoCore.Ty.map
+                         (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                         (GoLean.GoCore.Ty.bool) },
+            GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "live") (GoLean.GoCore.Expr.var "$c2235")],
+        GoLean.GoCore.Stmt.block
+          #[]
+          #[GoLean.GoCore.Stmt.initialization
+              { id := "$rcoll",
+                typ := GoLean.GoCore.Ty.slice
+                         (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })) },
+            GoLean.GoCore.Stmt.assign
+              (GoLean.GoCore.Assignee.var "$rcoll")
+              (GoLean.GoCore.Expr.fieldGet
+                (GoLean.GoCore.Expr.deref
+                  (GoLean.GoCore.Expr.var "t")
+                  (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                { key := "main.twin" }
+                "net"),
+            GoLean.GoCore.Stmt.initialization
+              { id := "$rlen", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+            GoLean.GoCore.Stmt.assign
+              (GoLean.GoCore.Assignee.var "$rlen")
+              (GoLean.GoCore.Expr.length (GoLean.GoCore.Expr.var "$rcoll") none),
+            GoLean.GoCore.Stmt.initialization
+              { id := "$ridx", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+            GoLean.GoCore.Stmt.assign
+              (GoLean.GoCore.Assignee.var "$ridx")
+              (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int)),
+            GoLean.GoCore.Stmt.initialization { id := "$rfirst", typ := GoLean.GoCore.Ty.bool },
+            GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$rfirst") (GoLean.GoCore.Expr.boolLit true),
+            GoLean.GoCore.Stmt.while
+              (GoLean.GoCore.Expr.boolLit true)
+              (GoLean.GoCore.Stmt.block
+                #[]
+                #[GoLean.GoCore.Stmt.ifThenElse
+                    (GoLean.GoCore.Expr.var "$rfirst")
+                    (GoLean.GoCore.Stmt.assign
+                      (GoLean.GoCore.Assignee.var "$rfirst")
+                      (GoLean.GoCore.Expr.boolLit false))
+                    (GoLean.GoCore.Stmt.assign
+                      (GoLean.GoCore.Assignee.var "$ridx")
+                      (GoLean.GoCore.Expr.add
+                        (GoLean.GoCore.Expr.var "$ridx")
+                        (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int)))),
+                  GoLean.GoCore.Stmt.ifThenElse
+                    (GoLean.GoCore.Expr.atLeastCmp (GoLean.GoCore.Expr.var "$ridx") (GoLean.GoCore.Expr.var "$rlen"))
+                    (GoLean.GoCore.Stmt.breakStmt)
+                    (GoLean.GoCore.Stmt.seqn #[]),
+                  GoLean.GoCore.Stmt.initialization
+                    { id := "j", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+                  GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "j") (GoLean.GoCore.Expr.var "$ridx"),
+                  GoLean.GoCore.Stmt.block
+                    #[]
+                    #[GoLean.GoCore.Stmt.ifThenElse
+                        (GoLean.GoCore.Expr.indexGet
+                          (GoLean.GoCore.Expr.fieldGet
+                            (GoLean.GoCore.Expr.deref
+                              (GoLean.GoCore.Expr.var "t")
+                              (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                            { key := "main.twin" }
+                            "live")
+                          (GoLean.GoCore.Expr.var "j"))
+                        (GoLean.GoCore.Stmt.block
+                          #[]
+                          #[GoLean.GoCore.Stmt.mapAssign
+                              (GoLean.GoCore.Expr.var "live")
+                              (GoLean.GoCore.Expr.var "j")
+                              (GoLean.GoCore.Expr.boolLit true)
+                              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                              (GoLean.GoCore.Ty.bool)])
+                        (GoLean.GoCore.Stmt.seqn #[])]])],
+        GoLean.GoCore.Stmt.ifThenElse
+          (GoLean.GoCore.Expr.greaterCmp
+            (GoLean.GoCore.Expr.length
+              (GoLean.GoCore.Expr.var "live")
+              (some (GoLean.GoCore.Ty.map (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)) (GoLean.GoCore.Ty.bool))))
+            (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int)))
+          (GoLean.GoCore.Stmt.block
+            #[]
+            #[GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization
+                    { id := "picked", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+                  GoLean.GoCore.Stmt.assign
+                    (GoLean.GoCore.Assignee.var "picked")
+                    (GoLean.GoCore.Expr.intLit (-1) (GoLean.GoCore.IntKind.int))],
+              GoLean.GoCore.Stmt.mapRange
+                (some "j")
+                none
+                (GoLean.GoCore.Expr.var "live")
+                (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                (GoLean.GoCore.Ty.bool)
+                (GoLean.GoCore.Stmt.block
+                  #[]
+                  #[GoLean.GoCore.Stmt.seqn
+                      #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "picked") (GoLean.GoCore.Expr.var "j")],
+                    GoLean.GoCore.Stmt.breakStmt]),
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization
+                    { id := "m",
+                      typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }) },
+                  GoLean.GoCore.Stmt.assign
+                    (GoLean.GoCore.Assignee.var "m")
+                    (GoLean.GoCore.Expr.indexGet
+                      (GoLean.GoCore.Expr.fieldGet
+                        (GoLean.GoCore.Expr.deref
+                          (GoLean.GoCore.Expr.var "t")
+                          (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                        { key := "main.twin" }
+                        "net")
+                      (GoLean.GoCore.Expr.var "picked"))],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2236", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2236"]
+                    { key := "itoa" }
+                    #[GoLean.GoCore.Expr.add
+                        (GoLean.GoCore.Expr.var "round")
+                        (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2237", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2237"]
+                    { key := "itoa" }
+                    #[GoLean.GoCore.Expr.var "picked"]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization
+                    { id := "$c2238", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2238"]
+                    { key := "raftpb.Message.GetType" }
+                    #[GoLean.GoCore.Expr.var "m"]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2239", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2239"]
+                    { key := "itoa" }
+                    #[GoLean.GoCore.Expr.convert
+                        (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                        (GoLean.GoCore.Expr.var "$c2238")]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization
+                    { id := "$c2240", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2240"]
+                    { key := "raftpb.Message.GetTo" }
+                    #[GoLean.GoCore.Expr.var "m"]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2241", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2241"]
+                    { key := "utoa" }
+                    #[GoLean.GoCore.Expr.var "$c2240"]],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.say" }
+                #[GoLean.GoCore.Expr.var "t",
+                  GoLean.GoCore.Expr.add
+                    (GoLean.GoCore.Expr.add
+                      (GoLean.GoCore.Expr.add
+                        (GoLean.GoCore.Expr.add
+                          (GoLean.GoCore.Expr.add
+                            (GoLean.GoCore.Expr.add
+                              (GoLean.GoCore.Expr.add
+                                (GoLean.GoCore.Expr.stringLit { bytes := #[114] })
+                                (GoLean.GoCore.Expr.var "$c2236"))
+                              (GoLean.GoCore.Expr.stringLit { bytes := #[32, 112, 105, 99, 107, 35] }))
+                            (GoLean.GoCore.Expr.var "$c2237"))
+                          (GoLean.GoCore.Expr.stringLit { bytes := #[32, 116, 121, 112, 101] }))
+                        (GoLean.GoCore.Expr.var "$c2239"))
+                      (GoLean.GoCore.Expr.stringLit { bytes := #[45, 62] }))
+                    (GoLean.GoCore.Expr.var "$c2241")],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.deliverIdx" }
+                #[GoLean.GoCore.Expr.var "t", GoLean.GoCore.Expr.var "picked"],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2242", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2242"]
+                    { key := "main.twin.projection" }
+                    #[GoLean.GoCore.Expr.var "t"]],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.say" }
+                #[GoLean.GoCore.Expr.var "t",
+                  GoLean.GoCore.Expr.add
+                    (GoLean.GoCore.Expr.add
+                      (GoLean.GoCore.Expr.stringLit { bytes := #[32] })
+                      (GoLean.GoCore.Expr.var "$c2242"))
+                    (GoLean.GoCore.Expr.stringLit { bytes := #[10] })],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.assign
+                    (GoLean.GoCore.Assignee.var "stuckPropose")
+                    (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))],
+              GoLean.GoCore.Stmt.continueStmt])
+          (GoLean.GoCore.Stmt.seqn #[]),
+        GoLean.GoCore.Stmt.seqn
+          #[GoLean.GoCore.Stmt.initialization { id := "$c2243", typ := GoLean.GoCore.Ty.bool },
+            GoLean.GoCore.Stmt.call
+              #[GoLean.GoCore.Assignee.var "$c2243"]
+              { key := "main.twin.complete" }
+              #[GoLean.GoCore.Expr.var "t"]],
+        GoLean.GoCore.Stmt.ifThenElse
+          (GoLean.GoCore.Expr.and
+            (GoLean.GoCore.Expr.var "$c2243")
+            (GoLean.GoCore.Expr.eqCmp
+              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+              (GoLean.GoCore.Expr.length
+                (GoLean.GoCore.Expr.fieldGet
+                  (GoLean.GoCore.Expr.deref
+                    (GoLean.GoCore.Expr.var "t")
+                    (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                  { key := "main.twin" }
+                  "pending")
+                (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+              (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+          (GoLean.GoCore.Stmt.block #[] #[GoLean.GoCore.Stmt.breakStmt])
+          (GoLean.GoCore.Stmt.seqn #[]),
+        GoLean.GoCore.Stmt.ifThenElse
+          (GoLean.GoCore.Expr.greaterCmp
+            (GoLean.GoCore.Expr.length
+              (GoLean.GoCore.Expr.fieldGet
+                (GoLean.GoCore.Expr.deref
+                  (GoLean.GoCore.Expr.var "t")
+                  (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                { key := "main.twin" }
+                "pending")
+              (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+            (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int)))
+          (GoLean.GoCore.Stmt.block
+            #[]
+            #[GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2244", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2244"]
+                    { key := "itoa" }
+                    #[GoLean.GoCore.Expr.add
+                        (GoLean.GoCore.Expr.var "round")
+                        (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))]],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.say" }
+                #[GoLean.GoCore.Expr.var "t",
+                  GoLean.GoCore.Expr.add
+                    (GoLean.GoCore.Expr.add
+                      (GoLean.GoCore.Expr.stringLit { bytes := #[114] })
+                      (GoLean.GoCore.Expr.var "$c2244"))
+                    (GoLean.GoCore.Expr.stringLit { bytes := #[32] })],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.step" }
+                #[GoLean.GoCore.Expr.var "t",
+                  GoLean.GoCore.Expr.structLit
+                    (GoLean.GoCore.Ty.defined { key := "main.op" })
+                    #[GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int),
+                      GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int),
+                      GoLean.GoCore.Expr.defaultValue (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))]],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.say" }
+                #[GoLean.GoCore.Expr.var "t", GoLean.GoCore.Expr.stringLit { bytes := #[10] }],
+              GoLean.GoCore.Stmt.assign
+                (GoLean.GoCore.Assignee.var "stuckPropose")
+                (GoLean.GoCore.Expr.add
+                  (GoLean.GoCore.Expr.var "stuckPropose")
+                  (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))),
+              GoLean.GoCore.Stmt.ifThenElse
+                (GoLean.GoCore.Expr.greaterCmp
+                  (GoLean.GoCore.Expr.var "stuckPropose")
+                  (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int)))
+                (GoLean.GoCore.Stmt.block
+                  #[]
+                  #[GoLean.GoCore.Stmt.seqn
+                      #[GoLean.GoCore.Stmt.assign
+                          (GoLean.GoCore.Assignee.addr
+                            (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "t") { key := "main.twin" } "halt"))
+                          (GoLean.GoCore.Expr.boolLit true)],
+                    GoLean.GoCore.Stmt.call
+                      #[]
+                      { key := "main.twin.say" }
+                      #[GoLean.GoCore.Expr.var "t",
+                        GoLean.GoCore.Expr.stringLit
+                          { bytes := #[33, 100, 114, 105, 118, 101, 114, 58, 32, 112, 114, 111, 112, 111, 115, 101, 32,
+                                       115, 116, 117, 99, 107, 32, 97, 116, 32, 113, 117, 105, 101, 115, 99, 101, 110,
+                                       99, 101, 10] }],
+                    GoLean.GoCore.Stmt.breakStmt])
+                (GoLean.GoCore.Stmt.seqn #[]),
+              GoLean.GoCore.Stmt.continueStmt])
+          (GoLean.GoCore.Stmt.seqn #[]),
+        GoLean.GoCore.Stmt.seqn
+          #[GoLean.GoCore.Stmt.assign
+              (GoLean.GoCore.Assignee.addr
+                (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "t") { key := "main.twin" } "halt"))
+              (GoLean.GoCore.Expr.boolLit true)],
+        GoLean.GoCore.Stmt.call
+          #[]
+          { key := "main.twin.say" }
+          #[GoLean.GoCore.Expr.var "t",
+            GoLean.GoCore.Expr.stringLit
+              { bytes := #[33, 100, 114, 105, 118, 101, 114, 58, 32, 113, 117, 105, 101, 115, 99, 101, 110, 116, 32,
+                           119, 105, 116, 104, 111, 117, 116, 32, 83, 52, 10] }],
+        GoLean.GoCore.Stmt.breakStmt]]) ([[("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([]) ([[("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([]) ([[],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "comp", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+     GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "comp")
+       (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2245", typ := GoLean.GoCore.Ty.bool },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2245"]
+       { key := "main.twin.complete" }
+       #[GoLean.GoCore.Expr.var "t"]],
+ GoLean.GoCore.Stmt.ifThenElse
+   (GoLean.GoCore.Expr.and
+     (GoLean.GoCore.Expr.and
+       (GoLean.GoCore.Expr.var "$c2245")
+       (GoLean.GoCore.Expr.eqCmp
+         (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+         (GoLean.GoCore.Expr.length
+           (GoLean.GoCore.Expr.fieldGet
+             (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+             { key := "main.twin" }
+             "pending")
+           (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+         (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+     (GoLean.GoCore.Expr.not
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "halt")))
+   (GoLean.GoCore.Stmt.block
+     #[]
+     #[GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.assign
+             (GoLean.GoCore.Assignee.var "comp")
+             (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))]])
+   (GoLean.GoCore.Stmt.seqn #[]),
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "floorOK", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+     GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "floorOK")
+       (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))],
+ GoLean.GoCore.Stmt.ifThenElse
+   (GoLean.GoCore.Expr.or
+     (GoLean.GoCore.Expr.lessCmp
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "claims")
+       (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int)))
+     (GoLean.GoCore.Expr.lessCmp
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "committed")
+       (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))))
+   (GoLean.GoCore.Stmt.block
+     #[]
+     #[GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.assign
+             (GoLean.GoCore.Assignee.var "floorOK")
+             (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))]])
+   (GoLean.GoCore.Stmt.seqn #[]),
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2246", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2246"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+           { key := "main.twin" }
+           "violations"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2247", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2247"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+           { key := "main.twin" }
+           "claims"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2248", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2248"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+           { key := "main.twin" }
+           "committed"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2249", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call #[GoLean.GoCore.Assignee.var "$c2249"] { key := "itoa" } #[GoLean.GoCore.Expr.var "comp"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2250", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2250"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.var "floorOK"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2251", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2251"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.var "round"]],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "main.twin.say" }
+   #[GoLean.GoCore.Expr.var "t",
+     GoLean.GoCore.Expr.add
+       (GoLean.GoCore.Expr.add
+         (GoLean.GoCore.Expr.add
+           (GoLean.GoCore.Expr.add
+             (GoLean.GoCore.Expr.add
+               (GoLean.GoCore.Expr.add
+                 (GoLean.GoCore.Expr.add
+                   (GoLean.GoCore.Expr.add
+                     (GoLean.GoCore.Expr.add
+                       (GoLean.GoCore.Expr.add
+                         (GoLean.GoCore.Expr.add
+                           (GoLean.GoCore.Expr.add
+                             (GoLean.GoCore.Expr.stringLit { bytes := #[101, 110, 100, 32, 118, 105, 111, 108, 61] })
+                             (GoLean.GoCore.Expr.var "$c2246"))
+                           (GoLean.GoCore.Expr.stringLit { bytes := #[32, 99, 108, 97, 105, 109, 115, 61] }))
+                         (GoLean.GoCore.Expr.var "$c2247"))
+                       (GoLean.GoCore.Expr.stringLit
+                         { bytes := #[32, 99, 111, 109, 109, 105, 116, 116, 101, 100, 61] }))
+                     (GoLean.GoCore.Expr.var "$c2248"))
+                   (GoLean.GoCore.Expr.stringLit { bytes := #[32, 99, 111, 109, 112, 108, 101, 116, 101, 61] }))
+                 (GoLean.GoCore.Expr.var "$c2249"))
+               (GoLean.GoCore.Expr.stringLit { bytes := #[32, 102, 108, 111, 111, 114, 61] }))
+             (GoLean.GoCore.Expr.var "$c2250"))
+           (GoLean.GoCore.Expr.stringLit { bytes := #[32, 114, 111, 117, 110, 100, 115, 61] }))
+         (GoLean.GoCore.Expr.var "$c2251"))
+       (GoLean.GoCore.Expr.stringLit { bytes := #[10] })],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2252", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2252"]
+       { key := "main.twin.projection" }
+       #[GoLean.GoCore.Expr.var "t"]],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "main.twin.say" }
+   #[GoLean.GoCore.Expr.var "t",
+     GoLean.GoCore.Expr.add
+       (GoLean.GoCore.Expr.add
+         (GoLean.GoCore.Expr.stringLit { bytes := #[102, 105, 110, 97, 108, 32] })
+         (GoLean.GoCore.Expr.var "$c2252"))
+       (GoLean.GoCore.Expr.stringLit { bytes := #[10] })],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res0") (GoLean.GoCore.Expr.var "t"),
+     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res1") (GoLean.GoCore.Expr.var "comp"),
+     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res2") (GoLean.GoCore.Expr.var "floorOK"),
+     GoLean.GoCore.Stmt.returnStmt]]) ([[("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.frame ([(GoLean.GoCore.Machine.TargetShape.chain [], [GoLean.GoCore.Expr.ref "t"]),
+ (GoLean.GoCore.Machine.TargetShape.chain [], [GoLean.GoCore.Expr.ref "comp"]),
+ (GoLean.GoCore.Machine.TargetShape.chain [], [GoLean.GoCore.Expr.ref "floorOK"])]) ([[("floorOK", GoLean.Loc.base { id := 105 }),
+  ("comp", GoLean.Loc.base { id := 104 }),
+  ("t", GoLean.Loc.base { id := 103 })],
+ [("$res4", GoLean.Loc.base { id := 102 }),
+  ("$res3", GoLean.Loc.base { id := 101 }),
+  ("$res2", GoLean.Loc.base { id := 100 }),
+  ("$res1", GoLean.Loc.base { id := 99 }),
+  ("$res0", GoLean.Loc.base { id := 98 })]]) ([GoLean.Loc.base { id := 106 }, GoLean.Loc.base { id := 107 }, GoLean.Loc.base { id := 108 }]) [] (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "$res0")
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "violations"),
+     GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "$res1")
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "claims"),
+     GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "$res2")
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "committed"),
+     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res3") (GoLean.GoCore.Expr.var "comp"),
+     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res4") (GoLean.GoCore.Expr.var "floorOK"),
+     GoLean.GoCore.Stmt.returnStmt]]) ([[("floorOK", GoLean.Loc.base { id := 105 }),
+  ("comp", GoLean.Loc.base { id := 104 }),
+  ("t", GoLean.Loc.base { id := 103 })],
+ [("$res4", GoLean.Loc.base { id := 102 }),
+  ("$res3", GoLean.Loc.base { id := 101 }),
+  ("$res2", GoLean.Loc.base { id := 100 }),
+  ("$res1", GoLean.Loc.base { id := 99 }),
+  ("$res0", GoLean.Loc.base { id := 98 })]]) (GoLean.Sym.Cont.frame ([]) ([]) ([]) [] (GoLean.Sym.Cont.stop) false)) false)))))))
+
+def mvSB1 : SymState :=
+  (GoLean.Sym.State.mk
+  [((GoLean.Loc.base { id := 15 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.HardState" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 57 })))),
+  ((GoLean.Loc.base { id := 18 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raft.lockedRand" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 67 })))),
+  ((GoLean.Loc.base { id := 27 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 23 (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true))]))),
+  ((GoLean.Loc.base { id := 28 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 23 (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true))]))),
+  ((GoLean.Loc.base { id := 57 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.HardState" })) (GoLean.Sym.Value.struct ({ key := "raftpb.HardState" }) #[(("Term"), (GoLean.Sym.Value.nil)),
+  (("Vote"), (GoLean.Sym.Value.nil)),
+  (("Commit"), (GoLean.Sym.Value.nil))]))),
+  ((GoLean.Loc.base { id := 67 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.lockedRand" })) (GoLean.Sym.Value.struct ({ key := "raft.lockedRand" }) #[(("mu"), (GoLean.Sym.Value.syncData (GoLean.SyncPrim.mutex false)))]))),
+  ((GoLean.Loc.base { id := 110 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.twin" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 121 })))),
+  ((GoLean.Loc.base { id := 121 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "main.twin" })) (GoLean.Sym.Value.struct ({ key := "main.twin" }) #[(("nodes"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 1764 }), offset := 0, len := 3, cap := 4 }))),
+  (("net"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 6077 }), offset := 0, len := 1, cap := 1 }))),
+  (("live"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 6078 }), offset := 0, len := 1, cap := 1 }))),
+  (("leaderOf"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 115 }) }))),
+  (("byIndex"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 118 }) }))),
+  (("claims"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("committed"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("violations"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("pending"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 136 }), offset := 0, len := 2, cap := 4 }))),
+  (("driven"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("seq"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.int))),
+  (("trace"), (GoLean.Sym.Value.string ({ bytes := #[91, 99, 104, 111, 105, 99, 101, 45, 100, 114, 105, 118, 101, 110, 93, 10, 99, 97, 109, 112, 97, 105, 103,
+             110, 49] }))),
+  (("halt"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 170 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "main.twinNode" })) (GoLean.Sym.Value.struct ({ key := "main.twinNode" }) #[(("id"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("rn"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1742 }))),
+  (("st"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 179 }))),
+  (("term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("commit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("state"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("applied"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("lastTrm"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("got"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 167 }) })))]))),
+  ((GoLean.Loc.base { id := 1764 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 4 (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.twinNode" })))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 170 })),
+  (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1770 })),
+  (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3369 })),
+  (GoLean.Sym.Value.nil)]))),
+  ((GoLean.Loc.base { id := 1770 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "main.twinNode" })) (GoLean.Sym.Value.struct ({ key := "main.twinNode" }) #[(("id"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("rn"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3342 }))),
+  (("st"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1779 }))),
+  (("term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("commit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("state"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("applied"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("lastTrm"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("got"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 1767 }) })))]))),
+  ((GoLean.Loc.base { id := 1779 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.MemoryStorage" })) (GoLean.Sym.Value.struct ({ key := "raft.MemoryStorage" }) #[(("Mutex"), (GoLean.Sym.Value.syncData (GoLean.SyncPrim.mutex false))),
+  (("hardState"), (GoLean.Sym.Value.nil)),
+  (("snapshot"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1858 }))),
+  (("ents"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 1900 }), offset := 0, len := 1, cap := 1 }))),
+  (("callStats"), (GoLean.Sym.Value.struct ({ key := "raft.inMemStorageCallStats" }) #[(("initialState"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.int))),
+  (("firstIndex"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.int))),
+  (("lastIndex"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 7) (GoLean.GoCore.IntKind.int))),
+  (("entries"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.int))),
+  (("snapshot"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int)))]))]))),
+  ((GoLean.Loc.base { id := 1886 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 1895 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 1898 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })) (GoLean.Sym.Value.struct ({ key := "raftpb.Entry" }) #[(("Term"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1886 }))),
+  (("Index"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1895 }))),
+  (("Type"), (GoLean.Sym.Value.nil)),
+  (("Data"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))]))),
+  ((GoLean.Loc.base { id := 1900 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 1 (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1898 }))]))),
+  ((GoLean.Loc.base { id := 1949 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.raftLog" })) (GoLean.Sym.Value.struct ({ key := "raft.raftLog" }) #[(("storage"), (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raft.MemoryStorage" })) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1779 })))),
+  (("unstable"), (GoLean.Sym.Value.struct ({ key := "raft.unstable" }) #[(("snapshot"), (GoLean.Sym.Value.nil)),
+  (("entries"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("offset"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("snapshotInProgress"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("offsetInProgress"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("logger"), (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.harnessLogger" })) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 97 }))))])),
+  (("committed"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("applying"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("applied"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("logger"), (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.harnessLogger" })) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 97 })))),
+  (("maxApplyingEntsSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1048576) (GoLean.GoCore.IntKind.uint64))),
+  (("applyingEntsSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("applyingEntsPaused"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 1989 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.raft" })) (GoLean.Sym.Value.struct ({ key := "raft.raft" }) #[(("id"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("Term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("Vote"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("readStates"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("raftLog"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1949 }))),
+  (("maxMsgSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1048576) (GoLean.GoCore.IntKind.uint64))),
+  (("maxUncommittedSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 18446744073709551615) (GoLean.GoCore.IntKind.uint64))),
+  (("trk"), (GoLean.Sym.Value.struct ({ key := "tracker.ProgressTracker" }) #[(("Config"), (GoLean.Sym.Value.struct ({ key := "tracker.Config" }) #[(("Voters"), (GoLean.Sym.Value.array #[(GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 2686 }) })),
+  (GoLean.Sym.Value.map ({ base := none }))])),
+  (("AutoLeave"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("Learners"), (GoLean.Sym.Value.map ({ base := none }))),
+  (("LearnersNext"), (GoLean.Sym.Value.map ({ base := none })))])),
+  (("Progress"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 2703 }) }))),
+  (("Votes"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 3059 }) }))),
+  (("MaxInflight"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 256) (GoLean.GoCore.IntKind.int))),
+  (("MaxInflightBytes"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 18446744073709551615) (GoLean.GoCore.IntKind.uint64)))])),
+  (("state"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("isLearner"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("msgs"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("msgsAfterAppend"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("lead"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("leadTransferee"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("pendingConfIndex"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("disableConfChangeValidation"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("uncommittedSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("readOnly"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3199 }))),
+  (("electionElapsed"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("heartbeatElapsed"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("checkQuorum"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("preVote"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("heartbeatTimeout"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.int))),
+  (("electionTimeout"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 10) (GoLean.GoCore.IntKind.int))),
+  (("randomizedElectionTimeout"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 10) (GoLean.GoCore.IntKind.int))),
+  (("disableProposalForwarding"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("stepDownOnRemoval"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("tick"), (GoLean.Sym.Value.funcVal ({ key := "raft.raft.tickElection" }) [(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1989 }))])),
+  (("step"), (GoLean.Sym.Value.funcVal ({ key := "raft.stepFollower" }) [])),
+  (("logger"), (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.harnessLogger" })) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 97 })))),
+  (("pendingReadIndexMessages"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("traceLogger"), (GoLean.Sym.Value.nil))]))),
+  ((GoLean.Loc.base { id := 2703 }), (GoLean.Sym.HeapCell.mk (none) (GoLean.Sym.Value.mapData #[((GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 2707 }))),
+  ((GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64)), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 2710 }))),
+  ((GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 3) (GoLean.GoCore.IntKind.uint64)), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 2812 })))]))),
+  ((GoLean.Loc.base { id := 2707 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "tracker.Progress" })) (GoLean.Sym.Value.struct ({ key := "tracker.Progress" }) #[(("Match"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("Next"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("sentCommit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("State"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("PendingSnapshot"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("RecentActive"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("MsgAppFlowPaused"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("Inflights"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3103 }))),
+  (("IsLearner"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 2710 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "tracker.Progress" })) (GoLean.Sym.Value.struct ({ key := "tracker.Progress" }) #[(("Match"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("Next"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("sentCommit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("State"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("PendingSnapshot"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("RecentActive"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("MsgAppFlowPaused"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("Inflights"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3136 }))),
+  (("IsLearner"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 2812 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "tracker.Progress" })) (GoLean.Sym.Value.struct ({ key := "tracker.Progress" }) #[(("Match"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("Next"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("sentCommit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("State"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("PendingSnapshot"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("RecentActive"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("MsgAppFlowPaused"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("Inflights"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3190 }))),
+  (("IsLearner"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 3199 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.readOnly" })) (GoLean.Sym.Value.struct ({ key := "raft.readOnly" }) #[(("option"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("acks"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 3196 }) }))),
+  (("unconfirmedReads"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("confirmedReads"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64)))]))),
+  ((GoLean.Loc.base { id := 3342 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.RawNode" })) (GoLean.Sym.Value.struct ({ key := "raft.RawNode" }) #[(("raft"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1989 }))),
+  (("asyncStorageWrites"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("prevSoftSt"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3344 }))),
+  (("prevHardSt"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3360 }))),
+  (("stepsOnAdvance"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))]))),
+  ((GoLean.Loc.base { id := 3344 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.SoftState" })) (GoLean.Sym.Value.struct ({ key := "raft.SoftState" }) #[(("Lead"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("RaftState"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64)))]))),
+  ((GoLean.Loc.base { id := 3351 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 3354 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 3360 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.HardState" })) (GoLean.Sym.Value.struct ({ key := "raftpb.HardState" }) #[(("Term"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3351 }))),
+  (("Vote"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3354 }))),
+  (("Commit"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3357 })))]))),
+  ((GoLean.Loc.base { id := 3369 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "main.twinNode" })) (GoLean.Sym.Value.struct ({ key := "main.twinNode" }) #[(("id"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 3) (GoLean.GoCore.IntKind.uint64))),
+  (("rn"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 4941 }))),
+  (("st"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3378 }))),
+  (("term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("commit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("state"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("applied"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("lastTrm"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("got"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 3366 }) })))]))),
+  ((GoLean.Loc.base { id := 6070 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6072 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6073 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int32))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 5) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6074 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6075 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6076 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })) (GoLean.Sym.Value.struct ({ key := "raftpb.Message" }) #[(("Type"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6073 }))),
+  (("To"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6074 }))),
+  (("From"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6075 }))),
+  (("Term"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6079 }))),
+  (("LogTerm"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6084 }))),
+  (("Index"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6085 }))),
+  (("Entries"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("Commit"), (GoLean.Sym.Value.nil)),
+  (("Vote"), (GoLean.Sym.Value.nil)),
+  (("Snapshot"), (GoLean.Sym.Value.nil)),
+  (("Reject"), (GoLean.Sym.Value.nil)),
+  (("RejectHint"), (GoLean.Sym.Value.nil)),
+  (("Context"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("Responses"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))]))),
+  ((GoLean.Loc.base { id := 6077 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 1 (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 }))]))),
+  ((GoLean.Loc.base { id := 6078 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 1 (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true))]))),
+  ((GoLean.Loc.base { id := 6079 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6080 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6081 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6082 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })) (GoLean.Sym.Value.struct ({ key := "raftpb.Entry" }) #[(("Term"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6080 }))),
+  (("Index"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6081 }))),
+  (("Type"), (GoLean.Sym.Value.nil)),
+  (("Data"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))]))),
+  ((GoLean.Loc.base { id := 6083 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 1 (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6082 }))]))),
+  ((GoLean.Loc.base { id := 6084 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6085 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6086 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.map (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)) (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 6087 }) })))),
+  ((GoLean.Loc.base { id := 6087 }), (GoLean.Sym.HeapCell.mk (none) (GoLean.Sym.Value.mapData #[((GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0)))) (GoLean.GoCore.IntKind.int)), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)))]))),
+  ((GoLean.Loc.base { id := 6088 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.map (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)) (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 6087 }) })))),
+  ((GoLean.Loc.base { id := 6089 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })))) (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 6077 }), offset := 0, len := 1, cap := 1 })))),
+  ((GoLean.Loc.base { id := 6090 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 1)) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6091 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.add
+      (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))
+      (GoLean.Sym.SymInt.lit 1)))) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6092 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6093 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6094 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit (-1))) (GoLean.GoCore.IntKind.int))))]
+  6095)
+
+def mvCB1 : SymConfig :=
+  (GoLean.Sym.Config.next (GoLean.Sym.Cont.mapIterK (some "j") (none) (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)) (GoLean.GoCore.Ty.bool) (GoLean.GoCore.Stmt.block
+  #[]
+  #[GoLean.GoCore.Stmt.seqn
+      #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "picked") (GoLean.GoCore.Expr.var "j")],
+    GoLean.GoCore.Stmt.breakStmt]) (some (GoLean.Loc.base { id := 6087 })) #[] #[(GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0)))) (GoLean.GoCore.IntKind.int))] ([[("picked", GoLean.Loc.base { id := 6094 })],
+ [("live", GoLean.Loc.base { id := 6088 }), ("$c2235", GoLean.Loc.base { id := 6086 })],
+ [],
+ [("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization
+       { id := "m", typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }) },
+     GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "m")
+       (GoLean.GoCore.Expr.indexGet
+         (GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+           { key := "main.twin" }
+           "net")
+         (GoLean.GoCore.Expr.var "picked"))],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2236", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2236"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.add
+           (GoLean.GoCore.Expr.var "round")
+           (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2237", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2237"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.var "picked"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization
+       { id := "$c2238", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2238"]
+       { key := "raftpb.Message.GetType" }
+       #[GoLean.GoCore.Expr.var "m"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2239", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2239"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.convert
+           (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+           (GoLean.GoCore.Expr.var "$c2238")]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2240", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2240"]
+       { key := "raftpb.Message.GetTo" }
+       #[GoLean.GoCore.Expr.var "m"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2241", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2241"]
+       { key := "utoa" }
+       #[GoLean.GoCore.Expr.var "$c2240"]],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "main.twin.say" }
+   #[GoLean.GoCore.Expr.var "t",
+     GoLean.GoCore.Expr.add
+       (GoLean.GoCore.Expr.add
+         (GoLean.GoCore.Expr.add
+           (GoLean.GoCore.Expr.add
+             (GoLean.GoCore.Expr.add
+               (GoLean.GoCore.Expr.add
+                 (GoLean.GoCore.Expr.add
+                   (GoLean.GoCore.Expr.stringLit { bytes := #[114] })
+                   (GoLean.GoCore.Expr.var "$c2236"))
+                 (GoLean.GoCore.Expr.stringLit { bytes := #[32, 112, 105, 99, 107, 35] }))
+               (GoLean.GoCore.Expr.var "$c2237"))
+             (GoLean.GoCore.Expr.stringLit { bytes := #[32, 116, 121, 112, 101] }))
+           (GoLean.GoCore.Expr.var "$c2239"))
+         (GoLean.GoCore.Expr.stringLit { bytes := #[45, 62] }))
+       (GoLean.GoCore.Expr.var "$c2241")],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "main.twin.deliverIdx" }
+   #[GoLean.GoCore.Expr.var "t", GoLean.GoCore.Expr.var "picked"],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2242", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2242"]
+       { key := "main.twin.projection" }
+       #[GoLean.GoCore.Expr.var "t"]],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "main.twin.say" }
+   #[GoLean.GoCore.Expr.var "t",
+     GoLean.GoCore.Expr.add
+       (GoLean.GoCore.Expr.add (GoLean.GoCore.Expr.stringLit { bytes := #[32] }) (GoLean.GoCore.Expr.var "$c2242"))
+       (GoLean.GoCore.Expr.stringLit { bytes := #[10] })],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "stuckPropose")
+       (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))],
+ GoLean.GoCore.Stmt.continueStmt]) ([[("picked", GoLean.Loc.base { id := 6094 })],
+ [("live", GoLean.Loc.base { id := 6088 }), ("$c2235", GoLean.Loc.base { id := 6086 })],
+ [],
+ [("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2243", typ := GoLean.GoCore.Ty.bool },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2243"]
+       { key := "main.twin.complete" }
+       #[GoLean.GoCore.Expr.var "t"]],
+ GoLean.GoCore.Stmt.ifThenElse
+   (GoLean.GoCore.Expr.and
+     (GoLean.GoCore.Expr.var "$c2243")
+     (GoLean.GoCore.Expr.eqCmp
+       (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+       (GoLean.GoCore.Expr.length
+         (GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+           { key := "main.twin" }
+           "pending")
+         (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+       (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+   (GoLean.GoCore.Stmt.block #[] #[GoLean.GoCore.Stmt.breakStmt])
+   (GoLean.GoCore.Stmt.seqn #[]),
+ GoLean.GoCore.Stmt.ifThenElse
+   (GoLean.GoCore.Expr.greaterCmp
+     (GoLean.GoCore.Expr.length
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "pending")
+       (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+     (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int)))
+   (GoLean.GoCore.Stmt.block
+     #[]
+     #[GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.initialization { id := "$c2244", typ := GoLean.GoCore.Ty.string },
+           GoLean.GoCore.Stmt.call
+             #[GoLean.GoCore.Assignee.var "$c2244"]
+             { key := "itoa" }
+             #[GoLean.GoCore.Expr.add
+                 (GoLean.GoCore.Expr.var "round")
+                 (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))]],
+       GoLean.GoCore.Stmt.call
+         #[]
+         { key := "main.twin.say" }
+         #[GoLean.GoCore.Expr.var "t",
+           GoLean.GoCore.Expr.add
+             (GoLean.GoCore.Expr.add
+               (GoLean.GoCore.Expr.stringLit { bytes := #[114] })
+               (GoLean.GoCore.Expr.var "$c2244"))
+             (GoLean.GoCore.Expr.stringLit { bytes := #[32] })],
+       GoLean.GoCore.Stmt.call
+         #[]
+         { key := "main.twin.step" }
+         #[GoLean.GoCore.Expr.var "t",
+           GoLean.GoCore.Expr.structLit
+             (GoLean.GoCore.Ty.defined { key := "main.op" })
+             #[GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int),
+               GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int),
+               GoLean.GoCore.Expr.defaultValue (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))]],
+       GoLean.GoCore.Stmt.call
+         #[]
+         { key := "main.twin.say" }
+         #[GoLean.GoCore.Expr.var "t", GoLean.GoCore.Expr.stringLit { bytes := #[10] }],
+       GoLean.GoCore.Stmt.assign
+         (GoLean.GoCore.Assignee.var "stuckPropose")
+         (GoLean.GoCore.Expr.add
+           (GoLean.GoCore.Expr.var "stuckPropose")
+           (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))),
+       GoLean.GoCore.Stmt.ifThenElse
+         (GoLean.GoCore.Expr.greaterCmp
+           (GoLean.GoCore.Expr.var "stuckPropose")
+           (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int)))
+         (GoLean.GoCore.Stmt.block
+           #[]
+           #[GoLean.GoCore.Stmt.seqn
+               #[GoLean.GoCore.Stmt.assign
+                   (GoLean.GoCore.Assignee.addr
+                     (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "t") { key := "main.twin" } "halt"))
+                   (GoLean.GoCore.Expr.boolLit true)],
+             GoLean.GoCore.Stmt.call
+               #[]
+               { key := "main.twin.say" }
+               #[GoLean.GoCore.Expr.var "t",
+                 GoLean.GoCore.Expr.stringLit
+                   { bytes := #[33, 100, 114, 105, 118, 101, 114, 58, 32, 112, 114, 111, 112, 111, 115, 101, 32, 115,
+                                116, 117, 99, 107, 32, 97, 116, 32, 113, 117, 105, 101, 115, 99, 101, 110, 99, 101,
+                                10] }],
+             GoLean.GoCore.Stmt.breakStmt])
+         (GoLean.GoCore.Stmt.seqn #[]),
+       GoLean.GoCore.Stmt.continueStmt])
+   (GoLean.GoCore.Stmt.seqn #[]),
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.addr
+         (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "t") { key := "main.twin" } "halt"))
+       (GoLean.GoCore.Expr.boolLit true)],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "main.twin.say" }
+   #[GoLean.GoCore.Expr.var "t",
+     GoLean.GoCore.Expr.stringLit
+       { bytes := #[33, 100, 114, 105, 118, 101, 114, 58, 32, 113, 117, 105, 101, 115, 99, 101, 110, 116, 32, 119, 105,
+                    116, 104, 111, 117, 116, 32, 83, 52, 10] }],
+ GoLean.GoCore.Stmt.breakStmt]) ([[("live", GoLean.Loc.base { id := 6088 }), ("$c2235", GoLean.Loc.base { id := 6086 })],
+ [],
+ [("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([]) ([[],
+ [("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.loop (GoLean.GoCore.Expr.boolLit true) (GoLean.GoCore.Stmt.block
+  #[]
+  #[GoLean.GoCore.Stmt.ifThenElse
+      (GoLean.GoCore.Expr.var "$forFirst")
+      (GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$forFirst") (GoLean.GoCore.Expr.boolLit false))
+      (GoLean.GoCore.Stmt.assign
+        (GoLean.GoCore.Assignee.var "round")
+        (GoLean.GoCore.Expr.add
+          (GoLean.GoCore.Expr.var "round")
+          (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int)))),
+    GoLean.GoCore.Stmt.seqn #[],
+    GoLean.GoCore.Stmt.ifThenElse
+      (GoLean.GoCore.Expr.lessCmp
+        (GoLean.GoCore.Expr.var "round")
+        (GoLean.GoCore.Expr.intLit 400 (GoLean.GoCore.IntKind.int)))
+      (GoLean.GoCore.Stmt.seqn #[])
+      (GoLean.GoCore.Stmt.breakStmt),
+    GoLean.GoCore.Stmt.block
+      #[]
+      #[GoLean.GoCore.Stmt.seqn
+          #[GoLean.GoCore.Stmt.initialization
+              { id := "$c2235",
+                typ := GoLean.GoCore.Ty.map
+                         (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                         (GoLean.GoCore.Ty.bool) },
+            GoLean.GoCore.Stmt.makeMap
+              (GoLean.GoCore.Assignee.var "$c2235")
+              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+              (GoLean.GoCore.Ty.bool)
+              none],
+        GoLean.GoCore.Stmt.seqn
+          #[GoLean.GoCore.Stmt.initialization
+              { id := "live",
+                typ := GoLean.GoCore.Ty.map
+                         (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                         (GoLean.GoCore.Ty.bool) },
+            GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "live") (GoLean.GoCore.Expr.var "$c2235")],
+        GoLean.GoCore.Stmt.block
+          #[]
+          #[GoLean.GoCore.Stmt.initialization
+              { id := "$rcoll",
+                typ := GoLean.GoCore.Ty.slice
+                         (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })) },
+            GoLean.GoCore.Stmt.assign
+              (GoLean.GoCore.Assignee.var "$rcoll")
+              (GoLean.GoCore.Expr.fieldGet
+                (GoLean.GoCore.Expr.deref
+                  (GoLean.GoCore.Expr.var "t")
+                  (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                { key := "main.twin" }
+                "net"),
+            GoLean.GoCore.Stmt.initialization
+              { id := "$rlen", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+            GoLean.GoCore.Stmt.assign
+              (GoLean.GoCore.Assignee.var "$rlen")
+              (GoLean.GoCore.Expr.length (GoLean.GoCore.Expr.var "$rcoll") none),
+            GoLean.GoCore.Stmt.initialization
+              { id := "$ridx", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+            GoLean.GoCore.Stmt.assign
+              (GoLean.GoCore.Assignee.var "$ridx")
+              (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int)),
+            GoLean.GoCore.Stmt.initialization { id := "$rfirst", typ := GoLean.GoCore.Ty.bool },
+            GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$rfirst") (GoLean.GoCore.Expr.boolLit true),
+            GoLean.GoCore.Stmt.while
+              (GoLean.GoCore.Expr.boolLit true)
+              (GoLean.GoCore.Stmt.block
+                #[]
+                #[GoLean.GoCore.Stmt.ifThenElse
+                    (GoLean.GoCore.Expr.var "$rfirst")
+                    (GoLean.GoCore.Stmt.assign
+                      (GoLean.GoCore.Assignee.var "$rfirst")
+                      (GoLean.GoCore.Expr.boolLit false))
+                    (GoLean.GoCore.Stmt.assign
+                      (GoLean.GoCore.Assignee.var "$ridx")
+                      (GoLean.GoCore.Expr.add
+                        (GoLean.GoCore.Expr.var "$ridx")
+                        (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int)))),
+                  GoLean.GoCore.Stmt.ifThenElse
+                    (GoLean.GoCore.Expr.atLeastCmp (GoLean.GoCore.Expr.var "$ridx") (GoLean.GoCore.Expr.var "$rlen"))
+                    (GoLean.GoCore.Stmt.breakStmt)
+                    (GoLean.GoCore.Stmt.seqn #[]),
+                  GoLean.GoCore.Stmt.initialization
+                    { id := "j", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+                  GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "j") (GoLean.GoCore.Expr.var "$ridx"),
+                  GoLean.GoCore.Stmt.block
+                    #[]
+                    #[GoLean.GoCore.Stmt.ifThenElse
+                        (GoLean.GoCore.Expr.indexGet
+                          (GoLean.GoCore.Expr.fieldGet
+                            (GoLean.GoCore.Expr.deref
+                              (GoLean.GoCore.Expr.var "t")
+                              (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                            { key := "main.twin" }
+                            "live")
+                          (GoLean.GoCore.Expr.var "j"))
+                        (GoLean.GoCore.Stmt.block
+                          #[]
+                          #[GoLean.GoCore.Stmt.mapAssign
+                              (GoLean.GoCore.Expr.var "live")
+                              (GoLean.GoCore.Expr.var "j")
+                              (GoLean.GoCore.Expr.boolLit true)
+                              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                              (GoLean.GoCore.Ty.bool)])
+                        (GoLean.GoCore.Stmt.seqn #[])]])],
+        GoLean.GoCore.Stmt.ifThenElse
+          (GoLean.GoCore.Expr.greaterCmp
+            (GoLean.GoCore.Expr.length
+              (GoLean.GoCore.Expr.var "live")
+              (some (GoLean.GoCore.Ty.map (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)) (GoLean.GoCore.Ty.bool))))
+            (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int)))
+          (GoLean.GoCore.Stmt.block
+            #[]
+            #[GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization
+                    { id := "picked", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+                  GoLean.GoCore.Stmt.assign
+                    (GoLean.GoCore.Assignee.var "picked")
+                    (GoLean.GoCore.Expr.intLit (-1) (GoLean.GoCore.IntKind.int))],
+              GoLean.GoCore.Stmt.mapRange
+                (some "j")
+                none
+                (GoLean.GoCore.Expr.var "live")
+                (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                (GoLean.GoCore.Ty.bool)
+                (GoLean.GoCore.Stmt.block
+                  #[]
+                  #[GoLean.GoCore.Stmt.seqn
+                      #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "picked") (GoLean.GoCore.Expr.var "j")],
+                    GoLean.GoCore.Stmt.breakStmt]),
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization
+                    { id := "m",
+                      typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }) },
+                  GoLean.GoCore.Stmt.assign
+                    (GoLean.GoCore.Assignee.var "m")
+                    (GoLean.GoCore.Expr.indexGet
+                      (GoLean.GoCore.Expr.fieldGet
+                        (GoLean.GoCore.Expr.deref
+                          (GoLean.GoCore.Expr.var "t")
+                          (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                        { key := "main.twin" }
+                        "net")
+                      (GoLean.GoCore.Expr.var "picked"))],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2236", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2236"]
+                    { key := "itoa" }
+                    #[GoLean.GoCore.Expr.add
+                        (GoLean.GoCore.Expr.var "round")
+                        (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2237", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2237"]
+                    { key := "itoa" }
+                    #[GoLean.GoCore.Expr.var "picked"]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization
+                    { id := "$c2238", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2238"]
+                    { key := "raftpb.Message.GetType" }
+                    #[GoLean.GoCore.Expr.var "m"]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2239", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2239"]
+                    { key := "itoa" }
+                    #[GoLean.GoCore.Expr.convert
+                        (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                        (GoLean.GoCore.Expr.var "$c2238")]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization
+                    { id := "$c2240", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2240"]
+                    { key := "raftpb.Message.GetTo" }
+                    #[GoLean.GoCore.Expr.var "m"]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2241", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2241"]
+                    { key := "utoa" }
+                    #[GoLean.GoCore.Expr.var "$c2240"]],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.say" }
+                #[GoLean.GoCore.Expr.var "t",
+                  GoLean.GoCore.Expr.add
+                    (GoLean.GoCore.Expr.add
+                      (GoLean.GoCore.Expr.add
+                        (GoLean.GoCore.Expr.add
+                          (GoLean.GoCore.Expr.add
+                            (GoLean.GoCore.Expr.add
+                              (GoLean.GoCore.Expr.add
+                                (GoLean.GoCore.Expr.stringLit { bytes := #[114] })
+                                (GoLean.GoCore.Expr.var "$c2236"))
+                              (GoLean.GoCore.Expr.stringLit { bytes := #[32, 112, 105, 99, 107, 35] }))
+                            (GoLean.GoCore.Expr.var "$c2237"))
+                          (GoLean.GoCore.Expr.stringLit { bytes := #[32, 116, 121, 112, 101] }))
+                        (GoLean.GoCore.Expr.var "$c2239"))
+                      (GoLean.GoCore.Expr.stringLit { bytes := #[45, 62] }))
+                    (GoLean.GoCore.Expr.var "$c2241")],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.deliverIdx" }
+                #[GoLean.GoCore.Expr.var "t", GoLean.GoCore.Expr.var "picked"],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2242", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2242"]
+                    { key := "main.twin.projection" }
+                    #[GoLean.GoCore.Expr.var "t"]],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.say" }
+                #[GoLean.GoCore.Expr.var "t",
+                  GoLean.GoCore.Expr.add
+                    (GoLean.GoCore.Expr.add
+                      (GoLean.GoCore.Expr.stringLit { bytes := #[32] })
+                      (GoLean.GoCore.Expr.var "$c2242"))
+                    (GoLean.GoCore.Expr.stringLit { bytes := #[10] })],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.assign
+                    (GoLean.GoCore.Assignee.var "stuckPropose")
+                    (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))],
+              GoLean.GoCore.Stmt.continueStmt])
+          (GoLean.GoCore.Stmt.seqn #[]),
+        GoLean.GoCore.Stmt.seqn
+          #[GoLean.GoCore.Stmt.initialization { id := "$c2243", typ := GoLean.GoCore.Ty.bool },
+            GoLean.GoCore.Stmt.call
+              #[GoLean.GoCore.Assignee.var "$c2243"]
+              { key := "main.twin.complete" }
+              #[GoLean.GoCore.Expr.var "t"]],
+        GoLean.GoCore.Stmt.ifThenElse
+          (GoLean.GoCore.Expr.and
+            (GoLean.GoCore.Expr.var "$c2243")
+            (GoLean.GoCore.Expr.eqCmp
+              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+              (GoLean.GoCore.Expr.length
+                (GoLean.GoCore.Expr.fieldGet
+                  (GoLean.GoCore.Expr.deref
+                    (GoLean.GoCore.Expr.var "t")
+                    (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                  { key := "main.twin" }
+                  "pending")
+                (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+              (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+          (GoLean.GoCore.Stmt.block #[] #[GoLean.GoCore.Stmt.breakStmt])
+          (GoLean.GoCore.Stmt.seqn #[]),
+        GoLean.GoCore.Stmt.ifThenElse
+          (GoLean.GoCore.Expr.greaterCmp
+            (GoLean.GoCore.Expr.length
+              (GoLean.GoCore.Expr.fieldGet
+                (GoLean.GoCore.Expr.deref
+                  (GoLean.GoCore.Expr.var "t")
+                  (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                { key := "main.twin" }
+                "pending")
+              (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+            (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int)))
+          (GoLean.GoCore.Stmt.block
+            #[]
+            #[GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2244", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2244"]
+                    { key := "itoa" }
+                    #[GoLean.GoCore.Expr.add
+                        (GoLean.GoCore.Expr.var "round")
+                        (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))]],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.say" }
+                #[GoLean.GoCore.Expr.var "t",
+                  GoLean.GoCore.Expr.add
+                    (GoLean.GoCore.Expr.add
+                      (GoLean.GoCore.Expr.stringLit { bytes := #[114] })
+                      (GoLean.GoCore.Expr.var "$c2244"))
+                    (GoLean.GoCore.Expr.stringLit { bytes := #[32] })],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.step" }
+                #[GoLean.GoCore.Expr.var "t",
+                  GoLean.GoCore.Expr.structLit
+                    (GoLean.GoCore.Ty.defined { key := "main.op" })
+                    #[GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int),
+                      GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int),
+                      GoLean.GoCore.Expr.defaultValue (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))]],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.say" }
+                #[GoLean.GoCore.Expr.var "t", GoLean.GoCore.Expr.stringLit { bytes := #[10] }],
+              GoLean.GoCore.Stmt.assign
+                (GoLean.GoCore.Assignee.var "stuckPropose")
+                (GoLean.GoCore.Expr.add
+                  (GoLean.GoCore.Expr.var "stuckPropose")
+                  (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))),
+              GoLean.GoCore.Stmt.ifThenElse
+                (GoLean.GoCore.Expr.greaterCmp
+                  (GoLean.GoCore.Expr.var "stuckPropose")
+                  (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int)))
+                (GoLean.GoCore.Stmt.block
+                  #[]
+                  #[GoLean.GoCore.Stmt.seqn
+                      #[GoLean.GoCore.Stmt.assign
+                          (GoLean.GoCore.Assignee.addr
+                            (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "t") { key := "main.twin" } "halt"))
+                          (GoLean.GoCore.Expr.boolLit true)],
+                    GoLean.GoCore.Stmt.call
+                      #[]
+                      { key := "main.twin.say" }
+                      #[GoLean.GoCore.Expr.var "t",
+                        GoLean.GoCore.Expr.stringLit
+                          { bytes := #[33, 100, 114, 105, 118, 101, 114, 58, 32, 112, 114, 111, 112, 111, 115, 101, 32,
+                                       115, 116, 117, 99, 107, 32, 97, 116, 32, 113, 117, 105, 101, 115, 99, 101, 110,
+                                       99, 101, 10] }],
+                    GoLean.GoCore.Stmt.breakStmt])
+                (GoLean.GoCore.Stmt.seqn #[]),
+              GoLean.GoCore.Stmt.continueStmt])
+          (GoLean.GoCore.Stmt.seqn #[]),
+        GoLean.GoCore.Stmt.seqn
+          #[GoLean.GoCore.Stmt.assign
+              (GoLean.GoCore.Assignee.addr
+                (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "t") { key := "main.twin" } "halt"))
+              (GoLean.GoCore.Expr.boolLit true)],
+        GoLean.GoCore.Stmt.call
+          #[]
+          { key := "main.twin.say" }
+          #[GoLean.GoCore.Expr.var "t",
+            GoLean.GoCore.Expr.stringLit
+              { bytes := #[33, 100, 114, 105, 118, 101, 114, 58, 32, 113, 117, 105, 101, 115, 99, 101, 110, 116, 32,
+                           119, 105, 116, 104, 111, 117, 116, 32, 83, 52, 10] }],
+        GoLean.GoCore.Stmt.breakStmt]]) ([[("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([]) ([[("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([]) ([[],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "comp", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+     GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "comp")
+       (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2245", typ := GoLean.GoCore.Ty.bool },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2245"]
+       { key := "main.twin.complete" }
+       #[GoLean.GoCore.Expr.var "t"]],
+ GoLean.GoCore.Stmt.ifThenElse
+   (GoLean.GoCore.Expr.and
+     (GoLean.GoCore.Expr.and
+       (GoLean.GoCore.Expr.var "$c2245")
+       (GoLean.GoCore.Expr.eqCmp
+         (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+         (GoLean.GoCore.Expr.length
+           (GoLean.GoCore.Expr.fieldGet
+             (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+             { key := "main.twin" }
+             "pending")
+           (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+         (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+     (GoLean.GoCore.Expr.not
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "halt")))
+   (GoLean.GoCore.Stmt.block
+     #[]
+     #[GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.assign
+             (GoLean.GoCore.Assignee.var "comp")
+             (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))]])
+   (GoLean.GoCore.Stmt.seqn #[]),
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "floorOK", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+     GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "floorOK")
+       (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))],
+ GoLean.GoCore.Stmt.ifThenElse
+   (GoLean.GoCore.Expr.or
+     (GoLean.GoCore.Expr.lessCmp
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "claims")
+       (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int)))
+     (GoLean.GoCore.Expr.lessCmp
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "committed")
+       (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))))
+   (GoLean.GoCore.Stmt.block
+     #[]
+     #[GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.assign
+             (GoLean.GoCore.Assignee.var "floorOK")
+             (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))]])
+   (GoLean.GoCore.Stmt.seqn #[]),
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2246", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2246"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+           { key := "main.twin" }
+           "violations"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2247", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2247"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+           { key := "main.twin" }
+           "claims"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2248", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2248"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+           { key := "main.twin" }
+           "committed"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2249", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call #[GoLean.GoCore.Assignee.var "$c2249"] { key := "itoa" } #[GoLean.GoCore.Expr.var "comp"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2250", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2250"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.var "floorOK"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2251", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2251"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.var "round"]],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "main.twin.say" }
+   #[GoLean.GoCore.Expr.var "t",
+     GoLean.GoCore.Expr.add
+       (GoLean.GoCore.Expr.add
+         (GoLean.GoCore.Expr.add
+           (GoLean.GoCore.Expr.add
+             (GoLean.GoCore.Expr.add
+               (GoLean.GoCore.Expr.add
+                 (GoLean.GoCore.Expr.add
+                   (GoLean.GoCore.Expr.add
+                     (GoLean.GoCore.Expr.add
+                       (GoLean.GoCore.Expr.add
+                         (GoLean.GoCore.Expr.add
+                           (GoLean.GoCore.Expr.add
+                             (GoLean.GoCore.Expr.stringLit { bytes := #[101, 110, 100, 32, 118, 105, 111, 108, 61] })
+                             (GoLean.GoCore.Expr.var "$c2246"))
+                           (GoLean.GoCore.Expr.stringLit { bytes := #[32, 99, 108, 97, 105, 109, 115, 61] }))
+                         (GoLean.GoCore.Expr.var "$c2247"))
+                       (GoLean.GoCore.Expr.stringLit
+                         { bytes := #[32, 99, 111, 109, 109, 105, 116, 116, 101, 100, 61] }))
+                     (GoLean.GoCore.Expr.var "$c2248"))
+                   (GoLean.GoCore.Expr.stringLit { bytes := #[32, 99, 111, 109, 112, 108, 101, 116, 101, 61] }))
+                 (GoLean.GoCore.Expr.var "$c2249"))
+               (GoLean.GoCore.Expr.stringLit { bytes := #[32, 102, 108, 111, 111, 114, 61] }))
+             (GoLean.GoCore.Expr.var "$c2250"))
+           (GoLean.GoCore.Expr.stringLit { bytes := #[32, 114, 111, 117, 110, 100, 115, 61] }))
+         (GoLean.GoCore.Expr.var "$c2251"))
+       (GoLean.GoCore.Expr.stringLit { bytes := #[10] })],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2252", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2252"]
+       { key := "main.twin.projection" }
+       #[GoLean.GoCore.Expr.var "t"]],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "main.twin.say" }
+   #[GoLean.GoCore.Expr.var "t",
+     GoLean.GoCore.Expr.add
+       (GoLean.GoCore.Expr.add
+         (GoLean.GoCore.Expr.stringLit { bytes := #[102, 105, 110, 97, 108, 32] })
+         (GoLean.GoCore.Expr.var "$c2252"))
+       (GoLean.GoCore.Expr.stringLit { bytes := #[10] })],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res0") (GoLean.GoCore.Expr.var "t"),
+     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res1") (GoLean.GoCore.Expr.var "comp"),
+     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res2") (GoLean.GoCore.Expr.var "floorOK"),
+     GoLean.GoCore.Stmt.returnStmt]]) ([[("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.frame ([(GoLean.GoCore.Machine.TargetShape.chain [], [GoLean.GoCore.Expr.ref "t"]),
+ (GoLean.GoCore.Machine.TargetShape.chain [], [GoLean.GoCore.Expr.ref "comp"]),
+ (GoLean.GoCore.Machine.TargetShape.chain [], [GoLean.GoCore.Expr.ref "floorOK"])]) ([[("floorOK", GoLean.Loc.base { id := 105 }),
+  ("comp", GoLean.Loc.base { id := 104 }),
+  ("t", GoLean.Loc.base { id := 103 })],
+ [("$res4", GoLean.Loc.base { id := 102 }),
+  ("$res3", GoLean.Loc.base { id := 101 }),
+  ("$res2", GoLean.Loc.base { id := 100 }),
+  ("$res1", GoLean.Loc.base { id := 99 }),
+  ("$res0", GoLean.Loc.base { id := 98 })]]) ([GoLean.Loc.base { id := 106 }, GoLean.Loc.base { id := 107 }, GoLean.Loc.base { id := 108 }]) [] (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "$res0")
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "violations"),
+     GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "$res1")
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "claims"),
+     GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "$res2")
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "committed"),
+     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res3") (GoLean.GoCore.Expr.var "comp"),
+     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res4") (GoLean.GoCore.Expr.var "floorOK"),
+     GoLean.GoCore.Stmt.returnStmt]]) ([[("floorOK", GoLean.Loc.base { id := 105 }),
+  ("comp", GoLean.Loc.base { id := 104 }),
+  ("t", GoLean.Loc.base { id := 103 })],
+ [("$res4", GoLean.Loc.base { id := 102 }),
+  ("$res3", GoLean.Loc.base { id := 101 }),
+  ("$res2", GoLean.Loc.base { id := 100 }),
+  ("$res1", GoLean.Loc.base { id := 99 }),
+  ("$res0", GoLean.Loc.base { id := 98 })]]) (GoLean.Sym.Cont.frame ([]) ([]) ([]) [] (GoLean.Sym.Cont.stop) false)) false))))))))))
+
+def mvSB2 : SymState :=
+  (GoLean.Sym.State.mk
+  [((GoLean.Loc.base { id := 15 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.HardState" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 57 })))),
+  ((GoLean.Loc.base { id := 18 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raft.lockedRand" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 67 })))),
+  ((GoLean.Loc.base { id := 27 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 23 (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true))]))),
+  ((GoLean.Loc.base { id := 28 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 23 (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true))]))),
+  ((GoLean.Loc.base { id := 57 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.HardState" })) (GoLean.Sym.Value.struct ({ key := "raftpb.HardState" }) #[(("Term"), (GoLean.Sym.Value.nil)),
+  (("Vote"), (GoLean.Sym.Value.nil)),
+  (("Commit"), (GoLean.Sym.Value.nil))]))),
+  ((GoLean.Loc.base { id := 67 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.lockedRand" })) (GoLean.Sym.Value.struct ({ key := "raft.lockedRand" }) #[(("mu"), (GoLean.Sym.Value.syncData (GoLean.SyncPrim.mutex false)))]))),
+  ((GoLean.Loc.base { id := 110 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.twin" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 121 })))),
+  ((GoLean.Loc.base { id := 121 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "main.twin" })) (GoLean.Sym.Value.struct ({ key := "main.twin" }) #[(("nodes"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 1764 }), offset := 0, len := 3, cap := 4 }))),
+  (("net"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 6077 }), offset := 0, len := 1, cap := 1 }))),
+  (("live"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 6078 }), offset := 0, len := 1, cap := 1 }))),
+  (("leaderOf"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 115 }) }))),
+  (("byIndex"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 118 }) }))),
+  (("claims"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("committed"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("violations"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("pending"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 136 }), offset := 0, len := 2, cap := 4 }))),
+  (("driven"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("seq"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.int))),
+  (("trace"), (GoLean.Sym.Value.string ({ bytes := #[91, 99, 104, 111, 105, 99, 101, 45, 100, 114, 105, 118, 101, 110, 93, 10, 99, 97, 109, 112, 97, 105, 103,
+             110, 49] }))),
+  (("halt"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 170 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "main.twinNode" })) (GoLean.Sym.Value.struct ({ key := "main.twinNode" }) #[(("id"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("rn"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1742 }))),
+  (("st"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 179 }))),
+  (("term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("commit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("state"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("applied"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("lastTrm"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("got"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 167 }) })))]))),
+  ((GoLean.Loc.base { id := 1764 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 4 (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.twinNode" })))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 170 })),
+  (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1770 })),
+  (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3369 })),
+  (GoLean.Sym.Value.nil)]))),
+  ((GoLean.Loc.base { id := 1770 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "main.twinNode" })) (GoLean.Sym.Value.struct ({ key := "main.twinNode" }) #[(("id"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("rn"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3342 }))),
+  (("st"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1779 }))),
+  (("term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("commit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("state"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("applied"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("lastTrm"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("got"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 1767 }) })))]))),
+  ((GoLean.Loc.base { id := 1779 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.MemoryStorage" })) (GoLean.Sym.Value.struct ({ key := "raft.MemoryStorage" }) #[(("Mutex"), (GoLean.Sym.Value.syncData (GoLean.SyncPrim.mutex false))),
+  (("hardState"), (GoLean.Sym.Value.nil)),
+  (("snapshot"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1858 }))),
+  (("ents"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 1900 }), offset := 0, len := 1, cap := 1 }))),
+  (("callStats"), (GoLean.Sym.Value.struct ({ key := "raft.inMemStorageCallStats" }) #[(("initialState"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.int))),
+  (("firstIndex"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.int))),
+  (("lastIndex"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 7) (GoLean.GoCore.IntKind.int))),
+  (("entries"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.int))),
+  (("snapshot"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int)))]))]))),
+  ((GoLean.Loc.base { id := 1886 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 1895 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 1898 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })) (GoLean.Sym.Value.struct ({ key := "raftpb.Entry" }) #[(("Term"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1886 }))),
+  (("Index"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1895 }))),
+  (("Type"), (GoLean.Sym.Value.nil)),
+  (("Data"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))]))),
+  ((GoLean.Loc.base { id := 1900 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 1 (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1898 }))]))),
+  ((GoLean.Loc.base { id := 1949 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.raftLog" })) (GoLean.Sym.Value.struct ({ key := "raft.raftLog" }) #[(("storage"), (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raft.MemoryStorage" })) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1779 })))),
+  (("unstable"), (GoLean.Sym.Value.struct ({ key := "raft.unstable" }) #[(("snapshot"), (GoLean.Sym.Value.nil)),
+  (("entries"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("offset"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("snapshotInProgress"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("offsetInProgress"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("logger"), (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.harnessLogger" })) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 97 }))))])),
+  (("committed"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("applying"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("applied"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("logger"), (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.harnessLogger" })) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 97 })))),
+  (("maxApplyingEntsSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1048576) (GoLean.GoCore.IntKind.uint64))),
+  (("applyingEntsSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("applyingEntsPaused"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 1989 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.raft" })) (GoLean.Sym.Value.struct ({ key := "raft.raft" }) #[(("id"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("Term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("Vote"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("readStates"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("raftLog"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1949 }))),
+  (("maxMsgSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1048576) (GoLean.GoCore.IntKind.uint64))),
+  (("maxUncommittedSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 18446744073709551615) (GoLean.GoCore.IntKind.uint64))),
+  (("trk"), (GoLean.Sym.Value.struct ({ key := "tracker.ProgressTracker" }) #[(("Config"), (GoLean.Sym.Value.struct ({ key := "tracker.Config" }) #[(("Voters"), (GoLean.Sym.Value.array #[(GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 2686 }) })),
+  (GoLean.Sym.Value.map ({ base := none }))])),
+  (("AutoLeave"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("Learners"), (GoLean.Sym.Value.map ({ base := none }))),
+  (("LearnersNext"), (GoLean.Sym.Value.map ({ base := none })))])),
+  (("Progress"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 2703 }) }))),
+  (("Votes"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 3059 }) }))),
+  (("MaxInflight"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 256) (GoLean.GoCore.IntKind.int))),
+  (("MaxInflightBytes"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 18446744073709551615) (GoLean.GoCore.IntKind.uint64)))])),
+  (("state"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("isLearner"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("msgs"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("msgsAfterAppend"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("lead"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("leadTransferee"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("pendingConfIndex"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("disableConfChangeValidation"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("uncommittedSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("readOnly"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3199 }))),
+  (("electionElapsed"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("heartbeatElapsed"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("checkQuorum"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("preVote"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("heartbeatTimeout"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.int))),
+  (("electionTimeout"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 10) (GoLean.GoCore.IntKind.int))),
+  (("randomizedElectionTimeout"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 10) (GoLean.GoCore.IntKind.int))),
+  (("disableProposalForwarding"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("stepDownOnRemoval"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("tick"), (GoLean.Sym.Value.funcVal ({ key := "raft.raft.tickElection" }) [(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1989 }))])),
+  (("step"), (GoLean.Sym.Value.funcVal ({ key := "raft.stepFollower" }) [])),
+  (("logger"), (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.harnessLogger" })) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 97 })))),
+  (("pendingReadIndexMessages"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("traceLogger"), (GoLean.Sym.Value.nil))]))),
+  ((GoLean.Loc.base { id := 2703 }), (GoLean.Sym.HeapCell.mk (none) (GoLean.Sym.Value.mapData #[((GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 2707 }))),
+  ((GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64)), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 2710 }))),
+  ((GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 3) (GoLean.GoCore.IntKind.uint64)), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 2812 })))]))),
+  ((GoLean.Loc.base { id := 2707 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "tracker.Progress" })) (GoLean.Sym.Value.struct ({ key := "tracker.Progress" }) #[(("Match"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("Next"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("sentCommit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("State"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("PendingSnapshot"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("RecentActive"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("MsgAppFlowPaused"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("Inflights"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3103 }))),
+  (("IsLearner"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 2710 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "tracker.Progress" })) (GoLean.Sym.Value.struct ({ key := "tracker.Progress" }) #[(("Match"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("Next"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("sentCommit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("State"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("PendingSnapshot"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("RecentActive"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("MsgAppFlowPaused"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("Inflights"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3136 }))),
+  (("IsLearner"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 2812 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "tracker.Progress" })) (GoLean.Sym.Value.struct ({ key := "tracker.Progress" }) #[(("Match"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("Next"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("sentCommit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("State"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("PendingSnapshot"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("RecentActive"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("MsgAppFlowPaused"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("Inflights"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3190 }))),
+  (("IsLearner"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 3199 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.readOnly" })) (GoLean.Sym.Value.struct ({ key := "raft.readOnly" }) #[(("option"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("acks"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 3196 }) }))),
+  (("unconfirmedReads"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("confirmedReads"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64)))]))),
+  ((GoLean.Loc.base { id := 3342 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.RawNode" })) (GoLean.Sym.Value.struct ({ key := "raft.RawNode" }) #[(("raft"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1989 }))),
+  (("asyncStorageWrites"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("prevSoftSt"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3344 }))),
+  (("prevHardSt"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3360 }))),
+  (("stepsOnAdvance"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))]))),
+  ((GoLean.Loc.base { id := 3344 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.SoftState" })) (GoLean.Sym.Value.struct ({ key := "raft.SoftState" }) #[(("Lead"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("RaftState"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64)))]))),
+  ((GoLean.Loc.base { id := 3351 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 3354 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 3360 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.HardState" })) (GoLean.Sym.Value.struct ({ key := "raftpb.HardState" }) #[(("Term"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3351 }))),
+  (("Vote"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3354 }))),
+  (("Commit"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3357 })))]))),
+  ((GoLean.Loc.base { id := 3369 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "main.twinNode" })) (GoLean.Sym.Value.struct ({ key := "main.twinNode" }) #[(("id"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 3) (GoLean.GoCore.IntKind.uint64))),
+  (("rn"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 4941 }))),
+  (("st"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3378 }))),
+  (("term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("commit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("state"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("applied"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("lastTrm"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("got"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 3366 }) })))]))),
+  ((GoLean.Loc.base { id := 6070 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6072 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6073 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int32))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 5) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6074 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6075 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6076 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })) (GoLean.Sym.Value.struct ({ key := "raftpb.Message" }) #[(("Type"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6073 }))),
+  (("To"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6074 }))),
+  (("From"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6075 }))),
+  (("Term"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6079 }))),
+  (("LogTerm"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6084 }))),
+  (("Index"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6085 }))),
+  (("Entries"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("Commit"), (GoLean.Sym.Value.nil)),
+  (("Vote"), (GoLean.Sym.Value.nil)),
+  (("Snapshot"), (GoLean.Sym.Value.nil)),
+  (("Reject"), (GoLean.Sym.Value.nil)),
+  (("RejectHint"), (GoLean.Sym.Value.nil)),
+  (("Context"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("Responses"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))]))),
+  ((GoLean.Loc.base { id := 6077 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 1 (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 }))]))),
+  ((GoLean.Loc.base { id := 6078 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 1 (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true))]))),
+  ((GoLean.Loc.base { id := 6079 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6080 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6081 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6082 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })) (GoLean.Sym.Value.struct ({ key := "raftpb.Entry" }) #[(("Term"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6080 }))),
+  (("Index"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6081 }))),
+  (("Type"), (GoLean.Sym.Value.nil)),
+  (("Data"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))]))),
+  ((GoLean.Loc.base { id := 6083 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 1 (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6082 }))]))),
+  ((GoLean.Loc.base { id := 6084 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6085 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6086 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.map (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)) (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 6087 }) })))),
+  ((GoLean.Loc.base { id := 6087 }), (GoLean.Sym.HeapCell.mk (none) (GoLean.Sym.Value.mapData #[((GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0)))) (GoLean.GoCore.IntKind.int)), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)))]))),
+  ((GoLean.Loc.base { id := 6088 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.map (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)) (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 6087 }) })))),
+  ((GoLean.Loc.base { id := 6089 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })))) (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 6077 }), offset := 0, len := 1, cap := 1 })))),
+  ((GoLean.Loc.base { id := 6090 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 1)) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6091 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.add
+      (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))
+      (GoLean.Sym.SymInt.lit 1)))) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6092 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6093 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6094 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit (-1))) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6095 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))))]
+  6096)
+
+def mvCB2 : SymConfig :=
+  (GoLean.Sym.Config.exec (GoLean.GoCore.Stmt.block
+  #[]
+  #[GoLean.GoCore.Stmt.seqn
+      #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "picked") (GoLean.GoCore.Expr.var "j")],
+    GoLean.GoCore.Stmt.breakStmt]) ([[("j", GoLean.Loc.base { id := 6095 })],
+ [("picked", GoLean.Loc.base { id := 6094 })],
+ [("live", GoLean.Loc.base { id := 6088 }), ("$c2235", GoLean.Loc.base { id := 6086 })],
+ [],
+ [("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.mapIterK (some "j") (none) (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)) (GoLean.GoCore.Ty.bool) (GoLean.GoCore.Stmt.block
+  #[]
+  #[GoLean.GoCore.Stmt.seqn
+      #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "picked") (GoLean.GoCore.Expr.var "j")],
+    GoLean.GoCore.Stmt.breakStmt]) (some (GoLean.Loc.base { id := 6087 })) #[(GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))] #[(GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))] ([[("picked", GoLean.Loc.base { id := 6094 })],
+ [("live", GoLean.Loc.base { id := 6088 }), ("$c2235", GoLean.Loc.base { id := 6086 })],
+ [],
+ [("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization
+       { id := "m", typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }) },
+     GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "m")
+       (GoLean.GoCore.Expr.indexGet
+         (GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+           { key := "main.twin" }
+           "net")
+         (GoLean.GoCore.Expr.var "picked"))],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2236", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2236"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.add
+           (GoLean.GoCore.Expr.var "round")
+           (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2237", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2237"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.var "picked"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization
+       { id := "$c2238", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2238"]
+       { key := "raftpb.Message.GetType" }
+       #[GoLean.GoCore.Expr.var "m"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2239", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2239"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.convert
+           (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+           (GoLean.GoCore.Expr.var "$c2238")]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2240", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2240"]
+       { key := "raftpb.Message.GetTo" }
+       #[GoLean.GoCore.Expr.var "m"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2241", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2241"]
+       { key := "utoa" }
+       #[GoLean.GoCore.Expr.var "$c2240"]],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "main.twin.say" }
+   #[GoLean.GoCore.Expr.var "t",
+     GoLean.GoCore.Expr.add
+       (GoLean.GoCore.Expr.add
+         (GoLean.GoCore.Expr.add
+           (GoLean.GoCore.Expr.add
+             (GoLean.GoCore.Expr.add
+               (GoLean.GoCore.Expr.add
+                 (GoLean.GoCore.Expr.add
+                   (GoLean.GoCore.Expr.stringLit { bytes := #[114] })
+                   (GoLean.GoCore.Expr.var "$c2236"))
+                 (GoLean.GoCore.Expr.stringLit { bytes := #[32, 112, 105, 99, 107, 35] }))
+               (GoLean.GoCore.Expr.var "$c2237"))
+             (GoLean.GoCore.Expr.stringLit { bytes := #[32, 116, 121, 112, 101] }))
+           (GoLean.GoCore.Expr.var "$c2239"))
+         (GoLean.GoCore.Expr.stringLit { bytes := #[45, 62] }))
+       (GoLean.GoCore.Expr.var "$c2241")],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "main.twin.deliverIdx" }
+   #[GoLean.GoCore.Expr.var "t", GoLean.GoCore.Expr.var "picked"],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2242", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2242"]
+       { key := "main.twin.projection" }
+       #[GoLean.GoCore.Expr.var "t"]],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "main.twin.say" }
+   #[GoLean.GoCore.Expr.var "t",
+     GoLean.GoCore.Expr.add
+       (GoLean.GoCore.Expr.add (GoLean.GoCore.Expr.stringLit { bytes := #[32] }) (GoLean.GoCore.Expr.var "$c2242"))
+       (GoLean.GoCore.Expr.stringLit { bytes := #[10] })],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "stuckPropose")
+       (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))],
+ GoLean.GoCore.Stmt.continueStmt]) ([[("picked", GoLean.Loc.base { id := 6094 })],
+ [("live", GoLean.Loc.base { id := 6088 }), ("$c2235", GoLean.Loc.base { id := 6086 })],
+ [],
+ [("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2243", typ := GoLean.GoCore.Ty.bool },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2243"]
+       { key := "main.twin.complete" }
+       #[GoLean.GoCore.Expr.var "t"]],
+ GoLean.GoCore.Stmt.ifThenElse
+   (GoLean.GoCore.Expr.and
+     (GoLean.GoCore.Expr.var "$c2243")
+     (GoLean.GoCore.Expr.eqCmp
+       (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+       (GoLean.GoCore.Expr.length
+         (GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+           { key := "main.twin" }
+           "pending")
+         (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+       (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+   (GoLean.GoCore.Stmt.block #[] #[GoLean.GoCore.Stmt.breakStmt])
+   (GoLean.GoCore.Stmt.seqn #[]),
+ GoLean.GoCore.Stmt.ifThenElse
+   (GoLean.GoCore.Expr.greaterCmp
+     (GoLean.GoCore.Expr.length
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "pending")
+       (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+     (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int)))
+   (GoLean.GoCore.Stmt.block
+     #[]
+     #[GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.initialization { id := "$c2244", typ := GoLean.GoCore.Ty.string },
+           GoLean.GoCore.Stmt.call
+             #[GoLean.GoCore.Assignee.var "$c2244"]
+             { key := "itoa" }
+             #[GoLean.GoCore.Expr.add
+                 (GoLean.GoCore.Expr.var "round")
+                 (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))]],
+       GoLean.GoCore.Stmt.call
+         #[]
+         { key := "main.twin.say" }
+         #[GoLean.GoCore.Expr.var "t",
+           GoLean.GoCore.Expr.add
+             (GoLean.GoCore.Expr.add
+               (GoLean.GoCore.Expr.stringLit { bytes := #[114] })
+               (GoLean.GoCore.Expr.var "$c2244"))
+             (GoLean.GoCore.Expr.stringLit { bytes := #[32] })],
+       GoLean.GoCore.Stmt.call
+         #[]
+         { key := "main.twin.step" }
+         #[GoLean.GoCore.Expr.var "t",
+           GoLean.GoCore.Expr.structLit
+             (GoLean.GoCore.Ty.defined { key := "main.op" })
+             #[GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int),
+               GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int),
+               GoLean.GoCore.Expr.defaultValue (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))]],
+       GoLean.GoCore.Stmt.call
+         #[]
+         { key := "main.twin.say" }
+         #[GoLean.GoCore.Expr.var "t", GoLean.GoCore.Expr.stringLit { bytes := #[10] }],
+       GoLean.GoCore.Stmt.assign
+         (GoLean.GoCore.Assignee.var "stuckPropose")
+         (GoLean.GoCore.Expr.add
+           (GoLean.GoCore.Expr.var "stuckPropose")
+           (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))),
+       GoLean.GoCore.Stmt.ifThenElse
+         (GoLean.GoCore.Expr.greaterCmp
+           (GoLean.GoCore.Expr.var "stuckPropose")
+           (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int)))
+         (GoLean.GoCore.Stmt.block
+           #[]
+           #[GoLean.GoCore.Stmt.seqn
+               #[GoLean.GoCore.Stmt.assign
+                   (GoLean.GoCore.Assignee.addr
+                     (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "t") { key := "main.twin" } "halt"))
+                   (GoLean.GoCore.Expr.boolLit true)],
+             GoLean.GoCore.Stmt.call
+               #[]
+               { key := "main.twin.say" }
+               #[GoLean.GoCore.Expr.var "t",
+                 GoLean.GoCore.Expr.stringLit
+                   { bytes := #[33, 100, 114, 105, 118, 101, 114, 58, 32, 112, 114, 111, 112, 111, 115, 101, 32, 115,
+                                116, 117, 99, 107, 32, 97, 116, 32, 113, 117, 105, 101, 115, 99, 101, 110, 99, 101,
+                                10] }],
+             GoLean.GoCore.Stmt.breakStmt])
+         (GoLean.GoCore.Stmt.seqn #[]),
+       GoLean.GoCore.Stmt.continueStmt])
+   (GoLean.GoCore.Stmt.seqn #[]),
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.addr
+         (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "t") { key := "main.twin" } "halt"))
+       (GoLean.GoCore.Expr.boolLit true)],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "main.twin.say" }
+   #[GoLean.GoCore.Expr.var "t",
+     GoLean.GoCore.Expr.stringLit
+       { bytes := #[33, 100, 114, 105, 118, 101, 114, 58, 32, 113, 117, 105, 101, 115, 99, 101, 110, 116, 32, 119, 105,
+                    116, 104, 111, 117, 116, 32, 83, 52, 10] }],
+ GoLean.GoCore.Stmt.breakStmt]) ([[("live", GoLean.Loc.base { id := 6088 }), ("$c2235", GoLean.Loc.base { id := 6086 })],
+ [],
+ [("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([]) ([[],
+ [("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.loop (GoLean.GoCore.Expr.boolLit true) (GoLean.GoCore.Stmt.block
+  #[]
+  #[GoLean.GoCore.Stmt.ifThenElse
+      (GoLean.GoCore.Expr.var "$forFirst")
+      (GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$forFirst") (GoLean.GoCore.Expr.boolLit false))
+      (GoLean.GoCore.Stmt.assign
+        (GoLean.GoCore.Assignee.var "round")
+        (GoLean.GoCore.Expr.add
+          (GoLean.GoCore.Expr.var "round")
+          (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int)))),
+    GoLean.GoCore.Stmt.seqn #[],
+    GoLean.GoCore.Stmt.ifThenElse
+      (GoLean.GoCore.Expr.lessCmp
+        (GoLean.GoCore.Expr.var "round")
+        (GoLean.GoCore.Expr.intLit 400 (GoLean.GoCore.IntKind.int)))
+      (GoLean.GoCore.Stmt.seqn #[])
+      (GoLean.GoCore.Stmt.breakStmt),
+    GoLean.GoCore.Stmt.block
+      #[]
+      #[GoLean.GoCore.Stmt.seqn
+          #[GoLean.GoCore.Stmt.initialization
+              { id := "$c2235",
+                typ := GoLean.GoCore.Ty.map
+                         (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                         (GoLean.GoCore.Ty.bool) },
+            GoLean.GoCore.Stmt.makeMap
+              (GoLean.GoCore.Assignee.var "$c2235")
+              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+              (GoLean.GoCore.Ty.bool)
+              none],
+        GoLean.GoCore.Stmt.seqn
+          #[GoLean.GoCore.Stmt.initialization
+              { id := "live",
+                typ := GoLean.GoCore.Ty.map
+                         (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                         (GoLean.GoCore.Ty.bool) },
+            GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "live") (GoLean.GoCore.Expr.var "$c2235")],
+        GoLean.GoCore.Stmt.block
+          #[]
+          #[GoLean.GoCore.Stmt.initialization
+              { id := "$rcoll",
+                typ := GoLean.GoCore.Ty.slice
+                         (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })) },
+            GoLean.GoCore.Stmt.assign
+              (GoLean.GoCore.Assignee.var "$rcoll")
+              (GoLean.GoCore.Expr.fieldGet
+                (GoLean.GoCore.Expr.deref
+                  (GoLean.GoCore.Expr.var "t")
+                  (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                { key := "main.twin" }
+                "net"),
+            GoLean.GoCore.Stmt.initialization
+              { id := "$rlen", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+            GoLean.GoCore.Stmt.assign
+              (GoLean.GoCore.Assignee.var "$rlen")
+              (GoLean.GoCore.Expr.length (GoLean.GoCore.Expr.var "$rcoll") none),
+            GoLean.GoCore.Stmt.initialization
+              { id := "$ridx", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+            GoLean.GoCore.Stmt.assign
+              (GoLean.GoCore.Assignee.var "$ridx")
+              (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int)),
+            GoLean.GoCore.Stmt.initialization { id := "$rfirst", typ := GoLean.GoCore.Ty.bool },
+            GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$rfirst") (GoLean.GoCore.Expr.boolLit true),
+            GoLean.GoCore.Stmt.while
+              (GoLean.GoCore.Expr.boolLit true)
+              (GoLean.GoCore.Stmt.block
+                #[]
+                #[GoLean.GoCore.Stmt.ifThenElse
+                    (GoLean.GoCore.Expr.var "$rfirst")
+                    (GoLean.GoCore.Stmt.assign
+                      (GoLean.GoCore.Assignee.var "$rfirst")
+                      (GoLean.GoCore.Expr.boolLit false))
+                    (GoLean.GoCore.Stmt.assign
+                      (GoLean.GoCore.Assignee.var "$ridx")
+                      (GoLean.GoCore.Expr.add
+                        (GoLean.GoCore.Expr.var "$ridx")
+                        (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int)))),
+                  GoLean.GoCore.Stmt.ifThenElse
+                    (GoLean.GoCore.Expr.atLeastCmp (GoLean.GoCore.Expr.var "$ridx") (GoLean.GoCore.Expr.var "$rlen"))
+                    (GoLean.GoCore.Stmt.breakStmt)
+                    (GoLean.GoCore.Stmt.seqn #[]),
+                  GoLean.GoCore.Stmt.initialization
+                    { id := "j", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+                  GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "j") (GoLean.GoCore.Expr.var "$ridx"),
+                  GoLean.GoCore.Stmt.block
+                    #[]
+                    #[GoLean.GoCore.Stmt.ifThenElse
+                        (GoLean.GoCore.Expr.indexGet
+                          (GoLean.GoCore.Expr.fieldGet
+                            (GoLean.GoCore.Expr.deref
+                              (GoLean.GoCore.Expr.var "t")
+                              (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                            { key := "main.twin" }
+                            "live")
+                          (GoLean.GoCore.Expr.var "j"))
+                        (GoLean.GoCore.Stmt.block
+                          #[]
+                          #[GoLean.GoCore.Stmt.mapAssign
+                              (GoLean.GoCore.Expr.var "live")
+                              (GoLean.GoCore.Expr.var "j")
+                              (GoLean.GoCore.Expr.boolLit true)
+                              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                              (GoLean.GoCore.Ty.bool)])
+                        (GoLean.GoCore.Stmt.seqn #[])]])],
+        GoLean.GoCore.Stmt.ifThenElse
+          (GoLean.GoCore.Expr.greaterCmp
+            (GoLean.GoCore.Expr.length
+              (GoLean.GoCore.Expr.var "live")
+              (some (GoLean.GoCore.Ty.map (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)) (GoLean.GoCore.Ty.bool))))
+            (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int)))
+          (GoLean.GoCore.Stmt.block
+            #[]
+            #[GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization
+                    { id := "picked", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+                  GoLean.GoCore.Stmt.assign
+                    (GoLean.GoCore.Assignee.var "picked")
+                    (GoLean.GoCore.Expr.intLit (-1) (GoLean.GoCore.IntKind.int))],
+              GoLean.GoCore.Stmt.mapRange
+                (some "j")
+                none
+                (GoLean.GoCore.Expr.var "live")
+                (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                (GoLean.GoCore.Ty.bool)
+                (GoLean.GoCore.Stmt.block
+                  #[]
+                  #[GoLean.GoCore.Stmt.seqn
+                      #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "picked") (GoLean.GoCore.Expr.var "j")],
+                    GoLean.GoCore.Stmt.breakStmt]),
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization
+                    { id := "m",
+                      typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }) },
+                  GoLean.GoCore.Stmt.assign
+                    (GoLean.GoCore.Assignee.var "m")
+                    (GoLean.GoCore.Expr.indexGet
+                      (GoLean.GoCore.Expr.fieldGet
+                        (GoLean.GoCore.Expr.deref
+                          (GoLean.GoCore.Expr.var "t")
+                          (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                        { key := "main.twin" }
+                        "net")
+                      (GoLean.GoCore.Expr.var "picked"))],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2236", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2236"]
+                    { key := "itoa" }
+                    #[GoLean.GoCore.Expr.add
+                        (GoLean.GoCore.Expr.var "round")
+                        (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2237", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2237"]
+                    { key := "itoa" }
+                    #[GoLean.GoCore.Expr.var "picked"]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization
+                    { id := "$c2238", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2238"]
+                    { key := "raftpb.Message.GetType" }
+                    #[GoLean.GoCore.Expr.var "m"]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2239", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2239"]
+                    { key := "itoa" }
+                    #[GoLean.GoCore.Expr.convert
+                        (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                        (GoLean.GoCore.Expr.var "$c2238")]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization
+                    { id := "$c2240", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2240"]
+                    { key := "raftpb.Message.GetTo" }
+                    #[GoLean.GoCore.Expr.var "m"]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2241", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2241"]
+                    { key := "utoa" }
+                    #[GoLean.GoCore.Expr.var "$c2240"]],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.say" }
+                #[GoLean.GoCore.Expr.var "t",
+                  GoLean.GoCore.Expr.add
+                    (GoLean.GoCore.Expr.add
+                      (GoLean.GoCore.Expr.add
+                        (GoLean.GoCore.Expr.add
+                          (GoLean.GoCore.Expr.add
+                            (GoLean.GoCore.Expr.add
+                              (GoLean.GoCore.Expr.add
+                                (GoLean.GoCore.Expr.stringLit { bytes := #[114] })
+                                (GoLean.GoCore.Expr.var "$c2236"))
+                              (GoLean.GoCore.Expr.stringLit { bytes := #[32, 112, 105, 99, 107, 35] }))
+                            (GoLean.GoCore.Expr.var "$c2237"))
+                          (GoLean.GoCore.Expr.stringLit { bytes := #[32, 116, 121, 112, 101] }))
+                        (GoLean.GoCore.Expr.var "$c2239"))
+                      (GoLean.GoCore.Expr.stringLit { bytes := #[45, 62] }))
+                    (GoLean.GoCore.Expr.var "$c2241")],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.deliverIdx" }
+                #[GoLean.GoCore.Expr.var "t", GoLean.GoCore.Expr.var "picked"],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2242", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2242"]
+                    { key := "main.twin.projection" }
+                    #[GoLean.GoCore.Expr.var "t"]],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.say" }
+                #[GoLean.GoCore.Expr.var "t",
+                  GoLean.GoCore.Expr.add
+                    (GoLean.GoCore.Expr.add
+                      (GoLean.GoCore.Expr.stringLit { bytes := #[32] })
+                      (GoLean.GoCore.Expr.var "$c2242"))
+                    (GoLean.GoCore.Expr.stringLit { bytes := #[10] })],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.assign
+                    (GoLean.GoCore.Assignee.var "stuckPropose")
+                    (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))],
+              GoLean.GoCore.Stmt.continueStmt])
+          (GoLean.GoCore.Stmt.seqn #[]),
+        GoLean.GoCore.Stmt.seqn
+          #[GoLean.GoCore.Stmt.initialization { id := "$c2243", typ := GoLean.GoCore.Ty.bool },
+            GoLean.GoCore.Stmt.call
+              #[GoLean.GoCore.Assignee.var "$c2243"]
+              { key := "main.twin.complete" }
+              #[GoLean.GoCore.Expr.var "t"]],
+        GoLean.GoCore.Stmt.ifThenElse
+          (GoLean.GoCore.Expr.and
+            (GoLean.GoCore.Expr.var "$c2243")
+            (GoLean.GoCore.Expr.eqCmp
+              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+              (GoLean.GoCore.Expr.length
+                (GoLean.GoCore.Expr.fieldGet
+                  (GoLean.GoCore.Expr.deref
+                    (GoLean.GoCore.Expr.var "t")
+                    (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                  { key := "main.twin" }
+                  "pending")
+                (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+              (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+          (GoLean.GoCore.Stmt.block #[] #[GoLean.GoCore.Stmt.breakStmt])
+          (GoLean.GoCore.Stmt.seqn #[]),
+        GoLean.GoCore.Stmt.ifThenElse
+          (GoLean.GoCore.Expr.greaterCmp
+            (GoLean.GoCore.Expr.length
+              (GoLean.GoCore.Expr.fieldGet
+                (GoLean.GoCore.Expr.deref
+                  (GoLean.GoCore.Expr.var "t")
+                  (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                { key := "main.twin" }
+                "pending")
+              (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+            (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int)))
+          (GoLean.GoCore.Stmt.block
+            #[]
+            #[GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2244", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2244"]
+                    { key := "itoa" }
+                    #[GoLean.GoCore.Expr.add
+                        (GoLean.GoCore.Expr.var "round")
+                        (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))]],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.say" }
+                #[GoLean.GoCore.Expr.var "t",
+                  GoLean.GoCore.Expr.add
+                    (GoLean.GoCore.Expr.add
+                      (GoLean.GoCore.Expr.stringLit { bytes := #[114] })
+                      (GoLean.GoCore.Expr.var "$c2244"))
+                    (GoLean.GoCore.Expr.stringLit { bytes := #[32] })],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.step" }
+                #[GoLean.GoCore.Expr.var "t",
+                  GoLean.GoCore.Expr.structLit
+                    (GoLean.GoCore.Ty.defined { key := "main.op" })
+                    #[GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int),
+                      GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int),
+                      GoLean.GoCore.Expr.defaultValue (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))]],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.say" }
+                #[GoLean.GoCore.Expr.var "t", GoLean.GoCore.Expr.stringLit { bytes := #[10] }],
+              GoLean.GoCore.Stmt.assign
+                (GoLean.GoCore.Assignee.var "stuckPropose")
+                (GoLean.GoCore.Expr.add
+                  (GoLean.GoCore.Expr.var "stuckPropose")
+                  (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))),
+              GoLean.GoCore.Stmt.ifThenElse
+                (GoLean.GoCore.Expr.greaterCmp
+                  (GoLean.GoCore.Expr.var "stuckPropose")
+                  (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int)))
+                (GoLean.GoCore.Stmt.block
+                  #[]
+                  #[GoLean.GoCore.Stmt.seqn
+                      #[GoLean.GoCore.Stmt.assign
+                          (GoLean.GoCore.Assignee.addr
+                            (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "t") { key := "main.twin" } "halt"))
+                          (GoLean.GoCore.Expr.boolLit true)],
+                    GoLean.GoCore.Stmt.call
+                      #[]
+                      { key := "main.twin.say" }
+                      #[GoLean.GoCore.Expr.var "t",
+                        GoLean.GoCore.Expr.stringLit
+                          { bytes := #[33, 100, 114, 105, 118, 101, 114, 58, 32, 112, 114, 111, 112, 111, 115, 101, 32,
+                                       115, 116, 117, 99, 107, 32, 97, 116, 32, 113, 117, 105, 101, 115, 99, 101, 110,
+                                       99, 101, 10] }],
+                    GoLean.GoCore.Stmt.breakStmt])
+                (GoLean.GoCore.Stmt.seqn #[]),
+              GoLean.GoCore.Stmt.continueStmt])
+          (GoLean.GoCore.Stmt.seqn #[]),
+        GoLean.GoCore.Stmt.seqn
+          #[GoLean.GoCore.Stmt.assign
+              (GoLean.GoCore.Assignee.addr
+                (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "t") { key := "main.twin" } "halt"))
+              (GoLean.GoCore.Expr.boolLit true)],
+        GoLean.GoCore.Stmt.call
+          #[]
+          { key := "main.twin.say" }
+          #[GoLean.GoCore.Expr.var "t",
+            GoLean.GoCore.Expr.stringLit
+              { bytes := #[33, 100, 114, 105, 118, 101, 114, 58, 32, 113, 117, 105, 101, 115, 99, 101, 110, 116, 32,
+                           119, 105, 116, 104, 111, 117, 116, 32, 83, 52, 10] }],
+        GoLean.GoCore.Stmt.breakStmt]]) ([[("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([]) ([[("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([]) ([[],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "comp", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+     GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "comp")
+       (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2245", typ := GoLean.GoCore.Ty.bool },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2245"]
+       { key := "main.twin.complete" }
+       #[GoLean.GoCore.Expr.var "t"]],
+ GoLean.GoCore.Stmt.ifThenElse
+   (GoLean.GoCore.Expr.and
+     (GoLean.GoCore.Expr.and
+       (GoLean.GoCore.Expr.var "$c2245")
+       (GoLean.GoCore.Expr.eqCmp
+         (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+         (GoLean.GoCore.Expr.length
+           (GoLean.GoCore.Expr.fieldGet
+             (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+             { key := "main.twin" }
+             "pending")
+           (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+         (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+     (GoLean.GoCore.Expr.not
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "halt")))
+   (GoLean.GoCore.Stmt.block
+     #[]
+     #[GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.assign
+             (GoLean.GoCore.Assignee.var "comp")
+             (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))]])
+   (GoLean.GoCore.Stmt.seqn #[]),
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "floorOK", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+     GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "floorOK")
+       (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))],
+ GoLean.GoCore.Stmt.ifThenElse
+   (GoLean.GoCore.Expr.or
+     (GoLean.GoCore.Expr.lessCmp
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "claims")
+       (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int)))
+     (GoLean.GoCore.Expr.lessCmp
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "committed")
+       (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))))
+   (GoLean.GoCore.Stmt.block
+     #[]
+     #[GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.assign
+             (GoLean.GoCore.Assignee.var "floorOK")
+             (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))]])
+   (GoLean.GoCore.Stmt.seqn #[]),
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2246", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2246"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+           { key := "main.twin" }
+           "violations"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2247", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2247"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+           { key := "main.twin" }
+           "claims"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2248", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2248"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+           { key := "main.twin" }
+           "committed"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2249", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call #[GoLean.GoCore.Assignee.var "$c2249"] { key := "itoa" } #[GoLean.GoCore.Expr.var "comp"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2250", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2250"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.var "floorOK"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2251", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2251"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.var "round"]],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "main.twin.say" }
+   #[GoLean.GoCore.Expr.var "t",
+     GoLean.GoCore.Expr.add
+       (GoLean.GoCore.Expr.add
+         (GoLean.GoCore.Expr.add
+           (GoLean.GoCore.Expr.add
+             (GoLean.GoCore.Expr.add
+               (GoLean.GoCore.Expr.add
+                 (GoLean.GoCore.Expr.add
+                   (GoLean.GoCore.Expr.add
+                     (GoLean.GoCore.Expr.add
+                       (GoLean.GoCore.Expr.add
+                         (GoLean.GoCore.Expr.add
+                           (GoLean.GoCore.Expr.add
+                             (GoLean.GoCore.Expr.stringLit { bytes := #[101, 110, 100, 32, 118, 105, 111, 108, 61] })
+                             (GoLean.GoCore.Expr.var "$c2246"))
+                           (GoLean.GoCore.Expr.stringLit { bytes := #[32, 99, 108, 97, 105, 109, 115, 61] }))
+                         (GoLean.GoCore.Expr.var "$c2247"))
+                       (GoLean.GoCore.Expr.stringLit
+                         { bytes := #[32, 99, 111, 109, 109, 105, 116, 116, 101, 100, 61] }))
+                     (GoLean.GoCore.Expr.var "$c2248"))
+                   (GoLean.GoCore.Expr.stringLit { bytes := #[32, 99, 111, 109, 112, 108, 101, 116, 101, 61] }))
+                 (GoLean.GoCore.Expr.var "$c2249"))
+               (GoLean.GoCore.Expr.stringLit { bytes := #[32, 102, 108, 111, 111, 114, 61] }))
+             (GoLean.GoCore.Expr.var "$c2250"))
+           (GoLean.GoCore.Expr.stringLit { bytes := #[32, 114, 111, 117, 110, 100, 115, 61] }))
+         (GoLean.GoCore.Expr.var "$c2251"))
+       (GoLean.GoCore.Expr.stringLit { bytes := #[10] })],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2252", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2252"]
+       { key := "main.twin.projection" }
+       #[GoLean.GoCore.Expr.var "t"]],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "main.twin.say" }
+   #[GoLean.GoCore.Expr.var "t",
+     GoLean.GoCore.Expr.add
+       (GoLean.GoCore.Expr.add
+         (GoLean.GoCore.Expr.stringLit { bytes := #[102, 105, 110, 97, 108, 32] })
+         (GoLean.GoCore.Expr.var "$c2252"))
+       (GoLean.GoCore.Expr.stringLit { bytes := #[10] })],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res0") (GoLean.GoCore.Expr.var "t"),
+     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res1") (GoLean.GoCore.Expr.var "comp"),
+     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res2") (GoLean.GoCore.Expr.var "floorOK"),
+     GoLean.GoCore.Stmt.returnStmt]]) ([[("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.frame ([(GoLean.GoCore.Machine.TargetShape.chain [], [GoLean.GoCore.Expr.ref "t"]),
+ (GoLean.GoCore.Machine.TargetShape.chain [], [GoLean.GoCore.Expr.ref "comp"]),
+ (GoLean.GoCore.Machine.TargetShape.chain [], [GoLean.GoCore.Expr.ref "floorOK"])]) ([[("floorOK", GoLean.Loc.base { id := 105 }),
+  ("comp", GoLean.Loc.base { id := 104 }),
+  ("t", GoLean.Loc.base { id := 103 })],
+ [("$res4", GoLean.Loc.base { id := 102 }),
+  ("$res3", GoLean.Loc.base { id := 101 }),
+  ("$res2", GoLean.Loc.base { id := 100 }),
+  ("$res1", GoLean.Loc.base { id := 99 }),
+  ("$res0", GoLean.Loc.base { id := 98 })]]) ([GoLean.Loc.base { id := 106 }, GoLean.Loc.base { id := 107 }, GoLean.Loc.base { id := 108 }]) [] (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "$res0")
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "violations"),
+     GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "$res1")
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "claims"),
+     GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "$res2")
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "committed"),
+     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res3") (GoLean.GoCore.Expr.var "comp"),
+     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res4") (GoLean.GoCore.Expr.var "floorOK"),
+     GoLean.GoCore.Stmt.returnStmt]]) ([[("floorOK", GoLean.Loc.base { id := 105 }),
+  ("comp", GoLean.Loc.base { id := 104 }),
+  ("t", GoLean.Loc.base { id := 103 })],
+ [("$res4", GoLean.Loc.base { id := 102 }),
+  ("$res3", GoLean.Loc.base { id := 101 }),
+  ("$res2", GoLean.Loc.base { id := 100 }),
+  ("$res1", GoLean.Loc.base { id := 99 }),
+  ("$res0", GoLean.Loc.base { id := 98 })]]) (GoLean.Sym.Cont.frame ([]) ([]) ([]) [] (GoLean.Sym.Cont.stop) false)) false))))))))))
+
+def mvSB3 : SymState :=
+  (GoLean.Sym.State.mk
+  [((GoLean.Loc.base { id := 15 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.HardState" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 57 })))),
+  ((GoLean.Loc.base { id := 18 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raft.lockedRand" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 67 })))),
+  ((GoLean.Loc.base { id := 27 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 23 (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true))]))),
+  ((GoLean.Loc.base { id := 28 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 23 (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true))]))),
+  ((GoLean.Loc.base { id := 57 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.HardState" })) (GoLean.Sym.Value.struct ({ key := "raftpb.HardState" }) #[(("Term"), (GoLean.Sym.Value.nil)),
+  (("Vote"), (GoLean.Sym.Value.nil)),
+  (("Commit"), (GoLean.Sym.Value.nil))]))),
+  ((GoLean.Loc.base { id := 67 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.lockedRand" })) (GoLean.Sym.Value.struct ({ key := "raft.lockedRand" }) #[(("mu"), (GoLean.Sym.Value.syncData (GoLean.SyncPrim.mutex false)))]))),
+  ((GoLean.Loc.base { id := 110 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.twin" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 121 })))),
+  ((GoLean.Loc.base { id := 121 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "main.twin" })) (GoLean.Sym.Value.struct ({ key := "main.twin" }) #[(("nodes"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 1764 }), offset := 0, len := 3, cap := 4 }))),
+  (("net"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 6077 }), offset := 0, len := 1, cap := 1 }))),
+  (("live"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 6078 }), offset := 0, len := 1, cap := 1 }))),
+  (("leaderOf"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 115 }) }))),
+  (("byIndex"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 118 }) }))),
+  (("claims"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0)) (GoLean.GoCore.IntKind.int))),
+  (("committed"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0)) (GoLean.GoCore.IntKind.int))),
+  (("violations"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0)) (GoLean.GoCore.IntKind.int))),
+  (("pending"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 136 }), offset := 0, len := 2, cap := 4 }))),
+  (("driven"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("seq"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 2)) (GoLean.GoCore.IntKind.int))),
+  (("trace"), (GoLean.Sym.Value.string ({ bytes := #[91, 99, 104, 111, 105, 99, 101, 45, 100, 114, 105, 118, 101, 110, 93, 10, 99, 97, 109, 112, 97, 105, 103,
+             110, 49, 114, 49, 32, 112, 105, 99, 107, 35, 48, 32, 116, 121, 112, 101, 53, 45, 62, 50] }))),
+  (("halt"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 170 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "main.twinNode" })) (GoLean.Sym.Value.struct ({ key := "main.twinNode" }) #[(("id"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("rn"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1742 }))),
+  (("st"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 179 }))),
+  (("term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("commit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("state"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("applied"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("lastTrm"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("got"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 167 }) })))]))),
+  ((GoLean.Loc.base { id := 1764 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 4 (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.twinNode" })))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 170 })),
+  (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1770 })),
+  (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3369 })),
+  (GoLean.Sym.Value.nil)]))),
+  ((GoLean.Loc.base { id := 1770 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "main.twinNode" })) (GoLean.Sym.Value.struct ({ key := "main.twinNode" }) #[(("id"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("rn"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3342 }))),
+  (("st"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1779 }))),
+  (("term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("commit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("state"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("applied"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("lastTrm"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("got"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 1767 }) })))]))),
+  ((GoLean.Loc.base { id := 1779 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.MemoryStorage" })) (GoLean.Sym.Value.struct ({ key := "raft.MemoryStorage" }) #[(("Mutex"), (GoLean.Sym.Value.syncData (GoLean.SyncPrim.mutex false))),
+  (("hardState"), (GoLean.Sym.Value.nil)),
+  (("snapshot"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1858 }))),
+  (("ents"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 1900 }), offset := 0, len := 1, cap := 1 }))),
+  (("callStats"), (GoLean.Sym.Value.struct ({ key := "raft.inMemStorageCallStats" }) #[(("initialState"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.int))),
+  (("firstIndex"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.int))),
+  (("lastIndex"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 7) (GoLean.GoCore.IntKind.int))),
+  (("entries"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.int))),
+  (("snapshot"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int)))]))]))),
+  ((GoLean.Loc.base { id := 1886 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 1895 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 1898 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })) (GoLean.Sym.Value.struct ({ key := "raftpb.Entry" }) #[(("Term"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1886 }))),
+  (("Index"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1895 }))),
+  (("Type"), (GoLean.Sym.Value.nil)),
+  (("Data"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))]))),
+  ((GoLean.Loc.base { id := 1900 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 1 (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1898 }))]))),
+  ((GoLean.Loc.base { id := 1949 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.raftLog" })) (GoLean.Sym.Value.struct ({ key := "raft.raftLog" }) #[(("storage"), (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raft.MemoryStorage" })) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1779 })))),
+  (("unstable"), (GoLean.Sym.Value.struct ({ key := "raft.unstable" }) #[(("snapshot"), (GoLean.Sym.Value.nil)),
+  (("entries"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("offset"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("snapshotInProgress"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("offsetInProgress"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("logger"), (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.harnessLogger" })) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 97 }))))])),
+  (("committed"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("applying"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("applied"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("logger"), (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.harnessLogger" })) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 97 })))),
+  (("maxApplyingEntsSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1048576) (GoLean.GoCore.IntKind.uint64))),
+  (("applyingEntsSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("applyingEntsPaused"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 1989 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.raft" })) (GoLean.Sym.Value.struct ({ key := "raft.raft" }) #[(("id"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("Term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("Vote"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("readStates"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("raftLog"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1949 }))),
+  (("maxMsgSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1048576) (GoLean.GoCore.IntKind.uint64))),
+  (("maxUncommittedSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 18446744073709551615) (GoLean.GoCore.IntKind.uint64))),
+  (("trk"), (GoLean.Sym.Value.struct ({ key := "tracker.ProgressTracker" }) #[(("Config"), (GoLean.Sym.Value.struct ({ key := "tracker.Config" }) #[(("Voters"), (GoLean.Sym.Value.array #[(GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 2686 }) })),
+  (GoLean.Sym.Value.map ({ base := none }))])),
+  (("AutoLeave"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("Learners"), (GoLean.Sym.Value.map ({ base := none }))),
+  (("LearnersNext"), (GoLean.Sym.Value.map ({ base := none })))])),
+  (("Progress"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 2703 }) }))),
+  (("Votes"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 3059 }) }))),
+  (("MaxInflight"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 256) (GoLean.GoCore.IntKind.int))),
+  (("MaxInflightBytes"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 18446744073709551615) (GoLean.GoCore.IntKind.uint64)))])),
+  (("state"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("isLearner"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("msgs"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("msgsAfterAppend"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("lead"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("leadTransferee"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("pendingConfIndex"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("disableConfChangeValidation"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("uncommittedSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("readOnly"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3199 }))),
+  (("electionElapsed"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("heartbeatElapsed"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("checkQuorum"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("preVote"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("heartbeatTimeout"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.int))),
+  (("electionTimeout"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 10) (GoLean.GoCore.IntKind.int))),
+  (("randomizedElectionTimeout"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 10) (GoLean.GoCore.IntKind.int))),
+  (("disableProposalForwarding"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("stepDownOnRemoval"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("tick"), (GoLean.Sym.Value.funcVal ({ key := "raft.raft.tickElection" }) [(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1989 }))])),
+  (("step"), (GoLean.Sym.Value.funcVal ({ key := "raft.stepFollower" }) [])),
+  (("logger"), (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.harnessLogger" })) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 97 })))),
+  (("pendingReadIndexMessages"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("traceLogger"), (GoLean.Sym.Value.nil))]))),
+  ((GoLean.Loc.base { id := 2703 }), (GoLean.Sym.HeapCell.mk (none) (GoLean.Sym.Value.mapData #[((GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 2707 }))),
+  ((GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64)), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 2710 }))),
+  ((GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 3) (GoLean.GoCore.IntKind.uint64)), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 2812 })))]))),
+  ((GoLean.Loc.base { id := 2707 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "tracker.Progress" })) (GoLean.Sym.Value.struct ({ key := "tracker.Progress" }) #[(("Match"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("Next"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("sentCommit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("State"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("PendingSnapshot"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("RecentActive"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("MsgAppFlowPaused"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("Inflights"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3103 }))),
+  (("IsLearner"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 2710 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "tracker.Progress" })) (GoLean.Sym.Value.struct ({ key := "tracker.Progress" }) #[(("Match"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("Next"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("sentCommit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("State"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("PendingSnapshot"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("RecentActive"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("MsgAppFlowPaused"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("Inflights"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3136 }))),
+  (("IsLearner"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 2812 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "tracker.Progress" })) (GoLean.Sym.Value.struct ({ key := "tracker.Progress" }) #[(("Match"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("Next"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("sentCommit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("State"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("PendingSnapshot"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("RecentActive"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("MsgAppFlowPaused"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("Inflights"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3190 }))),
+  (("IsLearner"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 3199 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.readOnly" })) (GoLean.Sym.Value.struct ({ key := "raft.readOnly" }) #[(("option"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("acks"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 3196 }) }))),
+  (("unconfirmedReads"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("confirmedReads"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64)))]))),
+  ((GoLean.Loc.base { id := 3342 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.RawNode" })) (GoLean.Sym.Value.struct ({ key := "raft.RawNode" }) #[(("raft"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1989 }))),
+  (("asyncStorageWrites"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("prevSoftSt"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3344 }))),
+  (("prevHardSt"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3360 }))),
+  (("stepsOnAdvance"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))]))),
+  ((GoLean.Loc.base { id := 3344 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.SoftState" })) (GoLean.Sym.Value.struct ({ key := "raft.SoftState" }) #[(("Lead"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("RaftState"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64)))]))),
+  ((GoLean.Loc.base { id := 3351 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 3354 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 3360 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.HardState" })) (GoLean.Sym.Value.struct ({ key := "raftpb.HardState" }) #[(("Term"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3351 }))),
+  (("Vote"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3354 }))),
+  (("Commit"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3357 })))]))),
+  ((GoLean.Loc.base { id := 3369 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "main.twinNode" })) (GoLean.Sym.Value.struct ({ key := "main.twinNode" }) #[(("id"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 3) (GoLean.GoCore.IntKind.uint64))),
+  (("rn"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 4941 }))),
+  (("st"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3378 }))),
+  (("term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("commit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("state"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("applied"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("lastTrm"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("got"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 3366 }) })))]))),
+  ((GoLean.Loc.base { id := 6070 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6072 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6073 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int32))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 5) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6074 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6075 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6076 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })) (GoLean.Sym.Value.struct ({ key := "raftpb.Message" }) #[(("Type"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6073 }))),
+  (("To"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6074 }))),
+  (("From"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6075 }))),
+  (("Term"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6079 }))),
+  (("LogTerm"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6084 }))),
+  (("Index"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6085 }))),
+  (("Entries"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("Commit"), (GoLean.Sym.Value.nil)),
+  (("Vote"), (GoLean.Sym.Value.nil)),
+  (("Snapshot"), (GoLean.Sym.Value.nil)),
+  (("Reject"), (GoLean.Sym.Value.nil)),
+  (("RejectHint"), (GoLean.Sym.Value.nil)),
+  (("Context"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("Responses"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))]))),
+  ((GoLean.Loc.base { id := 6077 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 1 (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 }))]))),
+  ((GoLean.Loc.base { id := 6078 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 1 (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))]))),
+  ((GoLean.Loc.base { id := 6079 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6080 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6081 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6082 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })) (GoLean.Sym.Value.struct ({ key := "raftpb.Entry" }) #[(("Term"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6080 }))),
+  (("Index"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6081 }))),
+  (("Type"), (GoLean.Sym.Value.nil)),
+  (("Data"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))]))),
+  ((GoLean.Loc.base { id := 6083 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 1 (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6082 }))]))),
+  ((GoLean.Loc.base { id := 6084 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6085 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6086 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.map (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)) (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 6087 }) })))),
+  ((GoLean.Loc.base { id := 6087 }), (GoLean.Sym.HeapCell.mk (none) (GoLean.Sym.Value.mapData #[((GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0)))) (GoLean.GoCore.IntKind.int)), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)))]))),
+  ((GoLean.Loc.base { id := 6088 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.map (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)) (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 6087 }) })))),
+  ((GoLean.Loc.base { id := 6089 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })))) (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 6077 }), offset := 0, len := 1, cap := 1 })))),
+  ((GoLean.Loc.base { id := 6090 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 1)) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6091 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.add
+      (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))
+      (GoLean.Sym.SymInt.lit 1)))) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6092 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6093 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6094 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0)) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6095 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6096 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6097 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[49] })))),
+  ((GoLean.Loc.base { id := 6098 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.add (GoLean.Sym.SymInt.lit 0) (GoLean.Sym.SymInt.lit 1)))) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6099 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[49] })))),
+  ((GoLean.Loc.base { id := 6100 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[49] })))),
+  ((GoLean.Loc.base { id := 6101 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.uint64)
+    (GoLean.Sym.SymInt.divC
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.uint64)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.uint64)
+          (GoLean.Sym.SymInt.norm
+            (GoLean.GoCore.IntKind.int)
+            (GoLean.Sym.SymInt.norm
+              (GoLean.GoCore.IntKind.int)
+              (GoLean.Sym.SymInt.add (GoLean.Sym.SymInt.lit 0) (GoLean.Sym.SymInt.lit 1))))))
+      10))) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6102 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[49] })))),
+  ((GoLean.Loc.base { id := 6103 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[49] })))),
+  ((GoLean.Loc.base { id := 6104 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6105 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[48] })))),
+  ((GoLean.Loc.base { id := 6106 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6107 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[48] })))),
+  ((GoLean.Loc.base { id := 6108 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[48] })))),
+  ((GoLean.Loc.base { id := 6109 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.uint64)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))))) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6110 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[48] })))),
+  ((GoLean.Loc.base { id := 6111 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6112 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6113 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6114 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[53] })))),
+  ((GoLean.Loc.base { id := 6115 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int32)
+      (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))))) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6116 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[53] })))),
+  ((GoLean.Loc.base { id := 6117 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[53] })))),
+  ((GoLean.Loc.base { id := 6118 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.uint64)
+    (GoLean.Sym.SymInt.divC
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.uint64)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.uint64)
+          (GoLean.Sym.SymInt.norm
+            (GoLean.GoCore.IntKind.int)
+            (GoLean.Sym.SymInt.norm
+              (GoLean.GoCore.IntKind.int)
+              (GoLean.Sym.SymInt.norm
+                (GoLean.GoCore.IntKind.int32)
+                (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)))))))
+      10))) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6119 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[53] })))),
+  ((GoLean.Loc.base { id := 6120 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[53] })))),
+  ((GoLean.Loc.base { id := 6121 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6122 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 2))) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6123 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6124 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 2)) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6125 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[50] })))),
+  ((GoLean.Loc.base { id := 6126 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.uint64)
+    (GoLean.Sym.SymInt.divC
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.uint64)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.uint64)
+          (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 2))))
+      10))) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6127 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[50] })))),
+  ((GoLean.Loc.base { id := 6128 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[50] })))),
+  ((GoLean.Loc.base { id := 6129 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6130 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.twin" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 121 })))),
+  ((GoLean.Loc.base { id := 6131 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[114, 49, 32, 112, 105, 99, 107, 35, 48, 32, 116, 121, 112, 101, 53, 45, 62, 50] })))),
+  ((GoLean.Loc.base { id := 6132 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.twin" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 121 })))),
+  ((GoLean.Loc.base { id := 6133 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6134 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6135 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 2))) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6136 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6137 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 2)) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6138 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.twinNode" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1770 })))),
+  ((GoLean.Loc.base { id := 6139 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.interface { key := "error" })) (GoLean.Sym.Value.nil))),
+  ((GoLean.Loc.base { id := 6140 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raft.RawNode" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3342 })))),
+  ((GoLean.Loc.base { id := 6141 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6142 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.interface { key := "error" })) (GoLean.Sym.Value.nil))),
+  ((GoLean.Loc.base { id := 6143 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6144 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6145 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6146 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6147 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int32)
+    (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6148 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6149 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6150 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int32)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int32)
+      (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6151 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 27 }), offset := 0, len := 23, cap := 23 })))),
+  ((GoLean.Loc.base { id := 6152 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6153 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int32)
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.int32)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int32)
+          (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))))))) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6154 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6155 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6156 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6157 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6158 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6159 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int32)
+    (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6160 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6161 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6162 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int32)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int32)
+      (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6163 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 28 }), offset := 0, len := 23, cap := 23 })))),
+  ((GoLean.Loc.base { id := 6164 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6165 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int32)
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.int32)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int32)
+          (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))))))) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6166 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6167 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6168 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.interface { key := "error" })) (GoLean.Sym.Value.nil))),
+  ((GoLean.Loc.base { id := 6169 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raft.raft" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1989 })))),
+  ((GoLean.Loc.base { id := 6170 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6171 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.interface { key := "error" })) (GoLean.Sym.Value.nil))),
+  ((GoLean.Loc.base { id := 6172 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raft.raft" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1989 })))),
+  ((GoLean.Loc.base { id := 6173 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6174 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 1)) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6175 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1))) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6176 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6177 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1)) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6178 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1))) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6179 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6180 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1)) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6181 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6182 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6183 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6184 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6185 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)))),
+  ((GoLean.Loc.base { id := 6186 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint8)))) (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))),
+  ((GoLean.Loc.base { id := 6187 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6188 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint8)))) (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))),
+  ((GoLean.Loc.base { id := 6189 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6190 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 16 (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint8)))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 67) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 97) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 109) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 112) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 97) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 105) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 103) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 110) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 84) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 114) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 97) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 110) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 115) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 102) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 101) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 114) (GoLean.GoCore.IntKind.uint8))]))),
+  ((GoLean.Loc.base { id := 6191 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint8)))) (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))),
+  ((GoLean.Loc.base { id := 6192 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint8)))) (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 6190 }), offset := 0, len := 16, cap := 16 })))),
+  ((GoLean.Loc.base { id := 6193 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6194 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6195 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 2)) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6196 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6197 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6198 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6199 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6200 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6201 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6202 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6203 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6204 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6205 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6206 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6207 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1))) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6208 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6209 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1)) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6210 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1))) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6211 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6212 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1)) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6213 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.interface { key := "any" }))) (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 6214 }), offset := 0, len := 5, cap := 5 })))),
+  ((GoLean.Loc.base { id := 6214 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 5 (GoLean.GoCore.Ty.interface { key := "any" }))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.interface (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" }) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))) (GoLean.GoCore.IntKind.int32))),
+  (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1))) (GoLean.GoCore.IntKind.uint64))),
+  (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1))) (GoLean.GoCore.IntKind.uint64)))]))),
+  ((GoLean.Loc.base { id := 6215 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.harnessLogger" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 97 })))),
+  ((GoLean.Loc.base { id := 6216 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[37, 120, 32, 91, 116, 101, 114, 109, 58, 32, 37, 100, 93, 32, 114, 101, 99, 101, 105, 118, 101, 100, 32,
+             97, 32, 37, 115, 32, 109, 101, 115, 115, 97, 103, 101, 32, 119, 105, 116, 104, 32, 104, 105, 103, 104, 101,
+             114, 32, 116, 101, 114, 109, 32, 102, 114, 111, 109, 32, 37, 120, 32, 91, 116, 101, 114, 109, 58, 32, 37,
+             100, 93] })))),
+  ((GoLean.Loc.base { id := 6217 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.interface { key := "any" }))) (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 6214 }), offset := 0, len := 5, cap := 5 })))),
+  ((GoLean.Loc.base { id := 6218 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6219 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6220 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6221 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6222 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6223 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6224 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6225 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))))]
+  6226)
+
+def mvCB3 : SymConfig :=
+  (GoLean.Sym.Config.next (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.ifThenElse
+   (GoLean.GoCore.Expr.not (GoLean.GoCore.Expr.var "$c1374"))
+   (GoLean.GoCore.Stmt.block
+     #[]
+     #[GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.initialization
+             { id := "$c1373", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+           GoLean.GoCore.Stmt.call
+             #[GoLean.GoCore.Assignee.var "$c1373"]
+             { key := "raftpb.Message.GetType" }
+             #[GoLean.GoCore.Expr.var "m"]],
+       GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.assign
+             (GoLean.GoCore.Assignee.var "$c1374")
+             (GoLean.GoCore.Expr.eqCmp
+               (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+               (GoLean.GoCore.Expr.var "$c1373")
+               (GoLean.GoCore.Expr.intLit 7 (GoLean.GoCore.IntKind.int32)))]])
+   (GoLean.GoCore.Stmt.seqn #[]),
+ GoLean.GoCore.Stmt.ifThenElse
+   (GoLean.GoCore.Expr.var "$c1374")
+   (GoLean.GoCore.Stmt.block
+     #[]
+     #[GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.initialization
+             { id := "$c1375", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+           GoLean.GoCore.Stmt.call
+             #[GoLean.GoCore.Assignee.var "$c1375"]
+             { key := "raftpb.Message.GetTerm" }
+             #[GoLean.GoCore.Expr.var "m"]],
+       GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.initialization
+             { id := "$c1376", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+           GoLean.GoCore.Stmt.call
+             #[GoLean.GoCore.Assignee.var "$c1376"]
+             { key := "raftpb.Message.GetFrom" }
+             #[GoLean.GoCore.Expr.var "m"]],
+       GoLean.GoCore.Stmt.call
+         #[]
+         { key := "raft.raft.becomeFollower" }
+         #[GoLean.GoCore.Expr.var "r", GoLean.GoCore.Expr.var "$c1375", GoLean.GoCore.Expr.var "$c1376"]])
+   (GoLean.GoCore.Stmt.block
+     #[]
+     #[GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.initialization
+             { id := "$c1377", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+           GoLean.GoCore.Stmt.call
+             #[GoLean.GoCore.Assignee.var "$c1377"]
+             { key := "raftpb.Message.GetTerm" }
+             #[GoLean.GoCore.Expr.var "m"]],
+       GoLean.GoCore.Stmt.call
+         #[]
+         { key := "raft.raft.becomeFollower" }
+         #[GoLean.GoCore.Expr.var "r", GoLean.GoCore.Expr.var "$c1377",
+           GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64)]])]) ([[("$c1374", GoLean.Loc.base { id := 6225 }),
+  ("$c1372", GoLean.Loc.base { id := 6221 }),
+  ("$c1370", GoLean.Loc.base { id := 6218 }),
+  ("$c1369", GoLean.Loc.base { id := 6213 }),
+  ("$c1368", GoLean.Loc.base { id := 6210 }),
+  ("$c1367", GoLean.Loc.base { id := 6207 }),
+  ("$c1366", GoLean.Loc.base { id := 6204 })],
+ [],
+ [("$swf1378", GoLean.Loc.base { id := 6203 }), ("$swi1378", GoLean.Loc.base { id := 6195 })],
+ [("$c1359", GoLean.Loc.base { id := 6185 }), ("$c1357", GoLean.Loc.base { id := 6182 })],
+ [],
+ [("$swf1414", GoLean.Loc.base { id := 6181 }), ("$swi1414", GoLean.Loc.base { id := 6174 })],
+ [],
+ [("$res0", GoLean.Loc.base { id := 6171 }),
+  ("m", GoLean.Loc.base { id := 6170 }),
+  ("r", GoLean.Loc.base { id := 6169 })]]) (GoLean.Sym.Cont.seq ([]) ([[],
+ [("$swf1378", GoLean.Loc.base { id := 6203 }), ("$swi1378", GoLean.Loc.base { id := 6195 })],
+ [("$c1359", GoLean.Loc.base { id := 6185 }), ("$c1357", GoLean.Loc.base { id := 6182 })],
+ [],
+ [("$swf1414", GoLean.Loc.base { id := 6181 }), ("$swi1414", GoLean.Loc.base { id := 6174 })],
+ [],
+ [("$res0", GoLean.Loc.base { id := 6171 }),
+  ("m", GoLean.Loc.base { id := 6170 }),
+  ("r", GoLean.Loc.base { id := 6169 })]]) (GoLean.Sym.Cont.seq ([]) ([[("$swf1378", GoLean.Loc.base { id := 6203 }), ("$swi1378", GoLean.Loc.base { id := 6195 })],
+ [("$c1359", GoLean.Loc.base { id := 6185 }), ("$c1357", GoLean.Loc.base { id := 6182 })],
+ [],
+ [("$swf1414", GoLean.Loc.base { id := 6181 }), ("$swi1414", GoLean.Loc.base { id := 6174 })],
+ [],
+ [("$res0", GoLean.Loc.base { id := 6171 }),
+  ("m", GoLean.Loc.base { id := 6170 }),
+  ("r", GoLean.Loc.base { id := 6169 })]]) (GoLean.Sym.Cont.breakableK (GoLean.Sym.Cont.seq ([]) ([[("$c1359", GoLean.Loc.base { id := 6185 }), ("$c1357", GoLean.Loc.base { id := 6182 })],
+ [],
+ [("$swf1414", GoLean.Loc.base { id := 6181 }), ("$swi1414", GoLean.Loc.base { id := 6174 })],
+ [],
+ [("$res0", GoLean.Loc.base { id := 6171 }),
+  ("m", GoLean.Loc.base { id := 6170 }),
+  ("r", GoLean.Loc.base { id := 6169 })]]) (GoLean.Sym.Cont.seq ([]) ([[],
+ [("$swf1414", GoLean.Loc.base { id := 6181 }), ("$swi1414", GoLean.Loc.base { id := 6174 })],
+ [],
+ [("$res0", GoLean.Loc.base { id := 6171 }),
+  ("m", GoLean.Loc.base { id := 6170 }),
+  ("r", GoLean.Loc.base { id := 6169 })]]) (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.ifThenElse
+   (GoLean.GoCore.Expr.or
+     (GoLean.GoCore.Expr.var "$swf1414")
+     (GoLean.GoCore.Expr.eqCmp
+       (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+       (GoLean.GoCore.Expr.var "$swi1414")
+       (GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int))))
+   (GoLean.GoCore.Stmt.block
+     #[]
+     #[GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$swf1414") (GoLean.GoCore.Expr.boolLit false)],
+       GoLean.GoCore.Stmt.block
+         #[]
+         #[GoLean.GoCore.Stmt.seqn
+             #[GoLean.GoCore.Stmt.initialization { id := "$c1386", typ := GoLean.GoCore.Ty.bool },
+               GoLean.GoCore.Stmt.assign
+                 (GoLean.GoCore.Assignee.var "$c1386")
+                 (GoLean.GoCore.Expr.or
+                   (GoLean.GoCore.Expr.fieldGet
+                     (GoLean.GoCore.Expr.deref
+                       (GoLean.GoCore.Expr.var "r")
+                       (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                     { key := "raft.raft" }
+                     "checkQuorum")
+                   (GoLean.GoCore.Expr.fieldGet
+                     (GoLean.GoCore.Expr.deref
+                       (GoLean.GoCore.Expr.var "r")
+                       (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                     { key := "raft.raft" }
+                     "preVote"))],
+           GoLean.GoCore.Stmt.ifThenElse
+             (GoLean.GoCore.Expr.var "$c1386")
+             (GoLean.GoCore.Stmt.block
+               #[]
+               #[GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1383", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                     GoLean.GoCore.Stmt.call
+                       #[GoLean.GoCore.Assignee.var "$c1383"]
+                       { key := "raftpb.Message.GetType" }
+                       #[GoLean.GoCore.Expr.var "m"]],
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization { id := "$c1385", typ := GoLean.GoCore.Ty.bool },
+                     GoLean.GoCore.Stmt.assign
+                       (GoLean.GoCore.Assignee.var "$c1385")
+                       (GoLean.GoCore.Expr.eqCmp
+                         (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                         (GoLean.GoCore.Expr.var "$c1383")
+                         (GoLean.GoCore.Expr.intLit 8 (GoLean.GoCore.IntKind.int32)))],
+                 GoLean.GoCore.Stmt.ifThenElse
+                   (GoLean.GoCore.Expr.not (GoLean.GoCore.Expr.var "$c1385"))
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1384", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1384"]
+                             { key := "raftpb.Message.GetType" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1385")
+                             (GoLean.GoCore.Expr.eqCmp
+                               (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                               (GoLean.GoCore.Expr.var "$c1384")
+                               (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int32)))]])
+                   (GoLean.GoCore.Stmt.seqn #[]),
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.assign
+                       (GoLean.GoCore.Assignee.var "$c1386")
+                       (GoLean.GoCore.Expr.var "$c1385")]])
+             (GoLean.GoCore.Stmt.seqn #[]),
+           GoLean.GoCore.Stmt.ifThenElse
+             (GoLean.GoCore.Expr.var "$c1386")
+             (GoLean.GoCore.Stmt.block
+               #[]
+               #[GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1387",
+                         typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" }) },
+                     GoLean.GoCore.Stmt.call
+                       #[GoLean.GoCore.Assignee.var "$c1387"]
+                       { key := "raftpb.MessageType.Enum" }
+                       #[GoLean.GoCore.Expr.intLit 4 (GoLean.GoCore.IntKind.int32)]],
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1388",
+                         typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" }) },
+                     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$c1388") (GoLean.GoCore.Expr.var "$c1387")],
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1389",
+                         typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }) },
+                     GoLean.GoCore.Stmt.newValue
+                       (GoLean.GoCore.Assignee.var "$c1389")
+                       (GoLean.GoCore.Expr.structLit
+                         (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })
+                         #[GoLean.GoCore.Expr.var "$c1388",
+                           GoLean.GoCore.Expr.fieldGet
+                             (GoLean.GoCore.Expr.deref
+                               (GoLean.GoCore.Expr.var "m")
+                               (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))
+                             { key := "raftpb.Message" }
+                             "From",
+                           GoLean.GoCore.Expr.defaultValue
+                             (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                           GoLean.GoCore.Expr.defaultValue
+                             (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                           GoLean.GoCore.Expr.defaultValue
+                             (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                           GoLean.GoCore.Expr.defaultValue
+                             (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                           GoLean.GoCore.Expr.defaultValue
+                             (GoLean.GoCore.Ty.slice
+                               (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" }))),
+                           GoLean.GoCore.Expr.defaultValue
+                             (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                           GoLean.GoCore.Expr.defaultValue
+                             (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                           GoLean.GoCore.Expr.defaultValue
+                             (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Snapshot" })),
+                           GoLean.GoCore.Expr.defaultValue (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.bool)),
+                           GoLean.GoCore.Expr.defaultValue
+                             (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                           GoLean.GoCore.Expr.defaultValue
+                             (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint8))),
+                           GoLean.GoCore.Expr.defaultValue
+                             (GoLean.GoCore.Ty.slice
+                               (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })))])
+                       (some (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))],
+                 GoLean.GoCore.Stmt.call
+                   #[]
+                   { key := "raft.raft.send" }
+                   #[GoLean.GoCore.Expr.var "r", GoLean.GoCore.Expr.var "$c1389"]])
+             (GoLean.GoCore.Stmt.block
+               #[]
+               #[GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1390", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                     GoLean.GoCore.Stmt.call
+                       #[GoLean.GoCore.Assignee.var "$c1390"]
+                       { key := "raftpb.Message.GetType" }
+                       #[GoLean.GoCore.Expr.var "m"]],
+                 GoLean.GoCore.Stmt.ifThenElse
+                   (GoLean.GoCore.Expr.eqCmp
+                     (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                     (GoLean.GoCore.Expr.var "$c1390")
+                     (GoLean.GoCore.Expr.intLit 17 (GoLean.GoCore.IntKind.int32)))
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "last", typ := GoLean.GoCore.Ty.defined { key := "raft.entryID" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "last"]
+                             { key := "raft.raftLog.lastEntryID" }
+                             #[GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.deref
+                                   (GoLean.GoCore.Expr.var "r")
+                                   (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                 { key := "raft.raft" }
+                                 "raftLog"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1391", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1391"]
+                             { key := "raftpb.Message.GetType" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1392", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1392"]
+                             { key := "raftpb.Message.GetFrom" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1393", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1393"]
+                             { key := "raftpb.Message.GetLogTerm" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1394", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1394"]
+                             { key := "raftpb.Message.GetIndex" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1395",
+                               typ := GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.interface { key := "any" }) },
+                           GoLean.GoCore.Stmt.makeSlice
+                             (GoLean.GoCore.Assignee.var "$c1395")
+                             (GoLean.GoCore.Ty.interface { key := "any" })
+                             (GoLean.GoCore.Expr.intLit 9 (GoLean.GoCore.IntKind.int))
+                             (some (GoLean.GoCore.Expr.intLit 9 (GoLean.GoCore.IntKind.int))),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1395")
+                                 (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.deref
+                                   (GoLean.GoCore.Expr.var "r")
+                                   (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                 { key := "raft.raft" }
+                                 "id")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1395")
+                                 (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.var "last")
+                                 { key := "raft.entryID" }
+                                 "term")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1395")
+                                 (GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.var "last")
+                                 { key := "raft.entryID" }
+                                 "index")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1395")
+                                 (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.deref
+                                   (GoLean.GoCore.Expr.var "r")
+                                   (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                 { key := "raft.raft" }
+                                 "Vote")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1395")
+                                 (GoLean.GoCore.Expr.intLit 4 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                               (GoLean.GoCore.Expr.var "$c1391")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1395")
+                                 (GoLean.GoCore.Expr.intLit 5 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.var "$c1392")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1395")
+                                 (GoLean.GoCore.Expr.intLit 6 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.var "$c1393")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1395")
+                                 (GoLean.GoCore.Expr.intLit 7 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.var "$c1394")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1395")
+                                 (GoLean.GoCore.Expr.intLit 8 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.deref
+                                   (GoLean.GoCore.Expr.var "r")
+                                   (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                 { key := "raft.raft" }
+                                 "Term"))],
+                       GoLean.GoCore.Stmt.call
+                         #[]
+                         { key := "raft.Logger.Infof" }
+                         #[GoLean.GoCore.Expr.fieldGet
+                             (GoLean.GoCore.Expr.deref
+                               (GoLean.GoCore.Expr.var "r")
+                               (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                             { key := "raft.raft" }
+                             "logger",
+                           GoLean.GoCore.Expr.stringLit
+                             { bytes := #[37, 120, 32, 91, 108, 111, 103, 116, 101, 114, 109, 58, 32, 37, 100, 44, 32,
+                                          105, 110, 100, 101, 120, 58, 32, 37, 100, 44, 32, 118, 111, 116, 101, 58, 32,
+                                          37, 120, 93, 32, 114, 101, 106, 101, 99, 116, 101, 100, 32, 37, 115, 32, 102,
+                                          114, 111, 109, 32, 37, 120, 32, 91, 108, 111, 103, 116, 101, 114, 109, 58, 32,
+                                          37, 100, 44, 32, 105, 110, 100, 101, 120, 58, 32, 37, 100, 93, 32, 97, 116,
+                                          32, 116, 101, 114, 109, 32, 37, 100] },
+                           GoLean.GoCore.Expr.var "$c1395"],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1396",
+                               typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) },
+                           GoLean.GoCore.Stmt.newValue
+                             (GoLean.GoCore.Assignee.var "$c1396")
+                             (GoLean.GoCore.Expr.fieldGet
+                               (GoLean.GoCore.Expr.deref
+                                 (GoLean.GoCore.Expr.var "r")
+                                 (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                               { key := "raft.raft" }
+                               "Term")
+                             (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)))],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1397",
+                               typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) },
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1397")
+                             (GoLean.GoCore.Expr.var "$c1396")],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1398",
+                               typ := GoLean.GoCore.Ty.pointer
+                                        (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" }) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1398"]
+                             { key := "raftpb.MessageType.Enum" }
+                             #[GoLean.GoCore.Expr.intLit 18 (GoLean.GoCore.IntKind.int32)]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1399",
+                               typ := GoLean.GoCore.Ty.pointer
+                                        (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" }) },
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1399")
+                             (GoLean.GoCore.Expr.var "$c1398")],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1400", typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.bool) },
+                           GoLean.GoCore.Stmt.newValue
+                             (GoLean.GoCore.Assignee.var "$c1400")
+                             (GoLean.GoCore.Expr.boolLit true)
+                             (some (GoLean.GoCore.Ty.bool))],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1401", typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.bool) },
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1401")
+                             (GoLean.GoCore.Expr.var "$c1400")],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1402",
+                               typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }) },
+                           GoLean.GoCore.Stmt.newValue
+                             (GoLean.GoCore.Assignee.var "$c1402")
+                             (GoLean.GoCore.Expr.structLit
+                               (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })
+                               #[GoLean.GoCore.Expr.var "$c1399",
+                                 GoLean.GoCore.Expr.fieldGet
+                                   (GoLean.GoCore.Expr.deref
+                                     (GoLean.GoCore.Expr.var "m")
+                                     (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))
+                                   { key := "raftpb.Message" }
+                                   "From",
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.var "$c1397",
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.slice
+                                     (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" }))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Snapshot" })),
+                                 GoLean.GoCore.Expr.var "$c1401",
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint8))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.slice
+                                     (GoLean.GoCore.Ty.pointer
+                                       (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })))])
+                             (some (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))],
+                       GoLean.GoCore.Stmt.call
+                         #[]
+                         { key := "raft.raft.send" }
+                         #[GoLean.GoCore.Expr.var "r", GoLean.GoCore.Expr.var "$c1402"]])
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1403", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1403"]
+                             { key := "raftpb.Message.GetType" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.ifThenElse
+                         (GoLean.GoCore.Expr.eqCmp
+                           (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                           (GoLean.GoCore.Expr.var "$c1403")
+                           (GoLean.GoCore.Expr.intLit 20 (GoLean.GoCore.IntKind.int32)))
+                         (GoLean.GoCore.Stmt.block
+                           #[]
+                           #[GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$c1404", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                 GoLean.GoCore.Stmt.call
+                                   #[GoLean.GoCore.Assignee.var "$c1404"]
+                                   { key := "raftpb.Message.GetIndex" }
+                                   #[GoLean.GoCore.Expr.var "m"]],
+                             GoLean.GoCore.Stmt.ifThenElse
+                               (GoLean.GoCore.Expr.neqCmp
+                                 (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                 (GoLean.GoCore.Expr.var "$c1404")
+                                 (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64)))
+                               (GoLean.GoCore.Stmt.block
+                                 #[]
+                                 #[GoLean.GoCore.Stmt.seqn
+                                     #[GoLean.GoCore.Stmt.initialization
+                                         { id := "$c1405",
+                                           typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                                       GoLean.GoCore.Stmt.call
+                                         #[GoLean.GoCore.Assignee.var "$c1405"]
+                                         { key := "raftpb.Message.GetType" }
+                                         #[GoLean.GoCore.Expr.var "m"]],
+                                   GoLean.GoCore.Stmt.seqn
+                                     #[GoLean.GoCore.Stmt.initialization
+                                         { id := "$c1406", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                       GoLean.GoCore.Stmt.call
+                                         #[GoLean.GoCore.Assignee.var "$c1406"]
+                                         { key := "raftpb.Message.GetTerm" }
+                                         #[GoLean.GoCore.Expr.var "m"]],
+                                   GoLean.GoCore.Stmt.seqn
+                                     #[GoLean.GoCore.Stmt.initialization
+                                         { id := "$c1407",
+                                           typ := GoLean.GoCore.Ty.slice
+                                                    (GoLean.GoCore.Ty.interface { key := "any" }) },
+                                       GoLean.GoCore.Stmt.makeSlice
+                                         (GoLean.GoCore.Assignee.var "$c1407")
+                                         (GoLean.GoCore.Ty.interface { key := "any" })
+                                         (GoLean.GoCore.Expr.intLit 4 (GoLean.GoCore.IntKind.int))
+                                         (some (GoLean.GoCore.Expr.intLit 4 (GoLean.GoCore.IntKind.int))),
+                                       GoLean.GoCore.Stmt.assign
+                                         (GoLean.GoCore.Assignee.addr
+                                           (GoLean.GoCore.Expr.indexAddr
+                                             (GoLean.GoCore.Expr.var "$c1407")
+                                             (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+                                         (GoLean.GoCore.Expr.toInterface
+                                           (GoLean.GoCore.Ty.interface { key := "any" })
+                                           (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                           (GoLean.GoCore.Expr.fieldGet
+                                             (GoLean.GoCore.Expr.deref
+                                               (GoLean.GoCore.Expr.var "r")
+                                               (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                             { key := "raft.raft" }
+                                             "id")),
+                                       GoLean.GoCore.Stmt.assign
+                                         (GoLean.GoCore.Assignee.addr
+                                           (GoLean.GoCore.Expr.indexAddr
+                                             (GoLean.GoCore.Expr.var "$c1407")
+                                             (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))))
+                                         (GoLean.GoCore.Expr.toInterface
+                                           (GoLean.GoCore.Ty.interface { key := "any" })
+                                           (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                           (GoLean.GoCore.Expr.fieldGet
+                                             (GoLean.GoCore.Expr.deref
+                                               (GoLean.GoCore.Expr.var "r")
+                                               (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                             { key := "raft.raft" }
+                                             "Term")),
+                                       GoLean.GoCore.Stmt.assign
+                                         (GoLean.GoCore.Assignee.addr
+                                           (GoLean.GoCore.Expr.indexAddr
+                                             (GoLean.GoCore.Expr.var "$c1407")
+                                             (GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int))))
+                                         (GoLean.GoCore.Expr.toInterface
+                                           (GoLean.GoCore.Ty.interface { key := "any" })
+                                           (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                                           (GoLean.GoCore.Expr.var "$c1405")),
+                                       GoLean.GoCore.Stmt.assign
+                                         (GoLean.GoCore.Assignee.addr
+                                           (GoLean.GoCore.Expr.indexAddr
+                                             (GoLean.GoCore.Expr.var "$c1407")
+                                             (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int))))
+                                         (GoLean.GoCore.Expr.toInterface
+                                           (GoLean.GoCore.Ty.interface { key := "any" })
+                                           (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                           (GoLean.GoCore.Expr.var "$c1406"))],
+                                   GoLean.GoCore.Stmt.call
+                                     #[]
+                                     { key := "raft.Logger.Infof" }
+                                     #[GoLean.GoCore.Expr.fieldGet
+                                         (GoLean.GoCore.Expr.deref
+                                           (GoLean.GoCore.Expr.var "r")
+                                           (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                         { key := "raft.raft" }
+                                         "logger",
+                                       GoLean.GoCore.Expr.stringLit
+                                         { bytes := #[37, 120, 32, 91, 116, 101, 114, 109, 58, 32, 37, 100, 93, 32, 105,
+                                                      103, 110, 111, 114, 101, 100, 32, 101, 110, 116, 114, 121, 32, 97,
+                                                      112, 112, 101, 110, 100, 115, 32, 102, 114, 111, 109, 32, 97, 32,
+                                                      37, 115, 32, 109, 101, 115, 115, 97, 103, 101, 32, 119, 105, 116,
+                                                      104, 32, 108, 111, 119, 101, 114, 32, 116, 101, 114, 109, 32, 91,
+                                                      116, 101, 114, 109, 58, 32, 37, 100, 93] },
+                                       GoLean.GoCore.Expr.var "$c1407"]])
+                               (GoLean.GoCore.Stmt.seqn #[]),
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$c1408",
+                                     typ := GoLean.GoCore.Ty.pointer
+                                              (GoLean.GoCore.Ty.defined { key := "raftpb.Snapshot" }) },
+                                 GoLean.GoCore.Stmt.call
+                                   #[GoLean.GoCore.Assignee.var "$c1408"]
+                                   { key := "raftpb.Message.GetSnapshot" }
+                                   #[GoLean.GoCore.Expr.var "m"]],
+                             GoLean.GoCore.Stmt.ifThenElse
+                               (GoLean.GoCore.Expr.neqCmp
+                                 (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Snapshot" }))
+                                 (GoLean.GoCore.Expr.var "$c1408")
+                                 (GoLean.GoCore.Expr.nil none))
+                               (GoLean.GoCore.Stmt.block
+                                 #[]
+                                 #[GoLean.GoCore.Stmt.seqn
+                                     #[GoLean.GoCore.Stmt.initialization
+                                         { id := "$c1409",
+                                           typ := GoLean.GoCore.Ty.pointer
+                                                    (GoLean.GoCore.Ty.defined { key := "raftpb.Snapshot" }) },
+                                       GoLean.GoCore.Stmt.call
+                                         #[GoLean.GoCore.Assignee.var "$c1409"]
+                                         { key := "raftpb.Message.GetSnapshot" }
+                                         #[GoLean.GoCore.Expr.var "m"]],
+                                   GoLean.GoCore.Stmt.call
+                                     #[]
+                                     { key := "raft.raft.appliedSnap" }
+                                     #[GoLean.GoCore.Expr.var "r", GoLean.GoCore.Expr.var "$c1409"]])
+                               (GoLean.GoCore.Stmt.seqn #[])])
+                         (GoLean.GoCore.Stmt.block
+                           #[]
+                           #[GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$c1410", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                                 GoLean.GoCore.Stmt.call
+                                   #[GoLean.GoCore.Assignee.var "$c1410"]
+                                   { key := "raftpb.Message.GetType" }
+                                   #[GoLean.GoCore.Expr.var "m"]],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$c1411", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                 GoLean.GoCore.Stmt.call
+                                   #[GoLean.GoCore.Assignee.var "$c1411"]
+                                   { key := "raftpb.Message.GetFrom" }
+                                   #[GoLean.GoCore.Expr.var "m"]],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$c1412", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                 GoLean.GoCore.Stmt.call
+                                   #[GoLean.GoCore.Assignee.var "$c1412"]
+                                   { key := "raftpb.Message.GetTerm" }
+                                   #[GoLean.GoCore.Expr.var "m"]],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$c1413",
+                                     typ := GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.interface { key := "any" }) },
+                                 GoLean.GoCore.Stmt.makeSlice
+                                   (GoLean.GoCore.Assignee.var "$c1413")
+                                   (GoLean.GoCore.Ty.interface { key := "any" })
+                                   (GoLean.GoCore.Expr.intLit 5 (GoLean.GoCore.IntKind.int))
+                                   (some (GoLean.GoCore.Expr.intLit 5 (GoLean.GoCore.IntKind.int))),
+                                 GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.addr
+                                     (GoLean.GoCore.Expr.indexAddr
+                                       (GoLean.GoCore.Expr.var "$c1413")
+                                       (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+                                   (GoLean.GoCore.Expr.toInterface
+                                     (GoLean.GoCore.Ty.interface { key := "any" })
+                                     (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                     (GoLean.GoCore.Expr.fieldGet
+                                       (GoLean.GoCore.Expr.deref
+                                         (GoLean.GoCore.Expr.var "r")
+                                         (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                       { key := "raft.raft" }
+                                       "id")),
+                                 GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.addr
+                                     (GoLean.GoCore.Expr.indexAddr
+                                       (GoLean.GoCore.Expr.var "$c1413")
+                                       (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))))
+                                   (GoLean.GoCore.Expr.toInterface
+                                     (GoLean.GoCore.Ty.interface { key := "any" })
+                                     (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                     (GoLean.GoCore.Expr.fieldGet
+                                       (GoLean.GoCore.Expr.deref
+                                         (GoLean.GoCore.Expr.var "r")
+                                         (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                       { key := "raft.raft" }
+                                       "Term")),
+                                 GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.addr
+                                     (GoLean.GoCore.Expr.indexAddr
+                                       (GoLean.GoCore.Expr.var "$c1413")
+                                       (GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int))))
+                                   (GoLean.GoCore.Expr.toInterface
+                                     (GoLean.GoCore.Ty.interface { key := "any" })
+                                     (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                                     (GoLean.GoCore.Expr.var "$c1410")),
+                                 GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.addr
+                                     (GoLean.GoCore.Expr.indexAddr
+                                       (GoLean.GoCore.Expr.var "$c1413")
+                                       (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int))))
+                                   (GoLean.GoCore.Expr.toInterface
+                                     (GoLean.GoCore.Ty.interface { key := "any" })
+                                     (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                     (GoLean.GoCore.Expr.var "$c1411")),
+                                 GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.addr
+                                     (GoLean.GoCore.Expr.indexAddr
+                                       (GoLean.GoCore.Expr.var "$c1413")
+                                       (GoLean.GoCore.Expr.intLit 4 (GoLean.GoCore.IntKind.int))))
+                                   (GoLean.GoCore.Expr.toInterface
+                                     (GoLean.GoCore.Ty.interface { key := "any" })
+                                     (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                     (GoLean.GoCore.Expr.var "$c1412"))],
+                             GoLean.GoCore.Stmt.call
+                               #[]
+                               { key := "raft.Logger.Infof" }
+                               #[GoLean.GoCore.Expr.fieldGet
+                                   (GoLean.GoCore.Expr.deref
+                                     (GoLean.GoCore.Expr.var "r")
+                                     (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                   { key := "raft.raft" }
+                                   "logger",
+                                 GoLean.GoCore.Expr.stringLit
+                                   { bytes := #[37, 120, 32, 91, 116, 101, 114, 109, 58, 32, 37, 100, 93, 32, 105, 103,
+                                                110, 111, 114, 101, 100, 32, 97, 32, 37, 115, 32, 109, 101, 115, 115,
+                                                97, 103, 101, 32, 119, 105, 116, 104, 32, 108, 111, 119, 101, 114, 32,
+                                                116, 101, 114, 109, 32, 102, 114, 111, 109, 32, 37, 120, 32, 91, 116,
+                                                101, 114, 109, 58, 32, 37, 100, 93] },
+                                 GoLean.GoCore.Expr.var "$c1413"]])])]),
+           GoLean.GoCore.Stmt.seqn
+             #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res0") (GoLean.GoCore.Expr.nil none),
+               GoLean.GoCore.Stmt.returnStmt]]])
+   (GoLean.GoCore.Stmt.seqn #[])]) ([[("$swf1414", GoLean.Loc.base { id := 6181 }), ("$swi1414", GoLean.Loc.base { id := 6174 })],
+ [],
+ [("$res0", GoLean.Loc.base { id := 6171 }),
+  ("m", GoLean.Loc.base { id := 6170 }),
+  ("r", GoLean.Loc.base { id := 6169 })]]) (GoLean.Sym.Cont.breakableK (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.breakable
+   (GoLean.GoCore.Stmt.block
+     #[]
+     #[GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.initialization
+             { id := "$c1418", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+           GoLean.GoCore.Stmt.call
+             #[GoLean.GoCore.Assignee.var "$c1418"]
+             { key := "raftpb.Message.GetType" }
+             #[GoLean.GoCore.Expr.var "m"]],
+       GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.initialization
+             { id := "$sw1419", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+           GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$sw1419") (GoLean.GoCore.Expr.var "$c1418")],
+       GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.initialization
+             { id := "$swi1467", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+           GoLean.GoCore.Stmt.assign
+             (GoLean.GoCore.Assignee.var "$swi1467")
+             (GoLean.GoCore.Expr.intLit 4 (GoLean.GoCore.IntKind.int))],
+       GoLean.GoCore.Stmt.block
+         #[]
+         #[GoLean.GoCore.Stmt.ifThenElse
+             (GoLean.GoCore.Expr.eqCmp
+               (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+               (GoLean.GoCore.Expr.var "$sw1419")
+               (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int32)))
+             (GoLean.GoCore.Stmt.seqn
+               #[GoLean.GoCore.Stmt.assign
+                   (GoLean.GoCore.Assignee.var "$swi1467")
+                   (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))])
+             (GoLean.GoCore.Stmt.block
+               #[]
+               #[GoLean.GoCore.Stmt.ifThenElse
+                   (GoLean.GoCore.Expr.eqCmp
+                     (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                     (GoLean.GoCore.Expr.var "$sw1419")
+                     (GoLean.GoCore.Expr.intLit 20 (GoLean.GoCore.IntKind.int32)))
+                   (GoLean.GoCore.Stmt.seqn
+                     #[GoLean.GoCore.Stmt.assign
+                         (GoLean.GoCore.Assignee.var "$swi1467")
+                         (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))])
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.ifThenElse
+                         (GoLean.GoCore.Expr.eqCmp
+                           (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                           (GoLean.GoCore.Expr.var "$sw1419")
+                           (GoLean.GoCore.Expr.intLit 22 (GoLean.GoCore.IntKind.int32)))
+                         (GoLean.GoCore.Stmt.seqn
+                           #[GoLean.GoCore.Stmt.assign
+                               (GoLean.GoCore.Assignee.var "$swi1467")
+                               (GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int))])
+                         (GoLean.GoCore.Stmt.block
+                           #[]
+                           #[GoLean.GoCore.Stmt.ifThenElse
+                               (GoLean.GoCore.Expr.eqCmp
+                                 (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                                 (GoLean.GoCore.Expr.var "$sw1419")
+                                 (GoLean.GoCore.Expr.intLit 5 (GoLean.GoCore.IntKind.int32)))
+                               (GoLean.GoCore.Stmt.seqn
+                                 #[GoLean.GoCore.Stmt.assign
+                                     (GoLean.GoCore.Assignee.var "$swi1467")
+                                     (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int))])
+                               (GoLean.GoCore.Stmt.block
+                                 #[]
+                                 #[GoLean.GoCore.Stmt.ifThenElse
+                                     (GoLean.GoCore.Expr.eqCmp
+                                       (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                                       (GoLean.GoCore.Expr.var "$sw1419")
+                                       (GoLean.GoCore.Expr.intLit 17 (GoLean.GoCore.IntKind.int32)))
+                                     (GoLean.GoCore.Stmt.seqn
+                                       #[GoLean.GoCore.Stmt.assign
+                                           (GoLean.GoCore.Assignee.var "$swi1467")
+                                           (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int))])
+                                     (GoLean.GoCore.Stmt.seqn #[])])])])])],
+       GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.initialization { id := "$swf1467", typ := GoLean.GoCore.Ty.bool },
+           GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$swf1467") (GoLean.GoCore.Expr.boolLit false)],
+       GoLean.GoCore.Stmt.ifThenElse
+         (GoLean.GoCore.Expr.or
+           (GoLean.GoCore.Expr.var "$swf1467")
+           (GoLean.GoCore.Expr.eqCmp
+             (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+             (GoLean.GoCore.Expr.var "$swi1467")
+             (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+         (GoLean.GoCore.Stmt.block
+           #[]
+           #[GoLean.GoCore.Stmt.seqn
+               #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$swf1467") (GoLean.GoCore.Expr.boolLit false)],
+             GoLean.GoCore.Stmt.block
+               #[]
+               #[GoLean.GoCore.Stmt.ifThenElse
+                   (GoLean.GoCore.Expr.fieldGet
+                     (GoLean.GoCore.Expr.deref
+                       (GoLean.GoCore.Expr.var "r")
+                       (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                     { key := "raft.raft" }
+                     "preVote")
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.call
+                         #[]
+                         { key := "raft.raft.hup" }
+                         #[GoLean.GoCore.Expr.var "r",
+                           GoLean.GoCore.Expr.stringLit
+                             { bytes := #[67, 97, 109, 112, 97, 105, 103, 110, 80, 114, 101, 69, 108, 101, 99, 116, 105,
+                                          111, 110] }]])
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.call
+                         #[]
+                         { key := "raft.raft.hup" }
+                         #[GoLean.GoCore.Expr.var "r",
+                           GoLean.GoCore.Expr.stringLit
+                             { bytes := #[67, 97, 109, 112, 97, 105, 103, 110, 69, 108, 101, 99, 116, 105, 111,
+                                          110] }]])]])
+         (GoLean.GoCore.Stmt.seqn #[]),
+       GoLean.GoCore.Stmt.ifThenElse
+         (GoLean.GoCore.Expr.or
+           (GoLean.GoCore.Expr.var "$swf1467")
+           (GoLean.GoCore.Expr.eqCmp
+             (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+             (GoLean.GoCore.Expr.var "$swi1467")
+             (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))))
+         (GoLean.GoCore.Stmt.block
+           #[]
+           #[GoLean.GoCore.Stmt.seqn
+               #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$swf1467") (GoLean.GoCore.Expr.boolLit false)],
+             GoLean.GoCore.Stmt.block
+               #[]
+               #[GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1420", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                     GoLean.GoCore.Stmt.call
+                       #[GoLean.GoCore.Assignee.var "$c1420"]
+                       { key := "raftpb.Message.GetIndex" }
+                       #[GoLean.GoCore.Expr.var "m"]],
+                 GoLean.GoCore.Stmt.ifThenElse
+                   (GoLean.GoCore.Expr.neqCmp
+                     (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                     (GoLean.GoCore.Expr.var "$c1420")
+                     (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64)))
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1421", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1421"]
+                             { key := "raftpb.Message.GetLogTerm" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1422", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1422")
+                             (GoLean.GoCore.Expr.var "$c1421")],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1423", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1423"]
+                             { key := "raftpb.Message.GetIndex" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1424", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1424")
+                             (GoLean.GoCore.Expr.var "$c1423")],
+                       GoLean.GoCore.Stmt.call
+                         #[]
+                         { key := "raft.raftLog.stableTo" }
+                         #[GoLean.GoCore.Expr.fieldGet
+                             (GoLean.GoCore.Expr.deref
+                               (GoLean.GoCore.Expr.var "r")
+                               (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                             { key := "raft.raft" }
+                             "raftLog",
+                           GoLean.GoCore.Expr.structLit
+                             (GoLean.GoCore.Ty.defined { key := "raft.entryID" })
+                             #[GoLean.GoCore.Expr.var "$c1422", GoLean.GoCore.Expr.var "$c1424"]]])
+                   (GoLean.GoCore.Stmt.seqn #[]),
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1425",
+                         typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Snapshot" }) },
+                     GoLean.GoCore.Stmt.call
+                       #[GoLean.GoCore.Assignee.var "$c1425"]
+                       { key := "raftpb.Message.GetSnapshot" }
+                       #[GoLean.GoCore.Expr.var "m"]],
+                 GoLean.GoCore.Stmt.ifThenElse
+                   (GoLean.GoCore.Expr.neqCmp
+                     (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Snapshot" }))
+                     (GoLean.GoCore.Expr.var "$c1425")
+                     (GoLean.GoCore.Expr.nil none))
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1426",
+                               typ := GoLean.GoCore.Ty.pointer
+                                        (GoLean.GoCore.Ty.defined { key := "raftpb.Snapshot" }) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1426"]
+                             { key := "raftpb.Message.GetSnapshot" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.call
+                         #[]
+                         { key := "raft.raft.appliedSnap" }
+                         #[GoLean.GoCore.Expr.var "r", GoLean.GoCore.Expr.var "$c1426"]])
+                   (GoLean.GoCore.Stmt.seqn #[])]])
+         (GoLean.GoCore.Stmt.seqn #[]),
+       GoLean.GoCore.Stmt.ifThenElse
+         (GoLean.GoCore.Expr.or
+           (GoLean.GoCore.Expr.var "$swf1467")
+           (GoLean.GoCore.Expr.eqCmp
+             (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+             (GoLean.GoCore.Expr.var "$swi1467")
+             (GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int))))
+         (GoLean.GoCore.Stmt.block
+           #[]
+           #[GoLean.GoCore.Stmt.seqn
+               #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$swf1467") (GoLean.GoCore.Expr.boolLit false)],
+             GoLean.GoCore.Stmt.block
+               #[]
+               #[GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1427",
+                         typ := GoLean.GoCore.Ty.slice
+                                  (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })) },
+                     GoLean.GoCore.Stmt.call
+                       #[GoLean.GoCore.Assignee.var "$c1427"]
+                       { key := "raftpb.Message.GetEntries" }
+                       #[GoLean.GoCore.Expr.var "m"]],
+                 GoLean.GoCore.Stmt.ifThenElse
+                   (GoLean.GoCore.Expr.greaterCmp
+                     (GoLean.GoCore.Expr.length
+                       (GoLean.GoCore.Expr.var "$c1427")
+                       (some (GoLean.GoCore.Ty.slice
+                          (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })))))
+                     (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int)))
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1428",
+                               typ := GoLean.GoCore.Ty.slice
+                                        (GoLean.GoCore.Ty.pointer
+                                          (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1428"]
+                             { key := "raftpb.Message.GetEntries" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1429",
+                               typ := GoLean.GoCore.Ty.slice
+                                        (GoLean.GoCore.Ty.pointer
+                                          (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1429"]
+                             { key := "raftpb.Message.GetEntries" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "index", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "index"]
+                             { key := "raftpb.Entry.GetIndex" }
+                             #[GoLean.GoCore.Expr.indexGet
+                                 (GoLean.GoCore.Expr.var "$c1428")
+                                 (GoLean.GoCore.Expr.sub
+                                   (GoLean.GoCore.Expr.length
+                                     (GoLean.GoCore.Expr.var "$c1429")
+                                     (some (GoLean.GoCore.Ty.slice
+                                        (GoLean.GoCore.Ty.pointer
+                                          (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })))))
+                                   (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int)))]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1430",
+                               typ := GoLean.GoCore.Ty.slice
+                                        (GoLean.GoCore.Ty.pointer
+                                          (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1430"]
+                             { key := "raftpb.Message.GetEntries" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1431", typ := GoLean.GoCore.Ty.defined { key := "raft.entryEncodingSize" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1431"]
+                             { key := "raft.entsSize" }
+                             #[GoLean.GoCore.Expr.var "$c1430"]],
+                       GoLean.GoCore.Stmt.call
+                         #[]
+                         { key := "raft.raft.appliedTo" }
+                         #[GoLean.GoCore.Expr.var "r", GoLean.GoCore.Expr.var "index", GoLean.GoCore.Expr.var "$c1431"],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1432",
+                               typ := GoLean.GoCore.Ty.slice
+                                        (GoLean.GoCore.Ty.pointer
+                                          (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1432"]
+                             { key := "raftpb.Message.GetEntries" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1433", typ := GoLean.GoCore.Ty.defined { key := "raft.entryPayloadSize" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1433"]
+                             { key := "raft.payloadsSize" }
+                             #[GoLean.GoCore.Expr.var "$c1432"]],
+                       GoLean.GoCore.Stmt.call
+                         #[]
+                         { key := "raft.raft.reduceUncommittedSize" }
+                         #[GoLean.GoCore.Expr.var "r", GoLean.GoCore.Expr.var "$c1433"]])
+                   (GoLean.GoCore.Stmt.seqn #[])]])
+         (GoLean.GoCore.Stmt.seqn #[]),
+       GoLean.GoCore.Stmt.ifThenElse
+         (GoLean.GoCore.Expr.or
+           (GoLean.GoCore.Expr.var "$swf1467")
+           (GoLean.GoCore.Expr.eqCmp
+             (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+             (GoLean.GoCore.Expr.var "$swi1467")
+             (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int))))
+         (GoLean.GoCore.Stmt.block
+           #[]
+           #[GoLean.GoCore.Stmt.seqn
+               #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$swf1467") (GoLean.GoCore.Expr.boolLit false)],
+             GoLean.GoCore.Stmt.block
+               #[]
+               #[GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1434", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                     GoLean.GoCore.Stmt.call
+                       #[GoLean.GoCore.Assignee.var "$c1434"]
+                       { key := "raftpb.Message.GetFrom" }
+                       #[GoLean.GoCore.Expr.var "m"]],
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization { id := "$c1438", typ := GoLean.GoCore.Ty.bool },
+                     GoLean.GoCore.Stmt.assign
+                       (GoLean.GoCore.Assignee.var "$c1438")
+                       (GoLean.GoCore.Expr.or
+                         (GoLean.GoCore.Expr.eqCmp
+                           (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                           (GoLean.GoCore.Expr.fieldGet
+                             (GoLean.GoCore.Expr.deref
+                               (GoLean.GoCore.Expr.var "r")
+                               (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                             { key := "raft.raft" }
+                             "Vote")
+                           (GoLean.GoCore.Expr.var "$c1434"))
+                         (GoLean.GoCore.Expr.and
+                           (GoLean.GoCore.Expr.eqCmp
+                             (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                             (GoLean.GoCore.Expr.fieldGet
+                               (GoLean.GoCore.Expr.deref
+                                 (GoLean.GoCore.Expr.var "r")
+                                 (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                               { key := "raft.raft" }
+                               "Vote")
+                             (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64)))
+                           (GoLean.GoCore.Expr.eqCmp
+                             (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                             (GoLean.GoCore.Expr.fieldGet
+                               (GoLean.GoCore.Expr.deref
+                                 (GoLean.GoCore.Expr.var "r")
+                                 (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                               { key := "raft.raft" }
+                               "lead")
+                             (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64)))))],
+                 GoLean.GoCore.Stmt.ifThenElse
+                   (GoLean.GoCore.Expr.not (GoLean.GoCore.Expr.var "$c1438"))
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1435", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1435"]
+                             { key := "raftpb.Message.GetType" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization { id := "$c1437", typ := GoLean.GoCore.Ty.bool },
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1437")
+                             (GoLean.GoCore.Expr.eqCmp
+                               (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                               (GoLean.GoCore.Expr.var "$c1435")
+                               (GoLean.GoCore.Expr.intLit 17 (GoLean.GoCore.IntKind.int32)))],
+                       GoLean.GoCore.Stmt.ifThenElse
+                         (GoLean.GoCore.Expr.var "$c1437")
+                         (GoLean.GoCore.Stmt.block
+                           #[]
+                           #[GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$c1436", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                 GoLean.GoCore.Stmt.call
+                                   #[GoLean.GoCore.Assignee.var "$c1436"]
+                                   { key := "raftpb.Message.GetTerm" }
+                                   #[GoLean.GoCore.Expr.var "m"]],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.var "$c1437")
+                                   (GoLean.GoCore.Expr.greaterCmp
+                                     (GoLean.GoCore.Expr.var "$c1436")
+                                     (GoLean.GoCore.Expr.fieldGet
+                                       (GoLean.GoCore.Expr.deref
+                                         (GoLean.GoCore.Expr.var "r")
+                                         (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                       { key := "raft.raft" }
+                                       "Term"))]])
+                         (GoLean.GoCore.Stmt.seqn #[]),
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1438")
+                             (GoLean.GoCore.Expr.var "$c1437")]])
+                   (GoLean.GoCore.Stmt.seqn #[]),
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization { id := "canVote", typ := GoLean.GoCore.Ty.bool },
+                     GoLean.GoCore.Stmt.assign
+                       (GoLean.GoCore.Assignee.var "canVote")
+                       (GoLean.GoCore.Expr.var "$c1438")],
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "lastID", typ := GoLean.GoCore.Ty.defined { key := "raft.entryID" } },
+                     GoLean.GoCore.Stmt.call
+                       #[GoLean.GoCore.Assignee.var "lastID"]
+                       { key := "raft.raftLog.lastEntryID" }
+                       #[GoLean.GoCore.Expr.fieldGet
+                           (GoLean.GoCore.Expr.deref
+                             (GoLean.GoCore.Expr.var "r")
+                             (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                           { key := "raft.raft" }
+                           "raftLog"]],
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1439", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                     GoLean.GoCore.Stmt.call
+                       #[GoLean.GoCore.Assignee.var "$c1439"]
+                       { key := "raftpb.Message.GetLogTerm" }
+                       #[GoLean.GoCore.Expr.var "m"]],
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1440", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$c1440") (GoLean.GoCore.Expr.var "$c1439")],
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1441", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                     GoLean.GoCore.Stmt.call
+                       #[GoLean.GoCore.Assignee.var "$c1441"]
+                       { key := "raftpb.Message.GetIndex" }
+                       #[GoLean.GoCore.Expr.var "m"]],
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1442", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$c1442") (GoLean.GoCore.Expr.var "$c1441")],
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "candLastID", typ := GoLean.GoCore.Ty.defined { key := "raft.entryID" } },
+                     GoLean.GoCore.Stmt.assign
+                       (GoLean.GoCore.Assignee.var "candLastID")
+                       (GoLean.GoCore.Expr.structLit
+                         (GoLean.GoCore.Ty.defined { key := "raft.entryID" })
+                         #[GoLean.GoCore.Expr.var "$c1440", GoLean.GoCore.Expr.var "$c1442"])],
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization { id := "$c1444", typ := GoLean.GoCore.Ty.bool },
+                     GoLean.GoCore.Stmt.assign
+                       (GoLean.GoCore.Assignee.var "$c1444")
+                       (GoLean.GoCore.Expr.var "canVote")],
+                 GoLean.GoCore.Stmt.ifThenElse
+                   (GoLean.GoCore.Expr.var "$c1444")
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization { id := "$c1443", typ := GoLean.GoCore.Ty.bool },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1443"]
+                             { key := "raft.raftLog.isUpToDate" }
+                             #[GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.deref
+                                   (GoLean.GoCore.Expr.var "r")
+                                   (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                 { key := "raft.raft" }
+                                 "raftLog",
+                               GoLean.GoCore.Expr.var "candLastID"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1444")
+                             (GoLean.GoCore.Expr.var "$c1443")]])
+                   (GoLean.GoCore.Stmt.seqn #[]),
+                 GoLean.GoCore.Stmt.ifThenElse
+                   (GoLean.GoCore.Expr.var "$c1444")
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1445", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1445"]
+                             { key := "raftpb.Message.GetType" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1446", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1446"]
+                             { key := "raftpb.Message.GetFrom" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1447",
+                               typ := GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.interface { key := "any" }) },
+                           GoLean.GoCore.Stmt.makeSlice
+                             (GoLean.GoCore.Assignee.var "$c1447")
+                             (GoLean.GoCore.Ty.interface { key := "any" })
+                             (GoLean.GoCore.Expr.intLit 9 (GoLean.GoCore.IntKind.int))
+                             (some (GoLean.GoCore.Expr.intLit 9 (GoLean.GoCore.IntKind.int))),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1447")
+                                 (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.deref
+                                   (GoLean.GoCore.Expr.var "r")
+                                   (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                 { key := "raft.raft" }
+                                 "id")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1447")
+                                 (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.var "lastID")
+                                 { key := "raft.entryID" }
+                                 "term")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1447")
+                                 (GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.var "lastID")
+                                 { key := "raft.entryID" }
+                                 "index")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1447")
+                                 (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.deref
+                                   (GoLean.GoCore.Expr.var "r")
+                                   (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                 { key := "raft.raft" }
+                                 "Vote")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1447")
+                                 (GoLean.GoCore.Expr.intLit 4 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                               (GoLean.GoCore.Expr.var "$c1445")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1447")
+                                 (GoLean.GoCore.Expr.intLit 5 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.var "$c1446")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1447")
+                                 (GoLean.GoCore.Expr.intLit 6 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.var "candLastID")
+                                 { key := "raft.entryID" }
+                                 "term")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1447")
+                                 (GoLean.GoCore.Expr.intLit 7 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.var "candLastID")
+                                 { key := "raft.entryID" }
+                                 "index")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1447")
+                                 (GoLean.GoCore.Expr.intLit 8 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.deref
+                                   (GoLean.GoCore.Expr.var "r")
+                                   (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                 { key := "raft.raft" }
+                                 "Term"))],
+                       GoLean.GoCore.Stmt.call
+                         #[]
+                         { key := "raft.Logger.Infof" }
+                         #[GoLean.GoCore.Expr.fieldGet
+                             (GoLean.GoCore.Expr.deref
+                               (GoLean.GoCore.Expr.var "r")
+                               (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                             { key := "raft.raft" }
+                             "logger",
+                           GoLean.GoCore.Expr.stringLit
+                             { bytes := #[37, 120, 32, 91, 108, 111, 103, 116, 101, 114, 109, 58, 32, 37, 100, 44, 32,
+                                          105, 110, 100, 101, 120, 58, 32, 37, 100, 44, 32, 118, 111, 116, 101, 58, 32,
+                                          37, 120, 93, 32, 99, 97, 115, 116, 32, 37, 115, 32, 102, 111, 114, 32, 37,
+                                          120, 32, 91, 108, 111, 103, 116, 101, 114, 109, 58, 32, 37, 100, 44, 32, 105,
+                                          110, 100, 101, 120, 58, 32, 37, 100, 93, 32, 97, 116, 32, 116, 101, 114, 109,
+                                          32, 37, 100] },
+                           GoLean.GoCore.Expr.var "$c1447"],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1448", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1448"]
+                             { key := "raftpb.Message.GetType" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1449", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1449"]
+                             { key := "raft.voteRespMsgType" }
+                             #[GoLean.GoCore.Expr.var "$c1448"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1450",
+                               typ := GoLean.GoCore.Ty.pointer
+                                        (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" }) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1450"]
+                             { key := "raftpb.MessageType.Enum" }
+                             #[GoLean.GoCore.Expr.var "$c1449"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1451",
+                               typ := GoLean.GoCore.Ty.pointer
+                                        (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" }) },
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1451")
+                             (GoLean.GoCore.Expr.var "$c1450")],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1452",
+                               typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }) },
+                           GoLean.GoCore.Stmt.newValue
+                             (GoLean.GoCore.Assignee.var "$c1452")
+                             (GoLean.GoCore.Expr.structLit
+                               (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })
+                               #[GoLean.GoCore.Expr.var "$c1451",
+                                 GoLean.GoCore.Expr.fieldGet
+                                   (GoLean.GoCore.Expr.deref
+                                     (GoLean.GoCore.Expr.var "m")
+                                     (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))
+                                   { key := "raftpb.Message" }
+                                   "From",
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.fieldGet
+                                   (GoLean.GoCore.Expr.deref
+                                     (GoLean.GoCore.Expr.var "m")
+                                     (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))
+                                   { key := "raftpb.Message" }
+                                   "Term",
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.slice
+                                     (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" }))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Snapshot" })),
+                                 GoLean.GoCore.Expr.defaultValue (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.bool)),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint8))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.slice
+                                     (GoLean.GoCore.Ty.pointer
+                                       (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })))])
+                             (some (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))],
+                       GoLean.GoCore.Stmt.call
+                         #[]
+                         { key := "raft.raft.send" }
+                         #[GoLean.GoCore.Expr.var "r", GoLean.GoCore.Expr.var "$c1452"],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1453", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1453"]
+                             { key := "raftpb.Message.GetType" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.ifThenElse
+                         (GoLean.GoCore.Expr.eqCmp
+                           (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                           (GoLean.GoCore.Expr.var "$c1453")
+                           (GoLean.GoCore.Expr.intLit 5 (GoLean.GoCore.IntKind.int32)))
+                         (GoLean.GoCore.Stmt.block
+                           #[]
+                           #[GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.addr
+                                     (GoLean.GoCore.Expr.fieldAddr
+                                       (GoLean.GoCore.Expr.var "r")
+                                       { key := "raft.raft" }
+                                       "electionElapsed"))
+                                   (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$c1454", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                 GoLean.GoCore.Stmt.call
+                                   #[GoLean.GoCore.Assignee.var "$c1454"]
+                                   { key := "raftpb.Message.GetFrom" }
+                                   #[GoLean.GoCore.Expr.var "m"]],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.addr
+                                     (GoLean.GoCore.Expr.fieldAddr
+                                       (GoLean.GoCore.Expr.var "r")
+                                       { key := "raft.raft" }
+                                       "Vote"))
+                                   (GoLean.GoCore.Expr.var "$c1454")]])
+                         (GoLean.GoCore.Stmt.seqn #[])])
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1455", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1455"]
+                             { key := "raftpb.Message.GetType" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1456", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1456"]
+                             { key := "raftpb.Message.GetFrom" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1457",
+                               typ := GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.interface { key := "any" }) },
+                           GoLean.GoCore.Stmt.makeSlice
+                             (GoLean.GoCore.Assignee.var "$c1457")
+                             (GoLean.GoCore.Ty.interface { key := "any" })
+                             (GoLean.GoCore.Expr.intLit 9 (GoLean.GoCore.IntKind.int))
+                             (some (GoLean.GoCore.Expr.intLit 9 (GoLean.GoCore.IntKind.int))),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1457")
+                                 (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.deref
+                                   (GoLean.GoCore.Expr.var "r")
+                                   (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                 { key := "raft.raft" }
+                                 "id")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1457")
+                                 (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.var "lastID")
+                                 { key := "raft.entryID" }
+                                 "term")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1457")
+                                 (GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.var "lastID")
+                                 { key := "raft.entryID" }
+                                 "index")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1457")
+                                 (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.deref
+                                   (GoLean.GoCore.Expr.var "r")
+                                   (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                 { key := "raft.raft" }
+                                 "Vote")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1457")
+                                 (GoLean.GoCore.Expr.intLit 4 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                               (GoLean.GoCore.Expr.var "$c1455")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1457")
+                                 (GoLean.GoCore.Expr.intLit 5 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.var "$c1456")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1457")
+                                 (GoLean.GoCore.Expr.intLit 6 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.var "candLastID")
+                                 { key := "raft.entryID" }
+                                 "term")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1457")
+                                 (GoLean.GoCore.Expr.intLit 7 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.var "candLastID")
+                                 { key := "raft.entryID" }
+                                 "index")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1457")
+                                 (GoLean.GoCore.Expr.intLit 8 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.deref
+                                   (GoLean.GoCore.Expr.var "r")
+                                   (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                 { key := "raft.raft" }
+                                 "Term"))],
+                       GoLean.GoCore.Stmt.call
+                         #[]
+                         { key := "raft.Logger.Infof" }
+                         #[GoLean.GoCore.Expr.fieldGet
+                             (GoLean.GoCore.Expr.deref
+                               (GoLean.GoCore.Expr.var "r")
+                               (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                             { key := "raft.raft" }
+                             "logger",
+                           GoLean.GoCore.Expr.stringLit
+                             { bytes := #[37, 120, 32, 91, 108, 111, 103, 116, 101, 114, 109, 58, 32, 37, 100, 44, 32,
+                                          105, 110, 100, 101, 120, 58, 32, 37, 100, 44, 32, 118, 111, 116, 101, 58, 32,
+                                          37, 120, 93, 32, 114, 101, 106, 101, 99, 116, 101, 100, 32, 37, 115, 32, 102,
+                                          114, 111, 109, 32, 37, 120, 32, 91, 108, 111, 103, 116, 101, 114, 109, 58, 32,
+                                          37, 100, 44, 32, 105, 110, 100, 101, 120, 58, 32, 37, 100, 93, 32, 97, 116,
+                                          32, 116, 101, 114, 109, 32, 37, 100] },
+                           GoLean.GoCore.Expr.var "$c1457"],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1458",
+                               typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) },
+                           GoLean.GoCore.Stmt.newValue
+                             (GoLean.GoCore.Assignee.var "$c1458")
+                             (GoLean.GoCore.Expr.fieldGet
+                               (GoLean.GoCore.Expr.deref
+                                 (GoLean.GoCore.Expr.var "r")
+                                 (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                               { key := "raft.raft" }
+                               "Term")
+                             (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)))],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1459",
+                               typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) },
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1459")
+                             (GoLean.GoCore.Expr.var "$c1458")],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1460", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1460"]
+                             { key := "raftpb.Message.GetType" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1461", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1461"]
+                             { key := "raft.voteRespMsgType" }
+                             #[GoLean.GoCore.Expr.var "$c1460"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1462",
+                               typ := GoLean.GoCore.Ty.pointer
+                                        (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" }) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1462"]
+                             { key := "raftpb.MessageType.Enum" }
+                             #[GoLean.GoCore.Expr.var "$c1461"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1463",
+                               typ := GoLean.GoCore.Ty.pointer
+                                        (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" }) },
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1463")
+                             (GoLean.GoCore.Expr.var "$c1462")],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1464", typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.bool) },
+                           GoLean.GoCore.Stmt.newValue
+                             (GoLean.GoCore.Assignee.var "$c1464")
+                             (GoLean.GoCore.Expr.boolLit true)
+                             (some (GoLean.GoCore.Ty.bool))],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1465", typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.bool) },
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1465")
+                             (GoLean.GoCore.Expr.var "$c1464")],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1466",
+                               typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }) },
+                           GoLean.GoCore.Stmt.newValue
+                             (GoLean.GoCore.Assignee.var "$c1466")
+                             (GoLean.GoCore.Expr.structLit
+                               (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })
+                               #[GoLean.GoCore.Expr.var "$c1463",
+                                 GoLean.GoCore.Expr.fieldGet
+                                   (GoLean.GoCore.Expr.deref
+                                     (GoLean.GoCore.Expr.var "m")
+                                     (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))
+                                   { key := "raftpb.Message" }
+                                   "From",
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.var "$c1459",
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.slice
+                                     (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" }))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Snapshot" })),
+                                 GoLean.GoCore.Expr.var "$c1465",
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint8))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.slice
+                                     (GoLean.GoCore.Ty.pointer
+                                       (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })))])
+                             (some (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))],
+                       GoLean.GoCore.Stmt.call
+                         #[]
+                         { key := "raft.raft.send" }
+                         #[GoLean.GoCore.Expr.var "r", GoLean.GoCore.Expr.var "$c1466"]])]])
+         (GoLean.GoCore.Stmt.seqn #[]),
+       GoLean.GoCore.Stmt.ifThenElse
+         (GoLean.GoCore.Expr.or
+           (GoLean.GoCore.Expr.var "$swf1467")
+           (GoLean.GoCore.Expr.eqCmp
+             (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+             (GoLean.GoCore.Expr.var "$swi1467")
+             (GoLean.GoCore.Expr.intLit 4 (GoLean.GoCore.IntKind.int))))
+         (GoLean.GoCore.Stmt.block
+           #[]
+           #[GoLean.GoCore.Stmt.seqn
+               #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$swf1467") (GoLean.GoCore.Expr.boolLit false)],
+             GoLean.GoCore.Stmt.block
+               #[]
+               #[GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "err", typ := GoLean.GoCore.Ty.interface { key := "error" } },
+                     GoLean.GoCore.Stmt.callValue
+                       #[GoLean.GoCore.Assignee.var "err"]
+                       (GoLean.GoCore.Expr.fieldGet
+                         (GoLean.GoCore.Expr.deref
+                           (GoLean.GoCore.Expr.var "r")
+                           (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                         { key := "raft.raft" }
+                         "step")
+                       #[GoLean.GoCore.Expr.var "r", GoLean.GoCore.Expr.var "m"]],
+                 GoLean.GoCore.Stmt.ifThenElse
+                   (GoLean.GoCore.Expr.neqCmp
+                     (GoLean.GoCore.Ty.interface { key := "error" })
+                     (GoLean.GoCore.Expr.var "err")
+                     (GoLean.GoCore.Expr.nil none))
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$res0")
+                             (GoLean.GoCore.Expr.var "err"),
+                           GoLean.GoCore.Stmt.returnStmt]])
+                   (GoLean.GoCore.Stmt.seqn #[])]])
+         (GoLean.GoCore.Stmt.seqn #[])]),
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res0") (GoLean.GoCore.Expr.nil none),
+     GoLean.GoCore.Stmt.returnStmt]]) ([[],
+ [("$res0", GoLean.Loc.base { id := 6171 }),
+  ("m", GoLean.Loc.base { id := 6170 }),
+  ("r", GoLean.Loc.base { id := 6169 })]]) (GoLean.Sym.Cont.frame ([(GoLean.GoCore.Machine.TargetShape.chain [], [GoLean.GoCore.Expr.ref "$c1790"])]) ([[("$c1790", GoLean.Loc.base { id := 6168 }),
+  ("$c1789", GoLean.Loc.base { id := 6167 }),
+  ("$c1787", GoLean.Loc.base { id := 6166 }),
+  ("$c1784", GoLean.Loc.base { id := 6158 }),
+  ("$c1783", GoLean.Loc.base { id := 6155 }),
+  ("$c1782", GoLean.Loc.base { id := 6154 }),
+  ("$c1779", GoLean.Loc.base { id := 6146 }),
+  ("$c1778", GoLean.Loc.base { id := 6143 })],
+ [("$res0", GoLean.Loc.base { id := 6142 }),
+  ("m", GoLean.Loc.base { id := 6141 }),
+  ("rn", GoLean.Loc.base { id := 6140 })]]) ([GoLean.Loc.base { id := 6171 }]) [] (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res0") (GoLean.GoCore.Expr.var "$c1790"),
+     GoLean.GoCore.Stmt.returnStmt]]) ([[("$c1790", GoLean.Loc.base { id := 6168 }),
+  ("$c1789", GoLean.Loc.base { id := 6167 }),
+  ("$c1787", GoLean.Loc.base { id := 6166 }),
+  ("$c1784", GoLean.Loc.base { id := 6158 }),
+  ("$c1783", GoLean.Loc.base { id := 6155 }),
+  ("$c1782", GoLean.Loc.base { id := 6154 }),
+  ("$c1779", GoLean.Loc.base { id := 6146 }),
+  ("$c1778", GoLean.Loc.base { id := 6143 })],
+ [("$res0", GoLean.Loc.base { id := 6142 }),
+  ("m", GoLean.Loc.base { id := 6141 }),
+  ("rn", GoLean.Loc.base { id := 6140 })]]) (GoLean.Sym.Cont.frame ([(GoLean.GoCore.Machine.TargetShape.chain [], [GoLean.GoCore.Expr.ref "err"])]) ([[("err", GoLean.Loc.base { id := 6139 })],
+ [("to", GoLean.Loc.base { id := 6138 }),
+  ("$c2316", GoLean.Loc.base { id := 6135 }),
+  ("m", GoLean.Loc.base { id := 6134 })],
+ [("i", GoLean.Loc.base { id := 6133 }), ("t", GoLean.Loc.base { id := 6132 })]]) ([GoLean.Loc.base { id := 6142 }]) [] (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.ifThenElse
+   (GoLean.GoCore.Expr.neqCmp
+     (GoLean.GoCore.Ty.interface { key := "error" })
+     (GoLean.GoCore.Expr.var "err")
+     (GoLean.GoCore.Expr.nil none))
+   (GoLean.GoCore.Stmt.block
+     #[]
+     #[GoLean.GoCore.Stmt.call
+         #[]
+         { key := "main.twin.say" }
+         #[GoLean.GoCore.Expr.var "t",
+           GoLean.GoCore.Expr.stringLit { bytes := #[32, 115, 116, 101, 112, 101, 114, 114] }]])
+   (GoLean.GoCore.Stmt.seqn #[])]) ([[("err", GoLean.Loc.base { id := 6139 })],
+ [("to", GoLean.Loc.base { id := 6138 }),
+  ("$c2316", GoLean.Loc.base { id := 6135 }),
+  ("m", GoLean.Loc.base { id := 6134 })],
+ [("i", GoLean.Loc.base { id := 6133 }), ("t", GoLean.Loc.base { id := 6132 })]]) (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$cr0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$cr0"]
+       { key := "main.twin.harvest" }
+       #[GoLean.GoCore.Expr.var "t", GoLean.GoCore.Expr.var "to"]]]) ([[("to", GoLean.Loc.base { id := 6138 }),
+  ("$c2316", GoLean.Loc.base { id := 6135 }),
+  ("m", GoLean.Loc.base { id := 6134 })],
+ [("i", GoLean.Loc.base { id := 6133 }), ("t", GoLean.Loc.base { id := 6132 })]]) (GoLean.Sym.Cont.frame ([]) ([[("$c2241", GoLean.Loc.base { id := 6125 }),
+  ("$c2240", GoLean.Loc.base { id := 6122 }),
+  ("$c2239", GoLean.Loc.base { id := 6114 }),
+  ("$c2238", GoLean.Loc.base { id := 6111 }),
+  ("$c2237", GoLean.Loc.base { id := 6105 }),
+  ("$c2236", GoLean.Loc.base { id := 6097 }),
+  ("m", GoLean.Loc.base { id := 6096 }),
+  ("picked", GoLean.Loc.base { id := 6094 })],
+ [("live", GoLean.Loc.base { id := 6088 }), ("$c2235", GoLean.Loc.base { id := 6086 })],
+ [],
+ [("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) ([]) [] (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2242", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2242"]
+       { key := "main.twin.projection" }
+       #[GoLean.GoCore.Expr.var "t"]],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "main.twin.say" }
+   #[GoLean.GoCore.Expr.var "t",
+     GoLean.GoCore.Expr.add
+       (GoLean.GoCore.Expr.add (GoLean.GoCore.Expr.stringLit { bytes := #[32] }) (GoLean.GoCore.Expr.var "$c2242"))
+       (GoLean.GoCore.Expr.stringLit { bytes := #[10] })],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "stuckPropose")
+       (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))],
+ GoLean.GoCore.Stmt.continueStmt]) ([[("$c2241", GoLean.Loc.base { id := 6125 }),
+  ("$c2240", GoLean.Loc.base { id := 6122 }),
+  ("$c2239", GoLean.Loc.base { id := 6114 }),
+  ("$c2238", GoLean.Loc.base { id := 6111 }),
+  ("$c2237", GoLean.Loc.base { id := 6105 }),
+  ("$c2236", GoLean.Loc.base { id := 6097 }),
+  ("m", GoLean.Loc.base { id := 6096 }),
+  ("picked", GoLean.Loc.base { id := 6094 })],
+ [("live", GoLean.Loc.base { id := 6088 }), ("$c2235", GoLean.Loc.base { id := 6086 })],
+ [],
+ [("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2243", typ := GoLean.GoCore.Ty.bool },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2243"]
+       { key := "main.twin.complete" }
+       #[GoLean.GoCore.Expr.var "t"]],
+ GoLean.GoCore.Stmt.ifThenElse
+   (GoLean.GoCore.Expr.and
+     (GoLean.GoCore.Expr.var "$c2243")
+     (GoLean.GoCore.Expr.eqCmp
+       (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+       (GoLean.GoCore.Expr.length
+         (GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+           { key := "main.twin" }
+           "pending")
+         (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+       (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+   (GoLean.GoCore.Stmt.block #[] #[GoLean.GoCore.Stmt.breakStmt])
+   (GoLean.GoCore.Stmt.seqn #[]),
+ GoLean.GoCore.Stmt.ifThenElse
+   (GoLean.GoCore.Expr.greaterCmp
+     (GoLean.GoCore.Expr.length
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "pending")
+       (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+     (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int)))
+   (GoLean.GoCore.Stmt.block
+     #[]
+     #[GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.initialization { id := "$c2244", typ := GoLean.GoCore.Ty.string },
+           GoLean.GoCore.Stmt.call
+             #[GoLean.GoCore.Assignee.var "$c2244"]
+             { key := "itoa" }
+             #[GoLean.GoCore.Expr.add
+                 (GoLean.GoCore.Expr.var "round")
+                 (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))]],
+       GoLean.GoCore.Stmt.call
+         #[]
+         { key := "main.twin.say" }
+         #[GoLean.GoCore.Expr.var "t",
+           GoLean.GoCore.Expr.add
+             (GoLean.GoCore.Expr.add
+               (GoLean.GoCore.Expr.stringLit { bytes := #[114] })
+               (GoLean.GoCore.Expr.var "$c2244"))
+             (GoLean.GoCore.Expr.stringLit { bytes := #[32] })],
+       GoLean.GoCore.Stmt.call
+         #[]
+         { key := "main.twin.step" }
+         #[GoLean.GoCore.Expr.var "t",
+           GoLean.GoCore.Expr.structLit
+             (GoLean.GoCore.Ty.defined { key := "main.op" })
+             #[GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int),
+               GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int),
+               GoLean.GoCore.Expr.defaultValue (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))]],
+       GoLean.GoCore.Stmt.call
+         #[]
+         { key := "main.twin.say" }
+         #[GoLean.GoCore.Expr.var "t", GoLean.GoCore.Expr.stringLit { bytes := #[10] }],
+       GoLean.GoCore.Stmt.assign
+         (GoLean.GoCore.Assignee.var "stuckPropose")
+         (GoLean.GoCore.Expr.add
+           (GoLean.GoCore.Expr.var "stuckPropose")
+           (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))),
+       GoLean.GoCore.Stmt.ifThenElse
+         (GoLean.GoCore.Expr.greaterCmp
+           (GoLean.GoCore.Expr.var "stuckPropose")
+           (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int)))
+         (GoLean.GoCore.Stmt.block
+           #[]
+           #[GoLean.GoCore.Stmt.seqn
+               #[GoLean.GoCore.Stmt.assign
+                   (GoLean.GoCore.Assignee.addr
+                     (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "t") { key := "main.twin" } "halt"))
+                   (GoLean.GoCore.Expr.boolLit true)],
+             GoLean.GoCore.Stmt.call
+               #[]
+               { key := "main.twin.say" }
+               #[GoLean.GoCore.Expr.var "t",
+                 GoLean.GoCore.Expr.stringLit
+                   { bytes := #[33, 100, 114, 105, 118, 101, 114, 58, 32, 112, 114, 111, 112, 111, 115, 101, 32, 115,
+                                116, 117, 99, 107, 32, 97, 116, 32, 113, 117, 105, 101, 115, 99, 101, 110, 99, 101,
+                                10] }],
+             GoLean.GoCore.Stmt.breakStmt])
+         (GoLean.GoCore.Stmt.seqn #[]),
+       GoLean.GoCore.Stmt.continueStmt])
+   (GoLean.GoCore.Stmt.seqn #[]),
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.addr
+         (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "t") { key := "main.twin" } "halt"))
+       (GoLean.GoCore.Expr.boolLit true)],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "main.twin.say" }
+   #[GoLean.GoCore.Expr.var "t",
+     GoLean.GoCore.Expr.stringLit
+       { bytes := #[33, 100, 114, 105, 118, 101, 114, 58, 32, 113, 117, 105, 101, 115, 99, 101, 110, 116, 32, 119, 105,
+                    116, 104, 111, 117, 116, 32, 83, 52, 10] }],
+ GoLean.GoCore.Stmt.breakStmt]) ([[("live", GoLean.Loc.base { id := 6088 }), ("$c2235", GoLean.Loc.base { id := 6086 })],
+ [],
+ [("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([]) ([[],
+ [("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.loop (GoLean.GoCore.Expr.boolLit true) (GoLean.GoCore.Stmt.block
+  #[]
+  #[GoLean.GoCore.Stmt.ifThenElse
+      (GoLean.GoCore.Expr.var "$forFirst")
+      (GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$forFirst") (GoLean.GoCore.Expr.boolLit false))
+      (GoLean.GoCore.Stmt.assign
+        (GoLean.GoCore.Assignee.var "round")
+        (GoLean.GoCore.Expr.add
+          (GoLean.GoCore.Expr.var "round")
+          (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int)))),
+    GoLean.GoCore.Stmt.seqn #[],
+    GoLean.GoCore.Stmt.ifThenElse
+      (GoLean.GoCore.Expr.lessCmp
+        (GoLean.GoCore.Expr.var "round")
+        (GoLean.GoCore.Expr.intLit 400 (GoLean.GoCore.IntKind.int)))
+      (GoLean.GoCore.Stmt.seqn #[])
+      (GoLean.GoCore.Stmt.breakStmt),
+    GoLean.GoCore.Stmt.block
+      #[]
+      #[GoLean.GoCore.Stmt.seqn
+          #[GoLean.GoCore.Stmt.initialization
+              { id := "$c2235",
+                typ := GoLean.GoCore.Ty.map
+                         (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                         (GoLean.GoCore.Ty.bool) },
+            GoLean.GoCore.Stmt.makeMap
+              (GoLean.GoCore.Assignee.var "$c2235")
+              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+              (GoLean.GoCore.Ty.bool)
+              none],
+        GoLean.GoCore.Stmt.seqn
+          #[GoLean.GoCore.Stmt.initialization
+              { id := "live",
+                typ := GoLean.GoCore.Ty.map
+                         (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                         (GoLean.GoCore.Ty.bool) },
+            GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "live") (GoLean.GoCore.Expr.var "$c2235")],
+        GoLean.GoCore.Stmt.block
+          #[]
+          #[GoLean.GoCore.Stmt.initialization
+              { id := "$rcoll",
+                typ := GoLean.GoCore.Ty.slice
+                         (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })) },
+            GoLean.GoCore.Stmt.assign
+              (GoLean.GoCore.Assignee.var "$rcoll")
+              (GoLean.GoCore.Expr.fieldGet
+                (GoLean.GoCore.Expr.deref
+                  (GoLean.GoCore.Expr.var "t")
+                  (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                { key := "main.twin" }
+                "net"),
+            GoLean.GoCore.Stmt.initialization
+              { id := "$rlen", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+            GoLean.GoCore.Stmt.assign
+              (GoLean.GoCore.Assignee.var "$rlen")
+              (GoLean.GoCore.Expr.length (GoLean.GoCore.Expr.var "$rcoll") none),
+            GoLean.GoCore.Stmt.initialization
+              { id := "$ridx", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+            GoLean.GoCore.Stmt.assign
+              (GoLean.GoCore.Assignee.var "$ridx")
+              (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int)),
+            GoLean.GoCore.Stmt.initialization { id := "$rfirst", typ := GoLean.GoCore.Ty.bool },
+            GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$rfirst") (GoLean.GoCore.Expr.boolLit true),
+            GoLean.GoCore.Stmt.while
+              (GoLean.GoCore.Expr.boolLit true)
+              (GoLean.GoCore.Stmt.block
+                #[]
+                #[GoLean.GoCore.Stmt.ifThenElse
+                    (GoLean.GoCore.Expr.var "$rfirst")
+                    (GoLean.GoCore.Stmt.assign
+                      (GoLean.GoCore.Assignee.var "$rfirst")
+                      (GoLean.GoCore.Expr.boolLit false))
+                    (GoLean.GoCore.Stmt.assign
+                      (GoLean.GoCore.Assignee.var "$ridx")
+                      (GoLean.GoCore.Expr.add
+                        (GoLean.GoCore.Expr.var "$ridx")
+                        (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int)))),
+                  GoLean.GoCore.Stmt.ifThenElse
+                    (GoLean.GoCore.Expr.atLeastCmp (GoLean.GoCore.Expr.var "$ridx") (GoLean.GoCore.Expr.var "$rlen"))
+                    (GoLean.GoCore.Stmt.breakStmt)
+                    (GoLean.GoCore.Stmt.seqn #[]),
+                  GoLean.GoCore.Stmt.initialization
+                    { id := "j", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+                  GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "j") (GoLean.GoCore.Expr.var "$ridx"),
+                  GoLean.GoCore.Stmt.block
+                    #[]
+                    #[GoLean.GoCore.Stmt.ifThenElse
+                        (GoLean.GoCore.Expr.indexGet
+                          (GoLean.GoCore.Expr.fieldGet
+                            (GoLean.GoCore.Expr.deref
+                              (GoLean.GoCore.Expr.var "t")
+                              (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                            { key := "main.twin" }
+                            "live")
+                          (GoLean.GoCore.Expr.var "j"))
+                        (GoLean.GoCore.Stmt.block
+                          #[]
+                          #[GoLean.GoCore.Stmt.mapAssign
+                              (GoLean.GoCore.Expr.var "live")
+                              (GoLean.GoCore.Expr.var "j")
+                              (GoLean.GoCore.Expr.boolLit true)
+                              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                              (GoLean.GoCore.Ty.bool)])
+                        (GoLean.GoCore.Stmt.seqn #[])]])],
+        GoLean.GoCore.Stmt.ifThenElse
+          (GoLean.GoCore.Expr.greaterCmp
+            (GoLean.GoCore.Expr.length
+              (GoLean.GoCore.Expr.var "live")
+              (some (GoLean.GoCore.Ty.map (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)) (GoLean.GoCore.Ty.bool))))
+            (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int)))
+          (GoLean.GoCore.Stmt.block
+            #[]
+            #[GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization
+                    { id := "picked", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+                  GoLean.GoCore.Stmt.assign
+                    (GoLean.GoCore.Assignee.var "picked")
+                    (GoLean.GoCore.Expr.intLit (-1) (GoLean.GoCore.IntKind.int))],
+              GoLean.GoCore.Stmt.mapRange
+                (some "j")
+                none
+                (GoLean.GoCore.Expr.var "live")
+                (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                (GoLean.GoCore.Ty.bool)
+                (GoLean.GoCore.Stmt.block
+                  #[]
+                  #[GoLean.GoCore.Stmt.seqn
+                      #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "picked") (GoLean.GoCore.Expr.var "j")],
+                    GoLean.GoCore.Stmt.breakStmt]),
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization
+                    { id := "m",
+                      typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }) },
+                  GoLean.GoCore.Stmt.assign
+                    (GoLean.GoCore.Assignee.var "m")
+                    (GoLean.GoCore.Expr.indexGet
+                      (GoLean.GoCore.Expr.fieldGet
+                        (GoLean.GoCore.Expr.deref
+                          (GoLean.GoCore.Expr.var "t")
+                          (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                        { key := "main.twin" }
+                        "net")
+                      (GoLean.GoCore.Expr.var "picked"))],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2236", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2236"]
+                    { key := "itoa" }
+                    #[GoLean.GoCore.Expr.add
+                        (GoLean.GoCore.Expr.var "round")
+                        (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2237", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2237"]
+                    { key := "itoa" }
+                    #[GoLean.GoCore.Expr.var "picked"]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization
+                    { id := "$c2238", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2238"]
+                    { key := "raftpb.Message.GetType" }
+                    #[GoLean.GoCore.Expr.var "m"]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2239", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2239"]
+                    { key := "itoa" }
+                    #[GoLean.GoCore.Expr.convert
+                        (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                        (GoLean.GoCore.Expr.var "$c2238")]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization
+                    { id := "$c2240", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2240"]
+                    { key := "raftpb.Message.GetTo" }
+                    #[GoLean.GoCore.Expr.var "m"]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2241", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2241"]
+                    { key := "utoa" }
+                    #[GoLean.GoCore.Expr.var "$c2240"]],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.say" }
+                #[GoLean.GoCore.Expr.var "t",
+                  GoLean.GoCore.Expr.add
+                    (GoLean.GoCore.Expr.add
+                      (GoLean.GoCore.Expr.add
+                        (GoLean.GoCore.Expr.add
+                          (GoLean.GoCore.Expr.add
+                            (GoLean.GoCore.Expr.add
+                              (GoLean.GoCore.Expr.add
+                                (GoLean.GoCore.Expr.stringLit { bytes := #[114] })
+                                (GoLean.GoCore.Expr.var "$c2236"))
+                              (GoLean.GoCore.Expr.stringLit { bytes := #[32, 112, 105, 99, 107, 35] }))
+                            (GoLean.GoCore.Expr.var "$c2237"))
+                          (GoLean.GoCore.Expr.stringLit { bytes := #[32, 116, 121, 112, 101] }))
+                        (GoLean.GoCore.Expr.var "$c2239"))
+                      (GoLean.GoCore.Expr.stringLit { bytes := #[45, 62] }))
+                    (GoLean.GoCore.Expr.var "$c2241")],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.deliverIdx" }
+                #[GoLean.GoCore.Expr.var "t", GoLean.GoCore.Expr.var "picked"],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2242", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2242"]
+                    { key := "main.twin.projection" }
+                    #[GoLean.GoCore.Expr.var "t"]],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.say" }
+                #[GoLean.GoCore.Expr.var "t",
+                  GoLean.GoCore.Expr.add
+                    (GoLean.GoCore.Expr.add
+                      (GoLean.GoCore.Expr.stringLit { bytes := #[32] })
+                      (GoLean.GoCore.Expr.var "$c2242"))
+                    (GoLean.GoCore.Expr.stringLit { bytes := #[10] })],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.assign
+                    (GoLean.GoCore.Assignee.var "stuckPropose")
+                    (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))],
+              GoLean.GoCore.Stmt.continueStmt])
+          (GoLean.GoCore.Stmt.seqn #[]),
+        GoLean.GoCore.Stmt.seqn
+          #[GoLean.GoCore.Stmt.initialization { id := "$c2243", typ := GoLean.GoCore.Ty.bool },
+            GoLean.GoCore.Stmt.call
+              #[GoLean.GoCore.Assignee.var "$c2243"]
+              { key := "main.twin.complete" }
+              #[GoLean.GoCore.Expr.var "t"]],
+        GoLean.GoCore.Stmt.ifThenElse
+          (GoLean.GoCore.Expr.and
+            (GoLean.GoCore.Expr.var "$c2243")
+            (GoLean.GoCore.Expr.eqCmp
+              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+              (GoLean.GoCore.Expr.length
+                (GoLean.GoCore.Expr.fieldGet
+                  (GoLean.GoCore.Expr.deref
+                    (GoLean.GoCore.Expr.var "t")
+                    (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                  { key := "main.twin" }
+                  "pending")
+                (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+              (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+          (GoLean.GoCore.Stmt.block #[] #[GoLean.GoCore.Stmt.breakStmt])
+          (GoLean.GoCore.Stmt.seqn #[]),
+        GoLean.GoCore.Stmt.ifThenElse
+          (GoLean.GoCore.Expr.greaterCmp
+            (GoLean.GoCore.Expr.length
+              (GoLean.GoCore.Expr.fieldGet
+                (GoLean.GoCore.Expr.deref
+                  (GoLean.GoCore.Expr.var "t")
+                  (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                { key := "main.twin" }
+                "pending")
+              (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+            (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int)))
+          (GoLean.GoCore.Stmt.block
+            #[]
+            #[GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2244", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2244"]
+                    { key := "itoa" }
+                    #[GoLean.GoCore.Expr.add
+                        (GoLean.GoCore.Expr.var "round")
+                        (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))]],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.say" }
+                #[GoLean.GoCore.Expr.var "t",
+                  GoLean.GoCore.Expr.add
+                    (GoLean.GoCore.Expr.add
+                      (GoLean.GoCore.Expr.stringLit { bytes := #[114] })
+                      (GoLean.GoCore.Expr.var "$c2244"))
+                    (GoLean.GoCore.Expr.stringLit { bytes := #[32] })],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.step" }
+                #[GoLean.GoCore.Expr.var "t",
+                  GoLean.GoCore.Expr.structLit
+                    (GoLean.GoCore.Ty.defined { key := "main.op" })
+                    #[GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int),
+                      GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int),
+                      GoLean.GoCore.Expr.defaultValue (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))]],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.say" }
+                #[GoLean.GoCore.Expr.var "t", GoLean.GoCore.Expr.stringLit { bytes := #[10] }],
+              GoLean.GoCore.Stmt.assign
+                (GoLean.GoCore.Assignee.var "stuckPropose")
+                (GoLean.GoCore.Expr.add
+                  (GoLean.GoCore.Expr.var "stuckPropose")
+                  (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))),
+              GoLean.GoCore.Stmt.ifThenElse
+                (GoLean.GoCore.Expr.greaterCmp
+                  (GoLean.GoCore.Expr.var "stuckPropose")
+                  (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int)))
+                (GoLean.GoCore.Stmt.block
+                  #[]
+                  #[GoLean.GoCore.Stmt.seqn
+                      #[GoLean.GoCore.Stmt.assign
+                          (GoLean.GoCore.Assignee.addr
+                            (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "t") { key := "main.twin" } "halt"))
+                          (GoLean.GoCore.Expr.boolLit true)],
+                    GoLean.GoCore.Stmt.call
+                      #[]
+                      { key := "main.twin.say" }
+                      #[GoLean.GoCore.Expr.var "t",
+                        GoLean.GoCore.Expr.stringLit
+                          { bytes := #[33, 100, 114, 105, 118, 101, 114, 58, 32, 112, 114, 111, 112, 111, 115, 101, 32,
+                                       115, 116, 117, 99, 107, 32, 97, 116, 32, 113, 117, 105, 101, 115, 99, 101, 110,
+                                       99, 101, 10] }],
+                    GoLean.GoCore.Stmt.breakStmt])
+                (GoLean.GoCore.Stmt.seqn #[]),
+              GoLean.GoCore.Stmt.continueStmt])
+          (GoLean.GoCore.Stmt.seqn #[]),
+        GoLean.GoCore.Stmt.seqn
+          #[GoLean.GoCore.Stmt.assign
+              (GoLean.GoCore.Assignee.addr
+                (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "t") { key := "main.twin" } "halt"))
+              (GoLean.GoCore.Expr.boolLit true)],
+        GoLean.GoCore.Stmt.call
+          #[]
+          { key := "main.twin.say" }
+          #[GoLean.GoCore.Expr.var "t",
+            GoLean.GoCore.Expr.stringLit
+              { bytes := #[33, 100, 114, 105, 118, 101, 114, 58, 32, 113, 117, 105, 101, 115, 99, 101, 110, 116, 32,
+                           119, 105, 116, 104, 111, 117, 116, 32, 83, 52, 10] }],
+        GoLean.GoCore.Stmt.breakStmt]]) ([[("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([]) ([[("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([]) ([[],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "comp", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+     GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "comp")
+       (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2245", typ := GoLean.GoCore.Ty.bool },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2245"]
+       { key := "main.twin.complete" }
+       #[GoLean.GoCore.Expr.var "t"]],
+ GoLean.GoCore.Stmt.ifThenElse
+   (GoLean.GoCore.Expr.and
+     (GoLean.GoCore.Expr.and
+       (GoLean.GoCore.Expr.var "$c2245")
+       (GoLean.GoCore.Expr.eqCmp
+         (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+         (GoLean.GoCore.Expr.length
+           (GoLean.GoCore.Expr.fieldGet
+             (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+             { key := "main.twin" }
+             "pending")
+           (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+         (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+     (GoLean.GoCore.Expr.not
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "halt")))
+   (GoLean.GoCore.Stmt.block
+     #[]
+     #[GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.assign
+             (GoLean.GoCore.Assignee.var "comp")
+             (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))]])
+   (GoLean.GoCore.Stmt.seqn #[]),
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "floorOK", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+     GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "floorOK")
+       (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))],
+ GoLean.GoCore.Stmt.ifThenElse
+   (GoLean.GoCore.Expr.or
+     (GoLean.GoCore.Expr.lessCmp
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "claims")
+       (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int)))
+     (GoLean.GoCore.Expr.lessCmp
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "committed")
+       (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))))
+   (GoLean.GoCore.Stmt.block
+     #[]
+     #[GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.assign
+             (GoLean.GoCore.Assignee.var "floorOK")
+             (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))]])
+   (GoLean.GoCore.Stmt.seqn #[]),
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2246", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2246"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+           { key := "main.twin" }
+           "violations"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2247", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2247"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+           { key := "main.twin" }
+           "claims"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2248", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2248"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+           { key := "main.twin" }
+           "committed"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2249", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call #[GoLean.GoCore.Assignee.var "$c2249"] { key := "itoa" } #[GoLean.GoCore.Expr.var "comp"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2250", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2250"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.var "floorOK"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2251", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2251"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.var "round"]],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "main.twin.say" }
+   #[GoLean.GoCore.Expr.var "t",
+     GoLean.GoCore.Expr.add
+       (GoLean.GoCore.Expr.add
+         (GoLean.GoCore.Expr.add
+           (GoLean.GoCore.Expr.add
+             (GoLean.GoCore.Expr.add
+               (GoLean.GoCore.Expr.add
+                 (GoLean.GoCore.Expr.add
+                   (GoLean.GoCore.Expr.add
+                     (GoLean.GoCore.Expr.add
+                       (GoLean.GoCore.Expr.add
+                         (GoLean.GoCore.Expr.add
+                           (GoLean.GoCore.Expr.add
+                             (GoLean.GoCore.Expr.stringLit { bytes := #[101, 110, 100, 32, 118, 105, 111, 108, 61] })
+                             (GoLean.GoCore.Expr.var "$c2246"))
+                           (GoLean.GoCore.Expr.stringLit { bytes := #[32, 99, 108, 97, 105, 109, 115, 61] }))
+                         (GoLean.GoCore.Expr.var "$c2247"))
+                       (GoLean.GoCore.Expr.stringLit
+                         { bytes := #[32, 99, 111, 109, 109, 105, 116, 116, 101, 100, 61] }))
+                     (GoLean.GoCore.Expr.var "$c2248"))
+                   (GoLean.GoCore.Expr.stringLit { bytes := #[32, 99, 111, 109, 112, 108, 101, 116, 101, 61] }))
+                 (GoLean.GoCore.Expr.var "$c2249"))
+               (GoLean.GoCore.Expr.stringLit { bytes := #[32, 102, 108, 111, 111, 114, 61] }))
+             (GoLean.GoCore.Expr.var "$c2250"))
+           (GoLean.GoCore.Expr.stringLit { bytes := #[32, 114, 111, 117, 110, 100, 115, 61] }))
+         (GoLean.GoCore.Expr.var "$c2251"))
+       (GoLean.GoCore.Expr.stringLit { bytes := #[10] })],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2252", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2252"]
+       { key := "main.twin.projection" }
+       #[GoLean.GoCore.Expr.var "t"]],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "main.twin.say" }
+   #[GoLean.GoCore.Expr.var "t",
+     GoLean.GoCore.Expr.add
+       (GoLean.GoCore.Expr.add
+         (GoLean.GoCore.Expr.stringLit { bytes := #[102, 105, 110, 97, 108, 32] })
+         (GoLean.GoCore.Expr.var "$c2252"))
+       (GoLean.GoCore.Expr.stringLit { bytes := #[10] })],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res0") (GoLean.GoCore.Expr.var "t"),
+     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res1") (GoLean.GoCore.Expr.var "comp"),
+     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res2") (GoLean.GoCore.Expr.var "floorOK"),
+     GoLean.GoCore.Stmt.returnStmt]]) ([[("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.frame ([(GoLean.GoCore.Machine.TargetShape.chain [], [GoLean.GoCore.Expr.ref "t"]),
+ (GoLean.GoCore.Machine.TargetShape.chain [], [GoLean.GoCore.Expr.ref "comp"]),
+ (GoLean.GoCore.Machine.TargetShape.chain [], [GoLean.GoCore.Expr.ref "floorOK"])]) ([[("floorOK", GoLean.Loc.base { id := 105 }),
+  ("comp", GoLean.Loc.base { id := 104 }),
+  ("t", GoLean.Loc.base { id := 103 })],
+ [("$res4", GoLean.Loc.base { id := 102 }),
+  ("$res3", GoLean.Loc.base { id := 101 }),
+  ("$res2", GoLean.Loc.base { id := 100 }),
+  ("$res1", GoLean.Loc.base { id := 99 }),
+  ("$res0", GoLean.Loc.base { id := 98 })]]) ([GoLean.Loc.base { id := 106 }, GoLean.Loc.base { id := 107 }, GoLean.Loc.base { id := 108 }]) [] (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "$res0")
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "violations"),
+     GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "$res1")
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "claims"),
+     GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "$res2")
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "committed"),
+     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res3") (GoLean.GoCore.Expr.var "comp"),
+     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res4") (GoLean.GoCore.Expr.var "floorOK"),
+     GoLean.GoCore.Stmt.returnStmt]]) ([[("floorOK", GoLean.Loc.base { id := 105 }),
+  ("comp", GoLean.Loc.base { id := 104 }),
+  ("t", GoLean.Loc.base { id := 103 })],
+ [("$res4", GoLean.Loc.base { id := 102 }),
+  ("$res3", GoLean.Loc.base { id := 101 }),
+  ("$res2", GoLean.Loc.base { id := 100 }),
+  ("$res1", GoLean.Loc.base { id := 99 }),
+  ("$res0", GoLean.Loc.base { id := 98 })]]) (GoLean.Sym.Cont.frame ([]) ([]) ([]) [] (GoLean.Sym.Cont.stop) false)) false)))))))) false))) false)) false)))))))))))
+
+def mvSB4 : SymState :=
+  (GoLean.Sym.State.mk
+  [((GoLean.Loc.base { id := 15 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.HardState" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 57 })))),
+  ((GoLean.Loc.base { id := 18 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raft.lockedRand" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 67 })))),
+  ((GoLean.Loc.base { id := 27 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 23 (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true))]))),
+  ((GoLean.Loc.base { id := 28 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 23 (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)),
+  (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true))]))),
+  ((GoLean.Loc.base { id := 57 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.HardState" })) (GoLean.Sym.Value.struct ({ key := "raftpb.HardState" }) #[(("Term"), (GoLean.Sym.Value.nil)),
+  (("Vote"), (GoLean.Sym.Value.nil)),
+  (("Commit"), (GoLean.Sym.Value.nil))]))),
+  ((GoLean.Loc.base { id := 67 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.lockedRand" })) (GoLean.Sym.Value.struct ({ key := "raft.lockedRand" }) #[(("mu"), (GoLean.Sym.Value.syncData (GoLean.SyncPrim.mutex true)))]))),
+  ((GoLean.Loc.base { id := 110 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.twin" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 121 })))),
+  ((GoLean.Loc.base { id := 121 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "main.twin" })) (GoLean.Sym.Value.struct ({ key := "main.twin" }) #[(("nodes"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 1764 }), offset := 0, len := 3, cap := 4 }))),
+  (("net"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 6077 }), offset := 0, len := 1, cap := 1 }))),
+  (("live"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 6078 }), offset := 0, len := 1, cap := 1 }))),
+  (("leaderOf"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 115 }) }))),
+  (("byIndex"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 118 }) }))),
+  (("claims"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0)) (GoLean.GoCore.IntKind.int))),
+  (("committed"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0)) (GoLean.GoCore.IntKind.int))),
+  (("violations"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0)) (GoLean.GoCore.IntKind.int))),
+  (("pending"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 136 }), offset := 0, len := 2, cap := 4 }))),
+  (("driven"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("seq"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 2)) (GoLean.GoCore.IntKind.int))),
+  (("trace"), (GoLean.Sym.Value.string ({ bytes := #[91, 99, 104, 111, 105, 99, 101, 45, 100, 114, 105, 118, 101, 110, 93, 10, 99, 97, 109, 112, 97, 105, 103,
+             110, 49, 114, 49, 32, 112, 105, 99, 107, 35, 48, 32, 116, 121, 112, 101, 53, 45, 62, 50] }))),
+  (("halt"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 170 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "main.twinNode" })) (GoLean.Sym.Value.struct ({ key := "main.twinNode" }) #[(("id"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("rn"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1742 }))),
+  (("st"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 179 }))),
+  (("term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("commit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("state"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("applied"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("lastTrm"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("got"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 167 }) })))]))),
+  ((GoLean.Loc.base { id := 1764 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 4 (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.twinNode" })))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 170 })),
+  (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1770 })),
+  (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3369 })),
+  (GoLean.Sym.Value.nil)]))),
+  ((GoLean.Loc.base { id := 1770 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "main.twinNode" })) (GoLean.Sym.Value.struct ({ key := "main.twinNode" }) #[(("id"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("rn"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3342 }))),
+  (("st"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1779 }))),
+  (("term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("commit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("state"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("applied"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("lastTrm"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("got"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 1767 }) })))]))),
+  ((GoLean.Loc.base { id := 1779 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.MemoryStorage" })) (GoLean.Sym.Value.struct ({ key := "raft.MemoryStorage" }) #[(("Mutex"), (GoLean.Sym.Value.syncData (GoLean.SyncPrim.mutex false))),
+  (("hardState"), (GoLean.Sym.Value.nil)),
+  (("snapshot"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1858 }))),
+  (("ents"), (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 1900 }), offset := 0, len := 1, cap := 1 }))),
+  (("callStats"), (GoLean.Sym.Value.struct ({ key := "raft.inMemStorageCallStats" }) #[(("initialState"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.int))),
+  (("firstIndex"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.int))),
+  (("lastIndex"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 7) (GoLean.GoCore.IntKind.int))),
+  (("entries"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.int))),
+  (("snapshot"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int)))]))]))),
+  ((GoLean.Loc.base { id := 1886 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 1895 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 1898 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })) (GoLean.Sym.Value.struct ({ key := "raftpb.Entry" }) #[(("Term"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1886 }))),
+  (("Index"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1895 }))),
+  (("Type"), (GoLean.Sym.Value.nil)),
+  (("Data"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))]))),
+  ((GoLean.Loc.base { id := 1900 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 1 (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1898 }))]))),
+  ((GoLean.Loc.base { id := 1949 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.raftLog" })) (GoLean.Sym.Value.struct ({ key := "raft.raftLog" }) #[(("storage"), (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raft.MemoryStorage" })) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1779 })))),
+  (("unstable"), (GoLean.Sym.Value.struct ({ key := "raft.unstable" }) #[(("snapshot"), (GoLean.Sym.Value.nil)),
+  (("entries"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("offset"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("snapshotInProgress"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("offsetInProgress"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("logger"), (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.harnessLogger" })) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 97 }))))])),
+  (("committed"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("applying"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("applied"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("logger"), (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.harnessLogger" })) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 97 })))),
+  (("maxApplyingEntsSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1048576) (GoLean.GoCore.IntKind.uint64))),
+  (("applyingEntsSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("applyingEntsPaused"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 1989 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.raft" })) (GoLean.Sym.Value.struct ({ key := "raft.raft" }) #[(("id"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.uint64)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.uint64)
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.uint64)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.uint64)
+          (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 2))))))) (GoLean.GoCore.IntKind.uint64))),
+  (("Term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.uint64)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.uint64)
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.uint64)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.uint64)
+          (GoLean.Sym.SymInt.norm
+            (GoLean.GoCore.IntKind.uint64)
+            (GoLean.Sym.SymInt.norm
+              (GoLean.GoCore.IntKind.uint64)
+              (GoLean.Sym.SymInt.norm
+                (GoLean.GoCore.IntKind.uint64)
+                (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1)))))))))) (GoLean.GoCore.IntKind.uint64))),
+  (("Vote"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.uint64)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.uint64)
+      (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 0))))) (GoLean.GoCore.IntKind.uint64))),
+  (("readStates"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("raftLog"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1949 }))),
+  (("maxMsgSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.uint64)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.uint64)
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.uint64)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.uint64)
+          (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1048576))))))) (GoLean.GoCore.IntKind.uint64))),
+  (("maxUncommittedSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.uint64)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.uint64)
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.uint64)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.uint64)
+          (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 18446744073709551615))))))) (GoLean.GoCore.IntKind.uint64))),
+  (("trk"), (GoLean.Sym.Value.struct ({ key := "tracker.ProgressTracker" }) #[(("Config"), (GoLean.Sym.Value.struct ({ key := "tracker.Config" }) #[(("Voters"), (GoLean.Sym.Value.array #[(GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 2686 }) })),
+  (GoLean.Sym.Value.map ({ base := none }))])),
+  (("AutoLeave"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("Learners"), (GoLean.Sym.Value.map ({ base := none }))),
+  (("LearnersNext"), (GoLean.Sym.Value.map ({ base := none })))])),
+  (("Progress"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 2703 }) }))),
+  (("Votes"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 3059 }) }))),
+  (("MaxInflight"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.int)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int)
+          (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 256))))))) (GoLean.GoCore.IntKind.int))),
+  (("MaxInflightBytes"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.uint64)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.uint64)
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.uint64)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.uint64)
+          (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 18446744073709551615))))))) (GoLean.GoCore.IntKind.uint64)))])),
+  (("state"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.uint64)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.uint64)
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.uint64)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.uint64)
+          (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 0))))))) (GoLean.GoCore.IntKind.uint64))),
+  (("isLearner"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("msgs"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("msgsAfterAppend"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("lead"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.uint64)
+    (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 0)))) (GoLean.GoCore.IntKind.uint64))),
+  (("leadTransferee"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.uint64)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.uint64)
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.uint64)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.uint64)
+          (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 0))))))) (GoLean.GoCore.IntKind.uint64))),
+  (("pendingConfIndex"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.uint64)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.uint64)
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.uint64)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.uint64)
+          (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 0))))))) (GoLean.GoCore.IntKind.uint64))),
+  (("disableConfChangeValidation"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("uncommittedSize"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.uint64)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.uint64)
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.uint64)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.uint64)
+          (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 0))))))) (GoLean.GoCore.IntKind.uint64))),
+  (("readOnly"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3199 }))),
+  (("electionElapsed"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))) (GoLean.GoCore.IntKind.int))),
+  (("heartbeatElapsed"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0)) (GoLean.GoCore.IntKind.int))),
+  (("checkQuorum"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("preVote"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("heartbeatTimeout"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.int)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int)
+          (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 1))))))) (GoLean.GoCore.IntKind.int))),
+  (("electionTimeout"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.int)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int)
+          (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 10))))))) (GoLean.GoCore.IntKind.int))),
+  (("randomizedElectionTimeout"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.int)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int)
+          (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 10))))))) (GoLean.GoCore.IntKind.int))),
+  (("disableProposalForwarding"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("stepDownOnRemoval"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("tick"), (GoLean.Sym.Value.funcVal ({ key := "raft.raft.tickElection" }) [(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1989 }))])),
+  (("step"), (GoLean.Sym.Value.funcVal ({ key := "raft.stepFollower" }) [])),
+  (("logger"), (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.harnessLogger" })) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 97 })))),
+  (("pendingReadIndexMessages"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("traceLogger"), (GoLean.Sym.Value.nil))]))),
+  ((GoLean.Loc.base { id := 2703 }), (GoLean.Sym.HeapCell.mk (none) (GoLean.Sym.Value.mapData #[((GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 2707 }))),
+  ((GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64)), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 2710 }))),
+  ((GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 3) (GoLean.GoCore.IntKind.uint64)), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 2812 })))]))),
+  ((GoLean.Loc.base { id := 2707 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "tracker.Progress" })) (GoLean.Sym.Value.struct ({ key := "tracker.Progress" }) #[(("Match"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("Next"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("sentCommit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("State"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("PendingSnapshot"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("RecentActive"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("MsgAppFlowPaused"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("Inflights"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3103 }))),
+  (("IsLearner"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 2710 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "tracker.Progress" })) (GoLean.Sym.Value.struct ({ key := "tracker.Progress" }) #[(("Match"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64))),
+  (("Next"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("sentCommit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("State"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("PendingSnapshot"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("RecentActive"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("MsgAppFlowPaused"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("Inflights"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3136 }))),
+  (("IsLearner"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 2812 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "tracker.Progress" })) (GoLean.Sym.Value.struct ({ key := "tracker.Progress" }) #[(("Match"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("Next"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (("sentCommit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("State"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("PendingSnapshot"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("RecentActive"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("MsgAppFlowPaused"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("Inflights"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3190 }))),
+  (("IsLearner"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))]))),
+  ((GoLean.Loc.base { id := 3199 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.readOnly" })) (GoLean.Sym.Value.struct ({ key := "raft.readOnly" }) #[(("option"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int))),
+  (("acks"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 3196 }) }))),
+  (("unconfirmedReads"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("confirmedReads"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64)))]))),
+  ((GoLean.Loc.base { id := 3342 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.RawNode" })) (GoLean.Sym.Value.struct ({ key := "raft.RawNode" }) #[(("raft"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1989 }))),
+  (("asyncStorageWrites"), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))),
+  (("prevSoftSt"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3344 }))),
+  (("prevHardSt"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3360 }))),
+  (("stepsOnAdvance"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))]))),
+  ((GoLean.Loc.base { id := 3344 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raft.SoftState" })) (GoLean.Sym.Value.struct ({ key := "raft.SoftState" }) #[(("Lead"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("RaftState"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64)))]))),
+  ((GoLean.Loc.base { id := 3351 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 3354 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 3360 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.HardState" })) (GoLean.Sym.Value.struct ({ key := "raftpb.HardState" }) #[(("Term"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3351 }))),
+  (("Vote"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3354 }))),
+  (("Commit"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3357 })))]))),
+  ((GoLean.Loc.base { id := 3369 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "main.twinNode" })) (GoLean.Sym.Value.struct ({ key := "main.twinNode" }) #[(("id"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 3) (GoLean.GoCore.IntKind.uint64))),
+  (("rn"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 4941 }))),
+  (("st"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3378 }))),
+  (("term"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("commit"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("state"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("applied"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("lastTrm"), (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (("got"), (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 3366 }) })))]))),
+  ((GoLean.Loc.base { id := 6070 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6072 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6073 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int32))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 5) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6074 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6075 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6076 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })) (GoLean.Sym.Value.struct ({ key := "raftpb.Message" }) #[(("Type"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6073 }))),
+  (("To"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6074 }))),
+  (("From"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6075 }))),
+  (("Term"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6079 }))),
+  (("LogTerm"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6084 }))),
+  (("Index"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6085 }))),
+  (("Entries"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("Commit"), (GoLean.Sym.Value.nil)),
+  (("Vote"), (GoLean.Sym.Value.nil)),
+  (("Snapshot"), (GoLean.Sym.Value.nil)),
+  (("Reject"), (GoLean.Sym.Value.nil)),
+  (("RejectHint"), (GoLean.Sym.Value.nil)),
+  (("Context"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 }))),
+  (("Responses"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))]))),
+  ((GoLean.Loc.base { id := 6077 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 1 (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 }))]))),
+  ((GoLean.Loc.base { id := 6078 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 1 (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false))]))),
+  ((GoLean.Loc.base { id := 6079 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6080 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6081 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6082 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })) (GoLean.Sym.Value.struct ({ key := "raftpb.Entry" }) #[(("Term"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6080 }))),
+  (("Index"), (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6081 }))),
+  (("Type"), (GoLean.Sym.Value.nil)),
+  (("Data"), (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))]))),
+  ((GoLean.Loc.base { id := 6083 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 1 (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6082 }))]))),
+  ((GoLean.Loc.base { id := 6084 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6085 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 1) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6086 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.map (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)) (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 6087 }) })))),
+  ((GoLean.Loc.base { id := 6087 }), (GoLean.Sym.HeapCell.mk (none) (GoLean.Sym.Value.mapData #[((GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0)))) (GoLean.GoCore.IntKind.int)), (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)))]))),
+  ((GoLean.Loc.base { id := 6088 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.map (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)) (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 6087 }) })))),
+  ((GoLean.Loc.base { id := 6089 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })))) (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 6077 }), offset := 0, len := 1, cap := 1 })))),
+  ((GoLean.Loc.base { id := 6090 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 1)) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6091 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.add
+      (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))
+      (GoLean.Sym.SymInt.lit 1)))) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6092 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6093 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6094 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0)) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6095 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6096 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6097 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[49] })))),
+  ((GoLean.Loc.base { id := 6098 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.add (GoLean.Sym.SymInt.lit 0) (GoLean.Sym.SymInt.lit 1)))) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6099 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[49] })))),
+  ((GoLean.Loc.base { id := 6100 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[49] })))),
+  ((GoLean.Loc.base { id := 6101 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.uint64)
+    (GoLean.Sym.SymInt.divC
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.uint64)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.uint64)
+          (GoLean.Sym.SymInt.norm
+            (GoLean.GoCore.IntKind.int)
+            (GoLean.Sym.SymInt.norm
+              (GoLean.GoCore.IntKind.int)
+              (GoLean.Sym.SymInt.add (GoLean.Sym.SymInt.lit 0) (GoLean.Sym.SymInt.lit 1))))))
+      10))) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6102 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[49] })))),
+  ((GoLean.Loc.base { id := 6103 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[49] })))),
+  ((GoLean.Loc.base { id := 6104 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6105 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[48] })))),
+  ((GoLean.Loc.base { id := 6106 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6107 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[48] })))),
+  ((GoLean.Loc.base { id := 6108 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[48] })))),
+  ((GoLean.Loc.base { id := 6109 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.uint64)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))))) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6110 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[48] })))),
+  ((GoLean.Loc.base { id := 6111 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6112 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6113 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6114 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[53] })))),
+  ((GoLean.Loc.base { id := 6115 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int32)
+      (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))))) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6116 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[53] })))),
+  ((GoLean.Loc.base { id := 6117 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[53] })))),
+  ((GoLean.Loc.base { id := 6118 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.uint64)
+    (GoLean.Sym.SymInt.divC
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.uint64)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.uint64)
+          (GoLean.Sym.SymInt.norm
+            (GoLean.GoCore.IntKind.int)
+            (GoLean.Sym.SymInt.norm
+              (GoLean.GoCore.IntKind.int)
+              (GoLean.Sym.SymInt.norm
+                (GoLean.GoCore.IntKind.int32)
+                (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)))))))
+      10))) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6119 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[53] })))),
+  ((GoLean.Loc.base { id := 6120 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[53] })))),
+  ((GoLean.Loc.base { id := 6121 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6122 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 2))) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6123 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6124 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 2)) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6125 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[50] })))),
+  ((GoLean.Loc.base { id := 6126 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.uint64)
+    (GoLean.Sym.SymInt.divC
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.uint64)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.uint64)
+          (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 2))))
+      10))) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6127 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[50] })))),
+  ((GoLean.Loc.base { id := 6128 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[50] })))),
+  ((GoLean.Loc.base { id := 6129 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6130 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.twin" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 121 })))),
+  ((GoLean.Loc.base { id := 6131 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[114, 49, 32, 112, 105, 99, 107, 35, 48, 32, 116, 121, 112, 101, 53, 45, 62, 50] })))),
+  ((GoLean.Loc.base { id := 6132 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.twin" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 121 })))),
+  ((GoLean.Loc.base { id := 6133 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6134 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6135 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 2))) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6136 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6137 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 2)) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6138 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.twinNode" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1770 })))),
+  ((GoLean.Loc.base { id := 6139 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.interface { key := "error" })) (GoLean.Sym.Value.nil))),
+  ((GoLean.Loc.base { id := 6140 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raft.RawNode" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 3342 })))),
+  ((GoLean.Loc.base { id := 6141 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6142 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.interface { key := "error" })) (GoLean.Sym.Value.nil))),
+  ((GoLean.Loc.base { id := 6143 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6144 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6145 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6146 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6147 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int32)
+    (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6148 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6149 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6150 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int32)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int32)
+      (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6151 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 27 }), offset := 0, len := 23, cap := 23 })))),
+  ((GoLean.Loc.base { id := 6152 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6153 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int32)
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.int32)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int32)
+          (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))))))) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6154 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6155 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6156 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6157 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6158 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6159 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int32)
+    (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6160 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6161 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6162 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int32)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int32)
+      (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6163 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.bool))) (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 28 }), offset := 0, len := 23, cap := 23 })))),
+  ((GoLean.Loc.base { id := 6164 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6165 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int32)
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.int32)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int32)
+          (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))))))) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6166 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6167 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6168 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.interface { key := "error" })) (GoLean.Sym.Value.nil))),
+  ((GoLean.Loc.base { id := 6169 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raft.raft" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1989 })))),
+  ((GoLean.Loc.base { id := 6170 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6171 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.interface { key := "error" })) (GoLean.Sym.Value.nil))),
+  ((GoLean.Loc.base { id := 6172 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raft.raft" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1989 })))),
+  ((GoLean.Loc.base { id := 6173 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6174 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 1)) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6175 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1))) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6176 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6177 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1)) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6178 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1))) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6179 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6180 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1)) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6181 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6182 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6183 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6184 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6185 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit true)))),
+  ((GoLean.Loc.base { id := 6186 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint8)))) (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))),
+  ((GoLean.Loc.base { id := 6187 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6188 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint8)))) (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))),
+  ((GoLean.Loc.base { id := 6189 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6190 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 16 (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint8)))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 67) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 97) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 109) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 112) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 97) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 105) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 103) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 110) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 84) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 114) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 97) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 110) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 115) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 102) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 101) (GoLean.GoCore.IntKind.uint8)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 114) (GoLean.GoCore.IntKind.uint8))]))),
+  ((GoLean.Loc.base { id := 6191 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint8)))) (GoLean.Sym.Value.slice ({ base := none, offset := 0, len := 0, cap := 0 })))),
+  ((GoLean.Loc.base { id := 6192 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint8)))) (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 6190 }), offset := 0, len := 16, cap := 16 })))),
+  ((GoLean.Loc.base { id := 6193 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6194 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6195 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 2)) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6196 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6197 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6198 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6199 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6200 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6201 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6202 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6203 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6204 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6205 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6206 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6207 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1))) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6208 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6209 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1)) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6210 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1))) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6211 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6212 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1)) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6213 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.interface { key := "any" }))) (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 6214 }), offset := 0, len := 5, cap := 5 })))),
+  ((GoLean.Loc.base { id := 6214 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.array 5 (GoLean.GoCore.Ty.interface { key := "any" }))) (GoLean.Sym.Value.array #[(GoLean.Sym.Value.interface (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 2) (GoLean.GoCore.IntKind.uint64))),
+  (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.uint64))),
+  (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" }) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))) (GoLean.GoCore.IntKind.int32))),
+  (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1))) (GoLean.GoCore.IntKind.uint64))),
+  (GoLean.Sym.Value.interface (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1))) (GoLean.GoCore.IntKind.uint64)))]))),
+  ((GoLean.Loc.base { id := 6215 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "main.harnessLogger" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 97 })))),
+  ((GoLean.Loc.base { id := 6216 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.string)) (GoLean.Sym.Value.string ({ bytes := #[37, 120, 32, 91, 116, 101, 114, 109, 58, 32, 37, 100, 93, 32, 114, 101, 99, 101, 105, 118, 101, 100, 32,
+             97, 32, 37, 115, 32, 109, 101, 115, 115, 97, 103, 101, 32, 119, 105, 116, 104, 32, 104, 105, 103, 104, 101,
+             114, 32, 116, 101, 114, 109, 32, 102, 114, 111, 109, 32, 37, 120, 32, 91, 116, 101, 114, 109, 58, 32, 37,
+             100, 93] })))),
+  ((GoLean.Loc.base { id := 6217 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.interface { key := "any" }))) (GoLean.Sym.Value.slice ({ base := some (GoLean.Loc.base { id := 6214 }), offset := 0, len := 5, cap := 5 })))),
+  ((GoLean.Loc.base { id := 6218 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6219 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6220 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6221 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6222 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6223 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6224 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6225 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6226 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int32)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5))) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6227 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6228 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int32) (GoLean.Sym.SymInt.lit 5)) (GoLean.GoCore.IntKind.int32)))),
+  ((GoLean.Loc.base { id := 6229 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1))) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6230 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 6076 })))),
+  ((GoLean.Loc.base { id := 6231 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1)) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6232 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raft.raft" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1989 })))),
+  ((GoLean.Loc.base { id := 6233 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.uint64)
+    (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1)))) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6234 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 0)) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6235 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raft.raft" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1989 })))),
+  ((GoLean.Loc.base { id := 6236 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.uint64)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.uint64)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.uint64)
+      (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.uint64) (GoLean.Sym.SymInt.lit 1))))) (GoLean.GoCore.IntKind.uint64)))),
+  ((GoLean.Loc.base { id := 6237 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raft.raft" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 1989 })))),
+  ((GoLean.Loc.base { id := 6238 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6239 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raft.lockedRand" }))) (GoLean.Sym.Value.addr (GoLean.Loc.base { id := 67 })))),
+  ((GoLean.Loc.base { id := 6240 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.int)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int)
+          (GoLean.Sym.SymInt.norm
+            (GoLean.GoCore.IntKind.int)
+            (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 10)))))))) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6241 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.lit 0) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6242 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.map
+  (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+  (GoLean.GoCore.Ty.defined { key := "struct{}" }))) (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 6243 }) })))),
+  ((GoLean.Loc.base { id := 6243 }), (GoLean.Sym.HeapCell.mk (none) (GoLean.Sym.Value.mapData #[((GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))) (GoLean.GoCore.IntKind.int)), (GoLean.Sym.Value.struct ({ key := "struct{}" }) #[])),
+  ((GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.add
+        (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))
+        (GoLean.Sym.SymInt.lit 1))))) (GoLean.GoCore.IntKind.int)), (GoLean.Sym.Value.struct ({ key := "struct{}" }) #[])),
+  ((GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.add
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int)
+          (GoLean.Sym.SymInt.norm
+            (GoLean.GoCore.IntKind.int)
+            (GoLean.Sym.SymInt.add
+              (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))
+              (GoLean.Sym.SymInt.lit 1))))
+        (GoLean.Sym.SymInt.lit 1))))) (GoLean.GoCore.IntKind.int)), (GoLean.Sym.Value.struct ({ key := "struct{}" }) #[])),
+  ((GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.add
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int)
+          (GoLean.Sym.SymInt.norm
+            (GoLean.GoCore.IntKind.int)
+            (GoLean.Sym.SymInt.add
+              (GoLean.Sym.SymInt.norm
+                (GoLean.GoCore.IntKind.int)
+                (GoLean.Sym.SymInt.norm
+                  (GoLean.GoCore.IntKind.int)
+                  (GoLean.Sym.SymInt.add
+                    (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))
+                    (GoLean.Sym.SymInt.lit 1))))
+              (GoLean.Sym.SymInt.lit 1))))
+        (GoLean.Sym.SymInt.lit 1))))) (GoLean.GoCore.IntKind.int)), (GoLean.Sym.Value.struct ({ key := "struct{}" }) #[])),
+  ((GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.add
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int)
+          (GoLean.Sym.SymInt.norm
+            (GoLean.GoCore.IntKind.int)
+            (GoLean.Sym.SymInt.add
+              (GoLean.Sym.SymInt.norm
+                (GoLean.GoCore.IntKind.int)
+                (GoLean.Sym.SymInt.norm
+                  (GoLean.GoCore.IntKind.int)
+                  (GoLean.Sym.SymInt.add
+                    (GoLean.Sym.SymInt.norm
+                      (GoLean.GoCore.IntKind.int)
+                      (GoLean.Sym.SymInt.norm
+                        (GoLean.GoCore.IntKind.int)
+                        (GoLean.Sym.SymInt.add
+                          (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))
+                          (GoLean.Sym.SymInt.lit 1))))
+                    (GoLean.Sym.SymInt.lit 1))))
+              (GoLean.Sym.SymInt.lit 1))))
+        (GoLean.Sym.SymInt.lit 1))))) (GoLean.GoCore.IntKind.int)), (GoLean.Sym.Value.struct ({ key := "struct{}" }) #[])),
+  ((GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.add
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int)
+          (GoLean.Sym.SymInt.norm
+            (GoLean.GoCore.IntKind.int)
+            (GoLean.Sym.SymInt.add
+              (GoLean.Sym.SymInt.norm
+                (GoLean.GoCore.IntKind.int)
+                (GoLean.Sym.SymInt.norm
+                  (GoLean.GoCore.IntKind.int)
+                  (GoLean.Sym.SymInt.add
+                    (GoLean.Sym.SymInt.norm
+                      (GoLean.GoCore.IntKind.int)
+                      (GoLean.Sym.SymInt.norm
+                        (GoLean.GoCore.IntKind.int)
+                        (GoLean.Sym.SymInt.add
+                          (GoLean.Sym.SymInt.norm
+                            (GoLean.GoCore.IntKind.int)
+                            (GoLean.Sym.SymInt.norm
+                              (GoLean.GoCore.IntKind.int)
+                              (GoLean.Sym.SymInt.add
+                                (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))
+                                (GoLean.Sym.SymInt.lit 1))))
+                          (GoLean.Sym.SymInt.lit 1))))
+                    (GoLean.Sym.SymInt.lit 1))))
+              (GoLean.Sym.SymInt.lit 1))))
+        (GoLean.Sym.SymInt.lit 1))))) (GoLean.GoCore.IntKind.int)), (GoLean.Sym.Value.struct ({ key := "struct{}" }) #[])),
+  ((GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.add
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int)
+          (GoLean.Sym.SymInt.norm
+            (GoLean.GoCore.IntKind.int)
+            (GoLean.Sym.SymInt.add
+              (GoLean.Sym.SymInt.norm
+                (GoLean.GoCore.IntKind.int)
+                (GoLean.Sym.SymInt.norm
+                  (GoLean.GoCore.IntKind.int)
+                  (GoLean.Sym.SymInt.add
+                    (GoLean.Sym.SymInt.norm
+                      (GoLean.GoCore.IntKind.int)
+                      (GoLean.Sym.SymInt.norm
+                        (GoLean.GoCore.IntKind.int)
+                        (GoLean.Sym.SymInt.add
+                          (GoLean.Sym.SymInt.norm
+                            (GoLean.GoCore.IntKind.int)
+                            (GoLean.Sym.SymInt.norm
+                              (GoLean.GoCore.IntKind.int)
+                              (GoLean.Sym.SymInt.add
+                                (GoLean.Sym.SymInt.norm
+                                  (GoLean.GoCore.IntKind.int)
+                                  (GoLean.Sym.SymInt.norm
+                                    (GoLean.GoCore.IntKind.int)
+                                    (GoLean.Sym.SymInt.add
+                                      (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))
+                                      (GoLean.Sym.SymInt.lit 1))))
+                                (GoLean.Sym.SymInt.lit 1))))
+                          (GoLean.Sym.SymInt.lit 1))))
+                    (GoLean.Sym.SymInt.lit 1))))
+              (GoLean.Sym.SymInt.lit 1))))
+        (GoLean.Sym.SymInt.lit 1))))) (GoLean.GoCore.IntKind.int)), (GoLean.Sym.Value.struct ({ key := "struct{}" }) #[])),
+  ((GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.add
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int)
+          (GoLean.Sym.SymInt.norm
+            (GoLean.GoCore.IntKind.int)
+            (GoLean.Sym.SymInt.add
+              (GoLean.Sym.SymInt.norm
+                (GoLean.GoCore.IntKind.int)
+                (GoLean.Sym.SymInt.norm
+                  (GoLean.GoCore.IntKind.int)
+                  (GoLean.Sym.SymInt.add
+                    (GoLean.Sym.SymInt.norm
+                      (GoLean.GoCore.IntKind.int)
+                      (GoLean.Sym.SymInt.norm
+                        (GoLean.GoCore.IntKind.int)
+                        (GoLean.Sym.SymInt.add
+                          (GoLean.Sym.SymInt.norm
+                            (GoLean.GoCore.IntKind.int)
+                            (GoLean.Sym.SymInt.norm
+                              (GoLean.GoCore.IntKind.int)
+                              (GoLean.Sym.SymInt.add
+                                (GoLean.Sym.SymInt.norm
+                                  (GoLean.GoCore.IntKind.int)
+                                  (GoLean.Sym.SymInt.norm
+                                    (GoLean.GoCore.IntKind.int)
+                                    (GoLean.Sym.SymInt.add
+                                      (GoLean.Sym.SymInt.norm
+                                        (GoLean.GoCore.IntKind.int)
+                                        (GoLean.Sym.SymInt.norm
+                                          (GoLean.GoCore.IntKind.int)
+                                          (GoLean.Sym.SymInt.add
+                                            (GoLean.Sym.SymInt.norm
+                                              (GoLean.GoCore.IntKind.int)
+                                              (GoLean.Sym.SymInt.lit 0))
+                                            (GoLean.Sym.SymInt.lit 1))))
+                                      (GoLean.Sym.SymInt.lit 1))))
+                                (GoLean.Sym.SymInt.lit 1))))
+                          (GoLean.Sym.SymInt.lit 1))))
+                    (GoLean.Sym.SymInt.lit 1))))
+              (GoLean.Sym.SymInt.lit 1))))
+        (GoLean.Sym.SymInt.lit 1))))) (GoLean.GoCore.IntKind.int)), (GoLean.Sym.Value.struct ({ key := "struct{}" }) #[])),
+  ((GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.add
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int)
+          (GoLean.Sym.SymInt.norm
+            (GoLean.GoCore.IntKind.int)
+            (GoLean.Sym.SymInt.add
+              (GoLean.Sym.SymInt.norm
+                (GoLean.GoCore.IntKind.int)
+                (GoLean.Sym.SymInt.norm
+                  (GoLean.GoCore.IntKind.int)
+                  (GoLean.Sym.SymInt.add
+                    (GoLean.Sym.SymInt.norm
+                      (GoLean.GoCore.IntKind.int)
+                      (GoLean.Sym.SymInt.norm
+                        (GoLean.GoCore.IntKind.int)
+                        (GoLean.Sym.SymInt.add
+                          (GoLean.Sym.SymInt.norm
+                            (GoLean.GoCore.IntKind.int)
+                            (GoLean.Sym.SymInt.norm
+                              (GoLean.GoCore.IntKind.int)
+                              (GoLean.Sym.SymInt.add
+                                (GoLean.Sym.SymInt.norm
+                                  (GoLean.GoCore.IntKind.int)
+                                  (GoLean.Sym.SymInt.norm
+                                    (GoLean.GoCore.IntKind.int)
+                                    (GoLean.Sym.SymInt.add
+                                      (GoLean.Sym.SymInt.norm
+                                        (GoLean.GoCore.IntKind.int)
+                                        (GoLean.Sym.SymInt.norm
+                                          (GoLean.GoCore.IntKind.int)
+                                          (GoLean.Sym.SymInt.add
+                                            (GoLean.Sym.SymInt.norm
+                                              (GoLean.GoCore.IntKind.int)
+                                              (GoLean.Sym.SymInt.norm
+                                                (GoLean.GoCore.IntKind.int)
+                                                (GoLean.Sym.SymInt.add
+                                                  (GoLean.Sym.SymInt.norm
+                                                    (GoLean.GoCore.IntKind.int)
+                                                    (GoLean.Sym.SymInt.lit 0))
+                                                  (GoLean.Sym.SymInt.lit 1))))
+                                            (GoLean.Sym.SymInt.lit 1))))
+                                      (GoLean.Sym.SymInt.lit 1))))
+                                (GoLean.Sym.SymInt.lit 1))))
+                          (GoLean.Sym.SymInt.lit 1))))
+                    (GoLean.Sym.SymInt.lit 1))))
+              (GoLean.Sym.SymInt.lit 1))))
+        (GoLean.Sym.SymInt.lit 1))))) (GoLean.GoCore.IntKind.int)), (GoLean.Sym.Value.struct ({ key := "struct{}" }) #[])),
+  ((GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.add
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int)
+          (GoLean.Sym.SymInt.norm
+            (GoLean.GoCore.IntKind.int)
+            (GoLean.Sym.SymInt.add
+              (GoLean.Sym.SymInt.norm
+                (GoLean.GoCore.IntKind.int)
+                (GoLean.Sym.SymInt.norm
+                  (GoLean.GoCore.IntKind.int)
+                  (GoLean.Sym.SymInt.add
+                    (GoLean.Sym.SymInt.norm
+                      (GoLean.GoCore.IntKind.int)
+                      (GoLean.Sym.SymInt.norm
+                        (GoLean.GoCore.IntKind.int)
+                        (GoLean.Sym.SymInt.add
+                          (GoLean.Sym.SymInt.norm
+                            (GoLean.GoCore.IntKind.int)
+                            (GoLean.Sym.SymInt.norm
+                              (GoLean.GoCore.IntKind.int)
+                              (GoLean.Sym.SymInt.add
+                                (GoLean.Sym.SymInt.norm
+                                  (GoLean.GoCore.IntKind.int)
+                                  (GoLean.Sym.SymInt.norm
+                                    (GoLean.GoCore.IntKind.int)
+                                    (GoLean.Sym.SymInt.add
+                                      (GoLean.Sym.SymInt.norm
+                                        (GoLean.GoCore.IntKind.int)
+                                        (GoLean.Sym.SymInt.norm
+                                          (GoLean.GoCore.IntKind.int)
+                                          (GoLean.Sym.SymInt.add
+                                            (GoLean.Sym.SymInt.norm
+                                              (GoLean.GoCore.IntKind.int)
+                                              (GoLean.Sym.SymInt.norm
+                                                (GoLean.GoCore.IntKind.int)
+                                                (GoLean.Sym.SymInt.add
+                                                  (GoLean.Sym.SymInt.norm
+                                                    (GoLean.GoCore.IntKind.int)
+                                                    (GoLean.Sym.SymInt.norm
+                                                      (GoLean.GoCore.IntKind.int)
+                                                      (GoLean.Sym.SymInt.add
+                                                        (GoLean.Sym.SymInt.norm
+                                                          (GoLean.GoCore.IntKind.int)
+                                                          (GoLean.Sym.SymInt.lit 0))
+                                                        (GoLean.Sym.SymInt.lit 1))))
+                                                  (GoLean.Sym.SymInt.lit 1))))
+                                            (GoLean.Sym.SymInt.lit 1))))
+                                      (GoLean.Sym.SymInt.lit 1))))
+                                (GoLean.Sym.SymInt.lit 1))))
+                          (GoLean.Sym.SymInt.lit 1))))
+                    (GoLean.Sym.SymInt.lit 1))))
+              (GoLean.Sym.SymInt.lit 1))))
+        (GoLean.Sym.SymInt.lit 1))))) (GoLean.GoCore.IntKind.int)), (GoLean.Sym.Value.struct ({ key := "struct{}" }) #[]))]))),
+  ((GoLean.Loc.base { id := 6244 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.map
+  (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+  (GoLean.GoCore.Ty.defined { key := "struct{}" }))) (GoLean.Sym.Value.map ({ base := some (GoLean.Loc.base { id := 6243 }) })))),
+  ((GoLean.Loc.base { id := 6245 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.add
+      (GoLean.Sym.SymInt.norm
+        (GoLean.GoCore.IntKind.int)
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int)
+          (GoLean.Sym.SymInt.add
+            (GoLean.Sym.SymInt.norm
+              (GoLean.GoCore.IntKind.int)
+              (GoLean.Sym.SymInt.norm
+                (GoLean.GoCore.IntKind.int)
+                (GoLean.Sym.SymInt.add
+                  (GoLean.Sym.SymInt.norm
+                    (GoLean.GoCore.IntKind.int)
+                    (GoLean.Sym.SymInt.norm
+                      (GoLean.GoCore.IntKind.int)
+                      (GoLean.Sym.SymInt.add
+                        (GoLean.Sym.SymInt.norm
+                          (GoLean.GoCore.IntKind.int)
+                          (GoLean.Sym.SymInt.norm
+                            (GoLean.GoCore.IntKind.int)
+                            (GoLean.Sym.SymInt.add
+                              (GoLean.Sym.SymInt.norm
+                                (GoLean.GoCore.IntKind.int)
+                                (GoLean.Sym.SymInt.norm
+                                  (GoLean.GoCore.IntKind.int)
+                                  (GoLean.Sym.SymInt.add
+                                    (GoLean.Sym.SymInt.norm
+                                      (GoLean.GoCore.IntKind.int)
+                                      (GoLean.Sym.SymInt.norm
+                                        (GoLean.GoCore.IntKind.int)
+                                        (GoLean.Sym.SymInt.add
+                                          (GoLean.Sym.SymInt.norm
+                                            (GoLean.GoCore.IntKind.int)
+                                            (GoLean.Sym.SymInt.norm
+                                              (GoLean.GoCore.IntKind.int)
+                                              (GoLean.Sym.SymInt.add
+                                                (GoLean.Sym.SymInt.norm
+                                                  (GoLean.GoCore.IntKind.int)
+                                                  (GoLean.Sym.SymInt.norm
+                                                    (GoLean.GoCore.IntKind.int)
+                                                    (GoLean.Sym.SymInt.add
+                                                      (GoLean.Sym.SymInt.norm
+                                                        (GoLean.GoCore.IntKind.int)
+                                                        (GoLean.Sym.SymInt.norm
+                                                          (GoLean.GoCore.IntKind.int)
+                                                          (GoLean.Sym.SymInt.add
+                                                            (GoLean.Sym.SymInt.norm
+                                                              (GoLean.GoCore.IntKind.int)
+                                                              (GoLean.Sym.SymInt.lit 0))
+                                                            (GoLean.Sym.SymInt.lit 1))))
+                                                      (GoLean.Sym.SymInt.lit 1))))
+                                                (GoLean.Sym.SymInt.lit 1))))
+                                          (GoLean.Sym.SymInt.lit 1))))
+                                    (GoLean.Sym.SymInt.lit 1))))
+                              (GoLean.Sym.SymInt.lit 1))))
+                        (GoLean.Sym.SymInt.lit 1))))
+                  (GoLean.Sym.SymInt.lit 1))))
+            (GoLean.Sym.SymInt.lit 1))))
+      (GoLean.Sym.SymInt.lit 1)))) (GoLean.GoCore.IntKind.int)))),
+  ((GoLean.Loc.base { id := 6246 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.bool)) (GoLean.Sym.Value.bool (GoLean.Sym.SymBool.lit false)))),
+  ((GoLean.Loc.base { id := 6247 }), (GoLean.Sym.HeapCell.mk (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))) (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0)) (GoLean.GoCore.IntKind.int))))]
+  6248)
+
+def mvCB4 : SymConfig :=
+  (GoLean.Sym.Config.next (GoLean.Sym.Cont.mapIterK (some "k") (none) (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)) (GoLean.GoCore.Ty.defined { key := "struct{}" }) (GoLean.GoCore.Stmt.block
+  #[]
+  #[GoLean.GoCore.Stmt.seqn #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "v") (GoLean.GoCore.Expr.var "k")],
+    GoLean.GoCore.Stmt.breakStmt]) (some (GoLean.Loc.base { id := 6243 })) #[] #[(GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))) (GoLean.GoCore.IntKind.int)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.add
+        (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))
+        (GoLean.Sym.SymInt.lit 1))))) (GoLean.GoCore.IntKind.int)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.add
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int)
+          (GoLean.Sym.SymInt.norm
+            (GoLean.GoCore.IntKind.int)
+            (GoLean.Sym.SymInt.add
+              (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))
+              (GoLean.Sym.SymInt.lit 1))))
+        (GoLean.Sym.SymInt.lit 1))))) (GoLean.GoCore.IntKind.int)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.add
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int)
+          (GoLean.Sym.SymInt.norm
+            (GoLean.GoCore.IntKind.int)
+            (GoLean.Sym.SymInt.add
+              (GoLean.Sym.SymInt.norm
+                (GoLean.GoCore.IntKind.int)
+                (GoLean.Sym.SymInt.norm
+                  (GoLean.GoCore.IntKind.int)
+                  (GoLean.Sym.SymInt.add
+                    (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))
+                    (GoLean.Sym.SymInt.lit 1))))
+              (GoLean.Sym.SymInt.lit 1))))
+        (GoLean.Sym.SymInt.lit 1))))) (GoLean.GoCore.IntKind.int)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.add
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int)
+          (GoLean.Sym.SymInt.norm
+            (GoLean.GoCore.IntKind.int)
+            (GoLean.Sym.SymInt.add
+              (GoLean.Sym.SymInt.norm
+                (GoLean.GoCore.IntKind.int)
+                (GoLean.Sym.SymInt.norm
+                  (GoLean.GoCore.IntKind.int)
+                  (GoLean.Sym.SymInt.add
+                    (GoLean.Sym.SymInt.norm
+                      (GoLean.GoCore.IntKind.int)
+                      (GoLean.Sym.SymInt.norm
+                        (GoLean.GoCore.IntKind.int)
+                        (GoLean.Sym.SymInt.add
+                          (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))
+                          (GoLean.Sym.SymInt.lit 1))))
+                    (GoLean.Sym.SymInt.lit 1))))
+              (GoLean.Sym.SymInt.lit 1))))
+        (GoLean.Sym.SymInt.lit 1))))) (GoLean.GoCore.IntKind.int)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.add
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int)
+          (GoLean.Sym.SymInt.norm
+            (GoLean.GoCore.IntKind.int)
+            (GoLean.Sym.SymInt.add
+              (GoLean.Sym.SymInt.norm
+                (GoLean.GoCore.IntKind.int)
+                (GoLean.Sym.SymInt.norm
+                  (GoLean.GoCore.IntKind.int)
+                  (GoLean.Sym.SymInt.add
+                    (GoLean.Sym.SymInt.norm
+                      (GoLean.GoCore.IntKind.int)
+                      (GoLean.Sym.SymInt.norm
+                        (GoLean.GoCore.IntKind.int)
+                        (GoLean.Sym.SymInt.add
+                          (GoLean.Sym.SymInt.norm
+                            (GoLean.GoCore.IntKind.int)
+                            (GoLean.Sym.SymInt.norm
+                              (GoLean.GoCore.IntKind.int)
+                              (GoLean.Sym.SymInt.add
+                                (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))
+                                (GoLean.Sym.SymInt.lit 1))))
+                          (GoLean.Sym.SymInt.lit 1))))
+                    (GoLean.Sym.SymInt.lit 1))))
+              (GoLean.Sym.SymInt.lit 1))))
+        (GoLean.Sym.SymInt.lit 1))))) (GoLean.GoCore.IntKind.int)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.add
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int)
+          (GoLean.Sym.SymInt.norm
+            (GoLean.GoCore.IntKind.int)
+            (GoLean.Sym.SymInt.add
+              (GoLean.Sym.SymInt.norm
+                (GoLean.GoCore.IntKind.int)
+                (GoLean.Sym.SymInt.norm
+                  (GoLean.GoCore.IntKind.int)
+                  (GoLean.Sym.SymInt.add
+                    (GoLean.Sym.SymInt.norm
+                      (GoLean.GoCore.IntKind.int)
+                      (GoLean.Sym.SymInt.norm
+                        (GoLean.GoCore.IntKind.int)
+                        (GoLean.Sym.SymInt.add
+                          (GoLean.Sym.SymInt.norm
+                            (GoLean.GoCore.IntKind.int)
+                            (GoLean.Sym.SymInt.norm
+                              (GoLean.GoCore.IntKind.int)
+                              (GoLean.Sym.SymInt.add
+                                (GoLean.Sym.SymInt.norm
+                                  (GoLean.GoCore.IntKind.int)
+                                  (GoLean.Sym.SymInt.norm
+                                    (GoLean.GoCore.IntKind.int)
+                                    (GoLean.Sym.SymInt.add
+                                      (GoLean.Sym.SymInt.norm (GoLean.GoCore.IntKind.int) (GoLean.Sym.SymInt.lit 0))
+                                      (GoLean.Sym.SymInt.lit 1))))
+                                (GoLean.Sym.SymInt.lit 1))))
+                          (GoLean.Sym.SymInt.lit 1))))
+                    (GoLean.Sym.SymInt.lit 1))))
+              (GoLean.Sym.SymInt.lit 1))))
+        (GoLean.Sym.SymInt.lit 1))))) (GoLean.GoCore.IntKind.int)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.add
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int)
+          (GoLean.Sym.SymInt.norm
+            (GoLean.GoCore.IntKind.int)
+            (GoLean.Sym.SymInt.add
+              (GoLean.Sym.SymInt.norm
+                (GoLean.GoCore.IntKind.int)
+                (GoLean.Sym.SymInt.norm
+                  (GoLean.GoCore.IntKind.int)
+                  (GoLean.Sym.SymInt.add
+                    (GoLean.Sym.SymInt.norm
+                      (GoLean.GoCore.IntKind.int)
+                      (GoLean.Sym.SymInt.norm
+                        (GoLean.GoCore.IntKind.int)
+                        (GoLean.Sym.SymInt.add
+                          (GoLean.Sym.SymInt.norm
+                            (GoLean.GoCore.IntKind.int)
+                            (GoLean.Sym.SymInt.norm
+                              (GoLean.GoCore.IntKind.int)
+                              (GoLean.Sym.SymInt.add
+                                (GoLean.Sym.SymInt.norm
+                                  (GoLean.GoCore.IntKind.int)
+                                  (GoLean.Sym.SymInt.norm
+                                    (GoLean.GoCore.IntKind.int)
+                                    (GoLean.Sym.SymInt.add
+                                      (GoLean.Sym.SymInt.norm
+                                        (GoLean.GoCore.IntKind.int)
+                                        (GoLean.Sym.SymInt.norm
+                                          (GoLean.GoCore.IntKind.int)
+                                          (GoLean.Sym.SymInt.add
+                                            (GoLean.Sym.SymInt.norm
+                                              (GoLean.GoCore.IntKind.int)
+                                              (GoLean.Sym.SymInt.lit 0))
+                                            (GoLean.Sym.SymInt.lit 1))))
+                                      (GoLean.Sym.SymInt.lit 1))))
+                                (GoLean.Sym.SymInt.lit 1))))
+                          (GoLean.Sym.SymInt.lit 1))))
+                    (GoLean.Sym.SymInt.lit 1))))
+              (GoLean.Sym.SymInt.lit 1))))
+        (GoLean.Sym.SymInt.lit 1))))) (GoLean.GoCore.IntKind.int)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.add
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int)
+          (GoLean.Sym.SymInt.norm
+            (GoLean.GoCore.IntKind.int)
+            (GoLean.Sym.SymInt.add
+              (GoLean.Sym.SymInt.norm
+                (GoLean.GoCore.IntKind.int)
+                (GoLean.Sym.SymInt.norm
+                  (GoLean.GoCore.IntKind.int)
+                  (GoLean.Sym.SymInt.add
+                    (GoLean.Sym.SymInt.norm
+                      (GoLean.GoCore.IntKind.int)
+                      (GoLean.Sym.SymInt.norm
+                        (GoLean.GoCore.IntKind.int)
+                        (GoLean.Sym.SymInt.add
+                          (GoLean.Sym.SymInt.norm
+                            (GoLean.GoCore.IntKind.int)
+                            (GoLean.Sym.SymInt.norm
+                              (GoLean.GoCore.IntKind.int)
+                              (GoLean.Sym.SymInt.add
+                                (GoLean.Sym.SymInt.norm
+                                  (GoLean.GoCore.IntKind.int)
+                                  (GoLean.Sym.SymInt.norm
+                                    (GoLean.GoCore.IntKind.int)
+                                    (GoLean.Sym.SymInt.add
+                                      (GoLean.Sym.SymInt.norm
+                                        (GoLean.GoCore.IntKind.int)
+                                        (GoLean.Sym.SymInt.norm
+                                          (GoLean.GoCore.IntKind.int)
+                                          (GoLean.Sym.SymInt.add
+                                            (GoLean.Sym.SymInt.norm
+                                              (GoLean.GoCore.IntKind.int)
+                                              (GoLean.Sym.SymInt.norm
+                                                (GoLean.GoCore.IntKind.int)
+                                                (GoLean.Sym.SymInt.add
+                                                  (GoLean.Sym.SymInt.norm
+                                                    (GoLean.GoCore.IntKind.int)
+                                                    (GoLean.Sym.SymInt.lit 0))
+                                                  (GoLean.Sym.SymInt.lit 1))))
+                                            (GoLean.Sym.SymInt.lit 1))))
+                                      (GoLean.Sym.SymInt.lit 1))))
+                                (GoLean.Sym.SymInt.lit 1))))
+                          (GoLean.Sym.SymInt.lit 1))))
+                    (GoLean.Sym.SymInt.lit 1))))
+              (GoLean.Sym.SymInt.lit 1))))
+        (GoLean.Sym.SymInt.lit 1))))) (GoLean.GoCore.IntKind.int)),
+  (GoLean.Sym.Value.int (GoLean.Sym.SymInt.norm
+  (GoLean.GoCore.IntKind.int)
+  (GoLean.Sym.SymInt.norm
+    (GoLean.GoCore.IntKind.int)
+    (GoLean.Sym.SymInt.norm
+      (GoLean.GoCore.IntKind.int)
+      (GoLean.Sym.SymInt.add
+        (GoLean.Sym.SymInt.norm
+          (GoLean.GoCore.IntKind.int)
+          (GoLean.Sym.SymInt.norm
+            (GoLean.GoCore.IntKind.int)
+            (GoLean.Sym.SymInt.add
+              (GoLean.Sym.SymInt.norm
+                (GoLean.GoCore.IntKind.int)
+                (GoLean.Sym.SymInt.norm
+                  (GoLean.GoCore.IntKind.int)
+                  (GoLean.Sym.SymInt.add
+                    (GoLean.Sym.SymInt.norm
+                      (GoLean.GoCore.IntKind.int)
+                      (GoLean.Sym.SymInt.norm
+                        (GoLean.GoCore.IntKind.int)
+                        (GoLean.Sym.SymInt.add
+                          (GoLean.Sym.SymInt.norm
+                            (GoLean.GoCore.IntKind.int)
+                            (GoLean.Sym.SymInt.norm
+                              (GoLean.GoCore.IntKind.int)
+                              (GoLean.Sym.SymInt.add
+                                (GoLean.Sym.SymInt.norm
+                                  (GoLean.GoCore.IntKind.int)
+                                  (GoLean.Sym.SymInt.norm
+                                    (GoLean.GoCore.IntKind.int)
+                                    (GoLean.Sym.SymInt.add
+                                      (GoLean.Sym.SymInt.norm
+                                        (GoLean.GoCore.IntKind.int)
+                                        (GoLean.Sym.SymInt.norm
+                                          (GoLean.GoCore.IntKind.int)
+                                          (GoLean.Sym.SymInt.add
+                                            (GoLean.Sym.SymInt.norm
+                                              (GoLean.GoCore.IntKind.int)
+                                              (GoLean.Sym.SymInt.norm
+                                                (GoLean.GoCore.IntKind.int)
+                                                (GoLean.Sym.SymInt.add
+                                                  (GoLean.Sym.SymInt.norm
+                                                    (GoLean.GoCore.IntKind.int)
+                                                    (GoLean.Sym.SymInt.norm
+                                                      (GoLean.GoCore.IntKind.int)
+                                                      (GoLean.Sym.SymInt.add
+                                                        (GoLean.Sym.SymInt.norm
+                                                          (GoLean.GoCore.IntKind.int)
+                                                          (GoLean.Sym.SymInt.lit 0))
+                                                        (GoLean.Sym.SymInt.lit 1))))
+                                                  (GoLean.Sym.SymInt.lit 1))))
+                                            (GoLean.Sym.SymInt.lit 1))))
+                                      (GoLean.Sym.SymInt.lit 1))))
+                                (GoLean.Sym.SymInt.lit 1))))
+                          (GoLean.Sym.SymInt.lit 1))))
+                    (GoLean.Sym.SymInt.lit 1))))
+              (GoLean.Sym.SymInt.lit 1))))
+        (GoLean.Sym.SymInt.lit 1))))) (GoLean.GoCore.IntKind.int))] ([[("v", GoLean.Loc.base { id := 6247 }),
+  ("draws", GoLean.Loc.base { id := 6244 }),
+  ("$c1155", GoLean.Loc.base { id := 6242 })],
+ [("$res0", GoLean.Loc.base { id := 6241 }),
+  ("n", GoLean.Loc.base { id := 6240 }),
+  ("r", GoLean.Loc.base { id := 6239 })]]) (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.syncStmt
+   (GoLean.GoCore.SyncStmtOp.unlock)
+   #[GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "r") { key := "raft.lockedRand" } "mu"]
+   #[],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res0") (GoLean.GoCore.Expr.var "v"),
+     GoLean.GoCore.Stmt.returnStmt]]) ([[("v", GoLean.Loc.base { id := 6247 }),
+  ("draws", GoLean.Loc.base { id := 6244 }),
+  ("$c1155", GoLean.Loc.base { id := 6242 })],
+ [("$res0", GoLean.Loc.base { id := 6241 }),
+  ("n", GoLean.Loc.base { id := 6240 }),
+  ("r", GoLean.Loc.base { id := 6239 })]]) (GoLean.Sym.Cont.frame ([(GoLean.GoCore.Machine.TargetShape.chain [], [GoLean.GoCore.Expr.ref "$c1730"])]) ([[("$c1730", GoLean.Loc.base { id := 6238 })], [("r", GoLean.Loc.base { id := 6237 })]]) ([GoLean.Loc.base { id := 6241 }]) [] (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.addr
+         (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "r") { key := "raft.raft" } "randomizedElectionTimeout"))
+       (GoLean.GoCore.Expr.add
+         (GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "r") (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+           { key := "raft.raft" }
+           "electionTimeout")
+         (GoLean.GoCore.Expr.var "$c1730"))]]) ([[("$c1730", GoLean.Loc.base { id := 6238 })], [("r", GoLean.Loc.base { id := 6237 })]]) (GoLean.Sym.Cont.frame ([]) ([[], [("term", GoLean.Loc.base { id := 6236 }), ("r", GoLean.Loc.base { id := 6235 })]]) ([]) [] (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.call #[] { key := "raft.raft.abortLeaderTransfer" } #[GoLean.GoCore.Expr.var "r"],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "tracker.ProgressTracker.ResetVotes" }
+   #[GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "r") { key := "raft.raft" } "trk"],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "tracker.ProgressTracker.Visit" }
+   #[GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "r") { key := "raft.raft" } "trk",
+     GoLean.GoCore.Expr.funcVal { key := "raft.raft.reset$lit0" } #[GoLean.GoCore.Expr.ref "r"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.addr
+         (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "r") { key := "raft.raft" } "pendingConfIndex"))
+       (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64))],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.addr
+         (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "r") { key := "raft.raft" } "uncommittedSize"))
+       (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64))],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization
+       { id := "$c1272", typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raft.readOnly" }) },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c1272"]
+       { key := "raft.newReadOnly" }
+       #[GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref
+             (GoLean.GoCore.Expr.fieldGet
+               (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "r") (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+               { key := "raft.raft" }
+               "readOnly")
+             (GoLean.GoCore.Ty.defined { key := "raft.readOnly" }))
+           { key := "raft.readOnly" }
+           "option"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.addr
+         (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "r") { key := "raft.raft" } "readOnly"))
+       (GoLean.GoCore.Expr.var "$c1272")]]) ([[], [("term", GoLean.Loc.base { id := 6236 }), ("r", GoLean.Loc.base { id := 6235 })]]) (GoLean.Sym.Cont.frame ([]) ([[],
+ [("lead", GoLean.Loc.base { id := 6234 }),
+  ("term", GoLean.Loc.base { id := 6233 }),
+  ("r", GoLean.Loc.base { id := 6232 })]]) ([]) [] (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.addr
+         (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "r") { key := "raft.raft" } "tick"))
+       (GoLean.GoCore.Expr.funcVal { key := "raft.raft.tickElection" } #[GoLean.GoCore.Expr.var "r"])],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.addr
+         (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "r") { key := "raft.raft" } "lead"))
+       (GoLean.GoCore.Expr.var "lead")],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.addr
+         (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "r") { key := "raft.raft" } "state"))
+       (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64))],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization
+       { id := "$c1307", typ := GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.interface { key := "any" }) },
+     GoLean.GoCore.Stmt.makeSlice
+       (GoLean.GoCore.Assignee.var "$c1307")
+       (GoLean.GoCore.Ty.interface { key := "any" })
+       (GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int))
+       (some (GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int))),
+     GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.addr
+         (GoLean.GoCore.Expr.indexAddr
+           (GoLean.GoCore.Expr.var "$c1307")
+           (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+       (GoLean.GoCore.Expr.toInterface
+         (GoLean.GoCore.Ty.interface { key := "any" })
+         (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+         (GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "r") (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+           { key := "raft.raft" }
+           "id")),
+     GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.addr
+         (GoLean.GoCore.Expr.indexAddr
+           (GoLean.GoCore.Expr.var "$c1307")
+           (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))))
+       (GoLean.GoCore.Expr.toInterface
+         (GoLean.GoCore.Ty.interface { key := "any" })
+         (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+         (GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "r") (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+           { key := "raft.raft" }
+           "Term"))],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "raft.Logger.Infof" }
+   #[GoLean.GoCore.Expr.fieldGet
+       (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "r") (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+       { key := "raft.raft" }
+       "logger",
+     GoLean.GoCore.Expr.stringLit
+       { bytes := #[37, 120, 32, 98, 101, 99, 97, 109, 101, 32, 102, 111, 108, 108, 111, 119, 101, 114, 32, 97, 116, 32,
+                    116, 101, 114, 109, 32, 37, 100] },
+     GoLean.GoCore.Expr.var "$c1307"],
+ GoLean.GoCore.Stmt.call #[] { key := "raft.traceBecomeFollower" } #[GoLean.GoCore.Expr.var "r"]]) ([[],
+ [("lead", GoLean.Loc.base { id := 6234 }),
+  ("term", GoLean.Loc.base { id := 6233 }),
+  ("r", GoLean.Loc.base { id := 6232 })]]) (GoLean.Sym.Cont.frame ([]) ([[("$c1377", GoLean.Loc.base { id := 6229 })],
+ [("$c1374", GoLean.Loc.base { id := 6225 }),
+  ("$c1372", GoLean.Loc.base { id := 6221 }),
+  ("$c1370", GoLean.Loc.base { id := 6218 }),
+  ("$c1369", GoLean.Loc.base { id := 6213 }),
+  ("$c1368", GoLean.Loc.base { id := 6210 }),
+  ("$c1367", GoLean.Loc.base { id := 6207 }),
+  ("$c1366", GoLean.Loc.base { id := 6204 })],
+ [],
+ [("$swf1378", GoLean.Loc.base { id := 6203 }), ("$swi1378", GoLean.Loc.base { id := 6195 })],
+ [("$c1359", GoLean.Loc.base { id := 6185 }), ("$c1357", GoLean.Loc.base { id := 6182 })],
+ [],
+ [("$swf1414", GoLean.Loc.base { id := 6181 }), ("$swi1414", GoLean.Loc.base { id := 6174 })],
+ [],
+ [("$res0", GoLean.Loc.base { id := 6171 }),
+  ("m", GoLean.Loc.base { id := 6170 }),
+  ("r", GoLean.Loc.base { id := 6169 })]]) ([]) [] (GoLean.Sym.Cont.seq ([]) ([[("$c1377", GoLean.Loc.base { id := 6229 })],
+ [("$c1374", GoLean.Loc.base { id := 6225 }),
+  ("$c1372", GoLean.Loc.base { id := 6221 }),
+  ("$c1370", GoLean.Loc.base { id := 6218 }),
+  ("$c1369", GoLean.Loc.base { id := 6213 }),
+  ("$c1368", GoLean.Loc.base { id := 6210 }),
+  ("$c1367", GoLean.Loc.base { id := 6207 }),
+  ("$c1366", GoLean.Loc.base { id := 6204 })],
+ [],
+ [("$swf1378", GoLean.Loc.base { id := 6203 }), ("$swi1378", GoLean.Loc.base { id := 6195 })],
+ [("$c1359", GoLean.Loc.base { id := 6185 }), ("$c1357", GoLean.Loc.base { id := 6182 })],
+ [],
+ [("$swf1414", GoLean.Loc.base { id := 6181 }), ("$swi1414", GoLean.Loc.base { id := 6174 })],
+ [],
+ [("$res0", GoLean.Loc.base { id := 6171 }),
+  ("m", GoLean.Loc.base { id := 6170 }),
+  ("r", GoLean.Loc.base { id := 6169 })]]) (GoLean.Sym.Cont.seq ([]) ([[("$c1374", GoLean.Loc.base { id := 6225 }),
+  ("$c1372", GoLean.Loc.base { id := 6221 }),
+  ("$c1370", GoLean.Loc.base { id := 6218 }),
+  ("$c1369", GoLean.Loc.base { id := 6213 }),
+  ("$c1368", GoLean.Loc.base { id := 6210 }),
+  ("$c1367", GoLean.Loc.base { id := 6207 }),
+  ("$c1366", GoLean.Loc.base { id := 6204 })],
+ [],
+ [("$swf1378", GoLean.Loc.base { id := 6203 }), ("$swi1378", GoLean.Loc.base { id := 6195 })],
+ [("$c1359", GoLean.Loc.base { id := 6185 }), ("$c1357", GoLean.Loc.base { id := 6182 })],
+ [],
+ [("$swf1414", GoLean.Loc.base { id := 6181 }), ("$swi1414", GoLean.Loc.base { id := 6174 })],
+ [],
+ [("$res0", GoLean.Loc.base { id := 6171 }),
+  ("m", GoLean.Loc.base { id := 6170 }),
+  ("r", GoLean.Loc.base { id := 6169 })]]) (GoLean.Sym.Cont.seq ([]) ([[],
+ [("$swf1378", GoLean.Loc.base { id := 6203 }), ("$swi1378", GoLean.Loc.base { id := 6195 })],
+ [("$c1359", GoLean.Loc.base { id := 6185 }), ("$c1357", GoLean.Loc.base { id := 6182 })],
+ [],
+ [("$swf1414", GoLean.Loc.base { id := 6181 }), ("$swi1414", GoLean.Loc.base { id := 6174 })],
+ [],
+ [("$res0", GoLean.Loc.base { id := 6171 }),
+  ("m", GoLean.Loc.base { id := 6170 }),
+  ("r", GoLean.Loc.base { id := 6169 })]]) (GoLean.Sym.Cont.seq ([]) ([[("$swf1378", GoLean.Loc.base { id := 6203 }), ("$swi1378", GoLean.Loc.base { id := 6195 })],
+ [("$c1359", GoLean.Loc.base { id := 6185 }), ("$c1357", GoLean.Loc.base { id := 6182 })],
+ [],
+ [("$swf1414", GoLean.Loc.base { id := 6181 }), ("$swi1414", GoLean.Loc.base { id := 6174 })],
+ [],
+ [("$res0", GoLean.Loc.base { id := 6171 }),
+  ("m", GoLean.Loc.base { id := 6170 }),
+  ("r", GoLean.Loc.base { id := 6169 })]]) (GoLean.Sym.Cont.breakableK (GoLean.Sym.Cont.seq ([]) ([[("$c1359", GoLean.Loc.base { id := 6185 }), ("$c1357", GoLean.Loc.base { id := 6182 })],
+ [],
+ [("$swf1414", GoLean.Loc.base { id := 6181 }), ("$swi1414", GoLean.Loc.base { id := 6174 })],
+ [],
+ [("$res0", GoLean.Loc.base { id := 6171 }),
+  ("m", GoLean.Loc.base { id := 6170 }),
+  ("r", GoLean.Loc.base { id := 6169 })]]) (GoLean.Sym.Cont.seq ([]) ([[],
+ [("$swf1414", GoLean.Loc.base { id := 6181 }), ("$swi1414", GoLean.Loc.base { id := 6174 })],
+ [],
+ [("$res0", GoLean.Loc.base { id := 6171 }),
+  ("m", GoLean.Loc.base { id := 6170 }),
+  ("r", GoLean.Loc.base { id := 6169 })]]) (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.ifThenElse
+   (GoLean.GoCore.Expr.or
+     (GoLean.GoCore.Expr.var "$swf1414")
+     (GoLean.GoCore.Expr.eqCmp
+       (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+       (GoLean.GoCore.Expr.var "$swi1414")
+       (GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int))))
+   (GoLean.GoCore.Stmt.block
+     #[]
+     #[GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$swf1414") (GoLean.GoCore.Expr.boolLit false)],
+       GoLean.GoCore.Stmt.block
+         #[]
+         #[GoLean.GoCore.Stmt.seqn
+             #[GoLean.GoCore.Stmt.initialization { id := "$c1386", typ := GoLean.GoCore.Ty.bool },
+               GoLean.GoCore.Stmt.assign
+                 (GoLean.GoCore.Assignee.var "$c1386")
+                 (GoLean.GoCore.Expr.or
+                   (GoLean.GoCore.Expr.fieldGet
+                     (GoLean.GoCore.Expr.deref
+                       (GoLean.GoCore.Expr.var "r")
+                       (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                     { key := "raft.raft" }
+                     "checkQuorum")
+                   (GoLean.GoCore.Expr.fieldGet
+                     (GoLean.GoCore.Expr.deref
+                       (GoLean.GoCore.Expr.var "r")
+                       (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                     { key := "raft.raft" }
+                     "preVote"))],
+           GoLean.GoCore.Stmt.ifThenElse
+             (GoLean.GoCore.Expr.var "$c1386")
+             (GoLean.GoCore.Stmt.block
+               #[]
+               #[GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1383", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                     GoLean.GoCore.Stmt.call
+                       #[GoLean.GoCore.Assignee.var "$c1383"]
+                       { key := "raftpb.Message.GetType" }
+                       #[GoLean.GoCore.Expr.var "m"]],
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization { id := "$c1385", typ := GoLean.GoCore.Ty.bool },
+                     GoLean.GoCore.Stmt.assign
+                       (GoLean.GoCore.Assignee.var "$c1385")
+                       (GoLean.GoCore.Expr.eqCmp
+                         (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                         (GoLean.GoCore.Expr.var "$c1383")
+                         (GoLean.GoCore.Expr.intLit 8 (GoLean.GoCore.IntKind.int32)))],
+                 GoLean.GoCore.Stmt.ifThenElse
+                   (GoLean.GoCore.Expr.not (GoLean.GoCore.Expr.var "$c1385"))
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1384", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1384"]
+                             { key := "raftpb.Message.GetType" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1385")
+                             (GoLean.GoCore.Expr.eqCmp
+                               (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                               (GoLean.GoCore.Expr.var "$c1384")
+                               (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int32)))]])
+                   (GoLean.GoCore.Stmt.seqn #[]),
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.assign
+                       (GoLean.GoCore.Assignee.var "$c1386")
+                       (GoLean.GoCore.Expr.var "$c1385")]])
+             (GoLean.GoCore.Stmt.seqn #[]),
+           GoLean.GoCore.Stmt.ifThenElse
+             (GoLean.GoCore.Expr.var "$c1386")
+             (GoLean.GoCore.Stmt.block
+               #[]
+               #[GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1387",
+                         typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" }) },
+                     GoLean.GoCore.Stmt.call
+                       #[GoLean.GoCore.Assignee.var "$c1387"]
+                       { key := "raftpb.MessageType.Enum" }
+                       #[GoLean.GoCore.Expr.intLit 4 (GoLean.GoCore.IntKind.int32)]],
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1388",
+                         typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" }) },
+                     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$c1388") (GoLean.GoCore.Expr.var "$c1387")],
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1389",
+                         typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }) },
+                     GoLean.GoCore.Stmt.newValue
+                       (GoLean.GoCore.Assignee.var "$c1389")
+                       (GoLean.GoCore.Expr.structLit
+                         (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })
+                         #[GoLean.GoCore.Expr.var "$c1388",
+                           GoLean.GoCore.Expr.fieldGet
+                             (GoLean.GoCore.Expr.deref
+                               (GoLean.GoCore.Expr.var "m")
+                               (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))
+                             { key := "raftpb.Message" }
+                             "From",
+                           GoLean.GoCore.Expr.defaultValue
+                             (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                           GoLean.GoCore.Expr.defaultValue
+                             (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                           GoLean.GoCore.Expr.defaultValue
+                             (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                           GoLean.GoCore.Expr.defaultValue
+                             (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                           GoLean.GoCore.Expr.defaultValue
+                             (GoLean.GoCore.Ty.slice
+                               (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" }))),
+                           GoLean.GoCore.Expr.defaultValue
+                             (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                           GoLean.GoCore.Expr.defaultValue
+                             (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                           GoLean.GoCore.Expr.defaultValue
+                             (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Snapshot" })),
+                           GoLean.GoCore.Expr.defaultValue (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.bool)),
+                           GoLean.GoCore.Expr.defaultValue
+                             (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                           GoLean.GoCore.Expr.defaultValue
+                             (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint8))),
+                           GoLean.GoCore.Expr.defaultValue
+                             (GoLean.GoCore.Ty.slice
+                               (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })))])
+                       (some (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))],
+                 GoLean.GoCore.Stmt.call
+                   #[]
+                   { key := "raft.raft.send" }
+                   #[GoLean.GoCore.Expr.var "r", GoLean.GoCore.Expr.var "$c1389"]])
+             (GoLean.GoCore.Stmt.block
+               #[]
+               #[GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1390", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                     GoLean.GoCore.Stmt.call
+                       #[GoLean.GoCore.Assignee.var "$c1390"]
+                       { key := "raftpb.Message.GetType" }
+                       #[GoLean.GoCore.Expr.var "m"]],
+                 GoLean.GoCore.Stmt.ifThenElse
+                   (GoLean.GoCore.Expr.eqCmp
+                     (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                     (GoLean.GoCore.Expr.var "$c1390")
+                     (GoLean.GoCore.Expr.intLit 17 (GoLean.GoCore.IntKind.int32)))
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "last", typ := GoLean.GoCore.Ty.defined { key := "raft.entryID" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "last"]
+                             { key := "raft.raftLog.lastEntryID" }
+                             #[GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.deref
+                                   (GoLean.GoCore.Expr.var "r")
+                                   (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                 { key := "raft.raft" }
+                                 "raftLog"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1391", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1391"]
+                             { key := "raftpb.Message.GetType" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1392", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1392"]
+                             { key := "raftpb.Message.GetFrom" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1393", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1393"]
+                             { key := "raftpb.Message.GetLogTerm" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1394", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1394"]
+                             { key := "raftpb.Message.GetIndex" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1395",
+                               typ := GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.interface { key := "any" }) },
+                           GoLean.GoCore.Stmt.makeSlice
+                             (GoLean.GoCore.Assignee.var "$c1395")
+                             (GoLean.GoCore.Ty.interface { key := "any" })
+                             (GoLean.GoCore.Expr.intLit 9 (GoLean.GoCore.IntKind.int))
+                             (some (GoLean.GoCore.Expr.intLit 9 (GoLean.GoCore.IntKind.int))),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1395")
+                                 (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.deref
+                                   (GoLean.GoCore.Expr.var "r")
+                                   (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                 { key := "raft.raft" }
+                                 "id")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1395")
+                                 (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.var "last")
+                                 { key := "raft.entryID" }
+                                 "term")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1395")
+                                 (GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.var "last")
+                                 { key := "raft.entryID" }
+                                 "index")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1395")
+                                 (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.deref
+                                   (GoLean.GoCore.Expr.var "r")
+                                   (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                 { key := "raft.raft" }
+                                 "Vote")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1395")
+                                 (GoLean.GoCore.Expr.intLit 4 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                               (GoLean.GoCore.Expr.var "$c1391")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1395")
+                                 (GoLean.GoCore.Expr.intLit 5 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.var "$c1392")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1395")
+                                 (GoLean.GoCore.Expr.intLit 6 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.var "$c1393")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1395")
+                                 (GoLean.GoCore.Expr.intLit 7 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.var "$c1394")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1395")
+                                 (GoLean.GoCore.Expr.intLit 8 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.deref
+                                   (GoLean.GoCore.Expr.var "r")
+                                   (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                 { key := "raft.raft" }
+                                 "Term"))],
+                       GoLean.GoCore.Stmt.call
+                         #[]
+                         { key := "raft.Logger.Infof" }
+                         #[GoLean.GoCore.Expr.fieldGet
+                             (GoLean.GoCore.Expr.deref
+                               (GoLean.GoCore.Expr.var "r")
+                               (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                             { key := "raft.raft" }
+                             "logger",
+                           GoLean.GoCore.Expr.stringLit
+                             { bytes := #[37, 120, 32, 91, 108, 111, 103, 116, 101, 114, 109, 58, 32, 37, 100, 44, 32,
+                                          105, 110, 100, 101, 120, 58, 32, 37, 100, 44, 32, 118, 111, 116, 101, 58, 32,
+                                          37, 120, 93, 32, 114, 101, 106, 101, 99, 116, 101, 100, 32, 37, 115, 32, 102,
+                                          114, 111, 109, 32, 37, 120, 32, 91, 108, 111, 103, 116, 101, 114, 109, 58, 32,
+                                          37, 100, 44, 32, 105, 110, 100, 101, 120, 58, 32, 37, 100, 93, 32, 97, 116,
+                                          32, 116, 101, 114, 109, 32, 37, 100] },
+                           GoLean.GoCore.Expr.var "$c1395"],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1396",
+                               typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) },
+                           GoLean.GoCore.Stmt.newValue
+                             (GoLean.GoCore.Assignee.var "$c1396")
+                             (GoLean.GoCore.Expr.fieldGet
+                               (GoLean.GoCore.Expr.deref
+                                 (GoLean.GoCore.Expr.var "r")
+                                 (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                               { key := "raft.raft" }
+                               "Term")
+                             (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)))],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1397",
+                               typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) },
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1397")
+                             (GoLean.GoCore.Expr.var "$c1396")],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1398",
+                               typ := GoLean.GoCore.Ty.pointer
+                                        (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" }) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1398"]
+                             { key := "raftpb.MessageType.Enum" }
+                             #[GoLean.GoCore.Expr.intLit 18 (GoLean.GoCore.IntKind.int32)]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1399",
+                               typ := GoLean.GoCore.Ty.pointer
+                                        (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" }) },
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1399")
+                             (GoLean.GoCore.Expr.var "$c1398")],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1400", typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.bool) },
+                           GoLean.GoCore.Stmt.newValue
+                             (GoLean.GoCore.Assignee.var "$c1400")
+                             (GoLean.GoCore.Expr.boolLit true)
+                             (some (GoLean.GoCore.Ty.bool))],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1401", typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.bool) },
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1401")
+                             (GoLean.GoCore.Expr.var "$c1400")],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1402",
+                               typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }) },
+                           GoLean.GoCore.Stmt.newValue
+                             (GoLean.GoCore.Assignee.var "$c1402")
+                             (GoLean.GoCore.Expr.structLit
+                               (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })
+                               #[GoLean.GoCore.Expr.var "$c1399",
+                                 GoLean.GoCore.Expr.fieldGet
+                                   (GoLean.GoCore.Expr.deref
+                                     (GoLean.GoCore.Expr.var "m")
+                                     (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))
+                                   { key := "raftpb.Message" }
+                                   "From",
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.var "$c1397",
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.slice
+                                     (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" }))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Snapshot" })),
+                                 GoLean.GoCore.Expr.var "$c1401",
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint8))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.slice
+                                     (GoLean.GoCore.Ty.pointer
+                                       (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })))])
+                             (some (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))],
+                       GoLean.GoCore.Stmt.call
+                         #[]
+                         { key := "raft.raft.send" }
+                         #[GoLean.GoCore.Expr.var "r", GoLean.GoCore.Expr.var "$c1402"]])
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1403", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1403"]
+                             { key := "raftpb.Message.GetType" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.ifThenElse
+                         (GoLean.GoCore.Expr.eqCmp
+                           (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                           (GoLean.GoCore.Expr.var "$c1403")
+                           (GoLean.GoCore.Expr.intLit 20 (GoLean.GoCore.IntKind.int32)))
+                         (GoLean.GoCore.Stmt.block
+                           #[]
+                           #[GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$c1404", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                 GoLean.GoCore.Stmt.call
+                                   #[GoLean.GoCore.Assignee.var "$c1404"]
+                                   { key := "raftpb.Message.GetIndex" }
+                                   #[GoLean.GoCore.Expr.var "m"]],
+                             GoLean.GoCore.Stmt.ifThenElse
+                               (GoLean.GoCore.Expr.neqCmp
+                                 (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                 (GoLean.GoCore.Expr.var "$c1404")
+                                 (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64)))
+                               (GoLean.GoCore.Stmt.block
+                                 #[]
+                                 #[GoLean.GoCore.Stmt.seqn
+                                     #[GoLean.GoCore.Stmt.initialization
+                                         { id := "$c1405",
+                                           typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                                       GoLean.GoCore.Stmt.call
+                                         #[GoLean.GoCore.Assignee.var "$c1405"]
+                                         { key := "raftpb.Message.GetType" }
+                                         #[GoLean.GoCore.Expr.var "m"]],
+                                   GoLean.GoCore.Stmt.seqn
+                                     #[GoLean.GoCore.Stmt.initialization
+                                         { id := "$c1406", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                       GoLean.GoCore.Stmt.call
+                                         #[GoLean.GoCore.Assignee.var "$c1406"]
+                                         { key := "raftpb.Message.GetTerm" }
+                                         #[GoLean.GoCore.Expr.var "m"]],
+                                   GoLean.GoCore.Stmt.seqn
+                                     #[GoLean.GoCore.Stmt.initialization
+                                         { id := "$c1407",
+                                           typ := GoLean.GoCore.Ty.slice
+                                                    (GoLean.GoCore.Ty.interface { key := "any" }) },
+                                       GoLean.GoCore.Stmt.makeSlice
+                                         (GoLean.GoCore.Assignee.var "$c1407")
+                                         (GoLean.GoCore.Ty.interface { key := "any" })
+                                         (GoLean.GoCore.Expr.intLit 4 (GoLean.GoCore.IntKind.int))
+                                         (some (GoLean.GoCore.Expr.intLit 4 (GoLean.GoCore.IntKind.int))),
+                                       GoLean.GoCore.Stmt.assign
+                                         (GoLean.GoCore.Assignee.addr
+                                           (GoLean.GoCore.Expr.indexAddr
+                                             (GoLean.GoCore.Expr.var "$c1407")
+                                             (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+                                         (GoLean.GoCore.Expr.toInterface
+                                           (GoLean.GoCore.Ty.interface { key := "any" })
+                                           (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                           (GoLean.GoCore.Expr.fieldGet
+                                             (GoLean.GoCore.Expr.deref
+                                               (GoLean.GoCore.Expr.var "r")
+                                               (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                             { key := "raft.raft" }
+                                             "id")),
+                                       GoLean.GoCore.Stmt.assign
+                                         (GoLean.GoCore.Assignee.addr
+                                           (GoLean.GoCore.Expr.indexAddr
+                                             (GoLean.GoCore.Expr.var "$c1407")
+                                             (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))))
+                                         (GoLean.GoCore.Expr.toInterface
+                                           (GoLean.GoCore.Ty.interface { key := "any" })
+                                           (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                           (GoLean.GoCore.Expr.fieldGet
+                                             (GoLean.GoCore.Expr.deref
+                                               (GoLean.GoCore.Expr.var "r")
+                                               (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                             { key := "raft.raft" }
+                                             "Term")),
+                                       GoLean.GoCore.Stmt.assign
+                                         (GoLean.GoCore.Assignee.addr
+                                           (GoLean.GoCore.Expr.indexAddr
+                                             (GoLean.GoCore.Expr.var "$c1407")
+                                             (GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int))))
+                                         (GoLean.GoCore.Expr.toInterface
+                                           (GoLean.GoCore.Ty.interface { key := "any" })
+                                           (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                                           (GoLean.GoCore.Expr.var "$c1405")),
+                                       GoLean.GoCore.Stmt.assign
+                                         (GoLean.GoCore.Assignee.addr
+                                           (GoLean.GoCore.Expr.indexAddr
+                                             (GoLean.GoCore.Expr.var "$c1407")
+                                             (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int))))
+                                         (GoLean.GoCore.Expr.toInterface
+                                           (GoLean.GoCore.Ty.interface { key := "any" })
+                                           (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                           (GoLean.GoCore.Expr.var "$c1406"))],
+                                   GoLean.GoCore.Stmt.call
+                                     #[]
+                                     { key := "raft.Logger.Infof" }
+                                     #[GoLean.GoCore.Expr.fieldGet
+                                         (GoLean.GoCore.Expr.deref
+                                           (GoLean.GoCore.Expr.var "r")
+                                           (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                         { key := "raft.raft" }
+                                         "logger",
+                                       GoLean.GoCore.Expr.stringLit
+                                         { bytes := #[37, 120, 32, 91, 116, 101, 114, 109, 58, 32, 37, 100, 93, 32, 105,
+                                                      103, 110, 111, 114, 101, 100, 32, 101, 110, 116, 114, 121, 32, 97,
+                                                      112, 112, 101, 110, 100, 115, 32, 102, 114, 111, 109, 32, 97, 32,
+                                                      37, 115, 32, 109, 101, 115, 115, 97, 103, 101, 32, 119, 105, 116,
+                                                      104, 32, 108, 111, 119, 101, 114, 32, 116, 101, 114, 109, 32, 91,
+                                                      116, 101, 114, 109, 58, 32, 37, 100, 93] },
+                                       GoLean.GoCore.Expr.var "$c1407"]])
+                               (GoLean.GoCore.Stmt.seqn #[]),
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$c1408",
+                                     typ := GoLean.GoCore.Ty.pointer
+                                              (GoLean.GoCore.Ty.defined { key := "raftpb.Snapshot" }) },
+                                 GoLean.GoCore.Stmt.call
+                                   #[GoLean.GoCore.Assignee.var "$c1408"]
+                                   { key := "raftpb.Message.GetSnapshot" }
+                                   #[GoLean.GoCore.Expr.var "m"]],
+                             GoLean.GoCore.Stmt.ifThenElse
+                               (GoLean.GoCore.Expr.neqCmp
+                                 (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Snapshot" }))
+                                 (GoLean.GoCore.Expr.var "$c1408")
+                                 (GoLean.GoCore.Expr.nil none))
+                               (GoLean.GoCore.Stmt.block
+                                 #[]
+                                 #[GoLean.GoCore.Stmt.seqn
+                                     #[GoLean.GoCore.Stmt.initialization
+                                         { id := "$c1409",
+                                           typ := GoLean.GoCore.Ty.pointer
+                                                    (GoLean.GoCore.Ty.defined { key := "raftpb.Snapshot" }) },
+                                       GoLean.GoCore.Stmt.call
+                                         #[GoLean.GoCore.Assignee.var "$c1409"]
+                                         { key := "raftpb.Message.GetSnapshot" }
+                                         #[GoLean.GoCore.Expr.var "m"]],
+                                   GoLean.GoCore.Stmt.call
+                                     #[]
+                                     { key := "raft.raft.appliedSnap" }
+                                     #[GoLean.GoCore.Expr.var "r", GoLean.GoCore.Expr.var "$c1409"]])
+                               (GoLean.GoCore.Stmt.seqn #[])])
+                         (GoLean.GoCore.Stmt.block
+                           #[]
+                           #[GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$c1410", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                                 GoLean.GoCore.Stmt.call
+                                   #[GoLean.GoCore.Assignee.var "$c1410"]
+                                   { key := "raftpb.Message.GetType" }
+                                   #[GoLean.GoCore.Expr.var "m"]],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$c1411", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                 GoLean.GoCore.Stmt.call
+                                   #[GoLean.GoCore.Assignee.var "$c1411"]
+                                   { key := "raftpb.Message.GetFrom" }
+                                   #[GoLean.GoCore.Expr.var "m"]],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$c1412", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                 GoLean.GoCore.Stmt.call
+                                   #[GoLean.GoCore.Assignee.var "$c1412"]
+                                   { key := "raftpb.Message.GetTerm" }
+                                   #[GoLean.GoCore.Expr.var "m"]],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$c1413",
+                                     typ := GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.interface { key := "any" }) },
+                                 GoLean.GoCore.Stmt.makeSlice
+                                   (GoLean.GoCore.Assignee.var "$c1413")
+                                   (GoLean.GoCore.Ty.interface { key := "any" })
+                                   (GoLean.GoCore.Expr.intLit 5 (GoLean.GoCore.IntKind.int))
+                                   (some (GoLean.GoCore.Expr.intLit 5 (GoLean.GoCore.IntKind.int))),
+                                 GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.addr
+                                     (GoLean.GoCore.Expr.indexAddr
+                                       (GoLean.GoCore.Expr.var "$c1413")
+                                       (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+                                   (GoLean.GoCore.Expr.toInterface
+                                     (GoLean.GoCore.Ty.interface { key := "any" })
+                                     (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                     (GoLean.GoCore.Expr.fieldGet
+                                       (GoLean.GoCore.Expr.deref
+                                         (GoLean.GoCore.Expr.var "r")
+                                         (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                       { key := "raft.raft" }
+                                       "id")),
+                                 GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.addr
+                                     (GoLean.GoCore.Expr.indexAddr
+                                       (GoLean.GoCore.Expr.var "$c1413")
+                                       (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))))
+                                   (GoLean.GoCore.Expr.toInterface
+                                     (GoLean.GoCore.Ty.interface { key := "any" })
+                                     (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                     (GoLean.GoCore.Expr.fieldGet
+                                       (GoLean.GoCore.Expr.deref
+                                         (GoLean.GoCore.Expr.var "r")
+                                         (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                       { key := "raft.raft" }
+                                       "Term")),
+                                 GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.addr
+                                     (GoLean.GoCore.Expr.indexAddr
+                                       (GoLean.GoCore.Expr.var "$c1413")
+                                       (GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int))))
+                                   (GoLean.GoCore.Expr.toInterface
+                                     (GoLean.GoCore.Ty.interface { key := "any" })
+                                     (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                                     (GoLean.GoCore.Expr.var "$c1410")),
+                                 GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.addr
+                                     (GoLean.GoCore.Expr.indexAddr
+                                       (GoLean.GoCore.Expr.var "$c1413")
+                                       (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int))))
+                                   (GoLean.GoCore.Expr.toInterface
+                                     (GoLean.GoCore.Ty.interface { key := "any" })
+                                     (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                     (GoLean.GoCore.Expr.var "$c1411")),
+                                 GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.addr
+                                     (GoLean.GoCore.Expr.indexAddr
+                                       (GoLean.GoCore.Expr.var "$c1413")
+                                       (GoLean.GoCore.Expr.intLit 4 (GoLean.GoCore.IntKind.int))))
+                                   (GoLean.GoCore.Expr.toInterface
+                                     (GoLean.GoCore.Ty.interface { key := "any" })
+                                     (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                     (GoLean.GoCore.Expr.var "$c1412"))],
+                             GoLean.GoCore.Stmt.call
+                               #[]
+                               { key := "raft.Logger.Infof" }
+                               #[GoLean.GoCore.Expr.fieldGet
+                                   (GoLean.GoCore.Expr.deref
+                                     (GoLean.GoCore.Expr.var "r")
+                                     (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                   { key := "raft.raft" }
+                                   "logger",
+                                 GoLean.GoCore.Expr.stringLit
+                                   { bytes := #[37, 120, 32, 91, 116, 101, 114, 109, 58, 32, 37, 100, 93, 32, 105, 103,
+                                                110, 111, 114, 101, 100, 32, 97, 32, 37, 115, 32, 109, 101, 115, 115,
+                                                97, 103, 101, 32, 119, 105, 116, 104, 32, 108, 111, 119, 101, 114, 32,
+                                                116, 101, 114, 109, 32, 102, 114, 111, 109, 32, 37, 120, 32, 91, 116,
+                                                101, 114, 109, 58, 32, 37, 100, 93] },
+                                 GoLean.GoCore.Expr.var "$c1413"]])])]),
+           GoLean.GoCore.Stmt.seqn
+             #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res0") (GoLean.GoCore.Expr.nil none),
+               GoLean.GoCore.Stmt.returnStmt]]])
+   (GoLean.GoCore.Stmt.seqn #[])]) ([[("$swf1414", GoLean.Loc.base { id := 6181 }), ("$swi1414", GoLean.Loc.base { id := 6174 })],
+ [],
+ [("$res0", GoLean.Loc.base { id := 6171 }),
+  ("m", GoLean.Loc.base { id := 6170 }),
+  ("r", GoLean.Loc.base { id := 6169 })]]) (GoLean.Sym.Cont.breakableK (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.breakable
+   (GoLean.GoCore.Stmt.block
+     #[]
+     #[GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.initialization
+             { id := "$c1418", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+           GoLean.GoCore.Stmt.call
+             #[GoLean.GoCore.Assignee.var "$c1418"]
+             { key := "raftpb.Message.GetType" }
+             #[GoLean.GoCore.Expr.var "m"]],
+       GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.initialization
+             { id := "$sw1419", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+           GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$sw1419") (GoLean.GoCore.Expr.var "$c1418")],
+       GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.initialization
+             { id := "$swi1467", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+           GoLean.GoCore.Stmt.assign
+             (GoLean.GoCore.Assignee.var "$swi1467")
+             (GoLean.GoCore.Expr.intLit 4 (GoLean.GoCore.IntKind.int))],
+       GoLean.GoCore.Stmt.block
+         #[]
+         #[GoLean.GoCore.Stmt.ifThenElse
+             (GoLean.GoCore.Expr.eqCmp
+               (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+               (GoLean.GoCore.Expr.var "$sw1419")
+               (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int32)))
+             (GoLean.GoCore.Stmt.seqn
+               #[GoLean.GoCore.Stmt.assign
+                   (GoLean.GoCore.Assignee.var "$swi1467")
+                   (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))])
+             (GoLean.GoCore.Stmt.block
+               #[]
+               #[GoLean.GoCore.Stmt.ifThenElse
+                   (GoLean.GoCore.Expr.eqCmp
+                     (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                     (GoLean.GoCore.Expr.var "$sw1419")
+                     (GoLean.GoCore.Expr.intLit 20 (GoLean.GoCore.IntKind.int32)))
+                   (GoLean.GoCore.Stmt.seqn
+                     #[GoLean.GoCore.Stmt.assign
+                         (GoLean.GoCore.Assignee.var "$swi1467")
+                         (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))])
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.ifThenElse
+                         (GoLean.GoCore.Expr.eqCmp
+                           (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                           (GoLean.GoCore.Expr.var "$sw1419")
+                           (GoLean.GoCore.Expr.intLit 22 (GoLean.GoCore.IntKind.int32)))
+                         (GoLean.GoCore.Stmt.seqn
+                           #[GoLean.GoCore.Stmt.assign
+                               (GoLean.GoCore.Assignee.var "$swi1467")
+                               (GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int))])
+                         (GoLean.GoCore.Stmt.block
+                           #[]
+                           #[GoLean.GoCore.Stmt.ifThenElse
+                               (GoLean.GoCore.Expr.eqCmp
+                                 (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                                 (GoLean.GoCore.Expr.var "$sw1419")
+                                 (GoLean.GoCore.Expr.intLit 5 (GoLean.GoCore.IntKind.int32)))
+                               (GoLean.GoCore.Stmt.seqn
+                                 #[GoLean.GoCore.Stmt.assign
+                                     (GoLean.GoCore.Assignee.var "$swi1467")
+                                     (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int))])
+                               (GoLean.GoCore.Stmt.block
+                                 #[]
+                                 #[GoLean.GoCore.Stmt.ifThenElse
+                                     (GoLean.GoCore.Expr.eqCmp
+                                       (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                                       (GoLean.GoCore.Expr.var "$sw1419")
+                                       (GoLean.GoCore.Expr.intLit 17 (GoLean.GoCore.IntKind.int32)))
+                                     (GoLean.GoCore.Stmt.seqn
+                                       #[GoLean.GoCore.Stmt.assign
+                                           (GoLean.GoCore.Assignee.var "$swi1467")
+                                           (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int))])
+                                     (GoLean.GoCore.Stmt.seqn #[])])])])])],
+       GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.initialization { id := "$swf1467", typ := GoLean.GoCore.Ty.bool },
+           GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$swf1467") (GoLean.GoCore.Expr.boolLit false)],
+       GoLean.GoCore.Stmt.ifThenElse
+         (GoLean.GoCore.Expr.or
+           (GoLean.GoCore.Expr.var "$swf1467")
+           (GoLean.GoCore.Expr.eqCmp
+             (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+             (GoLean.GoCore.Expr.var "$swi1467")
+             (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+         (GoLean.GoCore.Stmt.block
+           #[]
+           #[GoLean.GoCore.Stmt.seqn
+               #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$swf1467") (GoLean.GoCore.Expr.boolLit false)],
+             GoLean.GoCore.Stmt.block
+               #[]
+               #[GoLean.GoCore.Stmt.ifThenElse
+                   (GoLean.GoCore.Expr.fieldGet
+                     (GoLean.GoCore.Expr.deref
+                       (GoLean.GoCore.Expr.var "r")
+                       (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                     { key := "raft.raft" }
+                     "preVote")
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.call
+                         #[]
+                         { key := "raft.raft.hup" }
+                         #[GoLean.GoCore.Expr.var "r",
+                           GoLean.GoCore.Expr.stringLit
+                             { bytes := #[67, 97, 109, 112, 97, 105, 103, 110, 80, 114, 101, 69, 108, 101, 99, 116, 105,
+                                          111, 110] }]])
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.call
+                         #[]
+                         { key := "raft.raft.hup" }
+                         #[GoLean.GoCore.Expr.var "r",
+                           GoLean.GoCore.Expr.stringLit
+                             { bytes := #[67, 97, 109, 112, 97, 105, 103, 110, 69, 108, 101, 99, 116, 105, 111,
+                                          110] }]])]])
+         (GoLean.GoCore.Stmt.seqn #[]),
+       GoLean.GoCore.Stmt.ifThenElse
+         (GoLean.GoCore.Expr.or
+           (GoLean.GoCore.Expr.var "$swf1467")
+           (GoLean.GoCore.Expr.eqCmp
+             (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+             (GoLean.GoCore.Expr.var "$swi1467")
+             (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))))
+         (GoLean.GoCore.Stmt.block
+           #[]
+           #[GoLean.GoCore.Stmt.seqn
+               #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$swf1467") (GoLean.GoCore.Expr.boolLit false)],
+             GoLean.GoCore.Stmt.block
+               #[]
+               #[GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1420", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                     GoLean.GoCore.Stmt.call
+                       #[GoLean.GoCore.Assignee.var "$c1420"]
+                       { key := "raftpb.Message.GetIndex" }
+                       #[GoLean.GoCore.Expr.var "m"]],
+                 GoLean.GoCore.Stmt.ifThenElse
+                   (GoLean.GoCore.Expr.neqCmp
+                     (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                     (GoLean.GoCore.Expr.var "$c1420")
+                     (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64)))
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1421", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1421"]
+                             { key := "raftpb.Message.GetLogTerm" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1422", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1422")
+                             (GoLean.GoCore.Expr.var "$c1421")],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1423", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1423"]
+                             { key := "raftpb.Message.GetIndex" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1424", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1424")
+                             (GoLean.GoCore.Expr.var "$c1423")],
+                       GoLean.GoCore.Stmt.call
+                         #[]
+                         { key := "raft.raftLog.stableTo" }
+                         #[GoLean.GoCore.Expr.fieldGet
+                             (GoLean.GoCore.Expr.deref
+                               (GoLean.GoCore.Expr.var "r")
+                               (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                             { key := "raft.raft" }
+                             "raftLog",
+                           GoLean.GoCore.Expr.structLit
+                             (GoLean.GoCore.Ty.defined { key := "raft.entryID" })
+                             #[GoLean.GoCore.Expr.var "$c1422", GoLean.GoCore.Expr.var "$c1424"]]])
+                   (GoLean.GoCore.Stmt.seqn #[]),
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1425",
+                         typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Snapshot" }) },
+                     GoLean.GoCore.Stmt.call
+                       #[GoLean.GoCore.Assignee.var "$c1425"]
+                       { key := "raftpb.Message.GetSnapshot" }
+                       #[GoLean.GoCore.Expr.var "m"]],
+                 GoLean.GoCore.Stmt.ifThenElse
+                   (GoLean.GoCore.Expr.neqCmp
+                     (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Snapshot" }))
+                     (GoLean.GoCore.Expr.var "$c1425")
+                     (GoLean.GoCore.Expr.nil none))
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1426",
+                               typ := GoLean.GoCore.Ty.pointer
+                                        (GoLean.GoCore.Ty.defined { key := "raftpb.Snapshot" }) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1426"]
+                             { key := "raftpb.Message.GetSnapshot" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.call
+                         #[]
+                         { key := "raft.raft.appliedSnap" }
+                         #[GoLean.GoCore.Expr.var "r", GoLean.GoCore.Expr.var "$c1426"]])
+                   (GoLean.GoCore.Stmt.seqn #[])]])
+         (GoLean.GoCore.Stmt.seqn #[]),
+       GoLean.GoCore.Stmt.ifThenElse
+         (GoLean.GoCore.Expr.or
+           (GoLean.GoCore.Expr.var "$swf1467")
+           (GoLean.GoCore.Expr.eqCmp
+             (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+             (GoLean.GoCore.Expr.var "$swi1467")
+             (GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int))))
+         (GoLean.GoCore.Stmt.block
+           #[]
+           #[GoLean.GoCore.Stmt.seqn
+               #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$swf1467") (GoLean.GoCore.Expr.boolLit false)],
+             GoLean.GoCore.Stmt.block
+               #[]
+               #[GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1427",
+                         typ := GoLean.GoCore.Ty.slice
+                                  (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })) },
+                     GoLean.GoCore.Stmt.call
+                       #[GoLean.GoCore.Assignee.var "$c1427"]
+                       { key := "raftpb.Message.GetEntries" }
+                       #[GoLean.GoCore.Expr.var "m"]],
+                 GoLean.GoCore.Stmt.ifThenElse
+                   (GoLean.GoCore.Expr.greaterCmp
+                     (GoLean.GoCore.Expr.length
+                       (GoLean.GoCore.Expr.var "$c1427")
+                       (some (GoLean.GoCore.Ty.slice
+                          (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })))))
+                     (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int)))
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1428",
+                               typ := GoLean.GoCore.Ty.slice
+                                        (GoLean.GoCore.Ty.pointer
+                                          (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1428"]
+                             { key := "raftpb.Message.GetEntries" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1429",
+                               typ := GoLean.GoCore.Ty.slice
+                                        (GoLean.GoCore.Ty.pointer
+                                          (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1429"]
+                             { key := "raftpb.Message.GetEntries" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "index", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "index"]
+                             { key := "raftpb.Entry.GetIndex" }
+                             #[GoLean.GoCore.Expr.indexGet
+                                 (GoLean.GoCore.Expr.var "$c1428")
+                                 (GoLean.GoCore.Expr.sub
+                                   (GoLean.GoCore.Expr.length
+                                     (GoLean.GoCore.Expr.var "$c1429")
+                                     (some (GoLean.GoCore.Ty.slice
+                                        (GoLean.GoCore.Ty.pointer
+                                          (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })))))
+                                   (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int)))]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1430",
+                               typ := GoLean.GoCore.Ty.slice
+                                        (GoLean.GoCore.Ty.pointer
+                                          (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1430"]
+                             { key := "raftpb.Message.GetEntries" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1431", typ := GoLean.GoCore.Ty.defined { key := "raft.entryEncodingSize" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1431"]
+                             { key := "raft.entsSize" }
+                             #[GoLean.GoCore.Expr.var "$c1430"]],
+                       GoLean.GoCore.Stmt.call
+                         #[]
+                         { key := "raft.raft.appliedTo" }
+                         #[GoLean.GoCore.Expr.var "r", GoLean.GoCore.Expr.var "index", GoLean.GoCore.Expr.var "$c1431"],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1432",
+                               typ := GoLean.GoCore.Ty.slice
+                                        (GoLean.GoCore.Ty.pointer
+                                          (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" })) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1432"]
+                             { key := "raftpb.Message.GetEntries" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1433", typ := GoLean.GoCore.Ty.defined { key := "raft.entryPayloadSize" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1433"]
+                             { key := "raft.payloadsSize" }
+                             #[GoLean.GoCore.Expr.var "$c1432"]],
+                       GoLean.GoCore.Stmt.call
+                         #[]
+                         { key := "raft.raft.reduceUncommittedSize" }
+                         #[GoLean.GoCore.Expr.var "r", GoLean.GoCore.Expr.var "$c1433"]])
+                   (GoLean.GoCore.Stmt.seqn #[])]])
+         (GoLean.GoCore.Stmt.seqn #[]),
+       GoLean.GoCore.Stmt.ifThenElse
+         (GoLean.GoCore.Expr.or
+           (GoLean.GoCore.Expr.var "$swf1467")
+           (GoLean.GoCore.Expr.eqCmp
+             (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+             (GoLean.GoCore.Expr.var "$swi1467")
+             (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int))))
+         (GoLean.GoCore.Stmt.block
+           #[]
+           #[GoLean.GoCore.Stmt.seqn
+               #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$swf1467") (GoLean.GoCore.Expr.boolLit false)],
+             GoLean.GoCore.Stmt.block
+               #[]
+               #[GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1434", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                     GoLean.GoCore.Stmt.call
+                       #[GoLean.GoCore.Assignee.var "$c1434"]
+                       { key := "raftpb.Message.GetFrom" }
+                       #[GoLean.GoCore.Expr.var "m"]],
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization { id := "$c1438", typ := GoLean.GoCore.Ty.bool },
+                     GoLean.GoCore.Stmt.assign
+                       (GoLean.GoCore.Assignee.var "$c1438")
+                       (GoLean.GoCore.Expr.or
+                         (GoLean.GoCore.Expr.eqCmp
+                           (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                           (GoLean.GoCore.Expr.fieldGet
+                             (GoLean.GoCore.Expr.deref
+                               (GoLean.GoCore.Expr.var "r")
+                               (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                             { key := "raft.raft" }
+                             "Vote")
+                           (GoLean.GoCore.Expr.var "$c1434"))
+                         (GoLean.GoCore.Expr.and
+                           (GoLean.GoCore.Expr.eqCmp
+                             (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                             (GoLean.GoCore.Expr.fieldGet
+                               (GoLean.GoCore.Expr.deref
+                                 (GoLean.GoCore.Expr.var "r")
+                                 (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                               { key := "raft.raft" }
+                               "Vote")
+                             (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64)))
+                           (GoLean.GoCore.Expr.eqCmp
+                             (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                             (GoLean.GoCore.Expr.fieldGet
+                               (GoLean.GoCore.Expr.deref
+                                 (GoLean.GoCore.Expr.var "r")
+                                 (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                               { key := "raft.raft" }
+                               "lead")
+                             (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64)))))],
+                 GoLean.GoCore.Stmt.ifThenElse
+                   (GoLean.GoCore.Expr.not (GoLean.GoCore.Expr.var "$c1438"))
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1435", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1435"]
+                             { key := "raftpb.Message.GetType" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization { id := "$c1437", typ := GoLean.GoCore.Ty.bool },
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1437")
+                             (GoLean.GoCore.Expr.eqCmp
+                               (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                               (GoLean.GoCore.Expr.var "$c1435")
+                               (GoLean.GoCore.Expr.intLit 17 (GoLean.GoCore.IntKind.int32)))],
+                       GoLean.GoCore.Stmt.ifThenElse
+                         (GoLean.GoCore.Expr.var "$c1437")
+                         (GoLean.GoCore.Stmt.block
+                           #[]
+                           #[GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$c1436", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                 GoLean.GoCore.Stmt.call
+                                   #[GoLean.GoCore.Assignee.var "$c1436"]
+                                   { key := "raftpb.Message.GetTerm" }
+                                   #[GoLean.GoCore.Expr.var "m"]],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.var "$c1437")
+                                   (GoLean.GoCore.Expr.greaterCmp
+                                     (GoLean.GoCore.Expr.var "$c1436")
+                                     (GoLean.GoCore.Expr.fieldGet
+                                       (GoLean.GoCore.Expr.deref
+                                         (GoLean.GoCore.Expr.var "r")
+                                         (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                       { key := "raft.raft" }
+                                       "Term"))]])
+                         (GoLean.GoCore.Stmt.seqn #[]),
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1438")
+                             (GoLean.GoCore.Expr.var "$c1437")]])
+                   (GoLean.GoCore.Stmt.seqn #[]),
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization { id := "canVote", typ := GoLean.GoCore.Ty.bool },
+                     GoLean.GoCore.Stmt.assign
+                       (GoLean.GoCore.Assignee.var "canVote")
+                       (GoLean.GoCore.Expr.var "$c1438")],
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "lastID", typ := GoLean.GoCore.Ty.defined { key := "raft.entryID" } },
+                     GoLean.GoCore.Stmt.call
+                       #[GoLean.GoCore.Assignee.var "lastID"]
+                       { key := "raft.raftLog.lastEntryID" }
+                       #[GoLean.GoCore.Expr.fieldGet
+                           (GoLean.GoCore.Expr.deref
+                             (GoLean.GoCore.Expr.var "r")
+                             (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                           { key := "raft.raft" }
+                           "raftLog"]],
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1439", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                     GoLean.GoCore.Stmt.call
+                       #[GoLean.GoCore.Assignee.var "$c1439"]
+                       { key := "raftpb.Message.GetLogTerm" }
+                       #[GoLean.GoCore.Expr.var "m"]],
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1440", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$c1440") (GoLean.GoCore.Expr.var "$c1439")],
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1441", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                     GoLean.GoCore.Stmt.call
+                       #[GoLean.GoCore.Assignee.var "$c1441"]
+                       { key := "raftpb.Message.GetIndex" }
+                       #[GoLean.GoCore.Expr.var "m"]],
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "$c1442", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$c1442") (GoLean.GoCore.Expr.var "$c1441")],
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "candLastID", typ := GoLean.GoCore.Ty.defined { key := "raft.entryID" } },
+                     GoLean.GoCore.Stmt.assign
+                       (GoLean.GoCore.Assignee.var "candLastID")
+                       (GoLean.GoCore.Expr.structLit
+                         (GoLean.GoCore.Ty.defined { key := "raft.entryID" })
+                         #[GoLean.GoCore.Expr.var "$c1440", GoLean.GoCore.Expr.var "$c1442"])],
+                 GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization { id := "$c1444", typ := GoLean.GoCore.Ty.bool },
+                     GoLean.GoCore.Stmt.assign
+                       (GoLean.GoCore.Assignee.var "$c1444")
+                       (GoLean.GoCore.Expr.var "canVote")],
+                 GoLean.GoCore.Stmt.ifThenElse
+                   (GoLean.GoCore.Expr.var "$c1444")
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization { id := "$c1443", typ := GoLean.GoCore.Ty.bool },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1443"]
+                             { key := "raft.raftLog.isUpToDate" }
+                             #[GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.deref
+                                   (GoLean.GoCore.Expr.var "r")
+                                   (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                 { key := "raft.raft" }
+                                 "raftLog",
+                               GoLean.GoCore.Expr.var "candLastID"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1444")
+                             (GoLean.GoCore.Expr.var "$c1443")]])
+                   (GoLean.GoCore.Stmt.seqn #[]),
+                 GoLean.GoCore.Stmt.ifThenElse
+                   (GoLean.GoCore.Expr.var "$c1444")
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1445", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1445"]
+                             { key := "raftpb.Message.GetType" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1446", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1446"]
+                             { key := "raftpb.Message.GetFrom" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1447",
+                               typ := GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.interface { key := "any" }) },
+                           GoLean.GoCore.Stmt.makeSlice
+                             (GoLean.GoCore.Assignee.var "$c1447")
+                             (GoLean.GoCore.Ty.interface { key := "any" })
+                             (GoLean.GoCore.Expr.intLit 9 (GoLean.GoCore.IntKind.int))
+                             (some (GoLean.GoCore.Expr.intLit 9 (GoLean.GoCore.IntKind.int))),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1447")
+                                 (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.deref
+                                   (GoLean.GoCore.Expr.var "r")
+                                   (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                 { key := "raft.raft" }
+                                 "id")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1447")
+                                 (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.var "lastID")
+                                 { key := "raft.entryID" }
+                                 "term")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1447")
+                                 (GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.var "lastID")
+                                 { key := "raft.entryID" }
+                                 "index")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1447")
+                                 (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.deref
+                                   (GoLean.GoCore.Expr.var "r")
+                                   (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                 { key := "raft.raft" }
+                                 "Vote")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1447")
+                                 (GoLean.GoCore.Expr.intLit 4 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                               (GoLean.GoCore.Expr.var "$c1445")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1447")
+                                 (GoLean.GoCore.Expr.intLit 5 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.var "$c1446")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1447")
+                                 (GoLean.GoCore.Expr.intLit 6 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.var "candLastID")
+                                 { key := "raft.entryID" }
+                                 "term")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1447")
+                                 (GoLean.GoCore.Expr.intLit 7 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.var "candLastID")
+                                 { key := "raft.entryID" }
+                                 "index")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1447")
+                                 (GoLean.GoCore.Expr.intLit 8 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.deref
+                                   (GoLean.GoCore.Expr.var "r")
+                                   (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                 { key := "raft.raft" }
+                                 "Term"))],
+                       GoLean.GoCore.Stmt.call
+                         #[]
+                         { key := "raft.Logger.Infof" }
+                         #[GoLean.GoCore.Expr.fieldGet
+                             (GoLean.GoCore.Expr.deref
+                               (GoLean.GoCore.Expr.var "r")
+                               (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                             { key := "raft.raft" }
+                             "logger",
+                           GoLean.GoCore.Expr.stringLit
+                             { bytes := #[37, 120, 32, 91, 108, 111, 103, 116, 101, 114, 109, 58, 32, 37, 100, 44, 32,
+                                          105, 110, 100, 101, 120, 58, 32, 37, 100, 44, 32, 118, 111, 116, 101, 58, 32,
+                                          37, 120, 93, 32, 99, 97, 115, 116, 32, 37, 115, 32, 102, 111, 114, 32, 37,
+                                          120, 32, 91, 108, 111, 103, 116, 101, 114, 109, 58, 32, 37, 100, 44, 32, 105,
+                                          110, 100, 101, 120, 58, 32, 37, 100, 93, 32, 97, 116, 32, 116, 101, 114, 109,
+                                          32, 37, 100] },
+                           GoLean.GoCore.Expr.var "$c1447"],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1448", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1448"]
+                             { key := "raftpb.Message.GetType" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1449", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1449"]
+                             { key := "raft.voteRespMsgType" }
+                             #[GoLean.GoCore.Expr.var "$c1448"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1450",
+                               typ := GoLean.GoCore.Ty.pointer
+                                        (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" }) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1450"]
+                             { key := "raftpb.MessageType.Enum" }
+                             #[GoLean.GoCore.Expr.var "$c1449"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1451",
+                               typ := GoLean.GoCore.Ty.pointer
+                                        (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" }) },
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1451")
+                             (GoLean.GoCore.Expr.var "$c1450")],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1452",
+                               typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }) },
+                           GoLean.GoCore.Stmt.newValue
+                             (GoLean.GoCore.Assignee.var "$c1452")
+                             (GoLean.GoCore.Expr.structLit
+                               (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })
+                               #[GoLean.GoCore.Expr.var "$c1451",
+                                 GoLean.GoCore.Expr.fieldGet
+                                   (GoLean.GoCore.Expr.deref
+                                     (GoLean.GoCore.Expr.var "m")
+                                     (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))
+                                   { key := "raftpb.Message" }
+                                   "From",
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.fieldGet
+                                   (GoLean.GoCore.Expr.deref
+                                     (GoLean.GoCore.Expr.var "m")
+                                     (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))
+                                   { key := "raftpb.Message" }
+                                   "Term",
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.slice
+                                     (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" }))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Snapshot" })),
+                                 GoLean.GoCore.Expr.defaultValue (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.bool)),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint8))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.slice
+                                     (GoLean.GoCore.Ty.pointer
+                                       (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })))])
+                             (some (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))],
+                       GoLean.GoCore.Stmt.call
+                         #[]
+                         { key := "raft.raft.send" }
+                         #[GoLean.GoCore.Expr.var "r", GoLean.GoCore.Expr.var "$c1452"],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1453", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1453"]
+                             { key := "raftpb.Message.GetType" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.ifThenElse
+                         (GoLean.GoCore.Expr.eqCmp
+                           (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                           (GoLean.GoCore.Expr.var "$c1453")
+                           (GoLean.GoCore.Expr.intLit 5 (GoLean.GoCore.IntKind.int32)))
+                         (GoLean.GoCore.Stmt.block
+                           #[]
+                           #[GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.addr
+                                     (GoLean.GoCore.Expr.fieldAddr
+                                       (GoLean.GoCore.Expr.var "r")
+                                       { key := "raft.raft" }
+                                       "electionElapsed"))
+                                   (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$c1454", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                 GoLean.GoCore.Stmt.call
+                                   #[GoLean.GoCore.Assignee.var "$c1454"]
+                                   { key := "raftpb.Message.GetFrom" }
+                                   #[GoLean.GoCore.Expr.var "m"]],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.addr
+                                     (GoLean.GoCore.Expr.fieldAddr
+                                       (GoLean.GoCore.Expr.var "r")
+                                       { key := "raft.raft" }
+                                       "Vote"))
+                                   (GoLean.GoCore.Expr.var "$c1454")]])
+                         (GoLean.GoCore.Stmt.seqn #[])])
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1455", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1455"]
+                             { key := "raftpb.Message.GetType" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1456", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1456"]
+                             { key := "raftpb.Message.GetFrom" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1457",
+                               typ := GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.interface { key := "any" }) },
+                           GoLean.GoCore.Stmt.makeSlice
+                             (GoLean.GoCore.Assignee.var "$c1457")
+                             (GoLean.GoCore.Ty.interface { key := "any" })
+                             (GoLean.GoCore.Expr.intLit 9 (GoLean.GoCore.IntKind.int))
+                             (some (GoLean.GoCore.Expr.intLit 9 (GoLean.GoCore.IntKind.int))),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1457")
+                                 (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.deref
+                                   (GoLean.GoCore.Expr.var "r")
+                                   (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                 { key := "raft.raft" }
+                                 "id")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1457")
+                                 (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.var "lastID")
+                                 { key := "raft.entryID" }
+                                 "term")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1457")
+                                 (GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.var "lastID")
+                                 { key := "raft.entryID" }
+                                 "index")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1457")
+                                 (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.deref
+                                   (GoLean.GoCore.Expr.var "r")
+                                   (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                 { key := "raft.raft" }
+                                 "Vote")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1457")
+                                 (GoLean.GoCore.Expr.intLit 4 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" })
+                               (GoLean.GoCore.Expr.var "$c1455")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1457")
+                                 (GoLean.GoCore.Expr.intLit 5 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.var "$c1456")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1457")
+                                 (GoLean.GoCore.Expr.intLit 6 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.var "candLastID")
+                                 { key := "raft.entryID" }
+                                 "term")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1457")
+                                 (GoLean.GoCore.Expr.intLit 7 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.var "candLastID")
+                                 { key := "raft.entryID" }
+                                 "index")),
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.addr
+                               (GoLean.GoCore.Expr.indexAddr
+                                 (GoLean.GoCore.Expr.var "$c1457")
+                                 (GoLean.GoCore.Expr.intLit 8 (GoLean.GoCore.IntKind.int))))
+                             (GoLean.GoCore.Expr.toInterface
+                               (GoLean.GoCore.Ty.interface { key := "any" })
+                               (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                               (GoLean.GoCore.Expr.fieldGet
+                                 (GoLean.GoCore.Expr.deref
+                                   (GoLean.GoCore.Expr.var "r")
+                                   (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                                 { key := "raft.raft" }
+                                 "Term"))],
+                       GoLean.GoCore.Stmt.call
+                         #[]
+                         { key := "raft.Logger.Infof" }
+                         #[GoLean.GoCore.Expr.fieldGet
+                             (GoLean.GoCore.Expr.deref
+                               (GoLean.GoCore.Expr.var "r")
+                               (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                             { key := "raft.raft" }
+                             "logger",
+                           GoLean.GoCore.Expr.stringLit
+                             { bytes := #[37, 120, 32, 91, 108, 111, 103, 116, 101, 114, 109, 58, 32, 37, 100, 44, 32,
+                                          105, 110, 100, 101, 120, 58, 32, 37, 100, 44, 32, 118, 111, 116, 101, 58, 32,
+                                          37, 120, 93, 32, 114, 101, 106, 101, 99, 116, 101, 100, 32, 37, 115, 32, 102,
+                                          114, 111, 109, 32, 37, 120, 32, 91, 108, 111, 103, 116, 101, 114, 109, 58, 32,
+                                          37, 100, 44, 32, 105, 110, 100, 101, 120, 58, 32, 37, 100, 93, 32, 97, 116,
+                                          32, 116, 101, 114, 109, 32, 37, 100] },
+                           GoLean.GoCore.Expr.var "$c1457"],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1458",
+                               typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) },
+                           GoLean.GoCore.Stmt.newValue
+                             (GoLean.GoCore.Assignee.var "$c1458")
+                             (GoLean.GoCore.Expr.fieldGet
+                               (GoLean.GoCore.Expr.deref
+                                 (GoLean.GoCore.Expr.var "r")
+                                 (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                               { key := "raft.raft" }
+                               "Term")
+                             (some (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)))],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1459",
+                               typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) },
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1459")
+                             (GoLean.GoCore.Expr.var "$c1458")],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1460", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1460"]
+                             { key := "raftpb.Message.GetType" }
+                             #[GoLean.GoCore.Expr.var "m"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1461", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1461"]
+                             { key := "raft.voteRespMsgType" }
+                             #[GoLean.GoCore.Expr.var "$c1460"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1462",
+                               typ := GoLean.GoCore.Ty.pointer
+                                        (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" }) },
+                           GoLean.GoCore.Stmt.call
+                             #[GoLean.GoCore.Assignee.var "$c1462"]
+                             { key := "raftpb.MessageType.Enum" }
+                             #[GoLean.GoCore.Expr.var "$c1461"]],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1463",
+                               typ := GoLean.GoCore.Ty.pointer
+                                        (GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" }) },
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1463")
+                             (GoLean.GoCore.Expr.var "$c1462")],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1464", typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.bool) },
+                           GoLean.GoCore.Stmt.newValue
+                             (GoLean.GoCore.Assignee.var "$c1464")
+                             (GoLean.GoCore.Expr.boolLit true)
+                             (some (GoLean.GoCore.Ty.bool))],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1465", typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.bool) },
+                           GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$c1465")
+                             (GoLean.GoCore.Expr.var "$c1464")],
+                       GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.initialization
+                             { id := "$c1466",
+                               typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }) },
+                           GoLean.GoCore.Stmt.newValue
+                             (GoLean.GoCore.Assignee.var "$c1466")
+                             (GoLean.GoCore.Expr.structLit
+                               (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })
+                               #[GoLean.GoCore.Expr.var "$c1463",
+                                 GoLean.GoCore.Expr.fieldGet
+                                   (GoLean.GoCore.Expr.deref
+                                     (GoLean.GoCore.Expr.var "m")
+                                     (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))
+                                   { key := "raftpb.Message" }
+                                   "From",
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.var "$c1459",
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.slice
+                                     (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Entry" }))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Snapshot" })),
+                                 GoLean.GoCore.Expr.var "$c1465",
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint8))),
+                                 GoLean.GoCore.Expr.defaultValue
+                                   (GoLean.GoCore.Ty.slice
+                                     (GoLean.GoCore.Ty.pointer
+                                       (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })))])
+                             (some (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }))],
+                       GoLean.GoCore.Stmt.call
+                         #[]
+                         { key := "raft.raft.send" }
+                         #[GoLean.GoCore.Expr.var "r", GoLean.GoCore.Expr.var "$c1466"]])]])
+         (GoLean.GoCore.Stmt.seqn #[]),
+       GoLean.GoCore.Stmt.ifThenElse
+         (GoLean.GoCore.Expr.or
+           (GoLean.GoCore.Expr.var "$swf1467")
+           (GoLean.GoCore.Expr.eqCmp
+             (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+             (GoLean.GoCore.Expr.var "$swi1467")
+             (GoLean.GoCore.Expr.intLit 4 (GoLean.GoCore.IntKind.int))))
+         (GoLean.GoCore.Stmt.block
+           #[]
+           #[GoLean.GoCore.Stmt.seqn
+               #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$swf1467") (GoLean.GoCore.Expr.boolLit false)],
+             GoLean.GoCore.Stmt.block
+               #[]
+               #[GoLean.GoCore.Stmt.seqn
+                   #[GoLean.GoCore.Stmt.initialization
+                       { id := "err", typ := GoLean.GoCore.Ty.interface { key := "error" } },
+                     GoLean.GoCore.Stmt.callValue
+                       #[GoLean.GoCore.Assignee.var "err"]
+                       (GoLean.GoCore.Expr.fieldGet
+                         (GoLean.GoCore.Expr.deref
+                           (GoLean.GoCore.Expr.var "r")
+                           (GoLean.GoCore.Ty.defined { key := "raft.raft" }))
+                         { key := "raft.raft" }
+                         "step")
+                       #[GoLean.GoCore.Expr.var "r", GoLean.GoCore.Expr.var "m"]],
+                 GoLean.GoCore.Stmt.ifThenElse
+                   (GoLean.GoCore.Expr.neqCmp
+                     (GoLean.GoCore.Ty.interface { key := "error" })
+                     (GoLean.GoCore.Expr.var "err")
+                     (GoLean.GoCore.Expr.nil none))
+                   (GoLean.GoCore.Stmt.block
+                     #[]
+                     #[GoLean.GoCore.Stmt.seqn
+                         #[GoLean.GoCore.Stmt.assign
+                             (GoLean.GoCore.Assignee.var "$res0")
+                             (GoLean.GoCore.Expr.var "err"),
+                           GoLean.GoCore.Stmt.returnStmt]])
+                   (GoLean.GoCore.Stmt.seqn #[])]])
+         (GoLean.GoCore.Stmt.seqn #[])]),
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res0") (GoLean.GoCore.Expr.nil none),
+     GoLean.GoCore.Stmt.returnStmt]]) ([[],
+ [("$res0", GoLean.Loc.base { id := 6171 }),
+  ("m", GoLean.Loc.base { id := 6170 }),
+  ("r", GoLean.Loc.base { id := 6169 })]]) (GoLean.Sym.Cont.frame ([(GoLean.GoCore.Machine.TargetShape.chain [], [GoLean.GoCore.Expr.ref "$c1790"])]) ([[("$c1790", GoLean.Loc.base { id := 6168 }),
+  ("$c1789", GoLean.Loc.base { id := 6167 }),
+  ("$c1787", GoLean.Loc.base { id := 6166 }),
+  ("$c1784", GoLean.Loc.base { id := 6158 }),
+  ("$c1783", GoLean.Loc.base { id := 6155 }),
+  ("$c1782", GoLean.Loc.base { id := 6154 }),
+  ("$c1779", GoLean.Loc.base { id := 6146 }),
+  ("$c1778", GoLean.Loc.base { id := 6143 })],
+ [("$res0", GoLean.Loc.base { id := 6142 }),
+  ("m", GoLean.Loc.base { id := 6141 }),
+  ("rn", GoLean.Loc.base { id := 6140 })]]) ([GoLean.Loc.base { id := 6171 }]) [] (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res0") (GoLean.GoCore.Expr.var "$c1790"),
+     GoLean.GoCore.Stmt.returnStmt]]) ([[("$c1790", GoLean.Loc.base { id := 6168 }),
+  ("$c1789", GoLean.Loc.base { id := 6167 }),
+  ("$c1787", GoLean.Loc.base { id := 6166 }),
+  ("$c1784", GoLean.Loc.base { id := 6158 }),
+  ("$c1783", GoLean.Loc.base { id := 6155 }),
+  ("$c1782", GoLean.Loc.base { id := 6154 }),
+  ("$c1779", GoLean.Loc.base { id := 6146 }),
+  ("$c1778", GoLean.Loc.base { id := 6143 })],
+ [("$res0", GoLean.Loc.base { id := 6142 }),
+  ("m", GoLean.Loc.base { id := 6141 }),
+  ("rn", GoLean.Loc.base { id := 6140 })]]) (GoLean.Sym.Cont.frame ([(GoLean.GoCore.Machine.TargetShape.chain [], [GoLean.GoCore.Expr.ref "err"])]) ([[("err", GoLean.Loc.base { id := 6139 })],
+ [("to", GoLean.Loc.base { id := 6138 }),
+  ("$c2316", GoLean.Loc.base { id := 6135 }),
+  ("m", GoLean.Loc.base { id := 6134 })],
+ [("i", GoLean.Loc.base { id := 6133 }), ("t", GoLean.Loc.base { id := 6132 })]]) ([GoLean.Loc.base { id := 6142 }]) [] (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.ifThenElse
+   (GoLean.GoCore.Expr.neqCmp
+     (GoLean.GoCore.Ty.interface { key := "error" })
+     (GoLean.GoCore.Expr.var "err")
+     (GoLean.GoCore.Expr.nil none))
+   (GoLean.GoCore.Stmt.block
+     #[]
+     #[GoLean.GoCore.Stmt.call
+         #[]
+         { key := "main.twin.say" }
+         #[GoLean.GoCore.Expr.var "t",
+           GoLean.GoCore.Expr.stringLit { bytes := #[32, 115, 116, 101, 112, 101, 114, 114] }]])
+   (GoLean.GoCore.Stmt.seqn #[])]) ([[("err", GoLean.Loc.base { id := 6139 })],
+ [("to", GoLean.Loc.base { id := 6138 }),
+  ("$c2316", GoLean.Loc.base { id := 6135 }),
+  ("m", GoLean.Loc.base { id := 6134 })],
+ [("i", GoLean.Loc.base { id := 6133 }), ("t", GoLean.Loc.base { id := 6132 })]]) (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$cr0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$cr0"]
+       { key := "main.twin.harvest" }
+       #[GoLean.GoCore.Expr.var "t", GoLean.GoCore.Expr.var "to"]]]) ([[("to", GoLean.Loc.base { id := 6138 }),
+  ("$c2316", GoLean.Loc.base { id := 6135 }),
+  ("m", GoLean.Loc.base { id := 6134 })],
+ [("i", GoLean.Loc.base { id := 6133 }), ("t", GoLean.Loc.base { id := 6132 })]]) (GoLean.Sym.Cont.frame ([]) ([[("$c2241", GoLean.Loc.base { id := 6125 }),
+  ("$c2240", GoLean.Loc.base { id := 6122 }),
+  ("$c2239", GoLean.Loc.base { id := 6114 }),
+  ("$c2238", GoLean.Loc.base { id := 6111 }),
+  ("$c2237", GoLean.Loc.base { id := 6105 }),
+  ("$c2236", GoLean.Loc.base { id := 6097 }),
+  ("m", GoLean.Loc.base { id := 6096 }),
+  ("picked", GoLean.Loc.base { id := 6094 })],
+ [("live", GoLean.Loc.base { id := 6088 }), ("$c2235", GoLean.Loc.base { id := 6086 })],
+ [],
+ [("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) ([]) [] (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2242", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2242"]
+       { key := "main.twin.projection" }
+       #[GoLean.GoCore.Expr.var "t"]],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "main.twin.say" }
+   #[GoLean.GoCore.Expr.var "t",
+     GoLean.GoCore.Expr.add
+       (GoLean.GoCore.Expr.add (GoLean.GoCore.Expr.stringLit { bytes := #[32] }) (GoLean.GoCore.Expr.var "$c2242"))
+       (GoLean.GoCore.Expr.stringLit { bytes := #[10] })],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "stuckPropose")
+       (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))],
+ GoLean.GoCore.Stmt.continueStmt]) ([[("$c2241", GoLean.Loc.base { id := 6125 }),
+  ("$c2240", GoLean.Loc.base { id := 6122 }),
+  ("$c2239", GoLean.Loc.base { id := 6114 }),
+  ("$c2238", GoLean.Loc.base { id := 6111 }),
+  ("$c2237", GoLean.Loc.base { id := 6105 }),
+  ("$c2236", GoLean.Loc.base { id := 6097 }),
+  ("m", GoLean.Loc.base { id := 6096 }),
+  ("picked", GoLean.Loc.base { id := 6094 })],
+ [("live", GoLean.Loc.base { id := 6088 }), ("$c2235", GoLean.Loc.base { id := 6086 })],
+ [],
+ [("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2243", typ := GoLean.GoCore.Ty.bool },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2243"]
+       { key := "main.twin.complete" }
+       #[GoLean.GoCore.Expr.var "t"]],
+ GoLean.GoCore.Stmt.ifThenElse
+   (GoLean.GoCore.Expr.and
+     (GoLean.GoCore.Expr.var "$c2243")
+     (GoLean.GoCore.Expr.eqCmp
+       (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+       (GoLean.GoCore.Expr.length
+         (GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+           { key := "main.twin" }
+           "pending")
+         (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+       (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+   (GoLean.GoCore.Stmt.block #[] #[GoLean.GoCore.Stmt.breakStmt])
+   (GoLean.GoCore.Stmt.seqn #[]),
+ GoLean.GoCore.Stmt.ifThenElse
+   (GoLean.GoCore.Expr.greaterCmp
+     (GoLean.GoCore.Expr.length
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "pending")
+       (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+     (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int)))
+   (GoLean.GoCore.Stmt.block
+     #[]
+     #[GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.initialization { id := "$c2244", typ := GoLean.GoCore.Ty.string },
+           GoLean.GoCore.Stmt.call
+             #[GoLean.GoCore.Assignee.var "$c2244"]
+             { key := "itoa" }
+             #[GoLean.GoCore.Expr.add
+                 (GoLean.GoCore.Expr.var "round")
+                 (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))]],
+       GoLean.GoCore.Stmt.call
+         #[]
+         { key := "main.twin.say" }
+         #[GoLean.GoCore.Expr.var "t",
+           GoLean.GoCore.Expr.add
+             (GoLean.GoCore.Expr.add
+               (GoLean.GoCore.Expr.stringLit { bytes := #[114] })
+               (GoLean.GoCore.Expr.var "$c2244"))
+             (GoLean.GoCore.Expr.stringLit { bytes := #[32] })],
+       GoLean.GoCore.Stmt.call
+         #[]
+         { key := "main.twin.step" }
+         #[GoLean.GoCore.Expr.var "t",
+           GoLean.GoCore.Expr.structLit
+             (GoLean.GoCore.Ty.defined { key := "main.op" })
+             #[GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int),
+               GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int),
+               GoLean.GoCore.Expr.defaultValue (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))]],
+       GoLean.GoCore.Stmt.call
+         #[]
+         { key := "main.twin.say" }
+         #[GoLean.GoCore.Expr.var "t", GoLean.GoCore.Expr.stringLit { bytes := #[10] }],
+       GoLean.GoCore.Stmt.assign
+         (GoLean.GoCore.Assignee.var "stuckPropose")
+         (GoLean.GoCore.Expr.add
+           (GoLean.GoCore.Expr.var "stuckPropose")
+           (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))),
+       GoLean.GoCore.Stmt.ifThenElse
+         (GoLean.GoCore.Expr.greaterCmp
+           (GoLean.GoCore.Expr.var "stuckPropose")
+           (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int)))
+         (GoLean.GoCore.Stmt.block
+           #[]
+           #[GoLean.GoCore.Stmt.seqn
+               #[GoLean.GoCore.Stmt.assign
+                   (GoLean.GoCore.Assignee.addr
+                     (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "t") { key := "main.twin" } "halt"))
+                   (GoLean.GoCore.Expr.boolLit true)],
+             GoLean.GoCore.Stmt.call
+               #[]
+               { key := "main.twin.say" }
+               #[GoLean.GoCore.Expr.var "t",
+                 GoLean.GoCore.Expr.stringLit
+                   { bytes := #[33, 100, 114, 105, 118, 101, 114, 58, 32, 112, 114, 111, 112, 111, 115, 101, 32, 115,
+                                116, 117, 99, 107, 32, 97, 116, 32, 113, 117, 105, 101, 115, 99, 101, 110, 99, 101,
+                                10] }],
+             GoLean.GoCore.Stmt.breakStmt])
+         (GoLean.GoCore.Stmt.seqn #[]),
+       GoLean.GoCore.Stmt.continueStmt])
+   (GoLean.GoCore.Stmt.seqn #[]),
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.addr
+         (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "t") { key := "main.twin" } "halt"))
+       (GoLean.GoCore.Expr.boolLit true)],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "main.twin.say" }
+   #[GoLean.GoCore.Expr.var "t",
+     GoLean.GoCore.Expr.stringLit
+       { bytes := #[33, 100, 114, 105, 118, 101, 114, 58, 32, 113, 117, 105, 101, 115, 99, 101, 110, 116, 32, 119, 105,
+                    116, 104, 111, 117, 116, 32, 83, 52, 10] }],
+ GoLean.GoCore.Stmt.breakStmt]) ([[("live", GoLean.Loc.base { id := 6088 }), ("$c2235", GoLean.Loc.base { id := 6086 })],
+ [],
+ [("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([]) ([[],
+ [("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.loop (GoLean.GoCore.Expr.boolLit true) (GoLean.GoCore.Stmt.block
+  #[]
+  #[GoLean.GoCore.Stmt.ifThenElse
+      (GoLean.GoCore.Expr.var "$forFirst")
+      (GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$forFirst") (GoLean.GoCore.Expr.boolLit false))
+      (GoLean.GoCore.Stmt.assign
+        (GoLean.GoCore.Assignee.var "round")
+        (GoLean.GoCore.Expr.add
+          (GoLean.GoCore.Expr.var "round")
+          (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int)))),
+    GoLean.GoCore.Stmt.seqn #[],
+    GoLean.GoCore.Stmt.ifThenElse
+      (GoLean.GoCore.Expr.lessCmp
+        (GoLean.GoCore.Expr.var "round")
+        (GoLean.GoCore.Expr.intLit 400 (GoLean.GoCore.IntKind.int)))
+      (GoLean.GoCore.Stmt.seqn #[])
+      (GoLean.GoCore.Stmt.breakStmt),
+    GoLean.GoCore.Stmt.block
+      #[]
+      #[GoLean.GoCore.Stmt.seqn
+          #[GoLean.GoCore.Stmt.initialization
+              { id := "$c2235",
+                typ := GoLean.GoCore.Ty.map
+                         (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                         (GoLean.GoCore.Ty.bool) },
+            GoLean.GoCore.Stmt.makeMap
+              (GoLean.GoCore.Assignee.var "$c2235")
+              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+              (GoLean.GoCore.Ty.bool)
+              none],
+        GoLean.GoCore.Stmt.seqn
+          #[GoLean.GoCore.Stmt.initialization
+              { id := "live",
+                typ := GoLean.GoCore.Ty.map
+                         (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                         (GoLean.GoCore.Ty.bool) },
+            GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "live") (GoLean.GoCore.Expr.var "$c2235")],
+        GoLean.GoCore.Stmt.block
+          #[]
+          #[GoLean.GoCore.Stmt.initialization
+              { id := "$rcoll",
+                typ := GoLean.GoCore.Ty.slice
+                         (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" })) },
+            GoLean.GoCore.Stmt.assign
+              (GoLean.GoCore.Assignee.var "$rcoll")
+              (GoLean.GoCore.Expr.fieldGet
+                (GoLean.GoCore.Expr.deref
+                  (GoLean.GoCore.Expr.var "t")
+                  (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                { key := "main.twin" }
+                "net"),
+            GoLean.GoCore.Stmt.initialization
+              { id := "$rlen", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+            GoLean.GoCore.Stmt.assign
+              (GoLean.GoCore.Assignee.var "$rlen")
+              (GoLean.GoCore.Expr.length (GoLean.GoCore.Expr.var "$rcoll") none),
+            GoLean.GoCore.Stmt.initialization
+              { id := "$ridx", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+            GoLean.GoCore.Stmt.assign
+              (GoLean.GoCore.Assignee.var "$ridx")
+              (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int)),
+            GoLean.GoCore.Stmt.initialization { id := "$rfirst", typ := GoLean.GoCore.Ty.bool },
+            GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$rfirst") (GoLean.GoCore.Expr.boolLit true),
+            GoLean.GoCore.Stmt.while
+              (GoLean.GoCore.Expr.boolLit true)
+              (GoLean.GoCore.Stmt.block
+                #[]
+                #[GoLean.GoCore.Stmt.ifThenElse
+                    (GoLean.GoCore.Expr.var "$rfirst")
+                    (GoLean.GoCore.Stmt.assign
+                      (GoLean.GoCore.Assignee.var "$rfirst")
+                      (GoLean.GoCore.Expr.boolLit false))
+                    (GoLean.GoCore.Stmt.assign
+                      (GoLean.GoCore.Assignee.var "$ridx")
+                      (GoLean.GoCore.Expr.add
+                        (GoLean.GoCore.Expr.var "$ridx")
+                        (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int)))),
+                  GoLean.GoCore.Stmt.ifThenElse
+                    (GoLean.GoCore.Expr.atLeastCmp (GoLean.GoCore.Expr.var "$ridx") (GoLean.GoCore.Expr.var "$rlen"))
+                    (GoLean.GoCore.Stmt.breakStmt)
+                    (GoLean.GoCore.Stmt.seqn #[]),
+                  GoLean.GoCore.Stmt.initialization
+                    { id := "j", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+                  GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "j") (GoLean.GoCore.Expr.var "$ridx"),
+                  GoLean.GoCore.Stmt.block
+                    #[]
+                    #[GoLean.GoCore.Stmt.ifThenElse
+                        (GoLean.GoCore.Expr.indexGet
+                          (GoLean.GoCore.Expr.fieldGet
+                            (GoLean.GoCore.Expr.deref
+                              (GoLean.GoCore.Expr.var "t")
+                              (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                            { key := "main.twin" }
+                            "live")
+                          (GoLean.GoCore.Expr.var "j"))
+                        (GoLean.GoCore.Stmt.block
+                          #[]
+                          #[GoLean.GoCore.Stmt.mapAssign
+                              (GoLean.GoCore.Expr.var "live")
+                              (GoLean.GoCore.Expr.var "j")
+                              (GoLean.GoCore.Expr.boolLit true)
+                              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                              (GoLean.GoCore.Ty.bool)])
+                        (GoLean.GoCore.Stmt.seqn #[])]])],
+        GoLean.GoCore.Stmt.ifThenElse
+          (GoLean.GoCore.Expr.greaterCmp
+            (GoLean.GoCore.Expr.length
+              (GoLean.GoCore.Expr.var "live")
+              (some (GoLean.GoCore.Ty.map (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)) (GoLean.GoCore.Ty.bool))))
+            (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int)))
+          (GoLean.GoCore.Stmt.block
+            #[]
+            #[GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization
+                    { id := "picked", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+                  GoLean.GoCore.Stmt.assign
+                    (GoLean.GoCore.Assignee.var "picked")
+                    (GoLean.GoCore.Expr.intLit (-1) (GoLean.GoCore.IntKind.int))],
+              GoLean.GoCore.Stmt.mapRange
+                (some "j")
+                none
+                (GoLean.GoCore.Expr.var "live")
+                (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                (GoLean.GoCore.Ty.bool)
+                (GoLean.GoCore.Stmt.block
+                  #[]
+                  #[GoLean.GoCore.Stmt.seqn
+                      #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "picked") (GoLean.GoCore.Expr.var "j")],
+                    GoLean.GoCore.Stmt.breakStmt]),
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization
+                    { id := "m",
+                      typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.defined { key := "raftpb.Message" }) },
+                  GoLean.GoCore.Stmt.assign
+                    (GoLean.GoCore.Assignee.var "m")
+                    (GoLean.GoCore.Expr.indexGet
+                      (GoLean.GoCore.Expr.fieldGet
+                        (GoLean.GoCore.Expr.deref
+                          (GoLean.GoCore.Expr.var "t")
+                          (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                        { key := "main.twin" }
+                        "net")
+                      (GoLean.GoCore.Expr.var "picked"))],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2236", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2236"]
+                    { key := "itoa" }
+                    #[GoLean.GoCore.Expr.add
+                        (GoLean.GoCore.Expr.var "round")
+                        (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2237", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2237"]
+                    { key := "itoa" }
+                    #[GoLean.GoCore.Expr.var "picked"]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization
+                    { id := "$c2238", typ := GoLean.GoCore.Ty.defined { key := "raftpb.MessageType" } },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2238"]
+                    { key := "raftpb.Message.GetType" }
+                    #[GoLean.GoCore.Expr.var "m"]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2239", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2239"]
+                    { key := "itoa" }
+                    #[GoLean.GoCore.Expr.convert
+                        (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+                        (GoLean.GoCore.Expr.var "$c2238")]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization
+                    { id := "$c2240", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2240"]
+                    { key := "raftpb.Message.GetTo" }
+                    #[GoLean.GoCore.Expr.var "m"]],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2241", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2241"]
+                    { key := "utoa" }
+                    #[GoLean.GoCore.Expr.var "$c2240"]],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.say" }
+                #[GoLean.GoCore.Expr.var "t",
+                  GoLean.GoCore.Expr.add
+                    (GoLean.GoCore.Expr.add
+                      (GoLean.GoCore.Expr.add
+                        (GoLean.GoCore.Expr.add
+                          (GoLean.GoCore.Expr.add
+                            (GoLean.GoCore.Expr.add
+                              (GoLean.GoCore.Expr.add
+                                (GoLean.GoCore.Expr.stringLit { bytes := #[114] })
+                                (GoLean.GoCore.Expr.var "$c2236"))
+                              (GoLean.GoCore.Expr.stringLit { bytes := #[32, 112, 105, 99, 107, 35] }))
+                            (GoLean.GoCore.Expr.var "$c2237"))
+                          (GoLean.GoCore.Expr.stringLit { bytes := #[32, 116, 121, 112, 101] }))
+                        (GoLean.GoCore.Expr.var "$c2239"))
+                      (GoLean.GoCore.Expr.stringLit { bytes := #[45, 62] }))
+                    (GoLean.GoCore.Expr.var "$c2241")],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.deliverIdx" }
+                #[GoLean.GoCore.Expr.var "t", GoLean.GoCore.Expr.var "picked"],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2242", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2242"]
+                    { key := "main.twin.projection" }
+                    #[GoLean.GoCore.Expr.var "t"]],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.say" }
+                #[GoLean.GoCore.Expr.var "t",
+                  GoLean.GoCore.Expr.add
+                    (GoLean.GoCore.Expr.add
+                      (GoLean.GoCore.Expr.stringLit { bytes := #[32] })
+                      (GoLean.GoCore.Expr.var "$c2242"))
+                    (GoLean.GoCore.Expr.stringLit { bytes := #[10] })],
+              GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.assign
+                    (GoLean.GoCore.Assignee.var "stuckPropose")
+                    (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))],
+              GoLean.GoCore.Stmt.continueStmt])
+          (GoLean.GoCore.Stmt.seqn #[]),
+        GoLean.GoCore.Stmt.seqn
+          #[GoLean.GoCore.Stmt.initialization { id := "$c2243", typ := GoLean.GoCore.Ty.bool },
+            GoLean.GoCore.Stmt.call
+              #[GoLean.GoCore.Assignee.var "$c2243"]
+              { key := "main.twin.complete" }
+              #[GoLean.GoCore.Expr.var "t"]],
+        GoLean.GoCore.Stmt.ifThenElse
+          (GoLean.GoCore.Expr.and
+            (GoLean.GoCore.Expr.var "$c2243")
+            (GoLean.GoCore.Expr.eqCmp
+              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+              (GoLean.GoCore.Expr.length
+                (GoLean.GoCore.Expr.fieldGet
+                  (GoLean.GoCore.Expr.deref
+                    (GoLean.GoCore.Expr.var "t")
+                    (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                  { key := "main.twin" }
+                  "pending")
+                (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+              (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+          (GoLean.GoCore.Stmt.block #[] #[GoLean.GoCore.Stmt.breakStmt])
+          (GoLean.GoCore.Stmt.seqn #[]),
+        GoLean.GoCore.Stmt.ifThenElse
+          (GoLean.GoCore.Expr.greaterCmp
+            (GoLean.GoCore.Expr.length
+              (GoLean.GoCore.Expr.fieldGet
+                (GoLean.GoCore.Expr.deref
+                  (GoLean.GoCore.Expr.var "t")
+                  (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+                { key := "main.twin" }
+                "pending")
+              (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+            (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int)))
+          (GoLean.GoCore.Stmt.block
+            #[]
+            #[GoLean.GoCore.Stmt.seqn
+                #[GoLean.GoCore.Stmt.initialization { id := "$c2244", typ := GoLean.GoCore.Ty.string },
+                  GoLean.GoCore.Stmt.call
+                    #[GoLean.GoCore.Assignee.var "$c2244"]
+                    { key := "itoa" }
+                    #[GoLean.GoCore.Expr.add
+                        (GoLean.GoCore.Expr.var "round")
+                        (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))]],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.say" }
+                #[GoLean.GoCore.Expr.var "t",
+                  GoLean.GoCore.Expr.add
+                    (GoLean.GoCore.Expr.add
+                      (GoLean.GoCore.Expr.stringLit { bytes := #[114] })
+                      (GoLean.GoCore.Expr.var "$c2244"))
+                    (GoLean.GoCore.Expr.stringLit { bytes := #[32] })],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.step" }
+                #[GoLean.GoCore.Expr.var "t",
+                  GoLean.GoCore.Expr.structLit
+                    (GoLean.GoCore.Ty.defined { key := "main.op" })
+                    #[GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int),
+                      GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int),
+                      GoLean.GoCore.Expr.defaultValue (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))]],
+              GoLean.GoCore.Stmt.call
+                #[]
+                { key := "main.twin.say" }
+                #[GoLean.GoCore.Expr.var "t", GoLean.GoCore.Expr.stringLit { bytes := #[10] }],
+              GoLean.GoCore.Stmt.assign
+                (GoLean.GoCore.Assignee.var "stuckPropose")
+                (GoLean.GoCore.Expr.add
+                  (GoLean.GoCore.Expr.var "stuckPropose")
+                  (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))),
+              GoLean.GoCore.Stmt.ifThenElse
+                (GoLean.GoCore.Expr.greaterCmp
+                  (GoLean.GoCore.Expr.var "stuckPropose")
+                  (GoLean.GoCore.Expr.intLit 3 (GoLean.GoCore.IntKind.int)))
+                (GoLean.GoCore.Stmt.block
+                  #[]
+                  #[GoLean.GoCore.Stmt.seqn
+                      #[GoLean.GoCore.Stmt.assign
+                          (GoLean.GoCore.Assignee.addr
+                            (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "t") { key := "main.twin" } "halt"))
+                          (GoLean.GoCore.Expr.boolLit true)],
+                    GoLean.GoCore.Stmt.call
+                      #[]
+                      { key := "main.twin.say" }
+                      #[GoLean.GoCore.Expr.var "t",
+                        GoLean.GoCore.Expr.stringLit
+                          { bytes := #[33, 100, 114, 105, 118, 101, 114, 58, 32, 112, 114, 111, 112, 111, 115, 101, 32,
+                                       115, 116, 117, 99, 107, 32, 97, 116, 32, 113, 117, 105, 101, 115, 99, 101, 110,
+                                       99, 101, 10] }],
+                    GoLean.GoCore.Stmt.breakStmt])
+                (GoLean.GoCore.Stmt.seqn #[]),
+              GoLean.GoCore.Stmt.continueStmt])
+          (GoLean.GoCore.Stmt.seqn #[]),
+        GoLean.GoCore.Stmt.seqn
+          #[GoLean.GoCore.Stmt.assign
+              (GoLean.GoCore.Assignee.addr
+                (GoLean.GoCore.Expr.fieldAddr (GoLean.GoCore.Expr.var "t") { key := "main.twin" } "halt"))
+              (GoLean.GoCore.Expr.boolLit true)],
+        GoLean.GoCore.Stmt.call
+          #[]
+          { key := "main.twin.say" }
+          #[GoLean.GoCore.Expr.var "t",
+            GoLean.GoCore.Expr.stringLit
+              { bytes := #[33, 100, 114, 105, 118, 101, 114, 58, 32, 113, 117, 105, 101, 115, 99, 101, 110, 116, 32,
+                           119, 105, 116, 104, 111, 117, 116, 32, 83, 52, 10] }],
+        GoLean.GoCore.Stmt.breakStmt]]) ([[("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([]) ([[("$forFirst", GoLean.Loc.base { id := 6072 })],
+ [],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([]) ([[],
+ [("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "comp", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+     GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "comp")
+       (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2245", typ := GoLean.GoCore.Ty.bool },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2245"]
+       { key := "main.twin.complete" }
+       #[GoLean.GoCore.Expr.var "t"]],
+ GoLean.GoCore.Stmt.ifThenElse
+   (GoLean.GoCore.Expr.and
+     (GoLean.GoCore.Expr.and
+       (GoLean.GoCore.Expr.var "$c2245")
+       (GoLean.GoCore.Expr.eqCmp
+         (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+         (GoLean.GoCore.Expr.length
+           (GoLean.GoCore.Expr.fieldGet
+             (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+             { key := "main.twin" }
+             "pending")
+           (some (GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.string))))
+         (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))))
+     (GoLean.GoCore.Expr.not
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "halt")))
+   (GoLean.GoCore.Stmt.block
+     #[]
+     #[GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.assign
+             (GoLean.GoCore.Assignee.var "comp")
+             (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))]])
+   (GoLean.GoCore.Stmt.seqn #[]),
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "floorOK", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+     GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "floorOK")
+       (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))],
+ GoLean.GoCore.Stmt.ifThenElse
+   (GoLean.GoCore.Expr.or
+     (GoLean.GoCore.Expr.lessCmp
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "claims")
+       (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int)))
+     (GoLean.GoCore.Expr.lessCmp
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "committed")
+       (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int))))
+   (GoLean.GoCore.Stmt.block
+     #[]
+     #[GoLean.GoCore.Stmt.seqn
+         #[GoLean.GoCore.Stmt.assign
+             (GoLean.GoCore.Assignee.var "floorOK")
+             (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))]])
+   (GoLean.GoCore.Stmt.seqn #[]),
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2246", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2246"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+           { key := "main.twin" }
+           "violations"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2247", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2247"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+           { key := "main.twin" }
+           "claims"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2248", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2248"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.fieldGet
+           (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+           { key := "main.twin" }
+           "committed"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2249", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call #[GoLean.GoCore.Assignee.var "$c2249"] { key := "itoa" } #[GoLean.GoCore.Expr.var "comp"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2250", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2250"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.var "floorOK"]],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2251", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2251"]
+       { key := "itoa" }
+       #[GoLean.GoCore.Expr.var "round"]],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "main.twin.say" }
+   #[GoLean.GoCore.Expr.var "t",
+     GoLean.GoCore.Expr.add
+       (GoLean.GoCore.Expr.add
+         (GoLean.GoCore.Expr.add
+           (GoLean.GoCore.Expr.add
+             (GoLean.GoCore.Expr.add
+               (GoLean.GoCore.Expr.add
+                 (GoLean.GoCore.Expr.add
+                   (GoLean.GoCore.Expr.add
+                     (GoLean.GoCore.Expr.add
+                       (GoLean.GoCore.Expr.add
+                         (GoLean.GoCore.Expr.add
+                           (GoLean.GoCore.Expr.add
+                             (GoLean.GoCore.Expr.stringLit { bytes := #[101, 110, 100, 32, 118, 105, 111, 108, 61] })
+                             (GoLean.GoCore.Expr.var "$c2246"))
+                           (GoLean.GoCore.Expr.stringLit { bytes := #[32, 99, 108, 97, 105, 109, 115, 61] }))
+                         (GoLean.GoCore.Expr.var "$c2247"))
+                       (GoLean.GoCore.Expr.stringLit
+                         { bytes := #[32, 99, 111, 109, 109, 105, 116, 116, 101, 100, 61] }))
+                     (GoLean.GoCore.Expr.var "$c2248"))
+                   (GoLean.GoCore.Expr.stringLit { bytes := #[32, 99, 111, 109, 112, 108, 101, 116, 101, 61] }))
+                 (GoLean.GoCore.Expr.var "$c2249"))
+               (GoLean.GoCore.Expr.stringLit { bytes := #[32, 102, 108, 111, 111, 114, 61] }))
+             (GoLean.GoCore.Expr.var "$c2250"))
+           (GoLean.GoCore.Expr.stringLit { bytes := #[32, 114, 111, 117, 110, 100, 115, 61] }))
+         (GoLean.GoCore.Expr.var "$c2251"))
+       (GoLean.GoCore.Expr.stringLit { bytes := #[10] })],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.initialization { id := "$c2252", typ := GoLean.GoCore.Ty.string },
+     GoLean.GoCore.Stmt.call
+       #[GoLean.GoCore.Assignee.var "$c2252"]
+       { key := "main.twin.projection" }
+       #[GoLean.GoCore.Expr.var "t"]],
+ GoLean.GoCore.Stmt.call
+   #[]
+   { key := "main.twin.say" }
+   #[GoLean.GoCore.Expr.var "t",
+     GoLean.GoCore.Expr.add
+       (GoLean.GoCore.Expr.add
+         (GoLean.GoCore.Expr.stringLit { bytes := #[102, 105, 110, 97, 108, 32] })
+         (GoLean.GoCore.Expr.var "$c2252"))
+       (GoLean.GoCore.Expr.stringLit { bytes := #[10] })],
+ GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res0") (GoLean.GoCore.Expr.var "t"),
+     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res1") (GoLean.GoCore.Expr.var "comp"),
+     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res2") (GoLean.GoCore.Expr.var "floorOK"),
+     GoLean.GoCore.Stmt.returnStmt]]) ([[("stuckPropose", GoLean.Loc.base { id := 6071 }),
+  ("round", GoLean.Loc.base { id := 6070 }),
+  ("t", GoLean.Loc.base { id := 110 })],
+ [("$res2", GoLean.Loc.base { id := 108 }),
+  ("$res1", GoLean.Loc.base { id := 107 }),
+  ("$res0", GoLean.Loc.base { id := 106 })]]) (GoLean.Sym.Cont.frame ([(GoLean.GoCore.Machine.TargetShape.chain [], [GoLean.GoCore.Expr.ref "t"]),
+ (GoLean.GoCore.Machine.TargetShape.chain [], [GoLean.GoCore.Expr.ref "comp"]),
+ (GoLean.GoCore.Machine.TargetShape.chain [], [GoLean.GoCore.Expr.ref "floorOK"])]) ([[("floorOK", GoLean.Loc.base { id := 105 }),
+  ("comp", GoLean.Loc.base { id := 104 }),
+  ("t", GoLean.Loc.base { id := 103 })],
+ [("$res4", GoLean.Loc.base { id := 102 }),
+  ("$res3", GoLean.Loc.base { id := 101 }),
+  ("$res2", GoLean.Loc.base { id := 100 }),
+  ("$res1", GoLean.Loc.base { id := 99 }),
+  ("$res0", GoLean.Loc.base { id := 98 })]]) ([GoLean.Loc.base { id := 106 }, GoLean.Loc.base { id := 107 }, GoLean.Loc.base { id := 108 }]) [] (GoLean.Sym.Cont.seq ([GoLean.GoCore.Stmt.seqn
+   #[GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "$res0")
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "violations"),
+     GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "$res1")
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "claims"),
+     GoLean.GoCore.Stmt.assign
+       (GoLean.GoCore.Assignee.var "$res2")
+       (GoLean.GoCore.Expr.fieldGet
+         (GoLean.GoCore.Expr.deref (GoLean.GoCore.Expr.var "t") (GoLean.GoCore.Ty.defined { key := "main.twin" }))
+         { key := "main.twin" }
+         "committed"),
+     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res3") (GoLean.GoCore.Expr.var "comp"),
+     GoLean.GoCore.Stmt.assign (GoLean.GoCore.Assignee.var "$res4") (GoLean.GoCore.Expr.var "floorOK"),
+     GoLean.GoCore.Stmt.returnStmt]]) ([[("floorOK", GoLean.Loc.base { id := 105 }),
+  ("comp", GoLean.Loc.base { id := 104 }),
+  ("t", GoLean.Loc.base { id := 103 })],
+ [("$res4", GoLean.Loc.base { id := 102 }),
+  ("$res3", GoLean.Loc.base { id := 101 }),
+  ("$res2", GoLean.Loc.base { id := 100 }),
+  ("$res1", GoLean.Loc.base { id := 99 }),
+  ("$res0", GoLean.Loc.base { id := 98 })]]) (GoLean.Sym.Cont.frame ([]) ([]) ([]) [] (GoLean.Sym.Cont.stop) false)) false)))))))) false))) false)) false))))))))))) false)) false)) false)) false))))
+
+end GoLean.RaftSeam.RoundVote
