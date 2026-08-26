@@ -84,6 +84,19 @@ import GoLeanProofs.Specs.Raft.RingLit3
 import GoLeanProofs.Specs.Raft.RingLit4
 import GoLeanProofs.Specs.Raft.RingEquation
 import GoLeanProofs.Specs.Raft.RingWitness
+-- C2d: the MsgApp round lemma — the R-form's first proved instance
+-- (full-round literals + segment spans + the canonical run + the lemma)
+import GoLeanProofs.Specs.Raft.RoundMaLit1
+import GoLeanProofs.Specs.Raft.RoundMaLit2
+import GoLeanProofs.Specs.Raft.RoundMaLit3
+import GoLeanProofs.Specs.Raft.RoundMaLit4
+import GoLeanProofs.Specs.Raft.RoundMaLit5
+import GoLeanProofs.Specs.Raft.RoundMaLit6
+import GoLeanProofs.Specs.Raft.RoundMaEqA
+import GoLeanProofs.Specs.Raft.RoundMaEqB
+import GoLeanProofs.Specs.Raft.RoundMaEqC
+import GoLeanProofs.Specs.Raft.RoundMaEquation
+import GoLeanProofs.Specs.Raft.RoundMaLemma
 -- arc4b landing (C2c slice 0, per the lane's landing manifest): the native
 -- S1/S2/S3 chain over the obligation signature (SC1 + C3 + C4)
 import GoLeanProofs.Specs.Raft.NativeObligations

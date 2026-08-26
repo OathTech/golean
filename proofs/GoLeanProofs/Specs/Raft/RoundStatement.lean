@@ -57,9 +57,13 @@ CAVEATS (stated so the docstring never overclaims):
   for T1 (the driver never ticks, so no stream ever nets a
   MsgHeartbeat — the U18 census finding); it validates the STATEMENT
   FORM on landed arm machinery, and the form is round-kind-independent.
-- `RoundLemmaShape` has NO proved instance yet and is marked SCAFFOLD
-  accordingly; its first instances (REACHABLE round kinds) are C2+
-  work on the mirror route.
+- `RoundLemmaShape`'s SCAFFOLD marker is DISCHARGED (A4-U22 / C2d):
+  the first proved instance is `RoundMa.roundMa_lemma`
+  (`RoundMaLemma.lean`) — the REACHABLE MsgApp append-family round,
+  via the canonical mirror-chain run + the weak `stepFnIter_sim`
+  transport. (Original caveat, kept for the record: the C1-era form
+  had no proved instance; the heartbeat witness below remains the
+  form-validation artifact it always was.)
 -/
 
 namespace GoLean.RaftSeam

@@ -29,6 +29,7 @@ import Audit.MatMul
 import Audit.FrameShape
 import Audit.DriverNet
 import Audit.Ring
+import Audit.RoundMa
 
 /-!
 # In-build epistemic gate for the Iris proof layer
