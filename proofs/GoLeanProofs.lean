@@ -76,6 +76,14 @@ import GoLeanProofs.Specs.Raft.ShapeWitness
 import GoLeanProofs.SliceWalk
 import GoLeanProofs.Specs.Raft.DriverNet
 import GoLeanProofs.Specs.Raft.DriverNetWitness
+-- C2c: the storage-resp sub-ring spans at the MsgApp append-family round
+-- fixture (mirror-chain form; generated literals + equations + witness)
+import GoLeanProofs.Specs.Raft.RingLit1
+import GoLeanProofs.Specs.Raft.RingLit2
+import GoLeanProofs.Specs.Raft.RingLit3
+import GoLeanProofs.Specs.Raft.RingLit4
+import GoLeanProofs.Specs.Raft.RingEquation
+import GoLeanProofs.Specs.Raft.RingWitness
 -- arc4b landing (C2c slice 0, per the lane's landing manifest): the native
 -- S1/S2/S3 chain over the obligation signature (SC1 + C3 + C4)
 import GoLeanProofs.Specs.Raft.NativeObligations
