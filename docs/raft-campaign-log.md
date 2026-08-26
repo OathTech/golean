@@ -2236,6 +2236,27 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   semantics, useful-not-complete. The synthesis doc's §2-B1 is
   superseded by this entry.
 
+- **[USER] 2026-08-27 — the lift machinery pulled forward; the
+  choice-erased semantics chartered:** build the lifting machinery
+  soon, as "a twin semantics at the relational level which shows ~ₘ
+  is a valid equivalence (perhaps under some conditions)" — operate
+  in the choice-erasing semantics WHEN NEEDED without losing
+  fidelity. [AGENT] construction adopted: `ErasedStep` (⇝E) — the
+  latitude-erased step relation (semantic picks explicit); validity
+  = the per-class congruence packaged as bisimulation-up-to-~ₘ;
+  conditions = censused operation-class membership, FAIL-CLOSED on
+  unclassified draw sites (partial-by-construction, the B2
+  pattern); prerequisite = S3's relational face (the arc's first
+  theorem); naming recorded to dodge the twin/EStep collisions.
+  Fidelity by derivation: every erased fact is a theorem about the
+  concrete interpreter. Full T1 = the replay lemma + this arc's
+  composition. SEQUENCING: the lift arc joins wave β (demand-pulled
+  — §7 satisfied); wave α dispatches now: S1-S4 shape fixes + the
+  kills (K1/K2A + TwinSegs closure) + the arc4d landing (held 19
+  modules, small ceremony) + the legibility batch (live registry,
+  Corpus/ dir, Sym note, ledger rows) + the never-faults statement
+  draft for [USER] designation.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
