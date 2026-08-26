@@ -13,8 +13,10 @@ induction discharged at the identity placement on the Vr/Vote/Mar
 1-link chains, the trivial++Ma 2-link chain (chaining mechanics), and
 the trivial seeded chain (non-vacuity of the seeded statement).
 
-This module is swept by the CORPUS audit target (`AuditCorpus.lean`)
-— the A4-U25 validation-corpus split. -/
+This module is LIVE (default target, imported by `Audit.lean`) since
+the arc-4 landing fix round — the witness ships in the same gated
+build as its law (`round_induction` is live; the U25 split had
+deferred these pins to landmark corpus builds). -/
 
 /-- info: 'GoLean.RaftSeam.RoundInd.c0_vote_shared' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.RaftSeam.RoundInd.c0_vote_shared

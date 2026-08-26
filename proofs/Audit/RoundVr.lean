@@ -12,8 +12,9 @@ see `RoundVrLemma.lean`'s docstring). The canonical 33,274-step run
 FIVE choice-free Visit exhaustion-exits), the R-form instance,
 witness + closure, and the state/lead/claims/commit readouts.
 
-This module is swept by the CORPUS audit target (`AuditCorpus.lean`)
-— the A4-U25 validation-corpus split. -/
+This module is LIVE (default target) since the arc-4 landing fix
+round — the witness-return correction (witnesses of live laws ship in
+the gated build; see GoLeanProofs.lean's witness-return block). -/
 
 /-- info: 'GoLean.RaftSeam.RoundVr.roundVr_run' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.RaftSeam.RoundVr.roundVr_run

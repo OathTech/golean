@@ -7,21 +7,39 @@ over round sequences, composed at absState level
 
 ## What this module is
 
-The C-ladder's induction skeleton made a THEOREM: given a CHAIN of
-round links — each carrying a proved `RoundLemmaShape` instance (the
-R-form: A4-U22/U23/U24/U25 delivered four kinds) and an abstract
-`ReachRel`-segment of a dialect step relation — the whole trace runs
-from ANY `FrameSim` placement of the first canon, returns to the
-shared loop-head configuration at every boundary, re-establishes
-family membership at every boundary (trace-long Fam membership: the
-`FamTrace` constructors CARRY the per-boundary `FrameSim` facts), and
-the abstract boundary nets form a `ReachRel` trace of the dialect
-(the absState trace IS a specRound trace). With the arc4c seed pin
-(`seedσ`/`seedN₀`/`seed_N₀`, landed this unit) the seeded corollary
-discharges `Seed` and hands every obligation-discharging dialect
-`oneLeaderPerTerm` at the trace's end net — the layer-C design §3
-carry (`R σ N := σ ∈ Fam ∧ absRead σ = N`, stepped by round lemmas),
-mechanized at the granularity the R-form actually provides.
+The C-ladder's induction skeleton made a THEOREM — with its claim
+strength stated exactly (corrected at the arc-4 landing fix round,
+2026-08-26; the earlier header overclaimed — see the honesty note
+below). Given a CHAIN of round links — each carrying a proved
+`RoundLemmaShape` instance (the R-form: A4-U22/U23/U24/U25 delivered
+four kinds) and an abstract `ReachRel`-segment of a dialect step
+relation — the induction delivers TWO chains at once:
+
+1. **the CONCRETE Fam chain**: the whole trace runs from ANY
+   `FrameSim` placement of the first canon, returns to the shared
+   loop-head configuration at every boundary, and re-establishes
+   family membership at every boundary (trace-long Fam membership:
+   the `FamTrace` constructors CARRY the per-boundary `FrameSim`
+   facts); and
+2. **an INDEPENDENT abstract chain**: the link-supplied boundary nets
+   compose into a `ReachRel` trace of the dialect.
+
+**What it does NOT deliver (the honesty note):** the two chains are
+NOT coupled. `RoundLink.N`/`N'` are witness DATA with no tie to
+`absTwinRead` of the link's `canon`/`canon'` — no constructor of
+`FamTrace` mentions a concrete and an abstract component in one
+clause, and `FamTrace.reach`/`safety`/`fullInv` are derivable from
+the `habs` premises alone. The per-boundary abs-pairing
+(`absTwinRead σᵢ = projection of Nᵢ`) is the OPEN obligation **O5b**
+of the T1 open-obligation census (`docs/campaign-arc4-log.md`,
+landing fix-round entry) and the proposed next charter's item. Until
+O5b lands, this module mechanizes only the Fam-membership HALF of
+the layer-C design §3 carry (`R σ N := σ ∈ Fam ∧ absRead σ = N`) —
+the `absRead σ = N` conjunct is exactly what is not yet asserted.
+With the arc4c seed pin the seeded corollary discharges `Seed` and
+hands every obligation-discharging dialect `oneLeaderPerTerm` at the
+trace's end net — a fact about the SUPPLIED abstract chain, carried
+to the concrete run only once O5b pairs them.
 
 ## The chaining decision (the successor-canon design verdict, A4-U26
 slice 1 — probe `artifacts/probe/U26CanonProbe.lean`, recorded in
@@ -55,9 +73,12 @@ deliberately NOT asserted here (statement honesty: this module never
 claims the projection, it TRANSPORTS whatever pairing the instance
 supplies).
 
-LINEAGE: simulation induction / refinement mapping over an inductive
-invariant (Abadi–Lamport — the layer-C design §3/§7 pin); the
-abstract side is the standard RT-closure invariance rule
+LINEAGE: the CONCRETE half of a simulation induction (inductive-
+invariant carry, Abadi–Lamport family — the layer-C design §3/§7
+pin). Precision note (landing fix round): a refinement MAPPING needs
+its abstraction function applied at every boundary; that half is
+O5b, open — what is landed is the invariant-carry skeleton plus the
+standard RT-closure invariance rule on the abstract side
 (`NativeS1Chain.invariance`). No new mechanism class. -/
 
 namespace GoLean.RaftSeam
@@ -228,8 +249,15 @@ the placement is the member's own. -/
 /-- **THE SEEDED ROUND INDUCTION**: a chain from `(seedσ, seedN₀)`
 runs from any `SeedFam` member at its placement, and every
 obligation-discharging dialect carries `one_leader_per_term` to the
-end net — `Seed` discharged by `seed_N₀`, nothing left premised on
-the abstract side but the dialect's own obligation discharge. -/
+end net of the SUPPLIED abstract chain. `Seed` is discharged by
+`seed_N₀`; the `habs` argument — every link's `ReachRel` segment —
+remains an abstract-side premise, and it is the one carrying all the
+abstract content: the safety conjunct follows from `habs` + the
+dialect's obligation discharge, independently of the concrete trace,
+until O5b pairs the two sides. (This docstring previously said
+"nothing left premised on the abstract side but the dialect's own
+obligation discharge", which was false of `habs` — corrected at the
+landing fix round, 2026-08-26.) -/
 theorem seeded_round_induction {step : SNet → SNet → Prop} {C0 : Config}
     (links : List RoundLink)
     (hch : ChainedFrom seedσ seedN₀ links)

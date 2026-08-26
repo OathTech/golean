@@ -27,9 +27,15 @@ side as `followerCommitOk`'s `min lc matched` envelope
 (`NativeS23Route`/`NativeEtcdDischarge`); THIS lemma is the
 interpreter-level half — the twin's leader really performs the
 commit-without-append transition, kernel-checked end to end at a
-reachable fixture (the pinned run's own commit lands at anchor 7 by
-exactly this family; AnchorScan probe). The two halves meet at the
-T1 assembly.
+DOCTORED, PRUNED fixture derived from the pinned run's anchor-3
+state (§ below; the U26 canon probe established that pruned fixtures
+are open terms with dangling references — NOT reachable states; the
+round FAMILY is exercised by the real run, whose own commit lands at
+anchor 7 by exactly this family, AnchorScan probe — but the R-form's
+applicability to the real run is the A5 replay's obligation, not
+this fixture's). The two halves meet at the T1 assembly. (Wording
+corrected at the landing fix round: this paragraph previously called
+the fixture "reachable".)
 
 ## The fixture (anchor 3 — the U24 template extension)
 

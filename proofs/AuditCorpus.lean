@@ -1,30 +1,30 @@
 import Lean
 import GoLeanProofsCorpus
-import Audit.Ring
-import Audit.RoundMa
-import Audit.RoundVote
-import Audit.RoundMar
-import Audit.RoundVr
-import Audit.RoundIndWitness
 
 /-!
 # In-build epistemic gate for the VALIDATION CORPUS
 
 The corpus split (A4-U25 slice 0, 2026-08-26; the OOM incident's
 correction (a)) moved the literal-mode corpus out of the default build —
-see `GoLeanProofsCorpus.lean`'s header for the census and the landmark
-build discipline. This file is the corpus's `Audit.lean`: it hosts the
-corpus Audit pin modules (`Audit/Ring,RoundMa,RoundVote,RoundMar` — their
-`#guard_msgs in #print axioms` pins run when they elaborate here) and
-re-runs the exhaustive axiom sweep over the corpus closure, so a `sorry`/
-`native_decide`/new postulate anywhere in a corpus module fails the
-CORPUS build exactly as it would have failed the default build before the
-split. Build with:
+see `GoLeanProofsCorpus.lean`'s header for the census, the AMENDED
+placement criterion (arc-4 landing fix round: witnesses of LIVE laws
+are live; the Ring/Round* chains and their pin modules
+`Audit/{Ring,RoundMa,RoundVote,RoundMar,RoundVr,RoundIndWitness}`
+moved back to the default `Audit` target), and the landmark build
+discipline. This file is the corpus's `Audit.lean`: it re-runs the
+exhaustive axiom sweep over the corpus closure — now exactly the
+handler-equation validation chains — so a `sorry`/`native_decide`/new
+postulate anywhere in a corpus module fails the CORPUS build exactly
+as it would have failed the default build before the split. Build
+with:
 
     scripts/capped lake build AuditCorpus
 
-Coverage split, stated honestly: the per-gate `Audit` target no longer
-sees these modules; their sweep runs at landmark corpus builds only.
+and RECORD the run in the tracked `docs/corpus-landmark-record.md`
+(fix-round F7; `artifacts/` is gitignored and is not a record).
+
+Coverage split, stated honestly: the per-gate `Audit` target does not
+see these modules; their sweep runs at landmark corpus builds only.
 `scripts/ci`'s proofs-file coverage step pins every corpus file to THIS
 root's import closure and prints a visible deferred-sweep note — a file
 in neither closure fails the gate, so nothing can silently drop out of

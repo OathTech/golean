@@ -24,8 +24,18 @@ under the §2.2-item-4 projection; apply monotonicity, loud on
 unmodeled entry types) run at every apply/claim step INSIDE the
 program, and S4 as the stopping condition. Its observable is five
 ints: violations, claims, committed, complete, floor. T1 says: under
-EVERY delivery order and EVERY fuel, a completing run's checker
-recorded nothing — `violations = 0`. The witness says: some delivery
+EVERY delivery order and EVERY fuel, a completing run recorded no
+violation — `violations = 0`. PRECISION (landing fix round,
+2026-08-26): the violation counter is incremented at TWELVE sites in
+the subject (twin-lib.go), of which five are the S1–S3 checker
+proper and SEVEN are harness-liveness/error guards (harvest/drain
+quiescence bounds, storage-call failures, the unexpected-snapshot
+refusal). `violations = 0` therefore asserts the checker held AND
+every harness guard stayed silent — the per-site census with each
+guard's discharge route is census item T1-V of the T1
+open-obligation census (`docs/campaign-arc4-log.md`, fix-round
+entry). The earlier sentence here ("a completing run's checker
+recorded nothing") understated this. The witness says: some delivery
 order completes with the exercise floor met — so T1 is not vacuous.
 The v1 fine print (constitution §2.2): reliable-first network,
 bundled harvest, deterministic single-election client (term-1

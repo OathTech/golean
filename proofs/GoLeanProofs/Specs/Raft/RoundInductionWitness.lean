@@ -58,8 +58,9 @@ overclaims)
   doctored to exercise kinds). Multi-link chains over REAL successive
   rounds are the T1 replay's per-round emitter products (A5).
 
-This module is swept by the CORPUS audit target (`AuditCorpus.lean`)
-— the A4-U25 validation-corpus split. -/
+This module is LIVE (default target) since the arc-4 landing fix
+round — the witness-return correction (witnesses of live laws ship in
+the gated build; see GoLeanProofs.lean's witness-return block). -/
 
 namespace GoLean.RaftSeam.RoundInd
 

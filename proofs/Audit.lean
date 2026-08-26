@@ -31,6 +31,18 @@ import Audit.FrameShape
 import Audit.DriverNet
 import Audit.CheckerBridge
 import Audit.RoundInduction
+-- The witness return (arc-4 landing fix round): the live laws' witness
+-- pins gate per-commit again — Ring (span_consume's chain), the four
+-- proved round-kind instances, and the round induction's witnesses
+-- moved here from AuditCorpus; ChoiceInv is the SP1 layer's curated
+-- pin module (new at the fix round).
+import Audit.Ring
+import Audit.RoundMa
+import Audit.RoundVote
+import Audit.RoundMar
+import Audit.RoundVr
+import Audit.RoundIndWitness
+import Audit.ChoiceInv
 -- The corpus pin modules (Audit.Ring / Audit.RoundMa / Audit.RoundVote /
 -- Audit.RoundMar) moved to the AuditCorpus root with the A4-U25
 -- validation-corpus split: their subjects are no longer in this build's
