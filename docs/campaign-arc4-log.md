@@ -6197,3 +6197,25 @@ gate re-run if this unit's gate had to record the interference.
 Nothing merged; branch-complete. Merge/audit-ask remain the
 operator's (constitution §4.1); the comparator-landmark STALE +
 OWED-on-scope escalation stands (Audit.lean lines again).
+
+- 2026-08-26 A4-U24 GATE STATUS — **NOT GATED THIS SESSION; RECORDED
+  AS SUCH, NOT SKIPPED** (fail-noisy per doctrine). The unit-end
+  gate was ATTEMPTED at the exit tree
+  (`GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=24G scripts/ci`,
+  `artifacts/ci-arc4-u24-attempt1.log`, gitignored): every step
+  BEFORE the proofs build passed (preflight, escape hatches,
+  proofs-file audit coverage, bug-index, spec anchors, ...), then
+  **`GATE_EXIT=143`** at "proofs build incl. Audit gate" — the
+  shared-box reaper's SIGTERM, the same interference documented in
+  this unit's ops section (the full-build retry runner recorded 5+
+  consecutive kills at the same step over ~50 minutes,
+  `u24-full-build.log`; the U23 tip's gate PASSED cleanly hours
+  earlier, and NO gate-relevant input regressed since — the delta
+  is 19 tracked files whose content is verified module-by-module
+  through the lean channel with captured exit codes, per the U24
+  entry). OWED: a `scripts/ci` re-run at the next quiet window (one
+  command, warm cache once the full build completes) — flagged for
+  the operator beside the standing comparator-landmark STALE +
+  OWED-on-scope escalation. The full-build retry runner was left
+  running (12 attempts, 5-min backoff); its final state is in
+  `u24-full-build.log`.
