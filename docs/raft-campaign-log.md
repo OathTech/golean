@@ -2006,6 +2006,34 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   ceremony HOLD for the user's three calls (landing shape, audit
   scope, O6 route).
 
+- **[USER] 2026-08-26 — the milestone audit's shape (directed):**
+  top priority = COHERENCE AND DIRECTION OF TRAVEL — "the big issue
+  in this buildout is the potential for a messy accreted build,
+  rather than something coherent" — plus a detail-oriented
+  technical auditor. [AGENT] audit plan (revised from the earlier
+  proposal): reviewer 1+2 (the priority pair): (a) ARCHITECTURAL
+  COHERENCE — is the stack one design or an accretion: the
+  mechanism census (every layer: transports, frame/shape, lens,
+  choice-inv, SliceWalk, emitters, the corpus split), half-built/
+  orphaned/duplicated machinery, scaffold tags vs reality,
+  doc-of-record consistency (the §8 hierarchy), naming/layering
+  sanity — DELIVERABLE: the mechanism registry (the backlogged
+  coherence-audit item, produced BY this audit); (b) DIRECTION OF
+  TRAVEL — does the built structure converge on T1+T2 and the
+  reusable stack: the O1-O7 list vs what exists, the interface
+  stack's vacuity checks re-examined against the landed instances,
+  what the next target would actually reuse, where drift is
+  accumulating. Reviewer 3: the DETAIL TECHNICAL auditor —
+  semantics/correspondence (mandatory per standing doctrine) +
+  claim strength: the R-form statements' honesty, the visible
+  SeedChoiceInvariance premise, the ~ₘ mask's justification chain,
+  the round-induction statement vs its docstrings, the ci/corpus-
+  split changes (U25's flagged delta), axiom/pin integrity.
+  Verification passes default-refute as always; Opus throughout.
+  Launch AFTER gate+judge at the merged tip (audit the final
+  state). Ceremony order: gate (running) → judge + AuditCorpus
+  landmark → audit → fix round → [USER] ff sign-off.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
