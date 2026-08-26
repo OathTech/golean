@@ -61,3 +61,51 @@ slice, computed-vs-literal, zero sorry/native_decide/new axioms,
   a parameter threaded through an inductive's motive costs
   underscores, not proofs; the expensive-looking migration risk was
   imaginary because no landed consumer destructures `hpair`.
+
+- **[AGENT] ops note (S1 build):** five consecutive oom-kills at
+  the 48G cap during this worktree's FIRST heavy build (cold cache:
+  ~145 jobs incl. the Vr/Mar/Vote equation chains) — at default
+  threads, at 6, and at 2. Warm-up completed only at
+  LEAN_NUM_THREADS=1 (build6, EXIT=0). The recorded "warm at 2"
+  remedy is calibrated for the campaign worktree's warm cache, not
+  a cold worktree; also: two of the kills were misread at first as
+  my own tool-timeout SIGTERMs — `systemctl --user` scope Results
+  (oom-kill) are the honest signal, judged per the masked-kill
+  convention. Box-wide build-lock observed HELD by
+  "coordinator-ceremony" throughout (3+ h, no active build);
+  this lane stayed within the explicit-target ≤48G exemption and
+  did NOT touch the lock.
+
+- **S2 — RoundFam's family-former slot: EDITED** (RoundStatement +
+  SeedPin + the four Round*Lemma closures + one RoundInduction
+  docstring). `RoundFam (F : ExecState → Prop) σF := ∃ canon,
+  F canon ∧ ∃ r na₀ na fr, FrameSim r na₀ na fr canon σF`; every
+  landed instance uses the literal former `(· = canon)`;
+  `RoundFam.self σ : RoundFam (· = σ) σ`; the four closure proofs
+  gain the `canon', rfl` witness components (mechanical).
+
+- **S4 — the minor batch: EDITED.** (a) `Normalizes` predicate +
+  `fieldNormFuel` (kernel-pinned to `typeResolutionFuel - 1` by
+  `fieldNormFuel_eq`) wrap the raw 1023 out of L2/L3's premises;
+  fuel-monotonicity proved end to end (`normalizeValueForTyFuel_mono`
+  + `normalizeListWith_mono`/`normalizeFieldsWith_mono`/
+  `normalizeStructValueWith_mono`, plus the `Normalizes.of_le`
+  discharge form); Lens builds green standalone. (b)
+  `TwinVerdict`/`TwinVerdict.ofResult` decoder beside (NOT inside)
+  the pinned T1 statements, with `ofResult_violations` (the decoder
+  reads exactly the position `AgreementT1` pins) and
+  `agreementT1_verdict` (the aboutness corollary); RaftAgreement
+  builds green; Challenge's closure verified untouched (it never
+  imports RaftAgreement). (c) the `sliceElems` name collision
+  resolved: RoundStatement's private helper renamed
+  `twinSliceElems` (the public `GoLean.Lens.sliceElems` keeps the
+  name; F5e — no namespace changes).
+  [AGENT] validation-batching call: S2+S4 share the RoundStatement
+  rebuild cascade (~35 warm modules), so they are validated as ONE
+  build at the S4 tip and committed as two slices; risk accepted as
+  mechanical-edit-only, recorded here.
+  WHAT THIS TAUGHT US: the fuel-monotonicity proof was the entire
+  cost of S4a (~150 lines, all mechanical constructor fan-out); the
+  professor's "wrap the literal" is cheap ONLY because the
+  normalizer's helpers are already parameterized in the recursive
+  call — a design worth keeping for every fueled family.

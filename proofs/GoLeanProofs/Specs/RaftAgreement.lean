@@ -70,4 +70,112 @@ def CompletionWitness : Prop :=
     ∧ r.values[3]? = some (.int 1 .int)
     ∧ r.values[4]? = some (.int 1 .int)
 
+/-! ## The verdict decoder (wave α, S4 — readout/aboutness ONLY)
+
+`TwinVerdict.ofResult` names the harness's five observable ints so
+docstrings and corollaries can speak the harness's vocabulary
+("violations", "floor") instead of positional `values[i]?`. It is
+**NOT part of the pinned statements above**: `AgreementT1` and
+`CompletionWitness` read `r.values` positionally, byte-for-byte as
+before, and designation (when it happens) covers those definitions
+verbatim — the decoder is a labeled window onto the same five ints,
+with `ofResult_violations` pinning that the label points at the
+position the statement reads. -/
+
+/-- The twin harness's decoded verdict: the five observable ints in
+the order `twinChoiceVerdict` returns them (the aboutness sentence's
+"five ints"). -/
+structure TwinVerdict where
+  violations : Int
+  claims : Int
+  committed : Int
+  complete : Int
+  floor : Int
+  deriving Repr, DecidableEq
+
+/-- Read `values[i]` as a machine int, kind forgotten. Fail closed. -/
+private def intAt (r : Result) (i : Nat) : Option Int :=
+  match r.values[i]? with
+  | some (.int v _) => some v
+  | _ => none
+
+/-- Decode a run's `Result` into the named verdict. Fail closed:
+five positions, each a machine int, or `none`. -/
+def TwinVerdict.ofResult (r : Result) : Option TwinVerdict := do
+  let violations ← intAt r 0
+  let claims ← intAt r 1
+  let committed ← intAt r 2
+  let complete ← intAt r 3
+  let floor ← intAt r 4
+  pure { violations, claims, committed, complete, floor }
+
+/-- The decoder is faithful to the position `AgreementT1` pins: a
+decoded verdict's `violations` field IS the int at `values[0]`. -/
+theorem TwinVerdict.ofResult_violations {r : Result} {vd : TwinVerdict}
+    (h : TwinVerdict.ofResult r = some vd) :
+    ∃ k, r.values[0]? = some (.int vd.violations k) := by
+  unfold TwinVerdict.ofResult at h
+  cases h0 : intAt r 0 with
+  | none => rw [h0] at h; cases h
+  | some v0 =>
+      rw [h0] at h
+      unfold intAt at h0
+      cases hv : r.values[0]? with
+      | none => rw [hv] at h0; cases h0
+      | some gv =>
+          rw [hv] at h0
+          cases gv with
+          | int v k =>
+              refine ⟨k, ?_⟩
+              cases h1 : intAt r 1 with
+              | none => rw [h1] at h; cases h
+              | some v1 =>
+                rw [h1] at h
+                cases h2 : intAt r 2 with
+                | none => rw [h2] at h; cases h
+                | some v2 =>
+                  rw [h2] at h
+                  cases h3 : intAt r 3 with
+                  | none => rw [h3] at h; cases h
+                  | some v3 =>
+                    rw [h3] at h
+                    cases h4 : intAt r 4 with
+                    | none => rw [h4] at h; cases h
+                    | some v4 =>
+                      rw [h4] at h
+                      cases h
+                      injection h0 with h0'
+                      subst h0'
+                      simpa using hv
+          | unit => cases h0
+          | bool _ => cases h0
+          | float _ _ => cases h0
+          | string _ => cases h0
+          | addr _ => cases h0
+          | nil => cases h0
+          | interface _ _ => cases h0
+          | struct _ _ => cases h0
+          | array _ => cases h0
+          | slice _ => cases h0
+          | map _ => cases h0
+          | mapData _ => cases h0
+          | chan _ => cases h0
+          | chanData _ _ _ => cases h0
+          | funcVal _ _ => cases h0
+          | syncData _ => cases h0
+
+/-- Aboutness corollary (first-order readout in the decoder's
+vocabulary): under `AgreementT1`, every completing run that decodes
+has a zero `violations` field. -/
+theorem agreementT1_verdict (hT1 : AgreementT1) {fuel : Nat}
+    {ch : Choices} {r : Result} {vd : TwinVerdict}
+    (hrun : twinRun fuel ch = .ok r)
+    (hdec : TwinVerdict.ofResult r = some vd) :
+    vd.violations = 0 := by
+  obtain ⟨k, hv⟩ := TwinVerdict.ofResult_violations hdec
+  have h0 := hT1 fuel ch r hrun
+  rw [hv] at h0
+  simp only [Option.some.injEq, GoValue.int.injEq] at h0
+  exact h0.1
+
 end GoLean.Examples.RaftTwin

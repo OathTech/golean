@@ -306,9 +306,10 @@ theorem lensInst_witness :
       = some (.defined ⟨"raft.raft"⟩) := by kernel_rfl
   refine ⟨?_, ?_⟩
   · exact fieldRead_store_hit hst hc hv hd raftRaft_lookup raft_Term_ty
-      (by kernel_rfl)
+      (by unfold Normalizes; kernel_rfl)
   · exact fieldRead_store_miss hst hc hv hd raftRaft_lookup
-      (by decide) raft_Vote_ty (by kernel_rfl) (by kernel_rfl)
+      (by decide) raft_Vote_ty (by kernel_rfl)
+      (by unfold Normalizes; kernel_rfl)
 
 /-- The store itself succeeds (so `lensInst_witness` is live, not
 vacuous): existence by closed evaluation. -/

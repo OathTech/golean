@@ -582,11 +582,228 @@ theorem store_field_decomp {σ σ' : ExecState} {a : Addr} {tid : TypeId}
             rw [hd]
             exact (Except.ok.inj hst).symm
 
+/-! ### The store path's field-normalization budget (wave α, S4):
+the fuel literal wrapped in a named predicate + fuel monotonicity.
+The magic `1023` is a REPRESENTATION detail (tolerated scaffold,
+CLAUDE.md "clever tricks" doctrine): `storeLoc` enters the normalizer
+at `normalizeValueForTy` (= fuel `typeResolutionFuel` = 1024) and the
+struct arm consumes exactly one unit resolving the cell's defined
+type, so FIELD values normalize at 1023. Laws state their premises
+with `Normalizes`, never the raw literal; monotonicity lets any
+smaller-fuel computation discharge it. -/
+
+/-- The field-normalization budget: `typeResolutionFuel - 1` (the
+struct arm's one resolution step), kernel-pinned by
+`fieldNormFuel_eq` so the derivation can never silently drift. -/
+def fieldNormFuel : Nat := 1023
+
+theorem fieldNormFuel_eq : fieldNormFuel = typeResolutionFuel - 1 := rfl
+
+/-- `Normalizes σ τ v w`: `v` normalizes to `w` at field type `τ`
+within the store path's field budget — the premise form the L2/L3
+laws take (`Normalizes σ τ v v` is the stability reading). Discharge
+by evaluation, by the per-field-type shape lemmas below, or from any
+smaller-fuel computation via `Normalizes.of_le`. -/
+def Normalizes (σ : ExecState) (τ : Ty) (v w : GoValue) : Prop :=
+  normalizeValueForTyFuel fieldNormFuel σ τ v = .ok w
+
+/-- Success monotonicity of `normalizeListWith` in the element
+normalizer (pointwise on successes). -/
+theorem normalizeListWith_mono {f g : GoValue → Except GoError GoValue}
+    (hfg : ∀ v w, f v = .ok w → g v = .ok w) :
+    ∀ {xs : List GoValue} {ys : Array GoValue},
+      normalizeListWith f xs = .ok ys → normalizeListWith g xs = .ok ys := by
+  intro xs
+  induction xs with
+  | nil => exact fun h => h
+  | cons x rest ih =>
+      intro ys h
+      unfold normalizeListWith at h ⊢
+      cases hx : f x with
+      | error e => rw [hx, error_bind] at h; cases h
+      | ok hd =>
+          rw [hx, ok_bind] at h
+          rw [hfg x hd hx, ok_bind]
+          cases ht : normalizeListWith f rest with
+          | error e => rw [ht, error_bind] at h; cases h
+          | ok tl =>
+              rw [ht, ok_bind] at h
+              rw [ih ht, ok_bind]
+              exact h
+
+/-- Success monotonicity of `normalizeFieldsWith` in the field
+normalizer. -/
+theorem normalizeFieldsWith_mono {f g : Ty → GoValue → Except GoError GoValue}
+    (hfg : ∀ τ v w, f τ v = .ok w → g τ v = .ok w) :
+    ∀ {fds : List FieldDef} {fs : List (String × GoValue)}
+      {out : Array (String × GoValue)},
+      normalizeFieldsWith f fds fs = .ok out →
+      normalizeFieldsWith g fds fs = .ok out := by
+  intro fds
+  induction fds with
+  | nil => intro fs out h; cases fs <;> exact h
+  | cons fd rest ih =>
+      intro fs out h
+      cases fs with
+      | nil => exact h
+      | cons p prest =>
+          obtain ⟨pn, pv⟩ := p
+          unfold normalizeFieldsWith at h ⊢
+          by_cases hpn : (pn != fd.name) = true
+          · rw [if_pos hpn] at h; cases h
+          · rw [if_neg hpn] at h ⊢
+            replace h : (f fd.typ pv >>= fun head =>
+                normalizeFieldsWith f rest prest >>= fun tail =>
+                pure (#[(fd.name, head)] ++ tail)) = .ok out := h
+            show (g fd.typ pv >>= fun head =>
+                normalizeFieldsWith g rest prest >>= fun tail =>
+                pure (#[(fd.name, head)] ++ tail)) = .ok out
+            cases hx : f fd.typ pv with
+            | error e => rw [hx, error_bind] at h; cases h
+            | ok hd =>
+                rw [hx, ok_bind] at h
+                rw [hfg _ _ _ hx, ok_bind]
+                cases ht : normalizeFieldsWith f rest prest with
+                | error e => rw [ht, error_bind] at h; cases h
+                | ok tl =>
+                    rw [ht, ok_bind] at h
+                    rw [ih ht, ok_bind]
+                    exact h
+
+/-- Success monotonicity of `normalizeStructValueWith` in the field
+normalizer. -/
+theorem normalizeStructValueWith_mono
+    {f g : Ty → GoValue → Except GoError GoValue}
+    (hfg : ∀ τ v w, f τ v = .ok w → g τ v = .ok w)
+    {name : TypeId} {fields : Array FieldDef} {v w : GoValue}
+    (h : normalizeStructValueWith f name fields v = .ok w) :
+    normalizeStructValueWith g name fields v = .ok w := by
+  cases v with
+  | struct actual fieldsValue =>
+      unfold normalizeStructValueWith at h ⊢
+      by_cases hne : (actual != name) = true
+      · simp only [hne, if_true] at h ⊢
+        exact h
+      · simp only [hne, Bool.false_eq_true, if_false] at h ⊢
+        by_cases hsz : (fieldsValue.size != fields.size) = true
+        · simp only [hsz, if_true] at h ⊢
+          exact h
+        · simp only [hsz, Bool.false_eq_true, if_false] at h ⊢
+          cases hn : normalizeFieldsWith f fields.toList fieldsValue.toList with
+          | error e => rw [hn, map_error] at h; cases h
+          | ok nfs =>
+              rw [hn, map_ok] at h
+              rw [normalizeFieldsWith_mono hfg hn, map_ok]
+              exact h
+  | unit => exact h
+  | bool _ => exact h
+  | int _ _ => exact h
+  | float _ _ => exact h
+  | string _ => exact h
+  | addr _ => exact h
+  | nil => exact h
+  | interface _ _ => exact h
+  | funcVal _ _ => exact h
+  | slice _ => exact h
+  | map _ => exact h
+  | mapData _ => exact h
+  | chan _ => exact h
+  | chanData _ _ _ => exact h
+  | array _ => exact h
+  | syncData _ => exact h
+
+/-- **Fuel monotonicity of the normalizer** (the S4 lemma): a
+normalization that succeeds at fuel `n` succeeds identically at any
+`m ≥ n` — fuel bounds nesting DEPTH only, never changes an answer. -/
+theorem normalizeValueForTyFuel_mono :
+    ∀ {n m : Nat}, n ≤ m →
+      ∀ {σ : ExecState} {τ : Ty} {v w : GoValue},
+        normalizeValueForTyFuel n σ τ v = .ok w →
+        normalizeValueForTyFuel m σ τ v = .ok w := by
+  intro n
+  induction n with
+  | zero =>
+      intro m _ σ τ v w h
+      unfold normalizeValueForTyFuel GoCore.unsupported at h
+      cases h
+  | succ k ih =>
+      intro m hm σ τ v w h
+      obtain ⟨j, rfl⟩ : ∃ j, m = j + 1 := ⟨m - 1, by omega⟩
+      have hkj : k ≤ j := by omega
+      cases τ with
+      | array length elem =>
+          cases v with
+          | array values =>
+              unfold normalizeValueForTyFuel at h ⊢
+              by_cases hsz : (values.size != length) = true
+              · simp only [hsz, if_true] at h ⊢
+                exact h
+              · simp only [hsz, Bool.false_eq_true, if_false] at h ⊢
+                cases hl : normalizeListWith
+                    (normalizeValueForTyFuel k σ elem) values.toList with
+                | error e => rw [hl, map_error] at h; cases h
+                | ok ys =>
+                    rw [hl, map_ok] at h
+                    rw [normalizeListWith_mono
+                      (fun v w hv => ih hkj hv) hl, map_ok]
+                    exact h
+          | unit => exact h
+          | bool _ => exact h
+          | int _ _ => exact h
+          | float _ _ => exact h
+          | string _ => exact h
+          | addr _ => exact h
+          | nil => exact h
+          | interface _ _ => exact h
+          | funcVal _ _ => exact h
+          | slice _ => exact h
+          | map _ => exact h
+          | mapData _ => exact h
+          | chan _ => exact h
+          | chanData _ _ _ => exact h
+          | struct _ _ => exact h
+          | syncData _ => exact h
+      | defined name =>
+          unfold normalizeValueForTyFuel at h ⊢
+          cases hlk : TypeEnv.lookup σ.types name with
+          | none => rw [hlk] at h; cases h
+          | some td =>
+              rw [hlk] at h
+              cases td with
+              | alias target => exact ih hkj h
+              | defined target => exact ih hkj h
+              | struct fields =>
+                  exact normalizeStructValueWith_mono
+                    (fun τ' v' w' hv => ih hkj hv) h
+              | unsupported _ => cases h
+              | interfaceDef _ => cases h
+      | bool => cases v <;> exact h
+      | int _ => cases v <;> exact h
+      | float _ => cases v <;> exact h
+      | string => cases v <;> exact h
+      | slice _ => cases v <;> exact h
+      | map _ _ => cases v <;> exact h
+      | chan _ _ => cases v <;> exact h
+      | pointer _ => cases v <;> exact h
+      | funcType _ _ _ => cases v <;> exact h
+      | interface _ => cases v <;> exact h
+      | unsupported _ => cases v <;> exact h
+      | sync _ => cases v <;> exact h
+
+/-- Discharge `Normalizes` from any computation at fuel
+`≤ fieldNormFuel` (the shape lemmas below typically instantiate their
+generic successor fuel here). -/
+theorem Normalizes.of_le {σ : ExecState} {τ : Ty} {v w : GoValue}
+    {n : Nat} (hn : n ≤ fieldNormFuel)
+    (h : normalizeValueForTyFuel n σ τ v = .ok w) : Normalizes σ τ v w :=
+  normalizeValueForTyFuel_mono hn h
+
 /-- **L2 — store-miss (the frame half)**: a store to field `g` leaves
 field `f ≠ g` reading its OLD value, provided that value is stable
 under its own field-type normalization (free for pointer/slice/bool/
 interface fields; the in-range fact for scalar fields — the shape
-lemmas below). -/
+lemmas below). The stability premise is the `Normalizes` predicate —
+the store path's fuel budget stays out of the statement (S4). -/
 theorem fieldRead_store_miss {σ σ' : ExecState} {a : Addr} {tid : TypeId}
     {g : String} {w : GoValue} {cell : HeapCell}
     {fs : Array (String × GoValue)} {fds : Array FieldDef}
@@ -598,7 +815,7 @@ theorem fieldRead_store_miss {σ σ' : ExecState} {a : Addr} {tid : TypeId}
     {f : String} (hne : f ≠ g)
     {τ : Ty} (hfty : fieldTy? fds.toList f = some τ)
     {v : GoValue} (hold : StructFields.lookup fs f = some v)
-    (hstab : normalizeValueForTyFuel 1023 σ τ v = .ok v) :
+    (hstab : Normalizes σ τ v v) :
     fieldRead σ' a tid f = some v := by
   obtain ⟨updated, nfs, hset, hnorm, hσ'⟩ :=
     store_field_decomp hst hc hv hd hty
@@ -626,7 +843,8 @@ theorem fieldRead_store_miss {σ σ' : ExecState} {a : Addr} {tid : TypeId}
 
 /-- **L3 — store-hit**: after a successful store of `w` to field `g`,
 the field reads back as `w`'s normalization at its declared field
-type. -/
+type (stated through `Normalizes` — the fuel budget stays out of the
+statement, S4). -/
 theorem fieldRead_store_hit {σ σ' : ExecState} {a : Addr} {tid : TypeId}
     {g : String} {w : GoValue} {cell : HeapCell}
     {fs : Array (String × GoValue)} {fds : Array FieldDef}
@@ -636,7 +854,7 @@ theorem fieldRead_store_hit {σ σ' : ExecState} {a : Addr} {tid : TypeId}
     (hd : cell.declaredTy = some (.defined tid))
     (hty : TypeEnv.lookup σ.types tid = some (.struct fds))
     {τ : Ty} (hfty : fieldTy? fds.toList g = some τ)
-    {w' : GoValue} (hnw : normalizeValueForTyFuel 1023 σ τ w = .ok w') :
+    {w' : GoValue} (hnw : Normalizes σ τ w w') :
     fieldRead σ' a tid g = some w' := by
   obtain ⟨updated, nfs, hset, hnorm, hσ'⟩ :=
     store_field_decomp hst hc hv hd hty
@@ -784,7 +1002,8 @@ theorem lens_witness_L2L3 :
       ∧ fieldRead σ' ⟨0⟩ wTid "p" = some (.addr (.base ⟨1⟩)) := by
   intro σ' hst
   refine ⟨?_, ?_⟩
-  · exact fieldRead_store_hit hst rfl rfl rfl rfl rfl rfl
-  · exact fieldRead_store_miss hst rfl rfl rfl rfl (by decide) rfl rfl rfl
+  · exact fieldRead_store_hit hst rfl rfl rfl rfl rfl (by exact rfl)
+  · exact fieldRead_store_miss hst rfl rfl rfl rfl (by decide) rfl rfl
+      (by exact rfl)
 
 end GoLean.Lens

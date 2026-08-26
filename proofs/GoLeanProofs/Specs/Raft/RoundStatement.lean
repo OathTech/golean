@@ -155,7 +155,7 @@ private def readShell (σ : ExecState) : GoValue → Option (Int × Int × Int �
       | _ => none
   | _ => none
 
-private def sliceElems (σ : ExecState) : GoValue → Option (List GoValue)
+private def twinSliceElems (σ : ExecState) : GoValue → Option (List GoValue)
   | .slice sv => do
       match sv.base with
       | none => if sv.len == 0 then some [] else none
@@ -188,11 +188,11 @@ def absTwinRead (σ : ExecState) (tl : Loc) : Option AbsTwinV0 := do
       let violations ← readIntField fs "violations"
       let claims ← readIntField fs "claims"
       let committed ← readIntField fs "committed"
-      let ndPtrs ← (StructFields.lookup fs "nodes").bind (sliceElems σ)
+      let ndPtrs ← (StructFields.lookup fs "nodes").bind (twinSliceElems σ)
       let nodes ← ndPtrs.mapM (readShell σ)
-      let netPtrs ← (StructFields.lookup fs "net").bind (sliceElems σ)
+      let netPtrs ← (StructFields.lookup fs "net").bind (twinSliceElems σ)
       let msgs ← netPtrs.mapM (absMessage σ)
-      let liveVs ← (StructFields.lookup fs "live").bind (sliceElems σ)
+      let liveVs ← (StructFields.lookup fs "live").bind (twinSliceElems σ)
       let lives ← liveVs.mapM readBool
       if msgs.length == lives.length then
         pure { violations, claims, committed, nodes,
@@ -207,7 +207,7 @@ def absTwinNodeRaft (σ : ExecState) (tl : Loc) (i : Nat) : Option Addr := do
   match tc.value with
   | .struct tid fs => do
       guard (tid == twinTid)
-      let ndPtrs ← (StructFields.lookup fs "nodes").bind (sliceElems σ)
+      let ndPtrs ← (StructFields.lookup fs "nodes").bind (twinSliceElems σ)
       let ndv ← ndPtrs[i]?
       match ndv with
       | .addr ndl => do
