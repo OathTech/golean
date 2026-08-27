@@ -31,8 +31,6 @@ import GoLeanProofs.Frame.Relocate
 -- round (unconsumed byte-identical duplicate of the RaftSeam
 -- original; ledger row closed — see Audit/Kit.lean's tombstone).
 import GoLeanProofs.Sym.SpillTransport
-import GoLeanProofs.Specs.Raft.StaticCells
-import GoLeanProofs.Specs.Raft.StaticCellsExt
 -- W0 RESET (2026-08-27, kill-list K-A executed in this commit; K-B/
 -- K-C/K-D follow phase-by-phase): the fixed-trajectory era's literal
 -- modules (57 Specs/Raft `*Lit*` + TwinCheckpoints(F); 1,184,100
@@ -55,7 +53,6 @@ import GoLeanProofs.Frame.ShapeStep
 import GoLeanProofs.Frame.ShapeSpan
 import GoLeanProofs.SliceWalk
 import GoLeanProofs.Specs.Raft.DriverNet
-import GoLeanProofs.Specs.Raft.DriverNetWitness
 -- arc4b landing (C2c slice 0, per the lane's landing manifest): the native
 -- S1/S2/S3 chain over the obligation signature (SC1 + C3 + C4).
 -- W0 reset: NativeS1Witness/NativeS23Witness are RETAINED (professor
@@ -76,7 +73,6 @@ import GoLeanProofs.Specs.Raft.NativeCheckerBridge
 -- kill-list K-E (off the critical path; the seed pins and their
 -- literals are archived).
 import GoLeanProofs.Frame.ChoiceCanon
-import GoLeanProofs.Frame.ChoiceCanonWitness
 import GoLeanProofs.Frame.ChoiceInv
 -- A4-U8: the field-lens layer (Perennial Access lineage; general half —
 -- combinators + L1-L4 laws).
@@ -116,11 +112,6 @@ import GoLeanProofs.Specs.QuorumTargets
 import GoLeanProofs.Specs.WirePin
 import GoLeanProofs.Specs.TwinProgram
 import GoLeanProofs.Specs.RaftAgreement
--- Arc 2: the state-reflection elaborators (StateWire) — dies at W0
--- K-B (its sole consumers, the checkpoint modules, were K-A kills;
--- linked here until its own phase so the K-A commit stays one
--- concern).
-import GoLeanProofs.Specs.StateWire
 -- Arc 2 U4: the verified fast-twin evaluator (route (d) — untrusted
 -- method, never in any statement closure). KEPT (kill-list K-E): the
 -- differential instrument's certified replay.
@@ -276,15 +267,9 @@ import GoLeanProofs.Sym.SpikeKadane
 -- Campaign Arc 4 (A4-U1 pilot): the seam's abstraction reader (v1) —
 -- the pairing vocabulary's base (kill-list K-E keep).
 import GoLeanProofs.Specs.Raft.AbsState
--- HandlerEq/HandlerEqSym/BecomeFollowerWitness/LensInst: trajectory-
--- era modules, linked until their K-B phase deletes them (W0 reset).
-import GoLeanProofs.Specs.Raft.HandlerEq
-import GoLeanProofs.Specs.Raft.BecomeFollowerWitness
 -- A4-U2 slice 1: the handler-fragment Sym extension (class 1, the
 -- type-table input).
 import GoLeanProofs.Sym.TableExt
-import GoLeanProofs.Specs.Raft.HandlerEqSym
-import GoLeanProofs.Specs.Raft.LensInst
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)

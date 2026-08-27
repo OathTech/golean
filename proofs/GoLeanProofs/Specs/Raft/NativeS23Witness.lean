@@ -5,6 +5,11 @@ import GoLeanProofs.Specs.Raft.NativeS23Chain
 witness-in-same-slice lane convention — C3's lesson (a), now
 binding.)
 
+RETAINED at the W0 reset (kill-list amendment, professor final
+review): this module survives the witness kill as the non-vacuity
+demonstration of the interface premises the abstract leaves consume
+(the `S23Interface`/`HStep` obligations) — until W5 supersedes it.
+
 A concrete six-step T1-shaped run — the twin's deliver-loop shape
 at `ldr = 1`, `tm = 2` (the S1 chain's output instantiated): noop
 propose, command propose, leader commit to 3, follower 2 accepts

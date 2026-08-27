@@ -3,6 +3,12 @@ import GoLeanProofs.Specs.Raft.NativeS1CheckerLeaf
 /-! # C3 — the non-vacuity witness for the native S1 chain
 (scoping lane `campaign-arc4b`, unit C3, 2026-08-27.)
 
+RETAINED at the W0 reset (kill-list amendment, professor final
+review): this module survives the witness kill as the non-vacuity
+demonstration of the interface premises the abstract leaves consume
+(`ClaimTrace`/`hgen`/the S1 interface) — constructing it caught the
+self-vote soundness bug — until W5 supersedes it.
+
 The project's non-vacuity gate (CLAUDE.md): axiom-clean is not
 enough — a law ships with a discharge witness that instantiates it
 on a concrete instance and discharges every premise but the
