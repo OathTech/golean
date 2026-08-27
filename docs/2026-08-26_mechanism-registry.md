@@ -1,19 +1,5 @@
 # The mechanism registry — arc-4 landing audit deliverable (2026-08-26)
 
-> **TRACKED COPY (arc-4 landing fix round, F6).** Source: the campaign
-> worktree's `docs/2026-08-26_mechanism-registry.md` @ raft-proof-campaign
-> commit `f24ff11c` (registry computed against campaign-arc4 @ `b4977d05`,
-> the audited landing tip). This snapshot is the AUDIT-TIME state; the fix
-> round changed several rows — read them with the fix-round log entry
-> (`docs/campaign-arc4-log.md`) in hand: Sym/PickTransport DELETED (row
-> "DUPLICATE + ORPHAN" resolved); Star/ReachRel UNIFIED; the SC1 skeleton
-> Props DELETED; the corpus split's witness placement CORRECTED (Ring/Round*
-> chains + witnesses live again); ChoiceCanon/ChoiceInv renamespaced to
-> `GoLean.Frame.ChoiceErase` + Audit/ChoiceInv pins added; the generators
-> tracked at `tools/campaign/`; `collectFix`'s stability test fixed +
-> witnessed; the R-form's stale SCAFFOLD tag and the carried-relation
-> overstatement corrected.
-
 ## THE MECHANISM REGISTRY — campaign-arc4 @ b4977d05
 
 Legend for **completion**: COMPLETE (theorem + real consumers + witness), PARTIAL (shipped, keystone missing), STATEMENT-ONLY (former shipped, general discharge deferred), ORPHAN (built, no consumer), DUPLICATE.

@@ -20,7 +20,7 @@ separated:
 - **A reusable, agent-operable reasoning stack** over that
   semantics: Hoare-style specs, symbolic execution, frames, loop
   rules — general machinery with target instances, never the
-  reverse. Index: `docs/mechanism-registry.md`.
+  reverse. Index: `docs/2026-08-26_mechanism-registry.md`.
 
 Every verification result ships in one shape: **a theorem about a
 concrete harness (or a parameterized family of harnesses)** —
@@ -54,8 +54,8 @@ verified against the semantics, useful-not-complete, replaceable.
   unrolling, fixture-anchored statements: totally forbidden as
   proof technique — they do not generalize. A statement anchored to
   a SUBJECT RUN — a measured span length, a censused prefix, a
-  fixture identity — is scaffolding at best, labeled so at birth,
-  never cited by a proof. (Not banned: shape constants of the
+  fixture identity, an enumerated case list over states — is scaffolding at best, labeled so at birth,
+  never cited by — or composed into — a proof. (Not banned: shape constants of the
   frontend's fixed desugars in ∀-quantified rules, and bounds that
   appear in the reflected program text itself.)
   The subject's identity enters only via the reflection pair.
@@ -107,6 +107,10 @@ verified against the semantics, useful-not-complete, replaceable.
   different instances). Deletion bias: nothing is kept because
   tests are green; scaffolding carries a retirement condition or a
   deletion date.
+- **Proof-facing code is total.** No `partial`, no `sorry`, no
+  `native_decide` in the semantic core or the reasoning layer;
+  structural/well-founded recursion so the proof direction stays
+  reachable. The in-build Audit gate enforces the axiom envelope.
 - **Fail closed, always.** Unknown wire node, unsupported feature,
   unclassified case, exhausted budget → an explicit refusal that
   NAMES ITS CAUSE at the point of failure (the sealed-payload
@@ -162,7 +166,7 @@ verified against the semantics, useful-not-complete, replaceable.
 Plan of record: `docs/2026-08-27_clean-proof-plan.md` · Proof
 structure: `docs/2026-08-27_proof-structure-explained.md` · The
 archive of the killed era: `docs/ARCHIVE.md` · Mechanism index:
-`docs/mechanism-registry.md` · Operational lessons (build/OOM/tool
+`docs/2026-08-26_mechanism-registry.md` · Operational lessons (build/OOM/tool
 incidents, measured remedies): `docs/operational-lessons.md` ·
-Constitution (campaign governance): 
+Architecture rules: `AGENTS.md` · Constitution (campaign governance): 
 `docs/2026-08-21_raft-proof-constitution.md`.

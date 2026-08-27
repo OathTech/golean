@@ -119,3 +119,12 @@ judgment calls.
 
 Nothing merged; branch-complete. The merge ceremony (gate + judge +
 audit-ask) is the operator's.
+
+## Delta-review fixes (operator, post-review)
+- F1: landmark re-recorded at the reachable post-rebase sha (tree-identity justification in the marker comment).
+- F2: charter pointers fixed (registry path); the plan-of-record docs (clean-proof-plan, proof-structure-explained, kill-list, registry) landed on this branch so main is self-contained.
+- F3 (recorded as D3): S1/S23CheckerInterface have no concrete inhabitant post-kill — the CheckerBridge docstring corrected to the honest AbsStateV2 form; fresh instances are the W1 pilot's.
+- F4: the charter's two doctrine strengthenings restored ("or composed into"; "enumerated case list over states"); the charter's carve-outs and the merge-protocol main-merge-into-branch escape were [USER]-approved in-session (campaign log 2026-08-27 entries) — noted here since the commit message could not flag it.
+- F5: totality doctrine (no partial/sorry/native_decide) restored to the charter; AGENTS.md added to pointers.
+- F7: the commit message said three sibling witnesses; four (this log's D2 was correct).
+- F8: the 11-line wc-vs-numstat gap is trailing-newline accounting; both derivations stand.
