@@ -237,6 +237,26 @@ over an obligation signature the route):
   shape-pinned verbatim against the lowering) is silent on
   violation-free traces.
 
+## 4b. The network correspondence layer [PROPOSED — surfaced by the
+professor's final review; previously hidden in constructor premises]
+
+SNet has no network: EStep delivers directly, carrying premises
+(hgen genuineness; HStep's payload/window premises) the assembly
+must discharge from facts about IN-FLIGHT CONCRETE MESSAGES. The
+discharging object is NetCorr — an invariant clause of I relating
+every live net message to the abstract state: grant provenance for
+vote responses; history-slice payloads + all-EntryNormal for
+appends; Match evidence for acks; and the population clause (the
+message vocabulary, incl. the proved absence of MsgTimeoutNow — the
+library CAN campaign on message receipt, so the second-election
+exclusion is a preserved invariant, not a structural fact). This is
+Verdi's network-invariant stratum (votes_nw/leaderLogs) — where
+verdi-raft spent most of its lines — and one of the plan's two
+summits (the other: W1's footprint frame). Also surfaced: the
+runProgramM glue family (monotonicity, readout-of-total, truncation
+classification) — no runProgramM-level lemma existed; it gates both
+sentences and lands in W1.
+
 ## 5. The two remaining seams (both [PROPOSED], both spec-shaped)
 
 1. **The pairing + checker correspondence**: the body spec's

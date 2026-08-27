@@ -1,4 +1,4 @@
-# The clean proof plan (2026-08-27) — awaiting [USER] approval
+# The clean proof plan (2026-08-27, v2 — professor-amended) — awaiting [USER] approval
 
 Deliverable 1 of the replanning round. The proof structure is
 `docs/2026-08-27_proof-structure-explained.md` (deliverable 3 — read
@@ -35,16 +35,43 @@ accreted incident narratives move to a tracked
 `docs/operational-lessons.md`. Draft for [USER] sign-off (it is the
 charter; its content is yours).
 
+## THE PROFESSOR'S DELTAS (final review, folded in below — the two
+UNPRICED SUMMITS marked with a star)
+
+1. W1 gains the call-span judgment shape, the runProgramM glue
+   family, and (star) the frame design (footprint-annotated Spec).
+2. NEW W2.5 — (star) the invariant design note + NetCorr (the Verdi
+   network-invariant stratum, silently absorbed into EStep/HStep
+   constructor premises until this review named it): a [USER]
+   DESIGN GATE ahead of all of W3.
+3. W3 gains per-handler NetCorr-preservation conclusions, the
+   harvest-quiescence measure unit, the certified/leaderCommitOk
+   Match-evidence unit, and the reader extension.
+4. W4 gains the phase-transition round and the extended guard
+   census (panic sites, blocked-sync exclusion, readback-.ok).
+5. W2 gains the pick-loop element-type generalization and
+   mapIter_no_stop_of_unmutated.
+6. W0 amended: the two native interface witnesses RETAINED until
+   W5 (non-vacuity of ClaimTrace/hgen/S23Interface; one caught the
+   self-vote soundness bug); the W1 pilot may consult the archive.
+
 ## W1 — the spec former and driver (the judgment layer)
 
-`Spec P f Q` over the interchange format (`stepFnIter`-level, with
-`GoTriple`-shaped conclusions kept reachable); the call rule; the
-deterministic driver assembling the landed rules (sym engine,
-transports, lens, frame) with sealed `UNSUPPORTED payload` refusals
-and the escape ladder. GATE (the pilot): ONE handler's function spec
-(`becomeFollower` — smallest real handler) proved end-to-end via the
-driver, cost measured. The U1 lesson applies: if the pilot refutes
-the costing, redesign here before W3.
+`Spec P f Q` in the CALL-SPAN shape (function entry through the
+frame arm's result-read/store walk to the post-store configuration;
+the `.next k` form covers statements only), the call rule, and the
+deterministic driver with sealed refusals and the escape ladder.
+Plus THE GLUE FAMILY (gates both sentences): runProgramM_mono,
+runProgramM_readout_of_total (the bridge from ∃n specs to the
+∀-fuel partial sentence), runConfig_prefix_classify + its two-phase
+lift (NeverFaults' truncation half), setup/runPkgInitM unfolding,
+readback-.ok. Plus (star) THE FRAME DESIGN: footprint-annotated
+Spec + reader-congruence lemmas — the arc4d disjointness
+enumerations exist because this is missing; the killed Shape* was
+its refuted predecessor. GATE (the pilot, now three-legged): one
+handler spec end-to-end via the driver + ONE TWO-FUNCTION
+COMPOSITION exercising the frame + the glue family landed. Any leg
+refuting the costing means redesign here before W3.
 
 ## W2 — the loop-rule family + init spec
 
@@ -55,16 +82,35 @@ mapIter latitude is discharged ∀-draw); the plain-`for` head schema
 setup as ordinary specs establishing `I₀` (replaces the seed pins;
 kills the 81k-step replay obligation).
 
+## W2.5 — (star) THE INVARIANT DESIGN NOTE + NetCorr ([USER] gate)
+
+The full I as a written artifact BEFORE W3: the phase split
+(Electing / Elected ldr tm), BOTH abstract carriers (SNet reach;
+HNet/HistInv ESTABLISHED at the election win, with the noop as the
+fragment's first propose and the snapshot index offset), the
+pairing AS A RELATION (∃-ghost, deep readers, the shell-sync
+clause, per-carrier field selection so non-election deliveries are
+provable stutters), CheckerCorr (existential event histories,
+fold-state equations, the reader extension for leaderOf/byIndex/
+got/cursors), and NetCorr — four clauses, four consumers: hgen
+(term-aware grant provenance), the MsgApp payload clause (history
+slices + all-EntryNormal), the ack/Match clause, the population
+clause (message vocabulary incl. no-MsgTimeoutNow — the second-
+election exclusion becomes a PRESERVED INVARIANT, not an
+assertion). This is Verdi's votes_nw/leaderLogs stratum, now owned.
+
 ## W3 — the function specs
 
 The ~15 reachable handlers + library functions, the checker
-(reshaping arc4d's span content: predicate-level pre/post over the
-`projLOf`/`projBy`/`encGS` projections + the frame rule in place of
-disjointness enumerations), and the driver body spec (case analysis
-over net contents at the pick; conclusions: `I` preserved, abstract
-`EStep` taken, checker segment = model fold step). Specs are ∀-state
-and ∀-stream by construction. Per-spec Audit pins; function-linear
-statement inventory.
+(reshaped over the projections + W1's frame), and the driver body
+spec (case analysis over the invariant-constrained net population
+at the pick, symbolic in the net list). Named units per the
+review: the HARVEST-QUIESCENCE MEASURE (the 64-round guard proved
+silent — lexicographic drain measure; the hardest totality
+obligation); the MATCH-EVIDENCE unit (instantiate certified,
+discharge leaderCommitOk at the concrete commit-advance); the
+READER EXTENSION. Every spec: ∀-state, ∀-stream,
+emissions-preserve-NetCorr, guard-silence conclusions per census.
 
 ## W4 — the loop theorem and the sentences
 
@@ -95,7 +141,7 @@ the second-target probe.
 
 ## Sequencing and effort honesty
 
-W0 → W1(pilot-gated) → {W2 ∥ W3-start} → W3 → W4 → W5. No unit-count
+W0 → W1 (three-legged pilot gate) → W2 → W2.5 ([USER] design gate) → W3 → W4 → W5 — W2.5 precedes ALL of W3 (it fixes every W3 postcondition). No unit-count
 estimate until W1's pilot measurement (the standing rule: estimates
 resume when the gate's numbers exist). Every unit charter opens with
 its quantifier-audit line; every new mechanism carries lineage; no
