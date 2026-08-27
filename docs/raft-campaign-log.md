@@ -2451,6 +2451,34 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   gated by the three-legged pilot. Estimates resume at the pilot's
   measurement per the standing rule.
 
+- **W1 — BRANCH-COMPLETE @ 71b1561f, gate PASS, all three pilot
+  legs done** (2026-08-27): the CallSpec judgment WORKS — ∀-state
+  over footprint carriers, continuation-parametric, ∀ch incl.
+  short streams, ∃n; pre/post in reader vocabulary; THE ENABLING
+  TECHNICAL FINDING: open-tail window evaluation costs the same as
+  closed (kernel reduction never inspects below the barrier — rfl
+  closes window facts at OPEN env/k), which is what makes
+  spec-shaped statements kernel-cheap. Leg C: the runProgramM glue
+  family LANDED + pinned (18 pins — professor Gap 2 closed; the
+  ∃n→∀-fuel bridge and NeverFaults' truncation half exist). Leg B:
+  the call rule works; **the frame summit's verdict: FrameSim
+  alone CANNOT frame foreign call sites (three dead ends derived —
+  the caller's env/k live in the frame region outside every
+  admissible renaming); the measured redesign = FrameSim (state
+  half) + THE PLUG RULE (control half, wp_bind-as-theorem,
+  ~795-line class)** — pulled forward as W2 unit 1 since it gates
+  all W3 composition. Driver: the honest minimum sufficed (the
+  reflection retraction concK∘reflectK=id is the new general
+  piece); no tactic framework needed yet. One [AGENT]
+  interpretation flagged for audit: count-bearing lemmas as
+  private scaffolding under count-free exported statements.
+  Judge owed at the merge (Audit.lean moved). WHAT THIS TAUGHT US:
+  the pilot-gate pattern priced the summit BEFORE W3 built on the
+  wrong frame — the exact failure the old campaign would have
+  found fifteen handlers in. [AGENT]: W2 dispatched (fresh worker):
+  the plug rule, the loop-rule family, the init spec, the
+  layout-compliant tracked generator.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
