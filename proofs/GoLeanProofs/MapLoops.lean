@@ -65,7 +65,9 @@ exit test's `false` delivery).
 raw segments in, conditioned discharges constructed inside.
 
 **Group 4** — *your program RANGES over a map and you need the pick
-loop* (GAP-R1): `mapPickLoop_generic`, with the list-consumption
+loop* (GAP-R1): `mapPickLoop_generic` — ELEMENT-TYPE-GENERIC since W2
+(professor delta 5: the library maps are uint64-keyed; the old
+`(Int × Nat)` spelling was histogram's) — with the list-consumption
 helpers it is stated against — `consume_lt`, `eraseIdx_length_of_lt`,
 `mem_of_mem_eraseIdx`.
 
@@ -1106,12 +1108,12 @@ snapshot — one consumed choice and one erased entry per iteration
 (`hIter`), `e` steps to exit at the empty snapshot (`hExit`) — within
 `c·|rem| + e` steps, ending at `exitCfg` in a state satisfying
 `P d' []`. -/
-theorem mapPickLoop_generic {δ : Type}
-    (T : δ → ExecState) (cfg : δ → List (Int × Nat) → Config)
-    (exitCfg : Config) (P : δ → List (Int × Nat) → Prop)
+theorem mapPickLoop_generic {α : Type} {δ : Type}
+    (T : δ → ExecState) (cfg : δ → List α → Config)
+    (exitCfg : Config) (P : δ → List α → Prop)
     (c e : Nat)
-    (hIter : ∀ (d : δ) (rem : List (Int × Nat)) (idx : Nat)
-      (p : Int × Nat) (ch ch₂ : Choices),
+    (hIter : ∀ (d : δ) (rem : List α) (idx : Nat)
+      (p : α) (ch ch₂ : Choices),
       Choices.consume ch rem.length = (idx, ch₂) → idx < rem.length →
       rem[idx]? = some p → P d rem →
       ∃ (k : Nat) (d' : δ), k ≤ c ∧ P d' (rem.eraseIdx idx) ∧
@@ -1119,7 +1121,7 @@ theorem mapPickLoop_generic {δ : Type}
           = .ok (cfg d' (rem.eraseIdx idx), T d', ch₂))
     (hExit : ∀ (d : δ) (ch : Choices), P d [] →
       stepFnIter e (T d) (cfg d []) ch = .ok (exitCfg, T d, ch)) :
-    ∀ (m : Nat) (rem : List (Int × Nat)), rem.length = m →
+    ∀ (m : Nat) (rem : List α), rem.length = m →
     ∀ (d : δ) (ch : Choices), P d rem →
     ∃ (k : Nat) (d' : δ) (ch' : Choices),
       k ≤ c * m + e ∧ P d' [] ∧
@@ -1150,5 +1152,86 @@ theorem mapPickLoop_generic {δ : Type}
       have hms : c * (m + 1) = c * m + c := by
         rw [Nat.mul_add, Nat.mul_one]
       omega
+
+
+/-! ## API group 5 — the professor's named lemma (W2, delta 5):
+`mapIter_no_stop_of_unmutated` — an UNMUTATED range's candidates are
+all start-keyed, so while any remain the mandatory flag holds and the
+pick has NO STOP SLOT (`width = candidates.size`). The "unmutated"
+premise enters as the candidate⊆start-keys fact (`hsub`), which a
+consumer discharges from its own footprint invariant (the body
+touches neither the ranged cell's entries nor the start set) — plus
+`filterCandidateList_sublist`, the generic step from the live-entry
+walk to that fact. -/
+
+/-- Candidates are a sublist of the live entries (the filter only
+removes). -/
+theorem filterCandidateList_sublist {s : ExecState} {keyTy : Ty}
+    {produced : Array GoValue} :
+    ∀ {l : List (GoValue × GoValue)} {out : List (GoValue × GoValue)},
+      filterCandidateList s keyTy produced l = .ok out →
+      ∀ p ∈ out, p ∈ l := by
+  intro l
+  induction l with
+  | nil =>
+      intro out h p hp
+      simp only [filterCandidateList, pure, Except.pure,
+        Except.ok.injEq] at h
+      subst h
+      cases hp
+  | cons e rest ih =>
+      intro out h p hp
+      obtain ⟨k, v⟩ := e
+      simp only [filterCandidateList, bind, Except.bind] at h
+      revert h
+      cases hin : keyInKeys s keyTy produced k <;> intro h
+      · exact absurd h (by simp)
+      · rename_i b
+        revert h
+        cases htl : filterCandidateList s keyTy produced rest <;> intro h
+        · exact absurd h (by simp)
+        · rename_i tail
+          cases b with
+          | true =>
+              simp only [if_true, pure, Except.pure, Except.ok.injEq] at h
+              subst h
+              exact List.mem_cons_of_mem _ (ih htl p hp)
+          | false =>
+              simp only [Bool.false_eq_true, if_false, pure, Except.pure,
+                Except.ok.injEq] at h
+              subst h
+              rcases List.mem_cons.mp hp with hp | hp
+              · subst hp; exact List.mem_cons_self ..
+              · exact List.mem_cons_of_mem _ (ih htl p hp)
+
+/-- **The named lemma**: nonempty all-start-keyed candidates keep the
+mandatory flag — the stop slot is illegal. -/
+theorem mapIter_no_stop_of_unmutated {s : ExecState} {keyTy : Ty}
+    {cands : Array (GoValue × GoValue)} {start : Array GoValue}
+    (hne : cands.toList ≠ [])
+    (hsub : ∀ p ∈ cands.toList, keyInKeys s keyTy start p.1 = .ok true) :
+    mapIterMandatoryRemains s keyTy cands start = .ok true := by
+  unfold mapIterMandatoryRemains
+  cases hl : cands.toList with
+  | nil => exact absurd hl hne
+  | cons e rest =>
+      obtain ⟨k, v⟩ := e
+      have hk := hsub (k, v) (by rw [hl]; exact List.mem_cons_self ..)
+      simp only [mandatoryInList, bind, Except.bind, hk, if_true, pure,
+        Except.pure]
+
+/-- The width corollary: no stop slot — the pick draws over exactly
+the candidates. -/
+theorem mapIter_width_of_unmutated {s : ExecState} {keyTy : Ty}
+    {cands : Array (GoValue × GoValue)} {start : Array GoValue}
+    {mand : Bool}
+    (h : mapIterMandatoryRemains s keyTy cands start = .ok mand)
+    (hne : cands.toList ≠ [])
+    (hsub : ∀ p ∈ cands.toList, keyInKeys s keyTy start p.1 = .ok true) :
+    cands.size + (if mand then 0 else 1) = cands.size := by
+  have := mapIter_no_stop_of_unmutated hne hsub
+  rw [h] at this
+  cases this
+  rfl
 
 end GoLean.MapLoops

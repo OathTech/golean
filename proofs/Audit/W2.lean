@@ -1,4 +1,5 @@
 import GoLeanProofs.CondFor
+import GoLeanProofs.MapLoops
 import GoLeanProofs.Frame.PlugRule
 import GoLeanProofs.Specs.RaftPilot.W2Gate
 
@@ -53,3 +54,16 @@ at the real stepCandidate site with state framing. -/
 
 /-- info: 'GoLean.RaftSeam.w2_gate' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.RaftSeam.w2_gate
+
+/-! ## The loop-family additions (unit 2 / professor delta 5): the
+element-type-generic pick loop keeps its Kit pin
+(`Audit/Kit.lean` § MapLoops); the no-stop family pins here. -/
+
+/-- info: 'GoLean.MapLoops.filterCandidateList_sublist' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.MapLoops.filterCandidateList_sublist
+
+/-- info: 'GoLean.MapLoops.mapIter_no_stop_of_unmutated' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.MapLoops.mapIter_no_stop_of_unmutated
+
+/-- info: 'GoLean.MapLoops.mapIter_width_of_unmutated' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.MapLoops.mapIter_width_of_unmutated
