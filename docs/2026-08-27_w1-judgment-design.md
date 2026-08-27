@@ -11,6 +11,26 @@
 > durable constraint on any bind design, consumed by G-BIND) and
 > §§7–8's plug-rule design (the plug family LANDED judgment-free:
 > `Frame/Plug*.lean`, witnesses in `Frame/PlugWitness.lean`).
+>
+> **Also still live — the four machine-geometry facts** (added by the
+> pre-merge audit, semantics-dimension L6: facts about `stepFn`
+> itself, independent of the cancelled calculus; consumers = the
+> future G-CALLS/G-BIND units; the same four are routed from
+> `docs/ARCHIVE.md`'s harvest-pointer section):
+> 1. A defer-free callee's return arrival is `.returning (.frame
+>    plans env rlocs [] k false)` — `docs/w3-init-log.md:160-183`.
+> 2. A callee WITH defers exits via `.next (.frame …)` and never
+>    re-visits a `.returning` frame configuration (every
+>    `MemoryStorage` Lock/defer/Unlock method is in this class) —
+>    `docs/w3-init-log.md:160-183`, corroborated at
+>    `docs/w3-prover-log.md:700-703`.
+> 3. The wrap-per-op normalize rule: 1 normalize per arith op, 1 per
+>    int-cell store, DOUBLE for struct literals, ZERO for
+>    `newValue`/interface/pointer stores —
+>    `docs/w3-prover-log.md:1149-1153` (derivation :1025-1034).
+> 4. `postOp`/`opDone` is a pure strip in the sequential `stepFn`;
+>    the sync walk consumes no tape —
+>    `docs/w3-prover-log.md:703-705`.
 
 Unit: W1 (clean-proof plan §W1, professor-amended). Written BEFORE the
 code, per the charter's classics-first rule. Every mechanism below

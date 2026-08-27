@@ -3,19 +3,44 @@
 Executor: [AGENT] Fable, w1-prover worktree, branch `triage-landing`
 (created at `20cda772`, the w1-prover wave tip, per the plan's
 mechanism — deletions stay legible as commits on a working branch).
-Spec: the [USER]-approved `docs/2026-08-27_triage-plan.md` (in the
-design-pass worktree at approval time) + the [USER]-approved decision
-set + the adversarial pre-execution check's mandatory amendments
-A1–A8. Archive ref `archive/callspec-era` = `20cda772` (pre-existing;
+Spec: the [USER]-approved `docs/2026-08-27_triage-plan.md` (which
+lived only in the design-pass worktree at approval time, and which
+**landed in this branch as an audit fix** — pre-merge audit,
+semantics-dimension M1 / claim-dimension F5 — together with
+`docs/2026-08-27_w25-invariant-design.md`; both are cited authorities
+for the reclassification, the deletions, and the `Ghost.acks`
+extension, and a cited authority that ships nowhere is not an
+authority) + the approved decision set + the adversarial
+pre-execution check's mandatory amendments A1–A8. Archive ref `archive/callspec-era` = `20cda772` (pre-existing;
 verified before the first deletion — every deleted line is
 recoverable).
 
-**The approved decision set** ([USER], at sign-off): (1) ZERO
-CallSpec members survive as witnesses; (2) `Invariant.lean` is
-ARCHIVED, not landed; (3) the Surface FnSpec designated family
-stays; the fork/join pinned-stream rows reclassify to non-designated
-witnesses; (4) the W2Gate demo gap is accepted; LangC/D keep per the
-plan's consumer evidence; (5) full ceremony.
+**The approved decision set**, with honest provenance per decision
+(corrected 2026-08-27 by the pre-merge audit, gate-dimension M-1 —
+the original text of this block described all five as "[USER]
+decision", which overstated the user's authorship of four of them):
+
+- (1) ZERO CallSpec members survive as witnesses — **[AGENT]
+  coordinator recommendation, ratified by [USER] package assent at
+  the 2026-08-27 sign-off**.
+- (2) `Invariant.lean` is ARCHIVED, not landed — **[AGENT]
+  coordinator recommendation, ratified by [USER] package assent at
+  the 2026-08-27 sign-off**.
+- (3) the Surface FnSpec designated family stays; the fork/join
+  pinned-stream rows reclassify to non-designated witnesses —
+  **[USER] decision** (the designation act is the user's alone;
+  correctly recorded as such at birth and unchanged here).
+- (4) the W2Gate demo gap is accepted; LangC/D keep per the plan's
+  consumer evidence — **[AGENT] coordinator recommendation,
+  ratified by [USER] package assent at the 2026-08-27 sign-off**.
+- (5) full ceremony — **[AGENT] coordinator recommendation,
+  ratified by [USER] package assent at the 2026-08-27 sign-off**.
+
+"Package assent" is exactly what happened and is exactly what it is
+worth: the user approved the set as presented, without separately
+adjudicating each recommendation. Wherever this log, `ARCHIVE.md`,
+or the mechanism registry cites decisions 1/2/4/5, that longer form
+is the accurate one.
 
 ## Per-slice commits (each left the tree buildable; focused capped
 builds between slices, every build judged by captured exit code)
@@ -25,7 +50,7 @@ builds between slices, every build judged by captured exit code)
 | 1 | `3ed23de9` | LAND-prep: `Frame/PlugWitness.lean` (A4) + `Sym/CrossingWitness.lean` (A5) + `Audit/Landing.lean` pins + A1 (Audit/W1 imports ReflectConc directly) — witnesses land BEFORE the kills | EXIT=0, 74 jobs |
 | 2 | `1fcde452` | K-1a/b/c/d: SpecJudgment + 6 member modules + pilot/gate chain + fixture mass + `tools/relayout/CBfLitGen.lean` (23 files); MapOrderSpecs→MapPerm salvage (unitV/idKV + idKV_keys/filter + idsFam_population/lookup_agree/sorted_collapse) in the same commit; root + Audit/W1 + Audit/W2 prunes; A7 riders (MapPerm header/:757, mapPickLoop_perm SCAFFOLD label, ReflectConc consumer note, Crossing header + applyStrict_deref SCAFFOLD, PlugProbe relabel, Plug.lean:9/40) | warm EXIT=0 (72), full EXIT=0 (525 jobs) |
 | 3 | `b09a545f` | A6: `Invariant.lean` DELETED (archived, [USER] decision 2); importer grep re-run pre-deletion — root aggregator only; F-6 pin candidate `I.abs_oneLeaderPerTerm` dropped | EXIT=0, 484 jobs |
-| 4 | `9f309306` | K-2 `Frame/Relocate.lean` + K-3 `Frame/ChoiceInv.lean`, with A2 (Kit.lean import line + span_relocate pin pair) and A3 (Audit/ChoiceInv import + two pins; ChoiceCanon pins stay) riding the same commit; InitSpec:14 A7 rider | EXIT=0, 484 jobs |
+| 4 | `9f309306` | K-2 `Frame/Relocate.lean` + K-3 `Frame/ChoiceInv.lean`, with A2 (Kit.lean import line + the single `span_relocate` pin — "pin pair" here was an audit-corrected miscount, gate-dimension L-6: exactly one `#print axioms` line left `Audit/Kit.lean`) and A3 (Audit/ChoiceInv import + two pins; ChoiceCanon pins stay) riding the same commit; InitSpec:14 A7 rider | EXIT=0, 484 jobs |
 | 5 | `204e30cb` | TRUST-ADJACENT, own commit: designation reclassification — the five fork/join pinned-stream rows out of Challenge/Solution/Audit-designated-list/judge-config together (56 → 51 designated); proofs stay in `GoldenForkJoin.lean` with pins. Includes the amend that removed a `[USER]` bracket from the in-list comment after noticing the judge wrapper's sed list-parser ends at the first `]` — an executor-caught parser hazard, recorded here | EXIT=0, 525/521 jobs |
 | 6 | `ea0c91a3` | Hygiene: K-5 stale-docstring batch (11 files verified stale — dead `DriverNetWitness`/`LensInst`/`RoundMaLemma`/`ChoiceCanonWitness`/`Sym/UtoaSpan` citations, the false NativeObligations "nothing consumed" claim), K-4 dispositions (DriverNet invariants = span-lemma parameters; AbsStateV2 `_ren` keep-note), K-6 doc landings (`2026-08-16_symbolic-domain-design.md` from wp-design @ c3dc3986 — closes the wp-design lane per P-4; `2026-08-25_campaign-layerc-design.md` from raft-proof-campaign), 10 `artifacts/probe/*` citations marked "(untracked scratch)", L-9 supersession banners (w1-judgment-design, m-mechanism note), L-5 G-REPR note on AbsTwinCheckerRead, ARCHIVE.md CallSpec-era section, mechanism-registry triage addendum | EXIT=0, 522 jobs |
 | 7 | `5921c757` | F-6 pin wave in `Audit/Landing.lean`: MapPerm (incl. scaffold-labeled `mapPickLoop_perm` + the salvaged idsFam trio), Crossing representatives, reader mini-witnesses, ghost-acks; Invariant pins dropped (A6). Axiom lines taken from the compiler's own output (first-run mismatches corrected) | EXIT=0, 521 jobs |
@@ -36,7 +61,7 @@ builds between slices, every build judged by captured exit code)
 | amendment | status | how |
 |---|---|---|
 | A1 | DONE (slice 1) | `import GoLeanProofs.Sym.ReflectConc` added to `proofs/Audit/W1.lean`; its retraction pins survive the pilot chain's death (verified by the slice-2+ builds) |
-| A2 | DONE (slice 4) | `Audit/Kit.lean`'s `import GoLeanProofs.Frame.Relocate` deleted in the same commit as `Frame/Relocate.lean` + the `span_relocate` pin pair (tombstone comment in place) |
+| A2 | DONE (slice 4) | `Audit/Kit.lean`'s `import GoLeanProofs.Frame.Relocate` deleted in the same commit as `Frame/Relocate.lean` + the `span_relocate` pin — ONE `#print axioms` line, not a pair (audit correction, gate-dimension L-6) — with a tombstone comment in place |
 | A3 | DONE (slice 4) | `Audit/ChoiceInv.lean:2` import deleted with `Frame/ChoiceInv.lean`; the two ChoiceInv pins pruned; the ChoiceCanon pins at :31-41 survive |
 | A4 | DONE (slices 1+2) | `Frame/PlugWitness.lean`: `callSpan_plug_witness` + `stepFn_plug_witness` — named, pinned (`Audit/Landing.lean`), judgment-free, APPLYING `callSpan_plug` and `stepFn_plug` on the probe program at OPEN caller context under the rule's own premises (∃-side canonical run + non-wrapper fact discharged by kernel evaluation, the charter's carve-out). Cited from Audit/W2's plug-pin section docstring. PlugProbe header relabeled honest (concrete probe, NOT a witness; G-BIND retirement condition). NOTE: witnesses landed one commit BEFORE the W2Gate deletion (slice 1 vs slice 2) per the mission's execution order — at no commit is the family witness-less, which is the amendment's intent |
 | A5 | DONE (slices 1+2) | `Sym/CrossingWitness.lean`: three named span-derivation witnesses over abstract states/symbolic lengths — lenNeg (normalize collapse via `normalize_int_eq`/`int_ofNat_cast` + the length read via `applyStrict_length_slice`, whose engine is `validateSlice_ok`), ifSplit (`stepFn_ifK_true` as a span prefix), read (`loadLoc_base` → `applyStrict_indexGet_slice`). Crossing.lean:28-33 rewritten to cite them. Scaffold trio disposition [AGENT]: `applyStrict_deref` SCAFFOLD-labeled (G-REPR/G-CALLS resume); `loadLoc_base` now HAS a live consumer (witness 3) — labeled with its consumer instead; `int_ofNat_not_neg` had in-module consumers all along (applyStrict_indexGet_slice's range checks) — the amendment's zero-consumer premise was wrong for this one name, corrected on the record rather than mislabeled |
@@ -117,22 +142,35 @@ the branch tip covers, per the widened 2026-08-22 trigger.
 
 ## Final counts (derivation-anchored: `git diff --stat`)
 
-- vs the wave tip `20cda772`: 65 files, **+2,124/−29,792** (Lean
-  only: 57 files, +824/−29,491 — the plan §6 predicted ≈28.4k KILL
-  Lean; the extra ≈1k deletions are the Audit/root prunes, the
+Counts RE-MEASURED at the audit-response tip (the pre-merge audit's
+gate-dimension L-2 found the figures below had been computed at
+`c2e1824d`, i.e. before slice 9 added this log and the judge's
+landmark marker — 2 files, +179 — and that the deleted-module tally
+was short by two). Every number is `git diff --stat` at the tip named
+in its line; the audit-response commits themselves shift the docs
+column further, which is why the derivation, not the digit, is the
+durable part.
+
+- vs the wave tip `20cda772`: 67 files, **+2,303/−29,792** (Lean
+  only: 58 files, +824/−29,787 — the plan §6 predicted ≈28.4k KILL
+  Lean; the extra ≈1.4k deletions are the Audit/root prunes, the
   Invariant module's 629, and the fork/join designated rows).
-- vs `main` `84b5edb3` (what main will receive): 55 files,
-  **+12,172/−388** — Lean +7,651/−382 across 42 files (plan §6
+- vs `main` `84b5edb3` (what main will receive): 57 files,
+  **+12,351/−388** — Lean +7,651/−382 across 42 files (plan §6
   predicted ≈+7,700/−260; the delta over the prediction is the two
   new witness modules ≈290 lines and the A2/A3 pin prunes on the
-  main side), docs +4,521 across 12 files (five prover logs + three
-  design notes with banners + the two K-6 doc landings + ARCHIVE +
-  registry + this log).
+  main side), docs +4,700/−1 across 14 files (five prover logs +
+  three design notes with banners + the two K-6 doc landings +
+  ARCHIVE + registry + this log + the judge sprint marker).
 - Designated set: 56 → **51** (the five fork/join pinned-stream
   rows; Challenge/Solution/Audit/judge-config moved together).
 - Jobs: full proofs build 545 (wave tip) → **~523**.
-- Modules: 24 Lean modules + 1 tool deleted; 4 Lean modules added
-  (PlugWitness, CrossingWitness, MapPermRead, Audit/Landing).
+- Modules: **26 Lean modules + 1 tool deleted = 27 files**
+  (`git diff --diff-filter=D --name-only 20cda772..HEAD`; the
+  earlier "24 + 1" tally omitted `Frame/Relocate.lean` and
+  `Frame/ChoiceInv.lean`, the two main-side removals of slice 4);
+  4 Lean modules added (PlugWitness, CrossingWitness, MapPermRead,
+  Audit/Landing).
 
 ## Trust-adjacent edits (FOR THE AUDIT)
 
@@ -140,8 +178,9 @@ the branch tip covers, per the widened 2026-08-22 trigger.
    Challenge.lean, Solution.lean, Audit.lean designated list,
    judge-config.json ([USER] decision 3; judge landmark run covers).
 2. Audit pin prunes riding the kills: Audit/W1 (13 SpecJudgment + 4
-   pilot pins), Audit/W2 (4 W2Gate pins), Audit/Kit (span_relocate
-   pair, A2), Audit/ChoiceInv (2 pins, A3) — each in the same commit
+   pilot pins), Audit/W2 (4 W2Gate pins), Audit/Kit (the single
+   `span_relocate` pin, A2 — L-6 correction), Audit/ChoiceInv (2
+   pins, A3) — each in the same commit
    as its subject's deletion, with tombstone comments.
 3. Audit pin ADDITIONS: Audit/Landing.lean (slices 1+7).
 4. The `]`-in-comment hazard fix inside Audit.lean's designated list
@@ -163,7 +202,11 @@ the branch tip covers, per the widened 2026-08-22 trigger.
    zero-consumer; it has in-module consumers — verified, recorded).
 4. **Invariant.lean** deleted whole per decision 2 — the plan's L-6
    (land minus two clauses) is superseded; ARCHIVE.md records the
-   decision with [USER] provenance.
+   decision as an [AGENT] coordinator recommendation ratified by
+   [USER] package assent at the 2026-08-27 sign-off (provenance
+   corrected by the pre-merge audit, gate-dimension M-1 — the
+   original wording here and in ARCHIVE.md said "[USER] decision"
+   flat).
 5. **The judge count changes** (56 → 51): the plan's §4 anchor
    ("designated list UNCHANGED by this landing") predates decision 3;
    the run at this tip is therefore NOT like-for-like with the
@@ -173,6 +216,35 @@ the branch tip covers, per the widened 2026-08-22 trigger.
    lines post-landing under `proofs/`); my numbers above are from
    `git diff --stat` and `wc -l` at this tip — derivation stated,
    discrepancy noted rather than reconciled.
+
+## The audit-response slice (2026-08-27, post-audit, [AGENT])
+
+The three pre-merge adversarial audit reports produced a consolidated
+fix list; it was applied on this branch as two commits, scoped by
+[USER] to comment/doc/record changes plus one proof addition. What
+moved:
+
+| finding | fix |
+|---|---|
+| gate M-1 | provenance wording: decisions 1/2/4/5 are [AGENT] coordinator recommendations ratified by [USER] package assent, not [USER] decisions (this log, `ARCHIVE.md`, the registry). Decision 3 unchanged — the designation act was the user's. |
+| gate L-2 | deleted-file tally 24+1 → **26+1 = 27**; the "what main will receive" figures re-measured at the tip. |
+| gate L-6 | `span_relocate` "pin pair" → the single pin it was; `Audit/Landing.lean`'s blanket pin-policy sentence rewritten to the representative-sampling reality. |
+| claim F2 | `ARCHIVE.md`'s harvest pointer no longer implies `PlugWitness`/`CrossingWitness` replace `mapPickLoop_perm`'s discharge — that one is owed at G-MAPITER. |
+| sem M4 | supersession banners added to the crossing-kit note (its non-vacuity consumers were deleted) and the (M) note (its quantifier table's CallSpec discharge column is dead). |
+| sem L6 | the four machine-geometry facts routed with durable anchors from `ARCHIVE.md` and the W1 note's banner. |
+| sem M1 / claim F5 | `2026-08-27_triage-plan.md` and `2026-08-27_w25-invariant-design.md` landed (see the Spec line at the top); the w25 status header amended to "adopted, object archived, G-INV gate is the user's". |
+| claim F1 | MapPerm layer 2 (seven zero-consumer lemmas incl. the pick-step family) SCAFFOLD-labeled with the G-MAPITER resume condition; the false "promotion ≥2 satisfied at birth" claim corrected; `MapPermRead`'s two transports labeled likewise; registry row updated. |
+| claim F3 | `normalize_uint64_eq`/`_ofNat` and `normalize_int_ofNat` SCAFFOLD-labeled; `stepFn_ifK_false` left unlabeled with its reason (the split's other arm) recorded in its docstring; `Crossing.lean`'s header made exact about mini-witness coverage. |
+| claim F4 | stale `lookupI`/`Invariant.lean` and `Frame/ChoiceInv` citations repointed at the archive or the abstract pattern. |
+| sem L5 | `stepFn_pick_transport` citations (SpillTransport, `Audit/Kit.lean`) repointed at the archive with re-derivation flagged; `KernelRfl`'s measurement anchor noted archived; registry TableExt consumer census 8 → 3. |
+| claim F6/F7 | `Frame/PlugWitness.lean` gains `stepFn_plug_witness_step_ok` (the one proof addition — the canonical step's success, making the PS-implication visibly non-vacuous); the carve-out citation corrected from "∃-shaped discharge" to premise discharge of a ∀-shaped equation; the barrier config disclosed as synthetic. |
+
+DEFERRED by the same [USER] scoping, recorded so they are not lost:
+`proofs/Audit.lean`'s comment-wording fix (it sits in the judge's
+parsed region — next touch); gate L-7 (`fjRunDeadlocks`); sem M3
+(ChoiceCanon keep-or-kill, a pending [USER] call); gate L-3 (judge
+wrapper hardening — trust-adjacent scripts frozen this slice,
+post-merge follow-up).
 
 [AGENT] provenance throughout except where [USER] decisions are
 explicitly cited.

@@ -129,8 +129,11 @@ proof.
   (zero live consumers; cancelled R-geometry vocabulary),
   `Frame/ChoiceInv.lean` (`ChoiceInvariantToM`: zero inhabitants,
   zero consumers), and `Specs/RaftPilot/Invariant.lean` (the
-  629-line invariant contract, ARCHIVED rather than landed by
-  [USER] decision at sign-off — incl. the F-1-defective
+  629-line invariant contract, ARCHIVED rather than landed on an
+  [AGENT] coordinator recommendation ratified by [USER] package
+  assent at the 2026-08-27 sign-off — provenance corrected by the
+  pre-merge audit, gate-dimension M-1, from the flat "[USER]
+  decision" this line first carried — incl. the F-1-defective
   `ElectedAt.logBridge`/`commitTie` clause pair; G-INV re-designs
   the clause inventory at the Iris tier under the [USER] gate).
 
@@ -149,8 +152,58 @@ the prover record) are exactly the tier-agnostic substrate.
 - Member readback conclusions → tier-3 FnSpec postconditions
   (G-cluster units); windows/crossing maps/costs → the unit pricing
   anchors (w3 logs, landed).
-- The prior discharges of now-scaffold-labeled rules:
-  `mapPickLoop_perm` ← `MapOrderSpecs.lean:864`
-  (`jointConfigIDs_callSpecR`); the crossing kit ← the three
-  `LogReadSpecs` members. Their live replacements are
-  `Frame/PlugWitness.lean` and `Sym/CrossingWitness.lean`.
+- **The four machine-geometry facts** (pre-merge audit,
+  semantics-dimension L6: these are facts about `stepFn` ITSELF, not
+  about the killed calculus, so they survive the era wholesale and
+  must be routable without reading the dead code. Each is
+  probe-anchored in a landed log; the anchors below are the durable
+  citations, and the named consumers are the future G-CALLS/G-BIND
+  units):
+  1. **Two return-arrival geometries.** A defer-free callee ends at
+     `.returning (.frame plans env rlocs [] k false)`; that is the
+     only terminal such a callee reaches.
+     *Anchor:* `docs/w3-init-log.md:160-183`.
+  2. **Deferred frames exit via `.next (.frame …)`.** A callee WITH
+     defers drains them through the frame's defer arm and arrives at
+     `.next (.frame plans env rlocs [] k false)` — it NEVER re-visits
+     a `.returning` frame configuration. Both arrival arms perform
+     the same next step (loadMany + tgtOpK), so consumers may treat
+     the two forms identically, but a span that assumes the
+     `.returning` terminal for a deferred callee is kernel-stuck.
+     Every `MemoryStorage` method (Lock/defer/Unlock) is in this
+     class. *Anchor:* `docs/w3-init-log.md:160-183`; independently
+     corroborated from the prover lane at
+     `docs/w3-prover-log.md:700-703` (probe `kit-ms3.out`).
+  3. **The wrap-per-op normalize rule.** One `normalize` per
+     arithmetic op, one per int-cell store, DOUBLE for struct
+     literals (`structLit` normalizes each field via
+     `normalizeValueForTy` AND the store coerce normalizes again),
+     ZERO for `newValue`/interface/pointer stores (`newValue` stores
+     the read value RAW, so pointer-copy chains conclude exact
+     equality with no range facts). *Anchor:*
+     `docs/w3-prover-log.md:1149-1153`; derivation and the
+     -1-payload probe convention for wrap discovery at
+     `docs/w3-prover-log.md:1025-1034`.
+  4. **`postOp`/`opDone` is a PURE STRIP** in the sequential
+     `stepFn` — the sync walk consumes NO tape.
+     *Anchor:* `docs/w3-prover-log.md:703-705`.
+- The prior discharges of now-scaffold-labeled rules, and what did
+  (and did NOT) replace them — stated exactly, per the pre-merge
+  audit's claim-dimension F2, which found the earlier one-sentence
+  version overclaimed:
+  * `mapPickLoop_perm` ← `MapOrderSpecs.lean:864`
+    (`jointConfigIDs_callSpecR`, the full-permutation-family member
+    over the real `quorum.JointConfig.IDs`). **This one has NO live
+    replacement.** Its discharge is OWED AT THE G-MAPITER UNIT, per
+    the in-tree SCAFFOLD label on the rule itself
+    (`proofs/GoLeanProofs/MapPerm.lean`). Neither
+    `Frame/PlugWitness.lean` nor `Sym/CrossingWitness.lean`
+    discharges it, and nothing else in the tree does either.
+  * The crossing kit ← the three `LogReadSpecs` members. These DO
+    have live replacements: the judgment-free mini-witnesses in
+    `Sym/CrossingWitness.lean`
+    (`crossing_witness_lenNeg`/`_ifSplit`/`_read`).
+  * `Frame/PlugWitness.lean` (`callSpan_plug_witness`,
+    `stepFn_plug_witness`) replaces something else again — the
+    `W2Gate` plug-rule INSTANTIATION that died with the CallSpec
+    member corpus — not the map-pick discharge.

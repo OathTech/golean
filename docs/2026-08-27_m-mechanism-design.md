@@ -61,6 +61,38 @@ multiset-conservation invariant, discharged by the landed W2 rule
 
 ## QUANTIFIER AUDIT (the charter's opening requirement)
 
+> **BANNER — the table below is SUPERSEDED IN ITS DISCHARGE COLUMN**
+> (triage landing 2026-08-27; added by the pre-merge audit,
+> semantics-dimension M4). Two rows name CallSpec forms as the rule
+> that discharges their quantifier — "the member's `CallSpecR`/`RD`"
+> and "the landed judgment forms (`CallSpecR`/`RD`/`RN`),
+> unchanged". **Those forms are not landed and are not unchanged:
+> they were cancelled with the CallSpec calculus and deleted;** the
+> corpus is recoverable only at `archive/callspec-era`. A reader
+> must not treat either row as a discharged obligation.
+>
+> **The corrected discharge story.** The Perm-conservation CARRIER is
+> live and landed judgment-free (`proofs/GoLeanProofs/MapPerm.lean`),
+> so rows 1–2 (the ∀-pick latitude at each map-range site, and the
+> persistent assoc order ∃-packaged as a `List.Perm` family member)
+> still stand on `mapPickLoop_generic` + the carrier's algebra. But
+> the SPEC-BOUNDARY rows — the ∀ σ over a member's footprint family,
+> and the ∀ plans/env/k, ∀ ch, ∃ n composition — have **no live
+> discharging rule in the tree today**. They are **OWED AT THE
+> G-MAPITER UNIT** (the tier-3 map-range law: key+value,
+> mutation-tolerant, demonic-order `wp_map_iter` with a Perm-of-draws
+> readback), whose spec vocabulary is where the threading discipline
+> this note describes re-instantiates. `mapPickLoop_perm` carries the
+> matching in-tree SCAFFOLD label, and so does the layer-2
+> value-generic machine-fact group beneath it.
+>
+> **The archived instance**, for anyone reconstructing what the
+> discharge looked like: `MapOrderSpecs.lean:864`,
+> `jointConfigIDs_callSpecR` — the full-permutation-family member
+> over the real `quorum.JointConfig.IDs`, at `archive/callspec-era`.
+> It is cited as evidence that the shape closes, NOT as a live
+> discharge; no volume of archived instances discharges a ∀.
+
 | quantifier | rule that discharges it |
 |---|---|
 | ∀ ch latitude draws at each map-range site | `mapPickLoop_generic` (W2's ∀-pick strong induction: one consumed choice + one erased candidate per iteration), instantiated with a **Perm-conservation invariant** (`built ++ image(remaining) ~ canonical` — constant under every pick) |

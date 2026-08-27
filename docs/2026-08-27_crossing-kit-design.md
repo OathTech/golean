@@ -1,5 +1,34 @@
 # The data-branch crossing kit (W3 mechanism unit, 2026-08-27)
 
+> **SUPERSESSION BANNER (triage landing, 2026-08-27; added by the
+> pre-merge audit, semantics-dimension M4).** §"Non-vacuity" below
+> demonstrates the kit's ≥2-consumer requirement with three CallSpec
+> members — `unstable.maybeLastIndex`, `unstable.maybeTerm`
+> (`LogReadSpecs`), and `MemoryStorage.firstIndex`
+> (`StorageWalkSpecs`). **Those three modules were DELETED in the
+> 2026-08-27 triage** with the rest of the CallSpec calculus; they
+> are recoverable at `archive/callspec-era`. Read that section as
+> the historical demonstration, not as a live census.
+>
+> **The live non-vacuity witnesses** are the judgment-free
+> mini-witnesses in `proofs/GoLeanProofs/Sym/CrossingWitness.lean` —
+> `crossing_witness_lenNeg` (the class-1 normalize collapse via
+> `normalize_int_eq`/`int_ofNat_cast`, plus the length read through
+> `applyStrict_length_slice`, whose engine is `validateSlice_ok`),
+> `crossing_witness_ifSplit` (`stepFn_ifK_true` as a span prefix),
+> and `crossing_witness_read` (`loadLoc_base` →
+> `applyStrict_indexGet_slice`). All three are span derivations over
+> ABSTRACT states at symbolic lengths, pinned in
+> `proofs/Audit/Landing.lean`. The kit itself is unchanged and
+> judgment-free; only its consumers moved.
+>
+> Two kit members carry in-tree SCAFFOLD labels because the deletion
+> left them at zero consumers: `applyStrict_deref` (resume: G-REPR/
+> G-CALLS) and the `normalize_uint64_eq`/`normalize_uint64_ofNat`/
+> `normalize_int_ofNat` group (resume: first live consumer). The
+> kit's forward consumers remain the correspondence and ∃-side
+> discharge work of the G-units.
+
 One writer: the W3 crossing-kit worker (`w1-prover` lane, U3.1-F's
 successor). Deliverable: `proofs/GoLeanProofs/Sym/Crossing.lean` +
 this note. Consumers: the U3.1-F remainder (this unit's second half),
