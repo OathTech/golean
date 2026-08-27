@@ -2780,3 +2780,20 @@ logBridge + EStep reach). [AGENT]: goal already [USER]-paused; NO
 remediation without [USER] direction — the professor is explicit
 that an [AGENT]-folded repair would repeat the pattern that
 produced the defect.
+
+### 2026-08-27 — [USER] instruction: whole-project design pass, professor-standard
+
+[USER]: run a whole-project design pass. Aims: (1) refine the
+working document, (2) the remaining route to the summit clear and
+properly described, (3) no forbidden patterns crept in anywhere.
+The professor is NOT downscoped — their job is to look at
+EVERYTHING. [AGENT] execution: one Fable professor, primary
+sources, full tree at w1-prover @ 20cda772 + the campaign branch
+docs + main; deliverables = a ranked findings report AND a drafted
+v3 of the plan of record (new dated file; the plan of record itself
+untouched pending [USER] sign-off) incl. the invariant amendment
+design and the W4 composition-road decision AS PRICED PROPOSALS;
+the DIVERGENCE-MAJOR findings are input (deepen, don't re-derive).
+Professor writes in their own worktree (branch design-pass off the
+campaign branch); may spawn read-scouts but ALL judgments are their
+own from primary sources.
