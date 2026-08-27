@@ -82,22 +82,51 @@ verified against the semantics, useful-not-complete, replaceable.
   declared reflection certificates, in the discharge of ∃-shaped
   statements (exhibiting a run is how existentials are proved), and
   — until superseded — the retained interface witnesses.
-- **The quantifier audit.** Every unit charter states which
-  quantifier of the end theorem it advances and BY WHAT RULE —
-  never "by instances." No nameable rule ⇒ the unit is scaffolding
-  before it starts.
-- **Classics first, with lineage.** Every mechanism names its
-  classic ancestor (separation logic, simulation/refinement,
-  symbolic execution, certificate replay, …); an unmappable trick
-  is suspicious. Measurement referees between alternatives.
-- **The middle path.** Generality only against demonstrated demand
-  (≥2 consumers or measured fragility); cheap disposable slices are
-  fine; expensive or repeatedly-consumed machinery must be general.
-  No speculative interfaces; no keeping things because tests are
-  green.
-- **Fail closed, always.** Unknown input, unsupported feature,
-  unclassified case → explicit refusal that names itself. Never a
-  silent default. A visible red beats a hidden wrong answer.
+- **The quantifier audit.** Before work starts, write down the end
+  theorem's quantifiers (∀ streams, ∀ states, ∀ iterations, ∃ fuel,
+  …) and, for each, the RULE that discharges it — a loop rule, a
+  congruence, a spec, a case analysis over an invariant-constrained
+  set. Every unit charter opens with its line of this table: which
+  quantifier it advances, by what rule. "By instances" is never an
+  answer — no volume of proved instances discharges a ∀ (the
+  2026-08 enumeration mistake: weeks of green units advancing no
+  quantifier). A unit that cannot name its rule is scaffolding
+  before it starts, and must be labeled so.
+- **Classics first, with lineage.** Before building a proof
+  mechanism, identify the literature ancestor it instantiates —
+  separation logic and frames, simulation/refinement, symbolic
+  execution, loop invariants and variants, certificate replay,
+  computational reflection — and write a LINEAGE line in its design
+  note naming the classic and where the construction diverges. Why:
+  a classic arrives with obligation shapes the community has
+  stress-tested for decades; a novel trick repeats that evolution
+  at our expense, with failure modes discovered late. When two
+  classics compete, measurement referees (a probe each, compare).
+  A mechanism that maps to no classic is suspicious and takes extra
+  scrutiny — a named reason, a design review — before shipping.
+- **The middle path.** The build-decision test is two-axis: COST ×
+  CONSUMER COUNT. Cheap and disposable → a concrete slice is
+  correct; expensive OR repeatedly consumed → the general form is
+  mandatory. "Demonstrated demand" means an existing second
+  consumer (the promotion ledger's ≥2 rule: when a pattern bites
+  twice, lift it) or a MEASURED fragility/cost — never a
+  hypothetical future user. Speculative interfaces are as banned as
+  grind: an interface with one inhabitant is a chain in costume,
+  and every interface carries a named vacuity check (≥2 genuinely
+  different instances). Deletion bias: nothing is kept because
+  tests are green; scaffolding carries a retirement condition or a
+  deletion date.
+- **Fail closed, always.** Unknown wire node, unsupported feature,
+  unclassified case, exhausted budget → an explicit refusal that
+  NAMES ITS CAUSE at the point of failure (the sealed-payload
+  pattern: semantically False, payload identifies the site), never
+  a silent default, never an absorbing fallback. Refusals are
+  load-bearing signals: an `unsupported`/`stuck`/refused outcome
+  never counts as a pass, a gate that cannot run FAILS rather than
+  skips, and partial machinery advertises its boundary (coverage
+  grown consume-on-demand, each extension proved on admission).
+  The smell of fail-open is a default that makes an error
+  disappear; a visible red beats a hidden wrong answer.
 
 ## The gates
 
