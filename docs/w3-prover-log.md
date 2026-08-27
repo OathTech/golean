@@ -858,3 +858,82 @@ module 105 s with all 13 exported members' spans in-module.
   two lanes now share SpecJudgment's four judgment forms; the
   branch histories overlap at that commit and the lanes' merge
   order at the landing ceremony should account for it).
+
+---
+
+# W3 continuation (2026-08-27) — F-REMAINDER CLOSE-OUT + the harvest cluster (one writer; the crossing-kit worker's successor on the same lane)
+
+Charter: the coordinator's F-remainder + U3.1-B brief (Unit A =
+the F remainder in the park record's order; Unit B = the harvest
+engine cluster). Conventions unchanged (capped builds, box lock for
+full builds, zero sorry/native_decide/new axioms, [AGENT] provenance,
+count-free exports, park-not-weaken).
+
+**QUANTIFIER-AUDIT LINE:** both units build CallSpecR/RD instances =
+the RULES that discharge ∀-state at the storage/log/rawnode call
+sites (∀ σ over reader-vocabulary footprint families; ∀ plans-shape/
+env/k; ∀ ch demonic; ∃ n), consumed by clusters C/D/E and by
+U3.2c/U3.2e/U3.2f via `.consume`. No end-theorem quantifier closes
+here; per-spec docstrings name the ∀ each serves.
+
+## Successor re-verification (top claims re-checked before work)
+
+- Tip + cleanliness: `ce05ecd1`, branch `w1-prover`, clean. CONFIRMED.
+- Kit present as logged: `Sym/Crossing.lean` (stepFn_ifK_true/false,
+  normalize collapses, validateSlice/length/indexGet/deref lemmas);
+  `LogReadSpecs.lean` exports incl. `memoryStorage_FirstIndex_callSpecRD`;
+  `SpecJudgment.lean` carries CallSpec/R/RN/RD + conseq/consume.
+  CONFIRMED by reading.
+- Box lock: owner file RELEASED (crossing-kit exit 13:19Z); only idle
+  LSP workers on the box. CONFIRMED.
+- Hatch grep over kit + LogReadSpecs + SpecJudgment: 0 live
+  sorry/native_decide/partial. CONFIRMED.
+
+## UNIT A slice 1 — MemoryStorage.LastIndex + MemoryStorage.Term: LANDED
+
+New module `Specs/RaftPilot/StorageWalkSpecs.lean` (registered in the
+aggregator), consuming LogReadSpecs' family formers.
+
+- **`memoryStorage_LastIndex_callSpecRD`** — the parked mechanical
+  mirror, closed: Lock + defer + `callStats.lastIndex` increment +
+  the inner `lastIndex` inlined (BOTH kit crossings recur: the
+  `ents[0]` index read and the length read) + deferred unlock +
+  `.next`-frame exit. 3 windows (59/67/50, private) + 2 crossings.
+  Returns `(ents[0].Index + len - 1, nil)`; footprint reads back
+  mutex-unlocked with exactly the lastIndex counter incremented.
+- **`MemoryStorage.Term`, all three arms** (the parked maybeTerm-scale
+  member, closed at the subject's own branch trichotomy):
+  * family: NEW `msTFam` — TWO distinct entry cells (33 = the
+    `ents[0]` entry, Index→34; 35 = the `ents[j]` entry, Term→36 —
+    an honest family: real heaps have distinct entries) + the error
+    GLOBALS at their true static addresses 23/25 with FREE payloads
+    (the park record's plan: the arms conclude "returns the global's
+    value").
+  * `memoryStorage_Term_below_callSpecRD` (i < offset →
+    `(0, *cell-23)`; ifK crossing), `_aboveLast_` (len ≤ i-offset →
+    `(0, *cell-25)`; + length crossing + the atLeastCmp apply at free
+    scalars + second ifK), `_inRange_` (i = offset+j, j < len →
+    `(ents[j].Term, nil)`; + the class-3 `values[so+j]` read).
+    Windows 50/57 shared; arms 36 / 18+1+36 / 18+1+19+82.
+  * [AGENT] family bound, labeled at birth: the ≥offset arms carry
+    `i - offset < 2^63` (reader-vocabulary log-size envelope) — at
+    larger distances the subject's `int(i-offset)` conversion wraps
+    negative and falls into the read arm; no invariant-constrained
+    caller reaches that region. Precondition-family bound; no
+    conclusion narrowed.
+  * [AGENT] machine finding (recorded for the costing table): the
+    per-op wrap discipline is EXACTLY one `IntKind.normalize` per
+    arithmetic op and one per int-cell store (the landed FirstIndex
+    6-wrap chain re-derived, and the first W3 misstatement — one
+    missing store wrap — was caught by the kernel, fixed in one
+    iteration). Free error-global payloads RIDE through interface
+    stores (coerce matches the OLD value's constructor; old = nil →
+    catch-all) — kernel-confirmed, so "returns the global's value"
+    needs no payload shape pin.
+- Non-vacuity: `msTPre_inhabited` (∃-discharge; LastIndex rides on
+  the landed `MSPreX`).
+- Every export count-free; probes `artifacts/w3/ProbeFRem{1,2,3}.lean`
+  (+ .out dumps) are untracked scaffolding.
+- Build: module target build EXIT=0 (36 jobs, module 125 s at
+  48G/4 threads, artifacts/w3/frem-swalk-build1.log); zero warnings
+  in the new module. Hatch grep: 0 sorry/native_decide/partial.
