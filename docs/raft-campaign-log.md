@@ -2589,3 +2589,30 @@ joints ledgered for W3.2a/b/d/f. Prover log: docs/w3-prover-log.md.
 tightened to the four wire types per convergent census+worker
 findings) into the invariant BEFORE any cluster consumes it; then
 U3.1-F (shared log layer) opens Wave 3.1.
+
+### 2026-08-27 — U3.0d LANDED; U3.1-F PARTIAL with the decisive mechanism datum (w1-prover @ fe4e42a3)
+
+U3.0d (fc10a11d): term bound folded (AbsCarrier.tm hoisted;
+[AGENT]-stronger net clause — live net terms EXACTLY tm); probe
+vocabulary (absProgressOf/absRaftLogOf on a new σ-dependent map lens;
+Pair.progress with ProgOk); population tightened to the census's four
+wire types (design note's five corrected on the record). Deltas
+FLAGGED not absorbed: the amendment's Next ≥ Match+1 ≥ 2 chain
+unsatisfiable as written (stated distributively); [AGENT] ProgOk.nextUB
+added (else term(Next-1) hits ErrUnavailable and the snapshot family
+is not refuted); stateWire added. C5/U4: no amendment needed.
+U3.1-F (fe4e42a3): CallSpecR judgment form landed (callee-local
+result-bearing call-span; open-tail route, no plug-walk change; W1
+seal rescoped) + two unstable-family members green; REMAINDER PARKED
+on a named blocker — kernel reduction cannot decide data branches
+over symbolic scalars (normalize/validateSlice stuck) — the fix is a
+DATA-BRANCH CROSSING KIT (bf-pattern window splits +
+hypothesis-consuming step lemmas; promotion ledger: every remaining
+member of every cluster is a consumer → the general form is
+mandatory per the middle path). Costing (derivation-anchored in the
+prover log): kit ≈ one focused unit; F remainder 3-5 Fable-days
+after it; B ≈ 1.5-2×F; C ≈ F (term bound discharges the Step
+prelude); D+E largest, E last; A cheapest, parallel filler.
+[AGENT] dispatch: kit prover on w1-prover NOW; init cluster A in a
+sub-worktree (branch w3-init off fe4e42a3, one writer) with
+park-don't-duplicate instructions for kit-blocked members.
