@@ -2745,3 +2745,38 @@ were already gated on the review); no merges to main; nothing
 pushed. Open [USER] items unchanged: the W2.5 adjudication review,
 the flagged [AGENT] interpretation set, the eventual audit-ask +
 merge sign-off.
+
+### 2026-08-27 — PROFESSOR VERDICT: DIVERGENCE-MAJOR (scoped); presented to the [USER]
+
+Verdict at w1-prover @ 20cda772. F1 SEVERE: ElectedAt.logBridge +
+commitTie (Invariant.lean:478-479) tie the FROZEN S1 carrier (EStep:
+three constructors, none touches committed; only log write = the
+winner's noop) to the ADVANCING H-carrier — falsified at the first
+Elected-phase propose/commit; escape hatches checked and closed
+(terms/tmPos/netTerms/shellSync). Root cause: U3.0c misread the
+note's C2 — the intended CONCRETE-log↔NH pairing clause does not
+exist in I at all. Containment: definitions-only, nothing landed
+cites the two clauses, nothing proved is unsound — but W3.2a/b and
+C/D/E charters are costed against the defective contract. F2
+SERIOUS (attached): the W4 composition road for result-bearing
+specs does not exist (plug barrier hard-coded resultless; R-form
+FrameSim transport = W1 finding-1 dead end verbatim; CallSpecV +
+R-transport both on the W4 critical path, absent from every costing
+table — an unpriced summit). F3 MODERATE: loop-head quiescence
+assumed by prose + landed quiesced families but NOT a clause of I.
+F4/F5 MINOR: judgment family principled (consolidation assessment
+recommended at the CallSpecV unit); kit and (M) sound and
+well-lineaged (Sort lowering census + width docstring debts
+flagged). Calibration positives recorded (all other [AGENT] deltas
+verified sound; parks honest; bounded-technique scan clean).
+Professor's owner items: (1) amend ElectedAt (delete two clauses,
+add concrete-log↔NH prefix pairing + quiescence sub-clause),
+re-run the W2.5 gate on the amended note; (2) decide the W4
+composition road BEFORE C/D/E; (3) safe-to-continue set named
+(F-transcription, (M) consumers, quiescence-measure design, Sort
+census). Recommended first act of any fix unit: the five-line
+mechanized refutation (exhibit HStep.propose; derive False from
+logBridge + EStep reach). [AGENT]: goal already [USER]-paused; NO
+remediation without [USER] direction — the professor is explicit
+that an [AGENT]-folded repair would repeat the pattern that
+produced the defect.
