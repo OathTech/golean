@@ -2441,6 +2441,16 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   the CLAUDE.md charter rewrite drafted by the coordinator in
   parallel for [USER] sign-off. Then W1's three-legged pilot.
 
+- **[USER] 2026-08-27 — W0 MERGED (main @ 84b5edb3) + THE
+  AUTONOMOUS GOAL RE-SET** on the clean-proof-plan arc (W1-W5;
+  full charter in the goal text; W2.5 remains the plan's named
+  [USER] design gate and will be POSED, not skipped). [AGENT]:
+  lane w1-prover opened off main; the W1 worker dispatched — the
+  spec former (call-span shape), the composition rules + minimal
+  driver, the runProgramM glue family, the footprint-frame design,
+  gated by the three-legged pilot. Estimates resume at the pilot's
+  measurement per the standing rule.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
