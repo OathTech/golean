@@ -102,6 +102,49 @@ theorem pushVictory_votes (g : Ghost) (t l : Nat) (q : List Nat) :
 theorem pushVictory_victories (g : Ghost) (t l : Nat) (q : List Nat) :
     (pushVictory g t l q).victories = (t, l, q) :: g.victories := rfl
 
+/-! ## The ack ghost delta (W3 U3.0a — the acks-axis mirror of
+`pushVote`; INTERFACE ONLY, no quantifier advanced: the write sites
+are the W3 AppResp-emission handler specs and the read site is the
+W3.2b Match-evidence unit; here only the delta and its frame lemmas,
+so the S1-fragment machinery is PROVABLY acks-transparent). -/
+
+/-- Ack push: node `v` acknowledges its log through index `k` at term
+`t` (the genuine non-reject AppResp's ghost rule). -/
+def pushAck (g : Ghost) (v t k : Nat) : Ghost :=
+  { g with acks := fun w => if w = v then (t, k) :: g.acks w
+                            else g.acks w }
+
+theorem pushAck_self (g : Ghost) (v t k : Nat) :
+    (pushAck g v t k).acks v = (t, k) :: g.acks v := by simp [pushAck]
+
+theorem pushAck_other (g : Ghost) {v w : Nat} (t k : Nat) (h : w ≠ v) :
+    (pushAck g v t k).acks w = g.acks w := by simp [pushAck, h]
+
+theorem pushAck_votes (g : Ghost) (v t k : Nat) :
+    (pushAck g v t k).votes = g.votes := rfl
+
+theorem pushAck_victories (g : Ghost) (v t k : Nat) :
+    (pushAck g v t k).victories = g.victories := rfl
+
+/-- The S1 deltas never touch the ack record (the frame half the
+election fragment owes the commit axis). -/
+theorem pushVote_acks (g : Ghost) (v t c : Nat) :
+    (pushVote g v t c).acks = g.acks := rfl
+
+theorem pushVictory_acks (g : Ghost) (t l : Nat) (q : List Nat) :
+    (pushVictory g t l q).acks = g.acks := rfl
+
+/-- Ack growth under `pushAck` (the `ghostVotesMono` shape at the ack
+axis — what `ackCertified_mono` consumes at the push sites). -/
+theorem mem_acks_pushAck (g : Ghost) (v t k : Nat) {w t' k' : Nat}
+    (h : (t', k') ∈ g.acks w) : (t', k') ∈ (pushAck g v t k).acks w := by
+  by_cases hw : w = v
+  · subst hw
+    rw [pushAck_self]
+    exact List.mem_cons_of_mem _ h
+  · rw [pushAck_other _ _ _ hw]
+    exact h
+
 /-! ## Tally lemmas (`recordVote` / `grantedOf`) -/
 
 theorem mem_recordVote {l : List (Nat × Bool)} {v : Nat} {g : Bool}
@@ -280,6 +323,32 @@ inductive EStep (voters : List Nat) : SNet → SNet → Prop where
             pushVictory N.ghost (N.node i).term i
               (grantedOf (recordVote (N.node i).votesRec from_ (!reject)))
            else N.ghost))
+
+/-- The election fragment is acks-TRANSPARENT (W3 U3.0a frame fact):
+no `EStep` constructor writes the ack record — S1-fragment reasoning
+never disturbs a commit certificate. -/
+theorem EStep_acks_eq {voters : List Nat} {N N' : SNet}
+    (hs : EStep voters N N') : N'.ghost.acks = N.ghost.acks := by
+  cases hs with
+  | campaign i hi => rfl
+  | recvVote v c mT mLT mI r' g hc hspec =>
+      show (if g then pushVote N.ghost v r'.term c else N.ghost).acks
+        = N.ghost.acks
+      split <;> rfl
+  | recvVoteResp i from_ reject r' won hfrom htally hgen hspec =>
+      show (if won then pushVictory N.ghost (N.node i).term i _
+        else N.ghost).acks = N.ghost.acks
+      split <;> rfl
+
+/-- `ackCertified` rides every election-fragment step unchanged (the
+transport corollary the invariant's Elected phase consumes at S1
+stutters). -/
+theorem ackCertified_estep {voters : List Nat} {N N' : SNet}
+    (hs : EStep voters N N') {tm idx : Nat}
+    (h : ackCertified voters N.ghost tm idx) :
+    ackCertified voters N'.ghost tm idx :=
+  ackCertified_mono
+    (fun v t k hm => by rw [EStep_acks_eq hs]; exact hm) h
 
 /-! ## The discharge (charter part 3's deliverable) -/
 

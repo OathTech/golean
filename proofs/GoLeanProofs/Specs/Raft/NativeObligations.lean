@@ -165,10 +165,63 @@ def specRecvVoteResp (r : ENode) (selfId : Nat) (voters : List Nat)
 all-history vote record per voter and the victory record — verdi-raft's
 `electionsData` promoted to the family interface (the ADAPTS driver
 above: etcd's leader retains no tally, so the victory GHOST is the
-only dialect-neutral carrier of the quorum evidence). -/
+only dialect-neutral carrier of the quorum evidence).
+
+W3 U3.0a extension (`docs/2026-08-27_w25-invariant-design.md` open
+point 1, resolved [AGENT] as recommended): `acks` — the all-history
+APPEND-ACK record per acker, mirroring `votes`: an entry `(t, k)` in
+`acks v` records that node `v` sent a genuine (non-reject) AppResp at
+term `t` acknowledging its log through index `k`. Same ADAPTS driver
+as the tally: etcd's leader-side `Progress.Match` is mutable transient
+state (a re-derivation target, not a history), so the quorum evidence
+for a commit-advance is ghost-carried, exactly like `victories`.
+INTERFACE ONLY (the wave's quantifier line): this field and
+`ackCertified` below advance no quantifier by themselves — they are
+the carrier C4's ack/Match clause writes and the W3.2b Match-evidence
+unit reads at the leader's commit-advance. -/
 structure Ghost where
   votes : Nat → List (Nat × Nat)          -- voter ↦ (term, candidate)
   victories : List (Nat × Nat × List Nat) -- (term, leader, quorum)
+  acks : Nat → List (Nat × Nat)           -- acker ↦ (term, ackedIndex)
+
+/-- **`certified`, instantiated** (the W2.5 note's open point 1, the
+ghost-acks route): index `idx` is certified at term `tm` against
+ghost `g` when a QUORUM of the voters each has a recorded ack at that
+term reaching `idx` (an entry `(tm, k)` with `idx ≤ k` — acks are
+prefix acknowledgements, so a higher ack covers every lower index).
+This is the intended instantiation of `HStep`'s abstract
+`certified : Nat → Prop` parameter (`NativeS23Chain.lean`,
+`leaderCommit`'s O-C2 premise): `certified := ackCertified voters g tm`.
+The instantiation itself is performed by the W3.2b Match-evidence
+unit; nothing is discharged here (interface only — see the Ghost
+docstring's quantifier line). -/
+def ackCertified (voters : List Nat) (g : Ghost) (tm idx : Nat) : Prop :=
+  ∃ q, isQuorum voters q ∧
+    ∀ v ∈ q, ∃ k, idx ≤ k ∧ (tm, k) ∈ g.acks v
+
+/-- `ackCertified` is monotone under ack growth — the sanity lemma
+every acks-preserving/pushing ghost delta rides (certification once
+earned is never lost along a trace whose ghost acks only grow, the
+`ghostVotesMono` pattern at the ack axis). -/
+theorem ackCertified_mono {voters : List Nat} {g g' : Ghost}
+    (h : ∀ v t k, (t, k) ∈ g.acks v → (t, k) ∈ g'.acks v)
+    {tm idx : Nat} (hc : ackCertified voters g tm idx) :
+    ackCertified voters g' tm idx := by
+  obtain ⟨q, hq, hall⟩ := hc
+  refine ⟨q, hq, fun v hv => ?_⟩
+  obtain ⟨k, hk, hmem⟩ := hall v hv
+  exact ⟨k, hk, h v tm k hmem⟩
+
+/-- `ackCertified` is antitone in the index (a certificate for `idx`
+covers every lower index — the prefix-acknowledgement reading made
+formal; W3.2b's commit-advance consumes this at `committed' ≤ idx`). -/
+theorem ackCertified_le {voters : List Nat} {g : Ghost} {tm idx idx' : Nat}
+    (hle : idx' ≤ idx) (hc : ackCertified voters g tm idx) :
+    ackCertified voters g tm idx' := by
+  obtain ⟨q, hq, hall⟩ := hc
+  refine ⟨q, hq, fun v hv => ?_⟩
+  obtain ⟨k, hk, hmem⟩ := hall v hv
+  exact ⟨k, Nat.le_trans hle hk, hmem⟩
 
 /-- The abstract net a dialect projects into: node states by id plus
 the ghost. In-flight packets stay dialect-side; the obligations

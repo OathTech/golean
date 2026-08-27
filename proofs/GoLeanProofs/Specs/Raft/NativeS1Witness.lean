@@ -44,7 +44,8 @@ def wNode : ENode :=
   { state := 0, term := 1, vote := 0, lead := 0, log := [(1, 1)],
     committed := 1, votesRec := [] }
 
-def wG0 : Ghost := { votes := fun _ => [], victories := [] }
+def wG0 : Ghost :=
+  { votes := fun _ => [], victories := [], acks := fun _ => [] }
 
 /-- The boot net: all followers, empty ghost. -/
 def wN0 : SNet := { node := fun _ => wNode, ghost := wG0 }
@@ -129,5 +130,38 @@ concrete run (the guard premise is derivable at the final net, as
 the reachability argument promises). -/
 theorem witness_tallyOK : ∀ i, TallyOK voters3 wN4 i :=
   tallyOK_reachable (fun _ => rfl) wReach
+
+/-! ## W3 U3.0a — the ghost-acks non-vacuity check (kept BESIDE the
+retained witnesses, extending them, never changing their claims):
+`ackCertified` is inhabitable through `pushAck` at the twin's shape
+(nodes 2 and 3 ack index 2 at the leader's term 2 — a two-of-three
+quorum), and the S1 run above is acks-transparent end-to-end. -/
+
+/-- The post-election ghost with two recorded acks at (term 2,
+index 2). -/
+def wGAck : Ghost := pushAck (pushAck wN4.ghost 2 2 2) 3 2 2
+
+/-- **WITNESS 4 (U3.0a)** — the certified instantiation is
+inhabited: index 2 is certified at term 2 by the quorum {2, 3}. -/
+theorem witness_ackCertified : ackCertified voters3 wGAck 2 2 := by
+  refine ⟨[2, 3], ⟨by decide, by decide, by decide⟩, ?_⟩
+  intro v hv
+  rcases List.mem_cons.mp hv with rfl | hv'
+  · exact ⟨2, Nat.le_refl 2, by
+      show (2, 2) ∈ (pushAck (pushAck wN4.ghost 2 2 2) 3 2 2).acks 2
+      rw [pushAck_other _ _ _ (by decide), pushAck_self]
+      exact List.mem_cons_self ..⟩
+  · rcases List.mem_cons.mp hv' with rfl | hv''
+    · exact ⟨2, Nat.le_refl 2, by
+        show (2, 2) ∈ (pushAck (pushAck wN4.ghost 2 2 2) 3 2 2).acks 3
+        rw [pushAck_self]
+        exact List.mem_cons_self ..⟩
+    · exact absurd hv'' (List.not_mem_nil)
+
+/-- **WITNESS 5 (U3.0a)** — acks-transparency of the whole S1 run:
+the four-step election never writes the ack record. -/
+theorem witness_acks_transparent : wN4.ghost.acks = wN0.ghost.acks := by
+  rw [EStep_acks_eq wStep4, EStep_acks_eq wStep3, EStep_acks_eq wStep2,
+    EStep_acks_eq wStep1]
 
 end GoLean.RaftSeam.NativeSpec
