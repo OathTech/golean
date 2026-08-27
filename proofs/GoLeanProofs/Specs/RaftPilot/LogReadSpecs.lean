@@ -2191,7 +2191,186 @@ start state, and the candidate terminal). Resume: diff that window
 concretely cell-by-cell, then state the member against the
 `CallSpecRD` judgment (cherry-picked from the init lane — its
 terminal is exactly the deferred-frame `.next (.frame …)` this pair
-needs). -/
+needs); window 2 and the export below are stated at that shape. -/
+
+/-- Window 2 (106 steps, from the crossed index read): `GetIndex`,
+`+ 1`, the inner return + result glue, the outer results, the
+DEFERRED UNLOCK (mutex → false; coerce round 3 wraps the counters
+once more), exit through the `.next`-frame arm (the `CallSpecRD`
+terminal). Stated from the seam-collapsed stats. -/
+private theorem msXFI_w2 (so kn sc : Nat)
+    (iv a1 fiv a3 a4 a5 a6 : Int) (hsL snL : Loc)
+    (c32 : HeapCell) (edty idty : Option Ty)
+    (tmv typv dvv : GoValue) (c35 : HeapCell)
+    (sh : TargetShape) (e : Expr) (ops : List Expr)
+    (rest : List (TargetShape × List Expr)) (env : LocalEnv)
+    (k : Cont) (ch : Choices) :
+    stepFnIter 106
+      (msFamX none so (kn+1) sc true hsL snL
+        (msStatsV a1 fiv a3 a4 a5 a6) c32
+        (msEntryCell edty tmv typv dvv)
+        { declaredTy := idty, value := .int iv .uint64 } c35
+        (.int 0 .uint64) (.nil) (.int 0 .uint64)
+        (msXInnerCells (.int 0 .uint64) (.int 0 .uint64)) 43)
+      (.retV (.addr (Loc.base ⟨33⟩)) (msXKget ((sh, e :: ops) :: rest) env k)) ch
+      = .ok (.next
+          (.frame ((sh, e :: ops) :: rest) env [Loc.base ⟨37⟩, Loc.base ⟨38⟩] [] k false),
+        msFamX none so (kn+1) sc false hsL snL
+          (msStatsV (IntKind.normalize .int a1)
+            (IntKind.normalize .int fiv) (IntKind.normalize .int a3)
+            (IntKind.normalize .int a4) (IntKind.normalize .int a5)
+            (IntKind.normalize .int a6))
+          c32 (msEntryCell edty tmv typv dvv)
+          { declaredTy := idty, value := .int iv .uint64 } c35
+          (.int (IntKind.normalize .uint64
+          (IntKind.normalize .uint64
+            (IntKind.normalize .uint64
+              (IntKind.normalize .uint64
+                (IntKind.normalize .uint64
+                  (IntKind.normalize .uint64 iv) + 1))))) .uint64)
+          (.nil)
+          (.int (IntKind.normalize .uint64
+          (IntKind.normalize .uint64
+            (IntKind.normalize .uint64
+              (IntKind.normalize .uint64
+                (IntKind.normalize .uint64 iv) + 1)))) .uint64)
+          (msXInnerCells
+            (.int (IntKind.normalize .uint64
+            (IntKind.normalize .uint64
+              (IntKind.normalize .uint64
+                (IntKind.normalize .uint64 iv) + 1))) .uint64)
+            (.int (IntKind.normalize .uint64
+              (IntKind.normalize .uint64 iv)) .uint64) ++
+           [(Loc.base ⟨43⟩,
+             { declaredTy := some (Ty.pointer (Ty.defined ⟨"raftpb.Entry"⟩))
+               value := .addr (Loc.base ⟨33⟩) }),
+            (Loc.base ⟨44⟩,
+             { declaredTy := some (Ty.int .uint64)
+               value := .int (IntKind.normalize .uint64 iv) .uint64 }),
+            (Loc.base ⟨45⟩,
+             { declaredTy := some (Ty.pointer (Ty.sync .mutex))
+               value := .addr
+                 (.field (Loc.base ⟨31⟩) ⟨"raft.MemoryStorage"⟩
+                   "Mutex") })])
+          46,
+        ch) := by
+  kernel_rfl
+
+/-- **THE `MemoryStorage.FirstIndex` CallSpecRD** (the exported
+read: Lock + `defer Unlock` + callStats + the internal read):
+returns `(ents[0].Index + 1, nil)`; the footprint reads back with
+the mutex UNLOCKED again and the ONE honest mutation — the
+`callStats.firstIndex` counter incremented. Counter range facts are
+reader vocabulary (the invariant's C1 counters). -/
+theorem memoryStorage_FirstIndex_callSpecRD
+    (so kn sc : Nat) (iv a1 fiv a3 a4 a5 a6 : Int) (hsL snL : Loc)
+    (adty edty idty : Option Ty) (values : Array GoValue)
+    (tmv typv dvv : GoValue) (c35 : HeapCell)
+    (hsc : kn + 1 ≤ sc)
+    (hget : values[so]? = some (.addr (Loc.base ⟨33⟩)))
+    (hiv0 : 0 ≤ iv) (hiv64 : iv + 1 < 18446744073709551616)
+    (ha1a : -9223372036854775808 ≤ a1) (ha1b : a1 < 9223372036854775808)
+    (ha3a : -9223372036854775808 ≤ a3) (ha3b : a3 < 9223372036854775808)
+    (ha4a : -9223372036854775808 ≤ a4) (ha4b : a4 < 9223372036854775808)
+    (ha5a : -9223372036854775808 ≤ a5) (ha5b : a5 < 9223372036854775808)
+    (ha6a : -9223372036854775808 ≤ a6) (ha6b : a6 < 9223372036854775808)
+    (hfa : -9223372036854775808 ≤ fiv)
+    (hfb : fiv + 1 < 9223372036854775808) :
+    CallSpecRD
+      (MSPreX so (kn+1) sc hsL snL (msStatsV a1 fiv a3 a4 a5 a6)
+        { declaredTy := adty, value := .array values }
+        (msEntryCell edty tmv typv dvv)
+        { declaredTy := idty, value := .int iv .uint64 } c35)
+      ⟨"raft.MemoryStorage.FirstIndex"⟩ [] msArgV
+      (fun σ' vs =>
+        vs = [.int (iv + 1) .uint64, .nil] ∧
+        Heap.lookup σ'.heap (Loc.base ⟨31⟩)
+          = some { declaredTy := none
+                   value := msCellVL false hsL snL
+                     (msStatsV a1 (fiv + 1) a3 a4 a5 a6)
+                     so (kn+1) sc }) := by
+  intro σ hP sh e ops rest env k ch
+  have hA1 : IntKind.normalize .int a1 = a1 := normalize_int_eq ha1a ha1b
+  have hA3 : IntKind.normalize .int a3 = a3 := normalize_int_eq ha3a ha3b
+  have hA4 : IntKind.normalize .int a4 = a4 := normalize_int_eq ha4a ha4b
+  have hA5 : IntKind.normalize .int a5 = a5 := normalize_int_eq ha5a ha5b
+  have hA6 : IntKind.normalize .int a6 = a6 := normalize_int_eq ha6a ha6b
+  have hFv : IntKind.normalize .int fiv = fiv :=
+    normalize_int_eq hfa (by omega)
+  have hFv1 : IntKind.normalize .int (fiv + 1) = fiv + 1 :=
+    normalize_int_eq (by omega) hfb
+  have hIv : IntKind.normalize .uint64 iv = iv :=
+    normalize_uint64_eq hiv0 (by omega)
+  have hIv1 : IntKind.normalize .uint64 (iv + 1) = iv + 1 :=
+    normalize_uint64_eq (by omega) hiv64
+  have h1 := msXFI_w1 so kn sc a1 fiv a3 a4 a5 a6 hsL snL
+    { declaredTy := adty, value := .array values }
+    (msEntryCell edty tmv typv dvv)
+    { declaredTy := idty, value := .int iv .uint64 } c35 ((sh, e :: ops) :: rest) env k ch
+  simp only [msStatsV', hA1, hA3, hA4, hA5, hA6, hFv, hFv1] at h1
+  have hload : loadLoc
+      (msFamX none so (kn+1) sc true hsL snL
+        (msStatsV a1 (fiv + 1) a3 a4 a5 a6)
+        { declaredTy := adty, value := .array values }
+        (msEntryCell edty tmv typv dvv)
+        { declaredTy := idty, value := .int iv .uint64 } c35
+        (.int 0 .uint64) (.nil) (.int 0 .uint64)
+        (msXInnerCells (.int 0 .uint64) (.int 0 .uint64)) 43)
+      (Loc.base ⟨32⟩) = .ok (.array values) := rfl
+  have hx : stepFn
+      (msFamX none so (kn+1) sc true hsL snL
+        (msStatsV a1 (fiv + 1) a3 a4 a5 a6)
+        { declaredTy := adty, value := .array values }
+        (msEntryCell edty tmv typv dvv)
+        { declaredTy := idty, value := .int iv .uint64 } c35
+        (.int 0 .uint64) (.nil) (.int 0 .uint64)
+        (msXInnerCells (.int 0 .uint64) (.int 0 .uint64)) 43)
+      (.retV (.int 0 .int)
+        (.strictK .indexGet
+          [.slice ⟨some (Loc.base ⟨32⟩), so, kn+1, sc⟩] [] msEnvXin
+          (msXKget ((sh, e :: ops) :: rest) env k))) ch
+      = .ok (.retV (.addr (Loc.base ⟨33⟩)) (msXKget ((sh, e :: ops) :: rest) env k),
+        msFamX none so (kn+1) sc true hsL snL
+          (msStatsV a1 (fiv + 1) a3 a4 a5 a6)
+          { declaredTy := adty, value := .array values }
+          (msEntryCell edty tmv typv dvv)
+          { declaredTy := idty, value := .int iv .uint64 } c35
+          (.int 0 .uint64) (.nil) (.int 0 .uint64)
+          (msXInnerCells (.int 0 .uint64) (.int 0 .uint64)) 43,
+        ch) :=
+    stepFn_strict_apply
+      (applyStrict_indexGet_slice (j := 0) hsc (Nat.succ_pos kn) hload
+        hget)
+  have h2 := msXFI_w2 so kn sc iv a1 (fiv + 1) a3 a4 a5 a6 hsL snL
+    { declaredTy := adty, value := .array values } edty idty
+    tmv typv dvv c35 sh e ops rest env k ch
+  simp only [hA1, hA3, hA4, hA5, hA6, hFv1, hIv, hIv1] at h2
+  refine ⟨59 + (1 + 106),
+    msFamX none so (kn+1) sc false hsL snL
+      (msStatsV a1 (fiv + 1) a3 a4 a5 a6)
+      { declaredTy := adty, value := .array values }
+      (msEntryCell edty tmv typv dvv)
+      { declaredTy := idty, value := .int iv .uint64 } c35
+      (.int (iv + 1) .uint64) (.nil) (.int (iv + 1) .uint64)
+      (msXInnerCells (.int (iv + 1) .uint64) (.int iv .uint64) ++
+       [(Loc.base ⟨43⟩,
+         { declaredTy := some (Ty.pointer (Ty.defined ⟨"raftpb.Entry"⟩))
+           value := .addr (Loc.base ⟨33⟩) }),
+        (Loc.base ⟨44⟩,
+         { declaredTy := some (Ty.int .uint64)
+           value := .int iv .uint64 }),
+        (Loc.base ⟨45⟩,
+         { declaredTy := some (Ty.pointer (Ty.sync .mutex))
+           value := .addr
+             (.field (Loc.base ⟨31⟩) ⟨"raft.MemoryStorage"⟩
+               "Mutex") })]) 46,
+    [Loc.base ⟨37⟩, Loc.base ⟨38⟩],
+    [.int (iv + 1) .uint64, .nil], ch, ?_, ?_, ⟨rfl, ?_⟩,
+    List.suffix_refl ch⟩
+  · rw [hP]
+    exact stepFnIter_chain h1 (stepFnIter_chain (stepFnIter_one hx) h2)
+  · rfl
+  · rfl
 
 end MemStorage
 

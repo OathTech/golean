@@ -682,6 +682,78 @@ consumers)
   total with all 11 span windows; target-build logs
   artifacts/w3/kit-mt*-build*.log).
 
+## U3.1-F un-parking — the MemoryStorage read half
+
+- LANDED (lock-free leaves): `memoryStorage_firstIndex_callSpecR`
+  (`ents[0].Index + 1` — the kit's third genuinely-different
+  crossing class: literal index / symbolic length) and
+  `memoryStorage_lastIndex_callSpecR` (`+ len - 1`; adds the length
+  crossing). Wire facts folded into the family: the ms cell census
+  (embedded Mutex pinned unlocked — zero value), `Entry.Index` is a
+  POINTER (proto-optional, like Term).
+- LANDED (the Lock/defer walk): `memoryStorage_FirstIndex_callSpecRD`
+  — the exported read end-to-end: Lock (mutex→true), the
+  `defer Unlock` registration, the callStats increment (the ONE
+  honest footprint mutation, carried in the conclusion), the inner
+  read inlined, the DEFERRED unlock on the return path, exit at the
+  `.next`-frame terminal. Two windows (59/106) + one crossing.
+- [AGENT] MACHINE-GEOMETRY FINDINGS en route (each probe-anchored):
+  (i) deferred-frame callees exit via `.next (.frame …)`, never
+  `.returning` (kit-ms3.out) — the second return-arrival geometry,
+  = the init lane's independent discovery; (ii) `postOp`/`opDone`
+  is a PURE STRIP in the sequential `stepFn` — the sync walk
+  consumes NO tape; (iii) every ms-cell store routes the whole
+  struct through `coerceStoredValue`, which re-normalizes every
+  int-shaped field — families for cell-writing members must pin ALL
+  field SHAPES, and the per-store wraps collapse at window seams
+  (three wrap rounds: Lock, the increment, Unlock); (iv) the
+  result-glue `seqn` SPLICES (merge shape) — boundary towers carry
+  the spliced statement list; (v) the defer-drain arm's compiled
+  match scrutinizes the TARGETS column, so fully-generic `plans`
+  stick the kernel — resolved by the consolidated `CallSpecRD`'s
+  well-formed-shape quantification.
+- [AGENT] CHERRY-PICK (coordinator-directed consolidation):
+  `0087b48a` (init lane Wave A: `CallSpecRN`/`CallSpecRD` +
+  `InitCallSpecs.lean` + their log) cherry-picked as c4cd8593; my
+  own draft `CallSpecRD` was REMOVED first (a296cc63) so the lane
+  carries exactly one form. Their shaped-plans quantification is
+  precisely what closed this lane's parked defer-tail item —
+  the two lanes' independent derivations AGREE on both machine
+  findings (defer-tail geometry, postOp strip).
+
+## PARKED (park-not-weaken; per-member records)
+
+- `MemoryStorage.LastIndex` (exported): mechanical MIRROR of the
+  landed FirstIndex walk (lastIndex inner + the lastIndex counter);
+  no new mechanism — needs only its two window statements at fresh
+  probe counts. Sub-hour next session.
+- `MemoryStorage.Term`: the FirstIndex walk + the three maybeTerm-
+  style arms; the error arms READ THE ERROR GLOBALS (cells 23/25 —
+  inside the forced-identity region, so the family may pin them with
+  FREE payloads and conclude "returns the global's value") — no new
+  mechanism; maybeTerm-scale (a session-half).
+- `MemoryStorage.Entries` + `raftLog.slice`: the standing costliest
+  verdicts unchanged (limitSize/extend loops → W2 loop rules
+  composed with the kit; slice additionally the mixed
+  storage+unstable path).
+- `raftLog.{firstIndex,lastIndex,term,matchTerm,
+  zeroTermOnOutOfBounds}` + `mustCheckOutOfBounds` (census-U3 range
+  obligations): now UNBLOCKED mechanically — inline window-sums over
+  the landed leaves (the storage interface dispatch is concrete once
+  the family pins the `.interface msTy (.addr …)` field; the
+  composition finding above prices them: window-sum, not
+  consume-hops). mustCheckOutOfBounds' conclusion (no-fault +
+  the range verdict) needs raftLog.firstIndex/lastIndex inlined
+  first. Estimated 1-2 members/session-half at the measured pattern.
+- maybeTerm TRICHOTOMY JOIN: consumer-demand (needs a per-index
+  entries table in the invariant; arm members serve the known-side
+  call sites) — recorded, not manufactured.
+- [AGENT] Blocker (M) relay acknowledged (coordinator): if any
+  remaining member hits persistent-order map builds, park on (M) —
+  the init lane's map-order pick-family composition blocker — by
+  name; none of this session's members did (the log/storage read
+  family is map-free).
+
 ## COSTING SIGNAL for the remaining Wave 3.1 clusters ([AGENT]
 estimate, derivation-anchored to the PREDECESSOR session's
 measurements — superseded by this session's kit-adjusted signal at
@@ -725,3 +797,35 @@ highest-leverage next build, ~every remaining member its consumer).
   (the config literal is reflected-program text) → today's cheap
   pattern applies widely; newRaft's whole-chain span is long but
   branch-poor. Cheapest per function; good parallel filler.
+
+## KIT-ADJUSTED COSTING SIGNAL (supersedes the pre-kit estimate;
+derivation-anchored to this session's measurements)
+
+Measured this session (the actual F-remainder data the coordinator
+asked for): the KIT itself was ~half a session (design note + module
++ first consumer), not the estimated day-class. Per-member with the
+kit: maybeLastIndex nonempty = 3 windows, FIRST BUILD GREEN, ~1 h
+end-to-end; maybeTerm below-arm ~45 min; maybeTerm aboveLast/inRange
+(inline composition through a callee) ~1 h each; MemoryStorage
+lock-free leaves ~45 min each; the Lock/defer exported walk ~2.5 h
+(one-time: the coerce-wrap model + the defer-tail geometry +
+the shaped-plans discovery — all now amortized). Builds: LogReadSpecs
+module 105 s with all 13 exported members' spans in-module.
+
+- F remainder after this session (~8 fns): LastIndex mirror +
+  Term + the raftLog read tier = ~2 session-halves at the measured
+  pattern; Entries/slice keep the loop-rule surcharge.
+- B (harvest engine): unchanged shape, but the Lock/defer walk and
+  the coerce-wrap model — its two unknowns — are now measured and
+  amortized. Revise ≈ 1.5× F-remainder → ≈ 1 session + loop rules.
+- C (election): unchanged (term-bound clause serves it); the kit's
+  class-A crossings are its branch tool; becomeFollower-class spans
+  dominate. ≈ F-remainder class.
+- D (replication): entry-list loops → loop rules + kit; the
+  three-exit case analysis = per-arm members (the maybeTerm pattern
+  scales linearly in arms, measured). Largest with E.
+- E (ack/commit): schedule last, unchanged; NOTE stepLeader's votes/
+  prs map walks may hit blocker (M) — price after the (M) unit.
+- A (init): the sibling lane's Wave A landed 6/14 in one session;
+  their remainder parked on (M)+(K); (K) is NOW LANDED (this kit) —
+  their appendSpill-blocked members should re-price cheaper.
