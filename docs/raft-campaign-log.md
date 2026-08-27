@@ -2709,3 +2709,26 @@ TOGETHER WITH its consumers (Clone/Restore chain top) — adding the
 form aheadof consumers would violate the interface-vacuity rule.
 Quiescent point (professor review per the [USER] instruction) =
 F+B completion + lane consolidation.
+
+### 2026-08-27 — F+B report; QUIESCENT POINT: lanes consolidated (w1-prover @ 20cda772)
+
+F+B branch-complete @ 2eb594ac: 11 F members landed (MemoryStorage
+LastIndex/Term CallSpecRD trichotomy with error globals at true
+statics; raftLog firstIndex/lastIndex at the quiesced family;
+zeroTermOnOutOfBounds ×3 + two interface-equality crossing lemmas)
++ harvest's softState/hardState (the shellSync carriers, exact
+readbacks) + MustSync drain member; ZERO new judgment forms; parks
+all measured (term/matchTerm/mustCheck = pure transcription;
+Ready/acceptReady/Advance sequenced after (K)-caps and C's prelude).
+netTerms design check answered: local Resp messages never enter the
+net — no delta. Machine finding: the wrap-per-op rule (normalize
+counts per op class) — kills the session's one failure class.
+[AGENT] consolidation: snapshot refs taken
+(refs/snapshots/w1-prover-pre-m-consolidation, w3-m-final); w3-m's
+two commits cherry-picked onto w1-prover (c468f1ab, 20cda772,
+clean); consolidated FULL build EXIT=0, 545 jobs
+(artifacts/w3/consolidation-build.log); stale build-lock takeover
+logged (owner note RELEASED, zero golean builds; unrelated project's
+capped 48G build noted → 48G cap used); w3-m worktree retired.
+PROFESSOR REVIEW dispatched at this tip per the [USER] instruction;
+ALL new prover dispatches GATED on its verdict.
