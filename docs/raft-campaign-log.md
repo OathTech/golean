@@ -2683,3 +2683,29 @@ vs the classics-first doctrine, and the census-driven amendments.
 Review verdict classes: CALIBRATED (continue), DRIFT-MINOR (fold
 fixes, continue), DIVERGENCE-MAJOR (STOP the goal, present to the
 [USER]).
+
+### 2026-08-27 — (M) MECHANISM LANDED (w3-m @ 7468a9d4)
+
+MapPerm.lean (847 lines; LINEAGE multiset-abstraction +
+permutation-quotient, divergence recorded: carrier NEVER canonicalized
+— quotient in spec vocabulary only, family threaded ∃-out/∀-in
+between CallSpecs). Order-sensitive-consumer check: VERDICT NO
+(store-order lens contract + Invariant's lookup/∀-membership
+consumption + census; boundary condition recorded). Non-vacuity:
+JointConfig.IDs CallSpecR at the FULL ∀-family (real chain member,
+1000-line module) + the readback class incl. idsFam_threads (the
+composition closure, proved). Parked with probe-MEASURED records:
+Clone/symdiff/checkAndCopy/…/newRaft/NewRawNode chain top — on
+CallSpecV (function-value call-span at callValArgsK; closure sites
+cannot use any landed form; NAMED and PARKED per the serialization
+rule — SpecJudgment untouched). [AGENT] flags: mapPickLoop_perm
+carries own induction (promotion-ledger fold-back note); no Audit
+pins added this wave (lane convention, flagged); slices.Sort
+lowering census needed before Slice/VoterNodes. Costing: map-order
+∀-draw discharge now mechanical; remaining C/D/E blockers =
+CallSpecV, the Sort census, (K)-reallocating-appends.
+[AGENT] plan: CallSpecV is added by the NEXT w1-prover-lane unit
+TOGETHER WITH its consumers (Clone/Restore chain top) — adding the
+form aheadof consumers would violate the interface-vacuity rule.
+Quiescent point (professor review per the [USER] instruction) =
+F+B completion + lane consolidation.
