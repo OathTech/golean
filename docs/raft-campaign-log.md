@@ -2797,3 +2797,33 @@ the DIVERGENCE-MAJOR findings are input (deepen, don't re-derive).
 Professor writes in their own worktree (branch design-pass off the
 campaign branch); may spawn read-scouts but ALL judgments are their
 own from primary sources.
+
+### 2026-08-27 — WHOLE-PROJECT DESIGN PASS complete (design-pass @ 69076bc5)
+
+Deliverables: docs/2026-08-27_design-pass-findings.md (chain table
+L1-L15; findings F-1..F-10; pattern sweep P-1..P-11) +
+docs/2026-08-27_clean-proof-plan-v3-DRAFT.md (self-contained route,
+three priced decisions, 20-28-session ladder to AgreementT1 + Total
++ NeverFaults). Verdict: DIVERGENCE-MAJOR holds and DEEPENS; nothing
+landed unsound; export-layer forbidden-pattern discipline HELD
+everywhere (zero enumeration-as-∀ / subject counts / fail-open /
+hatches). Deepened: F1 — the concrete-log↔NH clause is UNSTATABLE
+today (AbsLog lacks a data axis → reader extension in the repair;
+freshLog vote-square sub-clause; Star-under-ghost-growth transport);
+F2 — WORSE: r.step is a func-value field ⇒ CallSpecV sits on EVERY
+C/D/E composition; the plug barrier recognizer cannot match
+result-bearing frames. NEW DEBT CLASS (the W0 kill's half-life):
+ChoiceInvariantToM zero-inhabitant zero-consumer (delete);
+Reloc.symPlugK dead DIVERGENT plug sibling (delete); ~10 files of
+stale docstrings; the designated statement set contains NO raft
+statement and still carries gallery-era pinned-stream rows; the
+ENTIRE W3 wave landed with zero Audit pins (workers flagged;
+overdue). Recommendations: (a) adopt amendment §D-A (~2 sessions),
+RE-RUN W2.5 AS THE [USER] GATE; (b) Route R — plans-bearing barrier
+generalization (~3-4 sessions) over mega-inline (≥10-15, strands
+leaf investment); (c) NO mega-judgment (fails own vacuity rule);
+CallSpecV with consumers; unify R/RD arrival shape only. PAUSE SET:
+C/D/E + U3.2a/b until the amended note passes the [USER] gate; safe
+meanwhile: F-transcription, (M) consumers, Sort census,
+quiescence-measure design, plug work. Judge owed twice at merge;
+trust surface verified untouched. Awaiting [USER] adjudication.
