@@ -38,7 +38,7 @@ tape; the call rule is Hoare's procedure rule with adaptation by
 consequence.
 
 Non-vacuity: the judgment's honest instances are the W1 pilot's
-(`Pilot/` — Leg A's becomeFollower `CallSpec`, and the tracked
+(`Specs/RaftPilot/` — Leg A's becomeFollower `CallSpec`, and the tracked
 open-tail window examples), stated as pilot instances per the
 charter's carve-out. Audit pins: `Audit/W1.lean`.
 -/

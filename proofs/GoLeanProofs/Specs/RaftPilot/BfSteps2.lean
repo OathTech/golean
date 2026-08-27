@@ -1,9 +1,9 @@
-import GoLeanProofs.Pilot.BfSteps
+import GoLeanProofs.Specs.RaftPilot.BfSteps
 
 /-!
 # W1 pilot scaffolding (HARVESTED from campaign-arc4d BfSteps2.lean,
 2026-08-27; open-tail parameterized). STATUS/retirement per
-Pilot/BfLit.lean. Original docstring follows.
+Specs/RaftPilot/BfLit.lean. Original docstring follows.
 
 # A4-U3: crossing facts, part 2 — Visit picks 2/3, the range STOP,
 and the sortSlice COLLAPSE

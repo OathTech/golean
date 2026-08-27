@@ -14,7 +14,7 @@ arc4d fixture's `[] .stop` (the open-tail route, design note
 `docs/2026-08-27_w1-judgment-design.md` §3 finding 2; the states are
 unchanged — no state literal contains the tail). Correctness is NOT
 assumed from generation OR harvesting: the window LINK theorems in
-`Pilot/BfFixture.lean` (`uW*_out`, kernel `rfl` against the
+`Specs/RaftPilot/BfFixture.lean` (`uW*_out`, kernel `rfl` against the
 evaluator at OPEN `tenv`/`k`) re-check every literal; on any drift
 they fail loudly.
 

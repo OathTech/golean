@@ -157,8 +157,8 @@ import GoLeanProofs.FuelMeasure
 import GoLeanProofs.RunGlue
 import GoLeanProofs.SpecJudgment
 import GoLeanProofs.Sym.ReflectConc
-import GoLeanProofs.Pilot.BecomeFollowerSpec
-import GoLeanProofs.Pilot.CallSiteComposition
+import GoLeanProofs.Specs.RaftPilot.BecomeFollowerSpec
+import GoLeanProofs.Specs.RaftPilot.CallSiteComposition
 import GoLeanProofs.Sym.KernelRfl
 import GoLeanProofs.StepKit
 import GoLeanProofs.Examples.FibProgram

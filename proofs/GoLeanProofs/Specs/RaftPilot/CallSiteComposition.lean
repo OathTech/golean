@@ -1,4 +1,4 @@
-import GoLeanProofs.Pilot.BecomeFollowerSpec
+import GoLeanProofs.Specs.RaftPilot.BecomeFollowerSpec
 
 /-!
 # W1 pilot LEG B: the two-function composition — becomeFollower's

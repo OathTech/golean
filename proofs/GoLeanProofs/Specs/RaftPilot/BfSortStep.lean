@@ -1,9 +1,9 @@
-import GoLeanProofs.Pilot.BfSteps2
+import GoLeanProofs.Specs.RaftPilot.BfSteps2
 import GoLeanProofs.Sym.KernelRfl
 
 /-! W1 pilot scaffolding (HARVESTED from campaign-arc4d
 BfSortStep.lean, 2026-08-27; open-tail parameterized). STATUS/
-retirement per Pilot/BfLit.lean. Original docstring follows.
+retirement per Specs/RaftPilot/BfLit.lean. Original docstring follows.
 
 A4-U3: the sortSlice COLLAPSE dispatcher — the §4(ii) collapse at
 the choice-prefix level: every pick order lands in one of the six

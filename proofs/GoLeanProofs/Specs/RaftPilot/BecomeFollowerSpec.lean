@@ -1,4 +1,4 @@
-import GoLeanProofs.Pilot.BfSortStep
+import GoLeanProofs.Specs.RaftPilot.BfSortStep
 import GoLeanProofs.SpecJudgment
 import GoLeanProofs.Sym.ReflectConc
 import GoLeanProofs.Specs.Raft.AbsState

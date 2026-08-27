@@ -56,7 +56,7 @@ judgment calls, derivation-anchored numbers.
   the barrier with the open tail below): `rfl` closes ALL THREE
   (artifacts/w1/ProbeOpenTail.lean, exit 0, run against the cold
   build; the probe examples are tracked in-build in the pilot capstone
-  module (`Pilot/BecomeFollowerSpec.lean`) so the finding is
+  module (`Specs/RaftPilot/BecomeFollowerSpec.lean`) so the finding is
   build-enforced).
   Route (b) is the driver's route. Cost of route (a) if ever needed
   at scale: the analogous landed arm walk `Frame/StepSim.lean` is
@@ -94,7 +94,7 @@ judgment calls, derivation-anchored numbers.
   Leg B therefore demonstrates the CALL-RULE mechanics at a real
   lowered call-statement shape with passive arguments and records
   the frame half as the measured summit finding rather than forcing
-  it. The three findings in `Pilot/CallSiteComposition.lean`'s
+  it. The three findings in `Specs/RaftPilot/CallSiteComposition.lean`'s
   honest-scope block are the leg's real output.
 
 ## THE THREE-LEGGED PILOT GATE — measurements (derivation-anchored)

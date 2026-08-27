@@ -1,4 +1,4 @@
-import GoLeanProofs.Pilot.BfFixture
+import GoLeanProofs.Specs.RaftPilot.BfFixture
 import GoLeanProofs.Sym.KernelRfl
 
 /-!
@@ -6,7 +6,7 @@ import GoLeanProofs.Sym.KernelRfl
 campaign-arc4d BfSteps.lean, 2026-08-27; open-tail parameterized —
 the chain configs carry the judgment's open `(tenv, k)`; states and
 all heavy γ-heap facts unchanged). STATUS/retirement per
-Pilot/BfLit.lean. Original docstring follows.
+Specs/RaftPilot/BfLit.lean. Original docstring follows.
 
 # A4-U3: the hand crossing facts — checklist items (2) and (4)
 

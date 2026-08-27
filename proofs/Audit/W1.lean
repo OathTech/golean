@@ -1,8 +1,8 @@
 import Lean
 import GoLeanProofs.RunGlue
 import GoLeanProofs.SpecJudgment
-import GoLeanProofs.Pilot.BecomeFollowerSpec
-import GoLeanProofs.Pilot.CallSiteComposition
+import GoLeanProofs.Specs.RaftPilot.BecomeFollowerSpec
+import GoLeanProofs.Specs.RaftPilot.CallSiteComposition
 import GoLeanProofs.Specs.Raft.RenCongr
 
 /-!

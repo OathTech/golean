@@ -1,5 +1,5 @@
-import GoLeanProofs.Pilot.SymBase
-import GoLeanProofs.Pilot.BfLit
+import GoLeanProofs.Specs.RaftPilot.SymBase
+import GoLeanProofs.Specs.RaftPilot.BfLit
 import GoLeanProofs.Sym.KernelRfl
 
 /-!
@@ -13,7 +13,7 @@ window link theorems below prove the span facts ∀ env k — the
 judgment's continuation-parametric shape — by the SAME kernel
 reduction (reduction never inspects below the barrier on a
 successful span). States are unchanged. STATUS: proof-body
-scaffolding for Leg A; retirement per Pilot/BfLit.lean. Original
+scaffolding for Leg A; retirement per Specs/RaftPilot/BfLit.lean. Original
 docstring follows.
 
 # A4-U3/U4: the POPULATED becomeFollower fixture and its 7-window chain
