@@ -169,6 +169,10 @@ import GoLeanProofs.Specs.RaftPilot.CallSiteComposition
 import GoLeanProofs.Specs.RaftPilot.Reloc
 import GoLeanProofs.Specs.RaftPilot.CBfLit
 import GoLeanProofs.Specs.RaftPilot.CBfFixture
+import GoLeanProofs.Specs.RaftPilot.CBfSteps
+import GoLeanProofs.Specs.RaftPilot.CBfSteps2
+import GoLeanProofs.Specs.RaftPilot.CBfSortStep
+import GoLeanProofs.Specs.RaftPilot.CBecomeFollowerSpec
 import GoLeanProofs.Sym.KernelRfl
 import GoLeanProofs.StepKit
 import GoLeanProofs.Examples.FibProgram
