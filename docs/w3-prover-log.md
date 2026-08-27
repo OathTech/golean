@@ -829,3 +829,32 @@ module 105 s with all 13 exported members' spans in-module.
 - A (init): the sibling lane's Wave A landed 6/14 in one session;
   their remainder parked on (M)+(K); (K) is NOW LANDED (this kit) —
   their appendSpill-blocked members should re-price cheaper.
+
+## WAVE CHECKPOINT (crossing-kit session; branch-complete)
+
+- Commits this session: bb7ef47b (kit + maybeLastIndex complete),
+  4983f453 (maybeTerm three arms), bbfae941 (MemoryStorage lock-free
+  leaves + geometry findings), a296cc63 (Lock/defer park + own-RD
+  removal), c4cd8593 ([AGENT] coordinator-directed cherry-pick of
+  the init lane's 0087b48a — CallSpecRN/RD + InitCallSpecs + their
+  log; clean, no conflict), 21b3614a (FirstIndex CallSpecRD landed +
+  parks + costing), this commit (wave-boundary record).
+- **Wave-boundary FULL proofs build (box lock claimed + released):
+  EXIT=0, 540 jobs, wall 63 s (warm tree), peak RSS 7.0 GB**
+  (artifacts/w3/kit-full-build.log/.time). Hatch grep over
+  Sym/Crossing + LogReadSpecs + SpecJudgment: 0 live
+  sorry/native_decide/partial (one docstring mention of the word
+  "partial" in a coverage label).
+- Nothing trust-adjacent touched: no Audit/*, no scripts/*, no
+  GoCore, no baselines; `proofs/GoLeanProofs.lean` gained the
+  Sym.Crossing import (+ the cherry-picked InitCallSpecs import).
+  No differential owed (proofs/docs/probe artifacts only).
+- The two retained interface witnesses: GREEN throughout (in the
+  full build).
+- FOR THE LANDING AUDIT (standing items restated): the W2.5 [AGENT]
+  invariant-design adjudication ([USER] review item); the U3.0d
+  design deltas vs Amendment 1; NEW: the [AGENT] cherry-pick of
+  0087b48a into this lane (coordinator-directed consolidation — the
+  two lanes now share SpecJudgment's four judgment forms; the
+  branch histories overlap at that commit and the lanes' merge
+  order at the landing ceremony should account for it).
