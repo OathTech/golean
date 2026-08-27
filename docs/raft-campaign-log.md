@@ -3032,3 +3032,24 @@ stale cites, geometry routing pointers. Audit.lean UNTOUCHED (no
 judge re-trigger). Then warm gate re-run → merge request to the
 [USER] with three reconfirmation items (56→51 designation; W2.5
 record item; ChoiceCanon keep-or-kill).
+
+### 2026-08-27 — Audit response complete (triage-landing @ 2a6621ed); MERGE REQUEST posed
+
+All 12 fixes discharged (nothing skipped; 4 DO-NOTs honored and
+recorded); 17 files +1,642/−86 (2 commits: docs, Lean); the one
+proof addition = stepFn_plug_witness_step_ok (kernel_rfl
+non-vacuity pin-down for the per-step witness). No-judge-retrigger
+asserted per-path by the executor AND verified first-hand by the
+coordinator (zero changes under Audit.lean/Challenge/Solution/
+judge-config/scripts/GoLean/baselines/Corpus); gate re-run PASS
+exit 0, 460s. Governing docs (triage plan + w25 note) now land
+with the branch; archive branch refs/heads/archive/callspec-era
+created. Two executor [AGENT] calls disclosed: the new public
+witness lemma left unpinned under Landing.lean's (corrected)
+representative-sampling license; the unreconcilable wave-tip
+sub-count replaced with the measured figure, derivation stated.
+Merge-base = main tip (ff-only clean). [AGENT]: merge request
+POSED to the [USER] with the three reserved items (designation
+reconfirmation; W2.5 record closure; ChoiceCanon keep-or-kill)
++ the delta-review waiver question for the schematic response
+commits. Held for at-the-moment sign-off.
