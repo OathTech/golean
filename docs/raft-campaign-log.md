@@ -2847,3 +2847,25 @@ wholesale parking. [AGENT]: triage planner dispatched (Fable,
 design-pass worktree) with the W0 kill-list as the format model;
 per-item evidence + an explicit Iris-lift consumption argument
 required for every LAND verdict.
+
+### 2026-08-27 — [USER] architecture statement + the pattern-corpus aim
+
+[USER] (verbatim intent, cerberus-lean sibling as template): the
+stack is executable semantics (TCB; statements live here; our
+distinctive strength: executable + oracle-tested) ⇧ adequacy ⇧
+relational semantics (per-step relation + language instance a WP is
+defined over) ⇧ Iris reasoning (RefinedC/BRiCk-analogous: heap RA,
+WP, FnSpec contracts, per-construct symbolic rules, assertion
+layer, case-split, automation — THE BUILD) ⇩ target programs
+(canonical-property theorems). NEW FIRST-CLASS AIM: identify
+exactly what machinery is needed, then a TARGET CORPUS of smaller
+programs — a clean set covering ALL patterns Raft needs (plus
+explored extras) — to exercise the Iris layer in small cases:
+"enough richness that cheating is hard, but tiny enough to motivate
+success." The existing Surface designated family (golden/recover/
+quorum/committedIndexAllConfigs FuncSpecs + readouts + negative
+twins + totality) is the statement idiom of record and the corpus
+seed pattern. [AGENT]: triage planner updated mid-flight (Surface
+set awareness; LAND arguments now point at the BRiCk-analogous
+layer build; gap table reframed as the tier-3 build inventory;
+corpus-seed assessment of the 67-example gallery added).
