@@ -2936,3 +2936,27 @@ branch (contains main's content + all W1-W3); ceremony = gate →
 comparator-judge (owed 3×) → audit-ask with the accumulated flag
 list → PAUSE for at-the-moment [USER] merge sign-off per protocol
 (this sign-off authorizes triage execution, NOT the merge).
+
+### 2026-08-27 — Adversarial KILL check: verdict + execution amendments
+
+54 import edges into 25 KILL modules checked exhaustively (1,612
+import lines); forward claim HOLDS (no LAND imports KILL); main-side
+zero-consumer claims SAFE; audit/gate surface SAFE conditional;
+12/12 evidence spot-checks pass; nothing unclassified. CAUGHT:
+(1) BUILD-BREAKER — Audit/W1 pins reflectV/K_conc but its only
+import path runs through KILLed BecomeFollowerSpec → same-commit
+fix: direct import of Sym.ReflectConc; (2) two unnamed import-line
+prunes (Audit/Kit:10, Audit/ChoiceInv:2); (3) WITNESS OVERCLAIMS —
+PlugProbe does NOT witness the plug lemmas (parallel concrete
+probe, anonymous examples; callSpan_plug's only instantiation dies
+in W2Gate) and the kit's consumers all die → same-commit
+obligations: a REAL plug witness + the ~50-line kit mini-witness;
+(4) miscitations/counts (WordFreq copy ≠ consumer; §6 arithmetic;
+L-3 mention count) + 5 stale-docstring files missing from K-5 +
+hlogBridge dead-code rider. [AGENT]: amendments folded into the
+execution brief as MANDATORY same-commit items — consistent with
+the approved package (the witness obligations are the charter's
+own non-vacuity rule); decision-2 rider: Invariant.lean is
+ARCHIVED per the [USER]-approved recommendation → executor
+verifies its importer set before deletion and drops its F-6 pin
+candidate. Execution dispatched on w1-prover.
