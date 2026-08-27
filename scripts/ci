@@ -298,15 +298,13 @@ STANDALONE_PROOFS="SliceSpike Challenge Solution"
 # (tamper-audit F2 class; subdir handling required by the module-split design,
 # docs/2026-07-20_proofs-structure-backlog.md).
 #
-# VALIDATION-CORPUS SPLIT (A4-U25 slice 0, 2026-08-26; campaign-log
-# correction (a) of that date): the literal-mode corpus lives in the
-# NON-DEFAULT AuditCorpus/GoLeanProofsCorpus targets — this gate does not
-# build it, so its sweep is DEFERRED to landmark corpus builds
-# (`scripts/capped lake build AuditCorpus`; discipline + census in
-# proofs/GoLeanProofsCorpus.lean). Coverage stays fail-closed: a proofs
-# file must be in the DEFAULT closure or the CORPUS closure (or the
-# standalone allowlist) — corpus-only files are counted and reported as a
-# visible deferred-sweep note; a file in neither closure still FAILS.
+# W0 RESET (2026-08-27, kill-list K-D): the A4-U25 two-closure form
+# (default + corpus closures, deferred-sweep note) is REVERTED to the
+# single default closure + the standalone allowlist — the corpus targets
+# are deleted with the literal-mode corpus they aggregated (archived at
+# archive/fixed-trajectory-era; docs/ARCHIVE.md). Fail-closed is
+# preserved: a proofs file outside the default closure and off the
+# allowlist FAILS the gate, exactly as before the split.
 pf_closure_from_roots() {
   local closure="$1" grow=1 m mf imp impf
   while [ "$grow" -eq 1 ]; do
@@ -325,24 +323,17 @@ pf_closure_from_roots() {
 }
 pf_bad=0
 closure="$(pf_closure_from_roots "Audit GoLeanProofs")"
-corpus_closure="$(pf_closure_from_roots "AuditCorpus GoLeanProofsCorpus")"
-corpus_only=0
 while IFS= read -r f; do
   rel="${f#proofs/}"
   m="$(echo "${rel%.lean}" | tr '/' '.')"
   case " $STANDALONE_PROOFS " in *" $m "*) continue ;; esac
   case " $closure " in *" $m "*) continue ;; esac
-  case " $corpus_closure " in *" $m "*) corpus_only=$((corpus_only+1)); continue ;; esac
-  echo "  proofs/$rel (module $m) is not in the audited import closure (default or corpus) nor on the standalone allowlist"
+  echo "  proofs/$rel (module $m) is not in the audited import closure nor on the standalone allowlist"
   pf_bad=1
 done < <(find proofs -name '*.lean' -not -path '*/.lake/*')
 if [ "$pf_bad" -ne 0 ]; then
-  bad "proofs-file audit coverage (un-swept proof file — import it from Audit.lean or AuditCorpus.lean, or allowlist with a reason)"
+  bad "proofs-file audit coverage (un-swept proof file — import it from Audit.lean or GoLeanProofs.lean, or allowlist with a reason)"
 else
-  if [ "$corpus_only" -gt 0 ]; then
-    echo "  $corpus_only file(s) covered by the CORPUS closure only (deferred sweep — see note)"
-    RESULTS+=("  note proofs-file coverage: $corpus_only file(s) in the CORPUS closure only — swept at landmark corpus builds (scripts/capped lake build AuditCorpus), not in this gate")
-  fi
   ok "proofs-file audit coverage"
 fi
 

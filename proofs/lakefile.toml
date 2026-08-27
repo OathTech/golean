@@ -28,22 +28,11 @@ name = "GoLeanProofs"
 [[lean_lib]]
 name = "Audit"
 
-# THE VALIDATION CORPUS (A4-U25 slice 0, 2026-08-26 — the OOM incident's
-# correction (a)): the literal-mode corpus (generated *Lit modules + their
-# consumed-only-by-validation *Eq/Equation/Lemma/witness chains — census in
-# GoLeanProofsCorpus.lean) is deliberately NOT a default target: gates and
-# `lake build` here build the live tree only. The corpus builds AT LANDMARKS
-# (merge preparation, comparator runs, corpus-touching arcs) with
-#     scripts/capped lake build AuditCorpus
-# under the box-wide build-lock at full cap. AuditCorpus is the corpus's
-# in-build epistemic gate (axiom sweep + the corpus Audit pin modules);
-# scripts/ci's proofs-file coverage step pins every corpus file to this
-# pair's import closure (deferred-sweep note printed, fail-closed kept).
-[[lean_lib]]
-name = "GoLeanProofsCorpus"
-
-[[lean_lib]]
-name = "AuditCorpus"
+# The validation-corpus targets (GoLeanProofsCorpus/AuditCorpus) were
+# DELETED at the W0 reset (2026-08-27, kill-list K-D): the literal-mode
+# corpus they aggregated is archived at archive/fixed-trajectory-era
+# (docs/ARCHIVE.md); scripts/ci's coverage step is back to the single
+# default closure + allowlist.
 
 # The verified fast replay driver (campaign Arc 2, unit P2R): compiled
 # `stepFast` execution of a wire program with the pinned transfer theorem

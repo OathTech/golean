@@ -42,15 +42,12 @@ import GoLeanProofs.Sym.SpillTransport
 -- docs/ARCHIVE.md. Nothing archived is ever cited by a proof.
 -- A4-U14: the branch-crossing transport (path-condition splitting).
 import GoLeanProofs.Sym.BranchTransport
--- C2a: the completeness-strengthened frame simulation (FrameSimS) —
--- the mid-walk consumption instrument (layer-C design v2 §8 D1)
-import GoLeanProofs.Frame.ShapeSim
-import GoLeanProofs.Frame.ShapeOps
-import GoLeanProofs.Frame.ShapeOps2
-import GoLeanProofs.Frame.ShapeOps3
-import GoLeanProofs.Frame.ShapeStrict
-import GoLeanProofs.Frame.ShapeStep
-import GoLeanProofs.Frame.ShapeSpan
+-- W0 K-D: the Frame/Shape* splice-clause completeness layer (7
+-- modules) is DELETED — layout-dependent, refuted at its one
+-- chartered use (single-splice cannot place a pruned sub-fixture
+-- into an interleaved outer frame; campaign log A4-U22). The
+-- layout-free heap-quotient frame is the plan's replacement if/when
+-- demanded. Archived.
 import GoLeanProofs.SliceWalk
 import GoLeanProofs.Specs.Raft.DriverNet
 -- arc4b landing (C2c slice 0, per the lane's landing manifest): the native
