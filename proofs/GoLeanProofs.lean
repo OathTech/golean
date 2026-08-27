@@ -267,6 +267,13 @@ import GoLeanProofs.Sym.SpikeKadane
 -- Campaign Arc 4 (A4-U1 pilot): the seam's abstraction reader (v1) —
 -- the pairing vocabulary's base (kill-list K-E keep).
 import GoLeanProofs.Specs.Raft.AbsState
+-- W0 K-C splits: the kept halves of the AbsStateV2/RoundStatement
+-- donors — the rename-congruence lemmas (RenCongr), the v2 readers +
+-- L4 transports (AbsStateV2), and the round-boundary twin reader
+-- (AbsTwinRead). The pairing vocabulary, kill-list criterion (a).
+import GoLeanProofs.Specs.Raft.RenCongr
+import GoLeanProofs.Specs.Raft.AbsStateV2
+import GoLeanProofs.Specs.Raft.AbsTwinRead
 -- A4-U2 slice 1: the handler-fragment Sym extension (class 1, the
 -- type-table input).
 import GoLeanProofs.Sym.TableExt

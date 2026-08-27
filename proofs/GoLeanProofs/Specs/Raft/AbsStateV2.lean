@@ -1,6 +1,5 @@
-import GoLeanProofs.Specs.Raft.LensInst
-import GoLeanProofs.Specs.Raft.AllocEqWave1
-import GoLeanProofs.Specs.Raft.BfFixture
+import GoLeanProofs.Specs.Raft.RenCongr
+import GoLeanProofs.Lens
 
 /-!
 # absState v2 — the raftLog / message / outbox projections (A4-U8
@@ -43,6 +42,17 @@ symbolic-from-birth, holds by construction).
 
 GAP-V1-2 (tracker) and -4 (AbstractNet) remain open; -5 stays by
 design.
+
+W0 reset (kill-list K-C, 2026-08-27): this module is the KEPT half of
+the AbsStateV2 split — the readers and their `_ren` transports (the
+pairing vocabulary, criterion (a) of the kill-list). The discharge
+witnesses were fixture-constant theorems over the deleted
+BfFixture/BecomeFollowerWitness fixtures (`uσ`/`wBase`) and are gone
+with them — the kill-list's delete column named only
+`absV2_witness_L4`; the other three consumed the same dead fixtures
+(discrepancy D2, docs/w0-reset-log.md). Fresh non-vacuity instances
+are the W1 pilot's to construct on the clean path. The `_ren`
+machinery this module consumes now lives in `RenCongr.lean`.
 -/
 
 namespace GoLean.RaftSeam
@@ -407,62 +417,5 @@ theorem absOutbox_ren {r : Nat → Nat} {na₀ na : Nat} {fr : Heap}
   rw [fieldRead_ren hF hbase]
   simp only [Option.bind_some]
   exact sliceRead_ren hF (fun v x hx => absMessage_ren hF hx) h
-
-/-! ## Discharge witnesses (§3.3; every value below #eval-checked
-first — probe `artifacts/probe/AbsV2Probe.lean`) -/
-
-/-- The log reader, live on the U3 populated fixture (`uσ`,
-BfFixture): stable `[(1,1)]` through the storage interface, empty
-unstable overlay at offset 2, scalars 1/1/1. -/
-theorem absV2_witness_log :
-    absRaftLog (uσ 7 2 1 5) ⟨1⟩ = some ⟨[(1, 1)], [], 2, 1, 1, 1⟩ := by
-  kernel_rfl
-
-theorem absV2_witness_lastIndex :
-    (absRaftLog (uσ 7 2 1 5) ⟨1⟩).map AbsLog.lastIndex
-      = some (some 1) := by
-  rw [absV2_witness_log]
-  rfl
-
-/-- The outbox reader, live on the same fixture: the init-state nil
-`msgs` slice reads as the EMPTY outbox (the lens's nil-slice arm,
-exercised). -/
-theorem absV2_witness_outbox :
-    absOutbox (uσ 7 2 1 5) ⟨0⟩ "msgs" = some [] := by
-  kernel_rfl
-
-private def tyMsg : Ty := .defined ⟨"raftpb.Message"⟩
-
-/-- The machine's own default `raftpb.Message` with the `Term` field
-pointed at a real cell (value 9) — every other plainpb pointer nil. -/
-private def wMsgVal : GoValue :=
-  match defaultValue wBase tyMsg with
-  | .ok (.struct tid fs) =>
-      match StructFields.set fs "Term" (.addr (.base ⟨1⟩)) with
-      | .ok fs2 => .struct tid fs2
-      | .error _ => .nil
-  | _ => .nil
-
-private def σMsg : ExecState :=
-  { wBase with heap := [(.base ⟨0⟩, ⟨some tyMsg, wMsgVal⟩),
-                        (.base ⟨1⟩, ⟨some (.int .uint64), .int 9 .uint64⟩)],
-               nextAddr := 2 }
-
-/-- The message reader, live: nil pointers read as zeros (the plainpb
-getter semantics), the populated `Term` reads 9, the nil slices read
-empty. -/
-theorem absV2_witness_message :
-    absMessage σMsg (.addr (.base ⟨0⟩))
-      = some ⟨0, 0, 0, 9, 0, 0, 0, 0, 0, false, [], []⟩ := by
-  kernel_rfl
-
-/-- The L4 transport, live at the zero-shift seed on the populated
-fixture (`absRaftLog_ren` consumed exactly as a wave-2 alloc-form
-equation will consume it). -/
-theorem absV2_witness_L4 :
-    absRaftLog (uσ 7 2 1 5) ⟨ρT 21 0 1⟩ = some ⟨[(1, 1)], [], 2, 1, 1, 1⟩ :=
-  absRaftLog_ren
-    (frameSim_seed rfl (fun f _ => renameStmt_ρT_zero 21 f.body))
-    absV2_witness_log
 
 end GoLean.RaftSeam

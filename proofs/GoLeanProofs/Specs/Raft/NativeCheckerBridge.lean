@@ -615,49 +615,11 @@ theorem s1Guard_pinned_prop :
 
 end ShapePins
 
-/-! ## 4. Witnesses (witness-in-same-slice; every value #eval'd
-first — `bridgeeval.out`) -/
-
-/-- FIRE witness (S1): two nodes claim term 5 → exactly one
-violation. -/
-theorem s1w_fire : (s1Run [(5,1),(5,2)]).viols = 1 := rfl
-
-/-- CLEAN witness (S1): re-claims by the same node and fresh terms
-are silent. -/
-theorem s1w_clean : (s1Run [(5,1),(5,1),(6,1)]).viols = 0 := rfl
-
-/-- The bridge produces the REAL delta from the fire (non-vacuity of
-`s1_viol_delta`'s conclusion). -/
-theorem s1w_delta : S1Delta [(5,1),(5,2)] :=
-  s1_viol_delta _ (by rw [s1w_fire]; exact Nat.one_pos)
-
-/-- The clean T1-shaped apply schedule (the C4 witness run's shape:
-two nodes each apply the noop + two commands, in order). -/
-def wCleanEvs : List AEv :=
-  [⟨1,1,2,0⟩,⟨1,2,2,7⟩,⟨1,3,2,8⟩,⟨2,1,2,0⟩,⟨2,2,2,7⟩,⟨2,3,2,8⟩]
-
-theorem s23w_clean :
-    (s23Run wCleanEvs).violS2 = 0 ∧ (s23Run wCleanEvs).violS3 = 0 :=
-  ⟨rfl, rfl⟩
-
-/-- FIRE witness (S2): two nodes apply index 2 with different data →
-one S2 violation. -/
-theorem s23w_fire2 : (s23Run [⟨1,2,2,7⟩,⟨2,2,2,8⟩]).violS2 = 1 := rfl
-
-/-- FIRE witness (S3): one node re-applies index 2 → one S3
-violation. -/
-theorem s23w_fire3 : (s23Run [⟨1,2,2,7⟩,⟨1,2,2,7⟩]).violS3 = 1 := rfl
-
-/-- The interface instance at a concrete final net whose applied
-records ARE the clean schedule's — every premise discharged
-(`hlog` by `rfl`, positivity by `decide` on the closed list; the
-#eval-first rule satisfied above). -/
-def wNf : HNet :=
-  { hist := [], node := fun i => ⟨[], 0, 0, nodeEvents i wCleanEvs⟩ }
-
-theorem s23w_iface :
-    S23CheckerInterface wNf (0 < (s23Run wCleanEvs).violS2)
-      (0 < (s23Run wCleanEvs).violS3) :=
-  s23_interface_of_run (fun _ => rfl) (by decide)
+-- W0 reset (kill-list K-C, 2026-08-27): the fire/clean witness section
+-- (s1w_fire/clean/delta, wCleanEvs, s23w_clean/fire2/fire3, wNf,
+-- s23w_iface) is deleted — instance-shaped demonstrations, the class the
+-- reset removes. The retained non-vacuity demonstrations for the
+-- interface premises are NativeS1Witness/NativeS23Witness (kill-list
+-- amendment) until W5. Archived at archive/fixed-trajectory-era.
 
 end GoLean.RaftSeam.NativeSpec
