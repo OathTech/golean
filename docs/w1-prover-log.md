@@ -55,8 +55,9 @@ judgment calls, derivation-anchored numbers.
   caller `env` in the frame's tenv; a 5-step seq+unwind span under
   the barrier with the open tail below): `rfl` closes ALL THREE
   (artifacts/w1/ProbeOpenTail.lean, exit 0, run against the cold
-  build; the probe examples are folded into the judgment module as
-  tracked non-vacuity examples so the finding is build-enforced).
+  build; the probe examples are tracked in-build in the pilot capstone
+  module (`Pilot/BecomeFollowerSpec.lean`) so the finding is
+  build-enforced).
   Route (b) is the driver's route. Cost of route (a) if ever needed
   at scale: the analogous landed arm walk `Frame/StepSim.lean` is
   795 lines (measured, `wc -l`).
