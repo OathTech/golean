@@ -722,10 +722,22 @@ consumers (BfSteps/BcSteps/Bc31/Bf31) all consume the RaftSeam
 original — none had the lift in its import closure. Deletion chosen
 over rewiring as the cheap direction (rewiring re-heads BfSteps and
 invalidates its whole fixture-chain downstream for zero semantic
-change). The U4 promotion-ledger row is CLOSED-UNCONSUMED; a re-lift
-is warranted only when a NON-RaftSeam consumer actually appears
-(re-promotion condition), and then by moving the original, not by
-copying it. -/
+change).
+
+CORRECTION (2026-08-27, pre-merge audit, semantics-dimension L5):
+the paragraph above is now entirely historical. `BfSteps.lean` and
+with it `GoLean.RaftSeam.stepFn_pick_transport` — the "original" the
+re-promotion instruction pointed at — were DELETED at the triage
+landing. **Nothing named `stepFn_pick_transport` exists in the tree.**
+Both the lift and the original are recoverable at
+`archive/callspec-era`.
+
+The U4 promotion-ledger row therefore stays CLOSED-UNCONSUMED, but
+its re-promotion instruction is amended: a re-lift is warranted when
+a live consumer appears, and it must be a **RE-DERIVATION**, not a
+move — there is no live original left to move, and an archived proof
+is evidence that the shape closes, never a substitute for a proof in
+the tree. -/
 
 /-! A4-U10: the append-spill transport (`Sym/SpillTransport.lean` —
 the machine's SECOND choice site crossed at γ-images; general,

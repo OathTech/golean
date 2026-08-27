@@ -5,7 +5,7 @@ import GoLeanProofs.SliceMem
 # The append-spill transport (A4-U10 deliverable 1)
 
 **LINEAGE: symbolic-execution path-condition splitting at a
-nondeterministic-choice site — the same classic as
+nondeterministic-choice site — the same classic as the ARCHIVED
 `stepFn_pick_transport` (choice-point transport in the
 symbolic-execution-by-conservative-extension frame, design
 `2026-08-22_campaign-arc4-sym-extension-design.md` §4(ii)) — realized
@@ -20,7 +20,18 @@ backing cell whose declared type `.array newCap elem` carries the
 REALIZED capacity. The mirror quits `.q3Choice` at exactly the apply
 configuration (`applyStmtOp'`, Mirror.lean), so a window ends AT the
 spill and this transport crosses it in one machine step, exactly as
-`stepFn_pick_transport` crosses a map pick.
+`stepFn_pick_transport` crossed a map pick.
+
+**CITATION NOTE (2026-08-27, pre-merge audit, semantics-dimension
+L5).** `stepFn_pick_transport` no longer exists anywhere in the tree.
+It lived in `GoLean.RaftSeam` (`Specs/RaftPilot/BfSteps.lean`), which
+died at the 2026-08-27 triage; the A4-U9 lifted copy had already been
+deleted at the arc-4 landing fix round. Both are recoverable at
+`archive/callspec-era`. The LINEAGE reference and the sentence above
+are kept as the historical record of the shape this transport was
+built to match — read them as history, not as a live
+cross-reference. This module's non-vacuity rests on its own in-module
+witness (`stepFn_appendSpill_transport_witness`).
 
 The §4(ii) collapse at this site: the realized capacity
 `appendRealizedCap cap (len+1) extra` depends on the consumed choice,

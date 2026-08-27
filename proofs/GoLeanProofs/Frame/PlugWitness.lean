@@ -22,9 +22,21 @@ re-point them at the G-BIND instance, when it does).
 
 Both witnesses hold at OPEN caller context `(env', k')` under the
 rule's own two premises — exactly the plug rule's consumption shape.
-The ∃-side facts (the canonical run of `p.f`, the `enterFrame`
-non-wrapper fact) are discharged by kernel evaluation, per the
-charter's concrete-evaluation carve-out for ∃-shaped discharge.
+
+**Which carve-out applies (corrected 2026-08-27, pre-merge audit,
+claim-dimension F7).** The kernel evaluations here — the canonical
+run of `p.f` (`canonRun_eq`), the `enterFrame` non-wrapper fact
+(`enterF_not_wrapper`), and the step-success anchor
+(`stepFn_plug_witness_step_ok`) — are NOT the charter's "∃-shaped
+discharge, exhibiting a run is how existentials are proved" clause.
+Both witnesses' statements are ∀-shaped EQUATIONS over the open
+caller context; what the kernel discharges is their PREMISES —
+concrete facts about a concrete probe program that the plug rule
+consumes as hypotheses. That falls under the carve-out for declared
+reflection/evaluation certificates, not the ∃ clause. The
+distinction matters because the ∃ clause licenses exhibiting a
+witness as the proof itself, and nothing here does that: the proof
+is one application of a ∀-quantified rule.
 
 Audit pins: `proofs/Audit/Landing.lean`.
 -/
@@ -99,10 +111,69 @@ theorem callSpan_plug_witness (env' : LocalEnv) (k' : Cont)
     (fun _ _ _ _ henter => wrapper_false_of_check enterF_not_wrapper henter)
     canonRun_eq
 
+/-! ### The per-step witness's non-vacuity anchor (audit finding F6)
+
+`PS env' k' x y` is an IMPLICATION: it says "if `x = .ok (d, σ₁,
+ch₁)` then `y = .ok (plugC env' k' d, σ₁, ch₁)` and `d` classifies".
+It is therefore VACUOUSLY TRUE whenever the canonical step `x`
+errors — `PS.err` is one line. So `stepFn_plug_witness` on its own
+does not demonstrate that the plug rule says anything here; it
+demonstrates that at most. The lemma below closes that hole by
+pinning the antecedent: the canonical step at the witness's
+configuration genuinely succeeds. -/
+
+/-- The canonical per-step run at the witness's configuration. -/
+private def plugStepRun : Except GoError (Config × ExecState × Choices) :=
+  stepFn σ0 (.exec fFunc.body [] (.frame [] [] [] [] .stop false)) []
+
+private def plugStepOut : Option (Config × ExecState × Choices) :=
+  match plugStepRun with
+  | .ok r => some r
+  | .error _ => none
+
+private theorem plugStepOut_isSome : plugStepOut.isSome = true := by
+  kernel_rfl
+
+/-- The step's result triple (kernel-computed, never spelled). -/
+private def plugStepRes : Config × ExecState × Choices :=
+  plugStepOut.get plugStepOut_isSome
+
+/-- **THE NON-VACUITY ANCHOR** for `stepFn_plug_witness` (pre-merge
+audit, claim-dimension F6): the canonical step at the witness's
+configuration reduces to an `.ok`, so the `PS` implication the
+witness proves has a satisfied antecedent and its conclusion is
+actually asserted. Without this, `PS.err` would prove the witness
+for free at any configuration whose step errors.
+
+Discharged by kernel evaluation — a concrete step on a concrete
+probe configuration, inside the charter's carve-out for declared
+reflection/evaluation certificates. -/
+theorem stepFn_plug_witness_step_ok :
+    stepFn σ0 (.exec fFunc.body [] (.frame [] [] [] [] .stop false)) []
+      = .ok plugStepRes := by
+  kernel_rfl
+
 /-- **THE PER-STEP WITNESS** (`stepFn_plug` applied): the per-step
 commutation at a concrete barrier-carrying configuration of the probe
-program (entry into `p.f`'s body over the barrier frame), at open
-`(env', k')` under the rule's premises. -/
+program, at open `(env', k')` under the rule's premises.
+
+**Non-vacuity:** `PS` is an implication and would hold vacuously on
+an erroring step — `stepFn_plug_witness_step_ok` (above) pins that
+the canonical step here reduces to `.ok`, so the commutation is
+genuinely asserted rather than dodged.
+
+**The configuration is SYNTHETIC — read this before citing the
+witness** (pre-merge audit, claim-dimension F6): `.frame [] [] [] []
+.stop false` is a hand-built barrier frame chosen to carry a barrier
+at the right place, NOT the frame `enterFrame σ0 ⟨"p.f"⟩ …` actually
+produces for this call (that one carries the callee's allocated
+result locations and its bound parameter environment; all four
+columns here are empty). What the witness therefore demonstrates is
+that `stepFn_plug` APPLIES and commutes at a barrier-carrying
+configuration of a real program's body — which is the rule's
+consumption shape — and NOT that it commutes at this call's exact
+entry product. The span-level `callSpan_plug_witness` above is the
+one that runs the real entry, through `enterFrame` itself. -/
 theorem stepFn_plug_witness (env' : LocalEnv) (k' : Cont)
     (hmf : mapIterFree k' = true)
     (hrc : recoverThroughWrappers k' = none) :

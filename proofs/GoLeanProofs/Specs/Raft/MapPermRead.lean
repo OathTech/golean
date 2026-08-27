@@ -23,7 +23,16 @@ namespace GoLean.MapPerm
 /-- The decode transport (pure-decoder side): reading a PERMUTED
 `mapData` entry list decodes to a permutation of the original decode
 — fail-closed arms preserved (a permutation decodes iff the original
-does). -/
+does).
+
+**SCAFFOLD (labeled 2026-08-27 by the pre-merge audit,
+claim-dimension F1).** Zero consumers: the transports' consumers were
+CallSpec members, deleted at the triage (archived at
+`archive/callspec-era`). Same resume condition as the rest of the (M)
+carrier's scaffold surface — **owed at the G-MAPITER unit**, where a
+map-range law's readback needs exactly this decode-side transport.
+Retirement: G-MAPITER consumes it, or supersedes it and it is
+deleted. -/
 theorem mapPairs_perm {κ ν : Type}
     {dk : GoValue → Option κ} {dv : GoValue → Option ν} :
     ∀ {es es' : List (GoValue × GoValue)}, List.Perm es es' →
@@ -70,7 +79,11 @@ theorem mapPairs_perm {κ ν : Type}
       exact ⟨xs₂, h₂, hp₁.trans hp₂⟩
 
 /-- The decode transport, σ-dependent-decoder side (`mapReadD`'s
-walk). -/
+walk).
+
+**SCAFFOLD (labeled 2026-08-27 by the pre-merge audit,
+claim-dimension F1)** — zero consumers, owed at G-MAPITER; see
+`mapPairs_perm`'s label above for the full statement. -/
 theorem mapPairsD_perm {κ ν : Type} {σ : ExecState}
     {dk : GoValue → Option κ} {dv : ExecState → GoValue → Option ν} :
     ∀ {es es' : List (GoValue × GoValue)}, List.Perm es es' →

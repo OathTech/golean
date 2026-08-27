@@ -56,11 +56,18 @@ flag in the output form (`CForm.flags`), so an exhausted
 canonicalization can never silently equate two states: flags are part
 of the form, and clean witnesses check `flags = []`.
 
-**Placement (arc-4 landing fix round, 2026-08-26):** this module and
-`ChoiceInv` live under `Frame/` as the choice-erasure layer of the
-frame/placement story; their namespace is `GoLean.Frame.ChoiceErase`
-(was the directory-inconsistent `GoLean.ChoiceErase` — a landing-audit
-coherence finding). Curated Audit pins: `Audit/ChoiceInv.lean`. -/
+**Placement (arc-4 landing fix round, 2026-08-26; citation repaired
+2026-08-27 by the pre-merge audit, claim-dimension F4):** this module
+lives under `Frame/` as the choice-erasure layer of the frame/
+placement story; its namespace is `GoLean.Frame.ChoiceErase` (was the
+directory-inconsistent `GoLean.ChoiceErase` — a landing-audit
+coherence finding). The original text read "this module and
+`ChoiceInv` live under `Frame/`" — `Frame/ChoiceInv.lean` was DELETED
+at the 2026-08-27 triage (`ChoiceInvariantToM`: zero inhabitants,
+zero consumers; archived at `archive/callspec-era`), so this module
+is now the layer's only member. Curated Audit pins:
+`Audit/ChoiceInv.lean` (the file kept its name; the ChoiceInv pins
+were pruned with the module, the ChoiceCanon pins survive). -/
 
 namespace GoLean.Frame.ChoiceErase
 

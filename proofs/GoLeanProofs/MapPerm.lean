@@ -52,11 +52,30 @@ judgment-free and lands as the soundness content of the tier-3
 map-range law unit (G-MAPITER — key+value, mutation-tolerant,
 demonic-order `wp_map_iter` with a Perm-of-draws readback).
 
-Non-vacuity: layer 1's readback quotient-crossing class is consumed
-in-module by the salvaged order-insensitive readback family
-(`idsFam_population`/`idsFam_lookup_agree`/`idsFam_sorted_collapse`,
-end of file); layer 3's discharge status is SCAFFOLD — see
-`mapPickLoop_perm`'s label.
+Non-vacuity, layer by layer (sharpened 2026-08-27 by the pre-merge
+audit, claim-dimension F1 — the earlier version of this paragraph
+reported layer 3's scaffold status but was silent about layer 2,
+which is in exactly the same position):
+
+- **Layer 1** (the order-quotient readback) is LIVE: its
+  quotient-crossing class is consumed in-module by the salvaged
+  order-insensitive readback family (`idsFam_population`/
+  `idsFam_lookup_agree`/`idsFam_sorted_collapse`, end of file).
+- **Layer 2** (the value-generic machine facts) is **SCAFFOLD**:
+  every consumer it was built for was a CallSpec member, and all of
+  them were deleted at the triage. Seven lemmas now sit at zero
+  consumers — `candidates_toEntriesV`, `mandatory_true_of_allV`,
+  `stepFn_iter_doneV`, the pick-step pair `stepFn_pick_bindV`/
+  `stepFn_pick_keyV`, `rangeStart_toEntriesV`, and
+  `mapAssignValue_toEntriesV`. See the layer-2 section header for the
+  resume condition; it is the same one layer 3 carries.
+- **Layer 3** (the composition rule) is **SCAFFOLD** — see
+  `mapPickLoop_perm`'s label.
+
+Two of three layers being scaffold is not a defect to hide: the
+carrier's algebra is what the triage kept, and the machine facts are
+retained precisely because G-MAPITER will need them. But they are
+retained on a promise, and the promise is written down at each site.
 -/
 
 namespace GoLean.MapPerm
@@ -75,8 +94,15 @@ key, so machine-built entry lists satisfy it by construction). -/
 def NodupKeys {κ ν : Type} (es : List (κ × ν)) : Prop :=
   (es.map Prod.fst).Nodup
 
-/-- First-match association lookup (the readers' lookup vocabulary;
-`Invariant.lean`'s `lookupI` is the `κ = Int` instance, definitionally). -/
+/-- First-match association lookup (the readers' lookup vocabulary).
+
+Citation repaired 2026-08-27 (pre-merge audit, claim-dimension F4):
+this docstring named `Invariant.lean`'s `lookupI` as the `κ = Int`
+instance, but `Specs/RaftPilot/Invariant.lean` was ARCHIVED at the
+triage and no `lookupI` exists in the tree. The archived original is
+at `archive/callspec-era`; abstractly, the instance it named is just
+`lookupP` at `κ = Int` over an id-keyed association list, which is
+what the `idKV` family at the end of this file uses directly. -/
 def lookupP {κ ν : Type} [DecidableEq κ] : List (κ × ν) → κ → Option ν
   | [], _ => none
   | p :: rest, t => if p.1 = t then some p.2 else lookupP rest t
@@ -221,9 +247,29 @@ theorem sortedLT_eq_of_perm :
 arbitrary map VALUES: `toEntriesV` wraps only the keys; values ride
 raw. The confchange/tracker consumers' value types — `struct{}`
 (MajorityConfig/Learners), `*tracker.Progress` (ProgressMap), `bool`
-(Votes) — are the demanded instances (promotion ≥2 satisfied at
-birth). Keys stay uint64 (the recorded boundary; every demanding
-consumer is uint64-keyed). -/
+(Votes) — were the demanded instances, and the ≥2 promotion bar WAS
+met at birth. Keys stay uint64 (the recorded boundary; every
+demanding consumer was uint64-keyed).
+
+**SCAFFOLD (triage landing, 2026-08-27 — labeled per the witness
+ruling, plan §1.4; label added by the pre-merge audit,
+claim-dimension F1).** Past tense above is the point: the instances
+that satisfied the promotion bar were CallSpec members, and the
+triage deleted all of them. This layer is now at **zero consumers**,
+so the ≥2 justification is HISTORICAL, not current — the earlier
+wording ("the demanded instances (promotion ≥2 satisfied at birth)")
+read as a live census and was corrected. The archived instances are
+recoverable at `archive/callspec-era`.
+
+Every lemma from here to the layer-3 header therefore carries the
+same status, and the SAME resume condition as `mapPickLoop_perm`:
+**a live consumer is OWED AT THE G-MAPITER UNIT** — the tier-3
+map-range law (key+value, mutation-tolerant, demonic-order
+`wp_map_iter` with a Perm-of-draws readback), whose soundness
+argument is exactly what these machine facts feed. Retirement
+condition: G-MAPITER consumes them, or G-MAPITER's design supersedes
+them and they are DELETED. They are kept because a named unit will
+need them, not because they build green. -/
 
 /-- The machine encoding of a value-generic association list:
 insertion-ordered `mapData` entries with wrapped-uint64 keys and raw
@@ -289,7 +335,11 @@ private theorem snapshot_normV (types : TypeEnv) (valTy : Ty) :
 /-- Pick-time candidates over the value-generic encoding: LOAD the
 cell, filter by the produced keys, validated by normalization (the
 value normal-form condition enters as the consumer-discharged
-hypothesis `hkv`). -/
+hypothesis `hkv`).
+
+**SCAFFOLD** (layer 2; zero consumers since the triage deleted the
+CallSpec members — resume: consumed at G-MAPITER, or deleted if that
+unit's design supersedes it. See the layer-2 section header). -/
 theorem candidates_toEntriesV {σ : ExecState} {a : Addr} {dty : Option Ty}
     {valTy : Ty} {kvs : List (Int × GoValue)} {ks : List Int}
     (hlook : Heap.lookup σ.heap (.base a)
@@ -332,7 +382,11 @@ theorem mandatory_toEntriesV (σ : ExecState) (ss : List Int) :
         simp [hk, hmem, ih]
 
 /-- Nonempty candidates whose keys all sit in the start set have a
-mandatory member (value-generic). -/
+mandatory member (value-generic).
+
+**SCAFFOLD** (layer 2; zero consumers since the triage deleted the
+CallSpec members — resume: consumed at G-MAPITER, or deleted if that
+unit's design supersedes it. See the layer-2 section header). -/
 theorem mandatory_true_of_allV (σ : ExecState) {ss : List Int}
     {rem : List (Int × GoValue)} (hne : rem ≠ [])
     (hall : ∀ p ∈ rem, ss.contains p.1) :
@@ -346,7 +400,11 @@ theorem mandatory_true_of_allV (σ : ExecState) {ss : List Int}
   | cons p rest => exact ⟨p, by simp, hall p (by simp)⟩
 
 /-- The DONE step at any value type: no candidate remains, the frame
-pops (no choice consumed — exhaustion is not a draw). -/
+pops (no choice consumed — exhaustion is not a draw).
+
+**SCAFFOLD** (layer 2; zero consumers since the triage deleted the
+CallSpec members — resume: consumed at G-MAPITER, or deleted if that
+unit's design supersedes it. See the layer-2 section header). -/
 theorem stepFn_iter_doneV {σ : ExecState} {base : Option Loc}
     {valTy : Ty} {produced start : Array GoValue}
     {ko vo : Option String} {body : Stmt}
@@ -365,7 +423,12 @@ the mandatory bit are state facts supplied as premises
 (`candidates_toEntriesV`/`mandatory_toEntriesV` compute them), ONE
 choice of width `candidates + stop` is consumed, the picked key joins
 the produced set, and the bindings/allocation are whatever
-`bindIterVars` says. -/
+`bindIterVars` says.
+
+**SCAFFOLD** (layer 2, the pick-step family; zero consumers since
+the triage deleted the CallSpec members — resume: consumed at
+G-MAPITER, or deleted if that unit's design supersedes it. See the
+layer-2 section header). -/
 theorem stepFn_pick_bindV {σ σ' : ExecState} {base : Option Loc}
     {valTy : Ty} {produced start : Array GoValue}
     {rem : List (Int × GoValue)} {mand : Bool}
@@ -416,7 +479,13 @@ theorem stepFn_pick_bindV {σ σ' : ExecState} {base : Option Loc}
 /-- The pick at a KEY-ONLY binder (`for id := range m` — the shape of
 EVERY confchange/tracker collect loop): the picked key's cell is
 freshly allocated at the current `nextAddr`, the binder declared over
-a pushed scope, the VALUE untouched (`bindIterVars` skips it). -/
+a pushed scope, the VALUE untouched (`bindIterVars` skips it).
+
+**SCAFFOLD** (layer 2, the pick-step family; zero consumers since
+the triage deleted the CallSpec members — "the shape of EVERY
+confchange/tracker collect loop" describes the Go code, not a live
+Lean consumer. Resume: consumed at G-MAPITER, or deleted if that
+unit's design supersedes it. See the layer-2 section header). -/
 theorem stepFn_pick_keyV {σ : ExecState} {base : Option Loc}
     {valTy : Ty} {produced start : Array GoValue}
     {rem : List (Int × GoValue)} {mand : Bool}
@@ -453,7 +522,11 @@ theorem stepFn_pick_keyV {σ : ExecState} {base : Option Loc}
 
 /-- The range START over the value-generic encoding: base cell +
 START-KEY set (keys column only — values are read live at
-production). -/
+production).
+
+**SCAFFOLD** (layer 2; zero consumers since the triage deleted the
+CallSpec members — resume: consumed at G-MAPITER, or deleted if that
+unit's design supersedes it. See the layer-2 section header). -/
 theorem rangeStart_toEntriesV {σ : ExecState} {a : Addr}
     {kvs : List (Int × GoValue)} {dty : Option Ty}
     (hlook : Heap.lookup σ.heap (.base a)
@@ -615,7 +688,11 @@ private theorem toEntriesV_setkV {kvs : List (Int × GoValue)} {w : Int}
 is `setkV` — the PERSISTENCE PRIMITIVE (a fresh key appends at the
 END, so the built order is exactly the pick order). The value's
 normal form enters as the consumer-discharged store hypothesis
-`hnv`. -/
+`hnv`.
+
+**SCAFFOLD** (layer 2; zero consumers since the triage deleted the
+CallSpec members — resume: consumed at G-MAPITER, or deleted if that
+unit's design supersedes it. See the layer-2 section header). -/
 theorem mapAssignValue_toEntriesV {σ : ExecState} {a : Addr}
     {valTy : Ty} {kvs : List (Int × GoValue)} {w : Int} {v : GoValue}
     (hlook : Heap.lookup σ.heap (.base a)
@@ -819,7 +896,14 @@ theorem idsFam_population {ids ids' : List Int}
 /-- **The lookup-agreement readback**: any two members of the same
 (M) family answer every lookup identically — the quotient-crossing
 lemma consumed at a member's decode (what makes every
-`lookupI`-vocabulary invariant clause order-insensitive). -/
+lookup-vocabulary invariant clause order-insensitive).
+
+Citation repaired 2026-08-27 (pre-merge audit, claim-dimension F4):
+the clause vocabulary was named `lookupI`, from the archived
+`Specs/RaftPilot/Invariant.lean` (`archive/callspec-era`). The
+property is stated here over `lookupP` and holds for any
+first-match association lookup, which is the durable form; G-INV
+re-designs the clause inventory that will consume it. -/
 theorem idsFam_lookup_agree {ids l₁ l₂ : List Int}
     (h₁ : List.Perm l₁ ids) (h₂ : List.Perm l₂ ids) (hnd : ids.Nodup) :
     ∀ v, lookupP (idKV l₁) v = lookupP (idKV l₂) v := by

@@ -26,15 +26,32 @@ applies): no name below may appear in a headline statement closure.
 Every lemma is over an ABSTRACT `σ : ExecState` (StepKit rules 1–5).
 
 CONSUME-ON-DEMAND KIT (triage landing, 2026-08-27): the original
-three consumers (`LogReadSpecs` CallSpec members) died with the
-CallSpec calculus; their discharges are archived at
+three consumers (`LogReadSpecs`/`StorageWalkSpecs` CallSpec members)
+died with the CallSpec calculus; their discharges are archived at
 `archive/callspec-era`. Live non-vacuity: the judgment-free
-mini-witnesses in `Sym/CrossingWitness.lean`
-(`crossing_witness_lenNeg`/`_ifSplit`/`_read` — real kernel-span
-derivations over abstract states consuming the normalize collapse,
-the validateSlice crossing, the ifK split, and the symbolic reads).
-The kit's forward consumers are the tier-1/tier-2 correspondence
-and ∃-side discharge work of the tier-3 build (the G-units).
+mini-witnesses in `Sym/CrossingWitness.lean` — real kernel-span
+derivations over ABSTRACT states at symbolic lengths.
+
+WHAT THE MINI-WITNESSES ACTUALLY COVER (made exact 2026-08-27 by the
+pre-merge audit, claim-dimension F3 — the earlier wording listed the
+four crossing CLASSES and read as if the kit were covered wholesale;
+it is not, and the gaps are labeled at their lemmas):
+
+- `crossing_witness_lenNeg` → `normalize_int_eq`, `int_ofNat_cast`,
+  `applyStrict_length_slice`, and through it `validateSlice_ok`.
+- `crossing_witness_ifSplit` → `stepFn_ifK_true` (and with it the
+  `stepFn_ifK_false` arm it splits against).
+- `crossing_witness_read` → `loadLoc_base`,
+  `applyStrict_indexGet_slice`, and in-module
+  `int_ofNat_not_neg`.
+
+NOT covered, each carrying its own SCAFFOLD label and resume
+condition: `applyStrict_deref` (G-REPR/G-CALLS), and the unsigned/
+`ofNat` normalize group `normalize_uint64_eq`,
+`normalize_uint64_ofNat`, `normalize_int_ofNat` (first live
+consumer). The kit's forward consumers are the tier-1/tier-2
+correspondence and ∃-side discharge work of the tier-3 build (the
+G-units).
 -/
 
 open GoLean.GoCore GoLean.GoCore.Machine
@@ -51,7 +68,16 @@ theorem stepFn_ifK_true {σ : ExecState} {b : Bool} {t e : Stmt}
       = .ok (.exec t env k, σ, ch) := by
   subst hb; rfl
 
-/-- The `ifK` step under a false branch condition. -/
+/-- The `ifK` step under a false branch condition.
+
+NOT scaffold-labeled, deliberately (pre-merge audit, claim-dimension
+F3): this lemma has no consumer of its own today, but it is the
+OTHER ARM of a constructor-complete `Bool` split whose `true` arm
+`stepFn_ifK_true` is live (`crossing_witness_ifSplit`). A case split
+that ships only the arm someone happened to need first is a
+fail-open shape — the missing arm is discovered as a stuck proof
+much later. Both arms ship together; the pair is the unit of
+non-vacuity, and the pair is consumed. -/
 theorem stepFn_ifK_false {σ : ExecState} {b : Bool} {t e : Stmt}
     {env : LocalEnv} {k : Cont} {ch : Choices} (hb : b = false) :
     stepFn σ (.retV (.bool b) (.ifK t e env k)) ch
@@ -71,7 +97,18 @@ theorem normalize_int_eq {v : Int}
   simp only [if_pos trivial]
   omega
 
-/-- `normalize .uint64` is the identity in unsigned-64 range. -/
+/-- `normalize .uint64` is the identity in unsigned-64 range.
+
+**SCAFFOLD (triage landing, 2026-08-27; labeled by the pre-merge
+audit, claim-dimension F3).** This lemma and its `ofNat` corollary
+`normalize_uint64_ofNat` form a CLOSED DEAD SUBTREE: the corollary's
+only consumer is this lemma's own application, and nothing outside
+the pair consumes either. The `.int` siblings are the live ones
+(`normalize_int_eq` ← `crossing_witness_lenNeg`). Resume condition:
+the first live consumer — expected at G-REPR/G-CALLS, where an
+unsigned-typed field or length read crosses a store-time normalize
+(raft's `uint64` term/index columns make this likely, not
+speculative). Delete if those units land without needing it. -/
 theorem normalize_uint64_eq {v : Int}
     (h0 : 0 ≤ v) (h1 : v < 18446744073709551616) :
     IntKind.normalize .uint64 v = v := by
@@ -90,13 +127,27 @@ theorem int_ofNat_not_neg (n : Nat) : ¬ (Int.ofNat n < 0) := by
   rw [int_ofNat_cast]; omega
 
 /-- `normalize .int` on an embedded `Nat` (the machine's slice-length
-reads land here). -/
+reads land here).
+
+**SCAFFOLD (triage landing, 2026-08-27; labeled by the pre-merge
+audit, claim-dimension F3).** Zero consumers: the live length-read
+witness `crossing_witness_lenNeg` goes through `normalize_int_eq` +
+`int_ofNat_cast` directly rather than through this convenience
+corollary. Resume condition: the first live consumer — G-REPR/
+G-CALLS, where a `Nat`-spelled length crosses a normalize without
+the caller already holding the cast. Delete if the direct route
+stays the one everybody takes. -/
 theorem normalize_int_ofNat {n : Nat} (h : n < 9223372036854775808) :
     IntKind.normalize .int (Int.ofNat n) = Int.ofNat n := by
   rw [int_ofNat_cast]
   exact normalize_int_eq (by omega) (by omega)
 
-/-- `normalize .uint64` on an embedded `Nat`. -/
+/-- `normalize .uint64` on an embedded `Nat`.
+
+**SCAFFOLD (triage landing, 2026-08-27; labeled by the pre-merge
+audit, claim-dimension F3)** — the second half of the closed dead
+subtree described on `normalize_uint64_eq`; same resume condition
+(first live consumer, expected at G-REPR/G-CALLS). -/
 theorem normalize_uint64_ofNat {n : Nat}
     (h : n < 18446744073709551616) :
     IntKind.normalize .uint64 (Int.ofNat n) = Int.ofNat n := by

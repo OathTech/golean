@@ -20,8 +20,26 @@ wave (plan: `docs/2026-08-27_triage-plan.md`; execution record:
   items (MapPerm representatives incl. `mapPickLoop_perm`, crossing
   representatives, the reader vocabulary, the ghost-acks lemmas).
 
-In-build (imported by `Audit.lean`); a new public landing theorem
-lands with its pin here in the same commit.
+In-build (imported by `Audit.lean`).
+
+**Pin policy, stated honestly** (corrected 2026-08-27 by the
+pre-merge audit, gate-dimension L-6). This header used to read "a new
+public landing theorem lands with its pin here in the same commit".
+That is not what this file does and never was: the pins below are a
+REPRESENTATIVE SAMPLE, not a cover. The MapPerm and crossing
+sections pin representatives of their families rather than every
+member, and public theorems exist in the landed modules with no pin
+of their own — `GoLean.Frame.stepFn_plug_witness_step_ok` is one.
+
+What the sample is chosen to catch is the thing an axiom pin can
+catch: an axiom-envelope regression somewhere in a family's proof
+closure, which shows up at any member sharing that closure. It does
+NOT certify per-theorem that each landed name was checked. A blanket
+claim of coverage would be the more dangerous of the two errors — it
+invites a reader to infer a pin exists where none does — so the
+sample is declared as a sample. The in-build Audit gate's envelope
+enforcement is unaffected either way; it is the pins' content, not
+their count, that does that work.
 -/
 
 /-! ## The plug discharge witnesses (A4) -/
