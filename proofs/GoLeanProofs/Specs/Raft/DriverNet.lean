@@ -21,9 +21,13 @@ twin: the guard/action body facts, the loop invariants (`RebuildInv`,
 symbolic in the net length `n = bs.length` AND the liveness payload
 `bs` (compositional mode I2: symbolic preconditions,
 bounded-completion conclusions; never one literal chain per net
-shape). `DriverNetWitness.lean` discharges every premise on a
-concrete state (the non-vacuity gate) and cross-checks the composed
-step counts against the compiled census.
+shape). (Triage hygiene 2026-08-27, P-2/K-4: the former
+`DriverNetWitness.lean` discharge module was W0-killed — its
+premise discharges are archived at `archive/fixed-trajectory-era`.
+`RebuildInv`/`LiveCountInv` are NOT witness-less survivors: they are
+the loop-invariant PARAMETERS of the kept span lemmas below
+(`rebuildLoop_span` concludes/consumes them). Witness owed on first
+consumption of the span lemmas by the tier-3 driver-loop work.)
 
 The SHAPE-PIN theorems (`drvRebuild_pinned`, `lc_pinned`) prove the
 module's statement vocabulary is EXACTLY the pinned lowering's — the
@@ -33,7 +37,7 @@ structural `Stmt.eqbF`); a frontend re-lowering that reshapes either
 loop turns the pins red (drift alarm), like the equation modules'
 window links.
 
-Census anchors (`artifacts/probe/c2bloopcensus2.out`): rebuild
+Census anchors (`artifacts/probe/c2bloopcensus2.out` (untracked scratch)): rebuild
 iterations 63/67 (first/subsequent, guard true), 54/58 (guard false),
 exit 29/33; liveCount 68/72 and 54/58. The composed kit bounds
 reproduce these exactly: `43 + bB` = 67 at `bB = 24` (rebuild), 72 at

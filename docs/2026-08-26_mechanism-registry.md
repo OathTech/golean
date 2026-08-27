@@ -50,3 +50,43 @@ re-census is the next landing audit's)
 | **Open-tail windows** — configs with open below-barrier tail + frame tenv; link theorems at free vars | Pilot (pattern, not code) | wp_bind by computational reflection (design note §3 finding 2) | VALIDATED at 2,316-step scale | Pilot chain | tracked probe examples in-build |
 | **Reader frame-congruence** — `fieldU64_ren`, `absRaftNode_frameSim` | Specs.Raft (target) | SL locality of pure heap projections | COMPLETE | frame verdict (design note §3) | extends the K-C `RenCongr` block to the whole pilot reader |
 | **Plug rule** (env/k inertness of call spans below the barrier) | — | wp_bind / evaluation-context locality | **NOT BUILT — measured design** | gates W3's framed consumption | cost datum: StepSim = 795 lines; design in note §3 finding 1 |
+
+## Triage-landing addendum (2026-08-27, registry refresh F-8d — [AGENT], per the [USER]-approved triage plan)
+
+Corrections to rows above, effective at the triage landing (full
+re-census remains the next landing audit's):
+
+- **Spec judgment** (W1 addendum row): **KILLED** — the CallSpec
+  calculus was [USER]-cancelled as parallel-calculus drift and
+  deleted; archived at `archive/callspec-era` (see
+  `docs/ARCHIVE.md`'s CallSpec-era section). DEINDEXED.
+- **Plug rule** (W1 addendum row "NOT BUILT"): **BUILT AND LANDED**
+  judgment-free — `Frame/{Plug,PlugOps,PlugApply,PlugStep,PlugRule}`
+  (`plugK`/`hasBarrierK`/`stepFn_plug`/`callSpan_plug`; wp_bind /
+  evaluation-context lineage), witnesses `Frame/PlugWitness.lean`
+  (+ the relabeled concrete probe `Frame/PlugProbe.lean`, retirement
+  = G-BIND's gate instance). Consumer: the tier-3 bind unit (G-BIND).
+- **ChoiceInv** row: **KILLED** (K-3: `ChoiceInvariantToM` zero
+  inhabitants/consumers); `ChoiceCanon` carrier stays (Mask consumed
+  by the parked SpanIso).
+- **Relocate** row: **KILLED** (K-2: zero live consumers; the
+  cancelled R-geometry road's vocabulary; placement genericity is
+  G-REPR's job).
+- **Lens/LensInst** row: general half stays; the per-field instance
+  layer remains archived (W0), regrows consume-on-demand at G-REPR.
+
+New/updated mechanisms indexed:
+
+| mechanism | layer | classic lineage | completion state | consumers | notes |
+|---|---|---|---|---|---|
+| **Plug family** — `plugK`, `stepFn_plug`, `stepFnIter_plug`, `callSpan_plug` | Frame (Go-general) | wp_bind / evaluation-context composition (Felleisen–Hieb), per-step commutation with the executable machine | COMPLETE (witnessed: `PlugWitness`) | G-BIND (chartered); Audit/W2 + Audit/Landing pins | premises = the non-locality census (recover walk, live map-range pruning) |
+| **RunGlue** — `runProgramM_mono`/`_classify_of_total`/`_readout_of_total` + per-phase cascade | Surface (general) | fuel monotonicity / certificate readout | COMPLETE | G-EXIT + G-STMTS (chartered); Audit/W1's 18 pins | the exit-theorem glue |
+| **CondFor** — `condFor_loop` | general | Floyd/Hoare invariant+variant loop rule | COMPLETE (in-file witnesses `countdown_span`/`cd_concrete`) | tier-3 loop-law unit; Audit/W2 pins | prep slot fixed empty (middle path) |
+| **MapPerm (the (M) carrier)** — `lookupP_perm`, `mapPairs(D)_perm`, `sortedLT_eq_of_perm`, pick-step family, `mapPickLoop_perm`, salvaged `idsFam_*` readbacks | general (imports one raft reader module — recorded altitude smell, revisit at G-MAPITER) | multiset abstraction / permutation quotient in spec vocabulary | COMPLETE except `mapPickLoop_perm` = **SCAFFOLD** (discharge owed at G-MAPITER; prior discharge archived) | G-MAPITER + G-SORT (chartered); readback class consumed in-module | see the m-mechanism note's supersession note |
+| **Crossing kit** — branch/normalize/slice/deref step lemmas + `CrossingWitness` | Sym (general) | King 1976 path conditions as window splits | COMPLETE (witnessed; `applyStrict_deref` = SCAFFOLD, G-REPR/G-CALLS resume) | correspondence/∃-side work of the G-units; Audit/Landing pins | consume-on-demand |
+| **ReflectConc** — `reflectV_conc`/`reflectK_conc` | Sym (general) | Galois-insertion retraction | COMPLETE (unconditional) | mirror-side reflection; Audit/W1 pins | — |
+| **Reader vocabulary** — `AbsTwinCheckerRead` (+`RenCongr` delta) | Specs.Raft (target) | lens laws / SL locality of pure projections | COMPLETE (`wTwin_*` mini-witnesses) | G-REPR (the pure-projection half); F-6 pins | fail-closed TypeId-checked |
+| **Ghost-acks interface** — `Ghost.acks`, `ackCertified` + EStep transparency | Specs.Raft (target, abstract layer) | auxiliary-variable / ghost state | INTERFACE + witnesses | tier-3 ack-evidence unit (chartered); NativeEtcdDischarge | self-declared advances-no-quantifier |
+| **InitSpec stage A** — `initSetup_establishes` | Specs.RaftPilot (target) | ∃-discharge by sanctioned concrete evaluation | COMPLETE | G-EXIT's base-case fact; Audit/W2 pin | count-free, stream-transparent |
+| **Invariant contract** | — | — | **ARCHIVED** ([USER] decision at sign-off — not landed; G-INV re-designs at the Iris tier under the [USER] gate) | — | `archive/callspec-era` |
+| **LangC/LangD** | Iris tier | thread-pool `Language` instances | KEPT — **post-T1 resume seam** for the channel-logic park (P-1) | Audit pins only (external consumer count zero — recorded, named future consumer) | do not delete as churn |

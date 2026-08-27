@@ -69,8 +69,8 @@ def derefBool (σ : ExecState) : GoValue → Option Bool
   | _ => none
 
 /-- `*int32`-kinded dereference: nil → `0` (`GetType` on a nil field —
-`raftpb.MessageType`'s underlying kind is `int32`, LensInst's
-`message_Type_ty`). -/
+`raftpb.MessageType`'s underlying kind is `int32`; the per-field
+type instance lived in the W0-killed `LensInst.lean`, archived). -/
 def derefI32 (σ : ExecState) : GoValue → Option Int
   | .nil => some 0
   | .addr l => (Heap.lookup σ.heap l).bind fun c => readIntK .int32 c.value
@@ -204,7 +204,14 @@ def absOutbox (σ : ExecState) (a : Addr) (f : String) :
 /-! ## L4 transports — every v2 reader's placement invariance BY
 COMPOSITION of the lens laws (this section is the demonstration that
 the hand `_ren` pattern is retired for lens-stated readers: no heap
-walk is re-derived below, only lens/`_ren` lemmas compose) -/
+walk is re-derived below, only lens/`_ren` lemmas compose)
+
+(Triage disposition 2026-08-27, K-4/P-1: the three `_ren` transports
+below are KEPT with a witness-on-first-consumption note — their
+named future consumer is the tier-3 driver-loop invariant unit's
+placement clauses (G-INV); until G-REPR's ∃-address points-to
+subsumes the `_ren` spine they are the address-genericity
+transport.) -/
 
 theorem derefBool_ren {r : Nat → Nat} {na₀ na : Nat} {fr : Heap}
     {σ σF : ExecState} (hF : FrameSim r na₀ na fr σ σF)

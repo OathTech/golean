@@ -1,5 +1,17 @@
 # W1 design note: the Spec judgment, its rules, the footprint frame, and the glue (2026-08-27)
 
+> **SUPERSESSION BANNER (triage landing, 2026-08-27).** The CallSpec
+> judgment family this note designs (§§1–2, 5–6) was diagnosed
+> parallel-calculus drift and **CANCELLED by [USER]** (campaign log
+> 2026-08-27; triage plan `docs/2026-08-27_triage-plan.md`): a
+> continuation-parametric triple calculus over `stepFnIter` beside
+> the real Iris tier on main. The code is deleted; the archive ref
+> `archive/callspec-era` preserves it. **Still live:** §3's probe
+> findings (FrameSim structurally cannot deliver caller env/k — a
+> durable constraint on any bind design, consumed by G-BIND) and
+> §§7–8's plug-rule design (the plug family LANDED judgment-free:
+> `Frame/Plug*.lean`, witnesses in `Frame/PlugWitness.lean`).
+
 Unit: W1 (clean-proof plan §W1, professor-amended). Written BEFORE the
 code, per the charter's classics-first rule. Every mechanism below
 carries a LINEAGE line. The quantifier-audit line for the whole unit

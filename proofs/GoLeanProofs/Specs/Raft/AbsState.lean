@@ -12,7 +12,7 @@ machine's state vocabulary.
 ## What v1 reads (grounded in instrumented contact, 2026-08-22)
 
 Probe of the pinned twin under the compiled interpreter
-(`artifacts/probe/probe2.out`, arc log entry of the same date): one
+(`artifacts/probe/probe2.out` (untracked scratch), arc log entry of the same date): one
 raft node lives in ONE heap cell — a `.struct ⟨"raft.raft"⟩` value of
 ~33 named fields, behind the `*raft` pointer every handler receives
 (node 1's cell at `Loc.base 389` on the canonical run). Scalar

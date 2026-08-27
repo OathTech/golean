@@ -13,16 +13,21 @@ focusing, "P focuses to A, restoring A' yields P'", consumed by
 instances (`deps/goose/proofgen/tmpl/types.tmpl:65-77`). Our carrier is
 FIRST-ORDER — `Option` readers over `ExecState`, not iProp points-to —
 so the pattern ports as one shared reader-combinator set + per-field LAW
-instances discharged by rewriting (`Specs/Raft/LensInst.lean`); a missing
+instances discharged by rewriting; a missing
 instance fails loudly at the proof, mirroring `mem.v:164`'s
 footprint-not-covered error. Design of record:
-`docs/2026-08-24_campaign-arc4-lens-design.md`.**
+`docs/2026-08-24_campaign-arc4-lens-design.md`.
+(Triage hygiene 2026-08-27, P-2: the per-field instance layer
+`Specs/Raft/LensInst.lean` was W0-killed — archived at
+`archive/fixed-trajectory-era`; the combinators and laws here are
+general infrastructure, instances regrow consume-on-demand at the
+tier-3 assertion-layer unit G-REPR.)**
 
 LAYERING: this is GENERAL proof infrastructure (the design §6 boundary):
 it imports machine vocabulary (`GoCore`) and the Frame layer only —
 no Sym, no `Specs.*`. Statement modules never import it. The target
-half (per-field instances at the pinned twin tables) lives in
-`Specs/Raft/LensInst.lean`.
+half (per-field instances at the pinned twin tables) was W0-killed
+with its era (archived); instances regrow on demand (G-REPR).
 
 Division of labor (design §2, binding): TableExt computes whole-struct
 stores INSIDE windows (untouched); the lens reasons AT window
@@ -499,9 +504,9 @@ the base — where the cell's DECLARED type re-normalizes the WHOLE
 struct (`normalizeValueForTy` at `typeResolutionFuel = 1024`, so the
 per-field normalizer runs at fuel 1023). The laws below characterize
 the result per FIELD; the per-field normalization data (the `hstab`/
-`hnw` premises) is discharged by the instance layer
-(`Specs/Raft/LensInst.lean`) from the shape lemmas at the end of this
-section. -/
+`hnw` premises) is discharged by a per-field instance layer (the
+W0-killed `LensInst.lean` was the exemplar — archived) from the
+shape lemmas at the end of this section. -/
 
 /-- `Except`'s ok-bind reduction (definitional; core ships no simp
 lemma for it — the Frame layer's `ExSim.bind` sidesteps it, but the

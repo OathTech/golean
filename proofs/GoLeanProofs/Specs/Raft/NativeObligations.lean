@@ -1,6 +1,7 @@
 /-! # SC1 — the obligation-signature probe: the native S1 fragment
-(scoping lane `campaign-arc4b`, 2026-08-26; design of record: the
-campaign worktree's `docs/2026-08-25_campaign-layerc-design.md` §8 D2
+(scoping lane `campaign-arc4b`, 2026-08-26; design of record:
+`docs/2026-08-25_campaign-layerc-design.md` §8 D2 (landed into this
+tree at the triage landing, closing the dangling pointer — P-10)
 REVISED — the family route b′; empirical gate "SC1, running" named
 there).
 
@@ -11,7 +12,13 @@ b′ route's obligation signature drafted at probe scale, the native
 `one_leader_per_term` statement over the etcd-abstract vocabulary,
 the superstructure skeleton organized around the signature, and the
 2–3 cheapest chain links proved end-to-end as the per-lemma cost
-calibration. Nothing here is consumed by any landed proof; the
+calibration. (Triage hygiene 2026-08-27, P-2: the old "nothing here
+is consumed" claim is FALSE — the ghost-acks interface below
+(`Ghost.acks`/`ackCertified` + monotonicity) is consumed by the
+EStep acks-transparency lemmas and their non-vacuity witnesses in
+`NativeEtcdDischarge.lean`/`NativeS1Witness.lean`, and is the
+commit-certification premise the tier-3 ack-evidence unit will
+discharge.) The
 statement chain that is NOT yet proved ships as named `Prop`
 definitions (never as unproven theorem stubs), each docstring-classified
 PORTS / ADAPTS / NEW against the T3 lattice

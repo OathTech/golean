@@ -33,10 +33,12 @@ choice; the handler's prefix-derived valuation absorbs the spill.
 
 Shapes covered: ONE appended element (`#[w]` visible in the elems
 operand), any old-slice handle (nil base included — `r.msgs` at init
-is the nil slice; the SliceMem lemma pins a `some` base). All three
+is the nil slice; the SliceMem lemma pins a `some` base). The three
 motivating sites (handleHeartbeat + handleAppendEntries `r.msgs`
-appends, becomeLeader's appendEntry path) are one-element appends; a
-multi-element variant is future work on its first consumer.
+appends, becomeLeader's appendEntry path — all one-element appends)
+were killed-era handler equations, archived at
+`archive/fixed-trajectory-era`; a multi-element variant is future
+work on its first consumer.
 -/
 
 namespace GoLean.Sym
@@ -142,7 +144,7 @@ theorem stepFn_appendSpill_transport (ρ : Valuation) (σ : ExecState)
 
 /-! ## §3.3 discharge witness — the transport instantiated on a
 concrete two-cell state (a nil `[]uint64` grown by one element), every
-premise discharged; #eval-checked in `artifacts/probe/HhU10Probe3.lean`
+premise discharged; #eval-checked in `artifacts/probe/HhU10Probe3.lean` (untracked scratch)
 before these `rfl`s were asked of the kernel. -/
 
 private def spillWitS : SymState :=
@@ -335,7 +337,7 @@ theorem stepFn_appendInPlace_transport (ρ : Valuation) (σ σ₁ : ExecState)
 
 /-! ## §3.3 discharge witness (the in-place transport instantiated on
 a concrete three-cell state — a one-element `[]uint64` at cap 2 grown
-in place; #eval-checked in `artifacts/probe/InPlaceDev.lean` history
+in place; #eval-checked in `artifacts/probe/InPlaceDev.lean` (untracked scratch) history
 before these `rfl`s were asked of the kernel). -/
 
 private def ipWitS : SymState :=

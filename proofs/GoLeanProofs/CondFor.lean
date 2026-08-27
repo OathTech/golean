@@ -26,10 +26,10 @@ the draw-consuming sibling, built on demand). Audit pins:
 
 The native frontend desugars the cond-only plain `for cond { body }`
 into ONE fixed shape (verified against the pinned twin lowering,
-`artifacts/probe/utoadump.out` — `utoa`'s digit loop carries it
+`artifacts/probe/utoadump.out` (untracked scratch) — `utoa`'s digit loop carries it
 verbatim; `main.twin.harvest`'s Ready loop carries the same skeleton
 with a call-prep statement in the second slot,
-`artifacts/probe/harvestdump.out`):
+`artifacts/probe/harvestdump.out` (untracked scratch)):
 
 ```
 block [] [
@@ -58,16 +58,19 @@ call-conditioned variant (harvest's `for nd.rn.HasReady()`) is the
 recorded latent consumer of a prep-parameterized generalization and
 is deliberately NOT built ahead of its demand.
 
-Consumers (the ≥2 of §7's two-axis test): `utoa`'s digit loop
-(`Sym/UtoaSpan.lean` — the checker-span arc's cost driver) and the
-countdown discharge witness below; harvest's Ready loop is latent.
+Consumers (triage hygiene 2026-08-27, P-2 — the old claim named
+`Sym/UtoaSpan.lean`, which does not exist in this tree, a killed-era
+citation): the live discharge is the in-file countdown witness pair
+(`countdown_span`/`cd_concrete`); `utoa`'s digit loop (the original
+cost driver) and harvest's Ready loop are the named latent consumers
+at the tier-3 loop-law unit.
 
 LINEAGE (clever-tricks doctrine): the Floyd/Hoare loop invariant —
 the same per-iteration-fact induction as `SliceWalk.sliceWalk_loop`,
 specialized to the frontend's plain-for desugar so instances prove
 only their cond and body facts.
 
-## The measured anatomy (trace `artifacts/probe/utoatrace.out`, the
+## The measured anatomy (trace `artifacts/probe/utoatrace.out` (untracked scratch), the
 U24 banked map re-verified in this arc's log)
 
 From the loop-head config (`.exec (.while true …)`), per iteration:

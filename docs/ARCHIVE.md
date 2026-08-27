@@ -87,3 +87,70 @@ set (`Frame/` core, `Sym/`, `Lens`, `SliceWalk`/`MapLoops`/`StepKit`/
 interface witnesses (`NativeS1Witness`, `NativeS23Witness`) stay until
 W5 supersedes them — the non-vacuity demonstrations of the interface
 premises the abstract leaves consume.
+
+---
+
+# ARCHIVE — the CallSpec era (ref: `archive/callspec-era`)
+
+The branch ref `archive/callspec-era` is pinned at `20cda772` — the
+w1-prover wave tip (W1–W3, 2026-08-27). The triage landing
+(`docs/2026-08-27_triage-plan.md`, [USER]-approved 2026-08-27)
+deleted the wave's parallel calculus and landed its tier-agnostic
+substrate; everything deleted is preserved at the ref in full. THE
+RULE above applies unchanged: nothing archived is ever cited by a
+proof.
+
+## What lived there
+
+- **The judgment calculus** (`SpecJudgment.lean`, 483): six
+  judgment forms (StmtSpec/CallSpec/R/RD/RN + B-forms) with
+  conseq/consume/seqn/call rules over `stepFnIter` — a
+  continuation-parametric triple calculus beside the real Iris tier
+  already on main. [USER] diagnosis: parallel-calculus drift;
+  CallSpecV and the R-geometry transport road CANCELLED.
+- **~30 CallSpec members** (`LogReadSpecs`, `StorageWalkSpecs`,
+  `RaftLogReadSpecs`, `InitCallSpecs`, `MapOrderSpecs`,
+  `HarvestSpecs`; ≈8.5k lines): exact readbacks of real etcd raft
+  log/storage/harvest/init functions — with fixture-family
+  preconditions (literal addresses in statements). The CONCLUSIONS'
+  semantic content re-derives as tier-3 FnSpec postconditions at the
+  cluster units; the per-member windows, crossing maps, and measured
+  costs live in the LANDED w1/w2/w3 prover logs.
+- **The pilot/gate chain** (`BecomeFollowerSpec`,
+  `CBecomeFollowerSpec`, `CallSiteComposition`, `W2Gate`; 925): the
+  W2 end-to-end framed-composition demonstration. Its load-bearing
+  content landed judgment-free (the plug family + `absRaftNode_frameSim`);
+  the G-BIND unit's gate instance is the named replacement demo.
+- **The fixture mass** (`SymBase`, `Bf*`/`CBf*` incl. 15.9k
+  generated literal lines, `Reloc` — with the divergent, unconsumed
+  `symPlugK`/`symPlugC` plug sibling, deleted with prejudice — plus
+  `tools/relayout/CBfLitGen.lean`; ≈18.6k).
+- **Main-side removals archived with the tip**: `Frame/Relocate.lean`
+  (zero live consumers; cancelled R-geometry vocabulary),
+  `Frame/ChoiceInv.lean` (`ChoiceInvariantToM`: zero inhabitants,
+  zero consumers), and `Specs/RaftPilot/Invariant.lean` (the
+  629-line invariant contract, ARCHIVED rather than landed by
+  [USER] decision at sign-off — incl. the F-1-defective
+  `ElectedAt.logBridge`/`commitTie` clause pair; G-INV re-designs
+  the clause inventory at the Iris tier under the [USER] gate).
+
+## The lesson
+
+Leaf specs were stated in a bespoke triple calculus over the
+executable machine while a real iris-lean tier (heap RA, WP, FnSpec
+contracts over real raft code, adequacy) stood on main. The error
+was not missing tiers — it was building a fourth, parallel calculus
+beside them. Landed survivors (plug, RunGlue, CondFor/MapLoops/
+MapPerm, Crossing/ReflectConc, the readers, InitSpec, ghost-acks,
+the prover record) are exactly the tier-agnostic substrate.
+
+## Harvest pointers
+
+- Member readback conclusions → tier-3 FnSpec postconditions
+  (G-cluster units); windows/crossing maps/costs → the unit pricing
+  anchors (w3 logs, landed).
+- The prior discharges of now-scaffold-labeled rules:
+  `mapPickLoop_perm` ← `MapOrderSpecs.lean:864`
+  (`jointConfigIDs_callSpecR`); the crossing kit ← the three
+  `LogReadSpecs` members. Their live replacements are
+  `Frame/PlugWitness.lean` and `Sym/CrossingWitness.lean`.

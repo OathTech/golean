@@ -334,8 +334,10 @@ value — the filter-and-recons keeps the length unchanged on a widen;
 nothing. The previous stability test compared the two LIST LENGTHS
 only, which a widen leaves unchanged — the fixpoint could stop with
 an untraversed widened window and silently drop content (arc-4
-landing-audit fail-open finding, 2026-08-26; the dropped case is
-witnessed in `Frame/ChoiceCanonWitness.lean`). -/
+landing-audit fail-open finding, 2026-08-26; the dropped case's
+witness module `ChoiceCanonWitness.lean` was W0-killed with all
+witnesses of its era — archived at `archive/fixed-trajectory-era`;
+witness owed on first consumption of the fixpoint). -/
 def VSt.measure (st : VSt) : Nat :=
   st.views.length + st.views.foldl (fun s p => s + p.2) 0 +
     st.direct.length

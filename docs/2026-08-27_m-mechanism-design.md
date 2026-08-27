@@ -11,6 +11,16 @@ the init chain is a ≥10⁴-leaf family that never re-converges.
 Enumeration is neither feasible nor charter-legal as proof; this note
 designs the family carrier and its composition story.
 
+> **SUPERSESSION NOTE (triage landing, 2026-08-27).** The CallSpec
+> forms this note threads the family through (the ∃-out/∀-in
+> composition between CallSpecs, and the `jointConfigIDs_callSpecR`
+> member) were cancelled and deleted with the judgment calculus
+> (archived at `archive/callspec-era`). The CARRIER is live and
+> landed (`MapPerm.lean`, judgment-free; `mapPickLoop_perm`
+> scaffold-labeled pending its G-MAPITER discharge witness); the
+> threading discipline described here re-instantiates at the tier-3
+> map-range law's spec vocabulary (G-MAPITER), not as CallSpecs.
+
 ## LINEAGE
 
 The mechanism instantiates the **multiset-abstraction /

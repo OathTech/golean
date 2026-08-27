@@ -10,7 +10,11 @@ the deep per-node reader. Kept per kill-list criterion (a): the clean
 proof path states its invariants over these readers. The donor's
 R-form statement former (`RoundLemmaShape`), `RoundFam`, and the
 heartbeat-round fixture witness were fixed-trajectory content
-(archived — docs/ARCHIVE.md).
+(archived — docs/ARCHIVE.md). (Triage hygiene 2026-08-27: the
+"clean proof path" that states invariants over these readers is now
+the tier-3 build's G-INV unit — the invariant contract itself was
+archived at the triage landing, USER decision; readers stay as the
+pure-projection vocabulary, G-REPR.)
 
 Fail-closed hardening carried over from the landing fix round: the
 twin and shell struct TypeIds are CHECKED (`twinTid`/`twinNodeTid`/

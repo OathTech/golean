@@ -42,7 +42,18 @@ family's classic), nothing new.
 
 QUANTIFIER LINE (the wave's): vocabulary only — advances no
 end-theorem quantifier; every clause of `I` that mentions checker
-state consumes these readers. -/
+state consumes these readers.
+
+CONSUMPTION (triage landing 2026-08-27, plan L-5): these readers are
+the PURE-PROJECTION half of the tier-3 assertion layer (G-REPR) — a
+RefinedC/BRiCk-style assertion layer is representation predicates
+over the heap plus pure projections of the represented value, and
+every Iris-tier raft spec's postcondition speaks this vocabulary
+(the Surface family's `MeetsSpec` corollaries are the template). The
+invariant contract `I` that consumed them was ARCHIVED at this
+landing ([USER] decision — G-INV re-designs it at the Iris tier);
+the `_ren` spine remains the address-genericity transport until
+G-REPR's ∃-address points-to subsumes it. -/
 
 namespace GoLean.RaftSeam
 

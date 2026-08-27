@@ -8,7 +8,7 @@ symbolic-net kit)
 
 The native frontend desugars `for i := range s { body }` (index-only
 range over a slice) into ONE fixed shape (verified against the pinned
-twin lowering, `artifacts/probe/c2bdump.out` — both the driver's
+twin lowering, `artifacts/probe/c2bdump.out` (untracked scratch) — both the driver's
 live-map rebuild and `main.twin.liveCount` carry it verbatim, with
 the SAME `$rcoll/$rlen/$ridx/$rfirst` temp names and only the user
 index variable and guarded body differing):
@@ -41,10 +41,11 @@ mirror); the map-range PICK loop is already covered by
 `MapLoops.mapPickLoop_generic`.
 
 Consumers (the demonstrated ≥2 of §7's two-axis test): the driver's
-live-map rebuild and `liveCount` — every REACHABLE round kind of the
-C-ladder walks both once per round (`Specs/Raft/DriverNet.lean`, the
-instances + witnesses); `pickFor`/`projection`/`complete` are latent
-further consumers of the same shape.
+live-map rebuild and `liveCount` (`Specs/Raft/DriverNet.lean` — the
+span-lemma instances; their concrete witness module was W0-killed,
+archived, witness owed on first consumption per the K-4 record);
+`pickFor`/`projection`/`complete` are latent further consumers of
+the same shape.
 
 LINEAGE (clever-tricks doctrine): the Floyd/Hoare loop invariant —
 the schema is a per-iteration-fact induction in the exact style of
@@ -52,7 +53,7 @@ the schema is a per-iteration-fact induction in the exact style of
 `MapLoops.mapCountLoop_generic`, specialized to the frontend's
 range-desugar shape so instances prove ONLY their body.
 
-## The measured anatomy (census `artifacts/probe/c2bloopcensus2.out`,
+## The measured anatomy (census `artifacts/probe/c2bloopcensus2.out` (untracked scratch),
 compiled-walk verified at collection lengths 0–3, mixed guard flags)
 
 From the loop-head config (`.exec (.while true …)`), per iteration:

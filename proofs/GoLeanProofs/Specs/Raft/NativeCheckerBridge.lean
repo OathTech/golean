@@ -51,11 +51,12 @@ checker state — is NOT here. It needs DriverNet-grade compositional
 span lemmas over the apply/record spans, whose viol branches build
 strings through `utoa` (a data-dependent digit loop with no kit lemma
 yet); ~1 unit at U20's measured rate, priced in the log. What stands
-in its place today: the guards pinned verbatim (layer 3), and the
-proved round runs kernel-checking the checker's CLEAN path at real
-fixtures (violations 0 → 0 readouts in `RoundMaLemma`/
-`RoundVoteLemma` — the interpreter's checker span leaving the counter
-untouched exactly where the model does).
+in its place today: the guards pinned verbatim (layer 3). (Triage
+hygiene 2026-08-27, P-2: the round-run kernel checks cited here —
+`RoundMaLemma`/`RoundVoteLemma`, violations 0 → 0 readouts at real
+fixtures — were fixed-trajectory-era modules, W0-killed and archived
+at `archive/fixed-trajectory-era`; the cond-loop kit lemma the viol
+branches' `utoa` needed has since landed as `CondFor.condFor_loop`.)
 
 LINEAGE: assume-guarantee interface decomposition (the C3/C4
 pattern's other half); the fold models are ghost-state abstractions
@@ -503,7 +504,7 @@ theorem s23_model_silent {ldr tm : Nat} {certified : Nat → Prop}
 
 /-! ## 3. The shape pins — the model's guard vocabulary IS the pinned
 lowering's (the DriverNet pin pattern; every `.any` value #eval'd
-true before the kernel pin — `artifacts/probe/BridgeEvalProbe.lean`
+true before the kernel pin — `artifacts/probe/BridgeEvalProbe.lean` (untracked scratch)
 → `bridgeeval.out`) -/
 
 section ShapePins
