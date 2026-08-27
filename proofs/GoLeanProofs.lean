@@ -161,6 +161,8 @@ import GoLeanProofs.Frame.Plug
 import GoLeanProofs.Frame.PlugProbe
 import GoLeanProofs.Frame.PlugOps
 import GoLeanProofs.Frame.PlugApply
+import GoLeanProofs.Frame.PlugStep
+import GoLeanProofs.Frame.PlugRule
 import GoLeanProofs.Sym.ReflectConc
 import GoLeanProofs.Specs.RaftPilot.BecomeFollowerSpec
 import GoLeanProofs.Specs.RaftPilot.CallSiteComposition

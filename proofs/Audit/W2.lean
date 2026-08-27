@@ -1,4 +1,5 @@
 import GoLeanProofs.CondFor
+import GoLeanProofs.Frame.PlugRule
 
 /-!
 # Audit pins: W2 — the loop-rule family, the plug rule, the init spec
@@ -22,3 +23,16 @@ witness's kernel cross-check at a concrete state. -/
 
 /-- info: 'GoLean.CondFor.cd_concrete' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.CondFor.cd_concrete
+
+/-! ## THE PLUG RULE (W2 unit 1 — design note §7-§8): the per-step
+commutation walk, its iteration, and the call-span corollary (the
+frame's control half; wp_bind lineage). -/
+
+/-- info: 'GoLean.Frame.stepFn_plug' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Frame.stepFn_plug
+
+/-- info: 'GoLean.Frame.stepFnIter_plug' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Frame.stepFnIter_plug
+
+/-- info: 'GoLean.Frame.callSpan_plug' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Frame.callSpan_plug
