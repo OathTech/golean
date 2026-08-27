@@ -1035,3 +1035,161 @@ New module `Specs/RaftPilot/HarvestSpecs.lean` (registered):
 - Non-vacuity: `rnPre_inhabited`.
 - Builds: module target build EXIT=0 (38 jobs, module 30 s); zero
   warnings.
+
+## UNIT B slice 1 addendum — raft.MustSync, nonzero-entries member: LANDED
+
+- `raft_MustSync_nonzeroEnts_callSpecR` (windows 24/35 + one branch
+  crossing): `entsnum ≠ 0 → true`, the short-circuit disjunct —
+  NOTHING read beyond the two HardState receiver pointers (every
+  scalar cell rides free). The Int-beq bridge
+  (`beq_eq_false_iff_ne` under the reader-vocabulary `en ≠ 0`) is
+  the same LawfulBEq route as the interface-equality crossings.
+- The vote-changed/term-changed disjunct members and the all-equal
+  (false) member: consumer-demand/parked — fully probed (60/~300
+  steps, boundaries mapped in artifacts/w3/frem8-trace.out; the
+  equal-scalar compares need only `beq_self_eq_true` rewrites, no
+  new mechanism; est. 2-3 h for all three).
+
+## PARK RECORDS (park-not-weaken; per-member, all probe-anchored —
+window/crossing maps measured this session, no estimates)
+
+**Unit A remainder:**
+- `raftLog.term` (3 arms at the quiesced family; probed end-to-end,
+  artifacts/w3/frem5-trace.out): compacted = 433 steps / 3 crossings
+  (i<uoff ifK, ents[0] indexGet, i+1<fi ifK); unavailable = 840 / 6
+  (+ the rl.lastIndex inline's indexGet+length, i>last ifK);
+  in-range = 1040 / ~10 (+ the full Term-walk trichotomy inline,
+  arm C). No new mechanism anywhere — pure window-sum transcription
+  at ~45 frame cells; est. 2-3 h/arm at the measured pattern. The
+  error-arm conclusions return the GLOBALS' values (cells 23/25 —
+  the zeroTerm members then close the caller's loop: term's error ∈
+  {nil, *23, *25} is the family trichotomy).
+- `raftLog.matchTerm`: term inlined + the entryID field reads + one
+  uint64-beq comparison (1093 steps probed); blocked on nothing;
+  price = term + ~30 min.
+- `raftLog.mustCheckOutOfBounds` (census U3, the no-fault
+  conclusion): ok-arm = 695 steps / 6 crossings (lo>hi ifK, the
+  rl.firstIndex inline's indexGet, lo<fi ifK, the rl.lastIndex
+  inline's indexGet+length, hi>fi+length ifK), terminal returns nil
+  = NO-FAULT; compacted-arm = 329 / 3 (returns *cell-23). Boundary
+  dumps complete (artifacts/w3/frem5e.out, MC9..MC695, ~46 frame
+  cells). No new mechanism; est. 2-3 h. The Panicf arms are refuted
+  by the arm preconditions (lo ≤ hi; the range trichotomy) — the U3
+  obligation shape is exactly the zeroTerm pattern.
+- `MemoryStorage.Entries` + `raftLog.entries`: unchanged verdict
+  (limitSize/extend loops → W2 loop rules composed with the kit;
+  the standing costliest with `slice`).
+- `raftLog.slice` mixed slow path (census U1): unchanged (loop
+  rules + the mixed storage+unstable path). NOT attempted this
+  session ([AGENT]: the trichotomy/mustCheck tier was priced ahead
+  of it and consumed the budget; the brief's park-with-record
+  outcome).
+
+**Unit B remainder (bodies probed where noted):**
+- `HasReady` (rawnode.go:448): multi-call over softState (landed) +
+  isHardStateEqual + raftLog has* leaves + length reads of
+  msgs/msgsAfterAppend — needs a RawNode-cell family (RawNode →
+  raft → raftLog chain; the rnFam pattern extends directly); est.
+  half-day with the leaf members.
+- `Ready`/`readyWithoutAccept`/`acceptReady`: the widest members —
+  slice literals + appends of msgsAfterAppend (APPEND-BEARING:
+  appendSpill picks → the (K)-crossed cap families; the census's
+  sync branch builds BOTH Resp messages unconditionally) + the
+  unstable accept family calls. The stepsOnAdvance fill is
+  assignment-shaped. Est. 1-2 days as a focused unit; the Resp
+  construction spans (needStorage*/newStorage*RespMsg) are
+  straight-line at pinned shapes (newStorageAppendRespMsg is
+  17 code lines) — the cheap first half of that unit.
+- `Advance` (the stepsOnAdvance replay through raft.Step): needs
+  the Step prelude members (cluster C) for the two local Resp
+  deliveries (Step:1216 → stableTo; Step:1224 → appliedTo +
+  reduceUncommittedSize) — sequence AFTER C's prelude arm or
+  in-line the two locals' paths (both prelude arms are
+  short: m.Term==0 catch for ApplyResp; the equal-term fallthrough
+  for AppendResp). Est. 1 day after the raftLog accept family.
+- `MemoryStorage.Append`/`SetHardState`: SetHardState = the
+  FirstIndex walk shape with a store (cheap, sub-hour at the
+  landed pattern); Append = the entry-overlap branch tree + append
+  (the (K) cap families + truncateAndAppend's single live arm) —
+  ~1 day.
+- unstable accept family (`stableTo`/`acceptUnstable`/
+  `acceptApplying`/`shrinkEntriesArray`): slice re-slicing +
+  branches on offsets — kit-class members, 2-4 windows each; est.
+  2-3 h each. `shrinkEntriesArray` allocates (append-bearing → (K)
+  cap family at the reallocation arm).
+- DESIGN NOTE (owed to U3.2c, recorded): the drain facts surfaced so
+  far — `MustSync`'s nonzero-entries verdict and
+  `hardState`/`softState`'s exact readbacks — are the vocabulary the
+  quiescence measure's "harvest pass strictly reduces pending Ready
+  work" lemma consumes; the strict-decrease witnesses themselves
+  live in acceptReady/Advance's conclusions (their members' Q should
+  state the msgs/msgsAfterAppend fields cleared and stepsOnAdvance
+  drained — flagged for their charters).
+- U3.0d-flagged check (the brief's NB): the invariant's netTerms
+  clause is stated over the NET population reader (absMessage over
+  t.net) — the local Resp messages never enter the net (census
+  §3.2), so the clause's vocabulary already distinguishes them; NO
+  design delta needed. The ApplyResp Term=0 case is caught by the
+  m.Term==0 prelude arm as the census says; hardState's landed
+  readback (Term = r.Term exactly) is the AppendResp term-bound
+  input.
+
+## KIT-ADJUSTED COSTING UPDATE (supersedes the crossing-kit
+session's signal; derivation-anchored to THIS session's actuals)
+
+Actuals (one worker, this session): 11 exported members LANDED
+across 4 slices — MS LastIndex (3w/2x), MS Term ×3 arms
+(50/57-shared + arm windows), rl.firstIndex (2w/1x, 140+138 steps),
+rl.lastIndex (3w/2x), rl.zeroTerm ×3, softState/hardState (1w each),
+MustSync-nonzero (2w/1x) — plus 4 new crossing lemmas
+(interface-equality same/ne; atLeastCmp-int; Int-beq bridges via
+LawfulBEq). Per-member wall: 30 min (single-window) to ~2 h
+(3-window inline compositions); module builds 30-160 s each; kernel
+iteration failures were EXCLUSIVELY store-wrap under-counts and
+crossing-seam off-by-ones, each fixed in one pass — the wrap-per-op
+rule (1 normalize per arith op, 1 per int-cell store, DOUBLE for
+struct literals, ZERO for newValue/interface/pointer stores) is now
+derived and logged, which should eliminate the failure class for
+successors.
+
+- **F remainder** (term/matchTerm/mustCheck + Entries/entries/
+  slice): term-tier = ~2 session-halves (pure transcription, maps in
+  hand); Entries/entries/slice keep the loop-rule surcharge (~2
+  days).
+- **B remainder**: Resp-message spans + SetHardState ≈ 1 session;
+  Ready/acceptReady/Advance + accept family ≈ 2-3 days (the (K) cap
+  families at the appends are the only mechanism-class cost; (K) is
+  landed).
+- **C (election)**: unchanged (≈ F-remainder class); the raft-cell
+  family (rnFam) landed here is C's receiver family — amortized.
+- **D (replication)**: unchanged (largest with E; per-arm members
+  scale linearly — measured again this session on Term's trichotomy).
+- **E (ack/commit)**: unchanged; the (M) blocker prices after the
+  sibling's unit.
+
+## WAVE CHECKPOINT (F-remainder + harvest session; branch-complete)
+
+- Commits: 77f55275 (slice 1: MS LastIndex + Term), e019d7a8
+  (slice 2: rl.firstIndex/lastIndex), 803a748d (slice 3: rl.zeroTerm
+  + iface-eq crossings), 4ee5e2aa (B slice 1: softState/hardState),
+  this commit (MustSync member + parks + costing + wave record).
+- NO judgment-form additions this session (CallSpec/R/RN/RD
+  sufficed for every member — the standing rule's log line).
+- Nothing trust-adjacent touched: no Audit/*, no scripts/*, no
+  GoCore, no baselines; `proofs/GoLeanProofs.lean` gained three
+  proof-layer imports (StorageWalkSpecs, RaftLogReadSpecs,
+  HarvestSpecs). No differential owed (proofs/docs/probes only).
+- The two retained interface witnesses: GREEN throughout (in every
+  full-target build).
+- FOR THE LANDING AUDIT (standing items restated): the W2.5 [AGENT]
+  invariant-design adjudication ([USER] review item); the U3.0d
+  design deltas vs Amendment 1; the 0087b48a cherry-pick lineage.
+  NEW from this session: the Term aboveLast family bound
+  (i - offset < 2^63, labeled) and the quiesced-family label on the
+  raftLog tier (both precondition-family scopes, flagged above).
+
+- **Wave-boundary FULL proofs build (box lock claimed + released):
+  EXIT=0, 543 jobs, wall 5 s (warm tree — the modules were built by
+  the per-slice target builds), peak RSS 2.2 GB**
+  (artifacts/w3/frem-full-build.log/.time). Hatch grep over the
+  three new modules: 0 live sorry/native_decide/partial.

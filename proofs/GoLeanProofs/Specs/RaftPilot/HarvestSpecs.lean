@@ -428,6 +428,201 @@ theorem raft_hardState_callSpecR (dty rldty : Option Ty)
 
 end HardState
 
+/-! ## `raft.MustSync` (census rawnode.go:191) — the nonzero-entries
+member (the harvest's common case: entries appended → sync owed).
+The subject is the three-way OR `entsnum ≠ 0 || vote changed || term
+changed`; this member covers the first disjunct's short-circuit —
+NOTHING beyond the two HardState pointers is read (the scalar cells
+ride fully free). The vote/term-comparison arms are
+consumer-demand/parked (log record). -/
+
+section MustSync
+
+/-- The `st` HardState cell (Term → 33, Vote → 35, Commit free). -/
+def msyncHS1 (h1dty : Option Ty) (cm1 : GoValue) : HeapCell :=
+  { declaredTy := h1dty
+    value := .struct ⟨"raftpb.HardState"⟩
+      #[("Term", .addr (Loc.base ⟨33⟩)), ("Vote", .addr (Loc.base ⟨35⟩)),
+        ("Commit", cm1)] }
+
+/-- The `prevst` HardState cell (Term → 34, Vote → 36). -/
+def msyncHS2 (h2dty : Option Ty) (cm2 : GoValue) : HeapCell :=
+  { declaredTy := h2dty
+    value := .struct ⟨"raftpb.HardState"⟩
+      #[("Term", .addr (Loc.base ⟨34⟩)), ("Vote", .addr (Loc.base ⟨36⟩)),
+        ("Commit", cm2)] }
+
+/-- The MustSync footprint family (31/32 = the two HardState cells,
+33-36 = their scalar targets — FREE cells for this member). -/
+def msyncFam (h1dty h2dty : Option Ty) (cm1 cm2 : GoValue)
+    (c33 c34 c35 c36 : HeapCell) : ExecState :=
+  { wBase with
+      heap := [(Loc.base ⟨31⟩, msyncHS1 h1dty cm1),
+       (Loc.base ⟨32⟩, msyncHS2 h2dty cm2),
+       (Loc.base ⟨33⟩, c33), (Loc.base ⟨34⟩, c34),
+       (Loc.base ⟨35⟩, c35), (Loc.base ⟨36⟩, c36)]
+      nextAddr := 37 }
+
+def MSyncPre (h1dty h2dty : Option Ty) (cm1 cm2 : GoValue)
+    (c33 c34 c35 c36 : HeapCell) (σm : ExecState) : Prop :=
+  σm = msyncFam h1dty h2dty cm1 cm2 c33 c34 c35 c36
+
+private def msyncEnv : LocalEnv :=
+  [[("$c1813", Loc.base ⟨41⟩)],
+   [("$res0", Loc.base ⟨40⟩), ("entsnum", Loc.base ⟨39⟩),
+    ("prevst", Loc.base ⟨38⟩), ("st", Loc.base ⟨37⟩)]]
+
+private def msyncVoteArm : Stmt :=
+  .block #[] #[
+    .seqn #[.initialization ⟨"$c1811", .int .uint64⟩,
+      .call #[.var "$c1811"] ⟨"raftpb.HardState.GetVote"⟩
+        #[.var "st"]],
+    .seqn #[.initialization ⟨"$c1812", .int .uint64⟩,
+      .call #[.var "$c1812"] ⟨"raftpb.HardState.GetVote"⟩
+        #[.var "prevst"]],
+    .seqn #[.assign (.var "$c1813")
+      (.neqCmp (.int .uint64) (.var "$c1811") (.var "$c1812"))]]
+
+private def msyncTermArm : Stmt :=
+  .block #[] #[
+    .seqn #[.initialization ⟨"$c1814", .int .uint64⟩,
+      .call #[.var "$c1814"] ⟨"raftpb.HardState.GetTerm"⟩
+        #[.var "st"]],
+    .seqn #[.initialization ⟨"$c1815", .int .uint64⟩,
+      .call #[.var "$c1815"] ⟨"raftpb.HardState.GetTerm"⟩
+        #[.var "prevst"]],
+    .seqn #[.assign (.var "$c1816")
+      (.neqCmp (.int .uint64) (.var "$c1814") (.var "$c1815"))]]
+
+private def msyncTail : List Stmt :=
+  [.seqn #[.initialization ⟨"$c1816", Ty.bool⟩,
+     .assign (.var "$c1816") (.var "$c1813")],
+   .ifThenElse (.not (.var "$c1816")) msyncTermArm (.seqn #[]),
+   .seqn #[.assign (.var "$res0") (.var "$c1816"), .returnStmt]]
+
+private def msyncFrame (plans : List (TargetShape × List Expr))
+    (env : LocalEnv) (k : Cont) : Cont :=
+  .frame plans env [Loc.base ⟨40⟩] [] k false
+
+private def msyncIn (h1dty h2dty : Option Ty) (cm1 cm2 : GoValue)
+    (c33 c34 c35 c36 : HeapCell) (env2 : GoValue) (r0 c1813 : GoValue)
+    (extra : Heap) (na : Nat) : ExecState :=
+  { wBase with
+      heap := [(Loc.base ⟨31⟩, msyncHS1 h1dty cm1),
+       (Loc.base ⟨32⟩, msyncHS2 h2dty cm2),
+       (Loc.base ⟨33⟩, c33), (Loc.base ⟨34⟩, c34),
+       (Loc.base ⟨35⟩, c35), (Loc.base ⟨36⟩, c36),
+       (Loc.base ⟨37⟩,
+        { declaredTy := some (Ty.pointer (Ty.defined ⟨"raftpb.HardState"⟩))
+          value := .addr (Loc.base ⟨31⟩) }),
+       (Loc.base ⟨38⟩,
+        { declaredTy := some (Ty.pointer (Ty.defined ⟨"raftpb.HardState"⟩))
+          value := .addr (Loc.base ⟨32⟩) }),
+       (Loc.base ⟨39⟩,
+        { declaredTy := some (Ty.int .int), value := env2 }),
+       (Loc.base ⟨40⟩,
+        { declaredTy := some Ty.bool, value := r0 }),
+       (Loc.base ⟨41⟩,
+        { declaredTy := some Ty.bool, value := c1813 })]
+        ++ extra
+      nextAddr := na }
+
+/-- Window 1 (24 steps): entry, the `entsnum ≠ 0` comparison and its
+negation, to the first branch boundary (the stuck two-scalar
+`Int`-beq riding). -/
+private theorem msync_w1 (h1dty h2dty : Option Ty) (cm1 cm2 : GoValue)
+    (c33 c34 c35 c36 : HeapCell) (en : Int)
+    (plans : List (TargetShape × List Expr)) (env : LocalEnv)
+    (k : Cont) (ch : Choices) :
+    stepFnIter 24
+      (msyncFam h1dty h2dty cm1 cm2 c33 c34 c35 c36)
+      (.retV (.int en .int)
+        (.callArgsK ⟨"raft.MustSync"⟩ plans
+          [.addr (Loc.base ⟨31⟩), .addr (Loc.base ⟨32⟩)] [] env k)) ch
+      = .ok (.retV
+          (.bool (!(!(IntKind.normalize .int en == 0))))
+          (.ifK msyncVoteArm (.seqn #[]) msyncEnv
+            (.seq msyncTail msyncEnv (msyncFrame plans env k))),
+        msyncIn h1dty h2dty cm1 cm2 c33 c34 c35 c36
+          (.int (IntKind.normalize .int en) .int) (.bool false)
+          (.bool (!(IntKind.normalize .int en == 0))) [] 42,
+        ch) := by
+  kernel_rfl
+
+/-- Window 2 (35 steps, from the crossed FALSE branch at the pinned
+TRUE `$c1813`): the `$c1816` copy, the second negation (false — the
+term arm skipped), the result store, return arrival. -/
+private theorem msync_w2 (h1dty h2dty : Option Ty) (cm1 cm2 : GoValue)
+    (c33 c34 c35 c36 : HeapCell) (env2 : GoValue)
+    (plans : List (TargetShape × List Expr)) (env : LocalEnv)
+    (k : Cont) (ch : Choices) :
+    stepFnIter 35
+      (msyncIn h1dty h2dty cm1 cm2 c33 c34 c35 c36 env2 (.bool false)
+        (.bool true) [] 42)
+      (.exec (.seqn #[]) msyncEnv
+        (.seq msyncTail msyncEnv (msyncFrame plans env k))) ch
+      = .ok (.returning (msyncFrame plans env k),
+        msyncIn h1dty h2dty cm1 cm2 c33 c34 c35 c36 env2 (.bool true)
+          (.bool true)
+          [(Loc.base ⟨42⟩,
+            { declaredTy := some Ty.bool, value := .bool true })] 43,
+        ch) := by
+  kernel_rfl
+
+/-- **THE `raft.MustSync` CallSpecR, nonzero-entries member**
+(`entsnum ≠ 0` — the short-circuit disjunct): returns `true` with
+NOTHING read beyond the two receiver pointers (every HardState
+scalar cell rides free); footprint unchanged. The harvest's
+"entries appended → sync owed" fact (U3.2c's drain vocabulary). -/
+theorem raft_MustSync_nonzeroEnts_callSpecR (h1dty h2dty : Option Ty)
+    (cm1 cm2 : GoValue) (c33 c34 c35 c36 : HeapCell) (en : Int)
+    (hen0 : 0 ≤ en) (hen63 : en < 9223372036854775808)
+    (hne : en ≠ 0) :
+    CallSpecR
+      (MSyncPre h1dty h2dty cm1 cm2 c33 c34 c35 c36)
+      ⟨"raft.MustSync"⟩
+      [.addr (Loc.base ⟨31⟩), .addr (Loc.base ⟨32⟩)] (.int en .int)
+      (fun σ' vs =>
+        vs = [.bool true] ∧
+        Heap.lookup σ'.heap (Loc.base ⟨31⟩)
+          = some (msyncHS1 h1dty cm1) ∧
+        Heap.lookup σ'.heap (Loc.base ⟨32⟩)
+          = some (msyncHS2 h2dty cm2)) := by
+  intro σ hP plans env k ch
+  have hEn : IntKind.normalize .int en = en :=
+    normalize_int_eq (by omega) hen63
+  have hBeq : (en == 0) = false := beq_eq_false_iff_ne.mpr hne
+  have h1 := msync_w1 h1dty h2dty cm1 cm2 c33 c34 c35 c36 en
+    plans env k ch
+  rw [hEn, hBeq] at h1
+  have hx : stepFn
+      (msyncIn h1dty h2dty cm1 cm2 c33 c34 c35 c36
+        (.int en .int) (.bool false) (.bool true) [] 42)
+      (.retV (.bool (!(!false)))
+        (.ifK msyncVoteArm (.seqn #[]) msyncEnv
+          (.seq msyncTail msyncEnv (msyncFrame plans env k)))) ch
+      = .ok (.exec (.seqn #[]) msyncEnv
+          (.seq msyncTail msyncEnv (msyncFrame plans env k)),
+        msyncIn h1dty h2dty cm1 cm2 c33 c34 c35 c36
+          (.int en .int) (.bool false) (.bool true) [] 42,
+        ch) :=
+    stepFn_ifK_false rfl
+  have h2 := msync_w2 h1dty h2dty cm1 cm2 c33 c34 c35 c36
+    (.int en .int) plans env k ch
+  refine ⟨24 + (1 + 35),
+    msyncIn h1dty h2dty cm1 cm2 c33 c34 c35 c36 (.int en .int)
+      (.bool true) (.bool true)
+      [(Loc.base ⟨42⟩,
+        { declaredTy := some Ty.bool, value := .bool true })] 43,
+    [Loc.base ⟨40⟩], [.bool true], ch, ?_, ?_, ⟨rfl, rfl, ?_⟩,
+    List.suffix_refl ch⟩
+  · rw [hP]
+    exact stepFnIter_chain h1 (stepFnIter_chain (stepFnIter_one hx) h2)
+  · rfl
+  · rfl
+
+end MustSync
+
 /-- Non-vacuity of the raft-cell carrier (the ∃-discharge, concrete
 values in every free slot). -/
 theorem rnPre_inhabited :
