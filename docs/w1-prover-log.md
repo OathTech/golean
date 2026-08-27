@@ -178,3 +178,39 @@ window-link generator at the compliant layout; the plug rule.
   the design note: the footprint frame = FrameSim (state half) +
   plug rule (control half); canonical specs dodge plug via open-tail
   windows; framed CONSUMPTION at a foreign call site does not.
+
+## W2 charter proposal ([AGENT] draft for the operator; plan §W2 +
+this unit's findings folded in)
+
+QUANTIFIER LINE: W2 discharges ∀-iterations (the loop-rule family
+over the judgment) and the library-internal mapIter latitude ∀-draw
+(multiset invariants — iterate-then-canonicalize), and establishes
+`I₀` (the init spec). Its own end-theorem quantifier count is zero;
+it is rule work plus one ∃-shaped init instance.
+
+Units, in order:
+1. **THE PLUG RULE, pulled forward** (W1's summit finding — it gates
+   ALL framed consumption in W3, so it should land before W3
+   estimates are priced): tenv/tail replacement below the barrier
+   frame commutes with successful spans; one `stepFn` arm walk
+   (StepSim-scale, 795-line cost datum) + the panic-walk helper
+   commutations; interface = the unchanged judgment (a `CallSpec`
+   proved at canonical placement becomes consumable at any framed
+   site together with `stepFnIter_sim` + reader congruence).
+2. The map-range loop rule with MULTISET invariants over the
+   judgment (the choice-site ∀-draw discharge; `sliceWalk_loop` and
+   `MapLoops` are the landed shapes to lift).
+3. The plain-`for` head schema (harvest arc4d `CondFor`).
+4. **THE INIT SPEC**: `$pkginit` + setup as ordinary `StmtSpec`s
+   establishing `I₀`, over RunGlue's unfolding equations — kills the
+   81k-step replay obligation. Its loops go through unit 2/3 rules.
+5. Professor delta 5: pick-loop element-type generalization +
+   `mapIter_no_stop_of_unmutated`.
+6. **Fixture re-layout + TRACKED generator** (the W1 finding +
+   registry Finding #3): regenerate the window-literal generator as
+   a tracked tool, at the transport-compliant layout (global cells
+   at their true static addresses); re-lay becomeFollower's fixture
+   as the pilot so W3's handlers inherit the compliant pattern.
+Inputs to W2.5 (recorded, not W2 work): footprint-carrier
+postconditions (Leg B finding 3) belong to the invariant `I`'s
+design.
