@@ -63,6 +63,106 @@ judgment calls, derivation-anchored numbers.
 - Cold build of the fresh worktree: GREEN, 508 jobs
   (artifacts/w1/cold-build.log, EXIT=0; capped 96G, threads 8,
   box lock held).
+- [AGENT] Statement-count discipline, interpreted and flagged for
+  the audit: the charter bans subject-run-anchored statements from
+  being "cited by — or composed into — a proof". The pilot's
+  EXPORTED deliverables are count-free judgment instances
+  (`becomeFollower_callSpec` etc. — ∃n, reader vocabulary, no
+  measured lengths); the count-bearing composition lemmas
+  (`bf_full_span`, the `uW*` window links) are PRIVATE (or
+  Pilot-scaffolding-labeled) proof-body content consumed only inside
+  the specs' own proofs — the reading under which the plan's own
+  "the arc4d span walks become the specs' proof bodies under the
+  driver" is executable at all. If the audit reads the ban more
+  strictly, the fix is mechanical (inline the private lemmas), not
+  structural. Flagged, not silently absorbed.
+- [AGENT] The judgment's ∀ch forced STREAM-TOTAL crossings: the
+  machine's `consume` pads with 0 WITHOUT popping on the empty
+  stream, so the arc4d pick lemmas (cons-shaped streams) were
+  generalized to the uniform `headD 0`/`tail` form
+  (`consume_eq : consume ch b = (ch.headD 0 % max 1 b, ch.tail)`) —
+  one lemma, no case split anywhere downstream; the span's residue
+  is `ch.tail⁴` at every stream length. What this taught us: the
+  demonic-∀ch judgment is strictly stronger than the trajectory
+  era's prefix-quantified forms, and the machine's exhaustion
+  convention makes it almost free.
+- [AGENT] Leg B scoping (boundary discipline): every real
+  becomeFollower caller is Step-scale (raft.go:1146/1303/1707…),
+  i.e., its own W3 production span; a same-session real-caller
+  composition would have required a fresh fixture-generation round.
+  Leg B therefore demonstrates the CALL-RULE mechanics at a real
+  lowered call-statement shape with passive arguments and records
+  the frame half as the measured summit finding rather than forcing
+  it. The three findings in `Pilot/CallSiteComposition.lean`'s
+  honest-scope block are the leg's real output.
+
+## THE THREE-LEGGED PILOT GATE — measurements (derivation-anchored)
+
+- **Leg A (becomeFollower's CallSpec, end-to-end)**: DONE.
+  Exported: `becomeFollower_callSpec` (∀-state over `BfPre`,
+  ∀ env k, ∀ ch, ∃n; pre/post via `absRaftNode`), `bfPre_reader`,
+  `bfPre_inhabited`. Cost: NEW content = SpecJudgment 291 lines +
+  ReflectConc 174 + capstone 262 + SymBase 96 (≈820 lines new);
+  HARVESTED+transformed scaffolding = BfLit 7,890 + BfFixture 382 +
+  BfSteps 318 + BfSteps2 390 + BfSortStep 109 (≈9,090 lines, arc4d
+  provenance, open-tail + stream-total transformations applied).
+  Wall (lake env lean / build, capped, warm imports): BfFixture's 7
+  open-tail window link theorems 88 s (the kernel-dominated step —
+  incl. the 2,316-step window at OPEN tenv/k); BfLit ≈2 s; steps
+  modules ≈1 s each; capstone ≈10 s; whole pilot chain cold
+  ≈105 s. The open-tail cost is INDISTINGUISHABLE from the closed
+  arc4d links (same 88 s-class wall) — parametricity is free.
+- **Leg B (two-function composition via the call rule)**: DONE at
+  the scoped shape (see the [AGENT] scoping call): 140 lines, 0.8 s
+  wall; `becomeFollower_call_stmtSpec` = caller StmtSpec containing
+  the whole callee span via `stmtSpec_call`. The FRAME half of the
+  planned leg is NOT demonstrated — refuted-as-planned with the
+  measured redesign (below).
+- **Leg C (the glue family)**: DONE and pinned. RunGlue 494 lines,
+  18 pins; runProgramM_mono / readout_of_total / classify_of_total,
+  runConfig_prefix_classify, unfolding equations, loadMany lemmas.
+  Wall: seconds (within the 48G-capped incremental builds).
+- Audit pins total (Audit/W1.lean): 39 `#guard_msgs` pins, in-build.
+
+## THE FOOTPRINT-DESIGN VERDICT (the starred summit): ADJUSTED,
+with one refuted-as-planned half and a measured redesign
+
+- WORKED: footprint-as-canonical-γ-image (`BfPre`), disjointness
+  carried once by the image (no pairwise enumerations anywhere in
+  the pilot); reader congruence under FrameSim
+  (`absRaftNode_frameSim`) — the Spec-transport half; open-tail
+  windows deliver the judgment's ∀ env k at canonical placement
+  for free (the plug rule NOT needed there).
+- REFUTED-AS-PLANNED: framed CONSUMPTION at a foreign call site via
+  FrameSim alone — the caller's env/k live exactly in the frame
+  region, outside every admissible ρ's image (three dead ends
+  measured by derivation: identity-ρ vs `fr_avoid`; aligned-prefix
+  layouts; `bodies_inv` forcing identity on the 31 twin globals,
+  which also disqualifies the arc4d fixture layout for transport).
+- THE REDESIGN (gates W3): the frame = FrameSim (state half, landed)
+  + THE PLUG RULE (control half: tenv/tail replacement below the
+  barrier frame commutes with successful spans — wp_bind as a
+  theorem). Cost datum: the analogous landed arm walk
+  (`Frame/StepSim.lean`) is 795 lines; the barrier is syntactically
+  recognizable (the unique frame directly over `.stop`), so no
+  reachability invariant is needed. Additionally W3's fixtures must
+  be laid out with global cells at their true static addresses
+  (regeneration; the probe generators are untracked — registry
+  Finding #3 bites here).
+
+## What the driver actually needed vs the Lithium plan
+
+The honest minimum sufficed — no Lithium, no tactic framework:
+(1) open-tail window facts (`rfl`/kernel_rfl at open tenv/k);
+(2) the stream-total crossing lemmas (consume_eq + the landed
+`stepFn_pick_transport`); (3) `stepFnIter_chain` composition;
+(4) the reflection retraction (`reflectK_conc`) to hand the
+judgment arbitrary machine continuations; (5) `CallSpec.consume` /
+`stmtSpec_call` at the sites. The only automation-shaped pain was
+simp-normalization drift (`headD` vs `head?.getD`, matcher
+mismatches in `runProgramSetupM`'s do-joins) — lemma-level fixes,
+not framework demand. Recorded promotion candidates for W3: a
+window-link generator at the compliant layout; the plug rule.
 - [AGENT] FRAME-DESIGN DEAD ENDS, measured by hand-derivation
   before any build (recorded because they shape §3 of the design
   note): (i) identity-placement FrameSim is impossible with a
