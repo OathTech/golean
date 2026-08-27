@@ -214,3 +214,25 @@ Units, in order:
 Inputs to W2.5 (recorded, not W2 work): footprint-carrier
 postconditions (Leg B finding 3) belong to the invariant `I`'s
 design.
+
+## Gate record (branch-complete)
+
+- **`GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=96G scripts/ci` → RESULT:
+  PASS** (artifacts/w1/gate2.log, GATE_EXIT=0; box-wide build lock
+  held throughout; no differential owed — this unit touched no
+  runtime code, proofs/docs only; the no-diff hatch printed its
+  visible notes, per the fresh-worktree provision).
+- One earlier gate FAIL (artifacts/w1/gate.log) was the
+  import-direction lint correctly catching the pilot modules
+  (target-layer content) living outside `Specs/` — fixed by moving
+  `GoLeanProofs/Pilot/` → `GoLeanProofs/Specs/RaftPilot/` (the
+  lint's own prescribed fix), full rebuild green (518 jobs).
+- Landmark note printed: comparator landmark OWED (scope) — the one
+  trusted-closure file changed is `proofs/Audit.lean` (the
+  `import Audit.W1` line). The `scripts/comparator-judge` run is the
+  OPERATOR'S at the merge ceremony, per the standing protocol (same
+  posture as W0's record).
+- [AGENT] Build lock RELEASED at unit end (owner file updated).
+
+Branch-complete. Nothing merged; the merge ceremony (gate + judge +
+audit-ask) is the operator's.
