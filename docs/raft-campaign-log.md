@@ -2515,3 +2515,17 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   immediately on the `campaign` branch (statement work is
   supervised-class — it stays on-branch, merge-gated, so supervision
   is preserved by the merge gate itself).
+
+### 2026-08-27 — W2.5 drafted; the [USER] design gate is POSED
+
+`docs/2026-08-27_w25-invariant-design.md` committed on the campaign
+branch: I = Base ∧ Pair ∧ Hygiene ∧ Stream ∧ (Electing ∨ Elected),
+five clauses mapped 1:1 onto W2's skeleton, the professor's Gap 1
+(NetCorr, four sub-clauses each with its named consumer) and Gap 3
+(phase split, CheckerCorr event histories, pairing-as-relation +
+shell-sync) folded in with a traceability section. Three open points
+put to the [USER]: certified's instantiation (ghost-acks recommended),
+the reader-extension shape (separate lens readers recommended), and
+the T1-fragment scoping of the payload clause. [AGENT]: the run STOPS
+here per the goal's named-checkpoint rule — W3 charters do not go out
+until the [USER] rules on this note.
