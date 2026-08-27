@@ -2990,3 +2990,12 @@ list exactly (not like-for-like with the 56 anchors, by [USER]
 decision 3 — recorded). Branch ff-mergeable at main @ 84b5edb3.
 [AGENT] next: the AUDIT-ASK posed to the [USER] (unconditional);
 merge held for at-the-moment sign-off.
+
+### 2026-08-27 — [USER] approved the pre-merge audit as proposed; launched
+
+Three Opus reviewers, one dimension each, on triage-landing @
+b8c14b4c vs main @ 84b5edb3: (1) gate honesty/trust surface (+the
+accumulated flag list), (2) landing claim strength
+(witnesses/labels/pins), (3) semantics (zero-runtime-diff
+verification + deletion spot-check). Findings fix on-branch →
+re-gate → merge held for separate [USER] sign-off.
