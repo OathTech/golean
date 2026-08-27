@@ -2960,3 +2960,33 @@ own non-vacuity rule); decision-2 rider: Invariant.lean is
 ARCHIVED per the [USER]-approved recommendation → executor
 verifies its importer set before deletion and drops its F-6 pin
 candidate. Execution dispatched on w1-prover.
+
+### 2026-08-27 — TRIAGE EXECUTED: triage-landing @ b8c14b4c, gate PASS, judge PASS
+
+Nine slices, each buildable (captured exit codes); witnesses landed
+BEFORE deletions (no witness-less state ever existed); A1-A8 all
+discharged with two honest corrections recorded (int_ofNat_not_neg
+had in-module consumers — A5's premise wrong for that name;
+loadLoc_base gained a live consumer instead of a scaffold label).
+STOP items: none. Deleted: 23 files ≈29.5k Lean lines (the CallSpec
+era; archived at refs/archive/callspec-era) + Invariant.lean
+(decision 2; importer-grep pre-verified) + main-side
+Relocate/ChoiceInv. Landed: +7,651 Lean (witnesses, MapPerm+new
+MapPermRead split — ci's import-direction lint forced the plan's
+recorded L-3 smell fix — readers, glue, kit, pins) + 4,521 docs.
+545→523 jobs. TRUST-ADJACENT (own commit): fork/join
+reclassification 56→51 designated, Challenge/Solution/judge-config
+in lockstep; caught hazard — a "[USER]" comment in the designated
+list truncated the judge wrapper's sed parser; fixed + verified
+against the parser's own extraction. Gate: first run FAIL exit 1
+(the MapPerm lint, the plan's own smell) → fixed → PASS exit 0
+(~5 min warm); [AGENT] GOLEAN_ALLOW_NO_DIFF=1 per the documented
+fresh-worktree hatch (zero runtime files touched — verified empty
+diff), visible notes printed, flagged. Judge: fail-closed on
+absent deps/comparator → offline sibling bootstrap (pins
+re-verified by the wrapper) → PASS exit 0, 51 theorems certified
+in 122s @ c2e1824d fresh clone; 51 = the post-reclassification
+list exactly (not like-for-like with the 56 anchors, by [USER]
+decision 3 — recorded). Branch ff-mergeable at main @ 84b5edb3.
+[AGENT] next: the AUDIT-ASK posed to the [USER] (unconditional);
+merge held for at-the-moment sign-off.
