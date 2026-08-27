@@ -255,6 +255,27 @@ carriers), clause list:
    per-round suffix accounting (the shape `mapPickLoop_generic`
    already realizes for pick loops).
 
+## Gate record (branch-complete)
+
+- **`GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=64G scripts/ci` → RESULT:
+  PASS** (artifacts/w2/ci-gate.log, GATE_EXIT=0; box-wide build lock
+  held for the run and RELEASED after; 64G cap chosen because an
+  unrelated project's build shared the box — the parallel-lane cap
+  discipline). No differential owed: this unit touched no runtime
+  code (proofs/docs/inert tools only); the no-diff hatch printed its
+  two visible notes, per the fresh-worktree provision.
+- Landmark note printed: **comparator landmark OWED (scope)** — the
+  one trusted-closure file changed is `proofs/Audit.lean` (the
+  `import Audit.W2` line). The `scripts/comparator-judge` run is the
+  OPERATOR'S at the merge ceremony — the same posture as W1's record,
+  and the lane already owed a judge run at its merge.
+- Final hatch grep over every W2 file: 0 live
+  sorry/native_decide/new-axiom occurrences.
+- [AGENT] Build lock RELEASED at unit end (owner file updated).
+
+Branch-complete. Nothing merged; the merge ceremony (gate + judge +
+audit-ask) is the operator's.
+
 ## Judgment calls and checkpoints
 
 - [AGENT] Log-file choice: new `docs/w2-prover-log.md` (this file),
