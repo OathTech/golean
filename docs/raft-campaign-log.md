@@ -2916,3 +2916,23 @@ G-AUTO probe ≈ 6-10 sessions before leaf work. CORPUS: 15 pattern
 classes, seeds cover ~5, ≈10-14 new small programs; each
 structural unit gates on its corpus program. §8 ambiguity list =
 the [USER] decision set. NO EXECUTION.
+
+### 2026-08-27 — [USER] SIGN-OFF: triage package approved; execution begins
+
+[USER]: "Yes, agree on all this. Go ahead." The approved package =
+the triage plan (design-pass @ e0d83868) + the five coordinator
+recommendations: (1) ZERO CallSpec witness survivors; (2)
+Invariant.lean ARCHIVED not landed (readers + design note + census
+land; re-derive under the [USER]-gated G-INV amendment at the raft
+corpus member); (3) Surface FnSpec family stays designated,
+fork/join rows reclassify to non-designated witnesses; (4) W2Gate
+demo gap accepted until G-BIND; LangC/D by the planner's consumer
+evidence; (5) full ceremony with a pre-execution ADVERSARIAL KILL
+CHECK (import-graph + zero-consumer claims re-verified). Approved
+as a PACKAGE (no cherry-picking between lists). Execution
+mechanics [AGENT]: archive ref archive/callspec-era at w1-prover
+@ 20cda772 BEFORE any deletion; triage executes on the w1-prover
+branch (contains main's content + all W1-W3); ceremony = gate →
+comparator-judge (owed 3×) → audit-ask with the accumulated flag
+list → PAUSE for at-the-moment [USER] merge sign-off per protocol
+(this sign-off authorizes triage execution, NOT the merge).
