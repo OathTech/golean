@@ -134,6 +134,54 @@ from 71b1561f.
   elaboration ≈ 3-4 min per iteration at 48G/4 threads; final full
   build of the five modules + pins green.
 
+## UNIT 4 + THE GATE: LANDED (measurements, derivation-anchored)
+
+- **The tracked generator** (`tools/relayout/CBfLitGen.lean`, inert —
+  run on demand via `lake env lean` from `proofs/`): the recovered
+  arc4d printer (git `0fd62435^:tools/campaign/BfLitGen.lean`,
+  fail-closed) + one W2 extension (`pKopen`: the barrier frame
+  printed with OPEN `tenv`/`k` — the continuation-parametric emission
+  W1 applied by hand). Emits `CBfLit.lean` (507,729 chars, tracked)
+  as the `Reloc` image of the tracked W1 literals. Provenance chain:
+  BfLit (tracked) → Reloc (tracked semantics module) → generator
+  (tracked) → CBfLit (tracked), re-checked in-build by CBfFixture's
+  kernel links. The F6 rule closed structurally — no untracked link
+  anywhere.
+- **Relocation-as-definition REJECTED on measurement**: defining the
+  compliant chain as `relocS`/`relocC` applications made the kernel
+  re-reduce the relocation inside every window check (>10 min,
+  killed); ground literals restore the original wall. Recorded in
+  CBfFixture's docstring so nobody re-simplifies the generator away.
+- **The compliant chain verifies**: `CBfFixture` window links
+  (kernel `rfl`, open caller context) GREEN in 88 s — same wall
+  class as the original layout; the machine is address-uniform on
+  this span, as predicted. Crossing modules (CBfSteps/2/SortStep,
+  address-shifted mirrors reusing all shared machinery by import)
+  ≈1 s each; the compliant capstone `cBecomeFollower_callSpec` 9.5 s.
+- **THE GATE — Leg-B-as-intended, PASSED, measured 38 s wall
+  (whole `W2Gate` module)**: `w2_gate` — the VERBATIM
+  `raft.stepCandidate` MsgApp-case call statement (extracted from the
+  pinned wire; args `#[.var "r", .var "$c1567", .var "$c1568"]`), at
+  a framed caller state σFG (the compliant footprint under
+  `ρT 52 4` + the caller's locals in the frame gap `[52,56)`, the
+  receiver cell pointing INTO the footprint — exactly the cells W1
+  proved no admissible ρ could cover), over the REAL continuation
+  (the site's next statement, the `handleAppendEntries` call, over
+  the caller's own frame), at EVERY choice stream: the span completes
+  to `.next kG` at the same fuel/stream discipline and the framed
+  terminal state reads back `specBecomeFollower` through
+  `absRaftNode`. Composition exactly as the design said: callee
+  CallSpec (state ∀, canonical anchor) + FrameSim state half
+  (`frameSimG`; `bodies_inv` discharged by `renameBodies_id` + ONE
+  kernel fold `funcListSup twinLowered.funcs = 31`) +
+  `stepFnIter_plug`/`callSpan_plug` control half + reader
+  congruence. Honest scope note in the module: σFG is a CONSTRUCTED
+  precondition instance (the ∃-discharge class), not a
+  driver-reachable state — reachable states are the init-spec/W3
+  chain's product.
+- Audit pins (`Audit/W2.lean`): cBecomeFollower_callSpec /
+  cBfPre_inhabited / frameSimG / w2_gate, exact axiom sets in-build.
+
 ## Judgment calls and checkpoints
 
 - [AGENT] Log-file choice: new `docs/w2-prover-log.md` (this file),
