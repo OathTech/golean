@@ -2886,3 +2886,33 @@ the re-ascent). Sequencing of record: triage plan ([USER] sign-off)
 → landing ceremony for LAND items → forward plan: Iris-layer build
 ladder + corpus design ([USER] sign-off) → small-case exercise
 gates → raft re-ascent.
+
+### 2026-08-27 — TRIAGE PLAN delivered (design-pass @ e0d83868); awaiting [USER] sign-off
+
+docs/2026-08-27_triage-plan.md. Headline (source-verified): main
+ALREADY IS the architecture of record — tier 2 (Machine.Step, 155
+ctors) has TOTAL two-way pinned correspondence to stepFn and ZERO
+sequential construct gaps vs the raft census; tier 3 is genuine
+iris-lean with the designated FnSpec family proved over real raft
+quorum functions. The W3 CallSpec calculus was a FOURTH parallel
+track beside this stack. KILL ≈28.4k lines (78% of the wave):
+SpecJudgment + all 6 member files (~30 members — cancelled form AND
+fixture-anchored with literal addresses), the pilot/W2Gate chain,
+the 18.3k Bf/CBf fixture mass, Reloc.symPlugK (hazard verified),
+main's Frame/Relocate + Frame/ChoiceInv (zero-consumer); P-1
+correction: DriverNet invariants NOT killable (kept-lemma params).
+LAND ≈7.7k Lean + 3.2k docs, every item with a named tier-3
+consumer (plug→G-BIND — plugK is literally the missing fill;
+RunGlue/InitSpec→G-EXIT; MapPerm→G-MAPITER; readers→G-REPR;
+invariant minus the two clauses; kit; pins). WITNESSES: ZERO
+CallSpec members survive (each need met judgment-free; ~1,571
+dead lines avoided; flagged for [USER]). PARK: channel-logic
+(HIGH salvage risk, 841 commits stale), arc4d (checker unit),
+ce/SpanIso; wp-design closes by landing its doc; 8 worktrees
+prunable. GAP: tier 2 raft-ready; tier 3 blocked behind FIVE
+structural units (G-REPR whole-cell heap = the big one; G-BIND;
+G-CALLS; G-MAPITER; G-EXIT) + G-STMTS/G-INV ([USER] acts) +
+G-AUTO probe ≈ 6-10 sessions before leaf work. CORPUS: 15 pattern
+classes, seeds cover ~5, ≈10-14 new small programs; each
+structural unit gates on its corpus program. §8 ambiguity list =
+the [USER] decision set. NO EXECUTION.
