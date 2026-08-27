@@ -1519,6 +1519,501 @@ theorem unstable_maybeTerm_inRange_callSpecR (dty : Option Ty)
 
 end MaybeTerm
 
+/-! ## `raft.MemoryStorage.{firstIndex,lastIndex}` — the storage
+read half's lock-free leaves (census: storage.go)
+
+The canonical MemoryStorage family: the ms cell at `.base ⟨31⟩`
+(field census from the wire's typeDef; the embedded Mutex pinned
+UNLOCKED — zero value), backing array at 32, entry cell at 33
+(`Index` pointer → 34), the index target at 34, a free spare cell at
+35 (the Term target of the later `Term` member — kept in the former
+so all storage members share one layout). `firstIndex` reads
+`ents[0]` — the kit's literal-index/symbolic-length consumer;
+`lastIndex` adds the length crossing. -/
+
+section MemStorage
+
+open GoLean.Surface
+
+def msCellV (hsv snv csv : GoValue) (so ln sc : Nat) : GoValue :=
+  .struct ⟨"raft.MemoryStorage"⟩
+    #[("Mutex", .syncData (.mutex false)),
+      ("hardState", hsv), ("snapshot", snv),
+      ("ents", .slice ⟨some (Loc.base ⟨32⟩), so, ln, sc⟩),
+      ("callStats", csv)]
+
+/-- The entry cell for the storage members (`Index` pinned to the
+canonical target cell 34; `Term` and the rest free). -/
+def msEntryCell (edty : Option Ty) (tmv typv dvv : GoValue) :
+    HeapCell :=
+  { declaredTy := edty
+    value := .struct ⟨"raftpb.Entry"⟩
+      #[("Term", tmv), ("Index", .addr (Loc.base ⟨34⟩)),
+        ("Type", typv), ("Data", dvv)] }
+
+def msFam (dty : Option Ty) (so ln sc : Nat) (hsv snv csv : GoValue)
+    (c32 c33 c34 c35 : HeapCell) : ExecState :=
+  { wBase with
+      heap := [(Loc.base ⟨31⟩,
+        { declaredTy := dty, value := msCellV hsv snv csv so ln sc }),
+       (Loc.base ⟨32⟩, c32), (Loc.base ⟨33⟩, c33),
+       (Loc.base ⟨34⟩, c34), (Loc.base ⟨35⟩, c35)]
+      nextAddr := 36 }
+
+def MSPre (dty : Option Ty) (so ln sc : Nat) (hsv snv csv : GoValue)
+    (c32 c33 c34 c35 : HeapCell) (σm : ExecState) : Prop :=
+  σm = msFam dty so ln sc hsv snv csv c32 c33 c34 c35
+
+/-- The receiver value: `&ms` at the canonical anchor. -/
+def msArgV : GoValue := .addr (Loc.base ⟨31⟩)
+
+private def msEnvFI : LocalEnv :=
+  [[("$c1961", Loc.base ⟨38⟩)],
+   [("$res0", Loc.base ⟨37⟩), ("ms", Loc.base ⟨36⟩)]]
+
+private def msKfr1 (plans : List (TargetShape × List Expr))
+    (env : LocalEnv) (k : Cont) : Cont :=
+  .frame plans env [Loc.base ⟨37⟩] [] k false
+
+private def msFIKget (plans : List (TargetShape × List Expr))
+    (env : LocalEnv) (k : Cont) : Cont :=
+  .callArgsK ⟨"raftpb.Entry.GetIndex"⟩
+    [(.chain [], [.ref "$c1961"])] [] [] msEnvFI
+    (.seq [.seqn #[
+        .assign (.var "$res0")
+          (.add (.var "$c1961") (.intLit 1 .uint64)),
+        .returnStmt]]
+      msEnvFI (msKfr1 plans env k))
+
+/-- The in-span state former for `firstIndex` (frame cells 36-38 +
+the GetIndex frame extras). -/
+private def msFamFI (dty : Option Ty) (so ln sc : Nat)
+    (hsv snv csv : GoValue) (c32 c33 c34 c35 : HeapCell)
+    (r0 c1961 : GoValue) (extra : Heap) (na : Nat) : ExecState :=
+  { wBase with
+      heap := [(Loc.base ⟨31⟩,
+        { declaredTy := dty, value := msCellV hsv snv csv so ln sc }),
+       (Loc.base ⟨32⟩, c32), (Loc.base ⟨33⟩, c33),
+       (Loc.base ⟨34⟩, c34), (Loc.base ⟨35⟩, c35),
+       (Loc.base ⟨36⟩,
+        { declaredTy := some (Ty.pointer (Ty.defined ⟨"raft.MemoryStorage"⟩))
+          value := msArgV }),
+       (Loc.base ⟨37⟩,
+        { declaredTy := some (Ty.int .uint64), value := r0 }),
+       (Loc.base ⟨38⟩,
+        { declaredTy := some (Ty.int .uint64), value := c1961 })]
+        ++ extra
+      nextAddr := na }
+
+/-- Window 1 (16 steps): frame entry, the ents read, up to the
+`ents[0]` boundary. -/
+private theorem msFI_w1 (dty : Option Ty) (so kn sc : Nat)
+    (hsv snv csv : GoValue) (c32 c33 c34 c35 : HeapCell)
+    (plans : List (TargetShape × List Expr)) (env : LocalEnv)
+    (k : Cont) (ch : Choices) :
+    stepFnIter 16
+      (msFam dty so (kn+1) sc hsv snv csv c32 c33 c34 c35)
+      (.retV msArgV
+        (.callArgsK ⟨"raft.MemoryStorage.firstIndex"⟩ plans [] [] env k))
+      ch
+      = .ok (.retV (.int 0 .int)
+          (.strictK .indexGet
+            [.slice ⟨some (Loc.base ⟨32⟩), so, kn+1, sc⟩] [] msEnvFI
+            (msFIKget plans env k)),
+        msFamFI dty so (kn+1) sc hsv snv csv c32 c33 c34 c35
+          (.int 0 .uint64) (.int 0 .uint64) [] 39,
+        ch) := by
+  kernel_rfl
+
+/-- Window 2 (68 steps, from the crossed index read): the `GetIndex`
+call on the pinned entry cell (nil checks reduce, Index deref),
+`+ 1`, result store, return arrival. -/
+private theorem msFI_w2 (dty : Option Ty) (so kn sc : Nat) (iv : Int)
+    (hsv snv csv : GoValue) (c32 : HeapCell) (edty idty : Option Ty)
+    (tmv typv dvv : GoValue) (c35 : HeapCell)
+    (plans : List (TargetShape × List Expr)) (env : LocalEnv)
+    (k : Cont) (ch : Choices) :
+    stepFnIter 68
+      (msFamFI dty so (kn+1) sc hsv snv csv c32
+        (msEntryCell edty tmv typv dvv)
+        { declaredTy := idty, value := .int iv .uint64 } c35
+        (.int 0 .uint64) (.int 0 .uint64) [] 39)
+      (.retV (.addr (Loc.base ⟨33⟩)) (msFIKget plans env k)) ch
+      = .ok (.returning (msKfr1 plans env k),
+        msFamFI dty so (kn+1) sc hsv snv csv c32
+          (msEntryCell edty tmv typv dvv)
+          { declaredTy := idty, value := .int iv .uint64 } c35
+          (.int (IntKind.normalize .uint64
+            (IntKind.normalize .uint64
+              (IntKind.normalize .uint64 (IntKind.normalize .uint64 iv)
+                + 1))) .uint64)
+          (.int (IntKind.normalize .uint64 (IntKind.normalize .uint64 iv))
+            .uint64)
+          [(Loc.base ⟨39⟩,
+            { declaredTy := some (Ty.pointer (Ty.defined ⟨"raftpb.Entry"⟩))
+              value := .addr (Loc.base ⟨33⟩) }),
+           (Loc.base ⟨40⟩,
+            { declaredTy := some (Ty.int .uint64)
+              value := .int (IntKind.normalize .uint64 iv) .uint64 })]
+          41,
+        ch) := by
+  kernel_rfl
+
+/-- **THE `MemoryStorage.firstIndex` CallSpecR** (the internal
+lock-free read): at a live `ents` of length `kn+1` whose first live
+slot holds the pinned entry, the call returns `ents[0].Index + 1` —
+the subject's exact result — with the footprint unchanged. The
+`ents[0]` read is the kit's literal-index/symbolic-length crossing;
+the read outcome (`hget`) and the ranges are reader-vocabulary
+facts. -/
+theorem memoryStorage_firstIndex_callSpecR (dty : Option Ty)
+    (so kn sc : Nat) (iv : Int) (adty edty idty : Option Ty)
+    (values : Array GoValue) (tmv typv dvv hsv snv csv : GoValue)
+    (c35 : HeapCell)
+    (hsc : kn + 1 ≤ sc)
+    (hget : values[so]? = some (.addr (Loc.base ⟨33⟩)))
+    (hiv0 : 0 ≤ iv) (hiv64 : iv + 1 < 18446744073709551616) :
+    CallSpecR
+      (MSPre dty so (kn+1) sc hsv snv csv
+        { declaredTy := adty, value := .array values }
+        (msEntryCell edty tmv typv dvv)
+        { declaredTy := idty, value := .int iv .uint64 } c35)
+      ⟨"raft.MemoryStorage.firstIndex"⟩ [] msArgV
+      (fun σ' vs =>
+        vs = [.int (iv + 1) .uint64] ∧
+        Heap.lookup σ'.heap (Loc.base ⟨31⟩)
+          = some { declaredTy := dty
+                   value := msCellV hsv snv csv so (kn+1) sc }) := by
+  intro σ hP plans env k ch
+  have hIv : IntKind.normalize .uint64 iv = iv :=
+    normalize_uint64_eq hiv0 (by omega)
+  have hIv1 : IntKind.normalize .uint64 (iv + 1) = iv + 1 :=
+    normalize_uint64_eq (by omega) hiv64
+  have h1 := msFI_w1 dty so kn sc hsv snv csv
+    { declaredTy := adty, value := .array values }
+    (msEntryCell edty tmv typv dvv)
+    { declaredTy := idty, value := .int iv .uint64 } c35 plans env k ch
+  have hload : loadLoc
+      (msFamFI dty so (kn+1) sc hsv snv csv
+        { declaredTy := adty, value := .array values }
+        (msEntryCell edty tmv typv dvv)
+        { declaredTy := idty, value := .int iv .uint64 } c35
+        (.int 0 .uint64) (.int 0 .uint64) [] 39)
+      (Loc.base ⟨32⟩) = .ok (.array values) := rfl
+  have hx : stepFn
+      (msFamFI dty so (kn+1) sc hsv snv csv
+        { declaredTy := adty, value := .array values }
+        (msEntryCell edty tmv typv dvv)
+        { declaredTy := idty, value := .int iv .uint64 } c35
+        (.int 0 .uint64) (.int 0 .uint64) [] 39)
+      (.retV (.int 0 .int)
+        (.strictK .indexGet
+          [.slice ⟨some (Loc.base ⟨32⟩), so, kn+1, sc⟩] [] msEnvFI
+          (msFIKget plans env k))) ch
+      = .ok (.retV (.addr (Loc.base ⟨33⟩)) (msFIKget plans env k),
+        msFamFI dty so (kn+1) sc hsv snv csv
+          { declaredTy := adty, value := .array values }
+          (msEntryCell edty tmv typv dvv)
+          { declaredTy := idty, value := .int iv .uint64 } c35
+          (.int 0 .uint64) (.int 0 .uint64) [] 39,
+        ch) :=
+    stepFn_strict_apply
+      (applyStrict_indexGet_slice (j := 0) hsc (Nat.succ_pos kn) hload
+        hget)
+  have h2 := msFI_w2 dty so kn sc iv hsv snv csv
+    { declaredTy := adty, value := .array values } edty idty tmv typv
+    dvv c35 plans env k ch
+  rw [hIv, hIv, hIv1, hIv1] at h2
+  refine ⟨16 + (1 + 68),
+    msFamFI dty so (kn+1) sc hsv snv csv
+      { declaredTy := adty, value := .array values }
+      (msEntryCell edty tmv typv dvv)
+      { declaredTy := idty, value := .int iv .uint64 } c35
+      (.int (iv + 1) .uint64) (.int iv .uint64)
+      [(Loc.base ⟨39⟩,
+        { declaredTy := some (Ty.pointer (Ty.defined ⟨"raftpb.Entry"⟩))
+          value := .addr (Loc.base ⟨33⟩) }),
+       (Loc.base ⟨40⟩,
+        { declaredTy := some (Ty.int .uint64)
+          value := .int iv .uint64 })] 41,
+    [Loc.base ⟨37⟩], [.int (iv + 1) .uint64], ch, ?_, ?_, ⟨rfl, ?_⟩,
+    List.suffix_refl ch⟩
+  · rw [hP]
+    exact stepFnIter_chain h1 (stepFnIter_chain (stepFnIter_one hx) h2)
+  · rfl
+  · rfl
+
+/-! ### `raft.MemoryStorage.lastIndex` — adds the length crossing -/
+
+private def msEnvLI : LocalEnv :=
+  [[("$c1959", Loc.base ⟨38⟩)],
+   [("$res0", Loc.base ⟨37⟩), ("ms", Loc.base ⟨36⟩)]]
+
+private def msLIAssign : Stmt :=
+  .seqn #[
+    .assign (.var "$res0")
+      (.sub
+        (.add (.var "$c1959")
+          (.convert (.int .uint64)
+            (.length
+              (.fieldGet
+                (.deref (.var "ms") (.defined ⟨"raft.MemoryStorage"⟩))
+                ⟨"raft.MemoryStorage"⟩ "ents")
+              (some (.slice (.pointer (.defined ⟨"raftpb.Entry"⟩)))))))
+        (.intLit 1 .uint64)),
+    .returnStmt]
+
+private def msLIKget (plans : List (TargetShape × List Expr))
+    (env : LocalEnv) (k : Cont) : Cont :=
+  .callArgsK ⟨"raftpb.Entry.GetIndex"⟩
+    [(.chain [], [.ref "$c1959"])] [] [] msEnvLI
+    (.seq [msLIAssign] msEnvLI (msKfr1 plans env k))
+
+/-- The continuation at the length boundary: the arithmetic spine
+above the store. -/
+private def msLIKlen (so ln sc : Nat)
+    (c1959v : GoValue)
+    (plans : List (TargetShape × List Expr)) (env : LocalEnv)
+    (k : Cont) : Cont :=
+  .strictK (.convert (.int .uint64)) [] [] msEnvLI
+    (.strictK .add [c1959v] [] msEnvLI
+      (.strictK .sub [] [.intLit 1 .uint64] msEnvLI
+        (.rhsK .vals [.chain (.addr (Loc.base ⟨37⟩)) [] []] [] []
+          (.seqn #[]) msEnvLI
+          (.seq [.returnStmt] msEnvLI (msKfr1 plans env k)))))
+
+/-- The in-span state former for `lastIndex` (mirrors `msFamFI`; the
+`$c1959` cell at 38). -/
+private def msFamLI (dty : Option Ty) (so ln sc : Nat)
+    (hsv snv csv : GoValue) (c32 c33 c34 c35 : HeapCell)
+    (r0 c1959 : GoValue) (extra : Heap) (na : Nat) : ExecState :=
+  msFamFI dty so ln sc hsv snv csv c32 c33 c34 c35 r0 c1959 extra na
+
+/-- Window 1 (16 steps): entry to the `ents[0]` boundary. -/
+private theorem msLI_w1 (dty : Option Ty) (so kn sc : Nat)
+    (hsv snv csv : GoValue) (c32 c33 c34 c35 : HeapCell)
+    (plans : List (TargetShape × List Expr)) (env : LocalEnv)
+    (k : Cont) (ch : Choices) :
+    stepFnIter 16
+      (msFam dty so (kn+1) sc hsv snv csv c32 c33 c34 c35)
+      (.retV msArgV
+        (.callArgsK ⟨"raft.MemoryStorage.lastIndex"⟩ plans [] [] env k))
+      ch
+      = .ok (.retV (.int 0 .int)
+          (.strictK .indexGet
+            [.slice ⟨some (Loc.base ⟨32⟩), so, kn+1, sc⟩] [] msEnvLI
+            (msLIKget plans env k)),
+        msFamLI dty so (kn+1) sc hsv snv csv c32 c33 c34 c35
+          (.int 0 .uint64) (.int 0 .uint64) [] 39,
+        ch) := by
+  kernel_rfl
+
+/-- Window 2 (67 steps): the `GetIndex` call, the ents re-read, up
+to the length boundary. -/
+private theorem msLI_w2 (dty : Option Ty) (so kn sc : Nat) (iv : Int)
+    (hsv snv csv : GoValue) (c32 : HeapCell) (edty idty : Option Ty)
+    (tmv typv dvv : GoValue) (c35 : HeapCell)
+    (plans : List (TargetShape × List Expr)) (env : LocalEnv)
+    (k : Cont) (ch : Choices) :
+    stepFnIter 67
+      (msFamLI dty so (kn+1) sc hsv snv csv c32
+        (msEntryCell edty tmv typv dvv)
+        { declaredTy := idty, value := .int iv .uint64 } c35
+        (.int 0 .uint64) (.int 0 .uint64) [] 39)
+      (.retV (.addr (Loc.base ⟨33⟩)) (msLIKget plans env k)) ch
+      = .ok (.retV (.slice ⟨some (Loc.base ⟨32⟩), so, kn+1, sc⟩)
+          (.strictK
+            (.lengthOf (some (.slice (.pointer (.defined ⟨"raftpb.Entry"⟩)))))
+            [] [] msEnvLI
+            (msLIKlen so (kn+1) sc
+              (.int (IntKind.normalize .uint64
+                (IntKind.normalize .uint64 iv)) .uint64)
+              plans env k)),
+        msFamLI dty so (kn+1) sc hsv snv csv c32
+          (msEntryCell edty tmv typv dvv)
+          { declaredTy := idty, value := .int iv .uint64 } c35
+          (.int 0 .uint64)
+          (.int (IntKind.normalize .uint64 (IntKind.normalize .uint64 iv))
+            .uint64)
+          [(Loc.base ⟨39⟩,
+            { declaredTy := some (Ty.pointer (Ty.defined ⟨"raftpb.Entry"⟩))
+              value := .addr (Loc.base ⟨33⟩) }),
+           (Loc.base ⟨40⟩,
+            { declaredTy := some (Ty.int .uint64)
+              value := .int (IntKind.normalize .uint64 iv) .uint64 })]
+          41,
+        ch) := by
+  kernel_rfl
+
+/-- Window 3 (12 steps, from the crossed length read): the
+conversion/arithmetic (normalizes riding), the result store, return
+arrival. Stated at the COLLAPSED `$c1959` (the caller rewrites
+before chaining). -/
+private theorem msLI_w3 (dty : Option Ty) (so kn sc : Nat) (iv : Int)
+    (hsv snv csv : GoValue) (c32 : HeapCell) (edty idty : Option Ty)
+    (tmv typv dvv : GoValue) (c35 : HeapCell)
+    (plans : List (TargetShape × List Expr)) (env : LocalEnv)
+    (k : Cont) (ch : Choices) :
+    stepFnIter 12
+      (msFamLI dty so (kn+1) sc hsv snv csv c32
+        (msEntryCell edty tmv typv dvv)
+        { declaredTy := idty, value := .int iv .uint64 } c35
+        (.int 0 .uint64) (.int iv .uint64)
+        [(Loc.base ⟨39⟩,
+          { declaredTy := some (Ty.pointer (Ty.defined ⟨"raftpb.Entry"⟩))
+            value := .addr (Loc.base ⟨33⟩) }),
+         (Loc.base ⟨40⟩,
+          { declaredTy := some (Ty.int .uint64)
+            value := .int iv .uint64 })] 41)
+      (.retV (.int (Int.ofNat (kn+1)) .int)
+        (msLIKlen so (kn+1) sc (.int iv .uint64) plans env k)) ch
+      = .ok (.returning (msKfr1 plans env k),
+        msFamLI dty so (kn+1) sc hsv snv csv c32
+          (msEntryCell edty tmv typv dvv)
+          { declaredTy := idty, value := .int iv .uint64 } c35
+          (.int (IntKind.normalize .uint64
+            (IntKind.normalize .uint64
+              (IntKind.normalize .uint64
+                (iv + IntKind.normalize .uint64 (Int.ofNat (kn+1)))
+                - 1))) .uint64)
+          (.int iv .uint64)
+          [(Loc.base ⟨39⟩,
+            { declaredTy := some (Ty.pointer (Ty.defined ⟨"raftpb.Entry"⟩))
+              value := .addr (Loc.base ⟨33⟩) }),
+           (Loc.base ⟨40⟩,
+            { declaredTy := some (Ty.int .uint64)
+              value := .int iv .uint64 })] 41,
+        ch) := by
+  kernel_rfl
+
+/-- **THE `MemoryStorage.lastIndex` CallSpecR** (the internal
+lock-free read): returns `ents[0].Index + len(ents) - 1` — the
+subject's exact result — with the footprint unchanged. Adds the
+length crossing to the firstIndex pattern. -/
+theorem memoryStorage_lastIndex_callSpecR (dty : Option Ty)
+    (so kn sc : Nat) (iv : Int) (adty edty idty : Option Ty)
+    (values : Array GoValue) (tmv typv dvv hsv snv csv : GoValue)
+    (c35 : HeapCell)
+    (hsc : kn + 1 ≤ sc) (hk : kn + 1 < 9223372036854775808)
+    (hget : values[so]? = some (.addr (Loc.base ⟨33⟩)))
+    (hiv0 : 0 ≤ iv)
+    (hivk : iv + Int.ofNat (kn + 1) < 18446744073709551616) :
+    CallSpecR
+      (MSPre dty so (kn+1) sc hsv snv csv
+        { declaredTy := adty, value := .array values }
+        (msEntryCell edty tmv typv dvv)
+        { declaredTy := idty, value := .int iv .uint64 } c35)
+      ⟨"raft.MemoryStorage.lastIndex"⟩ [] msArgV
+      (fun σ' vs =>
+        vs = [.int (iv + Int.ofNat (kn+1) - 1) .uint64] ∧
+        Heap.lookup σ'.heap (Loc.base ⟨31⟩)
+          = some { declaredTy := dty
+                   value := msCellV hsv snv csv so (kn+1) sc }) := by
+  intro σ hP plans env k ch
+  have hofc := int_ofNat_cast (kn + 1)
+  have hIv : IntKind.normalize .uint64 iv = iv :=
+    normalize_uint64_eq hiv0 (by rw [hofc] at hivk; omega)
+  have hcolU : IntKind.normalize .uint64 (Int.ofNat (kn+1))
+      = Int.ofNat (kn+1) := normalize_uint64_ofNat (by omega)
+  have hA : IntKind.normalize .uint64 (iv + Int.ofNat (kn+1))
+      = iv + Int.ofNat (kn+1) :=
+    normalize_uint64_eq (by rw [hofc]; omega) (by rw [hofc] at hivk ⊢; omega)
+  have hS : IntKind.normalize .uint64 (iv + Int.ofNat (kn+1) - 1)
+      = iv + Int.ofNat (kn+1) - 1 :=
+    normalize_uint64_eq (by rw [hofc]; omega) (by rw [hofc] at hivk ⊢; omega)
+  have h1 := msLI_w1 dty so kn sc hsv snv csv
+    { declaredTy := adty, value := .array values }
+    (msEntryCell edty tmv typv dvv)
+    { declaredTy := idty, value := .int iv .uint64 } c35 plans env k ch
+  have hload : loadLoc
+      (msFamLI dty so (kn+1) sc hsv snv csv
+        { declaredTy := adty, value := .array values }
+        (msEntryCell edty tmv typv dvv)
+        { declaredTy := idty, value := .int iv .uint64 } c35
+        (.int 0 .uint64) (.int 0 .uint64) [] 39)
+      (Loc.base ⟨32⟩) = .ok (.array values) := rfl
+  have hx1 : stepFn
+      (msFamLI dty so (kn+1) sc hsv snv csv
+        { declaredTy := adty, value := .array values }
+        (msEntryCell edty tmv typv dvv)
+        { declaredTy := idty, value := .int iv .uint64 } c35
+        (.int 0 .uint64) (.int 0 .uint64) [] 39)
+      (.retV (.int 0 .int)
+        (.strictK .indexGet
+          [.slice ⟨some (Loc.base ⟨32⟩), so, kn+1, sc⟩] [] msEnvLI
+          (msLIKget plans env k))) ch
+      = .ok (.retV (.addr (Loc.base ⟨33⟩)) (msLIKget plans env k),
+        msFamLI dty so (kn+1) sc hsv snv csv
+          { declaredTy := adty, value := .array values }
+          (msEntryCell edty tmv typv dvv)
+          { declaredTy := idty, value := .int iv .uint64 } c35
+          (.int 0 .uint64) (.int 0 .uint64) [] 39,
+        ch) :=
+    stepFn_strict_apply
+      (applyStrict_indexGet_slice (j := 0) hsc (Nat.succ_pos kn) hload
+        hget)
+  have h2 := msLI_w2 dty so kn sc iv hsv snv csv
+    { declaredTy := adty, value := .array values } edty idty tmv typv
+    dvv c35 plans env k ch
+  rw [hIv, hIv] at h2
+  have hx2 : stepFn
+      (msFamLI dty so (kn+1) sc hsv snv csv
+        { declaredTy := adty, value := .array values }
+        (msEntryCell edty tmv typv dvv)
+        { declaredTy := idty, value := .int iv .uint64 } c35
+        (.int 0 .uint64) (.int iv .uint64)
+        [(Loc.base ⟨39⟩,
+          { declaredTy := some (Ty.pointer (Ty.defined ⟨"raftpb.Entry"⟩))
+            value := .addr (Loc.base ⟨33⟩) }),
+         (Loc.base ⟨40⟩,
+          { declaredTy := some (Ty.int .uint64)
+            value := .int iv .uint64 })] 41)
+      (.retV (.slice ⟨some (Loc.base ⟨32⟩), so, kn+1, sc⟩)
+        (.strictK
+          (.lengthOf (some (.slice (.pointer (.defined ⟨"raftpb.Entry"⟩)))))
+          [] [] msEnvLI
+          (msLIKlen so (kn+1) sc (.int iv .uint64) plans env k))) ch
+      = .ok (.retV (.int (Int.ofNat (kn+1)) .int)
+          (msLIKlen so (kn+1) sc (.int iv .uint64) plans env k),
+        msFamLI dty so (kn+1) sc hsv snv csv
+          { declaredTy := adty, value := .array values }
+          (msEntryCell edty tmv typv dvv)
+          { declaredTy := idty, value := .int iv .uint64 } c35
+          (.int 0 .uint64) (.int iv .uint64)
+          [(Loc.base ⟨39⟩,
+            { declaredTy := some (Ty.pointer (Ty.defined ⟨"raftpb.Entry"⟩))
+              value := .addr (Loc.base ⟨33⟩) }),
+           (Loc.base ⟨40⟩,
+            { declaredTy := some (Ty.int .uint64)
+              value := .int iv .uint64 })] 41,
+        ch) :=
+    stepFn_strict_apply (applyStrict_length_slice hsc)
+  have h3 := msLI_w3 dty so kn sc iv hsv snv csv
+    { declaredTy := adty, value := .array values } edty idty tmv typv
+    dvv c35 plans env k ch
+  rw [hcolU, hA, hS, hS] at h3
+  refine ⟨16 + (1 + (67 + (1 + 12))),
+    msFamLI dty so (kn+1) sc hsv snv csv
+      { declaredTy := adty, value := .array values }
+      (msEntryCell edty tmv typv dvv)
+      { declaredTy := idty, value := .int iv .uint64 } c35
+      (.int (iv + Int.ofNat (kn+1) - 1) .uint64) (.int iv .uint64)
+      [(Loc.base ⟨39⟩,
+        { declaredTy := some (Ty.pointer (Ty.defined ⟨"raftpb.Entry"⟩))
+          value := .addr (Loc.base ⟨33⟩) }),
+       (Loc.base ⟨40⟩,
+        { declaredTy := some (Ty.int .uint64)
+          value := .int iv .uint64 })] 41,
+    [Loc.base ⟨37⟩], [.int (iv + Int.ofNat (kn+1) - 1) .uint64], ch,
+    ?_, ?_, ⟨rfl, ?_⟩, List.suffix_refl ch⟩
+  · rw [hP]
+    exact stepFnIter_chain h1 (stepFnIter_chain (stepFnIter_one hx1)
+      (stepFnIter_chain h2 (stepFnIter_chain (stepFnIter_one hx2) h3)))
+  · rfl
+  · rfl
+
+end MemStorage
+
 /-- Non-vacuity of the footprint carrier (the ∃-discharge, concrete
 values in every free slot). -/
 theorem uFIPre_inhabited :
