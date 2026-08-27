@@ -143,3 +143,146 @@ after each unit)
   EXIT=0, 43 jobs, module 0.5 s (u30b-build.log).
 - Quantifier line: vocabulary only; advances no quantifier (module
   docstring).
+
+- [AGENT] U3.0c structural call — THE HOISTED CARRIER PACK: the
+  note's `CheckerCorr ⊆ Pair`/`NetCorr ⊆ Pair` and the phase split
+  all speak about the same ∃-witnesses (the ghost-completed net, the
+  two event histories); a literal per-clause ∃ would let each clause
+  pick a DIFFERENT carrier. `AbsCarrier` (N, evsS1, evsA) is one
+  pack shared by Pair/CheckerCorr/NetCorr/phase inside `I.pair` —
+  the one departure from the note's surface syntax, semantic intent
+  preserved (arguably repaired).
+- [AGENT] U3.0c trace strengthening — `ClaimTraceTo` (endpoint-named
+  observation trace): the landed `ClaimTrace` truncates anywhere,
+  which the leaf tolerates but PRESERVATION cannot (extending the
+  trace at a new claim needs the frontier tied to the current
+  carrier). `ClaimTraceTo` adds the endpoint; `toClaimTrace` forgets
+  it (sanity lemma), so every landed consumer is served. C3(a) is
+  stated at the strengthened form.
+- [AGENT] U3.0c faithfulness inventory (clause → note): Base=C1
+  (statics/logger/lift-definedness incl. the new readers' via
+  Base.leaderOfRead…netMetaRead); Pair=C2 (∃-placement `NodePlaced`
+  with FrameSim placement data + carrier-side deep-reader agreement
+  `s1Agrees` on state/term/vote/lead — COMMIT OUTSIDE, per the
+  stutter-provability flag; `shellSync` on state/term; SNet Reach
+  carrier + Seed); CheckerCorr=C3 (a=trace, b=leaderOf/claims
+  equations, c=byIndex/cursors/got, e=violations equation — the
+  "+0" reading: every non-model guard silence is the equation's
+  preservation obligation, named per the T1-V census; d lives in
+  ElectedAt.appliedLogs); NetCorr=C4 population/entryTypes/hgen
+  (phase-shared) + ElectedNet payload/ack (Elected-scoped — in
+  Electing they are vacuous BY POPULATION restriction, not stub);
+  Hygiene=C5 context half (mapIterFree + recoverThroughWrappers =
+  none); Stream=C5 stream half as the state-level suffix clause
+  (ch <:+ ch₀ — the per-round suffix accounting; span-level
+  ∀ch/draw discipline lives in the specs, not the state); phase
+  split per the note (Electing: victories=[], evsS1=[], evsA=[],
+  net vote-family {Vote,VoteResp}; Elected: ghost victory on record
+  + H-carrier HistInv/Star HStep with `certified :=
+  ackCertified voters ghost tm` VERBATIM + log/commit bridges +
+  deep commit/applied ties + C3(d) + ElectedNet).
+- [AGENT] U3.0c additions beyond the note's letter (each cheap,
+  recorded): Pair.count/Pair.ids (concrete node list ↔ voter set —
+  the configuration-shape facts quorum instantiation needs);
+  NetCorr.metaLen (positional alignment of the metadata reader with
+  tv.net, carried as a clause instead of a lemma against
+  absTwinRead's private walk); ElectedAt.deepCommit (the deep
+  reader's commit/applied axes tied to the H-carrier — the
+  "per-carrier field selection" the note's C2 describes, read
+  directly on σ, coinciding with the carrier read by
+  absRaftNode_frameSim).
+- [AGENT] U3.0c population reading: general population lists the
+  note's five types incl. Prop(local); Electing restricts to
+  {Vote, VoteResp} (the note's "vote-family only", read strictly).
+  The harvest folds only rd.Messages into the net, so MsgProp
+  should never appear — W3.1's emission census may tighten the
+  general clause to the four wire types; recorded, not silently
+  tightened.
+
+## U3.0c — THE INVARIANT MODULE: LANDED
+
+- File: `Specs/RaftPilot/Invariant.lean` (new; registered in
+  `proofs/GoLeanProofs.lean`), namespace `GoLean.RaftSeam.Inv`.
+- Key definitions: `I` (Base ∧ Pair(+CheckerCorr+NetCorr) ∧ Hygiene
+  ∧ Stream ∧ (Electing ∨ ∃ ldr tm H₀ NH, ElectedAt)); `AbsCarrier`;
+  `Base`; `s1Agrees`/`NodePlaced`/`shellSync`/`Pair`;
+  `ClaimTraceTo`; `lookupI`/`LeaderOfCorr`/`ByIndexCorr`/`GotCorr`/
+  `CheckerCorr`; `NetCorr`; `Electing`; `hlogBridge`/`ElectedNet`/
+  `ElectedAt`; `Hygiene`; constants msgProp/msgApp/msgAppResp/
+  msgVote/msgVoteResp/entryNormalTy (raftpb-cited); `asNat` (the
+  precise Int↔Nat bridge — no `Int.toNat` negative-collapse).
+- Sanity lemmas (definitions-plus-cheap-lemmas charter): `I.twinRead`
+  (definedness projection), `I.abs_oneLeaderPerTerm` (the S1 chain
+  plugs into the carrier — etcd_discharges + native chain),
+  `ClaimTraceTo.toClaimTrace`/`ClaimTraceTo.reach`,
+  `CheckerCorr.claimTrace`, `claims_zero_of_electing`,
+  `violations_zero_of_electing` (the fold equations have
+  computational teeth), `ElectedAt.victory_recorded`,
+  `ElectedAt.histInv_end` (histInv_reachable surfaced).
+- NO preservation, NO establishment (later waves', by charter). NO
+  `True` stubs (grep clean); every not-yet-supplied piece is a NAMED
+  parameter (below).
+- Hatch grep over all W3-touched files: 0 sorry/native_decide/
+  partial.
+- Builds: module elaboration EXIT=0, zero warnings
+  (artifacts/w3/u30c-check.log); target build EXIT=0, 59 jobs,
+  module 0.8 s (u30c-build.log); **wave-boundary FULL proofs build
+  (lock held + released): EXIT=0, 537 jobs, wall 5.09 s (warm tree —
+  only the roots rebuilt), peak RSS 2.2 GB**
+  (u30c-full-build.log/.time). No differential owed (proofs/docs
+  only); a full scripts/ci gate is not required at this wave
+  boundary per the wave charter.
+
+## THE JOINTS LEFT FOR LATER WAVES (the named-parameter ledger)
+
+1. `dataEnc : List Int → Nat → Prop` — the data-encoding relation
+   (concrete command bytes ↔ abstract data ids; the arc4d encGS
+   seam). `I` is parameterized by it; W3.2d (checker reshape)
+   supplies the concrete instance.
+2. `tl : Loc` (the twin location) and `N₀ : SNet` (the abstract
+   seed) — `I`'s parameters; W3.2f (init stage B / establishment)
+   supplies the concrete values and proves `I` at the loop head
+   (the base case). `I` has NO inhabitation witness until then —
+   charter-sanctioned, restated in the module docstring.
+3. `certified`'s premises: the Elected carrier uses
+   `ackCertified voters ghost tm` verbatim (U3.0a); W3.2b discharges
+   `leaderCommitOk` from the ghost acks at the commit-advance.
+4. `H₀`/the phase transition: W3.2a's winning-MsgVoteResp spec
+   establishes ElectedAt (H₀ from the noop-first-propose; (ldr,tm)
+   fixed by the population clause, per the note).
+5. Guard silences: CheckerCorr.violations equates the concrete
+   counter with the MODEL folds' sum; each non-model guard's
+   silence (S3 anomaly, harness guards at twin-lib 236/245/254/262/
+   455/472/489) is a W3 handler-spec conclusion per the T1-V census
+   — the equation is their consumption site.
+6. NOT COVERED by `I`, recorded: twin.committed (the harness's
+   non-empty-apply counter) has no correspondence clause — the note
+   names none and no consumer exists yet; S4/complete() is an
+   END-of-run check, outside the loop invariant by design (W4's
+   post-loop obligation, not `I`'s).
+
+## WAVE 3.0 CHECKPOINT (branch-complete for the wave)
+
+- Units: U3.0a LANDED (b3a21913), U3.0b LANDED (040b7164),
+  U3.0c LANDED (this commit). Sequential, one writer, one commit
+  per unit.
+- The two retained interface witnesses: GREEN throughout (re-run at
+  U3.0a; in every subsequent full-target build).
+- Nothing trust-adjacent touched: no Audit/*, no scripts/*, no
+  GoCore, no baselines; `proofs/GoLeanProofs.lean` gained two
+  imports (proof-layer aggregation, not trusted closure).
+- FOR THE LANDING AUDIT (restated): the W2.5 [AGENT] adjudication
+  that adopted the invariant design is a mandatory [USER] review
+  item; this wave BUILT AGAINST that adopted contract.
+- Wave 3.1 handler-census inputs discovered here: (a) MsgProp
+  never enters the net via harvest (rd.Messages only) — the
+  population clause can likely tighten to four wire types; (b) the
+  emission-census conclusions each handler owes are exactly
+  NetCorr's four clauses at the U3.0b/U3.0c vocabulary (the
+  entryTypes clause needs emitted-entry typing, i.e. appendEntry/
+  bcastAppend specs must conclude EntryNormal typing through
+  absNetMeta); (c) shell-sync (state/term) means every harvest
+  handler spec owes the shell-update ↔ deep-reader agreement at
+  its Ready processing; (d) the cursors equation keys the s23 fold
+  at node id = list index + 1 — the apply-loop spec should conclude
+  exactly that keying.

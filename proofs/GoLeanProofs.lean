@@ -175,6 +175,10 @@ import GoLeanProofs.Specs.RaftPilot.CBfSortStep
 import GoLeanProofs.Specs.RaftPilot.CBecomeFollowerSpec
 import GoLeanProofs.Specs.RaftPilot.W2Gate
 import GoLeanProofs.Specs.RaftPilot.InitSpec
+-- W3 U3.0c: THE INVARIANT MODULE — `I` per the adopted W2.5 design
+-- (definitions + sanity lemmas; preservation/establishment are the
+-- later waves').
+import GoLeanProofs.Specs.RaftPilot.Invariant
 import GoLeanProofs.Sym.KernelRfl
 import GoLeanProofs.StepKit
 import GoLeanProofs.Examples.FibProgram
