@@ -1,7 +1,6 @@
 import GoLeanProofs.CondFor
 import GoLeanProofs.MapLoops
 import GoLeanProofs.Frame.PlugRule
-import GoLeanProofs.Specs.RaftPilot.W2Gate
 import GoLeanProofs.Specs.RaftPilot.InitSpec
 
 /-!
@@ -45,21 +44,12 @@ instantiation died with the CallSpec calculus). -/
 /-- info: 'GoLean.Frame.callSpan_plug' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Frame.callSpan_plug
 
-/-! ## The compliant pilot + THE W2 GATE (unit 4 + the Leg-B-full
-measurement): the re-laid becomeFollower CallSpec and its consumption
-at the real stepCandidate site with state framing. -/
-
-/-- info: 'GoLean.RaftSeam.cBecomeFollower_callSpec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.RaftSeam.cBecomeFollower_callSpec
-
-/-- info: 'GoLean.RaftSeam.cBfPre_inhabited' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.RaftSeam.cBfPre_inhabited
-
-/-- info: 'GoLean.RaftSeam.frameSimG' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.RaftSeam.frameSimG
-
-/-- info: 'GoLean.RaftSeam.w2_gate' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.RaftSeam.w2_gate
+/-! ## (Triage landing 2026-08-27, plan L-10/K-1c): the compliant-pilot
++ W2-gate pins (`cBecomeFollower_callSpec`/`cBfPre_inhabited`/
+`frameSimG`/`w2_gate`) were PRUNED in the same commit that deleted
+their subjects with the CallSpec calculus (archived at
+`archive/callspec-era`); the plug family's live instantiation is now
+`Frame/PlugWitness.lean` (pins: `Audit/Landing.lean`). -/
 
 /-! ## The loop-family additions (unit 2 / professor delta 5): the
 element-type-generic pick loop keeps its Kit pin

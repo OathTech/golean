@@ -6,8 +6,9 @@ predicates (W2 unit 1; design note `docs/2026-08-27_w1-judgment-design.md` §7)
 
 `plugK env' k'` replaces the below-barrier context of a continuation:
 at THE BARRIER — the unique frame whose tail slot is literally
-`.stop`, in the resultless non-wrapper shape the `CallSpec` judgment
-anchors at — it substitutes the caller-env slot and the tail; at a
+`.stop`, in the resultless non-wrapper shape a freshly entered
+callee frame has at the canonical (empty) caller context — it
+substitutes the caller-env slot and the tail; at a
 bare `.stop` (reached only outside the barrier's protection: the exit
 configuration `.next .stop` and the panic-crossed
 `.panicking chain .stop`) it substitutes the tail alone. Everywhere
@@ -37,8 +38,8 @@ namespace GoLean.Frame
 open GoLean GoLean.GoCore GoLean.GoCore.Machine
 
 /-- The below-barrier replacement. The FIRST arm is the barrier (the
-resultless, non-wrapper frame directly over `.stop` — the `CallSpec`
-anchor shape); the `.stop` arm fires only outside the barrier's
+resultless, non-wrapper frame directly over `.stop` — the canonical
+callee-entry shape); the `.stop` arm fires only outside the barrier's
 protection (exit / panic-crossed configurations). Everything else is
 the spine functor. -/
 def plugK (env' : LocalEnv) (k' : Cont) : Cont → Cont

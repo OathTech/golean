@@ -25,12 +25,16 @@ Everything here is UNTRUSTED METHOD (proof-side; StepKit's banner
 applies): no name below may appear in a headline statement closure.
 Every lemma is over an ABSTRACT `σ : ExecState` (StepKit rules 1–5).
 
-Non-vacuity (≥2 genuinely different consumers, in-unit):
-`unstable_maybeLastIndex_nonempty_callSpecR` (normalize collapse +
-the length crossing), `unstable_maybeTerm_*` (the symbolic two-scalar
-comparison + the in-range entry read), `MemoryStorage.firstIndex`'s
-member (the symbolic-length index read) —
-`Specs/RaftPilot/LogReadSpecs.lean`.
+CONSUME-ON-DEMAND KIT (triage landing, 2026-08-27): the original
+three consumers (`LogReadSpecs` CallSpec members) died with the
+CallSpec calculus; their discharges are archived at
+`archive/callspec-era`. Live non-vacuity: the judgment-free
+mini-witnesses in `Sym/CrossingWitness.lean`
+(`crossing_witness_lenNeg`/`_ifSplit`/`_read` — real kernel-span
+derivations over abstract states consuming the normalize collapse,
+the validateSlice crossing, the ifK split, and the symbolic reads).
+The kit's forward consumers are the tier-1/tier-2 correspondence
+and ∃-side discharge work of the tier-3 build (the G-units).
 -/
 
 open GoLean.GoCore GoLean.GoCore.Machine
@@ -79,7 +83,9 @@ theorem normalize_uint64_eq {v : Int}
 needs when the machine's terms carry the constructor spelling). -/
 theorem int_ofNat_cast (n : Nat) : Int.ofNat n = (n : Int) := rfl
 
-/-- An embedded `Nat` is never negative (constructor spelling). -/
+/-- An embedded `Nat` is never negative (constructor spelling).
+In-module consumers: `applyStrict_indexGet_slice`'s range-check
+crossings. -/
 theorem int_ofNat_not_neg (n : Nat) : ¬ (Int.ofNat n < 0) := by
   rw [int_ofNat_cast]; omega
 
@@ -182,7 +188,13 @@ theorem applyStrict_indexGet_slice {σ : ExecState} {sb : Loc}
 
 /-- The pointer dereference on a symbolic location: the
 `applyStrictOp` fact for the deref crossing (the read's outcome
-carried by the family). -/
+carried by the family).
+
+**SCAFFOLD (triage landing, 2026-08-27):** zero consumers to date
+(the killed members never reached a deref crossing). Resume
+condition: consumed at the G-REPR/G-CALLS units (the deref step of
+any pointer-shaped representation read); delete if those units'
+designs supersede it. -/
 theorem applyStrict_deref {σ : ExecState} {ty : Ty} {loc : Loc}
     {v : GoValue} (hload : loadLoc σ loc = .ok v) :
     applyStrictOp σ (.deref ty) [.addr loc] = .ok (v, σ) := by
@@ -191,7 +203,8 @@ theorem applyStrict_deref {σ : ExecState} {ty : Ty} {loc : Loc}
   rw [h1, hload]
   rfl
 
-/-- `loadLoc` at a base address, from the heap fact. -/
+/-- `loadLoc` at a base address, from the heap fact. Consumer:
+`crossing_witness_read` (`Sym/CrossingWitness.lean`). -/
 theorem loadLoc_base {σ : ExecState} {a : Addr} {cell : HeapCell}
     (h : Heap.lookup σ.heap (.base a) = some cell) :
     loadLoc σ (.base a) = .ok cell.value := by

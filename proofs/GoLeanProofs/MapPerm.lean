@@ -41,15 +41,19 @@ leaves that never re-converge. This module is the family carrier:
 
 Everything here is UNTRUSTED METHOD (proof-side; StepKit's banner
 applies): no name below may appear in a headline statement closure.
-No judgment form is added or changed (`SpecJudgment.lean` untouched —
-the w3-m serialization rule): the family rides inside the P/Q of the
-landed CallSpec forms.
 
-Non-vacuity (≥2 genuinely different consumers): the confchange-chain
-collect/rebuild class (order ∀-in/∃-out — layers 2+3) and the
-readback quotient-crossing class (the U3.2f Base-clause vocabulary —
-layer 1); see the design note §Non-vacuity and the w3-m member
-modules.
+Triage landing (2026-08-27): the CallSpec judgment family this
+carrier originally threaded through was [USER]-cancelled and deleted
+(archived at `archive/callspec-era`); the carrier itself is
+judgment-free and lands as the soundness content of the tier-3
+map-range law unit (G-MAPITER — key+value, mutation-tolerant,
+demonic-order `wp_map_iter` with a Perm-of-draws readback).
+
+Non-vacuity: layer 1's readback quotient-crossing class is consumed
+in-module by the salvaged order-insensitive readback family
+(`idsFam_population`/`idsFam_lookup_agree`/`idsFam_sorted_collapse`,
+end of file); layer 3's discharge status is SCAFFOLD — see
+`mapPickLoop_perm`'s label.
 -/
 
 namespace GoLean.MapPerm
@@ -752,14 +756,13 @@ theorem mapAssignValue_toEntriesV {σ : ExecState} {a : Addr}
 
 /-! ## Layer 3 — the composition rule -/
 
-/-- A raw tape pop's remainder is a suffix (private mirror of the
-judgment layer's `Choices.consume_suffix` — kept local so the kit
-stays below `SpecJudgment`; [AGENT] finding, recorded in the w3-m
-log: the landed `mapPickLoop_generic` does not EXPOSE the tape-suffix
-discipline the CallSpec judgment requires, so the Perm sibling below
-carries its own induction with the suffix conclusion — a
-promotion-ledger candidate to fold back into `MapLoops` when a second
-suffix-needing loop consumer bites). -/
+/-- A raw tape pop's remainder is a suffix (kept local — the killed
+judgment layer carried a `Choices.consume_suffix` twin, archived at
+`archive/callspec-era`; [AGENT] finding, recorded in the w3-m log:
+the landed `mapPickLoop_generic` does not EXPOSE the tape-suffix
+discipline, so the Perm sibling below carries its own induction with
+the suffix conclusion — a promotion-ledger candidate to fold back
+into `MapLoops` when a second suffix-needing loop consumer bites). -/
 private theorem consume_suffix' (ch : Choices) (bound : Nat) :
     (Choices.consume ch bound).2 <:+ ch := by
   cases ch with
@@ -777,7 +780,23 @@ indirection cancels — design note §carrier); the machine-level heap
 rides inside `δ`. Same induction as the landed W2
 `mapPickLoop_generic` (one consumed choice + one erased candidate per
 iteration), extended by the Perm-conservation and tape-suffix
-conclusions. -/
+conclusions.
+
+**SCAFFOLD (triage landing, 2026-08-27 — labeled per the witness
+ruling, plan §1.4):** this rule's sole discharge instance
+(`jointConfigIDs_callSpecR`) died with the CallSpec member corpus; a
+live discharge witness is OWED AT THE G-MAPITER UNIT (the tier-3
+map-range law this rule's Perm algebra feeds — the mini-IDs corpus
+program is its named gate instance). The prior discharge is archived
+at `archive/callspec-era` (`MapOrderSpecs.lean:864`,
+`jointConfigIDs_callSpecR` — the full-permutation-family member over
+the real `quorum.JointConfig.IDs`). Retirement condition: the
+G-MAPITER witness lands, or the unit's design supersedes this rule.
+(`mapPickLoop_generic`'s own live consumers are unaffected:
+`Examples/Histogram/HarnessR.lean` and
+`Examples/WordCount/RangeGeneric.lean:481` — the latter is the real
+second consumer; `Examples/WordFreq/Count.lean` is a re-derivation,
+not a consumer.) -/
 theorem mapPickLoop_perm {α β δ : Type}
     (T : δ → ExecState) (cfg : δ → List α → Config)
     (exitCfg : Config) (Q : δ → List α → Prop)
@@ -843,5 +862,81 @@ theorem mapPickLoop_perm {α β δ : Type}
           have h := (perm_cons_eraseIdx hp).map g
           simpa using h
         simpa using hmapperm.symm
+
+/-! ## The salvaged order-insensitive READBACK consumers (moved from
+the killed `Specs/RaftPilot/MapOrderSpecs.lean` at the triage
+landing, 2026-08-27 — the judgment-free ~100-line salvage of plan
+L-3; the quotient-crossing consumer class of layer 1, in the
+Base-clause reader vocabulary). -/
+
+/-- The `struct{}{}` value (the machine's struct-lit at the empty
+struct type — probe-confirmed shape). -/
+def unitV : GoValue := .struct ⟨"struct{}"⟩ #[]
+
+/-- An id list as a `map[uint64]struct{}` association list (the (M)
+family's canonical spelling: the ORDER of `ids` is the family
+parameter). -/
+def idKV (ids : List Int) : List (Int × GoValue) :=
+  ids.map (fun i => (i, unitV))
+
+theorem idKV_keys : ∀ ids : List Int, (idKV ids).map Prod.fst = ids := by
+  intro ids
+  induction ids with
+  | nil => rfl
+  | cons a t ih => simpa [idKV] using ih
+
+theorem idKV_filter (ids done : List Int) :
+    (idKV ids).filter (fun p => !done.contains p.1)
+      = idKV (ids.filter (fun i => !done.contains i)) := by
+  simp [idKV, List.filter_map]
+  rfl
+
+/-- **The population readback** (the `Pair.progress`-clause shape —
+"tracker population = the voter set", here at the built IDs map):
+ACROSS THE WHOLE FAMILY, membership in the built map's key column is
+membership in `ids`, and lookup is DEFINED at exactly the voter ids —
+order-insensitively (any family member gives the same answers). -/
+theorem idsFam_population {ids ids' : List Int}
+    (hperm : List.Perm ids' ids) (hnd : ids.Nodup) :
+    ((idKV ids').map Prod.fst = ids'
+      ∧ ∀ i, i ∈ ids' ↔ i ∈ ids)
+    ∧ ∀ v ∈ ids, lookupP (idKV ids') v = some unitV := by
+  refine ⟨⟨idKV_keys ids', fun i => hperm.mem_iff⟩, ?_⟩
+  intro v hv
+  have hnd' : NodupKeys (idKV ids') := by
+    show ((idKV ids').map Prod.fst).Nodup
+    rw [idKV_keys]
+    exact (hperm.nodup_iff).mpr hnd
+  exact lookupP_eq_some_of_mem hnd'
+    (List.mem_map.mpr ⟨v, hperm.mem_iff.mpr hv, rfl⟩)
+
+/-- **The lookup-agreement readback**: any two members of the same
+(M) family answer every lookup identically — the quotient-crossing
+lemma consumed at a member's decode (what makes every
+`lookupI`-vocabulary invariant clause order-insensitive). -/
+theorem idsFam_lookup_agree {ids l₁ l₂ : List Int}
+    (h₁ : List.Perm l₁ ids) (h₂ : List.Perm l₂ ids) (hnd : ids.Nodup) :
+    ∀ v, lookupP (idKV l₁) v = lookupP (idKV l₂) v := by
+  intro v
+  have hp : List.Perm (idKV l₁) (idKV l₂) :=
+    (List.Perm.map _ (h₁.trans h₂.symm))
+  have hnd₁ : NodupKeys (idKV l₁) := by
+    show ((idKV l₁).map Prod.fst).Nodup
+    rw [idKV_keys]
+    exact h₁.nodup_iff.mpr hnd
+  exact lookupP_perm hp hnd₁ v
+
+/-- **The sorted-readback consumer** (the `VoterNodes`/`Slice`-class
+converging read): sorting ANY family member's key column yields ONE
+value — the whole permutation family collapses at a `slices.Sort`
+boundary. -/
+theorem idsFam_sorted_collapse {ids l₁ l₂ : List Int}
+    (h₁ : List.Perm l₁ ids) (h₂ : List.Perm l₂ ids)
+    (s₁ s₂ : List Int)
+    (hs₁ : List.Perm s₁ l₁) (hs₂ : List.Perm s₂ l₂)
+    (hsort₁ : s₁.Pairwise (· < ·)) (hsort₂ : s₂.Pairwise (· < ·)) :
+    s₁ = s₂ :=
+  sortedLT_eq_of_perm
+    ((hs₁.trans h₁).trans (h₂.symm.trans hs₂.symm)) hsort₁ hsort₂
 
 end GoLean.MapPerm

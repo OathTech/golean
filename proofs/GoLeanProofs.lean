@@ -155,7 +155,6 @@ import GoLeanProofs.Specs.ImportedGooseRune
 import GoLeanProofs.NegativeSpecs
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.RunGlue
-import GoLeanProofs.SpecJudgment
 import GoLeanProofs.CondFor
 import GoLeanProofs.Frame.Plug
 import GoLeanProofs.Frame.PlugProbe
@@ -165,40 +164,15 @@ import GoLeanProofs.Frame.PlugApply
 import GoLeanProofs.Frame.PlugStep
 import GoLeanProofs.Frame.PlugRule
 import GoLeanProofs.Sym.ReflectConc
-import GoLeanProofs.Specs.RaftPilot.BecomeFollowerSpec
-import GoLeanProofs.Specs.RaftPilot.CallSiteComposition
-import GoLeanProofs.Specs.RaftPilot.Reloc
-import GoLeanProofs.Specs.RaftPilot.CBfLit
-import GoLeanProofs.Specs.RaftPilot.CBfFixture
-import GoLeanProofs.Specs.RaftPilot.CBfSteps
-import GoLeanProofs.Specs.RaftPilot.CBfSteps2
-import GoLeanProofs.Specs.RaftPilot.CBfSortStep
-import GoLeanProofs.Specs.RaftPilot.CBecomeFollowerSpec
-import GoLeanProofs.Specs.RaftPilot.W2Gate
 import GoLeanProofs.Specs.RaftPilot.InitSpec
 -- W3 U3.0c: THE INVARIANT MODULE — `I` per the adopted W2.5 design
 -- (definitions + sanity lemmas; preservation/establishment are the
 -- later waves').
 import GoLeanProofs.Specs.RaftPilot.Invariant
-import GoLeanProofs.Specs.RaftPilot.LogReadSpecs
--- W3 U3.1-F remainder: the exported MemoryStorage walk pair
--- (LastIndex/Term CallSpecRDs at the defer-tail geometry).
-import GoLeanProofs.Specs.RaftPilot.StorageWalkSpecs
--- W3 U3.1-F remainder: the raftLog read tier at the quiesced family
--- (inline window-sums over the landed leaves).
-import GoLeanProofs.Specs.RaftPilot.RaftLogReadSpecs
--- W3 U3.1-B: the harvest engine cluster (first members: softState/
--- hardState — the shell-sync vocabulary).
-import GoLeanProofs.Specs.RaftPilot.HarvestSpecs
--- # w3-init (U3.1-A init-cluster CallSpecs; keep contiguous — merged
--- with the sibling lane's additions by the coordinator)
-import GoLeanProofs.Specs.RaftPilot.InitCallSpecs
--- # w3-init end
 -- # w3-m (the (M) mechanism — map-order pick-family composition;
 -- design note docs/2026-08-27_m-mechanism-design.md; keep contiguous
 -- — merged with the sibling lanes' additions by the coordinator)
 import GoLeanProofs.MapPerm
-import GoLeanProofs.Specs.RaftPilot.MapOrderSpecs
 -- # w3-m end
 import GoLeanProofs.Sym.KernelRfl
 -- W3 crossing kit: data-branch window splits (path-condition

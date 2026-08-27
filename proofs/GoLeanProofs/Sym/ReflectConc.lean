@@ -18,7 +18,13 @@ LINEAGE: the retraction half of a Galois insertion (abstract
 interpretation's γ ∘ α = id on the exactly-representable elements —
 reflection's image is literal-only, so the retraction is exact).
 
-Consumer: `Pilot/BecomeFollowerSpec.lean` (Leg A's `CallSpec`).
+Consumers (triage landing, 2026-08-27): the original consumer (the
+BecomeFollowerSpec pilot's CallSpec instances) died with the
+CallSpec calculus (archived at `archive/callspec-era`); these are
+UNCONDITIONAL equations strengthening the landed `Sym/Conc`/`Mirror`
+pair (no premise to witness — no vacuity exposure), consumed by any
+mirror-side reflection of a machine continuation. Pins:
+`Audit/W1.lean`.
 -/
 
 namespace GoLean.Sym

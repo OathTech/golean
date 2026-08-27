@@ -6,6 +6,16 @@ re-checked every build (the W1 open-tail convention; working copy
 `artifacts/w2/ProbePlug.lean`): the plug rule's barrier recognition,
 concretely, BEFORE the general walk (design note §7 probe plan).
 
+**ROLE (relabeled at the triage landing, 2026-08-27, amendment A4):
+this module is a CONCRETE PROBE, not the plug family's discharge
+witness** — its anonymous examples re-check the commutation SHAPE by
+kernel evaluation in parallel to the proved rule; they do not apply
+`stepFn_plug`/`callSpan_plug`. The family's named witness is
+`Frame/PlugWitness.lean` (which applies both rules on this module's
+programs at open caller context). Retirement condition: the G-BIND
+unit's own gate instance lands — this probe retires with (or before)
+it.
+
 Question: does `plugC env' k'` commute with the machine step-for-step
 on successful resultless call spans — at open `env'/k'` — including
 through defer registration, nested frames, and a recover-on-the-

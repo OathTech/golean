@@ -1,20 +1,24 @@
 import Lean
 import GoLeanProofs.RunGlue
 import GoLeanProofs.Sym.ReflectConc
-import GoLeanProofs.SpecJudgment
-import GoLeanProofs.Specs.RaftPilot.BecomeFollowerSpec
-import GoLeanProofs.Specs.RaftPilot.CallSiteComposition
 import GoLeanProofs.Specs.Raft.RenCongr
 
 /-!
-# In-build axiom gate — the W1 surface (judgment layer + runProgramM glue)
+# In-build axiom gate — the W1 surface (runProgramM glue + the W1 survivors)
 
-W1 (clean-proof plan §W1; design note
-`docs/2026-08-27_w1-judgment-design.md`): exact-axiom pins for the
-glue family and the judgment layer's rules, in the `Audit/Kit.lean`
-format (the exhaustive root sweep bounds everything; these pins add
-EXACTNESS). A new public W1 lemma lands with its pin here in the same
-commit.
+W1 (design note `docs/2026-08-27_w1-judgment-design.md`, now
+supersession-bannered): exact-axiom pins for the glue family and the
+W1 wave's landed survivors, in the `Audit/Kit.lean` format (the
+exhaustive root sweep bounds everything; these pins add EXACTNESS).
+A new public W1 lemma lands with its pin here in the same commit.
+
+Triage landing (2026-08-27, plan L-10): the 13 SpecJudgment pins and
+the four BecomeFollowerSpec-pilot pins were PRUNED in the same commit
+that deleted their subjects (the CallSpec calculus, [USER]-cancelled;
+archived at `archive/callspec-era`). The retraction pair
+(`reflectV_conc`/`reflectK_conc`) and the reader-congruence pair
+(`fieldU64_ren`/`absRaftNode_frameSim`) survive — their subjects are
+LAND items (`Sym/ReflectConc.lean`, `Specs/Raft/RenCongr.lean`).
 -/
 
 /-! ## RunGlue — the runProgramM glue family (plan §W1: gates both
@@ -57,55 +61,16 @@ sentences; audit-pinned by charter) -/
 /-- info: 'GoLean.Surface.runProgramM_readout_of_total' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.runProgramM_readout_of_total
 
-/-! ## SpecJudgment — the judgment layer (plan §W1: the spec former
-+ composition rules) -/
-
-/-- info: 'GoLean.Spec.StmtSpecB.toSpec' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Spec.StmtSpecB.toSpec
-/-- info: 'GoLean.Spec.CallSpecB.toSpec' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Spec.CallSpecB.toSpec
-/-- info: 'GoLean.Spec.StmtSpecB.mono' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Spec.StmtSpecB.mono
-/-- info: 'GoLean.Spec.CallSpecB.mono' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Spec.CallSpecB.mono
-/-- info: 'GoLean.Spec.StmtSpec.conseq' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Spec.StmtSpec.conseq
-/-- info: 'GoLean.Spec.CallSpec.conseq' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Spec.CallSpec.conseq
-/-- info: 'GoLean.Spec.seqCont_pair_decomp' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Spec.seqCont_pair_decomp
-/-- info: 'GoLean.Spec.StmtSpec.seqn_pair' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Spec.StmtSpec.seqn_pair
-/-- info: 'GoLean.Spec.CallSpec.consume' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Spec.CallSpec.consume
-/-- info: 'GoLean.Spec.stmtSpec_call' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Spec.stmtSpec_call
-/-- info: 'GoLean.Spec.Choices.consume_suffix' does not depend on any axioms -/
-#guard_msgs in #print axioms GoLean.Spec.Choices.consume_suffix
-/-- info: 'GoLean.Spec.Choices.consumeAt_suffix' does not depend on any axioms -/
-#guard_msgs in #print axioms GoLean.Spec.Choices.consumeAt_suffix
-/-- info: 'GoLean.Spec.Refusal.not' does not depend on any axioms -/
-#guard_msgs in #print axioms GoLean.Spec.Refusal.not
-
-/-! ## The W1 pilot — Leg A (judgment instances + the reflection
-retraction; the judgment's non-vacuity per the charter's carve-out) -/
+/-! ## The reflection retraction (`Sym/ReflectConc.lean` — the Galois
+retraction over the landed Sym mirror; unconditional equations) -/
 
 /-- info: 'GoLean.Sym.reflectV_conc' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Sym.reflectV_conc
 /-- info: 'GoLean.Sym.reflectK_conc' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Sym.reflectK_conc
-/-- info: 'GoLean.RaftSeam.bfPre_reader' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.RaftSeam.bfPre_reader
-/-- info: 'GoLean.RaftSeam.becomeFollower_callSpec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.RaftSeam.becomeFollower_callSpec
-/-- info: 'GoLean.RaftSeam.bfPre_inhabited' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.RaftSeam.bfPre_inhabited
 
-/-! ## The W1 pilot — Leg B (the call-rule composition) and the
-frame's reader-congruence half -/
+/-! ## The frame's reader-congruence half (`Specs/Raft/RenCongr.lean`) -/
 
-/-- info: 'GoLean.RaftSeam.becomeFollower_call_stmtSpec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.RaftSeam.becomeFollower_call_stmtSpec
 /-- info: 'GoLean.RaftSeam.fieldU64_ren' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.RaftSeam.fieldU64_ren
 /-- info: 'GoLean.RaftSeam.absRaftNode_frameSim' depends on axioms: [propext, Quot.sound] -/
