@@ -155,6 +155,7 @@ import GoLeanProofs.Specs.ImportedGooseRune
 import GoLeanProofs.NegativeSpecs
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.RunGlue
+import GoLeanProofs.SpecJudgment
 import GoLeanProofs.Sym.KernelRfl
 import GoLeanProofs.StepKit
 import GoLeanProofs.Examples.FibProgram

@@ -1,5 +1,6 @@
 import Lean
 import GoLeanProofs.RunGlue
+import GoLeanProofs.SpecJudgment
 
 /-!
 # In-build axiom gate — the W1 surface (judgment layer + runProgramM glue)
@@ -51,3 +52,33 @@ sentences; audit-pinned by charter) -/
 #guard_msgs in #print axioms GoLean.Surface.runProgramM_classify_of_total
 /-- info: 'GoLean.Surface.runProgramM_readout_of_total' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.runProgramM_readout_of_total
+
+/-! ## SpecJudgment — the judgment layer (plan §W1: the spec former
++ composition rules) -/
+
+/-- info: 'GoLean.Spec.StmtSpecB.toSpec' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Spec.StmtSpecB.toSpec
+/-- info: 'GoLean.Spec.CallSpecB.toSpec' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Spec.CallSpecB.toSpec
+/-- info: 'GoLean.Spec.StmtSpecB.mono' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Spec.StmtSpecB.mono
+/-- info: 'GoLean.Spec.CallSpecB.mono' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Spec.CallSpecB.mono
+/-- info: 'GoLean.Spec.StmtSpec.conseq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Spec.StmtSpec.conseq
+/-- info: 'GoLean.Spec.CallSpec.conseq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Spec.CallSpec.conseq
+/-- info: 'GoLean.Spec.seqCont_pair_decomp' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Spec.seqCont_pair_decomp
+/-- info: 'GoLean.Spec.StmtSpec.seqn_pair' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Spec.StmtSpec.seqn_pair
+/-- info: 'GoLean.Spec.CallSpec.consume' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Spec.CallSpec.consume
+/-- info: 'GoLean.Spec.stmtSpec_call' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Spec.stmtSpec_call
+/-- info: 'GoLean.Spec.Choices.consume_suffix' does not depend on any axioms -/
+#guard_msgs in #print axioms GoLean.Spec.Choices.consume_suffix
+/-- info: 'GoLean.Spec.Choices.consumeAt_suffix' does not depend on any axioms -/
+#guard_msgs in #print axioms GoLean.Spec.Choices.consumeAt_suffix
+/-- info: 'GoLean.Spec.Refusal.not' does not depend on any axioms -/
+#guard_msgs in #print axioms GoLean.Spec.Refusal.not
