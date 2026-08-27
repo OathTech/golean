@@ -2529,3 +2529,25 @@ the reader-extension shape (separate lens readers recommended), and
 the T1-fragment scoping of the payload clause. [AGENT]: the run STOPS
 here per the goal's named-checkpoint rule — W3 charters do not go out
 until the [USER] rules on this note.
+
+### 2026-08-27 — RULE CONFLICT resolved: the W2.5 gate under the autonomous directive
+
+Conflict: the plan names W2.5 a [USER] design gate; the active goal
+directive ("complete the WHOLE remainder... don't stop to solicit
+feedback; make the call and keep going") was issued by the [USER]
+AFTER approving the plan, and the goal monitor refused the stop at
+the gate. Resolution ([AGENT], fail-closed per the global conflict
+rule): the gate is SELF-ADJUDICATED under the autonomous directive —
+minimum globally-visible change, since nothing merges to main and the
+W2.5 verdict is FLAGGED as a mandatory [USER] review item at the
+landing ceremony, where merge sign-off remains unconditional.
+
+[AGENT] W2.5 verdict — the note is ADOPTED as the W3 postcondition
+contract, with the three open points resolved as recommended:
+1. certified = the ghost-acks extension (acks map mirroring
+   votes/victories; uniform machinery, no per-commit re-derivation).
+2. Reader extension = separate lens readers per checker map (no
+   AbsTwinV0 version churn; composable).
+3. Payload clause stays T1-fragment-scoped (middle path; the general
+   form waits for a second consumer).
+W3 charters go out per-handler with the note as the contract.
