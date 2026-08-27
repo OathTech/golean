@@ -2431,6 +2431,16 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   (and saying so plainly per the audit line). First full
   application of the quantifier audit to in-flight work.
 
+- **[USER] 2026-08-27 — EXECUTION GO on the replanned campaign:**
+  the three deliverables (plan v2 professor-amended, kill-list
+  amended, the expert explanation with 4b) approved for execution;
+  no further checks requested. W0 OPENS: archive ref
+  `archive/fixed-trajectory-era` pinned at pre-kill main
+  (c4986b29); working branch `w0-reset`; the kill worker dispatched
+  (K-A/B/C/D per the amended list — native witnesses retained);
+  the CLAUDE.md charter rewrite drafted by the coordinator in
+  parallel for [USER] sign-off. Then W1's three-legged pilot.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
