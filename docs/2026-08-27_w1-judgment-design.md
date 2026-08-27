@@ -413,3 +413,61 @@ exercised by the W2 gate (Leg-B-as-intended): the pilot's
 FOREIGN placement (FrameSim state half + plug control half + reader
 congruence), measured. Non-vacuity: the gate instance itself.
 
+
+## 9. W2 addenda: the loop family, the compliant fixture mechanism, and the init spec (design records, post-landing)
+
+**§9.1 The loop-rule family (unit 2).** The plain-`for` head schema
+is the arc4d `CondFor` harvested verbatim (`GoLeanProofs/CondFor.lean`
+@ campaign-arc4d 7fa0e04d; drop-in — all four imports byte-identical;
+stream-total; witness `countdown_span`/`cd_concrete` in-file).
+LINEAGE: Floyd/Hoare loop invariant, the `sliceWalk_loop` sibling. The
+map-range rule with multiset invariants IS `mapPickLoop_generic`
+(MapLoops group 4 — the conservation-invariant encoding is how
+order-invariance under every pick becomes a loop fact), now
+ELEMENT-TYPE-GENERIC (professor delta 5); its standing non-vacuity
+witnesses are the two prior consumers, re-verified at the generalized
+statement. The professor's named lemma
+`mapIter_no_stop_of_unmutated` (+ `filterCandidateList_sublist`, the
+width corollary) lands in MapLoops group 5: nonempty all-start-keyed
+candidates keep the mandatory flag — the stop slot is illegal; the
+"unmutated" premise enters as the candidate⊆start fact a consumer
+discharges from its own footprint invariant. LINEAGE: the loop-rule
+side condition pattern (an invariant-preserved guard fact).
+
+**§9.2 The compliant fixture mechanism (unit 4).** Relocation
+semantics (`Specs/RaftPilot/Reloc.lean`: `rAddr` = fix ⟨18⟩, +31
+elsewhere; data-only — code untouched, which is exactly `bodies_inv`)
++ the tracked inert generator (`tools/relayout/CBfLitGen.lean`,
+recovered arc4d printer + `pKopen` open-tail barrier emission) +
+generated ground literals (`CBfLit.lean`) re-checked by CBfFixture's
+kernel window links. MEASURED DECISION RECORD:
+relocation-as-definition (no literals) made the kernel re-reduce the
+relocation inside every window check (>10 min, killed); ground
+literals restore the 88 s wall. LINEAGE: certificate
+replay/computational reflection (the literals are certificates; the
+links are their checkers); the F6 provenance rule realized with zero
+untracked links.
+
+**§9.3 The init spec, stage A (unit 3).** The conclusion is
+Spec-shaped over `runProgramSetupM` (RunGlue's boundary — the exact
+hypothesis FastEval/Transfer and ChoiceInv already assume), exported
+count-free (∃F₀/monotone fuel; ∀ ch stream-transparency in the map
+form — the open-tail principle applied at the STREAM), concluded in
+reader vocabulary (entry configuration, all 31 statics materialized,
+`loggerInstalled = false`). ∃-discharge: two kernel replays (~3 min
+each), the charter's concrete-evaluation carve-out for existentials —
+NOT per-fact literal pins (the killed StaticCells' failure mode): one
+Bool conjunction evaluates once and every export is a symbolic case
+analysis of the same opaque computation. SCOPING CORRECTION to the
+plan, recorded: `$pkginit` is LOOP-FREE (wire walk; 44 straight-line
+statements) — "init's loops" (the plan's phrase) are the SUBJECT's
+`newTwin` prefix, past this boundary, needing W3-class library
+CallSpecs; stage B is the recorded honest gap. LINEAGE: certificate
+replay for the base state; the statement discipline is the judgment's.
+
+**§9.4 The gate composition (the measured Leg-B-full).**
+`W2Gate.lean`: callee CallSpec at the canonical anchor + FrameSim
+state half (`ρT`-threshold kit + `renameBodies_id` +
+one whole-program `funcListSup = 31` kernel fold) + plug control half
++ reader congruence — 38 s wall, the shape W3's handler-into-driver
+assembly will instantiate per handler.

@@ -182,6 +182,79 @@ from 71b1561f.
 - Audit pins (`Audit/W2.lean`): cBecomeFollower_callSpec /
   cBfPre_inhabited / frameSimG / w2_gate, exact axiom sets in-build.
 
+## UNITS 2-3: LANDED (measurements, derivation-anchored)
+
+- **Unit 2 (the loop-rule family)**: (a) `CondFor` — the plain-`for`
+  head schema, harvested VERBATIM from campaign-arc4d @ 7fa0e04d
+  (735 lines; a drop-in — all four imports byte-identical, verified
+  by git hash-object at harvest; builds in 0.5 s; witness =
+  `countdown_span` + `cd_concrete`, in-file, non-subject;
+  stream-total, stated in its banner). (b) `mapPickLoop_generic`
+  element-type-generalized IN PLACE (professor delta 5); both prior
+  consumers (wordcount/histogram) re-verified green — they remain
+  the rule's standing non-vacuity witnesses; a contrived second-α
+  witness was NOT added (it would fake the stream discipline —
+  recorded rather than manufactured). (c) The named lemma family:
+  `mapIter_no_stop_of_unmutated` + `filterCandidateList_sublist` +
+  `mapIter_width_of_unmutated` (MapLoops group 5; pins propext-only).
+- **Unit 3 stage A (THE INIT SPEC)**: `initSetup_establishes` —
+  see the design note §9.3. Wall: the module builds in ~6 min (two
+  full kernel replays of the 1,382-step init + setup folds at ~3 min
+  each — the measured price of the ∃-discharge; StaticCells' 213 s
+  was the same class). Stage B (the subject's `newTwin` prefix:
+  the 3 real loops + NewMemoryStorage/ApplySnapshot/NewRawNode
+  CallSpecs) is W3-scale and recorded as THE honest gap of this
+  unit — the plan's "init's loops are slice/map walks over the
+  3-node structures" was a misplacement (they are subject-body
+  loops, not setup-boundary loops; wire-walk derivation in the log
+  above).
+
+## THE W2.5 DESIGN-NOTE SKELETON (the invariant's clause list as W2
+understands it — the coordinator drafts W2.5 for the [USER] gate
+from this; inputs marked with their W2 provenance)
+
+`I` (the driver-loop invariant over the machine state σ + ghost
+carriers), clause list:
+
+1. **BASE / init clause** (W2 unit 3's product): σ is reachable
+   from `initSetup_establishes`' boundary — the statics region
+   `[0,31)` materialized with the post-init contents,
+   `loggerInstalled` set (post-`installLogger`), the entry frame
+   discipline. Stage-B completion (shells built, net empty,
+   counters zero — the post-`newTwin` facts) joins this clause when
+   W3 lands the setup-prefix CallSpecs.
+2. **FOOTPRINT-CARRIER pairing clause** (W1 Leg-B finding 3 + the
+   W2 gate's shape): for each node i, the twin shell's `.rn.raft`
+   cell carries a `CBfPre`-STYLE footprint family at its TRUE
+   placement — i.e. the invariant stores, per handler-consumable
+   unit, a γ-image family + FrameSim placement data (ρT threshold +
+   frame), so handler CallSpecs consume by exactly the gate's
+   composition (spec + sim + plug + reader congruence). The
+   reader-only postcondition does NOT re-establish the next spec's
+   precondition — the invariant must carry the footprint, this is
+   the clause that does it.
+3. **PLUG-CONTEXT hygiene clause** (W2's premise census): every
+   caller continuation the driver builds is `mapIterFree` and
+   recover-refuting (`recoverThroughWrappers = none`) — structural
+   facts about the driver's own shapes, carried so handler
+   consumption's side conditions discharge by rfl. If a W3 handler
+   ranges over a map WHILE calling a deleting callee, the refined
+   prune-inert premise (design note §7, recorded escape) must be
+   built first.
+4. **Abstract-carrier clauses** (the plan's own list, unchanged by
+   W2): SNet reach; HNet/HistInv established at the election win;
+   the pairing as a relation (∃-ghost, deep readers, shell-sync);
+   CheckerCorr; NetCorr's four clauses. W2 adds only the
+   OBSERVATION that clause 2's placement data is what makes the
+   per-carrier field selection provable at deliveries (stutter
+   steps consume the frame half with an identity plug).
+5. **Choice-stream clause**: the init boundary is stream-TRANSPARENT
+   (W2's `initSetup_establishes` ∀ch conjunct) and every
+   handler-span clause is ∀ch/suffix-monotone (the judgment's
+   discipline) — the loop invariant threads one stream with
+   per-round suffix accounting (the shape `mapPickLoop_generic`
+   already realizes for pick loops).
+
 ## Judgment calls and checkpoints
 
 - [AGENT] Log-file choice: new `docs/w2-prover-log.md` (this file),
