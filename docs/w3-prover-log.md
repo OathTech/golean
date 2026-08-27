@@ -973,3 +973,30 @@ family.
   by the wrap-per-op rule in one pass each.
 - Builds: module target build EXIT=0 (37 jobs, module 159 s;
   artifacts/w3/frem-rl-build1.log); zero warnings in the new module.
+
+## UNIT A slice 3 — raftLog.zeroTermOnOutOfBounds (3 members) + the interface-equality crossings: LANDED
+
+- **TWO new value-level crossing lemmas** (module-local, kit-class —
+  promotion candidates at a third interface-comparison consumer):
+  `applyStrict_eqCmp_err_same` (identical error global: interface
+  equality reduces to payload-address BEq, closed by `LawfulBEq Loc`
+  reflexivity) and `applyStrict_eqCmp_err_ne` (distinct globals,
+  under the reader-vocabulary distinctness fact `pB ≠ pA` — statics
+  at distinct addresses, the invariant's C1). The globals' family
+  shape: `errIfaceV p` = `.interface (*errors.errorString) (.addr p)`
+  with FREE payload address — the `errors.New` product, program
+  text.
+- **Members** (each count-free, at the shared quiesced family):
+  `raftLog_zeroTerm_nil_callSpecR` (err = nil → returns `t`; ONE
+  26-step window), `..._compacted_...` (err = the ErrCompacted
+  global's value → 0; windows 20/18 + the same-global crossing),
+  `..._unavailable_...` (err = the ErrUnavailable global's value →
+  0; windows 20/7/18 + the ne-crossing + the same-crossing). The
+  err-vs-nil comparison reduces IN-WINDOW at a free payload (the
+  machine's interface-vs-nil arm is constructor-driven).
+- CENSUS-U3 note: the Panicf arm (any other error) is covered by NO
+  member — the three families exhaust the subject's own error
+  trichotomy at this call site; the invariant's log-error vocabulary
+  (term's results are exactly nil/the two globals) discharges the
+  callers' obligation.
+- Builds: module elaboration EXIT=0, zero warnings.

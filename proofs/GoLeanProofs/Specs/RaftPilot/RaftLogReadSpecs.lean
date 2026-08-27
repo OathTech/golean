@@ -1000,6 +1000,481 @@ theorem raftLog_lastIndex_callSpecR (dty : Option Ty) (uo uc : Nat)
 
 end RlLastIndex
 
+/-! ## `raft.raftLog.zeroTermOnOutOfBounds` (census log.go:567 —
+reachable via log-ARGUMENT evaluation, census §1 NB) at the subject's
+own error trichotomy (nil / ErrCompacted / ErrUnavailable)
+
+The error-global comparisons are INTERFACE equalities: same concrete
+dynamic type (`*errors.errorString` — the $pkginit `errors.New`
+shape, program text), payload-ADDRESS comparison. The family pins
+the globals' interface SHAPE with FREE payload addresses; the
+identical-global crossing closes by `LawfulBEq Loc` reflexivity, the
+distinct-globals crossing by a reader-vocabulary distinctness fact
+(statics at distinct addresses — the invariant's C1). The Panicf arm
+(any OTHER error) is the census-U3 obligation: unreachable for the
+three family shapes by construction (no member covers it — a caller
+passing a non-log error is outside every family). -/
+
+section RlZeroTerm
+
+/-- The error-global interface shape (`errors.New` product): dynamic
+type `*errors.errorString`, free payload address. -/
+def errIfaceV (p : Loc) : GoValue :=
+  .interface (.pointer (.defined ⟨"errors.errorString"⟩)) (.addr p)
+
+/-- Interface equality at the SAME error global: reduces to the
+payload-address `BEq`, closed by `LawfulBEq Loc`. -/
+private theorem valueEq_err_same (σ : ExecState) (p : Loc) :
+    valueEq σ (.interface ⟨"error"⟩) (errIfaceV p) (errIfaceV p)
+      = .ok true := by
+  have h1 : valueEq σ (.interface ⟨"error"⟩) (errIfaceV p) (errIfaceV p)
+      = .ok (p == p) := by kernel_rfl
+  rw [h1, beq_self_eq_true]
+
+/-- Interface equality at DISTINCT error globals (the reader-vocabulary
+distinctness fact — statics at distinct addresses). -/
+private theorem valueEq_err_ne (σ : ExecState) {p q : Loc}
+    (hne : p ≠ q) :
+    valueEq σ (.interface ⟨"error"⟩) (errIfaceV p) (errIfaceV q)
+      = .ok false := by
+  have h1 : valueEq σ (.interface ⟨"error"⟩) (errIfaceV p) (errIfaceV q)
+      = .ok (p == q) := by kernel_rfl
+  rw [h1, beq_eq_false_iff_ne.mpr hne]
+
+private theorem applyStrict_eqCmp_err_same {σ : ExecState} (p : Loc) :
+    applyStrictOp σ (.eqCmp (.interface ⟨"error"⟩))
+      [errIfaceV p, errIfaceV p] = .ok (.bool true, σ) := by
+  have h1 : applyStrictOp σ (.eqCmp (.interface ⟨"error"⟩))
+      [errIfaceV p, errIfaceV p]
+      = (valueEq σ (.interface ⟨"error"⟩) (errIfaceV p) (errIfaceV p)
+          >>= fun b => pure (.bool b, σ)) := rfl
+  rw [h1, valueEq_err_same]
+  rfl
+
+private theorem applyStrict_eqCmp_err_ne {σ : ExecState} {p q : Loc}
+    (hne : p ≠ q) :
+    applyStrictOp σ (.eqCmp (.interface ⟨"error"⟩))
+      [errIfaceV p, errIfaceV q] = .ok (.bool false, σ) := by
+  have h1 : applyStrictOp σ (.eqCmp (.interface ⟨"error"⟩))
+      [errIfaceV p, errIfaceV q]
+      = (valueEq σ (.interface ⟨"error"⟩) (errIfaceV p) (errIfaceV q)
+          >>= fun b => pure (.bool b, σ)) := rfl
+  rw [h1, valueEq_err_ne σ hne]
+  rfl
+
+private def ztEnv : LocalEnv :=
+  [[], [("$res0", Loc.base ⟨42⟩), ("err", Loc.base ⟨41⟩),
+        ("t", Loc.base ⟨40⟩), ("l", Loc.base ⟨39⟩)]]
+
+private def ztFrame (plans : List (TargetShape × List Expr))
+    (env : LocalEnv) (k : Cont) : Cont :=
+  .frame plans env [Loc.base ⟨42⟩] [] k false
+
+private def ztArm : Stmt :=
+  .block #[] #[.seqn #[
+    .assign (.var "$res0") (.intLit 0 .uint64),
+    .returnStmt]]
+
+private def ztPanicSeq1 : Stmt :=
+  .seqn #[
+    .initialization ⟨"$c1084", .slice (.interface ⟨"any"⟩)⟩,
+    .makeSlice (.var "$c1084") (.interface ⟨"any"⟩)
+      (.intLit 1 .int) (some (.intLit 1 .int)),
+    .assign
+      (.addr (.indexAddr (.var "$c1084") (.intLit 0 .int)))
+      (.var "err")]
+
+private def ztPanicCall : Stmt :=
+  .call #[] ⟨"raft.Logger.Panicf"⟩
+    #[.fieldGet (.deref (.var "l") (.defined ⟨"raft.raftLog"⟩))
+        ⟨"raft.raftLog"⟩ "logger",
+      .stringLit ⟨#[117, 110, 101, 120, 112, 101, 99, 116, 101, 100,
+        32, 101, 114, 114, 111, 114, 32, 40, 37, 118, 41]⟩,
+      .var "$c1084"]
+
+private def ztTail : Stmt :=
+  .seqn #[.assign (.var "$res0") (.intLit 0 .uint64), .returnStmt]
+
+private def ztKif (plans : List (TargetShape × List Expr))
+    (env : LocalEnv) (k : Cont) : Cont :=
+  .ifK ztArm (.seqn #[]) ztEnv
+    (.seq [ztPanicSeq1, ztPanicCall, ztTail] ztEnv
+      (ztFrame plans env k))
+
+private def ztKor (plans : List (TargetShape × List Expr))
+    (env : LocalEnv) (k : Cont) : Cont :=
+  .orK
+    (.eqCmp (.interface ⟨"error"⟩) (.var "err")
+      (.deref (.locLit (Loc.base ⟨25⟩)) (.interface ⟨"error"⟩)))
+    ztEnv (ztKif plans env k)
+
+/-- The zeroTerm in-span state former (frame cells 39-42). -/
+private def ztIn (dty : Option Ty) (uo uc : Nat)
+    (uoffv sipv oipv ulgv cv apv adv lgv mxv aszv pzv : GoValue)
+    (so ln sc : Nat) (hsL snL : Loc) (csv : GoValue)
+    (e23 e25 c32 c34 c35 c36 c37 c38 : HeapCell)
+    (tvv errvv r0 : GoValue) : ExecState :=
+  { wBase with
+      heap := [(Loc.base ⟨23⟩, e23), (Loc.base ⟨25⟩, e25),
+       (Loc.base ⟨31⟩,
+        { declaredTy := dty
+          value := logCellV rlStorageIfaceV
+            (.slice ⟨some (Loc.base ⟨32⟩), uo, 0, uc⟩)
+            uoffv sipv oipv ulgv cv apv adv lgv mxv aszv pzv }),
+       (Loc.base ⟨32⟩, c32),
+       (Loc.base ⟨33⟩,
+        { declaredTy := none
+          value := msCellV34 false hsL snL csv so ln sc }),
+       (Loc.base ⟨34⟩, c34), (Loc.base ⟨35⟩, c35),
+       (Loc.base ⟨36⟩, c36), (Loc.base ⟨37⟩, c37),
+       (Loc.base ⟨38⟩, c38),
+       (Loc.base ⟨39⟩,
+        { declaredTy := some (Ty.pointer (Ty.defined ⟨"raft.raftLog"⟩))
+          value := rlArgV }),
+       (Loc.base ⟨40⟩,
+        { declaredTy := some (Ty.int .uint64), value := tvv }),
+       (Loc.base ⟨41⟩,
+        { declaredTy := some (Ty.interface ⟨"error"⟩), value := errvv }),
+       (Loc.base ⟨42⟩,
+        { declaredTy := some (Ty.int .uint64), value := r0 })]
+      nextAddr := 43 }
+
+/-- The nil-arm span (PRIVATE — 26 steps, one window: the err = nil
+comparison reduces, the arm returns `t`). -/
+private theorem zt_nil (dty : Option Ty) (uo uc : Nat)
+    (uoffv sipv oipv ulgv cv apv adv lgv mxv aszv pzv : GoValue)
+    (so ln sc : Nat) (hsL snL : Loc) (csv : GoValue)
+    (e23 e25 c32 c34 c35 c36 c37 c38 : HeapCell) (tv : Int)
+    (plans : List (TargetShape × List Expr)) (env : LocalEnv)
+    (k : Cont) (ch : Choices) :
+    stepFnIter 26
+      (rlFam dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv aszv
+        pzv so ln sc hsL snL csv e23 e25 c32 c34 c35 c36 c37 c38)
+      (.retV .nil
+        (.callArgsK ⟨"raft.raftLog.zeroTermOnOutOfBounds"⟩ plans
+          [rlArgV, .int tv .uint64] [] env k)) ch
+      = .ok (.returning (ztFrame plans env k),
+        ztIn dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv aszv
+          pzv so ln sc hsL snL csv e23 e25 c32 c34 c35 c36 c37 c38
+          (.int (IntKind.normalize .uint64 tv) .uint64) (.nil)
+          (.int (IntKind.normalize .uint64
+            (IntKind.normalize .uint64 tv)) .uint64),
+        ch) := by
+  kernel_rfl
+
+/-- **THE `zeroTermOnOutOfBounds` CallSpecR, nil-error member**:
+returns `t` unchanged (the subject's pass-through arm). -/
+theorem raftLog_zeroTerm_nil_callSpecR (dty : Option Ty) (uo uc : Nat)
+    (uoffv sipv oipv ulgv cv apv adv lgv mxv aszv pzv : GoValue)
+    (so ln sc : Nat) (hsL snL : Loc) (csv : GoValue)
+    (e23 e25 c32 c34 c35 c36 c37 c38 : HeapCell) (tv : Int)
+    (htv0 : 0 ≤ tv) (htv64 : tv < 18446744073709551616) :
+    CallSpecR
+      (RLPre dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv aszv
+        pzv so ln sc hsL snL csv e23 e25 c32 c34 c35 c36 c37 c38)
+      ⟨"raft.raftLog.zeroTermOnOutOfBounds"⟩
+      [rlArgV, .int tv .uint64] .nil
+      (fun σ' vs =>
+        vs = [.int tv .uint64] ∧
+        Heap.lookup σ'.heap (Loc.base ⟨31⟩)
+          = some { declaredTy := dty
+                   value := logCellV rlStorageIfaceV
+                     (.slice ⟨some (Loc.base ⟨32⟩), uo, 0, uc⟩)
+                     uoffv sipv oipv ulgv cv apv adv lgv mxv aszv
+                     pzv }) := by
+  intro σ hP plans env k ch
+  have hTv : IntKind.normalize .uint64 tv = tv :=
+    normalize_uint64_eq htv0 htv64
+  have h1 := zt_nil dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv
+    aszv pzv so ln sc hsL snL csv e23 e25 c32 c34 c35 c36 c37 c38 tv
+    plans env k ch
+  rw [hTv, hTv] at h1
+  refine ⟨26,
+    ztIn dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv aszv pzv
+      so ln sc hsL snL csv e23 e25 c32 c34 c35 c36 c37 c38
+      (.int tv .uint64) (.nil) (.int tv .uint64),
+    [Loc.base ⟨42⟩], [.int tv .uint64], ch, ?_, ?_, ⟨rfl, ?_⟩,
+    List.suffix_refl ch⟩
+  · rw [hP]; exact h1
+  · rfl
+  · rfl
+
+/-- Window 1 of the error arms (20 steps): entry, the err = nil
+comparison (interface vs nil — reduces at a free payload), the FALSE
+branch, the ErrCompacted-global dereference, to the first
+interface-equality boundary. -/
+private theorem zt_w1 (dty : Option Ty) (uo uc : Nat)
+    (uoffv sipv oipv ulgv cv apv adv lgv mxv aszv pzv : GoValue)
+    (so ln sc : Nat) (hsL snL : Loc) (csv : GoValue)
+    (e23ty e25ty : Option Ty) (pA : Loc) (ev25 : GoValue)
+    (c32 c34 c35 c36 c37 c38 : HeapCell) (ep : Loc) (tv : Int)
+    (plans : List (TargetShape × List Expr)) (env : LocalEnv)
+    (k : Cont) (ch : Choices) :
+    stepFnIter 20
+      (rlFam dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv aszv
+        pzv so ln sc hsL snL csv
+        { declaredTy := e23ty, value := errIfaceV pA }
+        { declaredTy := e25ty, value := ev25 }
+        c32 c34 c35 c36 c37 c38)
+      (.retV (errIfaceV ep)
+        (.callArgsK ⟨"raft.raftLog.zeroTermOnOutOfBounds"⟩ plans
+          [rlArgV, .int tv .uint64] [] env k)) ch
+      = .ok (.retV (errIfaceV pA)
+          (.strictK (.eqCmp (.interface ⟨"error"⟩)) [errIfaceV ep] []
+            ztEnv (ztKor plans env k)),
+        ztIn dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv aszv
+          pzv so ln sc hsL snL csv
+          { declaredTy := e23ty, value := errIfaceV pA }
+          { declaredTy := e25ty, value := ev25 }
+          c32 c34 c35 c36 c37 c38
+          (.int (IntKind.normalize .uint64 tv) .uint64)
+          (errIfaceV ep) (.int 0 .uint64),
+        ch) := by
+  kernel_rfl
+
+/-- Window 2 of the COMPACTED arm (18 steps, from the crossed TRUE
+comparison): the or short-circuits, the zero arm, return arrival. -/
+private theorem zt_w2C (dty : Option Ty) (uo uc : Nat)
+    (uoffv sipv oipv ulgv cv apv adv lgv mxv aszv pzv : GoValue)
+    (so ln sc : Nat) (hsL snL : Loc) (csv : GoValue)
+    (e23 e25 c32 c34 c35 c36 c37 c38 : HeapCell)
+    (errvv : GoValue) (tvv : GoValue)
+    (plans : List (TargetShape × List Expr)) (env : LocalEnv)
+    (k : Cont) (ch : Choices) :
+    stepFnIter 18
+      (ztIn dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv aszv
+        pzv so ln sc hsL snL csv e23 e25 c32 c34 c35 c36 c37 c38
+        tvv errvv (.int 0 .uint64))
+      (.retV (.bool true) (ztKor plans env k)) ch
+      = .ok (.returning (ztFrame plans env k),
+        ztIn dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv aszv
+          pzv so ln sc hsL snL csv e23 e25 c32 c34 c35 c36 c37 c38
+          tvv errvv (.int 0 .uint64),
+        ch) := by
+  kernel_rfl
+
+/-- Window 2 of the UNAVAILABLE arm (7 steps, from the crossed FALSE
+comparison): the or evaluates its second disjunct — the
+ErrUnavailable-global dereference — to the second equality
+boundary. -/
+private theorem zt_w2U (dty : Option Ty) (uo uc : Nat)
+    (uoffv sipv oipv ulgv cv apv adv lgv mxv aszv pzv : GoValue)
+    (so ln sc : Nat) (hsL snL : Loc) (csv : GoValue)
+    (e23 : HeapCell) (e25ty : Option Ty) (pB : Loc)
+    (c32 c34 c35 c36 c37 c38 : HeapCell)
+    (errvv : GoValue) (tvv : GoValue)
+    (plans : List (TargetShape × List Expr)) (env : LocalEnv)
+    (k : Cont) (ch : Choices) :
+    stepFnIter 7
+      (ztIn dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv aszv
+        pzv so ln sc hsL snL csv e23
+        { declaredTy := e25ty, value := errIfaceV pB }
+        c32 c34 c35 c36 c37 c38 tvv errvv (.int 0 .uint64))
+      (.retV (.bool false) (ztKor plans env k)) ch
+      = .ok (.retV (errIfaceV pB)
+          (.strictK (.eqCmp (.interface ⟨"error"⟩)) [errvv] []
+            ztEnv (.boolK (ztKif plans env k))),
+        ztIn dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv aszv
+          pzv so ln sc hsL snL csv e23
+          { declaredTy := e25ty, value := errIfaceV pB }
+          c32 c34 c35 c36 c37 c38 tvv errvv (.int 0 .uint64),
+        ch) := by
+  kernel_rfl
+
+/-- Window 3 of the UNAVAILABLE arm (18 steps, from the crossed TRUE
+second comparison): the boolK/ifK, the zero arm, return arrival. -/
+private theorem zt_w3U (dty : Option Ty) (uo uc : Nat)
+    (uoffv sipv oipv ulgv cv apv adv lgv mxv aszv pzv : GoValue)
+    (so ln sc : Nat) (hsL snL : Loc) (csv : GoValue)
+    (e23 e25 c32 c34 c35 c36 c37 c38 : HeapCell)
+    (errvv : GoValue) (tvv : GoValue)
+    (plans : List (TargetShape × List Expr)) (env : LocalEnv)
+    (k : Cont) (ch : Choices) :
+    stepFnIter 18
+      (ztIn dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv aszv
+        pzv so ln sc hsL snL csv e23 e25 c32 c34 c35 c36 c37 c38
+        tvv errvv (.int 0 .uint64))
+      (.retV (.bool true) (.boolK (ztKif plans env k))) ch
+      = .ok (.returning (ztFrame plans env k),
+        ztIn dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv aszv
+          pzv so ln sc hsL snL csv e23 e25 c32 c34 c35 c36 c37 c38
+          tvv errvv (.int 0 .uint64),
+        ch) := by
+  kernel_rfl
+
+/-- **THE `zeroTermOnOutOfBounds` CallSpecR, ErrCompacted member**
+(the error IS the compacted global's value — the same free payload
+address): returns `0`. -/
+theorem raftLog_zeroTerm_compacted_callSpecR (dty : Option Ty)
+    (uo uc : Nat)
+    (uoffv sipv oipv ulgv cv apv adv lgv mxv aszv pzv : GoValue)
+    (so ln sc : Nat) (hsL snL : Loc) (csv : GoValue)
+    (e23ty e25ty : Option Ty) (pA : Loc) (ev25 : GoValue)
+    (c32 c34 c35 c36 c37 c38 : HeapCell) (tv : Int)
+    (htv0 : 0 ≤ tv) (htv64 : tv < 18446744073709551616) :
+    CallSpecR
+      (RLPre dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv aszv
+        pzv so ln sc hsL snL csv
+        { declaredTy := e23ty, value := errIfaceV pA }
+        { declaredTy := e25ty, value := ev25 }
+        c32 c34 c35 c36 c37 c38)
+      ⟨"raft.raftLog.zeroTermOnOutOfBounds"⟩
+      [rlArgV, .int tv .uint64] (errIfaceV pA)
+      (fun σ' vs =>
+        vs = [.int 0 .uint64] ∧
+        Heap.lookup σ'.heap (Loc.base ⟨31⟩)
+          = some { declaredTy := dty
+                   value := logCellV rlStorageIfaceV
+                     (.slice ⟨some (Loc.base ⟨32⟩), uo, 0, uc⟩)
+                     uoffv sipv oipv ulgv cv apv adv lgv mxv aszv
+                     pzv }) := by
+  intro σ hP plans env k ch
+  have hTv : IntKind.normalize .uint64 tv = tv :=
+    normalize_uint64_eq htv0 htv64
+  have h1 := zt_w1 dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv
+    aszv pzv so ln sc hsL snL csv e23ty e25ty pA ev25
+    c32 c34 c35 c36 c37 c38 pA tv plans env k ch
+  rw [hTv] at h1
+  have hx : stepFn
+      (ztIn dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv aszv
+        pzv so ln sc hsL snL csv
+        { declaredTy := e23ty, value := errIfaceV pA }
+        { declaredTy := e25ty, value := ev25 }
+        c32 c34 c35 c36 c37 c38
+        (.int tv .uint64) (errIfaceV pA) (.int 0 .uint64))
+      (.retV (errIfaceV pA)
+        (.strictK (.eqCmp (.interface ⟨"error"⟩)) [errIfaceV pA] []
+          ztEnv (ztKor plans env k))) ch
+      = .ok (.retV (.bool true) (ztKor plans env k),
+        ztIn dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv aszv
+          pzv so ln sc hsL snL csv
+          { declaredTy := e23ty, value := errIfaceV pA }
+          { declaredTy := e25ty, value := ev25 }
+          c32 c34 c35 c36 c37 c38
+          (.int tv .uint64) (errIfaceV pA) (.int 0 .uint64),
+        ch) :=
+    stepFn_strict_apply (applyStrict_eqCmp_err_same pA)
+  have h2 := zt_w2C dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv
+    aszv pzv so ln sc hsL snL csv
+    { declaredTy := e23ty, value := errIfaceV pA }
+    { declaredTy := e25ty, value := ev25 }
+    c32 c34 c35 c36 c37 c38 (errIfaceV pA) (.int tv .uint64)
+    plans env k ch
+  refine ⟨20 + (1 + 18),
+    ztIn dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv aszv pzv
+      so ln sc hsL snL csv
+      { declaredTy := e23ty, value := errIfaceV pA }
+      { declaredTy := e25ty, value := ev25 }
+      c32 c34 c35 c36 c37 c38
+      (.int tv .uint64) (errIfaceV pA) (.int 0 .uint64),
+    [Loc.base ⟨42⟩], [.int 0 .uint64], ch, ?_, ?_, ⟨rfl, ?_⟩,
+    List.suffix_refl ch⟩
+  · rw [hP]
+    exact stepFnIter_chain h1 (stepFnIter_chain (stepFnIter_one hx) h2)
+  · rfl
+  · rfl
+
+/-- **THE `zeroTermOnOutOfBounds` CallSpecR, ErrUnavailable member**
+(the error IS the unavailable global's value; the two globals'
+payload addresses are DISTINCT — the reader-vocabulary statics
+fact): returns `0`. -/
+theorem raftLog_zeroTerm_unavailable_callSpecR (dty : Option Ty)
+    (uo uc : Nat)
+    (uoffv sipv oipv ulgv cv apv adv lgv mxv aszv pzv : GoValue)
+    (so ln sc : Nat) (hsL snL : Loc) (csv : GoValue)
+    (e23ty e25ty : Option Ty) (pA pB : Loc)
+    (c32 c34 c35 c36 c37 c38 : HeapCell) (tv : Int)
+    (htv0 : 0 ≤ tv) (htv64 : tv < 18446744073709551616)
+    (hne : pB ≠ pA) :
+    CallSpecR
+      (RLPre dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv aszv
+        pzv so ln sc hsL snL csv
+        { declaredTy := e23ty, value := errIfaceV pA }
+        { declaredTy := e25ty, value := errIfaceV pB }
+        c32 c34 c35 c36 c37 c38)
+      ⟨"raft.raftLog.zeroTermOnOutOfBounds"⟩
+      [rlArgV, .int tv .uint64] (errIfaceV pB)
+      (fun σ' vs =>
+        vs = [.int 0 .uint64] ∧
+        Heap.lookup σ'.heap (Loc.base ⟨31⟩)
+          = some { declaredTy := dty
+                   value := logCellV rlStorageIfaceV
+                     (.slice ⟨some (Loc.base ⟨32⟩), uo, 0, uc⟩)
+                     uoffv sipv oipv ulgv cv apv adv lgv mxv aszv
+                     pzv }) := by
+  intro σ hP plans env k ch
+  have hTv : IntKind.normalize .uint64 tv = tv :=
+    normalize_uint64_eq htv0 htv64
+  have h1 := zt_w1 dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv
+    aszv pzv so ln sc hsL snL csv e23ty e25ty pA (errIfaceV pB)
+    c32 c34 c35 c36 c37 c38 pB tv plans env k ch
+  rw [hTv] at h1
+  have hx1 : stepFn
+      (ztIn dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv aszv
+        pzv so ln sc hsL snL csv
+        { declaredTy := e23ty, value := errIfaceV pA }
+        { declaredTy := e25ty, value := errIfaceV pB }
+        c32 c34 c35 c36 c37 c38
+        (.int tv .uint64) (errIfaceV pB) (.int 0 .uint64))
+      (.retV (errIfaceV pA)
+        (.strictK (.eqCmp (.interface ⟨"error"⟩)) [errIfaceV pB] []
+          ztEnv (ztKor plans env k))) ch
+      = .ok (.retV (.bool false) (ztKor plans env k),
+        ztIn dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv aszv
+          pzv so ln sc hsL snL csv
+          { declaredTy := e23ty, value := errIfaceV pA }
+          { declaredTy := e25ty, value := errIfaceV pB }
+          c32 c34 c35 c36 c37 c38
+          (.int tv .uint64) (errIfaceV pB) (.int 0 .uint64),
+        ch) :=
+    stepFn_strict_apply (applyStrict_eqCmp_err_ne hne)
+  have h2 := zt_w2U dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv
+    aszv pzv so ln sc hsL snL csv
+    { declaredTy := e23ty, value := errIfaceV pA } e25ty pB
+    c32 c34 c35 c36 c37 c38 (errIfaceV pB) (.int tv .uint64)
+    plans env k ch
+  have hx2 : stepFn
+      (ztIn dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv aszv
+        pzv so ln sc hsL snL csv
+        { declaredTy := e23ty, value := errIfaceV pA }
+        { declaredTy := e25ty, value := errIfaceV pB }
+        c32 c34 c35 c36 c37 c38
+        (.int tv .uint64) (errIfaceV pB) (.int 0 .uint64))
+      (.retV (errIfaceV pB)
+        (.strictK (.eqCmp (.interface ⟨"error"⟩)) [errIfaceV pB] []
+          ztEnv (.boolK (ztKif plans env k)))) ch
+      = .ok (.retV (.bool true) (.boolK (ztKif plans env k)),
+        ztIn dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv aszv
+          pzv so ln sc hsL snL csv
+          { declaredTy := e23ty, value := errIfaceV pA }
+          { declaredTy := e25ty, value := errIfaceV pB }
+          c32 c34 c35 c36 c37 c38
+          (.int tv .uint64) (errIfaceV pB) (.int 0 .uint64),
+        ch) :=
+    stepFn_strict_apply (applyStrict_eqCmp_err_same pB)
+  have h3 := zt_w3U dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv
+    aszv pzv so ln sc hsL snL csv
+    { declaredTy := e23ty, value := errIfaceV pA }
+    { declaredTy := e25ty, value := errIfaceV pB }
+    c32 c34 c35 c36 c37 c38 (errIfaceV pB) (.int tv .uint64)
+    plans env k ch
+  refine ⟨20 + (1 + (7 + (1 + 18))),
+    ztIn dty uo uc uoffv sipv oipv ulgv cv apv adv lgv mxv aszv pzv
+      so ln sc hsL snL csv
+      { declaredTy := e23ty, value := errIfaceV pA }
+      { declaredTy := e25ty, value := errIfaceV pB }
+      c32 c34 c35 c36 c37 c38
+      (.int tv .uint64) (errIfaceV pB) (.int 0 .uint64),
+    [Loc.base ⟨42⟩], [.int 0 .uint64], ch, ?_, ?_, ⟨rfl, ?_⟩,
+    List.suffix_refl ch⟩
+  · rw [hP]
+    exact stepFnIter_chain h1 (stepFnIter_chain (stepFnIter_one hx1)
+      (stepFnIter_chain h2 (stepFnIter_chain (stepFnIter_one hx2) h3)))
+  · rfl
+  · rfl
+
+end RlZeroTerm
+
 /-- Non-vacuity of the quiesced-family carrier (the ∃-discharge,
 concrete values in every free slot). -/
 theorem rlPre_inhabited :
