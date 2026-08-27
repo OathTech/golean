@@ -641,6 +641,47 @@ consumers)
   UPGRADED here (the labels on the arm members stand as arm-scoped
   statements, not coverage gaps).
 
+## U3.1-F un-parking — `maybeTerm` COMPLETE at the T1 family (arms
+= the program's own branch trichotomy)
+
+- [AGENT] Wire fact found by the probe and folded into the family:
+  `raftpb.Entry`'s proto-optional fields are POINTERS in the pinned
+  wire (`Term : *uint64` — `GetTerm` nil-checks then derefs); the
+  in-range family pins entry/Term cells at canonical 32-34 with free
+  payloads, and the backing-array read outcome is a family-carried
+  hypothesis (`hget` — classic symbolic-memory read).
+- [AGENT] COMPOSITION FINDING (costing-relevant, recorded): within-
+  family composition INLINES the callee — `maybeTerm`'s ≥offset arms
+  re-walk `maybeLastIndex` at the caller's extended heap (the landed
+  leaf CallSpecR is exact-heap and cannot be `consume`d mid-span at
+  a wider state; the alternative is the W2 FrameSim+plug transport,
+  the expensive road). The callee's two crossings simply RECUR and
+  are crossed by the same kit pieces — cost is additive windows, no
+  new mechanism. Cluster costing must price composed members as
+  window-sum, not consume-hops.
+- Members (all exported count-free; range/read premises in reader
+  vocabulary):
+  * `unstable_maybeTerm_below_callSpecR` — compacted arm (i <
+    offset): 2 windows + ONE class-A crossing (`stepFn_ifK_true` +
+    `decide_eq_true` — the kit's genuinely-symbolic two-scalar
+    comparison consumer); cells 32-34 ride free.
+  * `unstable_maybeTerm_aboveLast_callSpecR` — out-of-range arm:
+    5 windows (13/28/11/64/25) + 3 crossings (two class-A + the
+    inner length read) + the full collapse chain (the inner call's
+    result monster: 4 nested normalizes, 5-rewrite chain).
+  * `unstable_maybeTerm_inRange_callSpecR` — the unstable-read arm:
+    6 windows (13/28/11/64/23/73) + 4 crossings (+`applyStrict_
+    indexGet_slice` under `hget`); returns `(entry.Term, true)`.
+- Per-member join NOT built ([AGENT]): a trichotomy join needs
+  per-index read facts for every in-range slot (an entries table the
+  invariant carries); consumers (raftLog.term's arms) know their
+  side, so the join is consumer-demand — recorded, not
+  manufactured. The maybeLastIndex join stands as the kit's
+  recombination witness.
+- Builds: arm A module build 52 s; +arm B 65 s; +arm C 76 s (module
+  total with all 11 span windows; target-build logs
+  artifacts/w3/kit-mt*-build*.log).
+
 ## COSTING SIGNAL for the remaining Wave 3.1 clusters ([AGENT]
 estimate, derivation-anchored to the PREDECESSOR session's
 measurements — superseded by this session's kit-adjusted signal at
