@@ -25,8 +25,6 @@ import GoLeanProofs.Frame.StepSim
 import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Frame.RenameId
 import GoLeanProofs.Frame.AllocIndep
--- A4-U6: the relocation seed (promotion lift from the A4-U5 ledger).
-import GoLeanProofs.Frame.Relocate
 -- A4-U9's Sym.PickTransport lift DELETED at the arc-4 landing fix
 -- round (unconsumed byte-identical duplicate of the RaftSeam
 -- original; ledger row closed — see Audit/Kit.lean's tombstone).
@@ -64,13 +62,14 @@ import GoLeanProofs.Specs.Raft.NativeS1Witness
 import GoLeanProofs.Specs.Raft.NativeS23Chain
 import GoLeanProofs.Specs.Raft.NativeS23Witness
 import GoLeanProofs.Specs.Raft.NativeCheckerBridge
--- SP1 landing (arc4c lane), W0-pruned: the choice-invariance carrier
--- (~/~ₘ, CForm) + statement layer + the collectFix view-fixpoint
--- regression witness. General choice-erasure machinery, kept per
--- kill-list K-E (off the critical path; the seed pins and their
--- literals are archived).
+-- SP1 landing (arc4c lane), triage-pruned (K-3, 2026-08-27): the
+-- choice-erasure CARRIER (~/~ₘ, CForm — the statement-former; Mask
+-- consumed by the parked SpanIso) stays per K-E; the ChoiceInv
+-- statement layer (ChoiceInvariantToM: zero inhabitants, zero
+-- consumers) is DELETED — archived at archive/callspec-era. If the
+-- post-T1 choice-erasure consolidation needs an invariant-transport
+-- form it re-derives against SpanIso's relation with a witness.
 import GoLeanProofs.Frame.ChoiceCanon
-import GoLeanProofs.Frame.ChoiceInv
 -- A4-U8: the field-lens layer (Perennial Access lineage; general half —
 -- combinators + L1-L4 laws).
 import GoLeanProofs.Lens

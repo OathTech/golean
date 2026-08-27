@@ -11,8 +11,9 @@ entry frame)
 W0-killed `StaticCells` pinned raw heap literals by replaying init in
 the kernel per fact. Here the conclusion is a SPEC-shaped, composable
 statement over `runProgramSetupM` (RunGlue's unfolding boundary — the
-exact hypothesis `FastEval/Transfer` and `ChoiceInv.anchorRunProg`
-already consume), concluded in reader vocabulary (the statics the
+exact hypothesis `FastEval/Transfer` consumes; the killed ChoiceInv
+statement layer consumed it too, archived at `archive/callspec-era`),
+concluded in reader vocabulary (the statics the
 handlers read; every static materialized; the stream untouched), with
 fuel ∃-quantified and monotone (no subject-run counts in the export).
 The ∃-discharge is ONE kernel replay (`initFacts_true` — the

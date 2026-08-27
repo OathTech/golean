@@ -7,7 +7,6 @@ import GoLeanProofs.MapMem
 import GoLeanProofs.MapLoops
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.Frame.Threshold
-import GoLeanProofs.Frame.Relocate
 import GoLeanProofs.Lens
 import GoLeanProofs.Sym.SpillTransport
 import GoLeanProofs.Sym.BranchTransport
@@ -743,13 +742,14 @@ in-module (`stepFn_appendSpill_transport_witness`, same closure). -/
 /-- info: 'GoLean.Sym.stepFn_appendSpill_transport_witness' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Sym.stepFn_appendSpill_transport_witness
 
-/-! A4-U12: the span-relocate lift (`Frame/Relocate.lean`, the U11
-promotion row taken — general Frame-level plumbing, raft-independent;
-consumers: every handler equation's alloc form; discharge witnesses
-are the landed consumers' concrete instantiations). -/
-
-/-- info: 'GoLean.Frame.span_relocate' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Frame.span_relocate
+/-! A4-U12 (triage kill K-2, 2026-08-27): `Frame/Relocate.lean` and
+its `span_relocate` pin are DELETED — the docstring's "two named
+consumers recorded" was from the killed era and verified FALSE (zero
+live consumers); address-relocation transport was the cancelled
+R-geometry road's vocabulary, and placement genericity is the
+assertion layer's job at the Iris tier (G-REPR's ∃-address
+points-to). Archived at archive/callspec-era. The consumed renaming
+modules (Frame/Rename, RenameId) are untouched. -/
 
 /-! A4-U14: the branch-crossing transport (`Sym/BranchTransport.lean` —
 path-condition splitting at a symbolic `if`, King 1976; the third
