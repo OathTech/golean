@@ -159,6 +159,7 @@ import GoLeanProofs.SpecJudgment
 import GoLeanProofs.CondFor
 import GoLeanProofs.Frame.Plug
 import GoLeanProofs.Frame.PlugProbe
+import GoLeanProofs.Frame.PlugWitness
 import GoLeanProofs.Frame.PlugOps
 import GoLeanProofs.Frame.PlugApply
 import GoLeanProofs.Frame.PlugStep
@@ -203,6 +204,7 @@ import GoLeanProofs.Sym.KernelRfl
 -- W3 crossing kit: data-branch window splits (path-condition
 -- crossings; design note docs/2026-08-27_crossing-kit-design.md).
 import GoLeanProofs.Sym.Crossing
+import GoLeanProofs.Sym.CrossingWitness
 import GoLeanProofs.StepKit
 import GoLeanProofs.Examples.FibProgram
 import GoLeanProofs.Examples.Fib

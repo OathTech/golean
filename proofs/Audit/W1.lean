@@ -1,5 +1,6 @@
 import Lean
 import GoLeanProofs.RunGlue
+import GoLeanProofs.Sym.ReflectConc
 import GoLeanProofs.SpecJudgment
 import GoLeanProofs.Specs.RaftPilot.BecomeFollowerSpec
 import GoLeanProofs.Specs.RaftPilot.CallSiteComposition
