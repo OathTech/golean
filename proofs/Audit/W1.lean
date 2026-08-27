@@ -1,6 +1,7 @@
 import Lean
 import GoLeanProofs.RunGlue
 import GoLeanProofs.SpecJudgment
+import GoLeanProofs.Pilot.BecomeFollowerSpec
 
 /-!
 # In-build axiom gate — the W1 surface (judgment layer + runProgramM glue)
@@ -82,3 +83,17 @@ sentences; audit-pinned by charter) -/
 #guard_msgs in #print axioms GoLean.Spec.Choices.consumeAt_suffix
 /-- info: 'GoLean.Spec.Refusal.not' does not depend on any axioms -/
 #guard_msgs in #print axioms GoLean.Spec.Refusal.not
+
+/-! ## The W1 pilot — Leg A (judgment instances + the reflection
+retraction; the judgment's non-vacuity per the charter's carve-out) -/
+
+/-- info: 'GoLean.Sym.reflectV_conc' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.reflectV_conc
+/-- info: 'GoLean.Sym.reflectK_conc' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Sym.reflectK_conc
+/-- info: 'GoLean.RaftSeam.bfPre_reader' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.RaftSeam.bfPre_reader
+/-- info: 'GoLean.RaftSeam.becomeFollower_callSpec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.RaftSeam.becomeFollower_callSpec
+/-- info: 'GoLean.RaftSeam.bfPre_inhabited' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.RaftSeam.bfPre_inhabited
