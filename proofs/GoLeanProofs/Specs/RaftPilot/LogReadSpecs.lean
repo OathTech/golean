@@ -2012,6 +2012,187 @@ theorem memoryStorage_lastIndex_callSpecR (dty : Option Ty)
   · rfl
   · rfl
 
+/-! ### `raft.MemoryStorage.FirstIndex` — the exported Lock/defer
+walk (the `CallSpecRD` judgment's first instance)
+
+The span: Lock (mutex true), the `defer Unlock` registration, the
+callStats increment (the ONE footprint mutation — the conclusion
+carries it), the internal `firstIndex` INLINED, results, then the
+RETURN PATH RUNS THE DEFER (unlock — mutex back to false) and exits
+through the machine's `.next`-frame arm (the deferred-frame
+terminal). `postOp` completion markers are pure strips in the
+sequential machine — no tape interaction.
+
+FAMILY-SHAPE FACT (derived, recorded): every store into the ms cell
+routes the WHOLE struct through `coerceStoredValue` (declaredTy
+`none` — the honest cell shape), which recurses FIELD-WISE on
+constructor shapes and re-normalizes every int field. So this family
+pins ALL ms field SHAPES (hardState/snapshot as pointers with free
+targets, the six callStats counters as int-shaped free scalars), and
+the three cell stores (Lock, the increment, the deferred Unlock)
+each wrap the counters in one store-normalize — collapsed at the
+window seams under the counters' range facts. -/
+
+/-- The callStats value: six int-shaped counters, free payloads. -/
+def msStatsV (a1 fiv a3 a4 a5 a6 : Int) : GoValue :=
+  .struct ⟨"raft.inMemStorageCallStats"⟩
+    #[("initialState", .int a1 .int), ("firstIndex", .int fiv .int),
+      ("lastIndex", .int a3 .int), ("entries", .int a4 .int),
+      ("term", .int a5 .int), ("snapshot", .int a6 .int)]
+
+/-- The stats value with per-counter store-normalize wraps riding
+(the in-window form; `d`-fold on the five inert counters, the
+firstIndex slot given explicitly). -/
+def msStatsV' (a1 : Int) (fiE : Int) (a3 a4 a5 a6 : Int)
+    (w : Int → Int) : GoValue :=
+  .struct ⟨"raft.inMemStorageCallStats"⟩
+    #[("initialState", .int (w a1) .int), ("firstIndex", .int fiE .int),
+      ("lastIndex", .int (w a3) .int), ("entries", .int (w a4) .int),
+      ("term", .int (w a5) .int), ("snapshot", .int (w a6) .int)]
+
+/-- The ms cell mid-span: mutex state + callStats payload
+parameterized; hardState/snapshot pointer-pinned. -/
+def msCellVL (mb : Bool) (hsL snL : Loc) (csv : GoValue)
+    (so ln sc : Nat) : GoValue :=
+  .struct ⟨"raft.MemoryStorage"⟩
+    #[("Mutex", .syncData (.mutex mb)),
+      ("hardState", .addr hsL), ("snapshot", .addr snL),
+      ("ents", .slice ⟨some (Loc.base ⟨32⟩), so, ln, sc⟩),
+      ("callStats", csv)]
+
+private def msEnvX : LocalEnv :=
+  [[("$c1960", Loc.base ⟨39⟩)],
+   [("$res1", Loc.base ⟨38⟩), ("$res0", Loc.base ⟨37⟩),
+    ("ms", Loc.base ⟨36⟩)]]
+
+private def msEnvXin : LocalEnv :=
+  [[("$c1961", Loc.base ⟨42⟩)],
+   [("$res0", Loc.base ⟨41⟩), ("ms", Loc.base ⟨40⟩)]]
+
+/-- The outer FirstIndex frame with its pending unlock defer. -/
+private def msXFrame (plans : List (TargetShape × List Expr))
+    (env : LocalEnv) (k : Cont) : Cont :=
+  .frame plans env [Loc.base ⟨37⟩, Loc.base ⟨38⟩]
+    [(.funcVal ⟨"raft.MemoryStorage.FirstIndex$deferSync0"⟩ [],
+      [.addr (.field (Loc.base ⟨31⟩) ⟨"raft.MemoryStorage"⟩ "Mutex")])]
+    k false
+
+/-- The continuation below the inner `ents[0]` boundary. -/
+private def msXKget (plans : List (TargetShape × List Expr))
+    (env : LocalEnv) (k : Cont) : Cont :=
+  .callArgsK ⟨"raftpb.Entry.GetIndex"⟩
+    [(.chain [], [.ref "$c1961"])] [] [] msEnvXin
+    (.seq [.seqn #[
+        .assign (.var "$res0")
+          (.add (.var "$c1961") (.intLit 1 .uint64)),
+        .returnStmt]]
+      msEnvXin
+      (.frame [(.chain [], [.ref "$c1960"])] msEnvX [Loc.base ⟨41⟩] []
+        (.seq [.seqn #[
+            .assign (.var "$res0") (.var "$c1960"),
+            .assign (.var "$res1") (.nil none),
+            .returnStmt]]
+          msEnvX (msXFrame plans env k))
+        false))
+
+/-- The FirstIndex in-span state former (outer cells 36-39 +
+extras). -/
+private def msFamX (dty : Option Ty) (so ln sc : Nat) (mb : Bool)
+    (hsL snL : Loc) (csv : GoValue) (c32 c33 c34 c35 : HeapCell)
+    (r0 r1 c1960 : GoValue) (extra : Heap) (na : Nat) : ExecState :=
+  { wBase with
+      heap := [(Loc.base ⟨31⟩,
+        { declaredTy := dty
+          value := msCellVL mb hsL snL csv so ln sc }),
+       (Loc.base ⟨32⟩, c32), (Loc.base ⟨33⟩, c33),
+       (Loc.base ⟨34⟩, c34), (Loc.base ⟨35⟩, c35),
+       (Loc.base ⟨36⟩,
+        { declaredTy := some (Ty.pointer (Ty.defined ⟨"raft.MemoryStorage"⟩))
+          value := msArgV }),
+       (Loc.base ⟨37⟩,
+        { declaredTy := some (Ty.int .uint64), value := r0 }),
+       (Loc.base ⟨38⟩,
+        { declaredTy := some (Ty.interface ⟨"error"⟩), value := r1 }),
+       (Loc.base ⟨39⟩,
+        { declaredTy := some (Ty.int .uint64), value := c1960 })]
+        ++ extra
+      nextAddr := na }
+
+private def msXInnerCells (r0' c1961 : GoValue) : Heap :=
+  [(Loc.base ⟨40⟩,
+    { declaredTy := some (Ty.pointer (Ty.defined ⟨"raft.MemoryStorage"⟩))
+      value := msArgV }),
+   (Loc.base ⟨41⟩,
+    { declaredTy := some (Ty.int .uint64), value := r0' }),
+   (Loc.base ⟨42⟩,
+    { declaredTy := some (Ty.int .uint64), value := c1961 })]
+
+/-- The FirstIndex family former (pre-entry; declaredTy `none` — the
+coerce store path). -/
+def msFamX0 (so ln sc : Nat) (hsL snL : Loc) (csv : GoValue)
+    (c32 c33 c34 c35 : HeapCell) : ExecState :=
+  { wBase with
+      heap := [(Loc.base ⟨31⟩,
+        { declaredTy := none
+          value := msCellVL false hsL snL csv so ln sc }),
+       (Loc.base ⟨32⟩, c32), (Loc.base ⟨33⟩, c33),
+       (Loc.base ⟨34⟩, c34), (Loc.base ⟨35⟩, c35)]
+      nextAddr := 36 }
+
+def MSPreX (so ln sc : Nat) (hsL snL : Loc) (csv : GoValue)
+    (c32 c33 c34 c35 : HeapCell) (σm : ExecState) : Prop :=
+  σm = msFamX0 so ln sc hsL snL csv c32 c33 c34 c35
+
+/-- Window 1 (59 steps): entry, Lock (mutex → true; coerce round 1
+wraps the counters), the defer registration, the callStats increment
+(round 2), the inner `firstIndex` entry, to the inner `ents[0]`
+boundary. The stats payloads carry the two coerce rounds' normalize
+wraps. PARKED SCAFFOLDING for the exported-pair member (park record
+below); retirement: superseded or consumed when the member lands. -/
+private theorem msXFI_w1 (so kn sc : Nat)
+    (a1 fiv a3 a4 a5 a6 : Int) (hsL snL : Loc)
+    (c32 c33 c34 c35 : HeapCell)
+    (plans : List (TargetShape × List Expr)) (env : LocalEnv)
+    (k : Cont) (ch : Choices) :
+    stepFnIter 59
+      (msFamX0 so (kn+1) sc hsL snL
+        (msStatsV a1 fiv a3 a4 a5 a6) c32 c33 c34 c35)
+      (.retV msArgV
+        (.callArgsK ⟨"raft.MemoryStorage.FirstIndex"⟩ plans [] [] env k))
+      ch
+      = .ok (.retV (.int 0 .int)
+          (.strictK .indexGet
+            [.slice ⟨some (Loc.base ⟨32⟩), so, kn+1, sc⟩] [] msEnvXin
+            (msXKget plans env k)),
+        msFamX none so (kn+1) sc true hsL snL
+          (msStatsV'
+            a1
+            (IntKind.normalize .int
+              (IntKind.normalize .int
+                (IntKind.normalize .int fiv + 1)))
+            a3 a4 a5 a6
+            (fun x => IntKind.normalize .int (IntKind.normalize .int x)))
+          c32 c33 c34 c35
+          (.int 0 .uint64) (.nil) (.int 0 .uint64)
+          (msXInnerCells (.int 0 .uint64) (.int 0 .uint64)) 43,
+        ch) := by
+  kernel_rfl
+
+/-! PARK RECORD (`MemoryStorage.FirstIndex`/`LastIndex` exported pair,
+park-not-weaken): window 1 (59 steps, above) is kernel-VERIFIED
+through Lock + the defer registration + the callStats increment —
+the coerce-wrap model (every ms-cell store re-normalizes the six
+counters) is kernel-validated for the first two rounds, and the tail
+segments through the outer result stores are kernel-validated
+piecewise in `artifacts/w3/ProbeKitXFI3.lean` (micro2/4/6/8 green).
+The sole open item is ONE defeq divergence inside the final 14-step
+defer-run segment (micro9 red; probe file pins the exact window,
+start state, and the candidate terminal). Resume: diff that window
+concretely cell-by-cell, then state the member against the
+`CallSpecRD` judgment (cherry-picked from the init lane — its
+terminal is exactly the deferred-frame `.next (.frame …)` this pair
+needs). -/
+
 end MemStorage
 
 /-- Non-vacuity of the footprint carrier (the ∃-discharge, concrete
