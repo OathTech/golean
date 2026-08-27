@@ -634,6 +634,292 @@ theorem absNetMeta_defined {σ : ExecState} {tl : Loc} {n : Nat}
     ∃ ms, absNetMeta σ tl = some ms ∧ ms.length = n :=
   sliceField_defined h
 
+/-! ## READER 6 — the tracker Progress vocabulary (W3 U3.0d)
+
+Charter Amendment 1's probe-state vocabulary: the leader's
+per-follower `tracker.Progress` data (`Match`/`Next`/`State` incl.
+StateProbe, the `Inflights` window's count/size) plus the raft cell's
+`raftLog` hop into the LANDED `absRaftLog` view (`AbsStateV2`) — the
+concrete log-length axis the Progress consistency facts (invariant
+C2) are stated against. Navigation: raft cell → embedded `trk`
+struct → `Progress` map → per-id `*tracker.Progress` cell →
+scalar fields + the `*Inflights` hop.
+
+The map values here are POINTERS, so the pure-decoder `mapRead`
+cannot carry the element decode — `mapReadD` below is the
+σ-DEPENDENT sibling (dv reads the heap). Kept beside `mapRead`
+rather than replacing it: the three landed pure-decoder consumers
+keep their lemma chains untouched; promotion of the pair into one
+generalized lens is a recorded candidate when a third map-reader
+class bites (promotion ledger). -/
+
+/-- `raft.raft`'s TypeId (the deep cell the trackers live in). -/
+def raftTid : TypeId := ⟨"raft.raft"⟩
+
+/-- `tracker.ProgressTracker`'s TypeId (the embedded `trk` value). -/
+def trackerTid : TypeId := ⟨"tracker.ProgressTracker"⟩
+
+/-- `tracker.Progress`'s TypeId (the per-follower cell). -/
+def progressTid : TypeId := ⟨"tracker.Progress"⟩
+
+/-- `tracker.Inflights`'s TypeId. -/
+def inflightsTid : TypeId := ⟨"tracker.Inflights"⟩
+
+/-- One follower's abstract Progress: the scalar probe-state axes
+(`State` is the `tracker.StateType` numeral — 0 probe, 1 replicate,
+2 snapshot) plus the inflights window's count/size. Loc-free output —
+`_ren` transports verbatim. -/
+structure AbsProgress where
+  matchIdx : Int
+  nextIdx : Int
+  state : Int
+  infCount : Int
+  infSize : Int
+  deriving Repr, DecidableEq
+
+/-- The σ-dependent pair walk (the `mapPairs` sibling for heap-reading
+value decoders; keys stay pure — Go map keys are scalars here). -/
+def mapPairsD {κ ν : Type} (σ : ExecState) (dk : GoValue → Option κ)
+    (dv : ExecState → GoValue → Option ν) :
+    List (GoValue × GoValue) → Option (List (κ × ν))
+  | [] => some []
+  | (k, v) :: rest => do
+      let k' ← dk k
+      let v' ← dv σ v
+      let rest' ← mapPairsD σ dk dv rest
+      pure ((k', v') :: rest')
+
+/-- The σ-dependent map lens (`mapRead`'s sibling for pointer-valued
+maps; same fail-closed arms). -/
+def mapReadD {κ ν : Type} (σ : ExecState) (mv : GoValue)
+    (dk : GoValue → Option κ) (dv : ExecState → GoValue → Option ν) :
+    Option (List (κ × ν)) :=
+  match mv with
+  | .map ⟨some b⟩ =>
+      (Heap.lookup σ.heap b).bind fun c =>
+        match c.value with
+        | .mapData es => mapPairsD σ dk dv es.toList
+        | _ => none
+  | _ => none
+
+theorem mapPairsD_ren {κ ν : Type} {r : Nat → Nat}
+    {σ σF : ExecState}
+    {dk : GoValue → Option κ} {dv : ExecState → GoValue → Option ν}
+    (hk : ∀ v, dk (renameValue r v) = dk v)
+    (hv : ∀ v x, dv σ v = some x → dv σF (renameValue r v) = some x) :
+    ∀ {es : List (GoValue × GoValue)} {xs : List (κ × ν)},
+      mapPairsD σ dk dv es = some xs →
+      mapPairsD σF dk dv (renameValueEntries r es) = some xs := by
+  intro es
+  induction es with
+  | nil => intro xs h; exact h
+  | cons p rest ih =>
+      intro xs h
+      obtain ⟨k, v⟩ := p
+      simp only [mapPairsD, Option.bind_eq_bind] at h
+      obtain ⟨k', hk', h⟩ := Option.bind_eq_some_iff.mp h
+      obtain ⟨v', hv', h⟩ := Option.bind_eq_some_iff.mp h
+      obtain ⟨rest', hrest', h⟩ := Option.bind_eq_some_iff.mp h
+      simp only [renameValueEntries, mapPairsD, Option.bind_eq_bind, hk, hk',
+        Option.bind_some, hv _ _ hv', ih hrest']
+      exact h
+
+theorem mapReadD_ren {κ ν : Type} {r : Nat → Nat} {na₀ na : Nat}
+    {fr : Heap} {σ σF : ExecState} (hF : FrameSim r na₀ na fr σ σF)
+    {dk : GoValue → Option κ} {dv : ExecState → GoValue → Option ν}
+    (hk : ∀ v, dk (renameValue r v) = dk v)
+    (hv : ∀ v x, dv σ v = some x → dv σF (renameValue r v) = some x)
+    {mv : GoValue} {xs : List (κ × ν)}
+    (h : mapReadD σ mv dk dv = some xs) :
+    mapReadD σF (renameValue r mv) dk dv = some xs := by
+  cases mv with
+  | map m =>
+      obtain ⟨ob⟩ := m
+      cases ob with
+      | none => simp [mapReadD] at h
+      | some b =>
+          simp only [mapReadD, renameValue, Option.map_some] at h ⊢
+          cases hc : Heap.lookup σ.heap b with
+          | none => rw [hc] at h; cases h
+          | some c =>
+              rw [hc] at h
+              rw [hF.lookup_some hc]
+              simp only [Option.bind_some] at h ⊢
+              rw [show (renameCell r c).value = renameValue r c.value
+                from rfl]
+              cases hcv : c.value <;> rw [hcv] at h <;>
+                simp only [renameValue] at * <;> try cases h
+              case mapData es =>
+                rw [List.toList_toArray, mapPairsD_ren hk hv h]
+  | _ => simp [mapReadD] at h
+
+/-- The inflights hop: `*tracker.Inflights` → `(count, size)`. -/
+def readInflights (σ : ExecState) (v : GoValue) : Option (Int × Int) := do
+  let c ← (ptrField σ v inflightsTid "count").bind asIntAny
+  let s ← (ptrField σ v inflightsTid "size").bind asIntAny
+  pure (c, s)
+
+/-- One Progress pointer → its abstract Progress. -/
+def readProgress (σ : ExecState) (v : GoValue) : Option AbsProgress := do
+  let m ← (ptrField σ v progressTid "Match").bind asIntAny
+  let n ← (ptrField σ v progressTid "Next").bind asIntAny
+  let st ← (ptrField σ v progressTid "State").bind asIntAny
+  let infv ← ptrField σ v progressTid "Inflights"
+  let inf ← readInflights σ infv
+  pure ⟨m, n, st, inf.1, inf.2⟩
+
+/-- **THE PROGRESS READER**: the raft cell at `.base a` (the address
+`absTwinNodeRaft` yields), its embedded tracker's `Progress` map as
+`(id ↦ AbsProgress)` pairs. Store order; lookup-vocabulary consumption
+only (module docstring). -/
+def absProgressOf (σ : ExecState) (a : Addr) :
+    Option (List (Int × AbsProgress)) :=
+  (locField σ (.base a) raftTid "trk").bind fun trkv =>
+    (fieldOfValue trkv trackerTid "Progress").bind fun mv =>
+      mapReadD σ mv asIntAny readProgress
+
+/-- **THE LOG-VIEW HOP**: the raft cell's `raftLog` pointer followed
+into the landed `absRaftLog` view (AbsStateV2) — the concrete
+log-length vocabulary the Progress consistency facts consume
+(`AbsLog.lastIndex`). -/
+def absRaftLogOf (σ : ExecState) (a : Addr) : Option AbsLog :=
+  match locField σ (.base a) raftTid "raftLog" with
+  | some (.addr (.base rl)) => absRaftLog σ rl
+  | _ => none
+
+theorem readInflights_ren {r : Nat → Nat} {na₀ na : Nat} {fr : Heap}
+    {σ σF : ExecState} (hF : FrameSim r na₀ na fr σ σF)
+    {v : GoValue} {p : Int × Int} (h : readInflights σ v = some p) :
+    readInflights σF (renameValue r v) = some p := by
+  unfold readInflights at h ⊢
+  simp only [Option.bind_eq_bind] at h ⊢
+  obtain ⟨c, hc, h⟩ := Option.bind_eq_some_iff.mp h
+  obtain ⟨cv, hcv, hdc⟩ := Option.bind_eq_some_iff.mp hc
+  obtain ⟨s, hs, h⟩ := Option.bind_eq_some_iff.mp h
+  obtain ⟨sv, hsv, hds⟩ := Option.bind_eq_some_iff.mp hs
+  rw [ptrField_ren hF hcv]
+  simp only [Option.bind_some, asIntAny_ren, hdc]
+  rw [ptrField_ren hF hsv]
+  simp only [Option.bind_some, asIntAny_ren, hds]
+  exact h
+
+theorem readProgress_ren {r : Nat → Nat} {na₀ na : Nat} {fr : Heap}
+    {σ σF : ExecState} (hF : FrameSim r na₀ na fr σ σF)
+    {v : GoValue} {p : AbsProgress} (h : readProgress σ v = some p) :
+    readProgress σF (renameValue r v) = some p := by
+  unfold readProgress at h ⊢
+  simp only [Option.bind_eq_bind] at h ⊢
+  obtain ⟨m, hm, h⟩ := Option.bind_eq_some_iff.mp h
+  obtain ⟨mv, hmv, hdm⟩ := Option.bind_eq_some_iff.mp hm
+  obtain ⟨n, hn, h⟩ := Option.bind_eq_some_iff.mp h
+  obtain ⟨nv, hnv, hdn⟩ := Option.bind_eq_some_iff.mp hn
+  obtain ⟨st, hst, h⟩ := Option.bind_eq_some_iff.mp h
+  obtain ⟨stv, hstv, hdst⟩ := Option.bind_eq_some_iff.mp hst
+  obtain ⟨infv, hinfv, h⟩ := Option.bind_eq_some_iff.mp h
+  obtain ⟨inf, hinf, h⟩ := Option.bind_eq_some_iff.mp h
+  rw [ptrField_ren hF hmv]
+  simp only [Option.bind_some, asIntAny_ren, hdm]
+  rw [ptrField_ren hF hnv]
+  simp only [Option.bind_some, asIntAny_ren, hdn]
+  rw [ptrField_ren hF hstv]
+  simp only [Option.bind_some, asIntAny_ren, hdst]
+  rw [ptrField_ren hF hinfv]
+  simp only [Option.bind_some]
+  rw [readInflights_ren hF hinf]
+  simpa using h
+
+theorem absProgressOf_ren {r : Nat → Nat} {na₀ na : Nat} {fr : Heap}
+    {σ σF : ExecState} (hF : FrameSim r na₀ na fr σ σF)
+    {a : Addr} {pm : List (Int × AbsProgress)}
+    (h : absProgressOf σ a = some pm) :
+    absProgressOf σF ⟨r a.id⟩ = some pm := by
+  unfold absProgressOf at h ⊢
+  obtain ⟨trkv, htrkv, h⟩ := Option.bind_eq_some_iff.mp h
+  obtain ⟨mv, hmv, h⟩ := Option.bind_eq_some_iff.mp h
+  have hloc : locField σF (renameLoc r (.base a)) raftTid "trk"
+      = some (renameValue r trkv) := locField_ren hF htrkv
+  rw [show renameLoc r (.base a) = Loc.base ⟨r a.id⟩ from rfl] at hloc
+  rw [hloc]
+  simp only [Option.bind_some]
+  rw [fieldOfValue_ren, hmv]
+  simp only [Option.map_some, Option.bind_some]
+  exact mapReadD_ren hF (asIntAny_ren r)
+    (fun v x hx => readProgress_ren hF hx) h
+
+theorem absRaftLogOf_ren {r : Nat → Nat} {na₀ na : Nat} {fr : Heap}
+    {σ σF : ExecState} (hF : FrameSim r na₀ na fr σ σF)
+    {a : Addr} {L : AbsLog} (h : absRaftLogOf σ a = some L) :
+    absRaftLogOf σF ⟨r a.id⟩ = some L := by
+  unfold absRaftLogOf at h ⊢
+  cases hv : locField σ (.base a) raftTid "raftLog" with
+  | none => rw [hv] at h; cases h
+  | some v =>
+      rw [hv] at h
+      have hloc : locField σF (renameLoc r (.base a)) raftTid "raftLog"
+          = some (renameValue r v) := locField_ren hF hv
+      rw [show renameLoc r (.base a) = Loc.base ⟨r a.id⟩ from rfl] at hloc
+      rw [hloc]
+      cases v <;> try cases h
+      case addr l =>
+        cases l <;> try cases h
+        case base rl => exact absRaftLog_ren hF h
+
+/-- Definedness of the σ-dependent pair walk (the `mapPairs_defined`
+sibling). -/
+theorem mapPairsD_defined {κ ν : Type} {σ : ExecState}
+    {dk : GoValue → Option κ} {dv : ExecState → GoValue → Option ν} :
+    ∀ {es : List (GoValue × GoValue)},
+      (∀ p ∈ es, (dk p.1).isSome ∧ (dv σ p.2).isSome) →
+      ∃ xs, mapPairsD σ dk dv es = some xs := by
+  intro es
+  induction es with
+  | nil => exact fun _ => ⟨[], rfl⟩
+  | cons p rest ih =>
+      intro h
+      obtain ⟨k, v⟩ := p
+      obtain ⟨hk, hv⟩ := h (k, v) (List.mem_cons_self ..)
+      obtain ⟨k', hk'⟩ := Option.isSome_iff_exists.mp hk
+      obtain ⟨v', hv'⟩ := Option.isSome_iff_exists.mp hv
+      obtain ⟨rest', hrest'⟩ := ih (fun q hq => h q (List.mem_cons_of_mem _ hq))
+      exact ⟨(k', v') :: rest', by
+        simp only [mapPairsD, hk', hv', hrest']; rfl⟩
+
+/-- **The Progress shape** (C1/C2 vocabulary): the raft cell at
+`.base a` is a `raft.raft` struct whose embedded `trk` is a
+`tracker.ProgressTracker` whose `Progress` field is a live map whose
+entries all decode. -/
+def ProgressShaped (σ : ExecState) (a : Addr) : Prop :=
+  ∃ cell fs trkv pfs b c es,
+    Heap.lookup σ.heap (.base a) = some cell ∧
+    cell.value = .struct raftTid fs ∧
+    StructFields.lookup fs "trk" = some trkv ∧
+    trkv = .struct trackerTid pfs ∧
+    StructFields.lookup pfs "Progress" = some (.map ⟨some b⟩) ∧
+    Heap.lookup σ.heap b = some c ∧
+    c.value = .mapData es ∧
+    ∀ p ∈ es.toList, (asIntAny p.1).isSome ∧ (readProgress σ p.2).isSome
+
+theorem absProgressOf_defined {σ : ExecState} {a : Addr}
+    (h : ProgressShaped σ a) : ∃ pm, absProgressOf σ a = some pm := by
+  obtain ⟨cell, fs, trkv, pfs, b, c, es, hc, hval, htrk, htv, hp, hb,
+    hes, hall⟩ := h
+  obtain ⟨pm, hpm⟩ := mapPairsD_defined hall
+  refine ⟨pm, ?_⟩
+  unfold absProgressOf locField fieldOfValue
+  rw [hc]
+  simp only [Option.bind_some, hval]
+  rw [if_pos (by rfl), htrk]
+  simp only [Option.bind_some, htv]
+  rw [if_pos (by rfl), hp]
+  simp only [Option.bind_some]
+  show (Heap.lookup σ.heap b).bind
+      (fun c => match c.value with
+        | .mapData es => mapPairsD σ asIntAny readProgress es.toList
+        | _ => none) = some pm
+  rw [hb]
+  simp only [Option.bind_some, hes]
+  exact hpm
+
 /-! ## Non-vacuity checks (the definedness premises are satisfiable:
 one three-cell state exercising the map lens and the cursors walk
 end-to-end; the Lens `wLens` convention) -/
@@ -664,6 +950,41 @@ theorem wTwin_cursors :
 
 theorem wTwin_leaderOfShaped : LeaderOfShaped wTwinState (.base ⟨0⟩) := by
   refine ⟨_, _, .base ⟨2⟩, _, _, rfl, rfl, by rfl, rfl, rfl, ?_⟩
+  intro p hp
+  rcases List.mem_cons.mp hp with rfl | hp'
+  · exact ⟨rfl, rfl⟩
+  · exact absurd hp' (List.not_mem_nil)
+
+/-- Non-vacuity for the U3.0d Progress reader: a four-cell state
+(raft cell → embedded trk → Progress map → one Progress cell →
+Inflights cell) the reader decodes end-to-end. -/
+private def wProgState : ExecState :=
+  { heap := [(.base ⟨0⟩,
+      { declaredTy := none
+        value := .struct raftTid
+          #[("trk", .struct trackerTid
+              #[("Progress", .map ⟨some (.base ⟨1⟩)⟩)])] }),
+     (.base ⟨1⟩,
+      { declaredTy := none
+        value := .mapData #[(.int 2 .uint64, .addr (.base ⟨2⟩))] }),
+     (.base ⟨2⟩,
+      { declaredTy := none
+        value := .struct progressTid
+          #[("Match", .int 1 .uint64), ("Next", .int 2 .uint64),
+            ("State", .int 1 .uint64),
+            ("Inflights", .addr (.base ⟨3⟩))] }),
+     (.base ⟨3⟩,
+      { declaredTy := none
+        value := .struct inflightsTid
+          #[("count", .int 0 .int), ("size", .int 256 .int)] })]
+    nextAddr := 4 }
+
+theorem wProg_read :
+    absProgressOf wProgState ⟨0⟩ = some [(2, ⟨1, 2, 1, 0, 256⟩)] := by rfl
+
+theorem wProg_shaped : ProgressShaped wProgState ⟨0⟩ := by
+  refine ⟨_, _, _, _, .base ⟨1⟩, _, _, rfl, rfl, by rfl, rfl, by rfl,
+    rfl, rfl, ?_⟩
   intro p hp
   rcases List.mem_cons.mp hp with rfl | hp'
   · exact ⟨rfl, rfl⟩

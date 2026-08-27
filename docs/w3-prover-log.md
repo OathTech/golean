@@ -1,4 +1,4 @@
-# W3 log (2026-08-27) — one writer: the w3 Wave-3.0 worker (same lane, W2's successor)
+# W3 log (2026-08-27) — one writer: the w3 Wave-3.0 worker (same lane, W2's successor); continued by the U3.0d/U3.1-F worker (same lane, Wave-3.0's successor)
 
 **Charter**: the campaign worktree's `docs/2026-08-27_w3-charter.md`,
 Wave 3.0 (units U3.0a/U3.0b/U3.0c — the interface wave). Contract:
@@ -286,3 +286,137 @@ after each unit)
   its Ready processing; (d) the cursors equation keys the s23 fold
   at node id = list index + 1 — the apply-loop spec should conclude
   exactly that keying.
+
+---
+
+# W3 continuation (2026-08-27) — units U3.0d + U3.1-F (one writer; Wave-3.0's successor on the same lane)
+
+Charter: `docs/2026-08-27_w3-charter.md` INCLUDING AMENDMENT 1
+(census-derived, binding) + the coordinator's unit brief. Census
+instrument: the campaign worktree's
+`docs/2026-08-27_w31-reachability-census.md` ([AGENT] instrument —
+claims built on are re-verified against the wire below).
+
+**QUANTIFIER-AUDIT LINE:** U3.0d is invariant-definition work
+(interface: advances no quantifier — the folded clauses are the
+contract later preservation/establishment rules discharge). U3.1-F
+builds CallSpecs = the RULES that discharge ∀-state at the log/util
+call sites of clusters C/D/E, plus the result-bearing judgment form
+(rule machinery). No end-theorem quantifier closes in either unit,
+and each spec's docstring says which ∀ it serves.
+
+## Successor re-verification (Wave 3.0's top claims, re-checked)
+
+- Tip + cleanliness: `git log` head = `562eb988` (U3.0c invariant
+  module commit), `git status` clean. CONFIRMED.
+- Full-build claim: warm full proofs build re-run at start of this
+  session (as the U3.0d wave-boundary build below) — 537 jobs,
+  EXIT=0. CONFIRMED (same job count as the U3.0c record).
+- Invariant module zero-True-stubs: grep over
+  `Specs/RaftPilot/Invariant.lean` for `True` stubs → none; the
+  joint ledger's named parameters (`dataEnc`, `tl`/`N₀`, `H₀`,
+  guard silences) present as parameters, as recorded. CONFIRMED.
+- U3.0b readers present incl. the [AGENT] fifth (`absNetMeta`) with
+  `_ren` + definedness; wTwin non-vacuity state in-file. CONFIRMED
+  by reading `Specs/Raft/AbsTwinCheckerRead.lean`.
+- Build lock: owner file read RELEASED (Wave 3.0's exit); only idle
+  LSP workers on the box (a prior arc4d session + an unrelated
+  project) — same inventory as the predecessor's note. CONFIRMED.
+
+## Judgment calls — U3.0d
+
+- [AGENT] Census re-verification performed against the wire/subject
+  before building on it: (a) §3.1's four-type net alphabet re-derived
+  from the harvest fold (twin-lib.go:283-286 folds `rd.Messages`
+  only) + `stepFollower:1748` unreachability (nodes 2/3 never
+  proposed to; node 1 never a follower — predecessor's discovery (a)
+  agrees); (b) §2.4's Progress bounds re-read at raft.go:815-823
+  (reset: follower Match=0, Next=lastIndex+1; self Match=lastIndex)
+  and log.go:387-413 (term's TWO error arms — ErrCompacted at
+  i+1 < firstIndex, **ErrUnavailable at i > lastIndex**); (c) the
+  tracker shapes re-read from the pinned wire's typeDefs
+  (tracker.ProgressTracker/Progress/Inflights fields, probe
+  artifacts/w3/ProbeTypes.lean output).
+- [AGENT] TERM-BOUND formulation (Amendment 1 left it to the
+  worker): `tm` HOISTED into `AbsCarrier` (the same one-pack move as
+  U3.0c's carrier hoist; the Elected phase term is pinned to `A.tm`
+  in `I.pair`, so the bound's witness and the phase term can never
+  diverge). Node half in `Pair` (`tmPos : 1 ≤ A.tm`;
+  `terms : ∀ i, term ∈ {0, A.tm}` on the ABSTRACT nodes — concrete
+  terms follow through s1Agrees/shellSync); net half in `NetCorr`
+  (`netTerms`: every live message's term = EXACTLY `A.tm` —
+  STRONGER than the amendment's "∈ {0, tm}" spelling; justification
+  in the clause docstring: send:562 term-stamping + no node emits at
+  term 0; the exact form kills BOTH the `m.Term < r.Term` block and
+  the spurious `m.Term == 0` local-prelude branch at deliveries).
+  Establishable at the post-campaign loop head (chdriver:44 runs
+  before the round loop; every net message then carries term 1).
+- [AGENT] DESIGN DELTA against Amendment 1's letter, recorded not
+  absorbed: (i) the amendment's chain "Next ≥ Match+1 ≥ 2" is
+  unsatisfiable literally (follower Match=0 at reset) — `ProgOk`
+  states the two bounds separately (`Next ≥ Match+1`, `Next ≥ 2`),
+  which is what census §2.4 actually uses; (ii) `ProgOk.nextUB`
+  (`Next ≤ lastIndex+1`) ADDED beyond the amendment's named facts —
+  without it `term(Next-1)` can hit the ErrUnavailable arm
+  (log.go:401-403) and `maybeSendSnapshot` is not refuted; the
+  amendment's facts kill only the ErrCompacted route; (iii)
+  `ProgOk.stateWire` (`State ∈ {0,1}`) added — the vocabulary the
+  amendment names ("State incl. StateProbe") plus the fact the
+  handler specs need to refute the StateSnapshot arms (census §2.6
+  lists BecomeSnapshot unreachable). Each is preservable (reset
+  re-establishes; MaybeUpdate/MaybeDecrTo respect the bounds;
+  BecomeSnapshot has no reachable caller).
+- [AGENT] Progress population facts added to `Pair.progress`
+  (tracker keys = the voter set, both directions, lookup
+  vocabulary): what kills `RawNode.Step`'s `pr == nil` arm
+  (rawnode.go:118-120) and `stepLeader:1397`'s nil arm — cheap here,
+  consumed by clusters C/D/E.
+- [AGENT] U3.0d reader extension placed IN `AbsTwinCheckerRead.lean`
+  (the U3.0b file, per the brief's option): `absProgressOf` (raft
+  cell → embedded trk → Progress map → per-id AbsProgress incl.
+  Inflights count/size) + `absRaftLogOf` (raft cell → raftLog hop →
+  the LANDED `absRaftLog` view — the concrete log-length axis).
+  New σ-DEPENDENT map lens `mapReadD`/`mapPairsD` (the Progress
+  map's values are pointers; the landed pure-decoder `mapRead`
+  cannot read through them) — kept BESIDE `mapRead`, not replacing
+  it (three landed pure consumers untouched); promotion of the pair
+  into one generalized lens recorded as a candidate at the third
+  map-reader class. `_ren` congruences composed from the lens laws
+  for all of it; `ProgressShaped` + `absProgressOf_defined`
+  definedness spine; non-vacuity 4-cell state `wProgState`
+  (wProg_read computes; wProg_shaped discharges). `absRaftLogOf`
+  definedness enters through the invariant's ∃-equation form (the
+  same posture as `absTwinNodeRaft`, which has no Shaped spine).
+- [AGENT] POPULATION TIGHTENED (Amendment 1 item 3): `NetCorr`'s
+  population clause now lists the census-proved four wire types;
+  the design note's five-type list (incl. Prop(local)) is corrected
+  ON THE RECORD (clause docstring cites census §3.1 and the
+  unreachable forwarding site). `msgProp` constant retained (the
+  D-cluster's local-message vocabulary).
+- [AGENT] C5/U4 VERDICT (Amendment 1 item 4): NO amendment needed —
+  recorded at `I`'s docstring. The state-level Stream clause
+  (`ch <:+ ch₀`) is draw-count-agnostic and the span judgment's
+  ∀ch/suffix discipline constrains nothing about a dead draw's
+  value; the landed demonstration is `becomeFollower_callSpec`
+  itself, whose span already consumes the D-11 jitter draw
+  (becomeFollower → reset → resetRandomizedElectionTimeout) with a
+  value-agnostic statement.
+
+## U3.0d — THE CENSUS ADDENDA FOLDED INTO `I`: LANDED
+
+- Files: `Specs/Raft/AbsTwinCheckerRead.lean` (+~330 lines: reader 6
+  section, mapReadD lens, _ren + definedness + non-vacuity),
+  `Specs/RaftPilot/Invariant.lean` (AbsCarrier.tm; ProgOk;
+  Pair.tmPos/terms/progress; NetCorr population four-type +
+  netTerms; Elected branch pinned at A.tm; sanity lemmas
+  `Pair.term_le`, `NetCorr.net_term_pos`; `lookupI` hoisted to the
+  vocabulary section; module docstrings carry the U3.0d record).
+- Zero True stubs (unchanged); definitions + cheap sanity lemmas
+  only; hatch grep over both touched files: 0
+  sorry/native_decide/partial.
+- Builds: `AbsTwinCheckerRead` target 43 jobs EXIT=0 (0.76 s
+  module); `Invariant` target 59 jobs EXIT=0 (0.85 s module);
+  **wave-boundary FULL proofs build (box lock held + released):
+  EXIT=0, 537 jobs, wall 4.88 s (warm tree), peak RSS 2.2 GB**
+  (artifacts/w3/u30d-full-build.log). No differential owed
+  (proofs/docs only).

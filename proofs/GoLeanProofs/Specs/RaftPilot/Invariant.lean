@@ -17,6 +17,22 @@ HOISTED into one pack (`AbsCarrier`) so every sub-clause speaks about
 the same carrier; this hoisting is the one structural departure from
 the note's surface syntax, recorded in the W3 log).
 
+**U3.0d (charter Amendment 1, the census addenda — folded in):**
+(1) THE TERM-BOUND CLAUSE — `AbsCarrier` gains the campaign term
+`tm`; `Pair.tmPos`/`Pair.terms` bound every abstract node term into
+`{0, tm}` and `NetCorr.netTerms` pins every live net message's term
+to exactly `tm` (the two halves that kill `raft.Step`'s
+`m.Term < r.Term` block, census §2.2.1); the Elected phase's term IS
+`A.tm` (pinned in `I.pair`'s Elected branch). (2) PROBE-STATE
+VOCABULARY — `Pair.progress` carries every node's tracker Progress
+data (U3.0d readers `absProgressOf`/`absRaftLogOf`) with the `ProgOk`
+consistency facts (the snapshot-family-death chain, census §2.4) and
+the tracker population = voters. (3) POPULATION TIGHTENED —
+`NetCorr.population` is the census-proved four-type wire alphabet
+(§3.1); the design note's five-type list is corrected on the record.
+(4) C5/U4 — verdict recorded at `I`'s docstring: the landed
+Stream/Hygiene clauses absorb the D-11 dead draws unchanged.
+
 **DEFINITIONS ONLY (the unit charter):** this module defines `I` and
 proves cheap sanity lemmas (definedness projections, the
 trace-forgetting map, the electing-phase counter collapses, the
@@ -89,16 +105,27 @@ def asNat (i : Int) (n : Nat) : Prop := i = (n : Int)
 def gsBytes (s : GoString) : List Int :=
   s.bytes.toList.map (fun b => (b.toNat : Int))
 
+/-- First-match lookup on an Int-keyed association list (the map
+readers' lookup vocabulary; keys are unique in a Go map, so
+first-match = the map's lookup). -/
+def lookupI {ν : Type} : List (Int × ν) → Int → Option ν
+  | [], _ => none
+  | p :: rest, t => if p.1 = t then some p.2 else lookupI rest t
+
 /-! ## The carrier pack — the hoisted existential witnesses -/
 
 /-- The abstract carrier `I` pairs the concrete state with: the
-ghost-completed S1 net (C2's ∃-ghost) and the two event histories
-(C3's ∃-histories). One pack so Pair/CheckerCorr/NetCorr and the
-phase split all constrain the SAME witnesses. -/
+ghost-completed S1 net (C2's ∃-ghost), the two event histories
+(C3's ∃-histories), and — U3.0d, charter Amendment 1 — the single
+campaign's term `tm` (the term-bound clause's witness, shared by the
+node/net term bounds and forced onto `ElectedAt`'s term in the
+Elected phase). One pack so Pair/CheckerCorr/NetCorr and the phase
+split all constrain the SAME witnesses. -/
 structure AbsCarrier where
   N : SNet
   evsS1 : List (Nat × Nat)
   evsA : List AEv
+  tm : Nat
 
 /-! ## C1 — Base (the init-spec product, maintained) -/
 
@@ -154,11 +181,49 @@ outside, as above; `applied` pairs through CheckerCorr's cursors). -/
 def shellSync (sh : Int × Int × Int × Int) (r : ENode) : Prop :=
   sh.1 = (r.state : Int) ∧ sh.2.1 = (r.term : Int)
 
+/-- The Progress consistency facts (U3.0d, charter Amendment 1;
+census §2.4's snapshot-death chain + §2.6's live-arm set), per
+tracker entry, against the OWNER's concrete log view
+(`li` = the owner's `AbsLog.lastIndex`):
+
+- `matchLB`/`matchLog`: `0 ≤ Match ≤ lastIndex` (the amendment's
+  "Match ≤ log length").
+- `nextMatch`/`nextLB`: `Next ≥ Match + 1` and `Next ≥ 2` — the
+  amendment's chain "Next ≥ Match+1 ≥ 2" read DISTRIBUTIVELY: at a
+  fresh `reset` a follower's Match is 0 (raft.go:815-820), so the
+  literal chain `Match+1 ≥ 2` is unsatisfiable; the census's own
+  §2.4 argument uses exactly the two separate bounds (design delta,
+  recorded in the W3 log).
+- `nextUB` ([AGENT] addition beyond the amendment's letter):
+  `Next ≤ lastIndex + 1` — without it `raftLog.term(Next-1)` can
+  return `ErrUnavailable` (log.go:401-403) and `maybeSendSnapshot`
+  is NOT refuted; the amendment's named facts alone kill only the
+  `ErrCompacted` route. Recorded as a design delta, not silently
+  absorbed.
+- `stateWire`: `State ∈ {StateProbe=0, StateReplicate=1}` — the
+  snapshot family's death makes `BecomeSnapshot` unreachable
+  (census §2.6); the handler specs consume this to refute the
+  `StateSnapshot` arms (stepLeader:1550-1564, `IsPaused`). -/
+structure ProgOk (li : Int) (p : AbsProgress) : Prop where
+  matchLB : 0 ≤ p.matchIdx
+  matchLog : p.matchIdx ≤ li
+  nextMatch : p.matchIdx + 1 ≤ p.nextIdx
+  nextLB : 2 ≤ p.nextIdx
+  nextUB : p.nextIdx ≤ li + 1
+  stateWire : p.state = 0 ∨ p.state = 1
+
 /-- **`Pair`** (C2): the seeded S1 reach carrier plus, per concrete
 node `i` (id `i+1` — `newTwin`'s id loop, a reflected-program
 constant), the ∃-placement and the shell-sync against the SAME
 abstract net. `count`/`ids` record the driver's configuration shape
-(concrete node list ↔ the voter set). -/
+(concrete node list ↔ the voter set). U3.0d additions (charter
+Amendment 1): `tmPos`/`terms` — the node half of the term-bound
+clause (every abstract node term ∈ {0, A.tm}; concrete terms follow
+through `s1Agrees`/`shellSync`) — and `progress`, the probe-state
+vocabulary on C2's concrete side (every node's tracker entries
+satisfy the `ProgOk` consistency facts against that node's own
+concrete log view, with the tracker population = the voter set —
+what kills `RawNode.Step`'s `pr == nil` arm). -/
 structure Pair (voters : List Nat) (N₀ : SNet) (σ : ExecState) (tl : Loc)
     (tv : AbsTwinV0) (A : AbsCarrier) : Prop where
   seed : Seed N₀
@@ -170,6 +235,17 @@ structure Pair (voters : List Nat) (N₀ : SNet) (σ : ExecState) (tl : Loc)
       NodePlaced σ ra.id (A.N.node (i + 1))
   shells : ∀ i sh, tv.nodes[i]? = some sh →
     shellSync sh (A.N.node (i + 1))
+  tmPos : 1 ≤ A.tm
+  terms : ∀ i, (A.N.node i).term = 0 ∨ (A.N.node i).term = A.tm
+  progress : ∀ i, i < tv.nodes.length →
+    ∃ ra L li pm,
+      absTwinNodeRaft σ tl i = some ra ∧
+      absRaftLogOf σ ra = some L ∧
+      L.lastIndex = some li ∧
+      absProgressOf σ ra = some pm ∧
+      (∀ q ∈ pm, ProgOk li q.2) ∧
+      (∀ q ∈ pm, ∃ v ∈ voters, q.1 = (v : Int)) ∧
+      (∀ v ∈ voters, ∃ p, lookupI pm (v : Int) = some p)
 
 /-! ## C3 — the checker-state correspondence (`CheckerCorr ⊆ Pair`) -/
 
@@ -206,13 +282,6 @@ theorem ClaimTraceTo.reach {step : SNet → SNet → Prop} :
   induction h with
   | done hr => exact hr
   | obs hr _ _ _ ih => exact hr.trans ih
-
-/-- First-match lookup on an Int-keyed association list (the map
-readers' lookup vocabulary; keys are unique in a Go map, so
-first-match = the map's lookup). -/
-def lookupI {ν : Type} : List (Int × ν) → Int → Option ν
-  | [], _ => none
-  | p :: rest, t => if p.1 = t then some p.2 else lookupI rest t
 
 /-- Concrete `leaderOf` ↔ the S1 fold's map: Nat-ranged keys/values
 and lookup agreement at every term (both directions — the `none`
@@ -286,14 +355,25 @@ H-carrier) — `ElectedNet` below; in `Electing` the population is
 restricted to the vote family, so those clauses are vacuous there BY
 POPULATION, not by stub.
 
-- `population`: every LIVE message is Vote/VoteResp/App/AppResp/Prop
-  — in particular NO MsgTimeoutNow/TransferLeader/Hup: the
-  second-election exclusion as a PRESERVED fact (the library can
-  campaign on receipt; the driver never emits the trigger). `Prop`
-  is listed per the note; it is a LOCAL message type the harvest
-  should never fold into the net — W3.1's emission census may
-  tighten this to the four wire types (recorded, not silently
-  tightened here).
+- `population` (U3.0d TIGHTENED, charter Amendment 1 item 3): every
+  LIVE message is one of the FOUR wire types
+  Vote/VoteResp/App/AppResp — in particular NO
+  MsgTimeoutNow/TransferLeader/Hup: the second-election exclusion as
+  a PRESERVED fact (the library can campaign on receipt; the driver
+  never emits the trigger). CORRECTION against the design note's C4
+  (which listed five, incl. Prop(local)): the census §3.1 proves the
+  net alphabet is exactly {3,4,5,6} — the only MsgProp forwarding
+  site (`stepFollower:1748`) is unreachable in T1, and the harvest
+  folds only `rd.Messages`. Recorded in the W3 log.
+- `netTerms` (U3.0d, the net half of the term-bound clause): every
+  live message carries EXACTLY the campaign term `A.tm` — stronger
+  than the amendment's "∈ {0, tm}" spelling, and deliberately so
+  ([AGENT], logged): every wire emission is term-stamped with its
+  sender's term (`send:562`) and no node at term 0 ever emits (nodes
+  2/3 emit only inside a `Step` whose prelude has already bumped
+  them to the message's term); the exact form kills BOTH
+  `raft.Step`'s `m.Term < r.Term` block (census §2.2.1) AND the
+  spurious `m.Term == 0` local-prelude branch at deliveries.
 - `entryTypes`: all entries EntryNormal (feeds the S3-anomaly
   guard's silence), via the U3.0b metadata reader, positionally
   aligned with `tv.net` (`metaLen`).
@@ -305,7 +385,8 @@ structure NetCorr (dataEnc : List Int → Nat → Prop)
   metaLen : ∀ ms, absNetMeta σ tl = some ms → ms.length = tv.net.length
   population : ∀ lm ∈ tv.net, lm.1 = true →
     lm.2.typ = msgVote ∨ lm.2.typ = msgVoteResp ∨ lm.2.typ = msgApp ∨
-    lm.2.typ = msgAppResp ∨ lm.2.typ = msgProp
+    lm.2.typ = msgAppResp
+  netTerms : ∀ lm ∈ tv.net, lm.1 = true → asNat lm.2.term A.tm
   entryTypes : ∀ ms, absNetMeta σ tl = some ms →
     ∀ (j : Nat) (lm : Bool × AbsMessage) (mta : List (Int × List Int)),
       tv.net[j]? = some lm → ms[j]? = some mta →
@@ -425,11 +506,25 @@ voter configuration, the abstract seed `N₀`, the twin location `tl`
 (located once by shape — an invariant of the seeded run, carried not
 re-derived), the initial stream `ch₀`, and the `dataEnc` joint.
 `CheckerCorr`/`NetCorr` sit inside the `pair` conjunct (the note's
-`⊆ Pair`), sharing the carrier pack's witnesses. `Stream` is the
+`⊆ Pair`), sharing the carrier pack's witnesses — including `A.tm`,
+which the Elected branch pins as `ElectedAt`'s term (the term-bound
+clause and the phase term are the SAME witness). `Stream` is the
 standing threading discipline's state half: the current stream is a
 SUFFIX of the initial one (per-round suffix accounting — the shape
 `mapPickLoop_generic` realizes; span-level ∀ch/draw-quantification
-lives in the specs, not in the state). -/
+lives in the specs, not in the state).
+
+**U3.0d C5/U4 verdict (charter Amendment 1 item 4, recorded):** the
+D-11 jitter draw runs on every `reset` but is unobservable in T1
+(census U4 — `pastElectionTimeout` unreachable). The clauses AS
+LANDED absorb such dead draws with no amendment: `Stream` is
+draw-count-agnostic (any span leaves a suffix), and the span-level
+judgment's ∀ch discipline (`headD 0`/`tail` forms, `ch' <:+ ch`)
+constrains nothing about a consumed draw's VALUE. The landed
+demonstration is `becomeFollower_callSpec` itself, whose span already
+consumes the jitter draw among its stream pops (becomeFollower →
+`reset` → `resetRandomizedElectionTimeout`) and whose statement is
+value-agnostic in it. -/
 structure I (dataEnc : List Int → Nat → Prop) (voters : List Nat)
     (N₀ : SNet) (tl : Loc) (ch₀ : Choices)
     (σ : ExecState) (k : Cont) (ch : Choices) : Prop where
@@ -440,8 +535,8 @@ structure I (dataEnc : List Int → Nat → Prop) (voters : List Nat)
     CheckerCorr dataEnc voters N₀ σ tl tv A ∧
     NetCorr dataEnc σ tl tv A ∧
     (Electing tv A ∨
-      ∃ (ldr tm : Nat) (H₀ NH : HNet),
-        ElectedAt dataEnc voters σ tl tv A ldr tm H₀ NH)
+      ∃ (ldr : Nat) (H₀ NH : HNet),
+        ElectedAt dataEnc voters σ tl tv A ldr A.tm H₀ NH)
   hygiene : Hygiene k
   stream : ch <:+ ch₀
 
@@ -493,6 +588,27 @@ theorem violations_zero_of_electing {dataEnc voters N₀ σ tl tv A}
   have h := hc.violations
   rw [he.noClaims, he.noApplies] at h
   simpa [s1Run, s23Run] using h
+
+/-- Term-bound collapse (U3.0d): every abstract node term is bounded
+by the campaign term — the usable one-sided form of the `terms`
+disjunction. -/
+theorem Pair.term_le {voters N₀ σ tl tv A}
+    (hp : Pair voters N₀ σ tl tv A) (i : Nat) :
+    (A.N.node i).term ≤ A.tm := by
+  rcases hp.terms i with h | h
+  · rw [h]; exact Nat.zero_le _
+  · exact Nat.le_of_eq h
+
+/-- Term-bound collapse (U3.0d): a live net message is never
+term-local — its term is the campaign term, which is positive
+(what refutes the `m.Term == 0` prelude branch at wire deliveries). -/
+theorem NetCorr.net_term_pos {dataEnc voters N₀ σ tl tv A}
+    (hn : NetCorr dataEnc σ tl tv A) (hp : Pair voters N₀ σ tl tv A)
+    {lm : Bool × AbsMessage} (hmem : lm ∈ tv.net) (hlive : lm.1 = true) :
+    (1 : Int) ≤ lm.2.term := by
+  have h := hn.netTerms lm hmem hlive
+  rw [show lm.2.term = (A.tm : Int) from h]
+  exact_mod_cast hp.tmPos
 
 /-- An Elected `I`-state's leader really is the carrier's unique
 same-term leader candidate: the victory is on the ghost record (the
