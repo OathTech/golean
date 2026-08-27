@@ -2565,3 +2565,27 @@ reachable-handler closure + message-type population from the driver
 op vocabulary (verified narrow: one campaign, propose-at-quiescence,
 deliver picks, NO ticks) — the Wave 3.1 unit list will be committed
 as a campaign doc with file:line evidence.
+
+### 2026-08-27 — Wave 3.0 LANDED (w1-prover @ 562eb988)
+
+Three units, one commit each, wave-boundary proofs build GREEN
+(537 jobs, 5.09s warm, capped, lock held/released). U3.0a ghost-acks:
+Ghost.acks + ackCertified (∃-quorum, monotone lemmas); [AGENT] wiring
+call — NO new EStep constructor (would reshape the S1 dialect);
+instead EStep proved acks-TRANSPARENT (EStep_acks_eq) with certified
+instantiated at HStep; both retained witnesses re-run GREEN, plus two
+new witnesses. U3.0b readers: AbsTwinCheckerRead.lean (672 lines) —
+absLeaderOf/absByIndex/absNodeCursors/absNodeGot + [AGENT] FIFTH
+reader absNetMeta (C4's EntryNormal/payload-data vocabulary was
+unstatable over absMessage's (Index,Term) projection — charter
+estimate corrected on the record); each with _ren congruence +
+definedness. U3.0c Invariant.lean (513 lines): I = Base ∧ Pair
+(+CheckerCorr+NetCorr) ∧ Hygiene ∧ Stream ∧ phase split; AbsCarrier
+∃-pack hoisted (recorded departure); ClaimTraceTo endpoint-named
+([AGENT] strengthening for preservation); zero True stubs; six named
+joints ledgered for W3.2a/b/d/f. Prover log: docs/w3-prover-log.md.
+[AGENT] next: U3.0d — fold charter Amendment 1's census addenda
+(term-bound clause, probe-state Pair vocabulary, population
+tightened to the four wire types per convergent census+worker
+findings) into the invariant BEFORE any cluster consumes it; then
+U3.1-F (shared log layer) opens Wave 3.1.
