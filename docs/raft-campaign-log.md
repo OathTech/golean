@@ -2827,3 +2827,23 @@ C/D/E + U3.2a/b until the amended note passes the [USER] gate; safe
 meanwhile: F-transcription, (M) consumers, Sort census,
 quiescence-measure design, plug work. Judge owed twice at merge;
 trust surface verified untouched. Awaiting [USER] adjudication.
+
+### 2026-08-27 — [USER] instruction: whole-project TRIAGE PLANNING PASS
+
+[USER] direction (after the architecture reset discussion): the
+architecture of record is Executable GoCore <layered> Relational
+semantics <layered> Iris reasoning. Triage the whole project into:
+(1) LAND — machinery legitimately and reasonably usable to lift the
+machinery to the proper Iris level; (2) KILL — machinery which is
+off track; (3) PARK — other stuff, on a branch. Output is a PLAN;
+NO EXECUTION until [USER] sign-off. Context decisions recorded from
+the discussion: the CallSpec judgment family is the parallel-
+calculus drift (kill-class except minimal vacuity witnesses);
+CallSpecV + the R-transport road are CANCELLED (never built); the
+tier-2 substrate (plug/bind theorem, crossing kit, (M), readers,
+invariant minus the two defective clauses, glue, census) is the
+LAND candidate class; the channel-logic rot lesson argues against
+wholesale parking. [AGENT]: triage planner dispatched (Fable,
+design-pass worktree) with the W0 kill-list as the format model;
+per-item evidence + an explicit Iris-lift consumption argument
+required for every LAND verdict.
