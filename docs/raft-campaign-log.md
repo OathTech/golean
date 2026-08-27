@@ -2551,3 +2551,17 @@ contract, with the three open points resolved as recommended:
 3. Payload clause stays T1-fragment-scoped (middle path; the general
    form waits for a second consumer).
 W3 charters go out per-handler with the note as the contract.
+
+### 2026-08-27 — W3 opened: charter committed, Wave 3.0 dispatched
+
+`docs/2026-08-27_w3-charter.md` ([AGENT] wave structure: interface
+wave U3.0a-c sequential on the w1-prover lane → handler CallSpecs
+file-disjoint → the six named hard units). Wave 3.0 prover (Fable)
+dispatched into w1-prover @ 849b3707: ghost-acks extension, reader
+extension (separate lens readers), the invariant module (definitions
+only, True-stubs forbidden — joints recorded as named Prop fields).
+In parallel, a read-only census agent enumerates the T1-fragment
+reachable-handler closure + message-type population from the driver
+op vocabulary (verified narrow: one campaign, propose-at-quiescence,
+deliver picks, NO ticks) — the Wave 3.1 unit list will be committed
+as a campaign doc with file:line evidence.
