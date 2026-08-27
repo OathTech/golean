@@ -180,6 +180,10 @@ import GoLeanProofs.Specs.RaftPilot.InitSpec
 -- later waves').
 import GoLeanProofs.Specs.RaftPilot.Invariant
 import GoLeanProofs.Specs.RaftPilot.LogReadSpecs
+-- # w3-init (U3.1-A init-cluster CallSpecs; keep contiguous — merged
+-- with the sibling lane's additions by the coordinator)
+import GoLeanProofs.Specs.RaftPilot.InitCallSpecs
+-- # w3-init end
 import GoLeanProofs.Sym.KernelRfl
 -- W3 crossing kit: data-branch window splits (path-condition
 -- crossings; design note docs/2026-08-27_crossing-kit-design.md).

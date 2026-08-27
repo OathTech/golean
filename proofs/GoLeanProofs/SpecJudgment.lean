@@ -114,6 +114,77 @@ def CallSpecR (P : ExecState → Prop) (fid : FuncId)
       ∧ loadMany σ' rlocs = .ok vs
       ∧ Q σ' vs ∧ ch' <:+ ch
 
+/-- **The result-bearing call-span triple at the DEFER-TAIL exit
+geometry** (W3 U3.1-A — the first consumer is
+`raft.MemoryStorage.ApplySnapshot`, whose `defer ms.Unlock()` is the
+storage family's universal shape). The machine has TWO return-arrival
+geometries: a defer-FREE callee ends at
+`.returning (.frame plans env rlocs [] k false)` (the `CallSpecR`
+terminal), while a callee WITH defers drains them through the
+`.frame … ((cv,args)::ds) …` arm and arrives at
+`.next (.frame plans env rlocs [] k false)` — it never re-visits a
+`.returning` frame configuration. Both arrival arms perform the SAME
+next step (the pinned-result `loadMany` + the caller-side `tgtOpK`
+walk — StepFn.lean's twin frame arms), so the two forms are
+consumed identically; the postconditions state the DEFER-DRAINED
+state (e.g. the mutex unlocked again).
+
+The target plans are quantified at the WELL-FORMED result-consuming
+shape `(sh, e :: ops) :: rest` (a leading target with ≥ 1 operand
+expression — the frontend "always supplies targets for result-bearing
+calls", the machine's own stuck-closed discipline at the frame
+arms): the defer-DRAIN step's frame arm scrutinizes the targets
+column, so a span at a fully-open `plans` variable is kernel-stuck at
+that step — the shape quantification is exactly as strong at every
+real call site and keeps the whole span one kernel reduction.
+
+∀ sh/e/ops/rest (the plans shape) / env / k, ∀ ch, ∃ n; non-wrapper
+callees; LINEAGE as `CallSpecR` (no new mechanism class — the same
+procedure rule at the machine's second exit geometry). -/
+def CallSpecRD (P : ExecState → Prop) (fid : FuncId)
+    (vals : List GoValue) (v : GoValue)
+    (Q : ExecState → List GoValue → Prop) : Prop :=
+  ∀ σ, P σ → ∀ (sh : TargetShape) (e : Expr) (ops : List Expr)
+      (rest : List (TargetShape × List Expr))
+      (env : LocalEnv) (k : Cont) (ch : Choices),
+    ∃ (n : Nat) (σ' : ExecState) (rlocs : List Loc)
+      (vs : List GoValue) (ch' : Choices),
+      stepFnIter n σ
+        (.retV v (.callArgsK fid ((sh, e :: ops) :: rest) vals [] env k)) ch
+        = .ok (.next (.frame ((sh, e :: ops) :: rest) env rlocs [] k false),
+            σ', ch')
+      ∧ loadMany σ' rlocs = .ok vs
+      ∧ Q σ' vs ∧ ch' <:+ ch
+
+theorem CallSpecRD.conseq {P P' : ExecState → Prop} {fid : FuncId}
+    {vals : List GoValue} {v : GoValue}
+    {Q Q' : ExecState → List GoValue → Prop}
+    (h : CallSpecRD P fid vals v Q)
+    (hpre : ∀ σ, P' σ → P σ)
+    (hpost : ∀ σ vs, Q σ vs → Q' σ vs) : CallSpecRD P' fid vals v Q' := by
+  intro σ hP sh e ops rest env k ch
+  obtain ⟨n, σ', rlocs, vs, ch', hrun, hload, hQ, hsuf⟩ :=
+    h σ (hpre σ hP) sh e ops rest env k ch
+  exact ⟨n, σ', rlocs, vs, ch', hrun, hload, hpost σ' vs hQ, hsuf⟩
+
+/-- The definitional hop at a drained defer-tail call configuration
+(the `CallSpecR.consume` sibling at the second exit geometry). -/
+theorem CallSpecRD.consume {P : ExecState → Prop} {fid : FuncId}
+    {vals : List GoValue} {v : GoValue}
+    {Q : ExecState → List GoValue → Prop} {σ : ExecState}
+    (h : CallSpecRD P fid vals v Q) (hP : P σ)
+    (sh : TargetShape) (e : Expr) (ops : List Expr)
+    (rest : List (TargetShape × List Expr)) (env : LocalEnv) (k : Cont)
+    (ch : Choices) :
+    ∃ (n : Nat) (σ' : ExecState) (rlocs : List Loc)
+      (vs : List GoValue) (ch' : Choices),
+      stepFnIter n σ
+        (.retV v (.callArgsK fid ((sh, e :: ops) :: rest) vals [] env k)) ch
+        = .ok (.next (.frame ((sh, e :: ops) :: rest) env rlocs [] k false),
+            σ', ch')
+      ∧ loadMany σ' rlocs = .ok vs
+      ∧ Q σ' vs ∧ ch' <:+ ch := h σ hP sh e ops rest env k ch
+
 theorem CallSpecR.conseq {P P' : ExecState → Prop} {fid : FuncId}
     {vals : List GoValue} {v : GoValue}
     {Q Q' : ExecState → List GoValue → Prop}
@@ -346,9 +417,67 @@ def refusalResultBearingCallSpan : Prop :=
   Refusal "CallSpec: caller-inclusive result-bearing span (tgtOpK caller-target walk)"
 
 /-- Nullary calls enter the frame from the statement arm directly
-(no drained `.retV` shape); the nullary judgment form is sealed until
-a consumer demands it (every raft handler carries its receiver). -/
+(no drained `.retV` shape). The demanded RESULT-BEARING nullary form
+landed as `CallSpecRN` (W3 U3.1-A — `raft.NewMemoryStorage`, census
+E2, is nullary); this seal now covers only the RESULTLESS nullary
+form, for which no consumer exists yet. -/
 def refusalNullaryCallSpan : Prop :=
-  Refusal "CallSpec: nullary call entry"
+  Refusal "CallSpec: nullary RESULTLESS call entry"
+
+/-- **The result-bearing NULLARY call-span triple** (W3 U3.1-A — the
+first consumer is `raft.NewMemoryStorage`, census E2). A nullary call
+has no drained `.retV` configuration: the statement arm enters the
+frame directly (StepFn.lean:176-186), so the span starts at the call
+STATEMENT `.exec (.call targets fid #[]) env k` — with the caller's
+`targets` symbolic under the machine's own encoding premise
+(`targetsPlan targets.toList = some plans`, consumption-site
+checkable by `rfl` at any concrete site) — and ends at the same
+return-arrival configuration as `CallSpecR`, one step before the
+result read and the caller-side `tgtOpK` walk. ∀ targets/plans/env/k
+(target- and continuation-parametric), ∀ ch (demonic), ∃ n.
+Non-wrapper callees only, as in `CallSpecR`.
+
+LINEAGE: identical to `CallSpecR` (Hoare's procedure rule with
+result substitution at the CPS presentation); the only delta is the
+entry shape, which is the machine's own nullary route. -/
+def CallSpecRN (P : ExecState → Prop) (fid : FuncId)
+    (Q : ExecState → List GoValue → Prop) : Prop :=
+  ∀ σ, P σ → ∀ (targets : Array Assignee)
+      (plans : List (TargetShape × List Expr)),
+    targetsPlan targets.toList = some plans →
+    ∀ (env : LocalEnv) (k : Cont) (ch : Choices),
+    ∃ (n : Nat) (σ' : ExecState) (rlocs : List Loc)
+      (vs : List GoValue) (ch' : Choices),
+      stepFnIter n σ (.exec (.call targets fid #[]) env k) ch
+        = .ok (.returning (.frame plans env rlocs [] k false), σ', ch')
+      ∧ loadMany σ' rlocs = .ok vs
+      ∧ Q σ' vs ∧ ch' <:+ ch
+
+theorem CallSpecRN.conseq {P P' : ExecState → Prop} {fid : FuncId}
+    {Q Q' : ExecState → List GoValue → Prop}
+    (h : CallSpecRN P fid Q)
+    (hpre : ∀ σ, P' σ → P σ)
+    (hpost : ∀ σ vs, Q σ vs → Q' σ vs) : CallSpecRN P' fid Q' := by
+  intro σ hP targets plans henc env k ch
+  obtain ⟨n, σ', rlocs, vs, ch', hrun, hload, hQ, hsuf⟩ :=
+    h σ (hpre σ hP) targets plans henc env k ch
+  exact ⟨n, σ', rlocs, vs, ch', hrun, hload, hpost σ' vs hQ, hsuf⟩
+
+/-- The definitional hop at a nullary result-bearing call statement —
+the form a caller-site span proof consumes mid-walk (the caller then
+crosses the frame-exit step with the `loadMany` equation and its own
+target-operand walk, exactly as at `CallSpecR.consume`). -/
+theorem CallSpecRN.consume {P : ExecState → Prop} {fid : FuncId}
+    {Q : ExecState → List GoValue → Prop} {σ : ExecState}
+    (h : CallSpecRN P fid Q) (hP : P σ)
+    {targets : Array Assignee} {plans : List (TargetShape × List Expr)}
+    (henc : targetsPlan targets.toList = some plans)
+    (env : LocalEnv) (k : Cont) (ch : Choices) :
+    ∃ (n : Nat) (σ' : ExecState) (rlocs : List Loc)
+      (vs : List GoValue) (ch' : Choices),
+      stepFnIter n σ (.exec (.call targets fid #[]) env k) ch
+        = .ok (.returning (.frame plans env rlocs [] k false), σ', ch')
+      ∧ loadMany σ' rlocs = .ok vs
+      ∧ Q σ' vs ∧ ch' <:+ ch := h σ hP targets plans henc env k ch
 
 end GoLean.Spec
