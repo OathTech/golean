@@ -2479,6 +2479,34 @@ no-Iris-analog items; feeds the standing iris-lean refresh backlog
   the plug rule, the loop-rule family, the init spec, the
   layout-compliant tracked generator.
 
+- **W2 — BRANCH-COMPLETE @ 849b3707, gate PASS** (2026-08-27):
+  **THE PLUG RULE PROVED AND GATED** — the real Leg B passed at
+  38 s: the verbatim stepCandidate→becomeFollower call site from
+  the pinned wire, framed caller state at exactly the cells W1's
+  dead ends covered, the site's real continuation, ∀ch, absRaftNode
+  reading back specBecomeFollower; machinery 2,948 lines vs the
+  795-line walk datum (the walk itself in-class; the rest =
+  helper/builder/barrier layers); **the premise census held
+  EXACTLY** (mapIterFree + recover-refuting, consumed at precisely
+  the predicted arms across ~200 branches — the
+  special-case-degeneration worry measured away; W1's
+  no-side-conditions claim refuted-and-recorded as a design
+  delta). Loop family landed (CondFor drop-in; pick-loop
+  α-generalized; no-stop family pinned). Init spec stage A landed
+  (∃F₀ ∀fuel≥F₀ ∀ch: entry config + all 31 statics + stream
+  untouched; no subject counts); STAGE B = the recorded honest gap
+  ($pkginit is loop-free — the real loops are newTwin's, needing
+  W3-class CallSpecs). Compliant-fixture generator chain fully
+  tracked (F6 closed). Three [AGENT] interpretations flagged for
+  audit (scaffolding-literal labeling; the ∃-discharge shared
+  replay; the premise delta). Judge owed at merge (Audit.lean).
+  WHAT THIS TAUGHT US: the two-summit replan priced right — the
+  plug rule came in at the predicted class and the gate's
+  composition is exactly W3's per-handler recipe. [AGENT]: W2.5
+  drafted next from the worker's five-clause skeleton + the
+  professor's Gap 1/3 content — POSED to the [USER] as the plan's
+  named design gate.
+
 ## Judgment calls
 
 - **[USER]** 2026-08-22: campaign launched; constitution is the scope.
