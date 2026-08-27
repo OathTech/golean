@@ -166,6 +166,9 @@ import GoLeanProofs.Frame.PlugRule
 import GoLeanProofs.Sym.ReflectConc
 import GoLeanProofs.Specs.RaftPilot.BecomeFollowerSpec
 import GoLeanProofs.Specs.RaftPilot.CallSiteComposition
+import GoLeanProofs.Specs.RaftPilot.Reloc
+import GoLeanProofs.Specs.RaftPilot.CBfLit
+import GoLeanProofs.Specs.RaftPilot.CBfFixture
 import GoLeanProofs.Sym.KernelRfl
 import GoLeanProofs.StepKit
 import GoLeanProofs.Examples.FibProgram
