@@ -168,6 +168,7 @@ import GoLeanProofs.Specs.RaftPilot.InitSpec
 -- design note docs/2026-08-27_m-mechanism-design.md; keep contiguous
 -- — merged with the sibling lanes' additions by the coordinator)
 import GoLeanProofs.MapPerm
+import GoLeanProofs.Specs.Raft.MapPermRead
 -- # w3-m end
 import GoLeanProofs.Sym.KernelRfl
 -- W3 crossing kit: data-branch window splits (path-condition

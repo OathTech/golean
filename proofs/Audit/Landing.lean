@@ -2,6 +2,7 @@ import Lean
 import GoLeanProofs.Frame.PlugWitness
 import GoLeanProofs.Sym.CrossingWitness
 import GoLeanProofs.MapPerm
+import GoLeanProofs.Specs.Raft.MapPermRead
 import GoLeanProofs.Specs.Raft.AbsTwinCheckerRead
 import GoLeanProofs.Specs.Raft.NativeS1Witness
 

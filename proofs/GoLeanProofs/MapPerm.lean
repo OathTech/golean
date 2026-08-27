@@ -1,6 +1,5 @@
 import GoLeanProofs.MapMem
 import GoLeanProofs.MapLoops
-import GoLeanProofs.Specs.Raft.AbsTwinCheckerRead
 
 /-!
 # The (M) mechanism — map-order pick-family composition (W3, w3-m)
@@ -20,11 +19,15 @@ leaves that never re-converge. This module is the family carrier:
 
 * **Layer 1 — the order-quotient readback** (pure list lemmas):
   `NodupKeys`/`lookupP` with the quotient-crossing lemma
-  `lookupP_perm`, the decode transports `mapPairs_perm`/
-  `mapPairsD_perm` (a permuted `mapData` reads back as a permuted
-  abstract list), and `sortedLT_eq_of_perm` (unique sorted
+  `lookupP_perm`, and `sortedLT_eq_of_perm` (unique sorted
   representative — the `Slice`/`VoterNodes`/`Visit`-class converging
-  read).
+  read). The decode transports `mapPairs_perm`/`mapPairsD_perm` (a
+  permuted `mapData` reads back as a permuted abstract list) live
+  TARGET-SIDE in `Specs/Raft/MapPermRead.lean` — they are stated
+  over the raft reader module's decoders, and the import-direction
+  lint (general ↛ Specs) is right that they do not belong here (the
+  triage plan's recorded altitude smell, resolved at the landing by
+  this split rather than by a lint exception).
 * **Layer 2 — the value-generic machine facts**: `MapMem`'s pick-step
   family (`candidates`/`mandatory`/`pick`/`done`/`rangeStart`/
   `mapAssign`) generalized off the u64→u64 counts encoding to
@@ -60,7 +63,6 @@ namespace GoLean.MapPerm
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.Surface
 open GoLean.MapMem
-open GoLean.RaftSeam (mapPairs mapPairsD)
 
 set_option maxRecDepth 1000000
 set_option maxHeartbeats 2000000
@@ -174,102 +176,6 @@ theorem perm_cons_eraseIdx {α : Type} :
           simp only [List.getElem?_cons_succ] at h
           rw [List.eraseIdx_cons_succ]
           exact ((ih h).cons a).trans (List.Perm.swap p a _)
-
-/-- The decode transport (pure-decoder side): reading a PERMUTED
-`mapData` entry list decodes to a permutation of the original decode
-— fail-closed arms preserved (a permutation decodes iff the original
-does). -/
-theorem mapPairs_perm {κ ν : Type}
-    {dk : GoValue → Option κ} {dv : GoValue → Option ν} :
-    ∀ {es es' : List (GoValue × GoValue)}, List.Perm es es' →
-    ∀ {xs : List (κ × ν)}, mapPairs dk dv es = some xs →
-    ∃ xs', mapPairs dk dv es' = some xs' ∧ List.Perm xs xs' := by
-  intro es es' hperm
-  induction hperm with
-  | nil =>
-      intro xs h
-      exact ⟨xs, h, List.Perm.refl _⟩
-  | cons p _ ih =>
-      intro xs h
-      obtain ⟨kg, vg⟩ := p
-      simp only [mapPairs, Option.bind_eq_bind] at h ⊢
-      obtain ⟨k', hk', h⟩ := Option.bind_eq_some_iff.mp h
-      obtain ⟨v', hv', h⟩ := Option.bind_eq_some_iff.mp h
-      obtain ⟨rest', hrest', h⟩ := Option.bind_eq_some_iff.mp h
-      obtain ⟨rest'', hrest'', hpr⟩ := ih hrest'
-      injection h with h
-      subst h
-      exact ⟨(k', v') :: rest'',
-        by simp [hk', hv', hrest''], hpr.cons _⟩
-  | swap p q t =>
-      intro xs h
-      obtain ⟨kp, vp⟩ := p
-      obtain ⟨kq, vq⟩ := q
-      simp only [mapPairs, Option.bind_eq_bind] at h ⊢
-      obtain ⟨kq', hkq', h⟩ := Option.bind_eq_some_iff.mp h
-      obtain ⟨vq', hvq', h⟩ := Option.bind_eq_some_iff.mp h
-      obtain ⟨rest, hrest, h⟩ := Option.bind_eq_some_iff.mp h
-      obtain ⟨kp', hkp', hrest2⟩ := Option.bind_eq_some_iff.mp hrest
-      obtain ⟨vp', hvp', hrest3⟩ := Option.bind_eq_some_iff.mp hrest2
-      obtain ⟨tail, htail, hrest4⟩ := Option.bind_eq_some_iff.mp hrest3
-      injection hrest4 with hrest4
-      injection h with h
-      subst hrest4
-      subst h
-      refine ⟨(kp', vp') :: (kq', vq') :: tail, ?_, List.Perm.swap _ _ _⟩
-      simp [hkp', hvp', hkq', hvq', htail]
-  | trans _ _ ih₁ ih₂ =>
-      intro xs h
-      obtain ⟨xs₁, h₁, hp₁⟩ := ih₁ h
-      obtain ⟨xs₂, h₂, hp₂⟩ := ih₂ h₁
-      exact ⟨xs₂, h₂, hp₁.trans hp₂⟩
-
-/-- The decode transport, σ-dependent-decoder side (`mapReadD`'s
-walk). -/
-theorem mapPairsD_perm {κ ν : Type} {σ : ExecState}
-    {dk : GoValue → Option κ} {dv : ExecState → GoValue → Option ν} :
-    ∀ {es es' : List (GoValue × GoValue)}, List.Perm es es' →
-    ∀ {xs : List (κ × ν)}, mapPairsD σ dk dv es = some xs →
-    ∃ xs', mapPairsD σ dk dv es' = some xs' ∧ List.Perm xs xs' := by
-  intro es es' hperm
-  induction hperm with
-  | nil =>
-      intro xs h
-      exact ⟨xs, h, List.Perm.refl _⟩
-  | cons p _ ih =>
-      intro xs h
-      obtain ⟨kg, vg⟩ := p
-      simp only [mapPairsD, Option.bind_eq_bind] at h ⊢
-      obtain ⟨k', hk', h⟩ := Option.bind_eq_some_iff.mp h
-      obtain ⟨v', hv', h⟩ := Option.bind_eq_some_iff.mp h
-      obtain ⟨rest', hrest', h⟩ := Option.bind_eq_some_iff.mp h
-      obtain ⟨rest'', hrest'', hpr⟩ := ih hrest'
-      injection h with h
-      subst h
-      exact ⟨(k', v') :: rest'',
-        by simp [hk', hv', hrest''], hpr.cons _⟩
-  | swap p q t =>
-      intro xs h
-      obtain ⟨kp, vp⟩ := p
-      obtain ⟨kq, vq⟩ := q
-      simp only [mapPairsD, Option.bind_eq_bind] at h ⊢
-      obtain ⟨kq', hkq', h⟩ := Option.bind_eq_some_iff.mp h
-      obtain ⟨vq', hvq', h⟩ := Option.bind_eq_some_iff.mp h
-      obtain ⟨rest, hrest, h⟩ := Option.bind_eq_some_iff.mp h
-      obtain ⟨kp', hkp', hrest2⟩ := Option.bind_eq_some_iff.mp hrest
-      obtain ⟨vp', hvp', hrest3⟩ := Option.bind_eq_some_iff.mp hrest2
-      obtain ⟨tail, htail, hrest4⟩ := Option.bind_eq_some_iff.mp hrest3
-      injection hrest4 with hrest4
-      injection h with h
-      subst hrest4
-      subst h
-      refine ⟨(kp', vp') :: (kq', vq') :: tail, ?_, List.Perm.swap _ _ _⟩
-      simp [hkp', hvp', hkq', hvq', htail]
-  | trans _ _ ih₁ ih₂ =>
-      intro xs h
-      obtain ⟨xs₁, h₁, hp₁⟩ := ih₁ h
-      obtain ⟨xs₂, h₂, hp₂⟩ := ih₂ h₁
-      exact ⟨xs₂, h₂, hp₁.trans hp₂⟩
 
 /-- **Unique sorted representative** (the converging-read discharge:
 `slices.Sort` after a pick-ordered collect — `MajorityConfig.Slice`,
