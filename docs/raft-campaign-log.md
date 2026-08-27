@@ -2642,3 +2642,27 @@ CallSpecRD — relay sent to the kit prover: cherry-pick 0087b48a,
 never define a divergent sibling; park persistent-order members on
 (M) by name. Consolidation-first rule adopted: lanes merge linearly
 at the kit prover's completion before (M)/B/C/D/E dispatch.
+
+### 2026-08-27 — THE CROSSING KIT LANDED; lanes consolidated (w1-prover @ ce05ecd1)
+
+Kit (Sym/Crossing.lean + design note; LINEAGE King-1976 path
+conditions as window splits at kernel reduction; quantifier line:
+∀-state by case analysis over PROGRAM branch structure): landed with
+THREE distinct consumer classes in-unit. U3.1-F progress: maybeTerm
+all three arms, maybeLastIndex full-coverage join, MemoryStorage
+internal reads + the first CallSpecRD instance (exported FirstIndex
+through the Lock/defer walk, honest callStats mutation in the
+conclusion); parked-but-unblocked: raftLog window-sum family;
+standing costliest: slice, Entries (loop rules). Composition
+finding: exact-heap leaf specs INLINE at wider states (window-sum
+costing). Coordinator relay executed: own CallSpecRD draft removed,
+0087b48a cherry-picked (c4cd8593) — flag for the landing audit:
+lane histories share the judgment-form commit; sequence merges
+accordingly. COSTING COLLAPSED: kit half-session; members
+~45-60min; B ≈ 1 session + loop rules; A's (K)-parks re-price
+cheaper. [AGENT] dispatch: w3-init worktree retired (branch ref
+kept; content in w1-prover via cherry-pick); F-remainder+B prover
+on w1-prover; (M) mechanism prover on new lane w3-m @ ce05ecd1.
+New standing rule (collision lesson): SpecJudgment.lean judgment
+forms are added ONLY on the w1-prover lane; other lanes park and
+name the need.
