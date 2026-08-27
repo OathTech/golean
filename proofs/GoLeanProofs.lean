@@ -193,6 +193,12 @@ import GoLeanProofs.Specs.RaftPilot.HarvestSpecs
 -- with the sibling lane's additions by the coordinator)
 import GoLeanProofs.Specs.RaftPilot.InitCallSpecs
 -- # w3-init end
+-- # w3-m (the (M) mechanism — map-order pick-family composition;
+-- design note docs/2026-08-27_m-mechanism-design.md; keep contiguous
+-- — merged with the sibling lanes' additions by the coordinator)
+import GoLeanProofs.MapPerm
+import GoLeanProofs.Specs.RaftPilot.MapOrderSpecs
+-- # w3-m end
 import GoLeanProofs.Sym.KernelRfl
 -- W3 crossing kit: data-branch window splits (path-condition
 -- crossings; design note docs/2026-08-27_crossing-kit-design.md).
