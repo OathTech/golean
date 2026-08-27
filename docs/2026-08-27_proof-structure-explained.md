@@ -45,6 +45,41 @@ never stuck/panicked" is expressible (its docstring says so). **[HAVE]**
 
 ## 1. The program logic (the judgment and its rules)
 
+**The judgment, defined ([USER] review, 2026-08-27).** The machine is
+small-step over configurations; run-to-termination of an element is
+encoded continuation-parametrically — `c` has terminated exactly when
+control reaches `.next k` with the caller's `k` untouched:
+
+```
+{P} c {Q}  :=  ∀ σ ∈ P, ∀ env k, ∀ ch,
+    ∃ n σ' ch',  stepFnIter n σ (.exec c env k) ch = .ok (.next k, σ', ch')
+                 ∧ σ' ∈ Q   (ch' a suffix of ch; n ≤ bound for total)
+```
+
+The machine is deterministic GIVEN the tape, so `∀ ch` is the demonic
+all-executions reading of a triple over a nondeterministic language,
+with the nondeterminism reified as input. The two interchange forms
+are derived presentations of THIS judgment, not separate judgments:
+stream-invariant (`…= .ok (…, ch)`, tape unread) = the triple for a
+deterministic element; explicit-prefix (`(π ++ ch)`) = the
+bookkeeping form for a choice-consuming element — SOUND only with π
+quantified/existential; fixing π to constants was the trajectory
+era's sin. W1's `Spec` is this definition; the landed rules are its
+introduction rules.
+
+**The simulation square's granularity ([USER] review).** The core
+square — ∀ concrete `s ⇝* s'` (one body span at observation points):
+`lift(s) ⇝_EStep lift(s')` or a stutter — is committed in BIG-STEP /
+STUTTERING form: `lift = proj ∘ absTwinRead` is partial by design
+(mid-handler states have no abstract counterpart; the reader returns
+`none`), so squares are established where the abstraction is defined
+(loop heads = the checker's observation points) and the invariant
+carries lift-definedness. Every reachable observation-point state is
+represented exactly; every mid-span state is within one span of a
+represented one — the standard weak-simulation reading. A per-step
+square would need a totalized lift for no additional theorem
+strength, since the checker observes only at boundaries.
+
 The de facto judgment already exists as an interchange format that
 every landed rule produces and consumes:
 
