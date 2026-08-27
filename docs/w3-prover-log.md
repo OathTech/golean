@@ -1000,3 +1000,38 @@ family.
   (term's results are exactly nil/the two globals) discharges the
   callers' obligation.
 - Builds: module elaboration EXIT=0, zero warnings.
+
+## UNIT B slice 1 — the harvest cluster's shell-sync pair: LANDED
+
+New module `Specs/RaftPilot/HarvestSpecs.lean` (registered):
+
+- **The raft-cell footprint family** (`rnFam`/`RNPre`): the raft cell
+  at 31 (the wire's full 31-field census; the FOUR read scalars
+  int-shape-pinned with free payloads — Term/Vote/lead/state; the
+  raftLog pointer pinned to 32; the other 26 fields fully free) +
+  the raftLog cell at 32 (committed int-shaped; 8 fields free).
+- **`raft_softState_callSpecR`** (28-step single window, zero
+  crossings): returns `SoftState{Lead: r.lead, RaftState: r.state}`
+  BY VALUE; footprint unchanged. THE shellSync (C2) state-agreement
+  fact at the harvest's SoftState read (census E12) — delivered for
+  U3.2e.
+- **`raft_hardState_callSpecR`** (117-step single window, zero
+  crossings): returns a pointer to a FRESH three-pointer HardState
+  whose targets hold exactly `r.Term`/`r.Vote`/`r.raftLog.committed`
+  — the term-agreement carrier for SetHardState (E8) and the
+  MsgStorageAppendResp construction (the term-bound preservation
+  input for U3.2c's replay obligations); NO range hypotheses needed
+  (measured: `newValue` stores raw).
+- [AGENT] TWO machine findings (probe-anchored, costing-relevant for
+  every remaining B/C/D/E member):
+  (i) `structLit` NORMALIZES each field via `normalizeValueForTy`
+  and the store coerce normalizes AGAIN — struct-literal results
+  carry DOUBLE wraps (caught by the kernel on the first statement;
+  the -1-payload probe trick distinguishes wrap counts concretely —
+  recorded as the probe convention for wrap discovery);
+  (ii) `newValue` (Go's `new(...)` + value-copy lowering) stores the
+  read value RAW — no normalize, so pointer-copy chains conclude
+  EXACT equality with no range facts.
+- Non-vacuity: `rnPre_inhabited`.
+- Builds: module target build EXIT=0 (38 jobs, module 30 s); zero
+  warnings.
