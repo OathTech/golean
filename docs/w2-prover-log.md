@@ -88,7 +88,111 @@ from 71b1561f.
    provenance-documented; Spec-precondition instances, not proof-body
    literals; middle path — only what Leg-B-full + the init spec need).
 
+## UNIT 1 — THE PLUG RULE: LANDED (measurements, derivation-anchored)
+
+- **Probe-first (charter requirement)**: `Frame/PlugProbe.lean`
+  (tracked in-build; working copy `artifacts/w2/ProbePlug.lean`):
+  `plugC` commutes step-for-step at OPEN `env'/k'` on three concrete
+  spans — (P1/P2) a callee with a defer AND a nested call, 54 steps,
+  commutation checked at prefixes {1,3,8,15,25,40,53,54}; (P3) a
+  panic-recover-in-deferred-function span, 30 steps, prefixes
+  {1,5,10,20,29,30}; plus the deep driver-shaped context composition
+  (caller glue + labelK + the caller's own frame over `.stop` BELOW
+  the plug point, 66 steps, the caller's write landing after the
+  span). All 14 commutation examples close by `kernel_rfl`;
+  elaborator `rfl` does NOT reduce open-context `stepFnIter` (the
+  same W1 finding that begat `kernel_rfl`).
+- **The rule, landed** (`Frame/Plug.lean` 190 + `PlugOps.lean` 589 +
+  `PlugApply.lean` 761 + `PlugStep.lean` 1012 + `PlugRule.lean` 198
+  = **2,750 lines**; the W1 cost datum was the 795-line rename walk —
+  the plug walk's per-step file alone (1,012) is that class; the
+  rest is the helper/builder/barrier-preservation layers the rename
+  walk amortized across its own pre-existing helper modules):
+  * `stepFn_plug` — the ~200-branch `fun_cases` walk (StepSim's
+    skeleton, state-trivial): every arm commutes with `plugC`, with
+    the barrier/exit/crossed classification. Battery killed ~160
+    branches; 40 named cases (frame-family barrier splits, frame
+    entries, panic passthrough/drain, recover, catch-all entry
+    lemmas, mapIter pick, chan/sync/select applies).
+  * `stepFnIter_plug` — iteration; the crossed panic shape refuted
+    from span success (terminal discipline), the exit pins the fuel.
+  * `callSpan_plug` — **THE PLUG RULE**: a successful resultless
+    call-span at the canonical anchor `([], .stop)` (the shape
+    FrameSim transport delivers) holds at ANY `(env', k')` under the
+    §7 premises, at the same fuel/terminal state/stream.
+  * Axiom pins in-build (`Audit/W2.lean`): exact trio on all three.
+- **The §7 premise delta held up in the proof**: the two
+  context premises (`mapIterFree k'`; `recoverThroughWrappers k' =
+  none`) and the non-wrapper-callee premise are each consumed at
+  exactly the predicted arms (delete-prunes; the barrier-level
+  recover; the recover walk's wrapper transparency) — no further
+  side conditions surfaced across the whole walk. What this taught
+  us: the §7 "non-locality census" is COMPLETE — recover and
+  map-range pruning are the only two machine features that inspect a
+  continuation through a call boundary.
+- Wall (measured from the build logs): PlugStep's full-walk
+  elaboration ≈ 3-4 min per iteration at 48G/4 threads; final full
+  build of the five modules + pins green.
+
 ## Judgment calls and checkpoints
 
 - [AGENT] Log-file choice: new `docs/w2-prover-log.md` (this file),
   for the one-log-per-wave convention; the W1 log is closed history.
+- [AGENT] Plug-rule design delta recorded (design note §7): the W1
+  expectation "panic-walk arms excluded by span success, not side
+  conditions" is REFUTED by the machine walk-through — two genuine
+  side conditions on the plug context exist
+  (`recoverThroughWrappers k' = none`; `mapIterFree k'`) plus the
+  non-wrapper-callee premise; all consumption-site-checkable.
+  Derivations in §7 (the recover walk inspects below a barrier that
+  is the first non-wrapper frame; the delete-prune walk crosses call
+  frames by design).
+- [AGENT] Scoping facts established by survey before unit 3 (both
+  derivation-anchored to the pinned wire + RunGlue):
+  * `$pkginit` is LOOP-FREE: one 44-statement straight-line block
+    (31 global assigns, 8 unrolled map-literal sequences, 5 news, 10
+    calls to the `goleanShimErrorsNew` leaf; 1,382 machine steps,
+    zero choices consumed — the arc4 measurement). The plan's
+    "init's loops" live in the SUBJECT's setup prefix
+    (`newTwin`: the pending-commands push, the voters build, the
+    3-node build with NewMemoryStorage/ApplySnapshot/NewRawNode),
+    INSIDE `twinChoiceVerdict` — not in `runProgramSetupM`. The init
+    spec is therefore staged: stage A = the `runProgramSetupM`
+    boundary ($pkginit + seeding, concluding on the statics the
+    handlers read); stage B = the subject prefix through `newTwin`
+    (shells/empty net/counters zero), which needs library-function
+    CallSpecs of W3 scale — attempted after stage A, honest gap if
+    it exceeds the unit.
+  * The TRUE static layout: the twin's 31 globals sit at
+    `.base ⟨0⟩ … ⟨30⟩` in wire declaration order (seedGlobals pins
+    this, StepFn.lean:902); "layout-compliant" fixtures = addresses
+    0–30 reserved for the globals, fixture cells from 31 up (so
+    `bodies_inv`'s forced identity on 0..30 is compatible with a
+    ShiftSpec whose identity region covers them — the frame gap
+    then sits above the fixture top, where caller locals live).
+  * The arc4d/W1 pilot fixture (raft cell at 0, nextAddr 21) is
+    canonical-only, per W1 finding 3 — re-derived here: with the
+    twin function table every admissible ρ fixes 0..30, and
+    `alloc_reg` caps the identity region at the fixture's nextAddr
+    (21), so NO nonempty-frame FrameSim image of that fixture
+    exists. Leg-B-full therefore requires the RE-LAID pilot fixture
+    (unit 4's generator), exactly as W1's unit-6 proposal said.
+  * The killed `StaticCells.lean` (git 60969eee, deleted in W0) is
+    the authoritative record of the post-init statics (roots at
+    20..30, shim payload cells at 71/75/79/83/87/91/95/98-class
+    addresses, nextAddr 98 post-init) — consulted as a reference,
+    never revived as a replay pin.
+- [AGENT] Unit-4 scope note (potential charter tension, resolved
+  fail-closed and recorded): the W2 charter says the generator
+  produces "Spec-precondition instances, NOT proof-body literals";
+  but the gate (Leg-B-full with state framing) is UNREACHABLE
+  without a compliant-layout becomeFollower fixture, whose window
+  literals are proof-body scaffolding (the three W1 dead ends +
+  the alloc_reg derivation above close every literal-free route).
+  Resolution: the tracked generator emits BOTH the precondition
+  instances (its charter deliverable) and — as clearly-labeled
+  PRIVATE scaffolding with the W1 conventions (count-free exports,
+  literal-bearing privates) — the re-laid fixture the gate needs;
+  this follows W1's own unit-6 proposal ("re-lay becomeFollower's
+  fixture as the pilot"). Flagged for the audit rather than silently
+  absorbed.
