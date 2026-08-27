@@ -32,9 +32,10 @@ separated:
   reverse. Index: `docs/mechanism-registry.md`.
 
 Every verification result ships in one shape: **a theorem about a
-single concrete harness** — `∀ ch (fuel), the interpreter runs the
-pinned program to a result satisfying its spec` — proved by
-reasoning, with the program entering only through reflection.
+concrete harness (or a parameterized family of harnesses)** —
+`∀ ch (fuel), the interpreter runs the pinned program to a result
+satisfying its spec` — proved by reasoning, with the program
+entering only through reflection.
 
 ## The trusted surface (and nothing else)
 
@@ -46,8 +47,11 @@ reasoning, with the program entering only through reflection.
    term). `scripts/check-golden` ties bytes to source.
 3. The designated harness sentences (first-order over the
    interpreter; the statement-TCB gate enforces their closure) and
-   the audit/judge apparatus (`proofs/Audit.lean`, Challenge/
-   Solution + comparator — trust tools are never modified).
+   the audit/judge apparatus. The EXTERNAL trust tools (comparator,
+   lean4export, landrun) are never modified — version pins are
+   chosen with the user; our own apparatus (`Audit.lean`,
+   Challenge/Solution, the wrapper scripts) evolves only under the
+   gates, with trust-adjacent edits delta-flagged.
 
 Everything else — judgments, specs, invariants, symbolic
 evaluators, quotients, accelerators — is untrusted machinery,
@@ -57,9 +61,12 @@ verified against the semantics, useful-not-complete, replaceable.
 
 - **Bounded techniques are not proof.** Enumeration, fixed vectors,
   unrolling, fixture-anchored statements: totally forbidden as
-  proof technique — they do not generalize. A statement containing
-  a concrete step count, iteration bound, or fixture identity is
-  scaffolding at best, labeled so at birth, never cited by a proof.
+  proof technique — they do not generalize. A statement anchored to
+  a SUBJECT RUN — a measured span length, a censused prefix, a
+  fixture identity — is scaffolding at best, labeled so at birth,
+  never cited by a proof. (Not banned: shape constants of the
+  frontend's fixed desugars in ∀-quantified rules, and bounds that
+  appear in the reflected program text itself.)
   The subject's identity enters only via the reflection pair.
   (The 2026-08 fixed-trajectory era is the recorded cautionary
   instance: `docs/ARCHIVE.md`.)
@@ -72,8 +79,9 @@ verified against the semantics, useful-not-complete, replaceable.
   banned is CONCRETE walking as proof (grinding one literal state
   down one trajectory). Nondeterminism is the reified choice tape,
   quantified demonically. Concrete evaluation appears only in
-  declared reflection certificates (and, until superseded, the
-  retained interface witnesses).
+  declared reflection certificates, in the discharge of ∃-shaped
+  statements (exhibiting a run is how existentials are proved), and
+  — until superseded — the retained interface witnesses.
 - **The quantifier audit.** Every unit charter states which
   quantifier of the end theorem it advances and BY WHAT RULE —
   never "by instances." No nameable rule ⇒ the unit is scaffolding
