@@ -937,3 +937,39 @@ aggregator), consuming LogReadSpecs' family formers.
 - Build: module target build EXIT=0 (36 jobs, module 125 s at
   48G/4 threads, artifacts/w3/frem-swalk-build1.log); zero warnings
   in the new module. Hatch grep: 0 sorry/native_decide/partial.
+
+## UNIT A slice 2 — raftLog.firstIndex + raftLog.lastIndex: LANDED
+
+New module `Specs/RaftPilot/RaftLogReadSpecs.lean` (registered): the
+first two members of the census-U3 raftLog tier, at the QUIESCED
+family.
+
+- **The quiesced raftLog family** (`rlFam`/`RLPre`): unstable pinned
+  EMPTY at a live backing (snapshot nil) — the loop-head states the
+  invariant's C2 supplies; the storage field pinned
+  `.interface (*raft.MemoryStorage) (.addr 33)` (the park record's
+  un-parking route: interface DISPATCH is then concrete); the error
+  globals at 23/25 ride as free cells (shared family for the whole
+  tier); ms backing/entries at 34-38 (two distinct entry cells).
+  Unstable-nonempty variants are consumer-demand (labeled).
+- **`raftLog_firstIndex_callSpecR`** — 2 windows (140/138) + the
+  `ents[0]` crossing: maybeFirstIndex inlined (nil snapshot),
+  dispatch, the FULL FirstIndex walk inlined (lock/defer/counter/
+  unlock — its crossing recurring), err≠nil refuted (nil reduces),
+  RETURNING terminal (the outer raftLog frame is defer-free —
+  CallSpecR, not RD). Returns `ents[0].Index + 1`; the raftLog cell
+  reads back UNCHANGED; the ms cell mutex-unlocked with exactly
+  callStats.firstIndex incremented.
+- **`raftLog_lastIndex_callSpecR`** — 3 windows (171/67/82) + both
+  crossings recurring (the empty-unstable maybeLastIndex length read
+  REDUCES at the pinned len-0 slice — the landed empty-member
+  escape, re-used inline). Returns `ents[0].Index + len - 1`;
+  raftLog cell unchanged; callStats.lastIndex incremented.
+- Non-vacuity: `rlPre_inhabited`.
+- [AGENT] measured finding (costing): an 8-deep store-wrap chain
+  (the deepest so far) collapses with the same two-lemma kit
+  vocabulary — 2×hIv + 6×hIv1 rewrite passes; the only iteration
+  failures this slice were store-wrap UNDER-counts, both localized
+  by the wrap-per-op rule in one pass each.
+- Builds: module target build EXIT=0 (37 jobs, module 159 s;
+  artifacts/w3/frem-rl-build1.log); zero warnings in the new module.

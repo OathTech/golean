@@ -183,6 +183,9 @@ import GoLeanProofs.Specs.RaftPilot.LogReadSpecs
 -- W3 U3.1-F remainder: the exported MemoryStorage walk pair
 -- (LastIndex/Term CallSpecRDs at the defer-tail geometry).
 import GoLeanProofs.Specs.RaftPilot.StorageWalkSpecs
+-- W3 U3.1-F remainder: the raftLog read tier at the quiesced family
+-- (inline window-sums over the landed leaves).
+import GoLeanProofs.Specs.RaftPilot.RaftLogReadSpecs
 -- # w3-init (U3.1-A init-cluster CallSpecs; keep contiguous — merged
 -- with the sibling lane's additions by the coordinator)
 import GoLeanProofs.Specs.RaftPilot.InitCallSpecs
