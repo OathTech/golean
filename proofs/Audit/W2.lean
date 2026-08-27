@@ -2,6 +2,7 @@ import GoLeanProofs.CondFor
 import GoLeanProofs.MapLoops
 import GoLeanProofs.Frame.PlugRule
 import GoLeanProofs.Specs.RaftPilot.W2Gate
+import GoLeanProofs.Specs.RaftPilot.InitSpec
 
 /-!
 # Audit pins: W2 — the loop-rule family, the plug rule, the init spec
@@ -67,3 +68,10 @@ element-type-generic pick loop keeps its Kit pin
 
 /-- info: 'GoLean.MapLoops.mapIter_width_of_unmutated' depends on axioms: [propext] -/
 #guard_msgs in #print axioms GoLean.MapLoops.mapIter_width_of_unmutated
+
+/-! ## THE INIT SPEC, stage A (unit 3): the setup boundary
+established — entry configuration + statics materialized +
+stream-transparent, fuel ∃-quantified. -/
+
+/-- info: 'GoLean.RaftSeam.initSetup_establishes' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.RaftSeam.initSetup_establishes

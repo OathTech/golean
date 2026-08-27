@@ -174,6 +174,7 @@ import GoLeanProofs.Specs.RaftPilot.CBfSteps2
 import GoLeanProofs.Specs.RaftPilot.CBfSortStep
 import GoLeanProofs.Specs.RaftPilot.CBecomeFollowerSpec
 import GoLeanProofs.Specs.RaftPilot.W2Gate
+import GoLeanProofs.Specs.RaftPilot.InitSpec
 import GoLeanProofs.Sym.KernelRfl
 import GoLeanProofs.StepKit
 import GoLeanProofs.Examples.FibProgram
