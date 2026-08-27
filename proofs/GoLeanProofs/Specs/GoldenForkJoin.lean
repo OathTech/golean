@@ -29,9 +29,13 @@ This module holds the proofs and reaches the judge only through
 
 The slice-2 witnesses are rung-1, pinned-stream readouts; SLICE 5
 added the ∀-SCHEDULE family below (the `∀ ch` quantifier discharged by
-the pool ∀-streams kernel checker) which subsumes them — they are
-deliberately KEPT byte-identical (designated-set growth by extension,
-never restatement). What the pinned-stream witnesses pin, non-vacuously:
+the pool ∀-streams kernel checker) which subsumes them. DESIGNATION
+STATUS (triage landing 2026-08-27, [USER] decision, plan L-13): the
+five pinned-stream rows were RECLASSIFIED to NON-DESIGNATED witnesses
+— removed from Challenge/Solution/Audit's designated list and
+judge-config; the ∀-schedule family stays designated. The theorems
+are kept byte-identical here with their Audit axiom pins. What the
+pinned-stream witnesses pin, non-vacuously:
 the spawn step forks, the arrival intercept pairs the rendezvous, the
 handoff delivers the value, main's exit joins, and the all-asleep state
 classifies as the deadlock terminal — end to end, through the kernel.

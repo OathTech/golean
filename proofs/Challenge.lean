@@ -265,26 +265,17 @@ theorem committedIndexRef_meets_spec : committedIndexRef_meets_spec_statement :=
   sorry
 
 
-/-! ## The fork/join pool kernel witnesses (channels arc slice 2):
-pinned-stream `execProg` runs over the ThreadPool carrier — the
-canonical/adversarial/alternating schedules complete `.normal` with the
-pinned 42 readout; the all-asleep program classifies `.deadlock`. The
-defs (`fjRunGives42`/`fjRunDeadlocks`, seeds, drivers) are in the
-trusted closure — `Specs/ForkJoinTargets.lean` (def-only; the proofs
-live outside the closure, in `Specs/GoldenForkJoin.lean`). -/
-
-theorem forkJoinStreamCanonical : fjRunGives42 400 [] = true := sorry
-
-theorem forkJoinStreamAdversarial :
-    fjRunGives42 400 [9, 8, 7, 6, 5, 4, 3, 2, 1, 0] = true := sorry
-
-theorem forkJoinStreamAlternating :
-    fjRunGives42 400 [1, 1, 1, 1, 1, 1, 1, 1] = true := sorry
-
-theorem forkJoinDeadlockCanonical : fjRunDeadlocks 400 [] = true := sorry
-
-theorem forkJoinDeadlockAdversarial :
-    fjRunDeadlocks 400 [9, 8, 7, 6, 5, 4, 3, 2, 1, 0] = true := sorry
+/-! ## (Designation reclassification, triage landing 2026-08-27 —
+[USER] decision, plan L-13): the five slice-2 PINNED-STREAM fork/join
+rows (`forkJoinStreamCanonical`/`Adversarial`/`Alternating`,
+`forkJoinDeadlockCanonical`/`Adversarial`) left the designated set —
+single-stream kernel-replay readouts, a gallery-era role the
+∀-schedule family below subsumes. The theorems remain proved,
+non-designated witnesses in `Specs/GoldenForkJoin.lean` (Audit axiom
+pins retained). Removed here, from `Solution.lean`, from
+`Audit.lean`'s designated list, and from `judge-config.json` in the
+same commit; the comparator-judge landmark re-run covers the
+change. -/
 
 /-! ## The slice-5 ∀-SCHEDULE fork/join witnesses: the `∀ ch`
 quantifier discharged — EVERY choice stream (schedules + latitude,

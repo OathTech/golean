@@ -321,22 +321,21 @@ open Lean in
     ``GoLean.Surface.quorumOneKnownTotalReadout,
     ``GoLean.Surface.quorumThreeAllTotalReadout,
     ``GoLean.Quorum.committedIndexRef_meets_spec,
-    -- Channels arc slice 2 (2026-08-07): the fork/join KERNEL witnesses
-    -- over the ThreadPool carrier (`execProg`) — pinned-stream rung-1
-    -- readouts (canonical/adversarial/alternating schedules complete
-    -- .normal with the pinned value; the all-asleep program classifies
-    -- .deadlock). The full GoSpecC witness is the slice-5 deliverable
-    -- (design of record's slice plan); the COMPARATOR landmark for this
-    -- designated-set change was DISCHARGED at the arc-final audit
-    -- response (2026-08-08): scripts/comparator-judge PASS — 44
-    -- theorems certified in 123 s, fresh clone @ c526fb7c7f9e (run
-    -- record: the comparator-judge sprint doc's landmark log; never
-    -- run as part of ci).
-    ``GoLean.Surface.forkJoinStreamCanonical,
-    ``GoLean.Surface.forkJoinStreamAdversarial,
-    ``GoLean.Surface.forkJoinStreamAlternating,
-    ``GoLean.Surface.forkJoinDeadlockCanonical,
-    ``GoLean.Surface.forkJoinDeadlockAdversarial,
+    -- DESIGNATION RECLASSIFICATION (triage landing 2026-08-27, USER
+    -- decision at the triage-plan sign-off, plan L-13 scope; NB no
+    -- square brackets in this comment — the judge wrapper's list
+    -- parser ends at the first bracket): the five channels-arc
+    -- slice-2 PINNED-STREAM fork/join rows — forkJoinStreamCanonical,
+    -- forkJoinStreamAdversarial, forkJoinStreamAlternating,
+    -- forkJoinDeadlockCanonical, forkJoinDeadlockAdversarial — left
+    -- the designated set: single-pinned-stream kernel-replay
+    -- readouts, subsumed by the slice-5 all-schedule family below,
+    -- which STAYS designated. The theorems remain proved,
+    -- non-designated witnesses in Specs/GoldenForkJoin.lean with
+    -- their axiom pins retained. Removed from Challenge, Solution,
+    -- and judge-config in the same commit; the comparator-judge
+    -- landmark re-run at this landing covers the designated-set
+    -- change. Trust-adjacent edit, flagged for the pre-merge audit.
     -- Channels arc slice 5 (2026-08-07): the ∀-SCHEDULE fork/join
     -- witnesses (the pool ∀-streams kernel checker discharges the
     -- `∀ ch` quantifier — every schedule + latitude stream completes

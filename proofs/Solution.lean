@@ -254,25 +254,10 @@ theorem committedIndexRef_meets_spec : committedIndexRef_meets_spec_statement :=
   GoLean.Quorum.committedIndexRef_meets_spec
 
 
-/-! ## The fork/join pool kernel witnesses (channels arc slice 2) -/
-
-theorem forkJoinStreamCanonical : fjRunGives42 400 [] = true :=
-  GoLean.Surface.forkJoinStreamCanonical
-
-theorem forkJoinStreamAdversarial :
-    fjRunGives42 400 [9, 8, 7, 6, 5, 4, 3, 2, 1, 0] = true :=
-  GoLean.Surface.forkJoinStreamAdversarial
-
-theorem forkJoinStreamAlternating :
-    fjRunGives42 400 [1, 1, 1, 1, 1, 1, 1, 1] = true :=
-  GoLean.Surface.forkJoinStreamAlternating
-
-theorem forkJoinDeadlockCanonical : fjRunDeadlocks 400 [] = true :=
-  GoLean.Surface.forkJoinDeadlockCanonical
-
-theorem forkJoinDeadlockAdversarial :
-    fjRunDeadlocks 400 [9, 8, 7, 6, 5, 4, 3, 2, 1, 0] = true :=
-  GoLean.Surface.forkJoinDeadlockAdversarial
+/-! ## (The five slice-2 pinned-stream fork/join rows were
+RECLASSIFIED to non-designated witnesses at the triage landing,
+2026-08-27 — see Challenge.lean's record; proofs remain in
+`Specs/GoldenForkJoin.lean`.) -/
 
 /-! ## The slice-5 ∀-schedule fork/join witnesses + GoSpecC witness -/
 
