@@ -2999,3 +2999,36 @@ accumulated flag list), (2) landing claim strength
 (witnesses/labels/pins), (3) semantics (zero-runtime-diff
 verification + deletion spot-check). Findings fix on-branch →
 re-gate → merge held for separate [USER] sign-off.
+
+### 2026-08-27 — AUDIT COMPLETE: 2× MERGE-SAFE + 1× FIX-FIRST (prose only); response slice dispatched
+
+Gate honesty: MERGE-SAFE. Load-bearing checks all clean (four-way
+designation lockstep verified name-by-name via the judge's own
+parser; all dropped pins had dead subjects; axiom envelope exact —
+no sorryAx/ofReduceBool anywhere; trust tools byte-identical,
+binary sha-matched; cherry-picks patch-id-identical; sed hazard
+empirically reproduced, confirmed fail-closed, fix comment-only).
+M-1: [AGENT] recommendations ratified by package assent were
+compressed to bare "[USER] decision" in four records incl. an
+Audit.lean comment (that one deferred — judge-parsed region).
+Claim strength: FIX-FIRST. Witnesses verified REAL (callSpan_plug
+applied by name at ∀ caller contexts; kit lemmas consumed over
+symbolic states; PlugProbe relabel "unusually candid"). F1 MapPerm
+layer-2 = zero-consumer subtree still claiming "promotion ≥2
+satisfied at birth"; F2 ARCHIVE.md claims a live replacement for
+the G-MAPITER-owed discharge. Semantics: MERGE-SAFE — tree-hash
+equality on every trusted top-level entry; 51 surviving designated
+statements byte-identical; trusted closure ∩ changed set = ∅;
+judge-at-c2e1824d covers the tip (code trees identical); Ghost.acks
+purely additive; machine-geometry knowledge SURVIVES in the landed
+logs (routing gap only). M1 the governing docs (triage plan + w25
+note) didn't land — cited from trust-adjacent files; M2 archive
+ref not clone-reachable; M3 ChoiceCanon at zero consumers ([USER]
+call at merge); M4 two design-note banners missed.
+[AGENT] response slice (mostly doc/comment; one kernel_rfl
+strengthening): provenance wording, counts, F1-F6, land the two
+governing docs from design-pass, heads-ref archive branch, banners,
+stale cites, geometry routing pointers. Audit.lean UNTOUCHED (no
+judge re-trigger). Then warm gate re-run → merge request to the
+[USER] with three reconfirmation items (56→51 designation; W2.5
+record item; ChoiceCanon keep-or-kill).
