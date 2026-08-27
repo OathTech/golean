@@ -181,6 +181,9 @@ import GoLeanProofs.Specs.RaftPilot.InitSpec
 import GoLeanProofs.Specs.RaftPilot.Invariant
 import GoLeanProofs.Specs.RaftPilot.LogReadSpecs
 import GoLeanProofs.Sym.KernelRfl
+-- W3 crossing kit: data-branch window splits (path-condition
+-- crossings; design note docs/2026-08-27_crossing-kit-design.md).
+import GoLeanProofs.Sym.Crossing
 import GoLeanProofs.StepKit
 import GoLeanProofs.Examples.FibProgram
 import GoLeanProofs.Examples.Fib

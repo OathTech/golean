@@ -1,6 +1,7 @@
 import GoLeanProofs.Specs.RaftPilot.SymBase
 import GoLeanProofs.SpecJudgment
 import GoLeanProofs.Sym.KernelRfl
+import GoLeanProofs.Sym.Crossing
 
 /-!
 # W3 U3.1-F — the shared log/util read layer: `CallSpecR` instances
@@ -293,6 +294,322 @@ theorem unstable_maybeLastIndex_empty_callSpecR (dty : Option Ty)
       lgv mxv aszv pzv plans env k ch
   · rfl
   · rfl
+
+/-! ## `raft.unstable.maybeLastIndex` — the NONEMPTY arm (the
+crossing kit's first consumer; design note
+`docs/2026-08-27_crossing-kit-design.md`)
+
+The span has two kernel-stuck data points at a symbolic length
+`k+1`: the `len` builtin's `validateSlice` (class 2) and the
+store-normalized branch scalar at `l != 0` (class 1). The span is
+split into three `kernel_rfl` windows; the crossings are
+`stepFn_strict_apply` + `applyStrict_length_slice` (under the
+`len ≤ cap` premise) and the normalize-collapse rewrite (under the
+`len < 2^63` premise), after which the branch self-reduces. Range
+premises are reader-vocabulary facts the invariant supplies. -/
+
+section MaybeLastIndexNonempty
+
+open GoLean.Surface
+
+/-- The callee frame env after entry (probe-derived shape constant:
+the three scopes of the lowered body). -/
+private def uLIEnv3 : LocalEnv :=
+  [[("l", Loc.base ⟨35⟩)], [],
+   [("$res1", Loc.base ⟨34⟩), ("$res0", Loc.base ⟨33⟩),
+    ("u", Loc.base ⟨32⟩)]]
+
+private def uLIEnv2 : LocalEnv :=
+  [[], [("$res1", Loc.base ⟨34⟩), ("$res0", Loc.base ⟨33⟩),
+        ("u", Loc.base ⟨32⟩)]]
+
+/-- The nonempty arm's then-block (reflected-program shape constant,
+= the pinned wire's lowered body subterm). -/
+private def uLIArm : Stmt :=
+  .block #[] #[.seqn #[
+    .assign (.var "$res0")
+      (.sub
+        (.add
+          (.fieldGet (.deref (.var "u") (.defined ⟨"raft.unstable"⟩))
+            ⟨"raft.unstable"⟩ "offset")
+          (.convert (.int .uint64) (.var "l")))
+        (.intLit 1 .uint64)),
+    .assign (.var "$res1") (.boolLit true),
+    .returnStmt]]
+
+/-- The snapshot branch (dead in the T1 family — rides inertly in
+the continuation). -/
+private def uLISnapIf : Stmt :=
+  .ifThenElse
+    (.neqCmp (.pointer (.defined ⟨"raftpb.Snapshot"⟩))
+      (.fieldGet (.deref (.var "u") (.defined ⟨"raft.unstable"⟩))
+        ⟨"raft.unstable"⟩ "snapshot")
+      (.nil none))
+    (.block #[] #[
+      .seqn #[
+        .initialization
+          ⟨"$c1087", .pointer (.defined ⟨"raftpb.SnapshotMetadata"⟩)⟩,
+        .call #[.var "$c1087"] ⟨"raftpb.Snapshot.GetMetadata"⟩
+          #[.fieldGet (.deref (.var "u") (.defined ⟨"raft.unstable"⟩))
+              ⟨"raft.unstable"⟩ "snapshot"]],
+      .seqn #[
+        .initialization ⟨"$c1088", .int .uint64⟩,
+        .call #[.var "$c1088"] ⟨"raftpb.SnapshotMetadata.GetIndex"⟩
+          #[.var "$c1087"]],
+      .seqn #[
+        .assign (.var "$res0") (.var "$c1088"),
+        .assign (.var "$res1") (.boolLit true),
+        .returnStmt]])
+    (.seqn #[])
+
+private def uLITailSeq : Stmt :=
+  .seqn #[
+    .assign (.var "$res0") (.intLit 0 .uint64),
+    .assign (.var "$res1") (.boolLit false),
+    .returnStmt]
+
+private def uLIIf1 : Stmt :=
+  .ifThenElse (.neqCmp (.int .int) (.var "l") (.intLit 0 .int))
+    uLIArm (.seqn #[])
+
+/-- The continuation tower below the length read. -/
+private def uLIK1 (plans : List (TargetShape × List Expr))
+    (env : LocalEnv) (k : Cont) : Cont :=
+  .seq [uLIIf1] uLIEnv3
+    (.seq [uLISnapIf, uLITailSeq] uLIEnv2
+      (.frame plans env [Loc.base ⟨33⟩, Loc.base ⟨34⟩] [] k false))
+
+/-- The store continuation the length result lands in. -/
+private def uLIKrhs (plans : List (TargetShape × List Expr))
+    (env : LocalEnv) (k : Cont) : Cont :=
+  .rhsK .vals [.chain (.addr (Loc.base ⟨35⟩)) [] []] [] []
+    (.seqn #[]) uLIEnv3 (uLIK1 plans env k)
+
+/-- The branch boundary continuation (window 2's exit). -/
+private def uLIKif (plans : List (TargetShape × List Expr))
+    (env : LocalEnv) (k : Cont) : Cont :=
+  .ifK uLIArm (.seqn #[]) uLIEnv3
+    (.seq [] uLIEnv3
+      (.seq [uLISnapIf, uLITailSeq] uLIEnv2
+        (.frame plans env [Loc.base ⟨33⟩, Loc.base ⟨34⟩] [] k false)))
+
+/-- The in-span state former: footprint cell + the frame's cells at
+their pinned addresses (param 32, results 33/34, the `l` local 35). -/
+private def uFamLI1 (dty : Option Ty) (sb : Loc) (so ln sc : Nat)
+    (offv : GoValue)
+    (stv sipv oipv ulgv cv apv adv lgv mxv aszv pzv : GoValue)
+    (r0 r1 lv : GoValue) : ExecState :=
+  { wBase with
+      heap := [(Loc.base ⟨31⟩,
+        { declaredTy := dty
+          value := logCellV stv (.slice ⟨some sb, so, ln, sc⟩) offv sipv
+            oipv ulgv cv apv adv lgv mxv aszv pzv }),
+       (Loc.base ⟨32⟩,
+        { declaredTy := some (Ty.pointer (Ty.defined ⟨"raft.unstable"⟩))
+          value := uArgV }),
+       (Loc.base ⟨33⟩,
+        { declaredTy := some (Ty.int .uint64), value := r0 }),
+       (Loc.base ⟨34⟩,
+        { declaredTy := some Ty.bool, value := r1 }),
+       (Loc.base ⟨35⟩,
+        { declaredTy := some (Ty.int .int), value := lv })]
+      nextAddr := 36 }
+
+/-- Window 1 (PRIVATE count-bearing scaffolding — 18 steps, zero
+choices, open `plans`/`env`/`k`, symbolic length/cap/offset): frame
+entry, `l` initialization, the receiver walk, up to the config that
+applies the `len` builtin (the class-2 stuck step). -/
+private theorem uLI1_w1 (dty : Option Ty) (sb : Loc) (so kn sc : Nat)
+    (off : Int)
+    (stv sipv oipv ulgv cv apv adv lgv mxv aszv pzv : GoValue)
+    (plans : List (TargetShape × List Expr)) (env : LocalEnv)
+    (k : Cont) (ch : Choices) :
+    stepFnIter 18
+      (uFam dty stv (.slice ⟨some sb, so, kn+1, sc⟩) (.int off .uint64)
+        sipv oipv ulgv cv apv adv lgv mxv aszv pzv)
+      (.retV uArgV
+        (.callArgsK ⟨"raft.unstable.maybeLastIndex"⟩ plans [] [] env k))
+      ch
+      = .ok (.retV (.slice ⟨some sb, so, kn+1, sc⟩)
+          (.strictK
+            (.lengthOf (some (.slice (.pointer (.defined ⟨"raftpb.Entry"⟩)))))
+            [] [] uLIEnv3 (uLIKrhs plans env k)),
+        uFamLI1 dty sb so (kn+1) sc (.int off .uint64) stv sipv oipv
+          ulgv cv apv adv lgv mxv aszv pzv
+          (.int 0 .uint64) (.bool false) (.int 0 .int),
+        ch) := by
+  kernel_rfl
+
+/-- Window 2 (11 steps): store the length into `l` (the machine's
+normalize), evaluate the branch condition, up to the `ifK` boundary
+(the class-1 stuck step: the branch bool carries the stuck
+normalize). -/
+private theorem uLI1_w2 (dty : Option Ty) (sb : Loc) (so kn sc : Nat)
+    (off : Int)
+    (stv sipv oipv ulgv cv apv adv lgv mxv aszv pzv : GoValue)
+    (plans : List (TargetShape × List Expr)) (env : LocalEnv)
+    (k : Cont) (ch : Choices) :
+    stepFnIter 11
+      (uFamLI1 dty sb so (kn+1) sc (.int off .uint64) stv sipv oipv
+        ulgv cv apv adv lgv mxv aszv pzv
+        (.int 0 .uint64) (.bool false) (.int 0 .int))
+      (.retV (.int (Int.ofNat (kn+1)) .int) (uLIKrhs plans env k)) ch
+      = .ok (.retV
+          (.bool (!(IntKind.normalize .int (Int.ofNat (kn+1)) == 0)))
+          (uLIKif plans env k),
+        uFamLI1 dty sb so (kn+1) sc (.int off .uint64) stv sipv oipv
+          ulgv cv apv adv lgv mxv aszv pzv
+          (.int 0 .uint64) (.bool false)
+          (.int (IntKind.normalize .int (Int.ofNat (kn+1))) .int),
+        ch) := by
+  kernel_rfl
+
+/-- Window 3 (41 steps, from the COLLAPSED branch boundary): the
+branch self-reduces to the nonempty arm; offset read, the uint64
+conversion/arithmetic (their normalizes ride as stuck payloads,
+collapsed by the caller), result stores, return arrival. -/
+private theorem uLI1_w3 (dty : Option Ty) (sb : Loc) (so kn sc : Nat)
+    (off : Int)
+    (stv sipv oipv ulgv cv apv adv lgv mxv aszv pzv : GoValue)
+    (plans : List (TargetShape × List Expr)) (env : LocalEnv)
+    (k : Cont) (ch : Choices) :
+    stepFnIter 41
+      (uFamLI1 dty sb so (kn+1) sc (.int off .uint64) stv sipv oipv
+        ulgv cv apv adv lgv mxv aszv pzv
+        (.int 0 .uint64) (.bool false) (.int (Int.ofNat (kn+1)) .int))
+      (.retV (.bool (!(Int.ofNat (kn+1) == 0))) (uLIKif plans env k))
+      ch
+      = .ok (.returning
+          (.frame plans env [Loc.base ⟨33⟩, Loc.base ⟨34⟩] [] k false),
+        uFamLI1 dty sb so (kn+1) sc (.int off .uint64) stv sipv oipv
+          ulgv cv apv adv lgv mxv aszv pzv
+          (.int (IntKind.normalize .uint64
+            (IntKind.normalize .uint64
+              (IntKind.normalize .uint64
+                (off + IntKind.normalize .uint64 (Int.ofNat (kn+1))) - 1)))
+            .uint64)
+          (.bool true) (.int (Int.ofNat (kn+1)) .int),
+        ch) := by
+  kernel_rfl
+
+/-- **THE `maybeLastIndex` CallSpecR, nonempty member** (T1 family —
+snapshot nil, `len = kn+1` entries at a live backing slice): the call
+returns `(offset + len - 1, true)` — the subject's nonempty arm —
+with the footprint cell read back unchanged. The range premises are
+reader-vocabulary facts (`len ≤ cap` is slice well-formedness;
+`len < 2^63` and the offset bounds are the log-size envelope the
+invariant carries). Un-parks the U3.1-F nonempty arm via the
+crossing kit. -/
+theorem unstable_maybeLastIndex_nonempty_callSpecR (dty : Option Ty)
+    (sb : Loc) (so kn sc : Nat) (off : Int)
+    (stv sipv oipv ulgv cv apv adv lgv mxv aszv pzv : GoValue)
+    (hsc : kn + 1 ≤ sc) (hk : kn + 1 < 9223372036854775808)
+    (hoff0 : 0 ≤ off)
+    (hoffk : off + Int.ofNat (kn + 1) < 18446744073709551616) :
+    CallSpecR
+      (UFIPre dty stv (.slice ⟨some sb, so, kn+1, sc⟩)
+        (.int off .uint64) sipv oipv ulgv cv apv adv lgv mxv aszv pzv)
+      ⟨"raft.unstable.maybeLastIndex"⟩ [] uArgV
+      (fun σ' vs =>
+        vs = [.int (off + Int.ofNat (kn+1) - 1) .uint64, .bool true] ∧
+        Heap.lookup σ'.heap (Loc.base ⟨31⟩)
+          = some { declaredTy := dty
+                   value := logCellV stv
+                     (.slice ⟨some sb, so, kn+1, sc⟩)
+                     (.int off .uint64) sipv oipv ulgv cv apv adv lgv
+                     mxv aszv pzv }) := by
+  intro σ hP plans env k ch
+  -- the collapse facts
+  have hofc : Int.ofNat (kn + 1) = ((kn + 1 : Nat) : Int) := rfl
+  have hcolI : IntKind.normalize .int (Int.ofNat (kn+1))
+      = Int.ofNat (kn+1) := normalize_int_ofNat hk
+  have hcolU : IntKind.normalize .uint64 (Int.ofNat (kn+1))
+      = Int.ofNat (kn+1) := normalize_uint64_ofNat (by omega)
+  have hcolA : IntKind.normalize .uint64 (off + Int.ofNat (kn+1))
+      = off + Int.ofNat (kn+1) :=
+    normalize_uint64_eq (by rw [hofc] at hoffk ⊢; omega)
+      (by rw [hofc] at hoffk ⊢; omega)
+  have hcolS : IntKind.normalize .uint64 (off + Int.ofNat (kn+1) - 1)
+      = off + Int.ofNat (kn+1) - 1 :=
+    normalize_uint64_eq (by rw [hofc] at hoffk ⊢; omega)
+      (by rw [hofc] at hoffk ⊢; omega)
+  -- the windows and crossings
+  have h1 := uLI1_w1 dty sb so kn sc off stv sipv oipv ulgv cv apv adv
+    lgv mxv aszv pzv plans env k ch
+  have hx : stepFn
+      (uFamLI1 dty sb so (kn+1) sc (.int off .uint64) stv sipv oipv
+        ulgv cv apv adv lgv mxv aszv pzv
+        (.int 0 .uint64) (.bool false) (.int 0 .int))
+      (.retV (.slice ⟨some sb, so, kn+1, sc⟩)
+        (.strictK
+          (.lengthOf (some (.slice (.pointer (.defined ⟨"raftpb.Entry"⟩)))))
+          [] [] uLIEnv3 (uLIKrhs plans env k))) ch
+      = .ok (.retV (.int (Int.ofNat (kn+1)) .int) (uLIKrhs plans env k),
+          uFamLI1 dty sb so (kn+1) sc (.int off .uint64) stv sipv oipv
+            ulgv cv apv adv lgv mxv aszv pzv
+            (.int 0 .uint64) (.bool false) (.int 0 .int),
+          ch) :=
+    stepFn_strict_apply (applyStrict_length_slice hsc)
+  have h2 := uLI1_w2 dty sb so kn sc off stv sipv oipv ulgv cv apv adv
+    lgv mxv aszv pzv plans env k ch
+  rw [hcolI] at h2
+  have h3 := uLI1_w3 dty sb so kn sc off stv sipv oipv ulgv cv apv adv
+    lgv mxv aszv pzv plans env k ch
+  rw [hcolU, hcolA, hcolS, hcolS] at h3
+  -- assemble
+  refine ⟨18 + (1 + (11 + 41)),
+    uFamLI1 dty sb so (kn+1) sc (.int off .uint64) stv sipv oipv ulgv
+      cv apv adv lgv mxv aszv pzv
+      (.int (off + Int.ofNat (kn+1) - 1) .uint64) (.bool true)
+      (.int (Int.ofNat (kn+1)) .int),
+    [Loc.base ⟨33⟩, Loc.base ⟨34⟩],
+    [.int (off + Int.ofNat (kn+1) - 1) .uint64, .bool true], ch,
+    ?_, ?_, ⟨rfl, ?_⟩, List.suffix_refl ch⟩
+  · rw [hP]
+    exact stepFnIter_chain h1
+      (stepFnIter_chain (stepFnIter_one hx) (stepFnIter_chain h2 h3))
+  · rfl
+  · rfl
+
+end MaybeLastIndexNonempty
+
+/-- **THE `maybeLastIndex` JOIN** (full T1-family coverage at a live
+backing slice — the partial-coverage label of the empty member is
+upgraded here): at ANY length `n`, the call returns the subject's arm
+result — `(0, false)` when empty, `(offset + n - 1, true)` when not.
+The two arms recombine by case analysis on `n` (the program's own
+branch structure — the crossing kit's join rule; constructor-complete,
+never a subject-run enumeration). -/
+theorem unstable_maybeLastIndex_callSpecR (dty : Option Ty)
+    (sb : Loc) (so n sc : Nat) (off : Int)
+    (stv sipv oipv ulgv cv apv adv lgv mxv aszv pzv : GoValue)
+    (hsc : n ≤ sc) (hk : n < 9223372036854775808)
+    (hoff0 : 0 ≤ off)
+    (hoffn : off + Int.ofNat n < 18446744073709551616) :
+    CallSpecR
+      (UFIPre dty stv (.slice ⟨some sb, so, n, sc⟩)
+        (.int off .uint64) sipv oipv ulgv cv apv adv lgv mxv aszv pzv)
+      ⟨"raft.unstable.maybeLastIndex"⟩ [] uArgV
+      (fun σ' vs =>
+        vs = [.int (if n = 0 then 0 else off + Int.ofNat n - 1)
+                .uint64,
+              .bool (decide (n ≠ 0))] ∧
+        Heap.lookup σ'.heap (Loc.base ⟨31⟩)
+          = some { declaredTy := dty
+                   value := logCellV stv (.slice ⟨some sb, so, n, sc⟩)
+                     (.int off .uint64) sipv oipv ulgv cv apv adv lgv
+                     mxv aszv pzv }) := by
+  cases n with
+  | zero =>
+      exact (unstable_maybeLastIndex_empty_callSpecR dty sb so sc stv
+        (.int off .uint64) sipv oipv ulgv cv apv adv lgv mxv aszv
+        pzv).conseq (fun σ h => h) (fun σ vs h => by
+          simpa using h)
+  | succ kn =>
+      exact (unstable_maybeLastIndex_nonempty_callSpecR dty sb so kn sc
+        off stv sipv oipv ulgv cv apv adv lgv mxv aszv pzv hsc hk hoff0
+        hoffn).conseq (fun σ h => h) (fun σ vs h => by
+          simpa using h)
 
 /-- Non-vacuity of the footprint carrier (the ∃-discharge, concrete
 values in every free slot). -/

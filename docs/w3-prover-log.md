@@ -568,8 +568,83 @@ and each spec's docstring says which ∀ it serves.
   reading of the amendment's Next-chain) are flagged for review in
   the U3.0d entry.
 
+---
+
+# W3 continuation (2026-08-27) — THE DATA-BRANCH CROSSING KIT + U3.1-F completion (one writer; the U3.1-F worker's successor on the same lane)
+
+Charter: the coordinator's crossing-kit brief (kit as a mechanism
+unit + un-park the U3.1-F remainder). Design note:
+`docs/2026-08-27_crossing-kit-design.md` (LINEAGE + quantifier-audit
+line there; the kit advances ∀-state at spec boundaries by case
+analysis over the path condition — the split is over the program's
+own branch structure, never a subject run).
+
+## Successor re-verification (the park record's stuck-goal claims,
+REPRODUCED before design — the brief's precondition)
+
+- Tip + cleanliness: `fe4e42a3`, clean. CONFIRMED.
+- Blocker (ii) REPRODUCED (`artifacts/w3/kit-stuck1.out`):
+  `validateSlice ⟨some b, 0, k+1, sc⟩` does not reduce at free
+  `k`/`sc` (the reducer diverges through the refusal message's
+  `Nat.repr` on the undecidable `len > cap`); the len-0 control
+  reduces to `.ok ()` — exactly the landed empty member's escape.
+- Blocker (i) REPRODUCED (`artifacts/w3/kit-stuck2.out`):
+  `IntKind.normalize .int (Int.ofNat (k+1))` (and the branch bool
+  over it) does not reduce at free `k`.
+- Kit-lemma shape probe (`artifacts/w3/kit-lemmas.out`): the class-A
+  crossing (`subst`+`rfl`), the class-B unfold-to-match `rfl` +
+  `rw`, and the `validateSlice` collapse all PASS at abstract σ; the
+  normalize collapses need core-tactic proofs (no Mathlib in this
+  tree — `norm_num` absent; `omega` + `Int.emod` route landed).
+
+## Judgment calls — the kit
+
+- [AGENT] The kit EXTENDS StepKit's conditioned-step idiom instead
+  of duplicating it: `stepFn_strict_apply` (already landed, promoted
+  ≥2 rule) is the class-B workhorse; the kit adds the VALUE-level
+  path-condition lemmas that feed it (`validateSlice_ok`,
+  `applyStrict_length_slice`, `applyStrict_indexGet_slice`,
+  `applyStrict_deref`, `loadLoc_base`), the class-A branch step
+  lemmas (`stepFn_ifK_true/false`), and the normalize collapse
+  family (`normalize_int_eq`/`normalize_uint64_eq` + `ofNat`
+  corollaries, literal-bound hypotheses so consumers discharge by
+  `omega`). New module `proofs/GoLeanProofs/Sym/Crossing.lean`
+  (~200 lines), registered in `proofs/GoLeanProofs.lean`.
+  `whileK`/`andK`/`orK` siblings NOT built (no consumer in this
+  unit; consume-on-demand, recorded in the design note).
+- [AGENT] The window-split convention (measured on the first
+  consumer): span = `kernel_rfl` windows chained by
+  `stepFnIter_chain`; crossings as `stepFnIter_one` of a
+  conditioned step; hypothesis REWRITES of window exits between
+  links (a collapse rewrite often makes the following branch
+  SELF-reducing — maybeLastIndex's `l != 0` needed no ifK lemma at
+  all after the normalize collapse). Probe-first per member (config
+  dumps at the stuck boundaries: `artifacts/w3/ProbeKitLI*.lean`).
+
+## THE CROSSING KIT: LANDED (build 13 jobs, module 0.3 s)
+
+## U3.1-F un-parking — `maybeLastIndex` COMPLETE (first two kit
+consumers)
+
+- `unstable_maybeLastIndex_nonempty_callSpecR` — the parked nonempty
+  arm: 3 windows (18/11/41 steps, private) + the length crossing
+  (class 2) + normalize collapses (class 1); range premises
+  reader-vocabulary (`len ≤ cap`, `len < 2^63`, offset bounds);
+  returns `(offset + len - 1, true)`, footprint unchanged. Module
+  build 42 s (both new spans in-module). FIRST BUILD GREEN — the
+  kit's window statements + crossing lemmas composed without
+  rework.
+- `unstable_maybeLastIndex_callSpecR` — THE JOIN (recombination):
+  full T1-family coverage at any length `n` by constructor-complete
+  case analysis (`0` vs `kn+1`), citing the two arm members through
+  `CallSpecR.conseq`; the empty member's partial-coverage label is
+  UPGRADED here (the labels on the arm members stand as arm-scoped
+  statements, not coverage gaps).
+
 ## COSTING SIGNAL for the remaining Wave 3.1 clusters ([AGENT]
-estimate, derivation-anchored to this session's measurements)
+estimate, derivation-anchored to the PREDECESSOR session's
+measurements — superseded by this session's kit-adjusted signal at
+the end of this log)
 
 Measured data: straight-line/pinned-branch member ≈ one probe + one
 kernel span theorem (13 s build; ~1-2 h agent time end-to-end);
