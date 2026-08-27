@@ -485,4 +485,105 @@ theorem contAfterStmtOp_plug {k : Cont} (hb : hasBarrierK k = true)
       | _ :: _ :: _ => rfl
   all_goals rfl
 
+
+/-! ## Barrier preservation through the prunes (consumed by the walk's
+classification conclusion) -/
+
+/-- The keyed prune result of `.stop` is `.stop`. -/
+theorem pruneKey_stop {s : ExecState} {l : Loc} {key : GoValue} {k₃ : Cont}
+    (h : pruneIterFramesKey s l key .stop = .ok k₃) : k₃ = .stop := by
+  simp only [pruneIterFramesKey, pure, Except.pure, Except.ok.injEq] at h
+  exact h.symm
+
+theorem pruneKey_bar {s : ExecState} {l : Loc} {key : GoValue} :
+    ∀ {k k₃ : Cont}, pruneIterFramesKey s l key k = .ok k₃ →
+      hasBarrierK k₃ = hasBarrierK k := by
+  intro k
+  induction k <;> intro k₃ hpr
+  case stop => rw [pruneKey_stop hpr]
+  case frame t te r ds k₂ w ih =>
+      simp only [pruneIterFramesKey, bind, Except.bind] at hpr
+      cases hp2 : pruneIterFramesKey s l key k₂ <;> rw [hp2] at hpr
+      · exact absurd hpr (by simp)
+      · rename_i k₄
+        simp only [pure, Except.pure, Except.ok.injEq] at hpr
+        subst hpr
+        by_cases hb2 : t = [] ∧ k₂ = .stop ∧ w = false
+        · obtain ⟨h1, h2, h3⟩ := hb2; subst h1; subst h2; subst h3
+          rw [pruneKey_stop hp2]
+        · have h4 : ¬ (t = [] ∧ k₄ = .stop ∧ w = false) := by
+            intro hh
+            by_cases hk2 : k₂ = .stop
+            · exact hb2 ⟨hh.1, hk2, hh.2.2⟩
+            · exact pruneKey_ne_stop hk2 hp2 hh.2.1
+          rw [hasBarrierK_frame_of_ne h4, hasBarrierK_frame_of_ne hb2,
+            ih hp2]
+  case mapIterK kv vv kt vt b base prod st env₂ k₂ ih =>
+      simp only [pruneIterFramesKey, bind, Except.bind] at hpr
+      cases hp2 : pruneIterFramesKey s l key k₂ <;> rw [hp2] at hpr
+      · exact absurd hpr (by simp)
+      · rename_i k₄
+        by_cases hbase : base == some l
+        · simp only [hbase, if_pos] at hpr
+          cases h1 : removeKeyList s kt key prod.toList <;> rw [h1] at hpr
+          · exact absurd hpr (by simp [bind, Except.bind])
+          · cases h2 : removeKeyList s kt key st.toList <;> rw [h2] at hpr
+            · exact absurd hpr (by simp [bind, Except.bind])
+            · simp only [bind, Except.bind, pure, Except.pure,
+                Except.ok.injEq] at hpr
+              subst hpr
+              simp only [hasBarrierK]
+              exact ih hp2
+        · simp only [hbase, Bool.false_eq_true, if_false, pure, Except.pure,
+            Except.ok.injEq] at hpr
+          subst hpr
+          simp only [hasBarrierK]
+          exact ih hp2
+  all_goals
+    rename_i k₂ ih
+    simp only [pruneIterFramesKey, bind, Except.bind] at hpr
+    cases hp2 : pruneIterFramesKey s l key k₂ <;> rw [hp2] at hpr
+    · exact absurd hpr (by simp)
+    · simp only [pure, Except.pure, Except.ok.injEq] at hpr
+      subst hpr
+      simp only [hasBarrierK]
+      exact ih hp2
+
+theorem pruneAll_bar {l : Loc} :
+    ∀ {k : Cont}, hasBarrierK (pruneIterFramesAll l k) = hasBarrierK k := by
+  intro k
+  induction k
+  case stop => rfl
+  case frame t te r ds k₂ w ih =>
+      by_cases hb2 : t = [] ∧ k₂ = .stop ∧ w = false
+      · obtain ⟨h1, h2, h3⟩ := hb2; subst h1; subst h2; subst h3
+        rfl
+      · have hne2 : ¬ (t = [] ∧ pruneIterFramesAll l k₂ = .stop ∧ w = false) := by
+          intro h
+          by_cases hk2 : k₂ = .stop
+          · exact hb2 ⟨h.1, hk2, h.2.2⟩
+          · exact pruneAll_ne_stop hk2 h.2.1
+        show hasBarrierK (.frame t te r ds (pruneIterFramesAll l k₂) w) = _
+        rw [hasBarrierK_frame_of_ne hne2, hasBarrierK_frame_of_ne hb2, ih]
+  case mapIterK kv vv kt vt b base prod st env₂ k₂ ih =>
+      by_cases hbase : base == some l <;>
+        simp [pruneIterFramesAll, hasBarrierK, hbase, ih]
+  all_goals
+    rename_i k₂ ih
+    simp only [pruneIterFramesAll, hasBarrierK]
+    exact ih
+
+theorem contAfterStmtOp_bar {s : ExecState} {op : StmtOp} {vs : List GoValue}
+    {k k₃ : Cont} (h : contAfterStmtOp s op vs k = .ok k₃) :
+    hasBarrierK k₃ = hasBarrierK k := by
+  unfold contAfterStmtOp at h
+  simp only [bind, Except.bind, pure, Except.pure] at h
+  repeat' split at h
+  all_goals first
+    | (injection h with h; rw [← h]; done)
+    | (injection h with h; rw [← h]; exact pruneAll_bar)
+    | (exact pruneKey_bar h)
+    | (exact absurd h (by simp))
+    | (cases h; rfl)
+
 end GoLean.Frame

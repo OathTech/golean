@@ -527,4 +527,235 @@ theorem applySelect_plug (s : ExecState)
                   | inr msg =>
                       simp_all [List.getElem?_map, List.length_map, plugC]
 
+/-! ## Barrier preservation through the builders (the walk's
+classification for the opaque-result apply arms) -/
+
+theorem enterRecvTargets_bar {s : ExecState} {targets : List Assignee}
+    {vals : List GoValue} {body : Stmt} {env : LocalEnv} {k : Cont}
+    {c' : Config} {s' : ExecState}
+    (h : enterRecvTargets s targets vals body env k = .ok (c', s'))
+    (hb : hasBarrierK k = true) : hasBarrierC c' = true := by
+  unfold enterRecvTargets at h
+  repeat' split at h
+  all_goals first
+    | exact (Except.noConfusion h)
+    | (simp only [pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+       obtain ⟨h1, h2⟩ := h
+       rw [← h1]
+       simp_all [hasBarrierC, hasBarrierK]
+       done)
+    | (rename_i heq
+       simp only [pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+       obtain ⟨h1, h2⟩ := h
+       rw [← h1]
+       simp only [hasBarrierC]
+       exact enterRecvTargets_bar' heq hb)
+    | simp_all [hasBarrierC, hasBarrierK]
+
+theorem enterRecvTargets_bar' {s : ExecState} {targets : List Assignee}
+    {vals : List GoValue} {body : Stmt} {env : LocalEnv} {k : Cont}
+    {pr : Config × ExecState}
+    (h : enterRecvTargets s targets vals body env k = .ok pr)
+    (hb : hasBarrierK k = true) : hasBarrierC pr.1 = true := by
+  obtain ⟨c', s'⟩ := pr
+  exact enterRecvTargets_bar h hb
+
+theorem applyChanOp_bar {s : ExecState} {op : ChanStOp} {vs : List GoValue}
+    {env : LocalEnv} {k : Cont} {c' : Config} {s' : ExecState}
+    (h : applyChanOp s op vs env k = .ok (c', s'))
+    (hb : hasBarrierK k = true) : hasBarrierC c' = true := by
+  unfold applyChanOp at h
+  simp only [bind, Except.bind, pure, Except.pure] at h
+  repeat' split at h
+  all_goals first
+    | exact (Except.noConfusion h)
+    | (simp only [pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+       obtain ⟨h1, h2⟩ := h
+       rw [← h1]
+       simp_all [hasBarrierC, hasBarrierK]
+       done)
+    | (rename_i heq
+       simp only [pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+       obtain ⟨h1, h2⟩ := h
+       rw [← h1]
+       simp only [hasBarrierC]
+       exact enterRecvTargets_bar' heq hb)
+    | simp_all [hasBarrierC, hasBarrierK]
+
+theorem applySyncOp_bar {s : ExecState} {op : SyncOp} {vs : List GoValue}
+    {env : LocalEnv} {k : Cont} {c' : Config} {s' : ExecState}
+    (h : applySyncOp s op vs env k = .ok (c', s'))
+    (hb : hasBarrierK k = true) : hasBarrierC c' = true := by
+  unfold applySyncOp at h
+  simp only [bind, Except.bind, pure, Except.pure] at h
+  repeat' split at h
+  all_goals first
+    | exact (Except.noConfusion h)
+    | (simp only [pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+       obtain ⟨h1, h2⟩ := h
+       rw [← h1]
+       simp_all [hasBarrierC, hasBarrierK]
+       done)
+    | (rename_i heq
+       simp only [pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+       obtain ⟨h1, h2⟩ := h
+       rw [← h1]
+       simp only [hasBarrierC]
+       exact enterRecvTargets_bar' heq hb)
+    | simp_all [hasBarrierC, hasBarrierK]
+
+theorem commitClause_bar {s : ExecState} {env : LocalEnv} {k : Cont}
+    {cl : EvClause} {c' : Config} {s' : ExecState}
+    (h : commitClause s env k cl = .ok (c', s'))
+    (hb : hasBarrierK k = true) : hasBarrierC c' = true := by
+  unfold commitClause at h
+  simp only [bind, Except.bind, pure, Except.pure] at h
+  repeat' split at h
+  all_goals first
+    | exact (Except.noConfusion h)
+    | (simp only [pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+       obtain ⟨h1, h2⟩ := h
+       rw [← h1]
+       simp_all [hasBarrierC, hasBarrierK]
+       done)
+    | (rename_i heq
+       simp only [pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+       obtain ⟨h1, h2⟩ := h
+       rw [← h1]
+       simp only [hasBarrierC]
+       exact enterRecvTargets_bar' heq hb)
+    | simp_all [hasBarrierC, hasBarrierK]
+
+private theorem mapM_ok_forall {α β : Type} {F : α → Except GoError β}
+    {P : β → Prop} (hF : ∀ a b, F a = .ok b → P b) :
+    ∀ {l : List α} {out : List β}, l.mapM F = .ok out → ∀ b ∈ out, P b := by
+  intro l
+  induction l with
+  | nil =>
+      intro out h b hb
+      simp only [List.mapM_nil, pure, Except.pure, Except.ok.injEq] at h
+      subst h
+      cases hb
+  | cons a as ih =>
+      intro out h b hb
+      simp only [List.mapM_cons, bind, Except.bind] at h
+      cases hA : F a <;> rw [hA] at h
+      · exact absurd h (by simp)
+      · cases hAs : as.mapM F <;> rw [hAs] at h
+        · exact absurd h (by simp)
+        · simp only [pure, Except.pure, Except.ok.injEq] at h
+          subst h
+          rcases List.mem_cons.mp hb with hb | hb
+          · subst hb; exact hF a _ hA
+          · exact ih hAs b hb
+
+private theorem mapM_commit_bar {s : ExecState} {env : LocalEnv} {k : Cont}
+    (hb : hasBarrierK k = true)
+    {ready : List EvClause}
+    {commits : List (EvClause × (Config × ExecState ⊕ String))}
+    (h : (ready.mapM (fun cl =>
+        Machine.applySelectCore.match_3
+          (fun _ => Except GoError (EvClause × (Config × ExecState ⊕ String)))
+          (commitClause s env k cl)
+          (fun r => Except.ok (cl, Sum.inl r))
+          (fun msg => Except.ok (cl, Sum.inr msg))
+          (fun e => Except.error e))) = .ok commits) :
+    ∀ p ∈ commits, ∀ c₂ s₂, p.2 = .inl (c₂, s₂) → hasBarrierC c₂ = true := by
+  refine mapM_ok_forall ?_ h
+  intro a b hab
+  split at hab
+  · rename_i r hcc
+    injection hab with hab
+    subst hab
+    intro c₂ s₂ he2
+    simp only [Sum.inl.injEq] at he2
+    obtain ⟨r1, r2⟩ := r
+    simp only [Prod.mk.injEq] at he2
+    rw [← he2.1]
+    exact commitClause_bar hcc hb
+  · rename_i msg hcc
+    injection hab with hab
+    subst hab
+    intro c₂ s₂ he2
+    simp at he2
+  · exact absurd hab (by simp)
+
+theorem commitClause_bar' {s : ExecState} {env : LocalEnv} {k : Cont}
+    {cl : EvClause} {pr : Config × ExecState}
+    (h : commitClause s env k cl = .ok pr)
+    (hb : hasBarrierK k = true) : hasBarrierC pr.1 = true := by
+  obtain ⟨c', s'⟩ := pr
+  exact commitClause_bar h hb
+
+theorem applySelect_bar {s : ExecState}
+    {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt}
+    {vs : List GoValue} {env : LocalEnv} {k : Cont} {ch : Choices}
+    {c' : Config} {s' : ExecState} {ch₂ : Choices} {cl? : Option EvClause}
+    (h : applySelect s clauses default? vs env k ch = .ok (c', s', ch₂, cl?))
+    (hb : hasBarrierK k = true) : hasBarrierC c' = true := by
+  unfold applySelect at h
+  cases hcore : applySelectCore s clauses default? vs env k <;>
+    rw [hcore] at h
+  case error e => exact absurd h (by simp [bind, Except.bind])
+  case ok outcome =>
+      cases outcome with
+      | done c σ cl₂ =>
+          have hdone : hasBarrierC c = true := by
+            unfold applySelectCore at hcore
+            simp only [bind, Except.bind, pure, Except.pure] at hcore
+            repeat' split at hcore
+            all_goals first
+              | exact (Except.noConfusion hcore)
+              | (simp only [Except.ok.injEq, SelectOutcome.done.injEq] at hcore
+                 obtain ⟨h1, h2, h3⟩ := hcore
+                 rw [← h1]
+                 simp_all [hasBarrierC, hasBarrierK]
+                 done)
+              | (rename_i hcc
+                 simp only [Except.ok.injEq, SelectOutcome.done.injEq] at hcore
+                 obtain ⟨h1, h2, h3⟩ := hcore
+                 rw [← h1]
+                 exact commitClause_bar' hcc hb)
+              | simp at hcore
+          simp only [bind, Except.bind, pure, Except.pure,
+            Except.ok.injEq, Prod.mk.injEq] at h
+          obtain ⟨h1, -⟩ := h
+          rw [← h1]
+          exact hdone
+      | picks commits =>
+          have hentries : ∀ p ∈ commits, ∀ c₂ s₂, p.2 = .inl (c₂, s₂) →
+              hasBarrierC c₂ = true := by
+            unfold applySelectCore at hcore
+            simp only [bind, Except.bind, pure, Except.pure] at hcore
+            repeat' split at hcore
+            all_goals first
+              | exact (Except.noConfusion hcore)
+              | (rename_i hmm
+                 simp only [Except.ok.injEq, SelectOutcome.picks.injEq] at hcore
+                 subst hcore
+                 exact mapM_commit_bar hb hmm)
+              | simp at hcore
+          simp only [bind, Except.bind] at h
+          cases hpair : Choices.consumeAt .l2Entry commits.length ch with
+          | mk idx ch₃ =>
+              rw [hpair] at h
+              cases hidx : commits[idx]? <;> rw [hidx] at h
+              · exact absurd h (by simp [throw, throwThe, MonadExceptOf.throw])
+              · rename_i p
+                obtain ⟨cl, r⟩ := p
+                cases r with
+                | inl pr =>
+                    simp only [pure, Except.pure, Except.ok.injEq,
+                      Prod.mk.injEq] at h
+                    obtain ⟨h1, -⟩ := h
+                    rw [← h1]
+                    exact hentries (cl, .inl pr)
+                      (List.mem_of_getElem? hidx) pr.1 pr.2 rfl
+                | inr msg =>
+                    simp only [pure, Except.pure, Except.ok.injEq,
+                      Prod.mk.injEq] at h
+                    obtain ⟨h1, -⟩ := h
+                    rw [← h1]
+                    simp [hasBarrierC, hb]
+
 end GoLean.Frame
