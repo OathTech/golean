@@ -157,6 +157,8 @@ import GoLeanProofs.FuelMeasure
 import GoLeanProofs.RunGlue
 import GoLeanProofs.SpecJudgment
 import GoLeanProofs.CondFor
+import GoLeanProofs.Frame.Plug
+import GoLeanProofs.Frame.PlugProbe
 import GoLeanProofs.Sym.ReflectConc
 import GoLeanProofs.Specs.RaftPilot.BecomeFollowerSpec
 import GoLeanProofs.Specs.RaftPilot.CallSiteComposition
