@@ -94,3 +94,52 @@ after each unit)
   pins EXIT=0 (u30a-audit.log). Wall: ~1 min class (warm imports;
   the 28-job log's own duration — no single module above seconds).
 - No Audit pin changes; no trust-surface files touched.
+
+- [AGENT] U3.0b scope call: a FIFTH reader added beyond the
+  charter's four — `absNetMeta` (per net message, the entries'
+  `(Type, Data)` metadata). Reason: C4's population clause
+  ("all entries EntryNormal") and payload clause's data axis are
+  UNSTATABLE over `absMessage`'s `(Index, Term)` entry projection;
+  without this reader U3.0c would need a joint parameter for a
+  cheaply-definable lens — the wrong side of the fail-closed rule.
+  Charter estimate corrected, not silently exceeded.
+- [AGENT] U3.0b map-order honesty: Go map iteration order is
+  LATITUDE; `mapRead` exposes the machine's `mapData` store order
+  only because an assoc list must have one. Stated in the module
+  docstring; the invariant module consumes the maps through LOOKUP
+  vocabulary only, never order.
+- [AGENT] U3.0b lens choice: the map lens (`mapRead`) is NEW (maps
+  were unprojected before); kept file-local per the promotion
+  ledger's ≥2 rule — promotion to `Lens.lean` when a second consumer
+  bites. `locField`/`ptrField` (deref+field with TypeId check) are
+  likewise local; they generalize `fieldRead` off `.base`-only
+  addresses.
+
+## U3.0b — THE READER EXTENSION: LANDED
+
+- File: `Specs/Raft/AbsTwinCheckerRead.lean` (new, beside
+  AbsTwinRead; registered in `proofs/GoLeanProofs.lean`). NO change
+  to AbsTwinV0 or any of its consumers (AbsTwinRead untouched).
+- Readers (each total, fail-closed, TypeId-checked): `absLeaderOf`
+  (term ↦ claimer assoc), `absByIndex` (index ↦ (term, data,
+  firstNode) via the embedded `main.slot` decode), `absNodeCursors`
+  (per-node applied/lastTrm), `absNodeGot` (per-node data ↦ flag),
+  `absNetMeta` (per-message entry (Type, Data) — the [AGENT] fifth).
+- `_ren` congruences in the RenCongr/L4 style, composed from the
+  lens laws (sliceRead_ren + new mapPairs_ren/mapRead_ren +
+  locField_ren/ptrField_ren + pure-decoder invariances):
+  `absLeaderOf_ren`, `absByIndex_ren`, `absNodeCursors_ren`,
+  `absNodeGot_ren`, `absNetMeta_ren` (+ element-level lemmas).
+- Definedness under C1 well-shapedness: generic `MapFieldShaped`/
+  `SliceFieldShaped` + `mapField_defined`/`sliceField_defined`
+  (with the slice length equation), instantiated per reader:
+  `absLeaderOf_defined`, `absByIndex_defined`,
+  `absNodeCursors_defined`, `absNodeGot_defined`,
+  `absNetMeta_defined`. Non-vacuity of the shape premises: the
+  in-file `wTwinState` 4-cell state (wTwin_leaderOf/wTwin_cursors
+  compute; wTwin_leaderOfShaped discharges LeaderOfShaped).
+- Build: file elaboration EXIT=0 with zero warnings in the new file
+  (artifacts/w3/u30b-check.log); `lake build …AbsTwinCheckerRead`
+  EXIT=0, 43 jobs, module 0.5 s (u30b-build.log).
+- Quantifier line: vocabulary only; advances no quantifier (module
+  docstring).

@@ -292,6 +292,10 @@ import GoLeanProofs.Specs.Raft.AbsState
 import GoLeanProofs.Specs.Raft.RenCongr
 import GoLeanProofs.Specs.Raft.AbsStateV2
 import GoLeanProofs.Specs.Raft.AbsTwinRead
+-- W3 U3.0b: the checker-state lens readers (leaderOf/byIndex/got/
+-- cursors + the net entry-metadata reader) with their _ren
+-- congruences and C1-definedness lemmas — the C3/C4 vocabulary.
+import GoLeanProofs.Specs.Raft.AbsTwinCheckerRead
 -- A4-U2 slice 1: the handler-fragment Sym extension (class 1, the
 -- type-table input).
 import GoLeanProofs.Sym.TableExt
