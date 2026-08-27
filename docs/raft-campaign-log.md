@@ -2666,3 +2666,20 @@ on w1-prover; (M) mechanism prover on new lane w3-m @ ce05ecd1.
 New standing rule (collision lesson): SpecJudgment.lean judgment
 forms are added ONLY on the w1-prover lane; other lanes park and
 name the need.
+
+### 2026-08-27 — [USER] instruction: professor review at the next quiescent point
+
+[USER] (mid-run direction): when the run reaches a quiescent point,
+dispatch a professor-type reviewer to check (a) calibration of the
+built work against the plan, (b) overall theory / PL design
+goodness. MAJOR DIVERGENCES pause the goal for discussion with the
+user. [AGENT] execution plan: the next quiescent point is the
+F+B / (M) lane consolidation (both provers currently in flight);
+at that point the professor (Fable, grumpy-reviewer posture, primary
+sources not our summaries) reviews: the W2.5-as-adjudicated
+invariant vs the plan's W2.5 charter, the judgment-form family
+(CallSpecR/RN/RD) vs W1's design, the crossing kit and (M) mechanism
+vs the classics-first doctrine, and the census-driven amendments.
+Review verdict classes: CALIBRATED (continue), DRIFT-MINOR (fold
+fixes, continue), DIVERGENCE-MAJOR (STOP the goal, present to the
+[USER]).
