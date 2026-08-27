@@ -2,6 +2,8 @@ import Lean
 import GoLeanProofs.RunGlue
 import GoLeanProofs.SpecJudgment
 import GoLeanProofs.Pilot.BecomeFollowerSpec
+import GoLeanProofs.Pilot.CallSiteComposition
+import GoLeanProofs.Specs.Raft.RenCongr
 
 /-!
 # In-build axiom gate — the W1 surface (judgment layer + runProgramM glue)
@@ -97,3 +99,13 @@ retraction; the judgment's non-vacuity per the charter's carve-out) -/
 #guard_msgs in #print axioms GoLean.RaftSeam.becomeFollower_callSpec
 /-- info: 'GoLean.RaftSeam.bfPre_inhabited' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.RaftSeam.bfPre_inhabited
+
+/-! ## The W1 pilot — Leg B (the call-rule composition) and the
+frame's reader-congruence half -/
+
+/-- info: 'GoLean.RaftSeam.becomeFollower_call_stmtSpec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.RaftSeam.becomeFollower_call_stmtSpec
+/-- info: 'GoLean.RaftSeam.fieldU64_ren' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.RaftSeam.fieldU64_ren
+/-- info: 'GoLean.RaftSeam.absRaftNode_frameSim' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.RaftSeam.absRaftNode_frameSim

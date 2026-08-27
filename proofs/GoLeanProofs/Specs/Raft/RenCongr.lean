@@ -158,4 +158,85 @@ theorem absStorageEnts_ren {r : Nat → Nat} {na₀ na : Nat} {fr : Heap}
         case _ => exact absurd h (by simp)
       case _ => exact absurd h (by simp)
 
+/-! ## W1: the pilot reader's whole-projection frame congruence
+(clean-proof plan §W1 "reader-congruence lemmas"; design note
+`docs/2026-08-27_w1-judgment-design.md` §3: pre/postconditions in
+reader vocabulary transport through FrameSim because scalar readers
+are rename-invariant — the footprint design's Spec-transport half). -/
+
+/-- Field read + `uint64` decode commutes with renaming. -/
+theorem fieldU64_ren (r : Nat → Nat) (fs : Array (String × GoValue))
+    (n : String) :
+    fieldU64 ((renameValueFields r fs.toList).toArray) n
+      = fieldU64 fs n := by
+  unfold fieldU64
+  rw [structFieldsLookup_ren]
+  cases StructFields.lookup fs n with
+  | none => rfl
+  | some v => simp [Option.bind, asU64_ren]
+
+/-- **The raft-node projection is footprint-local**: a `FrameSim`
+image reads back the SAME abstract state at the renamed root — the
+frame theorem's Spec-transport half for the pilot's reader. -/
+theorem absRaftNode_frameSim {r : Nat → Nat} {na₀ na : Nat} {fr : Heap}
+    {σ σF : ExecState} (hF : FrameSim r na₀ na fr σ σF) (a : Nat)
+    {st : AbsRaftState} (h : absRaftNode σ ⟨a⟩ = some st) :
+    absRaftNode σF ⟨r a⟩ = some st := by
+  unfold absRaftNode at h ⊢
+  cases hc : Heap.lookup σ.heap (.base ⟨a⟩) with
+  | none => rw [hc] at h; cases h
+  | some c =>
+      rw [hc] at h
+      have hcF := hF.lookup_some hc
+      simp only [renameLoc] at hcF
+      rw [hcF]
+      simp only [Bind.bind, Option.bind] at h ⊢
+      split at h
+      case h_2 => cases h
+      case h_1 fs heq =>
+        have hval : (renameCell r c).value
+            = .struct ⟨"raft.raft"⟩ ((renameValueFields r fs.toList).toArray) := by
+          simp [renameCell, heq, renameValue]
+        rw [hval]
+        simp only [fieldU64_ren]
+        cases hterm : fieldU64 fs "Term" with
+        | none => rw [hterm] at h; cases h
+        | some term =>
+          rw [hterm] at h
+          cases hvote : fieldU64 fs "Vote" with
+          | none => rw [hvote] at h; cases h
+          | some vote =>
+            rw [hvote] at h
+            cases hlead : fieldU64 fs "lead" with
+            | none => rw [hlead] at h; cases h
+            | some lead =>
+              rw [hlead] at h
+              cases hstate : fieldU64 fs "state" with
+              | none => rw [hstate] at h; cases h
+              | some state =>
+                rw [hstate] at h
+                simp only [Bind.bind, Option.bind] at h ⊢
+                rw [structFieldsLookup_ren]
+                split at h
+                case h_2 => cases h
+                case h_1 rl hrl =>
+                  rw [hrl]
+                  simp only [Option.map_some, renameValue]
+                  cases hrc : Heap.lookup σ.heap rl with
+                  | none => rw [hrc] at h; cases h
+                  | some rlc =>
+                    rw [hrc] at h
+                    rw [hF.lookup_some hrc]
+                    simp only [Bind.bind, Option.bind] at h ⊢
+                    split at h
+                    case h_2 => cases h
+                    case h_1 rfs hrfs =>
+                      have hrval : (renameCell r rlc).value
+                          = .struct ⟨"raft.raftLog"⟩
+                            ((renameValueFields r rfs.toList).toArray) := by
+                        simp [renameCell, hrfs, renameValue]
+                      rw [hrval]
+                      simp only [fieldU64_ren]
+                      exact h
+
 end GoLean.RaftSeam
