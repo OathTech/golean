@@ -1,4 +1,13 @@
-# W2.5 — the invariant design note ([USER] DESIGN GATE — awaiting review)
+# W2.5 — the invariant design note
+
+STATUS (2026-08-27): ADOPTED as the W3 postcondition contract by
+[AGENT] adjudication under the active autonomous directive (the goal
+monitor refused a stop at the plan's named [USER] gate; conflict
+resolution logged in `docs/raft-campaign-log.md`). The three §3 open
+points are resolved as recommended (ghost-acks; separate lens
+readers; T1 scope). **This adjudication is a mandatory [USER] review
+item at the landing ceremony** — the gate's substance is still
+Mike's to overturn before merge.
 
 The plan's named checkpoint: the full loop invariant `I` as a written
 artifact before any W3 function spec is chartered, because every W3
