@@ -165,10 +165,6 @@ import GoLeanProofs.Frame.PlugStep
 import GoLeanProofs.Frame.PlugRule
 import GoLeanProofs.Sym.ReflectConc
 import GoLeanProofs.Specs.RaftPilot.InitSpec
--- W3 U3.0c: THE INVARIANT MODULE — `I` per the adopted W2.5 design
--- (definitions + sanity lemmas; preservation/establishment are the
--- later waves').
-import GoLeanProofs.Specs.RaftPilot.Invariant
 -- # w3-m (the (M) mechanism — map-order pick-family composition;
 -- design note docs/2026-08-27_m-mechanism-design.md; keep contiguous
 -- — merged with the sibling lanes' additions by the coordinator)
