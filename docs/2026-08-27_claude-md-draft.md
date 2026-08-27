@@ -63,14 +63,17 @@ verified against the semantics, useful-not-complete, replaceable.
   The subject's identity enters only via the reflection pair.
   (The 2026-08 fixed-trajectory era is the recorded cautionary
   instance: `docs/ARCHIVE.md`.)
-- **Reason over syntax; never walk executions.** Proofs are
+- **Reason; never dumbly walk the execution.** Proofs are
   Hoare/O'Hearn-style: function specs (continuation-parametric,
   call-span shaped), loop rules with invariants (variants for
-  totality), frame and congruence rules, symbolic execution as the
-  engine. Nondeterminism is the reified choice tape, quantified
-  demonically. Concrete evaluation appears only in declared
-  reflection certificates (and, until superseded, the retained
-  interface witnesses).
+  totality), frame and congruence rules. Symbolic execution —
+  execution over symbolic paths, covering a state family per step —
+  is a first-class valid technique and the working engine; what is
+  banned is CONCRETE walking as proof (grinding one literal state
+  down one trajectory). Nondeterminism is the reified choice tape,
+  quantified demonically. Concrete evaluation appears only in
+  declared reflection certificates (and, until superseded, the
+  retained interface witnesses).
 - **The quantifier audit.** Every unit charter states which
   quantifier of the end theorem it advances and BY WHAT RULE —
   never "by instances." No nameable rule ⇒ the unit is scaffolding
