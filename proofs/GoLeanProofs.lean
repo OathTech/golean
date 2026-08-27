@@ -31,36 +31,19 @@ import GoLeanProofs.Frame.Relocate
 -- round (unconsumed byte-identical duplicate of the RaftSeam
 -- original; ledger row closed — see Audit/Kit.lean's tombstone).
 import GoLeanProofs.Sym.SpillTransport
-import GoLeanProofs.Specs.Raft.HhLit
-import GoLeanProofs.Specs.Raft.HhEquation
 import GoLeanProofs.Specs.Raft.StaticCells
 import GoLeanProofs.Specs.Raft.StaticCellsExt
--- THE VALIDATION-CORPUS SPLIT (A4-U25 slice 0, 2026-08-26; the OOM
--- incident's correction (a)), AS CORRECTED at the arc-4 landing fix
--- round: the corpus target holds ONLY validation chains whose LAWS
--- are corpus-resident (the Hae/Stale/La/Bl/HhAdv/MsErr+MsResite/
--- HaeRej/HhFrom/SfHb/SfPd/SCHb/Slb handler-equation chains). The
--- U25 split had also moved the WITNESSES of LIVE laws out of the
--- per-gate closure — RingWitness (span_consume's only discharge
--- witness) and RoundInductionWitness (the round induction's) — which
--- silently weakened the non-vacuity doctrine for live laws: a witness
--- ships WITH its law, in the gated build, so deleting either fails
--- `scripts/ci`. Those chains (and their Round*/Ring dependencies)
--- returned to THIS target at the fix round; the gate-wall cost of the
--- return is measured in the fix-round log entry.
--- Also live: HhLit/HhEquation (a ShapeWitness dependency), RoundHbLit
--- (a RoundStatement dependency), StaticCells(+Ext) (link-pin pattern
--- machinery), the Bf/Bc fixture chains (AllocEq/AbsStateV2
--- dependencies), and RoundStatement itself.
--- (The U25-era comment here undercounted its own commit: it said
--- "the three proved round-kind instances (RoundMa/RoundVote/RoundMar)"
--- in the commit that landed the FOURTH, RoundVr — reconciled at the
--- fix round; the count of proved round-kind instances is FOUR.)
--- A4-U14: the branch-crossing transport (path-condition splitting);
--- its From-symbolic equation witness chain is in the corpus target.
+-- W0 RESET (2026-08-27, kill-list K-A executed in this commit; K-B/
+-- K-C/K-D follow phase-by-phase): the fixed-trajectory era's literal
+-- modules (57 Specs/Raft `*Lit*` + TwinCheckpoints(F); 1,184,100
+-- lines) are DELETED, and every module in their import closure (the
+-- handler-equation/fixture/round/seed chains, the round induction,
+-- AbsStateV2 and the split donors) is unlinked from this root in the
+-- same commit — the doomed files die in their own kill-list phases.
+-- The era is preserved at archive/fixed-trajectory-era; the record is
+-- docs/ARCHIVE.md. Nothing archived is ever cited by a proof.
+-- A4-U14: the branch-crossing transport (path-condition splitting).
 import GoLeanProofs.Sym.BranchTransport
-import GoLeanProofs.Specs.Raft.RoundHbLit
-import GoLeanProofs.Specs.Raft.RoundStatement
 -- C2a: the completeness-strengthened frame simulation (FrameSimS) —
 -- the mid-walk consumption instrument (layer-C design v2 §8 D1)
 import GoLeanProofs.Frame.ShapeSim
@@ -70,84 +53,14 @@ import GoLeanProofs.Frame.ShapeOps3
 import GoLeanProofs.Frame.ShapeStrict
 import GoLeanProofs.Frame.ShapeStep
 import GoLeanProofs.Frame.ShapeSpan
-import GoLeanProofs.Specs.Raft.ShapeWitness
 import GoLeanProofs.SliceWalk
 import GoLeanProofs.Specs.Raft.DriverNet
 import GoLeanProofs.Specs.Raft.DriverNetWitness
--- THE WITNESS RETURN (arc-4 landing fix round): the C2c Ring span
--- chain and the FOUR proved round-kind instances (C2d RoundMa,
--- A4-U23 RoundVote, A4-U24 RoundMar, A4-U25 RoundVr) return from the
--- corpus target to the live tree — RingWitness discharges the LIVE
--- `span_consume` (ShapeSpan) and RoundInductionWitness discharges
--- the LIVE `round_induction`/`seeded_round_induction`, and a
--- non-vacuity witness ships in the same gated build as its law
--- (CLAUDE.md's gate; the U25 split had deferred these to landmark
--- corpus builds only). The checker-interface I2 bridges (A4-U23
--- slice 2) are LIVE below (NativeCheckerBridge).
-import GoLeanProofs.Specs.Raft.RingLit1
-import GoLeanProofs.Specs.Raft.RingLit2
-import GoLeanProofs.Specs.Raft.RingLit3
-import GoLeanProofs.Specs.Raft.RingLit4
-import GoLeanProofs.Specs.Raft.RingEquation
-import GoLeanProofs.Specs.Raft.RingWitness
-import GoLeanProofs.Specs.Raft.RoundMaLit1
-import GoLeanProofs.Specs.Raft.RoundMaLit2
-import GoLeanProofs.Specs.Raft.RoundMaLit3
-import GoLeanProofs.Specs.Raft.RoundMaLit4
-import GoLeanProofs.Specs.Raft.RoundMaLit5
-import GoLeanProofs.Specs.Raft.RoundMaLit6
-import GoLeanProofs.Specs.Raft.RoundMaEqA
-import GoLeanProofs.Specs.Raft.RoundMaEqB
-import GoLeanProofs.Specs.Raft.RoundMaEqC
-import GoLeanProofs.Specs.Raft.RoundMaEquation
-import GoLeanProofs.Specs.Raft.RoundMaLemma
-import GoLeanProofs.Specs.Raft.RoundVoteLit1
-import GoLeanProofs.Specs.Raft.RoundVoteLit2
-import GoLeanProofs.Specs.Raft.RoundVoteLit3
-import GoLeanProofs.Specs.Raft.RoundVoteLit4
-import GoLeanProofs.Specs.Raft.RoundVoteLit5
-import GoLeanProofs.Specs.Raft.RoundVoteLit6
-import GoLeanProofs.Specs.Raft.RoundVoteEqA
-import GoLeanProofs.Specs.Raft.RoundVoteEqB
-import GoLeanProofs.Specs.Raft.RoundVoteEqC
-import GoLeanProofs.Specs.Raft.RoundVoteEquation
-import GoLeanProofs.Specs.Raft.RoundVoteLemma
-import GoLeanProofs.Specs.Raft.RoundMarLit1
-import GoLeanProofs.Specs.Raft.RoundMarLit2
-import GoLeanProofs.Specs.Raft.RoundMarLit3
-import GoLeanProofs.Specs.Raft.RoundMarLit4
-import GoLeanProofs.Specs.Raft.RoundMarLit5
-import GoLeanProofs.Specs.Raft.RoundMarLit6
-import GoLeanProofs.Specs.Raft.RoundMarLit7
-import GoLeanProofs.Specs.Raft.RoundMarEqA
-import GoLeanProofs.Specs.Raft.RoundMarEqB
-import GoLeanProofs.Specs.Raft.RoundMarEqC
-import GoLeanProofs.Specs.Raft.RoundMarEqD
-import GoLeanProofs.Specs.Raft.RoundMarEquation
-import GoLeanProofs.Specs.Raft.RoundMarLemma
-import GoLeanProofs.Specs.Raft.RoundVrLit1
-import GoLeanProofs.Specs.Raft.RoundVrLit2
-import GoLeanProofs.Specs.Raft.RoundVrLit3
-import GoLeanProofs.Specs.Raft.RoundVrLit4
-import GoLeanProofs.Specs.Raft.RoundVrLit5
-import GoLeanProofs.Specs.Raft.RoundVrLit6
-import GoLeanProofs.Specs.Raft.RoundVrLit7
-import GoLeanProofs.Specs.Raft.RoundVrLit8
-import GoLeanProofs.Specs.Raft.RoundVrLit9
-import GoLeanProofs.Specs.Raft.RoundVrLit10
-import GoLeanProofs.Specs.Raft.RoundVrLit11
-import GoLeanProofs.Specs.Raft.RoundVrLit12
-import GoLeanProofs.Specs.Raft.RoundVrLit13
-import GoLeanProofs.Specs.Raft.RoundVrLit14
-import GoLeanProofs.Specs.Raft.RoundVrEqA
-import GoLeanProofs.Specs.Raft.RoundVrEqB
-import GoLeanProofs.Specs.Raft.RoundVrEqC
-import GoLeanProofs.Specs.Raft.RoundVrEqD
-import GoLeanProofs.Specs.Raft.RoundVrEqE
-import GoLeanProofs.Specs.Raft.RoundVrEquation
-import GoLeanProofs.Specs.Raft.RoundVrLemma
 -- arc4b landing (C2c slice 0, per the lane's landing manifest): the native
--- S1/S2/S3 chain over the obligation signature (SC1 + C3 + C4)
+-- S1/S2/S3 chain over the obligation signature (SC1 + C3 + C4).
+-- W0 reset: NativeS1Witness/NativeS23Witness are RETAINED (professor
+-- amendment) — the interface premises' non-vacuity demonstrations
+-- until W5 supersedes them.
 import GoLeanProofs.Specs.Raft.NativeObligations
 import GoLeanProofs.Specs.Raft.NativeS23Route
 import GoLeanProofs.Specs.Raft.NativeS1Chain
@@ -157,56 +70,16 @@ import GoLeanProofs.Specs.Raft.NativeS1Witness
 import GoLeanProofs.Specs.Raft.NativeS23Chain
 import GoLeanProofs.Specs.Raft.NativeS23Witness
 import GoLeanProofs.Specs.Raft.NativeCheckerBridge
--- SP1 landing (arc4c lane, per its landing manifest — A4-U26 slice 0):
--- the choice-invariance carrier (~/~ₘ, CForm) + the seed pin. LIVE, not
--- corpus — placement re-justified at the landing fix round against the
--- corrected witness-with-law rule (the audit had flagged the U26-era
--- generated lines re-entering the default target as an unreconciled
--- rule violation; each line is justified here):
---   ChoiceCanon/ChoiceInv — live laws (the ~/~ₘ carrier + the
---     choice-invariance statement layer); namespace
---     GoLean.Frame.ChoiceErase since the fix round.
---   ChoiceCanonWitness — the collectFix view-fixpoint regression
---     witness (fix-round F2a; witness ships with the fixed law).
---   SeedLit (25,749 gen. lines) — SeedPin's literal; SeedPin is live
---     because seed_N₀/SeedFam discharge hypotheses of the LIVE
---     round induction and native chain.
---   SeedCFormLit (1,541 gen. lines) — seed_cform_pin's literal (live
---     law, same module).
---   SeedLitVar (22,532 gen. lines) + SeedWitness — the ~ₘ layer's
---     occupation witnesses (non-canonical stream landing CEquivM-equal):
---     witnesses of the LIVE equivalence, so live by the
---     witness-with-law rule (the U25 corpus criterion "no importer
---     outside the corpus set" is subordinate to that rule — corrected
---     at the fix round; GoLeanProofsCorpus.lean's header carries the
---     amended criterion).
--- Kernel cost joining the default build (measured at SP1): SeedPin
--- ≈262 s + SeedWitness ≈41 s.
+-- SP1 landing (arc4c lane), W0-pruned: the choice-invariance carrier
+-- (~/~ₘ, CForm) + statement layer + the collectFix view-fixpoint
+-- regression witness. General choice-erasure machinery, kept per
+-- kill-list K-E (off the critical path; the seed pins and their
+-- literals are archived).
 import GoLeanProofs.Frame.ChoiceCanon
 import GoLeanProofs.Frame.ChoiceCanonWitness
 import GoLeanProofs.Frame.ChoiceInv
-import GoLeanProofs.Specs.Raft.SeedLit
-import GoLeanProofs.Specs.Raft.SeedLitVar
-import GoLeanProofs.Specs.Raft.SeedCFormLit
-import GoLeanProofs.Specs.Raft.SeedPin
-import GoLeanProofs.Specs.Raft.SeedWitness
--- BUILD DISCIPLINE (landing delta-review F-2, 2026-08-26): the round
--- window-kernel modules returned to this default target by the
--- witness-with-its-law rule are CONCURRENCY-OOM-PRONE on cold builds
--- (measured: 6-8 concurrent window modules breach 96G; per-module
--- peaks are modest). A COLD build of this target MUST warm
--- sequentially first (per-Audit-root explicit targets at
--- LEAN_NUM_THREADS=2, then the full build at scaled threads) — the
--- warm-landing.log pattern. Warm gates measure 255-256 s; no cold
--- gate wall is on record yet (operator measurement owed).
--- A4-U26 slice 2: THE ROUND INDUCTION (generic simulation induction
--- over round chains; consumes the R-form + the native chain + the seed
--- pin). Its witnesses are LIVE beside it since the landing fix round
--- (the witness return above).
-import GoLeanProofs.Specs.Raft.RoundInduction
-import GoLeanProofs.Specs.Raft.RoundInductionWitness
 -- A4-U8: the field-lens layer (Perennial Access lineage; general half —
--- combinators + L1-L4 laws; per-field instances live in Specs/Raft).
+-- combinators + L1-L4 laws).
 import GoLeanProofs.Lens
 import GoLeanProofs.Lang
 import GoLeanProofs.LangC
@@ -243,16 +116,14 @@ import GoLeanProofs.Specs.QuorumTargets
 import GoLeanProofs.Specs.WirePin
 import GoLeanProofs.Specs.TwinProgram
 import GoLeanProofs.Specs.RaftAgreement
--- Arc 2: the checkpoint reflector (route memo §4c) — meta-side
--- scaffolding + the shared table-carrying base def — and the
--- reflected mid-run checkpoint (route memo §6.1).
+-- Arc 2: the state-reflection elaborators (StateWire) — dies at W0
+-- K-B (its sole consumers, the checkpoint modules, were K-A kills;
+-- linked here until its own phase so the K-A commit stays one
+-- concern).
 import GoLeanProofs.Specs.StateWire
-import GoLeanProofs.Specs.TwinCheckpoints
--- Arc 2 U4: the trie-form checkpoints, the kernel-pinned prelude, and
--- the verified fast-twin evaluator (route (d) — untrusted method,
--- never in any statement closure).
-import GoLeanProofs.Specs.TwinCheckpointsF
-import GoLeanProofs.Specs.TwinPrelude
+-- Arc 2 U4: the verified fast-twin evaluator (route (d) — untrusted
+-- method, never in any statement closure). KEPT (kill-list K-E): the
+-- differential instrument's certified replay.
 import GoLeanProofs.FastEval.Heap
 import GoLeanProofs.FastEval.Ops
 import GoLeanProofs.FastEval.Loops
@@ -402,48 +273,18 @@ import GoLeanProofs.Sym.Walk
 -- driver's induction over the walk at the symbolic interpretation.
 import GoLeanProofs.Sym.Refine
 import GoLeanProofs.Sym.SpikeKadane
--- Campaign Arc 4 (A4-U1 pilot): the interpreter⇄invariant seam's
--- abstraction reader + per-callee span equations + pinned witness.
--- Proof infrastructure — never imported by the Specs statement modules.
+-- Campaign Arc 4 (A4-U1 pilot): the seam's abstraction reader (v1) —
+-- the pairing vocabulary's base (kill-list K-E keep).
 import GoLeanProofs.Specs.Raft.AbsState
+-- HandlerEq/HandlerEqSym/BecomeFollowerWitness/LensInst: trajectory-
+-- era modules, linked until their K-B phase deletes them (W0 reset).
 import GoLeanProofs.Specs.Raft.HandlerEq
 import GoLeanProofs.Specs.Raft.BecomeFollowerWitness
 -- A4-U2 slice 1: the handler-fragment Sym extension (class 1, the
--- type-table input) + the Sym-driven re-measure of the pilot leaf.
+-- type-table input).
 import GoLeanProofs.Sym.TableExt
 import GoLeanProofs.Specs.Raft.HandlerEqSym
--- A4-U3: the populated becomeFollower fixture, the crossing facts,
--- and THE FIRST FULL HANDLER EQUATION.
-import GoLeanProofs.Specs.Raft.BfLit
-import GoLeanProofs.Specs.Raft.BfFixture
-import GoLeanProofs.Specs.Raft.BfSteps
-import GoLeanProofs.Specs.Raft.BfSteps2
-import GoLeanProofs.Specs.Raft.BfEquation
-import GoLeanProofs.Specs.Raft.BpcEquation
-import GoLeanProofs.Specs.Raft.BcLit
-import GoLeanProofs.Specs.Raft.BcFixture
-import GoLeanProofs.Specs.Raft.BcSteps
-import GoLeanProofs.Specs.Raft.BcEquation
-import GoLeanProofs.Specs.Raft.MsEquation
--- A4-U5: the allocation-symbolic handler-equation layer (the frame-rule
--- re-base of the fixture-pinned equations; BPC proved end-to-end).
-import GoLeanProofs.Specs.Raft.AllocEq
--- A4-U6: the remaining four re-bases + the re-sited fixture with the
--- non-identity placement witness.
-import GoLeanProofs.Specs.Raft.AllocEqWave1
-import GoLeanProofs.Specs.Raft.BpcResite
--- A4-U8: the lens instance table at the pinned tables (slice C) and
--- absState v2 (slice D — lens-consuming readers + L4 transports).
 import GoLeanProofs.Specs.Raft.LensInst
-import GoLeanProofs.Specs.Raft.AbsStateV2
--- A4-U8 part 2: the fixture re-siting consolidation (the U6 charter
--- residual): BC / Bf re-sited off the static locLit range with
--- placement-LIVE alloc equations. (MsResite — consumed only by
--- MsErrEquation — is in the corpus target with the A4-U25 split.)
-import GoLeanProofs.Specs.Raft.Bc31Lit
-import GoLeanProofs.Specs.Raft.Bc31
-import GoLeanProofs.Specs.Raft.Bf31Lit
-import GoLeanProofs.Specs.Raft.Bf31
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)

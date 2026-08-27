@@ -27,27 +27,16 @@ import Audit.WordFreq
 import Audit.SliceStack
 import Audit.SliceQueue
 import Audit.MatMul
-import Audit.FrameShape
 import Audit.DriverNet
 import Audit.CheckerBridge
-import Audit.RoundInduction
--- The witness return (arc-4 landing fix round): the live laws' witness
--- pins gate per-commit again — Ring (span_consume's chain), the four
--- proved round-kind instances, and the round induction's witnesses
--- moved here from AuditCorpus; ChoiceInv is the SP1 layer's curated
--- pin module (new at the fix round).
-import Audit.Ring
-import Audit.RoundMa
-import Audit.RoundVote
-import Audit.RoundMar
-import Audit.RoundVr
-import Audit.RoundIndWitness
 import Audit.ChoiceInv
--- [Comment corrected, landing delta-review F-4: the four round-kind pin
--- modules RETURNED to this root with the fix round's witness-with-its-law
--- rule — the imports above are current; only the handler-equation corpus
--- chains' pins remain at the AuditCorpus root.]
--- (`scripts/capped lake build AuditCorpus`) — see GoLeanProofsCorpus.lean.
+-- W0 reset (2026-08-27, kill-list K-A/K-D): the fixed-trajectory pin
+-- modules (Ring, RoundMa/Vote/Mar/Vr, RoundInduction(+Witness),
+-- FrameShape) are unlinked here in the K-A commit (their subjects'
+-- literal foundations are deleted) and their files deleted at K-D per
+-- the kill-list. ChoiceInv stays, pruned to the statement-layer pins.
+-- The era's content is preserved at archive/fixed-trajectory-era —
+-- see docs/ARCHIVE.md.
 
 /-!
 # In-build epistemic gate for the Iris proof layer

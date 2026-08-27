@@ -2,7 +2,6 @@ import Lean
 import GoLeanProofs.FastEval.Step
 import GoLeanProofs.FastEval.Transfer
 import GoLeanProofs.FastEval.TransferWitness
-import GoLeanProofs.Specs.TwinPrelude
 
 /-!
 # In-build axiom gate — the FastEval surface (campaign Arc 2, U4)
@@ -42,8 +41,10 @@ visible diff. Re-baseline only with the reason, in the same commit.
 #guard_msgs in #print axioms GoLean.FastEval.enterFrameF_ok
 /-- info: 'GoLean.FastEval.applySyncOpF_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.FastEval.applySyncOpF_ok
-/-- info: 'GoLean.Examples.RaftTwin.twin_prelude_eq' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Examples.RaftTwin.twin_prelude_eq
+-- W0 reset (kill-list K-B/K-D): the `twin_prelude_eq` pin is gone with
+-- `Specs/TwinPrelude` (fixed-trajectory kernel pin; archived). The
+-- transfer-theorem pins above and below stay — they are the live
+-- differential instrument's certificates.
 
 /-! Unit P2R (the verified fast replay engine): the run-level transfer
 theorems the `fastreplay` driver's verdict rests on. The

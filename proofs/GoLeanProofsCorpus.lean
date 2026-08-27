@@ -1,3 +1,10 @@
+-- W0 RESET (2026-08-27): the corpus is EMPTY as of the K-A commit —
+-- every chain it aggregated was fixed-trajectory validation content
+-- (kill-list K-A/K-B) and its literal foundations are deleted; the
+-- imports were pruned with them. This file and its lake targets are
+-- deleted at K-D. The era is preserved at archive/fixed-trajectory-era
+-- (docs/ARCHIVE.md). Historical header below, kept until K-D:
+--
 -- THE VALIDATION CORPUS (A4-U25 slice 0, 2026-08-26; the 2026-08-26 OOM
 -- incident's correction (a); MEMBERSHIP CORRECTED at the arc-4 landing
 -- fix round, 2026-08-26).
@@ -52,27 +59,3 @@
 -- (e.g. HaeEquation ← Stale/HaeRej/La; SfHbLit ← SCHb/Slb) are internal
 -- to this set; equation roots suffice for the closure but every member
 -- is listed explicitly so the census stays legible.
-import GoLeanProofs.Specs.Raft.HaeLit
-import GoLeanProofs.Specs.Raft.HaeEquation
-import GoLeanProofs.Specs.Raft.StaleLit
-import GoLeanProofs.Specs.Raft.StaleEquation
-import GoLeanProofs.Specs.Raft.LaLit
-import GoLeanProofs.Specs.Raft.LaEquation
-import GoLeanProofs.Specs.Raft.BlLit
-import GoLeanProofs.Specs.Raft.BlEquation
-import GoLeanProofs.Specs.Raft.HhAdvLit
-import GoLeanProofs.Specs.Raft.HhAdvEquation
-import GoLeanProofs.Specs.Raft.MsResite
-import GoLeanProofs.Specs.Raft.MsErrEquation
-import GoLeanProofs.Specs.Raft.HaeRejLit
-import GoLeanProofs.Specs.Raft.HaeRejEquation
-import GoLeanProofs.Specs.Raft.HhFromLit
-import GoLeanProofs.Specs.Raft.HhFromEquation
-import GoLeanProofs.Specs.Raft.SfHbLit
-import GoLeanProofs.Specs.Raft.SfHbEquation
-import GoLeanProofs.Specs.Raft.SfPdLit
-import GoLeanProofs.Specs.Raft.SfPdEquation
-import GoLeanProofs.Specs.Raft.SCHbLit
-import GoLeanProofs.Specs.Raft.SCHbEquation
-import GoLeanProofs.Specs.Raft.SlbLit
-import GoLeanProofs.Specs.Raft.SlbEquation
