@@ -6,6 +6,11 @@ carries a LINEAGE line. The quantifier-audit line for the whole unit
 is at the top of `docs/w1-prover-log.md` (W1 is the machinery wave:
 rules, not end-theorem quantifiers).
 
+**W2 addendum notice (2026-08-27, the W2 worker)**: §7–§8 below are
+the W2 additions (the plug rule's full design, written before its
+code, and a recorded DELTA against §3's side-condition expectation).
+The W2 quantifier line is at the top of `docs/w2-prover-log.md`.
+
 ## 1. The judgment
 
 The definition follows `docs/2026-08-27_proof-structure-explained.md`
@@ -218,3 +223,193 @@ instance is discharged by exhibiting the run (how existentials are
 proved). Interfaces added by W1: none beyond the judgment (no
 speculative typeclasses; the footprint predicate is a per-target
 def, not an interface).
+
+## 7. THE PLUG RULE (W2 unit 1 — the frame's control half, designed before code)
+
+Goal (§3 finding 1, the W1 summit finding): a `CallSpec` proved at
+CANONICAL anchor (caller env `[]`, below-barrier tail `.stop`) —
+which is how FrameSim-transported spans arrive, since `renameEnv ρ []
+= []` and `renameCont ρ .stop = .stop` — becomes consumable at a
+FOREIGN call site with the caller's REAL `env`/`k`, which live at
+frame-region addresses outside every admissible ρ's image.
+
+**Statement (target form)**:
+
+```
+theorem stepFnIter_plug (env' : LocalEnv) (k' : Cont) (…premises…) :
+  stepFnIter n σ c ch = .ok (.next .stop, σ', ch') →
+  Config.hasBarrier c = true →
+  stepFnIter n σ (plugConfig env' k' c) ch = .ok (.next k', σ', ch')
+```
+
+with the `CallSpec`-level corollary (peeling the deterministic frame
+entry): a successful span from
+`.retV v (.callArgsK fid [] vals [] [] .stop)` to `.next .stop`
+yields, at the SAME fuel/state/stream, the span from
+`.retV v (.callArgsK fid [] vals [] env' k')` to `.next k'`.
+
+**The replacement function** (`plugCont env' k'`, structural on the
+spine — `Cont` is linear: every constructor except `.stop` has
+exactly one tail):
+
+- `.frame [] te r ds .stop false ↦ .frame [] env' r ds k' false` —
+  THE BARRIER: the unique frame whose tail slot is literally `.stop`
+  (uniqueness by spine linearity: exactly one `.stop` per spine, at
+  the bottom). Both the caller-env slot (`te`, inert for a resultless
+  frame — only the targeted exit arm ever reads it) and the tail are
+  replaced, so the plugged frame is EXACTLY the frame a real call at
+  `(env', k')` constructs (StepFn's `callArgsK`-drained arm:
+  `.frame plans env resultLocs [] k' func.wrapper`).
+- `.stop ↦ k'` — reached only OUTSIDE the barrier's protection: the
+  exit configuration `.next .stop ↦ .next k'` and the
+  panic-crossed configuration `.panicking chain .stop ↦
+  .panicking chain k'`. During the span the barrier match fires
+  before recursion ever reaches the bare `.stop`, so the
+  substitution is applied exactly once. This one clause makes the
+  per-step commutation UNIFORM (in-span, exit, and crossed steps all
+  read `stepFn σ (plug c) ch = .ok (plug d, σ', ch')`).
+- every other constructor: map over the tail.
+
+`Config.hasBarrier` (the induction invariant): the configuration's
+continuation spine contains a frame of the barrier shape
+(`.frame [] _ _ _ .stop false`); recursing through `opDone`'s inner
+configuration; `false` on `.panicked`. Preserved by every in-span
+step (frames created during the span sit OVER the current
+continuation, whose bottom already carries the barrier, so no new
+frame ever has a literal-`.stop` tail).
+
+**The per-step walk** (the `fun_cases stepFn` arm walk,
+`Frame/StepSim.lean`'s proof pattern, state-trivially — the plugged
+run shares σ/choices verbatim, so no state relation and none of the
+rename walk's value/heap lemmas):
+
+```
+stepFn_plug : hasBarrier c → (premises) →
+  stepFn σ c ch = .ok (d, σ₁, ch₁) →
+  stepFn σ (plug c) ch = .ok (plug d, σ₁, ch₁)
+  ∧ (hasBarrier d ∨ d = .next .stop ∨ ∃ chain, d = .panicking chain .stop)
+```
+
+Iteration closes the three disjuncts: `hasBarrier d` recurses;
+`d = .next .stop` forces remaining fuel 0 (`stepFn` throws on the
+terminal — StepFn.lean:552 `.next .stop → .internal`), delivering the
+conclusion; the crossed disjunct is refuted from span success
+(`.panicking chain .stop` steps only to `.panicked`, which steps only
+to an error — the terminal discipline — so `.ok (.next .stop, …)` is
+unreachable from it, at any fuel).
+
+Helper commutations owed by the walk (each a structural induction or
+head-case bash): `seqCont`, `contHeadLabel`, `pushDefer`,
+`panicPassthrough`, `recoverThroughWrappers`/`recoverResult`,
+`pruneIterFramesKey`/`pruneIterFramesAll`/`contAfterStmtOp`, and the
+build-only embedders `applyChanOp`/`applySelect`/`applySyncOp`/
+`enterRecvTargets` (these embed `env`/`k` in their result
+configurations without inspecting them — one cases-per-outcome lemma
+each).
+
+**THE PREMISES — a recorded DELTA against §3 finding 1.** §3 claimed
+the panic-walk arms are "excluded by span success + the terminal
+discipline, not by side conditions". The W2 machine walk-through
+REFUTES that expectation for two arms; both need side conditions on
+the PLUG CONTEXT (consumption-site-checkable, so composition-
+friendly), and one on the callee. Flagged here, not silently
+absorbed:
+
+1. **`recoverThroughWrappers k' = none`** (the recover premise). A
+   bare `recover()` at barrier depth in the callee's body — reachable
+   through glue and WRAPPER frames only — makes `recoverResult`
+   inspect the below-barrier tail on a SUCCESSFUL span
+   (StepFn.lean:299-301; Machine.lean:2013-2016: at the first
+   non-wrapper frame the walk runs `recoverThroughWrappers` on that
+   frame's tail). Canonical tail `.stop` refutes to `none`
+   (recover = nil); an adversarial `k'` whose head reaches a
+   `panicResumeK` through glue/wrapper frames only would resolve —
+   genuine divergence, undetectable from the canonical run. The
+   premise is decidable and discharged by `rfl`/`decide` at closed
+   consumption sites; it propagates through caller glue (the walk
+   refutes at the caller's own non-wrapper frame, so any site under
+   a real enclosing frame discharges it structurally). Walks that
+   START above a NON-wrapper barrier and descend never pass it
+   (`.frame … false ↦ none` — Machine.lean:1950), which is why this
+   is the only recover exposure.
+2. **`mapIterFree k' = true`** (no in-flight `mapIterK` frame
+   anywhere in `k'`). A callee-body `mapDelete`/`clearMap` prunes
+   produced/start sets of EVERY in-flight map-range frame in the
+   continuation, crossing call frames by design
+   (Machine.lean:2085-2086 "The walk crosses every frame (a range
+   body may delete through a call)") — including frames BELOW the
+   barrier. That is real Go semantics (a callee deleting from a map
+   its caller is ranging over), so plugging is genuinely unsound
+   there: the plugged run's caller frames get pruned, the canonical
+   run cannot see them. The premise is syntactic on `k'`. The
+   refined variant (prune-inert: no `mapIterK` in `k'` over any base
+   the span deletes) is the recorded escape if a consumer ranges
+   over a map while calling a deleting handler; built on demand.
+3. **The callee's frame is non-wrapper** (`func.wrapper = false` for
+   the entered callee — carried as a premise on the function table
+   at the `CallSpec` corollary). A WRAPPER barrier is transparent to
+   the recover walk (Machine.lean:1948), so the walk would cross it
+   into `k'`; premise 1 alone would not cover the `recoverResult`
+   descent (Machine.lean:2017-2019 recurses through wrapper frames).
+   Raft handlers are ordinary functions; promotion-wrapper CallSpecs
+   are outside the rule until a consumer demands them (sealed-refusal
+   posture).
+
+Also inherited from the judgment's scope: the barrier is RESULTLESS
+(`targets = []` — the `CallSpec` shape); the barrier's `te` slot is
+then machine-inert, which is what licenses replacing it.
+
+LINEAGE: wp_bind / evaluation-context composition (Iris's `wp_bind`
+over a small-step language; Felleisen–Hieb evaluation contexts): the
+callee's triple proved in the EMPTY context lifts to every context
+`K[·]` — here the context is reified as the below-barrier
+continuation + the barrier's caller-env slot, and the lift is a
+per-step commutation of the context-replacement function with
+`stepFn`, i.e., locality of the step relation in the
+below-barrier tail. The premises are the non-locality census: the
+two machine features that genuinely inspect the context through a
+call boundary (Go's recover walk; live map-range pruning) surface as
+exactly the rule's side conditions — the fail-closed analogue of
+wp_bind's requirement that the context be an evaluation context.
+Divergence from the classic: the commutation is proved arm-by-arm on
+the executable step function (certificate-replay style) rather than
+by a context-composition lemma in a relational semantics, because
+the machine's continuations are defunctionalized (no syntactic
+`K[e]` decomposition exists to induct on).
+
+**Probe-first plan** (charter requirement — two structurally
+different call sites before the general theorem): (P1) the pilot's
+passive-argument call statement shape (caller glue = `callArgsK`
+argument walk only); (P2) a call under compound caller context
+(inside a `seq` under a `loop` with a caller `frame` below — the
+driver-shaped context). Each probe: build the plugged span for a
+tiny two-function program by the plug function and check the
+end-to-end equality concretely (`#eval`-first, then `example … :=
+rfl`/`decide`), confirming barrier recognition and the uniform
+`.stop ↦ k'` clause behave as designed before the 800-line walk is
+paid. Probes land tracked (in-build) beside the rule.
+
+**Cost datum**: the analogous rename walk (`Frame/StepSim.lean`) is
+795 lines OVER a state relation; the plug walk shares its `fun_cases`
+skeleton with a trivial state story but adds the three premise
+threads. Expected same order (600–900 lines incl. helpers); measured
+number to be recorded in the W2 log at landing.
+
+## 8. Interface position of the plug rule
+
+The rule ships as `Frame/Plug.lean` (general layer — machine
+locality, no target content) with the consumable composition
+corollary in the judgment's vocabulary:
+
+```
+CallSpec.transport : CallSpec P fid vals v Q →
+  (FrameSim premises + plug premises) →
+  the framed site's span at (env', k') over σF, with Q read back
+  through reader congruence
+```
+
+exercised by the W2 gate (Leg-B-as-intended): the pilot's
+`becomeFollower_callSpec` consumed at a real caller-site shape at a
+FOREIGN placement (FrameSim state half + plug control half + reader
+congruence), measured. Non-vacuity: the gate instance itself.
+

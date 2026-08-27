@@ -156,6 +156,7 @@ import GoLeanProofs.NegativeSpecs
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.RunGlue
 import GoLeanProofs.SpecJudgment
+import GoLeanProofs.CondFor
 import GoLeanProofs.Sym.ReflectConc
 import GoLeanProofs.Specs.RaftPilot.BecomeFollowerSpec
 import GoLeanProofs.Specs.RaftPilot.CallSiteComposition

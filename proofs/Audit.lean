@@ -31,6 +31,7 @@ import Audit.DriverNet
 import Audit.CheckerBridge
 import Audit.ChoiceInv
 import Audit.W1
+import Audit.W2
 -- W0 reset (2026-08-27, kill-list K-A/K-D): the fixed-trajectory pin
 -- modules (Ring, RoundMa/Vote/Mar/Vr, RoundInduction(+Witness),
 -- FrameShape) are unlinked here in the K-A commit (their subjects'
