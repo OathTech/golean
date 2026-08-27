@@ -965,4 +965,28 @@ theorem idsFam_sorted_collapse {ids l₁ l₂ : List Int}
   sortedLT_eq_of_perm
     ((hs₁.trans h₁).trans (h₂.symm.trans hs₂.symm)) hsort₁ hsort₂
 
+
+
+/-- **THE THREADING DEMONSTRATION** (the ∃-out/∀-in composition — the
+mechanism's distinctive claim, closed in-unit): the member spec
+consumed at ANY family member of a canonical id set concludes in the
+SAME family — i.e. an upstream spec's ∃-packaged order is exactly a
+downstream consumption's ∀-quantified precondition, and the family is
+CLOSED under the composition (`Perm.trans` at the `conseq`
+boundary). This is the shape every chain composite (`checkAndCopy` →
+`Simple` → `Restore`) consumes the carrier through. -/
+theorem idsFam_threads (ids ids' : List Int)
+    (hperm : List.Perm ids' ids) (hnd : ids.Nodup)
+    (hnorm : ∀ i ∈ ids, IntKind.normalize .uint64 i = i) :
+    CallSpecR (IDsPre ids') ⟨"quorum.JointConfig.IDs"⟩ [] recvV
+      (fun σ' vs => ∃ ids'', List.Perm ids'' ids
+        ∧ vs = [.map ⟨some (.base ⟨35⟩)⟩]
+        ∧ Heap.lookup σ'.heap (.base ⟨35⟩)
+            = some ⟨none, .mapData (toEntriesV (idKV ids''))⟩) := by
+  refine (jointConfigIDs_callSpecR ids' (hperm.nodup_iff.mpr hnd)
+    (fun i hi => hnorm i (hperm.mem_iff.mp hi))).conseq
+    (fun σ h => h) ?_
+  rintro σ' vs ⟨ids'', h1, h2, h3⟩
+  exact ⟨ids'', h1.trans hperm, h2, h3⟩
+
 end GoLean.RaftSeam.MOrder

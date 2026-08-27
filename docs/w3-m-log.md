@@ -159,3 +159,130 @@ carrier (design note §Non-vacuity).
 - Hatch grep over both new files: 0 sorry/native_decide/partial.
 - No SpecJudgment change (the serialization rule honored); no
   Audit/*, no scripts/*, no GoCore, no baselines, no trust surface.
+
+## Threading demonstration (post-checkpoint-1 addition)
+
+`idsFam_threads` (MapOrderSpecs): the member spec consumed at ANY
+family member of a canonical id set concludes in the SAME family —
+the ∃-out/∀-in composition closure (`Perm.trans` at the `conseq`
+boundary), the exact shape every chain composite consumes the carrier
+through. GREEN.
+
+## PARK RECORDS — the remaining chain members (park-not-weaken; each
+with its probe-measured record where probed this session)
+
+- `toConfChangeSingle` — **(K)** unchanged (3 reallocating appends,
+  drawn caps, 2nd/3rd branch on the drawn cap). Its outputs are
+  SLICES (deterministic order) — no (M) content of its own.
+- `tracker.Config.Clone` — **PROBED** (artifacts/w3m/probe-clone*.out):
+  326-step canonical span, terminal = the `CallSpecR` `.returning`
+  geometry ✓. Structure: closure creation + 4 closure calls — ONE
+  pick-loop clone of `Voters[0]` (the landed IDs machinery's shape,
+  placement-specific segments to re-derive) + 3 nil-map early
+  returns (concrete-handle kernel branches) — then the
+  array/struct/return build. MEASURED FINDINGS: (a) the frontend
+  DROPS `make(map, len(m))`'s capacity hint (`makeMap` with no size
+  operand — no len-at-symbolic-entries crossing needed); (b) the
+  post-loop tail performs ~12 allocations at the SYMBOLIC front →
+  ~20 conditioned steps (the established P9-class init/store/read
+  treatment — mechanical, not conceptual); (c) closure-call sites
+  drain via `callValArgsK`, for which NO judgment form exists — the
+  inner spans must be INLINED (the maybeTerm precedent) or the
+  chain needs **the PARKED JUDGMENT FORM: `CallSpecV`** (the
+  function-VALUE call-span sibling of `CallSpecR` at the
+  `callValArgsK` drained shape) — named per the serialization rule
+  (SpecJudgment is the w1-prover lane's); `Restore`'s per-cc ops
+  closures make this form unavoidable at the chain top, and
+  `Visit`'s per-id closure calls repeat it in clusters C/D/E.
+  Estimated at the IDs actuals: ~2.5–3× the IDs member.
+- `confchange.symdiff` — **PROBED** (artifacts/w3m/probe-sd*.out):
+  495-step span at l={1,2,3}/r={2,4} (n = 3 ✓ = |l\r|+|r\l|),
+  CallSpecR terminal ✓. The comma-ok is a dedicated `.mapLookup`
+  STATEMENT → `applyRhsOp .mapLookup` → `mapLookupValue` →
+  `mapEntryIndex?` — MapPerm's `mapEntryIndex?_toEntriesV` already
+  covers the scan; the needed layer-2 addition is the ~30-line
+  `mapLookupValue_toEntriesV` hit/miss pair. TWO sequential pick
+  loops (the second at the shifted front — machinery in place); the
+  count invariant is filter-length, Perm-invariant by
+  `Perm.filter` + `length_eq` (the CONVERGING-read direction).
+  Per-iteration ~35 steps with ~10 conditioned (2 inits + 3 reads +
+  rhs-apply + 2 stores + splice + pick). Estimated ≈ 1.5× the IDs
+  member.
+- `checkAndCopy` — (M) via Clone + the POINTER-VALUED Progress
+  rebuild loop (key+value binders, per-iteration alloc, pointer
+  insert — the layer-2 `*Progress` instance; the reader-level
+  conclusion via `mapReadD`/`mapPairsD_perm` cancels the
+  order-dependent fresh-address indirection — designed in the note,
+  not landed).
+- `checkInvariants` — consumes IDs' ∃-family output through exactly
+  the `idsFam_threads` shape; ranges the built map (draws) + `trk`
+  lookups (the same `mapLookupValue` crossing class); error arms
+  concrete-refuted at the T1 family.
+- `Simple`/`apply`/`chain`/`Restore` — the composites of the above;
+  `apply`'s per-cc switch is concrete program-text at T1's cc
+  values; `chain`/`Restore` add the ops-closure calls (the
+  `CallSpecV` need above).
+- `MakeProgressTracker` consumers / `switchToConfig` / `VoterNodes` /
+  `becomeFollower(0,None)` / `newRaft` / `NewRawNode` — as the init
+  lane's park records, with today's additions: `switchToConfig`'s
+  `ConfState()` calls `Slice` ×4 — sorted-collapse consumers
+  (`sortedLT_eq_of_perm` serves the READBACK; the spans need (K)
+  for `Slice`'s reallocating appends and the unresolved
+  `slices.Sort` lowering-route census (recorded above)).
+
+## Base-clause status vs U3.2f (honest accounting)
+
+OWED (from the brief): progress-map population = voters, terms 0 at
+init — these are conclusions OF THE newRaft COMPOSITION, which
+remains parked (above). DELIVERED THIS WAVE toward them: the exact
+vocabulary bridge — `idsFam_population` (the `Pair.progress`-clause
+conjunct shapes: population + lookup-defined, proved
+order-insensitive across any (M) family), `idsFam_lookup_agree`
+(every `lookupI`-vocabulary clause is family-invariant), and the
+family-closure (`idsFam_threads`) — so the composition's Base-clause
+conclusions will arrive in U3.2f-consumable form by construction.
+
+## COSTING SIGNAL for clusters C/D/E ([AGENT], derivation-anchored —
+the coordinator's reset()/bcastAppend question)
+
+- The (M) mechanism makes the ∀-draw discharge at every map range
+  MECHANICAL: the measured datum is the IDs member — 968 lines for a
+  255-step one-loop member (5 conditioned-step classes; module wall
+  5.5s warm). Per-member cost scales with (i) the body's
+  conditioned-step count (~25 lines each; symdiff's body ≈ 10/iter
+  vs IDs' 2/iter) and (ii) the post-loop tail's symbolic-front
+  allocation count (Clone ≈ 20).
+- `Visit`-class members (reset/bcastAppend): the collect half is
+  IDs-shaped (cheap now); `Visit` SORTS (the sorted-collapse
+  readback is landed — `sortedLT_eq_of_perm`), and its per-id
+  CLOSURE call needs `CallSpecV` (the parked form) or inlining;
+  `reset`'s Progress rebuild writes through POINTERS (the map's
+  assoc order is PRESERVED — the (M) family is maintained, not
+  re-drawn, so downstream Progress reads stay in the same family).
+  VERDICT: (M) removes the map-order blocker for C/D/E; the
+  remaining blockers there are `CallSpecV` (closures), the
+  `slices.Sort` lowering census, and (K) (reallocating appends).
+
+## WAVE-BOUNDARY CHECKPOINT (branch state at commit 2)
+
+- Wave-boundary FULL proofs build: EXIT=0, 542 jobs
+  (artifacts/w3m/wave-full-build.log; the two retained interface
+  witnesses in the aggregate target set — GREEN, build-enforced).
+- Hatch grep over both w3-m files: 0 live sorry/native_decide;
+  0 partial in proof-facing code (probe scaffolding is untracked).
+- Trust surface untouched: no Audit/*, no scripts/*, no GoCore, no
+  baselines, no SpecJudgment (the serialization rule held — the one
+  genuinely needed new form, `CallSpecV`, is PARKED BY NAME above).
+- No differential owed (proofs/docs only). [AGENT] Box-wide build
+  lock RELEASED at wave end (owner file updated).
+- FOR THE LANDING AUDIT: (a) `MapPerm` is kit content whose public
+  theorems carry NO Audit pins (the sibling W3 lanes' convention
+  this wave — flagged, not absorbed; the MapLoops §pins convention
+  would add them at consolidation); (b) `mapPickLoop_perm` carries
+  its own induction rather than consuming `mapPickLoop_generic`
+  (finding (iii): the landed rule hides the tape suffix) — the
+  promotion-ledger entry is recorded; (c) layer 2's value-genericity
+  is exercised in-unit at `struct{}` only — its second instance is
+  MapMem's landed u64 family (the same pattern's sibling), with
+  `*Progress`/`bool` as the chain's demanded instances (design-note
+  vacuity check).
