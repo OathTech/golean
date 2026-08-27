@@ -2616,3 +2616,29 @@ prelude); D+E largest, E last; A cheapest, parallel filler.
 [AGENT] dispatch: kit prover on w1-prover NOW; init cluster A in a
 sub-worktree (branch w3-init off fe4e42a3, one writer) with
 park-don't-duplicate instructions for kit-blocked members.
+
+### 2026-08-27 — U3.1-A report (w3-init @ 0087b48a); CallSpecRD collision averted
+
+Init cluster: 6 members LANDED (SetLogger at true statics,
+NewMemoryStorage, ApplySnapshot, Config.validate ∀id∈{1,2,3},
+MakeProgressTracker, newLogWithSize; InitCallSpecs.lean 1,323 lines;
+all spans kernel_rfl at open plans/env/k/ch — open ch = zero-draw
+certificate) + TWO new judgment forms in SpecJudgment.lean
+(CallSpecRN nullary; CallSpecRD defer-tail — the machine's second
+return-arrival geometry: defer-bearing callees exit via .next(.frame),
+never .returning). Base-clause delivery: storage row + log-offsets
+row incl. the reader equation; OWED: progress-map population +
+terms-0 (parked). PARKED: toConfChangeSingle on (K); the
+confchange/newRaft/NewRawNode chain on a SECOND named mechanism
+(M) — map-order pick-family composition (persistent assoc order
+from map-range draws; needs W2 multiset loop rules + a
+permutation-family carrier; ≥10⁴-leaf pick tree ⇒ nothing
+enumerative). "Cheapest cluster" estimate corrected on the record
+(mapIter pops at width 1; appendSpill width ≈32). Audit flags:
+the two judgment-shape additions (delta review); ApplySnapshot
+slot-0 cap-4 precondition-narrowing park (∀-cap owed U3.2f).
+[AGENT] coordination: BOTH lanes independently converged on
+CallSpecRD — relay sent to the kit prover: cherry-pick 0087b48a,
+never define a divergent sibling; park persistent-order members on
+(M) by name. Consolidation-first rule adopted: lanes merge linearly
+at the kit prover's completion before (M)/B/C/D/E dispatch.
