@@ -2869,3 +2869,20 @@ seed pattern. [AGENT]: triage planner updated mid-flight (Surface
 set awareness; LAND arguments now point at the BRiCk-analogous
 layer build; gap table reframed as the tier-3 build inventory;
 corpus-seed assessment of the 67-example gallery added).
+
+### 2026-08-27 — [USER] STRATEGIC DECISION: corpus-first; raft re-scoped
+
+[USER]: "I think this is probably necessary. Raft as a target is
+just too loose to make delivery possible." The strategy of record
+is now: build the BRiCk/RefinedC-analogous Iris layer, validated
+against a designed pattern corpus of small programs (rich enough
+that cheating is hard, small enough to motivate success); raft
+becomes the FINAL corpus member — the demonstration target is
+unchanged but the delivery unit is now the corpus case, not the
+campaign. The 2026-08-27 clean-proof-plan is SUPERSEDED as the
+active work breakdown pending the new forward plan (its landed
+content and its invariant/abstract-layer design carry over into
+the re-ascent). Sequencing of record: triage plan ([USER] sign-off)
+→ landing ceremony for LAND items → forward plan: Iris-layer build
+ladder + corpus design ([USER] sign-off) → small-case exercise
+gates → raft re-ascent.
