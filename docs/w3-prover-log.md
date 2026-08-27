@@ -420,3 +420,192 @@ and each spec's docstring says which ∀ it serves.
   EXIT=0, 537 jobs, wall 4.88 s (warm tree), peak RSS 2.2 GB**
   (artifacts/w3/u30d-full-build.log). No differential owed
   (proofs/docs only).
+
+## Judgment calls — U3.1-F
+
+- [AGENT] THE RESULT-BEARING JUDGMENT FORM (`CallSpecR`,
+  `SpecJudgment.lean`): the entire F family returns values, and W1's
+  `CallSpec` is resultless — its sealed refusal
+  (`refusalResultBearingCallSpan`) named exactly this consumer. The
+  landed form is CALLEE-LOCAL: the span ends at RETURN ARRIVAL
+  (`.returning (.frame plans env rlocs [] k false)`) — one machine
+  step BEFORE the result read (`loadMany`) and the caller-side
+  `tgtOpK` target-operand walk — with the results delivered as a
+  `loadMany` equation the call site's next step consumes
+  definitionally. ∀ plans/env/k: the target plans ride the frame
+  inertly, so the W1 open-tail route extends to them WITHOUT any
+  plug-walk change (the span never crosses the barrier frame's
+  exit). The seal's docstring now scopes it to the caller-inclusive
+  form only. Rules: `CallSpecR.conseq`, `CallSpecR.consume`.
+  LINEAGE in the docstring (Hoare procedure rule with result
+  substitution at the CPS presentation).
+- [AGENT] THE F PROOF PATTERN (measured, first two members): spec at
+  the CANONICAL COMPLIANT placement (footprint cell at `.base ⟨31⟩`,
+  first address above the twin's 31 forced-identity globals; twin
+  tables pinned; `nextAddr` concrete) over an EXACT footprint family
+  whose UNREAD positions are FREE `GoValue`/`Option Ty` parameters
+  (maximal width — any value rides opaquely) and whose read
+  positions pin only the constructors the span scrutinizes. The
+  whole span then closes by ONE `kernel_rfl` at open
+  `plans`/`env`/`k`. Empirical span discovery by a step-trace probe
+  (artifacts/w3/ProbeSpan*.lean) before stating the theorem — the
+  probe supplies the step count, allocation addresses, and terminal
+  cells; the kernel re-checks all of it symbolically.
+- [AGENT] THE MECHANISM BLOCKER, derived and recorded (the park
+  line for the rest of the cluster): kernel reduction decides a
+  data branch only when it bottoms out on constructors. Two
+  universal stuck classes hit here:
+  (i) store-time `IntKind.normalize` on a symbolic scalar makes any
+  subsequent branch on that scalar kernel-stuck (maybeLastIndex's
+  nonempty arm: the length is stored into the `l` local normalized,
+  then `l != 0` cannot reduce for free `k`);
+  (ii) `validateSlice`'s `len > cap` is a Nat-Nat comparison —
+  `Nat.ble` recurses on BOTH constructors, so it reduces ONLY when
+  one side is a literal (len 0 passed; len `m+1` vs any symbolic cap
+  is stuck), which blocks EVERY symbolic-length slice length/index
+  read (MemoryStorage.firstIndex's `ents[0]` included).
+  The needed mechanism is the bf pattern at DATA branches: split the
+  span into windows at the stuck step and cross with a
+  hypothesis-consuming step lemma (`hlen`-style range/branch
+  premises — exactly the shape of bf's normalize premises and
+  stream crossings). This is a PROMOTION-LEDGER candidate kit
+  ("data-branch crossing lemmas": ifK-on-symbolic-bool,
+  normalize-collapse under range premises, validateSlice under a
+  well-formedness premise) with ~everything in the cluster as its
+  consumers — the general form is mandatory under the middle path
+  (COST × CONSUMER COUNT both high). NOT built this session:
+  building it well is a focused unit of its own, and landing it
+  half-made to rescue one more member would be the wrong side of
+  park-not-weaken.
+- [AGENT] Coverage labeling instead of conclusion weakening: the
+  `maybeLastIndex` member is scoped to the empty-unstable,
+  live-backing-slice sub-family and SAYS SO (partial coverage
+  labeled at birth; the nonempty arm parked on the crossing kit;
+  the nil-slice sibling recorded as a consumer-demand variant).
+  Conclusions are the subject's exact arm results — nothing
+  narrowed silently.
+- [AGENT] Box note: an unrelated project ran its own capped 48G
+  build concurrently during the wave-boundary build; both builds
+  capped 48G (2×48 < 125G — the parallel-lane cap discipline);
+  golean's box-wide lock held by this lane throughout.
+
+## U3.1-F — THE SHARED LOG/UTIL LAYER: PARTIAL (judgment form + 2 members LANDED; remainder PARKED with records)
+
+- **LANDED:**
+  * `CallSpecR` + `conseq`/`consume` (`GoLeanProofs/SpecJudgment.lean`;
+    the sealed refusal rescoped to the caller-inclusive form).
+  * `Specs/RaftPilot/LogReadSpecs.lean` (new; registered in
+    `proofs/GoLeanProofs.lean`): the footprint-family formers
+    (`unstableV`/`logCellV`/`uFam`, receiver `uArgV` = the interior
+    `&l.unstable` field loc), and
+    - `unstable_maybeFirstIndex_callSpecR` — the FULL T1 family
+      (snapshot nil, everything else free incl. the entries
+      descriptor): returns `(0, false)`, footprint read back
+      unchanged; private 38-step span `uFI_span` (kernel_rfl, zero
+      choices, open plans/env/k);
+    - `unstable_maybeLastIndex_empty_callSpecR` — the
+      empty-unstable live-backing member (labeled partial
+      coverage): returns `(0, false)`; private 69-step span
+      `uLI0_span` (exercises local-decl allocation + the length
+      read + validateSlice at len 0);
+    - `uFIPre_inhabited` (the ∃-discharge; the judgment form's
+      non-vacuity instance is the subject spec itself).
+  * Every export count-free; step counts/addresses live only in the
+    private span lemmas + this log (W1 convention).
+- **PARKED, with records (charter park-not-weaken):** the remaining
+  family members —
+  * `unstable.maybeLastIndex` nonempty arm + `maybeTerm` (+ the
+    unstable slice/mustCheckOutOfBounds pair): data branches on
+    normalized symbolic scalars → the crossing kit (blocker (i)/(ii)
+    above). maybeTerm additionally branches `i < offset` on two free
+    Ints — pure crossing-kit content.
+  * `MemoryStorage.{firstIndex,lastIndex,Term,Entries,FirstIndex,
+    LastIndex}` (the storage read half incl. the Lock/defer walk):
+    `ents[0]`/`ents[i-offset]` symbolic-length slice indexing →
+    blocker (ii); the lock walk itself is concrete-reducible (sync
+    payload pinned unlocked) and composes via `CallSpecR.consume`
+    once the leaves exist. Probe bodies read
+    (artifacts/w3/ProbeMS.lean output): firstIndex is
+    two-statement + one nested `GetIndex` call — the cheapest
+    post-kit member.
+  * `raftLog.{term,entries,slice,firstIndex,lastIndex,matchTerm,
+    zeroTermOnOutOfBounds,maybeCommit-adjacent reads}` +
+    `mustCheckOutOfBounds` (U3 range obligations): compose the
+    above via `CallSpecR.consume` + the crossing kit; `slice`'s
+    mixed storage+unstable slow path (census U1, costed reachable)
+    additionally consumes the W2 loop rules through `extend`'s
+    append loop — the single costliest member, unchanged verdict.
+- **Builds:** LogReadSpecs module 13 s (one span) → 26 s (both
+  spans) at 48G target builds; **wave-boundary FULL proofs build
+  (lock held + released): EXIT=0, 538 jobs, wall 65 s (new module
+  cold), peak RSS 6.9 GB**
+  (artifacts/w3/u31f-full-build.log/.time). Hatch grep over
+  SpecJudgment/LogReadSpecs: 0 sorry/native_decide/partial. No
+  differential owed (proofs/docs only); no Audit/*, no scripts/*,
+  no GoCore, no baselines touched; `proofs/GoLeanProofs.lean`
+  gained one proof-layer import.
+
+## WAVE CHECKPOINT (U3.0d + U3.1-F; branch-complete for this session)
+
+- U3.0d LANDED (fc10a11d). U3.1-F PARTIAL as recorded above (this
+  commit): the result-bearing judgment layer + the F proof pattern
+  demonstrated end-to-end on two subject members; the remainder
+  parked on ONE named mechanism (the data-branch crossing kit) —
+  the recommended next unit for the cluster, before any further
+  member is attempted.
+- Census claims re-verified where built upon (U3.0d entry above);
+  the wire probes (function ids, typeDefs for
+  raftLog/unstable/MemoryStorage/Entry/tracker, the lowered bodies
+  of the specced members) all agree with the census's reachable set
+  and the invariant's vocabulary.
+- The two retained interface witnesses: GREEN throughout (in every
+  full-target build).
+- FOR THE LANDING AUDIT (restated from Wave 3.0, still standing):
+  the W2.5 [AGENT] adjudication that adopted the invariant design is
+  a mandatory [USER] review item. New from this session: nothing
+  trust-adjacent touched; the U3.0d design deltas vs Amendment 1
+  (ProgOk.nextUB, stateWire, netTerms-exact, the distributive
+  reading of the amendment's Next-chain) are flagged for review in
+  the U3.0d entry.
+
+## COSTING SIGNAL for the remaining Wave 3.1 clusters ([AGENT]
+estimate, derivation-anchored to this session's measurements)
+
+Measured data: straight-line/pinned-branch member ≈ one probe + one
+kernel span theorem (13 s build; ~1-2 h agent time end-to-end);
+the judgment layer amortized (done); data-branch members blocked on
+the crossing kit (est. one focused unit: ~10-15 conditioned step
+lemmas in the StepKit idiom + the window-split convention — the
+highest-leverage next build, ~every remaining member its consumer).
+
+- **F remainder** (~20 fns): crossing kit first, then mostly
+  2-4-window members; `slice` slow path adds loop-rule composition.
+  Multi-session (3-5 Fable worker-days) after the kit (kit itself
+  ~1 day-class).
+- **B (harvest engine)**: Ready/readyWithoutAccept/acceptReady/
+  Advance are multi-call bodies over rawnode state + storage
+  Append/SetHardState (Append loops + lock walk). Needs F's storage
+  half + the kit + loop rules; stepsOnAdvance's local-step replay
+  makes Advance the widest span. ≈ 1.5-2× F-remainder.
+- **C (election cluster)**: Step prelude case analysis is DIRECTLY
+  served by U3.0d's term-bound clause (the m.Term<r.Term block and
+  the local-prelude branch refute from `netTerms`+`terms`+`tmPos`);
+  campaign/poll/becomeLeader are becomeFollower-class spans (the
+  W1 pilot's cost datum: ~88 s-class windows each after fixture
+  generation); TallyVotes/VoteResult iterate the votes map → W2 map
+  loop rules. ≈ F-remainder class overall.
+- **D (replication cluster)**: handleAppendEntries all three exits
+  (R1) + maybeAppend/findConflict/truncateAndAppend — entry-list
+  loops throughout → loop rules + kit; commitTo's U3 range
+  obligation consumes `ProgOk`/log facts. With E the largest; the
+  three-exit case analysis triples the window sets.
+- **E (ack/commit cluster)**: stepLeader's MsgAppResp case is the
+  census's costliest single unit (194 lines live, both arms, probe
+  state machine + Inflights + maybeCommit/bcastAppend composition);
+  needs D's send/append specs + F + kit. Largest single unit;
+  schedule last as the charter's order already does.
+- **A (init cluster)**: 14+1 confchange fns + newRaft/validate +
+  MemoryStorage init: mostly straight-line at a PINNED config shape
+  (the config literal is reflected-program text) → today's cheap
+  pattern applies widely; newRaft's whole-chain span is long but
+  branch-poor. Cheapest per function; good parallel filler.

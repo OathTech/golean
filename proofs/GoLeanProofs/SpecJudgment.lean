@@ -79,6 +79,69 @@ def CallSpec (P : ExecState → Prop) (fid : FuncId)
         = .ok (.next k, σ', ch')
       ∧ Q σ' ∧ ch' <:+ ch
 
+/-- **The result-bearing call-span triple** (callee-local form —
+W3 U3.1-F, the consumer the sealed refusal below awaited: the
+raftLog/unstable/storage read family all return values). The span
+runs from the drained call configuration — the caller-target `plans`
+riding INERTLY in the continuation — to the RETURN-ARRIVAL
+configuration `.returning (.frame plans env rlocs [] k false)`:
+one machine step BEFORE the result read (`loadMany`) and the
+caller-side `tgtOpK` target-operand walk, so the span stays
+callee-local (the sealed tgtOpK-inclusive form stays sealed). The
+postcondition speaks the result VALUES through `loadMany` at the
+machine's own pinned result locations, delivered as an equation the
+call site's next step consumes definitionally.
+
+∀ plans/env/k (target- and continuation-parametric: the span never
+inspects them — the open-tail route extends to `plans`), ∀ ch
+(demonic), ∃ n. Non-wrapper callees only (`false` pinned in the
+frame): every subject library function; wrapper frames are the plug
+premises' excluded class.
+
+LINEAGE: Hoare's procedure rule with result substitution, at the
+CPS/evaluation-context presentation — the resultless `CallSpec`'s
+sibling with the machine's own frame discipline carrying the
+results; no new mechanism class. -/
+def CallSpecR (P : ExecState → Prop) (fid : FuncId)
+    (vals : List GoValue) (v : GoValue)
+    (Q : ExecState → List GoValue → Prop) : Prop :=
+  ∀ σ, P σ → ∀ (plans : List (TargetShape × List Expr))
+      (env : LocalEnv) (k : Cont) (ch : Choices),
+    ∃ (n : Nat) (σ' : ExecState) (rlocs : List Loc)
+      (vs : List GoValue) (ch' : Choices),
+      stepFnIter n σ (.retV v (.callArgsK fid plans vals [] env k)) ch
+        = .ok (.returning (.frame plans env rlocs [] k false), σ', ch')
+      ∧ loadMany σ' rlocs = .ok vs
+      ∧ Q σ' vs ∧ ch' <:+ ch
+
+theorem CallSpecR.conseq {P P' : ExecState → Prop} {fid : FuncId}
+    {vals : List GoValue} {v : GoValue}
+    {Q Q' : ExecState → List GoValue → Prop}
+    (h : CallSpecR P fid vals v Q)
+    (hpre : ∀ σ, P' σ → P σ)
+    (hpost : ∀ σ vs, Q σ vs → Q' σ vs) : CallSpecR P' fid vals v Q' := by
+  intro σ hP plans env k ch
+  obtain ⟨n, σ', rlocs, vs, ch', hrun, hload, hQ, hsuf⟩ :=
+    h σ (hpre σ hP) plans env k ch
+  exact ⟨n, σ', rlocs, vs, ch', hrun, hload, hpost σ' vs hQ, hsuf⟩
+
+/-- The definitional hop at a drained result-bearing call
+configuration — the form a caller-site span proof consumes mid-walk
+(then crosses the frame-exit step itself with the `loadMany`
+equation and its OWN target-operand walk). -/
+theorem CallSpecR.consume {P : ExecState → Prop} {fid : FuncId}
+    {vals : List GoValue} {v : GoValue}
+    {Q : ExecState → List GoValue → Prop} {σ : ExecState}
+    (h : CallSpecR P fid vals v Q) (hP : P σ)
+    (plans : List (TargetShape × List Expr)) (env : LocalEnv) (k : Cont)
+    (ch : Choices) :
+    ∃ (n : Nat) (σ' : ExecState) (rlocs : List Loc)
+      (vs : List GoValue) (ch' : Choices),
+      stepFnIter n σ (.retV v (.callArgsK fid plans vals [] env k)) ch
+        = .ok (.returning (.frame plans env rlocs [] k false), σ', ch')
+      ∧ loadMany σ' rlocs = .ok vs
+      ∧ Q σ' vs ∧ ch' <:+ ch := h σ hP plans env k ch
+
 /-- The bounded statement-span triple (`n ≤ B`; the totality-side
 form — `B` is a parameter, never a subject-run constant inside a
 statement). -/
@@ -272,12 +335,15 @@ def Refusal (site : String) : Prop := False ∧ site = site
 
 theorem Refusal.not (site : String) : ¬ Refusal site := fun h => h.1
 
-/-- Result-bearing call spans (the frame arm's tgtOpK caller-target
-walk, StepFn.lean:684-694) are OUTSIDE W1's `CallSpec`: the walk
-evaluates CALLER-side operands, so the span is not callee-local.
-Sealed until a consumer demands the result-bearing judgment form. -/
+/-- The tgtOpK-INCLUSIVE result-bearing span (the frame arm's
+caller-target walk, StepFn.lean:684-694) remains OUTSIDE the
+judgment: the walk evaluates CALLER-side operands, so that span is
+not callee-local. The demanded callee-local form landed as
+`CallSpecR` (W3 U3.1-F) — it ends at return arrival, one step before
+this walk; call sites compose the walk themselves. This seal now
+covers only the caller-inclusive form. -/
 def refusalResultBearingCallSpan : Prop :=
-  Refusal "CallSpec: result-bearing call span (tgtOpK caller-target walk)"
+  Refusal "CallSpec: caller-inclusive result-bearing span (tgtOpK caller-target walk)"
 
 /-- Nullary calls enter the frame from the statement arm directly
 (no drained `.retV` shape); the nullary judgment form is sealed until

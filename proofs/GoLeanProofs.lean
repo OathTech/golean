@@ -179,6 +179,7 @@ import GoLeanProofs.Specs.RaftPilot.InitSpec
 -- (definitions + sanity lemmas; preservation/establishment are the
 -- later waves').
 import GoLeanProofs.Specs.RaftPilot.Invariant
+import GoLeanProofs.Specs.RaftPilot.LogReadSpecs
 import GoLeanProofs.Sym.KernelRfl
 import GoLeanProofs.StepKit
 import GoLeanProofs.Examples.FibProgram
