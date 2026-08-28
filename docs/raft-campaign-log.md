@@ -3068,3 +3068,22 @@ construction). (4) Delta review of the audit-response commits
 WAIVED. Merge word itself not yet given — held per protocol
 (approval is at-that-moment, for the specific merge; not inferred
 from the rulings).
+
+### 2026-08-28 — [USER] MERGE SIGN-OFF given and executed
+
+[USER]: "go ahead with the merge." Executed exactly per protocol:
+git checkout main && git merge --ff-only triage-landing. main:
+84b5edb3 → 2a6621ed (fast-forward, no merge commit). End state
+verified: primary checkout parked on main, tree clean, gate green
+at the merged tip (the 460s PASS at 2a6621ed), judge landmark
+valid (51 theorems @ c2e1824d, code trees identical to tip). Push
+NOT authorized — separate sign-off when the [USER] chooses. Main
+now carries: the tier-2/3 substrate (plug/bind + witnesses,
+crossing kit + witnesses, MapPerm/MapPermRead, readers, ghost-acks,
+glue, kit), the governing docs, the archive pointers
+(refs/heads/archive/callspec-era), the 51-theorem designated set,
+zero CallSpec artifacts. Next: the forward plan (Iris build ladder
++ corpus design) drafted for [USER] adjudication; the next hygiene
+slice carries the scheduled ChoiceCanon kill + the deferred items
+(Audit.lean comment wording, judge-wrapper parser hardening,
+fjRunDeadlocks retirement).
