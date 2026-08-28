@@ -3673,3 +3673,37 @@ check-golden touch missed its [TRUST-ADJACENT] tag (edit verified
 data-only, gate stronger). F10: wrapper=false + no-cross-barrier-
 panic scope bounds unrecorded. [AGENT]: consolidation waits on the
 A-TRIP evasion audit; fix rounds per branch after.
+
+### 2026-08-28 — A-TRIP evasion audit: FIX-FIRST (demonstrated green veneer); consolidation into two fix rounds
+
+Headline: a policed module of pure veneers passed BOTH halves green
+(verbatim artifact). Five passing shapes, one root cause — the
+CLASSIFICATION, not the walker: F1 the upstream filter is a
+GoLean-name-prefix heuristic, false for our own repo (Audit/
+Challenge/Solution/SliceSpike are non-GoLean-rooted) → classify by
+package/positive allowlist, fail closed on unknown; F2 boundary-dir
+auto-enrolls (a 12th Laws/ file becomes boundary with no edit) →
+enumerate explicitly; F3 boundary DEFS stop the walk (rfl-reduction
+of machine defs through a boundary alias invisible) → stop at
+boundary THEOREMS only, recurse through defs (also kills the
+TC-decide shape); F4 V1/V2 literal-string spellings evaded
+(decide (config := {kernel/native := true})); F5 opt-in scope with
+no completeness check; F6 grandfather file-granular and unbounded →
+count-pin; F7-F10 minor. Fail-closed drills ALL reproduce (16
+drills); ci wiring CORRECT (0 removed lines, blocking, flags
+accurate); headline drill reproduces exactly. F11 context: the
+sole policed file today is the one class that cannot veneer —
+post-R2 the classification discipline is the load-bearing part.
+[AGENT] CONSOLIDATION: two parallel fix rounds. A-TRIP round =
+evasion F1-F6 (+F7-F10 docs) + outsider R2 (the scope must hold
+the corpus quartet: split-file convention + mechanical police-dir
+enrollment; the auditor's F11 note anticipates exactly this) + R3
+(sanctioned side-condition vocabulary). G-BIND round = its fix
+list 1-8 + coordinator items F8/F9/F10 recorded + outsider R1
+(grandfather labels into artifacts, incl. the 4 designated — rides
+g-bind since F5's new Audit pins trigger the judge there anyway,
+one landmark covers both) + R4 (=F1's owed row) + R5 shares.
+Merge order after both re-ceremonies: A-TRIP first, G-BIND
+rebases + enrolls its (split) files in the fixed scope — the
+tripwire's first enrollment must CATCH a planted veneer in the
+enrolled corpus file as its acceptance demo.
