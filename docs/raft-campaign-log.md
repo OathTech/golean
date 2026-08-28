@@ -3202,3 +3202,24 @@ refreshed), clean-proof-plan superseded-in-place. 4 files, +1,275/
 note). Judge NOT triggered (no designated statement, no trusted
 closure, no Audit.lean). [AGENT]: audit-ask posed (docs-only —
 waiver suggested); merge held for at-the-moment sign-off.
+
+### 2026-08-28 — [USER]: "Great, land it, then execute the plan" — MERGED; execution opens
+
+Audit waived by the [USER] (docs-only landing, substance
+professor-reviewed). Merged: main 2a6621ed → 05e81b70 (ff-only),
+parked clean. THE CORPUS-FIRST IRIS ERA IS THE ACTIVE PLAN. Push
+still not authorized (standing). [AGENT] execution kickoff per the
+plan's phase A, named gates enumerated up front per the new charter
+rule: N-2 (U0's comparator/lean4export re-pin — at-the-moment
+[USER] approval; the U0 worker STOPS there), N-3 (corpus-design
+sign-off after the reconciliation), N-4/G-INV (the W2.5 re-run,
+[USER] gatekeeper, reviews the first implementation), N-5
+(designation batches), N-6 (the "is the layer real?" checkpoint at
+2-3 corpus closures), N-7 (charter amendments — the hard-stop
+text just landed [USER]-approved at the merge-ask). Dispatched in
+parallel (disjoint files, one writer each): the HYGIENE SLICE
+(ChoiceCanon kill per the [USER] ruling; Audit.lean comment
+provenance wording; judge-parser hardening — trust-adjacent, delta
+review owed; fjRunDeadlocks retirement) and U0 (iris-lean refresh:
+pin assessment, upstream delta, COMMITTED TotalWp adoption; stops
+at N-2).
