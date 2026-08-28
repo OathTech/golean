@@ -502,3 +502,4 @@ LANDMARK-RUN: 3cdf4d24c87f 2026-08-27 56 116
 # Correction (delta-review F1): the 2026-08-27 run's recorded sha 3cdf4d24c87f is the pre-rebase twin (off-history); the certified TREE is byte-identical to the post-rebase charter commit — re-recorded at it:
 LANDMARK-RUN: 6ce22444ea9e 2026-08-27 56 116
 LANDMARK-RUN: c2e1824d7eb9 2026-08-27 51 122
+LANDMARK-RUN: 1022a6c221a5 2026-08-28 51 117
