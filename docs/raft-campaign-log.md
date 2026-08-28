@@ -3532,3 +3532,25 @@ instance = the first corpus program (differential-tested Go
 FIRST per guardrails-first), a two-function composition proved
 through wp_bind at the WP tier, with its negative twin. Both:
 capped 48G, box lock, park-not-improvise, no merge/push.
+
+### 2026-08-28 — A-TRIP branch-complete (a-trip @ b4160505); audit-ask posed
+
+BOTH halves landed: the text lint (scripts/wp-veneer-lint over the
+tracked scope config — police/boundary/grandfather/exempt classes,
+the Laws-lifting-adequacy boundary encoded with rationale;
+fail-closed: empty scope exit 2, unreadable file exit 1) AND the
+proof-side closure check (scripts/WpVeneerClosure.lean — the Audit
+walker re-aimed at PROOF TERMS, transitive, V-STMT/V-PROOF classes,
+sited against built oleans so Audit.lean/Challenge untouched → NO
+judge owed). Non-vacuity done right: the tripwire FIRED on all
+seven drill classes incl. a transitive helper chain, controls
+silent, fail-closed drills verified — and it caught TWO LIVE
+decide+kernel uses (LangD spawnNoop pair) on first run, resolved
+by grandfather-with-provenance, not weakening. One found-live
+checker fix during drilling (non-GoLean-rooted policed modules now
+recurse unconditionally). Gate ci --diff PASS (29 ok; both new
+steps green in-build; 2475/2475). ci additions delta-flagged
+[TRUST-ADJACENT], strengthens-only. Lane note: stale lake packages
+populated OFFLINE at tracked manifest pins (no network, no global
+state, sibling untouched). CLAUDE.md gained the one pointer line.
+[AGENT]: audit-ask posed; G-BIND still in flight.
