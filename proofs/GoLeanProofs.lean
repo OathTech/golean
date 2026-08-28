@@ -85,6 +85,7 @@ import GoLeanProofs.Ghost
 import GoLeanProofs.Lifting
 import GoLeanProofs.Inversions
 import GoLeanProofs.Laws.Control
+import GoLeanProofs.Laws.Bind
 import GoLeanProofs.Laws.Init
 import GoLeanProofs.Laws.Eval
 import GoLeanProofs.Laws.Assign
