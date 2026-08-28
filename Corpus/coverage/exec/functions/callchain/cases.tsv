@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+base	ccCaller	5	ok	-	calls,functions,defer,pointers
+zero	ccCaller	0	ok	-	calls,functions,defer,pointers
+neg	ccCaller	-3	ok	-	calls,functions,defer,pointers
