@@ -459,3 +459,64 @@ the W0 reset), so the row now reads **0 live at deletion**, which is
 what the item-1 sweep actually found.
 
 ### Fix-round ceremony
+
+**Same posture as the first round**: box-wide build lock taken and
+released; `GOLEAN_ALLOW_NO_DIFF=1 GOLEAN_MEM_MAX=48G scripts/capped
+scripts/ci`; judge run bare. Both judged by captured exit code.
+
+| gate | result | evidence |
+|---|---|---|
+| `scripts/ci` | **`EXIT=0`, RESULT: PASS** | `artifacts/hygiene/ci-fixround.log` |
+| `scripts/comparator-judge` | **`EXIT=0`, PASS — 51 theorems in 118 s**, fresh clone @ `09f8f5983f8f` | `artifacts/hygiene/judge-fixround.log` |
+
+The judge was re-triggered because `proofs/Audit.lean` was re-touched
+by F-1, and was independently owed by ci's scope note ("2 file(s) in
+Challenge's trusted closure changed since that run"). **51 theorems,
+like-for-like** with both prior landmarks (51 in 122 s on 2026-08-27,
+51 in 117 s at the pre-audit tip) — the designated set did not move in
+this fix round either. Marker appended:
+
+```
+LANDMARK-RUN: 09f8f5983f8f 2026-08-28 51 118
+```
+
+The ci run also exercises **F-2's leg directly**: `ok statement-TCB
+closure` is the step whose Audit↔judge-config lockstep now runs through
+the hardened extraction, on the every-commit path.
+
+### Fix-round deltas
+
+`git diff --stat 620e1a77..09f8f598` (the fix round proper): **7
+files, +239 / −40**, of which 177 changed lines are this log.
+
+| commit | fix | files | flag |
+|---|---|---|---|
+| `843d759e` | F-1 — designation provenance restored | 1 | **TRUST-ADJACENT, HIGH** (statement-TCB gate file, comment only) |
+| `b7e3c8f3` | F-2 — ci parser mirror hardened | 1 | **TRUST-ADJACENT** (every-commit gate; check made harder to blind) |
+| `09f8f598` | F-3/F-4/F-5 — record corrections | 5 | records (+ one comment-only touch of `scripts/comparator-judge`, declared under F-3) |
+
+**Cumulative at the final tip** (`05e81b70..09f8f598`): **13 files,
++663 / −749**; excluding this log, **12 files, +202 / −749** — the
+slice is still a net deletion of 547 lines of tree, with the 616-line
+`ChoiceCanon` kill as its bulk.
+
+### Standing delta-flags for the landing review (superseding §6's list)
+
+1. **Three trust-adjacent commits** across the slice: `4d29aab4`
+   (superseded by `843d759e`), `17d23216`, `b7e3c8f3`, plus
+   `843d759e`. None changes the designated set, the axiom allowlist,
+   the interpreter, or any statement's meaning; all are verified by
+   extraction counts and two judge runs at 51.
+2. **F-1 was a genuine provenance error by this executor**, caught by
+   the audit, not by me. It is corrected in the gate file and recorded
+   here with the citation trail; the superseded wording is preserved
+   in §2 under a banner rather than quietly overwritten.
+3. **The `allStreamsOkPool` evidentiary gap (F-5) is now an open,
+   named debt**, not a closed item: the checker's discrimination is
+   unwitnessed in-tree until the corpus fork/join member supplies a
+   negative twin. A reviewer should treat this as the slice's one
+   substantive cost.
+4. `GOLEAN_ALLOW_NO_DIFF=1` used in both rounds; scope argument in
+   §5a — no runtime code is touched anywhere in this slice.
+5. Still **no merge and no push**. Branch-complete at `09f8f598` plus
+   this record; both remain the user's calls.
