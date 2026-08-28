@@ -95,6 +95,12 @@ import GoLeanProofs.Laws.Values
 import GoLeanProofs.Laws.StmtOps
 import GoLeanProofs.Laws.Unwind
 import GoLeanProofs.Adequacy
+-- U0/A1 (2026-08-28): the committed total-WP adoption — upstream
+-- TotalWeakestPre/TotalLifting/TotalAdequacy seated on our language
+-- instance, with the seqn law pair, the SN adequacy readout, the
+-- sequential no-infinite-chain bridge, and the closed witness
+-- `sn_seqn_nil` (the ∃-fuel row's rule supplier; G-TOTAL builds here).
+import GoLeanProofs.TotalWp
 import GoLeanProofs.Specs.GoldenProgram
 import GoLeanProofs.Specs.GoldenTargets
 import GoLeanProofs.Specs.GoldenSliceWP
