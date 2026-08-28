@@ -176,6 +176,7 @@ import GoLeanProofs.Frame.PlugOps
 import GoLeanProofs.Frame.PlugApply
 import GoLeanProofs.Frame.PlugStep
 import GoLeanProofs.Frame.PlugRule
+import GoLeanProofs.Frame.PlugInv
 import GoLeanProofs.Sym.ReflectConc
 import GoLeanProofs.Specs.RaftPilot.InitSpec
 -- # w3-m (the (M) mechanism — map-order pick-family composition;
