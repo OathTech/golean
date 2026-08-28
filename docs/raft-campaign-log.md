@@ -3637,3 +3637,39 @@ greatest threat = proof-burden economics outrunning enforcement
 (892 proof lines per 32 Go lines at hand-modality ergonomics;
 G-AUTO unbuilt; the tripwire currently guards 2 theorems).
 [AGENT]: fix round consolidates when the two Opus audits land.
+
+### 2026-08-28 — G-BIND audit: FIX-FIRST (sound; record fixes + one data fix)
+
+Proof content SOUND: Löb structure kernel-checked; step_plug_inv
+circularity-free (linear import DAG, zero forward-walk files
+touched); NotStuck scoping VERIFIED CORRECT incl. against
+NeverFaults (also NotStuck-side — no roadmap gap); D-2's
+counterexample CORRECT (refutes Context at the pin; the
+"unconditional" adjective wrong — the law carries toVal=.none, the
+counterexample satisfies it); 13-is-the-bug's-output hand-traced
+and confirmed; all four new laws ∀-quantified with real witnesses;
+veneer read CLEAN (manual — nothing mechanical polices this branch
+yet); baseline re-pin SUBSTANCE verified (only the 3 callchain
+rows; full-run meta pinned). F1 HIGH (the real technical finding):
+hdrain is FALSE — not merely undischargeable — at drain sites with
+≥2 live defers (panicFrameDefer's state-dependent enterFrame
+premise vs hdrain's ∀σ); C-05 passes only because ccWork has ONE
+defer; trigger = defer a(); defer b() — routine Go, pervasive in
+raft; remedy = σ-conditioned wp_plug_bind restatement; converges
+with outsider R4 into ONE owed row. F2: PlugWitness re-point
+overclaims (C-05 reaches stepFn_plug only; callSpan_plug's sole
+application remains the witness — KEEP both pins, else the A4
+vacuity gap reopens); Audit/W2 now contradicts PlugWitness. F4b:
+the re-pinned baseline's header declares 5 columns over 3-column
+rows (latent mis-parse; one-line fix) + the 172-failure
+classification block dropped. F5: wp_plug_bind/step_plug_inv
+unpinned (family convention broken; #print axioms on the inversion
+timed out under its heartbeats — the envelope claim rests on the
+executor's unrecorded run). F6: the bind-vs-∀k alternative
+unmeasured (charter's measurement-referees rule not applied);
+check (iii) true but reads stronger than established. F8: eighth
+per-arity law vs the collapse charter (G-CALLS owed). F9:
+check-golden touch missed its [TRUST-ADJACENT] tag (edit verified
+data-only, gate stronger). F10: wrapper=false + no-cross-barrier-
+panic scope bounds unrecorded. [AGENT]: consolidation waits on the
+A-TRIP evasion audit; fix rounds per branch after.
