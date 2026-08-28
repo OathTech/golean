@@ -3189,3 +3189,16 @@ merge-ask), the A-TRIP veneer forbidden-pattern clause added to
 the proof doctrine, pointers updated (clean-proof-plan marked
 superseded). Ceremony: gate → audit-ask (docs-only; [USER] may
 waive) → merge sign-off.
+
+### 2026-08-28 — plan-landing @ 05e81b70 gate PASS; audit-ask + merge sign-off posed
+
+Branch plan-landing (off main @ 2a6621ed): the plan of record
+(status → APPROVED, [USER] 2026-08-28), the w25 post-mortem, the
+CLAUDE.md refresh (stack + plan prominent at top; VENEER ban in
+doctrine; the hard-stop design-gate amendment INCLUDED at its
+designated touch — presented verbatim at the merge-ask; pointers
+refreshed), clean-proof-plan superseded-in-place. 4 files, +1,275/
+−10, docs-only. Gate PASS exit 0 (documented no-diff hatch, visible
+note). Judge NOT triggered (no designated statement, no trusted
+closure, no Audit.lean). [AGENT]: audit-ask posed (docs-only —
+waiver suggested); merge held for at-the-moment sign-off.
