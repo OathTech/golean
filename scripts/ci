@@ -626,8 +626,19 @@ else
   # scripts/comparator-judge (landmark cadence), so a one-sided edit —
   # notably a DELETION from Audit's designated list, which the
   # missing-name guard cannot see — silently narrowed the in-build
-  # walker until the next landmark. Extraction mirrors the judge's.
-  ci_audit_full="$(sed -n '/let designated : List Name := \[/,/\]/p' proofs/Audit.lean \
+  # walker until the next landmark. Extraction mirrors the judge's —
+  # INCLUDING its 2026-08-28 hardening, which this line was updated in
+  # lockstep with (audit finding F-2: the mirror had been left on the
+  # old pattern, so the claim above was false on the every-commit
+  # path). The range END is ANCHORED to the list's actual closing line
+  # — an optional name literal followed by the bracket, or a bare
+  # bracket if the list is ever reflowed. The unanchored /\]/ it
+  # replaces ended at "the first line containing a ']' ANYWHERE": the
+  # 2026-08-27 HAZARD, where a `[USER]` provenance tag in one of the
+  # list's own interleaved comments truncated the extraction and the
+  # lockstep compare below ran against a short list. A comment line
+  # can no longer terminate the range.
+  ci_audit_full="$(sed -n -E '/let designated : List Name := \[/,/^[[:space:]]*(``[A-Za-z0-9_.]+)?\][[:space:]]*$/p' proofs/Audit.lean \
     | grep -oE '``[A-Za-z0-9_.]+' | sed -E 's/^``//' || true)"
   if [ -z "$ci_audit_full" ]; then
     echo "  could not parse the designated list from proofs/Audit.lean — failing closed" >&2
