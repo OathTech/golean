@@ -28,8 +28,10 @@ The delivery unit is a corpus case closed cleanly THROUGH the WP
 calculus. A proof that states WP but grinds machine spans underneath
 — the VENEER — is a named forbidden pattern: tier-3 proofs reach the
 machine only through the Laws/lifting/adequacy layer (the A-TRIP
-gate enforces this mechanically; cost profiles and negative twins do
-not catch it, so the closure check is the tripwire).
+gate enforces this mechanically — `scripts/wp-veneer-lint` + the
+proof-closure check `scripts/WpVeneerClosure.lean` in `scripts/ci`,
+scope `scripts/wp-lint-scope.txt`; cost profiles and negative twins
+do not catch it, so the closure check is the tripwire).
 
 ## What we are building
 

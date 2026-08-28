@@ -1,0 +1,86 @@
+# wp-lint-scope.txt — the WP-tier veneer-tripwire scope (unit A-TRIP).
+#
+# Consumed by BOTH halves of the A-TRIP gate:
+#   scripts/wp-veneer-lint        (text lint; ci step "WP veneer text lint")
+#   scripts/WpVeneerClosure.lean  (proof-term closure check; ci step
+#                                  "WP veneer proof-closure check")
+# Plan of record: docs/2026-08-28_iris-corpus-plan.md §2d (the veneer ban:
+# span-grinding inside a WP proof is the era's named forbidden pattern)
+# and §6.3 (unit A-TRIP). Unit log: docs/a-trip-log.md.
+#
+# THE BOUNDARY THIS FILE ENCODES ([AGENT], A-TRIP 2026-08-28). The proof
+# stack's machine crossing is the Laws/lifting/adequacy layer: the modules
+# that derive WP rules from the step relation and export WP conclusions as
+# first-order machine sentences. Relative to that layer:
+#
+#   police <path>    — a file ABOVE the boundary (tier-3 WP proofs: today
+#                      the WP-tier adoption witnesses; every corpus proof
+#                      file adds itself here as it lands). Both checks
+#                      apply in full: no kernel-decision closures
+#                      (`decide +kernel`, `native_decide`) and no
+#                      unfold-class mention of the executable machine
+#                      (`stepFn`/`stepFnIter`/`execStmt`/`execStmtLoop`/
+#                      `allStreamsOk`/`allStreamsOkPool`); the closure
+#                      check additionally walks every theorem's PROOF TERM
+#                      and refuses any route to those constants that does
+#                      not pass through a boundary module below.
+#   boundary <path>  — a file OF the boundary layer itself. It
+#                      LEGITIMATELY mentions the step relation and the
+#                      executable machine (that is its job — it is where
+#                      proofs are allowed to cross), so the machine-mention
+#                      rules do not apply; the kernel-decision bans
+#                      (`decide +kernel`, `native_decide`) still do. The
+#                      closure check STOPS at these modules: reaching the
+#                      machine through them is the sanctioned route.
+#   *-dir variants   — every *.lean under the directory, recursively
+#                      (fail-closed: a missing directory or an empty one
+#                      FAILS the gate).
+#   boundary-kernel-ok <path>
+#                    — a boundary file additionally carrying GRANDFATHERED
+#                      kernel-decision certificates (plan §2d: "the
+#                      existing pilot quartets are grandfathered as
+#                      labeled scaffolding", with a recorded retirement
+#                      condition). The `decide +kernel` ban is lifted for
+#                      the file; `native_decide` stays banned. Every entry
+#                      needs an inline provenance comment. NEW files never
+#                      start here.
+#   exempt <FQName>  — a per-theorem carve-out for the CLOSURE check only
+#                      (plan §6.3's declared-carve-out list: the
+#                      ∃-discharge sites the charter sanctions). Every
+#                      entry needs an inline provenance comment; a listed
+#                      name that does not resolve FAILS the gate. None
+#                      today.
+#
+# Files listed NOWHERE are outside this gate's scope: either BELOW the
+# boundary (GoCore, the language instances' machinery, ghost state) or
+# pre-Iris-era proof modules that never claimed the WP route (Examples/,
+# Specs/, Frame/, Sym/, StepKit, ... — policed by their own gates). The
+# scope is opt-in BY DESIGN and fail-noisy: an EMPTY police list fails the
+# gate, a listed-but-unreadable file fails the gate, and a policed module
+# missing from the audited build fails the closure check — scope rot is
+# loud, never silent.
+#
+# Seeding decision ([AGENT], A-TRIP 2026-08-28): of today's WP-tier files,
+# PinAdoptions.lean sits ABOVE the boundary (pure Iris-tier adoption
+# witnesses — police); TotalWp.lean IS the total-lifting layer (its own
+# header: "total lifting for our prim steps", crossing via Adequacy's
+# step_complete — boundary); the Laws/ tree, Lifting.lean, Adequacy.lean,
+# RunGlue.lean (the plan's ∃-fuel "classification glue") and the language
+# instances Lang/LangD/LangC are the boundary layer per plan §6.3's own
+# wording ("the Laws/lifting/adequacy layer").
+
+police proofs/GoLeanProofs/PinAdoptions.lean
+
+boundary proofs/GoLeanProofs/Lifting.lean
+boundary proofs/GoLeanProofs/Adequacy.lean
+boundary proofs/GoLeanProofs/TotalWp.lean
+boundary proofs/GoLeanProofs/Lang.lean
+# LangD carries the spawnNoop witness pair's `decide +kernel` completion
+# certificates (`spawnNoopAllStreamsCert` line ~1120 + the InitialSplit
+# side condition ~1100) — the §2d-grandfathered allStreamsOk pilot idiom,
+# retirement condition recorded in the plan (re-proved through G-TOTAL or
+# retired with the gallery-row cleanup). [AGENT] A-TRIP 2026-08-28.
+boundary-kernel-ok proofs/GoLeanProofs/LangD.lean
+boundary proofs/GoLeanProofs/LangC.lean
+boundary proofs/GoLeanProofs/RunGlue.lean
+boundary-dir proofs/GoLeanProofs/Laws

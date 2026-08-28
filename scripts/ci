@@ -914,6 +914,30 @@ else
   bad "import-direction violated (move the pin/witness to Specs/, or record an exception with a reason)"
 fi
 
+# 1e. WP VENEER TEXT LINT — the A-TRIP gate's day-one half.
+# ════════════════════════════════════════════════════════════════════════
+# [TRUST-ADJACENT DELTA — A-TRIP, 2026-08-28] GATE ADDITION, strengthens-
+# only: this step is NEW (unit A-TRIP of docs/2026-08-28_iris-corpus-plan.md
+# §6.3); no existing step was modified. It BLOCKS — deliberately unlike the
+# storm lint (3d), whose header forbids hardening because its rules are
+# cost HEURISTICS; these rules mechanize the CHARTERED veneer ban (plan
+# §2d: a WP-stated theorem whose proof grinds the machine underneath is
+# the era's named forbidden pattern; the Audit gate polices statements
+# only — "Proofs may use anything" — and cost profiles cannot discriminate
+# at corpus scale). Scope is the opt-in config scripts/wp-lint-scope.txt
+# (the Laws/lifting/adequacy boundary definition lives there); the lint is
+# fail-closed on a missing/empty/unreadable scope. Its proof-term sibling
+# is step 3b0 below.
+# ════════════════════════════════════════════════════════════════════════
+step "WP veneer text lint (scripts/wp-veneer-lint — A-TRIP gate, plan §2d; scope: scripts/wp-lint-scope.txt)"
+if vlout="$(./scripts/wp-veneer-lint 2>&1)"; then
+  printf '%s\n' "$vlout" | sed 's/^/  /'
+  ok "WP veneer text lint (no kernel-decision/machine-unfold in WP-tier scope)"
+else
+  printf '%s\n' "$vlout" | sed 's/^/  /' >&2
+  bad "WP veneer text lint (veneer-ban violation or broken scope — fail closed; see above)"
+fi
+
 # 2. Core build (the frontend / interpreter / relation).
 step "core build (lake build; must be WARNING-free — GoLean/ module warnings
 # replay into the runner's stdout and corrupt the JSON observation channel,
@@ -936,6 +960,33 @@ fi
 #    proof-layer claim FAILS HERE.
 step "proofs build incl. Audit gate (axiom allowlist + non-vacuity)"
 if ( cd proofs && lake build 2>&1 | tail -4 ); then ok "proofs + Audit gate"; else bad "proofs + Audit gate"; fi
+
+# 3b0. WP VENEER PROOF-CLOSURE CHECK — the A-TRIP gate's mature half.
+# ════════════════════════════════════════════════════════════════════════
+# [TRUST-ADJACENT DELTA — A-TRIP, 2026-08-28] GATE ADDITION, strengthens-
+# only: NEW step, no existing step modified. The Audit statement-closure
+# walker re-aimed at PROOF TERMS (LINEAGE in scripts/WpVeneerClosure.lean):
+# every theorem in a scope-policed module has its proof term walked, and
+# any route to the executable machine (stepFn/stepFnIter/execStmt/
+# execStmtLoop/allStreamsOk/allStreamsOkPool, whole namespaces) that does
+# not pass through the config's boundary modules (the Laws/lifting/
+# adequacy layer) FAILS — the veneer, plan §2d. Runs AFTER the proofs
+# build (oleans hot; a failed proofs build fails this step too — fail
+# closed, never skip). Same scope config as step 1e. NOTE (reported
+# honestly): this checker is Audit-ADJACENT but proofs/Audit.lean itself
+# is untouched by A-TRIP — the checker is a standalone scripts/ file
+# elaborated against the built oleans, outside Challenge's trusted
+# closure, so no comparator landmark is triggered by its addition.
+# ════════════════════════════════════════════════════════════════════════
+step "WP veneer proof-closure check (scripts/WpVeneerClosure.lean — A-TRIP gate, plan §2d)"
+vc_out="$( cd proofs && lake env lean ../scripts/WpVeneerClosure.lean 2>&1 )"; vc_rc=$?
+if [ "$vc_rc" -eq 0 ]; then
+  printf '%s\n' "$vc_out" | sed 's/^/  /'
+  ok "WP veneer proof-closure (proof terms reach the machine only through the boundary layer)"
+else
+  printf '%s\n' "$vc_out" | tail -30 >&2
+  bad "WP veneer proof-closure check (exit $vc_rc — a veneer, or a broken/vacuous scope; fail closed)"
+fi
 
 # 3b. The trusted root elaborates (launch audit D4-F5/K-5, D6-F2's
 # Solution corner): Challenge/Solution are NOT default Lake targets,
