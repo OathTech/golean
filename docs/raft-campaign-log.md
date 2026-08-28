@@ -3223,3 +3223,26 @@ provenance wording; judge-parser hardening — trust-adjacent, delta
 review owed; fjRunDeadlocks retirement) and U0 (iris-lean refresh:
 pin assessment, upstream delta, COMMITTED TotalWp adoption; stops
 at N-2).
+
+### 2026-08-28 — U0 session 1 parked AT N-2 (u0-iris-refresh @ 891521ff); gate posed
+
+Reuse table re-verified at boundary candidate e7a0a43 with anchors
+in both trees (framing correction: WP ElimModal already at the pin
+— the real gap is AddModal/ElimAcc; TotalWp zero-instance
+re-verified, fields stable across revs; Context/primStep_fill_inv
+confirmed — A5's obligation stands as named). Pin move BLOCKED at
+N-2, empirically anchored by a two-armed offline probe: e7a0a43
+FAILS under toolchain 4.31.0 (proof-mode core errors — nothing
+survives) and PASSES under 4.32.2 (299 jobs, exit 0); no
+intermediate pin buys the A1-critical rows (all postdate the
+mid-delta 4.32 bump); upstream 4.33 measured-broken. The move
+therefore drags lean-toolchain 4.31→4.32.2 AND the
+comparator/lean4export trust-tool re-pins. NOTHING touched or
+staged (hard stop honored; probe in gitignored scratch, kept warm).
+TotalWp inhabitation + adoptions correctly deferred behind the
+gate. [AGENT]: N-2 decision package POSED to the [USER] — four
+at-the-moment items: boundary-rev choice (e7a0a43 recommended,
+conditional on a user-side upstream-head re-check — sandbox blocks
+egress), trust-tool execution consent, the matching lean4export
+rev, judge-landmark scheduling. Hygiene slice still in flight
+(parallel, disjoint).
