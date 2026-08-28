@@ -325,19 +325,31 @@ open Lean in
     ``GoLean.Surface.quorumThreeAllTotalReadout,
     ``GoLean.Quorum.committedIndexRef_meets_spec,
     -- DESIGNATION RECLASSIFICATION (triage landing 2026-08-27, plan
-    -- L-13 scope). PROVENANCE, corrected at the hygiene slice
-    -- 2026-08-28 (pre-merge gate-audit finding M-1: the wording here
-    -- had flattened this to a plain USER decision at the triage-plan
-    -- sign-off): AGENT coordinator recommendation ratified by USER
-    -- package assent (2026-08-27); the reclassification act itself
-    -- USER-confirmed at the merge (2026-08-28). NB the provenance
-    -- tags in this comment are written WITHOUT their usual square
-    -- brackets, and no square bracket appears anywhere in this
-    -- comment, because this text sits INSIDE the region the
-    -- comparator-judge wrapper extracts the designated list from —
-    -- a bracket in a comment truncated that extraction once already
-    -- (the 2026-08-27 hazard). The wrapper's parser is hardened in
-    -- the same slice; this convention stays as belt-and-braces.
+    -- L-13 scope). PROVENANCE: a USER decision at the triage
+    -- sign-off — the designation act is the USER's alone, and this
+    -- was correctly recorded as such at birth. It was USER-
+    -- reconfirmed at the 2026-08-28 triage-landing merge; the record
+    -- of that reconfirmation lives in the campaign coordination log,
+    -- docs/raft-campaign-log.md, entry 2026-08-28, the USER rulings
+    -- line reading "Designation 56→51 CONFIRMED" — which lands on
+    -- main under its own ceremony, so cite it there rather than
+    -- here. NB for future editors: gate-audit finding M-1 corrected
+    -- several provenance lines of the same triage from plain USER
+    -- decisions to AGENT coordinator recommendations ratified by
+    -- USER package assent. THIS ROW IS NOT ONE OF THEM — M-1's scope
+    -- covers triage decisions 1, 2, 4 and 5 and explicitly EXCLUDES
+    -- decision 3, the designation act (docs/triage-execution-log.md
+    -- lines 29-32 and 229). The hygiene slice's first pass wrongly
+    -- copied the M-1 house wording onto this row and was corrected
+    -- by the pre-merge audit, finding F-1; do not reapply it.
+    -- NB also the provenance tags in this comment are written
+    -- WITHOUT their usual square brackets, and no square bracket
+    -- appears anywhere in this comment, because this text sits
+    -- INSIDE the region the comparator-judge wrapper extracts the
+    -- designated list from — a bracket in a comment truncated that
+    -- extraction once already (the 2026-08-27 hazard). The wrapper's
+    -- parser, and ci's mirror of it, are hardened in the same slice;
+    -- this convention stays as belt-and-braces.
     -- The rows: the five channels-arc
     -- slice-2 PINNED-STREAM fork/join rows — forkJoinStreamCanonical,
     -- forkJoinStreamAdversarial, forkJoinStreamAlternating,
