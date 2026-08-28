@@ -5,12 +5,37 @@ is done, and the gates. It is deliberately short; details live in
 the pointed-to documents. Amend only when a practice proves its
 worth or its cost.
 
+## The stack and the plan of record (top of mind)
+
+The plan of record is **`docs/2026-08-28_iris-corpus-plan.md`** —
+the corpus-first Iris era ([USER]-approved 2026-08-28; it replaced
+`docs/2026-08-27_clean-proof-plan.md`). The architecture:
+
+```
+executable GoCore       ← the TCB; statements live here; oracle-tested
+  ⇧ adequacy (proofs travel down; statements stay first-order)
+relational semantics    ← the per-step relation + language instance
+  ⇧
+Iris reasoning          ← heap RA, WP, FnSpec contracts, per-construct
+                          rules, assertion layer, automation: THE BUILD
+  ⇩ proves
+target programs         ← the pattern corpus (canonical properties
+                          incl. NEGATIVE TWINS); raft is the FINAL
+                          corpus member, not the next milestone
+```
+
+The delivery unit is a corpus case closed cleanly THROUGH the WP
+calculus. A proof that states WP but grinds machine spans underneath
+— the VENEER — is a named forbidden pattern: tier-3 proofs reach the
+machine only through the Laws/lifting/adequacy layer (the A-TRIP
+gate enforces this mechanically; cost profiles and negative twins do
+not catch it, so the closure check is the tripwire).
+
 ## What we are building
 
 A fast, careful Go-to-Lean verifier, demonstrated by verifying
-etcd-io/raft (`docs/roadmap.md`; the campaign plan of record is
-`docs/2026-08-27_clean-proof-plan.md`). Two products, strictly
-separated:
+etcd-io/raft (`docs/roadmap.md`) — reached corpus-first per the plan
+of record above. Two products, strictly separated:
 
 - **A trustworthy, portable Go semantics** — the weakest machine Go
   permits, all latitude included. Differential testing is the lower
@@ -72,7 +97,10 @@ verified against the semantics, useful-not-complete, replaceable.
   quantified demonically. Concrete evaluation appears only in
   declared reflection certificates, in the discharge of ∃-shaped
   statements (exhibiting a run is how existentials are proved), and
-  — until superseded — the retained interface witnesses.
+  — until superseded — the retained interface witnesses. In the
+  Iris era this includes the VENEER ban (the stack section above):
+  a WP-stated theorem whose proof term reaches the machine outside
+  the Laws/lifting/adequacy layer is concrete walking in costume.
 - **The quantifier audit.** Before work starts, write down the end
   theorem's quantifiers (∀ streams, ∀ states, ∀ iterations, ∃ fuel,
   …) and, for each, the RULE that discharges it — a loop rule, a
@@ -157,16 +185,32 @@ verified against the semantics, useful-not-complete, replaceable.
 - Autonomous arcs: judgment delegated inside written boundaries; no
   gate weakening, no trust-surface changes, no merge/push/
   designation; branch-complete + audit-ask posed is the end state.
+  **Named design gates are HARD STOPS**: no autonomous directive,
+  goal monitor, or completion pressure overrides one — a run that
+  cannot stop EXITS (the emergency path) rather than
+  self-adjudicating the gate; a self-adjudicated gate is a protocol
+  breach even when its substance survives review. A design gate's
+  review object includes the FIRST IMPLEMENTATION built against the
+  design, not the note alone. Autonomous-goal prompts enumerate the
+  named gates up front so a stop-at-gate reads as goal-compliant.
+  (The 2026-08 instance and rationale:
+  `docs/2026-08-28_w25-gate-postmortem.md`.)
 - Reference checkouts in gitignored `deps/` (goose, perennial,
   iris-lean, raft, verdi(+raft), BRiCk, refinedc, brick-wp, …) —
   consult before inventing.
 
 ## Pointers
 
-Plan of record: `docs/2026-08-27_clean-proof-plan.md` · Proof
-structure: `docs/2026-08-27_proof-structure-explained.md` · The
-archive of the killed era: `docs/ARCHIVE.md` · Mechanism index:
-`docs/2026-08-26_mechanism-registry.md` · Operational lessons (build/OOM/tool
-incidents, measured remedies): `docs/operational-lessons.md` ·
-Architecture rules: `AGENTS.md` · Constitution (campaign governance): 
+Plan of record: `docs/2026-08-28_iris-corpus-plan.md` (superseded
+predecessors, banners in place: `docs/2026-08-27_clean-proof-plan.md`)
+· The triage that opened this era: `docs/2026-08-27_triage-plan.md` ·
+Proof structure (pre-pivot, still the seam reference):
+`docs/2026-08-27_proof-structure-explained.md` · The archives of the
+killed eras: `docs/ARCHIVE.md` (+ branches
+`archive/fixed-trajectory-era`, `archive/callspec-era`) · The W2.5
+gate post-mortem: `docs/2026-08-28_w25-gate-postmortem.md` ·
+Mechanism index: `docs/2026-08-26_mechanism-registry.md` ·
+Operational lessons (build/OOM/tool incidents, measured remedies):
+`docs/operational-lessons.md` · Architecture rules: `AGENTS.md` ·
+Constitution (campaign governance):
 `docs/2026-08-21_raft-proof-constitution.md`.

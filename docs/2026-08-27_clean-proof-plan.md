@@ -1,3 +1,11 @@
+> **SUPERSEDED (2026-08-28).** This plan is no longer the plan of
+> record. The corpus-first Iris era's plan —
+> `docs/2026-08-28_iris-corpus-plan.md` ([USER]-approved 2026-08-28)
+> — replaces it. Its landed content (the W0 reset, the substrate now
+> on main) is history, not plan; its raft-specific unit ladder is
+> superseded in architecture, with the measured pricing reused by the
+> successor, cited as such. Kept for the record.
+
 # The clean proof plan (2026-08-27, v2 — professor-amended) — awaiting [USER] approval
 
 Deliverable 1 of the replanning round. The proof structure is
