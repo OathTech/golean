@@ -3087,3 +3087,28 @@ zero CallSpec artifacts. Next: the forward plan (Iris build ladder
 slice carries the scheduled ChoiceCanon kill + the deferred items
 (Audit.lean comment wording, judge-wrapper parser hardening,
 fjRunDeadlocks retirement).
+
+### 2026-08-28 — Iris corpus plan DRAFTED (design-pass @ 31321025); four-lens review dispatched
+
+docs/2026-08-28_iris-corpus-plan.md, 848 lines: unit 0 = iris-lean
+refresh (the pin already has EctxLanguage/wp_bind/ectx-finder —
+G-BIND becomes instantiation over plugK, cheaper than the gap
+table priced; the pin's real gaps are ergonomic and closed by the
+upstream delta); ladder G-BIND/G-REPR (footprint insight rolls up
+here, subsuming ChoiceCanon)/G-CALLS/G-MAPITER/G-EXIT/G-SORT +
+G-AUTO probe; corpus C-01..C-14 + 3 gallery re-specs covering all
+15 pattern classes, every program differential-tested first, raft
+= C-FINAL behind G-INV + G-STMTS; seven [USER] HARD-STOP gates;
+pricing 21-36 sessions, high-confidence prefix 8-13; delivery
+metric = corpus closures/week, first checkpoint = the [USER]'s
+"is the layer real?" review at 2-3 closures. Automation fork made
+explicit (tactic-driven adopted, judgment-driven revisit condition
+named). Git note: design-pass cannot rebase onto main (campaign-log
+lineage); deliverables cherry-pick onto a fresh branch at landing
+([AGENT], snapshotted, nothing resolved creatively).
+[USER]-commissioned four-lens review dispatched: faithful (real
+Iris, recognizable to a Perennial/BRiCk reader) / for real (veneer
+structurally prevented; G-AUTO discriminating) / useful (ergonomics
+measured, pleasant for a non-author) / goal-connected (every unit
+traces to the summit or a named durable consumer; ladder complete
+against the summit's known demands so no future gap-filler excuse).
