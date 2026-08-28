@@ -3454,3 +3454,29 @@ their contexts:
    reviewer scope; so tagged at the launch entry).
 These are the chain endpoints for the branch's §S3.4 citation;
 cite THIS entry (branch raft-proof-campaign) by section title.
+
+### 2026-08-28 — U0 audits both FIX-FIRST; consolidated fix round dispatched
+
+Trust surface: pins/sources/binaries/designated-set/differential
+all independently verified; the [USER]-tag hazard does not re-arise
+(parser never ranges over itself); "matching not latest" enforced
+at the binary with the upstream-tag absence verified. Migration:
+core files proof-script-only (signature extraction + per-line decl
+mapping); restated helpers self-checking against the real desugar;
+GoCoreS LeibnizO→DiscreteO verified semantics-preserving; TotalWp
+REAL on all five probes (instance/lifting/adequacy/symbolic/no-
+veneer); U3 witnesses fire the claimed instances on our heap.
+FIX ROUND (consolidated): F-1 smoke pair re-run with RETAINED
+evidence (the fail-closed arm of a trust-tool re-pin had none);
+F-2m name the three anonymous examples + Audit pin block for the
+total-WP family (envelope of new theorems on a fresh pin = the one
+thing nobody checked) → Audit.lean touch → judge re-triggered;
+F-2t §S3.4 generalized to every [USER] mention on the branch;
+F-3t citation → branch raft-proof-campaign + the verbatim-quotes
+entry (coordinator pre-landed it @ 98245091); F-3m U1 snippet
+preserved + cause de-attributed; F-4t landmark prose line; F-4m
+GoCoreS listed as the one definitional change; F-5m sn_seqn_nil
+labeled minimal-by-design; F-5t duplicate section number; F-6m
+cite the stronger gate run; F-7m desugar-coupling →
+operational-lessons; obs-t: PROOF_TOOLCHAIN floating-read doctrine
+line + the merge-time comparator-setup operator note.
