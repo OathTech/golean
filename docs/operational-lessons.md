@@ -85,6 +85,25 @@ because it misfired twice; the same discipline applies to
 infrastructure theories — the phantom-reaper incident survived two
 units because nobody ran the mundane systemctl check.)
 
+## Desugar coupling: helper lemmas married to the compiler's do-elaboration
+
+The U0 toolchain bump (Lean 4.31→4.32.2, 2026-08-28) had to edit
+PROOF-LAYER STATEMENTS, not just proofs: ~9 helper lemmas
+(`setLoopG`, `scan_generic`/`scan_genericV`/`scan_genericW`,
+`forIn_find_none/some`, Lens `setLoop`, DriftApply/DriftOps sim
+`body :=` arguments, FastEval `show`-terms) are stated against the
+LITERAL packing of the do-desugar — loop-state tuple type/order,
+junk `pure PUnit.unit` binds, trailing `let x ← e; pure x` — and
+the 4.32 elaborator changed all three (MProd→Prod in declaration
+order; junk binds gone; trailing binds kept in compiled functions
+but COLLAPSED in hand-written `show` terms, forcing explicit
+`>>=`). Measured blast radius this bump: 24 files (2 core + 22
+proofs). Lesson: any lemma whose statement names the compiled
+shape of a `for`/do-block is TOOLCHAIN-COUPLED — expect statement
+edits at every Lean bump, budget them, and prefer stating over a
+named function (the `setLoopG` idiom) so the coupling is one
+definition per loop rather than scattered patterns.
+
 ## Sandbox conventions
 
 Repo-local caches for ad hoc Go probes (`GOCACHE=$PWD/artifacts/…`);

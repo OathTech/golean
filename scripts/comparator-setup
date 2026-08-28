@@ -38,6 +38,14 @@ echo "== build comparator + its lean4export (lake, may fetch pinned deps)"
 # lean-toolchain says v4.32.0, but the judge reads v4.32.2 artifacts —
 # upstream cut no v4.32.2 tag, so the file cannot say it without dirtying
 # the pristine tree). No global elan state is touched.
+#
+# DOCTRINE (audit fix round, trust observation): this floating read
+# AUTOMATES the "matching" invariant — the trust-tool binaries always build
+# at whatever proofs/lean-toolchain says, and a mismatch fails closed at
+# olean load. The flip side: a FUTURE toolchain bump silently re-targets
+# this trust-tool build. That is a NAMED REVIEW TRIGGER, never a silent
+# ride-along: toolchain bump ⇒ trust-tool rebuild ⇒ judge landmark
+# re-baseline, each under its own trust-adjacent delta-flagged commit.
 PROOF_TOOLCHAIN="$(cat "$ROOT/proofs/lean-toolchain")"
 (cd "$ROOT/deps/comparator" && lake +"$PROOF_TOOLCHAIN" build lean4export comparator)
 

@@ -52,10 +52,13 @@ variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 
 /-- **The instance pin** (adoption piece 1): our `Config` language inherits
 the upstream total-WP instance — `WP c @ s ; E [{ Φ }]` is inhabited
-notation for GoCore. Kept as a named example so a regression (e.g. an
-upstream class reshape at a future pin move) fails HERE, at the adoption
-site, not at a distant use. -/
-example : TotalWp (IProp GF) Config Unit Stuckness := inferInstance
+notation for GoCore. NAMED (audit fix round, migration F-2) so it is
+Audit-pinnable and a regression (e.g. an upstream class reshape at a
+future pin move) fails HERE, at the adoption site, not at a distant
+use. -/
+@[reducible] def totalWpInstancePin :
+    TotalWp (IProp GF) Config Unit Stuckness :=
+  inferInstance
 
 /-- Total twin of `wp_seqn` (`Laws/Control.lean`): entering a statement
 sequence is a pure deterministic step, so the total WP of the continuation
@@ -182,7 +185,14 @@ initial state and environment, the empty-sequence program admits NO
 infinite reduction, proved end-to-end through the total-WP laws above and
 `go_total_adequacy` with the concrete functor bundle `GoCoreS`. The total
 twin of `adequate_seqn_nil`: same program, same bundle, but the
-conclusion is termination — the statement mentions no Iris. -/
+conclusion is termination — the statement mentions no Iris.
+
+MINIMAL BY DESIGN (audit fix round, migration F-5): the subject is two
+pure deterministic steps — no loop, no variant, no state read. This
+witness certifies the ADOPTION CHAIN composes (laws → total adequacy →
+SN), not that the totality machinery scales; the variant-carrying loop
+rule and its non-trivial totality closures are G-TOTAL's obligations
+(C-15 `countloop` + C-01's `Terminates` form are its gate instances). -/
 theorem sn_seqn_nil (σ : ExecState) (env : LocalEnv) (hwf : HeapWf σ) :
     Relation.StronglyNormalizing Language.ErasedStep
       ([Config.exec (.seqn #[]) env .stop], σ) :=

@@ -15,17 +15,31 @@ the consumer-side rewiring they enable is owned elsewhere, named below.
 - **U1 (WP modality instances — `addModalFupdWp`, the `InOut`-restated
   `ElimModal`s, the WP `ElimAcc`s; upstream `WeakestPre.lean:687/641/695`
   at pin `e7a0a438`):** PRESENT at the pin (verified by read), and a
-  MEASURED FINDING for G-AUTO stands recorded: from outside the iris
-  package, `imod H`/`icases H with >H` on a context `|={E}=>` against a
-  WP goal is refused by the proof-mode front-end ("is not a modality")
-  at this rev even though the `ElimModal` instances exist — so the
-  modality-dance retirement (the 4-step `go_walk_dance` body, its two
-  `idance` macros, 393 `fupd_intro` sites) is NOT a free rename; it is
-  G-AUTO's measured work, with this datum as its baseline. No witness
-  here rather than a fake one — the honest state is "instances landed,
-  tactic exploitation owed". The `ElimAcc` pair's consumer is
-  invariant/atomic access at G-INV/G-CONC, exercised when the first
-  invariant opens at our tier.
+  MEASURED FINDING for G-AUTO stands recorded — the attempt below
+  failed, twice, with the exact error quoted; THE CAUSE IS NOT
+  ATTRIBUTED (audit fix round, migration F-3: the instances are
+  `@[expose] public`, and the failure point is the proof mode's
+  instance/recognizer path — equally consistent with a mask or
+  goal-shape mismatch as with any boundary effect). The failing
+  attempt, preserved verbatim so G-AUTO reproduces it:
+
+  ```
+  example {c : Config} {H : IProp GF}
+      (h : H ⊢ WP c @ s ; E {{ Φ }}) :
+      iprop(|={E}=> H) ⊢ WP c @ s ; E {{ Φ }} := by
+    iintro H
+    imod H with H          -- error: icases: iprop(|={E}=> H) is not a modality
+    iapply h $$ H
+  -- variant `icases H with >H` fails identically
+  ```
+
+  Consequence: the modality-dance retirement (the 4-step
+  `go_walk_dance` body, its two `idance` macros, 393 `fupd_intro`
+  sites) is NOT a free rename; it is G-AUTO's measured work, with this
+  datum as its baseline. No witness here rather than a fake one — the
+  honest state is "instances landed, tactic exploitation owed". The
+  `ElimAcc` pair's consumer is invariant/atomic access at
+  G-INV/G-CONC, exercised when the first invariant opens at our tier.
 - **U3 (`frame_pointsto` + points-to `CombineSepGives`; upstream
   `GenHeap.lean:214/161`):** fractional points-to recombination by
   `iframe` alone, and two-observer agreement as a pure fact — the
@@ -47,8 +61,9 @@ variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 /-- **U3 witness (recombination)** — `frame_pointsto`
 (`instFramePointsTo` + `FrameFractionalQp`): two fractional views of a
 cell recombine to the sum by `iframe` alone — the split/combine move
-every per-field representation predicate makes. -/
-example {a : Nat} {c : HeapCell} {q₁ q₂ : Qp} :
+every per-field representation predicate makes. NAMED for the Audit
+pin (audit fix round, migration F-2). -/
+theorem pointsTo_fraction_recombine {a : Nat} {c : HeapCell} {q₁ q₂ : Qp} :
     iprop(a ↦{.own q₁} c ∗ a ↦{.own q₂} c)
       ⊢@{IProp GF} a ↦{.own (q₁ + q₂)} c := by
   iintro ⟨H1, H2⟩
@@ -56,8 +71,9 @@ example {a : Nat} {c : HeapCell} {q₁ q₂ : Qp} :
 
 /-- **U3 witness (agreement)** — the points-to `CombineSepGives`
 instance: two observers of one cell agree, as a pure fact, with the
-validity side-condition carried by the instance. -/
-example {a : Nat} {c₁ c₂ : HeapCell} {q₁ q₂ : Qp} :
+validity side-condition carried by the instance. NAMED for the Audit
+pin (audit fix round, migration F-2). -/
+theorem pointsTo_fraction_agree {a : Nat} {c₁ c₂ : HeapCell} {q₁ q₂ : Qp} :
     iprop(a ↦{.own q₁} c₁ ∗ a ↦{.own q₂} c₂)
       ⊢@{IProp GF} ⌜c₁ = c₂⌝ := by
   iintro ⟨H1, H2⟩

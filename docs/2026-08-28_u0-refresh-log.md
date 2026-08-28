@@ -344,6 +344,12 @@ full gate:
   regression, negative baseline no regression. Expected note:
   "comparator landmark … 5 commit(s) ago" — the judge re-run is the
   S2.5 step (pending).
+  **GATE-OF-RECORD note (audit fix round, migration F-6): the
+  authoritative full-gate run for the unit is the POST-REBASE,
+  post-judge `artifacts/u0-ci-diff-2.log`** (§S3: RESULT: PASS,
+  exit 0, 2475/2475, landmark staleness "0 commit(s) ago") — this
+  session-2 run gated the pin-move commit on the pre-rebase base
+  and is superseded as evidence by the rebased-tip run.
 
 **The migration tail, honestly inventoried** (the scan's §2b-7
 "silent class" turned out to be a LOUD class — do-notation desugar
@@ -351,7 +357,16 @@ changes, not instance-priority flips): 2 core files + 22 proof
 files of mechanical proof-script repairs, NO statement changes
 except desugar-mirroring lemma statements (the `setLoop`/
 `scan_generic`-class helpers that quantify over the compiled loop
-body's literal shape). The five recurring 4.31→4.32.2 patterns,
+body's literal shape) — plus exactly ONE definitional change
+(audit fix round, migration F-4): **`GoCoreS`'s functor bundle
+entries 4–5 retype `LeibnizO` → `DiscreteO`** (with the `.mk`
+sites in `Adequacy.lean`/`LangC.lean`). Semantics-preservation
+(the auditor's argument, verified): the two structures are
+identical one-field wrappers whose OFE structure is discrete on
+both sides (`Dist` = `Eq`), the rename is upstream's setoid
+retirement with no carrier change, and `GoCoreS` sits OUTSIDE
+every designated statement's closure (the Audit deletion test
+covers this mechanically — designated closures are Iris-free). The five recurring 4.31→4.32.2 patterns,
 each fixed at every site:
 
 1. `do`-desugar no longer emits junk `pure PUnit.unit` binds →
@@ -485,15 +500,26 @@ row; it advances no end-theorem quantifier itself and says so.
   `instCombineSepGivesPointsTo`). Consumer: G-REPR (the per-field
   split/combine base; C-08's sibling-frame test is the gate).
 - **U1: instances landed; tactic exploitation OWED — a measured
-  finding recorded**: from outside the iris package at this rev,
-  `imod H` / `icases H with >H` on a context `|={E}=>` against a
-  WP goal is REFUSED by the proof-mode front-end ("is not a
-  modality") even though `elimModalFupdWp`/`addModalFupdWp` exist
-  (reproduced twice, minimal example in the module header). So the
-  modality-dance retirement (4-step `go_walk_dance`, 2 `idance`
-  macros, 393 `fupd_intro` sites) is NOT a free rename — it is
-  G-AUTO's measured work and this datum is its baseline. No fake
-  witness shipped.
+  finding recorded**: `imod H` / `icases H with >H` on a context
+  `|={E}=>` against a WP goal FAILED, twice, with the exact errors
+  (audit fix round, migration F-3 — pasted verbatim from
+  `artifacts/u0-adopt-check{1,2}.log`):
+
+  ```
+  GoLeanProofs/PinAdoptions.lean:52:9: error: iintro: iprop(|={E}=> H) is not a modality
+  GoLeanProofs/PinAdoptions.lean:53:2: error: icases: iprop(|={E}=> H) is not a modality
+  ```
+
+  **The cause is NOT attributed** (the earlier package-boundary
+  theory is WITHDRAWN: the instances are `@[expose] public`, and
+  the failure is the proof-mode instance/recognizer path — equally
+  consistent with a mask or goal-shape mismatch). The failing
+  snippet is preserved in-tree in `PinAdoptions.lean`'s header for
+  G-AUTO to reproduce. Consequence unchanged: the modality-dance
+  retirement (4-step `go_walk_dance`, 2 `idance` macros, 393
+  `fupd_intro` sites) is NOT a free rename — it is G-AUTO's
+  measured work and this datum is its baseline. No fake witness
+  shipped.
 - **U8 (equiv_iff_eq → HeapBridge cleanup) DEFERRED with reason**:
   the hand extensionality lemmas conclude pointwise `≡ₘ` consumed
   by `genHeapInterp_eqv` at ~5 `Lifting.lean` call sites — the
@@ -549,7 +575,39 @@ one landmark.
   (rejected; fail-closed intact). Run replicated under
   `artifacts/u0-smoke/` (this sandbox cannot read back `/tmp`;
   the setup script's `mktemp` path is unchanged for normal
-  operators). Logs: `artifacts/u0-smoke/{match,mismatch}.log`.
+  operators).
+
+  **THE SMOKE EVIDENCE, verbatim in tracked prose (audit fix round
+  F-1 — the original artifacts were cleaned at park, so the
+  fail-closed arm had no retrievable evidence; re-run 2026-08-28
+  against the same rebuilt binaries, outputs and exit codes pasted
+  here):**
+
+  `simple_match` — **exit 0** (accepted); output tail:
+
+  ```
+  Exporting #[comm, propext, Quot.sound, Classical.choice, Nat.add, Nat.sub,
+    Nat.mul, Nat.pow, Nat.gcd, Nat.div, Nat.mod, Nat.beq, Nat.ble, Nat.land,
+    Nat.lor, Nat.xor, Nat.shiftLeft, Nat.shiftRight, String.ofList] from Solution
+  Running Lean default kernel on solution.
+  Lean default kernel accepts the solution
+  Your solution is okay!
+  ```
+
+  `simple_mismatch` — **exit 1** (rejected, fail-closed); output
+  tail:
+
+  ```
+  Exporting #[comm, propext, Quot.sound, Classical.choice, Nat.add, Nat.sub,
+    Nat.mul, Nat.pow, Nat.gcd, Nat.div, Nat.mod, Nat.beq, Nat.ble, Nat.land,
+    Nat.lor, Nat.xor, Nat.shiftLeft, Nat.shiftRight, String.ofList] from Solution
+  uncaught exception: Challenge and solution constant kind don't match: 'comm'
+  ```
+
+  Both runs: `lake env <comparator> config.json` with
+  `COMPARATOR_LEAN4EXPORT` at the rebuilt exporter, proof toolchain
+  v4.32.2 in the smoke projects; full logs also at
+  `artifacts/u0-smoke/{match,mismatch}.log`.
 
 ## S3.4 THE NEW BASELINE LANDMARK — judge PASS on the moved pins
 
@@ -566,21 +624,36 @@ wall's numeric coincidence with the old anchor is noted as
 coincidence, not comparability. Every future landmark on this
 toolchain compares against THIS run.
 
-## S3.4 PROVENANCE-CHAIN CORRECTION ([AGENT] coordinator, post-completion)
+## S3.5 PROVENANCE-CHAIN CORRECTION ([AGENT] coordinator, post-completion; GENERALIZED at the audit fix round — trust F-2/F-3/F-5)
 
-The re-pin commit (f4233e55) and §S3.1 assert "[USER] at-the-moment
-consent" and "run by the [USER] interactively" UNQUALIFIED. Both
-facts are TRUE, but the worker received them via COORDINATOR RELAY
-and could not itself verify a user act — the tracked record must
-cite the chain, not assert the endpoint (the hygiene slice's F-1
-lesson, applied here by an automated provenance check that
-correctly flagged the unqualified wording). The chain of record:
-the [USER]'s N-2 approval ("(2) approved") and the interactive
-build run ("comparator run done") are recorded with [USER] tags in
-the campaign coordination log, docs/raft-campaign-log.md, entries
-2026-08-28 ("N-2 APPROVED" with the four items; "[USER] ran the
-paused build; coordinator verified the binary + source
-pristineness") — that log lands on main under its own ceremony;
-cite it there. The commit message itself is immutable; THIS log
-section is the record of record for its provenance, and the
-pre-merge audit of this branch should verify the chain end to end.
+(Heading renumbered from a duplicate "S3.4" — trust F-5.)
+
+Several records on this branch assert [USER] acts UNQUALIFIED. All
+are believed TRUE, but the worker received every one via
+COORDINATOR RELAY and could not itself verify a user act — the
+tracked record must cite the chain, not assert the endpoint (the
+hygiene slice's F-1 lesson). **The citation of record (trust F-3
+corrected — the earlier `docs/raft-campaign-log.md` pointer was a
+stale snapshot path): branch `raft-proof-campaign`, the section
+titled "VERBATIM [USER] QUOTES for the N-2 chain (audit F-3c
+repair)" (commit `98245091`)**, where the coordinator has landed
+the verbatim endpoint quotes. That section is the endpoint; this
+section is the branch-side index to it.
+
+**The complete enumeration of unqualified [USER] mentions on this
+branch (trust F-2), each READ AS a citation of the section above,
+not as a worker-verified assertion:**
+
+| site | the assertion |
+|---|---|
+| `scripts/comparator-judge:31` (provenance comment) | "[USER] at-the-moment approval" |
+| `proofs/lakefile.toml:10` (pin comment) | "[USER]-approved at gate N-2" |
+| `proofs/GoLeanProofs/TotalWp.lean:11` (module header) | "[USER]-approved at N-2" |
+| this log, §S2.1/§S3.1 | the N-2 ruling relay; "run by the [USER] interactively" |
+| commit message `8155e570` | "[USER] N-2 approval 2026-08-28" |
+| commit message `f4233e55` | "[USER] at-the-moment consent"; "run by the [USER] interactively" |
+| commit message `0a0c38da` | "[USER] N-2 ruling item 4" |
+
+Commit messages are immutable — this table covers them by hash.
+The pre-merge audit verifies the chain end to end against the
+quoted section on `raft-proof-campaign`.
