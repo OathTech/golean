@@ -324,10 +324,21 @@ open Lean in
     ``GoLean.Surface.quorumOneKnownTotalReadout,
     ``GoLean.Surface.quorumThreeAllTotalReadout,
     ``GoLean.Quorum.committedIndexRef_meets_spec,
-    -- DESIGNATION RECLASSIFICATION (triage landing 2026-08-27, USER
-    -- decision at the triage-plan sign-off, plan L-13 scope; NB no
-    -- square brackets in this comment — the judge wrapper's list
-    -- parser ends at the first bracket): the five channels-arc
+    -- DESIGNATION RECLASSIFICATION (triage landing 2026-08-27, plan
+    -- L-13 scope). PROVENANCE, corrected at the hygiene slice
+    -- 2026-08-28 (pre-merge gate-audit finding M-1: the wording here
+    -- had flattened this to a plain USER decision at the triage-plan
+    -- sign-off): AGENT coordinator recommendation ratified by USER
+    -- package assent (2026-08-27); the reclassification act itself
+    -- USER-confirmed at the merge (2026-08-28). NB the provenance
+    -- tags in this comment are written WITHOUT their usual square
+    -- brackets, and no square bracket appears anywhere in this
+    -- comment, because this text sits INSIDE the region the
+    -- comparator-judge wrapper extracts the designated list from —
+    -- a bracket in a comment truncated that extraction once already
+    -- (the 2026-08-27 hazard). The wrapper's parser is hardened in
+    -- the same slice; this convention stays as belt-and-braces.
+    -- The rows: the five channels-arc
     -- slice-2 PINNED-STREAM fork/join rows — forkJoinStreamCanonical,
     -- forkJoinStreamAdversarial, forkJoinStreamAlternating,
     -- forkJoinDeadlockCanonical, forkJoinDeadlockAdversarial — left
