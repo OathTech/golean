@@ -727,6 +727,35 @@ open Lean in
 /-- info: 'GoLean.Iris.adequate_seqn_nil' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.adequate_seqn_nil
 
+-- The TOTAL-WP family (U0/A1 committed adoption, 2026-08-28, audit fix
+-- round migration F-2): the upstream TotalWeakestPre theory seated on our
+-- language instance — the ∃-fuel row's rule supplier (every new
+-- Terminates-class sentence discharges through these, never through
+-- allStreamsOk enumeration). sn_seqn_nil is the charter's discharge
+-- witness, MINIMAL BY DESIGN (two pure steps; the variant-carrying loop
+-- rule is G-TOTAL's). Same name-existence/deletion-tripwire scope as the
+-- blocks above. The U3 reuse-adoption witnesses (PinAdoptions.lean) ride
+-- this block: they pin that the boundary pin's frame_pointsto/
+-- CombineSepGives instances fire on our tier.
+/-- info: 'GoLean.Iris.totalWpInstancePin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.totalWpInstancePin
+/-- info: 'GoLean.Iris.twp_seqn' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.twp_seqn
+/-- info: 'GoLean.Iris.twp_seq_done' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.twp_seq_done
+/-- info: 'GoLean.Iris.go_total_adequacy' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.go_total_adequacy
+/-- info: 'GoLean.Iris.step_erased' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.step_erased
+/-- info: 'GoLean.Iris.sn_no_infinite_step_chain' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.sn_no_infinite_step_chain
+/-- info: 'GoLean.Iris.sn_seqn_nil' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.sn_seqn_nil
+/-- info: 'GoLean.Iris.pointsTo_fraction_recombine' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.pointsTo_fraction_recombine
+/-- info: 'GoLean.Iris.pointsTo_fraction_agree' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.pointsTo_fraction_agree
+
 -- The CONCURRENT Iris layer (channels arc slice 5, LangC.lean): the
 -- pool Language over StepE + the marker strip, the fork rule, and the
 -- closed end-to-end pool adequacy witness (a program that SPAWNS,
