@@ -504,4 +504,7 @@ LANDMARK-RUN: 6ce22444ea9e 2026-08-27 56 116
 LANDMARK-RUN: c2e1824d7eb9 2026-08-27 51 122
 LANDMARK-RUN: 1022a6c221a5 2026-08-28 51 117
 LANDMARK-RUN: 09f8f5983f8f 2026-08-28 51 118
+# U0 pin move (N-2): THE NEW BASELINE — first run on toolchain v4.32.2 / iris-lean e7a0a438 / comparator+lean4export at their v4.32.0 tags built at v4.32.2. NOT like-for-like with every marker above (those certify 4.31-era artifacts); the 122s numeric coincidence with the 4.31 anchor is coincidence, not comparability. Future landmarks on this toolchain compare from here. ([USER] N-2 ruling item 4, via docs/2026-08-28_u0-refresh-log.md §S3.4/§S3.5.)
 LANDMARK-RUN: f4233e553508 2026-08-28 51 122
+# U0 audit fix round: the total-WP family Audit pin block (trust-adjacent 534f2710) re-triggered the judge; same designated set, same new-baseline toolchain as the marker above.
+LANDMARK-RUN: 534f27109180 2026-08-28 51 118

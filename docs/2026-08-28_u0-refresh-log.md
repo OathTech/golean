@@ -657,3 +657,32 @@ not as a worker-verified assertion:**
 Commit messages are immutable — this table covers them by hash.
 The pre-merge audit verifies the chain end to end against the
 quoted section on `raft-proof-campaign`.
+
+## S3.6 THE AUDIT FIX ROUND — wave record (branch-complete state)
+
+Both pre-merge audits returned FIX-FIRST on evidence/gate-coverage
+with substance verdicts CLEAN; every item discharged on-branch:
+
+- **Batch 1** (`b57846b5`): F-1 smoke evidence verbatim in §S3.3
+  (re-run: match exit 0 / mismatch exit 1); the three witnesses
+  NAMED (`totalWpInstancePin`, `pointsTo_fraction_recombine`,
+  `pointsTo_fraction_agree`); U1 datum neutralized + snippet
+  preserved (mig F-3); GoCoreS definitional-change record (mig
+  F-4); `sn_seqn_nil` minimal-by-design labels (mig F-5);
+  gate-of-record cite (mig F-6); desugar-coupling lesson in
+  `docs/operational-lessons.md` (mig F-7); §S3.5 renumbered +
+  generalized [USER]-mention enumeration + campaign-log citation
+  fixed to branch `raft-proof-campaign`'s verbatim-quotes section
+  (trust F-2/F-3/F-5); the PROOF_TOOLCHAIN review-trigger doctrine
+  comment (trust observation).
+- **Batch 2** (`534f2710`, [TRUST-ADJACENT], Audit.lean alone):
+  the nine-pin total-WP family block; envelopes measured — the
+  classical trio for the seven Iris-carried names, CHOICE-FREE
+  `[propext, Quot.sound]` for the sequential bridge pair.
+- **Ceremony on the fix tip**: `scripts/ci --diff` RESULT: PASS,
+  exit 0 (`artifacts/u0-ci-diff-3.log`; 2475/2475 differential, no
+  regression); judge re-run **PASS, exit 0 — 51 theorems in 118 s,
+  fresh clone @ `534f27109180`** (`artifacts/u0-judge-2.log`) —
+  same designated set, same new-baseline toolchain as `f4233e55`'s
+  marker; both markers now carry their prose lines in the sprint
+  doc (trust F-4 discharged).
