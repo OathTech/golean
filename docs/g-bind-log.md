@@ -204,3 +204,35 @@ trust-adjacent) is left to the coordinator with the audit.
 - `go_walk` registration for the new laws (they carry
   `@[go_walk_law]` where the shape fits) — G-AUTO's probe will
   measure; the C-05 walks are hand-walks in the GoldenSliceWP idiom.
+
+## Wave-boundary gate record ([AGENT], 2026-08-28)
+
+- `scripts/capped scripts/ci --diff` at `c43dffd2` (pre-re-pin):
+  every step green EXCEPT the baseline diff, whose only drift was the
+  3 new C-05 rows (all PASS) — the anticipated case-set change.
+  Differential: full, 2478 cases (2306 pass / 172 fail — failing set
+  unchanged vs the 2026-08-22 baseline).
+- Baseline re-pinned from that full run (`298ee662`; reason in the
+  baseline header + this log). `coverage-baseline-diff --full`: no
+  regression.
+- `scripts/capped scripts/ci` (plain) at `298ee662`: **PASS, rc 0**
+  (baseline diff FULL 2478/2478; staleness note only — the recorded
+  run was 2 docs/baseline commits behind).
+- `scripts/capped scripts/ci --diff` re-run AT the re-pinned tip:
+  **PASS, rc 0, wall 217.9 s**, no baseline staleness.
+- Judge: NOT run — no designation change, no trusted-closure
+  movement; the comparator landmark note stands at 51 theorems /
+  118 s @ `534f2710` (pre-branch). The pre-merge ceremony (audit ask
+  + any judge re-run) is the coordinator's.
+- Axiom envelope spot-check: `callchainSpec`,
+  `callchainReturnsFourteen`, `callchainNotThirteen`, `wp_plug_bind`,
+  `step_plug_inv` all depend on [propext, Classical.choice,
+  Quot.sound] only; no `sorry`, no `partial`, no `native_decide` in
+  any new file.
+
+**Park state: G-BIND session 1 COMPLETE at a coherent boundary** —
+the bind rule + inversion landed and gated, the C-05 gate instance
+closed through the rule, corpus/differential/golden-pin/baseline all
+green. Session-2 remainder: the owed list above (G-TOTAL totality
+row, per-arity widening-note re-pointing under G-CALLS, go_walk
+registration measurement) plus the coordinator's audit ask.
