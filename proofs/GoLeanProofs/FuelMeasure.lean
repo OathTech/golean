@@ -444,9 +444,9 @@ theorem runFunctionWithContextM_mono {N fuel : Nat} {types : TypeEnv}
       (by simp [throw, throwThe, MonadExceptOf.throw, Bind.bind, Except.bind])
   · rw [if_neg hc] at h ⊢
     simp only [bind_eq_ok, pure, Except.pure, Except.ok.injEq] at h ⊢
-    obtain ⟨u, hu, ⟨env, s₁⟩, hbp, ⟨frameEnv, s₂⟩, had, locs, hpin,
+    obtain ⟨⟨env, s₁⟩, hbp, ⟨frameEnv, s₂⟩, had, locs, hpin,
       ⟨sF, chF⟩, hrc, vs, hload, hres⟩ := h
-    exact ⟨u, hu, (env, s₁), hbp, (frameEnv, s₂), had, locs, hpin,
+    exact ⟨(env, s₁), hbp, (frameEnv, s₂), had, locs, hpin,
       (sF, chF), runConfig_mono N fuel _ _ _ _ hle hrc, vs, hload, hres⟩
 
 /-! ### API group 3, continued — the harness-route readout -/

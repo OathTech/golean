@@ -192,14 +192,14 @@ theorem valueEq_int (σ : ExecState) (l r : Int) :
 /-- The key-scan loop over `bEntries js` at a key off every entry
 (the `MapMem.scan_generic` pattern at this module's model). -/
 private theorem scan_fresh {i : Nat}
-    (f : GoValue × GoValue → MProd (Option (Option Nat)) Nat →
-      Except GoError (ForInStep (MProd (Option (Option Nat)) Nat)))
-    (hf : ∀ (j : Nat) (v : GoValue) (r : MProd (Option (Option Nat)) Nat),
+    (f : GoValue × GoValue → Option (Option Nat) × Nat →
+      Except GoError (ForInStep (Option (Option Nat) × Nat)))
+    (hf : ∀ (j : Nat) (v : GoValue) (r : Option (Option Nat) × Nat),
       j ≠ i →
       f (.int (j : Int) .int, v) r = .ok (.yield ⟨none, r.snd + 1⟩)) :
     ∀ (js : List Nat) (c : Nat), (∀ j ∈ js, j ≠ i) →
     (forIn (m := Except GoError) (bEntries js)
-      (⟨none, c⟩ : MProd (Option (Option Nat)) Nat) f)
+      (⟨none, c⟩ : Option (Option Nat) × Nat) f)
       = pure ⟨none, c + js.length⟩ := by
   intro js
   induction js with

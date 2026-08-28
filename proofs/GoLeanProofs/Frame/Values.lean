@@ -345,11 +345,11 @@ theorem coerceStoredValue_ren :
     simp only [coerceStruct] at h
     rw [if_neg hname] at h
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-    obtain ⟨_, _, head, hhead, tail, htail, rfl⟩ := h
+    obtain ⟨head, hhead, tail, htail, rfl⟩ := h
     simp only [renameValueFields, coerceStruct]
     rw [if_neg (by simpa using hname)]
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq]
-    refine ⟨(), trivial, _, ih1 head hhead, _, ih2 tail htail, ?_⟩
+    refine ⟨_, ih1 head hhead, _, ih2 tail htail, ?_⟩
     simp [renameValueFields_eq_map]
   · -- coerceStruct catch-all
     intro t x hnc r h
@@ -431,11 +431,11 @@ theorem normalizeFieldsWith_ren {f g : Ty → GoValue → Except GoError GoValue
           · simp [Bind.bind, Except.bind] at h
           · rename_i hname
             simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-            obtain ⟨_, _, tail, htail, rest', hrest, rfl⟩ := h
+            obtain ⟨tail, htail, rest', hrest, rfl⟩ := h
             simp only [renameValueFields, normalizeFieldsWith]
             rw [if_neg hname]
             simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq]
-            refine ⟨(), trivial, _, hfg _ _ _ htail, _, ih hrest, ?_⟩
+            refine ⟨_, hfg _ _ _ htail, _, ih hrest, ?_⟩
             simp [renameValueFields_eq_map]
 
 private theorem renamedFields_isEmpty (l : Array (String × GoValue)) :
@@ -470,7 +470,6 @@ theorem normalizeStructValueWith_ren {f g : Ty → GoValue → Except GoError Go
         simp [Bind.bind, Except.bind] at h
     · rw [if_neg hne] at h
       rw [if_neg hne]
-      simp only [pure_bind] at h ⊢
       by_cases hsz : (fieldsValue.size != fields.size) = true
       · rw [if_pos hsz] at h
         simp [Bind.bind, Except.bind] at h
@@ -527,7 +526,6 @@ theorem normalizeValueForTyFuel_ren (htypes : σF.types = σ.types) :
           split at h
           · simp [Bind.bind, Except.bind] at h
           · rename_i hsz
-            simp only [pure_bind] at h
             rw [map_eq_ok] at h
             obtain ⟨arr, harr, rfl⟩ := h
             simp only [normalizeValueForTyFuel, renameValue]
@@ -535,7 +533,6 @@ theorem normalizeValueForTyFuel_ren (htypes : σF.types = σ.types) :
               simp only [ne_eq, List.size_toArray, renameValueList_length,
                 Array.length_toList]
               simpa using hsz)]
-            simp only [pure_bind]
             rw [map_eq_ok]
             exact ⟨_, normalizeListWith_ren ρ (fun v r hv => ih hv)
               (by simpa using harr), by simp [renameValue]⟩

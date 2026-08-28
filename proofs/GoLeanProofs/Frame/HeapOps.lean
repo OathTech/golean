@@ -118,8 +118,8 @@ theorem structFieldsSet_sim (ρ : Nat → Nat)
   unfold StructFields.set
   dsimp only
   refine ExSim.bind
-    (R := fun (r r' : MProd Bool (Array (String × GoValue))) =>
-      r'.fst = r.fst ∧ r'.snd = (renameValueFields ρ r.snd.toList).toArray)
+    (R := fun (r r' : Array (String × GoValue) × Bool) =>
+      r'.snd = r.snd ∧ r'.fst = (renameValueFields ρ r.fst.toList).toArray)
     ?_ ?_
   · -- the loops
     rw [← Array.forIn_toList, ← Array.forIn_toList, List.toList_toArray,
@@ -140,7 +140,7 @@ theorem structFieldsSet_sim (ρ : Nat → Nat)
     intro r r' hr
     obtain ⟨hr1, hr2⟩ := hr
     rw [hr1]
-    by_cases hf : r.fst = true
+    by_cases hf : r.snd = true
     · rw [if_pos hf, if_pos hf]
       exact ExSim.ok hr2
     · rw [if_neg hf, if_neg hf]
@@ -349,7 +349,6 @@ theorem storeLoc_sim (hS : FrameSim ρ na₀ na fr σ σF) :
         · rw [if_pos hne]
           exact ExSim.stuck'
         · rw [if_neg hne, if_neg hne]
-          simp only [pure_bind]
           refine ExSim.bind (structFieldsSet_sim ρ fields fname v) ?_
           intro upd updF hupdF
           subst hupdF

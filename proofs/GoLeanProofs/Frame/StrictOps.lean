@@ -312,7 +312,7 @@ private theorem intBinaryResult_noPanic (nm : String) (op : Int → Int → Int)
   refine NoPanic.bind (valueAsIntValue_noPanic r) fun q => ?_
   split
   split
-  · exact NoPanic.bind NoPanic.pure' fun _ => NoPanic.pure'
+  · exact NoPanic.pure'
   · exact NoPanic.bind NoPanic.stuck' fun _ => NoPanic.pure'
 
 private theorem intBinaryResult_ok (ρ : Nat → Nat) {nm : String}
@@ -554,8 +554,7 @@ private theorem defaultValueFuel_noPanic (σ₀ : ExecState) :
       case array len elem =>
           simp only [defaultValueFuel]
           refine NoPanic.ite' NoPanic.pure' ?_
-          exact NoPanic.bind NoPanic.pure' fun _ =>
-            NoPanic.bind (ih elem) fun _ => NoPanic.pure'
+          exact NoPanic.bind (ih elem) fun _ => NoPanic.pure'
       case defined name =>
           simp only [defaultValueFuel]
           split
@@ -618,8 +617,7 @@ private theorem buildStructValueFuel_noPanic (σ₀ : ExecState) :
           split
           · exact NoPanic.bind NoPanic.stuck' fun _ =>
               NoPanic.map (buildStructFields_noPanic _ _ _)
-          · exact NoPanic.bind NoPanic.pure' fun _ =>
-              NoPanic.map (buildStructFields_noPanic _ _ _)
+          · exact NoPanic.map (buildStructFields_noPanic _ _ _)
         · exact ih _ _
         · exact NoPanic.unsupported'
         · exact NoPanic.unsupported'
@@ -688,9 +686,7 @@ private theorem buildArrayValue_noPanic (σ₀ : ExecState) (len : Nat)
           reduceCtorEq, false_or, exists_eq_left'] at hx
         split at hx
         · simp [bind_eq_panic] at hx
-        · simp only [bind_eq_panic, pure_eq_ok, Except.ok.injEq,
-            reduceCtorEq, false_or, exists_eq_left'] at hx
-          split at hx
+        · split at hx
           · simp [bind_eq_panic] at hx
             rcases hx with h1 | ⟨nv, -, h2⟩
             · exact normalizeValueForTy_noPanic σ₀ elem value m h1
@@ -843,7 +839,6 @@ private theorem arm_div (hS : FrameSim ρ na₀ na fr σ σF) (l r : GoValue) :
            · rw [if_pos hz, if_pos hz]
              exact ExSim.panic
            · rw [if_neg hz, if_neg hz]
-             simp only [pure_bind]
              exact scalar_pair hS
                (intBinaryResult_sim ρ (by simp [renameValue]) (by simp [renameValue]))))
 
@@ -859,7 +854,6 @@ private theorem arm_mod (hS : FrameSim ρ na₀ na fr σ σF) (l r : GoValue) :
   · rw [if_pos hz, if_pos hz]
     exact ExSim.panic
   · rw [if_neg hz, if_neg hz]
-    simp only [pure_bind]
     exact scalar_pair hS (intBinaryResult_sim ρ rfl rfl)
 
 private theorem arm_shiftLeft (hS : FrameSim ρ na₀ na fr σ σF) (l r : GoValue) :
@@ -1207,7 +1201,6 @@ private theorem arm_fieldGet (hS : FrameSim ρ na₀ na fr σ σF)
       · rw [if_pos hne]
         exact ExSim.stuck'
       · rw [if_neg hne, if_neg hne]
-        simp only [pure_bind]
         rw [structFieldsLookup_ren]
         cases StructFields.lookup fields fname with
         | none => exact ExSim.stuck'
@@ -1259,7 +1252,6 @@ private theorem arm_arrayLit (hS : FrameSim ρ na₀ na fr σ σF)
   · rw [if_pos hlen]
     exact ExSim.stuck'
   · rw [if_neg hlen, if_neg hlen]
-    simp only [pure_bind]
     refine scalar_pair hS ?_
     refine exSim_of_ren (buildArrayValue_noPanic σ n elem (keys.zip vs).toArray) ?_
     intro a ha
@@ -1697,7 +1689,6 @@ private theorem arm_runeAt (hS : FrameSim ρ na₀ na fr σ σF)
       · rw [if_pos hneg]
         exact ExSim.stuck'
       · rw [if_neg hneg, if_neg hneg]
-        simp only [pure_bind]
         exact ExSim.ok ⟨by simp only [renameValue], hS⟩
   all_goals exact ExSim.stuck'
 
@@ -1716,7 +1707,6 @@ private theorem arm_runeSizeAt (hS : FrameSim ρ na₀ na fr σ σF)
       · rw [if_pos hneg]
         exact ExSim.stuck'
       · rw [if_neg hneg, if_neg hneg]
-        simp only [pure_bind]
         exact ExSim.ok ⟨by simp only [renameValue], hS⟩
   all_goals exact ExSim.stuck'
 

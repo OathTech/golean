@@ -58,8 +58,7 @@ private theorem defaultValueFuel_noPanic :
           simp only [defaultValueFuel]
           split
           · exact NoPanic.pure'
-          · exact NoPanic.bind NoPanic.pure' fun _ =>
-              NoPanic.bind (ih σ elem) fun _ => NoPanic.pure'
+          · exact NoPanic.bind (ih σ elem) fun _ => NoPanic.pure'
       | defined name =>
           simp only [defaultValueFuel]
           cases TypeEnv.lookup σ.types name with
@@ -88,22 +87,18 @@ theorem buildArrayValue_noPanic (σ : ExecState) (len : Nat) (elem : Ty)
   unfold buildArrayValue
   simp only [Std.Legacy.Range.forIn_eq_forIn_range', ← Array.forIn_toList]
   refine NoPanic.bind (NoPanic.forIn' fun a b => ?_) fun values => ?_
-  · exact NoPanic.bind (defaultValue_noPanic σ elem) fun _ =>
-      NoPanic.bind NoPanic.pure' fun _ => NoPanic.pure'
+  · exact NoPanic.bind (defaultValue_noPanic σ elem) fun _ => NoPanic.pure'
   · refine NoPanic.bind (NoPanic.forIn' fun p st => ?_) fun st => NoPanic.pure'
     obtain ⟨key, value⟩ := p
-    obtain ⟨seen, vals⟩ := st
+    obtain ⟨vals, seen⟩ := st
     refine NoPanic.ite' ?_ ?_
     · exact NoPanic.bind' NoPanic.stuck' fun a ha => by simp at ha
-    · refine NoPanic.bind NoPanic.pure' fun y => ?_
-      refine NoPanic.ite' ?_ ?_
+    · refine NoPanic.ite' ?_ ?_
       · exact NoPanic.bind' NoPanic.stuck' fun a ha => by simp at ha
-      · refine NoPanic.bind NoPanic.pure' fun y' => ?_
-        dsimp only
+      · dsimp only
         split
         · exact NoPanic.bind (normalizeValueForTy_noPanic σ elem value) fun nv =>
-            NoPanic.bind (coerceStoredValue_noPanic _ nv) fun _ =>
-              NoPanic.bind NoPanic.pure' fun _ => NoPanic.pure'
+            NoPanic.bind (coerceStoredValue_noPanic _ nv) fun _ => NoPanic.pure'
         · exact NoPanic.bind' NoPanic.stuck' fun a ha => by simp at ha
 
 theorem buildDefaultArrayValue_noPanic (σ : ExecState) (len : Nat) (elem : Ty) :
@@ -115,8 +110,7 @@ theorem validateSlice_noPanic (sl : SliceValue) : NoPanic (validateSlice sl) := 
   simp only [validateSlice]
   refine NoPanic.ite' ?_ ?_
   · exact NoPanic.bind' NoPanic.stuck' fun a ha => by simp at ha
-  · refine NoPanic.bind NoPanic.pure' fun y => ?_
-    cases sl.base with
+  · cases sl.base with
     | some b => exact NoPanic.pure'
     | none => exact NoPanic.ite' NoPanic.pure' NoPanic.stuck'
 
@@ -271,10 +265,8 @@ theorem applyStmtOpCore_sim (hS : FrameSim ρ na₀ na fr σ σF)
                   (σF.alloc (renameValue ρ value) typ).2) := by
             rw [← hS.alloc_fst value typ]
           rw [halloc]
-          refine ExSim.bind (storeLoc_sim (hS.alloc_snd value typ) loc
-            (.addr (σ.alloc value typ).1)) ?_
-          intro σ' σF' hS'
-          exact ExSim.ok hS'
+          exact storeLoc_sim (hS.alloc_snd value typ) loc
+            (.addr (σ.alloc value typ).1)
       | [] => exact ExSim.stuck'
       | [_] => exact ExSim.stuck'
       | _ :: _ :: _ :: _ => exact ExSim.stuck'
@@ -309,12 +301,10 @@ theorem applyStmtOpCore_sim (hS : FrameSim ρ na₀ na fr σ σF)
               refine ExSim.bind (valueAsLoc_sim ρ tv) ?_
               intro loc locF hloc
               subst hloc
-              refine ExSim.bind (storeLoc_sim
+              exact storeLoc_sim
                 (hS.alloc_snd backing (some (.array cap elem))) loc
                 (.slice { base := some (σ.alloc backing (some (.array cap elem))).1,
-                          offset := 0, len := len, cap := cap })) ?_
-              intro σ' σF' hS'
-              exact ExSim.ok hS'
+                          offset := 0, len := len, cap := cap })
           | [] => exact ExSim.stuck'
           | [_] => exact ExSim.stuck'
           | [_, _, _] => exact ExSim.stuck'
@@ -351,12 +341,10 @@ theorem applyStmtOpCore_sim (hS : FrameSim ρ na₀ na fr σ σF)
               refine ExSim.bind (valueAsLoc_sim ρ tv) ?_
               intro loc locF hloc
               subst hloc
-              refine ExSim.bind (storeLoc_sim
+              exact storeLoc_sim
                 (hS.alloc_snd backing (some (.array cap elem))) loc
                 (.slice { base := some (σ.alloc backing (some (.array cap elem))).1,
-                          offset := 0, len := len, cap := cap })) ?_
-              intro σ' σF' hS'
-              exact ExSim.ok hS'
+                          offset := 0, len := len, cap := cap })
           | [] => exact ExSim.stuck'
           | [_] => exact ExSim.stuck'
           | [_, _] => exact ExSim.stuck'
@@ -381,10 +369,8 @@ theorem applyStmtOpCore_sim (hS : FrameSim ρ na₀ na fr σ σF)
         refine ExSim.bind (valueAsLoc_sim ρ tv) ?_
         intro loc locF hloc
         subst hloc
-        refine ExSim.bind (storeLoc_sim (hS₁.alloc_snd (.mapData #[]) none) loc
-          (.map { base := some (σ₁.alloc (.mapData #[]) none).1 })) ?_
-        intro σ' σF' hS'
-        exact ExSim.ok hS'
+        exact storeLoc_sim (hS₁.alloc_snd (.mapData #[]) none) loc
+          (.map { base := some (σ₁.alloc (.mapData #[]) none).1 })
       cases hasSpace with
       | false =>
           match vs with
@@ -429,11 +415,9 @@ theorem applyStmtOpCore_sim (hS : FrameSim ρ na₀ na fr σ σF)
         refine ExSim.bind (valueAsLoc_sim ρ tv) ?_
         intro loc locF hloc
         subst hloc
-        refine ExSim.bind (storeLoc_sim
+        exact storeLoc_sim
           (hS₁.alloc_snd (.chanData #[] capacity false) none) loc
-          (.chan { base := some (σ₁.alloc (.chanData #[] capacity false) none).1 })) ?_
-        intro σ' σF' hS'
-        exact ExSim.ok hS'
+          (.chan { base := some (σ₁.alloc (.chanData #[] capacity false) none).1 })
       cases hasCap with
       | false =>
           match vs with
@@ -507,7 +491,7 @@ theorem applyStmtOpCore_sim (hS : FrameSim ρ na₀ na fr σ σF)
             rw [← Array.forIn_toList, ← Array.forIn_toList]
             simp only [renameValueList_eq_map, List.toList_toArray]
             refine ExSim.bind (forIn_sim (t := renameValue ρ)
-              (R := fun (p q : MProd ExecState Nat) =>
+              (R := fun (p q : ExecState × Nat) =>
                 FrameSim ρ na₀ na fr p.fst q.fst ∧ p.snd = q.snd)
               ⟨hS, rfl⟩ ?_) ?_
             · intro a ha x y hxy
@@ -532,10 +516,8 @@ theorem applyStmtOpCore_sim (hS : FrameSim ρ na₀ na fr σ σF)
               refine ExSim.bind (valueAsLoc_sim ρ tv) ?_
               intro tloc tlocF htloc
               subst htloc
-              refine ExSim.bind (storeLoc_sim hc tloc
-                (.int (Int.ofNat (Nat.min dlen slen)))) ?_
-              intro σ' σF' hS'
-              exact ExSim.ok hS'
+              exact storeLoc_sim hc tloc
+                (.int (Int.ofNat (Nat.min dlen slen)))
       | [] => exact ExSim.stuck'
       | [_] => exact ExSim.stuck'
       | [_, _] => exact ExSim.stuck'
@@ -569,10 +551,8 @@ theorem applyStmtOpCore_sim (hS : FrameSim ρ na₀ na fr σ σF)
               | some i =>
                   dsimp only
                   rw [renEntries_eraseIdx!]
-                  refine ExSim.bind (storeLoc_sim hS baseLoc
-                    (.mapData (entries.eraseIdx! i))) ?_
-                  intro σ' σF' hS'
-                  exact ExSim.ok hS'
+                  exact storeLoc_sim hS baseLoc
+                    (.mapData (entries.eraseIdx! i))
               | none => exact ExSim.ok hS
       | [] => exact ExSim.stuck'
       | [_] => exact ExSim.stuck'
@@ -592,9 +572,7 @@ theorem applyStmtOpCore_sim (hS : FrameSim ρ na₀ na fr σ σF)
           | some p =>
               obtain ⟨baseLoc, entries⟩ := p
               simp only [Option.map_some]
-              refine ExSim.bind (storeLoc_sim hS baseLoc (.mapData #[])) ?_
-              intro σ' σF' hS'
-              exact ExSim.ok hS'
+              exact storeLoc_sim hS baseLoc (.mapData #[])
       | [] => exact ExSim.stuck'
       | _ :: _ :: _ => exact ExSim.stuck'
   | clearSlice elem =>

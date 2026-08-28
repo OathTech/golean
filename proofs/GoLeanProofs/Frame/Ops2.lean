@@ -229,7 +229,6 @@ private theorem buildAppendBackingValue_sim (hS : FrameSim ρ na₀ na fr σ σF
     subst h
     simp only [renList_size, Array.length_toList]
     refine ExSim.ite_congr (fun _ => ExSim.stuck') (fun _ => ?_)
-    simp only [pure_bind]
     rw [Std.Legacy.Range.forIn_eq_forIn_range',
       Std.Legacy.Range.forIn_eq_forIn_range']
     refine ExSim.bind (forIn_sim_same
@@ -285,7 +284,7 @@ theorem applyStmtOp_sim (hS : FrameSim ρ na₀ na fr σ σF)
           rw [← Array.forIn_toList, ← Array.forIn_toList]
           simp only [renameValueList_eq_map, List.toList_toArray]
           refine ExSim.bind (forIn_sim (t := renameValue ρ)
-            (R := fun (p q : MProd ExecState Nat) =>
+            (R := fun (p q : ExecState × Nat) =>
               FrameSim ρ na₀ na fr p.fst q.fst ∧ p.snd = q.snd)
             ⟨hS, rfl⟩ ?_) ?_
           · intro a ha x y hxy

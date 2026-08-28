@@ -685,12 +685,10 @@ theorem sliceVisible_conc (σ : ExecState) {s : State D}
       (do
         let loc ← sliceIndexLoc' slice (Int.ofNat i)
         let v ← loadLoc' s loc
-        pure PUnit.unit
         pure (ForInStep.yield (x.push v))) = .ok st →
       ∃ st', (do
         let loc ← sliceIndexLoc slice (Int.ofNat i)
         let v ← loadLoc (concS I σ s) loc
-        pure PUnit.unit
         pure (ForInStep.yield (y.push v))) = .ok st' ∧
         StepConc (fun (a : Array (Value D)) (a' : Array GoValue) =>
           a' = a.map (concV I)) st st' := by
@@ -698,15 +696,13 @@ theorem sliceVisible_conc (σ : ExecState) {s : State D}
     subst hR
     obtain ⟨loc, hloc, hst⟩ := bind_eq_ok.mp hst
     obtain ⟨v, hv, hst⟩ := bind_eq_ok.mp hst
-    obtain ⟨_, _, hst⟩ := bind_eq_ok.mp hst
     have hstv : st = .yield (x.push v) := by
       simpa [pure, Except.pure, eq_comm] using hst
     subst hstv
     refine ⟨.yield ((x.map (concV I)).push (concV I v)), ?_,
       .yield (by simp)⟩
     refine bind_eq_ok.mpr ⟨loc, sliceIndexLoc_conc hloc, ?_⟩
-    refine bind_eq_ok.mpr ⟨concV I v, loadLoc_conc σ hv, ?_⟩
-    exact bind_eq_ok.mpr ⟨PUnit.unit, rfl, rfl⟩
+    exact bind_eq_ok.mpr ⟨concV I v, loadLoc_conc σ hv, rfl⟩
   obtain ⟨out', hout', hR⟩ := forInR_conc
     (R := fun (a : Array (Value D)) (a' : Array GoValue) =>
       a' = a.map (concV I))

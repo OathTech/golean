@@ -612,15 +612,15 @@ private theorem valueEq_u64V (σ : ExecState) (l r : Int) :
 /-- The key-scan engine over the value-generic encoding (private
 mirror of `MapMem.scan_generic` — the values ride untouched). -/
 private theorem scan_genericV {w : Int}
-    (f : GoValue × GoValue → MProd (Option (Option Nat)) Nat →
-      Except GoError (ForInStep (MProd (Option (Option Nat)) Nat)))
-    (hf : ∀ (k : Int) (v : GoValue) (r : MProd (Option (Option Nat)) Nat),
+    (f : GoValue × GoValue → Option (Option Nat) × Nat →
+      Except GoError (ForInStep (Option (Option Nat) × Nat)))
+    (hf : ∀ (k : Int) (v : GoValue) (r : Option (Option Nat) × Nat),
       f (.int k .uint64, v) r
         = .ok (if k = w then .done ⟨some (some r.snd), r.snd⟩
                else .yield ⟨none, r.snd + 1⟩)) :
     ∀ (kvs : List (Int × GoValue)) (i : Nat),
     (forIn (m := Except GoError) (toEntriesV kvs)
-      (⟨none, i⟩ : MProd (Option (Option Nat)) Nat) f)
+      (⟨none, i⟩ : Option (Option Nat) × Nat) f)
       = pure (match idxOfV? kvs w with
         | some j => ⟨some (some (j + i)), j + i⟩
         | none => ⟨none, i + kvs.length⟩) := by

@@ -201,15 +201,15 @@ section below.) -/
 abstraction is what lets `rw` unify it with the do-elaborated lambda),
 generalized over the starting counter. -/
 theorem scan_generic {w : Int}
-    (f : GoValue × GoValue → MProd (Option (Option Nat)) Nat →
-      Except GoError (ForInStep (MProd (Option (Option Nat)) Nat)))
-    (hf : ∀ (k : Int) (v : GoValue) (r : MProd (Option (Option Nat)) Nat),
+    (f : GoValue × GoValue → Option (Option Nat) × Nat →
+      Except GoError (ForInStep (Option (Option Nat) × Nat)))
+    (hf : ∀ (k : Int) (v : GoValue) (r : Option (Option Nat) × Nat),
       f (.int k .uint64, v) r
         = .ok (if k = w then .done ⟨some (some r.snd), r.snd⟩
                else .yield ⟨none, r.snd + 1⟩)) :
     ∀ (kvs : List (Int × Nat)) (i : Nat),
     (forIn (m := Except GoError) (toEntries kvs)
-      (⟨none, i⟩ : MProd (Option (Option Nat)) Nat) f)
+      (⟨none, i⟩ : Option (Option Nat) × Nat) f)
       = pure (match idxOf? kvs w with
         | some j => ⟨some (some (j + i)), j + i⟩
         | none => ⟨none, i + kvs.length⟩) := by

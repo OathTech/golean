@@ -38,8 +38,8 @@ def GoCoreS : BundledGFunctors
   | 1 => ⟨constOF (DisjointLeibnizSet CoPset), by infer_instance⟩
   | 2 => ⟨constOF (DisjointLeibnizSet PosSet), by infer_instance⟩
   | 3 => ⟨Auth.AuthURF (constOF Credit), by infer_instance⟩
-  | 4 => ⟨constOF (HeapView Nat (Agree (LeibnizO HeapCell)) GoHeapF), by infer_instance⟩
-  | 5 => ⟨constOF (HeapView Nat (Agree (LeibnizO GName)) GoHeapF), by infer_instance⟩
+  | 4 => ⟨constOF (HeapView Nat (Agree (DiscreteO HeapCell)) GoHeapF), by infer_instance⟩
+  | 5 => ⟨constOF (HeapView Nat (Agree (DiscreteO GName)) GoHeapF), by infer_instance⟩
   | 6 => ⟨constOF MetaUR, by infer_instance⟩
   | _ => ⟨constOF Unit, by infer_instance⟩
 
@@ -90,12 +90,12 @@ theorem go_adequacy [GoCoreGpreS .hasLC GF] (c : Config) (σ : ExecState)
   intro inst κs
   imod iOwn_alloc (E := GhostMapG.elem (K := Nat) (V := HeapCell) (H := GoHeapF))
     (HeapView.Auth (H := GoHeapF) (.own 1)
-      (Std.PartialMap.map (fun v : HeapCell => toAgree (LeibnizO.mk v))
+      (Std.PartialMap.map (fun v : HeapCell => toAgree (DiscreteO.mk v))
         (heapToMap σ.heap)))
     HeapView.auth_one_valid with ⟨%γh, Hh⟩
   imod iOwn_alloc (E := GhostMapG.elem (K := Nat) (V := GName) (H := GoHeapF))
     (HeapView.Auth (H := GoHeapF) (.own 1)
-      (Std.PartialMap.map (fun g : GName => toAgree (LeibnizO.mk g))
+      (Std.PartialMap.map (fun g : GName => toAgree (DiscreteO.mk g))
         (∅ : GoHeapF GName)))
     HeapView.auth_one_valid with ⟨%γm, Hm⟩
   letI _ : GoCoreGS .hasLC GF := ⟨⟨γh, γm⟩, σ.functions, σ.methods, σ.types⟩
@@ -158,12 +158,12 @@ theorem go_heap_adequacy [GoCoreGpreS .hasLC GF] (c : Config) (σ : ExecState)
   iintro %Hinv
   imod iOwn_alloc (E := GhostMapG.elem (K := Nat) (V := HeapCell) (H := GoHeapF))
     (HeapView.Auth (H := GoHeapF) (.own 1)
-      (Std.PartialMap.map (fun v : HeapCell => toAgree (LeibnizO.mk v))
+      (Std.PartialMap.map (fun v : HeapCell => toAgree (DiscreteO.mk v))
         (heapToMap σ.heap)))
     HeapView.auth_one_valid with ⟨%γh, Hh⟩
   imod iOwn_alloc (E := GhostMapG.elem (K := Nat) (V := GName) (H := GoHeapF))
     (HeapView.Auth (H := GoHeapF) (.own 1)
-      (Std.PartialMap.map (fun g : GName => toAgree (LeibnizO.mk g))
+      (Std.PartialMap.map (fun g : GName => toAgree (DiscreteO.mk g))
         (∅ : GoHeapF GName)))
     HeapView.auth_one_valid with ⟨%γm, Hm⟩
   letI _ : GoCoreGS .hasLC GF := ⟨⟨γh, γm⟩, σ.functions, σ.methods, σ.types⟩

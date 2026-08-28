@@ -7,8 +7,10 @@ defaultTargets = ["GoLeanProofs", "Audit"]
 #
 # iris-lean is a pinned git dependency (not an external path) so the repo is
 # self-contained: clone golean + `lake build` here fetches everything. The rev
-# is the one validated by the spike (docs/2026-07-18_iris-spike-result.md); it
-# targets Lean 4.31.0.
+# is the U0 boundary rev (docs/2026-08-28_u0-refresh-log.md; [USER]-approved
+# at gate N-2, 2026-08-28 — upstream master head 2026-08-19, probed green on
+# Lean v4.32.2); it targets Lean 4.32.2. Previous pin: 3877dbec… (spike-
+# validated, docs/2026-07-18_iris-spike-result.md, Lean 4.31.0).
 
 [[require]]
 name = "GoLean"
@@ -17,7 +19,7 @@ path = ".."
 [[require]]
 name = "iris"
 git = "https://github.com/leanprover-community/iris-lean.git"
-rev = "3877dbeccd1b0545c5be7ef73318e8c86acf79ab"
+rev = "e7a0a43814c4f1154ca0c8049883ca56c2288b86"
 subDir = "Iris"
 
 [[lean_lib]]

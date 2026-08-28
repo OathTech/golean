@@ -403,7 +403,6 @@ theorem normalizeFuel_conc (hI : I.Sound) (σ : ExecState) :
             simp only [Array.toList_map] at this ⊢
             rw [this]
             simp [Functor.map, Except.map]
-            rfl
       case succ.sync.syncData =>
         rename_i kind p
         by_cases hp : (p.kind == kind) = true
@@ -520,15 +519,16 @@ theorem forIn_conc {A B β β' : Type} {R : β → β' → Prop} {t : A → B}
 
 /-- The machine-side loop body of `StructFields.set`, named so the
 `forIn` transport's `g` instantiation is first-order. -/
+-- 4.32.2: the do-desugar's loop state is now `(out, found) : _ × Bool`
+-- in declaration order (was `MProd Bool (Array _)`), and the junk
+-- `pure PUnit.unit` binds are gone — this named body mirrors it exactly.
 private def setLoopG (needle : String) (w : GoValue)
-    (b : String × GoValue) (y : MProd Bool (Array (String × GoValue))) :
-    Except GoError (ForInStep (MProd Bool (Array (String × GoValue)))) :=
-  if (b.fst == needle) = true then do
-    pure PUnit.unit
-    pure (ForInStep.yield ⟨true, y.snd.push (b.fst, w)⟩)
-  else do
-    pure PUnit.unit
-    pure (ForInStep.yield ⟨y.fst, y.snd.push (b.fst, b.snd)⟩)
+    (b : String × GoValue) (y : Array (String × GoValue) × Bool) :
+    Except GoError (ForInStep (Array (String × GoValue) × Bool)) :=
+  if (b.fst == needle) = true then
+    pure (ForInStep.yield (y.fst.push (b.fst, w), true))
+  else
+    pure (ForInStep.yield (y.fst.push (b.fst, b.snd), y.snd))
 
 /-- Struct-field replacement commutation (the first `forIn` transport
 consumer; the loop relation is equality-to-image). -/
@@ -545,29 +545,27 @@ theorem structSet_conc {fields : Array (String × Value D)} {needle : String}
   rw [← Array.forIn_toList, Array.toList_map]
   simp only [bind_eq_ok] at h ⊢
   obtain ⟨r, hloop, hfin⟩ := h
-  refine ⟨⟨r.fst, r.snd.map (fun p => (p.1, concV I p.2))⟩, ?_, ?_⟩
+  refine ⟨⟨r.fst.map (fun p => (p.1, concV I p.2)), r.snd⟩, ?_, ?_⟩
   · have hstep : ∀ a ∈ fields.toList,
-        ∀ (x : MProd Bool (Array (String × Value D)))
-          (y : MProd Bool (Array (String × GoValue))),
-        y = ⟨x.fst, x.snd.map (fun p => (p.1, concV I p.2))⟩ →
-        ∀ st, ((if (a.fst == needle) = true then do
-                 pure PUnit.unit
+        ∀ (x : Array (String × Value D) × Bool)
+          (y : Array (String × GoValue) × Bool),
+        y = ⟨x.fst.map (fun p => (p.1, concV I p.2)), x.snd⟩ →
+        ∀ st, ((if (a.fst == needle) = true then
                  pure (ForInStep.yield
-                   (⟨true, x.snd.push (a.fst, v)⟩ :
-                     MProd Bool (Array (String × Value D))))
-               else do
-                 pure PUnit.unit
+                   ((x.fst.push (a.fst, v), true) :
+                     Array (String × Value D) × Bool))
+               else
                  pure (ForInStep.yield
-                   (⟨x.fst, x.snd.push (a.fst, a.snd)⟩ :
-                     MProd Bool (Array (String × Value D))))) :
-                 M (ForInStep (MProd Bool (Array (String × Value D)))))
+                   ((x.fst.push (a.fst, a.snd), x.snd) :
+                     Array (String × Value D) × Bool))) :
+                 M (ForInStep (Array (String × Value D) × Bool)))
                = .ok st →
           ∃ st', setLoopG needle (concV I v)
                    ((fun p => (p.1, concV I p.2)) a) y = .ok st' ∧
             StepConc (fun m m' =>
-              m' = ⟨m.fst, m.snd.map (fun p => (p.1, concV I p.2))⟩) st st' := by
+              m' = ⟨m.fst.map (fun p => (p.1, concV I p.2)), m.snd⟩) st st' := by
       intro a _ x y hR st hst
-      obtain ⟨xf, xs⟩ := x
+      obtain ⟨xs, xf⟩ := x
       subst hR
       unfold setLoopG
       by_cases hn : (a.fst == needle) = true
@@ -582,15 +580,15 @@ theorem structSet_conc {fields : Array (String × Value D)} {needle : String}
         cases hst
         exact ⟨_, rfl, .yield (by simp)⟩
     obtain ⟨out', hout', hR⟩ := forIn_conc
-      (R := fun (m : MProd Bool (Array (String × Value D)))
-            (m' : MProd Bool (Array (String × GoValue))) =>
-              m' = ⟨m.fst, m.snd.map (fun p => (p.1, concV I p.2))⟩)
-      (t := fun p => (p.1, concV I p.2)) (y := ⟨false, #[]⟩)
+      (R := fun (m : Array (String × Value D) × Bool)
+            (m' : Array (String × GoValue) × Bool) =>
+              m' = ⟨m.fst.map (fun p => (p.1, concV I p.2)), m.snd⟩)
+      (t := fun p => (p.1, concV I p.2)) (y := ⟨#[], false⟩)
       (g := setLoopG needle (concV I v))
       (by simp) hstep hloop
     rw [hR] at hout'
     exact hout'
-  · obtain ⟨rf, rs⟩ := r
+  · obtain ⟨rs, rf⟩ := r
     dsimp only at hfin ⊢
     by_cases hf : rf = true
     · rw [if_pos hf] at hfin

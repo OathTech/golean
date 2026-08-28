@@ -697,10 +697,10 @@ compares payloads and ignores kinds). -/
 /-- The search loop when NO entry matches: it runs to the end with the
 early-return slot still empty. -/
 theorem forIn_find_none {α ε : Type}
-    {f : α → (MProd (Option (Option Nat)) Nat) → Except ε (ForInStep (MProd (Option (Option Nat)) Nat))} :
+    {f : α → (Option (Option Nat) × Nat) → Except ε (ForInStep (Option (Option Nat) × Nat))} :
     ∀ (l : List α) (j : Nat),
       (∀ a ∈ l, ∀ i : Nat, f a ⟨none, i⟩ = .ok (.yield ⟨none, i + 1⟩)) →
-      forIn l (⟨none, j⟩ : MProd (Option (Option Nat)) Nat) f
+      forIn l (⟨none, j⟩ : Option (Option Nat) × Nat) f
         = .ok ⟨none, j + l.length⟩
   | [], j, _ => by simp
   | a :: t, j, h => by
@@ -712,12 +712,12 @@ theorem forIn_find_none {α ε : Type}
 /-- The search loop when the FIRST matching entry is at `pre.length`: the
 prefix all misses, then the body returns that index. -/
 theorem forIn_find_some {α ε : Type}
-    {f : α → (MProd (Option (Option Nat)) Nat) → Except ε (ForInStep (MProd (Option (Option Nat)) Nat))}
+    {f : α → (Option (Option Nat) × Nat) → Except ε (ForInStep (Option (Option Nat) × Nat))}
     (p : α) (rest : List α)
     (hhit : ∀ i : Nat, f p ⟨none, i⟩ = .ok (.done ⟨some (some i), i⟩)) :
     ∀ (pre : List α) (j : Nat),
       (∀ a ∈ pre, ∀ i : Nat, f a ⟨none, i⟩ = .ok (.yield ⟨none, i + 1⟩)) →
-      forIn (pre ++ p :: rest) (⟨none, j⟩ : MProd (Option (Option Nat)) Nat) f
+      forIn (pre ++ p :: rest) (⟨none, j⟩ : Option (Option Nat) × Nat) f
         = .ok ⟨some (some (j + pre.length)), j + pre.length⟩
   | [], j, _ => by
     rw [List.nil_append, List.forIn_cons, hhit j]

@@ -599,8 +599,7 @@ private theorem core_sortSlice_ok {σF : ExecStateF} {cmp : Ty} {nt : Nat}
                         let x ← sliceIndexLoc slice (Int.ofNat i)
                         let y ← loadLoc (γF σF) x
                         match y with
-                        | .int v kind => do
-                            pure PUnit.unit
+                        | .int v kind =>
                             pure (ForInStep.yield (loaded.push (v, kind)))
                         | other => do
                             stuck (toString "sortSlice expected int element, got "
@@ -635,7 +634,6 @@ private theorem core_sortSlice_ok {σF : ExecStateF} {cmp : Ty} {nt : Nat}
                         | some (v, kind) => do
                             let x ← sliceIndexLoc slice (Int.ofNat i)
                             let c ← storeLoc current x (GoValue.int v kind)
-                            pure PUnit.unit
                             pure (ForInStep.yield c)
                         | none => do
                             stuck "sortSlice element count mismatch"
@@ -671,36 +669,36 @@ private theorem core_sortSlice_ok {σF : ExecStateF} {cmp : Ty} {nt : Nat}
                     Std.Legacy.Range.size, Nat.sub_zero,
                     Nat.add_sub_cancel, Nat.div_one]
                   simp only [hvs, bind_ok_eq]
-                  show (do
-                    let r ← forIn (List.range' 0 slice.len 1)
+                  -- 4.32.2: the junk `pure PUnit.unit` binds are gone from
+                  -- the do-desugar; the machine's trailing `pure __s` bind
+                  -- survives, but writing `let r2 ← …; pure r2` in a `show`
+                  -- would be COLLAPSED by the do-elaborator, so the tail is
+                  -- spelled with explicit `>>=`.
+                  show ((forIn (List.range' 0 slice.len 1)
                       (#[] : Array (Int × IntKind)) (fun i loaded => do
                         let x ← sliceIndexLoc slice (Int.ofNat i)
                         let y ← loadLoc (γF σF) x
                         match y with
-                        | GoValue.int v kind => do
-                            pure PUnit.unit
+                        | GoValue.int v kind =>
                             pure (ForInStep.yield (loaded.push (v, kind)))
                         | other => do
                             stuck (toString "sortSlice expected int element, got "
                               ++ toString (repr other))
-                            pure (ForInStep.yield loaded))
-                    let r2 ← forIn (List.range' 0 slice.len 1) (γF σF)
+                            pure (ForInStep.yield loaded))) >>= fun r =>
+                    (forIn (List.range' 0 slice.len 1) (γF σF)
                       (fun i current =>
                         match (sortLe (fun (a b : Int × IntKind) =>
                             decide (a.fst ≤ b.fst)) r.toList).toArray[i]? with
                         | some (v, kind) => do
                             let x ← sliceIndexLoc slice (Int.ofNat i)
                             let c ← storeLoc current x (GoValue.int v kind)
-                            pure PUnit.unit
                             pure (ForInStep.yield c)
                         | none => do
                             stuck "sortSlice element count mismatch"
-                            pure (ForInStep.yield current))
+                            pure (ForInStep.yield current))) >>= fun r2 =>
                     pure r2) = Except.ok (γF σF')
                   simp only [hlres, bind_ok_eq]
                   simp only [hsres, bind_ok_eq]
-                  simp only [bind_ok_eq, pure, Except.pure,
-                    Except.ok.injEq] at h
                   simp only [pure, Except.pure, Except.ok.injEq]
                   rw [hsrel, h]
 
@@ -758,7 +756,6 @@ private theorem core_copySlice_ok {σF : ExecStateF} {nt : Nat}
                                   (body := fun i values => do
                                     let x ← sliceIndexLoc srcSlice (Int.ofNat i)
                                     let y ← loadLoc (γF σF) x
-                                    pure PUnit.unit
                                     pure (ForInStep.yield (values.push y)))
                                   (fun i b' b hR s' hstep => by
                                     subst hR
@@ -784,12 +781,11 @@ private theorem core_copySlice_ok {σF : ExecStateF} {nt : Nat}
                               obtain ⟨sres, hsres, hsrel⟩ :=
                                 list_forIn_sim
                                   (R := fun (pF : ExecStateF × Nat)
-                                      (p : MProd ExecState Nat) =>
+                                      (p : ExecState × Nat) =>
                                     p.fst = γF pF.1 ∧ p.snd = pF.2)
                                   (body := fun value r => do
                                     let x ← sliceIndexLoc dstSlice (Int.ofNat r.snd)
                                     let c ← storeLoc r.fst x value
-                                    pure PUnit.unit
                                     pure (ForInStep.yield ⟨c, r.snd + 1⟩))
                                   (fun value b' b hR s' hstep => by
                                     obtain ⟨hR1, hR2⟩ := hR
@@ -811,7 +807,7 @@ private theorem core_copySlice_ok {σF : ExecStateF} {nt : Nat}
                                               simp [Bind.bind, Except.bind, pure, Except.pure]
                                             · rw [← hstep]
                                               simp [stepRel])
-                                  values.toList (init := (⟨γF σF, 0⟩ : MProd ExecState Nat)) ⟨rfl, rfl⟩ hwrite
+                                  values.toList (init := (⟨γF σF, 0⟩ : ExecState × Nat)) ⟨rfl, rfl⟩ hwrite
                               simp only [applyStmtOpCore, hds, hss, hvd, hvsr,
                                 htl,
                                 Std.Legacy.Range.forIn_eq_forIn_range',
@@ -821,11 +817,9 @@ private theorem core_copySlice_ok {σF : ExecStateF} {nt : Nat}
                               simp only [hlres, bind_ok_eq]
                               rw [← hlrel, ← Array.forIn_toList]
                               simp only [hsres, bind_ok_eq]
-                              simp only [pure, Except.pure, Except.ok.injEq]
                               obtain ⟨hs1, hs2⟩ := hsrel
                               rw [hs1]
                               rw [storeLocF_ok h]
-                              rfl
 
 private theorem core_mapDelete_ok {σF : ExecStateF} {keyTy : Ty} {nt : Nat}
     {baseV keyV : GoValue} {σF' : ExecStateF}
@@ -1040,14 +1034,13 @@ theorem applyStmtOpF_ok {σF : ExecStateF} {choices : Choices} {op : StmtOp}
                                         obtain ⟨swr, hswr, hsrel⟩ :=
                                           list_forIn_sim
                                             (R := fun (pF : ExecStateF × Nat)
-                                                (p : MProd ExecState Nat) =>
+                                                (p : ExecState × Nat) =>
                                               p.fst = γF pF.1 ∧ p.snd = pF.2)
                                             (body := fun value r => do
                                               match slice.base with
                                               | some base => do
                                                   let c ← storeLoc r.fst
                                                     (Loc.index base (Int.ofNat (slice.offset + slice.len + r.snd))) value
-                                                  pure PUnit.unit
                                                   pure (ForInStep.yield ⟨c, r.snd + 1⟩)
                                               | none => do
                                                   stuck (toString "cannot append "
@@ -1075,7 +1068,7 @@ theorem applyStmtOpF_ok {σF : ExecStateF} {choices : Choices} {op : StmtOp}
                                                       · rw [← hstep]
                                                         simp [stepRel])
                                             elemValues.toList
-                                            (init := (⟨γF σF, 0⟩ : MProd ExecState Nat))
+                                            (init := (⟨γF σF, 0⟩ : ExecState × Nat))
                                             ⟨rfl, rfl⟩ hwr
                                         unfold applyStmtOp
                                         simp only [hsv, hev, hv1, hv2,
@@ -1083,13 +1076,12 @@ theorem applyStmtOpF_ok {σF : ExecStateF} {choices : Choices} {op : StmtOp}
                                           if_pos hle]
                                         show (do
                                           let r ← forIn elemValues
-                                            (⟨γF σF, 0⟩ : MProd ExecState Nat)
+                                            (⟨γF σF, 0⟩ : ExecState × Nat)
                                             (fun value r => do
                                               match slice.base with
                                               | some base => do
                                                   let c ← storeLoc r.fst
                                                     (Loc.index base (Int.ofNat (slice.offset + slice.len + r.snd))) value
-                                                  pure PUnit.unit
                                                   pure (ForInStep.yield ⟨c, r.snd + 1⟩)
                                               | none => do
                                                   stuck (toString "cannot append "
