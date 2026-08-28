@@ -97,6 +97,10 @@ import GoLeanProofs.Adequacy
 -- sequential no-infinite-chain bridge, and the closed witness
 -- `sn_seqn_nil` (the ∃-fuel row's rule supplier; G-TOTAL builds here).
 import GoLeanProofs.TotalWp
+-- U0 reuse adoptions (2026-08-28): the boundary pin's frame_pointsto/
+-- CombineSepGives points-to instances witnessed on our tier (G-REPR's
+-- ergonomic base), + the recorded U1 modality-dance finding for G-AUTO.
+import GoLeanProofs.PinAdoptions
 import GoLeanProofs.Specs.GoldenProgram
 import GoLeanProofs.Specs.GoldenTargets
 import GoLeanProofs.Specs.GoldenSliceWP
