@@ -3112,3 +3112,41 @@ structurally prevented; G-AUTO discriminating) / useful (ergonomics
 measured, pleasant for a non-author) / goal-connected (every unit
 traces to the summit or a named durable consumer; ladder complete
 against the summit's known demands so no future gap-filler excuse).
+
+### 2026-08-28 — Four-lens review: AMEND (A1-A6); fold dispatched
+
+Verdict AMEND (without A1-A3 = RETHINK on FOR-REAL and
+GOAL-CONNECTED). A1 TOTALITY: the ∃-fuel quantifier has NO
+discharging rule in the plan — zero variant machinery at any tier
+(wp_while_inv is Löb/partial; the pin's TotalWp is an uninhabited
+notation class; landed Terminates = decide+kernel enumeration on
+pinned seeds — bounded-technique class, tolerated only as pilot
+scaffolding); harvest-quiescence measure appears zero times →
+commit TotalWeakestPre/TotalAdequacy at U0, variant loop rule with
+a symbolic-Terminates corpus gate, restore U3.2c. A2 VENEER
+TRIPWIRE must be MECHANICAL: the Audit gate polices statements
+only ("Proofs may use anything"); cost profiles cannot
+discriminate at corpus scale → proof-closure check (tier-3 corpus
+proofs reach stepFn/decide-kernel only through Laws/lifting/
+adequacy), interim text-lint acceptable; twins don't help here (a
+veneer proves a twin as easily). A3 restore the dropped v3 rows
+(12-guard table — the "violations ARE the instrumentation"
+inversion recurred; U3.2e/f/b/d; refutation witness; Sort census;
+inline threshold; witness retirement owner) + census-vs-corpus
+construct reconciliation at N-3 (cap()-reading branches, [2]array
+values, variadic callbacks, ring buffer, ~20-arm switches, U3
+dead-branch class, U4 dead-nondeterminism as the footprint
+insight's natural gate — ~3-5 new members or written scope-outs);
+"explored extras" reinstated. A4 G-REPR lineage misattributed
+(Perennial's heap is FLAT — per-field points-to at distinct locs;
+fractional-whole-cell cannot write-under-sibling-frame; route (b)
+is the honest analogue) + pre-register the sibling-field-write
+probe test. A5 G-BIND: the pin's Context class demands the INVERSE
+decomposition (primStep_fill_inv) — a new obligation; drop the
+"cheaper than priced" framing (my earlier log claim, corrected).
+A6 counts/wording/AgreementT1-vacuity note/ghost-acks consumer
+row. Positives: gates N-1..N-7 correct, postmortem rule 2 carried
+verbatim, pricing honesty real, no machinery-for-its-own-sake
+outside the named gaps. [AGENT]: all six amendments dispatched to
+the drafter for folding; the amended plan then goes to the [USER]
+adjudication gate (hard stop).
