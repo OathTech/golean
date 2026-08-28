@@ -3280,3 +3280,30 @@ now given, judge landmark rides U0's ceremony (first landmark on
 the new pins). [AGENT]: U0 session 2 dispatched with the approval
 relayed verbatim; the trust-tool re-pin is the ONLY sanctioned
 trust-tool change and is delta-flagged for U0's landing review.
+
+### 2026-08-28 — Hygiene audit: FIX-FIRST (F-1 HIGH provenance mis-correction); fixes dispatched
+
+The auditor independently reproduced the parser verification (the
+historical 33-name truncation reproduces ONLY at the real 2026-08-27
+site; adversarial probes show the new regex's sole early-termination
+shape is unreachable in a green build — the mid-list bare ] breaks
+Lean first, so ci fails before the parser can lie) and verified all
+kills/sweeps CLEAN. F-1 HIGH: item 2 rewrote decision 3's provenance
+to "AGENT recommendation ratified by package assent" — WRONG: M-1's
+scope explicitly excluded decision 3 (triage-execution-log:29-32,
+:229 — "the designation act was the user's; correctly recorded at
+birth"); the worker copied the house wording off the wrong decision
+row. A reserved [USER] act was re-attributed to an [AGENT]
+recommendation inside the statement-TCB gate file — the
+critical-trust-failure class, in the USER→AGENT direction.
+CLARIFICATION on the record: the "2026-08-28 confirmation" IS real —
+this log's entry "[USER] rulings: (1) Designation 56→51 CONFIRMED"
+— but this log is not yet landed on main, hence the auditor's
+could-not-verify. F-2 MEDIUM: scripts/ci:630 carries the identical
+un-hardened sed pattern on the EVERY-COMMIT path with a comment
+claiming it mirrors the judge's (now false) — the chartered item was
+half-done. F-3/4/5 record wording. [AGENT]: fixes dispatched to the
+hygiene executor — F-1 revert to "USER decision" wording citing this
+log's entry as landing-with-its-own-ceremony; F-2 same anchored
+range in ci; F-3/4/5 ride along; Audit.lean re-touch batched into
+ONE commit → judge re-triggered at the re-ceremony.
