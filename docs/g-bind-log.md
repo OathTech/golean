@@ -53,7 +53,7 @@ F-3 below).
   on paper + the counterexample recorded here; route (b) is the rest
   of this unit.
 - **[AGENT] D-3 (the machine-level inverse, no second walk if
-  avoidable — REVISED, see D-8).** Initial plan: the inverse
+  avoidable — REVISED; see Session-1 results).** Initial plan: the inverse
   decomposition via `stepFn`-level error-transfer walk
   (`fun_cases`). Before paying it, probe two arms (plan's
   probe-first pricing rule).
@@ -127,3 +127,80 @@ F-3 below).
   corpus case returns for a conformance look. This session builds
   C-05 as chartered and DESIGNATES NOTHING (candidates marked in
   docstrings, N-5 untouched).
+
+## Session-1 results ([AGENT], 2026-08-28)
+
+**Landed, in order (tip at each step):**
+1. `89527243` — C-05 corpus case + golden pin (3/3 differential green;
+   both check-golden links green).
+2. `a162f5ee` — `Frame/PlugInv.lean`: the fill–step inversion.
+   `stepFn_plug_err` (the error-transfer walk), `stepFn_plug_ok_inv`,
+   `step_plug`, `step_plug_inv` (= `primStep_fill_inv` for our
+   geometry), terminal/value lemmas, `hdrain` step exhibits.
+3. `22afd963` — `Laws/Bind.lean`: `wp_crossed_of_canonical` +
+   **`wp_plug_bind`** (THE BIND RULE) + `wp_bind_plug` (entailment
+   shape) + the two `hdrain` dischargers.
+4. `45c740ae` — `Specs/Callchain.lean`: the C-05 quartet through the
+   bind rule (3 bind applications) + 4 supporting general laws
+   (`wp_call_enter_arg2`, `wp_defer_callee_arg`,
+   `wp_defer_register_args`, `wp_frame_defer_fall_arg1`).
+
+**The measured route comparison (charter ask):** route (a) — the
+pin's `Context` instance — cost ~30 min to assess and REFUTE
+(counterexample in D-2; no code written). Route (b) executed:
+- the inverse decomposition (PlugInv): ~2.5 h of iteration; the walk
+  itself compiles in ~26 s. The plan priced the inversion as "new
+  proof content the W2 forward walk did not pay for" — the actual
+  cost was LOWER than a second commutation walk because the
+  error-transfer formulation reuses the forward walk's landed
+  `_plug`/`_bar` helper equations wholesale and the ok-direction
+  comes free from `stepFn`'s functionality (D-3 revised: no second
+  commutation argument exists in the tree).
+- the bind rule itself: ~1.5 h (the pin's `wp_bind_iff` forward
+  branch adapted; the crossed-case machinery is the new content).
+- the gate instance: ~2.5 h (three canonical specs + harness +
+  quartet; the leaf walks are `GoldenSliceWP`-idiom hand walks).
+
+**[AGENT] F-4 (recorded boundary — the `hdrain` premise at
+defer-carrying contexts).** `hdrain` quantifies over ALL states, so at
+a context whose HEAD frame still carries deferred entries the drain
+step is an `enterFrame` whose success is state-dependent — the two
+shipped dischargers cover pop-headed and defer-FREE frame-headed
+contexts only. In practice call sites sit under sequence glue (the
+frontend's block/seqn desugars), so the head is a pop; if a future
+walk hits a bare defer-carrying head, the options are a
+program-pinned `hdrain` variant or a `σ.functions`-conditioned drain
+lemma. Recorded, not needed by C-05.
+
+**Non-vacuity:** every new law names `Specs/Callchain.lean` as its
+discharge witness in its docstring; the bind rule's witness is the
+C-05 quartet itself (three applications, checked in-build).
+
+**How a skeptic verifies the proof genuinely goes through `wp_bind`:**
+(i) `grep wp_bind_plug proofs/GoLeanProofs/Specs/Callchain.lean` —
+three application sites, one per call/drain site; (ii) the callee
+bodies (`ccDoubleFunc.body` etc.) are mentioned ONLY in their own
+canonical-spec theorems, never inside another walk — the call sites
+apply the specs, and deleting `wp_plug_bind` breaks all three
+compositions (`Laws/Bind.lean` is on the import spine of the
+quartet); (iii) the canonical specs are stated at `k = KB` (the
+barrier over `.stop`) — no caller context appears in them, so the
+composition into concrete contexts CANNOT have been proved there.
+
+**PlugWitness retirement condition:** the G-BIND gate instance now
+exists; per the recorded condition ("retire these, or re-point them
+at the G-BIND instance"), the witnesses are RE-POINTED (docstring
+edit, same commit) — actual retirement (Audit pin removal =
+trust-adjacent) is left to the coordinator with the audit.
+
+**Owed to session 2 / the coordinator:**
+- baseline re-pin after the wave-boundary full differential (this
+  session runs `scripts/ci --diff`; the 3 new rows join the baseline
+  with this log as the written reason).
+- C-05 totality via G-TOTAL (plan-assigned; D-5).
+- The per-arity enter laws' "widening owed" notes (Laws/Call.lean)
+  can now cite the bind rule as the collapse path — G-CALLS's
+  charter, not touched here.
+- `go_walk` registration for the new laws (they carry
+  `@[go_walk_law]` where the shape fits) — G-AUTO's probe will
+  measure; the C-05 walks are hand-walks in the GoldenSliceWP idiom.

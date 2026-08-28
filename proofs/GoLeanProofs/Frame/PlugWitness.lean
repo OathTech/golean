@@ -15,10 +15,14 @@ Role (the witness ruling, triage plan §1.4 + amendment A4): the plug
 family's previous in-tree instantiation (`W2Gate.lean`) died with the
 CallSpec calculus; `PlugProbe` is a parallel concrete PROBE of the
 commutation (verified, but its examples restate the commutation
-shape rather than applying the theorems). These witnesses are the
-family's non-vacuity demonstration until the G-BIND unit's own gate
-instance lands (the named retirement condition — retire these, or
-re-point them at the G-BIND instance, when it does).
+shape rather than applying the theorems). These witnesses were the
+family's non-vacuity demonstration until the G-BIND unit's gate
+instance landed; **the retirement condition FIRED 2026-08-28** (the
+C-05 `callchain` quartet, `Specs/Callchain.lean`, applies the plug
+family through `wp_plug_bind` three times — `docs/g-bind-log.md`).
+Per the recorded condition these witnesses are RE-POINTED here; their
+actual retirement (their Audit pins are trust-adjacent) is the
+coordinator's call at the unit's audit.
 
 Both witnesses hold at OPEN caller context `(env', k')` under the
 rule's own two premises — exactly the plug rule's consumption shape.
