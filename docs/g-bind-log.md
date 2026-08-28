@@ -337,3 +337,15 @@ Fix round applied on `g-bind`:
   `Specs/CallchainSentences.lean` (the boundary-sentences class).
   Enrollment in their scope config is NOT done here (that file is
   theirs; enrollment at the post-merge rebase).
+
+### Pin-cost measurement (audit F5a, [AGENT] 2026-08-28)
+
+The external auditor's `#print axioms GoLean.Frame.step_plug_inv`
+timed out under their harness's maxHeartbeats. Measured here before
+pinning: all six G-BIND pins (`step_plug`, `step_plug_inv`,
+`wp_plug_bind`, `wp_bind_plug`, `callchainSpec`,
+`callchainNotThirteen`) in one file elaborate in **0.69 s wall /
+1.8 GB peak RSS** (imports included; `lake env lean` on this box),
+and `Audit.lean` with the block added builds in **3.7 s**. The
+timeout does not reproduce; the real theorems are pinned — no
+corollary substitute needed.

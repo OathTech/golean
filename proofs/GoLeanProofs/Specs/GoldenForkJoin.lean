@@ -43,6 +43,12 @@ intercept pairs the rendezvous, the handoff delivers the value, and
 main's exit joins — end to end, through the kernel.
 -/
 
+-- SCAFFOLD LABEL (plan §2d grandfather; outsider-audit R1, G-BIND fix round 2026-08-28 [AGENT]):
+-- this file's `Terminates`-class content rides the `allStreamsOk` decide+kernel route —
+-- fuel-bounded enumeration on pinned seeds, GRANDFATHERED for the pre-corpus pilots and BANNED
+-- for new members; retirement condition: re-proved through G-TOTAL when the program is
+-- re-specced, or retired with the gallery-row cleanup.
+
 open GoLean GoLean.GoCore GoLean.GoCore.Machine
 
 namespace GoLean.Surface

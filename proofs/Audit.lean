@@ -753,6 +753,30 @@ open Lean in
 #guard_msgs in #print axioms GoLean.Iris.sn_seqn_nil
 /-- info: 'GoLean.Iris.pointsTo_fraction_recombine' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.pointsTo_fraction_recombine
+
+-- The G-BIND family (unit G-BIND, 2026-08-28, audit fix round F5 —
+-- [TRUST-ADJACENT commit; judge at the ceremony]): the bind/fill rule
+-- and its machine-level inversion — the ∀-caller-contexts row's rule
+-- supplier (plan §2d) — plus the C-05 gate instance's exit sentence
+-- (CANDIDATE, not designated; designation is the [USER]'s N-5 batch).
+-- step_plug_inv is OUR geometry's primStep_fill_inv (barrier-premised;
+-- the unconditional class shape is refuted, g-bind log D-2). Pin cost
+-- measured before pinning (the external auditor's #print axioms on
+-- step_plug_inv timed out in THEIR harness): all six pins elaborate
+-- in 0.69 s wall / 1.8 GB peak in one file on this box — no corollary
+-- substitute needed; numbers in docs/g-bind-log.md.
+/-- info: 'GoLean.Frame.step_plug' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Frame.step_plug
+/-- info: 'GoLean.Frame.step_plug_inv' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Frame.step_plug_inv
+/-- info: 'GoLean.Iris.wp_plug_bind' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wp_plug_bind
+/-- info: 'GoLean.Iris.wp_bind_plug' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wp_bind_plug
+/-- info: 'GoLean.Iris.Callchain.callchainSpec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.Callchain.callchainSpec
+/-- info: 'GoLean.Iris.Callchain.callchainNotThirteen' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.Callchain.callchainNotThirteen
 /-- info: 'GoLean.Iris.pointsTo_fraction_agree' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.pointsTo_fraction_agree
 
