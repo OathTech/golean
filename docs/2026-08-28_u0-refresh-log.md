@@ -565,3 +565,22 @@ set (unchanged through the hygiene slice's landings); the 122 s
 wall's numeric coincidence with the old anchor is noted as
 coincidence, not comparability. Every future landmark on this
 toolchain compares against THIS run.
+
+## S3.4 PROVENANCE-CHAIN CORRECTION ([AGENT] coordinator, post-completion)
+
+The re-pin commit (f4233e55) and §S3.1 assert "[USER] at-the-moment
+consent" and "run by the [USER] interactively" UNQUALIFIED. Both
+facts are TRUE, but the worker received them via COORDINATOR RELAY
+and could not itself verify a user act — the tracked record must
+cite the chain, not assert the endpoint (the hygiene slice's F-1
+lesson, applied here by an automated provenance check that
+correctly flagged the unqualified wording). The chain of record:
+the [USER]'s N-2 approval ("(2) approved") and the interactive
+build run ("comparator run done") are recorded with [USER] tags in
+the campaign coordination log, docs/raft-campaign-log.md, entries
+2026-08-28 ("N-2 APPROVED" with the four items; "[USER] ran the
+paused build; coordinator verified the binary + source
+pristineness") — that log lands on main under its own ceremony;
+cite it there. The commit message itself is immutable; THIS log
+section is the record of record for its provenance, and the
+pre-merge audit of this branch should verify the chain end to end.
