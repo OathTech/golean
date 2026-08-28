@@ -550,3 +550,18 @@ one landmark.
   `artifacts/u0-smoke/` (this sandbox cannot read back `/tmp`;
   the setup script's `mktemp` path is unchanged for normal
   operators). Logs: `artifacts/u0-smoke/{match,mismatch}.log`.
+
+## S3.4 THE NEW BASELINE LANDMARK — judge PASS on the moved pins
+
+**`comparator-judge: PASS — 51 theorems certified in 122s (fresh
+clone @ f4233e553508)`, exit 0** (`artifacts/u0-judge-1.log`;
+marker appended to `docs/2026-08-02_comparator-judge-sprint.md`,
+committed here). **This run is the NEW BASELINE LANDMARK and is
+explicitly NOT like-for-like with the pre-move anchors** ([USER]
+N-2 ruling item 4): toolchain v4.31.0 → v4.32.2, iris-lean
+`3877dbec` → `e7a0a438`, comparator/lean4export at their v4.32.0
+tags built at v4.32.2. The 51-theorem count matches the designated
+set (unchanged through the hygiene slice's landings); the 122 s
+wall's numeric coincidence with the old anchor is noted as
+coincidence, not comparability. Every future landmark on this
+toolchain compares against THIS run.
