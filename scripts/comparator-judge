@@ -126,7 +126,20 @@ want_axioms=$(echo "$PERMITTED_AXIOMS" | tr ' ' '\n' | sort | tr '\n' ' ' | sed 
 # collision detection (the mapping GoLean.*.X -> Judge.X is only injective
 # while short names are unique across the designated namespaces — a
 # collision makes the set-compare blind, so it fails the run).
-audit_full=$(sed -n '/let designated : List Name := \[/,/\]/p' "$CHECK_ROOT/proofs/Audit.lean" \
+# The range END is ANCHORED to the list's actual closing line — a line
+# that is exactly an optional name literal followed by the closing
+# bracket (`  ``Ns.thm]`), or a bare `]` if the list is ever reflowed.
+# It used to be the unanchored /\]/, i.e. "the first line containing a
+# ']' anywhere": the 2026-08-27 HAZARD — a `[USER]` provenance tag in
+# one of the list's own interleaved comments ended the range early and
+# silently TRUNCATED the designated list, so the lockstep compare below
+# ran against a short list (reproduced, then fixed comment-side at the
+# triage; hardened here at the 2026-08-28 hygiene slice, gate-audit
+# L-3). A comment line can no longer match: it would have to consist of
+# nothing but a name literal and a bracket. If the terminator is never
+# found the range runs to EOF and the extra names make the lockstep
+# compare below FAIL — fail-closed, never a silent short list.
+audit_full=$(sed -n -E '/let designated : List Name := \[/,/^[[:space:]]*(``[A-Za-z0-9_.]+)?\][[:space:]]*$/p' "$CHECK_ROOT/proofs/Audit.lean" \
   | grep -oE '``[A-Za-z0-9_.]+' | sed -E 's/^``//')
 [ -n "$audit_full" ] || fail "could not parse the designated list from proofs/Audit.lean"
 audit_names=$(echo "$audit_full" | sed -E 's/.*\.//' | sort)
