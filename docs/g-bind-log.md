@@ -349,3 +349,18 @@ pinning: all six G-BIND pins (`step_plug`, `step_plug_inv`,
 and `Audit.lean` with the block added builds in **3.7 s**. The
 timeout does not reproduce; the real theorems are pinned — no
 corollary substitute needed.
+
+### Fix-round ceremony record ([AGENT], 2026-08-28)
+
+- `scripts/capped scripts/ci --diff` at `50241dd5`: **PASS, rc 0,
+  wall 218.9 s** — with the EXPECTED landmark scope note (1 file in
+  Challenge's trusted closure changed since 534f2710: the R1
+  comment-only labels), which is exactly what the judge run below
+  covers.
+- `scripts/capped scripts/comparator-judge`: **PASS — 51 theorems
+  certified in 116 s, fresh clone @ 50241dd545e3** (total judge wall
+  incl. fresh-clone builds: 1869 s). Like-for-like with the
+  51@118s @ 534f2710 baseline: the designated set did NOT move (the
+  C-05 quartet remains candidates), matching the coordinator's
+  continuity expectation. Landmark marker committed with this
+  record.

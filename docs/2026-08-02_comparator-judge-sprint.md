@@ -508,3 +508,9 @@ LANDMARK-RUN: 09f8f5983f8f 2026-08-28 51 118
 LANDMARK-RUN: f4233e553508 2026-08-28 51 122
 # U0 audit fix round: the total-WP family Audit pin block (trust-adjacent 534f2710) re-triggered the judge; same designated set, same new-baseline toolchain as the marker above.
 LANDMARK-RUN: 534f27109180 2026-08-28 51 118
+# G-BIND audit fix round: the G-BIND family Audit pin block + the R1
+# scaffold labels in judge-parsed closure files (trust-adjacent
+# 50241dd5) triggered the owed landmark; same designated set (the C-05
+# quartet stays CANDIDATE, nothing designated), same new-baseline
+# toolchain — like-for-like with the 51@118s marker above.
+LANDMARK-RUN: 50241dd545e3 2026-08-28 51 116
