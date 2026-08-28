@@ -151,8 +151,7 @@ theorem coerceStoredValue_noPanic :
   · intro _ _ _ _ _ _ hname ih1 ih2
     simp only [coerceStruct]
     rw [if_neg hname]
-    exact NoPanic.bind NoPanic.pure' fun _ =>
-      NoPanic.bind ih1 fun _ => NoPanic.bind ih2 fun _ => NoPanic.pure'
+    exact NoPanic.bind ih1 fun _ => NoPanic.bind ih2 fun _ => NoPanic.pure'
   · intro t x hnc
     rw [coerceStruct.eq_def]
     split
@@ -188,9 +187,8 @@ theorem normalizeFieldsWith_noPanic {f : Ty → GoValue → Except GoError GoVal
           simp only [normalizeFieldsWith]
           split
           · exact NoPanic.bind' NoPanic.stuck' fun a ha => by simp at ha
-          · exact NoPanic.bind NoPanic.pure' fun _ =>
-              NoPanic.bind (hf _ _) fun _ =>
-                NoPanic.bind (ih ps) fun _ => NoPanic.pure'
+          · exact NoPanic.bind (hf _ _) fun _ =>
+              NoPanic.bind (ih ps) fun _ => NoPanic.pure'
 
 theorem normalizeStructValueWith_noPanic
     {f : Ty → GoValue → Except GoError GoValue}
@@ -204,8 +202,7 @@ theorem normalizeStructValueWith_noPanic
     · split
       · exact NoPanic.pure'
       · exact NoPanic.bind' NoPanic.stuck' fun a ha => by simp at ha
-    · refine NoPanic.bind NoPanic.pure' fun _ => ?_
-      split
+    · split
       · exact NoPanic.bind' NoPanic.stuck' fun a ha => by simp at ha
       · exact NoPanic.map (normalizeFieldsWith_noPanic hf _ _)
   all_goals exact NoPanic.stuck'
@@ -238,8 +235,7 @@ theorem normalizeValueForTyFuel_noPanic (σ : ExecState) :
             | skip
           split
           · exact NoPanic.bind' NoPanic.stuck' fun a ha => by simp at ha
-          · exact NoPanic.bind NoPanic.pure' fun _ =>
-              NoPanic.map (normalizeListWith_noPanic (fun v => ih _ v) _)
+          · exact NoPanic.map (normalizeListWith_noPanic (fun v => ih _ v) _)
       | interface id => exact NoPanic.pure'
       | funcType ps rs _ =>
           cases v <;> simp only [normalizeValueForTyFuel] <;>

@@ -173,7 +173,6 @@ private theorem coerceStoredValue_ne_panic :
   · intro _ _ _ _ _ _ hname ih1 ih2 m h
     simp only [coerceStruct] at h
     rw [if_neg hname] at h
-    simp only [pure_bind] at h
     exact bind_ne_panic ih1
       (fun a => bind_ne_panic ih2 (fun b m' => by simp)) m h
   · intro t x hnc m h
@@ -446,7 +445,6 @@ theorem buildStructValueFuel_ren :
                     rw [if_neg (show ¬((fields.size !=
                         ((renameValueList ρ args.toList).toArray).size) = true) by
                       rw [renArray_size]; exact hsz)]
-                    simp only [pure_bind] at h ⊢
                     rw [map_eq_ok] at h
                     obtain ⟨fs, hfs, rfl⟩ := h
                     rw [map_eq_ok]
@@ -481,8 +479,10 @@ theorem buildArrayValue_ren {len : Nat} {elem : Ty}
   rw [Std.Legacy.Range.forIn_eq_forIn_range'] at hvs₁
   rw [← Array.forIn_toList] at hloop
   simp only [bind_eq_ok]
+  -- 4.32.2: the loop state is now `(values, seenKeys)` in declaration
+  -- order (was `MProd (Array Int) (Array GoValue)` keys-first).
   refine ⟨(renameValueList ρ vs₁.toList).toArray, ?_,
-    ⟨st.1, (renameValueList ρ st.2.toList).toArray⟩, ?_, by simp [renameValue]⟩
+    ⟨(renameValueList ρ st.1.toList).toArray, st.2⟩, ?_, by simp [renameValue]⟩
   · -- default-fill loop: same range, loc-free defaults, renamed accumulator
     rw [Std.Legacy.Range.forIn_eq_forIn_range']
     refine forIn_list_ren_same
@@ -490,7 +490,7 @@ theorem buildArrayValue_ren {len : Nat} {elem : Ty}
       ?_ (by simp [renameValueList]) hvs₁
     intro a ha b rr hr
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-    obtain ⟨d, hd, -, -, hrr⟩ := hr
+    obtain ⟨d, hd, hrr⟩ := hr
     subst hrr
     rw [defaultValue_ren ρ htypes hd]
     simp [Bind.bind, Except.bind, renStep, renArray_push, renameValueList_eq_map]
@@ -498,12 +498,12 @@ theorem buildArrayValue_ren {len : Nat} {elem : Ty}
     rw [← Array.forIn_toList]
     refine forIn_list_ren
       (T := fun p : Int × GoValue => (p.1, renameValue ρ p.2))
-      (ren := fun st : MProd (Array Int) (Array GoValue) =>
-        MProd.mk st.1 ((renameValueList ρ st.2.toList).toArray))
+      (ren := fun st : Array GoValue × Array Int =>
+        ((renameValueList ρ st.1.toList).toArray, st.2))
       ?_ (by simp [renameValueEntriesKeyed]) rfl hloop
     intro a ha b rr hr
     obtain ⟨key, value⟩ := a
-    obtain ⟨seen, values⟩ := b
+    obtain ⟨values, seen⟩ := b
     split at hr
     · simp [Bind.bind, Except.bind] at hr
     · rename_i hnc
@@ -513,11 +513,10 @@ theorem buildArrayValue_ren {len : Nat} {elem : Ty}
         split at hr
         · rename_i old hold
           simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-          obtain ⟨_, _, _, _, nv, hnv, c, hc, _, _, hrr⟩ := hr
+          obtain ⟨nv, hnv, c, hc, hrr⟩ := hr
           subst hrr
           dsimp only
           rw [if_neg hnc]
-          simp only [pure_bind]
           rw [if_neg hneg]
           rw [renArray_getElem?, hold]
           simp [Option.map_some, Bind.bind, Except.bind,
@@ -554,7 +553,7 @@ theorem buildAppendBackingValue_ren {elem : Ty}
       (by simp [renameValueList]) hloop1
     intro a ha b rr hr
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-    obtain ⟨nv, hnv, -, -, hrr⟩ := hr
+    obtain ⟨nv, hnv, hrr⟩ := hr
     subst hrr
     rw [normalizeValueForTy_ren ρ htypes hnv]
     simp [Bind.bind, Except.bind, renStep, renArray_push, renameValueList_eq_map]
@@ -564,9 +563,8 @@ theorem buildAppendBackingValue_ren {elem : Ty}
     · rename_i hcap
       rw [if_neg hcap]
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-      obtain ⟨_, _, vs₂, hloop2, hr⟩ := h
+      obtain ⟨vs₂, hloop2, hr⟩ := h
       subst hr
-      simp only [pure_bind]
       rw [Std.Legacy.Range.forIn_eq_forIn_range'] at hloop2 ⊢
       simp only [bind_eq_ok]
       refine ⟨(renameValueList ρ vs₂.toList).toArray, ?_, by simp [renameValue]⟩
@@ -575,7 +573,7 @@ theorem buildAppendBackingValue_ren {elem : Ty}
         ?_ rfl hloop2
       intro a ha b rr hr
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-      obtain ⟨d, hd, -, -, hrr⟩ := hr
+      obtain ⟨d, hd, hrr⟩ := hr
       subst hrr
       rw [defaultValue_congr htypes, hd]
       simp [Bind.bind, Except.bind, renStep, renameValueList_eq_map,

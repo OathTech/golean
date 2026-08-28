@@ -65,10 +65,15 @@ theorem union_cover {h₁ h₂ : GoHeapF HeapCell}
       ↔ (h₁.get? k = some c ∨ h₂.get? k = some c) := by
   simp only [heaplet_get?_eq] at hdisj ⊢
   intro k c
-  rw [LawfulPartialMap.get?_union]
+  -- 4.32.2 pin move: upstream `get?_union` is now stated over `∪`
+  -- (`Union.union`); go through `union = merge` (`@[simp] def`) and the
+  -- `get?_merge` class field instead.
+  simp only [Std.PartialMap.union]
+  rw [LawfulPartialMap.get?_merge]
   rcases hdisj k with hn | hn <;> rw [hn] <;>
     cases hx : Std.PartialMap.get? (M := GoHeapF) h₁ k <;>
-      simp_all [Option.orElse]
+      cases hy : Std.PartialMap.get? (M := GoHeapF) h₂ k <;>
+        simp_all [Option.merge]
 
 section
 variable {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]

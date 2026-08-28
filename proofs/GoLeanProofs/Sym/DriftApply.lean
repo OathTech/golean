@@ -136,21 +136,23 @@ theorem buildArrayValue_conc (hI : I.Sound) (σ : ExecState)
   · -- the keyed-store loop: mapped elements, image on the values
     obtain ⟨rp, hloop, hpost⟩ := bind_eq_ok.mp h
     rw [← Array.forIn_toList] at hloop
+    -- 4.32.2: both twins' loop state is now `(values, seenKeys)` in
+    -- declaration order (was `MProd (Array Int) (Array _)` keys-first).
     refine bind_eq_ok.mpr
-      ⟨⟨rp.fst, rp.snd.map (concV I)⟩, ?_, ?_⟩
+      ⟨⟨rp.fst.map (concV I), rp.snd⟩, ?_, ?_⟩
     · rw [← Array.forIn_toList,
         show (args.map (fun p => (p.1, concV I p.2))).toList
             = args.toList.map (fun p => (p.1, concV I p.2))
           from by simp]
       refine forIn_conc_map
         (t := fun p : Int × Value D => (p.1, concV I p.2))
-        (φ := fun m : MProd (Array Int) (Array (Value D)) =>
-          (⟨m.fst, m.snd.map (concV I)⟩ :
-            MProd (Array Int) (Array GoValue)))
+        (φ := fun m : Array (Value D) × Array Int =>
+          ((m.fst.map (concV I), m.snd) :
+            Array GoValue × Array Int))
         (fun a _ x st hst => ?_) hloop
       obtain ⟨key, value⟩ := a
       simp only [] at hst ⊢
-      by_cases hseen : x.fst.contains key
+      by_cases hseen : x.snd.contains key
       · rw [if_pos hseen] at hst
         exact absurd hst (by simp [quit, Bind.bind, Except.bind])
       · rw [if_neg hseen] at hst
@@ -161,16 +163,16 @@ theorem buildArrayValue_conc (hI : I.Sound) (σ : ExecState)
         · rw [if_neg hneg] at hst
           rw [if_neg hneg]
           simp only [Bind.bind, Except.bind, pure, Except.pure] at hst ⊢
-          rcases hget : x.snd[key.toNat]? with _ | old <;>
+          rcases hget : x.fst[key.toNat]? with _ | old <;>
             rw [hget] at hst
           · cases hst
-          · rw [show (x.snd.map (concV I))[key.toNat]?
+          · rw [show (x.fst.map (concV I))[key.toNat]?
                   = some (concV I old)
                 from by simp [Array.getElem?_map, hget]]
             obtain ⟨normd, hnorm, hst⟩ := bind_eq_ok.mp hst
             obtain ⟨coerced, hco, hst⟩ := bind_eq_ok.mp hst
             have hstv : st = .yield
-                ⟨x.fst.push key, x.snd.set! key.toNat coerced⟩ := by
+                ⟨x.fst.set! key.toNat coerced, x.snd.push key⟩ := by
               simpa [pure, Except.pure, eq_comm] using hst
             subst hstv
             refine bind_eq_ok.mpr
@@ -178,7 +180,7 @@ theorem buildArrayValue_conc (hI : I.Sound) (σ : ExecState)
             refine bind_eq_ok.mpr
               ⟨concV I coerced, coerce_conc hI hco, ?_⟩
             simp [stepImage, Array.set!, map_setIfInBounds]
-    · have hout : out = .array rp.snd := by
+    · have hout : out = .array rp.fst := by
         simpa [pure, Except.pure, eq_comm] using hpost
       subst hout
       simp [concV_array, pure, Except.pure]
@@ -328,7 +330,6 @@ theorem applyStrictOp_conc (hI : I.Sound) (σ : ExecState) {s : State D}
             refine bind_eq_ok.mpr ⟨divisor,
               by simp [valueAsInt, hI.toInt? _ _ hrt], ?_⟩
             rw [if_neg hz]
-            refine bind_eq_ok.mpr ⟨PUnit.unit, rfl, ?_⟩
             refine bind_eq_ok.mpr ⟨.int (kind.normalize
               (Int.tdiv (I.intV lv) divisor)) kind, ?_, ?_⟩
             · simp only [intBinaryResult, valueAsIntValue, bind_eq_ok]
@@ -365,7 +366,6 @@ theorem applyStrictOp_conc (hI : I.Sound) (σ : ExecState) {s : State D}
           refine bind_eq_ok.mpr ⟨divisor,
             by simp [valueAsInt, hI.toInt? _ _ hrt], ?_⟩
           rw [if_neg hz]
-          refine bind_eq_ok.mpr ⟨PUnit.unit, rfl, ?_⟩
           refine bind_eq_ok.mpr ⟨.int (kind.normalize
             (Int.tmod (I.intV lv) divisor)) kind, ?_, ?_⟩
           · simp only [intBinaryResult, valueAsIntValue, bind_eq_ok]
@@ -677,7 +677,6 @@ theorem applyStrictOp_conc (hI : I.Sound) (σ : ExecState) {s : State D}
           simpa [pure, Except.pure, eq_comm, and_comm] using h
         simp only [applyStrictOp]
         rw [if_neg (by simpa using hlen)]
-        refine bind_eq_ok.mpr ⟨PUnit.unit, rfl, ?_⟩
         refine bind_eq_ok.mpr ⟨concV I out, ?_,
           by simp [pure, Except.pure]⟩
         have hb := buildArrayValue_conc hI (concS I σ s')
@@ -1263,7 +1262,6 @@ theorem applyStmtOpCore_conc (hI : I.Sound) (σ : ExecState) {s : State D}
       refine bind_eq_ok.mpr ⟨loc, asLoc_conc hloc, ?_⟩
       rw [alloc_conc, halloc]
       simp only []
-      refine bind_eq_ok.mpr ⟨concS I σ s', ?_, rfl⟩
       have := storeLoc_conc hI σ (loc := loc) (v := .addr nloc) h2
       simpa using this
   | makeSlice elem hasCap =>
@@ -1318,7 +1316,6 @@ theorem applyStmtOpCore_conc (hI : I.Sound) (σ : ExecState) {s : State D}
           simp only []
           rw [show valueAsLoc (concV I tv) = .ok loc from asLoc_conc hloc]
           simp only [ok_bind, pure_bind]
-          refine bind_eq_ok.mpr ⟨concS I σ s', ?_, rfl⟩
           have := storeLoc_conc hI σ (loc := loc)
             (v := Value.slice (D := D)
               ⟨some base, 0, lenValue.toNat, lenValue.toNat⟩) h4
@@ -1384,7 +1381,6 @@ theorem applyStmtOpCore_conc (hI : I.Sound) (σ : ExecState) {s : State D}
           simp only []
           rw [show valueAsLoc (concV I tv) = .ok loc from asLoc_conc hloc]
           simp only [ok_bind, pure_bind]
-          refine bind_eq_ok.mpr ⟨concS I σ s', ?_, rfl⟩
           have := storeLoc_conc hI σ (loc := loc)
             (v := Value.slice (D := D)
               ⟨some base, 0, lenValue.toNat, capValue.toNat⟩) h5
@@ -1413,7 +1409,6 @@ theorem applyStmtOpCore_conc (hI : I.Sound) (σ : ExecState) {s : State D}
           simp only []
           rw [show valueAsLoc (concV I tv) = .ok loc from asLoc_conc hloc]
           simp only [ok_bind, pure_bind]
-          refine bind_eq_ok.mpr ⟨concS I σ s', ?_, rfl⟩
           have := storeLoc_conc hI σ (loc := loc)
             (v := .map { base := some base }) h2
           simpa using this
@@ -1454,7 +1449,6 @@ theorem applyStmtOpCore_conc (hI : I.Sound) (σ : ExecState) {s : State D}
           simp only []
           rw [show valueAsLoc (concV I tv) = .ok loc from asLoc_conc hloc]
           simp only [ok_bind, pure_bind]
-          refine bind_eq_ok.mpr ⟨concS I σ s', ?_, rfl⟩
           have := storeLoc_conc hI σ (loc := loc)
             (v := .map { base := some base }) h4
           simpa using this
@@ -1482,7 +1476,6 @@ theorem applyStmtOpCore_conc (hI : I.Sound) (σ : ExecState) {s : State D}
           simp only []
           rw [show valueAsLoc (concV I tv) = .ok loc from asLoc_conc hloc]
           simp only [ok_bind, pure_bind]
-          refine bind_eq_ok.mpr ⟨concS I σ s', ?_, rfl⟩
           have := storeLoc_conc hI σ (loc := loc)
             (v := .chan { base := some base }) h2
           simpa using this
@@ -1524,7 +1517,6 @@ theorem applyStmtOpCore_conc (hI : I.Sound) (σ : ExecState) {s : State D}
           simp only []
           rw [show valueAsLoc (concV I tv) = .ok loc from asLoc_conc hloc]
           simp only [ok_bind, pure_bind]
-          refine bind_eq_ok.mpr ⟨concS I σ s', ?_, rfl⟩
           have := storeLoc_conc hI σ (loc := loc)
             (v := .chan { base := some base }) h4
           simpa using this
@@ -1563,7 +1555,6 @@ theorem applyStmtOpCore_conc (hI : I.Sound) (σ : ExecState) {s : State D}
           rfl
         · have := storeLoc_conc hI σ (loc := baseLoc)
             (v := .mapData (entries.eraseIdx! i)) h5
-          refine bind_eq_ok.mpr ⟨concS I σ s', ?_, rfl⟩
           simpa [concV_mapData, concEntries, map_eraseIdx!] using this
   | clearMap =>
       rcases vs with _ | ⟨baseV, _ | ⟨x, rest⟩⟩ <;>
@@ -1583,7 +1574,6 @@ theorem applyStmtOpCore_conc (hI : I.Sound) (σ : ExecState) {s : State D}
       · simp only [Option.map_some]
         have := storeLoc_conc hI σ (loc := baseLoc)
           (v := Value.mapData (D := D) #[]) h3
-        refine bind_eq_ok.mpr ⟨concS I σ s', ?_, rfl⟩
         simpa [concV_mapData] using this
   | clearSlice elem =>
       rcases vs with _ | ⟨baseV, _ | ⟨x, rest⟩⟩ <;>
@@ -1714,8 +1704,8 @@ theorem applyStmtOpCore_conc (hI : I.Sound) (σ : ExecState) {s : State D}
         · rw [← Array.forIn_toList] at hstoreloop
           rw [← Array.forIn_toList, Array.toList_map]
           refine forIn_conc_map (t := concV I)
-            (φ := fun m : MProd (State D) Nat =>
-              (⟨concS I σ m.fst, m.snd⟩ : MProd ExecState Nat))
+            (φ := fun m : State D × Nat =>
+              (⟨concS I σ m.fst, m.snd⟩ : ExecState × Nat))
             (fun a _ m st hst => ?_) hstoreloop
           obtain ⟨loc, hloc, hst2⟩ := bind_eq_ok.mp hst
           obtain ⟨cur', hstore', hst3⟩ := bind_eq_ok.mp hst2
@@ -1733,7 +1723,7 @@ theorem applyStmtOpCore_conc (hI : I.Sound) (σ : ExecState) {s : State D}
               (D.litI (Int.ofNat (Nat.min dstSlice.len srcSlice.len)))
               .int) h8
           simp only [concV_int, hI.litI] at this
-          refine bind_eq_ok.mpr ⟨concS I σ s', this, rfl⟩
+          exact this
   | appendSlice elem =>
       rcases vs with _ | ⟨a, _ | ⟨b, _ | ⟨c, _ | ⟨x, rest⟩⟩⟩⟩ <;>
         simp [applyStmtOpCore', quit] at h
@@ -1777,8 +1767,8 @@ theorem applyStmtOp_conc (hI : I.Sound) (σ : ExecState) {s : State D}
         · rw [← Array.forIn_toList] at hloop
           rw [← Array.forIn_toList, Array.toList_map]
           refine forIn_conc_map (t := concV I)
-            (φ := fun m : MProd (State D) Nat =>
-              (⟨concS I σ m.fst, m.snd⟩ : MProd ExecState Nat))
+            (φ := fun m : State D × Nat =>
+              (⟨concS I σ m.fst, m.snd⟩ : ExecState × Nat))
             (fun a _ m st hst => ?_) hloop
           rcases hbase : sl.base with _ | base <;> rw [hbase] at hst <;>
             (try simp only [] at hst)

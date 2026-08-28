@@ -496,7 +496,7 @@ elab_rules : tactic
       | some ts => ts.getElems
       | none => #[]
     normalizeGoal extra
-    let mut n := 0
+    let mut n : Nat := 0
     while n < fuel do
       match ← stepOnce extra with
       | some _ => n := n + 1
@@ -545,7 +545,7 @@ elab_rules : tactic
     let extra : Array Term := match extra? with
       | some ts => ts.getElems
       | none => #[]
-    let mut n := 0
+    let mut n : Nat := 0
     repeat
       if (← getGoals).isEmpty then return
       let saved ← saveState

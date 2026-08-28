@@ -338,13 +338,13 @@ theorem structFieldsLookup_eq (fs : Array (String × GoValue)) (n : String) :
 private theorem setLoop (needle : String) (v : GoValue) :
     ∀ (l : List (String × GoValue)) (found : Bool)
       (out : Array (String × GoValue)),
-      (forIn l (MProd.mk found out) (fun x r =>
+      (forIn l (out, found) (fun x r =>
           if (x.fst == needle) = true then
-            pure (ForInStep.yield ⟨true, r.snd.push (x.fst, v)⟩)
+            pure (ForInStep.yield ⟨r.fst.push (x.fst, v), true⟩)
           else
-            pure (ForInStep.yield ⟨r.fst, r.snd.push (x.fst, x.snd)⟩)) :
-        Except GoError (MProd Bool (Array (String × GoValue))))
-      = pure ⟨found || hasName needle l, out ++ (setL needle v l).toArray⟩
+            pure (ForInStep.yield ⟨r.fst.push (x.fst, x.snd), r.snd⟩)) :
+        Except GoError (Array (String × GoValue) × Bool))
+      = pure ⟨out ++ (setL needle v l).toArray, found || hasName needle l⟩
   | [], found, out => by simp [hasName, setL]
   | (n, w) :: rest, found, out => by
       rw [List.forIn_cons]
@@ -369,7 +369,6 @@ theorem structFieldsSet_eq (fields : Array (String × GoValue))
   unfold StructFields.set
   dsimp only
   rw [← Array.forIn_toList]
-  simp only [pure_bind]
   rw [setLoop needle v fields.toList false #[]]
   simp only [pure_bind, Bool.false_or]
   by_cases hf : hasName needle fields.toList

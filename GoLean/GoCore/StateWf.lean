@@ -1042,7 +1042,9 @@ theorem coerceStoredValue_locSup' :
     · rename_i hcond
       exact absurd hcond hname
     · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-      obtain ⟨_, _, hv, hcv, arr, harr, hr⟩ := h
+      -- 4.32.2 toolchain: the `bind_eq_ok` simp normal form flattens two
+      -- leading leaves out of this pattern (was ⟨_, _, hv, hcv, arr, harr, hr⟩).
+      obtain ⟨hv, hcv, arr, harr, hr⟩ := h
       subst hr
       have h1 := ih1 hv hcv
       have h2 := ih2 arr harr
@@ -1147,7 +1149,7 @@ theorem normalizeFieldsWith_locSup {f : Ty → GoValue → Except GoError GoValu
       split at h
       · simp [Bind.bind, Except.bind] at h
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-        obtain ⟨_, _, head, hhead, tail, htail, hr⟩ := h
+        obtain ⟨head, hhead, tail, htail, hr⟩ := h
         subst hr
         have h1 := hf _ _ _ hhead
         have h2 := ih htail
@@ -1173,12 +1175,10 @@ theorem normalizeStructValueWith_locSup {f : Ty → GoValue → Except GoError G
       subst h
       simp [GoValue.locSup, goValueFieldsSup]
     · simp [Bind.bind, Except.bind] at h
-  · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-    obtain ⟨_, _, h⟩ := h
-    split at h
+  · split at h
     · simp [Bind.bind, Except.bind] at h
-    · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, map_eq_ok] at h
-      obtain ⟨_, _, arr, harr, rfl⟩ := h
+    · simp only [map_eq_ok] at h
+      obtain ⟨arr, harr, rfl⟩ := h
       simpa [GoValue.locSup] using normalizeFieldsWith_locSup hf harr
 
 theorem normalizeValueForTyFuel_locSup :
@@ -1210,7 +1210,7 @@ theorem normalizeValueForTyFuel_locSup :
       split at h
       · simp [Bind.bind, Except.bind] at h
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, map_eq_ok] at h
-        obtain ⟨_, _, arr, harr, rfl⟩ := h
+        obtain ⟨arr, harr, rfl⟩ := h
         simpa [GoValue.locSup] using
           normalizeListWith_locSup (fun _ _ hr => ih hr) harr
     case interface id =>
@@ -1297,7 +1297,7 @@ theorem defaultValueFuel_locSup :
         subst h
         simp [GoValue.locSup, goValueListSup]
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-        obtain ⟨_, _, d, hd, hv⟩ := h
+        obtain ⟨d, hd, hv⟩ := h
         subst hv
         have h0 := ih hd
         simp only [GoValue.locSup, goValueListSup_eq]
@@ -1671,7 +1671,7 @@ theorem stringSlice_locSup {gs : GoString} {lo hi : Int} {m : Option Int}
   split at h
   · simp [Bind.bind, Except.bind] at h
   · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-    obtain ⟨_, _, p, _, hv⟩ := h
+    obtain ⟨p, _, hv⟩ := h
     subst hv
     rfl
 
@@ -1852,9 +1852,11 @@ theorem StructFields.set_locSup {fields : Array (String × GoValue)}
   simp only [bind_eq_ok] at h
   obtain ⟨st, hloop, hpost⟩ := h
   rw [← Array.forIn_toList] at hloop
+  -- 4.32.2: the do-desugar's loop state is now `(array, flag) : _ × Bool`
+  -- (was `MProd Bool (Array _)`); the invariant follows the array in `.1`.
   have hP := forIn_list_inv
-    (P := fun st : MProd Bool (Array (String × GoValue)) =>
-      goValueFieldsSup st.2.toList
+    (P := fun st : Array (String × GoValue) × Bool =>
+      goValueFieldsSup st.1.toList
         ≤ max (goValueFieldsSup fields.toList) (GoValue.locSup v))
     (l := fields.toList) ?step (Nat.zero_le _) hloop
   · split at hpost
@@ -2784,17 +2786,19 @@ theorem buildArrayValue_locSup {σ : ExecState} {len : Nat} {elem : Ty}
       goValueListSup vs.toList ≤ 0) ?_ (Nat.zero_le _) hvs₁
     intro a _ b rr hbb hr
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-    obtain ⟨d, hd, _, _, hrr⟩ := hr
+    obtain ⟨d, hd, hrr⟩ := hr
     subst hrr
     have h0 := defaultValue_locSup hd
     simp only [forInStepVal, goValueListSup_push]
     omega
   obtain ⟨st, hloop, h⟩ := h
   rw [← Array.forIn_toList] at hloop
-  have hP : goValueListSup st.2.toList
+  -- 4.32.2: loop state is now `(values, seenKeys) : Array GoValue × Array Int`
+  -- (was `MProd (Array Int) (Array GoValue)`); the values live in `.1`.
+  have hP : goValueListSup st.1.toList
       ≤ supBy (fun p => GoValue.locSup p.2) args.toList := by
-    refine forIn_list_inv (P := fun st : MProd (Array Int) (Array GoValue) =>
-      goValueListSup st.2.toList ≤ supBy (fun p => GoValue.locSup p.2) args.toList)
+    refine forIn_list_inv (P := fun st : Array GoValue × Array Int =>
+      goValueListSup st.1.toList ≤ supBy (fun p => GoValue.locSup p.2) args.toList)
       ?_ (Nat.le_trans hb₁ (Nat.zero_le _)) hloop
     intro a ha b rr hbb hr
     obtain ⟨key, value⟩ := a
@@ -2808,7 +2812,7 @@ theorem buildArrayValue_locSup {σ : ExecState} {len : Nat} {elem : Ty}
       · split at hr
         · rename_i old hold
           simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-          obtain ⟨_, _, _, _, nv, hnv, c, hc, _, _, hrr⟩ := hr
+          obtain ⟨nv, hnv, c, hc, hrr⟩ := hr
           subst hrr
           have h1 := normalizeValueForTy_locSup hnv
           have h2 := coerceStoredValue_locSup hc
@@ -2844,7 +2848,7 @@ theorem sliceVisibleValues_locSup {σ : ExecState} {slice : SliceValue}
     exact hP
   · intro a _ b rr hbb hr
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-    obtain ⟨l, hl, v, hv, _, _, hrr⟩ := hr
+    obtain ⟨l, hl, v, hv, hrr⟩ := hr
     subst hrr
     have h1 := loadLoc_locSup hv
     simp only [forInStepVal, goValueListSup_push]
@@ -2875,7 +2879,7 @@ theorem buildAppendBackingValue_locSup {σ : ExecState} {elem : Ty}
       · exact Nat.le_trans (by rw [goValueListSup_eq]; exact supBy_mem hm)
           (Nat.le_max_right _ _)
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-    obtain ⟨nv, hnv, _, _, hrr⟩ := hr
+    obtain ⟨nv, hnv, hrr⟩ := hr
     subst hrr
     have h1 := normalizeValueForTy_locSup hnv
     simp only [forInStepVal, goValueListSup_push]
@@ -2883,7 +2887,7 @@ theorem buildAppendBackingValue_locSup {σ : ExecState} {elem : Ty}
   split at h
   · simp [Bind.bind, Except.bind] at h
   · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-    obtain ⟨_, _, vs₂, hloop₂, hr⟩ := h
+    obtain ⟨vs₂, hloop₂, hr⟩ := h
     rw [Std.Legacy.Range.forIn_eq_forIn_range'] at hloop₂
     have hb₂ : goValueListSup vs₂.toList
         ≤ max (goValueListSup oldValues.toList) (goValueListSup elemValues.toList) := by
@@ -2893,7 +2897,7 @@ theorem buildAppendBackingValue_locSup {σ : ExecState} {elem : Ty}
         ?_ hb₁ hloop₂
       intro a _ b rr hbb hr
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-      obtain ⟨d, hd, _, _, hrr⟩ := hr
+      obtain ⟨d, hd, hrr⟩ := hr
       subst hrr
       have h0 := defaultValue_locSup hd
       simp only [forInStepVal, goValueListSup_push]
@@ -3094,7 +3098,7 @@ theorem applyStrictOp_wf {σ : ExecState} {op : StrictOp} {vs : List GoValue}
       split at h
       · simp [Bind.bind, Except.bind] at h
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨_, _, iv, hiv, rfl, rfl⟩ := h
+        obtain ⟨iv, hiv, rfl, rfl⟩ := h
         exact strictWfSame hw (by rw [intBinaryResult_locSup hiv]; omega)
   · -- mod
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
@@ -3102,7 +3106,7 @@ theorem applyStrictOp_wf {σ : ExecState} {op : StrictOp} {vs : List GoValue}
     split at h
     · simp [Bind.bind, Except.bind] at h
     · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨_, _, iv, hiv, rfl, rfl⟩ := h
+      obtain ⟨iv, hiv, rfl, rfl⟩ := h
       exact strictWfSame hw (by rw [intBinaryResult_locSup hiv]; omega)
   · -- shiftLeft
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
@@ -3267,7 +3271,7 @@ theorem applyStrictOp_wf {σ : ExecState} {op : StrictOp} {vs : List GoValue}
     split at h
     · simp [Bind.bind, Except.bind] at h
     · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨_, _, av, hav, rfl, rfl⟩ := h
+      obtain ⟨av, hav, rfl, rfl⟩ := h
       have := buildArrayValue_locSup hav
       exact strictWfSame hw (Nat.le_trans this (Nat.le_trans zip_snd_sup_le hvs))
   · -- toInterface
@@ -3867,8 +3871,7 @@ theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp} {nt : Nat}
     · rename_i tv value
       simp only [goValueListSup] at hvs
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-      obtain ⟨loc, hloc, σ₂, h, hσ⟩ := h
-      subst hσ
+      obtain ⟨loc, hloc, h⟩ := h
       have hlocb := valueAsLoc_locSup hloc
       cases halloc : σ.alloc value typ with
       | mk nloc σa =>
@@ -3894,8 +3897,7 @@ theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp} {nt : Nat}
       split at h
       · simp [Bind.bind, Except.bind] at h
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-        obtain ⟨backing, hbacking, loc, hloc, σ₂, h, hσ⟩ := h
-        subst hσ
+        obtain ⟨backing, hbacking, loc, hloc, h⟩ := h
         have hb0 := buildDefaultArrayValue_locSup hbacking
         have hlocb := valueAsLoc_locSup hloc
         cases halloc : σ.alloc backing (some (Ty.array cap elem)) with
@@ -3917,8 +3919,7 @@ theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp} {nt : Nat}
       split at h
       · simp [Bind.bind, Except.bind] at h
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-        obtain ⟨backing, hbacking, loc, hloc, σ₂, h, hσ⟩ := h
-        subst hσ
+        obtain ⟨backing, hbacking, loc, hloc, h⟩ := h
         have hb0 := buildDefaultArrayValue_locSup hbacking
         have hlocb := valueAsLoc_locSup hloc
         cases halloc : σ.alloc backing (some (Ty.array cap elem)) with
@@ -3942,8 +3943,7 @@ theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp} {nt : Nat}
       simp only [goValueListSup] at hvs
       simp only [pure_bind] at h
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-      obtain ⟨loc, hloc, σ₂, h, hσ⟩ := h
-      subst hσ
+      obtain ⟨loc, hloc, h⟩ := h
       have hlocb := valueAsLoc_locSup hloc
       obtain ⟨w1, w2, w3, w4⟩ := alloc_wf hw
         (by simp [GoValue.locSup, goValueEntriesSup]) halloc
@@ -3957,8 +3957,7 @@ theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp} {nt : Nat}
       simp only [goValueListSup] at hvs
       simp only [pure_bind] at h
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-      obtain ⟨sz, hsz, _, _, loc, hloc, σ₂, h, hσ⟩ := h
-      subst hσ
+      obtain ⟨sz, hsz, _, _, loc, hloc, h⟩ := h
       have hlocb := valueAsLoc_locSup hloc
       obtain ⟨w1, w2, w3, w4⟩ := alloc_wf hw
         (by simp [GoValue.locSup, goValueEntriesSup]) halloc
@@ -3975,8 +3974,7 @@ theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp} {nt : Nat}
       simp only [goValueListSup] at hvs
       simp only [pure_bind] at h
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-      obtain ⟨loc, hloc, σ₂, h, hσ⟩ := h
-      subst hσ
+      obtain ⟨loc, hloc, h⟩ := h
       have hlocb := valueAsLoc_locSup hloc
       cases halloc : σ.alloc (.chanData #[] 0 false) with
       | mk base σa =>
@@ -3994,8 +3992,7 @@ theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp} {nt : Nat}
       simp only [goValueListSup] at hvs
       simp only [pure_bind] at h
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-      obtain ⟨size, hsize, capacity, hcapacity, loc, hloc, σ₂, h, hσ⟩ := h
-      subst hσ
+      obtain ⟨size, hsize, capacity, hcapacity, loc, hloc, h⟩ := h
       have hlocb := valueAsLoc_locSup hloc
       cases halloc : σ.alloc (.chanData #[] capacity false) with
       | mk base σa =>
@@ -4036,10 +4033,7 @@ theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp} {nt : Nat}
         simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
         obtain ⟨idx, hidx, h⟩ := h
         split at h
-        · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-          obtain ⟨σ₂, h, hσ⟩ := h
-          subst hσ
-          refine storeLoc_pres hw hblb ?_ h
+        · refine storeLoc_pres hw hblb ?_ h
           show goValueEntriesSup _ ≤ σ.nextAddr
           refine Nat.le_trans goValueEntriesSup_eraseIdx! ?_
           omega
@@ -4062,9 +4056,6 @@ theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp} {nt : Nat}
         have hblb : Loc.locSup baseLoc ≤ σ.nextAddr := by
           have := valueAsMap_locSup hm
           omega
-        simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-        obtain ⟨σ₂, h, hσ⟩ := h
-        subst hσ
         refine storeLoc_pres hw hblb ?_ h
         show goValueEntriesSup (#[] : Array (GoValue × GoValue)).toList ≤ σ.nextAddr
         simp [goValueEntriesSup]
@@ -4086,7 +4077,7 @@ theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp} {nt : Nat}
         ?_ (stmtOpPres_refl hw) hloop
       intro a _ b rr hbb hr
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-      obtain ⟨l, hl, c, hc, _, _, hrr⟩ := hr
+      obtain ⟨l, hl, c, hc, hrr⟩ := hr
       subst hrr
       simp only [forInStepVal]
       refine StmtOpPres.trans hbb ?_
@@ -4115,7 +4106,7 @@ theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp} {nt : Nat}
       all_goals try (simp [Bind.bind, Except.bind] at hr; done)
       all_goals
         simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-        obtain ⟨l, hl, c, hc, _, _, hrr⟩ := hr
+        obtain ⟨l, hl, c, hc, hrr⟩ := hr
         subst hrr
         simp only [forInStepVal]
         refine StmtOpPres.trans hbb ?_
@@ -4139,7 +4130,7 @@ theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp} {nt : Nat}
           goValueListSup vals.toList ≤ σ.nextAddr) ?_ (Nat.zero_le _) hload
         intro a _ b rr hbb hr
         simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-        obtain ⟨l, hl, lv, hlv, _, _, hrr⟩ := hr
+        obtain ⟨l, hl, lv, hlv, hrr⟩ := hr
         subst hrr
         simp only [forInStepVal, goValueListSup_push]
         have := loadLoc_locSup hlv
@@ -4148,7 +4139,7 @@ theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp} {nt : Nat}
       have hpres : StmtOpPres σ st.1 := by
         rw [← Array.forIn_toList] at hloop
         refine forIn_list_inv
-          (P := fun st : MProd ExecState Nat => StmtOpPres σ st.1)
+          (P := fun st : ExecState × Nat => StmtOpPres σ st.1)
           ?_ (stmtOpPres_refl hw) hloop
         intro a ha b rr hbb hr
         have hab : GoValue.locSup a ≤ σ.nextAddr := by
@@ -4157,7 +4148,7 @@ theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp} {nt : Nat}
             exact supBy_mem ha
           omega
         simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-        obtain ⟨l, hl, c, hc, _, _, hrr⟩ := hr
+        obtain ⟨l, hl, c, hc, hrr⟩ := hr
         subst hrr
         simp only [forInStepVal]
         refine StmtOpPres.trans hbb ?_
@@ -4165,8 +4156,7 @@ theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp} {nt : Nat}
         refine storeLoc_pres b1 ?_ (by omega) hc
         have := sliceIndexLoc_locSup hl
         omega
-      obtain ⟨tloc, htloc, σ₂, h, hσ⟩ := h
-      subst hσ
+      obtain ⟨tloc, htloc, h⟩ := h
       refine StmtOpPres.trans hpres ?_
       obtain ⟨b1, b2, b3, b4, b5⟩ := hpres
       refine storeLoc_pres b1 ?_ (by simp [GoValue.locSup]) h
@@ -4211,7 +4201,7 @@ theorem applyStmtOp_wf {σ : ExecState} {ch : Choices} {op : StmtOp} {nt : Nat}
         have hpres : StmtOpPres σ st.1 := by
           rw [← Array.forIn_toList] at hloop
           refine forIn_list_inv
-            (P := fun st : MProd ExecState Nat => StmtOpPres σ st.1)
+            (P := fun st : ExecState × Nat => StmtOpPres σ st.1)
             ?_ (stmtOpPres_refl hw) hloop
           intro a ha b rr hbb hr
           have hab : GoValue.locSup a ≤ σ.nextAddr := by
@@ -4222,7 +4212,7 @@ theorem applyStmtOp_wf {σ : ExecState} {ch : Choices} {op : StmtOp} {nt : Nat}
           split at hr
           · rename_i base hbase
             simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-            obtain ⟨c, hc, _, _, hrr⟩ := hr
+            obtain ⟨c, hc, hrr⟩ := hr
             subst hrr
             simp only [forInStepVal]
             refine StmtOpPres.trans hbb ?_

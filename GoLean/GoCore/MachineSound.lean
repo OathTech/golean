@@ -1196,9 +1196,6 @@ theorem normalizeFieldsWith_congr {f g : Ty → GoValue → Except GoError GoVal
         obtain ⟨rfl, hvw, hrest⟩ := h
         simp only [normalizeFieldsWith]
         refine exceptCong.ite_congr (fun _ => rfl) fun _ => ?_
-        refine exceptCong.bind_congr
-          (R := fun (_ : PUnit) (_ : PUnit) => True)
-          (exceptCong.self fun _ => trivial) fun _ _ _ => ?_
         refine exceptCong.bind_congr (hfg _ v w hvw) fun a b hab => ?_
         refine exceptCong.bind_congr (ih hrest) fun as bs habs => ?_
         show capCongFields (#[(fd.name, a)] ++ as).toList
@@ -1274,9 +1271,6 @@ theorem normalizeValueForTyFuel_congr {σ₁ σ₂ : ExecState}
         have hlen : ws.size = vs.size := (capCongList_length hl).symm
         simp only [normalizeValueForTyFuel, hlen]
         refine exceptCong.ite_congr (fun _ => rfl) fun _ => ?_
-        refine exceptCong.bind_congr
-          (R := fun (_ : PUnit) (_ : PUnit) => True)
-          (exceptCong.self fun _ => trivial) fun _ _ _ => ?_
         refine exceptCong.map_congr
           (normalizeListWith_congr (fun a b hab => ih elem a b hab) hl)
           fun as bs habs => ?_
@@ -1335,13 +1329,7 @@ theorem normalizeValueForTyFuel_congr {σ₁ σ₂ : ExecState}
               -- its stuck arm the identical error.
               refine exceptCong.ite_congr (fun _ => ?_) fun _ => rfl
               exact exceptCong.self fun a => GoValue.capCong_refl a
-            refine exceptCong.bind_congr
-              (R := fun (_ : PUnit) (_ : PUnit) => True)
-              (exceptCong.self fun _ => trivial) fun _ _ _ => ?_
             refine exceptCong.ite_congr (fun _ => rfl) fun _ => ?_
-            refine exceptCong.bind_congr
-              (R := fun (_ : PUnit) (_ : PUnit) => True)
-              (exceptCong.self fun _ => trivial) fun _ _ _ => ?_
             refine exceptCong.map_congr
               (normalizeFieldsWith_congr
                 (fun ty a b hab => ih ty a b hab) fields.toList hf)
@@ -1535,9 +1523,6 @@ theorem coerceStoredValue_congr :
       obtain ⟨rfl, hvw, hrest⟩ := hf
       simp only [coerceStruct]
       refine exceptCong.ite_congr (fun hyes => absurd hyes hname) fun _ => ?_
-      refine exceptCong.bind_congr
-        (R := fun (_ : PUnit) (_ : PUnit) => True)
-        (exceptCong.self fun _ => trivial) fun _ _ _ => ?_
       refine exceptCong.bind_congr (ih1 hvw) fun a b hab => ?_
       refine exceptCong.bind_congr (ih2 hrest) fun as bs habs => ?_
       show capCongFields (#[(on, a)] ++ as).toList (#[(on, b)] ++ bs).toList
@@ -1620,9 +1605,12 @@ theorem StructFields.set_congr {fields : Array (String × GoValue)}
         capCongFields a.toList b.toList)
       (StructFields.set fields needle v) (StructFields.set fields needle w) := by
   unfold StructFields.set
+  -- 4.32.2: the loop state is now `(array, flag) : _ × Bool` (was
+  -- `MProd Bool (Array _)`); the R conjunct order is preserved (flag eq
+  -- first) — only the projections move.
   refine exceptCong.bind_congr
-    (R := fun (r₁ r₂ : MProd Bool (Array (String × GoValue))) =>
-      r₁.fst = r₂.fst ∧ capCongFields r₁.snd.toList r₂.snd.toList)
+    (R := fun (r₁ r₂ : Array (String × GoValue) × Bool) =>
+      r₁.2 = r₂.2 ∧ capCongFields r₁.1.toList r₂.1.toList)
     (forIn_congr_except_array ?_ fields ⟨rfl, trivial⟩) fun r₁ r₂ hr => ?_
   · intro p r₁ r₂ hr
     obtain ⟨hfnd, hout⟩ := hr
@@ -1630,19 +1618,19 @@ theorem StructFields.set_congr {fields : Array (String × GoValue)}
     dsimp only
     by_cases hn : (name == needle) = true
     · rw [if_pos hn, if_pos hn]
-      have hpush : capCongFields (r₁.snd.push (name, v)).toList
-          (r₂.snd.push (name, w)).toList := by
+      have hpush : capCongFields (r₁.1.push (name, v)).toList
+          (r₂.1.push (name, w)).toList := by
         rw [Array.toList_push, Array.toList_push]
         exact capCongFields_append hout ⟨rfl, hcc, trivial⟩
       exact ⟨rfl, hpush⟩
     · rw [if_neg hn, if_neg hn]
-      have hpush : capCongFields (r₁.snd.push (name, old)).toList
-          (r₂.snd.push (name, old)).toList := by
+      have hpush : capCongFields (r₁.1.push (name, old)).toList
+          (r₂.1.push (name, old)).toList := by
         rw [Array.toList_push, Array.toList_push]
         exact capCongFields_append hout ⟨rfl, GoValue.capCong_refl old, trivial⟩
       exact ⟨hfnd, hpush⟩
-  · obtain ⟨f₁, o₁⟩ := r₁
-    obtain ⟨f₂, o₂⟩ := r₂
+  · obtain ⟨o₁, f₁⟩ := r₁
+    obtain ⟨o₂, f₂⟩ := r₂
     obtain ⟨hfnd, hout⟩ := hr
     dsimp only at hfnd hout ⊢
     subst hfnd
@@ -1720,9 +1708,6 @@ theorem storeLoc_congr {σ₁ σ₂ : ExecState} (htypes : σ₂.types = σ₁.t
       case struct actual fields =>
         refine exceptCong.of_ok_bind ?_
         refine exceptCong.ite_congr (fun _ => rfl) fun _ => ?_
-        refine exceptCong.bind_congr
-          (R := fun (_ : PUnit) (_ : PUnit) => True)
-          (exceptCong.self fun _ => trivial) fun _ _ _ => ?_
         refine exceptCong.bind_congr (StructFields.set_congr hcc)
           fun u₁ u₂ hu => ?_
         exact ih hl ⟨rfl, hu⟩
@@ -2000,9 +1985,8 @@ theorem sliceVisibleValues_size {σ : ExecState} {sl : SliceValue}
   rw [Std.Legacy.Range.forIn_eq_forIn_range'] at hout
   have hsz := forIn_yield_push_size (body := _)
     (fun a r o hbody => by
-      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, true_and] at hbody
+      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hbody
       obtain ⟨l, hl, v, hv, hs⟩ := hbody
-      obtain ⟨_, hs⟩ := hs
       exact ⟨v, hs.symm⟩) _ hout
   simpa [List.length_range'] using hsz
 
@@ -2051,9 +2035,8 @@ theorem buildAppendBackingValue_congr {σ : ExecState} {elem : Ty}
     constructor
     · have hsz := forIn_yield_push_size (body := _)
         (fun a r s hbody => by
-          simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, true_and] at hbody
+          simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hbody
           obtain ⟨v, hv, hs⟩ := hbody
-          obtain ⟨_, hs⟩ := hs
           exact ⟨v, hs.symm⟩) _ hout
       have h' : out.size = 0 + (o ++ e).size := hsz
       rw [Array.size_append] at h'
@@ -2074,8 +2057,7 @@ theorem buildAppendBackingValue_congr {σ : ExecState} {elem : Ty}
   · obtain ⟨rfl, hsz, d, hd⟩ := hv
     rw [if_neg (by omega), if_neg (by omega)]
     refine exceptCong.of_oks ?_ ?_ <;>
-      · refine bind_isOk ⟨PUnit.unit, rfl⟩ fun _ => ?_
-        refine bind_isOk ?_ fun vs => ⟨.array vs, rfl⟩
+      · refine bind_isOk ?_ fun vs => ⟨.array vs, rfl⟩
         rw [Std.Legacy.Range.forIn_eq_forIn_range']
         exact forIn_ok_of_body_ok
           (fun a b => ⟨b.push d, by
