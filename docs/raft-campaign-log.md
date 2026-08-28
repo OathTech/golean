@@ -3516,3 +3516,19 @@ via local-path fetch + detach (no network). Old comparator copy
 removed (recoverable: the pinned rev is a public tag and the
 sibling bootstrap is reproducible). The judge wrapper re-verifies
 pins at every invocation — fails closed on any mismatch.
+
+### 2026-08-28 — Ladder opens: A-TRIP + G-BIND dispatched in parallel
+
+[AGENT]: A-TRIP (branch a-trip, w1-prover worktree; Fable — the
+closure-check half is meta-programming): the day-one ci text lint
+(designated-WP proof files may not reach stepFn/decide-kernel
+directly — a gate ADDITION, strengthens-only, delta-flagged) + the
+proof-side closure check on the Audit walker (park-allowed if it
+exceeds the 0.5-session price; the lint lands regardless). G-BIND
+(branch g-bind, u0-iris worktree; Fable): wire plugK into the
+pin's wp_bind machinery — the named inverse-decomposition
+obligation (primStep_fill_inv) is the honest summit; corpus gate
+instance = the first corpus program (differential-tested Go
+FIRST per guardrails-first), a two-function composition proved
+through wp_bind at the WP tier, with its negative twin. Both:
+capped 48G, box lock, park-not-improvise, no merge/push.
