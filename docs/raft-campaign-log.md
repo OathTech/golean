@@ -3150,3 +3150,26 @@ verbatim, pricing honesty real, no machinery-for-its-own-sake
 outside the named gaps. [AGENT]: all six amendments dispatched to
 the drafter for folding; the amended plan then goes to the [USER]
 adjudication gate (hard stop).
+
+### 2026-08-28 — AMENDED PLAN complete (design-pass @ 24212862); [USER] ADJUDICATION GATE posed
+
+All six amendments folded (REVISION 1 note in-doc; 1,104 lines;
+zero factual disagreements with the reviewer — corrections were to
+inferences, not contested facts). Highlights: G-TOTAL unit added
+(variant-carrying total-WP loop rule; C-15 countloop gate instance;
+allStreamsOk route BANNED for new members, pilots grandfathered as
+labeled scaffolding); A-TRIP mechanical veneer tripwire (day-one
+ci text-lint → proof-side closure check on the Audit walker);
+phase-D nine-row ownership table restored (guard-silence table,
+U3.2b/c/d/e/f, refutation witness, Sort census, inline threshold,
+witness retirement); five reconciliation members C-16..C-20 incl.
+deadbranch (the footprint-insight gate instance) + capcheck (the
+latitude-observing sibling of C-10); G-REPR route (b) presumptive
+with the sibling-frame-write probe pre-registered; G-BIND inverse
+decomposition named and re-priced. ERA TOTAL 21-36 → 28-46
+sessions — the doc states the growth is DISCLOSURE, not scope
+creep; high-confidence prefix (A+B) 11-16. [AGENT] branch-geometry
+intent at landing: cherry-pick the deliverable docs onto a fresh
+branch off main (design-pass history cannot rebase; snapshot
+taken). The plan is POSED at the [USER] adjudication gate — HARD
+STOP per the post-mortem rule.
