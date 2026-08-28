@@ -268,6 +268,223 @@ override and (for the closure drill) the one-line sed adding
 `import VeneerScratch` to a copy of the checker, every drill is
 reconstructible from this log alone.
 
+## Adversarial fix round (2026-08-28)
+
+The audits judged the plumbing good (all fail-closed drills reproduce,
+ci wiring correct) but the evasion auditor DEFEATED the classification:
+a policed module of pure veneers passed both halves green. Coordinator
+fix list F1-F10 + outsider R2/R3 applied — under the [USER]
+recalibration, acknowledged with provenance:
+
+> **[USER] (via coordinator, 2026-08-28)**: "there's a history of 'gate
+> cruft' where we build non-useful gates for increasingly fancy
+> adversarial scenarios." Standing rule (2026-08-11): gates are
+> speedbumps against ACCIDENTAL drift, not fortresses against malicious
+> evaders. Threat model written into both gate headers: an honest
+> author under schedule pressure taking an innocent-looking shortcut;
+> we are the gate's only authors. **THIS GATE IS DONE** — the evasion
+> shapes were re-run ONCE as verification of the fixes (below); no
+> further evasion iterations, no arms race; future changes to this gate
+> are simplifications or deletions per the 2026-08-11 rule.
+
+### Per-fix status
+
+- **F1 APPLIED** (false-premise fix): the `startsWith "GoLean"` name-
+  prefix filter replaced by exact positive classification — boundary /
+  sentences / police / our tree (root exactly `GoLean`/`GoLeanProofs`)
+  / enumerated upstream (`Iris`/`Std`/`Init`/`Lean`/`Qq`/`Batteries`,
+  by exact root component) / else **V-CLASS violation naming the
+  module**. The repo's own non-GoLean-rooted modules (Audit, Challenge,
+  Solution, SliceSpike) now fall to fail-closed if ever reached.
+- **F2 APPLIED**: `boundary-dir` globbing REMOVED (the directive no
+  longer exists — unknown directives fail); the Laws tree is enumerated
+  file-by-file in the config. Enrolling a boundary file always costs a
+  tracked, diffable scope edit. A new Laws file is simply unclassified
+  until enrolled (recursed by the walk, never silently whitelisted).
+- **F3 APPLIED**: the walk stops at boundary THEOREMS only; boundary
+  DEFS (kernel-transparent) recurse, type and value. Kills the
+  rfl-reduction and TC-decide shapes (verified below).
+- **F4 APPLIED, minimal**: lint V1/V2 extended to the flag and
+  config-syntax spellings (`decide +native`, `decide +kernel`,
+  `decide (config := { native/kernel := true })`, multi-line window
+  bounded by the config group's closing paren — no decide-config
+  parser); plus ci step 1a3, a NEW delta-flagged addendum scan for the
+  native spellings globally (step 1's own pattern predates this unit
+  and is untouched; kernel spellings stay legal globally — the judge's
+  own idiom — and WP-banned via the lint).
+- **F5 APPLIED**: `police-root` completeness directive; seeded with
+  `proofs/GoLeanProofs/Specs` (the corpus landing dir — first customer
+  g-bind's Callchain pair), all 56 pre-existing legacy Specs files
+  enumerated `exempt-file`. A new Specs file fails the lint until it
+  enrolls per the split-file convention.
+- **F6 APPLIED, simplest form**: `boundary-kernel-ok <file> <count>`;
+  LangD pinned at 2; drift either way fails.
+- **F7 RECOMMENDATION ONLY** (not mine to apply — the ci landmark
+  watched-set is trust-adjacent): consider adding
+  `scripts/wp-lint-scope.txt` to step 1c4's `lm_files` watched set at
+  the next [USER]-approved gate-maintenance pass.
+- **F8 DECLINED with reason** ([USER] recalibration): thmInfo-only
+  scope stands. A proof packaged as a `def` is not house style, is
+  walked wherever a theorem uses it, and def-seeding machinery for a
+  shape we never write is the gate cruft the 2026-08-11 rule deletes.
+  Recorded in the checker's HONEST LIMITS docstring.
+- **F9 APPLIED**: RunGlue precision note in the config (boundary
+  because it is the plan's ∃-fuel "classification glue" AND its lemma
+  proofs legitimately unfold `stepFn`, RunGlue.lean:79-84).
+- **F10 APPLIED**: exit semantics unified and documented in both tools:
+  exit 2 = scope unusable (missing config / EMPTY police+sentences set,
+  whatever the cause); exit 1 = violations or scope problems alongside
+  a nonempty scope.
+- **R2 APPLIED**: the `boundary-sentences` class + the split-file
+  convention, published in the config header (verbatim below). g-bind's
+  files NOT touched (the sibling owns them; they split Callchain per
+  the convention).
+- **R3 APPLIED**: the checker's kernel-decision claim corrected (it was
+  overbroad): a decide closure is caught exactly when the decided
+  prop's constants include or reach the six under the classification.
+  The sanctioned side-condition vocabulary is now a NAMED list in the
+  checker docstring + config: `MachineWf`, `normalizeValueForTy`,
+  `applyStrictOp`, `dynamicDispatch?` — Surface.lean:127-129's sanction
+  ("at concrete seeds it is discharged by `decide` (the checker is
+  kernel-reducible)"). Deciding a well-formedness SIDE CONDITION is not
+  deciding a RUN.
+
+### The split-file convention (published; = the config header's text)
+
+Every corpus member ships as (at least) two files: (1) the WP-walk
+file — representation predicates, WP lemmas, loop invariants — enrolled
+`police`; its statements never mention the executable machine. (2) the
+sentence-export file — the designated first-order sentences plus their
+thin discharges (a goSpec_of_wp/adequacy application citing the WP-walk
+file) — enrolled `boundary-sentences`. Co-locating sentences with WP
+walks in one police file fails V-STMT by design — split the file. A new
+Laws/lifting file is enrolled `boundary` by an explicit config line,
+never auto-classified. Enrollment is forced mechanically by the
+`police-root` completeness check over `proofs/GoLeanProofs/Specs`.
+
+`boundary-sentences` semantics (design record): statements licensed
+(no type walk); proofs walked with police rules under two licenses —
+(i) constants written in the theorem's own TYPE are statement
+vocabulary, exempt from the forbidden check; (ii) GoCore-package
+constants are name-checked but not recursed (the statement legitimately
+embeds the drivers). Documented residual: a proof grinding strictly
+within its own statement's written vocabulary is not distinguishable by
+constant reachability — the lint's unfold bans and review cover that
+corner; the expected sentence proof is a two-liner.
+
+### The one-time evasion re-run (all CAUGHT) — verbatim
+
+Shapes reconstructed per the audit's method (scratch modules built to
+oleans, `GOLEAN_WP_SCOPE` demo configs, demo checker = the real checker
++ one `import` line). Scratches deleted after; recipes: shape (a) =
+policed theorem citing a grinding helper in an UNCLASSIFIED module
+(`EvasionHelpers`, non-GoLean root); shapes (c)/(d) = a boundary-
+enrolled scratch def `boundaryRunsOk : Bool := allStreamsOk 0 sigma0
+(.next .stop)` consumed by a policed `have`-reduction (c) and by
+`by decide` (d — the kernel really evaluated the machine under the
+wrapper; the decide elaborated fine); shape (f) = the four
+config/flag decide spellings in a policed file.
+
+Closure check, shapes a/c/d (old checker: all three PASSED green —
+the audited defeat; hardened checker):
+
+```
+exit=1
+  shape_a [V-CLASS]: reaches constant evasion_helper from UNCLASSIFIED module EvasionHelpers — classify the module in scripts/wp-lint-scope.txt or remove the dependency (fail closed)
+    chain: shape_a → evasion_helper
+  shape_c [V-PROOF]: proof term reaches machine constant GoLean.GoCore.Machine.allStreamsOk OUTSIDE the Laws/lifting/adequacy boundary — the VENEER (plan §2d); route through the boundary layer
+    chain: shape_c → boundaryRunsOk → GoLean.GoCore.Machine.allStreamsOk
+  shape_d [V-STMT]: STATEMENT reaches machine constant GoLean.GoCore.Machine.allStreamsOk — a first-order machine sentence lives in a boundary-sentences export module (split-file convention, scripts/wp-lint-scope.txt) or on the exempt list, never in a policed corpus module
+    chain: shape_d → boundaryRunsOk → GoLean.GoCore.Machine.allStreamsOk
+  shape_d [V-PROOF]: proof term reaches machine constant GoLean.GoCore.Machine.allStreamsOk OUTSIDE the Laws/lifting/adequacy boundary — the VENEER (plan §2d); route through the boundary layer
+    chain: shape_d → boundaryRunsOk → GoLean.GoCore.Machine.allStreamsOk
+```
+
+Text lint, shape f (old lint: only the `decide +kernel` /
+`native_decide` tokens fired — config spellings PASSED):
+
+```
+exit=1
+  artifacts/atrip-demo/ShapeF.lean:4: V1 native decision (`decide +native`) in WP-tier scope
+  artifacts/atrip-demo/ShapeF.lean:3: V1 native decision (`decide (config := { native := true`) in WP-tier scope
+  artifacts/atrip-demo/ShapeF.lean:2: V2 kernel-replay decision (`decide (config := { kernel := true`) in WP-tier scope
+  artifacts/atrip-demo/ShapeF.lean:6: V2 kernel-replay decision (`decide (config :=`) in WP-tier scope
+```
+
+(Line 6 is the line-broken config object — the bounded `[^)]` window
+catches it without a parser.)
+
+F6 count-drift drill (pin edited 2→3 in a demo config):
+
+```
+exit=1
+  proofs/GoLeanProofs/LangD.lean: grandfathered kernel-decide count DRIFTED — pinned 3, found 2 (F6: re-pin deliberately in artifacts/atrip-demo/scope-drift.txt with a reason, never silently)
+```
+
+R2 both-ways drill (`sentence_ok : stepFnIter = stepFnIter := rfl`):
+as `boundary-sentences` → PASS (`sentence_ok [sentence]: 9 proof
+constants walked`, exit 0); the same file enrolled `police` → V-STMT +
+V-PROOF, exit 1 (co-location refused, as the convention demands).
+
+### The acceptance demo (verbatim) — the gate's whole job
+
+A corpus-shaped scratch `proofs/GoLeanProofs/Specs/CorpusScratch.lean`
+(the honest-mistake shortcut), three steps:
+
+Step 1 — the file merely EXISTS under the police-root, REAL config:
+
+```
+$ ./scripts/wp-veneer-lint; echo "exit=$?"
+wp-veneer-lint: scope problems (fail closed):
+  proofs/GoLeanProofs/Specs/CorpusScratch.lean: UNENROLLED under police-root 'proofs/GoLeanProofs/Specs' — classify it in scripts/wp-lint-scope.txt (police / boundary-sentences per the split-file convention; exempt-file is for pre-existing legacy only)
+exit=1
+```
+
+Step 2 — enrolled `police` (demo config = real + one line); the file
+contains `unfold GoLean.GoCore.Machine.stepFn`:
+
+```
+exit=1
+  proofs/GoLeanProofs/Specs/CorpusScratch.lean:8: V3 `unfold … stepFn` — direct machine unfold above the Laws/lifting/adequacy boundary (plan §2d)
+```
+
+Step 3 — the term-level variant the text lint cannot see
+(`have _ := @GoLean.GoCore.Machine.stepFn`), built and walked:
+
+```
+exit=1
+  corpus_shortcut [V-PROOF]: proof term reaches machine constant GoLean.GoCore.Machine.stepFn OUTSIDE the Laws/lifting/adequacy boundary — the VENEER (plan §2d); route through the boundary layer
+    chain: corpus_shortcut → GoLean.GoCore.Machine.stepFn
+```
+
+Scratches removed; both tools re-verified green on the clean tree
+(lint: `1 policed, 0 sentence-export, 18 boundary file(s); 1
+completeness root(s) (56 legacy-exempt); 0 violations`; closure: the
+2 PinAdoptions theorems, exit 0).
+
+### Fix-round ceremony ([AGENT], 2026-08-28)
+
+Full `scripts/ci --diff` under the box-wide build lock
+(taken/released), 48G cap, on the tree carrying the fix round
+(`scripts/wp-lint-scope.txt`, `scripts/wp-veneer-lint`,
+`scripts/WpVeneerClosure.lean`, `scripts/ci` step 1a3, this log):
+**RESULT: PASS, exit 0** — 30 ok (29 + the new F4 addendum step),
+zero FAIL; `baseline diff FULL (2475/2475, no regression)`. In-build:
+
+```
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   WP veneer text lint (no kernel-decision/machine-unfold in WP-tier scope)
+  ok   WP veneer proof-closure (proof terms reach the machine only through the boundary layer)
+```
+
+Judge NOT owed, verified two ways: the gate summary carries no
+landmark scope note and no staleness note (info line only: last
+certified run 51 theorems / 118 s @ 534f27109180, 2 commits behind),
+and the fix round's diff touches none of the watched files
+(Audit.lean, Challenge/Solution, judge-config, lakefile, toolchain,
+comparator-judge, or any trusted-closure module). Full log:
+`artifacts/atrip-demo/ci-fixround.log` (gitignored, local).
+
 ## Appendix — the drill scratches, verbatim
 
 Lint drill `artifacts/atrip-demo/VeneerScratch.lean` (scope:

@@ -274,6 +274,39 @@ else
   ok "meta-layer escape hatches (allowlist: ${META_HATCH_ALLOW})"
 fi
 
+# 1a3. ESCAPE-HATCH ADDENDUM — native decision config/flag spellings.
+# ════════════════════════════════════════════════════════════════════════
+# [TRUST-ADJACENT DELTA — A-TRIP fix round F4, 2026-08-28] GATE ADDITION,
+# strengthens-only. Step 1's token set predates this unit and is NOT
+# modified; this ADDS the spellings it cannot see: `decide +native` and
+# `decide (config := … native := true …)` reach the same ofReduceBool
+# axiom as `native_decide` without the surface token. Scope: same file
+# set and comment-stripping as the meta-hatch scan; single-line grep
+# (a line-broken config object is caught by the authoritative in-build
+# Audit axiom sweep via ofReduceBool, and — in WP scope — by
+# scripts/wp-veneer-lint's multi-line matcher). Kernel spellings are NOT
+# banned globally (decide +kernel is the judge's legitimate idiom in
+# Solution/GoldenForkJoin); the WP-tier kernel ban lives in the veneer
+# lint's scope.
+# ════════════════════════════════════════════════════════════════════════
+step "escape-hatch addendum (decide +native / config-syntax native spellings — A-TRIP F4)"
+nat_hatch=""
+while IFS= read -r -d '' nh_f; do
+  nh_hits="$(strip_lean_comments < "$nh_f" | grep -nE 'decide[[:space:]]*\+[[:space:]]*native|decide[[:space:]]*\([[:space:]]*config[[:space:]]*:=[^)]*native[[:space:]]*:=[[:space:]]*true' || true)"
+  if [ -n "$nh_hits" ]; then
+    nat_hatch="${nat_hatch}$(printf '%s\n' "$nh_hits" | sed "s|^|${nh_f}:|")"$'\n'
+  fi
+done < <(find GoLean proofs -name '*.lean' -not -path '*/.lake/*' \
+         -not -path 'proofs/Challenge.lean' -print0 2>/dev/null)
+nat_hatch="${nat_hatch%$'\n'}"
+if [ -n "$nat_hatch" ]; then
+  echo "$nat_hatch"
+  bad "escape-hatch addendum (a native-decision spelling outside the token scan — same class as native_decide)"
+else
+  echo "  none found"
+  ok "escape-hatch addendum (no decide +native / native-config spellings)"
+fi
+
 # 1b2. Proofs-file audit coverage (tamper audit F2): a NEW proofs/*.lean that
 # nothing imports is never built, so the in-build sweep never sees it. Every
 # proofs/*.lean must be imported into the audited build (reachable from

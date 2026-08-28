@@ -3,6 +3,15 @@
 # the VENEER tripwire (docs/2026-08-28_iris-corpus-plan.md §2d + §6.3;
 # unit log docs/a-trip-log.md).
 #
+# THREAT MODEL (scope statement, [USER]-calibrated at the fix round,
+# 2026-08-28): this gate exists to catch an HONEST AUTHOR under schedule
+# pressure taking a shortcut that looks innocent — a direct machine
+# unfold, a kernel decision on a machine prop, a corpus file that never
+# got enrolled. It is NOT a fortress against a deliberate evader; we are
+# the gate's only authors. Per the standing gates-are-speedbumps rule
+# (2026-08-11): THIS GATE IS DONE — no further evasion iterations, no
+# arms race; future changes to it are simplifications or deletions.
+#
 # THE NAMED FORBIDDEN PATTERN (plan §2d): a WP-stated theorem whose proof
 # drops through adequacy — or unfolds the interpreter directly — to grind
 # kernel spans of the concrete run under an Iris wrapper is a VENEER: the
@@ -13,44 +22,52 @@
 # cheap textual tripwire; scripts/WpVeneerClosure.lean is the proof-term
 # closure check behind it.
 #
-# THIS IS A GATE, NOT A SPEEDBUMP — deliberately unlike scripts/proof-lint
-# (whose header forbids hardening because its rules are cost HEURISTICS
-# with measured false-positive classes). The rules here mechanize a
-# chartered BAN with an explicit, opt-in scope: inside a scope-listed
-# WP-tier file there is no legitimate `decide +kernel` closure and no
-# legitimate unfold of the executable machine — a file that genuinely
-# needs the machine is boundary-layer by definition and moves to the
-# config's `boundary` class with a reviewed reason, never argues here.
+# THIS IS A GATE, NOT A SPEEDBUMP-REPORT — deliberately unlike
+# scripts/proof-lint (whose header forbids hardening because its rules
+# are cost HEURISTICS). The rules here mechanize a chartered BAN with an
+# explicit, opt-in scope: inside a scope-listed WP-tier file there is no
+# legitimate kernel-decision closure and no legitimate unfold of the
+# executable machine — a file that genuinely needs the machine is
+# boundary-layer by definition and moves to the config's boundary class
+# with a reviewed reason, never argues here.
 #
-# Scope config: scripts/wp-lint-scope.txt (the boundary definition lives
-# there). GOLEAN_WP_SCOPE overrides the config path — for the tripwire's
-# own fire drill only (see docs/a-trip-log.md); ci always runs the
-# default.
+# Scope config: scripts/wp-lint-scope.txt (the boundary definition, the
+# directive reference, and the split-file convention live there).
+# GOLEAN_WP_SCOPE overrides the config path — for the tripwire's own
+# fire drills only (see docs/a-trip-log.md); ci always runs the default.
 #
 # What is checked, per file class (comments/docstrings stripped first, so
 # prose mentions never fire):
-#   police files:
-#     V1  `native_decide` (redundant with the global escape-hatch ban —
-#         kept so this gate is self-contained over its scope)
-#     V2  `decide +kernel` (kernel-replay decision closures)
+#   police + boundary-sentences files:
+#     V1  native decision in ANY spelling: `native_decide`,
+#         `decide +native`, `decide (config := … native := true …)`
+#     V2  kernel-replay decision in ANY spelling: `decide +kernel`,
+#         `decide (config := … kernel := true …)`
 #     V3  an unfold-class mention of an executable-machine name
 #         (stepFn / stepFnIter / execStmt / execStmtLoop / allStreamsOk /
 #         allStreamsOkPool): inside `unfold`/`delta` arguments, inside a
 #         simp-family / `rw` bracket list (multi-line aware), or an
 #         equation-lemma reference (`stepFn.eq_def`-class names). BARE
-#         mentions are deliberately NOT banned: a corpus file's exported
-#         first-order sentence may STATE the machine (statement closure is
-#         the Audit gate's beat); what it may never do is UNFOLD it.
+#         mentions are deliberately NOT banned: statements may speak the
+#         machine where their class licenses it; what a scoped file may
+#         never do is UNFOLD it.
 #   boundary files: V1 + V2 only (the boundary layer legitimately
 #     mentions the machine — that is its job; kernel-decision closures
-#     stay banned everywhere in the WP stack). `boundary-kernel-ok`
-#     files (the config's grandfather class, per-file, provenance
-#     required) drop V2 only.
+#     stay banned everywhere in the WP stack).
+#   boundary-kernel-ok files: V1, plus the V2 occurrence count must
+#     EQUAL the pinned count from the config (grandfather drift, either
+#     direction, FAILS — fix F6).
+#   police-root dirs: completeness — every *.lean under the root must be
+#     classified (police / boundary / boundary-kernel-ok /
+#     boundary-sentences / exempt-file) or the lint FAILS naming the
+#     stragglers (fix F5 — the silent-non-enrollment hole).
 #
-# FAIL-CLOSED: missing/unreadable config -> exit 2; EMPTY police list ->
-# exit 2 (a tripwire with nothing under it is a misconfiguration, not a
-# pass); scope-listed file missing/unreadable -> exit 1; *-dir with no
-# .lean files -> exit 1. Violations -> exit 1. Clean -> exit 0.
+# EXIT SEMANTICS (fix F10): exit 2 = the scope itself is unusable
+# (config missing/unreadable, or the police+sentences set is EMPTY —
+# whatever the cause); exit 1 = violations, or scope problems (missing
+# listed file, count drift, completeness stragglers, unparseable entry)
+# alongside a nonempty scope. Clean -> exit 0. Every failure names its
+# cause.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -68,8 +85,9 @@ import os, re, sys
 scope_path = sys.argv[1]
 MACHINE = r'(stepFnIter|stepFn|execStmtLoop|execStmt|allStreamsOkPool|allStreamsOk)'
 
-police, boundary, problems, violations = [], [], [], []
-kernel_ok = set()   # boundary-kernel-ok files: grandfathered decide+kernel
+police, boundary, sentences, roots, exempt_files = [], [], [], [], []
+kernel_ok = {}      # path -> pinned decide+kernel count (F6)
+problems, violations = [], []
 
 with open(scope_path, encoding="utf-8") as fh:
     for lineno, raw in enumerate(fh, 1):
@@ -77,44 +95,64 @@ with open(scope_path, encoding="utf-8") as fh:
         if not line:
             continue
         parts = line.split()
-        if len(parts) != 2:
-            problems.append(f"{scope_path}:{lineno}: unparseable entry: {raw.rstrip()}")
-            continue
-        kind, arg = parts
-        if kind in ("police", "boundary"):
-            (police if kind == "police" else boundary).append(arg)
-        elif kind == "boundary-kernel-ok":
-            boundary.append(arg)
-            kernel_ok.add(arg)
-        elif kind in ("police-dir", "boundary-dir"):
-            if not os.path.isdir(arg):
-                problems.append(f"{scope_path}:{lineno}: {kind} '{arg}' is not a directory (fail closed)")
-                continue
-            found = []
-            for dp, _, names in os.walk(arg):
-                for n in sorted(names):
-                    if n.endswith(".lean"):
-                        found.append(os.path.join(dp, n))
-            if not found:
-                problems.append(f"{scope_path}:{lineno}: {kind} '{arg}' contains no .lean files (fail closed)")
-            (police if kind == "police-dir" else boundary).extend(sorted(found))
-        elif kind == "exempt":
+        kind = parts[0]
+        if kind == "police" and len(parts) == 2:
+            police.append(parts[1])
+        elif kind == "boundary" and len(parts) == 2:
+            boundary.append(parts[1])
+        elif kind == "boundary-sentences" and len(parts) == 2:
+            sentences.append(parts[1])
+        elif kind == "boundary-kernel-ok" and len(parts) == 3 and parts[2].isdigit():
+            boundary.append(parts[1])
+            kernel_ok[parts[1]] = int(parts[2])
+        elif kind == "police-root" and len(parts) == 2:
+            roots.append(parts[1])
+        elif kind == "exempt-file" and len(parts) == 2:
+            exempt_files.append(parts[1])
+        elif kind == "exempt" and len(parts) >= 2:
             pass  # closure-check-only directive; not this lint's business
         else:
-            problems.append(f"{scope_path}:{lineno}: unknown directive '{kind}' (fail closed)")
+            problems.append(f"{scope_path}:{lineno}: unparseable entry: {raw.rstrip()}")
 
-if not police:
-    print(f"wp-veneer-lint: FAIL — scope config '{scope_path}' lists NO police files "
-          f"(an empty tripwire scope is a misconfiguration, never a pass)", file=sys.stderr)
+# Scope vacuity: the POLICED tier (police + sentence files) must be
+# nonempty — an empty tripwire scope is a misconfiguration, never a pass.
+if not (police or sentences):
+    print(f"wp-veneer-lint: FAIL — scope config '{scope_path}' lists NO police/"
+          f"boundary-sentences files (an empty tripwire scope is a "
+          f"misconfiguration, never a pass)", file=sys.stderr)
     for p in problems:
         print("  " + p, file=sys.stderr)
     sys.exit(2)
 
+# F5 completeness: every .lean under a police-root must be classified.
+classified = set(police) | set(boundary) | set(sentences) | set(exempt_files)
+for root in roots:
+    if not os.path.isdir(root):
+        problems.append(f"police-root '{root}' is not a directory (fail closed)")
+        continue
+    found = []
+    for dp, _, names in os.walk(root):
+        for n in sorted(names):
+            if n.endswith(".lean"):
+                found.append(os.path.join(dp, n))
+    if not found:
+        problems.append(f"police-root '{root}' contains no .lean files (fail-noisy)")
+    for f in sorted(found):
+        if f not in classified:
+            problems.append(
+                f"{f}: UNENROLLED under police-root '{root}' — classify it in "
+                f"{scope_path} (police / boundary-sentences per the split-file "
+                f"convention; exempt-file is for pre-existing legacy only)")
+
+# exempt-file entries must exist (config rot is loud).
+for f in exempt_files:
+    if not os.path.isfile(f):
+        problems.append(f"exempt-file '{f}' missing on disk (stale scope entry — fail closed)")
+
 def strip_comments(src):
     """Strip -- line comments and (nested) /- ... -/ block comments,
-    preserving line structure. Backtick/string subtleties are accepted
-    slop in the SAFE direction for this gate: stripping too much can only
-    hide prose, never invent code."""
+    preserving line structure. Stripping too much can only hide prose,
+    never invent code — the safe direction for this gate."""
     out, i, depth, n = [], 0, 0, len(src)
     while i < n:
         c = src[i]
@@ -133,6 +171,18 @@ def strip_comments(src):
         i += 1
     return "".join(out)
 
+# F4: the flag AND config-syntax spellings, as plain patterns (no decide-
+# configuration parser — [USER] recalibration). The config-syntax window
+# is a bounded lazy match so a line-broken config object still hits.
+NATIVE_RES = [
+    re.compile(r'\bnative_decide\b'),
+    re.compile(r'\bdecide\s*\+\s*native\b'),
+    re.compile(r'\bdecide\s*\(\s*config\s*:=[^)]{0,200}?\bnative\s*:=\s*true'),
+]
+KERNEL_RES = [
+    re.compile(r'\bdecide\s*\+\s*kernel\b'),
+    re.compile(r'\bdecide\s*\(\s*config\s*:=[^)]{0,200}?\bkernel\s*:=\s*true'),
+]
 MACHINE_RE = re.compile(r'\b' + MACHINE + r'\b')
 EQLEMMA_RE = re.compile(r'\b' + MACHINE + r'\.(eq_def|eq_\d+|_eq_\d+|_unfold|match_\d+)\b')
 UNFOLD_RE = re.compile(r'\b(unfold|delta)\b([^\n;]*)')
@@ -145,7 +195,6 @@ def bracket_lists(text):
     for m in SIMPHEAD_RE.finditer(text):
         i = m.end()
         n = len(text)
-        # skip whitespace, `only`, `(...)` config groups, `at h` is a stop
         while i < n:
             if text[i].isspace():
                 i += 1
@@ -170,19 +219,32 @@ def bracket_lists(text):
 def lineno_at(text, off):
     return text.count("\n", 0, off) + 1
 
-def scan(path, is_police):
+def scan(path, machine_rules):
     try:
         src = open(path, encoding="utf-8").read()
     except OSError as e:
         problems.append(f"{path}: UNREADABLE ({e}) — a scope-listed file must be scannable (fail closed)")
         return
     code = strip_comments(src)
-    for m in re.finditer(r'\bnative_decide\b', code):
-        violations.append(f"{path}:{lineno_at(code, m.start())}: V1 native_decide in WP-tier scope")
-    if path not in kernel_ok:
-        for m in re.finditer(r'\bdecide\s*\+\s*kernel\b', code):
-            violations.append(f"{path}:{lineno_at(code, m.start())}: V2 `decide +kernel` kernel-replay closure in WP-tier scope")
-    if not is_police:
+    for rx in NATIVE_RES:
+        for m in rx.finditer(code):
+            violations.append(f"{path}:{lineno_at(code, m.start())}: V1 native decision "
+                              f"(`{m.group(0).splitlines()[0]}`) in WP-tier scope")
+    nkernel = 0
+    for rx in KERNEL_RES:
+        nkernel += len(rx.findall(code))
+    if path in kernel_ok:
+        if nkernel != kernel_ok[path]:
+            problems.append(
+                f"{path}: grandfathered kernel-decide count DRIFTED — pinned "
+                f"{kernel_ok[path]}, found {nkernel} (F6: re-pin deliberately in "
+                f"{scope_path} with a reason, never silently)")
+    elif nkernel:
+        for rx in KERNEL_RES:
+            for m in rx.finditer(code):
+                violations.append(f"{path}:{lineno_at(code, m.start())}: V2 kernel-replay decision "
+                                  f"(`{m.group(0).splitlines()[0]}`) in WP-tier scope")
+    if not machine_rules:
         return
     for m in UNFOLD_RE.finditer(code):
         hit = MACHINE_RE.search(m.group(2))
@@ -202,14 +264,13 @@ def scan(path, is_police):
             f"machine unfolding by equation lemma (plan §2d)")
 
 seen = set()
-for p in police:
-    if p not in seen:
-        seen.add(p); scan(p, True)
-for p in boundary:
+for p, machine_rules in ([(x, True) for x in police] + [(x, True) for x in sentences]
+                          + [(x, False) for x in boundary]):
     if p in seen:
-        problems.append(f"{p}: listed as BOTH police and boundary (fail closed — pick one)")
+        problems.append(f"{p}: listed in more than one scope class (fail closed — pick one)")
         continue
-    seen.add(p); scan(p, False)
+    seen.add(p)
+    scan(p, machine_rules)
 
 status = 0
 if problems:
@@ -225,7 +286,8 @@ if violations:
         print("  " + v, file=sys.stderr)
     status = 1
 if status == 0:
-    print(f"wp-veneer-lint: clean — {len(police)} policed file(s), "
-          f"{len(boundary)} boundary file(s), 0 violations")
+    print(f"wp-veneer-lint: clean — {len(police)} policed, {len(sentences)} sentence-export, "
+          f"{len(boundary)} boundary file(s); {len(roots)} completeness root(s) "
+          f"({len(exempt_files)} legacy-exempt); 0 violations")
 sys.exit(status)
 PY

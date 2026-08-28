@@ -1,4 +1,5 @@
-# wp-lint-scope.txt — the WP-tier veneer-tripwire scope (unit A-TRIP).
+# wp-lint-scope.txt — the WP-tier veneer-tripwire scope (unit A-TRIP,
+# hardened at the adversarial fix round F1-F6/R2, 2026-08-28).
 #
 # Consumed by BOTH halves of the A-TRIP gate:
 #   scripts/wp-veneer-lint        (text lint; ci step "WP veneer text lint")
@@ -13,61 +14,134 @@
 # that derive WP rules from the step relation and export WP conclusions as
 # first-order machine sentences. Relative to that layer:
 #
-#   police <path>    — a file ABOVE the boundary (tier-3 WP proofs: today
-#                      the WP-tier adoption witnesses; every corpus proof
-#                      file adds itself here as it lands). Both checks
-#                      apply in full: no kernel-decision closures
-#                      (`decide +kernel`, `native_decide`) and no
-#                      unfold-class mention of the executable machine
-#                      (`stepFn`/`stepFnIter`/`execStmt`/`execStmtLoop`/
-#                      `allStreamsOk`/`allStreamsOkPool`); the closure
-#                      check additionally walks every theorem's PROOF TERM
-#                      and refuses any route to those constants that does
-#                      not pass through a boundary module below.
+#   police <path>    — a file ABOVE the boundary (tier-3 WP proofs).
+#                      Text lint: no kernel-decision closures in ANY
+#                      spelling (`native_decide`, `decide +kernel`,
+#                      `decide +native`, `decide (config := { kernel/
+#                      native := true })`) and no unfold-class mention of
+#                      the executable machine (`stepFn`/`stepFnIter`/
+#                      `execStmt`/`execStmtLoop`/`allStreamsOk`/
+#                      `allStreamsOkPool`). Closure check: every theorem/
+#                      def/opaque's STATEMENT closure must be machine-free
+#                      (V-STMT) and its PROOF/VALUE term may reach the
+#                      machine only through boundary modules (V-PROOF);
+#                      every module a walk reaches must be positively
+#                      classified (V-CLASS — unknown = violation).
 #   boundary <path>  — a file OF the boundary layer itself. It
 #                      LEGITIMATELY mentions the step relation and the
 #                      executable machine (that is its job — it is where
-#                      proofs are allowed to cross), so the machine-mention
-#                      rules do not apply; the kernel-decision bans
-#                      (`decide +kernel`, `native_decide`) still do. The
-#                      closure check STOPS at these modules: reaching the
-#                      machine through them is the sanctioned route.
-#   *-dir variants   — every *.lean under the directory, recursively
-#                      (fail-closed: a missing directory or an empty one
-#                      FAILS the gate).
-#   boundary-kernel-ok <path>
+#                      proofs are allowed to cross), so the machine-
+#                      mention rules do not apply; the kernel-decision
+#                      bans still do. The closure walk STOPS at boundary
+#                      THEOREMS only; boundary DEFS are recursed (a def
+#                      is kernel-transparent — stopping at defs was the
+#                      audited rfl-reduction/TC-decide evasion, fix F3).
+#                      Every boundary file is ENUMERATED here one line at
+#                      a time — no directory globs (fix F2): enrolling a
+#                      boundary file always costs a tracked, diffable
+#                      edit of this config.
+#   boundary-kernel-ok <path> <count>
 #                    — a boundary file additionally carrying GRANDFATHERED
 #                      kernel-decision certificates (plan §2d: "the
 #                      existing pilot quartets are grandfathered as
-#                      labeled scaffolding", with a recorded retirement
-#                      condition). The `decide +kernel` ban is lifted for
-#                      the file; `native_decide` stays banned. Every entry
-#                      needs an inline provenance comment. NEW files never
-#                      start here.
-#   exempt <FQName>  — a per-theorem carve-out for the CLOSURE check only
-#                      (plan §6.3's declared-carve-out list: the
-#                      ∃-discharge sites the charter sanctions). Every
-#                      entry needs an inline provenance comment; a listed
-#                      name that does not resolve FAILS the gate. None
-#                      today.
+#                      labeled scaffolding"). <count> PINS the number of
+#                      kernel-decide occurrences (all spellings, comment-
+#                      stripped): the lint FAILS if the actual count
+#                      drifts either way (fix F6 — the grandfather can
+#                      never silently grow). `native` spellings stay
+#                      banned. New files never start here.
+#   boundary-sentences <path>
+#                    — a corpus SENTENCE-EXPORT file (fix-round R2; the
+#                      split-file convention below). Its declarations MAY
+#                      state first-order machine sentences (no V-STMT),
+#                      but their PROOFS are walked with police rules,
+#                      with exactly two licenses: (i) constants written
+#                      in the theorem's own TYPE are statement vocabulary
+#                      and exempt from the forbidden check; (ii) GoCore
+#                      constants are name-checked but not recursed (the
+#                      statement legitimately embeds the drivers). Text
+#                      lint: full police rules (a sentence proof never
+#                      needs an unfold or a kernel decision — it routes
+#                      through goSpec_of_wp/adequacy, which are boundary
+#                      theorems). Documented residual: a proof grinding
+#                      strictly within its own statement's written
+#                      vocabulary is not distinguishable by constant
+#                      reachability; the lint's unfold bans and review
+#                      cover that corner, and the expected proof shape is
+#                      a two-liner.
+#   police-root <dir>
+#                    — a COMPLETENESS root (fix F5): every *.lean under
+#                      it (recursively) must be classified in this file
+#                      as police / boundary / boundary-kernel-ok /
+#                      boundary-sentences / exempt-file, or the lint
+#                      FAILS naming the stragglers. This is how corpus
+#                      enrollment is made mechanical: landing a file
+#                      under the root forces a reviewed scope decision in
+#                      the same change. A missing or .lean-empty root
+#                      FAILS (fail-noisy).
+#   exempt-file <path>
+#                    — under a police-root but deliberately OUT of the
+#                      WP-tier scope (legacy modules policed by their own
+#                      gates). Must exist on disk (fail-closed). Never
+#                      valid for a NEW file: new files under a root
+#                      enroll as police or boundary-sentences.
+#   exempt <FQName>  — a per-DECLARATION carve-out for the closure check
+#                      (plan §6.3's declared-carve-out clause: the
+#                      sanctioned ∃-discharge sites). Inline provenance
+#                      comment required; a non-resolving name FAILS.
+#                      None today.
 #
-# Files listed NOWHERE are outside this gate's scope: either BELOW the
-# boundary (GoCore, the language instances' machinery, ghost state) or
-# pre-Iris-era proof modules that never claimed the WP route (Examples/,
-# Specs/, Frame/, Sym/, StepKit, ... — policed by their own gates). The
-# scope is opt-in BY DESIGN and fail-noisy: an EMPTY police list fails the
-# gate, a listed-but-unreadable file fails the gate, and a policed module
-# missing from the audited build fails the closure check — scope rot is
-# loud, never silent.
+# THE SPLIT-FILE CONVENTION (published here for corpus workers; R2).
+# Every corpus member ships as (at least) two files:
+#   1. the WP-walk file — representation predicates, the WP lemmas, loop
+#      invariants, the calculus work. Enrolled `police`. Its statements
+#      are WP-tier: they never mention the executable machine.
+#   2. the sentence-export file — the designated first-order sentences
+#      (∀ ch/fuel interpreter-runs-the-pinned-program shapes) plus their
+#      thin discharges (a goSpec_of_wp/adequacy application citing the
+#      WP-walk file). Enrolled `boundary-sentences`.
+# Co-locating sentences with WP walks in one police file fails V-STMT by
+# design — split the file. A NEW Laws/lifting file is enrolled
+# `boundary` by an explicit line here (deliberate, reviewed); it is
+# NEVER auto-classified.
 #
-# Seeding decision ([AGENT], A-TRIP 2026-08-28): of today's WP-tier files,
-# PinAdoptions.lean sits ABOVE the boundary (pure Iris-tier adoption
-# witnesses — police); TotalWp.lean IS the total-lifting layer (its own
-# header: "total lifting for our prim steps", crossing via Adequacy's
-# step_complete — boundary); the Laws/ tree, Lifting.lean, Adequacy.lean,
-# RunGlue.lean (the plan's ∃-fuel "classification glue") and the language
-# instances Lang/LangD/LangC are the boundary layer per plan §6.3's own
-# wording ("the Laws/lifting/adequacy layer").
+# EXIT/FAILURE SEMANTICS (fix F10, both tools): exit 2 = the scope
+# itself is unusable (config missing/unreadable, or the police+sentence
+# set is EMPTY — whatever the cause, including a root that expanded to
+# nothing); exit 1 = violations, or scope problems (missing listed file,
+# count drift, completeness stragglers) alongside a nonempty scope.
+# Every failure names its cause.
+#
+# Files listed NOWHERE and under no police-root are outside this gate's
+# scope: either BELOW the boundary (GoCore, the language instances'
+# machinery, ghost state) or pre-Iris-era proof modules policed by their
+# own gates. In the CLOSURE WALK nothing is ever silently skipped: a
+# reached module is boundary (stop at theorems), police/sentences/our
+# tree (recurse), enumerated upstream (Iris/Std/Init/Lean/Qq/Batteries —
+# stop), or a V-CLASS violation (fix F1: unknown-module = fail closed;
+# the repo's own non-GoLean-rooted modules — Audit, Challenge, Solution,
+# SliceSpike — deliberately fall here if a policed proof ever reaches
+# them).
+#
+# SANCTIONED SIDE-CONDITION KERNEL CERTIFICATES ≠ VENEER (R3): concrete-
+# seed side conditions on the checker-reducible well-formedness
+# vocabulary — `MachineWf`, `normalizeValueForTy`, `applyStrictOp`,
+# `dynamicDispatch?` — are sanctioned discharges (Surface.lean:127-129:
+# "at concrete seeds it is discharged by `decide` (the checker is
+# kernel-reducible)"). The named list and the veneer/side-condition
+# distinction live in scripts/WpVeneerClosure.lean's docstring.
+#
+# Seeding decision ([AGENT], A-TRIP 2026-08-28): of today's WP-tier
+# files, PinAdoptions.lean sits ABOVE the boundary (pure Iris-tier
+# adoption witnesses — police); TotalWp.lean IS the total-lifting layer
+# (its own header: "total lifting for our prim steps", crossing via
+# Adequacy's step_complete — boundary); Lifting/Adequacy/the Laws files
+# and the language instances Lang/LangD/LangC are the boundary layer per
+# plan §6.3's own wording ("the Laws/lifting/adequacy layer").
+# RunGlue.lean precision (fix F9): boundary because it is the plan's
+# ∃-fuel-row "classification glue" (§2d quantifier table) AND its lemma
+# proofs legitimately unfold `stepFn` (RunGlue.lean:79-84) — it is glue
+# AT the crossing, not a consumer above it.
 
 police proofs/GoLeanProofs/PinAdoptions.lean
 
@@ -76,11 +150,88 @@ boundary proofs/GoLeanProofs/Adequacy.lean
 boundary proofs/GoLeanProofs/TotalWp.lean
 boundary proofs/GoLeanProofs/Lang.lean
 # LangD carries the spawnNoop witness pair's `decide +kernel` completion
-# certificates (`spawnNoopAllStreamsCert` line ~1120 + the InitialSplit
-# side condition ~1100) — the §2d-grandfathered allStreamsOk pilot idiom,
-# retirement condition recorded in the plan (re-proved through G-TOTAL or
-# retired with the gallery-row cleanup). [AGENT] A-TRIP 2026-08-28.
-boundary-kernel-ok proofs/GoLeanProofs/LangD.lean
+# certificates (`spawnNoopAllStreamsCert` ~1120 + the InitialSplit side
+# condition ~1100) — the §2d-grandfathered allStreamsOk pilot idiom,
+# retirement condition recorded in the plan. Count PINNED at 2 (F6).
+# [AGENT] A-TRIP 2026-08-28.
+boundary-kernel-ok proofs/GoLeanProofs/LangD.lean 2
 boundary proofs/GoLeanProofs/LangC.lean
 boundary proofs/GoLeanProofs/RunGlue.lean
-boundary-dir proofs/GoLeanProofs/Laws
+# The Laws tree, enumerated file by file (F2 — a new Laws file must be
+# enrolled by a diffable edit here, never by landing in the directory):
+boundary proofs/GoLeanProofs/Laws/Assign.lean
+boundary proofs/GoLeanProofs/Laws/Call.lean
+boundary proofs/GoLeanProofs/Laws/Control.lean
+boundary proofs/GoLeanProofs/Laws/Eval.lean
+boundary proofs/GoLeanProofs/Laws/Init.lean
+boundary proofs/GoLeanProofs/Laws/Loop.lean
+boundary proofs/GoLeanProofs/Laws/Range.lean
+boundary proofs/GoLeanProofs/Laws/Slice.lean
+boundary proofs/GoLeanProofs/Laws/StmtOps.lean
+boundary proofs/GoLeanProofs/Laws/Unwind.lean
+boundary proofs/GoLeanProofs/Laws/Values.lean
+
+# ── The corpus completeness root (F5) ────────────────────────────────
+# Specs/ is where corpus members land (first customer: g-bind's
+# Callchain pair). Every file below is a pre-existing CallSpec-era
+# module, out of the WP-tier scope, policed by its own gates (surface
+# purity, statement-TCB, Audit pins) — enumerated so that any NEW file
+# under Specs/ fails the lint until it enrolls per the split-file
+# convention above. [AGENT] fix-round enumeration, 2026-08-28.
+police-root proofs/GoLeanProofs/Specs
+exempt-file proofs/GoLeanProofs/Specs/AutomationTargets.lean
+exempt-file proofs/GoLeanProofs/Specs/ForkJoinTargets.lean
+exempt-file proofs/GoLeanProofs/Specs/GoldenForkJoin.lean
+exempt-file proofs/GoLeanProofs/Specs/GoldenProgram.lean
+exempt-file proofs/GoLeanProofs/Specs/GoldenQuorum.lean
+exempt-file proofs/GoLeanProofs/Specs/GoldenQuorumAll.lean
+exempt-file proofs/GoLeanProofs/Specs/GoldenQuorumPin.lean
+exempt-file proofs/GoLeanProofs/Specs/GoldenQuorumThree.lean
+exempt-file proofs/GoLeanProofs/Specs/GoldenQuorumWP.lean
+exempt-file proofs/GoLeanProofs/Specs/GoldenRecover.lean
+exempt-file proofs/GoLeanProofs/Specs/GoldenSelectDone.lean
+exempt-file proofs/GoLeanProofs/Specs/GoldenSliceWP.lean
+exempt-file proofs/GoLeanProofs/Specs/GoldenSurface.lean
+exempt-file proofs/GoLeanProofs/Specs/GoldenTargets.lean
+exempt-file proofs/GoLeanProofs/Specs/GooseParityBlockWP.lean
+exempt-file proofs/GoLeanProofs/Specs/GooseParityChannels.lean
+exempt-file proofs/GoLeanProofs/Specs/GooseParityKit.lean
+exempt-file proofs/GoLeanProofs/Specs/GooseParityNewWP.lean
+exempt-file proofs/GoLeanProofs/Specs/GooseParityNilWP.lean
+exempt-file proofs/GoLeanProofs/Specs/GooseParityTargets.lean
+exempt-file proofs/GoLeanProofs/Specs/GooseParityVarsWP.lean
+exempt-file proofs/GoLeanProofs/Specs/ImportedGooseActris.lean
+exempt-file proofs/GoLeanProofs/Specs/ImportedGooseBlock.lean
+exempt-file proofs/GoLeanProofs/Specs/ImportedGooseConst.lean
+exempt-file proofs/GoLeanProofs/Specs/ImportedGooseDefer.lean
+exempt-file proofs/GoLeanProofs/Specs/ImportedGooseMapliteral.lean
+exempt-file proofs/GoLeanProofs/Specs/ImportedGooseMuxer.lean
+exempt-file proofs/GoLeanProofs/Specs/ImportedGooseNew.lean
+exempt-file proofs/GoLeanProofs/Specs/ImportedGooseNil.lean
+exempt-file proofs/GoLeanProofs/Specs/ImportedGooseRune.lean
+exempt-file proofs/GoLeanProofs/Specs/ImportedGooseSelectTricky.lean
+exempt-file proofs/GoLeanProofs/Specs/ImportedGooseVars.lean
+exempt-file proofs/GoLeanProofs/Specs/QuorumRefSpec.lean
+exempt-file proofs/GoLeanProofs/Specs/QuorumTargets.lean
+exempt-file proofs/GoLeanProofs/Specs/Raft/AbsState.lean
+exempt-file proofs/GoLeanProofs/Specs/Raft/AbsStateV2.lean
+exempt-file proofs/GoLeanProofs/Specs/Raft/AbsTwinCheckerRead.lean
+exempt-file proofs/GoLeanProofs/Specs/Raft/AbsTwinRead.lean
+exempt-file proofs/GoLeanProofs/Specs/Raft/DriverNet.lean
+exempt-file proofs/GoLeanProofs/Specs/Raft/MapPermRead.lean
+exempt-file proofs/GoLeanProofs/Specs/Raft/NativeCheckerBridge.lean
+exempt-file proofs/GoLeanProofs/Specs/Raft/NativeEtcdDischarge.lean
+exempt-file proofs/GoLeanProofs/Specs/Raft/NativeObligations.lean
+exempt-file proofs/GoLeanProofs/Specs/Raft/NativeS1Chain.lean
+exempt-file proofs/GoLeanProofs/Specs/Raft/NativeS1CheckerLeaf.lean
+exempt-file proofs/GoLeanProofs/Specs/Raft/NativeS1Witness.lean
+exempt-file proofs/GoLeanProofs/Specs/Raft/NativeS23Chain.lean
+exempt-file proofs/GoLeanProofs/Specs/Raft/NativeS23Route.lean
+exempt-file proofs/GoLeanProofs/Specs/Raft/NativeS23Witness.lean
+exempt-file proofs/GoLeanProofs/Specs/Raft/RenCongr.lean
+exempt-file proofs/GoLeanProofs/Specs/RaftAgreement.lean
+exempt-file proofs/GoLeanProofs/Specs/RaftPilot/InitSpec.lean
+exempt-file proofs/GoLeanProofs/Specs/Statements.lean
+exempt-file proofs/GoLeanProofs/Specs/TotalPins.lean
+exempt-file proofs/GoLeanProofs/Specs/TwinProgram.lean
+exempt-file proofs/GoLeanProofs/Specs/WirePin.lean
