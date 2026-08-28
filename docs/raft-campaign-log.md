@@ -3600,3 +3600,40 @@ soundness + claim strength + the baseline re-pin (Opus); (3) the
 outsider Iris-legitimacy review (Fable) over the ENTIRE WP-tier
 stack across both branches, judged against the tradition with
 deps/iris-lean + deps/perennial as reference.
+
+### 2026-08-28 — OUTSIDER LEGITIMACY REVIEW: MINOR REVISIONS ("This is genuine Iris")
+
+Verdict MINOR REVISIONS. Key sentences: "This is genuine Iris...
+I found no hidden cheat." Independently kernel-checked the
+flagship theorems (callchain quartet, wp_plug_bind, step_plug_inv,
+go_adequacy, go_total_adequacy, sn_seqn_nil): classical trio only.
+Section verdicts: (1) machinery doing honest work — YES (language
+instance real not decorative; lifting recognizably HeapLang-style;
+adequacy actually connects to the tested interpreter; the
+Callchain exhibit IS an Iris proof — read line by line, three
+genuine bind applications, callees never inlined); (2) enumeration
+ban HOLDS going forward, but the grandfathered allStreamsOk tier
+is ~35 theorems (4 designated/judge-shipped) with labels in DOCS
+not ARTIFACTS → R1; (3) no hidden cheats CONFIRMED (axiom sweep +
+independent checks; one latent Audit.*-module sweep gap noted);
+(4) tradition test PASSES (HeapLang transplant recognized;
+divergences flagged with accurate lineage — the D-2 counterexample
+checked against upstream's actual Context fields); (5) gaps
+honestly marked YES with the R1 exception. REVISIONS: R1
+grandfather labels into the artifacts (most urgently the 4
+designated); R2 THE BIG ONE — the A-TRIP scope cannot hold its
+first customer (measured: the closure checker FAILS on the
+quartet's co-located first-order sentences; polices only 2
+theorems today; enrollment opt-in with silent non-enrollment) →
+split corpus files or amend the checker, make Specs-corpus
+enrollment mechanical; R3 kernel-decision coverage overclaim in
+the checker docstring (sanctioned side-condition vocabulary to
+document); R4 the bind rule's context-premise debt (mapIterFree/
+recover-free/hdrain excludes sites that G-MAPITER/G-CALLS will
+need — named owed row); R5 housekeeping (stale registry rows,
+2 unlabeled Range scaffolds, PlugProbe retirement now satisfied).
+TRAJECTORY: "Yes, if it survives its own economics" — the single
+greatest threat = proof-burden economics outrunning enforcement
+(892 proof lines per 32 Go lines at hand-modality ergonomics;
+G-AUTO unbuilt; the tripwire currently guards 2 theorems).
+[AGENT]: fix round consolidates when the two Opus audits land.
