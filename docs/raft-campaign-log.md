@@ -3586,3 +3586,17 @@ audit round proposed for a-trip + g-bind; merge order A-TRIP
 first, then G-BIND rebases + adds its files to the lint scope
 (police Callchain; boundary Bind/PlugInv) — the lint's first real
 exercise polices the first real corpus proof.
+
+### 2026-08-28 — [USER] approved the combined audit + added the OUTSIDER legitimacy reviewer
+
+[USER] verbatim addition: "one additional reviewer, whose job it
+is to review as an outsider ensuring what we're building is a true
+and valid Iris-based proof system. Iris machinery, doing honest
+work, no enumerative techniques, no hidden cheats, nothing that
+isn't good honest reasoning in the RefinedC / Brick tradition
+(except for gaps that are honestly marked)." Three reviewers
+launched: (1) A-TRIP evasion resistance (Opus); (2) G-BIND
+soundness + claim strength + the baseline re-pin (Opus); (3) the
+outsider Iris-legitimacy review (Fable) over the ENTIRE WP-tier
+stack across both branches, judged against the tradition with
+deps/iris-lean + deps/perennial as reference.
