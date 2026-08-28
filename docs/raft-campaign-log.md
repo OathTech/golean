@@ -3246,3 +3246,24 @@ conditional on a user-side upstream-head re-check — sandbox blocks
 egress), trust-tool execution consent, the matching lean4export
 rev, judge-landmark scheduling. Hygiene slice still in flight
 (parallel, disjoint).
+
+### 2026-08-28 — HYGIENE SLICE branch-complete (hygiene-slice @ 620e1a77); audit-ask posed
+
+All four items done, no STOP conditions: ChoiceCanon killed (616
+lines; consumer sweep clean; the Audit/ChoiceInv pin file held
+nothing else and died with it; [USER] rationale in the commit;
+ARCHIVE.md + registry updated with the SpanIso/Mask park note);
+Audit.lean provenance corrected bracket-free (trust-adjacent,
+flagged); judge-parser hardened — the worker caught that the naive
+^\s*\]\s*$ terminator would swallow to EOF (the real closing line
+carries the last name) and anchored correctly, fail-closed both
+ways; hazard reproduced (old parser: 33 names with an injected
+bracket comment) and defeated (new: 51). fjRunDeadlocks + its
+orphaned deadlock cluster + 2 de-designated theorems + their pins
+retired (file kept — ci purity target). 10 files +151/−747. Gate
+PASS; judge PASS 51 theorems in 117s @ 1022a6c2 — LIKE-FOR-LIKE
+with the 2026-08-27 landmark (51=51 = end-to-end proof the parser
+change is behavior-preserving). Delta-flags recorded (2
+trust-adjacent commits; Challenge.lean comment-only; 6 pins of
+now-nonexistent decls removed; hatch scope argued). [AGENT]:
+audit-ask posed together with the pending N-2 ruling.
