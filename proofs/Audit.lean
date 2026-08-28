@@ -344,9 +344,13 @@ open Lean in
     -- forkJoinDeadlockCanonical, forkJoinDeadlockAdversarial — left
     -- the designated set: single-pinned-stream kernel-replay
     -- readouts, subsumed by the slice-5 all-schedule family below,
-    -- which STAYS designated. The theorems remain proved,
-    -- non-designated witnesses in Specs/GoldenForkJoin.lean with
-    -- their axiom pins retained. Removed from Challenge, Solution,
+    -- which STAYS designated. The three rendezvous theorems remain
+    -- proved, non-designated witnesses in Specs/GoldenForkJoin.lean
+    -- with their axiom pins retained; the two DEADLOCK rows were
+    -- RETIRED outright at the 2026-08-28 hygiene slice, gate-audit
+    -- L-7, together with the fjRunDeadlocks def they were the only
+    -- consumers of, the ∀-schedule forkJoinNoDeadlock carrying that
+    -- content. Removed from Challenge, Solution,
     -- and judge-config in the same commit; the comparator-judge
     -- landmark re-run at this landing covers the designated-set
     -- change. Trust-adjacent edit, flagged for the pre-merge audit.
@@ -597,17 +601,19 @@ open Lean in
 /-- info: 'GoLean.GoCore.Machine.loadLoc_after_disjoint_store' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.GoCore.Machine.loadLoc_after_disjoint_store
 
--- The fork/join pool kernel witnesses (pinned streams; slice 2).
+-- The fork/join pool kernel witnesses (pinned streams; slice 2) —
+-- the three surviving rendezvous rows.
 /-- info: 'GoLean.Surface.forkJoinStreamCanonical' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.forkJoinStreamCanonical
 /-- info: 'GoLean.Surface.forkJoinStreamAdversarial' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.forkJoinStreamAdversarial
 /-- info: 'GoLean.Surface.forkJoinStreamAlternating' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.forkJoinStreamAlternating
-/-- info: 'GoLean.Surface.forkJoinDeadlockCanonical' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Surface.forkJoinDeadlockCanonical
-/-- info: 'GoLean.Surface.forkJoinDeadlockAdversarial' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Surface.forkJoinDeadlockAdversarial
+-- (The two deadlock pins that stood here —
+-- forkJoinDeadlockCanonical/Adversarial — were RETIRED with their
+-- theorems and the fjRunDeadlocks def at the 2026-08-28 hygiene slice:
+-- gate-audit L-7, plan §6.3. Zero consumers after the triage
+-- de-designation; forkJoinNoDeadlock carries the content ∀-quantified.)
 
 -- The slice-5 ∀-schedule fork/join witnesses + the GoSpecC
 -- inhabitation witness (channels arc slice 5). The ∀-stream family

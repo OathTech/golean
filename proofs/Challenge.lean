@@ -270,9 +270,13 @@ theorem committedIndexRef_meets_spec : committedIndexRef_meets_spec_statement :=
 rows (`forkJoinStreamCanonical`/`Adversarial`/`Alternating`,
 `forkJoinDeadlockCanonical`/`Adversarial`) left the designated set —
 single-stream kernel-replay readouts, a gallery-era role the
-∀-schedule family below subsumes. The theorems remain proved,
-non-designated witnesses in `Specs/GoldenForkJoin.lean` (Audit axiom
-pins retained). Removed here, from `Solution.lean`, from
+∀-schedule family below subsumes. The three rendezvous theorems remain
+proved, non-designated witnesses in `Specs/GoldenForkJoin.lean` (Audit
+axiom pins retained); the two DEADLOCK rows were retired outright at
+the 2026-08-28 hygiene slice (gate-audit L-7), together with the
+`fjRunDeadlocks` def they were the only consumers of — the ∀-schedule
+`forkJoinNoDeadlock` carries that content. Removed here, from
+`Solution.lean`, from
 `Audit.lean`'s designated list, and from `judge-config.json` in the
 same commit; the comparator-judge landmark re-run covers the
 change. -/

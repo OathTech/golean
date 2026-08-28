@@ -4,7 +4,7 @@ import GoLean.GoCore.Multi
 # The fork/join statement targets — DEFS ONLY (statement module)
 
 The definitions the designated fork/join theorem STATEMENTS reference
-(`fjRunGives42`, `fjRunDeadlocks`, and their program/seed/env
+(`fjRunGives42`, `fjReadout42`, and their program/seed/env
 constituents), split out of `Specs/GoldenForkJoin.lean` at the
 channels-arc final audit (F4, 2026-08-07): the Comparator Challenge —
 the judge's trusted root — must import ONLY clean statement modules
@@ -23,9 +23,19 @@ Content notes (verbatim from the slice-2 originals — the split moves
 text, never restates it): the fork/join program is a hand-built
 two-goroutine rendezvous — main spawns a worker, the worker sends 42
 over an unbuffered channel, main receives it into the pinned output
-cell — and the deadlock program parks main and its worker on two
-different channels, all goroutines asleep after real multi-goroutine
-progress.
+cell.
+
+RETIRED at the hygiene slice (2026-08-28, gate-audit L-7, plan §6.3):
+the DEADLOCK program and its readout — `fjRunDeadlocks`,
+`fjBlockedWorker`, `fjDeadlockDriver`, `fjDeadlockSeed` — are deleted.
+Their only consumers were the two pinned-stream theorems
+`forkJoinDeadlockCanonical`/`Adversarial`, de-designated at the triage
+landing (2026-08-27) and retired in the same commit; the def then had
+zero consumers anywhere in the tree. The `.deadlock` content that
+matters is carried by `forkJoinNoDeadlock` (`GoldenForkJoin.lean`),
+which says NO schedule of the fork/join program deadlocks — a
+∀-quantified statement, strictly stronger than a pinned-stream replay
+of one deadlocking program. Recoverable at 05e81b70 (docs/ARCHIVE.md).
 -/
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine
@@ -68,32 +78,6 @@ def fjRunGives42 (fuel : Nat) (ch : Choices) : Bool :=
       | _ => false
   | _ => false
 
-/-- The blocked worker for the deadlock witness: receive on a channel
-nobody sends on. -/
-def fjBlockedWorker : Func := {
-  id := ⟨"fjBlocked"⟩,
-  args := #[{ id := "ch", typ := .chan .both .int }],
-  results := #[],
-  body := .seqn #[.chanRecv #[] (.var "ch") .int]
-}
-
-/-- Main parks on one channel while the spawned worker parks on
-another: ALL goroutines asleep after real multi-goroutine progress. -/
-abbrev fjDeadlockDriver : Stmt := .block
-  #[{ id := "av", typ := .chan .both .int },
-    { id := "bv", typ := .chan .both .int }]
-  #[
-    .makeChan (.var "av") .int none,
-    .makeChan (.var "bv") .int none,
-    .goStmt (.funcVal ⟨"fjBlocked"⟩ #[]) #[.var "av"],
-    .chanRecv #[.var "r"] (.var "bv") .int
-  ]
-
-def fjDeadlockSeed : ExecState :=
-  { functions := #[fjBlockedWorker],
-    heap := [(.base ⟨0⟩, ⟨some (.int .int), .int 0 .int⟩)],
-    nextAddr := 1 }
-
 /-- The joined-final-state readout: the output cell holds 42 (the
 slice-5 ∀-schedule certificate's post; lives here beside
 `fjRunGives42` so the two readouts share one matcher — the
@@ -101,12 +85,6 @@ slice-5 ∀-schedule certificate's post; lives here beside
 def fjReadout42 : ExecState → Bool := fun σf =>
   match loadLoc σf (.base ⟨0⟩) with
   | .ok (.int 42 .int) => true
-  | _ => false
-
-/-- Does the pool classify the run as the all-asleep DEADLOCK terminal? -/
-def fjRunDeadlocks (fuel : Nat) (ch : Choices) : Bool :=
-  match execProg fuel fjEnv fjDeadlockSeed ch fjDeadlockDriver with
-  | .error .deadlock => true
   | _ => false
 
 end GoLean.Surface

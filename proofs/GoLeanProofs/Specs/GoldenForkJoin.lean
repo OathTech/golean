@@ -15,11 +15,12 @@ consumes: two goroutines are runnable at the registry boundaries —
 including, since slice 4's BUG-040 fix, the POST-SPAWN `.spawned`
 boundary; the schedules were re-derived by probe after that fix and
 the distinctness argument re-recorded at `forkJoinStreamAlternating`;
-stream literals and readouts unchanged), plus a
-multi-goroutine DEADLOCK program classified `.deadlock` the same way.
+stream literals and readouts unchanged). The multi-goroutine DEADLOCK
+program that once sat beside them was RETIRED at the 2026-08-28
+hygiene slice — see the retirement note below.
 
 THE DEFS the designated statements reference (`fjRunGives42`,
-`fjRunDeadlocks`, the programs/seeds/env) live in
+`fjReadout42`, the programs/seeds/env) live in
 `Specs/ForkJoinTargets.lean` — the def-only statement module in
 Challenge's trusted closure (split at the channels-arc final audit,
 F4, 2026-08-07: this file holds `decide +kernel` PROOFS of designated
@@ -33,12 +34,13 @@ the pool ∀-streams kernel checker) which subsumes them. DESIGNATION
 STATUS (triage landing 2026-08-27, [USER] decision, plan L-13): the
 five pinned-stream rows were RECLASSIFIED to NON-DESIGNATED witnesses
 — removed from Challenge/Solution/Audit's designated list and
-judge-config; the ∀-schedule family stays designated. The theorems
-are kept byte-identical here with their Audit axiom pins. What the
-pinned-stream witnesses pin, non-vacuously:
-the spawn step forks, the arrival intercept pairs the rendezvous, the
-handoff delivers the value, main's exit joins, and the all-asleep state
-classifies as the deadlock terminal — end to end, through the kernel.
+judge-config; the ∀-schedule family stays designated. The three
+SURVIVING pinned-stream rows are kept byte-identical here with their
+Audit axiom pins (the two deadlock rows were retired at the 2026-08-28
+hygiene slice — note below). What the surviving pinned-stream
+witnesses pin, non-vacuously: the spawn step forks, the arrival
+intercept pairs the rendezvous, the handoff delivers the value, and
+main's exit joins — end to end, through the kernel.
 -/
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine
@@ -79,13 +81,17 @@ theorem forkJoinStreamAlternating :
     fjRunGives42 400 [1, 1, 1, 1, 1, 1, 1, 1] = true := by
   decide +kernel
 
-theorem forkJoinDeadlockCanonical : fjRunDeadlocks 400 [] = true := by
-  decide +kernel
-
-theorem forkJoinDeadlockAdversarial :
-    fjRunDeadlocks 400 [9, 8, 7, 6, 5, 4, 3, 2, 1, 0] = true := by
-  decide +kernel
-
+/-! RETIRED at the hygiene slice (2026-08-28, gate-audit L-7, plan
+§6.3): `forkJoinDeadlockCanonical` and `forkJoinDeadlockAdversarial`,
+the two pinned-stream `fjRunDeadlocks 400 <literal> = true` replays,
+are DELETED together with the `fjRunDeadlocks` def and its deadlock
+program (`Specs/ForkJoinTargets.lean`) and their two Audit axiom pins.
+They were de-designated at the triage landing (2026-08-27) as
+single-pinned-stream kernel replays, which left them with no consumer
+at all. `forkJoinNoDeadlock` below carries the deadlock content in the
+form the doctrine wants: ∀ ch, NO schedule of the fork/join program
+reaches the `.deadlock` terminal. Recoverable at 05e81b70
+(docs/ARCHIVE.md). -/
 
 /-! ## The slice-5 ∀-SCHEDULE witnesses — the `∀ ch` quantifier
 DISCHARGED (the pool ∀-streams kernel checker route the slice-2 note
@@ -103,10 +109,11 @@ grows by extension, never restatement). -/
 
 /-- The kernel certificate: the checker explores every schedule of the
 fork/join pool within fuel 400 and certifies the `.normal`/42 outcome
-on all of them. (The deadlock program of `fjRunDeadlocks` is REFUSED
-by the same checker — probed; a certificate for it cannot exist, since
-the soundness theorem would then contradict
-`forkJoinDeadlockCanonical`.) -/
+on all of them. (The checker is not vacuously satisfiable: the
+retired deadlock program — see the retirement note above — was probed
+against this same checker and REFUSED, as it must be, since a
+certificate for it plus the soundness theorem would contradict its
+`.deadlock` classification.) -/
 theorem forkJoinAllStreamsCert :
     allStreamsOkPool fjReadout42 400
       ⟨#[.exec forkJoinDriver fjEnv .stop], fjSeed, 0⟩ {} = true := by
