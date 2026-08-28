@@ -3433,3 +3433,24 @@ designated statement changed; helper-lemma restatements genuinely
 desugar-mirroring) + TotalWp witness reality (is sn_seqn_nil a
 real symbolic proof; is the inhabitation genuinely our language
 instance). Findings fix on-branch → re-gate → merge sign-off.
+
+### 2026-08-28 — VERBATIM [USER] QUOTES for the N-2 chain (audit F-3c repair)
+
+The U0 trust-surface audit correctly noted the consent endpoint was
+recorded as coordinator paraphrase. The verbatim user utterances,
+entered here by the coordinator from the primary conversation, with
+their contexts:
+1. N-2 approval — posed as a four-item package (boundary rev
+   e7a0a43; trust-tool execution consent; matching lean4export rev;
+   judge-landmark scheduling), alongside the hygiene audit-or-waive
+   question. [USER] verbatim: "(1) go ahead with the audit (2)
+   approved". Item (2) is the N-2 package approval.
+2. The paused trust-tool build — posed with the exact command for
+   interactive execution. [USER] verbatim, after running it:
+   "comparator run done". Coordinator then verified the binary
+   (timestamp 15:46) + source pristineness at the pinned tag.
+3. The U0 audit launch — [USER] verbatim: "Great, what's next?
+   Audit review I guess?" (taken as approval of the posed two-
+   reviewer scope; so tagged at the launch entry).
+These are the chain endpoints for the branch's §S3.4 citation;
+cite THIS entry (branch raft-proof-campaign) by section title.
