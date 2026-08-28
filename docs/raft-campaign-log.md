@@ -3707,3 +3707,29 @@ Merge order after both re-ceremonies: A-TRIP first, G-BIND
 rebases + enrolls its (split) files in the fixed scope — the
 tripwire's first enrollment must CATCH a planted veneer in the
 enrolled corpus file as its acceptance demo.
+
+### 2026-08-28 — [USER] gate-cruft warning; A-TRIP fix round RECALIBRATED
+
+[USER]: "we need to be careful here. There's a history of 'gate
+cruft' where we build non-useful gates for increasingly fancy
+adversarial scenarios." This invokes the standing 2026-08-11 rule
+(gates are speedbumps; never aim adversarial review at a gate;
+delete fragile gate cruft). [AGENT] own-miss acknowledged: the
+evasion audit aimed escape-hunting at a gate — [USER]-approved in
+the moment, but the principle should have shaped the scope and the
+fix round. RECALIBRATION (threat model = ACCIDENTAL drift by an
+honest author, not a malicious evader): KEEP F1 (the upstream
+filter's premise is factually false for our repo — a correctness
+fix, fail-closed), F2 (explicit boundary list — removes SILENT
+enrollment, the accidental-drift shape), F5+R2 (mechanical
+enrollment + the scope holding its first customer — usefulness,
+not hardening), F3 (a small classification tweak: theorems stop,
+defs recurse), F4 minimal (the decide-spelling patterns — the
++native forms are doctrine-banned anyway), F6 simplest-form count
+pin, R3 (docstring accuracy). DROP/DE-SCOPE: no defInfo seeding
+(note-only), no watched-set expansion, no further evasion
+iterations — after this round the gate is DONE; no arms race. New
+standing frame added to the gate's own header: complexity budget
+bounded; if the gate grows fragile the remedy is SIMPLIFICATION or
+deletion, never more rules; the acceptance demo checks the gate
+catches the SIMPLE shortcut, which is its whole job.
