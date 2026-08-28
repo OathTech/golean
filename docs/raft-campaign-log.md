@@ -3733,3 +3733,25 @@ standing frame added to the gate's own header: complexity budget
 bounded; if the gate grows fragile the remedy is SIMPLIFICATION or
 deletion, never more rules; the acceptance demo checks the gate
 catches the SIMPLE shortcut, which is its whole job.
+
+### 2026-08-28 — A-TRIP fix round complete under the recalibration (a-trip @ 83b448dc)
+
+[USER] recalibration honored with provenance: the threat-model
+scope statement (honest author's shortcut, not malicious evader) +
+"THIS GATE IS DONE — no further evasion iterations; future changes
+are simplifications or deletions" written into both gate headers.
+Keeps applied simply: exact positive classification (fail-closed
+V-CLASS naming unknown modules); boundary-dir REMOVED (explicit
+enumeration only); theorems-stop/defs-recurse; minimal decide-
+spelling patterns (no parser); police-root completeness (a new
+Specs file fails until enrolled; 56 legacy files exempt-file'd);
+two-line grandfather count pin (drift drilled both ways); R2's
+boundary-sentences class implemented with the split-file
+convention published; R3 vocabulary list. Drops declined WITH
+REASONS (defInfo, watched-set — recommendation-only). One-time
+evasion re-run: all four shapes CAUGHT (verbatim). Acceptance
+demo = the speedbump's job: unenrolled file → completeness FAIL;
+enrolled + planted stepFn unfold → caught at V3 AND at the proof
+walk. Gate ci --diff PASS (30 ok, 2475/2475); judge not owed
+(verified two ways). Branch-complete; merge waits on the G-BIND
+fix round so both asks go to the [USER] together.
