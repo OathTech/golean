@@ -3755,3 +3755,22 @@ enrolled + planted stepFn unfold → caught at V3 AND at the proof
 walk. Gate ci --diff PASS (30 ok, 2475/2475); judge not owed
 (verified two ways). Branch-complete; merge waits on the G-BIND
 fix round so both asks go to the [USER] together.
+
+### 2026-08-28 — G-BIND fix round complete (g-bind @ de2175c2); BOTH merge asks posed
+
+All 9 fix items done: baseline header restored + classification
+block carried forward; hdrain re-sized to the measured bound with
+the named owed row (converges R4); PlugWitness/Audit-W2 coherence
+with both pins kept; the pin-cost timeout resolved BY MEASUREMENT
+(0.69s/1.8GB — real theorems pinned, no substitutes); R1 SCAFFOLD
+labels in-tree incl. the four designated Terminates (statements
+untouched); the Callchain split applied per the sibling's landed
+convention (WP walks vs sentence exports; enrollment left for the
+post-merge rebase — the scope file is the sibling's). Ceremony:
+ci --diff PASS 218.9s with the expected R1 scope note; judge PASS
+51 in 116s @ 50241dd5 LIKE-FOR-LIKE (designated set unmoved;
+quartet stays CANDIDATE). Coordinator delta-checks first-hand:
+Audit.lean additions-only (0 removals); a-trip's ci additions-only
+(0 removals). [AGENT]: both merges posed — order A-TRIP (83b448dc)
+then G-BIND (de2175c2, rebases + enrolls its files in the fixed
+scope, re-gates at the rebase).
