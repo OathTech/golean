@@ -8,6 +8,29 @@ the W0 reset, the substrate now on main — is history, not plan; the
 raft-specific unit ladder of the v3 DRAFT is superseded in
 architecture but its measured pricing is reused here, cited as such).
 
+**REVISION 1 (2026-08-28).** The four-lens professor review of this
+draft returned AMEND; all six amendments are folded in below:
+A1 (totality machinery: committed TotalWp adoption at U0 + the new
+G-TOTAL variant unit + the restored U3.2c row + the allStreamsOk ban
+for new members), A2 (the proof-side veneer tripwire unit A-TRIP —
+closure checking of proof terms, since statement-closure audits and
+cost profiles cannot catch span-grinding at corpus scale), A3 (the
+restored named raft rows + the census-vs-corpus construct
+reconciliation: five added corpus members C-16..C-20 — plus A1's
+C-15 — and written scope-outs, and the corrected C-FINAL guard
+framing), A4 (the G-REPR
+lineage correction: Perennial's heap is flat — route (b) is the
+honest analogue; the sibling-frame write test pre-registered), A5
+(the G-BIND correction: the pin's `Context` class demands
+unconditional laws incl. inverse decomposition — the instance route
+is unavailable; re-priced), A6 (factual fixes: 123 wp laws, Fib's
+Iris content, the census-claim wording, AgreementT1's
+vacuous-satisfiability note, the ghost-acks consumer, the per-type
+instance-generation deferred row, G-AUTO's named metrics).
+[AGENT] drafter; the reviewer's findings were verified against the
+pin/Perennial/census sources and are treated as ground truth; no
+factual disagreement was found.
+
 Drafter: [AGENT] Fable, design-pass worktree. Every claim below is
 anchored to main @ `2a6621ed` (the triage-landed tip), the landed
 docs (`docs/2026-08-27_triage-plan.md`, `docs/ARCHIVE.md`, the
@@ -51,12 +74,12 @@ Where each existing asset sits (all verified on main @ `2a6621ed`):
 |---|---|---|
 | 1 (TCB) | `stepFn`/`execStmt`/`runProgramM` + differential corpus + reflection pair + Surface first-order judgment layer (`GoTriple`/`GoSpec`/`GoFuncSpec`, Iris-free) | trusted, unmoved |
 | 1→2 | `MachineSound.lean`: `stepFn_sound` / `step_complete` — total two-way per-step correspondence, pinned | HAVE |
-| 2 | `Machine.Step` (155 ctors) + `Steps`; nondeterminism = demonic rule multiplicity (tape stays at tier 1) | HAVE, raft-ready (zero sequential construct gaps vs the census) |
+| 2 | `Machine.Step` (155 ctors) + `Steps`; nondeterminism = demonic rule multiplicity (tape stays at tier 1) | HAVE, raft-ready — a census-INFORMED scout claim (the census has no per-construct vocabulary; the tier scout found no sequential construct gap against the raft fragment; re-checked construct-by-construct at gate N-3's reconciliation, §6.2) |
 | 2→3 | `Lang.lean`: bare `Language` instance over `Step` (no evaluation-context structure — the G-BIND gap) | HAVE/partial |
-| 3 | genuine iris-lean (pin `3877dbec`): gen_heap state interp (`Ghost.lean`), 8 lifting lemmas, 129 `wp_*` laws in 11 `Laws/*` files, 4 adequacy theorems (`Adequacy.lean`), `go_walk` tactic, non-vacuity witness gate | HAVE at function scale; 6 structural gaps (§4) |
+| 3 | genuine iris-lean (pin `3877dbec`): gen_heap state interp (`Ghost.lean`), 8 lifting lemmas, 123 `wp_*` laws in the 11 `Laws/*` files (declaration count: `wp_`-prefixed theorems, review re-grep — the draft's 129 double-counted witness siblings), 4 adequacy theorems (`Adequacy.lean`), `go_walk` tactic, non-vacuity witness gate | HAVE at function scale; 7 structural gaps (§4 — the seventh, totality machinery, review-discovered per A1) |
 | 3→1 readout | adequacy exits to `execStmt`/`stepFnIter` (`SurfaceExit.lean`), NOT yet to `runProgramM` (the G-EXIT gap); `RunGlue` + `InitSpec` are the landed halves of that last step | partial |
 | statements | the 51-name designated set (`Audit.lean:290`), template = the Surface FnSpec family over real etcd raft quorum code | HAVE; the corpus extends it |
-| substrate | plug family (+`PlugWitness`), crossing kit (+`CrossingWitness`), `MapPerm`/`MapPermRead`, readers (`AbsTwinCheckerRead`), ghost-acks (`NativeObligations`), `RunGlue`, `InitSpec`, archived invariant clause inventory | landed 2026-08-28, each with a named consumer unit below |
+| substrate | plug family (+`PlugWitness`), crossing kit (+`CrossingWitness`), `MapPerm`/`MapPermRead`, readers (`AbsTwinCheckerRead`), ghost-acks (`NativeObligations`), `RunGlue`, `InitSpec`, archived invariant clause inventory | landed 2026-08-28, each with a named consumer unit below (ghost-acks' consumer = the restored U3.2b row, §5.3 — the certified/`leaderCommitOk` discharge) |
 
 The CallSpec parallel calculus is dead and archived
 (`archive/callspec-era`; `docs/ARCHIVE.md` §"The CallSpec era" —
@@ -135,23 +158,49 @@ drafted `TotalT1` (∀ ch, ∃ fuel r, ok ∧ spec) and `NeverFaults`
 shapes, unchanged by the architecture reset. Posed at drafting,
 designated by the [USER] at the raft member's ceremony.
 
+Stated honestly (A6): the partial form `AgreementT1` (∀ fuel ch r,
+`ok → spec`) is **vacuously satisfiable** — a system that never
+reaches `.ok` satisfies it. Its non-vacuity is carried entirely by
+`TotalT1` (∃-fuel `.ok` on every stream), which is why the recorded
+end-state doctrine makes the TOTAL form the designated sentence and
+the partial form its decomposition; the designation batch treats
+them as a pair, never the partial form alone.
+
 ### 2d. The anti-cheating invariant (standing, era-wide)
 
 - **Every corpus case ships its negative twin** (2a.3). A spec whose
   negative twin cannot be stated or proved is not accepted as a
   closure.
 - **Proofs go through the WP calculus.** The corpus exists to
-  exercise tier 3. A proof that drops through adequacy to grind
-  kernel spans of the concrete run is a VENEER — it re-imports the
-  banned concrete-walking method under an Iris wrapper — and fails
-  review. The G-AUTO probe measures this structurally: per-case
-  proof texts are expected at the Surface-family scale, and walls
-  are compared against the archived CallSpec-era datum (§4.7); a
-  "WP proof" whose cost profile matches kernel span-grinding is
-  treated as one.
+  exercise tier 3. The named forbidden pattern of the era is
+  **span-grinding inside a WP proof**: a proof that drops through
+  adequacy (or unfolds the interpreter directly) to grind kernel
+  spans of the concrete run under an Iris wrapper is a VENEER —
+  the banned concrete-walking method in costume — and fails review.
+  Two honest limits of the existing defenses (A2, review-verified):
+  the Audit gate polices STATEMENT closures only (its own license:
+  "Proofs may use anything"), and cost profiles cannot discriminate
+  at corpus scale — kernel grinding is CHEAP on 15–60-line
+  programs, so a veneer would be a cost INLIER, not an outlier.
+  Negative twins do NOT serve this function either: a veneer proves
+  a twin exactly as easily as the positive. The mechanized defense
+  is the **veneer tripwire unit A-TRIP** (§6.3): a PROOF-SIDE
+  closure check for tier-3 corpus lemmas — the proof term may reach
+  `stepFn`/`execStmt`/`stepFnIter`/`allStreamsOk`/kernel-decision
+  constants only through the Laws/lifting/adequacy layer, never
+  directly.
 - **Bounded techniques stay banned** (charter): no fixture-anchored
   statements, no enumeration-as-∀; program-text shape constants in
   ∀-quantified rules remain the recorded carve-out.
+- **New corpus members may NOT prove `Terminates` via the
+  `allStreamsOk` decide+kernel route** (A1): every landed
+  Terminates today is fuel-bounded enumeration on pinned seeds —
+  exactly the bounded technique the charter bans as proof for new
+  work. New totality sentences discharge SYMBOLICALLY through
+  total-WP + the G-TOTAL variant rule. The existing pilot quartets
+  are grandfathered as labeled scaffolding (retirement condition:
+  re-proved through G-TOTAL when their programs are re-specced, or
+  retired with the gallery-row cleanup).
 - **The quantifier audit governs every unit** (each §4 unit opens
   with its line). The era's end-sentence quantifiers and their
   discharging rules:
@@ -163,7 +212,7 @@ designated by the [USER] at the raft member's ceremony.
 | ∀ caller contexts / frames | `wp_bind`/fill + the frame rule (GoTriple carries the frame in-statement) | G-BIND |
 | ∀ ch — schedule/latitude | tier-2 demonic rule multiplicity, erased at adequacy (by construction); order latitude via Perm-of-draws conclusions | HAVE / G-MAPITER |
 | ∀ iterations | loop-invariant laws (`wp_while_inv`, map-range law) | HAVE / G-MAPITER |
-| ∃ fuel (totality) | `ProgressExec`/`Terminates` + variant; classification glue | HAVE (RunGlue) + per-case |
+| ∃ fuel (totality) | total-WP (upstream `TotalWeakestPre`/`TotalAdequacy`, adopted at U0 — A1) + the variant-carrying loop rule (G-TOTAL, §4.7) + RunGlue's classification glue | U0 + G-TOTAL (rules that will exist; today NO variant machinery exists at any tier — review-verified) |
 | whole-program ∀ fuel ∀ ch | `runProgramM_mono`/`_readout_of_total` joined to WP-at-entry | G-EXIT |
 
 "By instances" is never an answer, per charter.
@@ -202,12 +251,19 @@ gate enforces this). The pin is substantially more complete than the
   the lifting families (`Lifting.lean`, `EctxLifting.lean`),
   adequacy (`wp_strong_adequacy_gen`), and a worked HeapLang
   instance including a Qq-based evaluation-context finder tactic
-  (`HeapLang/Tactic.lean`) — the direct structural template for
-  G-BIND and G-AUTO.
+  (`HeapLang/Tactic.lean`) — the structural template for G-BIND and
+  G-AUTO. Caveat (A5, review-verified): the `Context K` class
+  demands three UNCONDITIONAL laws including the inverse
+  decomposition `primStep_fill_inv`, so having `wp_bind` in the
+  library does not make G-BIND an inheritance — §4.1 carries the
+  honest obligation shape and price.
 
 The pin's real gaps: no telescopes → no Texan-triple notation; only
 `wp_bind`/`wp_pure(s)`/`wp_rec`-class tactics (heap-step lemmas are
-`iapply`-by-hand); `TotalWp` is a class with no theory behind it.
+`iapply`-by-hand); `TotalWp` is an UNINHABITED notation class — no
+instance, no lifting, no adequacy, no laws (A1, review-verified):
+without the upstream total-WP theory, no totality rule exists at
+any tier.
 
 ### 3b. Upstream delta (from `docs/2026-08-20_iris-lean-delta-scan.md`
 — 135 commits, zero divergence, fast-forward; **re-run the head
@@ -224,7 +280,7 @@ channel-logic resume; today the same rows pay into §4 directly):
 | `iinv`, `iinduction`, `ieval`/`isimp`/`iunfold`, completed intro/spec patterns, `iframe` w/ existentials | G-AUTO tactic base |
 | `frame_pointsto`, `CombineSepGives/As` points-to instances | G-REPR ergonomics (field points-to splitting/combining) |
 | telescopes + Texan triples | the FnSpec-contract notation decision (§4.3) |
-| `TotalWeakestPre`/`TotalAdequacy`/`TotalLifting` | the Terminates/TotalReadout family gets an upstream home instead of our lone `Specs/TotalPins` carry |
+| `TotalWeakestPre`/`TotalAdequacy`/`TotalLifting` | **COMMITTED ADOPTION at this unit (A1 — not an assessment)**: the era's entire totality story (§2d's ∃-fuel row, G-TOTAL, every new `Terminates` sentence) sits on this theory; our lone `Specs/TotalPins` carry re-seats on it |
 | `big_sepM2`, `ghost_var`, `gset_bij`, `SavedProp`, later credits | G-REPR/G-INV vocabulary as needed |
 | `equiv_iff_eq` (extensional maps) | retires hand extensionality in `HeapBridge` |
 
@@ -251,14 +307,17 @@ specs).
   channel-logic lane rebases through the move, not across it
   (recorded in the park row).
 
-**Price ([AGENT]): 1.5–2.5 sessions** (pin move + toolchain as one
+**Price ([AGENT]): 2–3 sessions** (pin move + toolchain as one
 gated commit ≈ 0.5–1; the instance-priority tail across the 240
-transitive files ≈ 0.5–1; the reuse-adoption slice (modality
-instances wired into `go_walk`, TotalWp adoption assessment) ≈ 0.5)
-+ the judge landmark re-run. Deliverables: the moved pin green in
-its own commit; the reuse table promoted from draft with a reason on
-every keep-ours row; the comparator re-pin executed under its
-conditions.
+transitive files ≈ 0.5–1; the reuse-adoption slice — modality
+instances wired into `go_walk`, plus the COMMITTED total-WP
+adoption: `TotalWp` instance for our `Language`, total lifting
+wired, total adequacy readout checked against `ProgressExec` —
+≈ 1) + the judge landmark re-run. Deliverables: the moved pin green
+in its own commit; the reuse table promoted from draft with a
+reason on every keep-ours row; the comparator re-pin executed under
+its conditions; **the total-WP theory inhabited for our language
+instance** (G-TOTAL's prerequisite).
 
 **Consumers: every unit in §4** (G-AUTO most directly), plus the
 channel-logic resume's named condition (i) — this unit discharges it
@@ -268,7 +327,9 @@ for that later road too.
 
 ## 4. The structural ladder
 
-One unit per gap from the triage plan's §5.3 gap table, each priced
+One unit per gap from the triage plan's §5.3 gap table — plus
+G-TOTAL (§4.7), the totality gap the review found the gap table
+itself had missed (A1) — each priced
 against the measured anchors (v3-DRAFT §2, derivation-anchored:
 straight member ≈ 30–60 min; kit-crossing member ≈ 1–2.5 h; 11
 members ≈ 1 worker-session; one mechanism unit ≈ 0.5–1.5 sessions;
@@ -296,17 +357,24 @@ analogue: GooseLang's `LanguageCtx'`/`ectx_lang_ctx'`.*
   features), `callSpan_plug` (span-level bind), plus `PlugWitness`.
   The W1 probe finding (FrameSim structurally cannot deliver caller
   env/k) is the standing design constraint.
-- **Obligation shape**: transport the `stepFn_plug` commutation to
-  `Step` (case-transport, not re-derivation — `MachineSound.lean`'s
-  arms mirror `Step`'s constructors 1:1 and share premise functions
-  verbatim), then either (a) instantiate the pin's `Context K` class
-  at `fun c => plugC env' k' c` under the two plug premises and
-  inherit `wp_bind` from the library, or (b) state the direct
-  bind lemma `WP c {{ _, WP plug-continuation }} ⊢ WP (plugC … c)`.
-  [AGENT] recommendation: probe (a) first — inheriting the library's
-  `wp_bind` is the lineage-clean route; (b) is the fallback if the
-  premise-conditioned fill fights the class. Retire/absorb the
-  per-arity widening-owed notes as corollaries.
+- **Obligation shape** (corrected per A5, review-verified against
+  the pin): the pin's `Context K` class demands three UNCONDITIONAL
+  laws, including the inverse decomposition `primStep_fill_inv` —
+  a premise-conditioned `plugC` cannot be a typeclass instance, so
+  the "inherit `wp_bind` from the library" route is UNAVAILABLE as
+  an instance route. The honest shape: (i) transport the
+  `stepFn_plug` commutation to `Step` (case-transport —
+  `MachineSound.lean`'s arms mirror `Step`'s constructors 1:1 and
+  share premise functions verbatim); (ii) **the inverse half is a
+  NEW obligation**: `stepFn_plug` is forward-only (fill-then-step),
+  and a bind law also needs step-then-decompose — the fill-step
+  INVERSION under the barrier premises, not yet proved in any form;
+  (iii) state the direct bind lemma
+  `WP c {{ _, WP plug-continuation }} ⊢ WP (plugC … c)` — either
+  with per-`k'` hand-built `Context` terms passed explicitly (the
+  library-shape variant of the same work) or as a standalone lemma;
+  both are the (b) shape. Retire/absorb the per-arity widening-owed
+  notes as corollaries.
 - **Gate instance**: corpus case **C-05 `callchain`** (§5) — a
   nested static call with a defer, proved once through `wp_bind`
   at an open caller context (also discharges `PlugWitness`'s
@@ -314,7 +382,10 @@ analogue: GooseLang's `LanguageCtx'`/`ectx_lang_ctx'`.*
   composition demo, closing that accepted gap).
 - **Consumers**: G-CALLS (kills the per-geometry surface), every
   corpus case with a call (all of them), the raft member.
-- **Price ([AGENT], W2 anchor)**: 1–1.5 sessions, probe-first.
+- **Price ([AGENT], W2 anchor, re-priced under A5)**: 1.5–2
+  sessions, probe-first — the inverse-decomposition obligation is
+  new proof content the W2 forward walk did not pay for; the probe
+  (two arms of the inversion before the walk) prices the rest.
 
 ### 4.2 G-REPR — the assertion layer (whole-cell heap → per-field points-to; THE BIG ONE)
 
@@ -337,15 +408,28 @@ the ptr-indexed-predicate alternative.*
   program (raft's `r.raftLog.storage…` chains, clone/copy, per-field
   mutation under a frame).
 - **Obligation shape** (design decision inside the unit, probed
-  before the walk is paid): either
-  (a) **view route** — keep the base-cell gen_heap and DEFINE typed/
-  per-field points-to as predicates over the cell (a fraction-
-  carrying lens view; the Perennial pattern transplanted to a
-  cell-structured heap), with get/set access lemmas and the
-  split/combine algebra; or
-  (b) **re-key route** — re-key the ghost heap at (base, path) so
-  per-field points-to IS a gen_heap points-to.
-  Both keep tier 1/2 untouched (the assertion layer is ghost-side).
+  before the walk is paid; route framing corrected per A4,
+  review-verified against the Perennial source): Perennial's New
+  Goose heap is FLAT — per-field points-to ARE `heap_pointsto`
+  facts at distinct locations, the struct assertion is a
+  separating conjunction over disjoint locations, and NO
+  fractional-lens-over-a-cell construction exists there. Therefore:
+  (b) **re-key route** — re-key the ghost heap at (base, path) so a
+  per-field points-to IS a gen_heap points-to over disjoint keys —
+  **is the honest Perennial analogue and the presumptive route**;
+  (a) the **whole-cell view route** (fractional lens predicates
+  over the base cell) is retained only as the probe's comparison
+  arm, with its structural defect stated up front: a fractional
+  view of one cell CANNOT deliver a per-field WRITE while a frame
+  holds a sibling field of the same struct (writing needs the full
+  fraction of the cell).
+  Either way tier 1/2 are untouched (the assertion layer is
+  ghost-side).
+- **The probe's pre-registered discriminating test** (A4): write
+  one field of a struct while the frame holds a points-to for a
+  SIBLING field of the same struct. A candidate that cannot state
+  and prove this is a reader-predicate in costume and fails the
+  probe regardless of what else it proves.
   Products either way: `own_struct`-style per-field decomposition
   with pure field-offset addressing, `own_slice` (+cap), `own_map`
   (the `gmap`-carrier ownership the map laws speak), ∃-address
@@ -364,7 +448,11 @@ the ptr-indexed-predicate alternative.*
   clone: per-field points-to split, copied footprint, frame intact)
   + **C-13 `initchain`**'s nested field-chain read (its PC-13 half).
   DONE = both closed through the layer with specs stated in
-  per-field vocabulary.
+  per-field vocabulary, **AND C-08's spec includes a
+  write-under-sibling-frame obligation** (A4: the clone must WRITE
+  destination fields while the frame holds sibling points-to — a
+  read-only clone spec could pass under a reader-predicate in
+  costume and does not gate the unit).
 - **Consumers**: G-INV (heap half of every invariant clause),
   G-CALLS ((T,error) result cells), G-MAPITER (`own_map`), most
   corpus cases, the raft member end-to-end.
@@ -495,10 +583,50 @@ packaged law — the per-call-site effect premise re-proof
 specifications (sortedness + Perm — the classical sorting spec);
 consumes `sortedLT_eq_of_perm`.*
 
-Gate instance: **C-09 `miniids`** (shared with G-MAPITER — build
-map → collect → sort). Price ([AGENT]): days, after G-MAPITER.
+**Named prerequisite (A3, restored from the v3 ladder's V-Sort
+row): the `slices.Sort` lowering census** — the (M) note recorded
+that `slices.Sort` has no lowered body under that name in the wire
+(w3-m log, machine finding vi); a small read-only census against
+the wire establishes what the sort law's subject actually is,
+BEFORE C-09's Go source is finalized (N-3 depends on it). Gate
+instance: **C-09 `miniids`** (shared with G-MAPITER — build map →
+collect → sort). Price ([AGENT]): 0.5 session including the
+census, after G-MAPITER.
 
-### 4.7 G-AUTO — the automation probe and build-out (the throughput referee + the veneer test)
+### 4.7 G-TOTAL — the variant-carrying loop rule (A1: the totality machinery that does not yet exist)
+
+*Quantifier-audit line: ∃ fuel (the totality quantifier of every
+`Terminates`/`TotalReadout`/`TotalT1` sentence), by a total-WP loop
+rule with a DECREASING MEASURE — never by fuel-bounded enumeration
+(`allStreamsOk` decide+kernel is banned for new members, §2d).
+LINEAGE: Floyd variants / total-correctness Hoare logic; Iris total
+weakest precondition (upstream `TotalWeakestPre`/`TotalAdequacy`/
+`TotalLifting`, adopted at U0); Perennial's total-wp analogue.*
+
+- **The gap (review-verified, A1)**: no variant machinery exists at
+  ANY tier today — `wp_while_inv` is Löb-based and measure-free
+  (admits divergence), the pin's `TotalWp` is an uninhabited
+  notation class, `GoSpecT` has zero inhabitants, and every landed
+  `Terminates` is decide+kernel on `allStreamsOk` (fuel-bounded
+  enumeration on pinned seeds). The plan's totality claims were
+  naming rules that did not exist; this unit builds them.
+- **Obligation shape**: instantiate the adopted total-WP for our
+  `Language` (U0 delivers the theory; this unit inhabits the
+  program-logic side): a total-WP while/loop rule carrying an
+  invariant + a decreasing measure (variant), total lifting for the
+  step relation, and the total-adequacy readout joined to
+  `ProgressExec`/`Terminates` and (via RunGlue) to the ∃-fuel
+  whole-program forms.
+- **Gate instance**: **C-15 `countloop`** (§5.2 — a while loop with
+  a decreasing counter) proving its `Terminates` SYMBOLICALLY, plus
+  the total form of **C-01 `mapwalk`** (measure = undrained keys)
+  as the map-range width check.
+- **Consumers**: every totality sentence of the era; `TotalT1`; the
+  restored U3.2c measure row (§5.3) is its raft-scale continuation.
+- **Price ([AGENT])**: ~1 session after U0 (the theory arrives
+  ported; the work is our instance + the loop rule + two closures).
+
+### 4.8 G-AUTO — the automation probe and build-out (the throughput referee)
 
 *Quantifier-audit line: advances no quantifier — it is the measured
 guard that the OTHER units' rules are actually usable at corpus
@@ -519,14 +647,21 @@ tactic route measurably stalls, with a probe refereeing).*
   cases wanting function-per-hour throughput.
 - **THE PROBE (before any corpus-wave charter)**: re-prove ONE
   landed Surface case (a quorum pilot) and prove ONE new case
-  (C-03 `lockstat`) with the post-U0 tactic base; measure walls and
-  proof-text size; compare against the archived CallSpec datum
-  (30–60 min straight / 1–2.5 h crossing members; 11 members per
-  session) — the layer must beat or match the dead calculus's
-  measured throughput at equal honesty, or the build-out backlog
-  reorders before cluster spends. **This is also the veneer test's
-  instrument** (§2d): the probe pins what an honest WP proof costs,
-  so a span-grinding veneer shows up as a cost-profile outlier.
+  (C-03 `lockstat`) with the post-U0 tactic base; compare against
+  the archived CallSpec datum (30–60 min straight / 1–2.5 h
+  crossing members; 11 members per session) — the layer must beat
+  or match the dead calculus's measured throughput at equal
+  honesty, or the build-out backlog reorders before cluster spends.
+  **Collected metrics, named (A6)**: wall time per case,
+  proof-lines-per-program-line, manual steps per construct, and
+  automation coverage (fraction of proof steps discharged by
+  `go_walk`/successors without hand intervention). A branch-scale
+  criterion rides the probe: the raft dispatch is a ~20-arm switch,
+  so the probe's report states how the per-construct costs
+  extrapolate to that arm count (a scale test, not a corpus
+  member). Veneer detection is NOT this probe's job (A2: at corpus
+  scale a veneer is a cost inlier) — that is the A-TRIP closure
+  check (§6.3).
 - **Build-out backlog (sized by the probe, not before)**:
   wp_apply-class law application, the Access-style
   whole-struct↔field bridging tactic (G-REPR's companion),
@@ -536,7 +671,7 @@ tactic route measurably stalls, with a probe refereeing).*
   unknown until probed — reserve 1–2 sessions in phase B pricing,
   re-priced at the probe.
 
-### 4.8 Deferred rows (named, not scheduled)
+### 4.9 Deferred rows (named, not scheduled)
 
 - **G-STITCH** (the `Steps`→`stepFnIter` stream-stitching converse,
   `MachineSound.lean` records it unproved): needed only if an
@@ -548,35 +683,47 @@ tactic route measurably stalls, with a probe refereeing).*
   (U0 discharges condition (i)); OUT of corpus-era scope except
   that the corpus DESIGN reserves pattern-class slots for it
   (§5.4).
+- **Per-type instance GENERATION** (A6 — automation at scale):
+  Goose needed ~1,400 machine-generated `Access`-class instances to
+  serve real codebases; our per-type points-to/value-typing
+  instances (G-REPR's companions) will hit the same wall. Named
+  trigger: **the raft member** — hand-written instances suffice for
+  the 15–60-line corpus; the raft charter includes a small
+  generator over the frontend's type table if the count-per-type
+  measured on the corpus extrapolates past hand-writing.
 
-### 4.9 Sequencing — the dependency graph (explicit)
+### 4.10 Sequencing — the dependency graph (explicit)
 
 ```
-      U0 (iris-lean refresh)         H (hygiene slice, §6.3)
-        │  (tactic base, TotalWp)      │ (ChoiceCanon kill, judge-parser, …)
-        ├────────────┬─────────────────┘
-        ▼            ▼
-     G-BIND       G-REPR  ◄─── design probe first (route (a)/(b))
-        │            │  \
-        ▼            │   ►(readers re-seated; own_map/own_slice)
-     G-CALLS ◄───────┤            │
-        │            │            ▼
-        │            │        G-MAPITER ──► G-SORT
-        ▼            ▼            │
-   C-05/07/12    C-08 (+C-13's   C-01/02/09
-                  field chain)
-        └────────────┴────────────┘
-                     ▼
-              G-AUTO probe  (after the first 2 structural units land;
-                     │       before any corpus-wave charter)
-                     ▼
-          corpus waves (§5, remaining cases)
-                     │
+      U0 (iris-lean refresh)     H + A-TRIP (early units, §6.3)
+        │ (tactic base; total-WP   │ (ChoiceCanon kill, judge-parser,
+        │  theory adopted)         │  fjRunDeadlocks; the veneer lint
+        ├───────────┬──────────────┘  then the closure checker)
+        ▼           ▼
+     G-BIND      G-REPR ◄── design probe first (route (b) presumptive;
+        │           │  \      sibling-frame write = the test)
+        ▼           │   ►(readers re-seated; own_map/own_slice)
+     G-CALLS ◄──────┤            │
+        │           │            ▼
+        │           │        G-MAPITER ──► G-SORT (+Sort census)
+        ▼           ▼            │
+   C-05/07/12   C-08 (+C-13's   C-01/02/09
+                 field chain)    │
+     U0 ──► G-TOTAL ──► C-15 (+C-01's Terminates form)
+        └───────────┴────────────┘
+                    ▼
+             G-AUTO probe  (after the first 2 structural units land;
+                    │       before any corpus-wave charter)
+                    ▼
+         corpus waves (§5, remaining cases incl. C-16..C-20)
+                    │
      G-EXIT ──► C-13 initchain ──► G-STMTS drafts ([USER] designation)
-                     │
-                     ▼
-        RAFT MEMBER: G-INV ([USER] gate) → cluster FnSpecs →
-        driver loop → AgreementT1/TotalT1/NeverFaults ([USER] designation)
+                    │
+                    ▼
+        RAFT MEMBER: G-INV ([USER] gate) → the restored §5.3 rows
+        (U3.2b/c/d/e/f, guard-silence table) → cluster FnSpecs →
+        driver loop → AgreementT1/TotalT1/NeverFaults ([USER]
+        designation)
 ```
 
 Ordering rules: U0 strictly first (everything downstream sits on the
@@ -587,7 +734,7 @@ corpus WAVE (single cases used as unit gate instances may land
 before it); G-EXIT anytime after U0 (independent of G-REPR); the
 raft member strictly last, behind its two [USER] gates.
 
-### 4.10 G-INV and G-STMTS (the raft member's own units — listed here, gated in §6)
+### 4.11 G-INV and G-STMTS (the raft member's own units — listed here, gated in §6)
 
 **G-INV** — the driver-loop invariant re-designed at the Iris tier.
 *Quantifier-audit line: ∀ iterations at the driver loop, by the
@@ -599,11 +746,13 @@ clauses) is the base inventory; the v3-DRAFT §D-A designs
 (concrete-log↔NH pairing + `hview`, the freshLog vote-square
 sub-clause, the quiescence clause + its two reader extensions, the
 Star/certified transport) are the amendment's content, re-shaped as
-⌜–⌝-embedded pure clauses + G-REPR heap assertions.* The design
-GATE is the [USER]'s — the re-run of W2.5 under the post-mortem's
-corrective rules (§6.2, N-4): hard stop; the gate reviews the FIRST
-IMPLEMENTATION built against the note, not the note alone. Price
-([AGENT], v3 anchor): ~2 sessions + the gate.
+⌜–⌝-embedded pure clauses + G-REPR heap assertions.* First act
+(A3): the mechanized logBridge/commitTie REFUTATION, kept as a
+regression witness (v3 §D-A A1 — the record of why the two clauses
+died). The design GATE is the [USER]'s — the re-run of W2.5 under
+the post-mortem's corrective rules (§6.2, N-4): hard stop; the gate
+reviews the FIRST IMPLEMENTATION built against the note, not the
+note alone. Price ([AGENT], v3 anchor): ~2 sessions + the gate.
 
 **G-STMTS** — the raft sentence drafts (`TotalT1`, `NeverFaults`
 Props + the NeverFaults-from-Total corollary via
@@ -616,7 +765,12 @@ session + the [USER] ceremony + judge.
 
 From the triage plan §7 (the 15 pattern classes, the seed
 assessment, the coverage matrix — its "≈10–14 new programs" row sums
-are this section's input). Standing rules for EVERY corpus program:
+are this section's input), extended per A3 by the census-vs-corpus
+CONSTRUCT reconciliation (C-15..C-20 + written scope-outs, §5.2b).
+The [USER] aim is reinstated in full: "a clean set covering ALL
+patterns Raft needs **(plus explored extras)**" — the reconciliation
+members and the scope-out ledger are the explored-extras clause made
+concrete. Standing rules for EVERY corpus program:
 
 - **Differential-tested Go first** (guardrails-first, charter): the
   program enters `Corpus/` as canonical Go with edge-case siblings
@@ -637,10 +791,14 @@ are this section's input). Standing rules for EVERY corpus program:
 Iris-track seeds: the golden pin, GoldenRecover, the three quorum
 pilots + `committedIndexAllConfigs`, GoldenSliceWP, GooseParity
 quartet, Fib, AutomationTargets — genuinely covering PC-11/12/15 and
-partially PC-1/2/3/4/7/13. The 26-program gallery is stepFn-track
-(zero `WP (` in its flagships) — it seeds PATTERNS and lowered
-programs; re-speccing a gallery program at tier 3 is itself corpus
-exercise (three cheap re-specs below).
+partially PC-1/2/3/4/7/13. The 26-program gallery is
+OVERWHELMINGLY stepFn-track — its large flagships (SliceQueue,
+SliceStack, MatMul, Kadane, …) carry zero `WP (`; `Examples/Fib`
+is the recorded exception (6 `WP (` occurrences — it is why Fib
+sits in the Iris-track seed list above; A6 correction of this
+draft's earlier "zero in flagships" phrasing). The gallery seeds
+PATTERNS and lowered programs; re-speccing a gallery program at
+tier 3 is itself corpus exercise (three cheap re-specs below).
 
 ### 5.2 The new members (each: name · ~Go size · pattern(s) · canonical properties incl. negative twin · gating unit)
 
@@ -655,32 +813,70 @@ exercise (three cheap re-specs below).
 | C-07 | `stepfield` | 35 | PC-5 (func-value FIELD dispatch — `r.step` in miniature) | dispatch-through-field FnSpec; both assignments of the field exercised; twin: unassigned-field variant fails closed | **G-CALLS gate instance** |
 | C-08 | `protoclone` | 45 | PC-6 + PC-13 (deep-struct clone; nested field chains) | clone FnSpec: source footprint intact (frame), copy per-field-equal, ∃-address for the copy; twin: aliasing variant refuted (separation does the work) | **G-REPR gate instance** |
 | C-09 | `miniids` | 40 | PC-7 + PC-1 (build map → collect keys → sort) | sorted-IDs FnSpec: result = sorted key multiset, ∀ draw orders; twin: dropped-key refuted; ALSO the owed `mapPickLoop_perm`/`MapPermRead` scaffold discharge | **G-MAPITER + G-SORT** |
-| C-10 | `growstack` | 30 | PC-8 (append-capacity latitude) | push/pop FnSpec ∀ capacity draws (cap never in the statement); twin: LIFO-order violation refuted | G-REPR (`own_slice`+cap) |
+| C-10 | `growstack` | 30 | PC-8 (append-capacity latitude, UNOBSERVED) | push/pop FnSpec ∀ capacity draws — this member's statements stay capacity-free (latitude quantified away); the latitude-OBSERVING sibling is C-16 (A3); twin: LIFO-order violation refuted | G-REPR (`own_slice`+cap) |
 | C-11 | `pipedrain` | 45 | PC-9 (+PC-1/2 pieces: produce-then-drain queue) | drain FnSpec: emptied source, sink = produced multiset; twin: lost-message refuted | corpus width (composes 4.1–4.4) |
 | C-12 | `finderr` | 35 | PC-10 (+PC-3: (T,error) return, error-global trichotomy) | three-arm FnSpec2 (ok/compacted-analogue/unavailable-analogue), error globals by identity; twin: swapped-error refuted | **G-CALLS gate instance** ((T,error)) |
 | C-13 | `initchain` | 40 | PC-14 (globals + `$pkginit` + constructor cascade) + a nested-field `fieldchain` read (PC-13) | the first whole-program `runProgramM` sentence (AgreementT1 shape) + NeverFaults corollary; twin: wrong-init-order-sensitive readout refuted | **G-EXIT gate instance** |
 | C-14 | `tribound` | 25 | PC-3 (data-branch trichotomy, u64 bounds — PC-11 density) | three-arm branch FnSpec with symbolic bound crossings; twin: boundary-off-by-one refuted | corpus width (crossing-kit patterns at tier 3) |
+| C-15 | `countloop` | 15 | bounded while loop with a decreasing counter | `Terminates` proved SYMBOLICALLY (variant rule — no `allStreamsOk`); total readout; twin: off-by-one final value refuted | **G-TOTAL gate instance** (A1) |
+| C-16 | `capcheck` | 30 | cap()-READING branch (the `shrinkEntriesArray` shape — latitude-OBSERVING control flow) | FnSpec ∀ capacity draws where the RESULT is capacity-conditioned (branch on cap); conclusion = the draw-indexed family, honestly stated; twin: branch-inverted variant refuted | corpus width; stresses G-REPR's cap carrier + G-MAPITER-era draw handling (A3) |
+| C-17 | `ringbuf` | 45 | the inflights ring-buffer shape (index arithmetic over a fixed backing array, wraparound) | add/freeTo FnSpec with the ring's content abstraction; twin: lost-slot refuted | corpus width (A3) |
+| C-18 | `valarray` | 40 | fixed-size arrays as VALUE types (`[2]MajorityConfig` miniature) + methods on a named map type (`map[K]struct{}` set idiom); nil-receiver note ridden here if the frontend lowers it | joint-quorum FnSpec over the two-element array value; set-method FnSpec; twin: single-half quorum refuted | corpus width; G-REPR value-type coverage (A3) |
+| C-19 | `visitcb` | 40 | variadic params + function-typed parameters/callbacks (the `confchange.chain`/`tracker.Visit` shape) + a three-result return | visit-in-order FnSpec (callback contract threaded as an FnSpec premise); twin: skipped-element refuted | G-CALLS width (A3) |
+| C-20 | `deadbranch` | 30 | the prove-branch-dead class (census U3) + the DEAD-NONDETERMINISM shape (census U4: a draw whose value cannot affect the observable result) | FnSpec concluding the branch is unreachable (feeds the NeverFaults idiom) + draw-irrelevance stated via footprint framing — **the natural gate instance for the [USER] footprint insight** (choices outside the footprint are frame-irrelevant, §4.2), added as such per A3 | corpus width; G-REPR footprint demonstration (A3) |
 
 Gallery re-specs (cheap width, after the probe): **Histogram**
 (PC-1), **BinSearch** (PC-3), **SliceStack** (PC-8 — may substitute
 for C-10 if the re-spec is cheaper; [AGENT] call at the wave).
 
+### 5.2b The census reconciliation and the scope-out ledger (A3)
+
+**Gate N-3 gains a criterion**: a construct-by-construct
+reconciliation of the reachability census against the corpus roster
+— every census-reachable construct either has a corpus member or a
+WRITTEN scope-out, signed at N-3. The reconciliation as of this
+draft:
+
+- **Members added above**: cap()-reading branches (C-16 — note this
+  is why C-10's "capacity-free statement" could not stand alone:
+  raft needs latitude-OBSERVING control flow), fixed-size arrays as
+  value types + named-map methods + `map[K]struct{}` (C-18), the
+  inflights ring buffer (C-17), variadic + function-typed params +
+  three-result returns (C-19), prove-branch-dead + dead
+  nondeterminism (C-20), the symbolic-Terminates loop (C-15, from
+  A1).
+- **Scope-outs (written, decided at N-3)**: live
+  `fmt.Sprintf`/`strings.Join`/`[]byte`/`bytes.Equal` — the
+  string/byte builtin family; [AGENT] proposal: a spec-vocabulary
+  decision (axiomatize-as-laws vs a small member) is POSED at N-3,
+  not defaulted. Nil-receiver methods — ride C-18 if the frontend
+  lowers the idiom, else a written scope-out with the frontend gap
+  named. The ~20-arm switch SCALE — not a member: a named G-AUTO
+  probe criterion (§4.8).
+
 Coverage check against the triage matrix: PC-1 (C-01/02/09), PC-2
 (C-03/04), PC-3 (C-14 + BinSearch), PC-4 (C-06), PC-5 (C-05/07),
-PC-6 (C-08), PC-7 (C-09), PC-8 (C-10/SliceStack), PC-9 (C-11),
-PC-10 (C-12), PC-11 (C-14 + quorum seeds), PC-12 (seeds, covered),
-PC-13 (C-08/C-13), PC-14 (C-13), PC-15 (seeds + C-05) — **all 15
-classes owned**, wholly-uncovered classes (PC-5/6/8/9/10/14) each
-pinned by a NEW program sitting behind exactly the structural unit
-the triage predicted.
+PC-6 (C-08), PC-7 (C-09), PC-8 (C-10/C-16/SliceStack), PC-9
+(C-11), PC-10 (C-12), PC-11 (C-14/C-17 + quorum seeds), PC-12
+(seeds, covered), PC-13 (C-08/C-13), PC-14 (C-13), PC-15 (seeds +
+C-05) — **all 15 classes owned**, wholly-uncovered classes
+(PC-5/6/8/9/10/14) each pinned by a NEW program sitting behind
+exactly the structural unit the triage predicted; the A3
+reconciliation members (C-15..C-20) cover the census-reachable
+CONSTRUCTS the pattern classes abstracted over, with the §5.2b
+ledger owning the remainder.
 
 ### 5.3 The final member: raft
 
 The twin harness returns as corpus member C-FINAL, spec'd like every
 other member — differential-anchored subject (already true),
-designated sentences, negative content (the checker's violation
-counters ARE the negative instrumentation), proofs through the
-layer. Its member spec points at:
+designated sentences, negative twins per §2a, proofs through the
+layer. Framing corrected per A3: the earlier draft's "the checker's
+violation counters ARE the negative instrumentation" was INVERTED —
+`violations = 0` is not free instrumentation but **twelve proof
+obligations** (each guard's silence must be PROVED), six of them
+harness-liveness guards; the guard-silence ASSIGNMENT TABLE below
+owns each one. Its member spec points at:
 
 - **G-INV** — the invariant amendment (the Elected-phase repair:
   the archived clause inventory minus `logBridge`/`commitTie`, plus
@@ -692,6 +888,23 @@ layer. Its member spec points at:
   postconditions (the archived member CONCLUSIONS are the harvest
   reference — `ARCHIVE.md` harvest pointers; the archive is never
   cited by a proof).
+
+**The named phase-D rows (A3 — ownership restored; the v3-DRAFT's
+priced designs are the content pointers, re-shaped for the Iris
+tier at charter time; dropping these from the plan would have
+dropped ownership, not work):**
+
+| row | content (pointer) | note |
+|---|---|---|
+| guard-silence assignment table | each of the 12 harness guards' silences bound to an owning unit (the v3 §5 item-4 table: checker sites → the U3.2d successor; harvest/drain guards → the U3.2c measure + harvest specs; propose-stuck + quiescent-without-S4 → the U3.2e case analysis; storage-failure guards → member nil-error conclusions; unexpected-snapshot → the ProgOk/census chain) | the C-FINAL framing fix made concrete |
+| U3.2b — ack evidence | ghost-acks → `certified` at commit-advance; discharges `HStep.leaderCommit`'s premise + the Star/certified transport | **the landed ghost-acks substrate's named consumer** (repairs §1's promise) |
+| U3.2c — the harvest-quiescence measure | the 64-round guard silent via a lexicographic drain measure; floor = the quiescence clause; **park-not-weaken clause stands** (restored per A1 — this is G-TOTAL's raft-scale continuation and the hardest totality obligation) | v3 anchor: 1–2 sessions |
+| U3.2d — checker reshape / `dataEnc` supplier | the fold-equation unit over the arc4d projections (the park's named resume); supplies the `dataEnc` joint the pairing clause needs | v3 anchor: 1–2 sessions |
+| U3.2e — the driver body spec | case analysis over the invariant-constrained net population (NetCorr) at the pick; I-preservation per delivery case | v3 anchor: 2–3 sessions |
+| U3.2f — raft loop-head establishment | the raft BASE CASE: newTwin/newRaft init chain establishes I at the loop head — **C-13 is a toy init and does not own this** | v3 anchor: 1–2 sessions |
+| the logBridge/commitTie refutation | mechanized refutation of the two deleted clauses, kept as a regression witness (v3 §D-A A1) — G-INV's first act | small |
+| the inline-threshold policy | inline remains sanctioned below a stated crossing threshold; the threshold is written at the raft charter, not re-litigated per member (v3 §D-B policy) | policy row |
+| native-witnesses retirement | the two retained interface witnesses' retirement condition gets an owner at the raft charter (supersession by the tier-3 chain or an explicit keep) | ownership row |
 
 Raft work BEGINS only after the first-checkpoint review (§6.2 N-6)
 confirms the layer is real on small cases.
@@ -729,13 +942,13 @@ closed by the [USER] 2026-08-28):
 |---|---|---|---|
 | N-1 | **This plan's adjudication** | now | this document; on sign-off it becomes the plan of record |
 | N-2 | **U0 execution moment** (trust-tool edge) | at unit 0's pin-move commit | the comparator/lean4export re-pin — conditions pre-approved 2026-08-20, the MOVE still requires at-the-moment approval per the trust-tools rule |
-| N-3 | **Corpus-design sign-off** | before the first corpus program is built | §5's program list + per-program property sets (the [USER] shapes the corpus; per rule 2, the first BUILT corpus case returns for a conformance look) |
+| N-3 | **Corpus-design sign-off** | before the first corpus program is built | §5's program list + per-program property sets + **the census-vs-corpus construct reconciliation (§5.2b: every census-reachable construct has a member or a written scope-out, signed here)** (the [USER] shapes the corpus; per rule 2, the first BUILT corpus case returns for a conformance look) |
 | N-4 | **G-INV — the W2.5 gate re-run** | before any raft cluster work consumes the invariant | the amended design note AND the first implemented clause set built against it (rule 2 verbatim — this is the gate whose override caused the post-mortem) |
 | N-5 | **Designation acts** (G-STMTS + per-corpus batches) | per corpus wave; at the raft member | the posed sentence batches; [USER]-only; judge re-run follows every designation change |
 | N-6 | **The first checkpoint — "is the layer real?"** | after the first 2–3 corpus closures | the closed cases end-to-end: statement honesty, proof route (veneer test), measured throughput vs the plan's prices; the era's pricing is re-based here |
 | N-7 | **The charter amendment sign-off** | at the next CLAUDE.md touch | the post-mortem's corrective-action-1 hard-stop language under "Autonomous arcs" |
 
-### 6.3 The hygiene slice (early unit H — small, first landing after N-1)
+### 6.3 The early units: the hygiene slice (H) + the veneer tripwire (A-TRIP) — small, first landings after N-1
 
 The scheduled debt batch, all [USER]-ruled or audit-flagged
 (campaign log 2026-08-28, the four merge rulings + deferred items):
@@ -765,6 +978,38 @@ The scheduled debt batch, all [USER]-ruled or audit-flagged
 U0's if the slices land together).* Trust-adjacent items ride their
 own flagged commits per standing practice.
 
+**A-TRIP — the veneer tripwire (A2; early, cheap, its own unit).**
+*Quantifier-audit line: advances no quantifier — it is the
+mechanized enforcement of §2d's proof-route rule. LINEAGE: the
+project's own Audit closure-walker, re-aimed from statement
+closures at PROOF-TERM closures.* The gap it closes
+(review-verified): the Audit gate polices statement closures only
+("Proofs may use anything"), and at corpus scale a span-grinding
+veneer is a cost INLIER — no existing check catches it; negative
+twins don't either (a veneer proves a twin as easily as the
+positive). Two forms, shipped in order:
+
+1. **Day-one text-lint** (lands with H): in designated-WP proof
+   files, no `decide`+kernel closures, no direct `stepFn`/
+   `stepFnIter`/`execStmt` unfolds, no `allStreamsOk` — a
+   fail-closed grep-class check in `scripts/ci`, list-scoped to
+   the corpus proof modules.
+2. **The proof-side closure check** (the unit proper): reusing the
+   existing Audit closure-walker infrastructure, walk the PROOF
+   TERMS of tier-3 corpus lemmas and verify that
+   `stepFn`/`execStmt`/`stepFnIter`/`allStreamsOk`/kernel-decision
+   constants are reached only THROUGH the Laws/lifting/adequacy
+   layer, never directly. Whitelist = the layer's module list;
+   violations name the constant and the reaching path (sealed
+   fail-closed reporting, per charter).
+
+Declared carve-outs (so the check is honest, not theater): the
+∃-discharge sites the charter sanctions (reflection certificates,
+`InitSpec`-class setup facts) are OUTSIDE the checked set by
+designation, listed in the checker's config with provenance.
+*Price ([AGENT]): 0.5 session (lint ≈ hours; the walker re-aim is
+the substance).* Consumers: every corpus closure review, gate N-6.
+
 ### 6.4 The standing ceremony (unchanged)
 
 The merge protocol is UNCHANGED and applies to every arc: work on
@@ -793,18 +1038,29 @@ the first closures.
 
 | phase | contents | price ([AGENT]) |
 |---|---|---|
-| A — foundations | U0 (1.5–2.5) + hygiene slice H (0.5) | **2–3 sessions** |
-| B — the structural ladder | G-BIND (1–1.5) + G-REPR (2–4) + G-CALLS (1–2) + G-MAPITER (1) + G-EXIT (0.5–1) + G-SORT (days) + G-AUTO probe (0.5) | **6–10 sessions** (the triage's headline, decomposed) |
-| C — corpus width | the 6 remaining new cases (C-02/04/06/10/11/14) + 3 gallery re-specs at probed throughput (planning figure 0.5–1 session/case until N-6 re-bases it) + G-AUTO build-out reserve (1–2) | **5–9 sessions** |
-| D — the raft member | G-INV (≈2 + gate) + G-STMTS (0.5 + ceremony) + handler-tier FnSpecs + driver body + loop instance + summit readout | **8–14 sessions** (LOW-confidence: derived from v3's 20–28-session raft ladder minus the substrate/structural work now in phases A–C; re-priced at N-6 and again at the raft member's charter) |
+| A — foundations | U0 (2–3, incl. the committed total-WP adoption) + hygiene slice H (0.5) + veneer tripwire A-TRIP (0.5) | **3–4 sessions** |
+| B — the structural ladder | G-BIND (1.5–2, re-priced under A5) + G-REPR (2–4) + G-CALLS (1–2) + G-MAPITER (1) + G-EXIT (0.5–1) + G-SORT (0.5 incl. the Sort census) + G-TOTAL (1) + G-AUTO probe (0.5) | **8–12 sessions** |
+| C — corpus width | the 11 remaining new cases (C-02/04/06/10/11/14/16/17/18/19/20 — a tiny-to-medium mix) + 3 gallery re-specs at probed throughput (planning figure 0.5–1 session/case until N-6 re-bases it; the tiny members expected under it) + G-AUTO build-out reserve (1–2) | **7–13 sessions** |
+| D — the raft member | G-INV (≈2 + gate) + G-STMTS (0.5 + ceremony) + the restored §5.3 rows (U3.2b 0.5–1, U3.2c 1–2, U3.2d 1–2, U3.2e 2–3, U3.2f 1–2, refutation/policy rows ≈0.5 — v3 anchors) + handler-tier FnSpecs + the loop instance & total variant + seam/readout | **10–17 sessions** (LOW-confidence; the named rows now sum visibly instead of hiding in a flat band; re-priced at N-6 and again at the raft charter) |
 
-**Era total ([AGENT], wide band, honestly): ≈ 21–36 worker-sessions**
-to the raft summit sentences, with phases A+B (**8–13 sessions**)
-being the high-confidence prefix and N-6 the re-basing point.
+**Era total ([AGENT], wide band, honestly): ≈ 28–46 worker-sessions**
+to the raft summit sentences, with phases A+B (**11–16 sessions**)
+the high-confidence prefix and N-6 the re-basing point.
+
+**Revision-1 pricing delta, attributed (was ≈ 21–36):** +1.5–2.5
+totality machinery that revision 0 wrongly assumed existed (U0's
+committed adoption, G-TOTAL, U3.2c restored to the visible sum);
++0.5 A-TRIP; +0.5 G-BIND's inverse-decomposition obligation;
++2–4 the six census-reconciliation corpus members; +2–3 the restored
+phase-D rows now priced explicitly rather than absorbed into a
+low-confidence band. The growth is disclosure, not scope creep:
+A1/A3 named work the summit always required.
+
 Dominant named risks: (1) G-REPR's design probe forcing a redesign
 loop (budgeted); (2) tier-3 throughput vs the CallSpec anchors
 (probed at G-AUTO, checked at N-6); (3) the raft-member figure's
-low confidence (re-priced twice before it spends).
+low confidence (re-priced twice before it spends); (4) U3.2c's
+measure (park-not-weaken clause stands).
 
 **The delivery metric of the era: corpus cases closed CLEANLY per
 week** — "cleanly" = differential-anchored subject, designated
