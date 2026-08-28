@@ -3053,3 +3053,18 @@ POSED to the [USER] with the three reserved items (designation
 reconfirmation; W2.5 record closure; ChoiceCanon keep-or-kill)
 + the delta-review waiver question for the schematic response
 commits. Held for at-the-moment sign-off.
+
+### 2026-08-28 — [USER] rulings on the four merge items
+
+(1) Designation 56→51 CONFIRMED. (2) W2.5 record item CLOSED;
+post-mortem commissioned ("let's do the post-mortem"). (3)
+ChoiceCanon: KILL at the next hygiene slice. [USER] rationale,
+recorded: "I expect this kind of choice-invariance will just roll
+up into the reasoning layer, eg. when we have a points-to we don't
+care about choices outside the footprint" — i.e. the erasure
+instrument's role is subsumed by G-REPR's separation discipline
+(choices outside the footprint are frame-irrelevant by
+construction). (4) Delta review of the audit-response commits
+WAIVED. Merge word itself not yet given — held per protocol
+(approval is at-that-moment, for the specific merge; not inferred
+from the rulings).
