@@ -3499,3 +3499,11 @@ gate ci --diff PASS, 2475/2475. Branch-complete, 10 commits over
 2c665abd. Standing parked: U5 (notation, [USER]), U8 (deferred),
 merge-time deps sync (operator — offline sibling bootstrap
 precedent available). [AGENT]: merge ask posed.
+
+### 2026-08-28 — [USER] merge sign-off: U0 MERGED (main @ c484cef9)
+
+ff-only 2c665abd → c484cef9; parked clean; main now on Lean
+4.32.2, iris-lean @ e7a0a438, trust tools pinned v4.32.0 tags,
+TotalWp inhabited + pinned. Push not authorized (standing).
+[AGENT] next: main deps/ sync (offline sibling bootstrap), then
+the ladder — A-TRIP, then G-BIND + first corpus program.
