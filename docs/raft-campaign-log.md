@@ -3267,3 +3267,16 @@ change is behavior-preserving). Delta-flags recorded (2
 trust-adjacent commits; Challenge.lean comment-only; 6 pins of
 now-nonexistent decls removed; hatch scope argued). [AGENT]:
 audit-ask posed together with the pending N-2 ruling.
+
+### 2026-08-28 — [USER] rulings: hygiene audit RUNS (not waived); N-2 APPROVED
+
+(1) [USER]: "go ahead with the audit" — the hygiene slice gets its
+pre-merge audit (Opus, scoped to the slice diff with the two
+trust-adjacent commits primary). Merge held until findings + at-the-
+moment sign-off. (2) N-2 APPROVED as packaged: boundary rev
+e7a0a43, toolchain 4.31.0→4.32.2, comparator/lean4export re-pins
+under the 2026-08-20 pre-approved conditions with execution consent
+now given, judge landmark rides U0's ceremony (first landmark on
+the new pins). [AGENT]: U0 session 2 dispatched with the approval
+relayed verbatim; the trust-tool re-pin is the ONLY sanctioned
+trust-tool change and is delta-flagged for U0's landing review.
