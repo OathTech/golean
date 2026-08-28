@@ -58,6 +58,12 @@ curation (kept local this slice — the P-S3-1 lesson: moving statement
 machinery is a deliberate step, not a side effect).
 -/
 
+-- SCAFFOLD LABEL (plan §2d grandfather; outsider-audit R1, G-BIND fix round 2026-08-28 [AGENT]):
+-- this file's `Terminates`-class content rides the `allStreamsOk` decide+kernel route —
+-- fuel-bounded enumeration on pinned seeds, GRANDFATHERED for the pre-corpus pilots and BANNED
+-- for new members; retirement condition: re-proved through G-TOTAL when the program is
+-- re-specced, or retired with the gallery-row cleanup.
+
 open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.Surface
 
 namespace GoLean.ImportedGoose

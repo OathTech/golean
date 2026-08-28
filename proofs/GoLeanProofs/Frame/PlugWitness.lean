@@ -15,14 +15,17 @@ Role (the witness ruling, triage plan §1.4 + amendment A4): the plug
 family's previous in-tree instantiation (`W2Gate.lean`) died with the
 CallSpec calculus; `PlugProbe` is a parallel concrete PROBE of the
 commutation (verified, but its examples restate the commutation
-shape rather than applying the theorems). These witnesses were the
-family's non-vacuity demonstration until the G-BIND unit's gate
-instance landed; **the retirement condition FIRED 2026-08-28** (the
-C-05 `callchain` quartet, `Specs/Callchain.lean`, applies the plug
-family through `wp_plug_bind` three times — `docs/g-bind-log.md`).
-Per the recorded condition these witnesses are RE-POINTED here; their
-actual retirement (their Audit pins are trust-adjacent) is the
-coordinator's call at the unit's audit.
+shape rather than applying the theorems). Witness status after
+G-BIND (corrected at the audit fix round, F2): the retirement
+condition fired **for the PER-STEP rule only** — the C-05 `callchain`
+quartet (`Specs/Callchain.lean`) reaches `stepFn_plug` (and the new
+inversion walk) through `wp_plug_bind`'s chain, so
+`stepFn_plug_witness` is re-pointed at that live consumer. The
+SPAN-level rules (`callSpan_plug` / `stepFnIter_plug`) are NOT on the
+bind chain; **`callSpan_plug_witness` below remains their live
+application and stays load-bearing** (retiring it would zero their
+applications and reopen the A4 vacuity gap — the auditor's explicit
+recommendation is to keep both `Audit/Landing` pins).
 
 Both witnesses hold at OPEN caller context `(env', k')` under the
 rule's own two premises — exactly the plug rule's consumption shape.

@@ -46,6 +46,12 @@ attribution fact of the design note is thereby not needed for the
 simulation (recorded there; it shapes the future WP laws instead).
 -/
 
+-- SCAFFOLD LABEL (plan §2d grandfather; outsider-audit R1, G-BIND fix round 2026-08-28 [AGENT]):
+-- the `spawnNoopAllStreamsCert` completion-certificate pair below rides the `allStreamsOk` decide+kernel route —
+-- fuel-bounded enumeration on pinned seeds, GRANDFATHERED for the pre-corpus pilots and BANNED
+-- for new members; retirement condition: re-proved through G-TOTAL when the program is
+-- re-specced, or retired with the gallery-row cleanup.
+
 open Iris Iris.ProgramLogic Iris.Std Iris.Std.PartialMap
 open Iris.ProgramLogic.Language.Notation
 open GoLean GoLean.GoCore GoLean.GoCore.Machine

@@ -67,7 +67,14 @@ set_option maxRecDepth 1000000
 /-! ## Per-pin termination (∀ fuel ≥ N, ∀ streams) -/
 
 /-- The golden pin (inc-via-call) terminates from its seeded state, at
-every choice stream, past fuel 300. -/
+every choice stream, past fuel 300.
+
+**SCAFFOLD (plan §2d grandfather; outsider-audit R1)**: proved by the
+`allStreamsOk` decide+kernel route — fuel-bounded enumeration on a
+pinned seed, grandfathered for the pre-corpus pilots and BANNED for
+new members; retirement condition: re-proved through G-TOTAL when the
+program is re-specced, or retired with the gallery-row cleanup. The
+STATEMENT is untouched by this label. -/
 theorem goldenTerminates : Terminates outEnv goldenOut goldenDriver := by
   refine ⟨300, fun fuel hfuel ch => ?_⟩
   have hall : allStreamsOk 300 goldenOut (.exec goldenDriver outEnv .stop)
@@ -76,7 +83,14 @@ theorem goldenTerminates : Terminates outEnv goldenOut goldenDriver := by
   exact ⟨out, ch', execStmtLoop_mono 300 fuel _ _ _ _ hfuel hrun⟩
 
 /-- The recover pin (panic/recover through defer) terminates from its
-seeded state, at every choice stream, past fuel 1000. -/
+seeded state, at every choice stream, past fuel 1000.
+
+**SCAFFOLD (plan §2d grandfather; outsider-audit R1)**: proved by the
+`allStreamsOk` decide+kernel route — fuel-bounded enumeration on a
+pinned seed, grandfathered for the pre-corpus pilots and BANNED for
+new members; retirement condition: re-proved through G-TOTAL when the
+program is re-specced, or retired with the gallery-row cleanup. The
+STATEMENT is untouched by this label. -/
 theorem recoverTerminates :
     Terminates recoverOutEnv
       { types := recoverLowered.typeDefs.toList,
@@ -95,7 +109,14 @@ theorem recoverTerminates :
 
 /-- The one-voter quorum pin (`committedOneKnown`, the real etcd-io/raft
 lowering) terminates from its seeded state, at every choice stream, past
-fuel 4000. -/
+fuel 4000.
+
+**SCAFFOLD (plan §2d grandfather; outsider-audit R1)**: proved by the
+`allStreamsOk` decide+kernel route — fuel-bounded enumeration on a
+pinned seed, grandfathered for the pre-corpus pilots and BANNED for
+new members; retirement condition: re-proved through G-TOTAL when the
+program is re-specced, or retired with the gallery-row cleanup. The
+STATEMENT is untouched by this label. -/
 theorem quorumOneKnownTerminates :
     Terminates quorumOutEnv
       { types := quorumLowered.typeDefs.toList,
@@ -114,7 +135,14 @@ theorem quorumOneKnownTerminates :
 
 /-- The three-voter quorum pin (`committedThreeAll`) terminates from its
 seeded state, at EVERY choice stream — all `3! = 6` map-iteration orders
-explored by the checker — past fuel 4000. -/
+explored by the checker — past fuel 4000.
+
+**SCAFFOLD (plan §2d grandfather; outsider-audit R1)**: proved by the
+`allStreamsOk` decide+kernel route — fuel-bounded enumeration on a
+pinned seed, grandfathered for the pre-corpus pilots and BANNED for
+new members; retirement condition: re-proved through G-TOTAL when the
+program is re-specced, or retired with the gallery-row cleanup. The
+STATEMENT is untouched by this label. -/
 theorem quorumThreeAllTerminates :
     Terminates threeOutEnv
       { types := quorumLowered.typeDefs.toList,

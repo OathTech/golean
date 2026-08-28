@@ -28,12 +28,17 @@ witness's kernel cross-check at a concrete state. -/
 
 /-! ## THE PLUG RULE (W2 unit 1 — design note §7-§8): the per-step
 commutation walk, its iteration, and the call-span corollary (the
-frame's control half; wp_bind lineage). Discharge witnesses:
-`GoLean.Frame.callSpan_plug_witness` / `stepFn_plug_witness`
-(`Frame/PlugWitness.lean`, pinned in `Audit/Landing.lean`) — the
-named instantiations of these rules on a concrete program at open
-caller context (triage amendment A4; the prior `W2Gate`
-instantiation died with the CallSpec calculus). -/
+frame's control half; wp_bind lineage). Discharge witnesses
+(status split at the G-BIND landing, audit fix round F2):
+`stepFn_plug`'s live consumer is now the BIND CHAIN itself
+(`Laws/Bind.lean`'s `wp_plug_bind` via `Frame/PlugInv.lean`,
+exercised by the C-05 quartet, `Specs/Callchain.lean`);
+`stepFn_plug_witness` (`Frame/PlugWitness.lean`, pinned in
+`Audit/Landing.lean`) is re-pointed there. The SPAN rules
+(`stepFnIter_plug`/`callSpan_plug`) are not on the bind chain —
+`callSpan_plug_witness` remains their live application (kept; the
+prior `W2Gate` instantiation died with the CallSpec calculus,
+triage amendment A4). -/
 
 /-- info: 'GoLean.Frame.stepFn_plug' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Frame.stepFn_plug
