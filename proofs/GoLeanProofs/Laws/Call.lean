@@ -664,6 +664,69 @@ theorem wp_call_enter₂₁ {fid : FuncId} {func : Func}
       exact ⟨h1.symm, h2.symm⟩))
   iexact Hcont
 
+/-- **Frame entry, TWO arguments / NO results, STATIC callee** — the
+resultless procedure arity (the C-05 `callchain` callees `ccWork`/
+`ccDouble`: `func f(dst *int, x int)`). Sibling of `wp_call_enter₂₁`
+with the result list emptied: two cells allocate in the single entry
+step (`wp_alloc_step₂` core), no result locations pin, and the frame is
+the RESULTLESS shape the plug barrier recognizes — the entry point the
+bind rule (`Laws/Bind.lean`) composes through. Non-vacuity witness:
+`Specs/Callchain.lean`'s walks. (The standing arity scope note lives on
+`wp_alloc_step₄`; G-CALLS owns the list-indexed generalization.) -/
+theorem wp_call_enter_arg2 {fid : FuncId} {func : Func}
+    {v₀ v₁ w₀ w₁ : GoValue}
+    {pid₀ pid₁ : String} {pty₀ pty₁ : Ty}
+    {plans : List (TargetShape × List Expr)} {env k}
+    (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
+    (hargs : func.args = #[⟨pid₀, pty₀⟩, ⟨pid₁, pty₁⟩])
+    (hres : func.results = #[])
+    (hnodisp : ∀ σ : ExecState, σ.functions = GoCoreGS.prog GF →
+      σ.methods = GoCoreGS.methods GF → σ.types = GoCoreGS.types GF →
+      dynamicDispatch? σ func #[v₀, v₁] = .ok none)
+    (hnorm₀ : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      normalizeValueForTy σ pty₀ v₀ = .ok w₀)
+    (hnorm₁ : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      normalizeValueForTy σ pty₁ v₁ = .ok w₁) :
+    iprop(∀ a₀ : Addr, ∀ a₁ : Addr,
+        a₀.id ↦ (⟨some pty₀, w₀⟩ : HeapCell)
+          ∗ a₁.id ↦ (⟨some pty₁, w₁⟩ : HeapCell) -∗
+        WP (Config.exec func.body
+              [[(pid₁, Loc.base a₁), (pid₀, Loc.base a₀)]]
+              (.frame plans env [] [] k func.wrapper)) @ s ; E {{ Φ }})
+      ⊢ WP (Config.retV v₁ (.callArgsK fid plans [v₀] [] env k))
+          @ s ; E {{ Φ }} := by
+  have henter : ∀ σ : ExecState, σ.functions = GoCoreGS.prog GF →
+      σ.methods = GoCoreGS.methods GF → σ.types = GoCoreGS.types GF →
+      enterFrame σ fid [v₀, v₁]
+        = .ok (func,
+            [[(pid₁, Loc.base ⟨σ.nextAddr + 1⟩), (pid₀, Loc.base ⟨σ.nextAddr⟩)]],
+            [],
+            allocMany σ [⟨some pty₀, w₀⟩, ⟨some pty₁, w₁⟩]) := by
+    intro σ hfns hmeths htypes
+    have hbind := bindParams₂ (σ := σ) (p₀ := ⟨pid₀, pty₀⟩) (p₁ := ⟨pid₁, pty₁⟩)
+      (v₀ := v₀) (v₁ := v₁) (w₀ := w₀) (w₁ := w₁)
+      (hnorm₀ σ htypes) (hnorm₁ _ htypes)
+    simp only [allocMany] at hbind ⊢
+    unfold enterFrame
+    rw [hfns, hfind]
+    simp [hnodisp σ hfns hmeths htypes, hargs, hres, hbind,
+      allocDecls, pinResultLocs, LocalEnv.declare, Bind.bind, Except.bind]
+    exact hfns
+  iintro Hcont
+  iapply (wp_alloc_step₂ (hnv := rfl)
+    (kof := fun a₀ a₁ => Config.exec func.body
+      [[(pid₁, Loc.base a₁), (pid₀, Loc.base a₀)]]
+      (.frame plans env [] [] k func.wrapper))
+    (hred := by
+      intro σ₁ hfns hmeths htypes
+      have hstep := Step.callArgsDoneEnter (vals := [v₀]) (plans := plans)
+        (env := env) (k := k) (by simpa using henter σ₁ hfns hmeths htypes)
+      refine ⟨hstep, ?_⟩
+      intro c' s' hst
+      obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
+      exact ⟨h1.symm, h2.symm⟩))
+  iexact Hcont
+
 /-- **Frame entry through an interface anchor — two arguments (receiver +
 one) and two results.** The last argument value arrives at the
 `callArgsK` frame; ONE machine step looks the anchor up, redirects to the
