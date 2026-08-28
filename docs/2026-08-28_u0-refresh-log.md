@@ -416,3 +416,60 @@ The mechanics identified and verified locally before the pause
   (+ its smoke-project toolchain line) — deferred until the
   mechanics are unblocked so the branch never demands pins that
   don't exist on the box.
+
+**S2.5a execution status [AGENT]:** after the pin-move commit the
+clone/checkout/seed steps went through cleanly (this worktree's
+`deps/comparator` @ `07bc4ea` tag v4.32.0 PRISTINE; its
+`.lake/packages/lean4export` @ `4e79152`, `Lean4Checker` @
+`b739819` — every rev exact, local objects only). The BUILD step —
+`lake +leanprover/lean4:v4.32.2 build lean4export comparator`
+(per-invocation toolchain selection; no elan state) — was
+classifier-blocked twice and is NOT retried further per standing
+guidance. THE RE-PIN IS PAUSED exactly there; the single command
+above (run in
+`.claude/worktrees/u0-iris/deps/comparator`, capped) is what
+remains, followed by the judge-script pin-constant edits
+(delta-flagged commit), the smoke pair, and the judge run whose
+PASS is recorded as the NEW BASELINE LANDMARK (not like-for-like
+with the 51@4.31 anchors — new toolchain; [USER] ruling item 4).
+
+## S2.5b THE COMMITTED TotalWp ADOPTION — DONE [AGENT]
+
+The unit's deliverable-of-record (plan §3 A1), landed as
+`proofs/GoLeanProofs/TotalWp.lean` (aggregator-imported, in the
+audited closure), green and warning-free:
+
+1. **Instance pin**: `example : TotalWp (IProp GF) Config Unit
+   Stuckness := inferInstance` — our language inherits upstream's
+   first-ever `TotalWp` inhabitant; a future upstream reshape fails
+   at the adoption site, not at a distant use.
+2. **Total lifting for our prim steps**: `twp_seqn` + `twp_seq_done`
+   — total twins of `Laws/Control.wp_seqn`/`wp_seq_done` via
+   upstream `twp.lift_pure_det_step_no_fork` over `GoPrimStep`. No
+   later, no credit: the least-fixpoint total WP has no Löb debt,
+   which is exactly what makes it a termination certificate.
+3. **`go_total_adequacy`**: `twp_total` seated on the GoCore ghost
+   state (the `go_adequacy` allocation, verbatim), concluding
+   `Relation.StronglyNormalizing Language.ErasedStep ([c], σ)` —
+   no infinite reduction under any demonic choice resolution.
+   Postcondition fixed to `True` by design (termination needs no
+   observation; richer forms weaken to it via `twp.strong_mono`;
+   the result-carrying rules are G-TOTAL's).
+4. **The sequential bridge**: `step_erased` + 
+   `sn_no_infinite_step_chain` (SN at the singleton pool refutes
+   any infinite sequential `Step` chain) — the pure joint the
+   `Terminates`/∃-fuel route consumes at G-TOTAL via
+   `step_complete`.
+5. **The discharge witness (charter's witness rule)**:
+   `sn_seqn_nil` — a CLOSED strong-normalization theorem for the
+   empty-sequence program at the concrete bundle `GoCoreS`, proved
+   end-to-end through the total laws + `go_total_adequacy`; the
+   total twin of `adequate_seqn_nil`, and the first
+   termination-shaped theorem in this tree proved SYMBOLICALLY
+   rather than by fuel-bounded enumeration.
+
+No design fight surfaced: our lifting shape (the `GoPrimStep`
+one-step pattern of `Lifting.lean`) transfers to the total class
+unchanged — the park-with-record contingency was not needed.
+Quantifier-audit note: this module supplies RULES for the ∃-fuel
+row; it advances no end-theorem quantifier itself and says so.
