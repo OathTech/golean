@@ -3374,3 +3374,26 @@ discrimination unwitnessed until the corpus fork/join twin). U0
 session 2 in flight (pin move + TotalWp inhabitation) — its branch
 will rebase onto this tip at its ceremony. Next after U0: A-TRIP,
 then the ladder per the plan.
+
+### 2026-08-28 — U0 session 2 parked report; [USER] ran the paused build; session 3 resumed
+
+Session 2 landed: pin move complete (iris-lean → e7a0a438,
+batteries/Qq bumped, toolchain 4.32.2 by FILE mechanism only; 24
+files of mechanical migration across five recurring patterns; no
+designated statement changed); ci --diff PASS with the FULL
+differential 2475/2475 no-regression on the new toolchain (the
+strongest validation of the move); TotalWp INHABITED
+(deliverable-of-record: first TotalWp instance, total lifting,
+go_total_adequacy, witness sn_seqn_nil = the tree's first
+symbolically-proved termination fact; park contingency unused); U3
+points-to adoptions + witnesses (→G-REPR); U1 measured finding
+recorded as G-AUTO baseline datum (no fake witness); U8 deferred
+with reason; U5 parked for the [USER] notation ruling.
+Blocked-command account complete: six classifier incidents, all
+benign, none global-state, the final one (the trust-tool binary
+build) correctly paused. [USER] ran the paused command
+interactively; coordinator verified the binary + source
+pristineness at the pinned tag. Session 3 resumed: pin-constant
+edits, smoke, judge as NEW BASELINE landmark, rebase onto
+2c665abd (re-judge after rebase — the hygiene slice hardened the
+judge script), full gate, branch-complete.
