@@ -473,3 +473,32 @@ one-step pattern of `Lifting.lean`) transfers to the total class
 unchanged — the park-with-record contingency was not needed.
 Quantifier-audit note: this module supplies RULES for the ∃-fuel
 row; it advances no end-theorem quantifier itself and says so.
+
+## S2.5c Reuse adoptions U1/U3 (+U8 deferral) [AGENT]
+
+`proofs/GoLeanProofs/PinAdoptions.lean` (aggregator-imported):
+
+- **U3 ADOPTED with two discharge witnesses on our tier**:
+  fractional points-to recombination by `iframe` alone
+  (`frame_pointsto`/`FrameFractionalQp`) and two-observer
+  agreement as a pure fact (`icombine … gives`,
+  `instCombineSepGivesPointsTo`). Consumer: G-REPR (the per-field
+  split/combine base; C-08's sibling-frame test is the gate).
+- **U1: instances landed; tactic exploitation OWED — a measured
+  finding recorded**: from outside the iris package at this rev,
+  `imod H` / `icases H with >H` on a context `|={E}=>` against a
+  WP goal is REFUSED by the proof-mode front-end ("is not a
+  modality") even though `elimModalFupdWp`/`addModalFupdWp` exist
+  (reproduced twice, minimal example in the module header). So the
+  modality-dance retirement (4-step `go_walk_dance`, 2 `idance`
+  macros, 393 `fupd_intro` sites) is NOT a free rename — it is
+  G-AUTO's measured work and this datum is its baseline. No fake
+  witness shipped.
+- **U8 (equiv_iff_eq → HeapBridge cleanup) DEFERRED with reason**:
+  the hand extensionality lemmas conclude pointwise `≡ₘ` consumed
+  by `genHeapInterp_eqv` at ~5 `Lifting.lean` call sites — the
+  upstream `=`-conclusion saves the lemmas but costs a call-site
+  refactor round; no consumer demands it this session (middle-path:
+  measured cost > benefit today). Session-3 candidate.
+- **U5 (telescopes/Texan)**: untouched — the [USER] notation
+  decision (plan §8.3) is still open; adoption follows the ruling.
