@@ -115,6 +115,34 @@ theorem wp_defer_register_noargs {cv : GoValue} {env k k'}
   wp_pure_det rfl (by simp [Config.choiceFree])
     (fun _ => Step.deferCalleeNoArgs hcallee hpush)
 
+/-- An argument-carrying deferred callee starts its argument spine
+(deferred arguments evaluate NOW, at registration — spec §Go
+statements). G-BIND landing: the first arg-carrying defer consumer is
+`Specs/Callchain.lean`'s `ccWork` walk. -/
+@[go_walk_law]
+theorem wp_defer_callee_arg {cv : GoValue} {a : Expr} {rest : List Expr}
+    {env k}
+    (hcallee : deferrableCallee cv = true) :
+    (|={E}[E]▷=> £ 1 -∗
+      WP (Config.evalE a env (.deferArgsK cv [] rest env k))
+        @ s ; E {{ Φ }}) ⊢
+      WP (Config.retV cv (.deferCalleeK (a :: rest) env k))
+        @ s ; E {{ Φ }} :=
+  wp_pure_det rfl (by simp [Config.choiceFree])
+    (fun _ => Step.deferCalleeArg hcallee)
+
+/-- The last deferred argument arrives: the pending call registers onto
+the innermost frame's chain (`pushDefer`, LIFO), arguments pinned by
+value. -/
+@[go_walk_law]
+theorem wp_defer_register_args {v cv : GoValue} {vals : List GoValue}
+    {env k k'}
+    (hpush : pushDefer (cv, vals ++ [v]) k = some k') :
+    (|={E}[E]▷=> £ 1 -∗ WP (Config.next k') @ s ; E {{ Φ }}) ⊢
+      WP (Config.retV v (.deferArgsK cv vals [] env k)) @ s ; E {{ Φ }} :=
+  wp_pure_det rfl (by simp [Config.choiceFree])
+    (fun _ => Step.deferArgsDone hpush)
+
 /-! ### The unwinding family (the unwinding arc's proof face) -/
 
 /-- `panic(e)`: evaluate the payload. -/
@@ -388,6 +416,37 @@ theorem wp_frame_defer_fall_cap1 {fid : FuncId} {func : Func}
           @ s ; E {{ Φ }})
       ⊢ WP (Config.next
             (.frame targets tenv results ((.funcVal fid [cv], []) :: ds) k wsrc))
+          @ s ; E {{ Φ }} :=
+  wp_enter_cap1_core rfl (by trivial)
+    (enterFrame_cap1 hfind hargs hres hnodisp hnorm)
+    (.frame [] [] [] [] (.frame targets tenv results ds k wsrc) func.wrapper)
+    (fun _ henter => Step.frameDeferFall (by simpa using henter))
+
+/-- The defer-drain entry for an ARGUMENT-carrying registration —
+`(.funcVal fid [], [cv])`, the `defer f(x)` shape whose argument was
+evaluated at registration (`wp_defer_register_args`); the `cap1`
+sibling above covers the capture shape `(.funcVal fid [cv], [])`.
+One parameter cell allocates, no results, and the deferred body runs
+over the popped frame. G-BIND landing; first consumer
+`Specs/Callchain.lean`. -/
+theorem wp_frame_defer_fall_arg1 {fid : FuncId} {func : Func}
+    {pid : String} {pty : Ty} {cv cv' : GoValue}
+    {targets : List (TargetShape × List Expr)} {tenv : LocalEnv}
+    {results : List Loc} {ds : List (GoValue × List GoValue)} {k}
+    {wsrc : Bool}
+    (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
+    (hargs : func.args = #[⟨pid, pty⟩])
+    (hres : func.results = #[])
+    (hnodisp : ∀ σ : ExecState, σ.methods = GoCoreGS.methods GF →
+      dynamicDispatch? σ func #[cv] = .ok none)
+    (hnorm : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      normalizeValueForTy σ pty cv = .ok cv') :
+    iprop(∀ pa : Addr, pa.id ↦ (⟨some pty, cv'⟩ : HeapCell) -∗
+        WP (Config.exec func.body [[(pid, Loc.base pa)]]
+              (.frame [] [] [] [] (.frame targets tenv results ds k wsrc) func.wrapper))
+          @ s ; E {{ Φ }})
+      ⊢ WP (Config.next
+            (.frame targets tenv results ((.funcVal fid [], [cv]) :: ds) k wsrc))
           @ s ; E {{ Φ }} :=
   wp_enter_cap1_core rfl (by trivial)
     (enterFrame_cap1 hfind hargs hres hnodisp hnorm)
