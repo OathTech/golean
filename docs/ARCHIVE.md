@@ -80,7 +80,8 @@ The trusted base (GoCore, the frontend, the differential corpus +
 scripts, FastEval + transfer theorems + fastreplay), the ∀-shaped rule
 set (`Frame/` core, `Sym/`, `Lens`, `SliceWalk`/`MapLoops`/`StepKit`/
 `FuelMeasure`, the Iris WP layer), `Frame/ChoiceCanon` + `ChoiceInv`
-(minus witnesses/seed pins), the native abstract chain +
+(minus witnesses/seed pins — both since KILLED, see the hygiene-slice
+section at the end of this file), the native abstract chain +
 `NativeCheckerBridge`'s rule half, the pairing vocabulary (`AbsState`,
 `AbsStateV2` readers + `_ren`, `absTwinRead`), and the statement layer
 (`WirePin`, `TwinProgram`, `RaftAgreement`). The two retained native
@@ -207,3 +208,35 @@ the prover record) are exactly the tier-agnostic substrate.
     `stepFn_plug_witness`) replaces something else again — the
     `W2Gate` plug-rule INSTANTIATION that died with the CallSpec
     member corpus — not the map-pick discharge.
+
+---
+
+# ARCHIVE — the hygiene-slice kills (2026-08-28, no new ref)
+
+THE RULE above applies unchanged: nothing archived is ever cited by a
+proof. These kills are single-file and recoverable from main's own
+history — no archive branch was cut.
+
+- **`Frame/ChoiceCanon.lean`** (616 lines, the `~`/`~ₘ` choice-erasure
+  carrier: `CForm`/`canonStateM`/`CEquivM`/`Mask`) + its pin module
+  `Audit/ChoiceInv.lean` (four carrier pins; nothing else survived in
+  it after the triage pruned the `ChoiceInv` pins) — DELETED by
+  **[USER] ruling 2026-08-28**: choice-invariance rolls up into the
+  reasoning layer, since with a points-to the choices outside the
+  footprint are frame-irrelevant, so G-REPR's footprint subsumption
+  replaces the erasure instrument
+  (`docs/2026-08-28_iris-corpus-plan.md` §4.2, §6.3).
+  *Recover at:* commit `05e81b70` (the pre-kill tip) — e.g.
+  `git show 05e81b70:proofs/GoLeanProofs/Frame/ChoiceCanon.lean`.
+  *Park-record note:* the parked SpanIso lane consumed `Mask`; at its
+  resume it re-derives the mask vocabulary or harvests it from that
+  commit — it may not import the dead module back.
+- **`fjRunDeadlocks`** and its deadlock program cluster
+  (`fjBlockedWorker`/`fjDeadlockDriver`/`fjDeadlockSeed`,
+  `Specs/ForkJoinTargets.lean`) + the two pinned-stream theorems
+  `forkJoinDeadlockCanonical`/`forkJoinDeadlockAdversarial`
+  (`Specs/GoldenForkJoin.lean`) and their Audit axiom pins — retired
+  (gate-audit L-7, plan §6.3): de-designated at the triage landing and
+  left with zero surviving consumers; the deadlock-freedom content is
+  carried by the ∀-schedule family (`forkJoinNoDeadlock`), which is a
+  strictly stronger statement. *Recover at:* `05e81b70`.

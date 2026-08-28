@@ -62,14 +62,18 @@ import GoLeanProofs.Specs.Raft.NativeS1Witness
 import GoLeanProofs.Specs.Raft.NativeS23Chain
 import GoLeanProofs.Specs.Raft.NativeS23Witness
 import GoLeanProofs.Specs.Raft.NativeCheckerBridge
--- SP1 landing (arc4c lane), triage-pruned (K-3, 2026-08-27): the
--- choice-erasure CARRIER (~/~ₘ, CForm — the statement-former; Mask
--- consumed by the parked SpanIso) stays per K-E; the ChoiceInv
--- statement layer (ChoiceInvariantToM: zero inhabitants, zero
--- consumers) is DELETED — archived at archive/callspec-era. If the
--- post-T1 choice-erasure consolidation needs an invariant-transport
--- form it re-derives against SpanIso's relation with a witness.
-import GoLeanProofs.Frame.ChoiceCanon
+-- SP1 landing (arc4c lane) — FULLY RETIRED at the hygiene slice
+-- (2026-08-28). The ChoiceInv statement layer went at the triage
+-- (K-3, 2026-08-27: ChoiceInvariantToM had zero inhabitants and zero
+-- consumers); the choice-erasure CARRIER itself (~/~ₘ, CForm, Mask —
+-- Frame/ChoiceCanon.lean, 616 lines) is now DELETED too, by [USER]
+-- ruling 2026-08-28: choice-invariance rolls up into the reasoning
+-- layer — with a points-to, choices outside the footprint are
+-- frame-irrelevant, so G-REPR's footprint subsumption replaces the
+-- erasure instrument (iris-corpus plan §4.2, §6.3). Recoverable from
+-- main's history at 05e81b70 (the pre-kill commit); see
+-- docs/ARCHIVE.md. The parked SpanIso lane's `Mask` dependency
+-- re-derives or harvests from that history at its resume.
 -- A4-U8: the field-lens layer (Perennial Access lineage; general half —
 -- combinators + L1-L4 laws).
 import GoLeanProofs.Lens

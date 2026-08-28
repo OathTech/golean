@@ -12,7 +12,7 @@ Consumers computed from the full 448-module import graph + whole-tree identifier
 | **Relocate** — `frameSim_relocate` / `span_relocate` | Frame (Go-general) | SL renaming lemma, Yang–O'Hearn (`Relocate.lean:6-11`) | COMPLETE | 3 live (Audit/Kit, ShapeSim, BpcResite) + 4 corpus Round*Lemma; ~8 equation call sites | Minor DUPLICATE: `GoLean.RaftSeam.span_relocate` re-declared at `HaeEquation.lean:295`. Benign in practice (the four bare-name sites do not import HaeEquation) but untagged | same as FrameSim |
 | **Threshold / rebaseSimT** | Frame (Go-general) | frame-growth rebase (gallery) | COMPLETE | 7 live | named as the blocker that forced FrameSimS to be additive (`ShapeSim.lean:24-30`) | — |
 | **AllocIndep** — `allocatorIndependence`, `swapShift` | Frame (Go-general) | quotient-representative discharge for the allocator pin | COMPLETE (terminal corollary) | none (aggregator only) — by design, it is a doctrine result not a mechanism | honest scope note at `AllocIndep.lean:29-33` naming the re-opening condition (address-exposing observation channel) | latitude inventory |
-| **ChoiceCanon** — `CForm`/`canonStateM`/`CEquivM` (`~`, `~ₘ`) | filed under Frame/, namespace `GoLean.ChoiceErase` | bisimulation up-to erasure quotient; CompCert block-naming; first-visit DFS canonical labeling (`ChoiceCanon.lean:68-72`) | COMPLETE as a carrier | 2 live (ChoiceInv, SeedCFormLit) | fail-closed flags in the form (FUEL/NONBASE-LOC/MAPKEY-UNSORTABLE/TAILNONZERO/MIXED-REF/VIEWFIX-UNSTABLE/DRAIN-FUEL); declared forward-compatible with the post-T1 symbolic semantics. **Layering smell**: only Frame/ module (with ChoiceInv) outside `GoLean.Frame`; imports nothing from Frame | redesign §8 "design contributions adopted since α" (note absent from branch) |
+| **ChoiceCanon** — `CForm`/`canonStateM`/`CEquivM` (`~`, `~ₘ`) — **DELETED 2026-08-28** (see the triage addendum below) | filed under Frame/, namespace `GoLean.ChoiceErase` | bisimulation up-to erasure quotient; CompCert block-naming; first-visit DFS canonical labeling (`ChoiceCanon.lean:68-72`) | COMPLETE as a carrier | 2 live (ChoiceInv, SeedCFormLit) | fail-closed flags in the form (FUEL/NONBASE-LOC/MAPKEY-UNSORTABLE/TAILNONZERO/MIXED-REF/VIEWFIX-UNSTABLE/DRAIN-FUEL); declared forward-compatible with the post-T1 symbolic semantics. **Layering smell**: only Frame/ module (with ChoiceInv) outside `GoLean.Frame`; imports nothing from Frame | redesign §8 "design contributions adopted since α" (note absent from branch) |
 | **ChoiceInv** — `anchorRun`, `ChoiceInvariantToM` | same | data independence / bisimulation up-to (`ChoiceInv.lean:41`) | **STATEMENT-ONLY, honestly declared** | 1 live (SeedPin). `ChoiceInvariantTo`, `ChoiceInstanceAtM`, `choiceInvariant_instance`, `anchorRunProg` = 4/7 decls with zero consumers | `ChoiceInv.lean:20-40` states the standing bluntly: statement layer + census + kernel witnesses ship; the ∀-stream discharge is post-T1. Open obligation **O6** | same |
 | **Lens** (general half) + **LensInst** (per-field) | `GoLean.Lens` (general) / Specs.Raft (target) | Perennial `Access`/`AccessStrict` + goose proofgen per-field instances (`Lens.lean:9-17`) | COMPLETE | Lens: Audit/Kit (7 pins) + LensInst; LensInst → AbsStateV2 | explicit LAYERING paragraph (`Lens.lean:20-24`); L2/L3 shipped in slice B | `docs/2026-08-24_campaign-arc4-lens-design.md` (present) |
 | **SliceWalk** — `sliceWalk_loop` | `GoLean.SliceWalk` (general) | Floyd/Hoare loop invariant (`SliceWalk.lean`) | COMPLETE | 1 module (DriverNet) carrying the 2 instances claimed; Audit/DriverNet pins it | prologue deliberately not schematized (middle-path §7, "no demonstrated demand") | redesign §3 I2 (absent from branch) |
@@ -67,8 +67,14 @@ re-census remains the next landing audit's):
   (+ the relabeled concrete probe `Frame/PlugProbe.lean`, retirement
   = G-BIND's gate instance). Consumer: the tier-3 bind unit (G-BIND).
 - **ChoiceInv** row: **KILLED** (K-3: `ChoiceInvariantToM` zero
-  inhabitants/consumers); `ChoiceCanon` carrier stays (Mask consumed
-  by the parked SpanIso).
+  inhabitants/consumers). **ChoiceCanon** row: **KILLED TOO** at the
+  hygiene slice ([USER] ruling 2026-08-28 — choice-invariance rolls up
+  into the reasoning layer; with a points-to, choices outside the
+  footprint are frame-irrelevant, so G-REPR subsumes the erasure
+  instrument). The module and its Audit pin file are deleted;
+  recoverable at `05e81b70` (docs/ARCHIVE.md, hygiene-slice section).
+  The parked SpanIso lane's `Mask` dependency re-derives or harvests
+  from that commit at its resume.
 - **Relocate** row: **KILLED** (K-2: zero live consumers; the
   cancelled R-geometry road's vocabulary; placement genericity is
   G-REPR's job).

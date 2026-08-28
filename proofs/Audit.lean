@@ -29,7 +29,6 @@ import Audit.SliceQueue
 import Audit.MatMul
 import Audit.DriverNet
 import Audit.CheckerBridge
-import Audit.ChoiceInv
 import Audit.W1
 import Audit.W2
 import Audit.Landing
@@ -37,7 +36,11 @@ import Audit.Landing
 -- modules (Ring, RoundMa/Vote/Mar/Vr, RoundInduction(+Witness),
 -- FrameShape) are unlinked here in the K-A commit (their subjects'
 -- literal foundations are deleted) and their files deleted at K-D per
--- the kill-list. ChoiceInv stays, pruned to the statement-layer pins.
+-- the kill-list. Audit/ChoiceInv.lean is DELETED at the hygiene slice
+-- (2026-08-28): it held nothing but the four ChoiceCanon carrier pins,
+-- and the carrier itself was killed by [USER] ruling that day
+-- (choice-invariance rolls up into the reasoning layer — G-REPR's
+-- footprint subsumption; iris-corpus plan §4.2/§6.3).
 -- The era's content is preserved at archive/fixed-trajectory-era —
 -- see docs/ARCHIVE.md.
 
