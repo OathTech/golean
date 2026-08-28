@@ -3345,3 +3345,21 @@ retry the exact command, with don't-hammer + interactive-approval
 fallback; (c) the general elan/opam prohibition restated as
 standing policy, unrelated to this incident. Worker to include the
 four blocked actions in its report for completeness.
+
+### 2026-08-28 — Hygiene fix round complete (2c665abd); coordinator delta-check PASS; merge ask posed
+
+All five audit fixes landed (F-1 alone, trust-adjacent, superseded
+wording preserved under a banner; F-2 ci:630 anchored byte-identical
+to the judge's with an honest comment; F-3/4/5 records). Worker
+declared one [AGENT] deviation (the same overstatement fixed in the
+comparator-judge comment — comment-only). Ceremony re-run: gate
+PASS; judge PASS 51 in 118s @ 09f8f598 — THIRD like-for-like
+landmark (51×3), certifying both parser edits behavior-preserving
+end-to-end. Coordinator first-hand delta-check of both
+trust-adjacent hunks: PASS (the F-1 comment is accurate — USER's
+act, correctly recorded at birth, 2026-08-28 reconfirmation
+forward-cited to this log; M-1-scope NB prevents reapplication).
+Open named debt carried honestly: allStreamsOkPool's discrimination
+is UNWITNESSED in-tree until the corpus fork/join member's negative
+twin (flagged in the slice log §flags). Net −547 tree lines.
+[AGENT]: merge ask posed to the [USER].
