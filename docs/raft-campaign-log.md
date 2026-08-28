@@ -3173,3 +3173,19 @@ intent at landing: cherry-pick the deliverable docs onto a fresh
 branch off main (design-pass history cannot rebase; snapshot
 taken). The plan is POSED at the [USER] adjudication gate — HARD
 STOP per the post-mortem rule.
+
+### 2026-08-28 — [USER] APPROVED the iris-corpus plan; charter refresh commissioned
+
+[USER]: "Great, I approve. Let's take the opportunity to make sure
+CLAUDE.md is clean and logs the current plan in a prominent place
+so it's top of mind." docs/2026-08-28_iris-corpus-plan.md is the
+PLAN OF RECORD. [AGENT] landing mechanics: branch plan-landing off
+main @ 2a6621ed (w1-prover worktree hosts it); lands the plan doc
+(DRAFT header → approved), the w25 post-mortem, and the CLAUDE.md
+refresh — architecture stack + plan pointer prominent, the
+post-mortem's hard-stop design-gate amendment included at its
+designated moment (presented to the [USER] verbatim at the
+merge-ask), the A-TRIP veneer forbidden-pattern clause added to
+the proof doctrine, pointers updated (clean-proof-plan marked
+superseded). Ceremony: gate → audit-ask (docs-only; [USER] may
+waive) → merge sign-off.
