@@ -3329,3 +3329,19 @@ must resolve the inconsistency AGAINST the primary record (the
 disposition table), not by picking the reading that fits the
 compression — and the worker who faithfully executes a wrong brief
 is not the error's owner.
+
+### 2026-08-28 — Blocked-command incident resolved: benign (classifier error)
+
+[USER] shared the blocked command: git checkout --detach e7a0a43 on
+the u0-iris worktree's GITIGNORED iris-lean reading copy — the
+chartered keep-in-sync step at the N-2-approved boundary rev. No
+global state, no trust tool. The block = a permission-classifier
+transient error ("Stage 2 classifier error... retrying often
+succeeds"), cascading to 4 consecutive blocks. [AGENT] record
+corrections: (a) the coordinator's initial elan hypothesis was
+WRONG (forensics had shown no elan state changed — consistent, but
+the hypothesis itself is retracted); (b) the worker is cleared to
+retry the exact command, with don't-hammer + interactive-approval
+fallback; (c) the general elan/opam prohibition restated as
+standing policy, unrelated to this incident. Worker to include the
+four blocked actions in its report for completeness.
