@@ -3480,3 +3480,22 @@ labeled minimal-by-design; F-5t duplicate section number; F-6m
 cite the stronger gate run; F-7m desugar-coupling →
 operational-lessons; obs-t: PROOF_TOOLCHAIN floating-read doctrine
 line + the merge-time comparator-setup operator note.
+
+### 2026-08-28 — U0 fix round complete (u0-iris-refresh @ c484cef9); merge ask posed
+
+All 11 items discharged. Highlights: smoke evidence now TRACKED
+verbatim (accept exit 0; reject exit 1 with the kind-mismatch
+exception — fail-closed demonstrated on the rebuilt binaries); the
+nine-pin Audit block landed [TRUST-ADJACENT], envelopes MEASURED
+not guessed (classical trio for the Iris-carried names; the
+sequential bridge pair choice-free [propext, Quot.sound]); three
+witnesses named and pinnable; provenance table enumerates every
+[USER] mention on the branch as citation-not-assertion, routed to
+the verbatim-quotes entry (98245091); U1 cause theory withdrawn on
+the record; both landmark markers carry prose; desugar-coupling →
+operational-lessons; PROOF_TOOLCHAIN review trigger named. Judge
+PASS 51 in 118s @ 534f2710 (the Audit-pin re-trigger, prose'd);
+gate ci --diff PASS, 2475/2475. Branch-complete, 10 commits over
+2c665abd. Standing parked: U5 (notation, [USER]), U8 (deferred),
+merge-time deps sync (operator — offline sibling bootstrap
+precedent available). [AGENT]: merge ask posed.
