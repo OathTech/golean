@@ -3421,3 +3421,15 @@ correction commit 384cbc98 cites the chain per the F-1 lesson
 (supersede-with-citation, commit message immutable, log = record
 of record); the pre-merge audit is directed to verify the chain
 end-to-end. [AGENT]: U0 audit-ask posed to the [USER].
+
+### 2026-08-28 — [USER] approved the U0 audit ("Audit review I guess"); launched
+
+Two Opus reviewers on u0-iris-refresh @ 384cbc98 vs main @
+2c665abd: (1) trust surface — the re-pin diff vs the pre-approved
+conditions, source pristineness, smoke/judge evidence, and the
+PROVENANCE CHAIN end-to-end per the automated flag + correction
+commit; (2) migration honesty — the 24-file 4.32.2 tail (no
+designated statement changed; helper-lemma restatements genuinely
+desugar-mirroring) + TotalWp witness reality (is sn_seqn_nil a
+real symbolic proof; is the inhabitation genuinely our language
+instance). Findings fix on-branch → re-gate → merge sign-off.
