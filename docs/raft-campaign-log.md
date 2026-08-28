@@ -3363,3 +3363,14 @@ Open named debt carried honestly: allStreamsOkPool's discrimination
 is UNWITNESSED in-tree until the corpus fork/join member's negative
 twin (flagged in the slice log §flags). Net −547 tree lines.
 [AGENT]: merge ask posed to the [USER].
+
+### 2026-08-28 — [USER] merge sign-off: hygiene slice MERGED (main @ 2c665abd)
+
+ff-only 05e81b70 → 2c665abd; primary checkout parked on main,
+clean. Push not authorized (standing). Era state: hygiene slice
+DONE (ChoiceCanon killed, provenance honest, both parsers hardened,
+fork/join scaffolds retired; open debt: allStreamsOkPool
+discrimination unwitnessed until the corpus fork/join twin). U0
+session 2 in flight (pin move + TotalWp inhabitation) — its branch
+will rebase onto this tip at its ceremony. Next after U0: A-TRIP,
+then the ladder per the plan.
