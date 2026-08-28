@@ -111,6 +111,7 @@ import GoLeanProofs.Specs.GoldenTargets
 import GoLeanProofs.Specs.GoldenSliceWP
 import GoLeanProofs.Specs.CallchainProgram
 import GoLeanProofs.Specs.Callchain
+import GoLeanProofs.Specs.CallchainSentences
 import GoLeanProofs.Surface
 import GoLeanProofs.SurfaceBridge
 import GoLeanProofs.SurfaceExit

@@ -99,8 +99,10 @@ build; keep-ours rows carry their reason.
 | U9 | pool carrier (`ThreadPool.lean`) / fork-join libs | `ProgramLogic/ThreadPool.lean`; `HeapLang/Lib/*` | absent | `LangC`/`LangD` carriers; `Specs/ForkJoinTargets` | — | **KEEP OURS** (scan R4/R13 reasons stand: GoCore-shaped carrier + differentially-anchored Go fork/join) |
 
 Supporting A5 anchor re-verified for G-BIND's honest pricing: the
-`Context K` class is `ProgramLogic/Language.lean:271` with the
-unconditional `primStep_fill` `:274` AND `primStep_fill_inv` `:277`
+`Context K` class is `ProgramLogic/Language.lean:271` with
+`primStep_fill` `:274` AND `primStep_fill_inv` `:277` (the inverse
+carries only the `toVal e = .none` premise — no plug-shaped premise
+can be added; wording corrected at the G-BIND audit fix round, F3)
 — the plan's corrected obligation shape confirmed at the boundary
 rev.
 

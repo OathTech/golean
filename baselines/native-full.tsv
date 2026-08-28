@@ -3,10 +3,28 @@
 #   docs/g-bind-log.md). Re-pin reason: the C-05 `callchain` corpus
 #   case (iris-corpus-plan §5.2, the G-BIND gate instance) adds 3 rows
 #   (functions/callchain/{base,zero,neg}, all PASS); full re-run at
-#   this tip: 2478 cases, 2306 pass / 172 fail — the only drift vs the
-#   2026-08-22 baseline is the 3 new PASS rows (ci-diff log,
-#   coverage-baseline-diff output).
-result	id	features	stage	detail
+#   that tip: 2478 cases, 2306 pass / 172 fail — the set-diff vs the
+#   2026-08-22 record is exactly the 3 new PASS rows (ci-diff log,
+#   coverage-baseline-diff output). NOTE: this re-pin regenerated the
+#   file from the run's row order, so the LINE diff is large
+#   (~1800 lines) while the SET diff is the 3 rows — verified by
+#   coverage-baseline-diff at the re-pin (g-bind log, wave record).
+# failing-set classification (unchanged from the 2026-08-22 record —
+#   carried forward, audit F4d):
+#     builtins/min-max-vs-call-order — BUG-062 WIDENED (the
+#     ordered-event set omits value-returning built-ins; grossmith
+#     campaign-2 F-1 promoted):
+#     FAIL/differential BY DESIGN (flip at mini-slice A6):
+#     min-value, max-value (machine 5 vs gc 1 — silent wrong value),
+#     min-arg-panic (machine 9 vs gc 0 — wrong panic order).
+#     PASS controls A6 must not regress: append-arg-panic (append IS
+#     ordered), call-in-builtin-arg (arg-list calls already hoist).
+#     The remaining FAIL rows are the standing frontend/feature gaps
+#     of the 2026-08-22 record (docs/2026-08-22_launch-audit-synthesis.md),
+#     none moved by this re-pin.
+# cases: 2478 (2306 PASS / 172 FAIL)
+# frontend: native (tools/nativefrontend)
+result	id	stage
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-

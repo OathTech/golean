@@ -133,7 +133,8 @@ theorem wp_defer_callee_arg {cv : GoValue} {a : Expr} {rest : List Expr}
 
 /-- The last deferred argument arrives: the pending call registers onto
 the innermost frame's chain (`pushDefer`, LIFO), arguments pinned by
-value. -/
+value. Non-vacuity witness: `Specs/Callchain.lean`'s
+`wp_ccWork_canonical` (the `defer ccBump(dst)` registration). -/
 @[go_walk_law]
 theorem wp_defer_register_args {v cv : GoValue} {vals : List GoValue}
     {env k k'}
