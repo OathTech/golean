@@ -3307,3 +3307,25 @@ hygiene executor — F-1 revert to "USER decision" wording citing this
 log's entry as landing-with-its-own-ceremony; F-2 same anchored
 range in ci; F-3/4/5 ride along; Audit.lean re-touch batched into
 ONE commit → judge re-triggered at the re-ceremony.
+
+### 2026-08-28 — F-1 provenance-of-the-error CORRECTION ([AGENT] self-report)
+
+The prior entry adopted the auditor's attribution ("the worker
+copied the house wording off the wrong decision row"). WRONG: the
+coordinator's fix-list brief to the hygiene executor DICTATED the
+erroneous wording verbatim (item 2 of the brief specified the
+"AGENT recommendation ratified by package assent" text for the
+Audit.lean comment). The chain: the first (gate-honesty) auditor's
+M-1 finding listed the Audit.lean comment among the mis-attributed
+artifacts while its own verdict simultaneously held decision 3
+CLEAN — an internal ambiguity; the coordinator resolved that
+ambiguity the WRONG WAY when compressing the finding into the fix
+list, overriding the M-1 disposition table's explicit decision-3
+exclusion; the worker executed the brief faithfully. The error is
+the coordinator's ([AGENT]). The fix instruction now dispatched is
+auditor-2's corrected version. Lesson, logged for the record:
+when an audit finding is internally inconsistent, the fix list
+must resolve the inconsistency AGAINST the primary record (the
+disposition table), not by picking the reading that fits the
+compression — and the worker who faithfully executes a wrong brief
+is not the error's owner.
