@@ -3397,3 +3397,27 @@ pristineness at the pinned tag. Session 3 resumed: pin-constant
 edits, smoke, judge as NEW BASELINE landmark, rebase onto
 2c665abd (re-judge after rebase — the hygiene slice hardened the
 judge script), full gate, branch-complete.
+
+### 2026-08-28 — U0 COMPLETE (u0-iris-refresh @ 384cbc98); provenance flag handled; audit-ask posed
+
+Session 3: both trust-tool binaries verified from the [USER]'s one
+interactive command (sources pristine at pins, porcelain empty);
+worker resequenced rebase-before-judge (reported, not silent —
+saves a discarded fresh-clone run; sound); rebase onto 2c665abd
+clean, zero conflicts; pin edits authored against the
+hygiene-hardened judge script ([TRUST-ADJACENT] f4233e55 with full
+provenance block; "matching, not latest" enforced at the binary —
+upstream cut no 4.32.2 tag); smoke pair fail-closed intact; JUDGE
+PASS 51 in 122s @ f4233e55 fresh clone = THE NEW BASELINE LANDMARK
+(explicitly not-like-for-like; the 122s numeric coincidence with
+the old anchor flagged as coincidence); gate ci --diff PASS,
+differential 2475/2475. U0 remainder: nothing execution-shaped
+(U5 notation = [USER]; U8 deferred; U1 exploitation = G-AUTO;
+deps sync at merge = operator step). PROVENANCE FLAG: an automated
+check correctly flagged the re-pin records asserting [USER]
+consent UNQUALIFIED — the facts are true (this log's own [USER]
+entries) but the worker only had coordinator relay; [AGENT]
+correction commit 384cbc98 cites the chain per the F-1 lesson
+(supersede-with-citation, commit message immutable, log = record
+of record); the pre-merge audit is directed to verify the chain
+end-to-end. [AGENT]: U0 audit-ask posed to the [USER].
