@@ -3554,3 +3554,35 @@ steps green in-build; 2475/2475). ci additions delta-flagged
 populated OFFLINE at tracked manifest pins (no network, no global
 state, sibling untouched). CLAUDE.md gained the one pointer line.
 [AGENT]: audit-ask posed; G-BIND still in flight.
+
+### 2026-08-28 — G-BIND session 1: THE FIRST CORPUS CASE CLOSED THROUGH THE WP CALCULUS (g-bind @ a7f7013f)
+
+The bind rule PROVED (wp_plug_bind, Löb induction mirroring the
+pin's wp_bind_iff forward branch) — route (b), with route (a)
+REFUTED not assumed: the pin's unconditional primStep_fill_inv is
+FALSE for K = plugC (counterexample: .returning .stop irreducible
+while K e steps by popping the frame — recorded D-2; measured
+comparison 30min-to-refute vs ~6.5h-to-execute). step_plug_inv
+proved barrier-premised via an error-transfer walk + stepFn
+functionality + MachineSound (cheaper than a second commutation
+walk). NEW SEMANTIC FINDING F-3: the naive bind entailment is
+false at step-indexed granularity — the hdrain (drain-head
+reducibility) premise is required (two-step panic abort can lag a
+garbage context's sticking); dischargers shipped; rule scoped
+NotStuck. CORPUS C-05 callchain (brief said C-01, plan says C-05 —
+resolved to the plan, D-1): differential 3/3 PASS, golden-pinned
+from birth, quartet all CANDIDATES (nothing designated — N-5
+respected): spec (symbolic input), two readouts, negative twin =
+the defer-ordering bug's exact output refuted. THROUGH-WP_BIND
+verified three ways for the skeptic: 3 application sites; callee
+bodies appear ONLY in barrier-scoped canonical specs (no caller
+context to inline); deleting the bind rule breaks all three
+compositions. Four new general laws each citing C-05 as witness.
+Baseline re-pinned 2475→2478 (failing set unchanged, full run,
+written reason — flag for audit). Judge not triggered. Totality
+row owed to G-TOTAL per plan. PlugWitness retirement condition
+FIRED (re-pointed; pin removal left to audit). [AGENT]: combined
+audit round proposed for a-trip + g-bind; merge order A-TRIP
+first, then G-BIND rebases + adds its files to the lint scope
+(police Callchain; boundary Bind/PlugInv) — the lint's first real
+exercise polices the first real corpus proof.
