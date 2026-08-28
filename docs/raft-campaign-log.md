@@ -3507,3 +3507,12 @@ ff-only 2c665abd → c484cef9; parked clean; main now on Lean
 TotalWp inhabited + pinned. Push not authorized (standing).
 [AGENT] next: main deps/ sync (offline sibling bootstrap), then
 the ladder — A-TRIP, then G-BIND + first corpus program.
+
+### 2026-08-28 — main deps/ synced (offline sibling bootstrap)
+
+deps/comparator → the u0-iris copy (pristine @ 07bc4ea4, porcelain
+0, built binary present); deps/iris-lean reading copy → e7a0a438
+via local-path fetch + detach (no network). Old comparator copy
+removed (recoverable: the pinned rev is a public tag and the
+sibling bootstrap is reproducible). The judge wrapper re-verifies
+pins at every invocation — fails closed on any mismatch.
