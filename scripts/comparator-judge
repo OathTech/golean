@@ -28,8 +28,18 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 . "$ROOT/scripts/lean-scan.sh"
 
 COMPARATOR_DIR="$ROOT/deps/comparator"
-COMPARATOR_REV=fd2e25de155523dbce1f35d410511f9f63998461
-LEAN4EXPORT_REV=8554815c2dc6b7abe99ec1f08849c9759ba77947
+# [TRUST-ADJACENT] U0 N-2 re-pin (2026-08-28, [USER] at-the-moment approval;
+# conditions pre-approved 2026-08-20, delta-scan §6): a VERSION PIN MOVE ONLY,
+# sources pristine — comparator fd2e25de (tag v4.31.0) → 07bc4ea4 (tag
+# v4.32.0; diff = README + the two version-pin lines); lean4export 8554815c
+# (v4.31.0) → 4e791520 (tag v4.32.0, per comparator@v4.32.0's own manifest).
+# Upstream cut no v4.32.2 tags (per-minor release granularity); the BINARIES
+# are built with the proof toolchain v4.32.2 by per-invocation selection
+# (scripts/comparator-setup) so the exporter/replayer read exactly the olean
+# format the kernel checks — "matching, not latest" holds at the binary.
+# Old→new + rebuild provenance: docs/2026-08-28_u0-refresh-log.md §S2.5/§S3.
+COMPARATOR_REV=07bc4ea40f2266dcb861820a2ec1fa3244ed307f
+LEAN4EXPORT_REV=4e7915201d3f9f04470d9eae002fa695f7cdc589
 LANDRUN_BIN="${LANDRUN_BIN:-$HOME/go/bin/landrun}"
 # landrun pin: cli-v2-era main (v0.1.16+ eats the `--` separator comparator
 # relies on; the v0.1.15 tag's -ldd misses the ELF interpreter). NB the

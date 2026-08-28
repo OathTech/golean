@@ -12,7 +12,10 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 COMPARATOR_URL=https://github.com/leanprover/comparator
-COMPARATOR_REV=fd2e25de155523dbce1f35d410511f9f63998461
+# [TRUST-ADJACENT] U0 N-2 re-pin (2026-08-28): v4.31.0 tag → v4.32.0 tag —
+# see the provenance block in scripts/comparator-judge (the pins move in
+# lockstep; a drift between the two scripts is a bug).
+COMPARATOR_REV=07bc4ea40f2266dcb861820a2ec1fa3244ed307f
 # landrun: cli-v2-era main. v0.1.16+ (urfave/cli v3) eats the `--` separator
 # comparator's lean4export invocation relies on; the v0.1.15 tag's -ldd
 # misses the ELF interpreter line. Full finding: the sprint doc.
@@ -30,7 +33,13 @@ dirty=$(git -C "$ROOT/deps/comparator" status --porcelain)
 [ -z "$dirty" ] || { echo "deps/comparator is not pristine — refusing:"; echo "$dirty"; exit 1; }
 
 echo "== build comparator + its lean4export (lake, may fetch pinned deps)"
-(cd "$ROOT/deps/comparator" && lake build lean4export comparator)
+# U0 N-2 re-pin: build with THE PROOF TOOLCHAIN via per-invocation selection
+# (olean loading is exact-version-gated; comparator@v4.32.0's own
+# lean-toolchain says v4.32.0, but the judge reads v4.32.2 artifacts —
+# upstream cut no v4.32.2 tag, so the file cannot say it without dirtying
+# the pristine tree). No global elan state is touched.
+PROOF_TOOLCHAIN="$(cat "$ROOT/proofs/lean-toolchain")"
+(cd "$ROOT/deps/comparator" && lake +"$PROOF_TOOLCHAIN" build lean4export comparator)
 
 echo "== landrun @ $LANDRUN_MODVER -> \$HOME/go/bin"
 have=$(go version -m "$HOME/go/bin/landrun" 2>/dev/null \
@@ -45,7 +54,9 @@ trap 'rm -rf "$SMOKE"' EXIT
 for t in simple_match simple_mismatch; do
   mkdir -p "$SMOKE/$t"
   cp "$ROOT/deps/comparator/tests/projects/$t"/{Challenge.lean,Solution.lean,config.json} "$SMOKE/$t/"
-  cp "$ROOT/deps/comparator/lean-toolchain" "$SMOKE/$t/"
+  # U0 N-2 re-pin: the smoke projects build with the PROOF toolchain (the
+  # binaries are v4.32.2-built and must read the smoke oleans).
+  cp "$ROOT/proofs/lean-toolchain" "$SMOKE/$t/"
   printf 'name = "comparatortest"\nversion = "0.1.0"\n\n[[lean_lib]]\nname = "Solution"\n\n[[lean_lib]]\nname = "Challenge"\n' \
     > "$SMOKE/$t/lakefile.toml"
 done

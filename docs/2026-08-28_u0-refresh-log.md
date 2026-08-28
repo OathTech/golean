@@ -502,3 +502,51 @@ row; it advances no end-theorem quantifier itself and says so.
   measured cost > benefit today). Session-3 candidate.
 - **U5 (telescopes/Texan)**: untouched — the [USER] notation
   decision (plan §8.3) is still open; adoption follows the ruling.
+
+---
+
+# SESSION 3 (2026-08-28) — the re-pin executed; ceremony
+
+## S3.1 The paused build command: run by the [USER] interactively
+
+Verified [AGENT]: BOTH binaries produced by the one command —
+`deps/comparator/.lake/build/bin/comparator` AND
+`deps/comparator/.lake/packages/lean4export/.lake/build/bin/lean4export`
+(both 2026-08-28 15:46); sources pristine at the pinned revs
+(comparator `07bc4ea4` tag v4.32.0, lean4export `4e791520` tag
+v4.32.0, Lean4Checker `b7398199` untouched; `git status --porcelain`
+empty in both trees).
+
+## S3.2 Resequencing decision [AGENT] (reported, not silent)
+
+The coordinator's step order was pin-edits → judge → rebase →
+re-judge. Executed instead as REBASE FIRST → pin-edits against the
+hardened script → smoke → ONE judge run: the final landmark must
+certify the rebased tip either way, the hygiene slice had just
+hardened `scripts/comparator-judge`'s extraction (authoring the pin
+constants directly against the hardened text removes the conflict
+the coordinator's re-verify step guarded), and a pre-rebase judge
+run would have been a discarded ~fresh-clone build. Same guarantees,
+one landmark.
+
+## S3.3 Rebase + the trust-adjacent pin edits + smoke
+
+- Snapshot ref `refs/snapshots/u0-iris-pre-rebase-s3` @ `276fb543`;
+  `git rebase main` onto `2c665abd` (hygiene slice) — CLEAN, no
+  conflicts; ChoiceCanon deletion, Audit/Challenge edits, judge
+  regex hardening all incorporated under our four commits.
+- Pin edits (this commit, [TRUST-ADJACENT] delta-flag):
+  `scripts/comparator-judge` COMPARATOR_REV `fd2e25de`→`07bc4ea4`,
+  LEAN4EXPORT_REV `8554815c`→`4e791520`, with the full provenance
+  block (conditions cite, "matching at the binary" note);
+  `scripts/comparator-setup` same pin + the build line now selects
+  the PROOF toolchain per-invocation
+  (`lake +"$(cat proofs/lean-toolchain)" build …`) + the smoke
+  projects take the proof toolchain. Trust-tool SOURCES untouched
+  throughout.
+- **Smoke pair on the v4.32.2-built binaries: PASS** —
+  `simple_match` exit 0 (accepted), `simple_mismatch` exit 1
+  (rejected; fail-closed intact). Run replicated under
+  `artifacts/u0-smoke/` (this sandbox cannot read back `/tmp`;
+  the setup script's `mktemp` path is unchanged for normal
+  operators). Logs: `artifacts/u0-smoke/{match,mismatch}.log`.
