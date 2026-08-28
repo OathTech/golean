@@ -136,9 +136,12 @@ want_axioms=$(echo "$PERMITTED_AXIOMS" | tr ' ' '\n' | sort | tr '\n' ' ' | sed 
 # ran against a short list (reproduced, then fixed comment-side at the
 # triage; hardened here at the 2026-08-28 hygiene slice, gate-audit
 # L-3). A comment line can no longer match: it would have to consist of
-# nothing but a name literal and a bracket. If the terminator is never
-# found the range runs to EOF and the extra names make the lockstep
-# compare below FAIL — fail-closed, never a silent short list.
+# nothing but a name literal and a bracket. The guarantee bought is
+# "never a silent SHORT list" (audit F-3, stated exactly): if the
+# terminator is never found the range runs to EOF, which on today's
+# file still yields exactly the 51 names — no name literal follows the
+# list — so the surplus-breaks-the-lockstep-compare backstop engages
+# only if names ever come to follow it.
 audit_full=$(sed -n -E '/let designated : List Name := \[/,/^[[:space:]]*(``[A-Za-z0-9_.]+)?\][[:space:]]*$/p' "$CHECK_ROOT/proofs/Audit.lean" \
   | grep -oE '``[A-Za-z0-9_.]+' | sed -E 's/^``//')
 [ -n "$audit_full" ] || fail "could not parse the designated list from proofs/Audit.lean"

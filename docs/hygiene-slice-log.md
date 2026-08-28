@@ -68,6 +68,13 @@ addendum are marked KILLED, and the stale "survived the reset" line in
 
 ## 2. Item 2 — the `Audit.lean` provenance comment [TRUST-ADJACENT]
 
+> **⚠ THIS ITEM WAS WRONG AND IS SUPERSEDED — see §7, fix F-1.** The
+> rewrite below applied M-1's wording to a row M-1 explicitly
+> excluded, re-attributing a reserved [USER] act to an [AGENT]
+> recommendation. It is left standing here as the record of what was
+> done and caught; the corrected text is in §7. Do not read the
+> wording in this section as the record.
+
 **Authority**: deferred pre-merge gate-audit finding **M-1**.
 
 The designated-list comment recorded the fork/join reclassification as
@@ -136,11 +143,17 @@ sed -n -E '/let designated : List Name := \[/,/^[[:space:]]*(``[A-Za-z0-9_.]+)?\
 ```
 
 A comment line can no longer terminate the range: it would have to
-consist of nothing but a name literal and a bracket. **Fail-closed in
-the other direction too** — if the terminator is never matched the
-range runs to EOF, the surplus names break the lockstep diff, and the
-run FAILS. It can never yield a silently short list. The emptiness
-guard and the lockstep diff are untouched.
+consist of nothing but a name literal and a bracket.
+
+**The failure direction, stated exactly** (corrected per audit finding
+F-3 — the first version of this section overstated it): the guarantee
+this change buys is **"never a silent SHORT list"**. If the terminator
+is never matched the range runs to EOF, and on today's file that
+yields **exactly 51 names**, not more — re-measured at this tip: zero
+`` `` name literals appear after the list's closing line. So the
+surplus-breaks-the-lockstep-diff mechanism does not engage today; it
+only engages if name literals ever come to follow the list. The
+emptiness guard and the lockstep diff are untouched.
 
 **Verification by extraction, four ways** (test done locally, by
 extraction only; the bracket-injected copy was written under
@@ -188,12 +201,28 @@ condition met.** [AGENT]
 - `Specs/GoldenForkJoin.lean`: the two theorems → a retirement note.
 - `proofs/Audit.lean`: their two `#print axioms` pins.
 
-**Why nothing is lost**: `forkJoinNoDeadlock` says ∀ ch, the fork/join
-program never reaches the `.deadlock` terminal — ∀-quantified, where
-the retired pair replayed two pinned streams of a *different*
-(deliberately deadlocking) program. The pair's non-vacuity role for
-`forkJoinAllStreamsCert` survives as a recorded probe note in that
-theorem's docstring rather than as a live kernel replay.
+**What is kept, and what is genuinely LOST** (this section was headed
+"Why nothing is lost" and overstated; corrected per audit finding
+F-5):
+
+- *Kept*: the deadlock-FREEDOM content. `forkJoinNoDeadlock` says ∀
+  ch, the fork/join program never reaches the `.deadlock` terminal —
+  ∀-quantified, where the retired pair replayed two pinned streams of
+  a *different* (deliberately deadlocking) program.
+- *Lost*: the retired pair was also the only **discriminating**
+  witness for `allStreamsOkPool`. Its deadlock program was probed
+  against that checker and REFUSED; with the pair gone there is **no
+  surviving in-tree demonstration that the checker can return
+  `false`** — verified at this tip, every in-tree use of
+  `allStreamsOkPool` is a `= true` certificate. The checker's
+  discrimination is **UNWITNESSED in-tree**; the probe survives only
+  as an archived record (`docs/ARCHIVE.md`, recoverable at
+  `05e81b70`). This is a real evidentiary gap: a checker that
+  returned `true` unconditionally would satisfy every live use. The
+  named re-supplier is the corpus's fork/join member when concurrency
+  resumes (plan §5), whose negative twin restores a live
+  false-witness. `Specs/GoldenForkJoin.lean`'s docstring and the
+  ARCHIVE entry now say exactly this.
 
 Prose corrected wherever it cited the retired names: both module
 docstrings, the `forkJoinAllStreamsCert` docstring, `Challenge.lean`'s
@@ -283,8 +312,14 @@ reclassification and are not comparable.)
 
 ## 6. Deltas and delta-flags for the landing review
 
-`git diff --stat 05e81b70..HEAD`: **10 files, +151 / −747** (net −596
-lines; 661 lines of Lean deleted, of which 616 are `ChoiceCanon`).
+**Measured at `1022a6c2`, the pre-audit tip** (relabelled per audit
+finding F-4 — this figure was originally presented as HEAD, which it
+had ceased to be once the log commit landed). The fix round's own
+deltas and the cumulative figure at the final tip are in §7.
+
+`git diff --stat 05e81b70..1022a6c2`: **10 files, +151 / −747** (net
+−596 lines; 661 lines of Lean deleted, of which 616 are
+`ChoiceCanon`).
 
 | commit | item | files | +/− | flag |
 |---|---|---|---|---|
@@ -308,3 +343,119 @@ lines; 661 lines of Lean deleted, of which 616 are `ChoiceCanon`).
 4. The `GOLEAN_ALLOW_NO_DIFF=1` hatch was used; scope argument in 5a.
 5. Nothing in this slice is a merge or a push. Branch-complete is the
    end state; both remain the user's calls.
+
+---
+
+## 7. Fix round — the pre-merge audit's FIX-FIRST verdict (2026-08-28)
+
+The pre-merge adversarial audit of this slice returned **FIX-FIRST**
+with one HIGH finding. The auditor's mechanical verdicts on the kills,
+the consumer sweeps and the parser were CLEAN — it reproduced the
+verification independently and probed the regex adversarially. **The
+defects were record-level, and F-1 is a real provenance error of
+mine.** [AGENT]
+
+### F-1 (HIGH) — the designation act's provenance, restored
+
+**The error.** Item 2 copied the M-1 house wording — "AGENT
+coordinator recommendation ratified by USER package assent" — onto the
+fork/join reclassification row. **M-1's scope never covered that
+row.** `docs/triage-execution-log.md:29-32` records triage decision 3
+as "**[USER] decision** (the designation act is the user's alone;
+correctly recorded as such at birth and unchanged here)", and the fix
+table at :229 says in terms: "Decision 3 unchanged — the designation
+act was the user's." M-1 re-attributes decisions **1, 2, 4, 5** only.
+
+So the edit **re-attributed a reserved [USER] act to an [AGENT]
+recommendation, inside the statement-TCB gate file** — precisely the
+class the charter names a critical trust failure. The lesson [AGENT]:
+I pattern-matched a house wording onto a neighbouring row instead of
+reading the finding's scope. Provenance is per-decision; it is never
+inferred from a sibling.
+
+**The corrected record** (`proofs/Audit.lean`, bracket-free convention
+and parser-hazard NB both kept), asserting nothing without citation:
+
+- the reclassification was a **USER decision at the triage sign-off**
+  — the designation act is the USER's alone, correctly recorded as
+  such at birth;
+- it was **USER-reconfirmed at the 2026-08-28 triage-landing merge**,
+  and the comment **cites where that record lives** rather than
+  restating it: `docs/raft-campaign-log.md`, entry 2026-08-28, the
+  USER rulings line "Designation 56→51 CONFIRMED", which lands on main
+  under its own ceremony. Checked: that entry is **not present in this
+  worktree**, so it is cited as a forward reference and nothing is
+  asserted about it here;
+- no provenance is re-derived from any other triage row. The comment
+  now carries a standing NB naming M-1's scope and this correction, so
+  the wrong wording is not reapplied.
+
+**Commit `843d759e`** — trust-adjacent, batched alone. Extraction
+re-verified: **OLD extractor 51, NEW extractor 51**, lockstep intact.
+
+### F-2 (MEDIUM) — ci's mirror of the parser, hardened
+
+`scripts/ci:630` carried the **byte-identical un-hardened pattern**,
+on the **every-commit** path, under a comment claiming "Extraction
+mirrors the judge's" — true before this slice, made false by it.
+Hardening one copy and leaving its stated mirror behind is the half-fix
+that reads as done and is not.
+
+Applied the same anchored range, **verified byte-identical** to the
+judge's; the mirror comment is true again and now cites the 2026-08-27
+hazard and F-2 so both are updated together. This leg matters more
+than the judge's: it feeds the D4-F2 lockstep check that catches a
+one-sided DELETION from the designated list at gate rather than
+landmark cadence.
+
+| input | OLD pattern | NEW pattern |
+|---|---|---|
+| clean `Audit.lean` | 51 | **51** |
+| bracket-injected copy | **33** ← hazard | **51** ← defeated |
+
+**Commit `b7e3c8f3`** — trust-adjacent. No gate weakened: the change
+makes a fail-closed check harder to blind, not easier.
+
+### F-3 (LOW) — the fail-closed claim, stated exactly
+
+§3's "the surplus names break the lockstep diff, and the run FAILS"
+overstated. Re-measured at this tip: **zero `` `` name literals appear
+after the list's closing line**, so a never-matched terminator runs to
+EOF and still yields **exactly 51**. The guarantee is **"never a
+silent SHORT list"**; the surplus backstop engages only if names ever
+come to follow the list. Corrected in §3 **and** in the same
+overstated comment I had put in `scripts/comparator-judge` — [AGENT]
+deviation from the "records only" batching, declared here: leaving a
+known-overstated comment in a trust-adjacent file after the audit
+flagged the wording is the F-2 mistake again. The edit is **comment
+text only**; the range expression is untouched.
+
+### F-4 (LOW) — the diffstat label
+
+§6's figure was presented as `HEAD` but measured at `1022a6c2`.
+Relabelled to its true anchor, with the fix round's deltas below.
+
+### F-5 (LOW) — the non-vacuity overstatement
+
+"Why nothing is lost" was false. The retired pair was **the only
+discriminating witness for `allStreamsOkPool`**: verified at this tip,
+every surviving in-tree use is a `= true` certificate, so there is
+**no in-tree demonstration that the checker can return `false`** — its
+discrimination is **UNWITNESSED in-tree**, and the deadlock probe
+survives only as an archived record. A checker returning `true`
+unconditionally would satisfy every live use. Reworded to say exactly
+that in all four places: this log's item-4 section,
+`docs/ARCHIVE.md`'s fj entry, and
+`Specs/GoldenForkJoin.lean`'s `forkJoinAllStreamsCert` docstring
+(which now **names the deleted theorem as the retired leg** rather
+than silently substituting the fact). The **named re-supplier** is the
+corpus's fork/join member when concurrency resumes (plan §5), whose
+negative twin restores a live false-witness.
+
+Also fixed under F-5: the registry's `ChoiceCanon` row carried a stale
+"2 live (ChoiceInv, SeedCFormLit)" census — **both** consumers were
+already dead (ChoiceInv at the 2026-08-27 triage K-3, SeedCFormLit at
+the W0 reset), so the row now reads **0 live at deletion**, which is
+what the item-1 sweep actually found.
+
+### Fix-round ceremony

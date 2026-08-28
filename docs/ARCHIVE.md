@@ -237,6 +237,16 @@ history — no archive branch was cut.
   `forkJoinDeadlockCanonical`/`forkJoinDeadlockAdversarial`
   (`Specs/GoldenForkJoin.lean`) and their Audit axiom pins — retired
   (gate-audit L-7, plan §6.3): de-designated at the triage landing and
-  left with zero surviving consumers; the deadlock-freedom content is
-  carried by the ∀-schedule family (`forkJoinNoDeadlock`), which is a
-  strictly stronger statement. *Recover at:* `05e81b70`.
+  left with zero surviving consumers. The deadlock-FREEDOM content is
+  carried by the ∀-schedule `forkJoinNoDeadlock`, a strictly stronger
+  statement. **What was NOT preserved** (audit finding F-5, stated
+  because the first version of this entry overstated): the retired
+  pair was also the only DISCRIMINATING witness for
+  `allStreamsOkPool` — the deadlock program was probed against that
+  checker and REFUSED, and with the pair gone there is no surviving
+  in-tree demonstration that the checker can return `false`. Its
+  discrimination is UNWITNESSED in the tree today; the probe survives
+  only as this archived record. The named re-supplier is the corpus's
+  fork/join member when concurrency resumes (iris-corpus plan §5),
+  whose negative twin restores a live false-witness.
+  *Recover at:* `05e81b70`.

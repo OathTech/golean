@@ -109,11 +109,23 @@ grows by extension, never restatement). -/
 
 /-- The kernel certificate: the checker explores every schedule of the
 fork/join pool within fuel 400 and certifies the `.normal`/42 outcome
-on all of them. (The checker is not vacuously satisfiable: the
-retired deadlock program — see the retirement note above — was probed
-against this same checker and REFUSED, as it must be, since a
-certificate for it plus the soundness theorem would contradict its
-`.deadlock` classification.) -/
+on all of them.
+
+NON-VACUITY, STATED HONESTLY (audit finding F-5, 2026-08-28): the
+discriminating leg of this claim was `forkJoinDeadlockCanonical`, and
+it was RETIRED at the hygiene slice (see the retirement note above).
+That theorem's deadlock program was probed against this same checker
+and REFUSED — as it must be, since a certificate for it plus the
+soundness theorem would contradict its `.deadlock` classification —
+but that probe now survives only as an ARCHIVED record
+(docs/ARCHIVE.md, recoverable at 05e81b70), not as a live theorem.
+So: `allStreamsOkPool` has NO surviving in-tree demonstration that it
+can return `false`. Its discrimination is UNWITNESSED in the tree
+today. This is a real evidentiary gap, not a formality — a checker
+that returned `true` unconditionally would satisfy every live use.
+The named re-supplier is the corpus's fork/join member when
+concurrency resumes (iris-corpus plan §5): its negative twin restores
+a live false-witness. -/
 theorem forkJoinAllStreamsCert :
     allStreamsOkPool fjReadout42 400
       ⟨#[.exec forkJoinDriver fjEnv .stop], fjSeed, 0⟩ {} = true := by
