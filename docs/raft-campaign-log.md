@@ -3774,3 +3774,26 @@ Audit.lean additions-only (0 removals); a-trip's ci additions-only
 (0 removals). [AGENT]: both merges posed — order A-TRIP (83b448dc)
 then G-BIND (de2175c2, rebases + enrolls its files in the fixed
 scope, re-gates at the rebase).
+
+### 2026-08-29 — [USER] merge sign-off executed: A-TRIP + G-BIND MERGED (main @ 7440bf70)
+
+Sequence per the approved package: a-trip ff-merged (83b448dc);
+g-bind rebased clean (snapshot ref kept); THE INTEGRATION MOMENT —
+the tripwire's first in-build run on its first corpus customer
+FIRED TWICE, both true classification gaps found by the gate
+itself: (1) the two G-BIND lifting modules (Laws/Bind, Frame/
+PlugInv) born after the boundary enumeration — enrolled with
+rationale; (2) SurfaceExit.lean (the adequacy-exit layer, the
+canonical boundary crossing) missed by the original enumeration
+because nothing policed exercised it until C-05 — enrolled with
+rationale. Zero veneers: every chain ran through the bind rule's
+soundness proof into MachineSound — legitimate lifting content,
+stopped correctly once classified. Full gate re-run PASS exit 0
+(both tripwire halves green in-build on the enrolled corpus
+files); coordinator enrollment commit [TRUST-ADJACENT,
+enrollment-only] on g-bind; g-bind ff-merged. main @ 7440bf70,
+parked clean. Push not authorized (standing). PHASE A COMPLETE:
+hygiene ✓ U0 ✓ A-TRIP ✓ G-BIND ✓ + C-05 closed through the WP
+calculus with the tripwire policing it. Next: G-REPR (the big
+design unit), G-CALLS/G-MAPITER/G-TOTAL rows, G-AUTO probe, then
+the corpus waves; N-6 at closure 2-3.
