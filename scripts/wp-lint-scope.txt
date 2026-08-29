@@ -235,3 +235,24 @@ exempt-file proofs/GoLeanProofs/Specs/Statements.lean
 exempt-file proofs/GoLeanProofs/Specs/TotalPins.lean
 exempt-file proofs/GoLeanProofs/Specs/TwinProgram.lean
 exempt-file proofs/GoLeanProofs/Specs/WirePin.lean
+
+# --- Corpus enrollment (C-05 callchain, G-BIND merge integration
+# 2026-08-29, coordinator; the first corpus member enrolled under
+# the split-file convention — WP walks policed, sentence exports in
+# the sentences class) ---
+police proofs/GoLeanProofs/Specs/Callchain.lean
+police proofs/GoLeanProofs/Specs/CallchainProgram.lean
+boundary-sentences proofs/GoLeanProofs/Specs/CallchainSentences.lean
+# G-BIND lifting modules (merge integration 2026-08-29, coordinator):
+# Laws/Bind.lean IS the bind wp-law (lifting-layer content by
+# definition); Frame/PlugInv.lean is its machine-side inverse lemma,
+# same class as MachineSound/RunGlue (its proofs legitimately walk
+# stepFn — that is what a lifting lemma is). Both stop the closure
+# walk at their THEOREMS per the F3 design.
+boundary proofs/GoLeanProofs/Laws/Bind.lean
+boundary proofs/GoLeanProofs/Frame/PlugInv.lean
+# SurfaceExit.lean is the adequacy-exit layer (goSpec_of_wp: WP ->
+# first-order GoSpec) — the canonical boundary crossing; missed by
+# the original enumeration because nothing policed exercised it
+# until C-05 enrolled (found by the gate's own first in-build run).
+boundary proofs/GoLeanProofs/SurfaceExit.lean
