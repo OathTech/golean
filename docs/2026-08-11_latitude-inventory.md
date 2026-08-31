@@ -755,13 +755,28 @@ concurrent observer).
   delete-unreached-during-range) are green post-surgery, and the
   created-entry latitude rows are MEMBERSHIP rows
   (maps/delete-readd-during-range, maps/added-entry-count).
-- RESIDUAL NARROWING (recorded, owed): delete-prune rewrites only the
-  SAME-GOROUTINE continuation — a cross-goroutine delete during
-  another goroutine's range (already a data race by the race
-  footprint's pick-time read, U1 now closed) does not prune that
-  goroutine's frames. Recorded in `Cont.mapIterK`'s docstring; the
-  re-envelope obligation is to widen or justify at the first
-  cross-goroutine-range case that is not already racy-red.
+- RESIDUAL NARROWING — **REOPEN (2026-08-31, corrected per the
+  code-wins rule; fidelity finding A1-20)**: delete-prune rewrites
+  only the SAME-GOROUTINE continuation. This row previously disposed
+  of the cross-goroutine case as "already a data race by the race
+  footprint's pick-time read" — FALSE against the machine's own site
+  record: `Cont.mapIterK`'s envelope statement scopes the unpruned
+  case to a **DRF cross-goroutine delete (synchronized mid-range)**,
+  which no refusal touches (a channel handshake HB-orders the delete
+  against every pick; `-race` and C10 stay green). So the narrowing
+  is NOT unobservable-by-refusal: a spec-permitted member of this
+  row's [USER]-ruled FULL literal envelope — re-production of a
+  cross-goroutine deleted-then-re-created key, a NEW entry under
+  I-1 — is unrealizable: **permitted ∉ modeled on a DRF program**,
+  standing, in the census's own exemplar row. The old re-envelope
+  trigger ("widen or justify at the first cross-goroutine-range case
+  that is not already racy-red") has FIRED by construction — the DRF
+  shape exists and the code names it. The machine-side fix
+  (cross-goroutine prune, or a [USER] re-scope of the 2026-08-19
+  full-envelope ruling to same-goroutine mutation) is Tier-5 work,
+  explicitly NOT closed by this record correction; a corpus witness
+  (handshake-synchronized delete-and-recreate during another
+  goroutine's range) is owed so the hole is red rather than prose.
 
 ### E10. Which `==`-equal map key is retained on overwrite — (b) PINNED (always-replace)
 
