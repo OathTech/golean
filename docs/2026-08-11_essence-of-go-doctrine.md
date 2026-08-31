@@ -111,8 +111,16 @@ write a bare "#6"/"#7".
    Records: `docs/evidence/2026-08-12_scheduler-wedge-probes/` (the
    discovery), `docs/evidence/2026-08-20_w32-postop-probes/` (the
    flip). RESIDUE, stated: (i) the abort window at panic terminals is
-   B3, DEFERRED at G1 with the U-1 probe as its trigger baseline
-   (inventory C3); (ii) ∀-stream termination of spinner shapes is the
+   B3 — RE-GROUNDED 2026-08-31 (probe-evidenced, runtime-text-argued;
+   evidence `docs/evidence/2026-08-31-b3-abort-window-probes/`): the
+   window is post-`.panicked` ONLY — post-RAISE partner progress is
+   already modeled (`.panicking` is a live, steppable state) — and a
+   56-run directed probe campaign (three designs, incl. a merged-fd
+   post-traceback ordering probe and `dontfreezetheworld`) found ZERO
+   observed-∉-modeled exhibitions; the residual is the UPPER-bound
+   class only, argued from gc's own freeze-is-best-effort runtime
+   text (proc.go — the window exists but is output-invisible by
+   construction), not from probe silence (inventory C3); (ii) ∀-stream termination of spinner shapes is the
    liveness tier's `Fair` question — FUTURE WORK, precisely: no
    `Fair`/`FairStream` predicate is a Lean definition in this tree,
    the parked reasoning branch, or any branch, and never has been

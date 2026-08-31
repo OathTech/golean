@@ -1,0 +1,8 @@
+panic: boom
+
+goroutine 7 [running]:
+main.worker()
+	/home/dev/projects/golean/.claude/worktrees/fidelity/artifacts/p2probe/b3_forced.go:24 +0x3e
+created by main.main in goroutine 1
+	/home/dev/projects/golean/.claude/worktrees/fidelity/artifacts/p2probe/b3_forced.go:28 +0x1a
+exit status 2

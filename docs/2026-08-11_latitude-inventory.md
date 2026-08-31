@@ -247,9 +247,32 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   member now (corpus row goroutines/wake-then-abort, members=2
   statuses=ok+panic; exhibition record
   `docs/evidence/2026-08-20_w32-postop-probes/`). The abort WINDOW at
-  panic terminals (post-RAISE partner progress, L5's analogue) stays
-  open as B3 — DEFERRED at G1 with the U-1 probe as its trigger
-  baseline: no observed member needs it.
+  panic terminals stays open as B3 — DEFERRED at G1, RE-GROUNDED
+  2026-08-31 (fidelity p2-fact claim 12; evidence
+  `docs/evidence/2026-08-31-b3-abort-window-probes/`). Two
+  corrections to the old record: (a) the window is
+  post-**`.panicked`** (fully unwound, unrecovered — the state
+  `execProgLoop` aborts on), NOT "post-RAISE" — post-raise partner
+  progress is MODELED, since `.panicking` (mid-unwind, deferred
+  functions running) is a live, steppable state the pool interleaves
+  with (a forced-handshake probe completed a full channel round trip
+  mid-unwind, 3/3 incl. GOMAXPROCS=1 — a modeled member); (b) the G1
+  deferral's "no clean oracle observable" was too strong — a
+  recover-based probe carries post-raise partner progress in an
+  ordinary return value (6/6) — but that observable lands in the
+  modeled region. The sharp post-`.panicked` probe (stdout+stderr
+  merged on one fd, ordering partner output against gc's fatalpanic
+  traceback): **56 runs, three configurations
+  (default/GOMAXPROCS=8/dontfreezetheworld), ZERO exhibitions** — no
+  observed ∉ modeled member is known. The honest residual is
+  UPPER-bound and rests on the runtime's own text, not probe
+  silence: gc's fatal-panic freeze is best-effort
+  (deps/go/src/runtime/proc.go:1183-1199; the dontfreezetheworld
+  path deliberately lets goroutines run until they enter the
+  scheduler), so a permitted post-`.panicked` window exists but is
+  output-invisible by construction — un-closable by differential
+  testing, held as a recorded permitted-∉-modeled deferral on that
+  argument.
 - COST, PAID (the boundary-set note §5's budget): witnesses/pinned
   streams re-derived (BUG-040 precedent), MultiSound/MultiStreams/
   MultiWfSound metatheory re-proved over the widened set, detector
@@ -1288,8 +1311,12 @@ achievement.
   is now {panic, ok 42} (corpus row goroutines/wake-then-abort,
   members=2 statuses=ok+panic; record
   `docs/evidence/2026-08-20_w32-postop-probes/`). Residual, recorded
-  at C3: post-RAISE partner progress is B3's window, DEFERRED at G1
-  with this probe as its trigger baseline. No longer a (d) unknown.
+  at C3: B3's window is post-`.panicked` progress (NOT post-raise,
+  which B1 models — wording corrected 2026-08-31 with the probe
+  evidence at `docs/evidence/2026-08-31-b3-abort-window-probes/`:
+  56 directed runs, zero exhibitions; residual argued from the
+  runtime's freeze-is-best-effort text — see C3). No longer a (d)
+  unknown.
 - **U-2 L4 ⊆ L1-reachability**: the envelope-width review's [ANALYSIS]
   that every width>1 L4 member is also realizable by arrival timing has
   no theorem and no counterexample search beyond the probed shapes.

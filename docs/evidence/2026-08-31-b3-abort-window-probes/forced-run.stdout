@@ -1,0 +1,3 @@
+A (deferred, post-raise)
+B (main, strictly after A)
+C (deferred, after partner round trip)
