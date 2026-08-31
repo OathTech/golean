@@ -518,6 +518,59 @@ if [ "$RUN_DIFF" -eq 1 ]; then
     *)   bad "negative run BROKE (exit $nrc)" ;;
   esac
 fi
+# 5d. Derived-oracle-artifact re-derivation guards (--diff tier;
+# fidelity work program 2026-08-31, item 5 / assessment D-6, in the
+# check-imported-goose / check-frontend-pins mold). Two tracked files
+# are GENERATED from the oracle and consumed as bytes by other gates
+# (Tests/FloatVectors.lean by the eval tests; inittask-std.tsv via
+# go:embed by the frontend): a silent value edit, or a table left
+# stale across a pin move, previously passed every gate. Both
+# regenerate deterministically in seconds at the pin (probed
+# byte-identical, lane-D §2). Deliberate regeneration remains exactly
+# that — rerun the recorded command and commit with the reason.
+if [ "$RUN_DIFF" -eq 1 ]; then
+  step "derived oracle artifacts re-derived (Tests/FloatVectors.lean + tools/nativefrontend/inittask-std.tsv)"
+  DERIVE_TMP="$(mktemp -d "${TMPDIR:-/tmp}/golean-derived-guard.XXXXXX")"
+  # (a) Float vectors — regeneration command from the generator's own
+  # header: GOCACHE=... GO111MODULE=off go run ./tools/floatvectors.
+  if GOCACHE="$PWD/artifacts/go-build-cache" GO111MODULE=off \
+       go run ./tools/floatvectors > "$DERIVE_TMP/floatvectors.lean" 2>"$DERIVE_TMP/fv.err"; then
+    if cmp -s "$DERIVE_TMP/floatvectors.lean" Tests/FloatVectors.lean; then
+      ok "Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)"
+    else
+      cmp "$DERIVE_TMP/floatvectors.lean" Tests/FloatVectors.lean 2>&1 | head -3
+      bad "Tests/FloatVectors.lean DIFFERS from a fresh tools/floatvectors run — tracked oracle vectors are edited or stale (regenerate deliberately with the generator's command, or find the edit)"
+    fi
+  else
+    tail -5 "$DERIVE_TMP/fv.err" 2>/dev/null
+    bad "FloatVectors regeneration FAILED (fail closed — the guard cannot run; see above)"
+  fi
+  # (b) The stdlib inittask table — regeneration command from its own
+  # header: scripts/gen-inittask-table (python3 + go). Compared modulo
+  # the '# generated:' date line only. Header toolchain line must equal
+  # the oracle pin (nothing checked this before — the header says
+  # "regenerate when the Go pin moves").
+  it_pin="$(head -1 baselines/go-oracle-pin 2>/dev/null | tr -d '[:space:]')"
+  it_hdr="$(grep -m1 '^# toolchain:' tools/nativefrontend/inittask-std.tsv 2>/dev/null | awk '{print $3}')"
+  if [ -z "$it_hdr" ] || [ -z "$it_pin" ] || [ "$it_hdr" != "$it_pin" ]; then
+    bad "inittask-std.tsv header toolchain [${it_hdr:-missing}] != oracle pin [${it_pin:-missing}] — the table was not regenerated for this pin"
+  elif ! command -v python3 >/dev/null 2>&1; then
+    bad "inittask re-derivation guard cannot run (python3 missing) — a gate that cannot run FAILS rather than skips"
+  elif scripts/gen-inittask-table -o "$DERIVE_TMP/inittask.tsv" >"$DERIVE_TMP/it.out" 2>&1; then
+    grep -v '^# generated:' "$DERIVE_TMP/inittask.tsv" > "$DERIVE_TMP/inittask.fresh"
+    grep -v '^# generated:' tools/nativefrontend/inittask-std.tsv > "$DERIVE_TMP/inittask.tracked"
+    if cmp -s "$DERIVE_TMP/inittask.fresh" "$DERIVE_TMP/inittask.tracked"; then
+      ok "inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)"
+    else
+      diff "$DERIVE_TMP/inittask.fresh" "$DERIVE_TMP/inittask.tracked" 2>&1 | head -5
+      bad "tools/nativefrontend/inittask-std.tsv DIFFERS from a fresh scripts/gen-inittask-table run — the realized init schedule drifted from gc's (regenerate deliberately, or find the edit)"
+    fi
+  else
+    tail -5 "$DERIVE_TMP/it.out" 2>/dev/null
+    bad "inittask-std.tsv regeneration FAILED (fail closed — the guard cannot run; see above)"
+  fi
+  rm -rf "$DERIVE_TMP"
+fi
 step "negative baseline diff"
 if [ -f artifacts/coverage/negative-latest.tsv ]; then
   # ATTRIBUTION, mirroring the exec branch below (fidelity work program
