@@ -459,22 +459,30 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   keys. The one place allocation identity WOULD be observable —
   gc's eface-identity `[recovered]` collapse — is fail-closed
   (R10/BUG-004 item 1).
-  **UPGRADED 2026-08-13 — heap addressing is (q) ENVELOPE-BY-QUOTIENT,
-  discharged by theorem.** Go promises no address determinism (and gc
+  **UPGRADED 2026-08-13 — heap addressing is (q) ENVELOPE-BY-QUOTIENT;
+  the discharging theorem was PROVED on what is now the parked
+  reasoning branch** (branch-located 2026-08-31 per the repo-split
+  citation convention; the old present-tense "is now PROVEN" read as
+  a claim of this tree). Go promises no address determinism (and gc
   moves stacks intra-run, transparently); the sequential `nextAddr`
-  allocator is now PROVEN to be a quotient representative:
-  `Frame.allocatorIndependence` (over `execStmtLoop_ren`, the
-  executable frame theorem `docs/2026-08-13_executable-frame-theorem.md`
-  §5b) transfers any run to any conforming address relabeling — any
-  `ShiftSpec` injection; `swapShift` witnesses the non-uniform width —
-  at the same fuel/stream/outcome with related terminals, and the
-  modeled pointer surface is equality-only, which injections preserve.
-  The re-envelope obligation this bullet's class carried is DISCHARGED
-  BY THEOREM — the first pin fully redeemed this way, the model case
-  for class (q). RE-OPENING CONDITION (scope honesty): the quotient
-  covers the modeled observable fragment only — modeling `%p` output,
-  pointer ordering, `unsafe` int↔ptr, or any address-exposing channel
-  re-opens this entry.
+  allocator was PROVED (2026-08-13) a quotient representative:
+  `Frame.allocatorIndependence` (over `execStmtLoop_ren`) transfers
+  any run to any conforming address relabeling — any `ShiftSpec`
+  injection; `swapShift` witnesses the non-uniform width — at the
+  same fuel/stream/outcome with related terminals, and the modeled
+  pointer surface is equality-only, which injections preserve. The
+  theorem and its design note live ONLY on branch
+  `park/reasoning-2026-08-31`
+  (`proofs/GoLeanProofs/Frame/AllocIndep.lean`;
+  `docs/2026-08-13_executable-frame-theorem.md` §5b — not in this
+  tree); nothing here contains or re-checks the discharge, and
+  machine changes here can drift from the proved-against machine
+  until the reasoning repo exists and pins this one. What THIS repo
+  maintains is the machine-side CONDITION below. RE-OPENING
+  CONDITION (scope honesty): the quotient covers the modeled
+  observable fragment only — modeling `%p` output, pointer ordering,
+  `unsafe` int↔ptr, or any address-exposing channel re-opens this
+  entry.
 - Goroutine EXIT has no HB edge (Race.lean:790–797; mem#goexit
   verbatim at the pin: "The exit of a goroutine is not guaranteed to
   be synchronized before any event in the program" — the P2 audit

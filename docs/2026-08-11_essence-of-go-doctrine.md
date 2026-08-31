@@ -186,19 +186,29 @@ write a bare "#6"/"#7".
    and sub-statement granularity generally, which is the NPDRF/
    reduction line's territory — the mover theorem resumes over the
    WIDENED point set (slice 5).
-6. **Sequential allocation addressing — DISCHARGED BY QUOTIENT
-   (2026-08-13), the register's first theorem-closed entry.** The
+6. **Sequential allocation addressing — quotient discharge PROVED ON
+   THE PARKED REASONING BRANCH; this repo maintains the CONDITION.**
+   (Re-located 2026-08-31 after the repo split — the entry's old
+   present-tense "DISCHARGED BY QUOTIENT" read as a claim of this
+   tree, which since 2026-08-31 makes NO verification claims.) The
    deterministic `nextAddr` allocator models less than Go promises
    (which is: nothing — addresses vary run to run, stacks move
-   intra-run), but the executable frame theorem's generalized renaming
-   proves every conforming address choice observationally equal
-   (`Frame.allocatorIndependence`; inventory C11's (q)
-   ENVELOPE-BY-QUOTIENT upgrade; frame-theorem note §5b). The
-   assumption stays listed because its discharge is CONDITIONAL on the
-   modeled observation surface (pointer equality only): an
-   address-exposing channel (`%p`, pointer order, `unsafe`) re-opens
-   it. Cost of removal already paid — by proof, not by widening the
-   machine.
+   intra-run). The executable frame theorem's generalized renaming
+   PROVED (2026-08-13) every conforming injective address relabeling
+   observationally equal — `Frame.allocatorIndependence`, which lives
+   ONLY at `proofs/GoLeanProofs/Frame/AllocIndep.lean` on branch
+   `park/reasoning-2026-08-31`, with its design note
+   `docs/2026-08-13_executable-frame-theorem.md` §5b on the same
+   branch; nothing in THIS repo's tree or build contains or re-checks
+   the theorem, and machine changes here can drift from the machine
+   it was proved against until the reasoning repo exists and pins
+   this one. What this repo maintains is the theorem's machine-side
+   CONDITION: the modeled observation surface is POINTER EQUALITY
+   ONLY — modeling `%p`, pointer ordering, `unsafe` int↔ptr, or any
+   address-exposing channel re-opens the entry (the frontend refusals
+   on `%p`/`unsafe`/uintptr observations are the standing guard).
+   Inventory C11 carries the (q) classification with the same
+   branch-located caveat.
 7. **Unbounded memory / allocation never fails** (added 2026-08-14 from
    the verified-examples pre-merge audit, finding R1-F1). The machine's
    heap is unbounded and every allocation succeeds: `make`, composite
