@@ -25,6 +25,7 @@ build failure. Use --strict to exit 1 when any finding is emitted.
 from __future__ import annotations
 
 import argparse
+import datetime
 import fnmatch
 import json
 import os
@@ -49,6 +50,7 @@ DIVLEDGER = p("docs", "spec-divergence-ledger.md")
 INTERP = p("docs", "spec-interpretations.md")
 LATITUDE = p("docs", "2026-08-11_latitude-inventory.md")
 TRIAGE = p("docs", "2026-08-19_triage-table.md")
+BACKLOG = p("docs", "discrepancy-backlog.md")
 UNTRIAGED_IDS = p("baselines", "untriaged-ids")
 UNTRIAGED_COUNT = p("baselines", "untriaged-count")
 CERTIFIED_DIR = p("baselines", "certified")
@@ -883,6 +885,83 @@ def check_version_pin():
 
 
 # ---------------------------------------------------------------------------
+# C14 — decay dates: the discrepancy backlog's `review by` column
+#
+# Decision 7 of the 2026-08-31 fidelity assessment ([USER]): every recorded
+# set-aside carries a review-by date, and THIS tool surfaces expired entries.
+# Same report-only character as everything else here — an overdue entry is
+# dossier material demanding a re-review, never a build failure.
+# ---------------------------------------------------------------------------
+
+
+def check_decay_dates():
+    out = {"file": BACKLOG}
+    if not os.path.exists(BACKLOG):
+        # The backlog lands with the fidelity-assessment branch; before that
+        # merge the check has no object. A note, not a crash — and not
+        # silence, because "the decay-date rule has nothing to read" is
+        # itself worth one line in the report.
+        finding(
+            "C14",
+            "low",
+            "no docs/discrepancy-backlog.md at this tip — the decay-date check "
+            "(assessment decision 7) has no object here",
+        )
+        out["entries"] = 0
+        return out
+    today = datetime.date.today()
+    entries, overdue, malformed = [], [], []
+    for i, ln in enumerate(lines(BACKLOG), 1):
+        if not ln.startswith("|"):
+            continue
+        cells = [c.strip() for c in ln.strip().strip("|").split("|")]
+        if len(cells) < 2 or not re.match(r"^[A-Z]+-\d+$", cells[0]):
+            continue  # header/separator/prose rows
+        rid = cells[0]
+        review = cells[-1]
+        entries.append(rid)
+        m = re.match(r"^(\d{4})-(\d{2})-(\d{2})$", review)
+        if not m:
+            malformed.append(
+                f"{BACKLOG}:{i} {rid}: last column {review!r} is not a "
+                "YYYY-MM-DD review-by date"
+            )
+            continue
+        try:
+            due = datetime.date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        except ValueError:
+            malformed.append(f"{BACKLOG}:{i} {rid}: impossible date {review!r}")
+            continue
+        if due < today:
+            overdue.append(
+                f"{BACKLOG}:{i} {rid}: review-by {review} is "
+                f"{(today - due).days} day(s) past ({cells[1][:80]}…)"
+            )
+    if malformed:
+        finding(
+            "C14",
+            "medium",
+            f"{len(malformed)} discrepancy-backlog entry(ies) carry no parseable "
+            "review-by date (the decay-date rule requires one per entry)",
+            malformed,
+        )
+    if overdue:
+        finding(
+            "C14",
+            "high",
+            f"{len(overdue)} discrepancy-backlog entry(ies) are PAST their "
+            "review-by date — decision 7: an expired set-aside owes a re-review "
+            "(re-date it with a reason, retire it, or escalate), not silence",
+            overdue,
+        )
+    if entries and not overdue and not malformed:
+        out["all_current"] = True
+    out["entries"] = len(entries)
+    out["overdue"] = len(overdue)
+    return out
+
+
+# ---------------------------------------------------------------------------
 # C11 — the census evidence reproduces (heavy: needs a frontend build)
 # ---------------------------------------------------------------------------
 
@@ -960,6 +1039,7 @@ def main():
     report["latitude"] = check_latitude_counts()
     report["choice_sites"] = check_choice_sites()
     report["version_pin"] = check_version_pin()
+    report["decay_dates"] = check_decay_dates()
     report["census"] = check_census(args.heavy)
     report["findings"] = FINDINGS
 
