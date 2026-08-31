@@ -237,7 +237,24 @@ def indexTargetLoc (s : ExecState) (b i : GoValue) : Except GoError Loc := do
 types, insert-or-overwrite; a NIL map is the run-time panic. Shared
 verbatim between the `mapAssign` wide op and `storeTarget`'s
 map-element arm (convergence round BUG-030 — a map-element receive
-target's store is a phase-2 event like any other). -/
+target's store is a phase-2 event like any other).
+
+PINNED LATITUDE — `==`-equal key retention on overwrite (inventory
+E10; site caveat added 2026-08-31, fidelity assessment A1-21 — the
+inventory had asserted this caveat existed when it did not). The spec
+is SILENT on which `==`-equal key a map stores after an overwrite;
+the plausible envelope has two members: {the NEW key replaces the
+stored key, the ORIGINAL stored key is retained}. The `entries.set! i
+(key, value)` below realizes always-replace. Observable exposure:
+exactly the key kinds where `==`-equal keys are distinguishable when
+the stored key is later observed — float (±0), complex, string
+(identity via later observation), interface, and arrays/structs over
+them (gc's per-type `needkeyupdate` is true for precisely these
+kinds, false where `==` implies bit-equality) — so always-replace is
+observationally equal to gc on every key kind. TRANSFER CAVEAT: a
+conforming ORIGINAL-KEY-RETAINING implementation is outside this
+singleton; no claim about the stored key transfers to it. Re-envelope
+(two-point retention choice) is XIMPL-gated — see inventory E10. -/
 def mapAssignValue (s : ExecState) (keyTy valueTy : Ty)
     (baseV keyV valueV : GoValue) : Except GoError ExecState := do
   let map ← valueAsMap baseV

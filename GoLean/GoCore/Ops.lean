@@ -1747,6 +1747,10 @@ def checkKeyHashable (state : ExecState) (key : GoValue)
   | .hashable => pure ()
 
 -- Not recursive; total now that valueEq is. The for-loop is fine in a plain def.
+-- Key-retention latitude note: the index this returns feeds
+-- `mapAssignValue`'s always-replace `entries.set!` — the E10 pinned
+-- latitude; the site caveat (envelope, observable key kinds, transfer
+-- limit) lives at `mapAssignValue` (Machine.lean).
 def mapEntryIndex? (state : ExecState) (keyTy : Ty) (entries : Array (GoValue × GoValue))
     (key : GoValue) (isInsert : Bool := false) : Except GoError (Option Nat) := do
   checkKeyHashable state key isInsert (!entries.isEmpty)

@@ -731,8 +731,11 @@ concurrent observer).
   probe — retention is unobservable for every kind where `==` implies
   bit-equality). Matches gc where pinned (`floats/signed-zero-map-key`
   green, version-tracks gc's choice); a conforming
-  original-key-retaining implementation is outside — recorded transfer
-  caveat at the site.
+  original-key-retaining implementation is outside — transfer caveat
+  recorded at the site (`mapAssignValue`, Machine.lean; ADDED
+  2026-08-31 at the fidelity fix round — this row previously asserted
+  a site caveat that did not exist, phase-2 finding A1-21; corrected
+  per the founding code-wins rule).
 - RE-ENVELOPE: a two-point retention choice — LOW cost (one arm), LOW
   value until a cross-implementation lane exists.
 
@@ -947,8 +950,9 @@ row so the axis stops being invisible, nothing more.
   `IntKind.normalize` wraps at the fixed width. Recorded only in
   docs/semantics.md:199 as an "executable testing policy" with the
   stated intent that width become an explicit parameter — the record
-  PREDATES the envelope doctrine and there is no site-level caveat in
-  Value.lean (§9, flag 2).
+  PREDATES the envelope doctrine; the owed site-level caveat in
+  Value.lean (§9, flag 2 — owed since 2026-08-11) was ADDED
+  2026-08-31 at `IntKind.bits?` (fidelity fix round).
 - Also entangled: which programs COMPILE (constant overflow at int
   boundaries — the negative lane inherits the pin via go/types on the
   host), and `uintptr` (frontend maps to uint64; observations of it
@@ -1367,7 +1371,8 @@ costs). Numbering continues the doctrine draft's 1–5.
    Value.lean/conversions/frontend Sizes/negative-lane acceptance —
    pervasive but mechanical, and worthless until a 32-bit oracle lane
    (cross-implementation evidence) exists. (semantics.md:199 records
-   the policy; no site-level caveat yet — owed.)
+   the policy; site-level caveat at `IntKind.bits?` ADDED 2026-08-31 —
+   the owed record discharged, §9 flag 2.)
 7. **Library-doc-silent behaviors are modeled at gc's realized point.**
    WaitGroup's int32 wrap-before-negative-test (BUG-055), the sync
    misuse FATAL class and its exact strings (probes p01–p03), the
@@ -1447,10 +1452,14 @@ permanent; the deviation is not.)
    irrelevant) and cites `raceWakeEvent`'s S3 correction. The flag had
    expired silently — Race.lean was touched 5× after "the next
    Race.lean-touching slice" was named as the trigger.
-2. **The int-width pin has no site-level record** (R1): the policy
-   lives in semantics.md prose only; Value.lean:33 carries no
-   caveat/envelope statement, although the singleton-narrowing rule
-   (nondeterminism doctrine F8/F15) would require one if shipped today.
+2. **DISCHARGED 2026-08-31 (fidelity fix round)** — the int-width
+   pin's site-level record (R1): the policy had lived in semantics.md
+   prose only, with no caveat/envelope statement at the site although
+   the singleton-narrowing rule (nondeterminism doctrine F8/F15) would
+   require one if shipped today. The envelope statement now sits at
+   `IntKind.bits?` (Value.lean) — pin, envelope {32,64}, transfer
+   caveat, XIMPL gate. (The flag stood 20 days after being recorded
+   as owed.)
 3. **Doctrine draft seeded #2's "to gc's realization"** — see §8's
    correction paragraph.
 4. **The created-entries map narrowing is recorded only inside

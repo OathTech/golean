@@ -29,6 +29,20 @@ def IntKind.name : IntKind → String
   | .uint64 => "uint64"
   | .unbounded name => name
 
+/-- PINNED LATITUDE — `int`/`uint` width (inventory R1; register
+extension #6; site caveat added 2026-08-31, closing §9 flag 2's owed
+record). spec#Numeric_types makes the width of `int`/`uint` (and
+`uintptr`, frontend-mapped to uint64) IMPLEMENTATION-SPECIFIC —
+"either 32 or 64 bits"; the plausible envelope is {32, 64} as a
+machine parameter. The `.int => some 64` / `.uint => some 64` arms
+below pin the 64-bit member — the oracle host's realization (gc
+linux/amd64), shared by the frontend's go/types Sizes and the
+negative lane's acceptance. TRANSFER CAVEAT: any claim about
+wrap/overflow at `int`/`uint` boundaries transfers only to 64-bit
+targets; a 32-bit conforming implementation is outside this
+singleton. Re-envelope (width as a parameter across normalize/
+conversions/frontend Sizes/negative-lane acceptance) is XIMPL-gated —
+blocked in practice on any 32-bit oracle lane; see inventory R1. -/
 def IntKind.bits? : IntKind → Option Nat
   | .int => some 64
   | .uint => some 64
