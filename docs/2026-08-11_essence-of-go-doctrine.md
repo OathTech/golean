@@ -228,7 +228,8 @@ write a bare "#6"/"#7".
    states the MODEL's domain, which is wider than the practical Go
    domain, so `n < 2^63` in the gallery means "where Go's `int` domain
    ends in the model", never "where the program stops working"
-   (`docs/verified-examples.md` says this at each entry). Disposition:
+   (`docs/verified-examples.md` said this at each entry — the gallery
+   left with the split, branch `park/reasoning-2026-08-31`). Disposition:
    STANDING IDEALIZATION, not a gc-pin — it carries no re-envelope
    obligation, because the too-wide direction here does not threaten
    theorem transfer to real runs that DO allocate successfully. Cost of
