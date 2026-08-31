@@ -43,6 +43,147 @@ private abbrev LowerM := ReaderT Nat (Except String)
 private def fail {α} (msg : String) : LowerM α :=
   fun _ => .error s!"native lowering: {msg}"
 
+/-! ## Exact-key discipline
+
+Fidelity work program 2026-08-31, item 10 (assessment p2 claim 2): the
+observation decoder has had `requireExactKeys` since birth; this wire
+decoder had none — an unknown key on any node was silently ignored, so
+a corrupted/foreign node could degrade toward a legal program instead
+of refusing loudly. Every node decode now checks that EVERY PRESENT
+KEY is one the emitter actually produces for that node kind (the
+allowed lists below are the emitter's measured output — emit.go/
+wire.go survey against a real wire, incl. the keys this decoder never
+reads: `package`, `define`, the always-attached optional `type`, the
+fmt-lift `operandType` on non-comparison `binary`). MISSING required
+keys keep failing through the existing `StrictJson.field` reads, which
+name the key and path; keys that are optional BY THE LANGUAGE (`cond`
+on `for {}`, `cap` on `make(chan T)`) stay optional — their absence is
+Go's own grammar, not corruption (p2 claim 2's corrected fact). This
+is decode-layer hardening of the declared TCB seam: strictly more
+refusals, never fewer. -/
+private def checkAllowedKeys (path : String) (obj : StrictJson.Obj)
+    (allowed : List String) : LowerM Unit := do
+  for key in obj.keys do
+    if !allowed.contains key then
+      fail s!"unknown key '{key}' at {path} — the emitter never produces it for this node kind (exact-key discipline, fail closed)"
+
+/-- Allowed key sets for type nodes, by `kind`. `none` = unknown kind
+(the dispatch arm's own refusal names it). -/
+private def tyAllowedKeys : String → Option (List String)
+  | "bool" | "string" => some ["kind"]
+  | "int" => some ["kind", "int"]
+  | "float" => some ["kind", "float"]
+  | "pointer" | "slice" => some ["kind", "elem"]
+  | "array" => some ["kind", "len", "elem"]
+  | "chan" => some ["kind", "dir", "elem"]
+  | "map" => some ["kind", "key", "value"]
+  | "sync" => some ["kind", "sync"]
+  | "named" | "interface" => some ["kind", "name"]
+  | "func" => some ["kind", "params", "results", "variadic"]
+  | _ => none
+
+/-- Allowed key sets for expression nodes, by `expr` tag. `type` is
+allowed almost everywhere: the emitter post-attaches it to any
+expression node whose type it can resolve. -/
+private def exprAllowedKeys : String → Option (List String)
+  | "ident" => some ["expr", "name", "type"]
+  | "func-value" => some ["expr", "func", "captured", "type"]
+  | "int" | "bool" => some ["expr", "value", "type"]
+  | "float" => some ["expr", "num", "den", "type"]
+  | "string" => some ["expr", "bytes", "type"]
+  | "nil" | "recover" => some ["expr", "type"]
+  | "bytes-from-string" | "string-from-bytes" | "string-from-rune"
+  | "runes-from-string" | "string-from-runes" => some ["expr", "x", "type"]
+  | "min" | "max" => some ["expr", "args", "type"]
+  | "ref" => some ["expr", "id", "type"]
+  | "globaladdr" => some ["expr", "gid", "type"]
+  | "deref" | "addr-of-deref" => some ["expr", "ptr", "type"]
+  | "field-get" => some ["expr", "recv", "typeId", "field", "type"]
+  | "field-addr" => some ["expr", "base", "typeId", "field", "type"]
+  | "index-get" | "index-addr" => some ["expr", "base", "index", "type"]
+  | "builtin-len" | "builtin-cap" => some ["expr", "operand", "operandType", "type"]
+  | "map-get" => some ["expr", "base", "index", "keyType", "valueType", "type"]
+  | "slice" => some ["expr", "base", "low", "high", "max", "type"]
+  | "convert" => some ["expr", "target", "x", "type"]
+  | "default" => some ["expr", "type"]
+  | "struct-lit" => some ["expr", "target", "args", "type"]
+  | "array-lit" => some ["expr", "length", "elem", "elems", "type"]
+  | "unary" => some ["expr", "op", "x", "type"]
+  | "binary" => some ["expr", "op", "x", "y", "operandType", "type"]
+  | "to-interface" => some ["expr", "target", "dynamic", "operand", "type"]
+  | "type-assert" => some ["expr", "operand", "target", "source", "type"]
+  | "call" => some ["expr", "func", "args", "resultTypes"]
+  | "call-value" => some ["expr", "callee", "args", "resultTypes"]
+  | _ => none
+
+/-- Allowed key sets for statement nodes, by `stmt` tag. `for` and
+`range` are deliberately ABSENT (`none`): their decoders check keys
+themselves, so the `labeled` wrapper's direct-dispatch path is covered
+too. -/
+private def stmtAllowedKeys : String → Option (List String)
+  | "block" | "breakable" => some ["stmt", "body"]
+  | "defer" | "go" => some ["stmt", "callee", "args"]
+  | "panic" => some ["stmt", "value", "wrap", "runtimeError"]
+  | "return" => some ["stmt", "results"]
+  -- `define` is emitted (a := vs =) and deliberately unread here.
+  | "assign" => some ["stmt", "lhs", "rhs", "define"]
+  | "type-assert" => some ["stmt", "target", "okTarget", "expr", "targetType"]
+  | "var" => some ["stmt", "decls"]
+  | "if" => some ["stmt", "cond", "then", "init", "else"]
+  | "incdec" => some ["stmt", "op", "target", "read", "type"]
+  | "compound-assign" => some ["stmt", "op", "target", "read", "rhs"]
+  | "expr" => some ["stmt", "expr"]
+  | "new" => some ["stmt", "target", "value", "elemType"]
+  | "make-slice" => some ["stmt", "target", "elem", "len", "cap"]
+  | "make-map" => some ["stmt", "target", "keyType", "valueType"]
+  | "make-chan" => some ["stmt", "target", "elem", "cap"]
+  | "chan-send" => some ["stmt", "ch", "value", "elem"]
+  | "chan-recv" => some ["stmt", "targets", "ch", "elem"]
+  | "chan-close" => some ["stmt", "ch"]
+  | "sync-op" => some ["stmt", "op", "args", "target"]
+  | "select" => some ["stmt", "clauses", "default"]
+  | "map-delete" => some ["stmt", "base", "index", "keyType"]
+  | "clear-map" => some ["stmt", "base"]
+  | "clear-slice" | "sort-slice" => some ["stmt", "base", "elem"]
+  | "append" => some ["stmt", "target", "elem", "slice", "elems"]
+  | "copy" => some ["stmt", "target", "dst", "src"]
+  | "map-compound-assign" =>
+      some ["stmt", "op", "base", "index", "read", "rhs", "keyType", "valueType"]
+  | "map-assign" => some ["stmt", "base", "index", "value", "keyType", "valueType"]
+  | "slice-lit" => some ["stmt", "target", "elem", "length", "elems"]
+  | "map-lit" => some ["stmt", "target", "keyType", "valueType", "entries"]
+  | "break" | "continue" => some ["stmt"]
+  | "break-to" | "continue-to" => some ["stmt", "label"]
+  | "labeled" => some ["stmt", "label", "body"]
+  | _ => none
+
+/-- Allowed key sets for assignment-target nodes, by `target` tag. -/
+private def targetAllowedKeys : String → Option (List String)
+  | "declare" => some ["target", "id", "type"]
+  | "var" => some ["target", "id"]
+  | "blank" => some ["target"]
+  | "addr" => some ["target", "expr"]
+  | "map" => some ["target", "base", "index", "keyType", "valueType"]
+  | _ => none
+
+/-- Allowed key sets for range statements, by `kind` (the shared base
+plus the per-kind extras the emitter merges in). -/
+private def rangeAllowedKeys : String → Option (List String)
+  | "map" => some ["stmt", "keyVar", "valVar", "collection", "body", "kind", "keyType", "valueType"]
+  | "chan" | "slice" | "array" => some ["stmt", "keyVar", "valVar", "collection", "body", "kind", "elemType"]
+  | "int" => some ["stmt", "keyVar", "valVar", "collection", "body", "kind", "operandType"]
+  | "array-pointer" => some ["stmt", "keyVar", "valVar", "collection", "body", "kind", "elemType", "arrType", "len"]
+  | "string" => some ["stmt", "keyVar", "valVar", "collection", "body", "kind"]
+  | _ => none
+
+/-- Dispatch-level key check: known kinds are checked; an unknown kind
+passes through to the arm's own named refusal. -/
+private def checkKindKeys (path : String) (obj : StrictJson.Obj)
+    (table : String → Option (List String)) (kind : String) : LowerM Unit := do
+  match table kind with
+  | some allowed => checkAllowedKeys path obj allowed
+  | none => pure ()
+
 /-! ## Types -/
 
 private def intKindOfName (name : String) : LowerM IntKind :=
@@ -65,6 +206,7 @@ private def intKindOfName (name : String) : LowerM IntKind :=
 partial def decodeTy (path : String) (json : Json) : LowerM Ty := do
   let obj ← StrictJson.obj path json
   let kind ← StrictJson.string s!"{path}.kind" (← StrictJson.field path obj "kind")
+  checkKindKeys path obj tyAllowedKeys kind
   match kind with
   | "bool" => pure .bool
   | "string" => pure .string
@@ -127,6 +269,7 @@ partial def decodeTy (path : String) (json : Json) : LowerM Ty := do
 
 private def decodeParam (path : String) (json : Json) : LowerM Param := do
   let obj ← StrictJson.obj path json
+  checkAllowedKeys path obj ["id", "type"]
   let id ← StrictJson.string s!"{path}.id" (← StrictJson.field path obj "id")
   let typ ← decodeTy s!"{path}.type" (← StrictJson.field path obj "type")
   pure { id, typ }
@@ -145,6 +288,7 @@ private def optType (path : String) (obj : StrictJson.Obj) : LowerM (Option Ty) 
 partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
   let obj ← StrictJson.obj path json
   let tag ← StrictJson.string s!"{path}.expr" (← StrictJson.field path obj "expr")
+  checkKindKeys path obj exprAllowedKeys tag
   match tag with
   | "ident" =>
       pure (.var (← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")))
@@ -293,6 +437,7 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
       let elems ← StrictJson.array s!"{path}.elems" (← StrictJson.field path obj "elems")
       let pairs ← elems.mapIdxM (fun i el => do
         let eo ← StrictJson.obj s!"{path}.elems[{i}]" el
+        checkAllowedKeys s!"{path}.elems[{i}]" eo ["index", "value"]
         let index ← StrictJson.int s!"{path}.elems[{i}].index" (← StrictJson.field s!"{path}.elems[{i}]" eo "index")
         let value ← decodeExpr s!"{path}.elems[{i}].value" (← StrictJson.field s!"{path}.elems[{i}]" eo "value")
         pure (index, value))
@@ -392,6 +537,7 @@ private structure Target where
 private def decodeTarget (path : String) (json : Json) : LowerM Target := do
   let obj ← StrictJson.obj path json
   let tag ← StrictJson.string s!"{path}.target" (← StrictJson.field path obj "target")
+  checkKindKeys path obj targetAllowedKeys tag
   match tag with
   | "declare" =>
       let id ← StrictJson.string s!"{path}.id" (← StrictJson.field path obj "id")
@@ -454,6 +600,7 @@ private def asMapGet? (json : Json) : LowerM (Option (Json × Json × Json × Js
   match json.getObjVal? "expr" with
   | .ok (.str "map-get") =>
       let obj ← StrictJson.obj "map-get" json
+      checkAllowedKeys "map-get" obj ["expr", "base", "index", "keyType", "valueType", "type"]
       pure (some (← StrictJson.field "map-get" obj "base", ← StrictJson.field "map-get" obj "index",
         ← StrictJson.field "map-get" obj "keyType", ← StrictJson.field "map-get" obj "valueType"))
   | _ => pure none
@@ -464,6 +611,7 @@ private def asCall? (json : Json) : LowerM (Option (String × Array Json)) := do
   match json.getObjVal? "expr" with
   | .ok (.str "call") =>
       let obj ← StrictJson.obj "call" json
+      checkAllowedKeys "call" obj ["expr", "func", "args", "resultTypes"]
       let name ← StrictJson.string "call.func" (← StrictJson.field "call" obj "func")
       let args ← StrictJson.array "call.args" (← StrictJson.field "call" obj "args")
       pure (some (name, args))
@@ -475,6 +623,7 @@ private def asCallValue? (json : Json) : LowerM (Option (Json × Array Json)) :=
   match json.getObjVal? "expr" with
   | .ok (.str "call-value") =>
       let obj ← StrictJson.obj "call-value" json
+      checkAllowedKeys "call-value" obj ["expr", "callee", "args", "resultTypes"]
       let callee ← StrictJson.field "call-value" obj "callee"
       let args ← StrictJson.array "call-value.args" (← StrictJson.field "call-value" obj "args")
       pure (some (callee, args))
@@ -486,6 +635,9 @@ mutual
 partial def decodeStmt (results : Array Param) (path : String) (json : Json) : LowerM Stmt := do
   let obj ← StrictJson.obj path json
   let tag ← StrictJson.string s!"{path}.stmt" (← StrictJson.field path obj "stmt")
+  -- `for`/`range` check their own keys (their decoders are also
+  -- reached directly through the `labeled` wrapper).
+  checkKindKeys path obj stmtAllowedKeys tag
   match tag with
   | "block" =>
       let body ← StrictJson.array s!"{path}.body" (← StrictJson.field path obj "body")
@@ -731,11 +883,13 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
             let body ← decodeStmt results s!"{cpath}.body" (← StrictJson.field cpath co "body")
             match ckind with
             | "send" =>
+                checkAllowedKeys cpath co ["clause", "ch", "value", "elem", "body"]
                 let chE ← decodeExpr s!"{cpath}.ch" (← StrictJson.field cpath co "ch")
                 let value ← decodeExpr s!"{cpath}.value" (← StrictJson.field cpath co "value")
                 let elemTy ← decodeTy s!"{cpath}.elem" (← StrictJson.field cpath co "elem")
                 cls := cls.push (.send chE value elemTy, body)
             | "recv" =>
+                checkAllowedKeys cpath co ["clause", "targets", "ch", "elem", "body"]
                 let targetsJ ← StrictJson.array s!"{cpath}.targets" (← StrictJson.field cpath co "targets")
                 if targetsJ.size > 2 then
                   fail s!"select receive with {targetsJ.size} targets at {cpath}"
@@ -808,6 +962,7 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
         match elems[i]? with
         | some el =>
             let eo ← StrictJson.obj s!"{path}.elems[{i}]" el
+            checkAllowedKeys s!"{path}.elems[{i}]" eo ["index", "value"]
             let index ← StrictJson.int s!"{path}.elems[{i}].index" (← StrictJson.field s!"{path}.elems[{i}]" eo "index")
             let value ← decodeExpr s!"{path}.elems[{i}].value" (← StrictJson.field s!"{path}.elems[{i}]" eo "value")
             stmts := stmts.push (.assign (.addr (.indexAddr (targetBaseExpr t) (.intLit index .int))) value)
@@ -829,6 +984,7 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
         match entries[i]? with
         | some e =>
             let eo ← StrictJson.obj s!"{path}.entries[{i}]" e
+            checkAllowedKeys s!"{path}.entries[{i}]" eo ["key", "value"]
             let key ← decodeExpr s!"{path}.entries[{i}].key" (← StrictJson.field s!"{path}.entries[{i}]" eo "key")
             let value ← decodeExpr s!"{path}.entries[{i}].value" (← StrictJson.field s!"{path}.entries[{i}]" eo "value")
             stmts := stmts.push (.mapAssign base key value keyTy valTy)
@@ -867,6 +1023,7 @@ wrapper) attaches DIRECTLY to the loop-forming statement — the machine's
 partial def decodeRange (results : Array Param) (path : String) (obj : StrictJson.Obj)
     (label : Option String := none) : LowerM Stmt := do
   let kind ← StrictJson.string s!"{path}.kind" (← StrictJson.field path obj "kind")
+  checkKindKeys path obj rangeAllowedKeys kind
   let keyVar := optString obj "keyVar"
   let valVar := optString obj "valVar"
   let collJson ← StrictJson.field path obj "collection"
@@ -1154,6 +1311,7 @@ partial def decodeVar (path : String) (obj : StrictJson.Obj) : LowerM Stmt := do
   let mut stmts : Array Stmt := #[]
   for i in [:decls.size] do
     let d ← StrictJson.obj s!"{path}.decls[{i}]" decls[i]!
+    checkAllowedKeys s!"{path}.decls[{i}]" d ["id", "type", "init"]
     let id ← StrictJson.string s!"{path}.decls[{i}].id" (← StrictJson.field path d "id")
     let typ ← decodeTy s!"{path}.decls[{i}].type" (← StrictJson.field path d "type")
     stmts := stmts.push (.initialization { id, typ })
@@ -1176,6 +1334,7 @@ partial def decodeIf (results : Array Param) (path : String) (obj : StrictJson.O
 
 partial def decodeFor (results : Array Param) (path : String) (obj : StrictJson.Obj)
     (label : Option String := none) : LowerM Stmt := do
+  checkAllowedKeys path obj ["stmt", "body", "init", "cond", "post", "condPre"]
   let cond ← (match obj.get? "cond" with
     | some c => decodeExpr s!"{path}.cond" c
     | none => pure (.boolLit true))
@@ -1224,6 +1383,7 @@ end
 
 private def decodeFieldDef (path : String) (json : Json) : LowerM FieldDef := do
   let obj ← StrictJson.obj path json
+  checkAllowedKeys path obj ["name", "type", "embedded"]
   let name ← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")
   let typ ← decodeTy s!"{path}.type" (← StrictJson.field path obj "type")
   let embedded ← StrictJson.bool s!"{path}.embedded" (← StrictJson.field path obj "embedded")
@@ -1235,6 +1395,7 @@ missing marker would silently default a variadic requirement to
 non-variadic and re-open finding 0's wrong `ok`. -/
 private def decodeMethodSig (path : String) (json : Json) : LowerM MethodSig := do
   let obj ← StrictJson.obj path json
+  checkAllowedKeys path obj ["name", "params", "results", "variadic"]
   let name ← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")
   let paramsJson ← StrictJson.array s!"{path}.params" (← StrictJson.field path obj "params")
   let resultsJson ← StrictJson.array s!"{path}.results" (← StrictJson.field path obj "results")
@@ -1245,9 +1406,19 @@ private def decodeMethodSig (path : String) (json : Json) : LowerM MethodSig := 
 
 private def decodeTypeDef (path : String) (json : Json) : LowerM (TypeId × TypeDef) := do
   let obj ← StrictJson.obj path json
+  checkAllowedKeys path obj ["name", "def"]
   let name ← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")
   let defObj ← StrictJson.obj s!"{path}.def" (← StrictJson.field path obj "def")
   let kind ← StrictJson.string s!"{path}.def.kind" (← StrictJson.field s!"{path}.def" defObj "kind")
+  -- NOTE: the def-object `kind` vocabulary is DISTINCT from the type
+  -- nodes' (`struct`/`alias`/`defined`/`interface`/`unsupported` here).
+  checkKindKeys s!"{path}.def" defObj
+    (fun k => match k with
+      | "struct" => some ["kind", "fields"]
+      | "alias" | "defined" => some ["kind", "target"]
+      | "interface" => some ["kind", "methods"]
+      | "unsupported" => some ["kind", "feature"]
+      | _ => none) kind
   match kind with
   | "struct" =>
       let fields ← StrictJson.array s!"{path}.def.fields" (← StrictJson.field s!"{path}.def" defObj "fields")
@@ -1278,6 +1449,12 @@ private def decodeTypeDef (path : String) (json : Json) : LowerM (TypeId × Type
 
 private def decodeFunc (path : String) (json : Json) : LowerM Func := do
   let obj ← StrictJson.obj path json
+  -- Two emitter shapes: quarantined {name, unsupported, arity} vs
+  -- normal {name, params, results, variadic, body}.
+  if obj.contains "unsupported" then
+    checkAllowedKeys path obj ["name", "unsupported", "arity"]
+  else
+    checkAllowedKeys path obj ["name", "params", "results", "variadic", "body"]
   let name ← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")
   -- A QUARANTINED declaration (per-decl fail-closed, slice 1 of arc
   -- wrong-answers-builtins): the frontend could not lower this function
@@ -1313,6 +1490,12 @@ private def decodeFunc (path : String) (json : Json) : LowerM Func := do
 receiver as the first parameter) plus a `MethodInfo` dispatch-table entry. -/
 private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodInfo) := do
   let obj ← StrictJson.obj path json
+  -- Union of the four emitter method shapes (declared / promotion
+  -- wrapper / interface anchor / declaration-only stub) — anchors and
+  -- stubs carry no body, which the arms below handle.
+  checkAllowedKeys path obj
+    ["name", "recvType", "recv", "params", "results", "variadic",
+     "wrapper", "interface", "unsupported", "body"]
   let name ← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")
   let recvType ← StrictJson.string s!"{path}.recvType" (← StrictJson.field path obj "recvType")
   let recv ← decodeParam s!"{path}.recv" (← StrictJson.field path obj "recv")
@@ -1366,6 +1549,10 @@ body-decoding call runs under — that is what arms the `globaladdr`
 bound check (audit response 2026-08-05, C1). -/
 partial def decodeProgram (json : Json) : Except String Program := do
   let obj ← StrictJson.obj "program" json
+  -- `package` is emitted and deliberately unread; `globals` is absent
+  -- on a globals-free wire.
+  let _ ← (checkAllowedKeys "program" obj
+    ["schema", "package", "types", "funcs", "methods", "methodSets", "globals"]).run 0
   let schema ← StrictJson.string "program.schema" (← StrictJson.field "program" obj "schema")
   if schema != "golean-native-v1" then
     throw s!"native lowering: unexpected schema {schema}"
@@ -1380,6 +1567,7 @@ partial def decodeProgram (json : Json) : Except String Program := do
         let arr ← StrictJson.array "program.globals" gj
         arr.mapIdxM (fun i g => do
           let gobj ← StrictJson.obj s!"program.globals[{i}]" g
+          let _ ← (checkAllowedKeys s!"program.globals[{i}]" gobj ["name", "type"]).run 0
           let name ← StrictJson.string s!"program.globals[{i}].name"
             (← StrictJson.field s!"program.globals[{i}]" gobj "name")
           let typ ← (decodeTy s!"program.globals[{i}].type"
@@ -1423,6 +1611,7 @@ partial def decodeProgram (json : Json) : Except String Program := do
     (← StrictJson.field "program" obj "methodSets")
   let declaredRecords ← msJson.mapIdxM (fun i m => do
     let mobj ← StrictJson.obj s!"program.methodSets[{i}]" m
+    let _ ← (checkAllowedKeys s!"program.methodSets[{i}]" mobj ["type", "coverage"]).run 0
     let key ← StrictJson.string s!"program.methodSets[{i}].type"
       (← StrictJson.field s!"program.methodSets[{i}]" mobj "type")
     let covStr ← StrictJson.string s!"program.methodSets[{i}].coverage"
