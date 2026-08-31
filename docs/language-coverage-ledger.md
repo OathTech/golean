@@ -339,6 +339,27 @@ within their size class (the charter's raft-path-first rule for
 successor arcs). Stage 0 is not frontier work — it is the arc's own
 open obligations, which precede everything below.
 
+**RE-RANKING ([USER] 2026-08-31, fidelity decision 3 —
+`docs/assessment/decisions-2026-08-31.md`, lands with the
+fidelity-assessment branch).** The 2026-08-19 ordering encoded the
+raft plan; under the semantics-first goal the queue is re-ranked
+WITHOUT renumbering the rows below (numbers stay stable as ids):
+
+- MOVED AHEAD: the stdlib-boundary work — the STDLIB-SURFACE
+  ENUMERATION toward FR-14 (41 of 143 refusals are stdlib, the real
+  frontier per lane A2's table; new shims stay frozen per decision 2
+  / discrepancy D-002 pending the retirement design) — and the
+  S-priced items: FR-1 (go-of-builtin thunk, ~half day, 5 reds) and
+  FR-2 with its mini-slice A6 adjuncts (receive-in-short-circuit;
+  A6 owns BUG-062's forced-point wrong answers — Tier-1 work).
+- EXPLICITLY LAST, BY DECISION: FR-15 complex numbers (queue 15) —
+  the 2026-08-19 "complex last" ruling is re-affirmed, now on the
+  semantics-first ground (one large arc, zero demonstrated
+  consumers), not the raft-path one.
+- The middle of the queue (3–13) is otherwise unchanged pending the
+  Q-row [USER] sitting (decision 3's second half; see §6 and
+  TODO.md "Re-homed obligations").
+
 **Stage 0 (this arc's open obligations, triage table §6):** mini-slices
 A3 (map multi-assign targets), A4 (chan type args), A5
 (shadow-capture tuple), A6 (ordered-event hoist predicate — now owns
