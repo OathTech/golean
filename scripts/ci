@@ -822,6 +822,39 @@ fi
 
 done
 
+# 6. Cross-ledger reconciliation — REPORT-ONLY (fidelity work program
+# 2026-08-31, item 7 / assessment p2 claim 6). tools/reconcile-records
+# covers the invariants that live only in prose (ledger arithmetic,
+# cross-references, decay dates) and is BY DESIGN an audit instrument,
+# not a gate: its findings are dossier material, and this step NEVER
+# sets fail. The defect it fixes was invisibility — a HIGH finding had
+# been emitted to nobody for 9+ days because nothing ran the tool —
+# not leniency. Headline lines only here; run the tool by hand for
+# details. A reconciler that cannot run is itself a visible note
+# (never a silent skip), but still not a FAIL: the gate's own
+# invariants are the steps above, not this report.
+step "cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)"
+if [ -x tools/reconcile-records ]; then
+  recon_out="$(./tools/reconcile-records 2>&1)"; recon_rc=$?
+  if [ "$recon_rc" -eq 0 ]; then
+    recon_heads="$(printf '%s\n' "$recon_out" | grep -E '^\[[0-9]+\]' || true)"
+    if [ -n "$recon_heads" ]; then
+      printf '%s\n' "$recon_heads" | sed 's/^/  /'
+      recon_n="$(printf '%s\n' "$recon_heads" | wc -l | tr -d ' ')"
+      recon_hi="$(printf '%s\n' "$recon_heads" | grep -c ' HIGH ' || true)"
+      RESULTS+=("  note reconciler: $recon_n finding(s), $recon_hi HIGH — report-only (details: tools/reconcile-records)")
+    else
+      echo "  no discrepancies found"
+      RESULTS+=("  note reconciler: no discrepancies")
+    fi
+  else
+    printf '%s\n' "$recon_out" | tail -5 | sed 's/^/  /'
+    RESULTS+=("  note reconciler COULD NOT RUN (exit $recon_rc) — report-only step, findings unavailable this run")
+  fi
+else
+  echo "  tools/reconcile-records missing or not executable"
+  RESULTS+=("  note reconciler ABSENT (tools/reconcile-records missing) — report-only step, findings unavailable")
+fi
 
 # Summary
 printf '\n\033[1m══ scripts/ci summary ══\033[0m\n'
