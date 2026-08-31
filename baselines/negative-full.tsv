@@ -1,5 +1,5 @@
 # GoLean negative-corpus (compile-rejection) baseline
-# recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection) + frontend fail-closed
+# recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection)  [header corrected 2026-08-31: the old "+ frontend fail-closed" conjunct claimed a check that does not exist — scripts/coverage-negative invokes no GoLean tool (p2-fact claim 5)]
 # manifest_cases: 390  pass: 390  fail: 0
 # Columns: result<TAB>id<TAB>stage (sorted by id); detail omitted (churns).
 # Regression = any flip/stage change vs this file (scripts/coverage-baseline-diff
