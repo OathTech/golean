@@ -110,7 +110,8 @@ Everything else is untrusted tooling.
 ## Pointers
 
 The split plan (this era's opening decision):
-`docs/2026-08-31_repo-split-plan.md` · Branch index for the parked
+`docs/2026-08-31_repo-split-plan.md` · Reviving the parked
+reasoning product: `docs/2026-08-31_reasoning-revival-guide.md` · Branch index for the parked
 reasoning product and the era archives: `docs/ARCHIVE.md` ·
 Semantics doctrine: `docs/2026-08-11_essence-of-go-doctrine.md` ·
 Latitude census: `docs/2026-08-11_latitude-inventory.md` · Spec

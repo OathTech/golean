@@ -12,7 +12,8 @@ and resolve locally.
   theorems, Challenge/Solution), `compat/` (verdi, gobra), the
   comparator-judge and A-TRIP gate apparatus, and the proof-era
   docs including that era's own ARCHIVE.md (which indexes the
-  history below in full). Pending migration to a separate repo.
+  history below in full). Pending migration to a separate repo —
+  the how-to-resume guide is `docs/2026-08-31_reasoning-revival-guide.md`.
 - **`raft-proof-campaign`** — the unmerged campaign decision log
   (reasoning-side; lands or migrates at the migration stage).
 - **`archive/callspec-era`** — the killed CallSpec judgment track
