@@ -264,7 +264,7 @@ rows covering all 158 anchors.
 | Run_time_panics | covered(B) | panic classes exercised across every suite (bounds, nil-deref, map, conversion, division); L:R9 (panic VALUES/messages pinned to gc's realized strings); runtime.Error's interface shape is stdlib-internal (P3 SKIPPED row records why it has no direct case). |
 | System_considerations | out-of-language | chapter preamble for the two rows below. |
 | Package_unsafe | out-of-language | justification: the spec's own guard (implementation-specific, type-safety escape, "may be non-portable"); modeling its observables = modeling gc's layout (the doctrine's anti-goal); the type-safety escape defeats the machine's memory model. Boundary is a MECHANISM since 2026-08-31 (BUG-070, t1-fidelity-fixes): unsafe.Sizeof/Offsetof/Alignof refuse the export unconditionally (`checkUnsafeLayoutOps` — pre-fix they constant-folded gc's layout into the wire silently); unsafe.Pointer refuses as a wire TYPE. Marker reds: `unsafe/layout-ops/{sizeof-fixed,layout-struct}` + `unsafe/boundary/pointer-roundtrip` (each mechanism separately attested). |
-| Size_and_alignment_guarantees | out-of-language | LAYOUT is observable only through unsafe/reflect (both outside) — but the section has TWO in-language-observable consequences, not one (row corrected at the audit fix round, reviewer C F1): `int`/`uint` width, held as L:R1 (pinned 64-bit, wrap-suite witnessed), and the zero-size address-identity latitude ("Two distinct zero-size variables may have the same address in memory" — observable by plain pointer equality), held as L:R15 and case-pinned both ways (`pointers/zero-size-address/{stack-distinct,escaped-same}`: gc probed NON-single-valued — stack distinct, heap/escaped equal via runtime.zerobase; the machine is the conforming never-same singleton, so escaped-same is a version-tracked latitude red, W3.2 re-envelope obligation). |
+| Size_and_alignment_guarantees | out-of-language | LAYOUT is observable only through unsafe/reflect (both outside) — but the section has TWO in-language-observable consequences, not one (row corrected at the audit fix round, reviewer C F1): `int`/`uint` width, held as L:R1 (pinned 64-bit, wrap-suite witnessed), and the zero-size address-identity latitude ("Two distinct zero-size variables may have the same address in memory" — observable by plain pointer equality), held as L:R15 and case-pinned both ways (`pointers/zero-size-address/{stack-distinct,escaped-same}`: gc probed NON-single-valued — stack distinct, heap/escaped equal via runtime.zerobase; the machine is the conforming never-same singleton, so escaped-same is a version-tracked latitude red — re-envelope obligation re-homed 2026-08-31, fidelity decision 6, from the parked W3.2 arc to this repo's TODO.md backlog). |
 | Appendix | out-of-language | document meta. |
 | Language_versions | out-of-language | version history; the machine models the go1.26 text (I-5/L-009: version-conditional readings at the declared-version scope). |
 | Go_1.9 … Go_1.24 (10 rows) | out-of-language | changelog entries; each change's CURRENT semantics is graded at its home section (e.g. Go 1.22 loopvar → For_statements A; range-int → For_range; Go 1.24 generic aliases → Alias_declarations). |
@@ -288,7 +288,7 @@ C10 is the doctrine's home.
 | synchronization | covered(D) | preamble; children below. |
 | init | covered(B) | init happens-before main: `init/` (19 pkgs) + `multipkg/init-order*`; the order latitude inside it is the spec-side C1/C2 story (§2 Package_initialization). |
 | go | covered(B) | go-statement happens-before: spawn suites, arg-eval-at-spawn pins, child-effect visibility through channels. |
-| goexit | frontier(Q-GOEXIT) | marker red `goroutines/goexit-marker/child` ("selector call Goexit is not a method value"); goroutine destruction is the F4 arc's scheduler-architecture question. |
+| goexit | frontier(Q-GOEXIT) | marker red `goroutines/goexit-marker/child` ("selector call Goexit is not a method value"); goroutine destruction is the Q-GOEXIT scheduler-architecture question (formerly the F4 arc's; re-homed 2026-08-31, fidelity decision 6 → this repo's TODO.md backlog). |
 | chan | covered(B) | channel happens-before: send/receive/close suites + the sb-chan litmus; NAMED GAP → T-6 (the buffered-capacity clause — k-th receive hb (k+C)-th send — has no dedicated litmus row). |
 | locks | covered(B) | mutex/rwmutex suites (order, misuse fatals, protected-data race rows) + L:C8 (acquisition-order envelope via L1, zero new sites); Cond → Q-COND. |
 | once | covered(B) | `sync/once-{basic,nested-do}`. |
@@ -392,7 +392,10 @@ requires a written profound reason. The complete list:
    written fresh in triage §4. **RATIFIED 2026-08-20** (C1–C8), with
    the C4 split taken: `panic-recover/panic-newline-abort` left this
    list for queue stage 0 as mini-slice A7. Their re-envelope
-   obligations route to W3.2 (raft master plan §W3.2) — a routing,
+   obligations were routed to W3.2 (raft master plan §W3.2 — parked
+   on `park/reasoning-2026-08-31`; re-homed 2026-08-31, fidelity
+   decision 6 [USER]: live owner is this repo's TODO.md backlog,
+   "Re-homed obligations") — still a routing,
    not a promised flip: C3/C6 and the unsafe marker are
    impossibility/out-of-language rows no envelope machinery converts.
 5. **Body-less (externally-implemented) function declarations** —
@@ -403,7 +406,14 @@ requires a written profound reason. The complete list:
 
 Each row is a QUESTION with an owner, never a queue slot (user
 direction). The suites named are the cases-in-hand the eventual memo
-consumes.
+consumes. **OWNER RE-HOMING (re-homed 2026-08-31, fidelity decision
+6 [USER]): the owner cells below name the W3.2/F4 arcs, which are
+parked on `park/reasoning-2026-08-31` — dangling routes since the
+split. All ten rows' LIVE owner is this repo's TODO.md backlog
+("Re-homed obligations"); the eight memo-backed rows await the one
+[USER] ruling sitting (fidelity decision 3, ruling sheet
+`docs/2026-08-21_w32-qrow-memos.md` §RULING SHEET). The arc names in
+the cells are kept as historical routing.**
 
 | id | question | reds / cases in hand | owner |
 | --- | --- | --- | --- |
@@ -555,7 +565,7 @@ bucket for it, which is exactly how 40 reds became invisible here.
 | `panic-recover/shim-refusal-unrecoverable/*` | 3 | raft W4.3 (audit R4-C-3: shim refusals are unrecoverable machine stops) |
 | `scoping/named-result-shadow/*` | 2 | BUG-068 — `docs/BUGS.md`, raft W4.3 |
 | `pointers/nil-array-ptr-slice-elided-high/*`, `pointers/nil-array-ptr-slice/slice-expr-nil` | 5 | BUG-066 — `docs/holes-arc-log.md`, `docs/BUGS.md` |
-| `pointers/zero-size-address/escaped-same` | 1 | **L:R15** — a latitude-pinned red (inventory R15), version-tracked, W3.2 re-envelope obligation |
+| `pointers/zero-size-address/escaped-same` | 1 | **L:R15** — a latitude-pinned red (inventory R15), version-tracked; re-envelope obligation re-homed 2026-08-31 (fidelity decision 6) from the parked W3.2 arc to this repo's TODO.md backlog |
 | `goroutines/worker-pool/sum` | 1 | `docs/goose-parity-parked.md` (branch park/reasoning-2026-08-31), `docs/w32-log.md` |
 | **total** | **43** | |
 

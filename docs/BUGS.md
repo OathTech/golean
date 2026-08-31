@@ -154,8 +154,10 @@ not by running anything.
 > members are recorded in the case file (gc's name-qualified ambiguous
 > form; ours the path-qualified form). The row itself stays RED until
 > the machine can carry the quotient — the display/identity split
-> below is semantic-core work (the W3.2 lane's), and this red is
-> "inclusion not yet checkable", never relaxed.
+> below is semantic-core work (formerly the W3.2 lane's; re-homed
+> 2026-08-31, fidelity decision 6 [USER]: owner now this repo's
+> TODO.md backlog), and this red is "inclusion not yet checkable",
+> never relaxed.
 
 Path-keyed TypeIds (the BUG-010 fix, multi-package arc W1.1,
 `docs/2026-08-18_multipackage-identity.md` §3) made identity DECISIONS
@@ -2459,9 +2461,10 @@ without re-running `step_complete_any_wf`'s mapIterNext case.
 > rows stay RED: the machine has NO text member yet
 > (`renderPanicHead` refuses — the impossibilities below are about
 > producing gc's bytes, but under the quotient a member need only
-> CONFORM, and producing ours is semantic-core work owned by the
-> W3.2 lane). No red was relaxed; the conversion completes when the
-> member lands.
+> CONFORM, and producing ours is semantic-core work formerly owned
+> by the W3.2 lane — re-homed 2026-08-31, fidelity decision 6
+> [USER]: owner now this repo's TODO.md backlog). No red was
+> relaxed; the conversion completes when the member lands.
 - Discovered: 2026-07-25 (pre-merge adversarial audit of `unwinding-arc`)
 
 Go's abort output makes four demands the machine's value-level state
@@ -2591,6 +2594,11 @@ DRF escape ("coarse ≡ fine for race-free programs") is NOT self-enforcing:
 the logic would verify such racy programs without complaint, so carrying
 this granularity into a concurrent `Rel` violates fail-closed (a hidden
 wrong answer, not a visible red).
+
+**Owner (re-homed 2026-08-31, fidelity decision 6 [USER]):** the F4
+arc referenced below is parked on `park/reasoning-2026-08-31`; this
+obligation's live owner is THIS repo's TODO.md backlog ("Re-homed
+obligations"). The F4 references stay as historical routing.
 
 **Consequence: the concurrency arc (F4) is BLOCKED on resolving this.**
 Sequentially it is NOT a bug — GoCore `Expr` has no call constructor (the
@@ -3214,7 +3222,10 @@ reachable only from the multi-package corpus, whose stdlib imports
   goroutines/worker-pool/sum — its (pool × detector) state graph
   exceeds the dedup budget too (>9.5M nodes without closure); it
   stays an honest fast-lane red awaiting the reduction/mover lane
-  (slice 5) or a per-row ruling.
+  (slice 5) or a per-row ruling. (Re-homed 2026-08-31, fidelity
+  decision 6 [USER]: the reduction/mover lane is parked on
+  `park/reasoning-2026-08-31`; the live owner is this repo's
+  TODO.md backlog — a per-row ruling or a revived reduction lane.)
 - Pinned-by: differential (enumeration cap breaches, fail-loud)
 - Cases: goroutines/worker-pool/sum
 

@@ -1276,7 +1276,9 @@ runtime observable. OPEN QUESTION as stated.
   escaped-same` RED differential (machine 0 vs gc 1 — observed ∉
   modeled-singleton at a latitude point; the init/hidden-dep-order
   class, disposition `latitude` in baselines/untriaged-ids).
-- RE-ENVELOPE obligation (W3.2): a may-equal choice at zero-size
+- RE-ENVELOPE obligation (formerly W3.2; re-homed 2026-08-31,
+  fidelity decision 6 → this repo's TODO.md backlog): a may-equal
+  choice at zero-size
   address creation (or a membership-lane row admitting {0,1}) turns
   the deviation record into an inclusion check. Until then the red is
   the honest version-tracked pin, never a fidelity bug.

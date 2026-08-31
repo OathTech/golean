@@ -72,12 +72,47 @@ obligation:
       NOT in question — the fuel-out on self-inserting loops is the
       ruled behavior, not this item.
 
+## Re-homed obligations (re-homed 2026-08-31, fidelity decision 6 [USER])
+
+The W3.2 and F4 arcs these obligations routed to are parked whole on
+branch `park/reasoning-2026-08-31` — the routes dangled from the
+split until this entry. Live owner for ALL of them: this backlog.
+Each originating site (ledger §5.1/§6, BUGS.md, inventory R15)
+carries the matching "(re-homed 2026-08-31, fidelity decision 6)"
+marker.
+
+- [ ] The eight Q-row rulings (ledger §6; memos + ruling sheet
+      `docs/2026-08-21_w32-qrow-memos.md` §RULING SHEET; ~20 reds
+      riding) — one [USER] sitting, approved by fidelity decision 3.
+- [ ] Q-ATOMICITY (= BUG-002, expression-step granularity — the
+      formerly-F4 blocking precondition) and Q-GOEXIT (goroutine
+      destruction): the two formerly-F4-owned design questions; held
+      here until a concurrency-granularity arc exists.
+- [ ] The (c)-pin re-envelope obligations (ledger §5.1 item 4): C1
+      hidden-dep init order (E7 envelope), C2 staticinit `callinit`,
+      C3 panic-qualifier rendering (BUG-059), C4 abort rendering
+      (BUG-004), C5 float→int (R6) — formerly routed "to W3.2";
+      C3/C6-class impossibility/out-of-language rows stay
+      unconvertible, unchanged.
+- [ ] BUG-004 + BUG-059: the display-vs-identity split and the
+      abort-text member (semantic-core work formerly "owned by the
+      W3.2 lane").
+- [ ] BUG-065 residual (`goroutines/worker-pool/sum` honest red):
+      formerly "awaiting the reduction/mover lane (slice 5)" — now a
+      per-row ruling here, or a revived reduction lane.
+- [ ] R15 zero-size-address re-envelope (may-equal choice or
+      membership {0,1}; `pointers/zero-size-address/escaped-same`
+      red) — formerly a "W3.2 re-envelope obligation".
+
 ## W3.2 re-envelope arc backlog (2026-08-20, charter DRAFT rev 1)
 
 Semantics-side items carried by headline; full item text on the park
 branch's TODO.md §"W3.2 re-envelope arc backlog". (The iris-lean
 refresh and campaign-routing items from that section are
-reasoning-side and migrate with that product.)
+reasoning-side and migrate with that product. NOTE 2026-08-31: the
+W3.2 arc itself is parked; the items below that are live semantics
+obligations — the Q-row and `nonterm=` rulings — are duplicated with
+owners in "Re-homed obligations" above, fidelity decision 6.)
 
 - [ ] Trace-coverage push — PARKED POST-CAMPAIGN ([USER], 2026-08-21).
 - [ ] Slice-5 probe: print-interleaving wedge-class candidate.
