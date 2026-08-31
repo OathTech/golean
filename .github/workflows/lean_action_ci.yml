@@ -14,6 +14,14 @@ name: gate
 # request, so it defaults to the strongest form).
 # Local runs of scripts/ci give the same answer — CI is redundancy, not a
 # different check.
+#
+# HONEST SCOPE OF A PUSH/PR GREEN (assessment D-2, 2026-08-31): the
+# push/PR job runs the FAST gate with GOLEAN_ALLOW_NO_DIFF=1 — a fresh
+# runner has no recorded differential — so a green check on a push or PR
+# certifies build + unit tests + pins + static cross-checks ONLY, NOT
+# the corpus. The corpus certification cadence is the nightly --slow run
+# (plus any local `scripts/ci --diff` the committer ran, which CI cannot
+# see). Any external "CI-verified" claim must carry this caption.
 
 on:
   push:
@@ -31,6 +39,11 @@ jobs:
   gate:
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    # Explicit token scopes (added with the failure-notification step):
+    # contents:read for checkout, issues:write for the failure issue.
+    permissions:
+      contents: read
+      issues: write
     steps:
       - uses: actions/checkout@v5
         with:
@@ -220,6 +233,25 @@ jobs:
           else
             cap --diff
           fi
+
+      # FAILURE NOTIFICATION (fidelity work program 2026-08-31, item 4 /
+      # assessment D-2 KEEP-BROKEN): the workflow previously had NO
+      # failure path at all — a red nightly produced a red check on a
+      # scheduled run and told nobody, so "the corpus cadence is
+      # nightly" was a claim about when the check RUNS, not when anyone
+      # LEARNS. Minimal delivery mechanism: a scheduled/dispatch failure
+      # files a GitHub issue titled with the run URL. Push/PR failures
+      # are excluded deliberately (someone is watching those runs; the
+      # unwatched path is the scheduled one). Nothing fancier.
+      - name: File an issue on scheduled/dispatch gate failure
+        if: failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/${{ github.repository }}/issues" \
+            -f title="gate FAILED (${{ github.event_name }}): ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            -f body="The ${{ github.event_name }} gate run failed at commit ${{ github.sha }}. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            || echo "::warning::gate failed AND the failure issue could not be filed — the notification path itself is broken; check GITHUB_TOKEN issue permissions"
 
       # Was anything OOM-killed inside the gate's cgroup scope? A cap kill
       # would otherwise be indistinguishable from a semantic failure in
