@@ -72,7 +72,7 @@ re-homed in the future reasoning repo's gate.
 | pre-split step | disposition |
 |---|---|
 | 1b2 proofs-file audit coverage | park (audits `proofs/**`) |
-| 1c surface purity (Iris-free surface) | park (scans proofs surface modules) |
+| 1c surface purity (Iris-free surface) | park (scans proofs surface modules; its final GoLean/-side clause — no Iris imports in the core — is SUBSUMED on main: the root manifest has no packages, so any Iris import is an unknown-module error in the core build) |
 | 1c3 statement-TCB closure | park (Challenge's closure) |
 | 1c4 comparator landmark scope/staleness notes | park (judge apparatus) |
 | 1d import-direction lint | SPLIT: proof-layer clauses park; the engine-isolation clause (GoCore ↛ EnumDedup) is retained as its own step |
@@ -83,7 +83,7 @@ re-homed in the future reasoning repo's gate.
 | 3c proof-cost trend | park |
 | 3d storm lint | park |
 | 3v verdi compat gate | park (compat/ left) |
-| golden-lowering staleness (check-golden) | park (the pinned Lean terms are proofs-side; on main the differential is the frontend/decoder guard) |
+| golden-lowering staleness (check-golden) | SPLIT (corrected at the split audit, findings A1/A2/B1): the 29 program-term pins are proofs-side and park; but TWO sub-checks were semantics-only and are RESTORED on main as `scripts/check-frontend-pins` (ci step 2b) with baselines re-homed to `baselines/pins/` — (1) the hidden-dep-order deviation-observation pin (its differential row is permanently red, so only the pin catches a drift to a third realized init order) and (2) the raft twin-wire pin (the only frontend exercise over the real raftsubject/ packages). The 29 emitter↔decoder `.repr` pins are a RECORDED TRADE: behavior-visible drift in those programs is differential-covered; IR-granularity drift detection for them is deliberately dropped on main (it re-homes with the reasoning repo). |
 | 3a2 imported-goose R2-pin staleness | park (pins are proofs-side Program terms) |
 
 Retained steps, scope-narrowed where they scanned `proofs/`:
@@ -109,8 +109,14 @@ wp-lint-scope.txt, WpVeneerClosure.lean, render-gallery.
 
 A full KEEP/DELETE classification of `docs/` (439 files) was run
 per rule "serves the semantics/differential product vs. serves the
-proof/reasoning product": 280 kept, 159 deleted (all on the park
-branch; 439 total), with these [AGENT] rulings on the mixed cases:
+proof/reasoning product". Counts as of the audit fix round, verified
+against git: 439 docs at the base; 156 deleted (all on the park
+branch), 283 kept — the per-file manifest IS the git diff:
+`git diff --diff-filter=D --name-only 7440bf70..HEAD -- docs/`.
+(The first commit's message says "159 deleted / 280 kept": off
+because ARCHIVE.md was rewritten rather than deleted, and two
+goose-parity docs were restored at the audit — see below.)
+The [AGENT] rulings on the mixed cases:
 
 - The eight early two-track planning records (2026-07-18 master
   plan / prioritization / review-findings, directional-audit,
@@ -129,10 +135,23 @@ branch; 439 total), with these [AGENT] rulings on the mixed cases:
   (`tools/nativefrontend/stdlibshim.go`).
 - `ARCHIVE.md`: rewritten as a stub indexing the archive/park
   branches (main must be able to explain the refs it carries).
-- Provenance comments in surviving code/fixtures that cite parked
-  docs (e.g. fixture headers citing proof-arc charters,
-  `Ops.lean` citing the sem-adequacy arc) are LEFT AS-IS: they cite
-  history, and the park branch is that history's archive.
+- Provenance citations of parked docs in surviving files are LEFT
+  AS-IS where they cite history. Scale, measured at the audit
+  (C-12): ~49 surviving files cite ~37 deleted docs, and most of
+  the citing files are themselves docs — the convention covers
+  doc→doc citations too. Where a citation is LOAD-BEARING (a live
+  gate's authority, a kept charter's governing ruling, a coverage
+  row's evidence), the audit fix round appended an explicit
+  `(branch park/reasoning-2026-08-31)` pointer instead: BUGS.md
+  (2 sites), language-coverage-ledger.md, the ci-runner-death doc,
+  the three raft charters citing harness-style-scoping §8, and
+  architecture.md's two live-instruction lines.
+- Restored at the audit (A6): `2026-08-07_goose-parity-charter.md`
+  and `2026-08-07_goose-comparative-scoping.md` — the surviving
+  imported-goose verbatim gate's charter belongs beside the gate.
+- The seven kept docs that asserted the check-golden
+  deviation-observation pin now point at its restored home
+  (`scripts/check-frontend-pins`).
 
 ## What main is now
 
@@ -147,12 +166,22 @@ Two trusted things and their evidence:
 The verification product — statements, proofs, judge, veneer gates
 — is no longer main's claim. Main makes NO verification claims.
 
-## Deferred to the migration stage (all [USER] decisions)
+## Deferred to the migration stage
 
+[USER] decisions:
 - New repo name/location; dependency mechanism (recommended at the
   planning discussion: pinned git require on golean, local remote
   until push is authorized); history strategy (recommended: full
   clone so every cited SHA resolves in both repos).
-- The GoCore relational-module extraction slice (above).
-- `architecture.md`/`roadmap.md` semantics rewrite.
 - Whether the `raft-proof-campaign` branch lands or migrates raw.
+
+[AGENT]-owed work (scheduled, not user decisions):
+- The GoCore relational-module extraction slice (above; the
+  DEFERRAL past this slice is itself an [AGENT] judgment — the
+  modules are interleaved with the executable core and moving them
+  safely needs its own slice; the DESTINATION is [USER]-ruled).
+  Full dependency cluster per the split audit (B9): Machine,
+  MachineSound, Multi (imported by EnumSpec, which the executable
+  dedup engine needs), MultiSound, MultiWfSound, MultiStreams,
+  NPDRF, Race, plus the StateEqb/SyntaxEqb/MachineEqb seam.
+- `architecture.md`/`roadmap.md` semantics rewrite.

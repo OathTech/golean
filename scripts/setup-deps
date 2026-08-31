@@ -108,6 +108,20 @@ TABLE
 
 mkdir -p deps
 fail=0
+# --only names that match NO pins row fail closed (split audit A7,
+# 2026-08-31: after the Lake section left, `--only lake` silently
+# succeeded doing nothing — a no-op where a refusal is right).
+if [[ -n "$ONLY" ]]; then
+  IFS=',' read -ra _only_names <<< "$ONLY"
+  for _n in "${_only_names[@]}"; do
+    [[ -z "$_n" ]] && continue
+    if ! grep -qE "^${_n}[[:space:]]" <<< "$PINS"; then
+      echo "setup-deps: FAIL — --only name '$_n' matches no pins-table row (fail closed; the Lake section and reasoning-side rows left at the repo split — use the park branch's setup-deps for those)" >&2
+      fail=1
+    fi
+  done
+  [[ "$fail" -ne 0 ]] && { echo "setup-deps: INCOMPLETE — unknown --only name(s) above" >&2; exit 1; }
+fi
 while read -r name rev url tier; do
   [[ -z "$name" ]] && continue
   if [[ -n "$ONLY" ]]; then

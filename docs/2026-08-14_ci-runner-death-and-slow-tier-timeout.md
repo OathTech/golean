@@ -142,7 +142,7 @@ Nothing semantic moved; the certified set is intact.
 - Timeouts are now NAMED in the FAIL detail ("enumerator TIMED OUT after
   Ns"; other failures carry their exit code) — in ALL three enumerating
   lanes (membership, confluent, racy; the empty-detail nit was originally
-  recorded against the confluent lane in `docs/goose-parity-parked.md`,
+  recorded against the confluent lane in `docs/goose-parity-parked.md` (branch park/reasoning-2026-08-31),
   muxer/make-greeting, and is closed there too). The 08-13 flake was
   undiagnosable from CI logs partly because the generic "enumerator
   failed" detail with an empty stats file never said which guard fired.

@@ -113,7 +113,8 @@ statements):**
    Decided nonetheless, recorded for the arc-final audit: the case
    stays an EXPECTED RED (`FAIL/differential`) — the visible,
    version-tracked deviation record — and the realized order itself is
-   pinned mechanically (check-golden's deviation-observation pin,
+   pinned mechanically (the deviation-observation pin — check-golden
+   then, scripts/check-frontend-pins since the 2026-08-31 repo split —
    asserting our 4242 end-to-end), so a drift to any THIRD order, even
    a non-conforming one, is caught rather than reading as the same red.
    Matching gc would mean re-implementing cmd/compile's unspecified

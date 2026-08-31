@@ -1,5 +1,5 @@
-# Shared Lean-source scanning primitives — SOURCED by scripts/ci and
-# scripts/comparator-judge. Extracted 2026-08-02 (comparator-judge pre-merge
+# Shared Lean-source scanning primitives — SOURCED by scripts/ci (pre-split also by
+# scripts/comparator-judge, now on branch park/reasoning-2026-08-31). Extracted 2026-08-02 (comparator-judge pre-merge
 # audit): the judge wrapper had re-implemented the import matcher with the
 # exact fail-open '^import ' anchor scripts/ci was hardened away from — the
 # canonical definitions live HERE, once, so a gate cannot drift from them.
@@ -38,10 +38,7 @@ strip_lean_comments() {
   }'
 }
 
-# Canonical extraction of a file's import list: comment-stripped, tolerant
-# match, normalized to bare module names. THE only sanctioned way for a
-# gate to read Lean imports as build edges.
-lean_imports() {
-  strip_lean_comments < "$1" | grep -E "$IMPORT_RE" | sed -E "s/$IMPORT_RE//" \
-    | sed -E 's/[[:space:]]+$//'
-}
+# (lean_imports — the canonical import-list extractor — was removed at the
+# repo split, 2026-08-31: its consumers were the proofs-side closure walks,
+# all parked. It lives on with them at
+# park/reasoning-2026-08-31:scripts/lean-scan.sh.)

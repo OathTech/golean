@@ -6,7 +6,7 @@ verbatim, (§2) the repo ground truth it lands on, (§3–§4) the critique
 of the end state and the prompt, (§5) the prerequisite ladder that
 makes the challenge settable, and (§6) this arc's deliverable — the
 executable raft harness family (`raftharness/`). Context docs:
-`docs/2026-08-14_harness-style-scoping.md` §8 (the capstone assessment
+`docs/2026-08-14_harness-style-scoping.md` (branch park/reasoning-2026-08-31) §8 (the capstone assessment
 and the safety-first ruling), `docs/roadmap.md` (the 6-stage etcd
 ladder), `docs/2026-08-09_verdi-compat-layer.md`.
 

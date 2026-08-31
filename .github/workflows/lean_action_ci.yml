@@ -102,7 +102,7 @@ jobs:
             lake-${{ runner.os }}-
 
       # The imported-goose verbatim guard verifies landed corpus
-      # bytes and R2 pin terms against the PINNED goose checkout and fail
+      # bytes against the PINNED goose checkout and fails
       # CLOSED if it is absent — deps/ is gitignored, so the runner must
       # clone it (pre-merge audit round, 2026-08-08; rev = the pin in
       # scripts/import-goose and scripts/check-imported-goose).

@@ -556,7 +556,7 @@ bucket for it, which is exactly how 40 reds became invisible here.
 | `scoping/named-result-shadow/*` | 2 | BUG-068 — `docs/BUGS.md`, raft W4.3 |
 | `pointers/nil-array-ptr-slice-elided-high/*`, `pointers/nil-array-ptr-slice/slice-expr-nil` | 5 | BUG-066 — `docs/holes-arc-log.md`, `docs/BUGS.md` |
 | `pointers/zero-size-address/escaped-same` | 1 | **L:R15** — a latitude-pinned red (inventory R15), version-tracked, W3.2 re-envelope obligation |
-| `goroutines/worker-pool/sum` | 1 | `docs/goose-parity-parked.md`, `docs/w32-log.md` |
+| `goroutines/worker-pool/sum` | 1 | `docs/goose-parity-parked.md` (branch park/reasoning-2026-08-31), `docs/w32-log.md` |
 | **total** | **43** | |
 
 **What is still owed here (registered, not fixed).** These 43 are

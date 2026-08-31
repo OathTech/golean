@@ -1934,7 +1934,7 @@ implementation of a spec-mandated algorithm."
   execution for such a program** — and **no frontend check detects the shape**.
   A certificate must carry this as a side condition, not prove it away.
 - *Guardrails*: `init/hidden-dep-order` is an EXPECTED RED (`FAIL/differential`)
-  with its realized order mechanically pinned by `check-golden`, so a drift to a
+  with its realized order mechanically pinned by the deviation pin (`scripts/check-frontend-pins` since the 2026-08-31 repo split), so a drift to a
   third order is caught. etcd-raft has package-level vars and is exposed in
   principle.
 
@@ -2669,11 +2669,17 @@ shape with no optional keys and unusable for one with them — see §11.
 **Round-trip / schema agreement: essentially none.** The only format agreement
 is the literal string `"golean-native-v1"` (`emit.go:546` vs
 `NativeToIR.lean:1356`). No version negotiation, no shared schema, no
-decoder→encoder round-trip. Partial pins that do exist: `scripts/check-golden`
-re-emits 7 pinned programs and diffs the decoded `repr` against
-`baselines/golden/*.repr` (real emitter↔decoder drift detection, for those
-programs); `scripts/check-imported-pins` does the same for 11 imported-goose R2
-pins; three negative decode unit tests at `Tests/GoCoreEval.lean:2564-2579`.
+decoder→encoder round-trip. [Split note 2026-08-31: the check-golden `.repr`
+pins and the R2 pins named below left with the reasoning product (branch
+park/reasoning-2026-08-31) — a RECORDED TRADE (repo-split plan, gate table):
+on main only the three negative decode unit tests at
+`Tests/GoCoreEval.lean:2564-2579` and the two restored pins in
+`scripts/check-frontend-pins` remain; IR-granularity drift detection for the
+pinned example programs is deliberately dropped here.] Partial pins that
+existed pre-split: `scripts/check-golden` re-emitted 7 pinned programs and
+diffed the decoded `repr` against `baselines/golden/*.repr` (real
+emitter↔decoder drift detection, for those programs);
+`scripts/check-imported-pins` did the same for 11 imported-goose R2 pins.
 Everything else rests on the differential, which exercises only wires the
 emitter actually produces — structurally blind to "the emitter *could* produce
 X".

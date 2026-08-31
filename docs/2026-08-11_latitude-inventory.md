@@ -610,7 +610,8 @@ concurrent observer).
   our order do NOT transfer to gc executions of hidden-dep programs.
   The deferral is UNGUARDED — no frontend check detects the shape; the
   case is a standing differential red (queued: §7 item 3) with the
-  realized order mechanically pinned (check-golden
+  realized order mechanically pinned (scripts/check-frontend-pins
+  since the 2026-08-31 repo split; previously check-golden
   deviation-observation pin), so drift to a third order is caught.
 - PLAUSIBLE ENVELOPE: all conforming initialization orders (the
   lexical-reference partial order's linear extensions, with

@@ -19,7 +19,8 @@ hiddenX = 462). go/types' `InitOrder` — the frontend's realization,
 driving `$pkginit` — puts hiddenX FIRST (ab() sees 0/0 → hiddenX = 0 →
 readout 4242; the standing differential red on
 `init/hidden-dep-order`, whose realized order is mechanically pinned
-by a check-golden deviation-observation pin). Both orders conform: the
+by a deviation-observation pin — check-golden then,
+scripts/check-frontend-pins since the 2026-08-31 repo split). Both orders conform: the
 spec text at the shape says the order "is not specified".
 
 The probe program is a println-readout copy of the corpus case

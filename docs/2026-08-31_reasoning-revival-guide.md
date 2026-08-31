@@ -43,31 +43,47 @@ history strategy) are the user's.
     (that branch's `CLAUDE.md`), the era archive index (that
     branch's `docs/ARCHIVE.md`), the arc logs, the post-mortems.
 - **`raft-proof-campaign`** — the unmerged campaign decision log
-  (161 commits of [AGENT]/[USER] provenance trail; its worktree
-  was `.claude/worktrees/campaign`).
+  (206 commits not on main, 153 of them touching
+  `docs/raft-campaign-log.md` — the [AGENT]/[USER] provenance
+  trail; its worktree was `.claude/worktrees/campaign`).
 - **`archive/callspec-era`**, **`archive/fixed-trajectory-era`** —
   the two killed eras (cautionary reading; indexed by the park
   branch's ARCHIVE.md).
 
 ## State of the product at the park (do not re-derive this)
 
-Phase A of the corpus-first Iris plan was COMPLETE and merged:
-hygiene slice ✓, U0 (Lean 4.32.2 + iris-lean `e7a0a438` pin,
-validated by a full 2475-case differential; TotalWp inhabited) ✓,
-A-TRIP (the veneer tripwire, live in-build, self-validated on its
-first customer) ✓, G-BIND (the bind rule `wp_plug_bind`/
-`wp_bind_plug` via Löb induction) ✓, and corpus case C-05
-(callchain) closed THROUGH the WP calculus with its negative twin
-and first-order sentence exports. An outsider review judged the
-layer "genuine Iris" (minor revisions). The last comparator-judge
-landmark: 51 theorems, like-for-like.
+Phase A of the corpus-first Iris plan (hygiene slice H, U0 —
+Lean 4.32.2 + iris-lean `e7a0a438` pin, validated by a full
+2475-case differential, TotalWp inhabited — and A-TRIP, the veneer
+tripwire, live in-build) was COMPLETE and merged, PLUS the first
+phase-B structural unit: G-BIND (the bind rule `wp_plug_bind`/
+`wp_bind_plug` via Löb induction) with its gate-instance corpus
+case C-05 (callchain) closed THROUGH the WP calculus, negative twin
+and first-order sentence exports included. Honest note on A-TRIP:
+its first in-build enrollment FAILED on scope gaps (the outsider
+review's R2, "the A-TRIP scope cannot hold its first customer");
+the enrollment was rebuilt and the gate went green at `7440bf70` —
+the scope config is young, treat it with care. An outsider review
+judged the layer "genuine Iris" (MINOR REVISIONS; record:
+`raft-proof-campaign` branch, `docs/raft-campaign-log.md`, the
+"OUTSIDER LEGITIMACY REVIEW" entry — NOT on the park branch), with
+two residuals that must travel with the verdict: R1, the
+grandfathered `allStreamsOk` enumeration tier (~35 theorems, 4 of
+them designated/judge-shipped, labeled in docs rather than
+artifacts); and the economics finding — 892 proof lines per 32 Go
+lines with G-AUTO unbuilt ("Yes, if it survives its own
+economics"). The last comparator-judge landmark: 51 theorems,
+like-for-like.
 
-Next on the ladder (per the plan of record, in order): **G-REPR**
-(the big design unit — real per-field points-to, route (b) re-keyed
-heap, with a pre-registered sibling-field-write-under-frame
-discriminating test), G-CALLS, G-MAPITER, G-TOTAL's corpus rows,
-G-EXIT, G-SORT, the G-AUTO throughput probe; then corpus waves
-C-01..C-20; raft is the FINAL corpus member. Named owed row: a
+Next on the ladder (per the plan of record — a PARTIAL order:
+G-EXIT can land any time after U0, and the G-AUTO probe gates after
+the first two structural units): **G-REPR** (the big design unit —
+real per-field points-to, route (b) re-keyed heap, with a
+pre-registered sibling-field-write-under-frame discriminating
+test), G-CALLS, G-MAPITER, G-TOTAL's corpus rows, G-EXIT, G-SORT,
+the G-AUTO throughput probe; then phase C — the ~11 corpus members
+not already closed as gate instances (C-05 is done; several others
+close inside phase B); raft is the FINAL corpus member. Named owed row: a
 σ-conditioned `wp_plug_bind` variant (the `hdrain` premise is FALSE
 at drain sites with ≥2 live defers — trigger: G-MAPITER/G-CALLS or
 the first ≥2-defer corpus member).
@@ -93,15 +109,20 @@ the first ≥2-defer corpus member).
 5. Re-read that branch's `CLAUDE.md` before proving anything: the
    veneer ban (WP-stated theorems reach the machine only through
    Laws/lifting/adequacy — A-TRIP enforces it), the quantifier
-   audit, the bounded-techniques ban, and the [USER] hard-stop
-   design gates (N-2 pins, N-3 corpus, G-INV, N-5 designation,
-   N-6 "is the layer real?", N-7 charter) are all still the law of
-   that product.
+   audit, and the bounded-techniques ban are the law of that
+   product. Of its [USER] hard-stop design gates: N-2 (trust-tool
+   pins) and N-7 (charter amendment) are already DISCHARGED
+   (recorded in `park:proofs/lakefile.toml` and the park CLAUDE.md
+   respectively); still LIVE ahead of you: N-3 (corpus design
+   sign-off), N-4 (G-INV — the re-run W2.5 invariant gate), N-5
+   (designation acts), N-6 ("is the layer real?" at 2-3 corpus
+   closures).
 
 ## The migration, when it happens (all [USER] decisions)
 
 Sketch as discussed at the split (nothing pre-committed): a new
-repo (working name `golean-logic`) created as a FULL CLONE of this
+repo ([AGENT]-proposed working name `golean-logic` — the user has
+not chosen a name) created as a FULL CLONE of this
 one (so every SHA cited in the logs resolves there), stripped to
 the reasoning product, with `[[require]] GoLean` rewired from
 `path=".."` to a PINNED git require on this repo. Known technical

@@ -43,7 +43,7 @@ See `docs/semantics.md` for the current GoCore semantics design and
 
 ## Proof-layer map (layering doctrine, 2026-08-01)
 
-Doctrine of record: `docs/2026-08-01_tcb-and-layering-doctrine.md`. The
+Doctrine of record: `docs/2026-08-01_tcb-and-layering-doctrine.md` (branch park/reasoning-2026-08-31). The
 proof layer (`proofs/`) divides into strict layers; module names and
 contents in the general layers describe **Go constructs, never targets**.
 
@@ -82,9 +82,11 @@ base defs            GoLean.GoCore.* (Syntax/Value/Machine/MachineSound; Iris-fr
 reverse. No module outside `Specs/` may import `GoLeanProofs.Specs.*`
 (the root aggregator `GoLeanProofs.lean` and the gate `proofs/Audit.lean`
 are structurally exempt — they import everything by design), and
-`Tactics/` may not import GoCore at all. Mechanized in `scripts/ci`
-("import-direction lint"), fail-closed, currently with **zero
-exceptions**; laws live in `Laws/*` and witnesses live beside the pinned
+`Tactics/` may not import GoCore at all. Was mechanized in `scripts/ci`
+("import-direction lint"), fail-closed, with **zero exceptions** — the
+lint left with the proofs package at the 2026-08-31 repo split; it is
+live on the park branch's ci, not main's;
+laws live in `Laws/*` and witnesses live beside the pinned
 programs they instantiate (`Specs/*`). The statement TCB is gated
 separately: the surface-purity scan (Iris-free import chains for the
 statement-bearing modules) and the statement-TCB deletion-test gate in

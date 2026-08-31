@@ -11,7 +11,7 @@ this plan's end state is the push's *starting gun*.
 Companions: the P0 scoping doc (ibid.: the ladder, the critique, the
 §7 gap analysis, the §8 open decisions), `docs/roadmap.md` (the
 6-stage etcd ladder this plan absorbs as W4),
-`docs/2026-08-14_harness-style-scoping.md` §8 (capstone form rulings).
+`docs/2026-08-14_harness-style-scoping.md` §8 (capstone form rulings) (branch park/reasoning-2026-08-31).
 
 ## §0 The end state, exactly
 

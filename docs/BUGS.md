@@ -592,7 +592,7 @@ verbatim, gc realization version-tracked).
 - Fix: deferred during the buildout (charter), then user-authorized
   and landed in the check-in response round (2026-08-08) — see the
   Status line.
-- Triage record: docs/goose-parity-parked.md P4.
+- Triage record: docs/goose-parity-parked.md P4 (branch park/reasoning-2026-08-31).
 
 ## BUG-047 — frontend emits a call TWICE when the RHS of a single assign/define is a conversion of a call (silent divergence from Go)
 
@@ -657,7 +657,7 @@ verbatim, gc realization version-tracked).
 - Handling lapse, recorded: the class was triggered by a batch-6
   wrapper and went unparked while the batch log claimed "zero frontend
   refusals" — a charter MUST-PARK compliance miss, recorded plainly in
-  docs/goose-parity-buildout-log.md and ledger entry P3.
+  docs/goose-parity-buildout-log.md (branch park/reasoning-2026-08-31) and ledger entry P3.
 
 ## BUG-046 — BUG-045's chan-object rule is fail-open for SELECT SEND clauses: selectgo pass 1 DOES racereadpc the channel object per polled send case
 

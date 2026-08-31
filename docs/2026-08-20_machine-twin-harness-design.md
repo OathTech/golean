@@ -12,7 +12,7 @@ Companions to read first: `raftharness/README.md` + `harness.go` (the go-run
 family — the executable specification this twin must not rewrite),
 `docs/2026-08-15_raft-push-p0-scoping.md` §3/§7,
 `docs/2026-08-04_nondeterminism-doctrine.md` (choice-site discipline),
-`docs/2026-08-14_harness-style-scoping.md` §8 (capstone form).
+`docs/2026-08-14_harness-style-scoping.md` §8 (capstone form) (branch park/reasoning-2026-08-31).
 
 ## Rulings and corrections, 2026-08-20
 

@@ -26,9 +26,11 @@ later, in its own repo.
   `docs/2026-08-11_essence-of-go-doctrine.md`; latitude census:
   `docs/2026-08-11_latitude-inventory.md`; spec pins:
   `docs/spec-sources.md`.
-- The fixture corpus (`Corpus/`, incl. the imported-goose cases and
-  the raft subject/harness) is the test suite for the semantics —
-  every fixture is a differential test case first.
+- The fixture corpus (`Corpus/`, incl. the imported-goose cases)
+  plus the top-level raft subject/harness (`raftsubject/`,
+  `raftharness/`) is the test suite for the semantics — every
+  fixture is a differential test case first; the raft subject's
+  lowering is pinned by `scripts/check-frontend-pins`.
 - Known-owed (recorded in the split plan): the Prop-level relation
   (`GoLean/GoCore/Machine.lean` + soundness modules) is destined
   for the reasoning side but is interleaved with the executable
@@ -49,12 +51,14 @@ Everything else is untrusted tooling.
 
 ## Doctrine
 
-- **The semantic core is total.** No `partial`, no `sorry`, no
-  `native_decide`, no axioms in `GoLean/`; structural/well-founded
-  recursion so the proof direction stays reachable for the
-  downstream reasoning repo. (The in-build Audit sweep left with
-  the proofs package; the ci escape-hatch scans are the standing
-  check here.)
+- **The semantic core is total.** No `sorry`, no `native_decide`,
+  no axioms anywhere in `GoLean/`; no `partial` in the semantic
+  core `GoLean/GoCore/` — structural/well-founded recursion so the
+  proof direction stays reachable for the downstream reasoning
+  repo. (The wire decoder `NativeToIR.lean`, the CLI, and
+  `EnumDedup.lean` use `partial` for JSON/search descent; they are
+  outside the core. The in-build Audit sweep left with the proofs
+  package; the ci escape-hatch scans are the standing check here.)
 - **Fail closed, always.** Unknown wire node, unsupported feature,
   unclassified case, exhausted budget → an explicit refusal that
   NAMES ITS CAUSE at the point of failure, never a silent default,
@@ -104,8 +108,8 @@ Everything else is untrusted tooling.
   design gates are HARD STOPS**: a run that cannot stop EXITS
   rather than self-adjudicating the gate.
 - Reference checkouts in gitignored `deps/` (`scripts/setup-deps`;
-  goose is gate-required, the rest opt-in) — consult before
-  inventing.
+  default set goose/raft/go — goose and go are gate-required —
+  the rest opt-in by name) — consult before inventing.
 
 ## Pointers
 

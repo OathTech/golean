@@ -1,27 +1,94 @@
 # TODO
 
-Tactical backlog for the SEMANTICS product. The pre-split TODO (which
-interleaved reasoning-track items) is preserved on branch
-`park/reasoning-2026-08-31`; reasoning items live there and migrate
-with that product (the repo split, 2026-08-31 —
-`docs/2026-08-31_repo-split-plan.md`).
+Tactical backlog for the SEMANTICS product.
+
+**Where the pre-split TODO went ([AGENT] ruling, recorded here per the
+audit):** the pre-split TODO.md (907 lines) is preserved verbatim on
+branch `park/reasoning-2026-08-31`. Its sections were triaged, not
+just truncated: the sections with LIVE unchecked semantics items are
+carried forward below (Enumerator optimization verbatim; W3.2 items by
+headline with a park pointer); the reasoning-track items (iris-lean
+refresh, campaign follow-up routing, proof generation) migrate with
+that product; the remaining sections (work queue, epistemic hardening,
+directional audit follow-ups, priority sequence, Goose/Perennial
+matrix, differential execution, hardening phase, GoCore memory
+milestone, 2026-08-09 follow-ups) are completed/superseded records —
+consult them on the park branch, not here. If an item in those
+sections turns out to be live, carry it forward with a note.
 
 ## Owed from the split (tracked in the split plan)
 
-- GoCore relational-module extraction slice (Machine/MachineSound/
-  Multi-soundness/NPDRF/Race → the reasoning side; needs a design
-  slice + full --diff revalidation). [USER]-ruled destination.
+- GoCore relational-module extraction slice → the reasoning side
+  ([USER]-ruled destination; [AGENT]-deferred past this slice because
+  the modules are interleaved with the executable core). The full
+  dependency cluster, enumerated at the audit: `Machine.lean`,
+  `MachineSound.lean`, `Multi.lean` (the concurrent relation itself —
+  imported by `EnumSpec.lean`, which the executable dedup engine
+  needs), `MultiSound.lean`, `MultiWfSound.lean`, `MultiStreams.lean`,
+  `NPDRF.lean`, `Race.lean`, plus the `StateEqb`/`SyntaxEqb`/
+  `MachineEqb` seam. Needs a design slice + full `--diff`
+  revalidation.
+- `tools/raftsubject/twin-chdriver.go` + `twin-chdriver-main.go`:
+  their Lean-side consumer (`TwinProgram.lean`) is parked; on main
+  they remain exercised only by the twin-wire pin
+  (`scripts/check-frontend-pins`). Revisit ownership at migration.
 - `docs/architecture.md` and `docs/roadmap.md` semantics-scoped
   rewrites (currently carrying split banners).
-- Migration stage (all [USER] decisions): new repo
-  name/location/dependency mechanism/history strategy;
-  `raft-proof-campaign` branch disposition.
+- Migration stage ([USER] decisions): new repo name/location/
+  dependency mechanism/history strategy; `raft-proof-campaign`
+  branch disposition.
+
+## Enumerator optimization layer (deferred backlog, 2026-08-07)
+
+Record only — no implementation scheduled. Design of record:
+`docs/2026-08-04_membership-lane-design.md`, section "Deferred: the
+enumerator OPTIMIZATION layer (2026-08-07)" (provenance: user
+discussion 2026-08-07). Layers, each behind the BOTH-EXPLORERS
+adoption gate (optimized vs reference explorer, identical observation
+sets on every tractable instance) and each with a named soundness
+obligation:
+
+- [ ] Verified POR — race-detector footprints as the independence
+      oracle; NPDRF mover lemmas as its eventual proof.
+- [ ] Symmetry reduction — decidable Config equality; the
+      id-relabeling lemma is the soundness obligation.
+- [ ] Preemption-bound-as-metadata — certificates must NAME their
+      bound (bounded tree, never silently the full one).
+- [ ] State memoization on canonicalized MultiConfig — requires the
+      decidable-equality/canonicalization layer first.
+- [ ] PCT / portfolio sampling beyond enumeration scale — sample
+      source only, never certification.
+- [ ] Map-range live-pick walk cost (BUG-005 (L), audit fix round
+      2026-08-19 — a PERF item, not semantics): every `mapIterNext`
+      pick recomputes `mapIterCandidates` = live entries minus the
+      produced-key set (a linear scan filtered by a linear membership
+      walk), so a full mutation-free range is ~O(n²) picks and the
+      ∀-stream confluence certifier multiplies that again — ~cubic
+      pick walks at scale. Invisible on today's corpus sizes; will
+      bite on raft-scale maps and enumerator workloads. Candidate:
+      an indexed produced-set (or incremental candidates) behind the
+      BOTH-EXPLORERS adoption gate above, with the pick-coherence
+      relation (`MapMem`) as the soundness obligation. Semantics is
+      NOT in question — the fuel-out on self-inserting loops is the
+      ruled behavior, not this item.
+
+## W3.2 re-envelope arc backlog (2026-08-20, charter DRAFT rev 1)
+
+Semantics-side items carried by headline; full item text on the park
+branch's TODO.md §"W3.2 re-envelope arc backlog". (The iris-lean
+refresh and campaign-routing items from that section are
+reasoning-side and migrate with that product.)
+
+- [ ] Trace-coverage push — PARKED POST-CAMPAIGN ([USER], 2026-08-21).
+- [ ] Slice-5 probe: print-interleaving wedge-class candidate.
+- [ ] RULE the eight Q-rows (charter §Slice 2 — memos written,
+      rulings owed).
+- [ ] RULE what `nonterm=` means under `engine=dedup`.
+- [ ] Perf: map-iteration pick walks (post-BUG-005 (L) surgery; see
+      the enumerator backlog's last item).
 
 ## Standing semantics backlog
 
-- The W3.2 concurrency re-envelope line (see `docs/w32-log.md` and
-  the boundary set / POR design notes) — sequential frontier is
-  SUPPORT-complete; concurrency rows are design-gated.
 - Coverage ledgers: consume-on-demand growth per
   `docs/coverage-suite-structure.md`; BUGS.md triage per
   `docs/bugfix-arc-log.md`.

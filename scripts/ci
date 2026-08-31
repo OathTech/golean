@@ -102,7 +102,9 @@ bad()  { RESULTS+=("  FAIL $1"); fail=1; }
 #     SUM OF PER-THREAD PEAKS. On this 32-core box an unbounded build therefore
 #     multiplies the heaviest module's peak by the number of live threads, which
 #     is how the full proofs build OOM-died inside a 48G cap while completing at
-#     64G (charter measurement, docs/2026-08-14_examples-phase2-arc-charter.md).
+#     64G (charter measurement, docs/2026-08-14_examples-phase2-arc-charter.md —
+#     the measurement record is on branch park/reasoning-2026-08-31; the 8G/thread
+#     constant below derives from it).
 #     Lake 5.0 has no -j/--jobs flag; this env var is the only knob.
 #
 #     THIS IS A PERFORMANCE KNOB, NOT A CORRECTNESS GATE: it changes how fast
@@ -192,7 +194,8 @@ step "escape-hatch preflight (sorry / admit / native_decide / axiom in the seman
 # Match the tokens as CODE, then drop prose: line-comments (`--`), docstring
 # lines, and backtick-quoted mentions (`sorry`/`native_decide`/…).
 # Depth-proof file list via find (no globstar dependence); .lake excluded. Any
-# NEW .lean file under GoLean/ is scanned automatically. Line
+# NEW .lean file under GoLean/ (plus the root GoLean.lean/Main.lean —
+# split audit A8) is scanned automatically. Line
 # comments are STRIPPED before matching (tamper audit F1: a trailing `-- WIP`
 # comment previously exempted the whole line, hiding real code); the token set
 # includes sorryAx/ofReduceBool (the axioms behind sorry/native_decide, which
@@ -206,7 +209,7 @@ step "escape-hatch preflight (sorry / admit / native_decide / axiom in the seman
 # an UNTERMINATED `/-` is still excluded (the token may sit inside a
 # multiline comment). Launch audit D6-F2 closed the `/-` sibling of
 # the earlier `--` tamper hole.
-hatch="$(find GoLean -name '*.lean' -not -path '*/.lake/*' -print0 2>/dev/null \
+hatch="$(find GoLean GoLean.lean Main.lean -name '*.lean' -not -path '*/.lake/*' -print0 2>/dev/null \
          | xargs -0 grep -nE 'sorry|admit|native_decide|ofReduceBool|^[[:space:]]*axiom ' 2>/dev/null \
          | sed -E 's/--.*$//; s@/-([^-]|-+[^/-])*-+/@@g' \
          | grep -E 'sorry|\badmit\b|native_decide|ofReduceBool|^[^:]*:[0-9]*:[[:space:]]*axiom ' \
@@ -251,7 +254,7 @@ while IFS= read -r -d '' mh_f; do
   if [ -n "$mh_hits" ]; then
     meta_hatch="${meta_hatch}$(printf '%s\n' "$mh_hits" | sed "s|^|${mh_f}:|")"$'\n'
   fi
-done < <(find GoLean -name '*.lean' -not -path '*/.lake/*' -print0 2>/dev/null)
+done < <(find GoLean GoLean.lean Main.lean -name '*.lean' -not -path '*/.lake/*' -print0 2>/dev/null)
 meta_hatch="${meta_hatch%$'\n'}"
 if [ -n "$meta_hatch" ]; then
   echo "$meta_hatch"
@@ -277,7 +280,7 @@ while IFS= read -r -d '' nh_f; do
   if [ -n "$nh_hits" ]; then
     nat_hatch="${nat_hatch}$(printf '%s\n' "$nh_hits" | sed "s|^|${nh_f}:|")"$'\n'
   fi
-done < <(find GoLean -name '*.lean' -not -path '*/.lake/*' -print0 2>/dev/null)
+done < <(find GoLean GoLean.lean Main.lean -name '*.lean' -not -path '*/.lake/*' -print0 2>/dev/null)
 nat_hatch="${nat_hatch%$'\n'}"
 if [ -n "$nat_hatch" ]; then
   echo "$nat_hatch"
@@ -387,7 +390,9 @@ step "core build (lake build; must be WARNING-free — GoLean/ module warnings
 core_out="$(lake build 2>&1)"
 core_rc=$?
 echo "$core_out" | tail -3
-core_warns="$(echo "$core_out" | grep -E '^warning: GoLean/' || true)"
+# Root modules included in the warning watch (split audit A8, 2026-08-31):
+# GoLean.lean/Main.lean warnings replay into the runner channel the same way.
+core_warns="$(echo "$core_out" | grep -E '^warning: (GoLean/|GoLean\.lean|Main\.lean)' || true)"
 if [ $core_rc -ne 0 ]; then
   bad "core build"
 elif [ -n "$core_warns" ]; then
@@ -395,6 +400,23 @@ elif [ -n "$core_warns" ]; then
   bad "core build has GoLean/ warnings (they corrupt the runner JSON channel)"
 else
   ok "core build (warning-free)"
+fi
+
+# 2b. Frontend pins (restored at the split audit, findings A1/A2 + B1/B8
+# — docs/2026-08-31_repo-split-plan.md fix round): the two SEMANTICS
+# pins that lived inside the parked check-golden. (1) the
+# hidden-dep-order deviation-observation pin — the differential row is
+# permanently red ("≠ gc"), so ONLY this pin catches a drift to a third
+# realized init order; (2) the raft twin-wire pin — the only gate
+# exercising the frontend over the real raftsubject/ packages. Ordered
+# after the core build (both need the golean binary; their internal
+# lake build is then a no-op). Fail closed, byte-exact, re-pin only
+# deliberately with a written reason.
+step "frontend pins (scripts/check-frontend-pins — deviation observation + raft twin wire)"
+if ./scripts/check-frontend-pins; then
+  ok "frontend pins (realized init-order deviation + twin wire = pinned bytes)"
+else
+  bad "frontend pins DRIFTED or broken (see above — re-pin deliberately with the reason)"
 fi
 
 
