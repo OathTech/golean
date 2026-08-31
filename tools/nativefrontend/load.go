@@ -207,6 +207,11 @@ func (l *loader) parseLocal(path, dir string) (*sourcePkg, error) {
 			unit.files = append(unit.files, pkg.Files[p])
 		}
 	}
+	// Same build-constraint refusal the main package gets
+	// (langversion.go): local packages are the same modeled fragment.
+	if err := refuseBuildConstrainedFiles(l.fset, unit.files); err != nil {
+		return nil, err
+	}
 	// E5 stdlib shims are PER UNIT (raft W4.0): a local package calling
 	// an allowlisted stdlib function gets its own injected shim
 	// declarations, before ITS type-check — exactly like the main
@@ -641,11 +646,18 @@ func loadProgram(fset *token.FileSet, rootDir string, mainFiles []*ast.File) ([]
 	}
 
 	// Type-check in dependency order (the same order works: every
-	// unit's imports precede it).
+	// unit's imports precede it). GoVersion is the PINNED language
+	// version (langversion.go): unset, go/types disables version
+	// checking entirely — the ambient-toolchain fail-open p2 claim 3
+	// measured.
+	lang, err := pinnedLangVersion()
+	if err != nil {
+		return nil, err
+	}
 	imp := &chainedImporter{locals: l.locals, stdlib: l.stdlib}
 	for _, unit := range order {
 		unit.info = newTypesInfo()
-		conf := types.Config{Importer: imp}
+		conf := types.Config{Importer: imp, GoVersion: lang}
 		pkg, err := conf.Check(unit.path, fset, unit.files, unit.info)
 		if err != nil {
 			return nil, fmt.Errorf("type-check: %w", err)

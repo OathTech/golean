@@ -94,6 +94,13 @@ func run() error {
 		}
 	}
 
+	// Build-constrained files refuse before anything else sees them
+	// (langversion.go — file-set selection is outside the modeled
+	// fragment; previously such files were silently included).
+	if err := refuseBuildConstrainedFiles(fset, files); err != nil {
+		return err
+	}
+
 	// E5 stdlib shims (stdlibshim.go): when an allowlisted stdlib
 	// selector call is present, inject the shim declarations as a
 	// synthetic file BEFORE type-check, so the shim type-checks and

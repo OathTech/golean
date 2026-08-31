@@ -276,7 +276,14 @@ func lowerShadowModel(model *importedTypeModel) ([]any, []any, error) {
 		return nil, nil, fmt.Errorf("internal: imported-type model %s failed to parse: %w", model.pkgPath, err)
 	}
 	info := newTypesInfo()
-	conf := types.Config{Importer: nil}
+	// The shadow models are checked at the same pinned language
+	// version as subject code (langversion.go; unset would disable
+	// version checking here too).
+	lang, err := pinnedLangVersion()
+	if err != nil {
+		return nil, nil, err
+	}
+	conf := types.Config{Importer: nil, GoVersion: lang}
 	pkg, err := conf.Check(model.pkgPath, fset, []*ast.File{file}, info)
 	if err != nil {
 		return nil, nil, fmt.Errorf("internal: imported-type model %s failed to type-check: %w", model.pkgPath, err)
