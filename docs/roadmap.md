@@ -1,3 +1,9 @@
+> **SPLIT BANNER (2026-08-31):** this document predates the repo split
+> (`docs/2026-08-31_repo-split-plan.md`) and still describes the
+> whole pre-split pipeline including the proof/reasoning layers, which
+> now live on branch `park/reasoning-2026-08-31`. Read it for the
+> semantics-side content; a semantics-scoped rewrite is owed (TODO.md).
+
 # Roadmap
 
 > **STALE — pending refresh (flagged 2026-07-19 by the pre-merge audit, D4-13).**

@@ -2,8 +2,9 @@ name: gate
 
 # The non-bypassable backstop for scripts/ci (the one-command validation gate:
 # escape-hatch preflight, bug-index + feature-coverage cross-checks, core build,
-# proofs build incl. the in-build Audit axiom/non-vacuity sweep, eval tests,
-# baseline diff + re-pin guard). Push/PR runs the fast gate; the full
+# eval tests, baseline diff + re-pin guard; the proofs-side steps left with
+# the proofs package at the repo split, 2026-08-31 — branch
+# park/reasoning-2026-08-31). Push/PR runs the fast gate; the full
 # differential corpus (`go run` per case) runs nightly and on manual dispatch.
 # The NIGHTLY runs `--slow` (tiered checking, 2026-08-08): tier=slow rows are
 # fully RE-CERTIFIED against their tracked certified-set records — this is the
@@ -59,11 +60,10 @@ jobs:
       # its own entry; the layered restore-keys then fall back to the
       # newest entry sharing the toolchain+manifest prefix, which is the
       # incremental-reuse case (Lake re-elaborates exactly the modules
-      # whose hashes moved). compat/verdi/.lake joins the cached paths
-      # because the gate builds that package on every run.
+      # whose hashes moved).
       #
       # Cost, recorded honestly: a fresh entry per source state churns
-      # the repo's 10 GB cache budget (proofs/.lake with iris is GBs), so
+      # the repo's 10 GB cache budget, so
       # GitHub evicts LRU and only the last few states stay warm. That is
       # the intended trade — a warm recent state beats a frozen old one.
       # HIT RATE IS NOT MEASURED HERE: it can only be observed on a real
@@ -85,8 +85,6 @@ jobs:
           path: |
             ~/.elan
             .lake
-            proofs/.lake
-            compat/verdi/.lake
           # The -r<run>.<attempt> suffix (audit F3, 2026-08-15) makes every
           # SAVED key unique: with a plain source-hash key, a retry of the
           # same commit exact-hits the failed attempt's entry and the
@@ -97,13 +95,13 @@ jobs:
           # newest attempt of the same source state, so each retry resumes
           # where the previous one died. Churn cost: same trade as already
           # recorded above, extended to re-runs; LRU eviction absorbs it.
-          key: lake-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'proofs/lean-toolchain', 'proofs/lake-manifest.json') }}-${{ hashFiles('GoLean/**/*.lean', 'proofs/**/*.lean', 'compat/verdi/**/*.lean') }}-r${{ github.run_id }}.${{ github.run_attempt }}
+          key: lake-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-${{ hashFiles('GoLean/**/*.lean', 'Tests/**/*.lean') }}-r${{ github.run_id }}.${{ github.run_attempt }}
           restore-keys: |
-            lake-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'proofs/lean-toolchain', 'proofs/lake-manifest.json') }}-${{ hashFiles('GoLean/**/*.lean', 'proofs/**/*.lean', 'compat/verdi/**/*.lean') }}-
-            lake-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'proofs/lean-toolchain', 'proofs/lake-manifest.json') }}-
+            lake-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-${{ hashFiles('GoLean/**/*.lean', 'Tests/**/*.lean') }}-
+            lake-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-
             lake-${{ runner.os }}-
 
-      # The imported-goose guards (ci steps 1c3-1c5) verify landed corpus
+      # The imported-goose verbatim guard verifies landed corpus
       # bytes and R2 pin terms against the PINNED goose checkout and fail
       # CLOSED if it is absent — deps/ is gitignored, so the runner must
       # clone it (pre-merge audit round, 2026-08-08; rev = the pin in
@@ -252,6 +250,4 @@ jobs:
           path: |
             ~/.elan
             .lake
-            proofs/.lake
-            compat/verdi/.lake
           key: ${{ steps.lake-cache.outputs.cache-primary-key }}

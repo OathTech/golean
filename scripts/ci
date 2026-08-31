@@ -4,9 +4,9 @@
 # docs/2026-07-19_pipeline-error-resistance.md). Runs ALL steps even if one
 # fails, then reports a summary and exits non-zero on any failure.
 #
-#   scripts/ci          fast gate: escape-hatch preflight, builds (incl. the
-#                       in-build axiom/non-vacuity Audit gate), eval tests, and
-#                       a baseline diff of the LAST recorded differential run.
+#   scripts/ci          fast gate: escape-hatch preflight, core build, eval
+#                       tests, and a baseline diff of the LAST recorded
+#                       differential run.
 #   scripts/ci --diff   also re-runs the full native differential corpus first
 #                       (slow: `go run` per case), then diffs it. Do this when
 #                       you touched runtime code (frontend / interpreter / Ops).
@@ -22,21 +22,15 @@
 # it does not re-run Go. For runtime changes, use --diff (or run
 # scripts/diff-one <ids> for a focused slice) so the baseline reflects reality.
 #
-# COMPARATOR LANDMARK NOTES (added 2026-08-22, step 1c4 — report-only).
-# The gate does NOT run `scripts/comparator-judge`: landmark cadence is
-# user-invoked by charter and the judge cannot even run from a lane
-# worktree. What the gate now does is tell you when one is OWED, because
-# the trigger that was supposed to — "did a designated headline theorem
-# STATEMENT change?" — is too narrow by construction. A designated
-# statement's meaning lives in its definitional closure, so a GoCore
-# change under it moves what the statement SAYS while its text sits
-# still; 371 commits and a statement-TCB move went by unnoticed exactly
-# that way (launch-audit dossier, link 3 / K-4). Step 1c4 therefore
-# prints two notes against the last `LANDMARK-RUN:` marker in
-# docs/2026-08-02_comparator-judge-sprint.md: SCOPE (a file in
-# Challenge's trusted closure changed since it) and STALENESS (more
-# than 100 commits since it). Both are notes. Neither ever fails the
-# gate — see the reasoning at 1c4.
+# REPO SPLIT (2026-08-31, [USER]-directed): this gate covers the SEMANTICS
+# product only — the executable GoCore interpreter, the native frontend, the
+# Go fixture corpus, and the differential apparatus. The reasoning layer
+# (proofs/, compat/, the Audit/Challenge/Solution + comparator-judge
+# apparatus, the A-TRIP veneer gates, check-golden and the R2 pin guards)
+# left main with its package; it is preserved whole on branch
+# park/reasoning-2026-08-31 and its gate steps went with it — see
+# docs/2026-08-31_repo-split-plan.md for the step-by-step inventory (every
+# removed step is accounted for there; none was silently dropped).
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -186,34 +180,33 @@ else
   bad "baselines/go-oracle-pin missing — the oracle pin is unverifiable"
 fi
 
-# 1. Escape-hatch preflight (cheap, no build). The authoritative axiom check is
-#    the in-build Audit gate (step 3); this catches obvious holes at edit time.
-step "escape-hatch preflight (sorry / admit / native_decide / axiom in proof-facing code)"
+# 1. Escape-hatch preflight (cheap, no build). GoCore is proof-facing code —
+#    the charter's totality rule (no sorry/native_decide/axiom in the semantic
+#    core) binds it regardless of where the proofs live.
+#    SCOPE NARROWED AT THE REPO SPLIT (2026-08-31): GoLean/ only — proofs/
+#    left with its package (the in-build Audit gate, formerly the
+#    authoritative sweep behind this preflight, went with it; for the
+#    semantics core this text scan is now the standing check, and the
+#    charter's ban is the rule it polices).
+step "escape-hatch preflight (sorry / admit / native_decide / axiom in the semantic core)"
 # Match the tokens as CODE, then drop prose: line-comments (`--`), docstring
-# lines, and backtick-quoted mentions (`sorry`/`native_decide`/…). The in-build
-# Audit gate (step 3) is authoritative; this is the cheap early-warning.
+# lines, and backtick-quoted mentions (`sorry`/`native_decide`/…).
 # Depth-proof file list via find (no globstar dependence); .lake excluded. Any
-# NEW .lean file under GoLean/ or proofs/ is scanned automatically. Line
+# NEW .lean file under GoLean/ is scanned automatically. Line
 # comments are STRIPPED before matching (tamper audit F1: a trailing `-- WIP`
 # comment previously exempted the whole line, hiding real code); the token set
 # includes sorryAx/ofReduceBool (the axioms behind sorry/native_decide, which
 # dodge the surface-syntax tokens). Docstring prose is tolerated only via
-# backticked mentions. The in-build Audit sweep remains authoritative.
-# proofs/Challenge.lean is exempt BY FUNCTION (comparator-judge sprint,
-# 2026-08-02): it is the Comparator judge's sorry-bodied challenge — the
-# sorries ARE the artifact. It is outside the audited import closure (see
-# the standalone allowlist below) and Comparator re-elaborates it itself;
-# nothing else in proofs/ may carry a sorry.
-# Both scan roots must exist — an absent dir made the scan vacuously
+# backticked mentions.
+# The scan root must exist — an absent dir made the scan vacuously
 # green (launch audit D6-F2, probed).
-[ -d GoLean ] && [ -d proofs ] || bad "escape-hatch preflight: GoLean/ or proofs/ missing — scan would be vacuous"
+[ -d GoLean ] || bad "escape-hatch preflight: GoLean/ missing — scan would be vacuous"
 # Complete inline block comments are STRIPPED (like `--` comments)
 # before matching, so `sorry /- TODO -/` is caught; only a line with
 # an UNTERMINATED `/-` is still excluded (the token may sit inside a
 # multiline comment). Launch audit D6-F2 closed the `/-` sibling of
 # the earlier `--` tamper hole.
-hatch="$(find GoLean proofs -name '*.lean' -not -path '*/.lake/*' \
-         -not -path 'proofs/Challenge.lean' -print0 2>/dev/null \
+hatch="$(find GoLean -name '*.lean' -not -path '*/.lake/*' -print0 2>/dev/null \
          | xargs -0 grep -nE 'sorry|admit|native_decide|ofReduceBool|^[[:space:]]*axiom ' 2>/dev/null \
          | sed -E 's/--.*$//; s@/-([^-]|-+[^/-])*-+/@@g' \
          | grep -E 'sorry|\badmit\b|native_decide|ofReduceBool|^[^:]*:[0-9]*:[[:space:]]*axiom ' \
@@ -221,7 +214,7 @@ hatch="$(find GoLean proofs -name '*.lean' -not -path '*/.lake/*' \
          || true)"
 if [ -n "$hatch" ]; then
   echo "$hatch"
-  bad "escape-hatch preflight — review the lines above (the in-build Audit gate is authoritative)"
+  bad "escape-hatch preflight — review the lines above (charter: the semantic core is total)"
 else
   echo "  none found"
   ok "escape-hatch preflight"
@@ -237,17 +230,12 @@ fi
 #      matching bare tokens would be noise. Speedbump standard: any NEW hit
 #      fails loud and is either removed or added here with a reason.
 step "meta-layer escape hatches (unsafe / opaque / @[implemented_by] outside the allowlist)"
-# THE ALLOWLIST — one entry, one reason, both load-bearing:
-#   proofs/GoLeanProofs/EntryEq.lean — the `derive_entry_eq` macro's
-#   compiler-evaluation plumbing (`Meta.evalExpr` reached through
-#   `@[implemented_by]` + `opaque`, the standard Lean meta idiom). META-LAYER
-#   ONLY: these four names shape SYNTAX that the elaborator and the kernel then
-#   check like any hand-written declaration — a wrong evaluation can at worst
-#   emit a theorem whose `rfl` is then REFUSED. The 2026-08-15 pre-merge audit
-#   verified they sit outside every proof closure (the emitted theorems'
-#   `#print axioms` is the classical trio, no `Lean.ofReduceBool`-class axiom
-#   and no meta name).
-META_HATCH_ALLOW='proofs/GoLeanProofs/EntryEq.lean'
+# THE ALLOWLIST — EMPTY since the repo split (2026-08-31): the sole entry
+# (proofs/GoLeanProofs/EntryEq.lean, the `derive_entry_eq` macro's
+# compiler-evaluation plumbing) left with the proofs package. GoLean/ has
+# no allowlisted meta-layer hatches; any NEW hit fails loud and is either
+# removed or allowlisted here with a reason.
+META_HATCH_ALLOW=''
 # Widened + comment-stripped (launch audit D6-F4, probed): the old
 # line-anchored patterns missed `@[simp, implemented_by …]`, split-line
 # `unsafe`⏎`def`, and `opaque` with the signature on the next line —
@@ -263,32 +251,25 @@ while IFS= read -r -d '' mh_f; do
   if [ -n "$mh_hits" ]; then
     meta_hatch="${meta_hatch}$(printf '%s\n' "$mh_hits" | sed "s|^|${mh_f}:|")"$'\n'
   fi
-done < <(find GoLean proofs -name '*.lean' -not -path '*/.lake/*' \
-         -not -path 'proofs/Challenge.lean' -print0 2>/dev/null)
+done < <(find GoLean -name '*.lean' -not -path '*/.lake/*' -print0 2>/dev/null)
 meta_hatch="${meta_hatch%$'\n'}"
 if [ -n "$meta_hatch" ]; then
   echo "$meta_hatch"
   bad "meta-layer escape hatches outside the allowlist — remove them, or allowlist with a reason"
 else
-  echo "  none outside ${META_HATCH_ALLOW}"
-  ok "meta-layer escape hatches (allowlist: ${META_HATCH_ALLOW})"
+  echo "  none found"
+  ok "meta-layer escape hatches (allowlist empty since the repo split)"
 fi
 
-# 1a3. ESCAPE-HATCH ADDENDUM — native decision config/flag spellings.
-# ════════════════════════════════════════════════════════════════════════
-# [TRUST-ADJACENT DELTA — A-TRIP fix round F4, 2026-08-28] GATE ADDITION,
-# strengthens-only. Step 1's token set predates this unit and is NOT
-# modified; this ADDS the spellings it cannot see: `decide +native` and
-# `decide (config := … native := true …)` reach the same ofReduceBool
+# 1a3. ESCAPE-HATCH ADDENDUM — native decision config/flag spellings
+# (origin: A-TRIP fix round F4, 2026-08-28; scope narrowed to GoLean/ at
+# the repo split, 2026-08-31). Step 1's token set predates this unit and
+# is NOT modified; this ADDS the spellings it cannot see: `decide +native`
+# and `decide (config := … native := true …)` reach the same ofReduceBool
 # axiom as `native_decide` without the surface token. Scope: same file
 # set and comment-stripping as the meta-hatch scan; single-line grep
-# (a line-broken config object is caught by the authoritative in-build
-# Audit axiom sweep via ofReduceBool, and — in WP scope — by
-# scripts/wp-veneer-lint's multi-line matcher). Kernel spellings are NOT
-# banned globally (decide +kernel is the judge's legitimate idiom in
-# Solution/GoldenForkJoin); the WP-tier kernel ban lives in the veneer
-# lint's scope.
-# ════════════════════════════════════════════════════════════════════════
+# (a line-broken config object evades it — recorded limit; the in-build
+# Audit axiom sweep that backstopped this left with the proofs package).
 step "escape-hatch addendum (decide +native / config-syntax native spellings — A-TRIP F4)"
 nat_hatch=""
 while IFS= read -r -d '' nh_f; do
@@ -296,8 +277,7 @@ while IFS= read -r -d '' nh_f; do
   if [ -n "$nh_hits" ]; then
     nat_hatch="${nat_hatch}$(printf '%s\n' "$nh_hits" | sed "s|^|${nh_f}:|")"$'\n'
   fi
-done < <(find GoLean proofs -name '*.lean' -not -path '*/.lake/*' \
-         -not -path 'proofs/Challenge.lean' -print0 2>/dev/null)
+done < <(find GoLean -name '*.lean' -not -path '*/.lake/*' -print0 2>/dev/null)
 nat_hatch="${nat_hatch%$'\n'}"
 if [ -n "$nat_hatch" ]; then
   echo "$nat_hatch"
@@ -307,68 +287,6 @@ else
   ok "escape-hatch addendum (no decide +native / native-config spellings)"
 fi
 
-# 1b2. Proofs-file audit coverage (tamper audit F2): a NEW proofs/*.lean that
-# nothing imports is never built, so the in-build sweep never sees it. Every
-# proofs/*.lean must be imported into the audited build (reachable from
-# Audit.lean, whose root import is GoLeanProofs) or on the explicit standalone
-# allowlist below (deliberate, documented exceptions only).
-step "proofs-file audit coverage (every proofs/**/*.lean in the audited import closure or allowlisted)"
-STANDALONE_PROOFS="SliceSpike Challenge Solution"
-# SliceSpike: superseded spike kept as record (structure audit P1-3: an
-#   allowlist entry must name an existing, documented file — no
-#   pre-authorized holes).
-# Challenge, Solution: the Comparator judge pair (comparator-judge sprint,
-#   2026-08-02) — deliberately OUTSIDE the audited build: Challenge is
-#   sorry-bodied by function and must never enter the Audit environment;
-#   Solution's axiom discipline is checked by the judge itself
-#   (permitted_axioms + kernel replay, scripts/comparator-judge), which is
-#   the stronger, independent check. The escape-hatch preflight still scans
-#   Solution.lean text.
-# Transitive import closure from the build roots (Audit, GoLeanProofs), over
-# ALL .lean files under proofs/ including subdirectories — module names derived
-# from paths (proofs/GoLeanProofs/Foo.lean -> GoLeanProofs.Foo). A module
-# outside the closure is never built, so the in-build sweep never sees it
-# (tamper-audit F2 class; subdir handling required by the module-split design,
-# docs/2026-07-20_proofs-structure-backlog.md).
-#
-# W0 RESET (2026-08-27, kill-list K-D): the A4-U25 two-closure form
-# (default + corpus closures, deferred-sweep note) is REVERTED to the
-# single default closure + the standalone allowlist — the corpus targets
-# are deleted with the literal-mode corpus they aggregated (archived at
-# archive/fixed-trajectory-era; docs/ARCHIVE.md). Fail-closed is
-# preserved: a proofs file outside the default closure and off the
-# allowlist FAILS the gate, exactly as before the split.
-pf_closure_from_roots() {
-  local closure="$1" grow=1 m mf imp impf
-  while [ "$grow" -eq 1 ]; do
-    grow=0
-    for m in $closure; do
-      mf="proofs/$(echo "$m" | tr '.' '/').lean"
-      [ -f "$mf" ] || continue
-      for imp in $(lean_imports "$mf"); do
-        impf="proofs/$(echo "$imp" | tr '.' '/').lean"
-        [ -f "$impf" ] || continue   # external import (Iris, GoLean core) — not ours
-        case " $closure " in *" $imp "*) ;; *) closure="$closure $imp"; grow=1 ;; esac
-      done
-    done
-  done
-  echo "$closure"
-}
-pf_bad=0
-closure="$(pf_closure_from_roots "Audit GoLeanProofs")"
-while IFS= read -r f; do
-  rel="${f#proofs/}"
-  m="$(echo "${rel%.lean}" | tr '/' '.')"
-  case " $STANDALONE_PROOFS " in *" $m "*) continue ;; esac
-  case " $closure " in *" $m "*) continue ;; esac
-  echo "  proofs/$rel (module $m) is not in the audited import closure nor on the standalone allowlist"
-  pf_bad=1
-done < <(find proofs -name '*.lean' -not -path '*/.lake/*')
-if [ "$pf_bad" -ne 0 ]; then
-  bad "proofs-file audit coverage (un-swept proof file — import it from Audit.lean or GoLeanProofs.lean, or allowlist with a reason)"
-else
-  ok "proofs-file audit coverage"
-fi
 
 # 1b. Bug-index cross-check (static, no build): BUGS.md <-> baseline.
 step "fidelity-bug index cross-check (scripts/check-bugs.sh)"
@@ -419,514 +337,27 @@ else
   bad "imported-goose verbatim DRIFTED (a landed imported body no longer matches goose @ pin)"
 fi
 
-# 1c. Surface purity (docs/2026-07-21_native-spec-surface.md D1; widened to
-# the FULL statement-bearing set 2026-08-01 per the TCB doctrine,
-# docs/2026-08-01_tcb-and-layering-doctrine.md §1 — QuorumTargets/
-# QuorumRefSpec/AutomationTargets were Iris-free-by-chain-or-gated but
-# UNGATED here, the exact silent-reopen class the 2026-07-23 hardening note
-# below warns about): the spec surface and its dependency chain stay
-# Iris-free — statements humans read must never mention Iris machinery.
-# Checks that close the chain (2026-07-21 audit hardening — the original
-# checked only two files' direct imports against an unanchored allowlist,
-# which was fail-open):
-#   (a) each statement-bearing file's DIRECT imports against its own
-#       exactly-anchored allowlist; every allowlisted GoLeanProofs module is
-#       itself in this scan, so the chain closes by induction;
-#   (b) the GoLean/ core — the only allowlisted prefix with its own
-#       dependency freedom — contains NO Iris imports anywhere, so every
-#       transitive path from the surface stays Iris-free;
-#   (c) the SEMANTIC twin lives in proofs/Audit.lean (the statement-TCB
-#       gate): imports are per-module, meaning is per-theorem.
-step "surface purity (Iris-free spec surface, full statement-bearing set)"
-surface_ok=1
-# R3 audit fix (2026-07-23, sustained finding): the scan list follows the
-# GoldenSlice -> GoldenProgram rename (the half-completed rename left the
-# gate scanning a deleted file — a silent no-op — while the replacement,
-# imported by Surface.lean, was scanned by neither arm). Hardened
-# fail-closed: a listed file that does not exist FAILS the gate, so a
-# future rename cannot silently reopen this hole.
-check_surface_imports() {
-  # $1 = file, $2 = anchored allowlist regex for its direct imports
-  if [ ! -f "$1" ]; then
-    echo "  surface-purity scan target MISSING: $1 (rename without re-pointing the gate?)" >&2
-    surface_ok=0
-    return
-  fi
-  local bad_imports
-  # Tolerant match + normalization (see IMPORT_RE above): an indented or
-  # `public` import is normalized to 'import X' and judged by the
-  # allowlist, never invisible to the first-stage grep. Comments are
-  # stripped first (2026-08-02, same class as the closure-walk fix at
-  # b27e608→3c1b4bf: a docstring line beginning 'import ...' is not an
-  # import — here it was a false POSITIVE, noisy rather than fail-open,
-  # but the blindness is the same).
-  bad_imports=$(strip_lean_comments < "$1" | grep -E "$IMPORT_RE" | sed -E "s/$IMPORT_RE/import /" | grep -Ev "$2" || true)
-  if [ -n "$bad_imports" ]; then
-    echo "  $1 has non-allowlisted imports:" >&2
-    echo "$bad_imports" | sed 's/^/    /' >&2
-    surface_ok=0
-  fi
-}
-# The general surface judgment language: GoLean core + Std only.
-check_surface_imports proofs/GoLeanProofs/Surface.lean \
-  '^import (GoLean\.|Std\.)'
-# The two program pins: GoLean core only.
-check_surface_imports proofs/GoLeanProofs/Specs/GoldenProgram.lean \
-  '^import GoLean\.'
-check_surface_imports proofs/GoLeanProofs/Specs/GoldenQuorum.lean \
-  '^import GoLean\.'
-# Statement modules over the surface + pins.
-check_surface_imports proofs/GoLeanProofs/Specs/GoldenTargets.lean \
-  '^import (GoLean\.|Std\.|GoLeanProofs\.Surface$|GoLeanProofs\.Specs\.GoldenProgram$)'
-check_surface_imports proofs/GoLeanProofs/Specs/QuorumTargets.lean \
-  '^import (GoLean\.|Std\.|GoLeanProofs\.Surface$)'
-check_surface_imports proofs/GoLeanProofs/Specs/QuorumRefSpec.lean \
-  '^import (GoLean\.|Std\.|GoLeanProofs\.Specs\.QuorumTargets$)'
-# Statements.lean is THE Iris-free statement layer (comparator-judge sprint,
-# 2026-08-02): every def a designated headline STATEMENT references and that
-# formerly lived in an Iris-reaching module was hoisted here, so that the
-# judge's Challenge import closure — and any skeptic reading it — never
-# touches Iris. Allowlist: core + Std + the clean statement chain.
-check_surface_imports proofs/GoLeanProofs/Specs/Statements.lean \
-  '^import (GoLean\.|Std\.|GoLeanProofs\.Surface$|GoLeanProofs\.Specs\.QuorumTargets$|GoLeanProofs\.Specs\.GoldenQuorum$|GoLeanProofs\.Specs\.GoldenProgram$)'
-# The fork/join statement targets (channels-arc final audit F4,
-# 2026-08-07): the DEF-ONLY module the designated fork/join statements
-# reference — in Challenge's trusted closure, so its imports are pinned
-# to the core alone.
-check_surface_imports proofs/GoLeanProofs/Specs/ForkJoinTargets.lean \
-  '^import GoLean\.'
-# The spec-parity statement targets (D3 designation, user ruling
-# 2026-08-10): the DEF-ONLY module the designated spec-parity
-# statements reference — in Challenge's trusted closure, so its
-# imports are pinned to core + the Iris-free surface + the (itself
-# def-only) actris pin module.
-check_surface_imports proofs/GoLeanProofs/Specs/GooseParityTargets.lean \
-  '^import (GoLean\.|GoLeanProofs\.Surface$|GoLeanProofs\.Specs\.ImportedGooseActris$)'
-# The actris pinned lowering (def-only since its creation; joined the
-# trusted closure at the D3 designation, so its imports are pinned).
-check_surface_imports proofs/GoLeanProofs/Specs/ImportedGooseActris.lean \
-  '^import GoLean\.'
-# The seven pinned example lowerings (examples phase-2 pre-merge audit,
-# 2026-08-15). `Examples/Targets.lean` — itself in Challenge's trusted
-# closure — imports all seven, so each one is trusted surface too, and
-# until this block existed they entered that closure behind a WILDCARD
-# with no pin of their own: a new import inside any of them was
-# unreviewed. All seven are core-only today (`GoLean.GoCore.Syntax`),
-# pinned here one file at a time, in the ImportedGooseActris style.
-check_surface_imports proofs/GoLeanProofs/Examples/FibProgram.lean \
-  '^import GoLean\.'
-check_surface_imports proofs/GoLeanProofs/Examples/GcdProgram.lean \
-  '^import GoLean\.'
-check_surface_imports proofs/GoLeanProofs/Examples/ReverseProgram.lean \
-  '^import GoLean\.'
-check_surface_imports proofs/GoLeanProofs/Examples/MinMaxProgram.lean \
-  '^import GoLean\.'
-check_surface_imports proofs/GoLeanProofs/Examples/BinSearchProgram.lean \
-  '^import GoLean\.'
-check_surface_imports proofs/GoLeanProofs/Examples/InsertionSortProgram.lean \
-  '^import GoLean\.'
-check_surface_imports proofs/GoLeanProofs/Examples/WordCountProgram.lean \
-  '^import GoLean\.'
-# The eighth lowering (gallery campaign G1, histogram). It is NOT in
-# `Examples/Targets.lean`'s allowlist and NOT in Challenge's trusted
-# closure — this example is undesignated by charter — but the pin costs
-# nothing and keeps the module core-only from birth.
-check_surface_imports proofs/GoLeanProofs/Examples/HistogramProgram.lean \
-  '^import GoLean\.'
-# The gallery-campaign G1 GUARDRAILS WAVE lowerings (2026-08-15). Same
-# story as the eighth: none is in `Examples/Targets.lean`'s allowlist or
-# in Challenge's trusted closure (all are undesignated by charter), but
-# each is pinned core-only from birth so a proof lane cannot widen it
-# unreviewed.
-check_surface_imports proofs/GoLeanProofs/Examples/BubbleSortProgram.lean \
-  '^import GoLean\.'
-check_surface_imports proofs/GoLeanProofs/Examples/TwoSumProgram.lean \
-  '^import GoLean\.'
-check_surface_imports proofs/GoLeanProofs/Examples/RunLengthProgram.lean \
-  '^import GoLean\.'
-check_surface_imports proofs/GoLeanProofs/Examples/PowModProgram.lean \
-  '^import GoLean\.'
-check_surface_imports proofs/GoLeanProofs/Examples/ArrayPalindromeProgram.lean \
-  '^import GoLean\.'
-check_surface_imports proofs/GoLeanProofs/Examples/DedupAdjacentProgram.lean \
-  '^import GoLean\.'
-check_surface_imports proofs/GoLeanProofs/Examples/KadaneProgram.lean \
-  '^import GoLean\.'
-check_surface_imports proofs/GoLeanProofs/Examples/DotProductProgram.lean \
-  '^import GoLean\.'
-check_surface_imports proofs/GoLeanProofs/Examples/SieveProgram.lean \
-  '^import GoLean\.'
-check_surface_imports proofs/GoLeanProofs/Examples/MatMulProgram.lean \
-  '^import GoLean\.'
-check_surface_imports proofs/GoLeanProofs/Examples/SliceStackProgram.lean \
-  '^import GoLean\.'
-check_surface_imports proofs/GoLeanProofs/Examples/SliceQueueProgram.lean \
-  '^import GoLean\.'
-check_surface_imports proofs/GoLeanProofs/Examples/StringReverseProgram.lean \
-  '^import GoLean\.'
-check_surface_imports proofs/GoLeanProofs/Examples/SteinProgram.lean \
-  '^import GoLean\.'
-check_surface_imports proofs/GoLeanProofs/Examples/FibMemoProgram.lean \
-  '^import GoLean\.'
-check_surface_imports proofs/GoLeanProofs/Examples/SelectionSortProgram.lean \
-  '^import GoLean\.'
-# The E5 consumer's lowering (gallery campaign G2, wordfreq). Same story
-# as the wave block: undesignated by charter, pinned core-only from
-# birth; NOTE this pin also covers the injected strings.Fields shim's
-# lowered body, which is part of the Program term.
-check_surface_imports proofs/GoLeanProofs/Examples/WordFreqProgram.lean \
-  '^import GoLean\.'
-# The fork/join pool witnesses (channels arc slice 2): statement-bearing,
-# Iris-free by chain — GoLean core + the surface + its own def-only
-# targets module (audit F4 split). NOT importable from Challenge (it
-# holds decide+kernel PROOFS of designated theorems).
-check_surface_imports proofs/GoLeanProofs/Specs/GoldenForkJoin.lean \
-  '^import (GoLean\.|GoLeanProofs\.Surface$|GoLeanProofs\.Specs\.ForkJoinTargets$)'
-# The Comparator Challenge — the judge's TRUSTED root (pre-merge audit
-# 2026-08-02, major finding: this file was in NO scripts/ci scan at all;
-# the wrapper's walk was its only gate, and that walk was fail-open).
-# Direct imports pinned to exactly the clean DEF-ONLY statement modules
-# (Statements, GoldenTargets, and — audit F4 — ForkJoinTargets; the
-# GoldenForkJoin PROOF module was removed from this list 2026-08-07,
-# restoring the statement-only import discipline).
-check_surface_imports proofs/Challenge.lean \
-  '^import (GoLeanProofs\.Specs\.Statements$|GoLeanProofs\.Specs\.GoldenTargets$|GoLeanProofs\.Specs\.ForkJoinTargets$|GoLeanProofs\.Specs\.GooseParityTargets$|GoLeanProofs\.Examples\.Targets$)'
-# The verified-examples gallery statement targets (examples phase-2 arc
-# end, 2026-08-14 designation): the DEF-ONLY module the eight designated
-# gallery headlines reference. It sits under Examples/ rather than
-# Specs/ ON PURPOSE — step 1d below forbids every non-Specs module under
-# proofs/GoLeanProofs/ from importing GoLeanProofs.Specs.*, "Exceptions:
-# NONE", and the example modules must import their own hoisted
-# vocabulary; siting the targets module inside Examples/ keeps that lint
-# intact rather than opening a hole in it. Its imports are pinned to the
-# core plus the (themselves def-only, core-only) pinned-lowering
-# modules, so Challenge's trusted closure gains nothing else.
-# The seven lowerings are listed BY NAME, not as `[A-Za-z]+Program`
-# (audit fix, 2026-08-15): under the wildcard a NEW `*Program` module
-# could join the trusted closure with no gate edit and so no review —
-# and, before the block above, with no import pin either. Adding an
-# eighth example now costs one reviewable line here and one pin above,
-# which is the point.
-check_surface_imports proofs/GoLeanProofs/Examples/Targets.lean \
-  '^import (GoLean\.|GoLeanProofs\.Examples\.(Fib|Gcd|Reverse|MinMax|BinSearch|InsertionSort|WordCount)Program$)'
-# AutomationTargets is statement-bearing but MIXED BY DESIGN: it holds the
-# range-rule target (a statement ABOUT the Iris-side proof infrastructure,
-# quantifying over IProp) and the phase-2 acceptance pins that reference
-# proven theorems — so an Iris-free import chain is impossible and is NOT
-# claimed for it. What IS pinned: its EXACT import list (any new import
-# fails here and must be justified). Since 2026-08-02 its pure headline
-# targets (the ∀-config and 3-voter statements) live in Specs/Statements
-# (Iris-free by import chain, scanned above); what remains here is the
-# range-rule target, the non-vacuity/pin-consistency theorems, and the
-# acceptance pins. (Recorded finding, close-out 2026-08-01: the doctrine's
-# "Iris-free by import chain" note was wrong for this file pre-hoist.)
-check_surface_imports proofs/GoLeanProofs/Specs/AutomationTargets.lean \
-  '^import (GoLeanProofs\.Specs\.GoldenQuorumWP$|GoLeanProofs\.Specs\.Statements$|GoLeanProofs\.Laws\.Range$)'
-if grep -rEq "${IMPORT_RE}Iris" GoLean/ --include='*.lean'; then
-  echo "  GoLean/ core has Iris imports (taints the surface chain):" >&2
-  grep -rEl "${IMPORT_RE}Iris" GoLean/ --include='*.lean' | sed 's/^/    /' >&2
-  surface_ok=0
-fi
-if [ "$surface_ok" = 1 ]; then
-  ok "surface purity (Iris-free imports, chain-closed)"
-else
-  bad "surface purity violated (Iris reachable from the spec surface)"
-fi
-
-# 1c3. Statement-TCB closure gate (channels-arc final audit F4,
-# 2026-08-07): no DESIGNATED theorem may be DECLARED (proved) anywhere in
-# Challenge's transitive import closure — the trusted root's story is "a
-# skeptic reads this file and its import closure and nothing else", and a
-# designated proof inside the closure collapses the statement/proof
-# separation the Comparator judge exists to police. The prior gates
-# (this script's Iris scan; comparator-judge §3c) check only
-# Iris-FREEDOM of the closure, which is how the slice-2 GoldenForkJoin
-# import shipped nine designated decide+kernel proofs into the closure
-# ungated. Closure walk over proofs/ AND GoLean/ modules; designated
-# names from proofs/judge-config.json (base names, Judge. stripped);
-# Challenge.lean itself is exempt (its sorry-bodied Judge.* statements
-# ARE the artifact). Fails closed on an empty name list or unreadable
-# closure file.
-step "statement-TCB closure (no designated theorem proved in Challenge's import closure)"
-tcb_ok=1
-desig_names="$(grep -o '"Judge\.[A-Za-z0-9_]*"' proofs/judge-config.json 2>/dev/null | sed 's/"Judge\.//; s/"$//' | sort -u)"
-if [ -z "$desig_names" ]; then
-  echo "  could not read designated names from proofs/judge-config.json — failing closed" >&2
-  tcb_ok=0
-else
-  # Audit<->judge-config lockstep at GATE cadence (launch audit
-  # D4-F2): previously this three-way comparison lived only in
-  # scripts/comparator-judge (landmark cadence), so a one-sided edit —
-  # notably a DELETION from Audit's designated list, which the
-  # missing-name guard cannot see — silently narrowed the in-build
-  # walker until the next landmark. Extraction mirrors the judge's —
-  # INCLUDING its 2026-08-28 hardening, which this line was updated in
-  # lockstep with (audit finding F-2: the mirror had been left on the
-  # old pattern, so the claim above was false on the every-commit
-  # path). The range END is ANCHORED to the list's actual closing line
-  # — an optional name literal followed by the bracket, or a bare
-  # bracket if the list is ever reflowed. The unanchored /\]/ it
-  # replaces ended at "the first line containing a ']' ANYWHERE": the
-  # 2026-08-27 HAZARD, where a `[USER]` provenance tag in one of the
-  # list's own interleaved comments truncated the extraction and the
-  # lockstep compare below ran against a short list. A comment line
-  # can no longer terminate the range.
-  ci_audit_full="$(sed -n -E '/let designated : List Name := \[/,/^[[:space:]]*(``[A-Za-z0-9_.]+)?\][[:space:]]*$/p' proofs/Audit.lean \
-    | grep -oE '``[A-Za-z0-9_.]+' | sed -E 's/^``//' || true)"
-  if [ -z "$ci_audit_full" ]; then
-    echo "  could not parse the designated list from proofs/Audit.lean — failing closed" >&2
-    tcb_ok=0
-  else
-    ci_audit_names="$(printf '%s\n' "$ci_audit_full" | sed -E 's/.*\.//' | sort)"
-    # Collision leg mirrors the judge exactly (delta-review DR1
-    # MEDIUM-1): sort -u silently COLLAPSES duplicate short names —
-    # the exact case the judge fails on ("the Judge.* mapping is no
-    # longer injective") — so a collision would have stayed invisible
-    # at gate cadence, defeating D4-F2's purpose.
-    ci_dup="$(printf '%s\n' "$ci_audit_names" | uniq -d)"
-    if [ -n "$ci_dup" ]; then
-      echo "  designated short names COLLIDE ($ci_dup) — the Judge.* mapping is no longer injective; failing closed" >&2
-      tcb_ok=0
-    fi
-    if [ "$ci_audit_names" != "$desig_names" ]; then
-      echo "  designated list (proofs/Audit.lean) vs judge-config.json OUT OF LOCKSTEP:" >&2
-      diff <(printf '%s\n' "$ci_audit_names") <(printf '%s\n' "$desig_names") | sed 's/^/    /' >&2
-      tcb_ok=0
-    fi
-  fi
-fi
-if [ -z "$desig_names" ]; then :; else
-  # Transitive closure of Challenge's imports, files resolved under
-  # proofs/ (GoLeanProofs.*) and the repo root (GoLean.*).
-  ch_closure=""
-  ch_frontier="$(lean_imports proofs/Challenge.lean)"
-  while [ -n "$ch_frontier" ]; do
-    next=""
-    for m in $ch_frontier; do
-      case " $ch_closure " in *" $m "*) continue ;; esac
-      ch_closure="$ch_closure $m"
-      mf=""
-      case "$m" in
-        GoLeanProofs*) mf="proofs/$(echo "$m" | tr '.' '/').lean" ;;
-        GoLean*)       mf="$(echo "$m" | tr '.' '/').lean" ;;
-        *) continue ;;  # external (Std, Init) — not ours
-      esac
-      [ -f "$mf" ] || { echo "  closure module $m has no file $mf — failing closed" >&2; tcb_ok=0; continue; }
-      next="$next $(lean_imports "$mf")"
-    done
-    ch_frontier="$next"
-  done
-  # Scan every closure file (never Challenge itself) for a designated
-  # theorem declaration.
-  name_re="$(printf '%s\n' "$desig_names" | paste -sd'|' -)"
-  for m in $ch_closure; do
-    case "$m" in
-      GoLeanProofs*) mf="proofs/$(echo "$m" | tr '.' '/').lean" ;;
-      GoLean*)       mf="$(echo "$m" | tr '.' '/').lean" ;;
-      *) continue ;;
-    esac
-    [ -f "$mf" ] || continue
-    # theorem|lemma both matched (launch audit D6-F5: a designated
-    # statement re-declared as `lemma` was invisible to this scan).
-    hits="$(strip_lean_comments < "$mf" | grep -nE "^[[:space:]]*(public[[:space:]]+)?(protected[[:space:]]+)?(theorem|lemma)[[:space:]]+($name_re)\b" || true)"
-    if [ -n "$hits" ]; then
-      echo "  designated theorem DECLARED in Challenge's closure ($mf):" >&2
-      echo "$hits" | sed 's/^/    /' >&2
-      tcb_ok=0
-    fi
-  done
-fi
-if [ "$tcb_ok" = 1 ]; then
-  ok "statement-TCB closure (designated theorems proved outside the trusted closure)"
-else
-  bad "statement-TCB closure violated (a designated proof is inside Challenge's import closure — move the defs to a statement module and the proofs out)"
-fi
-
-# 1c4. Comparator landmark SCOPE + STALENESS notes (REPORT-ONLY; added
-# 2026-08-22, settlement branch, for the launch-audit dossier's link-3
-# finding K-4).
-#
-# THE HOLE THIS CLOSES. CLAUDE.md's landmark trigger fires on a change
-# to a DESIGNATED headline theorem STATEMENT. That is too narrow by
-# construction: a designated statement's MEANING is fixed by its whole
-# definitional closure, so a GoCore change underneath it moves what the
-# statement says without touching the statement's text. Which is what
-# happened: between the last landmark (`e42020397648`) and the dossier,
-# three `Expr` constructors were added to GoCore/Syntax.lean,
-# GoCore/Value.lean changed, and Examples/Targets.lean changed — the
-# last INSIDE Challenge's trusted closure — and 371 commits passed with
-# no landmark run, because none of that was a designated-SET change.
-# `scripts/ci` does not build Challenge/Solution either, so nothing
-# anywhere noticed.
-#
-# THE WIDENING — two notes against the last recorded landmark run:
-#   (a) SCOPE: any file in Challenge's trusted closure (the set the
-#       gate directly above already walks — that is why this lives
-#       here and costs no second walk) changed since that run. This is
-#       the PRECISE signal; staleness is only its backstop.
-#   (b) STALENESS: more than $LANDMARK_STALE_N commits since that run.
-#
-# WHY REPORT-ONLY, ALWAYS, AND NOT NEGOTIABLE. Landmark cadence is
-# user-invoked by charter (comparator-judge sprint: "a landmark gate,
-# not an iteration gate"), and the judge needs ~6 minutes plus a
-# dot-free clone — it cannot run from a lane worktree at all. Blocking
-# on it would convert a deliberate cadence into an iteration tax, and
-# gates are speedbumps, never puzzles. This block therefore never sets
-# `fail` and never exits non-zero. It makes the owed run VISIBLE, which
-# is the one thing the prose trigger could not do.
-#
-# WHY N=100. A smoke alarm, not a policy. Small enough that the
-# 371-commit gap this exists to prevent would have fired at commit 101
-# — about a quarter of the way in, weeks before an audit found it —
-# and large enough that an ordinary arc (tens of commits in this repo's
-# log) never trips it on its own. Deliberately not tuned to a schedule.
-#
-# RECORD FORMAT. The landmark log's machine-readable marker, one line
-# per run, in docs/2026-08-02_comparator-judge-sprint.md:
-#     LANDMARK-RUN: <sha> <YYYY-MM-DD> <theorems> <seconds>
-# The last such line wins. Absent or unparseable -> a visible note
-# saying so, never a failure: a missing RECORD must not be able to
-# break a build, or the next person deletes the check instead of the
-# record.
-LANDMARK_STALE_N=100
-landmark_log="docs/2026-08-02_comparator-judge-sprint.md"
-landmark_rec="$(grep -hoE 'LANDMARK-RUN: [0-9a-f]{7,40} [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]+ [0-9]+' "$landmark_log" 2>/dev/null | tail -n1 || true)"
-if [ -z "$landmark_rec" ]; then
-  RESULTS+=("  note comparator landmark: no parseable LANDMARK-RUN marker in $landmark_log — scope/staleness not computed (report-only)")
-else
-  read -r _ lm_sha lm_date lm_n lm_secs <<<"$landmark_rec"
-  if ! git rev-parse -q --verify "${lm_sha}^{commit}" >/dev/null 2>&1; then
-    RESULTS+=("  note comparator landmark: recorded commit $lm_sha ($lm_date) is not in this repo — scope/staleness not computed (report-only)")
-  else
-    lm_behind="$(git rev-list --count "${lm_sha}..HEAD" 2>/dev/null || echo '?')"
-    # The closure file set, rebuilt from the walk the gate above did.
-    # `${ch_closure:-}` is load-bearing under `set -u`: the gate above
-    # only assigns it on its non-fail-closed path, so when judge-config
-    # is unreadable it is UNSET, and a bare `$ch_closure` here would
-    # abort the whole script — turning a controlled FAIL that still
-    # prints a summary into a crash that prints nothing. A note must
-    # never be able to break the gate it is reporting into.
-    # proofs/Audit.lean, Solution.lean, the lakefile, the toolchain
-    # pin, and the judge script join the watched set (launch audit
-    # D4-F2/D6-F6): the judge's own trust statement names the lakefile,
-    # and a one-sided edit to Audit's designated list was invisible
-    # here.
-    lm_files="proofs/Challenge.lean proofs/judge-config.json proofs/Audit.lean proofs/Solution.lean proofs/lakefile.toml proofs/lean-toolchain scripts/comparator-judge"
-    for m in ${ch_closure:-}; do
-      case "$m" in
-        GoLeanProofs*) lm_files="$lm_files proofs/$(echo "$m" | tr '.' '/').lean" ;;
-        GoLean*)       lm_files="$lm_files $(echo "$m" | tr '.' '/').lean" ;;
-      esac
-    done
-    # shellcheck disable=SC2086
-    lm_moved="$(git diff --name-only "${lm_sha}..HEAD" -- $lm_files 2>/dev/null | sort -u || true)"
-    lm_nmoved="$(printf '%s' "$lm_moved" | grep -c . || true)"
-    RESULTS+=("  note comparator landmark: last certified run $lm_n theorems in ${lm_secs}s @ $lm_sha ($lm_date), $lm_behind commit(s) ago")
-    if [ "$lm_nmoved" -gt 0 ] 2>/dev/null; then
-      RESULTS+=("  note comparator landmark OWED (scope): $lm_nmoved file(s) in Challenge's trusted closure changed since that run — a designated statement's MEANING can move without its text moving; run scripts/comparator-judge (report-only, never blocks)")
-      printf '  landmark scope note — trusted-closure files changed since %s:\n' "$lm_sha" >&2
-      printf '%s\n' "$lm_moved" | sed 's/^/    /' >&2
-    fi
-    if [ "$lm_behind" != '?' ] && [ "$lm_behind" -gt "$LANDMARK_STALE_N" ] 2>/dev/null; then
-      RESULTS+=("  note comparator landmark STALE: $lm_behind commits > $LANDMARK_STALE_N since the last certified run (report-only, never blocks)")
-    fi
-  fi
-fi
-
-# 1d. Import-direction lint (layering doctrine,
-# docs/2026-08-01_tcb-and-layering-doctrine.md §2, mechanized at the
-# proof-automation close-out): the proof layer divides into GENERAL
-# infrastructure (laws, lifting, ghost state, tactics, the surface and its
-# exit pipes — everything under proofs/GoLeanProofs/ EXCEPT Specs/) and the
-# TARGET layer (Specs/*: program pins, walks, witnesses, per-target
-# statements). The direction rule: target depends on general, never the
-# reverse — a general module importing a Specs pin is how target shapes leak
-# into laws (the over-specialization standing check's structural form).
-#   Exceptions: NONE. The 2026-08-01 restructure eliminated all three that
-#   existed (Laws/QuorumOps.lean -> Laws/StmtOps.lean + Specs/GoldenQuorumPin;
-#   Laws/Call.lean witnesses -> Specs/GoldenSliceWP; Surface.lean step-0
-#   statements -> Specs/GoldenTargets). Add an exception ONLY with a reason
-#   comment here and a matching note in docs/architecture.md.
-#   (The root aggregator proofs/GoLeanProofs.lean and the gate proofs/Audit.lean
-#   import everything by design; they live outside proofs/GoLeanProofs/ and are
-#   structurally exempt.)
-# Second clause: Tactics/* must not import GoCore at all (a tactic that can
-# name Config constructors can grow target knowledge; GoWalk.lean imports only
-# Lean + the Iris proof mode/WP, by construction).
-step "import-direction lint (general proof modules import no Specs/*; Tactics import no GoCore)"
-dir_bad=0
-while IFS= read -r f; do
-  hits=$(grep -nE "${IMPORT_RE}GoLeanProofs\\.Specs\\." "$f" || true)
-  if [ -n "$hits" ]; then
-    echo "  $f (general layer) imports target-layer Specs modules:" >&2
-    echo "$hits" | sed 's/^/    /' >&2
-    dir_bad=1
-  fi
-done < <(find proofs/GoLeanProofs -name '*.lean' -not -path '*/Specs/*' -not -path '*/.lake/*')
-# Tactics clause — hardened at the 2026-08-01 audit response (pre-merge
-# findings): the previous form was a NON-recursive shell glob with grep
-# errors swallowed (`Tactics/*.lean 2>/dev/null || true`), so a renamed or
-# moved Tactics/ directory made the clause a silent no-op, and a nested
-# Tactics/Sub/*.lean escaped it with the directory fully intact — the same
-# silent-reopen class the surface scan's 2026-07-23 hardening note warns
-# about, reproduced in a gate introduced on the same branch. Fail closed:
-# a missing directory or zero enumerated .lean files FAILS the lint; files
-# are enumerated recursively via find (depth-proof, matching this script's
-# own stated standard); imports matched via the tolerant IMPORT_RE.
-TACTICS_DIR=proofs/GoLeanProofs/Tactics
-if [ ! -d "$TACTICS_DIR" ]; then
-  echo "  Tactics directory MISSING: $TACTICS_DIR (renamed without re-pointing the lint?)" >&2
-  dir_bad=1
-else
-  tac_files=$(find "$TACTICS_DIR" -name '*.lean' -not -path '*/.lake/*')
-  if [ -z "$tac_files" ]; then
-    echo "  Tactics directory has NO .lean files: $TACTICS_DIR (moved without re-pointing the lint?)" >&2
-    dir_bad=1
-  else
-    # Per-file grep so exit codes are unambiguous: 1 = clean no-match,
-    # >=2 = unscannable file -> fail CLOSED (delta-audit 2026-08-01: the
-    # previous `xargs ... || true` swallowed read errors as "ok").
-    tac_hits=""
-    while IFS= read -r tf; do
-      hits=$(grep -nE "${IMPORT_RE}GoLean" "$tf"); rc=$?
-      if [ "$rc" -ge 2 ]; then
-        echo "  Tactics import scan ERRORED on $tf (rc=$rc) — failing closed" >&2
-        dir_bad=1
-      elif [ "$rc" -eq 0 ]; then
-        tac_hits="$tac_hits$tf: $hits
-"
-      fi
-    done <<EOF_TACFILES
-$tac_files
-EOF_TACFILES
-    if [ -n "$tac_hits" ]; then
-      echo "  Tactics/ imports GoCore/GoLean (a walk tactic must stay semantics-blind):" >&2
-      echo "$tac_hits" | sed 's/^/    /' >&2
-      dir_bad=1
-    fi
-  fi
-fi
-# Engine-isolation clause (POR slice 2026-08-21,
-# docs/2026-08-21_w32-por-design.md §7): the dedup ENGINE
-# (GoLean/EnumDedup.lean) is untrusted and deletable — the semantic
-# core (GoLean/GoCore/**) and the proofs must never import it (only
-# the CLI may). This is the module's deletion test, mechanized; fail
-# closed if the engine file vanishes without this clause moving.
+# 1d. Engine-isolation lint (POR slice 2026-08-21,
+# docs/2026-08-21_w32-por-design.md §7; the surviving semantics-side clause
+# of the pre-split import-direction lint — the proof-layer clauses left with
+# the proofs package at the repo split, 2026-08-31): the dedup ENGINE
+# (GoLean/EnumDedup.lean) is untrusted and deletable — the semantic core
+# (GoLean/GoCore/**) must never import it (only the CLI may). This is the
+# module's deletion test, mechanized; fail closed if the engine file
+# vanishes without this clause moving.
 # SCOPE, honest (audit fix 2026-08-21, finding B-F2): the scan is
 # DIRECT-import only — a `GoLean/*.lean` intermediary that imported the
 # engine and was itself imported by a scanned file would be missed.
-# Recorded, not fixed: the aggregators below are the realistic vector
-# and they ARE scanned; a transitive closure needs the olean graph.
-# The two proofs aggregators are listed EXPLICITLY: they are exempt
-# from the Specs clause above by design, which is exactly why they must
-# be in THIS scan (B-F2 — `proofs/GoLeanProofs.lean` and
-# `proofs/Audit.lean` are files, not inside the `proofs/GoLeanProofs/`
-# directory the find below walks, so they were invisible here).
+# Recorded, not fixed: the aggregator is the realistic vector and it IS
+# scanned (GoLean/GoCore.lean listed explicitly — a file, not inside the
+# GoLean/GoCore/ directory the find walks).
+step "engine-isolation lint (semantic core imports no EnumDedup — CLI-only by design)"
+dir_bad=0
 if [ ! -f GoLean/EnumDedup.lean ]; then
   echo "  dedup engine file MISSING: GoLean/EnumDedup.lean (deleted/renamed without re-pointing this clause?)" >&2
   dir_bad=1
 else
-  eng_files=$(find GoLean/GoCore proofs/GoLeanProofs -name '*.lean' -not -path '*/.lake/*'; echo GoLean/GoCore.lean; echo proofs/GoLeanProofs.lean; echo proofs/Audit.lean)
+  eng_files=$(find GoLean/GoCore -name '*.lean' -not -path '*/.lake/*'; echo GoLean/GoCore.lean)
   while IFS= read -r ef; do
     hits=$(grep -nE "${IMPORT_RE}GoLean\.EnumDedup([^A-Za-z].*)?\$" "$ef"); rc=$?
     if [ "$rc" -ge 2 ]; then
@@ -942,34 +373,12 @@ $eng_files
 EOF_ENGFILES
 fi
 if [ "$dir_bad" = 0 ]; then
-  ok "import-direction (general ↛ Specs; Tactics ↛ GoCore; core/proofs ↛ EnumDedup)"
+  ok "engine-isolation (core ↛ EnumDedup)"
 else
-  bad "import-direction violated (move the pin/witness to Specs/, or record an exception with a reason)"
+  bad "engine-isolation violated (the semantic core must not import the dedup engine)"
 fi
 
-# 1e. WP VENEER TEXT LINT — the A-TRIP gate's day-one half.
-# ════════════════════════════════════════════════════════════════════════
-# [TRUST-ADJACENT DELTA — A-TRIP, 2026-08-28] GATE ADDITION, strengthens-
-# only: this step is NEW (unit A-TRIP of docs/2026-08-28_iris-corpus-plan.md
-# §6.3); no existing step was modified. It BLOCKS — deliberately unlike the
-# storm lint (3d), whose header forbids hardening because its rules are
-# cost HEURISTICS; these rules mechanize the CHARTERED veneer ban (plan
-# §2d: a WP-stated theorem whose proof grinds the machine underneath is
-# the era's named forbidden pattern; the Audit gate polices statements
-# only — "Proofs may use anything" — and cost profiles cannot discriminate
-# at corpus scale). Scope is the opt-in config scripts/wp-lint-scope.txt
-# (the Laws/lifting/adequacy boundary definition lives there); the lint is
-# fail-closed on a missing/empty/unreadable scope. Its proof-term sibling
-# is step 3b0 below.
-# ════════════════════════════════════════════════════════════════════════
-step "WP veneer text lint (scripts/wp-veneer-lint — A-TRIP gate, plan §2d; scope: scripts/wp-lint-scope.txt)"
-if vlout="$(./scripts/wp-veneer-lint 2>&1)"; then
-  printf '%s\n' "$vlout" | sed 's/^/  /'
-  ok "WP veneer text lint (no kernel-decision/machine-unfold in WP-tier scope)"
-else
-  printf '%s\n' "$vlout" | sed 's/^/  /' >&2
-  bad "WP veneer text lint (veneer-ban violation or broken scope — fail closed; see above)"
-fi
+
 
 # 2. Core build (the frontend / interpreter / relation).
 step "core build (lake build; must be WARNING-free — GoLean/ module warnings
@@ -988,136 +397,12 @@ else
   ok "core build (warning-free)"
 fi
 
-# 3. Proofs build — this runs proofs/Audit.lean: the axiom allowlist
-#    (#guard_msgs #print axioms) + non-vacuity witness references. A weakened
-#    proof-layer claim FAILS HERE.
-step "proofs build incl. Audit gate (axiom allowlist + non-vacuity)"
-if ( cd proofs && lake build 2>&1 | tail -4 ); then ok "proofs + Audit gate"; else bad "proofs + Audit gate"; fi
 
-# 3b0. WP VENEER PROOF-CLOSURE CHECK — the A-TRIP gate's mature half.
-# ════════════════════════════════════════════════════════════════════════
-# [TRUST-ADJACENT DELTA — A-TRIP, 2026-08-28] GATE ADDITION, strengthens-
-# only: NEW step, no existing step modified. The Audit statement-closure
-# walker re-aimed at PROOF TERMS (LINEAGE in scripts/WpVeneerClosure.lean):
-# every theorem in a scope-policed module has its proof term walked, and
-# any route to the executable machine (stepFn/stepFnIter/execStmt/
-# execStmtLoop/allStreamsOk/allStreamsOkPool, whole namespaces) that does
-# not pass through the config's boundary modules (the Laws/lifting/
-# adequacy layer) FAILS — the veneer, plan §2d. Runs AFTER the proofs
-# build (oleans hot; a failed proofs build fails this step too — fail
-# closed, never skip). Same scope config as step 1e. NOTE (reported
-# honestly): this checker is Audit-ADJACENT but proofs/Audit.lean itself
-# is untouched by A-TRIP — the checker is a standalone scripts/ file
-# elaborated against the built oleans, outside Challenge's trusted
-# closure, so no comparator landmark is triggered by its addition.
-# ════════════════════════════════════════════════════════════════════════
-step "WP veneer proof-closure check (scripts/WpVeneerClosure.lean — A-TRIP gate, plan §2d)"
-vc_out="$( cd proofs && lake env lean ../scripts/WpVeneerClosure.lean 2>&1 )"; vc_rc=$?
-if [ "$vc_rc" -eq 0 ]; then
-  printf '%s\n' "$vc_out" | sed 's/^/  /'
-  ok "WP veneer proof-closure (proof terms reach the machine only through the boundary layer)"
-else
-  printf '%s\n' "$vc_out" | tail -30 >&2
-  bad "WP veneer proof-closure check (exit $vc_rc — a veneer, or a broken/vacuous scope; fail closed)"
-fi
 
-# 3b. The trusted root elaborates (launch audit D4-F5/K-5, D6-F2's
-# Solution corner): Challenge/Solution are NOT default Lake targets,
-# so a GoCore change breaking a Challenge statement's type — or a
-# hatch in Solution.lean, which the preflight alone watches — stayed
-# green until the next landmark. Cheap after the proofs build (oleans
-# hot). Sorry warnings in Challenge are its design; errors are not.
-step "trusted root elaborates (Challenge.lean + Solution.lean)"
-tr_out="$( cd proofs && lake env lean Challenge.lean 2>&1 )"; tr_rc=$?
-tr_nsorry="$(printf '%s\n' "$tr_out" | grep -cE "declaration uses .sorry." || true)"
-if [ "$tr_rc" -eq 0 ]; then
-  ok "Challenge.lean elaborates ($tr_nsorry sorry warnings — its design)"
-else
-  printf '%s\n' "$tr_out" | tail -10
-  bad "Challenge.lean does not elaborate (exit $tr_rc)"
-fi
-tr_out="$( cd proofs && lake env lean Solution.lean 2>&1 )"; tr_rc=$?
-if [ "$tr_rc" -eq 0 ]; then
-  ok "Solution.lean elaborates"
-else
-  printf '%s\n' "$tr_out" | tail -10
-  bad "Solution.lean does not elaborate (exit $tr_rc)"
-fi
 
-# 3c. PROOF-COST TREND — REPORT-ONLY SPEEDBUMP (examples phase-2 slice 0,
-#     lever 6, 2026-08-14). Prints per-module wall/peak growth over +25% vs
-#     that module's own previous recording (artifacts/proof-costs.tsv, written
-#     by scripts/proof-costs; artifacts/ is gitignored, so this is a local
-#     trend line and never a tracked baseline). No record present is NOT an
-#     error — it prints a line saying so.
-#     DO NOT HARDEN: this step must never call bad(), never set fail, and
-#     never gain a threshold that blocks a landing. Proof cost is a budget
-#     question for a human; a legitimate cost increase (a new phase, a harder
-#     theorem) must not have to argue with a gate. Every other step here
-#     defends a claim that must be TRUE; this one makes a number VISIBLE.
-step "proof-cost trend (report-only speedbump — never blocks; scripts/proof-costs to record)"
-costout="$(./scripts/proof-costs --check 2>&1)"
-printf '%s\n' "$costout"
-ngrow="$(printf '%s\n' "$costout" | grep -c '^  note ' || true)"
-RESULTS+=("  note proof-cost trend: $ngrow module(s) over +25% vs their previous recording (report-only)")
 
-# 3d. STORM LINT — REPORT-ONLY SPEEDBUMP (WP arc slice 5, 2026-08-18; the
-#     design note's T5). Syntax-level heuristics for the five measured
-#     proof-cost shapes (StepKit rules 3/4/5, the program-embedding long run,
-#     and the new smart-unfolding rule from the s5 option probe). Prints the
-#     summary line only; `scripts/proof-lint` lists every note and
-#     `--rule Lx` narrows to one.
-#     DO NOT HARDEN — identical policy to the proof-cost step above: never
-#     bad(), never fail, never a threshold that blocks a landing. Every rule
-#     is a regex heuristic with a documented false-positive class (the L3
-#     census is 552 hits on a green tree), so a blocking version would be
-#     wrong before it was useful.
-step "storm lint (report-only speedbump — never blocks; scripts/proof-lint for the notes)"
-lintout="$(./scripts/proof-lint --summary 2>&1)"
-printf '%s\n' "$lintout"
-RESULTS+=("  note storm lint: $(printf '%s\n' "$lintout" | sed 's/^proof-lint: //')")
 
-# 3v. Verdi compat gate (merge window 2026-08-10, verdi-p1 lane queue
-# item 1): the standalone compat/verdi package — the Verdi Raft spec
-# port + the differential harness's LEAN leg only. The Rocq extraction
-# oracle (compat/verdi/extraction/) is on-demand lane tooling — it
-# needs the repo-local Coq switch and built verdi-raft theories, so it
-# NEVER runs in ci; its run records live in the lane log
-# (docs/2026-08-09_verdi-p1-lane.md). What this step enforces:
-#   - the compat build, which includes the ENFORCING AxCheck gate
-#     (#guard_msgs axiom pins per named theorem + a collectAxioms
-#     sweep that throwErrors on any axiom beyond propext/Quot.sound —
-#     upgraded from advisory prints at the merge window, so axiom
-#     drift in the port FAILS the build);
-#   - diffharness check: the committed fixture byte-compared against
-#     regenerated content (port-drift pin, fail closed on a missing
-#     fixture).
-# Needs NO deps/ checkouts and no extra bootstrap in a fresh worktree
-# (the package is self-contained); a missing or broken package fails
-# loud, never skips.
-step "verdi compat gate (compat/verdi build incl. enforcing AxCheck + diffharness check)"
-if [ ! -f compat/verdi/lakefile.toml ]; then
-  echo "  compat/verdi/lakefile.toml MISSING (package moved without re-pointing the gate?)" >&2
-  bad "verdi compat gate (package absent — fail closed)"
-elif ( cd compat/verdi && lake build 2>&1 | tail -3 ) \
-  && ( cd compat/verdi && ./.lake/build/bin/diffharness check fixtures/handlers-n3.tsv ); then
-  ok "verdi compat gate (build + AxCheck + fixture pin)"
-else
-  bad "verdi compat gate (build, AxCheck, or fixture pin — see above)"
-fi
 
-# 3a. Built-artifact-dependent guards — DELIBERATELY ordered after the core
-# and proofs builds (CI-only failure, 2026-08-09): check-golden and
-# check-imported-pins run `lake env lean --run` against GoLean.NativeToIR /
-# pin-module .oleans (and check-golden runs .lake/build/bin/golean), and
-# test-import-goose's pin-guard fixtures invoke check-imported-pins. Each
-# script lake-builds its own prerequisites (fail closed), so ordering is
-# not load-bearing for correctness — but running them pre-build on a fresh
-# runner made the FIRST heavyweight build happen inside a guard step
-# (misattributed failures, and the fixture-mode build gap surfaced as a
-# mute "term print failed"). After steps 2-3 their internal builds are
-# provably no-ops. check-imported-goose (1c4) stays in the static section:
-# pure git byte-comparison, no build dependency.
 
 # 3a1. Import-pipeline gate self-test (goose-parity phase-A checkpoint,
 # 2026-08-08): scripts/import-goose's reject-shape fixtures (rev drift,
@@ -1125,8 +410,9 @@ fi
 # zero-oracle fail-closed, dest collision) plus the standing verbatim
 # guard's own tamper/wrong-rev/missing-checkout fixtures — the same
 # gated-mold treatment as its declared mold, test-lane-validation.
-# Needs go on PATH (self-containment fixture) and the core+proofs builds
-# above (pin-guard fixtures; the old "no lake build" claim was stale).
+# Needs go on PATH (self-containment fixture) and the core build above.
+# (The R2 pin-guard fixture half was removed at the repo split — its
+# subject, check-imported-pins, left with the proofs package.)
 step "import-goose gate self-test (scripts/test-import-goose)"
 if igout="$(./scripts/test-import-goose 2>&1)"; then
   echo "$igout" | tail -1 | sed 's/^/  /'
@@ -1136,24 +422,7 @@ else
   bad "import-goose fixtures (an import gate went quiet — see above)"
 fi
 
-step "golden-lowering staleness (scripts/check-golden)"
-if ./scripts/check-golden; then
-  ok "golden lowering (proof subject = decoded(frontend(source)))"
-else
-  bad "golden lowering DRIFTED (re-pin deliberately with the frontend change)"
-fi
 
-# 3a2. Imported-goose R2-PIN staleness (user check-in ruling on ledger P1,
-# 2026-08-08; check-golden mold): each R2 pin's checked-in Program term
-# must equal a FRESH decoded(frontend(source)) of its corpus case — a
-# frontend/decoder change that moves a pinned lowering fails here and the
-# term is regenerated deliberately in the same commit.
-step "imported-goose R2-pin staleness (scripts/check-imported-pins)"
-if ./scripts/check-imported-pins; then
-  ok "imported-goose R2 pins (term = decoded(frontend(source)), all pins)"
-else
-  bad "imported-goose R2 pin DRIFTED (regenerate the pin term with the frontend change)"
-fi
 
 # 3b. Frontend unit tests (generics slice, 2026-08-05): the monomorphization
 #     identity layer (mono.go — mangled-key renderings pinned against the

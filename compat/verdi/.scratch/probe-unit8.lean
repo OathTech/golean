@@ -1,4 +1,0 @@
-import VerdiCompat
-#print axioms VerdiCompat.Raft.leaderLogs_entries_match_invariant
-#print axioms VerdiCompat.Raft.append_entries_request_reply_correspondence_invariant
-#print axioms VerdiCompat.Raft.leaderLogs_sublog_invariant

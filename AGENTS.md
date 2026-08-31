@@ -9,16 +9,16 @@
 - Differential testing is the feature gate for executable semantics: compare
   real Go output (`go run`) against Lean GoCore interpreter output and require
   equivalent observations.
-- The end goal is a complete trust chain: Go → **the executable interpreter
-  (`stepFn` and its fuel iteration `execStmt`) as BOTH the differentially
-  validated model and the statement language** → machine-checked,
-  kernel-judged theorems stated entirely over it. The Prop-level relation
-  (`Step`/`Steps` in `Machine.lean`) is proof infrastructure — required because Iris WP needs a
-  transition relation, proven equivalent to `stepFn` (two-sided step
-  correspondence), and absent from headline statements like Iris itself
-  (sem-adequacy arc, 2026-08-03, superseding the earlier
-  "relation = proof authority" framing). It must keep pace with the
-  interpreter — see the merge invariant below.
+- This repo is the SEMANTICS product only (repo split 2026-08-31,
+  `docs/2026-08-31_repo-split-plan.md`): the executable interpreter
+  (`stepFn` and its fuel iteration `execStmt`) as the differentially
+  validated model. The verification chain built on it (machine-checked,
+  kernel-judged theorems) lives on branch `park/reasoning-2026-08-31`,
+  pending its own repo. The Prop-level relation (`Step`/`Steps` in
+  `Machine.lean`) is proof infrastructure destined for that side; it
+  remains here only until its extraction slice (interleaved with the
+  executable core — see the split plan's owed item). While it is here it
+  must keep pace with the interpreter — see the merge invariant below.
 
 ## Architecture Rules
 

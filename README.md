@@ -16,10 +16,10 @@ Direction:
   lowering adapter and fail closed.
 - Differential tests compare ordinary Go execution (`go run`) against Lean
   execution of GoCore.
-- The proof-facing relational semantics is the eventual authority; the
-  executable interpreter is a differentially-validated test artifact.
-- Proof and VCG layers can later reuse ideas from Aeneas, Goose/Perennial,
-  Strata, and Iris-Lean.
+- The verification/reasoning product built on this semantics lives on branch
+  `park/reasoning-2026-08-31`, pending migration to its own repo (the repo
+  split, 2026-08-31 — `docs/2026-08-31_repo-split-plan.md`); this repo is the
+  semantics and its differential validation only.
 
 Design and roadmap docs:
 

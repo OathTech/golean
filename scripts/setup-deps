@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# setup-deps — populate a worktree's gitignored deps/ at the pinned revs,
-# AND its proofs/.lake/packages at the Lake manifest's pins (2026-08-21,
-# holes arc: the missing packages step had bitten five lanes — see the
-# comment at that section).
+# setup-deps — populate a worktree's gitignored deps/ at the pinned revs.
+# (The proofs/.lake/packages section and the reasoning-side reference rows
+# — iris-lean, perennial, verdi family, gobra, aeneas, strata — left with
+# the proofs package at the repo split, 2026-08-31; they live on branch
+# park/reasoning-2026-08-31.)
 #
 # A fresh worktree has no deps/, so the verbatim gate fails CLOSED
 # ("deps/goose is not a git checkout") and takes scripts/ci red — hit on
@@ -18,24 +19,12 @@
 #                  offline and is the ONLY source for repos with no
 #                  public URL. Local clones use --shared=false (full
 #                  object copy: a pruned sibling must not corrupt us).
-#                  BOTH spellings reach BOTH sections: given a repo
-#                  root, deps/ and proofs/.lake/packages/ are found
-#                  under it; given the deps/ dir itself, the root is its
-#                  parent (fixed 2026-08-21, audit fix round — the
-#                  deps-dir spelling used to leave the Lake section with
-#                  no local source, so it silently tried the network for
-#                  a package the caller had just handed it locally).
+#                  Either spelling works: given a repo root, deps/ is
+#                  found under it; given the deps/ dir itself, it is
+#                  used directly.
 #   --only ...     restrict to named repos (default: the GATE set, see
 #                  the table — reading-only comparison checkouts are
-#                  opt-in by name). The Lake section (below) is selected
-#                  by the pseudo-name `lake` for all of it, or
-#                  `lake:<pkg>` for one package; with any --only that
-#                  names neither, the Lake section is SKIPPED. Without
-#                  --only it always runs. (Fixed 2026-08-21, audit fix
-#                  round: it used to run unconditionally, so the
-#                  documented replicate command at docs/spec-sources.md
-#                  — `--only go,covmap,go101,spectec,esmeta,proposal` —
-#                  failed on Lake packages nobody had asked for.)
+#                  opt-in by name).
 #
 # Behavior per repo, fail-closed:
 #   - already present at the pinned rev  -> ok (untouched)
@@ -69,34 +58,11 @@ while [[ $# -gt 0 ]]; do
     *) echo "setup-deps: unknown argument '$1' (fail closed)" >&2; exit 2 ;;
   esac
 done
-# Resolve BOTH forms of --from into the two things the two sections
-# need: FROM = the sibling's deps/ dir, FROMROOT = the sibling's repo
-# root (for proofs/.lake/packages below). Either spelling gives both.
-FROMROOT="$FROM"
+# Resolve either form of --from into the sibling's deps/ dir.
 if [[ -n "$FROM" && -d "$FROM/deps" ]]; then
   # a repo root was given
   FROM="$FROM/deps"
-elif [[ -n "$FROM" && "$(basename -- "$FROM")" == "deps" ]]; then
-  # the deps/ dir itself was given — the root is its parent, so the
-  # Lake section below still has a LOCAL source instead of falling
-  # through to the network (audit fix round 2026-08-21).
-  FROMROOT="$(dirname -- "$FROM")"
 fi
-
-# --only selection for the Lake section: `lake` (all) or `lake:<pkg>`.
-# No --only at all = run it, same as the deps/ default set.
-lake_selected() { # $1 = package name
-  [[ -z "$ONLY" ]] && return 0
-  [[ ",$ONLY," == *",lake,"* ]] && return 0
-  [[ ",$ONLY," == *",lake:$1,"* ]] && return 0
-  return 1
-}
-lake_section_selected() {
-  [[ -z "$ONLY" ]] && return 0
-  [[ ",$ONLY," == *",lake,"* ]] && return 0
-  [[ ",$ONLY," == *",lake:"* ]] && return 0
-  return 1
-}
 
 # Refuse to clone over a POPULATED non-git directory, and never rm -rf
 # one (audit fix round 2026-08-21). The hazard is concrete and it is
@@ -119,28 +85,16 @@ refuse_if_populated() { # $1 = dest, $2 = label
 
 # name | pinned rev | public URL ("-" = none: --from required) | in default set
 # Pins' authoritative homes: goose = scripts/check-imported-goose PINNED_REV;
-# perennial = the parity records (docs/goose-perennial-comparison.md);
-# verdi/verdi-raft/StructTact/rocq-lean-import/lf-lean = CLAUDE.md's
-# reference-checkout list; iris-lean = the Lake manifest's pinned rev
-# (reading copy); raft = north-star target (rev floats deliberately —
-# recorded as "-" pin meaning any rev accepted); go/covmap/go101/
-# spectec/esmeta/gofrontend/tinygo/proposal = docs/spec-sources.md (the
-# spec-and-community truth campaign's pin index — go's SHA is tag
-# go1.26.5, the language-version pin; covmap is internal, --from only).
+# raft = north-star target (rev floats deliberately — recorded as "-" pin
+# meaning any rev accepted); go/covmap/go101/spectec/esmeta/gofrontend/
+# tinygo/proposal = docs/spec-sources.md (the spec-and-community truth
+# campaign's pin index — go's SHA is tag go1.26.5, the language-version
+# pin; covmap is internal, --from only); grossmith = community-truth
+# correspondence materials, --from only.
 PINS=$(cat <<'TABLE'
 goose            3be88bbb4982f58e5813b6f0344302d5582c8e8a  https://github.com/goose-lang/goose.git      default
-perennial        43d4efabc22eb148eb239ebee89d1dd2ee54c900  https://github.com/mit-pdos/perennial.git    default
 raft             -                                         https://github.com/etcd-io/raft.git          default
-iris-lean        manifest                                  -                                            default
-verdi            7e1641b                                   https://github.com/uwplse/verdi.git          named
-verdi-raft       a3375e8                                   https://github.com/uwplse/verdi-raft.git     named
-StructTact       97268e1                                   https://github.com/uwplse/StructTact.git     named
-rocq-lean-import 96686c4                                   -                                            named
-lf-lean          2c0d52e                                   -                                            named
 grossmith        -                                         -                                            named
-gobra            -                                         -                                            named
-aeneas           -                                         -                                            named
-strata           -                                         -                                            named
 go               c19862e5f8415b4f24b189d065ed739517c548ba  https://github.com/golang/go.git             default
 covmap           2978393a4aed26b9562f5cd040e74507b2a53812  -                                            named
 go101            c13b00435002a00f574430b61eb65ec5a268acfe  https://github.com/go101/go101.git           named
@@ -160,14 +114,6 @@ while read -r name rev url tier; do
     [[ ",$ONLY," == *",$name,"* ]] || continue
   else
     [[ "$tier" == "default" ]] || continue
-  fi
-  # iris-lean's pin lives in the Lake manifest — resolve it, fail closed.
-  if [[ "$rev" == "manifest" ]]; then
-    rev="$(python3 -c "import json;m=json.load(open('proofs/lake-manifest.json'));print([p['rev'] for p in m['packages'] if p['name']=='iris'][0])" 2>/dev/null || true)"
-    if [[ -z "$rev" ]]; then
-      echo "setup-deps: FAIL — cannot resolve iris(-lean)'s rev from proofs/lake-manifest.json (fail closed)" >&2
-      fail=1; continue
-    fi
   fi
   dest="deps/$name"
   if [[ -d "$dest/.git" || -f "$dest/.git" ]]; then
@@ -208,78 +154,6 @@ while read -r name rev url tier; do
   fi
   echo "setup-deps: pinned    $name @ $(git -C "$dest" rev-parse --short HEAD)"
 done <<< "$PINS"
-
-# ---- Lake dependency checkouts (proofs/.lake/packages) ------------------
-# The proofs build (scripts/ci's "proofs + Audit gate") needs the Lake
-# dependency checkouts, and the sandbox denies lake's network fetch — so
-# every fresh lane worktree paid a manual `cp -a proofs/.lake/packages`
-# beside this script (recorded: gallery g1.md:861/g4.md:578, w32-log.md
-# bootstrap note, raft-w41-log.md item-1 gate note, and the holes arc's
-# own bootstrap). Populate them here instead, same posture as deps/:
-# offline from --from's sibling checkout at the MANIFEST pins, fail
-# closed, rev drift reported and never touched.
-if ! lake_section_selected; then
-  echo "setup-deps: skipped   Lake packages (--only '$ONLY' names none; pass 'lake' or 'lake:<pkg>' to include them)"
-elif [[ -f proofs/lake-manifest.json ]]; then
-  mkdir -p proofs/.lake/packages
-  lake_pkgs="$(python3 -c "
-import json
-m = json.load(open('proofs/lake-manifest.json'))
-for p in m['packages']:
-    if p.get('type') != 'git':
-        continue  # path deps (GoLean itself) have no checkout to populate
-    print(p['name'], p['rev'], p.get('url', '-'))
-" 2>/dev/null)" || { echo "setup-deps: FAIL — cannot parse proofs/lake-manifest.json (fail closed)" >&2; fail=1; lake_pkgs=""; }
-  while read -r name rev url; do
-    [[ -z "$name" ]] && continue
-    lake_selected "$name" || continue
-    dest="proofs/.lake/packages/$name"
-    if [[ -d "$dest/.git" || -f "$dest/.git" ]]; then
-      have="$(git -C "$dest" rev-parse HEAD)"
-      if [[ "$have" == "$rev" ]]; then
-        echo "setup-deps: ok        lake:$name @ ${have:0:9}"
-      else
-        echo "setup-deps: REV DRIFT lake:$name — have ${have:0:9}, manifest pins ${rev:0:9}; NOT touched (a moved manifest pin is resolved by 'lake update' or a human, never here)" >&2
-        fail=1
-      fi
-      continue
-    fi
-    src=""
-    if [[ -n "$FROMROOT" && ( -d "$FROMROOT/proofs/.lake/packages/$name/.git" || -f "$FROMROOT/proofs/.lake/packages/$name/.git" ) ]]; then
-      src="$FROMROOT/proofs/.lake/packages/$name"
-    elif [[ "$url" != "-" && -n "$url" ]]; then
-      src="$url"
-      # A --from that does not carry this package still goes to the
-      # network — but never SILENTLY (audit fix round 2026-08-21):
-      # offline lanes must be able to see that this run left the
-      # sibling, and why.
-      if [[ -n "$FROMROOT" ]]; then
-        echo "setup-deps: note      lake:$name — '$FROMROOT/proofs/.lake/packages/$name' is not a checkout, falling back to the manifest URL (this reaches the NETWORK)" >&2
-      fi
-    else
-      echo "setup-deps: FAIL — lake package $name has no URL in the manifest and --from did not provide proofs/.lake/packages/$name (fail closed)" >&2
-      fail=1; continue
-    fi
-    if ! refuse_if_populated "$dest" "lake:$name"; then
-      fail=1; continue
-    fi
-    echo "setup-deps: cloning   lake:$name from $src"
-    if ! git clone --quiet --no-hardlinks "$src" "$dest" 2>/dev/null; then
-      echo "setup-deps: FAIL — clone of lake package $name from $src failed (no network / bad source); use --from <a sibling repo root> (fail closed)" >&2
-      # Safe: refuse_if_populated above guarantees $dest was empty or
-      # absent before the clone.
-      rm -rf "$dest"; fail=1; continue
-    fi
-    if ! git -C "$dest" checkout --quiet "$rev" 2>/dev/null; then
-      echo "setup-deps: FAIL — lake package $name clone lacks manifest rev $rev (a stale/pruned source?); removing the partial clone (fail closed)" >&2
-      rm -rf "$dest"; fail=1; continue
-    fi
-    echo "setup-deps: pinned    lake:$name @ $(git -C "$dest" rev-parse --short HEAD)"
-  done <<< "$lake_pkgs"
-else
-  echo "setup-deps: FAIL — no proofs/lake-manifest.json (expected at the repo root's proofs/; fail closed)" >&2
-  fail=1
-fi
 
 if [[ "$fail" -ne 0 ]]; then
   echo "setup-deps: INCOMPLETE — one or more repos failed above (fail closed; gates depending on them stay red)" >&2
