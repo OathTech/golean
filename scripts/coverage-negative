@@ -7,9 +7,27 @@ cd "$ROOT"
 MANIFEST="${1:-}"
 OUT="${GOLEAN_COVERAGE_ARTIFACTS:-artifacts/coverage}"
 RESULTS_TSV="${GOLEAN_NEGATIVE_RESULTS:-$OUT/negative-latest.tsv}"
+META_TSV="${GOLEAN_NEGATIVE_META:-$OUT/negative-latest.meta.tsv}"
 GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
 GO_TIMEOUT_SECONDS="${GO_TIMEOUT_SECONDS:-30}"
 BUILD_OUT="$(mktemp -d "${TMPDIR:-/tmp}/golean-negative-build.XXXXXX")"
+
+# GATE INTEGRITY (exec-lane pattern, scaled down — fidelity work
+# program 2026-08-31, item 1 / assessment D-5; rationale as in
+# scripts/diff-coverage): invalidate the previous run's published
+# results FIRST, so a run that dies before publish leaves NO readable
+# results/meta pair for a consumer to judge as fresh. Exit discipline
+# mirrors the exec lane: 1 = FAIL rows exist and published results ARE
+# authoritative; >= 2 = infrastructure, nothing published.
+rm -f "$RESULTS_TSV" "$META_TSV"
+
+# Timeout knob must be a positive integer (exec-lane audit F1 pattern:
+# perl numifies a non-numeric string to 0 and `alarm 0` CANCELS the
+# guard — a value like "20m" would silently disable it).
+if [[ ! "$GO_TIMEOUT_SECONDS" =~ ^[1-9][0-9]*$ ]]; then
+  echo "coverage-negative: GO_TIMEOUT_SECONDS must be a positive integer (seconds), got '$GO_TIMEOUT_SECONDS' — refusing to run with a disabled or malformed timeout" >&2
+  exit 2
+fi
 
 run_with_timeout() {
   local seconds="$1"
@@ -19,6 +37,27 @@ run_with_timeout() {
 
 if ! command -v go >/dev/null 2>&1; then
   echo "go not found on PATH; install Go or expose it in the shell to run negative coverage" >&2
+  exit 2
+fi
+
+# ORACLE VERSION PIN (exec-lane pattern, diff-coverage's block verbatim
+# in miniature — assessment D-5: the negative lane previously held the
+# pin only transitively, when invoked under ci after its step 0c; a
+# standalone run against a drifted toolchain recorded silently).
+GO_PIN_FILE="$ROOT/baselines/go-oracle-pin"
+if [[ -f "$GO_PIN_FILE" ]]; then
+  go_pin="$(head -1 "$GO_PIN_FILE" | tr -d '[:space:]')"
+  go_live="$(go version | awk '{print $3}')"
+  if [[ "$go_live" != "$go_pin" ]]; then
+    if [[ "${GOLEAN_ALLOW_GO_DRIFT:-0}" = 1 ]]; then
+      echo "WARNING: live toolchain $go_live != pinned oracle $go_pin (GOLEAN_ALLOW_GO_DRIFT=1 — this run is NOT against the oracle of record)" >&2
+    else
+      echo "coverage-negative: live toolchain $go_live != pinned oracle $go_pin (baselines/go-oracle-pin); refusing — set GOLEAN_ALLOW_GO_DRIFT=1 to probe a non-oracle toolchain loudly" >&2
+      exit 2
+    fi
+  fi
+else
+  echo "coverage-negative: baselines/go-oracle-pin missing — the oracle pin is unverifiable; refusing" >&2
   exit 2
 fi
 
@@ -37,15 +76,55 @@ if [[ ! -f "$MANIFEST" ]]; then
 fi
 
 mkdir -p artifacts "$OUT" "$GO_BUILD_CACHE"
-printf 'result\tid\tfeatures\tstage\tdetail\n' > "$RESULTS_TSV"
+
+# ATOMIC PUBLISH (exec-lane pattern): rows accumulate in a same-dir
+# tmp pair and land at the published paths in one mv each, only after
+# the whole run classified. A killed run leaves nothing readable.
+RESULTS_DIR="$(dirname "$RESULTS_TSV")"
+META_DIR="$(dirname "$META_TSV")"
+mkdir -p "$RESULTS_DIR" "$META_DIR"
+RESULTS_TMP="$(mktemp "$RESULTS_DIR/.$(basename "$RESULTS_TSV").XXXXXX")"
+META_TMP="$(mktemp "$META_DIR/.$(basename "$META_TSV").XXXXXX")"
+printf 'result\tid\tfeatures\tstage\tdetail\n' > "$RESULTS_TMP"
+
+# PUBLISHED META (exec-lane pattern, the same key set the fast gate's
+# attribution check reads: which case set, which commit, which oracle,
+# drifted or not). The manifest sha covers ids, dirs, expected
+# substrings and feature tags — a silent case-set/expectation edit is
+# visible against a cached record.
+manifest_sha="$(shasum -a 256 "$MANIFEST" | awk '{ print $1 }')"
+manifest_cases="$(awk -F $'\t' 'NF > 0 && $1 !~ /^#/ { count += 1 } END { print count + 0 }' "$MANIFEST")"
+git_commit="$(git rev-parse HEAD 2>/dev/null || printf 'unknown')"
+if git diff --quiet -- . 2>/dev/null && git diff --cached --quiet -- . 2>/dev/null; then
+  git_dirty=false
+else
+  git_dirty=true
+fi
+{
+  printf 'key\tvalue\n'
+  printf 'lane\tnegative\n'
+  printf 'manifest\t%s\n' "$MANIFEST"
+  printf 'manifest_sha256\t%s\n' "$manifest_sha"
+  printf 'manifest_cases\t%s\n' "$manifest_cases"
+  printf 'git_commit\t%s\n' "$git_commit"
+  printf 'git_dirty\t%s\n' "$git_dirty"
+  printf 'go_toolchain\t%s\n' "$(go version 2>/dev/null | awk '{print $3}' || printf 'unknown')"
+  printf 'go_drift\t%s\n' "${GOLEAN_ALLOW_GO_DRIFT:-0}"
+} > "$META_TMP"
 
 cleanup() {
+  rm -f "$RESULTS_TMP" "$META_TMP"
   if [[ -n "$GENERATED_MANIFEST" ]]; then
     rm -f "$GENERATED_MANIFEST"
   fi
   rm -rf "$BUILD_OUT"
 }
 trap cleanup EXIT
+
+publish_results() {
+  mv "$RESULTS_TMP" "$RESULTS_TSV"
+  mv "$META_TMP" "$META_TSV"
+}
 
 case_count=0
 pass_count=0
@@ -67,7 +146,7 @@ report_negative_fail() {
   local flat_detail
   flat_detail="$(one_line "$detail")"
   printf 'FAIL\t%s\t%s\tstage=%s\tdetail=%s\n' "$id" "$features" "$stage" "$flat_detail"
-  printf 'FAIL\t%s\t%s\t%s\t%s\n' "$id" "$features" "$stage" "$flat_detail" >> "$RESULTS_TSV"
+  printf 'FAIL\t%s\t%s\t%s\t%s\n' "$id" "$features" "$stage" "$flat_detail" >> "$RESULTS_TMP"
   fail_count=$((fail_count + 1))
 }
 
@@ -75,7 +154,7 @@ report_negative_pass() {
   local id="$1"
   local features="$2"
   printf 'PASS\t%s\t%s\n' "$id" "$features"
-  printf 'PASS\t%s\t%s\t-\t-\n' "$id" "$features" >> "$RESULTS_TSV"
+  printf 'PASS\t%s\t%s\t-\t-\n' "$id" "$features" >> "$RESULTS_TMP"
   pass_count=$((pass_count + 1))
 }
 
@@ -111,14 +190,19 @@ while IFS=$'\t' read -r id go_dir expected_substring features extra || [[ -n "${
   fi
 done < "$MANIFEST"
 
+if [[ "$case_count" -eq 0 ]]; then
+  # Infra refusal, nothing published (the tmp pair dies with the trap).
+  echo "no negative coverage cases found in $MANIFEST (nothing published)" >&2
+  exit 2
+fi
+
+publish_results
+
 echo
 echo "negative coverage summary: cases=$case_count pass=$pass_count fail=$fail_count"
 echo "results: $RESULTS_TSV"
+echo "meta: $META_TSV"
 
-if [[ "$case_count" -eq 0 ]]; then
-  echo "no negative coverage cases found in $MANIFEST" >&2
-  exit 2
-fi
 if [[ "$fail_count" -ne 0 ]]; then
   exit 1
 fi

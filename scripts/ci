@@ -520,8 +520,56 @@ if [ "$RUN_DIFF" -eq 1 ]; then
 fi
 step "negative baseline diff"
 if [ -f artifacts/coverage/negative-latest.tsv ]; then
-  if ./scripts/coverage-baseline-diff --full --baseline baselines/negative-full.tsv        artifacts/coverage/negative-latest.tsv; then
-    ok "negative baseline diff (no regression)"
+  # ATTRIBUTION, mirroring the exec branch below (fidelity work program
+  # 2026-08-31, item 1 / assessment D-5): before judging the cached
+  # negative record, require its published meta and — for a run claiming
+  # full scope — a manifest_sha256 matching the manifest regenerated
+  # from the CURRENT negative corpus (ids, dirs, expected substrings,
+  # tags). Same drift-field reads as the exec branch (item 2).
+  neg_meta_ok=1
+  neg_dirty=""
+  neg_metafile=artifacts/coverage/negative-latest.meta.tsv
+  neg_ran="$(awk -F'\t' '!/^#/ && $1!="result" && NF>=2' artifacts/coverage/negative-latest.tsv | wc -l | tr -d ' ')"
+  neg_runcommit=""
+  if [ ! -f "$neg_metafile" ]; then
+    bad "negative baseline diff (negative-latest.tsv has NO published meta — refusing to judge unattributable results; re-run scripts/coverage-negative)"
+    neg_meta_ok=0
+  else
+    neg_runcommit="$(awk -F'\t' '$1=="git_commit"{print $2}' "$neg_metafile")"
+    neg_drift="$(awk -F'\t' '$1=="go_drift"{print $2}' "$neg_metafile")"
+    neg_tool="$(awk -F'\t' '$1=="go_toolchain"{print $2}' "$neg_metafile")"
+    neg_dirty="$(awk -F'\t' '$1=="git_dirty"{print $2}' "$neg_metafile")"
+    if [ -n "$neg_drift" ] && [ "$neg_drift" != 0 ]; then
+      if [ "${GOLEAN_ALLOW_GO_DRIFT:-0}" = 1 ]; then
+        RESULTS+=("  note negative record was made under a DRIFTED toolchain (${neg_tool:-unknown}; go_drift=$neg_drift) — GOLEAN_ALLOW_GO_DRIFT=1, judged anyway, NOT the oracle of record")
+      else
+        bad "negative baseline diff (recorded run used a DRIFTED toolchain ${neg_tool:-unknown}, go_drift=$neg_drift — not the oracle of record; re-run scripts/coverage-negative at the pin, or GOLEAN_ALLOW_GO_DRIFT=1 to judge it loudly)"
+        neg_meta_ok=0
+      fi
+    fi
+    neg_meta_sha="$(awk -F'\t' '$1=="manifest_sha256"{print $2}' "$neg_metafile")"
+    neg_cur_sha="$(./scripts/coverage-negative-manifest 2>/dev/null | shasum -a 256 | awk '{print $1}')"
+    neg_total="$(./scripts/coverage-negative-manifest 2>/dev/null | wc -l | tr -d ' ')"
+    if [ "$neg_ran" -ge "$neg_total" ] && [ "$neg_total" -gt 0 ]; then
+      if [ -z "$neg_meta_sha" ] || [ -z "$neg_cur_sha" ] || [ "$neg_meta_sha" != "$neg_cur_sha" ]; then
+        bad "negative baseline diff (published meta manifest_sha256 [${neg_meta_sha:-missing}] does not match the current negative-corpus manifest — stale/foreign results; re-run scripts/coverage-negative)"
+        neg_meta_ok=0
+      fi
+    fi
+  fi
+  neg_stale=""
+  neg_head="$(git rev-parse HEAD 2>/dev/null)"
+  [ -n "$neg_runcommit" ] && [ "$neg_runcommit" != "unknown" ] && [ "$neg_runcommit" != "$neg_head" ] && neg_stale=" [recorded at ${neg_runcommit:0:7}, HEAD is ${neg_head:0:7} — stale]"
+  if [ "$neg_meta_ok" -eq 0 ]; then
+    :
+  elif ./scripts/coverage-baseline-diff --full --baseline baselines/negative-full.tsv        artifacts/coverage/negative-latest.tsv; then
+    if [ "$neg_dirty" = "true" ]; then
+      # Same demotion as the exec branch: a dirty-tree record certifies
+      # that worktree state, not a commit — a note, never a silent ok.
+      RESULTS+=("  note negative baseline diff matched ($neg_ran case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit$neg_stale")
+    else
+      ok "negative baseline diff (no regression)$neg_stale"
+    fi
   else
     bad "negative baseline diff (DRIFT — see above)"
   fi
@@ -561,27 +609,65 @@ if [ -f artifacts/coverage/latest.tsv ]; then
   # runs are exempt from the sha comparison (their manifest was
   # filtered) — they are already reported as partial, never certified.
   meta_ok=1
+  rec_dirty=""
   metafile=artifacts/coverage/latest.meta.tsv
   if [ ! -f "$metafile" ]; then
     bad "baseline diff (latest.tsv has NO published meta — refusing to judge unattributable results; re-run scripts/ci --diff)"
     meta_ok=0
-  elif [ "$ran" -ge "$total" ] && [ "$total" -gt 0 ]; then
-    meta_sha="$(awk -F'\t' '$1=="manifest_sha256"{print $2}' "$metafile")"
-    cur_sha="$(./scripts/coverage-manifest 2>/dev/null | shasum -a 256 | awk '{print $1}')"
-    if [ -z "$meta_sha" ] || [ -z "$cur_sha" ] || [ "$meta_sha" != "$cur_sha" ]; then
-      bad "baseline diff (published meta manifest_sha256 [${meta_sha:-missing}] does not match the current corpus manifest — stale/foreign results; re-run scripts/ci --diff)"
-      meta_ok=0
+  else
+    # THE META'S OWN DRIFT FIELDS, READ (fidelity work program
+    # 2026-08-31, item 2 / assessment D-4): go_drift and git_dirty were
+    # added to the meta (delta-review DR1 MEDIUM-3) precisely so a
+    # drift-probe or dirty-tree run "must not be indistinguishable from
+    # an oracle-of-record run in the artifact a re-pin consumes" — and
+    # then nothing read them. A go_drift record is judged only under the
+    # same loud GOLEAN_ALLOW_GO_DRIFT=1 escape that produced it; a
+    # git_dirty record demotes the FULL certification line to a note
+    # (the partial-run pattern). HEAD staleness stays a note (below).
+    rec_drift="$(awk -F'\t' '$1=="go_drift"{print $2}' "$metafile")"
+    rec_tool="$(awk -F'\t' '$1=="go_toolchain"{print $2}' "$metafile")"
+    rec_dirty="$(awk -F'\t' '$1=="git_dirty"{print $2}' "$metafile")"
+    if [ -z "$rec_drift" ]; then
+      RESULTS+=("  note baseline-diff meta records no go_drift field (pre-provenance record) — oracle-of-record status unverifiable; re-run scripts/ci --diff")
+    elif [ "$rec_drift" != 0 ]; then
+      if [ "${GOLEAN_ALLOW_GO_DRIFT:-0}" = 1 ]; then
+        RESULTS+=("  note recorded differential ran under a DRIFTED toolchain (${rec_tool:-unknown}; go_drift=$rec_drift) — GOLEAN_ALLOW_GO_DRIFT=1, judged anyway, NOT the oracle of record")
+      else
+        bad "baseline diff (recorded run used a DRIFTED toolchain ${rec_tool:-unknown}, go_drift=$rec_drift — not the oracle of record; re-run scripts/ci --diff at the pin, or GOLEAN_ALLOW_GO_DRIFT=1 to judge it loudly)"
+        meta_ok=0
+      fi
+    fi
+    if [ "$ran" -ge "$total" ] && [ "$total" -gt 0 ]; then
+      meta_sha="$(awk -F'\t' '$1=="manifest_sha256"{print $2}' "$metafile")"
+      cur_sha="$(./scripts/coverage-manifest 2>/dev/null | shasum -a 256 | awk '{print $1}')"
+      if [ -z "$meta_sha" ] || [ -z "$cur_sha" ] || [ "$meta_sha" != "$cur_sha" ]; then
+        bad "baseline diff (published meta manifest_sha256 [${meta_sha:-missing}] does not match the current corpus manifest — stale/foreign results; re-run scripts/ci --diff)"
+        meta_ok=0
+      fi
     fi
   fi
   if [ "$meta_ok" -eq 0 ]; then
     :
   elif [ "$ran" -ge "$total" ] && [ "$total" -gt 0 ]; then
-    if ./scripts/coverage-baseline-diff --full; then ok "baseline diff FULL ($ran/$total, no regression)$stale"; else bad "baseline diff (DRIFT — see above)"; fi
+    if ./scripts/coverage-baseline-diff --full; then
+      if [ "$rec_dirty" = "true" ]; then
+        # The partial-run pattern (D-4): matched, but a dirty-tree record
+        # certifies the worktree state it ran in, not a commit — say so
+        # in the summary instead of an unqualified FULL ok.
+        RESULTS+=("  note baseline diff FULL ($ran/$total, no regression) but recorded on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit$stale")
+      else
+        ok "baseline diff FULL ($ran/$total, no regression)$stale"
+      fi
+    else
+      bad "baseline diff (DRIFT — see above)"
+    fi
   else
     if [ "$RUN_DIFF" -eq 1 ]; then
       bad "baseline diff (--diff demanded a full run but results are PARTIAL: $ran/$total)"
     elif ./scripts/coverage-baseline-diff; then
-      RESULTS+=("  note baseline diff PARTIAL ($ran/$total run, no drift among them — NOT a full certification; use --diff)$stale")
+      dirty_note=""
+      [ "$rec_dirty" = "true" ] && dirty_note=" [recorded on a DIRTY tree]"
+      RESULTS+=("  note baseline diff PARTIAL ($ran/$total run, no drift among them — NOT a full certification; use --diff)$stale$dirty_note")
     else
       bad "baseline diff (DRIFT among the $ran cases run — see above)"
     fi
@@ -697,6 +783,7 @@ if [ -n "$PIN_MODE" ]; then
 fi
 
 done
+
 
 # Summary
 printf '\n\033[1m══ scripts/ci summary ══\033[0m\n'
