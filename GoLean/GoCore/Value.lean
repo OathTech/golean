@@ -188,7 +188,8 @@ inductive GoError where
   moves the all-blocked judgment to the pool level. The message text is
   the detector's fixed line — Go pins the abort MESSAGE, though the
   detection itself is the flagship's rendering of the spec's "blocks
-  forever" (latitude row L6, ground-truth note §6). -/
+  forever" (latitude inventory row C9 — "L6" was a stale row id,
+  corrected 2026-08-31; ground-truth note §6). -/
   | deadlock
   /-- Data race — a PROGRAM-class refusal, not a model artifact
   (channels arc slice 3, D2+D3(b)): the pool's segment-level

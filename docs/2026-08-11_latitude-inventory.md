@@ -33,7 +33,7 @@ Citation norms (P2 retrofit, 2026-08-17): spec#/mem# anchor tokens
 resolve against the PINNED documents and are lint-checked
 (`scripts/check-spec-anchors`, fail closed). The JSCert-derived norm:
 every latitude RULE-SITE carries the governing clause text verbatim
-plus its anchor (E2's block at Machine.lean:3023–3055 is the model; cite re-anchored 2026-08-22 — launch audit D7 MEDIUM-7 found the exemplar itself pointing at .opDone/postOp code) —
+plus its anchor (E2's block at Machine.lean:3040–3072 is the model; cite re-anchored 2026-08-22 — launch audit D7 MEDIUM-7 found the exemplar itself pointing at .opDone/postOp code — and re-swept 2026-08-31) —
 maintained while writing, not retrofitted. Anchor existence is NOT a
 content-drift signal (`977e23a707` added normative mem#restrictions
 text with no anchor/version-line change); content hashing at re-pin
@@ -84,11 +84,24 @@ share ONE consumption line (Multi.lean:1153) and are distinguished by
 `Config.boundarySite` — so "one row per constructor" is the honest
 granularity here, not "one row per call site".
 
+**Full-document cite sweep 2026-08-31** ([AGENT], fidelity Tier-2 fix
+round). EVERY `file:line` citation in this document — ~80, not just
+the mirror table — was extracted by script and re-verified against the
+tree; 55 were fixed: 49 pre-existing drift (among them the mirror's
+own `appendSpillWidth` cell and §C7's `resumeThread` cite, both
+already wrong on 2026-08-22 — so the paragraph above's "Every row's
+site is now re-verified" was false at the moment it was written,
+phase-2 fact-verification claim 13), and 6 renumberings caused by this
+same fix round's new site-caveat comments in Machine.lean/Value.lean.
+Scope honesty, unchanged from 2026-08-22's lesson: this assertion is
+true of the tree at THIS commit only; no gate watches these numbers
+between sweeps (the reconciler's C12 checks row COUNT, not lines).
+
 | Site | Code | Bound | Consumed when | Empty-stream default |
 |---|---|---|---|---|
 | Map-iteration pick (`mapIter`) | StepFn.lean:615–621 | live candidates + conditional stop slot | every iteration (even width 1) | first remaining candidate in cell order, stop LAST (columns re-synced 2026-08-22 — the Bound/default cells were still describing the RETIRED snapshot design; launch audit D2-F1) |
-| Append spill capacity (`appendSpill`) | Machine.lean:946 | `appendSpillWidth` (Ops.lean:1857) | every spill | gc growth-formula point |
-| L2 select pick, entry path (`l2Entry`) | Machine.lean:2799 | ready-clause count | only width > 1 | first ready clause (clause order) |
+| Append spill capacity (`appendSpill`) | Machine.lean:963 | `appendSpillWidth` (Ops.lean:1972) | every spill | gc growth-formula point |
+| L2 select pick, entry path (`l2Entry`) | Machine.lean:2819 | ready-clause count | only width > 1 | first ready clause (clause order) |
 | L2 select pick, arrival path (`l2Arrival`) | Multi.lean:853 | `.multi` outcome count | only `.multi` | first ready clause |
 | L4 waiter pick (`l4Waiter`) | Multi.lean:1039 | matching-candidate count | only width > 1 | lowest (goroutine order, clause order) |
 | L1 scheduler pick (`l1Sched`) | Multi.lean:1153 (via `Config.boundarySite`, :1099) | \|runnable\| | only width > 1 | lowest runnable goroutine id |
@@ -298,8 +311,8 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   incidental `select{}` appears in mem#chan's limit-channel example) —
   auditors of C6/C7 should not hunt for a mem# cite;
   spec#Select_statements is the entire normative basis. Machine: the L2 envelope
-  statement at Machine.lean:2680–2750; entry consumption
-  Machine.lean:2802; arrival-path consumption (`.l2Arrival`)
+  statement at Machine.lean:2694–2764; entry consumption
+  Machine.lean:2819; arrival-path consumption (`.l2Arrival`)
   Multi.lean:853. (Cites re-derived 2026-08-22, launch audit D2-F2 —
   the old C6 cite landed a reader on the postOp envelope instead.)
 - ENVELOPE: ANY entry-ready clause (readiness waiter-extended on the
@@ -310,13 +323,13 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
 - EVIDENCE: GC — dense sampling (per-execution re-randomization: the
   map-order regime), both members exhibited 5/5–3/7 on the pinned
   shapes; `clauseReady`'s send-on-closed-counts-as-ready subtlety is
-  probe-pinned (p23, Machine.lean:1259–1263).
+  probe-pinned (p23, Machine.lean:1435–1440).
 
 ### C7. Which clause a WOKEN (parked) select commits — (b-n) NARROWED, deliberately
 
 - WHERE: same spec sentence as C6 (a parked select that becomes ready
   again is still a select "choosing"). Machine: `resumeThread`
-  Multi.lean:331–375 — a woken select head-commits the FIRST wake-ready
+  Multi.lean:376–402 — a woken select head-commits the FIRST wake-ready
   clause in clause order, deterministically, consuming nothing ("no
   re-randomization on the blocked path").
 - WHAT THE PLAUSIBLE ENVELOPE WOULD BE: any wake-ready clause (a second
@@ -351,8 +364,8 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   documentation for each of these specifies the guarantees it makes
   concerning synchronization" (quote corrected at the P2 audit; the
   earlier paraphrase wore quote marks it hadn't earned). Machine: `applySyncOp` envelope statement
-  Machine.lean:2015–2043 (consumes nothing, ever); wake-readiness is
-  cell-based (`wakeReady` Multi.lean:181–199); which ready contender
+  Machine.lean:2424–2486 (consumes nothing, ever); wake-readiness is
+  cell-based (`wakeReady` Multi.lean:162–199); which ready contender
   proceeds is the existing L1 pick (sync design §6).
 - ENVELOPE: every registry-granularity schedule over runnable
   goroutines — contains gc's handoff member and every barging member.
@@ -374,7 +387,7 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   gc's runtime realizes a global detector: `fatal error: all goroutines
   are asleep - deadlock!`, exit 2 (DOCS/GC). Machine: `.deadlock`
   terminal thrown when no goroutine is runnable (`stepMulti`
-  Multi.lean:923, `execProgLoop` :1432–1433; Value.lean:170–178
+  Multi.lean:1137–1144, `execProgLoop` :1639; Value.lean:183–193
   records the latitude: "the detection itself is the flagship's
   rendering of the spec's 'blocks forever'").
 - PLAUSIBLE ENVELOPE: {detected-fatal, silent hang} — a conforming
@@ -408,7 +421,8 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   this section: `977e23a707` (2023) ADDED the per-sub-value paragraph
   with no anchor or version-line change — content hashing, not anchor
   existence, is the drift signal here. Machine: `RaceState`/`raceUpdate`
-  (Race.lean + Multi.lean:1117–1263), terminal `raceDetected`.
+  (Race.lean + Multi.lean:1384, the fold run at :1635), terminal
+  `raceDetected`.
 - CLASSIFICATION: not an envelope — a doctrine-decided boundary
   (register #4): SC interleaving is claimed only inside DRF; outside,
   fail-closed refusal. The latitude the DETECTOR itself resolves is its
@@ -432,13 +446,13 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
 ### C11. Tie-breaks that look like latitude but are unreachable/unobservable — (c) FORCED
 
 - `panicMsg?` picks the first panicked goroutine in id order
-  (Multi.lean:1345–1351) — defensive only: the loop aborts at the first
+  (Multi.lean:1550–1556) — defensive only: the loop aborts at the first
   panicked config, and one pool step creates at most one, so the
   multi-panicked tie-break is unreachable in the driver. WHICH
   goroutine panics first is C1's (and C2/C3's) latitude, not a new
   site.
-- Goroutine ids = spawn order (pool index, Multi.lean:104–114); heap
-  addresses = `nextAddr` bump (State.lean:162–169). Unobservable
+- Goroutine ids = spawn order (pool index, Multi.lean:112–121); heap
+  addresses = `nextAddr` bump (State.lean:361–363). Unobservable
   in-language at the observation channel (uintptr observations refused;
   pointer formatting unsupported); they surface only as model-internal
   identity (`ChanValue.base` equality — forced semantics) and detector
@@ -461,7 +475,7 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   covers the modeled observable fragment only — modeling `%p` output,
   pointer ordering, `unsafe` int↔ptr, or any address-exposing channel
   re-opens this entry.
-- Goroutine EXIT has no HB edge (Race.lean:752–762; mem#goexit
+- Goroutine EXIT has no HB edge (Race.lean:790–797; mem#goexit
   verbatim at the pin: "The exit of a goroutine is not guaranteed to
   be synchronized before any event in the program" — the P2 audit
   caught this entry quoting the PRE-2022 "happen before" wording,
@@ -480,11 +494,11 @@ receive operations, and binary logical operations left-to-right;
 discipline and phase-2 left-to-right stores with the
 earlier-store-observable example; select operands evaluate exactly
 once in source order (spec#Select_statements step 1); channel buffers are FIFO
-("Channels act as first-in-first-out queues", Value.lean:614–621);
+("Channels act as first-in-first-out queues", Value.lean:634–641);
 defers run LIFO. The machine realizes all of these deterministically
-(storeK one-store-per-step Machine.lean:1621–1626, StepFn.lean:610–622;
-select entry Syntax.lean:338–344; send channel-then-value
-Machine.lean:1105–1111). The BUG-022/025/029/030/033/034/035/036/037
+(storeK one-store-per-step Machine.lean:1843–1850, StepFn.lean:634–646;
+select entry Syntax.lean:354–361; send channel-then-value
+Machine.lean:1122–1132). The BUG-022/025/029/030/033/034/035/036/037
 family was the machine being WRONG against these forced points — fixed
 or tracked in BUGS.md, not latitude. Cross-link (P2 retrofit):
 mem#model Requirement 1 DELEGATES sequenced-before to exactly this
@@ -498,9 +512,9 @@ concurrent observer).
 - WHERE: spec#Order_of_evaluation: "the order of those events compared
   to the evaluation and indexing of x and the evaluation of y ... is
   not specified." Machine: the PINNED LATITUDE rule-site block
-  Machine.lean:3023–3055 (spec text verbatim, gc realization probed
-  go1.26.5, version-tracked; cite re-anchored 2026-08-22, D7 MEDIUM-7), frame-exit twin :2750–2767, `callArgsK`
-  docstring :1543–1550, StepFn.lean:166/554/661. History: BUG-052.
+  Machine.lean:3040–3072 (spec text verbatim, gc realization probed
+  go1.26.5, version-tracked; cite re-anchored 2026-08-22, D7 MEDIUM-7; re-swept 2026-08-31), frame-exit twin :3216–3230, `callArgsK`
+  docstring :1718–1727, StepFn.lean:166/564/685. History: BUG-052.
 - PIN: the call evaluates first (args, frame); target operands evaluate
   at frame exit; then stores. gc's realized point. Plausible envelope:
   both orders (and in principle interleavings of the operand
@@ -528,7 +542,7 @@ concurrent observer).
 - WHERE: spec#Order_of_evaluation (only calls/receives/binary-logical
   are ordered — target-vs-target operand order is open). Machine:
   left-to-right inter-target walk (the tgtOpK spine; the rule-site
-  SCOPE clause (Machine.lean:3047, "the pin covers ONLY the
+  SCOPE clause (Machine.lean:3064, "the pin covers ONLY the
   call-vs-operand axis"; cite re-anchored 2026-08-22) records this
   axis as OPEN and explicitly NOT covered by E2's pin). Record: BUG-032's S1-delta
   amendment.
@@ -559,7 +573,7 @@ concurrent observer).
 - WHERE: BUG-032 round-4 amendment (b): `xs[ys[9]], b = zs[7], 2`
   realizes the LHS-operand panic where gc realizes the RHS's; both
   spec-legal. Machine: phase-1 targets-then-RHS order (tgtOpK → rhsK,
-  StepFn.lean:459–500).
+  StepFn.lean:469–500).
 - Same plausible envelope, obligation, and cost as E3 (one mechanism
   fixes both axes); recorded as OPEN envelope per BUG-032's precedent.
   F2 reading: as E3 — the shared mechanism inherits the unseq claim.
@@ -723,7 +737,8 @@ concurrent observer).
 - WHERE: spec — silent (only requires `==` on key types); gc realizes
   per-type `needkeyupdate` (floats design §4, arc-final F15). Machine:
   `entries.set! i (key, value)` — the NEW key replaces the stored key
-  (Machine.lean:239–243 via `mapEntryIndex?` Ops.lean:1638–1647).
+  (Machine.lean:258–270, the `entries.set!` at :268, via
+  `mapEntryIndex?` Ops.lean:1754–1762).
 - Observable exposure: exactly the key kinds where `==`-equal keys are
   distinguishable when the stored key is later observed — the recorded
   list is float/complex/string/interface/array/struct keys (floats
@@ -743,12 +758,12 @@ concurrent observer).
 
 - WHERE: spec — panics are mandated, their ORDER within one operation
   is not spec text. Machine: slice-expression bounds checked HIGH then
-  LOW (`checkSliceBounds`/`checkSliceBounds3` Ops.lean:173–218,
+  LOW (`checkSliceBounds`/`checkSliceBounds3` Ops.lean:211–244,
   "the runtime's exact messages and check ORDER (oracle-pinned)");
   map-key hashability walk stops at the first offending component in
-  gc's own hashing order (Ops.lean:1564–1611); interface-assert panic
+  gc's own hashing order (Ops.lean:1697–1721); interface-assert panic
   names the first unmet method in name-sorted order
-  (Ops.lean:716–747).
+  (Ops.lean:791–810).
 - Observable as which panic message appears. Plausible envelope: any
   check order. PERMANENT-pin candidate alongside R9 (message identity
   is already gc-pinned; an order envelope without a message envelope
@@ -946,7 +961,7 @@ row so the axis stops being invisible, nothing more.
 
 - WHERE: spec §Numeric types: `uint`/`int` are "implementation-specific
   sizes" — "either 32 or 64 bits". Machine: `IntKind.bits?`
-  Value.lean:33–34 (`.int => some 64`, `.uint => some 64`);
+  Value.lean:47–48 (`.int => some 64`, `.uint => some 64`);
   `IntKind.normalize` wraps at the fixed width. Recorded only in
   docs/semantics.md:199 as an "executable testing policy" with the
   stated intent that width become an explicit parameter — the record
@@ -973,8 +988,8 @@ row so the axis stops being invisible, nothing more.
 - WHERE: spec §Appending: append "allocates a new, sufficiently large
   underlying array" — ANY capacity ≥ newLen conforms (unbounded
   latitude). Machine: envelope [newLen, max(32, 2·growth)]
-  (`appendSpillUpper` Ops.lean:1829–1854 with the containment argument;
-  consumption Machine.lean:854–869, empty stream = the gc
+  (`appendSpillUpper` Ops.lean:1944–1972 with the containment argument;
+  consumption Machine.lean:954–970, empty stream = the gc
   growth-formula point).
 - NOT maximal, deliberately: the plausible upper bound is unbounded;
   the envelope is a PRAGMATIC SUBSET believed ⊇ gc across probed
@@ -991,7 +1006,7 @@ row so the axis stops being invisible, nothing more.
 - WHERE: spec §Conversions: "The capacity of the resulting slice is
   implementation-specific and may be larger than the slice length."
   Machine: SINGLETON cap = len, no consumption, transfer caveat at the
-  arm (Machine.lean:313–333): gc's ESCAPING path realizes
+  arm (Machine.lean:340–356): gc's ESCAPING path realizes
   roundupsize(len) — outside the singleton.
 - This is the same class as pre-widening BUG-021 (a real behavior
   outside the model), currently guarded only by the caveat: a theorem
@@ -1035,7 +1050,7 @@ row so the axis stops being invisible, nothing more.
 - WHERE: spec: "whether a run-time panic occurs is
   implementation-specific." Machine: IEEE ±Inf/NaN, never a panic; the
   float arm dispatches before the integer zero check
-  (Machine.lean:270–275).
+  (Machine.lean:297–304).
 - gc never panics (pinned by floats/division-specials); no known
   conforming-but-panicking implementation. XIMPL/ARCH would close the
   question; PERMANENT-record candidate otherwise.
@@ -1045,7 +1060,7 @@ row so the axis stops being invisible, nothing more.
 - WHERE: spec: "the conversion succeeds but the result value is
   implementation-dependent." Machine: explicit
   `.unsupported "float-to-int conversion out of range/NaN
-  (implementation-dependent in Go)"` (Ops.lean:1050–1060). Really does
+  (implementation-dependent in Go)"` (Ops.lean:1140–1150). Really does
   diverge across gc targets (amd64 0x8000...0; arm64 saturates).
 - The honest resolution for an unoracleable point; re-envelope would be
   a value envelope {amd64 point, saturation, ...} — only worth it if a
@@ -1105,11 +1120,11 @@ row so the axis stops being invisible, nothing more.
 - WHERE: spec §Run-time panics: "The exact error values that represent
   distinct run-time error conditions are unspecified." Machine:
   gc-exact texts everywhere — index/slice-bounds messages
-  (Ops.lean:92–218), map-key hash panic's two phrasings
-  (Ops.lean:1613–1636), make chan/map/slice negative-size strings
-  (Machine.lean:685–722, probe p21), channel op panics
-  ("send on closed channel" etc., Machine.lean:1966–2012, probes
-  p01–p03), nil-payload `*runtime.PanicNilError` (Machine.lean:1323 —
+  (Ops.lean:130–244), map-key hash panic's two phrasings
+  (Ops.lean:1724–1734), make chan/map/slice negative-size strings
+  (Machine.lean:785–822, probe p21), channel op panics
+  ("send on closed channel" etc., Machine.lean:2359–2417, probes
+  p01–p03), nil-payload `*runtime.PanicNilError` (Machine.lean:1499–1514 —
   oracle aligned with GODEBUG=panicnil=0), `$runtime.Error` box for
   runtime panics vs plain-string box for sync package panics (the
   BUG-054 class distinction — observable via recover().(string)).
@@ -1124,7 +1139,7 @@ row so the axis stops being invisible, nothing more.
 
 - WHERE: not spec at all — pure gc runtime realization (the spec does
   not define abort output). Machine: `renderPanicHead`/
-  `renderPanicPayload` (Machine.lean:1373–1443) render gc's exact
+  `renderPanicPayload` (Machine.lean:1607/:1564) render gc's exact
   shapes and FAIL CLOSED where the machine cannot decide gc's answer:
   eface identity for `[recovered]` collapse (needs allocation identity
   — unmodeled), Error()/String() rewrite (needs a method call at abort
@@ -1162,7 +1177,7 @@ with R9/R11; no machine content beyond the terminal classes themselves.
 
 ### R13. Sort stability in `sortSlice` — (b-n) NARROWED, declared-unobservable
 
-Syntax.lean:248–253 / Ops.lean:1931–1947: insertion sort, "exact for
+Syntax.lean:264–269 / Ops.lean:2042–2062: insertion sort, "exact for
 integers, where Go's instability is unobservable" (sort.Slice is
 documented NOT stable — DOCS latitude — but equal ints are
 indistinguishable). Becomes real latitude the day non-integer sorts
@@ -1228,7 +1243,7 @@ For completeness, the main spec-mandated points the machine implements
 deterministically and correctly-by-obligation (any divergence here is a
 plain bug, several were — see BUGS.md): E1's ordered-evaluation core;
 channel buffer FIFO; select default-when-none-ready (consuming nothing
-— Machine.lean:2343–2355); nil-channel never-ready (Multi.lean:161);
+— Machine.lean:2694–2700); nil-channel never-ready (Multi.lean:166–168);
 receive-communication-before-target-evaluation (§Assignments via
 BUG-022/029); defers LIFO; per-iteration loop variables (Go 1.22,
 BUG-003 fixed); range-over-slice/array/string/integer order; string
@@ -1246,8 +1261,8 @@ exit having no HB edge.
 
 R6 (float→int out-of-range), E6 (len/cap hoist shapes),
 select-with-select
-rendezvous (Multi.lean:92–97), racy programs (C10 — by doctrine),
-uintptr observations, `go` during `$pkginit` (StepFn.lean:501–521).
+rendezvous (Multi.lean:804/:813), racy programs (C10 — by doctrine),
+uintptr observations, `go` during `$pkginit` (StepFn.lean:511–525).
 Each is honest (visible red, never a wrong answer); none is a fidelity
 achievement.
 
@@ -1278,7 +1293,7 @@ achievement.
   re-audit covers the concurrency side of the same arms).
 - **U-5 Wide-op granularity under concurrency**: `appendSlice` spill,
   `copySlice`, `clearSlice`, AND `sortSlice` are single apply steps
-  (Machine.lean:66–69, 756–819; `sortSlice`'s arm — the COARSEST
+  (Machine.lean:66–69, 741–751; `sortSlice`'s arm — the COARSEST
   member, a whole sort in one step — was omitted from this row until
   the 2026-08-22 launch audit, D8-F1/V2) — coarse-but-recorded; fine
   sequentially; the granularity-ledger re-audit before any concurrency
@@ -1471,7 +1486,7 @@ permanent; the deviation is not.)
    site list (7 at this audit; 8 with stage C's `postOp` — the census
    is the `ChoiceSite` datatype now, exhaustiveness-checked), the
    module docstrings, and the executable consume sites agree exactly; the map-iteration site is the only one that consumes
-   even at width 1 (StepFn.lean:599 — the doctrine's width>1 phrasing
+   even at width 1 (StepFn.lean:616–621 — the doctrine's width>1 phrasing
    describes the pool sites and append's always-consume is width-formed;
    no behavioral consequence, but stream authors should know the
    alignment rule differs per site).
