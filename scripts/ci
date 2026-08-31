@@ -775,6 +775,44 @@ if [ -n "$PIN_MODE" ]; then
     else
       ok "re-pin guard ($nfl PASS→non-PASS flip(s), all listed in BUGS.md Cases)"
     fi
+    # THE OTHER DIRECTION, REPORT-ONLY (fidelity work program
+    # 2026-08-31, item 3 / assessment B12): the guard above covers
+    # PASS→non-PASS only, so a baseline edit flipping rows FAIL→PASS,
+    # deleting rows, or shrinking the case count landed with no trace —
+    # and push/PR CI runs no differential to catch a green-washed row
+    # live. This NEVER blocks (a legitimate fix flips FAIL→PASS every
+    # time; gates are speedbumps): it prints the rows and puts a note in
+    # the summary, so a silent green-washing edit is at least visible.
+    rev="$(printf '===OLD===\n%s\n===NEW===\n%s\n' "$oldbase" "$newbase" | awk -F'\t' '
+      /^===OLD===$/ { sec = 1; next }
+      /^===NEW===$/ { sec = 2; next }
+      /^#/ { next }
+      $1 == "result" { next }
+      sec == 1 && NF >= 2 { oldres[$2] = $1; nold++ }
+      sec == 2 && NF >= 2 { newres[$2] = $1; nnew++ }
+      END {
+        for (id in oldres) {
+          if (!(id in newres)) print "DELETED\t" id "\t(was " oldres[id] ")"
+          else if (oldres[id] != "PASS" && newres[id] == "PASS") print "GREENED\t" id "\t" oldres[id] " -> PASS"
+        }
+        print "COUNT\t" nold+0 "\t" nnew+0
+      }')" || rev=""
+    rev_rows="$(printf '%s\n' "$rev" | grep -E '^(DELETED|GREENED)' | LC_ALL=C sort || true)"
+    rev_old="$(printf '%s\n' "$rev" | awk -F'\t' '$1=="COUNT"{print $2}')"
+    rev_new="$(printf '%s\n' "$rev" | awk -F'\t' '$1=="COUNT"{print $3}')"
+    rev_notes=""
+    if [ -n "$rev_rows" ]; then
+      printf '%s\n' "$rev_rows" | sed 's/^/  re-pin note: /'
+      ng="$(printf '%s\n' "$rev_rows" | grep -c '^GREENED' || true)"
+      nd="$(printf '%s\n' "$rev_rows" | grep -c '^DELETED' || true)"
+      rev_notes="$ng non-PASS→PASS flip(s), $nd deleted row(s)"
+    fi
+    if [ -n "$rev_old" ] && [ -n "$rev_new" ] && [ "$rev_new" -lt "$rev_old" ]; then
+      rev_notes="${rev_notes:+$rev_notes; }case count DECREASED $rev_old → $rev_new"
+    fi
+    if [ -n "$rev_notes" ]; then
+      RESULTS+=("  note re-pin $GUARD_BASE: $rev_notes — report-only; verify the re-pin's written reason covers them")
+    fi
     fi
     fi
   else
