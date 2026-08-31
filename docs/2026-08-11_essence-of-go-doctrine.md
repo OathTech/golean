@@ -80,6 +80,16 @@ plausible envelope. Seeded at drafting; the latitude inventory will
 extend it; every entry names what is assumed, why, and what removing it
 costs. We do not BS ourselves about the distance to the goal.
 
+CITATION RULE (2026-08-31, fixing the numbering collision found by
+fidelity A1-45): the inventory's §8 extension numbered its entries to
+continue this register's original FIVE, but this register later grew
+entries 6–7 — so a bare "#6"/"#7" is ambiguous across the two binding
+documents. Cross-references must qualify by name: "register #6
+(allocator quotient)" / "register #7 (unbounded memory)" here, vs
+"extension #6 (int width)" / "extension #7 (library-doc-silent pins)"
+for inventory §8 (short form "§8 e6"…"§8 e13", already in use). Never
+write a bare "#6"/"#7".
+
 1. **Scheduling is gc-shaped — DISCHARGED (W3.2 slice 1, stages C+D,
    2026-08-20/21; G1 ruling of 2026-08-20).** The two narrowing seams
    are widened: every registry-op COMPLETION is a scheduling point
@@ -103,8 +113,14 @@ costs. We do not BS ourselves about the distance to the goal.
    flip). RESIDUE, stated: (i) the abort window at panic terminals is
    B3, DEFERRED at G1 with the U-1 probe as its trigger baseline
    (inventory C3); (ii) ∀-stream termination of spinner shapes is the
-   liveness tier's `Fair` question (now non-vacuous BY B2 — the
-   backEdge site's docstring); (iii) scheduling points remain
+   liveness tier's `Fair` question — FUTURE WORK, precisely: no
+   `Fair`/`FairStream` predicate is a Lean definition in this tree,
+   the parked reasoning branch, or any branch, and never has been
+   (verified 2026-08-31, phase-2 fact claim 7); what EXISTS is the
+   semantics-side half, the `backEdge` choice site whose docstring
+   records that a fair scheduler is EXPRESSIBLE over it (non-vacuous
+   BY B2) — the predicate itself is a planned reasoning-side
+   artifact; (iii) scheduling points remain
    REGISTRY/BACK-EDGE-granular, not per-instruction — register #5's
    residual, the reduction line's territory. (The 2026-08-12 exhibit
    correction stands: a REGISTRY-FREE spinner was never this bug —
@@ -113,10 +129,22 @@ costs. We do not BS ourselves about the distance to the goal.
 2. **Sequential evaluation-order latitude is pinned**, each axis to a
    recorded conforming point — gc's where pinnable (call-vs-operand
    order, BUG-052), OURS where gc's realization is compiler-internal
-   (inter-target order, early-store-across-phase), and hidden-dep init
-   order to go/types' point — with the known ≠ gc cases (E3, E5, E7)
-   carried as standing deviation records queued for re-envelope
-   (inventory §7 items 3 and 5). This wording adopts and supersedes
+   (inter-target order E3, targets-vs-RHS E4,
+   early-store-across-phase E5), STRUCTURAL (frontend ANF) on the
+   call-first family (binop operand order E12, non-call-panic vs
+   sibling calls E13, receiver-vs-arguments E14 — axes censused
+   2026-08-17/20/22, after this entry's original wording), and
+   hidden-dep init order to go/types' point (E7) — with the known
+   ≠ gc cases (**E3, E5, E7, E13 on its type-assertion axis** —
+   synced 2026-08-31 to inventory §10's honesty-critical list, which
+   this entry had drifted one short of, phase-2 finding A1-04; §10
+   also lists R3, a representation row outside this entry's
+   evaluation-order scope) carried as standing deviation records
+   queued for re-envelope (inventory §7 items 3 and 5). STANDING
+   RULE (2026-08-31): this entry's known-≠-gc enumeration is kept in
+   sync with inventory §10's "Known-≠-oracle deterministic points"
+   list — any edit to that list edits this sentence in the same
+   change. This wording adopts and supersedes
    §8's prescribed sentence: its "permanent deviation records" phrase
    is dropped, because under the bug definition a probed gc-elsewhere
    observation is an observed-∉-modeled candidate — a debt with a
@@ -124,13 +152,31 @@ costs. We do not BS ourselves about the distance to the goal.
    stronger reading is this register's own gloss, not §8's).
 3. **One-implementation evidence base**: the differential oracle is gc
    at a pinned version; no cross-implementation lane exists yet.
-4. **SC-only interleaving within DRF**: correct per the memory model's
-   DRF-SC promise for the programs we accept (mem#model states it
-   formally with the Boehm–Adve proof pointer; mem#overview
-   informally — anchors added at the P2 retrofit; racy programs
-   refused fail-closed — racy semantics is undefined by Go and
-   unmodelable as a testable artifact today, a position the plmm
-   record shows is state-of-the-art-aligned, not a shortcut).
+4. **SC-only interleaving within DRF** (reworded 2026-08-31 per the
+   [USER] fidelity ruling, decision 1, and phase-2 findings
+   A1-06/A1-07): correct per the memory model's DRF-SC promise for
+   the programs we accept (mem#model states it formally with the
+   Boehm–Adve proof pointer; mem#overview informally — anchors added
+   at the P2 retrofit). Racy EXECUTIONS refuse fail-closed, and the
+   refusal is **per-RUN**, not per-PROGRAM — the detector's own
+   wording (`raceUpdate`, Multi.lean:1181): "races fail closed per
+   run, on every run where the conflicting accesses execute";
+   program-level refusal holds exactly as far as the corpus
+   apparatus's enumeration reaches and the granularity reduction
+   (register #5's NPDRF obligation) holds — the machine computes no
+   per-program acceptance judgment. SCOPE ([USER] 2026-08-31): the
+   upper-bound claims — C3 and every "believed MAXIMAL" — are scoped
+   to **DRF programs**; the racy limited-outcomes envelope is
+   declared OUT of product scope. The ground for that exclusion is
+   **cost + no differential oracle** (gc `-race` halts; plain gc
+   exhibits one point per run), NOT "undefined by Go" — the pinned
+   memory model's own limited-outcomes stance (mem#restrictions:
+   word-sized racy reads see actually-written values, no
+   out-of-thin-air) contradicts the old "undefined" wording, which
+   is retired here. go_mem's report-and-terminate license remains
+   the refusal license, and the refusal boundary itself remains
+   state-of-the-art-aligned (plmm: the OOTA frontier is unsolved
+   everywhere; comparable stacks draw the same line).
 5. **Registry-granularity scheduling points**: sound only where
    scheduling is unobservable between them for race-free programs.
    The fused-boundary incompleteness this entry recorded is CLOSED
@@ -171,6 +217,21 @@ costs. We do not BS ourselves about the distance to the goal.
    removal (only if resource-bounded claims are ever wanted): an
    allocation-failure outcome in the machine plus a memory budget in
    every statement — deliberately not paid.
+   **MANDATORY RIDER ([USER] 2026-08-31, fidelity decision 5(a)):
+   every consumer-facing claim over this semantics is scoped to
+   ALLOCATION-SUCCEEDING runs.** The other direction is real and this
+   rider is what carries it: a gc run that hits `maxAlloc` (runtime
+   panic on an over-limit `make`) or OOM-aborts exhibits observed
+   behavior no machine stream models — the bug definition's carve-out
+   for it is exactly this named resource-exhaustion scope, never a
+   silent absorption. Follow-ups on the books: the deterministic
+   `maxAlloc` panic class is decision 5(b), Tier 5; the eventual
+   honest model (memory bounded and very large, Cerberus-C-style, so
+   arbitrary-context reasoning accounts for allocation failure while
+   execution runs essentially never see it — the [USER]'s verbatim
+   reasoning) is **discrepancy D-001** in
+   `docs/discrepancy-backlog.md` (file lands with the
+   fidelity-assessment branch; the id is stable).
 
 ## Why (the mission)
 

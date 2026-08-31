@@ -1376,7 +1376,14 @@ premise this line carried until the 2026-09-01 audit fix round).
 ## 8. THE REGISTER EXTENSION — entries beyond the doctrine's seeded five
 
 In the register's format (what is assumed, why, what removing it
-costs). Numbering continues the doctrine draft's 1–5.
+costs). Numbering continues the doctrine draft's 1–5. CITATION RULE
+(2026-08-31, fidelity A1-45): the doctrine register itself later grew
+entries 6–7 (allocator quotient; unbounded memory), so a bare
+"#6"/"#7" is ambiguous across the two documents — qualify every
+cross-reference: "extension #6 (int width)" / "extension #7
+(library-doc-silent pins)" for THIS list (short form "§8 e6"…"§8
+e13"), "register #6 (allocator quotient)" / "register #7 (unbounded
+memory)" for the doctrine's.
 
 6. **`int`/`uint`/`uintptr` are 64-bit.** The spec makes the width
    implementation-specific (32 or 64); the machine, frontend, and
