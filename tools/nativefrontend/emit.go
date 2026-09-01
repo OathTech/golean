@@ -6341,14 +6341,37 @@ func containsCall(x ast.Expr) bool {
 
 func (e *emitter) emitStructLit(cl *ast.CompositeLit, t types.Type, st *types.Struct) (any, error) {
 	// Composite-literal construction of a modeled sync primitive
-	// (`&sync.Mutex{}`, `sync.WaitGroup{}`) is out of scope (design
-	// note §9: `var` declarations and `new` are the modeled
-	// construction surface) — refused HERE, naming the capability
-	// (arc-end fix round 2026-08-10): descending into the underlying
-	// struct used to trip over the unexported `sync.noCopy` field
-	// type, a refusal naming an internal no user wrote.
+	// (`sync.Mutex{}`, `&sync.WaitGroup{}` — Q-SYNCLIT, [USER]-RULED
+	// 2026-08-31): the semantics is FORCED, no latitude.
+	// spec#Composite_literals — "It is an error to specify an element
+	// for a non-exported field of a struct belonging to a different
+	// package" — and all four modeled primitives have only non-exported
+	// fields, so the ENTIRE legal cross-package literal surface is the
+	// EMPTY literal, whose value is the zero value: the ready primitive
+	// by documented contract ("The zero value for a Mutex is an
+	// unlocked mutex", sync docs) and exactly what `var`/`new` already
+	// construct. So the empty literal lowers to the same
+	// default-of-Ty.sync those construct (`new(sync.Mutex)` ships this
+	// very node as its payload); the `&`-of form rides the ordinary
+	// &T{...} hoist and is byte-equivalent to new(sync.X). The COPY
+	// question the ledger row raised is already answered: sync state is
+	// modeled as VALUES and copies carry state, gc-faithfully (sync
+	// design §3, probe p10; vet's noCopy is not runtime behavior and
+	// refusing it is a recorded non-goal). A NON-empty sync literal is
+	// unreachable cross-package (the spec clause above) and keeps
+	// failing closed rather than being absorbed. History: refused
+	// whole 2026-08-10..2026-09-01, reason naming the capability (the
+	// pre-2026-08-10 emitter descended into the underlying struct and
+	// refused on the internal `sync.noCopy`).
 	if prim := e.syncPrimName(t); prim != "" {
-		return nil, unsup("composite-literal construction of sync.%s (out of scope: `var` declarations and new() are the modeled construction surface)", prim)
+		if len(cl.Elts) == 0 {
+			tyW, err := e.emitType(t)
+			if err != nil {
+				return nil, err
+			}
+			return map[string]any{"expr": "default", "type": tyW}, nil
+		}
+		return nil, unsup("non-empty composite-literal construction of sync.%s (spec#Composite_literals: elements for non-exported fields are illegal cross-package, so only the empty literal — the zero value — lowers)", prim)
 	}
 	target, err := e.emitType(t)
 	if err != nil {

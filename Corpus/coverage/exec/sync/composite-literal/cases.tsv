@@ -1,7 +1,11 @@
 # id	subject	args	expected_status	expected_reason	features
-# PERMANENT-until-lifted markers (arc-end fix round, 2026-08-10):
-# composite-literal sync construction refuses per-decl with a reason
-# naming the CAPABILITY (was: the unexported internal `sync.noCopy`).
-# Red at frontend-export by design; §9 records the scope.
+# LIFTED (Q-SYNCLIT, [USER]-RULED 2026-08-31; implemented on the
+# Q-SYNCVAL slice 2026-09-01): the empty composite literal of a modeled
+# sync primitive lowers as the zero value — the semantics is forced
+# (spec#Composite_literals: non-exported fields are un-writable
+# cross-package; zero value = ready primitive; copies carry state per
+# sync design §3/p10). Non-empty sync literals keep failing closed.
 mutex-addr-lit	mutexAddrLit	-	ok	-	sync,mutex
 waitgroup-value-lit	waitGroupValueLit	-	ok	-	sync,waitgroup
+rwmutex-addr-lit	rwMutexAddrLit	-	ok	-	sync,rwmutex
+once-value-lit	onceValueLit	-	ok	-	sync,once,closures
