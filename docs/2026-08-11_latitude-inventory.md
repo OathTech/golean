@@ -352,25 +352,61 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
 
 - WHERE: same spec sentence as C6 (a parked select that becomes ready
   again is still a select "choosing"). Machine: `resumeThread`
-  Multi.lean:376–402 — a woken select head-commits the FIRST wake-ready
+  Multi.lean:376–427 — a woken select head-commits the FIRST wake-ready
   clause in clause order, deterministically, consuming nothing ("no
-  re-randomization on the blocked path").
+  re-randomization on the blocked path"; the head-commit arm is
+  :424–427).
 - WHAT THE PLAUSIBLE ENVELOPE WOULD BE: any wake-ready clause (a second
   L2 draw at wake).
-- THE RECORDED COVERAGE ARGUMENT (envelope-width review, L2 wake path):
-  a parked gc select is committed by the EVENT that wakes it (the
-  partner dequeues one sudog), so gc's realized wake outcomes are
-  arrival-order outcomes, and each is realized in our envelope by a
-  prompt-wake L1 schedule — the narrowing is path-structural, not
-  observational. [ANALYSIS], not a theorem; the certified {1,2} wake
-  set contains gc's realized point, and membership polices too-narrow
-  per shape.
+- THE SUPERSEDED ARGUMENT (envelope-width review, pre-B1/B2 — kept for
+  the record, superseded 2026-09-01 [AGENT]): "a parked gc select is
+  committed by the EVENT that wakes it (the partner dequeues one
+  sudog), so gc's realized wake outcomes are arrival-order outcomes,
+  and each is realized in our envelope by a prompt-wake L1 schedule."
+  Its own re-argue trigger FIRED at the W3.2 B1/B2 boundary widening
+  and the re-argument was not recorded (fidelity A1-14); when run, the
+  premise was gc-FALSIFIED on the one-event/width-2 corner: a select
+  parked with TWO recv clauses on ONE channel, woken by `close(ch)`,
+  commits EITHER clause in gc (~half each, 200-run counts incl. a
+  park-first isolate; `selectgo` builds lockorder from the shuffled
+  pollorder precisely to permute same-channel cases, and `closechan`'s
+  first dequeue wins the `selectDone` CAS). One event, two clauses —
+  the event does not determine the clause, and no prompt-wake L1
+  schedule realizes the non-head commit. Evidence:
+  `docs/evidence/2026-09-01_c7-close-wake-probe/`.
+- THE COVERAGE ARGUMENT OF RECORD (re-argued 2026-09-01 [AGENT],
+  against the post-B1/B2 machine at 670d3351), two legs, [ANALYSIS]
+  not theorem:
+  (1) PARTNER wakes (an arriving send/recv beside the parked select)
+  never reach `resumeThread` — the arrival intercept pairs them at the
+  arriving op (`chanArrivalPlan`), where the L4 pick counts select
+  clauses INDIVIDUALLY (C5), so gc's same-channel sudog permutation is
+  a drawn choice in the model, not a narrowing.
+  (2) CELL wakes — for a parked select, exactly the `close` case — are
+  covered by the ENTRY-path schedule: close-before-entry is a
+  machine-realizable interleaving of the same program on every shape
+  (no HB edge can order a close after the select's entry, since entry
+  immediately follows the parking goroutine's previous boundary and a
+  park is not an event others can synchronize on; B1's post-op
+  boundary guarantees the scheduling point immediately before entry —
+  B1 STRENGTHENS this leg), and the entry-time L2 draw then covers any
+  clause the close enables; the reordering changes no other
+  observable (park performs no state change, so the state at the
+  commit is identical). Deferred multi-event wakes reduce to the same
+  two legs per enabling event, plus the head-commit itself as a
+  spec-legal member. The narrowing remains path-structural, not
+  observational: on the probe shape the certified set is {1,2}
+  (entry-path realized; enumeration record in the evidence dir) and
+  gc's realized {1,2} is contained. Membership polices too-narrow per
+  shape.
 - RE-ENVELOPE OBLIGATION + COST: a wake-path L2 draw — moderate
   (one consumption site added at `resumeThread`, stream shifts for
   pinned pool streams, enumerator bound work); LOW priority while the
-  coverage argument stands, but it should be re-argued whenever wake
-  machinery changes (it is the kind of argument the fused-boundary
-  discovery shows can silently lose its premise).
+  two-leg argument stands. Re-argue triggers (sharpened 2026-09-01):
+  any change to the wake machinery, to the arrival intercept's
+  clause-individual L4 candidates, or to the B1 boundary placement —
+  legs (1) and (2)'s premises respectively (this row already lost one
+  argument silently to exactly such a change; A1-14).
 
 ### C8. Sync acquisition order (Mutex/RWMutex/WaitGroup/Once contention) — (a) ENVELOPED, via L1 (zero new sites)
 
@@ -1498,11 +1534,19 @@ memory)" for the doctrine's.
     replayed. Residual: the cross-goroutine delete-prune narrowing
     recorded at E9.
 12. **A woken select head-commits; only entry-time selects draw L2.**
-    A deliberate wake-path narrowing carried on the recorded
-    gc-commit-at-wake argument (each gc wake outcome realized by a
-    prompt-wake L1 schedule) — an [ANALYSIS], not a theorem. Removing:
-    a wake-path L2 draw (stream shifts, enumerator bounds). Re-argue
-    whenever wake machinery changes.
+    A deliberate wake-path narrowing. RE-ARGUED 2026-09-01 [AGENT]
+    (post-B1/B2; the old gc-commit-at-wake argument is SUPERSEDED —
+    gc-falsified on the two-clauses-one-channel close wake, where gc
+    commits either clause ~half each): coverage now carries on the
+    C7 row's two-leg argument — partner wakes are L4
+    clause-individual pairings at the arrival intercept; close wakes
+    are covered by the always-realizable close-before-entry schedule
+    and the entry-time L2 draw (B1's post-op boundary supplies the
+    scheduling point). An [ANALYSIS], not a theorem; probe evidence
+    `docs/evidence/2026-09-01_c7-close-wake-probe/` (certified {1,2}
+    ⊇ gc's realized {1,2}). Removing: a wake-path L2 draw (stream
+    shifts, enumerator bounds). Re-argue on wake-machinery, arrival
+    intercept, or B1-boundary changes (C7's sharpened triggers).
 13. **The race-refusal boundary is TSan's realized edge set, not
     go_mem's minimal relation.** Deviations are quoted at their
     implementation sites and scoped by the U-ledger (U1–U2, U4–U5, plus
@@ -1563,8 +1607,18 @@ permanent; the deviation is not.)
    describes the pool sites and append's always-consume is width-formed;
    no behavioral consequence, but stream authors should know the
    alignment rule differs per site).
-
-## 10. Counts
+6. **OWED (recorded 2026-09-01, C7-refresh lane [AGENT])** — the
+   `resumeThread` docstring (Multi.lean:376–401, "gc … woken select
+   commits the case its waking event belongs to, never a fresh
+   shuffle" and the per-member prompt-wake coverage sentence) and the
+   `applySelect`-adjacent wake note (Machine.lean:2725 region) still
+   state C7's SUPERSEDED argument — gc-falsified on the
+   two-clauses-one-channel close wake
+   (`docs/evidence/2026-09-01_c7-close-wake-probe/`; the argument of
+   record is now C7's two-leg version). The refresh lane was
+   docs-and-evidence only by its brief, so the re-sync is owed to the
+   next Multi.lean/Machine.lean-touching slice — NAMED here because
+   flag 1's lesson is that such triggers expire silently.
 
 **Reading rule (adopted 2026-08-22, settlement branch).** Each bullet
 below is a MEMBERSHIP list and nothing else: every id it names is a

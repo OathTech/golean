@@ -1,0 +1,6 @@
+# producer: .lake/build/bin/golean coverage-observations --input artifacts/c7probe/wire.json --function selselCloseWake --max-width 2 --max-sites 24 --cap 64 --work-cap 200000 --expect-status ok
+# commit: 670d3351 (branch c7-refresh, clean tree)
+# wire-sha256: 867f94d1fe2625297e4c7fd55a6145ebe76e2fdc5921982ed6b5911c30bb35a7
+# stats: observations=2 steps=5590 probes=1311 sites=437 leaves=438 maxdepth=12 width=2
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}
