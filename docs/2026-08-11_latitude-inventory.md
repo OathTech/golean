@@ -647,16 +647,30 @@ concurrent observer).
   etcd-io/raft has package-level vars — must be checked at the target
   lane.
 
-### E8. Multi-file declaration order — (b-n) NARROWED to the go command's realization
+### E8. Multi-file declaration order — (b-n) NARROWED to the go command's DIRECTORY-mode presentation
 
 - WHERE: spec: "the order in which the files are presented to the
   compiler"; build systems are "encouraged" to sort by file name.
-  Frontend: files sorted by name (tools/nativefrontend, sort.Strings) —
-  matches the go command exactly (init design §1.2; pinned by
-  init/multi-file-order).
-- A conforming NON-go-command build system could present files in any
-  order — outside the envelope; revisit only if a target ships one.
-  PERMANENT-record candidate; cost of widening near-zero benefit.
+  Frontend: files sorted by name (tools/nativefrontend — main.go run()
+  + load.go parseLocal, both carrying the E8 site note since
+  2026-08-31) — matches the go command's DIRECTORY-mode presentation
+  exactly (init design §1.2; pinned by init/multi-file-order). Since
+  2026-08-31 (t1-fidelity-fixes) the realized per-unit order is a
+  WIRE-LEVEL record: program key "fileOrder" (emit.go).
+- CORRECTED PREMISE (p2-keeps-a1 A1-18, 2026-08-31): the other members
+  of this latitude are NOT exotic non-go-command build systems — the
+  go command's own FILE-LIST mode (`go run zz.go aa.go`) presents
+  files in ARGUMENT order and realizes them at the pinned oracle
+  (probe: za/az/az from the same two files). The frontend has no
+  file-list input mode (--dir only), so the machine models exactly the
+  directory-mode member; the differential harness invokes the oracle
+  in directory mode, so the apparatus is scoped to the agreeing
+  member. REVISIT TRIGGER (replacing the unfireable non-go-command
+  one): any consumer feeding the frontend a file-list-mode build —
+  that consumer must either present a directory (the modeled member)
+  or fund the presentation-order envelope. Machine-side single
+  realization + record: this row's disposition per the Tier-1 fix
+  round; the register-side restatement rides Tier 2.
 
 ### E9. Map iteration order — (a) ENVELOPED (full literal envelope over the LIVE map) — RE-ENVELOPED 2026-08-19 (BUG-005 (L) surgery, user-ruled)
 

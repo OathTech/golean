@@ -11,6 +11,7 @@ import (
 	"go/constant"
 	"go/token"
 	"go/types"
+	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -587,6 +588,32 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		"methods":    methods,
 		"methodSets": methodSets,
 	}
+	// fileOrder — the E8 wire-level record (latitude inventory §E8;
+	// assessment A1-18/p2-keeps-a1): the REALIZED file presentation
+	// order per unit, in program initialization order. The spec makes
+	// within-package declaration order "the order in which the files
+	// are presented to the compiler"; this frontend realizes exactly
+	// ONE member — the go command's DIRECTORY-mode order (file-name
+	// sort; main.go run() and load.go parseLocal are the two sort
+	// sites). The go command's FILE-LIST mode (`go run zz.go aa.go`)
+	// presents files in ARGUMENT order and realizes other members at
+	// the same pinned oracle — orders this frontend does NOT model
+	// (it has no file-list input mode; --dir is the only entry).
+	// Recording the realization on the wire makes the single point
+	// explicit and machine-visible; envelope-widening, if ever wanted,
+	// is a record-side decision. The injected shim file
+	// (golean-stdlib-shims.go) appears where it is really presented:
+	// appended after the sorted sources of its unit. The decoder
+	// ignores unknown program keys, so this is emitter-side only.
+	fileOrder := make([]any, 0, len(e.units))
+	for _, unit := range e.units {
+		names := make([]any, 0, len(unit.files))
+		for _, f := range unit.files {
+			names = append(names, filepath.Base(e.fset.Position(f.Package).Filename))
+		}
+		fileOrder = append(fileOrder, map[string]any{"package": unit.path, "files": names})
+	}
+	program["fileOrder"] = fileOrder
 	// Only when the package has package-level variables — a globals-free
 	// wire stays byte-identical to before the init slice.
 	if len(e.globalDefs) > 0 {

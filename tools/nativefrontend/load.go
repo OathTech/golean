@@ -183,7 +183,11 @@ func (l *loader) discover(importerPath string, files []*ast.File) error {
 
 // parseLocal parses one local package directory (non-test files,
 // lexical filename order — the same presentation order the main
-// package gets).
+// package gets). E8 REALIZATION SITE: the sort below is the imported-
+// unit twin of main.go's — the go command's DIRECTORY-mode member of
+// the spec's files-as-presented latitude; file-list-mode orders are
+// not modeled (main.go run() has the full note; the realized order is
+// recorded on the wire as program "fileOrder").
 func (l *loader) parseLocal(path, dir string) (*sourcePkg, error) {
 	pkgs, err := parser.ParseDir(l.fset, dir, nonTestGoFile, parser.ParseComments)
 	if err != nil {

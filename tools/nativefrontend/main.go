@@ -77,6 +77,17 @@ func run() error {
 		for p := range pkg.Files {
 			paths = append(paths, p)
 		}
+		// E8 REALIZATION SITE (latitude inventory §E8): within-package
+		// declaration order is spec-delegated to "the order in which
+		// the files are presented to the compiler". This sort realizes
+		// exactly ONE member — the go command's DIRECTORY-mode
+		// presentation (file-name sort). The go command's FILE-LIST
+		// mode (`go run zz.go aa.go`) presents files in ARGUMENT order
+		// and realizes OTHER members at the same pinned oracle; this
+		// frontend has no file-list input mode (--dir is the only
+		// entry) and does not model them. The realized order is
+		// recorded on the wire (program "fileOrder", emit.go). The
+		// sibling sort for imported units is load.go parseLocal.
 		sort.Strings(paths)
 		for _, p := range paths {
 			files = append(files, pkg.Files[p])
