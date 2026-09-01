@@ -140,6 +140,15 @@ owners in "Re-homed obligations" above, fidelity decision 6.)
 - [ ] Perf: map-iteration pick walks (post-BUG-005 (L) surgery; see
       the enumerator backlog's last item).
 
+## Q-SELSEL implementation slot ([USER]-ruled 2026-09-01, option A)
+
+- [ ] Q-SELSEL asymmetric-arrival envelope implementation (2 reds:
+      the select-to-select rendezvous rows) — envelope adopted per
+      docs/2026-08-31_qrow-rulings.md row 3; carry the owed C7
+      wording correction at the sites; membership-lane case
+      goroutines/select-wake-close-selsel recommended alongside
+      (c7-refresh lane, 2026-09-01).
+
 ## Standing semantics backlog
 
 - Coverage ledgers: consume-on-demand growth per
