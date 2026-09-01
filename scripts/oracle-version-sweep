@@ -126,14 +126,28 @@ go_pin="$(head -1 "$GO_PIN_FILE" | tr -d '[:space:]')"
 
 # SEPARATE artifacts tree, keyed by candidate version; refuse the
 # judged-records path outright (belt to the results/meta braces below).
+# CANONICALISED, not string-matched (audit fix round 2026-09-01, O1):
+# the old literal `case` guard let `../`-relative, absolute, and
+# symlinked spellings of artifacts/coverage through. realpath -m
+# canonicalises lexically without requiring existence (catches the
+# `../` and absolute forms before anything is created); after mkdir -p
+# the path EXISTS, so re-realpath'ing resolves any symlink component
+# the pre-mkdir pass could not — the symlink form refuses too.
 OUT="${GOLEAN_SWEEP_ARTIFACTS:-artifacts/oracle-sweep/$cand_version}"
-case "$OUT" in
-  artifacts/coverage|artifacts/coverage/*)
-    echo "oracle-version-sweep: refusing to write the judged records tree ($OUT) — sweep artifacts are separate by design" >&2
-    exit 2
-    ;;
-esac
+JUDGED_ABS="$(realpath -m -- "$ROOT/artifacts/coverage")"
+refuse_judged() {
+  echo "oracle-version-sweep: refusing to write the judged records tree ($1 -> $2) — sweep artifacts are separate by design" >&2
+  exit 2
+}
+OUT_ABS="$(realpath -m -- "$OUT")"
+if [[ "$OUT_ABS" == "$JUDGED_ABS" || "$OUT_ABS" == "$JUDGED_ABS"/* ]]; then
+  refuse_judged "$OUT" "$OUT_ABS"
+fi
 mkdir -p "$OUT"
+OUT_ABS="$(realpath -e -- "$OUT")" || { echo "oracle-version-sweep: cannot canonicalise output root '$OUT' after mkdir — refusing" >&2; exit 2; }
+if [[ "$OUT_ABS" == "$JUDGED_ABS" || "$OUT_ABS" == "$JUDGED_ABS"/* ]]; then
+  refuse_judged "$OUT" "$OUT_ABS (symlink-resolved)"
+fi
 
 # Candidate-first PATH via a shim dir, so diff-coverage (and every
 # `go run` it makes) resolves `go` to the candidate. The pinned

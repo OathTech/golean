@@ -12,6 +12,12 @@ Both tools are LANE TOOLING, not gate steps: they never write
 `artifacts/coverage` (the judged records) and never touch
 `baselines/`.
 
+Decision 4 approved THREE legs; the third — the `$GOROOT/test`
+differential run — is not in this lane: it is delivered by the
+`t4-gotest` lane (`docs/2026-09-01_gotest-triage.md`,
+`scripts/gotest-triage`). (Cross-reference added at the audit fix
+round, O4.)
+
 ---
 
 ## Leg 1 — the oracle version sweep: BUILT-AND-NULL-VALIDATED
@@ -73,6 +79,13 @@ Scope caveats, stated as bounds:
   records verify by wire sha, so a FULL sweep of go-side behavior on
   slow rows means running the sweep with `GOLEAN_SLOW=1` semantics —
   quick sweeps cover the go-run oracle everywhere the quick gate does.
+- The NEGATIVE lane (the 390 compile-rejection cases,
+  `baselines/negative-full.tsv`) is NOT swept: the sweep drives
+  `scripts/diff-coverage` (the exec differential) only, so a candidate
+  toolchain that changes an accept/reject verdict or a rejection
+  reason is outside this instrument's scope — that movement surfaces
+  only at a deliberate re-pin's full negative run. (Scope caveat added
+  at the audit fix round, O3.)
 - Resolution is (result, stage) per case, the baseline record's own
   columns. A candidate that changes a recorded-FAIL case's failure
   DETAIL without moving its stage is below this instrument; PASS-row

@@ -62,6 +62,20 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT" || exit 2
 
 OUT="${GOLEAN_386_ARTIFACTS:-artifacts/oracle-386-static}"
+# Judged-records guard, canonicalised (audit fix round 2026-09-01, O2 —
+# the O1 pattern): refuse artifacts/coverage and anything under it, in
+# `../`-relative, absolute, and symlinked spellings alike. realpath -m
+# catches the lexical forms pre-creation; the post-mkdir -e pass
+# resolves symlink components that did not exist before mkdir -p.
+JUDGED_ABS="$(realpath -m -- "$ROOT/artifacts/coverage")"
+refuse_judged() {
+  echo "oracle-386-static: refusing to write the judged records tree ($1 -> $2) — census artifacts are separate by design" >&2
+  exit 2
+}
+OUT_ABS="$(realpath -m -- "$OUT")"
+if [[ "$OUT_ABS" == "$JUDGED_ABS" || "$OUT_ABS" == "$JUDGED_ABS"/* ]]; then
+  refuse_judged "$OUT" "$OUT_ABS"
+fi
 GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
 GO_TIMEOUT_SECONDS="${GO_TIMEOUT_SECONDS:-60}"
 JOBS="${GOLEAN_386_JOBS:-$(nproc 2>/dev/null || echo 4)}"
@@ -223,6 +237,10 @@ if [[ "$go_live" != "$go_pin" ]]; then
 fi
 
 mkdir -p "$OUT/cases" "$GO_BUILD_CACHE"
+OUT_ABS="$(realpath -e -- "$OUT")" || { echo "oracle-386-static: cannot canonicalise output root '$OUT' after mkdir — refusing" >&2; exit 2; }
+if [[ "$OUT_ABS" == "$JUDGED_ABS" || "$OUT_ABS" == "$JUDGED_ABS"/* ]]; then
+  refuse_judged "$OUT" "$OUT_ABS (symlink-resolved)"
+fi
 
 # Warm the 386 stdlib into the shared build cache once, serially, so
 # the parallel case builds don't stampede-compile it. Fail closed: if
