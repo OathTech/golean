@@ -1,0 +1,567 @@
+#!/usr/bin/env bash
+# LANE TOOLING, NOT A GATE STEP (t4-grossmith — fidelity work program
+# Tier 4, [USER]-approved; assessment findings lane-b B10 / lane-d D-8;
+# report: docs/2026-09-01_grossmith-campaign-3.md).
+#
+# THE GROSSMITH RUNNER: drives the external differential fuzzer
+# `deps/grossmith` (a gitignored, READ-ONLY reference checkout — the
+# trust-tools rule: this script never writes inside it) against the
+# CURRENT native frontend + machine through the standing differential
+# harness (`scripts/diff-coverage`, nothing re-implemented), with a
+# CONTRACT TEST in front that fails loud when the adapter interface
+# drifts — the gap both assessment lanes named: the retired side/gofuzz
+# adapter died silently of a 7-field-vs-10-field manifest and a
+# stage-vocabulary drift, and grossmith's own adapter has only ever
+# been run by hand (twice), so nothing would have told us.
+#
+#   scripts/grossmith-run contract
+#       The static contract test alone (no build, seconds): manifest
+#       columns, results header/row shape, stage vocabulary, observation
+#       status vocabulary + schema, capability profile, generator pin
+#       and cleanliness, go oracle pin, gengo compiles. Exit 0 = contract
+#       holds; 1 = DRIFT (every violated clause printed); 2 = refusal.
+#
+#   scripts/capped scripts/grossmith-run campaign --seed S [--n N | --pairs P]
+#                        [--control386 N] [--label L] [--workers J]
+#       contract  ->  dynamic smoke (12 cases end-to-end through
+#       gengo -> diff-coverage -> verdicts; refuses on any harness-error)
+#       ->  the leg  ->  triage. One leg per invocation, so every leg's
+#       parameters are recorded verbatim in its own directory. Must run
+#       under scripts/capped: diff-coverage runs `lake build` and the
+#       reference pass compiles thousands of programs — this script
+#       SELF-WRAPS like scripts/ci and refuses when the cap cannot be
+#       proven (an uncapped run is the failure mode, not a fallback).
+#
+#   scripts/grossmith-run triage <batch-dir> [<batch-dir>...]
+#       Post-process published batches: every non-`match` verdict gets a
+#       row in <batch>/triage.tsv with a DEDUP GROUP (verdict, stage,
+#       normalized detail) and a triage CLASS from the closed set
+#         machine-bug-candidate | gc-bug-candidate |
+#         latitude-candidate   | harness-artifact
+#       under the PINNED-ORACLE RULE: gc is a bounded-trust witness (it
+#       was the wrong side 3 times out of 4 in campaign 2), so every
+#       observation-mismatch / reference-infra row is re-run at
+#       `-gcflags=all=-N -l`; a gc that disagrees with itself is
+#       classified gc-bug-candidate BEFORE the machine is suspected.
+#       Every class is a CANDIDATE — the TSV carries the evidence
+#       column and a needs_human flag; nothing here promotes, pins, or
+#       files. (There is no shrink step: grossmith has none and one is
+#       out of this lane's scope — the report says so.)
+#
+# What this script is NOT: it never writes artifacts/coverage (the
+# judged records), baselines/, Corpus/, or deps/. Artifacts land under
+# artifacts/grossmith/<date>/ (override: GOLEAN_GROSSMITH_ARTIFACTS),
+# a SEPARATE tree canonicalised and refused if it resolves into any of
+# those (oracle-version-sweep's O1 pattern). Scratch (TMPDIR for the
+# harness and the reference builds) is forced inside that tree too:
+# /tmp is write-only under the agent sandbox, and a harness that cannot
+# read back its own row files fails every case as a worker death.
+#
+# Exit codes: 0 ok; 1 contract drift / triage found divergences;
+# 2 refusal (nothing judged); 4 the cap could not be proven (capped).
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT" || exit 2
+
+# ---------------------------------------------------------------------
+# Pins. The generator revision is a DELIBERATE pin (campaign 2's rev,
+# docs/2026-08-20_grossmith-findings-2.md §0): moving it is a recorded
+# decision with a written reason in the campaign report, never a drift
+# absorbed at run time.
+GROSSMITH_PIN="e68867d6a61061ead0922703ce58d1c7a461b3b8"
+GROSSMITH="${GOLEAN_GROSSMITH:-$ROOT/deps/grossmith}"
+GO_PIN_FILE="$ROOT/baselines/go-oracle-pin"
+# Observation statuses the machine can emit that the adapter's closed
+# sets do NOT name. ACKNOWLEDGED, not waived: the adapter's fallthrough
+# for an unknown status is harness-error WITH the status preserved —
+# visible and fail-closed, only misattributed (infra vs semantic is
+# undecided). Both are unreachable for grossmith's import-free,
+# concurrency-free, budget-bounded programs; a campaign that shows one
+# is triaged as harness-artifact with the status in the evidence.
+STATUS_ACK="fatal fuel-out"
+# Stages diff-coverage emits ONLY on the non-strict lanes. The adapter
+# pins lane=strict on every row (asserted below), so these are
+# unreachable by construction and deliberately unmapped on its side.
+LANE_ONLY_STAGES="membership confluent racy"
+
+usage() { sed -n '2,62p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+
+MODE="${1:-}"
+case "$MODE" in
+  contract|campaign|triage) shift ;;
+  -h|--help|"") usage; exit "${MODE:+0}${MODE:-2}" ;;
+  *) echo "grossmith-run: unknown mode '$MODE' (contract | campaign | triage)" >&2; exit 2 ;;
+esac
+
+# ---------------------------------------------------------------------
+# Output root: separate tree, canonicalised, refused if it resolves
+# into the judged records, the baselines, the corpus, or the reference
+# checkouts. Same two-pass (pre-mkdir lexical, post-mkdir symlink-
+# resolving) shape as oracle-version-sweep.
+today="$(date -u +%F)"
+OUT="${GOLEAN_GROSSMITH_ARTIFACTS:-artifacts/grossmith/$today}"
+refuse_root() {
+  echo "grossmith-run: refusing output root $1 -> $2 (resolves into a protected tree: $3)" >&2
+  exit 2
+}
+check_root() {
+  local abs="$1" label="$2" p pabs
+  for p in artifacts/coverage baselines Corpus deps; do
+    pabs="$(realpath -m -- "$ROOT/$p")"
+    if [[ "$abs" == "$pabs" || "$abs" == "$pabs"/* ]]; then refuse_root "$OUT" "$abs$label" "$p"; fi
+  done
+  # The reference checkout may live outside deps/ (GOLEAN_GROSSMITH).
+  pabs="$(realpath -m -- "$GROSSMITH")"
+  if [[ "$abs" == "$pabs" || "$abs" == "$pabs"/* ]]; then refuse_root "$OUT" "$abs$label" "the grossmith checkout"; fi
+}
+OUT_ABS="$(realpath -m -- "$OUT")"
+check_root "$OUT_ABS" ""
+mkdir -p "$OUT" || exit 2
+OUT_ABS="$(realpath -e -- "$OUT")" || { echo "grossmith-run: cannot canonicalise $OUT after mkdir" >&2; exit 2; }
+check_root "$OUT_ABS" " (symlink-resolved)"
+OUT="$OUT_ABS"
+export TMPDIR="$OUT/tmp"
+mkdir -p "$TMPDIR" "$OUT/bin"
+export GOCACHE="$OUT/go-build-cache"
+export GOFLAGS="-mod=mod" GOTOOLCHAIN=local GOENV=off GOWORK=off
+
+# ---------------------------------------------------------------------
+# THE CONTRACT TEST. Each clause is independent; all run; every
+# violation is printed; the verdict is the conjunction. Read from the
+# SOURCES on both sides (diff-coverage, coverage-manifest, the CLI's
+# status vocabulary; the adapter's golean.go / constructs.go), so a
+# drift on either side trips it before a campaign spends an hour
+# producing a wall of misattributed verdicts.
+drift=0
+fail() { echo "  DRIFT  $*"; drift=1; }
+ok()   { echo "  ok     $*"; }
+note() { echo "  note   $*"; }
+
+set_eq() { # set_eq "<a b c>" "<c b a>"  -> 0 if equal as sets
+  [[ "$(tr ' ' '\n' <<<"$1" | sed '/^$/d' | sort -u)" == "$(tr ' ' '\n' <<<"$2" | sed '/^$/d' | sort -u)" ]]
+}
+set_minus() { # elements of $1 not in $2
+  comm -23 <(tr ' ' '\n' <<<"$1" | sed '/^$/d' | sort -u) <(tr ' ' '\n' <<<"$2" | sed '/^$/d' | sort -u) | tr '\n' ' '
+}
+
+contract() {
+  echo "grossmith-run: CONTRACT TEST (adapter interface vs today's harness)"
+  local dc="$ROOT/scripts/diff-coverage" cm="$ROOT/scripts/coverage-manifest"
+  local ad="$GROSSMITH/golean/golean.go" cons="$GROSSMITH/gen/constructs.go"
+  local val="$ROOT/GoLean/GoCore/Value.lean" cli="$ROOT/GoLean/CLI.lean"
+  for f in "$dc" "$cm" "$ad" "$cons" "$val" "$cli"; do
+    [[ -f "$f" ]] || { echo "grossmith-run: missing $f — cannot test the contract" >&2; exit 2; }
+  done
+
+  # C1 — the generator checkout: a git repo at the pin, clean.
+  if ! head="$(git -C "$GROSSMITH" rev-parse HEAD 2>/dev/null)"; then
+    fail "C1 grossmith: $GROSSMITH is not a git checkout"
+  else
+    if [[ "$head" == "$GROSSMITH_PIN" ]]; then ok "C1 grossmith @ ${head:0:7} (pinned)"; else fail "C1 grossmith @ ${head:0:7}, pin is ${GROSSMITH_PIN:0:7} — re-pin deliberately (edit GROSSMITH_PIN, write the reason in the campaign report)"; fi
+    if [[ -n "$(git -C "$GROSSMITH" status --porcelain 2>/dev/null)" ]]; then fail "C1 grossmith checkout is DIRTY (reference checkouts stay pristine — trust-tools rule)"; else ok "C1 grossmith checkout clean"; fi
+  fi
+
+  # C2 — manifest columns: the adapter's header vs the columns
+  # diff-coverage reads vs what coverage-manifest emits today.
+  local ad_cols dc_cols row_n
+  ad_cols="$(grep -oE 'manifest.WriteString\("# [^"]*\\n"\)' "$ad" | sed -E 's/.*"# (.*)\\n".*/\1/; s/\\t/ /g')"
+  dc_cols="$(grep -oE 'read -r id [a-z_ ]+ < "\$rowfile"' "$dc" | head -1 | sed -E 's/read -r (.*) < .*/\1/; s/ extra$//')"
+  # Positional names differ by convention on the two sides; the
+  # contract is the COLUMN MEANING per position, so map the adapter's
+  # names onto diff-coverage's before comparing.
+  local ad_mapped
+  ad_mapped="$(sed 's/\bfunction\b/function_name/; s/\bargs\b/arg_ints/' <<<"$ad_cols")"
+  if [[ -z "$ad_cols" || -z "$dc_cols" ]]; then
+    fail "C2 could not extract the manifest columns (adapter='$ad_cols' harness='$dc_cols') — the source shape moved; update the extractor"
+  elif [[ "$ad_mapped" == "$dc_cols" ]]; then
+    ok "C2 manifest columns agree, $(wc -w <<<"$dc_cols") fields: $dc_cols"
+  else
+    fail "C2 manifest columns differ: adapter writes [$ad_cols], diff-coverage reads [$dc_cols]"
+  fi
+  # The adapter's row builder must have exactly that many cells.
+  row_n="$(awk '/row = strings.Join\(\[\]string\{/{f=1;next} f&&/\}, "\\t"\)/{exit} f' "$ad" | tr ',' '\n' | sed '/^[[:space:]]*$/d' | wc -l)"
+  if [[ "$row_n" -eq "$(wc -w <<<"$dc_cols")" ]]; then ok "C2 adapter row builder emits $row_n cells"; else fail "C2 adapter row builder emits $row_n cells, harness reads $(wc -w <<<"$dc_cols")"; fi
+  # And the live corpus manifest today: every row the same width.
+  local widths
+  if widths="$("$cm" 2>/dev/null | awk -F'\t' 'NF>0 && $1!~/^#/ {c[NF]++} END {for (k in c) printf "%s:%s ", k, c[k]}')"; then
+    if [[ "$widths" =~ ^([0-9]+):([0-9]+)\ $ && "${BASH_REMATCH[1]}" == "$(wc -w <<<"$dc_cols")" ]]; then ok "C2 live coverage-manifest: ${BASH_REMATCH[2]} rows, all ${BASH_REMATCH[1]} fields"; else fail "C2 live coverage-manifest field widths: $widths (want all $(wc -w <<<"$dc_cols"))"; fi
+  else
+    fail "C2 scripts/coverage-manifest failed to run"
+  fi
+  # The adapter pins the strict lane (what makes LANE_ONLY_STAGES unreachable).
+  if grep -qE '"-", status, features, reason, "strict", "-", "-"' "$ad"; then ok "C2 adapter pins lane=strict on every row"; else fail "C2 adapter no longer pins lane=strict — the lane-only stages ($LANE_ONLY_STAGES) become reachable and are unmapped"; fi
+
+  # C3 — results file: header and row shape.
+  local dc_hdr ad_hdr
+  dc_hdr="$(grep -oE "printf 'result\\\\t[^']*'" "$dc" | head -1 | sed -E "s/printf '(.*)\\\\n'/\1/")"
+  ad_hdr="$(grep -oE 'lines\[0\] != "result\\t[^"]*"' "$ad" | sed -E 's/lines\[0\] != "(.*)"/\1/')"
+  if [[ -n "$dc_hdr" && "$dc_hdr" == "$ad_hdr" ]]; then ok "C3 results header agrees: $dc_hdr"; else fail "C3 results header: harness writes '$dc_hdr', adapter expects '$ad_hdr'"; fi
+  # Every row emitter writes 5 cells to the results file (the adapter
+  # refuses any other width). Count the CASE_OUT printf formats and the
+  # worker-death row.
+  local bad_rows
+  bad_rows="$( { grep -E '>> "\$CASE_OUT"$' "$dc"; grep -E "printf 'FAIL\\\\t%s\\\\tunknown\\\\tharness" "$dc"; } \
+    | grep -oE "printf '[^']*'" | sed -E "s/printf '([^']*)'/\1/" | awk '{ n=gsub(/\\t/,"&"); if (n!=4) print "  bad row format (" n+1 " cells): " $0 }')"
+  local n_emitters; n_emitters="$( { grep -E '>> "\$CASE_OUT"$' "$dc"; grep -E "printf 'FAIL\\\\t%s\\\\tunknown\\\\tharness" "$dc"; } | grep -cE "printf '")"
+  if [[ "$n_emitters" -lt 4 ]]; then fail "C3 found only $n_emitters results-row emitters (expected report_pass, report_pass_lane, report_fail, worker-death) — the extractor lost the source shape"
+  elif [[ -z "$bad_rows" ]]; then ok "C3 all $n_emitters results-row emitters write 5 cells (incl. the worker-death row)"; else fail "C3 results row emitters with the wrong width:"$'\n'"$bad_rows"; fi
+
+  # C4 — stage vocabulary: every stage diff-coverage can put in a row
+  # is either mapped by the adapter's judge() or a lane-only stage.
+  local dc_stages ad_stages unmapped extra
+  dc_stages="$(grep -oE 'report_(fail|pass_lane) "\$id" "\$features" "[a-z-]+"' "$dc" | grep -oE '"[a-z-]+"$' | tr -d '"' | sort -u | tr '\n' ' ' | sed 's/ $//')"
+  grep -qE "printf 'FAIL\\\\t%s\\\\tunknown\\\\tharness\\\\t" "$dc" && dc_stages="$dc_stages harness"
+  ad_stages="$(awk '/^func judge\(/{f=1} f&&/^}/{exit} f' "$ad" | grep -oE 'case "[^:]*:' | grep -oE '"[a-z-]+"' | tr -d '"' | sort -u | tr '\n' ' ')"
+  unmapped="$(set_minus "$dc_stages" "$ad_stages $LANE_ONLY_STAGES")"
+  extra="$(set_minus "$ad_stages" "$dc_stages")"
+  if [[ -z "$dc_stages" || -z "$ad_stages" ]]; then
+    fail "C4 could not extract the stage vocabulary (harness='$dc_stages' adapter='$ad_stages')"
+  elif [[ -z "$unmapped" ]]; then
+    ok "C4 stage vocabulary: harness emits {$dc_stages}; adapter maps {$ad_stages}; lane-only unmapped {$LANE_ONLY_STAGES}"
+  else
+    fail "C4 harness stages the adapter does not map: {$unmapped} — they would land as harness-error 'unrecognized GoLean stage'"
+  fi
+  [[ -n "$extra" ]] && note "C4 adapter maps stages the harness no longer emits: {$extra} (harmless; a vocabulary shrink)"
+
+  # C5 — observation status vocabulary + schema constant.
+  local cli_statuses ad_statuses unk
+  cli_statuses="$(awk '/^def GoError.status/{f=1;next} f&&/^$/{exit} f' "$val" | grep -oE '"[a-z-]+"' | tr -d '"' | tr '\n' ' ')"
+  cli_statuses="$cli_statuses ok error"   # runJson / cliErrorJson in CLI.lean
+  ad_statuses="$(awk '/^var cloneStatus(ProducedNoObservation|CarriesObservation)/{f=1} f&&/^}/{f=0} f' "$ad" | grep -oE '"[a-z-]+":' | tr -d '":' | tr '\n' ' ')"
+  unk="$(set_minus "$cli_statuses" "$ad_statuses $STATUS_ACK")"
+  if [[ -z "$cli_statuses" || -z "$ad_statuses" ]]; then
+    fail "C5 could not extract the status vocabulary (cli='$cli_statuses' adapter='$ad_statuses')"
+  elif [[ -z "$unk" ]]; then
+    ok "C5 machine statuses {$cli_statuses}: adapter knows {$ad_statuses}; acknowledged-unknown {$STATUS_ACK} (-> harness-error, visible)"
+  else
+    fail "C5 machine statuses the adapter neither knows nor this script acknowledges: {$unk}"
+  fi
+  local cli_schema ad_schema
+  cli_schema="$(awk '/^private def observationSchema/{getline; print; exit}' "$cli" | grep -oE '"[^"]+"' | tr -d '"')"
+  ad_schema="$(grep -oE 'CloneObservationSchema = "[^"]+"' "$ad" | grep -oE '"[^"]+"' | tr -d '"')"
+  if [[ -n "$cli_schema" && "$cli_schema" == "$ad_schema" ]]; then ok "C5 observation schema agrees: $cli_schema"; else fail "C5 observation schema: CLI '$cli_schema' vs adapter '$ad_schema'"; fi
+
+  # C6 — the capability profile still names real generator tags.
+  local excl opt missing
+  excl="$(awk '/^func Profile\(/{f=1} f&&/^}/{exit} f' "$ad" | grep -oE 'unionTags\(cfg.Exclude, [^)]*\)' | grep -oE '"[a-z_]+"' | tr -d '"' | tr '\n' ' ')"
+  opt="$(awk '/^func Optional\(\)/{f=1} f&&/^}/{exit} f' "$cons" | grep -oE '"[a-z_]+"' | tr -d '"' | tr '\n' ' ')"
+  missing="$(set_minus "$excl" "$opt")"
+  if [[ -z "$excl" || -z "$opt" ]]; then fail "C6 could not extract the profile/optional tags"; elif [[ -z "$missing" ]]; then ok "C6 golean.Profile excludes {$excl}; all in gen.Optional() ($(wc -w <<<"$opt") optional tags)"; else fail "C6 profile excludes tags the generator no longer has: {$missing}"; fi
+
+  # C7 — the oracle: the go on PATH is the pinned oracle (gengo -go
+  # pins this exact binary for the reference pass AND the nested one).
+  local go_pin go_ver
+  [[ -f "$GO_PIN_FILE" ]] || { fail "C7 $GO_PIN_FILE missing"; go_pin=""; }
+  go_pin="$(head -1 "$GO_PIN_FILE" 2>/dev/null | tr -d '[:space:]')"
+  GO_BIN="$(command -v go || true)"
+  go_ver="$("$GO_BIN" version 2>/dev/null | awk '{print $3}')"
+  if [[ -n "$GO_BIN" && "$go_ver" == "$go_pin" ]]; then ok "C7 go oracle $go_ver at $GO_BIN == baselines/go-oracle-pin"; else fail "C7 go on PATH is '${go_ver:-none}' (${GO_BIN:-none}); pin is '$go_pin'"; fi
+
+  # C8 — the adapter compiles against today's Go, into OUR tree (never
+  # inside the reference checkout), and compiling left it clean.
+  if (cd "$GROSSMITH" && go build -o "$OUT/bin/gengo" ./cmd/gengo) >"$OUT/gengo-build.log" 2>&1; then
+    ok "C8 gengo built -> $OUT/bin/gengo"
+  else
+    fail "C8 gengo failed to build (see $OUT/gengo-build.log)"
+  fi
+  if [[ -n "$(git -C "$GROSSMITH" status --porcelain 2>/dev/null)" ]]; then fail "C8 building gengo dirtied the reference checkout"; fi
+
+  if [[ "$drift" -eq 0 ]]; then
+    echo "grossmith-run: CONTRACT HOLDS (C1-C8)"
+  else
+    echo "grossmith-run: CONTRACT DRIFT — see the DRIFT lines above; no campaign may run on a drifted adapter" >&2
+  fi
+  return "$drift"
+}
+
+# ---------------------------------------------------------------------
+# Campaign helpers.
+gengo() { "$OUT/bin/gengo" "$@"; }
+
+verdict_counts() { # <batch-dir> -> "verdict count" lines from batch.json
+  python3 - "$1" <<'PY'
+import json, sys, collections
+rep = json.load(open(sys.argv[1] + "/batch.json"))
+c = collections.Counter(cr.get("verdict", "") for cr in rep["cases"])
+for k, v in sorted(c.items()):
+    print(k or "(unjudged)", v)
+print("refRan", rep.get("refRan"))
+print("total", rep.get("total"))
+PY
+}
+
+record_params() { # <leg-dir> <argv...>: verbatim provenance beside the batch
+  local dir="$1"; shift
+  {
+    echo "grossmith-run campaign parameters (verbatim)"
+    echo "  date_utc:        $(date -u -Is)"
+    echo "  golean:          $(git -C "$ROOT" rev-parse HEAD)$( [[ -n "$(git -C "$ROOT" status --porcelain)" ]] && echo '-dirty' )"
+    echo "  grossmith:       $(git -C "$GROSSMITH" rev-parse HEAD) ($GROSSMITH)"
+    echo "  go:              $("$GO_BIN" version) at $GO_BIN"
+    echo "  memory cap:      GOLEAN_MEM_MAX=${GOLEAN_MEM_MAX:-64G (default)} GOLEAN_CAPPED=${GOLEAN_CAPPED:-}"
+    echo "  cwd for gengo:   $ROOT"
+    echo "  TMPDIR/GOCACHE:  $TMPDIR / $GOCACHE"
+    echo "  generator cfg:   gen.DefaultConfig(seed) {Vars:4 Stmts:14 Depth:2 ExprFuel:3 LoopCap:6 Swarm:true} + golean.Profile (NoObserve slice,map; Exclude observe_point,defer,recover) — recorded per case in case.json 'config'"
+    echo "  gengo argv:      $*"
+  } > "$dir.params.txt"
+}
+
+campaign() {
+  # Self-wrap in the memory cap (scripts/ci's discipline): only the
+  # proven token skips the wrap; `none` is the loud opt-out.
+  case "${GOLEAN_CAPPED:-}" in
+    verified|none) ;;
+    *) exec "$ROOT/scripts/capped" "$ROOT/scripts/grossmith-run" campaign "$@" ;;
+  esac
+  local N=20000 SEED="" PAIRS=0 CTRL=300 LABEL="" WORKERS="" TIMEOUT="10s" SMOKE_N=12 SMOKE_SEED=424242
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --n) N="${2:-}"; shift 2 ;;
+      --seed) SEED="${2:-}"; shift 2 ;;
+      --pairs) PAIRS="${2:-}"; shift 2 ;;
+      --control386) CTRL="${2:-}"; shift 2 ;;
+      --label) LABEL="${2:-}"; shift 2 ;;
+      --workers) WORKERS="${2:-}"; shift 2 ;;
+      --timeout) TIMEOUT="${2:-}"; shift 2 ;;
+      *) echo "grossmith-run campaign: unknown option '$1'" >&2; exit 2 ;;
+    esac
+  done
+  [[ "$SEED" =~ ^[0-9]+$ ]] || { echo "grossmith-run campaign: --seed S is required (a campaign of record names its seed; nothing is defaulted)" >&2; exit 2; }
+  for v in N PAIRS CTRL; do [[ "${!v}" =~ ^[0-9]+$ ]] || { echo "grossmith-run campaign: --${v,,} must be a non-negative integer" >&2; exit 2; }; done
+  [[ -z "$WORKERS" || "$WORKERS" =~ ^[1-9][0-9]*$ ]] || { echo "grossmith-run campaign: --workers must be a positive integer" >&2; exit 2; }
+  [[ -n "$LABEL" ]] || LABEL="$( [[ "$PAIRS" -gt 0 ]] && echo "pairs${PAIRS}-seed${SEED}" || echo "swarm${N}-seed${SEED}" )"
+  [[ "$LABEL" =~ ^[A-Za-z0-9_.-]+$ ]] || { echo "grossmith-run campaign: --label must be a plain path component" >&2; exit 2; }
+  local leg="$OUT/$LABEL"
+  [[ -e "$leg" ]] && { echo "grossmith-run campaign: $leg exists — a leg is immutable; pick another --label" >&2; exit 2; }
+
+  contract || exit 1
+  local wflag=(); [[ -n "$WORKERS" ]] && wflag=(-workers "$WORKERS")
+
+  # DYNAMIC SMOKE: the adapter actually talks to today's harness. Small,
+  # fixed seed, must reach a semantic verdict on every case.
+  echo
+  echo "grossmith-run: SMOKE — $SMOKE_N cases end-to-end (seed $SMOKE_SEED)"
+  local smoke="$OUT/$LABEL-smoke"
+  record_params "$smoke" -n "$SMOKE_N" -seed "$SMOKE_SEED" -go "$GO_BIN" -timeout "$TIMEOUT" "${wflag[@]}" -out "$smoke" -clone "golean:$ROOT"
+  if ! gengo -n "$SMOKE_N" -seed "$SMOKE_SEED" -go "$GO_BIN" -timeout "$TIMEOUT" "${wflag[@]}" -out "$smoke" -clone "golean:$ROOT" > "$smoke.log" 2>&1; then
+    echo "grossmith-run: SMOKE FAILED — gengo exited nonzero; tail of $smoke.log:" >&2
+    tail -20 "$smoke.log" >&2
+    exit 2
+  fi
+  local sm; sm="$(verdict_counts "$smoke")"
+  echo "$sm" | sed 's/^/  /'
+  if grep -qE '^(harness-error|\(unjudged\)) ' <<<"$sm" || [[ "$(awk '$1=="refRan"{print $2}' <<<"$sm")" != "$SMOKE_N" ]]; then
+    echo "grossmith-run: SMOKE FAILED — harness-error / unjudged / reference did not run on every case (the adapter does not fit today's harness; see $smoke/batch.json and $smoke/golean-work/diff-coverage.log)" >&2
+    exit 2
+  fi
+  echo "grossmith-run: smoke ok"
+
+  # THE LEG.
+  echo
+  local argv=()
+  if [[ "$PAIRS" -gt 0 ]]; then argv=(-pairs "$PAIRS"); else argv=(-n "$N"); fi
+  argv+=(-seed "$SEED" -go "$GO_BIN" -timeout "$TIMEOUT" "${wflag[@]}" -out "$leg" -clone "golean:$ROOT")
+  echo "grossmith-run: LEG $LABEL — gengo ${argv[*]}"
+  record_params "$leg" "${argv[@]}"
+  local t0 t1; t0="$(date +%s)"
+  local rc=0
+  gengo "${argv[@]}" > "$leg.log" 2>&1 || rc=$?
+  t1="$(date +%s)"
+  echo "  wall: $((t1 - t0)) s; gengo exit $rc" | tee -a "$leg.params.txt"
+  if [[ "$rc" -ne 0 || ! -f "$leg/batch.json" ]]; then
+    echo "grossmith-run: LEG FAILED (exit $rc) — nothing to triage; tail of $leg.log:" >&2
+    tail -20 "$leg.log" >&2
+    exit 2
+  fi
+  verdict_counts "$leg" | sed 's/^/  /' | tee -a "$leg.params.txt"
+
+  # THE DISCRIMINATION CONTROL: gc@386 vs gc@amd64 through the same
+  # generator (no golean). Divergences must all fall inside the
+  # declared width_dependent tag — proves the pipeline detects real
+  # divergence when it exists, so a clean leg is not a dead harness.
+  if [[ "$CTRL" -gt 0 ]]; then
+    echo
+    local ctrl="$OUT/$LABEL-control386"
+    echo "grossmith-run: CONTROL — $CTRL cases gc-386 (seed $SEED)"
+    record_params "$ctrl" -n "$CTRL" -seed "$SEED" -go "$GO_BIN" -timeout "$TIMEOUT" "${wflag[@]}" -out "$ctrl" -clone gc-386
+    if gengo -n "$CTRL" -seed "$SEED" -go "$GO_BIN" -timeout "$TIMEOUT" "${wflag[@]}" -out "$ctrl" -clone gc-386 > "$ctrl.log" 2>&1; then
+      grep -E "cross-arch discrimination|width_dependent yield|observation-mismatch|^  match" "$ctrl.log" | sed 's/^/  /' | tee -a "$ctrl.params.txt"
+      if grep -qE "off-tag [1-9]" "$ctrl.log"; then echo "grossmith-run: CONTROL — OFF-TAG cross-arch divergence (a generator tagging defect; see $ctrl.log)" >&2; fi
+    else
+      echo "grossmith-run: CONTROL FAILED (see $ctrl.log) — the leg stands, the discrimination control does not" >&2
+    fi
+  fi
+
+  echo
+  triage "$leg"
+}
+
+# ---------------------------------------------------------------------
+# TRIAGE: dedup + classification, per published batch.
+triage() {
+  [[ $# -ge 1 ]] || { echo "grossmith-run triage: need at least one batch dir" >&2; exit 2; }
+  GO_BIN="${GO_BIN:-$(command -v go)}"
+  local any=0 b
+  for b in "$@"; do
+    [[ -f "$b/batch.json" && -f "$b/manifest.tsv" ]] || { echo "grossmith-run triage: $b is not a judged gengo batch (no batch.json/manifest.tsv)" >&2; exit 2; }
+    echo "grossmith-run: TRIAGE $b"
+    python3 - "$b" "$GO_BIN" "$TMPDIR" <<'PY' || any=1
+import json, os, re, subprocess, sys, collections
+
+batch, gobin, tmp = sys.argv[1], sys.argv[2], sys.argv[3]
+rep = json.load(open(os.path.join(batch, "batch.json")))
+seeds, feats = {}, {}
+with open(os.path.join(batch, "manifest.tsv")) as f:
+    next(f)
+    for line in f:
+        p = line.rstrip("\n").split("\t")
+        if len(p) < 3:
+            continue
+        seeds[p[0]] = p[1]
+        feats[p[0]] = {kv.split("=")[0] for kv in p[2].split(",") if kv}
+
+def norm(s):
+    # Dedup key: collapse the case-specific noise (numbers, hex, paths,
+    # quoted strings, case ids) so two hits of one mechanism share a group.
+    s = re.sub(r"case_\d+", "case_ID", s)
+    s = re.sub(r"(?:^|(?<=[\s(=:'\"]))/[^\s'\"]+", "/PATH", s)   # absolute paths only, not a/b words
+    s = re.sub(r"\"[^\"]*\"", '"STR"', s)
+    s = re.sub(r"0x[0-9a-fA-F]+", "HEX", s)
+    s = re.sub(r"-?\d+", "N", s)
+    return s[:200]
+
+def strip(o):
+    # Canonical form of an observation document for equality: drop
+    # empty/None fields (the recorded struct omits them; the driver's
+    # JSON may spell them explicitly).
+    if isinstance(o, dict):
+        # Go's omitempty drops zero values (0, false, "") from the RECORDED
+        # document; the live driver spells them — drop them on both sides.
+        return {k: strip(v) for k, v in o.items() if v not in (None, "", [], {}, 0, False)}
+    if isinstance(o, list):
+        return [strip(x) for x in o]
+    return o
+
+def metamorphic(case_dir):
+    """Re-run gc's reference with the optimizer and inliner off.
+    Returns (status, doc_or_detail): status in {ran, build-failed, run-failed, timeout}."""
+    exe = os.path.join(tmp, "meta-" + os.path.basename(case_dir) + ".bin")
+    env = dict(os.environ, GOENV="off", GOWORK="off", GOFLAGS="-buildvcs=false", GOEXPERIMENT="", CGO_ENABLED="0")
+    try:
+        b = subprocess.run([gobin, "build", "-gcflags=all=-N -l", "-o", exe, "."], cwd=case_dir,
+                           capture_output=True, text=True, timeout=120, env=env)
+    except subprocess.TimeoutExpired:
+        return "timeout", "build timeout"
+    if b.returncode != 0:
+        return "build-failed", (b.stdout + b.stderr).strip()
+    try:
+        r = subprocess.run([exe], capture_output=True, text=True, timeout=30, env={})
+    except subprocess.TimeoutExpired:
+        return "timeout", "run timeout"
+    finally:
+        try: os.remove(exe)
+        except OSError: pass
+    try:
+        return "ran", json.loads(r.stdout)
+    except ValueError:
+        return "run-failed", (r.stdout + r.stderr)[:300]
+
+rows, groups = [], collections.OrderedDict()
+for cr in rep["cases"]:
+    v = cr.get("verdict", "")
+    if v == "match":
+        continue
+    cid = cr["id"]
+    detail = cr.get("detail", "") or cr.get("reference", {}).get("detail", "")
+    stage = "-"
+    m = re.match(r"stage ([a-z-]+): ?(.*)", detail, re.S)
+    if m:
+        stage, detail = m.group(1), m.group(2)
+    ref_status = cr.get("reference", {}).get("status", "")
+    tags = feats.get(cid, set())
+    case_dir = os.path.join(batch, cid)
+    klass, evidence, human = "", "", "yes"
+
+    if v == "observation-mismatch":
+        st, doc = metamorphic(case_dir)
+        if st == "ran":
+            same = strip(doc) == strip(cr["reference"].get("document", {}))
+            if not same:
+                klass = "gc-bug-candidate"
+                evidence = "gc default-flags observation != gc -N -l observation (gc self-unstable; machine to be compared against the -N -l document)"
+            elif "order_witness" in tags:
+                klass = "latitude-candidate"
+                evidence = "gc self-stable at -N -l; case carries order_witness (the unsequenced-point instrument) — decide forced vs unsequenced by spec#Order_of_evaluation before filing"
+            else:
+                klass = "machine-bug-candidate"
+                evidence = "gc self-stable at -N -l; no order instrument in the case — the machine disagrees with a stable oracle"
+        else:
+            klass = "machine-bug-candidate"
+            evidence = "metamorphic re-run unavailable (%s: %s) — attribution NOT established" % (st, str(doc)[:120])
+    elif v == "reference-infra-failure":
+        st, doc = metamorphic(case_dir)
+        low = detail.lower()
+        if "timeout" in low or "deadline" in low or "killed" in low:
+            klass, evidence = "harness-artifact", "reference-side timeout/kill (budget), not a compile refusal"
+        elif st == "ran":
+            klass = "gc-bug-candidate"
+            evidence = "gc refuses/fails the program at default flags but compiles AND runs it at -N -l (optimizer-dependent refusal of a legal program)"
+        elif st == "build-failed":
+            klass = "harness-artifact"
+            evidence = "gc fails at -N -l too: %s" % str(doc)[:160]
+            human = "yes"
+        else:
+            klass, evidence = "harness-artifact", "reference infra failure; -N -l re-run: %s" % st
+    elif v == "clone-infra-failure":
+        if stage in ("frontend-export", "lean-run"):
+            klass = "machine-bug-candidate"
+            evidence = "the frontend/machine REFUSED a program inside grossmith's supported fragment (stage %s) — a refusal is a load-bearing signal, never a pass" % stage
+        else:
+            klass, evidence = "harness-artifact", "clone-side infra (stage %s): worker death / budget" % stage
+    elif v == "harness-error":
+        klass, evidence = "harness-artifact", "adapter/harness contract error (translation, unknown stage/status, invalid document)"
+    elif v == "both-infra-failure":
+        klass, evidence = "harness-artifact", "both sides failed to run"
+    elif v == "":
+        klass, evidence = "harness-artifact", "unjudged case (reference status %s)" % ref_status
+    else:
+        klass, evidence = "harness-artifact", "unknown verdict %r" % v
+
+    key = (v, stage, norm(detail))
+    if key not in groups:
+        groups[key] = {"n": 0, "rep": cid, "class": klass}
+    groups[key]["n"] += 1
+    gid = list(groups).index(key) + 1
+    rows.append([cid, seeds.get(cid, "?"), v, stage, klass, "G%d" % gid, human, evidence,
+                 ",".join(sorted(t for t in tags if t in ("order_witness", "recover_wrapper", "width_dependent", "panic_risk"))),
+                 detail.replace("\t", " ").replace("\n", "\\n")[:400]])
+
+with open(os.path.join(batch, "triage.tsv"), "w") as f:
+    f.write("id\tseed\tverdict\tstage\tclass\tdedup_group\tneeds_human\tevidence\tinstrument_tags\tdetail\n")
+    for r in rows:
+        f.write("\t".join(r) + "\n")
+with open(os.path.join(batch, "triage-groups.tsv"), "w") as f:
+    f.write("group\tcount\tverdict\tstage\tclass\trepresentative\tnormalized_detail\n")
+    for i, (k, g) in enumerate(groups.items(), 1):
+        f.write("G%d\t%d\t%s\t%s\t%s\t%s\t%s\n" % (i, g["n"], k[0], k[1], g["class"], g["rep"], k[2]))
+
+total = rep.get("total", len(rep["cases"]))
+print("  cases %d, non-match %d, dedup groups %d -> %s" % (total, len(rows), len(groups), os.path.join(batch, "triage.tsv")))
+byclass = collections.Counter(r[4] for r in rows)
+for k, n in sorted(byclass.items()):
+    print("    %-24s %d" % (k, n))
+for i, (k, g) in enumerate(groups.items(), 1):
+    print("    G%d x%d %s/%s %s e.g. %s: %s" % (i, g["n"], k[0], k[1], g["class"], g["rep"], k[2][:110]))
+sys.exit(1 if rows else 0)
+PY
+  done
+  if [[ "$any" -eq 0 ]]; then echo "grossmith-run: triage — no divergences in the given batch(es)"; fi
+  return "$any"
+}
+
+case "$MODE" in
+  contract) contract ;;
+  campaign) campaign "$@" ;;
+  triage)   triage "$@" ;;
+esac
