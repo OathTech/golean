@@ -321,7 +321,7 @@ to an FR/Q row here, a (c)-pin (triage §4), or an (a)-queued fix
 | FR-4 | method STENCILS lack the per-declaration quarantine (H-3 residual) | mono.go `flushTypeInsts` — whole-export refusal (measured: `native frontend unsupported: selector call Sprintf is not a method value`, exit 1) | spec#Method_declarations, spec#Instantiations | 1 (`generics/stencil-quarantine/sibling`) | frontend: the H-3 stub mechanism × the instantiation rollback; method-set-completeness invariant applies | seq → queue 4 |
 | FR-5 | sync ops in EXPRESSION position (the promoted/embedded half landed) | emit.go:7457 — `unsup("sync.%s.%s outside a statement/defer position (expression-position sync ops and sync method values are unmodeled; direct AND promoted statement/defer ops lower — H-12)")` | sync design note §9 (stdlib surface; spec#Selectors for the shape) | 1 (`sync/promoted-mutex/trylock-expr`) | frontend routing to the EXISTING modeled ops (no new envelope) | seq → queue 5 — raft-path (`deps/raft/storage.go:108,139,147` — the PROMOTED shapes, now lowering) |
 | FR-6 | assignment-form range with non-identifier targets | emit.go:3043 — `unsup("range assignment to non-identifier target (operands evaluate per iteration)")` | spec#For_range, spec#Assignment_statements | 4 (`assign-form-nonident/*`, `assign-tuple-order/range-assign`) | frontend: per-iteration two-phase target evaluation inside the range lowering | seq → queue 6 |
-| FR-7 | implicit boxing of tuple COMPONENTS into interface targets | emit.go:2225/:2529/:2601 — `unsup("implicit interface conversion in multi-value assignment (interfaces campaign, deferred)")` | spec#Assignment_statements, spec#Assignability, spec#Type_assertions | 6 (`…typed-iface` ×3, `tuple-call-iface`, `assert-comma-ok`, `imported-goose/unittest/interfaces`) | frontend: per-component box at the comma-ok/tuple stores (the BUG-057 reroute's guarded edge) | seq → queue 7 |
+| FR-7 | implicit boxing of tuple COMPONENTS into interface targets | emit.go:2225/:2529/:2601, + the comma-ok ASSIGN path (emitAssign, BUG-079, 2026-09-01) — `unsup("implicit interface conversion in multi-value assignment (interfaces campaign, deferred)")` | spec#Assignment_statements, spec#Assignability, spec#Type_assertions | 8 (`…typed-iface` ×3, `tuple-call-iface`, `assert-comma-ok`, `imported-goose/unittest/interfaces`, `interfaces/comma-ok-into-interface/{global-form,local-assign-form}` — BUG-079's pins: the package-level and local `=` comma-ok forms, previously lowered RAW and refused downstream) | frontend: per-component box at the comma-ok/tuple stores (the BUG-057 reroute's guarded edge) | seq → queue 7 |
 | FR-8 | ~~defined-type-aware typed nil (BUG-014)~~ **RETIRED 2026-08-22 — LANDED** | was: GoCore nil-literal arm — at use: `unsupported "len for non-array/slice/map value GoLean.GoValue.nil"` | spec#Composite_literals, spec#The_zero_value | 0 — all 8 rows of `maps/nil-literal-values/*` PASS; BUG-014 closed at commit f981f7cd, the representation arm landed at raft W4.1 (`maps/named-nil-flows`, 5 guardrails) | — | retired; queue slot 8 freed |
 | FR-9 | declarations for imported named types (BUG-008) | GoCore/Ops.lean `tyUncomparable` `none` arm — `unsupported "map key hashability for unknown defined type sort.IntSlice"` | spec#Comparison_operators | 1 (`maps/imported-named-key-unhashable`) — plus the D5-stub adjacency at sync/atomic-frontier/value, deliberately NOT counted here because it is already counted under Q-ATOMIC's 5 (id left un-backticked so the count stays mechanically re-derivable) | frontend feature (TypeDef emission for imported types; the interface mechanism exists) | seq → queue 9 — raft-path |
 | FR-10 | array-pointer VIEWS over slice storage (L2b) | GoCore conversion arms — succeeding `(*[N]T)(s)` forms refused (`Loc` has no subarray-view constructor) | spec#Conversions_from_slice_to_array_or_array_pointer | 1 (`slice-to-array/ok-forms`) | GoCore: a subarray-view `Loc` constructor + aliasing story | seq → queue 10 |
@@ -471,20 +471,29 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (2521 cases, 2352 PASS /
-169 FAIL; `baselines/native-full.tsv`, re-pinned 2026-09-01 on the
-gotest-fixes slice — the $GOROOT/test harvest fix round, BUG-074..078:
-+14 born-PASS rows pinning the four harvest mismatches and their
-boundary controls, +1 born-FAIL-by-design refusal pin
-`arrays/materialization-budget/over-budget` (BUG-078's array budget,
-the one red-count movement: 168 → 169, mapped below). Prior re-pin
-2026-09-01 on the qrow-syncval slice, commit `b16738d3` (baseline then
-2506 / 2338 / 168); +2 born-PASS pinning rows at
-the same slice's audit fix round, F10 — `sync/escapes/paren-forms`,
-`sync/composite-literal/lit-in-composite`; +1 born-PASS membership
-row at the c7-refresh rebase union, C8 —
-`goroutines/select-wake-close-selsel` — red-count arithmetic
-unchanged by both). **Re-derived 2026-09-01** on
+All numbers at the current tracked baseline (2526 cases, 2355 PASS /
+171 FAIL; `baselines/native-full.tsv`, re-pinned 2026-09-01 at the
+gotest-fixes slice's AUDIT FIX ROUND: +3 born-PASS NOTE-15 rows
+`range/range-not-evaluated/{conversion-no-var,conversion-two-vars-panic,
+const-len-index-key-only}`, +2 born-FAIL-by-design FR-7 refusal pins
+`interfaces/comma-ok-into-interface/{global-form,local-assign-form}`
+(BUG-079; red-count movement 169 → 171, mapped below — full ci --diff
+certification of that re-pin OWED, see the baseline header). Prior
+re-pin the gotest-fixes slice itself (2521 / 2352 / 169) — the
+$GOROOT/test harvest fix round, BUG-074..078: +14 born-PASS rows
+pinning the four harvest mismatches and their boundary controls, +1
+born-FAIL-by-design refusal pin `arrays/materialization-budget/
+over-budget` (BUG-078's array budget, red-count movement 168 → 169).
+Prior re-pin 2026-09-01 on the qrow-syncval slice, commit `b16738d3`
+(baseline then 2503 / 2335 / 168 — MEASURED at that commit; an
+earlier wording here attributed 2506 / 2338 to it, which is the
+post-main figure after the two rows below, RECORD 7 of the audit fix
+round); +2 born-PASS pinning rows at the same slice's audit fix
+round, F10 — `sync/escapes/paren-forms`,
+`sync/composite-literal/lit-in-composite` (2505 / 2337 at `220c2711`);
++1 born-PASS membership row at the c7-refresh rebase union, C8 —
+`goroutines/select-wake-close-selsel` (2506 / 2338 at `9e666fd0`) —
+red-count arithmetic unchanged by both). **Re-derived 2026-09-01** on
 that slice (rider B): the arithmetic below had gone stale against TWO
 rounds of re-pins beneath it — the Tier-1 fidelity-fixes round (which
 moved the baseline to 2493 / 2318 / 175, leaving 6 reds unmapped
@@ -509,17 +518,18 @@ the historical record; the method is §8b's, re-run).
 frontier 2 (atomic → Q-ATOMIC, goexit → Q-GOEXIT), latitude 1 (model →
 C10), out-of-language 5. Zero unclassified.
 
-**The 169 baseline reds, every one on a named row (re-derived
-mechanically 2026-09-01 — zero unmapped, zero double-mapped):**
+**The 171 baseline reds, every one on a named row (re-derived
+mechanically 2026-09-01 — zero unmapped, zero double-mapped; +2 at
+the audit fix round, both FR-7):**
 
 | bucket | reds |
 | --- | --- |
-| frontier FR-1…FR-15 (§4) | 81 |
+| frontier FR-1…FR-15 (§4) | 83 |
 | design questions Q-* (§6) | 14 |
 | (c) profound-reason pins (triage §4 + the unsafe marker) | 9 + 1 |
 | (a)-queued fixes (triage §3.2: A3 5, A4 1, A5 1, A7 1) | 8 |
-| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, untriaged-ids `coverage`) | 56 |
-| **total** | **169** |
+| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) | 56 |
+| **total** | **171** |
 
 *(Movements at the 2026-09-01 re-derivation, each derived in §8c:
 Q-* 21 → 14 — the Q-SYNCVAL slice flipped its 7 ruled reds;
@@ -535,8 +545,8 @@ FR/Q suite, §8b, or §8c is `unsafe/boundary/pointer-roundtrip` — the
 out-of-language boundary marker, argued as a (c)-class justified pin
 (triage postscript 3) and put to the user with the (c) list.
 
-**Sequential-frontier queue mass:** 14 live arcs (FR-8 retired), 81
-reds; the top four retire 12 reds in ~2-3 days of small arcs; FR-15
+**Sequential-frontier queue mass:** 14 live arcs (FR-8 retired), 83
+reds (FR-7 6 → 8 at the audit fix round, BUG-079's two pins); the top four retire 12 reds in ~2-3 days of small arcs; FR-15
 (complex) alone is 27. **Design-question mass:** 9 questions of which
 2 RESOLVED (Q-SYNCVAL + Q-SYNCLIT, ruled and implemented 2026-09-01)
 and 7 open, 14 reds, every one with its cases in hand.
@@ -665,6 +675,17 @@ records:**
 | `strings/trimspace-repeat/repeat-bound-refused` | 1 | BUG-073 (Repeat outputs past the shim's 1<<24 bound refuse by name) |
 | `init/hidden-dep-refused` | 1 | the E7 hidden-dep init-order detector pin (t1-fidelity-fixes; assessment p2 claim 6 family) |
 | `builtins/len-vs-call-order/panicky-between` | 1 | BUG-032's surviving A6 residual (panicky operand between a panicky left operand and a later event) — a fail-closed frontend refusal, not a divergence (§2 Order_of_evaluation row) |
+
+*Rider (2026-09-01, the gotest-fixes slice and its audit fix round):*
+since this derivation the gotest-fixes slice added ONE born-FAIL
+refusal pin — `arrays/materialization-budget/over-budget`, BUG-078's
+array budget (13 reds new since the vintage; 169 − 13 + 13 = 169 ✓;
+case count 2506 → 2521, the other 14 rows born PASS) — and the audit
+fix round added TWO more, `interfaces/comma-ok-into-interface/
+{global-form,local-assign-form}`, BUG-079's FR-7 pins (15 new since
+the vintage; 169 − 13 + 15 = 171 ✓; case count 2521 → 2526, the other
+3 rows — NOTE-15's range pins — born PASS). The 13 that went green are
+unchanged.
 
 Q-SYNCVAL's misuse-identity pins and the other 8 rows this slice added
 are born-PASS and appear in no red bucket; the out-of-scope sync reds

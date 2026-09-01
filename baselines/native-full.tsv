@@ -1,5 +1,30 @@
 # GoLean native-frontend full-corpus differential baseline
-# re-pinned: 2026-09-01 (gotest-fixes slice — the $GOROOT/test harvest
+# re-pinned: 2026-09-01 (gotest-fixes AUDIT FIX ROUND — [AGENT]-executed
+#   on the auditor's findings; +5 NEW rows, NO existing row moved, NO
+#   PASS->non-PASS flips expected. CERTIFICATION STATUS, stated honestly:
+#   the 5 rows were derived per-case at this tip through the SAME
+#   pipeline the differential runs (coverageharness oracle + working-tree
+#   nativefrontend + golean; the two frontend-export rows also verified
+#   red-first against the HEAD~ frontend) — the round's build host could
+#   not create the capped cgroup (systemd-run: bus permission denied), so
+#   the FULL ci --diff at this tip is OWED before merge and will judge
+#   this header. Two runtime changes ride with it, both refusal-only:
+#   the decodeReturn n=1 arity guard (BLOCKER 1; no corpus wire has the
+#   shape — the frontend splats multi-value returns) and the
+#   arrayLenBudget re-derivation 1<<20 -> 1<<16 (SHOULD-FIX 2; the
+#   corpus's largest array type is 128 elements, the only row above the
+#   budget is the already-red over-budget pin).
+#   NEW rows born PASS (3), NOTE-15 — the exprHasCallOrRecv arms the
+#     BUG-076 pins left unexercised:
+#     range/range-not-evaluated/{conversion-no-var,
+#     conversion-two-vars-panic,const-len-index-key-only}.
+#   NEW rows born FAIL BY DESIGN (2, on BUG-079's Cases line):
+#     interfaces/comma-ok-into-interface/{global-form,local-assign-form}
+#     FAIL/frontend-export — comma-ok assertion assigned into
+#     interface-typed targets now refuses AT THE LOWERING ("implicit
+#     interface conversion in multi-value assignment"), the FR-7 family;
+#     oracle truth `ok`.
+# previous re-pin: 2026-09-01 (gotest-fixes slice — the $GOROOT/test harvest
 #   fix round, [USER]-approved 2026-09-01 (triage report
 #   docs/2026-09-01_gotest-triage.md; fixes BUG-074..BUG-078). Full
 #   ci --diff run at this tip; drift = exactly the 15 NEW rows below,
@@ -26,9 +51,11 @@
 #     `ok` in the expected column; red forever until the owed linear
 #     normalize lands).
 #   Pure reorder normalized (no result moved): the rebase-union had
-#     appended goroutines/select-wake-close-selsel before
-#     select-wake-multi against the manifest order; this re-pin
-#     regenerates the body in manifest order.
+#     appended goroutines/select-wake-close-selsel AFTER
+#     select-wake-multi, against the manifest order (which sorts
+#     close-selsel BEFORE multi); this re-pin regenerates the body in
+#     manifest order. (Direction corrected at the audit fix round,
+#     NOTE 17 — the first wording had it backwards.)
 # previous re-pin: 2026-09-01 (REBASE UNION — c7-refresh rebased onto main
 #   220c2711 (the qrow-syncval merge); two independent same-day
 #   re-pin moves compose here and this header names both. Union
@@ -1485,6 +1512,8 @@ PASS	interfaces/call-assign-boxing/named-result	-
 PASS	interfaces/call-assign-boxing-controls/var-init	-
 PASS	interfaces/call-assign-boxing-controls/concrete	-
 PASS	interfaces/call-assign-boxing-controls/per-pair	-
+FAIL	interfaces/comma-ok-into-interface/global-form	frontend-export
+FAIL	interfaces/comma-ok-into-interface/local-assign-form	frontend-export
 PASS	interfaces/deep-incomparable-dynamic-eq	-
 PASS	interfaces/embedded-interface-assertion	-
 PASS	interfaces/embedded-interface	-
@@ -2061,6 +2090,9 @@ PASS	range/range-not-evaluated/deref-nil-key-only	-
 PASS	range/range-not-evaluated/field-ptr-nil-no-var	-
 PASS	range/range-not-evaluated/deref-nil-two-vars-panic	-
 PASS	range/range-not-evaluated/call-evaluated-once	-
+PASS	range/range-not-evaluated/conversion-no-var	-
+PASS	range/range-not-evaluated/conversion-two-vars-panic	-
+PASS	range/range-not-evaluated/const-len-index-key-only	-
 PASS	range/range-slice-index-value	-
 PASS	range/range-string-index-only	-
 PASS	range/range-struct-copy	-
