@@ -1,0 +1,416 @@
+#!/usr/bin/env bash
+# scripts/gotest-triage — the $GOROOT/test triage harness.
+#
+# LANE TOOLING, NOT A GATE. This script is the t4-gotest assessment lane's
+# runner (fidelity decision 4, [USER]-approved; outsider review demand D2 —
+# the test262-analogue step): it drives the classic $GOROOT/test suite
+# (deps/go/test, the run.go/testdir corpus) through the SAME two pipelines
+# the differential gate trusts — `go run` on the pinned oracle toolchain vs
+# nativefrontend → golean native-json-run — and classifies every in-scope
+# test fail-closed. It writes ONLY under artifacts/gotest/ (gitignored).
+# It is wired into no gate, no baseline, no corpus; scripts/ci does not
+# call it. Its product is evidence for docs/2026-09-01_gotest-triage.md.
+#
+# Categories (fail-closed — every case lands in exactly one):
+#   FRONTEND-REFUSED  the native frontend (or the wire decoder) refused,
+#                     with its named cause. A refusal IS the in/out-of-
+#                     fragment verdict: the frontend is the classifier.
+#   MACHINE-REFUSED   the machine refused (status unsupported/stuck/
+#                     fuel-out) or exceeded the wall-clock budget — named.
+#   MATCH             observations agree (see the honesty note below).
+#   MISMATCH          both sides produced comparable observations and
+#                     they DISAGREE. The gold: each gets a diagnosis in
+#                     the report.
+#   INFRA             the harness could not obtain a Go-side verdict
+#                     (go-run failure/timeout, build constraints, a
+#                     pinned-toolchain output deviation) — named.
+#
+# HONESTY NOTE (the comparable surface): the machine's observation is
+# termination status + panic/deadlock/fatal message + subject results —
+# there is NO stdout observable. `main` returns nothing, so for these
+# whole-program tests the differential surface is the termination status
+# and the failure message. $GOROOT `// run` tests are predominantly
+# SELF-CHECKING (silent on success, panic on any wrong value), so an
+# ok/ok agreement means every internal assertion of the test held in the
+# machine. Tests whose expected output (<name>.out or inline prints) is
+# nonempty are still status-compared, but the row is flagged
+# `output-uncompared` and the report counts them separately — a status-
+# only match is never silently pooled with a full one.
+#
+# Usage:
+#   scripts/gotest-triage survey            write the directive survey TSV
+#   scripts/gotest-triage run [opts]        survey + drive the in-scope slice
+#     --limit N        deterministic prefix (first N in sorted order) — SAID
+#                      in the meta, never silent
+#     --sample N --seed S   seeded random sample of N (recorded in meta)
+#     --jobs N         parallel workers (default 8)
+#     --only <rel.go>  a single test (repeatable), e.g. --only fixedbugs/bug001.go
+#   scripts/gotest-triage one <rel.go>      run one case, print its row
+#   scripts/gotest-triage report            aggregate artifacts/gotest/results.tsv
+#
+# Preconditions (fail-closed, never auto-built here):
+#   * .lake/build/bin/golean must exist — build it yourself via
+#     `scripts/capped lake build golean` (this script never invokes lake:
+#     the cgroup-cap discipline stays with the operator).
+#   * the live `go` must equal baselines/go-oracle-pin (same rule as
+#     scripts/diff-coverage; GOLEAN_ALLOW_GO_DRIFT=1 to probe loudly).
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
+GOTEST_DIR="${GOTEST_TRIAGE_DIR:-deps/go/test}"
+OUT="${GOTEST_TRIAGE_ARTIFACTS:-artifacts/gotest}"
+GO_TIMEOUT="${GOTEST_TRIAGE_GO_TIMEOUT:-30}"
+LEAN_TIMEOUT="${GOTEST_TRIAGE_LEAN_TIMEOUT:-30}"
+GOLEAN_BIN="$ROOT/.lake/build/bin/golean"
+GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
+
+# The testdir driver's own directory list (deps/go/src/cmd/internal/
+# testdir/testdir_test.go, `dirs`) — enumerate exactly what upstream runs.
+TEST_DIRS=("." "ken" "chan" "interface" "internal/runtime/sys" "syntax" "dwarf" "fixedbugs" "codegen" "abi" "typeparam" "typeparam/mdempsky" "arenas" "simd")
+
+die() { echo "gotest-triage: $*" >&2; exit 2; }
+
+preflight() {
+  command -v go >/dev/null 2>&1 || die "go not found on PATH"
+  [[ -d "$GOTEST_DIR" ]] || die "$GOTEST_DIR not found — run scripts/setup-deps (go is in the default set)"
+  # Oracle pin (same discipline as scripts/diff-coverage): triage evidence
+  # against a floated toolchain is not evidence about the pinned oracle.
+  local pin_file="$ROOT/baselines/go-oracle-pin" go_pin go_live
+  [[ -f "$pin_file" ]] || die "baselines/go-oracle-pin missing — the oracle pin is unverifiable; refusing"
+  go_pin="$(head -1 "$pin_file" | tr -d '[:space:]')"
+  go_live="$(go version | awk '{print $3}')"
+  if [[ "$go_live" != "$go_pin" ]]; then
+    if [[ "${GOLEAN_ALLOW_GO_DRIFT:-0}" = 1 ]]; then
+      echo "WARNING: live toolchain $go_live != pinned oracle $go_pin (GOLEAN_ALLOW_GO_DRIFT=1 — this run is NOT against the oracle of record)" >&2
+    else
+      die "live toolchain $go_live != pinned oracle $go_pin; refusing (GOLEAN_ALLOW_GO_DRIFT=1 to probe loudly)"
+    fi
+  fi
+}
+
+preflight_machine() {
+  [[ -x "$GOLEAN_BIN" ]] || die "no golean binary at $GOLEAN_BIN — build it first: scripts/capped lake build golean"
+}
+
+# Directive extraction, mirroring testdir_test.go run(): the action is the
+# first non-empty line that is not a build constraint, with any leading
+# `//` trimmed; token 1 = action, the rest = args/flags.
+directive_of() {
+  local src="$1"
+  awk '
+    /^\/\/go:build/ { next }
+    /^\/\/ \+build/ { next }
+    {
+      line = $0
+      sub(/^\/\//, "", line)
+      gsub(/^[ \t]+|[ \t\r]+$/, "", line)
+      if (line == "") next
+      print line
+      exit
+    }
+  ' "$src"
+}
+
+survey() {
+  mkdir -p "$OUT"
+  local survey_tsv="$OUT/survey.tsv"
+  : > "$survey_tsv.tmp"
+  local d f rel action_line action args scope
+  for d in "${TEST_DIRS[@]}"; do
+    [[ -d "$GOTEST_DIR/$d" ]] || continue
+    for f in "$GOTEST_DIR/$d"/*.go; do
+      [[ -e "$f" ]] || continue
+      rel="${f#"$GOTEST_DIR"/}"
+      rel="${rel#./}"
+      action_line="$(directive_of "$f")"
+      action="${action_line%% *}"
+      args="-"
+      if [[ "$action_line" == *" "* ]]; then
+        args="${action_line#* }"
+      fi
+      # In-scope for the run harness: a plain `// run` (no flags/args —
+      # gcflags/goexperiment/program-args change the recipe), single file.
+      if [[ "$action" == "run" && "$args" == "-" ]]; then
+        scope="in-scope"
+      else
+        scope="out-of-scope:$action"
+      fi
+      printf '%s\t%s\t%s\t%s\n' "$rel" "$action" "$args" "$scope" >> "$survey_tsv.tmp"
+    done
+  done
+  sort "$survey_tsv.tmp" > "$survey_tsv"
+  rm -f "$survey_tsv.tmp"
+  echo "survey: $(wc -l < "$survey_tsv") test files -> $survey_tsv" >&2
+}
+
+one_line() {
+  local value="$1"
+  value="${value//$'\t'/ }"
+  value="${value//$'\r'/\\r}"
+  value="${value//$'\n'/\\n}"
+  printf '%s' "$value"
+}
+
+json_string_literal() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//$'\n'/\\n}"
+  value="${value//$'\r'/\\r}"
+  value="${value//$'\t'/\\t}"
+  printf '"%s"' "$value"
+}
+
+# Frontend refusal cause, normalized for counting: first error line,
+# file positions stripped, so identical causes aggregate.
+normalize_cause() {
+  head -1 | sed -E 's#(/[^ :]+/)?main\.go:[0-9]+(:[0-9]+)?: ?##g' | cut -c1-160
+}
+
+# Run one test. Emits exactly one TSV row: category \t test \t detail.
+run_one() {
+  local rel="$1"
+  local src="$GOTEST_DIR/$rel"
+  [[ -f "$src" ]] || { printf 'INFRA\t%s\t%s\n' "$rel" "missing source $src"; return; }
+  local slug="${rel//\//__}"; slug="${slug%.go}"
+  local dir="$OUT/cases/$slug"
+  rm -rf "$dir"
+  mkdir -p "$dir"
+  # ENTRY-POINT SHIM: the native frontend deliberately skips `func main`
+  # in the main package (emit.go — GoCore runs the named subject, never
+  # main), so a whole-program test needs its entry point renamed. The
+  # transformation is SYMMETRIC — BOTH pipelines consume the identical
+  # transformed source (rename `func main` -> `func gotestMain`, append a
+  # trivial `func main() { gotestMain() }`), so it cannot skew one side
+  # only. Fail-closed on any shape the rename does not provably cover.
+  if [[ "$(grep -c '^func main()' "$src")" -eq 1 ]]; then
+    sed 's/^func main()/func gotestMain()/' "$src" > "$dir/main.go"
+  elif [[ "$(grep -c '^main()' "$src")" -eq 1 ]] && grep -qx 'func' "$src"; then
+    # The pre-gofmt two-line style of the oldest tests (ken/*.go):
+    # `func` on its own line, `main() {` on the next.
+    awk 'prev ~ /^func$/ && /^main\(\)/ { sub(/^main\(\)/, "gotestMain()") } { prev = $0; print }' "$src" > "$dir/main.go"
+  else
+    printf 'INFRA\t%s\t%s\n' "$rel" "entry-point shim: no single provably-renameable 'func main()' declaration"
+    return
+  fi
+  if [[ "$(grep -c '^func gotestMain()\|^gotestMain()' "$dir/main.go")" -ne 1 ]]; then
+    printf 'INFRA\t%s\t%s\n' "$rel" "entry-point shim: rename did not land exactly once"
+    return
+  fi
+  printf '\nfunc main() { gotestMain() }\n' >> "$dir/main.go"
+
+  # Expected Go-side output per the testdir rule: <name>.out or empty.
+  local expected="" out_file="${src%.go}.out"
+  if [[ -f "$out_file" ]]; then
+    expected="$(cat "$out_file")"
+  fi
+
+  # --- Go oracle -------------------------------------------------------
+  # Same env pins as scripts/diff-coverage's go_run_oracle: GOPATH mode,
+  # modern panic(nil) semantics, shared build cache.
+  local go_out go_rc
+  go_out="$(cd "$dir" && timeout "$GO_TIMEOUT" env GO111MODULE=off GODEBUG=panicnil=0 GOCACHE="$GO_BUILD_CACHE" go run main.go 2>&1)"
+  go_rc=$?
+
+  local go_status="" go_obs="" go_msg="" output_flag=""
+  if [[ "$go_rc" -eq 124 ]]; then
+    printf 'INFRA\t%s\t%s\n' "$rel" "go run timed out after ${GO_TIMEOUT}s"
+    return
+  elif [[ "$go_rc" -eq 0 ]]; then
+    if [[ "$go_out" != "$expected" ]]; then
+      # The pinned toolchain itself deviates from the suite's expectation
+      # — environment- or flag-dependent test; not a machine verdict.
+      printf 'INFRA\t%s\t%s\n' "$rel" "go output != expected .out on the pinned toolchain: $(one_line "${go_out:0:200}")"
+      return
+    fi
+    go_status="ok"
+    go_obs='{"schema":"golean-observation-v1","status":"ok","values":[]}'
+    if [[ -n "$go_out" ]]; then
+      output_flag="output-uncompared(${#go_out}B): the machine has no stdout observable; "
+    fi
+  elif [[ "$go_out" == *"fatal error: all goroutines are asleep - deadlock!"* ]]; then
+    go_status="deadlock"
+    go_obs='{"message":"all goroutines are asleep - deadlock!","schema":"golean-observation-v1","status":"deadlock"}'
+  elif [[ "$go_out" == *"panic:"* ]]; then
+    go_status="panic"
+    go_msg="$(printf '%s\n' "$go_out" | awk '/^panic: /{ sub(/^panic: /, ""); print; exit }')"
+    go_obs="{\"message\":$(json_string_literal "$go_msg"),\"schema\":\"golean-observation-v1\",\"status\":\"panic\"}"
+  elif [[ "$go_out" == *"fatal error: "* ]]; then
+    go_status="fatal"
+    go_msg="$(printf '%s\n' "$go_out" | awk '/^\t?fatal error: /{ sub(/^\t?fatal error: /, ""); print; exit }')"
+    go_obs="{\"message\":$(json_string_literal "$go_msg"),\"schema\":\"golean-observation-v1\",\"status\":\"fatal\"}"
+  else
+    # Compile error, unsatisfied build constraints, os.Exit(1), ... — no
+    # comparable runtime verdict from the oracle side.
+    printf 'INFRA\t%s\t%s\n' "$rel" "go run exited $go_rc without panic/fatal: $(one_line "${go_out:0:200}")"
+    return
+  fi
+
+  # --- Frontend --------------------------------------------------------
+  local wire="$dir/wire.json" fe_out fe_rc
+  fe_out="$(timeout "$GO_TIMEOUT" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/nativefrontend --dir "$dir" --out "$wire" 2>&1)"
+  fe_rc=$?
+  if [[ "$fe_rc" -ne 0 ]]; then
+    printf 'FRONTEND-REFUSED\t%s\t%s\n' "$rel" "$(one_line "$(printf '%s\n' "$fe_out" | normalize_cause)")"
+    return
+  fi
+
+  # --- Machine ---------------------------------------------------------
+  local lean_out lean_rc
+  lean_out="$(timeout "$LEAN_TIMEOUT" "$GOLEAN_BIN" native-json-run --input "$wire" --function gotestMain 2>&1)"
+  lean_rc=$?
+  if [[ "$lean_rc" -eq 124 ]]; then
+    printf 'MACHINE-REFUSED\t%s\t%s\n' "$rel" "wall-clock timeout after ${LEAN_TIMEOUT}s (go: $go_status)"
+    return
+  fi
+  local lean_status
+  lean_status="$(printf '%s' "$lean_out" | sed -n 's/.*"status":"\([a-z-]*\)".*/\1/p' | head -1)"
+  if [[ -z "$lean_status" ]]; then
+    printf 'INFRA\t%s\t%s\n' "$rel" "no observation from native-json-run (exit $lean_rc): $(one_line "${lean_out:0:200}")"
+    return
+  fi
+  # A frontend-QUARANTINED stub (per-decl fail-closed lowering) is a
+  # frontend coverage gap, not a machine refusal — same classification
+  # rule as scripts/diff-coverage's untriaged-ledger discipline.
+  if [[ "$lean_status" == "unsupported" && "$lean_out" == *"frontend-quarantined: "* ]]; then
+    printf 'FRONTEND-REFUSED\t%s\t%s\n' "$rel" "$(one_line "$(printf '%s' "$lean_out" | sed -n 's/.*frontend-quarantined: \([^"]*\)".*/\1/p' | head -1 | cut -c1-160)")"
+    return
+  fi
+  case "$lean_status" in
+    unsupported|stuck|fuel-out)
+      printf 'MACHINE-REFUSED\t%s\t%s\n' "$rel" "$(one_line "${lean_out:0:300}") (go: $go_status)"
+      return
+      ;;
+    error)
+      # The wire DECODER's fail-closed refusal (NativeToIR) — part of the
+      # lowering pipeline, so it counts against the frontend fragment.
+      printf 'FRONTEND-REFUSED\t%s\t%s\n' "$rel" "wire-decode: $(one_line "${lean_out:0:300}")"
+      return
+      ;;
+  esac
+
+  if [[ "$lean_status" != "$go_status" ]]; then
+    printf 'MISMATCH\t%s\t%s\n' "$rel" "status: go=$go_status lean=$lean_status; go_out=$(one_line "${go_out:0:200}") lean_obs=$(one_line "${lean_out:0:300}")"
+    return
+  fi
+
+  # Same status — compare the full observations with the repo's own
+  # comparator (message equality for panic/fatal/deadlock; values for ok —
+  # main returns nothing, so the ok shape is the empty-values observation).
+  if "$GOLEAN_BIN" observation-eq --left "$lean_out" --right "$go_obs" >/dev/null 2>&1; then
+    printf 'MATCH\t%s\t%s\n' "$rel" "${output_flag}status=$go_status"
+  else
+    printf 'MISMATCH\t%s\t%s\n' "$rel" "message/values (status=$go_status): go=$(one_line "$go_obs") lean=$(one_line "${lean_out:0:300}")"
+  fi
+}
+
+cmd="${1:-}"
+shift || true
+
+case "$cmd" in
+  survey)
+    preflight
+    survey
+    ;;
+  one)
+    preflight
+    preflight_machine
+    [[ "$#" -ge 1 ]] || die "usage: scripts/gotest-triage one <rel.go>"
+    mkdir -p "$OUT/cases"
+    run_one "$1"
+    ;;
+  run)
+    preflight
+    preflight_machine
+    limit="" sample="" seed="1" jobs=8
+    only=()
+    while [[ "$#" -gt 0 ]]; do
+      case "$1" in
+        --limit) limit="$2"; shift 2 ;;
+        --sample) sample="$2"; shift 2 ;;
+        --seed) seed="$2"; shift 2 ;;
+        --jobs) jobs="$2"; shift 2 ;;
+        --only) only+=("$2"); shift 2 ;;
+        *) die "unknown option $1" ;;
+      esac
+    done
+    survey
+    mkdir -p "$OUT/cases" "$OUT/rows" "$GO_BUILD_CACHE"
+    rm -f "$OUT"/rows/*.tsv 2>/dev/null
+    rm -f "$OUT/results.tsv" "$OUT/results.meta.tsv"
+
+    selection="$OUT/selection.txt"
+    if [[ "${#only[@]}" -gt 0 ]]; then
+      printf '%s\n' "${only[@]}" > "$selection"
+      scope_note="only=${only[*]}"
+    else
+      awk -F '\t' '$4 == "in-scope" { print $1 }' "$OUT/survey.tsv" | sort > "$selection"
+      scope_note="full in-scope slice"
+      if [[ -n "$sample" ]]; then
+        # Seeded, reproducible sample — never a silent truncation.
+        shuf --random-source=<(yes "$seed") -n "$sample" "$selection" | sort > "$selection.tmp"
+        mv "$selection.tmp" "$selection"
+        scope_note="seeded sample n=$sample seed=$seed"
+      elif [[ -n "$limit" ]]; then
+        head -n "$limit" "$selection" > "$selection.tmp"
+        mv "$selection.tmp" "$selection"
+        scope_note="deterministic prefix n=$limit"
+      fi
+    fi
+    total="$(wc -l < "$selection" | tr -d ' ')"
+    echo "gotest-triage: driving $total case(s) [$scope_note] with $jobs worker(s)" >&2
+
+    # Pre-warm the frontend build once so parallel `go run` calls hit cache.
+    env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go build -o /dev/null ./tools/nativefrontend || die "tools/nativefrontend does not build"
+
+    export GOTEST_DIR OUT GO_TIMEOUT LEAN_TIMEOUT GOLEAN_BIN GO_BUILD_CACHE ROOT
+    xargs -a "$selection" -P "$jobs" -I '{}' -- "$0" __worker '{}'
+    # Assemble: one row per selected case, fail-closed on a missing row
+    # (a killed worker must surface, never vanish).
+    {
+      printf 'category\ttest\tdetail\n'
+      while IFS= read -r rel; do
+        slug="${rel//\//__}"; slug="${slug%.go}"
+        if [[ -s "$OUT/rows/$slug.tsv" ]]; then
+          cat "$OUT/rows/$slug.tsv"
+        else
+          printf 'INFRA\t%s\t%s\n' "$rel" "worker produced no row (killed?)"
+        fi
+      done < "$selection"
+    } > "$OUT/results.tsv"
+    {
+      printf 'key\tvalue\n'
+      printf 'scope\t%s\n' "$scope_note"
+      printf 'cases\t%s\n' "$total"
+      printf 'go_toolchain\t%s\n' "$(go version | awk '{print $3}')"
+      printf 'git_commit\t%s\n' "$(git rev-parse HEAD 2>/dev/null || echo unknown)"
+      printf 'date\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+      printf 'go_timeout_s\t%s\n' "$GO_TIMEOUT"
+      printf 'lean_timeout_s\t%s\n' "$LEAN_TIMEOUT"
+    } > "$OUT/results.meta.tsv"
+    "$0" report
+    ;;
+  __worker)
+    # Internal: one case, row to $OUT/rows/<slug>.tsv (atomic mv).
+    rel="$1"
+    slug="${rel//\//__}"; slug="${slug%.go}"
+    run_one "$rel" > "$OUT/rows/$slug.tsv.tmp"
+    mv "$OUT/rows/$slug.tsv.tmp" "$OUT/rows/$slug.tsv"
+    ;;
+  report)
+    [[ -f "$OUT/results.tsv" ]] || die "no $OUT/results.tsv; run scripts/gotest-triage run first"
+    echo "== gotest-triage report ($OUT/results.tsv) =="
+    [[ -f "$OUT/results.meta.tsv" ]] && sed 1d "$OUT/results.meta.tsv" | sed 's/^/  /'
+    echo "-- categories --"
+    awk -F '\t' 'NR > 1 { c[$1] += 1; t += 1 } END { for (k in c) printf "  %-18s %d\n", k, c[k]; printf "  %-18s %d\n", "TOTAL", t }' "$OUT/results.tsv" | sort
+    echo "-- status-only matches (go printed; output uncompared) --"
+    awk -F '\t' '$1 == "MATCH" && $3 ~ /output-uncompared/ { n += 1 } END { printf "  %d\n", n + 0 }' "$OUT/results.tsv"
+    echo "-- mismatches --"
+    awk -F '\t' '$1 == "MISMATCH" { printf "  %s\t%s\n", $2, substr($3, 1, 220) }' "$OUT/results.tsv"
+    ;;
+  *)
+    die "usage: scripts/gotest-triage {survey|run|one|report} (see the header)"
+    ;;
+esac
