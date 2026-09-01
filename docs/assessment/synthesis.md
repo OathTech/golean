@@ -22,7 +22,9 @@ the REALIZED boundary differ — every one found by adversarial
 reading, none by a gate. The lower bound is genuinely strong at its
 core and thin at its edges; the upper bound is honestly enumerated
 and weakly realized (441 enumerated behaviors across the membership
-rows; 45 distinct values ever exhibited by the oracle — 10.2%);
+rows; 45 distinct values exhibited by the oracle in the current
+gate run's samples — 10.2%; per p2-fact adjustment 1, a
+current-samples count, not an all-time one);
 the validation apparatus's exec lane would survive hostile review
 while its negative lane, notification path, and derived-artifact
 guards would not.
