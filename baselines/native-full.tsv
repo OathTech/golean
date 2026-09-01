@@ -1,4 +1,54 @@
 # GoLean native-frontend full-corpus differential baseline
+# re-pinned: 2026-08-31/09-01 (t1-fidelity-fixes, the whole Tier-1
+#   round: mini-slice A6 = BUG-062 fix + BUG-032 over-refusal
+#   retirement; E7 detector; BUG-070 unsafe layout ops; BUG-071
+#   Formatter dyn hole; BUG-072/073 cause-named refusals. Full
+#   ci --diff run at the branch tip after the crash-recovery resume —
+#   the crashed worker's interim pin of this file was NEVER verified
+#   and is superseded by this one.) Row deltas, each on a docs/BUGS.md
+#   Cases: line:
+#   FAIL->PASS (9): builtins/len-vs-call-order/{chan,slice} and
+#     builtins/min-max-vs-call-order/{min-value,max-value,min-arg-panic}
+#     — BUG-062's five silent wrong answers, fixed by the sweep-scoped
+#     ordered-event hoist (len/cap/min/max hoist exactly when a
+#     call/receive follows in the same sweep);
+#     channels/recv-order/{dead-recv-len-operand,dead-recv-len-embedded}
+#     and bools/short-circuit-funclit/{e6-recv-len-in-sc,
+#     e6-recv-len-outside} — BUG-032's function-scoped over-refusal
+#     retired: no event in those statements, len inline realizes gc's
+#     left-to-right point (oracle-matched panics).
+#   NEW rows (4): builtins/len-vs-call-order/{short-circuit,
+#     short-circuit-skipped,panicky-before-call} PASS (A6 guardrails);
+#     builtins/len-vs-call-order/panicky-between FAIL/frontend-export
+#     BY DESIGN (the surviving BUG-032/A6 refusal: panicky operand
+#     between a panicky left operand and a later event).
+#   unsafe layout ops (BUG-070, same branch): the frontend now refuses
+#     unsafe.Sizeof/Offsetof/Alignof unconditionally (implementation-
+#     specific layout was silently constant-folding into the wire).
+#     ROW REMOVED: unsafe/boundary/sizeof-const (was PASS; its
+#     spec-forced shape moved to unsafe/layout-ops and is refused by
+#     the mechanism — the removal is on BUG-070's Cases: line).
+#     NEW rows: unsafe/layout-ops/{sizeof-fixed,layout-struct}
+#     FAIL/frontend-export BY DESIGN. unsafe/boundary/pointer-roundtrip
+#     unchanged (its own distinct Pointer-type refusal).
+#   NEW row (E7, same branch): init/hidden-dep-refused
+#     FAIL/frontend-export BY DESIGN — the E7 hidden-dep init-order
+#     detector refusal pin (tools/nativefrontend/hiddendep.go; the
+#     recorded deviation case init/hidden-dep-order keeps lowering
+#     under the apparatus-side allow and stays FAIL/differential).
+#   NEW row (BUG-071, same branch): fmt/formatter-dyn-hole/dyn-boxed
+#     FAIL/frontend-export BY DESIGN — the Formatter x dyn-fmt-shim
+#     emit-time refusal pin (checkFormatterDynHole, fmtdesugar.go).
+#   NEW rows (BUG-072, same branch): strings/shim-value-refused/
+#     {shimmed-value,unmodeled-value} FAIL/frontend-export BY DESIGN —
+#     the stdlib function-VALUE refusal now names its true cause
+#     (was the phantom "field selector on anonymous struct type").
+#   NEW rows (BUG-073, same branch): strings/trimspace-repeat/
+#     repeat-overflow PASS (upstream's Repeat output-length overflow
+#     panic modeled verbatim, both sides panic identically);
+#     strings/trimspace-repeat/repeat-bound-refused FAIL/
+#     frontend-export BY DESIGN (outputs past the shim's 1<<24 bound
+#     refuse by name instead of a causeless fuel/memory stop).
 # recorded: 2026-08-28 (G-BIND wave boundary, branch g-bind;
 #   docs/g-bind-log.md). Re-pin reason: the C-05 `callchain` corpus
 #   case (iris-corpus-plan §5.2, the G-BIND gate instance) adds 3 rows
@@ -10,7 +60,9 @@
 #   (~1800 lines) while the SET diff is the 3 rows — verified by
 #   coverage-baseline-diff at the re-pin (g-bind log, wave record).
 # failing-set classification (unchanged from the 2026-08-22 record —
-#   carried forward, audit F4d):
+#   carried forward, audit F4d; the min-max/len-vs-call block below is
+#   SUPERSEDED 2026-08-31 by the A6 re-pin note above — kept for the
+#   record):
 #     builtins/min-max-vs-call-order — BUG-062 WIDENED (the
 #     ordered-event set omits value-returning built-ins; grossmith
 #     campaign-2 F-1 promoted):
@@ -92,8 +144,8 @@ PASS	bools/short-circuit-funclit/outside-four	-
 PASS	bools/short-circuit-funclit/outside-zero	-
 PASS	bools/short-circuit-funclit/outside-then-sc	-
 PASS	bools/short-circuit-funclit/outside-then-sc-short	-
-FAIL	bools/short-circuit-funclit/e6-recv-len-in-sc	frontend-export
-FAIL	bools/short-circuit-funclit/e6-recv-len-outside	frontend-export
+PASS	bools/short-circuit-funclit/e6-recv-len-in-sc	-
+PASS	bools/short-circuit-funclit/e6-recv-len-outside	-
 PASS	bools/short-circuit-funclit/admit-new	-
 PASS	bools/short-circuit-funclit/admit-new-short	-
 PASS	bools/short-circuit-funclit/admit-copy	-
@@ -135,9 +187,13 @@ PASS	builtins/copy-edge/string-prefix	-
 PASS	builtins/copy-edge/generic-slices	-
 PASS	builtins/copy-string-to-bytes	-
 PASS	builtins/len-cap-array-pointer	-
-FAIL	builtins/len-vs-call-order/chan	differential
-FAIL	builtins/len-vs-call-order/slice	differential
+PASS	builtins/len-vs-call-order/chan	-
+PASS	builtins/len-vs-call-order/slice	-
 PASS	builtins/len-vs-call-order/recv-bearing	-
+PASS	builtins/len-vs-call-order/short-circuit	-
+PASS	builtins/len-vs-call-order/short-circuit-skipped	-
+PASS	builtins/len-vs-call-order/panicky-before-call	-
+FAIL	builtins/len-vs-call-order/panicky-between	frontend-export
 PASS	builtins/make-channel-len-cap	-
 PASS	builtins/make-map-hint	-
 PASS	builtins/min-max-edge/one-arg	-
@@ -150,9 +206,9 @@ PASS	builtins/min-max-edge/generic-strings	-
 PASS	builtins/min-max-edge/expressions	-
 PASS	builtins/min-max-ints	-
 PASS	builtins/min-max-strings	-
-FAIL	builtins/min-max-vs-call-order/min-value	differential
-FAIL	builtins/min-max-vs-call-order/max-value	differential
-FAIL	builtins/min-max-vs-call-order/min-arg-panic	differential
+PASS	builtins/min-max-vs-call-order/min-value	-
+PASS	builtins/min-max-vs-call-order/max-value	-
+PASS	builtins/min-max-vs-call-order/min-arg-panic	-
 PASS	builtins/min-max-vs-call-order/append-arg-panic	-
 PASS	builtins/min-max-vs-call-order/call-in-builtin-arg	-
 FAIL	builtins/real-imag	frontend-export
@@ -236,8 +292,8 @@ PASS	channels/recv-order/for-init	-
 PASS	channels/recv-order/for-cond	-
 PASS	channels/recv-order/else-if	-
 PASS	channels/recv-order/switch-case	-
-FAIL	channels/recv-order/dead-recv-len-operand	frontend-export
-FAIL	channels/recv-order/dead-recv-len-embedded	frontend-export
+PASS	channels/recv-order/dead-recv-len-operand	-
+PASS	channels/recv-order/dead-recv-len-embedded	-
 PASS	channels/recv-order/len-embedded-no-recv	-
 FAIL	channels/recv-short-circuit/and-rhs	frontend-export
 FAIL	channels/recv-short-circuit/or-rhs	frontend-export
@@ -812,6 +868,7 @@ PASS	fmt/errorf/fresh	-
 PASS	fmt/errorf/text	-
 PASS	fmt/errorf/sentinel-classify	-
 PASS	fmt/errorf/vs-errors-new	-
+FAIL	fmt/formatter-dyn-hole/dyn-boxed	frontend-export
 FAIL	fmt/formatter-precedence/over-stringer	frontend-export
 FAIL	fmt/formatter-precedence/over-kind-matrix	frontend-export
 FAIL	fmt/formatter-precedence/at-depth	frontend-export
@@ -1263,6 +1320,7 @@ PASS	init/global-in-closure	-
 PASS	init/global-shared-mutation	-
 PASS	init/global-zero-before-init	-
 FAIL	init/hidden-dep-order	differential
+FAIL	init/hidden-dep-refused	frontend-export
 PASS	init/init-defer-recover	-
 PASS	init/init-panic	-
 PASS	init/init-sees-var-values	-
@@ -2333,6 +2391,8 @@ PASS	strings/split-conformance/overlap	-
 PASS	strings/split-conformance/multi-byte-sep	-
 PASS	strings/split-conformance/confchange-shape	-
 FAIL	strings/split-conformance/empty-sep	frontend-export
+FAIL	strings/shim-value-refused/shimmed-value	frontend-export
+FAIL	strings/shim-value-refused/unmodeled-value	frontend-export
 PASS	strings/string-basic	-
 PASS	strings/string-byte-conversion	-
 PASS	strings/string-byte-len	-
@@ -2358,6 +2418,8 @@ PASS	strings/trimspace-repeat/trim-inner-runes	-
 PASS	strings/trimspace-repeat/repeat-basic	-
 PASS	strings/trimspace-repeat/repeat-describe-shape	-
 PASS	strings/trimspace-repeat/repeat-negative	-
+PASS	strings/trimspace-repeat/repeat-overflow	-
+FAIL	strings/trimspace-repeat/repeat-bound-refused	frontend-export
 PASS	structs/anonymous-field	-
 PASS	structs/blank-field	-
 PASS	structs/comparable	-
@@ -2486,8 +2548,9 @@ PASS	sync/waitgroup-negative-panic/negative-counter	-
 PASS	sync/waitgroup-panic-payload/payload-is-string	-
 PASS	sync/waitgroup-wait-deadlock/wait-deadlock	-
 PASS	sync/waitgroup-workers-join/workers-join	-
-PASS	unsafe/boundary/sizeof-const	-
 FAIL	unsafe/boundary/pointer-roundtrip	frontend-export
+FAIL	unsafe/layout-ops/sizeof-fixed	frontend-export
+FAIL	unsafe/layout-ops/layout-struct	frontend-export
 PASS	variadic/defined-slice-spread	-
 PASS	variadic/forwarding	-
 PASS	variadic/literal-args-local-slice	-
