@@ -1551,8 +1551,18 @@ partial def decodeProgram (json : Json) : Except String Program := do
   let obj ← StrictJson.obj "program" json
   -- `package` is emitted and deliberately unread; `globals` is absent
   -- on a globals-free wire.
+  -- `fileOrder` (T1 dc122857, integration fix per audit T3-10): the E8
+  -- file-presentation-order record the emitter writes at program level
+  -- (list of {package, files}). It is frontend METADATA — a wire-level
+  -- record of the order the frontend presented files in — with no
+  -- machine consumer yet, so it is EXPLICITLY IGNORED here (the
+  -- `package` precedent: known key, deliberately unread, named in this
+  -- comment), not shape-validated: validation without a consumer would
+  -- be dead code free to drift from the emitter. When a machine
+  -- consumer appears, it decodes strictly like every other read key.
   let _ ← (checkAllowedKeys "program" obj
-    ["schema", "package", "types", "funcs", "methods", "methodSets", "globals"]).run 0
+    ["schema", "package", "types", "funcs", "methods", "methodSets", "globals",
+     "fileOrder"]).run 0
   let schema ← StrictJson.string "program.schema" (← StrictJson.field "program" obj "schema")
   if schema != "golean-native-v1" then
     throw s!"native lowering: unexpected schema {schema}"
