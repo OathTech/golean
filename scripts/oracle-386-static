@@ -1,0 +1,343 @@
+#!/usr/bin/env bash
+# LANE TOOLING, NOT A GATE STEP (t4-oracle-legs, oracle-matrix legs —
+# fidelity decision 4, [USER]-approved:
+# docs/assessment/decisions-2026-08-31.md item 4; report:
+# docs/2026-09-01_oracle-legs.md).
+#
+# The GOARCH=386 STATIC leg: the pinned gc toolchain is its own 32-bit
+# oracle at COMPILE TIME (p2 finding, docs/assessment/p2-keeps-a2a3bcd.md
+# C-8 break: `GOARCH=386 go build` type-checks with 32-bit int/uint —
+# "1 << 40 ... overflows" — with zero extra infrastructure). For every
+# corpus case this script builds the SAME program the differential lane
+# runs, once per GOARCH in {amd64, 386}, build-only, and compares
+# accept/reject. A case the two arches classify differently is
+# width-sensitive in its STATIC semantics — exactly the entanglement
+# latitude row R1 (docs/2026-08-11_latitude-inventory.md) records for
+# the 64-bit pin ("which programs COMPILE ... the negative lane
+# inherits the pin via go/types on the host").
+#
+# SCOPE: static only. 386 EXECUTION is out of scope on this box — 386
+# binaries abort in this sandbox (exit 133 / SIGTRAP; p2 sandbox note,
+# carried to the user, not worked around). The dynamic cross-arch
+# evidence lives in the grossmith gc-386 leg
+# (docs/2026-08-20_grossmith-findings-2.md §6).
+#
+#   scripts/oracle-386-static [--lane exec|negative|all] [--prefix P]
+#
+# exec lane: per manifest row, generate the harness program
+#   (tools/coverageharness — the same generation the differential lane
+#   trusts; no resolution invented here), then build it at amd64 and at
+#   386. Classes:
+#     BOTH-ACCEPT        no static width signal
+#     386-REJECT         accepted at amd64, rejected at 386 — a
+#                        width-sensitivity the census must own
+#     AMD64-REJECT       rejected at amd64 (either arch outcome) — an
+#                        INFRA ALARM: the dynamic lane builds this case
+#                        at amd64 every --diff run, so a reject here
+#                        means THIS script's invocation is wrong, never
+#                        a finding
+#     INFRA-HARNESS      harness generation failed — alarm, named
+# negative lane: per negative-manifest row, `go build` the case dir at
+#   both arches (the recorded lane's own invocation). Classes:
+#     BOTH-REJECT        both arches reject AND both outputs carry the
+#                        recorded expected substring — no width signal
+#     386-ACCEPT         rejected at amd64 (as recorded), ACCEPTED at
+#                        386 — a width-sensitive rejection
+#     AMD64-ACCEPT       accepted at amd64 — infra alarm (contradicts
+#                        the recorded negative lane)
+#     REASON-DRIFT       both reject but the 386 output does NOT carry
+#                        the recorded expected substring — the
+#                        rejection reason moved with the width
+#
+# Artifacts: artifacts/oracle-386-static/{exec,negative}.tsv (+ per-case
+# build logs under artifacts/oracle-386-static/cases/). Never touches
+# artifacts/coverage or baselines/.
+#
+# Exit: 0 = census complete, no infra alarms (width findings are the
+# census OUTPUT, reported, not an error); 1 = census complete but infra
+# alarm rows exist (results published, alarms named); 2 = could not run.
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT" || exit 2
+
+OUT="${GOLEAN_386_ARTIFACTS:-artifacts/oracle-386-static}"
+GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
+GO_TIMEOUT_SECONDS="${GO_TIMEOUT_SECONDS:-60}"
+JOBS="${GOLEAN_386_JOBS:-$(nproc 2>/dev/null || echo 4)}"
+
+run_with_timeout() {
+  local seconds="$1"
+  shift
+  perl -e 'my $t = shift @ARGV; my $pid = fork(); die "fork failed\n" unless defined $pid; if ($pid == 0) { exec @ARGV; exit 127 } $SIG{ALRM} = sub { kill "TERM", $pid; select undef, undef, undef, 1; kill "KILL", $pid; exit 124 }; alarm $t; waitpid $pid, 0; my $s = $?; exit($s == -1 ? 127 : ($s & 127 ? 128 + ($s & 127) : $s >> 8));' "$seconds" "$@"
+}
+
+one_line() {
+  local value="$1"
+  value="${value//$'\t'/ }"
+  value="${value//$'\r'/\\r}"
+  value="${value//$'\n'/\\n}"
+  printf '%s' "$value"
+}
+
+# First line of a compiler stderr that names the failure (skip go's
+# "# package" banner lines); whole output if no such line.
+first_error_line() {
+  awk '!/^#/ && NF > 0 { print; exit }'
+}
+
+build_case() {
+  # build_case <arch> <dir> <logfile>: build the main package in <dir>
+  # (build-only; the binary goes to a scratch path and is removed).
+  # Echo nothing; return 0 = accept, 1 = reject (log holds stderr),
+  # 2 = timeout/infra.
+  local arch="$1" dir="$2" log="$3" rc=0
+  local bin="$dir/.golean-386-static.$arch.bin"
+  local gopath_env=()
+  if [[ -d "$dir/gopath" ]]; then
+    gopath_env=(GOPATH="$(cd "$dir/gopath" && pwd -P)")
+  fi
+  run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" \
+    GOOS=linux GOARCH="$arch" ${gopath_env[@]+"${gopath_env[@]}"} \
+    bash -c 'cd "$1" && shift && exec go build -o "$@" .' go-386-static "$dir" "$bin" \
+    > "$log" 2>&1 || rc=$?
+  rm -f "$bin"
+  if [[ "$rc" -eq 0 ]]; then return 0; fi
+  if [[ "$rc" -eq 124 || "$rc" -eq 127 ]]; then return 2; fi
+  return 1
+}
+
+# ---- hidden worker modes (one manifest row each; parallel via xargs) ----
+
+if [[ "${1:-}" == "--worker-exec" ]]; then
+  rowfile="${2:?--worker-exec needs a rowfile}"
+  IFS=$'\t' read -r id go_dir function_name arg_ints expected_status features _rest < "$rowfile"
+  outrow="$rowfile.out.tmp"
+  : > "$outrow"
+  casedir="$OUT/cases/${id//\//__}"
+  prog="$casedir/prog"
+  mkdir -p "$casedir"
+  emit() { printf '%s\t%s\t%s\t%s\t%s\n' "$1" "$id" "$features" "$(one_line "$2")" "$(one_line "$3")" >> "$outrow"; mv "$outrow" "$rowfile.out"; }
+  if ! gen_out="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" \
+      go run ./tools/coverageharness --input "$go_dir/main.go" --out "$prog" \
+      --subject "$function_name" --expected-status "$expected_status" --args "$arg_ints" 2>&1)"; then
+    emit "INFRA-HARNESS" "harness generation failed: $gen_out" "-"
+    exit 0
+  fi
+  amd64_rc=0; build_case amd64 "$prog" "$casedir/amd64.log" || amd64_rc=$?
+  i386_rc=0;  build_case 386   "$prog" "$casedir/386.log"   || i386_rc=$?
+  amd64_msg="-"; i386_msg="-"
+  [[ "$amd64_rc" -ne 0 ]] && amd64_msg="$(first_error_line < "$casedir/amd64.log")"
+  [[ "$i386_rc" -ne 0 ]] && i386_msg="$(first_error_line < "$casedir/386.log")"
+  if [[ "$amd64_rc" -eq 2 || "$i386_rc" -eq 2 ]]; then
+    emit "INFRA-HARNESS" "build timeout/exec failure: amd64 rc=$amd64_rc, 386 rc=$i386_rc" "-"
+  elif [[ "$amd64_rc" -ne 0 ]]; then
+    emit "AMD64-REJECT" "amd64: $amd64_msg" "386 rc=$i386_rc: $i386_msg"
+  elif [[ "$i386_rc" -ne 0 ]]; then
+    emit "386-REJECT" "amd64: accept" "386: $i386_msg"
+  else
+    emit "BOTH-ACCEPT" "-" "-"
+  fi
+  exit 0
+fi
+
+if [[ "${1:-}" == "--worker-negative" ]]; then
+  rowfile="${2:?--worker-negative needs a rowfile}"
+  IFS=$'\t' read -r id go_dir expected_substring features _rest < "$rowfile"
+  outrow="$rowfile.out.tmp"
+  : > "$outrow"
+  casedir="$OUT/cases/neg__${id//\//__}"
+  mkdir -p "$casedir"
+  emit() { printf '%s\t%s\t%s\t%s\t%s\n' "$1" "$id" "$features" "$(one_line "$2")" "$(one_line "$3")" >> "$outrow"; mv "$outrow" "$rowfile.out"; }
+  neg_build() { # <arch> <log>; returns build_case codes
+    local arch="$1" log="$2" rc=0
+    local bin="$casedir/$arch.bin"
+    run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" \
+      GOOS=linux GOARCH="$arch" go build -o "$bin" "./$go_dir" > "$log" 2>&1 || rc=$?
+    rm -f "$bin"
+    if [[ "$rc" -eq 0 ]]; then return 0; fi
+    if [[ "$rc" -eq 124 || "$rc" -eq 127 ]]; then return 2; fi
+    return 1
+  }
+  amd64_rc=0; neg_build amd64 "$casedir/amd64.log" || amd64_rc=$?
+  i386_rc=0;  neg_build 386   "$casedir/386.log"   || i386_rc=$?
+  amd64_msg="-"; i386_msg="-"
+  [[ "$amd64_rc" -ne 0 ]] && amd64_msg="$(first_error_line < "$casedir/amd64.log")"
+  [[ "$i386_rc" -ne 0 ]] && i386_msg="$(first_error_line < "$casedir/386.log")"
+  if [[ "$amd64_rc" -eq 2 || "$i386_rc" -eq 2 ]]; then
+    emit "INFRA-HARNESS" "build timeout/exec failure: amd64 rc=$amd64_rc, 386 rc=$i386_rc" "-"
+  elif [[ "$amd64_rc" -eq 0 ]]; then
+    emit "AMD64-ACCEPT" "amd64: accept (contradicts the recorded negative lane)" "386 rc=$i386_rc: $i386_msg"
+  elif [[ "$i386_rc" -eq 0 ]]; then
+    emit "386-ACCEPT" "amd64: $amd64_msg" "386: accept"
+  elif ! grep -qF "$expected_substring" "$casedir/386.log"; then
+    emit "REASON-DRIFT" "amd64: $amd64_msg" "386 lost the recorded substring '$expected_substring': $i386_msg"
+  else
+    emit "BOTH-REJECT" "amd64: $amd64_msg" "386: $i386_msg"
+  fi
+  exit 0
+fi
+
+# ---- driver ----
+
+LANE="all"
+PREFIX=""
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    --lane)
+      LANE="${2:-}"
+      case "$LANE" in exec|negative|all) ;; *)
+        echo "oracle-386-static: --lane must be exec, negative, or all (got '$LANE')" >&2; exit 2 ;;
+      esac
+      shift 2 ;;
+    --prefix)
+      PREFIX="${2:?--prefix needs an argument}"
+      shift 2 ;;
+    -h|--help)
+      sed -n '2,60p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      exit 0 ;;
+    *)
+      echo "oracle-386-static: unknown argument '$1'" >&2
+      exit 2 ;;
+  esac
+done
+
+if ! command -v go >/dev/null 2>&1; then
+  echo "oracle-386-static: go not found on PATH; refusing" >&2
+  exit 2
+fi
+# ORACLE VERSION PIN (the standing miniature): this leg's findings are
+# claims about the PINNED gc's two width points — a drifted toolchain
+# would census a different compiler. No drift escape here: run the leg
+# at the pin or not at all.
+GO_PIN_FILE="$ROOT/baselines/go-oracle-pin"
+if [[ ! -f "$GO_PIN_FILE" ]]; then
+  echo "oracle-386-static: baselines/go-oracle-pin missing — the oracle pin is unverifiable; refusing" >&2
+  exit 2
+fi
+go_pin="$(head -1 "$GO_PIN_FILE" | tr -d '[:space:]')"
+go_live="$(go version | awk '{print $3}')"
+if [[ "$go_live" != "$go_pin" ]]; then
+  echo "oracle-386-static: live toolchain $go_live != pinned oracle $go_pin — this census is only meaningful at the pin; refusing" >&2
+  exit 2
+fi
+
+mkdir -p "$OUT/cases" "$GO_BUILD_CACHE"
+
+# Warm the 386 stdlib into the shared build cache once, serially, so
+# the parallel case builds don't stampede-compile it. Fail closed: if
+# the pinned toolchain cannot cross-compile a trivial main to 386, the
+# whole leg is impossible and says so.
+WARM="$(mktemp -d "$OUT/.warm.XXXXXX")"
+trap 'rm -rf "$WARM"' EXIT
+printf 'package main\n\nfunc main() {}\n' > "$WARM/main.go"
+for arch in amd64 386; do
+  if ! warm_out="$(run_with_timeout 300 env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" \
+      GOOS=linux GOARCH="$arch" bash -c 'cd "$1" && exec go build -o .warm.bin .' warm "$WARM" 2>&1)"; then
+    echo "oracle-386-static: cannot build a trivial main at GOARCH=$arch — the leg cannot run: $warm_out" >&2
+    exit 2
+  fi
+done
+
+run_lane() {
+  # run_lane <lane-name> <worker-flag> <results-file>; manifest rows on stdin.
+  local lane_name="$1" worker_flag="$2" results="$3"
+  local rows_dir
+  rows_dir="$(mktemp -d "$OUT/.rows-$lane_name.XXXXXX")"
+  local n=0
+  while IFS= read -r line; do
+    [[ -z "$line" || "$line" == \#* ]] && continue
+    n=$((n + 1))
+    printf '%s\n' "$line" > "$(printf '%s/%06d.in' "$rows_dir" "$n")"
+  done
+  if [[ "$n" -eq 0 ]]; then
+    echo "oracle-386-static: $lane_name lane has no manifest rows — refusing (empty census is an error, not a green)" >&2
+    rm -rf "$rows_dir"
+    return 2
+  fi
+  find "$rows_dir" -name '*.in' | sort | xargs -P "$JOBS" -I{} "$ROOT/scripts/oracle-386-static" "$worker_flag" {}
+  # Assemble in manifest order; a missing .out (killed worker) is a
+  # named infra row, never a silent hole.
+  local tmp="$results.tmp"
+  printf 'class\tid\tfeatures\tamd64\t386\n' > "$tmp"
+  local i infile
+  for ((i = 1; i <= n; i++)); do
+    infile="$(printf '%s/%06d.in' "$rows_dir" "$i")"
+    if [[ -f "$infile.out" ]]; then
+      cat "$infile.out" >> "$tmp"
+    else
+      local missing_id
+      missing_id="$(cut -f1 "$infile")"
+      printf 'INFRA-HARNESS\t%s\t-\tworker died (no output row)\t-\n' "$missing_id" >> "$tmp"
+    fi
+  done
+  rm -rf "$rows_dir"
+  mv "$tmp" "$results"
+  return 0
+}
+
+infra=0
+summarize() {
+  local results="$1" lane_name="$2"
+  echo
+  echo "== $lane_name lane ($results) =="
+  awk -F'\t' 'NR>1 {c[$1]++} END {for (k in c) printf "  %-14s %d\n", k, c[k]}' "$results" | sort
+  case "$lane_name" in
+    exec)
+      if grep -q $'^386-REJECT\t' "$results"; then
+        echo "  WIDTH FINDINGS (accepted amd64, rejected 386):"
+        awk -F'\t' '$1=="386-REJECT" {printf "    %s\t%s\n", $2, $5}' "$results"
+      fi
+      if grep -Eq $'^(AMD64-REJECT|INFRA-HARNESS)\t' "$results"; then
+        echo "  INFRA ALARMS (this script, not the corpus — fix before believing the census):"
+        awk -F'\t' '$1=="AMD64-REJECT" || $1=="INFRA-HARNESS" {printf "    %s\t%s\t%s\n", $1, $2, $4}' "$results"
+        infra=1
+      fi
+      ;;
+    negative)
+      if grep -Eq $'^(386-ACCEPT|REASON-DRIFT)\t' "$results"; then
+        echo "  WIDTH FINDINGS (rejection differs at 386):"
+        awk -F'\t' '$1=="386-ACCEPT" || $1=="REASON-DRIFT" {printf "    %s\t%s\t%s\n", $1, $2, $5}' "$results"
+      fi
+      if grep -Eq $'^(AMD64-ACCEPT|INFRA-HARNESS)\t' "$results"; then
+        echo "  INFRA ALARMS (this script, not the corpus — fix before believing the census):"
+        awk -F'\t' '$1=="AMD64-ACCEPT" || $1=="INFRA-HARNESS" {printf "    %s\t%s\t%s\n", $1, $2, $4}' "$results"
+        infra=1
+      fi
+      ;;
+  esac
+}
+
+echo "oracle-386-static: pinned toolchain $go_live; GOOS=linux; arches amd64 vs 386; build-only (386 execution is sandbox-blocked, out of scope); jobs=$JOBS"
+
+if [[ "$LANE" == "exec" || "$LANE" == "all" ]]; then
+  manifest_cmd=(scripts/coverage-manifest --artifact-root "$OUT")
+  if [[ -n "$PREFIX" ]]; then manifest_cmd+=(--prefix "$PREFIX"); fi
+  if ! exec_manifest="$("${manifest_cmd[@]}")"; then
+    echo "oracle-386-static: coverage-manifest failed" >&2
+    exit 2
+  fi
+  run_lane exec --worker-exec "$OUT/exec.tsv" <<< "$exec_manifest" || exit 2
+  summarize "$OUT/exec.tsv" exec
+fi
+
+if [[ "$LANE" == "negative" || "$LANE" == "all" ]]; then
+  if ! neg_manifest="$(scripts/coverage-negative-manifest)"; then
+    echo "oracle-386-static: coverage-negative-manifest failed" >&2
+    exit 2
+  fi
+  if [[ -n "$PREFIX" ]]; then
+    neg_manifest="$(printf '%s\n' "$neg_manifest" | awk -F'\t' -v p="$PREFIX" 'index($1, p) == 1')"
+  fi
+  run_lane negative --worker-negative "$OUT/negative.tsv" <<< "$neg_manifest" || exit 2
+  summarize "$OUT/negative.tsv" negative
+fi
+
+if [[ "$infra" -ne 0 ]]; then
+  echo
+  echo "oracle-386-static: census published with INFRA ALARM rows (see above) — exit 1"
+  exit 1
+fi
+echo
+echo "oracle-386-static: census complete (results under $OUT)"
+exit 0

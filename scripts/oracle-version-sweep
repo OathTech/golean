@@ -1,0 +1,247 @@
+#!/usr/bin/env bash
+# LANE TOOLING, NOT A GATE STEP (t4-oracle-legs, oracle-matrix legs —
+# fidelity decision 4, [USER]-approved:
+# docs/assessment/decisions-2026-08-31.md item 4; report:
+# docs/2026-09-01_oracle-legs.md).
+#
+# The ORACLE VERSION SWEEP: re-run the differential corpus under a
+# CANDIDATE Go toolchain and diff the outcome against the recorded
+# pin-run (baselines/native-full.tsv). A drift row = a case where the
+# candidate toolchain's observable behavior no longer matches the
+# machine that was validated against the pinned oracle — i.e. the
+# oracle moved under us, surfaced per-case instead of discovered at a
+# re-pin.
+#
+#   GOLEAN_ORACLE_GO=<go binary | GOROOT dir> \
+#     scripts/capped scripts/oracle-version-sweep [--sample N] [manifest]
+#
+# What this script is NOT:
+#   * It is not the gate. It never writes artifacts/coverage (the
+#     judged records), never touches baselines/, and its runs are
+#     GOLEAN_ALLOW_GO_DRIFT=1 probes — loudly NOT the oracle of record
+#     (the drift provenance lands in the run's meta, per the standing
+#     diff-coverage discipline).
+#   * It is not a re-pin. A pin move stays what the charter says it is:
+#     deliberate, with a full run and a written reason.
+#
+# Artifacts land in artifacts/oracle-sweep/<candidate-version>/ —
+# a SEPARATE tree per candidate; results/meta paths are forced inside
+# it regardless of the caller's GOLEAN_COVERAGE_* environment.
+#
+# Exit codes (diff-coverage's discipline):
+#   0 = ran; zero drift vs the recorded pin-run (for the scope run)
+#   1 = ran; drift rows exist (printed; also in <out>/sweep-summary.txt)
+#   2 = infrastructure refusal; nothing to judge
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT" || exit 2
+
+SAMPLE=""
+MANIFEST_ARG=""
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    --sample)
+      SAMPLE="${2:-}"
+      if [[ ! "$SAMPLE" =~ ^[1-9][0-9]*$ ]]; then
+        echo "oracle-version-sweep: --sample needs a positive integer, got '${SAMPLE}'" >&2
+        exit 2
+      fi
+      shift 2
+      ;;
+    -h|--help)
+      sed -n '2,32p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      exit 0
+      ;;
+    -*)
+      echo "oracle-version-sweep: unknown option '$1' (expected --sample N or a manifest path)" >&2
+      exit 2
+      ;;
+    *)
+      if [[ -n "$MANIFEST_ARG" ]]; then
+        echo "oracle-version-sweep: at most one manifest argument" >&2
+        exit 2
+      fi
+      MANIFEST_ARG="$1"
+      shift
+      ;;
+  esac
+done
+if [[ -n "$SAMPLE" && -n "$MANIFEST_ARG" ]]; then
+  echo "oracle-version-sweep: --sample and an explicit manifest are mutually exclusive (the sample is drawn from the full generated manifest)" >&2
+  exit 2
+fi
+
+# THE CANDIDATE TOOLCHAIN — required, fail closed. Accepts either the
+# go binary itself or a GOROOT-style directory containing bin/go.
+if [[ -z "${GOLEAN_ORACLE_GO:-}" ]]; then
+  cat >&2 <<'EOF'
+oracle-version-sweep: GOLEAN_ORACLE_GO is not set — there is no candidate
+  toolchain to sweep. Point it at a go binary or a GOROOT directory:
+
+      GOLEAN_ORACLE_GO=/path/to/go1.XX.Y/bin/go \
+        scripts/capped scripts/oracle-version-sweep
+
+  This box carries only the pinned toolchain (go1.26.5). Providing a
+  second one is an OPERATOR action (never installed by an agent; the
+  global-state rule). Two project-local ways, neither touching
+  /usr/local/go or any global state:
+
+      # (a) Go's own toolchain download, confined to this repo's artifacts:
+      GOTOOLCHAIN=go1.27.1 GOMODCACHE="$PWD/artifacts/oracle-sweep/gomodcache" go version
+      # then:
+      GOLEAN_ORACLE_GO="$PWD/artifacts/oracle-sweep/gomodcache/golang.org/toolchain@v0.0.1-go1.27.1.linux-amd64/bin/go"
+
+      # (b) a tarball unpacked under a project-local dir:
+      curl -fsSL https://go.dev/dl/go1.27.1.linux-amd64.tar.gz | tar -xz -C "$PWD/artifacts/oracle-sweep"
+      GOLEAN_ORACLE_GO="$PWD/artifacts/oracle-sweep/go/bin/go"
+EOF
+  exit 2
+fi
+CAND="$GOLEAN_ORACLE_GO"
+if [[ -d "$CAND" && -x "$CAND/bin/go" ]]; then
+  CAND="$CAND/bin/go"
+fi
+if [[ ! -x "$CAND" ]]; then
+  echo "oracle-version-sweep: GOLEAN_ORACLE_GO='$GOLEAN_ORACLE_GO' is neither an executable go binary nor a directory containing bin/go — refusing" >&2
+  exit 2
+fi
+CAND="$(cd "$(dirname "$CAND")" && pwd -P)/$(basename "$CAND")"
+if ! cand_version_line="$("$CAND" version 2>&1)"; then
+  echo "oracle-version-sweep: candidate '$CAND version' failed: $cand_version_line" >&2
+  exit 2
+fi
+cand_version="$(printf '%s\n' "$cand_version_line" | awk '{print $3}')"
+if [[ -z "$cand_version" || "$cand_version" != go* ]]; then
+  echo "oracle-version-sweep: cannot parse candidate version from: $cand_version_line" >&2
+  exit 2
+fi
+
+GO_PIN_FILE="$ROOT/baselines/go-oracle-pin"
+if [[ ! -f "$GO_PIN_FILE" ]]; then
+  echo "oracle-version-sweep: baselines/go-oracle-pin missing — nothing to sweep against; refusing" >&2
+  exit 2
+fi
+go_pin="$(head -1 "$GO_PIN_FILE" | tr -d '[:space:]')"
+
+# SEPARATE artifacts tree, keyed by candidate version; refuse the
+# judged-records path outright (belt to the results/meta braces below).
+OUT="${GOLEAN_SWEEP_ARTIFACTS:-artifacts/oracle-sweep/$cand_version}"
+case "$OUT" in
+  artifacts/coverage|artifacts/coverage/*)
+    echo "oracle-version-sweep: refusing to write the judged records tree ($OUT) — sweep artifacts are separate by design" >&2
+    exit 2
+    ;;
+esac
+mkdir -p "$OUT"
+
+# Candidate-first PATH via a shim dir, so diff-coverage (and every
+# `go run` it makes) resolves `go` to the candidate. The pinned
+# toolchain stays untouched at /usr/local/go — nothing global moves.
+SHIM="$(mktemp -d "$OUT/.goshim.XXXXXX")"
+cleanup() { rm -rf "$SHIM"; rm -f "${SAMPLED_MANIFEST:-}"; }
+trap cleanup EXIT
+ln -s "$CAND" "$SHIM/go"
+# gofmt rides along when the candidate ships one (some tooling shells it).
+if [[ -x "$(dirname "$CAND")/gofmt" ]]; then
+  ln -s "$(dirname "$CAND")/gofmt" "$SHIM/gofmt"
+fi
+
+# The manifest: caller-supplied, or the full generated corpus, or a
+# deterministic stride sample of it (--sample N: every k-th row of the
+# generated manifest, k = ceil(total/N) — reproducible, no RNG).
+SAMPLED_MANIFEST=""
+MANIFEST="$MANIFEST_ARG"
+total_rows=""
+if [[ -n "$SAMPLE" ]]; then
+  SAMPLED_MANIFEST="$(mktemp "$OUT/.manifest.XXXXXX")"
+  if ! full="$(scripts/coverage-manifest --artifact-root "$OUT")"; then
+    echo "oracle-version-sweep: coverage-manifest failed" >&2
+    exit 2
+  fi
+  total_rows="$(printf '%s\n' "$full" | awk -F'\t' 'NF>0 && $1 !~ /^#/ {n++} END {print n+0}')"
+  if [[ "$total_rows" -eq 0 ]]; then
+    echo "oracle-version-sweep: generated manifest is empty — refusing" >&2
+    exit 2
+  fi
+  printf '%s\n' "$full" | awk -F'\t' -v want="$SAMPLE" -v total="$total_rows" '
+    BEGIN { k = int((total + want - 1) / want); if (k < 1) k = 1 }
+    NF>0 && $1 !~ /^#/ {
+      n++
+      if ((n - 1) % k == 0 && picked < want) { print; picked++ }
+    }' > "$SAMPLED_MANIFEST"
+  MANIFEST="$SAMPLED_MANIFEST"
+  picked_rows="$(awk 'END {print NR}' "$SAMPLED_MANIFEST")"
+  echo "oracle-version-sweep: SAMPLE run — $picked_rows of $total_rows corpus cases (stride sample; NOT a full sweep)"
+fi
+
+echo "oracle-version-sweep: candidate $cand_version ($CAND); pinned oracle $go_pin"
+echo "oracle-version-sweep: artifacts -> $OUT (judged records untouched)"
+
+# The differential run: candidate go first on PATH, drift allowed
+# LOUDLY, every artifact path forced inside $OUT. diff-coverage's own
+# meta records go_toolchain / go_drift_allowed / go_drift_actual, so
+# the artifact itself says it is not the oracle of record.
+run_rc=0
+env PATH="$SHIM:$PATH" \
+    GOLEAN_ALLOW_GO_DRIFT=1 \
+    GOLEAN_COVERAGE_ARTIFACTS="$OUT" \
+    GOLEAN_COVERAGE_RESULTS="$OUT/latest.tsv" \
+    GOLEAN_COVERAGE_META="$OUT/latest.meta.tsv" \
+    scripts/diff-coverage ${MANIFEST:+"$MANIFEST"} || run_rc=$?
+if [[ "$run_rc" -ge 2 ]]; then
+  echo "oracle-version-sweep: differential run refused (exit $run_rc) — nothing to judge" >&2
+  exit 2
+fi
+
+# Sanity: the run must actually have used the candidate (a shim mishap
+# silently sweeping the pin would be a null result dressed as a sweep).
+meta_toolchain="$(awk -F'\t' '$1=="go_toolchain"{print $2}' "$OUT/latest.meta.tsv" 2>/dev/null)"
+if [[ "$meta_toolchain" != "$cand_version" ]]; then
+  echo "oracle-version-sweep: run meta records toolchain '$meta_toolchain' but the candidate is '$cand_version' — the shim did not take; refusing to report this as a sweep" >&2
+  exit 2
+fi
+
+# The judgment: diff the sweep run against the recorded pin-run.
+# No --full: cases not in this run's scope are "not swept", never
+# silently green.
+diff_rc=0
+diff_out="$(scripts/coverage-baseline-diff "$OUT/latest.tsv")" || diff_rc=$?
+if [[ "$diff_rc" -ge 2 ]]; then
+  echo "oracle-version-sweep: baseline diff refused (exit $diff_rc)" >&2
+  echo "$diff_out" >&2
+  exit 2
+fi
+
+scope="FULL corpus"
+if [[ -n "$SAMPLE" ]]; then
+  scope="SAMPLE ($picked_rows of $total_rows cases, stride)"
+elif [[ -n "$MANIFEST_ARG" ]]; then
+  scope="caller manifest ($MANIFEST_ARG)"
+fi
+{
+  echo "oracle-version-sweep summary"
+  echo "  date:            $(date -Is)"
+  echo "  candidate:       $cand_version_line"
+  echo "  candidate path:  $CAND"
+  echo "  pinned oracle:   $go_pin"
+  echo "  scope:           $scope"
+  echo "  run exit:        $run_rc (0=all rows PASS, 1=FAIL rows exist)"
+  echo "  drift vs pin-run (baselines/native-full.tsv):"
+  printf '%s\n' "$diff_out" | sed 's/^/    /'
+} | tee "$OUT/sweep-summary.txt"
+
+# Zero drift = every case run reproduces the recorded pin-run's
+# (result, stage) — including the baseline's recorded FAIL rows (the
+# 175 known reds are part of the record; a candidate reproducing them
+# exactly AGREES with the pin-run). run_rc=1 with zero drift is
+# therefore agreement, not drift. Caveat (recorded in the report): the
+# comparison is (result, stage) — a FAIL row whose failure DETAIL moved
+# under the candidate without changing stage is below this instrument's
+# resolution.
+if [[ "$diff_rc" -eq 0 ]]; then
+  echo "oracle-version-sweep: ZERO observation drift ($scope) — candidate $cand_version reproduces the recorded pin-run on every case run"
+  exit 0
+fi
+echo "oracle-version-sweep: DRIFT — candidate $cand_version diverges from the recorded pin-run (rows above; artifacts in $OUT)"
+exit 1
