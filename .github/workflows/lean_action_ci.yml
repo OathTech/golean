@@ -247,11 +247,27 @@ jobs:
         if: failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Open-issue dedup (audit T3-9): consecutive red nightlies used
+        # to file one NEW issue per failure — a broken week buries the
+        # signal under duplicates. The title's fixed prefix is the dedup
+        # key: if an open issue already carries it, COMMENT the new run
+        # there instead of filing another. A failed dedup LOOKUP falls
+        # through to filing (a duplicate beats a lost notification); a
+        # failed file/comment stays the loud ::warning.
         run: |
-          gh api "repos/${{ github.repository }}/issues" \
-            -f title="gate FAILED (${{ github.event_name }}): ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            -f body="The ${{ github.event_name }} gate run failed at commit ${{ github.sha }}. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            || echo "::warning::gate failed AND the failure issue could not be filed — the notification path itself is broken; check GITHUB_TOKEN issue permissions"
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          existing="$(gh issue list --repo "${{ github.repository }}" --state open \
+            --search '"gate FAILED" in:title' --json number --jq '.[0].number // empty' || true)"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "${{ github.repository }}" \
+              --body "Another ${{ github.event_name }} gate failure at commit ${{ github.sha }}. Run: $run_url" \
+              || echo "::warning::gate failed AND commenting the existing failure issue #$existing failed — the notification path itself is broken; check GITHUB_TOKEN issue permissions"
+          else
+            gh api "repos/${{ github.repository }}/issues" \
+              -f title="gate FAILED (${{ github.event_name }}): $run_url" \
+              -f body="The ${{ github.event_name }} gate run failed at commit ${{ github.sha }}. Run: $run_url" \
+              || echo "::warning::gate failed AND the failure issue could not be filed — the notification path itself is broken; check GITHUB_TOKEN issue permissions"
+          fi
 
       # Was anything OOM-killed inside the gate's cgroup scope? A cap kill
       # would otherwise be indistinguishable from a semantic failure in
