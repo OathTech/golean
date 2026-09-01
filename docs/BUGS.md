@@ -3587,9 +3587,12 @@ named in refusals") failed on exactly the row it cited.
   the unrecoverable R4-C-3 stop whose observation text itself names
   the Repeat bound.)
 - Pinned-by: differential (repeat-overflow, both sides panic with the
-  identical message; repeat-bound-refused is the red-by-design
-  refusal pin demonstrating the cause-named message)
-- Cases: strings/trimspace-repeat/repeat-overflow, strings/trimspace-repeat/repeat-bound-refused
+  identical message). repeat-bound-refused is the red-by-design
+  refusal pin demonstrating the cause-named message — deliberately
+  FAIL/frontend-export forever, so it lives OFF the Cases line
+  (Cases carries the bug-pinning rows a fixed status must turn
+  green; a standing refusal pin is not one — check-bugs rule 3).
+- Cases: strings/trimspace-repeat/repeat-overflow
 - Discovered: 2026-08-31 (fidelity assessment phase 2, A3-S5: the
   Repeat output-length delta was argued "a visible stop, never a
   wrong answer" — but the stop was fuel exhaustion or a memory

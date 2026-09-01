@@ -8880,7 +8880,7 @@ func (e *emitter) sweepPanickyInlineBefore(pos token.Pos) bool {
 			}
 			if tv, ok := e.info.Types[nn.Fun]; ok && tv.IsType() && nn.End() <= pos {
 				// Conversion: only the slice-to-array(-pointer) class
-				// panics (spec#Conversions_from_slice_to_array...).
+				// panics (spec#Conversions_from_slice_to_array_or_array_pointer...).
 				if t := e.goTypeOf(nn); t != nil {
 					switch u := e.applySubst(t).Underlying().(type) {
 					case *types.Array:

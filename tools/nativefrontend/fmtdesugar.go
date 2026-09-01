@@ -560,16 +560,24 @@ func (e *emitter) refuseFormatter(fn, verbName string, argTy types.Type) error {
 // through any/variadic into a dyn site, would render via Error/String
 // where gc calls Format — an `ok` answer that differs from gc's, the
 // exact fail-open class the charter forbids. Static fmt sites refuse
-// Formatter implementors per-verb (refuseFormatter); this is the
-// EMIT-TIME closure for the dynamic path: if any unit injected the
-// dyn-fmt shim AND any unit declares a named type implementing
-// fmt.Formatter (value or pointer receiver — either can box), the
-// EXPORT refuses naming both. Whole-export because boxing travels:
-// no per-decl scan can bound which dyn site the implementor reaches.
-// Bound: the scan covers package-scope named types (an implementor
-// must name fmt.State, so its unit imports fmt and its type is in
-// scope); type-parameter instantiations cannot add a Format method a
-// generic declaration does not already carry.
+// Formatter implementors per-verb (refuseFormatter), and the dyn-pack
+// path refuses static implementor types at the call; this is the
+// EMIT-TIME closure for the remaining route: BOXING. KEY NARROWED at
+// the fidelity fix round (2026-09-01): the original whole-export key
+// ("any implementor declared anywhere") over-fired — v-composites'
+// deliberate static-refusal fixture (embFmt) killed its 16 sibling
+// rows, all of which use the implementor only in fmt-owned operand
+// positions the static path already polices. The sound key is
+// flow-insensitive boxing reachability: an implementor is dangerous
+// only if it is CONVERTED TO AN INTERFACE somewhere OUTSIDE the
+// fmt-owned operand positions — if it is never boxed, no dyn site can
+// receive it. The walk below enumerates the modeled fragment's boxing
+// contexts (assignments/var specs incl. tuple results, non-fmt call
+// arguments incl. variadic, returns, explicit conversions,
+// composite-literal fields/elements/keys, map index keys, channel
+// sends, interface-operand comparisons). A context outside this list
+// cannot box in the modeled fragment; if the fragment grows one, THIS
+// LIST is the named place to extend (fail-closed review note).
 func (e *emitter) checkFormatterDynHole() error {
 	dynInjected := false
 	for _, u := range e.units {
@@ -596,6 +604,7 @@ func (e *emitter) checkFormatterDynHole() error {
 		if iface == nil {
 			continue
 		}
+		hasImplementor := false
 		scope := u.pkg.Scope()
 		for _, name := range scope.Names() {
 			tn, ok := scope.Lookup(name).(*types.TypeName)
@@ -607,11 +616,235 @@ func (e *emitter) checkFormatterDynHole() error {
 				continue
 			}
 			if types.Implements(t, iface) || types.Implements(types.NewPointer(t), iface) {
-				return unsup("type %s.%s implements fmt.Formatter while the dynamic fmt shim is injected: gc consults Format ahead of error/Stringer for EVERY verb at dynamic fmt sites, and the dyn shim cannot see Formatter at runtime (fmt.State unmodeled) — a boxed %s reaching any dyn site would render wrongly, so the export fails closed (audit R1-F2 / assessment A3-S3)", u.pkg.Path(), name, name)
+				hasImplementor = true
+				break
 			}
+		}
+		if !hasImplementor {
+			continue
+		}
+		if err := e.walkFormatterBoxing(u, iface); err != nil {
+			return err
 		}
 	}
 	return nil
+}
+
+// walkFormatterBoxing scans one unit for a Formatter implementor being
+// boxed into an interface outside fmt-owned operand positions; any hit
+// refuses the export naming type, target, and site. See
+// checkFormatterDynHole's header for the key's derivation.
+func (e *emitter) walkFormatterBoxing(u *sourcePkg, iface *types.Interface) error {
+	implements := func(t types.Type) bool {
+		if t == nil || types.IsInterface(t) {
+			return false
+		}
+		return types.Implements(t, iface) || types.Implements(types.NewPointer(t), iface)
+	}
+	isIfaceTarget := func(t types.Type) bool {
+		return t != nil && types.IsInterface(t.Underlying())
+	}
+	var hole error
+	boxT := func(exprT, target types.Type, pos token.Pos, ctx string) bool {
+		if hole != nil {
+			return true
+		}
+		if !isIfaceTarget(target) || !implements(exprT) {
+			return false
+		}
+		hole = unsup("type %s implements fmt.Formatter and is boxed into %s (%s at %s) while the dynamic fmt shim is injected: gc consults Format ahead of error/Stringer for EVERY verb at dynamic fmt sites, and the dyn shim cannot see Formatter at runtime (fmt.State unmodeled) — the boxed value reaching any dyn site would render wrongly, so the export fails closed (audit R1-F2 / assessment A3-S3; key = boxing sites, narrowed 2026-09-01)",
+			types.TypeString(exprT, nil), types.TypeString(target, nil), ctx, e.fset.Position(pos))
+		return true
+	}
+	box := func(expr ast.Expr, target types.Type, ctx string) bool {
+		if expr == nil {
+			return false
+		}
+		return boxT(u.info.TypeOf(expr), target, expr.Pos(), ctx)
+	}
+	isFmtPkgCall := func(call *ast.CallExpr) bool {
+		sel, ok := call.Fun.(*ast.SelectorExpr)
+		if !ok {
+			return false
+		}
+		id, ok := sel.X.(*ast.Ident)
+		if !ok {
+			return false
+		}
+		pn, ok := u.info.Uses[id].(*types.PkgName)
+		return ok && pn.Imported().Path() == "fmt"
+	}
+	compositeElems := func(n *ast.CompositeLit) {
+		lt := u.info.TypeOf(n)
+		if lt == nil {
+			return
+		}
+		switch ut := lt.Underlying().(type) {
+		case *types.Struct:
+			pos := 0
+			for _, el := range n.Elts {
+				if kv, ok := el.(*ast.KeyValueExpr); ok {
+					if id, ok := kv.Key.(*ast.Ident); ok {
+						for i := 0; i < ut.NumFields(); i++ {
+							if ut.Field(i).Name() == id.Name {
+								box(kv.Value, ut.Field(i).Type(), "composite-literal field")
+							}
+						}
+					}
+				} else if pos < ut.NumFields() {
+					box(el, ut.Field(pos).Type(), "composite-literal field")
+					pos++
+				}
+			}
+		case *types.Slice:
+			for _, el := range n.Elts {
+				if kv, ok := el.(*ast.KeyValueExpr); ok {
+					box(kv.Value, ut.Elem(), "composite-literal element")
+				} else {
+					box(el, ut.Elem(), "composite-literal element")
+				}
+			}
+		case *types.Array:
+			for _, el := range n.Elts {
+				if kv, ok := el.(*ast.KeyValueExpr); ok {
+					box(kv.Value, ut.Elem(), "composite-literal element")
+				} else {
+					box(el, ut.Elem(), "composite-literal element")
+				}
+			}
+		case *types.Map:
+			for _, el := range n.Elts {
+				if kv, ok := el.(*ast.KeyValueExpr); ok {
+					box(kv.Key, ut.Key(), "map-literal key")
+					box(kv.Value, ut.Elem(), "map-literal value")
+				}
+			}
+		}
+	}
+	callArgs := func(n *ast.CallExpr) {
+		ft := u.info.TypeOf(n.Fun)
+		if ft == nil {
+			return
+		}
+		sig, ok := ft.Underlying().(*types.Signature)
+		if !ok {
+			return
+		}
+		params := sig.Params()
+		for i, a := range n.Args {
+			var pt types.Type
+			if sig.Variadic() && i >= params.Len()-1 {
+				if n.Ellipsis == token.NoPos {
+					if sl, ok := params.At(params.Len() - 1).Type().(*types.Slice); ok {
+						pt = sl.Elem()
+					}
+				} else {
+					pt = params.At(params.Len() - 1).Type()
+				}
+			} else if i < params.Len() {
+				pt = params.At(i).Type()
+			}
+			box(a, pt, "call argument")
+		}
+	}
+	var walk func(n ast.Node, results *types.Tuple)
+	walk = func(n ast.Node, results *types.Tuple) {
+		ast.Inspect(n, func(n ast.Node) bool {
+			if hole != nil {
+				return false
+			}
+			switch n := n.(type) {
+			case *ast.FuncLit:
+				if sig, ok := u.info.TypeOf(n).(*types.Signature); ok {
+					walk(n.Body, sig.Results())
+					return false
+				}
+			case *ast.ReturnStmt:
+				if results != nil && len(n.Results) == results.Len() {
+					for i, r := range n.Results {
+						box(r, results.At(i).Type(), "return value")
+					}
+				}
+			case *ast.AssignStmt:
+				if len(n.Lhs) == len(n.Rhs) {
+					for i := range n.Rhs {
+						box(n.Rhs[i], u.info.TypeOf(n.Lhs[i]), "assignment")
+					}
+				} else if len(n.Rhs) == 1 {
+					if tup, ok := u.info.TypeOf(n.Rhs[0]).(*types.Tuple); ok {
+						for i := 0; i < tup.Len() && i < len(n.Lhs); i++ {
+							boxT(tup.At(i).Type(), u.info.TypeOf(n.Lhs[i]), n.Rhs[0].Pos(), "tuple assignment")
+						}
+					}
+				}
+			case *ast.ValueSpec:
+				if n.Type != nil {
+					if t := u.info.TypeOf(n.Type); t != nil {
+						for _, v := range n.Values {
+							box(v, t, "var declaration")
+						}
+					}
+				}
+			case *ast.CallExpr:
+				if tv, ok := u.info.Types[n.Fun]; ok && tv.IsType() {
+					for _, a := range n.Args {
+						box(a, tv.Type, "conversion")
+					}
+					return true
+				}
+				if isFmtPkgCall(n) {
+					// fmt-owned operand positions: the static per-verb
+					// refusal and the dyn-pack check police these.
+					return true
+				}
+				callArgs(n)
+			case *ast.CompositeLit:
+				compositeElems(n)
+			case *ast.SendStmt:
+				if ct, ok := u.info.TypeOf(n.Chan).Underlying().(*types.Chan); ok {
+					box(n.Value, ct.Elem(), "channel send")
+				}
+			case *ast.IndexExpr:
+				if mt, ok := u.info.TypeOf(n.X).Underlying().(*types.Map); ok {
+					box(n.Index, mt.Key(), "map index key")
+				}
+			case *ast.BinaryExpr:
+				if n.Op == token.EQL || n.Op == token.NEQ {
+					lt, rt := u.info.TypeOf(n.X), u.info.TypeOf(n.Y)
+					if isIfaceTarget(lt) {
+						box(n.Y, lt, "interface comparison")
+					}
+					if isIfaceTarget(rt) {
+						box(n.X, rt, "interface comparison")
+					}
+				}
+			}
+			return true
+		})
+	}
+	for _, f := range u.files {
+		for _, d := range f.Decls {
+			if hole != nil {
+				break
+			}
+			switch d := d.(type) {
+			case *ast.FuncDecl:
+				if d.Body == nil {
+					continue
+				}
+				var results *types.Tuple
+				if o := u.info.Defs[d.Name]; o != nil {
+					if sig, ok := o.Type().(*types.Signature); ok {
+						results = sig.Results()
+					}
+				}
+				walk(d.Body, results)
+			case *ast.GenDecl:
+				walk(d, nil)
+			}
+		}
+	}
+	return hole
 }
 
 // fmtVerbArg compiles one verb x static-kind pair, or refuses naming
