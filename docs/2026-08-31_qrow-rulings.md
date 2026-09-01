@@ -73,8 +73,9 @@ what was put in front of the user).
 ### The row-3 ruling menu (2026-09-01) — the tracked record behind "(1) agree"
 
 [AGENT] menu recorded post-hoc from the session at the audit's C5;
-[USER] countersign requested at the merge ask. The coordinator
-presented two numbered items, verbatim:
+[USER] countersign requested at the merge ask. COUNTERSIGNED [USER]
+2026-09-01 at the merge sign-off ("all agreed, go ahead with the
+merge"). The coordinator presented two numbered items, verbatim:
 
 «1. Q-SELSEL is ready to rule (2 reds): the asymmetric-arrival
 envelope survives unchanged on fresh evidence; the open question is
