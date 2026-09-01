@@ -1,0 +1,37 @@
+# structural diff: old pin (pre-b16738d3) vs re-pinned twin-chdriver.wire.json
+# producer: docs/evidence/2026-09-01_qrow-syncval-twin-repin/README.md Reproduction block
+method keys only-in-old: []
+method keys only-in-new: []
+funcs only-in-old: []
+funcs only-in-new: []
+changed funcs: []
+===== changed method ('raft.MemoryStorage', 'Lock')
+  field: unsupported
+    old: "promoted sync-primitive method sync.Mutex.Lock (statement/defer-position sync ops \u2014 direct and promoted \u2014 lower at their call sites; this method-table entry answers satisfaction, and calls THROUGH it \u2014 interface dispatch, method values \u2014 fail closed)"
+    new: "promoted sync-primitive method sync.Mutex.Lock reached through interface dispatch on the embedding type (statement/defer ops and method values adjust to the embedded primitive at their sites and lower; this method-table entry answers satisfaction, and DISPATCH through it fails closed \u2014 the embedded-hop forwarding body is not modeled)"
+===== changed method ('raft.MemoryStorage', 'TryLock')
+  field: unsupported
+    old: "promoted sync-primitive method sync.Mutex.TryLock (statement/defer-position sync ops \u2014 direct and promoted \u2014 lower at their call sites; this method-table entry answers satisfaction, and calls THROUGH it \u2014 interface dispatch, method values \u2014 fail closed)"
+    new: "promoted sync-primitive method sync.Mutex.TryLock reached through interface dispatch on the embedding type (statement/defer ops and method values adjust to the embedded primitive at their sites and lower; this method-table entry answers satisfaction, and DISPATCH through it fails closed \u2014 the embedded-hop forwarding body is not modeled)"
+===== changed method ('raft.MemoryStorage', 'Unlock')
+  field: unsupported
+    old: "promoted sync-primitive method sync.Mutex.Unlock (statement/defer-position sync ops \u2014 direct and promoted \u2014 lower at their call sites; this method-table entry answers satisfaction, and calls THROUGH it \u2014 interface dispatch, method values \u2014 fail closed)"
+    new: "promoted sync-primitive method sync.Mutex.Unlock reached through interface dispatch on the embedding type (statement/defer ops and method values adjust to the embedded primitive at their sites and lower; this method-table entry answers satisfaction, and DISPATCH through it fails closed \u2014 the embedded-hop forwarding body is not modeled)"
+===== changed method ('sync.Mutex', 'Lock')
+  field: body
+    old: null
+    new: {"body": [{"args": [{"expr": "ident", "name": "$recv", "type": {"elem": {"kind": "sync", "sync": "Mutex"}, "kind": "pointer"}}], "op": "lock", "stmt": "sync-op"}], "stmt": "block"}
+  field: unsupported
+    old: "sync-primitive method sync.Mutex.Lock through interface dispatch (declaration-only stub: satisfaction answers; only direct statement/defer-position calls are modeled)"
+    new: null
+===== changed method ('sync.Mutex', 'TryLock')
+  field: unsupported
+    old: "sync-primitive method sync.Mutex.TryLock through interface dispatch (declaration-only stub: satisfaction answers; only direct statement/defer-position calls are modeled)"
+    new: "sync-primitive method sync.Mutex.TryLock (declaration-only stub: satisfaction answers, calls fail closed \u2014 the member is outside the modeled sync surface; the modeled ops lower through values via their bodied stubs, P-S2-6)"
+===== changed method ('sync.Mutex', 'Unlock')
+  field: body
+    old: null
+    new: {"body": [{"args": [{"expr": "ident", "name": "$recv", "type": {"elem": {"kind": "sync", "sync": "Mutex"}, "kind": "pointer"}}], "op": "unlock", "stmt": "sync-op"}], "stmt": "block"}
+  field: unsupported
+    old: "sync-primitive method sync.Mutex.Unlock through interface dispatch (declaration-only stub: satisfaction answers; only direct statement/defer-position calls are modeled)"
+    new: null
