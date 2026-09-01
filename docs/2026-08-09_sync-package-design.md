@@ -410,14 +410,22 @@ PRESENCE answers satisfaction since the arc-end fix round), `RLocker`
 as a CALL, sync method CALLS through interface dispatch (user-defined
 or `sync.Locker`; satisfaction/boxing answer — the call refuses
 per-stub; markers `sync/iface-dispatch`; the lift is real stub bodies
-over the machine's existing sync ops, recorded in §12),
+over the machine's existing sync ops, recorded in §12) (LANDED
+2026-09-01, Q-SYNCVAL slice — P-S2-6 bodied stubs; the modeled ops
+dispatch through them, `sync/iface-dispatch` green; unmodeled members
+stay declaration-only refusals),
 composite-literal construction (`&sync.Mutex{}`, `sync.WaitGroup{}` —
 refused naming the capability since the arc-end fix round, was the
 internal `sync.noCopy`; markers `sync/composite-literal`; `var` and
-`new` are the modeled construction surface), `defer wg.Add(n)` /
+`new` are the modeled construction surface) (LANDED 2026-09-01,
+Q-SYNCLIT — empty literal ≡ zero value, `sync/composite-literal`
+green; NON-empty literals stay refused), `defer wg.Add(n)` /
 `defer once.Do(f)` (the deferred-operand shape — an argument evaluated
 at defer time and threaded through the synthetic wrapper; Done already
-threads a literal -1, so the lift is the natural follow-up),
+threads a literal -1, so the lift is the natural follow-up) (LANDED
+2026-09-01, audit fix round F4 — both spellings now take the ordinary
+defer path over the P-S2-6 bodied stubs, receiver and argument
+evaluated at defer time, Go's rule),
 `WaitGroup.Go` (1.25 sugar), `OnceFunc`/`OnceValue`/`OnceValues`,
 migrating the
 go-of-nil-func refusal onto the new fatal class (a one-line follow-up,
@@ -828,7 +836,11 @@ stats bit-for-bit); corpus classification unchanged on all 1483 ids
   `sync.Once.Do` stub itself + a `$syncOnceDone` completer;
   TryLock/TryRLock/RLocker/Go stay declaration-only), plus the
   adjacent method-value/go-callee shapes and the Q-SYNCLIT
-  empty-literal lowering (row 7).** Satisfaction/boxing now answer
+  empty-literal lowering (row 7).** [The trailing prose below is the
+  PRE-LANDING scoping, kept for provenance — every "refuse"/"stay"
+  it states for the modeled ops is superseded by the landing above
+  (LANDED 2026-09-01); TryLock/TryRLocker/RLocker/Go declaration-only
+  refusals still stand.] Satisfaction/boxing now answer
   correctly through the `syncMethodStubs` declaration-only stubs; the
   CALLS refuse per-stub (markers `sync/iface-dispatch`). The lift is
   real stub bodies over the machine's EXISTING sync ops (Lock/Unlock/
@@ -839,4 +851,5 @@ stats bit-for-bit); corpus classification unchanged on all 1483 ids
   scoped slice with its own red-first cases, not a fix-round rider.
   Adjacent: the promoted-call lift (raft's MemoryStorage idiom,
   `sync/escapes/promoted`) and `defer wg.Add(n)`/`defer once.Do(f)`
-  (§9's deferred-operand shape).
+  (§9's deferred-operand shape — LANDED 2026-09-01, audit fix round
+  F4, via the ordinary defer path over the bodied stubs).

@@ -5,10 +5,12 @@
 "exactly the inspected sync-stub delta". This directory is that
 inspection, per the docs/evidence convention (D-9): a structural JSON
 diff of the old pin vs the new one, showing the delta is confined to
-FIVE method entries and NOTHING else — no method added or removed, no
-func added/removed/changed, no other top-level key moved.
+SIX method entries and NOTHING else — no method added or removed, no
+func added/removed/changed, no other top-level key moved. [Count
+corrected FIVE→SIX at the audit fix round (F5): the list below always
+had six.]
 
-The five changed entries (`structural-diff.txt` has the exact old/new
+The six changed entries (`structural-diff.txt` has the exact old/new
 field values):
 
 - `sync.Mutex.Lock`, `sync.Mutex.Unlock`: `unsupported` reason

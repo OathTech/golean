@@ -1,5 +1,16 @@
 # GoLean native-frontend full-corpus differential baseline
-# re-pinned: 2026-09-01 (qrow-syncval slice — Q-SYNCVAL + Q-SYNCLIT,
+# re-pinned: 2026-09-01 (qrow-syncval AUDIT FIX ROUND — F10's two
+#   pinning rows for the newly-lowering unpinned surface, both born
+#   PASS on a full ci --diff at this tip (the auditor's probe runs had
+#   clobbered the branch's differential record; this run also restores
+#   it, F11): sync/escapes/paren-forms (`(m.Lock)()` +
+#   `defer (wg.Add)(-1)` and the plain spelling side by side — the F4
+#   identity pin) and sync/composite-literal/lit-in-composite
+#   (`[]sync.Mutex{{},{}}` + struct-field literal — zero-value lowering
+#   in element position). NO other row moved; no PASS->non-PASS flips;
+#   header fixes ride along: cases line re-derived (F7), column-header
+#   line restored (F6).)
+# previous re-pin: 2026-09-01 (qrow-syncval slice — Q-SYNCVAL + Q-SYNCLIT,
 #   the two implement-ruled Q-rows of docs/2026-08-31_qrow-rulings.md
 #   (rows 6+7, [USER]-RULED 2026-08-31; row 6's D-002 freeze reading
 #   [USER]-confirmed 2026-09-01). Frontend-only: P-S2-6 bodied sync
@@ -130,8 +141,17 @@
 #     The remaining FAIL rows are the standing frontend/feature gaps
 #     of the 2026-08-22 record (docs/2026-08-22_launch-audit-synthesis.md),
 #     none moved by this re-pin.
-# cases: 2478 (2306 PASS / 172 FAIL)
+# cases: 2505 (2337 PASS / 168 FAIL)
+#   [cases line re-derived at the 2026-09-01 audit fix round (F7): it
+#   went stale at the Tier-1 re-pin and survived the qrow-syncval one
+#   still reading 2478/2306/172; counted from this file's data rows
+#   (2503/2335/168 pre-F10, +2 PASS for the F10 rows).]
 # frontend: native (tools/nativefrontend)
+# Columns: result<TAB>id<TAB>stage (sorted by id). The qrow-syncval
+#   re-pin also normalized the two strings/shim-value-refused rows
+#   into id-sort position (they had been appended out of order); pure
+#   reorder, no result moved.
+result	id	stage
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -2550,6 +2570,7 @@ PASS	sync/composite-literal/mutex-addr-lit	-
 PASS	sync/composite-literal/waitgroup-value-lit	-
 PASS	sync/composite-literal/rwmutex-addr-lit	-
 PASS	sync/composite-literal/once-value-lit	-
+PASS	sync/composite-literal/lit-in-composite	-
 PASS	sync/escapes/promoted	-
 PASS	sync/escapes/method-value	-
 PASS	sync/escapes/go-stmt	-
@@ -2559,6 +2580,7 @@ PASS	sync/escapes/method-value-negative-panic	-
 PASS	sync/escapes/once-do-method-value	-
 PASS	sync/escapes/promoted-method-value	-
 PASS	sync/escapes/passed-callback	-
+PASS	sync/escapes/paren-forms	-
 PASS	sync/iface-dispatch/mutex-user-iface	-
 PASS	sync/iface-dispatch/wg-user-iface	-
 PASS	sync/iface-dispatch/locker-box-dispatch	-

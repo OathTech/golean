@@ -166,6 +166,15 @@ type emitter struct {
 	// (the arc-end CRITICAL's exact mechanism).
 	syncUsed map[string]*types.Named
 
+	// "Prim.Method" pairs emitSelector value-lowered against the bodied
+	// stub promise (audit fix round 2026-09-01, F2): recorded at each
+	// method-value lowering (value = first-seen source position),
+	// cross-checked in syncMethodStubs against the ACTUALLY-BODIED set
+	// — a demanded pair whose stub got no body (a stdlib signature
+	// drift under a future pin) FAILS THE EXPORT there, instead of
+	// landing as a runtime refusal on a bodiless stub.
+	syncValueLowered map[string]string
+
 	// Mangled instantiation key → the types.Type it names (mono.go, the
 	// generics slice): the belt-and-suspenders collision registry behind
 	// the mangling injectivity argument, capped at monoRegistryCap. Every

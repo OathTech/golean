@@ -9,3 +9,4 @@ mutex-addr-lit	mutexAddrLit	-	ok	-	sync,mutex
 waitgroup-value-lit	waitGroupValueLit	-	ok	-	sync,waitgroup
 rwmutex-addr-lit	rwMutexAddrLit	-	ok	-	sync,rwmutex
 once-value-lit	onceValueLit	-	ok	-	sync,once,closures
+lit-in-composite	syncLitInComposite	-	ok	-	sync,mutex,slices,structs

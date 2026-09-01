@@ -15,3 +15,4 @@ method-value-negative-panic	escapeMethodValueNegative	-	panic	sync: negative Wai
 once-do-method-value	escapeOnceDoValue	-	ok	-	sync,once,closures
 promoted-method-value	escapePromotedMethodValue	-	ok	-	sync,mutex,embedding,closures
 passed-callback	escapePassedCallback	-	ok	-	sync,mutex,closures
+paren-forms	escapeParenForms	-	ok	-	sync,mutex,waitgroup,defer,closures

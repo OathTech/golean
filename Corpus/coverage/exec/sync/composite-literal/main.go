@@ -47,6 +47,29 @@ func onceValueLit() int {
 	return n
 }
 
+// Sync literal NESTED IN a composite (audit fix round 2026-09-01,
+// F10): the empty sync literal in ELEMENT position — a slice of
+// mutexes and an explicit struct-field literal — pins that the
+// zero-value lowering holds inside enclosing composites, not just
+// standalone.
+type guardedCell struct {
+	mu sync.Mutex
+	n  int
+}
+
+func syncLitInComposite() int {
+	ms := []sync.Mutex{{}, {}}
+	ms[0].Lock()
+	ms[1].Lock()
+	ms[0].Unlock()
+	ms[1].Unlock()
+	g := guardedCell{mu: sync.Mutex{}, n: 4}
+	g.mu.Lock()
+	g.n += 2
+	g.mu.Unlock()
+	return g.n
+}
+
 func main() {
 	mutexAddrLit()
 }

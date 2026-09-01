@@ -5503,16 +5503,21 @@ func (e *emitter) importedMethodStubs(qname string, named *types.Named) ([]any, 
 
 // syncValueOpModeled reports whether prim's METHOD lowers when reached
 // AS A VALUE (bodied stub / method value / go callee — P-S2-6,
-// Q-SYNCVAL [USER]-RULED 2026-08-31). THE SET IS DERIVED, NOT LISTED
-// TWICE: syncOpFor's zero-argument table — the SAME table the direct
-// statement/defer interception (`emitSyncOpStmt`/`emitDeferSyncOp`)
-// lowers through — plus the two argument-taking members that
-// interception also models (WaitGroup.Add/Done, Once.Do). One
-// derivation feeds both the stub-body synthesis and the method-value
-// lift, so the value surface can never name an op the direct surface
-// does not — the identity principle's mechanical half (the other half
-// is that the bodies below emit the SAME `sync-op` wire nodes, so the
-// machine path from the op boundary on is literally shared).
+// Q-SYNCVAL [USER]-RULED 2026-08-31). The ZERO-ARGUMENT set is
+// DERIVED, not listed twice: syncOpFor's table — the SAME table the
+// direct statement/defer interception (`emitSyncOpStmt`/
+// `emitDeferSyncOp`) lowers through — feeds both the stub-body
+// synthesis and this gate, so the value surface can never name a
+// zero-arg op the direct surface does not. The three ARGUMENT-TAKING
+// members (WaitGroup.Add/Done, Once.Do) are, by contrast, HAND-LISTED
+// at each consumer (here, syncStubBody's switch, and the direct
+// interception) — a divergence fails closed (an entry here without a
+// matching body fails the export via the F2 cross-check in
+// syncMethodStubs), but for those three the single-derivation claim
+// does not hold; only the fail-closed property does. The identity
+// principle's mechanical half is unchanged: the bodies emit the SAME
+// `sync-op` wire nodes, so the machine path from the op boundary on
+// is literally shared.
 func syncValueOpModeled(prim, method string) bool {
 	if syncOpFor(prim, method) != "" {
 		return true
@@ -5588,6 +5593,7 @@ func (e *emitter) syncMethodStubs() ([]any, []any, error) {
 	out := []any{}
 	extraFuncs := []any{}
 	onceDoneEmitted := false
+	bodied := map[string]bool{}
 	for _, name := range names {
 		named := e.syncUsed[name]
 		qname := "sync." + name
@@ -5636,6 +5642,7 @@ func (e *emitter) syncMethodStubs() ([]any, []any, error) {
 			}
 			if body != nil {
 				stub["body"] = body
+				bodied[name+"."+mfn.Name()] = true
 				if needOnceDone && !onceDoneEmitted {
 					extraFuncs = append(extraFuncs, syncOnceDoneFunc())
 					onceDoneEmitted = true
@@ -5647,6 +5654,25 @@ func (e *emitter) syncMethodStubs() ([]any, []any, error) {
 					"through values via their bodied stubs, P-S2-6)"
 			}
 			out = append(out, stub)
+		}
+	}
+	// The F2 cross-check (audit fix round 2026-09-01): every pair
+	// emitSelector value-lowered during emission must have received an
+	// actual BODY above — syncValueOpModeled is the necessary gate at
+	// the selector, but body synthesis additionally checks the pinned
+	// toolchain's signature shapes (syncStubBody's guards), so a future
+	// stdlib signature change would leave a demanded stub bodiless. A
+	// func-value over a declaration-only stub would refuse only at
+	// RUNTIME; failing the export here keeps the refusal at export
+	// time, with the demanding site named.
+	demanded := make([]string, 0, len(e.syncValueLowered))
+	for k := range e.syncValueLowered {
+		demanded = append(demanded, k)
+	}
+	sort.Strings(demanded)
+	for _, k := range demanded {
+		if !bodied[k] {
+			return nil, nil, unsup("sync.%s was lowered as a method VALUE (first at %s) but its stub carries no body — the pinned toolchain's signature no longer matches the modeled shape; refusing at export time (F2 value-lowered/bodied cross-check)", k, e.syncValueLowered[k])
 		}
 	}
 	return out, extraFuncs, nil
@@ -5838,6 +5864,35 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 			}
 			if !syncValueOpModeled(prim, sel.Sel.Name) {
 				return nil, unsup("sync.%s.%s as a method value (the member is outside the modeled sync surface; the modeled ops' method values lower — P-S2-6)", prim, sel.Sel.Name)
+			}
+			// Value-lowered implies stub on wire — ASSERTED, not assumed
+			// (audit fix round 2026-09-01, F2+F3). (F3) Register the
+			// primitive's identity NOW (emitType is the syncUsed writer),
+			// so the stub pass emits the type even when this method value
+			// is the program's only use of it; a resolved receiver that
+			// is not the named sync primitive would mean go/types changed
+			// shape under the pin — refuse, never assume. (F2) Record the
+			// demanded pair; syncMethodStubs cross-checks the demand set
+			// against the ACTUALLY-BODIED stub set and fails the export
+			// on any unbodied demand, so a future stdlib signature change
+			// refuses at export time, not runtime.
+			recvT := types.Unalias(seln.Obj().(*types.Func).Type().(*types.Signature).Recv().Type())
+			if p, isPtr := recvT.(*types.Pointer); isPtr {
+				recvT = types.Unalias(p.Elem())
+			}
+			named, isNamed := recvT.(*types.Named)
+			if !isNamed {
+				return nil, unsup("sync.%s.%s method value: resolved receiver %s is not the named sync primitive", prim, sel.Sel.Name, recvT)
+			}
+			if _, err := e.emitType(named); err != nil {
+				return nil, err
+			}
+			if e.syncValueLowered == nil {
+				e.syncValueLowered = map[string]string{}
+			}
+			key := prim + "." + sel.Sel.Name
+			if _, seen := e.syncValueLowered[key]; !seen {
+				e.syncValueLowered[key] = e.fset.Position(sel.Pos()).String()
 			}
 			// fall through: the MethodVal arm below emits the func-value
 			// over the bodied stub.
@@ -8606,13 +8661,15 @@ func (e *emitter) emitOnceDo(call *ast.CallExpr, recvW any) (any, bool, error) {
 // ops plus Done (spec-parity slice 2): a synthetic one-parameter
 // wrapper through the existing defer machinery — the receiver address
 // evaluates at defer time, the op (and any misuse fatal/panic) fires
-// at frame exit as the deferred invocation's. `defer wg.Add(n)` and
-// `defer once.Do(f)` — legal Go — fail closed as a visible per-decl
-// refusal: the deferred-operand shape (an argument evaluated at defer
-// time and threaded through the wrapper) is a recorded capability gap
-// (design note §9; Done already threads a LITERAL -1, so the lift is
-// the natural follow-up). handled=false when the deferred call is not
-// a sync-primitive method.
+// at frame exit as the deferred invocation's. The arg-taking MODELED
+// members — `defer wg.Add(n)`, `defer once.Do(f)` — return
+// handled=false and take the ORDINARY defer path instead (audit fix
+// round 2026-09-01, F4): the callee lowers as a method value over the
+// bodied stub (P-S2-6), receiver and argument both evaluated at defer
+// time, which is exactly Go's rule — and identical to what the
+// parenthesized spelling `defer (wg.Add)(n)` always got, so the two
+// spellings behave the same by construction. handled=false when the
+// deferred call is not a sync-primitive method.
 func (e *emitter) emitDeferSyncOp(call *ast.CallExpr) (any, bool, error) {
 	sel, ok := call.Fun.(*ast.SelectorExpr)
 	if !ok {
@@ -8630,11 +8687,17 @@ func (e *emitter) emitDeferSyncOp(call *ast.CallExpr) (any, bool, error) {
 	op := syncOpFor(prim, m)
 	var extraArgs []any
 	if op == "" {
-		if prim == "WaitGroup" && m == "Done" {
+		switch {
+		case prim == "WaitGroup" && m == "Done":
 			op = "wgAdd"
 			extraArgs = []any{syncNegOne()}
-		} else {
-			return nil, true, unsup("defer sync.%s.%s (only the zero-argument sync ops and Done are modeled in defer position)", prim, m)
+		case (prim == "WaitGroup" && m == "Add") || (prim == "Once" && m == "Do"):
+			// Arg-taking MODELED members (F4): decline, so the ordinary
+			// defer path lowers the callee as a method value over the
+			// bodied stub — same treatment either spelling gets.
+			return nil, false, nil
+		default:
+			return nil, true, unsup("defer sync.%s.%s (the member is outside the modeled sync surface — the zero-argument ops, Done, Add, and Do lower in defer position; unmodeled members refuse per-decl)", prim, m)
 		}
 	}
 	recvW, err := e.syncSelectionRecvAddr(sel, hops)

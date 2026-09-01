@@ -115,6 +115,25 @@ func escapePassedCallback() int {
 	return x
 }
 
+// PARENTHESIZED spellings (audit fix round 2026-09-01, F4/F10):
+// `(m.Lock)()` and `defer (wg.Add)(-1)` — Go's parens are transparent,
+// so both spellings of a sync op must take the same route (the method
+// value over the bodied stub; F4 routed the plain arg-taking defer
+// spelling through the same ordinary defer path). Both spellings of
+// the deferred Add appear here so a future divergence shows as a red.
+func escapeParenForms() int {
+	var wg sync.WaitGroup
+	wg.Add(2)
+	defer wg.Wait()
+	defer (wg.Add)(-1) // paren spelling
+	defer wg.Add(-1)   // plain spelling — F4: the identical route
+	var m sync.Mutex
+	(m.Lock)()
+	x := 8
+	(m.Unlock)()
+	return x
+}
+
 func main() {
 	escapePromoted()
 	escapeMethodValue()
