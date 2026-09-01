@@ -7,3 +7,8 @@ deref-nil-key-only	rangeDerefNilKeyOnly	-	ok	-	range,arrays,pointers,nil
 field-ptr-nil-no-var	rangeFieldPtrNilNoVar	-	ok	-	range,arrays,pointers,nil,fields
 deref-nil-two-vars-panic	rangeDerefNilTwoVars	-	panic	invalid memory address or nil pointer dereference	range,arrays,pointers,nil,panic
 call-evaluated-once	rangeCallEvaluatedOnce	-	ok	-	range,arrays,evaluation_order,calls
+# Audit fix round 2026-09-01 (NOTE-15): the conversion arm (both
+# directions) and the constant-builtin arm of exprHasCallOrRecv.
+conversion-no-var	rangeConversionNoVar	-	ok	-	range,arrays,slices,conversions,pointers
+conversion-two-vars-panic	rangeConversionTwoVarsPanic	-	panic	cannot convert slice with length 0 to array or pointer to array with length 4	range,arrays,slices,conversions,pointers,panic
+const-len-index-key-only	rangeConstLenIndexKeyOnly	-	ok	-	range,arrays,pointers,nil,builtins

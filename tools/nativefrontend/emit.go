@@ -9067,15 +9067,44 @@ func (e *emitter) panicFreeOperand(x ast.Expr) bool {
 // non-evaluation special case (BUG-076; go/types computes this flag in
 // rangeStmt but records the constant only in the compiler's types2, so
 // the frontend re-derives it). Mirrored decision points (deps/go @
-// go1.26.5, go/types): a receive sets it (expr.go, token.ARROW); an
-// ordinary function/method call sets it (call.go, after the conversion
-// early-return — conversions do NOT count, their operands are scanned
-// on their own); a builtin sets it exactly when its result is
-// NON-constant (call.go's builtin arm) — a constant-folded len/cap
-// discards even the events inside its own argument (builtins.go's
-// save/restore), so a constant-valued builtin call subtree is skipped
-// whole. Function-literal bodies are checked delayed in go/types and
-// never reach the flag — skipped here too.
+// go1.26.5, go/types), arm for arm:
+//
+//   - a receive sets it (expr.go, the token.ARROW arm);
+//   - an ordinary function/method call sets it (call.go, after the
+//     conversion early-return — conversions do NOT count; their
+//     operands are scanned on their own);
+//   - a builtin call sets it exactly when its result is NON-constant
+//     (call.go's builtin arm: "a non-constant result implies a
+//     function call"). A constant-result builtin is NOT itself a call,
+//     but what happens to events INSIDE its arguments depends on
+//     WHICH builtin: len and cap alone save/restore the flag around
+//     their argument (builtins.go, the `id == _Len || id == _Cap`
+//     block), so a constant-folded len/cap discards even a call nested
+//     in its operand and the whole subtree is skipped; every OTHER
+//     constant-result builtin (unsafe.Sizeof/Alignof/Offsetof, min/max
+//     of constants, real/imag/complex of constants) evaluates its
+//     arguments through the ordinary exprList with no save/restore, so
+//     a call inside one — `min(1, unsafe.Sizeof(g()))` — still sets
+//     the flag: the arguments are walked. (Audit fix round 2026-09-01,
+//     SHOULD-FIX 3: the first cut skipped every constant builtin's
+//     subtree whole, over-generalizing the len/cap premise.) Note the
+//     len/cap skip has no reachable positive witness — an event inside
+//     len's argument makes the len NON-constant before the constant is
+//     minted (builtins.go reads the flag first) — so for a constant
+//     len/cap "skip" and "walk" agree; the arm is kept shaped like
+//     go/types' so the two builtin behaviours cannot be conflated.
+//   - builtin recognition goes through go/types' own record —
+//     TypeAndValue.IsBuiltin() on the callee, identity via Uses on the
+//     callee's identifier (bare `len` or the selector's Sel for a
+//     package-qualified `unsafe.Sizeof`) — never through the callee's
+//     syntax alone, which mis-read every qualified builtin as an
+//     ordinary call (SHOULD-FIX 4: `unsafe.Sizeof(x)` over-counted,
+//     making a nil-pointer range spuriously evaluate where gc iterates).
+//
+// Function-literal bodies are checked delayed in go/types and never
+// reach the flag — skipped here too. Both builtin arms are masked today
+// by the unsafe-layout refusal (BUG-070) at the corpus level, so their
+// pins live in callorrecv_test.go against this predicate directly.
 func (e *emitter) exprHasCallOrRecv(x ast.Expr) bool {
 	found := false
 	ast.Inspect(x, func(n ast.Node) bool {
@@ -9091,14 +9120,19 @@ func (e *emitter) exprHasCallOrRecv(x ast.Expr) bool {
 				return false
 			}
 		case *ast.CallExpr:
-			if tv, ok := e.info.Types[nn.Fun]; ok && tv.IsType() {
+			ftv, ok := e.info.Types[nn.Fun]
+			if ok && ftv.IsType() {
 				return true // conversion: not a call; scan its operand
 			}
-			if id, ok := ast.Unparen(nn.Fun).(*ast.Ident); ok {
-				if _, isBuiltin := e.info.Uses[id].(*types.Builtin); isBuiltin {
-					if tv, ok := e.info.Types[nn]; ok && tv.Value != nil {
-						return false // constant-folded builtin: no call, arg events discarded
+			if ok && ftv.IsBuiltin() {
+				if tv, ok := e.info.Types[nn]; ok && tv.Value != nil {
+					// Constant-folded builtin: not a call. len/cap discard
+					// their argument's events (save/restore); the rest
+					// keep them — walk the arguments.
+					if isLenOrCap(e.builtinOf(nn.Fun)) {
+						return false
 					}
+					return true
 				}
 			}
 			found = true
@@ -9107,6 +9141,29 @@ func (e *emitter) exprHasCallOrRecv(x ast.Expr) bool {
 		return true
 	})
 	return found
+}
+
+// builtinOf returns the *types.Builtin a call's callee expression
+// resolves to (through parens; bare identifier or package-qualified
+// selector), or nil when the callee is not a builtin use.
+func (e *emitter) builtinOf(fun ast.Expr) *types.Builtin {
+	var id *ast.Ident
+	switch f := ast.Unparen(fun).(type) {
+	case *ast.Ident:
+		id = f
+	case *ast.SelectorExpr:
+		id = f.Sel
+	default:
+		return nil
+	}
+	b, _ := e.info.Uses[id].(*types.Builtin)
+	return b
+}
+
+// isLenOrCap reports whether b is the len or cap builtin — the only two
+// builtins go/types wraps in a hasCallOrRecv save/restore (builtins.go).
+func isLenOrCap(b *types.Builtin) bool {
+	return b != nil && (b.Name() == "len" || b.Name() == "cap")
 }
 
 // sweepOrderedEventAfter reports whether the current sweep (e.sweepStmt)

@@ -76,3 +76,47 @@ func rangeCallEvaluatedOnce() int {
 	}
 	return n*10 + rangeEvalCount
 }
+
+// ---- Audit fix round 2026-09-01 (NOTE-15): the two hasCallOrRecv arms
+// the first pins left unexercised, each with both boundary directions
+// where Go can reach them.
+
+// Conversions do NOT count as calls (go/types call.go returns before the
+// flag is set on the conversion arm): `*(*[4]int)(sl)` over an EMPTY
+// slice contains no call and no receive, so with no iteration variable
+// it is NOT evaluated — the slice-to-array-pointer conversion that would
+// panic (len 0 < 4) never runs; four silent iterations.
+func rangeConversionNoVar() int {
+	sl := []int{}
+	n := 0
+	for range *(*[4]int)(sl) {
+		n++
+	}
+	return n
+}
+
+// The same expression with TWO iteration variables IS evaluated: the
+// conversion runs and panics on the too-short slice.
+func rangeConversionTwoVarsPanic() int {
+	sl := []int{}
+	n := 0
+	for i, _ := range *(*[4]int)(sl) {
+		n += i
+	}
+	return n
+}
+
+// A CONSTANT len(...) inside the range expression is not a call
+// (call.go's builtin arm sets the flag only for a NON-constant result):
+// `ps[len(arr)-4]` over a nil *[2][4]int contains no call and no
+// receive, so key-only it is NOT evaluated — the nil deref that indexing
+// would perform never happens; the sum of four indices, 6.
+func rangeConstLenIndexKeyOnly() int {
+	var arr [4]int
+	var ps *[2][4]int
+	s := 0
+	for i := range ps[len(arr)-4] {
+		s += i
+	}
+	return s
+}
