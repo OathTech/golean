@@ -42,6 +42,27 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		}
 	}
 
+	// unsafe.Sizeof/Offsetof/Alignof are refused UNCONDITIONALLY, whole
+	// export, before anything emits (t1-fidelity-fixes 2026-08-31,
+	// assessment p2-keeps-a2a3bcd §1.1): go/constant folds them at
+	// type-check time, so without this scan their IMPLEMENTATION-
+	// SPECIFIC layout answers (spec#Size_and_alignment_guarantees
+	// forces only the fixed-width types) become anonymous wire
+	// literals — gc-amd64's layout leaking into the model with no
+	// refusal, the doctrine's exact anti-goal, and register #6's own
+	// re-opening channel. Whole-export (not per-decl quarantine)
+	// because a folded layout constant launders through named
+	// constants into any use site the subtree scan of that site would
+	// never see (`const s = unsafe.Sizeof(...)`). No carve-out for
+	// spec-forced operands: the boundary is a mechanism now, not a
+	// curation convention (the unsafe/boundary marker rows pin it red
+	// by design; ledger row Package_unsafe).
+	for _, unit := range e.units {
+		if err := checkUnsafeLayoutOps(e.fset, unit); err != nil {
+			return nil, err
+		}
+	}
+
 	// Generic declaration registry BEFORE the H-11 dry-run: an
 	// initializer may instantiate a generic function or type declared
 	// anywhere in the program (`var v1 = f[string]("foo")`), and its
@@ -8601,6 +8622,48 @@ func (e *emitter) emitMake(c *ast.CallExpr) (any, bool, error) {
 }
 
 // ---- channels (channels arc slice 1) ----
+
+// checkUnsafeLayoutOps refuses any reference to unsafe.Sizeof /
+// unsafe.Offsetof / unsafe.Alignof in the unit's sources, naming the
+// operator and its position (the emitProgram call site carries the
+// full rationale). The scan is syntactic-plus-resolution: a selector
+// whose base resolves to the `unsafe` package name — an aliased import
+// cannot smuggle one past it, and a user-defined `unsafe` identifier
+// does not trip it. Other unsafe surface keeps its standing refusals
+// (unsafe.Pointer refuses as a wire TYPE; unsafe.Add/Slice/... take
+// Pointer operands and refuse through it).
+func checkUnsafeLayoutOps(fset *token.FileSet, u *sourcePkg) error {
+	var bad error
+	for _, f := range u.files {
+		ast.Inspect(f, func(n ast.Node) bool {
+			if bad != nil {
+				return false
+			}
+			sel, ok := n.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
+			switch sel.Sel.Name {
+			case "Sizeof", "Offsetof", "Alignof":
+			default:
+				return true
+			}
+			base, ok := ast.Unparen(sel.X).(*ast.Ident)
+			if !ok {
+				return true
+			}
+			if pn, ok := u.info.Uses[base].(*types.PkgName); ok && pn.Imported().Path() == "unsafe" {
+				bad = unsup("unsafe.%s at %s: its folded value is gc's IMPLEMENTATION-SPECIFIC memory layout (spec#Size_and_alignment_guarantees forces only the fixed-width types), which must not enter the model as an anonymous constant — fail closed (out-of-language boundary, ledger row Package_unsafe)", sel.Sel.Name, fset.Position(sel.Pos()))
+				return false
+			}
+			return true
+		})
+		if bad != nil {
+			return bad
+		}
+	}
+	return nil
+}
 
 // (containsRecv, the function-scoped receive scan of the fnHasRecv era
 // — BUG-023/BUG-026 — was retired by the A6 sweep-scoped ordered-event

@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+# BOTH RED (frontend-export) BY DESIGN — BUG-070: the frontend refuses
+# unsafe.Sizeof/Offsetof/Alignof unconditionally (implementation-
+# specific layout must not enter the model as anonymous constants; see
+# main.go). Expected columns record the oracle's truth (go run @
+# go1.26.5, amd64: 84 / 8248).
+sizeof-fixed	unsafeSizeofFixed	-	ok	-	unsafe,constants
+layout-struct	unsafeLayoutStruct	-	ok	-	unsafe,constants,structs

@@ -2,31 +2,24 @@ package main
 
 import "unsafe"
 
-// OUT-OF-LANGUAGE BOUNDARY MARKERS (slice 6, the whole-language bar):
+// OUT-OF-LANGUAGE BOUNDARY MARKER (slice 6, the whole-language bar;
+// re-scoped 2026-08-31, t1-fidelity-fixes/BUG-070):
 // spec#Package_unsafe. The ledger classifies Package_unsafe
 // out-of-language — the spec's own guard ("packages using unsafe must
 // be vetted manually … may be non-portable", and the whole section is
 // gated on implementation-specific layout), and modeling its
 // observables means modeling gc's memory layout, the doctrine's exact
-// anti-goal. These two rows exist so the boundary is a VISIBLE RED,
-// never grey: marker-only, justification logged in the ledger row
-// (the charter's anticipated rare marker-only case).
+// anti-goal. This case pins the TYPE-ESCAPE boundary: unsafe.Pointer
+// (rule 1) refuses as a wire type — the RED row that must never pass
+// by accident; refusal: "basic type unsafe.Pointer" (wire.go).
 //
-// sizeof-const picks the one corner the spec DOES force
-// (spec#Size_and_alignment_guarantees fixes the byte sizes of the
-// fixed-width types) — and it is GREEN, measured at landing: the whole
-// expression is a CONSTANT, folded by go/constant at the frontend
-// before any unsafe machinery could be consulted (the S3
-// delegated-constant caveat, working in the honest direction — the
-// folded value is spec-forced, so the green attests go/types'
-// spec-conformant fold, never a layout model). pointer-roundtrip is
-// the type-safety escape itself (unsafe.Pointer rule 1) — the RED
-// boundary row that must never pass by accident; refusal:
-// "basic type unsafe.Pointer" (wire.go).
-
-func unsafeSizeofConst() int {
-	return int(unsafe.Sizeof(int64(0)))*10 + int(unsafe.Sizeof(int32(0))) // 84
-}
+// The sizeof-const row that used to live here (GREEN: a spec-forced
+// constant, folded by go/types) moved to unsafe/layout-ops and is RED
+// there: since BUG-070 the frontend refuses unsafe.Sizeof/Offsetof/
+// Alignof by MECHANISM (checkUnsafeLayoutOps, emit.go), with no
+// spec-forcedness carve-out — keeping the fold here would have killed
+// this whole export and buried the distinct Pointer-type refusal this
+// case exists to pin.
 
 func unsafePointerRoundtrip() int {
 	x := 7
@@ -36,6 +29,5 @@ func unsafePointerRoundtrip() int {
 }
 
 func main() {
-	unsafeSizeofConst()
 	unsafePointerRoundtrip()
 }

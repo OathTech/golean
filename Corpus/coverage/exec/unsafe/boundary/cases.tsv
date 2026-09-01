@@ -1,11 +1,9 @@
 # id	subject	args	expected_status	expected_reason	features
-# OUT-OF-LANGUAGE BOUNDARY MARKERS (slice 6): Package_unsafe is
-# classified out-of-language in docs/language-coverage-ledger.md (the
-# justification lives there); these rows keep the boundary visible
-# instead of grey. MARKER-ONLY by logged justification: full
-# enumeration of unsafe would pin gc's layout — modeling gc, the
-# doctrine's anti-goal. sizeof-const is GREEN (a spec-forced constant,
-# folded by go/constant at the frontend — see main.go); the RED
-# boundary is pointer-roundtrip ("basic type unsafe.Pointer").
-sizeof-const	unsafeSizeofConst	-	ok	-	unsafe,constants
+# OUT-OF-LANGUAGE BOUNDARY MARKER (slice 6; re-scoped 2026-08-31,
+# BUG-070): Package_unsafe is classified out-of-language in
+# docs/language-coverage-ledger.md (the justification lives there);
+# this row keeps the TYPE-ESCAPE boundary visible instead of grey —
+# RED by design, refusal "basic type unsafe.Pointer" (wire.go). The
+# former GREEN sizeof-const row moved to unsafe/layout-ops (RED there:
+# the layout operators refuse by mechanism since BUG-070).
 pointer-roundtrip	unsafePointerRoundtrip	-	ok	-	unsafe,pointers

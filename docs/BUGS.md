@@ -3462,3 +3462,46 @@ by probing imagination, not by any green gate). Adjacent to BUG-068
 wire's name channel too weak to carry a resolved distinction; 069 was
 the emitter not consulting the resolution at all.
 
+## BUG-070 — unsafe.Sizeof/Offsetof/Alignof folded gc's layout into the wire with no refusal
+
+- Status: fixed (2026-08-31, t1-fidelity-fixes — `checkUnsafeLayoutOps`
+  in tools/nativefrontend/emit.go: any reference to unsafe.Sizeof /
+  unsafe.Offsetof / unsafe.Alignof refuses the WHOLE export, naming
+  the operator and its source position. Whole-export rather than
+  per-decl quarantine because the folded constant launders through
+  named constants (`const s = unsafe.Sizeof(...)`) into use sites
+  whose own subtrees a per-site scan would never flag. No
+  spec-forcedness carve-out: even fixed-width-type operands refuse —
+  a carve-out would embed a layout-forcedness census in the frontend
+  to preserve one attestation row, and the fold that row attested was
+  go/types', not the machine's.)
+- Pinned-by: none (the refusal surfaces at `frontend-export` — a
+  coverage-stage boundary marker, not a fidelity pin; the rows below
+  are listed so the baseline deltas of the fix ride a Cases: line)
+- Cases: unsafe/boundary/sizeof-const, unsafe/layout-ops/sizeof-fixed, unsafe/layout-ops/layout-struct
+- Discovered: 2026-08-31 (fidelity assessment phase 2,
+  p2-keeps-a2a3bcd §1.1 — severity: boundary breach, not a
+  wrong-vs-pinned-oracle answer)
+
+Pre-fix, the three layout operators passed through `go/constant` at
+type-check time and landed on the wire as anonymous integer literals:
+the assessment probe's `int(unsafe.Sizeof(int(0)))*1000 +
+int(unsafe.Sizeof(S{}))*10 + int(unsafe.Offsetof(S{}.b))` exported
+clean as the literal `8248` — gc-amd64's implementation-specific
+layout (386/arm: `4164`; only the fixed-width types' sizes are forced
+by spec#Size_and_alignment_guarantees) inside a model that claims
+portability, with the pinned-oracle differential structurally green on
+it. The language-coverage ledger classified Package_unsafe
+out-of-language with the boundary "kept VISIBLE" by marker reds — but
+the only mechanism was the unsafe.Pointer wire-TYPE refusal; the
+layout operators had no mechanism at all, and what kept the corpus
+honest was curation (the boundary case deliberately used only
+spec-forced operands). The boundary is now a mechanism. Baseline
+deltas: `unsafe/boundary/sizeof-const` (PASS) REMOVED — its
+spec-forced shape moved to `unsafe/layout-ops/sizeof-fixed`, refused
+by the mechanism like every other operand; `unsafe/layout-ops/
+{sizeof-fixed,layout-struct}` are the new red-by-design refusal pins;
+`unsafe/boundary/pointer-roundtrip` keeps its own distinct
+Pointer-type refusal (the two boundary mechanisms stay separately
+attested).
+
