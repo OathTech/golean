@@ -28,14 +28,24 @@ package main
 // selection is not modeled — so they REFUSE, fail closed, naming the
 // file and the constraint. ONE narrow acceptance, chosen against the
 // vendored subject rather than invented: a constraint whose every tag
-// is a CUSTOM tag (no GOOS/GOARCH/release/toolchain/feature tag
-// anywhere in the expression) and which evaluates TRUE with all
-// custom tags unset is INERT in this pipeline — the oracle (`go run
-// <dir>`, no -tags) includes the file and so do we, identically, on
-// every host (raftsubject/raft/state_trace_nop.go's
-// `//go:build !with_tla` is the standing instance). Everything else —
-// excluded files, platform tags, version tags, feature tags — is a
-// refusal, never a silent include OR a silent exclude.
+// is a CUSTOM tag (no reserved tag anywhere in the expression) and
+// which evaluates TRUE with all custom tags unset is INERT in this
+// pipeline — the oracle (`go run <dir>`, no -tags) includes the file
+// and so do we (raftsubject/raft/state_trace_nop.go's
+// `//go:build !with_tla` is the standing instance). "Reserved" is
+// decided by STATIC SHAPE, host-independently: GOOS/GOARCH/release/
+// compiler/feature tags, AND the toolchain's own ToolTags —
+// goexperiment.* and the <goarch>.<capability> microarch tags
+// (amd64.v1, arm.5, 386.sse2, wasm.satconv, …). The ToolTags class
+// matters because those tags' truth values are set by the live
+// toolchain's configuration, NOT by -tags: evaluating them as
+// custom-false made `//go:build !goexperiment.greenteagc` a file the
+// oracle EXCLUDES but this pipeline lowered (audit T3-1 fail-open).
+// Only after every mentioned tag survives the reserved check is the
+// all-custom-tags-false evaluation meaningful for both sides on any
+// host. Everything else — excluded files, platform tags, version
+// tags, feature/ToolTags — is a refusal, never a silent include OR a
+// silent exclude.
 
 import (
 	"go/ast"
@@ -71,9 +81,23 @@ func pinnedLangVersion() (string, error) {
 // and the bare "go1".
 var goReleaseTag = regexp.MustCompile(`^go1(\.[0-9]+)?$`)
 
-// knownEnvTags are the build tags the toolchain defines from the
-// environment or its own identity — GOOS values, GOARCH values, and
-// the compiler/feature tags. Any of these in a constraint makes the
+// knownArchTags are the GOARCH values (go/build syslists). Kept as
+// their own set because they are ALSO the prefixes of the toolchain's
+// microarch/capability ToolTags (amd64.v1, arm.5, 386.sse2,
+// wasm.satconv, …) — see reservedConstraintTag. Over-inclusion here
+// only widens the refusal, the fail-closed direction.
+var knownArchTags = map[string]bool{
+	"386": true, "amd64": true, "amd64p32": true, "arm": true,
+	"arm64": true, "arm64be": true, "armbe": true, "loong64": true,
+	"mips": true, "mips64": true, "mips64le": true, "mips64p32": true,
+	"mips64p32le": true, "mipsle": true, "ppc": true, "ppc64": true,
+	"ppc64le": true, "riscv": true, "riscv64": true, "s390": true,
+	"s390x": true, "sparc": true, "sparc64": true, "wasm": true,
+}
+
+// knownEnvTags are the remaining build tags the toolchain defines from
+// the environment or its own identity — GOOS values and the
+// compiler/feature tags. Any of these in a constraint makes the
 // file's inclusion depend on platform/toolchain identity, which is
 // outside the modeled fragment. The lists are the toolchain's
 // (go/build syslists) — over-inclusion here only widens the refusal,
@@ -85,20 +109,30 @@ var knownEnvTags = map[string]bool{
 	"js": true, "linux": true, "nacl": true, "netbsd": true,
 	"openbsd": true, "plan9": true, "solaris": true, "wasip1": true,
 	"windows": true, "zos": true, "unix": true,
-	// GOARCH
-	"386": true, "amd64": true, "amd64p32": true, "arm": true,
-	"arm64": true, "arm64be": true, "armbe": true, "loong64": true,
-	"mips": true, "mips64": true, "mips64le": true, "mips64p32": true,
-	"mips64p32le": true, "mipsle": true, "ppc": true, "ppc64": true,
-	"ppc64le": true, "riscv": true, "riscv64": true, "s390": true,
-	"s390x": true, "sparc": true, "sparc64": true, "wasm": true,
 	// compiler / feature tags
 	"gc": true, "gccgo": true, "cgo": true, "race": true,
 	"msan": true, "asan": true, "boringcrypto": true,
 }
 
 func reservedConstraintTag(tag string) bool {
-	return knownEnvTags[tag] || goReleaseTag.MatchString(tag)
+	if knownEnvTags[tag] || knownArchTags[tag] || goReleaseTag.MatchString(tag) {
+		return true
+	}
+	// The toolchain's own ToolTags, matched by STATIC SHAPE rather than
+	// seeded from go/build.Default.ToolTags — ToolTags are
+	// host-configuration-dependent (which experiments/microarch level
+	// the LIVE toolchain enables), so a seeded list would make refusal
+	// itself host-dependent; the shape match refuses the whole class on
+	// every host, identically (audit T3-1: these evaluated as
+	// custom-false, so `//go:build !goexperiment.greenteagc` was
+	// EXCLUDED by the oracle yet lowered by us — probed).
+	if strings.HasPrefix(tag, "goexperiment.") {
+		return true
+	}
+	if i := strings.IndexByte(tag, '.'); i > 0 && knownArchTags[tag[:i]] {
+		return true // microarch/capability: amd64.v1, arm.5, 386.sse2, …
+	}
+	return false
 }
 
 // constraintTags collects every tag a constraint expression mentions
