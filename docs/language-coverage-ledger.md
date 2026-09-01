@@ -471,14 +471,15 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (2462 cases, 2293 PASS /
-169 FAIL; `baselines/native-full.tsv`, recorded 2026-08-22 at
-`56a12142`). **Re-derived 2026-08-22** on the settlement branch: the
-arithmetic below had been vintage-locked to the slice-6 tranche-B
-baseline (2219 / 2090 / 129, recorded 2026-08-19 at `6f68292c`) while
-seven re-pins moved beneath it, so §8 asserted "every one on a named
-row … zero unmapped" over a red set 40 cases smaller than the real
-one. §8b records the derivation.
+All numbers at the current tracked baseline (2503 cases, 2335 PASS /
+168 FAIL; `baselines/native-full.tsv`, re-pinned 2026-09-01 on the
+qrow-syncval slice, commit `b16738d3`). **Re-derived 2026-09-01** on
+that slice (rider B): the arithmetic below had gone stale against TWO
+rounds of re-pins beneath it — the Tier-1 fidelity-fixes round (which
+moved the baseline to 2493 / 2318 / 175, leaving 6 reds unmapped
+here; reconciler C4 HIGH ×2) and this slice's own 17-row movement.
+§8c records the fresh derivation (§8b is the 2026-08-22 one, kept as
+the historical record; the method is §8b's, re-run).
 
 **The spec's 158 sections:**
 
@@ -497,34 +498,40 @@ one. §8b records the derivation.
 frontier 2 (atomic → Q-ATOMIC, goexit → Q-GOEXIT), latitude 1 (model →
 C10), out-of-language 5. Zero unclassified.
 
-**The 169 baseline reds, every one on a named row (re-derived
-mechanically 2026-08-22 — zero unmapped, zero double-mapped):**
+**The 168 baseline reds, every one on a named row (re-derived
+mechanically 2026-09-01 — zero unmapped, zero double-mapped):**
 
 | bucket | reds |
 | --- | --- |
 | frontier FR-1…FR-15 (§4) | 81 |
-| design questions Q-* (§6) | 21 |
+| design questions Q-* (§6) | 14 |
 | (c) profound-reason pins (triage §4 + the unsafe marker) | 9 + 1 |
-| (a)-queued fixes (triage §3.2: A3 5, A4 1, A5 1, A6 4, A7 1 + BUG-062 2) | 14 |
-| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) | 43 |
-| **total** | **169** |
+| (a)-queued fixes (triage §3.2: A3 5, A4 1, A5 1, A7 1) | 8 |
+| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) | 55 |
+| **total** | **168** |
 
-*(Two rows re-balanced 2026-08-20 by the ratified C4 split — the (c)
-column went 10+1 → 9+1 and the (a)-queued column 13 → 14 as
-`panic-recover/panic-newline-abort` became mini-slice A7. The total is
-untouched: nothing flipped, one red changed bucket.)*
+*(Movements at the 2026-09-01 re-derivation, each derived in §8c:
+Q-* 21 → 14 — the Q-SYNCVAL slice flipped its 7 ruled reds;
+(a)-queued 14 → 8 — Tier-1's A6 landing flipped its 4 over-refusal
+rows and BUG-062's 2 vintage reds (min-max's 3 were born post-vintage
+and landed PASS, so they never appear here); post-vintage 43 → 55 —
+Tier-1's 12 born-FAIL refusal pins enter with their owning BUGS.md
+entries. Earlier re-balance history: 2026-08-20's C4 split moved one
+red (c) → (a); superseded rows above.)*
 
 The only red not in the triage table's original 138 groups, a slice-6
-FR/Q suite, or §8b is `unsafe/boundary/pointer-roundtrip` — the
+FR/Q suite, §8b, or §8c is `unsafe/boundary/pointer-roundtrip` — the
 out-of-language boundary marker, argued as a (c)-class justified pin
 (triage postscript 3) and put to the user with the (c) list.
 
 **Sequential-frontier queue mass:** 14 live arcs (FR-8 retired), 81
 reds; the top four retire 12 reds in ~2-3 days of small arcs; FR-15
-(complex) alone is 27. **Design-question mass:** 9 questions, 21 reds,
-every one with its cases in hand.
+(complex) alone is 27. **Design-question mass:** 9 questions of which
+2 RESOLVED (Q-SYNCVAL + Q-SYNCLIT, ruled and implemented 2026-09-01)
+and 7 open, 14 reds, every one with its cases in hand.
 
-### 8b. The re-derivation, 2026-08-19 vintage → this tip
+### 8b. The re-derivation, 2026-08-19 vintage → the 2026-08-22 tip
+(historical record; superseded by §8c)
 
 Method (reproducible, not asserted): take the FAIL id set of the
 vintage baseline `6f68292c` and of the current one, and diff them.
@@ -558,7 +565,8 @@ standing witness. So the feature is half-landed: FR-5 now names the
 expression-position half and cites that witness (1 red). The sync
 method-value / go-callee half (`sync/escapes/{method-value,go-stmt}`)
 was never FR-5's — it is Q-SYNCVAL's, and both cases are still red
-inside Q-SYNCVAL's 5.
+inside Q-SYNCVAL's 5. *(True when written; Q-SYNCVAL's 5 flipped
+2026-09-01 — §8c. FR-5's own scope and witness are unchanged.)*
 
 **Frontier bucket: 84 → 81.** −2 FR-8 (retired), −1 FR-5 (2 → 1);
 FR-13 net 0 (the compile-only-forms ↔ anon-struct-type-argument swap);
@@ -603,3 +611,51 @@ The reconciler (`tools/reconcile-records`, check C4) now re-derives
 this arithmetic on every run, so the next drift surfaces in seconds
 instead of over seven re-pins — the mechanism §8 previously claimed
 ("verified mechanically at the re-pin") but never retained.
+
+### 8c. The re-derivation, 2026-08-22 vintage → the 2026-09-01 tip
+
+Method: §8b's, re-run against this tip's baseline (re-pinned
+2026-09-01, commit `b16738d3`; the vintage is §8b's `56a12142`):
+
+```
+git show 56a12142:baselines/native-full.tsv | awk -F'\t' '$1=="FAIL"{print $2}' | sort > old
+awk -F'\t' '$1=="FAIL"{print $2}' baselines/native-full.tsv | sort > new
+comm -23 old new   # 13 vintage reds now green
+comm -13 old new   # 12 reds new since the vintage
+```
+
+169 − 13 + 12 = 168. ✓ (Case count 2462 → 2503: Tier-1 added 8 rows
+and removed 1 — `unsafe/boundary/sizeof-const`, recorded on BUG-070's
+entry — plus BUG-062's 3 post-vintage min-max rows, born red-first and
+landed PASS inside the same round, so they appear in no FAIL diff; the
+qrow-syncval slice added 10 rows, all born PASS.)
+
+**The 13 that went green:**
+
+| ids | bucket movement | disposition |
+| --- | --- | --- |
+| `builtins/len-vs-call-order/{chan,slice}` | (a)-queued −2 | BUG-062 FIXED (Tier-1 mini-slice A6, the sweep-scoped ordered-event hoist). |
+| `channels/recv-order/{dead-recv-len-operand,dead-recv-len-embedded}`, `bools/short-circuit-funclit/{e6-recv-len-in-sc,e6-recv-len-outside}` | (a)-queued −4 | BUG-032's A6 over-refusal retirement (Tier-1; trade recorded on BUG-032's A6 amendment). A6 leaves the (a) queue: 14 → 8. |
+| `sync/iface-dispatch/{mutex-user-iface,wg-user-iface,locker-box-dispatch}`, `sync/escapes/{method-value,go-stmt}` | Q-* −5 | Q-SYNCVAL implemented (this slice, rulings row 6 — bodied stubs, identity principle). |
+| `sync/composite-literal/{mutex-addr-lit,waitgroup-value-lit}` | Q-* −2 | Q-SYNCLIT implemented (this slice, rulings row 7 — empty literal = zero value). Q-* leaves 21 → 14. |
+
+**The 12 new since the vintage — all Tier-1-round born-FAIL refusal
+pins, joining the post-vintage bucket (43 → 55) with their owning
+records:**
+
+| family | reds | owning record |
+| --- | --- | --- |
+| `unsafe/layout-ops/{sizeof-fixed,layout-struct}`, `unsafe/dot-import/sizeof-bare` | 3 | BUG-070 (unsafe layout ops refused; the dot-import escape closed at the T1 audit fix round) |
+| `fmt/formatter-box-{crosspkg,generic,range}/*`, `fmt/formatter-dyn-hole/dyn-boxed` | 4 | BUG-071 (Formatter × dyn-fmt-shim emit-time refusal + the audit's three boxing-walk completeness pins) |
+| `strings/shim-value-refused/{shimmed-value,unmodeled-value}` | 2 | BUG-072 (stdlib function-VALUE refusal names its true cause) |
+| `strings/trimspace-repeat/repeat-bound-refused` | 1 | BUG-073 (Repeat outputs past the shim's 1<<24 bound refuse by name) |
+| `init/hidden-dep-refused` | 1 | the E7 hidden-dep init-order detector pin (t1-fidelity-fixes; assessment p2 claim 6 family) |
+| `builtins/len-vs-call-order/panicky-between` | 1 | BUG-032's surviving A6 residual (panicky operand between a panicky left operand and a later event) — a fail-closed frontend refusal, not a divergence (§2 Order_of_evaluation row) |
+
+Q-SYNCVAL's misuse-identity pins and the other 8 rows this slice added
+are born-PASS and appear in no red bucket; the out-of-scope sync reds
+(`sync/out-of-scope-cond/*` ×3, `sync/out-of-scope-trylock/
+trylock-uncontended` — Q-COND's 3 and Q-TRYLOCK's 1, both deferred
+with envelopes pre-ruled, rulings rows 8/5 — and FR-5's witness
+`sync/promoted-mutex/trylock-expr`) are unmoved, re-verified red with
+cause-naming refusals on this slice's full run.
