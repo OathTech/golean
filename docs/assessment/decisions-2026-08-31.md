@@ -21,8 +21,11 @@ program's tiers.
    now, deal with all the smaller things. Make sure our
    discrepancy backlog has it on the books." → entry D-002 in
    docs/discrepancy-backlog.md.
-   **[AGENT] interim policy pending that design (fail-closed
-   default, [USER] confirmation queued)**: until the retirement
+   **[AGENT] interim policy pending that design (fail-closed default;
+   CONFIRMED [USER] 2026-09-01 ("the 4 confirmations all seem like reasonable interpretations… agree on all of the above"), WITH the recorded revisit trigger: the freeze trades
+   away the cheapest lower-bound growth route — if the frontier
+   re-ranking makes stdlib coverage urgent before the retirement
+   design lands, the freeze is the first thing to revisit)**: until the retirement
    lands, NEW shims are frozen (no sixth mechanism, no new
    hand-modeled functions without a [USER] exception) and the
    Fields-standard validation rule applies to any shim that must
