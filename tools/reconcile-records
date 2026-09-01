@@ -743,7 +743,23 @@ def check_latitude_counts():
     for rid, ln, head in rows:
         m = re.search(r"—\s*(\(\w[\w-]*\)|REFUSED)", head)
         tag_of[rid] = m.group(1) if m else None
-    sec10 = txt[txt.find("## 10. Counts") :] if "## 10. Counts" in txt else ""
+    # Fail NOISY on a missing anchor (audit fix round 2026-09-01, C2 —
+    # motivated by C1: a doc edit deleted the heading and this check
+    # silently disabled itself, exactly the fail-open class the charter
+    # forbids). No heading -> HIGH finding, empty section (the per-class
+    # enumeration checks then have nothing to key on, and the reader is
+    # TOLD so instead of shown a vacuous green).
+    if "## 10. Counts" in txt:
+        sec10 = txt[txt.find("## 10. Counts") :]
+    else:
+        sec10 = ""
+        finding(
+            "C10",
+            "high",
+            "the latitude inventory has NO '## 10. Counts' heading — the C10 "
+            "class-enumeration checks key on it and are DISABLED until it returns "
+            "(previously this absorbed silently; fail-noisy since 2026-09-01)",
+        )
     listed = {}
     for label, pat in (
         ("(a)", r"- \(a\) ENVELOPED:(.*?)(?=\n- \(b\))"),

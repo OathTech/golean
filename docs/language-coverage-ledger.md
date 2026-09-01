@@ -471,12 +471,14 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (2505 cases, 2337 PASS /
+All numbers at the current tracked baseline (2506 cases, 2338 PASS /
 168 FAIL; `baselines/native-full.tsv`, re-pinned 2026-09-01 on the
 qrow-syncval slice, commit `b16738d3`; +2 born-PASS pinning rows at
 the same slice's audit fix round, F10 — `sync/escapes/paren-forms`,
-`sync/composite-literal/lit-in-composite` — red-count arithmetic
-unchanged). **Re-derived 2026-09-01** on
+`sync/composite-literal/lit-in-composite`; +1 born-PASS membership
+row at the c7-refresh rebase union, C8 —
+`goroutines/select-wake-close-selsel` — red-count arithmetic
+unchanged by both). **Re-derived 2026-09-01** on
 that slice (rider B): the arithmetic below had gone stale against TWO
 rounds of re-pins beneath it — the Tier-1 fidelity-fixes round (which
 moved the baseline to 2493 / 2318 / 175, leaving 6 reds unmapped
@@ -627,12 +629,14 @@ comm -23 old new   # 13 vintage reds now green
 comm -13 old new   # 12 reds new since the vintage
 ```
 
-169 − 13 + 12 = 168. ✓ (Case count 2462 → 2505: Tier-1 added 8 rows
+169 − 13 + 12 = 168. ✓ (Case count 2462 → 2506: Tier-1 added 8 rows
 and removed 1 — `unsafe/boundary/sizeof-const`, recorded on BUG-070's
 entry — plus BUG-062's 3 post-vintage min-max rows, born red-first and
 landed PASS inside the same round, so they appear in no FAIL diff; the
-qrow-syncval slice added 10 rows, all born PASS, and its audit fix
-round added 2 more born-PASS pinning rows, F10.)
+qrow-syncval slice added 10 rows, all born PASS, its audit fix
+round added 2 more born-PASS pinning rows, F10, and the c7-refresh
+rebase union added 1 more born-PASS membership row, C8 —
+`goroutines/select-wake-close-selsel`.)
 
 **The 13 that went green:**
 

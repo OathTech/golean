@@ -352,7 +352,7 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
 
 - WHERE: same spec sentence as C6 (a parked select that becomes ready
   again is still a select "choosing"). Machine: `resumeThread`
-  Multi.lean:376–427 — a woken select head-commits the FIRST wake-ready
+  Multi.lean:376–464 — a woken select head-commits the FIRST wake-ready
   clause in clause order, deterministically, consuming nothing ("no
   re-randomization on the blocked path"; the head-commit arm is
   :424–427).
@@ -367,8 +367,8 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   and the re-argument was not recorded (fidelity A1-14); when run, the
   premise was gc-FALSIFIED on the one-event/width-2 corner: a select
   parked with TWO recv clauses on ONE channel, woken by `close(ch)`,
-  commits EITHER clause in gc (~half each, 200-run counts incl. a
-  park-first isolate; `selectgo` builds lockorder from the shuffled
+  commits EITHER clause in gc (~half each, 200-run-per-config counts
+  incl. a park-first isolate; `selectgo` builds lockorder from the shuffled
   pollorder precisely to permute same-channel cases, and `closechan`'s
   first dequeue wins the `selectDone` CAS). One event, two clauses —
   the event does not determine the clause, and no prompt-wake L1
@@ -1615,10 +1615,22 @@ permanent; the deviation is not.)
    state C7's SUPERSEDED argument — gc-falsified on the
    two-clauses-one-channel close wake
    (`docs/evidence/2026-09-01_c7-close-wake-probe/`; the argument of
-   record is now C7's two-leg version). The refresh lane was
+   record is now C7's two-leg version). Two further sites carry the
+   same superseded wording (census completed at the audit fix round,
+   C3): `Corpus/coverage/exec/goroutines/select-wake-multi/main.go:8-10`
+   ("a woken select commits the case its waking event belongs to,
+   never a fresh shuffle" — the comment states the falsified GENERAL
+   rule; the CASE itself stays valid, its two clauses are on DIFFERENT
+   channels, where the wording's conclusion happens to hold) and
+   `docs/2026-08-06_channels-arc-design.md:1798` (the same
+   committed-by-the-event re-argument inside the slice-4 verdict
+   paragraph). The refresh lane was
    docs-and-evidence only by its brief, so the re-sync is owed to the
-   next Multi.lean/Machine.lean-touching slice — NAMED here because
+   next Multi.lean/Machine.lean-touching slice (the corpus-comment and
+   design-note sites ride the same owed re-sync) — NAMED here because
    flag 1's lesson is that such triggers expire silently.
+
+## 10. Counts
 
 **Reading rule (adopted 2026-08-22, settlement branch).** Each bullet
 below is a MEMBERSHIP list and nothing else: every id it names is a

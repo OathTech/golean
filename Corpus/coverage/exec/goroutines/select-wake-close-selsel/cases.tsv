@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# ADDED at the audit fix round 2026-09-01 (C8): the close-wake
+# membership pin — two recv clauses on ONE channel woken by one close.
+# The corpus twin of the C7 close-wake probe (evidence dir
+# 2026-09-01_c7-close-wake-probe): gc realizes BOTH clauses (selectgo
+# permutes same-channel cases per entry), the machine certifies {1, 2}
+# (clause 1 = wake head-commit; clause 2 = close-before-entry schedule
+# + entry-path L2 draw). Enrollment mirrors select-wake-multi (quick
+# tier, fresh enumeration per run; probe-validated at width 2 /
+# sites 24, observations=2).
+-	selectWakeCloseSelsel	-	ok	-	goroutines,channels,select,close,nondet	membership	one close waking a width-2 same-channel select does NOT determine the committed clause (the C7 falsified-wording corner): certified set {1, 2} (members=2) — wake head-commit yields 1, the always-realizable close-before-entry schedule + entry L2 draw yields 2; gc exhibits both (~half each, 200-run-per-config probe counts)	width=2,sites=24,members=2

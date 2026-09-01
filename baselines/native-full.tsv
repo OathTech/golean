@@ -1,15 +1,28 @@
 # GoLean native-frontend full-corpus differential baseline
-# re-pinned: 2026-09-01 (qrow-syncval AUDIT FIX ROUND — F10's two
-#   pinning rows for the newly-lowering unpinned surface, both born
-#   PASS on a full ci --diff at this tip (the auditor's probe runs had
-#   clobbered the branch's differential record; this run also restores
-#   it, F11): sync/escapes/paren-forms (`(m.Lock)()` +
+# re-pinned: 2026-09-01 (REBASE UNION — c7-refresh rebased onto main
+#   220c2711 (the qrow-syncval merge); two independent same-day
+#   re-pin moves compose here and this header names both. Union
+#   arithmetic: main's 2505 rows + this branch's 1 new row (no
+#   overlapping ids) = 2506; no row is moved by the union itself.
+#   Re-certified by a full ci --diff at the rebased tip.
+#   Move (1), qrow-syncval AUDIT FIX ROUND (landed on main) — F10's
+#   two pinning rows for the newly-lowering unpinned surface, both
+#   born PASS on a full ci --diff at that tip (the auditor's probe
+#   runs had clobbered that branch's differential record; that run
+#   also restored it, F11): sync/escapes/paren-forms (`(m.Lock)()` +
 #   `defer (wg.Add)(-1)` and the plain spelling side by side — the F4
 #   identity pin) and sync/composite-literal/lit-in-composite
 #   (`[]sync.Mutex{{},{}}` + struct-field literal — zero-value lowering
 #   in element position). NO other row moved; no PASS->non-PASS flips;
-#   header fixes ride along: cases line re-derived (F7), column-header
-#   line restored (F6).)
+#   header fixes rode along: cases line re-derived (F7), column-header
+#   line restored (F6).
+#   Move (2), c7-refresh AUDIT FIX ROUND (C8) — ONE new membership
+#   row born PASS on a full ci --diff at the pre-rebase branch tip
+#   and re-certified at the rebased tip:
+#   goroutines/select-wake-close-selsel, the close-wake same-channel
+#   width-2 pin (corpus twin of the C7 close-wake probe; certified
+#   {1,2}, gc exhibits both). No other row moved; no PASS->non-PASS
+#   flips.)
 # previous re-pin: 2026-09-01 (qrow-syncval slice — Q-SYNCVAL + Q-SYNCLIT,
 #   the two implement-ruled Q-rows of docs/2026-08-31_qrow-rulings.md
 #   (rows 6+7, [USER]-RULED 2026-08-31; row 6's D-002 freeze reading
@@ -141,11 +154,10 @@
 #     The remaining FAIL rows are the standing frontend/feature gaps
 #     of the 2026-08-22 record (docs/2026-08-22_launch-audit-synthesis.md),
 #     none moved by this re-pin.
-# cases: 2505 (2337 PASS / 168 FAIL)
-#   [cases line re-derived at the 2026-09-01 audit fix round (F7): it
-#   went stale at the Tier-1 re-pin and survived the qrow-syncval one
-#   still reading 2478/2306/172; counted from this file's data rows
-#   (2503/2335/168 pre-F10, +2 PASS for the F10 rows).]
+# cases: 2506 (2338 PASS / 168 FAIL)
+#   [re-derived by count from this file's data rows at the 2026-09-01
+#   rebase union: main's F7-re-derived 2505 (2337 PASS / 168 FAIL)
+#   plus this branch's 1 born-PASS membership row.]
 # frontend: native (tools/nativefrontend)
 # Columns: result<TAB>id<TAB>stage (sorted by id). The qrow-syncval
 #   re-pin also normalized the two strings/shim-value-refused rows
@@ -1198,6 +1210,7 @@ PASS	goroutines/select-wake/send	confluent
 PASS	goroutines/select-wake/closed	confluent
 PASS	goroutines/select-wake/buffered-data	confluent
 PASS	goroutines/select-wake-multi	membership
+PASS	goroutines/select-wake-close-selsel	membership
 PASS	goroutines/send-then-spin	membership
 PASS	goroutines/spawn-edge/nil-func-fatal	-
 PASS	goroutines/spawn-edge/child-panic-aborts	confluent

@@ -33,13 +33,23 @@ stream. Does gc ever commit clause 2 from the wake?
     go build -o artifacts/c7probe/plain docs/evidence/2026-09-01_c7-close-wake-probe/probe/main.go
     go build -o artifacts/c7probe/parkfirst docs/evidence/2026-09-01_c7-close-wake-probe/probe-gc-parkfirst/main.go
     for i in $(seq 1 200); do GOMAXPROCS=1 artifacts/c7probe/plain; done | sort | uniq -c
-    # (repeat for GOMAXPROCS=8 and for parkfirst; counts below)
+    for i in $(seq 1 200); do GOMAXPROCS=8 artifacts/c7probe/plain; done | sort | uniq -c
+    for i in $(seq 1 200); do GOMAXPROCS=1 artifacts/c7probe/parkfirst; done | sort | uniq -c
+    for i in $(seq 1 200); do GOMAXPROCS=8 artifacts/c7probe/parkfirst; done | sort | uniq -c
     go build -race -o artifacts/c7probe/plain-race docs/evidence/2026-09-01_c7-close-wake-probe/probe/main.go
     for i in $(seq 1 30); do GOMAXPROCS=8 artifacts/c7probe/plain-race >/dev/null; done  # 0 DATA RACE reports
 
     # machine side
     GO111MODULE=off go run ./tools/nativefrontend --dir docs/evidence/2026-09-01_c7-close-wake-probe/probe --out artifacts/c7probe/wire.json
     .lake/build/bin/golean native-json-run --input artifacts/c7probe/wire.json --function selselCloseWake
+    # directed streams (the five "Machine results" rows): --choices takes the
+    # comma-separated stream, e.g. for [1], [1,1], [9,8,7,6,5,4,3,2,1,0],
+    # [1,3,5,7,9,2,4,6,8,0], [5,5,5,5,5,5,5,5]:
+    .lake/build/bin/golean native-json-run --input artifacts/c7probe/wire.json --function selselCloseWake --choices 1
+    .lake/build/bin/golean native-json-run --input artifacts/c7probe/wire.json --function selselCloseWake --choices 1,1
+    .lake/build/bin/golean native-json-run --input artifacts/c7probe/wire.json --function selselCloseWake --choices 9,8,7,6,5,4,3,2,1,0
+    .lake/build/bin/golean native-json-run --input artifacts/c7probe/wire.json --function selselCloseWake --choices 1,3,5,7,9,2,4,6,8,0
+    .lake/build/bin/golean native-json-run --input artifacts/c7probe/wire.json --function selselCloseWake --choices 5,5,5,5,5,5,5,5
     .lake/build/bin/golean coverage-observations --input artifacts/c7probe/wire.json --function selselCloseWake \
       --max-width 2 --max-sites 24 --cap 64 --work-cap 200000 --expect-status ok
 
