@@ -207,10 +207,22 @@ if [[ "$manifest_cases" -eq 0 ]]; then
   exit 2
 fi
 git_commit="$(git rev-parse HEAD 2>/dev/null || printf 'unknown')"
-if git diff --quiet -- . 2>/dev/null && git diff --cached --quiet -- . 2>/dev/null; then
+# Untracked files count as dirty (audit T3-7): `git diff` sees only
+# tracked content, so a run with an untracked corpus dir/case recorded
+# git_dirty=false. Porcelain -unormal covers tracked AND untracked;
+# a failed git probe records dirty (fail closed).
+if _gstatus="$(git status --porcelain -unormal -- . 2>/dev/null)" && [[ -z "$_gstatus" ]]; then
   git_dirty=false
 else
   git_dirty=true
+fi
+unset _gstatus
+# go_drift_allowed / go_drift_actual (audit T3-6) — flag vs measured
+# bit; rationale in scripts/coverage-negative's twin block. Readers
+# prefer go_drift_actual, falling back to legacy go_drift records.
+go_drift_actual=false
+if [[ "$go_live" != "$go_pin" ]]; then
+  go_drift_actual=true
 fi
 {
   printf 'key\tvalue\n'
@@ -227,7 +239,8 @@ fi
   # GOLEAN_ALLOW_GO_DRIFT=1 must not be indistinguishable from an
   # oracle-of-record run in the artifact a re-pin consumes.
   printf 'go_toolchain\t%s\n' "$(go version 2>/dev/null | awk '{print $3}' || printf 'unknown')"
-  printf 'go_drift\t%s\n' "${GOLEAN_ALLOW_GO_DRIFT:-0}"
+  printf 'go_drift_allowed\t%s\n' "${GOLEAN_ALLOW_GO_DRIFT:-0}"
+  printf 'go_drift_actual\t%s\n' "$go_drift_actual"
 } > "$META_TMP"
 
 cleanup() {
@@ -239,8 +252,16 @@ cleanup() {
 trap cleanup EXIT
 
 publish_results() {
-  mv "$RESULTS_TMP" "$RESULTS_TSV"
+  # Meta FIRST (audit T3-5; this instance PRE-DATED the negative
+  # runner's copy and is fixed as a ride-along). The invariant
+  # consumers rely on is "results present ⇒ attributable meta
+  # present": each mv is atomic but the pair is two of them, and the
+  # old results-first order had a kill window that left results
+  # WITHOUT meta — exactly the unattributable state scripts/ci
+  # refuses. Meta-first leaves at worst meta-without-results, which no
+  # consumer reads as a run.
   mv "$META_TMP" "$META_TSV"
+  mv "$RESULTS_TMP" "$RESULTS_TSV"
 }
 
 echo "building Lean executable..."

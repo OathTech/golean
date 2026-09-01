@@ -589,21 +589,40 @@ if [ -f artifacts/coverage/negative-latest.tsv ]; then
     neg_meta_ok=0
   else
     neg_runcommit="$(awk -F'\t' '$1=="git_commit"{print $2}' "$neg_metafile")"
-    neg_drift="$(awk -F'\t' '$1=="go_drift"{print $2}' "$neg_metafile")"
+    # Prefer the recorded ACTUAL live-vs-pin drift bit (go_drift_actual,
+    # true/false — audit T3-6) over the legacy go_drift field, which
+    # recorded the GOLEAN_ALLOW_GO_DRIFT FLAG (whether the escape was
+    # open), not whether the toolchain actually drifted. Fallback keeps
+    # pre-T3-6 records judgeable; the not-drifted values across both
+    # generations are "false" and "0".
+    neg_drift="$(awk -F'\t' '$1=="go_drift_actual"{print $2}' "$neg_metafile")"
+    [ -z "$neg_drift" ] && neg_drift="$(awk -F'\t' '$1=="go_drift"{print $2}' "$neg_metafile")"
     neg_tool="$(awk -F'\t' '$1=="go_toolchain"{print $2}' "$neg_metafile")"
     neg_dirty="$(awk -F'\t' '$1=="git_dirty"{print $2}' "$neg_metafile")"
-    if [ -n "$neg_drift" ] && [ "$neg_drift" != 0 ]; then
+    if [ -z "$neg_drift" ]; then
+      # Mirror of the exec branch's absent-field note (audit T3-3: the
+      # exec branch called this case out, this branch silently fell
+      # through as if not-drifted).
+      RESULTS+=("  note negative meta records no go_drift field (pre-provenance record) — oracle-of-record status unverifiable; re-run scripts/coverage-negative")
+    elif [ "$neg_drift" != 0 ] && [ "$neg_drift" != false ]; then
       if [ "${GOLEAN_ALLOW_GO_DRIFT:-0}" = 1 ]; then
-        RESULTS+=("  note negative record was made under a DRIFTED toolchain (${neg_tool:-unknown}; go_drift=$neg_drift) — GOLEAN_ALLOW_GO_DRIFT=1, judged anyway, NOT the oracle of record")
+        RESULTS+=("  note negative record was made under a DRIFTED toolchain (${neg_tool:-unknown}; drift=$neg_drift) — GOLEAN_ALLOW_GO_DRIFT=1, judged anyway, NOT the oracle of record")
       else
-        bad "negative baseline diff (recorded run used a DRIFTED toolchain ${neg_tool:-unknown}, go_drift=$neg_drift — not the oracle of record; re-run scripts/coverage-negative at the pin, or GOLEAN_ALLOW_GO_DRIFT=1 to judge it loudly)"
+        bad "negative baseline diff (recorded run used a DRIFTED toolchain ${neg_tool:-unknown}, drift=$neg_drift — not the oracle of record; re-run scripts/coverage-negative at the pin, or GOLEAN_ALLOW_GO_DRIFT=1 to judge it loudly)"
         neg_meta_ok=0
       fi
     fi
     neg_meta_sha="$(awk -F'\t' '$1=="manifest_sha256"{print $2}' "$neg_metafile")"
     neg_cur_sha="$(./scripts/coverage-negative-manifest 2>/dev/null | shasum -a 256 | awk '{print $1}')"
     neg_total="$(./scripts/coverage-negative-manifest 2>/dev/null | wc -l | tr -d ' ')"
-    if [ "$neg_ran" -ge "$neg_total" ] && [ "$neg_total" -gt 0 ]; then
+    if [ "$neg_total" -eq 0 ]; then
+      # Audit T3-4: a failed manifest regeneration used to skip the sha
+      # comparison SILENTLY (neg_total=0 falsified the gate below), so
+      # the one check tying cached results to the current corpus never
+      # ran. A gate that cannot run FAILS.
+      bad "negative baseline diff (negative manifest could not be regenerated — attribution unverifiable; run scripts/coverage-negative-manifest by hand for the cause)"
+      neg_meta_ok=0
+    elif [ "$neg_ran" -ge "$neg_total" ]; then
       if [ -z "$neg_meta_sha" ] || [ -z "$neg_cur_sha" ] || [ "$neg_meta_sha" != "$neg_cur_sha" ]; then
         bad "negative baseline diff (published meta manifest_sha256 [${neg_meta_sha:-missing}] does not match the current negative-corpus manifest — stale/foreign results; re-run scripts/coverage-negative)"
         neg_meta_ok=0
@@ -677,16 +696,19 @@ if [ -f artifacts/coverage/latest.tsv ]; then
     # same loud GOLEAN_ALLOW_GO_DRIFT=1 escape that produced it; a
     # git_dirty record demotes the FULL certification line to a note
     # (the partial-run pattern). HEAD staleness stays a note (below).
-    rec_drift="$(awk -F'\t' '$1=="go_drift"{print $2}' "$metafile")"
+    # go_drift_actual preferred over the legacy flag field — see the
+    # negative branch's comment (audit T3-6).
+    rec_drift="$(awk -F'\t' '$1=="go_drift_actual"{print $2}' "$metafile")"
+    [ -z "$rec_drift" ] && rec_drift="$(awk -F'\t' '$1=="go_drift"{print $2}' "$metafile")"
     rec_tool="$(awk -F'\t' '$1=="go_toolchain"{print $2}' "$metafile")"
     rec_dirty="$(awk -F'\t' '$1=="git_dirty"{print $2}' "$metafile")"
     if [ -z "$rec_drift" ]; then
       RESULTS+=("  note baseline-diff meta records no go_drift field (pre-provenance record) — oracle-of-record status unverifiable; re-run scripts/ci --diff")
-    elif [ "$rec_drift" != 0 ]; then
+    elif [ "$rec_drift" != 0 ] && [ "$rec_drift" != false ]; then
       if [ "${GOLEAN_ALLOW_GO_DRIFT:-0}" = 1 ]; then
-        RESULTS+=("  note recorded differential ran under a DRIFTED toolchain (${rec_tool:-unknown}; go_drift=$rec_drift) — GOLEAN_ALLOW_GO_DRIFT=1, judged anyway, NOT the oracle of record")
+        RESULTS+=("  note recorded differential ran under a DRIFTED toolchain (${rec_tool:-unknown}; drift=$rec_drift) — GOLEAN_ALLOW_GO_DRIFT=1, judged anyway, NOT the oracle of record")
       else
-        bad "baseline diff (recorded run used a DRIFTED toolchain ${rec_tool:-unknown}, go_drift=$rec_drift — not the oracle of record; re-run scripts/ci --diff at the pin, or GOLEAN_ALLOW_GO_DRIFT=1 to judge it loudly)"
+        bad "baseline diff (recorded run used a DRIFTED toolchain ${rec_tool:-unknown}, drift=$rec_drift — not the oracle of record; re-run scripts/ci --diff at the pin, or GOLEAN_ALLOW_GO_DRIFT=1 to judge it loudly)"
         meta_ok=0
       fi
     fi
@@ -849,7 +871,14 @@ if [ -n "$PIN_MODE" ]; then
           else if (oldres[id] != "PASS" && newres[id] == "PASS") print "GREENED\t" id "\t" oldres[id] " -> PASS"
         }
         print "COUNT\t" nold+0 "\t" nnew+0
-      }')" || rev=""
+      }')"; rev_rc=$?
+    if [ "$rev_rc" -ne 0 ]; then
+      # Fail-noisy, still report-only (audit T3-8): the old `|| rev=""`
+      # absorbed an awk failure into "nothing to report" — the exact
+      # silent-skip shape the forward guard's own awk check refuses.
+      rev=""
+      RESULTS+=("  note re-pin $GUARD_BASE: reverse-direction scan FAILED (awk rc=$rev_rc) — FAIL→PASS/deletion/count visibility UNAVAILABLE this run; report-only, but do not read its silence as clean")
+    fi
     rev_rows="$(printf '%s\n' "$rev" | grep -E '^(DELETED|GREENED)' | LC_ALL=C sort || true)"
     rev_old="$(printf '%s\n' "$rev" | awk -F'\t' '$1=="COUNT"{print $2}')"
     rev_new="$(printf '%s\n' "$rev" | awk -F'\t' '$1=="COUNT"{print $3}')"
