@@ -182,7 +182,13 @@
 #   deterministic singleton (the init/hidden-dep-order class); retires
 #   by a W3.2 envelope (may-equal choice or membership row), never by
 #   a fix. Sibling stack-distinct is the green member-agreement pin.
-arrays/materialization-budget/over-budget	coverage
+# [arrays/materialization-budget/over-budget: ENTERED as `coverage` on
+#   the gotest-fixes slice (BUG-078, 2026-09-01) and LEFT at the same
+#   slice's audit fix round (RECORD 8): a Pinned-by: none entry's
+#   FAIL-by-design refusal row belongs on its own Cases: line (the
+#   BUG-070/071/072 precedent), where check-bugs counts it as explained
+#   — parking it here with a ceiling raise was avoidable. Entry retired;
+#   the row stays red by design on BUG-078's Cases line.]
 channels/select-select/beside-loop	coverage
 channels/select-select/core	coverage
 floats/to-int-out-of-range/nan	latitude

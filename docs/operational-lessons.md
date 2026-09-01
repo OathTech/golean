@@ -164,15 +164,33 @@ without approval.
 
 `golean` on issue34395's `[100<<20]byte` global died with exit 134
 ("Stack overflow detected. Aborting.") — a fail-noisy abort, but not a
-cause-naming refusal (the gotest-triage INFRA note, 2026-09-01).
-Measured: the element-wise normalize path (`normalizeListWith`,
-GoLean/GoCore/Ops.lean — non-tail recursion + quadratic `#[h] ++ t`
-appends) is fast at 10^5 elements, grinds past a 2-minute wall at
-10^6, and aborts the process at ~10^8. Remedy (BUG-078): the wire
-decoder refuses array TYPES past `arrayLenBudget` (1<<20 elements,
-GoLean/NativeToIR.lean) by name — every array type flows through that
-one decode; runtime-length allocations are slices, which normalize by
+cause-naming refusal (the gotest-triage INFRA note, 2026-09-01, which
+mis-described the program as "deep recursion"; the recursion was the
+normalizer's over the array's elements). Remedy (BUG-078): the wire
+decoder refuses array TYPES past `arrayLenBudget` (GoLean/
+NativeToIR.lean) by name — every array type flows through that one
+decode; runtime-length allocations are slices, which normalize by
 reference (probed: `make([]byte, 100<<20)` grinds but never aborts).
-The budget is a recorded idealization boundary, not fidelity; the
-owed core fix (an iterative, linear normalize — proof-locked with
-`isNormalForTyFuel`/MachineSound) lifts it.
+
+MEASURE THE PATH THE BUG NAMES (audit fix round 2026-09-01): the first
+budget, 1<<20, was derived from numbers taken on the DEFAULT-VALUE path
+(`var a [N]byte`, `Array.replicate` — linear: 0.06 s at 1<<20), but
+the pathology BUG-078 names is the element-wise normalize
+(`normalizeListWith`, GoLean/GoCore/Ops.lean — non-tail recursion +
+quadratic `#[h] ++ t`), reached by the LITERAL initializer
+(`var a = [N]byte{42}`) and by an ELEMENT STORE into a default array
+(`a[0] = 42`) — both QUADRATIC: 0.13 s at 10^4, 2.7 s at 5×10^4,
+5.0 s at 1<<16, 11.4 s at 10^5, 20.5 s at 1<<17, 46 s at 2×10^5,
+224 s at 4×10^5 (auditor), ≈25 min extrapolated at 1<<20 — against
+the gate's 30 s per-case wall (`LEAN_TIMEOUT_SECONDS`). The 1<<20
+budget therefore admitted shapes that could only die as wall-clock
+kills. Re-derived budget: 1<<16 (≈5–5.5 s worst flat path, >5×
+margin; 500× the largest corpus array type, 128). The budget is a
+PER-TYPE FLAT bound, not a value-size bound: nested
+`[1024][1024][128]byte` is admitted and its default value is cheap
+(1.1 s, persistent-array sharing), but ONE element store into it
+measured 46 s (the store re-normalizes through the nesting) — a
+recorded residual, honest wall-clock kill, lifted with the owed
+linear normalize. Lesson: a budget's docstring states WHICH path
+each number was measured on; a number without its path is not a
+derivation.

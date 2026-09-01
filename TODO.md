@@ -149,6 +149,24 @@ owners in "Re-homed obligations" above, fidelity decision 6.)
       goroutines/select-wake-close-selsel recommended alongside
       (c7-refresh lane, 2026-09-01).
 
+## Owed core fixes (BUGS.md carries the marker; this backlog the owner)
+
+- [ ] BUG-078 residual (1): the LINEAR normalize. `normalizeListWith`
+      (GoLean/GoCore/Ops.lean) is non-tail-recursive over the element
+      list and quadratic (`#[head] ++ tail` per element); it sits
+      arm-for-arm in lockstep with `isNormalForTyFuel` and the
+      MachineSound soundness proofs (the de-WF recipe, 2026-08-03), so
+      the rewrite is semantic-core surgery with a proof obligation on
+      the parked reasoning side. Until it lands, `arrayLenBudget`
+      (GoLean/NativeToIR.lean, 1<<16 — re-derived 2026-09-01 on the
+      literal/store path, docstring states each number's path) refuses
+      array TYPES past the bound by name; residual (3) — one element
+      store into an admitted nested `[1024][1024][128]byte` measured
+      46 s — is lifted by the same fix. Owner: this item ([AGENT]-
+      recorded at the gotest-fixes audit fix round, RECORD 9). Exit:
+      the budget constant retired or raised on a fresh re-measure, the
+      over-budget red pin flipped or re-pinned at the new bound.
+
 ## Standing semantics backlog
 
 - Coverage ledgers: consume-on-demand growth per

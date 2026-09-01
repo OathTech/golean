@@ -3813,7 +3813,8 @@ evaluated exactly once
 Mechanism: the ASSIGNMENT form's untyped nil reaches the machine as a
 bare nil node (no type), which `.nilLit none` accepts; the CONVERSION
 form flows through emitCallNode → emitExpr, whose generic
-type-attachment (emit.go:4601) stamps the target type onto the
+type-attachment (emit.go:4655 at this tip — `m["type"] = ty` in
+emitExpr) stamps the target type onto the
 typeless nil node — so the machine saw `.nilLit (some (.interface
 …))` and the arm enumeration, written for the assignment-form kinds,
 fell through to the fail-closed refusal. Interface and func ARE
@@ -3827,24 +3828,43 @@ the missing arms were the machine's. Trusted surface — flagged
 
 - Status: fixed (2026-09-01, gotest-fixes — decodeTy's array arm
   (GoLean/NativeToIR.lean) refuses array types longer than
-  `arrayLenBudget` (1<<20 elements) BY NAME, citing the budget and
-  this entry; the budget constant's docstring records the measured
-  pathology onset)
-- Pinned-by: none (refusal-by-design row
-  arrays/materialization-budget/over-budget pins the cause-named
-  refusal, red forever at the oracle's `ok` — the check-bugs rule-3
-  precedent of BUG-073's repeat-bound-refused: a standing refusal pin
-  lives OFF the Cases line)
+  `arrayLenBudget` BY NAME, citing the budget and this entry. Budget
+  1<<20 at the slice; RE-DERIVED to 1<<16 at the audit fix round
+  2026-09-01 (SHOULD-FIX 2) — the 1<<20 figure had been measured on
+  the default-value path, not the literal/store path the bug names;
+  the constant's docstring now states each number's path)
+- Pinned-by: none (the refusal surfaces at `lean-observation`; the
+  row below is a FAIL-BY-DESIGN refusal pin, red forever at the
+  oracle's `ok`, listed on the Cases line per the BUG-070/071/072
+  precedent — check-bugs verifies EXISTENCE only for none-entries and
+  counts a listed row as explained, so the row leaves untriaged-ids.
+  Audit fix round 2026-09-01, RECORD 8: the slice had parked it in
+  untriaged-ids with a ceiling raise 11→12 instead; reverted)
+- Cases: arrays/materialization-budget/over-budget
 - Discovered: 2026-09-01 ($GOROOT/test harvest,
   docs/2026-09-01_gotest-triage.md INFRA note — issue34395.go's
   `[100<<20]byte` global: exit 134, "Stack overflow detected.
-  Aborting.")
+  Aborting." The triage note filed it as "a very deep recursion
+  program"; this entry CORRECTS that description — issue34395 is a
+  `[100<<20]byte` global with a two-line main, and the overflowing
+  recursion was the normalizer's over the array's elements, not the
+  program's)
 
 Diagnosis: the machine materializes array VALUES element-wise; the
 normalize path (`normalizeListWith`, GoLean/GoCore/Ops.lean:863) is
 non-tail-recursive over the element list AND quadratic (`#[head] ++
-tail` per element). Measured: 10^5 elements fast, 10^6 grinds past a
-2-minute wall, 10^8 aborts the process on native stack overflow. The
+tail` per element). Measured, BY PATH (audit fix round 2026-09-01 —
+the slice's "10^5 fast, 10^6 grinds, 10^8 aborts" were DEFAULT-VALUE
+numbers, `Array.replicate`, linear: 0.03 s at 10^5, 0.06 s at 1<<20):
+the LITERAL initializer `var a = [N]byte{42}` and an ELEMENT STORE
+into a default array both take the quadratic normalize — 0.13 s at
+10^4, 2.7 s at 5×10^4, 5.0/5.5 s at 1<<16 (literal/store), 11.4 s at
+10^5, 20.5 s at 1<<17, 46 s at 2×10^5, 224 s at 4×10^5, ≈25 min
+extrapolated at 1<<20 — against the gate's 30 s per-case wall. The
+budget is 1<<16: >5× under the wall on the worst flat path, 500× the
+largest corpus array type (128). It is a PER-TYPE FLAT bound, not a
+value-size bound (nested `[1024][1024][128]byte` is admitted; default
+value 1.1 s). The
 clean fix (an iterative, linear normalize) is semantic-core surgery —
 `normalizeListWith` sits arm-for-arm in lockstep with
 `isNormalForTyFuel` and the MachineSound soundness proofs — beyond
@@ -3856,6 +3876,12 @@ slices, whose values normalize by reference — probed:
 abort). IDEALIZATION BOUNDARY, not fidelity: gc materializes such
 arrays fine; the region past the budget is a deliberate visible
 machine-refuses/gc-succeeds red, never a wrong answer, never an
-abort. Owed residuals recorded: (1) the linear-normalize core fix
-lifts the budget need; (2) huge `make` lengths still grind to the
-wall-clock/fuel budget (an honest stop, but slow).
+abort. Owed residuals recorded (owner: TODO.md, "Owed core fixes"):
+(1) the linear-normalize core fix lifts the budget need; (2) huge
+`make` lengths still grind to the wall-clock/fuel budget (an honest
+stop, but slow); (3) the flat per-type bound does not cap NESTED
+values — one element store into an admitted `[1024][1024][128]byte`
+measured 46 s (the store re-normalizes through the nesting), so an
+oversized nested value can still reach the wall clock: an honest
+kill, never a wrong answer, lifted by (1).
+

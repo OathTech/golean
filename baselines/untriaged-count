@@ -169,7 +169,7 @@
 #   operand; the frontend now emits the spec's auto-deref), repaired by
 #   its fix and folded into its Cases. The buildout's import of
 #   unittest/embedded.go re-surfaced the class and forced the triage.
-coverage 12
+coverage 11
 latitude 4
 wrong-answer 0
 # 2026-08-09 (spec-parity slice 2, sync guardrails)  16 -> 50, mostly
@@ -311,3 +311,10 @@ wrong-answer 0
 # guardrail landed WITH its feature, never a wrong answer; retires
 # only when the owed linear normalize (BUG-078's residual) lifts the
 # budget. wrong-answer stays 0.
+# 12 -> 11 (2026-09-01, gotest-fixes AUDIT FIX ROUND, RECORD 8): the
+# raise above is REVERTED — it was avoidable. BUG-078 is a Pinned-by:
+# none entry, and the BUG-070/071/072 precedent puts a none-entry's
+# FAIL-by-design refusal row ON its Cases: line, where check-bugs
+# (existence-only for none-entries) counts it as explained; the row
+# moved there and leaves untriaged-ids. Same red, same cause-naming
+# refusal; only the accounting moves. wrong-answer stays 0.

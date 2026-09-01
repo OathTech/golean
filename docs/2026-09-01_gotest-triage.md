@@ -168,6 +168,11 @@ widening priorities, not obligations.
 - 1 **golean robustness note**: `issue34395.go` (a very deep recursion
   program) crashes `golean` with a native STACK OVERFLOW (exit 134,
   "Stack overflow detected. Aborting.") rather than a named refusal.
+  *[Corrected by BUG-078 (2026-09-01): issue34395 is NOT a deep-
+  recursion program — it is a `[100<<20]byte` global with a two-line
+  main; the overflowing recursion was the machine's element-wise
+  normalize over the array, and the case now refuses by name at the
+  wire decoder's array-type budget.]*
   Fail-noisy, not fail-silent, but a process abort is not a
   cause-naming refusal — recorded here as a standing robustness
   follow-up for the interpreter driver.

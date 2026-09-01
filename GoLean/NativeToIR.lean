@@ -204,12 +204,46 @@ private def intKindOfName (name : String) : LowerM IntKind :=
   | other => fail s!"unsupported integer kind {other}"
 
 /-- The array-type materialization budget (BUG-078): the largest array
-length the decoder admits, in elements. 1<<20 sits well below the
-measured pathology onset (≈10^5 elements is fast, 10^6 grinds past a
-2-minute wall, ≈10^8 aborts on native stack overflow) while leaving
-every real corpus/fixture shape untouched by orders of magnitude.
-Raising it is a deliberate re-measure, not a tweak. -/
-def arrayLenBudget : Nat := 1 <<< 20
+length the decoder admits, in elements — a PER-TYPE FLAT bound on one
+array type's own length, NOT a bound on a value's total element count
+(a nested `[1024][1024][128]byte` is admitted: each level is a short
+replicate of one shared element value, so its default value is cheap —
+1.1 s measured — via persistent-array sharing).
+
+Derivation (re-measured 2026-09-01 at the audit fix round on the tip
+golean; the harness's per-case wall clock is 30 s —
+`LEAN_TIMEOUT_SECONDS`, scripts/diff-coverage). The paths differ by
+orders of magnitude, so each number names its path:
+
+* DEFAULT-VALUE, read only (`var a [N]byte; a[0]`): `defaultValue`'s
+  `Array.replicate` — linear and cheap: 0.03 s at 10^5, 0.06 s at
+  1<<20. The earlier "10^5 fast / 10^6 grinds / ~10^8 aborts" numbers
+  were this path's, and they said nothing about the path the bug
+  names.
+* LITERAL INITIALIZER (`var a = [N]byte{42}`): `.arrayLit` →
+  `normalizeListWith`, the non-tail recursion with quadratic
+  `#[h] ++ t` appends — QUADRATIC: 0.13 s at 10^4, 2.7 s at 5×10^4,
+  5.0 s at 1<<16, 11.4 s at 10^5, 20.5 s at 1<<17, 46.0 s at 2×10^5
+  (the auditor measured 224 s at 4×10^5; ≈25 min extrapolated at the
+  old 1<<20 budget). So the old budget admitted types whose literal
+  initialization could never finish inside the gate's wall clock,
+  surfacing as a timeout kill, not a cause-naming refusal.
+* ELEMENT STORE into a default array (`var a [N]byte; a[0] = 42`):
+  the store re-normalizes the containing array — the SAME quadratic
+  path: 5.5 s at 1<<16, 11.6 s at 10^5.
+
+1<<16 (65 536) keeps both quadratic paths at ≈5–5.5 s (a >5× margin
+under the 30 s wall, headroom for a loaded box running 8 workers) and
+still exceeds the largest array type in the corpus/raft subject (128
+elements) by two and a half orders of magnitude. What it does NOT
+bound, recorded as BUG-078 residual (3): a single element store into
+an admitted nested `[1024][1024][128]byte` measured 46 s (the store
+re-normalizes through the nesting), so oversized NESTED values can
+still reach the wall clock — an honest kill, never a wrong answer.
+Raising the budget is a deliberate re-measure on the literal/store
+paths, not a tweak; the owed linear normalize (BUG-078 residual (1),
+TODO.md) is what lifts it. -/
+def arrayLenBudget : Nat := 1 <<< 16
 
 partial def decodeTy (path : String) (json : Json) : LowerM Ty := do
   let obj ← StrictJson.obj path json
@@ -233,11 +267,13 @@ partial def decodeTy (path : String) (json : Json) : LowerM Ty := do
       let len ← StrictJson.nat s!"{path}.len" (← StrictJson.field path obj "len")
       -- Materialization budget (BUG-078, $GOROOT/test issue34395's
       -- [100<<20]byte global): the machine materializes array values
-      -- element-wise (defaultValue's replicate, the normalize path's
-      -- non-tail element recursion with quadratic appends), so an
-      -- array TYPE past this bound either grinds for minutes or kills
-      -- the process with a native stack overflow — a process abort,
-      -- not a refusal. Every array type reaches the machine through
+      -- element-wise — the literal-initializer normalize path's
+      -- non-tail element recursion with quadratic appends is the
+      -- pathology (the default-value replicate is linear and cheap;
+      -- see arrayLenBudget's docstring for the per-path numbers) —
+      -- so an array TYPE past this bound either grinds past the
+      -- gate's wall clock or kills the process with a native stack
+      -- overflow — a process abort, not a refusal. Every array type reaches the machine through
       -- this decode (runtime-length allocations are slices, whose
       -- values normalize by reference), so the wire boundary is the
       -- single honest choke point: refuse HERE, naming the cause and
