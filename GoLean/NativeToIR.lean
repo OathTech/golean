@@ -1195,10 +1195,20 @@ partial def decodeReturn (results : Array Param) (path : String) (obj : StrictJs
   let rs ← StrictJson.array s!"{path}.results" (← StrictJson.field path obj "results")
   if rs.size == 0 then
     pure .returnStmt
-  else if rs.size == 1 then
-    -- return e1  →  assign the result local, then returnStmt (one
-    -- operand, one store: the two-phase split below is a no-op here
-    -- and the single-assign form keeps the lowered shape unchanged).
+  else if rs.size == 1 && results.size == 1 then
+    -- return e1 at a ONE-result function  →  assign the result local,
+    -- then returnStmt (one operand, one store: the two-phase split
+    -- below is a no-op here and the single-assign form keeps the
+    -- lowered shape unchanged). The arity guard is part of the arm
+    -- (audit fix round 2026-09-01, BLOCKER 1): without
+    -- `results.size == 1` this fast path ran BEFORE the arity check,
+    -- so a one-operand return at a >=2-result function stored result
+    -- 0 and left the rest ZERO-FILLED — a silent wrong answer on a
+    -- corrupt wire where main's decoder refused by name. A 1-vs-n
+    -- mismatch now falls through to the arity refusal below; the
+    -- frontend never emits the shape (a multi-value `return f()` is
+    -- splatted into n operands, emitReturn), so the refusal is the
+    -- wire-corruption backstop, pinned in Tests/GoCoreEval.lean.
     match rs[0]?, results[0]? with
     | some rj, some rp =>
         pure (.seqn #[.assign (.var rp.id) (← decodeExpr s!"{path}.results[0]" rj),

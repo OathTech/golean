@@ -2590,6 +2590,47 @@ def main : IO UInt32 := do
     (match Lean.Json.parse "{\"schema\":\"golean-native-v1\",\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[{\"type\":\"main.T\",\"coverage\":\"full\"},{\"type\":\"main.T\",\"coverage\":\"full\"}]}" with
      | .error _ => false
      | .ok j => !(GoLean.NativeToIR.decodeProgram j).isOk))
+  -- WIRE-CORRUPTION backstops in decodeReturn / decodeTy (audit fix
+  -- round 2026-09-01). BLOCKER 1: the BUG-075 slice's n=1 return fast
+  -- path ran BEFORE the arity check, so a one-operand `return` at a
+  -- TWO-result function decoded (result 1 silently zero-filled: the
+  -- auditor's hand-patched wire — a 2-result function's return with
+  -- one operand removed — answered 70 where 79 was owed, and main
+  -- refused "return arity 1 does not match 2 results"). The decoder
+  -- must refuse BY NAME; the message pin is the arity text itself.
+  let retWire (results : String) : String :=
+    "{\"schema\":\"golean-native-v1\",\"types\":[],\"methods\":[],\"methodSets\":[]," ++
+    "\"funcs\":[{\"name\":\"pair\",\"params\":[],\"variadic\":false," ++
+    "\"results\":[{\"id\":\"$res0\",\"type\":{\"kind\":\"int\",\"int\":\"int\"}},{\"id\":\"$res1\",\"type\":{\"kind\":\"int\",\"int\":\"int\"}}]," ++
+    "\"body\":{\"stmt\":\"block\",\"body\":[{\"stmt\":\"return\",\"results\":[" ++ results ++ "]}]}}]}"
+  let intLit (v : String) : String := "{\"expr\":\"int\",\"value\":\"" ++ v ++ "\",\"type\":{\"kind\":\"int\",\"int\":\"int\"}}"
+  let decodeMsg (wire : String) : Except String Unit :=
+    match Lean.Json.parse wire with
+    | .error e => .error s!"json parse failed: {e}"
+    | .ok j => (GoLean.NativeToIR.decodeProgram j).map (fun _ => ())
+  passed := passed && (← expectTrue "RET: decode accepts a two-operand return at a two-result function (control)"
+    (decodeMsg (retWire (intLit "7" ++ "," ++ intLit "9"))).isOk)
+  passed := passed && (← expectTrue "RET: decode REFUSES a one-operand return at a two-result function, naming the arity (BLOCKER 1 — the n=1 fast path must not bypass the arity check)"
+    (match decodeMsg (retWire (intLit "7")) with
+     | .error msg => (msg.splitOn "return arity 1 does not match 2 results").length > 1
+     | .ok _ => false))
+  passed := passed && (← expectTrue "RET: decode REFUSES a three-operand return at a two-result function, naming the arity"
+    (match decodeMsg (retWire (intLit "7" ++ "," ++ intLit "9" ++ "," ++ intLit "11")) with
+     | .error msg => (msg.splitOn "return arity 3 does not match 2 results").length > 1
+     | .ok _ => false))
+  -- BUG-078: the array-type materialization budget refuses BY NAME at
+  -- decode, one past the budget; at the budget it decodes. The wire
+  -- carries only the TYPE (a global of that type), so the pin is on
+  -- the decoder's bound, not on any materialization.
+  let arrWire (len : Nat) : String :=
+    "{\"schema\":\"golean-native-v1\",\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[]," ++
+    "\"globals\":[{\"name\":\"main.big\",\"type\":{\"kind\":\"array\",\"len\":" ++ toString len ++ ",\"elem\":{\"kind\":\"int\",\"int\":\"uint8\"}}}]}"
+  passed := passed && (← expectTrue "BUG-078: decode admits an array type AT the materialization budget"
+    (decodeMsg (arrWire GoLean.NativeToIR.arrayLenBudget)).isOk)
+  passed := passed && (← expectTrue "BUG-078: decode REFUSES an array type one past the materialization budget, naming the budget and the entry"
+    (match decodeMsg (arrWire (GoLean.NativeToIR.arrayLenBudget + 1)) with
+     | .error msg => (msg.splitOn "materialization budget").length > 1 && (msg.splitOn "BUG-078").length > 1
+     | .ok _ => false))
   -- The class pin proper: main.T has a TypeDef on the wire (the OLD
   -- guard's presence key) but NO method-set record — satisfaction must
   -- refuse `unsupported`, proving the guard keys on the RECORD.
