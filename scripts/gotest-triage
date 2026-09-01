@@ -61,6 +61,26 @@ cd "$ROOT"
 
 GOTEST_DIR="${GOTEST_TRIAGE_DIR:-deps/go/test}"
 OUT="${GOTEST_TRIAGE_ARTIFACTS:-artifacts/gotest}"
+# Output-root preflight, canonicalised (audit fix round 2026-09-01, G1
+# — the O1 pattern): any GOTEST_TRIAGE_ARTIFACTS outside <root>/artifacts/
+# refuses — `../`-relative, absolute, and symlinked spellings alike.
+# realpath -m canonicalises lexically pre-creation; after mkdir -p the
+# path exists, so re-realpath'ing resolves symlink components the
+# first pass could not.
+ART_ABS="$(realpath -m -- "$ROOT/artifacts")"
+refuse_out() {
+  echo "gotest-triage: refusing output root outside $ROOT/artifacts/ ($1 -> $2) — triage artifacts live under artifacts/ by design" >&2
+  exit 2
+}
+OUT_ABS="$(realpath -m -- "$OUT")"
+if [[ "$OUT_ABS" != "$ART_ABS" && "$OUT_ABS" != "$ART_ABS"/* ]]; then
+  refuse_out "$OUT" "$OUT_ABS"
+fi
+mkdir -p "$OUT"
+OUT_ABS="$(realpath -e -- "$OUT")" || { echo "gotest-triage: cannot canonicalise output root '$OUT' after mkdir — refusing" >&2; exit 2; }
+if [[ "$OUT_ABS" != "$ART_ABS" && "$OUT_ABS" != "$ART_ABS"/* ]]; then
+  refuse_out "$OUT" "$OUT_ABS (symlink-resolved)"
+fi
 GO_TIMEOUT="${GOTEST_TRIAGE_GO_TIMEOUT:-30}"
 LEAN_TIMEOUT="${GOTEST_TRIAGE_LEAN_TIMEOUT:-30}"
 GOLEAN_BIN="$ROOT/.lake/build/bin/golean"

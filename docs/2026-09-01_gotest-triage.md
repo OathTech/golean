@@ -2,7 +2,9 @@
 
 Date: 2026-09-01 · Lane: t4-gotest (assessment) · [AGENT]-executed under
 [USER]-approved fidelity decision 4 ("the single best external-validity
-purchase"; outsider review demand D2, `docs/assessment/lane-e-outsider-review.md`
+purchase" — the synthesis's phrase, `docs/assessment/synthesis.md` §4,
+approved-as-recommended by decision 4; outsider review demand D2,
+`docs/assessment/lane-e-outsider-review.md`
 — the test262-analogue step).
 
 **Assessment-run boundaries**: the tracked products of this lane are this
@@ -61,10 +63,13 @@ One run = survey + drive + classify, all under `artifacts/gotest/`
 observable; `main` returns nothing. The differential surface here is
 termination status + panic/deadlock/fatal message. Tests that print on
 success would be flagged `output-uncompared` and counted separately —
-in this run that count is ZERO: every test that prints needs
-print/println/fmt, which the frontend refuses, so every MATCH below is
-a full-strength one (silent-success self-checking program agreed on
-both sides).
+in this run that count is ZERO — a MEASURED result, not a theorem:
+the in-scope printing tests happen to reach stdout via
+print/println/fmt, which the frontend refuses, but nothing guarantees
+every conceivable printing route is refused — the zero is what the
+run counted (loosened at the audit fix round, G4). So every MATCH
+below is a full-strength one (silent-success self-checking program
+agreed on both sides).
 
 **Scope of the run**: the FULL in-scope slice — all 1,013 cases, no
 sampling, no truncation. Wall time 86 s at 8 workers (plus a one-time
@@ -215,7 +220,13 @@ machine `probeF`=false (correct — the two-phase ASSIGN path is right),
 `probeG`=true, `probeH`=true (gc: false/false/false). So the
 multi-value `return e1, e2` path stores result 1 before evaluating e2;
 when e2 panics and a deferred recover() catches it, the partial store
-is observable through named/blank results.
+is observable through named/blank results. The site is
+`GoLean/NativeToIR.lean:1171-1183` — `decodeReturn` lowers
+`return e1, .., en` as SEQUENTIAL per-result assigns
+(`assign r1 := e1; assign r2 := e2; ...; return`), so each result
+stores as its operand evaluates instead of after ALL operands have
+evaluated. That is the wire decoder — TRUSTED-SURFACE, not the
+frontend (the frontend emits the return node faithfully).
 
 **Recommendation: fidelity-bug candidate — BUGS.md entry + one corpus
 row** (return-with-panic-in-second-operand, recover-observed).
