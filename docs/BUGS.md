@@ -2214,6 +2214,25 @@ imported named types — which is also what the interface-declaration pass
 exists; extending it to imported non-interface named types is the owed
 sub-slice.
 
+**Re-check 2026-09-01 (T2 records lane, item 9) [AGENT]: still red;
+the D5 mechanism did not — and by its own design could not — close
+this bug.** BUG-009's 2026-08-05 D5 fix landed after this entry was
+written and had never been re-run against this entry's pin; isolated
+`scripts/diff-one maps/imported-named-key-unhashable` (artifact root
+redirected via `GOLEAN_COVERAGE_ARTIFACTS` to a scratch dir, so the
+recorded full-run `latest.tsv` pair is untouched) at 439d4543,
+go1.26.5: FAIL at stage lean-observation, `expected status panic, got
+unsupported "map key hashability for unknown defined type
+sort.IntSlice"` — the same honest fail-closed refusal recorded above,
+corroborated by the identical row in the 2478/2478 full run recorded
+at this same commit. This is exactly D5's stated residue: its
+existence-marker TypeDefs are `kind: unsupported` precisely so that
+STRUCTURAL use (comparability included) keeps failing closed; D5 fed
+method-set queries, not `tyUncomparable`. Status stays open, the
+baseline FAIL row stays true, and nothing is owed to a re-pin; the
+case goes green only when the owed sub-slice (real declarations for
+imported non-interface named types) lands.
+
 ## BUG-007 — method PROMOTION through embedded fields is unmodeled
 
 - Status: fixed (2026-08-05, general-coverage slice 2 — the recorded fix
