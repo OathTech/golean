@@ -182,6 +182,7 @@
 #   deterministic singleton (the init/hidden-dep-order class); retires
 #   by a W3.2 envelope (may-equal choice or membership row), never by
 #   a fix. Sibling stack-distinct is the green member-agreement pin.
+arrays/materialization-budget/over-budget	coverage
 channels/select-select/beside-loop	coverage
 channels/select-select/core	coverage
 floats/to-int-out-of-range/nan	latitude

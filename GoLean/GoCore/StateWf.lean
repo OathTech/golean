@@ -3627,6 +3627,14 @@ theorem applyStrictOp_wf {σ : ExecState} {op : StrictOp} {vs : List GoValue}
       · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
         exact strictWfSame hw (by simp [GoValue.locSup])
+      · -- interface: typed nil literal → the nil interface (BUG-077)
+        simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        exact strictWfSame hw (by simp [GoValue.locSup])
+      · -- funcType: typed nil literal → the nil func value (BUG-077)
+        simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        exact strictWfSame hw (by simp [GoValue.locSup])
       · simp at h
       · simp at h
   · -- runesFromString: the second allocating arm (triage L1, mirrors

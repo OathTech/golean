@@ -1,5 +1,35 @@
 # GoLean native-frontend full-corpus differential baseline
-# re-pinned: 2026-09-01 (REBASE UNION — c7-refresh rebased onto main
+# re-pinned: 2026-09-01 (gotest-fixes slice — the $GOROOT/test harvest
+#   fix round, [USER]-approved 2026-09-01 (triage report
+#   docs/2026-09-01_gotest-triage.md; fixes BUG-074..BUG-078). Full
+#   ci --diff run at this tip; drift = exactly the 15 NEW rows below,
+#   NO existing row moved, NO PASS->non-PASS flips.)
+#   NEW rows born PASS (14), pinning the four harvest mismatches +
+#   boundary controls:
+#     channels/select-entry-snapshot/{send-value-snapshot,
+#     chan-operand-snapshot} (BUG-074: select operands snapshot at
+#     entry — issue4313/issue43111);
+#     returns/multi-return-two-phase/{panic-second-operand-unnamed,
+#     panic-second-operand-blank-named,assign-control} (BUG-075:
+#     two-phase multi-value return — issue43835);
+#     range/range-not-evaluated/{deref-nil-no-var,deref-nil-key-only,
+#     field-ptr-nil-no-var,deref-nil-two-vars-panic,
+#     call-evaluated-once} (BUG-076: the range non-evaluation special
+#     case, both boundary directions — issue72844);
+#     interfaces/nil-conversion/{error-nil,any-nil,
+#     typed-nil-vs-error-nil,func-nil} (BUG-077: conversion-form nil
+#     at interface/func types — issue19911/issue53619/issue42758).
+#   NEW row born FAIL BY DESIGN (1, no Cases-line obligation — the
+#     BUG-073 repeat-bound precedent):
+#     arrays/materialization-budget/over-budget FAIL/lean-observation
+#     — the BUG-078 array budget refusal (cause-named, oracle truth
+#     `ok` in the expected column; red forever until the owed linear
+#     normalize lands).
+#   Pure reorder normalized (no result moved): the rebase-union had
+#     appended goroutines/select-wake-close-selsel before
+#     select-wake-multi against the manifest order; this re-pin
+#     regenerates the body in manifest order.
+# previous re-pin: 2026-09-01 (REBASE UNION — c7-refresh rebased onto main
 #   220c2711 (the qrow-syncval merge); two independent same-day
 #   re-pin moves compose here and this header names both. Union
 #   arithmetic: main's 2505 rows + this branch's 1 new row (no
@@ -154,15 +184,12 @@
 #     The remaining FAIL rows are the standing frontend/feature gaps
 #     of the 2026-08-22 record (docs/2026-08-22_launch-audit-synthesis.md),
 #     none moved by this re-pin.
-# cases: 2506 (2338 PASS / 168 FAIL)
+# cases: 2521 (2352 PASS / 169 FAIL)
 #   [re-derived by count from this file's data rows at the 2026-09-01
-#   rebase union: main's F7-re-derived 2505 (2337 PASS / 168 FAIL)
-#   plus this branch's 1 born-PASS membership row.]
+#   gotest-fixes re-pin: 2506 (2338 PASS / 168 FAIL) + 14 born-PASS
+#   + 1 born-FAIL-by-design = 2521 (2352 PASS / 169 FAIL).]
 # frontend: native (tools/nativefrontend)
-# Columns: result<TAB>id<TAB>stage (sorted by id). The qrow-syncval
-#   re-pin also normalized the two strings/shim-value-refused rows
-#   into id-sort position (they had been appended out of order); pure
-#   reorder, no result moved.
+# Columns: result<TAB>id<TAB>stage (manifest order).
 result	id	stage
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
@@ -179,6 +206,7 @@ PASS	arrays/defined-array-receiver	-
 PASS	arrays/index-eval-order	-
 PASS	arrays/keyed-literal-eval-order	-
 PASS	arrays/keyed-literal-sparse	-
+FAIL	arrays/materialization-budget/over-budget	lean-observation
 PASS	arrays/nested-arrays	-
 PASS	arrays/nested-copy-value	-
 PASS	arrays/nil-pointer-len-cap	-
@@ -402,6 +430,8 @@ PASS	channels/select-deterministic/selected-receive-lhs-eval	-
 PASS	channels/select-deterministic/send-rhs-panic-before-default	-
 PASS	channels/select-deterministic/recv-chan-panic-before-default	-
 PASS	channels/select-empty-receive-default	-
+PASS	channels/select-entry-snapshot/send-value-snapshot	-
+PASS	channels/select-entry-snapshot/chan-operand-snapshot	-
 PASS	channels/select-full-send-default	-
 PASS	channels/select-multi-ready	-
 PASS	channels/select-multi-ready/observable	membership
@@ -1209,8 +1239,8 @@ PASS	goroutines/select-wake/recv	confluent
 PASS	goroutines/select-wake/send	confluent
 PASS	goroutines/select-wake/closed	confluent
 PASS	goroutines/select-wake/buffered-data	confluent
-PASS	goroutines/select-wake-multi	membership
 PASS	goroutines/select-wake-close-selsel	membership
+PASS	goroutines/select-wake-multi	membership
 PASS	goroutines/send-then-spin	membership
 PASS	goroutines/spawn-edge/nil-func-fatal	-
 PASS	goroutines/spawn-edge/child-panic-aborts	confluent
@@ -1511,6 +1541,10 @@ PASS	interfaces/mixed-compare/sentinel-error	-
 PASS	interfaces/mixed-compare/sentinel-error-reversed	-
 PASS	interfaces/mixed-compare/struct-both-orders	-
 PASS	interfaces/mixed-compare/ctl-iface-iface	-
+PASS	interfaces/nil-conversion/error-nil	-
+PASS	interfaces/nil-conversion/any-nil	-
+PASS	interfaces/nil-conversion/typed-nil-vs-error-nil	-
+PASS	interfaces/nil-conversion/func-nil	-
 PASS	interfaces/nil-interface	-
 PASS	interfaces/promoted-method-assert-ok	-
 PASS	interfaces/quarantined-anonymous-interface	-
@@ -2022,6 +2056,11 @@ PASS	range/range-map-sum	-
 PASS	range/range-map-value-copy	-
 PASS	range/range-nil-map	-
 PASS	range/range-nil-slice	-
+PASS	range/range-not-evaluated/deref-nil-no-var	-
+PASS	range/range-not-evaluated/deref-nil-key-only	-
+PASS	range/range-not-evaluated/field-ptr-nil-no-var	-
+PASS	range/range-not-evaluated/deref-nil-two-vars-panic	-
+PASS	range/range-not-evaluated/call-evaluated-once	-
 PASS	range/range-slice-index-value	-
 PASS	range/range-string-index-only	-
 PASS	range/range-struct-copy	-
@@ -2040,6 +2079,9 @@ PASS	returns/multi-result-method	-
 PASS	returns/multi-result-method-forward	-
 PASS	returns/multi-result-three	-
 PASS	returns/multi-result-to-existing	-
+PASS	returns/multi-return-two-phase/panic-second-operand-unnamed	-
+PASS	returns/multi-return-two-phase/panic-second-operand-blank-named	-
+PASS	returns/multi-return-two-phase/assign-control	-
 PASS	returns/naked-return	-
 PASS	returns/named-multi-defer	-
 PASS	returns/named-result-defaults	-

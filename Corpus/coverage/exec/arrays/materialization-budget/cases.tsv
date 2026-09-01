@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+# over-budget: RED BY DESIGN — the machine refuses array types past
+# 1<<20 elements with a cause-naming message (BUG-078); gc runs it
+# fine, so the row is a standing machine-refuses/gc-succeeds delta
+# (visible red, never a wrong answer, never an abort).
+over-budget	arrayOverBudget	-	ok	-	arrays,globals

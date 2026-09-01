@@ -471,9 +471,15 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (2506 cases, 2338 PASS /
-168 FAIL; `baselines/native-full.tsv`, re-pinned 2026-09-01 on the
-qrow-syncval slice, commit `b16738d3`; +2 born-PASS pinning rows at
+All numbers at the current tracked baseline (2521 cases, 2352 PASS /
+169 FAIL; `baselines/native-full.tsv`, re-pinned 2026-09-01 on the
+gotest-fixes slice — the $GOROOT/test harvest fix round, BUG-074..078:
++14 born-PASS rows pinning the four harvest mismatches and their
+boundary controls, +1 born-FAIL-by-design refusal pin
+`arrays/materialization-budget/over-budget` (BUG-078's array budget,
+the one red-count movement: 168 → 169, mapped below). Prior re-pin
+2026-09-01 on the qrow-syncval slice, commit `b16738d3` (baseline then
+2506 / 2338 / 168); +2 born-PASS pinning rows at
 the same slice's audit fix round, F10 — `sync/escapes/paren-forms`,
 `sync/composite-literal/lit-in-composite`; +1 born-PASS membership
 row at the c7-refresh rebase union, C8 —
@@ -503,7 +509,7 @@ the historical record; the method is §8b's, re-run).
 frontier 2 (atomic → Q-ATOMIC, goexit → Q-GOEXIT), latitude 1 (model →
 C10), out-of-language 5. Zero unclassified.
 
-**The 168 baseline reds, every one on a named row (re-derived
+**The 169 baseline reds, every one on a named row (re-derived
 mechanically 2026-09-01 — zero unmapped, zero double-mapped):**
 
 | bucket | reds |
@@ -512,8 +518,8 @@ mechanically 2026-09-01 — zero unmapped, zero double-mapped):**
 | design questions Q-* (§6) | 14 |
 | (c) profound-reason pins (triage §4 + the unsafe marker) | 9 + 1 |
 | (a)-queued fixes (triage §3.2: A3 5, A4 1, A5 1, A7 1) | 8 |
-| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) | 55 |
-| **total** | **168** |
+| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, untriaged-ids `coverage`) | 56 |
+| **total** | **169** |
 
 *(Movements at the 2026-09-01 re-derivation, each derived in §8c:
 Q-* 21 → 14 — the Q-SYNCVAL slice flipped its 7 ruled reds;

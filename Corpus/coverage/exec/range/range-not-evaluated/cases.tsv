@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+# BUG-076 pins ($GOROOT/test issue72844): array / pointer-to-array
+# range expressions with at most one iteration variable and no
+# calls/receives are NOT evaluated; both boundary directions pinned.
+deref-nil-no-var	rangeDerefNilNoVar	-	ok	-	range,arrays,pointers,nil
+deref-nil-key-only	rangeDerefNilKeyOnly	-	ok	-	range,arrays,pointers,nil
+field-ptr-nil-no-var	rangeFieldPtrNilNoVar	-	ok	-	range,arrays,pointers,nil,fields
+deref-nil-two-vars-panic	rangeDerefNilTwoVars	-	panic	invalid memory address or nil pointer dereference	range,arrays,pointers,nil,panic
+call-evaluated-once	rangeCallEvaluatedOnce	-	ok	-	range,arrays,evaluation_order,calls

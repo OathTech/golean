@@ -3870,29 +3870,43 @@ func (e *emitter) emitRange(rs *ast.RangeStmt) (any, error) {
 	}
 
 	rangeTy := e.goTypeOf(rs.X).Underlying()
+	// The non-evaluation special case (BUG-076, spec §For statements):
+	// with AT MOST ONE iteration variable present (a blank second
+	// variable still counts as present — go/types' sValue test) and a
+	// constant len(x) (array or pointer-to-array type, no channel
+	// receives or function calls in x — spec §Length and capacity), the
+	// range expression is NOT evaluated: `for range *p` over a nil
+	// *[4]int iterates four times without dereferencing ($GOROOT/test
+	// issue72844), exactly as the len(*p) constant fold already did.
+	rangeNotEvaluated := rs.Value == nil && !e.exprHasCallOrRecv(rs.X)
 	var coll any
 	kindFields := map[string]any{}
 	if ptr, ok := rangeTy.(*types.Pointer); ok {
-		// Range over *[N]T: the pointer evaluates ONCE; the index-only
-		// form (and N == 0) never dereferences — a nil pointer iterates
-		// fine, N is static — while the value form reads elements through
-		// it (nil panics at the first read, which the up-front deref
-		// reproduces: nothing observable happens between loop entry and
-		// the first element read).
+		// Range over *[N]T: the pointer evaluates ONCE — unless the
+		// non-evaluation case above holds, in which case it does not
+		// evaluate AT ALL (an effect-free operand whose evaluation
+		// would nil-deref, `for range s.p` with s nil, must not panic).
+		// The index-only form (and N == 0) never dereferences — a nil
+		// pointer iterates fine, N is static — while the value form
+		// reads elements through it (nil panics at the first read,
+		// which the up-front deref reproduces: nothing observable
+		// happens between loop entry and the first element read).
 		arr, ok := ptr.Elem().Underlying().(*types.Array)
 		if !ok {
 			return nil, unsup("range over %s", e.goTypeOf(rs.X))
 		}
-		savedRoot := e.sweepStmt
-		e.sweepStmt = rs.X
-		pw, err := e.emitExpr(rs.X)
-		e.sweepStmt = savedRoot
-		if err != nil {
-			return nil, err
-		}
 		if valName == "" || arr.Len() == 0 {
-			if _, err := e.hoist(pw, e.goTypeOf(rs.X)); err != nil {
-				return nil, err
+			if !rangeNotEvaluated {
+				savedRoot := e.sweepStmt
+				e.sweepStmt = rs.X
+				pw, err := e.emitExpr(rs.X)
+				e.sweepStmt = savedRoot
+				if err != nil {
+					return nil, err
+				}
+				if _, err := e.hoist(pw, e.goTypeOf(rs.X)); err != nil {
+					return nil, err
+				}
 			}
 			// `type` is REQUIRED on every wire int node (census H-b:
 			// this was the one emitter site shipping a typeless int,
@@ -3907,6 +3921,13 @@ func (e *emitter) emitRange(rs *ast.RangeStmt) (any, error) {
 			kindFields["operandType"] = intType("int")
 			valName = ""
 		} else {
+			savedRoot := e.sweepStmt
+			e.sweepStmt = rs.X
+			pw, err := e.emitExpr(rs.X)
+			e.sweepStmt = savedRoot
+			if err != nil {
+				return nil, err
+			}
 			// Value form: the POINTER binds once; each iteration reads the
 			// element THROUGH it, so writes to the array during the loop
 			// are observed (an up-front deref snapshotted — pre-merge
@@ -3929,6 +3950,16 @@ func (e *emitter) emitRange(rs *ast.RangeStmt) (any, error) {
 			kindFields["arrType"] = arrTy
 			kindFields["len"] = arr.Len()
 		}
+	} else if arrDirect, isArr := rangeTy.(*types.Array); isArr && rangeNotEvaluated {
+		// Direct array type in the non-evaluation case ($GOROOT/test
+		// issue72844's `for range *p` with p a nil *[4]int): the same
+		// static-length int desugar as the pointer index arm, with the
+		// expression NOT emitted at all — a would-panic effect-free
+		// operand (a nil indirection, an out-of-range index) must not
+		// panic, because it never evaluates.
+		coll = map[string]any{"expr": "int", "value": itoa(int(arrDirect.Len())), "type": intType("int")}
+		kindFields["kind"] = "int"
+		kindFields["operandType"] = intType("int")
 	} else {
 		savedRoot := e.sweepStmt
 		e.sweepStmt = rs.X
@@ -9029,6 +9060,55 @@ func (e *emitter) panicFreeOperand(x ast.Expr) bool {
 	return false
 }
 
+// exprHasCallOrRecv mirrors go/types' hasCallOrRecv flag over one
+// expression — the spec's "does not contain channel receives or
+// function calls" test that decides whether len(x) of an array or
+// pointer-to-array is constant, and with it the range-expression
+// non-evaluation special case (BUG-076; go/types computes this flag in
+// rangeStmt but records the constant only in the compiler's types2, so
+// the frontend re-derives it). Mirrored decision points (deps/go @
+// go1.26.5, go/types): a receive sets it (expr.go, token.ARROW); an
+// ordinary function/method call sets it (call.go, after the conversion
+// early-return — conversions do NOT count, their operands are scanned
+// on their own); a builtin sets it exactly when its result is
+// NON-constant (call.go's builtin arm) — a constant-folded len/cap
+// discards even the events inside its own argument (builtins.go's
+// save/restore), so a constant-valued builtin call subtree is skipped
+// whole. Function-literal bodies are checked delayed in go/types and
+// never reach the flag — skipped here too.
+func (e *emitter) exprHasCallOrRecv(x ast.Expr) bool {
+	found := false
+	ast.Inspect(x, func(n ast.Node) bool {
+		if found || n == nil {
+			return false
+		}
+		switch nn := n.(type) {
+		case *ast.FuncLit:
+			return false
+		case *ast.UnaryExpr:
+			if nn.Op == token.ARROW {
+				found = true
+				return false
+			}
+		case *ast.CallExpr:
+			if tv, ok := e.info.Types[nn.Fun]; ok && tv.IsType() {
+				return true // conversion: not a call; scan its operand
+			}
+			if id, ok := ast.Unparen(nn.Fun).(*ast.Ident); ok {
+				if _, isBuiltin := e.info.Uses[id].(*types.Builtin); isBuiltin {
+					if tv, ok := e.info.Types[nn]; ok && tv.Value != nil {
+						return false // constant-folded builtin: no call, arg events discarded
+					}
+				}
+			}
+			found = true
+			return false
+		}
+		return true
+	})
+	return found
+}
+
 // sweepOrderedEventAfter reports whether the current sweep (e.sweepStmt)
 // contains a spec-ordered runtime event — a channel receive, or a call
 // that the ANF lowering hoists to a statement — beginning at or after
@@ -9546,6 +9626,16 @@ func (e *emitter) selectRecvClause(ux *ast.UnaryExpr, lhs []ast.Expr, define boo
 	if err != nil {
 		return nil, err
 	}
+	// Entry-time snapshot (BUG-074, spec#Select_statements step 1): the
+	// receive clause's channel operand is evaluated exactly once on
+	// ENTRY — effect-free operands included (a plain `ch` re-read at
+	// commit observes later clauses' entry-time mutations,
+	// $GOROOT/test issue43111). Hoisted before either lowering path so
+	// both read the snapshot.
+	chW, err = e.hoist(chW, e.goTypeOf(ux.X))
+	if err != nil {
+		return nil, err
+	}
 	if !define && len(lhs) > 0 {
 		ws, ok, err := e.machineSelectTargets(lhs, elemGo)
 		if err != nil {
@@ -9630,12 +9720,15 @@ func (e *emitter) selectRecvClause(ux *ast.UnaryExpr, lhs []ast.Expr, define boo
 }
 
 // emitSelect lowers a select statement (channels arc slice 1): clause
-// channel operands and send RHS values are emitted in source order — their
-// effectful subexpressions ride the statement-level hoists, realizing the
-// spec's entry-time once-in-source-order evaluation (step 1) — and the
-// whole statement wraps in "breakable" (a select body's `break` exits the
-// select, like switch). The machine commits exactly-one-ready or default;
-// multi-ready fails closed there (slice 4).
+// channel operands and send RHS values are emitted in source order and
+// SNAPSHOTTED into entry-time temps via the statement-level hoists —
+// effectful subexpressions AND effect-free operands alike (BUG-074:
+// hoisting only the effectful ones left effect-free operands re-read at
+// commit time, after a later clause's entry-time effects) — realizing
+// the spec's entry-time once-in-source-order evaluation (step 1). The
+// whole statement wraps in "breakable" (a select body's `break` exits
+// the select, like switch). The machine commits exactly-one-ready or
+// default; multi-ready fails closed there (slice 4).
 func (e *emitter) emitSelect(st *ast.SelectStmt) (any, error) {
 	clauses := []any{}
 	var defaultBody any
@@ -9666,11 +9759,29 @@ func (e *emitter) emitSelect(st *ast.SelectStmt) (any, error) {
 			if err != nil {
 				return nil, err
 			}
+			// Entry-time snapshot (BUG-074): the channel operand is
+			// evaluated exactly once ON ENTRY (spec#Select_statements
+			// step 1) — effect-free or not. Leaving an effect-free
+			// operand in the clause re-reads it at COMMIT time, after a
+			// later clause's hoisted effects may have mutated it
+			// ($GOROOT/test issue43111). The hoist lands in this
+			// statement's entry-time prefix, in source order.
+			chW, err = e.hoist(chW, e.goTypeOf(comm.Chan))
+			if err != nil {
+				return nil, err
+			}
 			valW, err := e.emitExpr(comm.Value)
 			if err != nil {
 				return nil, err
 			}
 			valW, err = e.wrapInterfaceConversion(ch.Elem(), e.goTypeOf(comm.Value), valW)
+			if err != nil {
+				return nil, err
+			}
+			// Same snapshot for the send RHS value (spec step 1 names
+			// both; $GOROOT/test issue4313) — after the interface wrap,
+			// so the temp holds the exact value the commit sends.
+			valW, err = e.hoist(valW, ch.Elem())
 			if err != nil {
 				return nil, err
 			}

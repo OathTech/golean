@@ -203,6 +203,14 @@ private def intKindOfName (name : String) : LowerM IntKind :=
   | "uintptr" => pure .uint64
   | other => fail s!"unsupported integer kind {other}"
 
+/-- The array-type materialization budget (BUG-078): the largest array
+length the decoder admits, in elements. 1<<20 sits well below the
+measured pathology onset (≈10^5 elements is fast, 10^6 grinds past a
+2-minute wall, ≈10^8 aborts on native stack overflow) while leaving
+every real corpus/fixture shape untouched by orders of magnitude.
+Raising it is a deliberate re-measure, not a tweak. -/
+def arrayLenBudget : Nat := 1 <<< 20
+
 partial def decodeTy (path : String) (json : Json) : LowerM Ty := do
   let obj ← StrictJson.obj path json
   let kind ← StrictJson.string s!"{path}.kind" (← StrictJson.field path obj "kind")
@@ -223,6 +231,21 @@ partial def decodeTy (path : String) (json : Json) : LowerM Ty := do
   | "slice" => pure (.slice (← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")))
   | "array" =>
       let len ← StrictJson.nat s!"{path}.len" (← StrictJson.field path obj "len")
+      -- Materialization budget (BUG-078, $GOROOT/test issue34395's
+      -- [100<<20]byte global): the machine materializes array values
+      -- element-wise (defaultValue's replicate, the normalize path's
+      -- non-tail element recursion with quadratic appends), so an
+      -- array TYPE past this bound either grinds for minutes or kills
+      -- the process with a native stack overflow — a process abort,
+      -- not a refusal. Every array type reaches the machine through
+      -- this decode (runtime-length allocations are slices, whose
+      -- values normalize by reference), so the wire boundary is the
+      -- single honest choke point: refuse HERE, naming the cause and
+      -- the budget. A recorded idealization boundary (docs/BUGS.md
+      -- BUG-078), not fidelity: gc materializes such arrays fine, and
+      -- the delta stays a visible machine-refuses/gc-succeeds red.
+      if len > arrayLenBudget then
+        fail s!"array type of {len} elements exceeds the interpreter's materialization budget ({arrayLenBudget} elements; BUG-078 idealization boundary) at {path}"
       pure (.array len (← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")))
   | "chan" =>
       let dir ← StrictJson.string s!"{path}.dir" (← StrictJson.field path obj "dir")
@@ -1172,15 +1195,35 @@ partial def decodeReturn (results : Array Param) (path : String) (obj : StrictJs
   let rs ← StrictJson.array s!"{path}.results" (← StrictJson.field path obj "results")
   if rs.size == 0 then
     pure .returnStmt
+  else if rs.size == 1 then
+    -- return e1  →  assign the result local, then returnStmt (one
+    -- operand, one store: the two-phase split below is a no-op here
+    -- and the single-assign form keeps the lowered shape unchanged).
+    match rs[0]?, results[0]? with
+    | some rj, some rp =>
+        pure (.seqn #[.assign (.var rp.id) (← decodeExpr s!"{path}.results[0]" rj),
+                      .returnStmt])
+    | _, _ => fail s!"return arity mismatch at {path}"
   else if rs.size == results.size then
-    -- return e1, .., en  →  assign each result local, then returnStmt.
-    let mut stmts : Array Stmt := #[]
+    -- return e1, .., en  →  TWO-PHASE, like an assignment to the result
+    -- variables (spec#Return_statements): evaluate EVERY operand into a
+    -- fresh temp (left to right — a panic in a later operand fires
+    -- before ANY result is stored), THEN store all temps to the result
+    -- locals, then returnStmt. BUG-075 ($GOROOT/test issue43835): the
+    -- previous sequential per-result assigns stored result 1 before
+    -- operand 2 evaluated, so a recover observed the partial store
+    -- through named/blank results.
+    let mut evals : Array Stmt := #[]
+    let mut stores : Array Stmt := #[]
     for i in [:rs.size] do
       match rs[i]?, results[i]? with
       | some rj, some rp =>
-          stmts := stmts.push (.assign (.var rp.id) (← decodeExpr s!"{path}.results[{i}]" rj))
+          let tmp := s!"$ret{i}"
+          evals := evals.push (.initialization { id := tmp, typ := rp.typ })
+          evals := evals.push (.assign (.var tmp) (← decodeExpr s!"{path}.results[{i}]" rj))
+          stores := stores.push (.assign (.var rp.id) (.var tmp))
       | _, _ => pure ()
-    pure (.seqn (stmts.push .returnStmt))
+    pure (.seqn (evals ++ stores ++ #[.returnStmt]))
   else
     fail s!"return arity {rs.size} does not match {results.size} results at {path}"
 

@@ -3702,3 +3702,160 @@ region between the bound and upstream's overflow stays a
 machine-refuses/gc-succeeds delta BY DESIGN (visible red, never a
 wrong answer); outputs at or above overflow now agree with gc
 exactly.
+
+## BUG-074 — select left effect-free clause operands un-snapshotted: re-read at COMMIT, after a later clause's entry-time effects (silent wrong answer / wrong deadlock)
+
+- Status: fixed (2026-09-01, gotest-fixes — emitSelect +
+  selectRecvClause (tools/nativefrontend/emit.go) now hoist EVERY
+  clause channel operand and send RHS value into an entry-time temp,
+  in source order, effect-free or not; the clauses reference the
+  temps, so commit-time reads see the entry snapshot)
+- Pinned-by: differential
+- Cases: channels/select-entry-snapshot/send-value-snapshot, channels/select-entry-snapshot/chan-operand-snapshot
+- Discovered: 2026-09-01 ($GOROOT/test harvest,
+  docs/2026-09-01_gotest-triage.md M1 — fixedbugs/issue4313.go, go ok
+  vs machine panics 42; fixedbugs/issue43111.go, go ok vs machine
+  deadlocks; one root cause)
+
+Spec (spec#Select_statements step 1): on entry, ALL channel operands
+of receive clauses and BOTH the channel and right-hand-side
+expressions of send clauses are evaluated exactly once, in source
+order. The lowering realized entry-time evaluation only for EFFECTFUL
+subexpressions (the A-normal-form statement hoists); an effect-free
+operand (a plain `x`, a global `ch`) stayed embedded in the clause
+node and was read again at COMMIT time — after a LATER clause's
+hoisted entry-time effects had mutated it. issue4313's shape sends 42
+where gc sends the entry-time 0; issue43111's shape re-reads a
+channel variable its sibling clause's RHS closed-and-nil'd at entry,
+and deadlocks on the nil where gc receives from the entry-time
+(closed) channel. Latitude check: C5/C6/C7 (which clause commits) are
+untouched — this is spec-PINNED evaluation order, not clause-choice
+latitude; the fix adds entry-time temp assigns and changes no
+readiness/commit machinery. The full select corpus slice re-ran green
+(counts in the branch record).
+
+## BUG-075 — multi-value `return` stored result 1 before operand 2 evaluated: a recovered panic exposed the partial store (silent wrong answer) [TRUST-ADJACENT: wire decoder]
+
+- Status: fixed (2026-09-01, gotest-fixes — decodeReturn
+  (GoLean/NativeToIR.lean) lowers `return e1, .., en` (n ≥ 2)
+  two-phase: every operand evaluates left-to-right into a fresh
+  `$ret<i>` temp, THEN all temps store to the result locals, then
+  returnStmt — the same phase split the multi-assign path already
+  had; n = 1 keeps the single-assign shape)
+- Pinned-by: differential
+- Cases: returns/multi-return-two-phase/panic-second-operand-unnamed, returns/multi-return-two-phase/panic-second-operand-blank-named
+- Discovered: 2026-09-01 ($GOROOT/test harvest,
+  docs/2026-09-01_gotest-triage.md M2 — fixedbugs/issue43835.go, go
+  ok vs machine panics FAIL; the f/g/h probes isolated the return
+  path: the assign path was already two-phase and correct)
+
+Spec (spec#Return_statements): "return e1, .., en" assigns to the
+result variables LIKE AN ASSIGNMENT — all right-hand operands
+evaluate before any store. The decoder lowered it as sequential
+per-result assigns (`assign r1 := e1; assign r2 := e2; ...`), so e1's
+store landed before e2's panic; with a deferred recover, the partial
+store was observable through named/blank results (issue43835 g/h). A
+control row pins the already-correct assign-path sibling
+(returns/multi-return-two-phase/assign-control). This is the wire
+decoder — trusted surface — flagged [TRUST-ADJACENT]; the change is
+the documented two-phase lowering only, no new machine operations.
+
+## BUG-076 — array/pointer-to-array range expressions were ALWAYS evaluated: the spec's non-evaluation special case was missing (spurious panic)
+
+- Status: fixed (2026-09-01, gotest-fixes — emitRange
+  (tools/nativefrontend/emit.go): with at most one iteration variable
+  present (rs.Value syntactically absent — a blank second variable
+  counts as present, go/types' sValue test) and no channel receives
+  or function calls in the range expression (exprHasCallOrRecv, an
+  arm-for-arm mirror of go/types' hasCallOrRecv — conversions don't
+  count, constant-folded builtins don't count and discard their
+  argument's events, func-literal bodies are skipped), BOTH the
+  direct-array and the pointer-to-array lowerings emit the
+  static-length int desugar WITHOUT emitting the range expression at
+  all)
+- Pinned-by: differential
+- Cases: range/range-not-evaluated/deref-nil-no-var, range/range-not-evaluated/deref-nil-key-only, range/range-not-evaluated/field-ptr-nil-no-var
+- Discovered: 2026-09-01 ($GOROOT/test harvest,
+  docs/2026-09-01_gotest-triage.md M3 — fixedbugs/issue72844.go, go
+  ok vs machine panics nil-dereference on `for range *p`; the len(*p)
+  special case was already right, range was missing exactly the same
+  treatment)
+
+Spec (spec#For_statements: "if at most one iteration variable is
+present and len(x) is constant, the range expression is not
+evaluated"; spec#Length_and_capacity: len(x) is constant for array /
+pointer-to-array x with no channel receives or function calls). The
+old lowering evaluated the direct-array expression unconditionally
+(`for range *p`, nil p: panic where gc iterates 4 times), and the
+pointer-to-array index-only arm evaluated the POINTER expression once
+(right for `for range p`, wrong for `for range s.p` with s nil — the
+selector's implicit deref panicked where gc, not evaluating, does
+not; caught by inspection at the fix, not by the harvest — the
+sibling shape rode the same fix). Both boundary directions are
+pinned: two iteration variables → evaluated → panic
+(range/range-not-evaluated/deref-nil-two-vars-panic), a call in x →
+evaluated exactly once
+(range/range-not-evaluated/call-evaluated-once).
+
+## BUG-077 — the CONVERSION form of nil at interface/func types (`error(nil)`, `any(nil)`, `(func())(nil)`) refused: the machine's nil-literal arm had no interface/func arms (wrongly-stuck) [TRUST-ADJACENT: interpreter]
+
+- Status: fixed (2026-09-01, gotest-fixes — the `.nilLit` operator
+  (GoLean/GoCore/Machine.lean) gains `.interface _ => .nil` and
+  `.funcType _ _ _ => .nil` arms, the zero values `defaultValue`
+  already yields for both types)
+- Pinned-by: differential
+- Cases: interfaces/nil-conversion/error-nil, interfaces/nil-conversion/any-nil, interfaces/nil-conversion/typed-nil-vs-error-nil, interfaces/nil-conversion/func-nil
+- Discovered: 2026-09-01 ($GOROOT/test harvest,
+  docs/2026-09-01_gotest-triage.md suspicious-refusal 1 —
+  issue19911.go, issue53619.go, typeparam/issue42758.go refused "nil
+  literal for non-nilable type …interface…")
+
+Mechanism: the ASSIGNMENT form's untyped nil reaches the machine as a
+bare nil node (no type), which `.nilLit none` accepts; the CONVERSION
+form flows through emitCallNode → emitExpr, whose generic
+type-attachment (emit.go:4601) stamps the target type onto the
+typeless nil node — so the machine saw `.nilLit (some (.interface
+…))` and the arm enumeration, written for the assignment-form kinds,
+fell through to the fail-closed refusal. Interface and func ARE
+nilable types (spec#Assignability); their nil is the zero value. The
+frontend is unchanged — the typed nil node is a faithful wire shape;
+the missing arms were the machine's. Trusted surface — flagged
+[TRUST-ADJACENT]; the arms are zero-value returns identical to
+`defaultValue`'s.
+
+## BUG-078 — array types past the interpreter's materialization capacity killed golean with a native stack overflow instead of a refusal (process abort, not a cause-naming refusal) [TRUST-ADJACENT: wire decoder; refusal-only]
+
+- Status: fixed (2026-09-01, gotest-fixes — decodeTy's array arm
+  (GoLean/NativeToIR.lean) refuses array types longer than
+  `arrayLenBudget` (1<<20 elements) BY NAME, citing the budget and
+  this entry; the budget constant's docstring records the measured
+  pathology onset)
+- Pinned-by: none (refusal-by-design row
+  arrays/materialization-budget/over-budget pins the cause-named
+  refusal, red forever at the oracle's `ok` — the check-bugs rule-3
+  precedent of BUG-073's repeat-bound-refused: a standing refusal pin
+  lives OFF the Cases line)
+- Discovered: 2026-09-01 ($GOROOT/test harvest,
+  docs/2026-09-01_gotest-triage.md INFRA note — issue34395.go's
+  `[100<<20]byte` global: exit 134, "Stack overflow detected.
+  Aborting.")
+
+Diagnosis: the machine materializes array VALUES element-wise; the
+normalize path (`normalizeListWith`, GoLean/GoCore/Ops.lean:863) is
+non-tail-recursive over the element list AND quadratic (`#[head] ++
+tail` per element). Measured: 10^5 elements fast, 10^6 grinds past a
+2-minute wall, 10^8 aborts the process on native stack overflow. The
+clean fix (an iterative, linear normalize) is semantic-core surgery —
+`normalizeListWith` sits arm-for-arm in lockstep with
+`isNormalForTyFuel` and the MachineSound soundness proofs — beyond
+this slice's scope; recorded here as the owed follow-up. The honest
+minimal fix is a refusal at the single choke point every array type
+flows through, the wire decoder (runtime-length allocations are
+slices, whose values normalize by reference — probed:
+`make([]byte, 100<<20)` grinds at interpreter speed but does not
+abort). IDEALIZATION BOUNDARY, not fidelity: gc materializes such
+arrays fine; the region past the budget is a deliberate visible
+machine-refuses/gc-succeeds red, never a wrong answer, never an
+abort. Owed residuals recorded: (1) the linear-normalize core fix
+lifts the budget need; (2) huge `make` lengths still grind to the
+wall-clock/fuel budget (an honest stop, but slow).

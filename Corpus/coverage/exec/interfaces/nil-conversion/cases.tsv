@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+# BUG-077 pins ($GOROOT/test issue19911/issue53619/issue42758): the
+# conversion form of nil at interface/func types is the zero value.
+error-nil	convErrorNilIsNil	-	ok	-	interfaces,conversions,nil,equality
+any-nil	convAnyNilIsNil	-	ok	-	interfaces,conversions,nil,equality
+typed-nil-vs-error-nil	convTypedNilVsErrorNil	-	ok	-	interfaces,conversions,nil,equality,pointers
+func-nil	convFuncNilIsNil	-	ok	-	functions,conversions,nil,equality

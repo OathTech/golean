@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+# BUG-075 pins ($GOROOT/test issue43835): all return operands evaluate
+# before any result stores; a panic in operand 2 leaves result 1 unset.
+panic-second-operand-unnamed	retTwoPhaseUnnamed	-	ok	-	returns,evaluation_order,recover,panic
+panic-second-operand-blank-named	retTwoPhaseBlankNamed	-	ok	-	returns,evaluation_order,recover,panic
+assign-control	retTwoPhaseAssignControl	-	ok	-	returns,evaluation_order,recover,assignment

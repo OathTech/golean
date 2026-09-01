@@ -159,3 +159,20 @@ Repo-local caches for ad hoc Go probes (`GOCACHE=$PWD/artifacts/…`);
 any sandbox denial: stop and hand the user exact commands; never
 vendor or copy around restrictions. Do not `rm -rf` scratch dirs
 without approval.
+
+## Huge array types: a native stack overflow presented as a process abort
+
+`golean` on issue34395's `[100<<20]byte` global died with exit 134
+("Stack overflow detected. Aborting.") — a fail-noisy abort, but not a
+cause-naming refusal (the gotest-triage INFRA note, 2026-09-01).
+Measured: the element-wise normalize path (`normalizeListWith`,
+GoLean/GoCore/Ops.lean — non-tail recursion + quadratic `#[h] ++ t`
+appends) is fast at 10^5 elements, grinds past a 2-minute wall at
+10^6, and aborts the process at ~10^8. Remedy (BUG-078): the wire
+decoder refuses array TYPES past `arrayLenBudget` (1<<20 elements,
+GoLean/NativeToIR.lean) by name — every array type flows through that
+one decode; runtime-length allocations are slices, which normalize by
+reference (probed: `make([]byte, 100<<20)` grinds but never aborts).
+The budget is a recorded idealization boundary, not fidelity; the
+owed core fix (an iterative, linear normalize — proof-locked with
+`isNormalForTyFuel`/MachineSound) lifts it.

@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+# BUG-074 pins ($GOROOT/test issue4313 + issue43111): select operands
+# snapshot at entry, effect-free or not.
+send-value-snapshot	selEntrySendValueSnapshot	-	ok	-	channels,select,evaluation_order,nil
+chan-operand-snapshot	selEntryChanOperandSnapshot	-	ok	-	channels,select,evaluation_order,close,nil

@@ -577,6 +577,14 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
           | .map _ _ => do return ((← defaultValue s ty), s)
           | .chan _ _ => do return ((← defaultValue s ty), s)
           | .pointer _ => return (.nil, s)
+          -- Interface and func are nilable types too (spec
+          -- §Assignability; BUG-077 — the CONVERSION form `error(nil)`
+          -- / `any(nil)` / `(func())(nil)` carries the target type on
+          -- the nil wire node where the assignment form's bare nil
+          -- landed in the arm above): their zero value is `.nil`,
+          -- exactly what `defaultValue` yields for both.
+          | .interface _ => return (.nil, s)
+          | .funcType _ _ _ => return (.nil, s)
           | .unsupported feature => unsupported s!"nil literal for {feature}"
           | other => stuck s!"nil literal for non-nilable type {repr other}"
   -- `[]rune(s)` (triage L1, 2026-08-19): decode every code point
