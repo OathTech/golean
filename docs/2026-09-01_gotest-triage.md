@@ -153,6 +153,14 @@ widening priorities, not obligations.
   modeling gap in the conversion path (fail-closed, so no fidelity lie,
   but an easy fragment win and worth a look: the assignment form
   lowers, the conversion form refuses).
+  *[Superseded 2026-09-01, fix slice + audit fix round: the conversion
+  arm is BUG-077 (fixed). Only issue42758 MATCHes on it; issue19911
+  progresses to a strings.Index frontier refusal (FR-14); issue53619
+  carries a SECOND defect this triage did not see — its comma-ok
+  assertion into INTERFACE-typed globals lowered an unboxed bool and
+  refused downstream at interface equality — now BUG-079, refused at
+  the lowering by name. The "one modeling gap" classification of the
+  three was wrong.]*
 
 ### INFRA (22)
 

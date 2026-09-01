@@ -2873,6 +2873,27 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 	// target encoding — on `:=`, v declares as T and ok as bool via Defs.
 	if len(st.Lhs) == 2 && len(st.Rhs) == 1 {
 		if ta, isTA := ast.Unparen(st.Rhs[0]).(*ast.TypeAssertExpr); isTA && ta.Type != nil {
+			// An INTERFACE-typed target with a non-interface component
+			// owes an implicit boxing the tuple-producing type-assert
+			// statement cannot express (the machine would store the
+			// component RAW into the interface cell — BUG-079: the
+			// package-level `var a, b any = any(nil).(bool)` reaches this
+			// path as a fabricated AssignStmt, and so does the local
+			// `a, b = x.(bool)` form; the declaration forms already
+			// refuse in emitDeclStmt). Same named cause, same site
+			// discipline: refuse at the lowering, never downstream. On
+			// `:=` the targets take the component types via Defs, so no
+			// conversion is ever owed there.
+			if !define {
+				comps := [2]types.Type{e.goTypeOf(ta.Type), types.Typ[types.Bool]}
+				for i, l := range st.Lhs {
+					target := e.applySubst(e.assignTargetType(l, define))
+					comp := e.applySubst(comps[i])
+					if target != nil && comp != nil && types.IsInterface(target) && !types.IsInterface(comp) {
+						return nil, unsup("implicit interface conversion in multi-value assignment (interfaces campaign, deferred)")
+					}
+				}
+			}
 			target, err := e.emitAssignTarget(st.Lhs[0], define)
 			if err != nil {
 				return nil, err

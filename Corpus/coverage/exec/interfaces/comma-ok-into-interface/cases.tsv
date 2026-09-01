@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+# BUG-079: RED BY DESIGN — both rows refuse at frontend-export with
+# "implicit interface conversion in multi-value assignment (interfaces
+# campaign, deferred)"; gc runs both. Retire when tuple-component boxing
+# lands.
+global-form	globalCommaOkIntoInterface	-	ok	-	interfaces,type_assertions,globals,init,nil
+local-assign-form	localAssignCommaOkIntoInterface	-	ok	-	interfaces,type_assertions

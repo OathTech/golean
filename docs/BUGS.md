@@ -3824,6 +3824,18 @@ the missing arms were the machine's. Trusted surface — flagged
 [TRUST-ADJACENT]; the arms are zero-value returns identical to
 `defaultValue`'s.
 
+Scope correction (audit fix round 2026-09-01, SHOULD-FIX 6): this
+entry closes the nil-CONVERSION refusal ONLY — it does not make the
+three harvest tests it names comparable. Of the three, only
+typeparam/issue42758.go MATCHes after the fix; issue19911.go
+progresses to a strings.Index frontier refusal (FR-14); issue53619.go
+carries a SECOND, independent defect — its comma-ok assertion into
+INTERFACE-typed globals (`var a, b any = any(nil).(bool)`) stored an
+unboxed bool, refused downstream at the first interface equality
+rather than at the lowering — which is BUG-079 (now refused at the
+lowering, by name). The earlier framing of this entry as resolving
+the issue53619 family was wrong.
+
 ## BUG-078 — array types past the interpreter's materialization capacity killed golean with a native stack overflow instead of a refusal (process abort, not a cause-naming refusal) [TRUST-ADJACENT: wire decoder; refusal-only]
 
 - Status: fixed (2026-09-01, gotest-fixes — decodeTy's array arm
@@ -3884,4 +3896,44 @@ values — one element store into an admitted `[1024][1024][128]byte`
 measured 46 s (the store re-normalizes through the nesting), so an
 oversized nested value can still reach the wall clock: an honest
 kill, never a wrong answer, lifted by (1).
+## BUG-079 — comma-ok type assertion ASSIGNED into interface-typed targets stored the component RAW: the package-level `var a, b any = any(nil).(bool)` and local `a, b = x.(T)` forms bypassed the multi-value boxing guard (refused downstream at interface equality — the wrong site)
+
+- Status: fixed (2026-09-01, gotest-fixes audit fix round — emitAssign's
+  comma-ok type-assertion path (tools/nativefrontend/emit.go) refuses,
+  for `=` (never `:=`, whose targets take the component types via
+  Defs), any INTERFACE-typed target whose component — the asserted T
+  for the value slot, bool for the ok slot — is non-interface, with the
+  declaration forms' exact named cause: "implicit interface conversion
+  in multi-value assignment (interfaces campaign, deferred)". Refusal
+  moved to the lowering; no boxing is implemented — FR-7 owns the
+  feature)
+- Pinned-by: none (the refusals surface at `frontend-export`, a
+  coverage stage; the rows below are FAIL-by-design refusal pins of
+  the FR-7 family, listed so the fix's baseline rows ride a Cases:
+  line — the BUG-070/071/072 precedent. Oracle truth `ok` in both
+  expected columns; gc runs both)
+- Cases: interfaces/comma-ok-into-interface/global-form, interfaces/comma-ok-into-interface/local-assign-form
+- Discovered: 2026-09-01 (audit of the gotest-fixes slice, SHOULD-FIX
+  6: $GOROOT/test issue53619.go's post-BUG-077 residual — the slice's
+  triage re-run reported it as "an honest raw-vs-boxed bool
+  interface-equality refusal", which is a refusal at the WRONG site)
+
+Mechanism: spec#Type_assertions writes the comma-ok form as `var v,
+ok interface{} = x.(T)` — an implicit multi-value interface
+conversion the tuple-producing type-assert statement cannot express
+(the machine stores the component RAW into the interface cell). The
+DECLARATION forms (`var a, b any = x.(bool)` in a function body)
+already refused at emitDeclStmt with the BUG-057 reroute's guard; the
+ASSIGNMENT forms did not: emitAssign's dedicated comma-ok path
+(`v, ok = x.(T)`) never asked whether a target was interface-typed,
+and the package-level declaration reaches exactly that path — the
+init lowering fabricates `a, b = any(nil).(bool)` as an AssignStmt so
+emitAssign's machinery applies unchanged. Measured red-first (HEAD
+frontend, tip golean): both rows lowered and stopped downstream with
+`unsupported: interface equality for GoValue.bool false and
+GoValue.interface (Ty.bool) (GoValue.bool false)` — fail-closed, so
+no fidelity lie, but the cause was named at the wrong site and a
+program that never compares the cell would have run on an unboxed
+interface value. With the guard both rows refuse at frontend-export
+by name. Frontend only, fail-closed-strengthening.
 
