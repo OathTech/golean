@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+# RED (frontend-export) BY DESIGN: the Formatter x dyn-shim emit-time
+# refusal (see main.go). The expected column records the oracle's
+# truth (go run @ go1.26.5 → "via-format"); pre-fix the machine
+# returned "via-string" with status ok — the silent-wrong-answer
+# channel this pin now keeps closed.
+dyn-boxed	formatterDynBoxed	-	ok	-	stdlib,strings,methods,defined_type,interfaces

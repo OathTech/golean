@@ -615,8 +615,13 @@ type goleanShimStringer interface{ String() string }
 // answer this shim cannot detect. Static sites refuse Formatter
 // implementors (refuseFormatter, fmtdesugar.go), so the exposure is
 // exactly: a Formatter implementor reaching a dyn site THROUGH an
-// any/variadic boxing the static desugar cannot see. Recorded, not
-// closed; nothing in the subject tree implements fmt.Formatter.
+// any/variadic boxing the static desugar cannot see. CLOSED at emit
+// time since 2026-08-31 (t1-fidelity-fixes; assessment A3-S3):
+// checkFormatterDynHole (fmtdesugar.go) refuses the whole export
+// whenever this bundle is injected AND any declared type implements
+// fmt.Formatter — the shim itself still cannot see Formatter, but no
+// implementor can reach it anymore (pinned by
+// fmt/formatter-dyn-hole/dyn-boxed).
 func goleanShimFmtDynVerb(verb string, a any) string {
 	if verb == "%" {
 		goleanShimUnsupported("golean fmt shim: unreachable %% arm")

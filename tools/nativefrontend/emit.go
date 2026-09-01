@@ -63,6 +63,15 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		}
 	}
 
+	// fmt.Formatter x dynamic-fmt-shim silent-wrong-answer closure
+	// (fmtdesugar.go checkFormatterDynHole): refuse the export when a
+	// declared type implements fmt.Formatter while the dyn shim is
+	// injected — the dyn path cannot see Format and would render
+	// wrongly where gc calls it.
+	if err := e.checkFormatterDynHole(); err != nil {
+		return nil, err
+	}
+
 	// Generic declaration registry BEFORE the H-11 dry-run: an
 	// initializer may instantiate a generic function or type declared
 	// anywhere in the program (`var v1 = f[string]("foo")`), and its

@@ -3505,3 +3505,42 @@ by the mechanism like every other operand; `unsafe/layout-ops/
 Pointer-type refusal (the two boundary mechanisms stay separately
 attested).
 
+
+## BUG-071 — the dynamic fmt shim rendered fmt.Formatter implementors through error/Stringer (recorded silent-wrong-answer class, now closed at emit time)
+
+- Status: fixed (2026-08-31, t1-fidelity-fixes —
+  `checkFormatterDynHole` in tools/nativefrontend/fmtdesugar.go,
+  called from emitProgram: the export refuses whenever the dynamic
+  fmt bundle (goleanShimFmtDynVerb) is injected AND any package-scope
+  declared type implements fmt.Formatter, value or pointer receiver.
+  Whole-export because boxing travels — no per-decl scan can bound
+  which dyn site the implementor reaches. Static fmt sites keep their
+  standing per-verb refusals (refuseFormatter,
+  fmt/formatter-precedence pins); the two mechanisms stay separately
+  attested.)
+- Pinned-by: none (the refusal surfaces at `frontend-export` — the
+  row below is the red-by-design refusal pin, listed so the baseline
+  delta of the fix rides a Cases: line)
+- Cases: fmt/formatter-dyn-hole/dyn-boxed
+- Discovered: 2026-08-22 as audit R1-F2's RECORDED BOUND (W4.3 fix
+  round: "recorded, not closed; nothing in the subject tree
+  implements fmt.Formatter" — a raft-subject bound, not a mechanism);
+  promoted to a fix by the 2026-08-31 fidelity assessment (A3-S3:
+  under the fail-closed doctrine a recorded silent-wrong-answer
+  channel is a defect, its subject-tree bound curation)
+
+gc's handleMethods consults Format FIRST, for every verb; the dyn
+shim runs inside the model with no reflection and cannot ask "does
+the dynamic type implement fmt.Formatter" (fmt.State is unmodeled, so
+no goleanShim interface can name Format's signature). Pre-fix, a
+value whose type implements BOTH Formatter and error/Stringer, boxed
+through any/variadic into a dyn site, rendered via Error/String where
+gc calls Format — both sides `ok`, different strings, nothing red
+(probed: machine "via-string" vs gc "via-format" on the dyn-boxed
+shape). The emit-time scan is conservative in the sound direction: a
+Formatter implementor that never reaches a dyn site still refuses the
+export (visible over-refusal, never a wrong answer). Formatter-ONLY
+types (no error/Stringer leg) already fell to the dyn shim's
+unmodeled-kind refusal; the scan now refuses those exports up front
+too, uniformly.
+

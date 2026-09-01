@@ -549,6 +549,71 @@ func (e *emitter) refuseFormatter(fn, verbName string, argTy types.Type) error {
 	return nil
 }
 
+// checkFormatterDynHole closes the RECORDED silent-wrong-answer channel
+// of the dynamic fmt shim (t1-fidelity-fixes 2026-08-31; assessment
+// A3-S3, audit R1-F2's recorded bound at goleanShimFmtDynVerb): gc's
+// handleMethods consults Format FIRST, for every verb, but the dyn
+// shim runs inside the model with no reflection — it cannot ask "does
+// the dynamic type implement fmt.Formatter" (fmt.State is unmodeled,
+// so no goleanShim interface can name Format's signature). A value
+// whose type implements BOTH Formatter and error/Stringer, boxed
+// through any/variadic into a dyn site, would render via Error/String
+// where gc calls Format — an `ok` answer that differs from gc's, the
+// exact fail-open class the charter forbids. Static fmt sites refuse
+// Formatter implementors per-verb (refuseFormatter); this is the
+// EMIT-TIME closure for the dynamic path: if any unit injected the
+// dyn-fmt shim AND any unit declares a named type implementing
+// fmt.Formatter (value or pointer receiver — either can box), the
+// EXPORT refuses naming both. Whole-export because boxing travels:
+// no per-decl scan can bound which dyn site the implementor reaches.
+// Bound: the scan covers package-scope named types (an implementor
+// must name fmt.State, so its unit imports fmt and its type is in
+// scope); type-parameter instantiations cannot add a Format method a
+// generic declaration does not already carry.
+func (e *emitter) checkFormatterDynHole() error {
+	dynInjected := false
+	for _, u := range e.units {
+		// goleanShimFmtDynVerb is the dyn bundle's kernel (one of
+		// stdlibShimDeclNames[fmtDynShimKey]); its presence in a unit's
+		// scope IS the injection fact.
+		if u.pkg.Scope().Lookup("goleanShimFmtDynVerb") != nil {
+			dynInjected = true
+			break
+		}
+	}
+	if !dynInjected {
+		return nil
+	}
+	for _, u := range e.units {
+		var iface *types.Interface
+		for _, p := range u.pkg.Imports() {
+			if p.Path() == "fmt" {
+				if o := p.Scope().Lookup("Formatter"); o != nil {
+					iface, _ = o.Type().Underlying().(*types.Interface)
+				}
+			}
+		}
+		if iface == nil {
+			continue
+		}
+		scope := u.pkg.Scope()
+		for _, name := range scope.Names() {
+			tn, ok := scope.Lookup(name).(*types.TypeName)
+			if !ok {
+				continue
+			}
+			t := tn.Type()
+			if types.IsInterface(t) {
+				continue
+			}
+			if types.Implements(t, iface) || types.Implements(types.NewPointer(t), iface) {
+				return unsup("type %s.%s implements fmt.Formatter while the dynamic fmt shim is injected: gc consults Format ahead of error/Stringer for EVERY verb at dynamic fmt sites, and the dyn shim cannot see Formatter at runtime (fmt.State unmodeled) — a boxed %s reaching any dyn site would render wrongly, so the export fails closed (audit R1-F2 / assessment A3-S3)", u.pkg.Path(), name, name)
+			}
+		}
+	}
+	return nil
+}
+
 // fmtVerbArg compiles one verb x static-kind pair, or refuses naming
 // it. Every call-site argument expression is emitted EXACTLY ONCE.
 func (e *emitter) fmtVerbArg(fn, format string, v fmtVerb, arg ast.Expr, k int) (*fmtArgPlan, error) {
