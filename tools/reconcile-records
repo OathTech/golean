@@ -910,13 +910,28 @@ def check_decay_dates():
         out["entries"] = 0
         return out
     today = datetime.date.today()
-    entries, overdue, malformed = [], [], []
+    entries, overdue, malformed, suspect = [], [], [], []
     for i, ln in enumerate(lines(BACKLOG), 1):
         if not ln.startswith("|"):
             continue
         cells = [c.strip() for c in ln.strip().strip("|").split("|")]
         if len(cells) < 2 or not re.match(r"^[A-Z]+-\d+$", cells[0]):
-            continue  # header/separator/prose rows
+            # Header/separator/prose rows — but a skipped row whose LAST
+            # cell is date-shaped looks like an entry whose id cell
+            # drifted from the ID-NN convention: flag it rather than
+            # silently dropping it from the decay-date sweep (audit
+            # T3-2: the id match was an absorbing filter).
+            if (
+                len(cells) >= 2
+                and re.match(r"^\d{4}-\d{2}-\d{2}$", cells[-1])
+            ):
+                suspect.append(
+                    f"{BACKLOG}:{i}: last cell {cells[-1]!r} is date-shaped "
+                    f"but id cell {cells[0]!r} does not match the ID-NN "
+                    "convention — row skipped by the entry parser "
+                    "(format drift?)"
+                )
+            continue
         rid = cells[0]
         review = cells[-1]
         entries.append(rid)
@@ -937,6 +952,29 @@ def check_decay_dates():
                 f"{BACKLOG}:{i} {rid}: review-by {review} is "
                 f"{(today - due).days} day(s) past ({cells[1][:80]}…)"
             )
+    if not entries:
+        # PRESENT but zero-parsed (audit T3-2): the absent-file branch
+        # above emits a LOW note, but a backlog that EXISTS and parses
+        # to nothing previously emitted NOTHING — an empty table or a
+        # format drift silently retired the whole decay-date rule.
+        finding(
+            "C14",
+            "medium",
+            f"{BACKLOG} EXISTS but ZERO entries parsed — the decay-date "
+            "check (assessment decision 7) has nothing to police here; "
+            "an empty table or a format drift must be visible, never "
+            "silent",
+        )
+    if suspect:
+        finding(
+            "C14",
+            "medium",
+            f"{len(suspect)} discrepancy-backlog row(s) carry a date-shaped "
+            "last cell but an id cell outside the ID-NN convention — "
+            "skipped by the entry parser, so their decay dates are NOT "
+            "being policed (probable format drift)",
+            suspect,
+        )
     if malformed:
         finding(
             "C14",
@@ -954,10 +992,11 @@ def check_decay_dates():
             "(re-date it with a reason, retire it, or escalate), not silence",
             overdue,
         )
-    if entries and not overdue and not malformed:
+    if entries and not overdue and not malformed and not suspect:
         out["all_current"] = True
     out["entries"] = len(entries)
     out["overdue"] = len(overdue)
+    out["suspect_rows"] = len(suspect)
     return out
 
 
@@ -1013,6 +1052,80 @@ def _unified(a, b):
 
 
 # ---------------------------------------------------------------------------
+# --selftest: synthetic-input checks for check_decay_dates (audit T3-2 —
+# the two silent-skip modes it closed must stay closed). Exit 0/1.
+# ---------------------------------------------------------------------------
+
+
+def selftest():
+    import tempfile
+
+    failures = []
+
+    def run_decay(content):
+        global BACKLOG, FINDINGS
+        saved = (BACKLOG, FINDINGS)
+        FINDINGS = []
+        fd, path = tempfile.mkstemp(suffix=".md", dir=ROOT)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(content)
+            BACKLOG = path
+            out = check_decay_dates()
+            return out, FINDINGS
+        finally:
+            os.unlink(path)
+            BACKLOG, FINDINGS = saved
+
+    # 1. PRESENT but zero-parsed backlog -> MEDIUM (T3-2a).
+    out, f = run_decay(
+        "# backlog whose table the parser cannot read\n"
+        "| identifier | note | review by |\n|---|---|---|\n"
+    )
+    if out["entries"] != 0 or not any(
+        x["check"] == "C14" and x["severity"] == "medium" and "ZERO entries" in x["message"]
+        for x in f
+    ):
+        failures.append("present-but-zero-parsed backlog did not emit the MEDIUM finding")
+
+    # 2. id-cell-mismatch row with a date-shaped last cell -> flagged (T3-2b).
+    out, f = run_decay(
+        "| id | what | review by |\n|---|---|---|\n"
+        "| D-1x | drifted id cell | 2026-09-15 |\n"
+        "| D-2 | healthy entry | 2099-01-01 |\n"
+    )
+    if out.get("suspect_rows") != 1 or not any(
+        x["check"] == "C14" and "date-shaped" in x["message"] and x["detail"] for x in f
+    ):
+        failures.append("id-mismatch row with a date-shaped last cell was not flagged")
+    if out["entries"] != 1:
+        failures.append(f"healthy control entry miscounted (entries={out['entries']})")
+
+    # 3. Healthy control: one current entry, no findings at all.
+    out, f = run_decay(
+        "| id | what | review by |\n|---|---|---|\n"
+        "| D-3 | current entry | 2099-01-01 |\n"
+    )
+    if f or not out.get("all_current"):
+        failures.append(f"healthy backlog emitted findings or lost all_current: {f}")
+
+    # 4. Overdue entry still fires HIGH (pre-existing behavior, kept).
+    out, f = run_decay(
+        "| id | what | review by |\n|---|---|---|\n"
+        "| D-4 | expired entry | 2020-01-01 |\n"
+    )
+    if not any(x["check"] == "C14" and x["severity"] == "high" for x in f):
+        failures.append("overdue entry did not emit the HIGH finding")
+
+    if failures:
+        for msg in failures:
+            print(f"selftest FAIL: {msg}", file=sys.stderr)
+        return 1
+    print("selftest: 4/4 decay-date synthetic checks passed")
+    return 0
+
+
+# ---------------------------------------------------------------------------
 
 
 def main():
@@ -1020,7 +1133,12 @@ def main():
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--heavy", action="store_true", help="also re-derive the census evidence")
     ap.add_argument("--strict", action="store_true", help="exit 1 if any finding is emitted")
+    ap.add_argument("--selftest", action="store_true",
+                    help="synthetic-input checks for check_decay_dates (audit T3-2)")
     args = ap.parse_args()
+
+    if args.selftest:
+        sys.exit(selftest())
 
     bl = load_baseline()
     bugs = load_bugs()
