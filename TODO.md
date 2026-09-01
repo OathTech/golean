@@ -72,18 +72,26 @@ obligation:
       NOT in question — the fuel-out on self-inserting loops is the
       ruled behavior, not this item.
 
-## Re-homed obligations (re-homed 2026-08-31, fidelity decision 6 [USER])
+## Re-homed obligations (re-homed 2026-08-31, fidelity decision 6 [USER]; R15 by [AGENT] extension — see its entry)
 
 The W3.2 and F4 arcs these obligations routed to are parked whole on
 branch `park/reasoning-2026-08-31` — the routes dangled from the
 split until this entry. Live owner for ALL of them: this backlog.
-Each originating site (ledger §5.1/§6, BUGS.md, inventory R15)
-carries the matching "(re-homed 2026-08-31, fidelity decision 6)"
-marker.
+Each originating site (ledger §5.1/§6, BUGS.md) carries the matching
+"(re-homed 2026-08-31, fidelity decision 6)" marker; the R15 sites
+(inventory R15, ledger §2/§6) carry the [AGENT]-extension variant —
+see the R15 entry below.
 
 - [ ] The eight Q-row rulings (ledger §6; memos + ruling sheet
       `docs/2026-08-21_w32-qrow-memos.md` §RULING SHEET; ~20 reds
       riding) — one [USER] sitting, approved by fidelity decision 3.
+- [ ] The `nonterm=`-under-`engine=dedup` ruling (charter OQ5,
+      `docs/2026-08-20_w32-re-envelope-charter.md` §Open questions
+      posed to the user;
+      three candidate readings, and it changes what a green row
+      asserts, so a [USER] ruling is owed) — live owner: this
+      backlog. (Entry added at the 2026-08-31 audit fix round — the
+      W3.2-section copy below is the historical text.)
 - [ ] Q-ATOMICITY (= BUG-002, expression-step granularity — the
       formerly-F4 blocking precondition) and Q-GOEXIT (goroutine
       destruction): the two formerly-F4-owned design questions; held
@@ -102,7 +110,9 @@ marker.
       per-row ruling here, or a revived reduction lane.
 - [ ] R15 zero-size-address re-envelope (may-equal choice or
       membership {0,1}; `pointers/zero-size-address/escaped-same`
-      red) — formerly a "W3.2 re-envelope obligation".
+      red) — formerly a "W3.2 re-envelope obligation". (re-homed
+      2026-08-31 — [AGENT] extension of fidelity decision 6's orphan
+      class; R15 fits the class, [USER] confirmation pending)
 
 ## W3.2 re-envelope arc backlog (2026-08-20, charter DRAFT rev 1)
 

@@ -123,8 +123,9 @@ write a bare "#6"/"#7".
    construction), not from probe silence (inventory C3); (ii) ∀-stream termination of spinner shapes is the
    liveness tier's `Fair` question — FUTURE WORK, precisely: no
    `Fair`/`FairStream` predicate is a Lean definition in this tree,
-   the parked reasoning branch, or any branch, and never has been
-   (verified 2026-08-31, phase-2 fact claim 7); what EXISTS is the
+   the parked reasoning branch, or any branch tip
+   (verified 2026-08-31, phase-2 fact claim 7 — branch tips checked,
+   not full history); what EXISTS is the
    semantics-side half, the `backEdge` choice site whose docstring
    records that a fair scheduler is EXPRESSIBLE over it (non-vacuous
    BY B2) — the predicate itself is a planned reasoning-side
