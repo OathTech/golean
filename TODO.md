@@ -112,7 +112,7 @@ see the R15 entry below.
       membership {0,1}; `pointers/zero-size-address/escaped-same`
       red) — formerly a "W3.2 re-envelope obligation". (re-homed
       2026-08-31 — [AGENT] extension of fidelity decision 6's orphan
-      class; R15 fits the class, [USER] confirmation pending)
+      class; R15 fits the class; confirmed [USER] 2026-09-01)
 
 ## W3.2 re-envelope arc backlog (2026-08-20, charter DRAFT rev 1)
 
