@@ -30,7 +30,55 @@
 #     RSS via cgroup is the only honest knob.
 # MemorySwapMax=0 is deliberate: with swap available the runaway thrashes
 # ~19 GB of it first, which hangs the box in a slower, more confusing way.
+#
+# TWO PLACEMENT MECHANISMS, ONE READBACK (2026-09-01, [USER]-directed port of
+# the cerberus-lean capped, mainline bbdbacaff). `systemd-run --user --scope`
+# needs the user manager's D-Bus socket, which the nono sandbox does not
+# grant (its profile history tried bus grants and rolled them back). The cap
+# itself needs no systemd: under cgroup v2 delegation (user@.service,
+# Delegate=yes) this process's PARENT cgroup (app.slice) is writable by us
+# and already has the memory controller enabled for children — so we create
+# a SIBLING child cgroup there (the same shape systemd-run would create),
+# write memory.max/memory.swap.max, migrate this wrapper in (children
+# inherit), and re-enter. Sibling-not-child: cgroup v2's no-internal-
+# processes rule forbids enabling controllers under a cgroup that already
+# has processes (our own scope does). Needs only a cgroupfs path grant
+# (nono: /sys/fs/cgroup/user.slice/user-$UID.slice/user@$UID.service/
+# app.slice). If any step is refused we fall through to systemd-run.
+# EITHER WAY the re-entered script's readback below is what certifies the
+# cap — placement mechanism never bypasses verification.
 set -uo pipefail
+
+# systemd suffix semantics: K/M/G/T are binary (1024^n). "max"/"infinity"
+# are REJECTED here on purpose — a limit of "max" is not a cap, and the
+# readback would refuse it anyway; the honest spelling of "no cap" is
+# GOLEAN_MEM_MAX=none.
+mem_to_bytes() {
+  local v="$1" n u
+  n="${v%[KkMmGgTt]}"; u="${v#"$n"}"
+  [[ "$n" =~ ^[0-9]+$ ]] || return 1
+  case "$u" in
+    ''|B|b) echo "$n";;
+    K|k) echo $((n*1024));;
+    M|m) echo $((n*1024*1024));;
+    G|g) echo $((n*1024*1024*1024));;
+    T|t) echo $((n*1024*1024*1024*1024));;
+    *) return 1;;
+  esac
+}
+
+# The KILL banner (ported with the mechanism): a cgroup/OOM kill lands as
+# exit 137 (128+SIGKILL), a TERM as 143. A killed child must SHOUT — three
+# exit-code misreadings in the sibling project earned this. The banner goes
+# to stderr; the exit code propagates unchanged (loudness, never a rescue).
+kill_banner() {
+  local rc="$1"
+  if [ "$rc" -eq 137 ] || [ "$rc" -eq 143 ]; then
+    echo "==============================================================" >&2
+    echo "scripts/capped: KILLED (exit $rc — cgroup/OOM or signal; NOT a pass)" >&2
+    echo "==============================================================" >&2
+  fi
+}
 
 MEM="${GOLEAN_MEM_MAX:-64G}"
 
@@ -105,12 +153,47 @@ if [ "$MEM" = "none" ]; then
   exec env GOLEAN_CAPPED=none "$@"
 fi
 
+# --- Placement 1: cgroup-direct (bus-free) -----------------------------------
+# Create a sibling child cgroup under this process's parent, cap it, migrate
+# THIS wrapper into it, and re-enter $0 as a CHILD (not exec) so we can
+# migrate back and rmdir afterwards. The child inherits the cgroup, so the
+# re-entered script's readback proves the cap exactly as in the systemd path.
+cgroup_direct() {
+  local mem_bytes self orig parent cg rc=0
+  mem_bytes="$(mem_to_bytes "$MEM")" || {
+    echo "scripts/capped: cannot parse GOLEAN_MEM_MAX='$MEM' (want e.g. 64G / 8192M / a plain byte count; 'none' for an explicit uncapped run)" >&2
+    exit 2
+  }
+  self="$(awk -F: '/^0::/{print substr($0, index($0,":")+2); exit}' /proc/self/cgroup 2>/dev/null)"
+  [ -n "$self" ] && [ "$self" != "/" ] || return 1
+  orig="/sys/fs/cgroup${self}"; parent="$(dirname "$orig")"
+  [ -d "$parent" ] && [ -f "$parent/cgroup.subtree_control" ] || return 1
+  grep -qw memory "$parent/cgroup.subtree_control" 2>/dev/null || return 1
+  cg="$parent/capped-$$-$(date +%s%N)"
+  mkdir "$cg" 2>/dev/null || return 1
+  if ! { echo "$mem_bytes" > "$cg/memory.max" && echo 0 > "$cg/memory.swap.max" \
+         && echo $$ > "$cg/cgroup.procs"; } 2>/dev/null; then
+    echo $$ > "$orig/cgroup.procs" 2>/dev/null || true
+    rmdir "$cg" 2>/dev/null || true
+    return 1
+  fi
+  # Placed. Re-enter for the readback (GOLEAN_CAPPED=1 = "untrusted, verify").
+  env GOLEAN_CAPPED=1 "$0" "$@" || rc=$?
+  echo $$ > "$orig/cgroup.procs" 2>/dev/null || true
+  rmdir "$cg" 2>/dev/null \
+    || echo "scripts/capped: WARNING — could not remove cgroup $cg (a process still inside? it stays capped there)" >&2
+  kill_banner "$rc"
+  exit "$rc"
+}
+cgroup_direct "$@"   # exits on success; returns 1 only if placement was refused
+
+# --- Placement 2: systemd-run fallback ---------------------------------------
 if ! command -v systemd-run >/dev/null 2>&1; then
   cat >&2 <<EOF
-scripts/capped: systemd-run not found — refusing to run uncapped.
+scripts/capped: cgroup-direct placement refused AND systemd-run not found — refusing to run uncapped.
   An uncapped Lean build has taken this machine down before (see the header
-  of this script). Either install systemd, or opt out explicitly and
-  knowingly with:
+  of this script). Either grant cgroupfs writes under your app.slice / install
+  systemd, or opt out explicitly and knowingly with:
       GOLEAN_MEM_MAX=none scripts/capped $*
 EOF
   exit 127
@@ -121,8 +204,9 @@ fi
 # surface as a bare systemd message and exit 1 — indistinguishable from "the
 # build failed" (delta-review D3/D5/D7):
 #   * systemd-run present but no session D-Bus ("Failed to connect to bus") —
-#     GitHub runners, sudo-ed shells, containers. This is the F1 environment,
-#     so it is exactly the case that deserves the pointer to the opt-out.
+#     GitHub runners, sudo-ed shells, containers, sandboxes without a bus
+#     grant. This is exactly the case that deserves the pointer to the opt-out
+#     (and, since 2026-09-01, to the cgroup-direct grant that avoids the bus).
 #   * an unparseable GOLEAN_MEM_MAX ("64GB", "abc", "infinity") — systemd
 #     rejects it, or silently means "no limit", which the readback would then
 #     refuse with a misleading diagnosis.
@@ -130,11 +214,13 @@ fi
 if ! probe="$(systemd-run --user --scope -q -p MemoryMax="$MEM" -p MemorySwapMax=0 -- true 2>&1)"; then
   cat >&2 <<EOF
 scripts/capped: cannot create a capped cgroup — refusing to run uncapped.
-  systemd-run said: ${probe:-<no output>}
+  cgroup-direct placement was refused (no writable delegated parent cgroup —
+  in a sandbox, grant /sys/fs/cgroup/user.slice/user-\$(id -u).slice/user@\$(id -u).service/app.slice),
+  and systemd-run said: ${probe:-<no output>}
   GOLEAN_MEM_MAX=$MEM
   Likely either a bad size (use 64G / 8192M / a plain byte count), or no
-  systemd user session on this host (common on CI runners, in containers, and
-  under sudo — check: systemctl --user is-system-running).
+  reachable systemd user session on this host (common on CI runners, in
+  containers, under sudo, and in sandboxes — check: systemctl --user is-system-running).
   If this host cannot cap, opt out explicitly and knowingly:
       GOLEAN_MEM_MAX=none $0 $*
 EOF

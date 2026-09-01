@@ -20,6 +20,53 @@ thread). RSS via cgroup (`systemd-run --user --scope` +
 `MemoryMax`) is the only honest knob. The cap is a blast radius,
 not a budget.
 
+## The cap without the bus: cgroup-direct placement (2026-09-01)
+
+INCIDENT. After a session relaunch under a nono sandbox profile that
+did not grant the systemd user-bus socket (`/run/user/$UID/bus`),
+`scripts/capped` — then built on `systemd-run --user --scope` — failed
+closed everywhere at once (`Failed to connect to bus: Operation not
+permitted`, exit 4): every gate, every worker's build, the fuzz
+campaign. Diagnosis by `nono why --profile claude-local --path
+/run/user/1000/bus --op write` → `path_not_granted`. The process's
+`snap.zellij` AppArmor label was a red herring (complain mode; the
+user's own shell inside zellij reached the bus fine). Granting the bus
+to the sandbox had been tried and rolled back in the sibling
+cerberus-lean project (profile history 1.9–1.11).
+
+REMEDY ([USER]-directed port of cerberus-lean's `scripts/capped`,
+mainline `bbdbacaff`). The cap never needed systemd: under cgroup v2
+delegation (`user@.service`, `Delegate=yes`) the process's PARENT
+cgroup (`app.slice`) is writable by the user and has the memory
+controller enabled for children. `scripts/capped` now creates a
+SIBLING child cgroup there (the same shape `systemd-run` would make),
+writes `memory.max` + `memory.swap.max=0`, migrates itself in, and
+RE-ENTERS ITSELF — so the existing readback (`GOLEAN_CAPPED=1` →
+prove `memory.max` → `=verified`) certifies the cap exactly as before;
+placement changed, verification did not. `systemd-run` remains the
+fallback when cgroupfs isn't writable; an unavailable cap is still an
+error (exit 4/127), never a silent uncapped run. New: a KILLED banner
+on exit 137/143 (a cgroup kill must shout — the sibling project's
+tail-pipe/exit-code misreadings earned it).
+
+SANDBOX PREREQUISITE (the one grant): filesystem write under
+`/sys/fs/cgroup/user.slice/user-$UID.slice/user@$UID.service/app.slice`
+(nono profile `claude-local` 1.13.0). Narrow: cgroupfs writes within
+the user's own slice only. GOTCHA: `nono why` without `--profile
+<name>` evaluates the default profile and reports the slice DENIED even
+when the live one grants it — always pass `--profile claude-local`.
+
+VERIFY after any change (seconds each):
+  GOLEAN_MEM_MAX=32G scripts/capped cat /proc/self/cgroup
+      # ends in .../app.slice/capped-<pid>-<ts>
+  GOLEAN_MEM_MAX=32G scripts/capped env | grep GOLEAN_CAPPED   # =verified
+  GOLEAN_MEM_MAX=256M scripts/capped python3 -c 'x=bytearray(1<<30)'
+      # must die: exit 137 + the KILLED banner
+  scripts/capped sh -c 'exit 42'; echo $?                        # 42
+All four measured green at the port (2026-09-01), plus: no leftover
+`capped-*` cgroups after runs; `GOLEAN_MEM_MAX=64GB` refuses (exit 2);
+`none` still warns.
+
 ## Concurrency OOM: threads × per-module peaks, not single modules
 
 Full parallel builds of trees with heavy modules breach any sane cap
