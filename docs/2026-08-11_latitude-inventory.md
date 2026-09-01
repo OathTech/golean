@@ -1278,7 +1278,7 @@ runtime observable. OPEN QUESTION as stated.
   class, disposition `latitude` in baselines/untriaged-ids).
 - RE-ENVELOPE obligation (formerly W3.2; re-homed 2026-08-31 —
   [AGENT] extension of fidelity decision 6's orphan class; R15 fits
-  the class, [USER] confirmation pending → this repo's TODO.md
+  the class, confirmed [USER] 2026-09-01 → this repo's TODO.md
   backlog): a may-equal
   choice at zero-size
   address creation (or a membership-lane row admitting {0,1}) turns
