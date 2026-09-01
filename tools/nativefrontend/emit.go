@@ -62,6 +62,16 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		return nil, err
 	}
 
+	// E7 hidden-dependency init-order detector (hiddendep.go): a kept
+	// initializer reaching an interface-dispatched method that reads an
+	// initialized package variable refuses the export — the realized
+	// go/types InitOrder is KNOWN ≠ gc on that shape. After the
+	// quarantine pre-pass (skipped initializers are neither roots nor
+	// targets); before any body emission.
+	if err := e.checkHiddenDepInitOrder(); err != nil {
+		return nil, err
+	}
+
 	for _, unit := range e.units {
 		e.setUnit(unit)
 		for _, f := range unit.files {

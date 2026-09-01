@@ -566,7 +566,16 @@ run_case_rows() {
   # resolves them); no batch export step is needed.
   wire_json="$OUT/native/$id/wire.json"
   mkdir -p "$(dirname "$wire_json")"
-  if ! native_export="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/nativefrontend --dir "$go_dir" --out "$wire_json" 2>&1)"; then
+  # E7 apparatus allow (tools/nativefrontend/hiddendep.go): ONLY the
+  # recorded deviation case lowers past the hidden-dep init-order
+  # detector, with the finding downgraded to a visible warning. The
+  # allow is keyed to the exact case id HERE, in the apparatus — a new
+  # hidden-dep case cannot opt itself in from source.
+  fe_flags=()
+  if [[ "$id" == "init/hidden-dep-order" ]]; then
+    fe_flags+=(--allow-hidden-dep-init-order)
+  fi
+  if ! native_export="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/nativefrontend ${fe_flags[@]+"${fe_flags[@]}"} --dir "$go_dir" --out "$wire_json" 2>&1)"; then
     report_fail "$id" "$features" "frontend-export" "native frontend: $native_export"
     return 0
   fi
@@ -1080,7 +1089,12 @@ run_membership_case_rows() {
   local wire_json="$OUT/native/$id/wire.json"
   mkdir -p "$(dirname "$wire_json")"
   local native_export
-  if ! native_export="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/nativefrontend --dir "$go_dir" --out "$wire_json" 2>&1)"; then
+  # E7 apparatus allow — same keyed exception as the strict lane above.
+  local mem_fe_flags=()
+  if [[ "$id" == "init/hidden-dep-order" ]]; then
+    mem_fe_flags+=(--allow-hidden-dep-init-order)
+  fi
+  if ! native_export="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/nativefrontend ${mem_fe_flags[@]+"${mem_fe_flags[@]}"} --dir "$go_dir" --out "$wire_json" 2>&1)"; then
     report_fail "$id" "$features" "frontend-export" "native frontend: $native_export"
     return 0
   fi

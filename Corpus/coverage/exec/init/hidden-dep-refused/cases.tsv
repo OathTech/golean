@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+# RED (frontend-export) BY DESIGN: the E7 hidden-dep detector refusal
+# pin — see main.go. The expected column records the oracle's truth
+# (go run @ go1.26.5 → 21103); the machine refuses the export naming
+# the hidden-dependency shape instead of realizing an order the spec
+# leaves unspecified and gc realizes differently.
+-	hiddenDepRefused	-	ok	-	init,globals,interfaces,methods

@@ -49,6 +49,14 @@ func run() error {
 
 	dir := flag.String("dir", "", "package directory to type-check and emit")
 	out := flag.String("out", "", "output wire JSON path (default stdout)")
+	// The E7 apparatus allow (hiddendep.go): downgrade the
+	// hidden-dependency init-order refusal to a stderr WARNING. Passed
+	// ONLY for the recorded deviation case init/hidden-dep-order by
+	// scripts/diff-coverage and scripts/check-frontend-pins — never a
+	// user-facing default; the warning keeps the finding visible on
+	// every allowed run.
+	flag.BoolVar(&allowHiddenDepInitOrder, "allow-hidden-dep-init-order", false,
+		"apparatus-only: allow the recorded E7 hidden-dep init-order deviation case to lower (finding still printed as a WARNING)")
 	flag.Parse()
 	if *dir == "" {
 		return fmt.Errorf("--dir is required")

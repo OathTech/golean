@@ -44,7 +44,11 @@ DEV_SRC="Corpus/coverage/exec/init/hidden-dep-order"
 DEV_BASE="baselines/pins/hidden-dep-order.observation.json"
 DEV_FUNC="hiddenDepOrder"
 [ -f "$DEV_BASE" ] || { echo "check-frontend-pins: FAIL — no baseline at $DEV_BASE" >&2; exit 1; }
-GO111MODULE=off go run ./tools/nativefrontend --dir "$DEV_SRC" --out "$WORK/deviation.wire.json" \
+# --allow-hidden-dep-init-order: the E7 detector (t1-fidelity-fixes,
+# 2026-08-31) refuses hidden-dep-shape programs; this pinned deviation
+# case is the ONE recorded exception, allowed explicitly here in the
+# apparatus (the detector's finding still prints as a warning).
+GO111MODULE=off go run ./tools/nativefrontend --allow-hidden-dep-init-order --dir "$DEV_SRC" --out "$WORK/deviation.wire.json" \
   || { echo "check-frontend-pins: FAIL [hidden-dep-order] — frontend emit failed (fail closed)" >&2; exit 1; }
 .lake/build/bin/golean native-json-run --input "$WORK/deviation.wire.json" --function "$DEV_FUNC" \
   > "$WORK/deviation.obs" \

@@ -613,9 +613,23 @@ concurrent observer).
   (4242) vs gc hiddenX-after-a/b (4624242). Both conform. This is the
   doctrine's TOO-NARROW, soundness-relevant direction: theorems over
   our order do NOT transfer to gc executions of hidden-dep programs.
-  The deferral is UNGUARDED — no frontend check detects the shape; the
-  case is a standing differential red (queued: §7 item 3) with the
-  realized order mechanically pinned (scripts/check-frontend-pins
+  GUARDED since 2026-08-31 (t1-fidelity-fixes; the charter-era "ships
+  FIRST" ruling, finally executed): the fail-closed detector
+  `tools/nativefrontend/hiddendep.go` refuses the export of any
+  program whose kept package-level initializer REACHES (through
+  statically-resolved calls) a method call dispatched through an
+  interface whose name matches a same-unit method reading an
+  initialized package variable — the observable hidden-dep shape, the
+  spec example's own composition. Refusal pin:
+  init/hidden-dep-refused. The ONE exception is the recorded
+  deviation case below, allowed explicitly in the APPARATUS
+  (--allow-hidden-dep-init-order, keyed to the exact case id in
+  scripts/diff-coverage and scripts/check-frontend-pins; the finding
+  still prints as a warning on every allowed run). Recorded residual:
+  dispatch through FUNCTION VALUES is a distinct hidden channel the
+  detector does not cover (it rides this row's re-envelope
+  obligation). The deviation case is a standing differential red with
+  the realized order mechanically pinned (scripts/check-frontend-pins
   since the 2026-08-31 repo split; previously check-golden
   deviation-observation pin), so drift to a third order is caught.
 - PLAUSIBLE ENVELOPE: all conforming initialization orders (the
@@ -623,10 +637,11 @@ concurrent observer).
   hidden-dep-affected variables freed).
 - RE-ENVELOPE OBLIGATION + COST: a named Choices site over conforming
   orders + envelope discussion (deliberately deferred, recorded in the
-  design note); OR the cheap interim: a frontend DETECTOR for the
-  hidden-dep shape (method-through-interface-conversion reachability)
-  that fails closed, converting the unguarded silent-divergence into a
-  visible refusal. Detector: LOW cost. Full envelope: MODERATE
+  design note). The cheap interim — the fail-closed frontend DETECTOR
+  (method-through-interface-conversion reachability) — LANDED
+  2026-08-31 (see above), converting the unguarded silent-divergence
+  into a visible refusal; the func-value channel and the full envelope
+  remain on this obligation. Full envelope: MODERATE
   ($pkginit becomes schedule-bearing; strict-lane init cases must stay
   on the deterministic default point). North-star exposure recorded:
   etcd-io/raft has package-level vars — must be checked at the target
