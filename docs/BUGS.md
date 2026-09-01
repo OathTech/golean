@@ -216,7 +216,9 @@ and only differentially-visibly.
   `bare-assert-missing-panics` were green throughout, and the dispatch
   markers `sync/iface-dispatch/{mutex-user-iface,wg-user-iface,
   locker-box-dispatch}` are permanent-until-lifted `frontend-export`
-  reds by design.)
+  reds by design.) (LIFT LANDED 2026-09-01, Q-SYNCVAL slice — P-S2-6
+  bodied stubs; the three dispatch markers flip PASS, identity with
+  the direct lowering. Historical text above kept verbatim.)
 - **CLASS-CLOSURE ADDENDUM (2026-08-10, user direction):** the fix
   above closed the INSTANCE (sync stubs), not the CLASS — the machine
   still read an absent method table as a correct empty method set for

@@ -403,6 +403,18 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
 - EVIDENCE: GC — probe suite p01–p26 (sync design §2); membership
   certification. DOCS bear directly (the Mutex/RWMutex doc sentences
   quoted at the arms: `pendingW` reader exclusion, Wait-at-zero).
+- INDIRECTION PRESERVES THE SITE (Q-SYNCVAL, RULED [USER] 2026-08-31,
+  implemented 2026-09-01 — `docs/2026-08-31_qrow-rulings.md` row 6): a
+  sync op reached AS A VALUE (interface dispatch, method value, go
+  callee, passed callback) consumes the SAME C8 site as the direct
+  call, or refuses — never a variant. Mechanically: the frontend's
+  bodied sync stubs emit the same `sync-op` wire node as the direct
+  interception, from the same op table (emit.go `syncOpFor` /
+  `syncStubBody`), so the machine path from `applySyncOp` on is
+  literally shared; the extra stub frame adds private steps only (no
+  new boundaries at registry granularity — memo §6). Misuse identity
+  pinned green: `sync/iface-dispatch/locker-double-lock`,
+  `sync/escapes/method-value-negative-panic`.
 
 ### C9. Global deadlock: detect-and-classify vs hang — (b) PINNED to gc's runtime detector (spec-silent)
 

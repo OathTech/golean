@@ -82,9 +82,17 @@ Each originating site (ledger §5.1/§6, BUGS.md) carries the matching
 (inventory R15, ledger §2/§6) carry the [AGENT]-extension variant —
 see the R15 entry below.
 
-- [ ] The eight Q-row rulings (ledger §6; memos + ruling sheet
-      `docs/2026-08-21_w32-qrow-memos.md` §RULING SHEET; ~20 reds
-      riding) — one [USER] sitting, approved by fidelity decision 3.
+- [x] The eight Q-row rulings — the [USER] sitting HAPPENED 2026-08-31
+      (fidelity decision 3); ruling record of record:
+      `docs/2026-08-31_qrow-rulings.md` (supersedes the memos doc's
+      §RULING SHEET by pointer). Six ruled: rows 6+7 (Q-SYNCVAL +
+      Q-SYNCLIT) IMPLEMENTED 2026-09-01 on the qrow-syncval slice
+      (7 reds flipped); rows 1/4/5/8 ruled with vehicles named
+      (Q-INITSPAWN → standalone $pkginit backlog item; Q-RACEPATH →
+      Tier-4 detector-soundness leg; Q-TRYLOCK/Q-COND → deferred with
+      envelopes pre-ruled). Rows 2/3 OPEN with return conditions:
+      Q-ATOMIC returns with an owner proposal (post Tier-4 scoping);
+      Q-SELSEL after the C7 refresh + close-wake probe (queued S item).
 - [ ] The `nonterm=`-under-`engine=dedup` ruling (charter OQ5,
       `docs/2026-08-20_w32-re-envelope-charter.md` §Open questions
       posed to the user;

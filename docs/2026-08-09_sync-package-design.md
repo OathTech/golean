@@ -822,7 +822,13 @@ stats bit-for-bit); corpus classification unchanged on all 1483 ids
   caption. Closing it means modeling struct-copy accesses of sync
   cells → future arc if ever needed.
 - **P-S2-6 — Lift sync method CALLS through interface dispatch
-  (arc-end fix round, 2026-08-10).** Satisfaction/boxing now answer
+  (arc-end fix round, 2026-08-10). LANDED 2026-09-01 (the Q-SYNCVAL
+  slice, per `docs/2026-08-31_qrow-rulings.md` row 6): bodied stubs
+  exactly as scoped below (Do's generic host is the bodied
+  `sync.Once.Do` stub itself + a `$syncOnceDone` completer;
+  TryLock/TryRLock/RLocker/Go stay declaration-only), plus the
+  adjacent method-value/go-callee shapes and the Q-SYNCLIT
+  empty-literal lowering (row 7).** Satisfaction/boxing now answer
   correctly through the `syncMethodStubs` declaration-only stubs; the
   CALLS refuse per-stub (markers `sync/iface-dispatch`). The lift is
   real stub bodies over the machine's EXISTING sync ops (Lock/Unlock/
