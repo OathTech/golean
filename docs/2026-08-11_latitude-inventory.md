@@ -581,16 +581,21 @@ concurrent observer).
   and gc's is the exotic one — the doctrine's "pinned to gc" framing
   does not describe this axis (see §9, flag 3).
 
-### E6. `len`/`cap` hoist discriminating shapes — REFUSED (recorded)
+### E6. `len`/`cap` hoist discriminating shapes — REFUSED (narrowed to the true residual, A6 2026-08-31)
 
-- WHERE: BUG-032's fix — a potentially-panicking `len`/`cap` operand in
-  a receive-bearing function fails closed (`panicFreeOperand`;
-  channels/recv-order/dead-recv-len-operand is a permanent frontend
-  refusal). Not latitude: a coverage refusal that EXISTS because
-  realizing gc's point inside the E3/E4 latitude needs the
-  linearization not built. Reach calibrated at F23 (idiomatic
-  `len(p.xs)` in any receive-bearing function; method refusals kill
-  whole-package export — the goose-parity cliff note).
+- WHERE: BUG-032's fix as amended by mini-slice A6 (t1-fidelity-fixes):
+  the refusal now fires ONLY on the composition (panicky residual
+  operand) x (panicky inline material to its left) x (ordered event
+  after it in the same sweep) — `sweepOrderedEventAfter` /
+  `residualPanicFreeOperand` / `sweepPanickyInlineBefore`, emit.go;
+  pinned red-by-design at builtins/len-vs-call-order/panicky-between.
+  Not latitude: a coverage refusal that EXISTS because realizing gc's
+  point inside the E3/E4 latitude needs the linearization not built.
+  The F23 reach (idiomatic `len(p.xs)` refused in any receive-bearing
+  function; whole-package kills through methods) is RETIRED: those
+  shapes now lower, inline or hoisted, at gc's realized order
+  (channels/recv-order/dead-recv-len-* and the e6-* pair pin it
+  green).
 
 ### E7. Hidden-dependency initialization order — (b) PINNED to go/types' conforming order, **known ≠ gc**
 

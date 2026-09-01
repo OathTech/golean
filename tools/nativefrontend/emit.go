@@ -775,10 +775,10 @@ func (e *emitter) quarantineUnlowerableGlobals() error {
 	e.quarantinedGlobals = map[*types.Var]string{}
 	e.quarantinedInits = map[ast.Expr]bool{}
 	savedPkg, savedInfo := e.pkg, e.info
-	savedFn, savedSeq, savedRecv, savedResults := e.curFuncName, e.liftSeq, e.fnHasRecv, e.curResults
+	savedFn, savedSeq, savedResults := e.curFuncName, e.liftSeq, e.curResults
 	defer func() {
 		e.pkg, e.info = savedPkg, savedInfo
-		e.curFuncName, e.liftSeq, e.fnHasRecv, e.curResults = savedFn, savedSeq, savedRecv, savedResults
+		e.curFuncName, e.liftSeq, e.curResults = savedFn, savedSeq, savedResults
 	}()
 	for _, u := range e.units {
 		e.setUnit(u)
@@ -798,7 +798,6 @@ func (e *emitter) quarantineUnlowerableGlobals() error {
 			// rename a same-named initializer local — latent, since
 			// this path never calls resultShadowScan (delta-review LOW).
 			e.curResults, e.localRenames = nil, nil
-			e.fnHasRecv = containsRecv(as)
 			localTypesMark := len(e.localTypeDefs)
 			localIfaceMark := len(e.localIfaceMethods)
 			namedStructMark := len(e.namedStructTypes)
@@ -1300,10 +1299,6 @@ func (e *emitter) synthesizePkgInit() (map[string]any, error) {
 	// localRenames rides WITH curResults — see quarantineUnlowerableGlobals
 	// above for why clearing only one of the pair is a latent alias trap.
 	e.curResults, e.localRenames = nil, nil
-	// One function body, one receive flag (the flag is FUNCTION-scoped
-	// by design — BUG-026): scan every unit's initializers before
-	// emitting any segment.
-	e.fnHasRecv = false
 	perUnit := make([][]ast.Stmt, len(e.units))
 	for i, u := range e.units {
 		stmts := make([]ast.Stmt, 0, len(u.info.InitOrder))
@@ -1311,17 +1306,13 @@ func (e *emitter) synthesizePkgInit() (map[string]any, error) {
 			// H-11: a quarantined initializer is SKIPPED — its vars'
 			// cells stay zero-seeded and poisoned (globalAddr), so
 			// $pkginit must not attempt the emission that already
-			// failed the dry-run. The recv scan below ranges over the
-			// KEPT initializers only, matching what actually emits.
+			// failed the dry-run.
 			if e.quarantinedInits[ini.Rhs] {
 				continue
 			}
 			as, ok := e.globalInitStmt[ini.Rhs]
 			if !ok {
 				return nil, unsup("package-level initializer with no declaration site")
-			}
-			if containsRecv(as) {
-				e.fnHasRecv = true
 			}
 			stmts = append(stmts, as)
 		}
@@ -1571,11 +1562,6 @@ func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
 	if err := e.resultShadowScan(d.Body); err != nil {
 		return nil, err
 	}
-	// Function-scoped receive flag (BUG-023/BUG-026): drives the len/cap
-	// hoist that keeps spec-ordered evaluations lexically ordered against
-	// hoisted receives, in every emission path of this body.
-	e.fnHasRecv = d.Body != nil && containsRecv(d.Body)
-
 	params, err := e.emitParams(sig.Params())
 	if err != nil {
 		return nil, err
@@ -2238,12 +2224,17 @@ func (e *emitter) emitStmtList(list []ast.Stmt) ([]any, error) {
 	for _, s := range list {
 		// A-normal form: emit each statement with a fresh hoist accumulator, then
 		// emit the hoisted temp bindings (from calls/allocs in its expressions)
-		// immediately before it.
+		// immediately before it. The statement is the sweep root (A6): the
+		// ordered-event predicate for len/cap/min/max scans exactly the
+		// material whose hoists share this accumulator.
 		saved := e.hoisted
+		savedRoot := e.sweepStmt
 		e.hoisted = nil
+		e.sweepStmt = s
 		w, err := e.emitStmt(s)
 		hoists := e.hoisted
 		e.hoisted = saved
+		e.sweepStmt = savedRoot
 		if err != nil {
 			return nil, err
 		}
@@ -3253,7 +3244,9 @@ func (e *emitter) emitDeclStmt(st *ast.DeclStmt) (any, error) {
 	for _, spec := range gd.Specs {
 		vs := spec.(*ast.ValueSpec)
 		saved := e.hoisted
+		savedRoot := e.sweepStmt
 		e.hoisted = nil
+		e.sweepStmt = vs
 		var node any
 		var err error
 		if isMultiValueSpec(vs) {
@@ -3295,6 +3288,7 @@ func (e *emitter) emitDeclStmt(st *ast.DeclStmt) (any, error) {
 		}
 		hoists := e.hoisted
 		e.hoisted = saved
+		e.sweepStmt = savedRoot
 		if err != nil {
 			return nil, err
 		}
@@ -3309,7 +3303,10 @@ func (e *emitter) emitIf(st *ast.IfStmt) (any, error) {
 	node := map[string]any{"stmt": "if"}
 	var initNode any
 	if st.Init != nil {
+		savedInitRoot := e.sweepStmt
+		e.sweepStmt = st.Init
 		init, err := e.emitStmt(st.Init)
+		e.sweepStmt = savedInitRoot
 		if err != nil {
 			return nil, err
 		}
@@ -3328,6 +3325,11 @@ func (e *emitter) emitIf(st *ast.IfStmt) (any, error) {
 	var condHoists []any
 	var cond any
 	var err error
+	// The condition is its own sweep scope (A6): events in the branches
+	// run under control flow, never via this accumulator, so the
+	// ordered-event scan must not see them.
+	savedRoot := e.sweepStmt
+	e.sweepStmt = st.Cond
 	if st.Init != nil {
 		saved := e.hoisted
 		e.hoisted = nil
@@ -3340,6 +3342,7 @@ func (e *emitter) emitIf(st *ast.IfStmt) (any, error) {
 		// Keep that path byte-identical.
 		cond, err = e.emitExpr(st.Cond)
 	}
+	e.sweepStmt = savedRoot
 	if err != nil {
 		return nil, err
 	}
@@ -3474,8 +3477,13 @@ func (e *emitter) emitFor(st *ast.ForStmt) (any, error) {
 		}
 	}
 	node := map[string]any{"stmt": "for"}
+	// Init/cond/post are each their own sweep scope (A6): body events run
+	// under control flow, never via these accumulators.
 	if st.Init != nil {
+		savedRoot := e.sweepStmt
+		e.sweepStmt = st.Init
 		init, err := e.emitStmt(st.Init)
+		e.sweepStmt = savedRoot
 		if err != nil {
 			return nil, err
 		}
@@ -3487,10 +3495,13 @@ func (e *emitter) emitFor(st *ast.ForStmt) (any, error) {
 		// condition INSIDE the loop body: they travel as `condPre`,
 		// spliced immediately before each test.
 		saved := e.hoisted
+		savedRoot := e.sweepStmt
 		e.hoisted = nil
+		e.sweepStmt = st.Cond
 		cond, err := e.emitExpr(st.Cond)
 		condHoists := e.hoisted
 		e.hoisted = saved
+		e.sweepStmt = savedRoot
 		if err != nil {
 			return nil, err
 		}
@@ -3504,10 +3515,13 @@ func (e *emitter) emitFor(st *ast.ForStmt) (any, error) {
 		// inside it rather than escaping to before the loop (same class as
 		// the else-if fix above).
 		saved := e.hoisted
+		savedRoot := e.sweepStmt
 		e.hoisted = nil
+		e.sweepStmt = st.Post
 		post, err := e.emitStmt(st.Post)
 		postHoists := e.hoisted
 		e.hoisted = saved
+		e.sweepStmt = savedRoot
 		if err != nil {
 			return nil, err
 		}
@@ -3552,10 +3566,13 @@ func (e *emitter) emitForPerIteration(st *ast.ForStmt, vars []*ast.Ident) (any, 
 	// under their own names in the outer scope (iteration 0's source).
 	{
 		saved := e.hoisted
+		savedRoot := e.sweepStmt
 		e.hoisted = nil
+		e.sweepStmt = st.Init
 		initW, err := e.emitStmt(st.Init)
 		hoists := e.hoisted
 		e.hoisted = saved
+		e.sweepStmt = savedRoot
 		if err != nil {
 			return nil, err
 		}
@@ -3619,10 +3636,13 @@ func (e *emitter) emitForPerIteration(st *ast.ForStmt, vars []*ast.Ident) (any, 
 	}
 	if st.Post != nil {
 		saved := e.hoisted
+		savedRoot := e.sweepStmt
 		e.hoisted = nil
+		e.sweepStmt = st.Post
 		post, err := e.emitStmt(st.Post)
 		postHoists := e.hoisted
 		e.hoisted = saved
+		e.sweepStmt = savedRoot
 		if err != nil {
 			return nil, err
 		}
@@ -3640,10 +3660,13 @@ func (e *emitter) emitForPerIteration(st *ast.ForStmt, vars []*ast.Ident) (any, 
 	}
 	if st.Cond != nil {
 		saved := e.hoisted
+		savedRoot := e.sweepStmt
 		e.hoisted = nil
+		e.sweepStmt = st.Cond
 		cond, err := e.emitExpr(st.Cond)
 		condHoists := e.hoisted
 		e.hoisted = saved
+		e.sweepStmt = savedRoot
 		if err != nil {
 			return nil, err
 		}
@@ -3784,7 +3807,10 @@ func (e *emitter) emitRange(rs *ast.RangeStmt) (any, error) {
 		if !ok {
 			return nil, unsup("range over %s", e.goTypeOf(rs.X))
 		}
+		savedRoot := e.sweepStmt
+		e.sweepStmt = rs.X
 		pw, err := e.emitExpr(rs.X)
+		e.sweepStmt = savedRoot
 		if err != nil {
 			return nil, err
 		}
@@ -3828,7 +3854,10 @@ func (e *emitter) emitRange(rs *ast.RangeStmt) (any, error) {
 			kindFields["len"] = arr.Len()
 		}
 	} else {
+		savedRoot := e.sweepStmt
+		e.sweepStmt = rs.X
 		w, err := e.emitExpr(rs.X)
+		e.sweepStmt = savedRoot
 		if err != nil {
 			return nil, err
 		}
@@ -4129,10 +4158,13 @@ func (e *emitter) emitTypeSwitch(st *ast.TypeSwitchStmt) (any, error) {
 		return nil, err
 	}
 	saved := e.hoisted
+	savedRoot := e.sweepStmt
 	e.hoisted = nil
+	e.sweepStmt = guardExpr
 	guardW, err := e.emitExpr(guardExpr)
 	hoists := e.hoisted
 	e.hoisted = saved
+	e.sweepStmt = savedRoot
 	if err != nil {
 		return nil, err
 	}
@@ -4289,10 +4321,13 @@ func (e *emitter) emitSwitch(st *ast.SwitchStmt) (any, error) {
 	var tagTy any
 	if st.Tag != nil {
 		saved := e.hoisted
+		savedRoot := e.sweepStmt
 		e.hoisted = nil
+		e.sweepStmt = st.Tag
 		tagExpr, err := e.emitExpr(st.Tag)
 		hoists := e.hoisted
 		e.hoisted = saved
+		e.sweepStmt = savedRoot
 		if err != nil {
 			return nil, err
 		}
@@ -4375,10 +4410,13 @@ func (e *emitter) emitSwitch(st *ast.SwitchStmt) (any, error) {
 	var chain any
 	for k := len(cases) - 1; k >= 0; k-- {
 		saved := e.hoisted
+		savedRoot := e.sweepStmt
 		e.hoisted = nil
+		e.sweepStmt = cases[k].expr
 		cw, err := e.emitExpr(cases[k].expr)
 		hoists := e.hoisted
 		e.hoisted = saved
+		e.sweepStmt = savedRoot
 		if err != nil {
 			return nil, err
 		}
@@ -6379,8 +6417,6 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 	// The restriction is restored on the way out, so the ENCLOSING
 	// expression keeps its refusal exactly as before.
 	savedCapture, savedHoisted, savedName := e.captureParam, e.hoisted, e.curFuncName
-	savedFnRecv := e.fnHasRecv
-	e.fnHasRecv = containsRecv(lit.Body)
 	savedResults := e.curResults
 	savedRenames := e.localRenames
 	savedBranch, savedGoto := e.branchLabels, e.gotoLabels
@@ -6392,7 +6428,6 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 	// its result slots — resultshadow.go); restored with curResults.
 	if err := e.resultShadowScan(lit.Body); err != nil {
 		e.captureParam, e.hoisted, e.curFuncName = savedCapture, savedHoisted, savedName
-		e.fnHasRecv = savedFnRecv
 		e.curResults, e.localRenames = savedResults, savedRenames
 		e.hoistForbidden, e.scHoistOK = savedForbidden, savedSCHoistOK
 		return nil, err
@@ -6408,7 +6443,6 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 		body, berr = e.emitBlock(lit.Body)
 	}
 	e.captureParam, e.hoisted, e.curFuncName = savedCapture, savedHoisted, savedName
-	e.fnHasRecv = savedFnRecv
 	e.curResults = savedResults
 	e.localRenames = savedRenames
 	e.branchLabels, e.gotoLabels = savedBranch, savedGoto
@@ -6599,8 +6633,8 @@ func (e *emitter) emitBinary(b *ast.BinaryExpr) (any, error) {
 		return nil, err
 	}
 	// (The binary-position left-operand pre-bind for receives was replaced
-	// by the ONE-mechanism len/cap hoist under the function-scoped
-	// `fnHasRecv` flag — BUG-023/BUG-026: every operand AND
+	// by the ONE-mechanism len/cap hoist — BUG-023/BUG-026, since A6
+	// sweep-scoped via sweepOrderedEventAfter: every operand AND
 	// statement-emission position, not just binary operands.)
 	// The RHS of a short-circuit operator is evaluated CONDITIONALLY (spec,
 	// "Logical operators": p && q is "if p then q else false"; p || q is
@@ -6625,14 +6659,17 @@ func (e *emitter) emitBinary(b *ast.BinaryExpr) (any, error) {
 		savedHoisted := e.hoisted
 		savedForbidden := e.hoistForbidden
 		savedOK := e.scHoistOK
+		savedRoot := e.sweepStmt
 		e.hoisted = nil
 		e.hoistForbidden = "short-circuit operand"
 		e.scHoistOK = true
+		e.sweepStmt = b.Y
 		y, err = e.emitExpr(b.Y)
 		rhsHoists := e.hoisted
 		e.hoisted = savedHoisted
 		e.hoistForbidden = savedForbidden
 		e.scHoistOK = savedOK
+		e.sweepStmt = savedRoot
 		if err != nil {
 			return nil, err
 		}
@@ -7665,26 +7702,36 @@ func (e *emitter) emitBuiltin(c *ast.CallExpr, name string) (any, bool, error) {
 			tag = "builtin-cap"
 		}
 		node := any(map[string]any{"expr": tag, "operand": operand, "operandType": opTy})
-		// A function containing a receive (BUG-023/BUG-026): len/cap are
-		// spec-ordered calls but are emitted inline, while the receive
-		// hoists to a statement — hoisting len/cap too keeps the lexical
-		// left-to-right order (hoists append in emission order). Under
-		// hoistForbidden the sweep cannot contain a receive (the receive
-		// itself refuses there), so inline stays correct.
+		// The A6 ordered-event predicate (BUG-062, retiring BUG-032's
+		// function-scoped over-refusal): len/cap are spec-ordered calls
+		// (spec#Order_of_evaluation + spec#Built-in_functions "called
+		// like any other function") but are emitted inline, while calls
+		// and receives hoist to statements. Whenever an ordered event
+		// lexically FOLLOWS this builtin in the SAME SWEEP, the inline
+		// form would evaluate after that event's hoisted statement —
+		// `len(ch) + fill(ch)` reading the post-call length, a
+		// spec-FORCED silent wrong answer — so the builtin hoists too,
+		// at its emission position, which is its lexical position.
+		// With no following event, inline realizes gc's left-to-right
+		// point exactly (events in OTHER sweeps — other statements, a
+		// loop body vs its condition — execute under control flow and
+		// cannot reorder against this sweep; the receive-anywhere-in-
+		// the-function trigger this replaces refused idiomatic
+		// `len(p.xs)` for no order reason at all — BUG-032/F23).
 		//
-		// The hoist is restricted to syntactically PANIC-FREE operands
-		// (BUG-032): hoisting evaluates the operand ahead of the whole
-		// statement, dragging its panic ahead of spec-unordered inline
-		// panics to its left (`iv.(int) + len(b[j])` must realize gc's
-		// left-to-right interface-conversion panic, dead receive or no).
-		// A potentially-panicking operand in a receive-bearing function
-		// FAILS CLOSED rather than picking between the two misorders
-		// (inline loses the len-vs-receive order, hoisted loses the
-		// operand-panic order) — pinned by
-		// channels/recv-order/dead-recv-len-operand.
-		if e.fnHasRecv && e.hoistForbidden == "" {
-			if !e.panicFreeOperand(c.Args[0]) {
-				return nil, false, unsup("%s of a potentially-panicking operand in a receive-bearing function (hoisting would reorder its panic — BUG-032)", name)
+		// The hoist evaluates the operand ahead of the sweep's REMAINING
+		// INLINE material. That is order-transparent unless BOTH (a) the
+		// residual operand (calls hoist out of it first) can panic AND
+		// (b) potentially-panicking inline material sits lexically LEFT
+		// of the builtin — then hoisting would drag the operand's panic
+		// ahead of a spec-UNORDERED panic gc realizes first
+		// (`iv.(int) + len(b[j]) + f()` must panic with gc's interface-
+		// conversion message). Realizing gc's point there needs the
+		// full-statement linearization deliberately not built (BUG-032);
+		// FAIL CLOSED naming the shape.
+		if (e.hoistForbidden == "" || e.scHoistOK) && e.sweepOrderedEventAfter(c.End()) {
+			if !e.residualPanicFreeOperand(c.Args[0]) && e.sweepPanickyInlineBefore(c.Pos()) {
+				return nil, false, unsup("%s of a potentially-panicking operand between a potentially-panicking operand to its left and a later ordered call/receive in the same statement (hoisting %s would reorder the panics; realizing gc's left-to-right point needs full-statement linearization — BUG-032/A6)", name, name)
 			}
 			hoisted, err := e.hoist(node, e.goTypeOf(c))
 			if err != nil {
@@ -7764,7 +7811,28 @@ func (e *emitter) emitBuiltin(c *ast.CallExpr, name string) (any, bool, error) {
 			}
 			args = append(args, w)
 		}
-		return map[string]any{"expr": name, "args": args}, false, nil
+		node := any(map[string]any{"expr": name, "args": args})
+		// min/max are ORDERED events — spec#Built-in_functions: "called
+		// like any other function" (BUG-062 widened, grossmith F-1):
+		// when a later ordered event in the same sweep will hoist, the
+		// inline form would run AFTER it — `min(n,100) + bump()` read
+		// the post-bump n (silent wrong value), and `min(b, s[i]),
+		// wit(7,9)` ran wit before s[i]'s panic (wrong panic order).
+		// Hoisting at the emission position restores the lexical order,
+		// exactly as any user call's hoist does. With no later event,
+		// inline realizes gc's point exactly. A hoisted min/max whose
+		// argument panics joins the recorded frontend-ANF call-first
+		// family (latitude E12/E13) on the same terms as any other
+		// call's arguments — no refusal, because min/max ARE calls and
+		// this IS the calls' recorded realization.
+		if (e.hoistForbidden == "" || e.scHoistOK) && e.sweepOrderedEventAfter(c.End()) {
+			hoisted, err := e.hoist(node, e.goTypeOf(c))
+			if err != nil {
+				return nil, false, err
+			}
+			return hoisted, false, nil
+		}
+		return node, false, nil
 	case "recover":
 		if len(c.Args) != 0 {
 			return nil, false, unsup("recover with %d arguments", len(c.Args))
@@ -8497,40 +8565,18 @@ func (e *emitter) emitMake(c *ast.CallExpr) (any, bool, error) {
 
 // ---- channels (channels arc slice 1) ----
 
-// containsRecv reports whether a node syntactically contains a channel
-// receive, WITHOUT descending into func literals (their bodies evaluate
-// at call time and scan their own bodies at emitFuncLit). Spec §Order of
-// evaluation: function calls AND receive operations are ordered
-// lexically left-to-right — a receive hoists to a statement (it can
-// block), so any spec-ordered evaluation LEFT of it that is not itself
-// hoisted (len/cap) must hoist too, which is what the function-scoped
-// `fnHasRecv` flag drives (BUG-023/BUG-026).
-func containsRecv(x ast.Node) bool {
-	found := false
-	ast.Inspect(x, func(n ast.Node) bool {
-		if found {
-			return false
-		}
-		switch n := n.(type) {
-		case *ast.FuncLit:
-			return false
-		case *ast.UnaryExpr:
-			if n.Op == token.ARROW {
-				found = true
-				return false
-			}
-		}
-		return true
-	})
-	return found
-}
+// (containsRecv, the function-scoped receive scan of the fnHasRecv era
+// — BUG-023/BUG-026 — was retired by the A6 sweep-scoped ordered-event
+// predicate above: sweepOrderedEventAfter covers receives AND calls,
+// scoped to the sweep whose hoists can actually reorder.)
 
 // panicFreeOperand reports whether evaluating x can NEVER panic —
 // conservatively syntactic: identifiers, basic literals, parens, and
 // selector chains free of pointer indirection (an implicit nil deref
-// can panic). Used to keep the fnHasRecv len/cap hoist
-// order-transparent (BUG-032): only a panic-free operand may move ahead
-// of the statement without reordering a spec-unordered panic.
+// can panic). Used (via residualPanicFreeOperand) to keep the A6
+// len/cap hoist order-transparent (BUG-032): only a panic-free operand
+// may move ahead of panicky inline material to its left without
+// reordering a spec-unordered panic.
 func (e *emitter) panicFreeOperand(x ast.Expr) bool {
 	switch v := ast.Unparen(x).(type) {
 	case *ast.Ident:
@@ -8557,6 +8603,196 @@ func (e *emitter) panicFreeOperand(x ast.Expr) bool {
 		return e.panicFreeOperand(v.X)
 	}
 	return false
+}
+
+// sweepOrderedEventAfter reports whether the current sweep (e.sweepStmt)
+// contains a spec-ordered runtime event — a channel receive, or a call
+// that the ANF lowering hoists to a statement — beginning at or after
+// pos. This is the A6 hoist predicate for the inline builtins
+// (len/cap/min/max, emitBuiltin): exactly when such an event follows,
+// the inline form would evaluate AFTER the event's hoisted statement,
+// breaking spec#Order_of_evaluation's lexical left-to-right order for
+// calls and receives (BUG-062). Events strictly inside [c.Pos, pos)
+// — i.e. inside the builtin's own operand — hoist during the operand's
+// emission, before the builtin's own hoist, so they never require it.
+//
+// Event set: receives, and CallExprs that are neither conversions nor
+// constant-folded nor the inline builtins themselves (a later len/cap/
+// min/max hoists only if a real event follows IT — which also follows
+// pos — so excluding them loses nothing). Func-literal bodies run only
+// when called and are skipped. A nil sweep root answers TRUE — the
+// fail-closed direction: an unnecessary hoist of a panic-free operand
+// is order-transparent, and a panicky one surfaces as a visible
+// refusal, never a silent reorder.
+func (e *emitter) sweepOrderedEventAfter(pos token.Pos) bool {
+	root := e.sweepStmt
+	if root == nil {
+		return true
+	}
+	found := false
+	ast.Inspect(root, func(n ast.Node) bool {
+		if found || n == nil {
+			return false
+		}
+		switch nn := n.(type) {
+		case *ast.FuncLit:
+			return false
+		case *ast.UnaryExpr:
+			if nn.Op == token.ARROW && nn.Pos() >= pos {
+				found = true
+				return false
+			}
+		case *ast.CallExpr:
+			if nn.Pos() >= pos && e.runtimeOrderedCall(nn) {
+				found = true
+				return false
+			}
+		}
+		return true
+	})
+	return found
+}
+
+// runtimeOrderedCall reports whether c is an ordered runtime event for
+// sweepOrderedEventAfter: a call that actually runs at execution time
+// and hoists to a statement. Conversions and constant-folded calls are
+// not; the inline builtins len/cap/min/max are excluded (see the
+// predicate's doc); every other call — user functions, methods,
+// function values, the effectful builtins — answers true.
+func (e *emitter) runtimeOrderedCall(c *ast.CallExpr) bool {
+	if tv, ok := e.info.Types[c]; ok && tv.Value != nil {
+		return false // constant-folded: no runtime evaluation
+	}
+	if tv, ok := e.info.Types[c.Fun]; ok && tv.IsType() {
+		return false // conversion; a call in its argument is scanned on its own
+	}
+	if id, ok := ast.Unparen(c.Fun).(*ast.Ident); ok {
+		if _, isBuiltin := e.info.Uses[id].(*types.Builtin); isBuiltin {
+			switch id.Name {
+			case "len", "cap", "min", "max":
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// residualPanicFreeOperand reports whether the RESIDUAL of operand x —
+// what remains inline after its emission hoisted the real calls out —
+// cannot panic. Same conservative-syntactic ground as panicFreeOperand,
+// plus one arm: a non-conversion, non-constant call leaves only its
+// bound temp in the residual (its own panic fires at its hoisted
+// position, the correct lexical one), so it is residual-panic-free
+// even though the source syntax is a call — retiring the F23
+// `len(f())` over-refusal. Conversions stay inline and can panic
+// (slice-to-array), so they keep the conservative answer.
+func (e *emitter) residualPanicFreeOperand(x ast.Expr) bool {
+	if v, ok := ast.Unparen(x).(*ast.CallExpr); ok {
+		if tv, ok := e.info.Types[v]; ok && tv.Value != nil {
+			return true // constant-folded: no runtime evaluation at all
+		}
+		if tv, ok := e.info.Types[v.Fun]; ok && tv.IsType() {
+			return false // conversion: inline, possibly panicking
+		}
+		return true
+	}
+	return e.panicFreeOperand(x)
+}
+
+// sweepPanickyInlineBefore reports whether the current sweep contains
+// potentially-panicking INLINE material strictly before pos: syntax
+// whose evaluation stays in the residual expression (not hoisted) and
+// can panic, so hoisting a later builtin's panicky operand ahead of it
+// would reorder two spec-UNORDERED panics away from gc's realized
+// left-to-right point (the BUG-032 shape, `iv.(int) + len(b[j]) + f()`).
+// Real calls and receives are pruned — their evaluation (arguments
+// included) happens at their own hoisted statements, which precede any
+// later builtin's hoist in emission order — as are func-literal bodies.
+// The panicky kinds mirror initializerEffectIsolated's census: indexing,
+// slicing, dereference, type assertion, division/remainder, interface
+// comparison, implicitly-indirecting selection, and slice-to-array(-
+// pointer) conversions. A nil sweep root answers TRUE (fail closed:
+// combined with a panicky operand this refuses visibly rather than
+// reordering silently).
+func (e *emitter) sweepPanickyInlineBefore(pos token.Pos) bool {
+	root := e.sweepStmt
+	if root == nil {
+		return true
+	}
+	found := false
+	ast.Inspect(root, func(n ast.Node) bool {
+		if found || n == nil {
+			return false
+		}
+		if n.Pos() >= pos {
+			return false // at/after the builtin: not "to its left"
+		}
+		switch nn := n.(type) {
+		case *ast.FuncLit:
+			return false
+		case *ast.UnaryExpr:
+			if nn.Op == token.ARROW {
+				return false // receive: hoisted at its own position
+			}
+		case *ast.CallExpr:
+			if e.runtimeOrderedCall(nn) {
+				return false // real call: hoisted, args evaluate there
+			}
+			if tv, ok := e.info.Types[nn]; ok && tv.Value != nil {
+				return false // constant-folded subtree
+			}
+			if tv, ok := e.info.Types[nn.Fun]; ok && tv.IsType() && nn.End() <= pos {
+				// Conversion: only the slice-to-array(-pointer) class
+				// panics (spec#Conversions_from_slice_to_array...).
+				if t := e.goTypeOf(nn); t != nil {
+					switch u := e.applySubst(t).Underlying().(type) {
+					case *types.Array:
+						found = true
+					case *types.Pointer:
+						if _, arr := u.Elem().Underlying().(*types.Array); arr {
+							found = true
+						}
+					}
+				} else {
+					found = true
+				}
+				return !found
+			}
+		case *ast.IndexExpr:
+			if nn.End() <= pos {
+				// Generic instantiation is type-level, not an index read.
+				if tv, ok := e.info.Types[nn]; !ok || tv.Value == nil {
+					if _, isTypeArg := e.info.Types[nn.Index]; !isTypeArg || !e.info.Types[nn.Index].IsType() {
+						found = true
+						return false
+					}
+				}
+			}
+		case *ast.SliceExpr, *ast.StarExpr, *ast.TypeAssertExpr:
+			if n.End() <= pos {
+				found = true
+				return false
+			}
+		case *ast.BinaryExpr:
+			if nn.End() <= pos && (nn.Op == token.QUO || nn.Op == token.REM) {
+				found = true
+				return false
+			}
+			if nn.End() <= pos && (nn.Op == token.EQL || nn.Op == token.NEQ) {
+				if t := e.goTypeOf(nn.X); t == nil || types.IsInterface(t.Underlying()) {
+					found = true // interface comparison can panic (uncomparable)
+					return false
+				}
+			}
+		case *ast.SelectorExpr:
+			if nn.End() <= pos && !e.panicFreeOperand(nn) {
+				found = true
+				return false
+			}
+		}
+		return true
+	})
+	return found
 }
 
 // chanElem resolves an expression's channel element type (substitution-
@@ -8705,8 +8941,9 @@ func (e *emitter) emitChanRecvAssign(st *ast.AssignStmt, ux *ast.UnaryExpr, defi
 				// temp; the map-assign stores it AFTER the communication.
 				// Base and key are emitted INLINE into that post-receive
 				// store (BUG-028): calls in them auto-hoist pre-receive
-				// (A-normal form) and len(ch) keys hoist via the
-				// fnHasRecv flag — both spec-ordered, both pre-receive —
+				// (A-normal form) and len(ch) keys hoist via the A6
+				// ordered-event predicate — both spec-ordered, both
+				// pre-receive —
 				// while a panicking NON-call operand (spec-unordered
 				// against the receive) fires post-receive, matching gc's
 				// receive-first realization like the sibling
@@ -8811,10 +9048,13 @@ func (e *emitter) machineSelectTargets(lhs []ast.Expr, elemGo types.Type) ([]any
 					return nil, false, nil
 				}
 				saved := e.hoisted
+				savedRoot := e.sweepStmt
 				e.hoisted = nil
+				e.sweepStmt = lv
 				mw, err := e.emitMapTargetWire(ix, m)
 				hoists = e.hoisted
 				e.hoisted = saved
+				e.sweepStmt = savedRoot
 				if err != nil {
 					return nil, false, err
 				}
@@ -8830,10 +9070,13 @@ func (e *emitter) machineSelectTargets(lhs []ast.Expr, elemGo types.Type) ([]any
 			return nil, false, nil
 		}
 		saved := e.hoisted
+		savedRoot := e.sweepStmt
 		e.hoisted = nil
+		e.sweepStmt = lv
 		w, err := e.emitAssignTarget(lv, false)
 		hoists = e.hoisted
 		e.hoisted = saved
+		e.sweepStmt = savedRoot
 		if err != nil {
 			return nil, false, err
 		}
@@ -8897,8 +9140,11 @@ func (e *emitter) selectRecvClause(ux *ast.UnaryExpr, lhs []ast.Expr, define boo
 			// The user assignment's own operand hoists (an effectful LHS
 			// index, an interface boxing) must stay INSIDE the clause body.
 			saved := e.hoisted
+			savedRoot := e.sweepStmt
 			e.hoisted = nil
+			e.sweepStmt = lhs[0]
 			w, err := e.emitAssignTarget(lhs[0], define)
+			e.sweepStmt = savedRoot
 			if err != nil {
 				e.hoisted = saved
 				return nil, err
@@ -8920,8 +9166,11 @@ func (e *emitter) selectRecvClause(ux *ast.UnaryExpr, lhs []ast.Expr, define boo
 			targets = append(targets, map[string]any{"target": "declare", "id": okName, "type": boolTy})
 			if id, ok := lhs[1].(*ast.Ident); !ok || id.Name != "_" {
 				saved := e.hoisted
+				savedRoot := e.sweepStmt
 				e.hoisted = nil
+				e.sweepStmt = lhs[1]
 				w, err := e.emitAssignTarget(lhs[1], define)
+				e.sweepStmt = savedRoot
 				if err != nil {
 					e.hoisted = saved
 					return nil, err

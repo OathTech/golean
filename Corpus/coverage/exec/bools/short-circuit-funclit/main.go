@@ -125,8 +125,9 @@ func outsideThenSC(n, k uint64) uint64 {
 // not only stop over-refusing `make`/`append`. It also restores the
 // literal body to the SAME emitter configuration it has outside a
 // short-circuit — and one of the things that configuration controls is
-// the E6 / BUG-032 gate (`docs/2026-08-11_latitude-inventory.md` §E6,
-// emit.go:6355 `if e.fnHasRecv && e.hoistForbidden == ""`).
+// the E6 / BUG-032 gate (`docs/2026-08-11_latitude-inventory.md` §E6;
+// since A6 2026-08-31 the sweep-scoped predicate in emitBuiltin —
+// sweepOrderedEventAfter — replaced the era's fnHasRecv form).
 //
 // Before the fix that gate could not fire inside a literal-in-SC,
 // because hoistForbidden was non-empty there. So a receive-bearing
@@ -136,9 +137,12 @@ func outsideThenSC(n, k uint64) uint64 {
 // in a short-circuit RHS was a way to walk around a fail-closed guard.
 //
 // The invariant these rows pin is the intended disposition: THE SAME
-// LITERAL BEHAVES IDENTICALLY IN AND OUT OF A SHORT-CIRCUIT. The
-// `e6-*` pair must refuse identically (both frontend-export, same
-// verbatim BUG-032 reason); the `admit-*` rows must run identically.
+// LITERAL BEHAVES IDENTICALLY IN AND OUT OF A SHORT-CIRCUIT. Since the
+// A6 sweep-scoped predicate (2026-08-31, BUG-032 amendment) the `e6-*`
+// pair no longer refuses — the statement has no ordered event of its
+// own, so len stays inline and both rows are GREEN with gc's
+// left-to-right interface-conversion panic, still identical in and out
+// of the short-circuit; the `admit-*` rows must run identically.
 
 // e6RecvLenInSC: receive-bearing literal (the receive is in a dead
 // branch, exactly the BUG-032 shape) whose live path evaluates
@@ -163,8 +167,8 @@ func e6RecvLenInSC(n, j uint64) uint64 {
 }
 
 // e6RecvLenOutside: the CONTROL — byte-identical literal body, called
-// from a plain statement. This has always refused; the row exists so
-// the pair can be compared, not so the control is news.
+// from a plain statement. Refused from BUG-032 until A6; the row
+// exists so the pair can be compared (identical in and out of the SC).
 func e6RecvLenOutside(j uint64) uint64 {
 	var iv interface{} = "s"
 	b := make([][]uint64, 0)

@@ -7,17 +7,16 @@ package main
 // len-vs-call-order family: spec#Order_of_evaluation orders function
 // calls left-to-right, and spec#Built-in_functions says built-ins "are
 // called like any other function" — so min/max are ORDERED events and
-// their operands evaluate before a lexically later call runs. The
-// frontend's ordered-event predicate omits the value-returning
-// built-ins (BUG-062's widened statement), so the machine runs the
+// their operands evaluate before a lexically later call runs. Pre-A6
+// the frontend's ordered-event predicate omitted the value-returning
+// built-ins (BUG-062's widened statement) and the machine ran the
 // later call first.
 //
-// Colors as pinned (flip green at mini-slice A6, whose re-scope must
-// enumerate built-in call sites — findings-2 §9 F-1):
-//   min-value, max-value, min-arg-panic  — RED (differential)
-//   append-arg-panic, call-in-builtin-arg — GREEN controls: append IS
-//     an ordered event and calls INSIDE a built-in's args already
-//     hoist in lexical order. A6 must not regress either.
+// ALL FIVE GREEN since mini-slice A6 (2026-08-31, t1-fidelity-fixes):
+// min/max hoist exactly when an ordered event follows in the same
+// sweep (sweepOrderedEventAfter, emit.go), like any other call;
+// append-arg-panic and call-in-builtin-arg pin that append's standing
+// ordering and arg-list call hoists did not regress.
 
 var w int
 

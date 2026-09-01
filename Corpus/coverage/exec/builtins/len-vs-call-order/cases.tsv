@@ -1,11 +1,20 @@
 # id	subject	args	expected_status	expected_reason	features
-# RED PINS (2 of 3): the len-vs-CALL forced-point divergence found by
-# the slice-5 triage (§3.4) — spec#Order_of_evaluation + the built-ins-
-# are-called-like-any-other-function sentence force len BEFORE the
-# call; the frontend's ANF call hoist runs the call first in a
-# receive-free function. Flips green at mini-slice A6 (ordered-event
-# predicate). recv-bearing is the accident-green control and must stay
-# green through A6.
+# GREEN since mini-slice A6 (2026-08-31, t1-fidelity-fixes; was 2 RED
+# pins from the slice-5 triage §3.4): spec#Order_of_evaluation + the
+# built-ins-are-called-like-any-other-function sentence force len
+# BEFORE the call; the A6 ordered-event predicate hoists len exactly
+# when a call/receive follows it in the same sweep. recv-bearing pins
+# the receive-bearing shape; short-circuit pins the same order inside
+# a short-circuit RHS; panicky-before-call pins the hoist WITH a
+# panicky operand (nothing panicky to its left — gc's exact order).
+# panicky-between is the surviving BUG-032/A6 refusal, RED
+# frontend-export BY DESIGN: panicky operand between a spec-unordered
+# panicky operand on the left and an ordered call after — hoisting
+# would reorder the panics; refusing keeps it visible.
 chan	lenVsCallChan	-	ok	-	channels,len,evaluation_order,calls
 slice	lenVsCallSlice	-	ok	-	slices,len,evaluation_order,calls,append
 recv-bearing	lenVsCallRecvBearing	-	ok	-	channels,len,evaluation_order,calls
+short-circuit	lenVsCallShortCircuit	1	ok	-	channels,len,evaluation_order,calls,bools
+short-circuit-skipped	lenVsCallShortCircuit	0	ok	-	channels,len,evaluation_order,calls,bools
+panicky-before-call	lenPanickyBeforeCall	3	ok	-	slices,len,evaluation_order,calls,panic,recover,indexing
+panicky-between	lenPanickyBetween	2	ok	-	slices,len,evaluation_order,calls,panic,recover,indexing,interfaces,type_assertions

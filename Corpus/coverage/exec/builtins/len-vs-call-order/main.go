@@ -1,7 +1,8 @@
 package main
 
 // The len-vs-CALL forced-point divergence (bug-fix arc triage §3.4;
-// slice 6 lands the owed guardrail). spec#Order_of_evaluation orders
+// slice 6 landed the guardrail, mini-slice A6 the fix — 2026-08-31,
+// t1-fidelity-fixes). spec#Order_of_evaluation orders
 // "all function calls, method calls, receive operations, and binary
 // logical operations" left-to-right when evaluating an expression's
 // operands, and spec#Built-in_functions says built-ins "are called
@@ -9,18 +10,23 @@ package main
 // is read BEFORE the call runs. gc agrees (go1.26.5 probe,
 // artifacts/probe/slice6a + the slice-5 triage probe): go run → 1.
 //
-// The frontend hoists CALLS out of expressions (ANF) but leaves len
-// inline in a receive-free function (the fnHasRecv hoist is the only
-// thing that ever hoists len), so the machine evaluates fill first and
-// reads the post-call len — BUG-023's exact class on the len-vs-CALL
-// axis. The two bare rows are pinned RED (differential) until the A6
-// mini-slice lands with the corrected predicate ("the statement's
-// sweep contains an ORDERED EVENT — receive OR call", triage §3.4).
+// A6 (BUG-062 fix): the frontend hoists len/cap exactly when an
+// ordered event — receive OR call — lexically FOLLOWS it in the same
+// sweep (sweepOrderedEventAfter, emit.go), so the chan/slice rows are
+// GREEN, in every function shape and inside short-circuit RHS
+// normalization too (the short-circuit row). recv-bearing pins the
+// receive-bearing shape green BY DESIGN now (pre-A6 it was green by
+// accident of the fnHasRecv hoist).
 //
-// The recv-bearing row is the ACCIDENT-GREEN control: a function
-// containing a live receive hoists len ahead of the call hoist today,
-// so it gets len-vs-call RIGHT by accident. Pinning it green means A6
-// cannot silently extend the divergence to receive-bearing functions.
+// panicky-before-call pins the A6 hoist with a PANICKY operand and
+// nothing panicky to its left: hoisting realizes gc's exact order
+// (b[j] panics before the call runs) — no refusal owed. The refusal
+// SURVIVOR is panicky-between (RED, frontend-export, BY DESIGN): a
+// panicky len operand with a spec-UNORDERED panicky operand to its
+// LEFT and an ordered event after — hoisting would reorder the two
+// panics away from gc's left-to-right point, and realizing that point
+// needs the full-statement linearization deliberately not built
+// (BUG-032's recorded residual), so it fails closed naming the shape.
 
 func fill(ch chan int) int {
 	ch <- 2
@@ -53,8 +59,58 @@ func lenVsCallRecvBearing() int {
 	return v*10 + <-sink    // 1*10 + 5
 }
 
+// A6 guardrail: the same len-vs-call order INSIDE a short-circuit RHS
+// (calls hoist into the conditional-normalization accumulator there —
+// E3 — and pre-A6 len stayed inline, an unpinned silent wrong order).
+// gc: len reads 1 pre-fill, so the RHS is true → v=100; final len is 3.
+func lenVsCallShortCircuit(k int) int {
+	ch := make(chan int, 4)
+	ch <- 1
+	v := 0
+	if k > 0 && len(ch)+fill(ch) == 1 {
+		v = 100
+	}
+	return v*10 + len(ch) // gc: k=1 → 1003, k=0 → 1 (RHS skipped)
+}
+
+var w2 int
+
+func wit2(x int) int { w2 = w2*31 + 7; return x }
+
+// A6 guardrail: panicky operand, NOTHING panicky to its left — the
+// hoist realizes gc's exact order (b[j]'s index panic fires before
+// wit2 runs; w2 stays 0). Pre-A6 this shape was silently wrong in a
+// receive-free function (wit2 ran first) and REFUSED in a
+// receive-bearing one (BUG-032's function-scoped predicate).
+func lenPanickyBeforeCall(j int) (r int) {
+	w2 = 0
+	b := make([][]int, 0)
+	defer func() { recover(); r = w2 }()
+	return len(b[j]) + wit2(5) // gc: 0 (panic precedes the call)
+}
+
+var w3 int
+
+func wit3(x int) int { w3 = w3*31 + 3; return x }
+
+// The refusal survivor (RED frontend-export BY DESIGN — BUG-032/A6):
+// panicky len operand BETWEEN a spec-unordered panicky operand on its
+// left (the type assertion) and an ordered call after it. gc realizes
+// left-to-right (interface-conversion panic, w3=0, probe
+// .tmp-era t1 fix round); the machine refuses rather than reorder.
+// NOT called from main: the frontend quarantines the decl.
+func lenPanickyBetween(j int) (r int) {
+	w3 = 0
+	var iv interface{} = "s"
+	b := make([][]int, 0)
+	defer func() { recover(); r = w3 }()
+	return iv.(int) + len(b[j]) + wit3(5) // gc: 0 (assertion panics first)
+}
+
 func main() {
 	lenVsCallChan()
 	lenVsCallSlice()
 	lenVsCallRecvBearing()
+	lenVsCallShortCircuit(1)
+	lenPanickyBeforeCall(3)
 }

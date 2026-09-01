@@ -74,23 +74,28 @@ type emitter struct {
 	// Whether the `defer recover()` no-op function has been registered.
 	deferNoopEmitted bool
 
-	// Whether the function BODY currently being emitted contains a
-	// channel receive anywhere (nested func literals excluded — each
-	// scans its own body; set at emitFuncDecl/emitFuncLit/
-	// synthesizePkgInit — BUG-023/BUG-026): a receive hoists to a
-	// statement, so every spec-ordered evaluation that is NOT itself
-	// hoisted — `len`/`cap`, the only such builtins — must hoist too to
-	// keep the spec's lexical left-to-right order for calls and receives
-	// (§Order of evaluation). The flag is FUNCTION-scoped on purpose
-	// (BUG-026: a per-statement sweep missed for-init/for-cond/else-if/
-	// switch-case emission paths), and new statement-emission paths
-	// cannot rot it. Over-hoisting the BUILTIN is order-transparent only
-	// while its OPERAND cannot panic: the hoist drags the operand's
-	// evaluation — and its panic — ahead of spec-unordered inline panics
-	// to its left (BUG-032), so emitBuiltin hoists only syntactically
-	// panic-free operands (panicFreeOperand) and fails closed on the
-	// rest in receive-bearing functions.
-	fnHasRecv bool
+	// sweepStmt is the AST node whose emission owns the CURRENT hoist
+	// accumulator (the "sweep"): the statement in emitStmtList, or the
+	// sub-node at every site that opens a fresh accumulator (if/for
+	// conditions and init/post, switch tags and case values, range
+	// operands, short-circuit RHS, per-spec var initializers,
+	// assignment-target probes). It is the SCAN SCOPE for the A6
+	// ordered-event predicate (emitBuiltin, sweepOrderedEventAfter):
+	// spec#Order_of_evaluation orders "all function calls, method
+	// calls, receive operations" lexically left-to-right, and
+	// spec#Built-in_functions says built-ins "are called like any
+	// other function" — so a len/cap/min/max must hoist exactly when
+	// an ordered event (receive or call) lexically FOLLOWS it in the
+	// same sweep: those events hoist, and an inline builtin would
+	// otherwise evaluate after them, reading state the later event
+	// already changed (BUG-062: a spec-FORCED silent wrong value/
+	// panic order). Events in a DIFFERENT sweep (a loop body vs its
+	// condition) cannot reorder against this one, which is why the
+	// scope is the sweep — not the function (the retired fnHasRecv
+	// era, whose function-wide receive flag both missed calls
+	// entirely, BUG-062, and over-refused panicky len operands in
+	// statements with no event at all, BUG-032/F23).
+	sweepStmt ast.Node
 
 	// Label usage of the CURRENT function body (control-flow slice,
 	// docs/2026-08-04_control-flow-design.md), computed by scanLabelUses

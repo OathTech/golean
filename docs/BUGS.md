@@ -1320,6 +1320,25 @@ alongside every `e.lifted` rollback (both paths).
 
 ## BUG-032 — the fnHasRecv len/cap hoist drags its OPERAND's panic ahead of spec-unordered panics to its left
 
+- A6 AMENDMENT (2026-08-31, t1-fidelity-fixes — the over-refusal
+  retirement this entry's F23 paragraph priced): the refusal is
+  narrowed to its TRUE residual. The predicate is now sweep-scoped
+  (BUG-062's fix, `sweepOrderedEventAfter`): with NO ordered event
+  after the builtin in its sweep, len stays inline and realizes gc's
+  left-to-right point — so `iv.(int) + len(b[j])` is now GREEN with
+  gc's interface-conversion panic whether or not a dead receive exists
+  anywhere in the function, and the four standing over-refusal rows
+  flip PASS (the Cases below, all oracle-matched). With an event after,
+  the hoist is taken unless BOTH the residual operand can panic
+  (`residualPanicFreeOperand` — real calls hoist out first, retiring
+  the F23 `len(f())` instance) AND potentially-panicking INLINE
+  material sits to the builtin's left (`sweepPanickyInlineBefore`);
+  only that composition still needs the unbuilt full-statement
+  linearization and still fails closed, pinned red-by-design at
+  builtins/len-vs-call-order/panicky-between. The
+  channels/recv-order/dead-recv-len-operand row this entry called a
+  permanent refusal marker is that marker no longer — it pins the
+  inline realization green instead.
 - Status: fixed (2026-08-06, convergence response: the hoist is
   restricted to syntactically PANIC-FREE operands — identifiers,
   literals, pointer-free selector chains (`panicFreeOperand`); a
@@ -1377,9 +1396,11 @@ alongside every `e.lifted` rollback (both paths).
   natural home is the BUG-025 retirement slice. A future pin in this
   shape must use the membership/envelope treatment, not strict
   equality.)
-- Pinned-by: none (the discriminating shape now fails closed at the
-  frontend — channels/recv-order/dead-recv-len-operand is a permanent
-  frontend-export refusal, tracked as coverage, not a fidelity pin)
+- Pinned-by: differential (since the 2026-08-31 A6 amendment above:
+  the once-refused rows now pin the inline realization green; the
+  surviving refusal shape is pinned red-by-design on BUG-062's
+  panicky-between row)
+- Cases: channels/recv-order/dead-recv-len-operand, channels/recv-order/dead-recv-len-embedded, bools/short-circuit-funclit/e6-recv-len-in-sc, bools/short-circuit-funclit/e6-recv-len-outside
 - Discovered: 2026-08-06 (channels-arc-s1 convergence round, verified —
   severity minor: both realized orders are spec-legal, but the
   justifying claim in BUG-023/BUG-026 and wire.go was FALSE and the
@@ -2967,9 +2988,28 @@ FIRST per the standing rule.
 
 ## BUG-062 — inline `len`/`cap` reads reorder against calls in the same expression (receive-free functions)
 
-- Status: open
+- Status: fixed (2026-08-31, t1-fidelity-fixes mini-slice A6 — the
+  hoist predicate is now the SWEEP-SCOPED ordered-event scan the triage
+  prescribed: `sweepOrderedEventAfter` (emit.go) hoists an inline
+  builtin — len/cap AND min/max, closing the widened statement below —
+  exactly when an ordered event (receive or non-conversion,
+  non-constant call) lexically FOLLOWS it in the same sweep, where the
+  sweep is the hoist-accumulator scope tracked per statement and per
+  sub-accumulator site (`e.sweepStmt`: if/for cond+init+post, switch
+  tag/case values, range operands, short-circuit RHS, per-spec var
+  initializers, assign-target probes). The function-scoped `fnHasRecv`
+  flag and `containsRecv` are retired. min/max hoist with NO
+  panic-free restriction — they are calls, and a hoisted arg panic
+  joins the recorded frontend-ANF call-first family (latitude E12/E13)
+  on the same terms as any user call's; len/cap keep BUG-032's
+  fail-closed refusal, narrowed to its true residual (see BUG-032's
+  2026-08-31 amendment). All five reds flip PASS; both green controls
+  and the whole recv-order family hold; four A6 guardrail rows added
+  (len-vs-call-order/{short-circuit,short-circuit-skipped,
+  panicky-before-call} green, panicky-between the surviving refusal
+  pin, red frontend-export by design).)
 - Pinned-by: differential
-- Cases: builtins/len-vs-call-order/chan, builtins/len-vs-call-order/slice, builtins/min-max-vs-call-order/min-value, builtins/min-max-vs-call-order/max-value, builtins/min-max-vs-call-order/min-arg-panic
+- Cases: builtins/len-vs-call-order/chan, builtins/len-vs-call-order/slice, builtins/min-max-vs-call-order/min-value, builtins/min-max-vs-call-order/max-value, builtins/min-max-vs-call-order/min-arg-panic, builtins/len-vs-call-order/short-circuit, builtins/len-vs-call-order/panicky-before-call
 
 WIDENED 2026-08-22 (grossmith campaign-2 F-1, promoted by the
 launch-audit fix round): the predicate gap is not `len`/`cap`
@@ -3016,7 +3056,12 @@ predicate becomes "the statement's sweep contains an ORDERED EVENT"
 both this entry and the A6 refusal family (F23) without extending the
 divergence. Owner: mini-slice A6 (queued, category (a) in
 docs/2026-08-19_triage-table.md; queue position in
-docs/language-coverage-ledger.md).
+docs/language-coverage-ledger.md). LANDED 2026-08-31 exactly in that
+shape, refined one notch: the scan asks for an event lexically AFTER
+the builtin (an earlier event's hoist precedes the builtin's inline
+position anyway), and the scope is the SWEEP — the hoist-accumulator
+unit — not the whole statement, so a loop body's calls do not force
+hoists into the loop's condition (see the Status paragraph).
 
 ## BUG-063 — receiver-position implicit `&*q` collapses instead of panicking (BUG-056's implicit-& sibling)
 
@@ -3416,3 +3461,4 @@ by probing imagination, not by any green gate). Adjacent to BUG-068
 (shadowing a NAMED RESULT) but a different mechanism: 068 was the
 wire's name channel too weak to carry a resolved distinction; 069 was
 the emitter not consulting the resolution at all.
+
