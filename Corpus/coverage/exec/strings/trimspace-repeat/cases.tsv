@@ -11,8 +11,9 @@ repeat-negative	repeatNegative	-	panic	strings: negative Repeat count	stdlib,str
 # repeat-overflow: upstream's overflow panic modeled verbatim
 # (2026-08-31 t1-fidelity-fixes; both sides panic, no allocation).
 # repeat-bound-refused: RED BY DESIGN — outputs past the shim's 1<<24
-# modeled bound refuse by name (goleanShimUnsupported) instead of a
-# causeless fuel/memory stop; expected column records the oracle's
-# truth (gc allocates the 16 MiB fine → 16777232).
+# modeled bound refuse by name (goleanShimStringsRepeatBound, the
+# force-quarantined cause-naming helper) instead of a causeless
+# fuel/memory stop; expected column records the oracle's truth (gc
+# allocates the 16 MiB fine → 16777232).
 repeat-overflow	repeatOverflow	-	panic	strings: Repeat output length overflow	stdlib,strings,panic
 repeat-bound-refused	repeatBoundRefused	-	ok	-	stdlib,strings

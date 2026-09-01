@@ -1338,7 +1338,17 @@ alongside every `e.lifted` rollback (both paths).
   builtins/len-vs-call-order/panicky-between. The
   channels/recv-order/dead-recv-len-operand row this entry called a
   permanent refusal marker is that marker no longer — it pins the
-  inline realization green instead.
+  inline realization green instead. NOT A PURE NARROWING (B-3
+  correction, 2026-09-01 audit fix round): the sweep-scoped predicate
+  fires on CALLS as well as receives, so receive-FREE functions —
+  which the fnHasRecv trigger never touched — GAINED the refusal on
+  the panicky composition (panicky operand x panicky inline left x
+  ordered call after), while the silent wrong answer the old scope
+  shipped in exactly those functions (inline len reading post-call
+  state, BUG-062's forced-point divergence) DIED. Trade stated: new
+  visible refusals on one rare composition in receive-free functions,
+  in exchange for retiring a spec-FORCED silent wrong answer; the
+  four flipped Cases rows measure the retirement side only.
 - Status: fixed (2026-08-06, convergence response: the hoist is
   restricted to syntactically PANIC-FREE operands — identifiers,
   literals, pointer-free selector chains (`panicFreeOperand`); a
@@ -3007,7 +3017,12 @@ FIRST per the standing rule.
   and the whole recv-order family hold; four A6 guardrail rows added
   (len-vs-call-order/{short-circuit,short-circuit-skipped,
   panicky-before-call} green, panicky-between the surviving refusal
-  pin, red frontend-export by design).)
+  pin, red frontend-export by design). B-3 correction (2026-09-01
+  audit fix round): A6 is NOT a pure narrowing of BUG-032's refusal —
+  receive-FREE functions, where this bug's silent wrong answer lived,
+  GAINED the fail-closed refusal on the panicky composition at the
+  same time the wrong answer died; trade stated in BUG-032's A6
+  amendment.)
 - Pinned-by: differential
 - Cases: builtins/len-vs-call-order/chan, builtins/len-vs-call-order/slice, builtins/min-max-vs-call-order/min-value, builtins/min-max-vs-call-order/max-value, builtins/min-max-vs-call-order/min-arg-panic, builtins/len-vs-call-order/short-circuit, builtins/len-vs-call-order/panicky-before-call
 
@@ -3474,11 +3489,21 @@ the emitter not consulting the resolution at all.
   spec-forcedness carve-out: even fixed-width-type operands refuse —
   a carve-out would embed a layout-forcedness census in the frontend
   to preserve one attestation row, and the fold that row attested was
-  go/types', not the machine's.)
+  go/types', not the machine's. COMPLETED at the audit fix round
+  2026-09-01: the scan is selector-based, and `import . "unsafe"`
+  made the layout ops BARE identifiers that walked straight past it
+  (audit probe u2 exported Sizeof's fold cleanly) — dot-imports of
+  unsafe now refuse OUTRIGHT, before the selector walk, pinned by
+  unsafe/dot-import/sizeof-bare.)
 - Pinned-by: none (the refusal surfaces at `frontend-export` — a
   coverage-stage boundary marker, not a fidelity pin; the rows below
-  are listed so the baseline deltas of the fix ride a Cases: line)
-- Cases: unsafe/boundary/sizeof-const, unsafe/layout-ops/sizeof-fixed, unsafe/layout-ops/layout-struct
+  are listed so the baseline deltas of the fix ride a Cases: line.
+  The fix's one PASS→gone flip was the REMOVAL of the row
+  `unsafe/boundary/sizeof-const` — named here in prose, not on the
+  Cases line, because the id no longer exists in the baseline for
+  check-bugs to verify; the Baseline-deltas paragraph below carries
+  the removal record)
+- Cases: unsafe/layout-ops/sizeof-fixed, unsafe/layout-ops/layout-struct, unsafe/dot-import/sizeof-bare
 - Discovered: 2026-08-31 (fidelity assessment phase 2,
   p2-keeps-a2a3bcd §1.1 — severity: boundary breach, not a
   wrong-vs-pinned-oracle answer)
@@ -3507,20 +3532,44 @@ attested).
 
 ## BUG-071 — the dynamic fmt shim rendered fmt.Formatter implementors through error/Stringer (recorded silent-wrong-answer class, now closed at emit time)
 
-- Status: fixed (2026-08-31, t1-fidelity-fixes —
-  `checkFormatterDynHole` in tools/nativefrontend/fmtdesugar.go,
-  called from emitProgram: the export refuses whenever the dynamic
-  fmt bundle (goleanShimFmtDynVerb) is injected AND any package-scope
-  declared type implements fmt.Formatter, value or pointer receiver.
-  Whole-export because boxing travels — no per-decl scan can bound
-  which dyn site the implementor reaches. Static fmt sites keep their
-  standing per-verb refusals (refuseFormatter,
+- Status: fixed (2026-08-31, t1-fidelity-fixes; key NARROWED at the
+  gate-red fix round 2026-09-01 and COMPLETED at the audit fix round
+  2026-09-01 — `checkFormatterDynHole` + `walkFormatterBoxing` in
+  tools/nativefrontend/fmtdesugar.go, called from emitProgram. The
+  original whole-export key ("dyn bundle injected AND any declared
+  type implements Formatter") over-fired — v-composites' deliberate
+  static-refusal implementor killed its 16 sibling rows — so it was
+  narrowed to BOXING REACHABILITY: with the dynamic fmt bundle
+  (goleanShimFmtDynVerb) injected and a fmt.Formatter implementor
+  (value or pointer receiver) declared in ANY unit, the export
+  refuses iff some unit boxes an implementor into an interface
+  OUTSIDE the fmt-owned operand positions the static path already
+  polices — an implementor that is never boxed cannot reach a dyn
+  site. THE KEY IS ENUMERATIVE, NOT DERIVED: its soundness rests on
+  walkFormatterBoxing's context list matching every boxing context
+  the modeled fragment admits (assignments/var specs incl. tuple
+  results, non-fmt call arguments incl. variadic, returns,
+  conversions, composite-literal fields/elements/keys, map index
+  keys, channel sends, interface-operand comparisons, `=`-form range
+  key/value targets, expression-switch case comparisons). That list —
+  in the checkFormatterDynHole header — is the NAMED EXTENSION POINT:
+  a construct added to the modeled fragment that can box must be
+  added there in the same change, and a context missing from it is a
+  reopened silent-wrong-answer channel (the 2026-09-01 audit found
+  four: see below). Two conservative closures ride the key: a
+  TYPE-PARAMETER-typed operand boxed inside a generic body is a HIT
+  whenever an implementor is declared anywhere (types.Implements is
+  undecidable for a type parameter), and the implementor scan is
+  DECOUPLED from the boxing walk (implementor in pkg A + boxing in
+  pkg B refuses). Whole-export because boxing travels — no per-decl
+  scan can bound which dyn site the implementor reaches. Static fmt
+  sites keep their standing per-verb refusals (refuseFormatter,
   fmt/formatter-precedence pins); the two mechanisms stay separately
   attested.)
-- Pinned-by: none (the refusal surfaces at `frontend-export` — the
-  row below is the red-by-design refusal pin, listed so the baseline
-  delta of the fix rides a Cases: line)
-- Cases: fmt/formatter-dyn-hole/dyn-boxed
+- Pinned-by: none (the refusals surface at `frontend-export` — the
+  rows below are the red-by-design refusal pins, listed so the
+  baseline deltas of the fix ride a Cases: line)
+- Cases: fmt/formatter-dyn-hole/dyn-boxed, fmt/formatter-box-range/range-assign, fmt/formatter-box-generic/generic-body, fmt/formatter-box-crosspkg/cross-package
 - Discovered: 2026-08-22 as audit R1-F2's RECORDED BOUND (W4.3 fix
   round: "recorded, not closed; nothing in the subject tree
   implements fmt.Formatter" — a raft-subject bound, not a mechanism);
@@ -3536,12 +3585,25 @@ value whose type implements BOTH Formatter and error/Stringer, boxed
 through any/variadic into a dyn site, rendered via Error/String where
 gc calls Format — both sides `ok`, different strings, nothing red
 (probed: machine "via-string" vs gc "via-format" on the dyn-boxed
-shape). The emit-time scan is conservative in the sound direction: a
-Formatter implementor that never reaches a dyn site still refuses the
-export (visible over-refusal, never a wrong answer). Formatter-ONLY
-types (no error/Stringer leg) already fell to the dyn shim's
-unmodeled-kind refusal; the scan now refuses those exports up front
-too, uniformly.
+shape). The boxing key is conservative WITHIN its enumeration — an
+implementor boxed on a path that never reaches a dyn site still
+refuses (visible over-refusal) — but its soundness is ENUMERATIVE: a
+boxing context missing from walkFormatterBoxing's list is a reopened
+silent-wrong-answer channel, which is exactly what the 2026-09-01
+pre-merge audit found in the narrowed key's first shipping: four
+shapes exported and rendered "via-string" where gc prints
+"via-format" (`=`-form range assignment; type-parameter boxing inside
+a generic body, where types.Implements answers false; the
+expression-switch case comparison; and the implementor-in-pkg-A /
+boxing-in-pkg-B split the per-unit scan coupling missed). All four
+refuse since the audit fix round; three are pinned by the
+formatter-box-* rows on the Cases line, and the switch-case shape is
+covered by the same walk arm as interface comparisons (audit probe
+fm7 re-verified). The context list in the checkFormatterDynHole
+header is the standing extension point. Formatter-ONLY types (no
+error/Stringer leg) already fell to the dyn shim's unmodeled-kind
+refusal; the boxing key refuses those exports up front too,
+uniformly.
 
 ## BUG-072 — the stdlib function-VALUE refusal named a phantom cause ("field selector on anonymous struct type invalid type")
 

@@ -11,8 +11,15 @@ import "fmt"
 // rendered via String where gc calls Format: an `ok` answer differing
 // from gc's, the recorded silent-wrong-answer channel of
 // stdlibshim.go's dyn bundle. The frontend now refuses the EXPORT at
-// emit time whenever a dyn-fmt shim is injected and any declared type
-// implements fmt.Formatter (checkFormatterDynHole, fmtdesugar.go).
+// emit time whenever a dyn-fmt shim is injected, an implementor is
+// declared in any unit, AND some unit BOXES an implementor into an
+// interface outside the fmt-owned operand positions
+// (checkFormatterDynHole/walkFormatterBoxing, fmtdesugar.go — the key
+// narrowed from implementor-anywhere to boxing reachability,
+// 2026-09-01). The key is ENUMERATIVE: the walk's boxing-context list
+// in the checkFormatterDynHole header is the named extension point,
+// and the formatter-box-* sibling rows pin the contexts the audit
+// found missing (range assign, generic body, cross-package).
 //
 // This row is RED (frontend-export) BY DESIGN — the refusal firing IS
 // the pin. gc @ go1.26.5: "via-format" (probed, .tmp-era t1 fix

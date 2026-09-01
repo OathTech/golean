@@ -10,7 +10,11 @@
 # panicky-between is the surviving BUG-032/A6 refusal, RED
 # frontend-export BY DESIGN: panicky operand between a spec-unordered
 # panicky operand on the left and an ordered call after — hoisting
-# would reorder the panics; refusing keeps it visible.
+# would reorder the panics; refusing keeps it visible. B-3 correction
+# (2026-09-01): that refusal fires in receive-FREE functions too —
+# A6 was not a pure narrowing; the new refusal is the price of
+# retiring BUG-062's silent wrong answer there (trade in BUG-032's
+# A6 amendment).
 chan	lenVsCallChan	-	ok	-	channels,len,evaluation_order,calls
 slice	lenVsCallSlice	-	ok	-	slices,len,evaluation_order,calls,append
 recv-bearing	lenVsCallRecvBearing	-	ok	-	channels,len,evaluation_order,calls

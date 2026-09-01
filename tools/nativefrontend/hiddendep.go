@@ -30,17 +30,24 @@ package main
 //     what the reference-based dependency analyses cannot see through
 //     — the hidden-dep channel of the spec's own example.
 //  2. OBSERVABLE: some method with the dispatched NAME, declared in
-//     the SAME UNIT as the initializer, references a package-level
-//     variable of that unit that itself has a kept initializer. Only
-//     then can the hidden edge reorder an observable initialization
-//     (methods of OTHER units read their own unit's variables, and
-//     dependency units are fully initialized before this unit's
-//     variables start — the program schedule fixes cross-unit order).
+//     the SAME UNIT as the initializer, references — directly or
+//     TRANSITIVELY through statically-resolved calls (the same
+//     worklist discipline as condition 1; audit fix round 2026-09-01,
+//     which found the shipped direct-read-only gate DEFEATED by one
+//     helper-function indirection) — a package-level variable of that
+//     unit that itself has a kept initializer. Only then can the
+//     hidden edge reorder an observable initialization (methods of
+//     OTHER units read their own unit's variables, and dependency
+//     units are fully initialized before this unit's variables start
+//     — the program schedule fixes cross-unit order).
 //
-// Both conditions are conservative over-approximations in the sound
-// direction: a static reach that never executes, or a name-matched
-// method the dynamic dispatch can never select, produces a REFUSAL of
-// a program the machine could have run — visible, never wrong.
+// Within their stated scope — static reach for condition 1, reads
+// reachable through statically-resolved calls for condition 2 — both
+// conditions over-approximate in the sound direction: a static reach
+// that never executes, or a name-matched method the dynamic dispatch
+// can never select, produces a REFUSAL of a program the machine could
+// have run — visible, never wrong. The scope boundary that remains is
+// the function-value channel below, which BOTH conditions share.
 //
 // RECORDED RESIDUAL (deliberate scope boundary, not an oversight):
 // dispatch through FUNCTION VALUES (`var f func(); f()` in an
@@ -130,18 +137,41 @@ func (e *emitter) checkHiddenDepInitOrder() error {
 
 		// methodReadsInitVar: the observability gate for a dispatched
 		// name — some same-unit method of that name references a kept
-		// initialized package variable of this unit.
+		// initialized package variable of this unit, DIRECTLY or
+		// TRANSITIVELY through statically-resolved calls (the same
+		// worklist discipline as the reach walk below; audit fix round
+		// 2026-09-01 — the direct-read-only gate was defeated by one
+		// helper indirection). Every *types.Func the body references is
+		// followed (call positions, method selectors, method/func
+		// values alike): following a function the dynamic path never
+		// runs can only over-approximate in the sound direction.
+		// Function VALUES (`var f func(); f()`) stay unfollowed — the
+		// recorded E7 residual both conditions share.
 		methodReadsInitVar := func(name string) (string, bool) {
-			for _, mb := range methodsByName[name] {
+			work := append([]declBody{}, methodsByName[name]...)
+			seen := map[types.Object]bool{}
+			for len(work) > 0 {
+				mb := work[0]
+				work = work[1:]
 				var hit string
 				ast.Inspect(mb.body, func(n ast.Node) bool {
 					if hit != "" {
 						return false
 					}
 					if id, ok := n.(*ast.Ident); ok {
-						if obj := mb.unit.info.Uses[id]; obj != nil && initVars[obj] {
+						obj := mb.unit.info.Uses[id]
+						if obj == nil {
+							return true
+						}
+						if initVars[obj] {
 							hit = obj.Name()
 							return false
+						}
+						if fn, isFn := obj.(*types.Func); isFn && !seen[fn] {
+							seen[fn] = true
+							if db, ok := bodies[fn]; ok {
+								work = append(work, db)
+							}
 						}
 					}
 					return true

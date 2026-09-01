@@ -6,6 +6,9 @@
 #
 #   (1) every `- Cases:` id of an open Pinned-by:differential bug exists in the
 #       baseline AND is currently FAIL (a PASSing pinned case = fixed-not-closed);
+#       every `- Cases:` id of a Pinned-by:none bug EXISTS in the baseline
+#       (existence only — none-entries mix red-by-design pins with flip-record
+#       rows, so no direction is derivable; audit fix round 2026-09-01);
 #   (2) every open Pinned-by:differential bug lists >=1 case;
 #   (3) SYMMETRIC: every `Status: fixed` differential bug's cases must now PASS
 #       (marking a bug fixed while its cases still fail is laundering);
@@ -63,7 +66,27 @@ while IFS='|' read -r id st pb cs; do
   if [ "$pb" != differential ] && [ "$pb" != none ]; then
     echo "FAIL (0): $id has unrecognized 'Pinned-by: $pb' (must be differential|none)"; fail=1; continue
   fi
-  [ "$pb" = differential ] || continue
+  # Pinned-by:none entries with a Cases line (audit fix round
+  # 2026-09-01): previously UNENFORCED — a none-entry's Cases id could
+  # dangle after a baseline row removal with nothing red (the
+  # unsafe/boundary/sizeof-const dangle). EXISTENCE is now verified for
+  # every listed id; the FAIL/PASS direction is NOT, because
+  # none-entries' Cases lines mix red-by-design refusal pins (FAIL by
+  # design under a FIXED status) with flip-record rows, so the
+  # direction is not derivable from Status the way it is for
+  # differential pins. [AGENT] A row a none-entry names must exist; a
+  # removed row is named in the entry's prose instead.
+  if [ "$pb" = none ]; then
+    IFS=',' read -r -a arr <<< "$cs"
+    for c in "${arr[@]}"; do
+      [ -z "$c" ] && continue
+      declared_cases="$declared_cases $c"
+      if ! blk "$c" >/dev/null; then
+        echo "FAIL (1): $id case '$c' not found in $BASELINE (Pinned-by:none Cases ids must name live rows — record removals in prose, not on the Cases line)"; fail=1
+      fi
+    done
+    continue
+  fi
   if [ "$st" = open ] && [ -z "$cs" ]; then
     echo "FAIL (2): $id is open+differential but lists no '- Cases:'"; fail=1; continue
   fi

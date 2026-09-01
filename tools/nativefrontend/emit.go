@@ -8664,14 +8664,23 @@ func (e *emitter) emitMake(c *ast.CallExpr) (any, bool, error) {
 // unsafe.Offsetof / unsafe.Alignof in the unit's sources, naming the
 // operator and its position (the emitProgram call site carries the
 // full rationale). The scan is syntactic-plus-resolution: a selector
-// whose base resolves to the `unsafe` package name — an aliased import
-// cannot smuggle one past it, and a user-defined `unsafe` identifier
-// does not trip it. Other unsafe surface keeps its standing refusals
-// (unsafe.Pointer refuses as a wire TYPE; unsafe.Add/Slice/... take
-// Pointer operands and refuse through it).
+// whose base resolves to the `unsafe` package name, so an ALIASED
+// import (`import u "unsafe"; u.Sizeof`) is caught by resolution and
+// a user-defined `unsafe` identifier does not trip it. A DOT-import
+// (`import . "unsafe"`) would make the layout ops BARE identifiers,
+// outside any selector — audit fix round 2026-09-01 (probe u2, which
+// smuggled Sizeof past the pre-fix scan): dot-imports of unsafe are
+// refused OUTRIGHT, before the selector walk. Other unsafe surface
+// keeps its standing refusals (unsafe.Pointer refuses as a wire TYPE;
+// unsafe.Add/Slice/... take Pointer operands and refuse through it).
 func checkUnsafeLayoutOps(fset *token.FileSet, u *sourcePkg) error {
 	var bad error
 	for _, f := range u.files {
+		for _, imp := range f.Imports {
+			if imp.Name != nil && imp.Name.Name == "." && imp.Path.Value == `"unsafe"` {
+				return unsup("import . %s at %s: a dot-import makes the unsafe layout operators (Sizeof/Offsetof/Alignof) bare identifiers, outside the selector-based scan that polices them — refused outright (fail closed; out-of-language boundary, ledger row Package_unsafe)", imp.Path.Value, fset.Position(imp.Pos()))
+			}
+		}
 		ast.Inspect(f, func(n ast.Node) bool {
 			if bad != nil {
 				return false
@@ -8846,11 +8855,15 @@ func (e *emitter) residualPanicFreeOperand(x ast.Expr) bool {
 // included) happens at their own hoisted statements, which precede any
 // later builtin's hoist in emission order — as are func-literal bodies.
 // The panicky kinds mirror initializerEffectIsolated's census: indexing,
-// slicing, dereference, type assertion, division/remainder, interface
-// comparison, implicitly-indirecting selection, and slice-to-array(-
-// pointer) conversions. A nil sweep root answers TRUE (fail closed:
-// combined with a panicky operand this refuses visibly rather than
-// reordering silently).
+// slicing, dereference, type assertion, division/remainder, shifts by a
+// non-constant count (negative counts panic; constant counts are
+// compile-checked — the arm this list was MISSING until the audit fix
+// round 2026-09-01, NOTE-10: the mirror claim was false, and a
+// shift-left composition silently hoisted where every sibling shape
+// refused), interface comparison, implicitly-indirecting selection,
+// and slice-to-array(-pointer) conversions. A nil sweep root answers
+// TRUE (fail closed: combined with a panicky operand this refuses
+// visibly rather than reordering silently).
 func (e *emitter) sweepPanickyInlineBefore(pos token.Pos) bool {
 	root := e.sweepStmt
 	if root == nil {
@@ -8914,6 +8927,14 @@ func (e *emitter) sweepPanickyInlineBefore(pos token.Pos) bool {
 			if nn.End() <= pos && (nn.Op == token.QUO || nn.Op == token.REM) {
 				found = true
 				return false
+			}
+			if nn.End() <= pos && (nn.Op == token.SHL || nn.Op == token.SHR) {
+				// A negative (necessarily non-constant) shift count
+				// panics; see the header (NOTE-10 census add).
+				if tv, ok := e.info.Types[nn.Y]; !ok || tv.Value == nil {
+					found = true
+					return false
+				}
 			}
 			if nn.End() <= pos && (nn.Op == token.EQL || nn.Op == token.NEQ) {
 				if t := e.goTypeOf(nn.X); t == nil || types.IsInterface(t.Underlying()) {

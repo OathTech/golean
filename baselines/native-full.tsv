@@ -1,5 +1,22 @@
 # GoLean native-frontend full-corpus differential baseline
-# re-pinned: 2026-08-31/09-01 (t1-fidelity-fixes, the whole Tier-1
+# re-pinned: 2026-09-01 (t1-fidelity-fixes AUDIT FIX ROUND — the
+#   pre-merge audit's BLOCKER-1 walk-completeness closures, the
+#   unsafe dot-import escape, E7 observability transitivity, and the
+#   NOTE-10 shift census. Full ci --slow run at this tip; numbers in
+#   docs/t1-fidelity-fixes-report.md.) Row deltas, all NEW rows born
+#   FAIL/frontend-export BY DESIGN (no Cases-line obligation; listed
+#   on BUG-070/BUG-071's Cases lines anyway as refusal pins), NO
+#   PASS→non-PASS flips:
+#   NEW rows (BUG-071 completeness, audit BLOCKER-1):
+#     fmt/formatter-box-range/range-assign (`=`-form range boxing),
+#     fmt/formatter-box-generic/generic-body (type-param boxing in a
+#     generic body), fmt/formatter-box-crosspkg/cross-package
+#     (implementor in pkg A, boxing in pkg B) — the audit's three
+#     wrong-answer shapes, now refusal pins.
+#   NEW row (BUG-070 completeness): unsafe/dot-import/sizeof-bare —
+#     `import . "unsafe"` refused outright (the bare-identifier
+#     escape past the selector scan, audit probe u2).
+# previous re-pin: 2026-08-31/09-01 (t1-fidelity-fixes, the whole Tier-1
 #   round: mini-slice A6 = BUG-062 fix + BUG-032 over-refusal
 #   retirement; E7 detector; BUG-070 unsafe layout ops; BUG-071
 #   Formatter dyn hole; BUG-072/073 cause-named refusals. Full
@@ -16,7 +33,12 @@
 #     and bools/short-circuit-funclit/{e6-recv-len-in-sc,
 #     e6-recv-len-outside} — BUG-032's function-scoped over-refusal
 #     retired: no event in those statements, len inline realizes gc's
-#     left-to-right point (oracle-matched panics).
+#     left-to-right point (oracle-matched panics). B-3 correction
+#     (2026-09-01 audit fix round): A6 is NOT a pure narrowing —
+#     receive-FREE functions gained the panicky-composition refusal
+#     while BUG-062's silent wrong answer died there (trade stated in
+#     BUG-032's A6 amendment); these four rows measure the retirement
+#     side only.
 #   NEW rows (4): builtins/len-vs-call-order/{short-circuit,
 #     short-circuit-skipped,panicky-before-call} PASS (A6 guardrails);
 #     builtins/len-vs-call-order/panicky-between FAIL/frontend-export
@@ -27,7 +49,10 @@
 #     specific layout was silently constant-folding into the wire).
 #     ROW REMOVED: unsafe/boundary/sizeof-const (was PASS; its
 #     spec-forced shape moved to unsafe/layout-ops and is refused by
-#     the mechanism — the removal is on BUG-070's Cases: line).
+#     the mechanism — the removal rides BUG-070's entry, recorded in
+#     its prose since the 2026-09-01 audit fix round: check-bugs now
+#     verifies that every Cases id names a LIVE baseline row, so a
+#     removed row is named in prose, never left dangling on the line).
 #     NEW rows: unsafe/layout-ops/{sizeof-fixed,layout-struct}
 #     FAIL/frontend-export BY DESIGN. unsafe/boundary/pointer-roundtrip
 #     unchanged (its own distinct Pointer-type refusal).
@@ -868,6 +893,9 @@ PASS	fmt/errorf/fresh	-
 PASS	fmt/errorf/text	-
 PASS	fmt/errorf/sentinel-classify	-
 PASS	fmt/errorf/vs-errors-new	-
+FAIL	fmt/formatter-box-crosspkg/cross-package	frontend-export
+FAIL	fmt/formatter-box-generic/generic-body	frontend-export
+FAIL	fmt/formatter-box-range/range-assign	frontend-export
 FAIL	fmt/formatter-dyn-hole/dyn-boxed	frontend-export
 FAIL	fmt/formatter-precedence/over-stringer	frontend-export
 FAIL	fmt/formatter-precedence/over-kind-matrix	frontend-export
@@ -2549,6 +2577,7 @@ PASS	sync/waitgroup-panic-payload/payload-is-string	-
 PASS	sync/waitgroup-wait-deadlock/wait-deadlock	-
 PASS	sync/waitgroup-workers-join/workers-join	-
 FAIL	unsafe/boundary/pointer-roundtrip	frontend-export
+FAIL	unsafe/dot-import/sizeof-bare	frontend-export
 FAIL	unsafe/layout-ops/sizeof-fixed	frontend-export
 FAIL	unsafe/layout-ops/layout-struct	frontend-export
 PASS	variadic/defined-slice-spread	-

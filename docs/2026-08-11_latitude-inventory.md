@@ -595,7 +595,12 @@ concurrent observer).
   function; whole-package kills through methods) is RETIRED: those
   shapes now lower, inline or hoisted, at gc's realized order
   (channels/recv-order/dead-recv-len-* and the e6-* pair pin it
-  green).
+  green). B-3 correction (2026-09-01 audit fix round): A6 is NOT a
+  pure narrowing — the sweep-scoped predicate fires on calls too, so
+  receive-FREE functions GAINED this refusal on the composition at
+  the same time BUG-062's silent wrong answer died there; trade
+  stated (a new visible refusal bought the retirement of a
+  spec-FORCED silent wrong answer).
 
 ### E7. Hidden-dependency initialization order — (b) PINNED to go/types' conforming order, **known ≠ gc**
 
@@ -864,6 +869,36 @@ the same call.
   not instability in gc — the contrast with E3, where gc's realization
   is compiler-internal and hence unpinnable, is worth keeping. XIMPL
   would bear on whether any implementation orders these; none known.
+
+  MIN/MAX EVIDENCE (audit fix round 2026-09-01, probes a6p/a6q —
+  gc @ go1.26.5, machine re-run at the fix tip; `b`/`b2` are slices
+  whose lengths make the two index panics' messages distinct where it
+  matters, `wit4` is an effectful ordered call):
+
+  | probe | shape (panicky-left x min/max) | gc | machine |
+  |---|---|---|---|
+  | a6p-p1 | `iv.(int) + min(b[j],1) + wit4(5)` | interface conversion (assert first) | index `[3]`/len 0 (min's arg first) |
+  | a6q-q5 | `iv.(int) + min(*p,1) + wit4(5)` | interface conversion | nil deref |
+  | a6q-q6 | `iv.(int) + min(*p,1) + <-ch` | interface conversion | nil deref |
+  | a6q-q1 | `b2[k] + max(b[j],1) + wit4(5)` | index `[3]`/len 0 (max's arg first) | index `[3]`/len 0 |
+  | a6p-p3 | `(7/d)*0 + min(b[j],1) + wit4(5)` | index `[3]`/len 0 (min's arg first) | index `[3]`/len 0 |
+  | a6p-p5 | `b2[k] + min(*p,1) + wit4(5)` | nil deref (min's arg first) | nil deref |
+
+  [AGENT] MEMBERSHIP: **min/max join the ANF call-first hoist family
+  (E12/E13).** The frontend hoists min/max like calls (they are
+  excluded from the A6 len/cap inline treatment — runtimeOrderedCall's
+  len/cap/min/max carve-out is about ORDERED-EVENT status, not about
+  their own emission), and gc's realizations land EXACTLY on this
+  family's existing pattern: gc runs min/max ARGUMENTS ahead of a
+  lexically-left index/division panic (q1/p3/p5 — machine agrees) and
+  realizes a lexically-left ASSERTION panic first (p1/q5/q6 — machine
+  realizes the arg's panic; opposite members, both conforming — the
+  same assertion-vs-indexing split as the d1/bare-index rows above).
+  This AFFIRMS the E12/E13 reading that BUG-062's status already
+  takes; the assert-axis divergences are census'd HERE, not open
+  bugs, and the NO-PIN rule of this entry covers the min/max axes
+  identically (a strict pin on the assert axis would record latitude
+  as a fidelity failure).
 - NO PIN MAY BE TAKEN HERE. Deliberately **not** a corpus case, and no
   strict-lane row may pin either axis: the machine and gc realize
   different members on the assertion axis, so a strict pin would record
@@ -1312,7 +1347,12 @@ changes), R2's upper end and R4/R5 float narrowings (tripwired /
 platform-scoped), E10/E11/R8/R9/R10/R11 permanent-pin candidates
 (record-and-caveat, widening buys no verification value while the
 oracle is gc), C9 deadlock-as-terminal (observationally coincident),
-E8 multi-file order (no non-go-command target exists).
+E8 multi-file order (the frontend and the harness are both scoped to
+the go command's DIRECTORY-mode member; the other members are the go
+command's own FILE-LIST mode — §E8's corrected premise — and the
+revisit trigger is a consumer feeding the frontend a file-list-mode
+build, not a non-go-command build system, which was the stale
+premise this line carried until the 2026-09-01 audit fix round).
 
 ## 8. THE REGISTER EXTENSION — entries beyond the doctrine's seeded five
 

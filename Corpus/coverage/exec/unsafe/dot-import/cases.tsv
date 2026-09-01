@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+# RED (frontend-export) BY DESIGN: dot-imports of unsafe refuse
+# outright (see main.go — the bare-identifier escape past the
+# selector scan). Expected column records the oracle's truth (go run
+# @ go1.26.5, amd64: 16).
+sizeof-bare	dotImportSizeof	-	ok	-	unsafe,constants,structs

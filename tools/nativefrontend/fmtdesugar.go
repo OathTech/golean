@@ -571,13 +571,24 @@ func (e *emitter) refuseFormatter(fn, verbName string, argTy types.Type) error {
 // flow-insensitive boxing reachability: an implementor is dangerous
 // only if it is CONVERTED TO AN INTERFACE somewhere OUTSIDE the
 // fmt-owned operand positions — if it is never boxed, no dyn site can
-// receive it. The walk below enumerates the modeled fragment's boxing
-// contexts (assignments/var specs incl. tuple results, non-fmt call
-// arguments incl. variadic, returns, explicit conversions,
-// composite-literal fields/elements/keys, map index keys, channel
-// sends, interface-operand comparisons). A context outside this list
-// cannot box in the modeled fragment; if the fragment grows one, THIS
-// LIST is the named place to extend (fail-closed review note).
+// receive it. The key is ENUMERATIVE, not derived: the walk below
+// enumerates the modeled fragment's boxing contexts (assignments/var
+// specs incl. tuple results, non-fmt call arguments incl. variadic,
+// returns, explicit conversions, composite-literal
+// fields/elements/keys, map index keys, channel sends,
+// interface-operand comparisons, `=`-form range key/value targets,
+// expression-switch case comparisons — the last two added at the
+// audit fix round 2026-09-01, BLOCKER-1(a), after probes showed them
+// missing). Soundness rests on this list matching the fragment's
+// boxing contexts; if the fragment grows one, THIS LIST is the named
+// place to extend (fail-closed review note). Two more BLOCKER-1
+// closures (2026-09-01): the implementor scan and the boxing walk are
+// DECOUPLED — an implementor declared in ANY unit arms the walk over
+// EVERY unit (cross-package boxing refuses); and inside a generic
+// body a type-parameter-typed operand boxed into an interface is a
+// conservative HIT whenever an implementor is declared anywhere
+// (types.Implements answers false for a *types.TypeParam, so the
+// per-type key cannot be decided there — BLOCKER-1(c)).
 func (e *emitter) checkFormatterDynHole() error {
 	dynInjected := false
 	for _, u := range e.units {
@@ -592,8 +603,11 @@ func (e *emitter) checkFormatterDynHole() error {
 	if !dynInjected {
 		return nil
 	}
+	// Resolve fmt.Formatter ONCE, from any unit's fmt import (one
+	// type-checker universe under the shared importer, so any unit's
+	// answer is the program's).
+	var iface *types.Interface
 	for _, u := range e.units {
-		var iface *types.Interface
 		for _, p := range u.pkg.Imports() {
 			if p.Path() == "fmt" {
 				if o := p.Scope().Lookup("Formatter"); o != nil {
@@ -601,10 +615,18 @@ func (e *emitter) checkFormatterDynHole() error {
 				}
 			}
 		}
-		if iface == nil {
-			continue
+		if iface != nil {
+			break
 		}
-		hasImplementor := false
+	}
+	if iface == nil {
+		return unsup("the dynamic fmt shim is injected but fmt.Formatter cannot be resolved from any unit's fmt import (internal inconsistency; fail closed — the boxing check must run, never be skipped)")
+	}
+	// DECOUPLED SCANS (audit BLOCKER-1(b)): implementor-anywhere arms
+	// the walk over every unit — implementor in pkg A boxed in pkg B is
+	// exactly the same wrong-answer channel as the same-unit shape.
+	hasImplementor := false
+	for _, u := range e.units {
 		scope := u.pkg.Scope()
 		for _, name := range scope.Names() {
 			tn, ok := scope.Lookup(name).(*types.TypeName)
@@ -620,9 +642,14 @@ func (e *emitter) checkFormatterDynHole() error {
 				break
 			}
 		}
-		if !hasImplementor {
-			continue
+		if hasImplementor {
+			break
 		}
+	}
+	if !hasImplementor {
+		return nil
+	}
+	for _, u := range e.units {
 		if err := e.walkFormatterBoxing(u, iface); err != nil {
 			return err
 		}
@@ -649,7 +676,22 @@ func (e *emitter) walkFormatterBoxing(u *sourcePkg, iface *types.Interface) erro
 		if hole != nil {
 			return true
 		}
-		if !isIfaceTarget(target) || !implements(exprT) {
+		if !isIfaceTarget(target) || exprT == nil {
+			return false
+		}
+		// A TYPE-PARAMETER-typed operand inside a generic body (audit
+		// BLOCKER-1(c)): types.Implements answers FALSE for a
+		// *types.TypeParam, so the per-type key cannot be decided here —
+		// and an implementor instantiation would monomorphize this very
+		// boxing into the dangerous one. With an implementor declared
+		// anywhere in the program (the caller's arming condition), the
+		// conservative fail-closed answer is a HIT naming the parameter.
+		if tp, isTP := types.Unalias(exprT).(*types.TypeParam); isTP {
+			hole = unsup("type parameter %s is boxed into %s (%s at %s) inside a generic body while the dynamic fmt shim is injected and a fmt.Formatter implementor is declared in the program: whether %s's instantiations implement fmt.Formatter is undecidable at this site (types.Implements is false for a type parameter), and an implementor instantiation would reach the Formatter-blind dyn shim — conservative fail-closed HIT (audit BLOCKER-1(c), fix round 2026-09-01)",
+				tp.Obj().Name(), types.TypeString(target, nil), ctx, e.fset.Position(pos), tp.Obj().Name())
+			return true
+		}
+		if !implements(exprT) {
 			return false
 		}
 		hole = unsup("type %s implements fmt.Formatter and is boxed into %s (%s at %s) while the dynamic fmt shim is injected: gc consults Format ahead of error/Stringer for EVERY verb at dynamic fmt sites, and the dyn shim cannot see Formatter at runtime (fmt.State unmodeled) — the boxed value reaching any dyn site would render wrongly, so the export fails closed (audit R1-F2 / assessment A3-S3; key = boxing sites, narrowed 2026-09-01)",
@@ -804,6 +846,43 @@ func (e *emitter) walkFormatterBoxing(u *sourcePkg, iface *types.Interface) erro
 				if ct, ok := u.info.TypeOf(n.Chan).Underlying().(*types.Chan); ok {
 					box(n.Value, ct.Elem(), "channel send")
 				}
+			case *ast.RangeStmt:
+				// The `=`-form key/value targets are assignment contexts
+				// (audit BLOCKER-1(a)): ranging over implementor elements
+				// into pre-declared interface-typed variables boxes each
+				// element. (The `:=` form declares the variables AT the
+				// element types — no conversion happens there.)
+				if n.Tok == token.ASSIGN {
+					kT, vT := rangeKeyValueTypes(u.info.TypeOf(n.X))
+					if n.Key != nil && kT != nil {
+						boxT(kT, u.info.TypeOf(n.Key), n.Key.Pos(), "range assignment (key)")
+					}
+					if n.Value != nil && vT != nil {
+						boxT(vT, u.info.TypeOf(n.Value), n.Value.Pos(), "range assignment (value)")
+					}
+				}
+			case *ast.SwitchStmt:
+				// The expression-switch comparison form (audit
+				// BLOCKER-1(a)): `switch iface { case impl: }` compares
+				// the tag against each case expression with ==, boxing
+				// whichever side is non-interface (both directions, like
+				// the BinaryExpr arm below).
+				if n.Tag != nil && n.Body != nil {
+					tagT := u.info.TypeOf(n.Tag)
+					for _, s := range n.Body.List {
+						cc, ok := s.(*ast.CaseClause)
+						if !ok {
+							continue
+						}
+						for _, ce := range cc.List {
+							if isIfaceTarget(tagT) {
+								box(ce, tagT, "switch-case comparison")
+							} else if ceT := u.info.TypeOf(ce); isIfaceTarget(ceT) {
+								boxT(tagT, ceT, n.Tag.Pos(), "switch-case comparison")
+							}
+						}
+					}
+				}
 			case *ast.IndexExpr:
 				if mt, ok := u.info.TypeOf(n.X).Underlying().(*types.Map); ok {
 					box(n.Index, mt.Key(), "map index key")
@@ -845,6 +924,55 @@ func (e *emitter) walkFormatterBoxing(u *sourcePkg, iface *types.Interface) erro
 		}
 	}
 	return hole
+}
+
+// rangeKeyValueTypes: the key/value types a `range x` clause produces
+// (spec#For_range), nil where the form has none. The switch is COMPLETE
+// over Go 1.26's range operand shapes post-type-check (slice, array,
+// *array, map, string, channel, integer, range-over-func); walk callers
+// use it for the `=`-form boxing check.
+func rangeKeyValueTypes(t types.Type) (types.Type, types.Type) {
+	if t == nil {
+		return nil, nil
+	}
+	switch ut := t.Underlying().(type) {
+	case *types.Slice:
+		return types.Typ[types.Int], ut.Elem()
+	case *types.Array:
+		return types.Typ[types.Int], ut.Elem()
+	case *types.Pointer:
+		if arr, ok := ut.Elem().Underlying().(*types.Array); ok {
+			return types.Typ[types.Int], arr.Elem()
+		}
+	case *types.Map:
+		return ut.Key(), ut.Elem()
+	case *types.Chan:
+		return ut.Elem(), nil
+	case *types.Basic:
+		if ut.Info()&types.IsString != 0 {
+			return types.Typ[types.Int], types.Typ[types.Rune]
+		}
+		if ut.Info()&types.IsInteger != 0 {
+			// range over int: the key has the OPERAND's type (a named
+			// integer type can carry methods — implementor included).
+			return t, nil
+		}
+	case *types.Signature:
+		// range-over-func: the yield function's parameter types.
+		if ut.Params().Len() == 1 {
+			if yield, ok := ut.Params().At(0).Type().Underlying().(*types.Signature); ok {
+				var k, v types.Type
+				if yield.Params().Len() >= 1 {
+					k = yield.Params().At(0).Type()
+				}
+				if yield.Params().Len() >= 2 {
+					v = yield.Params().At(1).Type()
+				}
+				return k, v
+			}
+		}
+	}
+	return nil, nil
 }
 
 // fmtVerbArg compiles one verb x static-kind pair, or refuses naming

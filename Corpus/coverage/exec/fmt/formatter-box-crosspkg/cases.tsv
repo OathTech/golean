@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+# RED (frontend-export) BY DESIGN: implementor in pkg A + boxing in
+# pkg B refuses (decoupled scans; see main.go). The expected column
+# records the oracle's truth (go run @ go1.26.5 → "via-format");
+# pre-fix the machine returned "via-string" with status ok.
+cross-package	crossUnitBox	-	ok	-	stdlib,strings,methods,defined_type,interfaces,multipackage,imports

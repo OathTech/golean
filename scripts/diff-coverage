@@ -579,6 +579,11 @@ run_case_rows() {
     report_fail "$id" "$features" "frontend-export" "native frontend: $native_export"
     return 0
   fi
+  # A successful export can still carry frontend stderr (the E7 allow's
+  # WARNING, hiddendep.go) — keep it visible in the gate, never swallowed.
+  if [[ -n "$native_export" ]]; then
+    printf '%s: %s\n' "$id" "$native_export" >&2
+  fi
 
   # CONFLUENT lane (D9(b), slice 4): certify |set| = 1 over ALL
   # schedules FIRST — the strict pipeline below then verifies the one
@@ -1097,6 +1102,11 @@ run_membership_case_rows() {
   if ! native_export="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/nativefrontend ${mem_fe_flags[@]+"${mem_fe_flags[@]}"} --dir "$go_dir" --out "$wire_json" 2>&1)"; then
     report_fail "$id" "$features" "frontend-export" "native frontend: $native_export"
     return 0
+  fi
+  # Same as the strict lane: surface the E7 allow's WARNING (and any
+  # other frontend stderr) on a SUCCESSFUL export too.
+  if [[ -n "$native_export" ]]; then
+    printf '%s: %s\n' "$id" "$native_export" >&2
   fi
   local int_flags=()
   if [[ "$arg_ints" != "-" ]]; then
