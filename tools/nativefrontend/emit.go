@@ -1614,14 +1614,19 @@ func (e *emitter) quarantinedMethodStub(d *ast.FuncDecl, u unsupported) (map[str
 }
 
 func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
-	// goleanShimUnsupported is FORCE-QUARANTINED (audit R4-C-3): its
-	// wire declaration is an unsupported stub, so calling it throws
-	// GoError.unsupported — the unrecoverable interpreter-level stop
-	// every golean shim RUNTIME refusal routes through. Its Go body
-	// (panic(msg)) exists only to type-check; returning unsup here
-	// hands it to the ordinary per-decl quarantine machinery.
-	if d.Recv == nil && d.Name.Name == shimUnsupportedName {
-		return nil, unsup("golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers")
+	// The shim runtime-refusal helpers are FORCE-QUARANTINED (audit
+	// R4-C-3): their wire declarations are unsupported stubs, so a
+	// call throws GoError.unsupported — the unrecoverable
+	// interpreter-level stop every golean shim RUNTIME refusal routes
+	// through, carrying the helper's reason
+	// (shimRuntimeRefusalReasons: the generic goleanShimUnsupported,
+	// plus cause-named helpers like the Repeat output bound). The Go
+	// bodies exist only to type-check; returning unsup here hands
+	// them to the ordinary per-decl quarantine machinery.
+	if d.Recv == nil {
+		if reason, ok := shimRuntimeRefusalReasons[d.Name.Name]; ok {
+			return nil, unsup("%s", reason)
+		}
 	}
 	sig := e.info.Defs[d.Name].Type().(*types.Signature)
 	e.curResults = sig.Results()
@@ -5614,6 +5619,29 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 	// to the standing paths and refusals.
 	if pkgName, ok := e.qualifiedPkgRef(sel); ok {
 		return e.emitQualifiedSelector(sel, pkgName)
+	}
+	// A NON-source (stdlib) package-qualified selector in VALUE
+	// position (t1-fidelity-fixes 2026-08-31; assessment p2-keeps-
+	// a2a3bcd §1.3 instance 1): `f := strings.Fields` used to fall
+	// through to the FIELD-selection machinery and refuse with the
+	// phantom cause "field selector on anonymous struct type invalid
+	// type" (goTypeOf of a package name is invalid). The refusal was
+	// always correct — the E5 shim policy admits only the direct CALL
+	// shape — but the charter requires the refusal to NAME ITS CAUSE.
+	// Constants never reach here (folded upstream in emitExprBare);
+	// source packages took the arm above.
+	if x, isIdent := sel.X.(*ast.Ident); isIdent {
+		if pkgName, isPkg := e.info.Uses[x].(*types.PkgName); isPkg {
+			path := pkgName.Imported().Path()
+			if fns, modeled := stdlibShimAllowlist[path]; modeled {
+				if _, shimmed := fns[sel.Sel.Name]; shimmed {
+					return nil, unsup("%s.%s used as a function VALUE: the stdlib shim admits only the direct-call shape %s.%s(...) — a shimmed stdlib function has no modeled func value (E5 fail-closed rules, stdlibshim.go)",
+						pkgName.Imported().Name(), sel.Sel.Name, pkgName.Imported().Name(), sel.Sel.Name)
+				}
+			}
+			return nil, unsup("stdlib-qualified selector %s.%s in value position: only allowlisted DIRECT CALLS of modeled stdlib members lower (E5 shims / fmt desugar); the value shape is outside the modeled surface (package %q)",
+				pkgName.Imported().Name(), sel.Sel.Name, path)
+		}
 	}
 	// Sync-primitive METHOD VALUES / METHOD EXPRESSIONS (`f := m.Lock`,
 	// `go wg.Done()`'s callee, `(*sync.Mutex).Lock`) fail closed here

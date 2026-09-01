@@ -3505,7 +3505,6 @@ by the mechanism like every other operand; `unsafe/layout-ops/
 Pointer-type refusal (the two boundary mechanisms stay separately
 attested).
 
-
 ## BUG-071 — the dynamic fmt shim rendered fmt.Formatter implementors through error/Stringer (recorded silent-wrong-answer class, now closed at emit time)
 
 - Status: fixed (2026-08-31, t1-fidelity-fixes —
@@ -3544,3 +3543,65 @@ types (no error/Stringer leg) already fell to the dyn shim's
 unmodeled-kind refusal; the scan now refuses those exports up front
 too, uniformly.
 
+## BUG-072 — the stdlib function-VALUE refusal named a phantom cause ("field selector on anonymous struct type invalid type")
+
+- Status: fixed (2026-08-31, t1-fidelity-fixes — emitSelector
+  (tools/nativefrontend/emit.go) intercepts NON-source
+  package-qualified selectors in value position before the
+  field-selection machinery: an allowlisted shim member as a value
+  (`f := strings.Fields`) refuses naming the E5 direct-call-only
+  policy; every other stdlib-qualified value-position selector
+  refuses naming the modeled-surface boundary. The BOUNDARY is
+  unchanged — those shapes always quarantined — only the refusal's
+  cause is honest now.)
+- Pinned-by: none (refusals at `frontend-export`; the rows below pin
+  the two messages, red by design)
+- Cases: strings/shim-value-refused/shimmed-value, strings/shim-value-refused/unmodeled-value
+- Discovered: 2026-08-31 (fidelity assessment phase 2,
+  p2-keeps-a2a3bcd §1.3 instance 1 — severity: charter conformance,
+  not a wrong answer: "an explicit refusal that NAMES ITS CAUSE at
+  the point of failure" named an anonymous struct that does not exist
+  in the program)
+
+Mechanism: `strings.Fields` in value position has no go/types
+Selection (qualified identifiers resolve by name, not selection) and
+`strings` is not a source package, so the selector fell through to
+the promoted-field/fieldBase machinery, where goTypeOf of a package
+name is the invalid type — hence the phantom. The stdlib-shim policy
+header (stdlibshim.go) had always said the function-value shape
+"keeps existing refusals"; assessment A3-S7's claim (iv) ("narrowings
+named in refusals") failed on exactly the row it cited.
+
+## BUG-073 — strings.Repeat's oversized-output stop named no cause (fuel-out/OOM instead of a refusal); upstream's overflow panic was unmodeled
+
+- Status: fixed (2026-08-31, t1-fidelity-fixes — two arms in the
+  Repeat shim (stdlibshim.go), both checked UP FRONT from len(s) and
+  count before any allocation: (1) upstream's output-length overflow
+  panic modeled VERBATIM — `panic("strings: Repeat output length
+  overflow")` exactly when len(s)*count > maxInt, matching deps/go @
+  go1.26.5 strings.Repeat; an ordinary RECOVERABLE panic per the shim
+  header's split, upstream-faithful panics stay panics. (2) below
+  overflow, outputs past the golean bound (1<<24 bytes) refuse BY
+  NAME through the force-quarantined cause-named helper
+  goleanShimStringsRepeatBound (shimRuntimeRefusalReasons, emit.go) —
+  the unrecoverable R4-C-3 stop whose observation text itself names
+  the Repeat bound.)
+- Pinned-by: differential (repeat-overflow, both sides panic with the
+  identical message; repeat-bound-refused is the red-by-design
+  refusal pin demonstrating the cause-named message)
+- Cases: strings/trimspace-repeat/repeat-overflow, strings/trimspace-repeat/repeat-bound-refused
+- Discovered: 2026-08-31 (fidelity assessment phase 2, A3-S5: the
+  Repeat output-length delta was argued "a visible stop, never a
+  wrong answer" — but the stop was fuel exhaustion or a memory
+  blow-up that under scripts/capped presents as infra death, the one
+  delta in the shim table whose failure mode did not name its cause)
+
+The golean bound is honest-refusal territory, not fidelity: upstream
+gc allocates a 16 MiB+ Repeat fine, while the shim's quadratic loop
+concatenation could never realize it within machine resources — the
+bound converts an hours-long fuel grind (or a capped OOM) into an
+instant, cause-named, unrecoverable refusal. Recorded residual: the
+region between the bound and upstream's overflow stays a
+machine-refuses/gc-succeeds delta BY DESIGN (visible red, never a
+wrong answer); outputs at or above overflow now agree with gc
+exactly.

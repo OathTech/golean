@@ -131,6 +131,17 @@ const binaryLEPutUint64ShimName = "goleanShimLEPutUint64"
 // catch them. Injected whenever any shim is (it costs one dead decl).
 const shimUnsupportedName = "goleanShimUnsupported"
 
+// stringsRepeatBoundName (t1-fidelity-fixes 2026-08-31): the
+// strings.Repeat shim's CAUSE-NAMED runtime refusal helper. The
+// generic goleanShimUnsupported throw surfaces the callee's
+// quarantine reason, not its msg argument — fine for bounds whose
+// case context names them, but assessment A3-S5's condition is that
+// the Repeat output-bound stop NAME ITS CAUSE in the observation
+// itself. A dedicated force-quarantined helper carries the specific
+// reason (shimRuntimeRefusalReasons); same unrecoverable R4-C-3
+// mechanism.
+const stringsRepeatBoundName = "goleanShimStringsRepeatBound"
+
 const strconvFormatUintShimName = "goleanShimStrconvFormatUint"
 const strconvFormatIntShimName = "goleanShimStrconvFormatInt"
 const strconvParseUintShimName = "goleanShimStrconvParseUint"
@@ -225,12 +236,24 @@ var stdlibShimDeclNames = map[string][]string{
 		"goleanShimStrconvQuote", "goleanShimStrconvError"},
 	stringsSplitShimName:     {stringsSplitShimName},
 	stringsTrimSpaceShimName: {stringsTrimSpaceShimName},
-	stringsRepeatShimName:    {stringsRepeatShimName},
+	stringsRepeatShimName:    {stringsRepeatShimName, stringsRepeatBoundName},
 	slicesSortFuncShimName:   {slicesSortFuncShimName},
 	cmpCompareUintShimName:   {cmpCompareUintShimName},
 	cmpCompareIntShimName:    {cmpCompareIntShimName},
 	cmpCompareStringShimName: {cmpCompareStringShimName},
 	shimUnsupportedName:      {shimUnsupportedName},
+}
+
+// shimRuntimeRefusalReasons: reserved helper name -> the quarantine
+// reason its FORCE-QUARANTINED wire declaration carries (emit.go,
+// emitFuncDecl). Calling one throws GoError.unsupported with exactly
+// this text — the unrecoverable R4-C-3 stop — so a CAUSE-SPECIFIC
+// helper makes the observation itself name the bound it hit
+// (t1-fidelity-fixes 2026-08-31; the generic goleanShimUnsupported
+// stays for the bounds whose shim call sites carry the text).
+var shimRuntimeRefusalReasons = map[string]string{
+	shimUnsupportedName: "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers",
+	stringsRepeatBoundName: "golean strings.Repeat shim RUNTIME refusal (fail closed): output length exceeds the modeled bound (1<<24 bytes) — the loop-concatenation shim cannot realize it within machine resources; upstream go allocates it fine (recorded honest-refusal delta, t1-fidelity-fixes 2026-08-31). Unrecoverable BY DESIGN (audit R4-C-3)",
 }
 
 // stdlibShimSources: shim declaration name -> Go source of the
@@ -1160,21 +1183,56 @@ func goleanShimStringsTrimSpace(s string) string {
 
 	// strings.Repeat: loop concatenation; upstream's negative-count
 	// panic verbatim (gc-probed artifacts/w43/probe-b R1). Upstream's
-	// output-length overflow panic is NOT modeled (the machine would
-	// grow the string until fuel/memory bounds it — a visible stop,
-	// never a wrong answer; recorded bound).
+	// output-length OVERFLOW panic is modeled verbatim since
+	// 2026-08-31 (t1-fidelity-fixes; assessment A3-S5's cause-naming
+	// condition): the pinned oracle (deps/go @ go1.26.5,
+	// strings.Repeat) panics "strings: Repeat output length overflow"
+	// exactly when len(s)*count > maxInt — an ordinary RECOVERABLE
+	// panic per the header split (upstream-faithful panics stay
+	// panics). Below overflow, outputs past the golean bound (1<<24
+	// bytes) refuse BY NAME through goleanShimUnsupported instead of
+	// grinding into a fuel/memory stop that names no cause (the
+	// quadratic loop concatenation could never realize them within
+	// machine resources anyway — pre-fix that region presented as
+	// fuel-out or capped-OOM infra death; a recorded honest-refusal
+	// delta: upstream allocates such outputs fine).
 	stringsRepeatShimName: `
 // goleanShimStringsRepeat is the native frontend's strings.Repeat shim
-// (W4.3 item 1 landing B). Injected declaration — not user code.
+// (W4.3 item 1 landing B; overflow + bound arms t1-fidelity-fixes
+// 2026-08-31). Injected declaration — not user code.
 func goleanShimStringsRepeat(s string, count int) string {
 	if count < 0 {
 		panic("strings: negative Repeat count")
+	}
+	if count > 1 && len(s) > 0 {
+		// Upstream-faithful (go1.26.5 strings.Repeat): the output
+		// length may not exceed maxInt. len(s) > maxInt/count is
+		// exactly len(s)*count > maxInt (both operands positive).
+		if len(s) > 9223372036854775807/count {
+			panic("strings: Repeat output length overflow")
+		}
+		// golean bound (NOT upstream): refuse BY NAME what the loop
+		// below could never finish within machine resources. The
+		// helper is force-quarantined with the cause-naming reason
+		// (shimRuntimeRefusalReasons), so the observation itself says
+		// which bound fired.
+		if len(s)*count > 1<<24 {
+			goleanShimStringsRepeatBound()
+		}
 	}
 	out := ""
 	for i := 0; i < count; i++ {
 		out += s
 	}
 	return out
+}
+
+// goleanShimStringsRepeatBound is the Repeat shim's cause-named
+// runtime refusal (see shimRuntimeRefusalReasons). The Go body exists
+// for type-checking only — the wire declaration is a force-quarantined
+// stub and a call to it is the unrecoverable R4-C-3 throw.
+func goleanShimStringsRepeatBound() {
+	panic("golean strings.Repeat shim: output length exceeds the modeled bound (1<<24 bytes)")
 }
 `,
 

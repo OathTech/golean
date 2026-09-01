@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+# BOTH RED (frontend-export) BY DESIGN: the stdlib function-VALUE
+# refusal now names its true cause (see main.go; pre-fix it named the
+# phantom "field selector on anonymous struct type invalid type").
+# Expected columns record the oracle's truth (go run @ go1.26.5:
+# 3 / true).
+shimmed-value	shimmedValue	-	ok	-	stdlib,strings,closures
+unmodeled-value	unmodeledValue	-	ok	-	stdlib,strings,closures
