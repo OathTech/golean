@@ -75,7 +75,10 @@ what was put in front of the user).
 [AGENT] menu recorded post-hoc from the session at the audit's C5;
 [USER] countersign requested at the merge ask. COUNTERSIGNED [USER]
 2026-09-01 at the merge sign-off ("all agreed, go ahead with the
-merge"). The coordinator presented two numbered items, verbatim:
+merge") — provenance chain: the quote was received directly by the
+[AGENT] coordinator in-session and RELAYED to the recording worker;
+the worker did not receive it firsthand (assertion converted to
+citation per the U0-incident convention). The coordinator presented two numbered items, verbatim:
 
 «1. Q-SELSEL is ready to rule (2 reds): the asymmetric-arrival
 envelope survives unchanged on fresh evidence; the open question is
