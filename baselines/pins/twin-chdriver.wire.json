@@ -399055,7 +399055,7 @@
    },
    "recvType": "raft.MemoryStorage",
    "results": [],
-   "unsupported": "promoted sync-primitive method sync.Mutex.Lock (statement/defer-position sync ops — direct and promoted — lower at their call sites; this method-table entry answers satisfaction, and calls THROUGH it — interface dispatch, method values — fail closed)",
+   "unsupported": "promoted sync-primitive method sync.Mutex.Lock reached through interface dispatch on the embedding type (statement/defer ops and method values adjust to the embedded primitive at their sites and lower; this method-table entry answers satisfaction, and DISPATCH through it fails closed — the embedded-hop forwarding body is not modeled)",
    "variadic": false
   },
   {
@@ -399080,7 +399080,7 @@
      }
     }
    ],
-   "unsupported": "promoted sync-primitive method sync.Mutex.TryLock (statement/defer-position sync ops — direct and promoted — lower at their call sites; this method-table entry answers satisfaction, and calls THROUGH it — interface dispatch, method values — fail closed)",
+   "unsupported": "promoted sync-primitive method sync.Mutex.TryLock reached through interface dispatch on the embedding type (statement/defer ops and method values adjust to the embedded primitive at their sites and lower; this method-table entry answers satisfaction, and DISPATCH through it fails closed — the embedded-hop forwarding body is not modeled)",
    "variadic": false
   },
   {
@@ -399098,7 +399098,7 @@
    },
    "recvType": "raft.MemoryStorage",
    "results": [],
-   "unsupported": "promoted sync-primitive method sync.Mutex.Unlock (statement/defer-position sync ops — direct and promoted — lower at their call sites; this method-table entry answers satisfaction, and calls THROUGH it — interface dispatch, method values — fail closed)",
+   "unsupported": "promoted sync-primitive method sync.Mutex.Unlock reached through interface dispatch on the embedding type (statement/defer ops and method values adjust to the embedded primitive at their sites and lower; this method-table entry answers satisfaction, and DISPATCH through it fails closed — the embedded-hop forwarding body is not modeled)",
    "variadic": false
   },
   {
@@ -402496,6 +402496,28 @@
    "variadic": false
   },
   {
+   "body": {
+    "body": [
+     {
+      "args": [
+       {
+        "expr": "ident",
+        "name": "$recv",
+        "type": {
+         "elem": {
+          "kind": "sync",
+          "sync": "Mutex"
+         },
+         "kind": "pointer"
+        }
+       }
+      ],
+      "op": "lock",
+      "stmt": "sync-op"
+     }
+    ],
+    "stmt": "block"
+   },
    "name": "Lock",
    "params": [],
    "recv": {
@@ -402510,7 +402532,6 @@
    },
    "recvType": "sync.Mutex",
    "results": [],
-   "unsupported": "sync-primitive method sync.Mutex.Lock through interface dispatch (declaration-only stub: satisfaction answers; only direct statement/defer-position calls are modeled)",
    "variadic": false
   },
   {
@@ -402535,10 +402556,32 @@
      }
     }
    ],
-   "unsupported": "sync-primitive method sync.Mutex.TryLock through interface dispatch (declaration-only stub: satisfaction answers; only direct statement/defer-position calls are modeled)",
+   "unsupported": "sync-primitive method sync.Mutex.TryLock (declaration-only stub: satisfaction answers, calls fail closed — the member is outside the modeled sync surface; the modeled ops lower through values via their bodied stubs, P-S2-6)",
    "variadic": false
   },
   {
+   "body": {
+    "body": [
+     {
+      "args": [
+       {
+        "expr": "ident",
+        "name": "$recv",
+        "type": {
+         "elem": {
+          "kind": "sync",
+          "sync": "Mutex"
+         },
+         "kind": "pointer"
+        }
+       }
+      ],
+      "op": "unlock",
+      "stmt": "sync-op"
+     }
+    ],
+    "stmt": "block"
+   },
    "name": "Unlock",
    "params": [],
    "recv": {
@@ -402553,7 +402596,6 @@
    },
    "recvType": "sync.Mutex",
    "results": [],
-   "unsupported": "sync-primitive method sync.Mutex.Unlock through interface dispatch (declaration-only stub: satisfaction answers; only direct statement/defer-position calls are modeled)",
    "variadic": false
   }
  ],

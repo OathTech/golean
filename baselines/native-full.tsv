@@ -1,5 +1,36 @@
 # GoLean native-frontend full-corpus differential baseline
-# re-pinned: 2026-09-01 (t1-fidelity-fixes AUDIT FIX ROUND — the
+# re-pinned: 2026-09-01 (qrow-syncval slice — Q-SYNCVAL + Q-SYNCLIT,
+#   the two implement-ruled Q-rows of docs/2026-08-31_qrow-rulings.md
+#   (rows 6+7, [USER]-RULED 2026-08-31; row 6's D-002 freeze reading
+#   [USER]-confirmed 2026-09-01). Frontend-only: P-S2-6 bodied sync
+#   method stubs (identity principle — indirection consumes the same
+#   C8 site as the direct call or refuses; bodies emit the same
+#   sync-op nodes via the same syncOpFor table) + the forced
+#   empty-literal-as-zero-value lowering. Full ci --diff run at this
+#   tip; drift list = exactly these 17 rows, nothing else moved.)
+#   Row deltas — NO PASS->non-PASS flips, no Cases-line obligation:
+#   FAIL->PASS (7), the ruled reds, all were frontend-export refusal
+#     markers "PERMANENT-until-lifted" whose lift landed:
+#     sync/iface-dispatch/{mutex-user-iface,wg-user-iface,
+#     locker-box-dispatch} + sync/escapes/{method-value,go-stmt}
+#     (Q-SYNCVAL: dispatch/method-value/go-callee now execute through
+#     the bodied stubs); sync/composite-literal/{mutex-addr-lit,
+#     waitgroup-value-lit} (Q-SYNCLIT: empty literal = zero value).
+#   NEW rows (10), all born PASS, pinning the lifted surface:
+#     sync/iface-dispatch/{rw-locker-dispatch,once-iface-dispatch,
+#     locker-double-lock} — the last is the misuse-IDENTITY pin
+#     (dispatched double-Lock = gc's deadlock fatal, same as direct);
+#     sync/escapes/{method-value-add-arg,method-value-negative-panic,
+#     once-do-method-value,promoted-method-value,passed-callback} —
+#     negative-panic is the value-shape misuse-identity pin (wgAdd(-1)
+#     through a method value = gc's negative-counter panic);
+#     sync/composite-literal/{rwmutex-addr-lit,once-value-lit} — all
+#     four primitives' literal construction pinned.
+#   Out-of-scope sync reds unmoved and re-verified red with
+#     cause-naming refusals: sync/out-of-scope-cond/* (3),
+#     sync/out-of-scope-trylock/trylock-uncontended,
+#     sync/promoted-mutex/trylock-expr.
+# previous re-pin: 2026-09-01 (t1-fidelity-fixes AUDIT FIX ROUND — the
 #   pre-merge audit's BLOCKER-1 walk-completeness closures, the
 #   unsafe dot-import escape, E7 observability transitivity, and the
 #   NOTE-10 shift census. Full ci --slow run at this tip; numbers in
@@ -101,7 +132,6 @@
 #     none moved by this re-pin.
 # cases: 2478 (2306 PASS / 172 FAIL)
 # frontend: native (tools/nativefrontend)
-result	id	stage
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -2409,6 +2439,8 @@ PASS	strings/rune-literal-values	-
 PASS	strings/rune-slice-conversion	-
 PASS	strings/rune-slice-to-string-copy	-
 PASS	strings/rune-string-conversion	-
+FAIL	strings/shim-value-refused/shimmed-value	frontend-export
+FAIL	strings/shim-value-refused/unmodeled-value	frontend-export
 PASS	strings/slice-eval-order	-
 PASS	strings/slice-eval-order-elided-high	-
 PASS	strings/split-conformance/basic	-
@@ -2419,8 +2451,6 @@ PASS	strings/split-conformance/overlap	-
 PASS	strings/split-conformance/multi-byte-sep	-
 PASS	strings/split-conformance/confchange-shape	-
 FAIL	strings/split-conformance/empty-sep	frontend-export
-FAIL	strings/shim-value-refused/shimmed-value	frontend-export
-FAIL	strings/shim-value-refused/unmodeled-value	frontend-export
 PASS	strings/string-basic	-
 PASS	strings/string-byte-conversion	-
 PASS	strings/string-byte-len	-
@@ -2516,15 +2546,25 @@ FAIL	sync/atomic-frontier/cas	frontend-export
 FAIL	sync/atomic-frontier/swap	frontend-export
 FAIL	sync/atomic-frontier/value	lean-observation
 FAIL	sync/atomic-frontier/mp-litmus	membership
-FAIL	sync/composite-literal/mutex-addr-lit	frontend-export
-FAIL	sync/composite-literal/waitgroup-value-lit	frontend-export
+PASS	sync/composite-literal/mutex-addr-lit	-
+PASS	sync/composite-literal/waitgroup-value-lit	-
+PASS	sync/composite-literal/rwmutex-addr-lit	-
+PASS	sync/composite-literal/once-value-lit	-
 PASS	sync/escapes/promoted	-
-FAIL	sync/escapes/method-value	frontend-export
-FAIL	sync/escapes/go-stmt	frontend-export
+PASS	sync/escapes/method-value	-
+PASS	sync/escapes/go-stmt	-
 PASS	sync/escapes/defer-embedded	-
-FAIL	sync/iface-dispatch/mutex-user-iface	frontend-export
-FAIL	sync/iface-dispatch/wg-user-iface	frontend-export
-FAIL	sync/iface-dispatch/locker-box-dispatch	frontend-export
+PASS	sync/escapes/method-value-add-arg	-
+PASS	sync/escapes/method-value-negative-panic	-
+PASS	sync/escapes/once-do-method-value	-
+PASS	sync/escapes/promoted-method-value	-
+PASS	sync/escapes/passed-callback	-
+PASS	sync/iface-dispatch/mutex-user-iface	-
+PASS	sync/iface-dispatch/wg-user-iface	-
+PASS	sync/iface-dispatch/locker-box-dispatch	-
+PASS	sync/iface-dispatch/rw-locker-dispatch	-
+PASS	sync/iface-dispatch/once-iface-dispatch	-
+PASS	sync/iface-dispatch/locker-double-lock	-
 PASS	sync/mutex-basic/lock-unlock	-
 PASS	sync/mutex-basic/defer-unlock	-
 PASS	sync/mutex-basic/copy-carries-state	-
