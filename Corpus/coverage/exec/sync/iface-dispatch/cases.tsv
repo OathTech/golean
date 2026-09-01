@@ -1,10 +1,15 @@
 # id	subject	args	expected_status	expected_reason	features
-# PERMANENT-until-lifted markers (arc-end fix round, 2026-08-10):
-# sync method calls through interface dispatch — satisfaction and
-# boxing answer, the CALL refuses per-stub (red at frontend-export by
-# design; was a misclassified runtime `stuck` before the fix).
-# Lifting the calls onto the machine's sync ops is the recorded
-# follow-up (design note §12).
+# LIFTED (Q-SYNCVAL slice, P-S2-6, 2026-09-01; formerly
+# PERMANENT-until-lifted markers from the arc-end fix round
+# 2026-08-10): sync method calls through interface dispatch execute —
+# dispatch lands on the bodied stub whose body is the same sync-op the
+# direct call lowers to (the identity principle, [USER]-RULED
+# 2026-08-31). locker-double-lock pins the misuse identity: the
+# dispatched second Lock parks into gc's deadlock fatal exactly like
+# the direct form.
 mutex-user-iface	mutexUserIface	-	ok	-	sync,mutex,interfaces
 wg-user-iface	wgUserIface	-	ok	-	sync,waitgroup,interfaces
 locker-box-dispatch	lockerBoxDispatch	-	ok	-	sync,mutex,interfaces
+rw-locker-dispatch	rwLockerDispatch	-	ok	-	sync,rwmutex,interfaces
+once-iface-dispatch	onceIfaceDispatch	-	ok	-	sync,once,interfaces,closures
+locker-double-lock	lockerDoubleLock	-	deadlock	-	sync,mutex,interfaces,deadlock

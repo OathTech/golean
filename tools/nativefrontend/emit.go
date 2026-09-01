@@ -447,19 +447,23 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	typeDefs = append(typeDefs, modelDefs...)
 	methods = append(methods, modelMethods...)
 
-	// Sync-primitive method-set stubs (arc-end fix round 2026-08-10):
-	// the four modeled sync types' FULL exported pointer method sets,
-	// so interface satisfaction answers what gc answers (the early
-	// `{"kind":"sync"}` return skipped the D5 registration, leaving
-	// them the ONLY imported family that runs past a satisfaction
-	// query with no method table — a silent false "no"). Also before
-	// the interface-declaration pass: RLocker's signature mentions
-	// sync.Locker.
-	syncStubs, err := e.syncMethodStubs()
+	// Sync-primitive method-set stubs (arc-end fix round 2026-08-10;
+	// bodied per P-S2-6, Q-SYNCVAL slice 2026-09-01): the four modeled
+	// sync types' FULL exported pointer method sets, so interface
+	// satisfaction answers what gc answers (the early `{"kind":"sync"}`
+	// return skipped the D5 registration, leaving them the ONLY
+	// imported family that runs past a satisfaction query with no
+	// method table — a silent false "no"). Also before the
+	// interface-declaration pass: RLocker's signature mentions
+	// sync.Locker. The modeled ops carry real sync-op bodies (identity
+	// with the direct lowering); syncFns is their program-level
+	// synthetic support ($syncOnceDone).
+	syncStubs, syncFns, err := e.syncMethodStubs()
 	if err != nil {
 		return nil, err
 	}
 	methods = append(methods, syncStubs...)
+	funcs = append(funcs, syncFns...)
 
 	// Interface DECLARATIONS: one `interface` TypeDef per interface type that
 	// reached the wire anywhere (declared here, predeclared `error`, or
@@ -5094,7 +5098,7 @@ func (e *emitter) syncPromotedStub(named *types.Named, tName string, mfn *types.
 		"results":  results,
 		"variadic": sig.Variadic(),
 		"unsupported": "promoted sync-primitive method sync." + prim + "." + mfn.Name() +
-			" (statement/defer-position sync ops — direct and promoted — lower at their call sites; this method-table entry answers satisfaction, and calls THROUGH it — interface dispatch, method values — fail closed)",
+			" reached through interface dispatch on the embedding type (statement/defer ops and method values adjust to the embedded primitive at their sites and lower; this method-table entry answers satisfaction, and DISPATCH through it fails closed — the embedded-hop forwarding body is not modeled)",
 	}, nil
 }
 
@@ -5497,17 +5501,72 @@ func (e *emitter) importedMethodStubs(qname string, named *types.Named) ([]any, 
 	return out, true
 }
 
+// syncValueOpModeled reports whether prim's METHOD lowers when reached
+// AS A VALUE (bodied stub / method value / go callee — P-S2-6,
+// Q-SYNCVAL [USER]-RULED 2026-08-31). THE SET IS DERIVED, NOT LISTED
+// TWICE: syncOpFor's zero-argument table — the SAME table the direct
+// statement/defer interception (`emitSyncOpStmt`/`emitDeferSyncOp`)
+// lowers through — plus the two argument-taking members that
+// interception also models (WaitGroup.Add/Done, Once.Do). One
+// derivation feeds both the stub-body synthesis and the method-value
+// lift, so the value surface can never name an op the direct surface
+// does not — the identity principle's mechanical half (the other half
+// is that the bodies below emit the SAME `sync-op` wire nodes, so the
+// machine path from the op boundary on is literally shared).
+func syncValueOpModeled(prim, method string) bool {
+	if syncOpFor(prim, method) != "" {
+		return true
+	}
+	switch {
+	case prim == "WaitGroup" && (method == "Add" || method == "Done"):
+		return true
+	case prim == "Once" && method == "Do":
+		return true
+	}
+	return false
+}
+
+// syncOnceDoneFunc is the generic completer `$syncOnceDone` the bodied
+// sync.Once.Do stub defers (P-S2-6's "generic $syncOnceDo": the stub
+// ITSELF is the generic Do — one wire function, not a per-site
+// synthetic — and this is its completion half). Identical in substance
+// to emitOnceDo's per-site `$onceDone`: completion MUST land when Do's
+// own frame exits (gc sets done in a defer of doSlow itself), and here
+// Do's frame IS the stub's.
+func syncOnceDoneFunc() map[string]any {
+	oncePtrTyW := map[string]any{"kind": "pointer",
+		"elem": map[string]any{"kind": "sync", "sync": "Once"}}
+	return map[string]any{
+		"name":     "$syncOnceDone",
+		"params":   []any{map[string]any{"id": "$once", "type": oncePtrTyW}},
+		"results":  []any{},
+		"variadic": false,
+		"body": map[string]any{"stmt": "block", "body": []any{
+			map[string]any{"stmt": "sync-op", "op": "onceComplete",
+				"args": []any{map[string]any{"expr": "ident", "name": "$once", "type": oncePtrTyW}}},
+		}},
+	}
+}
+
 // syncMethodStubs emits, for every modeled sync primitive type whose
-// identity reached the wire, its FULL exported method set as
-// declaration-only stubs (arc-end fix round 2026-08-10): the real
-// go/types signatures — `satisfiesMethodSig` compares them — over
-// fail-closed bodies, so interface satisfaction against a bare
-// `*sync.Mutex` answers what gc answers while a CALL through a stub
-// (interface dispatch; direct calls are intercepted earlier and
-// lowered to sync ops) refuses with the reason. All four types carry
-// exported POINTER-receiver methods only (mutex.go / rwmutex.go /
-// waitgroup.go / once.go), so a value box correctly keeps an empty
-// method set.
+// identity reached the wire, its FULL exported method set (arc-end fix
+// round 2026-08-10; BODIES per P-S2-6, Q-SYNCVAL slice 2026-09-01): the
+// real go/types signatures — `satisfiesMethodSig` compares them — so
+// interface satisfaction against a bare `*sync.Mutex` answers what gc
+// answers. The MODELED members (`syncValueOpModeled`) carry real
+// one-statement bodies over the machine's EXISTING sync ops — the same
+// `sync-op` wire nodes the direct statement/defer interception emits,
+// via the same `syncOpFor` table — so a call that arrives through a
+// VALUE (interface dispatch, method value, go callee) consumes the same
+// machine op / same C8 choice site as the direct form: the Q-SYNCVAL
+// identity principle, indirection preserves op identity or refuses.
+// The extra stub frame adds PRIVATE steps only — no new boundaries at
+// registry granularity (memo §6). Everything else (TryLock, TryRLock,
+// RLocker, WaitGroup.Go, and any member a future toolchain adds) stays
+// a declaration-only stub: satisfaction answers, a CALL refuses with
+// the reason — the allowlist fails closed by construction. The second
+// result is the program-level synthetic functions the bodies need
+// (`$syncOnceDone` when Once reached the wire).
 //
 // Unlike importedMethodStubs this FAILS THE EXPORT on any un-emittable
 // signature instead of skipping the type whole. (Comment truthed at the
@@ -5520,13 +5579,15 @@ func (e *emitter) importedMethodStubs(qname string, named *types.Named) ([]any, 
 // policy stands as belt-and-suspenders — contract note §3 item 1 — the
 // export-time refusal beats a run-time one; only the stated reason was
 // stale.)
-func (e *emitter) syncMethodStubs() ([]any, error) {
+func (e *emitter) syncMethodStubs() ([]any, []any, error) {
 	names := make([]string, 0, len(e.syncUsed))
 	for n := range e.syncUsed {
 		names = append(names, n)
 	}
 	sort.Strings(names)
 	out := []any{}
+	extraFuncs := []any{}
+	onceDoneEmitted := false
 	for _, name := range names {
 		named := e.syncUsed[name]
 		qname := "sync." + name
@@ -5535,7 +5596,7 @@ func (e *emitter) syncMethodStubs() ([]any, error) {
 		for i := 0; i < ptrSet.Len(); i++ {
 			mfn, ok := ptrSet.At(i).Obj().(*types.Func)
 			if !ok {
-				return nil, unsup("sync method-set entry %s.%s is not a func", qname, ptrSet.At(i).Obj().Name())
+				return nil, nil, unsup("sync method-set entry %s.%s is not a func", qname, ptrSet.At(i).Obj().Name())
 			}
 			if !mfn.Exported() {
 				// Cross-package unexported identity can never satisfy a
@@ -5546,34 +5607,143 @@ func (e *emitter) syncMethodStubs() ([]any, error) {
 			sig := mfn.Type().(*types.Signature)
 			valueTy, err := e.emitType(named)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
+			recvIsPtr := valSet.Lookup(mfn.Pkg(), mfn.Name()) == nil
 			recvTy := any(valueTy)
-			if valSet.Lookup(mfn.Pkg(), mfn.Name()) == nil {
+			if recvIsPtr {
 				recvTy = map[string]any{"kind": "pointer", "elem": valueTy}
 			}
 			params, err := e.emitParams(sig.Params())
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			results, err := e.emitResults(sig.Results())
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
-			out = append(out, map[string]any{
+			stub := map[string]any{
 				"name":     mfn.Name(),
 				"recvType": qname,
 				"recv":     map[string]any{"id": "$recv", "type": recvTy},
 				"params":   params,
 				"results":  results,
 				"variadic": sig.Variadic(),
-				"unsupported": "sync-primitive method " + qname + "." + mfn.Name() +
-					" through interface dispatch (declaration-only stub: satisfaction answers; " +
-					"only direct statement/defer-position calls are modeled)",
-			})
+			}
+			body, needOnceDone, err := e.syncStubBody(name, mfn.Name(), recvTy, recvIsPtr, sig, params)
+			if err != nil {
+				return nil, nil, err
+			}
+			if body != nil {
+				stub["body"] = body
+				if needOnceDone && !onceDoneEmitted {
+					extraFuncs = append(extraFuncs, syncOnceDoneFunc())
+					onceDoneEmitted = true
+				}
+			} else {
+				stub["unsupported"] = "sync-primitive method " + qname + "." + mfn.Name() +
+					" (declaration-only stub: satisfaction answers, calls fail closed — " +
+					"the member is outside the modeled sync surface; the modeled ops lower " +
+					"through values via their bodied stubs, P-S2-6)"
+			}
+			out = append(out, stub)
 		}
 	}
-	return out, nil
+	return out, extraFuncs, nil
+}
+
+// syncStubBody synthesizes the wire body for a MODELED sync-primitive
+// method's stub (P-S2-6), or nil for a declaration-only member. Every
+// body is the same `sync-op` node the direct interception emits —
+// zero-argument ops through the shared `syncOpFor` table, Done as
+// wgAdd(-1) (gc waitgroup.go's own definition, the same lowering
+// `emitSyncOpStmt` uses at both call sites), Add threading its `$a0`
+// parameter, and Once.Do as the generic onceBegin/deferred-complete/
+// call shape (`emitOnceDo`'s body, hosted in the stub's own frame so
+// completion lands when Do returns — the same discipline). Parameter
+// ids of bodied stubs are FORCED to stable synthetic names ("$a0", …):
+// the body must reference them, and export-data parameter names are
+// not a contract (signature TYPES stay the real ones — satisfaction
+// compares types, not names). A modeled member whose receiver or
+// signature is not the pinned toolchain's shape gets NO body — it
+// falls back to the declaration-only refusal rather than guessing
+// (fail closed; identity or refusal, never a variant).
+func (e *emitter) syncStubBody(prim, method string, recvTy any, recvIsPtr bool, sig *types.Signature, params []any) (any, bool, error) {
+	if !syncValueOpModeled(prim, method) {
+		return nil, false, nil
+	}
+	// Every modeled op is pointer-receiver on the pinned toolchain
+	// (mutex.go / rwmutex.go / waitgroup.go / once.go) and the machine's
+	// sync ops take the primitive's ADDRESS; a value-receiver shape here
+	// would mean the stdlib changed under the pin — refuse the body.
+	if !recvIsPtr {
+		return nil, false, nil
+	}
+	recvIdent := map[string]any{"expr": "ident", "name": "$recv", "type": recvTy}
+	block := func(stmts ...any) map[string]any {
+		return map[string]any{"stmt": "block", "body": stmts}
+	}
+	forceParamID := func(i int, id string) (map[string]any, bool) {
+		p, ok := params[i].(map[string]any)
+		if !ok {
+			return nil, false
+		}
+		p["id"] = id
+		return map[string]any{"expr": "ident", "name": id, "type": p["type"]}, true
+	}
+	if op := syncOpFor(prim, method); op != "" {
+		if sig.Params().Len() != 0 {
+			return nil, false, nil
+		}
+		return block(map[string]any{"stmt": "sync-op", "op": op,
+			"args": []any{recvIdent}}), false, nil
+	}
+	switch {
+	case prim == "WaitGroup" && method == "Done":
+		if sig.Params().Len() != 0 {
+			return nil, false, nil
+		}
+		return block(map[string]any{"stmt": "sync-op", "op": "wgAdd",
+			"args": []any{recvIdent, syncNegOne()}}), false, nil
+	case prim == "WaitGroup" && method == "Add":
+		if sig.Params().Len() != 1 || sig.Variadic() {
+			return nil, false, nil
+		}
+		deltaIdent, ok := forceParamID(0, "$a0")
+		if !ok {
+			return nil, false, nil
+		}
+		return block(map[string]any{"stmt": "sync-op", "op": "wgAdd",
+			"args": []any{recvIdent, deltaIdent}}), false, nil
+	case prim == "Once" && method == "Do":
+		if sig.Params().Len() != 1 || sig.Variadic() {
+			return nil, false, nil
+		}
+		fSig, isSig := sig.Params().At(0).Type().Underlying().(*types.Signature)
+		if !isSig || fSig.Params().Len() != 0 || fSig.Results().Len() != 0 || fSig.Variadic() {
+			return nil, false, nil
+		}
+		fIdent, ok := forceParamID(0, "$a0")
+		if !ok {
+			return nil, false, nil
+		}
+		boolTyW := map[string]any{"kind": "bool"}
+		return block(
+			map[string]any{"stmt": "sync-op", "op": "onceBegin", "args": []any{recvIdent},
+				"target": map[string]any{"target": "declare", "id": "$onceStarted", "type": boolTyW}},
+			map[string]any{"stmt": "if",
+				"cond": map[string]any{"expr": "ident", "name": "$onceStarted", "type": boolTyW},
+				"then": block(
+					map[string]any{"stmt": "defer",
+						"callee": map[string]any{"expr": "func-value", "func": "$syncOnceDone", "captured": []any{}},
+						"args":   []any{recvIdent}},
+					map[string]any{"stmt": "expr", "expr": map[string]any{"expr": "call-value",
+						"callee": fIdent, "args": []any{}, "resultTypes": []any{}}},
+				),
+			},
+		), true, nil
+	}
+	return nil, false, nil
 }
 
 // stringLitNode emits a string literal wire node (the machine's GoString
@@ -5643,14 +5813,34 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 				pkgName.Imported().Name(), sel.Sel.Name, path)
 		}
 	}
-	// Sync-primitive METHOD VALUES / METHOD EXPRESSIONS (`f := m.Lock`,
-	// `go wg.Done()`'s callee, `(*sync.Mutex).Lock`) fail closed here
-	// (audit fix round F4): the lowering would otherwise emit a
-	// func-value over a nonexistent `sync.X.Y` function id and land as
-	// runtime `stuck`.
+	// Sync-primitive METHOD VALUES (`f := m.Lock`, `go wg.Done()`'s
+	// callee, a passed callback) of the MODELED ops lower through the
+	// ORDINARY method-value path below (P-S2-6, Q-SYNCVAL [USER]-RULED
+	// 2026-08-31): the emitted func-value references the BODIED stub
+	// `sync.X.Y`, whose body is the same `sync-op` node the direct
+	// interception emits (syncOpFor — one table), so the indirect call
+	// consumes the same machine op / same C8 choice site as the direct
+	// form — identity, never a variant. The receiver captures at
+	// method-value time (address of the primitive; promoted receivers
+	// adjust through their embedded hops in promotedReceiverArg), which
+	// is gc's own moment. Everything else stays fail-closed HERE, at
+	// export time (audit fix round F4 — the pre-stub lowering emitted a
+	// func-value over a NONEXISTENT `sync.X.Y` id and landed as runtime
+	// `stuck`; today the id exists, so this refusal is the
+	// statically-knowable-beats-runtime half): method values of
+	// unmodeled members (TryLock, RLocker, WaitGroup.Go, …) and sync
+	// METHOD EXPRESSIONS (`(*sync.Mutex).Lock` — outside this slice's
+	// ruled scope) refuse per-decl.
 	if seln, ok := e.info.Selections[sel]; ok && seln.Kind() != types.FieldVal {
 		if prim := e.syncMethodPrim(seln); prim != "" {
-			return nil, unsup("sync.%s.%s as a method value (only direct statement/defer-position sync ops are modeled)", prim, sel.Sel.Name)
+			if seln.Kind() != types.MethodVal {
+				return nil, unsup("sync.%s.%s as a method expression (the modeled sync ops lower as METHOD VALUES — P-S2-6; the method-expression shape stays refused)", prim, sel.Sel.Name)
+			}
+			if !syncValueOpModeled(prim, sel.Sel.Name) {
+				return nil, unsup("sync.%s.%s as a method value (the member is outside the modeled sync surface; the modeled ops' method values lower — P-S2-6)", prim, sel.Sel.Name)
+			}
+			// fall through: the MethodVal arm below emits the func-value
+			// over the bodied stub.
 		}
 	}
 	if seln, ok := e.info.Selections[sel]; ok && seln.Kind() != types.FieldVal {
@@ -7568,26 +7758,28 @@ func (e *emitter) emitQualifiedSelector(sel *ast.SelectorExpr, pkgName *types.Pk
 
 func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool, error) {
 	// Sync-primitive methods never reach the ordinary method machinery:
-	// the modeled surface is DIRECT statement/defer-position calls only
-	// (spec-parity slice 2), intercepted upstream — anything arriving
-	// here is an expression-position use (TryLock in a condition, a
-	// sync method call as an operand) or — audit fix round F4 — a
-	// PROMOTED call on an embedding struct, and fails closed with a
-	// per-decl quarantine (a visible frontend-export refusal, never a
-	// dangling `sync.Mutex.Lock` call that lands as runtime `stuck`).
-	// The check keys on the resolved method's own receiver
-	// (`syncMethodPrim`), which covers the promoted shape the
-	// receiver-expression check misses. A call THROUGH AN INTERFACE
-	// resolves to the interface's method, not a sync receiver, so this
-	// guard correctly passes it through — that lane's fail-closed story
-	// is the `syncMethodStubs` pass (arc-end fix round 2026-08-10): the
-	// dispatch lands on a declaration-only stub and refuses per-stub
-	// (before that pass existed, this comment's "never a dangling call"
-	// claim was FALSE for exactly the interface-dispatch shape, which
-	// escaped to a runtime `stuck` — sync/iface-dispatch pins it).
+	// statement/defer-position calls (direct AND promoted, H-12) are
+	// intercepted upstream, and every MODELED op returns no results —
+	// legal Go cannot put one in expression position — so anything
+	// arriving here is an expression-position use of a value-returning
+	// UNMODELED member (TryLock in a condition, RLocker as an operand)
+	// and fails closed with a per-decl quarantine (a visible
+	// frontend-export refusal, never a dangling `sync.Mutex.Lock` call
+	// that lands as runtime `stuck`). The check keys on the resolved
+	// method's own receiver (`syncMethodPrim`), which covers the
+	// promoted shape the receiver-expression check misses. A call
+	// THROUGH AN INTERFACE resolves to the interface's method, not a
+	// sync receiver, so this guard correctly passes it through — that
+	// lane executes via the `syncMethodStubs` pass (bodied for the
+	// modeled ops per P-S2-6, the Q-SYNCVAL slice: dispatch lands on a
+	// stub whose body is the same sync-op the direct form lowers to;
+	// unmodeled members' stubs stay declaration-only and refuse
+	// per-stub). Method VALUES of the modeled ops lower in emitSelector
+	// (same slice); their invocations are call-value nodes, not method
+	// calls, and never reach here.
 	if seln := e.info.Selections[sel]; seln != nil && seln.Kind() == types.MethodVal {
 		if prim := e.syncMethodPrim(seln); prim != "" {
-			return nil, false, unsup("sync.%s.%s outside a statement/defer position (expression-position sync ops and sync method values are unmodeled; direct AND promoted statement/defer ops lower — H-12)", prim, sel.Sel.Name)
+			return nil, false, unsup("sync.%s.%s outside a statement/defer position (the member is outside the modeled sync surface; modeled ops lower at statement/defer sites and through values — P-S2-6)", prim, sel.Sel.Name)
 		}
 	}
 	seln, ok := e.info.Selections[sel]

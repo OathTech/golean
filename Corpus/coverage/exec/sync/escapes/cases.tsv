@@ -1,11 +1,17 @@
 # id	subject	args	expected_status	expected_reason	features
-# Refusal markers (audit fix round, F4), red at frontend-export until
-# lifted. W4.1 item 5 LIFTED the promoted statement/defer shapes
-# (`promoted` and `defer-embedded` are green since — the raft
-# MemoryStorage idiom, sync/promoted-mutex is the positive family);
-# method-value and go-position sync ops remain refused per-decl, and
-# these two rows stay red by design.
+# Escape shapes (audit fix round F4). W4.1 item 5 LIFTED the promoted
+# statement/defer shapes (`promoted`, `defer-embedded`); the Q-SYNCVAL
+# slice (P-S2-6, 2026-09-01) LIFTED the value shapes — `method-value`,
+# `go-stmt`, and the new rows below (argument-threading, misuse
+# identity, Once.Do value, promoted method value, passed callback).
+# All lower through the bodied sync stubs: same sync-op as the direct
+# form (the identity principle, [USER]-RULED 2026-08-31).
 promoted	escapePromoted	-	ok	-	sync,mutex,embedding
 method-value	escapeMethodValue	-	ok	-	sync,mutex,closures
 go-stmt	escapeGoStmt	-	ok	-	sync,waitgroup,goroutines
 defer-embedded	escapeDeferEmbedded	-	ok	-	sync,mutex,defer,embedding
+method-value-add-arg	escapeMethodValueAdd	-	ok	-	sync,waitgroup,closures
+method-value-negative-panic	escapeMethodValueNegative	-	panic	sync: negative WaitGroup counter	sync,waitgroup,panic,closures
+once-do-method-value	escapeOnceDoValue	-	ok	-	sync,once,closures
+promoted-method-value	escapePromotedMethodValue	-	ok	-	sync,mutex,embedding,closures
+passed-callback	escapePassedCallback	-	ok	-	sync,mutex,closures
