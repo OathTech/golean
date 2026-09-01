@@ -280,10 +280,13 @@ recommendation, sized as follows:
   tests → re-run and re-triage), after any evaluation-order/lowering
   change, and on oracle re-pins (a new $GOROOT snapshot brings new
   tests).
-- If adopted, track a small expected-MISMATCH allowlist (the M1-M3 rows
-  until fixed) so a NEW mismatch is loud — the fail-closed shape the
-  other legs already use. Promotion of the runner to a gate leg is a
-  gate change and stays the user's call.
+- ~~If adopted, track a small expected-MISMATCH allowlist (the M1-M3 rows
+  until fixed) so a NEW mismatch is loud~~ — RETIRED 2026-09-01 (audit
+  fix round, NOTE 14): with MISMATCH at 0 after the fix slice there is
+  nothing to allowlist; the fail-closed shape for a standing lane is
+  simply "any MISMATCH is loud" (an empty allowlist is not a mechanism,
+  it is the default). Promotion of the runner to a gate leg is a gate
+  change and stays the user's call.
 
 Extensions worth their cost, in order: (1) statement-position
 print/println modeling (fragment lever #1, unlocks the biggest slice);
@@ -304,3 +307,31 @@ errorcheck tests (a frontend-precision census, no machine involvement).
   shapes are stated in the diagnosis sections above, and the upstream
   test files in `deps/go/test/fixedbugs/` are the permanent
   reproducers (pinned by the go checkout rev).
+
+## Addendum (2026-09-01, post-fix) — the headline counts above are superseded
+
+The fix slice `gotest-fixes` (BUG-074..078, [USER]-approved "(2)
+agree") re-ran the full 1,013-case in-scope slice at its tip
+(f2bc17dd, tip golean + tip frontend):
+
+| category | this report | post-fix |
+|---|---|---|
+| FRONTEND-REFUSED | 641 | 642 |
+| MATCH | 331 | 337 |
+| MACHINE-REFUSED | 15 | 13 |
+| INFRA | 22 | 21 |
+| **MISMATCH** | **4** | **0** |
+
+issue4313 / issue43111 / issue43835 / issue72844 / typeparam/issue42758
+MATCH; issue19911 refuses honestly at the strings.Index frontier
+(FR-14); issue34395 refuses by name (BUG-078, the INFRA note above
+corrected in place); issue53619 refused downstream at the slice and,
+after the audit fix round's BUG-079, refuses at the lowering by name
+(FRONTEND-REFUSED). The verdict paragraph's "331 agree and 4 disagree"
+is the record of THIS run; the standing count is 0 disagreements on
+the comparable slice. The expected-MISMATCH-allowlist recommendation
+(§Standing-lane recommendation) is retired above. The audit fix
+round's own re-run over the eight named cases is recorded in that
+round's report; a full-slice re-run rides the next standing-lane
+trigger (the next frontend fragment widening or oracle re-pin).
+

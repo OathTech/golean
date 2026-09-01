@@ -579,7 +579,12 @@ defers run LIFO. The machine realizes all of these deterministically
 select entry Syntax.lean:354–361; send channel-then-value
 Machine.lean:1122–1132). The BUG-022/025/029/030/033/034/035/036/037
 family was the machine being WRONG against these forced points — fixed
-or tracked in BUGS.md, not latitude. Cross-link (P2 retrofit):
+or tracked in BUGS.md, not latitude; the 2026-09-01 $GOROOT/test
+harvest added BUG-074 (select operands not snapshotted at entry —
+spec#Select_statements step 1), BUG-075 (multi-value `return` stored
+result 1 before operand 2 evaluated — the two-phase discipline at
+returns) and BUG-076 (the range non-evaluation special case missing)
+to the same was-wrong family. Cross-link (P2 retrofit):
 mem#model Requirement 1 DELEGATES sequenced-before to exactly this
 section — the spec's forced core is also the memory model's
 per-goroutine order, so E2–E5's residual latitude propagates verbatim
@@ -673,6 +678,14 @@ concurrent observer).
 - Note the asymmetry: here the machine's point is the SPEC-shaped one
   and gc's is the exotic one — the doctrine's "pinned to gc" framing
   does not describe this axis (see §9, flag 3).
+- Returns (2026-09-01, BUG-075): multi-value `return e1, …, en` now
+  sits in the FORCED two-phase core — decodeReturn evaluates every
+  operand into a temp, then stores all results (a panic in a later
+  operand precedes ANY result store), so the machine holds the
+  spec-literal point at returns exactly as it does here for
+  assignments. Whether gc's early-store exotic point of this row has
+  a return-side twin is NOT probed; if one is ever observed it joins
+  this row's envelope question, not E1.
 
 ### E6. `len`/`cap` hoist discriminating shapes — REFUSED (narrowed to the true residual, A6 2026-08-31)
 
