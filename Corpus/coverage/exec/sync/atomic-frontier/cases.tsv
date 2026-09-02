@@ -11,4 +11,4 @@ add-load-store	atomicAddLoadStore	-	ok	-	sync,atomics,ints	strict	-	-
 cas	atomicCas	-	ok	-	sync,atomics,ints	strict	-	-
 swap	atomicSwap	-	ok	-	sync,atomics,ints	strict	-	-
 value	atomicValue	-	ok	-	sync,atomics,interfaces,type_assertions	strict	-	-
-mp-litmus	atomicMpLitmus	-	ok	-	sync,atomics,goroutines,nondet	membership	message-passing litmus under mem#atomic's seq_cst clause: writer stores data then flag, reader loads flag then data — admitted set {0, 1, 11}; the SC-excluded member is 10 (flag seen, data missed). One member oracle-witnessed (0, 400/400 at the pin); the set is argued from the mem text, which is exactly the membership lane's job	width=8
+mp-litmus	atomicMpLitmus	-	ok	-	sync,atomics,goroutines,nondet	membership	message-passing litmus under mem#atomic's seq_cst clause: writer stores data then flag, reader loads flag then data — admitted set {0, 1, 11}; the SC-excluded member is 10 (flag seen, data missed). One member oracle-witnessed (0, 400/400 at the pin); the set is argued from the mem text, which is exactly the membership lane's job	width=8,sites=8

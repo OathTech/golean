@@ -10,41 +10,74 @@
 # docs/2026-09-02_detector-soundness.md.
 #
 # WHAT IT MEASURES. For every in-scope case it obtains TWO race verdicts
-# and places the case in one of four cells:
+# and places the case in one cell:
 #
 #   gc side      `go build -race` of the SAME generated harness the
 #                differential gate runs (tools/coverageharness), executed
 #                --runs N times at EACH --procs GOMAXPROCS value. A run is
 #                RACE iff TSan printed "WARNING: DATA RACE" (TSan has no
 #                false positives w.r.t. ITS OWN happens-before model, so
-#                one red run is a real TSan race); gc verdict = RACE if
-#                any run is red, else DRF-in-N-runs (a per-run sampler,
-#                never a proof of race-freedom — reported as counts).
+#                one red run is a real TSan race). A run is COMPLETED iff
+#                it exited 0 or its transcript shows the program's own
+#                terminal outcome (a printed observation, a `panic:` or a
+#                `fatal error:` line); a timeout or an exit with none of
+#                those is NOT a completed run. gc verdict = RACE if any
+#                run is red; else DRF-in-N-runs if at least one run
+#                completed (a per-run sampler, never a proof of race-
+#                freedom — reported as counts); else NO-VERDICT (every run
+#                timed out or died before its outcome — the gc side says
+#                NOTHING about the row; it is never counted as DRF).
 #   machine side the schedule ENUMERATOR (golean coverage-observations,
 #                the enumerating lanes' engine) run WITHOUT --expect-status
 #                so every member's status is visible; verdict = RACE-ALL
 #                (every enumerated path refuses), RACE-SOME (some paths
 #                refuse — schedule-dependent race), DRF (no path refuses),
 #                or ENUM-FAIL:<cause> (budget/timeout/refusal — the claim
-#                is then UNCERTIFIED, never silently DRF). The default
-#                stream's single run (native-json-run) is recorded beside
-#                it as the per-run verdict the strict lane actually sees.
+#                is then UNCERTIFIED, never silently DRF). Only members of
+#                status `race` count as refusals; any member whose status
+#                is outside {ok, panic, race} DISQUALIFIES the enumeration
+#                (ENUM-FAIL:member-status), as does any truncation the
+#                enumerator reports in its stats line (nonterm= or
+#                backedgeCapped= > 0 — a truncated path is a path whose
+#                accesses were never all executed, so "no path refuses"
+#                is not certified). The default stream's single run
+#                (native-json-run) is recorded beside it as the per-run
+#                verdict the strict lane actually sees; a single-run
+#                status outside {ok, panic, race} also disqualifies.
+#   params       strict-lane rows enumerate under --strict-enum (explicit
+#                on the command line). Enumerating-lane rows enumerate
+#                under their OWN cases.tsv params, which MUST declare
+#                width= and sites= — the runner does not invent a bound:
+#                a row whose params omit either is REFUSED, naming the
+#                cause (cell `refused`), never silently defaulted. (The
+#                gate's manifest default for an omitted sites= is 8,
+#                scripts/coverage-manifest; the corpus now declares it
+#                explicitly on every enumerating-lane row so that the
+#                runner's enumeration is the gate's enumeration.)
 #
 #   cells:  agree-race     gc RACE      ∧ machine RACE-ALL|RACE-SOME
 #           agree-DRF      gc DRF-in-N  ∧ machine DRF
 #           HOLE           gc RACE      ∧ machine DRF        <- the soundness
 #                          hole: SC semantics given to a program TSan races.
-#                          Every HOLE row is a STOP-and-report finding; it is
-#                          diagnosed by hand in the report (a HOLE can also be
-#                          a TSan-vs-go_mem divergence — U5 — which is NOT
-#                          "SC given to a racy program"; the raw cell count is
-#                          still reported honestly and the diagnosis beside it).
+#                          Diagnosed by hand in the report; the standing,
+#                          on-the-books HOLEs are BUG-080's two pins — a HOLE
+#                          whose id is NOT on a BUGS.md Cases: line is a STOP.
+#           possible-HOLE  gc RACE      ∧ machine ENUM-FAIL  <- a program TSan
+#                          races that the enumerator could NOT certify either
+#                          way: the row may be a HOLE hiding behind a budget;
+#                          loud, exit-bearing, never "uncertified".
 #           over-refusal   gc DRF-in-N  ∧ machine RACE-*    <- the three-way
 #                          investigation rule (diff-coverage): too-eager
 #                          detector, a schedule the sampler never hit, or a
 #                          misclassified program — each row gets a verdict.
-#           uncertified    machine ENUM-FAIL (either gc verdict) — listed
-#                          separately with the single-run status.
+#           uncertified    gc DRF-in-N|NO-VERDICT ∧ machine ENUM-FAIL — listed
+#                          separately with the cause and the single-run status.
+#           gc-no-verdict  gc NO-VERDICT ∧ machine DRF|RACE-* — the gc side
+#                          produced no completed run; the row is NOT agree-*.
+#           refused        the row's params omit width=/sites= (see above).
+#           gc-infra       the gc side could not be built/run, or the worker
+#                          died — the matrix is INCOMPLETE.
+#           unclassified   any verdict pair not named above (a runner bug).
 #
 # SCOPE: every row of the racy/membership/confluent lanes plus every
 # strict-lane row whose feature tags touch goroutines/channels/sync
@@ -56,7 +89,14 @@
 #                              [--out DIR] [--manifest FILE | --select in-scope|all]
 #                              [--strict-enum width=4,sites=32,cap=512,work=4000000,backedge=1]
 #                              [--id ID ...]
-# Exit: 0 ran, no HOLE rows; 1 ran, HOLE rows exist; 2 infrastructure refusal.
+# Exit: 0 ran, no HOLE / possible-HOLE / refused / gc-infra / unclassified rows;
+#       1 ran, HOLE or possible-HOLE rows exist (the matrix is complete);
+#       2 infrastructure refusal, or the matrix is INCOMPLETE (refused /
+#         gc-infra / unclassified rows, a died worker, an --id matching no row).
+# WHAT THE EXIT CODE CHECKS (and nothing more): it is the runner's verdict on
+# ITS OWN matrix — it does not compare against a recorded HOLE list; the
+# standing re-check after a footprint-touching change is to run this and
+# compare the HOLE rows against BUG-080's Cases: line by hand.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -85,7 +125,7 @@ while [[ "$#" -gt 0 ]]; do
     --select) SELECT="${2:-}"; shift 2 ;;
     --strict-enum) STRICT_ENUM="${2:-}"; shift 2 ;;
     --id) IDS+=("${2:-}"); shift 2 ;;
-    -h|--help) sed -n '2,62p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,98p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "detector-soundness: unknown argument '$1'" >&2; exit 2 ;;
   esac
 done
@@ -93,6 +133,9 @@ for v in "$RUNS" "$JOBS"; do
   [[ "$v" =~ ^[1-9][0-9]*$ ]] || { echo "detector-soundness: --runs/--jobs need positive integers" >&2; exit 2; }
 done
 [[ "$PROCS" =~ ^[1-9][0-9]*(,[1-9][0-9]*)*$ ]] || { echo "detector-soundness: --procs must be a comma list of positive integers" >&2; exit 2; }
+for key in width sites; do
+  [[ ",$STRICT_ENUM," == *",$key="* ]] || { echo "detector-soundness: --strict-enum must declare $key= (no silent bound)" >&2; exit 2; }
+done
 
 # ---- preflight (fail closed: nothing to judge without both oracles) ----
 if ! command -v go >/dev/null 2>&1; then echo "detector-soundness: go not on PATH" >&2; exit 2; fi
@@ -136,15 +179,24 @@ else
 fi
 if [[ "${#IDS[@]}" -gt 0 ]]; then
   : > "$OUT/manifest.sel.tsv"
-  for id in "${IDS[@]}"; do awk -F'\t' -v id="$id" '$1 == id' "$MANIFEST" >> "$OUT/manifest.sel.tsv"; done
+  for id in "${IDS[@]}"; do
+    n_hit="$(awk -F'\t' -v id="$id" '$1 == id' "$MANIFEST" | tee -a "$OUT/manifest.sel.tsv" | wc -l)"
+    if [[ "$n_hit" -eq 0 ]]; then
+      echo "detector-soundness: --id '$id' matches no row of the selected manifest — refusing (a typo would otherwise judge an empty or partial selection)" >&2
+      exit 2
+    fi
+  done
   MANIFEST="$OUT/manifest.sel.tsv"
 fi
 n_rows="$(awk -F'\t' 'NF > 0 { c += 1 } END { print c + 0 }' "$MANIFEST")"
 if [[ "$n_rows" -eq 0 ]]; then echo "detector-soundness: empty manifest selection — nothing to judge" >&2; exit 2; fi
 
+# The commit line names the tree the binary and the corpus came from; +dirty
+# covers tracked modifications AND untracked files (git status --porcelain),
+# so a run over uncommitted tooling or corpus rows is marked as such.
 {
   echo "tool	scripts/detector-soundness"
-  echo "commit	$(git rev-parse HEAD 2>/dev/null || echo unknown)$(git diff --quiet 2>/dev/null || echo '+dirty')"
+  echo "commit	$(git rev-parse HEAD 2>/dev/null || echo unknown)$([[ -n "$(git status --porcelain 2>/dev/null)" ]] && echo '+dirty')"
   echo "go	$go_live"
   echo "golean	$GOLEAN_BIN"
   echo "runs	$RUNS"
@@ -169,34 +221,39 @@ run_row() {
   local gc_summary="" gc_verdict="INFRA"
   local m_members="-" m_race="-" m_verdict="ENUM-FAIL:not-run" m_single="not-run"
 
+  oneline() { head -1 | tr '\t' ' ' | cut -c1-200; }
+
   # --- gc side ---
   local h_out
   if ! h_out="$(run_with_timeout "$GO_BUILD_TIMEOUT" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/coverageharness \
         --input "$go_file" --out "$d/go" --subject "$fn" --expected-status "$expected_status" --args "$arg_ints" 2>&1)"; then
-    detail="harness: $(echo "$h_out" | head -1)"
+    detail="harness: $(echo "$h_out" | oneline)"
   else
     local gopath_env=()
     if [[ -d "$d/go/gopath" ]]; then gopath_env=(GOPATH="$(cd "$d/go/gopath" && pwd -P)"); fi
     local b_out
     if ! b_out="$(run_with_timeout "$GO_BUILD_TIMEOUT" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" ${gopath_env[@]+"${gopath_env[@]}"} \
           bash -c 'cd "$1" && exec go build -race -o ./golean-race-bin .' go-build "$d/go" 2>&1)"; then
-      detail="go build -race: $(echo "$b_out" | head -1)"
+      detail="go build -race: $(echo "$b_out" | oneline)"
     else
-      local any_race=0 p i rc
+      local any_race=0 completed=0 p i rc
       for p in ${PROCS//,/ }; do
-        local nr=0 nc=0 nt=0 nx=0
+        local nr=0 nc=0 nt=0 nx=0 na=0
         for i in $(seq 1 "$RUNS"); do
           run_with_timeout "$GO_RUN_TIMEOUT" env GOMAXPROCS="$p" GODEBUG=panicnil=0 GORACE="exitcode=66" \
             bash -c 'cd "$1" && exec ./golean-race-bin' go-race-run "$d/go" > "$d/run.p$p.$i.txt" 2>&1
           rc=$?
           if grep -q "WARNING: DATA RACE" "$d/run.p$p.$i.txt"; then nr=$((nr+1)); any_race=1
           elif [[ "$rc" -eq 124 ]]; then nt=$((nt+1))
-          elif [[ "$rc" -eq 0 ]]; then nc=$((nc+1))
-          else nx=$((nx+1)); fi
+          elif [[ "$rc" -eq 0 ]]; then nc=$((nc+1)); completed=$((completed+1))
+          elif grep -q '"schema":"golean-observation-v1"\|^panic: \|^fatal error: ' "$d/run.p$p.$i.txt"; then nx=$((nx+1)); completed=$((completed+1))
+          else na=$((na+1)); fi
         done
-        gc_summary="${gc_summary}p$p:race=$nr,clean=$nc,exit=$nx,timeout=$nt;"
+        gc_summary="${gc_summary}p$p:race=$nr,clean=$nc,exit=$nx,abnormal=$na,timeout=$nt;"
       done
-      if [[ "$any_race" -eq 1 ]]; then gc_verdict="RACE"; else gc_verdict="DRF-in-N"; fi
+      if [[ "$any_race" -eq 1 ]]; then gc_verdict="RACE"
+      elif [[ "$completed" -gt 0 ]]; then gc_verdict="DRF-in-N"
+      else gc_verdict="NO-VERDICT"; detail="${detail:+$detail; }gc: no completed run (all timed out or died before an outcome)"; fi
     fi
   fi
 
@@ -207,24 +264,30 @@ run_row() {
   if ! fe_out="$(run_with_timeout "$GO_BUILD_TIMEOUT" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/nativefrontend ${fe_flags[@]+"${fe_flags[@]}"} --dir "$go_dir" --out "$wire" 2>&1)"; then
     m_verdict="ENUM-FAIL:frontend-refused"
     m_single="frontend-refused"
-    detail="${detail:+$detail; }frontend: $(echo "$fe_out" | tr '\n' ' ' | cut -c1-200)"
+    detail="${detail:+$detail; }frontend: $(echo "$fe_out" | tr '\n\t' '  ' | cut -c1-200)"
   else
     local args=()
     if [[ "$arg_ints" != "-" ]]; then
       local v; IFS=',' read -r -a ints <<< "$arg_ints"
       for v in "${ints[@]}"; do args+=(--arg-int "$v"); done
     fi
-    # single default-stream run (the per-run verdict the strict lane sees)
+    # single default-stream run (the per-run verdict the strict lane sees).
+    # "error" is a REAL machine status, so an unparseable output gets its
+    # own sentinel naming the exit code.
     local s_out
     s_out="$(run_with_timeout "$SINGLE_TIMEOUT" "$GOLEAN_BIN" native-json-run --input "$wire" --function "$fn" ${args[@]+"${args[@]}"} 2>&1)"
     rc=$?
-    if [[ "$rc" -eq 124 ]]; then m_single="timeout"
-    else m_single="$(echo "$s_out" | grep -o '"status":"[a-z-]*"' | head -1 | cut -d'"' -f4)"; [[ -z "$m_single" ]] && m_single="error"; fi
+    if [[ "$rc" -eq 124 ]]; then m_single="timeout-${SINGLE_TIMEOUT}s"
+    else
+      m_single="$(echo "$s_out" | grep -o '"status":"[a-z-]*"' | head -1 | cut -d'"' -f4)"
+      [[ -z "$m_single" ]] && m_single="no-status(rc=$rc)"
+    fi
     echo "$s_out" > "$d/single.txt"
-    # enumerator params
-    local width="" sites=8 cap=64 work=200000 engine="" backedge="" nonterm=""
+    # enumerator params: strict rows take --strict-enum; enumerating-lane
+    # rows take their own params, which must declare width= and sites=.
+    local width="" sites="" cap=64 work=200000 engine="" backedge="" nonterm=""
     local plist="$params"
-    if [[ "$lane" == "strict" || "$params" == "-" ]]; then plist="$STRICT_ENUM"; fi
+    if [[ "$lane" == "strict" ]]; then plist="$STRICT_ENUM"; fi
     local kv key value
     IFS=',' read -r -a kvs <<< "$plist"
     for kv in "${kvs[@]}"; do
@@ -235,37 +298,60 @@ run_row() {
         *) ;;  # statuses/samples/members/tier: gc-sampling / cardinality params, irrelevant here
       esac
     done
-    [[ -z "$width" ]] && width=4
-    local e_args=(coverage-observations --input "$wire" --function "$fn" --max-width "$width" --max-sites "$sites" --cap "$cap" --work-cap "$work")
-    [[ -n "$engine" ]] && e_args+=(--engine "$engine")
-    [[ -n "$backedge" ]] && e_args+=(--backedge "$backedge")
-    [[ -n "$nonterm" && -z "$engine" ]] && e_args+=(--allow-nonterm "$nonterm")
-    e_args+=(${args[@]+"${args[@]}"})
-    run_with_timeout "$ENUM_TIMEOUT" "$GOLEAN_BIN" "${e_args[@]}" > "$d/observations.txt" 2> "$d/enum-stats.txt"
-    rc=$?
-    if [[ "$rc" -eq 124 ]]; then
-      m_verdict="ENUM-FAIL:timeout-${ENUM_TIMEOUT}s"
-    elif [[ "$rc" -ne 0 ]]; then
-      m_verdict="ENUM-FAIL:$(head -1 "$d/enum-stats.txt" | sed 's/coverage-observations: //' | cut -c1-120 | tr '\t' ' ')"
+    local missing=""
+    [[ -z "$width" ]] && missing="width="
+    [[ -z "$sites" ]] && missing="${missing:+$missing,}sites="
+    if [[ -n "$missing" ]]; then
+      m_verdict="REFUSED:params-omit-$missing"
+      detail="${detail:+$detail; }params '$params' omit $missing — the runner will not invent an enumeration bound; declare it in cases.tsv (lane $lane)"
     else
-      m_members="$(grep -c '"status"' "$d/observations.txt")"
-      m_race="$(grep -c '"status":"race"' "$d/observations.txt")"
-      if [[ "$m_members" -eq 0 ]]; then m_verdict="ENUM-FAIL:zero-members"
-      elif [[ "$m_race" -eq "$m_members" ]]; then m_verdict="RACE-ALL"
-      elif [[ "$m_race" -gt 0 ]]; then m_verdict="RACE-SOME"
-      else m_verdict="DRF"; fi
+      local e_args=(coverage-observations --input "$wire" --function "$fn" --max-width "$width" --max-sites "$sites" --cap "$cap" --work-cap "$work")
+      [[ -n "$engine" ]] && e_args+=(--engine "$engine")
+      [[ -n "$backedge" ]] && e_args+=(--backedge "$backedge")
+      [[ -n "$nonterm" && -z "$engine" ]] && e_args+=(--allow-nonterm "$nonterm")
+      e_args+=(${args[@]+"${args[@]}"})
+      run_with_timeout "$ENUM_TIMEOUT" "$GOLEAN_BIN" "${e_args[@]}" > "$d/observations.txt" 2> "$d/enum-stats.txt"
+      rc=$?
+      if [[ "$rc" -eq 124 ]]; then
+        m_verdict="ENUM-FAIL:timeout-${ENUM_TIMEOUT}s"
+      elif [[ "$rc" -ne 0 ]]; then
+        m_verdict="ENUM-FAIL:$(head -1 "$d/enum-stats.txt" | sed 's/coverage-observations: //' | cut -c1-120 | tr '\t' ' ')"
+      else
+        m_members="$(grep -c '"status"' "$d/observations.txt")"
+        m_race="$(grep -c '"status":"race"' "$d/observations.txt")"
+        local n_other stats_line n_nonterm n_becap
+        n_other="$(grep -o '"status":"[a-z-]*"' "$d/observations.txt" | grep -v -c '"status":"\(ok\|panic\|race\)"')"
+        stats_line="$(grep -m1 'coverage-observations:' "$d/enum-stats.txt" || true)"
+        n_nonterm="$(echo "$stats_line" | grep -o 'nonterm=[0-9]*' | head -1 | cut -d= -f2)"; n_nonterm="${n_nonterm:-0}"
+        n_becap="$(echo "$stats_line" | grep -o 'backedgeCapped=[0-9]*' | head -1 | cut -d= -f2)"; n_becap="${n_becap:-0}"
+        if [[ "$m_members" -eq 0 ]]; then m_verdict="ENUM-FAIL:zero-members"
+        elif [[ "$n_other" -gt 0 ]]; then
+          m_verdict="ENUM-FAIL:member-status:$(grep -o '"status":"[a-z-]*"' "$d/observations.txt" | grep -v '"status":"\(ok\|panic\|race\)"' | cut -d'"' -f4 | sort -u | tr '\n' '+' | sed 's/+$//')"
+        elif [[ "$n_nonterm" -gt 0 || "$n_becap" -gt 0 ]]; then
+          m_verdict="ENUM-FAIL:truncated(nonterm=$n_nonterm,backedgeCapped=$n_becap)"
+        elif [[ "$m_race" -eq "$m_members" ]]; then m_verdict="RACE-ALL"
+        elif [[ "$m_race" -gt 0 ]]; then m_verdict="RACE-SOME"
+        else m_verdict="DRF"; fi
+      fi
+      # the default-stream run must itself be a certified-class outcome
+      if [[ "$m_verdict" != ENUM-FAIL* && ! "$m_single" =~ ^(ok|panic|race)$ ]]; then
+        m_verdict="ENUM-FAIL:single-run-status:$m_single"
+      fi
     fi
   fi
 
   # --- the cell ---
   local cell
   case "$gc_verdict/$m_verdict" in
+    */REFUSED*) cell="refused" ;;
+    INFRA/*) cell="gc-infra" ;;
     RACE/RACE-ALL|RACE/RACE-SOME) cell="agree-race" ;;
     DRF-in-N/DRF) cell="agree-DRF" ;;
     RACE/DRF) cell="HOLE" ;;
+    RACE/ENUM-FAIL*) cell="possible-HOLE" ;;
     DRF-in-N/RACE-ALL|DRF-in-N/RACE-SOME) cell="over-refusal" ;;
-    INFRA/*) cell="gc-infra" ;;
-    */ENUM-FAIL*) cell="uncertified" ;;
+    DRF-in-N/ENUM-FAIL*|NO-VERDICT/ENUM-FAIL*) cell="uncertified" ;;
+    NO-VERDICT/*) cell="gc-no-verdict" ;;
     *) cell="unclassified" ;;
   esac
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
@@ -276,10 +362,11 @@ run_row() {
 export -f run_row run_with_timeout
 export OUT RUNS PROCS GOLEAN_BIN GO_BUILD_CACHE STRICT_ENUM GO_RUN_TIMEOUT GO_BUILD_TIMEOUT ENUM_TIMEOUT SINGLE_TIMEOUT
 
-# ---- drive (parallel, atomic per-row files) ----
+# ---- drive (parallel, atomic per-row files; the pool's own status is kept) ----
 mkdir -p "$OUT/rows"
 : > "$OUT/progress.txt"
 xargs -P "$JOBS" -d '\n' -I{} bash -c 'run_row "$1"' _ {} < "$MANIFEST" | tee -a "$OUT/progress.txt"
+xargs_rc="${PIPESTATUS[0]}"
 
 # ---- assemble (fail closed: a row without a row.tsv is a WORKER-DIED row) ----
 {
@@ -293,9 +380,12 @@ xargs -P "$JOBS" -d '\n' -I{} bash -c 'run_row "$1"' _ {} < "$MANIFEST" | tee -a
   done < "$MANIFEST"
 } > "$OUT/matrix.tsv"
 
+count_cell() { awk -F'\t' -v c="$1" '$1 !~ /^#/ && $11 == c' "$OUT/matrix.tsv" | wc -l; }
+n_hole="$(count_cell HOLE)"; n_phole="$(count_cell possible-HOLE)"
+n_refused="$(count_cell refused)"; n_infra="$(count_cell gc-infra)"; n_uncl="$(count_cell unclassified)"
 {
   echo "detector-soundness summary — $(date -u -Is)"
-  echo "rows: $n_rows   runs/proc: $RUNS   procs: $PROCS"
+  echo "rows: $n_rows   runs/proc: $RUNS   procs: $PROCS   worker-pool exit: $xargs_rc"
   echo
   echo "cells:"
   awk -F'\t' '$1 !~ /^#/ { c[$11] += 1 } END { for (k in c) printf "  %-14s %d\n", k, c[k] }' "$OUT/matrix.tsv" | sort
@@ -303,21 +393,36 @@ xargs -P "$JOBS" -d '\n' -I{} bash -c 'run_row "$1"' _ {} < "$MANIFEST" | tee -a
   echo "by lane × cell:"
   awk -F'\t' '$1 !~ /^#/ { c[$2 "\t" $11] += 1 } END { for (k in c) printf "  %s\t%d\n", k, c[k] }' "$OUT/matrix.tsv" | sort
   echo
-  echo "HOLE rows (gc RACE, machine DRF — STOP-and-report; diagnose each):"
+  echo "HOLE rows (gc RACE, machine DRF — exit-bearing; a HOLE not on a BUGS.md Cases: line is a STOP):"
   awk -F'\t' '$11 == "HOLE" { print "  " $1 "\t" $5 "\t" $9 }' "$OUT/matrix.tsv"
+  echo
+  echo "possible-HOLE rows (gc RACE, machine ENUM-FAIL — exit-bearing; certify or diagnose each):"
+  awk -F'\t' '$11 == "possible-HOLE" { print "  " $1 "\t" $5 "\tsingle=" $10 "\t" $9 }' "$OUT/matrix.tsv"
   echo
   echo "over-refusal rows (machine RACE-*, gc DRF-in-N — three-way investigation):"
   awk -F'\t' '$11 == "over-refusal" { print "  " $1 "\t" $5 "\t" $9 " (" $8 "/" $7 " members)" }' "$OUT/matrix.tsv"
   echo
-  echo "uncertified rows (machine ENUM-FAIL):"
+  echo "uncertified rows (machine ENUM-FAIL, gc not red):"
   awk -F'\t' '$11 == "uncertified" { print "  " $1 "\tgc=" $6 "\tsingle=" $10 "\t" $9 }' "$OUT/matrix.tsv"
   echo
-  echo "gc-infra rows:"
-  awk -F'\t' '$11 == "gc-infra" { print "  " $1 "\t" $12 }' "$OUT/matrix.tsv"
+  echo "gc-no-verdict rows (gc produced no completed run; machine certified):"
+  awk -F'\t' '$11 == "gc-no-verdict" { print "  " $1 "\t" $5 "\t" $9 }' "$OUT/matrix.tsv"
+  echo
+  echo "refused rows (params omit width=/sites= — declare them in cases.tsv):"
+  awk -F'\t' '$11 == "refused" { print "  " $1 "\t" $12 }' "$OUT/matrix.tsv"
+  echo
+  echo "gc-infra / unclassified rows (the matrix is INCOMPLETE):"
+  awk -F'\t' '$11 == "gc-infra" || $11 == "unclassified" { print "  " $1 "\t" $11 "\t" $12 }' "$OUT/matrix.tsv"
 } > "$OUT/summary.txt"
 echo "finished	$(date -u -Is)" >> "$OUT/meta.tsv"
 cat "$OUT/summary.txt"
 echo "artifacts: $OUT"
-holes="$(awk -F'\t' '$11 == "HOLE"' "$OUT/matrix.tsv" | wc -l)"
-if [[ "$holes" -gt 0 ]]; then exit 1; fi
+if [[ "$xargs_rc" -ne 0 || "$n_infra" -gt 0 || "$n_uncl" -gt 0 || "$n_refused" -gt 0 ]]; then
+  echo "detector-soundness: INCOMPLETE matrix — worker-pool exit $xargs_rc, gc-infra $n_infra, unclassified $n_uncl, refused $n_refused (exit 2)" >&2
+  exit 2
+fi
+if [[ "$n_hole" -gt 0 || "$n_phole" -gt 0 ]]; then
+  echo "detector-soundness: HOLE $n_hole, possible-HOLE $n_phole (exit 1)" >&2
+  exit 1
+fi
 exit 0

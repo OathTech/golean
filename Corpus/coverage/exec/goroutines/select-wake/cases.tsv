@@ -9,7 +9,7 @@
 # schedule-independence is now a certified claim, not a 3-stream spot
 # check. Params: sites/work raised only where the measured tree needs
 # them (probed at reclassification).
-recv	selectWakeRecv	-	ok	-	goroutines,channels,select	confluent	exactly one clause ever becomes ready; the parked select commits it on every schedule	width=4
+recv	selectWakeRecv	-	ok	-	goroutines,channels,select	confluent	exactly one clause ever becomes ready; the parked select commits it on every schedule	width=4,sites=8
 send	selectWakeSend	-	ok	-	goroutines,channels,select	confluent	exactly one clause ever becomes ready (the receiver's arrival); fixed commit on every schedule	width=4,sites=16
 closed	selectWakeClosed	-	ok	-	goroutines,channels,select,close	confluent	only the closed channel's clause becomes ready; the closed-zero commit is fixed	width=4,sites=16
 buffered-data	selectWakeBufferedData	-	ok	-	goroutines,channels,select,make	confluent	only the buffered channel's clause becomes ready when the data lands; fixed commit	width=4,sites=16

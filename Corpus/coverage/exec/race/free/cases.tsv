@@ -7,21 +7,21 @@
 # break the certified singleton on SOME schedule, not just the sampled
 # streams. The shared why: each subject joins its worker before the
 # readout, so every schedule yields the one member.
-slice-disjoint	freeSliceDisjoint	-	ok	-	goroutines,channels,slices,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4
-field-disjoint	freeFieldDisjoint	-	ok	-	goroutines,channels,structs,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4
+slice-disjoint	freeSliceDisjoint	-	ok	-	goroutines,channels,slices,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=8
+field-disjoint	freeFieldDisjoint	-	ok	-	goroutines,channels,structs,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=8
 # S3 audit response: the READ/WRITE direction (what actually trips
 # whole-cell read footprints) — struct local and *struct forms, green
 # via the fieldGet-chain narrowing.
-field-read-write	freeFieldReadWrite	-	ok	-	goroutines,channels,structs,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4
-ptr-field-read-write	freePtrFieldReadWrite	-	ok	-	goroutines,channels,structs,pointers,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4
+field-read-write	freeFieldReadWrite	-	ok	-	goroutines,channels,structs,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=8
+ptr-field-read-write	freePtrFieldReadWrite	-	ok	-	goroutines,channels,structs,pointers,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=8
 # Q-RACEPATH (RULED [USER] 2026-08-31, implemented 2026-09-02, Tier-4
 # detector-soundness lane): CONSTANT-index value-path array reads are
 # narrowed to the element path (`projChainTarget`, Race.lean O1), so the
 # former BUG-041 red pin is GREEN and joins the confluent guards; the two
 # chain forms (index-then-field, field-then-index) guard the composition.
-array-read-write	freeArrayReadWrite	-	ok	-	goroutines,channels,arrays,race	confluent	join-ordered readout; the constant-index read a[1] is narrowed to its element path — a whole-cell read would break the certified singleton on some schedule	width=4
-array-const-index-field	freeArrayConstIndexField	-	ok	-	goroutines,channels,arrays,structs,race	confluent	join-ordered readout; indexGet-then-fieldGet chain narrowed to a[1].x	width=4
-field-array-const-index	freeFieldArrayConstIndex	-	ok	-	goroutines,channels,arrays,structs,race	confluent	join-ordered readout; fieldGet-then-indexGet chain narrowed to s.arr[1]	width=4
+array-read-write	freeArrayReadWrite	-	ok	-	goroutines,channels,arrays,race	confluent	join-ordered readout; the constant-index read a[1] is narrowed to its element path — a whole-cell read would break the certified singleton on some schedule	width=4,sites=8
+array-const-index-field	freeArrayConstIndexField	-	ok	-	goroutines,channels,arrays,structs,race	confluent	join-ordered readout; indexGet-then-fieldGet chain narrowed to a[1].x	width=4,sites=8
+field-array-const-index	freeFieldArrayConstIndex	-	ok	-	goroutines,channels,arrays,structs,race	confluent	join-ordered readout; fieldGet-then-indexGet chain narrowed to s.arr[1]	width=4,sites=8
 # RED PIN (BUG-041 RESIDUAL, O1): a DYNAMIC-index value-path array read
 # (`a[i]`, i = 1) beside a disjoint-element write — go/types cannot fold
 # the index, the base read stays whole-cell, and the race-free program is
@@ -33,12 +33,12 @@ array-dyn-index-read-write	freeArrayDynIndexReadWrite	1	ok	-	goroutines,channels
 # a non-embedded outer field is race-free) plus the free directions of
 # the method-value (deref at call, not creation) and spawn-entry
 # (write-before-go ordered by the spawn edge) dispatch pins.
-promoted-ptr-box	freePromotedPtrBox	-	ok	-	goroutines,channels,interfaces,methods,embedding,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4
+promoted-ptr-box	freePromotedPtrBox	-	ok	-	goroutines,channels,interfaces,methods,embedding,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=8
 # BUG-056 acceptance pin (fix 2026-08-19): &*p beside a concurrent
 # pointee write is race-FREE (gc: uninstrumented TESTB nil-probe, no
 # load — TSan-green 20/20 at the fix probe; the real-load control is
 # TSan-red exit 66). Red here means the addrOfDeref op grew a memory
 # access it must not have.
-addr-deref-no-read	freeAddrDerefNoRead	-	ok	-	goroutines,channels,pointers,race	confluent	join-ordered readout; the &*p window is race-free only because addrOfDeref touches no pointee memory	width=4
-method-value-order	freeMethodValueOrder	-	ok	-	goroutines,channels,interfaces,methods,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4
-spawn-dispatch-free	freeSpawnDispatch	-	ok	-	goroutines,channels,interfaces,methods,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4
+addr-deref-no-read	freeAddrDerefNoRead	-	ok	-	goroutines,channels,pointers,race	confluent	join-ordered readout; the &*p window is race-free only because addrOfDeref touches no pointee memory	width=4,sites=8
+method-value-order	freeMethodValueOrder	-	ok	-	goroutines,channels,interfaces,methods,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=8
+spawn-dispatch-free	freeSpawnDispatch	-	ok	-	goroutines,channels,interfaces,methods,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=8

@@ -14,10 +14,10 @@
 # a false raceDetected on some schedule and break the singleton);
 # racy shared-variable forms are lane=racy — EVERY enumerated path
 # refuses, `go run -race` red as the justifying oracle.
-mp-sync	litmusMPSync	-	ok	-	goroutines,channels,race	confluent	the child's write is ordered before main's read by the flag send/recv edge on every schedule, so the stale read is unreachable and 42 is the only member	width=4
-mp-racy	litmusMPRacy	-	race	-	goroutines,channels,race	racy	-	width=4
-lb-racy	litmusLBRacy	-	race	-	goroutines,channels,race	racy	-	width=4
-close-hb	litmusCloseHB	-	ok	-	goroutines,channels,close,race	confluent	main can only proceed past its receive after the close, whose HB edge orders the child's write before main's read on every schedule — 9 is the only member	width=4
+mp-sync	litmusMPSync	-	ok	-	goroutines,channels,race	confluent	the child's write is ordered before main's read by the flag send/recv edge on every schedule, so the stale read is unreachable and 42 is the only member	width=4,sites=8
+mp-racy	litmusMPRacy	-	race	-	goroutines,channels,race	racy	-	width=4,sites=8
+lb-racy	litmusLBRacy	-	race	-	goroutines,channels,race	racy	-	width=4,sites=8
+close-hb	litmusCloseHB	-	ok	-	goroutines,channels,close,race	confluent	main can only proceed past its receive after the close, whose HB edge orders the child's write before main's read on every schedule — 9 is the only member	width=4,sites=8
 chan-mutex	litmusChanMutex	-	ok	-	goroutines,channels,race	confluent	the cap-1 channel's k/k+C edge serializes the two increments on every schedule (the counting-semaphore idiom), so 2 is the only member	width=4,sites=20
 # CERTIFIED at slice 4 (formerly the sb-chan RED PIN): the SB shape's
 # admitted set is {1, 10, 11} with 00 SC-FORBIDDEN (r1 = 0 puts T1's

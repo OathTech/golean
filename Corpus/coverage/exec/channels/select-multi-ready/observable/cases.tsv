@@ -3,4 +3,4 @@
 # consumption site (single goroutine, both clauses buffered-ready).
 # Width: the L2 bound is the ready-clause count, 2; members=2 pins the
 # set. Go samples both members (the runtime's own uniform shuffle).
--	channelSelectMultiReadyObservable	-	ok	-	channels,select,make,len,nondet	membership	which of the two ready clauses commits is the L2 select latitude (spec: "uniform pseudo-random selection", weakened possibilistically to any entry-ready case): certified set {101 (a-clause), 210 (b-clause)} (members=2); the only consumption site is the L2 pick, bound 2	width=2,members=2
+-	channelSelectMultiReadyObservable	-	ok	-	channels,select,make,len,nondet	membership	which of the two ready clauses commits is the L2 select latitude (spec: "uniform pseudo-random selection", weakened possibilistically to any entry-ready case): certified set {101 (a-clause), 210 (b-clause)} (members=2); the only consumption site is the L2 pick, bound 2	width=2,members=2,sites=8

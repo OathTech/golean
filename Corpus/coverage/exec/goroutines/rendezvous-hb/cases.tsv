@@ -5,5 +5,5 @@
 # schedule-independence is now a certified claim, not a 3-stream spot
 # check. Params: sites/work raised only where the measured tree needs
 # them (probed at reclassification).
-send-hb	rendezvousSendHB	-	ok	-	goroutines,channels,globals	confluent	the unbuffered send is synchronized before the receive completes (go_mem), ordering the global write before the read on every schedule	width=4
-recv-hb	rendezvousRecvHB	-	ok	-	goroutines,channels,globals	confluent	the unbuffered receive is synchronized before the send completes (go_mem's other direction), same fixed readout	width=4
+send-hb	rendezvousSendHB	-	ok	-	goroutines,channels,globals	confluent	the unbuffered send is synchronized before the receive completes (go_mem), ordering the global write before the read on every schedule	width=4,sites=8
+recv-hb	rendezvousRecvHB	-	ok	-	goroutines,channels,globals	confluent	the unbuffered receive is synchronized before the send completes (go_mem's other direction), same fixed readout	width=4,sites=8

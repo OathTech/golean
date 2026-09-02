@@ -5,7 +5,7 @@
 # schedule-independence is now a certified claim, not a 3-stream spot
 # check. Params: sites/work raised only where the measured tree needs
 # them (probed at reclassification).
-send	selectSendClosedArrival	-	panic	send on closed channel	goroutines,channels,select,close,panic	confluent	the send clause's channel is closed before the select on every schedule (join-ordered), so the committed send panics identically	width=4
+send	selectSendClosedArrival	-	panic	send on closed channel	goroutines,channels,select,close,panic	confluent	the send clause's channel is closed before the select on every schedule (join-ordered), so the committed send panics identically	width=4,sites=8
 # RECLASSIFICATION (arc-final audit F1, major; BUG-045): the parked
 # plain SENDER beside main's close makes this a TSan DATA RACE (gc's
 # chansend racereadpc on the channel object vs closechan's racewritepc;

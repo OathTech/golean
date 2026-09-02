@@ -8,7 +8,7 @@
 # landed, two days after the pin was written. The machine raises
 # GoError.fatal at the spawn, gc's fixed string.
 nil-func-fatal	spawnNilFuncFatal	-	fatal	go of nil func value	goroutines,channels,nil,fatal
-child-panic-aborts	spawnChildPanicAborts	-	panic	child says no	goroutines,channels,panic	confluent	the child's unrecovered panic aborts the program on every schedule (any-goroutine panic abort, D6)	width=4
+child-panic-aborts	spawnChildPanicAborts	-	panic	child says no	goroutines,channels,panic	confluent	the child's unrecovered panic aborts the program on every schedule (any-goroutine panic abort, D6)	width=4,sites=8
 # RED PIN (frontend gap, found by this guardrail): a BARE `recover()`
 # statement has no statement lowering — the frontend quarantines the
 # decl with a precise reason (it used to emit an undecodable node that
@@ -21,4 +21,4 @@ child-recovers	spawnChildRecovers	-	ok	-	goroutines,channels,recover
 # recoverable, realized via the frontend's pre-spawn hoist; nil
 # POINTER-BOX auto-deref -> child-side, program abort).
 nil-interface-recovered	spawnNilInterfaceRecovered	-	ok	-	goroutines,channels,interfaces,nil,recover
-ptr-box-child-aborts	spawnPtrBoxChildAborts	-	panic	runtime error: invalid memory address or nil pointer dereference	goroutines,channels,interfaces,nil,panic	confluent	the child's frame-entry deref panic aborts on every schedule (child-side class, S2 audit)	width=4
+ptr-box-child-aborts	spawnPtrBoxChildAborts	-	panic	runtime error: invalid memory address or nil pointer dereference	goroutines,channels,interfaces,nil,panic	confluent	the child's frame-entry deref panic aborts on every schedule (child-side class, S2 audit)	width=4,sites=8
