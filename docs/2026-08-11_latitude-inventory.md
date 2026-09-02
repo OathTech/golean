@@ -339,10 +339,28 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   Multi.lean:853. (Cites re-derived 2026-08-22, launch audit D2-F2 —
   the old C6 cite landed a reader on the postOp envelope instead.)
 - ENVELOPE: ANY entry-ready clause (readiness waiter-extended on the
-  arrival path). "Uniform pseudo-random" is deliberately weakened to
-  the possibilistic "any" per the doctrine's no-distributional-claims
-  rule — the envelope's SUPPORT equals the spec's, so this direction is
-  maximal; distributional facts are out of scope by declaration.
+  arrival path). "Uniform pseudo-random" is weakened to the
+  possibilistic "any": the envelope's SUPPORT equals the spec's on
+  every FINITE trace (every finite observation sequence has non-zero
+  probability under uniform choice, so no finite differential
+  observation distinguishes the two), and on INFINITE traces the
+  envelope is DELIBERATELY WIDER — it admits the schedule that commits
+  clause 1 forever and starves a permanently-ready clause 2, which a
+  conforming uniform-pseudo-random implementation realizes with
+  probability 0. RESOLUTION [USER] 2026-09-02 (the fairness doctrine,
+  `docs/2026-08-11_essence-of-go-doctrine.md` "Scheduling and
+  fairness" — "the semantics should admit unfair schedules … Fairness
+  is an assumption about the sequences that are chosen"): the weakest
+  machine ADMITS the starving schedule; probability-1 non-starvation
+  is a fairness assumption on the chosen sequence, stated where used
+  (reasoning-side, over `Fair : Choices → Prop`) — never a machine
+  constraint. This restates the row per assessment p2-keeps-a1 A1-12
+  (KEEP-WEAKENED: the over-approximation and its DIRECTION must be
+  stated, not the earlier "no probabilistic property is expressible"
+  gloss); the former "distributional facts are out of scope by
+  declaration" hedge is WITHDRAWN — the infinite-trace width is a
+  stated doctrine consequence, and this row's spec-mandated
+  distributional clause is where it bites.
 - EVIDENCE: GC — dense sampling (per-execution re-randomization: the
   map-order regime), both members exhibited 5/5–3/7 on the pinned
   shapes; `clauseReady`'s send-on-closed-counts-as-ready subtlety is

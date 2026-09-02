@@ -1,5 +1,28 @@
 # Q-ATOMIC owner proposal — the atomics arc, post-split (2026-09-01/02)
 
+> **RULING [USER] 2026-09-02** (Mike: "I agree with this approach" —
+> the approach as presented is recorded verbatim in
+> `docs/2026-08-31_qrow-rulings.md`, appendix "The row-2 ruling
+> record"; the quote was relayed to the recording worker by the [AGENT]
+> coordinator — citation, not firsthand). **Option A′ RATIFIED. OWNER =
+> THIS repo (the semantics product)**: a named lane dispatched from
+> TODO.md ("Q-ATOMIC arc"), sequenced into Tier 5 with §5's ordering
+> constraints carried. **DECOUPLED: BUG-080's detector atomic-access
+> KIND** (§4 wave 1's detector bullet — `RaceAccess := Kind × Loc`,
+> atomic↔atomic non-conflicting, atomic↔plain conflicting, recorded at
+> the sync cell's path) does NOT ride this arc: it is pulled forward as
+> its OWN S–M slice, sequenced BEFORE the arc, with the two costs §4
+> names (one `syncData` cell per primitive vs the `locPrefix`
+> over-refusal + the `wgSemaAccess` carve-out; gc's per-primitive
+> instrumentation differences) checked in that slice — §4's "BUG-080
+> rides HERE" sentence and its "Revisable" clause are superseded by
+> this header. **OUT OF SCOPE: FairStream / the `Fair`-quantified claim
+> class** — reasoning-side future work TO BE BUILT (§2), confirmed by
+> the same-sitting fairness doctrine ruling
+> (`docs/2026-08-11_essence-of-go-doctrine.md`, "Scheduling and
+> fairness"). Ruling of record: `docs/2026-08-31_qrow-rulings.md` row
+> 2. The body below is the memo as presented, unchanged.
+
 [AGENT] memo, written on the Tier-4 detector-soundness lane
 (`t4-detector-soundness`) as the rider the Q-row ruling sheet asked
 for: `docs/2026-08-31_qrow-rulings.md` row 2 holds Q-ATOMIC OPEN

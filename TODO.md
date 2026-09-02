@@ -90,9 +90,48 @@ see the R15 entry below.
       (7 reds flipped); rows 1/4/5/8 ruled with vehicles named
       (Q-INITSPAWN → standalone $pkginit backlog item; Q-RACEPATH →
       Tier-4 detector-soundness leg; Q-TRYLOCK/Q-COND → deferred with
-      envelopes pre-ruled). Rows 2/3 OPEN with return conditions:
-      Q-ATOMIC returns with an owner proposal (post Tier-4 scoping);
-      Q-SELSEL after the C7 refresh + close-wake probe (queued S item).
+      envelopes pre-ruled). Rows 2/3 were OPEN with return conditions,
+      both since discharged: Q-SELSEL RULED 2026-09-01 (its slot
+      section below); Q-ATOMIC RULED 2026-09-02 — A′, THIS repo as
+      owner, BUG-080's detector-kind slice pulled forward (the two
+      items directly below). All eight rows ruled.
+- [ ] **BUG-080 detector atomic-access-kind slice (S–M, PULLED
+      FORWARD — sequence BEFORE the atomics arc)** ([USER]-ruled
+      2026-09-02, `docs/2026-08-31_qrow-rulings.md` row 2; was: rides
+      the arc's detector wave by [AGENT] sequencing, audit fix S4):
+      the atomic access KIND in `GoLean/GoCore/Race.lean` —
+      `RaceAccess := Kind × Loc`, atomic↔atomic non-conflicting,
+      atomic↔plain conflicting, one atomic access recorded at the sync
+      cell's path from `raceUpdate`'s sync arm. The two named costs
+      are the slice's design checks: (i) one `syncData` cell per
+      primitive vs the `locPrefix` over-refusal
+      (`probe/u4/disjoint-field-vs-lock` must stay green) and the
+      `wgSemaAccess` plain-pair carve-out; (ii) gc's per-primitive
+      instrumentation differences (WaitGroup under `race.Disable` +
+      the `wg.sema` pair vs Mutex's state CAS) — the per-op recorded
+      set derived primitive by primitive from `-race`'s realized set
+      (`scripts/detector-soundness` is the two-direction check). Exit:
+      `race/negative-sync/{wg-overwrite,mutex-copy}` flip FAIL→PASS on
+      BUG-080's Cases line; Race.lean's U4 inventory text updated;
+      full `ci --diff`; audit ask.
+- [ ] **Q-ATOMIC arc (A′, this repo owner; Tier 5; ~3–5 sessions)**
+      ([USER]-ruled 2026-09-02, `docs/2026-08-31_qrow-rulings.md` row
+      2; charter = `docs/2026-09-01_qatomic-owner-proposal.md` §4 +
+      `docs/2026-08-21_w32-qrow-memos.md` §2): a named worktree lane
+      ("atomics arc"). Wave 1 integer core + `mp-litmus` (fused SC
+      registry ops taking `.opDone`, zero new choice sites,
+      value-returning op family in the `syncStmt` mold, TSan-realized
+      detector edges over the per-address clock — the access KIND
+      itself lands in the BUG-080 slice above and is CONSUMED here);
+      wave 2 `atomic.Value`; Q-TRYLOCK rides wave 1 per row 5's
+      pre-ruled envelope; spin-wait rows under `nonterm=` membership
+      accounting, NO termination claim. Sequencing (proposal §5):
+      after the gotest fix slice and the t4-detector merge; after the
+      frontend-touching Q-row items ($pkginit, the Q-SELSEL slot); the
+      BUG-080 slice first. OUT OF SCOPE: FairStream / the
+      `Fair`-quantified claim class (reasoning-side future work — the
+      fairness doctrine, [USER] 2026-09-02). D-002 not-shim-injection
+      confirmation owed at dispatch, as Q-SYNCVAL's was.
 - [ ] The `nonterm=`-under-`engine=dedup` ruling (charter OQ5,
       `docs/2026-08-20_w32-re-envelope-charter.md` §Open questions
       posed to the user;
@@ -150,6 +189,11 @@ owners in "Re-homed obligations" above, fidelity decision 6.)
       (c7-refresh lane, 2026-09-01).
 
 ## Owed core fixes (BUGS.md carries the marker; this backlog the owner)
+
+- [ ] BUG-080 (race detector U4 — the atomic access KIND): scheduled
+      as its OWN S–M slice ahead of the atomics arc ([USER]
+      2026-09-02) — the item "BUG-080 detector atomic-access-kind
+      slice" in the re-homed section above is the owner entry.
 
 - [ ] BUG-078 residual (1): the LINEAR normalize. `normalizeListWith`
       (GoLean/GoCore/Ops.lean) is non-tail-recursive over the element

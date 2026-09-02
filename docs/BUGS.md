@@ -3970,7 +3970,14 @@ kill, never a wrong answer, lifted by (1).
   is a third access KIND — atomic — that conflicts with plain accesses
   only (`RaceAccess := Kind × Loc`; atomic↔atomic non-conflicting,
   atomic↔plain conflicting; recorded at the sync cell's path from
-  `raceUpdate`'s sync arm). SEQUENCING ([AGENT] judgment, audit fix
+  `raceUpdate`'s sync arm). SCHEDULED [USER] 2026-09-02 (Q-row ruling
+  sheet row 2, ruled with the A′ ratification — "I agree with this
+  approach"): the fix lands as its OWN S–M slice, sequenced BEFORE
+  the atomics arc rather than riding it — TODO.md "BUG-080 detector
+  atomic-access-kind slice"; the two costs named below are that
+  slice's design checks. The sequencing paragraph that follows is the
+  SUPERSEDED [AGENT] judgment (was: rides the arc's detector wave),
+  kept for the record. SEQUENCING ([AGENT] judgment, audit fix
   round 2026-09-02 S4 — NOT a forced dependency): that kind is
   separable from the sync/atomic lowering and could land alone (S–M);
   it is sequenced to ride the atomics arc's detector wave

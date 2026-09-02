@@ -34,6 +34,39 @@ our machine cannot, that is definitionally a bug somewhere — far more
 likely in GoLean than in Go. `observed ∉ modeled` is always
 red, never latitude.
 
+**Scheduling and fairness ([USER] 2026-09-02).** Mike, verbatim: "the
+semantics should admit unfair schedules, i.e scheduling is local and
+nondeterministic. Fairness is an assumption about the sequences that
+are chosen." The principle, named: **the weakest machine ADMITS every
+schedule, the starving ones included; fairness is a hypothesis on the
+chosen choice sequence, stated where it is used, never a constraint
+the machine enforces.** This confirms the existing design rather than
+changing it — (i) the scheduler pick is a local demonic choice at
+every scheduling point: L1 (`runnableIdxs`/`stepMulti`, Multi.lean —
+"ANY runnable goroutine may run next"), drawn at the sites
+`{l1Sched, l5ExitWindow, postOp, backEdge}` (`ChoiceSite`,
+State.lean); (ii) the upper-bound argument is the scheduling dossier
+§3.1 (`docs/2026-08-20_go-scheduling-semantics-dossier.md`: no
+language-level guarantee that a runnable goroutine ever runs — a
+maximally portable model must admit postponing one forever); (iii)
+the always-spin schedules are therefore MEMBERS of the envelope by
+right and are COUNTED, never claimed away, by the `nonterm=`
+accounting (boundary-set note §5d; corpus row
+`goroutines/send-then-spin`; register #1); (iv) `Fair : Choices →
+Prop` is a reasoning-side hypothesis over streams — a future
+definition in the reasoning repo that theorems ASSUME, quantifying
+over exactly the four scheduling sites (State.lean's `ChoiceSite`
+docstring), never a machine-side filter (register #1 residue (ii)).
+Consequence for the one place the spec's text is distributional AND
+mandatory — select's uniform-pseudo-random clause
+(spec#Select_statements; inventory C6; assessment p2-keeps-a1 A1-12):
+the weakest machine ADMITS the schedule that starves a
+permanently-ready clause forever; probability-1 non-starvation is a
+fairness assumption on the chosen sequence, stated where used. That
+is the doctrine's position, not a hedge: C6's envelope is
+support-equal to the spec's on finite traces and deliberately wider
+on infinite ones.
+
 ## Evidence classes for the upper bound
 
 In rough order of authority: the language spec's text; the memory model

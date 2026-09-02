@@ -18,12 +18,20 @@ and not otherwise tracked, auditor D3-2). Row 3 (Q-SELSEL) is
 [USER]-RULED 2026-09-01 — option (A) with an implementation slot,
 per the tracked two-item menu in the appendix ("(1) agree"; menu
 recorded post-hoc at the audit's C5, countersign requested at the
-merge ask). Row 2 remains OPEN. Reds total 20.
+merge ask). Row 2 (Q-ATOMIC) is [USER]-RULED 2026-09-02 — option A′
+with THIS repo (the semantics product) as owner, plus BUG-080's
+detector-kind slice pulled forward — per the owner proposal
+`docs/2026-09-01_qatomic-owner-proposal.md` (Mike: "I agree with this
+approach"; the approach as presented is recorded verbatim in the
+appendix; the quote was received by the [AGENT] coordinator
+in-session and RELAYED to the recording worker — citation, not
+firsthand, per the U0-incident convention). No row remains OPEN: all
+eight are ruled. Reds total 20.
 
 | # | row (reds) | status | ruling / state |
 |---|---|---|---|
 | 1 | **Q-INITSPAWN** (1) | **RULED [USER] 2026-08-31** | Envelope ruled as recommended: init-spawned children are ordinary goroutines from the spawn boundary (L1, zero new sites; during-init execution probed 40/40 — deferred-release models foreclosed). VEHICLE REFRESH: the memo's "rider on slice 3(a)" is dead (that W3.2 slice never ran; arc parked) — implementation is a standalone `$pkginit` item on this product's backlog (re-homed per fidelity decision 6), sequenced with the next init-phase surgery. Ruling binds any future implementer now. |
-| 2 | **Q-ATOMIC** (5) | **OPEN** — the arc decision | mem#atomic as a forced SC point stands; the atomics-arc design memo is still the recommendation. TWO REFRESHES before ruling: (a) "FairStream tier bundled" must read as future work TO BE BUILT (FairStream has never been a Lean definition — assessment finding); (b) the arc has NO live owner post-split — ratifying requires naming one. Decision shape: ratify-with-owner / ratify-with-FairStream-split (A′) / defer the family (Q-TRYLOCK's implementation and the liveness story inherit the wait). |
+| 2 | **Q-ATOMIC** (5) | **RULED [USER] 2026-09-02 — option A′, owner = THIS repo (the semantics product); BUG-080's detector-kind slice PULLED FORWARD** ("I agree with this approach" to the approach presented — recorded verbatim in the appendix below; quote relayed to the recording worker by the [AGENT] coordinator, citation not firsthand) | The atomics arc is RATIFIED as scoped in `docs/2026-09-01_qatomic-owner-proposal.md` §4/§6 (A′): mem#atomic as a forced SC point stands; fused single-step registry ops, zero new choice sites, TSan-realized detector edges; integer core → `mp-litmus` → `atomic.Value`; spin-wait rows carried under `nonterm=` membership accounting with NO termination claim. OWNER: this repo's backlog — a named worktree lane ("atomics arc") dispatched from TODO.md, sequenced into Tier 5 with the proposal §5 ordering constraints carried (after the gotest fix slice and the t4-detector merge; after the frontend-touching Q-row items; ~3–5 sessions, L). PULLED FORWARD as its OWN S–M slice, sequenced BEFORE the arc rather than riding its detector wave (supersedes the [AGENT] sequencing judgment of audit fix S4): BUG-080's fix — the atomic access KIND in `Race.lean` (`RaceAccess := Kind × Loc`; atomic↔atomic non-conflicting, atomic↔plain conflicting; recorded at the sync cell's path from `raceUpdate`'s sync arm), with the two named costs CHECKED IN THAT SLICE: (i) one `syncData` cell per primitive vs the `locPrefix` over-refusal (the `disjoint-field-vs-lock` control must stay green) and the `wgSemaAccess` plain-pair carve-out; (ii) gc's per-primitive instrumentation differences (WaitGroup under `race.Disable` + the `wg.sema` pair vs Mutex's state CAS), so the per-op recorded set is derived primitive by primitive from `-race`'s realized set. OUT OF SCOPE: FairStream / the `Fair`-quantified claim class — reasoning-side FUTURE WORK TO BE BUILT, NOT part of the arc (proposal §2; the fairness doctrine ruled the same sitting is the doctrine's "Scheduling and fairness" paragraph). Q-TRYLOCK rides as a wave-1 rider per its pre-ruled envelope (row 5). Refreshes (a)/(b) below are discharged by the proposal. SUPERSEDED PRE-RULING STATE: mem#atomic as a forced SC point stands; the atomics-arc design memo is still the recommendation. TWO REFRESHES before ruling: (a) "FairStream tier bundled" must read as future work TO BE BUILT (FairStream has never been a Lean definition — assessment finding); (b) the arc has NO live owner post-split — ratifying requires naming one. Decision shape: ratify-with-owner / ratify-with-FairStream-split (A′) / defer the family (Q-TRYLOCK's implementation and the liveness story inherit the wait). |
 | 3 | **Q-SELSEL** (2) | **RULED [USER] 2026-09-01 — option (A) with an implementation slot** ("(1) agree" to the tracked two-item menu — recorded VERBATIM in the appendix below; menu recorded post-hoc from the session at the audit's C5, [USER] countersign requested at the merge ask; prereq discharged same day): the asymmetric-arrival envelope adopted — its structure is leg (1) of the refreshed C7 argument; the falsified commit-by-waking-event wording is NOT part of the adopted envelope (the owed wording correction lands at implementation); the idiom is ordinary Go, not raft-specific, so the slot lives on this product's backlog despite the original consumer being parked | SUPERSEDED PRE-RULING STATE: Do not rule as written: the scheduling driver ("before the raft node layer") is parked with the reasoning product, and the envelope rides C7's pairing argument whose re-argue trigger ALREADY FIRED (B1/B2 changed the wake machinery; the promised re-argument was never recorded — p2-keeps-a1 A1-14), with an unprobed corner (two clauses on one channel, woken by close). PREREQ (S): refresh C7's argument + run the close-wake probe; then re-present. **RE-PRESENTATION (2026-09-01 [AGENT], C7-refresh lane):** both prerequisites ran. (i) The close-wake probe (`docs/evidence/2026-09-01_c7-close-wake-probe/`): gc commits EITHER same-channel clause from one close wake (~half each over 800 runs incl. a park-first isolate), falsifying the old "committed by the EVENT that wakes it" wording — but observed ∈ modeled HOLDS (machine-certified {1,2} ⊇ gc's {1,2}; the second member rides the always-realizable close-before-entry schedule + entry L2 draw). The envelope does NOT need widening. (ii) C7's argument is re-recorded post-B1/B2 as two legs (inventory C7 + §8 e12): partner wakes = L4 clause-INDIVIDUAL pairing at the arrival intercept; close wakes = the entry-path mask. Consequence for this row: recommendation (A)'s envelope survives UNCHANGED — its structure (each matching parked clause a distinct L4 candidate, memo option (B)'s own decomposition) is exactly leg (1) and never leaned on the falsified wording; one wording correction owed at implementation: the memo's "C7's commit-by-waking-event argument extended verbatim" must read "the parked side's matched clause is the L4 candidate's clause". The close corner is irrelevant to select↔select rendezvous (closes never pair). Remaining for the [USER]: the vehicle — (A)'s implementation slot post-split (the raft node-layer driver is parked with the reasoning product; the 2 reds stand in this repo's baseline either way) — i.e. rule (A)-with-a-slot or (C) defer-with-dependency-recorded. |
 | 4 | **Q-RACEPATH** (1) | **RULED [USER] 2026-08-31 — IMPLEMENTED 2026-09-02 [AGENT]** (Tier-4 detector-soundness lane) | Constant-index narrowing (S) as recommended: extend the shipped fieldGet-chain narrowing to evaluated-index indexGet frames; dynamic-index residual stays in O1 with its trigger. VEHICLE REFRESH: "next footprint-touching slice" = the Tier-4 detector-soundness leg (the natural co-located work). IMPLEMENTATION RECORD: `projChainTarget` (Race.lean) — the narrowing fires for `indexGet` frames whose pending index is an `intLit` AND whose base cell is an ARRAY (slice/string headers stay whole-cell), composing with `fieldGet` in either order; `race/free/array-read-write` flipped FAIL→PASS (confluent), +2 chain-form green guards, +2 must-stay-racy racy-lane guards, +1 born-FAIL residual pin (`race/free/array-dyn-index-read-write`, on BUG-041's Cases line). Ruling text carried to inventory C10/O1, ledger §6, BUG-041. |
 | 5 | **Q-TRYLOCK** (1) | **RULED [USER] 2026-08-31 via the killable-set approval; per-row CONFIRMED [USER] 2026-09-01 ("the 4 confirmations all seem like reasonable interpretations… agree on all of the above")** (auditor D3-2 resolved) | Deferred WITH the envelope pre-ruled, as recommended: when modeled, TryLock takes mem#locks' spurious-failure member as a real width-2 choice site (success-edge-only detector; the fairness-claim class); the always-succeeds pin is off the menu permanently. Implementation inherits Q-ATOMIC's arc decision. |
@@ -50,7 +58,11 @@ merge ask). Row 2 remains OPEN. Reds total 20.
 - Rows 2/3 return to the [USER] when: (2) an owner proposal exists
   (post Tier-4 scoping), (3) the C7 refresh + close-wake probe are
   done (queued as an S item) — **DONE 2026-09-01 [AGENT] (C7-refresh
-  lane): row 3 is ready for ruling; see its RE-PRESENTATION.**
+  lane): row 3 is ready for ruling; see its RE-PRESENTATION.** **Row 2
+  RETURNED via the owner proposal (2026-09-01/02) and RULED [USER]
+  2026-09-02 — see the row; its vehicles are the two TODO.md items
+  (the BUG-080 detector-kind slice first, then the atomics arc).**
+  Nothing on this sheet now awaits the [USER].
 
 ## Appendix — the coordinator's row-by-row currency table
 
@@ -62,7 +74,7 @@ what was put in front of the user).
 | # | row | currency finding | disposition presented |
 |---|---|---|---|
 | 1 | Q-INITSPAWN | recommendation current; VEHICLE stale (slice 3(a) dead — standalone `$pkginit` backlog item instead) | rule now as recommended |
-| 2 | Q-ATOMIC | recommendation needs two refreshes before ruling: FairStream must read as future work TO BE BUILT, and the arc has NO live owner post-split | hold — returns with an owner proposal |
+| 2 | Q-ATOMIC | recommendation needs two refreshes before ruling: FairStream must read as future work TO BE BUILT, and the arc has NO live owner post-split | hold — returns with an owner proposal. RETURNED via `docs/2026-09-01_qatomic-owner-proposal.md`; RULED [USER] 2026-09-02 — A′ with this repo as owner + the BUG-080 detector-kind slice pulled forward (record below) |
 | 3 | Q-SELSEL | STALE premise: scheduling driver parked with the reasoning product; C7's re-argue trigger already fired (re-argument never recorded, A1-14); unprobed close-wake corner | hold — C7 refresh + close-wake probe, then re-present. RE-PRESENTED 2026-09-01 via the two-item menu below; ruled "(1) agree" = adopt the recommended (A)-with-a-slot |
 | 4 | Q-RACEPATH | recommendation current; vehicle refresh ("next footprint-touching slice" = Tier-4 detector-soundness leg) | rule now as recommended |
 | 5 | Q-TRYLOCK | recommendation current; zero-red pre-ruled DEFERRAL (kills no reds; implementation inherits Q-ATOMIC's arc decision) | defer with the envelope pre-ruled |
@@ -92,3 +104,27 @@ lands.»
 The user replied «(1) agree, (2) agree». So "(1) agree" = adopt the
 recommended (A)-with-a-slot (the row-3 ruling above); "(2) agree" =
 the gotest fix slice is the next dispatch after this round lands.
+
+### The row-2 ruling record (2026-09-02) — the tracked record behind "I agree with this approach"
+
+[AGENT] record. Provenance chain: the [USER] quote was received by the
+[AGENT] coordinator in-session and RELAYED to the recording worker in
+its brief; the worker did not receive it firsthand (citation, never
+bare assertion — the U0-incident convention). The approach presented,
+as relayed:
+
+«ratify A′ with this repo as owner, sequenced into Tier 5, AND pull
+BUG-080's detector fix forward as its own S–M slice (the atomic access
+KIND in Race.lean: RaceAccess := Kind × Loc, atomic↔atomic
+non-conflicting, atomic↔plain conflicting, recorded at the sync cell's
+path; the two named costs to check: single syncData cell per primitive
+vs locPrefix over-refusal + wgSemaAccess carve-out; gc's per-primitive
+instrumentation differences) rather than waiting 3–5 sessions.
+FairStream/fairness = reasoning-side future work, NOT part of the arc.»
+
+The user replied «I agree with this approach». The same sitting
+produced the fairness doctrine ruling (verbatim in the doctrine's
+"Scheduling and fairness" paragraph,
+`docs/2026-08-11_essence-of-go-doctrine.md`), which is why FairStream's
+exclusion from the arc is a doctrine consequence, not merely a scoping
+choice.
