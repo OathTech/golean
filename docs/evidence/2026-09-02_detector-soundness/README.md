@@ -57,13 +57,19 @@ review D5; A1-07 / A2-Q3). Convention: `docs/evidence/README.md`.
   (contending ops, sibling fields under the lock, disjoint primitives).
   `probes-u4kind-pre.*` — on the 0f3c05ff machine (main's binary, the
   worktree dirty only with the probe files): 7 HOLE, 7 possible-HOLE,
-  14 agree-DRF. `probes-u4kind-post.*` — on the fixed machine (the
-  slice's Race.lean/Multi.lean, tree at 0f3c05ff+dirty = the slice's
-  diff): 0 HOLE, 26 agree, 2 possible-HOLE (`rw-overwrite-vs-{runlock,
-  unlock}` — machine `fatal` where gc reports the race then dies;
-  BUG-080 residual (b)). `corpus-bug080.*` — the in-scope corpus matrix
-  re-run at the slice's tip: HOLE 2 → 0, no new over-refusal rows.
-  `gate-tail-bug080.txt` — the slice's `ci --diff` tail.
+  14 agree-DRF. `probes-u4kind-post.*` — on the fixed machine at the
+  slice's commit 43fd17e1 (clean stamp; an earlier run on the same
+  machine at 0f3c05ff+dirty gave cell-for-cell identical results): 0
+  HOLE, 26 agree, 2 possible-HOLE (`rw-overwrite-vs-{runlock,unlock}`
+  — machine `fatal` where gc reports the race then dies; BUG-080
+  residual (b)). `corpus-bug080.*` — the in-scope corpus matrix (368
+  rows = the 364 + the slice's 4 new rows) on the fixed machine, stamp
+  0f3c05ff+dirty where dirty = exactly the diff committed as 43fd17e1
+  (the run overlapped the gate; the golean binary was the slice's):
+  HOLE 2 → 0, possible-HOLE 0, over-refusal 1 (the O1 residual, no new
+  row), agree-race 23 → 27, agree-DRF 275 → 277, uncertified 63 (same
+  set). `gate-tail-bug080.txt` — the slice's `ci --diff` tail + the
+  final fast-gate tail.
 - Raw per-run TSan transcripts, harness dirs, wire dumps, enumerator
   observations and stats live under the run's `artifacts/detector-
   soundness/<run>/rows/<id>/` (gitignored; regenerate with the commands
