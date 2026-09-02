@@ -155,3 +155,27 @@ construction — `other-map` can only widen through identity-blindness
 (its ranged map is never mutated), `delete` only through the emptied
 start set (its deleted key is not live, so identity-blindness alone
 changes nothing there).
+
+### F10 — the clean-tip gate (the recorded slice gate ran on a dirty tree)
+
+`scripts/capped scripts/ci --diff` at the COMMITTED fix-round tip
+`e0ddf99c` (working tree clean, `git status --short` empty at launch;
+this dir's `gate-tail-fixround.txt` is the summary block verbatim, no
+"DIRTY tree" note this time):
+
+```
+differential coverage summary: cases=2540 pass=2367 fail=173 export_status=0
+  ok   baseline diff FULL (2540/2540, no regression)
+  ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
+  note reconciler: 3 finding(s), 0 HIGH — report-only (details: tools/reconcile-records)
+RESULT: PASS
+```
+
+Drift vs the slice's baseline = exactly the 3 NEW `noreadd` rows (all
+PASS/confluent); the 2537 existing rows unchanged in result and stage.
+`scripts/check-spec-anchors`: ok (580 spec# + 148 mem# resolve at the
+pin). `tools/reconcile-records`: 3 findings (C13/C5/C9, all
+pre-existing MEDIUM), 0 HIGH — the slice gate's C4 HIGH (stale §8
+arithmetic) is cleared by this round's §8 update. This paragraph and
+`gate-tail-fixround.txt` are added by a docs-only follow-up commit, so
+the gate's certified content is `e0ddf99c` + this record.
