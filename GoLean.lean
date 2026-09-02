@@ -4,3 +4,4 @@ import GoLean.StrictJson
 import GoLean.GoCore
 import GoLean.NativeToIR
 import GoLean.CLI
+import GoLean.ChoiceTrace
