@@ -7,7 +7,7 @@
 #   NO other row moved; NO PASS->non-PASS flips). Machine change:
 #   GoLean/GoCore/Race.lean `RaceAccess := AccessKind × Loc` with
 #   AccessKind ∈ {read, write, atomicRead, atomicWrite} (conflict = at
-#   least one write ∧ not both atomic — mem#restrictions verbatim, TSan's
+#   least one write ∧ not both atomic — mem#model's data-race definitions, TSan's
 #   shadow rule) + `syncEntryKinds`/`syncReleaseTailKinds`, the set gc's
 #   -race build realizes on a sync primitive's OWN words derived primitive
 #   by primitive (Mutex Lock/Unlock atomic writes; RWMutex ops a plain
@@ -272,7 +272,13 @@
 #     The remaining FAIL rows are the standing frontend/feature gaps
 #     of the 2026-08-22 record (docs/2026-08-22_launch-audit-synthesis.md),
 #     none moved by this re-pin.
-# cases: 2533 (2360 PASS / 173 FAIL)
+# cases: 2537 (2366 PASS / 171 FAIL)
+#   [re-derived by count from this file's data rows at the 2026-09-02
+#   bug080-atomic-kind re-pin: 2533 (2360 PASS / 173 FAIL) + 4 born-PASS
+#   + 2 FAIL->PASS flips = 2537 (2366 PASS / 171 FAIL). The re-pin had
+#   left this header at the previous figure (caught at the slice's audit,
+#   G2 F3 — the second re-pin in a row to do so); tools/reconcile-records
+#   check C1H now compares this line to the data rows, report-only.]
 #   [re-derived by count from this file's data rows at the 2026-09-02
 #   detector-soundness re-pin: 2526 (2355 PASS / 171 FAIL) + 4 born-PASS
 #   + 3 born-FAIL + 1 FAIL->PASS flip = 2533 (2360 PASS / 173 FAIL).]

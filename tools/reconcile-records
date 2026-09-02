@@ -182,6 +182,55 @@ def check_baseline(bl):
 
 
 # ---------------------------------------------------------------------------
+# C1H — the baseline's own `# cases:` header vs its data rows
+# ---------------------------------------------------------------------------
+
+HEADER_CASES_RE = re.compile(
+    r"^#\s*cases:\s*(\d+)\s*\(\s*(\d+)\s+PASS\s*/\s*(\d+)\s+FAIL\s*\)"
+)
+
+
+def check_baseline_header(bl, info, path=BASELINE):
+    """The baseline's `# cases: N (P PASS / F FAIL)` header line vs the
+    counts of its data rows. Two re-pins in a row (t4-detector-soundness,
+    then bug080-atomic-kind; caught at the latter's audit, G2 F3)
+    regenerated the rows and left this header at the previous figure — a
+    summary a reader trusts without counting. REPORT-ONLY (a speedbump,
+    not a gate): HIGH on any mismatch; HIGH when the header is missing or
+    unparseable (a header that cannot be checked is not a clean header).
+    The FIRST matching line is the header; the indented
+    `#   [re-derived ...]` derivation lines beneath it do not match."""
+    hdr = None
+    hdr_line = None
+    for i, ln in enumerate(lines(path), 1):
+        m = HEADER_CASES_RE.match(ln)
+        if m:
+            hdr = tuple(int(x) for x in m.groups())
+            hdr_line = i
+            break
+    rel = os.path.relpath(path, ROOT)
+    if hdr is None:
+        finding(
+            "C1H",
+            "high",
+            f"{rel}: no parseable `# cases: N (P PASS / F FAIL)` header line — the summary cannot be checked",
+        )
+        return {"header": None, "rows": [info["cases"], info["pass"], info["fail"]], "matches": False}
+    rows = (info["cases"], info["pass"], info["fail"])
+    ok = hdr == rows
+    if not ok:
+        finding(
+            "C1H",
+            "high",
+            f"{rel}:{hdr_line} header says {hdr[0]} cases ({hdr[1]} PASS / {hdr[2]} FAIL) "
+            f"but the data rows count {rows[0]} ({rows[1]} PASS / {rows[2]} FAIL) — stale header; "
+            "re-derive it from the rows (and add the derivation line)",
+            [f"header - rows: total {hdr[0]-rows[0]:+d}, PASS {hdr[1]-rows[1]:+d}, FAIL {hdr[2]-rows[2]:+d}"],
+        )
+    return {"header": list(hdr), "header_line": hdr_line, "rows": list(rows), "matches": ok}
+
+
+# ---------------------------------------------------------------------------
 # C2 — the gate's own BUGS<->baseline check, run and reported
 # ---------------------------------------------------------------------------
 
@@ -1162,6 +1211,7 @@ def main():
 
     report = {}
     report["baseline"] = check_baseline(bl)
+    report["baseline_header"] = check_baseline_header(bl, report["baseline"])
     report["check_bugs"] = check_check_bugs()
     report["bugs"] = check_bug_cases_exist(bugs, bl, corpus)
     report["lang_ledger"] = check_lang_ledger_arithmetic(bl, report["baseline"])
@@ -1185,6 +1235,8 @@ def main():
         print("=" * 72)
         b = report["baseline"]
         print(f"baseline            {b['cases']} cases  {b['pass']} PASS  {b['fail']} FAIL")
+        h = report["baseline_header"]
+        print(f"baseline header     {h['header']}  {'matches the rows' if h['matches'] else 'MISMATCH vs the rows (C1H)'}")
         print(f"bugs                {report['bugs']['bugs']} entries  "
               f"{report['bugs']['open']} open  {report['bugs']['fixed']} fixed")
         u = report["untriaged"]
