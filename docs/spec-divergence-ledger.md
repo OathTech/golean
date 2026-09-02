@@ -112,11 +112,12 @@ Discipline notes, recorded up front:
 - How found: spec-re-read (FG/memory-model note §2.1/§4.1).
 - Sources: mem#model Requirement 1 (links spec#Order_of_evaluation).
 - Content: the memory model's per-goroutine order is a PARTIAL order
-  exactly where the spec's evaluation order is open — E2–E5's latitude
+  exactly where the spec's evaluation order is open — E2–E4's latitude
   (and E12's, now in the inventory on this tree — the dangling id was
   caught at the P4 audit, resolved by the post-P2 rebase) is
   memory-model latitude too,
-  under concurrency.
+  under concurrency. (E5 left this set 2026-09-02: the phase boundary
+  is FORCED and gc's early store a deviation, L-016.)
 - Stance: recorded at E1's cross-link (P2 retrofit); matters the day
   an E-series envelope meets a concurrent observer.
 
@@ -364,7 +365,10 @@ Discipline notes, recorded up front:
 - Sources: spec#Order_of_evaluation — "the order of those events
   compared to the evaluation and indexing of x and the evaluation of
   y is not specified" (the section's own example commentary); the
-  inventory's E2–E5 and E12 envelope statements.
+  inventory's E2–E4 and E12 envelope statements (E5 was in this set
+  until 2026-09-02 — re-ruled FORCED, gc deviation L-016; the UNSEQ
+  reading concerns phase-1 event groups and never licensed a phase-2
+  store inside phase 1).
 - Sharp question: when the spec leaves the order of two event groups
   "not specified", is a conforming implementation restricted to one
   of the two SEQUENTIAL orders per expression (either-order), or may
@@ -385,10 +389,10 @@ Discipline notes, recorded up front:
 - Bound affected: upper (either-order would narrow the claimed
   envelope below the plausible weakest machine).
 - Status: adopted; indexed as `docs/spec-interpretations.md` I-2;
-  carried operationally by the inventory's E2–E5/E12 plausible-
+  carried operationally by the inventory's E2–E4/E12 plausible-
   envelope statements (the machine's PINS at those points are
   unchanged — this entry fixes the ENVELOPE's reading, not the
-  realization).
+  realization; E5 dropped from the list 2026-09-02, L-016).
 
 ### L-014 — an optimized constant fold truncates to 32 bits — `gc-bug` (UNFILED; upstream filing pending Mike)
 
@@ -542,6 +546,124 @@ Discipline notes, recorded up front:
   later filing needs no re-derivation. No corpus row: the corpus cannot
   hold a program the oracle refuses to build.
 
+### L-016 — gc stores an earlier multi-assign target before a LATER right-hand operand's panic, visible under `recover` — `gc-bug` (UNFILED; upstream classification pending — P5 filing-policy decision [USER])
+
+- How found: differential — the shape was first recorded 2026-08-06
+  (BUG-032's final-check amendment, `x, a[i].f = 1, 7/z`), probed
+  2026-08-15 (`docs/2026-08-15_dossier-e5.md`,
+  `docs/evidence/2026-08-15-dossier-e5/`), and witnessed twice by
+  grossmith campaign 3 (`m3a-rerun/part-04/case_03110` seed 5,015,110
+  and `m3pairs/part-01/case_03079` seed 6,003,079 —
+  `docs/2026-09-01_grossmith-campaign-3.md` §5.2/§5.0). For 27 days it
+  was carried as latitude-inventory row **E5**, "both spec-legal";
+  **re-classified 2026-09-02 by [USER] ruling** (Mike, verbatim:
+  "agree we should mark as a gc deviation, and record in our gc bug
+  backlog"), on the campaign-3 verifier's analysis [AGENT] below. The
+  third ledger entry where the ORACLE is the wrong side (L-014, L-015).
+- Sources: spec#Assignment_statements, the two-phase sentence, verbatim
+  at the go1.26.5 pin: "The assignment proceeds in two phases. First,
+  the operands of index expressions and pointer indirections (including
+  implicit pointer indirections in selectors) on the left and the
+  expressions on the right are all evaluated in the usual order.
+  Second, the assignments are carried out in left-to-right order." —
+  NORMATIVE: it defines the phase structure; spec#Order_of_evaluation's
+  "usual order" governs the order WITHIN phase 1 and does not license
+  a phase-2 store to precede phase-1 work. spec#Return_statements
+  ("like an assignment") extends the same sentence to `return`. gc's
+  own regression test `deps/go/test/fixedbugs/issue43835.go` (2021):
+  `bad, _ = true, *p` under a recovered nil-deref must leave `bad`
+  false — gc itself asserts NO early store is visible under a recovered
+  panic. gc's fix site: `deps/go/src/cmd/compile/internal/walk/assign.go`
+  `ascompatee` (`deferResultWrite`, comment "Assignments to a result
+  parameter in a function with defers becomes visible early if
+  evaluation of any later expression panics (#43835)") and its
+  `readsMemory` heuristic. Our own precedent: **BUG-075** (FIXED
+  2026-09-01) — the MACHINE's early store of result 1 before operand
+  2's panic at `return` was filed and fixed as a wrong answer under
+  this same sentence. Reproducer: **`docs/evidence/2026-09-02_e5-gc-deviation/`**.
+- Sharp question: when a later right-hand operand of a multi-target
+  assignment panics and the panic is recovered, may an EARLIER
+  target already hold its new value?
+- Minimal program (p5 of the reproducer matrix; `probe/main.go`
+  `probeTwoTargets`):
+
+  ```go
+  func probeTwoTargets() (r uint64) {
+  	v := uint64(58)
+  	z := int16(0)
+  	var b int16
+  	defer func() { recover(); r = v }()
+  	v, b = 29, z/z // phase 1 panics (z/z); spec: no phase-2 store happens
+  	_ = b
+  	return 0
+  }
+  ```
+
+  Spec answer: `v` stays 58. gc: 29 (default flags AND
+  `-gcflags=all='-N -l'` — not an optimizer-level artifact). Machine:
+  58.
+- Per-implementation data (gc only, N=1 — ARGUED per the discipline
+  note, with gc-vs-itself as the strong form: issue43835.go passes on
+  gc, i.e. gc holds the store back for RESULT-PARAMETER targets and
+  for `return`, and deviates on ordinary locals). The reproducer
+  matrix, go1.26.5 linux/amd64:
+
+  | probe | statement (v = 58 before; z = 0) | gc | machine = spec |
+  |---|---|---|---|
+  | p1 | `a, v, b = -a+a, 29, z/z` | **29** early store | 58 |
+  | p2 | `a, v, b = -a+a, w, z/z` (w a variable) | **29** early store | 58 |
+  | p3 | `b, v = z/z, 29` (panic first) | 58 | 58 |
+  | p4 | `v, b = 29, s[i]` (INDEX panic) | 58 held back | 58 |
+  | p5 | `v, b = 29, z/z` | **29** early store | 58 |
+  | p6 | control `v = 29; b = z/z` | 29 | 29 |
+
+  Plus the 2026-08-15 dossier datum: the same statement with GLOBAL
+  targets realizes the spec point (`x = 0`). Mechanism reading
+  [AGENT, from source]: `ascompatee` evaluates a later right-hand
+  expression before earlier stores ONLY when `readsMemory` says an
+  earlier store could alias it (index/deref: yes → held back, p4
+  PROBED; division: no → stored early, p1/p2/p5 PROBED; the rest of
+  `readsMemory`'s no-list — arithmetic, shift, conversion, type
+  assertion — predicts early store too but is UNPROBED here; globals:
+  aliasing assumed → held back, the 2026-08-15 datum). The
+  issue43835 fix (`deferResultWrite`) forces the spec order only for
+  result parameters in functions with defers; a local captured by the
+  deferred closure is the same observation channel and is not covered.
+  So this is an ALIASING optimization whose panic path leaks through
+  `recover` — not a designed realization of latitude.
+- Stance: **`gc-bug`; the machine is right.** The two-phase sentence is
+  a forced point, and the "both spec-legal" reading (BUG-032, 2026-08-06)
+  rested on spec#Order_of_evaluation's list of ordered EVENTS — which
+  orders phase-1 operands among themselves and says nothing that lets
+  a phase-2 store move into phase 1. Three independent witnesses agree
+  on the reading: the sentence's own structure, gc's own regression
+  test (which asserts exactly the machine's behaviour for its shape),
+  and our BUG-075 (the same sentence at `return`, where the machine's
+  identical early store was treated as a wrong answer and fixed). One
+  sentence cannot be forced for `return` and latitude for `=`. The
+  inventory's **re-envelope obligation for E5 is WITHDRAWN** (the
+  ruling's consequence): adding gc's point to the machine would widen
+  it PAST the spec — the machine is "the weakest machine Go PERMITS",
+  and Go does not permit this.
+- Bound affected: **none** — the machine already holds the spec point
+  (differential red on p1/p2/p5 is gc's deviation, not observed ∉
+  modeled). Consequence for the strict lane: these shapes can never be
+  a strict corpus row (pinning gc's answer would pin the wrong answer,
+  as at L-014); the campaign-3 witnesses stay reduced here, not in
+  `Corpus/`. Triage lesson (adds to L-014's): a `machine-bug-candidate`
+  whose oracle is self-stable under `-N -l` can STILL be gc's fault
+  when the deviation lives in `walk`, not the optimizer — check the
+  spec sentence before trusting the flag matrix.
+- Status: **recorded; UNFILED upstream — classification pending the
+  P5 filing-policy decision ([USER]).** Filing is a public action
+  reserved to Mike (per-filing sign-off, discipline note); nothing has
+  been filed. When a filing lands, record the issue number in Sources.
+  Cross-records updated 2026-09-02: inventory §E5 (heading, body,
+  §4/§7/§8/§10), doctrine register #2, BUG-032 correction note,
+  BUG-075 cross-reference, campaign-3 report §5 caveat (resolved),
+  coverage ledger Order_of_evaluation / Assignment_statements rows,
+  dossier E5 (superseded).
+
 ## Feed status (honest accounting)
 
 Census at the go1.26.5 pin (post-audit regeneration): **926 spec
@@ -555,13 +677,25 @@ before the pin (historic keys, not covmap segment names) and 148+1 pre-anchor-er
 are 2009; delta-review N3) carry the explicit `(pre-anchor-era)`
 marker (the pre-HTML file had no anchors) — the
 uncurated feed.
-Curated above: **15 entries, L-001…L-015** (recounted 2026-08-20 in the
+Curated above: **16 entries, L-001…L-016** (recounted 2026-08-20 in the
 docs-gcbugs slice: the bare "6" predates L-011…L-015 and was never
 updated as entries landed; it is a count of ENTRIES, and the ledger
-holds every kind, including the `prior-art` and informational rows).
-Of those, **2 are `gc-bug`** — L-014 and L-015, both from the 2026-08-20
-grossmith campaign, and both arriving through the differential channel
-rather than the census feed. Issue-metadata enrichment DONE (2026-08-17,
+holds every kind, including the `prior-art` and informational rows;
+L-016 added 2026-09-02).
+Of those, **3 are `gc-bug`** — L-014 and L-015, both from the 2026-08-20
+grossmith campaign, and L-016 (the E5 early-store deviation,
+[USER]-ruled 2026-09-02 out of the latitude inventory), all three
+arriving through the differential channel rather than the census feed.
+
+**Upstream filing backlog (recorded 2026-09-02).** NONE of the
+upstream-reportable entries has been filed: **L-007, L-008** (spec
+errata), **L-014, L-015, L-016** (gc bugs) are all UNFILED. Filing is a
+public action reserved to the [USER] (per-filing sign-off, discipline
+note above) and is pending the **P5 filing-policy decision**; the
+per-entry Status lines record each entry's own stance (L-014 "Mike is
+filing", L-015 "hold", L-016 "classification pending") and this line
+records the aggregate fact so no reader infers a filing from an entry's
+existence. Issue-metadata enrichment DONE (2026-08-17,
 sandbox opened by operator; counts updated after the census
 regeneration retired two false-positive refs): 370 of 372 refs
 resolved into the tracked `docs/spec-archaeology/issue-index.tsv`

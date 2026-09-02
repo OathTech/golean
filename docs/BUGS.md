@@ -1436,7 +1436,31 @@ alongside every `e.lifted` rollback (both paths).
   a fix would need the store held back, not panics linearized; its
   natural home is the BUG-025 retirement slice. A future pin in this
   shape must use the membership/envelope treatment, not strict
-  equality.)
+  equality.) **CORRECTION (2026-09-02, [USER] ruling — Mike: "agree
+  we should mark as a gc deviation, and record in our gc bug
+  backlog"):** the early-STORE manifestation's "Both spec-legal"
+  verdict just above is WITHDRAWN. spec#Assignment_statements' two-phase
+  sentence is normative (every store after every operand evaluation);
+  spec#Order_of_evaluation's list of ordered events governs the order
+  WITHIN phase 1 and does not license a phase-2 store inside it. gc's
+  own regression test `deps/go/test/fixedbugs/issue43835.go` asserts
+  no early store under a recovered panic; its fix (walk/assign.go
+  `ascompatee`) covers result parameters and `return` only — the
+  observed early store on ordinary locals is an aliasing optimization
+  leaking through `recover`; and BUG-075 (fixed 2026-09-01) treats the
+  machine's own identical early store at `return` as a wrong answer
+  under the same sentence. The machine's behaviour here (x stays 0) is
+  the FORCED point, not one of two legal members; gc's is a DEVIATION,
+  recorded as `docs/spec-divergence-ledger.md` **L-016** (gc-bug,
+  UNFILED) with the reproducer matrix at
+  `docs/evidence/2026-09-02_e5-gc-deviation/`. Inventory row E5 is
+  re-classed (c) FORCED and its re-envelope obligation withdrawn; "no
+  pin / membership treatment" above stands for the reason L-014's does
+  — a strict row would pin gc's WRONG answer — not because either
+  answer is legal. The panic-SELECTION axes (E3/E4, the paragraph's
+  first half) are unaffected: still both-legal, still open envelope.
+  Analysis [AGENT] (grossmith campaign-3 verifier, 2026-09-02); the
+  class call [USER].
 - Pinned-by: differential (since the 2026-08-31 A6 amendment above:
   the once-refused rows now pin the inline realization green; the
   surviving refusal shape is pinned red-by-design on BUG-062's
@@ -3786,6 +3810,19 @@ control row pins the already-correct assign-path sibling
 (returns/multi-return-two-phase/assign-control). This is the wire
 decoder — trusted surface — flagged [TRUST-ADJACENT]; the change is
 the documented two-phase lowering only, no new machine operations.
+
+Cross-reference (2026-09-02): the assignment-side twin of this bug,
+latitude-inventory row **E5** (gc stores an earlier multi-assign
+target before a LATER operand's panic, visible under recover), was
+RE-LABELLED from latitude to **gc DEVIATION** by [USER] ruling on
+2026-09-02 — `docs/spec-divergence-ledger.md` L-016. This entry was
+one of the three witnesses for that ruling: the machine's early store
+at `return` was treated here as a wrong answer under the SAME two-phase
+sentence, so gc's identical shape at `=` cannot be latitude. The same
+gc regression test (issue43835.go) that exposed this bug is gc's own
+assertion of the no-early-store rule — gc passes it (its fix covers
+result parameters and `return`) and deviates only on ordinary locals,
+which is the E5 shape.
 
 ## BUG-076 — array/pointer-to-array range expressions were ALWAYS evaluated: the spec's non-evaluation special case was missing (spurious panic)
 

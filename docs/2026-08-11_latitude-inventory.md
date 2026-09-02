@@ -651,9 +651,10 @@ returns) and BUG-076 (the range non-evaluation special case missing)
 to the same was-wrong family. Cross-link (P2 retrofit):
 mem#model Requirement 1 DELEGATES sequenced-before to exactly this
 section — the spec's forced core is also the memory model's
-per-goroutine order, so E2–E5's residual latitude propagates verbatim
+per-goroutine order, so E2–E4's residual latitude propagates verbatim
 into sequenced-before (matters the day an E-series envelope meets a
-concurrent observer).
+concurrent observer; E5 is no longer residual latitude — FORCED, with
+gc's early store a deviation, L-016, 2026-09-02).
 
 ### E2. Call vs. assignment-target operands — (b) PINNED to gc (call-first)
 
@@ -726,30 +727,80 @@ concurrent observer).
   fixes both axes); recorded as OPEN envelope per BUG-032's precedent.
   F2 reading: as E3 — the shared mechanism inherits the unseq claim.
 
-### E5. Early store across the phase boundary — (b) PINNED to the spec-literal point; gc elsewhere
+### E5. Early store across the phase boundary — (c) FORCED; **gc DEVIATION** (L-016; re-labelled from (b) PINNED latitude 2026-09-02, [USER] ruling)
 
-- WHERE: BUG-032 final-check amendment: `x, a[i].f = 1, 7/z` (z = 0,
-  recovered) — gc lands the x = 1 store BEFORE the phase-1 division
-  panic; we follow the spec's literal two-phase order (x stays 0). Both
-  spec-legal (spec#Order_of_evaluation orders only calls/receives/
-  binary-logical). F2 reading (P2 retrofit): a straight two-point
-  choice (store-early vs store-held-back — no interleaving content);
-  the re-envelope design is Cerberus's Q2 mold (add a nondeterministic
-  choice covering gc's observed exotic point; prior-art note §3), per
-  §7 item 5's updated record. Distinct mechanism from E3/E4 — a fix holds the
-  store back rather than linearizing panics; natural home the BUG-025
-  retirement slice; a future pin must use the membership treatment.
-- Note the asymmetry: here the machine's point is the SPEC-shaped one
-  and gc's is the exotic one — the doctrine's "pinned to gc" framing
-  does not describe this axis (see §9, flag 3).
-- Returns (2026-09-01, BUG-075): multi-value `return e1, …, en` now
-  sits in the FORCED two-phase core — decodeReturn evaluates every
-  operand into a temp, then stores all results (a panic in a later
-  operand precedes ANY result store), so the machine holds the
-  spec-literal point at returns exactly as it does here for
-  assignments. Whether gc's early-store exotic point of this row has
-  a return-side twin is NOT probed; if one is ever observed it joins
-  this row's envelope question, not E1.
+- RULING ([USER] 2026-09-02, Mike, verbatim: "agree we should mark as
+  a gc deviation, and record in our gc bug backlog"). This row is NOT
+  latitude. The machine sits on the spec point; gc's early store is a
+  **deviation from the spec**, recorded in the gc bug backlog as
+  `docs/spec-divergence-ledger.md` **L-016** (`gc-bug`; upstream
+  classification pending — UNFILED; filing is a [USER] public action
+  and has not been done). The analysis the ruling acted on is the
+  grossmith campaign-3 verifier's [AGENT] (2026-09-02), below.
+- WHERE: spec#Assignment_statements, the two-phase sentence — "First,
+  the operands of index expressions and pointer indirections … on the
+  left and the expressions on the right are all evaluated in the usual
+  order. Second, the assignments are carried out in left-to-right
+  order." — is NORMATIVE: every phase-2 store follows every phase-1
+  evaluation, so a phase-1 panic precedes ANY store. The former
+  "both spec-legal" argument (BUG-032 final-check amendment,
+  2026-08-06) rested on spec#Order_of_evaluation ordering only
+  calls/receives/binary-logical; but that clause governs order WITHIN
+  phase 1 ("the usual order") and never licenses a phase-2 store to
+  move into phase 1. Shape: `x, a[i].f = 1, 7/z` (z = 0, recovered) —
+  gc lands x = 1 before the division panic; the machine (the tgtOpK →
+  rhsK → storeK spine, StepFn.lean:469–500) keeps x = 0, the spec
+  point.
+- WHY DEVIATION, NOT LATITUDE (the verifier's three witnesses, all
+  independent of our own correctness): (1) the sentence's own
+  structure, above; (2) gc's OWN regression test
+  `deps/go/test/fixedbugs/issue43835.go` (2021) asserts that
+  `bad, _ = true, *p` under a recovered nil-deref leaves `bad` false —
+  gc itself treats a visible early store as a bug; its fix
+  (`walk/assign.go` `ascompatee`, `deferResultWrite` + the
+  `readsMemory` aliasing heuristic) covers RESULT-PARAMETER targets in
+  functions with defers and `return`, and leaves ordinary locals
+  captured by the deferred closure uncovered — an aliasing
+  optimization whose panic path leaks through `recover`, exactly the
+  probe matrix's shape: early store for a division operand
+  (p1/p2/p5, PROBED; `readsMemory`'s op list predicts the same for
+  shift/arithmetic/conversion/type-assert operands — read from source,
+  UNPROBED), none for index/deref (p4, probed); (3) our BUG-075
+  (FIXED 2026-09-01): the machine's identical early store at `return`
+  was treated as a WRONG ANSWER under the same sentence
+  (spec#Return_statements "like an assignment"). One sentence cannot
+  be forced at `return` and latitude at `=`.
+- RE-ENVELOPE OBLIGATION: **WITHDRAWN** (2026-09-02, consequence of
+  the ruling). The prior record queued a two-point store-timing
+  envelope (Cerberus Q2 mold, §7 item 5, dossier E5's proposal). Acting
+  on it would add a behaviour the spec forbids and so widen the
+  machine PAST the spec — the machine is "the weakest machine Go
+  PERMITS", and Go does not permit this. No corpus row either way: a
+  strict row of the shape would pin gc's wrong answer (L-014's
+  reasoning); the reproducers live in evidence, not `Corpus/`.
+- WITNESSES (kept as the deviation's evidence, not as envelope
+  members): the reproducer matrix p1–p6 with gc/machine outputs,
+  `docs/evidence/2026-09-02_e5-gc-deviation/` (gc: 29 on p1/p2/p5 at
+  default flags AND `-N -l`; machine 58 = spec on all six; p4's index
+  panic holds the store back); campaign-3 generated witnesses
+  `m3a-rerun/part-04/case_03110` (seed 5,015,110, §5.2) and
+  `m3pairs/part-01/case_03079` (seed 6,003,079, §5.0) of
+  `docs/2026-09-01_grossmith-campaign-3.md`; the 2026-08-15 dossier
+  probes (`docs/evidence/2026-08-15-dossier-e5/`: GLOBAL targets get
+  the spec point — consistent with the aliasing reading).
+- History of the record: latitude row "(b) PINNED to the spec-literal
+  point; gc elsewhere" from 2026-08-11 to 2026-09-02 (BUG-032
+  final-check amendment 2026-08-06 → inventory row 2026-08-11 → F2
+  reading + Q2 mold 2026-08-17 → dossier E5 membership proposal
+  2026-08-15 → campaign-3 witnesses 2026-09-02 → ruling). The §9 flag-3
+  asymmetry note ("here the machine's point is the SPEC-shaped one and
+  gc's is the exotic one") was the tell: the row never fit the
+  "pinned to gc" framing because it was never a pin.
+- Returns (2026-09-01, BUG-075): multi-value `return e1, …, en` sits in
+  the FORCED two-phase core — decodeReturn evaluates every operand into
+  a temp, then stores all results. gc's return side is spec-conformant
+  (issue43835's `g`/`h` pass on gc — its fix covers `return`); the
+  deviation of this row is the ASSIGNMENT side with non-result targets.
 
 ### E6. `len`/`cap` hoist discriminating shapes — REFUSED (narrowed to the true residual, A6 2026-08-31)
 
@@ -1420,7 +1471,10 @@ plain bug, several were — see BUGS.md): E1's ordered-evaluation core;
 channel buffer FIFO; select default-when-none-ready (consuming nothing
 — Machine.lean:2694–2700); nil-channel never-ready (Multi.lean:166–168);
 receive-communication-before-target-evaluation (§Assignments via
-BUG-022/029); defers LIFO; per-iteration loop variables (Go 1.22,
+BUG-022/029); the assignment PHASE BOUNDARY — no store before every
+operand is evaluated (§Assignments' two-phase sentence; E5, ruled
+FORCED 2026-09-02 with gc's early store recorded as deviation L-016;
+BUG-075 the return-side instance, fixed); defers LIFO; per-iteration loop variables (Go 1.22,
 BUG-003 fixed); range-over-slice/array/string/integer order; string
 semantics as bytes with U+FFFD decoding; IEEE-754 arithmetic per op
 (within R4's narrowing); two's-complement wrap at fixed widths; map
@@ -1531,12 +1585,16 @@ concurrency-relevance (the charter: concurrency matters most),
    escaping path (the record's own caveat) — the same too-narrow class
    BUG-021 was, unwidened; cheap (append-spill mold, one arm + one
    membership pin). Best value-per-cost in the queue.
-5. **E3/E4/E5 — the unordered-panic-selection axes.** Deterministic
+5. **E3/E4 — the unordered-panic-selection axes.** Deterministic
    divergences from gc recorded and probed (unpinnable
    compiler-internal realization); needs the membership/panic-identity
    envelope treatment or linearization. Sequential-only,
    moderate cost — above R1/R4-class pins because it is
-   oracle-visible in panic-selection shapes today.
+   oracle-visible in panic-selection shapes today. **E5 LEFT this
+   item 2026-09-02** ([USER] ruling): its re-envelope obligation is
+   WITHDRAWN — the phase boundary is FORCED and gc's early store a
+   deviation (L-016); widening toward it would take the machine past
+   the spec.
 
 Below the line (recorded, deliberately not queued): R1 int width
 (waits on any 32-bit oracle lane — XIMPL evidence class), C7 select
@@ -1648,7 +1706,15 @@ one deliberate change — "permanent deviation records" is superseded by
 points sit in §7's queue (items 3 and 5) and under the doctrine's bug
 definition a probed gc-elsewhere observation is an observed-∉-modeled
 candidate, not a divergence to be at peace with. (The record is
-permanent; the deviation is not.)
+permanent; the deviation is not.) **E5 UPDATE (2026-09-02, [USER]
+ruling):** the early-store axis is no longer an "OPEN envelope" of any
+kind — it is a FORCED point on which gc DEVIATES (L-016); it leaves
+§7's queue and the "queued for re-envelope" clause above no longer
+applies to it. The gc-elsewhere observation there is not an
+observed-∉-modeled candidate but an observed-∉-PERMITTED one — the
+ledger's exception channel ("If the standard and gc disagree, that's a
+finding!"), not the register's debt queue. E3/E7 (and E13/R3) keep
+their queued-debt standing.
 
 ## 9. Records-vs-code flags found by the sweep
 
@@ -1723,20 +1789,27 @@ mention, so the mentions moved out. Keep it that way: put prose in the
 history block, never in a membership line.
 
 - (a) ENVELOPED: 9 sites / 9 entries — C1, C2, C3, C4, C5, C6, C8, E9, R2.
-- (b) PINNED: **17 entries** — concurrency: C9; sequential order: E2,
-  E3, E4, E5, E7, E10, E11, E12, E13; representation/runtime: R1, R8,
+- (b) PINNED: **16 entries** — concurrency: C9; sequential order: E2,
+  E3, E4, E7, E10, E11, E12, E13; representation/runtime: R1, R8,
   R9, R10, R11, R12, R15.
 - (b-n) NARROWED with recorded caveat: 7 — C7, E8, R3, R4, R5, R7, R13.
 - (c) FORCED: the §4 list (machine follows; BUG-005's mandated
   point — removed-before-reached never produced — CLOSED 2026-08-19
-  by the (L) surgery's delete-prune).
+  by the (L) surgery's delete-prune); rows carrying the tag: E1, E5
+  (since 2026-09-02), E14.
 - (d) UNKNOWN: 6 (U-2 … U-7; U-1 probed and admitted at W3.2 stage C, 2026-08-20).
 - REFUSED standing in for latitude: 9 (§5).
-- Known-≠-oracle deterministic points (the honesty-critical subset of
-  (b)): E3, E5, E7, E13(type-assertion axis; the indexing axis agrees),
-  R3(escaping path). (E13 added 2026-08-20; the C2+C3 send-then-spin
-  wedge LEFT this list 2026-08-21 — W3.2 stages C/D re-enveloped it,
-  register #1 discharged.)
+- Known-≠-oracle deterministic points (the honesty-critical list):
+  E3, E5, E7, E13(type-assertion axis; the indexing axis agrees),
+  R3(escaping path). Two CLASSES inside one list, stated per row: E3,
+  E7, E13, R3 are (b)/(b-n) PINS with gc on another conforming member
+  (re-envelope debts, §7); **E5 is a (c) FORCED row on which gc
+  DEVIATES** (L-016, [USER] ruling 2026-09-02) — it stays listed
+  because the oracle disagrees with the machine there, but the
+  disagreement is gc's, not a debt of ours. (E13 added 2026-08-20; the
+  C2+C3 send-then-spin wedge LEFT this list 2026-08-21 — W3.2 stages
+  C/D re-enveloped it, register #1 discharged; E5's class changed
+  2026-09-02.)
 
 ### 10.1 Movement and history (NOT membership)
 
@@ -1749,6 +1822,15 @@ Nothing in this block is a class member by virtue of being named here.
   stages C/D). Count corrected 2026-08-12; **C3 moved (b)→(a)
   2026-08-20 and C2 (b)→(a) 2026-08-21** — both were still named
   inside the (b) list until 2026-08-22.
+- **(b), 17 → 16 (2026-09-02).** **E5 moved (b) → (c)** by [USER]
+  ruling: the early store across the assignment phase boundary is a
+  FORCED point (spec#Assignment_statements' two-phase sentence), the
+  machine holds it, and gc's contrary realization is recorded as a
+  DEVIATION (`docs/spec-divergence-ledger.md` L-016), not as the other
+  member of a latitude. Its re-envelope obligation is withdrawn (§7
+  item 5) and it stays in the known-≠-oracle list above as the one
+  entry there whose ≠ is gc's fault. Recording agent [AGENT]; the
+  class call is the [USER]'s.
 - **(b), 15 → 17.** The "15" was never a count of the rows. It omitted
   **C9** (global deadlock, heading "(b) PINNED to gc's runtime
   detector") outright — the line said "structural: none remaining",

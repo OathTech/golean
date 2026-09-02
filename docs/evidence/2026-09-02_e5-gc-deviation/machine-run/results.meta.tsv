@@ -1,0 +1,14 @@
+key	value
+frontend	native
+manifest	/home/dev/projects/golean/.claude/worktrees/t4-grossmith/artifacts/grossmith/2026-09-01/probe-e5/manifest.tsv
+manifest_sha256	15dd62694db6ae8d75c51d84ee00a5396be95cc2231314ec72947c931f9f5efe
+manifest_cases	6
+total_corpus_cases	unknown
+full_run	unknown
+filters	unknown
+git_commit	864d1bdc4aefd0c13c8cf0389fe522b00fc55c99
+git_dirty	true
+go_toolchain	go1.26.5
+go_drift_allowed	0
+go_drift_actual	false
+jobs	32

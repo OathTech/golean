@@ -1,0 +1,7 @@
+# producer: go run -gcflags=all='-N -l' docs/evidence/2026-09-02_e5-gc-deviation/probe/main.go 2>&1  (go version go1.26.5 linux/amd64)
+p1 29
+p2 29
+p3 58
+p4 58
+p5 29
+p6 29

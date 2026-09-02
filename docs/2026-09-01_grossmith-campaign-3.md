@@ -34,9 +34,13 @@ artifacts), and the re-run plus the pairwise leg judged
 observation-mismatches, 1 reference-infra failures,
 zero clone-infra, zero harness-error. Every divergence is triaged in
 §5: one reference refusal = L-015's assembler bug (third witness); two mismatches = E5 (gc stores a multi-target assignment's earlier right-hand value before a later operand's division panic — both legs); one mismatch = E13 on a new axis (string slicing vs sibling calls). **No new machine bug**; the machine's two
-disagreements with gc land on two latitude points already in the
+disagreements with gc land on two points already in the
 inventory (E5, E13), with gc on the exotic member both times, and the
-reference refusals are L-015's assembler bug again. The widening-cost
+reference refusals are L-015's assembler bug again. (Post-report,
+2026-09-02, [USER] ruling: E5 is a **gc DEVIATION** — ledger L-016 —
+not latitude; so the campaign's honest headline is two gc bugs
+witnessed (L-015, L-016) and one latitude point (E13), zero machine
+bugs. §5's caveat records the resolution.) The widening-cost
 assessment (§7) and the cadence recommendation (§8) close the mandate.
 
 ---
@@ -56,6 +60,7 @@ assessment (§7) and the cadence recommendation (§8) close the mandate.
 | 0.9 | Campaign 3's legs all live under `artifacts/grossmith/2026-09-01/` (the campaign date) — the `m3pairs` leg started after midnight and was pointed there explicitly with `GOLEAN_GROSSMITH_ARTIFACTS`; the tool's default tree is date-keyed per invocation. | [AGENT] |
 | 0.10 | The runner refuses to start a leg while the documented box-wide build lock (`artifacts/build-lock.d`, `docs/operational-lessons.md`) exists in this worktree or the primary checkout. Note: no script implements that lock today — the check is a courtesy against the convention, not a mechanism. | [AGENT] — coordinator's request; the first m3a failure was NOT load (§4.1) |
 | 0.11 | Triage auto-class `machine-bug-candidate` is overridden by hand to LATITUDE (recorded E5) for BOTH campaign-3 witnesses: `m3a-rerun/part-04/case_03110` (§5.2) AND `m3pairs/part-01/case_03079` (§5.0 — `artifacts/grossmith-m3pairs.log` ends with the pairs leg's `machine-bug-candidate 1`, and that row is case_03079). The first cut of this row logged only case_03110 (audit fix G-3). The rule stays as written: a wrong-answer candidate with a self-stable oracle defaults to OURS until a human clears it against the record; both overrides stand only as far as the E5 classification itself does — see the caveat at the head of §5. | [AGENT] |
+| 0.12 | The E5 classification under 0.11 is SUPERSEDED: E5 is a **gc DEVIATION** (spec-divergence-ledger L-016), not latitude — the two 0.11 overrides now read `machine-bug-candidate` → **gc-bug L-016** for case_03110 and case_03079. Reproducers moved out of the gitignored probe dir into `docs/evidence/2026-09-02_e5-gc-deviation/`. No corpus row (a strict row would pin gc's wrong answer), no BUGS.md entry (the machine is right), no code change. Upstream filing NOT done (a [USER] public action; pending the P5 filing-policy decision). | [USER] ruling 2026-09-02 (Mike: "agree we should mark as a gc deviation, and record in our gc bug backlog"); analysis [AGENT] (verifier, 2026-09-02) |
 
 ---
 
@@ -392,7 +397,34 @@ permitted. Both readings cannot hold of one sentence unless the
 assignment/return distinction is doing the work; until the [USER] rules,
 §5.0 and §5.2 are "latitude per the inventory as it stands", not
 settled, and the two decision-0.11 overrides carry the same caveat.
-(ii) **E13.** The inventory entry scopes itself to type assertions and
+**RESOLVED 2026-09-02 — [USER] ruling** (Mike, verbatim: "agree we
+should mark as a gc deviation, and record in our gc bug backlog"):
+E5 is re-labelled from latitude to **gc DEVIATION**. The machine sits
+on the FORCED spec point; gc's early store is recorded in the gc bug
+backlog as `docs/spec-divergence-ledger.md` **L-016** (gc-bug, UNFILED
+— upstream classification pending the P5 filing-policy decision),
+with the p1–p6 matrix copied out of the gitignored artifacts into
+`docs/evidence/2026-09-02_e5-gc-deviation/`; the inventory's E5
+re-envelope obligation is withdrawn (widening toward gc's point would
+take the machine past the spec). Consequences for this report:
+§5.0/§5.2's "LATITUDE" dispositions read as **gc DEVIATION (L-016)**;
+"no BUGS entry" stands (the machine is right — the entry belongs in
+the gc backlog, where it now is); "no corpus row" stands for L-014's
+reason (a strict row would pin gc's wrong answer), not because either
+answer is legal; decision 0.11's two overrides stand as overrides of
+the auto-class `machine-bug-candidate`, now to "gc-bug L-016" rather
+than "latitude E5" (decision 0.12). The verifier's analysis behind the
+ruling ([AGENT]) is recorded at L-016 and inventory §E5: the
+two-phase sentence is normative; gc's own regression test
+`deps/go/test/fixedbugs/issue43835.go` asserts no early store under a
+recovered panic; gc's fix (`walk/assign.go` `ascompatee`,
+`readsMemory`) is an aliasing heuristic that leaks through `recover`
+— early store for division operands, none for index/deref, exactly
+p1/p2/p5 vs p4 (shift/type-assert predicted by the same op list,
+unprobed); and BUG-075 treats the machine's
+own early store at `return` as a wrong answer under the same
+sentence. Point (ii) below is NOT resolved by this ruling and stays
+open. (ii) **E13.** The inventory entry scopes itself to type assertions and
 index expressions ("a type assertion is none of these, and neither is
 an index expression") and does not name slice expressions, so §5.3's
 E13 classification of `case_01848` is a RECOMMENDED annotation (a new
@@ -423,6 +455,8 @@ same E5 annotation as §5.2 (two campaign-3 witnesses, one per leg; rate
 2 in 39,800 — the shape needs a multi-target assignment whose later
 operand panics by division, which the generator's `panic_risk` arm
 supplies at ~5 % of statements); NO corpus row; no BUGS entry.
+**Re-classified 2026-09-02 ([USER] ruling; §5 head, decision 0.12):
+gc DEVIATION, ledger L-016 — second witness.**
 
 ### 5.1 `m3a-rerun/part-03/case_03428` (seed 5,011,428) — reference-infra → [gc-bug-candidate] → **L-015, third witness**
 
@@ -491,7 +525,13 @@ uint64/multi-target/third-operand shape as a second witnessed point.
 **Disposition:** annotate E5 with this case and the p1–p6 matrix; NO
 corpus row (a strict pin of either member is forbidden by E5); no BUGS
 entry. The triage rule's default to "ours" was right to fire and right
-to be overridden by the record.
+to be overridden by the record. **Re-classified 2026-09-02 ([USER]
+ruling; §5 head, decision 0.12): gc DEVIATION, ledger L-016 — this
+case is its first campaign-3 witness; the p1–p6 matrix above is L-016's
+reproducer, preserved at `docs/evidence/2026-09-02_e5-gc-deviation/`.
+The "operation-specific" fact is the deviation's mechanism signature
+(`ascompatee`'s `readsMemory` aliasing heuristic), not evidence of an
+unpinnable latitude; "no corpus row" now holds for L-014's reason.**
 
 ### 5.3 `m3a-rerun/part-05/case_01848` (seed 5,017,848) — observation-mismatch, `q15` (`wOrd`): machine 1026, gc 1 → [latitude-candidate] → **LATITUDE: E13, string-SLICE axis (new witnessed shape)**
 
@@ -533,16 +573,20 @@ appeared).
 ## 6. Promotion recommendations (none made; all RECOMMENDED)
 
 - **Corpus rows: none.** Both machine/gc disagreements are recorded
-  latitude points whose inventory entries forbid a strict pin (E5,
-  E13); the reference refusal never reached the machine.
-- **BUGS.md entries: none.** No forced-point wrong answer was found in
-  39,800 judged programs — this is the campaign's headline,
-  stated as a lower bound: observed ∈ modeled on every judged program
-  in grossmith's fragment at `7cf19198`.
+  points whose entries forbid a strict pin — E13 (latitude, structural
+  pin) and E5 (since 2026-09-02 a gc DEVIATION, L-016: a strict row
+  would pin gc's WRONG answer, L-014's reason); the reference refusal
+  never reached the machine.
+- **BUGS.md entries: none.** No forced-point wrong answer BY THE
+  MACHINE was found in 39,800 judged programs — this is the
+  campaign's headline, stated as a lower bound: observed ∈ modeled on
+  every judged program in grossmith's fragment at `7cf19198`. (The
+  forced-point wrong answer found is gc's — L-016.)
 - **Three annotations owed** (record-side, not fixes): L-015 (+1
   witness, seed 5,011,428, rate 3/~100k); E5 (+ the campaign-3 shape
-  and the p1–p6 matrix: early store is variable-too and
-  operation-specific); E13 (+ string-slice axis).
+  and the p1–p6 matrix) — DONE 2026-09-02 as the re-labelling to
+  L-016 rather than as an annotation of a latitude row; E13 (+
+  string-slice axis, still owed with its probe row).
 - **Regression evidence delivered by construction:** BUG-062 (fixed
   2026-08-31; `min`/`max` vs call order) — `min`/`max` appear in ~4,200
   lines per 3,000 programs (§3 census) and produced zero mismatches;

@@ -171,18 +171,27 @@ write a bare "#6"/"#7".
 2. **Sequential evaluation-order latitude is pinned**, each axis to a
    recorded conforming point — gc's where pinnable (call-vs-operand
    order, BUG-052), OURS where gc's realization is compiler-internal
-   (inter-target order E3, targets-vs-RHS E4,
-   early-store-across-phase E5), STRUCTURAL (frontend ANF) on the
-   call-first family (binop operand order E12, non-call-panic vs
-   sibling calls E13, receiver-vs-arguments E14 — axes censused
-   2026-08-17/20/22, after this entry's original wording), and
-   hidden-dep init order to go/types' point (E7) — with the known
-   ≠ gc cases (**E3, E5, E7, E13 on its type-assertion axis** —
-   synced 2026-08-31 to inventory §10's honesty-critical list, which
-   this entry had drifted one short of, phase-2 finding A1-04; §10
-   also lists R3, a representation row outside this entry's
+   (inter-target order E3, targets-vs-RHS E4), STRUCTURAL (frontend
+   ANF) on the call-first family (binop operand order E12,
+   non-call-panic vs sibling calls E13, receiver-vs-arguments E14 —
+   axes censused 2026-08-17/20/22, after this entry's original
+   wording), and hidden-dep init order to go/types' point (E7) — with
+   the known ≠ gc cases (**E3, E7, E13 on its type-assertion axis, and
+   E5** — synced 2026-08-31 to inventory §10's honesty-critical list,
+   which this entry had drifted one short of, phase-2 finding A1-04;
+   §10 also lists R3, a representation row outside this entry's
    evaluation-order scope) carried as standing deviation records
-   queued for re-envelope (inventory §7 items 3 and 5). STANDING
+   queued for re-envelope (inventory §7 items 3 and 5) — EXCEPT E5,
+   whose class changed 2026-09-02 ([USER] ruling): the early store
+   across the assignment phase boundary is a FORCED point
+   (spec#Assignment_statements' two-phase sentence), the machine holds
+   it, and gc's contrary realization is a recorded gc DEVIATION
+   (`docs/spec-divergence-ledger.md` L-016, the exception channel of
+   the bug definition above: the standard and gc disagree, so the
+   finding is gc's). E5 stays in the known-≠-gc enumeration because
+   the oracle disagrees there; it carries NO re-envelope debt (the
+   obligation is withdrawn — widening toward gc's point would take
+   the machine past what Go permits). STANDING
    RULE (2026-08-31): this entry's known-≠-gc enumeration is kept in
    sync with inventory §10's "Known-≠-oracle deterministic points"
    list — any edit to that list edits this sentence in the same

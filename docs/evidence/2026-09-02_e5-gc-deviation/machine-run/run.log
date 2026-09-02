@@ -1,0 +1,13 @@
+building Lean executable...
+Build completed successfully (58 jobs).
+native frontend: per-case type-check + emit (no batch export)
+FAIL	e5/probeVarStoreBeforePanic	order,assignment	stage=differential	detail=Lean={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"uint64","tag":"int","value":58}]} Go={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"uint64","tag":"int","value":29}]} left:  {"schema":"golean-observation-v1","status":"ok","values":[{"kind":"uint64","tag":"int","value":58}]}\nright: {"schema":"golean-observation-v1","status":"ok","values":[{"kind":"uint64","tag":"int","value":29}]}
+FAIL	e5/probeConstStoreBeforePanic	order,assignment	stage=differential	detail=Lean={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"uint64","tag":"int","value":58}]} Go={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"uint64","tag":"int","value":29}]} left:  {"schema":"golean-observation-v1","status":"ok","values":[{"kind":"uint64","tag":"int","value":58}]}\nright: {"schema":"golean-observation-v1","status":"ok","values":[{"kind":"uint64","tag":"int","value":29}]}
+FAIL	e5/probeTwoTargets	order,assignment	stage=differential	detail=Lean={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"uint64","tag":"int","value":58}]} Go={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"uint64","tag":"int","value":29}]} left:  {"schema":"golean-observation-v1","status":"ok","values":[{"kind":"uint64","tag":"int","value":58}]}\nright: {"schema":"golean-observation-v1","status":"ok","values":[{"kind":"uint64","tag":"int","value":29}]}
+PASS	e5/probePanicFirstThenConst	order,assignment
+PASS	e5/probeConstStoreBeforeIndexPanic	order,assignment
+PASS	e5/probeControlSeparate	order,assignment
+
+differential coverage summary: cases=6 pass=3 fail=3 export_status=0
+results: /home/dev/projects/golean/.claude/worktrees/t4-grossmith/artifacts/grossmith/2026-09-01/probe-e5/results.tsv
+metadata: /home/dev/projects/golean/.claude/worktrees/t4-grossmith/artifacts/grossmith/2026-09-01/probe-e5/results.meta.tsv

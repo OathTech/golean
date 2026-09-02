@@ -1,0 +1,7 @@
+# id	go_dir	function	args	expected_status	features	expected_reason	lane	why	params
+e5/probeConstStoreBeforePanic	docs/evidence/2026-09-02_e5-gc-deviation/probe	probeConstStoreBeforePanic	-	ok	order,assignment	-	strict	-	-
+e5/probeVarStoreBeforePanic	docs/evidence/2026-09-02_e5-gc-deviation/probe	probeVarStoreBeforePanic	-	ok	order,assignment	-	strict	-	-
+e5/probePanicFirstThenConst	docs/evidence/2026-09-02_e5-gc-deviation/probe	probePanicFirstThenConst	-	ok	order,assignment	-	strict	-	-
+e5/probeConstStoreBeforeIndexPanic	docs/evidence/2026-09-02_e5-gc-deviation/probe	probeConstStoreBeforeIndexPanic	-	ok	order,assignment	-	strict	-	-
+e5/probeTwoTargets	docs/evidence/2026-09-02_e5-gc-deviation/probe	probeTwoTargets	-	ok	order,assignment	-	strict	-	-
+e5/probeControlSeparate	docs/evidence/2026-09-02_e5-gc-deviation/probe	probeControlSeparate	-	ok	order,assignment	-	strict	-	-
