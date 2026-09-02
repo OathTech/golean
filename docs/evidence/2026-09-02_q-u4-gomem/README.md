@@ -142,7 +142,11 @@ flip(s), all listed in BUGS.md Cases"; reconciler 3 findings, 0 HIGH
 (the 3 MEDIUMs — C13 doc Go-version sites, C5 one frontier-table
 citation, C9 wire-schema-after-certification — are main's, unchanged
 by this lane); eval tests 146 ok; spec anchors resolve. `gate-tail.txt`
-is the run's tail, ANSI-stripped. Sliced runs before the gate:
+is the run's tail, ANSI-stripped. CLEAN-TIP RE-RUN: the same
+`scripts/capped scripts/ci --diff` on the committed tree at `f68e1360`
+(`latest.meta.tsv`: `git_dirty false`) — **RESULT: PASS**, baseline diff
+FULL 2567/2567 no regression, re-pin guard HEAD-vs-HEAD~1 clean,
+reconciler 0 HIGH; its tail is appended to `gate-tail.txt`. Sliced runs before the gate:
 `scripts/coverage run --prefix race/` (51 rows: the 6 gomem-only rows
 FAIL/lean-observation `expected status ok, got {"status":"race"}`, the
 2 free-sync guards PASS/confluent, every other race row as in the
