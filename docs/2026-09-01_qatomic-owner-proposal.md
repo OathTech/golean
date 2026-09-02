@@ -117,9 +117,12 @@ Wave 1 — **integer core + mp-litmus** (the 4 non-Value reds):
   Effort M.
 - Detector (`Race.lean` + `raceUpdate`): gc's realized edges —
   under -race every `sync/atomic` op is routed to TSan's Go atomic
-  hooks (`__tsan_go_atomic32_load/store/...`, pinned source
-  `deps/go/src/runtime/race_amd64.s:201-236`; `sync/atomic/race.s`
-  is the -race build's entry), which realize seq_cst as acquire on
+  hooks (`__tsan_go_atomic32_load/store/...`, reached through the
+  `sync∕atomic·{Load,Store,Swap,Add,And,Or,CompareAndSwap}*` TEXT
+  symbols of `deps/go/src/runtime/race_amd64.s` — the block headed
+  "Atomic operations for sync/atomic package" — via
+  `racecallatomic`; `sync/atomic/race.s` is the -race build's
+  entry), which realize seq_cst as acquire on
   loads, release on stores, both on RMWs, over the address's own
   clock (so atomics synchronize among themselves — the SC total
   order's HB); plus a new access KIND `atomic` recorded at the loc
@@ -130,6 +133,22 @@ Wave 1 — **integer core + mp-litmus** (the 4 non-Value reds):
   (`scripts/detector-soundness`) is the ready-made check that the
   new edges match `-race` in both directions.
   Effort S–M.
+  BUG-080 rides HERE by [AGENT] SEQUENCING judgment (audit fix round
+  2026-09-02, S4), not by dependency: the atomic access KIND
+  (`RaceAccess := Kind × Loc`, atomic↔atomic non-conflicting,
+  atomic↔plain conflicting, recorded at the sync cell's path from
+  `raceUpdate`'s sync arm) is separable from this wave's lowering
+  and could land alone. It is sequenced here because (i) each sync
+  primitive is ONE `syncData` cell, so the kind's per-cell access
+  must be checked against the `locPrefix` over-refusal and
+  reconciled with the `wgSemaAccess` plain-pair carve-out — the same
+  per-address footprint design this wave settles for atomics; and
+  (ii) gc's per-primitive instrumentation differs (WaitGroup under
+  `race.Disable` + the `wg.sema` pair vs Mutex's state CAS), so the
+  per-op recorded set is derived primitive by primitive from
+  `-race`'s realized set — the `-race` alignment pass this wave
+  performs anyway. Revisable: if this arc slips, the kind can be
+  its own S slice.
 - Enumerator: nothing structural (fused steps branch only through
   L1; no per-op width). `mp-litmus` flips green membership with
   {0, 1, 11} certified and 10 mechanically excluded — the first

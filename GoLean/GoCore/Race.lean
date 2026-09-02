@@ -277,8 +277,24 @@ SYNCHRONIZATION (the registry's ops — HB updates, never data):
   `race/negative-sync/{wg-overwrite,mutex-copy}`. The fix is NOT a
   table entry: recording sync ops as plain writes would make two
   legal contending Locks conflict; gc realizes a third access KIND
-  (atomic — conflicts with plain accesses only), which is the
-  atomics arc's detector deliverable (Q-ATOMIC owner proposal §4).
+  (atomic — conflicts with plain accesses only, never with another
+  atomic): `RaceAccess := Kind × Loc`, one atomic access recorded at
+  the sync cell's path from `raceUpdate`'s sync arm. That kind is
+  SEPARABLE from the sync/atomic LOWERING (the atomics arc, S–M) and
+  could land alone; deferring it to ride that arc is an [AGENT]
+  SEQUENCING judgment (audit fix round 2026-09-02, S4), not a forced
+  dependency, for two stated reasons: (i) each primitive is ONE
+  `syncData` cell, so an atomic access at the cell's path has to be
+  checked against the `locPrefix` over-refusal (a plain access to a
+  SIBLING field of a struct holding the primitive must stay green —
+  the `disjoint-field-vs-lock` control) and reconciled with the
+  `wgSemaAccess` carve-out, which already records one PLAIN pair on
+  the same cell; (ii) gc's per-primitive instrumentation differs
+  (WaitGroup runs its state accesses under `race.Disable` and exposes
+  the `wg.sema` pair; Mutex exposes the state CAS as an atomic), so
+  the per-op recorded set must be derived from `-race`'s realized set
+  primitive by primitive — the owner proposal's detector wave
+  (Q-ATOMIC owner proposal §4) is where that derivation is scoped.
 
 FRESH ALLOCATION / DRIVER (excluded — the malloc convention):
 - `ExecState.alloc`, `allocDecls`, `bindParams`, `bindIterVars`,

@@ -965,7 +965,8 @@ verbatim, gc realization version-tracked).
   DISJOINT-path write refuses a `-race`-green race-free program. The
   S3 audit response NARROWED the dominant class — a read delivered
   straight into single-operand `fieldGet` frames records only the
-  projected field path (`fieldChainTarget`; covers `p.a` on struct
+  projected field path (the then-named `fieldChainTarget`, since
+  Q-RACEPATH `projChainTarget`; covers `p.a` on struct
   locals and on `*struct`, green-pinned by
   `race/free/{field-read-write,ptr-field-read-write}`) — leaving
   exactly: value-path ARRAY-element reads (`a[1]`: the index operand
@@ -3922,6 +3923,7 @@ values — one element store into an admitted `[1024][1024][128]byte`
 measured 46 s (the store re-normalizes through the nesting), so an
 oversized nested value can still reach the wall clock: an honest
 kill, never a wrong answer, lifted by (1).
+
 ## BUG-080 — race detector U4: the sync primitives' OWN state-word accesses are unmodeled, so a plain access to a primitive in use by another goroutine (copy / overwrite) runs to a value where gc's -race build refuses
 
 - Status: open
@@ -3966,11 +3968,25 @@ kill, never a wrong answer, lifted by (1).
   plain WRITES on the primitive's cell would make two legal contending
   `Lock`s conflict (atomic-vs-atomic is not a race); what gc realizes
   is a third access KIND — atomic — that conflicts with plain accesses
-  only. That kind is the atomics arc's detector deliverable
+  only (`RaceAccess := Kind × Loc`; atomic↔atomic non-conflicting,
+  atomic↔plain conflicting; recorded at the sync cell's path from
+  `raceUpdate`'s sync arm). SEQUENCING ([AGENT] judgment, audit fix
+  round 2026-09-02 S4 — NOT a forced dependency): that kind is
+  separable from the sync/atomic lowering and could land alone (S–M);
+  it is sequenced to ride the atomics arc's detector wave
   (`docs/2026-09-01_qatomic-owner-proposal.md` §4; Q-ATOMIC row 2 of
-  the ruling sheet, OPEN): once it exists, every sync op records one
-  atomic access on its cell (Lock/Unlock/RLock/RUnlock/Add/Done/Wait/
-  Do — TSan's realized set, per register #13) and these rows flip
+  the ruling sheet, OPEN) for two stated reasons: (i) each primitive
+  is ONE `syncData` cell, so the atomic access at the cell's path
+  must be checked against the `locPrefix` over-refusal (a sibling-
+  field plain access beside the lock — the `disjoint-field-vs-lock`
+  control — must stay green) and reconciled with the `wgSemaAccess`
+  carve-out, which already records one PLAIN pair on that cell;
+  (ii) gc's per-primitive instrumentation differs (WaitGroup under
+  `race.Disable` + the `wg.sema` pair; Mutex's state CAS as an
+  atomic), so the per-op recorded set (Lock/Unlock/RLock/RUnlock/
+  Add/Done/Wait/Do — TSan's realized set, per register #13) must be
+  derived primitive by primitive, which the atomics arc's `-race`
+  alignment work already does. Once the kind lands these rows flip
   without further design. Recorded against decision 1's deferred
   investment as the mandate directs; until then the rows stay red and
   Race.lean's U4 text points here.
