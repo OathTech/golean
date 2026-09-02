@@ -1,0 +1,33 @@
+detector-soundness summary — 2026-09-02T00:22:47+00:00
+rows: 45   runs/proc: 5   procs: 1,8
+
+cells:
+  agree-DRF      12
+  agree-race     24
+  HOLE           2
+  over-refusal   3
+  uncertified    4
+
+by lane × cell:
+  probe	agree-DRF	12
+  probe	agree-race	24
+  probe	HOLE	2
+  probe	over-refusal	3
+  probe	uncertified	4
+
+HOLE rows (gc RACE, machine DRF — STOP-and-report; diagnose each):
+  probe/u4/wg-overwrite-vs-add	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	DRF
+  probe/u4/struct-copy-vs-lock	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	DRF
+
+over-refusal rows (machine RACE-*, gc DRF-in-N — three-way investigation):
+  probe/footprint/array-dyn-index-vs-write	p1:race=0,clean=5,exit=0,timeout=0;p8:race=0,clean=5,exit=0,timeout=0;	RACE-ALL (1/1 members)
+  probe/schedule/default-path-race	p1:race=0,clean=5,exit=0,timeout=0;p8:race=0,clean=5,exit=0,timeout=0;	RACE-SOME (1/2 members)
+  probe/schedule/deep-path-race	p1:race=0,clean=5,exit=0,timeout=0;p8:race=0,clean=5,exit=0,timeout=0;	RACE-SOME (1/2 members)
+
+uncertified rows (machine ENUM-FAIL):
+  probe/u4/struct-overwrite-vs-lock	gc=RACE	single=ok	ENUM-FAIL:alias-guard probe [1, 5] failed: the probed member's run errored — fatal: sync: unlock of unlocked mutex. Under a corr
+  probe/u4/rw-overwrite-vs-rlock	gc=RACE	single=ok	ENUM-FAIL:alias-guard probe [1, 5] failed: the probed member's run errored — fatal: sync: RUnlock of unlocked RWMutex. Under a c
+  probe/u4/once-overwrite-vs-do	gc=RACE	single=ok	ENUM-FAIL:alias-guard probe [1, 5] failed: the probed member's run errored — error: onceComplete without a matching onceBegin. U
+  probe/u5/cross-unlock-publish	gc=RACE	single=ok	ENUM-FAIL:alias-guard probe [0, 0, 0, 0, 0, 1, 7] failed: the probed member's run errored — fatal: sync: unlock of unlocked mute
+
+gc-infra rows:

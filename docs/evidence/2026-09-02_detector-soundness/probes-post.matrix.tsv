@@ -1,0 +1,47 @@
+# scripts/detector-soundness rows — see meta.tsv; columns:
+# id	lane	features	expected_status	gc_runs(per GOMAXPROCS)	gc_verdict	machine_members	machine_race_members	machine_verdict	machine_single_run	cell	detail
+probe/u2/len-chan-vs-send	probe	goroutines,channels,len,race	ok	p1:race=0,clean=5,exit=0,timeout=0;p8:race=0,clean=5,exit=0,timeout=0;	DRF-in-N	2	0	DRF	ok	agree-DRF	-
+probe/u2/cap-chan-vs-close	probe	goroutines,channels,close,race	ok	p1:race=0,clean=5,exit=0,timeout=0;p8:race=0,clean=5,exit=0,timeout=0;	DRF-in-N	1	0	DRF	ok	agree-DRF	-
+probe/u2/len-map-vs-write	probe	goroutines,channels,maps,len,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-
+probe/u2/len-slice-var-vs-append	probe	goroutines,channels,slices,len,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-
+probe/u2/len-array-vs-elem-write	probe	goroutines,channels,arrays,len,race	ok	p1:race=0,clean=5,exit=0,timeout=0;p8:race=0,clean=5,exit=0,timeout=0;	DRF-in-N	1	0	DRF	ok	agree-DRF	-
+probe/u2/len-string-vs-write	probe	goroutines,channels,strings,len,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-
+probe/u2/cap-slice-var-vs-reslice	probe	goroutines,channels,slices,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-
+probe/u4/struct-overwrite-vs-lock	probe	sync,mutex,goroutines,channels,structs,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	-	-	ENUM-FAIL:alias-guard probe [1, 5] failed: the probed member's run errored — fatal: sync: unlock of unlocked mutex. Under a corr	ok	uncertified	-
+probe/u4/wg-overwrite-vs-add	probe	sync,waitgroup,goroutines,channels,structs,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	2	0	DRF	ok	HOLE	-
+probe/u4/rw-overwrite-vs-rlock	probe	sync,rwmutex,goroutines,channels,structs,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	-	-	ENUM-FAIL:alias-guard probe [1, 5] failed: the probed member's run errored — fatal: sync: RUnlock of unlocked RWMutex. Under a c	ok	uncertified	-
+probe/u4/once-overwrite-vs-do	probe	sync,once,goroutines,channels,structs,closures,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	-	-	ENUM-FAIL:alias-guard probe [1, 5] failed: the probed member's run errored — error: onceComplete without a matching onceBegin. U	ok	uncertified	-
+probe/u4/disjoint-field-vs-lock	probe	sync,mutex,goroutines,channels,structs,race	ok	p1:race=0,clean=5,exit=0,timeout=0;p8:race=0,clean=5,exit=0,timeout=0;	DRF-in-N	1	0	DRF	ok	agree-DRF	-
+probe/u4/struct-copy-vs-lock	probe	sync,mutex,goroutines,channels,structs,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	0	DRF	ok	HOLE	-
+probe/u5/cross-unlock-publish	probe	sync,mutex,goroutines,channels,globals,race	ok	p1:race=3,clean=2,exit=0,timeout=0;p8:race=4,clean=1,exit=0,timeout=0;	RACE	-	-	ENUM-FAIL:alias-guard probe [0, 0, 0, 0, 0, 1, 7] failed: the probed member's run errored — fatal: sync: unlock of unlocked mute	ok	uncertified	-
+probe/u5/handoff-unlock	probe	sync,mutex,goroutines,channels,globals,race	ok	p1:race=0,clean=5,exit=0,timeout=0;p8:race=0,clean=5,exit=0,timeout=0;	DRF-in-N	1	0	DRF	ok	agree-DRF	-
+probe/footprint/struct-copy-vs-field-write	probe	goroutines,channels,structs,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-
+probe/footprint/iface-box-vs-field-write	probe	goroutines,channels,structs,interfaces,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-
+probe/footprint/send-struct-vs-field-write	probe	goroutines,channels,structs,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-
+probe/footprint/defer-arg-vs-write	probe	goroutines,channels,defer,closures,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-
+probe/footprint/method-value-copy-vs-write	probe	goroutines,channels,methods,structs,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-
+probe/footprint/swap-vs-write	probe	goroutines,channels,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-
+probe/footprint/copy-src-vs-write	probe	goroutines,channels,slices,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-
+probe/footprint/append-inplace-vs-reslice	probe	goroutines,channels,slices,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-
+probe/footprint/slice-of-array-vs-elem-write	probe	goroutines,channels,arrays,slices,race	ok	p1:race=0,clean=5,exit=0,timeout=0;p8:race=0,clean=5,exit=0,timeout=0;	DRF-in-N	1	0	DRF	ok	agree-DRF	-
+probe/footprint/ptr-array-elem-vs-write	probe	goroutines,channels,arrays,pointers,race	ok	p1:race=0,clean=5,exit=0,timeout=0;p8:race=0,clean=5,exit=0,timeout=0;	DRF-in-N	1	0	DRF	ok	agree-DRF	-
+probe/footprint/array-dyn-index-vs-write	probe	goroutines,channels,arrays,race	ok	p1:race=0,clean=5,exit=0,timeout=0;p8:race=0,clean=5,exit=0,timeout=0;	DRF-in-N	1	1	RACE-ALL	race	over-refusal	-
+probe/footprint/array-const-index-field-vs-write	probe	goroutines,channels,arrays,structs,race	ok	p1:race=0,clean=5,exit=0,timeout=0;p8:race=0,clean=5,exit=0,timeout=0;	DRF-in-N	1	0	DRF	ok	agree-DRF	-
+probe/footprint/field-array-const-index-vs-write	probe	goroutines,channels,arrays,structs,race	ok	p1:race=0,clean=5,exit=0,timeout=0;p8:race=0,clean=5,exit=0,timeout=0;	DRF-in-N	1	0	DRF	ok	agree-DRF	-
+probe/footprint/array-const-index-same-elem	probe	goroutines,channels,arrays,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-
+probe/footprint/array-const-index-vs-whole-write	probe	goroutines,channels,arrays,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-
+probe/footprint/range-slice-disjoint-vs-write	probe	goroutines,channels,slices,range,race	ok	p1:race=0,clean=5,exit=0,timeout=0;p8:race=0,clean=5,exit=0,timeout=0;	DRF-in-N	1	0	DRF	ok	agree-DRF	-
+probe/footprint/range-array-vs-elem-write	probe	goroutines,channels,arrays,range,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-
+probe/footprint/select-send-value-vs-write	probe	goroutines,channels,select,default,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-
+probe/footprint/recv-into-shared-vs-write	probe	goroutines,channels,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-
+probe/footprint/woken-recv-into-shared-vs-write	probe	goroutines,channels,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-
+probe/footprint/global-vs-write	probe	goroutines,channels,globals,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-
+probe/footprint/captured-vs-write	probe	goroutines,channels,closures,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-
+probe/footprint/map-disjoint-keys	probe	goroutines,channels,maps,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-
+probe/footprint/bytes-from-string-vs-write	probe	goroutines,channels,strings,slices,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-
+probe/footprint/spawn-arg-vs-child-write	probe	goroutines,channels,closures,race	ok	p1:race=0,clean=5,exit=0,timeout=0;p8:race=0,clean=5,exit=0,timeout=0;	DRF-in-N	1	0	DRF	ok	agree-DRF	-
+probe/footprint/nested-field-disjoint	probe	goroutines,channels,structs,race	ok	p1:race=0,clean=5,exit=0,timeout=0;p8:race=0,clean=5,exit=0,timeout=0;	DRF-in-N	1	0	DRF	ok	agree-DRF	-
+probe/footprint/nested-whole-vs-field	probe	goroutines,channels,structs,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-
+probe/schedule/default-path-race	probe	goroutines,channels,select,default,race	ok	p1:race=0,clean=5,exit=0,timeout=0;p8:race=0,clean=5,exit=0,timeout=0;	DRF-in-N	2	1	RACE-SOME	ok	over-refusal	-
+probe/schedule/tail-race	probe	goroutines,channels,loops,race	ok	p1:race=5,clean=0,exit=0,timeout=0;p8:race=5,clean=0,exit=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-
+probe/schedule/deep-path-race	probe	goroutines,channels,select,default,loops,race	ok	p1:race=0,clean=5,exit=0,timeout=0;p8:race=0,clean=5,exit=0,timeout=0;	DRF-in-N	2	1	RACE-SOME	ok	over-refusal	-
