@@ -3990,17 +3990,30 @@ kill, never a wrong answer, lifted by (1).
   RETIREMENT, not double-recording); (ii) per-primitive instrumentation —
   the 28-subject probe family `probes/u4kind` (both directions per
   primitive: copy and overwrite, plain access in main and in the child)
-  went 7 HOLE + 7 possible-HOLE + 14 agree-DRF → 0 HOLE, 26 agree, 2
-  possible-HOLE (residual (b) below); the in-scope corpus matrix's HOLE
+  went 8 HOLE + 7 possible-HOLE + 13 agree-DRF (the tracked-source PRE
+  matrix on main's 0f3c05ff binary, re-run at audit G2 F4 — the slice's
+  first pre run read 7/7/14 on a first-cut source whose
+  `wg-copy-vs-first-wait` had its roles swapped; evidence README) → 0
+  HOLE, 26 agree, 2 possible-HOLE (residual (b) below); the in-scope
+  corpus matrix's HOLE
   cell went 2 → 0. RESIDUALS, recorded in Race.lean's sync-words section
-  and flagged for the audit: (a) [AGENT] the copy-beside-RWMutex-op and
-  plain-beside-WaitGroup-`Done`/Add-from-nonzero/Wait-at-0 shapes are racy
-  by mem#restrictions but TSan-INVISIBLE (gc runs those RMWs under
-  `race.Disable`) — the machine follows the -race oracle (register #13)
-  and runs them (probes `rw-copy-vs-{rlock,lock}`, `wg-copy-vs-done`,
-  `wg-overwrite-vs-done`, `wg-overwrite-vs-wait-at-0`: agree-DRF);
-  recording `.atomicWrite` there instead would refuse them at the cost of
-  over-refusal rows against the oracle — the brief said none; (b) an
+  and flagged for the audit: (a) [AGENT] the go_mem-racy-but-TSan-
+  INVISIBLE class, stated precisely (audit G2 F10 — the first statement
+  over-counted): a plain access beside a WRITE-LIKE op gc runs under
+  `race.Disable` — `RUnlock`, RWMutex `Unlock` (mem#model: unlock is
+  write-like), WaitGroup `Add`/`Done` (the state RMW) — or a plain
+  OVERWRITE beside a `Wait` at counter 0. NOT in the class: a plain COPY
+  beside RWMutex `RLock`/`Lock` — lock is read-like, a copy is read-like,
+  no write-like operand, no race by mem#model; `rw-copy-vs-{rlock,lock}`
+  agree-DRF is the CORRECT verdict (not a bug to fix). The machine
+  follows the -race oracle (register #13) and runs the class (probes
+  `wg-copy-vs-done`, `wg-overwrite-vs-done`, `wg-overwrite-vs-wait-at-0`:
+  agree-DRF; a copy beside RUnlock/Unlock is unprobed); recording the
+  go_mem kinds instead (the auditor's table — RLock/Lock→atomicRead,
+  RUnlock/Unlock→atomicWrite, Add/Done→+atomicWrite, Wait→+atomicRead)
+  would refuse them at the cost of over-refusal rows against the oracle —
+  the brief said none; POSED to the [USER] as Q-U4RESIDUAL,
+  `docs/2026-08-31_qrow-rulings.md` row 9 (OPEN); (b) an
   overwrite that unlocks a held Mutex/RWMutex and is FOLLOWED by another
   goroutine's Unlock/RUnlock: gc's `race.Read`/Add precedes its misuse
   check so TSan reports the race and THEN the fatal fires; the machine's

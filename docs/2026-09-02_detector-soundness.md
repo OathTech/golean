@@ -272,10 +272,15 @@ both sides.
 > its counters under `race.Disable`) — so an overwrite is red but a copy
 > is green; WaitGroup exposes only the `wg.sema` misuse pair (Done is
 > invisible); Once's done-Do is an atomic read, its slow path atomic
-> writes. Pre → post: 7 HOLE + 7 possible-HOLE + 14 agree-DRF → 0 HOLE,
-> 26 agree, 2 possible-HOLE (residual (b) at BUG-080: an overwrite that
+> writes. Pre → post: 8 HOLE + 7 possible-HOLE + 13 agree-DRF (the
+> tracked-source PRE matrix on main's 0f3c05ff binary, re-run at audit
+> G2 F4 — the slice's first pre run read 7/7/14 on a first-cut source
+> with one subject's roles swapped; evidence README) → 0 HOLE, 26
+> agree, 2 possible-HOLE (residual (b) at BUG-080: an overwrite that
 > unlocks a held lock before another goroutine's Unlock ends `fatal`
-> here where gc reports the race first — both refuse). Corpus in-scope
+> here where gc reports the race first — both abort; the machine's is
+> an asserted program outcome, `GoError.fatal`, gc's is the race report
+> then the same abort). Corpus in-scope
 > matrix HOLE cell 2 → 0 (`corpus-bug080.*`); the two pins plus
 > `race/negative-sync/{rw-overwrite,once-copy}` PASS/racy; check (i)'s
 > green guards `race/free-sync/{mutex-siblings,disjoint-prims}` born

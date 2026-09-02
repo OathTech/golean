@@ -1,14 +1,14 @@
-detector-soundness summary — 2026-09-02T05:10:08+00:00
+detector-soundness summary — 2026-09-02T06:31:56+00:00
 rows: 28   runs/proc: 5   procs: 1,8   worker-pool exit: 0
 
 cells:
-  agree-DRF      14
-  HOLE           7
+  agree-DRF      13
+  HOLE           8
   possible-HOLE  7
 
 by lane × cell:
-  probe	agree-DRF	14
-  probe	HOLE	7
+  probe	agree-DRF	13
+  probe	HOLE	8
   probe	possible-HOLE	7
 
 HOLE rows (gc RACE, machine DRF — exit-bearing; a HOLE not on a BUGS.md Cases: line is a STOP):
@@ -16,6 +16,7 @@ HOLE rows (gc RACE, machine DRF — exit-bearing; a HOLE not on a BUGS.md Cases:
   probe/u4kind/mu-lock-vs-copy	p1:race=5,clean=0,exit=0,abnormal=0,timeout=0;p8:race=5,clean=0,exit=0,abnormal=0,timeout=0;	DRF
   probe/u4kind/mu-copy-vs-unlock	p1:race=5,clean=0,exit=0,abnormal=0,timeout=0;p8:race=5,clean=0,exit=0,abnormal=0,timeout=0;	DRF
   probe/u4kind/wg-overwrite-vs-add-from-0	p1:race=5,clean=0,exit=0,abnormal=0,timeout=0;p8:race=5,clean=0,exit=0,abnormal=0,timeout=0;	DRF
+  probe/u4kind/wg-copy-vs-first-wait	p1:race=5,clean=0,exit=0,abnormal=0,timeout=0;p8:race=5,clean=0,exit=0,abnormal=0,timeout=0;	DRF
   probe/u4kind/once-copy-vs-first-do	p1:race=5,clean=0,exit=0,abnormal=0,timeout=0;p8:race=5,clean=0,exit=0,abnormal=0,timeout=0;	DRF
   probe/u4kind/once-overwrite-vs-done-do	p1:race=5,clean=0,exit=0,abnormal=0,timeout=0;p8:race=5,clean=0,exit=0,abnormal=0,timeout=0;	DRF
   probe/u4kind/once-first-do-vs-copy	p1:race=5,clean=0,exit=0,abnormal=0,timeout=0;p8:race=5,clean=0,exit=0,abnormal=0,timeout=0;	DRF

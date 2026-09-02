@@ -55,21 +55,39 @@ review D5; A1-07 / A2-Q3). Convention: `docs/evidence/README.md`.
   plain read, overwrite = plain write; plain access in main beside the
   op in a child, and roles swapped) plus the negative controls
   (contending ops, sibling fields under the lock, disjoint primitives).
-  `probes-u4kind-pre.*` — on the 0f3c05ff machine (main's binary, the
-  worktree dirty only with the probe files): 7 HOLE, 7 possible-HOLE,
-  14 agree-DRF. `probes-u4kind-post.*` — on the fixed machine at the
-  slice's commit 43fd17e1 (clean stamp; an earlier run on the same
-  machine at 0f3c05ff+dirty gave cell-for-cell identical results): 0
-  HOLE, 26 agree, 2 possible-HOLE (`rw-overwrite-vs-{runlock,unlock}`
-  — machine `fatal` where gc reports the race then dies; BUG-080
-  residual (b)). `corpus-bug080.*` — the in-scope corpus matrix (368
-  rows = the 364 + the slice's 4 new rows) on the fixed machine, stamp
-  0f3c05ff+dirty where dirty = exactly the diff committed as 43fd17e1
-  (the run overlapped the gate; the golean binary was the slice's):
-  HOLE 2 → 0, possible-HOLE 0, over-refusal 1 (the O1 residual, no new
-  row), agree-race 23 → 27, agree-DRF 275 → 277, uncertified 63 (same
-  set). `gate-tail-bug080.txt` — the slice's `ci --diff` tail + the
-  final fast-gate tail.
+  `probes-u4kind-pre.*` — the TRACKED source on main's machine: a
+  scratch checkout of `git archive 0f3c05ff` (main's GoLean/ tree, the
+  golean binary built from it) running the tracked `probes/u4kind/
+  main.go` + `probes-u4kind.tsv` + `scripts/detector-soundness` as at
+  f0a29d77: 8 HOLE, 7 possible-HOLE, 13 agree-DRF. HISTORY, stated
+  honestly (audit G2 F4): the slice's ORIGINAL pre run (05:09, stamp
+  0f3c05ff+dirty) read 7 / 7 / 14 on a FIRST-CUT source in which
+  `wg-copy-vs-first-wait` had its roles the other way round (the
+  copying goroutine Waited; the 5-run sampler never realized a blocking
+  Wait, so the row read agree-DRF for a sampler reason — main.go's WG-5
+  header comment records the change). That source was never tracked,
+  so the run was not reproducible; it is REPLACED here by the
+  tracked-source run, which differs from it in exactly that one row
+  (agree-DRF → HOLE; the other 27 cells identical). The pre/post pair
+  is therefore an A/B over the SAME source. `probes-u4kind-post.*` — on
+  the fixed machine at the slice's commit 43fd17e1 (clean stamp; an
+  earlier run on the same machine over the then-uncommitted change gave
+  cell-for-cell identical results): 0 HOLE, 26 agree, 2 possible-HOLE
+  (`rw-overwrite-vs-{runlock,unlock}` — machine `fatal` where gc
+  reports the race then dies; BUG-080 residual (b)). `corpus-bug080.*`
+  — the in-scope corpus matrix (368 rows = the 364 + the slice's 4 new
+  rows) on the fixed machine, stamp 0f3c05ff+dirty. What the timestamps
+  support and no more: the run ended 05:43:18 and 43fd17e1 was
+  committed 05:49:57, so the stamp shows an UNCOMMITTED tree over
+  0f3c05ff; that the dirty diff equalled what 43fd17e1 committed is the
+  lane session's assertion, which the record cannot verify — the
+  nearest tracked corroboration is the u4kind-post run at the clean
+  43fd17e1 stamp reproducing its own dirty-tree predecessor cell for
+  cell. Cells: HOLE 2 → 0, possible-HOLE 0, over-refusal 1 (the O1
+  residual, no new row), agree-race 23 → 27, agree-DRF 275 → 277,
+  uncertified 63 (same set). `gate-tail-bug080.txt` — the slice's `ci
+  --diff` tail + the final fast-gate tail, and (appended) the audit fix
+  round G2's `ci --diff` tail.
 - Raw per-run TSan transcripts, harness dirs, wire dumps, enumerator
   observations and stats live under the run's `artifacts/detector-
   soundness/<run>/rows/<id>/` (gitignored; regenerate with the commands
@@ -102,6 +120,22 @@ review D5; A1-07 / A2-Q3). Convention: `docs/evidence/README.md`.
     scripts/detector-soundness \
       --manifest docs/evidence/2026-09-02_detector-soundness/probes.tsv \
       --out artifacts/detector-soundness/probes-tip --jobs 8
+    # BUG-080 slice (bug080-atomic-kind):
+    # probes-u4kind-pre — main's machine = 0f3c05ff's GoLean/ tree. In a scratch
+    # checkout (`git archive 0f3c05ff | tar -x -C <scratch>`), copy in this dir's
+    # probes/u4kind/, probes-u4kind.tsv and scripts/detector-soundness as tracked
+    # at the slice's tip, `scripts/capped lake build` there, then:
+    scripts/detector-soundness \
+      --manifest docs/evidence/2026-09-02_detector-soundness/probes-u4kind.tsv \
+      --out artifacts/detector-soundness/probes-u4kind-pre --jobs 8
+    # (the runner's meta.tsv `commit` line then names the scratch repo's own
+    #  hash — the tracked copy rewrites it by hand to the tree it denotes)
+    # probes-u4kind-post — at 43fd17e1 or any later tip of the slice, build, then:
+    scripts/detector-soundness \
+      --manifest docs/evidence/2026-09-02_detector-soundness/probes-u4kind.tsv \
+      --out artifacts/detector-soundness/probes-u4kind-post --jobs 8
+    # corpus-bug080 — the same machine, the in-scope corpus (368 rows at the tip):
+    scripts/detector-soundness --out artifacts/detector-soundness/corpus-bug080 --jobs 8
     # copies: cp artifacts/detector-soundness/<run>/{summary.txt,matrix.tsv,meta.tsv} here
     #         (absolute worktree paths scrubbed to repo-relative with sed)
     # gate-tail.txt: the tail of `scripts/capped scripts/ci --diff` at the tip
@@ -129,7 +163,20 @@ detector), 300 s per enumeration.
   The committed tree that reproduces the POST/corpus/deep machine is
   **804f9588** (Q-RACEPATH landed; Race.lean unchanged since, except
   a comment at the fix round). The `-tip` runs name the fix round's
-  tip.
+  tip. THE u4kind / corpus-bug080 RUNS (audit G2 F4, the same S7
+  caution): `probes-u4kind-pre.meta.tsv` is the tracked-source re-run
+  from a SCRATCH checkout — the runner stamped that scratch repo's own
+  throwaway hash, which the tracked copy replaces BY HAND with the tree
+  it denotes (0f3c05ff's GoLean/ + the tracked probes and runner); the
+  slice's original pre run (superseded, untracked) was stamped
+  `0f3c05ff+dirty`, a marker that covered the untracked probe files and
+  cannot show whether Race.lean/Multi.lean were already partly edited at
+  05:09. `corpus-bug080.meta.tsv` says `0f3c05ff+dirty` for the same
+  reason (the bullet above states what the timestamps support).
+  `probes-u4kind-post.meta.tsv`'s `43fd17e1` is the slice's one clean
+  stamp. All three `.meta.tsv` `golean` lines were scrubbed from the
+  lane's absolute path to `.lake/build/bin/golean` (the convention
+  above).
 - Host: `Linux 7.0.0-30-generic x86_64`, 32 cores, 125 G; the corpus
   run shared the box with one other lane's enumerator (t4-membership)
   — the per-row gc counts are scheduling-sensitive and are reported as
