@@ -194,13 +194,38 @@ def wakeReady (s : ExecState) : Config → Bool
   | .blockedSync op loc _ _ =>
       match loadLoc s loc with
       | .ok (.syncData p) =>
-          match op, p with
-          | .lock, .mutex locked => !locked
-          | .wlock, .rwmutex writer readers _ => !writer && readers == 0
-          | .rlock, .rwmutex writer _ pendingW => !writer && pendingW == 0
-          | .wgWait, .waitGroup counter _ => counter == 0
-          | .onceBegin _, .once _ done => done
-          | _, _ => false
+          -- Op axis exhaustive (a new `SyncOp` head is a compile error);
+          -- on the cell axis each parking head names its own primitive
+          -- and the three OTHER primitives explicitly — an op/cell shape
+          -- mismatch is "never ready" here (the resume path throws
+          -- `.internal` on the same mismatch, `resumeThread`).
+          match op with
+          | .lock =>
+              match p with
+              | .mutex locked => !locked
+              | .rwmutex .. | .waitGroup .. | .once .. => false
+          | .wlock =>
+              match p with
+              | .rwmutex writer readers _ => !writer && readers == 0
+              | .mutex .. | .waitGroup .. | .once .. => false
+          | .rlock =>
+              match p with
+              | .rwmutex writer _ pendingW => !writer && pendingW == 0
+              | .mutex .. | .waitGroup .. | .once .. => false
+          | .wgWait =>
+              match p with
+              | .waitGroup counter _ => counter == 0
+              | .mutex .. | .rwmutex .. | .once .. => false
+          | .onceBegin _ =>
+              match p with
+              | .once _ done => done
+              | .mutex .. | .rwmutex .. | .waitGroup .. => false
+          -- The releasing heads are never parked (`applySyncOp` constructs
+          -- `.blockedSync` only for the five above).
+          | .unlock | .runlock | .wunlock | .wgAdd | .onceComplete => false
+      -- ABSORBING DEFAULT, named: a load failure or a non-`syncData` cell
+      -- at a parked sync op's `loc` reads "not ready" — the goroutine
+      -- stays parked and the pool ends `.deadlock` if nothing else runs.
       | _ => false
   | _ => false
 
@@ -1297,7 +1322,11 @@ def raceWakeEvent (s : ExecState) (i : Nat) (r : RaceState) :
       | .wlock => return (r.syncAcquire i loc (alsoB := true))
       | .wgWait => return (r.syncAcquire i loc)
       | .onceBegin _ => return (r.syncAcquire i loc)
-      | _ => return r
+      -- The five heads above are the ONLY ones `applySyncOp` parks
+      -- (`.blockedSync` construction sites, Machine.lean); the releasing
+      -- heads never sit in a parked Config. Enumerated so a new head is a
+      -- compile error, not a silently edge-less wake.
+      | .unlock | .runlock | .wunlock | .wgAdd | .onceComplete => return r
   | _ => return r
 
 /-- Clock update for a PAIRING step (arriving goroutine `i`, woken
@@ -1484,15 +1513,18 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (ev : StepEvent)
               match (v :: done).reverse.head? with
               | some (.addr loc) =>
                   match syncCell sPre loc with
-                  | .error _ => return r  -- non-sync cell: the apply was stuck, never here
+                  -- Unreachable by construction (the apply already took this
+                  -- cell as a primitive, else it was stuck and never folded);
+                  -- propagated, not absorbed — a fail-open `return r` here
+                  -- would silently drop the entry access.
+                  | .error e => throw e
                   | .ok pre => do
-                  let delta : Int :=
+                  let delta : Int ←
                     match op, (v :: done).reverse[1]? with
-                    | .wgAdd, some dv =>
-                        (match valueAsInt dv with
-                        | .ok d => d
-                        | .error _ => 0)
-                    | _, _ => 0
+                    | .wgAdd, some dv => valueAsInt dv  -- an error propagates (same reason)
+                    | .wgAdd, none =>
+                        throw (.internal "sync arm: wgAdd committed without its delta operand")
+                    | _, _ => pure 0
                   let r ← r.accesses i ((syncEntryKinds op pre delta).map ((·, loc)))
                   let r ← (match op with
                   | .lock | .rlock =>

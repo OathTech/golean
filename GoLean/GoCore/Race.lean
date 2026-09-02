@@ -1132,7 +1132,17 @@ this very release and then plainly reads the primitive still conflicts
 — TSan's verdict exactly. -/
 def syncReleaseTailKinds : SyncOp → List AccessKind
   | .unlock | .onceComplete => [.atomicWrite]
-  | _ => []
+  -- Every other head's realized set lies entirely at ENTRY
+  -- (`syncEntryKinds`). Enumerated, never `_`-absorbed, so a new
+  -- constructor is a compile error here as in every other sync arm.
+  | .lock => []
+  | .rlock => []
+  | .runlock => []
+  | .wlock => []
+  | .wunlock => []
+  | .wgAdd => []
+  | .wgWait => []
+  | .onceBegin _ => []
 
 /-- The write of one phase-2 store step (`storeK`): the resolved
 target path. Chain resolution itself reads no user memory (address
